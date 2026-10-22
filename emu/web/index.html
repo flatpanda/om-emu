@@ -1,0 +1,772 @@
+<!doctype html>
+<!-- The browser player: web/play.html with an api() that talks to web/worker.mjs
+     over postMessage (web/page.mjs) instead of HTTP, frames that are RGBA drawn into the canvas, and the
+     firmware file input and the cache line added. The .BIN is read in this browser and never uploaded. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OM-Emu (browser)</title>
+<style>
+:root {
+  --bg: #15171a; --panel: #1d2024; --line: #30353b; --text: #d9dde2; --dim: #8b939c;
+  --body: #2a2c2f; --body-hi: #3a3d41; --btn: #111214; --btn-hi: #26292d;
+  --wired: #4cc38a; --decoded: #e0a83c; --none: #6b7178; --accent: #6aa9ff; --err: #ff6b6b;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.4 system-ui, sans-serif; }
+body { padding: 12px 16px 40px; }
+h1 { font-size: 15px; font-weight: 600; margin: 0 0 8px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+h1 small { color: var(--dim); font-weight: 400; }
+h1 select { font: 13px system-ui, sans-serif; background: var(--panel); color: var(--text); border: 1px solid var(--line);
+            border-radius: 6px; padding: 3px 6px; }
+.wrap { max-width: 1320px; margin: 0 auto; }
+/* camera body */
+.cam { background: linear-gradient(#323539, var(--body)); border-radius: 28px 28px 18px 18px; padding: 14px 18px 18px;
+       box-shadow: 0 8px 30px #0008, inset 0 1px 0 #ffffff14; }
+.top { display: flex; align-items: center; gap: 14px; padding: 4px 6px 12px; border-bottom: 1px solid #0006; flex-wrap: wrap; }
+.mid { display: grid; grid-template-columns: 120px 1fr 190px; gap: 16px; padding-top: 12px; align-items: start; }
+.front { display: flex; gap: 12px; padding: 10px 6px 0; border-top: 1px solid #0006; margin-top: 12px; align-items: center; flex-wrap: wrap; }
+.col { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.lbl { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+.b { appearance: none; border: 2px solid var(--none); background: var(--btn); color: var(--text); border-radius: 999px;
+     min-width: 46px; height: 34px; padding: 0 10px; font: 600 12px system-ui, sans-serif; cursor: pointer; user-select: none;
+     touch-action: none; position: relative; }
+.b:hover { background: var(--btn-hi); }
+.b.wired { border-color: var(--wired); }
+.b.decoded { border-color: var(--decoded); }
+.b.none { border-style: dashed; color: var(--dim); }
+.b.down { background: var(--accent); color: #000; }
+.b.on { box-shadow: 0 0 0 3px #6aa9ff55; }
+.b kbd { position: absolute; right: -6px; top: -9px; font: 10px ui-monospace, monospace; background: #000c; color: var(--dim);
+         border-radius: 4px; padding: 0 3px; }
+.shutter { width: 58px; height: 58px; border-radius: 50%; }
+.dial { width: 74px; height: 74px; border-radius: 50%; border: 2px solid var(--wired);
+        background: repeating-conic-gradient(#1a1c1f 0 6deg, #2c2f33 6deg 12deg); display: grid; grid-template-columns: 1fr 1fr;
+        overflow: hidden; touch-action: none; }
+.dial button { border: 0; background: transparent; color: #fff; font: 700 16px system-ui; cursor: pointer; }
+.dial button:hover { background: #ffffff18; }
+.mode { width: 84px; height: 84px; border-radius: 50%; border: 2px solid var(--wired); background: #18191b; position: relative; }
+.mode span { position: absolute; inset: 0; display: grid; place-items: center; font: 700 20px system-ui; }
+.mode button { position: absolute; left: 0; right: 0; height: 50%; border: 0; background: transparent; color: var(--dim); cursor: pointer; }
+.mode button:first-of-type { top: 0; } .mode button:last-of-type { bottom: 0; }
+.mode button:hover { background: #ffffff12; }
+.pad { display: grid; grid-template-columns: 44px 52px 44px; grid-template-rows: 40px 52px 40px; gap: 4px; place-items: center; }
+.pad .b { min-width: 40px; padding: 0; }
+.pad .ok { width: 52px; height: 52px; }
+.joy { display: grid; grid-template-columns: repeat(3, 30px); grid-template-rows: repeat(3, 30px); gap: 2px; place-items: center; }
+.joy .b { min-width: 28px; height: 28px; padding: 0; font-size: 11px; }
+.evf { display: flex; gap: 8px; align-items: center; justify-content: center; margin-bottom: 8px; }
+.eyecup { width: 160px; height: 46px; border-radius: 12px 12px 6px 6px; background: #0d0e10; border: 1px solid #000;
+          display: grid; place-items: center; color: var(--dim); font-size: 11px; }
+.screen { position: relative; background: #000; border-radius: 6px; border: 6px solid #0b0b0c; aspect-ratio: 3 / 2; width: 100%;
+          overflow: hidden; }
+.screen.evf { aspect-ratio: 4 / 3; max-width: 820px; margin: 0 auto; border-radius: 50px; border-width: 14px; }
+.screen canvas { width: 100%; height: 100%; display: block; image-rendering: auto; cursor: crosshair; touch-action: none;
+                 position: relative; }
+.screen #poster { position: absolute; inset: 0; width: 100%; height: 100%; }
+.screen .ovl { position: absolute; inset: 0; display: none; place-items: center; text-align: center; background: #000b;
+               color: #fff; font-size: 15px; padding: 20px; white-space: pre-wrap; }
+.screen.show-ovl .ovl { display: grid; }
+.switch { display: flex; gap: 6px; align-items: center; }
+.switch .state { color: var(--accent); font: 11px ui-monospace, monospace; }
+/* status */
+/* one line of fixed height: a wrapping status would move everything below it while the session runs */
+.status { display: flex; flex-wrap: nowrap; overflow: hidden; white-space: nowrap; gap: 6px 16px; padding: 8px 10px; margin: 12px 0 8px; background: var(--panel);
+          border: 1px solid var(--line); border-radius: 8px; font: 12px ui-monospace, monospace; align-items: center; }
+.status b { color: var(--dim); font-weight: 400; }
+.status > span { flex: none; }
+.status > span.last { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.a15line { margin: -4px 0 8px; padding: 0 10px; min-height: 1.4em; font: 12px ui-monospace, monospace; color: var(--decoded);
+           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.phase { padding: 1px 8px; border-radius: 999px; background: #2b3b2f; color: var(--wired); }
+.phase.busy, .phase.waiting-gui, .phase.starting { background: #3b3424; color: var(--decoded); }
+.phase.error, .phase.stopped, .phase.off { background: #402426; color: var(--err); }
+.spin { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--decoded); border-top-color: transparent;
+        animation: s .8s linear infinite; display: none; }
+.busy .spin, .spin.on { display: inline-block; }
+@keyframes s { to { transform: rotate(360deg); } }
+.toolbar { display: flex; gap: 8px; margin: 8px 0; flex-wrap: wrap; align-items: center; }
+.tb { border: 1px solid var(--line); background: var(--panel); color: var(--text); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+.tb:hover { background: var(--btn-hi); }
+.legend { display: flex; gap: 14px; color: var(--dim); font-size: 12px; margin-left: auto; flex-wrap: wrap; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid; vertical-align: -2px; margin-right: 4px; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.tabs button { border: 0; background: transparent; color: var(--dim); padding: 7px 12px; cursor: pointer; border-bottom: 2px solid transparent; }
+.tabs button.sel { color: var(--text); border-bottom-color: var(--accent); }
+.tab { display: none; padding: 10px 0; overflow-x: auto; }
+.tab.sel { display: block; }
+table { border-collapse: collapse; width: 100%; font-size: 12px; }
+th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--dim); font-weight: 500; }
+td code, .mono { font: 11px ui-monospace, monospace; }
+.st-wired { color: var(--wired); } .st-decoded { color: var(--decoded); } .st-not-wired { color: var(--dim); }
+.err { color: var(--err); white-space: pre-wrap; font: 11px ui-monospace, monospace; background: #2a1517; padding: 8px; border-radius: 6px; }
+.log { font: 11px ui-monospace, monospace; white-space: pre-wrap; max-height: 360px; overflow: auto; background: #111316;
+       padding: 8px; border-radius: 6px; }
+.fw { display: flex; flex-wrap: wrap; gap: 8px; }
+.note { color: var(--dim); font-size: 12px; margin: 6px 0; }
+/* S-SCENE: the image sensor stand-in's controls */
+.scene { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
+.scene summary { cursor: pointer; font-weight: 600; }
+.scene .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 6px 18px; margin-top: 8px; }
+.scene label { display: grid; grid-template-columns: 92px 1fr 64px; gap: 6px; align-items: center; color: var(--dim); }
+.scene label output { color: var(--text); font: 12px ui-monospace, monospace; text-align: right; }
+.scene input[type=range], .scene select { width: 100%; }
+.scene .read { font: 12px ui-monospace, monospace; color: var(--text); white-space: pre-wrap; margin-top: 8px; }
+.scene h4 { margin: 10px 0 2px; font-size: 12px; color: var(--dim); font-weight: 600; grid-column: 1 / -1; }
+@media (max-width: 900px) {
+  .mid { grid-template-columns: 1fr; }
+  .col { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>OM-Emu <select id="model" aria-label="camera model" title="The camera model: another one reloads this page on it"></select>
+  <small id="sub">emulated in this browser (emu in a Web Worker)</small></h1>
+<div class="toolbar" id="fwbar">
+  <label class="tb">Firmware .BIN <input type="file" id="fwfile" accept=".BIN,.bin"></label>
+  <button class="tb" id="fwcache" disabled>Start from the cached firmware</button>
+  <button class="tb" id="fwclear">Forget the cached firmware</button>
+  <span class="note" id="fwstatus"></span>
+</div>
+
+<div class="cam" id="cam">
+  <div class="top">
+    <div class="col"><div class="lbl">Mode</div>
+      <div class="mode" id="mode" title="Mode dial (PageUp / PageDown); position names are not known">
+        <button data-mode="+1" aria-label="mode dial next">▲</button><span id="modeval">0</span><button data-mode="-1" aria-label="mode dial previous">▼</button>
+      </div></div>
+    <div class="col"><div class="lbl">Power</div><button class="b" data-ctl="power" id="powerbtn">ON</button></div>
+    <div class="col"><div class="lbl">Top</div><div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="b" data-ctl="afmeter">AF/⊡</button><button class="b" data-ctl="drive">Drive</button><button class="b" data-ctl="bkt">BKT</button></div></div>
+    <div style="flex:1"></div>
+    <div class="col"><div class="lbl">REC</div><button class="b" data-ctl="rec" style="color:#ff5d5d">●</button></div>
+    <div class="col"><div class="lbl">ISO / ±</div><div style="display:flex;gap:6px"><button class="b" data-ctl="iso">ISO</button><button class="b" data-ctl="exp">±</button></div></div>
+    <div class="col"><div class="lbl">Main dial</div><div class="dial" data-dial="main" title="Main dial (EVT_ST_CHANGE_MAIN_DIAL): [ and ] or the mouse wheel; which physical dial it is, is not known"><button data-d="-1">−</button><button data-d="1">+</button></div></div>
+    <div class="col"><div class="lbl">Shutter</div><div style="display:flex;gap:6px;align-items:center">
+      <button class="b" data-ctl="s1" title="half press (F)">½</button><button class="b shutter" data-ctl="s2" title="full press (Space)"></button></div></div>
+  </div>
+  <div class="mid">
+    <div class="col">
+      <button class="b" data-ctl="menu">MENU</button>
+      <button class="b" data-ctl="play">▶</button>
+      <button class="b" data-ctl="delete">Del</button>
+      <div class="lbl" style="margin-top:12px">Monitor</div>
+      <div class="switch"><button class="b" data-ctl="monitor">Hinge</button></div>
+      <span class="mono" id="monstate"></span>
+      <button class="b" data-ctl="rotate">Rotate</button>
+    </div>
+    <div>
+      <div class="evf">
+        <button class="b" data-ctl="lv">LV</button>
+        <div class="eyecup" id="eyecup">EVF</div>
+        <button class="b" data-ctl="eye" title="eye sensor (N)">Eye</button>
+      </div>
+      <div class="screen" id="screen">
+        <div id="poster"></div>
+        <canvas id="cv" width="900" height="600"></canvas>
+        <div class="ovl" id="ovl">starting…</div>
+      </div>
+    </div>
+    <div class="col">
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="b" data-ctl="afon">AF-ON</button>
+        <button class="b" data-ctl="lever" title="Fn lever (\)">Lever</button>
+      </div>
+      <div class="lbl">Sub dial</div>
+      <div class="dial" data-dial="sub" title="Sub dial (EVT_ST_CHANGE_SUB_DIAL): , and . or Shift + mouse wheel; which physical dial it is, is not known"><button data-d="-1">−</button><button data-d="1">+</button></div>
+      <button class="b" data-ctl="lvkey">|●|</button>
+      <div class="lbl">Multi-selector</div>
+      <div class="joy">
+        <button class="b" data-ctl="js_ul">◤</button><button class="b" data-ctl="js_up">▲</button><button class="b" data-ctl="js_ur">◥</button>
+        <button class="b" data-ctl="js_left">◀</button><button class="b" data-ctl="js_press">●</button><button class="b" data-ctl="js_right">▶</button>
+        <button class="b" data-ctl="js_dl">◣</button><button class="b" data-ctl="js_down">▼</button><button class="b" data-ctl="js_dr">◢</button>
+      </div>
+      <button class="b" data-ctl="info">INFO</button>
+      <div class="pad">
+        <span></span><button class="b" data-ctl="up">▲</button><span></span>
+        <button class="b" data-ctl="left">◀</button><button class="b ok" data-ctl="ok">OK</button><button class="b" data-ctl="right">▶</button>
+        <span></span><button class="b" data-ctl="down">▼</button><span></span>
+      </div>
+      <button class="b" data-ctl="lock">Lock</button>
+    </div>
+  </div>
+  <div class="front"><div class="lbl">Front</div><button class="b" data-ctl="front1">Fn ▲</button><button class="b" data-ctl="front2">Fn ▼</button>
+    <div class="note" style="margin-left:auto">Mouse on the monitor = touch (TFT only).</div></div>
+</div>
+
+<div class="status" id="status">
+  <span class="phase" id="phase">starting</span><span class="spin" id="spin"></span>
+  <span><b>model</b> <span id="s-model">–</span></span>
+  <span><b>GUI</b> <span id="s-gui">–</span></span>
+  <span><b>screen</b> <span id="s-screen">–</span></span>
+  <span><b>panel</b> <span id="s-panel">–</span></span>
+  <span><b>device</b> <span id="s-dev">–</span></span>
+  <span><b>layout</b> <span id="s-layout">–</span></span>
+  <span><b>lab</b> <span id="s-lab">–</span></span>
+  <span><b>pace</b> <span id="s-pace">–</span></span>
+  <span><b>latency</b> <span id="s-lat">–</span></span>
+  <span class="last"><b>last</b> <span id="s-last">–</span></span>
+</div>
+<div id="s-a15" class="a15line"></div>
+<div id="errbox"></div>
+<div class="toolbar">
+  <button class="tb" id="restart">Restart</button>
+  <button class="tb" id="pause">Pause time</button>
+  <button class="tb" id="quit">Quit</button>
+  <div class="legend"><span><i style="border-color:var(--wired)"></i>wired</span><span><i style="border-color:var(--decoded)"></i>decoded only</span>
+    <span><i style="border-color:var(--none);border-style:dashed"></i>not wired</span></div>
+</div>
+<details class="scene" id="scene">
+  <summary>Scene and image sensor (S-SCENE stand-in)</summary>
+  <p class="note">The camera's sensor, image pipeline, AF and release are not modelled. This stand-in renders a synthetic scene
+  (layers at three distances, a thin lens on a Four Thirds sensor, the exposure triangle) into the live-view bank, and the
+  firmware's own through-image API shows it on the IMG1 plane (it needs A15). S1 focuses on the layer under the AF point
+  S2 records a capture with the exposure in use and REC starts and ends a clip: all three are the stand-in's, not the firmware's.
+  The firmware's camera application answers S1 and S2 itself (the date prompt, the shooting information, the focus
+  confirmation, the capture display for the shutter time in use, the rec view), with the modules' notifications of a release
+  stood in (S-RELSEQ). REC records at mode-dial position 7 after the LLPSW firmware key (Firmware keys, 1.1.4 0x121c) is
+  released; with LLPSW pressed, as the lab's idle image has it, the application refuses the key's function.</p>
+  <div class="grid">
+    <label><span>Live view</span><select id="sc-lv"><option value="0">off</option><option value="1">on</option></select><output></output></label>
+    <label><span>Scene</span><select id="sc-preset"><option value="static">static (park)</option><option value="moving">moving (rider, ball)</option><option value="chart">test chart</option></select><output></output></label>
+    <label><span>Brightness</span><input id="sc-ev" type="range" min="-2" max="18" step="0.5" value="12"><output></output></label>
+    <h4>Lens</h4>
+    <label><span>Focal length</span><input id="sc-focal" type="range" min="8" max="150" step="1" value="25"><output></output></label>
+    <label><span>Aperture</span><select id="sc-ap"></select><output></output></label>
+    <label><span>Focus</span><input id="sc-focus" type="range" min="0" max="100" step="1" value="42"><output></output></label>
+    <label><span>AF point x</span><input id="sc-afx" type="range" min="0" max="1" step="0.01" value="0.5"><output></output></label>
+    <label><span>AF point y</span><input id="sc-afy" type="range" min="0" max="1" step="0.01" value="0.5"><output></output></label>
+    <h4>Exposure</h4>
+    <label><span>Mode</span><select id="sc-mode"><option value="auto">auto (shutter)</option><option value="manual">manual</option></select><output></output></label>
+    <label><span>Shutter</span><select id="sc-sh"></select><output></output></label>
+    <label><span>ISO</span><select id="sc-iso"></select><output></output></label>
+    <label><span>Compensation</span><input id="sc-comp" type="range" min="-3" max="3" step="0.3" value="0"><output></output></label>
+    <h4>Layers (back to front)</h4>
+    <div id="sc-layers" style="display:contents"></div>
+  </div>
+  <div class="read" id="sc-read"></div>
+</details>
+<div class="tabs" id="tabs">
+  <button data-tab="keys" class="sel">Keys</button><button data-tab="screens">Screens</button>
+  <button data-tab="fw">Firmware keys</button><button data-tab="touch">Touch log</button><button data-tab="events">Event log</button>
+  <button data-tab="standins">Stand-ins</button>
+</div>
+<div class="tab sel" id="tab-keys"></div>
+<div class="tab" id="tab-screens"></div>
+<div class="tab" id="tab-fw"></div>
+<div class="tab" id="tab-touch"><div class="log" id="touchlog"></div></div>
+<div class="tab" id="tab-events"><div class="log" id="eventlog"></div></div>
+<div class="tab" id="tab-standins"></div>
+</div>
+
+<script>
+// Opened as a file (file://), the browser refuses the module script below and its Worker, so nothing would answer the
+// firmware input: say so, and how to serve the page.
+if (location.protocol === 'file:') {
+  document.getElementById('fwfile').disabled = true;
+  document.getElementById('fwstatus').textContent = 'This page does not run from file://: serve emu/ on localhost, for example '
+    + 'python3 -m http.server -d emu 8000 --bind 127.0.0.1, and open http://127.0.0.1:8000/web/index.html';
+}
+</script>
+<script type="module">
+import { PagePlayer } from './page.mjs';
+import { MODEL_LIST, modelDoc } from '../src/fw/modeldoc.mjs';
+const PP = new PagePlayer();
+window.__player = PP;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let CONTROLS = [], BYID = {}, KEYMAP = {}, STATUS = {}, stopped = false, frameSeq = 0, statusSeq = 0;
+const cv = $('cv'), g = cv.getContext('2d', { willReadFrequently: true });
+let drawn = null;                 // the frame on the canvas: {seq, sha16, device, w, h}
+
+// play.html's transport, over postMessage (web/page.mjs): the same paths, bodies and answers as the HTTP API.
+async function api(path, body) {
+  const r = await PP.api(path, body);
+  if (!r.ok && r.status !== 204) throw new Error(path + ' ' + r.status);
+  return r;
+}
+// Every input is its own request, so two in flight together can reach the server in either order: each carries this
+// page's id and its place in the page's order (cseq), and the page's own timestamp (t_client, ms), which the server's
+// touch timing (H-TOUCHGAP) uses inside one contact and between taps.
+const CLIENT = Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+let cseq = 0;
+function send(inp) {
+  if (stopped) return;
+  const body = Object.assign({}, inp, { client: CLIENT, cseq: ++cseq, t_client: performance.now() });
+  api('/api/input', body).catch(() => {});
+  logEvent('→ ' + JSON.stringify(inp));
+}
+
+// ---- keyboard -------------------------------------------------------------------------------------------------------
+const CODE = { BracketLeft: '[', BracketRight: ']', Comma: ',', Period: '.', Backslash: '\\' };
+const SHIFTABLE = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'T', 'Home', 'End', 'PageUp', 'PageDown']);
+function keyName(e) {
+  let k = e.code;
+  if (k.startsWith('Key')) k = k.slice(3);
+  else if (k.startsWith('Digit')) k = k.slice(5);
+  else if (CODE[k]) k = CODE[k];
+  if (e.shiftKey && SHIFTABLE.has(k)) k = 'Shift+' + k;
+  return k;
+}
+const DIALKEYS = { '[': ['main', -1], ']': ['main', 1], ',': ['sub', -1], '.': ['sub', 1] };
+const held = new Set();
+function control(id, action, alt) {
+  const c = BYID[id];
+  if (!c) return;
+  if (c.status === 'not-wired') { note(c.name + ': not wired — ' + c.reason); return; }
+  if (c.kind === 'power') {
+    if (action !== 'down') return;
+    if (STATUS.phase === 'off' || STATUS.phase === 'error') send({ type: 'control', op: 'power', value: 1 });
+    else send({ type: 'control', op: 'power', value: 0 });
+    return;
+  }
+  if (c.kind === 'modedial') return;
+  if (action === 'down') { sentDown.add(id); send({ type: 'key', id, action }); return; }
+  if (sentDown.delete(id)) send({ type: 'key', id, action: 'up' });   // a switch's release is ignored by the server
+}
+const sentDown = new Set();
+addEventListener('keydown', (e) => {
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
+  const k = keyName(e);
+  if (e.ctrlKey || e.metaKey) return;
+  if (DIALKEYS[k]) { e.preventDefault(); if (!e.repeat) send({ type: 'dial', id: DIALKEYS[k][0], detents: DIALKEYS[k][1] }); return; }
+  if (k === 'PageUp' || k === 'PageDown') { e.preventDefault(); if (!e.repeat) modeStep(k === 'PageUp' ? 1 : -1); return; }
+  const id = KEYMAP[k];
+  if (!id) return;
+  e.preventDefault();
+  if (e.repeat || held.has(k)) return;
+  held.add(k);
+  press(id, true);
+  control(id, 'down', e.altKey);
+});
+addEventListener('keyup', (e) => {
+  const k = keyName(e);
+  const plain = k.startsWith('Shift+') ? k.slice(6) : k;
+  for (const kk of [k, plain, 'Shift+' + plain]) {
+    if (held.has(kk)) {
+      held.delete(kk);
+      const id = KEYMAP[kk];
+      if (id) { e.preventDefault(); press(id, false); control(id, 'up', e.altKey); }
+    }
+  }
+});
+addEventListener('blur', () => {
+  for (const k of held) { const id = KEYMAP[k]; if (id) { press(id, false); control(id, 'up'); } }
+  held.clear();
+  for (const f of heldPointers.values()) f({});
+  heldPointers.clear();
+});
+function press(id, on) { document.querySelectorAll(`[data-ctl="${id}"]`).forEach((b) => b.classList.toggle('down', on)); }
+function modeStep(d) { send({ type: 'switch', id: 'mode_dial', step: d }); }   // relative: the server adds it to the position it has
+
+// ---- buttons ----------------------------------------------------------------------------------------------------------
+function wireButtons() {
+  document.querySelectorAll('[data-ctl]').forEach((b) => {
+    const c = BYID[b.dataset.ctl];
+    if (!c) return;
+    b.classList.add(c.status === 'wired' ? 'wired' : c.status === 'decoded' ? 'decoded' : 'none');
+    b.title = `${c.name} [${c.key || 'click'}] — ${c.status}${c.reason ? ': ' + c.reason : ''}${c.note ? ' (' + c.note + ')' : ''}`;
+    if (c.key && c.key.length <= 9 && !b.querySelector('kbd')) { const k = document.createElement('kbd'); k.textContent = c.key.replace('Arrow', '').replace('Shift+', '⇧'); b.appendChild(k); }
+    holdButton(b, c.id);
+  });
+  document.querySelectorAll('[data-dial]').forEach((d) => {
+    d.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => send({ type: 'dial', id: d.dataset.dial, detents: +b.dataset.d })));
+    d.addEventListener('wheel', (e) => { e.preventDefault(); send({ type: 'dial', id: d.dataset.dial, detents: e.deltaY > 0 ? 1 : -1 }); }, { passive: false });
+  });
+  document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => modeStep(+b.dataset.mode)));
+}
+
+function capture(el, e) { try { el.setPointerCapture(e.pointerId); } catch (_) { /* a synthetic pointer (selftest) */ } }
+// A pressed page button is released by its pointer's up or cancel wherever the pointer is then (window, capture phase):
+// pointer capture sends it to the button, and the window listener also catches a pointer released off the button
+// when capture is not available, so no 'down' is left without its 'up'.
+const heldPointers = new Map();     // pointerId -> release
+function holdButton(b, id) {
+  b.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); capture(b, e);
+    if (heldPointers.has(e.pointerId)) return;
+    b.classList.add('down'); control(id, 'down', e.altKey);
+    heldPointers.set(e.pointerId, (ev) => { b.classList.remove('down'); control(id, 'up', ev.altKey); });
+  });
+}
+function releasePointer(e) { const f = heldPointers.get(e.pointerId); if (f) { heldPointers.delete(e.pointerId); f(e); } }
+addEventListener('pointerup', releasePointer, true);
+addEventListener('pointercancel', releasePointer, true);
+
+// ---- touch on the monitor --------------------------------------------------------------------------------------------
+let touching = false, lastMove = 0, wheelAcc = 0;
+function pos(e) {
+  const r = cv.getBoundingClientRect();
+  return { x: Math.max(0, Math.min(899, Math.round((e.clientX - r.left) / r.width * 900))),
+           y: Math.max(0, Math.min(599, Math.round((e.clientY - r.top) / r.height * 600))) };
+}
+cv.addEventListener('pointerdown', (e) => {
+  if (STATUS.device !== 'tft') { note('touch: the touch panel is the rear monitor; the page sends touches while the TFT is shown'); return; }
+  e.preventDefault(); capture(cv, e); touching = true; send({ type: 'touch', action: 'down', ...pos(e) });
+});
+cv.addEventListener('pointermove', (e) => {
+  if (!touching) return; const t = performance.now(); if (t - lastMove < 30) return; lastMove = t;
+  send({ type: 'touch', action: 'move', ...pos(e) });
+});
+const tup = (e) => { if (!touching) return; touching = false; send({ type: 'touch', action: 'up', ...pos(e) }); };
+cv.addEventListener('pointerup', tup); cv.addEventListener('pointercancel', tup);
+$('screen').addEventListener('wheel', (e) => {
+  e.preventDefault(); wheelAcc += e.deltaY;
+  if (Math.abs(wheelAcc) < 40) return;
+  send({ type: 'dial', id: e.shiftKey ? 'sub' : 'main', detents: wheelAcc > 0 ? 1 : -1 }); wheelAcc = 0;
+}, { passive: false });
+
+// ---- frames and status (long polls) ---------------------------------------------------------------------------------
+async function frames() {
+  while (!stopped) {
+    try {
+      const r = await api('/api/frame?after=' + frameSeq);
+      if (r.status === 204) continue;
+      frameSeq = +r.headers.get('X-Frame-Seq');
+      const dev = r.headers.get('X-Device');
+      const { w, h, rgba } = r.frame;                  // RGBA from the Worker (web/frame.mjs), drawn as it is
+      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+      $('screen').classList.toggle('evf', dev === 'evf');
+      g.putImageData(new ImageData(new Uint8ClampedArray(rgba.buffer, rgba.byteOffset, rgba.length), w, h), 0, 0);
+      drawn = { seq: frameSeq, sha16: r.headers.get('X-Frame-Sha'), device: dev, w, h };
+      PP.ackFrame(frameSeq);
+      $('poster').style.display = 'none';
+    } catch (e) { await gone(); }
+  }
+}
+async function statusLoop() {
+  while (!stopped) {
+    try {
+      const r = await api('/api/status?after=' + statusSeq);
+      const s = await r.json(); statusSeq = s.seq || statusSeq; STATUS = s; showStatus(s);
+    } catch (e) { await gone(); }
+  }
+}
+let failures = 0;
+async function gone() {
+  failures += 1;
+  if (failures > 3) { stopped = true; showStatus({ phase: 'stopped' }); $('ovl').textContent = 'stopped (the session has ended; reload the page to start again)'; $('screen').classList.add('show-ovl'); return; }
+  await new Promise((r) => setTimeout(r, 500));
+}
+let lastLogged = 0, lastInputError = null;
+function showStatus(s) {
+  failures = 0;
+  const ph = $('phase'); ph.textContent = s.phase; ph.className = 'phase ' + s.phase;
+  $('status').classList.toggle('busy', s.phase === 'busy' || s.phase === 'waiting-gui' || s.phase === 'starting');
+  $('s-gui').textContent = s.gui ? `${s.gui} ${s.gui_name}` : '–';
+  $('s-screen').textContent = s.screen || '–';
+  $('s-panel').textContent = s.panel ?? '–';
+  $('s-dev').textContent = s.device || '–';
+  $('s-layout').textContent = s.layout ? `byte ${s.layout.layout}, connect ${s.layout.connect}` : '–';
+  $('s-a15').textContent = $('s-a15').title = s.a15 && s.a15.text ? s.a15.text + (s.a15_frames ? ` (${s.a15_frames} frames)` : '') : '';
+  $('s-lab').textContent = s.lab_ns != null ? (s.lab_ns / 1e9).toFixed(2) + ' s' : '–';
+  $('s-pace').textContent = s.pace != null ? s.pace + (s.idle === 'off' ? ' (paused)' : '') : (s.idle === 'off' ? 'paused' : '–');
+  $('s-lat').textContent = s.last && s.last.latency_ms != null ? s.last.latency_ms + ' ms' : '–';
+  const rec = s.last && s.last.record;
+  if (rec) {
+    const ui = (rec.uiin || []).map((u) => `${u.code} ${u.ev || ''}`).join(', ');
+    $('s-last').textContent = `${rec.token}${ui ? ' · UI_IN ' + ui : ''}${rec.messages && rec.messages.length ? ' · GUI ' + rec.messages.join(' ') : ''}` +
+      (rec.switch && rec.switch.reopens ? ` · screen re-opened, lost ${rec.switch.reopens}` : '');
+  }
+  if (s.input_error && s.input_error !== lastInputError) note('refused: ' + s.input_error);
+  lastInputError = s.input_error;
+  for (const e of s.log_tail || []) {
+    if (e.idx > lastLogged && e.record) { lastLogged = e.idx; logRecord(e.record); }
+  }
+  $('modeval').textContent = s.mode_dial ?? 0;
+  if (s.bits) $('monstate').textContent = `monitor bit ${s.bits.monitor}, rotate ${s.bits.rotate}, lever ${s.bits.lever}` +
+    (s.tp_mask != null ? ` · touch gestures the GUI enabled: ${(s.tp_gestures || []).join(' ') || 'none'} (0x${s.tp_mask.toString(16)})` +
+      ((s.tp_mask & 16) ? '' : ' — set when the shooting screen was built on the EVF; it is rebuilt on the next switch back or MENU twice') : '');
+  $('powerbtn').textContent = s.phase === 'off' ? 'OFF' : 'ON';
+  $('pause').textContent = s.idle === 'off' ? 'Resume time' : 'Pause time';
+  $('eyecup').textContent = s.device === 'evf' ? 'EVF (shown)' : 'EVF';
+  document.querySelectorAll('[data-ctl="eye"]').forEach((b) => b.classList.toggle('on', s.device === 'evf'));
+  const ov = $('ovl');
+  if (s.phase === 'starting') { ov.textContent = 'starting the lab… (3-5 s)'; $('screen').classList.add('show-ovl'); }
+  else if (s.phase === 'off') { ov.textContent = 'power off (H-POWER)\npress O or the power button to start a new session'; $('screen').classList.add('show-ovl'); }
+  else if (s.phase === 'stopped') { $('screen').classList.add('show-ovl'); }
+  else if (s.phase === 'error') { ov.textContent = `lab error on ${MODEL.label}: its session stopped (see below)\nRestart starts a new session; the model menu above switches to another body`; $('screen').classList.add('show-ovl'); }
+  else $('screen').classList.remove('show-ovl');
+  const eb = $('errbox');
+  if (s.error && s.phase === 'error') eb.innerHTML = `<div class="err">${esc(s.error.message)}\n\n${esc(s.error.stderr_tail || '')}</div>`;
+  else if (s.frame_error) eb.innerHTML = `<div class="note">frame not updated: ${esc(s.frame_error)}</div>`;
+  else eb.innerHTML = '';
+  if (s.dropped && Object.keys(s.dropped).length) $('s-last').title = 'dropped: ' + JSON.stringify(s.dropped);
+  showScene(s.scene);
+}
+function note(t) { $('s-last').textContent = t; logEvent('! ' + t); }
+// ---- S-SCENE controls ------------------------------------------------------------------------------------------------
+const STOPS = [1.2, 1.4, 1.8, 2, 2.8, 4, 5.6, 8, 11, 16, 22];
+const SHUTTERS = [8000, 4000, 2000, 1000, 500, 250, 125, 60, 30, 15, 8, 4, 2].map((d) => [`1/${d}`, 1 / d]).concat([['1"', 1], ['2"', 2]]);
+const ISOS = [64, 100, 200, 400, 800, 1600, 3200, 6400, 12800, 25600];
+const focusOf = (v) => +(0.25 * Math.pow(4000, v / 100)).toPrecision(3);          // the slider: 0.25 m .. 1 km, logarithmic
+const sliderOf = (m) => Math.round(100 * Math.log(m / 0.25) / Math.log(4000));
+const opt = (el, items) => { el.innerHTML = items.map(([l, v]) => `<option value="${v}">${l}</option>`).join(''); };
+opt($('sc-ap'), STOPS.map((n) => [`f/${n}`, n])); $('sc-ap').value = '2.8';
+opt($('sc-sh'), SHUTTERS); $('sc-sh').value = String(1 / 125);
+opt($('sc-iso'), ISOS.map((n) => [String(n), n])); $('sc-iso').value = '200';
+let sceneTimer = null, scenePending = {};
+function sceneSend(change, now) {
+  Object.assign(scenePending, change);
+  clearTimeout(sceneTimer);
+  sceneTimer = setTimeout(() => { const c = scenePending; scenePending = {}; sceneTimer = null; send({ type: 'scene', change: c }); }, now ? 0 : 150);
+}
+function sceneWire(id, field, conv, show) {
+  const el = $(id), out = el.parentElement.querySelector('output');
+  const upd = (now) => { const v = conv(el.value); if (out) out.textContent = show ? show(v) : v; if (field) sceneSend({ [field]: v }, now); };
+  el.addEventListener('input', () => upd(false));
+  el.addEventListener('change', () => upd(true));
+  if (out) out.textContent = show ? show(conv(el.value)) : conv(el.value);
+}
+sceneWire('sc-lv', 'liveview', (v) => v === '1', (v) => (v ? 'on' : 'off'));
+sceneWire('sc-preset', 'preset', (v) => v, () => '');
+sceneWire('sc-ev', 'ev', Number, (v) => `EV ${v}`);
+sceneWire('sc-focal', 'focal_mm', Number, (v) => `${v} mm`);
+sceneWire('sc-ap', 'aperture', Number, (v) => `f/${v}`);
+sceneWire('sc-focus', 'focus_m', (v) => focusOf(Number(v)), (v) => `${v} m`);
+sceneWire('sc-mode', 'mode', (v) => v, () => '');
+sceneWire('sc-sh', 'shutter_s', Number, (v) => (v >= 1 ? `${v}"` : `1/${Math.round(1 / v)}`));
+sceneWire('sc-iso', 'iso', Number, (v) => `ISO ${v}`);
+sceneWire('sc-comp', 'comp_ev', Number, (v) => `${v > 0 ? '+' : ''}${v} EV`);
+for (const ax of ['x', 'y']) {
+  const el = $(`sc-af${ax}`), out = el.parentElement.querySelector('output');
+  const upd = (now) => { out.textContent = el.value; sceneSend({ af_point: [Number($('sc-afx').value), Number($('sc-afy').value)] }, now); };
+  el.addEventListener('input', () => upd(false)); el.addEventListener('change', () => upd(true));
+  out.textContent = el.value;
+}
+let sceneLayersKey = '';
+function sceneLayers(layers) {
+  const key = layers.map((l) => l.name).join();
+  if (key === sceneLayersKey) return;
+  sceneLayersKey = key;
+  $('sc-layers').innerHTML = layers.map((l, i) => `<label><span>${esc(l.name)} m</span><input type="range" min="0" max="100" step="1" value="${sliderOf(l.depth_m)}" data-li="${i}" data-lf="depth_m"><output>${l.depth_m}</output></label>` +
+    `<label><span>${esc(l.name)} m/s</span><input type="range" min="-10" max="10" step="0.1" value="${l.speed}" data-li="${i}" data-lf="speed"><output>${l.speed}</output></label>`).join('');
+  $('sc-layers').querySelectorAll('input').forEach((el) => {
+    const out = el.parentElement.querySelector('output');
+    const upd = (now) => {
+      const v = el.dataset.lf === 'depth_m' ? focusOf(Number(el.value)) : Number(el.value);
+      out.textContent = v;
+      send({ type: 'scene', change: { layer: { index: Number(el.dataset.li), [el.dataset.lf]: v } } });
+    };
+    el.addEventListener('change', () => upd(true));
+    el.addEventListener('input', () => { out.textContent = el.dataset.lf === 'depth_m' ? focusOf(Number(el.value)) : el.value; });
+  });
+}
+// the controls follow the scene the server reports (S1 moves the focus), except the one being used and while a change
+// is on its way
+function sceneSync(sc) {
+  if (sceneTimer !== null && Object.keys(scenePending).length) return;
+  const put = (id, v, text) => { const el = $(id); if (document.activeElement === el) return; el.value = String(v); const o = el.parentElement.querySelector('output'); if (o) o.textContent = text; };
+  put('sc-lv', sc?.liveview ? '1' : '0', sc?.liveview ? 'on' : 'off');   // a new session (restart) has no scene
+  if (!sc) return;
+  put('sc-preset', sc.preset, '');
+  put('sc-ev', sc.ev, `EV ${sc.ev}`);
+  put('sc-focal', sc.lens.focal_mm, `${sc.lens.focal_mm} mm`);
+  put('sc-ap', sc.lens.aperture, `f/${sc.lens.aperture}`);
+  put('sc-focus', sliderOf(sc.lens.focus_m), `${sc.lens.focus_m} m`);
+  put('sc-afx', sc.af_point[0], sc.af_point[0]);
+  put('sc-afy', sc.af_point[1], sc.af_point[1]);
+  put('sc-mode', sc.exposure.mode, '');
+  put('sc-iso', sc.exposure.iso, `ISO ${sc.exposure.iso}`);
+  put('sc-comp', sc.exposure.comp_ev, `${sc.exposure.comp_ev > 0 ? '+' : ''}${sc.exposure.comp_ev} EV`);
+}
+function showScene(sc) {
+  if (!sc) { sceneSync(null); $('sc-read').textContent = 'live view off: turn it on above (a scene input; it stays in the session log, --replay repeats it)'; return; }
+  sceneSync(sc);
+  sceneLayers(sc.layers);
+  const e = sc.exposure, sh = e.shutter_s >= 1 ? `${e.shutter_s.toFixed(1)}"` : `1/${Math.round(1 / e.shutter_s)}`;
+  const caps = (sc.captures || []).map((c) => `#${c.n} ${c.shutter_s >= 1 ? c.shutter_s + '"' : '1/' + Math.round(1 / c.shutter_s)} f/${c.aperture} ISO ${c.iso} (${c.ev_offset >= 0 ? '+' : ''}${c.ev_offset} EV) focus ${c.focus_m} m AF ${c.af}`).join('\n');
+  $('sc-read').textContent = `live view ${sc.liveview ? 'on' : 'off'} · exposure in use ${sh} f/${e.aperture} ISO ${e.iso}` +
+    ` (${e.ev_offset >= 0 ? '+' : ''}${e.ev_offset} EV against mid-grey${e.clipped ? ', ' + e.clipped + 'exposed' : ''}) · focus ${sc.lens.focus_m} m · AF ${sc.af} (S1)\n` +
+    sc.layers.map((l) => `${l.name.padEnd(10)} ${String(l.depth_m).padStart(6)} m  ${String(l.speed).padStart(5)} m/s  circle of confusion ${(l.coc_mm * 1000).toFixed(0)} µm`).join('\n') +
+    (caps ? `\ncaptures (S2):\n${caps}` : '') +
+    ((sc.clips || []).length ? '\nclips (REC):\n' + sc.clips.map((c) => `#${c.n} ${c.end_ns === null ? 'recording since ' + (c.start_ns / 1e9).toFixed(2) + ' s lab time' : c.seconds + ' s'}`).join('\n') : '');
+}
+function logEvent(t) { const el = $('eventlog'); el.textContent = (t + '\n' + el.textContent).slice(0, 40000); }
+function logRecord(r) {
+  const ui = (r.uiin || []).map((u) => `${u.code} ${u.ev || ''}`).join(', ');
+  logEvent(`#${r.n} ${r.token}: ${r.state_before} -> ${r.state && r.state.gui} ${r.state && r.state.gui_name}` +
+           `${ui ? ' | UI_IN ' + ui : ''}${r.indices && r.indices.length ? ' | sendEvent ' + r.indices.join(',') : ''}` +
+           ` | ${r.engine_commands} engine cmds` +
+           `${r.writes && r.writes.length ? ' | writes ' + JSON.stringify(r.writes) : ''}`);
+  if (r.gestures || r.touch_posted || r.cafwd) {
+    const el = $('touchlog');
+    const gs = (r.gestures || []).map((x) => `${x.name}(${x.x},${x.y})`).join(' ');
+    const tp = (r.touch_posted || []).map((x) => `${x.status}->${x.name}`).join(' ');
+    const ca = (r.cafwd || []).map((x) => `S-CAFWD param ${x.param} from ${x.caller}`).join(' ');
+    el.textContent = (`#${r.n} ${r.token}: driver ${gs || '-'} | HFW ${(r.tp_status || []).join(',') || '-'} | GUI ${tp || '-'} | ${ca || ''}\n` + el.textContent).slice(0, 40000);
+  }
+}
+
+// ---- tabs ----------------------------------------------------------------------------------------------------------
+$('tabs').addEventListener('click', (e) => {
+  const t = e.target.dataset.tab; if (!t) return;
+  document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('sel', b.dataset.tab === t));
+  document.querySelectorAll('.tab').forEach((d) => d.classList.toggle('sel', d.id === 'tab-' + t));
+});
+function fill(controls, screens) {
+  const rows = controls.filter((c) => !c.kind.startsWith('fw')).map((c) => {
+    const evs = (c.ev || []).filter(Boolean).join(' / ');
+    const ui = c.uiin ? `${c.uiin.group}.${c.uiin.byte}.${c.uiin.bit} <code>${c.uiin.code}</code> ${evs}`
+      : c.inject ? `code entry <code>0x5014c12e(0x${c.inject[0].toString(16)}, ${c.inject[1]} / ${c.inject[2]})</code> ${evs}`
+      : c.dial ? `counter writer <code>0x5014bae6(0x${c.dial[0].toString(16).padStart(8, '0')}, ±1)</code> ${evs}` : '–';
+    const gui = c.gui.map((i, k) => i == null ? '' : `${['on', 'long', 'off'][k]} ${i} <code>${esc(c.gui_names[k])}</code>`).filter(Boolean).join('<br>');
+    return `<tr><td><b>${esc(c.key)}</b></td><td>${esc(c.name)}</td><td class="st-${c.status}">${c.status}</td><td>${ui}</td><td>${gui || '–'}</td><td>${esc(c.reason || c.note || '')}</td></tr>`;
+  }).join('');
+  $('tab-keys').innerHTML = `<p class="note">Keys go through the firmware's own key decoder UI_IN (task 84) natively, and the firmware's camera application turns the decoded EV into the GUI's input itself. Dials: [ ] (main), , . (sub), mouse wheel; each detent goes through the firmware's counter writer and UI_IN's dial step. Multi-selector: Shift + arrows, Shift + Home / PageUp / End / PageDown for the diagonals, Shift + Enter to press (the press and the directions go through UI_IN's joystick decoder; the camera application's own query names the direction). Mode dial: PageUp / PageDown.</p>
+    <table><tr><th>Key</th><th>Control</th><th>Status</th><th>UI_IN (group.byte.bit, code, EV)</th><th>GUI (sendEvent index, message)</th><th>Note</th></tr>${rows}</table>`;
+  const fw = controls.filter((c) => c.kind.startsWith('fw'));
+  $('tab-fw').innerHTML = `<p class="note">Every other entry of UI_IN groups 0-4. Pressing one pushes its bit natively (group 4 through the firmware's own group-4 producer 0x5014d537); the decoded code shows in the status line. The CEC keys have a GUI index by name; the monitor joint 0x2403 and headphone 0x1711 switches go to 208 / 209 by explicit rows; LLPSW 0x121c and HDMI 0x0501 go through the switch table's pick (0x50424f9a, native) to 66 / 67 and 121. The others (grey) are decoded only: no EV name, or no GUI message for it.</p><div class="fw">` +
+    fw.map((c) => `<button class="b ${c.status === 'wired' ? 'wired' : 'decoded'}" data-fw="${c.id}" title="${esc((c.ev || []).join(' / '))}">${c.uiin.group}.${c.uiin.byte}.${c.uiin.bit} ${c.uiin.code}<br><small>${esc((c.ev || []).filter(Boolean)[0] || '')}</small></button>`).join('') + '</div>';
+  document.querySelectorAll('[data-fw]').forEach((b) => {
+    b.style.height = 'auto'; b.style.padding = '4px 10px'; b.style.borderRadius = '8px';
+    holdButton(b, b.dataset.fw);
+  });
+  $('tab-screens').innerHTML = `<table><tr><th>Screen</th><th>GUI state / panel</th><th>How</th><th>Status</th></tr>
+    <tr><td>Date prompt, shooting / standby info</td><td>0x0108 / 324, 10</td><td>start (the camera application takes the GUI to its screen), S1 or INFO</td><td>native; values from the native store; the shooting information from the application's state (S-RELSEQ, S-CARD, S-LENS stand in for the modules)</td></tr>
+    <tr><td>Setup Menu, all tabs and pages, help, popups, sub-screens</td><td>0x0b02 / 329 …</td><td>MENU, keys, dials</td><td>native; the live view stops behind it (S-THROUGH); closing it skips the settings' flash save (S-SETSAVE)</td></tr>
+    <tr><td>Playback, no picture</td><td>0x0505 / 324</td><td>PLAY before any S2</td><td>native "No Picture"</td></tr>
+    <tr><td>Super Control Panel and its cells' screens</td><td>0x0403 / 467 …</td><td>OK on the shooting screen, then arrows / dials / OK</td><td>native</td></tr>
+    <tr><td>Focus confirmation, recording screen, rec view</td><td>0x0108</td><td>S1, REC (mode dial 7, LLPSW released), S2</td><td>native (S-DISPFRAME runs CPU 3's DISP_FRAME; S-RECVIEW holds the capture's frame)</td></tr>
+    <tr><td>Every screen above on the EVF</td><td>layout byte 2 (0 in menus)</td><td>LV (V), eye sensor (N), or --device evf</td><td>the GUI is told (H-CONNECT 131) and the application re-enters the screen (S-OUTDISP); the EVF's bottom bar and repaint are still wrong (docs/om1-shutter-spec.md section 7 item 56)</td></tr>
+    <tr><td>Playback of the pictures taken</td><td>0x0508 / 0x050b</td><td>S2, then PLAY; left / right, INFO; PLAY or S1 back</td><td>native GUI; S-CARD keeps the images, S-PLAYSEQ finishes the play module's requests, S-PLAYCOMP answers for the play component, S-PLAYVIEW shows the frame S-SCENE renders again from the scene kept with the image</td></tr></table>`;
+  $('tab-standins').innerHTML = '<table><tr><th>Label</th><th>In use</th><th>What and why</th></tr>' +
+    Object.entries(screens.stand_ins).map(([k, v]) => `<tr><td><b>${k}</b></td><td class="inuse" data-si="${k}"></td><td>${esc(v)}</td></tr>`).join('') + '</table>';
+}
+setInterval(() => {
+  const used = new Set(STATUS.stand_ins || []);
+  document.querySelectorAll('[data-si]').forEach((td) => { td.textContent = used.has(td.dataset.si) ? 'yes' : ''; });
+}, 1000);
+$('restart').onclick = () => send({ type: 'control', op: 'restart' });
+$('pause').onclick = () => send({ type: 'control', op: STATUS.idle === 'off' ? 'resume' : 'pause' });
+$('quit').onclick = () => { api('/api/quit', {}).catch(() => {}); };
+
+// ---- firmware and start (the browser player) ------------------------------------------------------------------------
+const Q = new URLSearchParams(location.search);
+const ARGS = {};
+for (const k of ['lang', 'device', 'a15', 'start', 'tab', 'idle', 'touch', 'us_clock', 'compose']) if (Q.has(k)) ARGS[k] = Q.get(k);
+for (const k of ['no_bgdraw', 'debug_api']) if (Q.get(k) === '1') ARGS[k] = true;
+const fwStatus = (t) => { $('fwstatus').textContent = t; };
+const MiB = (n) => (n / 2 ** 20).toFixed(1) + ' MiB';
+let bootError = null;                // the message of a boot that failed (the file input is offered again)
+PP.onEvent = (m) => {
+  if (m.type === 'boot-failed') {
+    started = false; bootError = m.message;
+    $('fwfile').disabled = false; $('fwfile').value = '';
+    PP.worker.postMessage({ type: 'cache-info' });
+    fwStatus('could not start: ' + m.message);
+    $('ovl').textContent = 'could not start: ' + m.message + '\nchoose the firmware .BIN above, or the model it is for'; $('screen').classList.add('show-ovl');
+  }
+  else if (m.type === 'error' && m.message === bootError) return;
+  else if (m.type === 'error') { fwStatus('error: ' + m.message); $('ovl').textContent = 'error: ' + m.message; $('screen').classList.add('show-ovl'); }
+  else if (m.type === 'progress' && m.stage === 'unpack') fwStatus(`unpacking ${m.name} (${MiB(m.size)}) in this browser…`);
+  else if (m.type === 'progress' && m.stage === 'firmware') fwStatus(`firmware ${m.from === 'cache' ? 'from the cache in this browser' : 'unpacked and cached in this browser'}: main code ${MiB(m.rom)}, resources ${MiB(m.res)} (${JSON.stringify(m.T)} ms)`);
+  else if (m.type === 'progress' && m.stage === 'cache') { $('fwcache').disabled = !m.manifest || started; if (m.manifest && bootError === null) fwStatus(`cached firmware: ${m.manifest.bin.name} (${MiB(m.manifest.bin.size)}); choose a .BIN to replace it`); }
+  else if (m.type === 'progress' && m.stage === 'cache-cleared') { $('fwcache').disabled = true; fwStatus('the cached firmware is gone from this browser'); }
+};
+// The model: src/fw/model.mjs reads ?model= here as the Worker does (web/page.mjs gives it this page's query), and throws
+// for a code MODELS does not have; then no Worker starts and the picker offers the models. A pick reloads the page with
+// ?model=CODE and its other options kept: that model's firmware comes from its own cache in this browser (web/opfs.mjs)
+// or from its .BIN.
+const MODEL = await import('../src/fw/model.mjs').then((m) => modelDoc(m.MODEL), (e) => ({ error: e.message }));
+$('model').innerHTML = (MODEL.error ? '<option value="" disabled>choose a model</option>' : '') +
+  MODEL_LIST.map((m) => `<option value="${esc(m.model)}">${esc(m.label)}</option>`).join('');
+$('model').value = MODEL.model ?? '';
+$('model').onchange = (e) => { Q.set('model', e.target.value); location.search = Q.toString(); };
+let started = false;
+const go = (file) => { if (started) return; started = true; bootError = null; $('fwfile').disabled = true; $('fwcache').disabled = true; PP.boot(file, ARGS); init(); };
+$('screen').classList.add('show-ovl');
+if (MODEL.error) {
+  $('fwfile').disabled = $('fwclear').disabled = true;
+  fwStatus(MODEL.error);
+  $('ovl').textContent = `${MODEL.error}\npick a model above`;
+} else {
+  document.title = `OM-Emu (browser) · ${MODEL.name} (${MODEL.model})`;
+  $('sub').textContent = `firmware ${MODEL.bin}, emulated in this browser (emu in a Web Worker)`;
+  $('s-model').textContent = MODEL.model;
+  fwStatus(`Choose the camera's firmware file (${MODEL.bin}). It is read here; nothing is uploaded.`);
+  PP.start();
+  PP.worker.postMessage({ type: 'cache-info' });
+  $('fwfile').addEventListener('change', (e) => { if (e.target.files[0]) go(e.target.files[0]); });
+  $('fwcache').onclick = () => go(null);
+  $('fwclear').onclick = () => PP.worker.postMessage({ type: 'clear-cache' });
+  $('ovl').textContent = 'choose the firmware .BIN above (or start from the cache)';
+  if (Q.get('cache') === '1') go(null);
+}
+window.__playPage = { get drawn() { return drawn; }, get status() { return STATUS; }, canvas: () => g.getImageData(0, 0, cv.width, cv.height).data,
+  canvasSha16: () => { const d = g.getImageData(0, 0, cv.width, cv.height).data; return PagePlayer.sha16(new Uint8Array(d.buffer, d.byteOffset, d.length)); } };
+
+async function init() {
+  await PP.waitFor(() => PP.status || PP.bootFailed, 600000);
+  if (!PP.status) return;              // the boot failed (the file input is offered again) or never answered
+  try {
+    CONTROLS = await (await api('/api/controls')).json();
+    const screens = await (await api('/api/screens')).json();
+    for (const c of CONTROLS) {
+      BYID[c.id] = c;
+      for (const k of [c.key, c.alt_key]) if (k && !k.includes(' ') && c.kind !== 'dial' && c.kind !== 'modedial') KEYMAP[k] = c.id;
+    }
+    wireButtons(); fill(CONTROLS, screens);
+  } catch (e) { $('ovl').textContent = 'the Worker did not answer: ' + e.message; $('screen').classList.add('show-ovl'); return; }
+  statusLoop(); frames();
+  if (new URLSearchParams(location.search).get('selftest') === '1') selftest();
+}
+
+// ---- self-test (?selftest=1 under play.mjs --debug-api, result to /api/pagetest): drives this page's own handlers with synthetic events ----------
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function until(pred, ms) { const t0 = performance.now(); while (performance.now() - t0 < ms) { if (pred()) return true; await sleep(50); } return false; }
+function key(code, type, shiftKey) { window.dispatchEvent(new KeyboardEvent(type, { code, key: code.replace('Key', '').toLowerCase(), shiftKey: !!shiftKey, bubbles: true })); }
+async function tap(code) { key(code, 'keydown'); await sleep(150); key(code, 'keyup'); }
+async function selftest() {
+  const R = { steps: [] };
+  const step = (name, ok, extra) => R.steps.push({ name, ok, ...(extra || {}) });
+  step('first frame and running', await until(() => frameSeq >= 1 && STATUS.phase === 'running', 60000), { gui: STATUS.gui });
+  await sleep(500);
+  R.canvas_shooting = cv.toDataURL('image/png');
+  await tap('KeyM');
+  step('M key: Setup Menu (UI_IN, the camera application)', await until(() => STATUS.gui === '0x0b02', 20000), { gui: STATUS.gui });
+  await sleep(800);
+  const row0 = STATUS.menu && STATUS.menu.row;
+  await tap('ArrowDown');
+  step('ArrowDown: cursor moves', await until(() => STATUS.menu && STATUS.menu.row !== row0 && STATUS.phase === 'running', 20000), { row0, row: STATUS.menu && STATUS.menu.row });
+  await sleep(800);
+  R.canvas_menu = cv.toDataURL('image/png');
+  await tap('KeyM');
+  step('M key again: shooting screen', await until(() => STATUS.gui === '0x0108', 20000), { gui: STATUS.gui });
+  await sleep(800);
+  const r = cv.getBoundingClientRect();
+  const at = { clientX: r.left + 90 / 900 * r.width, clientY: r.top + 30 / 600 * r.height, pointerId: 7, bubbles: true, isPrimary: true };
+  cv.dispatchEvent(new PointerEvent('pointerdown', at));
+  await sleep(300);
+  cv.dispatchEvent(new PointerEvent('pointerup', at));
+  step('mouse on the monitor: GUI touch', await until(() => $('touchlog').textContent.includes('TOUCH'), 20000), { log: $('touchlog').textContent.slice(0, 300) });
+  await sleep(1000);
+  R.canvas_touch = cv.toDataURL('image/png');
+  const m0 = STATUS.mode_dial || 0;
+  for (let i = 0; i < 2; i++) { key('PageUp', 'keydown'); key('PageUp', 'keyup'); }   // faster than one input runs
+  step('PageUp twice quickly: mode dial two positions', await until(() => STATUS.mode_dial === (m0 + 2) % 10 && STATUS.phase === 'running', 20000), { m0, mode: STATUS.mode_dial });
+  // a firmware key pressed on its button and released off it (synthetic pointers cannot be captured): the up still goes
+  const fwb = document.querySelector('[data-fw="fw_2005"]');
+  const pressed = () => (STATUS.pressed || []).includes('fw_2005');
+  const rep0 = (STATUS.dropped || {})['key repeat'] || 0;
+  for (const pid of [11, 12]) {
+    fwb.dispatchEvent(new PointerEvent('pointerdown', { pointerId: pid, bubbles: true, isPrimary: true }));
+    const down = await until(() => pressed() && STATUS.phase === 'running', 20000);
+    document.body.dispatchEvent(new PointerEvent('pointerup', { pointerId: pid, bubbles: true, isPrimary: true }));
+    step(`firmware key 0x2005 pressed, released off the button (#${pid - 10})`, down && await until(() => !pressed() && STATUS.phase === 'running', 20000) &&
+         ((STATUS.dropped || {})['key repeat'] || 0) === rep0, { pressed: STATUS.pressed, dropped: STATUS.dropped });
+  }
+  key('PageDown', 'keydown', true); await sleep(150); key('PageDown', 'keyup', true);
+  step('Shift+PageDown: multi-selector down-right (UI_IN 0x02021234)', await until(() => $('eventlog').textContent.includes('0x02021234'), 20000) && STATUS.mode_dial === (m0 + 2) % 10, { mode: STATUS.mode_dial });
+  R.buttons = { wired: document.querySelectorAll('[data-ctl].b.wired').length, decoded: document.querySelectorAll('[data-ctl].b.decoded').length, none: document.querySelectorAll('[data-ctl].b.none').length };
+  R.keymap = KEYMAP;
+  R.events = $('eventlog').textContent.slice(0, 3000);
+  R.status = STATUS;
+  await api('/api/pagetest', R);
+}
+</script>
+</body>
+</html>

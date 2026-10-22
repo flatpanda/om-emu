@@ -1,0 +1,121 @@
+{
+  "format": "om1-checks/2",
+  "about": "The checks' runs: node emu/checks/<check>.mjs ARGS from the repository root, the exit status the run must give, its own environment variables (bin/checks.mjs ENV_WHITELIST), the output files it must write ({out} = its emu/out/checks/js/<run>/ directory; bin/golden.mjs records their digests) and, for a fault-point run, a line its stdout or stderr must hold. volatile: the stdout lines whose detail reads the wall clock or the host's memory, recorded by bin/golden.mjs up to the end of the match. No firmware-derived data.",
+  "checks": {
+    "gen_vsc_regs": {"runs": [
+      {"id": "vscregs", "args": ["--check"], "rc": 0},
+      {"id": "vscregs-usage", "args": ["--check=1"], "rc": 2}
+    ]},
+    "check_kernel": {"runs": [
+      {"id": "kernel", "args": [], "rc": 0},
+      {"id": "kernel-args", "args": ["--bogus"], "rc": 0}
+    ]},
+    "check_nd128": {"runs": [
+      {"id": "nd128", "args": ["--report", "{out}/nd128-report.json"], "rc": 0, "files": ["{out}/nd128-report.json"]},
+      {"id": "nd128-usage", "args": ["--t"], "rc": 2}
+    ]},
+    "check_isa": {"runs": [
+      {"id": "isa", "args": [], "rc": 0},
+      {"id": "isa-usage", "args": ["--s", "1"], "rc": 2},
+      {"id": "isa-inert", "args": ["--golden", "x.json", "--seed", "7"], "rc": 0},
+      {"id": "isa-regen", "args": ["--regen"], "rc": 2}
+    ]},
+    "check_irq": {"runs": [
+      {"id": "irq", "args": [], "rc": 0},
+      {"id": "irq-mutants", "args": ["--mutants"], "rc": 0},
+      {"id": "irq-i2", "args": ["--only", "I2"], "rc": 0},
+      {"id": "irq-usage", "args": ["--only"], "rc": 2},
+      {"id": "irq-xm28", "args": [], "rc": 1, "env": {"OM_MACHINE": "mutant=28"}},
+      {"id": "irq-fault", "args": ["--only", "I10"], "rc": 1, "env": {"OM_FAULT": "ipi-80c-clear-all"}, "stdout_re": "^      \\+0x80c clears the written bits: got 0, want 16$"}
+    ]},
+    "check_perf": {"runs": [
+      {"id": "perf", "args": [], "rc": 0},
+      {"id": "perf-bench", "args": ["--bench"], "rc": 0},
+      {"id": "perf-usage", "args": ["--p"], "rc": 2},
+      {"id": "perf-inert", "args": ["--bench", "--repeat", "2", "--paced", "3"], "rc": 0},
+      {"id": "perf-usage-order", "args": ["--repeat", "x", "--p"], "rc": 2},
+      {"id": "perf-usage-play", "args": ["--play", "--zz"], "rc": 2},
+      {"id": "perf-fault", "args": [], "rc": 1, "env": {"OM_FAULT": "p1-isa-flags"}, "stdout_re": "^\\[FAIL\\] P1 "}
+    ]},
+    "check_display": {"runs": [
+      {"id": "display", "args": [], "rc": 0, "files": ["{out}/tft.ycc", "{out}/tft.json", "{out}/tft-to-evf.ycc", "{out}/tft-to-evf.json", "{out}/evf.ycc", "{out}/evf.json", "{out}/evf-to-tft.ycc", "{out}/evf-to-tft.json"]},
+      {"id": "display-seed2", "args": ["--seed", "2"], "rc": 0, "files": ["{out}/tft.ycc", "{out}/tft.json", "{out}/tft-to-evf.ycc", "{out}/tft-to-evf.json", "{out}/evf.ycc", "{out}/evf.json", "{out}/evf-to-tft.ycc", "{out}/evf-to-tft.json"]},
+      {"id": "display-knone", "args": ["--kernel", "none"], "rc": 0, "files": ["{out}/tft.ycc", "{out}/tft.json", "{out}/tft-to-evf.ycc", "{out}/tft-to-evf.json", "{out}/evf.ycc", "{out}/evf.json", "{out}/evf-to-tft.ycc", "{out}/evf-to-tft.json"]},
+      {"id": "display-usage", "args": ["--kernel", "x"], "rc": 2},
+      {"id": "display-fault", "args": [], "rc": 1, "env": {"OM_FAULT": "display-stub-preset"}, "stderr_re": "^AssertionError$"}
+    ]},
+    "check_liveview": {"runs": [
+      {"id": "liveview", "args": [], "rc": 0, "files": ["{out}/tft.ycc", "{out}/tft.json"]},
+      {"id": "liveview-g3s4", "args": ["--only", "G3", "--seed", "4"], "rc": 0},
+      {"id": "liveview-g3s2", "args": ["--only", "G3", "--seed", "2"], "rc": 0},
+      {"id": "liveview-g3s5", "args": ["--only", "G3", "--seed", "5"], "rc": 0},
+      {"id": "liveview-g3s7", "args": ["--only", "G3", "--seed", "7"], "rc": 0},
+      {"id": "liveview-knone", "args": ["--kernel", "none"], "rc": 0, "files": ["{out}/tft.ycc", "{out}/tft.json"]},
+      {"id": "liveview-usage", "args": ["--only", "G9"], "rc": 2},
+      {"id": "liveview-usage2", "args": ["--only", "G1", "--write-notes"], "rc": 2},
+      {"id": "liveview-fault", "args": [], "rc": 1, "env": {"OM_FAULT": "liveview-winreg"}, "stderr_re": "^AssertionError$"}
+    ]},
+    "check_text": {"runs": [
+      {"id": "text", "args": [], "rc": 0},
+      {"id": "text-seed2", "args": ["--seed", "2"], "rc": 0},
+      {"id": "text-knone", "args": ["--kernel", "none"], "rc": 0},
+      {"id": "text-mutants", "args": ["--mutants"], "rc": 0},
+      {"id": "text-mut-sset", "args": [], "rc": 1, "env": {"OM_TEXT_MUTANT": "sset-accepted"}},
+      {"id": "text-mut-nohstack", "args": [], "rc": 1, "env": {"OM_TEXT_MUTANT": "no-h-stack"}},
+      {"id": "text-usage", "args": ["--write-notes", "--kernel", "none"], "rc": 2},
+      {"id": "text-fault", "args": [], "rc": 1, "env": {"OM_FAULT": "text-getstring"}, "stdout_re": "^\\[FAIL\\] 1 native 0x51257bfb"}
+    ]},
+    "check_osd": {"runs": [
+      {"id": "osd", "args": [], "rc": 0},
+      {"id": "osd-seed2", "args": ["--seed", "2"], "rc": 0},
+      {"id": "osd-knone", "args": ["--kernel", "none"], "rc": 0},
+      {"id": "osd-usage", "args": ["--kernel", "x"], "rc": 2},
+      {"id": "osd-seed0", "args": ["--seed", "0"], "rc": 1},
+      {"id": "osd-seed5", "args": ["--seed", "5"], "rc": 1},
+      {"id": "osd-seed6", "args": ["--seed", "6"], "rc": 1},
+      {"id": "osd-fault", "args": [], "rc": 1, "env": {"OM_FAULT": "osd-debug-write"}, "stderr_re": "^AssertionError: \\[\\{\"code\": 22, \"name\": \"DEBUG_CPU_WRITE\""}
+    ]},
+    "check_menu": {"runs": [
+      {"id": "menu-quick", "args": ["--quick"], "rc": 0},
+      {"id": "menu", "args": [], "rc": 0},
+      {"id": "menu-full", "args": ["--full"], "rc": 0},
+      {"id": "menu-jobs4", "args": ["--jobs", "4"], "rc": 0},
+      {"id": "menu-empty", "args": ["--store", "empty"], "rc": 0},
+      {"id": "menu-empty-quick", "args": ["--store", "empty", "--quick"], "rc": 0},
+      {"id": "menu-mutants", "args": ["--mutants"], "rc": 0},
+      {"id": "menu-mut-persist-page+1", "args": ["--quick"], "rc": 1, "env": {"OM_MENU_MUTANT": "persist-page+1"}},
+      {"id": "menu-mut-no-ctors", "args": ["--quick"], "rc": 1, "env": {"OM_MENU_MUTANT": "no-ctors"}},
+      {"id": "menu-mut-gui-4513-native", "args": ["--quick"], "rc": 1, "env": {"OM_MENU_MUTANT": "gui-4513-native"}},
+      {"id": "menu-mut-settle-no-irq", "args": ["--quick"], "rc": 1, "env": {"OM_MENU_MUTANT": "settle-no-irq"}},
+      {"id": "menu-mut-vsc-other-device", "args": ["--quick"], "rc": 1, "env": {"OM_MENU_MUTANT": "vsc-other-device"}},
+      {"id": "menu-usage1", "args": ["--write-notes", "--quick"], "rc": 2},
+      {"id": "menu-usage2", "args": ["--jobs", "0"], "rc": 2},
+      {"id": "menu-usage3", "args": ["--store", "foo"], "rc": 2},
+      {"id": "menu-badmutant", "args": ["--quick"], "rc": 1, "env": {"OM_MENU_MUTANT": "zzz"}},
+      {"id": "menu-fault", "args": ["--quick"], "rc": 1, "env": {"OM_FAULT": "menu-gui-state"}, "stdout_re": "^      p1-en-A: GUI state 0x0b03$"}
+    ]},
+    "check_nav": {"runs": [
+      {"id": "nav-quick", "args": ["--quick"], "rc": 0},
+      {"id": "nav", "args": [], "rc": 0, "files": ["{out}/check-N8/01-SHOT-tft.ycc", "{out}/check-N8/01-SHOT-tft.json", "{out}/check-N8/02-SWITCH-evf.ycc", "{out}/check-N8/02-SWITCH-evf.json", "{out}/check-N8/03-SHOT-evf.ycc", "{out}/check-N8/03-SHOT-evf.json", "{out}/check-N8/04-SWITCH-tft.ycc", "{out}/check-N8/04-SWITCH-tft.json", "{out}/check-N8/05-SHOT-tft.ycc", "{out}/check-N8/05-SHOT-tft.json"]},
+      {"id": "nav-jobs4", "args": ["--jobs", "4"], "rc": 0},
+      {"id": "nav-mutants", "args": ["--mutants"], "rc": 0},
+      {"id": "nav-mut-no-store-init", "args": ["--quick"], "rc": 1, "env": {"OM_NAV_MUTANT": "no-store-init"}},
+      {"id": "nav-mut-defaults-shift", "args": ["--quick"], "rc": 1, "env": {"OM_NAV_MUTANT": "defaults-shift"}},
+      {"id": "nav-mut-reg0-clear", "args": ["--quick"], "rc": 1, "env": {"OM_NAV_MUTANT": "reg0-clear"}},
+      {"id": "nav-mut-pri60", "args": ["--quick"], "rc": 1, "env": {"OM_NAV_MUTANT": "pri60"}},
+      {"id": "nav-mut-no-dial-init", "args": ["--quick"], "rc": 1, "env": {"OM_NAV_MUTANT": "no-dial-init"}},
+      {"id": "nav-mut-updown-swapped", "args": ["--quick"], "rc": 1, "env": {"OM_NAV_MUTANT": "updown-swapped"}},
+      {"id": "nav-mut-b2-no-takeover", "args": ["--quick"], "rc": 1, "env": {"OM_NAV_MUTANT": "b2-no-takeover"}},
+      {"id": "nav-mut-b2-loutput-1", "args": ["--quick"], "rc": 1, "env": {"OM_NAV_MUTANT": "b2-loutput-1"}},
+      {"id": "nav-mut-b2-scope", "args": ["--quick"], "rc": 1, "env": {"OM_NAV_MUTANT": "b2-scope"}},
+      {"id": "nav-mut-switch-no-resend", "args": ["--quick"], "rc": 1, "env": {"OM_NAV_MUTANT": "switch-no-resend"}},
+      {"id": "nav-mut-b7-no-task16", "args": ["--quick"], "rc": 1, "env": {"OM_NAV_MUTANT": "b7-no-task16"}},
+      {"id": "nav-mut-lang-no-follow", "args": ["--quick"], "rc": 1, "env": {"OM_NAV_MUTANT": "lang-no-follow"}},
+      {"id": "nav-usage1", "args": ["--jobs", "0"], "rc": 2},
+      {"id": "nav-usage2", "args": ["--bogus"], "rc": 2},
+      {"id": "nav-badmutant", "args": ["--quick"], "rc": 1, "env": {"OM_NAV_MUTANT": "zzz"}},
+      {"id": "nav-usage3", "args": ["--write-notes", "--quick"], "rc": 1},
+      {"id": "nav-fault", "args": ["--quick"], "rc": 1, "env": {"OM_FAULT": "nav-scpu-command"}, "stdout_re": "^      stderr: "}
+    ]}
+  }
+}

@@ -1,0 +1,12 @@
+{
+ "format": "om-emu-player-inputs/1",
+ "scenario": "power-replay",
+ "labs": ["power-replay","power-replay#2","power-replay#3"],
+ "source": "captured on 2026-10-13 (bin/play.mjs --replay of power's session log (restart and power entries), a queued quit); the inputs only, without the outcomes recorded with them",
+ "actions": [
+  [0,"file","replay",[[{"idx":1,"lab_ns":268925120,"input":{"type":"key","id":"power","action":"down"}},{"idx":2,"lab_ns":null,"input":{"type":"control","op":"power","value":1}},{"idx":3,"lab_ns":null,"input":{"type":"control","op":"restart"}},{"idx":4,"lab_ns":268925120,"input":{"type":"key","id":"menu","action":"down"}},{"idx":5,"lab_ns":335656400,"input":{"type":"key","id":"menu","action":"up"}}]],{}],
+  [1,"ctor","Player",[],{"lang":"en","device":"tft","evf_layout":false,"a15":"off","start":"shooting","tab":"7,1,1","idle":"off","touch":"gui","us_clock":"lab","no_camseq":false,"no_bgdraw":false,"compose":"boundary","port":0,"no_browser":true,"out":"<out>","replay":"<replay>","debug_api":true,"x_mutant":null,"x_trim_keep":null,"no_wait_on_error":true}],
+  [2,"player","submit",[{"type":"control","op":"quit"}],{}],
+  [3,"player","run",[],{}]
+ ]
+}

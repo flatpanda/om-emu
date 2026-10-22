@@ -1,0 +1,15 @@
+{
+ "format": "om-emu-player-inputs/1",
+ "scenario": "a15-open",
+ "labs": ["a15-open"],
+ "source": "captured on 2026-10-13 (XCALL:ctrl_or:2:0, request shoot (the A15 guard sees an open bracket)); the inputs only, without the outcomes recorded with them",
+ "actions": [
+  [0,"ctor","Player",[],{"lang":"en","device":"tft","evf_layout":false,"a15":"auto","start":"shooting","tab":"7,1,1","idle":"off","touch":"gui","us_clock":"lab","no_camseq":false,"no_bgdraw":false,"compose":"boundary","port":0,"no_browser":true,"out":"<out>","replay":null,"debug_api":true,"x_mutant":null,"x_trim_keep":null,"no_wait_on_error":true}],
+  [1,"player","open_session",[],{}],
+  [2,"player","submit",[{"type":"token","token":"XCALL:ctrl_or:2:0"}],{}],
+  [3,"player","tick",[],{}],
+  [4,"player","submit",[{"type":"request","id":"shoot"}],{}],
+  [5,"player","tick",[],{}],
+  [6,"player","close_session",[],{}]
+ ]
+}

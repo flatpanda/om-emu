@@ -1,0 +1,24 @@
+<!doctype html>
+<!-- bin/webgate.mjs's page (gate B5): runs one job of web/runner.mjs in a fresh web/worker.mjs, with the .BIN from the
+     file input or the OPFS cache, and returns its result. The calls documents come from the gate server's test-only
+     route. Not part of the player. -->
+<html lang="en"><meta charset="utf-8"><title>emu web gate</title>
+<input type="file" id="fwfile">
+<script type="module">
+window.gateRun = async (job) => {
+  const file = job.useFile ? document.getElementById('fwfile').files[0] : undefined;
+  if (job.useFile && !file) throw new Error('gate: no file in the input');
+  if (job.callsName) job.calls = await (await fetch(`/test/calls/${job.callsName}.calls.json`)).json();
+  const w = new Worker('./worker.mjs', { type: 'module' });
+  try {
+    return await new Promise((resolve, reject) => {
+      w.onmessage = (e) => { const m = e.data; if (m.type === 'gate-result') resolve(m); else if (m.type === 'error') reject(new Error(m.message + '\n' + m.stack)); };
+      w.onerror = (e) => reject(new Error(`worker: ${e.message}`));
+      const { useFile, callsName, ...rest } = job;
+      w.postMessage({ type: 'gate', job: rest, file, cache: job.cache !== false });
+    });
+  } finally { w.terminate(); }
+};
+window.clearCache = () => new Promise((resolve) => { const w = new Worker('./worker.mjs', { type: 'module' }); w.onmessage = () => { w.terminate(); resolve(true); }; w.postMessage({ type: 'clear-cache' }); });
+</script>
+</html>

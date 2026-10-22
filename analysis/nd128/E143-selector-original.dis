@@ -1,0 +1,58 @@
+
+unpacked/E143/OLY_E_143_1900_0000_0000.BIN.blk00000000.OE.0100.bin:     file format binary
+
+
+Disassembly of section .data:
+
+002d00ee <.data+0x2d00ee>:
+  2d00ee:	f8 b8 3b    	movbu	(59,sp),d0
+  2d00f1:	a0 01       	cmp	1,d0
+  2d00f3:	c8 18       	beq	0x2d010b
+  2d00f5:	a0 02       	cmp	2,d0
+  2d00f7:	c8 17       	beq	0x2d010e
+  2d00f9:	a0 03       	cmp	3,d0
+  2d00fb:	c8 17       	beq	0x2d0112
+  2d00fd:	a0 04       	cmp	4,d0
+  2d00ff:	c8 1a       	beq	0x2d0119
+  2d0101:	a0 05       	cmp	5,d0
+  2d0103:	c8 1a       	beq	0x2d011d
+  2d0105:	a0 06       	cmp	6,d0
+  2d0107:	c8 20       	beq	0x2d0127
+  2d0109:	ca 28       	bra	0x2d0131
+  2d010b:	12          	extb	d2
+  2d010c:	ca 1f       	bra	0x2d012b
+  2d010e:	12          	extb	d2
+  2d010f:	ea          	add	d2,d2
+  2d0110:	ca 1b       	bra	0x2d012b
+  2d0112:	12          	extb	d2
+  2d0113:	88          	mov	d2,d0
+  2d0114:	54          	asl2	d0
+  2d0115:	f1 08       	sub	d2,d0
+  2d0117:	ca 0a       	bra	0x2d0121
+  2d0119:	12          	extb	d2
+  2d011a:	56          	asl2	d2
+  2d011b:	ca 10       	bra	0x2d012b
+  2d011d:	12          	extb	d2
+  2d011e:	88          	mov	d2,d0
+  2d011f:	54          	asl2	d0
+  2d0120:	e8          	add	d2,d0
+  2d0121:	5c 58       	mov	(88,sp),a0
+  2d0123:	f0 50       	movbu	d0,(a0)
+  2d0125:	ca 27       	bra	0x2d014c
+  2d0127:	12          	extb	d2
+  2d0128:	f9 02 06    	udf00	6,d2
+  2d012b:	5c 58       	mov	(88,sp),a0
+  2d012d:	f0 58       	movbu	d2,(a0)
+  2d012f:	ca 1d       	bra	0x2d014c
+  2d0131:	5c 58       	mov	(88,sp),a0
+  2d0133:	04          	clr	d1
+  2d0134:	f0 54       	movbu	d1,(a0)
+  2d0136:	85 01       	mov	1,d1
+  2d0138:	46 04       	mov	d1,(4,sp)
+  2d013a:	42 08       	mov	d0,(8,sp)
+  2d013c:	fc cc 02 00 	mov	234881026,d0
+  2d0140:	00 0e 
+  2d0142:	2d c7 09    	mov	2503,d1
+  2d0145:	dd 66 67 2a 	call	0x5768ab,[d2,d3,a2],96
+  2d0149:	00 e0 60 
+  2d014c:	df f0 54    	ret	[d2,d3,a2,a3],84

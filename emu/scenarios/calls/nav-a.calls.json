@@ -1,0 +1,26 @@
+{
+ "format": "om-emu-session-inputs/1",
+ "scenario": "nav-a",
+ "source": "captured on 2026-10-13 (NavSession with lab time: OPEN DOWN DOWN RIGHT INFO INFO OK MENU, compose(tft) after each); the inputs only, without the outcomes recorded with them",
+ "actions": [
+  [0,"ctor","NavSession",["en","tft","skip",{"$tuple":[7,1,1]},{}],{"open_menu":false,"png":"each","tag":"ref-nav","time":true}],
+  [1,"nav","__enter__",[],{}],
+  [2,"nav","step",["OPEN"],{}],
+  [3,"lab","compose",["tft"],{}],
+  [4,"nav","step",["DOWN"],{}],
+  [5,"lab","compose",["tft"],{}],
+  [6,"nav","step",["DOWN"],{}],
+  [7,"lab","compose",["tft"],{}],
+  [8,"nav","step",["RIGHT"],{}],
+  [9,"lab","compose",["tft"],{}],
+  [10,"nav","step",["INFO"],{}],
+  [11,"lab","compose",["tft"],{}],
+  [12,"nav","step",["INFO"],{}],
+  [13,"lab","compose",["tft"],{}],
+  [14,"nav","step",["OK"],{}],
+  [15,"lab","compose",["tft"],{}],
+  [16,"nav","step",["MENU"],{}],
+  [17,"lab","compose",["tft"],{}],
+  [18,"nav","close",[],{}]
+ ]
+}

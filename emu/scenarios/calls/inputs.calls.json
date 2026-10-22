@@ -1,0 +1,23 @@
+{
+ "format": "om-emu-player-inputs/1",
+ "scenario": "inputs",
+ "labs": ["inputs"],
+ "source": "captured on 2026-10-13 (a touch at (90,30), a dial and the lever: touch down, WAIT:30, up, WAIT:300, main dial +1, lever 1); the inputs only, without the outcomes recorded with them",
+ "actions": [
+  [0,"ctor","Player",[],{"lang":"en","device":"tft","evf_layout":false,"a15":"off","start":"shooting","tab":"7,1,1","idle":"off","touch":"gui","us_clock":"lab","no_camseq":false,"no_bgdraw":false,"compose":"boundary","port":0,"no_browser":true,"out":"<out>","replay":null,"debug_api":true,"x_mutant":null,"x_trim_keep":null,"no_wait_on_error":true}],
+  [1,"player","open_session",[],{}],
+  [2,"player","submit",[{"type":"touch","action":"down","x":90,"y":30}],{}],
+  [3,"player","tick",[],{}],
+  [4,"player","submit",[{"type":"token","token":"WAIT:30"}],{}],
+  [5,"player","tick",[],{}],
+  [6,"player","submit",[{"type":"touch","action":"up","x":90,"y":30}],{}],
+  [7,"player","tick",[],{}],
+  [8,"player","submit",[{"type":"token","token":"WAIT:300"}],{}],
+  [9,"player","tick",[],{}],
+  [10,"player","submit",[{"type":"dial","id":"main","detents":1}],{}],
+  [11,"player","tick",[],{}],
+  [12,"player","submit",[{"type":"switch","id":"lever","value":1}],{}],
+  [13,"player","tick",[],{}],
+  [14,"player","close_session",[],{}]
+ ]
+}

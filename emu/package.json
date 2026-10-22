@@ -1,0 +1,16 @@
+{
+  "name": "om-emu",
+  "private": true,
+  "type": "module",
+  "description": "OM-Emu: an emulator of Olympus/OM camera firmware in JavaScript; see README.md",
+  "engines": { "node": ">=26" },
+  "scripts": {
+    "test": "node bin/test.mjs",
+    "test:pure": "node bin/test-pure.mjs",
+    "golden": "node bin/golden.mjs check",
+    "play": "sh play.sh",
+    "fetch-fw": "node bin/fetch-fw.mjs",
+    "run": "node bin/run.mjs",
+    "bench": "node bin/bench.mjs"
+  }
+}

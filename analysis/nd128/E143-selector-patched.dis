@@ -1,0 +1,68 @@
+
+artifacts/nd128/OM1_v1.9_ND128.main-code.bin:     file format binary
+
+
+Disassembly of section .data:
+
+002d00ee <.data+0x2d00ee>:
+  2d00ee:	f8 b8 3b    	movbu	(59,sp),d0
+  2d00f1:	a0 01       	cmp	1,d0
+  2d00f3:	c0 3e       	blt	0x2d0131
+  2d00f5:	a0 07       	cmp	7,d0
+  2d00f7:	c1 3a       	bgt	0x2d0131
+  2d00f9:	12          	extb	d2
+  2d00fa:	81          	mov	d0,d1
+  2d00fb:	00          	clr	d0
+  2d00fc:	e8          	add	d2,d0
+  2d00fd:	29 ff       	add	-1,d1
+  2d00ff:	c9 fd       	bne	0x2d00fc
+  2d0101:	82          	mov	d0,d2
+  2d0102:	ca 29       	bra	0x2d012b
+  2d0104:	a0 06       	cmp	6,d0
+  2d0106:	c9 03       	bne	0x2d0109
+  2d0108:	40          	inc	d0
+  2d0109:	f8 53 23    	movbu	d0,(35,a3)
+  2d010c:	df f0 1c    	ret	[d2,d3,a2,a3],28
+  2d010f:	cb          	nop	
+  2d0110:	cb          	nop	
+  2d0111:	cb          	nop	
+  2d0112:	cb          	nop	
+  2d0113:	cb          	nop	
+  2d0114:	cb          	nop	
+  2d0115:	cb          	nop	
+  2d0116:	cb          	nop	
+  2d0117:	cb          	nop	
+  2d0118:	cb          	nop	
+  2d0119:	cb          	nop	
+  2d011a:	cb          	nop	
+  2d011b:	cb          	nop	
+  2d011c:	cb          	nop	
+  2d011d:	cb          	nop	
+  2d011e:	cb          	nop	
+  2d011f:	cb          	nop	
+  2d0120:	cb          	nop	
+  2d0121:	cb          	nop	
+  2d0122:	cb          	nop	
+  2d0123:	cb          	nop	
+  2d0124:	cb          	nop	
+  2d0125:	cb          	nop	
+  2d0126:	cb          	nop	
+  2d0127:	cb          	nop	
+  2d0128:	cb          	nop	
+  2d0129:	cb          	nop	
+  2d012a:	cb          	nop	
+  2d012b:	5c 58       	mov	(88,sp),a0
+  2d012d:	f0 58       	movbu	d2,(a0)
+  2d012f:	ca 1d       	bra	0x2d014c
+  2d0131:	5c 58       	mov	(88,sp),a0
+  2d0133:	04          	clr	d1
+  2d0134:	f0 54       	movbu	d1,(a0)
+  2d0136:	85 01       	mov	1,d1
+  2d0138:	46 04       	mov	d1,(4,sp)
+  2d013a:	42 08       	mov	d0,(8,sp)
+  2d013c:	fc cc 02 00 	mov	234881026,d0
+  2d0140:	00 0e 
+  2d0142:	2d c7 09    	mov	2503,d1
+  2d0145:	dd 66 67 2a 	call	0x5768ab,[d2,d3,a2],96
+  2d0149:	00 e0 60 
+  2d014c:	df f0 54    	ret	[d2,d3,a2,a3],84

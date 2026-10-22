@@ -1,0 +1,54 @@
+# check_menu pinned observations (regenerate with --write-notes)
+# UNVERIFIED <session> <masked px>: cells the reference does not predict (R5, R6); "row N" is the 0-based row index
+# PROP4513 <session> <return site>:<count>...: S-PROP answers per return site (property 4513: 0x503eff61 the GUI gate, 0x503d72c5 and 0x503d2551 reached once the descriptor hash exists)
+# U1 <page-lang> <pixels where the A and B composites differ>
+# REFUSE <session>: BMP_TRANSPARENCY refusals in the default model
+# ERRLOG <session>: firmware error-log calls by code
+ERRLOG p1-en-A 0x1c005002x28 0x37005208x1
+ERRLOG p1-en-B 0x1c005002x28 0x37005208x1
+ERRLOG p1-en-c3-A 0x1c005002x28 0x37005208x1
+ERRLOG p1-en-evf-A 0x1c005002x28
+ERRLOG p1-en-evflayout-A 0x1c005002x28
+ERRLOG p1-en-refuse 0x1c005002x28 0x37005208x1
+ERRLOG p1-ja-A 0x1c005002x28 0x37005208x1
+ERRLOG p1-ja-B 0x1c005002x28 0x37005208x1
+ERRLOG p1-zh-CN-A 0x1c005002x28 0x37005208x1
+ERRLOG p1-zh-CN-B 0x1c005002x28 0x37005208x1
+ERRLOG p2-en-A 0x1c005002x28 0x37005208x1
+ERRLOG p3-en-A 0x1c005002x28 0x37005208x1
+ERRLOG p4-en-A 0x1c005002x28 0x37005208x1
+ERRLOG p5-en-A 0x1c005002x28 0x37005208x1
+ERRLOG p5-en-B 0x1c005002x28 0x37005208x1
+ERRLOG p5-en-c7-A 0x1c005002x28 0x37005208x1
+ERRLOG p5-en-seed-A 0x1c005002x28 0x37005208x1
+ERRLOG p6-en-A 0x1c005002x28 0x37005208x1
+ERRLOG p6-ja-A 0x1c005002x28 0x37005208x1
+EVFLAYOUT p1-en-evflayout-A mode byte 0 after H-CONNECT {"layout": 2, "connect": 5} composite sha256 210921c8d3204901a19346603225725fcd11d9607f140ca1e502339bc68e0cd4
+PROP4513 p1-en-A 0x503d72c5:12 0x503eff61:29
+PROP4513 p1-en-B 0x503d72c5:12 0x503eff61:29
+PROP4513 p1-en-c3-A 0x503d72c5:12 0x503eff61:29
+PROP4513 p1-en-evf-A 0x503d72c5:12 0x503eff61:29
+PROP4513 p1-en-evflayout-A 0x503d72c5:12 0x503eff61:59
+PROP4513 p1-en-refuse 0x503d72c5:12 0x503eff61:29
+PROP4513 p1-ja-A 0x503d72c5:12 0x503eff61:29
+PROP4513 p1-ja-B 0x503d72c5:12 0x503eff61:29
+PROP4513 p1-zh-CN-A 0x503d72c5:12 0x503eff61:29
+PROP4513 p1-zh-CN-B 0x503d72c5:12 0x503eff61:29
+PROP4513 p2-en-A 0x503d72c5:2 0x503eff61:29
+PROP4513 p3-en-A 0x503d72c5:8 0x503eff61:37
+PROP4513 p4-en-A 0x503d72c5:4 0x503eff61:33
+PROP4513 p5-en-A 0x503d2551:10 0x503d72c5:8 0x503eff61:29
+PROP4513 p5-en-B 0x503d2551:10 0x503d72c5:8 0x503eff61:29
+PROP4513 p5-en-c7-A 0x503d2551:10 0x503d72c5:8 0x503eff61:29
+PROP4513 p5-en-seed-A 0x503d2551:10 0x503d72c5:8 0x503eff61:29
+PROP4513 p6-en-A 0x503d72c5:2 0x503eff61:29
+PROP4513 p6-ja-A 0x503d72c5:2 0x503eff61:29
+REFUSE p1-en-refuse first pass: direct 139 as predicted, 0 in unverified cells, 0 on the kind-3 path (not predicted)
+U1 p1-en 0
+U1 p1-ja 20
+U1 p1-zh-CN 1
+U1 p5-en 3
+UNVERIFIED p3-en-A 36456 px: 56 (row 1 mode 5339), 57 (row 2 mode 3416), 63 (row 1 mode 5339), 64 (row 2 mode 3416), 70 (row 1 mode 5339), 71 (row 2 mode 3416), 77 (row 1 mode 5339), 78 (row 2 mode 3416), 84 (row 1 mode 5339), 85 (row 2 mode 3416), 91 (row 1 mode 5339), 92 (row 2 mode 3416), 98 (row 1 mode 5339), 99 (row 2 mode 3416), 105 (row 1 mode 5339), 106 (row 2 mode 3416), 112 (row 1 mode 5339), 113 (row 2 mode 3416), 119 (row 1 mode 5339), 120 (row 2 mode 3416), 126 (row 1 mode 5339), 127 (row 2 mode 3416)
+UNVERIFIED p4-en-A 18228 px: 56 (row 1 mode 2031), 63 (row 1 mode 2031), 70 (row 1 mode 2031), 77 (row 1 mode 2031), 84 (row 1 mode 2031), 91 (row 1 mode 2031), 98 (row 1 mode 2031), 105 (row 1 mode 2031), 112 (row 1 mode 2031), 119 (row 1 mode 2031), 126 (row 1 mode 2031)
+UNVERIFIED p6-en-A 36456 px: 56 (row 1 mode 5120), 60 (row 5 mode 3269), 63 (row 1 mode 5120), 67 (row 5 mode 3269), 70 (row 1 mode 5120), 74 (row 5 mode 3269), 77 (row 1 mode 5120), 81 (row 5 mode 3269), 84 (row 1 mode 5120), 88 (row 5 mode 3269), 91 (row 1 mode 5120), 95 (row 5 mode 3269), 98 (row 1 mode 5120), 102 (row 5 mode 3269), 105 (row 1 mode 5120), 109 (row 5 mode 3269), 112 (row 1 mode 5120), 116 (row 5 mode 3269), 119 (row 1 mode 5120), 123 (row 5 mode 3269), 126 (row 1 mode 5120), 130 (row 5 mode 3269)
+UNVERIFIED p6-ja-A 36456 px: 56 (row 1 mode 5120), 60 (row 5 mode 3269), 63 (row 1 mode 5120), 67 (row 5 mode 3269), 70 (row 1 mode 5120), 74 (row 5 mode 3269), 77 (row 1 mode 5120), 81 (row 5 mode 3269), 84 (row 1 mode 5120), 88 (row 5 mode 3269), 91 (row 1 mode 5120), 95 (row 5 mode 3269), 98 (row 1 mode 5120), 102 (row 5 mode 3269), 105 (row 1 mode 5120), 109 (row 5 mode 3269), 112 (row 1 mode 5120), 116 (row 5 mode 3269), 119 (row 1 mode 5120), 123 (row 5 mode 3269), 126 (row 1 mode 5120), 130 (row 5 mode 3269)

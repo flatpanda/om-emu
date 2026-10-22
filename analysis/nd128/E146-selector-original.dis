@@ -1,0 +1,63 @@
+
+unpacked/E146/OLY_E_146_1300_0000_0000.BIN.blk00000000.OE.0100.bin:     file format binary
+
+
+Disassembly of section .data:
+
+002e7ef0 <.data+0x2e7ef0>:
+  2e7ef0:	f8 b8 3b    	movbu	(59,sp),d0
+  2e7ef3:	a0 01       	cmp	1,d0
+  2e7ef5:	c8 1c       	beq	0x2e7f11
+  2e7ef7:	a0 02       	cmp	2,d0
+  2e7ef9:	c8 1b       	beq	0x2e7f14
+  2e7efb:	a0 03       	cmp	3,d0
+  2e7efd:	c8 1b       	beq	0x2e7f18
+  2e7eff:	a0 04       	cmp	4,d0
+  2e7f01:	c8 1e       	beq	0x2e7f1f
+  2e7f03:	a0 05       	cmp	5,d0
+  2e7f05:	c8 1e       	beq	0x2e7f23
+  2e7f07:	a0 06       	cmp	6,d0
+  2e7f09:	c8 24       	beq	0x2e7f2d
+  2e7f0b:	a0 07       	cmp	7,d0
+  2e7f0d:	c8 26       	beq	0x2e7f33
+  2e7f0f:	ca 2e       	bra	0x2e7f3d
+  2e7f11:	12          	extb	d2
+  2e7f12:	ca 25       	bra	0x2e7f37
+  2e7f14:	12          	extb	d2
+  2e7f15:	ea          	add	d2,d2
+  2e7f16:	ca 21       	bra	0x2e7f37
+  2e7f18:	12          	extb	d2
+  2e7f19:	88          	mov	d2,d0
+  2e7f1a:	54          	asl2	d0
+  2e7f1b:	f1 08       	sub	d2,d0
+  2e7f1d:	ca 0a       	bra	0x2e7f27
+  2e7f1f:	12          	extb	d2
+  2e7f20:	56          	asl2	d2
+  2e7f21:	ca 16       	bra	0x2e7f37
+  2e7f23:	12          	extb	d2
+  2e7f24:	88          	mov	d2,d0
+  2e7f25:	54          	asl2	d0
+  2e7f26:	e8          	add	d2,d0
+  2e7f27:	5c 5c       	mov	(92,sp),a0
+  2e7f29:	f0 50       	movbu	d0,(a0)
+  2e7f2b:	ca 2d       	bra	0x2e7f58
+  2e7f2d:	12          	extb	d2
+  2e7f2e:	f9 02 06    	udf00	6,d2
+  2e7f31:	ca 06       	bra	0x2e7f37
+  2e7f33:	12          	extb	d2
+  2e7f34:	f9 02 07    	udf00	7,d2
+  2e7f37:	5c 5c       	mov	(92,sp),a0
+  2e7f39:	f0 58       	movbu	d2,(a0)
+  2e7f3b:	ca 1d       	bra	0x2e7f58
+  2e7f3d:	5c 5c       	mov	(92,sp),a0
+  2e7f3f:	04          	clr	d1
+  2e7f40:	f0 54       	movbu	d1,(a0)
+  2e7f42:	85 01       	mov	1,d1
+  2e7f44:	46 04       	mov	d1,(4,sp)
+  2e7f46:	42 08       	mov	d0,(8,sp)
+  2e7f48:	fc cc 02 00 	mov	234881026,d0
+  2e7f4c:	00 0e 
+  2e7f4e:	2d df 09    	mov	2527,d1
+  2e7f51:	dd 1f dd 26 	call	0x555c70,[d2,d3,a2],96
+  2e7f55:	00 e0 60 
+  2e7f58:	df f0 58    	ret	[d2,d3,a2,a3],88

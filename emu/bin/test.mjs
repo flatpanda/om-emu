@@ -1,0 +1,148 @@
+#!/usr/bin/env node
+// The test gate in one command: the recorded ISA vectors on both engines (the CPU's own step and the decoded-cache
+// interpreter), the core's two tiers in lockstep, the decode-cache regression (test_regress.mjs), the command-line
+// tools and the regression net's permanent controls (test_cli.mjs: mutants golden.mjs must report), infrastructure
+// (test_infra.mjs), the VSC register tables, class tables and blend table (test_dev.mjs), the kick model's TB-layout
+// refusals (test_irq.mjs), the replayer's argument binding and PlaySession.trim (test_lab.mjs), the check runner and
+// the checks' controls (test_checks.mjs) and their command-line parser (test_args.mjs), the debug API's units
+// (test_debug.mjs), the .BIN unpacker (test_unpack.mjs, needing $OM_FW_DIR or $OM_BIN, else counted as a failure),
+// the browser player's pure parts, its node host and its Worker in a node worker thread (test_web.mjs), the node host
+// over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
+// (test_camapp.mjs) and the firmware rules of src/fw/facts.mjs (test_facts.mjs). The fixtures they compare with are
+// emu's own (test/fixtures, checks/fixtures, golden.json): a deliberate behaviour change that one of them pins is
+// re-recorded from emu with its reason.
+//   node emu/bin/test.mjs        (needs the unpacked firmware and emu/golden.json)
+import fs from 'node:fs';
+import { vectors } from '../test/test_vectors.mjs';
+import { coreTests } from '../test/test_core.mjs';
+import { purity } from '../test/test_pure.mjs';
+import { factsTests } from '../test/test_facts.mjs';
+import { cache } from '../test/test_regress.mjs';
+import { cli, cli2, cli3, cli4, cli5, cli6 } from '../test/test_cli.mjs';
+import { vscClasses, vscRegsHeader, blendTable } from '../test/test_dev.mjs';
+import { kickRefusals, refusalControl } from '../test/test_irq.mjs';
+import { infra } from '../test/test_infra.mjs';
+import { labTests, trimTests } from '../test/test_lab.mjs';
+import { checksTests } from '../test/test_checks.mjs';
+import { argsTests } from '../test/test_args.mjs';
+import { watchUnits, snapshotUnits, protocolUnits, limitUnits, attachUnits } from '../test/test_debug.mjs';
+import { unpackTests } from '../test/test_unpack.mjs';
+import { shaTests, yccTests, controlsTests, hostApiTests, driverTests, bodyTests, resultBoxTests, pageTests, workerTests } from '../test/test_web.mjs';
+
+// the temporary OM_CHECK_OUT directories of checktrace runs that ended by a signal, which they could not remove
+{
+  const os = await import('node:os'), path = await import('node:path');
+  const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; } };
+  let swept = 0;
+  for (const f of fs.readdirSync(os.tmpdir())) {
+    const m = /^om-emu-checktrace-(\d+)-/.exec(f);
+    if (m && !alive(Number(m[1]))) { fs.rmSync(path.join(os.tmpdir(), f), { recursive: true, force: true }); swept++; }
+  }
+  if (swept) console.log(`swept ${swept} temporary directories of checktrace runs that no longer exist`);
+}
+let bad = 0;
+for (const engine of ['port', 'cached']) {
+  const r = vectors(engine);
+  console.log(`isa vectors (${engine}): ${r.pass}/${r.total}`);
+  bad += r.total - r.pass;
+}
+{
+  const co = coreTests();
+  console.log(`core (test_core.mjs): lockstep step() vs run(1) ${co.lockstep.cases - co.lockstep.bad.length}/${co.lockstep.cases}, mutant 7 caught: ${co.mutant.bad.length ? 'yes' : 'NO'}; lengths over ${co.lengths.pairs} (op, p) pairs`);
+  co.bad.forEach((x) => console.log('  ', x));
+  bad += co.bad.length;
+}
+const ca = cache(), cl = cli(), c2 = cli2();
+console.log(`decode-cache checks: ${ca.checks - ca.bad.length}/${ca.checks}; command-line checks: ${cl.checks - cl.bad.length}/${cl.checks} (round 1), ${c2.checks - c2.bad.length}/${c2.checks} (round 2)`);
+[...ca.bad, ...cl.bad, ...c2.bad].forEach((x) => console.log('  ', x));
+bad += ca.bad.length + cl.bad.length + c2.bad.length;
+const inf = infra(), hd = vscRegsHeader(), bl = blendTable(), vc = vscClasses(), c3 = cli3();
+console.log(`infrastructure: ${inf.checks - inf.bad.length}/${inf.checks}; vsc register tables vs header: ${hd.bad.length ? 'DIFFERENT' : 'identical'}; blend table: ${bl.inputs - bl.bad.length}/${bl.inputs}; vsc-classes: ${vc.names} names, ${vc.bad.length} differences; Stage 1 tooling checks: ${c3.checks - c3.bad.length}/${c3.checks}`);
+[...inf.bad, ...hd.bad, ...bl.bad, ...vc.bad, ...c3.bad].forEach((x) => console.log('  ', x));
+bad += inf.bad.length + hd.bad.length + bl.bad.length + vc.bad.length + c3.bad.length;
+const c4 = cli4(), c5 = cli5();
+console.log(`Stage 2 tooling checks (J1 included): ${c4.checks - c4.bad.length}/${c4.checks}; Player-boundary replay checks: ${c5.checks - c5.bad.length}/${c5.checks}`);
+[...c4.bad, ...c5.bad].forEach((x) => console.log('  ', x));
+bad += c4.bad.length + c5.bad.length;
+const kr = await kickRefusals(), kn = await refusalControl();
+console.log(`TB-layout refusals: ${kr.cases - kr.bad.length}/${kr.cases}; refusal control (NC-REF-e): ${kn.checks - kn.bad.length}/${kn.checks}`);
+[...kr.bad, ...kn.bad].forEach((x) => console.log('  ', x));
+bad += kr.bad.length + kn.bad.length;
+const lt = labTests(), tt = trimTests();
+console.log(`replayer binding and Player refusals (test_lab.mjs): ${lt.checks - lt.bad.length}/${lt.checks}; PlaySession.trim bounds an idling session: ${tt.checks - tt.bad.length}/${tt.checks}`);
+[...lt.bad.slice(0, 20), ...tt.bad].forEach((x) => console.log('  ', x));
+bad += lt.bad.length + tt.bad.length;
+const c6 = cli6(), ck = await checksTests(), ar = argsTests();
+console.log(`Stage 3a open item 1 (J7, J8, J7b, NC-FMT): ${c6.checks - c6.bad.length}/${c6.checks}; check runner and check controls (the osd inputs included): ${ck.checks - ck.bad.length}/${ck.checks}; command-line parser: ${ar.checks - ar.bad.length}/${ar.checks}`);
+[...c6.bad, ...ck.bad, ...ar.bad].forEach((x) => console.log('  ', x));
+bad += c6.bad.length + ck.bad.length + ar.bad.length;
+const dw = watchUnits(), dsn = snapshotUnits(), dp = protocolUnits(), dl = limitUnits(), dat = attachUnits();
+console.log(`debug API: watch units ${dw.checks - dw.bad.length}/${dw.checks}, snapshot units ${dsn.checks - dsn.bad.length}/${dsn.checks}, protocol units ${dp.checks - dp.bad.length}/${dp.checks}, trace-file, watch-log and stderr limits ${dl.checks - dl.bad.length}/${dl.checks}, lab-session and disasm units ${dat.checks - dat.bad.length}/${dat.checks}`);
+[...dw.bad, ...dsn.bad, ...dp.bad, ...dl.bad, ...dat.bad].forEach((x) => console.log('  ', x));
+bad += dw.bad.length + dsn.bad.length + dp.bad.length + dl.bad.length + dat.bad.length;
+const up = await unpackTests(), sh = shaTests(), yc = yccTests(), ct = controlsTests(), dr = await driverTests(), ap = await hostApiTests();
+console.log(`browser player: unpacker (B1) ${up.checks - up.bad.length}/${up.checks}${up.skipped.length ? `, ${up.skipped.length} SKIPPED (no firmware: set OM_FW_DIR or OM_BIN)` : ''}; sha256 (B2) ${sh.checks - sh.bad.length}/${sh.checks}; ycc_to_rgb over 2^24 words (B4) ${yc.checks - yc.bad.length}/${yc.checks}; node host on a Player (B4) ${ap.checks - ap.bad.length}/${ap.checks}; playui rows ${ct.checks - ct.bad.length}/${ct.checks}; driver (B3) ${dr.checks - dr.bad.length}/${dr.checks}`);
+[...up.bad, ...up.skipped.map((x) => `SKIPPED ${x}`), ...sh.bad.slice(0, 10), ...yc.bad, ...ap.bad, ...ct.bad, ...dr.bad].forEach((x) => console.log('  ', x));
+bad += up.bad.length + up.skipped.length + sh.bad.length + yc.bad.length + ap.bad.length + ct.bad.length + dr.bad.length;
+const pj = bodyTests(), rbx = await resultBoxTests(), pg = await pageTests(), wk = await workerTests();
+console.log(`browser player hosts: request bodies ${pj.checks - pj.bad.length}/${pj.checks}; wait_result ${rbx.checks - rbx.bad.length}/${rbx.checks}; page after a stop ${pg.checks - pg.bad.length}/${pg.checks}; Worker in a node worker thread ${wk.checks - wk.bad.length}/${wk.checks}${wk.skipped.length ? `, ${wk.skipped.length} SKIPPED (no firmware: set OM_FW_DIR or OM_BIN)` : ''}`);
+[...pj.bad, ...rbx.bad, ...pg.bad, ...wk.bad, ...wk.skipped.map((x) => `SKIPPED ${x}`)].forEach((x) => console.log('  ', x));
+bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipped.length;
+// The node host over real HTTP (G-host)
+{
+  const { hostTests } = await import('../test/test_host.mjs');
+  const hs = await hostTests();
+  console.log(`Stage 3c host (G-host: the queue under load, the status during a WAIT, one clock, the stops and signals, SIGUSR2, the order wait, the page copy, the HTTP front, a busy port): ${hs.checks - hs.bad.filter((x) => x.startsWith('[')).length}/${hs.checks}`);
+  hs.bad.forEach((x) => console.log('  ', x));
+  bad += hs.bad.length;
+}
+// the image sensor stand-in (S-SCENE): its model, and its live view in a play session with a --replay of it
+{
+  const { sceneUnits, sceneSession } = await import('../test/test_scene.mjs');
+  const su = sceneUnits(), ss = await sceneSession();
+  console.log(`scene stand-in: model ${su.checks - su.bad.length}/${su.checks}; live view in play ${ss.checks - ss.bad.length}/${ss.checks}`);
+  [...su.bad, ...ss.bad].forEach((x) => console.log('  ', x));
+  bad += su.bad.length + ss.bad.length;
+}
+// the camera application running natively (S-CAMAPP and its stand-ins): S1, S2 and the rec view in a play session
+{
+  const { camappSession } = await import('../test/test_camapp.mjs');
+  const ca = await camappSession();
+  console.log(`camera application (S-CAMAPP) in play: ${ca.checks - ca.bad.length}/${ca.checks}`);
+  ca.bad.forEach((x) => console.log('  ', x));
+  bad += ca.bad.length;
+}
+// the camera's non-volatile state kept between sessions (S-NVRAM): no date prompt, a setting kept across sessions
+{
+  const { nvramSessions } = await import('../test/test_nvram.mjs');
+  const nv = await nvramSessions();
+  console.log(`non-volatile state (S-NVRAM) across sessions: ${nv.checks - nv.bad.length}/${nv.checks}`);
+  nv.bad.forEach((x) => console.log('  ', x));
+  bad += nv.bad.length;
+}
+// the body's Fn-type buttons reach the camera application's button mapping (ISO, +/-, Drive, AF/metering, AF-ON, |o|, front)
+{
+  const { fnKeySessions } = await import('../test/test_fnkeys.mjs');
+  const fk = await fnKeySessions();
+  console.log(`Fn-type buttons in play: ${fk.checks - fk.bad.length}/${fk.checks}`);
+  fk.bad.forEach((x) => console.log('  ', x));
+  bad += fk.bad.length;
+}
+// the 12-40 on the mount and the camera's own exposure plan for the scene (S-LENS, S-EXPOSE)
+{
+  const { exposeSessions } = await import('../test/test_expose.mjs');
+  const ex = await exposeSessions();
+  console.log(`lens and exposure plan (S-LENS, S-EXPOSE) in play: ${ex.checks - ex.bad.length}/${ex.checks}`);
+  ex.bad.forEach((x) => console.log('  ', x));
+  bad += ex.bad.length;
+}
+const fa = factsTests();
+console.log(`firmware facts (${fa.models} unpacked main blocks): ${fa.checks - fa.bad.length}/${fa.checks}`);
+fa.bad.forEach((x) => console.log('  ', x));
+bad += fa.bad.length;
+const pu = purity();
+console.log(`purity: ${pu.files} modules, ${pu.bad.length} violations`);
+pu.bad.forEach((x) => console.log('  ', x));
+bad += pu.bad.length;
+console.log(bad ? `FAILED (${bad})` : 'all passed');
+process.exit(bad ? 1 : 0);

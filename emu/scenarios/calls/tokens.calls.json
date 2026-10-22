@@ -1,0 +1,29 @@
+{
+ "format": "om-emu-player-inputs/1",
+ "scenario": "tokens",
+ "labs": ["tokens"],
+ "source": "captured on 2026-10-13 (the --debug-api tokens: GET:1881, CLOCK:1700000000, INTC, VSC, B2, WAIT_UNTIL, OPEN, CLOSE, EV:217 (ISO dial-direct)); the inputs only, without the outcomes recorded with them",
+ "actions": [
+  [0,"ctor","Player",[],{"lang":"en","device":"tft","evf_layout":false,"a15":"off","start":"shooting","tab":"7,1,1","idle":"off","touch":"gui","us_clock":"lab","no_camseq":false,"no_bgdraw":false,"compose":"boundary","port":0,"no_browser":true,"out":"<out>","replay":null,"debug_api":true,"x_mutant":null,"x_trim_keep":null,"no_wait_on_error":true}],
+  [1,"player","open_session",[],{}],
+  [2,"player","submit",[{"type":"token","token":"GET:1881"}],{}],
+  [3,"player","tick",[],{}],
+  [4,"player","submit",[{"type":"token","token":"CLOCK:1700000000"}],{}],
+  [5,"player","tick",[],{}],
+  [6,"player","submit",[{"type":"token","token":"INTC"}],{}],
+  [7,"player","tick",[],{}],
+  [8,"player","submit",[{"type":"token","token":"VSC"}],{}],
+  [9,"player","tick",[],{}],
+  [10,"player","submit",[{"type":"token","token":"B2"}],{}],
+  [11,"player","tick",[],{}],
+  [12,"player","submit",[{"type":"token","token":"WAIT_UNTIL:318925120"}],{}],
+  [13,"player","tick",[],{}],
+  [14,"player","submit",[{"type":"token","token":"OPEN"}],{}],
+  [15,"player","tick",[],{}],
+  [16,"player","submit",[{"type":"token","token":"CLOSE"}],{}],
+  [17,"player","tick",[],{}],
+  [18,"player","submit",[{"type":"token","token":"EV:217"}],{}],
+  [19,"player","tick",[],{}],
+  [20,"player","close_session",[],{}]
+ ]
+}

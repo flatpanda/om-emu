@@ -1,0 +1,322 @@
+# emu: the OM-Emu emulator and lab
+
+emu runs Olympus / OM System camera firmware in JavaScript: an MN10300 (AM33) CPU, the camera's interrupt controller,
+timers, OSD engine, VSC display compositor and SCPU interface, and a harness that runs the firmware's own kernel, GUI
+and camera application with named stand-ins where a part of the camera is not modelled. It runs the OM-1 v1.9 (E143)
+natively and other bodies through ports (`docs/model-survey.md`). This file is the user and developer guide; the design
+is in [ARCHITECTURE.md](ARCHITECTURE.md) and the known departures from the hardware in
+[FIDELITY-NOTES.md](FIDELITY-NOTES.md).
+
+## Requirements
+
+- node 26 (tested with v26.11.1); no npm packages, no Python.
+- The model's firmware, which is never stored in this repository: `node emu/bin/fetch-fw.mjs [--model CODE]` downloads
+  the `.BIN` from the vendor's updater API, checks it against `BLOBS.sha256`, unpacks the main code block and the
+  resource block into `unpacked/<code>/` and checks both against `src/fw/models.mjs` (for the OM-1, about 240 MB
+  downloaded, 90 MB kept). The player does this itself on first use.
+- For the debug API's `--disasm` only: `tools/mn10300-objdump` (or `$OM_OBJDUMP`; the build recipe is in `BLOBS.md`).
+- For `bin/webgate.mjs`: the `.BIN` (`$OM_BIN`, or `$OM_FW_DIR` holding it) and Chrome: `--chrome PATH`, else the
+  first found of `/usr/bin/google-chrome-stable`, `/usr/bin/google-chrome`, `/usr/bin/chromium`,
+  `/usr/bin/chromium-browser` and the macOS Chrome and Chromium apps in `/Applications` (tested with Chrome
+  155.0.8059.39 on Linux and 155.0.8059.85 on macOS). The browser player itself needs a browser with module Workers and
+  OPFS.
+
+## Quick start
+
+```sh
+emu/play.sh                    # the interactive player in the default browser (the play page and its API)
+emu/play.sh --device evf --start menu --idle off     # any play option
+emu/play.sh --model E144       # another camera model (OM-5); --model list shows them all
+```
+
+The model is E143 (OM-1 v1.9) unless `--model CODE` names another body of `src/fw/models.mjs` (`OM_EMU_MODEL` in the
+environment does the same; the option wins); `bin/play.mjs`, `bin/nav.mjs` and `bin/fetch-fw.mjs` take the same option.
+`--model list` prints each one's code, name, firmware version and whether its firmware is on disk. A body whose port is
+not finished stops during its start: the status's phase is `error` with the reason, and the page shows it; a body the
+lab does not load on yet (the E118 family, on unread board facts) is refused at start with the reason, exit 1. The
+page's model menu switches a running server to another body (`POST /api/model`): the session stops as Quit stops it,
+the server restarts on that model at the same URL, and the page reloads. It refuses, with the reason under the menu and
+the session running on, a body whose firmware is not unpacked yet (run `fetch-fw.mjs --model CODE` first), a body the
+lab does not load on, and a session started with `--out` or `--replay`.
+
+On first use the player provisions the model's firmware (`host/firmware.mjs`): it takes the `.BIN` from `fw/` or
+`fw/old/` (or `$OM_FW_DIR`, or `$OM_BIN` when that file is the model's `.BIN`), else downloads it (the API serves only
+each body's latest release), and verifies and unpacks it as `fetch-fw.mjs` does (`--check` only reports whether the
+blocks are the model's). `npm run play` in `emu/` does the same as `play.sh`. Ctrl+C stops it; the session log is in
+`emu/out/play/<model>/<time>/session.json`. A browser-only variant, with the lab in a Worker and no server, is under
+"The browser player".
+
+**The live view.** The page's "Scene and image sensor" panel turns on S-SCENE, a stand-in for the image sensor
+(`src/lab/scene.mjs`, `docs/om1-shutter-spec.md`). It renders a synthetic scene (static, moving or a test chart; three
+layers at their own distances and speeds) through a thin lens on a Four Thirds sensor (focal length, aperture, focus
+distance: depth of field from the circle of confusion) at an exposure (EV, shutter, ISO, compensation; auto or
+manual), and the firmware's own through-image API shows it on the live-view plane under the GUI. S1 focuses on the
+layer under the AF point, S2 records a capture with the exposure in use and REC starts and ends a clip; all three are
+the stand-in's, because the camera modules that would run AF, the release and the movie recording do not run in the
+lab. Its inputs are session-log inputs, so `--replay` repeats them.
+
+**The camera application.** Every play session runs the firmware's camera application (CA_MAIN) natively (S-CAMAPP,
+`src/lab/camapp.mjs`, `docs/om1-shutter-spec.md` section 7). It takes the GUI from power-on to its own screen (on the
+lab's unset clock, the date prompt), and S1 and S2 are the application's: S1 cancels the prompt and shows the shooting
+information, S2 the capture display and the rec view. What runs below it is stood in:
+
+- module requests are answered (S-MODACK), the HLS transaction layer's exec succeeds (S-TRAACK), and the modules'
+  notifications of a release (focus, exposure, rec view) are posted as the callbacks the HLS would make of them
+  (S-RELSEQ); no image is captured. The focus result and the exposure time come from S-SCENE when its live view is on.
+- A card is in the SD slot (S-CARD: the HLS mount state, every picture taken kept as an image of folder 100, a
+  remaining-shots answer of 999 less the images and a movie time left of an hour less what has been recorded), the
+  system timer module's long timers run out (S-LONGTIMER), and a lens is on the mount (S-LENS: an attach flag, a
+  lens-ready byte and a 12-40mm F2.8 PRO record, so the screen shows S-AF and the AF target).
+- A half press in focus shows the green AF frame and focus mark. They are CPU 3's (its task DISP_FRAME draws them into
+  the TFT's face-frame plane), so S-DISPFRAME runs DISP_FRAME on the lab CPU for each post to it, S-TAKEFRAME sets the
+  frame display mode the TAKE module would, S-AFOSD uploads the indicator and the AF frame the AF module would, and
+  the VSC model shows the plane under the opt-in A19 (`docs/om1-shutter-spec.md` section 7 item 50). A full press
+  clears the GUI's information for the capture and the rec view; during the rec view S-RECVIEW holds S-SCENE's frame
+  of the capture on the live-view plane (the lab develops no image).
+- With the control op camapp at 2 a new session runs the HLS components too (off otherwise: the GUI then shows its
+  shooting panel over a black image area): S-CAMAPP starts the OXF main thread (task 57 HIGHLEVEL_MAIN), S-BOOTDONE
+  sends the camera base and the still-shooting category the events the modules' start would bring, so the shoot mode
+  and Cmp_ShootingComponent are created natively, and S-CPU3 takes their remote calls to CPU 3 off the ring.
+- REC records at mode-dial position 7 once the LLPSW firmware key is released; while it records, the GUI shows its
+  movie recording screen (the card, a red REC mark with the recording's time, the time left, the movie mode, shutter,
+  aperture and a blinking ISO).
+- OK opens the Super Control Panel, MENU the menu (the live view stops behind it, S-THROUGH; closing it skips the
+  settings' flash save, S-SETSAVE), PLAY playback (the pictures taken, newest first, through S-PLAYSEQ, S-PLAYCOMP and
+  S-PLAYVIEW; left and right move between them, INFO shows the detail view, PLAY or S1 returns; "No Picture" before
+  any), and LV or the eye sensor switches to the EVF with the application re-entering the screen (S-OUTDISP). The
+  application creates the GUI itself (H-GUIBYAPP), so the EVF shows its information and bottom bar in every frame.
+
+## Run
+
+```sh
+sh emu/play.sh                                   # the interactive player (bin/play.mjs) in the browser
+node emu/bin/play.mjs --no-browser --idle off    # its server alone (HTTP API; --debug-api for the debug tokens)
+OM_EMU_NVRAM=~/.om-emu.json sh emu/play.sh       # keep the settings and the clock between sessions (S-NVRAM): no date
+                                                 # prompt at power-on, menu changes back in the next session
+node emu/bin/nav.mjs --time --png each 'DOWN OK MENU'     # a scripted menu session: a line and a PNG per step
+node emu/bin/run.mjs all --trace emu/out/js      # the replayed scenarios, traced (37 labs, about 3 min)
+node emu/bin/run.mjs stage2 --slice 1000000      # the same in budgeted continues of 1 M instructions
+node emu/bin/golden.mjs check [--jobs N]         # emu against its own recorded outputs (golden.json), about 20 min
+node emu/bin/modelcheck.mjs [MODEL ...]          # the ported models' smoke test: start, S1, S2, PLAY, INFO on TFT and EVF
+node emu/bin/port.mjs all                        # re-port every model after a change to the rules, src/lab or overrides
+node emu/bin/xto.mjs E144 0x501e04b7             # where an E143 code address is in a ported model (xwhere.mjs: back)
+node emu/bin/fw-survey.mjs survey                # the multi-model survey's columns for every .BIN in fw/ and fw/old/
+```
+
+`bin/play.mjs` is the play server and `bin/nav.mjs` the scripted menu tool (`host/playcli.mjs`, `host/navcli.mjs`). The
+server answers every request with the router the browser uses (`src/lab/playapi.mjs`) on node's main thread and runs
+`Player.run` synchronously in a `worker_threads` Worker (`host/labworker.mjs`), whose input queue blocks
+(`host/portqueue.mjs`: `receiveMessageOnPort` and `Atomics.wait`). SIGINT, SIGTERM and SIGHUP stop the loop after its
+current tick; a second signal exits 130. The default `--out` is `emu/out/play/<model>/<time>`
+(`emu/out/nav/<model>/<tag>` for nav). Two request bodies throw Unported rather than guess: a JSON body nested deeper
+than 10,000 levels and a body whose `surrogatepass` decode puts two surrogates in a row.
+
+**Scenarios.** `bin/run.mjs` replays sessions from their inputs: `scenarios/calls/<scenario>.calls.json` holds recorded
+calls into the lab objects (recorded on 2026-10-13; inputs only, no outcomes), and the osd scenario's calls are
+generated from `check_osd` at run time (`checks/lib/osdcalls.mjs`: its arguments carry memory copied out of the
+firmware, so they are not committed). Each replayed call's outcome digest goes into the trace, where `bin/golden.mjs`
+records it. Groups: `stage0` (the six kernel sessions `kernel-1`, `kernel-5b`, `kernel-5c`, `kernel-6`, `kernel-7`,
+`kernel-7b`, and `osd`), `stage1` (`shoot-tft`, `shoot-evf`, `menu-tft`, `nav-a`, `nav-evf`: the play session's bring-up
+to the shooting screen, a menu open and close, two scripted menu sessions), `stage2` (the Player driven without HTTP or
+threads: `play-perf`, `scp-timeout`, `scp-edge`, `evf-idle`, `eye-burn`, `switch-shoot`, `switch-scp`, `inputs`,
+`a15-open`, `queue`, `power`, `scp-replay`, `power-replay`, `keys`, `b7-gate`, `tokens`, `playback`, `tokens-3b`,
+`pace-wall`), `stage3` (`menu-open`, `menu-open-any`: a menu session in interrupt gate modes 1 and 2) and `all` (37
+labs). `pace-wall` drives the Player with `--idle wall` under a frozen clock, so its pacing is kept in its outcomes
+rather than removed. A session that opens more than one lab is traced as `NAME`, `NAME#2`, `NAME#3`. A scenario that
+throws (a FirmwareError, Unported, a calls file the replayer cannot drive, or a bug) is reported and the others still
+run; with `--trace` its partial trace goes to `<scenario>.partial.json` and the throw to `<scenario>.divergence.json`,
+and the exit status is 1. `run.mjs --trace DIR` first removes the earlier trace, partial and divergence files of the
+scenarios it runs, so a failed run never leaves an old trace behind.
+
+**The checks** (`checks/check_*.mjs`), like `bin/debug.mjs`, `bin/play.mjs` and `bin/nav.mjs`, parse their command lines
+with `checks/lib/args.mjs`: options are spelled in full, and an unknown option, a missing or malformed value or a usage
+rule of the check's own prints `PROG: message` and the usage line on stderr and exits 2. check_perf's `--play`, which it
+does not implement, is refused that way with the reason. An uncaught error prints its stack and exits 1.
+`checks/runs.json` lists every run with the exit status it must give, its own environment variables, the output files it
+must write and, for a fault-point run (`OM_FAULT`), a line its output must hold; `bin/checks.mjs` runs them and
+judges each on its own exit status. `OM_MACHINE` sets the machine options of every lab a check makes, as white-space
+separated `mutant=N` (a negative control) and `oneInsn=0|1` (the one-instruction mode); run `irq-xm28` sets `mutant=28`.
+`--write-notes` writes into `OM_NOTES_DIR` and is refused without it; output files go under `OM_CHECK_OUT` (default
+`emu/out/checks/js/manual/`). A check that declares a notes file compares its observations with
+`checks/fixtures/check_*_notes.txt`, pinned from emu's own run. PNGs are compared by their pixels, never by their bytes.
+check_menu's and check_nav's `--jobs N` run the sessions in N `worker_threads`; `--mutants` runs the check as a node
+child under each mutant; check_menu's and check_nav's first check that a child spinning on `bra .` and killed on timeout
+leaves no child process and no temporary directory.
+
+## The debug API
+
+`bin/debug.mjs` is the command-line debugger (`--entry`, `--stop`, `--reg`, `--write`, `--read`, `--step`, `--stack`,
+`--trace`, `--insn-limit`; `--image` defaults to the ND128 candidate's main code, built in memory from the E143 main
+block and the patches in `artifacts/nd128/manifest.json`). It also has
+`--watch ADDR:LEN[:r|w|rw]`, `--exec-trace PATH` with `--trace-mode native|one-insn`, `--mmio-trace PATH`,
+`--irq-trace PATH`, `--disasm ADDR:LEN` (through `tools/mn10300-objdump` or `$OM_OBJDUMP`) and `--max-ms N`.
+`node emu/bin/debug.mjs --serve` reads one JSON request per line and answers one per line, for scripts, for
+example:
+
+```
+{"id": 1, "op": "load", "image": "unpacked/E143/OLY_E_143_1900_0000_0000.BIN.blk00000000.OE.0100.bin"}
+{"id": 2, "op": "reset", "regs": {"pc": "0x502d0336", "d3": "0xa2022000"}}
+{"id": 3, "op": "watch", "list": [{"addr": "0xa2022000", "len": 2, "kind": "w"}]}
+{"id": 4, "op": "cont", "stops": ["0x502d0341"], "maxMs": 5000}
+```
+
+The ops are in `src/debug/protocol.mjs`. The library behind both, `src/debug/debugger.mjs`, is Worker-safe: a standalone
+machine or a running lab session's Simulator, registers and memory, continues with a budget or a wall-time limit, single
+steps, watchpoints per virtual address (stop or log), exec, MMIO and interrupt traces, lab time, and in-memory
+snapshots. The exec trace has two modes: `one-insn` runs every instruction as its own one-instruction block (the
+machine option `oneInsn`), `native` (the default) keeps the untraced run's interrupt timing; both write the line format
+of QEMU's `-d exec` log (the protocol's trace format `qemu`; `jsonl` is its other).
+
+A client has to plan for three behaviours. A `cont` whose pc is on a breakpoint (after a break stop, or a watch stop
+that ended on a breakpoint pc) returns `break` at once without executing anything, so `step` first. After `abort` the
+machine is gone: every op, `reset` included, fails with `Aborted` until the next `load`. While a budgeted or `maxMs`
+continue is paused, every op that would change the machine or its run is refused until `resume` or `abort`: `break`,
+`step`, `cont`, `watch`, `snapshot`, `restore`, `reset`, `setRegs`, `setReg`, `write`, `cpuStore`, `lab` other than
+`time`, an `exec` trace and `trace {off}` (which turns the exec trace off too); the reads (`regs`, `reg`, `read`,
+`stack`, `stderr`, `watchLog`, `stats`, `disasm`, `lab {time}`) and `mmio` and `irq` traces are allowed.
+
+Requests are handled one at a time: a `cont` or `resume` without `budget` or `maxMs` runs until a stop, a fault or the
+insn limit, and no later request, `abort` included, is read meanwhile, so give `maxMs` to keep control. `stack` dumps
+upward from the current SP, or from `at` (a task's saved SP); `initialSp` only tags the line at that address. A `jsonl`
+trace writes addresses and values as `"0x..."` strings, as the responses do; a `trace` request that fails changes no
+file and no running trace; a trace restarted on its own file starts empty, two keys of one request may name one file
+(their lines interleave), and a file another running trace writes is refused. The watch log keeps the newest hits (at
+200,000 it drops the oldest half): `watchLog {limit?}` takes at most `limit` entries (default 100,000) off it and says
+how many are `more` and how many were `dropped` since the last call. A standalone machine keeps its last 1,000 to 2,000
+stderr lines: `stderr {since?}` answers from the oldest line still kept, with `first` and `dropped`, and a run's own
+`stderr` field is its last 1,000 lines, with `stderrDropped` when it wrote more. `disasm`'s `n` is a byte count, not an
+instruction count, and each returned line is one whole instruction. A watch stop's `watch` record and the `watchLog`
+entries give `kind` as a number (1 read, 2 write, 3 both), where the `watch` request takes `r`, `w` or `rw`. On a lab
+session's Simulator (`Debugger.attach(sim, {lab})`) breakpoints and stopping watchpoints are refused, because the
+harness owns the breakpoint list and takes any stop as its own; use log watchpoints (`watchLog`) and the traces there.
+The open items are in `docs/ROADMAP.md` "Debug API follow-ups".
+
+## The browser player
+
+`web/index.html` is the player's page (`web/play.html`) running the lab in a module Worker (`web/worker.mjs`). Serve
+`emu/` from any static server on localhost (for example `python3 -m http.server -d emu 8000 --bind 127.0.0.1`), open
+`http://127.0.0.1:8000/web/index.html` and choose the camera's firmware file (the page names it: E143's is
+`OLY_E_143_1900_0000_0000.BIN`). The Worker reads it block by block (`src/fw/olyfw.mjs`: the container walk,
+descramble and checksum), keeps the main code block and the part of the resource block the lab can read
+(`src/fw/resprefix.mjs`, 9.6 of 58 MiB), and caches both in the browser's Origin Private File System, so a later visit
+starts with "Start from the cached firmware". Nothing is uploaded.
+
+The query string takes the player's options (`?idle=off`, `device=evf`, `a15=on`, `touch=driver`, `start=menu`,
+`tab=7,5,1`, `debug_api=1`, ...); the default is `--idle wall`. The page runs one model, E143 unless `?model=CODE`
+names another of `src/fw/models.mjs` (the page's model menu reloads it with that parameter): the Worker compares the
+main code block and the resource prefix with that model's sha256 (`src/fw/labfw.mjs`) before it caches anything (one
+OPFS directory per model), so any other `.BIN` (a newer release, or another body's) is refused with a message that
+names the file the model needs, and the file input is offered again. With `debug_api=1`, the `WINDOWS` token is
+refused before it runs anything (its layers carry zlib's level-6 deflate, which the Worker does not have); `STORE` and
+the other tokens run as in `bin/play.mjs`. Quit ends the session; the page then stops polling and says so.
+
+The Worker runs the Player as the server's lab thread does (`web/driver.mjs`: tick, then wait for a message, the pacing
+target or 20 ms) and answers the page's API calls with `src/lab/playapi.mjs`. The page swaps play.html's `fetch` for
+`web/page.mjs`, which answers the status and frame long polls from what the Worker pushes (every status, the newest
+frame as RGBA, the session log) and sends every other request to the Worker. The message protocol is in
+`web/worker.mjs`'s header. `web/gate.html` and `web/runner.mjs` are `bin/webgate.mjs`'s Worker-side runner.
+
+## Layout
+
+- `src/`: the machine and the harness, with no node APIs, so that it runs in a Web Worker. `core/` the CPU, the
+  interpreter and the one machine buffer; `dev/` the devices; `machine.mjs` the board and its gdbstub-equivalent API
+  (with budgeted continues: `cont({budget})`, `resume`, `abort`); `lab/` the harness (the HLE layers, the native
+  kernel, display, text, menu, navigation, the play session, the Player, the camera application's stand-ins and the
+  scene); `fw/` the `.BIN` unpacker, the model table (`models.mjs`), the per-model address tables (`ports.mjs`, written
+  by `bin/port.mjs`), the cross-build map (`xmap.mjs`, `place.mjs`), the firmware rules (`facts.mjs`) and the boards
+  (`board.mjs`); `debug/` the debug API; `trace/` the trace writer; `util/` sha256 for the Worker, bytes and hex text
+  (`bytes`, `hex`), counts (`tally`), value text and equality for messages and checks (`show`, `equal`), the numbers
+  of the lab's text inputs (`parse`) and the trace and digest JSON (`tracejson`). Values are plain JS values
+  throughout; the Player's HTTP API and session logs are plain JSON (`JSON.stringify` / `JSON.parse`).
+- `refs/`: the checks' independent references (the menu reference with its raster and navigation rules, the font, the
+  settings tables, the OSD bitmap format, the MT19937 generator with CPython-compatible seeding (`mt19937`), the
+  reference compositor and register formulas, the live-view formulas, the ISA and interrupt expectations), Worker-safe
+  and importing only `refs/`.
+- `checks/`: one node command per check, `checks/lib/` their helpers, `checks/runs.json` the run table.
+- `scenarios/`: the scenario replayers (`kernel.mjs`, `osd_replay.mjs`, `session_replay.mjs`, `bind.mjs`) and the
+  replayed scenarios' inputs (`scenarios/calls/`).
+- `bin/`: the command-line tools. `host/`: the node hosts of the player and the scripted menu tool. `web/`: the browser
+  player (page, Worker, driver, frame conversion, OPFS cache), importing only `src/`, `scenarios/` and `web/`.
+- `test/`: the test suites (`bin/test.mjs` runs them) and their fixtures (`test/fixtures/isa_vectors.json`);
+  `checks/fixtures/`: the checks' pinned data; `golden.json`: the regression reference.
+
+`src/` and `scenarios/` import neither `refs/` nor `checks/`; `test/test_pure.mjs` checks the import rules and that the
+Worker-side modules use no node API. Paths that are not modelled throw `Unported` with their source name.
+
+**Interrupt acceptance** is not checked at every instruction: a pending interrupt is looked at only at the start of a
+continue, after a helper RTI or PSW write, after an instruction run as a one-instruction translation block (TB: the PSW
+write window, irq_wait, the last 64 instructions before the insn limit, or every instruction with the `oneInsn` machine
+option), and once more after an instruction that raised the request. Where a look would depend on a TB layout or TB
+cache that emu does not model, `src/core/interp.mjs` refuses (`TbUndecidable`) instead of guessing, and the continue
+ends with a stop of kind `undecidable`; `test/test_irq.mjs` checks those refusals unsliced and in slices. A budgeted
+continue pauses only where no look is pending, so a chain of slices takes exactly the looks of one continue. CPU faults
+write trap lines prefixed `om-emu:` to stderr, and a FirmwareError message ends with them (golden pins the check runs
+that print them). FIDELITY-NOTES 2.1-2.3 say where this departs from the hardware.
+
+## Data
+
+Firmware images and unpacked blocks stay outside git (`fw/`, `unpacked/`; see `BLOBS.md`), and what a run produces
+(traces with register and memory images, device vectors, frames) is written to `emu/out/`, which is gitignored. None of
+that is committed or published with this code; composites appear in traces only as sha256. The repository does hold
+small derived data: the VSC register and name table `checks/fixtures/om1-vsc-regs.h`, the digests and short recorded
+observations of `checks/fixtures/` and `golden.json`, the replayed scenarios' inputs in `scenarios/calls/` (call
+arguments: keys, options, lab-time targets, addresses; no firmware bytes), and the addresses, tables and short excerpts
+in `docs/` and `analysis/`. The browser player takes the firmware only from the user's own file and keeps the unpacked
+blocks only in that browser's Origin Private File System; the page embeds no firmware, and `bin/webgate.mjs` checks that
+it sends nothing but GETs for its own files.
+
+## Tests
+
+| Command | What it covers | Needs |
+|---|---|---|
+| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present) | node; runs on any checkout in a few seconds |
+| `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts, the node host, the command-line tools, the scene, the camera application and the regression net's controls | the E143 firmware blocks and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
+| `node emu/bin/golden.mjs check` | every scenario, every lab of the traced check runs and every check run's output against `golden.json`: what the panels show, what the devices see and what the checks conclude must not change | the firmware |
+| `node emu/bin/checks.mjs [CHECK \| RUN ...]` | every run of `checks/runs.json`, judged on its exit status | the firmware |
+| `node emu/bin/checktrace.mjs RUN [--slice N]` | the labs one check run creates, traced (golden records them) | as checks.mjs |
+| `node emu/bin/bench.mjs SCENARIO --passes 5` | MIPS and cost per stop; exit 1 if a pass does not repeat pass 0 | the firmware |
+| `node emu/bin/playperf.mjs` | the play workload on the Player; exit 1 unless its digest is `867f5ce731613fc9` | the firmware |
+| `node emu/bin/snapgate.mjs kernel-5c osd shoot-tft` | snapshot detours leave the sessions and the end state unchanged | the firmware |
+| `OM_FW_DIR=fw node emu/bin/webgate.mjs --rounds 4` | headless Chrome: the Worker against node and `bin/run.mjs`, the page (keys, touch, canvas, session log), no uploads; about 5 min | the `.BIN`, Chrome |
+| `node emu/bin/modelcheck.mjs` | each ported model with its firmware unpacked: start, S1, S2, PLAY, INFO, PLAY on the TFT and the EVF | the models' firmware |
+
+What the tests compare with is emu's own data, and it is regression data, not a specification
+([ARCHITECTURE.md](ARCHITECTURE.md), "Ground truth"): `golden.json` is recorded from emu by `bin/golden.mjs record`, the
+checks' notes files and pinned results under `checks/fixtures/` come from emu's own runs, and the 5,311 ISA vectors
+(`test/fixtures/isa_vectors.json`) are recorded vectors, fixed data that no tool in this tree regenerates. The replayed
+scenarios' inputs (`scenarios/calls/`) are the other recorded data, replayed as inputs only. A checkout with the fetched
+firmware runs every command above but `webgate`, which also needs Chrome.
+
+An intended behaviour change updates a fixture only with a recorded reason and its evidence level (firmware code,
+manual, camera). `bin/golden.mjs record` asks for both (`--reason`, `--evidence`) and writes them into `golden.json`'s
+log. A change to the tooling alone is recorded with `record --tooling-only --reason TEXT`: it refuses (exit 2, nothing
+written) when any session's screen or devices layer differs, and logs which layers of which sessions changed. A pinned
+fixture under `checks/fixtures/` or `test/fixtures/`, or a pinned constant in a check, changes in the commit that
+changes the behaviour, with its reason in the commit message.
+
+Do not run `bin/checks.mjs`, `bin/checktrace.mjs` and `bin/golden.mjs` against the same output directories at the same
+time: they share `emu/out/checks/js/` and `emu/out/js/check/`. Give a second checktrace its own `--trace DIR`.
+
+## Performance
+
+Measured on an Intel i7-1265U laptop (2 P-cores with 4 threads and 8 E-cores, 15 GB of RAM) under Linux with node
+v26.11.1. Medians of alternating runs unless noted; MIPS are instructions per second of guest time.
+
+| Date | What | Figure |
+|---|---|---|
+| 2026-10-10 | interpreter on the kernel and OSD sessions (`bench.mjs`, steady passes) | 34-36 MIPS unpinned; 31-34 on the P-cores, 20-22 on the E-cores; 53-56 in long continues only; the cold first pass 13-16 (V8 warm-up) |
+| 2026-10-10 | cost per stop (harness, HLE stubs, machine API) | 29-34 us on the kernel and OSD sessions; 18-25 us on the play sessions |
+| 2026-10-10 | the play bring-up sessions (`shoot-tft`, `menu-tft`, `nav-a`, ...) | 50-62 MIPS steady |
+| 2026-10-10 | the play workload (`bench.mjs play-perf`) | 44 MIPS steady (bring-up 56-61, Player phases 28), 18 us per stop |
+| 2026-10-10 | the play workload's phases (`playperf.mjs`) | 3.78 s; a whole process 7.16 s |
+| 2026-10-10 | lab seconds per wall second, unpaced | shooting screen 3.75, menu 5.30, Super Control Panel 2.30 |
+| 2026-10-10 | peak RSS of `run.mjs all` | 2.2 GB |
+| 2026-10-13 | the debug API's hooks, off | no cost: `shoot-tft` 56.7 MIPS against 56.7 before the debug API, `play-perf` 43.5 against 44.2 |
+| 2026-10-13 | headless Chrome 155 against node | `shoot-tft` 1.5x node's time, the workload's phases 1.08x; a paced page ran 10.12 lab s in 10.00 wall s; Chrome's memory 1.6-2.1 GB |
+| 2026-10-13 | firmware loading in Chrome | unpacking the `.BIN` with the E143 check 0.85-0.88 s, the first OPFS write about 50 ms, a start from the OPFS cache 0.71-0.75 s |
+| 2026-10-13 | `bin/test.mjs`, the whole suite | 742 s |
+| 2026-10-20 | `bin/port.mjs all`, 17 bodies with every map from the cache | 52 s and 3.4 GB in one process; 119 s as one run per body |
+
+A real-time player needs at least 1.0 lab second per wall second; the slowest phase measured, the Super Control Panel,
+clears it about 2.3 times over unpaced on this host. Under load the figures drop: at a load of 3-6 the OSD session fell
+to 16-17 MIPS unpinned (2026-10-10).

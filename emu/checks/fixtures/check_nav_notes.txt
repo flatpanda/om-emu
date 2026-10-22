@@ -1,0 +1,164 @@
+# check_nav pinned observations (regenerate with --write-notes)
+# STEP <script> <n>-<token> <screen> panel <id> hooks <hook stops> sets <GESetEvent> engine <commands>
+# SUBSCREEN, POPUP-WRITE, STOP: sub-screens, the popup write and the expected stops
+# STORE: stand-in counts and SCPU replies; CLOCK-EPOCH0: page-6 texts with e8 = 0
+B2 N7 00-OPEN page 1 composite sha256 210921c8d3204901a19346603225725fcd11d9607f140ca1e502339bc68e0cd4
+B2 N7 01-RIGHT page 2 composite sha256 890e1a74dacd6c11ba034046f3bff822a82bcef34dcaa3022d2c88f2d9861f43
+B2 N7 02-RIGHT page 3 composite sha256 6fed72c3b929cace3127b88b1afdd8128418bdb12722785ca0c9b27e83895751
+B2 N7 03-RIGHT page 4 composite sha256 68b41b468390fbb6c02b04f2e70fb1b5fe47fe2260a05dd3999f17c6795daa0c
+B2 N7 04-RIGHT page 5 composite sha256 43cdc55e5e9af3c8260bdc3049dfb7b47cbeffafb767f61c40c9c3778416fcd9
+B2 N7 05-RIGHT page 6 composite sha256 02813f2c8f7625c63322f5b293135edff7a55740dd8cf133845e6f8f7c95315a
+B2 N7 07-OPEN page 6 composite sha256 02813f2c8f7625c63322f5b293135edff7a55740dd8cf133845e6f8f7c95315a
+B2 N7 ConnectChangePlay: vt+56 0x50afcf14 (query 65803) -> 1, 0x510c91eb locals (settings 304/1265/288, id 44) [0, 2, 18, 0], gate word 0x60375a9c 0
+B2 N7 edge pad 00-OPEN plane 0 buffer 0xb7862000 width 800 rows 600 byte 0x7f
+B2 N7 edge pad 00-OPEN plane 0 buffer 0xb7a49800 width 800 rows 600 byte 0x7f
+B2 N7 edge pad 00-OPEN plane 1 buffer 0xb7493000 width 800 rows 600 byte 0xff
+B2 N7 edge pad 00-OPEN plane 1 buffer 0xb767a800 width 800 rows 600 byte 0xff
+B2 N7 edge pad 00-OPEN plane 2 buffer 0xb7c31000 width 800 rows 600 byte 0x1f
+B2 N7 edge pad 00-OPEN plane 2 buffer 0xb7e18800 width 800 rows 600 byte 0x1f
+B2 N7 error log 0x1c005002x28
+B2 N7 registers vs N7C (layout 1 -> layout 0): CTRL3=0x1->0x41 OSDDMASPOS=null->0x0
+B7 N3T slot count 3 period 5, Genifa clock 20 at timer 522's start (0 ticks before the bracket), channel 21 next 404202000 period 2001000 ns: T_pred 498249000 ns; before 0x9ac6/110, at 0x0/120, lab time after 502484600
+BUDGET measured maxima: post 34 hook stops, settle 9859, GESetEvent 202 per step; limits 140 / 40000 / 810
+CAPTURE N1 01-INFO not compared (help, tab 7): pixels pinned by the composite only
+CLOCK-DIFF N4 second epoch changes 606 bytes in [741, 224, 874, 247]
+CLOCK-EPOCH0 N1 row 1 strings ["'--.--.--", "--:--:--"]
+DEFAULTS checked 27 ids
+DESCRIPTORS 1557 ids: firmware lookup == refs/settings.mjs (first record in table order)
+KEY-SELECTORS 18 ids 2:0x503c589b 3:0x503c589b 4:0x503c589b 6:0x503c58b9 17:0x503c589b 86:0x503c589b 140:0x503c589b 475:0x503c589b 490:0x503c589b 491:0x503c589b 1667:0x503c589b 1668:0x503c589b 1669:0x503c589b 1670:0x503c589b 1671:0x503c58b9 1672:0x503c58b9 2089:0x503c589b 2090:0x503c589b
+LONG-WAIT WAIT:10500 slices 2 GESetEvent 1050 hook stops 22253 idle log [["irq", 16377], ["signal", 2], ["time", 17003]]; DOWN row 1
+POPUP-WRITE N3 32 = 300; GUI awaits 0x9ac6 EVT_10MS_WIZARD_MENU (Genifa timer 522)
+PROP4513 native after init 0
+SCPU-IMMEDIATES 0x00:10 0x04:2 0x08:2 0x58:1 0x80:1 0x84:1 0x88:1 0x8c:1 0x90:3 0x94:6 0x98:3 0x9c:4 0xa0:4 0xa4:4 0xa8:3 0xac:3 0xb0:3 0xb4:3 0xb8:3 0xbc:3 0xc0:1 0xc4:6 0xc8:3 0xcc:3 0xd0:2 0xd4:6 0xd8:4 0xdc:3 0xe0:1 0xe4:1 0xe8:6 0xec:8 0xf0:1 0xf4:21 0xf8:1
+STEP N1 00-OPEN page panel 329 hooks 9680 sets 192 engine 229
+STEP N1 01-INFO help panel 329 hooks 2427 sets 18 engine 264
+STEP N1 02-DOWN page panel 329 hooks 1670 sets 12 engine 179
+STEP N1 03-INFO help panel 329 hooks 2353 sets 12 engine 264
+STEP N1 04-INFO:off help panel 329 hooks 28 sets 2 engine 0
+STEP N1 05-DOWN page panel 329 hooks 1670 sets 12 engine 179
+STEP N1 06-DOWN page panel 329 hooks 652 sets 12 engine 55
+STEP N1 07-DOWN page panel 329 hooks 1166 sets 19 engine 115
+STEP N1 08-DOWN page panel 329 hooks 1166 sets 19 engine 115
+STEP N1 09-DOWN page panel 329 hooks 652 sets 12 engine 55
+STEP N1 10-DOWN page panel 329 hooks 652 sets 12 engine 55
+STEP N1 11-DOWN page panel 329 hooks 669 sets 11 engine 59
+STEP N1 12-UP page panel 329 hooks 669 sets 11 engine 59
+STEP N1 13-RIGHT page panel 329 hooks 1551 sets 57 engine 120
+STEP N1 14-RIGHT page panel 329 hooks 2097 sets 64 engine 175
+STEP N1 15-RIGHT page panel 329 hooks 1723 sets 45 engine 150
+STEP N1 16-RIGHT page panel 329 hooks 1975 sets 49 engine 170
+STEP N1 17-RIGHT page panel 329 hooks 1763 sets 29 engine 175
+STEP N1 18-LEFT page panel 329 hooks 1818 sets 28 engine 170
+STEP N1 19-MAIN+1 page panel 329 hooks 1724 sets 26 engine 175
+STEP N1 20-MAIN-1 page panel 329 hooks 1789 sets 26 engine 170
+STEP N1 21-SUB+1 page panel 329 hooks 1633 sets 38 engine 146
+STEP N1 22-SUB-1 page panel 329 hooks 1865 sets 38 engine 171
+STEP N1 23-SUB-1 page panel 329 hooks 1617 sets 69 engine 114
+STEP N1 24-SUB+1 page panel 329 hooks 2125 sets 66 engine 177
+STEP N1 25-OK sub panel 386 hooks 3513 sets 113 engine 79
+STEP N1 26-MENU page panel 329 hooks 7152 sets 202 engine 179
+STEP N1 27-DOWN page panel 329 hooks 652 sets 12 engine 55
+STEP N1 28-MENU closed panel 329 hooks 128 sets 3 engine 0
+STEP N1 29-OPEN page panel 329 hooks 2163 sets 11 engine 50
+STEP N1 30-RIGHT page panel 329 hooks 1527 sets 57 engine 116
+STEP N1 31-LEFT page panel 329 hooks 1906 sets 47 engine 167
+STEP N1 32-SUB-1 page panel 329 hooks 1616 sets 69 engine 114
+STEP N1 33-MENU closed panel 329 hooks 190 sets 3 engine 0
+STEP N1 34-OPEN page panel 329 hooks 1825 sets 11 engine 26
+STEP N1 35-MENU closed panel 329 hooks 66 sets 3 engine 0
+STEP N1 36-OPEN page panel 329 hooks 1825 sets 11 engine 26
+STEP N1 37-RIGHT page panel 329 hooks 2259 sets 94 engine 163
+STEP N1 38-LEFT page panel 329 hooks 1638 sets 70 engine 114
+STEP N1 39-MENU closed panel 329 hooks 190 sets 3 engine 0
+STEP N1 40-OPEN page panel 329 hooks 1825 sets 11 engine 26
+STEP N1 41-RIGHT page panel 329 hooks 2091 sets 70 engine 163
+STEP N1 42-MAIN-1 page panel 329 hooks 1612 sets 68 engine 114
+STEP N1 43-MENU closed panel 329 hooks 66 sets 3 engine 0
+STEP N1 44-OPEN page panel 329 hooks 1825 sets 11 engine 26
+STEP N1 45-LEFT page panel 329 hooks 2326 sets 92 engine 185
+STEP N1 46-MENU closed panel 329 hooks 190 sets 3 engine 0
+STEP N2 00-OPEN page panel 329 hooks 9860 sets 191 engine 248
+STEP N2 01-SUB+1 page panel 329 hooks 1631 sets 71 engine 114
+STEP N2 02-SUB+1 page panel 329 hooks 2265 sets 86 engine 177
+STEP N2 03-MENU closed panel 329 hooks 128 sets 3 engine 0
+STEP N2 04-OPEN page panel 329 hooks 2163 sets 11 engine 50
+STEP N3 00-OPEN page panel 329 hooks 9650 sets 188 engine 223
+STEP N3 01-SET:32=180 page panel 329 hooks 36 sets 0 engine 0
+STEP N3 02-RIGHT page panel 329 hooks 1770 sets 30 engine 175
+STEP N3 03-LEFT page panel 329 hooks 1827 sets 29 engine 170
+STEP N3 04-DOWN page panel 329 hooks 596 sets 12 engine 46
+STEP N3 05-DOWN page panel 329 hooks 596 sets 12 engine 46
+STEP N3 06-DOWN page panel 329 hooks 596 sets 12 engine 46
+STEP N3 07-DOWN page panel 329 hooks 596 sets 12 engine 46
+STEP N3 08-OK popup panel 329 hooks 2903 sets 103 engine 205
+STEP N3 09-DOWN popup panel 329 hooks 682 sets 12 engine 53
+STEP N3 10-OK popup panel 329 hooks 1824 sets 14 engine 174
+STEP N3T 00-OPEN page panel 329 hooks 9650 sets 188 engine 223
+STEP N3T 01-SET:32=180 page panel 329 hooks 36 sets 0 engine 0
+STEP N3T 02-RIGHT page panel 329 hooks 1772 sets 30 engine 175
+STEP N3T 03-LEFT page panel 329 hooks 1828 sets 29 engine 170
+STEP N3T 04-DOWN page panel 329 hooks 602 sets 13 engine 46
+STEP N3T 05-DOWN page panel 329 hooks 597 sets 12 engine 46
+STEP N3T 06-DOWN page panel 329 hooks 597 sets 12 engine 46
+STEP N3T 07-DOWN page panel 329 hooks 597 sets 12 engine 46
+STEP N3T 08-OK popup panel 329 hooks 2908 sets 104 engine 205
+STEP N3T 09-DOWN popup panel 329 hooks 683 sets 12 engine 53
+STEP N3T 10-OK popup panel 329 hooks 1825 sets 14 engine 174
+STEP N3T 11-B7 page panel 329 hooks 2506 sets 90 engine 180
+STEP N3T 12-MENU closed panel 329 hooks 129 sets 3 engine 0
+STEP N4 00-CLOCK:1791369000 unknown panel null hooks 0 sets 0 engine 0
+STEP N4 01-OPEN page panel 329 hooks 9650 sets 188 engine 223
+STEP N4 02-RIGHT page panel 329 hooks 1770 sets 30 engine 175
+STEP N4 03-CLOCK:1791455461 page panel 329 hooks 0 sets 0 engine 0
+STEP N4 04-LEFT page panel 329 hooks 1818 sets 28 engine 170
+STEP N4 05-RIGHT page panel 329 hooks 1753 sets 28 engine 175
+STEP N5 00-OPEN page panel 329 hooks 9200 sets 192 engine 168
+STEP N5 01-DOWN page panel 329 hooks 612 sets 12 engine 49
+STEP N5 02-RIGHT page panel 329 hooks 1207 sets 57 engine 76
+STEP N5 03-LEFT page panel 329 hooks 1466 sets 47 engine 112
+STEP N6 00-OPEN page panel 329 hooks 8862 sets 183 engine 142
+STEP N6 01-MENU closed panel 329 hooks 66 sets 3 engine 0
+STEP N7 00-OPEN page panel 329 hooks 9553 sets 193 engine 253
+STEP N7 01-RIGHT page panel 329 hooks 1464 sets 55 engine 111
+STEP N7 02-RIGHT page panel 329 hooks 2098 sets 64 engine 175
+STEP N7 03-RIGHT page panel 329 hooks 1724 sets 45 engine 150
+STEP N7 04-RIGHT page panel 329 hooks 1977 sets 49 engine 170
+STEP N7 05-RIGHT page panel 329 hooks 1764 sets 29 engine 175
+STEP N7 06-MENU closed panel 329 hooks 129 sets 3 engine 0
+STEP N7 07-OPEN page panel 329 hooks 2353 sets 11 engine 92
+STEP N7C 00-OPEN page panel 329 hooks 9676 sets 192 engine 229
+STEP N8 00-OPEN page panel 329 hooks 9676 sets 192 engine 229
+STEP N8 01-SHOT page panel 329 hooks 1 sets 0 engine 0
+STEP N8 02-SWITCH:evf page panel 329 hooks 151 sets 0 engine 0
+STEP N8 03-SHOT page panel 329 hooks 1 sets 0 engine 0
+STEP N8 04-SWITCH:tft page panel 329 hooks 138 sets 0 engine 0
+STEP N8 05-SHOT page panel 329 hooks 1 sets 0 engine 0
+STOP N3 MENU: index 23: event storm: more than 810 GESetEvent calls in step 11-MENU; awaited 0x9ac6
+STORE N1 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N2 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N3 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N3T K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N4 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N5 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N6 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N7 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N7C K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N8 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+SUBSCREEN N1 page 1 row 0: sub panel 386
+SUBSCREEN N3 page 5 row 4: popup panel 329
+SUBSCREEN N3T page 5 row 4: popup panel 329
+SWITCH N8 01-SHOT tft assumed 1 sha256 c1bdbd50b81d56b4bf2784a2909452e5ef575acb464e561e60931c62f080312d
+SWITCH N8 02-SWITCH:evf evf assumed 0 sha256 1ff09a00ba216487ac87fbbe6b73d61ce601b098a5f1dc85b266f7fd9cd08154
+SWITCH N8 03-SHOT evf assumed 0 sha256 1ff09a00ba216487ac87fbbe6b73d61ce601b098a5f1dc85b266f7fd9cd08154
+SWITCH N8 04-SWITCH:tft tft assumed 0 sha256 f5a268683f1ca32098514432f6a49cd6d01af4d61287a4f77c5ccc5725509716
+SWITCH N8 05-SHOT tft assumed 0 sha256 f5a268683f1ca32098514432f6a49cd6d01af4d61287a4f77c5ccc5725509716
+SWITCH N8 edge pad 02-SWITCH:evf plane 0 buffer 0xb7a49800 width 800 rows 600 byte 0x7f
+SWITCH N8 edge pad 02-SWITCH:evf plane 1 buffer 0xb767a800 width 800 rows 600 byte 0xff
+SWITCH N8 edge pad 02-SWITCH:evf plane 2 buffer 0xb7e18800 width 800 rows 600 byte 0x1f
+SWITCH N8 kinds 0x4671=1 0x8279=0 0xd7f9=0 0xe831=1 error log 0x1c005002x11
+SWITCH N8 third SHOT vs first: 452 px differ, all in column 800 (rows 24..586)
+UNVERIFIED-VALUE page 3 row 1 mode 5339 handler 0x511bf596
+UNVERIFIED-VALUE page 3 row 2 mode 3416 handler 0x511bf596
+UNVERIFIED-VALUE page 4 row 1 mode 2031 handler 0x511bf765
+UNVERIFIED-VALUE page 6 row 1 mode 5120 handler 0x511bf7a2
+UNVERIFIED-VALUE page 6 row 5 mode 3269 handler 0x511bf8d2

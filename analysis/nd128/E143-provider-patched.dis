@@ -1,0 +1,23 @@
+
+artifacts/nd128/OM1_v1.9_ND128.main-code.bin:     file format binary
+
+
+Disassembly of section .data:
+
+002d163b <.data+0x2d163b>:
+  2d163b:	04          	clr	d1
+  2d163c:	2c 41 1e    	mov	7745,d0
+  2d163f:	90 00       	mov	0,a0
+  2d1641:	dd 99 01 d7 	call	0x417da,[d2,d3],12
+  2d1645:	ff c0 0c 
+  2d1648:	f8 53 22    	movbu	d0,(34,a3)
+  2d164b:	5c 04       	mov	(4,sp),a0
+  2d164d:	14          	extbu	d0
+  2d164e:	f0 70       	movhu	d0,(a0)
+  2d1650:	2c 51 1e    	mov	7761,d0
+  2d1653:	90 00       	mov	0,a0
+  2d1655:	04          	clr	d1
+  2d1656:	dd 84 01 d7 	call	0x417da,[d2,d3],12
+  2d165a:	ff c0 0c 
+  2d165d:	cc a7 ea    	jmp	0x2d0104
+  2d1660:	df f0 1c    	ret	[d2,d3,a2,a3],28

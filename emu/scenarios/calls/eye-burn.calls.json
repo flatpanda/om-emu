@@ -1,0 +1,31 @@
+{
+ "format": "om-emu-player-inputs/1",
+ "scenario": "eye-burn",
+ "labs": ["eye-burn"],
+ "source": "captured on 2026-10-13 (EVF burn-in dimming with property 1947 = 0: SET:1947=0, GET:1947, eye 1, EYE, WAIT:7000, EYE, eye 0, EYE, WAIT:7000, EYE); the inputs only, without the outcomes recorded with them",
+ "actions": [
+  [0,"ctor","Player",[],{"lang":"en","device":"tft","evf_layout":false,"a15":"auto","start":"shooting","tab":"7,1,1","idle":"off","touch":"gui","us_clock":"lab","no_camseq":false,"no_bgdraw":false,"compose":"boundary","port":0,"no_browser":true,"out":"<out>","replay":null,"debug_api":true,"x_mutant":null,"x_trim_keep":null,"no_wait_on_error":true}],
+  [1,"player","open_session",[],{}],
+  [2,"player","submit",[{"type":"token","token":"SET:1947=0"}],{}],
+  [3,"player","tick",[],{}],
+  [4,"player","submit",[{"type":"token","token":"GET:1947"}],{}],
+  [5,"player","tick",[],{}],
+  [6,"player","submit",[{"type":"switch","id":"eye","value":1}],{}],
+  [7,"player","tick",[],{}],
+  [8,"player","submit",[{"type":"token","token":"EYE"}],{}],
+  [9,"player","tick",[],{}],
+  [10,"player","submit",[{"type":"token","token":"WAIT:7000"}],{}],
+  [11,"player","tick",[],{}],
+  [12,"player","submit",[{"type":"token","token":"EYE"}],{}],
+  [13,"player","tick",[],{}],
+  [14,"player","submit",[{"type":"switch","id":"eye","value":0}],{}],
+  [15,"player","tick",[],{}],
+  [16,"player","submit",[{"type":"token","token":"EYE"}],{}],
+  [17,"player","tick",[],{}],
+  [18,"player","submit",[{"type":"token","token":"WAIT:7000"}],{}],
+  [19,"player","tick",[],{}],
+  [20,"player","submit",[{"type":"token","token":"EYE"}],{}],
+  [21,"player","tick",[],{}],
+  [22,"player","close_session",[],{}]
+ ]
+}

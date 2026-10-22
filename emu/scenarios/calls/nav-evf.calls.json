@@ -1,0 +1,26 @@
+{
+ "format": "om-emu-session-inputs/1",
+ "scenario": "nav-evf",
+ "source": "captured on 2026-10-13 (NavSession(evf, evf_layout, a15; check_nav N7 options): OPEN RIGHT RIGHT RIGHT RIGHT RIGHT MENU OPEN, compose(evf) after each); the inputs only, without the outcomes recorded with them",
+ "actions": [
+  [0,"ctor","NavSession",["en","evf","skip",{"$tuple":[7,1,1]},{}],{"open_menu":false,"png":"none","tag":"ref-nav-evf","evf_layout":true,"a15":true}],
+  [1,"nav","__enter__",[],{}],
+  [2,"nav","step",["OPEN"],{}],
+  [3,"lab","compose",["evf"],{}],
+  [4,"nav","step",["RIGHT"],{}],
+  [5,"lab","compose",["evf"],{}],
+  [6,"nav","step",["RIGHT"],{}],
+  [7,"lab","compose",["evf"],{}],
+  [8,"nav","step",["RIGHT"],{}],
+  [9,"lab","compose",["evf"],{}],
+  [10,"nav","step",["RIGHT"],{}],
+  [11,"lab","compose",["evf"],{}],
+  [12,"nav","step",["RIGHT"],{}],
+  [13,"lab","compose",["evf"],{}],
+  [14,"nav","step",["MENU"],{}],
+  [15,"lab","compose",["evf"],{}],
+  [16,"nav","step",["OPEN"],{}],
+  [17,"lab","compose",["evf"],{}],
+  [18,"nav","close",[],{}]
+ ]
+}

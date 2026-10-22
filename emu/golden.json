@@ -1,0 +1,3774 @@
+{
+ "about": "emu/bin/golden.mjs: per scenario session, the sha256 of each layer of its trace",
+ "image_sha256": "7f791611580925f3550d394baa9e8cca4e8f4c38e427ccd498170e8d1feb67e9",
+ "sessions": {
+  "a15-open": {
+   "screen": "8a946a1c8961106d123a2b076d5a4de5faf28a1f9969fc716ca62228b50b2437",
+   "devices": "0110a4353a4055bc324240bc4e2a78686c918c6e338f94d7d5646ed244653637",
+   "stops": "77b7a3f913c895e384e3ab6eb928db2f164c741db5c97e06a59d23fd952042b0",
+   "harness": "d6ef528b210f70d8c1dc48c4eb9496854cf706df7a59438b23096df8c1d961c1",
+   "output": "e146f82b994d119e45d052b13f2f164632be438dd36e99e8970ba8705ae224db",
+   "items": {
+    "screen": 2,
+    "devices": 50,
+    "stops": 16321,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "b7-gate": {
+   "screen": "16b538d2bda078017bb66a20fd8d89de94ea02cc73939d1f862a0c588e859624",
+   "devices": "04065c78484e3dec290b372a9ae7e18562c07dc7b6300b25ef2738893dc10c35",
+   "stops": "b6df387c783a73f05341ee987767c082d24ff948f4c7e8707d916652adceb3f4",
+   "harness": "a17d3c453b5ecbbbb9950242eb2548a85852b78c61a6fec7ef44f16baecbc74f",
+   "output": "6230b0a49e375a0545a7a78e54f236af0368533a1538559754dd2429bc398dad",
+   "items": {
+    "screen": 9,
+    "devices": 314,
+    "stops": 77499,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "evf-idle": {
+   "screen": "73e7d1865663f02268bf3a0286293f4de8c47ef241dc3b75b4c3006cdcff372b",
+   "devices": "e034f0f168ba1af404c4f791f2e812ee58aff07bca42b59e7b1ff7bf7d305962",
+   "stops": "547d4f2faefd359e0e8e61f2dbc8adc6ec32a244e28a03cd92e1fd8ffb51e1b5",
+   "harness": "5b9c614e1aaf9958ef487ad58037c7e6c02d5b88846a3d07edaa0bb2e57524fc",
+   "output": "58048e243d68ec29ae32e64fbd071d8b698ae94b7f1a0650ef768c623ab89df0",
+   "items": {
+    "screen": 3,
+    "devices": 9190,
+    "stops": 74331,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "eye-burn": {
+   "screen": "e5ca3af75a967f42ca8c706a4981f8f9227187a66a84e7c1f54857a676ea9077",
+   "devices": "27155be7fc79d5773c2171117f5c086d8df3d28a5d59d5cdc61fbc33cb276b17",
+   "stops": "f2e8df49f0942e80a9fada4c566dc279057da5f9c88e5b0b99062df2dcd6a494",
+   "harness": "7902489c9d5724fddfd1d8056a1454a2bc82cdcc5707a69946793d234792ade5",
+   "output": "9dc43b10ab2f83d0258abe0b5d8d4797bccb03a7fbbb5fe12335fc9de261291e",
+   "items": {
+    "screen": 6,
+    "devices": 21329,
+    "stops": 223992,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "inputs": {
+   "screen": "325319e43e6f35c4fc71a6ed55291775eb256464c9ec2e9bc4ca4739c6f0e54a",
+   "devices": "c6ed2030be0c1be3a4b3e574374a6089cee6b7356e21a50258937a5e5df8a6a5",
+   "stops": "8a81e97e1b0c34395fa944bf8d70f65fcd354ad5285b0d141a0ed61a269eddfd",
+   "harness": "912de4cfeb799580ed87e08a63d95bfdcc3356cc76a4294799191eb4c92f56f4",
+   "output": "30102efe35edeb290dbfe2e3974c476d037cf79f8682945d81a37c1901adec7f",
+   "items": {
+    "screen": 5,
+    "devices": 639,
+    "stops": 183643,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "kernel-1": {
+   "screen": "bb3c7b3d411b28610760b6382f05567a5482c89705a12924959e421b0baf8666",
+   "devices": "0cf74de58fe6543a37ed60950f1afc475b4f0ccf14ca76cb76944d08b750e349",
+   "stops": "0da749b13f5eb7a8870562efa3bdddeb5e4ed6f392e5632e58915d93c19add94",
+   "harness": "340069a8086298ed2458a9fa7ae5f00f41ff3a054852b09b24a5cf9205d46285",
+   "output": "2e6fe9e5fa7e4f71501f987f35a2e6a195f35b21c2147e8472a7a8bce3f3e436",
+   "items": {
+    "screen": 1,
+    "devices": 8,
+    "stops": 50,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "kernel-5b": {
+   "screen": "bb3c7b3d411b28610760b6382f05567a5482c89705a12924959e421b0baf8666",
+   "devices": "cb1bd01323239cc1bf99a90ef7936992ec6a4facca5d4375cba1d3cbd8140ae7",
+   "stops": "22163b63bc27beaba0b7c0feaa7dbdf1f0edd6c9ed239e19a864a572a50070f0",
+   "harness": "9f5f0d02c67bad444b4cf7a98b8af3b3ff314ef93daddaaecf597cd51f2c63e1",
+   "output": "5480af6b26d49850d78f7b52df4babed16ba8535bdbea7c40c1a5ff7884d3772",
+   "items": {
+    "screen": 1,
+    "devices": 4,
+    "stops": 35,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "kernel-5c": {
+   "screen": "bb3c7b3d411b28610760b6382f05567a5482c89705a12924959e421b0baf8666",
+   "devices": "c1a44f315fb119a55d3aa18c6f446edfda12a7017e1d8d1c8362dcb0f371d3dc",
+   "stops": "bc0e512949e420ab267ea05f8c0fc3f3cb1d902005a01754acfcb7e7a0118d9c",
+   "harness": "eba7d7797a61189a3c852606e30b0cceb575bec88449b940f9c0677e9d6068a3",
+   "output": "e77425e97994366cc2d1b89d41bcd67b86786253f0e3d8a4f45638f8d652e115",
+   "items": {
+    "screen": 1,
+    "devices": 315,
+    "stops": 690,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "kernel-6": {
+   "screen": "bb3c7b3d411b28610760b6382f05567a5482c89705a12924959e421b0baf8666",
+   "devices": "ed31a09d31abda061b97d891e7da7ab7e09fb1833a1f938b1033bedcbef284b3",
+   "stops": "fdf240cd89620a1d908dfda8cc389519318f5d7626323acd7cf12c105a3a1d18",
+   "harness": "9468f498b6cb07da81fe5d6fc176a74ca8adeba09b1a49aad912fb9b33fb2da9",
+   "output": "b4bceaadb362127ef60c3582afad23b985ab5a2be9719818722ced86f2b573e8",
+   "items": {
+    "screen": 1,
+    "devices": 4,
+    "stops": 14,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "kernel-7": {
+   "screen": "bb3c7b3d411b28610760b6382f05567a5482c89705a12924959e421b0baf8666",
+   "devices": "4d6c595c8f16da824ba1b1f270a14d86d0a2c40435c22d650d44afffc853f60b",
+   "stops": "19952ee1c126573e73fff88ee8dd00f02949fdf6f81087c9538463f31d27bcd0",
+   "harness": "ce8bc4b0e66fad7ec79ebc24d80163ee7179818a8d9f97a7ec1ada8659ea87be",
+   "output": "76c82ec0deb1715d1031742b8caf2ce8e4091504331269db6d7e6259e6c7747c",
+   "items": {
+    "screen": 1,
+    "devices": 4,
+    "stops": 27,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "kernel-7b": {
+   "screen": "bb3c7b3d411b28610760b6382f05567a5482c89705a12924959e421b0baf8666",
+   "devices": "36ae78c5e5d5d563378067c96bc0cb92f584de2b5d524c80b5534c21b0b8a6fe",
+   "stops": "d9c6402b005e91c173e70e6f9b146ac2fcfdfaf9bc125d5f490871e186061247",
+   "harness": "10edfd9bfcf418196c8d757f8c72ee88948d811279d3fccc3c253e59fc242964",
+   "output": "c27fed0f821594f27af153ad98caf8a0de8a7fc44d85a374ec6409d9bd78eefa",
+   "items": {
+    "screen": 1,
+    "devices": 5,
+    "stops": 22,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "keys": {
+   "screen": "1f8925826e050e30b582446c79878f81a9f3605017d043f55d986afe957589c7",
+   "devices": "cf830d5e842d9fad0fcf6ae276ed6cf680eaa7d43881c80dd3105a771194d8aa",
+   "stops": "4465a0397bf5ae46fa45f26f83b786ec631f863a211d35c425061d6ae206efc4",
+   "harness": "14b00ed636972612b5dd1177d9a37b5fb65650d9909f1777dce83ae9dd7ba85c",
+   "output": "b0950457f66c0caee22a79d4d1c7173fe0875b3ddaab2f54b6038cffec8435b0",
+   "items": {
+    "screen": 4,
+    "devices": 178,
+    "stops": 64981,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "menu-open-any": {
+   "screen": "7405f93bb4a5cd070607c19317bcee03937d22b6d5adb2d1e90781cc84546b2b",
+   "devices": "011ac228f3247897373d0d092ce693e2418b70d900be479e257206193059d8c4",
+   "stops": "2767c3887748893d0fdb30e9e89d63dd2f2f05239d187bcaef5d86e79ba4d31d",
+   "harness": "8009112f13bc3db7df887fb9bd9b75141803217382f78fd838fd5f59b4626cc2",
+   "output": "ac60ce1b84c3b6bbb3c88c1be99fed7ecada82af78772cb2e61fe3c492abe0fc",
+   "items": {
+    "screen": 1,
+    "devices": 32,
+    "stops": 15745,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "menu-open": {
+   "screen": "7405f93bb4a5cd070607c19317bcee03937d22b6d5adb2d1e90781cc84546b2b",
+   "devices": "bd48c1d73b09735e06a75f65c462ba9730340d422f723ab26138fb41f9ac32ec",
+   "stops": "85b442a9b526d2dfd4188aba009db8d0b8beb614e091e792c53e46c3727f1839",
+   "harness": "ef09881d5c8b56ac5dadd1e81d9e636419ee18657446b1b4931bb68682c21cd2",
+   "output": "0e0238e0c9f54319803216d0f1a4cafad246e7b09e10a97184bf0c15e4e62b4b",
+   "items": {
+    "screen": 1,
+    "devices": 31,
+    "stops": 15745,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "menu-tft": {
+   "screen": "7d4b9d0478b839cf6176ecdcdc1da707b036e54597edadb4f3ba768a9c84505b",
+   "devices": "0345203efc62dd9380ba7787e3513752a8346f2ac2b6d415d0fe250bb4996eac",
+   "stops": "d7b985402ed176cf4533d531d3b8ad28835e95fd662e8e47fa1e8f707846faa0",
+   "harness": "a01ef96979c12645b1d689f957244e267f56047a3f4be96927b06cb236e93bd2",
+   "output": "2f0b455679f86e98516c5831e44d8fde6c81552c08f0a3dd3ac46cc017ab8baa",
+   "items": {
+    "screen": 10,
+    "devices": 396,
+    "stops": 60485,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "nav-a": {
+   "screen": "00dfe3481f418923943fa68a12f1afe756830bef86c8afa32124f4f6919280bf",
+   "devices": "1cf992e4c317f445dc9995c7f63824e6f3165d062b50c41888e7520d5740e385",
+   "stops": "6f3de5897220973f42481eae1bfe964bc4f96aa3cbcfa5ed15d05192e2cc5b9e",
+   "harness": "be98403f10180daeca8fb9f19d8ee40a8010e0919beeb0185789e701fbdd348a",
+   "output": "1eaa258b23366f4dfa31ad6fe3e453862203c170712c599e819d509c04cb60ee",
+   "items": {
+    "screen": 9,
+    "devices": 62,
+    "stops": 35992,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "nav-evf": {
+   "screen": "28fabbb3570d9a7a70d159751fdef8b1ccf63f7525d649f8eae452e0b20ac54d",
+   "devices": "c6dedb32938e476d4d8b8f438920eba3d3d6e0235ae353942bd23fe55ff9b80e",
+   "stops": "4d6e9cf1f859ba4a9559d76a7f41a43b41359ec35f6d40de3c051755a6562fe6",
+   "harness": "304f2d5d78e9fe5897bdde21bd78b592d1d0b1e7ec945c9d7cd8211c9f39b9b6",
+   "output": "38cfe95752ac73d51caaaea72e89db3ebd3c203a174d84144a834fb60804f2af",
+   "items": {
+    "screen": 9,
+    "devices": 45,
+    "stops": 33253,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "osd": {
+   "screen": "ea986d51d3590cee27b5b7c58a462ad09efdb4be469f8fa908f2343fe37dc026",
+   "devices": "be778bd8b709d3697326c5e6dee8d0072bcbd33cb2ab6568069b9f2ceb230bf1",
+   "stops": "a808887fe54f43e221bf1caca9882e99de4a403fdf1ec16d179225c5de5d4a07",
+   "harness": "67b963c5692a0d805813e51856afc71ad1f44f6db16324de987cce0ce29b1a33",
+   "output": "c8f70f469d182b9d726e953f2819674494687ad1a3b8d7085a004cd1962d1090",
+   "items": {
+    "screen": 59,
+    "devices": 88,
+    "stops": 6750,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "pace-wall": {
+   "screen": "9538931c1eda49caafd04aae8b9a3d3619ac7a596108d1c856ac6eeaa5e100fe",
+   "devices": "03165d1c8c7cf9a94357d5a440e6558fbe1498eab2676f039c6172eb6513d713",
+   "stops": "3df6ac45f8d31c5b89674d9ee709939e58cf7248e2918a243006f35a908a3591",
+   "harness": "5c687e79332035df10bb74572c583029baea4c6a2443469a8e0bbfc2bb83bd63",
+   "output": "9f0a9aec30f46d6d5d4893dec43208e0ebf5ecc2da4ac8c6df5a09f4c64d1f49",
+   "items": {
+    "screen": 4,
+    "devices": 15523,
+    "stops": 69350,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "play-perf": {
+   "screen": "dc22b3b35c40070504f0cb932b5c7e4899645379907a4372d2bd5dfc56eb223a",
+   "devices": "736b40fe103f9f0697f6f2b608d48848ddc5c02f56dd3a7dc80374420df726e8",
+   "stops": "66bc7f41a2984048c4ad765183b075936028807e4504438d032d6e429d52d30b",
+   "harness": "4c070f78b0858a5e06968831d9baa47907dec49c164eb75b1f1e493e0135b348",
+   "output": "560f75c0a7e0111478ab481ea7e741024e691e3fea437d6e58543abbc111a9b3",
+   "items": {
+    "screen": 147,
+    "devices": 11474,
+    "stops": 147705,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "playback": {
+   "screen": "b289c1f24b27099a7729c3ce359fee56dab7e48d3dac704dd393bf2227bcd423",
+   "devices": "94a0240202942a1e7806146b4b1c4caf767224b5fb022bceee7607e4f0bcabe6",
+   "stops": "694a70ea12baded622cde3adee88cb8a34675a7fdf3f4f8b1a579249c7a8ed7a",
+   "harness": "94fd056726f399d82321f4ee45d1cc6e9b0301146d3b228ab9eb6b40fab7942a",
+   "output": "075b02d71723302d8a3859cfc61eb772ee6b03dd22903bfe650683e1173c7bdc",
+   "items": {
+    "screen": 4,
+    "devices": 1688,
+    "stops": 56243,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "power#2": {
+   "screen": "38aa477faf81519beacb598a011c91a12f0ca440c808196c8cc1fe514220709c",
+   "devices": "bf9dd401dfb7e0c5daf5219d8fa78806920daa30d74bd2db615e525e7df55efc",
+   "stops": "2090db049936624e1d94c5408c09229dde753712bc8c90a4bfcbe40bd3476bb4",
+   "harness": "98abef0de6d225ff536df8a3e4604ef87b733853c8db55590da273eb12acae04",
+   "output": "709cdf5a215a94cf5ec1f6be67a16c9d37904a6a9a558850ce04aee9e8139f81",
+   "items": {
+    "screen": 2,
+    "devices": 47,
+    "stops": 16248,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "power#3": {
+   "screen": "49340b82d44fd73871110ec23c7a66d0be9c989b763db5fd64b84dc02bb30d00",
+   "devices": "ccb12e19e0758ec01306bdedee7711e14d274e43cd267fb5fce24762de19aa87",
+   "stops": "ca84abf3038bbfe13d043c94968d3d428c33a34caa2026501a7e98ac155c1ad5",
+   "harness": "0f778e716a013fa6c897968fc1b49e5f2f36a50ba7f57f9c453b34e93f8ba5c1",
+   "output": "709cdf5a215a94cf5ec1f6be67a16c9d37904a6a9a558850ce04aee9e8139f81",
+   "items": {
+    "screen": 3,
+    "devices": 90,
+    "stops": 42537,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "power-replay#2": {
+   "screen": "38aa477faf81519beacb598a011c91a12f0ca440c808196c8cc1fe514220709c",
+   "devices": "0a12edead54a23cb9c75d41f5b69c9fb4282770d4ed40b6e805266c8d457f7b5",
+   "stops": "2090db049936624e1d94c5408c09229dde753712bc8c90a4bfcbe40bd3476bb4",
+   "harness": "dc20a0c52410e6435d862a6ac912f4885a4c8edab2dbaaa8bedb857c73e25e36",
+   "output": "de8b8df39095535c3563b39c8b3d76bd61f55752ff5cc2bef3ed54397a3460d6",
+   "items": {
+    "screen": 2,
+    "devices": 45,
+    "stops": 16248,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "power-replay#3": {
+   "screen": "49340b82d44fd73871110ec23c7a66d0be9c989b763db5fd64b84dc02bb30d00",
+   "devices": "e41027a0fb754c89079db32c4b5fe5c727bcb6e11eebe1b1fc352458829c6e56",
+   "stops": "c8d90c58479cece486a7c154f853383810587ddd47d165bf28d86b7d7cd7fed9",
+   "harness": "c0f2b9fb3dc98ea191aa46e5d8fd771bd60a1c47a0d1c0c35bcf05f8661a2aaa",
+   "output": "de8b8df39095535c3563b39c8b3d76bd61f55752ff5cc2bef3ed54397a3460d6",
+   "items": {
+    "screen": 3,
+    "devices": 85,
+    "stops": 42555,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "power-replay": {
+   "screen": "35ae0644bf373b8809ff0ad5bf250687ba02f34a262ee0b76c562d560df5af55",
+   "devices": "c456449f90721a11b7aa8be84ea9b4c150e4efc9538dab5416c766554f66870a",
+   "stops": "259e87aaf819fdcbb48c9cc6af459cb7149f0c3ef0326493135e82051d184724",
+   "harness": "022b3648ca1e2b2144d98a78b11d8a8fcad319c44702619f274518ae418068eb",
+   "output": "de8b8df39095535c3563b39c8b3d76bd61f55752ff5cc2bef3ed54397a3460d6",
+   "items": {
+    "screen": 2,
+    "devices": 53,
+    "stops": 28811,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "power": {
+   "screen": "35ae0644bf373b8809ff0ad5bf250687ba02f34a262ee0b76c562d560df5af55",
+   "devices": "9cfbe26b64aaab8b67af7ba1eac409467da333aff64d23b4ef45a6387fbc7c62",
+   "stops": "259e87aaf819fdcbb48c9cc6af459cb7149f0c3ef0326493135e82051d184724",
+   "harness": "ec6e466315bbd59d51c950c15628313b4a2b717918bce93e0a5d7d20f110d1f7",
+   "output": "709cdf5a215a94cf5ec1f6be67a16c9d37904a6a9a558850ce04aee9e8139f81",
+   "items": {
+    "screen": 2,
+    "devices": 55,
+    "stops": 28811,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "queue": {
+   "screen": "d1e1722a27b96934cc301d1c5986777f10c4dea3923a56f27e33feb133add774",
+   "devices": "029a73b2cc92ca9e7651c64161cf08deebe0d661d02d05c736ed63950697361c",
+   "stops": "f08f8555693e1386f742afbd3ab015ce28cf1dad8b87ddd45ac2d7667de0e60c",
+   "harness": "19273349fb83aa0c30840e4ca88dcf691791d088627444d2688e4a42b52694fd",
+   "output": "f3300a5bd58ef86e82b134b278e5d8e5ea8f74875dae7e0c462ad282b5889907",
+   "items": {
+    "screen": 4,
+    "devices": 193,
+    "stops": 38423,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "scp-edge": {
+   "screen": "a61873ee642d71de6391601cbffa6cde612764a040d195f83eebbb513e6acd16",
+   "devices": "ef3e58e4a8ef7dcae82b1419b00c48cc02086e2e656ab8379260c1ea3ba84442",
+   "stops": "9f81820c9602e15fa561ca591cb75463144aff36f526b701781560cdb0e8e920",
+   "harness": "ac2c32e0da5f7b7a2de865b1295e646d129182c0fc916a9b48e914effa48afe8",
+   "output": "c707f9c1b3000f3d8691424966553138720aa008648b610a0b56f04775bf22f0",
+   "items": {
+    "screen": 5,
+    "devices": 12810,
+    "stops": 142998,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "scp-replay": {
+   "screen": "33014be3cc3ca2c2af5b36a78bcf87979d719734acef4264ca6f69ebd6aee3af",
+   "devices": "8f139424d0f6c72d71047520ed9dfaa0ba1b330f77bdb0856aa0eb7efab5ee29",
+   "stops": "4941378adf77fec8577f6cd2ec8bbc805930f8d188112eec4dd193ba0a47e2c9",
+   "harness": "443f78948140de8c05b977945c24210b0d2f373b54d170182207d1b13ff43d0f",
+   "output": "6e836391b187dd2c73b01dc4bcfc8be38d577f395cb29aa3e1f8cf4508b32877",
+   "items": {
+    "screen": 7,
+    "devices": 22807,
+    "stops": 230944,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "scp-timeout": {
+   "screen": "af068f2de0b79704326f95ceae3a4335a19dbd1961402bfbee28bb1c7e3f8fd3",
+   "devices": "c2a357cae63b3a509be445c3b552e4da68c88fdf55f6d78d706aa9d5062d17ed",
+   "stops": "88b965b957b7172cd8bbe2ea2e9f607bf81d5e27532fea4c8a4829f2c6fe75e1",
+   "harness": "6c80b015e4eddc2a6cc938f477e0206235b6864f12a07b1c64edd30371e1a8ec",
+   "output": "73d45787d5b3eae417c2018c17cab21085276e9d83151345db4d36b5f4db756f",
+   "items": {
+    "screen": 17,
+    "devices": 22977,
+    "stops": 234040,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "shoot-evf": {
+   "screen": "8b41f55eddea99e1315b346dcd7e95ce76470d7dfb11304191bd3c118e59b805",
+   "devices": "20a253a14f2d14adcdaf80b3001d6df810295f765970bf86da5b93de30e25260",
+   "stops": "579085317dd9278fbcd2a7388abcd68dd6a2dd4ba501060307d976f40567fdd6",
+   "harness": "f37bb541be7af77c9ce380a61fdc7fbc2653f7c00e09808a9e45f85f03ea77ba",
+   "output": "e60172989f457e520574ac6095bb7cf2b02f831a56174c92fd7b3a659efe521b",
+   "items": {
+    "screen": 22,
+    "devices": 1541,
+    "stops": 24177,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "shoot-tft": {
+   "screen": "523d626a3f01f1a3a80104512fbec682563174d0dce13b0c7c7233ddd0bc2b18",
+   "devices": "d7a6574cc5fb71807929aa4c26e5501a452ab1f157b6803ccf7978817f90d8f6",
+   "stops": "65d416039ef9c0894f77c2976aa8f1d5049c5e8c73257a64e63e87f81a77ce05",
+   "harness": "e5de3aa8583e92633db22e466c139466ec0f71cb1a891f62868a15b26c05d42b",
+   "output": "c55e76a35f04d0323017f92911c09de4fd6fff005609e77aa458309c5bf10860",
+   "items": {
+    "screen": 22,
+    "devices": 1637,
+    "stops": 24659,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "switch-scp": {
+   "screen": "41ebcc50deb4b5bad401195db3fbfc22c19d9ad96e259097bad4a2e4552bdec9",
+   "devices": "1b15648714435d1d5dcf18ecfe63d29ac8c5b298a87b6aa8d3b6bdb8d187ef36",
+   "stops": "675678a4783b3172d6aacd193c2f1b097da55aa7f20483588bac6a39362f7d0a",
+   "harness": "e72ed6e56cb0fedde10262d47e243a43f23443129c807c48d5d7cb6f2fa71987",
+   "output": "43c92d3dbd12d4e78ad4698e7f41bf17d600228e255d40375d3669db31447518",
+   "items": {
+    "screen": 7,
+    "devices": 225,
+    "stops": 44938,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "switch-shoot": {
+   "screen": "d53e2f59fc67680a9fc262737e60f5bfae8d595337cb701960e30723a1f59c40",
+   "devices": "4a12844c236f32554aa60da2cb26022f6a5c35af7ea4bdf7e023809b25f86400",
+   "stops": "35f33415024d8f951322758de97b9d9569af92f0eda09b4480f199336748cbc2",
+   "harness": "c93c028e2ed71178e1c5899b8e459189af7607d580926dfb3d23b144600a5613",
+   "output": "67af65e97487c56af1ae48c9d4ca382861ef84ddfdb483a5a4cac18c216e046e",
+   "items": {
+    "screen": 6,
+    "devices": 186,
+    "stops": 35931,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "tokens-3b": {
+   "screen": "306ba1e189d76e0ab8c81eaccf7eda65c7c3835efc67ed115cb04c189b29ff97",
+   "devices": "60298a344232596f7233f5c18945278415f27c1993ebf5c360d947236758e056",
+   "stops": "9578194f6498f162a39a93e801f8f2289175ccff0736a311fd0afdf929fa8f78",
+   "harness": "b0358f17ea44bd53d7cd0d6e77f6a7e9bdd2e3c124198016476ba6d1c75f9230",
+   "output": "f0a2bd62d248fa5235d42823ccf3bd103ec9fc1de8f59c38865e037294d6287d",
+   "items": {
+    "screen": 9,
+    "devices": 253,
+    "stops": 30215,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "tokens": {
+   "screen": "44352a157960640f3b4f8ebc59b08fb01d75aa61ee5d902ff81f3cdbda0ba550",
+   "devices": "ebf930ca40c625f18ec158fa4d7a8353ec9cafd9624fb8ce4289bb56f012ca6b",
+   "stops": "99c02d88811b3fbcef565abe37d63b2ffacd23af7c3a4170c94880cb576ed31b",
+   "harness": "c493f80bb9abeac05bc0ae3cc2aae843d3ed7440824bbaaae06d83a2b4d51398",
+   "output": "0a0c3053e1c6bf5dde7337a53a7d1f0fb7b1638c02ab3d3790b7ab5c18fac174",
+   "items": {
+    "screen": 4,
+    "devices": 179,
+    "stops": 35857,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/display#10": {
+   "screen": "8c40f0446f2a7c5190a1feedab2abc64569a0cabf443928d471c11d48a3bae7b",
+   "devices": "ac90b6e4246dda1a3710c7c8958c8e0d4d707e57575540a82ca84dc9505ae38f",
+   "stops": "90318712e7a3748ab811d0a72486a32a883f496212dc7ecd65388bf57813c38c",
+   "harness": "df42be38b3c639c64a0ff1f47252f5437fc11c07334f59930670fa8778a19534",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 4,
+    "devices": 4,
+    "stops": 1181,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display#11": {
+   "screen": "9d4e6372e2710b980cafbc3069516466c5c74376bbf55bf75eb4a9cc061a6d4c",
+   "devices": "c9259491097b83f6c4aa69640c3a43da9d9c382018231d07da4ce16c53aee6f3",
+   "stops": "30a96aa9765489e13c9463b9de5d1afc8fba1988d301e5e7d655260bb7f547c8",
+   "harness": "f9f9f2983a058e7354570b5ad0ee87fc2e315d9543ae0bb7af19839c1a865d2d",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 3,
+    "devices": 4,
+    "stops": 974,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display#12": {
+   "screen": "4db77a14a15c6ce246d1c3ef02a497bc86a8ae5782a673ab2b7856250ded02db",
+   "devices": "34d0454548fbd48c0bb09326d3e5a3a35950895e7ba56e9ce4307fec190f42e0",
+   "stops": "3e354c8273327856fa3bec21983a4301316d61a6cbd16e4ef046c32d8733a43d",
+   "harness": "b6ffadc58731609c088810557bef0330ba6fa87f6f01ca841249ae3343d8583d",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 4,
+    "devices": 4,
+    "stops": 1175,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display#13": {
+   "screen": "5d20b4e53a8019ee5df42b0a15751037a6946cdb11f374a25fbaedc3500706a7",
+   "devices": "a707b63e21449476c48ccb5b49449b4d9a2d9d251b286e551ef6dcc86ea3cd17",
+   "stops": "13f77dc66741a84ebfe9a4fcf0a04ec3eae501030f2ddb3c8c7e504ff294b732",
+   "harness": "7680c14bd0a824bc88e8e6b738568724b26d12506fefe500fe6b897fc177c390",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 679,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display#14": {
+   "screen": "8c40f0446f2a7c5190a1feedab2abc64569a0cabf443928d471c11d48a3bae7b",
+   "devices": "ac90b6e4246dda1a3710c7c8958c8e0d4d707e57575540a82ca84dc9505ae38f",
+   "stops": "90318712e7a3748ab811d0a72486a32a883f496212dc7ecd65388bf57813c38c",
+   "harness": "df42be38b3c639c64a0ff1f47252f5437fc11c07334f59930670fa8778a19534",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 4,
+    "devices": 4,
+    "stops": 1181,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display#2": {
+   "screen": "76d980d00ec2062e9ab241f2b472099b15e7e6d33960e0137f87bb1719ab4de4",
+   "devices": "a3873a22b29f96ac04c378a85f72e52a43518ec65c8fac749f712911a5dffbfa",
+   "stops": "77eb9c3a4a1b9745d107c69e020badbc9e9e90653a32de9bbfac7899b2cd6ff8",
+   "harness": "770ec9260faf15fa1b57878d745dc11343b31583f036be85db2d92dc34ce3e1d",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 15,
+    "devices": 4,
+    "stops": 1276,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display#3": {
+   "screen": "5d20b4e53a8019ee5df42b0a15751037a6946cdb11f374a25fbaedc3500706a7",
+   "devices": "0c025958b3cf1ad3abf2b88e90be786d2ec9db68fab21d3a1d6a5d56e55bda86",
+   "stops": "11aee1539867372ea7551ba21ac8cc0ff0ed6c2be968754f730e252ec6f11dbc",
+   "harness": "a2cab4817160acb9d091e81e064773fcf8fbf067af6aede18e82fb31bc6a1fc0",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 744,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display#4": {
+   "screen": "5d20b4e53a8019ee5df42b0a15751037a6946cdb11f374a25fbaedc3500706a7",
+   "devices": "6b62bc23c8c21b1c3f34ed4bfeaedf44ebe379ca3c13fd97f3e34fc2a776455a",
+   "stops": "c154948df677898827ea23286ff23b16e86e20522785646893a93db502a7ff97",
+   "harness": "1372173a89e32f14e7427a43bcf94d22c061d9f66c3bcd9d087c0d34fdb994d9",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 704,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display#5": {
+   "screen": "5d20b4e53a8019ee5df42b0a15751037a6946cdb11f374a25fbaedc3500706a7",
+   "devices": "a0e852a4f476536fc5cb372437ef256559ce2757807ba0c222716f053381c17c",
+   "stops": "98a327b5187c2c1c828e652919677c5658c68f3ce6e64e711e5e44d88dd16ff0",
+   "harness": "830cda94353c05b18b3ce33047ed93062f0be1a44d4d4d594537e3996dc89ea6",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 687,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display#6": {
+   "screen": "5d20b4e53a8019ee5df42b0a15751037a6946cdb11f374a25fbaedc3500706a7",
+   "devices": "80377fdca170eb190e0f8c25e787324bc8de41b38eafd3f93cc446dd9f639053",
+   "stops": "e24d3019e23730736b759d5a9e463b4fa207be01176e1999ff00b2ab29e00ace",
+   "harness": "027bc52015cd551f3f4b5d540aee2eb10b170b588cb8e7ca46b1b6fe84833adf",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 518,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display#7": {
+   "screen": "46d58fabc85b094b8c6b69aa35ee3cdda650a1bd34e03b15ea0e02050f2183be",
+   "devices": "fb2c6f6936efceb8bb288684b8f5d7b659322a76db4547b40b6251856e559591",
+   "stops": "ef74a1e9ed505287c2a6debef8a87e15cbffa004268135c69a04b9cce0f9e466",
+   "harness": "91d0c96a02e5dc129e020e24ff0e1e47703fafa6e3e01070cdecd2029e96afab",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 3,
+    "devices": 4,
+    "stops": 820,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display#8": {
+   "screen": "a1fbf35016cc97877d73fc60ef4b51d998aebc92e9d26f146a8cfba757c7434d",
+   "devices": "574b7ed8be44b24f640d3d265c231f213c96e0c95b7433806f9a6e5cc6fafb19",
+   "stops": "27df1b40785b2637fd988a734c40a692b4c8d9f80b1a50ce595df7f1f96feaff",
+   "harness": "6cc2473ac06723fadebebaeabbd996128a7aeb9b0ef400816a74644f6677a8d2",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 9,
+    "devices": 4,
+    "stops": 815,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display#9": {
+   "screen": "8471e9e02851feaca344ca727eee182436b68c4b772ea088ca3268b3aa7084a8",
+   "devices": "ceaf86c8dc2ac3b76794d5ae081cf354888fd0cb88f2efc0b3ef0f4921e1d465",
+   "stops": "02646c1df8aaa61da005cd9572418cf924937bab1ef84d02d2d38e20dd7677c4",
+   "harness": "8539afa098540ae1834752a7d8dbb85d60a751abe4f3f02e2b04cb15139f297f",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 39,
+    "devices": 5,
+    "stops": 1288,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display": {
+   "screen": "5d20b4e53a8019ee5df42b0a15751037a6946cdb11f374a25fbaedc3500706a7",
+   "devices": "28e5c485c1d03ac5dfdc57e374aa9dda1f143ce8d31f6b9c46437191969e2843",
+   "stops": "cb15e768f7cc8a6d9f90ad664afd500bd30fcd057db8e387a680a8961ae8929a",
+   "harness": "c74b99fc09d6c1d12f9e1ad7c0f1c374c9c7d3431159cfe7a38c99e950b1c70f",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 274,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview#10": {
+   "screen": "594562fc881b3d141e07056469a75c8de6c06c995e484fdd27600b2f8b6edc0b",
+   "devices": "2a6bae5f12a340ba284db39fc858b56ae4f1a61e85ba17bbf05e6b7ac0b2a3ac",
+   "stops": "1c741ab846f410d36c53b6f3639eb3a4dff5d199d94ab0608c0a045825f0511a",
+   "harness": "2820c8f086db950d3a21c7ea990322a56737c6b76919213e3a35776e6c2cd591",
+   "output": "b63485cc106cab38fd768ab207ed31a9cc7513a4db4ca8bb5468b71058f6d641",
+   "items": {
+    "screen": 4,
+    "devices": 4,
+    "stops": 919,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview#11": {
+   "screen": "ecfb66c7d9f3cab282e66f6b9d11df71f4683ac144f9270149073222e95d603d",
+   "devices": "ca3ef8a695cd644d72e7e892b566d5844152f1aaf05541728e6ce487f580b9da",
+   "stops": "cb998e1d838a6589abc97105661de6a433ad7b4337ed71261b2a3b7f02060f5c",
+   "harness": "437f12ea24506ed9ec89d3ae6edd9015b466be12f69d8615ca855977400230fe",
+   "output": "b63485cc106cab38fd768ab207ed31a9cc7513a4db4ca8bb5468b71058f6d641",
+   "items": {
+    "screen": 2,
+    "devices": 3,
+    "stops": 734,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview#12": {
+   "screen": "3777b164fbfd0505d9461d90fbf721e237fcd7bf737cf651c88635f416214fe8",
+   "devices": "7f99afe28257cbe8289f9c02fe37986362ac684c22b5cc41d552b6bc3e7ebf7f",
+   "stops": "eaab18af3574bda802d3026e58818b41ca20b21d5e5035eab5762d2d17134692",
+   "harness": "95248e8c2e0b71bdd1caf2f9dcd26400cac1cbfecbf51c986878d7a2b5f0e815",
+   "output": "b63485cc106cab38fd768ab207ed31a9cc7513a4db4ca8bb5468b71058f6d641",
+   "items": {
+    "screen": 2,
+    "devices": 3,
+    "stops": 765,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview#13": {
+   "screen": "5d20b4e53a8019ee5df42b0a15751037a6946cdb11f374a25fbaedc3500706a7",
+   "devices": "c62a521c38dde08829c54975e4c393890f74be554e15f372c60d93ff947c81e9",
+   "stops": "9b2478dbe8f84adebef76c13987aa2f96e21f70f9f0fb60d27e9d126f5d42758",
+   "harness": "aae8626e32fa86b7647c639979828516e86751fd02e867d61faee280e3ebbe9b",
+   "output": "b63485cc106cab38fd768ab207ed31a9cc7513a4db4ca8bb5468b71058f6d641",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 783,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview#14": {
+   "screen": "5d20b4e53a8019ee5df42b0a15751037a6946cdb11f374a25fbaedc3500706a7",
+   "devices": "7d491080325275e902568be0ed6bbbb396f97e3ea92b2796ca95b3837289e59e",
+   "stops": "b73051dcce917b85e7df2b393cc89f6f3f281886472045522d1c31cf5396225f",
+   "harness": "22e28a53b1d4b4f5a9fba569c4da2611a69a3206bd44862aa1b0dd8476e8e618",
+   "output": "b63485cc106cab38fd768ab207ed31a9cc7513a4db4ca8bb5468b71058f6d641",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 820,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview#15": {
+   "screen": "148583bb51de581416acb5e59bce264fb40047ddb663c4a1f024f1eef220e780",
+   "devices": "41d9b0190e8eee0a347b7cee0f58220df3595eba1ac3a17b0619a7c5b3f59ee8",
+   "stops": "91996fab7f749f3c21eb9db78c30fca2091e03ded9c69c214d693927abc7c09c",
+   "harness": "66417c5b8a7f99b88cd243491e589abae7481eb74637ac4a0bb77253c6d792b1",
+   "output": "b63485cc106cab38fd768ab207ed31a9cc7513a4db4ca8bb5468b71058f6d641",
+   "items": {
+    "screen": 4,
+    "devices": 4,
+    "stops": 936,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview#2": {
+   "screen": "63260cf330260f9c2d280c99a4848dadc2af4bae2291356e15305a9f3836512d",
+   "devices": "33d3ddab18eec2b542ee0069b3724e5ee0948eb640bf1eeed8e1526f771b58ed",
+   "stops": "473879ada14a6307894eb89e47a4ff889018887c6a506436bcb9328d56b686a4",
+   "harness": "0b89b7ef3dc9832afa70b9a519035d2a41e67a86b3eab58e9a875730c08c93f9",
+   "output": "b63485cc106cab38fd768ab207ed31a9cc7513a4db4ca8bb5468b71058f6d641",
+   "items": {
+    "screen": 6,
+    "devices": 4,
+    "stops": 988,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview#3": {
+   "screen": "f23abb684dc3b2d0c4e5ee4b29142f4559b35e3a765b39445e3881c7f9392788",
+   "devices": "aa5a786c4278794c7fb142c223cd9c98d6813b9ba01440d2b5e4cfa34128bcff",
+   "stops": "ebfdc06269fccc51ba25ad2c72c9e7dd3121e699a110c255ae1c5dcb85010d6d",
+   "harness": "626961836ac8b17c129470fe304d93845785fe351bcdb69b084576d4d9b59f88",
+   "output": "b63485cc106cab38fd768ab207ed31a9cc7513a4db4ca8bb5468b71058f6d641",
+   "items": {
+    "screen": 2,
+    "devices": 4,
+    "stops": 1467,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview#4": {
+   "screen": "f23abb684dc3b2d0c4e5ee4b29142f4559b35e3a765b39445e3881c7f9392788",
+   "devices": "57c2252872945f6158e8a4010c5843bfed8a867ca8e3c087630ac0a823b6a1b1",
+   "stops": "ff80bbc1ec57a2b2680d6643c62541e5e9cc444b0038184cdf33e55d11299ee2",
+   "harness": "ed04b779a4e0615e1c58158bcf77b42cc359493694328548235b5d91f53f866b",
+   "output": "b63485cc106cab38fd768ab207ed31a9cc7513a4db4ca8bb5468b71058f6d641",
+   "items": {
+    "screen": 2,
+    "devices": 4,
+    "stops": 1498,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview#5": {
+   "screen": "098c9a225240d209af3742875c5d573f7db3ac6e6fd55917d5e86ed4fa8c9aef",
+   "devices": "5e55c1cb88091f67e3b03294876761ea0e98681b98fedd185b2e49715ce35e74",
+   "stops": "f5c4c9e918d998ae2fbfe9c49d4eb34db67d76272e0e0f1c0087b0671d851ba2",
+   "harness": "82f0630de9de32d4402e70c977e92d7066cff7a73d00100c48cba04af66e1dc7",
+   "output": "b63485cc106cab38fd768ab207ed31a9cc7513a4db4ca8bb5468b71058f6d641",
+   "items": {
+    "screen": 10,
+    "devices": 4,
+    "stops": 1096,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview#6": {
+   "screen": "53fd4cadaa4167a9ba0ae137aa88a13b84f29aa8ea98a8f9b72ab48eab0300e7",
+   "devices": "31da6e57ee21840fe45b2bc8911f6f66c7d5f580a44544844631652f0bfaad43",
+   "stops": "a9fa1b21b922de0b4a6722e60ecaf0ba373e756e630d3dcea1d2cc3c6007d785",
+   "harness": "fed3e0c0458fe1c993040c9d147c5ae570aa79dcf53d15a1348a73ee3c9bd760",
+   "output": "b63485cc106cab38fd768ab207ed31a9cc7513a4db4ca8bb5468b71058f6d641",
+   "items": {
+    "screen": 10,
+    "devices": 4,
+    "stops": 1127,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview#7": {
+   "screen": "0df558d39e53e223187e37b06bb0fdfdcbf191b1478bd7d232925a552017dc57",
+   "devices": "f178409861378f80fe21a2912b6a221c5cc881947f9f5deced654fb992d81760",
+   "stops": "ab341485735da46943aa428a614828ce9f4e5221fa2afe479e65d4b4afe3045b",
+   "harness": "b977e689b72f046fd416b0cd6f2b105e934ec11d161e55261f2d296d24911b09",
+   "output": "b63485cc106cab38fd768ab207ed31a9cc7513a4db4ca8bb5468b71058f6d641",
+   "items": {
+    "screen": 21,
+    "devices": 4,
+    "stops": 1119,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview#8": {
+   "screen": "46fa25e945b53d382a129386d2653eaa60c1ddd7b233e3fe85b428f0949518ed",
+   "devices": "e9f86028cd28c934f47f2563c8d8f6d65dee81f5d5d18f1b24afe7b361e0f39c",
+   "stops": "ec43075c8a92d915436826c1ca315c8c15265fbc942cce0acdf18fb59bb28450",
+   "harness": "f419cf3caf8074e45b2814d68aa14f263e892949444b3b570f76776f97122340",
+   "output": "b63485cc106cab38fd768ab207ed31a9cc7513a4db4ca8bb5468b71058f6d641",
+   "items": {
+    "screen": 5,
+    "devices": 4,
+    "stops": 1171,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview#9": {
+   "screen": "59a3a3915dc8959c3eda23f217dc9c36f4246567e14b184edc81e07ef541e4dc",
+   "devices": "b6a59d3d24c8071a96fb3ffb0285fa0c9d19dc60db3644b4993ec9297dd001db",
+   "stops": "cd3f3ce5096c0f02e7f9b5f2b13107b544651a4431792cf2bf732ad2b89380d9",
+   "harness": "526d30df541c084a11e797acf3cc430618e23973c6b16986186bd89aef69d06d",
+   "output": "b63485cc106cab38fd768ab207ed31a9cc7513a4db4ca8bb5468b71058f6d641",
+   "items": {
+    "screen": 4,
+    "devices": 4,
+    "stops": 969,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview": {
+   "screen": "5d20b4e53a8019ee5df42b0a15751037a6946cdb11f374a25fbaedc3500706a7",
+   "devices": "a1fdbbbe3636eeb3901171cec21a2044fa09fe295858810bc7a033254fec4620",
+   "stops": "1c053bb35ed1610ffce7772a91a61d9bfb87720bf39ceafb343bce14d4ba03b9",
+   "harness": "ae316b96a6d6a285d7a6af1d57706718f66972e72dae75b50f4d0316bf905c6c",
+   "output": "b63485cc106cab38fd768ab207ed31a9cc7513a4db4ca8bb5468b71058f6d641",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 250,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview-g3s4#2": {
+   "screen": "f23abb684dc3b2d0c4e5ee4b29142f4559b35e3a765b39445e3881c7f9392788",
+   "devices": "57c2252872945f6158e8a4010c5843bfed8a867ca8e3c087630ac0a823b6a1b1",
+   "stops": "99b36a19770d221c1042e17f1f968b2387b8963aa9ddf10ae0128c532ba2165d",
+   "harness": "823e70dfbeb6415dbbb9e0fb2dac69f1fb3b7b25c40a96209fd91a29523588f2",
+   "output": "4a8dfa0bf9ade478d1391b95890591be21d1b75ca5d565c28ba79cab6b4c4436",
+   "items": {
+    "screen": 2,
+    "devices": 4,
+    "stops": 1498,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview-g3s4": {
+   "screen": "f23abb684dc3b2d0c4e5ee4b29142f4559b35e3a765b39445e3881c7f9392788",
+   "devices": "aa5a786c4278794c7fb142c223cd9c98d6813b9ba01440d2b5e4cfa34128bcff",
+   "stops": "d94ccea115e40dc2c3f93f7009a2459ab55c816e05209c6296a8baac4297d23a",
+   "harness": "ed0b980351b1628f7ede4bdc0770d29b661db57ffe176151bda31de5fa34362b",
+   "output": "4a8dfa0bf9ade478d1391b95890591be21d1b75ca5d565c28ba79cab6b4c4436",
+   "items": {
+    "screen": 2,
+    "devices": 4,
+    "stops": 1467,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/text#2": {
+   "screen": "40ecaa8434d1a0aa6a35db026783366148b4f15de69278c79a97141357987803",
+   "devices": "7766eda463d7cfb2a9041dfd2958cfaf3bd9a32e2e1134e55418a8900e2222eb",
+   "stops": "fb699020c95099a2c8902deafc45ecac26ec8042fbe8171f41f14c427662e476",
+   "harness": "230e5979e6e2ff3a7d7a2e07a982a9143819efc7bdccc6dc665082d293e76549",
+   "output": "0e9024ec2189bbf69b4bfaf2e797b744bcb222069898745eebdd32361467a14a",
+   "items": {
+    "screen": 51,
+    "devices": 59,
+    "stops": 8022,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/text#3": {
+   "screen": "21a247e5d8c5e0479fb87834cb10ebfa8e0970b6471d5b01de448fc95028f485",
+   "devices": "d95ebf783f3cb9f04b917390b580906e00fe531e8558e8577ca436fabfb5d871",
+   "stops": "a6f287542b18101015aea1637c58e14ca2214e082f84ae140d569a9c99d7e7cb",
+   "harness": "3ce96152961579b7e719f13ba181e6d1a8d3e7d3a12da760f02d139d2f5528fa",
+   "output": "0e9024ec2189bbf69b4bfaf2e797b744bcb222069898745eebdd32361467a14a",
+   "items": {
+    "screen": 6,
+    "devices": 14,
+    "stops": 1111,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/text#4": {
+   "screen": "e083ecb3ad44ae6c8bc4cf47795465837f54e918c170d720600780ac1e3dac40",
+   "devices": "688ab212dd04b3f8eba4df46e0dfb5de4e0e51722c1f0d8dd9bf9bd41553aa6d",
+   "stops": "facaeaf237680a420484c5e7fb2948abf673ed041c0f848211d9a4a5e8ab359a",
+   "harness": "4cc7aac3be3b0823ff46025d644ceee4b85d24cb38b0951c0c4db487b517a75d",
+   "output": "0e9024ec2189bbf69b4bfaf2e797b744bcb222069898745eebdd32361467a14a",
+   "items": {
+    "screen": 6,
+    "devices": 14,
+    "stops": 1006,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/text#5": {
+   "screen": "d895342b353ba2c25520033cb356f1537a4931f02e9783706a4763b8dd10ff64",
+   "devices": "78b9e069b8b7a24657e9e3314c7c190fe6ad480e392b5fd1ede57e9a918ec2fb",
+   "stops": "5b86d1afb4c97bd8e7dc3f9ee28244d7c2aba0dc58332a395afc4f9d5ed35b61",
+   "harness": "5e17e212bf7e24956456a6791c42d7b8bad1d6779c415ed0aec643ad7d478433",
+   "output": "0e9024ec2189bbf69b4bfaf2e797b744bcb222069898745eebdd32361467a14a",
+   "items": {
+    "screen": 17,
+    "devices": 25,
+    "stops": 2485,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/text#6": {
+   "screen": "bf92912fbd3e5aa34d28fa0adfabe8aea15694451d39930450cf75e8fa1ee370",
+   "devices": "8a111f185349791dd653c4986e6968ac4c34cf0f3a22763e6b33d8911fff3ff0",
+   "stops": "668eed8330e9b00efdb25da752c135657123ef26fd2e67bf40878f88776b58c5",
+   "harness": "938efe0ca8eb8b624c3a5cda149f0724f8a81a4723e099a08af5ea1e9b279b6a",
+   "output": "0e9024ec2189bbf69b4bfaf2e797b744bcb222069898745eebdd32361467a14a",
+   "items": {
+    "screen": 9,
+    "devices": 17,
+    "stops": 1741,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/text#7": {
+   "screen": "0a2ecf6bbf5ee5521a2e68ac1e5656f6e01cf4034d7cd02ff1d7f952a4364d38",
+   "devices": "7547f3c0714ad901b2c634efcc3bac43fa03c4091eb8e84a7d590fe3895249be",
+   "stops": "a77a4108ca8c68815ae5755ade9ca836a3e13aa7bd28670d184f380c6667e767",
+   "harness": "6a7a85c6ddc350772b1c32732994b6adbdb97b40b6cb1015ca2517f029e81c52",
+   "output": "0e9024ec2189bbf69b4bfaf2e797b744bcb222069898745eebdd32361467a14a",
+   "items": {
+    "screen": 14,
+    "devices": 21,
+    "stops": 2344,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/text#8": {
+   "screen": "296a5ff668ff5db290b738b4fc15168da61c7ef5b59dd2003495eb87db432a60",
+   "devices": "4dc776784432aea6d6e22aa67266eeb24d86c3ee2d78ac2e7a46a180ee6ea398",
+   "stops": "231f0ba79b8bd08dfc123f668325f2621cda9fd7e8cb744c44adbfd31f204fff",
+   "harness": "0599c3e68b89e910c06f16c977276b2f4edb3adddb6e10b5695788dfe002fd5f",
+   "output": "0e9024ec2189bbf69b4bfaf2e797b744bcb222069898745eebdd32361467a14a",
+   "items": {
+    "screen": 14,
+    "devices": 21,
+    "stops": 2375,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/text": {
+   "screen": "bb3c7b3d411b28610760b6382f05567a5482c89705a12924959e421b0baf8666",
+   "devices": "387eda0157963362c09e3e926a231ca613600bcaf55b1686c213a86b6165b4f0",
+   "stops": "acf5ed158b0467416dbd664397962dd9d0dd94375e5ebe3143981a330d33b3c6",
+   "harness": "f678b4f03eec89fb5945a35869b1b65d81ff5c912c2d5c3db26de02502631444",
+   "output": "0e9024ec2189bbf69b4bfaf2e797b744bcb222069898745eebdd32361467a14a",
+   "items": {
+    "screen": 1,
+    "devices": 9,
+    "stops": 1991,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/text-knone#2": {
+   "screen": "5ce0769196f336590fdc188745dc70ff9c03308158bb8cdef975aab65131658c",
+   "devices": "e5d8e6ba9d1986c4c2df51121a66b3c8a0530b92a06e8a186ceeaaf57569e79a",
+   "stops": "c6232516c0d42cfa6a7ba5386400cd0df9d14551505f66c86edbed222621f27e",
+   "harness": "4613ebbc55800afeac692379f2f4aff0fc36924fbc572300c3dab25d732de583",
+   "output": "0790e00bca6f5665fcce31d9b63896c833d9db232b2134652a05b3bbd56ef460",
+   "items": {
+    "screen": 51,
+    "devices": 3,
+    "stops": 7501,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/text-knone#3": {
+   "screen": "21a247e5d8c5e0479fb87834cb10ebfa8e0970b6471d5b01de448fc95028f485",
+   "devices": "1a709522d25cc7d91193190b64fe3c86d7b8c3cdcfea4e75f61f488ff8d29953",
+   "stops": "ac3c26139e5403f8cf3c277ec7d027a473cd0bf9b59866a2f31b3dafa838ef01",
+   "harness": "a360235c1f1e448528896689de3ef6edb3ba6f24f30b44ac4d62f5e05e4558fc",
+   "output": "0790e00bca6f5665fcce31d9b63896c833d9db232b2134652a05b3bbd56ef460",
+   "items": {
+    "screen": 6,
+    "devices": 3,
+    "stops": 993,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/text-knone#4": {
+   "screen": "e083ecb3ad44ae6c8bc4cf47795465837f54e918c170d720600780ac1e3dac40",
+   "devices": "4b7dd430fb6342df794c3fafae252fdc03d424a8242034d1c3b1025c9f4098ce",
+   "stops": "fa415f90936cb75dba7baa682196587dd12f2ffe68fdda2f6c901b99ddc65f74",
+   "harness": "87b1626927f9f2cbed4add1901bc719a4dc7d3fc6a5d59eeef936a58ed4349af",
+   "output": "0790e00bca6f5665fcce31d9b63896c833d9db232b2134652a05b3bbd56ef460",
+   "items": {
+    "screen": 6,
+    "devices": 3,
+    "stops": 888,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/text-knone#5": {
+   "screen": "d895342b353ba2c25520033cb356f1537a4931f02e9783706a4763b8dd10ff64",
+   "devices": "dd007b741a7753f517500ca58c312ddf8de0af1933988aaf16c7d005490e335b",
+   "stops": "33a0def43c0a2d31f1e1f1b7d8d588fa1bf1a62e9565efa9c59aa2b9980406a4",
+   "harness": "b74fc5e3b17399df4d66a416339e6d750bedb37a0bfd94c23ea11043d3d04cc6",
+   "output": "0790e00bca6f5665fcce31d9b63896c833d9db232b2134652a05b3bbd56ef460",
+   "items": {
+    "screen": 17,
+    "devices": 3,
+    "stops": 2268,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/text-knone#6": {
+   "screen": "bf92912fbd3e5aa34d28fa0adfabe8aea15694451d39930450cf75e8fa1ee370",
+   "devices": "90c266070f7587fe21b0cde4559d824318f0b1ad080ddedc408018647a72f698",
+   "stops": "9ef852f589d6fd539902746958f4595863cf4f045d65939fc69ca7092c946066",
+   "harness": "e36702cb64c46863eb97a7105120462ab7b3aa0fc620de79ecbe9abb427f23bd",
+   "output": "0790e00bca6f5665fcce31d9b63896c833d9db232b2134652a05b3bbd56ef460",
+   "items": {
+    "screen": 9,
+    "devices": 3,
+    "stops": 1596,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/text-knone#7": {
+   "screen": "0a2ecf6bbf5ee5521a2e68ac1e5656f6e01cf4034d7cd02ff1d7f952a4364d38",
+   "devices": "f0f014830af1ef8dbd0741a924735fb767344bf566a0df3064cf44dbd96fe70c",
+   "stops": "d1aec9979176b984a87f2156aad3bfce2a12610961b3f2a542d838b2b83bb698",
+   "harness": "3ac0ab11f64770fdefd9dccb3ef1979427578fe690f4910745274c6f555899fb",
+   "output": "0790e00bca6f5665fcce31d9b63896c833d9db232b2134652a05b3bbd56ef460",
+   "items": {
+    "screen": 14,
+    "devices": 3,
+    "stops": 2009,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/text-knone#8": {
+   "screen": "296a5ff668ff5db290b738b4fc15168da61c7ef5b59dd2003495eb87db432a60",
+   "devices": "45c31ee11739cbbd71966bc9d388bd13a108b13865b953d464713ad6be658ef3",
+   "stops": "3a67fc19dea97858da24654f52579a09f31a45080acada1ee8b69a59f19478f1",
+   "harness": "37d72e54958e7a02d960fd4e478d70fe76d424beea06f3bf6915e7092dd5a2a9",
+   "output": "0790e00bca6f5665fcce31d9b63896c833d9db232b2134652a05b3bbd56ef460",
+   "items": {
+    "screen": 14,
+    "devices": 3,
+    "stops": 2036,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/text-knone": {
+   "screen": "bb3c7b3d411b28610760b6382f05567a5482c89705a12924959e421b0baf8666",
+   "devices": "236353ed2ee4a99154ced92449ce806cf3024018d3bb8748623107663dded1c6",
+   "stops": "7aa1b87da73d6c09f7460f40cf95264ea7a0b5b831fc178381812e803707a4cc",
+   "harness": "3523323037f8e98f51ebd2e683e805fe7c7a30ca483c98d72e657e2eb3dd7e34",
+   "output": "0790e00bca6f5665fcce31d9b63896c833d9db232b2134652a05b3bbd56ef460",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 1918,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display-knone#10": {
+   "screen": "8c40f0446f2a7c5190a1feedab2abc64569a0cabf443928d471c11d48a3bae7b",
+   "devices": "3620588ab88b15ee92343e07d9b7ab90fd3dd22ea4d1968a0b73100e3b2bbfbf",
+   "stops": "fc98107a3c9d13d3dbdc0496509eec67842a79efde8b8ad65167ac80db796a3a",
+   "harness": "1920310887e3735cc995baaf8bc494ac5cba6490f33716f2fa4c2b518dfca7a8",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 4,
+    "devices": 3,
+    "stops": 1059,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display-knone#11": {
+   "screen": "9d4e6372e2710b980cafbc3069516466c5c74376bbf55bf75eb4a9cc061a6d4c",
+   "devices": "3ad17518c121561256b60a45a8a42ba6a00da57a801e0446dbb94e3586bebf3d",
+   "stops": "dee02012d75a09fd455913335db09a95e628b954fac2c6b7c64e14904139454c",
+   "harness": "d7f0dbfa16d039e33a774a050d3e7783819ef4ed899f763401578ee32963d661",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 3,
+    "devices": 3,
+    "stops": 883,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display-knone#12": {
+   "screen": "4db77a14a15c6ce246d1c3ef02a497bc86a8ae5782a673ab2b7856250ded02db",
+   "devices": "81761518b4e3fe9778be779677d59bcb25d782106e17ef6c63d2a2c05f074285",
+   "stops": "8e6460456acbfda6aec75578d4571cc101ccf364d92cb42119990e3f90ab711e",
+   "harness": "2b4be28dc572de44cd11ca12e0f138e4069720836a59686e8a55285236fbd86b",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 4,
+    "devices": 3,
+    "stops": 1057,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display-knone#13": {
+   "screen": "5d20b4e53a8019ee5df42b0a15751037a6946cdb11f374a25fbaedc3500706a7",
+   "devices": "7d0d312bb81640419b4ee0cc742b406922983ce02469c0907a218adb27b5b308",
+   "stops": "a0bfd8474aeb3400a8ca0f639e0ddac61449896e89b26ddce08f9dffbc9b5f6d",
+   "harness": "585701b2ffa58f961eea6fa2c1799b90e4076b1121ea0f1636d8dfa371eb53c6",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 604,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display-knone#14": {
+   "screen": "8c40f0446f2a7c5190a1feedab2abc64569a0cabf443928d471c11d48a3bae7b",
+   "devices": "3620588ab88b15ee92343e07d9b7ab90fd3dd22ea4d1968a0b73100e3b2bbfbf",
+   "stops": "fc98107a3c9d13d3dbdc0496509eec67842a79efde8b8ad65167ac80db796a3a",
+   "harness": "1920310887e3735cc995baaf8bc494ac5cba6490f33716f2fa4c2b518dfca7a8",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 4,
+    "devices": 3,
+    "stops": 1059,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display-knone#2": {
+   "screen": "76d980d00ec2062e9ab241f2b472099b15e7e6d33960e0137f87bb1719ab4de4",
+   "devices": "6f6ab7d74cb6a2a6f8e2e2b5f4ad96e3bb340455ac8e7224c3fb2af2319515ce",
+   "stops": "ac8a3e19dd2c56dfb4eedbe64c2254d92d18124045fe9820d0ff6db20584c644",
+   "harness": "99246c6a92c3d1babc1fe305533a5bc99c5dfbd6fc131694ce7bcb11f0d01e71",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 15,
+    "devices": 3,
+    "stops": 1189,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display-knone#3": {
+   "screen": "5d20b4e53a8019ee5df42b0a15751037a6946cdb11f374a25fbaedc3500706a7",
+   "devices": "062af06047e799c7ba780879d37e0c85c2b22d284d1993b80b23e2641193f44c",
+   "stops": "6aa62b87fe5e2ad2191f630d477ea9679d0663c78dc1201f71ee94efa6fc06aa",
+   "harness": "0cc75cffd0272fc5177a2edad234b9381e2316b337191249493e86e00bfa3e78",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 652,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display-knone#4": {
+   "screen": "5d20b4e53a8019ee5df42b0a15751037a6946cdb11f374a25fbaedc3500706a7",
+   "devices": "db0efcdbbfd3f8340103b9a8e833008d42424aed1464753712385cc64d96ab90",
+   "stops": "68d8e0e712e730fdffc3d96ebb5108f8c1685a8782f45cf101ba04a4df19c08b",
+   "harness": "f08738ab19dc5a87e3519d945345e0918049ce91deb9daa5c113827354910b3a",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 632,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display-knone#5": {
+   "screen": "5d20b4e53a8019ee5df42b0a15751037a6946cdb11f374a25fbaedc3500706a7",
+   "devices": "60469753e7050d448678e94237167c7f1ff0e1cc6c76b78aa378fb49a1e98eea",
+   "stops": "a0a96435e0cc6465a5b6e7173900c45035bca5ff1daad48253a07eddc62e52d1",
+   "harness": "3d5eb253b8b87b7d7047a72e3a060472ec01ff7b8897b978b8dde5222da2325f",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 615,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display-knone#6": {
+   "screen": "5d20b4e53a8019ee5df42b0a15751037a6946cdb11f374a25fbaedc3500706a7",
+   "devices": "cbfd14b502f402332b4130208dfb762df37bcdc290a2a9b0ba03722ef8a3642e",
+   "stops": "2368c7fec1ae432bf1cca8011c212ff9e71ef82892b3ce0495958da7c6789b4f",
+   "harness": "8638603703ccd2aa6cded12481190fb77a421a8631e7b925dc8494cb1b35f994",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 470,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display-knone#7": {
+   "screen": "46d58fabc85b094b8c6b69aa35ee3cdda650a1bd34e03b15ea0e02050f2183be",
+   "devices": "5daa202a0c6a56d5f6cd8043880f2646df455571dd88629823b78ba290ded1dc",
+   "stops": "9047ce3dea1530141384dd0151523cb5dce1ca57efded02a302c8050db3c45a9",
+   "harness": "84c737ee92d7eff44182b308f314c9e702b89bb9973f569ea0cc614e2a9e315a",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 3,
+    "devices": 3,
+    "stops": 729,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display-knone#8": {
+   "screen": "a1fbf35016cc97877d73fc60ef4b51d998aebc92e9d26f146a8cfba757c7434d",
+   "devices": "b83bd6dacf4a58ca4ede2ba4117f5bbc5f9f5b0e648287e4b80d5b7370a7292a",
+   "stops": "dacc486b94e783fb0244376c2de3831b276cc59b51f7d68b7dea1acc68f07574",
+   "harness": "3458eff8d6f36407be661b5d5479e7f04f631615be73409b0a2b18d88c61cfb7",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 9,
+    "devices": 3,
+    "stops": 728,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display-knone#9": {
+   "screen": "8471e9e02851feaca344ca727eee182436b68c4b772ea088ca3268b3aa7084a8",
+   "devices": "dfcf028db3e07e9d4d2a4d53c8a030be50d0b5ab17905d4cf33d729a7ad21f0d",
+   "stops": "f24ee6fd39985aa22c581235f930fa490a820be0056c17df5383985b0340bf5a",
+   "harness": "358670f34327a0b817d6d7eae15c79df0fdb2a8dea5e7398e58e9bdb665a92cc",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 39,
+    "devices": 3,
+    "stops": 1148,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/display-knone": {
+   "screen": "5d20b4e53a8019ee5df42b0a15751037a6946cdb11f374a25fbaedc3500706a7",
+   "devices": "02dfb849ff99382f01e0f3203b072539e4ee67d8265efcf09b364b1867449c6c",
+   "stops": "f862dcb268fcc198e46357b0a48e2ad4f5a4772e223e9bf9cde4ac7153fe6e69",
+   "harness": "508977adeae9c638185b6718475bb8943681d6800eccf97fba7e4a921ec9a9ae",
+   "output": "2634e189e899f0cfd610586222b8349a56a3afa04ca66e27fa09b7c669b96501",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 246,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview-g3s2#2": {
+   "screen": "f23abb684dc3b2d0c4e5ee4b29142f4559b35e3a765b39445e3881c7f9392788",
+   "devices": "57c2252872945f6158e8a4010c5843bfed8a867ca8e3c087630ac0a823b6a1b1",
+   "stops": "f18445e46752997523db728039dda26569df1af5d52ece1e6ae9cef902192c54",
+   "harness": "2ea82082feda839587268fa94eea977327c7f55573eb80f7284e3f5dd6900ae2",
+   "output": "f4e3a6b4293141a9e10a91dde95ed46150e9649c3c34b02d1ccf6692673eb814",
+   "items": {
+    "screen": 2,
+    "devices": 4,
+    "stops": 1498,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview-g3s2": {
+   "screen": "f23abb684dc3b2d0c4e5ee4b29142f4559b35e3a765b39445e3881c7f9392788",
+   "devices": "aa5a786c4278794c7fb142c223cd9c98d6813b9ba01440d2b5e4cfa34128bcff",
+   "stops": "a0a71a084f6ae3b79b20e30b7bd261af7237207569515893af59845840c6bc87",
+   "harness": "897c27c137e40b65e6b2f8d07b8ad8da1ce813eb1788fc37e8967488db2ff5ee",
+   "output": "f4e3a6b4293141a9e10a91dde95ed46150e9649c3c34b02d1ccf6692673eb814",
+   "items": {
+    "screen": 2,
+    "devices": 4,
+    "stops": 1467,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview-g3s5#2": {
+   "screen": "f23abb684dc3b2d0c4e5ee4b29142f4559b35e3a765b39445e3881c7f9392788",
+   "devices": "57c2252872945f6158e8a4010c5843bfed8a867ca8e3c087630ac0a823b6a1b1",
+   "stops": "885092e94d45a7efc5bc8d90dc2dc55f9727285de728c59c9ecc568d28d1c30f",
+   "harness": "76b185ad00d80d288da288025df116bb8a12a0069884cc08534afc4b7ab70cbc",
+   "output": "ac253deb32f3b03a2f292c1cacb37d7aace2993d590e3c14bc9b786f5e1dc663",
+   "items": {
+    "screen": 2,
+    "devices": 4,
+    "stops": 1498,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview-g3s5": {
+   "screen": "f23abb684dc3b2d0c4e5ee4b29142f4559b35e3a765b39445e3881c7f9392788",
+   "devices": "aa5a786c4278794c7fb142c223cd9c98d6813b9ba01440d2b5e4cfa34128bcff",
+   "stops": "925942a81dc62a8113f1658e4ab1cd91d745d19cffa3ba1bd2210a8ddf979833",
+   "harness": "5904eefefc0948d64ef3f2df1d87fe989b8633c18a3fef49668b5fb00a788891",
+   "output": "ac253deb32f3b03a2f292c1cacb37d7aace2993d590e3c14bc9b786f5e1dc663",
+   "items": {
+    "screen": 2,
+    "devices": 4,
+    "stops": 1467,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview-g3s7#2": {
+   "screen": "f23abb684dc3b2d0c4e5ee4b29142f4559b35e3a765b39445e3881c7f9392788",
+   "devices": "57c2252872945f6158e8a4010c5843bfed8a867ca8e3c087630ac0a823b6a1b1",
+   "stops": "895c2983ed012762ce7c0f8e287419b44c67dd3a491d676b00d20063f0b6858d",
+   "harness": "7055e77efa4406f916d1ee7fc32ec20e34b103070cde346146384a8774eb7ecb",
+   "output": "396d8d9019df0f5f0fde289f4616ae8297be48263830d1a2fc272c4a03aee247",
+   "items": {
+    "screen": 2,
+    "devices": 4,
+    "stops": 1498,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/liveview-g3s7": {
+   "screen": "f23abb684dc3b2d0c4e5ee4b29142f4559b35e3a765b39445e3881c7f9392788",
+   "devices": "aa5a786c4278794c7fb142c223cd9c98d6813b9ba01440d2b5e4cfa34128bcff",
+   "stops": "fa0f47f8f36855b13a95c457d2a7aa31cbc4be583bbbb1f040ef2c46f04c1fe1",
+   "harness": "3728ae0ba49e79b4d747223d8be5e6fed79fbc5d2b7b8a024650c27c448609dd",
+   "output": "396d8d9019df0f5f0fde289f4616ae8297be48263830d1a2fc272c4a03aee247",
+   "items": {
+    "screen": 2,
+    "devices": 4,
+    "stops": 1467,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/menu#10": {
+   "screen": "faae7b6e729e3a7799eca51391baf19cbb7d9c90686468d0ae418eb30b891ea2",
+   "devices": "bf3d3f2c1a170a4f34fbe667e0c6d26189f4071c0a0370132b7b2d51fe64d921",
+   "stops": "ba22c18c660e05281516d343dd35bf142f9ec054cf9bfb36ffe1d4fb991c9078",
+   "harness": "5f28a77f45376a07dadea5aee314b18ef7a5599e0084d4f9b0d1027e0a9cf2ae",
+   "output": "b298782a1c08067b80a83af608fb525c3b03b69a9bf43715e7765de19ab58507",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 15480,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#11": {
+   "screen": "3331fbd2f8a9ea789a5002f1171fd72894702d59445a8a76d5104b83961114d4",
+   "devices": "03fdd341359600edb768d08323d60173b4a35bfff273270c274af1e6fe64ea73",
+   "stops": "4b6ecb06a8c64180fb1f6a68d9290e245cbf28b118fd743d3df852dad0254465",
+   "harness": "5d0e89e0428c02e2b55a268299f593d38e2577920913d9b7484cbe3fb4c8e7ff",
+   "output": "b4c271bb11808e63f75273be55f7e4debdc5ad2da9bfecf53ab9a0d2f3576c71",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 15445,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#12": {
+   "screen": "c87cab04f4fb80c83e9278af7e76e6c99e9c3157ad17914f1ac9e8791bd42ae0",
+   "devices": "af57ff31dbe875b75be3873109f778b39bf13f5eb9b9024430c0c0af1ab45d1d",
+   "stops": "01d46f93bf9d6853cd14cfd2c03a99aff4673793af4329057e7c52d0b6d5572a",
+   "harness": "3de7441ff30656fe66319ae439a1be6e9846eff20dc7525efa45f3f75eb8139a",
+   "output": "c927c604a02dfeafeb99f1a742cfd49188c5233e8a22e062c7498d5963cef736",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 14946,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#13": {
+   "screen": "902df413f225246dde2c43372e5b233b811755b97fe6851131542244c33c06f9",
+   "devices": "16cf30c32c75723c9f62c4a0a4a565e6c641f0a8d595a01ab0dbb054615bc23b",
+   "stops": "db2c38c9f0185d09725d505577f8159c8dd2694709797e863c9911fc1e4e3769",
+   "harness": "287c6a0071eea32e859514303e5ec385c28f6798e9daea448e249b84f76796d2",
+   "output": "d2095ec3ec6d2f7928466c136fe412418d16e0f8d971d341c382bcbcb55291e1",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 14702,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#14": {
+   "screen": "9033c3fad605a43b4dd1537474bde14b12ab591cf69194be93bc8da46f45305f",
+   "devices": "0a9daa64b1312d1c138d2b7ef42e5d51adbcbacca75226cf5e8835b94d9efdae",
+   "stops": "d215af6d12191bba5749eb49df97b0964a12628d1191f191e2c8d8b2864e3d3a",
+   "harness": "fac600cec20a2505c236db2d39884b490c1aeb261e01a9534910aed1e568a909",
+   "output": "30222610ab5be89237503005f25a0a1b61cb756a818818565117f3d5c5617d4a",
+   "items": {
+    "screen": 2,
+    "devices": 16,
+    "stops": 18149,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#15": {
+   "screen": "9f42db24ff522e439d436b20f86158019fb5cb546f59fd905a9201759d940ac4",
+   "devices": "6b3dd9b710ae12e04259bf5046f429aa2673b8d46593fd5a6d15f2e53d95842f",
+   "stops": "ba22c18c660e05281516d343dd35bf142f9ec054cf9bfb36ffe1d4fb991c9078",
+   "harness": "87669847a6997c4cdf1ed49eaf28fa955691aea8692437af9610be5c5da2f006",
+   "output": "ed68ec27ada762d5f3a09a9e7269f0bb7ba4cbe75685d8fc58fa4d6126343516",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 15480,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#16": {
+   "screen": "8d51ccacd3490bdd95a02d7db4d21b69f2019a8a236834cfe2317823a84572b4",
+   "devices": "b12e6738196772790dc862567ae2807babc7d8049e231b276800fd2b39ba5566",
+   "stops": "80bda12f7d428e0dd68be254993deed8f8cd32a61de17ebf8c15bb47f132228e",
+   "harness": "5dece10a2fc4f802fcf20e06e40cad7db90991b4f78cbbbd75c5bc0608c2c8d0",
+   "output": "f23333d58f190414ec125a59b6762c9bc9a2b1fc4f4a686cad757ee0918ace0a",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 15511,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#17": {
+   "screen": "976f18da8a4bc9e8e36cca944b4fb8936de6dda9a41db85ad2df77be3baaba6f",
+   "devices": "f413c703b8cec8734ca1fe4ff92c98a0879d3dfefcb6b493f889e16147172f89",
+   "stops": "d7e7dc58c4a4d171fe706ba45ccefed887ffccc63bc5b5e2a160f6578edbb151",
+   "harness": "7d82681b8ae051551784de7a9ac9b2925288df7032b46d8038cada09fe827116",
+   "output": "ba4ae2b237cd7b5011dc1104031b1ca5ddf3b25082eea3967a2d142ae90d3701",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 15499,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#18": {
+   "screen": "6e6e4bfff1a4a283bb4fd5a1b7cf3accfd206ba4f1f96ca44f1cc302ccfbb307",
+   "devices": "4e20f5c66b39bca121d1886eff7d1d61d1783c6524194f9ca225acd75d154ec5",
+   "stops": "840dc669eaff4078cbcb6ce85dad6522478b988e91ceb8aae5b47e35bcfdc04c",
+   "harness": "084aa9aa0b3271109e0f93a99d7f6637594a3e0004463a9afab228ae3b86cd77",
+   "output": "e0b11d664710598666005022104d9eccbf51fd9ab3ceef27decf26617807a2e3",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 15480,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#19": {
+   "screen": "d41ecd033a81ba828500a7cb1e378f37dcccf01792158c78955a0b56bad9e32c",
+   "devices": "03fdd341359600edb768d08323d60173b4a35bfff273270c274af1e6fe64ea73",
+   "stops": "6e6d680e1f7d329dd14d83b271dd1f8dac85c581765a1e2d63f0308db5351105",
+   "harness": "a4db4aba50d2c2b0c45f5b02ced3d2d65cba771277d23603f1c5817e747b6933",
+   "output": "8da24dab91b0c2a66a60750a087cdaf040b626898555b5c18dabaaf38204867d",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 15445,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#2": {
+   "screen": "f2a076d22dbcd7dfdbc34f584d4c0b61a254c57a78ce0725dccae178f0e56d0f",
+   "devices": "12b58039f82f77807b9f0b51de9c07a7d81bed75de2d8cfaa50888f6fd9c22db",
+   "stops": "3deeb2ee947768c357b8dc210cfd5b560fce2c25ce862d89f0045e32a51e75d4",
+   "harness": "f02d49c75f43928618b332b9eaecd44ec99de763efdd9ddecd0ce3c1b5cc5466",
+   "output": "6cf74648b14e6e642a656c46e3b1ac0e42c2815b3ea958d90996c2b16b72f339",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 14800,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#20": {
+   "screen": "afb78db2f5f1aff9487afbac4c4de2788a23a5728d3b31b87d4520be1fc984d5",
+   "devices": "52c525c06fe4a29517abf4a2b8aaf46900212e41ed5c307eba2b2546ca51b264",
+   "stops": "761242988bb6f0d039b2822113803c08a829d7dd2d243aa32710c84b12ca8a26",
+   "harness": "39ac92ddac968574153c300f5a8579d5871ed32fdbdc29ba8e6fd2615f43362f",
+   "output": "75c6e6bbb9eaa99a95c56e5e0c17b60b447a25d037c9457de38eef45fa0b13d4",
+   "items": {
+    "screen": 2,
+    "devices": 3,
+    "stops": 677,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#21": {
+   "screen": "bc070579177c5b25a03fbb6208d3dec7f25ff84da3df8968286132a4727b1f33",
+   "devices": "7c6b8063d52266c2bc4f68257a5654e216f0883a562ec3d421bd26d384433c35",
+   "stops": "54ca7b50bc14d3e944690f7a38cf8ba1b2c507d5a92a45fbb6d3900d359294cd",
+   "harness": "89080acca8b04382a42dea9e3b5d3d7e9facf2d6e240de37be2e74f9461f8a04",
+   "output": "dae872e80df5f70522dad7db4d5c7b4a54b0f1a74ee48a39085d18d97cbadaba",
+   "items": {
+    "screen": 2,
+    "devices": 3,
+    "stops": 708,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#3": {
+   "screen": "99434484ee6837716c29b0b4c1303b4172bc6aba9be30207636d7f56190b7313",
+   "devices": "193c1076f54d2503da931a7dadaa7e129e40c82fab606081bdb9eed3c9c3087e",
+   "stops": "c412bcccf60f2e60d20ce9a7a9a7c4de91507a7c6b94d128cde7deb90757bb2b",
+   "harness": "460596ee27792832159095b8b3726c13262033d08f766d41af1ac4820b5db125",
+   "output": "af1ed8d6cf8b58b680401b0abeb2ed45ab7d71f97c1f6ed3ae7db2e2b9bf09fa",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 15814,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#4": {
+   "screen": "360b75715b07967c4bfc936ccab07c9203c27a2bab219206c702b271568a3f1c",
+   "devices": "587913bc72280981588230e8b117fc3273fbac5ae74b22588a1e382c711715de",
+   "stops": "4a8ba5feda019cffdcc11982db46fc27bdc9db0221285fe57357922f96655490",
+   "harness": "c51ca759f0c2187ebfc848fd7cfd2a51c37a1646afd820c1c629b8e3448d4ac3",
+   "output": "fdab32c3e635c6541de0ca99ed92f03927fcbcb251ed558683c285ca89cd2ba4",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 15108,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#5": {
+   "screen": "5d8247bd23697e6b22201a9c8da29ac8c4cd5fe0d11b91177197a9e00b5eb7fd",
+   "devices": "03fdd341359600edb768d08323d60173b4a35bfff273270c274af1e6fe64ea73",
+   "stops": "4b6ecb06a8c64180fb1f6a68d9290e245cbf28b118fd743d3df852dad0254465",
+   "harness": "705cdc62d0c5da2070bf7f0ea39ea0ac03f7a36c7bf3899488ecb8179335aef7",
+   "output": "9212f61eaaf1f9c8c53eb05494fd469a51975ab20306d2cf9c8bd4aa4bf20c62",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 15445,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#6": {
+   "screen": "97961057f4329902b2191957957252e4d6353467539e7b129136515fdf3d894d",
+   "devices": "32b5170fe0fb7848ce984b7e0700b16a8a761ea18469ab122faa7018f02e1fce",
+   "stops": "ed652527f971d4a080496789e374d07ddcf2ed3ff94067bca507ae3ab058bcba",
+   "harness": "75533752255ab53523e7cc973a51f1d7a7442af31defdbb30ccc17ac0030e591",
+   "output": "0914c7184d0209d1b4cb35103e6f6521b5042f33a63f59e62faa455df2f0497c",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 15519,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#7": {
+   "screen": "4f194a6a553bfe39456deb52178de0c41e052df5bb04522e0454415d70e33418",
+   "devices": "38af9cd28ad4d618d32b2ad41a8305b8cf00eaa84f7a68677f636523745f7d78",
+   "stops": "c9e93f6df77628338cd604fd0e4a3b48f641273c7aa38081a02bc5f8b0aa0b2b",
+   "harness": "f9edb3bb8a15f24956a9bc0e4fa6dd572f3a90b3d08321d5c8f96cb0a532e3ca",
+   "output": "fcadaf2e30860ad380f9408572feeec4792e923b2901acaab061bc9dc5c985b0",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 14787,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#8": {
+   "screen": "2cf66afed934f7c33caf84379e724d0e07bdcaf0495b2e1dbaf93d07df350a79",
+   "devices": "af57ff31dbe875b75be3873109f778b39bf13f5eb9b9024430c0c0af1ab45d1d",
+   "stops": "01d46f93bf9d6853cd14cfd2c03a99aff4673793af4329057e7c52d0b6d5572a",
+   "harness": "adf783ea8be752d894b4517180b95e4538cd9dd43274fc2207119ae0d81a72e6",
+   "output": "11f59743c9e39feec852dc92e955aa16e05a7a223a2b9cc3ee73b5e6f4558303",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 14946,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu#9": {
+   "screen": "5c3a06c1d7e2020a8ee23527abb40f586f66ba1b486157b4b32c8326aabcc68f",
+   "devices": "16cf30c32c75723c9f62c4a0a4a565e6c641f0a8d595a01ab0dbb054615bc23b",
+   "stops": "db2c38c9f0185d09725d505577f8159c8dd2694709797e863c9911fc1e4e3769",
+   "harness": "4744d43793acda1b4d182143d75b926ac79b3fc24ac843861deb6f31192b48d8",
+   "output": "e07ae83dd808d2b64783c075a0c2afc0f4ba07b6f22ce0e57bf2082f44462138",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 14702,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu": {
+   "screen": "170f9e1ebc8b18d7a105b7950a4d461035948ce8bee641664c888b8ed0837b56",
+   "devices": "bf3d3f2c1a170a4f34fbe667e0c6d26189f4071c0a0370132b7b2d51fe64d921",
+   "stops": "ba22c18c660e05281516d343dd35bf142f9ec054cf9bfb36ffe1d4fb991c9078",
+   "harness": "b50eda70abc31e3e897d366291600d6db78b7907bd2330a701cf29f4363f2cec",
+   "output": "706673ceb62cc5ee084e515438a7656f15426f7191c52f4ba2903dadfe1d5cc2",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 15480,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu-empty-quick": {
+   "screen": "773e4bee1fbaee44e60c985eac6aea7ed7a149b82e7ac3826062c743934a21c1",
+   "devices": "af8448deb229bfdd9bc1877ef936428f57ce7bfaacaada26e7468cba0b2435bf",
+   "stops": "d7041c53b1a11f173bbbede17c6d337fb720bca5e45462623d120759b9e5db92",
+   "harness": "8fb29cbddffcd1375a0a32f13fc0323b5d5f968615f6b32ddfbeaa3d90d34561",
+   "output": "e32c24989e7abe1b2878d8931b8fdafcf777b404a4ba2d515b945267ddc71809",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 16557,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/menu-mut-no-ctors": {
+   "screen": "e31c99c0b9ef1150e768a75f364f871b9a7efec387f92333bf779e1ef11dc9ee",
+   "devices": "f0083bc19c7b47fe8e207381add7622116c105f9e804602b79f5630bc04b82d3",
+   "stops": "2968e9ca7c2549b4f885663ad050d2319d1c0578b6c1c18cb3989168481e917b",
+   "harness": "0fc7741046a40608b2f46e211d454ae7710da27b31605b7a8220275809f87d6f",
+   "output": "9bb6c1a00706a56a7f3dcd0a0635589f376daa4588d52bb9f2914c2e48e79c76",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 1159,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/menu-mut-settle-no-irq": {
+   "screen": "74d081a6dddd703eb3827d8d836d3b06e6476e6e89a73ca5e9af9c535618e455",
+   "devices": "77aca4f468d857b819c957a8e8bfd6f02877e639d73ab3e4a8d8ed9098f74b59",
+   "stops": "8bc8949c865bb8bcd75ae8515676db2aebbbf702d2e1847e159753b9e46817f2",
+   "harness": "e0e0945a62fcacd9bd277dde8c3a207d594510edd318f51273ff8ebef0845a3c",
+   "output": "1c8395e1c60196910e389999835bff14ffde79dc866a2c61abe44f410eea8ebd",
+   "items": {
+    "screen": 1,
+    "devices": 3,
+    "stops": 2891,
+    "harness": 8,
+    "output": 2
+   }
+  },
+  "check/nav#10": {
+   "screen": "53eb65c884f25fc36a9c7b51df98b092f4f2f618c89c4c9fcc9384ba69f8db57",
+   "devices": "dda75ba04012a61967111d6ca92ff973a8e0515d7afbcc083baca6cba7b315fd",
+   "stops": "bbff807331f3354dd0142f68d33a5d67f1a095799bbb01562a778ecfdee84382",
+   "harness": "1a052b94d7dc01955e7c404188c85b638eb72a5a3a0f2361dada2b9693b4eb18",
+   "output": "c7b3ab6f1dc17a7353c8289f1896b87366730062bc15b62b8bd338acfff62a78",
+   "items": {
+    "screen": 11,
+    "devices": 15,
+    "stops": 15984,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/nav#11": {
+   "screen": "d999ea18f9698e8fa67969c370e0d5c0eec6b65020d3a2dd53cd866d8211031d",
+   "devices": "3a27dbfca595b7e07eadc51b584b39ddd538459073f25cd973fc26bc24e54959",
+   "stops": "a1f63437723fcce717a3390b402be780550139285b64ca2a82663ea0883fa30a",
+   "harness": "cf378fdb58f5b7feb317f21168a64adee2926f20ba319b29d9432ce1605157a6",
+   "output": "eb907a1b5f46a9373b5885135239da919e7228b07b153ebe945c207a3bc24f70",
+   "items": {
+    "screen": 1,
+    "devices": 16395,
+    "stops": 60842,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/nav#12": {
+   "screen": "d999ea18f9698e8fa67969c370e0d5c0eec6b65020d3a2dd53cd866d8211031d",
+   "devices": "ae5441d6df0c300e5e3ca89c4ca2c452bfa770eb69fb4b2b4756e62b9050b3b8",
+   "stops": "3b83cb9a33ac036fe0a4dc114528ba8b2e8051552720d20246028e623957e76e",
+   "harness": "4844916d1dc87a6a86bd538651996c94abf86f83ee280e9d2a4e1f08197f5c9e",
+   "output": "1d10c824ca6c230821656ad3e641ae919b404080094c816717e8dd9dddbb65a5",
+   "items": {
+    "screen": 1,
+    "devices": 16395,
+    "stops": 60838,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/nav#13": {
+   "screen": "f238b81188fb6ba7a2d81d866d215469179045ef432084f5965de0dd2875617c",
+   "devices": "23c2f2638501dbd609331506fa23ce072a8b8b4dc4818e3a6256369b2e9692d6",
+   "stops": "5ac86770451427e6df33d4a0c815359f36aad98abe8ddc6ff06c44935915d42d",
+   "harness": "fd964988020c55793240933b22881c3b6fc788013fe761e283389b09c972b6c9",
+   "output": "5f4c486d8098552ad1ceb1284094e3464a43d729dfcf8b514997c11aaac2bdad",
+   "items": {
+    "screen": 1,
+    "devices": 793,
+    "stops": 33757,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/nav#14": {
+   "screen": "621644e4fc09e1cfb5b75226bd6867563f437d15fe7743a40d444d58de25c39d",
+   "devices": "86ef64a71cd5535b8186931a487fca80fc7406ad94d979a67b643cab04f8bf16",
+   "stops": "76452e390acb46ac657934b96fe804dad83565667767d8c05eb579c75f139e4f",
+   "harness": "f70bca7346ed054581fdcd0686d3293c1fbadd5a7a1557c3203b19ea2b68ecb6",
+   "output": "650be5e8cd71796f1be3fb356fefc75ac59480db033311e1e95e84387c9b1e74",
+   "items": {
+    "screen": 1,
+    "devices": 15,
+    "stops": 14460,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/nav#2": {
+   "screen": "58ba088f9d70ecb62d72b9b589a627093471b43616c088aab2836598244781cd",
+   "devices": "77d697c5a37f6f07b7d55f638d206424b8f20c80ee14f4d945253b21fdd3ee3a",
+   "stops": "b01f48e872857220a25249e23ba2d21133801b58aa236f8edcfebb3955a93708",
+   "harness": "f294fb2398fa317fd4c46742e0cc739a4eee834df80c821a9e3ca1be32dbba03",
+   "output": "f0f8d8f9e6c217533b063a8f28c3a5719205fe47caabdc9454f0f52889096af0",
+   "items": {
+    "screen": 2,
+    "devices": 23,
+    "stops": 42481,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/nav#3": {
+   "screen": "6c2c2078c75d02bd3a3c32fa587f7fd762257e313ca61c2737606dff7e53de59",
+   "devices": "81c7ba049f2202486fad2e9dc2bc285d6427993b4548fdc10934d492ed5ee060",
+   "stops": "b35fec04816eedefabe5cf8bc1130ab481c0a81453ed2537a45513581fcd2d9e",
+   "harness": "aeef84a711a9943ea17f495b6eb06a71e2c85842860d887aeda6b9ea5955ab86",
+   "output": "6abe57b717177da2d9309a7a4ead79c1f2891548a9d724ee7062071818da8175",
+   "items": {
+    "screen": 2,
+    "devices": 40,
+    "stops": 45439,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/nav#4": {
+   "screen": "f77a36ebe111bd15c1d492bbf38492a0773e5abb8d4894e007e9561a462a1e03",
+   "devices": "79017ed84f02165269c6e9e9a5d06a40e7c5e5400c5d2f29a53f56214fde93c5",
+   "stops": "ade93b1e0957e6dbbff3cefaf5e1daf43f9ad01bbef5ad00aefdbafeb735bb90",
+   "harness": "f3bd90aef717cdc5fb7325d2147bfa3d2a890beff54aed82dd4468e784c4e40c",
+   "output": "07a6c90102fbc68f7f2388a1c2bad65aeb7788854b02120f085ee291b5ee859f",
+   "items": {
+    "screen": 3,
+    "devices": 195,
+    "stops": 33079,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/nav#5": {
+   "screen": "8a8b666783dd109d709565b76cdfd3c5f6ab2e4bca916221351a4613adcce9c5",
+   "devices": "14f8a5fef45568a0746c07745a72ed46b14486709abd4eb28b2f9561b5ca9ac1",
+   "stops": "6353148d93065c22a504130aa76bc6ae8c5e3b8205439b6bd13c2c9502c3acd9",
+   "harness": "83d0b5a01ef4fcb2dbb5c12c6f6d832cf075e00ef25ef6fa436692ade1882479",
+   "output": "26be954a5cd089fb8f2cea4efffbb4cd4e0a5e193728a336f66346e13d6789c0",
+   "items": {
+    "screen": 3,
+    "devices": 21,
+    "stops": 21955,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/nav#6": {
+   "screen": "2763b17cb84f09a220df08d1f50863787e746097353b3ae0d9980aaaa263eca2",
+   "devices": "7acb7f7fdd4afb813e16c4344f31345eb2156b25f6b1302902339ed3454ab1f3",
+   "stops": "04256c2fe2e451fc860279d979d81b49ff901fb712582b97f80ded18e90c14e3",
+   "harness": "3c43b3eba3483589860c4d7c9b143c46dedae6cfc3091aacf49f7d2eb3a004b2",
+   "output": "6daab98e59674cb467b3b52261851db12fb68ece2d0b80770f12f761ac957c13",
+   "items": {
+    "screen": 4,
+    "devices": 23,
+    "stops": 19130,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/nav#7": {
+   "screen": "1cabe67b35c4c2678f47a7f50309d12f159215bce0d671f35412ca8c94d56aa8",
+   "devices": "78f6afad68fbf262e990c61be395e73748498ddeb2d9953ba18a8e670b6900c5",
+   "stops": "986d3732ccadc73d79ae1103fb43e179cebda84e758b1df4d26b2d4e612d3d1d",
+   "harness": "d24e2b94ec57623682158da24fff22bcc172206e72f79b64b4d3939354cac6f4",
+   "output": "d575dab53b27efe2fd965878f10c8618ae65e6f8486ef784ea92d41bcb1648fd",
+   "items": {
+    "screen": 1,
+    "devices": 15,
+    "stops": 14584,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/nav#8": {
+   "screen": "02ef91e9a9b34ef5c1b78e9579529ecd71555635e0cf9cf41c51541e4aba20ff",
+   "devices": "9e69e460df07bbf8fec3bd2d0705ff6c8e389de1b937cc55e437a1755b5e57c5",
+   "stops": "ec52e2aa7dfbb01e7f3254df9b1091d55552718f6c0f4e8dd13546f8cd78d00d",
+   "harness": "e3428e674a42e7158d81f09e33efe5761f8f988eee1d7cb13f73ab92c5e07a07",
+   "output": "306fe73e8a242800d6b6786dae48ba37c3dd60ed275fef77fe257da403fe69e9",
+   "items": {
+    "screen": 8,
+    "devices": 28,
+    "stops": 33286,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/nav#9": {
+   "screen": "8d51ccacd3490bdd95a02d7db4d21b69f2019a8a236834cfe2317823a84572b4",
+   "devices": "87570f6c6dbde66e73ea8e8c51df56aa5c25d8d70e4af03c9d20e8d1cfe19c3c",
+   "stops": "d6786abbbb96033bbaa2c11cef31194045cfa24a00f1e2da8a47e2f72f3e64c2",
+   "harness": "5e1fc1a261091b6b046db1bf35d1bb31ded66d7e5d047b1abbf76a27fe8611e3",
+   "output": "fd6b870044558e1a11002f8483ca346aa8507f9bf0b6bda8385dcd58c148ee32",
+   "items": {
+    "screen": 2,
+    "devices": 15,
+    "stops": 15577,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/nav": {
+   "screen": "69174099efa826b397e08ecf4fdb61b24503abf1bb2e38d6512d4c709d94cc7a",
+   "devices": "d77cd42eeab929379ed99e0d753e99a1297f2c5c14973dd0e22690778df90871",
+   "stops": "02b6f255a04e76b64515f2803c590d165db37afc800c3e1a2c0b67ba1d009ee7",
+   "harness": "0e8ae5bd8b886f4c4d01b7167ea72c6959706add8b5b35b39c6e7aa90ed546d8",
+   "output": "6a18ab7308dfb0e5c90183206e9e577e0d32e64f106c785e022f32e106ce84da",
+   "items": {
+    "screen": 13,
+    "devices": 128,
+    "stops": 107443,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/nav-mut-pri60": {
+   "screen": "cf49d0edcd97063f57db3672a577ce73fb3eca6843a8d6ab7196e29a109fccd5",
+   "devices": "5db9a06547b4140467b93dcd6534f795066130e75dcc85adc1228d8f16911048",
+   "stops": "58c4ca16f0bbb5ff6a88cfd8033a1af8d875c77985355994cc787a26eae54f47",
+   "harness": "87093bf331af5d00550e97adc5824893bd195c9fc52b5d8e2a3d0aed060206a5",
+   "output": "8b3e855aaa5893838b8b9157d87cb3b5f4da0ea7b5d8327c4d9240bf12dfd384",
+   "items": {
+    "screen": 1,
+    "devices": 9,
+    "stops": 3555,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/nav-mut-switch-no-resend": {
+   "screen": "603819d7132c80d945c1f2777720fb7aebc29046807c87870ed6936febf7eb7a",
+   "devices": "61157cf2a2c3c81d439d22b8b48418809a795c022c49446ed351e746a87fefd6",
+   "stops": "131a85918ce73913caab9c4e6733cc0e5ffa018209d9df755b79e41e87fd0679",
+   "harness": "28f0792e68b7467517ed7273c3c98e3b97a7e3de118bbbb512f778ba035c8a0b",
+   "output": "08cbd175af3c5e434602ea9e4ecc9f5b07d38c48a3fd2e6dc300728905b7e38f",
+   "items": {
+    "screen": 4,
+    "devices": 15,
+    "stops": 15727,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "check/nav-mut-b7-no-task16": {
+   "screen": "9a136edc67c56d760323767c6cbb019cd3bac36fdb9c5c3ed796fdb837694fdf",
+   "devices": "74f56245ae999cacaafcc186847b52deb7fc12dc6b98b08186da6e027a16be29",
+   "stops": "703bd82066b0395f83d0cf62bc4bb8a2a6c6abbadf53209b3f62f434b7c8e347",
+   "harness": "a8ac0f6118260e763e9e5b90b9c151e46a412ce2e04d953a74f2c2725007347e",
+   "output": "8d5a92b85ddfbf64df42ee8aeab3ad6721702a709d55b03f19170bb76fd156b5",
+   "items": {
+    "screen": 3,
+    "devices": 190,
+    "stops": 45721,
+    "harness": 8,
+    "output": 3
+   }
+  },
+  "run/vscregs-usage": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "3de8238d308b01a1516c635a1175fa7b39802fe1d4f9df72c780b64a4f6517fa",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nd128-usage": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "3f90e2b0819bca9906229c9f1ffe2de28c7e5ea6372999f8780f98cabed003c4",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/vscregs": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "883d3085925b303e5d3885126e5231f5ed2e93b7482ea18b6b508fb654480a78",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/isa-usage": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "7d06be854de9409ba7fa0dddb3d29fa48cdb25dc54b31e817b5804febe986698",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nd128": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "7d894574fd47c91da94cdb38d81f47e66c5c6cce41975ed2a478247773475009",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 4
+   }
+  },
+  "run/isa-regen": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "2e1817042098fc77ad13172a466611c0f3573b1d0f14ac8c8ae957cb6d12e309",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/kernel-args": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "30cfe23fc62d139c6b7adb7e9a06937ea8f1682be6a7804d62d78c353c85c862",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/kernel": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "30cfe23fc62d139c6b7adb7e9a06937ea8f1682be6a7804d62d78c353c85c862",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/irq-usage": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "8481e51d897735050853305bb46904b3a4645c60717bfbafb617ace7b36f6c39",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/irq-i2": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "9d81416bb8f5de51e6b18a93a7fdbfcfee7fa93814753cac6617f80041b2e035",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/isa": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "e76394726c273e942be274cb11e49e42d4ffd546bafdc92d6435285c6fe3d0ec",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/isa-inert": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "e76394726c273e942be274cb11e49e42d4ffd546bafdc92d6435285c6fe3d0ec",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/irq-fault": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "4b5bf088deac45c38c050a768e36aab63c591e7e45c6a437225de211a0f8fc8f",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/perf-usage": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "eb5d83f4ab3a5c37f8b18e7f1aefad4faa47695b3e8b360cfe94a6fda5f66fbd",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/irq": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "17e7deacea865518dae7c3c6507791fa08b3922dac710d9e8bd214087bbca255",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/perf-usage-order": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "b229f309fe50071d99f0425226cef9d1163840a76c2f83324f0801abf4ca0df8",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/perf-usage-play": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "93c8dea102f7f2374d4131d16dfe8b52165c3d9c6b3f9ec8fa502b561d95da99",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/irq-xm28": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "22ee60a99679413794ab40b268dc7055606905cf35f1f993e9e6eaab749fa07f",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/irq-mutants": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "f9ad7d4486d101a78fec084c62f989a006ef31362c3fa591319e82cb84648597",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/perf-bench": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "c698e0c1cf314b1406196bedc2fe874d647b4b6ade2a433e75a85270b0c93b82",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/perf-inert": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "c698e0c1cf314b1406196bedc2fe874d647b4b6ade2a433e75a85270b0c93b82",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/display-usage": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "4cfe10d4811a8e2053f293b1e190d4cf343a01733322072a2ac36da0db2845c3",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/display-fault": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "a14ba3ccde603c67abcf6ddfe549a485f41392d04e07e3362b4d7c9662568ab2",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/display": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "3a5a7627e79022669597ebf93e1905e18c68c8cceb2f1b858776a7d03a82d0d1",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 11
+   }
+  },
+  "run/display-seed2": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "a7b37d3f808c098377f8b1101b668392d34fb766e39a7e2a389a8ff21fc22a8c",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 11
+   }
+  },
+  "run/display-knone": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "3a5a7627e79022669597ebf93e1905e18c68c8cceb2f1b858776a7d03a82d0d1",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 11
+   }
+  },
+  "run/liveview-g3s4": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "45ff5b4e4c407c459b248c088f63cca0373179badce87e60759d87b6bafa6eac",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/liveview-g3s2": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "d4e3097fd823034c4d93706797647294eebc0b13709b08fe5c103679e1694b61",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/liveview-g3s5": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "2995e21b459e1e2614aaed045b5f8fa0dab68c8035a7fa6e8a6ed7f87b727d6a",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/liveview-usage": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "cfdb2fae76e05e44c448e26db5b856e35c9203c4c26505128b665f1b1235f285",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/liveview-g3s7": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "77bd54499faa8bd636a155330828c5f43592be9e6508c84f64ff69778f33b7a8",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/liveview-usage2": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "71278d5194d87100e2861baaf5abb7a08c882a819d2a4f2e1d106a2155433164",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/liveview-fault": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "c13deebfddc7984fd8430536108286f52d2ad6cbb22ab3dad02a3338a20df509",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/text": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "d12184114e570f781aec603cedbceb767f1e4d8b8f6483a0d4285197e96f6d62",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/liveview": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "c4c82f5c08c7ffd28c8ea352bfd32a2176f4fb5b35fe9dffa53d6d642fb7b70e",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 5
+   }
+  },
+  "run/text-seed2": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "d12184114e570f781aec603cedbceb767f1e4d8b8f6483a0d4285197e96f6d62",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/text-knone": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "7c84a0fcc44af17b2a7c73eeec95b4857ac3948a3d23caa834a7effd8d9e76c7",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/text-mut-sset": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "06b401d461f05e70c880e456803f8ee8bf08a2672c42c3e5c70a5758ba288a0a",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/text-usage": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "f7a0ead1522a86b954d0f30d1081f3471f0731ff33845ced12de63a8cc869fea",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/text-mut-nohstack": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "730523af317af133c50af9116a427d886f1d6b41f074349b8bebceb638cf88d4",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/text-mutants": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "c91649aa3404cfda4d4d34f5333dad1653452d14b45601761bf20accf5056ecf",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/text-fault": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "9ecbc02278cd5dd5a5d9fb604ea8232b2c241006333a84a88758a66493ac5166",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/osd": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "67676fd7bda360d2678f5c68fdfca968f0c834e958b2a977e08aeadaa6804903",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/osd-usage": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "f0681914941371a4ded145cac16fc052a1167c42ce6a53c15f6ca11fb7d6e0cf",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/osd-seed2": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "351a1c131bb6661a720c0b5320b6e24159eec5231952054781dc689ade6ef258",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/osd-knone": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "67676fd7bda360d2678f5c68fdfca968f0c834e958b2a977e08aeadaa6804903",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/osd-seed0": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "1b2c1ae8f8185ae76f228d1db2a5e2c8dba9aa13f4fd85e7254378b65a07c064",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/osd-fault": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "4a25d3b8c07b854270110463b5e150ac5735997fe1e1ea15fcc155c3c701a447",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/osd-seed5": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "7461834e502ec55f04974c051345a912c86739af819f7324c656cd09a776ac2e",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/osd-seed6": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "5a337140fadd51903b9f81d18487c0ec75a36bda438abe0cb904983ae0104c11",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/liveview-knone": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "c4c82f5c08c7ffd28c8ea352bfd32a2176f4fb5b35fe9dffa53d6d642fb7b70e",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 5
+   }
+  },
+  "run/menu-quick": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "a4df31d93970f0ea4ef1a6740c22d027b70712c49553b5019e71f4467e47b051",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/menu-empty": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "eb2fb486978485ac01fe7025c9defff6e322d778087c3cc606c6baca18318974",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/menu-jobs4": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "bd7512f4332a0be2f2431454a6dc6bf0f03df471edde148a8ead8b24d61f6038",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/menu-empty-quick": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "a4df31d93970f0ea4ef1a6740c22d027b70712c49553b5019e71f4467e47b051",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/menu-mut-persist-page+1": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "9283b717f1843808071477f013033a3ebd9563db46e26105bf2ab6665466a7d1",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/menu-mut-no-ctors": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "0c4996273c37d892980f9e11c21a73041519a51a226537004ebb2a2b39e3fd19",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/menu-mut-gui-4513-native": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "3b2c7c2a65475a4a0c3067d70e9500d38e195b7431ae9f6427cef46b718a49d2",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/menu-mut-settle-no-irq": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "e8b36bbc3bfd6853c6ebc88384c1de07ef25075e4dc02fcaaa552cab88b7479d",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/perf": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "8e3cac1dab09b2018e8d91f17e6f526c17368d8e079581c44277ee9b53fb4de8",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/menu-mut-vsc-other-device": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "cd5046a21b7b6098397337cdb5e1bfb44fa9050a769e5abcd1a5148a15082cc7",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/menu-usage1": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "ee899f1bc88c3e02f38e7912c4e3b2a032024302ad1166900887ae46790dfdf0",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/menu-usage2": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "7aa2caac764ae12bcd3dd5a7ba4d9b261119762345c74fb892571de640424706",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/menu-usage3": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "296f09eb50411371db9e704aec932cffa48438d81123a68365344a58f6fceaff",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/menu-badmutant": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "37c11c54cbd319bb6079215cabdefac9d26fb46d63e22a87f122a731ad65c431",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/perf-fault": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "bd428e0dada747be2edebb8e5eaf6bb201628c6649004c919db2d6bf953d5f5b",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/menu-fault": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "587a2ef390953b8312ef2b2ce11b371405627b3de5d49f86c325f85324a520c4",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-quick": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "c85bf800010667f0a00d647c3dde24a335a94fa053bca3511605bae7b85b9a29",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/menu": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "bd7512f4332a0be2f2431454a6dc6bf0f03df471edde148a8ead8b24d61f6038",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-mut-no-store-init": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "3af9601aa9f16965d9684d253656f15eab60a139ce93d5df2db89ee9e80384b2",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-jobs4": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "81bfb466b2dea39c07541f78937078ece0124e9ed099ac3ffd8650232597407f",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/menu-mutants": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "c809b6f6766ca2948c2620a6b8ef4effd276966e4d72078120e72da0020aff6e",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-mut-pri60": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "0298ffc30604b2a033e0c7d80c7fb4a62a69b1611f52d512eabbcb49117564a7",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-mut-defaults-shift": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "7ea0f9988c1852f38736678e10d22b95235c40da4016cdaeb1fe911728c7cfef",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-mut-reg0-clear": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "1f44dc4b1b46324cd7fa43ce4a401ffe8f59e5f95c9738deca78e0d13c6c19d9",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-mut-no-dial-init": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "c12d7d9138da2285eb669201f8227a91789635650304c20dc07a3a09d9b0f501",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-mut-b2-loutput-1": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "591a640821c6bb06e94026a756b588bafa5fc2c90746c6714cffff5b91b5c312",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-mut-updown-swapped": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "a31208d70013999f3403a0585bfd4963475d7f19d60cd9cf1bc1b42c41f91434",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-mut-b2-no-takeover": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "786ba2ea2c36780b4ab2db65cd088bba127520fa81deeb6e387c9506b623a46b",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-mut-b2-scope": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "5c1559d9a4d102f6e0bce28bf9ad211d405fcd767ca2e7c5ada612b7f60de74b",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-mut-switch-no-resend": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "e0b9b614a6803ac7fbb82de15c6d3a49b7d611c65cee5383d1af3c061a377540",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-usage1": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "408c6445f7c04b8a5938892842c058870ddcb1a71167ce18dfcdcece2a0d0d51",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-usage2": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "cb63e32471be55b9be2d31a014e2eaf021d01a1bc72335ebe592651363d90ad4",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-badmutant": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "37c11c54cbd319bb6079215cabdefac9d26fb46d63e22a87f122a731ad65c431",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-usage3": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "67e6763b7e020c4d3a7d0dcf96ab2f8d6b21a1961f9dcaaabf739c7489c9cd55",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-mut-b7-no-task16": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "7aab6b930f6f3af65b53af25f2a69f542066bfbb411cee7ecb595bfd6acf3ac1",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-fault": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "1b8947ae44ffab7b8c482933a64d291ad92f531449c38f9364613bd12d5f3473",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-mut-lang-no-follow": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "63a690fd38af3a53f4f4a9b7a21b4dff8c92fe2ebd49856a8c5cbb85fcb8c09b",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "7990e67bdf81f3441daba5270af5416f5be013a9f3b059e792b5c5824965bc18",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 13
+   }
+  },
+  "run/menu-full": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "84bb8c209b807094ad53389ff0c87668b1b2f5d677b6a1a30b4eaa6e1ccea2b5",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  },
+  "run/nav-mutants": {
+   "screen": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+   "output": "a3f5e54df0e69dafd67ef880ffa4513cc960face7b0a4e178164f1758885cca9",
+   "items": {
+    "screen": 0,
+    "devices": 0,
+    "stops": 0,
+    "harness": 0,
+    "output": 3
+   }
+  }
+ },
+ "log": [
+  {
+   "commit": "2026-10-13",
+   "sessions": 37,
+   "reason": "first recording, at the freeze of the Python lab; the lab with that lab removed checked identical in all four layers"
+  },
+  {
+   "commit": "2026-10-14",
+   "sessions": 145,
+   "reason": "golden now covers the labs of the 17 check runs and an output layer (rc and stdout, wall-clock figures masked); the 37 scenario sessions' other layers unchanged. Identical on macOS and Linux."
+  },
+  {
+   "commit": "2026-10-14",
+   "sessions": 91,
+   "reason": "golden now records every check run's output (rc, stdout, stderr)"
+  },
+  {
+   "commit": "2026-10-14",
+   "sessions": 5,
+   "reason": "golden now records every check run's output (rc, stdout, stderr); wall-clock and speed figures masked"
+  },
+  {
+   "commit": "2026-10-14",
+   "sessions": 6,
+   "reason": "a further re-recording for the same change as the entries around it (no reason was given at the time)"
+  },
+  {
+   "commit": "2026-10-14",
+   "sessions": 9,
+   "reason": "golden records every check run's output (rc, stdout, stderr); wall-clock and speed figures masked; /proc replaced by ps/lsof and BSD script handled so the checks run on macOS"
+  },
+  {
+   "commit": "2026-10-14",
+   "sessions": 153,
+   "reason": "golden records the lab's own display steps, notes and check results (harness layer), the replay outcome counts and the checks' session results (output layer) and the checks' declared output files; no screen, devices or stops layer changed",
+   "evidence": "tooling"
+  },
+  {
+   "commit": "2026-10-15",
+   "sessions": 28,
+   "reason": "every play session runs the firmware's camera application (S-CAMAPP); the lab's stand-in for it (S-CAMSEQ, S-KEYMAP, S-OUTSEQ, the request input) are removed",
+   "evidence": "firmware"
+  },
+  {
+   "commit": "2026-10-15",
+   "sessions": 31,
+   "reason": "golden's output layer keeps every replayed call's own outcome digest, so a change to what a call returns shows although the frozen Python lab's outcome was not reproduced already",
+   "evidence": "tooling"
+  },
+  {
+   "commit": "2026-10-15",
+   "sessions": 7,
+   "reason": "the project is OM-Emu: device messages print om-emu: in place of the QEMU board's name, and the repository was renamed",
+   "evidence": "tooling"
+  },
+  {
+   "commit": "2026-10-15",
+   "sessions": 28,
+   "reason": "S-CARD keeps the pictures taken and answers the media API's image count (0x503feea4) in place of its native path; S-PLAYSEQ, S-PLAYCOMP and S-PLAYVIEW play them back; S-RELSEQ only while the shooting service runs; DISP_FRAME's swap-wait sleeps on the display clock (docs/om1-shutter-spec.md item 58)",
+   "evidence": "firmware"
+  },
+  {
+   "commit": "2026-10-15",
+   "sessions": 28,
+   "reason": "H-GUIBYAPP: the application creates the GUI, the lab's bring-up no longer does (two GUIs held OSD layer 1's second buffer, the EVF lost its information every other frame); S-GUIOUT, S-ROOTLAYOUT and the EVF-start H-CONNECT removed; A19 for the EVF channel with nearest-neighbour scaling (docs/om1-shutter-spec.md item 59)",
+   "evidence": "firmware"
+  },
+  {
+   "commit": "2026-10-15",
+   "sessions": 3,
+   "reason": "the rename of the lab's directory to emu/: nd128's report names the engine emu; check_perf's P10a passes again, its oracle reference now carrying the om-emu: device prefix (before, the reference's old prefix made it fail)",
+   "evidence": "tooling"
+  },
+  {
+   "commit": "2026-10-15",
+   "sessions": 28,
+   "reason": "S-LENS mounts a filled 12-40mm F2.8 record and S-EXPOSE runs the firmware's exposure plan (take_expose_calculate 0x50597e82) on the scene's BV after the application starts and after each input: every play session's screen shows the planned shutter, aperture and ISO (shutter spec section 7 item 60)",
+   "evidence": "firmware"
+  },
+  {
+   "commit": "2026-10-21",
+   "sessions": 146,
+   "reason": "the multi-model plan's changes to E143's runs (screen unchanged everywhere): S-DISPSTART runs the DISPLAY task's start-up once, as its entry does (D): interrupts present 373 ns earlier per skipped call, errlog 0x1c005002 and hook counters fall, checks re-pinned; S-RVSTANDBY stores RecView's standby word before the start: interrupt times move by 2-30 ns and the Player status lists it, the replayed outcomes otherwise equal (X); S-DISPSYNC adds hook stops; K-CRT-134D returns the SCPU counter (harness only); check_menu keeps prop_device; check_perf P10b fails as recorded (no frame checked)",
+   "evidence": "firmware"
+  },
+  {
+   "commit": "2026-10-21",
+   "sessions": 31,
+   "reason": "the replayed scenarios run from their inputs alone (emu/scenarios/calls; osd's generated from check_osd): the output layer no longer counts the old lab's outcomes the replay does not reproduce, osd's now carries its calls' outcome digests and play-perf's the workload digest; screen, devices, stops and harness unchanged",
+   "evidence": "tooling"
+  },
+  {
+   "commit": "0c5dfb9",
+   "sessions": 13,
+   "reason": "QEMU/oracle names removed: the trap-line prefix is om-emu:, check outputs say mutant / one-insn / no child, the refused --qemu, --oracle, --regen and --respec options and the nd128 report's qemu_* fields are gone",
+   "evidence": "tooling",
+   "changed": {
+    "output": [
+     "check/menu-mut-no-ctors",
+     "run/nd128-usage",
+     "run/isa-usage",
+     "run/nd128",
+     "run/isa-regen",
+     "run/irq-mutants",
+     "run/osd-usage",
+     "run/menu-mut-no-ctors",
+     "run/perf",
+     "run/perf-fault",
+     "run/menu-mutants",
+     "run/nav-fault",
+     "run/nav-mutants"
+    ]
+   }
+  },
+  {
+   "commit": "ced2a1d",
+   "sessions": 22,
+   "reason": "errors and process conventions: usage errors as 'PROG: message' plus the usage line (checks/lib/args.mjs), uncaught errors as their stack (no Python traceback)",
+   "evidence": "tooling",
+   "changed": {
+    "output": [
+     "run/vscregs-usage",
+     "run/nd128-usage",
+     "run/isa-usage",
+     "run/isa-regen",
+     "run/irq-usage",
+     "run/perf-usage",
+     "run/perf-usage-order",
+     "run/perf-usage-play",
+     "run/display-usage",
+     "run/display-fault",
+     "run/liveview-usage",
+     "run/liveview-usage2",
+     "run/liveview-fault",
+     "run/text-usage",
+     "run/osd-usage",
+     "run/osd-seed0",
+     "run/osd-fault",
+     "run/menu-usage1",
+     "run/menu-usage2",
+     "run/menu-usage3",
+     "run/nav-usage1",
+     "run/nav-usage2"
+    ]
+   }
+  },
+  {
+   "commit": "90c8c24",
+   "sessions": 2,
+   "reason": "check_perf's play workload runs with --a15 auto: since every play session runs the camera application, --a15 off refused every frame and P10b failed (recorded as rc 1)",
+   "evidence": "tooling",
+   "changed": {
+    "output": [
+     "run/perf-fault",
+     "run/perf"
+    ]
+   }
+  },
+  {
+   "commit": "6fc7404",
+   "sessions": 135,
+   "reason": "stage 4 of the Python-shim removal: the checks, references and the check result normaliser print values with show() and compare with deepEqual (no tuple, repr, pyEq, PySet); refs/pyrandom.mjs is refs/mt19937.mjs; notes fixtures and perf-p10a re-pinned. Only check and run stdout/stderr/results/files and the osd replay outcomes move; screen and devices are identical",
+   "evidence": "tooling",
+   "changed": {
+    "harness": [
+     "check/menu#10",
+     "check/menu#11",
+     "check/menu#12",
+     "check/menu#13",
+     "check/menu#14",
+     "check/menu#15",
+     "check/menu#16",
+     "check/menu#17",
+     "check/menu#18",
+     "check/menu#19",
+     "check/menu#2",
+     "check/menu#20",
+     "check/menu#21",
+     "check/menu#3",
+     "check/menu#4",
+     "check/menu#5",
+     "check/menu#6",
+     "check/menu#7",
+     "check/menu#8",
+     "check/menu#9",
+     "check/menu",
+     "check/menu-empty-quick",
+     "check/nav#10",
+     "check/nav#13",
+     "check/nav#14",
+     "check/nav#8",
+     "check/nav#9",
+     "check/nav-mut-switch-no-resend"
+    ],
+    "output": [
+     "osd",
+     "check/display#10",
+     "check/display#11",
+     "check/display#12",
+     "check/display#13",
+     "check/display#14",
+     "check/display#2",
+     "check/display#3",
+     "check/display#4",
+     "check/display#5",
+     "check/display#6",
+     "check/display#7",
+     "check/display#8",
+     "check/display#9",
+     "check/display",
+     "check/liveview#10",
+     "check/liveview#11",
+     "check/liveview#12",
+     "check/liveview#13",
+     "check/liveview#14",
+     "check/liveview#15",
+     "check/liveview#2",
+     "check/liveview#3",
+     "check/liveview#4",
+     "check/liveview#5",
+     "check/liveview#6",
+     "check/liveview#7",
+     "check/liveview#8",
+     "check/liveview#9",
+     "check/liveview",
+     "check/text#2",
+     "check/text#3",
+     "check/text#4",
+     "check/text#5",
+     "check/text#6",
+     "check/text#7",
+     "check/text#8",
+     "check/text",
+     "check/text-knone#2",
+     "check/text-knone#3",
+     "check/text-knone#4",
+     "check/text-knone#5",
+     "check/text-knone#6",
+     "check/text-knone#7",
+     "check/text-knone#8",
+     "check/text-knone",
+     "check/display-knone#10",
+     "check/display-knone#11",
+     "check/display-knone#12",
+     "check/display-knone#13",
+     "check/display-knone#14",
+     "check/display-knone#2",
+     "check/display-knone#3",
+     "check/display-knone#4",
+     "check/display-knone#5",
+     "check/display-knone#6",
+     "check/display-knone#7",
+     "check/display-knone#8",
+     "check/display-knone#9",
+     "check/display-knone",
+     "check/menu#10",
+     "check/menu#11",
+     "check/menu#12",
+     "check/menu#13",
+     "check/menu#14",
+     "check/menu#15",
+     "check/menu#16",
+     "check/menu#17",
+     "check/menu#18",
+     "check/menu#19",
+     "check/menu#2",
+     "check/menu#20",
+     "check/menu#21",
+     "check/menu#3",
+     "check/menu#4",
+     "check/menu#5",
+     "check/menu#6",
+     "check/menu#7",
+     "check/menu#8",
+     "check/menu#9",
+     "check/menu",
+     "check/menu-empty-quick",
+     "check/nav#10",
+     "check/nav#11",
+     "check/nav#12",
+     "check/nav#13",
+     "check/nav#14",
+     "check/nav#2",
+     "check/nav#3",
+     "check/nav#4",
+     "check/nav#5",
+     "check/nav#6",
+     "check/nav#7",
+     "check/nav#8",
+     "check/nav#9",
+     "check/nav",
+     "check/nav-mut-pri60",
+     "check/nav-mut-switch-no-resend",
+     "check/nav-mut-b7-no-task16",
+     "run/irq-xm28",
+     "run/irq-mutants",
+     "run/display",
+     "run/display-seed2",
+     "run/display-knone",
+     "run/text",
+     "run/liveview",
+     "run/text-seed2",
+     "run/text-knone",
+     "run/text-mut-sset",
+     "run/text-mut-nohstack",
+     "run/text-mutants",
+     "run/text-fault",
+     "run/osd-seed0",
+     "run/osd-fault",
+     "run/liveview-knone",
+     "run/menu-mut-persist-page+1",
+     "run/menu-badmutant",
+     "run/nav-quick",
+     "run/nav-mut-no-store-init",
+     "run/nav-jobs4",
+     "run/menu-mutants",
+     "run/nav-mut-pri60",
+     "run/nav-mut-defaults-shift",
+     "run/nav-mut-reg0-clear",
+     "run/nav-mut-no-dial-init",
+     "run/nav-mut-b2-no-takeover",
+     "run/nav-mut-updown-swapped",
+     "run/nav-mut-b2-loutput-1",
+     "run/nav-mut-b2-scope",
+     "run/nav-mut-switch-no-resend",
+     "run/nav-badmutant",
+     "run/nav-mut-b7-no-task16",
+     "run/nav-fault",
+     "run/nav-mut-lang-no-follow",
+     "run/nav"
+    ]
+   }
+  },
+  {
+   "commit": "4833083",
+   "sessions": 29,
+   "reason": "stage 5 of the Python-shim removal: the lab's values are plain arrays and its messages quote values with show(); output texts only",
+   "evidence": "tooling",
+   "changed": {
+    "harness": [
+     "check/nav#3",
+     "check/nav-mut-switch-no-resend",
+     "check/nav-mut-b7-no-task16"
+    ],
+    "output": [
+     "b7-gate",
+     "inputs",
+     "keys",
+     "osd",
+     "pace-wall",
+     "play-perf",
+     "playback",
+     "power#2",
+     "power#3",
+     "power-replay#2",
+     "power-replay#3",
+     "power-replay",
+     "power",
+     "queue",
+     "scp-edge",
+     "scp-replay",
+     "scp-timeout",
+     "tokens",
+     "check/menu-mut-settle-no-irq",
+     "check/nav#3",
+     "check/nav-mut-switch-no-resend",
+     "check/nav-mut-b7-no-task16",
+     "run/text-mut-nohstack",
+     "run/menu-mut-gui-4513-native",
+     "run/menu-mut-settle-no-irq",
+     "run/nav-mut-b2-scope",
+     "run/nav-mut-switch-no-resend",
+     "run/nav-mut-b7-no-task16",
+     "run/nav-mut-lang-no-follow"
+    ]
+   }
+  },
+  {
+   "commit": "527ded1",
+   "sessions": 64,
+   "reason": "check_menu and check_nav name emu's references (refs/settings.mjs, refs/menuref.mjs, refs/font.mjs, src/lab/menudata.mjs, src/lab/text.mjs) instead of the old lab's modules in their group and problem texts; output layer only",
+   "evidence": "tooling",
+   "changed": {
+    "output": [
+     "check/menu#10",
+     "check/menu#11",
+     "check/menu#12",
+     "check/menu#13",
+     "check/menu#14",
+     "check/menu#15",
+     "check/menu#16",
+     "check/menu#17",
+     "check/menu#18",
+     "check/menu#19",
+     "check/menu#2",
+     "check/menu#20",
+     "check/menu#21",
+     "check/menu#3",
+     "check/menu#4",
+     "check/menu#5",
+     "check/menu#6",
+     "check/menu#7",
+     "check/menu#8",
+     "check/menu#9",
+     "check/menu",
+     "check/menu-empty-quick",
+     "check/nav#10",
+     "check/nav#11",
+     "check/nav#12",
+     "check/nav#13",
+     "check/nav#14",
+     "check/nav#2",
+     "check/nav#3",
+     "check/nav#4",
+     "check/nav#5",
+     "check/nav#6",
+     "check/nav#7",
+     "check/nav#8",
+     "check/nav#9",
+     "check/nav",
+     "check/nav-mut-pri60",
+     "check/nav-mut-switch-no-resend",
+     "check/nav-mut-b7-no-task16",
+     "run/menu-quick",
+     "run/menu-empty",
+     "run/menu-empty-quick",
+     "run/menu-jobs4",
+     "run/menu-mut-persist-page+1",
+     "run/menu-mut-vsc-other-device",
+     "run/menu-fault",
+     "run/nav-quick",
+     "run/menu",
+     "run/nav-mut-no-store-init",
+     "run/nav-jobs4",
+     "run/nav-mut-pri60",
+     "run/nav-mut-defaults-shift",
+     "run/nav-mut-reg0-clear",
+     "run/nav-mut-no-dial-init",
+     "run/nav-mut-b2-no-takeover",
+     "run/nav-mut-b2-loutput-1",
+     "run/nav-mut-updown-swapped",
+     "run/nav-mut-b2-scope",
+     "run/nav-mut-switch-no-resend",
+     "run/nav-mut-b7-no-task16",
+     "run/nav-fault",
+     "run/nav-mut-lang-no-follow",
+     "run/nav",
+     "run/menu-full"
+    ]
+   }
+  },
+  {
+   "commit": "05ccda5",
+   "sessions": 2,
+   "reason": "check_perf P10a and P10b say what they compare (the pinned outcome; default, one-insn and sliced) instead of naming knobs emu never read",
+   "evidence": "tooling",
+   "changed": {
+    "output": [
+     "run/perf-fault",
+     "run/perf"
+    ]
+   }
+  }
+ ]
+}

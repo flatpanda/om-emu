@@ -1,0 +1,210 @@
+{
+  "status": "offline_research_candidate_NOT_camera_verified",
+  "source": "fw/OLY_E_143_1900_0000_0000.BIN",
+  "source_sha256": "342954a48b60bb900614791d6c44d2ba88a67e7a0e03a065069160daa5fbd75a",
+  "output": "artifacts/nd128/OM1_v1.9_ND128_ND64-slot_EXPERIMENTAL.BIN",
+  "output_sha256": "a17baf28773d5a108b45e35d9ab6c47ad7dbe8aeeb4780369d02d1d62e2d831f",
+  "output_size": 240779264,
+  "main_code": "artifacts/nd128/OM1_v1.9_ND128.main-code.bin",
+  "main_code_sha256": "8a7e8d2ca9feea8aa0478a197d17d1943f39b2c761d7bbf8c9dad4cb9649e29d",
+  "original_main_code_sha256": "7f791611580925f3550d394baa9e8cca4e8f4c38e427ccd498170e8d1feb67e9",
+  "menu_behavior": "ND64 label retained; its exposure-adapter step is remapped 6 -> 7",
+  "patches": [
+    {
+      "decoded_body_offset": "0x2d00f1",
+      "before": "a001c818a002c817a003c817a004c81aa005c81aa006c820ca2812ca1f12eaca1b128854f108ca0a1256ca10128854e85c58f050ca2712f90206",
+      "after": "a001c03ea007c13a128100e829ffc9fd82ca29a006c90340f85323dff01ccbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcb"
+    },
+    {
+      "decoded_body_offset": "0x2d165d",
+      "before": "f85323",
+      "after": "cca7ea"
+    }
+  ],
+  "trampoline_body_offset": "0x2d0104",
+  "first_block_tail_checksum_before": "0x16a1f898",
+  "first_block_tail_checksum_after": "0x4000a8bc",
+  "packed_body_changed_bytes": 58,
+  "source_blocks": [
+    {
+      "offset": 0,
+      "length": 33554368,
+      "flags": 256,
+      "model": "1430",
+      "checksum_ok": true,
+      "noop_identical": true
+    },
+    {
+      "offset": 33554432,
+      "length": 60817344,
+      "flags": 257,
+      "model": "1430",
+      "checksum_ok": true,
+      "noop_identical": true
+    },
+    {
+      "offset": 94371840,
+      "length": 143785920,
+      "flags": 262,
+      "model": "1430",
+      "checksum_ok": true,
+      "noop_identical": true
+    },
+    {
+      "offset": 238157824,
+      "length": 262080,
+      "flags": 270,
+      "model": "1430",
+      "checksum_ok": true,
+      "noop_identical": true
+    },
+    {
+      "offset": 238419968,
+      "length": 2097088,
+      "flags": 258,
+      "model": "1430",
+      "checksum_ok": true,
+      "noop_identical": true
+    },
+    {
+      "offset": 240517120,
+      "length": 262080,
+      "flags": 263,
+      "model": "1430",
+      "checksum_ok": true,
+      "noop_identical": true
+    }
+  ],
+  "output_blocks": [
+    {
+      "offset": 0,
+      "length": 33554368,
+      "flags": 256,
+      "model": "1430",
+      "checksum_ok": true,
+      "noop_identical": false
+    },
+    {
+      "offset": 33554432,
+      "length": 60817344,
+      "flags": 257,
+      "model": "1430",
+      "checksum_ok": true,
+      "noop_identical": false
+    },
+    {
+      "offset": 94371840,
+      "length": 143785920,
+      "flags": 262,
+      "model": "1430",
+      "checksum_ok": true,
+      "noop_identical": false
+    },
+    {
+      "offset": 238157824,
+      "length": 262080,
+      "flags": 270,
+      "model": "1430",
+      "checksum_ok": true,
+      "noop_identical": false
+    },
+    {
+      "offset": 238419968,
+      "length": 2097088,
+      "flags": 258,
+      "model": "1430",
+      "checksum_ok": true,
+      "noop_identical": false
+    },
+    {
+      "offset": 240517120,
+      "length": 262080,
+      "flags": 263,
+      "model": "1430",
+      "checksum_ok": true,
+      "noop_identical": false
+    }
+  ],
+  "donor_tables": [
+    {
+      "om1_offset": "0x6cbbf0",
+      "om1ii_offset": "0x6b0da4",
+      "bytes": 134,
+      "identical": true
+    },
+    {
+      "om1_offset": "0x6cbc76",
+      "om1ii_offset": "0x6b0e2a",
+      "bytes": 92,
+      "identical": true
+    },
+    {
+      "om1_offset": "0x6cbcd2",
+      "om1ii_offset": "0x6b0e86",
+      "bytes": 50,
+      "identical": true
+    },
+    {
+      "om1_offset": "0x6cbd04",
+      "om1ii_offset": "0x6b0eb8",
+      "bytes": 138,
+      "identical": true
+    },
+    {
+      "om1_offset": "0x6cbd8e",
+      "om1ii_offset": "0x6b0f42",
+      "bytes": 96,
+      "identical": true
+    },
+    {
+      "om1_offset": "0x6cbdee",
+      "om1ii_offset": "0x6b0fa2",
+      "bytes": 54,
+      "identical": true
+    },
+    {
+      "om1_offset": "0x6cbe24",
+      "om1ii_offset": "0x6b0fd8",
+      "bytes": 96,
+      "identical": true
+    },
+    {
+      "om1_offset": "0x6cbe84",
+      "om1ii_offset": "0x6b1038",
+      "bytes": 54,
+      "identical": true
+    },
+    {
+      "om1_offset": "0x6cc078",
+      "om1ii_offset": "0x6b122c",
+      "bytes": 300,
+      "identical": true
+    }
+  ],
+  "validation": {
+    "machine_code_cases": 1024,
+    "provider_6_to_7": true,
+    "selector_valid_steps": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "table_index_offsets_for_step7": [
+      7,
+      14,
+      21
+    ],
+    "requested_frame_count": 128,
+    "camera_tested": false
+  },
+  "limitations": [
+    "UI and other direct parameter readers still see step 6",
+    "Remaining image-pipeline limits and EXIF behavior are unverified",
+    "Camera update acceptance and on-device behavior are untested",
+    "Six named Bayer buffers do not prove ND128 memory safety"
+  ]
+}

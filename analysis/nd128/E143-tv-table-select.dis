@@ -1,0 +1,82 @@
+
+unpacked/E143/OLY_E_143_1900_0000_0000.BIN.blk00000000.OE.0100.bin:     file format binary
+
+
+Disassembly of section .data:
+002cf4e3 <.data+0x2cf4e3>:
+  2cf4e3:	92          	mov	a0,a2
+  2cf4e4:	82          	mov	d0,d2
+  2cf4e5:	f0 42       	movbu	(a2),d0
+  2cf4e7:	97          	mov	a1,a3
+  2cf4e8:	a0 59       	cmp	89,d0
+  2cf4ea:	c8 06       	beq	0x2cf4f0
+  2cf4ec:	a0 5a       	cmp	90,d0
+  2cf4ee:	c9 66       	bne	0x2cf554
+  2cf4f0:	cd 91 02 00 	call	0x2cf781,[],0
+  2cf4f4:	00 
+  2cf4f5:	14          	extbu	d0
+  2cf4f6:	a0 01       	cmp	1,d0
+  2cf4f8:	c9 5c       	bne	0x2cf554
+  2cf4fa:	f8 62 02    	movhu	(2,a2),d0
+  2cf4fd:	18          	exth	d0
+  2cf4fe:	a0 55       	cmp	85,d0
+  2cf500:	c8 0e       	beq	0x2cf50e
+  2cf502:	fa c8 80 00 	cmp	128,d0
+  2cf506:	c8 1a       	beq	0x2cf520
+  2cf508:	fa c8 00 01 	cmp	256,d0
+  2cf50c:	c8 2e       	beq	0x2cf53a
+  2cf50e:	f8 62 28    	movhu	(40,a2),d0
+  2cf511:	a0 18       	cmp	24,d0
+  2cf513:	c9 55       	bne	0x2cf568
+  2cf515:	fc cc 24 cd 	mov	1617874212,d0
+  2cf519:	6e 60 
+  2cf51b:	63          	mov	d0,(a3)
+  2cf51c:	80 45       	mov	69,d0
+  2cf51e:	ca 69       	bra	0x2cf587
+  2cf520:	f8 62 28    	movhu	(40,a2),d0
+  2cf523:	a0 18       	cmp	24,d0
+  2cf525:	c9 0a       	bne	0x2cf52f
+  2cf527:	fc cc ae cd 	mov	1617874350,d0
+  2cf52b:	6e 60 
+  2cf52d:	ca 08       	bra	0x2cf535
+  2cf52f:	fc cc 44 ce 	mov	1617874500,d0
+  2cf533:	6e 60 
+  2cf535:	63          	mov	d0,(a3)
+  2cf536:	80 30       	mov	48,d0
+  2cf538:	ca 4f       	bra	0x2cf587
+  2cf53a:	f8 62 28    	movhu	(40,a2),d0
+  2cf53d:	a0 18       	cmp	24,d0
+  2cf53f:	c9 0a       	bne	0x2cf549
+  2cf541:	fc cc 0e ce 	mov	1617874446,d0
+  2cf545:	6e 60 
+  2cf547:	ca 08       	bra	0x2cf54f
+  2cf549:	fc cc a4 ce 	mov	1617874596,d0
+  2cf54d:	6e 60 
+  2cf54f:	63          	mov	d0,(a3)
+  2cf550:	80 1b       	mov	27,d0
+  2cf552:	ca 35       	bra	0x2cf587
+  2cf554:	f8 62 02    	movhu	(2,a2),d0
+  2cf557:	18          	exth	d0
+  2cf558:	a0 55       	cmp	85,d0
+  2cf55a:	c8 0e       	beq	0x2cf568
+  2cf55c:	fa c8 80 00 	cmp	128,d0
+  2cf560:	c8 13       	beq	0x2cf573
+  2cf562:	fa c8 00 01 	cmp	256,d0
+  2cf566:	c8 18       	beq	0x2cf57e
+  2cf568:	fc cc 10 cc 	mov	1617873936,d0
+  2cf56c:	6e 60 
+  2cf56e:	63          	mov	d0,(a3)
+  2cf56f:	80 43       	mov	67,d0
+  2cf571:	ca 16       	bra	0x2cf587
+  2cf573:	fc cc 96 cc 	mov	1617874070,d0
+  2cf577:	6e 60 
+  2cf579:	63          	mov	d0,(a3)
+  2cf57a:	80 2e       	mov	46,d0
+  2cf57c:	ca 0b       	bra	0x2cf587
+  2cf57e:	fc cc f2 cc 	mov	1617874162,d0
+  2cf582:	6e 60 
+  2cf584:	63          	mov	d0,(a3)
+  2cf585:	80 19       	mov	25,d0
+  2cf587:	f1 e8       	mov	d2,a0
+  2cf589:	f0 50       	movbu	d0,(a0)
+  2cf58b:	df b0 10    	ret	[d2,a2,a3],16

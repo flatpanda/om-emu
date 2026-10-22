@@ -1,0 +1,12 @@
+# Large binaries are tracked by SHA-256 only; see BLOBS.md and BLOBS.sha256.
+*.BIN
+*.bin
+/refs/*.pdf
+/refs/*.zip
+/tools/mn10300-objdump
+# The updater API's replies (fw-survey.mjs fetch, omfw_download.sh): they carry the vendor's terms.
+*_reply.xml
+
+# Build output and caches
+__pycache__/
+*.pyc

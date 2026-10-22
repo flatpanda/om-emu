@@ -1,0 +1,33 @@
+{
+ "format": "om-emu-player-inputs/1",
+ "scenario": "queue",
+ "labs": ["queue"],
+ "source": "captured on 2026-10-13 (Player FIFO gating, five batches: key repeat, touch-move coalescing, dial cap 8, the queued cap, a page's cseq order); the inputs only, without the outcomes recorded with them",
+ "actions": [
+  [0,"ctor","Player",[],{"lang":"en","device":"tft","evf_layout":false,"a15":"off","start":"shooting","tab":"7,1,1","idle":"off","touch":"gui","us_clock":"lab","no_camseq":false,"no_bgdraw":false,"compose":"boundary","port":0,"no_browser":true,"out":"<out>","replay":null,"debug_api":true,"x_mutant":null,"x_trim_keep":null,"no_wait_on_error":true}],
+  [1,"player","open_session",[],{}],
+  [2,"player","submit",[{"type":"key","id":"right","action":"down"}],{}],
+  [3,"player","submit",[{"type":"key","id":"right","action":"down"}],{}],
+  [4,"player","submit",[{"type":"key","id":"right","action":"up"}],{}],
+  [5,"player","tick",[],{}],
+  [6,"player","tick",[],{}],
+  [7,"player","submit",[{"type":"touch","action":"down","x":100,"y":200}],{}],
+  [8,"player","submit",[{"type":"touch","action":"move","x":110,"y":200}],{}],
+  [9,"player","submit",[{"type":"touch","action":"move","x":120,"y":200}],{}],
+  [10,"player","submit",[{"type":"touch","action":"move","x":130,"y":200}],{}],
+  [11,"player","submit",[{"type":"touch","action":"up","x":130,"y":200}],{}],
+  [12,"player","tick",[],{}],
+  [13,"player","tick",[],{}],
+  [14,"player","tick",[],{}],
+  [15,"player","submit",[{"type":"dial","id":"main","detents":10}],{}],
+  [16,"player","tick",[],{}],
+  [17,"player","submit",[{"type":"dial","id":"main","detents":2}],{}],
+  [18,"player","submit",[{"type":"dial","id":"main","detents":8}],{}],
+  [19,"player","tick",[],{}],
+  [20,"player","submit",[{"type":"key","id":"left","action":"up","client":"pg","cseq":2}],{}],
+  [21,"player","submit",[{"type":"key","id":"left","action":"down","client":"pg","cseq":1}],{}],
+  [22,"player","tick",[],{}],
+  [23,"player","tick",[],{}],
+  [24,"player","close_session",[],{}]
+ ]
+}

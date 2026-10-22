@@ -1,0 +1,27 @@
+{
+ "format": "om-emu-session-inputs/1",
+ "scenario": "menu-tft",
+ "source": "captured on 2026-10-13 (PlaySession (Player.opts() defaults, tft): open, frame, MENU down/up, 2 x 50 ms, MENU down/up, 2 x 50 ms, a frame after each); the inputs only, without the outcomes recorded with them",
+ "actions": [
+  [0,"ctor","PlaySession",[],{"opts":{"start":"shooting","touch":"gui","us_clock":"lab","camseq":true,"bgdraw":true,"mutant":null,"a15":"auto"},"lang":"en","device":"tft","start":{"$tuple":[7,1,1]},"tag":"play","a15":false}],
+  [1,"session","__enter__",[],{}],
+  [2,"session","frame",["boundary"],{"raw":true}],
+  [3,"session","key",["menu","down"],{}],
+  [4,"session","frame",["boundary"],{"raw":true}],
+  [5,"session","key",["menu","up"],{}],
+  [6,"session","frame",["boundary"],{"raw":true}],
+  [7,"session","idle_slice",[402339220],{}],
+  [8,"session","frame",["boundary"],{"raw":true}],
+  [9,"session","idle_slice",[452387680],{}],
+  [10,"session","frame",["boundary"],{"raw":true}],
+  [11,"session","key",["menu","down"],{}],
+  [12,"session","frame",["boundary"],{"raw":true}],
+  [13,"session","key",["menu","up"],{}],
+  [14,"session","frame",["boundary"],{"raw":true}],
+  [15,"session","idle_slice",[585850240],{}],
+  [16,"session","frame",["boundary"],{"raw":true}],
+  [17,"session","idle_slice",[635898700],{}],
+  [18,"session","frame",["boundary"],{"raw":true}],
+  [19,"session","close",[],{}]
+ ]
+}

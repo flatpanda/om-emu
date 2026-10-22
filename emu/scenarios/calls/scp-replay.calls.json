@@ -1,0 +1,12 @@
+{
+ "format": "om-emu-player-inputs/1",
+ "scenario": "scp-replay",
+ "labs": ["scp-replay"],
+ "source": "captured on 2026-10-13 (bin/play.mjs --replay of scp-timeout's session log (Player.run, idle off), a queued quit); the inputs only, without the outcomes recorded with them",
+ "actions": [
+  [0,"file","replay",[[{"idx":1,"lab_ns":268925120,"input":{"type":"key","id":"ok","action":"down"}},{"idx":2,"lab_ns":318973580,"input":{"type":"key","id":"ok","action":"up"}},{"idx":3,"lab_ns":318973580,"input":{"type":"token","token":"WAIT:4000"}},{"idx":4,"lab_ns":4322850380,"input":{"type":"key","id":"right","action":"down"}},{"idx":5,"lab_ns":4356216020,"input":{"type":"key","id":"right","action":"up"}},{"idx":6,"lab_ns":4356216020,"input":{"type":"token","token":"WAIT:1000"}},{"idx":7,"lab_ns":5357185220,"input":{"type":"token","token":"WAIT:1000"}},{"idx":8,"lab_ns":6358154420,"input":{"type":"token","token":"WAIT:1000"}},{"idx":9,"lab_ns":7359123620,"input":{"type":"token","token":"WAIT:1000"}},{"idx":10,"lab_ns":8360092820,"input":{"type":"token","token":"WAIT:1000"}},{"idx":11,"lab_ns":9361062020,"input":{"type":"token","token":"WAIT:1000"}},{"idx":12,"lab_ns":10378714040,"input":{"type":"token","token":"WAIT:1000"}},{"idx":13,"lab_ns":11379683240,"input":{"type":"token","token":"WAIT:1000"}},{"idx":14,"lab_ns":12380652440,"input":{"type":"token","token":"WAIT:1000"}},{"idx":15,"lab_ns":13380652440,"input":{"type":"internal","what":"camseq"}},{"idx":16,"lab_ns":13431670100,"input":{"type":"token","token":"WAIT:1000"}},{"idx":17,"lab_ns":14466004940,"input":{"type":"token","token":"WAIT:1000"}}]],{}],
+  [1,"ctor","Player",[],{"lang":"en","device":"tft","evf_layout":false,"a15":"off","start":"shooting","tab":"7,1,1","idle":"off","touch":"gui","us_clock":"lab","no_camseq":false,"no_bgdraw":false,"compose":"boundary","port":0,"no_browser":true,"out":"<out>","replay":"<replay>","debug_api":true,"x_mutant":null,"x_trim_keep":null,"no_wait_on_error":true}],
+  [2,"player","submit",[{"type":"control","op":"quit"}],{}],
+  [3,"player","run",[],{}]
+ ]
+}

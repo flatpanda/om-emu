@@ -14,6 +14,11 @@ application from a harness task of its own. The image sensor and the camera modu
 and movie recording are not modelled; stand-ins produce what the screens show. No firmware is included in this
 repository: you download it from the vendor yourself (see "Quick start").
 
+![The OM-3 firmware's Setup menu, page 1, on the emulated TFT](docs/img/om3-setup-menu.png)
+
+*The OM-3 (E147, firmware v1.1) in the player (`node emu/bin/play.mjs --model E147`) after one press of MENU: the
+Setup menu's first page, drawn by the firmware's own GUI on the emulated TFT.*
+
 ## What works today
 
 On the OM-1 (E143), in the interactive player in your browser: the power-on start to the shooting screen, the menus

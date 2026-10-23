@@ -519,7 +519,10 @@ S-TAKEOVER); nothing in the lab's behaviour changes. What it shows on E143 v1.9:
    (`0x50b7e192`). A 12-byte reply `[0, 0xf0020000, word 3]` written to queue 6 (`--qsend 6:0:0xf0020000:<word 3>`,
    the layout of DISPLAY's replies, `0x501c48bf`) wakes it: `RECV APP_EVENT [0xF0020000]`. Running TAKE_FUNC
    (`0x502cd1ca`) natively instead only moves the wait down: it forwards to TAKE_FUNC_CP (`0x502cd604`, queue `0x5f`),
-   which waits on event flag 66 (`0x502cd49f`) and then sends to BC_EXEC and LENS_EXEC.
+   which waits on event flag 66 (`0x502cd49f`) and then sends to BC_EXEC and LENS_EXEC. Corrected 2026-10-23 (D,
+   hle-gaps.md 4.1.1): `0x2000a` is the API's id, and the message's third word, 0, is TAKE_FUNC command 0. Flag 66 is
+   TAKE_CAM_EVENT (0x42), set by the completion `0x502cd4d0` of the camera driver's request 148, which TAKE_FUNC_CP's
+   ready sequence makes before its BC_EXEC and LENS_EXEC messages; their replies come back on TAKE_FUNC_CP_POST (0x61).
 15. **A generic module seam (X).** `--ack-modules` answers every request the API sender posts to a module queue (the
    target table of 2.2, plus PC_PD_CMD_EXEC 207) with that reply after the step, and returns E_OK for every
    synchronous send (`0x5002e39d`) the lab's own stand-in refuses (TAKE_FUNC cmds 13 and 18, PC_PD_CMD_EXEC cmd 8,
@@ -531,7 +534,9 @@ S-TAKEOVER); nothing in the lab's behaviour changes. What it shows on E143 v1.9:
    removed by TRA 486, `0x50af8b3f..`), then hands the request to a remote channel that answers `0xf0000001` at once.
    TRA ids seen in the probe: 415, 598, 614, 691, 958, 990, 1503. `--ack-tra` makes the synchronous exec (`0x50af7cb9` by
    calls, `0x50af7cbe` by call) return 0 without touching the request; then `startShootingService end = 0x00000000`
-   and the application reaches `state = 0x5100`.
+   and the application reaches `state = 0x5100`. Corrected 2026-10-23 (D, hle-gaps.md 4.1.2): no code builds a TRA 485
+   or 486 request (their vtables `0x60dcb54c` / `0x60dcb594` occur nowhere in the main block), so the local list is
+   empty on the camera too and the remote channel, through the State Mediator to the components, is the normal path.
 17. **The GUI driven by the application (X).** The lab's play bring-up builds the shooting screen itself (S-CAMSEQ
    request 125), which takes `0x3c320` bytes of the GUI's window pool `0x106` (descriptors at `0x62b3e6b8`, 16 bytes
    each: id, base, size, high-water mark; pool `0x106` is `0x60b00` bytes). The application's own rebuild on S1 then
@@ -567,7 +572,10 @@ S-TAKEOVER); nothing in the lab's behaviour changes. What it shows on E143 v1.9:
    CBS_REQUEST_DISPLAY_RECVIEW (294), 1328 CBS_START_READY_MOVIE (205), 1329/1330 CBS_END_READY_MOVIE (206),
    1298/1326/1350/1351/1376/1382 CBS_START_RECORDING_MOVIE (216), 1327 CBS_END_RECORDING_MOVIE (217), 1314 CBS_AF_LOCK (155),
    1325 CBS_UPDATE_SHOOTING_TIME (108) (an earlier version of this list gave the table's entries, the ids less 423).
-   Which module sends which id is ? (the senders do not run).
+   Which module sends which id is ? (the senders do not run). Corrected 2026-10-23 (D, hle-gaps.md 4.1.3): no module
+   sends them. Their classes (gap@0x50af1ebd) are built by the HLS itself, most of them by CmpSqp_SequencePartsBase
+   (1308, 1319..1329 among them), others by Cmp_StillShootingComponentBase, CapTak_Take and CmpSts_RecordController;
+   S-RELSEQ stands in for the sequence parts, which act on the capabilities' observer events.
 21. **The release sequence on screen (X).** `--seq` posts those callbacks between key actions as the reactive would.
    With `key:s1:down, cbs:213:0, cbs:214:1, key:s2:down, cbs:210:0, cbs:136:0, cbs:21:0, cbs:211:0, cbs:89:0`, the
    application answers each one itself: END_FOCUS(1) -> `STATE_CHANGE_FOCUS_ICON` (no change on screen with MF and no
@@ -810,6 +818,11 @@ S-TAKEOVER); nothing in the lab's behaviour changes. What it shows on E143 v1.9:
    parts (the sequence object, controllers) run on it once S-BOOTDONE's 415 lets the category start; none answers the
    request. The module requests made meanwhile (synchronous sends to queue 94, commands 13, 18, 29, 22; queue 207
    command 8 repeatedly) are answered E_OK by S-MODACK and no module notification follows, which is the likely wait (I).
+   Corrected 2026-10-23 (D, hle-gaps.md 4.1.2): the object that takes 990 is the shooting component. The hashed
+   dispatcher of CmpSht_ShootingComponent_NEW (`0x50d725f0`, ids 414..1492, the one a camapp 2 session runs, X) answers
+   990 at once at case `0x50d72a2d` through Com_ResponserUnit (`0x50d7f197`) and only then sets the service up, and 991
+   at case `0x50d72eb5` before it starts or stops the through capability; "the component's answer to 990 waits on the
+   modules" is withdrawn. Why that run saw no answer is ?.
 
 44. **What the recording asks the HLS (X).** During a camapp 1 recording the application and GUI call (by the HLS API
    name lookup `0x50abc82f`) getSettingDetail, getFlashInfo, getAfAreaType, getModeDialState, getRecViewState (30..26
@@ -1091,7 +1104,7 @@ S-TAKEOVER); nothing in the lab's behaviour changes. What it shows on E143 v1.9:
    `0x11`, steps `0x800`): A19 is on for both channels, with nearest-neighbour scaling (vsc spec), and S-DISPFRAME
    sets the face-plane colours of both.
 
-Next steps, in order: the module notifications startShootingService waits for (item 43); whether a camera's GUI holds a root for output 0 (item 47); the AF module's frames and the TAKE module's frame mode in place of S-AFOSD and S-TAKEFRAME (item 50); what the GUI's recording display waits for (item 42); why the GUI keeps the power-on panel (item 41); the module notifications at their own boundary (the HLS event manager, task 166 `0x50abbf0c`,
+Next steps, in order: why startShootingService's TRA 990 went unanswered in the native run (item 43; the shooting component answers it, hle-gaps.md 4.1.2); whether a camera's GUI holds a root for output 0 (item 47); the AF module's frames and the TAKE module's frame mode in place of S-AFOSD and S-TAKEFRAME (item 50); what the GUI's recording display waits for (item 42); why the GUI keeps the power-on panel (item 41); the module notifications at their own boundary (the HLS event manager, task 166 `0x50abbf0c`,
 receives module event codes through `0x50abc393`, and the TRA notifications reach the components) in place of
 S-RELSEQ's callbacks, now that the components that take them run; the module-ready bits (`0x62a3f148`) the modules
 would set; the REC mark (item 35) and the lens record's layout (item 37).

@@ -128,15 +128,15 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 
 | Block | Today | HLE seam | Depends on | Code | Effort (I) | User-visible gain |
 |---|---|---|---|---|---|---|
-| **TAKE module and HLS shooting sequence** (4.1) | S: S-RELSEQ posts the CBS callbacks in an inferred order; S-TRAACK answers TRA 991 and the release TRAs with 0; S-MODACK acks TAKE_FUNC; S-TAKEFRAME; S-EXPOSE writes TAKE_EXPOSE's results | TAKE native, its neighbours answered at their own seams (lens, BC, sensor, shutter). Interim: TAKE as a black box at queues `0x5e` / `0x5a` with TRA notifications 1274..1382 | the TRA 485 registrations (who handles 991, what answers 990: shutter spec item 43); lens and BC_EXEC (TAKE_FUNC_CP waits on flag 66, item 14); the sensor control plane; the shutter; task starts | 307,393 / 301,082: C TAKE about 100k, HLS sequence 196k | ?: no survey sized it; "TAKE reached, 1-2 weeks" (capture survey) leaves out the lens, BC and sensor answers it needs | the camera's own release sequence and timing in place of S-RELSEQ's guessed order; AE lock, drive modes, bracketing |
+| **TAKE module and HLS shooting sequence** (4.1) | S: S-RELSEQ posts the CBS callbacks in an inferred order; S-TRAACK answers TRA 991 and the release TRAs with 0; S-MODACK acks TAKE_FUNC; S-TAKEFRAME; S-EXPOSE writes TAKE_EXPOSE's results | TAKE native, its neighbours answered at their own seams (lens, BC, sensor, shutter). Interim: TAKE as a black box at queues `0x5e` / `0x5a`, its results delivered as the capabilities' observer events (4.1.3) | the shooting component's native answers to TRA 990 / 991 (4.1.2); lens, BC_EXEC and the camera driver's requests 148 / 6 (TAKE_FUNC_CP's ready sequence, 4.1.1); CPU 2 for the movie and through commands; the sensor control plane; the shutter; task starts | 307,393 / 301,082: C TAKE about 100k, HLS sequence 196k | ?: no survey sized it; "TAKE reached, 1-2 weeks" (capture survey) leaves out the lens, BC and sensor answers it needs | the camera's own release sequence and timing in place of S-RELSEQ's guessed order; AE lock, drive modes, bracketing |
 | **Shutter mechanism** (section 7) | 0: block `0x9b900000` (271 registers, IRQs 11 / 12 / 13) never touched; S-RELSEQ's START / END_EXPOSE stand in | not proposed by the survey. A register file with W1C status `+0x008..+0x010` and per-bit callbacks on IRQ 11 has the camera driver's shape, so the sensor's seam D (control plane plus event producer) fits (I) | sensor SSG timing (the EFS curtains are the sensor's reset / readout scan, I), TAKE, time model, the MEC_ADJUST layout | 20,942 / 20,942 (gap@0x50108fe0 19.6k plus cam_mec_ctrl); none run | ? | shutter sound timing, black-out, EFCS / ES modes from the firmware |
-| **Sensor / ISP front end, live view** (4.2) | S: S-SCENE paints bank `0x0A` and calls TH with H-REQ; S-EXPOSE per input, no LV AE; 33 camera IRQs unwired | A: MVR_IMG's TH request builders (CPU 2); B: AE / AWB statistics at the callback table `0x629a7c64`; D (target): control plane plus HLE pixel and statistics producers | CPU 2, TAKE, the TRA 991 handler, IRQs anywhere and time (VD-paced), shutter, DISP_SYNC | 327,531 / 320,730, plus about 25k of MVR's live-view part | 10-16 weeks (seam D open-ended) | the camera's live-view geometry per device, frame cadence, continuous metering, AWB, AE lock, LV modes, magnify |
+| **Sensor / ISP front end, live view** (4.2) | S: S-SCENE paints bank `0x0A` and calls TH with H-REQ; S-EXPOSE per input, no LV AE; 33 camera IRQs unwired | A: MVR_IMG's TH request builders (CPU 2); B: AE / AWB statistics at the callback table `0x629a7c64`; D (target): control plane plus HLE pixel and statistics producers | CPU 2, TAKE (the through commands 25 / 27 / 28 that TRA 991 reaches, 4.1.2), IRQs anywhere and time (VD-paced), shutter, DISP_SYNC | 327,531 / 320,730, plus about 25k of MVR's live-view part | 10-16 weeks (seam D open-ended) | the camera's live-view geometry per device, frame cadence, continuous metering, AWB, AE lock, LV modes, magnify |
 | **EXP exposure module** (inside the sensor block, 4.2) | S: only the plan `take_expose_calculate` `0x50597e82` runs, under S-EXPOSE and H-AEINIT | native, fed by seam B's statistics | seam B, the TAKE_EXPOSE and EXP_MOVIE tasks | about 107k (EXP 96k plus TAKE_EXPOSE 13.6k), one MMIO reference: device-free | part of seam B (3-5 weeks) | continuous metering, AE / AF BV, flicker detection, face and spot AE |
 | **Still capture, image processing, recording** (4.3) | S: S-RELSEQ, S-RECVIEW, S-CARD, S-TAKEFRAME; X: S2 posts no module request | C1 DRAM capture, C2 the imgpro_mdl API, C3 CIC, C4 storage (shared with 4.8), C5 the CPU 2 halves | TAKE, the sensor (C1), CPU 2, storage, the A53 for Handheld High Res (I) | 429,679 / 421,478, of which the imgpro library about 275k behind about 10 imgpro_mdl entries | 6-9 weeks | S2 writes a real JPEG / ORF with the firmware's EXIF and DCF name; the rec view shows the firmware's view image |
 | **AF and lens** (4.4) | S: S-LENS (record values I), S-RELSEQ's END_FOCUS, S-AFOSD's fixed frame; X: no request reaches LENS, FCS, BC or TAKE_EXEC | lens: the serial device `0x9b980000` (IRQ 14) and the edge unit `0x9b883e40` (IRQ 60); AF: the module seam TAKE_FOCUS `0x5d` / FCS_EXEC `0x1b` | TakeReady (TAKE), task starts and the lens inits, sensor VD for LENS_SYNC, CPU 1 (FCS_IP, flag 0x92) and CPU 3 (MDET) for native FCS, IRQs anywhere, time | 510,248 / 504,870 with IS: FCS 372k (about 100k CPU-1-only), lens about 84k | lens 2-3 weeks; AF 2-3 weeks once TakeReady runs; native FCS months | the lens identified by the firmware, zoom and MF, the firmware's AF decision and frames |
 | **Body IS (BC)** (4.4) | 0: no BC, no gyro, no IS state | the module seam BC_EXEC `0x09`; BC native only with a capture of the IS link | TAKE (TAKE_FUNC sends to BC_EXEC), the IS controller's serial channel (?) | 34-42k / about 34k (inside AF / lens / IS) | about 1 week at BC_EXEC | IS mode and indicator, IS EXIF |
 | **Subject detection** (4.12) | 0 | ? (not surveyed as a block) | CPU 3, the detection engines, image buffers | 84,500 / 81,771 keyed; about 127k with the SDET and FACE units | ? | subject and face frames, C-AF tracking |
-| **Movie and audio** (4.5) | S: S-RELSEQ's movie callbacks, S-CARD's movie time, S-CPU2's zero level snapshot, S-MODACK for AUD_EXEC | S3 TAKE_FUNC commands 30 / 31 / 68 / 69, S4 the mvr IF (CPU 2), S5 AUD_LEVEL_MONITOR, S6 a host AVM writing a MOV through the firmware's DFS calls, S7 AUD_EXEC | TAKE (item 43), CPU 2 (MVR, audio level), sensor, storage, EXP_MOVIE / FCS_MOVIE | 134,137 / 124,319 | 10-15 weeks (stages A-C) | a playable .MOV on the card, the firmware's recording sequence, audio meters, beeps |
+| **Movie and audio** (4.5) | S: S-RELSEQ's movie callbacks, S-CARD's movie time, S-CPU2's zero level snapshot, S-MODACK for AUD_EXEC | S3 TAKE_FUNC commands 30 / 31 / 68 / 69, S4 the mvr IF (CPU 2), S5 AUD_LEVEL_MONITOR, S6 a host AVM writing a MOV through the firmware's DFS calls, S7 AUD_EXEC | TAKE (commands 30 / 31 / 68 / 69 wait on CPU 2's MOV_COMMAND, SDET_EXEC and WB_MOV, 4.1.1), CPU 2 (MVR, audio level), sensor, storage, EXP_MOVIE / FCS_MOVIE | 134,137 / 124,319 | 10-15 weeks (stages A-C) | a playable .MOV on the card, the firmware's recording sequence, audio meters, beeps |
 | **AV codec back end** (4.5) | 0 | none for HLE: seam S6 bypasses it | CPU 1; the codec engines; IRQs 303-306 | 416,471 / 411,438 (overlay segment 8, CPU 1) | ?: native needs register-level codec models, no documentation | native movie encode and playback below the HLS (I) |
 | **CPUs 1-3 and inter-core** (4.6) | S: K-OTHERCPU, K-BOOTSYNC, K-IPI, no start barrier; S-CPU2 (one post), S-CPU3, S-DISPFRAME on CPU 0; any other doorbell is an error | run CPUs 1-3 natively on one bus; per-core `0x8000` page, INTC bank n to core n, `+0x808/+0x80c` IRQ 324, `+0x810/+0x814` IRQ 325, `+0x800/+0x804` ISC IRQ 323, ticks 139..141. A53: "off" or ISC node 4 | a machine refactor (per-core CPU state), a per-core kernel lab, flash reads for CPU 2's loader and CPU 3's boot jobs, ROADMAP phases 3-4 | 5,422 keyed; 441,542 reachable only from CPU 1-3 tasks (a lower bound) | 5-7 weeks for the cores | the histogram, a native DISP_FRAME, cross-core owners (AUD_MAIN, AVM) can start; three stand-ins and four kernel stand-ins retire |
 | **SCPU, power, clock, on-board sensors, persistence** (4.7) | S: SCPU window as storage at 5 offsets, S-SCPU-MSG (4 wait sites), S-KEYBITS group 0, H-POWER, H-EYESTATE, S-SETSAVE / opt-in S-NVRAM; clock frozen; Level Adjust hangs | a request server at PER_SCPU_RECEIVE (type-3 id 2); SCPU event / port registers and IRQ 320; clock `0xe8 / 0xec` ticking with lab time; accelerometer at the PER_SIO transfer or the sample cache; S-NVRAM's NAND seam as the default | lab time; the UI_IN, ACC, SCPU and PER_SIO inits; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, Level Adjust, level gauge, rotation, eye sensor |
@@ -170,36 +170,162 @@ and the first concrete step. Task ids are `cpu << 12 | index` (kernel spec §2.1
 - **Tasks (CPU 0, D):** TAKE_MAIN 0x6b `0x503996c3`, TAKE_MAIN_CP 0x72 `0x5039a09e`, TAKE_FUNC 0x69 `0x502cd1ca`,
   TAKE_FUNC_CP 0x6a `0x502cd604`, TAKE_EXPOSE 0x67 `0x5059145d`, TAKE_FOCUS 0x68 `0x509a0ebe`, TAKE_PROXY 0x78
   `0x503a9880`, TAKE_POWER_MANAGER 0x83 `0x503a9241`, TAKE_MOV 0x70 `0x506e4326`.
-- **Objects (D):** queues TAKE_EXEC 0x5a (API targets 6 / 11), TAKE_FUNC 0x5e (25), TAKE_FUNC_CP 0x5f, TAKE_POST 0x63,
-  TAKE_EXPOSE 0x5b, TAKE_FOCUS 0x5d, TAKE_MAIN_CP 0xb8, TAKE_PROXY_EXEC 0xc5; flags TAKE_CAM_EVENT 0x42, TAKE_FUNC 0x44,
-  TAKE_FUNC_CP 0x66, TAKE_DRAMCAP 0xb1 and others. Debug dumps print `job.com`, `res_qname`, `pkt_addr` per job (a
-  command, a reply queue and a parameter-packet pointer).
+- **Objects (D):** queues TAKE_EXEC 0x5a (API targets 6 / 11), TAKE_EXPOSE 0x5b, TAKE_FCS_POST 0x5c, TAKE_FOCUS 0x5d,
+  TAKE_FUNC 0x5e (25), TAKE_FUNC_CP 0x5f, TAKE_FUNC_CP_APPEVENT 0x60, TAKE_FUNC_CP_POST 0x61, TAKE_FUNC_POST 0x62,
+  TAKE_POST 0x63, TAKE_FUNC_IMDFUNC 0xa7, TAKE_MAIN_CP 0xb8, TAKE_PROXY_EXEC 0xc5, TAKE_POWER_MANAGER_EXEC 0xd7;
+  flags TAKE_CAM_EVENT 0x42, TAKE_FUNC 0x44, TAKE_FUNC_CP 0x66, TAKE_DRAMCAP 0xb1 and others; semaphore TAKE_FUNC
+  0x19 (names from the object-name table, queue ids from the halfwords at `0x60043270..0x60043288`). Debug dumps print
+  `job.com`, `res_qname`, `pkt_addr` per job (a command, a reply queue and a parameter-packet pointer, 4.1.1).
 - **No MMIO (D):** TAKE's code `0x50390000..0x503c2000` holds no device operands; it is software over the driver APIs.
   Inside it, a fixed-point arithmetic block `0x50390a90..0x5039724f` (11.8k) and `0x5039724f..0x503996c3` (4.1k) have
   no known role (?).
-- **The HLS half:** CmpSqp_SequencePartsBase (101k, the largest named module), the TRA event dispatchers in
-  gap@0x50c5c4ac and 209 OXF event classes in gap@0x50c7eeb2 (D). They run at 1.3%, mostly static initialisers.
-- **What reaches it today (X):** at the start the application sends TAKE_FUNC one asynchronous request (`[6,
-  0xf0010000, 0, 0x62457560]`) and synchronous commands 13 and 18; with the components on (`control camapp 2`) the
-  start sends 12 synchronous TAKE_FUNC requests and S1 / S2 send nothing downwards. The through image is switched by
-  TRA 991 from `OlyHfwOpeShoot::ctrlAutoThrough` `0x50abd373`, whose handler a module registers through TRA 485 (I:
-  TAKE). The shooting component's start (TRA 990) waits on the modules (shutter spec item 43). TAKE publishes only the
-  module events `0x04020215` and `0x040800f0`, so its results reach the HLS through callbacks the HLS registers with it
-  (I, shutter spec item 44). The AF request lives in `CapTre_TakeReady` -> API `0x50417cd9`, which neither camapp mode
-  reaches.
+- **The HLS half:** CmpSqp_SequencePartsBase (101k, the largest named module), the shooting sequence's per-phase TRA
+  dispatchers in gap@0x50c5c4ac and 209 OXF event classes in gap@0x50c7eeb2 (4.1.3). They run at 1.3% in the golden
+  workload, mostly static initialisers.
+- **What reaches it today (X):** at the start the application sends TAKE_FUNC command 0 asynchronously (`[6,
+  0xf0010000, 0, param]`, the startShootingService API `0x5040e931`, shutter spec item 14) and the synchronous commands
+  13 and 18; with the components on (`control camapp 2`) also 29 (seven times) and 22 (three times). S-MODACK answers
+  them all; S1 and S2 send nothing downwards. The start's transactions (415, 598, 614, 990, 958, 1515, 955, 1001, 1061,
+  992, 1503, 1045, 938, 974; with the components also 937, 1036, 942, 1065) are all answered 0 by S-TRAACK at the exec,
+  so the shooting component that answers 990 and 991 (4.1.2) is never asked. TAKE publishes only the module events
+  `0x04020215` and `0x040800f0`, so its results reach the HLS through the replies to its requests and the callbacks the
+  capabilities register (I, shutter spec item 44; 4.1.3). The AF request lives in `CapTre_TakeReady` -> API
+  `0x50417cd9`, which neither camapp mode reaches.
 - **Seam:** TAKE native, its neighbours answered at their own seams. Inside the step: lens at its serial seam (or
-  LENS_EXEC answered) and BC_EXEC answered; the sensor control plane far enough for TAKE's through start
-  `0x5039f8df`; the shutter at its control plane; the strobe can be planned beside the shutter.
-- **First step:** decode statically the TRA 485 registrations (the module that handles TRA 991, id `0x3df`, and what
-  answers TRA 990), TAKE_FUNC's dispatcher `0x502cd1ca` (commands 13 / 18 at the start, movie 30 / 31 / 68 / 69) and
-  the TRA event dispatchers in gap@0x50c5c4ac; make the HLS component bring-up (`control camapp 2`) the default of the
-  coverage workload, so the HLS half of TAKE is measured before TAKE itself is attempted.
+  LENS_EXEC answered) and BC_EXEC answered; the sensor control plane far enough for TAKE's through start (TAKE_FUNC
+  command 25, 4.1.1); the shutter at its control plane; the strobe can be planned beside the shutter.
+- **First step:** the static decodes are done (4.1.1-4.1.3). Next, make the HLS component bring-up (`control camapp
+  2`) the default of the coverage workload, so the HLS half of TAKE is measured before TAKE itself is attempted; then a
+  probe that runs TAKE_FUNC and TAKE_FUNC_CP natively with a recording stand-in on each queue they send to (4.1.1's
+  table), which gives the order and contents of their requests for a start, a through switch and a movie.
+
+#### 4.1.1 TAKE_FUNC's command interface (D unless tagged)
+
+- **Message:** 16 bytes `{+0 reply queue (0: none), +4 token or the sender's tid, +8 command, +12 parameter}`. The
+  API sends it asynchronously through `0x503eb960` (target 25) or synchronously through `0x503ec094` (queue
+  `(0x60043280)` = 0x5e, command in d1, reply queue made per call, menu spec). The loop `0x502cd1ca` receives with
+  timeout -1 (`0x502ce641`), dispatches through `0x502cd230` and replies through `0x502ce619`: 12 bytes `{u16 status,
+  token, parameter}` to the queue in +0 when it is not 0, the layout of DISPLAY's replies.
+- **Dispatch:** commands 0..92 index the table `0x602f4868` (93 run-time pointers; disassembly address = pointer -
+  `0x10021020`); a higher command answers `0x4b01`. A handler gets a0 = the message and a1 = the context `0x62a3f148`
+  and returns the status. 37 commands share `0x5039a8e9` (answers `0x4b01`, not supported), 38 / 39 / 78 / 79 share
+  `0x5039a8ef` (answers 0). While context bit 15 is set, `0x502cd2e0` puts every command except 74, 75, 80, 81, 83,
+  84, 85 and 90 into a ring at `*(context + 248)` (`0x502cdfc4`) instead of running it; who replays the ring is ?.
+- **TAKE_FUNC_CP:** commands 5, 6, 54, 68 and 69 (handler `0x502cd381`) are forwarded unchanged to TAKE_FUNC_CP (queue
+  0x5f) with word 0 cleared, so TAKE_FUNC sends no reply. TAKE_FUNC_CP `0x502cd604` dispatches through a 32-slot hashed
+  table `0x602f4a34` (`[command + 1, handler]`): commands 0, 1, 4, 5, 6, 25, 31, 33, 54, 68, 69, 81, 82, 85, 86, 87,
+  88; 5 and 54 return to the loop without a reply.
+- **Synchronous requests from TAKE_FUNC** go through `0x506d9854(queue, command, parameter)`: from any other task a
+  synchronous send `0x5002e39d`; from TAKE_FUNC itself (tid `(0x60042df8)` = 0x69) an OlyQeWr with reply queue
+  TAKE_FUNC_IMDFUNC (0xa7) and a 12-byte receive on 0xa7 with timeout -1 (`0x502ce86d`). Every row below that names a
+  queue waits there for that task's reply.
+
+| Command | Handler | Sender | What it does and waits for |
+|---|---|---|---|
+| 0 | `0x502cd32d` | async, the startShootingService API `0x5040e931` (API id `0x2000a`) | the parameter's two words: context byte +349 = both are 1; forwarded to TAKE_FUNC_CP command 0 |
+| CP 0 | `0x502cd6c4` -> `0x502cd760` -> `0x502cd820` | TAKE_FUNC | a state at `0x62a3f394` stepped by the two words, then the ready sequence: a message to TAKE_POWER_MANAGER_EXEC (0xd7); the camera driver's request 148 through `0x502cd411` -> `0x502a4a46` (the driver's request switch, ids 5..152 in the hashed table `0x602c651c`), whose completion `0x502cd4d0` sets TAKE_CAM_EVENT (0x42) bit 1, waited for with OlyEvWt at `0x502cd49f` under the TAKE_FUNC semaphore 0x19 (OlySmWt / OlySmSi); then BC_EXEC (0x09) `{0x61, 2, 29 or 0, param}` and LENS_EXEC (0x2e) `{0x61, 1, 4 or 1, 12-byte buffer}` (pending bits `0x62a3f3b0` \|= 0x82 and 1), their replies received on TAKE_FUNC_CP_POST (0x61) at `0x502cdad2`; the driver's request 6 follows. This is shutter spec item 14's flag-66 wait |
+| 13 / 14 | `0x506d7f03` / `0x5039a9fe` | sync, api_rec `0x5040ed39` (API `0x2000f`) at the start | exposure on / off: context bit 1; TAKE_EXPOSE (0x5b) commands 0 and `0x200` (13), `0x201` and 1 (14), under the context's mode bits |
+| 18 / 19 | `0x5039aad4` / `0x5039ab4d` | sync, api_rec `0x5040e5a5` (API `0x20006`) at the start | focus on / off: context bit 3; 18 calls `0x506eab1f` (strings tfcs_imdfunc, TAKE_CONTINUE_END), TAKE_FOCUS (0x5d) command 2, then the mode computation `0x5039c864` -> `0x5039bb7e`; 19 sends TAKE_FOCUS command 1 |
+| 22 | `0x5039ab86` | sync, api_rec `0x5041073d` | TAKE_FOCUS command 2 when context bit 15 is clear and the bits `0x28` / `0xa8` allow it, then `0x5039c864` |
+| 25 | `0x506d7f55` | async, api_tft `0x504214fc` from `CapThr::start` `0x50bcc0d8` | the through start: settings reads, command 29's body (`0x5039bacd`, the entry a `call` uses), `0x506d83f9`; delays with OlyTaSS `0x5002c6e5` while through_s_wait (`0x62a3f2b4`) is set; TAKE_FUNC_CP command 25 (`0x506d99ce`) |
+| 27 | `0x5039b17e` | async, api_tft `0x50422021` from CapThr's `Pause_Through` `0x50bd1299` | the through pause: through_pause (`0x62a3f2b6`) and through_p_wait (`0x62a3f2b5`) bytes, the mvr IF helper `0x506d961e(5, ...)`, asynchronous messages to TAKE_FUNC_CP (`0x502ce57b`) |
+| 28 | `0x5039b468` | async, api_tft `0x504220fe` from CapThr's `Restart_Through` `0x50bd1330` | the through restart: through_start (`0x62a3f2b8`) = 1 at `0x5039b48c`, `0x506d961e(1, ...)`, a copied message to TAKE_FUNC_CP (`0x502ce5b7`), CPU 2's WB_MOV queue (0x2006) command 1 |
+| 29 | `0x5039bac8` | sync, api_tft `0x5042404f` | a mode update: settings `0x1e71` and `0x8551`, the mode computation `0x5039bb7e`, `0x5039c6a3` |
+| 30 | `0x5039d5a4` | async, api_movie `0x503f1a00` (API `0x5000c`) | movie start: TAKE_FOCUS `0xa03`, TAKE_EXPOSE `0xc00`, TAKE_FOCUS `0xa00`, the mode computation; CPU 2's SDET_EXEC (0x2005) command 4; the mvr IF helpers `0x506d961e(4, ...)` and `0x506d9659(4, ...)` (`0x5042dcbd` / `0x5042dd49`); CPU 2's MOV_COMMAND (0x2001) command 16 |
+| 31 | `0x5039d91b` | async, api_movie `0x503f1af9` (API `0x5000d`) | movie stop: MOV_COMMAND command 26; a 16-byte message to MOV_COMMAND (`0x502ce5b7`); TAKE_FUNC_CP command 81; SDET_EXEC command 5; TAKE_FOCUS `0xa01`; TAKE_EXPOSE `0xc01`; a 12-byte receive on TAKE_FUNC_POST (0x62, `0x502ce67e`) |
+| 68 / 69 | `0x502cd381` -> CP `0x503a85f0` / `0x503a860f` | async, api_movie `0x503f4b0e` / `0x503f4be7` (APIs `0x50041` / `0x50042`) | forwarded to TAKE_FUNC_CP, which sends CPU 2's WB_MOV queue (0x2006) command 7 (68, then `0x503a86ab(1)`) or 9 (69) synchronously |
+
+The rows give each handler's requests in code order; several are conditional. The CPU 2 queue ids come from
+`0x60043670..0x6004367e` (MOV_COMMAND 0x2001, SDET_EXEC 0x2005, WB_MOV 0x2006, from CPU 2's object-name table). No lab
+runs a CPU 2 reader, so a native TAKE_FUNC would wait for ever at the first of these sends (I). The meaning of the
+TAKE_EXPOSE / TAKE_FOCUS command words (`0xa0n`, `0xc0n`, `0x200`) and of the mvr IF helpers' kinds is ?; whether
+TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
+
+#### 4.1.2 The TRA layer: TRA 485, who handles 991 and what answers 990 (D unless tagged)
+
+- **The exec (`0x50af7cb9` / `0x50af7cbe`):** it asks the local handlers first (`0x50af8019` over the list of the
+  transaction dispatcher `0x62afd244`, returned by `0x50af7ff4`; each handler object's vt[0](id, request, out)), then
+  sends the request through the receiver substance (this->vt[9], vt[35], vt[41]), the remote path through which the
+  State Mediator hands it to the active state's components (shutter spec item 43).
+- **TRA 485 never happens:** the system-transaction handler `0x50af89f4` (slot 4 of the reception's vtable
+  `0x60dffdd0`, OlyHfwReception.cpp) takes 428 (an EVFW observer registration, `0x50af8df9`), 429, 431, 440, 441, 443
+  (`0x50b7e1d6`), 483, 484, 485 (adds the handler at request +28 to the local list, `0x50af7fa8`), 486 (removes it,
+  `0x50af8069`) and 493. The request classes of 485 (vtable `0x60dcb54c`, isTypeOf `0x50ab7a18`) and 486
+  (`0x60dcb594`) are never built: no word of the main block, code or data, holds either vtable (byte scan), and
+  nothing calls their isTypeOf directly. So the local list stays empty on the camera as in the lab, every transaction
+  takes the remote path, and no module registers 991's handler; the earlier reading "a module registers it through TRA
+  485 (I: TAKE)" is withdrawn.
+- **Who answers:** components consume transactions in hashed dispatchers keyed by id - base (`[id - base, case]`
+  tables). Of the 145 dispatchers of that code shape in the main block, only two hold 990 and 991: the shooting
+  component's, CmpSht_ShootingComponent_NEW `0x50d725f0` (table `0x60ef0354`, ids 414..1492), and the same table in
+  Cmp_StillShootingComponentBase `0x50c7b9b8` (`0x60ea1aa8`); no code compares an id with 990 or 991 outside the two
+  classes' own isTypeOf (`0x50ac147d`, `0x50ac14b0`). The running component is the `_NEW` one (X: `0x50d725f0` runs in
+  a camapp 2 session, `0x50c7b9b8` does not).
+- **990 (startShootingService):** case `0x50d72a2d` answers first, through Com_ResponserManager / Com_ResponserUnit
+  (`0x50d7edc6` -> `0x50d7f017`, `0x50d7f197`, which build an evTraResProcessStartSuccess, id 425, `0x50ab6f71`; the
+  evTraRes names and ids are at `0x60dd40bc`), then sets the component up (`0x50c78b35`, the media query api_media
+  `0x503f0bd7`). Why the native run of shutter spec item 43 saw no answer is ?.
+- **991 (the through image on / off):** the request's +32 is the switch (ctor `0x50ac1495`). Case `0x50d72eb5`
+  answers the same way, then calls Cmp_ShootingComponentBase `0x50c7d457`, which for 1 starts the through capability
+  CapThr_ThroughImage (`0x50bd0467(1, 1)`: its StartSync trigger `0x50bcfeb1`; `(1, 0)` would be Start `0x50bce2a3`)
+  and for 0 stops it (`0x50bd04c9`, "Trigger Force stop"). CapThr reaches TAKE through api_tft: `CapThr::start`
+  `0x50bcc0d8` -> `0x504214fc` = TAKE_FUNC command 25, `Pause_Through` -> command 27, `Restart_Through` -> command 28
+  (4.1.1). Which of the capability's triggers a given switch ends in is its own state machine (I).
+- **When 991 is sent (D, X):** `ctrlAutoThrough` `0x50abd373` builds it only in the shooting phases 100 / 101, only
+  when `(0x6035e9d4)` is 1, and only when the switch changes the word `(0x6035e828)`: a switch to 1 needs it 1 and
+  clears it, a switch to 0 needs it 0 and sets it (I: 1 while the through image is stopped). The start's
+  `ctrlAutoThrough(1)` sends nothing (X, camapp 1 and 2: the word is not 1); the menu's open and close do (the golden
+  workload runs the constructor, under S-THROUGH and S-TRAACK).
+- **No through_start code at `0x5039f8df`:** `0x5039f7f5..0x5039fc93` is TAKE_FUNC's debug dump ("--take_func--",
+  "job.com"), and `0x5039f893..0x5039f8df` print the context bytes through_s_wait `0x62a3f2b4`, through_p_wait
+  `0x62a3f2b5`, through_pause `0x62a3f2b6`, through_ipause `0x62a3f2b7`, through_start `0x62a3f2b8`, cnt_thr_start
+  `0x62a3f2b9`, take_mov_init `0x62a3f2ba`, start_up_flag `0x62a3f2bc`. through_start is written by command 28
+  (`0x5039b48c`), `0x5039b9fc` and `0x506d83f9`; TAKE's through start is command 25 and its callees.
+
+#### 4.1.3 How events reach the shooting sequence (D unless tagged)
+
+- **gap@0x50c5c4ac is the sequence's per-phase dispatch.** CmpShc_ShootingSequenceBase's running state (4) handles an
+  event in `0x50c591d4`: first `0x50c5b2d4` ("SeqState [%d] EventId [%d]") takes the event's id (vt[3]) and the phase
+  of the sequence-parts controller at +2784 (`0x50cc60fa`, phases 101..122), and calls through the jump table
+  `0x60e993a0` the phase's dispatcher, a pointer to member in `0x6036449c..0x6036453c` that the static initialiser
+  `0x50c5c973` fills at boot (with `0x50c63dd9`, the module's 458 executed instructions). Phases 101..118 have 18
+  hashed dispatchers (`0x50c5cc48` .. `0x50c635b9`, tables `0x60e994b0..0x60e9c0b0`, base 281..792 per phase), phases
+  120..122 three small ones (ids 25, 793, 27 / 851), phase 119 none; an event no phase takes goes on to `0x50c5bade` and
+  `0x50c5924f`. Each case calls a virtual method of the controller (CmpSqp_SequencePartsBase and its variants:
+  ZeroLag, MultiExposure, HandheldHighRes, PictBkt, DigitalNDFilter, ...). Together they take 193 ids in 25..1516; 990,
+  991 and the notification ids 1270..1431 are not among them.
+- **Inbound: the 209 classes in gap@0x50c7eeb2** (ids 340..1489, one constructor each that stores the vtable and the id
+  at +4) are built by Com_EvSenderManager `0x50d76ac8` (115 classes: the application's and the system's events, such as
+  the key codes `0x0200xxxx`, mapped to sequence events) and by one observer class per capability notification, among
+  them CmpSts_ObserverNotifyTakeReadyFinish 794, TakePictureDone 791, TakePictureComplete 790, TakePictureFail 804,
+  TakeFree 788, TakePictureNr 843, RecordMedia 787, MountMediaDone 784, BufferFree 782, Trig1Release / ReleaseOff
+  826 / 827, Trig2Release / ReleaseOff 824 / 828, MovieOn / MovieOff 829 / 900; CmpShc_ObserverNotifyThroughExecDone
+  1123, AELockDone 1074, AFLockDone 1075, LensInitializeError 1076, ZoomUpdate 1167; CapTak_NotifyStopTakeReadyDone 793;
+  CapAFL_Notify_OK / NG 781 / 780; CmpMov_NotifyRecReady 344, MovieStopped 341, BufferFull 342 (callers of each
+  constructor in the module map). The observers are what the components register with the capabilities (CapTak_Take,
+  CapAef, CapAFL, CmpMov's recorder), which call the modules through `api_*.c`; how a module's reply or callback
+  reaches a capability's observer (the HLS executor's token routing, shutter spec item 14) is ?.
+- **Outbound: the release notifications are the HLS's own.** The classes of shutter spec item 20's ids (gap@0x50af1ebd,
+  98 constructors, ids 1270..1507) are built by the sequence parts and components, not by modules:
+  CmpSqp_SequencePartsBase builds 1308 START_EXPOSE, 1319 START_READY, 1320, 1321 END_FOCUS (also CapAef_AEAFLock),
+  1322, 1323 START_FOCUS, 1324 START_SHOOTING_PICTURE, 1325 UPDATE_SHOOTING_TIME, 1326, 1327, 1328, 1329 and most
+  others; Cmp_StillShootingComponentBase 1316, 1389, 1392, 1507; CmpShc_ShootingSequenceBase 1301, 1312; CapTak_Take
+  1291, 1313, 1314, 1358; CmpSts_RecordController 1286, 1413, 1428. S-RELSEQ therefore stands in for the sequence
+  parts' notifications, and what makes the parts send them is the inbound events above (I).
+- **What runs (X, a camapp 2 play session with S1, S2 and two REC presses, observers on the dispatchers and
+  Com_EvSenderManager, coverage):** S1 and S2 reach Com_EvSenderManager (`0x02000100`, `0x02000101`, their releases
+  `0x0201xxxx`) but no event reaches the sequence's state-4 handler; each REC press (`0x0200120a`) reaches it as event
+  1080, which the phase-101 dispatcher takes (case `0x50c5d628`). Functions entered: the sequence base 67 of 311,
+  CmpSqp_SequencePartsBase 128 of 3,205, gap@0x50c5c4ac 5 of 111 (phase 101 only), gap@0x50c7eeb2 7 of 838,
+  gap@0x50af1ebd 22 of 438, CapTak_Take 20 of 145 (not TakeReady `0x50bc79e6` nor takePicture `0x50bc876a`), the
+  shooting component's dispatcher `0x50d725f0` (event 502 three times, not 990 or 991); TAKE_FUNC's loop none. The
+  release callbacks still come from S-RELSEQ; where Com_EvSenderManager sends S1 and S2 is ?.
 
 ### 4.2 Sensor, ISP front end and live view (with EXP)
 
-- **Tasks (D):** CPU 0: TAKE_MAIN's through states (`through_s_wait`, `through_p_wait`, `through_pause`,
-  `through_ipause`, `through_start`, used at `0x5039f893..0x5039f8df`; the through permit `0x501c40d0` called at
-  `0x5039f578`, the frame display mode `0x500256d9` at `0x5039f622`); TAKE_EXPOSE (command handler `0x50596187` writes
+- **Tasks (D):** CPU 0: TAKE_FUNC's through commands 25 / 27 / 28 and their context bytes `through_s_wait` ..
+  `through_start` (`0x62a3f2b4..0x62a3f2b8`, 4.1.2; the through permit `0x501c40d0` called at `0x5039f578`, the frame
+  display mode `0x500256d9` at `0x5039f622`); TAKE_EXPOSE (command handler `0x50596187` writes
   the AE result objects `0xc12a` / `0xc0ba` / `0xc0ca`); EXP_MOVIE 0x58 `0x50553697` (states THROUGH_START ..
   THROUGH_LV_END, CONT_LVAE, `[EXP] AF_BV_18x18`); ISEQ_MAIN 0x44, ISEQ_ASIC 0x81; USR_FAST_APP 0x55 `0x501e673b`;
   PER_CCD_TEMP_MAIN 0x14. CPU 2: EXP_MOVIE2 0x2009 / EXP_MOVIE3 0x200a (the EXP module, I), MVR_IMG1 0x2005, MVR_IMG2
@@ -236,10 +362,11 @@ and the first concrete step. Task ids are `cpu << 12 | index` (kernel spec §2.1
   IRQs 15-22, SLVS status and IRQs 243-247, clock gates, W1C status, register files) until TAKE's through start
   completes: 4-8 weeks, open-ended. Seams C (the cam driver API) and E (today's module answers) replace firmware and
   are not targets.
-- **First step:** find statically the module that registers TRA 991's handler and trace it to `through_start`
-  `0x5039f8df` and to the MVR command MVR_IMG executes before `0x504340cd`; then run that module natively in a probe
-  session with a recording stub over `0x9b000000..0x9b6fffff` and `0x98280000` (every access logged in order, reads 0,
-  nothing kept). The log names the first device the live-view start needs and gives the register program per block.
+- **First step:** TRA 991's path is read down to TAKE (4.1.2): the shooting component, CapThr_ThroughImage and
+  TAKE_FUNC commands 25 / 27 / 28. Trace command 25 (`0x506d7f55`, the through start) to the MVR command MVR_IMG
+  executes before `0x504340cd`; then run TAKE_FUNC and TAKE_FUNC_CP natively in a probe session with a recording stub
+  over `0x9b000000..0x9b6fffff` and `0x98280000` (every access logged in order, reads 0, nothing kept). The log names
+  the first device the live-view start needs and gives the register program per block.
 - **Unknowns:** which hardware writes the YC through image into the live-view banks; the statistics' memory layout
   (readable in principle from EXP's and MVR's consumer code); the sensor's serial protocol and replies; the per-mode
   register meaning of gap@0x5017eeda (1,285 call edges, D).
@@ -330,12 +457,13 @@ and the first concrete step. Task ids are `cpu << 12 | index` (kernel spec §2.1
 
 - **Chain (D):** CA_MAIN RECORDING_MOVIE `0x51068e37` -> the shooting component's MOV_READY 113 / MOV_READY_FINISH 114
   / MOV_RECORDING 115 / MOV_END 117 -> CapMov_MovieRecorderSLR (`0x50bf1751..0x50bf1ad0`) -> `api_movie.c` (entries
-  `0x503f1a00`, `0x503f1af9` send asynchronously to target 25 = TAKE_FUNC; command words 30 / 31, and 68 / 69 for
-  `0x503f4ba3` / `0x503f4c74`, I) -> TAKE_FUNC, TAKE_MOV, EXP_MOVIE (CPU 0) -> the mvr IF `0x5042d000..0x5044ffff`
-  (CPU 2 flag ids 0x2003 / 0x2004 passed to MVR's helpers `0x5044ec1b` / `0x5044ec8e`: cpu_conn traffic, not
-  sys_callrequest) -> MVR_*, EXP_MOVIE2/3, WB_MOV, SDET, AUD_LEVEL_MONITOR (CPU 2) -> AVM middleware `avm*.c`
-  (`0x50527ee1..0x50532c8c`; AVM0 on CPU 0, AVM2 on CPU 2, AVM_CPUSW / AVM_FILE on CPU 1) -> AVPI codec and MP4 mux on
-  CPU 1 (segment 8). No module-API target names a movie, MVR or EXP_MOVIE queue.
+  `0x503f1a00`, `0x503f1af9` send asynchronously to target 25 = TAKE_FUNC; command words 30 / 31, and 68 / 69 from
+  `0x503f4b0e` / `0x503f4be7`, 4.1.1) -> TAKE_FUNC, TAKE_MOV, EXP_MOVIE (CPU 0) -> the mvr IF
+  `0x5042d000..0x5044ffff` (CPU 2 flag ids 0x2003 / 0x2004 passed to MVR's helpers `0x5044ec1b` / `0x5044ec8e`:
+  cpu_conn traffic, not sys_callrequest) -> MVR_*, EXP_MOVIE2/3, WB_MOV, SDET, AUD_LEVEL_MONITOR (CPU 2) -> AVM
+  middleware `avm*.c` (`0x50527ee1..0x50532c8c`; AVM0 on CPU 0, AVM2 on CPU 2, AVM_CPUSW / AVM_FILE on CPU 1) -> AVPI
+  codec and MP4 mux on CPU 1 (segment 8). No module-API target names a movie, MVR or EXP_MOVIE queue; TAKE_FUNC sends
+  to CPU 2's MOV_COMMAND, SDET_EXEC and WB_MOV queues directly (4.1.1).
 - **Tasks (D):** CPU 0: TAKE_MOV 0x70 (waits on flag 0x95 TAKE_MOV_TASK), EXP_MOVIE 0x58, FCS_MOVIE 0x59, AUD_MAIN 0x52
   `0x50a62a05` (starts AUD_WAKEUP 0x2017 and AUD_LEVEL_MONITOR 0x200e on CPU 2), AUD_COPY_DATA, AUD_LATE_RISER,
   AUD_WATCH_DOG, REC_SOUND, PLAY_SOUND, AVM_*_0. CPU 1: AVM_CPUSW, AVM_FILE, AVMDL_THREAD00..20, the AVPI VDE / VEN
@@ -356,9 +484,10 @@ and the first concrete step. Task ids are `cpu << 12 | index` (kernel spec §2.1
 - **Stages (I):** A, TAKE_FUNC's movie commands and TAKE_MOV's flag loop, S3 and the S2 callbacks, S5 + S7 so AUD_MAIN
   runs natively: 3-4 weeks after the item-43 work. B, a CPU 2 service model for MVR's cpu_conn traffic: 3-5 weeks
   (shrinks to its device parts once CPU 2 runs natively, section 6). C, S6: 4-6 weeks.
-- **First step:** read TAKE_FUNC's cases for commands 30, 31, 68 and 69 down to their TAKE_MOV flag sets and mvr IF
-  calls, and the registration through which CapMov_MovieRecorderSLR gets its Notify* observers; then check in a camapp 2
-  session whether anything below CA_MAIN calls `0x503f1a00` / `0x503f1af9` on REC.
+- **First step:** TAKE_FUNC's cases 30, 31, 68 and 69 are read (4.1.1): they wait on CPU 2's MOV_COMMAND, SDET_EXEC
+  and WB_MOV queues and on the mvr IF helpers; whether they wake TAKE_MOV is ?. Next, the registration through which
+  CapMov_MovieRecorderSLR gets its Notify* observers (the CmpMov_Notify* observer classes of 4.1.3); then check in a
+  camapp 2 session whether anything below CA_MAIN calls `0x503f1a00` / `0x503f1af9` on REC.
 
 ### 4.6 CPUs 1-3, inter-core services and the A53
 
@@ -566,7 +695,7 @@ and the first concrete step. Task ids are `cpu << 12 | index` (kernel spec §2.1
 | A machine-owned time model, time mode by default (F06, F26) | sensor VD cadence, LENS_SYNC up to 240 fps, the lens command times, the SCPU clock, the accelerometer sampler, SD and DDC timeouts, cross-core timed waits | opt-in time mode; ticks lost inside display steps | ROADMAP phase 4, M9 follow-ups |
 | More CPUs (per-core state, `0x8000` page, INTC banks, kicks, ticks) | live view, capture, movie, audio, AF, detection, wireless, histogram | CPU 0 only | 4.6 |
 | Task starts and module inits from the boot chain (USTART2..5; init chains such as `0x503dae30`, `0x501ea63c..0x501ea78f`, EYEFI's) | every block | entries refused by the kernel lab's guard; inits skipped | every block's footprint (section 4) |
-| TAKE and the HLS module notifications (TRA 485 registrations, TRA 990, TakeReady) | capture, AF, movie, live view, shutter, remote release | S-RELSEQ, S-TRAACK | shutter spec items 14, 16, 43; 4.1 |
+| TAKE and the HLS transactions (the shooting component's answers to TRA 990 / 991, the capabilities' observer events, TakeReady) | capture, AF, movie, live view, shutter, remote release | S-RELSEQ, S-TRAACK | shutter spec items 14, 16, 20, 43; 4.1.1-4.1.3 |
 | Shared peripheral transports: PER_SIO `0x5005f25f` (25 callers: touch, eye, accelerometer, power IC, audio channel 14, BC `0x5005f49f`), IIC `0x5004ca40`, the pin / GPIO block `0x9b88xxxx` (lens edge IRQ 60, SD pins, touch, audio, the A53 UART probe), the clock-gate helper `0x50061c3a` (lens clocks 5 / 17, mechanism clocks 105 / 106) and the `0x9b5008xx` gates, PER_ADCONV | SCPU and sensors, lens, IS, audio, touch, shutter, sensor, USB (VBUS) | S-TPREG, S-IICWAIT, S-GPIO-TP per call site; the I2C map init `0x5005f0b2` not run | 4.4, 4.7, section 7 |
 | A flash read model (NAND `0x98d01800`, IRQ 237) | CPU 2's overlay loader, CPU 3's AJ and MLS jobs, the store load, store F | S-NVRAM at the write call; no read model | 4.6, 4.7 |
 | A probe mode for stub space: every access logged in order, reads 0, nothing kept, opt-in for reverse-engineering runs only | the first steps of the sensor, AF, storage and capture blocks | absent (the stub tables deny) | 4.2, 4.3, 4.4, 4.8 |
@@ -582,7 +711,7 @@ The order follows what each step unblocks: the keystones first, because each lat
 [ROADMAP.md](ROADMAP.md) "HLE of E143" carries each step's status.
 
 1. **Static decodes that every first step needs** (no emu change; days each; nothing waits on them):
-   - the TRA 485 registrations: the module that handles TRA 991 and what answers TRA 990 (shutter spec item 43);
+   - the TRA layer: who handles TRA 991 and what answers TRA 990 (shutter spec item 43);
    - TAKE_FUNC's dispatcher `0x502cd1ca` (commands 13 / 18 at the start, movie 30 / 31 / 68 / 69);
    - the HLS TRA event dispatchers in gap@0x50c5c4ac;
    - the PER_SCPU dispatch `0x5004fe2e` (who calls a request's `+20`);
@@ -611,8 +740,8 @@ The order follows what each step unblocks: the keystones first, because each lat
 6. **Storage at the sdmem seam.** It needs steps 3 and 5 but not TAKE, and gives a real card, counts and Card
    Formatting. Capture, movie, playback, USB and wireless all write or read through it.
 7. **TAKE native with its neighbours:** the lens at its serial seam (or LENS_EXEC answered) and BC_EXEC answered; the
-   sensor control plane far enough for TAKE's through start `0x5039f8df`; the shutter at its control plane, with the
-   strobe (shutter-sized, partly native) planned beside it. This is the step that makes S1 / S2 / REC reach the
+   sensor control plane far enough for TAKE's through start (TAKE_FUNC command 25); the shutter at its control plane,
+   with the strobe (shutter-sized, partly native) planned beside it. This is the step that makes S1 / S2 / REC reach the
    modules, and it retires S-RELSEQ.
 8. **Then, by gain:** still capture C1-C3 (a real picture); live-view statistics, seam B (it also lets the 107k EXP
    module run); AF at TAKE_FOCUS / FCS_EXEC; movie (a host AVM writing a MOV) and audio; playback of real files (with
@@ -817,13 +946,21 @@ Corrections to earlier readings, each now owned here or by the document named.
     FlashAir / iSDIO (wireless); BAS_MAIN / BAS_RCU_SRV are test code; SAICAS / DPS_MAIN are PictBridge; ALBM_MAIN is
     a movie-clip album manager (playback); C3D is a GPU path; ADJ / ADJSLF are factory code; HPROC_PROC,
     AUTOMATIC_DIMMER, STK_MONI_MAIN and PROCLOG sit in the SCPU, boot, kernel and debug areas; ICTLOG is wireless.
+18. **`0x5039f8df` is not TAKE's through start** (D, 4.1.2): it lies in TAKE_FUNC's debug dump `0x5039f7f5`, which
+    prints the context byte through_start `0x62a3f2b8` and its neighbours. TAKE's through start is TAKE_FUNC command 25
+    (`0x506d7f55`); commands 27 / 28 pause and restart the through image. Applied to 4.2 and section 6.
+19. **No module registers transaction handlers** (D, 4.1.2): the request classes of TRA 485 and 486 are never built, so
+    the transaction dispatcher's local list stays empty; TRA 990 and 991 are answered by the shooting component. The
+    release notifications of shutter spec item 20 are built by the HLS sequence parts, not by modules (4.1.3). Applied
+    to the shutter spec items 14, 16, 20 and 43.
 
 ## 10. Open questions
 
 The block-level unknowns are in section 4 and the shutter's in 7.5. Across blocks:
 
-1. Which module registers TRA 991's handler, what should answer TRA 990, and how TAKE delivers its results to the HLS
-   observers (the CapMovSLR and CmpSts notifications).
+1. How a module's replies and callbacks reach the capabilities' observers (the HLS executor's token routing, 4.1.3),
+   and why TRA 990 went unanswered in shutter spec item 43's native run although the shooting component answers it
+   (4.1.2). Who handles TRA 991 and what answers TRA 990 is settled (section 9 item 19).
 2. The DCF folder name: the capture code's strings name `100OLYMP` (body `0x6035ce`), the DCF layer's own strings
    (`0x9ed..0x9f8`) use `100OMSYS`; both exist (D, body `0x6035c5` / `0x6035ce` / `0x6035e9` and `0x9ef1c0` /
    `0x9f3226` / `0x9f8668`). Which one a camera writes stays open until a native REC_FILE run or a camera's card shows

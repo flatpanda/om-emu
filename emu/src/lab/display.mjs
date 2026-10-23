@@ -56,6 +56,7 @@ export const VSYNC_FLAG_IDS = GEN2 ? [VSYNC_E143[1], VSYNC_E143[0]] : VSYNC_E143
 export const VSYNC_ALIAS_IDS = MODEL_INFO.vsync_alias_flags ?? [];
 export const OLYEVCL = A(0x5002BEDD), OLYQERD = A(0x5002C067), OLYQEWR = A(0x5002C151), OLYTASS = A(0x5002C6E5);
 export const GET_TID = A(0x5001091E), SYNC_SEND = A(0x5002E39D), PROP_GET = A(0x503EE3BF);
+export const OLYEVWT = [...RTOS_NAMES].find(([, name]) => name === 'OlyEvWt')[0];
 export const TP_I2C_WRITE = A(0x501E4DFD), TP_I2C_READ = A(0x501E4F2A);
 // a build without a touch-panel driver (E145, src/fw/facts.mjs touchDriver) has no touch I2C functions to hook and
 // runs as --touch off (src/lab/play.mjs touch_on)
@@ -627,8 +628,11 @@ export class DisplayLab extends OsdLab {
     this._qewr[0](hle, r);
   }
   // Run a real task body for one message: its first OlyQeRd gets msg, its second ends the run. Nested runs (a
-  // handler sending to DISPLAY) get their own stack.
-  task_message(loop, queueAddress, msg, label, limit = 300000) {
+  // handler sending to DISPLAY) get their own stack. wait {flag, bit} (the flag's id word and a mask) is for a task
+  // that waits on an event flag before it receives (the touch task, src/fw/facts.mjs touchQueue): its first OlyEvWt
+  // on that flag returns bit as the flag's pattern and its second ends the run; its waits on other flags run as
+  // before.
+  task_message(loop, queueAddress, msg, label, limit = 300000, wait = null) {
     const queue = this._queue(queueAddress);
     let n = 0;
     const level = this.depth;
@@ -640,7 +644,20 @@ export class DisplayLab extends OsdLab {
       hle.finish(r, { d0: 0 });
     };
     const key = runtime(OLYQERD), saved = this.hooks.get(key);
+    const evKey = runtime(OLYEVWT), evSaved = this.hooks.get(evKey);
     this.hook(OLYQERD, qerd, `OlyQeRd(${label})`);
+    if (wait !== null) {
+      const flag = this._queue(wait.flag);
+      if (!evSaved) throw new FirmwareError(`${label}: OlyEvWt is not hooked, so a wait on another flag has no stand-in to run`);
+      let waits = 0;
+      this.hook(OLYEVWT, (hle, r) => {
+        if ((r.d0 & 0xFFFF) !== flag) { evSaved[0](hle, r); return; }
+        waits += 1;
+        if (waits > 1) throw new TaskDone();
+        if (r.a0) this.sim.write(r.a0, pack('<I', wait.bit));
+        hle.finish(r, { d0: 0 });
+      }, `OlyEvWt(${label})`);
+    }
     this.depth += 1;
     try {
       // a fourth nested run raises IndexError (TASK_STACKS has three levels); undefined here would fall back to
@@ -653,6 +670,7 @@ export class DisplayLab extends OsdLab {
     } finally {
       this.depth -= 1;
       this.hooks.set(key, saved);
+      if (wait !== null) this.hooks.set(evKey, evSaved);
     }
   }
   display_cmd(cmd, param) {

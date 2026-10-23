@@ -360,6 +360,7 @@ export class Player {
     if (this.session?.lab?.iic_answered) used.push('S-IICWAIT');                            // a body whose firmware waits on the IIC bus
     if (this.session?.camapp?.dispsync_released) used.push('S-DISPSYNC');                   // a body whose GUI synced its display updates
     if (this.session?.lab?.panel_answered) used.push('S-PANELDONE');                        // a panel driver's serial completion wait answered
+    if (this.session?.lab?.tp_sends?.length) used.push('S-TPSEND');                         // a synchronous send to the touch task
     if (this.session?.lab?.scpu_server) used.push('S-SCPU');                                // a body whose SCPU keeps its date and backed-up words
     if (this.session?.scpu_port) used.push('H-SCPUIRQ', 'H-UIINPORT', 'H-SCPUPORT');        // a body whose group 0 comes through the SCPU's ports
     if (this.session?.hdmi_port) used.push('H-GIOSLOTS', 'S-HDMISINK', 'A-HDMI-1');          // --hdmi on: the HDMI port, its sink

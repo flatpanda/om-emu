@@ -5,7 +5,7 @@
 // application (S-CAMAPP, camapp.mjs), idle slices and frames, trim, status, the debug tokens). The Player (queue, lab time, replay) is in
 // player.mjs. The mutants (opts.mutant, the Player's --x-mutant: negative controls) sit at the sites they break.
 // Addresses are disassembly notation unless marked run-time.
-import { A, MODEL, ON_LAB_MODEL, MODEL_INFO, IMAGE_BASE, refuseUnmapped, fact } from '../fw/model.mjs';
+import { A, MODEL, ON_LAB_MODEL, MODEL_INFO, IMAGE_BASE, refuseUnmapped, isUnmapped, fact } from '../fw/model.mjs';
 import { BOARD } from '../fw/board.mjs';
 import { SCPU_DOORBELL, HDMI_WINDOW, HDMI_DOORBELL } from '../machine.mjs';
 import { SET_INPUTS } from '../dev/scpu.mjs';
@@ -13,7 +13,7 @@ import { PLUG, EDID, W_EDID_LEN, W_CABLE, W_DDC_READS } from '../dev/hdmi.mjs';
 import { sinkEdid } from './edid.mjs';
 import { Accelerometer } from './acc.mjs';
 import { imageView } from '../fw/image.mjs';
-import { IIC_WAITS_E143 } from '../fw/facts.mjs';
+import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143 } from '../fw/facts.mjs';
 import * as D from './display.mjs';
 import * as IRQ from './irq.mjs';
 import * as K from './kernel.mjs';
@@ -21,7 +21,8 @@ import * as MM from './menu.mjs';
 import * as N from './nav.mjs';
 import * as HLE from './hle.mjs';
 import { FirmwareError, disasm, runtime, where } from './hle.mjs';
-import { ValueError, KeyError, lookup } from './errors.mjs';
+import { ValueError, KeyError, AssertionError, lookup } from './errors.mjs';
+import { packRegs } from './sim.mjs';
 import { Unported } from '../core/mem.mjs';
 import { show } from '../util/show.mjs';
 import { decimalInt } from '../util/parse.mjs';
@@ -87,6 +88,9 @@ export const DISPQ_SEND_RETURN = A(0x503EBA07), DISPQ_REPLY_RETURNS = [A(0x501C4
 // request of its build too (fact dispq.sends, src/fw/facts.mjs displaySends: E137's cmd 19 after about 5 s of idle)
 export const DISPQ_SEND_RETURNS = [DISPQ_SEND_RETURN, ...fact('dispq.sends', [])];
 export const TOUCH_INIT = A(0x501E3DCA), TOUCH_TASK = A(0x501E3EAC), TOUCH_TASK_ID = A(0x60042DCC), TP_OPEN = A(0x501E40DA), TP_MASK = A(0x501E41D1);
+// S-TPSEND's touch task queue: its flag and queue words and the queue's bit in the flag (src/fw/facts.mjs
+// touchQueue, which also places TP_FLAG), none on a build without a touch task
+export const TOUCH_QUEUE = isUnmapped(TOUCH_TASK) ? null : fact('touch_task', TOUCH_TASK_QUEUE_E143);
 export const HFW_CALLBACK = A(0x50B76E60), TP_MASK_ALL = 0x11F1, TP_MASK_WORD = A(0x62A3EBC0), TP_FLAG = A(0x6004306C), OLYEVST = A(0x5002BD01);
 export const HFW_STATUS = [[A(0x50B76FE3), [16, 225]], [A(0x50B7706B), [128, 226]], [A(0x50B770F3), [1, 227]], [A(0x50B7717C), [32, 228]],
   [A(0x50B77205), [256, 229]], [A(0x50B77297), [64, 230]], [A(0x50B77320), [4096, 300]]];
@@ -567,6 +571,24 @@ export class PlayLab extends N.NavLab {
     if (!CAFWD_CALLERS.includes(disasm(r.mdr))) throw new PlayError(`S-CAFWD: touch forward (event 35) from ${where(r.mdr)}, not a pinned caller`);
     this.cafwd.push({ step: this.step_tag, event: ev, param: params[0], params, caller: h8(disasm(r.mdr)) });
     try { hle.finish(r, { d0: 0 }); } catch (e) { if (!(e instanceof FirmwareError)) throw e; hle.finish_calls(r, { d0: 0 }); }
+  }
+  // S-TPSEND: a synchronous send to the touch task's queue from a display run runs the touch task's loop for that
+  // message on a lab stack, as a DISPLAY send runs the DISPLAY loop: its wait on its flag returns the queue's bit, its
+  // receive gets the message with word 0, the reply queue, at 0, so it replies to no one and waits again, which ends
+  // the run; the send returns 0. Natively the display task would wait for the reply while the touch task ran; in the
+  // lab a display run cannot wait, and the start's display open runs before the touch task starts (H-TPINIT, in the
+  // play bring-up). E134's and E130's first EVF open sends cmd 5 after its change task (docs/model-survey.md finding
+  // 11). The camera application's synchronous requests to the touch task (E143's cmd 8 through its API sender) are
+  // not display runs and stay S-MODACK's (camapp.mjs)
+  _sync_send(hle, r) {
+    if (TOUCH_QUEUE === null || !this.in_display_run() || (r.d0 & 0xFFFF) !== this._queue(TOUCH_QUEUE.queue)) return super._sync_send(hle, r);
+    const saved = { ...r };
+    this.kernel.events.push(['send', `queue ${r.d0 & 0xFFFF} cmd ${r.d1}`, `param 0x${r.a0.toString(16)}`, where(r.mdr)]);
+    (this.tp_sends ??= []).push([r.d1, h8(disasm(r.mdr))]);
+    this.task_message(TOUCH_TASK, TOUCH_QUEUE.queue, pack('<IIII', 0, 0, r.d1, r.a0), `touch cmd ${r.d1}`, undefined,
+      { flag: TOUCH_QUEUE.flag, bit: TOUCH_QUEUE.bit });
+    if (this.sim.packet('G' + packRegs(saved)) !== 'OK') throw new AssertionError('');
+    hle.finish(saved, { d0: 0 });
   }
   // S-TPREG
   _s_tpreg(hle, r) {

@@ -32,7 +32,8 @@
 //   node emu/test/test_facts.mjs
 import fs from 'node:fs';
 import path from 'node:path';
-import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143 } from '../src/fw/facts.mjs';
+import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
+  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -163,6 +164,14 @@ const UI_IN_FOUND = { E143: 0x5014B736, E125: 0x500FEBDE };
 const TOUCH_START_FOUND = {
   E143: { init: 0x501E3DCA, id_word: 0x60042DCC }, E134: { init: 0x50217D43, id_word: 0x6004145E },
   E125: { init: 0x5022D065, id_word: 0x60040CAA },
+};
+// The touch task's command queue (touch_task; src/fw/facts.mjs touchQueue): E143's as the lab gives it
+// (src/fw/facts.mjs TOUCH_TASK_QUEUE_E143: the flag its loop waits on at 0x501e3ef2, the queue it receives from at
+// 0x501e4053, bit 8 tested at 0x501e4038, D), E134's (0x50217e68, 0x50217eb2, D) and E130's, whose flag is not the
+// map's place of E143's (0x50207909, 0x50207953, D)
+const TOUCH_QUEUE_FOUND = {
+  E143: TOUCH_TASK_QUEUE_E143, E134: { flag: 0x60041710, queue: 0x60041972, bit: 8 },
+  E130: { flag: 0x60420D54, queue: 0x60420F48, bit: 8 },
 };
 // The display sync's functions as read at the code (display.sync; D: E137's request 0x502bd2d2 and image sync
 // 0x502bd5bc by their API ids, the setter 0x507a2fa4 its release calls at 0x509797ee)
@@ -517,6 +526,10 @@ export function factsTests() {
     const tps = placed?.touch_start;
     if (TOUCH_START_FOUND[code] && (code === 'E143' || PORTS[code])) ok(same(tps, TOUCH_START_FOUND[code]), `${code}: touch_start ${hx(tps ?? placed)}, found ${hx(TOUCH_START_FOUND[code])}`);
     if (tps !== undefined && PORTS[code]) ok((PORTS[code][0x501E3DCA] ?? 0x501E3DCA) === tps.init && (PORTS[code][0x60042DCC] ?? 0x60042DCC) === tps.id_word, `${code}: A() of the touch init and id word ${hx([PORTS[code][0x501E3DCA], PORTS[code][0x60042DCC]])}, the rule's ${hx(tps)}`);
+    // the touch task's queue, and the port's place of E143's touch flag word at the rule's flag (how 'touch-wait')
+    const tq = placed?.touch_task;
+    if (TOUCH_QUEUE_FOUND[code] && (code === 'E143' || PORTS[code])) ok(same(tq, TOUCH_QUEUE_FOUND[code]), `${code}: touch_task ${hx(tq ?? placed)}, found ${hx(TOUCH_QUEUE_FOUND[code])}`);
+    if (tq !== undefined && PORTS[code]) ok((PORTS[code][TP_FLAG_E143] ?? TP_FLAG_E143) === tq.flag, `${code}: A() of the touch flag word ${hx(PORTS[code][TP_FLAG_E143])}, the rule's ${hx(tq)}`);
     if (SYNC_FOUND[code]) ok(same(got.display?.sync, SYNC_FOUND[code]), `${code}: display.sync ${hx(got.display ?? got)}, found ${hx(SYNC_FOUND[code])}`);
     ok(got.touch_panel?.driver === !NO_TOUCH_DRIVER.includes(code), `${code}: touch_panel ${hx(got.touch_panel ?? got)}, found ${NO_TOUCH_DRIVER.includes(code) ? 'no driver' : 'a driver'}`);
     ok(got.lens?.mount === !NO_LENS_MOUNT.includes(code), `${code}: lens ${hx(got.lens ?? got)}, found ${NO_LENS_MOUNT.includes(code) ? 'no mount' : 'a mount'}`);

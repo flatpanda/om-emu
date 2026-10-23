@@ -820,6 +820,42 @@ function touchStart(img, kcb, task, taSt) {
   return found[0];
 }
 
+// The touch task's command queue (fact 'touch_task', src/lab/play.mjs S-TPSEND, and through bin/port.mjs the place of
+// E143's touch flag word TP_FLAG_E143 0x6004306c, play.mjs TP_FLAG), read at the port's places of E143's touch task
+// (TOUCH_TASK_E143), OlyEvWt (OLYEVWT_E143 0x5002bdd8) and OlyQeRd (OLYQERD_E143): the task's loop waits on its event
+// flag, the `movhu (flag),d0` before its first OlyEvWt, and where the bit of the `btst bit,d0` before its first OlyQeRd
+// is set it receives a 16-byte message from its queue, the `movhu (queue),d0` before that call, runs the command in
+// word 2 and, where word 0 names a reply queue, replies there; with word 0 at 0 it waits again (E143: the flag
+// 0x6004306c with mask 11 at 0x501e3ef2, bit 8 at 0x501e4038, the queue 0x600432e8 received at 0x501e4053, word 0
+// tested at 0x501e4099, the reply 0x501e40bc; E134: 0x60041710 with mask 9 at 0x50217e68, the queue 0x60041972 at
+// 0x50217eb2, its 13 commands through the jump table 0x602424f4, word 0 tested at 0x50217fd8, the reply 0x50217ffa,
+// D). The walk from the entry runs straight, calls stepped over, with no return before the receive, which lies
+// 0x71..0x230 bytes in, bit 8 on all twelve bodies with a touch task at the port's places (E143, E146, E147, E144,
+// E139, E134, E137, E142, E140, E125, E130, E133, X). On E125, E130 and E133 the flag is not the map's place of
+// TP_FLAG (E130: 0x60420d54, the map's 0x60420d46, X), so the rule places it. Returns {flag, queue, bit} (the words
+// and the bit's mask); throws where the walk meets a return or TOUCH_TASK_SPAN bytes before the receive, or finds no
+// wait, load or test before it, or the wait's mask (its `mov imm8,d1`) lacks the bit.
+export const OLYEVWT_E143 = 0x5002BDD8, TP_FLAG_E143 = 0x6004306C;
+export const TOUCH_TASK_QUEUE_E143 = { flag: 0x6004306C, queue: 0x600432E8, bit: 8 };
+const TOUCH_TASK_SPAN = 0x300;
+function touchQueue(img, task, evWt, qerd) {
+  let flag, mask, load, d1, bit;
+  for (let p = task - 0x50000000, end = p + TOUCH_TASK_SPAN; p < end && !isRet(img, p);) {
+    const c = callAt(img, p), to = c ? 0x50000000 + c.to : null;
+    if (to === evWt && flag === undefined) [flag, mask] = [load, d1];
+    else if (to === qerd) {
+      if (flag === undefined || load === undefined || bit === undefined || !(mask & bit)) {
+        throw new Error(`touchQueue: the touch task ${h8(task)} receives at ${h8(0x50000000 + p)} after flag ${flag && h8(flag)} mask ${mask}, queue ${load && h8(load)}, bit ${bit}`);
+      }
+      return { flag, queue: load, bit };
+    } else if (!c && bytesAt(img, p, [0xfc, 0xac])) load = u32(img, p + 2);
+    else if (!c && bytesAt(img, p, [0xf8, 0xec])) bit = img[p + 2];
+    else if (!c && img[p] === 0x85) d1 = img[p + 1];
+    p += c?.len ?? insnLength(img[p], img[p + 1]);
+  }
+  throw new Error(`touchQueue: the touch task ${h8(task)} runs to no receive within ${TOUCH_TASK_SPAN} bytes`);
+}
+
 // The RTOS wrapper OlyTaWu (fact 'rtos.ta_wu', and through bin/port.mjs the place of E143's OLYTAWU_E143 0x5002c6a7,
 // src/lab/rtos.mjs RTOS, which the lab hooks while it builds the kernel): the caller of wup_tsk (E143's 0x50016bf0, at
 // its place in the build) that opens right after a return with `mov d0,Dn; clr Dm; exth d0` (81..83, 00/04/08/0c, 18:
@@ -1768,6 +1804,8 @@ export function readPlacedFacts({ img, at }) {
   if (kcb !== null && uiFlag !== null) facts.ui_in = { task: uiInTask(img, kcb, uiFlag) };
   const tpStart = kcb !== null && tpTask !== null && taSt !== null ? touchStart(img, kcb, tpTask, taSt) : undefined;
   if (tpStart !== undefined) facts.touch_start = tpStart;
+  const evWt = at(OLYEVWT_E143);
+  if (tpTask !== null && evWt !== null && qerd !== null) facts.touch_task = touchQueue(img, tpTask, evWt, qerd);
   const modeSet = takeFrame !== null ? frameModeSet(img, takeFrame) : undefined;
   if (modeSet !== undefined) facts.frame_mode = { set: modeSet };
   if (!propSites.includes(null)) facts.prop = { device: propDevice(img, propSites) };
@@ -1870,9 +1908,10 @@ export function rulePlaces(facts) {
 // opening (taWu, 'wup-opening'); the DISPLAY task loop at the static task that runs to the DISPLAY queue's receive
 // (displayLoop, 'queue-receive'); the UI_IN task at the static task that runs to its flag word's load (uiInTask,
 // 'flag-wait'); the touch init and the touch task's id word at the boot's start of the touch task (touchStart,
-// 'task-start'); the DB init's flash save return at the one call of the flash save in the DB init (dbSave, 'db-save');
-// the hardware-timer table pointer at the word the hardware-timer init keeps it in, unplaced where the init indexes a
-// fixed table (hwTimer, 'timer-init'); the C-runtime clock read at the target of the call at the place of E143's
+// 'task-start'); the touch task's flag word at the word its loop waits on (touchQueue, 'touch-wait'); the DB init's
+// flash save return at the one call of the flash save in the DB init (dbSave, 'db-save'); the hardware-timer table
+// pointer at the word the hardware-timer init keeps it in, unplaced where the init indexes a fixed table (hwTimer,
+// 'timer-init'); the C-runtime clock read at the target of the call at the place of E143's
 // (crtClockRead, 'call-target'); the frame display mode set at the one the TAKE request's clamp calls (frameModeSet,
 // 'take-clamp').
 export function placedRulePlaces(facts, e143, place) {
@@ -1886,6 +1925,7 @@ export function placedRulePlaces(facts, e143, place) {
     out.set(TOUCH_INIT_E143, { to: facts.touch_start.init, how: 'task-start' });
     out.set(TOUCH_TASK_ID_E143, { to: facts.touch_start.id_word, how: 'task-start' });
   }
+  if (facts.touch_task) out.set(TP_FLAG_E143, { to: facts.touch_task.flag, how: 'touch-wait' });
   if (facts.ae) out.set(AE_INIT_E143, { to: facts.ae.init, how: facts.ae.rows === undefined ? 'ae-wrapper' : 'ae-rows' });
   for (const [dev, to] of Object.entries(facts.frame_period ?? {})) out.set(FRAME_PERIOD_E143[dev].word, { to, how: 'period-getter' });
   if (facts.hw_timer) out.set(HW_TIMER_PTR_E143, { to: facts.hw_timer.ptr ?? null, how: 'timer-init' });

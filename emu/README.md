@@ -338,7 +338,7 @@ it sends nothing but GETs for its own files.
 | `node emu/bin/playperf.mjs` | the play workload on the Player; exit 1 unless its digest is `59e15f337f58cf57` | the firmware |
 | `node emu/bin/snapgate.mjs kernel-5c osd shoot-tft` | snapshot detours leave the sessions and the end state unchanged | the firmware |
 | `OM_FW_DIR=fw node emu/bin/webgate.mjs --rounds 4` | headless Chrome: the Worker against node and `bin/run.mjs`, the page (keys, touch, canvas, session log), no uploads; about 5 min | the `.BIN`, Chrome |
-| `node emu/bin/modelcheck.mjs` | each ported model with its firmware unpacked: start, S1, S2, PLAY, INFO, PLAY on the TFT and the EVF | the models' firmware |
+| `node emu/bin/modelcheck.mjs` | the ported models marked `checked` in `src/fw/models.mjs` (E146, E147, E144, E139, E137, E125), or those named: start, S1, S2, PLAY, INFO, PLAY on the TFT, and start, S1, S2 on the EVF of a body with one; GUI states by name | the models' firmware |
 | `node emu/test/test_fwmap.mjs` | the coverage option off and on, the static map's determinism and headline, the labels' keys, `run.mjs` under `OM_COVERAGE` (also in both suites above) | the E143 main block for the second half |
 
 What the tests compare with is emu's own data, and it is regression data, not a specification

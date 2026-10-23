@@ -224,6 +224,16 @@ Each note was checked against the cited code. Paths are relative to the reposito
 
 **Confidence:** high
 
+### 5.4 Kind-2 VSC (the E144 family): one channel for the TFT and the EVF, and an OSD scaler by analogy
+
+**Where:** `emu/src/dev/vsc.mjs:140-149`, `emu/src/dev/vsc.mjs:321-322`, `emu/src/lab/display.mjs:858-866`, `emu/src/dev/vsccompose2.mjs:79-104`
+
+**Emulator:** Channel 0 drives the TFT and the EVF, each with its own vertical-total register (SYNC2, SYNC8). The channel runs from the one the firmware wrote last, at the line time the harness derives for that device from its frame period word, and a change of bank starts a new frame at once. The compositor scales an OSD plane when the control word of its six resize words is 0x11, reading the next words as E143's OSD steps (source pixels per output pixel in 1/4096) and sampling as E143's OSD planes do (columns rounded half up, rows floor). IMG planes are not composited (FMT_UNMODELLED).
+
+**Expected / concern:** Which register selects the bank on the chip, and what the panel shows while the firmware switches, are not read; the bank rule rests on the firmware's timing writer storing one of the two registers per device. The scaler's layout rests on the values the EVF start writes (control 0x11, steps 0x9FC for a 640 x 480 source on a 1024 x 768 area, which E143's step form gives for those sizes), not on E144's step setter, so another scale factor or filter would show here as a wrong picture, not an error.
+
+**Confidence:** medium
+
 ### 5.3 OSD engine opcodes 0x41 and 0x60 not executed
 
 **Where:** `emu/src/dev/engine.mjs:218-231`, `emu/src/dev/engine.mjs:340-349`
@@ -315,6 +325,16 @@ Each note was checked against the cited code. Paths are relative to the reposito
 **Emulator:** `_loop` sets `this.drained = 0` and adds it to `used`, but nothing increments it: the host-folded builtins (PERF2) are not implemented. Folded memset/memcpy work therefore never counts toward the per-call stub limit. `createMachine` defaults to `insnLimit = 1000000`, and `Simulator` maps `null` to the same value. A continue with default arguments ends in a limit fault (fault 7) after one million instructions.
 
 **Expected / concern:** These are harness limits, not hardware behaviour. They can still stop a long but correct run.
+
+**Confidence:** medium
+
+### 7.7 Switch levels at power-on are the lab's choice
+
+**Where:** `emu/src/lab/play.mjs:270-305` (S-KEYBITS idle image), `emu/src/lab/play.mjs:367-369`
+
+**Emulator:** The idle image gives every UI_IN switch a level at the start: bit 0 for most switches on E143 (its pinned tables), and on a ported body the power lever on and the USB connection 0x0400 with no cable, each set by its state under that body's polarity, except in the group the firmware's group-4 producer pushes from its own image, where the E143 family's 0x0400 lies. No producer of the real levels (the sub-CPU's port scan, the USB detection) runs.
+
+**Expected / concern:** A real camera starts with whatever its switches read. The lab models one start, power lever on and no cable; a USB start, a charge start or another switch position is not represented. On the E143 family 0x0400 stays at state 0, which the E144 family's firmware reads as a cable; their starts do not act on it, but other paths that read it may.
 
 **Confidence:** medium
 

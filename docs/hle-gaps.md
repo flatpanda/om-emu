@@ -17,7 +17,7 @@ from the module map (section 2.2). Every effort figure is a rough estimate of fo
   components).
 - **What does not:** every block below the camera application that the user reaches through a shot, a recording, a
   card, a cable, a radio or the power lever. Each is a harness answer at the HLS or module level (S-RELSEQ, S-MODACK,
-  S-TRAACK, S-CARD, S-SCENE, S-EXPOSE, S-LENS, S-CPU2, S-SCPU-MSG, H-POWER and others) or is not modelled at all. None
+  S-TRAACK, S-CARD, S-SCENE, S-EXPOSE, S-LENS, S-CPU2, S-SCPU, H-POWER and others) or is not modelled at all. None
   of their tasks runs in a lab (X: a full S1 + S2 and a REC post no module request; the kernel lab's task-start guard
   refuses their entries, `emu/src/lab/kernel.mjs`), and their MMIO is lab-stub space that faults on first touch.
 - **In code:** the lab executes 287,101 of the main block's 5,186,071 instructions (5.54%), about 6.1% of the code a
@@ -117,7 +117,7 @@ not run), **0** nothing. Code column: instructions keyed to the block / gap-rele
 | Text and resources | N (M4) | S-RES, Genifa | 28,861 (9.09%) | U items (text spec) |
 | GUI and menu | N (M5, M6, M10B) | S-SEND, S-PROP | 621,898 (19.31%) | navigation rules observed, not decoded; the 53 screen classes of gap@0x510ef2bf (35k) are unnamed (?) |
 | Inputs | N from UI_IN up (M10) | S-KEYBITS, H-EYESTATE, S-TPINT, S-TPREG, H-DIALSTEP | 43,895 (20.85%) | the raw-bit producers (4.7) |
-| Settings store | N: the property store `0x503c4974..0x503db10c` and the LowAPI property unit gap@0x503edeea | S-SCPU-MSG, S-SETSAVE / S-FLASHSAVE or S-NVRAM | 50,515 (31.24%) | persistence by default (4.7) |
+| Settings store | N: the property store `0x503c4974..0x503db10c` and the LowAPI property unit gap@0x503edeea | S-SCPU, S-SETSAVE / S-FLASHSAVE or S-NVRAM | 50,515 (31.24%) | persistence by default (4.7) |
 | Camera application (CA_MAIN, HLS) | N since 2026-10-15, in part: 99k gap-relevant instructions unrun | S-RELSEQ, S-MODACK, S-TRAACK, S-CARD below it | 320,057 (18.64%) | the HLS shooting sequence (196k, 4.1) and the playback components (310k, 4.8) are 1-2% run |
 
 Of the application's executed instructions, at least 9,456 of 28,686 in one part of the map are C++ static
@@ -139,7 +139,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **Movie and audio** (4.5) | S: S-RELSEQ's movie callbacks, S-CARD's movie time, S-CPU2's zero level snapshot, S-MODACK for AUD_EXEC | S3 TAKE_FUNC commands 30 / 31 / 68 / 69, S4 the mvr IF (CPU 2), S5 AUD_LEVEL_MONITOR, S6 a host AVM writing a MOV through the firmware's DFS calls, S7 AUD_EXEC | TAKE (commands 30 / 31 / 68 / 69 wait on CPU 2's MOV_COMMAND, SDET_EXEC and WB_MOV, 4.1.1), CPU 2 (MVR, audio level), sensor, storage, EXP_MOVIE / FCS_MOVIE | 134,137 / 124,319 | 10-15 weeks (stages A-C) | a playable .MOV on the card, the firmware's recording sequence, audio meters, beeps |
 | **AV codec back end** (4.5) | 0 | none for HLE: seam S6 bypasses it | CPU 1; the codec engines; IRQs 303-306 | 416,471 / 411,438 (overlay segment 8, CPU 1) | ?: native needs register-level codec models, no documentation | native movie encode and playback below the HLS (I) |
 | **CPUs 1-3 and inter-core** (4.6) | S: K-OTHERCPU, K-BOOTSYNC, K-IPI, no start barrier; S-CPU2 (one post), S-CPU3, S-DISPFRAME on CPU 0; any other doorbell is an error | run CPUs 1-3 natively on one bus; per-core `0x8000` page, INTC bank n to core n, `+0x808/+0x80c` IRQ 324, `+0x810/+0x814` IRQ 325, `+0x800/+0x804` ISC IRQ 323, ticks 139..141. A53: "off" or ISC node 4 | a machine refactor (per-core CPU state), a per-core kernel lab, flash reads for CPU 2's loader and CPU 3's boot jobs, ROADMAP phases 3-4 | 5,422 keyed; 441,542 reachable only from CPU 1-3 tasks (a lower bound) | 5-7 weeks for the cores | the histogram, a native DISP_FRAME, cross-core owners (AUD_MAIN, AVM) can start; three stand-ins and four kernel stand-ins retire |
-| **SCPU, power, clock, on-board sensors, persistence** (4.7) | S: SCPU window as storage at 5 offsets, S-SCPU-MSG (4 wait sites), S-KEYBITS group 0, H-POWER, H-EYESTATE, S-SETSAVE / opt-in S-NVRAM; clock frozen; Level Adjust hangs | a request server at PER_SCPU_RECEIVE (type-3 id 2); SCPU event / port registers and IRQ 320; clock `0xe8 / 0xec` ticking with lab time; accelerometer at the PER_SIO transfer or the sample cache; S-NVRAM's NAND seam as the default | lab time; the UI_IN, ACC, SCPU and PER_SIO inits; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, Level Adjust, level gauge, rotation, eye sensor |
+| **SCPU, power, clock, on-board sensors, persistence** (4.7) | S: S-SCPU, the request server at the request API (since 2026-10-23: `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1); the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; S-KEYBITS group 0, H-POWER, H-EYESTATE, S-SETSAVE / opt-in S-NVRAM; Level Adjust hangs | SCPU event / port registers and IRQ 320; accelerometer at the PER_SIO transfer or the sample cache; S-NVRAM's NAND seam as the default | lab time; the UI_IN, ACC, SCPU and PER_SIO inits; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, Level Adjust, level gauge, rotation, eye sensor |
 | **Card and file system** (4.8) | S: S-CARD; the DCF remain count runs and says "not mounted" (X) | a block device at the sdmem request `0x508b1cdc` with a host FAT32 / exFAT image; sd_mount's result beside it | task starts (EYEFI's init chain, FILECLBK, FILEFGND, DCFPROC_SUB), IRQs anywhere (completions are IRQ to flag) | 115,103 / 108,887 (17k of it self-test and debug) | 3-5 weeks | a card that fills, real files in DCIM, Card Formatting, both slots |
 | **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
 | **HDMI and DisplayPort** (4.9) | 0: the DISPLAY OPEN polls the EDID state `0x62a3c8ec` 50 times and gives up (X) | TX byte registers at `0x99c07000`: HPD / RxSense byte 8 bits 3 / 4, DDC `0xa80..0xa83`, EDID at `0x99c07c00`, IRQ 239; then VSC channel 0 | IRQ 239 delivered while DISPLAY waits (phase 3), VSC channel 0 in the compositor | about 11k (3.3k plus the TX / DP driver's 7.7k) | 3-4 weeks (EDID / HPD about 1) | the HDMI output a TV shows |
@@ -584,7 +584,9 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   callbacks); `+0x9c` 7 request bits (`+0x9c` = 127 ends the power-off sequence); `+0xa0..+0xb8` seven port
   registers, bit 31 each an input; `+0xbc..+0xd8` the two transfer channels A and B; `+0xe8 / +0xec` the clock
   (seconds since 1970 local time, 1/1024 s in bits 14..5). IRQs 320 and 321 (level 5) are attached by the SCPU init
-  `0x5004dc55`, which the lab does not run.
+  `0x5004dc55`, which the lab does not run. In the lab (`emu/src/dev/scpu.mjs`) the clock ticks with lab time since
+  2026-10-23 (on the E143 board and on E139 and E134; the other E144-family bodies keep it still, 4.7.1's last
+  bullet); `+0x00`, `+0x08..+0x3c` are storage and `+0xf4` the command word (settings spec section 3).
 - **The request API (D, 4.7.1):** `0x5005cd17` sends a 28-byte request `{+0 u8 cmd, +4 s_size, +8 tx, +12 r_size,
   +16 rx, +20 completion, +24 arg}` inside a 36-byte message to PER_SCPU_RECEIVE (timeout 5000). PER_SCPU carries it
   to the SCPU over PER_SIO channel 2 and two pins, not through the window, writes the reply into rx and then calls the
@@ -603,15 +605,16 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
 - **Power-off (D calls, I meaning):** `0x50044d8e..0x50044de7` sends on a channel, arms channel A, tests the camera
   state, calls the IO expanders and ends with `0x5004dfd0` (`+0x9c` = 127). An HLE of the lever lets this run and ends
   the session at that write instead of H-POWER's immediate close.
-- **Steps (I):** 1, a host server at PER_SCPU_RECEIVE for 0x01 / 0x81 / 0x06 / 0x86 with the clock ticking from lab
-  time and S-NVRAM as the default: 4-6 days. 2, the event / port registers with IRQ 320 and UI_IN's registration:
-  group-0 keys and the power lever natively, 3-5 days. 3, the accelerometer at the PER_SIO seam or the sample cache:
-  Level Adjust, level gauge, rotation, 1-1.5 weeks. 4, the eye sensor (I2C plus GPIO interrupt) driving the native chain
-  to `0x50050efd`: 1 week. 5, the power manager: 2+ weeks, gated by hardware numbers. 6, a NAND register model and
-  store F: 1-2 weeks, only for a full boot.
-- **First step:** the PER_SCPU dispatch is read (4.7.1). Next, replace S-SCPU-MSG with the request server of 4.7.1's
-  last bullet: the four D commands answered (rx written, `+20` called), every other command refused by its name, and
-  `+0xe8` ticking from lab time.
+- **Steps (I):** 1, a host server for 0x01 / 0x81 / 0x06 / 0x86 with the clock ticking from lab time and S-NVRAM as the
+  default: 4-6 days (done 2026-10-23 at the request API, 4.7.1; S-NVRAM stays opt-in, `docs/ROADMAP.md`). 2, the event /
+  port registers with IRQ 320 and UI_IN's registration: group-0 keys and the power lever natively, 3-5 days. 3, the
+  accelerometer at the PER_SIO seam or the sample cache: Level Adjust, level gauge, rotation, 1-1.5 weeks. 4, the eye
+  sensor (I2C plus GPIO interrupt) driving the native chain to `0x50050efd`: 1 week. 5, the power manager: 2+ weeks,
+  gated by hardware numbers. 6, a NAND register model and store F: 1-2 weeks, only for a full boot.
+- **First step: done** (2026-10-23). The PER_SCPU dispatch is read (4.7.1) and S-SCPU-MSG is replaced by S-SCPU, the
+  request server of 4.7.1's last bullet: the four D commands answered (rx written, `+20` called), every other command
+  refused by its name, and `+0xe8 / +0xec` ticking with lab time. Next is step 2, the event / port registers and IRQ
+  320.
 
 #### 4.7.1 The PER_SCPU request server (D unless tagged)
 
@@ -686,11 +689,12 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
 
 The flag and semaphore names are the object-name table's (D); the commands' meanings beyond the strings are I.
 
-- **What a session sends (X, a play session with S1 and a menu open and close):** only the store init's three
-  requests: `0x06 {2, value, 0}` (from `0x5012c547`), `0x01` with the reset date (`0x5012b78c`) and `0x86 {2, 0}`
-  (`0x5012c70a`), whose waits on 0xf5, 0xf7 and 0xf6 S-SCPU-MSG answers today (settings spec section 4). Backup word 2
-  holds the time-zone setting, packed by `0x5012c685..0x5012c700` with bit 31 = valid (the 12-byte record `0xa32d7270`;
-  minute fields up to 780 per zone, `0x5012c5c8`; field meanings I), so a reply of 0 means no record. The clock setting
+- **What a session sends (X, a play session with S1 and a menu open and close):** only the store init's three requests:
+  `0x06 {2, value, 0}` (from `0x5012c547`), `0x01` with the reset date (`0x5012b78c`) and `0x86 {2, 0}` (`0x5012c70a`),
+  whose waits on 0xf5, 0xf7 and 0xf6 run natively since S-SCPU answers the requests (settings spec section 4; X: they
+  return E_OK at once). The `0x06` writes `0x8000021c` and the `0x86` reads it back (X). Backup word 2 holds the
+  time-zone setting, packed by `0x5012c685..0x5012c700` with bit 31 = valid (the 12-byte record `0xa32d7270`; minute
+  fields up to 780 per zone, `0x5012c5c8`; field meanings I), so a reply of 0 means no record. The clock setting
   (`0x5012b7a7`, called from api_system.c) writes both the window clock (`0x5005a587`) and the SCPU's date (`0x01`); at
   boot `0x5012b767` (called from `0x500248b4`, not run in the lab) reads `0x81` and with status 0 sets the window clock
   from it, else resets it to 1970 (I: the window counter does not keep time over power-off, the SCPU's date does).
@@ -698,16 +702,44 @@ The flag and semaphore names are the object-name table's (D); the commands' mean
   is a slot pointer; read the 36 bytes and clear the slot's bit in `(0xa32c9498)` as `0x5005cb62..0x5005cb7f` does), or
   at the request API `0x5005cd17`, which carries the same 28 bytes without the queue. Per command: write r_size bytes to
   rx when rx is not 0, then call `+20` with a0 = `+24` in task context. `0x01`: keep the date (S-NVRAM's clock offset,
-  `_s_sctime` in `emu/src/lab/menu.mjs`); `0x81`: answer the kept date with status 0 in rx bytes 7..8; `0x06` / `0x86`:
-  keep and return a word per index (S-NVRAM's store for index 2; 0 on a blank camera). Every other command stops the
-  session naming it: the firmware's own refusal calls the completion with rx unwritten, which a stand-in must not
-  imitate. The firmware checks: the date's status and range (2000..2099, `0x5012b9ab`), the `0x88` reply's rx[1] = 0,
-  and after a window clock write that `+0xe8` reads back within 5 s of the value written (`0x5005a71f..2a`, else ten
-  retries with errlog `0x19001005` and the signature cleared). The window clock: `+0xe8` counts seconds since 1970 in
-  local time and `+0xec` bits 14..5 the 1/1024 s phase (readers `0x5005a5c9..0x5005a5f0`, `0x5005a6bb`); a write sets
-  `+0xe8` and, when its second argument is 1, `+0xec` = 0 (`0x5004e337..0x5004e359`), then commits with `+0xf4`.
-  PER_SCPU's own start (`0x85 {2}`, the reset pulse, the watchdog) and the inbound path have no counterpart at this
-  seam; the faithful later seam is an SCPU device at PER_SIO channel 2 and pins 102 / 103, now that the frames are D.
+  then `_s_sctime` in `emu/src/lab/menu.mjs`); `0x81`: answer the kept date (status 0 in rx bytes 7..8 was the first
+  reading; S-SCPU answers the kept status, below); `0x06` / `0x86`: keep and return a word per index (S-NVRAM's store
+  for index 2; 0 on a blank camera). Every other command stops the session naming it: the firmware's own refusal calls
+  the completion with rx unwritten, which a stand-in must not imitate. The firmware checks: the date's status and range
+  (2000..2099, `0x5012b9ab`), the `0x88` reply's rx[1] = 0, and after a window clock write that `+0xe8` reads back
+  within 5 s of the value written (`0x5005a71f..2a`, else ten retries with errlog `0x19001005` and the signature
+  cleared). The window clock: `+0xe8` counts seconds since 1970 in local time and `+0xec` bits 14..5 the 1/1024 s phase
+  (readers `0x5005a5c9..0x5005a5f0`, `0x5005a6bb`); a write sets `+0xe8` and, when its second argument is 1, `+0xec` = 0
+  (`0x5004e337..0x5004e359`), then commits with `+0xf4`. PER_SCPU's own start (`0x85 {2}`, the reset pulse, the
+  watchdog) and the inbound path have no counterpart at this seam; the faithful later seam is an SCPU device at PER_SIO
+  channel 2 and pins 102 / 103, now that the frames are D.
+- **Built: S-SCPU** (2026-10-23, `emu/src/lab/scpuserver.mjs`, D for the transport and the layouts, I for what the
+  sub-CPU keeps). The seam is the request API `0x5005cd17`, hooked: the request arrives whole in a0, the hook needs no
+  address but the API's own (already in every backup body's port), and it owns no firmware state. The data-queue seam
+  would run the API's trace record, allocation and post natively, but the server would then free the pool's slots
+  (`0xa32c9498`) and drive the queue for a task that does not run, two more addresses of internal state, for no
+  behaviour the camera shows. Per request: refused outside a task's context (the nesting byte `sns_ctx` reads), the
+  command looked up, its tx and rx sizes checked against its senders', r_size bytes written to rx when rx is not 0, then
+  `+20` called natively with a0 = `+24` through a `calls` trampoline (`HLE.finish_after`), and the API returns 0 (its
+  callers do not read it). The completion's flag latches, so the requester's own OlyEvWt, native, returns at once.
+  - The sub-CPU's memory (`ScpuMemory`): the date as the last `0x01` set it, status included, advancing with lab time
+    (whole seconds), answered by `0x81` with the kept status (I: the reset path sends status 10501 and the boot read
+    `0x5012b767` resets the clock unless the status is 0, so echoing the status keeps a reset camera asking for the
+    date; the alternative reading, a status the sub-CPU makes itself, has no evidence either); a get before any set
+    stops the session (a blank sub-CPU's answer is ?). One word per index, 0 when blank (settings spec A-SCPU-2); the
+    body's words are its fact `scpu.words` (E143, E146, E147, E139: index 2, byte 0; E134: index 23), any other refused.
+  - A body's writes without data, completion or wait are its fact `scpu.quiet`: none on E143, E146, E147 and E139;
+    E134's dial init sends `0x21` (its meaning is ?), taken without an effect.
+  - Under S-NVRAM the same memory lives in the host's file and its date advances with the host's local time; the boot
+    stand-in sets the window clock from it whatever the status (as before, so a kept camera starts without the date
+    prompt).
+  - The window clock ticks with lab time on the E143 board (E143, E146, E147) and on E139 and E134 (their MODELS
+    boards). The other E144-family bodies keep it still: E137's and E130's operating-time count (E137 `0x5004d531`)
+    writes a NAND record once the counter advances, and their start then stops at the NAND controller (X). A nonzero
+    write to `+0xec` is a bus error (A-SCPU-3).
+  - Not covered: PER_SCPU's start (`0x85 {2}`, the reset pulse, the watchdog), the inbound path (poll frames, the
+    `0x08` / `0x11..0x13` / `0x40` messages), every other command. The faithful later seam is still an SCPU device at
+    PER_SIO channel 2 and pins 102 / 103.
 
 ### 4.8 Card, file system and playback
 

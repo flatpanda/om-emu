@@ -111,10 +111,10 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   addRegion({ base: ISC, size: isc.length * ISC_STRIDE, kind: K_MMIO, name: 'om1.isc-locks', dev: {
     read: (a, w, dbg) => { const off = a - ISC; if (w !== 1 || (off % ISC_STRIDE)) unknown('isc', 'read', ISC, off, w, 0, dbg); return isc[off / ISC_STRIDE]; },
     write: (a, v, w, dbg) => { const off = a - ISC; if (w !== 1 || (off % ISC_STRIDE)) unknown('isc', 'write', ISC, off, w, v, dbg); isc[off / ISC_STRIDE] = v; } } });
-  const scpu = new Scpu(m);
+  const lclock = new Clock();
+  const scpu = new Scpu(m, lclock);
   const bus = new Bus(m);
   bus.onRemap = windowRemapped;                // the decode slots of window pcs, the main-loop return (interp.mjs)
-  const lclock = new Clock();
   const intc = new Intc(m);
   const engine = new Engine(m, bus, intc);
   const vsc = new Vsc(m, lclock, intc, bus, rom);

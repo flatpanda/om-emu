@@ -236,13 +236,13 @@ Each note was checked against the cited code. Paths are relative to the reposito
 
 **Confidence:** high
 
-### 6.2 SCPU (sub-CPU) interface is only storage plus a command log
+### 6.2 SCPU (sub-CPU): window storage, a ticking clock and four answered requests
 
-**Where:** `emu/src/dev/scpu.mjs:1-40`
+**Where:** `emu/src/dev/scpu.mjs`, `emu/src/lab/scpuserver.mjs`, `emu/src/lab/menu.mjs` (`store_init`)
 
-**Emulator:** Offsets 0x00, 0x08-0x3C, 0xE8 and 0xEC are plain storage. A write to the command register 0xF4 is stored, counted and printed, and a read of 0xF4 returns 0 (A-SCPU-1). Any other access raises a bus error.
+**Emulator:** In the window 0x98E00000, offsets 0x00 and 0x08-0x3C are plain storage. The clock 0xE8 (seconds) and 0xEC (the 1/1024 s phase in bits 14..5) ticks with the lab clock; a write of 0xE8 keeps the phase, a write of 0 to 0xEC restarts it and any other value there is a bus error (A-SCPU-3). On the E144 family's bodies other than E139 and E134 the clock stands still, because a ticking counter sends E137's and E130's start into a NAND write the lab does not model. A write to the command register 0xF4 is stored, counted and printed, and a read of 0xF4 returns 0 (A-SCPU-1). Any other access raises a bus error. The requests the firmware sends to the sub-CPU through the task PER_SCPU (which does not run) are answered at the request API by S-SCPU: set and get the date, write and read the backed-up word, plus a body's listed writes without an answer (E134's 0x21). The reply is written and the completion called before the API returns, so the requester's wait finds its flag already set. Any other command stops the session.
 
-**Expected / concern:** The real sub-CPU acts on commands and answers them, with status, data and probably interrupts. Firmware waiting for a sub-CPU response never gets one.
+**Expected / concern:** The real sub-CPU answers over a serial channel some time later, while the requester waits and other tasks run; here no task runs in between. What the sub-CPU keeps is inferred: the date as last set, status included, advancing with time, and one word per index, all blank (no date, words 0) at the start of every session unless S-NVRAM restores them. PER_SCPU's own start, the sub-CPU's inbound messages (the port scan, the power manager's messages, USB power delivery), its event and port registers and IRQ 320 are not modelled, so the power lever, the group-0 keys and anything else the sub-CPU reports never change on their own.
 
 **Confidence:** high
 

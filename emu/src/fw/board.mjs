@@ -48,7 +48,9 @@ export const FAMILIES = {
     // the OSD draw engine (src/dev/engine.mjs): its base, the guard slots the lab's debug window holds, the LUT
     // registers (0x5c..0x6c, 0x88..0xff) and the list base register's unit (E143: 16-byte units)
     engine: { base: 0x9BC00000, guards: 8, lut: true, list_shift: 4 },
-    scpu: { command: 0xf4, clock: [0xe8, 0xec], storage: [[0x00, 0x00], [0x08, 0x3c], [0xe8, 0xec]] },
+    // the SCPU interface (src/dev/scpu.mjs): its command word, its clock [seconds, phase], whether the lab lets the
+    // clock tick with lab time (a lab choice; plain storage that stands still otherwise) and its plain storage
+    scpu: { command: 0xf4, clock: [0xe8, 0xec], ticks: true, storage: [[0x00, 0x00], [0x08, 0x3c]] },
     core_byte: 0x97F00254,
     // the interrupt vectors' page, the high half of the level slots' run-time addresses: E143's vector init loads
     // 0x60030020..0x60030080 (0x5000f09b, D; src/fw/facts.mjs vectorPage, which reads the same on E146 and E147)
@@ -129,10 +131,13 @@ export const FAMILIES = {
     // (0x50050cb7/bd); 0x8c (E143 0xdc) is a parameter word the command 0x20041001 sets the low 6 bits of first
     // (0x50001a37..4a); 0x48 (E143 0x90) a word the clock path sets to -1 before the same command (0x500480c0);
     // the compacted words 0x40..0x9c (E143 0x98..0xec: 0xa0..0xb8 -> 0x58..0x68, 0xbc -> 0x6c, 0xc4 -> 0x74, ...,
-    // 0xdc -> 0x8c, D: the paired init sequences) are storage; the C-runtime window the lab's K-CRT-134D answers
+    // 0xdc -> 0x8c, D: the paired init sequences) are storage, but for the clock; the C-runtime window the lab's K-CRT-134D answers
     // (src/lab/menu.mjs SCPU_CLOCK) reads the clock 0x98: `mov (0x98e00098),d0; retf` at E144 0x516824a1 and E137
-    // 0x51462486, where E143's 0x51a7034d reads 0x98e000e8 (D)
-    scpu: { command: 0xa4, clock: [0x98, 0x9c], storage: [[0x00, 0x00], [0x08, 0x3c], [0x40, 0x9c]] },
+    // 0x51462486, where E143's 0x51a7034d reads 0x98e000e8 (D). The clock stands still on this family's bodies but
+    // E139 and E134, the ones with S-SCPU (src/fw/models.mjs): E137's and E130's operating-time count writes its NAND
+    // record once the counter has advanced (E137 0x5004d531 -> 0x50039157, D; docs/om1-settings-spec.md K-CRT-134D),
+    // and their start then stops at the NAND controller the lab does not model (X)
+    scpu: { command: 0xa4, clock: [0x98, 0x9c], ticks: false, storage: [[0x00, 0x00], [0x08, 0x3c], [0x40, 0x94]] },
     // per body, read by src/fw/facts.mjs (coreByte; resetHead's library and preload rows; vectorPage: 0x6003xxxx on
     // E144, 0x6041xxxx on the 0x60400020 bodies, X; dramSize: 256 MiB on E144, 512 MiB on the 0x60400020 bodies, X)
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,

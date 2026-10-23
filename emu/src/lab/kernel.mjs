@@ -343,6 +343,9 @@ export class LabTask {
   }
 }
 
+// The firmware's sns_ctx (SVC.sns_ctx) read in place: true while the running CPU is outside a task's context (the
+// nesting byte its KCB +28 points to, which in_interrupt raises, is not 0)
+export function non_task_context(lab) { return lab.sim.read(lab.nk.kcb(28), 1)[0] !== 0; }
 export function in_interrupt(lab, body) {
   const sim = lab.sim, nk = lab.nk;
   const nest = nk.kcb(28), flags = nk.kcb(16);

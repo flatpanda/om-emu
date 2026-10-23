@@ -62,6 +62,10 @@ export const MODELS = {
     vsc_extra: [0x6800, 0x1400],
     touch: false,
     g4set: G4SET_UNCHECKED,
+    // the SCPU's backed-up words the firmware writes and reads, [index, byte], and its writes without data or an
+    // answer (src/lab/scpuserver.mjs S-SCPU; E143's [2, 0] and none): the time-zone record's write and read wrappers
+    // at 0x5005c164 and 0x5005c171 pass index 2, byte 0 (D)
+    scpu: { words: [[2, 0]], quiet: [] },
     extra_tasks: [
       0x501DC568,   // started by the display task init (E143 0x501c2f13 starts no task; E147 starts 0x501e3eca)
     ],
@@ -87,6 +91,10 @@ export const MODELS = {
     g4set: G4SET_UNCHECKED,
     // property 4513 (the output device) reads the play path makes from one more site than E143's GUI (X)
     prop_sites: [0x503DAF24],
+    // the SCPU's backed-up words the firmware writes and reads, [index, byte], and its writes without data or an
+    // answer (src/lab/scpuserver.mjs S-SCPU; E143's [2, 0] and none): the time-zone record's write and read wrappers
+    // at 0x50057330 and 0x5005733d pass index 2, byte 0 (D)
+    scpu: { words: [[2, 0]], quiet: [] },
     extra_tasks: [
       0x501E3ECA,   // started by the display task init (0x501cfd03, E143 0x501c2f13 starts no task), X
     ],
@@ -154,7 +162,9 @@ export const MODELS = {
     res_len: 11726816, res_sha256: '0d4c92407626a32ae4173fc2d6efc5360d75b5c271f088339830ffe1455e157e',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
-    board: { family: 'E144' },
+    // the SCPU clock ticks, as on E143 (src/fw/board.mjs: the family's stands still): its start, S1 and S2 run as with
+    // the clock standing still (X: bin/modelcheck.mjs)
+    board: { family: 'E144', scpu: { ticks: true } },
     // the map from E144 pairs 7.29M instructions with 14 conflicts, the one from E143 2.18M with 110 (X: port.json
     // port_via.map and map, bin/port.mjs)
     port_via: 'E144',
@@ -167,6 +177,10 @@ export const MODELS = {
     // 0x50cc4a41..51), where E143's passes the same two from the same offsets of its GUI block in a0, a1 (D)
     state_log_regs: ['d1', 'a0'],
     g4set: G4SET_UNCHECKED,
+    // the SCPU's backed-up words the firmware writes and reads, [index, byte], and its writes without data or an
+    // answer (src/lab/scpuserver.mjs S-SCPU; E143's [2, 0] and none): the time-zone record's write and read wrappers
+    // at 0x50051013 and 0x50051020 pass index 2, byte 0 (D)
+    scpu: { words: [[2, 0]], quiet: [] },
     // S-NOPOWEROFF at 0x50c9bdcc (D): run, the GUI leaves shooting for 0x0104 ID_ST_BLACK_SCREEN after message
     // 0x9626 (X)
     call_skips: [NO_USB_POWER_OFF],
@@ -182,7 +196,9 @@ export const MODELS = {
     res_len: 22175200, res_sha256: '1b390ea79011cf8a4946344c909078b320f8dc46000ab9f07018b8e0c76e9176',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
-    board: { family: 'E144' },
+    // the SCPU clock ticks, as on E143 (src/fw/board.mjs: the family's stands still): its start, S1 and S2 run as with
+    // the clock standing still (X: bin/modelcheck.mjs)
+    board: { family: 'E144', scpu: { ticks: true } },
     // the map from E139 pairs 8.12M instructions with 34 conflicts, the one from E144 5.88M with 47; through E139, 106
     // of the overrides carry, 15 against the direct map's answer and 11 fail, through E144 102, 22 and 16 (X: port.json
     // port_via.map, carried, carry_failed, bin/port.mjs with each; since the frame-wait knob left the seeds and E144's
@@ -191,6 +207,11 @@ export const MODELS = {
     // DISPLAY sends are read by a rule since, src/fw/facts.mjs displaySends)
     port_via: 'E139',
     g4set: G4SET_UNCHECKED,
+    // the SCPU's backed-up words the firmware writes and reads, [index, byte], and its writes without data or an
+    // answer (src/lab/scpuserver.mjs S-SCPU; E143's [2, 0] and none): the time-zone record's write and read wrappers
+    // at 0x5005239a and 0x500523a7 pass index 23, byte 0 (D); the dial init sends 0x21 with no data, no
+    // completion and nothing waiting for it (0x50109328..0x50109342, D; its meaning is ?)
+    scpu: { words: [[23, 0]], quiet: [0x21] },
     overrides: {
       '0x50023bab': { to: '0x5021050d', why: 'the EVF vtotal getter (display.mjs DEVICE.evf), which neither map places (E139\'s is the direct map\'s alignment 0x50021641): after the retf at 0x5021050a, `movbu (0x62316834),d1; mov 819,d2; cmp 1,d1` with 787 for mode 1 and 900 for a 20000 us period read through 0x50210666, as E139\'s 0x50021641 (D)' },
       '0x5014b7c7': { to: '0x501092da', why: 'the dial init (menu.mjs DIAL_INIT), which neither map places: like E143\'s it selects the board\'s dial table (src/fw/facts.mjs dialStore) and clears the dial counters, the 16-byte slots from 0xa28b9ecc, the map\'s DIAL_COUNTERS (0x501092f7..0x50109327), after a call of 0x501091eb, which clears ten bytes from 0xa28b9f10 and the three after them; then it posts a message through 0x50053de3 (0x50109342), which E143\'s does not; its one caller is 0x50108d5f (D)' },

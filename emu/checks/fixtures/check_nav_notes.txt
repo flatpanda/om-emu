@@ -134,16 +134,16 @@ STEP N8 03-SHOT page panel 329 hooks 1 sets 0 engine 0
 STEP N8 04-SWITCH:tft page panel 329 hooks 138 sets 0 engine 0
 STEP N8 05-SHOT page panel 329 hooks 1 sets 0 engine 0
 STOP N3 MENU: index 23: event storm: more than 810 GESetEvent calls in step 11-MENU; awaited 0x9ac6
-STORE N1 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
-STORE N2 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
-STORE N3 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
-STORE N3T K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
-STORE N4 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
-STORE N5 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
-STORE N6 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
-STORE N7 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
-STORE N7C K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
-STORE N8 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "00000000"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N1 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "1c020080"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N2 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "1c020080"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N3 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "1c020080"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N3T K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "1c020080"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N4 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "1c020080"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N5 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "1c020080"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N6 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "1c020080"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N7 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "1c020080"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N7C K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "1c020080"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
+STORE N8 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "1c020080"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]
 SUBSCREEN N1 page 1 row 0: sub panel 386
 SUBSCREEN N3 page 5 row 4: popup panel 329
 SUBSCREEN N3T page 5 row 4: popup panel 329

@@ -1,6 +1,8 @@
 // The camera's non-volatile state for a node-hosted lab (env.nvram, src/lab/menu.mjs S-NVRAM): the settings stores' flash
-// images the firmware saves (M, the user settings, and E), the SCPU's backed-up words (the clock signature 0x00 and
-// the B store 0x08..0x3c), kept in one JSON file between sessions, and the host's local time for the SCPU clock.
+// images the firmware saves (M, the user settings, and E), the SCPU window's backed-up words (the clock signature 0x00
+// and the B store 0x08..0x3c) and the sub-CPU's own memory (src/lab/scpuserver.mjs ScpuMemory: its date as an offset
+// from the host's local time and its status, its backed-up words), kept in one JSON file between sessions, and the
+// host's local time for the clock.
 // Off unless the host passes a file (OM_EMU_NVRAM); node-only (host/).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,13 +20,14 @@ export function fileNvram(file) {
   const bytes = (s) => (typeof s === 'string' ? new Uint8Array(Buffer.from(s, 'base64')) : null);
   return {
     file,
-    // {M, E: Uint8Array or null, scpu: {offset: word} or null}, or null for a camera that never saved
+    // {M, E: Uint8Array or null, scpu: {offset: word} or null, clock_offset, clock_status, scpu_words: {index: word}},
+    // or null for a camera that never saved
     load() {
       const j = read();
-      return j ? { M: bytes(j.M), E: bytes(j.E), scpu: j.scpu ?? null, clock_offset: j.clock_offset ?? 0 } : null;
+      return j ? { M: bytes(j.M), E: bytes(j.E), scpu: j.scpu ?? null, clock_offset: j.clock_offset ?? 0, clock_status: j.clock_status ?? 0, scpu_words: j.scpu_words ?? {} } : null;
     },
-    // the camera clock's offset from the host's local time in seconds (set by the camera's own clock setting)
-    saveClockOffset(s) { const j = read() ?? { version: 1 }; j.clock_offset = s; write(j); },
+    // the sub-CPU's memory {clock_offset: its date less the host's local time in seconds, clock_status, words}
+    saveScpuMemory(m) { const j = read() ?? { version: 1 }; Object.assign(j, { clock_offset: m.clock_offset, clock_status: m.clock_status, scpu_words: m.words }); write(j); },
     save(name, data) { const j = read() ?? { version: 1 }; j[name] = Buffer.from(data).toString('base64'); write(j); },
     saveScpu(words) { const j = read() ?? { version: 1 }; j.scpu = words; write(j); },
     // local time as seconds since 1970-01-01 00:00 (the SCPU clock word 0xe8 holds local time, 0x5012bf86)

@@ -47,8 +47,9 @@ not reconciled.
 2. **The open stops of the remaining bodies** (Multi-model "Next stops"): E145's start, E133's GUI creator, E129's
    settings store, E132's deferred serial send, then the E118 family's board port.
 3. **HLE of E143, step 2** (HLE of E143 below; step 1's static decodes are done): the cheap CPU 0 wins (a ticking
-   clock, persistence by default, native group-0 keys and power lever, Level Adjust, the HDMI EDID), first the SCPU
-   request server of hle-gaps.md 4.7.1.
+   clock, persistence by default, native group-0 keys and power lever, Level Adjust, the HDMI EDID). The SCPU request
+   server and the ticking clock are in (S-SCPU, 2026-10-23); next the SCPU port registers and IRQ 320, then the
+   accelerometer.
 4. **Debug API follow-ups**, above all a debug route to a running play session (F31).
 5. **Emulator architecture** phases 2-5: finish phase 2's typed seams (machine port, options object, composed lab
    features), then ground the CPU and interrupts in the manual, then the time model. Phases 3 and 4 are also step 3 of
@@ -170,7 +171,7 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
 | Step | What | Status |
 |---|---|---|
 | 1 | static decodes: the TRA layer (who handles TRA 991, what answers TRA 990), TAKE_FUNC's dispatcher, the HLS TRA event dispatchers, the PER_SCPU dispatch, the sdmem contract, the lens serial layer, the ISC port formats | done (2026-10-23): the TRA layer, TAKE_FUNC's commands and the HLS event dispatch (hle-gaps.md 4.1.1-4.1.3); the PER_SCPU request server and command set (4.7.1); the sdmem request / completion contract (4.8.1); the lens serial layer, its IRQ 14 bits, the command history and the init chain's command ids (4.4.1); the ISC transport from both ends (4.11.1). Two parts stay ? and move to later first steps: the table from a lens command id to its packet bytes (4.4's probe) and the per-port ISC payloads (4.11) |
-| 2 | cheap CPU 0 wins: the SCPU request server with a ticking clock and S-NVRAM by default; the SCPU port registers and IRQ 320; the accelerometer; HDMI EDID / HPD | not started |
+| 2 | cheap CPU 0 wins: the SCPU request server with a ticking clock and S-NVRAM by default; the SCPU port registers and IRQ 320; the accelerometer; HDMI EDID / HPD | started (2026-10-23): S-SCPU, the request server at the request API (`0x01`, `0x81`, `0x06`, `0x86`, hle-gaps.md 4.7.1) on E143, E146, E147, E139 and E134, with the SCPU window's clock ticking with lab time (on those bodies) and a blank sub-CPU memory per session; S-SCPU-MSG is retired. S-NVRAM stays opt-in (`OM_EMU_NVRAM`): as the player's default it would need a state file per model, put the host's clock into every session and make sessions start from the last one's settings, a choice for the user. Next: the port registers and IRQ 320 |
 | 3 | interrupt acceptance anywhere, then the machine-owned time model | not started: architecture phases 3 and 4 |
 | 4 | CPU 2, then CPU 3, then CPU 1, natively | not started |
 | 5 | task-start and module-init infrastructure; the HLS component bring-up as the coverage workload's default | not started |
@@ -261,7 +262,7 @@ alignment. The navigation rules are observed (X), not decoded: the 0x9031 / 0x90
 `0x511bde6b`, the page and tab edges. The camera path above sendEvent (the reader of queue 6, long-press and repeat
 timing), the physical rotation of the dials (the board byte `0x97f00254` selects between two dial tables; which board
 the OM-1 is, is not known), sub-screens that list media and the Card Formatting actions, My Menu's page count and
-internal page, the 18 key-selected settings (settings spec section 2), the SCPU task's replies (S-SCPU-MSG), the flash
+internal page, the 18 key-selected settings (settings spec section 2), the SCPU's replies beyond the four commands S-SCPU answers, the flash
 controller `0x98d01800` (settings do not persist without S-NVRAM), the settings module init chain `0x503dae30` (not
 run), mode-dependent defaults (`0x605e9198`), and the store-init order (menu spec §12-§13, settings spec §4).
 

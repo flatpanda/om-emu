@@ -158,7 +158,7 @@ export async function checksTests() {
   }
   // FAULT (check_menu, check_nav, check_irq, check_osd): the fault point trips its predicate (exit 1), the tautology there passes (0)
   for (const [c, name, text, args] of [['check_menu', 'menu-gui-state', 'if (!pred(r.state === MM.STATE_MENU)) p2.push(', ['--quick']],
-    ['check_nav', 'nav-scpu-command', "if (!pred(count(err, 'scpu UNKNOWN') === 6", ['--quick']],
+    ['check_nav', 'nav-scpu-command', "if (!pred(count(err, 'scpu UNKNOWN') === 7", ['--quick']],
     ['check_irq', 'ipi-80c-clear-all', "g.eq('+0x80c clears the written bits'", ['--only', 'I10']],
     ['check_osd', 'osd-debug-write', "check(deepEqual(lab.engine.errors().map((e) => e.name), ['DEBUG_CPU_WRITE'])", []]]) {
     const src = path.join(J, `checks/${c}.mjs`), lines = fs.readFileSync(src, 'utf8').split('\n');

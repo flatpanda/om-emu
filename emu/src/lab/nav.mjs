@@ -445,8 +445,8 @@ export class NavSession {
       { set: { id: sid, value, ret: r.d0, read_back: this.get(sid) } });
   }
   get(sid) { return this.lab.get(sid); }
-  // S-SCPU-CLOCK: the sub-CPU's counter now reads epoch: one CPU store to om1.scpu's clock word from harness code
-  // (MM.SCPU_CLOCK; E143's 0x98e000e8).
+  // S-SCPU-CLOCK: the sub-CPU's counter now reads epoch, and ticks on from it with lab time: one CPU store to om1.scpu's
+  // clock word from harness code (MM.SCPU_CLOCK; E143's 0x98e000e8).
   clock(epoch, tag = null) {
     if (tag === null) this.begin(`${String(this.steps.length).padStart(2, '0')}-CLOCK:${epoch}`);
     this.lab.cpu_store(MM.SCPU_CLOCK, epoch);

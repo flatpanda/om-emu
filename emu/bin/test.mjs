@@ -8,7 +8,8 @@
 // (test_debug.mjs), the .BIN unpacker (test_unpack.mjs, needing $OM_FW_DIR or $OM_BIN, else counted as a failure),
 // the browser player's pure parts, its node host and its Worker in a node worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
-// (test_camapp.mjs), the firmware rules of src/fw/facts.mjs (test_facts.mjs) and the firmware map (test_fwmap.mjs:
+// (test_camapp.mjs), the SCPU's clock and request server (test_scpu.mjs), the firmware rules of src/fw/facts.mjs
+// (test_facts.mjs) and the firmware map (test_fwmap.mjs:
 // the machine's coverage option, the static map's determinism and pinned headline, the labels' keys, run.mjs under
 // OM_COVERAGE). The fixtures they compare with are emu's own (test/fixtures, checks/fixtures, golden.json): a
 // deliberate behaviour change that one of them pins is re-recorded from emu with its reason.
@@ -112,6 +113,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipp
   console.log(`camera application (S-CAMAPP) in play: ${ca.checks - ca.bad.length}/${ca.checks}`);
   ca.bad.forEach((x) => console.log('  ', x));
   bad += ca.bad.length;
+}
+// the SCPU interface's clock and the sub-CPU's request server (S-SCPU), without firmware
+{
+  const { scpuUnits } = await import('../test/test_scpu.mjs');
+  const sc = scpuUnits();
+  console.log(`SCPU clock and request server (S-SCPU): ${sc.checks - sc.bad.length}/${sc.checks}`);
+  sc.bad.forEach((x) => console.log('  ', x));
+  bad += sc.bad.length;
 }
 // the camera's non-volatile state kept between sessions (S-NVRAM): no date prompt, a setting kept across sessions
 {

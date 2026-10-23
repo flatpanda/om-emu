@@ -745,8 +745,10 @@ function p10aPin() {
 
 // ---------------------------------------------------------------- P6
 // 125_983_720 until S-DISPSTART (src/lab/display.mjs) ran the DISPLAY task's start-up in the first DISPLAY run only
-// (X: the same run with the hook off gives that count and the earlier register digest 86258afcae1743f0)
-const FIXED_INSNS = 125_980_953;
+// (X: the same run with the hook off gives that count and the earlier register digest 86258afcae1743f0); 125_980_953
+// until S-SCPU (src/lab/scpuserver.mjs) served the store init's three SCPU requests at the request API, whose own
+// trace record, message and post no longer run, while the completions and the waits run natively (X)
+const FIXED_INSNS = 125_979_479;
 const CHECK_MENU = path.join(path.dirname(new URL(import.meta.url).pathname), 'check_menu.mjs');
 // check_menu --quick in a child with OM_STATS and OM_COMPOSITES, these machine options added to the run's:
 // [exit code, stdout without timings, stats, {session label: sha256 of its composite words}].

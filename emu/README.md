@@ -60,6 +60,8 @@ lab. Its inputs are session-log inputs, so `--replay` repeats them.
 lab's unset clock, the date prompt), and S1 and S2 are the application's: S1 cancels the prompt and shows the shooting
 information, S2 the capture display and the rec view. What runs below it is stood in:
 
+- the sub-CPU's side of the firmware's SCPU requests is answered (S-SCPU, `src/lab/scpuserver.mjs`): the date and the
+  backed-up time-zone word are kept for the session, and the SCPU clock ticks with lab time.
 - module requests are answered (S-MODACK), the HLS transaction layer's exec succeeds (S-TRAACK), and the modules'
   notifications of a release (focus, exposure, rec view) are posted as the callbacks the HLS would make of them
   (S-RELSEQ); no image is captured. The focus result and the exposure time come from S-SCENE when its live view is on.
@@ -315,13 +317,13 @@ it sends nothing but GETs for its own files.
 
 | Command | What it covers | Needs |
 |---|---|---|
-| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units | node; runs on any checkout in a few seconds |
+| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units, the SCPU clock and request server (S-SCPU) | node; runs on any checkout in a few seconds |
 | `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts, the node host, the command-line tools, the scene, the camera application, the firmware map and the regression net's controls | the E143 firmware blocks and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
 | `node emu/bin/golden.mjs check` | every scenario, every lab of the traced check runs and every check run's output against `golden.json`: what the panels show, what the devices see and what the checks conclude must not change | the firmware |
 | `node emu/bin/checks.mjs [CHECK \| RUN ...]` | every run of `checks/runs.json`, judged on its exit status | the firmware |
 | `node emu/bin/checktrace.mjs RUN [--slice N]` | the labs one check run creates, traced (golden records them) | as checks.mjs |
 | `node emu/bin/bench.mjs SCENARIO --passes 5` | MIPS and cost per stop; exit 1 if a pass does not repeat pass 0 | the firmware |
-| `node emu/bin/playperf.mjs` | the play workload on the Player; exit 1 unless its digest is `867f5ce731613fc9` | the firmware |
+| `node emu/bin/playperf.mjs` | the play workload on the Player; exit 1 unless its digest is `59e15f337f58cf57` | the firmware |
 | `node emu/bin/snapgate.mjs kernel-5c osd shoot-tft` | snapshot detours leave the sessions and the end state unchanged | the firmware |
 | `OM_FW_DIR=fw node emu/bin/webgate.mjs --rounds 4` | headless Chrome: the Worker against node and `bin/run.mjs`, the page (keys, touch, canvas, session log), no uploads; about 5 min | the `.BIN`, Chrome |
 | `node emu/bin/modelcheck.mjs` | each ported model with its firmware unpacked: start, S1, S2, PLAY, INFO, PLAY on the TFT and the EVF | the models' firmware |

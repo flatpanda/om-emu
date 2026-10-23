@@ -1,5 +1,6 @@
 > Status (2026-10): implemented by `emu/src/lab/menu.mjs` (store phase, `store='native'`), `emu/refs/settings.mjs`
-> (offline decoder and reference) and `emu/src/dev/scpu.mjs` (`om1.scpu`); checked by `emu/checks/check_nav.mjs`
+> (offline decoder and reference), `emu/src/dev/scpu.mjs` (`om1.scpu`) and `emu/src/lab/scpuserver.mjs` (S-SCPU, the
+> sub-CPU's answers, since 2026-10-23); checked by `emu/checks/check_nav.mjs`
 > (groups 0-2b, 4) and `emu/checks/check_menu.mjs`. Consolidated from three analysis reports
 > that are not part of this repository (settings store, event path, page 6 / EVF layout) and what the M6
 > implementation read or executed (marked "M6"). Corrections to those reports are listed in section 9.
@@ -90,23 +91,26 @@ the same block "retained registers"; both views are one device. Every firmware a
 |---|---|---|---|
 | 0x00 | 32-bit storage, reset 0 | bits 7..2 a signature: `0x5004e384` reads `(v >> 2) & 63`, `0x5005a5a7` wants 42; written by `0x5004e36d` (42 at `0x5005a72c` after a set read back within 5 s, 0 at `0x5005a737`). Other bits stored as written, meaning ?: bit 10 (`0x5004e394`, `0x500027ce`), bit 9 (`0x5004e3e3`), bits 31..24 (`0x5004e3b1/ca`), bit 1 (`btst 2` = mask 2 at `0x5004ddc4`) | DB init reads it, writes 0xa8 (42 << 2); page 6 reads it |
 | 0x08..0x3c | 14 x 32-bit storage, reset 0 | store B (layout `0x60097964`, 56 bytes): reader `0x5004e4de` (`mov (d0,a0),d0`, a0 = `0x98e00008`, index clamped to 13), writer `0x5004e4c9` | the registry bootstrap reads all 14 |
-| 0xe8 | 32-bit storage, reset 0, does not tick | seconds since 1970: `0x5012bf86` (86400, 1461-day cycles, `add 1970`); written at `0x5004e347`, read back at `0x5005a71f` | DB init writes 0 and reads it back; page 6 reads it |
-| 0xec | 32-bit storage, reset 0 | bits 14..5 = 1/1024 s (`0x5005a5dd..f0`); written at `0x5004e355` (d1 == 1 only) | DB init writes 0; page 6 reads it |
+| 0xe8 | the clock's seconds, reset 0, ticking with lab time (since 2026-10-23; standing still on the E144 family's bodies but E139 and E134, `emu/src/fw/board.mjs` scpu.ticks); a write sets the second and keeps the phase | seconds since 1970: `0x5012bf86` (86400, 1461-day cycles, `add 1970`); written at `0x5004e347`, read back at `0x5005a71f` (within 5 s of the value written) | DB init writes 0 and reads it back; page 6 reads it |
+| 0xec | the clock's phase, reset 0: bits 14..5 the 1/1024 s since the second began, bits 4..0 read 0; a write of 0 restarts the phase at the current second, any other value is UNKNOWN (A-SCPU-3) | bits 14..5 = 1/1024 s (`0x5005a5dd..f0`); written at `0x5004e355` (d1 == 1 only, with 0) | DB init writes 0; page 6 reads it |
 | 0xf4 | command: a write is stored, counted and printed (`om-emu: scpu command 0x... pc ... #n`); a read returns 0 | 0x20041001 written, then polled until 0 (`0x5004e31d..27`, `0x5004e35f..69`, `0x5004de49..62`, `0x500027c0..ca`) | DB init: read, write 0x20041001 (pc `0x5004e35f`), read; one command per session |
 | any other offset, width or alignment | UNKNOWN: bus error, `om-emu: scpu UNKNOWN ...` | 0x04 (`0x5004e4f3`, callers `0x5014e4f4`/`0x5014e864`), 0x58, 0x80..0xdc, 0xe0, 0xe4, 0xf0, 0xf8: driver init, TX/RX `0x5004e000..0x5004e2ff`, boot `0x50002770..d8`, standby | never reached |
 
 Lab assumptions: **A-SCPU-1** a command completes before the first poll (the poll loop's exit value, like the
 panel-stub presets); **A-SCPU-2** reset 0 everywhere = a camera whose backup memory is blank, matching the zero flash
-copy the registry reads. What a command does in the sub-CPU is ?; the model only stores. Debugger reads return the
-storage of any aligned offset; the harness writes MMIO with a CPU store from harness code
-(`DisplayLab.cpu_store`, `emu/src/lab/display.mjs`), because the debugger's writes do not reach MMIO (X: a debugger
-write of 0xe8 left it 0).
+copy the registry reads (and, since S-SCPU, a blank sub-CPU memory: its backed-up words read 0); **A-SCPU-3** the
+clock's phase word takes 0 only (its one writer, `0x5004e355`, writes 0; what another value does is ?). What a window
+command does in the sub-CPU is ?; the model only stores. The clock ticks with the lab clock, so a run stays
+deterministic. Debugger reads return the storage of any aligned offset and the clock as the CPU reads it; the harness
+writes MMIO with a CPU store from harness code (`DisplayLab.cpu_store`, `emu/src/lab/display.mjs`), because the
+debugger's writes do not reach MMIO (X: a debugger write of 0xe8 left it 0).
 The image addresses 35 distinct offsets with `0x98e000xx` immediates (`check_nav` group 0 lists them as modelled or UNKNOWN; the per-offset counts are pinned by the `SCPU-IMMEDIATES` line of `check_nav_notes.txt`, group 6); 0x00, 0x08,
 0xe8, 0xec and 0xf4 are among them, 0x0c..0x3c are reached only through the indexed reader/writer.
 
 The window is not the SCPU's command channel: the requests of `0x5005cd17` (date, backed-up words, port scan, system
 control, ...) travel as frames on PER_SIO channel 2 between pins 103 and 102, driven by the task PER_SCPU, which the
-lab does not run; hle-gaps.md 4.7.1 owns that protocol and its command set (D).
+lab does not run; hle-gaps.md 4.7.1 owns that protocol and its command set (D). S-SCPU answers the commands the
+sessions send at the request API (section 4).
 
 ## 4. Init path and its stand-ins (M6, X)
 
@@ -118,7 +122,8 @@ The display path reads four kinds through the camera-state read `0x500417da`; th
    "l D"), no errlog.
 2. Settings-DB init `0x503c5473` returns (blank path, `0x503eefdf` != 0): steps 1-3 as in the STORE report (reset
    `0x503d9cdd` -> `0x503d9bf3`, region overrides); step 4 `0x504205d2` -> `0x5012b78c` fills a date struct
-   (status 10501, `0x5012b91f`), sends it to the SCPU task (`0x5012c7d9` -> request `0x5005cd17`, wait flag 0xf7)
+   (status 10501, `0x5012b91f`), sends it to the SCPU task (`0x5012c7d9` -> request `0x5005cd17`, wait flag 0xf7;
+   S-SCPU keeps it)
    and calls `0x5005a57c` = `0x5005a6fa(0, 1)`, which sets the clock to 0: register sequence R f4, W e8 = 0,
    W ec = 0, W f4 = 0x20041001, R f4, R e8, R 0x00, W 0x00 = 0xa8; the last call `0x503eee94` is skipped
    (S-FLASHSAVE: it would save the freshly reset stores E and M to flash, see the table).
@@ -126,13 +131,13 @@ The display path reads four kinds through the camera-state read `0x500417da`; th
 | stand-in | what | evidence |
 |---|---|---|
 | K-CFLUSH | `0x5004e68a` returns at once; only from the call at `0x50040863` (return `0x5004086a`), others raise; 4 calls per session (check_nav group 2) | cache maintenance with a cross-core handshake: clears bit 1 (mask 2) of low-RAM `(0x8070)` (`0x5004e693..9a`), then loops while bit 3 (`btst 8` = mask 8) of it is set (`0x5004e69d..ac`); reads 1024 words each at `0x28a00000`/`0x28a80000`; sets bit 4 (mask 16) of a per-core register picked by `(0x8050)`: `0x98100000` for 0, `+ 0x400` for 1, `+ 0x800` for 2, `+ 0x1000` for any other value (`0x5004e6ce..0x5004e70e`, unmapped), and polls until that bit is clear again (`0x5004e716..27` for 0). Who clears bit 3 of `(0x8070)` and the register bit is not shown by this code (?) |
-| K-CRT-134D | `0x3ffe134d` returns the board's SCPU counter (`menu.mjs` `SCPU_CLOCK`: `0x98e000e8`; `0x98e00098` on the E144 family, whose window reads it: E144 `0x516824a1`, E137 `0x51462486`, D), as the window code does; from any caller | `call 0x3ffe134d; mov d0,(0x62965138)`; no other abs32 reference to `0x62965138`; per-core C-runtime window (lands mid-instruction at `0x5000236d`); the window code at `0x51a7034d` is `mov (0x98e000e8),d0; retf`, so the real call returns SCPU register `0xe8` (D, cores spec 8). E137 also reads it in an operating-time count that E143 and E144 stub out with a `retf` (E143 `0x5005a6db`, E144 `0x50050dc9`): `0x5004d531` adds the time since the start (`0x61f275f4`, kept by `0x5004d521`) to a NAND record at `0x40680000` through `0x50039157` when the counter has advanced, logs `0x19001003` when it went back and does nothing when it is equal; the lab's counter does not advance without S-SCPU-CLOCK or S-NVRAM, so the start's count writes nothing (D; X, a probe of `0x50039157`); with an advancing counter the NAND update would run natively, which is open |
-| S-SCPU-MSG | OlyEvWt `0x5002bdd8` on the four SCPU flags `(0x6004315a/5c/5e/60)` returns E_OK with the waited pattern; only from the call at `0x5005a7f2` (0xf5), `0x5005a858` (0xf6), `0x5012c876` (0xf7), `0x5012c8cc` (0xf8), others raise. One wait each on 0xf5, 0xf7, 0xf6 per session | requests to the SCPU task (`0x5005cd17` posts to `(0x600431bc)`), which does not run. The request bytes are recorded; the reply bytes consumed after the 0xf6 wait (`0x5005a86c` reads `0xa32c6502..05`, boot-zero `00000000`) are pinned as SCPU_REPLY_UNMODELLED, never written. The flags are PER_SCPU_BK_REG_WRITE_W.. (0xf5), PER_SCPU_BK_REG_READ_WA.. (0xf6), SCTIME_SET_DATA_WAIT (0xf7) and SCTIME_GET_DATA_WAIT (0xf8) in the object-name table; on a camera PER_SCPU's completion of commands 0x06, 0x86, 0x01 and 0x81 sets them (hle-gaps.md 4.7.1) |
+| K-CRT-134D | `0x3ffe134d` returns the board's SCPU counter (`menu.mjs` `SCPU_CLOCK`: `0x98e000e8`; `0x98e00098` on the E144 family, whose window reads it: E144 `0x516824a1`, E137 `0x51462486`, D), as the window code does; from any caller | `call 0x3ffe134d; mov d0,(0x62965138)`; no other abs32 reference to `0x62965138`; per-core C-runtime window (lands mid-instruction at `0x5000236d`); the window code at `0x51a7034d` is `mov (0x98e000e8),d0; retf`, so the real call returns SCPU register `0xe8` (D, cores spec 8). E137 also reads it in an operating-time count that E143 and E144 stub out with a `retf` (E143 `0x5005a6db`, E144 `0x50050dc9`): `0x5004d531` adds the time since the start (`0x61f275f4`, kept by `0x5004d521`) to a NAND record at `0x40680000` through `0x50039157` when the counter has advanced, logs `0x19001003` when it went back and does nothing when it is equal; on the E144 family's board the lab's counter stands still (`emu/src/fw/board.mjs` scpu.ticks), so the start's count writes nothing (D; X, a probe of `0x50039157`); with a ticking counter E137's and E130's starts reach the NAND controller and stop there (X, 2026-10-23), so a NAND model comes first |
+| S-SCPU | the request API `0x5005cd17` is answered in the sub-CPU's place (`emu/src/lab/scpuserver.mjs`, since 2026-10-23 in place of S-SCPU-MSG, which answered the four waits instead): `0x06` keeps the backed-up word, `0x86` writes it to rx, `0x01` keeps the date (status included) and `0x81` answers it advanced by lab time; then the request's completion runs natively, so the waits on the four SCPU flags `(0x6004315a/5c/5e/60)` run natively and return at once (observed at their returns `0x5005a7f9`, `0x5005a85f`, `0x5012c87d`, `0x5012c8d3`). Any other command, size, word or context stops the session. Per session: `0x06 {2, 0x8000021c, 0}`, `0x01` with the reset date, `0x86 {2, 0}`, whose reply `1c020080` the reader `0x5005a86c` takes (X, `check_nav` STORE notes) | PER_SCPU, which the lab does not run, would carry each request to the sub-CPU over PER_SIO channel 2, write the reply and call the completion in its own task (hle-gaps.md 4.7.1, D). The flags are PER_SCPU_BK_REG_WRITE_W.. (0xf5), PER_SCPU_BK_REG_READ_WA.. (0xf6), SCTIME_SET_DATA_WAIT (0xf7) and SCTIME_GET_DATA_WAIT (0xf8) in the object-name table. What the sub-CPU keeps (the date with its status, one word per index) is I |
 | S-FLASHSAVE | `0x503eee94` returns, d0 unchanged; only from the call at `0x503c5530` (return `0x503c5537`), others raise | a save of stores E and M to flash: it builds the request {mode 1, B 0, F 0, E 1, M 1, 0} (`0x503eeec3..d5`) for `0x50041f56`, whose mode 1 (`0x50041f7a..0x500420b6`) is the save path (success prints `FS.` `F1S.` `BS.` `ES.` `MS.`, strings `0x601151a4..b9`; loads print `lD`/`lR`). Per flagged store `0x5003f5dd` returns 0 if the RAM object equals the current flash slot (`0x50003881`), else picks the next slot (`0x5003f4ba`), copies, calls K-CFLUSH and programs the flash controller `0x98d01800` (unmapped; `0x5003d9da`/`0x5003d95c`). The DB init's last call on the blank path, its d0 discarded (`0x503c5537 mov a2,d0; ret`); skipping it loses nothing while persistence is not modelled |
 | S-PROP (extended) | property 4513 answered with the display device at return sites `0x503d72c5` and `0x503d2551` too, reached once the descriptor hash exists; the native value after init is 0 (pinned in `check_nav_notes.txt`) | `0x503d72c5` is a bit-4 test (`and 16,d0; cmp 16` at `0x503d72c5..cd`). `0x503d2551` is the raw property read in the setting-rule evaluator `0x503d23e7..0x503d25a6`: it compares exth(value) with the rule entry's s16 at (2,a2) (`0x503d2568..72`) and ANDs the entries of a group. All 11 rule entries for 4513 (`0x605c9e84`, `0x605c9eac`, `0x605c9ed4`, `0x605c9fdc`, `0x605c9ffc`, `0x605ca01c`, `0x605cce70..0x605ccee8`) require 4513 == 8, next to terms on 44, 1417, 453 (finder style) and 451. TFT (1) gives the same outcome as the native 0; EVF (8) makes the term true: in a 13-step EVF navigation run 2 of the 10 groups that read 4513 there evaluated true (TFT: 0 of 10; X, rule result a2 at `0x503d2585`). Which rules those are and what they change is ? |
 | S-PERSIST | experiment inputs written raw with `0x503ee412(id, value)` after the DB init and before GUI creation; each read back through the getter | stands in for a persisted store M (the store S-FLASHSAVE would save) that the lab cannot load: every listed id and every seed id checked has its data object in the M list (layout `0x600e6034`): 3009 kind 0x85e1, 1881 0x3e91, 1882 0x3ef1, 1883..1924 0x3f01..0x44a1, seeds 32 0x81d2, 21 0x8211, 115 0x9502 (`Settings.slot`); ids 3009 (one of the 18 language setting values), 1881, 1882, the cursor memories (the union of the tab table's +8 lists, 1883..1924, My Menu's 1920..1924 included; `persist_ids` in `menu.mjs`) and validated seeds; scalar descriptor ids only (the firmware's own lookup `0x503da999`, type != 6, value in the allowed list, no key selector at custom object +20, section 2); a raw set sends no notifications |
 | S-DIAL | `NavSession`: before a dial event the u16 counter at `0xa32daab4 + 16 * slot + 8` (+) or `+ 10` (-) is set to 1 | the reader `0x5014ba55..78` returns `(+10) - (+8)` and clears both; who increments them on a camera (the UI_IN scan) is ? |
-| S-SCPU-CLOCK | the nav token `CLOCK:epoch`: one CPU store of 0xe8 | the counter does not tick in the lab |
+| S-SCPU-CLOCK | the nav token `CLOCK:epoch`: one CPU store of 0xe8, from which the counter ticks on with lab time | a date on the page without the menu's date entry, which the firmware's own clock setting (`0x5012b7a7`) needs |
 
 The dial-table init `0x5014b7c7` runs natively (`(0xa32daab0) = 0x60223e3c[8 * movbu (0x97f00254)]`). Its input,
 the board byte `0x97f00254`, is S-BOARD: at boot the board-ID routine sets it (`0x50002b93..dc` reads bit 4 of GPIO
@@ -203,8 +208,10 @@ independent dump, plus the investigation's executed spot values.
 
 ## 7. Persistence
 
-None: the store is RAM. Values survive leaving and reopening the menu within a session; a new session starts from
-the blank-store defaults plus its S-PERSIST inputs. Blockers: the flash controller `0x98d01800/04` (`0x500014e6`)
+None by default: the store is RAM. Values survive leaving and reopening the menu within a session; a new session
+starts from the blank-store defaults plus its S-PERSIST inputs, and from a blank sub-CPU memory (S-SCPU). S-NVRAM
+(opt-in, `OM_EMU_NVRAM=FILE` on the node host) keeps the stores' flash images, the window's backed-up words and the
+sub-CPU's memory in a file. Blockers: the flash controller `0x98d01800/04` (`0x500014e6`)
 and the per-unit flash contents (store F at flash `0x400a0000`, 128 KiB). The blank path saves stores E and M to flash
 at once (S-FLASHSAVE); when the camera saves otherwise is ?.
 
@@ -217,7 +224,7 @@ The clock row's handler `0x511bf7a2` asks the API (`(0x60361294)` vt+0 `0x50b402
 +1644 + 20 r (date) and +1784 + 18 r (time); they are not drawn through DrawText `0x510ab0f9`. With the firmware's own
 e8 = 0 (1970) the row reads `'--.--.-- --:--:--`; with S-SCPU-CLOCK 1791369000 it reads `'26.10.07 10:30:00`
 (X, `check_nav` N4: the string equals the epoch formatted as UTC in this format, and a second epoch changes only
-the clock cell).
+the clock cell; the counter ticks on from the epoch, and N4's page is drawn before it reaches the next second).
 
 ## 9. Corrections to the investigation reports
 

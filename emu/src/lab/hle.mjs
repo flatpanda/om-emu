@@ -146,9 +146,9 @@ export class HLE {
     const r = { ...regs, pc: RETURN, fault: 0 };
     if (this.sim.packet('G' + packRegs(r)) !== 'OK') throw new AssertionError('');
   }
-  // finish() that first calls fn (disassembly notation) natively with d0 = arg through `calls`, as a task calls a
-  // completion callback, then returns 0 in d0 from the hooked function
-  finish_after(regs, fn, arg) {
+  // finish() that first calls fn (disassembly notation) natively with the registers args ({d0: result} or {a0:
+  // argument}) through `calls`, as a task calls a completion callback, then returns 0 in d0 from the hooked function
+  finish_after(regs, fn, args) {
     const ra = regs.mdr, here = regs.pc;
     const longCall = this.sim.read(ra - 7, 7), shortCall = longCall.subarray(2);
     let mask, size;
@@ -157,7 +157,8 @@ export class HLE {
     else throw new FirmwareError(`stub at ${where(here)} not reached by CALL (mdr ${where(ra)})`);
     refuseUnmapped(fn, 'finish_after');
     this.sim.write(RETURN, cat(bytes(0xfc, 0xff), u32le(runtime(fn) - RETURN), bytes(0x00, 0xDF, mask, size)));
-    const r = { ...regs, pc: RETURN, fault: 0, d0: arg >>> 0 };
+    const r = { ...regs, pc: RETURN, fault: 0 };
+    for (const [name, value] of Object.entries(args)) r[name] = value >>> 0;
     if (this.sim.packet('G' + packRegs(r)) !== 'OK') throw new AssertionError('');
   }
   finish_calls(regs, results = {}) {

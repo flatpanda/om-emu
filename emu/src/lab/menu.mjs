@@ -13,6 +13,7 @@ import * as T from './text.mjs';
 import { FirmwareError, disasm, runtime, where } from './hle.mjs';
 import { EXEC_SLOTS, EXPECTED_RECORDS, KIND3_RECORD, KIND3_AREA, NRECORDS, REGISTRY, STRIDE, HEIGHT, EngineError } from './osd.mjs';
 import { RTOS } from './rtos.mjs';
+import { ScpuServer, ScpuMemory } from './scpuserver.mjs';
 import { ValueError, RuntimeError, AssertionError } from './errors.mjs';
 import { packRegs } from './sim.mjs';
 import { show } from '../util/show.mjs';
@@ -64,11 +65,16 @@ export const K_CFLUSH = A(0x5004E68A), K_CFLUSH_RETURN = A(0x5004086A), K_CRT_13
 // the SCPU counter, and the hook reads the same word. E143 calls it once,
 // to keep the counter at a start (return 0x5005a6d2, after its 7-byte call); a later body also reads it to count the
 // time since that start (E137, docs/om1-settings-spec.md K-CRT-134D)
+// SCPU_REQUEST: the firmware's SCPU request API, where S-SCPU serves the requests (src/lab/scpuserver.mjs)
 export const FLASH_SAVE = A(0x503EEE94), FLASH_SAVE_RETURN = A(0x503C5537), SCPU_REQUEST = A(0x5005CD17);
+// the requesters' waits for their completion flags, {flag id word -> the wait's return}: the backed-up word write
+// (0xf5) and read (0xf6), the date set (0xf7) and get (0xf8); with S-SCPU they run natively, observed as they return
 export const SCPU_WAITS = new Map([[A(0x6004315A), A(0x5005A7F9)], [A(0x6004315C), A(0x5005A85F)], [A(0x6004315E), A(0x5012C87D)], [A(0x60043160), A(0x5012C8D3)]]);
 // whether the SCPU keeps the camera's backup words and clock, which the store init requests through SCPU_REQUEST
-// (src/fw/facts.mjs scpuBackup, its request names; E143's do, D)
+// (src/fw/facts.mjs scpuBackup, its request names; E143's do, D); the request API, its senders and PER_SCPU's
+// completion call are E143's on E146, E147, E139 and E134, the bodies with them (X: their disassembly)
 export const SCPU_BACKUP = fact('scpu.backup', true);
+// the readers of the replies (the backed-up word, the date), observed
 export const SCPU_REPLY_READERS = new Map([[A(0x5005A86C), [A(0xA32C6502), 4]], [A(0x5012C8E0), [A(0xA32D7290), 8]]]);
 export const STORE_PROP_SITES = [A(0x503D72C5), A(0x503D2551)];
 export const REGISTRY_PRINTS = ['FlD.', 'BlD.', 'ElD.', 'MlD.'];
@@ -87,10 +93,9 @@ export const REPLACE_INFO = [[A(0xA32A9788), A(0xA3212700)], [A(0xA32A978C), A(0
 // the SCPU words the camera keeps across power-off: the clock signature 0x00 (bits 7..2 = 42 once a clock set was
 // verified, 0x5005a59e) and the B store 0x08..0x3c
 export const SCPU_BACKED = [0x00, ...Array.from({ length: 14 }, (_, i) => 0x08 + 4 * i)];
-// the SCPU clock messages (Sctime, posted by 0x5005cd17): a request {u8 cmd, ..., +8 tx buffer, +12 length, +16 rx
-// buffer} with cmd 0x01 (write, 0x5012c7d9) or 0x81 (read, 0x5012c88d); the 9 data bytes are {u16 year, month, day,
-// hour, minute, second, u16 status} (D)
-export const SCTIME_WRITE = 0x01, SCTIME_READ = 0x81, SCTIME_BYTES = 9;
+// the SCPU's date requests (Sctime, through 0x5005cd17): 0x01 sets it (0x5012c7d9), 0x81 gets it (0x5012c88d), in
+// 9 bytes {u16 year, month, day, hour, minute, second, u16 status} (D); S-SCPU keeps the date (src/lab/scpuserver.mjs
+// ScpuMemory), in S-NVRAM's file when there is one
 export const PANEL_FLAG = A(0x60043188);                                   // the panel driver's serial completion flag id (E143's EVF panel; S-PANELDONE)
 export const NATIVE_HOOK_LIMIT = 2000000;
 export const CTOR_TABLES = new Map([[6, [A(0x60EF9AD0), 48]], [7, [A(0x615C71D4), 64]]]);
@@ -602,39 +607,30 @@ export class MenuLab extends T.TextDisplayLab {
     if (cover.length) throw new MenuError(`lab stub page ${show(cover)} covers the SCPU block ${h8(SCPU)}`);
     this.hook(K_CFLUSH, (h, r) => this._k_cflush(h, r), 'K-CFLUSH');
     this.hook(K_CRT_134D, (h, r) => this._k_crt_134d(h, r), 'K-CRT-134D');
-    const nvram = this.env.nvram ?? null, loaded = nvram ? this.nvram_load(nvram) : null;
+    const nvram = this.env.nvram ?? null, saved = nvram ? nvram.load() : null, loaded = nvram ? this.nvram_load(saved) : null;
     if (nvram) {                                      // S-NVRAM: the stores' saves run natively down to the NAND write
       this.hook(NAND_WRITE, (h, r) => this._s_nand_write(h, r, false), 'S-NVRAM');
       this.hook(NAND_POST, (h, r) => this._s_nand_write(h, r, true), 'S-NVRAM (flash task)');
     } else this.hook(FLASH_SAVE, (h, r) => this._s_flash_save(h, r), 'S-FLASHSAVE');
-    // a model whose SCPU keeps no backup words or clock (SCPU_BACKUP; E144: no Sctime/ScpuBkup requests, D) has none of
-    // these sites: their observers and S-SCPU-MSG are not installed
-    this.scpu_flags = new Map();
+    // the sub-CPU's memory: S-NVRAM's, kept in its file and advancing with the host's local time, else a blank one whose
+    // date advances with lab time (a session stays hermetic)
+    this.scpu_memory = nvram ? new ScpuMemory(() => nvram.now(), { clock_offset: saved?.clock_offset ?? 0, clock_status: saved?.clock_status ?? 0, words: saved?.scpu_words ?? {} }, (st) => nvram.saveScpuMemory(st))
+      : new ScpuMemory(() => Math.floor(this.lab_time() / 1e9));
+    // S-SCPU: the request server at the request API; the requesters' waits (OlyEvWt 0x5002bdd8 on their flags) and the
+    // replies' readers run natively and are observed. A model whose SCPU keeps no backup words or clock (SCPU_BACKUP;
+    // E144: no Sctime/ScpuBkup requests, D) has none of these sites
     if (SCPU_BACKUP) {
-      this.observe(SCPU_REQUEST, (lab, r) => this._scpu_request(lab, r), 'obs-scpu-request');
+      this.scpu_server = new ScpuServer(this, this.scpu_memory, { words: fact('scpu.words', [[2, 0]]), quiet: fact('scpu.quiet', []) });
+      this.hook(SCPU_REQUEST, (h, r) => this.scpu_server.serve(h, r), 'S-SCPU');
       for (const [reader, [address, size]] of SCPU_REPLY_READERS) {
         this.observe(reader, (lab) => lab.store_log.scpu_replies.push({ reader: h8(reader), address: h8(address), bytes: bytesHex(lab.sim.read(address, size)) }), 'obs-scpu-reply');
       }
       for (const [a, ra] of SCPU_WAITS) {
         refuseUnmapped(a, 'SCPU wait flag id word'); refuseUnmapped(ra, 'SCPU wait site');
-        const b = this.sim.read(a, 2);
-        this.scpu_flags.set(b[0] | b[1] << 8, [a, ra]);
+        const b = this.sim.read(a, 2), flag = '0x' + (b[0] | b[1] << 8).toString(16);
+        this.observe(ra, (lab, r) => lab.store_log.scpu_waits.push({ flag, site: h8(ra), rc: r.d0 | 0 }), 'obs-scpu-wait');
       }
     }
-    const router = this.hooks.get(runtime(A(0x5002BDD8)));
-    const evwt = (hle, r) => {
-      const flag = r.d0 & 0xFFFF;
-      if (!this.scpu_flags.has(flag)) return router[0](hle, r);
-      const [address, ra] = this.scpu_flags.get(flag);
-      if (disasm(r.mdr) !== ra) {
-        throw new MenuError(`S-SCPU-MSG: OlyEvWt on SCPU flag 0x${flag.toString(16)} ((${h8(address)})) from ${where(r.mdr)}: not the listed wait site ${h8(ra)}`);
-      }
-      this.store_log.scpu_waits.push({ flag: '0x' + flag.toString(16), caller: h8(ra), pattern: r.d1 });
-      this.stub_hits.add([this.phase, 'S-SCPU-MSG', 'gui']);
-      if (r.a0) this.sim.write(r.a0, pack('<I', r.d1 >>> 0));
-      hle.finish(r, { d0: 0 });
-    };
-    this.hook(A(0x5002BDD8), evwt, 'S-SCPU-MSG+' + router[1]);
     const reg = this.native(REGISTRY_INIT, null, 'registry bootstrap 0x50040aeb');
     // with saved images the bootstrap restores those stores ('xlR.'); one it rejects is a broken save, not a blank camera
     const wantPrints = REGISTRY_PRINTS.map((p) => (loaded?.has(p[0]) ? p.replace('lD.', 'lR.') : p));
@@ -642,7 +638,7 @@ export class MenuLab extends T.TextDisplayLab {
       throw new MenuError(`registry bootstrap: prints ${show(reg.prints)}, errlog ${show(reg.errlog)}; expected ${show(wantPrints)} and none`);
     }
     const db = this.native(SETTINGS_DB_INIT, null, 'settings-DB init 0x503c5473');
-    if (nvram) this.nvram_clock(nvram);
+    if (nvram) this.nvram_clock();
     else if (this.store_log.flash_save.length !== 1) {
       throw new MenuError(`settings-DB init returned with S-FLASHSAVE hit ${this.store_log.flash_save.length} times, expected once`);
     }
@@ -662,13 +658,12 @@ export class MenuLab extends T.TextDisplayLab {
     if ((JSON.stringify(db.prints) !== JSON.stringify(dbPrints) && !backupSave) || dbErrlog.length) throw new MenuError(`settings-DB init: prints ${show(db.prints)}, errlog ${show(dbErrlog.slice(0, 4))}`);
     this.store_log.scpu = this.scpu_registers();
   }
-  // S-NVRAM's boot: the saved images into their mirrors (the NAND read the lab does not run), the replace-info state, the
-  // SCPU's backed-up words. Returns the set of restored store letters.
-  nvram_load(nvram) {
-    const saved = nvram.load(), out = new Set();
+  // S-NVRAM's boot: the saved images (nvram.load()) into their mirrors (the NAND read the lab does not run), the
+  // replace-info state, the SCPU window's backed-up words. Returns the set of restored store letters.
+  nvram_load(saved) {
+    const out = new Set();
     this.store_log.nvram = { loaded: [], saves: [] };
     if (!saved) return out;
-    this.clock_offset = saved.clock_offset ?? 0;
     for (const [name, [mirror, size]] of Object.entries(STORE_MIRRORS)) {
       const img = saved[name];
       if (!img) continue;
@@ -682,10 +677,12 @@ export class MenuLab extends T.TextDisplayLab {
     this.store_log.nvram.loaded = [...out];
     return out;
   }
-  // S-NVRAM's clock: the SCPU counter (SCPU_CLOCK) at the host's local time (seconds since 1970-01-01, 0x5012bf86), as the
-  // camera's backed-up clock would read after power-off
-  nvram_clock(nvram) {
-    const t = (nvram.now() + (this.clock_offset ?? 0)) >>> 0;
+  // S-NVRAM's clock: the SCPU counter (SCPU_CLOCK) at the sub-CPU's date (seconds since 1970-01-01, 0x5012bf86): the
+  // host's local time plus the offset the camera's last clock setting left, as the camera's backed-up clock would read
+  // after power-off (the boot's date read, which the lab does not run, would set it from the sub-CPU's date when its
+  // status is 0; S-NVRAM sets it whatever the status, so a kept camera starts without the date prompt)
+  nvram_clock() {
+    const t = this.scpu_memory.seconds() >>> 0;
     this.cpu_store(SCPU_CLOCK, t);
     this.store_log.nvram.clock = t;
   }
@@ -705,7 +702,7 @@ export class MenuLab extends T.TextDisplayLab {
     for (const off of SCPU_BACKED) scpu[off] = this.sim.u32(SCPU + off);
     nvram.saveScpu(scpu);
     this.store_log.nvram.saves.push({ store: name, from: where(r.mdr), posted });
-    if (cb) hle.finish_after(r, disasm(cb), 0); else hle.finish(r, { d0: 0 });
+    if (cb) hle.finish_after(r, disasm(cb), { d0: 0 }); else hle.finish(r, { d0: 0 });
   }
   scpu_registers() {
     const out = {};
@@ -743,32 +740,6 @@ export class MenuLab extends T.TextDisplayLab {
     }
     this.store_log.flash_save.push(h8(disasm(r.mdr)));
     hle.finish(r, { d0: r.d0 });
-  }
-  _scpu_request(lab, r) {
-    this.store_log.scpu_requests.push({ caller: where(r.mdr), request: bytesHex(this.sim.read(r.a0, 28)) });
-    if (this.env.nvram) this._s_sctime(r);
-  }
-  // S-NVRAM's clock messages: a read is answered with the camera clock (the host's local time plus the offset the
-  // camera's last clock setting left), a write keeps the new offset; both set the SCPU counter (SCPU_CLOCK) as the sub-CPU's
-  // clock would
-  _s_sctime(r) {
-    const req = this.sim.read(r.a0, 20), dv = new DataView(req.buffer, req.byteOffset, 20), cmd = req[0];
-    const nvram = this.env.nvram, clock = () => (nvram.now() + (this.clock_offset ?? 0)) >>> 0;
-    if (cmd === SCTIME_READ && dv.getUint32(12, true) === SCTIME_BYTES) {
-      const t = clock(), d = new Date(t * 1000), b = new Uint8Array(SCTIME_BYTES);
-      new DataView(b.buffer).setUint16(0, d.getUTCFullYear(), true);
-      b.set([d.getUTCMonth() + 1, d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds()], 2);
-      this.sim.write(dv.getUint32(16, true), b);
-      this.cpu_store(SCPU_CLOCK, t);
-      this.store_log.nvram.sctime = (this.store_log.nvram.sctime ?? 0) + 1;
-    } else if (cmd === SCTIME_WRITE && dv.getUint32(12, true) === SCTIME_BYTES) {
-      const b = this.sim.read(dv.getUint32(8, true), SCTIME_BYTES), y = b[0] | b[1] << 8;
-      const t = Date.UTC(y, b[2] - 1, b[3], b[4], b[5], b[6]) / 1000;
-      this.clock_offset = t - nvram.now();
-      nvram.saveClockOffset(this.clock_offset);
-      this.cpu_store(SCPU_CLOCK, t >>> 0);
-      this.store_log.nvram.clock_set = t;
-    }
   }
   // The firmware's own descriptor lookup 0x503da999 (after the DB init built the hash).
   descriptor(sid) {

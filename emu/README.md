@@ -73,6 +73,13 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   registration needs, as the GIO init that does not run would (H-GIOSLOTS). The camera application then leaves the
   date prompt but opens no HDMI output; an unplug is refused (A-HDMI-1), and so is the `fw_0501` switch, which the
   firmware now drives (`docs/hle-gaps.md` 4.9).
+- On E143 and E146 the accelerometer is stood in at its sample cache (`src/lab/acc.mjs`): the ACC module init and
+  PER_SLOPE's init run natively at the bring-up (H-ACCINIT, H-SLOPEINIT), the sensor's register file answers the
+  probe (S-ACCREG), and before each of ACC_MAIN's 80 ms copies the lab stores one sample where the sampler's
+  completion would (S-ACCSAMPLE): a level camera by default, tilted by the input `{"type": "tilt", "roll": 5,
+  "pitch": 0}` (degrees, within 45; A-ACC-1..3). ACC_MAIN, PER_SLOPE, the shooting screen's level gauge and Setup's
+  Level Adjust run natively; with the lab's blank factory data Adjust writes the user table but leaves the gauge as it
+  was (`docs/hle-gaps.md` 4.7.3).
 - module requests are answered (S-MODACK), the HLS transaction layer's exec succeeds (S-TRAACK), and the modules'
   notifications of a release (focus, exposure, rec view) are posted as the callbacks the HLS would make of them
   (S-RELSEQ); no image is captured. The focus result and the exposure time come from S-SCENE when its live view is on.
@@ -316,8 +323,8 @@ frame as RGBA, the session log) and sends every other request to the Worker. The
 - `src/`: the machine and the harness, with no node APIs, so that it runs in a Web Worker. `core/` the CPU, the
   interpreter and the one machine buffer; `dev/` the devices; `machine.mjs` the board and its gdbstub-equivalent API
   (with budgeted continues: `cont({budget})`, `resume`, `abort`); `lab/` the harness (the HLE layers, the native
-  kernel, display, text, menu, navigation, the play session, the Player, the camera application's stand-ins and the
-  scene); `fw/` the `.BIN` unpacker, the model table (`models.mjs`), the per-model address tables (`ports.mjs`, written
+  kernel, display, text, menu, navigation, the play session, the Player, the camera application's stand-ins, the
+  scene and the accelerometer's stand-in); `fw/` the `.BIN` unpacker, the model table (`models.mjs`), the per-model address tables (`ports.mjs`, written
   by `bin/port.mjs`), the cross-build map (`xmap.mjs`, `place.mjs`), the firmware rules (`facts.mjs`) and the boards
   (`board.mjs`); `debug/` the debug API; `trace/` the trace writer; `util/` sha256 for the Worker, bytes and hex text
   (`bytes`, `hex`), counts (`tally`), value text and equality for messages and checks (`show`, `equal`), the numbers
@@ -368,13 +375,13 @@ it sends nothing but GETs for its own files.
 
 | Command | What it covers | Needs |
 |---|---|---|
-| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units, the SCPU clock, port words and request server (S-SCPU), the HDMI port's device and sink | node; runs on any checkout in a few seconds |
-| `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts, the node host, the command-line tools, the scene, the camera application, an HDMI plug in play on E143, E146 and E147, the firmware map and the regression net's controls | the E143 firmware blocks (E146's and E147's for the HDMI plug) and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
+| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units, the SCPU clock, port words and request server (S-SCPU), the HDMI port's device and sink, the accelerometer stand-in's sample | node; runs on any checkout in a few seconds |
+| `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts, the node host, the command-line tools, the scene, the camera application, an HDMI plug in play on E143, E146 and E147, check_level on E146, the firmware map and the regression net's controls | the E143 firmware blocks (E146's and E147's for the HDMI plug, E146's for check_level) and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
 | `node emu/bin/golden.mjs check` | every scenario, every lab of the traced check runs and every check run's output against `golden.json`: what the panels show, what the devices see and what the checks conclude must not change | the firmware |
 | `node emu/bin/checks.mjs [CHECK \| RUN ...]` | every run of `checks/runs.json`, judged on its exit status | the firmware |
 | `node emu/bin/checktrace.mjs RUN [--slice N]` | the labs one check run creates, traced (golden records them) | as checks.mjs |
 | `node emu/bin/bench.mjs SCENARIO --passes 5` | MIPS and cost per stop; exit 1 if a pass does not repeat pass 0 | the firmware |
-| `node emu/bin/playperf.mjs` | the play workload on the Player; exit 1 unless its digest is `59e15f337f58cf57` | the firmware |
+| `node emu/bin/playperf.mjs` | the play workload on the Player; exit 1 unless its digest is `0a8f94603ae67b51` | the firmware |
 | `node emu/bin/snapgate.mjs kernel-5c osd shoot-tft` | snapshot detours leave the sessions and the end state unchanged | the firmware |
 | `OM_FW_DIR=fw node emu/bin/webgate.mjs --rounds 4` | headless Chrome: the Worker against node and `bin/run.mjs`, the page (keys, touch, canvas, session log), no uploads; about 5 min | the `.BIN`, Chrome |
 | `node emu/bin/modelcheck.mjs` | the ported models marked `checked` in `src/fw/models.mjs` (E146, E147, E144, E139, E137, E125), or those named: start, S1, S2, PLAY, INFO, PLAY on the TFT, and start, S1, S2 on the EVF of a body with one; GUI states by name | the models' firmware |

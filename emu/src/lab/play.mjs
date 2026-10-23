@@ -11,6 +11,7 @@ import { SCPU_DOORBELL, HDMI_WINDOW, HDMI_DOORBELL } from '../machine.mjs';
 import { SET_INPUTS } from '../dev/scpu.mjs';
 import { PLUG, EDID, W_EDID_LEN, W_CABLE, W_DDC_READS } from '../dev/hdmi.mjs';
 import { sinkEdid } from './edid.mjs';
+import { Accelerometer } from './acc.mjs';
 import { imageView } from '../fw/image.mjs';
 import { IIC_WAITS_E143 } from '../fw/facts.mjs';
 import * as D from './display.mjs';
@@ -72,6 +73,9 @@ export const SCPU_PORT_GROUP = 0;
 // UI_IN natively (X: 1.4 ms of lab time on E143). The port's switch 0x0501 is then the firmware's, so the fw_0501
 // input is refused
 export const HDMI_PLUG_MS = 100, HDMI_SWITCH = 0x0501;
+// a tilt input's wait (src/lab/acc.mjs): ACC_MAIN's next 80 ms cycle and PER_SLOPE's 20 ms (X: the gauge's getter
+// reads the new tilt at the end of it; the GUI's redraw of the gauge follows up to about 50 ms later)
+export const TILT_MS = 250;
 export const JS_EV = [369, 370, 371, 372, 373, 374, 375, 376, 377];
 export const OLYQEWR = A(0x5002C151), TSND_DTQ = A(0x50016578);
 // every call of tsnd_dtq, which the guard on blocked sends observes: E143's 11 (a byte scan, D); a ported model's read by
@@ -116,7 +120,7 @@ export const TOUCHMAP = new Map([[225, [1, 'TOUCH']], [226, [2, 'LONG TOUCH']], 
   [230, [5, 'DOUBLE TAP']], [229, [6, 'SLIDE']], [300, [7, 'FLICK -> 7 (unnamed)']]]);
 export const TOUCH_INDEX = 109;
 // M10B display switches: the GUI-busy note, H-EYESTATE / H-STOREFIRST addresses
-export const GUI_BUSY_NOTE = 'e.g. Level Adjust -> Adjust: 0x5004ad13 waits for 12 sensor samples, which the lab never produces';
+export const GUI_BUSY_NOTE = 'e.g. Level Adjust -> Adjust: 0x5004ad13 sleeps for about 1 s while it takes 12 sensor samples';
 export const EYE_SET = A(0x50050EFD), EYE_STATE = { evf: 2, tft: 1 }, EYE_WORD = A(0xA32C1F44), EYE_CALLBACK = A(0xA32C1F48), EYE_TIMER = A(0xA32C1F4C);
 
 // The status line while a frame rests on A15 under the bracket guard.
@@ -414,6 +418,14 @@ export class PlayLab extends N.NavLab {
     this.heap_stats = new Tally();
     this.hook(HLE.MALLOC, (h, r) => this._s_malloc(h, r), 'S-HEAP malloc');
     this.hook(HLE.FREE, (h, r) => this._s_free(h, r), 'S-HEAP free');
+    // the heap's block get and release of one pool, which code calls without malloc (Level Adjust's sampling loop,
+    // MODEL_INFO.heap_pool): from S-HEAP as well, since the pool's memory is S-HEAP's (X: natively the get hands out the
+    // pool's first block, which S-HEAP has already given out)
+    const pool = MODEL_INFO.heap_pool;
+    if (pool) {
+      this.hook(pool.get, (h, r) => this._s_malloc(h, { ...r, d0: pool.bytes }, r), 'S-HEAP pool get');
+      this.hook(pool.put, (h, r) => this._s_free(h, r), 'S-HEAP pool release');
+    }
     if (opts.bgdraw ?? true) this.hook(BGDRAW, (h, r) => this._s_bgdraw(h, r), 'S-BGDRAW');
     // a later model's drivers of peripherals the lab does not have, answered with the value of their success path
     // (MODEL_INFO.return_stubs: [function, d0, name, why])
@@ -506,7 +518,7 @@ export class PlayLab extends N.NavLab {
     }
   }
   // S-HEAP
-  _s_malloc(hle, r) {
+  _s_malloc(hle, r, regs = r) {
     const size = Math.max(16, Math.floor((r.d0 + 15) / 16) * 16);   // unbounded: malloc(-1) exhausts the heap
     const free = this.heap_free.get(size);
     let a;
@@ -520,7 +532,7 @@ export class PlayLab extends N.NavLab {
       this.heap_stats.add('new');
     }
     this.heap_sizes.set(a, size);
-    hle.finish(r, { a0: a });
+    hle.finish(regs, { a0: a });
   }
   _s_free(hle, r) {
     const a = r.a0;
@@ -760,6 +772,7 @@ export class PlaySession extends N.NavSession {
     this.capture_frame = null; this.recview_hold = false;   // S-RECVIEW: the last capture's frame, held during the rec view
     this.playview_hold = false;    // S-PLAYVIEW: a card image's frame shown
     this.camapp = null;            // S-CAMAPP (camapp.mjs), from the bring-up on
+    this.acc = null;               // the accelerometer (acc.mjs) on a body that gives it (models.mjs acc)
   }
   // Steps are renumbered with a counter that trim() does not cut.
   begin(tag) {
@@ -833,6 +846,7 @@ export class PlaySession extends N.NavSession {
     this.takeover_bring_up();
     this.ipi_bring_up();
     if (o.mutant !== 'no-aeinit') this.aeinit_bring_up();   // without it the interpolation's div fault comes back
+    if (MODEL_INFO.acc) this.acc_bring_up();
     this.end('play-bring-up', 'bring-up', [], [], { idle_codes: this.idle_codes.map(h8) });
     // S-CAMAPP: the application starts, creates the GUI (H-GUIBYAPP) and takes it to its screen, on the EVF for an EVF
     // start (S-OUTDISP: its own 131 with lOutput 7); start 'menu' then presses MENU
@@ -869,6 +883,17 @@ export class PlaySession extends N.NavSession {
     lab.call(old_state, null, null, null, 2000);
     const old = lab.sim.read(g0.old, 1)[0];
     if (old !== port) throw new PlayError(`H-UIINPORT: group ${SCPU_PORT_GROUP}'s old state (${h8(g0.old)}) is 0x${fx(old, 2)} after ${h8(old_state)}, not the port byte 0x${fx(port, 2)}`);
+  }
+  // H-ACCINIT, S-ACCREG, S-ACCSAMPLE and H-SLOPEINIT (acc.mjs): the ACC module init and PER_SLOPE's init natively in
+  // the boot's place, before the application starts, since its GUI starts PER_SLOPE for the gauge (startLevel at the
+  // application's start, X); the settle runs ACC_MAIN's probe, whose accesses are then checked
+  acc_bring_up() {
+    this.acc = new Accelerometer(this.lab, MODEL_INFO.acc, this.opts.mutant);
+    this.acc.bring_up();
+    this.settle('H-ACCINIT');
+    const why = this.acc.probe_problem();
+    if (why) throw new PlayError(`H-ACCINIT: ${why}`);
+    this.acc.prime();
   }
   // the SCPU interface's port levels (bit k port k), through the lab's doorbell (src/dev/scpu.mjs)
   port_levels(levels) { this.lab.cpu_store(SCPU_DOORBELL, (SET_INPUTS << 24 | levels) >>> 0); }
@@ -1236,6 +1261,15 @@ export class PlaySession extends N.NavSession {
     this.hdmi_plugged = true;
     return this.wait_until(lab.lab_time() + HDMI_PLUG_MS * 1000000, tag, true,
       { kind: 'hdmi', extra: () => ({ hdmi: this.hdmi_status(), uiin_codes: lab.uiin_codes.slice(c0).map(([, x]) => h8(x)) }) });
+  }
+  // The camera's tilt (acc.mjs): roll and pitch in degrees, level (0, 0) at the start. ACC_MAIN takes the new sample at
+  // its next cycle; the step waits TILT_MS of lab time and records the sample and what the gauge's getter reads then
+  tilt_input(roll, pitch) {
+    if (this.acc === null) throw new ValueError(`tilt: ${MODEL} has no accelerometer in the lab (src/fw/models.mjs acc)`);
+    this.acc.set(roll, pitch);
+    const lab = this.lab, tag = `tilt ${roll} ${pitch}`;
+    this.begin(`${String(this.steps.length).padStart(2, '0')}-${tag}`);
+    return this.wait_until(lab.lab_time() + TILT_MS * 1000000, tag, true, { kind: 'tilt', extra: () => ({ acc: this.acc.status(), gauge: this.acc.gauge() }) });
   }
   // the port as the lab sees it: the cable, the E-DDC reads the sink answered and the driver's EDID state
   hdmi_status() {

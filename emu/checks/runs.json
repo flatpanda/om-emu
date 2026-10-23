@@ -55,6 +55,12 @@
       {"id": "liveview-usage2", "args": ["--only", "G1", "--write-notes"], "rc": 2},
       {"id": "liveview-fault", "args": [], "rc": 1, "env": {"OM_FAULT": "liveview-winreg"}, "stderr_re": "^AssertionError$"}
     ]},
+    "check_level": {"runs": [
+      {"id": "level", "args": [], "rc": 0},
+      {"id": "level-mutants", "args": ["--mutants"], "rc": 0},
+      {"id": "level-l3", "args": ["--only", "L3"], "rc": 0},
+      {"id": "level-usage", "args": ["--only", "L9"], "rc": 2}
+    ]},
     "check_text": {"runs": [
       {"id": "text", "args": [], "rc": 0},
       {"id": "text-seed2", "args": ["--seed", "2"], "rc": 0},

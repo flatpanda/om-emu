@@ -202,6 +202,16 @@ Each note was checked against the cited code. Paths are relative to the reposito
 
 **Confidence:** medium
 
+### 4.6 Accelerometer: stood in at its sample cache; its consumers run natively (E143, E146)
+
+**Where:** `emu/src/lab/acc.mjs`, `emu/src/lab/play.mjs` (`acc_bring_up`, `tilt_input`), `emu/src/fw/models.mjs` (`acc`)
+
+**Emulator:** At the play bring-up the ACC module init runs natively with its device part stepped over, and so does PER_SLOPE's init; ACC_MAIN (the probe, then every 80 ms the cache copy and the correction) and PER_SLOPE (every 20 ms while the GUI has started it) run as firmware tasks. The sensor's register API answers the probe from a register file: WHO_AM_I 0x6A and the two set-up writes; any other register access stops the session. The sensor itself, its data-ready pin, the sampler task ACC_SENS_MAIN and its PER_SIO transfer are not modelled: before each of ACC_MAIN's copies the lab stores one new sample where the read's completion would (the three accelerometer halfwords, the temperature word, the counter + 1). The sample is the firmware's pose-0 reference (0, -16384, 0) for a level camera, turned by the play input tilt (roll, pitch in degrees, within 45); the temperature reads 25.0 degC. The bring-up also runs one copy and correction from the lab task, as the samples a camera has had since its boot. The heap's pool-2 block get and release that Level Adjust calls are served by S-HEAP (7.1).
+
+**Expected / concern:** The real sensor samples on its own clock (12.5 Hz by the probe's CTRL1_XL value, I) and reports noise, a temperature and the camera's actual attitude; here every sample is noise-free, exactly one arrives per ACC_MAIN cycle (A-ACC-2) and the temperature is fixed (A-ACC-1). Which physical direction a positive roll or pitch is has no camera evidence (A-ACC-3): the input is defined by what the gauge's getter reads back. PER_ROTATE does not run, so the camera's orientation stays 0 (landscape) and larger tilts are refused; PER_ACC_PWRMGR_MAIN, the gyroscope and the data-ready pin's interrupt are absent (the probe's enable of the pin writes two GIO words the lab stub keeps). The lab's factory calibration data are the image templates, whose gate keeps the correction off: Level Adjust's Adjust completes and writes the user table, but the gauge does not change, where a calibrated camera would zero it. Not modelled on E147 (different accelerometer code) or the other bodies.
+
+**Confidence:** high for the consumers' code paths (native); medium for the sample (its form and scale are the firmware's, its timing and content the lab's)
+
 ## 5. Display (VSC) and OSD engine
 
 ### 5.1 VSC register validity comes from the firmware image under test
@@ -272,7 +282,7 @@ Each note was checked against the cited code. Paths are relative to the reposito
 
 **Where:** `emu/src/lab/hle.mjs:178-203`, `emu/src/lab/play.mjs:353-384`
 
-**Emulator:** The base HLE replaces malloc with a bump allocator that rounds to 16 bytes and never reuses memory, and free does nothing. Play mode (S-HEAP) uses exact-size free lists in 16-byte size classes, with a 16-byte minimum. It keeps blocks freed from before play mode and detects double frees.
+**Emulator:** The base HLE replaces malloc with a bump allocator that rounds to 16 bytes and never reuses memory, and free does nothing. Play mode (S-HEAP) uses exact-size free lists in 16-byte size classes, with a 16-byte minimum. It keeps blocks freed from before play mode and detects double frees. On E143 and E146 S-HEAP also serves the heap's pool-2 block get and release (16512 bytes; `models.mjs` heap_pool), which Level Adjust's sampling loop calls instead of malloc and free: the pool's memory is S-HEAP's, and the native get handed out a block S-HEAP had already given out.
 
 **Expected / concern:** The firmware heap has its own placement, headers, fragmentation and failure behaviour. Addresses, and any bug that depends on heap layout or reuse (use after free, overruns into neighbouring blocks), differ from hardware.
 

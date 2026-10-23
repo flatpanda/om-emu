@@ -139,7 +139,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **Movie and audio** (4.5) | S: S-RELSEQ's movie callbacks, S-CARD's movie time, S-CPU2's zero level snapshot, S-MODACK for AUD_EXEC | S3 TAKE_FUNC commands 30 / 31 / 68 / 69, S4 the mvr IF (CPU 2), S5 AUD_LEVEL_MONITOR, S6 a host AVM writing a MOV through the firmware's DFS calls, S7 AUD_EXEC | TAKE (commands 30 / 31 / 68 / 69 wait on CPU 2's MOV_COMMAND, SDET_EXEC and WB_MOV, 4.1.1), CPU 2 (MVR, audio level), sensor, storage, EXP_MOVIE / FCS_MOVIE | 134,137 / 124,319 | 10-15 weeks (stages A-C) | a playable .MOV on the card, the firmware's recording sequence, audio meters, beeps |
 | **AV codec back end** (4.5) | 0 | none for HLE: seam S6 bypasses it | CPU 1; the codec engines; IRQs 303-306 | 416,471 / 411,438 (overlay segment 8, CPU 1) | ?: native needs register-level codec models, no documentation | native movie encode and playback below the HLS (I) |
 | **CPUs 1-3 and inter-core** (4.6) | S: K-OTHERCPU, K-BOOTSYNC, K-IPI, no start barrier; S-CPU2 (one post), S-CPU3, S-DISPFRAME on CPU 0; any other doorbell is an error | run CPUs 1-3 natively on one bus; per-core `0x8000` page, INTC bank n to core n, `+0x808/+0x80c` IRQ 324, `+0x810/+0x814` IRQ 325, `+0x800/+0x804` ISC IRQ 323, ticks 139..141. A53: "off" or ISC node 4 | a machine refactor (per-core CPU state), a per-core kernel lab, flash reads for CPU 2's loader and CPU 3's boot jobs, ROADMAP phases 3-4 | 5,422 keyed; 441,542 reachable only from CPU 1-3 tasks (a lower bound) | 5-7 weeks for the cores | the histogram, a native DISP_FRAME, cross-core owners (AUD_MAIN, AVM) can start; three stand-ins and four kernel stand-ins retire |
-| **SCPU, power, clock, on-board sensors, persistence** (4.7) | S: S-SCPU, the request server at the request API (since 2026-10-23: `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1); the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / opt-in S-NVRAM; Level Adjust hangs | accelerometer at the PER_SIO transfer or the sample cache; S-NVRAM's NAND seam as the default | lab time; the UI_IN, ACC, SCPU and PER_SIO inits; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, Level Adjust, level gauge, rotation, eye sensor |
+| **SCPU, power, clock, on-board sensors, persistence** (4.7) | S: S-SCPU, the request server at the request API (since 2026-10-23: `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1); the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / opt-in S-NVRAM; N: the ACC module init, ACC_MAIN, PER_SLOPE, the level gauge and Level Adjust with the accelerometer at its sample cache (since 2026-10-23, 4.7.3; H-ACCINIT, S-ACCREG, S-ACCSAMPLE, H-SLOPEINIT) | the accelerometer at the PER_SIO transfer and its data-ready pin (ACC_SENS_MAIN native); PER_ROTATE; S-NVRAM's NAND seam as the default | lab time; the UI_IN, SCPU and PER_SIO inits, the GIO init for the data-ready pin; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, rotation, eye sensor (Level Adjust and the level gauge in, 4.7.3) |
 | **Card and file system** (4.8) | S: S-CARD; the DCF remain count runs and says "not mounted" (X) | a block device at the sdmem request `0x508b1cdc` with a host FAT32 / exFAT image; sd_mount's result beside it | task starts (EYEFI's init chain, FILECLBK, FILEFGND, DCFPROC_SUB), IRQs anywhere (completions are IRQ to flag) | 115,103 / 108,887 (17k of it self-test and debug) | 3-5 weeks | a card that fills, real files in DCIM, Card Formatting, both slots |
 | **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
 | **HDMI and DisplayPort** (4.9) | N with `--hdmi on` (since 2026-10-23, E143, E146, E147): a plug runs the hot-plug pin's IRQ 109, the HDMI init, two E-DDC reads with IRQ 239, the EDID's checks and parse and the connect report to UI_IN natively (H-GIOSLOTS, S-HDMISINK); off by default, and either way the DISPLAY OPEN of HDMI is not reached (X) | TX byte registers at `0x99c07000` (HPD / RxSense byte 8, DDC `0xa80..0xa83`, the buffer `0xc00`, IRQ 239) and the GIO pin 77 (`0x9b881540`, IRQ 109), both modelled; then the HDMI open and VSC channel 0 | the camera application's output switch (?), VSC channel 0 in the compositor, an unplug (A-HDMI-1) | about 11k (3.3k plus the TX / DP driver's 7.7k) | 2-3 weeks left (the open and channel 0) | the HDMI output a TV shows |
@@ -599,11 +599,12 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
 - **Inputs from the SCPU (D):** UI_IN's port init `0x5014e3ab` (called by its module init) registers `0x5014e534` as an
   IRQ 320 callback; it reads the port byte (`0x5004df3f`) and pushes it as group 0's image: the power lever, the Fn
   lever and S1 are sampled by the SCPU. Native in the lab since 2026-10-23 (4.7.2).
-- **Accelerometer (D):** ACC_SENS_MAIN reads register 0x0f of device channel 6 and wants 0x6a (I: the WHO_AM_I of ST's
-  LSM6DSL / LSM6DSM family); the bus is SPI over PER_SIO (`[PER_ACC_SPI] per_sio_open_error`, ACC_SPI). Samples land in
-  the cache `0x62963f60..0x62963f6c` and bump the counter `0x6034d9d4`. Level Adjust's loop `0x5004ad13..0x5004add7`
-  waits for 12 counter changes through the pointer `(0x62963f58)`, which the unrun module init `0x50048cad..cf` sets;
-  in the lab it reads low RAM 0 and never ends.
+- **Accelerometer (D):** ACC_MAIN's probe reads register 0x0f of device channel 6 and wants 0x6a (I: the WHO_AM_I of
+  ST's LSM6DSL / LSM6DSM family); the bus is SPI over PER_SIO (`[PER_ACC_SPI] per_sio_open_error`, ACC_SPI). Samples
+  land in the cache `0x62963f60..0x62963f6c` and bump the counter `0x6034d9d4`. Level Adjust's loop
+  `0x5004ad13..0x5004add7` waits for 12 counter changes through the pointer `(0x62963f58)`, which the module init
+  `0x50048cad..cf` sets. Since 2026-10-23 the init, ACC_MAIN and PER_SLOPE run natively with the sensor stood in at
+  the sample cache, and the level gauge and Level Adjust run (4.7.3).
 - **The accelerometer's path (D unless tagged, read 2026-10-23 for step 3):** the module init `0x50048cad` clears
   `0x62963fb8`, runs `0x500493ac`, stores the counter's address `0x6034d9d4` into `(0x62963f58)` and the cache copy
   `0x50049201` (run time `0x6006a221`) into `(0x62963f5c)`, runs `0x5004aa9f` and `0x50048cec` and starts a task through
@@ -623,10 +624,8 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   layer `0x5005384b` / `0x500538bf`, and wait on flag `(0x60043086)` (`0x5004cbf6`). I: that framing is an I2C register
   access to the 7-bit address 0x6b, the LSM6DSL's address with SA0 high, although the firmware's names say SPI. The
   probe `0x50048fd1` reads register 0x0f once and wants 0x6a, then writes 0x10 to register 0x10 and 1 to register
-  0x0d (I, by ST's map: WHO_AM_I, CTRL1_XL 12.5 Hz, INT1_CTRL data-ready). Not read: how Level Adjust and the level
-  gauge turn the cache into a level (which axis is the body's vertical, the scale), so a "level" answer would be a
-  guess today. A device at this seam needs the three ACC tasks started, their completions delivered in interrupt
-  context, and that decode; none of it is built.
+  0x0d (I, by ST's map: WHO_AM_I, CTRL1_XL 12.5 Hz, INT1_CTRL data-ready). How the gauge and Level Adjust use the
+  cache (the axes, the scale, the calibration) is read in 4.7.3, with what is built.
 - **Flash (D):** NAND controller `0x98d01100..0x98d011c0`, `0x98d01800/04`, completion IRQ 237, 2048-byte pages;
   store mirrors M `0xa36fd280` and E `0xa377d280` saved by `0x5003f5dd`. The settings init chain `0x503dae30` (17 module
   inits) is called once from the boot chain at `0x501e9060`; the lab runs none of them.
@@ -639,13 +638,15 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   default: 4-6 days (done 2026-10-23 at the request API, 4.7.1; S-NVRAM stays opt-in, `docs/ROADMAP.md`). 2, the event /
   port registers with IRQ 320 and UI_IN's registration: group-0 keys and the power lever natively, 3-5 days (done
   2026-10-23 for the keys and the lever's code, 4.7.2; the power-off sequence waits for the power manager). 3, the
-  accelerometer at the PER_SIO seam or the sample cache: Level Adjust, level gauge, rotation, 1-1.5 weeks. 4, the eye
+  accelerometer at the PER_SIO seam or the sample cache: Level Adjust, level gauge, rotation, 1-1.5 weeks (done
+  2026-10-23 at the sample cache for Level Adjust and the gauge, 4.7.3; rotation open). 4, the eye
   sensor (I2C plus GPIO interrupt) driving the native chain to `0x50050efd`: 1 week. 5, the power manager: 2+ weeks,
   gated by hardware numbers. 6, a NAND register model and store F: 1-2 weeks, only for a full boot.
 - **First step: done** (2026-10-23). The PER_SCPU dispatch is read (4.7.1) and S-SCPU-MSG is replaced by S-SCPU, the
   request server of 4.7.1's last bullet: the four D commands answered (rx written, `+20` called), every other command
   refused by its name, and `+0xe8 / +0xec` ticking with lab time. Step 2 followed the same day (4.7.2): the event and
-  port words with IRQ 320, UI_IN's group 0 natively. Next is step 3, the accelerometer.
+  port words with IRQ 320, UI_IN's group 0 natively, and step 3 at the sample cache (4.7.3): ACC_MAIN and PER_SLOPE
+  natively, the level gauge following a tilt input and Level Adjust completing. Next is step 4, the eye sensor.
 
 #### 4.7.1 The PER_SCPU request server (D unless tagged)
 
@@ -825,6 +826,124 @@ The flag and semaphore names are the object-name table's (D); the commands' mean
   registrations, callbacks, port readers and old-state inits match E143's instruction for instruction but for their
   addresses and E147's errlog line number, D; E147 keeps the count at `0xa32bff60`); the E144 family's event and port words sit in its compacted map's storage and are not modelled, so
   its bodies push group 0 with S-KEYBITS as before.
+
+#### 4.7.3 The accelerometer's consumers: the level gauge and Level Adjust (D unless tagged)
+
+Read 2026-10-23 for step 3 from the module's own debug strings (`per_acc.c`), the gauge's API and HFW operation
+(`OlyApiLevelCtrl`, `OlyHfwOpeLevel.cpp`) and the code between them; the double-precision helpers were identified by
+running them on the lab CPU (X: `0x5002ac35` divides, `0x5002aeb3` multiplies, `0x5002a98f` adds, `0x5002a983`
+subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a912` truncate to an integer,
+`0x5002b1d5` / `0x5002b1df` convert one).
+
+- **Two caches.** The cache copy `0x50049201` (ACC_MAIN, every 80 ms) puts the newest sample into the raw cache
+  `0x62963f60..64` (accelerometer x, y, z in the sensor's axes, LSB) and `0x62963f6c` (temperature). The correction
+  `0x500493dc` writes the corrected cache `0x62963f66..6a` (the debug print `0x50048b37`: "x raw ... temp_delta ...
+  offset_delta ... correct"). Readers go through two accessors that also return the counter: `0x50049771` (raw: Level
+  Adjust) and `0x50049795` (corrected: PER_SLOPE, PER_ROTATE `0x5005a17e`, the other ACC users). The copy compares the
+  counter with `(0x6034d9e4)`, which nothing writes (no store to it in the image), so it copies whenever one sample has
+  arrived and counts misses only before the first; after five misses it returns `0x8001` and ACC_MAIN logs errlog
+  `0x46000202`.
+- **The correction and its gate.** `0x5004b4a1` opens the gate only when data object `0x4e8a[0]` != 1000 and
+  `0x4efa[29]` == 5031; closed, the corrected cache is the raw one. Open, per axis: corrected = raw + temp_delta +
+  (ref[pose] - (offset[pose] - offset_temp_delta)), with temp_delta = (offset[pose].temp - temp) x a / 100000 when the
+  axis's temperature calibration type is 0 (types and coefficients: `0x4efa` / `0x4f0a` / `0x4f1a` elements 24..26,
+  loaded by `0x5004b431` into `0x6296405c`), ref the pose references below, offset the user pose table `0x62963f70`
+  (`0x500494e7`: data objects `0x4eba` / `0x4eca` / `0x4eda` / `0x4eea`, x / y / z / temperature, index = pose) and
+  pose `0x5005a175()`, PER_ROTATE's orientation `(0xa32c64f8)`. Temperature: `0x500497b9` = (raw / 256 + 25) x 10, in
+  0.1 degC (256 LSB/degC is LSM6DSL's by ST's map, I).
+- **Pose references.** `0x50048d14` (from the init) writes six vectors of three halfwords at `0x6034d9b0` from the
+  axis order and polarity 1, -2, 3 (its abs() tests on constants; error string "ACC_ROTATE_AXIS_ORDER_POLARITY"): pose
+  0 (0, -16384, 0), 1 (16384, 0, 0), 2 (0, 16384, 0), 3 (-16384, 0, 0), 4 (0, 0, 16384), 5 (0, 0, -16384). The same
+  six are the factory pose table's image templates (data objects `0x4e7a` / `0x4e8a` / `0x4e9a`, x / y / z, store F;
+  `0x4eaa`, temperature, 250 each). Pose 0 is "ACC_MODE_ORIENTATION_ROTATE_0" in Level Adjust (below): the level camera
+  reads sensor y = -1 g, 16384 LSB being the firmware's 1 g.
+- **Scale and axes.** `0x500497df` converts LSB to mg with the double 0.061 (`0x3faf3b645a1cac08`; ST's 0.061 mg/LSB
+  at +-2 g, I). The remap `0x5005ff7d` gives body[i] = sign(t[i]) x sensor[|t[i]| - 1] with t = `(0x6034e170)` = 1,
+  -2, 3 (image data): body x = sensor x, body y = -sensor y, body z = sensor z.
+- **PER_SLOPE** (task 78, entry `0x5005fb9c`; its init `0x5005fb31` creates flag "PER_SLOPE", sets the state
+  `(0x62965141)` = 1 and the offset `(0x62965162)` = property `0x8bca[0]` / 10, starts the task, names it
+  "PER_SLOPE_TSK"). Idle (`(0x62965144)` != 1) it sets the state to 2 and waits on its flag; the GUI's startLevel
+  (`0x504250e9` -> `0x5005f92d`: mode 0, active, flag set; `0x5005f94f` is mode 1) starts it and endLevel (`0x5042511c`
+  -> `0x5005f970`) stops it; startLevel runs when the application starts (X). Active, every 20 ms: the corrected sample
+  and the counter; when the counter moved, the orientation `0x5005a175()` (a change re-inits through `0x50048ea9`), the
+  remap, mg, a stability test `0x5005fd06` (a two-sample ring of the mg of the axis the horizon is read from, x in
+  orientations 0, 2, 4, 5 and y in 1 and 3; max - min > `(0x62965164)` = 50 is "unstable HI", > 25 "unstable LO") into
+  the state, and per axis the angle `0x5005fe5d(mg)` into the doubles `0x62965148` (x), `0x62965150` (y), `0x62965158`
+  (z); then, in mode 0, event `0x4125000` through the publish `0x50025088`. 500 passes (10 s) without a new sample set
+  the state to 2. `0x5005fe5d` is asin in degrees by table: |mg| clamped to 1000; below 256 mg the index is 4 x |mg|,
+  above it 1024 + (|mg| - 256) / 1.5, capped at 1535; the u16 table `0x6011bedc` holds 0.01 degree (index 4: 5, 1 mg ->
+  0.05; index 1186: 2993, 499 mg -> 29.93; 1520: 9000), signed by the input, / 100 (X on the lab CPU: 999.4 mg ->
+  86.86).
+- **The gauge's getter** `0x5005f982(record)`: +10 the orientation; the horizon +2 = (short)(10 x roll) with roll =
+  -angle_x in orientations 0, 2, 4, 5, angle_y in 1, -angle_y in 3, and, if Level Adjust has not adjusted
+  (`0x5004a4c2(5)` returns `(0x62964080)` = 0) and the orientation is 0..3, minus `(0x62965162)`. The vertical +6 =
+  (short)(10 x pitch) with pitch = -angle_z / 3 in orientations 0..3 (`0x5005fa2c..54`: divided by 3.0, times -1.0; why
+  a third is not read), angle_y in 4 and 5. +4 and +8, the validities, are 1 unless the state is 2; a caller's +11 = 11
+  clears them. `0x50425c2e` (through `0x5042514f`) copies it out for `OlyHfwOpeLevel::getSlope` `0x50b639d2` (called
+  from OlyApiLevelCtrl's getSlope `0x50b461b8`), which ("roll[0] ... pitch[1] ... slope_state") returns the horizon
+  (negated when `0x50ab651a(1, 0)` is 1, `0x50ab4057()` and property 678 is 1: a mirrored view, I), the vertical, the
+  body (the orientation 0..5) and the reliability (both validities 1). The GUI reads it on each redraw of the shooting
+  screen's level gauge (X: two getSlope calls per redraw, each through `0x5042514f` and `0x50425c2e`); the gauge draws
+  its arc and bar green when level, lights the arc's segments by degree and puts an orange end mark past its range (X,
+  pixels).
+- **Level Adjust** (Setup page 6 row 3, panel 387, "Adjusts the 0 level to the current position", Reset / Adjust).
+  `OlyHfwOpeLevel::calibration` `0x50b638c6` and `::reset` `0x50b63bac` call `0x503dbd59(1 or 2, rotate)` (api_adj.c),
+  which calls per_slope_adj `0x5005fa9e`: Adjust -> `0x5004a4c2(1, 0x5005a175())`, Reset -> `0x5004a4c2(2, 11)`; a
+  result of 0, 4 or 161 is success. In `0x5004a4c2`: op 0 "PER_ACC_ADJ_FACTORY_RESET" (the factory table), op 1
+  "PER_ACC_ADJ_USER_RESET" (Adjust), op 2 "PER_ACC_ADJ_USER_CLEAR" (Reset: the user table = the factory table,
+  `(0x62964080)` = 0), ops 3 and 4 the temperature calibration, op 5 returns `(0x62964080)`, op 6 the last statistics.
+  Op 1 samples with `0x5004ad13`: a pool-2 heap block (`0x5000314c`), then until the raw counter has changed 12 times,
+  every 20 ms (dly_tsk), one raw sample and the temperature; then per axis the sum, min, max and the standard deviation
+  x 100 (`0x5004b30a`, `0x5004b379`) into `0x6296408a..b8`, the means to the caller, the block released
+  (`0x50003156`). With pose 0 it writes all six user poses as factory[k] + (mean - factory[0]) (x, y, z and
+  temperature, through the setter `0x5004188b` into store E); with a pose k > 0 only pose k = the mean; then it
+  reloads the temperature parameters and sets `(0x62964080)` = 1. It does not check the mean against a tolerance (no
+  such test in op 1). At boot `0x5004aa9f` sets `(0x62964080)` = 1 when any user pose differs from its factory pose in
+  the two axes across gravity or in temperature. So a camera with factory data (the gate's `0x4efa[29]` = 5031) zeroes
+  its gauge at the adjusted position; with the lab's blank factory data (the image templates, `0x4efa[29]` = 8192)
+  the gate stays closed and Adjust changes the store and `(0x62964080)` only, not the gauge (D, X).
+- **Built (2026-10-23, `emu/src/lab/acc.mjs`, `emu/src/lab/play.mjs`, `src/fw/models.mjs` acc and heap_pool), seam
+  (b), the sample cache.** Seam (a) was not taken: the sampler ACC_SENS_MAIN is started per sample by the data-ready
+  pin's callback (`0x500490a9`, registered by the device part `0x500493ac` through the pin layer `0x50051a29(129)`, a
+  GIO pin whose init does not run) and reads through PER_SIO's transfer layer (`0x5005384b` / `0x500538bf`), which has
+  no model; its completion sets a flag in interrupt context. H-ACCINIT runs the module init natively at the play
+  bring-up, before the application starts, with the call of the device part stepped over (the init's other work, the
+  references and the user, factory and temperature tables from the store, runs as on the camera), checks the two
+  pointers it stores and lets ACC_MAIN (task 121) start. S-ACCREG answers the register API `0x5004c971` /
+  `0x5004cb57` / `0x5004cb6d` / `0x5004cb4c` from a register file: WHO_AM_I `0x6a` (the value the probe wants, D) and
+  the two set-up writes kept; any other access stops the session. ACC_MAIN then runs natively: the probe (X: open (6,
+  107), read 0x0f -> 0x6a, write 0x10 = 0x10, write 0x0d = 1, close; `(0x62963fb8)` = 1; its last call
+  `0x50051a7d(129)` enables the pin's GIO interrupt with five accesses to the words `0x9b883080` / `0x9b8831c0`, which
+  the lab stub keeps), then its 80 ms cycle. S-ACCSAMPLE stands for the sensor, its pin, ACC_SENS_MAIN and the
+  transfer: before each of ACC_MAIN's cache copies it stores one new sample as the completion `0x5004910a` does (the
+  halfwords `0x62963fd6..da` and `0x62963fde`, the counter + 1, D), so the copy and the correction run natively
+  (A-ACC-2: one sample per 80 ms cycle; the probe's CTRL1_XL 0x10 is 12.5 Hz by ST's map, I). H-ACCINIT then runs one
+  cycle's copy and correction from the lab task, the samples a camera has before its GUI starts (without them
+  PER_SLOPE's state is still 2 at the GUI's first gauge read and the gauge is drawn invalid, X). H-SLOPEINIT runs
+  PER_SLOPE's init natively (task 78); the application's startLevel then runs it natively. The sample is the pose-0
+  reference (0, -16384, 0) for the level camera, turned by the play input `{type: "tilt", roll, pitch}` (degrees):
+  the body reading 16384 (-sin roll cos pitch, cos roll cos pitch, -sin pitch), mapped back through the axis table;
+  temperature raw 0, 25.0 degC (A-ACC-1). Roll is what the getter reads back as the horizon, pitch three times its
+  vertical; which way is positive physically has no camera evidence (A-ACC-3). Tilts stay within 45 degrees with y
+  dominant (A-ACC-2): PER_ROTATE does not run, so the orientation `(0xa32c64f8)` stays 0. S-HEAP also serves pool 2's
+  block get and release (`heap_pool`): natively the get handed out the pool's first block `0x62424700`, which S-HEAP
+  had already given out, and Level Adjust's statistics overwrote it (X: the session stopped in task 164 at
+  `0x50ab2930`). A tilt step waits 250 ms (TILT_MS) and records the sample and the getter's reading (run natively).
+- **Checked** (`emu/checks/check_level.mjs`, E143 in `checks/runs.json`, E146 in `bin/test.mjs`): L1 the probe's
+  accesses, its success halfword and ACC_MAIN's wait; L2 12 or 13 counter moves in 1 s, the raw cache = the level
+  sample, the corrected cache = the raw one; L3 the getter within 0.2 degree for five tilts and the gauge's pixels
+  (the arc and the bar green when level, the arc not green rolled 5 degrees, the bar not green pitched 9); L4 Adjust
+  at roll 2, pitch -3: the GUI back at its message receive on the shooting screen within 2 s and the store's user pose
+  0 = that sample with 250. Negative controls (`--mutants`): acc-still (no sample) fails L2 and L4, tilt-ignored fails
+  L3 and L4. Bodies: E143 and E146 (the init, ACC_MAIN, the probe, the completion, the copy, the correction, the
+  register API and PER_SLOPE compare instruction for instruction with E143's but for addresses, D; E146's getter calls
+  the adjust machine with a larger frame, and that machine has a seventh op). E147's ACC code differs (D: its probe
+  wants WHO_AM_I 0x70 and its ACC_MAIN copies every 30 ms only while an enable halfword is 1), so it keeps the
+  accelerometer off; the E144 and E118 families are not read.
+- **Not modelled:** PER_ROTATE (`0x5005a17e`: the camera's orientation from the corrected sample, the hysteresis
+  tables `0x6011a080` / `0x6011a1e8`, event `0x4020310`), PER_ACC_PWRMGR_MAIN, the gyroscope words, the data-ready pin
+  and ACC_SENS_MAIN, factory calibration data (store F) and the temperature compensation (calibration type 255 on the
+  templates).
 
 ### 4.8 Card, file system and playback
 
@@ -1133,7 +1252,7 @@ The order follows what each step unblocks: the keystones first, because each lat
 2. **Cheap CPU 0 wins with no keystone dependency:** the SCPU request server with a ticking clock and S-NVRAM as the
    default (4-6 days); the SCPU port registers and IRQ 320 for group-0 keys and the power lever (3-5 days; both in
    since 2026-10-23, 4.7.1 and 4.7.2, S-NVRAM opt-in and the power-off sequence open); the
-   accelerometer (Level Adjust); HDMI EDID / HPD (in since 2026-10-23 behind `--hdmi on`, 4.9: its interrupts are
+   accelerometer (Level Adjust and the level gauge, in since 2026-10-23 at the sample cache, 4.7.3); HDMI EDID / HPD (in since 2026-10-23 behind `--hdmi on`, 4.9: its interrupts are
    taken at the idle point, so it was no test case for step 3 after all). They retire named stand-ins and fix visible
    defects: the frozen clock, lost settings, a GUI hang, the abandoned HDMI open.
 3. **Interrupt acceptance anywhere, then the machine-owned time model** (ROADMAP architecture phases 3 and 4). Every

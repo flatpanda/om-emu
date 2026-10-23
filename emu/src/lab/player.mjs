@@ -363,6 +363,7 @@ export class Player {
     if (this.session?.lab?.scpu_server) used.push('S-SCPU');                                // a body whose SCPU keeps its date and backed-up words
     if (this.session?.scpu_port) used.push('H-SCPUIRQ', 'H-UIINPORT', 'H-SCPUPORT');        // a body whose group 0 comes through the SCPU's ports
     if (this.session?.hdmi_port) used.push('H-GIOSLOTS', 'S-HDMISINK', 'A-HDMI-1');          // --hdmi on: the HDMI port, its sink
+    if (this.session?.acc) used.push('H-ACCINIT', 'S-ACCREG', 'S-ACCSAMPLE', 'H-SLOPEINIT', 'A-ACC-1', 'A-ACC-2', 'A-ACC-3');   // a body whose accelerometer is stood in at its sample cache
     // the model's own stand-ins (src/fw/models.mjs return_stubs and call_skips, src/lab/play.mjs), each by its name
     for (const [, , name] of MODEL_INFO.return_stubs ?? []) used.push(name);
     for (const [, name] of MODEL_INFO.call_skips ?? []) used.push(name);
@@ -835,6 +836,15 @@ export class Player {
       return s.touch(act, x, y);
     }
     if (t === 'hdmi') return s.hdmi_input(get(inp, 'action'));
+    if (t === 'tilt') {                                              // degrees, fractions kept; a field left out is 0
+      const deg = (k) => {
+        if (!has(inp, k)) return 0;
+        const v = get(inp, k);
+        if (!isNum(v)) throw new ValueError(`tilt ${k}: ${brief(v)} is not a number`);
+        return v + 0;
+      };
+      return s.tilt_input(deg('roll'), deg('pitch'));
+    }
     if (t === 'request') throw new ValueError('request: the camera application sends the GUI its own requests');
     if (t === 'token') {
       if (!this.a.debug_api) throw new ValueError('tokens need --debug-api');

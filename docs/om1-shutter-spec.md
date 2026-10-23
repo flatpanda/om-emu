@@ -225,8 +225,9 @@ tables every access is DENIED and raises a bus error (fault 2). That is the proj
    (flags LENS_*); capture -> ISEQ waits on ISP/ASIC completion flags; record -> CPU 2 tasks and
    the card.
 5. `OlyHfwOpeShoot::ctrlRelease` busy-waits on `0x50ab5716(3)` status bits (2.3).
-6. Level Adjust already shows the pattern: the GUI task sleeps in `0x5004ad13`'s dly_tsk loop for
-   12 sensor samples that never come (ROADMAP "Open follow-ups by milestone", Level Adjust).
+6. Level Adjust showed the pattern: the GUI task slept in `0x5004ad13`'s dly_tsk loop for
+   12 sensor samples that never came, until the accelerometer's stand-in delivered them (2026-10-23, hle-gaps.md
+   4.7.3).
 
 ---------------------------------------------------------------------------------------------------
 

@@ -49,6 +49,24 @@ const G4SET_UNCHECKED = false;
 // slots the GIO init ends with (the init does not run in the lab; without the reset the display init's registration
 // of the hot-plug pin finds no free slot and does nothing); state [address, bytes], the driver's EDID state, which its
 // getter reads (0xf0 the EDID read and parsed, 0xff failed, 0 not read). A body without it has no HDMI port
+//
+// `acc`: the accelerometer, stood in at its sample cache (src/lab/acc.mjs H-ACCINIT, S-ACCREG, S-ACCSAMPLE,
+// H-SLOPEINIT; docs/hle-gaps.md 4.7.3), in the model's disassembly notation (data at run-time addresses): init, the ACC
+// module init, run natively with its device part, the call at device (the data-ready pin's set-up and the register
+// API's kernel objects), stepped over; ptrs [counter slot, copy slot], the two pointers the init stores (the sample
+// counter's address and the cache copy's run-time address); main, ACC_MAIN's entry (task 121, which the init starts);
+// probed, the halfword ACC_MAIN sets to 1 after a successful probe; reg {open, read, write, close}, the sensor's
+// register API, and dev [channel, device], what the probe opens; who_am_i [register, value], the probe's read and the
+// value it wants; setup, the probe's register writes [register, value]; copy and correct, the cache copy and the
+// correction ACC_MAIN calls each cycle; words [accelerometer x/y/z, temperature], the halfwords the sample read's
+// completion packs, and counter, the sample counter it increments; refs, the six pose references the init computes
+// (pose 0 is the level camera); axes, the axis order and polarity the remap reads; slope {init, main, get}, PER_SLOPE's
+// init, its task entry (task 78) and the gauge's getter. A body without it keeps the accelerometer and PER_SLOPE off
+// (the gauge reads the BSS)
+//
+// `heap_pool`: the firmware heap's block get and release of its pool 2 (get, put, the pool's block bytes), which Level
+// Adjust's sampling loop calls instead of malloc and free; S-HEAP (src/lab/play.mjs), whose memory is that pool's,
+// serves them too. A body without it runs them natively
 export const MODELS = {
   E143: {
     name: 'OM-1', bin: 'OLY_E_143_1900_0000_0000.BIN', version: '1.9', res_block: 'blk02000000.OE.0101.bin',
@@ -65,6 +83,24 @@ export const MODELS = {
     // the GIO init 0x50002a20 ends with 0x50002b5d (0x50002a2d), which marks the 325 slots at 0xa32c1f74 free (255);
     // the EDID state byte 0x62a3c8ec, read by 0x501d30f6 (D)
     hdmi: { gio_slots: 0x50002B5D, state: [0x62A3C8EC, 1] },
+    // the module init 0x50048cad calls the device part 0x500493ac at 0x50048cb4, stores 0x6034d9d4 and the run-time
+    // 0x6006a221 (= 0x50049201) at 0x50048cbf / 0x50048ccb, starts ACC_MAIN through OlyTaSt (0x50048ce2); the probe
+    // 0x50048fd1 opens (6, 107), reads register 0x0f, wants 0x6a and writes 0x10 = 0x10, 0x0d = 1, and 0x50048ead then
+    // sets 0x62963fb8 to 1; the completion 0x5004910a packs
+    // 0x62963fd6..da and 0x62963fde and increments 0x6034d9d4; 0x50048d14 writes the references at 0x6034d9b0; the remap
+    // 0x5005ff7d reads 0x6034e170; PER_SLOPE's init 0x5005fb31 starts task 78 (0x5005fb9c); the gauge's getter
+    // 0x5005f982; ACC_MAIN's cycle calls the copy through 0x62963f5c and then the correction 0x500493dc (D)
+    acc: {
+      init: 0x50048CAD, device: 0x50048CB4, ptrs: [0x62963F58, 0x62963F5C], main: 0x50048EC2, probed: 0x62963FB8,
+      reg: { open: 0x5004C971, read: 0x5004CB57, write: 0x5004CB6D, close: 0x5004CB4C },
+      dev: [6, 107], who_am_i: [0x0F, 0x6A], setup: [[0x10, 0x10], [0x0D, 0x01]],
+      copy: 0x50049201, correct: 0x500493DC, words: [0x62963FD6, 0x62963FDE], counter: 0x6034D9D4,
+      refs: 0x6034D9B0, axes: 0x6034E170,
+      slope: { init: 0x5005FB31, main: 0x5005FB9C, get: 0x5005F982 },
+    },
+    // 0x5000314c / 0x50003156 run the heap's get 0x5000319c / release 0x50003466 with pool 2, whose block size is 16512
+    // (the table 0x60029908) and whose memory is 0x62424700.. (0x50003211), S-HEAP's (D)
+    heap_pool: { get: 0x5000314C, put: 0x50003156, bytes: 16512 },
   },
   E146: {
     name: 'OM-1 II', bin: 'OLY_E_146_1300_0000_0000.BIN', version: '1.3', res_block: 'blk02000000.OE.0101.bin', checked: true,
@@ -86,6 +122,21 @@ export const MODELS = {
     // as E143's (D): the SCPU init 0x5004f6d7 attaches 0x5004fc7f at level 5 (0x5004f910..1b); UI_IN's port init
     // registers 0x50152295 (0x5015226f..75); its start stage calls 0x5015227f (0x5014fd27)
     scpu_port: { irq: [0x5004FC7F, 5], register: 0x5004F953, callback: 0x50152295, old_state: 0x5015227F },
+    // as E143's (D: the module init, ACC_MAIN, the probe, the sampler's completion, the copy, the correction, the
+    // register API and PER_SLOPE compare instruction for instruction with E143's but for addresses; the gauge's getter
+    // calls the adjust state machine with a 72-byte frame, which has a seventh operation): the init 0x5004999e calls the
+    // device part at 0x500499a5 and stores 0x6034d9d4 and the run-time 0x6006af12 (= 0x50049ef2) at 0x6298d750 /
+    // 0x6298d754; the completion 0x50049dfb packs 0x6298d7ce..d2 and 0x6298d7d6; the remap 0x50061a33 reads 0x6034e2c4
+    acc: {
+      init: 0x5004999E, device: 0x500499A5, ptrs: [0x6298D750, 0x6298D754], main: 0x50049BB3, probed: 0x6298D7B0,
+      reg: { open: 0x5004E3F3, read: 0x5004E5D9, write: 0x5004E5EF, close: 0x5004E5CE },
+      dev: [6, 107], who_am_i: [0x0F, 0x6A], setup: [[0x10, 0x10], [0x0D, 0x01]],
+      copy: 0x50049EF2, correct: 0x5004A0CD, words: [0x6298D7CE, 0x6298D7D6], counter: 0x6034D9D4,
+      refs: 0x6034D9B0, axes: 0x6034E2C4,
+      slope: { init: 0x500615E7, main: 0x50061652, get: 0x50061436 },
+    },
+    // as E143's (D): pool 2's get 0x5000314d and release 0x50003157, block 16512 (the table 0x60029910), memory 0x62424700
+    heap_pool: { get: 0x5000314D, put: 0x50003157, bytes: 16512 },
     // as E143's (D): the GIO init 0x50002a21 ends with 0x50002b5e (0x50002a2e), slots at 0xa32c1f74; the EDID state is
     // the word 0x62a67880 its getter 0x501d8647 reads. The hot-plug handler's work runs in the display init's HDMI task
     // 0x501dc568 (extra_tasks), not in task 16 as E143's
@@ -126,6 +177,9 @@ export const MODELS = {
     // as E146's (D): the GIO init 0x50002a11 ends with 0x50002b50 (0x50002a1e), slots at 0xa32c1c44; the EDID state
     // word 0x62a655e4 (its getter at 0x501e078a); the hot-plug work runs in the HDMI task 0x501e3eca
     hdmi: { gio_slots: 0x50002B50, state: [0x62A655E4, 4] },
+    // no acc: E147's accelerometer code is not E143's (D): its probe 0x50049771 wants WHO_AM_I 0x70, and its ACC_MAIN
+    // 0x50049640 copies every 30 ms only while 0x6298d7b0 is 1 (set by 0x50049616, cleared by 0x50049621); its sensor,
+    // its scale and what sets the enable are not read
     extra_tasks: [
       0x501E3ECA,   // started by the display task init (0x501cfd03, E143 0x501c2f13 starts no task), X
     ],

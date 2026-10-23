@@ -9,8 +9,8 @@
 // the browser player's pure parts, its node host and its Worker in a node worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
 // (test_camapp.mjs), the SCPU's clock and request server (test_scpu.mjs), the HDMI port and a plug in play on E143,
-// E146 and E147 (test_hdmi.mjs), the firmware rules of src/fw/facts.mjs
-// (test_facts.mjs) and the firmware map (test_fwmap.mjs:
+// E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the firmware
+// rules of src/fw/facts.mjs (test_facts.mjs) and the firmware map (test_fwmap.mjs:
 // the machine's coverage option, the static map's determinism and pinned headline, the labels' keys, run.mjs under
 // OM_COVERAGE). The fixtures they compare with are emu's own (test/fixtures, checks/fixtures, golden.json): a
 // deliberate behaviour change that one of them pins is re-recorded from emu with its reason.
@@ -144,6 +144,17 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipp
   console.log(`HDMI port: units ${hu.checks - hu.bad.length}/${hu.checks}; plug in play (E143) ${hs.checks - hs.bad.length}/${hs.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
   [...hu.bad, ...hs.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += hu.bad.length + hs.bad.length + others.filter(([, rc]) => rc !== 0).length;
+}
+// the accelerometer: its sample without firmware, then checks/check_level.mjs on E146 in a process of its own (E143's
+// runs are checks/runs.json's; the model is fixed when the lab is imported)
+{
+  const { accUnits } = await import('../test/test_acc.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const au = accUnits();
+  const r = spawnSync(process.execPath, [new URL('../checks/check_level.mjs', import.meta.url).pathname], { env: { ...process.env, OM_EMU_MODEL: 'E146' }, encoding: 'utf8' });
+  console.log(`accelerometer: sample units ${au.checks - au.bad.length}/${au.checks}; check_level on E146 ${r.status === 0 ? 'ok' : 'FAILED'}`);
+  [...au.bad, ...(r.status === 0 ? [] : (r.stdout + r.stderr).trim().split('\n').map((l) => `E146: ${l.trim()}`))].forEach((x) => console.log('  ', x));
+  bad += au.bad.length + (r.status === 0 ? 0 : 1);
 }
 // the camera's non-volatile state kept between sessions (S-NVRAM): no date prompt, a setting kept across sessions
 {

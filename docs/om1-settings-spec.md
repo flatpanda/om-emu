@@ -80,6 +80,28 @@ property observer active; measured on the check runs).
     (`0x503c5cc2..de`); otherwise through the inverse map `0x503da603`, which returns the value unchanged when the
     descriptor has no value table (`0x503da60d..19`). The menu's vt+4 writes take this path (section 5).
 
+### 2.1 The accelerometer's calibration objects (D; the use in docs/hle-gaps.md 4.7.3)
+
+The accelerometer module and Level Adjust read these data objects through the camera-state read `0x500417da(kind,
+index)` and write them through the setter `0x5004188b`; signed u16 elements (`kind & 7` = 2, bit 3 set), index =
+pose 0..5 unless noted. The values are the image templates the lab's store holds (no flash data).
+
+| Kinds | Store | What | Template |
+|---|---|---|---|
+| `0x4e7a`, `0x4e8a`, `0x4e9a` | F | factory pose table: x, y, z of the sensor at each pose, LSB (1 g = 16384) | the pose references: x (0, 16384, 0, -16384, 0, 0), y (-16384, 0, 16384, 0, 0, 0), z (0, 0, 0, 0, 16384, -16384) |
+| `0x4eaa` | F | factory pose table: temperature, 0.1 degC | 250 each |
+| `0x4eba`, `0x4eca`, `0x4eda`, `0x4eea` | E | user pose table (Level Adjust's Adjust writes it, Reset copies the factory table into it): x, y, z, temperature | x (0, 1000, 0, -1000, 0, 0), y (1000, 0, -1000, 0, 0, 0), z (0, 0, 0, 0, 1000, -1000), temperature 250 each |
+| `0x4efa`, `0x4f0a`, `0x4f1a` (30 elements) | F | per axis x, y, z: element 24 the temperature calibration type (non-zero reads as 255: no compensation), 25..26 the coefficient (high, low halfword); `0x4efa[29]` = 5031 is one half of the correction's gate | 8192 each |
+| `0x4f2a` (30 elements) | F | read by the temperature calibration (the adjust machine's ops 3 and 4, `0x5004abc3`, `0x5004b4e4`) and by `0x51814dab..`; not decoded | 250 each |
+| `0x8bca` (5 elements) | F | element 0 / 10: the gauge's horizon offset in 0.1 degree, subtracted while Level Adjust has not adjusted | 0 each |
+
+The correction's gate `0x5004b4a1` is open when `0x4e8a[0]` != 1000 and `0x4efa[29]` == 5031. On the templates it is
+closed, so the gauge reads the raw sample, and Level Adjust's Adjust changes only the user table (X:
+`emu/checks/check_level.mjs` L4 reads it back). Whether a camera's factory data open it is not known here (I: the
+gate's name for "calibrated" is a guess from its use). The user table's templates (1000 for 1 g, signs opposite to the
+factory table's for y) are what a blank store starts with; the code never compares them with the factory table but in
+`0x5004aa9f`, which sets "adjusted" when they differ across gravity, and on the templates they do not.
+
 ## 3. The SCPU interface `0x98e00000` (`om1.scpu`)
 
 `0x98e00000..0x98e000ff` is the firmware's register window to the sub-CPU that keeps the clock and the backup words:

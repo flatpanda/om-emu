@@ -18,7 +18,7 @@
 // src/fw/model.mjs); a knob is either carried or given here.
 // `board`: the board family (src/fw/board.mjs FAMILIES) and the facts this model gives by hand where its firmware's
 // differ from the family's or no rule of src/fw/facts.mjs reads them yet, each with its evidence; a fact the port
-// reads (FACTS[code].board) is not given here too.
+// reads (FACTS[code].board) is not given here too. `checked`: in bin/modelcheck.mjs's default set, which it passes.
 import { OVERRIDES_E144 } from './overrides-E144.mjs';
 
 // The VSC register blocks the kind-1 compositor composes without (board vsc.unapplied; src/dev/vsccompose.mjs A21):
@@ -138,7 +138,7 @@ export const MODELS = {
     },
   },
   E144: {
-    name: 'OM-5', bin: 'OLY_E_144_1200_0000_0000.BIN', version: '1.2', res_block: 'blk017c0000.OE.0101.bin',
+    name: 'OM-5', bin: 'OLY_E_144_1200_0000_0000.BIN', version: '1.2', res_block: 'blk017c0000.OE.0101.bin', checked: true,
     rom_len: 24903616, rom_sha256: 'cf4babeab5f516514e4a9b6032b0374e643830511e083b9cdd26bcb02980af88',
     // the reset head's jump into the run-time copy at 0x500000b6: mov 0x600210f9,a0; jmp (a0) (D)
     image_base: 0x60021020,
@@ -183,7 +183,7 @@ export const MODELS = {
   // board.family: the family scan's (src/fw/board.mjs FAMILIES, whose comments name the bodies scanned, X); the
   // family's per-body facts are read by bin/port.mjs (src/fw/ports.mjs FACTS), none is given here.
   E139: {
-    name: 'E-M1 III', bin: 'OLY_E_139_1600_0000_0000.BIN', version: '1.6', res_block: 'blk01a00000.OE.0101.bin',
+    name: 'E-M1 III', bin: 'OLY_E_139_1600_0000_0000.BIN', version: '1.6', res_block: 'blk01a00000.OE.0101.bin', checked: true,
     rom_len: 27262912, rom_sha256: '3f8bcc3248e63a823dd978607f019f2063ead83080b9c93cddc836d556ff42dd',
     // the reset head's jump into the run-time copy at 0x500000b6: mov 0x600210f9,a0; jmp (a0) (D)
     image_base: 0x60021020,
@@ -243,7 +243,7 @@ export const MODELS = {
     },
   },
   E137: {
-    name: 'E-M5 III', bin: 'OLY_E_137_1700_0000_0000.BIN', version: '1.7', res_block: 'blk017e0000.OE.0101.bin',
+    name: 'E-M5 III', bin: 'OLY_E_137_1700_0000_0000.BIN', version: '1.7', res_block: 'blk017e0000.OE.0101.bin', checked: true,
     rom_len: 25034688, rom_sha256: '4097f57751ac30c24589448865b2824891a754744eae63ab14359fd46c1cf4be',
     // the reset head's jump into the run-time copy at 0x500000b6: mov 0x600210f9,a0; jmp (a0) (D)
     image_base: 0x60021020,
@@ -311,7 +311,7 @@ export const MODELS = {
     g4set: G4SET_UNCHECKED,
   },
   E125: {
-    name: 'E-M1 II', bin: 'OLY_E_125_3700_0000_0000.BIN', version: '3.7', res_block: 'blk01600000.OE.0101.bin',
+    name: 'E-M1 II', bin: 'OLY_E_125_3700_0000_0000.BIN', version: '3.7', res_block: 'blk01600000.OE.0101.bin', checked: true,
     rom_len: 23068608, rom_sha256: '0a41fb8e1105751f7817e5664f2edf2a1bdf399f070e91b4e3c84e6943113803',
     // the reset head's jump into the run-time copy at 0x500000b6: mov 0x600210f9,a0; jmp (a0) (D)
     image_base: 0x60021020,

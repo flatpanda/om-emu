@@ -366,6 +366,14 @@ const TOUCH_ARGS_FOUND = { E143: TOUCH_ARGS_E143, E147: ta(20, 'a1'), E144: ta(2
 // the calls (D: E143's after its trace load 0x5106174a; E144's and E139's S-NOPOWEROFF call_skips as src/fw/models.mjs
 // gave them by hand before the rule; E137's `mov 7,d0; mov a2,a0; call 0x50c3b781`, which E137's start reaches, X),
 // none on E118, which holds no "startPowerOff"
+// The change task the EVF's first open creates (display.change_entry; src/fw/facts.mjs displayChangeEntry), the entry
+// as the creation loads it (D: E144 0x501747f4, E142 0x50157e7b, E139's packet store 0x50175bde) and as the EVF starts
+// of E144, E139, E134, E137, E140 and E130 ask the kernel to start (X); none where the change task is static or the
+// name is not held
+const CHANGE_ENTRY_FOUND = {
+  E143: null, E146: null, E147: null, E144: 0x50173B55, E139: 0x50174F55, E134: 0x5021007A, E137: 0x5016187E,
+  E142: 0x50157137, E140: 0x5015713E, E125: null, E145: null, E130: 0x50200556, E133: 0x501F123F, E129: null, E132: null,
+};
 const POWER_OFF_FOUND = {
   E143: 0x510617BD, E144: 0x50CF0E21, E139: 0x50C9BDCC, E137: 0x50C3EF76, E118: undefined,
 };
@@ -403,7 +411,7 @@ const E143_FACTS = {
   res: { font_limit: E143_LOADER.font[1], string_limit: E143_LOADER.string[1] },
   menu: { list_menu: true, tab_memory: 1881, page_memory: 1882, take: 0x510C2A2E },
   kernel: { cpus: 4 }, errlog: { entry: ERRLOG_FOUND.E143 }, scpu: { backup: true },
-  display: { change_task: true, queue_word: 0x600432D4, queue_id: 0x88, task_init: 0x501C2F13, init_2nd: null, frame_wait: 0x60043088, timer_sleep: 0x501C2E94,
+  display: { change_task: true, change_entry: null, queue_word: 0x600432D4, queue_id: 0x88, task_init: 0x501C2F13, init_2nd: null, frame_wait: 0x60043088, timer_sleep: 0x501C2E94,
     sync: { request: 0x503E4DD5, image_sync: 0x503E50EC, sync_set: 0x50AB43CD } },
   timer: { reload_less_one: false }, dial: { select: 0x5014B7C7, select_end: 0x1A, table_ptr: 0xA32DAAB0, table0: 0x60223DBC },
   touch_panel: { driver: true }, lens: { mount: true }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
@@ -555,6 +563,7 @@ export function factsTests() {
     if (TOUCH_ARGS_FOUND[code] && (code === 'E143' || PORTS[code])) ok(same(placed?.touch_args, TOUCH_ARGS_FOUND[code]), `${code}: touch_args ${hx(placed?.touch_args ?? placed)}, found ${hx(TOUCH_ARGS_FOUND[code])}`);
     if (GUI_FOUND[code]) ok(same(got.gui, GUI_FOUND[code]), `${code}: gui ${hx(got.gui ?? got)}, found ${hx(GUI_FOUND[code])}`);
     if (RECVIEW_FOUND[code]) ok(same(got.recview, RECVIEW_FOUND[code]), `${code}: recview ${hx(got.recview ?? got)}, found ${hx(RECVIEW_FOUND[code])}`);
+    if (Object.hasOwn(CHANGE_ENTRY_FOUND, code)) ok(got.display?.change_entry === CHANGE_ENTRY_FOUND[code], `${code}: display.change_entry ${hx(got.display?.change_entry)}, found ${hx(CHANGE_ENTRY_FOUND[code])}`);
     if (Object.hasOwn(POWER_OFF_FOUND, code)) ok(got.power_off?.usb_disconnect === POWER_OFF_FOUND[code], `${code}: power_off ${hx(got.power_off ?? got)}, found ${hx(POWER_OFF_FOUND[code] ?? 'none')}`);
     // the play component's wrappers, and every place the port gave one of E143's among them (bin/port.mjs, how
     // 'component-method')

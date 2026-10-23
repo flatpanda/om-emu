@@ -345,6 +345,34 @@ export const scpuBackup = (img) => hasString(img, 'ScpuBkupW');
 // and E125's static task table has no task of E143's change task's priority and stack (0x36, 0x400; D, kcb+124)
 export const displayChangeTask = (img) => hasString(img, '[CHG] CHG MAIN S');
 
+// The change task a build creates at run time (fact 'display.change_entry', src/lab/menu.mjs: the lab task lets the
+// kernel start it): where the DISPLAY task runs the changes itself (no static change task, displayChangeTask), the
+// EVF's first open powers the TFT down, the EVF up and then creates a task named "DISPLAY_CHANGE" (priority 26, stack
+// 1024; X: E144, the create through 0x50185903 at 0x501747fd in the open's power-up 0x50174786). The creation loads the
+// name, `mov <"DISPLAY_CHANGE">,a0` (fc dc), with the entry either loaded next, `mov <entry>,a1` (fc dd: E144
+// 0x501747ee, entry 0x50173b55; E142, E140, D), or taken from the creation packet, `mov (d8,sp),a1` within
+// CHANGE_SPAN bytes before the name's load and `mov <entry>,d0; mov d0,(d8,sp)` (fc cc .. 42 d8) within twice that
+// (E139 0x50175c07, entry 0x50174f55 stored at 0x50175bde, slot 28; E137's slot 40; E134, E130, E133, D). The E143
+// family loads the name for its static change task with no entry near; E125, E145, E129 and E132 hold no such name (X,
+// a byte scan of the 15 expanded images; the entries are the ones the EVF starts of E144, E139, E134, E137, E140 and
+// E130 ask the kernel for, X). Returns the entry (disassembly notation), or null; throws for two.
+const CHANGE_NAME = 'DISPLAY_CHANGE', CHANGE_SPAN = 0x30;
+export function displayChangeEntry(img) {
+  const { base } = imageBase(img), found = new Set();
+  for (const o of findString(img, CHANGE_NAME, { nul: true, after: true })) for (const p of loadsOf(img, base + o)) {
+    if (img[p + 1] !== 0xdc) continue;
+    if (img[p + 6] === 0xfc && img[p + 7] === 0xdd) { found.add(u32(img, p + 8)); continue; }
+    let slot = null;
+    for (let q = p - 2; q >= p - CHANGE_SPAN && slot === null; q--) if (img[q] === 0x5d) slot = img[q + 1];
+    if (slot === null) continue;
+    for (let q = p - 8; q >= p - 2 * CHANGE_SPAN; q--) {
+      if (img[q] === 0xfc && img[q + 1] === 0xcc && img[q + 6] === 0x42 && img[q + 7] === slot) { found.add(u32(img, q + 2)); break; }
+    }
+  }
+  if (found.size > 1) throw new Error(`displayChangeEntry: "${CHANGE_NAME}" created with entries ${[...found].map(h8).join(', ')}, want one`);
+  return found.size ? (0x50000000 + [...found][0] - base) >>> 0 : null;
+}
+
 // The DISPLAY task's message queue (facts 'display.queue_word', 'display.queue_id'; src/lab/play.mjs play_init): the
 // display init creates it under the name "DISPLAY" from its id word in the static queue-id table, `movhu (abs32),d0;
 // exth d0; mov <"DISPLAY">,a0` (E143 0x501c3003, word 0x600432d4, D) or with the exth after the name (E139
@@ -1752,7 +1780,7 @@ export function readPlacedFacts({ img, at }) {
 // {core_byte, library, preload, vector_page, dram_size}} for a family whose reset head copies with the flash-copy
 // routine (only vector_page and dram_size for reset_head null, the E143 family's), {res: {font_limit, string_limit}},
 // {menu: {list_menu, tab_memory, page_memory, take}}, {kernel: {cpus}}, {errlog: {entry}}, {scpu: {backup}}, {display:
-// {change_task, queue_word, queue_id, task_init, frame_wait, timer_sleep, sync, face_colour}}, {timer:
+// {change_task, change_entry, queue_word, queue_id, task_init, frame_wait, timer_sleep, sync, face_colour}}, {timer:
 // {reload_less_one}}, {dial: {select, select_end, table_ptr, table0}}, {touch_panel: {driver}}, {lens: {mount}}, {iic:
 // {waits}}, {touch: {i2c_write, i2c_read}}, {touch_api: {open}}, {shooting: {start, end, auto_through}}, {func_direct:
 // {run, id}}, {broker: {init}}, {card: {shots_query}}, {power_off: {usb_disconnect}} and {gui: {stride, height, banks,
@@ -1776,7 +1804,8 @@ export function readFacts({ img, family, resLoad }) {
   const frame = frameWait(img), sleep = timerSleep(img), sync = displaySync(img);
   const taskInit = displayTaskInit(img), faceColour = faceColourSet(img);
   facts.display = {
-    change_task: displayChangeTask(img), ...displayQueue(img), ...(taskInit !== undefined && { task_init: taskInit }),
+    change_task: displayChangeTask(img), change_entry: displayChangeEntry(img), ...displayQueue(img),
+    ...(taskInit !== undefined && { task_init: taskInit }),
     init_2nd: displayInit2nd(img),
     ...(frame !== undefined && { frame_wait: frame }), ...(sleep !== undefined && { timer_sleep: sleep }),
     ...(sync !== undefined && { sync }), ...(faceColour !== undefined && { face_colour: faceColour }),

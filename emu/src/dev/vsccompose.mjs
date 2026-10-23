@@ -67,7 +67,7 @@ export function blend(src, dst, tra) {
   return (L[t | (src & 0xFF) << 8 | (dst & 0xFF)] | L[t | (src >>> 8 & 0xFF) << 8 | (dst >>> 8 & 0xFF)] << 8
     | L[t | (src >>> 16 & 0xFF) << 8 | (dst >>> 16 & 0xFF)] << 16) >>> 0;
 }
-const osdCol = (i, sh) => Math.floor((i * sh + 2048) / 4096);
+export const osdCol = (i, sh) => Math.floor((i * sh + 2048) / 4096);
 // ycComp: component 0 Y of pixel x (byte 2x), 1 Cb and 2 Cr of its pair (bytes 4 (x >> 1) + 1 / + 3)
 const ycComp = (b, x, comp) => (comp === 0 ? b[2 * x] : b[4 * (x >>> 1) + (comp === 1 ? 1 : 3)]);
 // imgRow: output pixel i from source column s = i * sh >> 12 and the fraction f = i * sh & 4095 (S and F

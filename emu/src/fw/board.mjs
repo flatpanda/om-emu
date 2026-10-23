@@ -129,9 +129,10 @@ export const FAMILIES = {
     },
     // the VSC (D): base 0x9c000000, channel 0 for the TFT and the EVF and channel 1 for HDMI (0x5002361c); the
     // name table 0x6025b2f0 (422 entries, *_VL latched copies at +0x400); INTST1 0x014 (W1C), INTEN1 0x00c; the
-    // vertical total in SYNC2 0x22c (TFT/HDMI) or SYNC8 0x380 (EVF); MONI3 0x2bc read at 0x50187ae2; the ISR
-    // 0x50185b76 acts on INTST1 bits 0 (frame), 8, 15 (the serial engine's completion), 18, 19, of which the model
-    // raises 0 and 15
+    // vertical total in SYNC2 0x22c (TFT/HDMI) or SYNC8 0x380 (EVF: the device setup's timing writer 0x500231e5
+    // stores SYNC8 for the EVF's device bit and SYNC2 otherwise, 0x500232ed / 0x500232fa); MONI3 0x2bc read at
+    // 0x50187ae2; the ISR 0x50185b76 acts on INTST1 bits 0 (frame), 8, 15 (the serial engine's completion), 18, 19, of
+    // which the model raises 0 and 15
     vsc: {
       kind: 2, base: 0x9C000000, size: 0x8000, channels: 2, stride: 0x4000, reg_end: 0x7EC, names: [422, 0],
       regs: { INTEN1: 0x00C, INTST1: 0x014, SYNC2: 0x22C, SYNC8: 0x380, MONI3: 0x2BC, INTEN2: 0x3C0, INTST2: 0x3C4 },

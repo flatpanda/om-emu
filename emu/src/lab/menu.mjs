@@ -226,7 +226,8 @@ export class MenuLab extends T.TextDisplayLab {
     this.nk = new K.NativeKernel(this);
     this.nk.boot();
     this.kernel.go_native(this.nk.intc);
-    this.lt = new K.LabTask(this.nk, LAB_PRI, null, 0x60000, [GUI_TASK, GENIFA_TIMER_TASK, EMPTY_TASK, EYEFI_TASK, ...(D.HAS_CHANGE ? [CHANGE_TASK] : [])]);
+    this.lt = new K.LabTask(this.nk, LAB_PRI, null, 0x60000, [GUI_TASK, GENIFA_TIMER_TASK, EMPTY_TASK, EYEFI_TASK, ...(D.HAS_CHANGE ? [CHANGE_TASK] : []),
+      ...(D.CHANGE_ENTRY !== null ? [D.CHANGE_ENTRY] : [])]);
     this.lt.start();
     this.lt.make_settle_sem();
     R.load(this.sim, this.block);

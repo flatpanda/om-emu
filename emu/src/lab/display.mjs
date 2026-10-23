@@ -75,8 +75,10 @@ export const DISPLAY_TASK_INIT = A(0x501C2F13), DISP_SYNC_INIT = A(0x507F2FE0);
 export const DISPLAY_LOOP = A(0x501C3035), DISPLAY_QUEUE = A(0x600432D4), DISPLAY_TID = A(0x60042D92);
 export const CHANGE_LOOP = A(0x501C6D8C), CHANGE_QUEUE = A(0x60043378), CHANGE_WAIT_POLL = A(0x501C74E3);
 // a model whose DISPLAY task runs the device changes itself has no DISPLAY_CHANGE task (E144: "[CHG] START" .. "[CHG]
-// END" at 0x501711a4..0x50171cc6, D): no CHANGE stand-ins (fact display.change_task, src/fw/facts.mjs displayChangeTask)
-export const HAS_CHANGE = fact('display.change_task', true);
+// END" at 0x501711a4..0x50171cc6, D): no CHANGE stand-ins (fact display.change_task, src/fw/facts.mjs displayChangeTask).
+// Its EVF's first open creates a task of that name, which the kernel starts and runs natively (CHANGE_ENTRY, fact
+// display.change_entry, src/fw/facts.mjs displayChangeEntry; null where the build creates none)
+export const HAS_CHANGE = fact('display.change_task', true), CHANGE_ENTRY = fact('display.change_entry', null);
 export const GPI_UPDATE_DISPLAY = A(0x510BD4EE);
 export const PALETTE_RESEND = A(0x503E52C7), RESEND_KIND = { tft: 1, evf: 32 }, RESEND_SEND_RETURN = A(0x503EC117), DISPIF_ASYNC = A(0x60357648);
 export const EXPECTED_ERRLOG = new Map([[0x1C005002, 'camera state store 0x500417da empty in the lab (id read 0)'],
@@ -320,8 +322,9 @@ export class VscDebug {
   }
   irq_line(c) { return this.u32(DBG_CHAN + 0x40 * c + 0x10); }
   set_line_ns(c, value) { this.sim.word(DEBUG + DBG_CHAN + 0x40 * c + 0x14, value); }
-  // kind 2: the register holding the vertical total, 0 SYNC2 (TFT, HDMI) or 1 SYNC8 (EVF)
-  set_timing(c, sel) { this.sim.write(DEBUG + DBG_CHAN + 0x40 * c + 0x3A, new Uint8Array([sel])); }
+  // kind 2: the line time of the channel's EVF bank (SYNC8; set_line_ns gives the SYNC2 bank's); the channel runs from
+  // the bank whose vertical total the firmware wrote last (src/dev/vsc.mjs)
+  set_line_ns_evf(c, value) { this.sim.word(DEBUG + DBG_CHAN + 0x40 * c + 0x2C, value); }
   set_order(c, order) {
     this.sim.write(DEBUG + DBG_CHAN + 0x40 * c + 0x30, new Uint8Array(order.map((p) => { const i = PLANES.indexOf(p); if (i < 0) throw new ValueError(`${show(p)} is not in list`); return i; })));
   }
@@ -853,19 +856,16 @@ export class DisplayLab extends OsdLab {
       const vtotal = this.call(d.vtotal_fn, { d0: 1 }).d0;
       const line = Math.floor(period * 1000 / vtotal);
       this.line_ns.set(dev, { period_us: period, vtotal, line_ns: line });
-      this.vsc.set_line_ns(d.channel, line);
+      // kind 2's TFT and EVF share channel 0, each with its own bank of timing registers: the channel runs at the
+      // line time of the bank whose vertical total the firmware wrote last (src/dev/vsc.mjs), so a switch keeps the
+      // shown device's timing until the firmware programs the other's (E144's EVF open first waits for a TFT frame
+      // as it powers the TFT down, X)
+      if (GEN2 && dev === 'evf') this.vsc.set_line_ns_evf(d.channel, line);
+      else this.vsc.set_line_ns(d.channel, line);
     }
-    if (GEN2) this.device_timing('tft');                    // one channel for both: the task init opened the TFT
-  }
-  // Kind 2's TFT and EVF share channel 0: its line time and vertical-total register are the open device's
-  device_timing(device) {
-    const c = lookup(DEVICE, device).channel;
-    this.vsc.set_line_ns(c, this.line_ns.get(device).line_ns);
-    this.vsc.set_timing(c, device === 'evf' ? 1 : 0);
   }
   open(device) {
     this.props.set(this.prop_device, lookup(DEVICE, device).prop);
-    if (GEN2) this.device_timing(device);
     this.step(`DISPLAY cmd 2 OPEN ${device} (mask ${lookup(DEVICE, device).mask})`, () => {
       this.display_cmd(2, pack('<I', lookup(DEVICE, device).mask));
       this.drain_display_change();

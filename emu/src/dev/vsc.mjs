@@ -15,9 +15,12 @@ import { compose2 } from './vsccompose2.mjs';
 
 // The model's VSC (src/fw/board.mjs). Kind 1 (E143, E147): what this header says. Kind 2 (E144): two channels of
 // 0x4000, the register file 0x000..reg_end with the latched copies of some registers named *_VL at +0x400 (read-only;
-// the frame boundary latches them), INTST1 at 0x014, the vertical total in SYNC2 (TFT, HDMI) or SYNC8 (EVF; the
-// harness picks the bank, CH.TIMING), MONI3 with a 14-bit line count at [13:0] and at [29:16], and plain storage
-// 0x800..0x3fff (palettes, gamma and the serial engine's words); no output block.
+// the frame boundary latches them), INTST1 at 0x014, the vertical total in SYNC2 (TFT, HDMI) or SYNC8 (EVF), MONI3
+// with a 14-bit line count at [13:0] and at [29:16], and plain storage 0x800..0x3fff (palettes, gamma and the serial
+// engine's words); no output block. A kind-2 channel runs from the bank whose vertical total the firmware wrote last
+// (CH.TIMING, published: 0 SYNC2, 1 SYNC8), at that bank's line time (the harness's CH.LINE_NS, CH.LINE_NS_EVF), and a
+// change of bank starts a new frame there (I: the firmware's timing writer stores one of the two per device,
+// src/fw/board.mjs; what selects the bank on the chip is ?).
 const V = BOARD.vsc, GEN2 = V.kind === 2;
 export const VSC_BASE = V.base, VSC_SIZE = V.size, CHANNELS = V.channels, CHAN_STRIDE = V.stride;
 export const REG_WORDS = V.reg_end / 4, PAL_BASE = 0x4400, PAL_WORDS = 0x1800 / 4, LUT_BASE = 0x5C00, LUT_WORDS = 0xC00 / 4;
@@ -38,7 +41,8 @@ export const D = { MAGIC: 0x000, VERSION: 0x004, ERR_TOTAL: 0x008, NOTE_TOTAL: 0
   EVENT_SOURCES: 0x030, CHAN: 0x040, CHAN_SIZE: 0x40, HDR: 0x100, PLANE: 0x180, ERR_RING: 0x400, ERR_SLOTS: 64,
   NOTE_RING: 0x1000, NOTE_SLOTS: 512, FLAGS: 0x4000, FLAGS_SIZE: 0x1400, OUT_FLAGS: 0x8000 };
 export const CH = { RUNNING: 0x00, FRAMES: 0x04, FIELD: 0x08, MONI3: 0x0C, IRQ: 0x10, LINE_NS: 0x14, START_LO: 0x18,
-  START_HI: 0x1C, LEN: 0x20, LATCHED: 0x24, COMPOSE: 0x28, ORDER: 0x30, ASSUME: 0x38, VIEW: 0x39, TIMING: 0x3A };
+  START_HI: 0x1C, LEN: 0x20, LATCHED: 0x24, COMPOSE: 0x28, LINE_NS_EVF: 0x2C, ORDER: 0x30, ASSUME: 0x38, VIEW: 0x39,
+  TIMING: 0x3A };
 const CMD_ADVANCE = 1, CMD_RUN_TO_FRAME = 2, CMD_COMPOSE = 3, CMD_CLEAR = 4, CMD_RUN_TO_EVENT = 5;
 export const R = V.regs;
 // kind 2's storage after the register file and the *_VL mirror words (the copy of the register 0x400 below)
@@ -59,7 +63,8 @@ export class Vsc {
     this.ch = [];
     for (let c = 0; c < CHANNELS; c++) {
       this.ch.push({ w: new Uint32Array(REG_WORDS), m: new Uint32Array(REG_WORDS), pal: new Uint32Array(PAL_WORDS),
-        lut: new Uint32Array(LUT_WORDS), running: false, latched: false, field: 0, curLen: 0, frames: 0, frameStart: 0 });
+        lut: new Uint32Array(LUT_WORDS), running: false, latched: false, field: 0, curLen: 0, frames: 0, frameStart: 0,
+        bank: 0 });
     }
     this.ow = new Uint32Array(REG_WORDS); this.osram = new Uint32Array(OSRAM_WORDS);
     this.chanValid = null; this.outValid = null; this.chanRegs = null; this.image = image;
@@ -132,7 +137,7 @@ export class Vsc {
   }
 
   // ---- lab clock
-  lineNs(c) { return this.dget(chanDbg(c, CH.LINE_NS)); }
+  lineNs(c) { return this.dget(chanDbg(c, GEN2 && this.ch[c].bank === 1 ? CH.LINE_NS_EVF : CH.LINE_NS)); }
   moni3(c) {
     const ch = this.ch[c];
     if (!ch.running || !this.lineNs(c)) return 0;
@@ -140,8 +145,8 @@ export class Vsc {
     if (GEN2) return ((lines & 0x3FFF) | (lines & 0x3FFF) << 16) >>> 0;   // the TFT/HDMI and the EVF counter
     return ((lines & 0x7FFF) | (ch.field === 0 ? 1 << 16 : 0)) >>> 0;
   }
-  // the register holding the vertical total: E143 SYNC2; kind 2 SYNC2 or, for the EVF (CH.TIMING 1), SYNC8
-  vreg(c) { return GEN2 && this.dbg[chanDbg(c, CH.TIMING)] === 1 ? R.SYNC8 : R.SYNC2; }
+  // the register holding the vertical total: E143 SYNC2; kind 2 that of the channel's bank, SYNC2 or SYNC8 (EVF)
+  vreg(c) { return GEN2 && this.ch[c].bank === 1 ? R.SYNC8 : R.SYNC2; }
   publish() {
     const t = this.clock.t;
     this.dset(D.T_LO, t % 4294967296); this.dset(D.T_HI, Math.floor(t / 4294967296));
@@ -157,6 +162,7 @@ export class Vsc {
       this.dset(chanDbg(c, CH.START_HI), Math.floor(ch.frameStart / 4294967296));
       this.dset(chanDbg(c, CH.LEN), ch.curLen);
       this.dset(chanDbg(c, CH.LATCHED), ch.latched ? 1 : 0);
+      if (GEN2) this.dbg[chanDbg(c, CH.TIMING)] = ch.bank;
     }
   }
   // A channel starts running at the current lab time once it has a line time (harness) and a written vertical total.
@@ -312,6 +318,9 @@ export class Vsc {
       if (local === R.INTST1 || local === R.INTST2) ch.w[local / 4] &= ~value;          // write-1-to-clear
       else ch.w[local / 4] = value;
       this.dbg[this.wFlags(c) + local / 4] = 1;
+      if (GEN2 && (local === R.SYNC2 || local === R.SYNC8) && ch.bank !== +(local === R.SYNC8)) {
+        ch.bank = +(local === R.SYNC8); ch.running = false;                  // the other bank: a new frame (see above)
+      }
       this.chanSync(c);
       this.publish();
       return;

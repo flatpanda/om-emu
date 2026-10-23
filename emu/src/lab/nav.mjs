@@ -157,16 +157,16 @@ export class NavLab extends MM.MenuLab {
 }
 
 // with NavSession: the keyword arguments as kw (lang, device, u1, start, seed, open_menu, png, tag, store_first,
-// evf_layout, b2_options, a15, time); env as for the lab.
+// evf_layout, b2_options, a15, time, hdmi: the lab's H-GIOSLOTS for a machine with the HDMI port); env as for the lab.
 export class NavSession {
   static lab_class = NavLab;
   constructor(env, kw = {}) {
     const k = { lang: 'en', device: 'tft', u1: 'skip', start: [MM.SETUP_TAB, 1, 1], seed: null, open_menu: true, out: null,
-      png: 'each', tag: 'nav', store_first: false, evf_layout: false, b2_options: null, a15: false, time: false, ...kw };
+      png: 'each', tag: 'nav', store_first: false, evf_layout: false, b2_options: null, a15: false, time: false, hdmi: false, ...kw };
     if (k.evf_layout && k.device !== 'evf') throw new ValueError('--evf-layout: EVF only');
     this.env = env;
     this.store_first = k.store_first; this.evf_layout = k.evf_layout; this.b2_options = k.b2_options ?? {}; this.a15 = k.a15;
-    this.time = k.time;
+    this.time = k.time; this.hdmi = k.hdmi;
     this.lang = k.lang; this.device = k.device; this.u1 = k.u1; this.start = k.start;
     this.seed = k.seed instanceof Map ? new Map(k.seed) : new Map(Object.entries(k.seed ?? {}).map(([s, v]) => [+s, v]));   // a Map keeps the dict's order
     this.open_menu = k.open_menu; this.png = k.png; this.tag = k.tag;
@@ -186,7 +186,7 @@ export class NavSession {
     }
     for (const sid of this.seed.keys()) if (!this.scalar_hint(sid)) throw new ValueError(`seed ${sid}: not a Setup row store id`);
     this.lab = new this.lab_class(this.env, { lang: this.lang, inputs, seed: this.seed, key_mode: this.u1,
-      store_first: this.store_first, evf_layout: this.evf_layout, time: this.time });
+      store_first: this.store_first, evf_layout: this.evf_layout, time: this.time, hdmi: this.hdmi });
     this.lab.b2_options = { ...this.b2_options };
     try {
       if (this.a15) this.lab.assume('A15', true);
@@ -369,8 +369,9 @@ export class NavSession {
     return this.wait_until(this.lab.lab_time() + Math.trunc(ms * 1000000), tag || `WAIT:${ms}`, true);
   }
   // Time mode: lab time runs to the absolute t_ns, which must lie ahead of the lab clock; the step budgets grow with the
-  // duration; the wait runs as ELAPSE slices of at most WAIT_SLICE_MS.
-  wait_until(t_ns, tag = 'WAIT', begun = false) {
+  // duration; the wait runs as ELAPSE slices of at most WAIT_SLICE_MS. kind: the step record's; extra: a function
+  // whose fields the record gets besides the wait's, called after it.
+  wait_until(t_ns, tag = 'WAIT', begun = false, { kind = 'wait', extra = null } = {}) {
     const lab = this.lab;
     if (!lab.time_mode) throw new NavError(`${tag}: lab time needs --time (a NavSession with time: true)`);
     const n0 = lab.log.length, t0 = lab.lab_time();
@@ -396,7 +397,7 @@ export class NavSession {
       if (!k) throw new IndexError(`${tag}: an empty elapse log entry`);
       counts[k] = (counts[k] ?? 0) + 1;
     }
-    return this.end(tag, 'wait', [], [[0, lab.log.length - n0]], { wait: { start: t0, target: t_ns, end: lab.lab_time(), slices, log: counts } });
+    return this.end(tag, kind, [], [[0, lab.log.length - n0]], { wait: { start: t0, target: t_ns, end: lab.lab_time(), slices, log: counts }, ...(extra ? extra() : {}) });
   }
   // SWITCH:<tft|evf>: DISPLAY cmd 2 OPEN of the other device, H-RESEND, H-UPDATE (the GUI's re-display wrapper
   // 0x510bd84b from the lab task), then a capture; the GUI is not told.

@@ -10,8 +10,9 @@ At the bottom, the CPU (`src/core/cpu.mjs`), the decode-cache interpreter (`src/
 (`src/core/mem.mjs`) are ES-module singletons: a realm holds at most one machine. `createMachine()` (`src/machine.mjs`)
 re-initialises the realm and returns a closure-based facade guarded by a generation counter. It builds the address map
 of the model's board (`src/fw/board.mjs`) and constructs the lab devices: the interrupt controller, the timer and the
-shared lab clock, the VSC display compositor, the OSD engine, the bus window, the lab stub and the SCPU interface
-(`src/dev/`). The devices' debug windows and doorbells sit in guest-addressable memory.
+shared lab clock, the VSC display compositor, the OSD engine, the bus window, the lab stub, the SCPU interface and,
+with the machine's hdmi option, the HDMI port (`src/dev/`). The devices' debug windows and doorbells sit in
+guest-addressable memory.
 
 `Simulator` (`src/lab/sim.mjs`) sits on top of the machine. It still speaks gdbstub-shaped text packets for registers
 and run control, and its Stats and harness digests hash that traffic. The HLE labs form an eight-class inheritance
@@ -49,7 +50,7 @@ harness  Simulator  (in-process gdbstub text: 'g'/'G'/'c'/'s'; Stats + HarnessDi
 machine  createMachine(): board address map, device wiring, cont/resume/step, snapshot/restore, generation guard
            |
 core     cpu.mjs (R, S, step)   interp.mjs (decode cache, run, TB-look irq timing)   mem.mjs (page tables, buffer, DIRTY)
-dev      intc  timer(+Clock)  vsc/vsccompose  engine  bus  stub  scpu   (debug windows + doorbell MMIO in guest space)
+dev      intc  timer(+Clock)  vsc/vsccompose  engine  bus  stub  scpu  hdmi (option)   (debug windows + doorbell MMIO in guest space)
 support  fw/ (olyfw, labfw, models, ports, xmap, facts, board)   util/ (bytes, hex, show, equal, parse, tally, tracejson)   trace/   debug/
 verify   test/ (bin/test.mjs, bin/test-pure.mjs, fixtures/)   checks/ (runs.json, fixtures/)   scenarios/   golden.json   bin/*gate
 measure  bin/fwmap.mjs + fwmap/ (static map, coverage via createMachine's coverage option, report by module and block)

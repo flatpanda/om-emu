@@ -65,6 +65,14 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   the power lever, the Fn lever and S1 are the SCPU interface's port levels (H-SCPUPORT): IRQ 320, its handler and
   UI_IN's callback run natively; the lab attaches the IRQ and registers the callback in place of the inits that would
   (H-SCPUIRQ, H-UIINPORT).
+- With `--hdmi on` (E143, E146, E147; off by default) the HDMI port is modelled: the transmitter's registers, its
+  DDC and IRQ 239, and the hot-plug GIO pin with its IRQ 109 (`src/dev/hdmi.mjs`). The input `{"type": "hdmi",
+  "action": "plug"}` puts a lab sink on it (S-HDMISINK: a 1080p60 EDID with a CTA-861 block composed for the lab,
+  `src/lab/edid.mjs`), and the firmware takes the pin's interrupt, starts the transmitter, reads and parses the EDID
+  over the DDC and reports the connection to UI_IN natively; the lab only frees the GIO interrupt slots the pin's
+  registration needs, as the GIO init that does not run would (H-GIOSLOTS). The camera application then leaves the
+  date prompt but opens no HDMI output; an unplug is refused (A-HDMI-1), and so is the `fw_0501` switch, which the
+  firmware now drives (`docs/hle-gaps.md` 4.9).
 - module requests are answered (S-MODACK), the HLS transaction layer's exec succeeds (S-TRAACK), and the modules'
   notifications of a release (focus, exposure, rec view) are posted as the callbacks the HLS would make of them
   (S-RELSEQ); no image is captured. The focus result and the exposure time come from S-SCENE when its live view is on.
@@ -96,6 +104,7 @@ information, S2 the capture display and the rec view. What runs below it is stoo
 ```sh
 sh emu/play.sh                                   # the interactive player (bin/play.mjs) in the browser
 node emu/bin/play.mjs --no-browser --idle off    # its server alone (HTTP API; --debug-api for the debug tokens)
+node emu/bin/play.mjs --hdmi on                  # with the HDMI port; the input {"type": "hdmi", "action": "plug"}
 OM_EMU_NVRAM=~/.om-emu.json sh emu/play.sh       # keep the settings and the clock between sessions (S-NVRAM): no date
                                                  # prompt at power-on, menu changes back in the next session
 node emu/bin/nav.mjs --time --png each 'DOWN OK MENU'     # a scripted menu session: a line and a PNG per step
@@ -320,8 +329,8 @@ it sends nothing but GETs for its own files.
 
 | Command | What it covers | Needs |
 |---|---|---|
-| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units, the SCPU clock, port words and request server (S-SCPU) | node; runs on any checkout in a few seconds |
-| `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts, the node host, the command-line tools, the scene, the camera application, the firmware map and the regression net's controls | the E143 firmware blocks and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
+| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units, the SCPU clock, port words and request server (S-SCPU), the HDMI port's device and sink | node; runs on any checkout in a few seconds |
+| `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts, the node host, the command-line tools, the scene, the camera application, an HDMI plug in play on E143, E146 and E147, the firmware map and the regression net's controls | the E143 firmware blocks (E146's and E147's for the HDMI plug) and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
 | `node emu/bin/golden.mjs check` | every scenario, every lab of the traced check runs and every check run's output against `golden.json`: what the panels show, what the devices see and what the checks conclude must not change | the firmware |
 | `node emu/bin/checks.mjs [CHECK \| RUN ...]` | every run of `checks/runs.json`, judged on its exit status | the firmware |
 | `node emu/bin/checktrace.mjs RUN [--slice N]` | the labs one check run creates, traced (golden records them) | as checks.mjs |

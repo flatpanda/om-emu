@@ -44,6 +44,12 @@ const NO_USB_POWER_OFF = ['power_off.usb_disconnect', 'S-NOPOWEROFF',
 // 320 handler the SCPU init attaches; register, the IRQ 320 callback registration; callback, UI_IN's callback, which
 // its port init registers; old_state, the init of UI_IN's group-0 old state from the port byte, which UI_IN's start
 // stage calls first. A body without it pushes group 0 as the other groups (S-KEYBITS)
+//
+// `hdmi`: the HDMI port (src/dev/hdmi.mjs with the board's hdmi; src/lab/display.mjs H-GIOSLOTS, src/lab/play.mjs the
+// hdmi input; docs/hle-gaps.md 4.9), in the model's disassembly notation: gio_slots, the reset of the GIO interrupt
+// slots the GIO init ends with (the init does not run in the lab; without the reset the display init's registration
+// of the hot-plug pin finds no free slot and does nothing); state [address, bytes], the driver's EDID state, which its
+// getter reads (0xf0 the EDID read and parsed, 0xff failed, 0 not read). A body without it has no HDMI port
 export const MODELS = {
   E143: {
     name: 'OM-1', bin: 'OLY_E_143_1900_0000_0000.BIN', version: '1.9', res_block: 'blk02000000.OE.0101.bin',
@@ -57,6 +63,9 @@ export const MODELS = {
     // table of 4; UI_IN's port init 0x5014e3ab registers 0x5014e534 (0x5014e50e..14); UI_IN's start stage 0x5014bfc6
     // calls 0x5014e51e (D)
     scpu_port: { irq: [0x5004E1FD, 5], register: 0x5004DED1, callback: 0x5014E534, old_state: 0x5014E51E },
+    // the GIO init 0x50002a20 ends with 0x50002b5d (0x50002a2d), which marks the 325 slots at 0xa32c1f74 free (255);
+    // the EDID state byte 0x62a3c8ec, read by 0x501d30f6 (D)
+    hdmi: { gio_slots: 0x50002B5D, state: [0x62A3C8EC, 1] },
   },
   E146: {
     name: 'OM-1 II', bin: 'OLY_E_146_1300_0000_0000.BIN', version: '1.3', res_block: 'blk02000000.OE.0101.bin', checked: true,
@@ -78,6 +87,10 @@ export const MODELS = {
     // as E143's (D): the SCPU init 0x5004f6d7 attaches 0x5004fc7f at level 5 (0x5004f910..1b); UI_IN's port init
     // registers 0x50152295 (0x5015226f..75); its start stage calls 0x5015227f (0x5014fd27)
     scpu_port: { irq: [0x5004FC7F, 5], register: 0x5004F953, callback: 0x50152295, old_state: 0x5015227F },
+    // as E143's (D): the GIO init 0x50002a21 ends with 0x50002b5e (0x50002a2e), slots at 0xa32c1f74; the EDID state is
+    // the word 0x62a67880 its getter 0x501d8647 reads. The hot-plug handler's work runs in the display init's HDMI task
+    // 0x501dc568 (extra_tasks), not in task 16 as E143's
+    hdmi: { gio_slots: 0x50002B5E, state: [0x62A67880, 4] },
     extra_tasks: [
       0x501DC568,   // started by the display task init (E143 0x501c2f13 starts no task; E147 starts 0x501e3eca)
     ],
@@ -111,6 +124,9 @@ export const MODELS = {
     // its count at 0xa32bff60 (E143's 0xa32bff5c); UI_IN's port init registers 0x501595dc (0x501595b6..bc); its start
     // stage calls 0x501595c6 (0x5015707b)
     scpu_port: { irq: [0x5004F9BC, 5], register: 0x5004F690, callback: 0x501595DC, old_state: 0x501595C6 },
+    // as E146's (D): the GIO init 0x50002a11 ends with 0x50002b50 (0x50002a1e), slots at 0xa32c1c44; the EDID state
+    // word 0x62a655e4 (its getter at 0x501e078a); the hot-plug work runs in the HDMI task 0x501e3eca
+    hdmi: { gio_slots: 0x50002B50, state: [0x62A655E4, 4] },
     extra_tasks: [
       0x501E3ECA,   // started by the display task init (0x501cfd03, E143 0x501c2f13 starts no task), X
     ],

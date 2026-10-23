@@ -1,13 +1,13 @@
 // The board of the model this copy of the lab runs (src/fw/model.mjs): where the on-chip SRAM and the hardware
 // semaphores sit, the interrupt controller's banks, IRQ count and register offsets, the timer block's channels and
-// register layout, the SCPU interface's register offsets, the flash-library window, the interrupt vectors' page and
-// the MMIO pages the lab's stub allows. The machine (src/machine.mjs), the devices (src/dev/) and the lab's views of
+// register layout, the SCPU interface's register offsets, the HDMI port's registers, the flash-library window, the
+// interrupt vectors' page and the MMIO pages the lab's stub allows. The machine (src/machine.mjs), the devices (src/dev/) and the lab's views of
 // them read BOARD.
 //
 // A model's board is its family's (FAMILIES, named by its MODELS entry's board.family), then the facts bin/port.mjs
 // reads from its firmware (src/fw/ports.mjs FACTS[code].board, by the rules of src/fw/facts.mjs), then the
 // differences its MODELS entry gives by hand, each with its evidence; the sub-objects (isc, intc, timer, vsc, engine,
-// scpu) merge one level deep, so a model can give a single field such as intc.irqs. A fact both read from the
+// scpu, hdmi) merge one level deep, so a model can give a single field such as intc.irqs. A fact both read from the
 // firmware and given by hand is refused. A family fact no body has been read for is UNKNOWN: reading it throws, so a
 // device that needs it fails where it first does instead of running on another board's value.
 import { MODELS } from './models.mjs';
@@ -57,6 +57,13 @@ export const FAMILIES = {
       command: 0xf4, clock: [0xe8, 0xec], ticks: true, storage: [[0x00, 0x00], [0x08, 0x3c]],
       events: { pending: 0x98, ports: 0xa0, count: 7, irq: 320 },
     },
+    // the HDMI port (src/dev/hdmi.mjs, built only with the machine's hdmi option; docs/hle-gaps.md 4.9): the
+    // transmitter's byte registers (the driver's register reader 0x501d55d8 and writer 0x501d5645), the writer's lane
+    // word, IRQ 239 (the HDMI init 0x501d15e8 attaches 0x501d508a at level 5); the hot-plug pin 77's level word and
+    // bit (the pin read 0x50002a35: bit 4 of the word (0x60025ff8)[77]) and its GIO record (slot 124 of the slot table
+    // 0x60026788, record 0x600268f4 + 32 x 124): its group's status and enable words, the pin's type-0 bit and the
+    // group's IRQ 109 (D; E146 and E147: the same words, bit and IRQ in their tables, D)
+    hdmi: { tx: 0x99C07000, lanes: 0x99C08000, irq: 239, hpd: { level: 0x9B881540, level_bit: 0x10, status: 0x9B883038, enable: 0x9B883178, bit: 0x40, irq: 109 } },
     core_byte: 0x97F00254,
     // the interrupt vectors' page, the high half of the level slots' run-time addresses: E143's vector init loads
     // 0x60030020..0x60030080 (0x5000f09b, D; src/fw/facts.mjs vectorPage, which reads the same on E146 and E147)
@@ -145,6 +152,8 @@ export const FAMILIES = {
     // and their start then stops at the NAND controller the lab does not model (X)
     // The event and port words (E143's 0x98, 0xa0..0xb8) lie in the storage 0x40..0x94: events null (not modelled)
     scpu: { command: 0xa4, clock: [0x98, 0x9c], ticks: false, storage: [[0x00, 0x00], [0x08, 0x3c], [0x40, 0x94]], events: null },
+    // the HDMI port: not read on this family
+    hdmi: UNKNOWN,
     // per body, read by src/fw/facts.mjs (coreByte; resetHead's library and preload rows; vectorPage: 0x6003xxxx on
     // E144, 0x6041xxxx on the 0x60400020 bodies, X; dramSize: 256 MiB on E144, 512 MiB on the 0x60400020 bodies, X)
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,
@@ -193,7 +202,7 @@ export const FAMILIES = {
       kernel_ticks: UNKNOWN, soft_tick: UNKNOWN, hw_channels: UNKNOWN, hw_entries: UNKNOWN,
     },
     // the VSC name table is not in the E144 form; the engine's and the SCPU's registers were not read
-    vsc: UNKNOWN, engine: UNKNOWN, scpu: UNKNOWN,
+    vsc: UNKNOWN, engine: UNKNOWN, scpu: UNKNOWN, hdmi: UNKNOWN,
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,
     // E143's scratch DRAM holds E122's icons record (the loader's destination 0xa1fa6c00, 0x730a00 bytes decoded: X,
     // src/fw/facts.mjs resLoader and resources.mjs record): the lab's scratch is E144's lab region, which E118, E120

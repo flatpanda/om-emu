@@ -461,6 +461,7 @@ export class DisplayLab extends OsdLab {
     this.timer_log = null;
     this.time_mode = opts.time ?? false;
     this.time_log_boot = null;
+    this.hdmi = opts.hdmi ?? false;                  // the HDMI port (the machine's hdmi option): H-GIOSLOTS in start()
   }
   static skip_defer = false;
   get skip_defer() { return this.constructor.skip_defer; }
@@ -812,12 +813,31 @@ export class DisplayLab extends OsdLab {
     this.time_log_boot = { steps: log, table: h8(table), enabled, attached, running, ie: h8(timer.ie()) };
     return this.time_log_boot;
   }
+  // H-GIOSLOTS (the HDMI port, src/dev/hdmi.mjs; docs/hle-gaps.md 4.9): the reset of the GIO interrupt slots that the
+  // GIO init ends with (src/fw/models.mjs hdmi.gio_slots), natively and before the display init. The GIO init does not
+  // run in the lab, so without the reset the display init's registration of the hot-plug pin finds no free slot and
+  // gives up without a word (X); after it the registration takes slot and handler and attaches the pin's group IRQ
+  // natively (hpd_attached checks the IRQ). The init's other two steps, the board's pin configuration, are not run: they
+  // write the pin block, whose pages are the lab stub's
+  gio_slots() {
+    const port = MODEL_INFO.hdmi;
+    if (!port) throw new FirmwareError(`H-GIOSLOTS: ${MODEL} has no HDMI port in the lab (src/fw/models.mjs hdmi)`);
+    if (!this.sim.m.devices.hdmi) throw new FirmwareError('H-GIOSLOTS: the machine has no HDMI port (its hdmi option is off)');
+    if (!this.nk?.intc) throw new FirmwareError('H-GIOSLOTS: the HDMI port needs K-native with native interrupts');
+    this.step('H-GIOSLOTS', () => this.call(port.gio_slots, null, null, null, 20000));
+  }
+  hpd_attached() {
+    const { irq } = BOARD.hdmi.hpd, level = this.nk.intc.level(irq), handler = this.sim.u32(IRQ.HANDLER_TABLE + 4 * irq);
+    if (level !== 1 << 5 || !handler) throw new FirmwareError(`H-GIOSLOTS: after the display init the hot-plug pin's IRQ ${irq} has level register 0x${level.toString(16)}, handler ${h8(handler)}: its registration did not take`);
+  }
   // Software-timer init (or, in time mode, H-BOOTTIME), display task init + disp_sync init, then the lab clock of
   // channels 1 and 2.
   start() {
     if (this.time_mode) this.boot_time();
     else if (this.timer_init) this.software_timer_init();
+    if (this.hdmi) this.gio_slots();
     this.step('display task init 0x501c2f13', () => this.call(DISPLAY_TASK_INIT));
+    if (this.hdmi) this.hpd_attached();
     this.step('disp_sync init 0x507f2fe0', () => this.call(DISP_SYNC_INIT));
     // H-DISPINIT2: where the display init leaves the devices' setup (their frame period words among it) to the first
     // DISPLAY OPEN, which runs it once behind a guard word, the lab runs it here, between the init and the OPEN as

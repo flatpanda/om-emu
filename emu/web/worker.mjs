@@ -67,7 +67,7 @@ async function firmware(file, { cache = true } = {}) {
 // The page's query string as play.mjs's command line (the options that move the lab; --no-browser, no --out).
 function playerArgs(q = {}) {
   const a = { ...PLAYER_PARSER, no_browser: true, out: '<out>', no_wait_on_error: false };
-  for (const k of ['lang', 'device', 'a15', 'start', 'tab', 'idle', 'touch', 'us_clock', 'compose']) if (typeof q[k] === 'string') a[k] = q[k];
+  for (const k of ['lang', 'device', 'a15', 'start', 'tab', 'idle', 'touch', 'us_clock', 'compose', 'hdmi']) if (typeof q[k] === 'string') a[k] = q[k];
   for (const k of ['no_bgdraw', 'debug_api']) if (q[k] !== undefined) a[k] = !!q[k];
   if (q.x_trim_keep !== undefined) a.x_trim_keep = q.x_trim_keep;
   return a;

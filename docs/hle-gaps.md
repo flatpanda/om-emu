@@ -142,7 +142,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **SCPU, power, clock, on-board sensors, persistence** (4.7) | S: S-SCPU, the request server at the request API (since 2026-10-23: `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1); the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / opt-in S-NVRAM; Level Adjust hangs | accelerometer at the PER_SIO transfer or the sample cache; S-NVRAM's NAND seam as the default | lab time; the UI_IN, ACC, SCPU and PER_SIO inits; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, Level Adjust, level gauge, rotation, eye sensor |
 | **Card and file system** (4.8) | S: S-CARD; the DCF remain count runs and says "not mounted" (X) | a block device at the sdmem request `0x508b1cdc` with a host FAT32 / exFAT image; sd_mount's result beside it | task starts (EYEFI's init chain, FILECLBK, FILEFGND, DCFPROC_SUB), IRQs anywhere (completions are IRQ to flag) | 115,103 / 108,887 (17k of it self-test and debug) | 3-5 weeks | a card that fills, real files in DCIM, Card Formatting, both slots |
 | **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
-| **HDMI and DisplayPort** (4.9) | 0: the DISPLAY OPEN polls the EDID state `0x62a3c8ec` 50 times and gives up (X) | TX byte registers at `0x99c07000`: HPD / RxSense byte 8 bits 3 / 4, DDC `0xa80..0xa83`, EDID at `0x99c07c00`, IRQ 239; then VSC channel 0 | IRQ 239 delivered while DISPLAY waits (phase 3), VSC channel 0 in the compositor | about 11k (3.3k plus the TX / DP driver's 7.7k) | 3-4 weeks (EDID / HPD about 1) | the HDMI output a TV shows |
+| **HDMI and DisplayPort** (4.9) | N with `--hdmi on` (since 2026-10-23, E143, E146, E147): a plug runs the hot-plug pin's IRQ 109, the HDMI init, two E-DDC reads with IRQ 239, the EDID's checks and parse and the connect report to UI_IN natively (H-GIOSLOTS, S-HDMISINK); off by default, and either way the DISPLAY OPEN of HDMI is not reached (X) | TX byte registers at `0x99c07000` (HPD / RxSense byte 8, DDC `0xa80..0xa83`, the buffer `0xc00`, IRQ 239) and the GIO pin 77 (`0x9b881540`, IRQ 109), both modelled; then the HDMI open and VSC channel 0 | the camera application's output switch (?), VSC channel 0 in the compositor, an unplug (A-HDMI-1) | about 11k (3.3k plus the TX / DP driver's 7.7k) | 2-3 weeks left (the open and channel 0) | the HDMI output a TV shows |
 | **USB** (4.10) | 0 on E143 | the event level first (EV_USB_CONNECTED 8, EV_USB_RXDETECT `0x040d00d2`, the select screen); later a DWC3-family device at `0x9a600000` (IRQ 223) | SCPU (PD, power source), ADC flag `0xbf`, the PC_* tasks, storage for MSC | 121,861 / 117,704 | 1-2 weeks events; 4-8 weeks data path | the USB select screen, charging state; later MSC, MTP, PTP |
 | **PC connection over PTP (TPC)** (4.10) | 0 | ? (the bulk of the USB data path) | a USB or Wi-Fi transport, storage | about 52.6k / about 52k (21.4k of it filed under factory code) | ? | tethering, the PTP firmware-update path |
 | **PictBridge / DPS / DPOF, XML parser** (4.10) | 0 | ? | USB | about 89k in parts: 13.4k HLS, 25.7k Cmp_PictBridge, 10.3k HFW print, 2.8k DPS transport, 9.4k DPS XML, 2.8k DPOF, 24.5k expat-like XML parser | ? | direct printing |
@@ -904,20 +904,91 @@ The flag and semaphore names are the object-name table's (D); the commands' mean
 
 ### 4.9 HDMI and DisplayPort
 
-- **Driver (D):** inside the display code, `0x501d1381..0x501d6ad0` (about 7.7k, 6% run): init `0x501d15e8`, IRQ 239
-  (level 5) handler `0x501d508a`, EDID read `0x501d3113`, EDID step `0x501d34b8`, state getter `0x501d30f6`. The
-  driver's own task is DISPLAY_DP 0x8e (`0x501d1381`; a debug / ES test task by its strings, I), and DisplayPort has its
-  own EDID reads. There is no HDMI task: the DISPLAY task runs the HDMI open.
-- **Contract (D):** a byte-register file at `0x99c07000`, written through `0x501d5645` (byte-lane enable at
-  `0x99c08000`). Hot plug: byte 8 bits 3 and 4 both 1 (I: HPD and receiver sense); interrupt status bytes 0x90 / 0x92 /
-  0x9a. EDID: DDC bytes `0xa80` (segment), `0xa81` (offset), `0xa82` = 127, `0xa83` = 130, a wait on flag
-  HDMI_DDC_WAIT 0x103 for 1000 ticks that IRQ 239 sets; the step reads 128 bytes at `0x99c07c00`, checks the header and
-  the checksum, reads the extensions, then sets the state `0x62a3c8ec` = `0xF0`, which the DISPLAY OPEN polls. After
-  EDID: the PLL / PHY registers at `0x99c08004..`, infoframes, the mode choice from the EDID, CEC registers by name
-  and audio (HDMI_AUD_RESP 0xa2): semantics ?. Video goes out on VSC channel 0.
-- **First step:** a DDC / EDID model with a standard EDID behind IRQ 239 (about 1 week). It needs IRQ 239 delivered
-  while DISPLAY waits; if ROADMAP phase 3 is not in yet, this is its first test case. Polls past the EDID whose exit
-  values have no firmware evidence are reported, not guessed.
+Status (2026-10-23): the plug of a cable runs natively down to the transmitter and the hot-plug pin, with the play
+option `--hdmi on` and its input `hdmi plug` (`src/dev/hdmi.mjs`, `src/lab/edid.mjs`; FIDELITY-NOTES 4.5) on E143, E146
+and E147; off by default. Addresses are E143's (disassembly notation) unless a body is named.
+
+- **Driver (D):** inside the display code, `0x501d1381..0x501d6ad0` (about 7.7k): the HDMI init `0x501d15e8`, the IRQ
+  239 (level 5) handler `0x501d508a`, the EDID read `0x501d3113`, the EDID step `0x501d34b8`, the state getter
+  `0x501d30f6`, the hot-plug handler `0x501d6501`, the HDMI open `0x501d5bae` (from DISPLAY cmd 2, `0x501d14f5`). The
+  driver's own task DISPLAY_DP 0x8e (`0x501d1381`) is a debug / ES test task by its strings (I), and DisplayPort has its
+  own EDID reads. The DISPLAY task runs the HDMI open; the hot-plug work runs in task 16, the deferred-call task (kernel
+  spec 9.6), on E146 and E147 in an HDMI task of their own (below).
+- **Registers (D: the reader `0x501d55d8`, the writer `0x501d5645`):** a byte-register file at `0x99c07000`, register r
+  in byte lane r & 3 of the word at r & ~3, read and written as words. The writer first stores (keep << 16) | 1 to the
+  lane word `0x99c08000`, keep naming the three lanes the word store leaves alone (14, 13, 11, 7), then the byte in its
+  lane. Register 8: bit 3 hot-plug detect, bit 4 receiver sense (I: names; `0x501d1727`, `0x501d173b`). Interrupts (the
+  status reader `0x501d1985`): the summary 0x90 (bit 2 for 0x92, bit 4 for 0x94, bit 6 for 0x96), the statuses 0x92 /
+  0x94 / 0x96, written back by the reader (W1C, I), their masks 0x9a / 0x9c / 0x9e (set and cleared by `0x501d17a3(off,
+  &bits)`), and 0x98, which the init sets to 0x57 (I: the summary's mask). The handler, asked for 0x846: bit 2 (0x92 &
+  3) calls `(0x62a3c9f4)`, bit 4 (0x92 & 0xc) `(0x62a3c9f8)`, the hot-plug callbacks `0x501d648c` / `0x501d64b6` that
+  the display init stores (`0x501d5b85`); 0x94 bit 7 with bit 5 sets the DDC wait's flag `(0x60043176)` with pattern 1,
+  with bit 6 pattern 2; 0x96 bit 7 sets `(0x6004308e)`, which the HDMI open's wait `0x501d5149` takes. The DDC: `0xa80`
+  segment, `0xa81` offset, `0xa82` count - 1 (I), `0xa83` the command: 130 in the EDID read (an E-DDC read, I), 128 in
+  the open's SCDC write `0x501d5186` (by way of `0x501d1b92`, `0x501d53d1`: slave `0xa8`, register `0x20`, the byte at
+  `0xc00`, I: SCDC TMDS configuration; it polls 0x94 until one of its bits 5..7 is set, then writes 0xff to it), the
+  data at `0xc00..`. The PHY / PLL words at `0x99c08004`, `0x99c08054`, `0x99c080fc` (the power step `0x501d174f`,
+  `0x501d166c`) are the lab stub's.
+- **Hot plug through a GIO pin (D):** the display init registers pin 77's handler `0x501d6243` (`0x501d696c`: the GIO
+  mode `0x500519ce(77, 5)` and handler `0x50051a29(77, {type 0, handler})`) and enables it (`0x501d6926`). The GIO
+  driver maps a logical pin through `0x500029ad` (class 0 here) to the class's functions (tables at run time
+  `0x60118f30..0x60118fa0`: read `0x50002a35`, mode `0x5005222f`, handler `0x5005229f`, enable `0x500523ae`, disable
+  `0x50052462`); the pin's level is bit 4 of the word `(0x60025ff8)[77]` = `0x9b881540`; the pin's slot is
+  `0x60026788[77]` = 124, its record `0x600268f4 + 32 x 124` = {pin word, 0, IRQ 109, the group handler `0x500529af`,
+  status `0x9b883038`, enable `0x9b883178`, bit 0x40 for type 0, 0x80 for type 1}, its state `0xa32c1f74 + 24 x 124`.
+  The mode function takes only a free slot (255, `0x500525c7`; otherwise it returns `0xffff`) and attaches the record's
+  IRQ (`0x50053f76`; level 5 here); the group handler `0x500525ee(121, ...)` calls the handler of each slot whose status
+  and enable bits are set and writes the bit back. The slots are freed by the GIO init `0x50002a20` (last step
+  `0x50002b5d`, 325 slots; before it `0x50002b84` and the board's pin setup `0x50002a59`), which the lab does not run:
+  without it the display init's registration is refused without a word (X). On a rising pin the handler reads pin 77
+  high, turns the pin's interrupt off (`0x501d6949`) and defers `0x501d6286` (`0x501d64e0`: flag `0x62a3ca21`, the
+  poster `0x50053505`); low, it calls the disconnect send `0x501d644b`. E146 and E147: the same pin, words, slot, bit
+  and IRQ (their tables, D).
+- **The plug's sequence (D, X on E143, E146, E147):** in task 16 `0x501d6286` runs the HDMI init (state 0, IRQ 239
+  attached, the clocks `0x501c7806`, the power step: lane word 1, the PHY words, `0xa32db45e` = 1; then 0x98 = 0x57,
+  0x33, 0x05, 0x20, 0x21, 0x0a; OlyTaSS(1)) and the hot-plug handler, which wants the transmitter powered (`0x501d179a`)
+  and then, for up to 30 passes, hot-plug detect and receiver sense: both high, it enables their interrupts (0x9a) and,
+  with the state 0, runs the EDID read; detect without sense, with `(0xa32db46c)` = 1, it sleeps 100 ms a pass and after
+  20 sets the state 0xff and posts `0x04020201` (`0x50025095`); detect low, it calls the disconnect send. The EDID read
+  enables 0x9c's bits 5..7, writes 12 to `0xa9c` and per block b writes `0xa80` = b >> 1, `0xa81` = (b & 1) x 128,
+  `0xa82` = 127, `0xa83` = 130, then waits in OlyEvWt on the DDC flag for 1000 ticks; pattern 1 runs the EDID step,
+  pattern 2 prints "DDC RETRY"; it ends at state 0xf0, past block 64 or after six failed tries (errlog `0x37009108`, (3,
+  2532, block, tries)). The step: block 0's checksum (`0x501d3d91`: the 128 bytes sum to 0) and the base parse
+  `0x501d35dc` (the extension count, byte 126, to `0x62a3c8ed`; bytes 8..19 to `0x62a3c7f8` (manufacturer), `0x62a3c7fa`
+  (product), `0x62a3c7f4` (serial), `0x62a3c7fc..ff` (week, year, version, revision); the 13 bytes from byte 95, the
+  third descriptor's text, to `0x62a3c800`); state 0xf0 without an extension, else 1 and `0x62a3c8ee` = 1. Each later
+  block: the checksum and `0x501d36a4` by its tag (2: the CTA-861 parse `0x501d36e4`: `0xa32db460` |= 8, tag, revision
+  and timing offset to `0x62a3c810..812`, byte 3's bits 7..4 and its low nibble to `0x62a3c813..817`, then the data
+  blocks: video VICs to `0x62a3c819..` (count `0x62a3c818`, at most 64, each matched against the table at run time
+  `0x602bd278`), audio, vendor and extended blocks); state 0xf0 once `0x62a3c8ee` reaches the count. The hot-plug
+  handler then calls the connect send `0x501d6402`: `0x501d699b` asks UI_IN for the switch `0x0501` (`0x5014c015(0x0501,
+  2)`), and for its answer 1 (the lab's idle state, X) `0x501d69c2(1)` calls the group-4 producer with `0x02020501` and
+  0 (H-G4SET's), and UI_IN forwards EV_HDMI_CONNECTED to the camera application. A failed read (the EDID read returns 0)
+  logs `0x37008206` (1, 821, ...), sets the state 0xff (`0x501d3242`) and sends the connect report all the same. With
+  the lab sink (S-HDMISINK: 1080p60, base block plus a CTA-861 block) the sequence takes 1.4 ms of lab time on E143: IRQ
+  109, then IRQ 239 for each of two E-DDC reads (segment 0, offsets 0 and 128), state 0xf0, the fields as above (VICs 16
+  native, 4, 3, 2, 1), one connect report (X, test_hdmi.mjs); with the base block's checksum off by one, six reads of
+  block 0, both errlog entries, state 0xff and the report (X).
+- **The DDC wait and IRQ-anywhere (X):** the wait is task 16's (E146 / E147: the HDMI task's) OlyEvWt, not in a display
+  run: the task blocks natively, the CPU takes IRQ 239 at the idle point, its handler sets the flag and the task goes
+  on. The transmitter completes a read when its command is written (I), before the wait, so no interrupt has to be taken
+  anywhere but at the idle point; nor does S-IRQFIRST apply. HDMI is not a test case for ROADMAP step 3.
+- **E146 and E147 (D):** the driver's code and its tables are E143's but for addresses, and the sequence's transmitter
+  accesses are E143's (X: the same registers and words). The deferred call is replaced by an HDMI task the display init
+  starts (E146 `0x501dc568`, E147 `0x501e3eca`; src/fw/models.mjs extra_tasks): the GIO handler (E146 `0x501dc2d1`) sets
+  the task's flag (E146 `(0x60042fe2)`) with pattern 1 (`0x501dc544`), for which the task runs the HDMI init (E146
+  `0x501d6aa2`) and the hot-plug handler (E146 `0x501dc5aa`); patterns 2 and 4 run the handler only. The EDID state is a
+  word (E146 `0x62a67880`, E147 `0x62a655e4`).
+- **After the report (X):** the camera application takes EV_HDMI_CONNECTED natively (CCommon::doHdmiConnectChange,
+  setOutputType, getHdmiState by their strings), its display manager sends DISPLAY cmd 18 (S-DISPQ), and the TFT leaves
+  the date prompt for the shooting screen; it sends no DISPLAY OPEN of the HDMI device. The same frame and cmd 18 follow
+  H-G4SET's toggle of `0x0501` in a session without the port, so the driver's EDID state does not change what the
+  application shows here. Why it opens nothing is ? (openDevice's caller is not traced, vsc spec section 8, H-RESEND).
+  The open past its poll (the PLL / PHY words, infoframes (I, `0x501d3dcd`), the SCDC write, the wait on `(0x6004308e)`,
+  the mode choice (?), VSC channel 0), CEC, audio (HDMI_AUD_RESP 0xa2) and DisplayPort are not reached.
+- **Next:** an unplug (A-HDMI-1: which of 0x92's bits the transmitter sets when detect and sense fall, and the GIO edge
+  type's other bit), a cable in at power-on (whether the pin's type 0 is an edge or a level, ?), the camera
+  application's output switch, then the HDMI open and VSC channel 0 in the compositor.
 
 ### 4.10 USB, PTP and PictBridge
 
@@ -1019,7 +1090,7 @@ The flag and semaphore names are the object-name table's (D); the commands' mean
 
 | Prerequisite | Blocks that need it | State today | Evidence |
 |---|---|---|---|
-| Interrupt acceptance at any instruction boundary, native delivery (F03, F27) | every device seam: HDMI (IRQ 239), SD (225-232), lens (14, 60), sensor (15-42, 243-247), SCPU (320, 321), ISC (323) | idle point only (H-IRQGATE) | ROADMAP phase 3; X: accepting anywhere moved 21 of 30 acceptances with identical output |
+| Interrupt acceptance at any instruction boundary, native delivery (F03, F27) | every device seam: SD (225-232), lens (14, 60), sensor (15-42, 243-247), SCPU (321), ISC (323); not HDMI's IRQs 109 and 239 or SCPU's 320, which their waiters take at the idle point (4.7.2, 4.9, X) | idle point only (H-IRQGATE) | ROADMAP phase 3; X: accepting anywhere moved 21 of 30 acceptances with identical output |
 | A machine-owned time model, time mode by default (F06, F26) | sensor VD cadence, LENS_SYNC up to 240 fps, the lens command times, the SCPU clock, the accelerometer sampler, SD and DDC timeouts, cross-core timed waits | opt-in time mode; ticks lost inside display steps | ROADMAP phase 4, M9 follow-ups |
 | More CPUs (per-core state, `0x8000` page, INTC banks, kicks, ticks) | live view, capture, movie, audio, AF, detection, wireless, histogram | CPU 0 only | 4.6 |
 | Task starts and module inits from the boot chain (USTART2..5; init chains such as `0x503dae30`, `0x501ea63c..0x501ea78f`, EYEFI's) | every block | entries refused by the kernel lab's guard; inits skipped | every block's footprint (section 4) |
@@ -1049,8 +1120,9 @@ The order follows what each step unblocks: the keystones first, because each lat
 2. **Cheap CPU 0 wins with no keystone dependency:** the SCPU request server with a ticking clock and S-NVRAM as the
    default (4-6 days); the SCPU port registers and IRQ 320 for group-0 keys and the power lever (3-5 days; both in
    since 2026-10-23, 4.7.1 and 4.7.2, S-NVRAM opt-in and the power-off sequence open); the
-   accelerometer (Level Adjust); HDMI EDID / HPD (about 1 week, the first test case for step 3's interrupts). They
-   retire named stand-ins and fix visible defects: the frozen clock, lost settings, a GUI hang, the abandoned HDMI open.
+   accelerometer (Level Adjust); HDMI EDID / HPD (in since 2026-10-23 behind `--hdmi on`, 4.9: its interrupts are
+   taken at the idle point, so it was no test case for step 3 after all). They retire named stand-ins and fix visible
+   defects: the frozen clock, lost settings, a GUI hang, the abandoned HDMI open.
 3. **Interrupt acceptance anywhere, then the machine-owned time model** (ROADMAP architecture phases 3 and 4). Every
    device seam completes by interrupt -> flag while a task waits (SD, DDC, lens, SSG / VD, SCPU channels, ISC), and the
    VD frame clock, the lens command times, the SCPU clock and the SD / DDC timeouts need time that devices own. Doing
@@ -1292,6 +1364,13 @@ Corrections to earlier readings, each now owned here or by the document named.
 22. **The lens init steps' "parsers" are predicates** (D, 4.4.1) on the lens record that earlier replies filled; the
     one step that writes the record from a table is `0x502b0bce` (known lens ids). `+0x08` of the lens serial controller
     is W1C (D: the IRQ 14 handler writes back what it read).
+23. **HDMI's hot plug comes over a GIO pin, and its DDC wait is a task's** (D, X, 4.9): pin 77's interrupt (IRQ 109,
+    the GIO group handler) starts the hot-plug work, which attaches IRQ 239 only then; the EDID read waits in task 16
+    (E146, E147: an HDMI task), not in DISPLAY, so the interrupt is taken at the idle point and S-IRQFIRST is not
+    needed. The GIO init that frees the pins' interrupt slots does not run in the lab, so both pin registrations a lab
+    session makes, HDMI's and the touch panel's, were refused without a word (X: the coverage of the GIO mode function,
+    and IRQ 132 attached for the touch panel once the slots are free); H-GIOSLOTS runs the slot reset with `--hdmi on`
+    only.
 
 ## 10. Open questions
 

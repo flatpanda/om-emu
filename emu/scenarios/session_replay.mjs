@@ -162,6 +162,8 @@ export const PLAYER_PARSER = { lang: 'en', device: 'tft', evf_layout: false, a15
   touch: 'gui', us_clock: 'lab', no_bgdraw: false, compose: 'boundary', port: 0, no_browser: false, out: null, replay: null,
   debug_api: false, x_mutant: null, x_trim_keep: null };
 export const PLAYER_EXTRA_KEYS = ['no_wait_on_error'];
+// keys a later option added: a recording made before it lacks them, and the Player takes the option's default
+export const PLAYER_ADDED_KEYS = ['hdmi'];
 export const OUT_PLACEHOLDER = '<out>', REPLAY_PLACEHOLDER = '<replay>';
 export const WALL_PATHS = {
   step: [['seconds']],
@@ -258,7 +260,7 @@ function stepOut(r) {
 const RETIRED_PLAYER_KEYS = ['no_camseq'];
 function playerNamespace(kwargs, replayFile) {
   kwargs = Object.fromEntries(Object.entries(kwargs).filter(([k]) => !RETIRED_PLAYER_KEYS.includes(k)));
-  const want = [...Object.keys(PLAYER_PARSER), ...PLAYER_EXTRA_KEYS].sort(), got = Object.keys(kwargs).sort();
+  const want = [...Object.keys(PLAYER_PARSER), ...PLAYER_EXTRA_KEYS].sort(), got = Object.keys(kwargs).filter((k) => !PLAYER_ADDED_KEYS.includes(k)).sort();
   if (JSON.stringify(want) !== JSON.stringify(got)) {
     throw new Divergence(`Player ctor: keys missing ${JSON.stringify(want.filter((k) => !got.includes(k)))}, unknown ${JSON.stringify(got.filter((k) => !want.includes(k)))}`);
   }

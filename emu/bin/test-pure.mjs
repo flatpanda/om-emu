@@ -7,8 +7,8 @@
 // (test_args.mjs), the worker purity rule (and no py-prefixed module or name), the firmware rules of
 // src/fw/facts.mjs (test_facts.mjs: firmware-optional, each unpacked main block checked against its MODELS entry) and
 // the firmware map's units (test_fwmap.mjs: the machine's coverage option off and on, fwmap's decoder against the
-// interpreter's transfer forms, the coverage union, the block aggregation) and the SCPU's clock and request server
-// (test_scpu.mjs).
+// interpreter's transfer forms, the coverage union, the block aggregation), the SCPU's clock and request server
+// (test_scpu.mjs) and the HDMI port's device and sink (test_hdmi.mjs).
 // bin/test.mjs runs all of these too, with everything else.
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
@@ -21,6 +21,7 @@ import { factsTests } from '../test/test_facts.mjs';
 import { argsTests } from '../test/test_args.mjs';
 import { fwmapUnits } from '../test/test_fwmap.mjs';
 import { scpuUnits } from '../test/test_scpu.mjs';
+import { hdmiUnits } from '../test/test_hdmi.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -49,6 +50,7 @@ report('scene stand-in (S-SCENE)', sceneUnits());
 report('command-line parser', argsTests());
 report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnits());
 report('SCPU clock, ports and request server (S-SCPU)', scpuUnits());
+report('HDMI port: transmitter, hot-plug pin, sink (S-HDMISINK)', hdmiUnits());
 const fa = factsTests();
 report(`firmware facts (${fa.models} unpacked main blocks)`, fa);
 const pu = purity();

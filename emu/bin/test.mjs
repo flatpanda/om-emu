@@ -8,7 +8,8 @@
 // (test_debug.mjs), the .BIN unpacker (test_unpack.mjs, needing $OM_FW_DIR or $OM_BIN, else counted as a failure),
 // the browser player's pure parts, its node host and its Worker in a node worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
-// (test_camapp.mjs), the SCPU's clock and request server (test_scpu.mjs), the firmware rules of src/fw/facts.mjs
+// (test_camapp.mjs), the SCPU's clock and request server (test_scpu.mjs), the HDMI port and a plug in play on E143,
+// E146 and E147 (test_hdmi.mjs), the firmware rules of src/fw/facts.mjs
 // (test_facts.mjs) and the firmware map (test_fwmap.mjs:
 // the machine's coverage option, the static map's determinism and pinned headline, the labels' keys, run.mjs under
 // OM_COVERAGE). The fixtures they compare with are emu's own (test/fixtures, checks/fixtures, golden.json): a
@@ -121,6 +122,20 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipp
   console.log(`SCPU clock, ports and request server (S-SCPU): ${sc.checks - sc.bad.length}/${sc.checks}`);
   sc.bad.forEach((x) => console.log('  ', x));
   bad += sc.bad.length;
+}
+// the HDMI port: its device and sink without firmware, then a plug in play: E143 here, E146 and E147 each in a process
+// of its own (the model is fixed when the lab is imported)
+{
+  const { hdmiUnits, hdmiSession } = await import('../test/test_hdmi.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const hu = hdmiUnits(), hs = await hdmiSession();
+  const others = ['E146', 'E147'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_hdmi.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
+  });
+  console.log(`HDMI port: units ${hu.checks - hu.bad.length}/${hu.checks}; plug in play (E143) ${hs.checks - hs.bad.length}/${hs.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  [...hu.bad, ...hs.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += hu.bad.length + hs.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // the camera's non-volatile state kept between sessions (S-NVRAM): no date prompt, a setting kept across sessions
 {

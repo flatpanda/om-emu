@@ -16,6 +16,7 @@ import { Bus } from './dev/bus.mjs';
 import { Engine } from './dev/engine.mjs';
 import { Stub } from './dev/stub.mjs';
 import { Scpu } from './dev/scpu.mjs';
+import { Hdmi } from './dev/hdmi.mjs';
 
 export { Unported, TbUndecidable };
 export class HostStopped extends Error {       // a run or write call after a host error stopped the machine mid-instruction
@@ -31,6 +32,8 @@ const hex8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 const HLE_BASE = 0x89A30000, HLE_SIZE = 0x4000, HLE_MAGIC = 0x31454C48;
 // the lab's doorbell of the SCPU interface (src/dev/scpu.mjs): the input levels of its ports
 export const SCPU_DOORBELL = 0x89A40000;
+// the HDMI port's lab window (the sink's EDID) and doorbell (the cable), with the hdmi option (src/dev/hdmi.mjs)
+export const HDMI_WINDOW = 0x89A50000, HDMI_DOORBELL = 0x89A51000;
 let generation = 0;
 const LONG_CONT = 50000;
 // The creation registry (src/debug/, the trace and snapshot gates): every function registered here is called with each
@@ -45,9 +48,11 @@ export function onMachine(fn) {
 // interpreter; 0 none), oneInsn (the one-instruction mode: one instruction per TB), keepStderr (keep
 // every stderr line: MenuLab.scpu_commands reads it whole; default a 2,000-line ring), coverage (an execution-coverage
 // collector, bin/fwmap.mjs cover: its mark(pc) is called with the pc of every instruction the CPU runs, at least once
-// each, and HLE calls its stub(pc, name) for every stand-in that fires; null, the default: none, and nothing changes).
+// each, and HLE calls its stub(pc, name) for every stand-in that fires; null, the default: none, and nothing changes),
+// hdmi (the HDMI port's transmitter, its hot-plug pin and the sink, src/dev/hdmi.mjs; false, the default: none, and
+// their addresses stay the lab stub's).
 export const WATCH_LOG_MAX = 200000;
-export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 1000000, clock = () => performance.now(), mutant = 0, oneInsn = false, keepStderr = false, coverage = null } = {}) {
+export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 1000000, clock = () => performance.now(), mutant = 0, oneInsn = false, keepStderr = false, coverage = null, hdmi = false } = {}) {
   if (dramBytes > mem.DRAM_MAX || dramBytes < 64 << 20) throw new Error(`om-emu: DRAM must be 64..${mem.DRAM_MAX >> 20} MiB`);
   const myGen = ++generation;
   const tCreate = clock();
@@ -118,6 +123,7 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   bus.onRemap = windowRemapped;                // the decode slots of window pcs, the main-loop return (interp.mjs)
   const intc = new Intc(m);
   const scpu = new Scpu(m, lclock, intc, SCPU_DOORBELL);
+  const hdmiPort = hdmi ? new Hdmi(m, intc, HDMI_WINDOW, HDMI_DOORBELL) : null;
   const engine = new Engine(m, bus, intc);
   const vsc = new Vsc(m, lclock, intc, bus, rom);
   const timer = new Timer(m, lclock, intc);
@@ -170,7 +176,7 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   // Every CPU fault writes its trap line (after any device line the faulting access wrote).
   const trap = (f) => { for (const line of trapLines(f, R[PC])) m.stderr(line); };
   Object.assign(m, {
-    devices: { intc, timer, engine, vsc, bus, stub, scpu, clock: lclock },
+    devices: { intc, timer, engine, vsc, bus, stub, scpu, clock: lclock, ...(hdmiPort ? { hdmi: hdmiPort } : {}) },
     getRegs() { live(); return getRegs(); },
     // 'p' / 'P' (registers 0..15 as cpu.mjs getRegs / setRegs, and the lab registers 16..19: HI, unit C,
     // unit D, unit V); null for a register the stub does not have.

@@ -7,8 +7,10 @@
 // Addresses are disassembly notation unless marked run-time.
 import { A, MODEL, ON_LAB_MODEL, MODEL_INFO, IMAGE_BASE, refuseUnmapped, fact } from '../fw/model.mjs';
 import { BOARD } from '../fw/board.mjs';
-import { SCPU_DOORBELL } from '../machine.mjs';
+import { SCPU_DOORBELL, HDMI_WINDOW, HDMI_DOORBELL } from '../machine.mjs';
 import { SET_INPUTS } from '../dev/scpu.mjs';
+import { PLUG, EDID, W_EDID_LEN, W_CABLE, W_DDC_READS } from '../dev/hdmi.mjs';
+import { sinkEdid } from './edid.mjs';
 import { imageView } from '../fw/image.mjs';
 import { IIC_WAITS_E143 } from '../fw/facts.mjs';
 import * as D from './display.mjs';
@@ -63,6 +65,13 @@ const g4set = () => fact('g4set', true);
 // handler, UI_IN's callback, its push and its flag run natively; a body without it pushes group 0 with S-KEYBITS
 const scpuPort = () => (BOARD.scpu.events && MODEL_INFO.scpu_port) || null;
 export const SCPU_PORT_GROUP = 0;
+// The HDMI port (--hdmi on, a body with src/fw/models.mjs hdmi; src/dev/hdmi.mjs, docs/hle-gaps.md 4.9): the machine
+// gets the transmitter, the hot-plug pin and the sink, the lab runs H-GIOSLOTS, and the input hdmi plug puts the sink
+// (S-HDMISINK, src/lab/edid.mjs) on the port and lets HDMI_PLUG_MS of lab time run, in which the firmware takes the
+// pin's interrupt, starts the transmitter, reads and parses the sink's EDID over the DDC and reports the connection to
+// UI_IN natively (X: 1.4 ms of lab time on E143). The port's switch 0x0501 is then the firmware's, so the fw_0501
+// input is refused
+export const HDMI_PLUG_MS = 100, HDMI_SWITCH = 0x0501;
 export const JS_EV = [369, 370, 371, 372, 373, 374, 375, 376, 377];
 export const OLYQEWR = A(0x5002C151), TSND_DTQ = A(0x50016578);
 // every call of tsnd_dtq, which the guard on blocked sends observes: E143's 11 (a byte scan, D); a ported model's read by
@@ -682,6 +691,13 @@ export class PlaySession extends N.NavSession {
     const opts = { ...(kw.opts ?? {}) };
     const k = { ...kw };
     delete k.opts;
+    const hdmi = opts.hdmi ?? 'off';
+    if (!['off', 'on'].includes(hdmi)) throw new ValueError(`hdmi ${show(hdmi)}: off or on`);
+    if (hdmi === 'on') {
+      if (!MODEL_INFO.hdmi) throw new ValueError(`--hdmi on: ${MODEL} has no HDMI port in the lab (src/fw/models.mjs hdmi)`);
+      env = { ...env, machine: { ...(env.machine ?? {}), hdmi: true } };
+      k.hdmi = true;
+    }
     // defaults for the keys kw does not give (a key given as null keeps it)
     const setdefault = (key, v) => { if (!Object.hasOwn(k, key)) k[key] = v; };
     setdefault('time', true);
@@ -696,6 +712,8 @@ export class PlaySession extends N.NavSession {
     apply_uiin_layout(env.rom);                    // the model's key matrix (E143: checked against CONTROLS)
     this.images = idle_images();
     this.scpu_port = scpuPort();
+    this.hdmi_port = hdmi === 'on';
+    this.hdmi_plugged = false;
     if (opts.mutant === 'monitor-inverted') set_bit(this.images[MONITOR_OPEN[0]], MONITOR_OPEN[1], MONITOR_OPEN[2], 0);   // the monitor reads closed: touches rejected
     this.pressed = new Set();
     this.shutter_held = new Set();
@@ -1165,6 +1183,7 @@ export class PlaySession extends N.NavSession {
     const positions = MODE_DIAL.positions.length;
     if (c.kind === 'modedial' && !(value >= 0 && value < positions)) throw new ValueError(`mode dial position ${value}: 0..${positions - 1}`);
     if (c.kind !== 'modedial' && value !== 0 && value !== 1) throw new ValueError(`${c.name}: value ${show(value).slice(0, 40)} is not 0 or 1`);
+    if (this.hdmi_port && c.uiin[3] === HDMI_SWITCH) throw new ValueError(`${c.name}: with --hdmi on the HDMI switch is the firmware's own (input hdmi)`);
     this.begin(`${String(this.steps.length).padStart(2, '0')}-switch ${cid} ${value}`);
     const state0 = this.lab.state();
     const [g, b, bit, code, , pol] = c.uiin;
@@ -1180,6 +1199,31 @@ export class PlaySession extends N.NavSession {
     const extra = this.extra(c, value, codes, decoded);
     if (c.kind === 'modedial') extra.mode_dial_index = this.lab.sim.u32(MODE_DIAL_INDEX);
     return this.end(`switch ${cid} ${value}`, 'switch', posted, [], extra);
+  }
+  // The HDMI cable (see HDMI_PLUG_MS): plug only. An unplug is refused (A-HDMI-1: what the transmitter and the pin
+  // show when the cable comes out is not read), and so is a second plug.
+  hdmi_input(action) {
+    if (!this.hdmi_port) throw new ValueError('hdmi: the session has no HDMI port (--hdmi on)');
+    if (action === 'unplug') throw new ValueError('hdmi unplug: not modelled (A-HDMI-1: what the transmitter and the hot-plug pin show when the cable comes out is not read)');
+    if (action !== 'plug') throw new ValueError(`hdmi: action ${show(action)} (plug)`);
+    if (this.hdmi_plugged) throw new ValueError('hdmi plug: the cable is in already');
+    const lab = this.lab, tag = 'hdmi plug', edid = sinkEdid();
+    this.begin(`${String(this.steps.length).padStart(2, '0')}-${tag}`);
+    lab.sim.write(HDMI_WINDOW + EDID, edid);
+    lab.sim.write(HDMI_WINDOW + W_EDID_LEN, pack('<I', edid.length));
+    const c0 = lab.uiin_codes.length;
+    lab.cpu_store(HDMI_DOORBELL, (PLUG << 24) >>> 0);
+    this.hdmi_plugged = true;
+    return this.wait_until(lab.lab_time() + HDMI_PLUG_MS * 1000000, tag, true,
+      { kind: 'hdmi', extra: () => ({ hdmi: this.hdmi_status(), uiin_codes: lab.uiin_codes.slice(c0).map(([, x]) => h8(x)) }) });
+  }
+  // the port as the lab sees it: the cable, the E-DDC reads the sink answered and the driver's EDID state
+  hdmi_status() {
+    if (!this.hdmi_port) return null;
+    const lab = this.lab, [address, bytes] = MODEL_INFO.hdmi.state, b = lab.sim.read(address, bytes);
+    let state = 0;
+    for (let i = bytes - 1; i >= 0; i--) state = state * 256 + b[i];
+    return { cable: lab.sim.u32(HDMI_WINDOW + W_CABLE) ? 'in' : 'out', ddc_reads: lab.sim.u32(HDMI_WINDOW + W_DDC_READS), edid_state: `0x${state.toString(16)}` };
   }
   bit_of(cid) {
     const c = BY_ID.get(cid);

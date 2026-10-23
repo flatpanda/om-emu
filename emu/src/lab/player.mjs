@@ -271,7 +271,7 @@ export class Player {
   // ---- session lifecycle
   opts() {
     const a = this.a;
-    return { start: a.start, touch: a.touch, us_clock: a.us_clock, bgdraw: !a.no_bgdraw, mutant: a.x_mutant, a15: a.a15 ?? 'auto',
+    return { start: a.start, touch: a.touch, us_clock: a.us_clock, bgdraw: !a.no_bgdraw, mutant: a.x_mutant, a15: a.a15 ?? 'auto', hdmi: a.hdmi ?? 'off',
       ...(this.camapp_components ? { camapp_components: true } : {}) };
   }
   open_session() {
@@ -315,7 +315,8 @@ export class Player {
     const doc = { phase: this.phase, error: this.error, queue: this.q.qsize() + this.held.length, idle: this.idle, last: this.last,
       dropped: this.dropped.toObject(), frame_seq: this.frame_seq, pace: this.pace_ratio(), stand_ins: this.stand_ins_in_use(),
       us_clock: a.us_clock, touch: a.touch, mutant: a.x_mutant, frame_error: this.frame_error, input_error: this.input_error,
-      idle_taken, log_tail: this.log.slice(-12), ...(this.camapp_components ? { camapp_components: true } : {}) };   // absent when off: the recorded documents
+      idle_taken, log_tail: this.log.slice(-12), ...(this.camapp_components ? { camapp_components: true } : {}),   // absent when off: the recorded documents
+      ...(s?.hdmi_port && s.lab ? { hdmi: s.hdmi_status() } : {}) };                                        // --hdmi on only, likewise
     if (s !== null && s.lab !== null) {
       try { Object.assign(doc, s.status()); } catch (e) {
         if (!(e instanceof LabError)) throw e;          // a JS failure is never a status_error
@@ -353,6 +354,7 @@ export class Player {
     if (this.session?.lab?.panel_answered) used.push('S-PANELDONE');                        // a panel driver's serial completion wait answered
     if (this.session?.lab?.scpu_server) used.push('S-SCPU');                                // a body whose SCPU keeps its date and backed-up words
     if (this.session?.scpu_port) used.push('H-SCPUIRQ', 'H-UIINPORT', 'H-SCPUPORT');        // a body whose group 0 comes through the SCPU's ports
+    if (this.session?.hdmi_port) used.push('H-GIOSLOTS', 'S-HDMISINK', 'A-HDMI-1');          // --hdmi on: the HDMI port, its sink
     // the model's own stand-ins (src/fw/models.mjs return_stubs and call_skips, src/lab/play.mjs), each by its name
     for (const [, , name] of MODEL_INFO.return_stubs ?? []) used.push(name);
     for (const [, name] of MODEL_INFO.call_skips ?? []) used.push(name);
@@ -791,6 +793,7 @@ export class Player {
       const x = number(inp, 'x'), y = number(inp, 'y');
       return s.touch(act, x, y);
     }
+    if (t === 'hdmi') return s.hdmi_input(get(inp, 'action'));
     if (t === 'request') throw new ValueError('request: the camera application sends the GUI its own requests');
     if (t === 'token') {
       if (!this.a.debug_api) throw new ValueError('tokens need --debug-api');

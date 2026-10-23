@@ -16,6 +16,7 @@ or its harness chooses to behave, treat it as the model's assumption, not as har
 | [mn10300-isa-spec.md](mn10300-isa-spec.md) | the MN10300 base ISA as implemented: the opcode map, semantics, faults, the unknowns that must fault, the lab translator, exceptions and interrupts |
 | [om1-udf-spec.md](om1-udf-spec.md) | the OM-1's user-defined (UDF) instructions: integer multiply and HI, the binary32 float unit, the context unit |
 | [om1-cores-spec.md](om1-cores-spec.md) | the four CPU cores: boot per core, task placement, inter-core traffic, shared resources |
+| [a53-spec.md](a53-spec.md) | the OM-1 line's Cortex-A53 (E143/E146/E147): its Linux kernel and network/HHHR userland, hardware and boot handoff, device table, and a phased low-level-emulation plan (with the A9 sibling in the other bodies) |
 | [om1-intc-timer-spec.md](om1-intc-timer-spec.md) | the interrupt controller and the timer block, and the assumptions the lab makes about them |
 | [om1-kernel-spec.md](om1-kernel-spec.md) | the uITRON kernel as the lab runs it natively (K-native): control blocks, services, the lab task, interrupts |
 | [om1-vsc-spec.md](om1-vsc-spec.md) | the VSC display compositor: address map, timing, planes, mixing, the lab model, the live-view API, colour management |

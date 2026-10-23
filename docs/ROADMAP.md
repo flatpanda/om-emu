@@ -58,7 +58,12 @@ not reconciled.
    the HLE plan: every device seam below the camera application waits on them.
 6. **HLE of E143, steps 4-8**: CPUs 2, 3 and 1; task starts with the HLS bring-up; storage; TAKE native with its
    neighbours; then the blocks by user-visible gain.
-7. **Hardware validation**, as soon as an OM-1 is available for photos or HDMI captures.
+7. **The A53 and its A9 siblings** (`docs/a53-spec.md`): the A53's own kernel boots to userspace on QEMU, used as an
+   oracle only, and stops where iscdrv maps the custom windows (the MN INTC banks, the ISC lock and control block,
+   `mn-mmc`). Next: model those windows in the oracle until ISC comes up, so each port's replies can be read from the
+   A53's own daemons; then choose between the HLE ISC node-4 service (4.11) and an in-JS AArch64 core with AArch32 EL0.
+   The A53 boots standalone; answering CPU 1 natively waits on the multi-core and ISC transport work.
+8. **Hardware validation**, as soon as an OM-1 is available for photos or HDMI captures.
 
 ## Multi-model
 

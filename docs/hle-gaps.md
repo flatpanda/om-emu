@@ -557,7 +557,9 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
 - **The A53 (D):** block `blk05a00000` holds an aarch64 Linux 4.14.222 image with a network userland (section 4.11).
   SYS_CA53_PWR_MNG (CPU 1, `0x5003c8f4`) powers the A53 on request, with a request / response queue and a "load arm
   linux from sd" string; which requests trigger it is ?. Seams: "A53 off", the firmware's own path where the network
-  tasks report "not available", or the ISC endpoint at node 4. Never emulated.
+  tasks report "not available", or the ISC endpoint at node 4. Never emulated. The A53 side (its own kernel + userland,
+  the boot handoff, the custom device set, and a phased LLE plan vs the HLE ISC-node service) is specified in
+  `docs/a53-spec.md`, which also covers the A9 sibling in E144 and the other networked bodies.
 - **Seam:** cores native on one bus, per-core state and devices (section 3.2's row); timing: boot polls have no
   timeouts and run-time rings are FIFO with a full check, so any fair interleave works (I), but timed waits on replies
   need the remote core to run within lab time; relative core speed becomes a named assumption.
@@ -1063,7 +1065,9 @@ and E147; off by default. Addresses are E143's (disassembly notation) unless a b
 - **Doorbells:** after a write the sender writes `0x4000` to the target's register: for node n = 0..3 to `+0x800` of
   that core's bank, for node 4 to `+0x880` of bank 0 (from the A53) or of the sender's own bank (from an MN core,
   `0x50aa324b`). The A53 maps the four banks at `0x99200000`, `0x99300000`, `0x99b00000`, `0x99b80000` (`.rodata`
-  `+0x110`), the same four addresses as `0x50aa324b`'s operands.
+  `+0x110`), the same four addresses as `0x50aa324b`'s operands. The A53-side driver (`iscdrv.ko`) and the daemons that
+  sit above each port are read out in `docs/a53-spec.md` §1 and §3 (a per-daemon port map: sccore 26/27, hhhr 30/31,
+  isc_socket 3/4, isc_olnet 19/20/21, isc_cgi 11..16, isc_file 5/6/8, blebridge 28/29, and so on).
 - **`0x50aa4c98` is a service gate, not a message dispatcher:** it takes a service code `0x15c00001..0x15c00024` and an
   argument block and jumps through `0x60ac7510`, e.g. to `0x50aa369e`, which makes `isc_send`'s checks (node below 5
   and not its own, size + 2 below the FIFO size) and writes through `0x50aa3595`, a caller of the doorbell `0x50aa324b`

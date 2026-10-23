@@ -46,9 +46,9 @@ not reconciled.
    `bin/modelcheck.mjs`'s path, so each has a regression check beyond its start.
 2. **The open stops of the remaining bodies** (Multi-model "Next stops"): E145's start, E133's GUI creator, E129's
    settings store, E132's deferred serial send, then the E118 family's board port.
-3. **HLE of E143, steps 1-2** (HLE of E143 below): the static decodes every block's first step needs, then the cheap
-   CPU 0 wins (a ticking clock, persistence by default, native group-0 keys and power lever, Level Adjust, the HDMI
-   EDID). The decodes change nothing in emu and can run beside 1 and 2.
+3. **HLE of E143, step 2** (HLE of E143 below; step 1's static decodes are done): the cheap CPU 0 wins (a ticking
+   clock, persistence by default, native group-0 keys and power lever, Level Adjust, the HDMI EDID), first the SCPU
+   request server of hle-gaps.md 4.7.1.
 4. **Debug API follow-ups**, above all a debug route to a running play session (F31).
 5. **Emulator architecture** phases 2-5: finish phase 2's typed seams (machine port, options object, composed lab
    features), then ground the CPU and interrupts in the manual, then the time model. Phases 3 and 4 are also step 3 of
@@ -169,7 +169,7 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
 
 | Step | What | Status |
 |---|---|---|
-| 1 | static decodes: the TRA layer (who handles TRA 991, what answers TRA 990), TAKE_FUNC's dispatcher, the HLS TRA event dispatchers, the PER_SCPU dispatch, the sdmem contract, the lens serial layer, the ISC port formats | in part (2026-10-23): the TRA layer, TAKE_FUNC's commands and the HLS event dispatch are done (hle-gaps.md 4.1.1-4.1.3); the PER_SCPU dispatch, the sdmem contract, the lens serial layer and the ISC port formats are open |
+| 1 | static decodes: the TRA layer (who handles TRA 991, what answers TRA 990), TAKE_FUNC's dispatcher, the HLS TRA event dispatchers, the PER_SCPU dispatch, the sdmem contract, the lens serial layer, the ISC port formats | done (2026-10-23): the TRA layer, TAKE_FUNC's commands and the HLS event dispatch (hle-gaps.md 4.1.1-4.1.3); the PER_SCPU request server and command set (4.7.1); the sdmem request / completion contract (4.8.1); the lens serial layer, its IRQ 14 bits, the command history and the init chain's command ids (4.4.1); the ISC transport from both ends (4.11.1). Two parts stay ? and move to later first steps: the table from a lens command id to its packet bytes (4.4's probe) and the per-port ISC payloads (4.11) |
 | 2 | cheap CPU 0 wins: the SCPU request server with a ticking clock and S-NVRAM by default; the SCPU port registers and IRQ 320; the accelerometer; HDMI EDID / HPD | not started |
 | 3 | interrupt acceptance anywhere, then the machine-owned time model | not started: architecture phases 3 and 4 |
 | 4 | CPU 2, then CPU 3, then CPU 1, natively | not started |

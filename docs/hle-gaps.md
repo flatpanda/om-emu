@@ -146,7 +146,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **USB** (4.10) | 0 on E143 | the event level first (EV_USB_CONNECTED 8, EV_USB_RXDETECT `0x040d00d2`, the select screen); later a DWC3-family device at `0x9a600000` (IRQ 223) | SCPU (PD, power source), ADC flag `0xbf`, the PC_* tasks, storage for MSC | 121,861 / 117,704 | 1-2 weeks events; 4-8 weeks data path | the USB select screen, charging state; later MSC, MTP, PTP |
 | **PC connection over PTP (TPC)** (4.10) | 0 | ? (the bulk of the USB data path) | a USB or Wi-Fi transport, storage | about 52.6k / about 52k (21.4k of it filed under factory code) | ? | tethering, the PTP firmware-update path |
 | **PictBridge / DPS / DPOF, XML parser** (4.10) | 0 | ? | USB | about 89k in parts: 13.4k HLS, 25.7k Cmp_PictBridge, 10.3k HFW print, 2.8k DPS transport, 9.4k DPS XML, 2.8k DPOF, 24.5k expat-like XML parser | ? | direct printing |
-| **Wireless** (4.11) | 0: CPU 1 not emulated, no ISC model; the menus paint boot defaults | the ISC node-4 port boundary (a JS "A53 service"), at the dispatcher `0x50aa4c98` or as the mailbox device | CPU 1 native (blocking), the USTART chain, ISC init CREQs on all cores, card, imaging, SCPU (BLE wake) | 137,490 / 130,344: about 72k MN10300 application on CPU 1, about 25k CPU 0 HLS, FlashAir | 6-9 weeks after CPU 1 exists | live Wi-Fi / BT state, connection setup, a virtual smartphone over the firmware's own OI.Share API |
+| **Wireless** (4.11) | 0: CPU 1 not emulated, no ISC model; the menus paint boot defaults | the ISC node-4 port boundary (a JS "A53 service"), at the ISC services behind the gate `0x50aa4c98` or as node 4's FIFO and doorbell (4.11.1) | CPU 1 native (blocking), the USTART chain, ISC init CREQs on all cores, card, imaging, SCPU (BLE wake) | 137,490 / 130,344: about 72k MN10300 application on CPU 1, about 25k CPU 0 HLS, FlashAir | 6-9 weeks after CPU 1 exists | live Wi-Fi / BT state, connection setup, a virtual smartphone over the firmware's own OI.Share API |
 | **GPU and C3D** (4.12) | 0 | ? (which user feature drives it is ?) | CPU 1 | about 85k / about 84k | ? | ? |
 | **Strobe and hot shoe** (4.12) | partly native: 562 instructions run (X); no device | ? (not surveyed) | ? | 33,625 / 31,493 (24 driver modules plus 17 HLS) | ? (shutter-sized) | flash control in normal shooting |
 | **Image effects (ART)** | 0 | ? (not surveyed) | ? | 9,539 / 9,237 | ? | ? |
@@ -429,7 +429,7 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
 
   | Region | Operands | IRQ (level), handler | Role |
   |---|---|---|---|
-  | `0x9b980000..0x9b98021c` | 121, at `0x502c0ea5..0x502c2193` | 14 (3), `0x502c12c0`, attach `0x502c0e79` | lens serial controller (I from the LENS_SSC strings); status `+0x08` W1C (I); clocks 5 and 17 via `0x50061c3a` |
+  | `0x9b980000..0x9b98021c` | 121, at `0x502c0ea5..0x502c2193` | 14 (3), `0x502c12c0`, attach `0x502c0e79` | lens serial controller (I from the LENS_SSC strings); status `+0x08` W1C; clocks 5 and 17 via `0x50061c3a` (4.4.1) |
   | `0x9b883e40..0x9b883e6c` | 12, at `0x50122331..0x501225b7` | 60 (3), `0x5012232e` | edge-interrupt unit beside pins 108..113; four event bits dispatched as (channel, edge); callbacks called from the lens sync layer `0x502c4e5f` |
   | `0x9bf00000..0x9bf0076c` | 24 in FCS `0x50957687..0x5095799e`, plus `0x5002563b` and `0x502c0e99/9f` | 281 (3), `0x5095798f` | a DMA-driven unit used by FCS, clocks 36 / 37 / 48 (function ?) |
   | `0x9b400000..0x9b401808` | 150 | 38 `0x501616f7` | contrast AF evaluation |
@@ -447,11 +447,54 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   the AF info block written as the module writes it; IS at BC_EXEC. Seam C advances only as far as the parsers make the
   expected answers readable; an unknown packet stops with an error. Native FCS (the AF data path) is LLE-scale work:
   it needs CPU 1, the sensor pipeline and the `0x9bf00000` unit.
-- **First step:** decode the lens serial layer statically: the send / receive API around `0x502c0e79..0x502c2193` (the
-  register roles, IRQ 14's status bits), the command-history record behind the debug table (`0x502c5f17..`) and the
-  response parsers called from the lens init steps `0x50122cac..0x50122e1b`. Then allow LENS_MAIN, LENS_COMMAND and
-  LENS_ASKDATA in a probe lab with `0x9b980000` as a logging device model that faults on the first unknown response,
-  and record the init sequence's first command packet.
+- **First step:** the serial layer is read (4.4.1) except the table that turns a lens command id into its packet.
+  Next, allow LENS_MAIN, LENS_COMMAND and LENS_ASKDATA in a probe lab with `0x9b980000` as a logging device model that
+  faults on the first unknown response, and record the init sequence's first command packet (its id is 91 or 7,
+  4.4.1; its bytes are ?).
+
+#### 4.4.1 The lens serial layer (D unless tagged)
+
+- **Open and reset:** `0x502c0e4e` attaches IRQ 14 at level 3 (`0x50053f76(14, 3, 0x502c12c0)` at `0x502c0e79`),
+  turns on clocks 5 and 17 (`0x50061c3a`), clears `0x9bf00000` and `0x9bf00068`, then `+0x000` = 0, `+0x204` = 1,
+  `+0x004` = 0; the same three writes reset the controller before each command (`0x502c0ec2`, `0x502c112e`,
+  `0x502c100a`). `0x502c0ec2` also packs five configuration nibbles into `+0x010`. The mount pins 153..158 and 180 are
+  switched between two functions around a transfer (`0x502c1690`, `0x502c1736`, `0x502c1787`; pin helper
+  `0x502c2ba6`; which function each mode is, ?).
+- **The command packet (pointer `(0x6296d180)`, the active one also at `(0x6296d1a4)`):** `+4` the completion
+  `fn(d0 = status bits)`, `+8 u16` a speed index (`0x502af75a` -> table `0x6296cd24`, its `+2` into `+0x030`), `+10` the
+  class byte and `+11` the code byte (with `+12`, `+13` the four header bytes written little-endian to `+0x048`),
+  `+14 u16` the data count (`+0x054`, 1 written as 0), `+16` / `+18 u16` timing values (`0x502c1c55`), `+20` 1 = send
+  with interrupts masked, `+28` into `+0x03c`, `+29` a DMA count into `+0x018` with `+32` the DMA address into `+0x020`
+  (bits 6 and up, `0x502c1a6d`) for the classes `0xb0`, `0x70`, `0xc0`, `0x80` and some `0xf0` / `0x90` codes, `+44`,
+  `+52` a time stamp for command `0x70 0xc8`, `+56`. The class picks the mode word `+0x034` through the table
+  `0x602f384c` (classes `0x60..0xf0`: 33, 14113, 1057, 33 or 81, 9761, or a function). Sends: `0x502c112e` (from
+  `0x502c4c2f`) and `0x502c100a`; both set `+0x00c` (959, or 5055 for `0x70 0xc8`), load the header (`0x502c17d5`) and
+  start with `+0x038` = 1. Register roles beyond these writes are ?.
+- **IRQ 14 (`0x502c12c0`):** reads `+0x008`, writes the value back (W1C) and ORs it into `(0x6296d1a8)`. Bit 9 stops the
+  transfer (`0x502c13ba`: `+0x018` = 0, `+0x038` = 0, `+0x004` = 17); bits 2 and 3 call one-shot callbacks
+  (`(0x6296d18c)(0x6296d188)`, `(0x6296d19c)(0x6296d198)`); bits 10..13 with command `0x70 0xc8` store the microsecond
+  timer (`0x502c2dce`) in `+52`; bits 0, 1, 4, 5 map to the error bits 1, 2, 4, 8 (`0x502c13ec`); bits 11, 12 with bit 7
+  lead to `0x502c1ea7` for the DMA classes. The command completes when an error bit is set, or bit 7 is set and either
+  bit 8 is set or no DMA is pending: `+0x008` = `0x3ff3`, then `0x502c1523` calls `+4` with the error bits, plus `0x40`
+  for a class-`0xc0` command with `+44` = 0, and keeps the class and code in `0x6296d1b0` / `0x6296d1b1`.
+- **The command history (`lens ssc log`, printer `0x502c5ede`):** 100 records of 20 bytes in `0x6296d834..0x6296e004`
+  (read pointer `(0x6296e004)`, write pointer `(0x6296e008)`, count `(0x6296e00c)`): `{u32 command, u32 the previous
+  end, u32 start, u32 status, u32 end}`, times from the microsecond timer `0x502c2dce`; the command word is 0 for
+  "initial", 1 for "finalize" or the four bytes at the request's `+18..+21`, by the request's `+14` (1, 2, 0;
+  `0x502c5d11`). The writer `0x502c5def` runs only with `(0x6296d830)` bit 2 set ("LENS_SSC_DEBUG_COMMAND"); after the
+  first record whose status is neither 0 nor `0x6cf0` it keeps 39 more and stops. The last command, its execution and
+  response times are kept in `0x6296e014..0x6296e024` ("LAST COMMAND INFO").
+- **The init steps `0x50122abf..0x50122f2b`:** a chain of continuations; each posts a lens request through
+  `0x502a8f4b` -> `0x502a8f54` with `+16` = 6, `+18` = 1, `+20 u16` the command id, `+22 u16` a sub-code and `+160` the
+  next step (a run-time code address), or skips to a later step by a test. Ids in order: 91 (only when the lens
+  version `0x502af742(0)` >= `0x130a` and the record's `+1096` bit 31 is set; otherwise the chain starts at 7), 7, 71
+  (unless `0x502b0bce` finds the lens's four bytes at record `+1100` among the 13 `{u32 id, data}` entries of
+  `0x60214d4c`, in which case it copies that entry's data into the record from `+9445` on), 76 (version >=
+  `0x101a`), 77, 79 (record `+1096` bit 22), 80 with the sub-codes `0x1801`, `0x0c01`, `0x0301`, `0x0b02`, `0x1f01`
+  (each behind a function-flag test `0x502af9ce(1, mask)` or a version >= `0x120a`), 85 (bit 25). The functions these
+  steps call (`0x502af742`, `0x502afa2b..0x502afbac`, `0x502afe5a`) are predicates on the lens record `(0xa32caa8c)`
+  that earlier replies filled, not response parsers; where a reply is parsed into the record, and the
+  table from a command id to its SSC packet (inside `0x502a9036` / `0x502a8d6e`), are ?.
 
 ### 4.5 Movie, audio and the AV back end
 
@@ -529,8 +572,8 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
 
 ### 4.7 SCPU, power, clock, on-board sensors and persistence
 
-- **Tasks (CPU 0, D):** PER_SCPU 0x7a `0x5005b424` (the request server: reads type-3 PER_SCPU_RECEIVE id 2, message
-  type 11 to the framework `0x5004fed5` / `0x5004fe2e`; starts a 100-period software timer, purpose ?), PWR_MAIN 0x0a
+- **Tasks (CPU 0, D):** PER_SCPU 0x7a `0x5005b424` (the request server: reads the data queue PER_SCPU_RECEIVE id 2
+  and runs a table-driven state machine, `0x5004fe2e`; its 100 timer is the SCPU start watchdog, 4.7.1), PWR_MAIN 0x0a
   (queue PWR_EXEC 0x7c, target 28), PWR_STANDBY 0x9d, PER_IN 0x15, PER_EYE_SENSOR 0x41, PER_SLOPE 0x4e (level gauge),
   PER_ROTATE 0x3b, ACC_MAIN 0x79 / ACC_SENS_MAIN 0x84 / PER_ACC_PWRMGR_MAIN 0x8d (accelerometer, its sampler, a
   camera-down detector for power saving), PER_IOEXP 0x88 / PER_IOEXP_PBH 0x8c, FLASHMEM 0x85 / FLASH_PRM_EXEC_ASYNC
@@ -542,12 +585,11 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   registers, bit 31 each an input; `+0xbc..+0xd8` the two transfer channels A and B; `+0xe8 / +0xec` the clock
   (seconds since 1970 local time, 1/1024 s in bits 14..5). IRQs 320 and 321 (level 5) are attached by the SCPU init
   `0x5004dc55`, which the lab does not run.
-- **The request API (D):** `0x5005cd17` sends a 28-byte request `{+0 u8 cmd, +4 s_size, +8 tx, +12 r_size, +16 rx,
-  +20 completion function, +24 arg}` inside a 36-byte message to PER_SCPU_RECEIVE (timeout 5000); the completion sets
-  the requester's flag. Commands with known formats: 0x01 / 0x81 clock set / get, 0x06 / 0x86 backup word write / read,
-  0x02 / 0x82 GPIO extension pins, 0x07 / 0x88 port scan (reply bit 0 is UI_IN group-4 `0x0400`), 0x87 firmware-update
-  state. 0x85 / 0x05, 0x80 and 0x04 are memory, version and system control by their names (I); 0x12 belongs to the
-  power manager, format ?. Who calls `+20` and when the rx bytes land is in the PER_SCPU state machine, not read (?).
+- **The request API (D, 4.7.1):** `0x5005cd17` sends a 28-byte request `{+0 u8 cmd, +4 s_size, +8 tx, +12 r_size,
+  +16 rx, +20 completion, +24 arg}` inside a 36-byte message to PER_SCPU_RECEIVE (timeout 5000). PER_SCPU carries it
+  to the SCPU over PER_SIO channel 2 and two pins, not through the window, writes the reply into rx and then calls the
+  completion, which sets the requester's flag. The command set, the transaction and what a server must answer are in
+  4.7.1.
 - **Inputs from the SCPU (D):** UI_IN's module init registers `0x5014e534` as an IRQ 320 callback; it reads the port
   byte (`0x5004df3f`) and pushes it as group 0's image: the power lever, the Fn lever and S1 are sampled by the SCPU.
 - **Accelerometer (D):** ACC_SENS_MAIN reads register 0x0f of device channel 6 and wants 0x6a (I: the WHO_AM_I of ST's
@@ -567,10 +609,105 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   Level Adjust, level gauge, rotation, 1-1.5 weeks. 4, the eye sensor (I2C plus GPIO interrupt) driving the native chain
   to `0x50050efd`: 1 week. 5, the power manager: 2+ weeks, gated by hardware numbers. 6, a NAND register model and
   store F: 1-2 weeks, only for a full boot.
-- **First step:** read the PER_SCPU dispatch (`0x5004fe2e` and the code reached from `0x5005b490`) far enough to state
-  who calls a request's `+20` and when the rx bytes are written; then replace S-SCPU-MSG with a host server on
-  PER_SCPU_RECEIVE that answers the four D commands (writing rx, calling `+20`) and refuses every other command by name,
-  with `+0xe8` ticking from lab time.
+- **First step:** the PER_SCPU dispatch is read (4.7.1). Next, replace S-SCPU-MSG with the request server of 4.7.1's
+  last bullet: the four D commands answered (rx written, `+20` called), every other command refused by its name, and
+  `+0xe8` ticking from lab time.
+
+#### 4.7.1 The PER_SCPU request server (D unless tagged)
+
+- **Transport:** PER_SCPU does not send commands through the `0x98e00000` window. A transaction is a frame on PER_SIO
+  channel 2 (configuration `0xa32c6efc`: channel byte 2, clock word 6,000,000; transfer descriptor `0xa32c6f0c`, started
+  with `0x5005f4ae` / `0x5005f587`) between two pins: PER_SCPU drives pin 103 low to request (`0x5005b72d(103, 0)`) and
+  the SCPU answers with edges on pin 102 (callbacks `0x5005c989`, `0x5005c9dc`); pin 107 resets the SCPU (pulsed at
+  `0x5005b9ab`, and at the task start `0x5005cec5` with "SCPU RST!" when the cause halfword `(0xa32bff5e)` is 0, 10 or
+  11). The pin roles are I from their use. Frames are `[length, command, data]` with length = data bytes + 2 in both
+  directions (tx built at `0x5005bf6f..0x5005bf8a`; rx read as one length byte, then length - 1 bytes, `0x5005ca2d`). A
+  request with more than 10 tx bytes or more than 253 rx bytes is split into `0x0f`-framed chunks (states 11..18).
+- **Task and message:** PER_SCPU receives from the data queue PER_SCPU_RECEIVE ("PER_CMDM_DTQR", id `(0x600431bc)` =
+  2) with no timeout through `0x5005cb09`, which copies the message out of a pool of 256-byte slots (`0xa32c7418`, sizes
+  at `0xa32c9418`, u16 mask `(0xa32c9498)`) and frees the slot; senders call `0x5005cb93` from a task (timed send,
+  5000) or `0x5005cc21` from interrupt context (`0x50010e06`, isnd_dtq). A message is an 8-byte header `{u16 event,
+  u16 0x7a, u16 0, u16 length}` and its payload. Only event 11 comes from outside the task: the request API's message,
+  whose payload is the 28-byte request. The task's own callbacks post the others: 5 the IRQ 320 callback `0x5005c8d9`
+  (event bit 3 pending while port bit 3 is low: the SCPU has a message), 6 and 8 pin-102 edges, 7 the SIO send's end
+  (`0x5005cabf`), 9 and 10 the receive callback (length byte, then the rest), 12 the watchdog (`0x5005b818` ->
+  `0x5005b833`).
+- **State machine:** `0x5004fe2e` is a generic table machine. Object `0xa32c6c2c`: +1 state, +2 event count 13, +4
+  column count 8, +8 configuration `0x6011b4b4` (pre / post hooks `0x5005b87d` / `0x5005b8bf`), +12 the event map
+  `0x6011afd8` (events 5..12 -> columns 0..7, 0..4 invalid), +16 the current message. Table `0x6011aff4`: 19 states x 8
+  columns of `{handler, next state}`, next 254 = the handler sets the state, 255 = invalid (`0x5005c8a9`, errlog
+  `0x1900270b`). The loop `0x5005b45e` defers event 11 into the queue `0xa32c6f28` (`0x5004fed5`, dequeued by
+  `0x5004ff52`) whenever the state is not 0 or 2. States: 0 started, 1 after an SCPU reset, 2 idle, 3 request line low,
+  4..10 one short transaction, 11..14 a long write, 15..18 a long read.
+- **One transaction:** event 11 in state 2 (`0x5005bc9d`) copies the message to `0xa32c6c74` (the request at
+  `0xa32c6c7c`), drives pin 103 low and arms pin 102 (3). The edge (6) builds the tx frame and starts the send
+  (`0x5005bdf1` -> `0x5005be25`, 4). The send's end (7) and an edge (8), in either order (states 5, 6), lead to
+  `0x5005bfb8`: a command with bit 7 clear (a write) completes there; one with bit 7 set (a read) arms pin 102 (7). The
+  edge (6) starts the receive (`0x5005c022`, 8, 9); at the frame's end (10) `0x5005c0f8` copies r_size bytes from rx
+  frame + 2 to the request's rx when rx is not 0 (10); the last edge (8) leads to `0x5005c143` -> `0x5005c18b`.
+- **Completion (`0x5005c18b`):** `0x5005b406` copies the request and calls `+20` with a0 = `+24` (`calls (a1)` at
+  `0x5005b41f`); no status is passed. `+20` is a run-time code address (disassembly = value - `0x10021020`). Then pin
+  103 goes high, SIO channel 2 is released (`0x5005f25f(2)`) and the port byte (`0x5004df3f`) decides the next step:
+  bit 3 low sends a zeroed request as the poll frame `[2, 0x8f]` (`0x5005be81..0x5005bea0`), whose reply carries an SCPU
+  message; bit 3 high takes the next queued request (3) or goes idle (2). So rx is written before the completion runs,
+  the completion runs in PER_SCPU's task (its flag setters take OlyEvSt, not iOlyEvSt, by `0x50017b6a`), and a write
+  completes once its frame is sent, with no reply frame.
+- **Inbound messages:** a poll's reply is dispatched by its command byte (bit 7 clear) through the two-level table
+  `0x6011af98` (`0x5005b355`; the handler gets a0 = `{u32 length - 2, data pointer}` at `0xa32c6c24`): `0x08` ->
+  `0x5005d43e` (data bit 0 -> UI_IN group 4 `0x0400`, as the `0x88` reply), `0x11` / `0x12` / `0x13` -> `0x50045138` /
+  `0x50045171` / `0x500451aa` (in the power-manager code gap@0x50039c16), `0x40` -> `0x5000441b`; any other logs
+  `0x1900270c`.
+- **Gating and failures:** the task's init sets a block flag `(0xa32c94f3)` = 1 and sends `0x85 {2, 0, 0}` as its first
+  request (`0x5005cf0a`, no completion), whose completion step clears the flag (`0x5005c306`). While the flag is set
+  every command but `0x85` is refused (`0x5005bd2a`: errlog `0x1900270e` or `0x1900270a`, the completion called, rx not
+  written). `0x85` with tx[0] 1 or 3 drops every queued request without its completion (`0x5005c20d`). The init arms a
+  100 timer and every state from 3 on a 1000 timer (`0x5005b8bf`, PER_MINTIMER `0x5005899c`; the unit is ?). A timeout
+  in state 0 resets the SCPU (pin 107) and waits again (state 1); a second one, or one inside a transaction, calls every
+  pending completion without rx, logs `0x19002708` and stops CPU 0 (`0x5005c896`: `0x5003cc5c(1)`, interrupts masked, a
+  branch to itself).
+
+| Command | tx / rx bytes | Sender (flag or semaphore) | Meaning (strings, object names) |
+|---|---|---|---|
+| `0x01` | 9: `{u16 year, month, day, hour, minute, second, u16 status}` / - | `0x5012c7d9` (SCTIME_SET_DATA_WAIT 0xf7) | set the SCPU's date ("per scpu settime yyyy mm dd hh mm ss"); the date struct is `{u16 year, u8 month, day, hour, minute, second, 1/100 s, u16 status}`, its +7 not sent |
+| `0x81` | - / 9, the same layout | `0x5012c88d` (SCTIME_GET_DATA_WAIT 0xf8) | get the date; status 0 = valid (`0x5012b76f`) |
+| `0x06` | 6: `{index, u32 value LE, byte}` / - | `0x5005a770` "ScpuBkupW" (PER_SCPU_BK_REG_WRITE_W.. 0xf5) | write a backed-up word; the only caller writes index 2, byte 0 (`0x5005a6e2`) |
+| `0x86` | 2: `{index, byte}` / 4: u32 LE | `0x5005a809` "ScpuBkupR" (PER_SCPU_BK_REG_READ_WA.. 0xf6) | read it; the only caller reads index 2, byte 0 (`0x5005a6ef`) |
+| `0x02` | 2 / - | `0x50052bc9` (no direct caller) | GPIO extension write (I, beside `0x82`) |
+| `0x82` | 1 / 1 | `0x50052ca7` (semaphore PER_GIO_EXT_R 0x6c) | GPIO extension read (I) |
+| `0x04` | 4n + 5: `{u32 address, n, n words}` / - | `0x5005d07d` (PER_SCPU_MEMRW_WAIT 0xf1) | SCPU memory write ("per scpu wmem") |
+| `0x84` | 5: `{u32 address, n}` / 4n | `0x5005d127` (0xf1) | SCPU memory read ("rmem") |
+| `0x80` | - / 4: u32 | `0x5005d2e8` (PER_SCPU_GETVER_WAIT 0xf3) | the SCPU binary's creation time ("per scpu ver"; `0x5005d218` adds 32400 s and prints "SCPU Build: mm/dd hh:mm") |
+| `0x85` | 3: `{mode, x, y}` / 3 at `0xa32c94e9` | PER_SCPU (mode 2); the power-off path `0x5005cdfd` from `0x50044ca8` (1 or 3 by camera state `0xa011`; PER_SCPU_SYSCTRL_WAIT 0xf2, then pin 102 polled low, returns rx[2]); `0x5005cf4e` (4 or 5, no direct caller) | system control: the modes' meanings are ? |
+| `0x07` | - / - | `0x5005d464` | the SCPU firmware update: `0x510369f8` ("[scpu]Start !") transfers the image (`0x51036bd6`), sends `0x85 {2}`, `0x07`, then polls `0x87` |
+| `0x87` | - / 1 | `0x5005d480` (PER_SCPU_GETFIRMUP_COMP 0xf4) | update state, polled while it reads 1 |
+| `0x88` | - / 2 | `0x5005d36a` from UI_IN `0x5014bf91` (PER_SCPU_GET_PORT_SCAN_ 0xd7) | port scan: retried up to 5000 times while rx[1] is not 0 (errlog `0x19002710`), then rx[0] bit 0 -> UI_IN group 4 `0x0400` |
+| `0x12`, `0x13`, `0x14` | short writes, batched | the power manager through `0x5004322c` (semaphore PWR_COMM_SCPU 0x68, flag PWR_COMM_SND_SCPU_WAIT 0xee; builders `0x500433f9`, `0x50043452`, `0x500435dc`, `0x50043a47`, `0x50043abd`) | formats ? |
+| `0x40` | n / - | `0x5102b8f7` (semaphore PC_PD_COMMUNICATION 0x7c; "USB SCPU_CONN", "PCPDC" beside it) | USB power delivery (I) |
+
+The flag and semaphore names are the object-name table's (D); the commands' meanings beyond the strings are I.
+
+- **What a session sends (X, a play session with S1 and a menu open and close):** only the store init's three
+  requests: `0x06 {2, value, 0}` (from `0x5012c547`), `0x01` with the reset date (`0x5012b78c`) and `0x86 {2, 0}`
+  (`0x5012c70a`), whose waits on 0xf5, 0xf7 and 0xf6 S-SCPU-MSG answers today (settings spec section 4). Backup word 2
+  holds the time-zone setting, packed by `0x5012c685..0x5012c700` with bit 31 = valid (the 12-byte record `0xa32d7270`;
+  minute fields up to 780 per zone, `0x5012c5c8`; field meanings I), so a reply of 0 means no record. The clock setting
+  (`0x5012b7a7`, called from api_system.c) writes both the window clock (`0x5005a587`) and the SCPU's date (`0x01`); at
+  boot `0x5012b767` (called from `0x500248b4`, not run in the lab) reads `0x81` and with status 0 sets the window clock
+  from it, else resets it to 1970 (I: the window counter does not keep time over power-off, the SCPU's date does).
+- **The request server (the seam, I from the above):** take each request where PER_SCPU would (the data queue: the word
+  is a slot pointer; read the 36 bytes and clear the slot's bit in `(0xa32c9498)` as `0x5005cb62..0x5005cb7f` does), or
+  at the request API `0x5005cd17`, which carries the same 28 bytes without the queue. Per command: write r_size bytes to
+  rx when rx is not 0, then call `+20` with a0 = `+24` in task context. `0x01`: keep the date (S-NVRAM's clock offset,
+  `_s_sctime` in `emu/src/lab/menu.mjs`); `0x81`: answer the kept date with status 0 in rx bytes 7..8; `0x06` / `0x86`:
+  keep and return a word per index (S-NVRAM's store for index 2; 0 on a blank camera). Every other command stops the
+  session naming it: the firmware's own refusal calls the completion with rx unwritten, which a stand-in must not
+  imitate. The firmware checks: the date's status and range (2000..2099, `0x5012b9ab`), the `0x88` reply's rx[1] = 0,
+  and after a window clock write that `+0xe8` reads back within 5 s of the value written (`0x5005a71f..2a`, else ten
+  retries with errlog `0x19001005` and the signature cleared). The window clock: `+0xe8` counts seconds since 1970 in
+  local time and `+0xec` bits 14..5 the 1/1024 s phase (readers `0x5005a5c9..0x5005a5f0`, `0x5005a6bb`); a write sets
+  `+0xe8` and, when its second argument is 1, `+0xec` = 0 (`0x5004e337..0x5004e359`), then commits with `+0xf4`.
+  PER_SCPU's own start (`0x85 {2}`, the reset pulse, the watchdog) and the inbound path have no counterpart at this
+  seam; the faithful later seam is an SCPU device at PER_SIO channel 2 and pins 102 / 103, now that the frames are D.
 
 ### 4.8 Card, file system and playback
 
@@ -590,18 +727,65 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   link serves mass storage.
 - **Media events (D):** EV_MEDIA_MOUNT_REC 193, _PLAY 194, _END 195, EV_INSERT_EXT_MEDIA(_SLOT2); their sender is ?.
   The HLS mount-word setter `0x50aca6b1` takes kind 4 = SD (`0x60360bfc`), 1 = IN and 8 = SD2 (`0x60360c08`).
-- **Seams:** B (recommended first), a block device at the sdmem request (request +0 u16 port, +2 u16 index, +26 u16
-  command; commands 0, 1, 2, 10, 11 tested) with a host disk image, so logsec, FAT / exFAT, DCF, fileif, the file
-  tasks and REC_FILE run natively; C, sd_mount's result beside it (the drive status's mount bit `0x1000` comes from the
-  device state's bit 16, `0x508a83e7`; the lab's state is `0x8600`). A, the SD host registers with a card model, is
-  the faithful later step (3-6 weeks, optional). Formatting (`sdmem_format.c`, dosfat) runs natively under B.
+- **Seams:** B (recommended first), a block device at the sdmem request (4.8.1) with a host disk image, so logsec, FAT /
+  exFAT, DCF, fileif, the file tasks and REC_FILE run natively; C, sd_mount's result beside it (the drive status's mount
+  bit `0x1000` comes from the device state's bit 16, `0x508a83e7`; the lab's state is `0x8600`). A, the SD host
+  registers with a card model, is the faithful later step (3-6 weeks, optional). Formatting (`sdmem_format.c`, dosfat)
+  runs natively under B.
 - **Playback:** with S-PLAYSEQ, S-PLAYCOMP and S-PLAYVIEW kept, real files need a JPEG decoder at the codec seam (4.3's
   C2 `decode_jpeg`, `play_img.c`): 2-4 weeks on top of storage. A native path needs the HLS play components (310k),
   segment 9's PLAY_* / MOVP / MOVE, the AV back end for movies and the CIC engine for RAW: a block of its own.
 - **First step:** in a probe session, let EYEFI's init chain (`0x508a49f9`, `0x50894d42`, `0x508ac195`, `0x50888c4a`,
   `0x508a533e`, `0x50877de4`) and FILECLBK, FILEFGND and DCFPROC_SUB start, with the SD ports' pages (`0x99000000`,
   `0x9a300000`, 64 KiB each) as a logging device that faults on the first read; record the mount path down to the first
-  SD register access, and read `0x508b1cdc` with its logsec callers to fix the request / completion contract.
+  SD register access and the sdmem commands it sends in order. The request / completion contract is read (4.8.1).
+
+#### 4.8.1 The sdmem request contract (D unless tagged)
+
+- **Request (128 bytes; builders allocate it with `0x5000305e(128)`):** `+0 u16` drive (0, 1, 2 or 8 pass logsec's
+  entry `0x508ac286`; any other completes with `0x1319` and errlog `0x10001101`), `+2 u16` slot (the port index from
+  `0x508b0c7f`), `+4 u32` first sector, `+8 u32` sector count, `+12 u32` buffer, `+16 u32` flags (bit 2 picks 1 or 4
+  for the work area's `+86`, meaning ?), `+26 u16` command, `+28` the caller's word (logsec: its ticket), `+32` the
+  completion `fn(a0 = request, d0 = u16 status)`, `+36` / `+40` further callbacks (command 3; logsec sets `+36` =
+  `0x508ac505`), `+60 u16` status, `+64..` sdmem's work area (`+106..+110` used by commands 4 / 5 when flags bit 2 is
+  set, ?). Sectors are 512 bytes (`asl 9` at `0x508b2480`, `0x508b25d4`).
+- **Entry `0x508b1cdc`:** command 10 (abort) sets `(0xa31fc684)[slot]` = 1 and goes straight to the executor. Every
+  command but 0, 1, 2 and 11 takes the sdmem semaphore 0x7b (`(0x60042f4e)`) and checks the card state first
+  (`0x508acbe0`, then `0x508b3acf` for UHS-II or `0x508b0c2a` for a legacy card), failing with `0x1301`, `0x1402` or
+  `0x1416`. The executor `0x508b1de1` keeps one active request per slot (`0xa31fc64c + 4 * slot`) and queues up to four
+  more (`0xa31fc654 + 24 * slot`; a fifth fails with `0x1314`), then dispatches commands 1..24 through the table
+  `0x60a18c10` (`0x508b1f00`; command 0 directly, `0x508b21f6`).
+
+| Command | Handler | What it does |
+|---|---|---|
+| 0 | `0x508b21f6` | a 128-byte job to the driver queue `0x508b37de` (its completion `0x508b2249`); the card bring-up (I) |
+| 1 | `0x508b2b51` | clears the port's card info and completes with 0 |
+| 2, 11, 14 | `0x508b2a56` with class 4, 5, `(flags & 0x30) \| 7` | ? |
+| 3 | `0x508b2189` | checks ready (`0x140d`) and write protect (`0x1410`), then calls `+36` (or `+40`) |
+| 4, 5, 6 | `0x508b2323` | the data transfer: count 0 completes with 0; not ready `0x1409`; 5 on a write-protected card `0x1410` (so 5 is a write, I; 4 a read, I; 6 ?); first + count beyond the capacity `0x1417`; else the work area and the driver job (`0x508b23d1`) |
+| 7, 8 | `0x508b24dc` | a second transfer pair (8 sets a flag), ? |
+| 9, 10, 24 | `0x508b2cdd`, `0x508b2eb4`, `0x508b2f4f` | ? (10 is the abort) |
+| 18, 20 | `0x508b2169` | complete with 0 |
+| 21 | `0x508b2175` | writes 80 to the card info's `+89`, completes with 0 |
+| 12, 13, 15, 16, 17, 19, 22, 23 | - | complete with `0x1320` (not supported, I) |
+
+- **Completion:** `0x508b1fbc(request, status)` stores the status in `+60` when that is still 0 and hands `+32` to
+  `0x50894ddb(fn, request, status)`, which appends `{fn, arg, u16 status, u16 kind 2}` to a 32-entry ring at
+  `0xa31fbfd4` (write index `0xa31fc156`) and sets flag 0x1f; the task FILEFGND 0x0e (`0x50894e37`) waits on that flag
+  and calls `fn(a0 = request, d0 = status)` for each entry (`0x50894d77`). Then the slot is freed and each queued
+  request is started, or failed with the same status. So every completion runs in FILEFGND's task, in order, never in
+  the caller's or an interrupt's context. Below the request, the driver jobs and the SD host's IRQs (225 / 227 / 228)
+  are not read (?).
+- **Card info (per port, `0xa31fc4dc + 92 * port`; `0x508b2b99` returns it):** `+0 u32` capacity in sectors, `+8` bit 0
+  write protect, `+12` a pointer to `+20`, `+88 u32` not 0 when the card is ready, `+89` the byte command 21 writes.
+  Which job fills it, and the rest of its fields, are ?.
+- **logsec's side:** synchronous callers (dosfat, the dcf* modules, logsec_sem, api_picfile) go through `0x508ac1dd`:
+  a ticket from `0x508ac3ca`, `+32` = `0x508ac487` (stores the status and a done mark in the ticket and sets its flag),
+  the request through `0x508ac286`, the wait `0x508ac5d9`, which returns the status.
+- **What seam B must return (I):** for commands 4 and 5, count x 512 bytes copied between the image and `+12`, the
+  status in `+60` and the completion through `0x50894ddb(+32, request, status)`, so FILEFGND keeps calling it; the range
+  and write-protect checks as the table gives them; card info that the mount accepts. Which commands the mount sends,
+  in which order, and what each must leave in the card info, is ? until the first step's probe has run.
 
 ### 4.9 HDMI and DisplayPort
 
@@ -652,23 +836,52 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
 - **The protocol surface (D):** `get_commandlist.cgi` returns the XML at body `0x18f9448` listing every CGI with its
   parameters (connect mode, camera mode, image list, thumbnails, EXIF, erase, remote release, live view, properties,
   time, GPS, movie stream, firmware update, MySet backup, camera log).
-- **ISC (D):** node ids 0..3 are the MN cores, 4 the A53 (I); ports 0..47; per-port owners: 1 / 2 remote live view,
+- **ISC (D):** node ids 0..3 are the MN cores, 4 the A53 (4.11.1); ports 0..47; per-port owners: 1 / 2 remote live view,
   3 / 4 BSD socket API, 5 / 6 / 8 FILEISCAM, 11..16 HTTPD CGI relay, 19 / 20 Wi-Fi requests, 21 Wi-Fi events, 24 UPnP,
   25 mDNS, 26 SYS_CA53_PWR_MNG, 27 the A53 start completion, 28 / 29 BLE, 30 / 31 IMGPRO_HHHR (not wireless), 47 / 49
-  shell tests. The ring layout in the control blocks `0xa3251704 + 0xea8 * node` is ?.
+  shell tests. The rings are the FIFOs of the shared control block `0x97f00c00` (4.11.1); the MN library's per-node
+  structures at `0xa3251704 + 0xea8 * node` are its own, layout ?.
 - **Others (D):** Bluetooth classic is dead code (BTSTK, BTTIM, BTEVU, BTAPL, BT_CTRL, BTIAP, OBEX, OBEX_ACP are
   one-instruction stubs at `0x510175d7..0x510175ec`); FlashAir / iSDIO (SPC_MAIN, SPC_TIMER, 3.8k) and ICTLOG belong
   here; location comes from the phone (HTTP and BLE), the OM-1 has no GPS receiver of its own.
 - **Seam:** the ISC node-4 port boundary: a JS "A53 service" answers CPU 1's ISC messages as the Linux daemons would,
-  either by intercepting the ISC dispatcher `0x50aa4c98` (cheaper) or as the mailbox device (bank `+0x800/+0x804/+0x880
-  /+0x888`, IRQ 323; needs the ring layout). The A53 start (`0x5003bd93`) needs the ISC init on all four cores, the
-  power / reset registers as plain storage and a reply on port 27 (content ?).
+  either at the ISC services (send `0x50aa369e` behind the service gate `0x50aa4c98`, 4.11.1; cheaper) or as the
+  device: node 4's FIFO in the control block plus the doorbell `+0x880` and IRQ 323 (4.11.1). The A53 start
+  (`0x5003bd93`) needs the ISC init on all four cores, the power / reset registers as plain storage and a reply on port
+  27 (content ?).
 - **Breakdown (I, after a CPU 1 core exists):** ISC protocol decode 1-2 weeks; mailbox or intercept plus the A53 boot
   handshake 1 week; the JS service for HTTP and remote shooting 2-3 weeks; RTP live view and movie stream 1-2 weeks; BLE
   1-2 weeks.
-- **First step:** decode the ISC message formats per port from both ends without running anything: extract the A53
-  squashfs, disassemble `isc_cgi`, `isc_socket`, `isc_olnet`, `isc_file`, `blebridge` and `iscdrv.ko`, and pair each
-  with its CPU 1 call site. This also yields the ring layout.
+- **First step:** the transport is read from both ends (4.11.1). Next, decode the per-port payloads without running
+  anything: disassemble `isc_cgi`, `isc_socket`, `isc_olnet`, `isc_file` and `blebridge` (32-bit ARM, stripped) and
+  pair each port with its CPU 1 call site.
+
+#### 4.11.1 The ISC transport (D unless tagged)
+
+- **Both ends share one configuration:** the MN table `0x6034d018` and the `.data` of the A53's `iscdrv.ko` (Linux
+  module, "Inter System Communication driver", author Miraxia Edge Technology, not stripped) hold the same values:
+  control block `0x97f00c00`, 1024 bytes; 48 channels (ports); shared memory 128 KiB at `0x63fe0000` for nodes 0..3 and
+  `0x2_a3fe0000` for node 4; hardware lock id 7. The A53 image is readable with existing tools: the squashfs at
+  `blk05a00000` body `0x2f10fe0` (v4.0, xz, 11,811,224 bytes) extracts with 7-Zip, and Apple's `objdump` disassembles
+  both the aarch64 module and the 32-bit ARM daemons.
+- **Control block:** `+0 u16` a magic `0x1000 | (byte sum of the configuration & 0xff)`, which `isc_start` checks;
+  `+2 u8` the node count; `+4 u32` a shared-memory size (memblock_init); `+8` one `u16` offset per node to that node's
+  receive FIFO. `iscdrv` takes node 4 as its own (after its bank loop, `isc_start` stores 4 as the own node).
+- **FIFO (one per receiving node):** a 12-byte header `{u16 state, u16 size, u16 read, u16 write, 4 bytes ?}`, the data
+  from `+12`; state `0x1000` while the owner starts, `0x2000` when running (`isc_start` refuses a FIFO already in a
+  `0x3000` state). A message is a 2-byte header `{u8 port, u8 length}` and at most 128 bytes (`isc_send` refuses longer
+  ones and ports >= 48), written at the write index with wrap; free space is `read - 1 - write` modulo the size. Port
+  `0xff` is skipped by the receiver (`isc_receive_interrupt`). A sender holds the hardware lock for the target: on the
+  MN side bit `node` of the byte `0x97000000 + 64 * id` (`bset` / `bclr`, `0x50aa31d6` / `0x50aa31ed`), on the A53 an
+  exclusive byte at `isc_lock_baseaddr + 64 * id` (that this is the same byte is I).
+- **Doorbells:** after a write the sender writes `0x4000` to the target's register: for node n = 0..3 to `+0x800` of
+  that core's bank, for node 4 to `+0x880` of bank 0 (from the A53) or of the sender's own bank (from an MN core,
+  `0x50aa324b`). The A53 maps the four banks at `0x99200000`, `0x99300000`, `0x99b00000`, `0x99b80000` (`.rodata`
+  `+0x110`), the same four addresses as `0x50aa324b`'s operands.
+- **`0x50aa4c98` is a service gate, not a message dispatcher:** it takes a service code `0x15c00001..0x15c00024` and an
+  argument block and jumps through `0x60ac7510`, e.g. to `0x50aa369e`, which makes `isc_send`'s checks (node below 5
+  and not its own, size + 2 below the FIFO size) and writes through `0x50aa3595`, a caller of the doorbell `0x50aa324b`
+  (so the send, I). The per-port payloads above the transport are ?.
 
 ### 4.12 Detection, GPU / C3D, strobe
 
@@ -953,6 +1166,16 @@ Corrections to earlier readings, each now owned here or by the document named.
     the transaction dispatcher's local list stays empty; TRA 990 and 991 are answered by the shooting component. The
     release notifications of shutter spec item 20 are built by the HLS sequence parts, not by modules (4.1.3). Applied
     to the shutter spec items 14, 16, 20 and 43.
+20. **SCPU commands do not use the `0x98e00000` window** (D, 4.7.1): PER_SCPU frames them on PER_SIO channel 2 between
+    pins 103 and 102. `0x07` is the SCPU firmware update's command, not a port scan; the port state comes as the reply
+    to `0x88` and as the SCPU's own message `0x08`. None of the 19 call sites of the request API sends `0x05`.
+    PER_SCPU's 100 timer is its start watchdog.
+21. **`0x50aa4c98` is the ISC service gate** (D, 4.11.1), not a per-port dispatcher: intercepting it answers service
+    calls (send, receive, memory), not messages. The ring layout is the control block's FIFOs at `0x97f00c00`, read from
+    both ends. Applied to 4.11's seam.
+22. **The lens init steps' "parsers" are predicates** (D, 4.4.1) on the lens record that earlier replies filled; the
+    one step that writes the record from a table is `0x502b0bce` (known lens ids). `+0x08` of the lens serial controller
+    is W1C (D: the IRQ 14 handler writes back what it read).
 
 ## 10. Open questions
 

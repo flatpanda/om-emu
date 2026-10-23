@@ -417,6 +417,19 @@ export async function workerTests() {
         checks++;
         const inf = await req(3, 'POST', '/api/input?sync=1', { type: 'dial', id: 'main', detents: 'x' });
         if (!inf || inf.status !== 200 || !String(inf.doc.result?.error).includes('is not an integer')) bad.push(`worker: a refused dial: ${JSON.stringify(inf)?.slice(0, 300)}`);
+        // the live debug route on the Worker's queue (src/debug/live.mjs): halt, a dial held meanwhile, no breakpoints
+        // (the queue does not block), resume, the dial then run
+        checks++;
+        const dh = await req(7, 'POST', '/api/debug', { id: 'h', op: 'halt' });
+        w.postMessage({ type: 'req', id: 8, method: 'POST', path: '/api/input?sync=1', body: JSON.stringify({ type: 'dial', id: 'main', detents: 1 }), t_page: 0 });
+        const db = await req(9, 'POST', '/api/debug', { op: 'break', pcs: ['0x50000000'] });
+        const ds = await req(10, 'POST', '/api/debug', { op: 'state' });
+        const early = seen.some((x) => x.type === 'res' && x.id === 8);
+        const dr = await req(11, 'POST', '/api/debug', { op: 'resume' });
+        const dial = await until((x) => x.type === 'res' && x.id === 8, 60000);
+        if (dh?.doc?.stop !== 'halt' || dh.doc.id !== 'h' || !/does not block/.test(db?.doc?.error?.message ?? '') || ds?.doc?.state !== 'halted' || early || dr?.doc?.state !== 'running' || !dial || dial.status !== 200) {
+          bad.push(`worker: the debug route: halt ${JSON.stringify(dh?.doc)?.slice(0, 120)}, break ${JSON.stringify(db?.doc)?.slice(0, 160)}, state ${ds?.doc?.state}, the dial answered while halted ${early}, resume ${dr?.doc?.state}, the held dial ${dial ? dial.status : 'unanswered'}`);
+        }
         // a ?sync=1 request in flight when the session quits is answered (result null or the record), then 'stopped'
         checks++;
         const k = seen.length;

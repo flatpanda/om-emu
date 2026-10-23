@@ -6,30 +6,42 @@
 // Error types: the thrown error's class (Fault, RspError, Unported, HostStopped, Aborted, ValueError, RuntimeError, ...)
 // or BadRequest for a malformed request. An error never ends the session; after HostStopped (a host error stopped the
 // machine mid-instruction) every run or write op fails with it, as the machine refuses them.
-// Addresses and values are numbers or "0x..." strings; registers and addresses come back as "0x%08x" strings. As with a
-// GDB stub, a cont whose pc is on a breakpoint returns 'break' at once (step first); after abort every op fails with
-// Aborted until the next load; while a budget / maxMs continue is paused, every op that changes the machine or its run
-// is refused until resume or abort (break, step, cont, watch, snapshot, restore, reset, setRegs, setReg, write,
-// cpuStore, lab but lab {time}, an exec trace and trace {off}); the reads (regs, reg, read, stack, stderr, watchLog,
-// stats, disasm, lab {time}) and mmio and irq traces are allowed. Requests are handled one at a time: a cont or resume
-// without budget or maxMs runs until a stop, a fault or the insn limit, and no later request (abort included) is read
-// meanwhile, so give maxMs (or a budget) to keep control; abort ends a paused continue between slices, it cannot
-// interrupt a running one.
+// Addresses and values are numbers or "0x..." strings; registers and addresses come back as "0x%08x" strings. A field
+// of the wrong shape is a BadRequest: an address outside 0..2^32-1, a register or stored value outside 32 bits
+// (signed or unsigned: -2^31..2^32-1), a count that is not a non-negative integer (step's n, disasm's n,
+// watch's len and a budget positive), a list (stops, pcs, watch's list, irqs) that is not an array, regs or a watch
+// entry that is not an object. As with a GDB stub, a cont whose pc is on a breakpoint returns 'break' at once (step
+// first); after abort every op fails with Aborted until the next load; while a budget / maxMs continue is paused, every
+// op that changes the machine or its run is refused until resume, halt or abort (break, step, cont, watch, snapshot,
+// restore, reset, setRegs, setReg, write, cpuStore, lab but lab {time}, an exec trace and trace {off}); the reads
+// (regs, reg, read, stack, stderr, watchLog, stats, disasm, lab {time}) and mmio and irq traces are allowed. Requests
+// are handled one at a time: a cont or resume without budget or maxMs runs until a stop, a fault or the insn limit, and
+// no later request (abort included) is read meanwhile, so give maxMs (or a budget) to keep control; halt and abort end
+// a paused continue between slices, they cannot interrupt a running one.
+// With an attached Debugger (new Protocol(host, {attached}): the live route of a play session, src/debug/live.mjs)
+// the ops that make, reset or rewind a machine or move lab time are refused (load, quit, reset, cpuStore, snapshot,
+// restore, drop, abort, lab but lab {time}); live.mjs serves the run control itself.
 //
 // Ops (one to one with the Debugger):
 //   load {image?, insnLimit?, mutant?, oneInsn?}      a fresh standalone machine (the image: the host's default)
 //   reset {regs?}  regs  setRegs {regs}  reg {name}  setReg {name, value}
 //   read {addr, size} -> {hex}   write {addr, hex}   cpuStore {addr, value, stub?} -> {regs}
-//   break {pcs}   cont {stops?, budget?, maxMs?}   resume {budget?, maxMs?}   abort   step {n?}
-//     cont, resume and step answer {stop: break|watch|fault|limit|paused, regs, fault?, watch?, stderr, stderrDropped?}
-//     (stderr: the lines the run wrote, the last 1,000 of them; stderrDropped: how many it wrote before those)
+//   break {pcs}   cont {stops?, budget?, maxMs?}   resume {budget?, maxMs?}   halt   abort   step {n?}
+//     cont, resume, halt and step answer {stop: break|watch|fault|limit|paused|halt, regs, fault?, watch?, stderr,
+//     stderrDropped?} (stderr: the lines the run wrote, the last 1,000 of them; stderrDropped: how many it wrote
+//     before those); halt ends a paused continue where it paused (stop 'halt'), the machine runnable
 //   watch {list: [{id?, addr|lo, len|hi, kind: r|w|rw, action: stop|log}]}
 //   watchLog {limit?} -> {entries, more, dropped}   the oldest logged hits, at most limit (default 100,000), taken
 //     off the log; more: the entries still in it; dropped: the hits lost since the last watchLog (the log keeps at
-//     least the newest 100,000: at 200,000 it drops the oldest half)
+//     least the newest 100,000: at 200,000 it drops the oldest half); on a lab session each entry also has lab_ns (the
+//     lab clock at the hit) and n (its number since attach, the dropped hits counted)
 //     a watch stop's 'watch' and each watchLog entry: {id, kind (a number: 1 r, 2 w, 3 rw, mem.mjs's mask), addr, hit,
 //     size, dir, value, pc, insns}
-//   trace {exec?, mmio?, irq?, mode: native|one-insn, format: qemu|jsonl, from?, to?} or {off: true} -> {files}
+//   trace {exec?, mmio?, irq?, mode: native|one-insn, format: qemu|jsonl, from?, to?, filter?} or {off: true} -> {files}
+//     filter: {exec?: {from?, to?, pcs?}, mmio?: {from?, to?, dir?: r|w}, irq?: {kind?: presented|accepted, irqs?}}
+//     keeps the lines of those instructions (a pc range [from, to), a pc list), accesses (overlapping [from, to), one
+//     direction) and interrupts (one kind; a list of IRQ numbers keeps presentations only); the top-level from and to
+//     are the exec filter's
 //     a key given again replaces that trace (its file closed, then the new file truncated: a trace restarted on its
 //     own file starts empty); keys naming one file share it (lines interleaved); a file a running trace
 //     keeps writing is refused; a failed request changes no file and no trace
@@ -51,14 +63,53 @@ import { regsHex, hex8 } from './regs.mjs';
 import { execLine, mmioLine, mmioPcLine, irqLine, jsonLine } from './trace.mjs';
 
 const WATCH_LOG_LIMIT = 100000;                  // watchLog's entries per response by default (about 13 MB of JSON)
-class BadRequest extends Error { constructor(m) { super(m); this.name = 'BadRequest'; } }
+export class BadRequest extends Error { constructor(m) { super(m); this.name = 'BadRequest'; } }
 const HEXRE = /^[0-9a-fA-F]*$/;
-function num(v, what) {
+export function num(v, what) {
   if (typeof v === 'number' && Number.isInteger(v)) return v;
   if (typeof v === 'string' && /^(0x[0-9a-f]+|-?[0-9]+)$/i.test(v.trim())) return Number(v.trim());
   throw new BadRequest(`${what}: a number or "0x..." string, got ${JSON.stringify(v)}`);
 }
-const opt = (v, what, d) => v === undefined || v === null ? d : num(v, what);
+const absent = (v) => v === undefined || v === null;
+// An address (0..2^32-1), a 32-bit value (signed or unsigned, as a u32), a count (an integer >= min), a range's
+// exclusive end (0..0x100000000); the opt forms take d when the field is absent.
+export function addr(v, what) {
+  const x = num(v, what);
+  if (x < 0 || x > 2 ** 32 - 1) throw new BadRequest(`${what}: ${JSON.stringify(v)} is not a 32-bit address`);
+  return x;
+}
+export function word(v, what) {
+  const x = num(v, what);
+  if (x < -(2 ** 31) || x > 2 ** 32 - 1) throw new BadRequest(`${what}: ${JSON.stringify(v)} is not a 32-bit value`);
+  return x >>> 0;
+}
+export function count(v, what, min = 0) {
+  const x = num(v, what);
+  if (x < min) throw new BadRequest(`${what}: ${JSON.stringify(v)} is not ${min ? 'a positive' : 'a non-negative'} integer`);
+  return x;
+}
+function end(v, what) {
+  const x = num(v, what);
+  if (x < 0 || x > 0x100000000) throw new BadRequest(`${what}: ${JSON.stringify(v)} is not a range end in 0..0x100000000`);
+  return x;
+}
+const opt = (v, what, d) => absent(v) ? d : num(v, what);
+const optAddr = (v, what, d) => absent(v) ? d : addr(v, what);
+const optCount = (v, what, d, min = 0) => absent(v) ? d : count(v, what, min);
+const optEnd = (v, what) => absent(v) ? null : end(v, what);
+// A list field (an array) and an object field (not an array).
+export function list(v, what) {
+  if (!Array.isArray(v)) throw new BadRequest(`${what}: a list, got ${JSON.stringify(v)}`);
+  return v;
+}
+export function dict(v, what) {
+  if (v === null || typeof v !== 'object' || Array.isArray(v)) throw new BadRequest(`${what}: an object, got ${JSON.stringify(v)}`);
+  return v;
+}
+const regValues = (v) => Object.fromEntries(Object.entries(dict(v ?? {}, 'regs')).map(([k, x]) => [k, word(x, k)]));
+// The ops an attached (live) Protocol refuses: they make, reset or rewind a machine (lab other than {time} too: it
+// moves lab time).
+const STANDALONE = new Set(['load', 'quit', 'reset', 'cpuStore', 'snapshot', 'restore', 'drop', 'abort']);
 function bytes(hex, what) {
   if (typeof hex !== 'string' || hex.length % 2 || !HEXRE.test(hex)) throw new BadRequest(`${what}: an even-length hex string`);
   const out = new Uint8Array(hex.length / 2);
@@ -66,7 +117,7 @@ function bytes(hex, what) {
   return out;
 }
 const toHex = (b) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
-function outcome(o) {
+export function outcome(o) {
   const r = { stop: o.stop, regs: regsHex(o.regs) };
   if (o.fault !== undefined) r.fault = o.fault;
   if (o.watch) r.watch = { ...o.watch, addr: hex8(o.watch.addr), hit: hex8(o.watch.hit), value: hex8(o.watch.value), pc: hex8(o.watch.pc) };
@@ -80,7 +131,7 @@ function outcome(o) {
 // close(), and with prepare: commit() (truncate: the trace starts) and discard() (close, remove the file if this open
 // created it), the file left as it was until commit}, disasm(addr, bytes) -> lines }
 export class Protocol {
-  constructor(host) { this.host = host; this.dbg = null; this.sinks = []; this.done = false; }
+  constructor(host, { attached = null } = {}) { this.host = host; this.dbg = attached; this.live = attached !== null; this.sinks = []; this.done = false; }
   _need() { if (this.dbg === null) throw new BadRequest('no machine: send {"op": "load"} first'); return this.dbg; }
   _closeSinks() { for (const s of this.sinks) s.close(); this.sinks = []; }
   handle(req) {
@@ -95,6 +146,9 @@ export class Protocol {
   }
   _op(q) {
     const H = this.host;
+    if (this.live && (STANDALONE.has(q.op) || (q.op === 'lab' && !(q.time && q.advance === undefined && q.runToFrame === undefined && q.runToEvent === undefined)))) {
+      throw new BadRequest(`${q.op === 'lab' ? 'lab but lab {time}' : q.op}: not on a live session (it would make, reset or rewind the machine, or move lab time behind the session)`);
+    }
     switch (q.op) {
       case 'load': {
         this.traces = {};
@@ -102,41 +156,41 @@ export class Protocol {
         const image = q.image ?? H.defaultImage;
         const rom = H.loadImage(image);
         const mutant = q.mutant === undefined || q.mutant === null ? null : num(q.mutant, 'mutant');
-        this.dbg = Debugger.create({ ...H.env, rom }, { insnLimit: q.insnLimit === undefined || q.insnLimit === null ? null : num(q.insnLimit, 'insnLimit'), mutant, oneInsn: !!q.oneInsn, disasm: H.disasm });
+        this.dbg = Debugger.create({ ...H.env, rom }, { insnLimit: optCount(q.insnLimit, 'insnLimit', null), mutant, oneInsn: !!q.oneInsn, disasm: H.disasm });
         return { image, regs: regsHex(this.dbg.regs()) };
       }
       case 'quit': this._closeSinks(); if (this.dbg) { try { this.dbg.close(); } catch { /* aborted */ } } this.dbg = null; this.done = true; return { quit: true };
-      case 'reset': this._need().reset(Object.fromEntries(Object.entries(q.regs ?? {}).map(([k, v]) => [k, num(v, k)]))); return { regs: regsHex(this.dbg.regs()) };
+      case 'reset': { const regs = regValues(q.regs); this._need().reset(regs); return { regs: regsHex(this.dbg.regs()) }; }
       case 'regs': return { regs: regsHex(this._need().regs()) };
-      case 'setRegs': this._need().setRegs(Object.fromEntries(Object.entries(q.regs ?? {}).map(([k, v]) => [k, num(v, k)]))); return { regs: regsHex(this.dbg.regs()) };
+      case 'setRegs': { const regs = regValues(q.regs); this._need().setRegs(regs); return { regs: regsHex(this.dbg.regs()) }; }
       case 'reg': { const v = this._need().reg(q.name); return { value: v === null ? null : hex8(v) }; }
-      case 'setReg': this._need().setReg(q.name, num(q.value, 'value')); return {};
-      case 'read': { const d = this._need().read(num(q.addr, 'addr') >>> 0, num(q.size, 'size')); return { hex: toHex(d) }; }
-      case 'write': this._need().write(num(q.addr, 'addr') >>> 0, bytes(q.hex, 'hex')); return {};
-      case 'cpuStore': return { regs: regsHex(this._need().cpuStore(num(q.addr, 'addr'), num(q.value, 'value'), opt(q.stub, 'stub', undefined))) };
-      case 'break': return { pcs: this._need().breakpoints((q.pcs ?? []).map((x) => num(x, 'pcs'))).map(hex8) };
-      case 'cont': return outcome(this._need().cont({ ...(q.stops ? { stops: q.stops.map((x) => num(x, 'stops')) } : {}), budget: opt(q.budget, 'budget', Infinity), maxMs: opt(q.maxMs, 'maxMs', null) }));
-      case 'resume': return outcome(this._need().resume({ budget: opt(q.budget, 'budget', Infinity), maxMs: opt(q.maxMs, 'maxMs', null) }));
-      case 'abort': this._need().abort(); return {};
-      case 'step': return outcome(this._need().step(opt(q.n, 'n', 1)));
-      case 'watch': {
-        const list = (q.list ?? []).map((w, i) => {
-          const lo = num(w.lo ?? w.addr, 'lo');
-          return { id: w.id ?? i, lo, hi: w.hi !== undefined ? num(w.hi, 'hi') : lo + num(w.len ?? 1, 'len'), kind: w.kind ?? 'w', action: w.action ?? 'stop' };
-        });
-        this._need().watch(list);
-        return { count: list.length };
+      case 'setReg': { const v = word(q.value, 'value'); this._need().setReg(q.name, v); return {}; }
+      case 'read': { const a = addr(q.addr, 'addr'), n = count(q.size, 'size'); return { hex: toHex(this._need().read(a, n)) }; }
+      case 'write': { const a = addr(q.addr, 'addr'), b = bytes(q.hex, 'hex'); this._need().write(a, b); return {}; }
+      case 'cpuStore': {
+        const a = addr(q.addr, 'addr'), v = word(q.value, 'value'), stub = optAddr(q.stub, 'stub', undefined);
+        return { regs: regsHex(this._need().cpuStore(a, v, stub)) };
       }
+      case 'break': { const pcs = pcList(q.pcs ?? [], 'pcs'); return { pcs: this._need().breakpoints(pcs).map(hex8) }; }
+      case 'cont': {
+        const stops = absent(q.stops) ? undefined : pcList(q.stops, 'stops'), run = runLimits(q);
+        return outcome(this._need().cont({ ...(stops ? { stops } : {}), ...run }));
+      }
+      case 'resume': { const run = runLimits(q); return outcome(this._need().resume(run)); }
+      case 'halt': return outcome(this._need().halt());
+      case 'abort': this._need().abort(); return {};
+      case 'step': { const n = optCount(q.n, 'n', 1, 1); return outcome(this._need().step(n)); }
+      case 'watch': { const ws = watchList(q.list ?? []); this._need().watch(ws); return { count: ws.length }; }
       case 'watchLog': {
-        const d = this._need(), entries = d.watchLog(opt(q.limit, 'limit', WATCH_LOG_LIMIT)), st = d.watchLogState();
+        const d = this._need(), entries = d.watchLog(optCount(q.limit, 'limit', WATCH_LOG_LIMIT)), st = d.watchLogState();
         return { entries: entries.map((r) => ({ ...r, addr: hex8(r.addr), hit: hex8(r.hit), value: hex8(r.value), pc: hex8(r.pc) })), more: st.kept, dropped: st.dropped };
       }
       case 'trace': return this._trace(q);
       case 'lab': {
         const d = this._need();
-        if (q.advance !== undefined) return d.advance(num(q.advance, 'advance'));
-        if (q.runToFrame !== undefined) return d.runToFrame(num(q.runToFrame, 'runToFrame'));
-        if (q.runToEvent !== undefined) return d.runToEvent(num(q.runToEvent, 'runToEvent'));
+        if (q.advance !== undefined) return d.advance(count(q.advance, 'advance'));
+        if (q.runToFrame !== undefined) return d.runToFrame(count(q.runToFrame, 'runToFrame'));
+        if (q.runToEvent !== undefined) return d.runToEvent(count(q.runToEvent, 'runToEvent'));
         if (q.time) return { time: d.labTime() };
         throw new BadRequest('lab: one of advance, runToFrame, runToEvent, time');
       }
@@ -145,25 +199,27 @@ export class Protocol {
       case 'drop': this._need().drop(num(q.handle, 'handle')); return {};
       case 'stack': {
         if (q.sp !== undefined) throw new BadRequest('stack: "sp" is now "initialSp" (it only tags a line); "at" dumps from an address');
-        return { stack: this._need().stack(opt(q.words, 'words', 16), opt(q.initialSp, 'initialSp', A(0xA2200000)), opt(q.at, 'at', null)) };
+        const words = optCount(q.words, 'words', 16), top = optAddr(q.initialSp, 'initialSp', A(0xA2200000)), at = optAddr(q.at, 'at', null);
+        return { stack: this._need().stack(words, top, at) };
       }
       case 'stderr': {
-        const d = this._need(), since = opt(q.since, 'since', 0), r = d.stderr(since);
+        const since = optCount(q.since, 'since', 0), d = this._need(), r = d.stderr(since);
         return { lines: r.lines, count: d.stderrCount(), first: r.first, dropped: r.first - since };
       }
       case 'stats': return { stats: this._need().stats() };
-      case 'disasm': return { lines: this._need().disasm(num(q.addr, 'addr'), opt(q.n, 'n', 16)) };
+      case 'disasm': { const a = addr(q.addr, 'addr'), n = optCount(q.n, 'n', 16, 1); return { lines: this._need().disasm(a, n) }; }
       default: throw new BadRequest(`unknown op ${JSON.stringify(q.op)}`);
     }
   }
   _trace(q) {
     const d = this._need(), H = this.host;
-    const SET = { exec: (f, o) => d.traceExec(f, o), mmio: (f) => d.traceMmio(f), irq: (f) => d.traceIrq(f) };
+    const SET = { exec: (f, o) => d.traceExec(f, o), mmio: (f, o) => d.traceMmio(f, o), irq: (f, o) => d.traceIrq(f, o) };
     if (q.off) { for (const k in SET) SET[k](null); this._closeSinks(); this.traces = {}; return {}; }
     const format = q.format ?? 'qemu';
     if (format !== 'qemu' && format !== 'jsonl') throw new BadRequest('trace format: qemu or jsonl');
     const keys = ['exec', 'mmio', 'irq'].filter((k) => q[k]);
-    const opts = { mode: q.mode ?? 'native', from: q.from === undefined ? null : num(q.from, 'from'), to: q.to === undefined ? null : num(q.to, 'to') };
+    if (keys.length && !H.openSink) throw new BadRequest('trace: this host writes no trace files');
+    const opts = traceFilters(q);
     const LINE = { exec: format === 'qemu' ? execLine : (r) => jsonLine('exec', r),
       mmio: format === 'qemu' ? (q.pc === false ? mmioLine : mmioPcLine) : (r) => jsonLine('mmio', r),
       irq: format === 'qemu' ? irqLine : (r) => jsonLine('irq', r) };
@@ -186,7 +242,7 @@ export class Protocol {
     try {
       for (const k of keys) {
         const line = LINE[k];
-        SET[k]((r) => sinks[k].write(line(r)), opts);
+        SET[k]((r) => sinks[k].write(line(r)), opts[k]);
         set.push(k);
       }
       const byPath = new Map();
@@ -202,7 +258,7 @@ export class Protocol {
     const files = {};
     for (const k of keys) {
       const line = LINE[k];
-      this.traces[k] = { sink: sinks[k], hook: (r) => sinks[k].write(line(r)), opts, path: paths[k] };
+      this.traces[k] = { sink: sinks[k], hook: (r) => sinks[k].write(line(r)), opts: opts[k], path: paths[k] };
       files[k] = q[k];
     }
     const live = new Set(Object.values(this.traces).map((t) => t.sink));
@@ -213,4 +269,32 @@ export class Protocol {
     for (const s of opened) { s.commit?.(); this.sinks.push(s); }
     return { files };
   }
+}
+// A list of pcs (addresses).
+const pcList = (v, what) => list(v, what).map((x) => addr(x, what));
+// cont's and resume's budget (a positive instruction count) and maxMs (wall milliseconds, non-negative).
+const runLimits = (q) => ({ budget: optCount(q.budget, 'budget', Infinity, 1), maxMs: optCount(q.maxMs, 'maxMs', null) });
+// watch's list: [{id?, addr|lo, len|hi, kind?, action?}], each an object; len at least 1.
+export function watchList(v) {
+  return list(v, 'list').map((w, i) => {
+    dict(w, `list[${i}]`);
+    const lo = addr(w.lo ?? w.addr, 'lo');
+    return { id: w.id ?? i, lo, hi: w.hi !== undefined ? end(w.hi, 'hi') : lo + count(w.len ?? 1, 'len', 1), kind: w.kind ?? 'w', action: w.action ?? 'stop' };
+  });
+}
+// trace's options per kind: {exec: {mode, from, to, pcs}, mmio: {from, to, dir}, irq: {kind, irqs}} (null: no filter).
+function traceFilters(q) {
+  const f = absent(q.filter) ? {} : dict(q.filter, 'filter');
+  for (const k of Object.keys(f)) if (!['exec', 'mmio', 'irq'].includes(k)) throw new BadRequest(`filter: ${JSON.stringify(k)} is not exec, mmio or irq`);
+  const part = (k) => absent(f[k]) ? {} : dict(f[k], `filter.${k}`);
+  const ex = part('exec'), mm = part('mmio'), iq = part('irq');
+  if ((!absent(q.from) && !absent(ex.from)) || (!absent(q.to) && !absent(ex.to))) throw new BadRequest('trace: from or to given both at the top and in filter.exec');
+  const dir = absent(mm.dir) ? null : mm.dir, kind = absent(iq.kind) ? null : iq.kind;
+  if (dir !== null && dir !== 'r' && dir !== 'w') throw new BadRequest(`filter.mmio.dir: 'r' or 'w', got ${JSON.stringify(dir)}`);
+  if (kind !== null && kind !== 'presented' && kind !== 'accepted') throw new BadRequest(`filter.irq.kind: 'presented' or 'accepted', got ${JSON.stringify(kind)}`);
+  return {
+    exec: { mode: q.mode ?? 'native', from: optAddr(q.from ?? ex.from, 'from', null), to: optEnd(q.to ?? ex.to, 'to'), pcs: absent(ex.pcs) ? null : pcList(ex.pcs, 'filter.exec.pcs') },
+    mmio: { from: optAddr(mm.from, 'filter.mmio.from', null), to: optEnd(mm.to, 'filter.mmio.to'), dir },
+    irq: { kind, irqs: absent(iq.irqs) ? null : list(iq.irqs, 'filter.irq.irqs').map((x) => count(x, 'filter.irq.irqs')) },
+  };
 }

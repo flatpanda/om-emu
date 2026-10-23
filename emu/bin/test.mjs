@@ -5,7 +5,7 @@
 // (test_infra.mjs), the VSC register tables, class tables and blend table (test_dev.mjs), the kick model's TB-layout
 // refusals (test_irq.mjs), the replayer's argument binding and PlaySession.trim (test_lab.mjs), the check runner and
 // the checks' controls (test_checks.mjs) and their command-line parser (test_args.mjs), the debug API's units
-// (test_debug.mjs), the .BIN unpacker (test_unpack.mjs, needing $OM_FW_DIR or $OM_BIN, else counted as a failure),
+// (test_debug.mjs) and its live route to a play session (test_live.mjs), the .BIN unpacker (test_unpack.mjs, needing $OM_FW_DIR or $OM_BIN, else counted as a failure),
 // the browser player's pure parts, its node host and its Worker in a node worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
 // (test_camapp.mjs), the SCPU's clock and request server (test_scpu.mjs), the HDMI port and a plug in play on E143,
@@ -98,6 +98,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipp
   console.log(`Stage 3c host (G-host: the queue under load, the status during a WAIT, one clock, the stops and signals, SIGUSR2, the order wait, the page copy, the HTTP front, a busy port): ${hs.checks - hs.bad.filter((x) => x.startsWith('[')).length}/${hs.checks}`);
   hs.bad.forEach((x) => console.log('  ', x));
   bad += hs.bad.length;
+}
+// the debug API's live route to a play session (F31): its units, a headless Player, bin/play.mjs over HTTP
+{
+  const { liveUnits, liveSession, liveHost } = await import('../test/test_live.mjs');
+  const lu = await liveUnits(), ls = await liveSession(), lh = await liveHost();
+  console.log(`debug API live route (F31): argument checks, halt, trace filters and route units ${lu.checks - lu.bad.length}/${lu.checks}; a headless play session ${ls.checks - ls.bad.length}/${ls.checks}; the play server and --attach ${lh.checks - lh.bad.length}/${lh.checks}`);
+  [...lu.bad, ...ls.bad, ...lh.bad].forEach((x) => console.log('  ', x));
+  bad += lu.bad.length + ls.bad.length + lh.bad.length;
 }
 // the image sensor stand-in (S-SCENE): its model, and its live view in a play session with a --replay of it
 {

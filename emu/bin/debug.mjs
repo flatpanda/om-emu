@@ -5,9 +5,12 @@
 //                            [--read ADDR:SIZE]... [--step] [--stack [WORDS]] [--trace PATH] [--insn-limit N]
 //   node emu/bin/debug.mjs --serve        one JSON request per line on stdin, one response per line on stdout
 //                                           (src/debug/protocol.mjs lists the ops)
+//   node emu/bin/debug.mjs --attach URL   the same lines to a running play session (bin/play.mjs --debug-api; URL:
+//                                           its 'play: http://127.0.0.1:PORT/?t=TOKEN' line), the live route
+//                                           (src/debug/live.mjs lists its ops), one request at a time in order
 // The options parse as the checks' do (checks/lib/args.mjs: an unknown option or a malformed value, an item option's
 // too, exits 2 with the usage line); ADDR, VALUE, SIZE and LEN are integers (decimal or 0x...), HEX pairs of hex
-// digits. The run prints JSON on stdout (indent 2, registers as 0x%08x, memory and stack only when asked for); on a
+// digits; an ADDR outside 0..0xffffffff and a VALUE outside 32 bits (signed or unsigned) are usage errors. The run prints JSON on stdout (indent 2, registers as 0x%08x, memory and stack only when asked for); on a
 // nonzero fault it prints the whole device and trap stderr after it and exits 1, and a debugger read error is an
 // uncaught 'RuntimeError: GDB m...: E14' (its stack, exit 1). --image defaults to
 // artifacts/nd128/OM1_v1.9_ND128.main-code.bin, built in memory from artifacts/nd128/manifest.json's patches (the file
@@ -23,12 +26,10 @@
 //   --irq-trace PATH            every interrupt presentation and acceptance
 //   --disasm ADDR:LEN           disassembly at the stop (tools/mn10300-objdump, or $OM_OBJDUMP), added as "disasm"
 //   --max-ms N                  pause the continue after N ms of wall time (adds "paused": true)
-import fs from 'node:fs';
-import os from 'node:os';
+import http from 'node:http';
 import path from 'node:path';
 import readline from 'node:readline';
-import { execFileSync } from 'node:child_process';
-import { REPO, PATCHED, createHash, envMachine, runMain, readBytes, readPatched } from '../checks/lib/env.mjs';
+import { PATCHED, createHash, envMachine, runMain, readBytes, readPatched } from '../checks/lib/env.mjs';
 import { parseArgs, intValue } from '../checks/lib/args.mjs';
 import { Simulator, SP } from '../src/lab/sim.mjs';
 import { RuntimeError } from '../src/lab/errors.mjs';
@@ -36,11 +37,15 @@ import { Debugger } from '../src/debug/debugger.mjs';
 import { Protocol } from '../src/debug/protocol.mjs';
 import { execLine, mmioPcLine, irqLine } from '../src/debug/trace.mjs';
 import { regsHex } from '../src/debug/regs.mjs';
+import { openSink, disasm } from '../host/debughost.mjs';
+
+export { openSink, disasm };
 
 const PROG = 'debug.mjs';
 const ACTIONS = [
   { opt: '--image', type: 'path', default: PATCHED },
   { opt: '--entry', type: 'int', required: true, metavar: 'ADDR' },
+  { opt: '--attach', type: 'str', metavar: 'URL' },
   { opt: '--stop', type: 'int', repeat: true, metavar: 'ADDR' },
   { opt: '--reg', type: 'str', repeat: true, metavar: 'NAME=VALUE' },
   { opt: '--write', type: 'str', repeat: true, metavar: 'ADDR=HEX' },
@@ -58,32 +63,6 @@ const ACTIONS = [
   { opt: '--disasm', type: 'str', repeat: true, metavar: 'ADDR:LEN' },
   { opt: '--max-ms', type: 'int', metavar: 'N' },
 ];
-// A buffered line writer (the trace files). prepare (the protocol's trace op): the file is opened (created if missing)
-// but not truncated until commit(); discard() closes it and removes it when this open created it.
-export function openSink(file, { prepare = false } = {}) {
-  const created = prepare && !fs.existsSync(file);
-  const fd = fs.openSync(file, prepare ? fs.constants.O_WRONLY | fs.constants.O_CREAT : 'w');
-  let buf = [], n = 0;
-  const flush = () => { if (buf.length) { fs.writeSync(fd, buf.join('')); buf = []; n = 0; } };
-  return {
-    write(line) { buf.push(line + '\n'); n += line.length; if (n > 1 << 20) flush(); },
-    close() { flush(); fs.closeSync(fd); },
-    commit() { fs.ftruncateSync(fd, 0); },
-    discard() { fs.closeSync(fd); if (created) fs.rmSync(file, { force: true }); },
-  };
-}
-// The disassembly callback of the library: tools/mn10300-objdump (or $OM_OBJDUMP) on the bytes at their address.
-export function disasm(addr, bytes) {
-  const objdump = process.env.OM_OBJDUMP || path.join(REPO, 'tools/mn10300-objdump');
-  if (!fs.existsSync(objdump)) throw new Error(`disasm: ${objdump} not found (build or copy tools/mn10300-objdump, or set OM_OBJDUMP)`);
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'om-emu-disasm-'));
-  try {
-    const f = path.join(dir, 'code.bin');
-    fs.writeFileSync(f, bytes);
-    const out = execFileSync(objdump, ['-D', '-b', 'binary', '-m', 'mn10300', `--adjust-vma=0x${addr.toString(16)}`, f], { encoding: 'utf8' });
-    return out.split('\n').filter((l) => /^\s*[0-9a-f]+:\t/.test(l)).map((l) => l.trimEnd());
-  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
-}
 function loadImage(p) {
   try { return p === PATCHED ? readPatched() : readBytes(p); } catch (e) { throw new RuntimeError(`${PROG}: cannot read the image ${p} (${e.code ?? e.message})`); }
 }
@@ -95,26 +74,41 @@ function items(args) {
     return parts;
   };
   const int = (opt, item, text) => { const v = intValue(text); if (v === null) args.error(`${opt} ${item}: ${text} is not an integer`); return v; };
+  const address = (opt, item, text) => { const v = int(opt, item, text); if (v < 0 || v > 0xffffffff) args.error(`${opt} ${item}: ${text} is not a 32-bit address`); return v; };
+  const value = (opt, item, text) => { const v = int(opt, item, text); if (v < -0x80000000 || v > 0xffffffff) args.error(`${opt} ${item}: ${text} is not a 32-bit value`); return v >>> 0; };
+  const size = (opt, item, text) => { const v = int(opt, item, text); if (v < 0) args.error(`${opt} ${item}: ${text} is negative`); return v; };
+  for (const [opt, v] of [['--entry', args.entry], ...args.stop.map((x) => ['--stop', x])]) {
+    if (v !== undefined && (v < 0 || v > 0xffffffff)) args.error(`${opt} ${v}: not a 32-bit address`);
+  }
   return {
-    regs: args.reg.map((x) => { const [k, v] = split('--reg', x, '=', 2, 'NAME=VALUE'); return [k, int('--reg', x, v)]; }),
+    regs: args.reg.map((x) => { const [k, v] = split('--reg', x, '=', 2, 'NAME=VALUE'); return [k, value('--reg', x, v)]; }),
     writes: args.write.map((x) => {
       const [a, h] = split('--write', x, '=', 2, 'ADDR=HEX');
       if (!/^([0-9a-f]{2})*$/i.test(h)) args.error(`--write ${x}: HEX is pairs of hex digits`);
-      return [int('--write', x, a) >>> 0, Uint8Array.from(Buffer.from(h, 'hex'))];
+      return [address('--write', x, a), Uint8Array.from(Buffer.from(h, 'hex'))];
     }),
-    reads: args.read.map((x) => split('--read', x, ':', 2, 'ADDR:SIZE').map((v) => int('--read', x, v))),
+    reads: args.read.map((x) => { const [a, n] = split('--read', x, ':', 2, 'ADDR:SIZE'); return [address('--read', x, a), size('--read', x, n)]; }),
     watches: args.watch.map((x, k) => {
       const [a, l, kind = 'w'] = split('--watch', x, ':', 3, 'ADDR:LEN[:KIND]');
-      return { id: k, lo: int('--watch', x, a), len: int('--watch', x, l), kind, action: 'stop' };
+      const len = size('--watch', x, l);
+      if (len < 1) args.error(`--watch ${x}: LEN is at least 1`);
+      return { id: k, lo: address('--watch', x, a), len, kind, action: 'stop' };
     }),
-    disasms: args.disasm.map((x) => split('--disasm', x, ':', 2, 'ADDR:LEN').map((v) => int('--disasm', x, v))),
+    disasms: args.disasm.map((x) => { const [a, n] = split('--disasm', x, ':', 2, 'ADDR:LEN'); return [address('--disasm', x, a), size('--disasm', x, n)]; }),
   };
 }
 
 function main(argv) {
-  const serve = argv.includes('--serve');
+  const serve = argv.includes('--serve') || argv.includes('--attach');
   const actions = serve ? ACTIONS.map((a) => a.opt === '--entry' ? { ...a, required: false } : a) : ACTIONS;
   const args = parseArgs(PROG, argv, actions);
+  if (args.attach !== undefined) {
+    let url;
+    try { url = new URL(args.attach); } catch { args.error(`--attach ${args.attach}: not a URL`); }
+    if (url.protocol !== 'http:' || !url.searchParams.get('t')) args.error(`--attach ${args.attach}: the play server's http://127.0.0.1:PORT/?t=TOKEN`);
+    startAttach(url);
+    return 0;
+  }
   if (serve) { startServe(); return 0; }
   const { regs, writes, reads, watches, disasms } = items(args);       // all checked before the machine starts
   const oneInsn = args.trace !== undefined || args.trace_mode === 'one-insn' && args.exec_trace !== undefined;
@@ -180,6 +174,47 @@ function startServe() {
     if (proto.done) { rl.close(); process.stdin.destroy(); }
   });
   rl.on('close', () => { if (!proto.done) proto.handle({ op: 'quit' }); });
+}
+
+// --attach: each line POSTed to the play server's /api/debug (X-Token: the URL's t) in order, the next sent once the
+// previous one is answered; a line that is not JSON, and a refused request (403: no --debug-api, a wrong token), are
+// answered here in the protocol's error form; a server gone ends the client (exit 1).
+function startAttach(url) {
+  const token = url.searchParams.get('t');
+  const post = (body) => new Promise((resolve, reject) => {
+    const data = Buffer.from(body);
+    const r = http.request(new URL('/api/debug', url), { method: 'POST', agent: false,
+      headers: { 'X-Token': token, 'Content-Type': 'application/json', 'Content-Length': data.length } },
+    (res) => { const c = []; res.on('data', (x) => c.push(x)); res.on('end', () => resolve({ status: res.statusCode, body: Buffer.concat(c).toString('utf8') })); });
+    r.on('error', reject);
+    r.end(data);
+  });
+  const say = (o) => process.stdout.write(JSON.stringify(o) + '\n');
+  const lines = [];
+  let busy = false;
+  const next = async () => {
+    if (busy) return;
+    busy = true;
+    while (lines.length) {
+      const line = lines.shift();
+      let req;
+      try { req = JSON.parse(line); } catch (e) { say({ id: null, ok: false, error: { type: 'BadRequest', message: `not JSON: ${e.message}` } }); continue; }
+      try {
+        const r = await post(JSON.stringify(req));
+        if (r.status === 200) process.stdout.write(r.body + '\n');
+        else say({ id: req?.id ?? null, ok: false, error: { type: 'HTTP', message: `${r.status} ${r.body}` } });
+      } catch (e) {
+        process.stderr.write(`${PROG}: ${url.origin}: ${e.message}\n`);
+        process.exitCode = 1;
+        lines.length = 0;
+        rl.close();
+        process.stdin.destroy();
+      }
+    }
+    busy = false;
+  };
+  const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity, terminal: false });
+  rl.on('line', (line) => { if (line.trim() && process.exitCode !== 1) { lines.push(line); next(); } });
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) runMain(PROG, main);

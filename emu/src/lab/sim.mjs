@@ -52,6 +52,12 @@ export class Simulator {
     this.observer = null;          // capture-equivalent tracer: onStop(kind), onG(text), onWrite(address, data)
     this.closed = false;
     this.kills = env.labKills?.() ?? 0;   // the node host's lab-kill count when this lab was made (see _alive)
+    // The live debugger of a play session (src/debug/live.mjs; null, the default: none, and nothing changes):
+    // {pcs (a Set), stopped(stop)}. Its breakpoints join the harness's at every continue, and a continue or step that
+    // ends on one of its stops (a pc of pcs the harness did not ask for, a stopping watchpoint) is held in stopped()
+    // until the debugger lets it go, then goes on (off a breakpoint by a single step), so the harness sees only its own
+    // stops.
+    this.debug = null;
   }
   // env.labKills (the node host's --debug-api SIGUSR2 count, a simulated lab crash; test/test_host.mjs): a kill since this
   // lab was made fails every later packet, read and write (status() then raises, so the
@@ -100,6 +106,48 @@ export class Simulator {
     }
     return this._packet(text);
   }
+  // One continue. env.slice: it runs in slices of that many instructions (cont/resume, the same stops and interrupt
+  // looks as one continue), with env.onSlice() between slices (a Worker's yield point).
+  _cont() {
+    const m = this.m, slice = this.env.slice ?? Infinity;
+    if (m.cont({ budget: slice }) === 'paused') {
+      do { if (this.env.onSlice) this.env.onSlice(); } while (m.resume({ budget: slice }) === 'paused');
+    }
+  }
+  // The live debugger's stops in a continue (this.debug): each is held in debug.stopped(), then the continue goes on
+  // from where the debugger left the pc, unless that is one of the harness's breakpoints, which the harness takes as
+  // its own stop. A continue from a breakpoint pc stops at once, so a debug breakpoint is left by a single step first
+  // (no interrupt accepted; its own watch hit is a stop too), except where a watch stop ended right before it, whose
+  // breakpoint is then reported (as a standalone continue does). A debugger that let go (stopped() cleared this.debug)
+  // has cleared its stops, so a stop after that is the harness's.
+  _debugCont() {
+    const m = this.m;
+    let st = m.lastStop();
+    for (;;) {
+      const d = this.debug;
+      if (d === null) return;
+      const pc = m.getRegs()[9] >>> 0;
+      if (st?.kind === 'watch') d.stopped({ kind: 'watch', pc, watch: m.watchHit(), during: 'continue' });
+      else if (st?.kind === 'break' && d.pcs.has(pc) && !this.breakpoints.has(pc)) d.stopped({ kind: 'break', pc, during: 'continue' });
+      else return;
+      const at = m.getRegs()[9] >>> 0;
+      if (this.breakpoints.has(at)) return;
+      if (this.debug?.pcs.has(at)) {
+        if (st.kind === 'watch' && at === pc) { st = { kind: 'break' }; continue; }
+        m.step();
+        st = m.lastStop();
+        if (st.kind === 'watch') { m.dropPendingStop(); continue; }
+        if (st.kind !== 'break') return;                 // a fault or the insn limit: the harness's continue ended so
+      }
+      this._cont();
+      st = m.lastStop();
+    }
+  }
+  // The debugger's breakpoints with the harness's (break_at) on the machine.
+  rearm() {
+    const d = this.debug;
+    this.m.setBreakpoints(d === null || !d.pcs.size ? [...this.breakpoints] : [...new Set([...this.breakpoints, ...d.pcs])]);
+  }
   // The debug stub: the GDB remote packets the harness sends.
   _packet(text) {
     const m = this.m, kind = text[0];
@@ -109,15 +157,19 @@ export class Simulator {
         case 'G': m.setRegs(hexRegs(text.slice(1))); return 'OK';
         case 'c': {
           if (this.observer) this.observer.beforeRun();
-          // env.slice: the continue runs in slices of that many instructions (cont/resume, the same stops and
-          // interrupt looks as one continue), with env.onSlice() between slices (a Worker's yield point).
-          const slice = this.env.slice ?? Infinity;
-          if (m.cont({ budget: slice }) === 'paused') {
-            do { if (this.env.onSlice) this.env.onSlice(); } while (m.resume({ budget: slice }) === 'paused');
+          this._cont();
+          if (this.debug !== null) this._debugCont();
+          return 'T05thread:01;';
+        }
+        case 's': {
+          if (this.observer) this.observer.beforeRun();
+          m.step();
+          if (this.debug !== null && m.lastStop()?.kind === 'watch') {      // a stopping watchpoint the step hit
+            this.debug.stopped({ kind: 'watch', pc: m.getRegs()[9] >>> 0, watch: m.watchHit(), during: 'step' });
+            m.dropPendingStop();
           }
           return 'T05thread:01;';
         }
-        case 's': if (this.observer) this.observer.beforeRun(); m.step(); return 'T05thread:01;';
         case 'm': {
           const [a, n] = text.slice(1).split(',').map((v) => parseInt(v, 16));
           if (n > MAX_READ) throw new RspError('E22');
@@ -187,7 +239,8 @@ export class Simulator {
   word(address, value) { this.write(address, le4(value >>> 0)); }
   break_at(addresses) {
     this.breakpoints = new Set(addresses);
-    this.m.setBreakpoints([...this.breakpoints]);
+    if (this.debug === null) this.m.setBreakpoints([...this.breakpoints]);
+    else this.rearm();
   }
   // builtins: the stops that are PERF2 builtin pcs (HLE._loop), for the kick refusal (d)
   run(stops = [], step = false, on_stop = null, builtins = []) {

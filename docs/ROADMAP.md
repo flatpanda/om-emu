@@ -52,7 +52,8 @@ not reconciled.
    server and the ticking clock are in (S-SCPU, 2026-10-23), so are the SCPU port registers and IRQ 320 (group 0
    natively, 2026-10-23) and the HDMI plug down to the EDID (`--hdmi on`, 2026-10-23); left: the accelerometer, whose
    level computation needs decoding first.
-4. **Debug API follow-ups**, above all a debug route to a running play session (F31).
+4. **Debug API follow-ups** (Debug API follow-ups below): the route to a running play session (F31), the attached
+   watch log's lab time, halt and trace filters are in (2026-10-23); left are the gate gaps (items 1-3, 6, 7).
 5. **Emulator architecture** phases 2-5: finish phase 2's typed seams (machine port, options object, composed lab
    features), then ground the CPU and interrupts in the manual, then the time model. Phases 3 and 4 are also step 3 of
    the HLE plan: every device seam below the camera application waits on them.
@@ -206,13 +207,23 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
 3. **Edge cases no gate covers:** a code-fetch fault in an instruction's operand bytes writes no exec-trace line,
    because `step()` fetches every byte before the exec hook; a watch hit inside interrupt entry stops the continue
    before the handler's first instruction; the snapshot gate's cross-check detours are short (22 to 687 instructions).
-4. **Feature requests:** a CLI or JSON-lines route to a running lab session (F31: today a live session exposes only
-   the `--debug-api` tokens; a generic debug input on the existing input queue, handled between ticks through
-   `Debugger.attach(lab.sim, {lab})`, would do it), lab time and a monotonic count in attached watch logs, a halt op for
-   a paused continue, trace filters.
-5. **Protocol rough edges:** `cont {stops: "0x502d0341"}` (a string, not a list) answers `TypeError: q.stops.map is not
-   a function` instead of BadRequest; `setReg d0 0x1ffffffff` is truncated to `0xffffffff` without a word; `step {n: 0}`
-   and `{n: -1}` answer `break` without stepping. Each is a silent surprise.
+4. **Feature requests:** done (2026-10-23). F31, the live route (`src/debug/live.mjs`, `emu/README.md` "The debug
+   API"): debug inputs `{type: 'debug', op, ...}` on the play session's own input queue, through `POST /api/debug` or
+   `bin/debug.mjs --attach URL` (JSON lines), `--debug-api` only, handled between ticks through
+   `Debugger.attach(lab.sim, {lab})`: the protocol's reads and writes, `tasks`, `standins`, `halt` at a tick boundary,
+   breakpoints and stopping watchpoints that hold the session inside its tick (the Simulator's debug hook), `step`,
+   `cont`, `resume`, `detach`; nothing runs before the first debug input (golden identical). The attached watch log's
+   entries carry `lab_ns` and `n`; `halt` ends a paused standalone continue; traces take a `filter` (exec pcs, an MMIO
+   range and direction, an interrupt kind or IRQ list). Left: the browser player's Worker cannot hold a debug stop (its
+   queue does not block, so break and stopping watchpoints are refused there, and it offers no trace files or
+   disassembler); a step at a debug stop accepts no interrupt; `--attach` sends one request at a time, so a `cont`
+   without `maxMs` holds the client until the next stop.
+5. **Protocol rough edges:** fixed (2026-10-23). `cont {stops: "0x502d0341"}`, `setReg d0 0x1ffffffff` and `step {n:
+   0}` / `{n: -1}` answer BadRequest, and so do their siblings: every list field (`pcs`, `list`, `filter.exec.pcs`,
+   `irqs`) that is not a list, `regs` or a watch entry that is not an object, every address outside 32 bits (they were
+   wrapped by `>>> 0`), every register or stored value outside 32 bits (`setRegs`, `reset`, `cpuStore`, also in the
+   library as a ValueError and on `bin/debug.mjs`'s command line as a usage error), and negative counts (`size`,
+   `words`, `since`, `limit`, `advance`), a zero `disasm` `n`, watch `len` or `budget`.
 6. **`web/index.html`'s EVF layout class** is not checked by any gate.
 7. The browser player was measured in Chrome on one machine; other browsers and platforms are untested.
 

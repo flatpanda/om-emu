@@ -207,8 +207,8 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
     // Aborted). budget: a positive integer or Infinity. The run loop is the same: a pause is run()'s budget return,
     // where no main-loop visit is pending (run() returns RUN_VISIT before it tests the budget), so a chain of slices
     // takes exactly the interrupt looks and stops of one unsliced continue. Returns 'stop' when the continue has ended (breakpoint, fault,
-    // insn-limit). A chain counts as one continue in stats. While paused only getRegs, dbgRead, resume and abort are
-    // allowed: a debugger write could raise a request that would only be seen at the next real 'c' visit.
+    // insn-limit). A chain counts as one continue in stats. While paused only getRegs, dbgRead, resume, halt and abort
+    // are allowed: a debugger write could raise a request that would only be seen at the next real 'c' visit.
     cont({ budget = Infinity } = {}) {
       live(); runnable('cont'); notPaused('cont');
       if (!budgetOk(budget)) throw new RangeError(`cont: budget ${budget}: a positive instruction count or Infinity`);
@@ -229,7 +229,19 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
       if (chain === null) throw new Error('abort: no paused continue');
       chain = null; gen = -1;                  // every later call, resume included, throws Aborted
     },
+    // halt(): ends a paused continue where it paused, leaving the machine runnable (lastStop kind 'halt'). The pause is
+    // an instruction boundary with no main-loop visit pending, so the machine stands as after a breakpoint stop there:
+    // the next continue visits first.
+    halt() {
+      live();
+      if (chain === null) throw new Error('halt: no paused continue');
+      this._endChain();
+      lastStop = { kind: 'halt', code: 0 };
+    },
     paused() { return chain !== null; },
+    // The debug stop a single step's watchpoint hit left pending (pendingDebug), dropped: the caller reported the hit
+    // itself (src/lab/sim.mjs's live debugger), so the next step or continue runs.
+    dropPendingStop() { live(); pendingDebug = false; },
     _run(budget, visit) {
       const t0 = clock();
       let result = 'stop';
@@ -302,8 +314,9 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
     stderrTail(size = 600) { const t = stderrLines.join('\n').trim(); return t.slice(Math.max(0, t.length - size)); },
 
     // ---- the debug API's machine side (src/debug/). Every hook is off at creation and costs nothing while off.
-    // The last run's end (cont/resume/step): {kind: 'break' (a breakpoint, or a step that ended normally), 'fault',
-    // 'limit' (insn-limit, fault 7), 'paused' (budget), 'watch' (a stopping watchpoint), code: the fault code}.
+    // The last run's end (cont/resume/step/halt): {kind: 'break' (a breakpoint, or a step that ended normally), 'fault',
+    // 'limit' (insn-limit, fault 7), 'paused' (budget), 'watch' (a stopping watchpoint), 'halt' (a paused continue
+    // halted), code: the fault code}.
     lastStop() { return lastStop; },
     // Exec trace: fn(pc, op) before each instruction executes. mode 'native': every decoded form runs through the
     // helper (setForceHelper), the interrupt looks unchanged; 'one-insn': every instruction runs as a one-instruction

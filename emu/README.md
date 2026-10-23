@@ -103,7 +103,8 @@ information, S2 the capture display and the rec view. What runs below it is stoo
 
 ```sh
 sh emu/play.sh                                   # the interactive player (bin/play.mjs) in the browser
-node emu/bin/play.mjs --no-browser --idle off    # its server alone (HTTP API; --debug-api for the debug tokens)
+node emu/bin/play.mjs --no-browser --idle off    # its server alone (HTTP API; --debug-api for the debug tokens and
+                                                 # the live debug route, below)
 node emu/bin/play.mjs --hdmi on                  # with the HDMI port; the input {"type": "hdmi", "action": "plug"}
 OM_EMU_NVRAM=~/.om-emu.json sh emu/play.sh       # keep the settings and the clock between sessions (S-NVRAM): no date
                                                  # prompt at power-on, menu changes back in the next session
@@ -225,8 +226,10 @@ of QEMU's `-d exec` log (the protocol's trace format `qemu`; `jsonl` is its othe
 
 A client has to plan for three behaviours. A `cont` whose pc is on a breakpoint (after a break stop, or a watch stop
 that ended on a breakpoint pc) returns `break` at once without executing anything, so `step` first. After `abort` the
-machine is gone: every op, `reset` included, fails with `Aborted` until the next `load`. While a budgeted or `maxMs`
-continue is paused, every op that would change the machine or its run is refused until `resume` or `abort`: `break`,
+machine is gone: every op, `reset` included, fails with `Aborted` until the next `load`; `halt` instead ends a paused
+continue where it paused (stop `halt`) and leaves the machine runnable, as after a breakpoint stop. While a budgeted
+or `maxMs` continue is paused, every op that would change the machine or its run is refused until `resume`, `halt`
+or `abort`: `break`,
 `step`, `cont`, `watch`, `snapshot`, `restore`, `reset`, `setRegs`, `setReg`, `write`, `cpuStore`, `lab` other than
 `time`, an `exec` trace and `trace {off}` (which turns the exec trace off too); the reads (`regs`, `reg`, `read`,
 `stack`, `stderr`, `watchLog`, `stats`, `disasm`, `lab {time}`) and `mmio` and `irq` traces are allowed.
@@ -242,9 +245,45 @@ how many are `more` and how many were `dropped` since the last call. A standalon
 stderr lines: `stderr {since?}` answers from the oldest line still kept, with `first` and `dropped`, and a run's own
 `stderr` field is its last 1,000 lines, with `stderrDropped` when it wrote more. `disasm`'s `n` is a byte count, not an
 instruction count, and each returned line is one whole instruction. A watch stop's `watch` record and the `watchLog`
-entries give `kind` as a number (1 read, 2 write, 3 both), where the `watch` request takes `r`, `w` or `rw`. On a lab
-session's Simulator (`Debugger.attach(sim, {lab})`) breakpoints and stopping watchpoints are refused, because the
-harness owns the breakpoint list and takes any stop as its own; use log watchpoints (`watchLog`) and the traces there.
+entries give `kind` as a number (1 read, 2 write, 3 both), where the `watch` request takes `r`, `w` or `rw`. A field
+of the wrong shape is a `BadRequest`, never a JS error or a silent truncation: an address outside 0..2^32-1, a register
+or stored value outside 32 bits (signed or unsigned), a count that is not a non-negative integer (`step`'s `n`,
+`disasm`'s `n`, a watch's `len` and a `budget` positive), a list field (`stops`, `pcs`, `list`) that is not a list,
+`regs` or a watch entry that is not an object. A trace's `filter` keeps fewer lines: `{exec: {from, to, pcs}, mmio:
+{from, to, dir}, irq: {kind, irqs}}` (a pc range or list; accesses overlapping an address range, one direction; one
+kind of interrupt event, or the presentations of some IRQ numbers); the top-level `from` and `to` are the exec
+filter's. On a lab session's Simulator (`Debugger.attach(sim, {lab})`) breakpoints are refused, because the harness
+owns the breakpoint list and takes any stop as its own, and so are stopping watchpoints unless a host routes the
+stops (the live route below); the watch log's entries there also carry `lab_ns` (the lab clock at the hit) and `n`
+(the hit's number since attach, dropped hits counted).
+
+**A running play session (the live route).** With `--debug-api`, `POST /api/debug` (the `X-Token` header, as every API
+request) takes one request of the JSON-lines protocol and answers its response object once it ran; `node
+emu/bin/debug.mjs --attach 'http://127.0.0.1:PORT/?t=TOKEN'` (the URL `bin/play.mjs` prints) sends its stdin's lines
+there in order and prints the answers, as `--serve` does. Without `--debug-api` the route answers 403 and a `{type:
+'debug'}` input on `/api/input` is refused. The requests are inputs on the session's own queue (`src/debug/live.mjs`):
+the Player runs them between ticks, outside the session log and the GUI's event gate, through `Debugger.attach(lab.sim,
+{lab})` on the current session (a restart starts with a fresh debugger), and nothing of the route runs before the first
+one, so an unused route changes nothing (the golden runs are identical). The reads and memory writes of the protocol
+work (`regs`, `reg`, `setReg`, `setRegs`, `read`, `write`, `stack`, `stderr`, `stats`, `disasm`, `watchLog`, `trace`,
+`lab {time}`), plus `tasks` (the kernel's tasks: id, entry in the disassembly notation, state, priority, saved SP, the
+running one) and `standins {limit?}` (the last harness stub calls by name, the camera application's stand-in actions,
+the stand-ins in use); `load`, `reset`, `cpuStore`, the snapshots, `abort`, `quit` and `lab` time moves are refused. Run
+control: `halt` pauses the session at the current tick boundary (phase `debug`; only debug inputs and controls run, the
+other inputs wait in the queue in their order); `break {pcs}` and a stopping watchpoint make a debug stop inside a tick,
+where the session is held (the harness's continue or step waits in the Simulator's debug hook) while debug inputs run:
+`step {n?}` single-steps there (no interrupt accepted; it stops before an instruction at one of the harness's own
+breakpoints, `harness: true`, which a `cont` then lets the harness take); `cont {stops?, maxMs?}` runs on and answers at
+the next debug stop or halt (stop `break`, `watch` or `halt`, the registers, the watch hit, `lab_ns`, `at: run` or
+`tick`, the stderr lines since), `maxMs` halting at the first tick boundary after that much wall time; `resume` runs on
+and answers at once; `detach` turns breakpoints, watchpoints and traces off and runs on; `state` says where the session
+is. A control (restart, power, quit) during a debug stop lets the stop go (its breakpoints and stopping watchpoints
+cleared) and runs after the tick; during a halt it runs at once. A debug stop waits for the next input inside the tick,
+which needs a blocking input queue: the node server's has one, the browser player's Worker does not, so there
+(`/api/debug` on its router) `break`, `cont`'s `stops` and stopping watchpoints are refused while `halt`, the reads and
+log watchpoints work, and trace files and `disasm` are not offered. Stepping and setting registers inside a tick can
+leave the harness in a state it did not expect; that is the user's to judge.
+
 The open items are in `docs/ROADMAP.md` "Debug API follow-ups".
 
 ## The browser player

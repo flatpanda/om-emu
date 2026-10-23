@@ -8,7 +8,8 @@
 // src/fw/facts.mjs (test_facts.mjs: firmware-optional, each unpacked main block checked against its MODELS entry) and
 // the firmware map's units (test_fwmap.mjs: the machine's coverage option off and on, fwmap's decoder against the
 // interpreter's transfer forms, the coverage union, the block aggregation), the SCPU's clock and request server
-// (test_scpu.mjs) and the HDMI port's device and sink (test_hdmi.mjs).
+// (test_scpu.mjs), the HDMI port's device and sink (test_hdmi.mjs) and the debug API's argument checks, halt, trace
+// filters and live-route units (test_live.mjs liveUnits: a machine on a blank image).
 // bin/test.mjs runs all of these too, with everything else.
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
@@ -22,6 +23,7 @@ import { argsTests } from '../test/test_args.mjs';
 import { fwmapUnits } from '../test/test_fwmap.mjs';
 import { scpuUnits } from '../test/test_scpu.mjs';
 import { hdmiUnits } from '../test/test_hdmi.mjs';
+import { liveUnits } from '../test/test_live.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -51,6 +53,7 @@ report('command-line parser', argsTests());
 report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnits());
 report('SCPU clock, ports and request server (S-SCPU)', scpuUnits());
 report('HDMI port: transmitter, hot-plug pin, sink (S-HDMISINK)', hdmiUnits());
+report('debug API: argument checks, halt, trace filters, live route', await liveUnits());
 const fa = factsTests();
 report(`firmware facts (${fa.models} unpacked main blocks)`, fa);
 const pu = purity();

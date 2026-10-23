@@ -21,7 +21,11 @@
 // host (host/) adds queue (a blocking queue), flags (an Int32Array on shared memory: [1] stop, [2] signalled, read and
 // written through the stop and signalled fields), onResult(seq, res) (finish: the host keeps the results), onStop()
 // (set_stop), and onLogEntry(entry) / onLogUpdate(entry) / onLogTrim(n) (the in-memory session log: an entry appended,
-// its frame field set after the lab time that followed it, the oldest n dropped).
+// its frame field set after the lab time that followed it, the oldest n dropped), and debugHost ({openSink, disasm,
+// resolvePath}: the live debug route's trace files and disassembler, host/debughost.mjs).
+// Debug inputs ({type: 'debug', op, ...}, --debug-api only) go to the live debug route (src/debug/live.mjs), made at the
+// first one: they run between ticks, outside the session log and the B7 gate, and answer with the result's debug field;
+// a halted session ticks only debug inputs and controls (the others wait held, in their order).
 import * as P from './play.mjs';
 import { PlaySession, PlayError, BY_ID, MODE_DIAL, B7_GATE } from './play.mjs';
 import { LabError, ValueError, KeyError } from './errors.mjs';
@@ -32,6 +36,7 @@ import { MODEL_INFO } from '../fw/model.mjs';
 import { show } from '../util/show.mjs';
 import { decimalInt, intLiteral } from '../util/parse.mjs';
 import { setKey } from '../util/tracejson.mjs';
+import { LiveDebug } from '../debug/live.mjs';
 
 export const PNG_CACHE = 8, SLICE_NS = 50000000, GATE_SLICE_NS = 10000000, GATE_LIMIT_NS = 2000000000, BEHIND_NS = 250000000;
 export const DIAL_CAP = 8, TOUCH_MIN_NS = 20000000, TOUCH_GAP_CAP_NS = 2000000000, TOUCH_TAP_CAP_NS = 320000000;
@@ -262,6 +267,7 @@ export class Player {
     this.replay_limit = null;
     this.a15_frames_closed = 0;
     this.replaying = false;
+    this.live = null;                // the live debug route (debug_input), made at the first debug input
     if (env.flags) {                 // the node host: stop and signalled live in shared memory (host/labworker.mjs)
       const f = env.flags;
       Object.defineProperty(this, 'stop', { get: () => Atomics.load(f, 1) !== 0, set: (v) => { Atomics.store(f, 1, v ? 1 : 0); }, enumerable: true });
@@ -292,6 +298,7 @@ export class Player {
     this.set_phase('running');
   }
   close_session() {
+    if (this.live !== null) this.live.closed();
     if (this.session !== null) {
       this.a15_frames_closed += this.session.a15_frames;
       try { this.session.close(); } finally { this.session = null; }
@@ -316,7 +323,8 @@ export class Player {
       dropped: this.dropped.toObject(), frame_seq: this.frame_seq, pace: this.pace_ratio(), stand_ins: this.stand_ins_in_use(),
       us_clock: a.us_clock, touch: a.touch, mutant: a.x_mutant, frame_error: this.frame_error, input_error: this.input_error,
       idle_taken, log_tail: this.log.slice(-12), ...(this.camapp_components ? { camapp_components: true } : {}),   // absent when off: the recorded documents
-      ...(s?.hdmi_port && s.lab ? { hdmi: s.hdmi_status() } : {}) };                                        // --hdmi on only, likewise
+      ...(s?.hdmi_port && s.lab ? { hdmi: s.hdmi_status() } : {}),                                        // --hdmi on only, likewise
+      ...(this.live !== null ? { debug: this.live.status() } : {}) };                                    // after a debug input only
     if (s !== null && s.lab !== null) {
       try { Object.assign(doc, s.status()); } catch (e) {
         if (!(e instanceof LabError)) throw e;          // a JS failure is never a status_error
@@ -519,16 +527,44 @@ export class Player {
       return inp;
     }
   }
-  finish(inp, rec, error = null) {
+  // A debug input's answer: the live route's response object, as the result's debug field.
+  finish_debug(inp, answer) { this.finish(inp, null, null, answer); }
+  finish(inp, rec, error = null, debug = undefined) {
     if (inp === this.current) this.current = null;
     const lr = rec ? light(rec) : null;
     if (lr !== null && error === null) lr.frame = this.frame ? this.frame[3] : null;
-    const res = { record: lr, error, dropped: !rec && error === null, frame_seq: this.frame_seq };
+    const res = { record: lr, error, dropped: !rec && error === null && debug === undefined, frame_seq: this.frame_seq };
+    if (debug !== undefined) res.debug = debug;
     if (this.stop) this.stop_seen = true;                // a quit control's stop takes effect with its result
     this.box.put(inp.seq, res);
     this.env.onResult?.(inp.seq, res);
   }
   stopping() { return this.stop || this.signalled; }
+  // The first debug input or control in the FIFO, the others left held in their order (a halted or stopped session
+  // takes only these): a debug input is taken out of it, a control too when take_controls (else it stays, for the
+  // stopped session to see and let its stop go); null when there is none (block: after a blocking queue's 20 ms wait
+  // for one).
+  next_debug(block, take_controls) {
+    for (;;) {
+      this.drain();
+      const i = this.held.findIndex((x) => ['debug', 'control'].includes(get(x, 'type')));
+      if (i >= 0) return get(this.held[i], 'type') === 'control' && !take_controls ? this.held[i] : this.held.splice(i, 1)[0];
+      if (!block || !this.q.canBlock) return null;
+      const x = this.q.get(0.02);
+      if (x === null) return null;
+      this.held.push(x);
+      this.order_held();
+    }
+  }
+  // Whether a debug input or control waits (web/driver.mjs: a halted session's next tick).
+  debug_ready() { return [...this.q.items(), ...this.held].some((x) => ['debug', 'control'].includes(get(x, 'type'))); }
+  // A debug input: refused without --debug-api, else the live route's answer (now, or later for a cont).
+  debug_input(inp) {
+    if (!this.a.debug_api) { this.finish(inp, null, 'debug inputs need --debug-api'); return; }
+    this.live ??= new LiveDebug(this, this.env.debugHost ?? {});
+    const answer = this.live.handle(inp);
+    if (answer !== null) this.finish_debug(inp, answer);
+  }
   run() {
     // the --replay file's entries (env.readReplay: the host's file read); a read error or a malformed file is raised
     // out of run(), before the session starts
@@ -570,6 +606,10 @@ export class Player {
     while (this.held.length) this.finish(this.held.shift(), null, this.error.message);
   }
   tick() {
+    if (this.live !== null) {                       // the live debug route: a cont's maxMs, a halted session
+      this.live.poll();
+      if (this.live.halted) { this.live.tick_halted(); return; }
+    }
     const s = this.session;
     if (s === null) {                               // off or error: only control inputs
       const inp = this.next_input(true);
@@ -682,6 +722,7 @@ export class Player {
     const s = this.session;
     const t = get(inp, 'type');
     if (t === 'control') { this.control(inp); return; }
+    if (t === 'debug') { this.debug_input(inp); return; }
     const held_ns = this.hold_for_gate(inp);
     if (this.session === null) { this.finish(inp, null, 'no session'); return; }
     this.set_phase('busy');

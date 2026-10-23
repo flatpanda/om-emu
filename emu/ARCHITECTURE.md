@@ -177,7 +177,7 @@ planned in `docs/ROADMAP.md` "Emulator architecture".
 | F28 the decode cache helps only inlined forms | open: measure first |
 | F29 error classification uses several overlapping mechanisms | fixed (`FirmwareError` is a `RuntimeError`; the class tree is tested) |
 | F30 status, frame and log synchronisation is implemented twice | open, conditional |
-| F31 the debug API cannot attach to a running session | open: `docs/ROADMAP.md` "Debug API follow-ups" |
+| F31 the debug API cannot attach to a running session | fixed: the live route (`src/debug/live.mjs`: debug inputs on the play session's queue, `POST /api/debug`, `bin/debug.mjs --attach`); its limits in `docs/ROADMAP.md` "Debug API follow-ups" |
 | F32 a tick or continue cannot be cancelled from inside | open, conditional |
 | F36 harness-owned guest memory is scattered constants with no guards | depth guard added; the scratch layout is unchanged |
 | F37 VSC register tables load lazily from fixed image offsets | comment fixed; open, conditional |

@@ -5,7 +5,8 @@
 // wake() resolves on the next macrotask when an input is queued (and not held back by its page's order) or when the
 // lab is behind its pacing target (--idle wall); otherwise on the next kick() (a message arrived) or a timer: until the
 // pacing target passes the lab time, until a held input's order deadline, else 20 ms. It never spins: a lab ahead of
-// the wall clock with nothing queued sleeps. The Player runs with env.asyncHost (an overtaking input makes the blocking
+// the wall clock with nothing queued sleeps, and so does a session halted by the live debug route (src/debug/live.mjs)
+// until a debug input or control arrives. The Player runs with env.asyncHost (an overtaking input makes the blocking
 // next_input return instead of polling). Worker-safe; the scheduler is injectable for the node test (test_web.mjs).
 import { LabError } from '../src/lab/errors.mjs';
 import { Unported, HostStopped } from '../src/machine.mjs';
@@ -51,6 +52,7 @@ export class Driver {
   delay() {
     const pl = this.pl;
     if (pl.stopping()) return 0;
+    if (pl.live?.halted) return pl.debug_ready() ? 0 : IDLE_WAIT_MS;        // halted (debug): its inputs wait held
     if (pl.q.length || pl.held.length) {
       const h = pl.held[0];
       const key = h && h.client !== undefined ? `${h.client}\0${pl.client_next.get(h.client) ?? 1}` : null;

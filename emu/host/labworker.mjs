@@ -14,6 +14,7 @@ import { PortQueue, F_KILL } from './portqueue.mjs';
 import { stackOf } from '../checks/lib/errors.mjs';
 import { installChildTrace, tracedPlay } from '../checks/lib/childtrace.mjs';
 import { fileNvram } from './nvram.mjs';
+import { debugHost } from './debughost.mjs';
 
 const { args: a, flags, port, out, argv } = workerData;
 const post = (m, transfer) => parentPort.postMessage(m, transfer);
@@ -38,6 +39,7 @@ const env = {
   readReplay: (p) => fs.readFileSync(p, 'utf8'),
   logSink: sink,
   labKills: () => Atomics.load(flags, F_KILL),
+  debugHost,                         // the live debug route's trace files and disassembler (src/debug/live.mjs)
   onStatus: (doc) => post({ type: 'status', seq: doc.seq, text: JSON.stringify(doc) }),
   onFrame: (w, h, raw, meta) => { const b = raw.slice(); post({ type: 'frame', ...meta, w, h, raw: b }, [b.buffer]); },
   onResult: (seq, res) => post({ type: 'result', seq, text: JSON.stringify(res) }),

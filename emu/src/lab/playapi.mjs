@@ -25,6 +25,10 @@
 //   Worker, whose page reloads with ?model= instead), 409 with the host's reason when it refuses (opts.onSwitch(code)
 //   returns or resolves to one), else {model, switching: true}, and the session stops as /api/quit stops it (the host then starts the
 //   chosen model's).
+// - POST /api/debug (--debug-api, else 403 as /api/token): the live debug route (src/debug/live.mjs). The body is one
+//   request of the debug API's JSON-lines protocol, queued as {type: 'debug', ...}; the answer is its response object
+//   ({id, ok, ...}) once it ran, or after ?timeout=S (default 300) {ok: false, error: {type: 'Timeout'}}; an input the
+//   Player refused before the route (no session) answers {ok: false, error: {type: 'Refused', message}}.
 // The host calls notify() after every published status and frame and when the Player stops,
 // and onFrame(w, h, raw, meta) from the Player's env.onFrame, which keeps the newest composite for /api/frame.
 // Worker-safe.
@@ -195,6 +199,20 @@ export class PlayApi {
       this.opts.onSubmit?.(seq);
       if (args.sync === '1') return pl.wait_result(seq, timeout).then((res) => this.send(200, { seq, result: res }));
       return this.send(200, { seq });
+    }
+    if (path === '/api/debug') {
+      // the live debug route (src/debug/live.mjs): the body is one JSON-lines request, queued as a debug input; the
+      // answer is its response object once it ran (?timeout=S as for ?sync=1: a cont waits for the next stop)
+      if (!pl.a.debug_api) return this.send(403, { error: '--debug-api' });
+      if (!isDict(body)) return this.send(400, { error: `a debug request is a JSON object, not ${jsonType(body)}` });
+      const timeout = Object.hasOwn(args, 'timeout') ? decimalNumber(args.timeout) : 300;
+      if (timeout === null) return this.send(400, { error: 'timeout' });
+      const id = Object.hasOwn(body, 'id') ? body.id : null;
+      const seq = pl.submit({ ...body, type: 'debug' });
+      this.opts.onSubmit?.(seq);
+      return pl.wait_result(seq, timeout).then((res) => this.send(200, res === null
+        ? { id, ok: false, error: { type: 'Timeout', message: `no answer in ${timeout} s (a cont answers at the next debug stop: send state, or halt)` } }
+        : res.debug ?? { id, ok: false, error: { type: 'Refused', message: res.error ?? 'dropped' } }));
     }
     if (path === '/api/pagetest') {
       if (!pl.a.debug_api) return this.send(403, { error: '--debug-api' });

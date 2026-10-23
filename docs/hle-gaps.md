@@ -602,6 +602,29 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   the cache `0x62963f60..0x62963f6c` and bump the counter `0x6034d9d4`. Level Adjust's loop `0x5004ad13..0x5004add7`
   waits for 12 counter changes through the pointer `(0x62963f58)`, which the unrun module init `0x50048cad..cf` sets;
   in the lab it reads low RAM 0 and never ends.
+- **The accelerometer's path (D unless tagged, read 2026-10-23 for step 3):** the module init `0x50048cad` clears
+  `0x62963fb8`, runs `0x500493ac`, stores the counter's address `0x6034d9d4` into `(0x62963f58)` and the cache copy
+  `0x50049201` (run time `0x6006a221`) into `(0x62963f5c)`, runs `0x5004aa9f` and `0x50048cec` and starts a task through
+  OlyTaSt (`0x50048ce2`, id `(0x60042e18)`). ACC_MAIN (task 121, entry `0x50048ec2`) loops on OlyTaSS(80) and calls
+  `(0x62963f5c)`, which copies the newest sample into the cache `0x62963f60..0x62963f6c` when the counter moved.
+  ACC_SENS_MAIN (task 132, `0x50048f60`) starts a sample (`0x500490c7`: the channel opened for device 107 with the start
+  `0x500490eb` as its callback) and waits for flag `(0x60043114)` with a 4000 timeout (`0x500491d5`, counting timeouts
+  in `0x6034d9dc`). The start reads 14 bytes from register 0x20 into `0x62963fc8` (`0x5004ca40(6, 0x20, ..., 14)`,
+  completion `0x5004910a`); the completion closes channel 6 (`0x5004cb4c` -> `0x5005f25f`), packs the bytes into seven
+  halfwords (`0x62963fde`, `0x62963fe0..e4`, `0x62963fd6..da`), increments `0x6034d9d4` and sets the flag with iOlyEvSt
+  (`0x500491cb`): it runs in interrupt context. The cache takes `0x62963fd6..da` and `0x62963fde`. I, by ST's register
+  map: registers 0x20..0x2d are OUT_TEMP, the gyro's and the accelerometer's X, Y, Z, so the cache holds the
+  accelerometer's three axes and the temperature. The register API: `0x5004c971(6, 107)` takes semaphore
+  `(0x60042edc)`, opens the channel with `0x5005f0f7` (retrying every 16 ms while busy) and keeps 214 = 107 << 1 in
+  `0x6296415c`; `0x5004cb57(6, register, buffer, count)` reads and `0x5004cb6d(6, register, value, count)` writes
+  through `0x5004ca40` / `0x5004caba`, which frame `{0xd6, register}` then `{0xd7}` (`0x5004ca56..79`) for the transfer
+  layer `0x5005384b` / `0x500538bf`, and wait on flag `(0x60043086)` (`0x5004cbf6`). I: that framing is an I2C register
+  access to the 7-bit address 0x6b, the LSM6DSL's address with SA0 high, although the firmware's names say SPI. The
+  probe `0x50048fd1` reads register 0x0f once and wants 0x6a, then writes 0x10 to register 0x10 and 1 to register
+  0x0d (I, by ST's map: WHO_AM_I, CTRL1_XL 12.5 Hz, INT1_CTRL data-ready). Not read: how Level Adjust and the level
+  gauge turn the cache into a level (which axis is the body's vertical, the scale), so a "level" answer would be a
+  guess today. A device at this seam needs the three ACC tasks started, their completions delivered in interrupt
+  context, and that decode; none of it is built.
 - **Flash (D):** NAND controller `0x98d01100..0x98d011c0`, `0x98d01800/04`, completion IRQ 237, 2048-byte pages;
   store mirrors M `0xa36fd280` and E `0xa377d280` saved by `0x5003f5dd`. The settings init chain `0x503dae30` (17 module
   inits) is called once from the boot chain at `0x501e9060`; the lab runs none of them.

@@ -1,0 +1,82 @@
+--- a/hw/arm/virt.c	2026-09-29 06:33:20.000000000 -0700
++++ b/hw/arm/virt.c	2026-10-23 11:58:43.514759016 -0700
+@@ -91,6 +91,8 @@
+ #include "hw/virtio/virtio-md-pci.h"
+ #include "hw/virtio/virtio-iommu.h"
+ #include "hw/char/pl011.h"
++#include "chardev/char.h"
++#include "system/hostmem.h"
+ #include "hw/core/cpu.h"
+ #include "hw/cxl/cxl.h"
+ #include "hw/cxl/cxl_host.h"
+@@ -149,7 +151,7 @@
+ 
+ 
+ /* Number of external interrupt lines to configure the GIC with */
+-#define NUM_IRQS 256
++#define NUM_IRQS 512
+ 
+ #define PLATFORM_BUS_NUM_IRQS 64
+ 
+@@ -2877,6 +2879,45 @@
+     }
+ }
+ 
++/*
++ * om-isc (oracle only): back the OM-1 Cortex-A53 ISC hardware windows and wire
++ * the ISC receive doorbell to the GIC, so the camera's real A53 Linux can bring
++ * ISC up on virt. Enabled by the env var OM_ISC_MEMDEV (a memory-backend id);
++ * OM_ISC_CHARDEV names the doorbell chardev. See tools/a53-oracle/.
++ * The irqcon banks sit at GIC SPIs 0x1c0/0x1c2/0x1c4/0x1c6 (the A53's irqcon
++ * driver requires irq-0x1c0 <= 7); NUM_IRQS is widened above to fit them.
++ */
++static void create_om_isc(VirtMachineState *vms)
++{
++    const char *memid = getenv("OM_ISC_MEMDEV");
++    const char *chrid = getenv("OM_ISC_CHARDEV");
++    Object *be;
++    DeviceState *dev;
++    int n;
++
++    if (!memid) {
++        return;
++    }
++    be = object_resolve_path_type(memid, TYPE_MEMORY_BACKEND, NULL);
++    if (!be) {
++        error_report("OM_ISC_MEMDEV: no memory-backend '%s'", memid);
++        exit(1);
++    }
++    dev = qdev_new("om-isc");
++    object_property_set_link(OBJECT(dev), "memdev", be, &error_fatal);
++    if (chrid) {
++        Chardev *c = qemu_chr_find(chrid);
++        if (c) {
++            qdev_prop_set_chr(dev, "chardev", c);
++        }
++    }
++    sysbus_realize_and_unref(SYS_BUS_DEVICE(dev), &error_fatal);
++    for (n = 0; n < 4; n++) {
++        sysbus_connect_irq(SYS_BUS_DEVICE(dev), n,
++                           qdev_get_gpio_in(vms->gic, 0x1c0 + 2 * n));
++    }
++}
++
+ static void machvirt_init(MachineState *machine)
+ {
+     VirtMachineState *vms = VIRT_MACHINE(machine);
+@@ -3239,6 +3280,8 @@
+ 
+     create_platform_bus(vms);
+ 
++    create_om_isc(vms);
++
+     if (machine->nvdimms_state->is_enabled) {
+         const struct AcpiGenericAddress arm_virt_nvdimm_acpi_dsmio = {
+             .space_id = AML_AS_SYSTEM_MEMORY,
+--- a/hw/misc/meson.build	2026-09-29 06:33:20.000000000 -0700
++++ b/hw/misc/meson.build	2026-10-23 10:16:18.727531791 -0700
+@@ -168,3 +168,4 @@
+ 
+ # HPPA devices
+ system_ss.add(when: 'CONFIG_LASI', if_true: files('lasi.c'))
++system_ss.add(files('om-isc.c'))

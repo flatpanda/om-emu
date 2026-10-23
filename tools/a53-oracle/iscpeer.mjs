@@ -113,9 +113,24 @@ class BufMem {               // flat buffer with an address->offset map (selftes
   getU32(a) { return this.b.readUInt32LE(this._o(a)); }
   setU32(a, v) { this.b.writeUInt32LE(v >>> 0, this._o(a)); }
 }
-class FileMem {              // memory-backend-file shared with QEMU (ramBase..)
-  constructor(path, ramBase) { this.fd = fs.openSync(path, 'r+'); this.ramBase = BigInt(ramBase); }
-  _o(a) { return Number(BigInt(a) - this.ramBase); }
+// memory-backend-file shared with QEMU; the address->file-offset map MUST match
+// the om-isc device's backend layout (hw/misc/om-isc.c: O_LOCK/O_SCC/O_CB/O_MMN/O_MA).
+class FileMem {
+  constructor(path) {
+    this.fd = fs.openSync(path, 'r+');
+    this.map = [
+      [0x97000000n, 0x00000, 0x200],    // lock
+      [0x97f00b80n, 0x01000, 0x80],     // scc
+      [0x97f00c00n, 0x02000, 0x400],    // control block
+      [0x63fe0000n, 0x10000, 0x20000],  // nodes 0..3 shared mem
+      [0x2a3fe0000n, 0x30000, 0x20000], // node 4 shared mem
+    ];
+  }
+  _o(a) {
+    const x = BigInt(a);
+    for (const [base, off, len] of this.map) if (x >= base && x < base + BigInt(len)) return off + Number(x - base);
+    throw new Error(`unmapped ${x.toString(16)}`);
+  }
   _rd(a, n) { const b = Buffer.alloc(n); fs.readSync(this.fd, b, 0, n, this._o(a)); return b; }
   _wr(a, b) { fs.writeSync(this.fd, b, 0, b.length, this._o(a)); }
   getU8(a) { return this._rd(a, 1)[0]; }
@@ -126,31 +141,78 @@ class FileMem {              // memory-backend-file shared with QEMU (ramBase..)
   setU32(a, v) { const b = Buffer.alloc(4); b.writeUInt32LE(v >>> 0); this._wr(a, b); }
 }
 
+// Per-node receive FIFO: the cb+8 array holds a u16 offset *relative to the
+// control block* (D, isc_start 0x2588 `add x0, x21(cb), offset`), so the FIFOs
+// live inside the cb window, past its 8+2*nodeCount-byte header. The big shared
+// memory (0x63fe0000 / 0x2_a3fe0000) is only ISC_alloc_mem/attach_mem bulk pool.
+const FIFO_OFF = [0x20, 0xe0, 0x1a0, 0x260, 0x320]; // within cb (len 0x400)
+const FIFO_CAP = [0xc0, 0xc0, 0xc0, 0xc0, 0xc0];
+
 // The MN peer: owns the control block and nodes 0..3; exchanges with node 4. ---
 export class MnPeer {
-  constructor(mem, cfg = CFG) { this.m = mem; this.cfg = cfg; this.rxFifo = {}; this.txFifo = {}; }
-  // Lay out each node's receive FIFO at memAddr[node]+0 and publish the control
-  // block the A53's isc_start verifies.
+  constructor(mem, cfg = CFG) { this.m = mem; this.cfg = cfg; this.rxFifo = {}; }
+  // Publish the control block the A53's isc_start verifies, and lay out each
+  // node's receive FIFO. MN nodes (0..3) come up RUN; node 4's state is left 0
+  // for the A53's isc_start to drive 0x1000->0x2000 (we only set its cap).
   initControlBlock() {
     const cb = Number(this.cfg.cbAddr);
     this.m.setU16(cb + 0, controlMagic(this.cfg));
     this.m.setU8(cb + 2, this.cfg.nodeCount);
     this.m.setU32(cb + 4, this.cfg.memSize);
     for (let n = 0; n < this.cfg.nodeCount; n++) {
-      this.m.setU16(cb + 8 + 2 * n, 0);          // each node's RX FIFO at memAddr[n]+0
-      const f = new Fifo(this.m, Number(this.cfg.memAddr[n]) & 0xffffffff, this.cfg.memSize);
-      this.rxFifo[n] = f;                          // n's inbox (n receives here)
-      if (n !== 4) f.init(STATE_RUN);              // MN nodes come up running
+      this.m.setU16(cb + 8 + 2 * n, FIFO_OFF[n]);     // offset relative to cb
+      const f = new Fifo(this.m, cb + FIFO_OFF[n], FIFO_CAP[n]);
+      this.rxFifo[n] = f;
+      f.init(n === 4 ? 0 : STATE_RUN);
     }
   }
   // Send to a node: write into that node's RX FIFO, then ring its doorbell.
   send(dstNode, port, payload, doorbell) {
     const r = this.rxFifo[dstNode].push(port, Buffer.from(payload));
-    if (r >= 0 && doorbell) doorbell(dstNode);     // 0x4000 -> bank+0x800 (node 0..3) / bank0+0x880 (node 4)
+    if (r >= 0 && doorbell) doorbell(dstNode);
     return r;
   }
-  // Receive from a node: pop from *our* (node 1) RX FIFO.
   recvOwn(selfNode = 1) { return this.rxFifo[selfNode].pop(); }
+}
+
+// Live mode: drive a running QEMU om-isc device over the shared file + doorbell
+// socket. Inits the control block, then on every A53->MN doorbell drains node 1
+// and prints each message; optionally sends scripted MN->A53 requests.
+async function live(memPath, sockPath, opts = {}) {
+  const net = await import('node:net');
+  const mem = new FileMem(memPath);
+  const peer = new MnPeer(mem);
+  peer.initControlBlock();
+  console.log(`[peer] control block published, magic 0x${controlMagic().toString(16)}`);
+
+  const sock = net.connect(sockPath);
+  const drain = (why) => {
+    for (let n = 0; n < 5; n++) {
+      if (n === 4) continue;             // node 4 is the A53's inbox
+      let m; while ((m = peer.rxFifo[n].pop())) {
+        console.log(`[peer] RX node ${n} port ${m.port}  [${[...m.data].map(b => b.toString(16).padStart(2, '0')).join(' ')}]  (${why})`);
+        if (m.port === 27) console.log(`[peer] >>> PORT 27 START-COMPLETE from the A53 <<<`);
+      }
+    }
+  };
+  sock.on('data', (d) => { for (const b of d) console.log(`[peer] doorbell <- A53 (node ${b})`); drain('doorbell'); });
+  sock.on('connect', () => console.log('[peer] doorbell socket connected'));
+  sock.on('error', (e) => console.log('[peer] socket error', e.message));
+
+  // Fallback poll (in case a doorbell write raced before connect).
+  const poll = setInterval(() => drain('poll'), 200);
+
+  // Scripted MN->A53 sends: opts.send = [{afterMs, node, port, bytes}]
+  for (const s of opts.send || []) {
+    setTimeout(() => {
+      const r = peer.send(s.node ?? 4, s.port, Buffer.from(s.bytes), () => sock.write(Buffer.from([0])));
+      console.log(`[peer] TX -> node ${s.node ?? 4} port ${s.port}  [${s.bytes.map(b => b.toString(16).padStart(2, '0')).join(' ')}]  ret ${r}`);
+    }, s.afterMs);
+  }
+
+  await new Promise((res) => setTimeout(res, opts.runMs ?? 8000));
+  clearInterval(poll); sock.destroy();
+  console.log('[peer] done');
 }
 
 // Self-test: round-trip a message through the exact FIFO/control-block format. -
@@ -158,8 +220,8 @@ function selftest() {
   const mem = new BufMem(0x300000);
   // Map the control block and the two FIFOs we use (node 1 = MN/CPU1, node 4 = A53).
   mem.region(Number(CFG.cbAddr), 0, CFG.cbSize);
-  mem.region(Number(CFG.memAddr[1]) & 0xffffffff, 0x10000, CFG.memSize); // node 1 inbox
-  mem.region(Number(CFG.memAddr[4]) & 0xffffffff, 0x100000, CFG.memSize); // node 4 inbox (low 32 of 0x2_a3fe0000)
+  mem.region(Number(CFG.memAddr[1]), 0x10000, CFG.memSize);  // node 1 inbox
+  mem.region(Number(CFG.memAddr[4]), 0x100000, CFG.memSize); // node 4 inbox (0x2_a3fe0000)
   const peer = new MnPeer(mem);
   peer.initControlBlock();
 
@@ -200,7 +262,16 @@ function selftest() {
 const cmd = process.argv[2];
 if (cmd === 'selftest') selftest();
 else if (cmd === 'magic') console.log('0x' + controlMagic().toString(16));
-else {
-  console.log('usage: node iscpeer.mjs selftest | magic');
-  console.log('  (file-backed live mode drives a QEMU memory-backend-file; see README "The wall")');
+else if (cmd === 'live') {
+  // live <memPath> <sockPath> [runMs] [send-spec ...]
+  // send-spec: afterMs:node:port:hexbytes  e.g. 1500:4:26:03000000100000000
+  const [memPath, sockPath, runMsS, ...sends] = process.argv.slice(3);
+  const send = sends.map((s) => {
+    const [afterMs, node, port, hex] = s.split(':');
+    const bytes = hex.match(/../g).map((h) => parseInt(h, 16));
+    return { afterMs: +afterMs, node: +node, port: +port, bytes };
+  });
+  live(memPath, sockPath, { runMs: runMsS ? +runMsS : 8000, send });
+} else {
+  console.log('usage: node iscpeer.mjs selftest | magic | live <mem> <sock> [runMs] [afterMs:node:port:hex ...]');
 }

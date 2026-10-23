@@ -1,12 +1,19 @@
 # A53 oracle
 
 A development-only oracle for the OM-1 line's Cortex-A53 (`docs/a53-spec.md`): it
-boots the camera's real A53 Linux on QEMU inside the throwaway `om-emu` VM and
-drives the custom hardware windows far enough to bring the Inter-System
-Communication (ISC) link up, so the per-port protocols can be read from the
-A53's own daemons. **None of this ships in `emu/`** -- the emulator stays pure
-JS and must not depend on QEMU. This is the cross-check that tells a future JS
-"A53 service" what its replies should be.
+boots the camera's real A53 Linux on a patched QEMU inside the throwaway `om-emu`
+VM, backs the custom ISC hardware windows with a small device, and brings the
+Inter-System Communication (ISC) link **fully up live** -- `isc_start` succeeds,
+and an external MN-side peer exchanges real messages both directions with the
+A53's own daemons. **None of this ships in `emu/`** -- the emulator stays pure JS
+and must not depend on QEMU. This is the cross-check that tells a future JS "A53
+service" what its replies should be.
+
+Live result (X, reproducible with `run-isc.sh`): the A53 sends its port-27
+start-completion `{01 00 00 00}`; a port-26 kind-3 request is received by the
+A53 over IRQ 14, which forks its survival child and replies on port 27 echoing
+the requested size; and `hhhr` answers a port-30 request with a 112-byte reply
+on port 31 to node 0. See `docs/a53-spec.md` 9.
 
 Firmware and extracted filesystems are untrusted data: run them only inside the
 VM, never on the macOS host. Nothing extracted is committed; re-derive it by
@@ -22,15 +29,20 @@ path/offset as below.
 | `dmesg.mjs` | read the Linux 4.14 printk ring out of a RAM dump |
 | `dis-daemons.sh` | disassemble `iscdrv.ko` + the ISC daemons and print each port's ISC calls |
 | `iscports.mjs` | helper: list `ISC_*` calls with their node/port immediates |
-| `iscpeer.mjs` | **the MN half of ISC outside QEMU**: control block + FIFOs + doorbell, with a `selftest` |
+| `iscpeer.mjs` | **the MN half of ISC outside QEMU**: control block + FIFOs + doorbell, with a `selftest` and a `live` mode |
+| `om-isc.c` | the QEMU sysbus device: backs the ISC windows + irqcon banks, bridges doorbells |
+| `om-isc-qemu.patch` | the board hook (`hw/arm/virt.c`) + `hw/misc/meson.build` line for the device |
+| `build-qemu.sh` | fetch + patch + build the aarch64 QEMU with the device (into `$HOME/qemu-om`) |
+| `run-isc.sh` | boot the A53 live and run the MN peer; capture the ISC traffic |
 
 ## Prerequisites (inside the VM only)
 
 OrbStack Linux VM `om-emu` (Arch Linux ARM, aarch64). Already present:
-`qemu-system-aarch64` 11.1.2, `gdb`, `dtc`, `binutils` (GNU `objdump`),
-`squashfs-tools`, `nodejs`, `python`. Nothing extra was installed for this track;
-a patched-QEMU build (see "Bringing ISC up") would add `base-devel`, `ninja`,
-`glib2`, `pixman` via `pacman`. Host side: nothing is installed or downloaded.
+`qemu-system-aarch64` 11.1.2 (for the static harness), `gdb`, `dtc`, `binutils`
+(GNU `objdump`), `squashfs-tools`, `nodejs`, `python`, and the build deps
+`base-devel`, `ninja`, `meson`, `glib2`, `pixman` (the patched build needs these;
+install any missing with `sudo pacman -S --needed`). Host side: nothing is
+installed or downloaded.
 
 ## Extract (outside git, into a fresh dir)
 
@@ -41,29 +53,39 @@ python3 -I tools/olyfw.py <E143.BIN> --dump    # the blk05a00000 0106 bundle
 #   BL31  block-file-offset 0x29807e0   DTB 0x2986fe0
 #   Image 0x2989fe0                     squashfs 0x2f10fe0
 # unsquashfs the rootfs; dtc -I dtb -O dts nep1.dtb > nep1.dts
-# node qdts.mjs nep1.dts virt-nep1.dts        # the virt DT for qrun.sh
 ```
 
-Put `Image`, `rootfs.sqfs`, `virt-nep1.dts` in one dir; `export IMG=<that dir>`.
+Put `Image`, `rootfs.sqfs`, `nep1.dts` in one dir; `export IMG=<that dir>`.
+`run-isc.sh` generates the virt DT from `nep1.dts` itself (via `qdts.mjs`).
 
 ## Reproduce
 
 ```
-# phases a/b: console + userspace (reached)
+# build the patched QEMU with the om-isc device (into $HOME/qemu-om)
+bash build-qemu.sh
+
+# bring ISC up LIVE: boot the A53, run the MN peer, exchange messages.
+# args are scripted MN->A53 sends, "afterMs:node:port:hex".
+IMG=$IMG bash run-isc.sh 45 \
+    16000:4:26:0300000040000000      # a port-26 kind-3 request, 0x40 bytes
+#   -> [peer] RX node 1 port 27 [01 00 00 00]   the A53 start-complete
+#   -> [peer] RX node 1 port 27 [40 00 00 00]   the kind-3 child's reply (size echo)
+
+IMG=$IMG bash run-isc.sh 55 \
+    14000:4:26:0100000000000000      \  # kind-1: the A53 runs /etc/init.d/wifi
+    26000:4:30:000000...<48 hex 00>     # an hhhr job (count 0)
+#   -> [peer] RX node 0 port 31 [...112 bytes...]   hhhr's reply to CPU 0
+
+# the MN-side transport also self-checks with no QEMU at all:
+node iscpeer.mjs selftest     # control-block magic + FIFO round-trip
+
+# static side: the static harness (stock VM qemu) and the daemon decode
 IMG=$IMG bash qrun.sh 25 && node dmesg.mjs /tmp/a53run/ram.bin | tail
-#   -> full boot banner, /sbin/init, rcS, sccore/hhhr/dbgterm start
-
-# phase c: ISC. On stock virt the custom windows have no backing, so:
-node dmesg.mjs /tmp/a53run/ram.bin | grep isc
-#   -> isc: isc_start failed -6        (measured, X)
-
-# the MN-side transport, verified with no QEMU:
-node iscpeer.mjs selftest              # control-block magic + FIFO round-trip
-node iscpeer.mjs magic                 # the isc_start magic for this config
-
-# read the port protocols from the daemons (inside the VM):
 ROOT=<extracted rootfs> bash dis-daemons.sh
 ```
+
+On **stock** (unpatched) virt the custom windows have no backing, so `qrun.sh`
+stops at `isc: isc_start failed -6` -- the measurement that motivates the device.
 
 ## The custom hardware windows (decoded for the device model)
 
@@ -111,56 +133,44 @@ Every window a device model does not implement should **log loudly** (an
 unassigned-access abort, as virt already does -- see below), never silently
 return 0.
 
-## Why phase c stops, measured (X)
+## Why stock virt stops (X), and how the device fixes it
 
-Two runs, both proving the windows have no backing on stock virt:
+On **stock** virt with `-m 2G` the windows fall inside the machine RAM span, and
+arm64 `__ioremap` refuses to map RAM, so `isc_lock_init` / `irqcon` / `isc_start`
+all fail (`isc: isc_start failed -6`, `ENXIO`). The `om-isc` device + patch solve
+every piece:
 
-- `-m 2G` (RAM region `0x40000000..0xC0000000`, covering the `0x97xxxxxx`
-  windows): `isc: isc_start failed -6`. `-6` = `ENXIO` from the control-block
-  `__ioremap` returning NULL (`iscdrv.ko+0x2288`/`+0x2298`): arm64 refuses to
-  ioremap an address the machine presents as RAM.
-- `-m 1024M` (RAM ends `0x80000000`, windows unassigned): the first access to an
-  ISC window raises a *Synchronous External Abort* (`0x96000010`) -- unassigned
-  MMIO on virt faults. (This run also aborts earlier in boot for an unrelated
-  size reason, so the clean citation is the `-m 2G` stop.)
+- **Backing at the true addresses.** `om-isc` aliases one shared
+  `memory-backend-file` into system memory at `0x97000000` (lock, normal RAM so
+  the LL/SC monitor works), `0x97f00b80` (scc), `0x97f00c00` (control block +
+  FIFOs), `0x63fe0000` and `0x2_a3fe0000` (the bulk `alloc_mem` pool), all at
+  *higher priority* than the machine RAM so they override it. `run-isc.sh` also
+  passes `mem=0x5140000` so the kernel's own RAM stays the A53's real 81 MiB and
+  these windows are not "RAM" to `__ioremap` (which then succeeds). The peer
+  (`iscpeer.mjs live`) mmaps the same file and reads/writes the control block and
+  FIFOs directly; its address->offset map matches the device's `O_*` layout.
+- **The receive interrupt.** The A53's `isc_receive_wait` sleeps on the IRQ-14
+  waitqueue with no timeout, so MN->A53 needs a real interrupt. `om-isc` models
+  the four `irqcon` banks as MMIO; a byte from the peer on the chardev sets
+  `bank0 +0x880` bit 14 (`0x4000`) and raises the bank's GIC SPI (level, lowered
+  on the guest's ack). The board hook wires the banks to GIC SPIs
+  `0x1c0/0x1c2/0x1c4/0x1c6`, which the A53's `irqcon` driver *requires*
+  (`irqcon_postcore_init` hardcodes `irq-0x1c0 <= 7`, D at kernel
+  `0xffffff8008583268`); virt's GIC is widened to `NUM_IRQS 512` in the patch so
+  it can represent SPI `0x1c6`. `irqcon` then demuxes SPI `0x1c0` bit 14 to the
+  handler registered by `isc_system_init` (`irqarm_entry_handler(14, ...)`), i.e.
+  `isc_receive_interrupt`.
+- **A53->MN** needs no guest interrupt: the A53 rings `bank(n)+0x800`, an MMIO
+  write `om-isc` catches and forwards to the peer as one byte, after which the
+  peer drains that node's FIFO.
 
-So `isc_start` cannot succeed on any stock-virt memory size: the control block,
-lock, shared memory and doorbells must be *backed* and the doorbell must raise
-IRQ 14. That is the device model's job.
+The `om-isc` device logs any offset it does not model via `LOG_UNIMP` and reads 0.
 
-## Bringing ISC up (the device model) and the wall
+### Measured live (X, `run-isc.sh`)
 
-The data plane is solved and committed: `iscpeer.mjs` implements the MN half
-(control-block magic + node count + FIFO offsets; `isc_send`/`isc_receive` FIFO
-format; doorbell writes) and its `selftest` round-trips a port-26 request and a
-port-27 start-complete through the exact encoding `iscdrv.ko` uses. The two ways
-to give it a live A53 to talk to:
-
-1. **memory-backend-file (no QEMU patch).** Back all guest RAM with
-   `-object memory-backend-file,id=m,size=2G,mem-path=guestram.bin,share=on
-   -machine memory-backend=m`, shrink the DT `memory` node so the kernel's RAM
-   ends below a gap, and relocate the ISC windows into that gap (still inside the
-   backing file, so ioremap succeeds *and* the bytes persist). `iscpeer.mjs` in
-   `file` mode mmaps `guestram.bin` at `offset = addr - 0x40000000` and reads/
-   writes the control block and FIFOs directly. Relocating means binary-patching
-   the fixed addresses: `config_isc_cb_addr` / `config_isc_mem_addr[4]` in
-   `iscdrv.ko`'s `.data`, and `isc_lock_init` / `scc_init` in the kernel `Image`;
-   the four `irqcon` banks are DT-overridable. This gets the **control block and
-   FIFOs exchanging both directions**.
-
-2. **a small QEMU sysbus device (patch).** One device covering `0x97000000`
-   (lock, as RAM with a working exclusive monitor), `0x97f00000` (scc + control
-   block), the four `irqcon` banks, and `0x2_a3fe0000` (shared mem); a QMP/chardev
-   bridge so `iscpeer.mjs` drives the FIFOs and, crucially, pulses GIC SPI
-   `0x1c0` (-> IRQ 14) when the MN rings `bank0+0x880`. Build from the Arch
-   `qemu-system-aarch64` PKGBUILD source inside the VM.
-
-**The wall:** the MN->A53 doorbell is an *interrupt*. A plain shared file
-(option 1) and the QEMU monitor cannot inject a GIC SPI, so the A53's
-`isc_receive_wait` -- which sleeps on the IRQ-14 waitqueue -- never wakes, even
-with the FIFO correctly filled. Raising IRQ 14 needs either the device (option 2)
-or a gdb-scripted `$pc`-forced call into `isc_receive_interrupt` after each MN
-write (hacky but possible with the existing gdb harness). A full live round-trip
-was therefore not completed in this session; option 2 is the clean finish. The
-protocol table below was read statically from the daemons, which does not need
-the live loop.
+- `isc_start` succeeds (no `-6`); the A53 posts port-27 `{01 00 00 00}`.
+- A port-26 kind-3 request is delivered over IRQ 14; the A53's survival child
+  replies on port 27 echoing the requested malloc size (send `0x40` -> reply
+  `{40 00 00 00}`), a full MN->A53->MN round-trip.
+- `hhhr` answers a 48-byte port-30 request with a 112-byte reply on port 31 to
+  node 0 (CPU 0) -- matching the static decode.

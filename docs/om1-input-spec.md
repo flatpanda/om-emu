@@ -180,6 +180,7 @@ Added by PLAYFIX (play only):
 ## 9. Open
 
 - The camera application: the reader of queue 6, task 58's queue-207 send, the code -> request translation, long press and repeat timing, mode change, shutter release, AF, movie recording, the power sequence.
+- The mode change. The application's dial query `0x5014c0de` returns `0x602243a0[position]`: 3, 4, `0x3e`, `0x35`, `0x36`, `0x37`, `0x38`, `0xa`, 1, 2 for positions 0..9 (D); which mode each is, is ?. Setting 820 reads 1 at power-on and after a change to position 8, and 0 after a change to any other position, although every raw write of it during the change (`0x503ee412` from `0x503c5c1d`) writes 1 (X); with 820 at 0 the application's OK path skips (`0x5106675d..66`: `0x51052dc8` is 1 when 820 is 0, D), so OK opens no Super Control Panel and draws nothing (X; webgate B6 presses OK before the dial for this reason). Why 820 reads 0 there is ?.
 - Why the shooting screen's exposure compensation stays 0.0 when a dial turns, alone or with +/- held; and what the functions without a screen of their own (AFL, one-touch WB, PREVIEW, CHANGE_LV_STATE) need from the camera side.
 - The producers of the raw bits (SCPU RX, poller), of EVFSW and the eye sensor, the multi-selector raw codes `0x1234` / `0x1235` and the lock lever.
 - The encoder position read `0x50059fa4` behind `0x5014bd60` (C4), and which physical dial and rotation is main / "+".

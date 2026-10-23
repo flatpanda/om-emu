@@ -6,7 +6,8 @@
 // refusals (test_irq.mjs), the replayer's argument binding and PlaySession.trim (test_lab.mjs), the check runner and
 // the checks' controls (test_checks.mjs) and their command-line parser (test_args.mjs), the debug API's units
 // (test_debug.mjs) and its live route to a play session (test_live.mjs), the .BIN unpacker (test_unpack.mjs, needing $OM_FW_DIR or $OM_BIN, else counted as a failure),
-// the browser player's pure parts, its node host and its Worker in a node worker thread (test_web.mjs), the node host
+// the browser player's pure parts, its node host, webgate B6's page inputs on a node Player and its Worker in a node
+// worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
 // (test_camapp.mjs), the SCPU's clock and request server (test_scpu.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the firmware
@@ -30,7 +31,7 @@ import { checksTests } from '../test/test_checks.mjs';
 import { argsTests } from '../test/test_args.mjs';
 import { watchUnits, snapshotUnits, protocolUnits, limitUnits, attachUnits } from '../test/test_debug.mjs';
 import { unpackTests } from '../test/test_unpack.mjs';
-import { shaTests, yccTests, controlsTests, hostApiTests, driverTests, bodyTests, resultBoxTests, pageTests, workerTests } from '../test/test_web.mjs';
+import { shaTests, yccTests, controlsTests, hostApiTests, pageInputsTests, driverTests, bodyTests, resultBoxTests, pageTests, workerTests } from '../test/test_web.mjs';
 
 // the temporary OM_CHECK_OUT directories of checktrace runs that ended by a signal, which they could not remove
 {
@@ -83,10 +84,10 @@ const dw = watchUnits(), dsn = snapshotUnits(), dp = protocolUnits(), dl = limit
 console.log(`debug API: watch units ${dw.checks - dw.bad.length}/${dw.checks}, snapshot units ${dsn.checks - dsn.bad.length}/${dsn.checks}, protocol units ${dp.checks - dp.bad.length}/${dp.checks}, trace-file, watch-log and stderr limits ${dl.checks - dl.bad.length}/${dl.checks}, lab-session and disasm units ${dat.checks - dat.bad.length}/${dat.checks}`);
 [...dw.bad, ...dsn.bad, ...dp.bad, ...dl.bad, ...dat.bad].forEach((x) => console.log('  ', x));
 bad += dw.bad.length + dsn.bad.length + dp.bad.length + dl.bad.length + dat.bad.length;
-const up = await unpackTests(), sh = shaTests(), yc = yccTests(), ct = controlsTests(), dr = await driverTests(), ap = await hostApiTests();
-console.log(`browser player: unpacker (B1) ${up.checks - up.bad.length}/${up.checks}${up.skipped.length ? `, ${up.skipped.length} SKIPPED (no firmware: set OM_FW_DIR or OM_BIN)` : ''}; sha256 (B2) ${sh.checks - sh.bad.length}/${sh.checks}; ycc_to_rgb over 2^24 words (B4) ${yc.checks - yc.bad.length}/${yc.checks}; node host on a Player (B4) ${ap.checks - ap.bad.length}/${ap.checks}; playui rows ${ct.checks - ct.bad.length}/${ct.checks}; driver (B3) ${dr.checks - dr.bad.length}/${dr.checks}`);
-[...up.bad, ...up.skipped.map((x) => `SKIPPED ${x}`), ...sh.bad.slice(0, 10), ...yc.bad, ...ap.bad, ...ct.bad, ...dr.bad].forEach((x) => console.log('  ', x));
-bad += up.bad.length + up.skipped.length + sh.bad.length + yc.bad.length + ap.bad.length + ct.bad.length + dr.bad.length;
+const up = await unpackTests(), sh = shaTests(), yc = yccTests(), ct = controlsTests(), dr = await driverTests(), ap = await hostApiTests(), pi = await pageInputsTests();
+console.log(`browser player: unpacker (B1) ${up.checks - up.bad.length}/${up.checks}${up.skipped.length ? `, ${up.skipped.length} SKIPPED (no firmware: set OM_FW_DIR or OM_BIN)` : ''}; sha256 (B2) ${sh.checks - sh.bad.length}/${sh.checks}; ycc_to_rgb over 2^24 words (B4) ${yc.checks - yc.bad.length}/${yc.checks}; node host on a Player (B4) ${ap.checks - ap.bad.length}/${ap.checks}; B6's page inputs on a Player ${pi.checks - pi.bad.length}/${pi.checks}; playui rows ${ct.checks - ct.bad.length}/${ct.checks}; driver (B3) ${dr.checks - dr.bad.length}/${dr.checks}`);
+[...up.bad, ...up.skipped.map((x) => `SKIPPED ${x}`), ...sh.bad.slice(0, 10), ...yc.bad, ...ap.bad, ...pi.bad, ...ct.bad, ...dr.bad].forEach((x) => console.log('  ', x));
+bad += up.bad.length + up.skipped.length + sh.bad.length + yc.bad.length + ap.bad.length + pi.bad.length + ct.bad.length + dr.bad.length;
 const pj = bodyTests(), rbx = await resultBoxTests(), pg = await pageTests(), wk = await workerTests();
 console.log(`browser player hosts: request bodies ${pj.checks - pj.bad.length}/${pj.checks}; wait_result ${rbx.checks - rbx.bad.length}/${rbx.checks}; page after a stop ${pg.checks - pg.bad.length}/${pg.checks}; Worker in a node worker thread ${wk.checks - wk.bad.length}/${wk.checks}${wk.skipped.length ? `, ${wk.skipped.length} SKIPPED (no firmware: set OM_FW_DIR or OM_BIN)` : ''}`);
 [...pj.bad, ...rbx.bad, ...pg.bad, ...wk.bad, ...wk.skipped.map((x) => `SKIPPED ${x}`)].forEach((x) => console.log('  ', x));

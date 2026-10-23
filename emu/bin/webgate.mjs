@@ -20,10 +20,12 @@
 // - Chrome (B5): the same jobs in web/worker.mjs (web/gate.html), first with the .BIN handed to the file input
 //   (DOM.setFileInputFiles) on a fresh profile (the unpack path; the first job fills the OPFS cache), then from the
 //   OPFS cache; every trace must be byte-identical to node's, and identical to bin/run.mjs's.
-// - Chrome (B6): web/index.html?idle=off with the .BIN through its file input: three keys (Input.dispatchKeyEvent) and
-//   one touch (Input.dispatchMouseEvent); after each, the result is ok, the frame seq advanced, and the canvas read
-//   back equals the RGBA node computes for the composite whose sha16 the Player published; the page's session log
-//   equals node's run of the inputs the page sent (wall fields removed); screenshots. Then a paced page from the cache
+// - Chrome (B6): web/index.html?idle=off with the .BIN through its file input: four keys (Input.dispatchKeyEvent), one
+//   touch (Input.dispatchMouseEvent) and two quick PageUps, as test/test_web.mjs PAGE_B6_INPUTS lists them (the page
+//   must send those inputs; the regular gate runs them on a node Player); after each key and the touch, the result is
+//   ok, the frame seq advanced, the GUI is in the listed state, and the canvas read back equals the RGBA node computes
+//   for the composite whose sha16 the Player published; the page's session log equals node's run of the inputs the
+//   page sent (wall fields removed); screenshots. Then a paced page from the cache
 //   (idle wall): 10 lab seconds, the real-time ratio.
 // - B7: every network request of the page and its Workers (Network domain, auto-attached Worker sessions) is a GET to
 //   the gate's own origin with no body.
@@ -45,6 +47,7 @@ import { Tables } from '../src/lab/play.mjs';
 import { PLAYER_PARSER, WORKLOAD_DIGEST } from '../scenarios/session_replay.mjs';
 import { LabError } from '../src/lab/errors.mjs';
 import { fileReader } from '../test/test_unpack.mjs';
+import { PAGE_B6_INPUTS } from '../test/test_web.mjs';
 import { firstDivergence, runScenarios, osdDoc, loadImage, loadBlock, CALLS_DIR } from './run.mjs';
 import { dump as dumpTrace } from '../src/trace/tracer.mjs';
 import { createHash as nodeHash } from 'node:crypto';
@@ -374,15 +377,20 @@ if (!argv.includes('--skip-page') && !QUICK) {
   checks.push({ what: 'power on', ...(await state()) });
   await shot('page-shooting');
   await page.ev('document.activeElement && document.activeElement.blur(), true');
+  // each check's inputs and the GUI state it ends in: test/test_web.mjs PAGE_B6_INPUTS, which pageInputsTests runs
+  // on a node Player in the regular gate (the sent inputs must be these, below)
+  const plan = PAGE_B6_INPUTS.values();
+  const planned = (what) => { const g = plan.next().value; if (g?.what !== what) fail(`B6 ${what}: PAGE_B6_INPUTS has ${g?.what} here`); return g ?? {}; };
   const key = async (code, key, vk) => {
+    const { gui } = planned(`key ${code}`);
     const before = await state();
     await page.S('Input.dispatchKeyEvent', { type: 'keyDown', code, key, windowsVirtualKeyCode: vk });
     await sleep(120);
     await page.S('Input.dispatchKeyEvent', { type: 'keyUp', code, key, windowsVirtualKeyCode: vk });
-    const ok = await until(`(() => { const s = window.__playPage.status; return !!(s && s.last && s.last.input && s.last.input.id && s.last.input.action === 'up' && s.frame_seq > ${before.frame_seq}) && ${settled}; })()`, 60000);
+    const ok = await until(`(() => { const s = window.__playPage.status; return !!(s && s.last && s.last.input && s.last.input.id && s.last.input.action === 'up' && s.frame_seq > ${before.frame_seq} && s.gui === ${JSON.stringify(gui)}) && ${settled}; })()`, 60000);
     const after = await state();
     checks.push({ what: `key ${code}`, ok, before_seq: before.frame_seq, ...after });
-    if (!ok) fail(`B6 key ${code}: no result with a new frame (frame_seq ${before.frame_seq} -> ${after.frame_seq})`);
+    if (!ok) fail(`B6 key ${code}: no result with a new frame and GUI ${gui} (frame_seq ${before.frame_seq} -> ${after.frame_seq}, GUI ${after.gui} ${after.gui_name})`);
   };
   await key('KeyM', 'm', 77);
   await sleep(300);
@@ -392,6 +400,7 @@ if (!argv.includes('--skip-page') && !QUICK) {
   // one touch on the shooting screen's monitor (900 x 600 composite coordinates 90, 30, as in the inputs scenario), as the
   // page's pointer handlers read it
   {
+    const { gui } = planned('touch (90, 30)');
     const before = await state();
     const rect = await page.ev(`(() => { const r = document.getElementById('cv').getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; })()`);
     const x = rect.x + 90 / 900 * rect.w, y = rect.y + 30 / 600 * rect.h;
@@ -399,27 +408,33 @@ if (!argv.includes('--skip-page') && !QUICK) {
     await page.S('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
     await sleep(150);
     await page.S('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
-    const ok = await until(`(() => { const s = window.__playPage.status; return !!(s && s.last && s.last.input && s.last.input.type === 'touch' && s.last.input.action === 'up' && s.frame_seq > ${before.frame_seq}) && ${settled}; })()`, 60000);
+    const ok = await until(`(() => { const s = window.__playPage.status; return !!(s && s.last && s.last.input && s.last.input.type === 'touch' && s.last.input.action === 'up' && s.frame_seq > ${before.frame_seq} && s.gui === ${JSON.stringify(gui)}) && ${settled}; })()`, 60000);
     const after = await state();
     checks.push({ what: 'touch (90, 30)', ok, before_seq: before.frame_seq, ...after });
-    if (!ok) fail(`B6 touch: no result with a new frame (frame_seq ${before.frame_seq} -> ${after.frame_seq})`);
+    if (!ok) fail(`B6 touch: no result with a new frame and GUI ${gui} (frame_seq ${before.frame_seq} -> ${after.frame_seq}, GUI ${after.gui} ${after.gui_name})`);
   }
   await shot('page-touch');
+  // OK on the shooting screen opens the Super Control Panel; before the mode dial moves: after a dial change the
+  // camera application skips OK (PAGE_B6_INPUTS has the evidence)
+  await key('Enter', 'Enter', 13);
+  await shot('page-scp');
   // two inputs sent before the first is taken (the page's selftest's "PageUp twice quickly"): both must arrive
   {
+    const { mode_dial: steps } = planned('PageUp twice quickly');
     const m0 = await page.ev('window.__playPage.status.mode_dial || 0');
     for (let i = 0; i < 2; i++) {
       await page.S('Input.dispatchKeyEvent', { type: 'keyDown', code: 'PageUp', key: 'PageUp', windowsVirtualKeyCode: 33 });
       await page.S('Input.dispatchKeyEvent', { type: 'keyUp', code: 'PageUp', key: 'PageUp', windowsVirtualKeyCode: 33 });
     }
-    const ok = await until(`(() => { const s = window.__playPage.status; return !!(s && s.mode_dial === ${(m0 + 2) % 10}) && ${settled}; })()`, 60000);
+    const ok = await until(`(() => { const s = window.__playPage.status; return !!(s && s.mode_dial === ${(m0 + steps) % 10}) && ${settled}; })()`, 60000);
     const after = await state();
     checks.push({ what: 'PageUp twice quickly', ok, ...after });
-    if (!ok) fail(`B6 two quick inputs: mode dial ${m0} -> ${await page.ev('window.__playPage.status.mode_dial')}, want ${(m0 + 2) % 10}`);
+    if (!ok) fail(`B6 two quick inputs: mode dial ${m0} -> ${await page.ev('window.__playPage.status.mode_dial')}, want ${(m0 + steps) % 10}`);
   }
-  await key('Enter', 'Enter', 13);
-  await shot('page-scp');
+  if (!plan.next().done) fail('B6: PAGE_B6_INPUTS has checks the page did not run');
   const sent = await page.ev('window.__player.sent');
+  const bare = (x) => JSON.stringify(x.map(({ client, cseq, t_client, ...b }) => b));
+  if (bare(sent) !== JSON.stringify(PAGE_B6_INPUTS.flatMap((g) => g.inputs))) fail(`B6: the page sent ${bare(sent)}, not PAGE_B6_INPUTS's inputs`);
   const pageLog = await page.ev(`(async () => (await window.__player.api('/api/log')).json())()`);
   const frameStats = await page.ev('window.__player.frameStats');
   const ns = nodeSession(sent);

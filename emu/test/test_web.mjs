@@ -5,6 +5,8 @@
 // - B4: web/frame.mjs's converter over all 2^24 words against the digest pinned from emu (YCC_SHA256), and
 //   src/lab/playapi.mjs on a node Player (hostApiTests): the browser host's refusal of unported tokens, ?sync=1
 //   timeouts, the logged input;
+// - B6's page inputs (PAGE_B6_INPUTS, webgate's keys and touch) on a node Player: a new frame and the GUI state after
+//   each, so a sequence the page check would fail on fails here without Chrome (pageInputsTests);
 // - playui.mjs's rows against play.mjs's CONTROLS on every shared field;
 // - B3's driver unit: web/driver.mjs with an injected scheduler (no spin while the lab is ahead, an immediate wake on
 //   input, a kick ending a wait, 20 ms otherwise, an order deadline);
@@ -13,7 +15,7 @@
 //   at once forever), and web/worker.mjs hosted in a node worker thread (test/workershim.mjs): a file that is no .BIN
 //   and a container that is not E143 refused with the boot offered again, and with $OM_BIN / $OM_FW_DIR the E143
 //   .BIN booted, an unported token refused, a ?sync=1 request answered when the session quits.
-//   node emu/test/test_web.mjs [--no-api]   (--no-api: skip the Player session of B4, about 10 s)
+//   node emu/test/test_web.mjs [--no-api]   (--no-api: skip the Player sessions of B4 and B6's page inputs, about 15 s)
 // Writes its temporary files under emu/out/test-web/.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -114,6 +116,49 @@ export function controlsTests() {
     }
   });
   return { checks: CONTROL_ROWS.length, bad };
+}
+
+// B6's page inputs (bin/webgate.mjs): the Player inputs web/index.html sends for webgate's keys and touch, in order,
+// grouped by the page check that waits for each group; webgate requires the page's sent inputs to be these. gui: the
+// state the group must end in. OK comes before the mode dial: after a dial change to any position but 8 setting 820
+// reads 0 and the camera application's OK path skips (0x5106675d..66: 0x51052dc8 is 1 when 820 is 0), so no frame
+// follows (X); why 820 reads 0 there is ?, the mode change is an open item (docs/om1-input-spec.md section 9).
+const KEY = (id) => [{ type: 'key', id, action: 'down' }, { type: 'key', id, action: 'up' }];
+export const PAGE_B6_INPUTS = [
+  { what: 'key KeyM', inputs: KEY('menu'), gui: '0x0b02' },
+  { what: 'key ArrowDown', inputs: KEY('down'), gui: '0x0b02' },
+  { what: 'key KeyM', inputs: KEY('menu'), gui: '0x0108' },
+  { what: 'touch (90, 30)', inputs: [{ type: 'touch', action: 'down', x: 90, y: 30 }, { type: 'touch', action: 'up', x: 90, y: 30 }], gui: '0x0108' },
+  { what: 'key Enter', inputs: KEY('ok'), gui: '0x0403' },
+  { what: 'PageUp twice quickly', inputs: [{ type: 'switch', id: 'mode_dial', step: 1 }, { type: 'switch', id: 'mode_dial', step: 1 }], mode_dial: 2 },
+];
+// B6 without Chrome: PAGE_B6_INPUTS on a node Player as webgate's node side runs them (idle off, one input at a time).
+// Each key and touch group must publish a new frame and end in its GUI state; the two dial steps move the dial two.
+export async function pageInputsTests() {
+  const bad = [];
+  const rom = new Uint8Array(fs.readFileSync(E + '00000000.OE.0100.bin')), resBlock = new Uint8Array(fs.readFileSync(E + '02000000.OE.0101.bin'));
+  const a = { ...PLAYER_PARSER, no_browser: true, out: '<out>', no_wait_on_error: false, idle: 'off' };
+  const pl = new Player(a, { rom, resBlock, createHash: nodeHash, wallClock: () => performance.now() / 1000 });
+  const api = new PlayApi(pl, { tables: Tables.of(rom), frameRgba: rgbaOf });
+  try { pl.open_session(); } catch (e) { if (!(e instanceof LabError)) throw e; pl.set_phase('error', pl.describe(e)); }
+  try {
+    for (const g of PAGE_B6_INPUTS) {
+      const seq0 = pl.frame_seq, dial0 = pl.session?.mode_index;
+      for (const b of g.inputs) {
+        api.handle({ method: 'POST', path: '/api/input', headers: {}, body: JSON.stringify(b) });
+        while (pl.q.length || pl.held.length) { try { pl.tick(); } catch (e) { if (!(e instanceof LabError)) throw e; pl.fail(e); } }
+      }
+      pl.publish_status();
+      const s = pl.status_doc;
+      if (s.phase !== 'running') { bad.push(`page inputs ${g.what}: phase ${s.phase} ${JSON.stringify(s.error)?.slice(0, 300)}`); break; }
+      if (g.gui && (s.frame_seq <= seq0 || s.gui !== g.gui)) bad.push(`page inputs ${g.what}: frame_seq ${seq0} -> ${s.frame_seq}, GUI ${s.gui} ${s.gui_name} (want a new frame, GUI ${g.gui})`);
+      if (g.mode_dial !== undefined && s.mode_dial !== (dial0 + g.mode_dial) % 10) bad.push(`page inputs ${g.what}: mode dial ${dial0} -> ${s.mode_dial}`);
+    }
+  } finally {
+    if (pl.session !== null) pl.close_session();
+    pl.set_stop();
+  }
+  return { checks: PAGE_B6_INPUTS.length, bad };
 }
 
 // B4: a node Player through the router (src/lab/playapi.mjs), its session opened, then the host checks
@@ -513,9 +558,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     `request bodies: ${j.checks - j.bad.length}/${j.checks}; wait_result: ${rb.checks - rb.bad.length}/${rb.checks}; page after stop: ${p.checks - p.bad.length}/${p.checks}; worker host: ${w.checks - w.bad.length}/${w.checks}${w.skipped.length ? ` (${w.skipped.length} SKIPPED)` : ''}`);
   const all = [...s.bad, ...y.bad, ...c.bad, ...d.bad, ...j.bad, ...rb.bad, ...p.bad, ...w.bad];
   if (!process.argv.includes('--no-api')) {
-    const a = await hostApiTests();
-    console.log(`node host on a Player (B4): ${a.checks - a.bad.length}/${a.checks}`);
-    all.push(...a.bad);
+    const a = await hostApiTests(), pi = await pageInputsTests();
+    console.log(`node host on a Player (B4): ${a.checks - a.bad.length}/${a.checks}; B6's page inputs on a Player: ${pi.checks - pi.bad.length}/${pi.checks}`);
+    all.push(...a.bad, ...pi.bad);
   }
   all.slice(0, 40).forEach((x) => console.log('  ', x));
   process.exit(all.length ? 1 : 0);

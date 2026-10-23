@@ -49,8 +49,14 @@ export const FAMILIES = {
     // registers (0x5c..0x6c, 0x88..0xff) and the list base register's unit (E143: 16-byte units)
     engine: { base: 0x9BC00000, guards: 8, lut: true, list_shift: 4 },
     // the SCPU interface (src/dev/scpu.mjs): its command word, its clock [seconds, phase], whether the lab lets the
-    // clock tick with lab time (a lab choice; plain storage that stands still otherwise) and its plain storage
-    scpu: { command: 0xf4, clock: [0xe8, 0xec], ticks: true, storage: [[0x00, 0x00], [0x08, 0x3c]] },
+    // clock tick with lab time (a lab choice; plain storage that stands still otherwise), its plain storage and its
+    // event word, the first of its port words, their count and the IRQ they drive (the SCPU init 0x5004dc55 clears
+    // 0x98 with 127 and attaches IRQ 320 to the handler 0x5004e1fd that reads it; the port byte reader 0x5004df3f
+    // reads bit 31 of 0xa0..0xb8, D; the same on E146 and E147, D: their inits and readers)
+    scpu: {
+      command: 0xf4, clock: [0xe8, 0xec], ticks: true, storage: [[0x00, 0x00], [0x08, 0x3c]],
+      events: { pending: 0x98, ports: 0xa0, count: 7, irq: 320 },
+    },
     core_byte: 0x97F00254,
     // the interrupt vectors' page, the high half of the level slots' run-time addresses: E143's vector init loads
     // 0x60030020..0x60030080 (0x5000f09b, D; src/fw/facts.mjs vectorPage, which reads the same on E146 and E147)
@@ -137,7 +143,8 @@ export const FAMILIES = {
     // E139 and E134, the ones with S-SCPU (src/fw/models.mjs): E137's and E130's operating-time count writes its NAND
     // record once the counter has advanced (E137 0x5004d531 -> 0x50039157, D; docs/om1-settings-spec.md K-CRT-134D),
     // and their start then stops at the NAND controller the lab does not model (X)
-    scpu: { command: 0xa4, clock: [0x98, 0x9c], ticks: false, storage: [[0x00, 0x00], [0x08, 0x3c], [0x40, 0x94]] },
+    // The event and port words (E143's 0x98, 0xa0..0xb8) lie in the storage 0x40..0x94: events null (not modelled)
+    scpu: { command: 0xa4, clock: [0x98, 0x9c], ticks: false, storage: [[0x00, 0x00], [0x08, 0x3c], [0x40, 0x94]], events: null },
     // per body, read by src/fw/facts.mjs (coreByte; resetHead's library and preload rows; vectorPage: 0x6003xxxx on
     // E144, 0x6041xxxx on the 0x60400020 bodies, X; dramSize: 256 MiB on E144, 512 MiB on the 0x60400020 bodies, X)
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,

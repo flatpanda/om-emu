@@ -94,12 +94,16 @@ the same block "retained registers"; both views are one device. Every firmware a
 | 0xe8 | the clock's seconds, reset 0, ticking with lab time (since 2026-10-23; standing still on the E144 family's bodies but E139 and E134, `emu/src/fw/board.mjs` scpu.ticks); a write sets the second and keeps the phase | seconds since 1970: `0x5012bf86` (86400, 1461-day cycles, `add 1970`); written at `0x5004e347`, read back at `0x5005a71f` (within 5 s of the value written) | DB init writes 0 and reads it back; page 6 reads it |
 | 0xec | the clock's phase, reset 0: bits 14..5 the 1/1024 s since the second began, bits 4..0 read 0; a write of 0 restarts the phase at the current second, any other value is UNKNOWN (A-SCPU-3) | bits 14..5 = 1/1024 s (`0x5005a5dd..f0`); written at `0x5004e355` (d1 == 1 only, with 0) | DB init writes 0; page 6 reads it |
 | 0xf4 | command: a write is stored, counted and printed (`om-emu: scpu command 0x... pc ... #n`); a read returns 0 | 0x20041001 written, then polled until 0 (`0x5004e31d..27`, `0x5004e35f..69`, `0x5004de49..62`, `0x500027c0..ca`) | DB init: read, write 0x20041001 (pc `0x5004e35f`), read; one command per session |
-| any other offset, width or alignment | UNKNOWN: bus error, `om-emu: scpu UNKNOWN ...` | 0x04 (`0x5004e4f3`, callers `0x5014e4f4`/`0x5014e864`), 0x58, 0x80..0xdc, 0xe0, 0xe4, 0xf0, 0xf8: driver init, TX/RX `0x5004e000..0x5004e2ff`, boot `0x50002770..d8`, standby | never reached |
+| 0x98 (E143 board) | event word: a pending bit per port, set when the port's level changes (either way, I); a write clears the bits it has set (I); IRQ 320 high while a bit is pending | the IRQ 320 handler `0x5004e1fd` reads and writes it back; the SCPU init writes 127 (hle-gaps.md 4.7.2) | H-SCPUIRQ's 127; every group-0 input (H-SCPUPORT) |
+| 0xa0..0xb8 (E143 board) | port k at 0xa0 + 4k: bit 31 the level the lab sets through its doorbell, the other bits 0 (A-SCPU-4); a write is a bus error | the port byte reader `0x5004df3f`; the port setter `0x5004e3fc` and the SCPU init write configuration words (not run) | UI_IN's callback and old-state init |
+| any other offset, width or alignment | UNKNOWN: bus error, `om-emu: scpu UNKNOWN ...` | 0x04 (`0x5004e4f3`, callers `0x5014e4f4`/`0x5014e864`), 0x58, 0x80..0x94, 0x9c, 0xbc..0xdc, 0xe0, 0xe4, 0xf0, 0xf8: driver init, TX/RX `0x5004e000..0x5004e2ff`, boot `0x50002770..d8`, standby | never reached |
 
 Lab assumptions: **A-SCPU-1** a command completes before the first poll (the poll loop's exit value, like the
 panel-stub presets); **A-SCPU-2** reset 0 everywhere = a camera whose backup memory is blank, matching the zero flash
 copy the registry reads (and, since S-SCPU, a blank sub-CPU memory: its backed-up words read 0); **A-SCPU-3** the
-clock's phase word takes 0 only (its one writer, `0x5004e355`, writes 0; what another value does is ?). What a window
+clock's phase word takes 0 only (its one writer, `0x5004e355`, writes 0; what another value does is ?); **A-SCPU-4** a
+port word's bits other than bit 31 read 0 (the firmware's one reader in the lab takes bit 31 only; what the
+configuration bits read back is ?). What a window
 command does in the sub-CPU is ?; the model only stores. The clock ticks with the lab clock, so a run stays
 deterministic. Debugger reads return the storage of any aligned offset and the clock as the CPU reads it; the harness
 writes MMIO with a CPU store from harness code (`DisplayLab.cpu_store`, `emu/src/lab/display.mjs`), because the

@@ -48,8 +48,8 @@ not reconciled.
    settings store, E132's deferred serial send, then the E118 family's board port.
 3. **HLE of E143, step 2** (HLE of E143 below; step 1's static decodes are done): the cheap CPU 0 wins (a ticking
    clock, persistence by default, native group-0 keys and power lever, Level Adjust, the HDMI EDID). The SCPU request
-   server and the ticking clock are in (S-SCPU, 2026-10-23); next the SCPU port registers and IRQ 320, then the
-   accelerometer.
+   server and the ticking clock are in (S-SCPU, 2026-10-23), and so are the SCPU port registers and IRQ 320 (group 0
+   natively, 2026-10-23); next the accelerometer, then the HDMI EDID.
 4. **Debug API follow-ups**, above all a debug route to a running play session (F31).
 5. **Emulator architecture** phases 2-5: finish phase 2's typed seams (machine port, options object, composed lab
    features), then ground the CPU and interrupts in the manual, then the time model. Phases 3 and 4 are also step 3 of
@@ -171,7 +171,7 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
 | Step | What | Status |
 |---|---|---|
 | 1 | static decodes: the TRA layer (who handles TRA 991, what answers TRA 990), TAKE_FUNC's dispatcher, the HLS TRA event dispatchers, the PER_SCPU dispatch, the sdmem contract, the lens serial layer, the ISC port formats | done (2026-10-23): the TRA layer, TAKE_FUNC's commands and the HLS event dispatch (hle-gaps.md 4.1.1-4.1.3); the PER_SCPU request server and command set (4.7.1); the sdmem request / completion contract (4.8.1); the lens serial layer, its IRQ 14 bits, the command history and the init chain's command ids (4.4.1); the ISC transport from both ends (4.11.1). Two parts stay ? and move to later first steps: the table from a lens command id to its packet bytes (4.4's probe) and the per-port ISC payloads (4.11) |
-| 2 | cheap CPU 0 wins: the SCPU request server with a ticking clock and S-NVRAM by default; the SCPU port registers and IRQ 320; the accelerometer; HDMI EDID / HPD | started (2026-10-23): S-SCPU, the request server at the request API (`0x01`, `0x81`, `0x06`, `0x86`, hle-gaps.md 4.7.1) on E143, E146, E147, E139 and E134, with the SCPU window's clock ticking with lab time (on those bodies) and a blank sub-CPU memory per session; S-SCPU-MSG is retired. S-NVRAM stays opt-in (`OM_EMU_NVRAM`): as the player's default it would need a state file per model, put the host's clock into every session and make sessions start from the last one's settings, a choice for the user. Next: the port registers and IRQ 320 |
+| 2 | cheap CPU 0 wins: the SCPU request server with a ticking clock and S-NVRAM by default; the SCPU port registers and IRQ 320; the accelerometer; HDMI EDID / HPD | started (2026-10-23): S-SCPU, the request server at the request API (`0x01`, `0x81`, `0x06`, `0x86`, hle-gaps.md 4.7.1) on E143, E146, E147, E139 and E134, with the SCPU window's clock ticking with lab time (on those bodies) and a blank sub-CPU memory per session; S-SCPU-MSG is retired. S-NVRAM stays opt-in (`OM_EMU_NVRAM`): as the player's default it would need a state file per model, put the host's clock into every session and make sessions start from the last one's settings, a choice for the user. The port and event words with IRQ 320 (2026-10-23, hle-gaps.md 4.7.2) on E143, E146 and E147: group 0 (power lever, Fn lever, S1) reaches UI_IN through IRQ 320, its handler and UI_IN's callback natively (H-SCPUIRQ, H-UIINPORT, H-SCPUPORT in place of S-KEYBITS for group 0); the power-off sequence after the lever's code needs the power manager, so H-POWER stays. Next: the accelerometer |
 | 3 | interrupt acceptance anywhere, then the machine-owned time model | not started: architecture phases 3 and 4 |
 | 4 | CPU 2, then CPU 3, then CPU 1, natively | not started |
 | 5 | task-start and module-init infrastructure; the HLS component bring-up as the coverage workload's default | not started |
@@ -311,7 +311,8 @@ store in the lab (vsc spec §10).
 lab's stand-ins for its key mapping, request sequences and display-switch re-entry; what stays open below it:
 - Raw-bit producers (S-KEYBITS pushes whole group images): the SCPU receive path and the poller; the producers of
   EVFSW, the eye sensor `0x2301`, the multi-selector `0x1234` / `0x1235`, the lock lever `0x0202123d/e`. Group 0 (power
-  lever, Fn lever, S1) comes from the SCPU's port registers through IRQ 320 (hle-gaps.md §4.7; HLE step 2).
+  lever, Fn lever, S1) comes from the SCPU's port registers through IRQ 320 natively on E143, E146 and E147 since
+  2026-10-23 (hle-gaps.md §4.7.2); the E144 family's bodies still push it.
 - UI_IN's module init: only the ring init `0x5014cb5f` runs (H-UIINRING); `0x5014e3ab`, `0x5014ce00`, `0x5005d36a`,
   `0x5014d62e`, `0x5014d97a` do not; the board byte that selects the bit-table variant.
 - Switch idle state: HDMI `0x0501` and `0x0400` both at 1 make the menu close paint the black panel 6 (X); what

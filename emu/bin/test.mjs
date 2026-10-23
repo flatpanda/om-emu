@@ -118,7 +118,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipp
 {
   const { scpuUnits } = await import('../test/test_scpu.mjs');
   const sc = scpuUnits();
-  console.log(`SCPU clock and request server (S-SCPU): ${sc.checks - sc.bad.length}/${sc.checks}`);
+  console.log(`SCPU clock, ports and request server (S-SCPU): ${sc.checks - sc.bad.length}/${sc.checks}`);
   sc.bad.forEach((x) => console.log('  ', x));
   bad += sc.bad.length;
 }

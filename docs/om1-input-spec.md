@@ -49,6 +49,8 @@ Everything drawn is native. What does not run is the camera application: the rea
 
 ## 3. Idle image and inputs (S-KEYBITS)
 
+Group 0 has a firmware producer on E143, E146 and E147 since 2026-10-23 (H-SCPUPORT): the SCPU interface's port words, read by UI_IN's IRQ 320 callback, which pushes the port byte as group 0's record (`docs/hle-gaps.md` 4.7.2). The lab sets the ports' levels from group 0's image below; at bring-up the firmware's own init sets group 0's old state from them, so the idle image decodes nothing in group 0. What follows describes the other groups, and group 0 on the bodies without the port path.
+
 The producers of UI_IN's raw bits (the SCPU's receive path, the poller) are not traced. S-KEYBITS keeps one image per group and pushes the whole image with `0x5014cb74`, then `set_flg(id at 0x60043010, 1)`; UI_IN decodes natively. Idle image: every type-2 entry released (bit != polarity; the three code-0 entries of group 0 too), every switch bit 0 (the old state of every lab before M10), except the monitor bit 1 ("not closed") and the mode dial one-hot at index 0 (the index-to-mode map is ?). Pushed once per group after H-UIIN; the codes it produces (releases and the switch changes 0 -> 1 of the monitor and the mode dial) go nowhere.
 
 A switch bit of 1 is not neutral: group 4 all ones makes the menu close paint the black panel 6 (X, by bisection; menu spec section 15). The GUI's check is `0x50abaab7` (D): it asks `0x50424f9a` for HDMI `0x02020501` (from `0x50abaac5`) and `0x02020400` (from `0x50abaad8`, then `0x50ab4e0f`); panel 6 comes with both bits at 1 and with neither alone (X: group-4 images `0120` and `ffff` paint it, `0100`, `0020`, `fedf`, `ffdf`, `feff` and `0000` do not).
@@ -131,7 +133,10 @@ The player (`emu/src/lab/player.mjs`) runs lab time in ELAPSE slices of at most 
 |---|---|---|
 | H-UIINRING | the ring init `0x5014cb5f` before H-UIIN | section 2 (D, X) |
 | H-UIIN | `act_tsk(84)` | buttons investigation (X) |
-| S-KEYBITS | group images of groups 0..3 pushed with `0x5014cb74` + `set_flg`; group 4 once at bring-up (equal to the firmware's image) | section 3 |
+| S-KEYBITS | group images of groups 0..3 (1..3 on a body with H-SCPUPORT) pushed with `0x5014cb74` + `set_flg`; group 4 once at bring-up (equal to the firmware's image) | section 3 |
+| H-SCPUIRQ | the idle port levels, 127 to the SCPU's event word `0x98` and IRQ 320's attach at level 5 to `0x5004e1fd`, in place of the SCPU init `0x5004dc55` | hle-gaps.md 4.7.2 (D) |
+| H-UIINPORT | UI_IN's IRQ 320 callback `0x5014e534` registered through `0x5004ded1` (no other callback is allowed) and group 0's old state set by `0x5014e51e` | hle-gaps.md 4.7.2 (D) |
+| H-SCPUPORT | a group-0 input sets the SCPU interface's port levels (bit 31 of `+0xa0 + 4k`); the event raises IRQ 320, taken natively at the idle point, and UI_IN's callback pushes the port byte | hle-gaps.md 4.7.2 (D, X; either edge sets the event bit, I) |
 | H-G4SET | a group-4 input is one call of the firmware's group-4 producer `0x5014d537(code, value)` from the lab task | section 3 (D, X); its callers (the display driver's HDMI report, the lens and grip code) do not run |
 | S-KEYMAP | a code UI_IN forwards (`0x5014c3eb`) or posts itself (`0x50025095` from its dial step `0x5014bc05` and joystick decoder `0x5014e36d`) -> sendEvent index by the pairing rule or an explicit row; LLPSW and HDMI by the switch table's native pick; the multi-selector direction by the application's native query and its table, the centre -> the OFF of the direction posted last | section 4 (names D, pairing I) |
 | H-DIALSTEP | a dial detent is one call of the firmware's counter writer `0x5014bae6(dial id, +1 / -1)` from the lab task | section 2 (D, X); its callers (the command dispatcher, the encoder reader whose position read is not modelled) do not run |

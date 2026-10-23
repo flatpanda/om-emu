@@ -116,7 +116,7 @@ not run), **0** nothing. Code column: instructions keyed to the block / gap-rele
 | OSD engine, VSC, display flow | N to the device models (M2, M3, M7, M8) | `0x9BC00000`, `0x9BB80000`; A15 opt-in | 99,890 (26.78%) | DISP_SYNC `0x9c180000` (S-DISPSYNC), the CMM image, HDMI channel 0 (4.9), A5 / A7 / A15 need hardware |
 | Text and resources | N (M4) | S-RES, Genifa | 28,861 (9.09%) | U items (text spec) |
 | GUI and menu | N (M5, M6, M10B) | S-SEND, S-PROP | 621,898 (19.31%) | navigation rules observed, not decoded; the 53 screen classes of gap@0x510ef2bf (35k) are unnamed (?) |
-| Inputs | N from UI_IN up (M10) | S-KEYBITS, H-EYESTATE, S-TPINT, S-TPREG, H-DIALSTEP | 43,895 (20.85%) | the raw-bit producers (4.7) |
+| Inputs | N from UI_IN up (M10); group 0 from IRQ 320 up (4.7.2) | S-KEYBITS (groups 1..3), H-EYESTATE, S-TPINT, S-TPREG, H-DIALSTEP | 43,895 (20.85%) | the raw-bit producers (4.7) |
 | Settings store | N: the property store `0x503c4974..0x503db10c` and the LowAPI property unit gap@0x503edeea | S-SCPU, S-SETSAVE / S-FLASHSAVE or S-NVRAM | 50,515 (31.24%) | persistence by default (4.7) |
 | Camera application (CA_MAIN, HLS) | N since 2026-10-15, in part: 99k gap-relevant instructions unrun | S-RELSEQ, S-MODACK, S-TRAACK, S-CARD below it | 320,057 (18.64%) | the HLS shooting sequence (196k, 4.1) and the playback components (310k, 4.8) are 1-2% run |
 
@@ -139,7 +139,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **Movie and audio** (4.5) | S: S-RELSEQ's movie callbacks, S-CARD's movie time, S-CPU2's zero level snapshot, S-MODACK for AUD_EXEC | S3 TAKE_FUNC commands 30 / 31 / 68 / 69, S4 the mvr IF (CPU 2), S5 AUD_LEVEL_MONITOR, S6 a host AVM writing a MOV through the firmware's DFS calls, S7 AUD_EXEC | TAKE (commands 30 / 31 / 68 / 69 wait on CPU 2's MOV_COMMAND, SDET_EXEC and WB_MOV, 4.1.1), CPU 2 (MVR, audio level), sensor, storage, EXP_MOVIE / FCS_MOVIE | 134,137 / 124,319 | 10-15 weeks (stages A-C) | a playable .MOV on the card, the firmware's recording sequence, audio meters, beeps |
 | **AV codec back end** (4.5) | 0 | none for HLE: seam S6 bypasses it | CPU 1; the codec engines; IRQs 303-306 | 416,471 / 411,438 (overlay segment 8, CPU 1) | ?: native needs register-level codec models, no documentation | native movie encode and playback below the HLS (I) |
 | **CPUs 1-3 and inter-core** (4.6) | S: K-OTHERCPU, K-BOOTSYNC, K-IPI, no start barrier; S-CPU2 (one post), S-CPU3, S-DISPFRAME on CPU 0; any other doorbell is an error | run CPUs 1-3 natively on one bus; per-core `0x8000` page, INTC bank n to core n, `+0x808/+0x80c` IRQ 324, `+0x810/+0x814` IRQ 325, `+0x800/+0x804` ISC IRQ 323, ticks 139..141. A53: "off" or ISC node 4 | a machine refactor (per-core CPU state), a per-core kernel lab, flash reads for CPU 2's loader and CPU 3's boot jobs, ROADMAP phases 3-4 | 5,422 keyed; 441,542 reachable only from CPU 1-3 tasks (a lower bound) | 5-7 weeks for the cores | the histogram, a native DISP_FRAME, cross-core owners (AUD_MAIN, AVM) can start; three stand-ins and four kernel stand-ins retire |
-| **SCPU, power, clock, on-board sensors, persistence** (4.7) | S: S-SCPU, the request server at the request API (since 2026-10-23: `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1); the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; S-KEYBITS group 0, H-POWER, H-EYESTATE, S-SETSAVE / opt-in S-NVRAM; Level Adjust hangs | SCPU event / port registers and IRQ 320; accelerometer at the PER_SIO transfer or the sample cache; S-NVRAM's NAND seam as the default | lab time; the UI_IN, ACC, SCPU and PER_SIO inits; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, Level Adjust, level gauge, rotation, eye sensor |
+| **SCPU, power, clock, on-board sensors, persistence** (4.7) | S: S-SCPU, the request server at the request API (since 2026-10-23: `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1); the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / opt-in S-NVRAM; Level Adjust hangs | accelerometer at the PER_SIO transfer or the sample cache; S-NVRAM's NAND seam as the default | lab time; the UI_IN, ACC, SCPU and PER_SIO inits; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, Level Adjust, level gauge, rotation, eye sensor |
 | **Card and file system** (4.8) | S: S-CARD; the DCF remain count runs and says "not mounted" (X) | a block device at the sdmem request `0x508b1cdc` with a host FAT32 / exFAT image; sd_mount's result beside it | task starts (EYEFI's init chain, FILECLBK, FILEFGND, DCFPROC_SUB), IRQs anywhere (completions are IRQ to flag) | 115,103 / 108,887 (17k of it self-test and debug) | 3-5 weeks | a card that fills, real files in DCIM, Card Formatting, both slots |
 | **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
 | **HDMI and DisplayPort** (4.9) | 0: the DISPLAY OPEN polls the EDID state `0x62a3c8ec` 50 times and gives up (X) | TX byte registers at `0x99c07000`: HPD / RxSense byte 8 bits 3 / 4, DDC `0xa80..0xa83`, EDID at `0x99c07c00`, IRQ 239; then VSC channel 0 | IRQ 239 delivered while DISPLAY waits (phase 3), VSC channel 0 in the compositor | about 11k (3.3k plus the TX / DP driver's 7.7k) | 3-4 weeks (EDID / HPD about 1) | the HDMI output a TV shows |
@@ -586,14 +586,17 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   (seconds since 1970 local time, 1/1024 s in bits 14..5). IRQs 320 and 321 (level 5) are attached by the SCPU init
   `0x5004dc55`, which the lab does not run. In the lab (`emu/src/dev/scpu.mjs`) the clock ticks with lab time since
   2026-10-23 (on the E143 board and on E139 and E134; the other E144-family bodies keep it still, 4.7.1's last
-  bullet); `+0x00`, `+0x08..+0x3c` are storage and `+0xf4` the command word (settings spec section 3).
+  bullet); `+0x00`, `+0x08..+0x3c` are storage and `+0xf4` the command word (settings spec section 3); on the E143
+  board `+0x98` and `+0xa0..+0xb8` are modelled and drive IRQ 320, whose attach the lab makes in the init's place
+  (4.7.2).
 - **The request API (D, 4.7.1):** `0x5005cd17` sends a 28-byte request `{+0 u8 cmd, +4 s_size, +8 tx, +12 r_size,
   +16 rx, +20 completion, +24 arg}` inside a 36-byte message to PER_SCPU_RECEIVE (timeout 5000). PER_SCPU carries it
   to the SCPU over PER_SIO channel 2 and two pins, not through the window, writes the reply into rx and then calls the
   completion, which sets the requester's flag. The command set, the transaction and what a server must answer are in
   4.7.1.
-- **Inputs from the SCPU (D):** UI_IN's module init registers `0x5014e534` as an IRQ 320 callback; it reads the port
-  byte (`0x5004df3f`) and pushes it as group 0's image: the power lever, the Fn lever and S1 are sampled by the SCPU.
+- **Inputs from the SCPU (D):** UI_IN's port init `0x5014e3ab` (called by its module init) registers `0x5014e534` as an
+  IRQ 320 callback; it reads the port byte (`0x5004df3f`) and pushes it as group 0's image: the power lever, the Fn
+  lever and S1 are sampled by the SCPU. Native in the lab since 2026-10-23 (4.7.2).
 - **Accelerometer (D):** ACC_SENS_MAIN reads register 0x0f of device channel 6 and wants 0x6a (I: the WHO_AM_I of ST's
   LSM6DSL / LSM6DSM family); the bus is SPI over PER_SIO (`[PER_ACC_SPI] per_sio_open_error`, ACC_SPI). Samples land in
   the cache `0x62963f60..0x62963f6c` and bump the counter `0x6034d9d4`. Level Adjust's loop `0x5004ad13..0x5004add7`
@@ -604,17 +607,20 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   inits) is called once from the boot chain at `0x501e9060`; the lab runs none of them.
 - **Power-off (D calls, I meaning):** `0x50044d8e..0x50044de7` sends on a channel, arms channel A, tests the camera
   state, calls the IO expanders and ends with `0x5004dfd0` (`+0x9c` = 127). An HLE of the lever lets this run and ends
-  the session at that write instead of H-POWER's immediate close.
+  the session at that write instead of H-POWER's immediate close. Not reachable yet: with the lever's off decoded
+  natively (4.7.2) and the session left open, the application takes the code and the GUI stays in shooting for 5 s of
+  lab time, with no write to `+0x9c` (X); the sequence's owner, the power manager (PWR_MAIN), does not run.
 - **Steps (I):** 1, a host server for 0x01 / 0x81 / 0x06 / 0x86 with the clock ticking from lab time and S-NVRAM as the
   default: 4-6 days (done 2026-10-23 at the request API, 4.7.1; S-NVRAM stays opt-in, `docs/ROADMAP.md`). 2, the event /
-  port registers with IRQ 320 and UI_IN's registration: group-0 keys and the power lever natively, 3-5 days. 3, the
+  port registers with IRQ 320 and UI_IN's registration: group-0 keys and the power lever natively, 3-5 days (done
+  2026-10-23 for the keys and the lever's code, 4.7.2; the power-off sequence waits for the power manager). 3, the
   accelerometer at the PER_SIO seam or the sample cache: Level Adjust, level gauge, rotation, 1-1.5 weeks. 4, the eye
   sensor (I2C plus GPIO interrupt) driving the native chain to `0x50050efd`: 1 week. 5, the power manager: 2+ weeks,
   gated by hardware numbers. 6, a NAND register model and store F: 1-2 weeks, only for a full boot.
 - **First step: done** (2026-10-23). The PER_SCPU dispatch is read (4.7.1) and S-SCPU-MSG is replaced by S-SCPU, the
   request server of 4.7.1's last bullet: the four D commands answered (rx written, `+20` called), every other command
-  refused by its name, and `+0xe8 / +0xec` ticking with lab time. Next is step 2, the event / port registers and IRQ
-  320.
+  refused by its name, and `+0xe8 / +0xec` ticking with lab time. Step 2 followed the same day (4.7.2): the event and
+  port words with IRQ 320, UI_IN's group 0 natively. Next is step 3, the accelerometer.
 
 #### 4.7.1 The PER_SCPU request server (D unless tagged)
 
@@ -740,6 +746,60 @@ The flag and semaphore names are the object-name table's (D); the commands' mean
   - Not covered: PER_SCPU's start (`0x85 {2}`, the reset pulse, the watchdog), the inbound path (poll frames, the
     `0x08` / `0x11..0x13` / `0x40` messages), every other command. The faithful later seam is still an SCPU device at
     PER_SIO channel 2 and pins 102 / 103.
+
+#### 4.7.2 The event and port words, IRQ 320 and UI_IN's group 0 (D unless tagged)
+
+- **The words:** `+0x98` holds an event bit per port. The IRQ 320 handler `0x5004e1fd` reads it, keeps the byte at
+  `0xa32bff60`, writes the word back (no `+0xf4` commit) and calls every registered callback in order (count
+  `0xa32bff5c`, table `0xa32bff4c`); the SCPU init writes 127 to it before its commit (`0x5004dd87..89`). I: a write
+  clears the bits it has set (the handler's write-back would otherwise leave a level IRQ high, and 127 is all seven).
+  `+0xa0 + 4k` (k = 0..6) is port k: the port byte reader `0x5004df3f` packs bit 31 of each into bit k of a byte; the
+  port setter `0x5004e3fc` writes a configuration word built from an 11-byte record (bits 0, 1, 2, 4, 5, 6, 8..23 and
+  24..31 from its bytes 9, 7, 5, 8, 6, 4, 2..3 and 10; its meaning is ?), which UI_IN's port init `0x5014e3ab` applies to
+  the ports a table per board variant names (`(0x6034f958)` etc. by `(0xa32dab38)`, `0x5014e3ab..0x5014e4a1`), and the SCPU init writes `0xffee`, `0xffee`, `0xffee`, 7,
+  14, 14, `0xffee` (`0x5004dd55..81`). The handler's callers read a callback's events as a copy: `0x5004dfb4` returns
+  the kept byte and `0x5004dfbd` clears bits of it.
+- **The registration:** `0x5004ded1(a0 callback)` takes the hardware lock `0x5003b31e(0x09050009, 255)` (errlog
+  `0x19001001` when it fails) and adds the callback while fewer than 4 are registered (more are dropped silently).
+  Four sites register one: UI_IN's port init (`0x5014e514`: `0x5014e534`), PER_SCPU's task start (`0x5005b6a4`:
+  `0x5005c8d9`), and two modules' inits at `0x50055c8b` (`0x50055c9b`) and `0x50057bf2` (`0x50057c07`). The boot head
+  runs the SCPU init (`0x5000023a`, beside the IPI init's call `0x5000032b`), which clears the table and attaches IRQ 320
+  (`0x5004e1fd`) and 321 (`0x5004e243`, the channel-done word `+0x94`) at level 5 (`0x5004de8e..a9`).
+- **The callbacks pair event bit k with port bit k:** UI_IN's `0x5014e534` acts on any event (below); PER_SCPU's on
+  event bit 3 with port bit 3 low (the SCPU has a message, 4.7.1: it posts event 5 into PER_SCPU_RECEIVE from interrupt
+  context); `0x50055c9b` on bit 5 with port 5 low and `0x50057c07` on bit 4 with port 4 low (their modules are ?). UI_IN's
+  edge table `0x5014c4dc` (`0xa32dabac`, 100 bytes per index) matches an entry's event bit with its port bit too. So
+  ports 3..5 are request lines from the SCPU, active low.
+- **UI_IN's callback:** port byte and event byte; with any event bit set (and UI_IN's edge table, empty in the lab, run)
+  it stores the byte at `0x62988828`, pushes it as a 1-byte group-0 record (`0x5014cb74(1, 0, ...)`) and sets UI_IN's
+  flag with OlyEvSt or iOlyEvSt by `sns_ctx` (`0x5014e597..be`). Group 0's seven entries are the port's seven bits:
+  power `0x000c`, Fn lever `0x1223`, S1 `0x0100`, three code-0 entries (the request lines, which UI_IN drops), `0x1229`
+  (input spec section 2). UI_IN's start stage `0x5014bfc6` (via `0x5014b729`, boot call `0x50024b84`, the call after UI_IN's module init's
+  `0x50024b7d`) first calls
+  `0x5014e51e`, which sets group 0's old state `0xa32dade8` (and `0x62988828`) from the port byte: the levels at power-on
+  decode no code.
+- **Not reached:** the port scan `0x88` (`0x5005d36a`, 4.7.1's table) has two senders, UI_IN's module init
+  (`0x5014bfb2`) and a record handler of UI_IN's ring processor (`0x5014c7da`, a record kind the lab never pushes);
+  neither runs, so S-SCPU does not serve it (its rx[0] bit 0 would set group 4's `0x0400`; what the SCPU answers is ?).
+  `+0x9c` (request bits: `0x5004dffc` sets bit n, `0x5004e02c` reads one, seven calls each at `0x519d2153..0x519d221b`,
+  ?; `0x5004dfd0` writes 127 at the end of the power-off, 4.7) and `+0x94` / IRQ 321 (the transfer channels) have no
+  user in the lab and stay bus errors.
+- **Built (2026-10-23, `emu/src/dev/scpu.mjs`, `emu/src/lab/play.mjs`):** the device models `+0x98` (pending bits, a
+  write clears, I) and the port words (bit 31 the level the lab sets, the other bits 0, A-SCPU-4; a write is a bus
+  error, since nothing in the lab configures a port), and drives IRQ 320 while a bit is pending; a level change of
+  either direction sets the port's event bit (I: UI_IN decodes both edges of S1 and the levers from this one event).
+  The lab sets the levels through a doorbell (`0x89a40000`, command 1). At bring-up, H-SCPUIRQ sets the idle levels
+  (`0x3c`: S1 and the request lines high), writes 127 to `+0x98` as the init does and attaches IRQ 320 at level 5
+  through the firmware's attach; H-UIINPORT registers UI_IN's callback through `0x5004ded1` (any other registration is
+  refused, so PER_SCPU's callback, whose events would fill PER_SCPU_RECEIVE's 16 slots with no reader, cannot be
+  added) and runs `0x5014e51e`; group 0's inputs then set the levels (H-SCPUPORT) and the CPU takes IRQ 320 at the idle
+  point: handler, callback, push and flag run natively, and UI_IN decodes the change (X: S1 down and up post
+  `0x02000100` / `0x02010100`, the Fn lever `0x02021223` both ways, the power lever `0x0202000c`). No interrupt
+  delivery beyond the idle point is needed: a key arrives while the CPU idles. H-POWER still closes the session after
+  the lever's code (4.7, power-off). Bodies: E143, E146 and E147 (`src/fw/models.mjs` scpu_port: their inits,
+  registrations, callbacks, port readers and old-state inits match E143's instruction for instruction but for their
+  addresses and E147's errlog line number, D; E147 keeps the count at `0xa32bff60`); the E144 family's event and port words sit in its compacted map's storage and are not modelled, so
+  its bodies push group 0 with S-KEYBITS as before.
 
 ### 4.8 Card, file system and playback
 
@@ -964,7 +1024,8 @@ The order follows what each step unblocks: the keystones first, because each lat
    - the lens serial layer and parsers `0x502c0e79..`, `0x50122cac..`;
    - the ISC port formats from the A53 squashfs.
 2. **Cheap CPU 0 wins with no keystone dependency:** the SCPU request server with a ticking clock and S-NVRAM as the
-   default (4-6 days); the SCPU port registers and IRQ 320 for group-0 keys and the power lever (3-5 days); the
+   default (4-6 days); the SCPU port registers and IRQ 320 for group-0 keys and the power lever (3-5 days; both in
+   since 2026-10-23, 4.7.1 and 4.7.2, S-NVRAM opt-in and the power-off sequence open); the
    accelerometer (Level Adjust); HDMI EDID / HPD (about 1 week, the first test case for step 3's interrupts). They
    retire named stand-ins and fix visible defects: the frozen clock, lost settings, a GUI hang, the abandoned HDMI open.
 3. **Interrupt acceptance anywhere, then the machine-owned time model** (ROADMAP architecture phases 3 and 4). Every

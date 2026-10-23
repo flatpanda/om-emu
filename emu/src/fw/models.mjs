@@ -39,6 +39,11 @@ const G4SET_UNCHECKED = false;
 const NO_USB_POWER_OFF = ['power_off.usb_disconnect', 'S-NOPOWEROFF',
   'start power-off: the start state that avoids it is open'];
 
+// `scpu_port`: UI_IN's group 0 through the SCPU interface's port and event words (src/lab/play.mjs H-SCPUIRQ,
+// H-UIINPORT, H-SCPUPORT; docs/hle-gaps.md 4.7.2), in the model's disassembly notation: irq [handler, level], the IRQ
+// 320 handler the SCPU init attaches; register, the IRQ 320 callback registration; callback, UI_IN's callback, which
+// its port init registers; old_state, the init of UI_IN's group-0 old state from the port byte, which UI_IN's start
+// stage calls first. A body without it pushes group 0 as the other groups (S-KEYBITS)
 export const MODELS = {
   E143: {
     name: 'OM-1', bin: 'OLY_E_143_1900_0000_0000.BIN', version: '1.9', res_block: 'blk02000000.OE.0101.bin',
@@ -48,6 +53,10 @@ export const MODELS = {
     res_len: 10031072, res_sha256: '03a18d68e950ab0f55df3f1379d26ace4ee654a6e4a276bc8872daa1e9ebfa6c',
     panels: { tft: [900, 600], evf: [1600, 1200] },
     board: { family: 'E143' },
+    // the SCPU init 0x5004dc55 attaches 0x5004e1fd at level 5 (0x5004de8e..99); 0x5004ded1 adds a callback to its
+    // table of 4; UI_IN's port init 0x5014e3ab registers 0x5014e534 (0x5014e50e..14); UI_IN's start stage 0x5014bfc6
+    // calls 0x5014e51e (D)
+    scpu_port: { irq: [0x5004E1FD, 5], register: 0x5004DED1, callback: 0x5014E534, old_state: 0x5014E51E },
   },
   E146: {
     name: 'OM-1 II', bin: 'OLY_E_146_1300_0000_0000.BIN', version: '1.3', res_block: 'blk02000000.OE.0101.bin', checked: true,
@@ -66,6 +75,9 @@ export const MODELS = {
     // answer (src/lab/scpuserver.mjs S-SCPU; E143's [2, 0] and none): the time-zone record's write and read wrappers
     // at 0x5005c164 and 0x5005c171 pass index 2, byte 0 (D)
     scpu: { words: [[2, 0]], quiet: [] },
+    // as E143's (D): the SCPU init 0x5004f6d7 attaches 0x5004fc7f at level 5 (0x5004f910..1b); UI_IN's port init
+    // registers 0x50152295 (0x5015226f..75); its start stage calls 0x5015227f (0x5014fd27)
+    scpu_port: { irq: [0x5004FC7F, 5], register: 0x5004F953, callback: 0x50152295, old_state: 0x5015227F },
     extra_tasks: [
       0x501DC568,   // started by the display task init (E143 0x501c2f13 starts no task; E147 starts 0x501e3eca)
     ],
@@ -95,6 +107,10 @@ export const MODELS = {
     // answer (src/lab/scpuserver.mjs S-SCPU; E143's [2, 0] and none): the time-zone record's write and read wrappers
     // at 0x50057330 and 0x5005733d pass index 2, byte 0 (D)
     scpu: { words: [[2, 0]], quiet: [] },
+    // as E143's (D): the SCPU init attaches 0x5004f9bc at level 5 (0x5004f64c..57), its registration 0x5004f690 keeps
+    // its count at 0xa32bff60 (E143's 0xa32bff5c); UI_IN's port init registers 0x501595dc (0x501595b6..bc); its start
+    // stage calls 0x501595c6 (0x5015707b)
+    scpu_port: { irq: [0x5004F9BC, 5], register: 0x5004F690, callback: 0x501595DC, old_state: 0x501595C6 },
     extra_tasks: [
       0x501E3ECA,   // started by the display task init (0x501cfd03, E143 0x501c2f13 starts no task), X
     ],

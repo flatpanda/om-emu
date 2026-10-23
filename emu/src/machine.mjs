@@ -29,6 +29,8 @@ export class RspError extends Error {          // the debug stub's error reply (
 }
 const hex8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 const HLE_BASE = 0x89A30000, HLE_SIZE = 0x4000, HLE_MAGIC = 0x31454C48;
+// the lab's doorbell of the SCPU interface (src/dev/scpu.mjs): the input levels of its ports
+export const SCPU_DOORBELL = 0x89A40000;
 let generation = 0;
 const LONG_CONT = 50000;
 // The creation registry (src/debug/, the trace and snapshot gates): every function registered here is called with each
@@ -112,10 +114,10 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
     read: (a, w, dbg) => { const off = a - ISC; if (w !== 1 || (off % ISC_STRIDE)) unknown('isc', 'read', ISC, off, w, 0, dbg); return isc[off / ISC_STRIDE]; },
     write: (a, v, w, dbg) => { const off = a - ISC; if (w !== 1 || (off % ISC_STRIDE)) unknown('isc', 'write', ISC, off, w, v, dbg); isc[off / ISC_STRIDE] = v; } } });
   const lclock = new Clock();
-  const scpu = new Scpu(m, lclock);
   const bus = new Bus(m);
   bus.onRemap = windowRemapped;                // the decode slots of window pcs, the main-loop return (interp.mjs)
   const intc = new Intc(m);
+  const scpu = new Scpu(m, lclock, intc, SCPU_DOORBELL);
   const engine = new Engine(m, bus, intc);
   const vsc = new Vsc(m, lclock, intc, bus, rom);
   const timer = new Timer(m, lclock, intc);

@@ -6,6 +6,9 @@
 // player.mjs. The mutants (opts.mutant, the Player's --x-mutant: negative controls) sit at the sites they break.
 // Addresses are disassembly notation unless marked run-time.
 import { A, MODEL, ON_LAB_MODEL, MODEL_INFO, IMAGE_BASE, refuseUnmapped, fact } from '../fw/model.mjs';
+import { BOARD } from '../fw/board.mjs';
+import { SCPU_DOORBELL } from '../machine.mjs';
+import { SET_INPUTS } from '../dev/scpu.mjs';
 import { imageView } from '../fw/image.mjs';
 import { IIC_WAITS_E143 } from '../fw/facts.mjs';
 import * as D from './display.mjs';
@@ -53,6 +56,13 @@ export const G4_IMAGE = A(0x629887E4), JS_DIR_CODE = 0x1234, JS_QUERY = A(0x5042
 // a session is brought up: E143's does (X); a model's MODELS g4set gives its own with its evidence, and a model
 // without one is refused there
 const g4set = () => fact('g4set', true);
+// UI_IN's group 0 (the power lever, the Fn lever, S1, 0x1229 and three of the SCPU's request lines) through the SCPU
+// interface's port and event words (src/dev/scpu.mjs, board scpu.events) on a body that gives the firmware's part
+// (src/fw/models.mjs scpu_port; docs/hle-gaps.md 4.7.2), null elsewhere: the bring-up attaches IRQ 320 and registers
+// UI_IN's callback (H-SCPUIRQ, H-UIINPORT) and a group-0 input sets the ports' levels (H-SCPUPORT), so the IRQ's
+// handler, UI_IN's callback, its push and its flag run natively; a body without it pushes group 0 with S-KEYBITS
+const scpuPort = () => (BOARD.scpu.events && MODEL_INFO.scpu_port) || null;
+export const SCPU_PORT_GROUP = 0;
 export const JS_EV = [369, 370, 371, 372, 373, 374, 375, 376, 377];
 export const OLYQEWR = A(0x5002C151), TSND_DTQ = A(0x50016578);
 // every call of tsnd_dtq, which the guard on blocked sends observes: E143's 11 (a byte scan, D); a ported model's read by
@@ -293,7 +303,7 @@ export function uiin_layout(image) {
     }
     const entries = [];
     if (n) { const table = v.u32(list); for (let i = 0; i < n; i++) entries.push([Math.floor(i / bits), i % bits, v.u32(table + 8 * i), v.u8(table + 8 * i + 4), v.u8(table + 8 * i + 5)]); }
-    groups.push({ bytes, bits, entries });
+    groups.push({ bytes, bits, entries, old: v.u32(rec + 4) });
   }
   return { groups };
 }
@@ -685,6 +695,7 @@ export class PlaySession extends N.NavSession {
     this.tables = Tables.of(env.rom);
     apply_uiin_layout(env.rom);                    // the model's key matrix (E143: checked against CONTROLS)
     this.images = idle_images();
+    this.scpu_port = scpuPort();
     if (opts.mutant === 'monitor-inverted') set_bit(this.images[MONITOR_OPEN[0]], MONITOR_OPEN[1], MONITOR_OPEN[2], 0);   // the monitor reads closed: touches rejected
     this.pressed = new Set();
     this.shutter_held = new Set();
@@ -776,7 +787,8 @@ export class PlaySession extends N.NavSession {
     if (g4set() && (g4[0] !== this.images[4][0] || g4[1] !== this.images[4][1])) {
       throw new PlayError(`UI_IN's group-4 image (${h8(G4_IMAGE)}) ${bytesHex(g4)} is not the idle image ${bytesHex(this.images[4])}`);
     }
-    for (let g = 0; g < GROUP_BYTES.length; g++) if (GROUP_LIVE[g]) this.push_group(g);
+    if (this.scpu_port) this.scpu_port_bring_up();
+    for (let g = 0; g < GROUP_BYTES.length; g++) if (GROUP_LIVE[g] && !(this.scpu_port && g === SCPU_PORT_GROUP)) this.push_group(g);
     this.idle_codes = lab.uiin_codes.map(([, c]) => c);
     if (this.touch_on) this.touch_bring_up();
     if ((o.us_clock ?? 'lab') === 'lab') lab.sim.write(IRQ.TIMER_DEBUG + IRQ.T_USMODE, pack('<I', 1));
@@ -793,6 +805,35 @@ export class PlaySession extends N.NavSession {
     this.end('S-CAMAPP start', 'camapp', [], [], { camapp: this.camapp.status() });
     if ((o.start ?? 'shooting') === 'menu') { this.key('menu', 'down'); this.key('menu', 'up'); }
   }
+  // H-SCPUIRQ: what the SCPU init (not run) does for the event word: the ports at the idle image's levels, their
+  // events cleared as the init clears them (127 to the event word), IRQ 320 attached to its handler at the init's level
+  // through the firmware's attach (checked as H-IPIINIT's). H-UIINPORT: UI_IN's callback registered through the
+  // firmware's registration, as UI_IN's port init (not run) registers it, and group 0's old state set from the port
+  // byte by the firmware's own init, which UI_IN's start stage (not run) calls first: group 0 then decodes no code at
+  // bring-up. Any other registration is refused: PER_SCPU's callback, for one, would post its port event into a queue
+  // no task reads (its slot pool runs dry, docs/hle-gaps.md 4.7.2)
+  scpu_port_bring_up() {
+    const lab = this.lab, ev = BOARD.scpu.events, { irq: [handler, level], register, callback, old_state } = this.scpu_port;
+    const g0 = uiin_layout(lab.image).groups[SCPU_PORT_GROUP];
+    if (g0.bytes !== 1 || g0.bits !== ev.count) throw new PlayError(`H-UIINPORT: UI_IN's group ${SCPU_PORT_GROUP} is ${g0.bytes} bytes of ${g0.bits} bits, not the port byte's ${ev.count} bits`);
+    const port = this.images[SCPU_PORT_GROUP][0];
+    this.port_levels(port);
+    lab.cpu_store(MM.SCPU + ev.pending, (1 << ev.count) - 1);
+    const r = lab.call(IRQ.ATTACH_WRAPPER, { d0: ev.irq, d1: level, a0: runtime(handler) }, null, null, 20000);
+    const lv = lab.nk.intc.level(ev.irq), table = lab.sim.u32(IRQ.HANDLER_TABLE + 4 * ev.irq);
+    if (r.d0 !== 0 || lv !== 1 << level || table !== runtime(handler)) {
+      throw new PlayError(`H-SCPUIRQ: attach(${ev.irq}, ${level}, ${h8(handler)}) = ${r.d0}, level register 0x${lv.toString(16)}, handler ${h8(table)}`);
+    }
+    lab.observe(register, (l, r2) => {
+      if (r2.a0 !== runtime(callback)) throw new PlayError(`IRQ ${ev.irq} callback ${h8(disasm(r2.a0))} registered from ${where(r2.mdr)}: only UI_IN's (${h8(callback)}) is modelled`);
+    }, 'obs-scpu-callback');
+    lab.call(register, { a0: runtime(callback) }, null, null, 20000);
+    lab.call(old_state, null, null, null, 2000);
+    const old = lab.sim.read(g0.old, 1)[0];
+    if (old !== port) throw new PlayError(`H-UIINPORT: group ${SCPU_PORT_GROUP}'s old state (${h8(g0.old)}) is 0x${fx(old, 2)} after ${h8(old_state)}, not the port byte 0x${fx(port, 2)}`);
+  }
+  // the SCPU interface's port levels (bit k port k), through the lab's doorbell (src/dev/scpu.mjs)
+  port_levels(levels) { this.lab.cpu_store(SCPU_DOORBELL, (SET_INPUTS << 24 | levels) >>> 0); }
   takeover_bring_up() {
     const lab = this.lab;
     if (lab.b2_trace === undefined) lab.install_b2_observers();
@@ -856,8 +897,10 @@ export class PlaySession extends N.NavSession {
     this.settle('H-TPSTART');
   }
   // ---- primitives
-  // S-KEYBITS: push group g's image with 0x5014cb74 and set UI_IN's flag; returns [codes forwarded, codes decoded].
+  // Group g's image to UI_IN: S-KEYBITS, or for group 0 on a body with the SCPU's port path H-SCPUPORT (below); returns
+  // [codes forwarded, codes decoded].
   push_group(g) {
+    if (this.scpu_port && g === SCPU_PORT_GROUP) return this.port_group();
     const lab = this.lab;
     const n0 = lab.uiin_codes.length, d0 = lab.uiin_decoded.length;
     const data = this.images[g].slice();
@@ -871,6 +914,17 @@ export class PlaySession extends N.NavSession {
     if (rc !== K.E_OK) throw new PlayError(`S-KEYBITS: set_flg(${flag}, 1) = ${rc}`);
     this.settle(`UI_IN group ${g}`);
     this.sync_group4();
+    return [lab.uiin_codes.slice(n0).map(([, c]) => c), lab.uiin_decoded.slice(d0).map(([, c]) => c)];
+  }
+  // H-SCPUPORT: group 0's image as the SCPU interface's port levels; the port events raise IRQ 320, which the CPU takes
+  // natively at the idle point, and its handler runs UI_IN's callback, which pushes the port byte and sets UI_IN's flag
+  port_group() {
+    const lab = this.lab;
+    const n0 = lab.uiin_codes.length, d0 = lab.uiin_decoded.length;
+    this.port_levels(this.images[SCPU_PORT_GROUP][0]);
+    this.settle(`UI_IN group ${SCPU_PORT_GROUP} (SCPU port)`);
+    const pending = lab.sim.u32(MM.SCPU + BOARD.scpu.events.pending);
+    if (pending) throw new PlayError(`H-SCPUPORT: the SCPU's events 0x${fx(pending, 2)} are still pending after the settle: IRQ ${BOARD.scpu.events.irq} was not taken`);
     return [lab.uiin_codes.slice(n0).map(([, c]) => c), lab.uiin_decoded.slice(d0).map(([, c]) => c)];
   }
   sync_group4() {

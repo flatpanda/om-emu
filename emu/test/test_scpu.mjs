@@ -7,8 +7,13 @@
 //              completion called with a0 = the argument, or a plain return without one) and a body's quiet write, and
 //              refuses another command, a size its senders do not use, an unlisted word and a request outside a task's
 //              context
+//   portTests  (on a board with scpu.events) a port reads its level in bit 31; a level change, either way, sets the
+//              port's event bit and raises IRQ 320; a write clears the bits it names and drops the line once none is
+//              pending; a port write, an event bit past the ports and a doorbell store other than the command are
+//              bus errors
 //   node emu/test/test_scpu.mjs
-import { createMachine } from '../src/machine.mjs';
+import { createMachine, SCPU_DOORBELL } from '../src/machine.mjs';
+import { SET_INPUTS } from '../src/dev/scpu.mjs';
 import { BUS } from '../src/core/mem.mjs';
 import { BOARD } from '../src/fw/board.mjs';
 import { IMAGE_BASE } from '../src/fw/model.mjs';
@@ -37,6 +42,30 @@ function clockTests(ok) {
   ok(scpu.read(S, 4, true) === 51, 'a debugger read sees the clock as the CPU does');
   ok(throwsAs(() => wr(P, 1), BUS), 'a nonzero phase write is a bus error');
   ok(rd(S) === 51 && rd(P) === 0, 'the refused write changes nothing');
+}
+
+function portTests(ok) {
+  const ev = BOARD.scpu.events;
+  if (!ev) return;
+  const m = createMachine({ rom: new Uint8Array(0x100), insnLimit: 0 });
+  const { scpu, intc } = m.devices;
+  const rd = (o) => scpu.read(o, 4, false), wr = (o, v) => scpu.write(o, v, 4, false), port = (k) => rd(ev.ports + 4 * k);
+  const bell = (v) => scpu.doorbell(SCPU_DOORBELL, v, 4, false);
+  ok(rd(ev.pending) === 0 && port(2) === 0 && intc.line[ev.irq] === 0, 'the levels and the events start at 0');
+  bell((SET_INPUTS << 24 | 0x3c) >>> 0);
+  ok(port(2) === 0x80000000 && port(1) === 0 && rd(ev.pending) === 0x3c && intc.line[ev.irq] === 1, `levels 0x3c: port 2 0x${port(2).toString(16)}, events 0x${rd(ev.pending).toString(16)}`);
+  wr(ev.pending, 0x0c);
+  ok(rd(ev.pending) === 0x30 && intc.line[ev.irq] === 1, 'a write clears the bits it names');
+  wr(ev.pending, 0x7f);
+  ok(rd(ev.pending) === 0 && intc.line[ev.irq] === 0, 'the line drops with the last pending bit');
+  bell((SET_INPUTS << 24 | 0x38) >>> 0);
+  ok(rd(ev.pending) === 0x04 && intc.line[ev.irq] === 1 && port(2) === 0, 'a falling level sets its event bit too');
+  bell((SET_INPUTS << 24 | 0x38) >>> 0);
+  ok(rd(ev.pending) === 0x04, 'the same levels set no bit');
+  ok(throwsAs(() => wr(ev.ports, 0x80000000), BUS), 'a port write is a bus error');
+  ok(throwsAs(() => wr(ev.pending, 1 << ev.count), BUS), 'an event bit past the ports is a bus error');
+  ok(throwsAs(() => bell(0x3c), BUS) && throwsAs(() => bell((SET_INPUTS << 24 | 1 << ev.count) >>> 0), BUS), 'a doorbell store other than the command is a bus error');
+  ok(scpu.read(ev.pending, 4, true) === 0x04 && throwsAs(() => scpu.write(ev.pending, 4, 4, true), BUS), 'a debugger reads the events and cannot clear them');
 }
 
 function memoryTests(ok) {
@@ -111,6 +140,7 @@ export function scpuUnits() {
   let checks = 0;
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
   clockTests(ok);
+  portTests(ok);
   memoryTests(ok);
   serverTests(ok);
   return { checks, bad };
@@ -118,7 +148,7 @@ export function scpuUnits() {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const r = scpuUnits();
-  console.log(`SCPU clock and S-SCPU: ${r.checks - r.bad.length}/${r.checks}`);
+  console.log(`SCPU clock, ports and S-SCPU: ${r.checks - r.bad.length}/${r.checks}`);
   r.bad.forEach((x) => console.log('  ', x));
   process.exit(r.bad.length ? 1 : 0);
 }

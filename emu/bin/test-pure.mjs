@@ -48,7 +48,7 @@ report('page after a stop', await pageTests());
 report('scene stand-in (S-SCENE)', sceneUnits());
 report('command-line parser', argsTests());
 report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnits());
-report('SCPU clock and request server (S-SCPU)', scpuUnits());
+report('SCPU clock, ports and request server (S-SCPU)', scpuUnits());
 const fa = factsTests();
 report(`firmware facts (${fa.models} unpacked main blocks)`, fa);
 const pu = purity();

@@ -8,9 +8,10 @@
 // (test_debug.mjs), the .BIN unpacker (test_unpack.mjs, needing $OM_FW_DIR or $OM_BIN, else counted as a failure),
 // the browser player's pure parts, its node host and its Worker in a node worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
-// (test_camapp.mjs) and the firmware rules of src/fw/facts.mjs (test_facts.mjs). The fixtures they compare with are
-// emu's own (test/fixtures, checks/fixtures, golden.json): a deliberate behaviour change that one of them pins is
-// re-recorded from emu with its reason.
+// (test_camapp.mjs), the firmware rules of src/fw/facts.mjs (test_facts.mjs) and the firmware map (test_fwmap.mjs:
+// the machine's coverage option, the static map's determinism and pinned headline, the labels' keys, run.mjs under
+// OM_COVERAGE). The fixtures they compare with are emu's own (test/fixtures, checks/fixtures, golden.json): a
+// deliberate behaviour change that one of them pins is re-recorded from emu with its reason.
 //   node emu/bin/test.mjs        (needs the unpacked firmware and emu/golden.json)
 import fs from 'node:fs';
 import { vectors } from '../test/test_vectors.mjs';
@@ -135,6 +136,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipp
   console.log(`lens and exposure plan (S-LENS, S-EXPOSE) in play: ${ex.checks - ex.bad.length}/${ex.checks}`);
   ex.bad.forEach((x) => console.log('  ', x));
   bad += ex.bad.length;
+}
+// the firmware map (bin/fwmap.mjs) and the machine's coverage option
+{
+  const { fwmapUnits, fwmapFirmware } = await import('../test/test_fwmap.mjs');
+  const fu = fwmapUnits(), ff = await fwmapFirmware();
+  console.log(`firmware map: units ${fu.checks - fu.bad.length}/${fu.checks}; static map, labels and OM_COVERAGE ${ff.checks - ff.bad.length}/${ff.checks}${ff.skipped.length ? `, ${ff.skipped.length} SKIPPED (no E143 main block)` : ''}`);
+  [...fu.bad, ...ff.bad, ...ff.skipped.map((x) => `SKIPPED ${x}`)].forEach((x) => console.log('  ', x));
+  bad += fu.bad.length + ff.bad.length + ff.skipped.length;
 }
 const fa = factsTests();
 console.log(`firmware facts (${fa.models} unpacked main blocks): ${fa.checks - fa.bad.length}/${fa.checks}`);

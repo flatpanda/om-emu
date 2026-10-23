@@ -11,6 +11,7 @@ import { WrongFirmware } from '../../src/fw/labfw.mjs';
 import { MODEL_INFO } from '../../src/fw/model.mjs';
 import { romPath, resPath } from '../../src/fw/models.mjs';
 import { resPrefix } from '../../src/fw/resprefix.mjs';
+import { coverageOption } from './coverage.mjs';
 
 export const REPO = path.resolve(new URL('../../../', import.meta.url).pathname);
 // the checks' own fixtures: their pinned notes, the VSC register header and class tables, check_perf's P7 address list
@@ -65,9 +66,10 @@ export function labEnv(extra = {}) {
 
 // The machine options of a run (src/lab/sim.mjs env.machine): OM_MACHINE, white-space separated NAME=VALUE pairs,
 // mutant=N (a negative control, a non-negative integer) and oneInsn=0|1 (the one-instruction mode). Parsed and checked
-// at the first use; formatMachine writes the same form for a child's environment.
+// at the first use; formatMachine writes the same form for a child's environment. With OM_COVERAGE set, also the
+// realm's coverage collector (checks/lib/coverage.mjs).
 let MACHINE = null;
-export function envMachine() { return MACHINE ??= parseMachine(process.env.OM_MACHINE ?? ''); }
+export function envMachine() { return MACHINE ??= { ...parseMachine(process.env.OM_MACHINE ?? ''), ...coverageOption() }; }
 export function parseMachine(text) {
   const out = {};
   for (const item of text.split(/\s+/).filter(Boolean)) {

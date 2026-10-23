@@ -31,6 +31,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import os from 'node:os';
 import { checkImage, checkBlock } from '../checks/lib/env.mjs';
+import { coverageEnv } from '../checks/lib/coverage.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
 import { MODEL_INFO } from '../src/fw/model.mjs';
 import { romPath, resPath } from '../src/fw/models.mjs';
@@ -74,6 +75,7 @@ export async function runScenarios(names, { rom, resBlock, trace = false, onSess
   let pending = null, current = null;
   const env = {
     rom, createHash, ...(clock ? { clock } : {}), ...(replayStats ? { replayStats } : {}), ...(slice ? { slice } : {}),
+    ...coverageEnv(),                         // OM_COVERAGE (bin/fwmap.mjs cover): the machine's coverage option
     // the WINDOWS token's zlib (level 6) and the replay's inflate of its 'z' fields (scenarios/session_replay.mjs)
     deflate: (b, level) => new Uint8Array(zlib.deflateSync(b, { level })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)),
     ...(onAction ? { onAction } : {}),

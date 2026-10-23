@@ -22,7 +22,7 @@
 // and a pc whose fetch faults never has a TB, so an arrival there passes the main loop, which looks before the fetch.
 import { Fault, TbUndecidable, CODEPG, TOTAL, IO, CST, MmioFetch, FETCH, codePhys, cb, setSmcHook, ld8, ld16, ld32, st8, st16, st32, WHIT } from './mem.mjs';
 import { R, S, D0, A0, SP, PC, PSW, LIR, LAR, FAULT, UNDEF, HAZ, Z, N, C, V, CC_USES, ccEval, cv, s8, s16, insnLength,
-  step } from './cpu.mjs';
+  step, CV } from './cpu.mjs';
 
 export const RUN_BP = 1, RUN_FAULT = 2, RUN_LIMIT = 3, RUN_VISIT = 4;
 const NEAR_LIMIT = 64;   // the TB instruction cap: within it of insn-limit every instruction is its own TB
@@ -268,6 +268,7 @@ function decode(pc, i) {
     if (e instanceof Fault) { R[FAULT] = e.code; e.done = true; }
     throw e;                                                    // fetch fault: not counted
   }
+  if (CV !== null) CV(pc);                                      // the coverage hook (cpu.mjs): pc runs next
   const src = (op >> 2) & 3, dst = op & 3;
   let k = K.FB, x = 0, y = 0, imm = 0;
   if (op <= 0x0f) { if ((op & 3) === 0) { k = K.CLR; x = src; } }

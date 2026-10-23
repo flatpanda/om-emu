@@ -75,6 +75,7 @@ export class HLE {
     this.builtins_seen = 0;
     this.drained = 0;
     this.stubObserver = null;          // capture's on_stub patch (tracer)
+    this.coverage = env.machine?.coverage ?? null;     // the machine's coverage collector: every stand-in that fires
     if (this.session) this.session.attach(this);
   }
   close() { if (this.session) this.session.close(this, () => this.sim.close()); else this.sim.close(); }
@@ -219,6 +220,7 @@ export class HLE {
       if (hook && !result.fault) {
         const [stub, name] = hook;
         used += 1;
+        if (this.coverage !== null) this.coverage.stub(pc, name);
         this.on_stub(name);
         stub(this, result);
         continue;

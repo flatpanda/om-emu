@@ -31,6 +31,12 @@ to screen, devices, stops and harness layers), the checks judged on their own ex
 `test/fixtures/`, the checks' pinned data in `checks/fixtures/`). `bench`, `snapgate` and `webgate` compare a run
 with itself (slicing, snapshot detours, the browser Worker against node).
 
+Measurement sits beside verification: `bin/fwmap.mjs` (`fwmap/`) maps the main block statically into functions and
+source modules, runs golden's workload with the machine's `coverage` option on (`OM_COVERAGE`,
+`checks/lib/coverage.mjs`), and reports what ran per module and per subsystem block (the labels of
+`fwmap/E143.labels.json`). The option is a hook in the core: `step()` and the interpreter's decode call the collector
+with the pc, HLE's stub dispatch with the stand-in's name; null by default, so a run without it is unchanged.
+
 ```
 hosts    web/  page.mjs <-> worker.mjs + Driver      host/  playcli (HTTP) <-> labworker (Player.run)      bin/debug (CLI, JSON-lines)
            |                                           |                                                    |
@@ -46,6 +52,7 @@ core     cpu.mjs (R, S, step)   interp.mjs (decode cache, run, TB-look irq timin
 dev      intc  timer(+Clock)  vsc/vsccompose  engine  bus  stub  scpu   (debug windows + doorbell MMIO in guest space)
 support  fw/ (olyfw, labfw, models, ports, xmap, facts, board)   util/ (bytes, hex, show, equal, parse, tally, tracejson)   trace/   debug/
 verify   test/ (bin/test.mjs, bin/test-pure.mjs, fixtures/)   checks/ (runs.json, fixtures/)   scenarios/   golden.json   bin/*gate
+measure  bin/fwmap.mjs + fwmap/ (static map, coverage via createMachine's coverage option, report by module and block)
 ```
 
 ## Design rules
@@ -157,7 +164,7 @@ planned in `docs/ROADMAP.md` "Emulator architecture".
 | F16 instruction semantics are implemented twice, with hand-maintained derived lists | partly fixed: `test/test_core.mjs` runs the two in lockstep and checks the length and transfer tables |
 | F17 lab features form an eight-class inheritance chain | signature drift fixed; composition instead of the chain is phase 2 |
 | F18 negative-control mutants are compiled into product code | open, phase 2 |
-| F19 machine options travel through a realm-global array and import side effects | partly fixed: the Simulator passes `env.machine` (`mutant`, `oneInsn`) to `createMachine` and `OM_MACHINE` is parsed at first use; the options still travel in the untyped env bag (F13) |
+| F19 machine options travel through a realm-global array and import side effects | partly fixed: the Simulator passes `env.machine` (`mutant`, `oneInsn`, `coverage`) to `createMachine` and `OM_MACHINE` (and `OM_COVERAGE`) is parsed at first use; the options still travel in the untyped env bag (F13) |
 | F20 board and SoC constants are hard-coded across core, memory and interpreter | largely addressed by the multi-model work: per-model boards (`src/fw/board.mjs`) and address tables (`src/fw/ports.mjs`) |
 | F21 devices self-register into the global address table; the lab stub is special-cased | open, conditional |
 | F22 the debug-window and doorbell ABI is defined on both the device and the harness side | open, phase 2 |

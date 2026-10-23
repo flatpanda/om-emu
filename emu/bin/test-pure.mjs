@@ -4,8 +4,10 @@
 // (test/fixtures/isa_vectors.json) on both engines, the core's two tiers in lockstep and its length tables
 // (test_core.mjs), the pure sha256, the router's request bodies, the browser player's driver, result box and page
 // after a stop, the scene stand-in's model, the decode-cache checks, the command-line parser of the checks and tools
-// (test_args.mjs), the worker purity rule (and no py-prefixed module or name) and the firmware rules of
-// src/fw/facts.mjs (test_facts.mjs: firmware-optional, each unpacked main block checked against its MODELS entry).
+// (test_args.mjs), the worker purity rule (and no py-prefixed module or name), the firmware rules of
+// src/fw/facts.mjs (test_facts.mjs: firmware-optional, each unpacked main block checked against its MODELS entry) and
+// the firmware map's units (test_fwmap.mjs: the machine's coverage option off and on, fwmap's decoder against the
+// interpreter's transfer forms, the coverage union, the block aggregation).
 // bin/test.mjs runs all of these too, with everything else.
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
@@ -16,6 +18,7 @@ import { shaTests, bodyTests, driverTests, resultBoxTests, pageTests } from '../
 import { sceneUnits } from '../test/test_scene.mjs';
 import { factsTests } from '../test/test_facts.mjs';
 import { argsTests } from '../test/test_args.mjs';
+import { fwmapUnits } from '../test/test_fwmap.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -42,6 +45,7 @@ report('wait_result', await resultBoxTests());
 report('page after a stop', await pageTests());
 report('scene stand-in (S-SCENE)', sceneUnits());
 report('command-line parser', argsTests());
+report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnits());
 const fa = factsTests();
 report(`firmware facts (${fa.models} unpacked main blocks)`, fa);
 const pu = purity();

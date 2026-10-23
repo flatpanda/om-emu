@@ -37,13 +37,13 @@ const le4 = (v) => new Uint8Array([v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff
 
 export class Simulator {
   // env: { rom, createHash, clock?, stats? (a Stats or null), slice? (instructions per continue slice), onSlice?,
-  // machine? (the machine options passed to createMachine: mutant, a negative control's number, and oneInsn, the
-  // one-instruction mode; absent, neither) }; insnLimit: None keeps 1,000,000, 0 disables. keepStderr: every stderr
-  // line is kept (stderrLines()).
+  // machine? (the machine options passed to createMachine: mutant, a negative control's number, oneInsn, the
+  // one-instruction mode, and coverage, an execution-coverage collector; absent, none) }; insnLimit: None keeps
+  // 1,000,000, 0 disables. keepStderr: every stderr line is kept (stderrLines()).
   constructor(env, insnLimit = null, keepStderr = false) {
     this.env = env;
-    const { mutant = 0, oneInsn = false } = env.machine ?? {};
-    this.m = createMachine({ rom: env.rom, insnLimit: insnLimit === null ? 1000000 : insnLimit, ...(env.clock ? { clock: env.clock } : {}), mutant, oneInsn, keepStderr });
+    const { mutant = 0, oneInsn = false, coverage = null } = env.machine ?? {};
+    this.m = createMachine({ rom: env.rom, insnLimit: insnLimit === null ? 1000000 : insnLimit, ...(env.clock ? { clock: env.clock } : {}), mutant, oneInsn, keepStderr, coverage });
     this.breakpoints = new Set();
     this.known_insns = 0; this.ran = false;
     this.fast = false;

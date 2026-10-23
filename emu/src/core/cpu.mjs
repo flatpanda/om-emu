@@ -150,6 +150,12 @@ function udfCompare(dn, dm, pc) {
 // one-instruction mode, in which every instruction is a one-instruction TB run by step()).
 let XT = null;
 export function setExecTrace(f) { XT = f; }
+// The coverage hook (createMachine's coverage option, bin/fwmap.mjs cover): CV(pc) once per instruction that reaches
+// step(), after its code fetch; interp.mjs calls it when it decodes a pc into the cache, so every pc an inline form runs
+// is marked before it first runs. A pc may be marked more than once. null (the default): one test per helper step and
+// per decode.
+export let CV = null;
+export function setCoverage(f) { CV = f; }
 
 // ---- step: one instruction, all memory accesses before register writes
 // refetch: an instruction fetched from MMIO (interp.mjs, mem.mjs cbIo): after the translator's reads of every byte the
@@ -168,6 +174,7 @@ export function step(refetch = false) {
     } else for (let i = 2, ln = insnLength(op, p); i < ln; i++) cb(pc + i);
   } catch (e) { if (e instanceof Fault) { R[FAULT] = e.code; e.done = true; } throw e; }   // code fetch: not counted
   if (XT !== null) XT(pc, op);
+  if (CV !== null) CV(pc);
   let src = (op >> 2) & 3, dst = op & 3;
   const hazard = R[HAZ];
   let newHazard = hazard ? hazard - 1 : 0;

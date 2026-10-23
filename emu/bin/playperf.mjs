@@ -16,6 +16,7 @@ import { loadImage, loadBlock } from './run.mjs';
 import { Player } from '../src/lab/player.mjs';
 import { PLAYER_PARSER, WORKLOAD_DIGEST, workloadText } from '../scenarios/session_replay.mjs';
 import { show } from '../src/util/show.mjs';
+import { coverageEnv } from '../checks/lib/coverage.mjs';
 
 export const PLAY_SCRIPT = [['shoot 3 s lab', 'idle', 3000], ['MENU open', 'key', 'menu'], ['menu 2 s lab', 'idle', 2000],
   ['MENU close', 'key', 'menu'], ['OK -> SCP', 'key', 'ok'], ['SCP 2 s lab', 'idle', 2000], ['MENU close', 'key', 'menu']];
@@ -87,7 +88,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
   const load = os.loadavg()[0];
   const t0 = performance.now();
-  const env = { rom: loadImage(), resBlock: loadBlock(), createHash, ...(slice !== undefined ? { slice } : {}) };
+  const env = { rom: loadImage(), resBlock: loadBlock(), createHash, ...(slice !== undefined ? { slice } : {}), ...coverageEnv() };
   const res = playWorkload(env);
   const { hashed, ...shown } = res;
   if (dump) fs.writeFileSync(dump, hashed);

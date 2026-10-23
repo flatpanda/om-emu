@@ -3,8 +3,8 @@
 // passed in from bin/ (or, in the Worker, src/util/sha256.mjs and the File the page hands over). Plus the import rules
 // below, and web/ imports only src/, scenarios/ and web/. host/ (the node host of bin/play.mjs
 // and bin/nav.mjs, node-only) is imported by none of src/, scenarios/, refs/ and web/.
-// And the retired py-prefixed helpers stay retired: no module under src/, scenarios/, refs/, web/, host/, checks/ or
-// bin/ is named py*.mjs, imports one, or uses a name of py and a capital letter outside its comments.
+// And the retired py-prefixed helpers stay retired: no module under src/, scenarios/, refs/, web/, host/, checks/,
+// fwmap/ or bin/ is named py*.mjs, imports one, or uses a name of py and a capital letter outside its comments.
 //   node emu/test/test_pure.mjs
 import fs from 'node:fs';
 import path from 'node:path';
@@ -39,7 +39,7 @@ function retiredNames(rel, code) {
 export function purity() {
   const bad = [];
   let files = 0;
-  for (const dir of [...PURE, 'host', 'checks', 'bin']) {
+  for (const dir of [...PURE, 'host', 'checks', 'fwmap', 'bin']) {
     const walk = (d) => {
       for (const e of fs.readdirSync(d, { withFileTypes: true })) {
         const p = path.join(d, e.name), rel = path.relative(ROOT, p);
@@ -64,7 +64,7 @@ export function purity() {
 }
 if (import.meta.url === `file://${process.argv[1]}`) {
   const r = purity();
-  console.log(`purity: ${r.files} modules in src/, scenarios/, refs/, web/, host/, checks/ and bin/, ${r.bad.length} violations`);
+  console.log(`purity: ${r.files} modules in src/, scenarios/, refs/, web/, host/, checks/, fwmap/ and bin/, ${r.bad.length} violations`);
   r.bad.forEach((x) => console.log('  ', x));
   process.exit(r.bad.length ? 1 : 0);
 }

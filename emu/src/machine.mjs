@@ -6,7 +6,7 @@ import { BOARD } from './fw/board.mjs';
 import { IMAGE_BASE } from './fw/model.mjs';
 import * as mem from './core/mem.mjs';
 import { Fault, Unported, TbUndecidable, K_RAM, K_ROM, K_ROMD, K_MMIO, BUS, addRegion, allocWindow } from './core/mem.mjs';
-import { R, S, PC, PSW, UNDEF, HAZ, HI, UC, UD, UV, resetCpu, execInterrupt, getRegs, setRegs, limitFault, trapLines, admits, setExecTrace } from './core/cpu.mjs';
+import { R, S, PC, PSW, UNDEF, HAZ, HI, UC, UD, UV, resetCpu, execInterrupt, getRegs, setRegs, limitFault, trapLines, admits, setExecTrace, setCoverage } from './core/cpu.mjs';
 import { run, resetInterp, configureInterp, setBreakpoints, setWatch, windowRemapped, stepAny, setForceHelper, flushDecode, interpState, setInterpState, RUN_VISIT, RUN_LIMIT, RUN_FAULT, RUN_BP } from './core/interp.mjs';
 import { Intc, setIrqTrace } from './dev/intc.mjs';
 import { snapshotDevices, restoreDevices, devicesBytes } from './debug/snapshot.mjs';
@@ -41,9 +41,11 @@ export function onMachine(fn) {
 
 // options: mutant (a negative control: check_irq's 20..31 in the CPU, INTC and timer, check_perf's 1 to 9 in the
 // interpreter; 0 none), oneInsn (the one-instruction mode: one instruction per TB), keepStderr (keep
-// every stderr line: MenuLab.scpu_commands reads it whole; default a 2,000-line ring).
+// every stderr line: MenuLab.scpu_commands reads it whole; default a 2,000-line ring), coverage (an execution-coverage
+// collector, bin/fwmap.mjs cover: its mark(pc) is called with the pc of every instruction the CPU runs, at least once
+// each, and HLE calls its stub(pc, name) for every stand-in that fires; null, the default: none, and nothing changes).
 export const WATCH_LOG_MAX = 200000;
-export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 1000000, clock = () => performance.now(), mutant = 0, oneInsn = false, keepStderr = false } = {}) {
+export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 1000000, clock = () => performance.now(), mutant = 0, oneInsn = false, keepStderr = false, coverage = null } = {}) {
   if (dramBytes > mem.DRAM_MAX || dramBytes < 64 << 20) throw new Error(`om-emu: DRAM must be 64..${mem.DRAM_MAX >> 20} MiB`);
   const myGen = ++generation;
   const tCreate = clock();
@@ -53,6 +55,7 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   S.mutant = mutant | 0;
   S.vectorPage = BOARD.vector_page;              // the board's interrupt vectors' page (src/fw/board.mjs)
   configureInterp({ mutant, oneInsn });
+  setCoverage(coverage === null ? null : coverage.mark);
   const stderrLines = [];
   let stderrBase = 0;                           // global index of stderrLines[0] (older lines are dropped)
   // guestMs: time inside cont/step, the OSD engine's synchronous command execution (engineMs) and the VSC's COMPOSE

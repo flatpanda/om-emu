@@ -101,6 +101,7 @@ node emu/bin/modelcheck.mjs [MODEL ...]          # the ported models' smoke test
 node emu/bin/port.mjs all                        # re-port every model after a change to the rules, src/lab or overrides
 node emu/bin/xto.mjs E144 0x501e04b7             # where an E143 code address is in a ported model (xwhere.mjs: back)
 node emu/bin/fw-survey.mjs survey                # the multi-model survey's columns for every .BIN in fw/ and fw/old/
+node emu/bin/fwmap.mjs                           # the firmware map: static map, coverage run, report (about 5 min)
 ```
 
 `bin/play.mjs` is the play server and `bin/nav.mjs` the scripted menu tool (`host/playcli.mjs`, `host/navcli.mjs`). The
@@ -142,6 +143,47 @@ separated `mutant=N` (a negative control) and `oneInsn=0|1` (the one-instruction
 check_menu's and check_nav's `--jobs N` run the sessions in N `worker_threads`; `--mutants` runs the check as a node
 child under each mutant; check_menu's and check_nav's first check that a child spinning on `bra .` and killed on timeout
 leaves no child process and no temporary directory.
+
+## The firmware map
+
+`bin/fwmap.mjs` measures how much of the E143 main block emu runs, per source module and per subsystem block, so that a
+modelling step can be measured against the one before. Its subcommands (default `all`, the three in order):
+
+```sh
+node emu/bin/fwmap.mjs static          # the static map: functions, their modules and features (a few seconds)
+node emu/bin/fwmap.mjs cover           # golden's workload under OM_COVERAGE, and the union of what it ran (about 4 min)
+node emu/bin/fwmap.mjs report          # the map joined with the coverage and the labels: emu/out/fwmap/E143/report/
+node emu/bin/fwmap.mjs cover --scenarios shoot-tft,menu-tft --checks none     # a smaller workload
+node emu/bin/fwmap.mjs report --without-mutants --top 20
+```
+
+**static** (`fwmap/discover.mjs`, `fwmap/static.mjs`) finds the code by recursive descent from the reset and CPU 1..3
+entries, the static task tables and the interrupt vectors, then from validated code pointers (`mov imm32` in code,
+aligned words in data, jump tables), each kind of evidence drained before the next, and splits it into functions. A
+function's module is the source file whose `__FILE__` string it loads, or a `Class::method` string's class; the
+functions between two of one module take it (contiguity, call affinity at the edges), and what is left forms gap
+pieces named `gap@<first entry>`. The instruction lengths are emu's (`src/core/cpu.mjs insnLength`); the validity of an
+encoding is the ISA spec's (`fwmap/isa.mjs` says why not `step()`'s). The map is a function of the image and
+`fwmap/E143.seeds.json`, executed instruction starts the static phases miss, pinned; `static --update-seeds` re-derives
+them from the last cover run. On E143: 102,803 functions, 5,186,071 instructions, 2,629 modules (1,217 named).
+
+**cover** runs `node emu/bin/run.mjs all` and `node emu/bin/checks.mjs --jobs 4` (every run of `checks/runs.json`, the
+mutant and fault-injection runs included) with `OM_COVERAGE` set, and takes the union of the per-thread files
+(`checks/lib/coverage.mjs`). The machine option behind it, `coverage` (`src/machine.mjs`), marks every pc the CPU runs
+(at its decode into the cache and at every helper step) and every stand-in that fires; without it nothing changes,
+`golden.mjs check` included. `OM_COVERAGE=DIR` works on its own for any lab made through `labEnv`, `bin/run.mjs` or
+`bin/playperf.mjs`; children and worker threads inherit it. It shares `emu/out/checks/js/` with `checks.mjs`, so do not
+run it beside `checks.mjs` or `golden.mjs`.
+
+**report** writes, under `emu/out/fwmap/E143/report/`, `functions.jsonl` and `modules.json` (each function and module
+with what ran of it, the direct call sites that ran, the stand-ins at it), `regions.json` (each MMIO region the code
+names, with emu's model status), `lists.json` (the largest modules never entered, the ones a running caller did not
+call, the ones that touch unmodelled MMIO, the functions stood in for), `blocks.json` and `report.md`, and prints the
+table by block. The blocks come from `fwmap/E143.labels.json`: per module a subsystem block, whether its code is
+gap-relevant (code a native path would still have to reach), the evidence and a description, written by agents from
+the map. The labels are keyed by the static pass's module names, so a change to discovery or attribution (or to the
+seeds) that renames modules needs them re-keyed: report lists the modules without a label and the labels without a
+module, and `test/test_fwmap.mjs` fails until both are empty. Only E143 is supported (`--model` refuses others).
 
 ## The debug API
 
@@ -237,6 +279,9 @@ frame as RGBA, the session log) and sends every other request to the Worker. The
   replayed scenarios' inputs (`scenarios/calls/`).
 - `bin/`: the command-line tools. `host/`: the node hosts of the player and the scripted menu tool. `web/`: the browser
   player (page, Worker, driver, frame conversion, OPFS cache), importing only `src/`, `scenarios/` and `web/`.
+- `fwmap/`: the firmware map's library (`bin/fwmap.mjs`: the ISA view, discovery, the static map, the coverage run, the
+  report, the block aggregation) and its E143 data: the module labels (`E143.labels.json`) and the pinned discovery
+  seeds (`E143.seeds.json`).
 - `test/`: the test suites (`bin/test.mjs` runs them) and their fixtures (`test/fixtures/isa_vectors.json`);
   `checks/fixtures/`: the checks' pinned data; `golden.json`: the regression reference.
 
@@ -260,8 +305,9 @@ Firmware images and unpacked blocks stay outside git (`fw/`, `unpacked/`; see `B
 that is committed or published with this code; composites appear in traces only as sha256. The repository does hold
 small derived data: the VSC register and name table `checks/fixtures/om1-vsc-regs.h`, the digests and short recorded
 observations of `checks/fixtures/` and `golden.json`, the replayed scenarios' inputs in `scenarios/calls/` (call
-arguments: keys, options, lab-time targets, addresses; no firmware bytes), and the addresses, tables and short excerpts
-in `docs/` and `analysis/`. The browser player takes the firmware only from the user's own file and keeps the unpacked
+arguments: keys, options, lab-time targets, addresses; no firmware bytes), the firmware map's module labels and seeds in
+`fwmap/` (module names, addresses, descriptions with short strings), and the addresses, tables and short excerpts in
+`docs/` and `analysis/`. The browser player takes the firmware only from the user's own file and keeps the unpacked
 blocks only in that browser's Origin Private File System; the page embeds no firmware, and `bin/webgate.mjs` checks that
 it sends nothing but GETs for its own files.
 
@@ -269,8 +315,8 @@ it sends nothing but GETs for its own files.
 
 | Command | What it covers | Needs |
 |---|---|---|
-| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present) | node; runs on any checkout in a few seconds |
-| `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts, the node host, the command-line tools, the scene, the camera application and the regression net's controls | the E143 firmware blocks and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
+| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units | node; runs on any checkout in a few seconds |
+| `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts, the node host, the command-line tools, the scene, the camera application, the firmware map and the regression net's controls | the E143 firmware blocks and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
 | `node emu/bin/golden.mjs check` | every scenario, every lab of the traced check runs and every check run's output against `golden.json`: what the panels show, what the devices see and what the checks conclude must not change | the firmware |
 | `node emu/bin/checks.mjs [CHECK \| RUN ...]` | every run of `checks/runs.json`, judged on its exit status | the firmware |
 | `node emu/bin/checktrace.mjs RUN [--slice N]` | the labs one check run creates, traced (golden records them) | as checks.mjs |
@@ -279,6 +325,7 @@ it sends nothing but GETs for its own files.
 | `node emu/bin/snapgate.mjs kernel-5c osd shoot-tft` | snapshot detours leave the sessions and the end state unchanged | the firmware |
 | `OM_FW_DIR=fw node emu/bin/webgate.mjs --rounds 4` | headless Chrome: the Worker against node and `bin/run.mjs`, the page (keys, touch, canvas, session log), no uploads; about 5 min | the `.BIN`, Chrome |
 | `node emu/bin/modelcheck.mjs` | each ported model with its firmware unpacked: start, S1, S2, PLAY, INFO, PLAY on the TFT and the EVF | the models' firmware |
+| `node emu/test/test_fwmap.mjs` | the coverage option off and on, the static map's determinism and headline, the labels' keys, `run.mjs` under `OM_COVERAGE` (also in both suites above) | the E143 main block for the second half |
 
 What the tests compare with is emu's own data, and it is regression data, not a specification
 ([ARCHITECTURE.md](ARCHITECTURE.md), "Ground truth"): `golden.json` is recorded from emu by `bin/golden.mjs record`, the

@@ -16,6 +16,7 @@ import { Worker, isMainThread, parentPort, workerData } from 'node:worker_thread
 import { createHash } from 'node:crypto';
 import { REPO, FIXTURES, labEnv, loadImage, loadBlock, runMain, SystemExit, resultHook } from './lib/env.mjs';
 import { parseArgs } from './lib/args.mjs';
+import { flushCoverage } from './lib/coverage.mjs';
 import { pred, fault } from './lib/pred.mjs';
 import { isValueError, hasStack, regValue } from './lib/errors.mjs';
 import { encode, decode } from './lib/wire.mjs';
@@ -926,8 +927,9 @@ function workerMain() {
     let value;
     try { value = ['ok', JOB_FUNCTIONS[name](...args)]; } catch (e) {
       if (e instanceof FirmwareError || isValueError(e)) value = ['error', e.message];
-      else { parentPort.postMessage({ k, crash: String(e?.stack ?? e) }); return; }
+      else { flushCoverage(); parentPort.postMessage({ k, crash: String(e?.stack ?? e) }); return; }
     }
+    flushCoverage();                   // OM_COVERAGE: the pool may terminate this worker without an exit event
     parentPort.postMessage({ k, value: encode(value), out: '', err: '', guard: before || REFS_LOADED });
   });
 }

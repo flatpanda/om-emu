@@ -1042,7 +1042,10 @@ and E147; off by default. Addresses are E143's (disassembly notation) unless a b
   1-2 weeks.
 - **First step:** the transport is read from both ends (4.11.1). Next, decode the per-port payloads without running
   anything: disassemble `isc_cgi`, `isc_socket`, `isc_olnet`, `isc_file` and `blebridge` (32-bit ARM, stripped) and
-  pair each port with its CPU 1 call site.
+  pair each port with its CPU 1 call site. **Done (D):** the per-port protocol table (message lengths and the
+  sccore/hhhr/socket/cgi bodies, the port-27 start-complete `{0x01,0,0,0}`, and how each daemon behaves without a
+  radio) is in `docs/a53-spec.md` §9; the A53-side ISC registers and an MN-side peer (`iscpeer.mjs`) that plays this
+  half outside QEMU are in `tools/a53-oracle/`.
 
 #### 4.11.1 The ISC transport (D unless tagged)
 
@@ -1071,7 +1074,11 @@ and E147; off by default. Addresses are E143's (disassembly notation) unless a b
 - **`0x50aa4c98` is a service gate, not a message dispatcher:** it takes a service code `0x15c00001..0x15c00024` and an
   argument block and jumps through `0x60ac7510`, e.g. to `0x50aa369e`, which makes `isc_send`'s checks (node below 5
   and not its own, size + 2 below the FIFO size) and writes through `0x50aa3595`, a caller of the doorbell `0x50aa324b`
-  (so the send, I). The per-port payloads above the transport are ?.
+  (so the send, I). The per-port payloads above the transport are decoded in `docs/a53-spec.md` §9 (D). The A53-side
+  registers (the `irqcon` doorbell at `bank0+0x880` raising A53 IRQ 14, the `0x97000000` lock, the `0x97f00c00` control
+  block and its magic/FIFO contract) are decoded in `docs/a53-spec.md` §3, and `tools/a53-oracle/iscpeer.mjs`
+  implements the MN half (the same encoding as `0x6034d018` / `0x50aa324b`) with a `selftest` that round-trips a
+  message; `tools/a53-oracle/README.md` has the oracle and the two ways to back these windows under QEMU.
 
 ### 4.12 Detection, GPU / C3D, strobe
 

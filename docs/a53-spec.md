@@ -126,6 +126,33 @@ add a bank from `*(port+0x190)`; store word at `membase+off`; `dsb`. `console_pu
 `+0x18` and a status word at `+0x44` whose bit 15 means "not ready". (Recovered via the kernel's own `kallsyms`, which
 `scratchpad/a53/tools/kallsyms2.mjs` reconstructs — 18,181 symbols, base-relative, no separate `System.map` needed.)
 
+**The custom ISC windows, decoded register by register (D).** These are the four windows phase (c) needs; each fact
+is read from the A53's own aarch64 code (`iscdrv.ko` offsets, or kernel VAs against `vmlinux.elf`) and cross-checks the
+MN side in `docs/hle-gaps.md` §4.11.1. The oracle models them; `tools/a53-oracle/README.md` holds the same table with
+the reproduction.
+
+- **`irqcon`** banks `0x99200000 / 0x99300000 / 0x99b00000 / 0x99b80000` (D, DT `irqcon@99200000`; same four in
+  `iscdrv.ko` `.rodata+0x110`), GIC parents SPI `0x1c0/0x1c2/0x1c4/0x1c6`. A53-side model (D, `irqam32_notify`
+  `0xffffff800826fd98`, `irqam32_notify_k` `..fe28`): a *notify* stores `(1<<bit)` at `bank+0x800+(k-1)*8`; the receive
+  *entry* `irqarm_interrupt` reads the pending word at `bank+0x880+k*4`, acks by writing it back, then calls the handler
+  registered by `irqarm_entry_handler`. The ISC receive handler sits on virtual IRQ **14** (D, `isc_system_init`
+  `iscdrv.ko+0xa80`: `irqarm_entry_handler(14, isc_receive_interrupt)`) — this is the A53's counterpart to the MN's
+  receive IRQ 323.
+- **ISC doorbells** (D, `isc_send` `iscdrv.ko+0x1c48`, tail `0x1ea4..0x1f40`): to reach node `n`, write `0x4000` to
+  `isc_driver+[24+8*n]` (the bank for node `n`), offset `+0x800` for nodes 0..3 and `+0x880` for node 4. So the A53
+  rings an MN core by `0x4000 → bank(n)+0x800`, and the MN rings the A53 by `0x4000 → bank0+0x880` (`0x99200880`),
+  which must raise A53 IRQ 14.
+- **ISC hardware lock** `0x97000000` len `0x200` (D, `isc_lock_init` `0xffffff8008583460`): per-id byte at
+  `lockbase + 64*id`, taken with an LL/SC exclusive byte (`ldaxrb`/`stlxrb`, `iscdrv.ko+0x1d24`) — so it must be
+  *normal* memory, not device, for the monitor to work. **SCCORE control** `0x97f00b80` len `0x80` (D, `scc_init`
+  `0xffffff80085833e4`) is plain storage for phase (c).
+- **ISC control block** `0x97f00c00` len `0x400` and **shared memory** 128 KiB/node at `0x63fe0000` (0..3) /
+  `0x2_a3fe0000` (4) (D, `iscdrv.ko` `.data`: `config_isc_cb_addr/size`, `config_isc_mem_addr[5]`,
+  `config_isc_channel_nr=0x30`, `config_isc_drv_lock_id=7`). `isc_start` (`iscdrv.ko+0x2228`) ioremaps the block,
+  checks `cb[0]` == `0x1000 | (config byte-sum & 0xff)`, reads `cb[2]` (node count) and the per-node u16 FIFO offsets
+  at `cb+8`, sets its own (node-4) FIFO `state 0x1000→0x2000`, and drains. FIFO header and message format are in
+  `docs/hle-gaps.md` §4.11.1 and implemented in `tools/a53-oracle/iscpeer.mjs`.
+
 ## 4. LLE feasibility: phases and the minimum device set
 
 Measured on the `om-emu` QEMU VM by booting the real `Image` with the real DTB (with the GIC moved to virt's
@@ -148,6 +175,16 @@ These phases are the device budget for an in-emulator LLE, whatever engine runs 
   transport already decoded in `docs/hle-gaps.md` §4.11.1. Once node-4's FIFO and doorbell exist and the MN side (CPU 1,
   or a JS stand-in for it) drains/fills them, `iscdrv` would start and `sccore`/`isc_socket`/`isc_olnet` would get
   replies.
+  **Phase (c) result (X, `tools/a53-oracle`).** The stop is pinned two ways. With RAM covering the windows
+  (`-m 2G`), the control-block `__ioremap` returns NULL and `isc_start` returns `-6` (`ENXIO`); with RAM capped below
+  them, the first access to a window raises a Synchronous External Abort (`0x96000010`) — unassigned MMIO on virt
+  faults. Either way `isc_start` cannot pass on stock virt: the control block, lock, shared memory and doorbells must be
+  *backed*, and the MN→A53 doorbell must raise IRQ 14. The MN half of the link is implemented and verified outside QEMU
+  by `tools/a53-oracle/iscpeer.mjs` (control-block magic + node count + FIFO offsets; `isc_send`/`isc_receive` FIFO
+  format), whose `selftest` round-trips a port-26 request and a port-27 start-complete through the exact encoding the
+  driver uses. The remaining wall for a *live* loop is injecting IRQ 14 on the MN→A53 doorbell, which a shared file and
+  the QEMU monitor cannot do; it needs a small QEMU sysbus device (or a gdb-forced call into `isc_receive_interrupt`).
+  The register models and both approaches are in `tools/a53-oracle/README.md`.
 
 **Custom vs standard, restated.** Custom (registers must be modelled from the kernel's aarch64 code, done above for the
 UART; `irqcon`, `isc_lock`, `scc`, `mn-mmc` remain): `ntcj,irqcon`, `ntcj,mn-sio-1-uart`, the ISC lock/control windows,
@@ -234,14 +271,46 @@ emulator's purposes the same conclusion holds: model the ISC seam in JS and use 
 do not build the core unless a standalone "run the camera's Linux" goal justifies it. (E125/E130's A9 runs an
 ITRON-style image over a 2-node ISC rather than Linux, and E122 has no coprocessor at all — out of scope here.)
 
-## 9. Open questions
+## 9. ISC per-port protocols (D, from the daemon disassembly)
+
+Read statically from the daemons in the extracted rootfs (`tools/a53-oracle/dis-daemons.sh`); this does not need the
+live loop. `ISC_send_timeout(node, port, buf, len, timeout)` and `ISC_receive_wait(port, buf, len)` are the ARM
+calling convention (r0..r3, 5th on the stack). Every daemon sends to **node 1** (CPU 1) except `hhhr`, which replies to
+**node 0** (CPU 0) — confirming CPU 1 owns the A53 while HHHR results return to CPU 0. Bodies larger than the 128-byte
+FIFO message move through `ISC_attach_mem` shared buffers (the message then carries a handle/size); those daemons are
+tagged "+shmem".
+
+| Daemon | recv port (len) | send port (node, len) | Payload (D) / behaviour |
+|---|---|---|---|
+| `sccore` | 26 (8) | 27 (node 1, 4) | **The SYS_CA53_PWR_MNG pair.** Port-26 request is 8 bytes, byte0 = kind: `1` → `system("/etc/init.d/wifi start &")`; `2` → stop Wi-Fi, reply on 27; `3` → `fork` a prioritised survival child that mallocs `word@+4` bytes and replies on 27, then loops `memset`+`sleep(30)` (`iscdrv.ko+0x10e00`, D). At init `sccore` sends port-27 `{0x01,0,0,0}` = **start-complete** (the reply CPU 1 waits for) after spawning its 3 threads (`iscdrv.ko+0x10fc4`, D). Also port 14 (NEON freerun benchmark: recv a trigger, run NEON, send result) and port 32 (recv/echo "arm survival inquiry/reply" heartbeat). |
+| `hhhr` | 30 (48) | 31 (node 0, 112) | HHHR compute. Port-30 request 48 bytes (matrix sizes + buffer handle); mmaps `/dev/mem`, `ISC_dcache_clean_range` over the result, replies 112 bytes on port 31 to CPU 0 (`hhhr.dis 0x133a0`, D). |
+| `isc_socket` | 3 (64) | 4 (node 1, 64) | BSD-socket bridge. Fixed 64-byte request/response records; 16 send sites = the 16 socket ops (socket/bind/connect/send/recv/…). +shmem for bulk data (`isc_socket.dis 0x10e54/0x11220`, D). |
+| `isc_cgi` | 11,12,13,16 (32) | 11,12,13,16 (node 1, 32) | OI.Share HTTP CGI relay. 32-byte control records per port; HTTP bodies via `ISC_attach_mem` (`isc_cgi.dis 0x10f24/0x11040`, D). +shmem. |
+| `isc_file` / `sd_reader` | 6 (?) | 5, 8 (node 1, ?) | FILEISCAM media serving; +shmem, `dcache_clean_inv_range` over the mapped file buffers (D). |
+| `isc_olnet` | 20 (?) | 19, 21 (node 1, ?) | Wi-Fi manager; +shmem. Absent radio → see below. |
+| `blebridge` | 28 (?) | 28, 29 (node 1, ?) | BLE bridge to BSA; absent BT → see below. |
+| `wifi_remocon` / `wifi_upnp` / `wifi_mdns` | 1, 24, 25 | 1/2, 24, 25 | remote-control / UPnP / mDNS responders; +shmem for 24/25 (D). |
+| `dbgterm_server` | 15 | 15 (node 1) | debug-terminal relay; +shmem (D). |
+| `isc_test` | 47, 49 | 47, 49 (node 0/4) | factory shell test; the one daemon that also sends to node 4 (self/loopback) (D). |
+
+**Without Wi-Fi / BT hardware (I, from the daemon code + §6).** `mn-mmc` returns "no card", so `isc_olnet` fails to
+insmod `bcmdhd`/`mn-sdmmc`, `/etc/init.d/wifi` cannot bring an interface up, and `isc_olnet` answers its ISC ports with
+a "not available" status rather than crashing; `blebridge`/`bsa_server` find no `/dev/ttyS1` BT and likewise report BLE
+unavailable. `sccore`'s port-26 kind-1 "wifi start" still runs the init script (which then fails internally). HHHR and
+the socket/CGI/file relays are **radio-independent** and would answer normally — they are the endpoints the emulator
+actually needs. This matches the MN-side seam in `docs/hle-gaps.md` §4.11 (network tasks report "not available").
+
+## 10. Open questions
 
 1. The exact meaning of the `0x988003xx`/`0x988004xx` reset/clock/power bits `0x5003bcd9` programs before release (?).
-2. Which `SYS_CA53_PWR_MNG` request codes trigger power-on vs off, and the content of the port-27 start-complete reply
-   that CPU 1 waits for (`docs/hle-gaps.md` §4.11 "First step"; the handshake strings are `arm survival inquiry/reply`
-   in `sccore`) (?).
-3. The per-port ISC payload formats above the transport (the message bodies on ports 3/4, 11..16, 19/20, 26/27, 30/31),
-   needed for the HLE service; decode each daemon's handler paired with its CA_* caller (I: the plan in §4.11 "First
-   step").
+2. ~~The port-27 start-complete reply~~ — **resolved (§9, D):** `sccore` sends `{0x01,0,0,0}` on port 27 at init. The
+   port-26 request kinds 1/2/3 are decoded (§9); which MN request code maps to A53 power-*off* vs the kinds above is
+   still ? (the MN side `SYS_CA53_PWR_MNG` `0x5003c8f4` was not re-scanned here).
+3. ~~Per-port payload formats~~ — **largely resolved (§9, D):** message lengths and the sccore/hhhr/socket/cgi bodies
+   are decoded. The exact field layouts inside the 64-byte socket and 32-byte CGI records, and the `isc_file`/`olnet`/
+   `ble` record contents, remain partly ? (lengths read, field semantics not fully named), and want pairing with the
+   MN-side CPU 1 senders in the E143 main block.
 4. The precise `mapinfo` record layout and whether production ever takes the "from sd" path (the strings exist:
    `<arm load4>`, `<arm jtag sd0..2>`) (?).
+5. The exact field set summed for the control-block magic (`iscpeer.mjs controlMagic` is I from `isc_start`
+   `0x23b8..0x2554`); bench-verifiable once a live loop raises IRQ 14 (?).

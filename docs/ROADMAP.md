@@ -33,7 +33,7 @@ Every milestone runs in emu and is covered by the check its row names; the `chec
 | Hosts and the debug API | the player on node (an HTTP server with the lab in a worker thread) and in the browser (a module Worker), the JSON-lines debug API | `emu/bin/test.mjs`, `golden.json` | `emu/README.md` |
 | The camera application | every play session runs the firmware's camera application (CA_MAIN) natively (S-CAMAPP, 2026-10-15): power-on to the shooting screen, S1, S2 and the rec view, REC, playback, the Super Control Panel and the menu; the lab's own stand-ins for it are gone | `test_camapp`, `golden.json` | shutter spec §7 |
 | Exposure | a 12-40mm F2.8 PRO record on the mount (S-LENS) and the scene's brightness fed to the camera's own exposure plan (S-EXPOSE); the screen shows the planned shutter, aperture and ISO | `golden.json` | shutter spec §7 item 60 |
-| Multi-model, steps 1-4 and part of 7 | 17 bodies besides E143 have ports; E146, E147, E144, E139, E137 and E125 shoot, play back and run the EVF through `bin/modelcheck.mjs`, E134 on the TFT, and four more reach their shooting screen with a picture (Multi-model below) | `emu/bin/modelcheck.mjs`, `test_facts` | `docs/model-survey.md` |
+| Multi-model, steps 1-4 and part of 7 | 17 bodies besides E143 have ports; E146, E147, E144, E139, E134, E137, E140, E125 and E130 shoot, play back and run the EVF through `bin/modelcheck.mjs`, E142 (no EVF) on the TFT; E145, E133, E129 and E132 stop in their start, the E118 family at import (Multi-model below) | `emu/bin/modelcheck.mjs`, `test_facts` | `docs/model-survey.md` |
 
 Instruction counts: the ISA row's 1,684,013 reachable instructions come from a reachability scan that is no longer in
 the repository. `node emu/bin/fwmap.mjs` finds 5,186,071 instructions in the main block, because it also follows code
@@ -42,9 +42,9 @@ not reconciled.
 
 ## Next, in recommended order
 
-1. **Depth on the ported bodies** (Multi-model step 7): E144, E139, E137 and E125 pass `bin/modelcheck.mjs` since
-   2026-10-23; left are E134's and E130's EVF (a synchronous send after the change task), E142's playback after S2,
-   E140's AF frame (an OSD bitmap format) and E130's AF upload (Multi-model "Next stops").
+1. **Depth on the ported bodies** (Multi-model step 7): ten bodies pass `bin/modelcheck.mjs` since 2026-10-23; left
+   are the remaining-shots query of E142, E140 and E134 (their screens show "Card Full" or 0 shots), E145's AF upload
+   and start (Multi-model "Next stops").
 2. **The open stops of the remaining bodies** (Multi-model "Next stops"): E145's start, E133's GUI creator, E129's
    settings store, E132's deferred serial send, then the E118 family's board port.
 3. **HLE of E143, step 2** (HLE of E143 below; step 1's static decodes are done): the cheap CPU 0 wins (a ticking
@@ -82,9 +82,9 @@ bodies; the bodies whose image runs at a `0x60xxxxxx` base pair 0.76M-2.08M inst
 |---|---|---|
 | ported | E146 OM-1 II, E147 OM-3 | `bin/modelcheck.mjs` passes on the TFT and the EVF |
 | ported | E144 OM-5, E139 E-M1 III | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23) |
-| A | E134 E-M1X | `bin/modelcheck.mjs` passes on the TFT; the EVF start stops at a synchronous send after the change task |
-| B | E137 E-M5 III, E142 E-P7, E140 E-M10 IV, E125 E-M1 II, E145 TG-7 | E137 and E125: `bin/modelcheck.mjs` passes on the TFT and the EVF; E142: S2 takes its card image, PLAY after it stays in shooting; E140: S1's AF frame stops at an OSD bitmap format; E145's start ends in `0x1103` |
-| C | E133 E-PL9, E130 E-M10 III, E129 / E132 TG-5, E118 E-M5 II, E122 PEN-F, E120 E-M10 II | E130: shooting screen, S1 stops at the unplaced AF upload; E133, E129 and E132 stop in their start; the E118 family stops at import on its board |
+| A | E134 E-M1X | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23); its EVF shows 0 shots left |
+| B | E137 E-M5 III, E142 E-P7, E140 E-M10 IV, E125 E-M1 II, E145 TG-7 | E137, E140 and E125: `bin/modelcheck.mjs` passes on the TFT and the EVF, E142 (no EVF) on the TFT; E142's and E140's screens show "Card Full"; E145's start ends in `0x1103` |
+| C | E133 E-PL9, E130 E-M10 III, E129 / E132 TG-5, E118 E-M5 II, E122 PEN-F, E120 E-M10 II | E130: `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23); E133, E129 and E132 stop in their start; the E118 family stops at import on its board |
 | D | E100, E101, E106-E113, E115, E117, E121, E126 | not tried |
 | - | the new OM System PEN (E148?) | not served yet (E148-E199 answer nothing, 2026-10-19): re-probe |
 
@@ -132,25 +132,29 @@ The plan:
    EVF. Done when `bin/modelcheck.mjs` passes on each. **Done** for E144, E139, E137 and E125 (2026-10-23, `MODELS`
    `checked`): their starts had been USB starts (the idle image's power lever and USB connection, survey finding 9;
    S-NOPOWEROFF retired), and their EVF starts met the kind-2 channel's timing bank, the change task created at run
-   time and the EVF's scaled OSD planes (finding 10). E134 passes on the TFT; E142, E140 and E130 stop later than
-   before (Next stops). This comes before more bodies: a body counts as supported once it passes modelcheck.
+   time and the EVF's scaled OSD planes (finding 10). **Done** for E134, E142, E140 and E130 too (2026-10-23, round 2):
+   the EVF open's synchronous command to the touch task (finding 11), the shooting callbacks' ids per build (finding
+   12), the OSD bitmap format 9 and the lens record's layout and buffer (finding 13) and E130's AF upload (finding 14).
+   E142's and E140's screens show "Card Full" and E134's EVF 0 shots (Next stops). This comes before more bodies: a
+   body counts as supported once it passes modelcheck.
 
 Throughout: re-probe the update API (`fw-survey.mjs probe`) for the new PEN; a new `.BIN` goes into `BLOBS.sha256` and
 the survey table.
 
 ### Next stops
 
-- **E134's and E130's EVF:** after the change task the first EVF open sends cmd 5 synchronously to a queue whose task
-  does not run in the lab (E134 queue 151 from `0x50210cc4`, E130 queue 150 from `0x50201120`; X). Read which task
-  takes that queue and what cmd 5 asks, then run it or serve it as DISPLAY's messages are.
-- **E142:** PLAY after S2 stays in shooting: its ShootingStill state takes the key without a command, where before S2
-  it gives CAM_PLAY (X, the application's trace). Read what the state waits for after a release (I: a notification
-  S-RELSEQ does not send on E142). Its touch controller (slave `0x48`) is not the one S-TPREG serves (E143's slave
-  `0x70`, register 2), so touch input does not reach its GUI.
-- **E140's AF frame:** S1's END_FOCUS draws an OSD bitmap of format 9 (header `0x0900d027`), which the engine model
-  does not decode; read the format from E140's drawing code.
-- **E130's and E145's AF upload:** S-AFOSD's upload (E143 `0x500257ce`) has no place in either build; the E144-family
-  shape (E142 `0x50025d21`) is not in their images.
+- **The remaining-shots query:** E142 and E140 show "Card Full" from the start on and E134's EVF 0 shots left (X:
+  frames): E142's application asks through `0x502c79db` (called at `0x5076b263` with what `0x502abbea(23)` returns),
+  not the function the shots-query rule placed (`0x502d2e89`, one caller elsewhere), so S-CARD never answers (D);
+  E134's session makes no shots query (X). Read the E142 family's query and E134's, then answer them as S-CARD answers
+  E143's.
+- **E142's touch controller** (slave `0x48`) is not the one S-TPREG serves (E143's slave `0x70`, register 2), so touch
+  input does not reach its GUI.
+- **E145's AF upload:** its frame plane has no function of the AF upload's shape (survey finding 14); read what its AF
+  module uploads the frame through (its mode-2 upload `0x5002272c` takes five halfwords, I).
+- **The touch task's power-up wait:** before the play bring-up sets the lab microsecond clock, the touch panel's 40 ms
+  interrupt wait (and E137's 150 ms one) takes one lab sleep of 2 ms per microsecond-counter read, 40,001 sleeps (X,
+  survey finding 11); why the counter advances one per read then is not read.
 - **The kind-2 VSC:** which register selects a channel's timing bank (the model follows the last vertical total
   written, I); IMG planes (live view, playback) are not modelled.
 - **The E143 family's USB connection:** E143, E146 and E147 keep `0x0400` at state 0, which on the E144 family is a

@@ -244,6 +244,16 @@ Each note was checked against the cited code. Paths are relative to the reposito
 
 **Confidence:** medium
 
+### 5.5 OSD bitmap format 9 decoded from the resources' data
+
+**Where:** `emu/src/dev/engine.mjs` (`cmdBitmap`, case 0x09), `emu/refs/osdfmt.mjs` (`TOKEN`)
+
+**Emulator:** A bitmap of format 9 is a byte stream of 8-bit tokens, a 2-bit colour index over a 6-bit run (run = low six bits + 1), mapped through the command's inline table as formats 2 and 0x0A are. The layout comes from the E144 family's resource blocks, where every format-9 bitmap found decodes so to exactly its width x lines, and from E140's AF frame, which draws them with a four-colour inline table.
+
+**Expected / concern:** No format-9 bitmap is wider than 32 or has a run over 32, so bit 5 could as well be a third colour bit that is always 0; the engine's own definition of the format is not read. Format 1, which would be to 9 what 2 is to 0x0A, stays an error.
+
+**Confidence:** medium
+
 ### 5.3 OSD engine opcodes 0x41 and 0x60 not executed
 
 **Where:** `emu/src/dev/engine.mjs:218-231`, `emu/src/dev/engine.mjs:340-349`
@@ -345,6 +355,16 @@ Each note was checked against the cited code. Paths are relative to the reposito
 **Emulator:** The idle image gives every UI_IN switch a level at the start: bit 0 for most switches on E143 (its pinned tables), and on a ported body the power lever on and the USB connection 0x0400 with no cable, each set by its state under that body's polarity, except in the group the firmware's group-4 producer pushes from its own image, where the E143 family's 0x0400 lies. No producer of the real levels (the sub-CPU's port scan, the USB detection) runs.
 
 **Expected / concern:** A real camera starts with whatever its switches read. The lab models one start, power lever on and no cable; a USB start, a charge start or another switch position is not represented. On the E143 family 0x0400 stays at state 0, which the E144 family's firmware reads as a cable; their starts do not act on it, but other paths that read it may.
+
+**Confidence:** medium
+
+### 7.8 The touch task's synchronous commands from a display run (S-TPSEND)
+
+**Where:** `emu/src/lab/play.mjs` (`_sync_send`), `emu/src/lab/display.mjs` (`task_message`, its flag wait)
+
+**Emulator:** A synchronous send to the touch task's queue from a display run (E134's and E130's first EVF open sends cmd 5) runs the touch task's loop for that message on a lab stack: its wait on its event flag returns the queue's bit, its receive gets the message with no reply queue, and the run ends at its next wait. The send returns 0 at once. The camera application's own synchronous requests to the touch task are not display runs and stay S-MODACK's: they return 0 without running the task.
+
+**Expected / concern:** On the camera the display task waits while the touch task, a task of its own, runs the command and replies. In the lab the start's EVF open runs before the touch task is started, so the command runs before the touch init, and the touch panel's power-up then waits 40,001 lab sleeps for an interrupt the lab does not raise. The order of the command against other tasks' work is not the camera's.
 
 **Confidence:** medium
 

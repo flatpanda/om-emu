@@ -44,14 +44,14 @@ through a reference place more; "Per-body status" has their figures).
 | E147 | OM-3 | 1100 | 32.0 | 0x60021020 (7.5%) | olycompress | 5.25M | 5 | modelcheck passes |
 | E144 | OM-5 | 1200 | 23.7, 2 sections | 0x60021020 (6.6%) | olycompress | 2.15M | 45 | modelcheck passes (TFT and EVF) |
 | E139 | E-M1 III | 1600 | 26.0, 2 sections | 0x60021020 (6.6%) | olycompress | 2.08M | 44 | through E144: modelcheck passes (TFT and EVF) |
-| E134 | E-M1X | 2400 | 26.0 | 0x60021020 (6.5%) | plain | 2.03M | 46 | through E139: modelcheck passes on the TFT; the EVF start stops at a synchronous send to a queue whose task does not run |
+| E134 | E-M1X | 2400 | 26.0 | 0x60021020 (6.5%) | plain | 2.03M | 46 | through E139: modelcheck passes (TFT and EVF; the touch task's send, finding 11) |
 | E137 | E-M5 III | 1700 | 23.9 | 0x60021020 (6.7%) | plain | 1.71M | 68 | through E144: modelcheck passes (TFT and EVF) |
-| E142 | E-P7 | 1100 | 25.0 | 0x60020020 (7.2%) | plain | 1.47M | 74 | through E144: S2 takes its card image; PLAY after S2 stays in shooting (no EVF) |
-| E140 | E-M10 IV | 1100 | 25.0 | 0x60020020 (7.2%) | plain | 1.44M | 77 | through E142: S1's AF frame stops at an OSD bitmap of format 9 the engine model lacks (TFT and EVF) |
+| E142 | E-P7 | 1100 | 25.0 | 0x60020020 (7.2%) | plain | 1.47M | 74 | through E144: modelcheck passes (no EVF; the callback ids, finding 12); the screen shows "Card Full" |
+| E140 | E-M10 IV | 1100 | 25.0 | 0x60020020 (7.2%) | plain | 1.44M | 77 | through E142: modelcheck passes (TFT and EVF; format 9 and the lens record, finding 13); the screen shows "Card Full" |
 | E125 | E-M1 II | 3700 | 22.0 | 0x60021020 (7.1%) | plain | 1.29M | 71 | through E134: modelcheck passes (TFT and EVF) |
-| E145 | TG-7 | 1103 | 19.5 | 0x60021020 (7.5%) | plain | 1.10M | 81 | through E142: the start ends in 0x1103 (unnamed) with no USB cable; S1 stops at the unplaced AF upload (E143 `0x500257ce`) |
+| E145 | TG-7 | 1103 | 19.5 | 0x60021020 (7.5%) | plain | 1.10M | 81 | through E142: the start ends in 0x1103 (unnamed) with no USB cable; S1 stops at S-AFOSD, its frame plane having no AF upload of that shape |
 | E133 | E-PL9 | 1101 | 25.0 | 0x60400020 (7.2%) | plain | 1.04M | 83 | through E142: kernel, display start, touch start and the camera application's start, then the application's task waits inside the GUI creator: `H-GUIBYAPP: GUI tasks [], timer tasks [] after the application's start` |
-| E130 | E-M10 III | 1200 | 25.0 | 0x60400020 (6.9%) | plain | 1.02M | 82 | through E142: shooting screen; S1 stops at the unplaced AF upload (E143 `0x500257ce`); the EVF start stops as E134's |
+| E130 | E-M10 III | 1200 | 25.0 | 0x60400020 (6.9%) | plain | 1.02M | 82 | through E142: modelcheck passes (TFT and EVF; findings 11 and 14) |
 | E129 | TG-5 | 1101 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: kernel and display start, then the settings store's registry bootstrap waits for the boot's stage-1 bit: `registry bootstrap 0x50040aeb: all tasks blocked (lab task 153 state WAI)` |
 | E132 | TG-5 (KOUICHIRO) | 1300 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: kernel, display start and settings store, then blocks in the camera application's start on a serial request (channel 9) whose send is deferred to an interrupt the lab does not raise: `all tasks blocked (lab task 155 state WAI)` |
 | E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | stops at import: board fact `intc.irq_osd_engine` unknown (family E118) |
@@ -152,13 +152,61 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    `display.change_entry`) and the kernel starts it natively; and the EVF's OSD planes are scaled (RSZ18/24/30 `0x11`
    with steps `0x9fc`), which the kind-2 compositor now samples as E143's OSD scaler (I, `src/dev/vsccompose2.mjs`).
    The EVF then shows its 1024 x 768 shooting screen on E144, E139, E137 and E125 (X: frames).
+11. **The touch task's synchronous command** (2026-10-23, step 7 round 2). E134's and E130's first EVF open sends cmd 5
+   synchronously to queue 151 (E134, from `0x50210cc4`; E130 queue 150 from `0x50201120`) after its change task. The
+   receiver is the touch task (E134 `0x50217e3f`, the port's place of E143's `0x501e3eac`): its loop waits on its event
+   flag (`0x60041710`, mask 9), receives from the queue when bit 8 is set (`0x60041972`, at `0x50217eb2`), runs the
+   command through a jump table (`0x602424f4`; cmd 5 traces "TP_SETUP_SELFRUN_START" and runs the touch panel's
+   power-up sequence, `0x5017c100`) and replies only where the message's word 0 names a reply queue (`0x50217fd8`, D).
+   E143's touch task has the same loop (flag `0x6004306c`, queue `0x600432e8`, bit 8, D). E137 runs the same sequence
+   inline in its display task (`0x501625d7..`, D), so it never met the send. The rule `touchQueue` (fact `touch_task`)
+   reads the flag, the queue and the bit on the twelve bodies with a touch task (bit 8 on all, X) and places E143's
+   touch flag word, which the maps had put beside the task's own flag on E125, E130 and E133 (X); S-TPSEND
+   (`src/lab/play.mjs`) runs the touch task's loop for a synchronous send from a display run, as a DISPLAY send runs
+   the DISPLAY loop, with word 0 at 0. The power-up's 40 ms wait for the touch panel's interrupt times out
+   ("TP_DRV_INT_WAIT TIME_OUT"); before the play bring-up sets the lab microsecond clock it takes 40,001 lab sleeps of
+   2 ms, as E137's inline copy of it does at its starts (150,001 on the TFT, X; why the counter advances one per read
+   then is not read). The camera application's own synchronous requests to the touch task (E143's cmd 8 through its API
+   sender `0x503ec110`) stay S-MODACK's: run through the touch task too, they changed 26 golden sessions (X).
+12. **The shooting callbacks' ids are per build** (2026-10-23). E142's PLAY after S2 stayed in shooting because its
+   still state stayed in `0x5101` after a release, where E143's returns to `0x5100` at END_SHOOTING_PICTURE, so the
+   state's procReady found no key to take (X: the state word at the state machine's store, E142 `0x50cd3053`, E143
+   `0x5107e614`). S-RELSEQ posted E143's CBS ids, and E142 numbers CBS_END_SHOOTING_PICTURE 369 in its CBS name table
+   (`0x60a6c7f4`), where E143 has 211; E142's callback handler (`0x50cd6b5a`) looks the id up in a hashed table that
+   holds no 211 and posted nothing (D). E140 and E133 number it 369 too; every other name S-RELSEQ posts has E143's id
+   on all 18 expanded images (X). The rule `cbsIds` (fact `cbs`) reads each name's id. Next, E142's playback set
+   variable 226 with 2 bytes, which the menu record observer refused: 226 is E143's menu viewer record (2428 bytes,
+   one site, D) and another variable on every other body read (2 bytes on E142 and E140, 382 on E144, 152 on E146,
+   D), so the observer runs on E143 alone.
+13. **The OSD bitmap format 9 and the lens record** (2026-10-23). E140's S1 drew its AF frame with bitmaps of format 9,
+   which the engine model refused. Read from the data: in E140's resource block 7419 places with format 9 decode as
+   8-bit tokens of a 2-bit colour index over a 6-bit run to exactly width x lines, 7379 of them up to the next bitmap's
+   header (X, a byte scan); the E144 family's blocks hold 4300-7700 each, the E143 family's none (X); E140's AF frame
+   draws them with the inline table [0, 0x21, 0x20, 0x1f] (D). None is wider than 32 or has a run over 32, so that bit
+   5 is the run's is I. With the format the next stop was a division by zero in the focal-length interpolation
+   (`0x500d96d1`): S-LENS had written the 12-40's zoom steps at E143's offset in E143's buffer. The E144 family keeps
+   the record's zoom table at +1156 (E143 +1164; E130 and E133 +644, D at each port's place of E143's focal-length read,
+   rule `lensZoomTable`), and its lens driver's init points the record at a static buffer of its own (E140
+   `0xa2682d00`, from `0x501d2284`, rule `lensStatic`; ten E144-family and three E118-family bodies, none of the E143
+   family, X), which the lab does not run; at E143's buffer the bytes on E140 held a nonzero flag (+35366) that sent
+   the interpolation down the dividing path (X). Fact `lens_record` gives both.
+14. **E130's AF upload and E145's frame plane** (2026-10-23). E130's AF upload is `0x50022dd8` (a hand override): its
+   one caller `0x50605bc1` passes `mov 3,d0`, the count and the frames as E142's caller `0x5063ef07` passes them to
+   E142's `0x50025d21`, and its body is E142's without the first call (D). E145's frame plane has the mode set
+   (`0x5002264b`, modes 0 to 3) and two uploads, mode 1's (`0x500226e9`) and mode 2's (`0x5002272c`, five halfwords,
+   four callers), but no function of the AF upload's shape (mode 3, a frame count and frames, D); which of them carries
+   the TG-7's AF frame is not read.
 
 ## Per-body status
 
 The state as of 2026-10-23. Each body's `MODELS` entry (`src/fw/models.mjs`) carries the numbers its `port_via` choice
 rests on and the evidence of every hand value. On that date `bin/modelcheck.mjs --no-port` passes E146, E147, E144,
-E139, E137 and E125 on the TFT and the EVF (their `MODELS` entries are `checked`) and E134 on the TFT; E142, E140 and
-E130 stop later than before (their paragraphs, X). The
+E139, E134, E137, E140, E125 and E130 on the TFT and the EVF and E142 (no EVF) on the TFT (their `MODELS` entries are
+`checked`; E134, E142, E140 and E130 since the second round of step 7, findings 11 to 14, X). Two of them pass with a
+wrong screen: E142 and E140 show the "Card Full" warning from the start on (X: frames), as their application asks for
+the remaining shots through a function S-CARD does not answer (E142 `0x502c79db`, called at `0x5076b263`, where E144's
+calls the place of E143's query, `0x502fab48`; the shots-query rule placed E142's `0x502d2e89`, which only `0x50bb85e4`
+calls, D), and E134's EVF frame shows 0 shots left, its session making no shots query either (X). The
 S-PANELDONE stand-in answers three to five panel-flag waits in the starts of E139, E134, E125 and E130, which ran
 natively before with the same results (X), so on those bodies it replaces a native path that worked, without a visible
 effect (`ROADMAP.md` "Next stops").
@@ -205,11 +253,11 @@ has no step table (`aeInit` reads `table: false`, D), so H-AEINIT checks only it
 reach the USB-disconnect power-off (X): its USB connection `0x0400` has polarity 1, so the old idle bit 0 already
 read as no cable (finding 9), and it took S2 before the other bodies did. `bin/modelcheck.mjs` passes on the TFT
 (2026-10-23, X). Its EVF start runs the first open's power-up and the change task (`display.change_entry`
-`0x5021007a`), then stops in the lab's synchronous send: after the change task the open sends cmd 5 to queue 151 (the
-id word `0x60041972`, from `0x50210cc4`), whose receiver does not run in the lab and which no stand-in serves (X);
-which task reads that queue is not read. Open: what S1 runs beyond the GUI state is not checked; the lab reads the
-touch I2C hooks' arguments in E143's layout, where E134's length is the caller's (4,sp) (D), so the i2c records are
-not trustworthy on ported bodies.
+`0x5021007a`), then sends cmd 5 synchronously to the touch task's queue 151 (the id word `0x60041972`, from
+`0x50210cc4`), which S-TPSEND serves by running the touch task's loop for it (finding 11); `bin/modelcheck.mjs` passes
+on the EVF too (X), its frame the 1024 x 768 EVF shooting screen with 0 shots left (no shots query, X). Open: what S1
+runs beyond the GUI state is not checked; the lab reads the touch I2C hooks' arguments in E143's layout, where E134's
+length is the caller's (4,sp) (D), so the i2c records are not trustworthy on ported bodies.
 
 **E137 (E-M5 III).** Ported through E144 (E144's board traits, no SCPU backup, font limit `0x9fc00` and E144's EVF
 code, D) and boots natively to its shooting screen; the TFT session stays in `0x108` and takes S1 (X). It has no hand
@@ -242,12 +290,10 @@ application's flash saves (`dbSave`, `appSaves`), the function-direct start by i
 delivered before the wait, X; that the camera takes it so is I), the rec view component's standby (S-RVSTANDBY: with
 RecView's state word at 0 the GUI drew only the rec view's items, X; that the component is in standby at power-on is
 I) and the touch functions' length arguments (`touchArgs`: S-TPREG had written 6 bytes for a 1-byte read on the stack,
-X). Since finding 9, S2 takes its card image (X). PLAY after S2 stays in shooting, and so does INFO (X,
-`bin/modelcheck.mjs`; it has no EVF, so only the TFT is checked): the application takes the key's event, but its
-ShootingStill state's procReady goes another way than before S2 (eight setting reads, no rec view query) and gives
-no command for it, where before S2 the same press gives ShootingCommon's CAM_PLAY and playback opens (`0x605`
-ID_ST_NO_PICTURE; X, the application's trace calls `0x50cdbc6a`). What the state still waits for after a release is
-not read (I: a notification of the release's end that S-RELSEQ does not send on E142). Open: S-TPREG serves touch
+X). Since finding 9, S2 takes its card image (X). PLAY after S2 stayed in shooting: its still state waited in
+`0x5101` for END_SHOOTING_PICTURE, which E142 numbers 369 (finding 12); with the ids read from its CBS table and the
+menu record observer on E143 alone, `bin/modelcheck.mjs` passes (2026-10-23, X; it has no EVF, so only the TFT is
+checked). Its screen shows "Card Full" from the start on (the per-body note above, X). Open: S-TPREG serves touch
 data only for E143's controller (slave `0x70`, register 2),
 where E142 polls slave `0x48`; its facts carry an EVF frame period word (`0x6222cd88`) from E144's, though the E-P7 has
 no EVF (not checked).
@@ -260,11 +306,12 @@ device-state code `0x24000615`: the device-state table is filled by its module's
 which the lab runs on no body, so a first read fills the slot and logs the code (D; the log is expected, `display.mjs`
 EXPECTED_ERRLOG). Through E142, which has no EVF, three E143 addresses stay unplaced: the eye-state compare
 `0x501e806c`, the eye-state setter `0x50050efd` and the YCbCr conversion `0x501db1c8`. Since finding 9 its S1 releases
-(S-RELSEQ's START_FOCUS, END_FOCUS), and the AF frame's draw stops the session on the TFT and the EVF: the OSD engine
-model meets a bitmap of format 9 (header word `0x0900d027`, BMP_FORMAT at the engine start, pc E140 `0x50b8e3e6`), which
-it does not decode (it knows formats 2, 3, 10 and 11), and the next wait faults (X). Its EVF start, before that, runs
-with the change task `0x5015713e` (X). Open: format 9; E140's eye state (its word `0xa2717360`, stored in another shape
-than E144's, D).
+(S-RELSEQ's START_FOCUS, END_FOCUS), and the AF frame's draw met bitmaps of format 9 (header word `0x0900d027`), which
+the engine model now decodes from the resources' data, and then the focal-length interpolation's division by zero,
+which the lens record's zoom table and buffer read per build removed (finding 13); with E142's callback ids (finding 12)
+`bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23, X; its EVF change task `0x5015713e`). Its screen shows
+"Card Full" from the start on, as E142's (X). Open: the remaining-shots query; E140's eye state (its word
+`0xa2717360`, stored in another shape than E144's, D).
 
 **E125 (E-M1 II).** Ported through E134 (of E139, E144 and E134, through E134 the most overrides carry, 108, the fewest
 fail, 7, and only there is the EVF vtotal function placed at its entry, D) and boots natively to its shooting screen;
@@ -312,21 +359,23 @@ IIC controller and its interrupt are not modelled; the state block save (E144's 
 a rule. With finding 9 (no USB cable; its power key is a button, type 2, so the lever's state does not apply) its
 start ends in `0x1103`, the state the event-0 trial above reached, and S1 still stops at S-AFOSD's unplaced AF upload
 (X; that it no longer takes OLY_USB_CONNECTED is I, its events were not traced again); S-NOPOWEROFF is retired (its
-post is not reached, X).
+post is not reached, X). Its frame plane has no function of the AF upload's shape (finding 14), so S-AFOSD has nothing
+to call on it; what the TG-7 uploads its AF frame through is not read.
 
 **E130 (E-M10 III).** Ported through E142 (the map from E142 pairs 2.11M instructions against 1.02M from E143; through
 E142 118 overrides carry and 14 fail; through E145 the start stops earlier, at the settings store's unplaced init, X)
 and boots natively to its shooting screen: the TFT session takes S1 and draws the E-M10 III shooting screen (P, 1", the
 exposure scale, S-IS ON, the flash mark, Wi-Fi, L N, FHD 60p, the movie time 0:00:00 and 999 shots, S-CARD's answers),
 and the player settles running with that picture (X). Its own `MODELS` values are the reference and the shared stand-in
-g4set (S-NOPOWEROFF, at `0x50c2f598`, `mov 7,d0`, D, went with finding 9). Since then its S1 releases, and S-AFOSD's AF
-upload stops it: `call: the E143 address 0x500257ce has no place in E130's build`, as on E145 (X; the E144-family
-upload's shape, E142's `0x50025d21`, is not in E130's image, a byte scan). Its EVF start stops as E134's, at the
-synchronous send to queue 150 cmd 5 after the change task (`0x50200556`), from `0x50201120` (X). Its board's DRAM is 512
+g4set (S-NOPOWEROFF, at `0x50c2f598`, `mov 7,d0`, D, went with finding 9), and the place of the AF upload,
+`0x50022dd8` (finding 14). Since finding 9 its S1 releases; S-AFOSD's AF upload had no place (E142's bytes are not in
+E130's image, a byte scan, X), and its EVF start sent cmd 5 to the touch task's queue 150 from `0x50201120` (finding
+11). With both `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23, X; the TFT frame the shooting screen with
+999 shots). Its board's DRAM is 512
 MiB (with E143's 384 MiB its application start faulted in a copy to `0xbfc59440`, X); that the GUI's first OSD bank ends
 at the DRAM's top is I. S-PANELDONE answers three panel-flag waits in its start (X); which waits these are is not read.
-Open: S-AFOSD's AF upload and the EVF's synchronous send (above); which touch controller it polls is not checked against
-S-TPREG's.
+Open: which touch controller it polls is not checked against S-TPREG's; its zoom table (+644) and lens buffer are the
+rules', not checked against a lens attach.
 
 **E133 (E-PL9).** Ported through E142 (2.24M instructions paired, against 1.04M directly). It runs the kernel, the
 display start, the touch start and the camera application's start, then stops in H-GUIBYAPP: the application's task

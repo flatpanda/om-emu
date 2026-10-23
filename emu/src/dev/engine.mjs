@@ -153,6 +153,12 @@ export class Engine {
     let bits, runbits, perWord;
     switch (fmt) {
       case 0x02: case 0x0A: bits = 8; runbits = 4; perWord = 0; break;
+      // a 2-bit colour index over a 6-bit run, through the inline table's first four entries: in E140's resource
+      // block 7419 places with format 9 decode so to exactly width x lines, 7379 of them up to the next bitmap's
+      // header (X, a byte scan; the E144 family's blocks hold 4300-7700 each, the E143 family's none), and E140's
+      // AF frame draws them with the table [0, 0x21, 0x20, 0x1f] (D). None is wider than 32 or has a run over 32,
+      // so that bit 5 is the run's and not the colour's is I
+      case 0x09: bits = 8; runbits = 6; perWord = 0; break;
       case 0x03: bits = 10; runbits = 2; perWord = 6; break;
       case 0x0B: bits = 12; runbits = 4; perWord = 5; break;
       default: return this.fail(E.BMP_FORMAT, src, (hdr[0] | hdr[1] << 8 | hdr[2] << 16 | hdr[3] << 24) >>> 0);

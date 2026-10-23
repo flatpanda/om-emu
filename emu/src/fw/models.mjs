@@ -342,7 +342,7 @@ export const MODELS = {
     g4set: G4SET_UNCHECKED,
   },
   E140: {
-    name: 'E-M10 IV', bin: 'OLY_E_140_1100_0000_0000.BIN', version: '1.1', res_block: 'blk01900000.OE.0101.bin',
+    name: 'E-M10 IV', bin: 'OLY_E_140_1100_0000_0000.BIN', version: '1.1', res_block: 'blk01900000.OE.0101.bin', checked: true,
     rom_len: 26214336, rom_sha256: '5f2bfb367a7d65278fae1338bb10181ca8de8ebbd9a83f9e89bec4db9ade1fa5',
     // the reset head's jump into the run-time copy at 0x500000b6: mov 0x600200f9,a0; jmp (a0) (D)
     image_base: 0x60020020,

@@ -76,7 +76,7 @@ import { pack } from '../util/bytes.mjs';
 import { hex } from '../util/hex.mjs';
 import * as SC from './scene.mjs';
 import { A, ON_LAB_MODEL, MODEL_INFO, IMAGE_BASE, knob, fact, isUnmapped } from '../fw/model.mjs';
-import { DISPLAY_SYNC_E143, RECVIEW_E143, CBS_E143 } from '../fw/facts.mjs';
+import { DISPLAY_SYNC_E143, RECVIEW_E143, CBS_E143, LENS_ZOOM_TABLE_E143 } from '../fw/facts.mjs';
 //   S-CARD     a card in the SD slot: the HLS media state the file module's mount would set (SD 0x60360bfc and
 //              0x60360c08, both read through 0x50aca51d by getMountState) is 8: the application's card check passes
 //              (errFactor 0) and the GUI's count check (0x511ffcc9) too; each picture taken (END_SHOOTING_PICTURE) is
@@ -207,9 +207,14 @@ const PICTURE_SIZE = [5184, 3888];   // the OM-1's 4:3 large size, which the scr
 // src/fw/facts.mjs lensMount); a body with a built-in lens (E145, E129, E132) has no such record to mount one through
 export const LENS_MOUNT = fact('lens.mount', true);
 const LENS_ATTACHED = A(0xA32D4B9A), LENS_VALID = A(0xA32D4B98), LENS_RECORD = A(0xA32CAA8C), LENS_READY = A(0xA32D4B94);
-// S-LENS: the driver's static record and its current copies (0x502ac60b), commits and derived values
-const LENS_STATIC = A(0xA3193780), LENS_STATE = A(0xA32CA5F4), LENS_CHARACTER = A(0xA32CAA38), LENS_ZOOM_ENTRY = A(0xA32CAA7C);
-const LENS_COMMIT_STATE = A(0x502AC838), LENS_COMMIT_CHARACTER = A(0x502ACB96), LENS_ZOOM_TABLE = 1164;
+// S-LENS: the driver's static record and its current copies (0x502ac60b), commits and derived values; a build whose
+// driver init points the record at a static buffer of its own has that buffer read (src/fw/facts.mjs lensStatic), the
+// others keep E143's
+const lensStatic = () => fact('lens_record.static', null) ?? A(0xA3193780);
+const LENS_STATE = A(0xA32CA5F4), LENS_CHARACTER = A(0xA32CAA38), LENS_ZOOM_ENTRY = A(0xA32CAA7C);
+const LENS_COMMIT_STATE = A(0x502AC838), LENS_COMMIT_CHARACTER = A(0x502ACB96);
+// the record's zoom table, 16 bytes a step (src/fw/facts.mjs lensZoomTable: E143's 1164, the E144 family's 1156)
+const lensZoomTable = () => fact('lens_record.zoom_table', LENS_ZOOM_TABLE_E143);
 const LENS_DERIVE = [A(0x502A63C2), A(0x50129A3E), A(0x50129980), A(0x501299A2)], LENS_FOCAL_NOW = A(0x50129980);
 const LENS_ID = [0x00, 0x00, 0x19, 0x10, 0x00, 0x00], LENS_NAME = '12-40mm F2.8 PRO';
 const LENS_ZOOM = [12, 14, 17, 20, 25, 30, 35, 40], LENS_AP = [761, 2283];    // mm; APEX x 256 (F2.8, F22)
@@ -358,7 +363,8 @@ export class CamApp {
     const lab = this.s.lab, sim = lab.sim;
     const u16 = (v) => pack('<H', v & 0xFFFF);
     sim.write(LENS_VALID, Uint8Array.of(1));
-    sim.write(LENS_RECORD, pack('<I', LENS_STATIC));
+    const record = lensStatic();
+    sim.write(LENS_RECORD, pack('<I', record));
     sim.write(LENS_STATE, pack('<I', 0x8000));                    // L_STATUS_M
     sim.write(LENS_STATE + 12, u16(LENS_AP[0]));                  // L_APACTnow
     sim.write(LENS_STATE + 14, u16(LENS_AP[0]));                  // L_APACTnow(infinity)
@@ -371,7 +377,8 @@ export class CamApp {
     entry(LENS_ZOOM_ENTRY, LENS_ZOOM[0]);                         // L_FLenc, L_APmin, L_APmax, L_APACTmin, L_APACTmax
     lab.call(LENS_COMMIT_STATE, null, null, null, 200000);
     lab.call(LENS_COMMIT_CHARACTER, null, null, null, 200000);
-    LENS_ZOOM.forEach((fl, i) => { if (i) entry(LENS_STATIC + LENS_ZOOM_TABLE + 16 * i, fl); });
+    const table = lensZoomTable();
+    LENS_ZOOM.forEach((fl, i) => { if (i) entry(record + table + 16 * i, fl); });
     this.zoom = 0;
     for (const f of LENS_DERIVE) lab.call(f, null, null, null, 200000);
   }

@@ -1178,6 +1178,47 @@ export function lensMount(img) {
   return sites.length === 1;
 }
 
+// Where the lens record keeps its zoom table (fact 'lens_record.zoom_table', src/lab/camapp.mjs S-LENS, which writes
+// the 12-40's zoom steps there), read at the port's place of E143's current-focal-length read (LENS_FOCAL_NOW_E143
+// 0x50129980, camapp.mjs LENS_FOCAL_NOW): it takes the record from the driver's getter and reads the focal length of the
+// current zoom step's 16-byte entry, `add T,a0; asl 4,d0; movhu (d0,a0),d0`, within LENS_READ_SPAN bytes of its entry
+// (E143 0x5012998f, D). The focal-length interpolation beside it indexes the same table (E143 `add 1164,a2` at
+// 0x501298de) and divides by the difference of two neighbouring entries' focal lengths (0x5012994f, D). T is 1164 on
+// E143, E146 and E147, 1156 on E144, E139, E134, E137, E142, E140 and E125, 644 on E130 and E133, 640 on E118 and
+// E122 and 628 on E120 (X, the read at each port's place; the interpolation's index agrees on the twelve E143- and
+// E144-family bodies with a lens mount, X); none on the three bodies with a built-in lens. S-LENS wrote the steps at
+// E143's 1164, so E140's interpolation at S1's END_FOCUS divided by zero (0x500d96d1, X). Returns T, or undefined where
+// the place does not hold that sequence.
+export const LENS_FOCAL_NOW_E143 = 0x50129980, LENS_ZOOM_TABLE_E143 = 1164;
+const LENS_READ_SPAN = 0x20, LENS_INDEX = [0xfa, 0xd0, null, null, 0xf8, 0xc0, 0x04, 0xf4, 0x80];
+export function lensZoomTable(img, fn) {
+  const e = fn - 0x50000000;
+  for (let p = e; p < e + LENS_READ_SPAN; p++) if (bytesAt(img, p, LENS_INDEX)) return img[p + 2] | img[p + 3] << 8;
+  return undefined;
+}
+
+// The lens record's static buffer (fact 'lens_record.static', src/lab/camapp.mjs S-LENS, which points the record at it
+// and fills it), read at the port's place of E143's record pointer (LENS_RECORD_E143 0xa32caa8c): on the E144 family
+// the lens driver's init points the record at a static buffer aligned to 64 bytes, `mov -64,d1; mov S,d0; add 63,d0;
+// and d1,d0; mov d0,(W); mov d0,(record)` (E140 0x501d2284, S 0xa2682cc8, D), once on each of the ten E144-family
+// and the three E118-family bodies with a lens mount (E140 and E142 0xa2682d00, E144 0xa25988c0, E134 0xa27cf940, X, a
+// byte scan at each port's place), on none of the E143 family. The lab does not run that init. S-LENS had put E143's buffer (0xa3193780; E143's driver picks one of two
+// slots of a run-time area at the lens's attach, 0x502b3c5f and 0x502b3c9e, D) in the pointer on every body: on E140
+// the bytes there held a nonzero flag (the record's +35366) that sent S1's focal-length interpolation down the path
+// that divides by zero (X). Returns the buffer's address, or null where no such init stores the pointer (the E143
+// family, whose S-LENS keeps E143's buffer); throws for two.
+export const LENS_RECORD_E143 = 0xA32CAA8C;
+const LENS_ALIGN = [0x85, 0xc0, 0xfc, 0xcc, null, null, null, null, 0x28, 0x3f, 0xf2, 0x04], LENS_ALIGN_SPAN = 24;
+export function lensStatic(img, record) {
+  const found = [];
+  for (let p = img.indexOf(0xfc); p >= 0 && p + 6 <= img.length; p = img.indexOf(0xfc, p + 1)) {
+    if (img[p + 1] !== 0x81 || u32(img, p + 2) !== record) continue;
+    for (let q = p - LENS_ALIGN_SPAN; q < p; q++) if (q >= 0 && bytesAt(img, q, LENS_ALIGN)) { found.push(((u32(img, q + 4) + 63) & ~63) >>> 0); break; }
+  }
+  if (found.length > 1) throw new Error(`lensStatic: ${found.length} aligned inits of the lens record pointer ${h8(record)}, want one`);
+  return found[0] ?? null;
+}
+
 // The IIC bus driver's completion waits (fact 'iic.waits', src/lab/play.mjs S-IICWAIT, which answers them at once as a
 // bus with no device would): a blocking transfer is `mov C,a1; call S; call W`, S the transfer's start, which keeps
 // the run-time callback C for the controller's completion, and W the wait for C's flag F with no timeout, `mov -1,d0;
@@ -1850,6 +1891,9 @@ export function readPlacedFacts({ img, at }) {
   const modeSet = takeFrame !== null ? frameModeSet(img, takeFrame) : undefined;
   if (modeSet !== undefined) facts.frame_mode = { set: modeSet };
   if (!propSites.includes(null)) facts.prop = { device: propDevice(img, propSites) };
+  const focalNow = at(LENS_FOCAL_NOW_E143), zoomTable = focalNow !== null ? lensZoomTable(img, focalNow) : undefined;
+  const lensRecord = at(LENS_RECORD_E143);
+  if (zoomTable !== undefined && lensRecord !== null) facts.lens_record = { zoom_table: zoomTable, static: lensStatic(img, lensRecord) };
   return facts;
 }
 

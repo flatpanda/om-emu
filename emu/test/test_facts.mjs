@@ -33,7 +33,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
-  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143 } from '../src/fw/facts.mjs';
+  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -177,6 +177,10 @@ const TOUCH_QUEUE_FOUND = {
 // docs/om1-shutter-spec.md item 20), and E142's, E140's and E133's, whose CBS_END_SHOOTING_PICTURE is 369 in their CBS
 // name tables (E142 0x60a6c7f4, D)
 const CBS_FOUND = { E143: CBS_E143, ...Object.fromEntries(['E142', 'E140', 'E133'].map((m) => [m, { ...CBS_E143, END_SHOOTING_PICTURE: 369 }])) };
+// The lens record's zoom table (lens_record.zoom_table; src/fw/facts.mjs lensZoomTable): E143's as the lab gave it
+// (src/lab/camapp.mjs S-LENS, the focal-length read's `add 1164,a0` at 0x5012998f, D), E140's and E130's (their
+// interpolations' index, E140 0x500d9660 `add 1156,a2`, D)
+const LENS_TABLE_FOUND = { E143: LENS_ZOOM_TABLE_E143, E140: 1156, E130: 644 };
 // The display sync's functions as read at the code (display.sync; D: E137's request 0x502bd2d2 and image sync
 // 0x502bd5bc by their API ids, the setter 0x507a2fa4 its release calls at 0x509797ee)
 const SYNC_FOUND = { E137: { request: 0x502BD2D2, image_sync: 0x502BD5BC, sync_set: 0x507A2FA4 } };
@@ -535,6 +539,7 @@ export function factsTests() {
     const tq = placed?.touch_task;
     if (TOUCH_QUEUE_FOUND[code] && (code === 'E143' || PORTS[code])) ok(same(tq, TOUCH_QUEUE_FOUND[code]), `${code}: touch_task ${hx(tq ?? placed)}, found ${hx(TOUCH_QUEUE_FOUND[code])}`);
     if (tq !== undefined && PORTS[code]) ok((PORTS[code][TP_FLAG_E143] ?? TP_FLAG_E143) === tq.flag, `${code}: A() of the touch flag word ${hx(PORTS[code][TP_FLAG_E143])}, the rule's ${hx(tq)}`);
+    if (LENS_TABLE_FOUND[code] && (code === 'E143' || PORTS[code])) ok(placed?.lens_record?.zoom_table === LENS_TABLE_FOUND[code], `${code}: lens_record ${hx(placed?.lens_record ?? placed)}, found ${LENS_TABLE_FOUND[code]}`);
     if (CBS_FOUND[code]) ok(same(got.cbs, CBS_FOUND[code]), `${code}: cbs ${hx(got.cbs ?? got)}, found ${hx(CBS_FOUND[code])}`);
     if (SYNC_FOUND[code]) ok(same(got.display?.sync, SYNC_FOUND[code]), `${code}: display.sync ${hx(got.display ?? got)}, found ${hx(SYNC_FOUND[code])}`);
     ok(got.touch_panel?.driver === !NO_TOUCH_DRIVER.includes(code), `${code}: touch_panel ${hx(got.touch_panel ?? got)}, found ${NO_TOUCH_DRIVER.includes(code) ? 'no driver' : 'a driver'}`);

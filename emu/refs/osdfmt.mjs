@@ -13,8 +13,9 @@ export const ERRORS = ['NONE', 'REG_UNKNOWN', 'REG_READ_UNUSED', 'START_MODE', '
   'OPCODE_UNKNOWN', 'OPCODE_UNMODELED', 'WORD_BITS', 'DEPTH', 'COLOR_HIGH', 'SIZE_4096', 'DMA_RANGE', 'GUARD',
   'COPY_OVERLAP', 'BMP_FORMAT', 'BMP_SCALE', 'BMP_LUT', 'BMP_TOKEN', 'BMP_TRANSPARENCY', 'SEQUENCE', 'DEBUG_CPU_WRITE'];
 export const ERROR_CODE = Object.fromEntries(ERRORS.map((n, i) => [n, i]));
-// format -> [token bits, run bits, tokens per 64-bit word (null: a byte stream)]
-export const TOKEN = new Map([[0x02, [8, 4, null]], [0x0A, [8, 4, null]], [0x03, [10, 2, 6]], [0x0B, [12, 4, 5]]]);
+// format -> [token bits, run bits, tokens per 64-bit word (null: a byte stream)]; 0x09 the E144 family's 2-bit colour
+// over a 6-bit run (src/dev/engine.mjs)
+export const TOKEN = new Map([[0x02, [8, 4, null]], [0x0A, [8, 4, null]], [0x09, [8, 6, null]], [0x03, [10, 2, 6]], [0x0B, [12, 4, 5]]]);
 export const SHOOTING_PALETTE_FOR_PLANE = new Map([[0, 61], [1, 62], [2, 63]]);
 
 const byteAt = (data, i) => { if (i < 0 ? i + data.length < 0 : i >= data.length) throw new IndexError('index out of range'); return data[i < 0 ? i + data.length : i]; };

@@ -581,6 +581,47 @@ export function recViewStandby(img) {
   throw new Error(`recViewStandby: no 'mov n,d0; call' within ${RECVIEW_WALK} instructions after the trace at ${h8(0x50000000 + loads[0])}`);
 }
 
+// The ids of the shooting callbacks S-RELSEQ posts (fact 'cbs', src/lab/camapp.mjs CBS): each name's code in the
+// build's CBS name table, the one run of CBS_TABLE_MIN or more 8-byte entries {u32 code, u32 address of "CBS_<name>"}
+// (E143 0x60dcfb68, 289 entries, the names in alphabetical order, CBS_ABORT_ZOOM first; docs/om1-shutter-spec.md item
+// 20, D). The application's callback handler takes the code: E142's (0x50cd6b5a) looks the code less 2 up in a hashed
+// table of [code - 2, case] (0x60f6bd24) and posts nothing for a code it does not hold (D). On E142, E140 and E133
+// CBS_END_SHOOTING_PICTURE is 369 where it is 211 on E143 and the 14 other bodies, and E142's handler table holds no
+// 211: S2's END_SHOOTING_PICTURE reached no state, the still state stayed in 0x5101 and PLAY found no key to take (X).
+// Every other name S-RELSEQ posts has E143's code on all 18 expanded images (X, a scan of each). Returns {NAME: code} for the names of CBS_E143, or undefined where the build holds no such table; throws for
+// two tables or a name the table lacks.
+export const CBS_E143 = { START_FOCUS: 213, END_FOCUS: 214, START_SHOOTING_PICTURE: 210, START_EXPOSE: 136, END_EXPOSE: 21,
+  END_SHOOTING_PICTURE: 211, START_RECVIEW: 89, END_RECVIEW: 27, START_READY_MOVIE: 205, END_READY_MOVIE: 206,
+  START_RECORDING_MOVIE: 216, END_RECORDING_MOVIE: 217, START_SHOOTING_MOVIE: 92, STOP_SHOOTING_MOVIE: 97,
+  UPDATE_SHOOTING_TIME: 108 };
+const CBS_TABLE_MIN = 200, CBS_PREFIX = [0x43, 0x42, 0x53, 0x5f];                          // "CBS_"
+export function cbsIds(img) {
+  const { base } = imageBase(img);
+  const nameAt = (o) => { const a = u32(img, o + 4) - base; return a >= 0 && a + 4 < img.length && bytesAt(img, a, CBS_PREFIX) ? a : -1; };
+  const tables = [];
+  for (let o = 0; o + 8 <= img.length; o += 4) {
+    if (nameAt(o) < 0 || (o >= 8 && nameAt(o - 8) >= 0)) continue;
+    let n = 0;
+    while (o + 8 * (n + 1) <= img.length && nameAt(o + 8 * n) >= 0) n++;
+    if (n >= CBS_TABLE_MIN) tables.push({ o, n });
+  }
+  if (!tables.length) return undefined;
+  if (tables.length > 1) throw new Error(`cbsIds: ${tables.length} CBS name tables (${tables.map((t) => h8(base + t.o)).join(', ')}), want one`);
+  const codes = new Map(), { o, n } = tables[0];
+  for (let k = 0; k < n; k++) {
+    const a = nameAt(o + 8 * k), z = img.indexOf(0, a);
+    let name = '';
+    for (let p = a + CBS_PREFIX.length; p < z; p++) name += String.fromCharCode(img[p]);
+    codes.set(name, u32(img, o + 8 * k));
+  }
+  const out = {};
+  for (const name of Object.keys(CBS_E143)) {
+    if (!codes.has(name)) throw new Error(`cbsIds: the CBS name table at ${h8(base + o)} holds no CBS_${name}`);
+    out[name] = codes.get(name);
+  }
+  return out;
+}
+
 // The flag the display's device open waits on once per frame (fact 'display.frame_wait', src/lab/menu.mjs S-FRAMEWAIT):
 // the open loops over its frame count, each pass a 28 ms wait on the flag, `mov 28,d0; mov d0,(4,sp); movhu (abs32),d0;
 // mov (d8,sp),a0; exth d0; mov 1,d1; mov 1,a1; call OlyEvWt` (E143 0x501d7e74, word 0x60043088; E144 0x50181d06 and
@@ -1821,10 +1862,10 @@ export function readPlacedFacts({ img, at }) {
 // {change_task, change_entry, queue_word, queue_id, task_init, frame_wait, timer_sleep, sync, face_colour}}, {timer:
 // {reload_less_one}}, {dial: {select, select_end, table_ptr, table0}}, {touch_panel: {driver}}, {lens: {mount}}, {iic:
 // {waits}}, {touch: {i2c_write, i2c_read}}, {touch_api: {open}}, {shooting: {start, end, auto_through}}, {func_direct:
-// {run, id}}, {broker: {init}}, {card: {shots_query}}, {power_off: {usb_disconnect}} and {gui: {stride, height, banks,
-// kind3}} and {recview: {word, standby}} (no memories, take, task init, frame wait, timer sleep, sync, face colour,
-// timer, dial, touch, touch_api, shooting, func_direct, power_off or recview part where its rule reads none). Throws
-// for a reset_head with no rule here, and where a rule throws.
+// {run, id}}, {broker: {init}}, {card: {shots_query}}, {power_off: {usb_disconnect}}, {gui: {stride, height, banks,
+// kind3}}, {recview: {word, standby}} and {cbs: {NAME: code}} (no memories, take, task init, frame wait, timer sleep,
+// sync, face colour, timer, dial, touch, touch_api, shooting, func_direct, power_off, recview or cbs part where its
+// rule reads none). Throws for a reset_head with no rule here, and where a rule throws.
 export function readFacts({ img, family, resLoad }) {
   const facts = {};
   if (family.reset_head === 'flash-copy') {
@@ -1871,6 +1912,8 @@ export function readFacts({ img, family, resLoad }) {
   facts.board.dram_size = dramSize(facts.gui);
   const recview = recViewStandby(img);
   if (recview !== undefined) facts.recview = recview;
+  const cbs = cbsIds(img);
+  if (cbs !== undefined) facts.cbs = cbs;
   return facts;
 }
 

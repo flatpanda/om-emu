@@ -33,7 +33,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
-  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143 } from '../src/fw/facts.mjs';
+  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -173,6 +173,10 @@ const TOUCH_QUEUE_FOUND = {
   E143: TOUCH_TASK_QUEUE_E143, E134: { flag: 0x60041710, queue: 0x60041972, bit: 8 },
   E130: { flag: 0x60420D54, queue: 0x60420F48, bit: 8 },
 };
+// The shooting callbacks' ids (cbs; src/fw/facts.mjs cbsIds): E143's as the lab gave them (src/lab/camapp.mjs, D:
+// docs/om1-shutter-spec.md item 20), and E142's, E140's and E133's, whose CBS_END_SHOOTING_PICTURE is 369 in their CBS
+// name tables (E142 0x60a6c7f4, D)
+const CBS_FOUND = { E143: CBS_E143, ...Object.fromEntries(['E142', 'E140', 'E133'].map((m) => [m, { ...CBS_E143, END_SHOOTING_PICTURE: 369 }])) };
 // The display sync's functions as read at the code (display.sync; D: E137's request 0x502bd2d2 and image sync
 // 0x502bd5bc by their API ids, the setter 0x507a2fa4 its release calls at 0x509797ee)
 const SYNC_FOUND = { E137: { request: 0x502BD2D2, image_sync: 0x502BD5BC, sync_set: 0x507A2FA4 } };
@@ -426,6 +430,7 @@ const E143_FACTS = {
   touch_panel: { driver: true }, lens: { mount: true }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
   broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143 }, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143,
+  cbs: CBS_FOUND.E143,
 };
 
 export function factsTests() {
@@ -530,6 +535,7 @@ export function factsTests() {
     const tq = placed?.touch_task;
     if (TOUCH_QUEUE_FOUND[code] && (code === 'E143' || PORTS[code])) ok(same(tq, TOUCH_QUEUE_FOUND[code]), `${code}: touch_task ${hx(tq ?? placed)}, found ${hx(TOUCH_QUEUE_FOUND[code])}`);
     if (tq !== undefined && PORTS[code]) ok((PORTS[code][TP_FLAG_E143] ?? TP_FLAG_E143) === tq.flag, `${code}: A() of the touch flag word ${hx(PORTS[code][TP_FLAG_E143])}, the rule's ${hx(tq)}`);
+    if (CBS_FOUND[code]) ok(same(got.cbs, CBS_FOUND[code]), `${code}: cbs ${hx(got.cbs ?? got)}, found ${hx(CBS_FOUND[code])}`);
     if (SYNC_FOUND[code]) ok(same(got.display?.sync, SYNC_FOUND[code]), `${code}: display.sync ${hx(got.display ?? got)}, found ${hx(SYNC_FOUND[code])}`);
     ok(got.touch_panel?.driver === !NO_TOUCH_DRIVER.includes(code), `${code}: touch_panel ${hx(got.touch_panel ?? got)}, found ${NO_TOUCH_DRIVER.includes(code) ? 'no driver' : 'a driver'}`);
     ok(got.lens?.mount === !NO_LENS_MOUNT.includes(code), `${code}: lens ${hx(got.lens ?? got)}, found ${NO_LENS_MOUNT.includes(code) ? 'no mount' : 'a mount'}`);

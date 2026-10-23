@@ -4,7 +4,7 @@
 // WAIT_SLICE_MS, which check_nav rebinds for a session, are live bindings with setters here (setNavPri,
 // setWaitSliceMs). screenshot writes through env.writeOutputs (PNG and zlib live in
 // checks/lib/png.mjs, so src/ stays Worker-safe); the session's out directory is a relative path the writer resolves.
-import { A } from '../fw/model.mjs';
+import { A, ON_LAB_MODEL } from '../fw/model.mjs';
 import * as D from './display.mjs';
 import * as K from './kernel.mjs';
 import * as MM from './menu.mjs';
@@ -115,7 +115,10 @@ export class NavLab extends MM.MenuLab {
   native_init() {
     super.native_init();
     this.observe(SHOW_PANEL, (lab, r) => lab.panels.push([lab.step_tag, r.d0 & 0xFFFF]), 'obs-showpanel');
-    this.observe(VAR_SET, (lab, r) => this._var(lab, r), 'obs-var226');
+    // variable 226 is E143's menu viewer record (2428 bytes, set at one place, D); on another build 226 is another
+    // variable (E142 and E140: 2 bytes, E144: 382, E146: 152, at the port's place of the setter, D) and the record
+    // is not identified, so only E143's is observed
+    if (ON_LAB_MODEL) this.observe(VAR_SET, (lab, r) => this._var(lab, r), 'obs-var226');
     this.hook(MM.API_WRITE, (h, r) => this._vt4(h, r), 'obs-vt4');
     this.wrap(MM.DISPATCH, (take) => (hle, r) => {
       if (this.posting) throw new NavError(`GUI ran during post (dispatch ${h8(MM.DISPATCH)} reached before sendEvent returned): the lab task does not outrank the GUI task`);

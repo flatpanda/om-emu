@@ -268,7 +268,7 @@ export const MODELS = {
     },
   },
   E134: {
-    name: 'E-M1X', bin: 'OLY_E_134_2400_0000_0000.BIN', version: '2.4', res_block: 'blk01a00000.OE.0101.bin',
+    name: 'E-M1X', bin: 'OLY_E_134_2400_0000_0000.BIN', version: '2.4', res_block: 'blk01a00000.OE.0101.bin', checked: true,
     rom_len: 27262912, rom_sha256: '7b0d72f88cfed079c6e3367a910856f9e4f69bc9e020f9c06d7ed0980bd66d3f',
     // the reset head's jump into the run-time copy at 0x500000b6: mov 0x600210f9,a0; jmp (a0) (D)
     image_base: 0x60021020,
@@ -317,7 +317,7 @@ export const MODELS = {
     g4set: G4SET_UNCHECKED,
   },
   E142: {
-    name: 'E-P7', bin: 'OLY_E_142_1100_0000_0000.BIN', version: '1.1', res_block: 'blk01900000.OE.0101.bin',
+    name: 'E-P7', bin: 'OLY_E_142_1100_0000_0000.BIN', version: '1.1', res_block: 'blk01900000.OE.0101.bin', checked: true,
     rom_len: 26214336, rom_sha256: '5dd9af164b4590c7e82f6905c919b3cc450bb58f2d5742ab2a0e3a4eb2e26190',
     // the reset head's jump into the run-time copy at 0x500000b6: mov 0x600200f9,a0; jmp (a0) (D)
     image_base: 0x60020020,

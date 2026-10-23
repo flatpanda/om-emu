@@ -76,7 +76,7 @@ import { pack } from '../util/bytes.mjs';
 import { hex } from '../util/hex.mjs';
 import * as SC from './scene.mjs';
 import { A, ON_LAB_MODEL, MODEL_INFO, IMAGE_BASE, knob, fact, isUnmapped } from '../fw/model.mjs';
-import { DISPLAY_SYNC_E143, RECVIEW_E143 } from '../fw/facts.mjs';
+import { DISPLAY_SYNC_E143, RECVIEW_E143, CBS_E143 } from '../fw/facts.mjs';
 //   S-CARD     a card in the SD slot: the HLS media state the file module's mount would set (SD 0x60360bfc and
 //              0x60360c08, both read through 0x50aca51d by getMountState) is 8: the application's card check passes
 //              (errFactor 0) and the GUI's count check (0x511ffcc9) too; each picture taken (END_SHOOTING_PICTURE) is
@@ -147,10 +147,9 @@ const DISPSYNC_REQUEST = 3, DISPSYNC_OFF = 0, DISPSYNC_PANELS = 2, DISPSYNC_KIND
 const TRA_EXEC_CALLS = A(0x50AF7CB9), TRA_EXEC_CALL = A(0x50AF7CBE);
 const SHOOT_POST = A(0x50AF4451), SHOOT_REACTIVE_VT = A(0x60DFF400);
 const HEAP = A(0x62424700), HEAP_END = A(0x6268D380);
-export const CBS = { START_FOCUS: 213, END_FOCUS: 214, START_SHOOTING_PICTURE: 210, START_EXPOSE: 136, END_EXPOSE: 21,
-  END_SHOOTING_PICTURE: 211, START_RECVIEW: 89, END_RECVIEW: 27, START_READY_MOVIE: 205, END_READY_MOVIE: 206,
-  START_RECORDING_MOVIE: 216, END_RECORDING_MOVIE: 217, START_SHOOTING_MOVIE: 92, STOP_SHOOTING_MOVIE: 97,
-  UPDATE_SHOOTING_TIME: 108 };
+// the callbacks' ids, by name in the build's CBS name table (src/fw/facts.mjs cbsIds): a build may number one
+// otherwise (E142's END_SHOOTING_PICTURE is 369, E143's 211)
+export const CBS = fact('cbs', CBS_E143);
 // S-RELSEQ's shooting phase during a movie: the phases the shooting component's sequence enters (CmpSqp_SequencePartsBase,
 // setter 0x50cc6121: 113 at 0x50c87a17 (MOV_READY, I), 114 MOV_READY_FINISH, 115 MOV_RECORDING, 117 MOV_END), which the
 // phase query 0x50ab57e9 answers in place of 100 (no sequence controller in camapp 1). getMovieState is 1 at 113..115.

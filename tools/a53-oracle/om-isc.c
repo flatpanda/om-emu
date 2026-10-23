@@ -13,6 +13,12 @@
  * bank(n)+0x800) is forwarded to the peer as one byte 'n'; a byte from the peer
  * sets bank0+0x880 pending and pulses IRQ line 0 (wired to the GIC by the board
  * hook in hw/arm/virt.c when enabled). Unmodelled offsets: LOG_UNIMP, read 0.
+ *
+ * This file is built into QEMU and, unlike the rest of this repository, is
+ * licensed under the GNU General Public License, version 2 or (at your
+ * option) any later version.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 #include "qemu/osdep.h"
 #include "qemu/log.h"

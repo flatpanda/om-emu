@@ -9,6 +9,11 @@ A53's own daemons. **None of this ships in `emu/`** -- the emulator stays pure J
 and must not depend on QEMU. This is the cross-check that tells a future JS "A53
 service" what its replies should be.
 
+License: `om-isc.c` and `om-isc-qemu.patch` are built into QEMU and are licensed
+under the GNU GPL, version 2 or later (`SPDX-License-Identifier:
+GPL-2.0-or-later`, in each file's header); the rest of this directory and of the
+repository is not under that license.
+
 Live result (X, reproducible with `run-isc.sh`): the A53 sends its port-27
 start-completion `{01 00 00 00}`; a port-26 kind-3 request is received by the
 A53 over IRQ 14, which forks its survival child and replies on port 27 echoing

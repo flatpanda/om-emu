@@ -1,3 +1,9 @@
+om-isc board hook for QEMU's hw/arm/virt.c and hw/misc/meson.build (oracle only).
+A patch to QEMU and, unlike the rest of this repository, licensed under the
+GNU General Public License, version 2 or (at your option) any later version.
+
+SPDX-License-Identifier: GPL-2.0-or-later
+
 --- a/hw/arm/virt.c	2026-09-29 06:33:20.000000000 -0700
 +++ b/hw/arm/virt.c	2026-10-23 11:58:43.514759016 -0700
 @@ -91,6 +91,8 @@

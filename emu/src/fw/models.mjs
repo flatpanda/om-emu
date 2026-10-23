@@ -31,13 +31,12 @@ const VSC_UNAPPLIED = [[0x48C, 0x494], [0x4CC, 0x4CC], [0x5D0, 0x5DC], [0x9A0, 0
 // bodies that give it, while their group-4 producer (the port places E143's) is not checked: start and S1 run so (X)
 const G4SET_UNCHECKED = false;
 
-// S-NOPOWEROFF (src/lab/play.mjs call_skips, at a fact path): the power-off post in the PC sub-app state's
-// USB-disconnect handler (its traces "UsbDisconnectSubAppStatePc" and "startPowerOff", read by src/fw/facts.mjs
-// usbPowerOff, fact power_off.usb_disconnect) is stepped over. Run, the start leaves shooting (each body's entry gives
-// what it saw); stepped over, the GUI stays in shooting (0x108) and takes S1 (X). A stand-in while the start state a
-// power-switch start leaves is open (docs/model-survey.md, E144)
-const NO_USB_POWER_OFF = ['power_off.usb_disconnect', 'S-NOPOWEROFF',
-  'start power-off: the start state that avoids it is open'];
+// S-NOPOWEROFF, retired 2026-10-23: the lab stepped over the power-off post in the PC sub-app state's USB-disconnect
+// handler (fact power_off.usb_disconnect, src/fw/facts.mjs usbPowerOff) on eight E144-family bodies. The start had
+// reached it because the idle image left the USB connection 0x0400 at "cable in" (and E144's and E137's power lever
+// off): the application went to its PC state, ending the shooting service. With the power lever on and no cable
+// (src/lab/play.mjs IDLE_SWITCH_STATES) no body's start reaches the post (X: E144, E139, E137, E142, E140, E125, E145,
+// E130), so the call runs as the firmware's
 
 // `scpu_port`: UI_IN's group 0 through the SCPU interface's port and event words (src/lab/play.mjs H-SCPUIRQ,
 // H-UIINPORT, H-SCPUPORT; docs/hle-gaps.md 4.7.2), in the model's disassembly notation: irq [handler, level], the IRQ
@@ -169,9 +168,6 @@ export const MODELS = {
     // completion flag (0x600417aa) time out and log 0x1d003003 "INTCHA Eve W Err" without the charger, X), which the
     // GUI's power-state change 0x50041a4c makes about 4 s after power-on (X); 0 is its success value (0x5004135c, D)
     return_stubs: [[0x50041179, 0, 'S-INTCHA', 'internal charger IIC write: no charger in the lab']],
-    // S-NOPOWEROFF at 0x50cf0e21 (`mov 8,d0; mov a2,a0; call 0x50ceb714`, D): run, the start ends in the power-off's
-    // final loop 0x5004da5b (`call 0x5003a37f` with d0 1, `bra .`) before the first S1 (X)
-    call_skips: [NO_USB_POWER_OFF],
     // its board family's (src/fw/board.mjs FAMILIES.E144); its core byte (the getter 0x5000276d `movbu
     // (0x8ff00198),d0`), library (flash 0x41e02000 -> 1536 words at 0x47000800, 0x5000027d..0x5000028e) and preload
     // (the reset head's copies 0x500000f7..0x50000117, 0x5000018b..0x500001c5) are read by bin/port.mjs
@@ -213,9 +209,6 @@ export const MODELS = {
     // answer (src/lab/scpuserver.mjs S-SCPU; E143's [2, 0] and none): the time-zone record's write and read wrappers
     // at 0x50051013 and 0x50051020 pass index 2, byte 0 (D)
     scpu: { words: [[2, 0]], quiet: [] },
-    // S-NOPOWEROFF at 0x50c9bdcc (D): run, the GUI leaves shooting for 0x0104 ID_ST_BLACK_SCREEN after message
-    // 0x9626 (X)
-    call_skips: [NO_USB_POWER_OFF],
     overrides: {
       '0x5014e374': { to: '0x5011080a', why: 'the joystick decoder publish return, as the map from E143 places it (E144 has no joystick and gives null): the UI_IN code has E143\'s branch on 0x1235/0x1234 (D cmp at 0x50110999/0x501109a5 and 0x50110a59/0x50110a65, E143 0x5014c07a/0x5014c086 and 0x5014c13a/0x5014c146), and 0x501107fe..0x5011080a is E143\'s 0x5014e368..0x5014e374, the call of the publisher 0x500257d0 with d1 0, a0 0 (D; play)' },
     },
@@ -268,9 +261,6 @@ export const MODELS = {
     // paired (carryKnob, X; the DISPLAY sends are read by a rule since, src/fw/facts.mjs displaySends)
     port_via: 'E144',
     g4set: G4SET_UNCHECKED,
-    // S-NOPOWEROFF at 0x50c3ef76 (`mov 7,d0`: event 7, E144's 8, D): run, the GUI leaves shooting for 0x0104 after
-    // message 0x9626 and the application's flash save 0x507e48bb stops the lab (S-FLASHSAVE, X)
-    call_skips: [NO_USB_POWER_OFF],
   },
   E142: {
     name: 'E-P7', bin: 'OLY_E_142_1100_0000_0000.BIN', version: '1.1', res_block: 'blk01900000.OE.0101.bin',
@@ -296,9 +286,6 @@ export const MODELS = {
     // EXPECTED_ERRLOG): IRQ 120 (0x5016c6d5), called at 0x50164055, the code at 0x5016406a (D); reached, X
     // the shared stand-in (G4SET_UNCHECKED); start and S1 run with it (X)
     g4set: G4SET_UNCHECKED,
-    // S-NOPOWEROFF at 0x50cba3a5 (`mov 8,d0; mov a2,a0`, as E144's, D): run, the GUI leaves shooting for 0x0104 after
-    // message 0x9626 (X); stepped over, it stays in 0x108 and takes S1 (X)
-    call_skips: [NO_USB_POWER_OFF],
   },
   E140: {
     name: 'E-M10 IV', bin: 'OLY_E_140_1100_0000_0000.BIN', version: '1.1', res_block: 'blk01900000.OE.0101.bin',
@@ -322,9 +309,6 @@ export const MODELS = {
     // EXPECTED_ERRLOG): IRQ 120 (0x5016c5a4), called at 0x50163fee, the code at 0x50164003 (D); reached, X
     // the shared stand-in (G4SET_UNCHECKED); start and S1 run with it (X)
     g4set: G4SET_UNCHECKED,
-    // S-NOPOWEROFF at 0x50cb6247 (`mov 8,d0; mov a2,a0`, as E142's, D): run, the GUI leaves shooting for 0x0104 after
-    // message 0x9626 (X); stepped over, it stays in 0x108 and takes S1 (X)
-    call_skips: [NO_USB_POWER_OFF],
   },
   E125: {
     name: 'E-M1 II', bin: 'OLY_E_125_3700_0000_0000.BIN', version: '3.7', res_block: 'blk01600000.OE.0101.bin',
@@ -350,9 +334,6 @@ export const MODELS = {
                     // 0x5078d2ba..d3) and starts in the camera application's start (S-CAMAPP, X); E143 has no battery
                     // manager (no "OlyHfwBatteryManager" string, X)
     ],
-    // S-NOPOWEROFF at 0x50d2302c (`mov 7,d0; mov a2,a0`, as E145's, D): run, the GUI reaches 0x108 and the power-off
-    // posts at once, the start ending in 0x0104 (X); stepped over, it stays in 0x108 and takes S1 (X)
-    call_skips: [NO_USB_POWER_OFF],
     // S-CARD's mount test (src/lab/camapp.mjs): E125's DCF remain count 0x505f49ad tests the drive status 0x5061cb03
     // returns for its error bits only, `btst 63,d0; mov 1,d1; beq` at 0x505f49d0, where E143's (0x5087d7dc) goes on
     // only with the mount bit 0x1000 set too, `btst 4096,d1; bne` at 0x5087d80a, the status's bit 12 copied from the
@@ -383,10 +364,6 @@ export const MODELS = {
     port_via: 'E142',
     // the shared stand-in (G4SET_UNCHECKED)
     g4set: G4SET_UNCHECKED,
-    // S-NOPOWEROFF at 0x50c0f63c (`mov 7,d0; mov a2,a0`, D): run, the start ends in 0x0104 ID_ST_BLACK_SCREEN and
-    // S1 stops at K-CFLUSH from the state block save (return 0x5000392f, X); stepped over (once in the start, X), it
-    // stays in 0x108 and takes S1 (X)
-    call_skips: [NO_USB_POWER_OFF],
   },
   E133: {
     name: 'E-PL9', bin: 'OLY_E_133_1101_0000_0000.BIN', version: '1.1', res_block: 'blk01900000.OE.0101.bin',
@@ -423,9 +400,6 @@ export const MODELS = {
     port_via: 'E142',
     // the shared stand-in (G4SET_UNCHECKED)
     g4set: G4SET_UNCHECKED,
-    // S-NOPOWEROFF at 0x50c2f598 (`mov 7,d0; mov a2,a0`, as E145's, D): run, the start ends in 0x0104
-    // ID_ST_BLACK_SCREEN (X); stepped over, it stays in 0x108 and takes S1 (X)
-    call_skips: [NO_USB_POWER_OFF],
   },
   E129: {
     name: 'TG-5', bin: 'OLY_E_129_1101_0000_0000.BIN', version: '1.1', res_block: 'blk01900000.OE.0101.bin',

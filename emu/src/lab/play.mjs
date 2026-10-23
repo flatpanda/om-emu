@@ -272,6 +272,22 @@ export const MODE_DIAL = { group: 2, positions: Array.from({ length: 10 }, (_, k
 // profile is not known
 export const SWITCH_IDLE_POSITION = 1;
 export const POSITION_SWITCHES = [];
+// a ported model's switches the idle image sets by state, not by bit: [code, state], a switch's state 0 being its bit
+// at the entry's polarity (UI_IN's reading; H-G4SET's producer sets the bit so for value 0, docs/om1-input-spec.md
+// "Group 4"). E143's idle bit 0 gives a body whose polarity differs the other state. The power lever 0x000c on, the
+// state E143's idle image gives it: E144 and E137 read their lever at polarity 1, where bit 0 left it off and the
+// start was a USB start or, with no cable, a power-off (X, E144). The USB connection 0x0400 with no cable (state 1):
+// with state 0 the E144 family's shooting service start publishes the switch's "on" as a module event, which the
+// application's module-event broker gives CA_MAIN as event 8 OLY_USB_CONNECTED, and the shooting state's command is
+// then PC_START_PC_USB_SELECT: the application ends its shooting service and S1 and S2 release nothing (D, X: E144,
+// E139, E137, E142, E140, E125, E130; E134's polarity 1 gave it state 1, and only E134 took S2; the addresses are in
+// docs/model-survey.md, E144). Not in the group of the HDMI report 0x0501, which the firmware's group-4 producer
+// pushes from its own image (H-G4SET; the HDMI plug's report, a lens or grip input): there the USB connection is the
+// SCPU port scan's, reported through that producer (docs/hle-gaps.md 4.7, the 0x88 reply), which does not run, and the
+// lab's level would be undone by the producer's next push (X: E146, E147). So the E143 family keeps 0x0400 at state
+// 0, as E143's own idle image above does; its starts publish no USB connection (X; what state 0 is there is I)
+export const IDLE_SWITCH_STATES = [[0x000C, 0], [0x0400, 1]], PRODUCER_CODE = 0x0501;
+export const STATE_SWITCHES = [];             // [[group, byte, bit, level]] of IDLE_SWITCH_STATES, apply_uiin_layout
 // the dial group's image at position k: k's bit at its polarity, every other position's at the other value
 export function mode_image(k) {
   const img = new Uint8Array(GROUP_BYTES[MODE_DIAL.group]);
@@ -289,6 +305,7 @@ export function idle_images() {
   set_bit(imgs[MONITOR_OPEN[0]], MONITOR_OPEN[1], MONITOR_OPEN[2], 1);
   imgs[MODE_DIAL.group].set(mode_image(0));
   for (const [g, b, bit, pol] of POSITION_SWITCHES) set_bit(imgs[g], b, bit, pol);
+  for (const [g, b, bit, level] of STATE_SWITCHES) set_bit(imgs[g], b, bit, level);
   return imgs;
 }
 // The image's UI_IN key matrix (docs/om1-input-spec.md "Groups"): N records of 12 bytes at UIIN_GROUPS, {u32
@@ -350,6 +367,9 @@ export function apply_uiin_layout(image) {
   const byCode = new Map();
   groups.forEach(({ entries }, g) => entries.forEach(([b, bit, code, typ, pol]) => { if (code && code !== MODE_DIAL_CODE && typ === 1) { if (!byCode.has(code)) byCode.set(code, []); byCode.get(code).push([g, b, bit, pol]); } }));
   POSITION_SWITCHES.splice(0, POSITION_SWITCHES.length, ...[...byCode.values()].filter((l) => l.length > 1).map((l) => l[SWITCH_IDLE_POSITION]));
+  const states = new Map(IDLE_SWITCH_STATES);
+  STATE_SWITCHES.splice(0, STATE_SWITCHES.length, ...groups.flatMap(({ entries }, g) => (entries.some((e) => e[2] === PRODUCER_CODE) ? [] : entries
+    .filter(([, , code, typ]) => typ === 1 && states.has(code)).map(([b, bit, code, , pol]) => [g, b, bit, states.get(code) === 0 ? pol : 1 - pol]))));
   CODE0_KEYS.splice(0, CODE0_KEYS.length, ...code0);
   if (monitor) MONITOR_OPEN.splice(0, 3, ...monitor);
   UIIN_ENTRIES.clear();

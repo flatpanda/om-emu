@@ -1297,15 +1297,16 @@ export function funcDirect(img) {
   return found[0];
 }
 
-// The PC state's USB-disconnect power-off (fact 'power_off.usb_disconnect', src/lab/play.mjs MODEL_INFO.call_skips
-// S-NOPOWEROFF): the call that posts the power-off in the function traced "UsbDisconnectSubAppStatePc", the first
-// call after its "startPowerOff" trace that `mov imm8,d0; mov a2,a0` (80 nn 98) directly precedes (E143 0x510617bd,
-// its trace loaded at 0x5106174a, `mov 8,d0; mov a2,a0; call 0x5105cdf8`; E144 0x50cf0e21 and E139 0x50c9bdcc, their
-// S-NOPOWEROFF sites by hand before the rule; E137 0x50c3ef76, its trace at 0x50c3ef0f, `mov 7,d0; call 0x50c3b781`;
-// D). One on each of the 18 expanded images but E118's, which holds no "startPowerOff" (X, a byte scan); the event is
-// 8 on E143, E146, E147, E144, E139, E140 and E142, 7 on the others (X). Returns the call's address (disassembly
-// notation), or undefined where the traces are not held; throws for a trace held or loaded twice, or a walk that
-// meets the return first.
+// The PC state's USB-disconnect power-off (fact 'power_off.usb_disconnect'; S-NOPOWEROFF stepped over it through
+// MODEL_INFO.call_skips until the idle image's switch states kept the starts out of the PC state, src/fw/models.mjs,
+// and no stand-in reads it now): the call that posts the power-off in the function traced "UsbDisconnectSubAppStatePc",
+// the first call after its "startPowerOff" trace that `mov imm8,d0; mov a2,a0` (80 nn 98) directly precedes (E143
+// 0x510617bd, its trace loaded at 0x5106174a, `mov 8,d0; mov a2,a0; call 0x5105cdf8`; E144 0x50cf0e21 and E139
+// 0x50c9bdcc, their S-NOPOWEROFF sites by hand before the rule; E137 0x50c3ef76, its trace at 0x50c3ef0f, `mov 7,d0;
+// call 0x50c3b781`; D). One on each of the 18 expanded images but E118's, which holds no "startPowerOff" (X, a byte
+// scan); the event is 8 on E143, E146, E147, E144, E139, E140 and E142, 7 on the others (X). Returns the call's address
+// (disassembly notation), or undefined where the traces are not held; throws for a trace held or loaded twice, or a
+// walk that meets the return first.
 const USB_OFF_TRACE = 'UsbDisconnectSubAppStatePc', POWER_OFF_TRACE = 'startPowerOff', POWER_OFF_WALK = 80;
 export function usbPowerOff(img) {
   const { base } = imageBase(img), held = (s) => findString(img, s, { nul: true, after: true }).map((o) => base + o);

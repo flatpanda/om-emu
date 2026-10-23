@@ -438,7 +438,7 @@ export const MODELS = {
     g4set: G4SET_UNCHECKED,
   },
   E130: {
-    name: 'E-M10 III', bin: 'OLY_E_130_1200_0000_0000.BIN', version: '1.2', res_block: 'blk01900000.OE.0101.bin',
+    name: 'E-M10 III', bin: 'OLY_E_130_1200_0000_0000.BIN', version: '1.2', res_block: 'blk01900000.OE.0101.bin', checked: true,
     rom_len: 26214336, rom_sha256: '8c3099214a3ec1aa29a9058997c4472072bdeddda8c8df93ec707d7a0bc31eb9',
     // the reset head's jump into the run-time copy at 0x500000b6: mov 0x604000f9,a0; jmp (a0) (D)
     image_base: 0x60400020,
@@ -454,6 +454,9 @@ export const MODELS = {
     port_via: 'E142',
     // the shared stand-in (G4SET_UNCHECKED)
     g4set: G4SET_UNCHECKED,
+    overrides: {
+      '0x500257ce': { to: '0x50022dd8', why: 'the AF module\'s OSD upload (camapp.mjs S-AFOSD), which neither map places: its one caller 0x50605bc1 loads the frame count into d1 and the frames into a0 and calls it with `mov 3,d0`, as E142\'s 0x5063ef07 calls E142\'s upload 0x50025d21; like that one it acts when the frame mode word (0xa2ab74c0) is 3, stores the count (0xa2ab7894), copies 8 bytes a frame from a0 to 0xa2ab74cc and sets bit 0x1000 of the flag in 0x60420d1a, without E142\'s first call 0x50025e99 (0x50022dd8..0x50022e48, D)' },
+    },
   },
   E129: {
     name: 'TG-5', bin: 'OLY_E_129_1101_0000_0000.BIN', version: '1.1', res_block: 'blk01900000.OE.0101.bin',

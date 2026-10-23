@@ -175,16 +175,21 @@ These phases are the device budget for an in-emulator LLE, whatever engine runs 
   transport already decoded in `docs/hle-gaps.md` §4.11.1. Once node-4's FIFO and doorbell exist and the MN side (CPU 1,
   or a JS stand-in for it) drains/fills them, `iscdrv` would start and `sccore`/`isc_socket`/`isc_olnet` would get
   replies.
-  **Phase (c) result (X, `tools/a53-oracle`).** The stop is pinned two ways. With RAM covering the windows
-  (`-m 2G`), the control-block `__ioremap` returns NULL and `isc_start` returns `-6` (`ENXIO`); with RAM capped below
-  them, the first access to a window raises a Synchronous External Abort (`0x96000010`) — unassigned MMIO on virt
-  faults. Either way `isc_start` cannot pass on stock virt: the control block, lock, shared memory and doorbells must be
-  *backed*, and the MN→A53 doorbell must raise IRQ 14. The MN half of the link is implemented and verified outside QEMU
-  by `tools/a53-oracle/iscpeer.mjs` (control-block magic + node count + FIFO offsets; `isc_send`/`isc_receive` FIFO
-  format), whose `selftest` round-trips a port-26 request and a port-27 start-complete through the exact encoding the
-  driver uses. The remaining wall for a *live* loop is injecting IRQ 14 on the MN→A53 doorbell, which a shared file and
-  the QEMU monitor cannot do; it needs a small QEMU sysbus device (or a gdb-forced call into `isc_receive_interrupt`).
-  The register models and both approaches are in `tools/a53-oracle/README.md`.
+  **Phase (c) result: ISC is up, live (X, `tools/a53-oracle`).** On stock virt `isc_start` fails `-6` (`ENXIO`): with
+  RAM covering the windows the control-block `__ioremap` returns NULL, because arm64 refuses to ioremap what the machine
+  presents as RAM. A patched QEMU (`om-isc-qemu.patch` + `om-isc.c`, built by `build-qemu.sh`) fixes this: a small
+  sysbus device backs the lock (`0x97000000`, as normal RAM so the LL/SC monitor works), scc (`0x97f00b80`), the control
+  block + FIFOs (`0x97f00c00`) and the `alloc_mem` pool (`0x63fe0000` / `0x2_a3fe0000`) from a shared
+  memory-backend-file at the true physical addresses (high priority over machine RAM; `mem=0x5140000` keeps the
+  kernel's own RAM the real 81 MiB so the windows are not RAM and ioremap succeeds). It models the four `irqcon` banks
+  and, on an MN→A53 doorbell from the peer, sets `bank0+0x880` bit 14 and raises GIC SPI `0x1c0` — which the A53's
+  `irqcon` driver hardwires (`irqcon_postcore_init` requires `irq-0x1c0 <= 7`, D at `0xffffff8008583268`), so virt's GIC
+  is widened to 512 IRQs in the patch. `irqcon` then demuxes bit 14 to `isc_receive_interrupt`. The MN half runs outside
+  QEMU as `iscpeer.mjs` (control-block magic `0x10f7`, node count, cb-relative FIFO offsets, `isc_send`/`isc_receive`
+  FIFO format). **Measured:** `isc_start` succeeds; the A53 posts the port-27 start-complete `{01 00 00 00}`; a port-26
+  kind-3 request is received over IRQ 14 and answered on port 27 with the requested size echoed back; and `hhhr` answers
+  a port-30 request with a 112-byte port-31 reply to node 0. Reproduce with `run-isc.sh`; details in
+  `tools/a53-oracle/README.md`.
 
 **Custom vs standard, restated.** Custom (registers must be modelled from the kernel's aarch64 code, done above for the
 UART; `irqcon`, `isc_lock`, `scc`, `mn-mmc` remain): `ntcj,irqcon`, `ntcj,mn-sio-1-uart`, the ISC lock/control windows,
@@ -282,8 +287,8 @@ tagged "+shmem".
 
 | Daemon | recv port (len) | send port (node, len) | Payload (D) / behaviour |
 |---|---|---|---|
-| `sccore` | 26 (8) | 27 (node 1, 4) | **The SYS_CA53_PWR_MNG pair.** Port-26 request is 8 bytes, byte0 = kind: `1` → `system("/etc/init.d/wifi start &")`; `2` → stop Wi-Fi, reply on 27; `3` → `fork` a prioritised survival child that mallocs `word@+4` bytes and replies on 27, then loops `memset`+`sleep(30)` (`iscdrv.ko+0x10e00`, D). At init `sccore` sends port-27 `{0x01,0,0,0}` = **start-complete** (the reply CPU 1 waits for) after spawning its 3 threads (`iscdrv.ko+0x10fc4`, D). Also port 14 (NEON freerun benchmark: recv a trigger, run NEON, send result) and port 32 (recv/echo "arm survival inquiry/reply" heartbeat). |
-| `hhhr` | 30 (48) | 31 (node 0, 112) | HHHR compute. Port-30 request 48 bytes (matrix sizes + buffer handle); mmaps `/dev/mem`, `ISC_dcache_clean_range` over the result, replies 112 bytes on port 31 to CPU 0 (`hhhr.dis 0x133a0`, D). |
+| `sccore` | 26 (8) | 27 (node 1, 4) | **The SYS_CA53_PWR_MNG pair (live X).** Port-26 request is 8 bytes, byte0 = kind: `1` → `system("/etc/init.d/wifi start &")`; `2` → stop Wi-Fi, reply on 27; `3` → `fork` a prioritised survival child that mallocs `word@+4` bytes and replies on 27, then loops `memset`+`sleep(30)` (`iscdrv.ko+0x10e00`, D). At init `sccore` sends port-27 `{0x01,0,0,0}` = **start-complete** (the reply CPU 1 waits for) after spawning its 3 threads (`iscdrv.ko+0x10fc4`, D). Confirmed live: start-complete arrives, and a kind-3 request returns a port-27 reply echoing the requested size (X, `run-isc.sh`). Also port 14 (NEON freerun benchmark: recv a trigger, run NEON, send result) and port 32 (recv/echo "arm survival inquiry/reply" heartbeat). |
+| `hhhr` | 30 (48) | 31 (node 0, 112) | HHHR compute (live X). Port-30 request 48 bytes (matrix sizes + buffer handle); mmaps `/dev/mem`, `ISC_dcache_clean_range` over the result, replies 112 bytes on port 31 to CPU 0 (`hhhr.dis 0x133a0`, D). Confirmed live: a 48-byte request returns a 112-byte port-31 reply to node 0 (X). |
 | `isc_socket` | 3 (64) | 4 (node 1, 64) | BSD-socket bridge. Fixed 64-byte request/response records; 16 send sites = the 16 socket ops (socket/bind/connect/send/recv/…). +shmem for bulk data (`isc_socket.dis 0x10e54/0x11220`, D). |
 | `isc_cgi` | 11,12,13,16 (32) | 11,12,13,16 (node 1, 32) | OI.Share HTTP CGI relay. 32-byte control records per port; HTTP bodies via `ISC_attach_mem` (`isc_cgi.dis 0x10f24/0x11040`, D). +shmem. |
 | `isc_file` / `sd_reader` | 6 (?) | 5, 8 (node 1, ?) | FILEISCAM media serving; +shmem, `dcache_clean_inv_range` over the mapped file buffers (D). |
@@ -303,14 +308,16 @@ actually needs. This matches the MN-side seam in `docs/hle-gaps.md` §4.11 (netw
 ## 10. Open questions
 
 1. The exact meaning of the `0x988003xx`/`0x988004xx` reset/clock/power bits `0x5003bcd9` programs before release (?).
-2. ~~The port-27 start-complete reply~~ — **resolved (§9, D):** `sccore` sends `{0x01,0,0,0}` on port 27 at init. The
-   port-26 request kinds 1/2/3 are decoded (§9); which MN request code maps to A53 power-*off* vs the kinds above is
-   still ? (the MN side `SYS_CA53_PWR_MNG` `0x5003c8f4` was not re-scanned here).
-3. ~~Per-port payload formats~~ — **largely resolved (§9, D):** message lengths and the sccore/hhhr/socket/cgi bodies
-   are decoded. The exact field layouts inside the 64-byte socket and 32-byte CGI records, and the `isc_file`/`olnet`/
-   `ble` record contents, remain partly ? (lengths read, field semantics not fully named), and want pairing with the
-   MN-side CPU 1 senders in the E143 main block.
+2. ~~The port-27 start-complete reply~~ — **resolved (§9; confirmed live, X):** `sccore` sends `{0x01,0,0,0}` on port 27
+   at init, and the oracle receives it. The port-26 request kinds 1/2/3 are decoded and kind 3 round-trips live (§9);
+   which MN request code maps to A53 power-*off* vs the kinds above is still ? (the MN side `SYS_CA53_PWR_MNG`
+   `0x5003c8f4` was not re-scanned here).
+3. ~~Per-port payload formats~~ — **largely resolved (§9, D; sccore + hhhr confirmed live, X):** message lengths and the
+   sccore/hhhr/socket/cgi bodies are decoded. The exact field layouts inside the 64-byte socket and 32-byte CGI records,
+   and the `isc_file`/`olnet`/`ble` record contents, remain partly ? (lengths read, field semantics not fully named):
+   exercising those ports live needs their marshalling decoded, and pairing with the MN-side CPU 1 senders in the E143
+   main block.
 4. The precise `mapinfo` record layout and whether production ever takes the "from sd" path (the strings exist:
    `<arm load4>`, `<arm jtag sd0..2>`) (?).
-5. The exact field set summed for the control-block magic (`iscpeer.mjs controlMagic` is I from `isc_start`
-   `0x23b8..0x2554`); bench-verifiable once a live loop raises IRQ 14 (?).
+5. ~~The control-block magic~~ — **resolved (X):** `0x10f7` (`0x1000 | (config byte-sum & 0xff)`), confirmed by
+   `isc_start` succeeding live against `iscpeer.mjs`'s published control block.

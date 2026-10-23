@@ -84,9 +84,10 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   notifications of a release (focus, exposure, rec view) are posted as the callbacks the HLS would make of them
   (S-RELSEQ); no image is captured. The focus result and the exposure time come from S-SCENE when its live view is on.
 - A card is in the SD slot (S-CARD: the HLS mount state, every picture taken kept as an image of folder 100, a
-  remaining-shots answer of 999 less the images and a movie time left of an hour less what has been recorded), the
-  system timer module's long timers run out (S-LONGTIMER), and a lens is on the mount (S-LENS: an attach flag, a
-  lens-ready byte and a 12-40mm F2.8 PRO record, so the screen shows S-AF and the AF target).
+  remaining-shots answer of 999 less the images to the application's getAvailableShootCount and a movie time left of
+  an hour less what has been recorded), the system timer module's long timers run out (S-LONGTIMER), and a lens is on
+  the mount (S-LENS: an attach flag, a lens-ready byte and a 12-40mm F2.8 PRO record, so the screen shows S-AF and the
+  AF target).
 - A half press in focus shows the green AF frame and focus mark. They are CPU 3's (its task DISP_FRAME draws them into
   the TFT's face-frame plane), so S-DISPFRAME runs DISP_FRAME on the lab CPU for each post to it, S-TAKEFRAME sets the
   frame display mode the TAKE module would, S-AFOSD uploads the indicator and the AF frame the AF module would, and
@@ -384,7 +385,7 @@ it sends nothing but GETs for its own files.
 | `node emu/bin/playperf.mjs` | the play workload on the Player; exit 1 unless its digest is `0a8f94603ae67b51` | the firmware |
 | `node emu/bin/snapgate.mjs kernel-5c osd shoot-tft` | snapshot detours leave the sessions and the end state unchanged | the firmware |
 | `OM_FW_DIR=fw node emu/bin/webgate.mjs --rounds 4` | headless Chrome: the Worker against node and `bin/run.mjs`, the page (keys, touch, canvas, session log), no uploads; about 5 min | the `.BIN`, Chrome |
-| `node emu/bin/modelcheck.mjs` | the ported models marked `checked` in `src/fw/models.mjs` (E146, E147, E144, E139, E134, E137, E142, E140, E125, E130), or those named: start, S1, S2, PLAY, INFO, PLAY on the TFT, and start, S1, S2 on the EVF of a body with one; GUI states by name | the models' firmware |
+| `node emu/bin/modelcheck.mjs` | the ported models marked `checked` in `src/fw/models.mjs` (E146, E147, E144, E139, E134, E137, E142, E140, E125, E130), or those named: start, S1, S2, PLAY, INFO, PLAY on the TFT, and start, S1, S2 on the EVF of a body with one; GUI states by name; after S1 the count probe: the screen must change with S-CARD's remaining-shots count and only there (E142, E140 and E130 pass it; the E143 and E144 families' screens do not show the count, FIDELITY-NOTES 7.9) | the models' firmware |
 | `node emu/test/test_fwmap.mjs` | the coverage option off and on, the static map's determinism and headline, the labels' keys, `run.mjs` under `OM_COVERAGE` (also in both suites above) | the E143 main block for the second half |
 
 What the tests compare with is emu's own data, and it is regression data, not a specification

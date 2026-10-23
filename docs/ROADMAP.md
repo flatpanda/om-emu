@@ -33,7 +33,7 @@ Every milestone runs in emu and is covered by the check its row names; the `chec
 | Hosts and the debug API | the player on node (an HTTP server with the lab in a worker thread) and in the browser (a module Worker), the JSON-lines debug API | `emu/bin/test.mjs`, `golden.json` | `emu/README.md` |
 | The camera application | every play session runs the firmware's camera application (CA_MAIN) natively (S-CAMAPP, 2026-10-15): power-on to the shooting screen, S1, S2 and the rec view, REC, playback, the Super Control Panel and the menu; the lab's own stand-ins for it are gone | `test_camapp`, `golden.json` | shutter spec §7 |
 | Exposure | a 12-40mm F2.8 PRO record on the mount (S-LENS) and the scene's brightness fed to the camera's own exposure plan (S-EXPOSE); the screen shows the planned shutter, aperture and ISO | `golden.json` | shutter spec §7 item 60 |
-| Multi-model, steps 1-4 and part of 7 | 17 bodies besides E143 have ports; E146, E147, E144, E139, E134, E137, E140, E125 and E130 shoot, play back and run the EVF through `bin/modelcheck.mjs`, E142 (no EVF) on the TFT; E145, E133, E129 and E132 stop in their start, the E118 family at import (Multi-model below) | `emu/bin/modelcheck.mjs`, `test_facts` | `docs/model-survey.md` |
+| Multi-model, steps 1-4 and part of 7 | 17 bodies besides E143 have ports; E146, E147, E144, E139, E134, E137, E140, E125 and E130 shoot, play back and run the EVF through `bin/modelcheck.mjs`, E142 (no EVF) on the TFT; its count probe passes on E142, E140 and E130 only; E145, E133, E129 and E132 stop in their start, the E118 family at import (Multi-model below) | `emu/bin/modelcheck.mjs`, `test_facts` | `docs/model-survey.md` |
 
 Instruction counts: the ISA row's 1,684,013 reachable instructions come from a reachability scan that is no longer in
 the repository. `node emu/bin/fwmap.mjs` finds 5,186,071 instructions in the main block, because it also follows code
@@ -42,9 +42,10 @@ not reconciled.
 
 ## Next, in recommended order
 
-1. **Depth on the ported bodies** (Multi-model step 7): ten bodies pass `bin/modelcheck.mjs` since 2026-10-23; left
-   are the remaining-shots query of E142, E140 and E134 (their screens show "Card Full" or 0 shots), E145's AF upload
-   and start (Multi-model "Next stops").
+1. **Depth on the ported bodies** (Multi-model step 7): ten bodies pass `bin/modelcheck.mjs`'s path since 2026-10-23,
+   and E142, E140 and E130 its count probe too; left are the remaining-shots count on the screens of the E143 and E144
+   families (they do not follow S-CARD's answer), E145's AF upload and the movie time the E142 lineage shows
+   (Multi-model "Next stops").
 2. **The open stops of the remaining bodies** (Multi-model "Next stops"): E145's start, E133's GUI creator, E129's
    settings store, E132's deferred serial send, then the E118 family's board port.
 3. **HLE of E143, step 2** (HLE of E143 below; step 1's static decodes are done): the cheap CPU 0 wins (a ticking
@@ -80,11 +81,11 @@ bodies; the bodies whose image runs at a `0x60xxxxxx` base pair 0.76M-2.08M inst
 
 | Tier | Bodies | Where it stands |
 |---|---|---|
-| ported | E146 OM-1 II, E147 OM-3 | `bin/modelcheck.mjs` passes on the TFT and the EVF |
-| ported | E144 OM-5, E139 E-M1 III | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23) |
-| A | E134 E-M1X | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23); its EVF shows 0 shots left |
-| B | E137 E-M5 III, E142 E-P7, E140 E-M10 IV, E125 E-M1 II, E145 TG-7 | E137, E140 and E125: `bin/modelcheck.mjs` passes on the TFT and the EVF, E142 (no EVF) on the TFT; E142's and E140's screens show "Card Full"; E145's start ends in `0x1103` |
-| C | E133 E-PL9, E130 E-M10 III, E129 / E132 TG-5, E118 E-M5 II, E122 PEN-F, E120 E-M10 II | E130: `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23); E133, E129 and E132 stop in their start; the E118 family stops at import on its board |
+| ported | E146 OM-1 II, E147 OM-3 | `bin/modelcheck.mjs`'s path passes on the TFT and the EVF; its count probe fails, as on E143 |
+| ported | E144 OM-5, E139 E-M1 III | `bin/modelcheck.mjs`'s path passes on the TFT and the EVF (2026-10-23); its count probe fails |
+| A | E134 E-M1X | `bin/modelcheck.mjs`'s path passes on the TFT and the EVF (2026-10-23); its count probe fails (its EVF shows 0 shots left, as E143's) |
+| B | E137 E-M5 III, E142 E-P7, E140 E-M10 IV, E125 E-M1 II, E145 TG-7 | E137, E140 and E125: `bin/modelcheck.mjs`'s path passes on the TFT and the EVF, E142 (no EVF) on the TFT; the count probe passes on E142 and E140 (999 shots), fails on E137 and E125; E145's start ends in its date and time setting (`0x1103`) |
+| C | E133 E-PL9, E130 E-M10 III, E129 / E132 TG-5, E118 E-M5 II, E122 PEN-F, E120 E-M10 II | E130: `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe too; E133, E129 and E132 stop in their start; the E118 family stops at import on its board |
 | D | E100, E101, E106-E113, E115, E117, E121, E126 | not tried |
 | - | the new OM System PEN (E148?) | not served yet (E148-E199 answer nothing, 2026-10-19): re-probe |
 
@@ -135,19 +136,30 @@ The plan:
    time and the EVF's scaled OSD planes (finding 10). **Done** for E134, E142, E140 and E130 too (2026-10-23, round 2):
    the EVF open's synchronous command to the touch task (finding 11), the shooting callbacks' ids per build (finding
    12), the OSD bitmap format 9 and the lens record's layout and buffer (finding 13) and E130's AF upload (finding 14).
-   E142's and E140's screens show "Card Full" and E134's EVF 0 shots (Next stops). This comes before more bodies: a
-   body counts as supported once it passes modelcheck.
+   Round 3 (2026-10-23): the shots query is placed where each build's getAvailableShootCount asks (finding 15), so
+   E142 and E140 show 999 shots, and modelcheck's count probe checks that the screen draws S-CARD's count (finding 16):
+   E142, E140 and E130 pass it, E146, E147, E144, E139, E134, E137 and E125 do not, as E143 does not (Next stops). This
+   comes before more bodies: a body counts as supported once it passes modelcheck.
 
 Throughout: re-probe the update API (`fw-survey.mjs probe`) for the new PEN; a new `.BIN` goes into `BLOBS.sha256` and
 the survey table.
 
 ### Next stops
 
-- **The remaining-shots query:** E142 and E140 show "Card Full" from the start on and E134's EVF 0 shots left (X:
-  frames): E142's application asks through `0x502c79db` (called at `0x5076b263` with what `0x502abbea(23)` returns),
-  not the function the shots-query rule placed (`0x502d2e89`, one caller elsewhere), so S-CARD never answers (D);
-  E134's session makes no shots query (X). Read the E142 family's query and E134's, then answer them as S-CARD answers
-  E143's.
+- **The remaining-shots count on the E143 and E144 families' screens:** their application's getAvailableShootCount is
+  answered (S-CARD, finding 15), but their screens do not follow it: the EVF shows an orange 0, the TFT no count, at
+  999 as at 777 shots (X, E143, E146, E147, E144, E139, E134, E137, E125; survey finding 16). Only the E142 lineage's
+  GUI has a count item that asks the HLS API for it (E142 `0x50e1af20`). Ruled out on E143: the API's GUI clients
+  (the card-full test, a buffer-count builder), the slot-in-media count (API slot 752, none of its 26 GUI sites runs),
+  the buffer count `0x504169b2` and the Wi-Fi component's word `0xa320c08c` (X). Find what their count item draws,
+  then make the count probe pass on them.
+- **The E142 lineage's movie time:** E142, E140 and E130 show an orange `0:00:00` where E143, E146 and E134's EVF
+  show S-CARD's `1:00:00` (frames, X), though S-CARD's movie time query is answered in their sessions (17 times, from
+  E142 `0x502aea25`, the place of E143's `0x503f1cd8`, X); E143 asks from `0x503f3dd3` and `0x503f3e9d`. Read what
+  their movie item draws, as for the count.
+- **The GUI state table's length:** the lab names the first 12 parents (E143's); the firmware's lookup bounds it at 12
+  on E143 (`0x5124b478`) and 18 on E145 (`0x50de87bf`, D), so E142's and E145's SS_MENU (`0x11`) states print unnamed.
+  A rule reading the bound would name them (survey finding 17).
 - **E142's touch controller** (slave `0x48`) is not the one S-TPREG serves (E143's slave `0x70`, register 2), so touch
   input does not reach its GUI.
 - **E145's AF upload:** its frame plane has no function of the AF upload's shape (survey finding 14); read what its AF
@@ -164,9 +176,11 @@ the survey table.
   sync-word clear, then an image sync of the kind the pending state takes). What the camera waits for before the
   release is not known (I: once its through image shows). E143's GUI asks for the sync at a recording's start too
   (shutter spec item 44), so the recording frames of the camera-application tests should be looked at.
-- **E145's start:** with no USB cable (survey finding 9) it ends in `0x1103`, a state the lab does not name, as the
-  trial that replaced OLY_USB_CONNECTED by event 0 did (X; the event's path from the switch is not traced on E145).
-  Read what `0x1103` waits for; then place or gate S-AFOSD's AF upload. Why its TFT area is 1440 wide is not read.
+- **E145's start:** it ends in `0x1103`, its date and time setting, which the TG-7 opens at power-on with the clock
+  unset where E143 warns (survey finding 17: the frame, X; SS_MENU's state, I); MENU cancels it to `0x108`. So the
+  start waits for the user, not a device. To run its modelcheck path the session needs MENU after the start (or a set
+  clock, which would also drop E143's start warning from golden); then place or gate S-AFOSD's AF upload. Why its TFT
+  area is 1440 wide is not read (the setting's frame looks stretched twice horizontally, I).
 - **E133's GUI creator** waits on a synchronous call's reply where E130's passes: compare the two at E133
   `0x50c7b065`.
 - **E129's settings store:** its flash read waits for the boot's stage-1 bit, which the init task the lab ends would

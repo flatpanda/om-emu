@@ -35,16 +35,27 @@ Every milestone runs in emu and is covered by the check its row names; the `chec
 | Exposure | a 12-40mm F2.8 PRO record on the mount (S-LENS) and the scene's brightness fed to the camera's own exposure plan (S-EXPOSE); the screen shows the planned shutter, aperture and ISO | `golden.json` | shutter spec §7 item 60 |
 | Multi-model, steps 1-4 | 17 bodies besides E143 have ports; E146 and E147 shoot and play back, and eight more reach their shooting screen with a picture and take S1 (Multi-model below) | `emu/bin/modelcheck.mjs`, `test_facts` | `docs/model-survey.md` |
 
+Instruction counts: the ISA row's 1,684,013 reachable instructions come from a reachability scan that is no longer in
+the repository. `node emu/bin/fwmap.mjs` finds 5,186,071 instructions in the main block, because it also follows code
+pointers held in data (vtables, handler and command tables). The scan's method is not available, so the two counts are
+not reconciled.
+
 ## Next, in recommended order
 
 1. **Depth on the ported bodies** (Multi-model step 7): take every body that reaches its shooting screen through
    `bin/modelcheck.mjs`'s path, so each has a regression check beyond its start.
 2. **The open stops of the remaining bodies** (Multi-model "Next stops"): E145's start, E133's GUI creator, E129's
    settings store, E132's deferred serial send, then the E118 family's board port.
-3. **Debug API follow-ups**, above all a debug route to a running play session (F31).
-4. **Emulator architecture** phases 2-5: finish phase 2's typed seams (machine port, options object, composed lab
-   features), then ground the CPU and interrupts in the manual, then the time model.
-5. **Hardware validation**, as soon as an OM-1 is available for photos or HDMI captures.
+3. **HLE of E143, steps 1-2** (HLE of E143 below): the static decodes every block's first step needs, then the cheap
+   CPU 0 wins (a ticking clock, persistence by default, native group-0 keys and power lever, Level Adjust, the HDMI
+   EDID). The decodes change nothing in emu and can run beside 1 and 2.
+4. **Debug API follow-ups**, above all a debug route to a running play session (F31).
+5. **Emulator architecture** phases 2-5: finish phase 2's typed seams (machine port, options object, composed lab
+   features), then ground the CPU and interrupts in the manual, then the time model. Phases 3 and 4 are also step 3 of
+   the HLE plan: every device seam below the camera application waits on them.
+6. **HLE of E143, steps 4-8**: CPUs 2, 3 and 1; task starts with the HLS bring-up; storage; TAKE native with its
+   neighbours; then the blocks by user-visible gain.
+7. **Hardware validation**, as soon as an OM-1 is available for photos or HDMI captures.
 
 ## Multi-model
 
@@ -148,6 +159,24 @@ Naming: the tools dropped the model from their names (`bin/play.mjs`, `bin/nav.m
 the specs of E143's firmware (`docs/om1-*-spec.md`), the machine's memory-region names (`om1.dram`, ... in
 `src/machine.mjs`) keep `om1`; the environment knobs are `OM_*`. Model-specific data lives in per-model tables
 (`src/fw/models.mjs`, `src/fw/ports.mjs`).
+
+## HLE of E143
+
+What a complete HLE of E143 still lacks below the camera application, block by block (firmware footprint, seam,
+dependencies, code size, effort, first step), is in [hle-gaps.md](hle-gaps.md), with the basis of the order below in
+its section 6; this section owns the order and the status. The lab executes 287,101 of the main block's 5,186,071
+instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hle-gaps.md §2.2).
+
+| Step | What | Status |
+|---|---|---|
+| 1 | static decodes: the TRA 485 registrations (who handles TRA 991, what answers TRA 990), TAKE_FUNC's dispatcher, the HLS TRA event dispatchers, the PER_SCPU dispatch, the sdmem contract, the lens serial layer, the ISC port formats | not started |
+| 2 | cheap CPU 0 wins: the SCPU request server with a ticking clock and S-NVRAM by default; the SCPU port registers and IRQ 320; the accelerometer; HDMI EDID / HPD | not started |
+| 3 | interrupt acceptance anywhere, then the machine-owned time model | not started: architecture phases 3 and 4 |
+| 4 | CPU 2, then CPU 3, then CPU 1, natively | not started |
+| 5 | task-start and module-init infrastructure; the HLS component bring-up as the coverage workload's default | not started |
+| 6 | storage at the sdmem seam | not started |
+| 7 | TAKE native with the lens, BC, the sensor control plane and the shutter (the strobe beside it) | not started |
+| 8 | by gain: still capture, live-view statistics and EXP, AF, movie and audio, playback, USB, the power manager, wireless after CPU 1, GPU / C3D, the rest | not started |
 
 ## Debug API follow-ups
 
@@ -280,7 +309,8 @@ store in the lab (vsc spec §10).
 **Inputs and display switching (M10, M10B).** The camera application runs natively since 2026-10-15, which retired the
 lab's stand-ins for its key mapping, request sequences and display-switch re-entry; what stays open below it:
 - Raw-bit producers (S-KEYBITS pushes whole group images): the SCPU receive path and the poller; the producers of
-  EVFSW, the eye sensor `0x2301`, the multi-selector `0x1234` / `0x1235`, the lock lever `0x0202123d/e`.
+  EVFSW, the eye sensor `0x2301`, the multi-selector `0x1234` / `0x1235`, the lock lever `0x0202123d/e`. Group 0 (power
+  lever, Fn lever, S1) comes from the SCPU's port registers through IRQ 320 (hle-gaps.md §4.7; HLE step 2).
 - UI_IN's module init: only the ring init `0x5014cb5f` runs (H-UIINRING); `0x5014e3ab`, `0x5014ce00`, `0x5005d36a`,
   `0x5014d62e`, `0x5014d97a` do not; the board byte that selects the bit-table variant.
 - Switch idle state: HDMI `0x0501` and `0x0400` both at 1 make the menu close paint the black panel 6 (X); what
@@ -300,9 +330,11 @@ lab's stand-ins for its key mapping, request sequences and display-switch re-ent
   list), each cell's value -> image / string mapping, the group descriptors (type 6) the settings reference does not
   decode.
 - CPU 2: S-CPU2 serves the one allow-listed post (AUD_LEVEL_MONITOR's level data read 0); its swap path `0x50aaad0e` is
-  refused.
+  refused. The GUI's histogram send to OSD_DRAW_CPU2 (queue `0x2013`) at idle, S1 and S2 is not refused: S-MODACK's
+  blanket rule answers it E_OK (shutter spec item 42).
 - Level Adjust -> Adjust: the GUI task sleeps in `0x5004ad13`'s dly_tsk loop for 12 sensor samples the lab never
-  produces; the sensor's pointer init `0x50048cb9..bf` and sample code `0x5004910a` do not run.
+  produces; the sensor's pointer init `0x50048cb9..bf` and sample code `0x5004910a` do not run (hle-gaps.md §4.7;
+  HLE step 2).
 - The touch interrupt, the I2C reads (touch I2C reads return 0, otherwise a divide by zero at `0x5005f00d`) and the
   mode-dependent values, the start-screen logo and live view under the shooting screen are not modelled (input spec
   §9).
@@ -322,9 +354,10 @@ lab's stand-ins for its key mapping, request sequences and display-switch re-ent
   remaining wall-clock figures.
 
 **Exposure.** The plan runs at the application's start and after each input on the shooting screen, not continuously
-(the camera's LV AE task with its 18 x 18 grids does not run); one lens record, the 12-40 at the zoom step nearest the
-scene's focal length (the lens table `0x506ea4f3` names the others, their characteristics are not in the firmware);
-why the application does not apply a dial turn to the exposure compensation (input spec §9).
+(the camera's LV AE task with its 18 x 18 grids does not run; the live-view statistics seam, hle-gaps.md §4.2, would run
+it); one lens record, the 12-40 at the zoom step nearest the scene's focal length (the lens table `0x506ea4f3` names the
+others, their characteristics are not in the firmware); why the application does not apply a dial turn to the exposure
+compensation (input spec §9).
 
 ## Open unknowns and assumptions
 
@@ -356,9 +389,11 @@ own boot paths (`docs/om1-cores-spec.md` §2, §3, §6.1). What runs before the 
 loads first) is unknown.
 
 Approach: start at the main block's reset path, let each unmapped MMIO access fault (fault 2), and add a stub or model
-for that device only with code evidence, as for the panel-side stub (`docs/om1-vsc-spec.md` §9). The interrupts, the
-timer block and the lab clock exist (M9); a full boot also needs acceptance anywhere, the display tasks as real tasks
-and time mode by default (the M9 follow-ups, architecture phase 4).
+for that device only with code evidence, as for the panel-side stub (`docs/om1-vsc-spec.md` §9). Two constant clusters
+that look like device regions are not roles to model: `0x9a000000`'s constants are AVFW return codes, and
+`0x9c700000` is touched only by LLF bus-arbiter and DRAM bus-measurement debug code (hle-gaps.md §9 items 5, 6). The
+interrupts, the timer block and the lab clock exist (M9); a full boot also needs acceptance anywhere, the display tasks
+as real tasks and time mode by default (the M9 follow-ups, architecture phase 4).
 
 Verification: the firmware's own boot prints as progress markers; reaching GUI init without harness calls; display
 output identical to the harness-driven M2-M6 runs. Size: months.
@@ -389,4 +424,5 @@ composite, B2), the IMG edge rule (A6), what CTRL3 bit 6 of the live-view setup 
 post-mix stages (A14), which palette a buffer kind uses (vsc spec §7), `udf07`'s bit order (udf spec §2), and whether
 the updater accepts a modified image. Photos of the rear screen from an OM-1 on v1.9 need no flashing and would also be
 the external reference for the menu: the Setup pages where U1 hypotheses A and B differ (`check_menu_notes.txt`) would
-settle U1, given a camera reset to its defaults (the lab's store) or set to a seed.
+settle U1, given a camera reset to its defaults (the lab's store) or set to a seed. For the blocks below the camera
+application, hle-gaps.md §8 lists the captures and files that would unblock each, a debug-UART console log first.

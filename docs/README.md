@@ -10,6 +10,7 @@ or its harness chooses to behave, treat it as the model's assumption, not as har
 | Document | What it covers |
 |---|---|
 | [ROADMAP.md](ROADMAP.md) | what is done, the open items, and the plan: multi-model, the debug API, the emulator's architecture, full-boot LLE, the firmware-patch track, hardware validation |
+| [hle-gaps.md](hle-gaps.md) | what a complete HLE of E143 still lacks below the camera application, block by block (firmware footprint, seam, dependencies, code size and coverage, effort, first step), the order of the work, and the shutter mechanism across bodies |
 | [model-survey.md](model-survey.md) | every body the vendor's updater API serves (32, E100-E147), what each shares with E143 and E144, and where each ported body stands |
 | [firmware-container.md](firmware-container.md) | fetching firmware from the updater API, the `.BIN` container, its scramble and checksum, the bodies served, repacking and flashing |
 | [mn10300-isa-spec.md](mn10300-isa-spec.md) | the MN10300 base ISA as implemented: the opcode map, semantics, faults, the unknowns that must fault, the lab translator, exceptions and interrupts |

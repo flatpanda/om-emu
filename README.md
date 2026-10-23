@@ -95,8 +95,8 @@ firmware rules on every body that is unpacked. The full suite (`node emu/bin/tes
   [emu/FIDELITY-NOTES.md](emu/FIDELITY-NOTES.md): where it departs from the hardware.
 - [docs/README.md](docs/README.md): the index of the specs (CPU and ISA, kernel, cores, interrupts and timers, VSC,
   input, menus, settings, text, shutter, UDF), with the evidence tags and address notation they use.
-- [docs/ROADMAP.md](docs/ROADMAP.md), [docs/model-survey.md](docs/model-survey.md),
-  [docs/firmware-container.md](docs/firmware-container.md).
+- [docs/ROADMAP.md](docs/ROADMAP.md), [docs/hle-gaps.md](docs/hle-gaps.md),
+  [docs/model-survey.md](docs/model-survey.md), [docs/firmware-container.md](docs/firmware-container.md).
 
 ## Status and disclaimer
 

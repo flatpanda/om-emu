@@ -176,10 +176,10 @@ IBM Rhapsody OXF-generated classes (`./../../../../base_framework/include/rhapso
 | ISP front end | PFP (LV, AF1-3), BN (binning/OBC/DMA), PRO1/PRO2 (`cam_prepro.c`, MMIO 0x9b300000..0x9b304fff), RAP, VDC, CWD/CRD (compressed write/read DMA?), EMS1/2 | clock gates 0x9b500800/0x850/0x870 (`0x5015fd21`, `0x50160d7b`, `0x501609a0`, D); region map in 2.5 | unmapped |
 | AE statistics | AE1/AE2, AWB1-4 blocks; `cam_bright.c` code `0x50158000..0x5015a800` writes 186 registers in 0x9b380000..0x9b384fff and reads 10 (0x9b3803d0, 0x9b382040, ...) | D for the accesses; that results come by DMA into DRAM is I (few reads) | unmapped |
 | AF contrast | `cam_contrast.c` `0x50161000..0x50163000`: 0x9b400000..0x9b401fff (122 refs) + 0x9b5008xx | D accesses, role I | unmapped |
-| AF phase / ranging | PFP_AF1..3 subblocks, PDMIX (`CAM_KEEP_FLAG_SSG1_PDMIX_SETTING`), FCS_IP on CPU 0 posts jobs to CPU 1 (`0x5090fc6d..`, `0x50932401..`) and waits on CPU 0 flag 0x92 FCS_IP; FCS code uses MMIO 0x9bf00000 (23 refs) | cores spec §5.2 (D/I), MMIO D | CPU 1 not modelled: any AF request that needs CPU 1 waits forever |
+| AF phase / ranging | PFP_AF1..3 subblocks, PDMIX (`CAM_KEEP_FLAG_SSG1_PDMIX_SETTING`), FCS_IP on CPU 0 posts jobs to CPU 1 (`0x5090fc6d..`, `0x50932401..`) and waits on CPU 0 flag 0x92 FCS_IP; FCS code uses MMIO 0x9bf00000 (24 operands at `0x50957687..0x5095799e`, plus `0x5002563b` and `0x502c0e99/9f`), a unit with its own IRQ 281 | cores spec §5.2 (D/I), MMIO D | CPU 1 not modelled: any AF request that needs CPU 1 waits forever |
 | Exposure calc | EXP / TAKE_EXPOSE (software; TAKE_EXPOSE region 0x50570000..0x505a0000 has ~no MMIO), cam_expcal/cam_ev; flags EXP_APERT, EXP_EXPOSE, EXP_START, EXP_UPDATE, TAKE_EXPOSE_SYNC | D names | not run (H-AEINIT runs only the interpolation table init) |
-| Lens | LENS_MAIN/COMMAND/ASKDATA on CPU 0; lens record (L_ID, L_FT_VERSION, FuncFlag[], L_VERSION +0x488, MAG_CNG, L_PRIVATE_ID_DATA; cmd 0x50 page/item requests, analysis/lens-gates); LENS_COMMAND code touches pin block 0x9b883000 (12 refs) and 0x99999000; flags LENS, LENS_APERTURE, LENS_FOCUS, FCS_IP_LENS, EXP_LENS sem | D | not run; no lens attached (lens record empty, ?) |
-| Mechanical shutter | `SHUTTER_MOTOR_ON/OFF/CLOSE_CHARGE_CONDITION_A`, `SHUTTER_MAGNET_*`, `INITIAL_SHUTTER_READY` (0x6020ddfd..0x6020e21a), debug tags `mec`, `sht`, `mot` | D strings; driver hardware ? | not modelled |
+| Lens | LENS_MAIN/COMMAND/ASKDATA on CPU 0; lens record (L_ID, L_FT_VERSION, FuncFlag[], L_VERSION +0x488, MAG_CNG, L_PRIVATE_ID_DATA; cmd 0x50 page/item requests, analysis/lens-gates); the lens serial device 0x9b980000 (IRQ 14) and the IRQ-60 edge unit 0x9b883e40..0x9b883e6c in the pin block, both driven by the lens serial and sync layers, not LENS_COMMAND (2.5); flags LENS, LENS_APERTURE, LENS_FOCUS, FCS_IP_LENS, EXP_LENS sem | D | not run; no lens attached (lens record empty, ?) |
+| Mechanical shutter | `SHUTTER_MOTOR_ON/OFF/CLOSE_CHARGE_CONDITION_A`, `SHUTTER_MAGNET_*`, `INITIAL_SHUTTER_READY` (0x6020ddfd..0x6020e21a), debug tags `mec`, `sht`, `mot`; driver block 0x9b900000 (271 registers), IRQs 11-13 | D; the block, its driver and the `mec` shell in `docs/hle-gaps.md` section 7 | not modelled |
 | Capture sequence | ISEQ_* (`iseq_*.c`), ISEQ_ASIC (flags ISEQ_ASIC_WAIT_PIXSHIFT, ISEQ_MAIN_WAIT), `cam_still_seq.c` (`0x5085fb13..`) | D | not run |
 | Record | REC_* CPU 0 + REC_*_CPU2 / STLNML on CPU 2; DCF/file (`dcffnode.c`), card (UHS-II strings, `SD Card Media 1st SLOT`), EV_MEDIA_MOUNT_REC | D | no card, no CPU 2 (S-CPU2 serves one GUI post only) |
 | Movie | TAKE_MOV, EXP_MOVIE (CPU 0); MVR_* on CPU 2; AV encode on CPU 1 (AVPI VEN BACD) | cores spec §4 | not modelled |
@@ -197,9 +197,15 @@ IBM Rhapsody OXF-generated classes (`./../../../../base_framework/include/rhapso
 | 0x9b480000 | 40 | 0x5018d3f6 | cam_param.c |
 | 0x9b500000 | 563 | 0x50033865 | camera clocks (0x9b5008xx, D) |
 | 0x9b580000, 0x9b600000 | 23, 28 | 0x50166fdc, 0x5016629b | (cam driver) |
-| 0x9b883000 | 12 | LENS_COMMAND | pin block (same block as the touch pins 0x9b880e00, input spec §5) |
-| 0x99990000 | 215 | 0x50128f0f | lens OIS / IS info |
-| 0x9bf00000 | 23 | FCS (0x50900000..) | AF |
+| 0x9b883e40..0x9b883e6c | 12 | 0x50122331 | IRQ-60 edge-interrupt unit in the pin block (same block as the touch pins 0x9b880e00, input spec §5), configured by the lens sync layer (`0x502c47fd`, `0x502c4820`, `0x502c4e5f`); not LENS_COMMAND |
+| 0x9b980000 | 121 | 0x502c0ea5 | lens serial controller (LENS_SSC strings), IRQ 14, handler `0x502c12c0` |
+| 0x9bf00000 | 24 + 3 | 0x50957687 (FCS) | AF: a DMA-driven unit, IRQ 281 |
+
+Corrected 2026-10-22 (D; `docs/hle-gaps.md` section 9): `0x99990000`, listed here before as "215 refs, lens OIS / IS
+info", is not a device. 214 of its 215 operands are `0x9999999a` loaded by `mov imm32`, the low word of a double (at
+`0x50128f0f`: d0:d1 = 0.2 passed to a soft-float routine), and the remaining hit at `0x5188337a` is not a load or
+store. The lens serial device `0x9b980000` was missing from this table; the 12 operands first filed under
+LENS_COMMAND sit at `0x50122331..0x501225b7` and address the IRQ-60 edge unit.
 
 In emu every one of these is lab-stub space: `src/dev/stub.mjs:1-8` -- with empty allow/preset
 tables every access is DENIED and raises a bus error (fault 2). That is the project's ground rule
@@ -267,7 +273,8 @@ tables every access is DENIED and raises a bus error (fault 2). That is the proj
   focal length `APPEVENT_STATE_FOCALLEN`, focus ring `EV_CHANGE_FOCUS_RING`, MF clutch
   `EV_LENS_MF_SW_ON/OFF`, actual aperture `[exp]:actual_aperture_open`) over the lens link;
   AF contrast values (cam_contrast block) and phase-detect data (PFP_AF, PDMIX, ranging on CPU 1);
-  sensor temperature (PER_CCD_TEMP); IS state (0x9999xxxx).
+  sensor temperature (PER_CCD_TEMP); IS state (in the lens record and the BC module; `0x9999xxxx` is not a device,
+  2.5).
 - The GUI reads shooting values through the HFW / LowApi getters (`OlyHfwLowApiWrap::
   getShutterSpeedLimit`, `Shooting::getApparentShutterSpeed`, strings D); their backing state is
   kept by the modules that do not run (I).
@@ -766,8 +773,11 @@ S-TAKEOVER); nothing in the lab's behaviour changes. What it shows on E143 v1.9:
 
 42. **Not OSD_DRAW_CPU2 (X).** OSD_DRAW_CPU2's queue (`0x2013`, the halfword at `0x60043698`) is written only by
    `0x51014a5d` (a synchronous send, `0x5002e39d`), reached from the HLS OSD control (API 0x11117,
-   OSDControl::drawHistogram, `0x50ae9f8b` -> `0x510149a2`): the histogram. Neither it nor the send runs during S1,
-   S2 or a recording, with or without the components. While recording (camapp 1) the GUI's draw log has the three
+   OSDControl::drawHistogram, `0x50ae9f8b` -> `0x510149a2`): the histogram. Corrected 2026-10-22 (X): the send does
+   run, at idle, S1 and S2, after each TRA 944 (getHistogramData); the log shows queue 8211 (`0x2013`), command 1,
+   from `0x51014a64`. It never reaches cpu_conn, because S-MODACK answers every synchronous send whose receiver does
+   not run with E_OK (D), so no inter-core traffic shows: the histogram is a CPU 2 consumer answered by that blanket
+   rule, not a listed site. While recording (camapp 1) the GUI's draw log has the three
    layer clears (layer 1 index 255 with one column of 125, layer 2 index 31) and their copies to OSD2 / OSD3 only;
    GESetEvent sets 0x1002 about every 70 ms and the dispatch observer sees none taken, while the GUI task waits in
    SystemCommon::scOsWaitEvent (API 0x11026, `0x50b01ac7` from `0x50b81c7b`) and returns from it about 30 times a

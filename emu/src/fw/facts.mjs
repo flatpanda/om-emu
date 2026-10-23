@@ -1345,27 +1345,48 @@ export function shootingService(img) {
 }
 
 // The remaining-shots query (fact 'card.shots_query', and through bin/port.mjs the place of E143's SHOTS_QUERY_E143
-// 0x50419164, src/lab/camapp.mjs S-CARD, which answers it in d0): the callee of the call that the GUI's shots refresh
-// stores under its lock, the call followed by `mov d0,d2; mov -1,d0; call d16 [d2,d3],16; mov d2,(abs32)` (82 80 ff cd
-// d16 c0 10 fc 89). E143's refresh calls the query at 0x517fdb39, takes the lock 0x517fddbc (released by 0x517fde4f)
-// and stores the count to 0xa320c08c, then sets bit 1024 of 0xa320c088 where it is 0 (D). The query's form differs:
-// E143's and the other E144-family bodies' open with the trace `mov 4,d0; mov 1,d1; mov 0x200f0,a0; call` and read
-// settings 1129 and 1134 (E143's; E142's 0x502d2e89 1139 and 1144, D); E133's, E130's, E129's and E132's are a
-// three-argument wrapper with the trace module 0x2800c (E133 0x502dab10, calling 0x502e4c24, D), which their
-// application calls too (E133 0x506fce9c, D), as E143's own wrapper of that module (0x5040deb7) calls 0x50416d9a, the
-// count E143's query calls; the E118 family's is a wrapper with no trace (E118 0x502c2877, D). Exactly one such call on
-// each of the 18 expanded images (the other store of that form follows no call) and its callee the port's place on the
-// 10 bodies whose map placed one but E132, whose map through E145 placed 0x502caa58, inside the function that returns
-// at 0x502caab2 (X, a byte scan; D). Returns the entry (disassembly notation); throws unless one.
+// 0x50419164, src/lab/camapp.mjs S-CARD, which answers it in d0): the function the application's
+// OlyHfwOpeShoot::getAvailableShootCount calls for the count, the callee of the call between the method's start and end
+// traces ("OlyHfwOpeShoot::getAvailableShootCount start", "... end = available %d waitSave %d") that is followed by
+// `movhu d0,(An)` (f0 70..73), the method's store of the count, but for a callee the method also calls right after a
+// `mov imm,d0`: its settings read, through which the bodies with a gate read a kept count (E143 `mov 1436,d0; call
+// 0x503c4ba8; movhu d0,(a3)` at 0x50ad89bf, taken where setting 477 is 1 and 484 is not 0, D; not taken in a session,
+// X). The callee is a module request of one of three forms (D): the query proper on the E143 family and E144, E139,
+// E134, E137 and E125 (E143 0x50419164, called at 0x50ad89d6 and 0x50ad8a51; it opens with the trace `mov 4,d0; mov
+// 1,d1; mov 0x200f0,a0; call`, reads settings 1129 and 1134 and calls the count 0x50416d9a per slot); the module
+// 0x2800c's three-argument wrapper of the count (`mov a0,a2; mov d1,d2; mov d0,d3; mov 4,d0; mov 1,d1; mov 0x2800c,a0`)
+// on E142, E140 and E145 (E142 0x502c79db, called at 0x5076b263, calling the count 0x502d0a38) and on E133, E130, E129
+// and E132 (E133 0x502dab10); a wrapper with no trace on the E118 family (E118 0x502c2877). Before this rule the place
+// was the callee the store `mov d0,d2; mov -1,d0; call d16 [d2,d3],16; mov d2,(abs32)` follows: E143's 0x517fdb32
+// stores the count to 0xa320c08c under the lock 0x517fddbc, a component whose init message is sent at 0x517ecc22,
+// amid the Wi-Fi manager's app-protocol sequence (D), and which no session runs (X); on E142, E140 and E145 it calls
+// the query proper (E142 0x502d2e89), which their application does not, so S-CARD answered nothing there, their count
+// was the count function's own, 0, and the GUI's card-full test (E143 0x51055c38, through the HLS API 0x20116 whose
+// handler calls the method) showed "Card Full" (X: S-CARD's hook counts per session; with this place E142, E140 and
+// E145 ask it 27, 27 and 10 times and E142 and E140 show 999 shots). Each trace is held and loaded once on each of the
+// 18 expanded images, and exactly one callee is left on each (X, a byte scan). Returns the entry (disassembly
+// notation); throws for a trace not held or loaded once, or for none or two callees.
 export const SHOTS_QUERY_E143 = 0x50419164;
-const SHOTS_STORE = [0x82, 0x80, 0xff, 0xcd, null, null, 0xc0, 0x10, 0xfc, 0x89];
+const SHOTS_TRACE = ['OlyHfwOpeShoot::getAvailableShootCount start', 'OlyHfwOpeShoot::getAvailableShootCount end = available %d waitSave %d'];
+// mov imm8,d0 (80 xx), mov imm16,d0 (2c xx xx), mov imm32,d0 (fc cc imm32)
+const movImmD0 = (img, p) => img[p] === 0x80 || img[p] === 0x2c || (img[p] === 0xfc && img[p + 1] === 0xcc);
 export function shotsQuery(img) {
-  // a call whose last bytes decode as a shorter call (E122's `call 0x502e3440,[],4` at 0x50a86716, dd 2a cd 85 ff 00
-  // 04, holds `cd 85 ff 00 04` at +2, D) is one call: the longest that ends at the store
-  const calls = callsWhere(img, () => true).filter((c) => bytesAt(img, c.at + c.len, SHOTS_STORE));
-  const stores = [...new Set(calls.map((c) => c.at + c.len))];
-  if (stores.length !== 1) throw new Error(`shotsQuery: ${stores.length} calls before the GUI's shots store (${stores.map((o) => h8(0x50000000 + o)).join(', ')}), want one`);
-  return 0x50000000 + calls.reduce((x, c) => (c.len > x.len ? c : x)).to;
+  const { base } = imageBase(img);
+  const [from, to] = SHOTS_TRACE.map((name) => {
+    const at = findString(img, name, { nul: true }), sites = at.length === 1 ? loadsOf(img, base + at[0]).filter((o) => img[o + 1] === 0xcc) : [];
+    if (sites.length !== 1) throw new Error(`shotsQuery: "${name}" held ${at.length} times, loaded ${sites.length} times, want one each`);
+    return sites[0];
+  });
+  const stored = new Set(), settings = new Set();
+  for (let p = from, prev = -1; p < to; prev = p, p += callAt(img, p)?.len ?? insnLength(img[p], img[p + 1])) {
+    const c = callAt(img, p);
+    if (!c) continue;
+    if (prev >= 0 && movImmD0(img, prev)) settings.add(c.to);
+    if (img[p + c.len] === 0xf0 && (img[p + c.len + 1] & 0xfc) === 0x70) stored.add(c.to);
+  }
+  const q = [...stored].filter((t) => !settings.has(t));
+  if (q.length !== 1) throw new Error(`shotsQuery: ${q.length} callees whose result getAvailableShootCount stores (${q.map((t) => h8(0x50000000 + t)).join(', ')}), want one`);
+  return 0x50000000 + q[0];
 }
 
 // The event broker's init (fact 'broker.init', and through bin/port.mjs the place of E143's BROKER_E143 0x502a48b6,
@@ -1966,10 +1987,11 @@ export function readFacts({ img, family, resLoad }) {
 // 'touch-trace'); the shooting service's start and end at their traces' loads (shootingService, 'service-trace'); the
 // GUI task's take after its receive loop (guiTake, 'take-loop'); the function direct start after its checks
 // (funcDirect, 'direct-checks'); the event broker init by its opening and slot loop (brokerInit, 'broker-slots'); the
-// error log by its test of the id's module (errlogEntry, 'module-test'); the remaining-shots query at the call the
-// GUI's shots store follows (shotsQuery, 'shots-store'); the touch panel's open by its trace (touchOpen, 'open-trace');
-// the display task init as the function that creates the DISPLAY queue (displayTaskInit, 'queue-init'); the face
-// plane's colour setter at the one that loads its trace (faceColourSet, 'cpdata-trace').
+// error log by its test of the id's module (errlogEntry, 'module-test'); the remaining-shots query at the callee whose
+// result the application's getAvailableShootCount stores (shotsQuery, 'shots-method'); the touch panel's open by its
+// trace (touchOpen, 'open-trace'); the display task init as the function that creates the DISPLAY queue
+// (displayTaskInit, 'queue-init'); the face plane's colour setter at the one that loads its trace (faceColourSet,
+// 'cpdata-trace').
 export function rulePlaces(facts) {
   return new Map([
     ...Object.entries(facts.touch ?? {}).map(([k, to]) => [TOUCH_E143[k], { to, how: 'touch-trace' }]),
@@ -1978,7 +2000,7 @@ export function rulePlaces(facts) {
     ...(facts.func_direct ? [[FUNC_DIRECT_E143, { to: facts.func_direct.run, how: 'direct-checks' }]] : []),
     [BROKER_E143, { to: facts.broker.init, how: 'broker-slots' }],
     [ERRLOG_E143, { to: facts.errlog.entry, how: 'module-test' }],
-    [SHOTS_QUERY_E143, { to: facts.card.shots_query, how: 'shots-store' }],
+    [SHOTS_QUERY_E143, { to: facts.card.shots_query, how: 'shots-method' }],
     ...(facts.touch_api ? [[TP_OPEN_E143, { to: facts.touch_api.open, how: 'open-trace' }]] : []),
     ...(facts.display.task_init !== undefined ? [[DISPLAY_TASK_INIT_E143, { to: facts.display.task_init, how: 'queue-init' }]] : []),
     ...(facts.display.face_colour !== undefined ? [[FACE_COLOUR_SET_E143, { to: facts.display.face_colour, how: 'cpdata-trace' }]] : []),

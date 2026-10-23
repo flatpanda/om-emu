@@ -324,12 +324,13 @@ const ERRLOG_FOUND = {
   E130: 0x5003FDA7, E129: 0x50040967, E132: 0x50040943, E118: 0x5000318E, E122: 0x50003195, E120: 0x500031B7,
 };
 // The remaining-shots query (card.shots_query; src/fw/facts.mjs shotsQuery): E143's as the lab gives it
-// (src/lab/camapp.mjs SHOTS_QUERY, D), the places of E143's the maps gave (E146, E147, E144, E139, E134, E137, E142,
-// E140, E125, E145), and on the other bodies the wrapper their GUI's shots refresh calls (D: E133's, E130's, E129's
-// and E132's of the trace module 0x2800c, the E118 family's with no trace)
+// (src/lab/camapp.mjs SHOTS_QUERY, D), the places of E143's the maps gave (E146, E147, E144, E139, E134, E137, E125),
+// and on the other bodies the function their application's getAvailableShootCount calls for the count (D: E142's,
+// E140's and E145's module-0x2800c wrapper, which S-CARD answers in their sessions, X; E133's, E130's, E129's and
+// E132's wrapper of that module; the E118 family's with no trace)
 const SHOTS_FOUND = {
   E143: 0x50419164, E146: 0x50414A5F, E147: 0x50422B7E, E144: 0x502FAB48, E139: 0x502F7CEB, E134: 0x50313E2D,
-  E137: 0x502EC70F, E142: 0x502D2E89, E140: 0x502E18D1, E125: 0x50307376, E145: 0x502DC471, E133: 0x502DAB10,
+  E137: 0x502EC70F, E142: 0x502C79DB, E140: 0x502D63A0, E125: 0x50307376, E145: 0x502CEB73, E133: 0x502DAB10,
   E130: 0x502E943F, E129: 0x502BB7E3, E132: 0x502BD1C7, E118: 0x502C2877, E122: 0x502E3440, E120: 0x502BD9A9,
 };
 // CPU 0's init task and OlyTaWu (rtos.init_task, rtos.ta_wu; src/fw/facts.mjs initTask, taWu) at the port's places of
@@ -562,7 +563,7 @@ export function factsTests() {
     // the error log, and the port's place of E143's at the rule's (bin/port.mjs, how 'module-test')
     ok(got.errlog?.entry === ERRLOG_FOUND[code], `${code}: errlog ${hx(got.errlog ?? got)}, found ${hx(ERRLOG_FOUND[code])}`);
     if (got.errlog && PORTS[code]) ok(PORTS[code][0x50047313] === got.errlog.entry, `${code}: A() of errlog ${hx(PORTS[code][0x50047313])}, the rule's ${hx(got.errlog.entry)}`);
-    // the remaining-shots query, and the port's place of E143's at the rule's (bin/port.mjs, how 'shots-store')
+    // the remaining-shots query, and the port's place of E143's at the rule's (bin/port.mjs, how 'shots-method')
     ok(got.card?.shots_query === SHOTS_FOUND[code], `${code}: card ${hx(got.card ?? got)}, found ${hx(SHOTS_FOUND[code])}`);
     if (got.card && PORTS[code]) ok(PORTS[code][0x50419164] === got.card.shots_query, `${code}: A() of the shots query ${hx(PORTS[code][0x50419164])}, the rule's ${hx(got.card.shots_query)}`);
     // CPU 0's init task and OlyTaWu, and the port's places of E143's at the rules' (bin/port.mjs, how 'task-table',

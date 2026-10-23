@@ -80,8 +80,9 @@ import { DISPLAY_SYNC_E143, RECVIEW_E143, CBS_E143, LENS_ZOOM_TABLE_E143 } from 
 //   S-CARD     a card in the SD slot: the HLS media state the file module's mount would set (SD 0x60360bfc and
 //              0x60360c08, both read through 0x50aca51d by getMountState) is 8: the application's card check passes
 //              (errFactor 0) and the GUI's count check (0x511ffcc9) too; each picture taken (END_SHOOTING_PICTURE) is
-//              kept as an image (IMAGE_COUNT); the remaining-shots query 0x50419164 (a module request
-//              getAvailableShootCount makes) answers CARD_SHOTS less the images; the movie time query 0x5042da58 (the module request
+//              kept as an image (IMAGE_COUNT); the remaining-shots query 0x50419164 (the module request
+//              getAvailableShootCount makes; src/fw/facts.mjs shotsQuery) answers card_shots (CARD_SHOTS unless
+//              bin/modelcheck.mjs's count probe sets it) less the images; the movie time query 0x5042da58 (the module request
 //              behind getMovieCountdownTime's time left, 0x503f3cf5, and the time code, 0x503f3e4e) fills its 24-byte
 //              reply: +0 and +4 the time left in ms (CARD_MOVIE_S less the recordings' time), +12 the recording's time
 //              in ms, +16 its whole seconds (the time code; +20, the frame, 0). Set before CA_MAIN starts. No file
@@ -300,6 +301,7 @@ export class CamApp {
     this.recording = null;     // the lab ns a recording started, or null
     this.movie_phase = null;   // S-RELSEQ: the shooting phase the phase query answers during a movie, or null
     this.card_used_ms = 0;     // S-CARD: the recordings' time so far, off the movie time left
+    this.card_shots = CARD_SHOTS;   // S-CARD: the card's shots before any image (bin/modelcheck.mjs's count probe sets it)
     this.images = [];          // S-CARD: the pictures taken, { number, release }
     this.release = 0;          // S-CARD: the releases (S2 down while shooting) so far; views: release -> S-SCENE's view
     this.views = new Map();    // of its capture; view_release: the release whose view S-SCENE gives next
@@ -504,7 +506,7 @@ export class CamApp {
       if (ms === 0) this.long_timers.delete(n); else this.long_timers.set(n, l.lab_time() + ms * 1e6);
     }, 'S-LONGTIMER');
     lab.hook(SHOTS_QUERY, (h, r) => {
-      const n = Math.max(0, CARD_SHOTS - this.images.length);
+      const n = Math.max(0, this.card_shots - this.images.length);
       this.log.push(['card', `remaining shots from ${where(r.mdr)}: ${n}`]);
       h.finish(r, { d0: n });
     }, 'S-CARD');

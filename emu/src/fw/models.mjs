@@ -235,7 +235,7 @@ export const MODELS = {
     touch: false,
     g4set: G4SET_UNCHECKED,
     // the SCPU's backed-up words the firmware writes and reads, [index, byte], and its writes without data or an
-    // answer (src/lab/scpuserver.mjs S-SCPU; E143's [2, 0] and none): the time-zone record's write and read wrappers
+    // answer (src/lab/scpudev.mjs S-SCPUDEV; E143's [2, 0] and none): the time-zone record's write and read wrappers
     // at 0x5005c164 and 0x5005c171 pass index 2, byte 0 (D)
     scpu: { words: [[2, 0]], quiet: [] },
     // as E143's (D): the SCPU init 0x5004f6d7 attaches 0x5004fc7f at level 5 (0x5004f910..1b); UI_IN's port init
@@ -286,7 +286,7 @@ export const MODELS = {
     // property 4513 (the output device) reads the play path makes from one more site than E143's GUI (X)
     prop_sites: [0x503DAF24],
     // the SCPU's backed-up words the firmware writes and reads, [index, byte], and its writes without data or an
-    // answer (src/lab/scpuserver.mjs S-SCPU; E143's [2, 0] and none): the time-zone record's write and read wrappers
+    // answer (src/lab/scpudev.mjs S-SCPUDEV; E143's [2, 0] and none): the time-zone record's write and read wrappers
     // at 0x50057330 and 0x5005733d pass index 2, byte 0 (D)
     scpu: { words: [[2, 0]], quiet: [] },
     // as E143's (D): the SCPU init attaches 0x5004f9bc at level 5 (0x5004f64c..57), its registration 0x5004f690 keeps
@@ -379,7 +379,7 @@ export const MODELS = {
     state_log_regs: ['d1', 'a0'],
     g4set: G4SET_UNCHECKED,
     // the SCPU's backed-up words the firmware writes and reads, [index, byte], and its writes without data or an
-    // answer (src/lab/scpuserver.mjs S-SCPU; E143's [2, 0] and none): the time-zone record's write and read wrappers
+    // answer (src/lab/scpudev.mjs S-SCPUDEV; E143's [2, 0] and none): the time-zone record's write and read wrappers
     // at 0x50051013 and 0x50051020 pass index 2, byte 0 (D)
     scpu: { words: [[2, 0]], quiet: [] },
     overrides: {
@@ -406,7 +406,7 @@ export const MODELS = {
     port_via: 'E139',
     g4set: G4SET_UNCHECKED,
     // the SCPU's backed-up words the firmware writes and reads, [index, byte], and its writes without data or an
-    // answer (src/lab/scpuserver.mjs S-SCPU; E143's [2, 0] and none): the time-zone record's write and read wrappers
+    // answer (src/lab/scpudev.mjs S-SCPUDEV; E143's [2, 0] and none): the time-zone record's write and read wrappers
     // at 0x5005239a and 0x500523a7 pass index 23, byte 0 (D); the dial init sends 0x21 with no data, no
     // completion and nothing waiting for it (0x50109328..0x50109342, D; its meaning is ?)
     scpu: { words: [[23, 0]], quiet: [0x21] },

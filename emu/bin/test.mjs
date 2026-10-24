@@ -9,7 +9,7 @@
 // the browser player's pure parts, its node host, webgate B6's page inputs on a node Player and its Worker in a node
 // worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
-// (test_camapp.mjs), the SCPU's clock and request server (test_scpu.mjs), the publication audit
+// (test_camapp.mjs), the SCPU's clock, ports, link pins and sub-CPU model (test_scpu.mjs), the publication audit
 // (test_pubaudit.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the card and the
 // file system on E143 (test_storage.mjs), the firmware
@@ -126,13 +126,20 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipp
   ca.bad.forEach((x) => console.log('  ', x));
   bad += ca.bad.length;
 }
-// the SCPU interface's clock and the sub-CPU's request server (S-SCPU), without firmware
+// the SCPU interface's clock and ports, the link's pins and the sub-CPU's model (S-SCPUDEV) without firmware, then the
+// link at a play session's start: E143 here, E146 and E147 (the link) and E139 and E134 (its start stops at the link)
+// each in a process of its own (the model is fixed when the lab is imported)
 {
-  const { scpuUnits } = await import('../test/test_scpu.mjs');
-  const sc = scpuUnits();
-  console.log(`SCPU clock, ports and request server (S-SCPU): ${sc.checks - sc.bad.length}/${sc.checks}`);
-  sc.bad.forEach((x) => console.log('  ', x));
-  bad += sc.bad.length;
+  const { scpuUnits, scpuSession } = await import('../test/test_scpu.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const sc = scpuUnits(), ss = await scpuSession();
+  const others = ['E146', 'E147', 'E139', 'E134'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_scpu.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
+  });
+  console.log(`SCPU clock, ports, link pins and the sub-CPU (S-SCPUDEV): ${sc.checks - sc.bad.length}/${sc.checks}; the link in play (E143) ${ss.checks - ss.bad.length}/${ss.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  [...sc.bad, ...ss.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += sc.bad.length + ss.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // the publication audit (bin/pubaudit.mjs) on a throwaway repository with made-up firmware
 {

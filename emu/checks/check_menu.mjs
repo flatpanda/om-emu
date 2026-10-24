@@ -34,6 +34,7 @@ import { FirmwareError, runtime } from '../src/lab/hle.mjs';
 import { ValueError, LabError, AssertionError } from '../src/lab/errors.mjs';
 import { Simulator } from '../src/lab/sim.mjs';
 import { disasm_of as K_disasm } from '../src/lab/kernel.mjs';
+import { PER_SCPU_TASK } from '../src/lab/scpulink.mjs';
 import { deepEqual } from '../src/util/equal.mjs';
 import { show } from '../src/util/show.mjs';
 import { pack } from '../src/util/bytes.mjs';
@@ -191,7 +192,7 @@ export function run_lab(spec, mutant = null) {
       palettes: draws.filter((d) => d.op === 'palette pending').map((d) => [d.layer, [...d.palette]]),
       palette_kinds: draws.filter((d) => d.op === 'palette kind').map((d) => d.kind),
       settings: lab.settings_log.filter(([, , k]) => k !== 'prop-native').map(([s, v, k]) => [s, v, k]),
-      prints: lab.kernel.events.filter((e) => e[0] === 'print').slice(sp.length), store_prints: sp, persist: [...lab.store_log.persist],
+      prints: lab.kernel.events.filter((e) => e[0] === 'print').slice(sp.length + (lab.scpu_link?.prints.length ?? 0)), store_prints: sp, link_prints: lab.scpu_link?.prints ?? null, persist: [...lab.store_log.persist],
       store_phases: lab.store_log.phases.map((p) => [p.label, p.ok, p.errlog]), errlog, lab_task: lab.lt.tid,
       started: new Set(lab.lt.started.slice(1).map(K_disasm)), tasks: lab.nk.tasks(), timed: lab.nk.timed_waiters(), init_loaded: lab.init_loaded,
       ctors: lab.ctor_results.filter((c) => c.status !== 'ok'), n_ctors: lab.ctor_results.length,
@@ -583,9 +584,13 @@ export async function check(mode = 'default', write_notes = false) {
   const p1 = [];
   for (const r of results) {
     if (!pred(r.lab_task === 160)) p1.push(`${r.label}: lab task ${r.lab_task}`);
-    if (!pred(setEq(r.started, STARTED))) p1.push(`${r.label}: tasks started ${show(hex_sorted(r.started))}`);
+    // with the native store, PER_SCPU too, started at the store init over the sub-CPU link (src/lab/scpulink.mjs),
+    // whose start prints the firmware's "SCPU RST!" and leaves the task waiting
+    const link = r.link_prints !== null;
+    if (!pred(setEq(r.started, link ? new Set([...STARTED, PER_SCPU_TASK]) : STARTED))) p1.push(`${r.label}: tasks started ${show(hex_sorted(r.started))}`);
+    if (link && !pred(deepEqual(r.link_prints, ['SCPU RST!']))) p1.push(`${r.label}: PER_SCPU's start printed ${show(r.link_prints)}`);
     const live = [...r.tasks].filter(([, [, st]]) => st !== 'DMT').map(([, [, st]]) => st);
-    if (!pred(deepEqual(sortStr(live), ['RUN', 'WAI', 'WAI', 'WAI', 'WAI']) && !r.timed.length)) p1.push(`${r.label}: task states ${show(r.tasks)} timed ${show(r.timed)}`);
+    if (!pred(deepEqual(sortStr(live), ['RUN', 'WAI', 'WAI', 'WAI', 'WAI', ...(link ? ['WAI'] : [])]) && !r.timed.length)) p1.push(`${r.label}: task states ${show(r.tasks)} timed ${show(r.timed)}`);
     if (!pred(!r.prints.length)) p1.push(`${r.label}: kernel prints ${show(r.prints.slice(0, 3))}`);
     if (!pred(!r.ctors.length && r.n_ctors === 112)) p1.push(`${r.label}: CTORS ${r.n_ctors} run, failed ${show(r.ctors.slice(0, 2))}`);
     const extraStub = [...r.rtos_stub.keys()].filter((k) => !['OlyTaSS', 'iOlyEvSt', 'OlyEvCl', 'OlyEvWt'].includes(k));
@@ -613,7 +618,7 @@ export async function check(mode = 'default', write_notes = false) {
     if (!pred(setEq(g.started, new Set([MM.CHANGE_TASK, MM.EMPTY_TASK])))) p1.push(`G2 ${g.device}: tasks started ${show(hex_sorted(g.started))}`);
     p1.push(...g.s_send.map((x) => `G2 ${g.device}: S-SEND rule: ${x}`));
   }
-  group('1 bring-up on K-native: lab task 160, only allowed tasks started (CHANGE, empty display task 70, GUI_TASK, Genifa timer, HLS_EYEFI) and all waiting forever, no kernel print, 112 constructors, src/lab/text.mjs\'s post-init '
+  group('1 bring-up on K-native: lab task 160, only allowed tasks started (CHANGE, empty display task 70, GUI_TASK, Genifa timer, HLS_EYEFI; with the native store PER_SCPU, whose start prints SCPU RST!) and all waiting forever, no kernel print, 112 constructors, src/lab/text.mjs\'s post-init '
     + 'checks; S-SEND drops only queue 10 cmd 10 from 0x50045474, S-PROP only from 0x503eff61, every native settings read has its value, no unlisted hook on the GUI path'
     + (g2.length ? '; G2: DISPLAY OPEN tft/evf on K-native (the CHANGE task native up to its first receive), empty-GUI composite == check_display.reference(), error log == check_display\'s, S-SEND rule'
       : '; G2 not run in this mode'), p1);

@@ -2,7 +2,7 @@
 // breakpoints Z0/z0, continue 'c' (main-loop visits, interrupt acceptance before the breakpoint check), single step
 // 's' (no breakpoint, no interrupt), debugger memory 'm'/'M'. One machine per realm: createMachine() replaces the
 // previous one, whose object then refuses every call.
-import { BOARD } from './fw/board.mjs';
+import { BOARD, boardKnows } from './fw/board.mjs';
 import { IMAGE_BASE } from './fw/model.mjs';
 import * as mem from './core/mem.mjs';
 import { Fault, Unported, TbUndecidable, K_RAM, K_ROM, K_ROMD, K_MMIO, BUS, addRegion, allocWindow } from './core/mem.mjs';
@@ -17,6 +17,7 @@ import { Engine } from './dev/engine.mjs';
 import { Stub } from './dev/stub.mjs';
 import { Scpu } from './dev/scpu.mjs';
 import { Hdmi } from './dev/hdmi.mjs';
+import { LinkPins } from './dev/linkpins.mjs';
 
 export { Unported, TbUndecidable };
 export class HostStopped extends Error {       // a run or write call after a host error stopped the machine mid-instruction
@@ -124,6 +125,8 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   const intc = new Intc(m);
   const scpu = new Scpu(m, lclock, intc, SCPU_DOORBELL);
   const hdmiPort = hdmi ? new Hdmi(m, intc, HDMI_WINDOW, HDMI_DOORBELL) : null;
+  // the sub-CPU link's GIO pins, on a board that gives them (src/dev/linkpins.mjs; the lab wires the sub-CPU)
+  const linkPins = boardKnows('scpu_link') ? new LinkPins(m, intc, BOARD.scpu_link) : null;
   const engine = new Engine(m, bus, intc);
   const vsc = new Vsc(m, lclock, intc, bus, rom);
   const timer = new Timer(m, lclock, intc);
@@ -176,7 +179,7 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   // Every CPU fault writes its trap line (after any device line the faulting access wrote).
   const trap = (f) => { for (const line of trapLines(f, R[PC])) m.stderr(line); };
   Object.assign(m, {
-    devices: { intc, timer, engine, vsc, bus, stub, scpu, clock: lclock, ...(hdmiPort ? { hdmi: hdmiPort } : {}) },
+    devices: { intc, timer, engine, vsc, bus, stub, scpu, clock: lclock, ...(hdmiPort ? { hdmi: hdmiPort } : {}), ...(linkPins ? { linkpins: linkPins } : {}) },
     getRegs() { live(); return getRegs(); },
     // 'p' / 'P' (registers 0..15 as cpu.mjs getRegs / setRegs, and the lab registers 16..19: HI, unit C,
     // unit D, unit V); null for a register the stub does not have.

@@ -25,7 +25,7 @@ import * as CD from './check_display.mjs';
 import * as CM from './check_menu.mjs';
 import * as D from '../src/lab/display.mjs';
 import * as MM from '../src/lab/menu.mjs';
-import { ScpuError } from '../src/lab/scpuserver.mjs';
+import { ScpuError } from '../src/lab/scpudev.mjs';
 import * as M from '../src/lab/menudata.mjs';
 import * as N from '../src/lab/nav.mjs';
 import * as R from '../src/lab/resources.mjs';
@@ -436,27 +436,20 @@ function b7_bracket(nav, observed) {
   return nav.end('B7', 'wait', [], [], { b7 });
 }
 
-// The listed-site rules of K-CFLUSH and S-FLASHSAVE, S-SCPU's refusals and the S-PERSIST phase rule, called directly
-// with a recording finish: an unlisted caller must raise MenuError, a request S-SCPU does not model ScpuError (each
-// request is written into the lab's data area: the port scan 0x88 {-, rx 2}, which UI_IN sends and no session does,
-// and a read of the backed-up word 3, which no caller reads). K-CRT-134D takes any caller since the multi-model work:
+// The listed-site rules of K-CFLUSH and S-FLASHSAVE, S-SCPUDEV's refusals and the S-PERSIST phase rule, called directly
+// with a recording finish: an unlisted caller must raise MenuError, a command S-SCPUDEV does not model ScpuError (its
+// read handlers called as a frame would: the port scan 0x88, which UI_IN sends and no session does, and a read of the
+// backed-up word 3, which no caller reads). K-CRT-134D takes any caller since the multi-model work:
 // it returns the SCPU counter the window code reads (`mov (0x98e000e8),d0; retf`, D), which E137's operating-time count
 // calls too.
 function stand_in_rules(lab) {
   class Finish { constructor() { this.done = []; } finish(r, kw = {}) { this.done.push(kw); } }
   const problems = [];
-  const request = (cmd, txSize, tx, rxSize, rx) => {
-    const b = new Uint8Array(28), dv = new DataView(b.buffer);
-    b[0] = cmd;
-    for (const [o, v] of [[4, txSize], [8, tx], [12, rxSize], [16, rx]]) dv.setUint32(o, v, true);
-    return lab.alloc(b);
-  };
-  const word3 = lab.alloc(new Uint8Array([3, 0])), reply = lab.alloc(new Uint8Array(4));
-  const serve = (h, r) => lab.scpu_server.serve(h, r);
+  const read = (cmd, data) => () => lab.scpu_dev.read(cmd, new Uint8Array(data));
   for (const [label, fn, regs, error] of [
     ['K-CFLUSH unlisted caller', (h, r) => lab._k_cflush(h, r), { mdr: runtime(0x5004086C) }, MM.MenuError],
-    ['S-SCPU command 0x88', serve, { a0: request(0x88, 0, 0, 2, reply), mdr: runtime(0x5005A7E0) }, ScpuError],
-    ['S-SCPU backed-up word 3', serve, { a0: request(0x86, 2, word3, 4, reply), mdr: runtime(0x5005A846) }, ScpuError],
+    ['S-SCPUDEV command 0x88', read(0x88, []), {}, ScpuError],
+    ['S-SCPUDEV backed-up word 3', read(0x86, [3, 0]), {}, ScpuError],
     ['S-FLASHSAVE unlisted caller', (h, r) => lab._s_flash_save(h, r), { d0: 0, mdr: runtime(0x503C5534) }, MM.MenuError]]) {
     try {
       fn(new Finish(), regs);
@@ -1032,7 +1025,7 @@ export async function check(mode = 'default', write_notes = false) {
     notes.push(`STORE ${run.name} K-CFLUSH ${show(sortedItems([...s.cflush].map(([k, v]) => [h8(k), v])))} replies ${show(s.replies.map((r) => [r.reader, r.bytes]))} requests ${s.requests.length} `
       + `SCPU commands ${show(run.scpu_commands.map((c) => [hx(c[0]), hx(disasm(c[1])), c[2]]))}`);
   }
-  group('2 store init: FlD. BlD. ElD. MlD., no error log; S-SCPU serves 0x06, 0x01 and 0x86 and the native waits on 0xf5/0xf6/0xf7 return E_OK once each, K-CRT-134D and S-FLASHSAVE once and K-CFLUSH 4 times from their listed sites, no lab-stub page over 0x98e00000; SCPU reg0 '
+  group('2 store init: FlD. BlD. ElD. MlD., no error log; PER_SCPU carries 0x06, 0x01 and 0x86 to S-SCPUDEV and the native waits on 0xf5/0xf6/0xf7 return E_OK once each, K-CRT-134D and S-FLASHSAVE once and K-CFLUSH 4 times from their listed sites, no lab-stub page over 0x98e00000; SCPU reg0 '
     + `0xa8, e8 = ec = 0, one command 0x20041001; dial table 0x60223dbc (${names.join(', ')})`, p2);
   p2 = [];
   const blank = by.get('N2');

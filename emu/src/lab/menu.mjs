@@ -13,7 +13,8 @@ import * as T from './text.mjs';
 import { FirmwareError, disasm, runtime, where } from './hle.mjs';
 import { EXEC_SLOTS, EXPECTED_RECORDS, KIND3_RECORD, KIND3_AREA, NRECORDS, REGISTRY, STRIDE, HEIGHT, EngineError } from './osd.mjs';
 import { RTOS } from './rtos.mjs';
-import { ScpuServer, ScpuMemory } from './scpuserver.mjs';
+import { ScpuDev, ScpuMemory } from './scpudev.mjs';
+import { ScpuLink, PER_SCPU_TASK } from './scpulink.mjs';
 import { ValueError, RuntimeError, AssertionError } from './errors.mjs';
 import { packRegs } from './sim.mjs';
 import { show } from '../util/show.mjs';
@@ -65,10 +66,10 @@ export const K_CFLUSH = A(0x5004E68A), K_CFLUSH_RETURN = A(0x5004086A), K_CRT_13
 // the SCPU counter, and the hook reads the same word. E143 calls it once,
 // to keep the counter at a start (return 0x5005a6d2, after its 7-byte call); a later body also reads it to count the
 // time since that start (E137, docs/om1-settings-spec.md K-CRT-134D)
-// SCPU_REQUEST: the firmware's SCPU request API, where S-SCPU serves the requests (src/lab/scpuserver.mjs)
+// SCPU_REQUEST: the firmware's SCPU request API, which posts each request to PER_SCPU (observed; src/lab/scpulink.mjs)
 export const FLASH_SAVE = A(0x503EEE94), FLASH_SAVE_RETURN = A(0x503C5537), SCPU_REQUEST = A(0x5005CD17);
 // the requesters' waits for their completion flags, {flag id word -> the wait's return}: the backed-up word write
-// (0xf5) and read (0xf6), the date set (0xf7) and get (0xf8); with S-SCPU they run natively, observed as they return
+// (0xf5) and read (0xf6), the date set (0xf7) and get (0xf8); they run natively, observed as they return
 export const SCPU_WAITS = new Map([[A(0x6004315A), A(0x5005A7F9)], [A(0x6004315C), A(0x5005A85F)], [A(0x6004315E), A(0x5012C87D)], [A(0x60043160), A(0x5012C8D3)]]);
 // whether the SCPU keeps the camera's backup words and clock, which the store init requests through SCPU_REQUEST
 // (src/fw/facts.mjs scpuBackup, its request names; E143's do, D); the request API, its senders and PER_SCPU's
@@ -94,7 +95,7 @@ export const REPLACE_INFO = [[A(0xA32A9788), A(0xA3212700)], [A(0xA32A978C), A(0
 // verified, 0x5005a59e) and the B store 0x08..0x3c
 export const SCPU_BACKED = [0x00, ...Array.from({ length: 14 }, (_, i) => 0x08 + 4 * i)];
 // the SCPU's date requests (Sctime, through 0x5005cd17): 0x01 sets it (0x5012c7d9), 0x81 gets it (0x5012c88d), in
-// 9 bytes {u16 year, month, day, hour, minute, second, u16 status} (D); S-SCPU keeps the date (src/lab/scpuserver.mjs
+// 9 bytes {u16 year, month, day, hour, minute, second, u16 status} (D); the sub-CPU's RTC keeps it (src/lab/scpudev.mjs
 // ScpuMemory), in S-NVRAM's file when there is one
 export const PANEL_FLAG = A(0x60043188);                                   // the panel driver's serial completion flag id (E143's EVF panel; S-PANELDONE)
 export const NATIVE_HOOK_LIMIT = 2000000;
@@ -177,7 +178,7 @@ export class MenuLab extends T.TextDisplayLab {
     this.inputs = new Map(opts.inputs ?? []);
     this.seed = new Map(opts.seed ?? []);
     this.prop_sites = [...PROP_GUI_SITES, ...(store === 'native' ? STORE_PROP_SITES : []), ...(MODEL_INFO.prop_sites ?? [])];
-    this.store_log = { phases: [], persist: [], scpu_waits: [], scpu_requests: [], scpu_replies: [], cflush: new Map(), crt134d: [], flash_save: [], dial: null };
+    this.store_log = { phases: [], persist: [], scpu_waits: [], scpu_requests: [], scpu_replies: [], scpu_frames: [], cflush: new Map(), crt134d: [], flash_save: [], dial: null };
     this.key_mode_wanted = opts.key_mode ?? 'refuse';
     this.settings_log = [];
     this.language_changes = [];
@@ -428,7 +429,7 @@ export class MenuLab extends T.TextDisplayLab {
     const gui = [], timer = [];
     for (const [t, [e]] of tasks) { if (e === GUI_TASK) gui.push(t); if (e === GENIFA_TIMER_TASK) timer.push(t); }
     const started = this.lt.started.slice(1).map(K.disasm_of);
-    const wantStarted = [...(D.HAS_CHANGE ? [CHANGE_TASK] : []), EMPTY_TASK, GUI_TASK, GENIFA_TIMER_TASK, ...(this.time_mode && !this.skip_defer ? [D.DEFER_TASK] : [])];
+    const wantStarted = [...(D.HAS_CHANGE ? [CHANGE_TASK] : []), EMPTY_TASK, GUI_TASK, GENIFA_TIMER_TASK, ...(this.time_mode && !this.skip_defer ? [D.DEFER_TASK] : []), ...(this.scpu_link ? [PER_SCPU_TASK] : [])];
     const sortNum = (xs) => [...xs].sort((a, b) => a - b);
     if (JSON.stringify(sortNum(started)) !== JSON.stringify(sortNum(wantStarted))) problems.push(`tasks started: ${show(started.map(hex))}`);
     if (gui.length !== 1 || timer.length !== 1 || tasks.get(gui[0])[1] !== 'WAI' || tasks.get(timer[0])[1] !== 'WAI') {
@@ -617,12 +618,17 @@ export class MenuLab extends T.TextDisplayLab {
     // date advances with lab time (a session stays hermetic)
     this.scpu_memory = nvram ? new ScpuMemory(() => nvram.now(), { clock_offset: saved?.clock_offset ?? 0, clock_status: saved?.clock_status ?? 0, words: saved?.scpu_words ?? {} }, (st) => nvram.saveScpuMemory(st))
       : new ScpuMemory(() => Math.floor(this.lab_time() / 1e9));
-    // S-SCPU: the request server at the request API; the requesters' waits (OlyEvWt 0x5002bdd8 on their flags) and the
-    // replies' readers run natively and are observed. A model whose SCPU keeps no backup words or clock (SCPU_BACKUP;
-    // E144: no Sctime/ScpuBkup requests, D) has none of these sites
+    // H-SCPUSTART, S-SIO2, S-SCPUDEV: PER_SCPU started natively with the sub-CPU at the far end of its link
+    // (src/lab/scpulink.mjs, src/lab/scpudev.mjs); the requests (the API's entry), the requesters' waits (OlyEvWt
+    // 0x5002bdd8 on their flags) and the replies' readers run natively and are observed. A model whose SCPU keeps no
+    // backup words or clock (SCPU_BACKUP; E144: no Sctime/ScpuBkup requests, D) has none of these sites, and the lab
+    // does not start its PER_SCPU
     if (SCPU_BACKUP) {
-      this.scpu_server = new ScpuServer(this, this.scpu_memory, { words: fact('scpu.words', [[2, 0]]), quiet: fact('scpu.quiet', []) });
-      this.hook(SCPU_REQUEST, (h, r) => this.scpu_server.serve(h, r), 'S-SCPU');
+      this.scpu_dev = new ScpuDev(this.scpu_memory, { words: fact('scpu.words', [[2, 0]]), quiet: fact('scpu.quiet', []) });
+      this.store_log.scpu_frames = this.scpu_dev.frames;
+      this.scpu_link = new ScpuLink(this, this.scpu_dev);
+      this.scpu_link.bring_up();
+      this.observe(SCPU_REQUEST, (lab, r) => lab.store_log.scpu_requests.push({ caller: where(r.mdr), request: bytesHex(lab.sim.read(r.a0 >>> 0, 28)) }), 'obs-scpu-request');
       for (const [reader, [address, size]] of SCPU_REPLY_READERS) {
         this.observe(reader, (lab) => lab.store_log.scpu_replies.push({ reader: h8(reader), address: h8(address), bytes: bytesHex(lab.sim.read(address, size)) }), 'obs-scpu-reply');
       }

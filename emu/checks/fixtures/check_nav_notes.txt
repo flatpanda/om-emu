@@ -18,7 +18,7 @@ B2 N7 edge pad 00-OPEN plane 2 buffer 0xb7c31000 width 800 rows 600 byte 0x1f
 B2 N7 edge pad 00-OPEN plane 2 buffer 0xb7e18800 width 800 rows 600 byte 0x1f
 B2 N7 error log 0x1c005002x28
 B2 N7 registers vs N7C (layout 1 -> layout 0): CTRL3=0x1->0x41 OSDDMASPOS=null->0x0
-B7 N3T slot count 3 period 5, Genifa clock 20 at timer 522's start (0 ticks before the bracket), channel 21 next 404202000 period 2001000 ns: T_pred 498249000 ns; before 0x9ac6/110, at 0x0/120, lab time after 502484600
+B7 N3T slot count 4 period 5, Genifa clock 20 at timer 522's start (0 ticks before the bracket), channel 21 next 404202000 period 2001000 ns: T_pred 500250000 ns; before 0x9ac6/110, at 0x0/120, lab time after 519167420
 BUDGET measured maxima: post 34 hook stops, settle 9859, GESetEvent 202 per step; limits 140 / 40000 / 810
 CAPTURE N1 01-INFO not compared (help, tab 7): pixels pinned by the composite only
 CLOCK-DIFF N4 second epoch changes 606 bytes in [741, 224, 874, 247]
@@ -26,7 +26,7 @@ CLOCK-EPOCH0 N1 row 1 strings ["'--.--.--", "--:--:--"]
 DEFAULTS checked 27 ids
 DESCRIPTORS 1557 ids: firmware lookup == refs/settings.mjs (first record in table order)
 KEY-SELECTORS 18 ids 2:0x503c589b 3:0x503c589b 4:0x503c589b 6:0x503c58b9 17:0x503c589b 86:0x503c589b 140:0x503c589b 475:0x503c589b 490:0x503c589b 491:0x503c589b 1667:0x503c589b 1668:0x503c589b 1669:0x503c589b 1670:0x503c589b 1671:0x503c58b9 1672:0x503c58b9 2089:0x503c589b 2090:0x503c589b
-LONG-WAIT WAIT:10500 slices 2 GESetEvent 1050 hook stops 22253 idle log [["irq", 16377], ["signal", 2], ["time", 17003]]; DOWN row 1
+LONG-WAIT WAIT:10500 slices 2 GESetEvent 1049 hook stops 22248 idle log [["irq", 16377], ["signal", 2], ["time", 17003]]; DOWN row 1
 POPUP-WRITE N3 32 = 300; GUI awaits 0x9ac6 EVT_10MS_WIZARD_MENU (Genifa timer 522)
 PROP4513 native after init 0
 SCPU-IMMEDIATES 0x00:10 0x04:2 0x08:2 0x58:1 0x80:1 0x84:1 0x88:1 0x8c:1 0x90:3 0x94:6 0x98:3 0x9c:4 0xa0:4 0xa4:4 0xa8:3 0xac:3 0xb0:3 0xb4:3 0xb8:3 0xbc:3 0xc0:1 0xc4:6 0xc8:3 0xcc:3 0xd0:2 0xd4:6 0xd8:4 0xdc:3 0xe0:1 0xe4:1 0xe8:6 0xec:8 0xf0:1 0xf4:21 0xf8:1
@@ -101,10 +101,10 @@ STEP N3T 04-DOWN page panel 329 hooks 602 sets 13 engine 46
 STEP N3T 05-DOWN page panel 329 hooks 597 sets 12 engine 46
 STEP N3T 06-DOWN page panel 329 hooks 597 sets 12 engine 46
 STEP N3T 07-DOWN page panel 329 hooks 597 sets 12 engine 46
-STEP N3T 08-OK popup panel 329 hooks 2908 sets 104 engine 205
-STEP N3T 09-DOWN popup panel 329 hooks 683 sets 12 engine 53
+STEP N3T 08-OK popup panel 329 hooks 2903 sets 103 engine 205
+STEP N3T 09-DOWN popup panel 329 hooks 688 sets 13 engine 53
 STEP N3T 10-OK popup panel 329 hooks 1825 sets 14 engine 174
-STEP N3T 11-B7 page panel 329 hooks 2506 sets 90 engine 180
+STEP N3T 11-B7 page panel 329 hooks 2513 sets 90 engine 180
 STEP N3T 12-MENU closed panel 329 hooks 129 sets 3 engine 0
 STEP N4 00-CLOCK:1791369000 unknown panel null hooks 0 sets 0 engine 0
 STEP N4 01-OPEN page panel 329 hooks 9650 sets 188 engine 223
@@ -129,9 +129,9 @@ STEP N7 07-OPEN page panel 329 hooks 2353 sets 11 engine 92
 STEP N7C 00-OPEN page panel 329 hooks 9676 sets 192 engine 229
 STEP N8 00-OPEN page panel 329 hooks 9676 sets 192 engine 229
 STEP N8 01-SHOT page panel 329 hooks 1 sets 0 engine 0
-STEP N8 02-SWITCH:evf page panel 329 hooks 151 sets 0 engine 0
+STEP N8 02-SWITCH:evf page panel 329 hooks 155 sets 0 engine 0
 STEP N8 03-SHOT page panel 329 hooks 1 sets 0 engine 0
-STEP N8 04-SWITCH:tft page panel 329 hooks 138 sets 0 engine 0
+STEP N8 04-SWITCH:tft page panel 329 hooks 142 sets 0 engine 0
 STEP N8 05-SHOT page panel 329 hooks 1 sets 0 engine 0
 STOP N3 MENU: index 23: event storm: more than 810 GESetEvent calls in step 11-MENU; awaited 0x9ac6
 STORE N1 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "1c020080"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]

@@ -7,7 +7,7 @@
 // (test_args.mjs), the worker purity rule (and no py-prefixed module or name), the firmware rules of
 // src/fw/facts.mjs (test_facts.mjs: firmware-optional, each unpacked main block checked against its MODELS entry) and
 // the firmware map's units (test_fwmap.mjs: the machine's coverage option off and on, fwmap's decoder against the
-// interpreter's transfer forms, the coverage union, the block aggregation), the SCPU's clock and request server
+// interpreter's transfer forms, the coverage union, the block aggregation), the SCPU's clock, ports and link
 // (test_scpu.mjs), the HDMI port's device and sink (test_hdmi.mjs), the accelerometer stand-in's sample
 // (test_acc.mjs), the SD card model and the FAT reader (test_storage.mjs), the debug API's argument checks, halt,
 // trace filters and live-route units (test_live.mjs liveUnits: a machine on a blank image) and the publication
@@ -56,7 +56,7 @@ report('page after a stop', await pageTests());
 report('scene stand-in (S-SCENE)', sceneUnits());
 report('command-line parser', argsTests());
 report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnits());
-report('SCPU clock, ports and request server (S-SCPU)', scpuUnits());
+report('SCPU clock, ports, link pins and the sub-CPU (S-SCPUDEV)', scpuUnits());
 report('HDMI port: transmitter, hot-plug pin, sink (S-HDMISINK)', hdmiUnits());
 report('accelerometer sample (S-ACCSAMPLE)', accUnits());
 report('SD card and FAT reader (S-SDCARD, refs/fat.mjs)', storageUnits());

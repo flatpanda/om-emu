@@ -895,8 +895,9 @@ export class PlaySession extends N.NavSession {
   // through the firmware's attach (checked as H-IPIINIT's). H-UIINPORT: UI_IN's callback registered through the
   // firmware's registration, as UI_IN's port init (not run) registers it, and group 0's old state set from the port
   // byte by the firmware's own init, which UI_IN's start stage (not run) calls first: group 0 then decodes no code at
-  // bring-up. Any other registration is refused: PER_SCPU's callback, for one, would post its port event into a queue
-  // no task reads (its slot pool runs dry, docs/hle-gaps.md 4.7.2)
+  // bring-up. A later registration of another callback is refused (none has the firmware's evidence); PER_SCPU's own
+  // callback is registered natively before, at its task's start (H-SCPUSTART, src/lab/scpulink.mjs), and acts on the
+  // message port's events (docs/hle-gaps.md 4.7.2)
   scpu_port_bring_up() {
     const lab = this.lab, ev = BOARD.scpu.events, { irq: [handler, level], register, callback, old_state } = this.scpu_port;
     const g0 = uiin_layout(lab.image).groups[SCPU_PORT_GROUP];

@@ -33,6 +33,10 @@ export const SET_INPUTS = 1;
 // handler writes back the word it read, the SCPU init writes 127, D); a bit outside the ports is UNKNOWN. The levels
 // are the lab's: a store of (SET_INPUTS << 24) | levels to the doorbell sets them (bit k port k's level), as the
 // body's levers and buttons would; any other store, or a read, is a bus error. The levels and the events start at 0.
+// But for port events.message (board scpu.events; E143's port 3): its level is the sub-CPU's message line, PC2, which
+// the sub-CPU's model sets through setMessage() (src/lab/scpulink.mjs); it starts high, released (I: the line is low
+// only while the sub-CPU has a message to post, D: docs/om1-scpu-spec.md 3.1), and a doorbell store with that port's
+// bit 0 is a bus error (the lab drives no level onto the line).
 export class Scpu {
   constructor(machine, clock, intc = null, doorbell = null) {
     this.m = machine;
@@ -42,6 +46,7 @@ export class Scpu {
     this.clk = { sec: 0, at: 0 };
     this.commands = 0;
     this.inputs = 0;
+    this.message = 1;                    // the sub-CPU's message line (events.message), released
     this.pending = 0;
     addRegion({ base: SCPU_BASE, size: 0x100, kind: K_MMIO, name: 'om1.scpu',
       dev: { read: (a, w, dbg) => this.read(a - SCPU_BASE, w, dbg), write: (a, v, w, dbg) => this.write(a - SCPU_BASE, v, w, dbg) } });
@@ -73,15 +78,33 @@ export class Scpu {
     const k = (off - EV.ports) >> 2;
     return k < EV.count ? k : -1;
   }
-  // the lab's levels (bit k port k): a changed port's event bit is set and the line follows the event word
-  setInputs(levels) {
-    const changed = (this.inputs ^ levels) >>> 0;
-    this.inputs = levels >>> 0;
-    this.pending = (this.pending | changed) >>> 0;
+  // the ports' levels (bit k port k): the lab's, but for the message port, whose level is the sub-CPU's line
+  levels() {
+    if (EV.message === undefined) return this.inputs;
+    const m = 1 << EV.message;
+    return ((this.inputs & ~m) | (this.message ? m : 0)) >>> 0;
+  }
+  // a changed port's event bit is set and the line follows the event word
+  changed(before) {
+    this.pending = (this.pending | (before ^ this.levels())) >>> 0;
     this.intc.setLine(EV.irq, this.pending !== 0);
   }
+  // the lab's levels (bit k port k)
+  setInputs(levels) {
+    const before = this.levels();
+    this.inputs = levels >>> 0;
+    this.changed(before);
+  }
+  // the sub-CPU's message line (src/lab/scpulink.mjs)
+  setMessage(level) {
+    if (EV?.message === undefined) throw new Error('Scpu: the board has no message port (scpu.events.message)');
+    const before = this.levels();
+    this.message = level ? 1 : 0;
+    this.changed(before);
+  }
   doorbell(a, value, size, dbg) {
-    if (dbg || size !== 4 || (a & 3) || value >>> 24 !== SET_INPUTS || (value & 0xffffff) >>> EV.count) return this.labUnknown('write', a, size, value, dbg);
+    const held = EV.message === undefined ? 0 : 1 << EV.message;
+    if (dbg || size !== 4 || (a & 3) || value >>> 24 !== SET_INPUTS || (value & 0xffffff) >>> EV.count || (value & held) !== held) return this.labUnknown('write', a, size, value, dbg);
     this.setInputs(value & 0xffffff);
   }
   read(off, size, dbg) {
@@ -90,7 +113,7 @@ export class Scpu {
     if (TICKS && off === CLK1) return this.phase();
     if (EV && off === EV.pending) return this.pending;
     const k = this.port(off);
-    if (k >= 0) return ((this.inputs >>> k) & 1) << 31 >>> 0;
+    if (k >= 0) return ((this.levels() >>> k) & 1) << 31 >>> 0;
     if (dbg || storage(off)) return this.reg[off >> 2];
     if (off === COMMAND) return 0;                    // A-SCPU-1
     return this.unknown('read', off, size, 0, dbg);

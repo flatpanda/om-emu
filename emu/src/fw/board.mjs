@@ -52,10 +52,26 @@ export const FAMILIES = {
     // clock tick with lab time (a lab choice; plain storage that stands still otherwise), its plain storage and its
     // event word, the first of its port words, their count and the IRQ they drive (the SCPU init 0x5004dc55 clears
     // 0x98 with 127 and attaches IRQ 320 to the handler 0x5004e1fd that reads it; the port byte reader 0x5004df3f
-    // reads bit 31 of 0xa0..0xb8, D; the same on E146 and E147, D: their inits and readers)
+    // reads bit 31 of 0xa0..0xb8, D; the same on E146 and E147, D: their inits and readers); message: the port whose
+    // level is the sub-CPU's message line, PC2 of the sub-CPU (PER_SCPU's IRQ 320 callback 0x5005c8d9 acts on event
+    // bit 3 with port bit 3 low and polls the sub-CPU then, D; the sub-CPU drives PC2 low to post a message,
+    // 0x8012c42, and high when it answers the poll, 0x8012e9e, D; docs/om1-scpu-spec.md 3.1)
     scpu: {
       command: 0xf4, clock: [0xe8, 0xec], ticks: true, storage: [[0x00, 0x00], [0x08, 0x3c]],
-      events: { pending: 0x98, ports: 0xa0, count: 7, irq: 320 },
+      events: { pending: 0x98, ports: 0xa0, count: 7, irq: 320, message: 3 },
+    },
+    // The MN's GIO pins of the sub-CPU link (src/dev/linkpins.mjs, src/lab/scpulink.mjs; docs/om1-scpu-spec.md 3.1):
+    // PER_SCPU's pin numbers (ready 102: its edge callbacks 0x5005c989 / 0x5005c9dc; request 103: 0x5005b72d(103, 0);
+    // reset 107: the pulses at 0x5005cec5 and 0x5005b9ab, D) and each pin's GIO words from the driver's tables: the
+    // pin word (0x60025ff8)[pin] (+0 the level in bit 4, the read 0x50002a35, and the output in bit 0, the write
+    // 0x500521ff; +4 the configuration, 0x500520f4; +8 the word the handler registration 0x5005229f writes), and pin
+    // 102's interrupt record (slot (0x60026788)[102] = 191, record 0x600268f4 + 32 x 191: a dedicated slot (+4 = 1)
+    // with IRQ 119 and handler 0x50052a44, status and enable words, the type-0 bit 1 and the type-1 bit 2), D; E146 and
+    // E147: the same pins (their PER_SCPU inits), words, slot, record and IRQ (their tables), D
+    scpu_link: {
+      ready: { pin: 102, word: 0x9B881B80, status: 0x9B883060, enable: 0x9B8831A0, bits: [1, 2], irq: 119 },
+      request: { pin: 103, word: 0x9B881BC0 },
+      reset: { pin: 107, word: 0x9B881CC0 },
     },
     // the HDMI port (src/dev/hdmi.mjs, built only with the machine's hdmi option; docs/hle-gaps.md 4.9): the
     // transmitter's byte registers (the driver's register reader 0x501d55d8 and writer 0x501d5645), the writer's lane
@@ -153,6 +169,9 @@ export const FAMILIES = {
     // and their start then stops at the NAND controller the lab does not model (X)
     // The event and port words (E143's 0x98, 0xa0..0xb8) lie in the storage 0x40..0x94: events null (not modelled)
     scpu: { command: 0xa4, clock: [0x98, 0x9c], ticks: false, storage: [[0x00, 0x00], [0x08, 0x3c], [0x40, 0x94]], events: null },
+    // the sub-CPU link's pins: not read on this family (E139's PER_SCPU is not E143's: another fatal path, 0x50052fe6,
+    // and pin calls, D; its GIO tables were not read)
+    scpu_link: UNKNOWN,
     // the HDMI port: not read on this family
     hdmi: UNKNOWN,
     // per body, read by src/fw/facts.mjs (coreByte; resetHead's library and preload rows; vectorPage: 0x6003xxxx on
@@ -203,7 +222,7 @@ export const FAMILIES = {
       kernel_ticks: UNKNOWN, soft_tick: UNKNOWN, hw_channels: UNKNOWN, hw_entries: UNKNOWN,
     },
     // the VSC name table is not in the E144 form; the engine's and the SCPU's registers were not read
-    vsc: UNKNOWN, engine: UNKNOWN, scpu: UNKNOWN, hdmi: UNKNOWN,
+    vsc: UNKNOWN, engine: UNKNOWN, scpu: UNKNOWN, scpu_link: UNKNOWN, hdmi: UNKNOWN,
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,
     // E143's scratch DRAM holds E122's icons record (the loader's destination 0xa1fa6c00, 0x730a00 bytes decoded: X,
     // src/fw/facts.mjs resLoader and resources.mjs record): the lab's scratch is E144's lab region, which E118, E120
@@ -247,6 +266,10 @@ export function boardOf(code) {
 }
 
 export const BOARD = boardOf(MODEL);
+// whether a top-level fact of BOARD is known (not UNKNOWN), without reading it: for a device the machine builds only
+// on a board that gives its facts (src/machine.mjs the sub-CPU link's pins); a user that needs the fact reads it and
+// throws with the board's message
+export const boardKnows = (key) => Object.hasOwn(BOARD, key) && !Object.getOwnPropertyDescriptor(BOARD, key).get;
 export const IRQS = BOARD.intc.irqs;
 // the IRQ a timer channel raises (shared lines included), or -1
 export function timerIrq(n) {

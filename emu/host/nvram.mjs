@@ -1,8 +1,8 @@
 // The camera's non-volatile state for a node-hosted lab (env.nvram, src/lab/menu.mjs S-NVRAM): the settings stores' flash
 // images the firmware saves (M, the user settings, and E), the SCPU window's backed-up words (the clock signature 0x00
-// and the B store 0x08..0x3c) and the sub-CPU's own memory (src/lab/scpuserver.mjs ScpuMemory: its date as an offset
-// from the host's local time and its status, its backed-up words), kept in one JSON file between sessions, and the
-// host's local time for the clock.
+// and the B store 0x08..0x3c) and the sub-CPU's own memory (src/lab/scpudev.mjs ScpuMemory: its RTC's date as an
+// offset from the host's local time, the status a get would answer, its backup registers by number), kept in one JSON
+// file between sessions, and the host's local time for the clock.
 // Off unless the host passes a file (OM_EMU_NVRAM); node-only (host/).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -26,7 +26,7 @@ export function fileNvram(file) {
       const j = read();
       return j ? { M: bytes(j.M), E: bytes(j.E), scpu: j.scpu ?? null, clock_offset: j.clock_offset ?? 0, clock_status: j.clock_status ?? 0, scpu_words: j.scpu_words ?? {} } : null;
     },
-    // the sub-CPU's memory {clock_offset: its date less the host's local time in seconds, clock_status, words}
+    // the sub-CPU's memory {clock_offset: its RTC's date less the host's local time in seconds, clock_status, words: the backup registers}
     saveScpuMemory(m) { const j = read() ?? { version: 1 }; Object.assign(j, { clock_offset: m.clock_offset, clock_status: m.clock_status, scpu_words: m.words }); write(j); },
     save(name, data) { const j = read() ?? { version: 1 }; j[name] = Buffer.from(data).toString('base64'); write(j); },
     saveScpu(words) { const j = read() ?? { version: 1 }; j.scpu = words; write(j); },

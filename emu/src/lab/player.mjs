@@ -364,9 +364,10 @@ export class Player {
     if (this.session?.camapp?.dispsync_released) used.push('S-DISPSYNC');                   // a body whose GUI synced its display updates
     if (this.session?.lab?.panel_answered) used.push('S-PANELDONE');                        // a panel driver's serial completion wait answered
     if (this.session?.lab?.tp_sends?.length) used.push('S-TPSEND');                         // a synchronous send to the touch task
-    if (this.session?.lab?.scpu_server) used.push('S-SCPU');                                // a body whose SCPU keeps its date and backed-up words
+    if (this.session?.lab?.scpu_link) used.push('H-SCPUSTART', 'S-SIO2', 'S-SCPUDEV', 'A-SCPUDEV-1', 'A-LINKPINS-1');   // a body whose PER_SCPU runs natively against the sub-CPU's model
     if (this.session?.scpu_port) used.push('H-SCPUIRQ', 'H-UIINPORT', 'H-SCPUPORT');        // a body whose group 0 comes through the SCPU's ports
-    if (this.session?.hdmi_port) used.push('H-GIOSLOTS', 'S-HDMISINK', 'A-HDMI-1');          // --hdmi on: the HDMI port, its sink
+    if (this.session?.hdmi_port || this.session?.lab?.scpu_link) used.push('H-GIOSLOTS');   // the GIO slots, for the HDMI pin or the link's pin 102
+    if (this.session?.hdmi_port) used.push('S-HDMISINK', 'A-HDMI-1');                       // --hdmi on: the HDMI port, its sink
     if (this.session?.storage) used.push('H-FILEINIT', 'H-FILECLBK', 'S-SDHOST', 'S-SDCARD', 'S-FSNAND', 'S-ALBM', 'S-RECFILE');   // the file system native on a card (storage.mjs)
     const media = this.session?.camapp?.media;
     if (media?.formats || media?.ctrl) used.push('S-MDACTRL');                               // a Card Formatting from the menu (media.mjs)

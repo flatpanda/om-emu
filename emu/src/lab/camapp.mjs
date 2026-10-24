@@ -76,6 +76,7 @@ import { pack } from '../util/bytes.mjs';
 import { hex } from '../util/hex.mjs';
 import * as SC from './scene.mjs';
 import { jpegOfFrame } from './jpeg.mjs';
+import { HlsMedia } from './media.mjs';
 import { A, ON_LAB_MODEL, MODEL_INFO, IMAGE_BASE, knob, fact, isUnmapped } from '../fw/model.mjs';
 import { DISPLAY_SYNC_E143, RECVIEW_E143, CBS_E143, LENS_ZOOM_TABLE_E143, CARD_DETECT_E143 } from '../fw/facts.mjs';
 //   S-CARD     a card in the SD slot. On a body whose file system runs natively (storage.mjs; MODELS storage: E143)
@@ -85,7 +86,8 @@ import { DISPLAY_SYNC_E143, RECVIEW_E143, CBS_E143, LENS_ZOOM_TABLE_E143, CARD_D
 //              application's card check passes, errFactor 0, and the GUI's count check 0x511ffcc9 too); each picture
 //              taken (END_SHOOTING_PICTURE) is kept as an image (IMAGE_COUNT) for playback, and its file is written
 //              through the file module (S-RECFILE, storage.mjs) in place of REC_FILE, whose recording modules do not
-//              run; the DCF database learns of the file only at the next mount. The firmware counts the remaining shots
+//              run; the DCF database learns of the file only at the next mount (none while the card is out of the slot,
+//              and a format from the menu clears them: media.mjs). The firmware counts the remaining shots
 //              (getAvailableShootCount's query 0x50419164) and the movie time (0x5042da58) from the card itself, and
 //              the card driver's detect state comes from the DCF process's card-in. On the other bodies the card has
 //              no file system: the driver's detect state of drive 0 (CARD_DETECT) is set to 2, inserted, so the drive
@@ -276,8 +278,8 @@ export const CAMAPP_STAND_INS = {
   "S-MODACK": "the module tasks do not run: every request the application's API sender posts to a module queue (OlyQeWr returning to 0x503eba07) is answered after the step with [status 0, token, word 3] to the reply queue in its word 0, the layout of DISPLAY's replies (0x501c48bf); every synchronous send (0x5002e39d) the lab otherwise refuses returns E_OK. Nothing a module would write back is written (I)",
   "S-DISPSYNC": "the release of the GUI's synced display updates: while the application's sync word for a panel is set (CameraCommon::setDispSync, which E137's GUI asks for at the start), the GUI's update is a request of type 3, which leaves its buffers pending until an image sync; their one sender, the shooting sequence's stopRecView, does not run in an idle session, so E137's screen stayed blank (X). After each step the lab releases each device with such a request: both panels' sync words cleared through the application's setter, as stopRecView does, then the image sync of kind 1, whose event the display manager takes in the state the type-3 request leaves, and the pending buffers are committed (D). stopRecView's kind 2 is not taken there: under it E137's screen came only at its GUI's next update, a 250 ms redraw of a blinking item, and E125's GUI, which sends none, kept a one-colour frame (X). When the camera releases the sync at the start is not known (I: once its through image shows)",
   "S-RVSTANDBY": "the rec view component in standby: the shooting components' RecView does not run; its entryStandby would store state 1 in the application's state word (fact recview), which starts at 0, and getRecViewState takes 0 for a rec view, so E142's GUI showed the rec view's items at the start (EVT_REC_DISP_RECVIEW, 0xf005) instead of the shooting screen (X). The lab stores 1 before the application starts; that the camera's component is in standby then is I",
-  "S-TRAACK": "the HLS transaction layer's synchronous exec (0x50af7cb9 / 0x50af7cbe) returns 0: no local handler is ever registered (on the camera either), so every transaction goes to the active state's components, where the shooting component CmpSht_ShootingComponent_NEW answers TRA 990 and 991; it runs only with the HLS components, and the remote channel answers 0xf0000001 (startShootingService fails on TRA 990 without it, X)",
-  "S-CARD": "a card in the SD slot. With the file system native (a body that gives it: E143; storage.mjs) the card is S-SDCARD's, which the firmware formats and mounts itself at the insertion, and S-CARD keeps only the HLS media mount state (0x60360bfc, 0x60360c08) at 8, as the HLS media layer would set it on the file layer's mount, and the pictures taken (S-RELSEQ's END_SHOOTING_PICTURE) as images of folder 100, numbered from 1, for playback, the media API's image count (0x503feea4) answering their number for type 1 (the firmware's own count of type 1 counts a P*.JPG file in DCIM, X): each one's file is written by S-RECFILE in place of the release's recording modules, which do not run, and the DCF database learns of it at the next mount. The firmware answers the remaining shots and the movie time from the card. On the other bodies the card has no file system: the card driver's detect state of the first slot is 2, inserted (src/fw/facts.mjs cardDetect), set before the application starts; the remaining-shots module query 0x50419164 answers 999 less the images; the movie time query 0x5042da58 answers a time left of 1:00:00 less the time recorded so far, and the current recording's time; a DCF remain count that tests only the drive status's error bits (MODEL_INFO.dcf_mount_test) is given the mount test E143's count makes, so it returns as not mounted. An image is its number, its exposure and S-SCENE's scene at the capture",
+  "S-TRAACK": "the HLS transaction layer's synchronous exec (0x50af7cb9 / 0x50af7cbe) returns 0: no local handler is ever registered (on the camera either), so every transaction goes to the active state's components, where the shooting component CmpSht_ShootingComponent_NEW answers TRA 990 and 991; it runs only with the HLS components, and the remote channel answers 0xf0000001 (startShootingService fails on TRA 990 without it, X). With the file system native the media control's start (TRA 1511) also goes to S-MDACTRL (media.mjs)",
+  "S-CARD": "a card in the SD slot. With the file system native (a body that gives it: E143; storage.mjs) the card is S-SDCARD's, which the firmware formats and mounts itself at the insertion, and S-CARD keeps only the HLS media mount state (0x60360bfc, 0x60360c08) at 8, as the HLS media layer would set it on the file layer's mount, and the pictures taken (S-RELSEQ's END_SHOOTING_PICTURE) as images of folder 100, numbered from 1, for playback, the media API's image count (0x503feea4) answering their number for type 1 (the firmware's own count of type 1 counts a P*.JPG file in DCIM, X): each one's file is written by S-RECFILE in place of the release's recording modules, which do not run, and the DCF database learns of it at the next mount. The firmware answers the remaining shots and the movie time from the card. While the card is out of the slot (media.mjs S-MEDIA) no picture is kept and the image count is 0; a format from the menu (S-MDACTRL) clears the pictures. On the other bodies the card has no file system: the card driver's detect state of the first slot is 2, inserted (src/fw/facts.mjs cardDetect), set before the application starts; the remaining-shots module query 0x50419164 answers 999 less the images; the movie time query 0x5042da58 answers a time left of 1:00:00 less the time recorded so far, and the current recording's time; a DCF remain count that tests only the drive status's error bits (MODEL_INFO.dcf_mount_test) is given the mount test E143's count makes, so it returns as not mounted. An image is its number, its exposure and S-SCENE's scene at the capture",
   "S-PLAYSEQ": "the play module's notifications: each asynchronous HLS play request (OlyHfwOpePlyComAsyncRsb::execute 0x50ad26fb) is finished after the step by its notify function (0x50ad2bc2) with the request's id and kind 2, as the module would: startPlayService (0) makes PlyCom's callback post CBS_END and the GUI leave ID_ST_PREPARE, startSingleFrame (8) and moveCurrent (9) make the single-frame callback post CBS_FINISH_DRAW and the GUI show the image. While a request's transaction runs (S-TRAACK) the module's answer is written: canMoveCurrent (sync 344) can move whenever there are two images or more (they wrap around), moveCurrent's result is 1 and the image shown moves (direction 3 left, 4 right). That every request finishes at once, with result 0 and no other data, is an inference from the callbacks (I)",
   "S-PLAYCOMP": "the play component's answers (Cmp_PlayComponentBase, which only the HLS components create; OlyHfwOpePlyCom's wrappers 0x50acf156..0x50acf356 are answered in its place) for the image S-PLAYSEQ shows, the newest: getNumber its index, file number and folder 100, getStillInfo its exposure time, f-number, bias and ISO (from S-SCENE at the capture; 1/125 s alone without it) and the picture size 5184 x 3888, the type 0, not protected, no recording; a move's completion clears the single-move state (0x60362a7c), as the component's start_single_move_current does. The other wrappers answer 0, each logged (I)",
   "S-PLAYVIEW": "(with S-SCENE's live view) while the GUI shows a card image, from startSingleFrame's finish to endPlayService (sync request 1), the live-view plane holds the frame S-SCENE renders again from the scene kept with the image (black for an image taken without it): the camera would decode the file onto its image plane, which the lab does not have (I: same plane, same scaling as S-RECVIEW)",
@@ -322,6 +324,7 @@ export class CamApp {
     this.play_cur = null;      // S-PLAYCOMP: the index of the image shown
     this.play_exec = null;     // S-PLAYSEQ: the play request whose transaction runs next
     this.components = !!session.opts.camapp_components;   // S-BOOTDONE / S-CPU3: the HLS components run (control camapp 2)
+    this.media = null;         // S-MDACTRL / S-MEDIA (media.mjs): with the file system native
     this.shoot_mode = false;   // S-BOOTDONE: 420 sent
     this.boot_finished = false; // S-BOOTDONE: the category left its state 3
     this.started = false;
@@ -481,6 +484,7 @@ export class CamApp {
     // with the file system native (storage.mjs) the file module's own task, FILECLBK, takes its queue's requests
     const fileq = this.s.storage ? this.s.storage.f.fileclbk.queue : null;
     if (fileq !== null) this.module_queues.delete(fileq);
+    if (this.s.storage) { this.media = new HlsMedia(this.s, this.s.storage); this.media.install(); }
     this.s.lab.panel_done = true;                                                  // S-PANELDONE (menu.mjs)
     const lab = this.s.lab;
     lab.xcpu_served.add(CPU3);                                                     // S-CPU3: S-CPU2 leaves bank 3 to drain_cpu3
@@ -505,6 +509,7 @@ export class CamApp {
     const tra = (h, r, calls) => {
       const req = r.a1 >>> 0, b = req ? lab.sim.read(req + 4, 2) : null;
       this.log.push(['tra', `${b ? b[0] | (b[1] << 8) : -1} from ${where(r.mdr)}`]);
+      if (b && this.media && (b[0] | (b[1] << 8)) === this.media.f.ctrl.request) this.media.control(req);   // S-MDACTRL
       if (this.play_exec !== null) this.play_answer(this.play_exec);                // S-PLAYSEQ
       this.play_exec = null;
       if (calls) h.finish_calls(r, { d0: 0 }); else h.finish(r, { d0: 0 });
@@ -530,7 +535,7 @@ export class CamApp {
       this.log.push(['card', `remaining shots from ${where(r.mdr)}: ${n}`]);
       h.finish(r, { d0: n });
     }, 'S-CARD');
-    lab.hook(IMAGE_COUNT, (h, r) => h.finish(r, { d0: (r.d1 >>> 0) === IMAGE_TYPE ? this.images.length : 0 }), 'S-CARD (images)');
+    lab.hook(IMAGE_COUNT, (h, r) => h.finish(r, { d0: (r.d1 >>> 0) === IMAGE_TYPE ? this.card_images() : 0 }), 'S-CARD (images)');
     const mt = MODEL_INFO.dcf_mount_test;                                         // E143's count makes its own
     if (mt && !native) lab.hook(mt.at, (h, r) => {
       const status = r[mt.reg] >>> 0;
@@ -616,6 +621,19 @@ export class CamApp {
       if (++m > 50) throw new FirmwareError(`S-PLAYSEQ: more than 50 play requests in one step (${this.play_pending.length} pending)`);
       this.play_finish(this.play_pending.shift());
     }
+    if (this.media && this.media.busy()) {                                         // S-MDACTRL / S-MEDIA (media.mjs)
+      this.media.tick();
+      for (const [k, d] of this.media.take_log()) this.log.push([`media ${k}`, d]);
+      if (this.acks.length || this.play_pending.length || this.dispsync.size) this.pump();
+    }
+  }
+  // S-CARD: the pictures on the card (none while it is out of the slot or not mounted)
+  card_images() { return this.s.storage && !this.s.storage.mounted ? 0 : this.images.length; }
+  // S-CARD, after a format from the menu (media.mjs S-MDACTRL): the card's pictures are gone
+  card_formatted() {
+    this.log.push(['card', `formatted: ${this.images.length} image(s) gone`]);
+    this.images = [];
+    this.play_cur = null;
   }
   // S-PLAYSEQ: one play request finished as the play module would (an asynchronous request through its notify), or
   // the end of the play service
@@ -759,7 +777,9 @@ export class CamApp {
     s.settle(`S-RELSEQ ${name}`);
     this.pump();
     if (name === 'START_RECVIEW' || name === 'END_RECVIEW') s.scene_recview?.(name === 'START_RECVIEW');   // S-RECVIEW
-    if (name === 'END_SHOOTING_PICTURE') {                                          // S-CARD
+    if (name === 'END_SHOOTING_PICTURE' && s.storage && !s.storage.mounted) {      // S-CARD: no card mounted
+      this.log.push(['card', 'no card mounted: no image, no file']);
+    } else if (name === 'END_SHOOTING_PICTURE') {                                   // S-CARD
       const img = { number: this.images.length + 1, release: this.release };
       this.images.push(img);
       this.log.push(['card', `image ${CARD_FOLDER}-${String(img.number).padStart(4, '0')} saved`]);

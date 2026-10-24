@@ -15,7 +15,10 @@
 //                   card; a saved card (env.card) mounts in the next session without a format, and a player keeps
 //                   its card across a power cycle; S2 with the live view writes the picture's file (S-RECFILE): its
 //                   directory entry, size and bytes read back independently, the JPEG decoded (refs/jpeg.mjs) to the
-//                   capture's block means, and the next session's DCF numbering mount and image count find it
+//                   capture's block means, and the next session's DCF numbering mount and image count find it; Card
+//                   Formatting from the menu (S-MDACTRL): the card read back is freshly formatted, the counts reset and
+//                   the application returns to the menu; the card out and back in (S-MEDIA): the drive unmounted and the
+//                   screen without the counts, then mounted again by the firmware with the counts back
 //   node emu/test/test_storage.mjs [--session]
 import { SdCard, NO_RESPONSE, SECTOR, crc7, r2Words, cardImage, cardFromImage } from '../src/lab/sdcard.mjs';
 import { FatVolume, mbrPartition } from '../refs/fat.mjs';
@@ -280,6 +283,87 @@ export async function storageSession() {
       lab.hooks.set(key, hook);
       ok(n === 1, `the firmware's own image count (type 1) in the next session: ${n}`);
     } catch (e) { bad.push(`S2 picture: ${e.message.slice(0, 400)}`); }
+    try { pl.close_session(); } catch { /* closed */ }
+  }
+  // Card Formatting from the menu (S-MDACTRL, media.mjs) after a picture: the format reaches the card from the
+  // firmware's own request, the card read back independently is freshly formatted, the counts reset, the application
+  // leaves Busy for the menu
+  {
+    const { loadImage, createHash } = await import('../checks/lib/env.mjs');
+    const { Player } = await import('../src/lab/player.mjs');
+    const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+    const { runtime } = await import('../src/lab/hle.mjs');
+    const card = new SdCard();
+    const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true },
+      { rom: loadImage(), resBlock, createHash, wallClock: () => performance.now() / 1000, card: { open: () => card, save() {} } });
+    const press = (s, k) => { s.key(k, 'down'); s.camapp.pump(); s.idle_slice(s.lab.lab_time() + 100e6); s.key(k, 'up'); s.camapp.pump(); s.idle_slice(s.lab.lab_time() + 400e6); };
+    const frame = (s) => { const [w, h, words] = s.frame('boundary'); return { w, h, words }; };
+    const rows = (f, y0, y1) => { const a = f.words.slice(y0 * f.w, y1 * f.w), b = []; for (const x of a) b.push(x); return b.join(','); };
+    try {
+      pl.open_session();
+      const s = pl.session, lab = s.lab;
+      s.idle_slice(lab.lab_time() + 1500e6);
+      const fresh = new FatVolume((lba, n) => card.read(lba, n), mbrPartition(card.read(0, 1)).start).freeClusters();
+      press(s, 's2'); s.idle_slice(lab.lab_time() + 1000e6);
+      const vol0 = new FatVolume((lba, n) => card.read(lba, n), mbrPartition(card.read(0, 1)).start);
+      ok(vol0.find('DCIM/100OMSYS/P1010001.JPG') && vol0.freeClusters() < fresh && s.camapp.images.length === 1, `before the format: the picture's file on the card, ${vol0.freeClusters()} of ${fresh} clusters free`);
+      press(s, 'menu');
+      const menu = frame(s);
+      for (const k of ['ok', 'ok', 'up', 'ok', 'up', 'ok']) press(s, k);
+      const busy = frame(s), media = s.camapp.media;
+      ok(media.ctrl !== null || media.formats === 1, 'Format Card, Yes: the media control start reached S-MDACTRL');
+      for (let i = 0; i < 100 && media.formats === 0; i++) s.idle_slice(lab.lab_time() + 50e6);
+      s.idle_slice(lab.lab_time() + 1000e6);
+      ok(media.formats === 1 && media.ctrl === null, `the format finished: ${JSON.stringify(media.status())}`);
+      const vol = new FatVolume((lba, n) => card.read(lba, n), mbrPartition(card.read(0, 1)).start);
+      ok(vol.type === 'FAT32' && vol.label === 'OM SYSTEM  ' && vol.list().length === 0, `read back: a FAT32 'OM SYSTEM' volume with an empty root: ${JSON.stringify(vol.list().map((e) => e.name))}`);
+      ok(!vol.find('DCIM/100OMSYS/P1010001.JPG') && vol.freeClusters() === fresh && vol.fsInfo()?.free === fresh, `the picture is gone: ${vol.freeClusters()} clusters free (FSInfo ${vol.fsInfo()?.free}), a fresh volume's ${fresh}`);
+      const key = runtime(A(0x503FEEA4)), hook = lab.hooks.get(key);   // S-CARD's image count (camapp.mjs IMAGE_COUNT) aside
+      lab.hooks.delete(key);
+      const n = lab.call(A(0x503FEEA4), { d0: 0, d1: 1 }, null, null, 2000000).d0;
+      lab.hooks.set(key, hook);
+      ok(n === 0 && s.camapp.images.length === 0 && s.storage.next_file === 1, `the counts reset: the firmware's image count ${n}, S-CARD's ${s.camapp.images.length}, next file ${s.storage.next_file}`);
+      const after = frame(s);
+      ok(rows(after, 0, 130) === rows(menu, 0, 130) && rows(after, 200, 600) !== rows(busy, 200, 600), 'the application left Busy for the menu (its tab bar and title as before the format)');
+      ok(pl.stand_ins_in_use().includes('S-MDACTRL'), 'the player lists S-MDACTRL');
+    } catch (e) { bad.push(`menu format: ${e.message.slice(0, 400)}`); }
+    try { pl.close_session(); } catch { /* closed */ }
+  }
+  // The card taken out and put back while the camera runs (S-MEDIA, media.mjs): the card switch through UI_IN, the
+  // firmware unmounts and the screen loses the card's counts; back in, the firmware initialises and mounts the card
+  // again and the counts come back
+  {
+    const { loadImage, createHash } = await import('../checks/lib/env.mjs');
+    const { Player } = await import('../src/lab/player.mjs');
+    const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+    const card = new SdCard();
+    const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true },
+      { rom: loadImage(), resBlock, createHash, wallClock: () => performance.now() / 1000, card: { open: () => card, save() {} } });
+    const box = (s) => { const [w, , words] = s.frame('boundary'), out = []; for (let y = 0; y < 45; y++) for (let x = 230; x < 460; x++) out.push(words[y * w + x]); return out.join(','); };
+    try {
+      pl.open_session();
+      const s = pl.session, lab = s.lab, st = s.storage, media = s.camapp.media;
+      s.idle_slice(lab.lab_time() + 1500e6);
+      s.key('s1', 'down'); s.camapp.pump(); s.idle_slice(lab.lab_time() + 100e6); s.key('s1', 'up'); s.camapp.pump();   // the date prompt off
+      s.idle_slice(lab.lab_time() + 1000e6);
+      const counts = box(s), shots = lab.call(SHOTS, { d0: 0 }, null, null, 2000000).d0 | 0, cmds = st.commands;
+      const detect = lab.sim.read(st.f.detect, 2)[0];
+      const out = pl.run_input({ type: 'card', action: 'remove' });
+      s.idle_slice(lab.lab_time() + 500e6);
+      ok(!st.card.present && !st.mounted && lab.sim.read(st.f.detect, 2)[0] === 1 && media.mount_state(4) === 0, `out: the drive unmounted (detect state ${lab.sim.read(st.f.detect, 2)[0]}, HLS mount state ${media.mount_state(4)}, ${out?.card?.drive_status})`);
+      ok(out?.uiin_codes?.includes('0x02021506') && media.level() === 1, `out: UI_IN decoded the card switch (${JSON.stringify(out?.uiin_codes)}), level ${media.level()}`);
+      ok(box(s) !== counts, 'out: the screen lost the card\'s counts');
+      let refused = false;
+      try { pl.run_input({ type: 'card', action: 'remove' }); } catch (e) { refused = /out of the slot already/.test(e.message); }
+      ok(refused, 'a second removal is refused');
+      const back = pl.run_input({ type: 'card', action: 'insert' });
+      s.idle_slice(lab.lab_time() + 500e6);
+      ok(st.card.present && st.mounted && st.insertions === 1 && lab.sim.read(st.f.detect, 2)[0] === detect && media.mount_state(4) === 8, `in: the firmware mounted the card again (${back?.card?.drive_status}, detect state ${lab.sim.read(st.f.detect, 2)[0]}, ${detect} at the start)`);
+      ok(st.commands - cmds > 20 && card.log.some(([i]) => i === 2), `in: sd_mount initialised the card again (${st.commands - cmds} SD commands, CMD2 among them)`);
+      const shots2 = lab.call(SHOTS, { d0: 0 }, null, null, 2000000).d0 | 0;
+      ok(shots2 === shots && box(s) === counts, `in: the counts are back (${shots2} shots, the screen's counts as before)`);
+      ok(pl.stand_ins_in_use().includes('S-MEDIA'), 'the player lists S-MEDIA');
+    } catch (e) { bad.push(`card out and in: ${e.message.slice(0, 400)}`); }
     try { pl.close_session(); } catch { /* closed */ }
   }
   // a 4 GiB card: the firmware's count follows the card

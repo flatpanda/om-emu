@@ -368,6 +368,9 @@ export class Player {
     if (this.session?.scpu_port) used.push('H-SCPUIRQ', 'H-UIINPORT', 'H-SCPUPORT');        // a body whose group 0 comes through the SCPU's ports
     if (this.session?.hdmi_port) used.push('H-GIOSLOTS', 'S-HDMISINK', 'A-HDMI-1');          // --hdmi on: the HDMI port, its sink
     if (this.session?.storage) used.push('H-FILEINIT', 'H-FILECLBK', 'S-SDHOST', 'S-SDCARD', 'S-FSNAND', 'S-ALBM', 'S-RECFILE');   // the file system native on a card (storage.mjs)
+    const media = this.session?.camapp?.media;
+    if (media?.formats || media?.ctrl) used.push('S-MDACTRL');                               // a Card Formatting from the menu (media.mjs)
+    if (this.session?.storage?.removals || this.session?.storage?.insertions) used.push('S-MEDIA');   // a card taken out or put back (media.mjs)
     if (this.session?.acc) used.push('H-ACCINIT', 'S-ACCREG', 'S-ACCSAMPLE', 'H-SLOPEINIT', 'A-ACC-1', 'A-ACC-2', 'A-ACC-3');   // a body whose accelerometer is stood in at its sample cache
     // the model's own stand-ins (src/fw/models.mjs return_stubs and call_skips, src/lab/play.mjs), each by its name
     for (const [, , name] of MODEL_INFO.return_stubs ?? []) used.push(name);
@@ -841,6 +844,7 @@ export class Player {
       return s.touch(act, x, y);
     }
     if (t === 'hdmi') return s.hdmi_input(get(inp, 'action'));
+    if (t === 'card') return s.card_input(get(inp, 'action'));
     if (t === 'tilt') {                                              // degrees, fractions kept; a field left out is 0
       const deg = (k) => {
         if (!has(inp, k)) return 0;

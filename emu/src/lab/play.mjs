@@ -78,6 +78,10 @@ export const HDMI_PLUG_MS = 100, HDMI_SWITCH = 0x0501;
 // a tilt input's wait (src/lab/acc.mjs): ACC_MAIN's next 80 ms cycle and PER_SLOPE's 20 ms (X: the gauge's getter
 // reads the new tilt at the end of it; the GUI's redraw of the gauge follows up to about 50 ms later)
 export const TILT_MS = 250;
+// a card input's wait (src/lab/media.mjs S-MEDIA, src/lab/storage.mjs): the card's change runs in the step (the
+// insertion's requests take about 0.8 s of lab time, logsec's 740 ms wait after the card switch's change included,
+// X), then CARD_MS more for the application's redraw
+export const CARD_MS = 300;
 export const JS_EV = [369, 370, 371, 372, 373, 374, 375, 376, 377];
 export const OLYQEWR = A(0x5002C151), TSND_DTQ = A(0x50016578);
 // every call of tsnd_dtq, which the guard on blocked sends observes: E143's 11 (a byte scan, D); a ported model's read by
@@ -1306,6 +1310,27 @@ export class PlaySession extends N.NavSession {
     const lab = this.lab, tag = `tilt ${roll} ${pitch}`;
     this.begin(`${String(this.steps.length).padStart(2, '0')}-${tag}`);
     return this.wait_until(lab.lab_time() + TILT_MS * 1000000, tag, true, { kind: 'tilt', extra: () => ({ acc: this.acc.status(), gauge: this.acc.gauge() }) });
+  }
+  // The card in the first slot (a body with the file system native, src/fw/models.mjs storage): 'remove' takes it out
+  // (S-SDCARD's card answers no command), 'insert' puts the same card back. The slot's card switch changes as a
+  // body's does (S-KEYBITS' bit of UI_IN's group, which UI_IN decodes natively and the file layer's callback takes),
+  // and S-MEDIA (media.mjs) runs the media manager's part of the change in the step; then CARD_MS of lab time
+  card_input(action) {
+    const st = this.storage, media = this.camapp?.media ?? null;
+    if (!st || !media) throw new ValueError(`card: ${MODEL} has no card in the lab with its file system (src/fw/models.mjs storage)`);
+    if (action !== 'remove' && action !== 'insert') throw new ValueError(`card: action ${show(action)} (remove, insert)`);
+    if ((action === 'remove') !== st.card.present) throw new ValueError(`card ${action}: the card is ${st.card.present ? 'in' : 'out of'} the slot already`);
+    if (media.busy()) throw new ValueError(`card ${action}: the media layer is busy (a format or a card change runs)`);
+    const sw = media.f.slots[0].switch, c = CONTROLS.find((x) => x.kind === 'fwswitch' && x.uiin[3] === sw);
+    if (!c) throw new ValueError(`card: no UI_IN switch control for the card switch 0x${fx(sw, 4)}`);
+    const lab = this.lab, tag = `card ${action}`, [g, b, bit, , , pol] = c.uiin;
+    this.begin(`${String(this.steps.length).padStart(2, '0')}-${tag}`);
+    if (action === 'remove') st.card.remove(); else st.card.insert();          // S-SDCARD
+    set_bit(this.images[g], b, bit, action === 'remove' ? 1 - pol : pol);         // the card switch, S-KEYBITS
+    const [codes] = this.push_group(g);
+    this.camapp.pump();                                                            // S-MEDIA's change, in the step
+    return this.wait_until(lab.lab_time() + CARD_MS * 1000000, tag, true,
+      { kind: 'card', extra: () => ({ card: st.status(), slot: st.slot(), media: media.status(), uiin_codes: codes.map(h8) }) });
   }
   // the port as the lab sees it: the cable, the E-DDC reads the sink answered and the driver's EDID state
   hdmi_status() {

@@ -152,6 +152,73 @@ export const MODELS = {
       fileif: { open: 0x10001, close: 0x10002, write: 0x10003, mkdir: 0x1000C },
       names: { drive: 'C', folder: 'OMSYS', file: 'P101', ext: 'JPG' },
       errlog: [[0x39000903, 'the movie time query\'s frame rate is 0: the movie module\'s info is not set up in the lab (the time left is the card\'s)']],
+      // The DCF process's card out (FILECLBK 0xf0, {u16 command 2, u16 drive}; 0x5087bd75): for a drive in detect
+      // state 2, 3 or 4 it sets 1 and, from 2, unmounts (0x5087c987, 0x508748f5, 0x5087c9dd); X: the drive status
+      // loses 0x80 (0x13780 -> 0x13700), the card-in after it mounts again
+      card_out: 2,
+      // FILECLBK's sdmem class (codes 0x10..0x1e, 0x50890114: the table 0x60a105f8 gives the sdmem command, the block
+      // is a 128-byte sdmem request sent through logsec's synchronous call 0x508ac1dd): 0x12 is command 1, which
+      // clears the port's card info (0x508b2b51). Without it a mount after a removal reads the removed card's
+      // state and fails (X: CMD17, CMD13 four times and CMD0 unanswered by the card that came back, the FAT mount
+      // 0x1405). Which component sends it on a body is not read (I)
+      card_info: 0x12,
+      // The HLS side of the card (src/lab/media.mjs; docs/hle-gaps.md 4.8.3). D unless tagged.
+      // reception: OlyHfwReception's singleton getter (0x6035f0fc, made by 0x50af8959) and its vtable slot 2
+      // (0x50af8c96: the receive body 0x50af89f9 with d0 = 1), which hands an event to every receptor of its list
+      // (+20: u16 count at +2, items at +8; 0x50af8156, 0x50af818b) whose isInterested (vt[3]) takes it, through the
+      // receptor's synchronous slot (vt[2], 0x50ac8f27: the reactive's handleEvent, OMReactive vt[6] 0x50d9bd10).
+      // Slot 1 (0x50af89e5, d0 = 0) is the asynchronous one: the receptor's vt[1] (0x50ac8eed) gens the event to the
+      // reactive's OXF thread (+100), the OXF main thread HIGHLEVEL_MAIN, which runs only with the HLS components.
+      // OlyHfwOpeMdaCtrl's receptor (vtable 0x60de6808) takes the events of class 696 (its filter, +8), and its
+      // reactive (vtable 0x60de8ffc) handles them in its state 6 (0x50acb4b9 -> 0x50acb53e) by posting the
+      // application's callbacks (0x50ab8390) and events (0x50b7a392). `new`: operator new (size d0, line d1, file
+      // a0), as every sender allocates its events
+      hls: {
+        reception: 0x50ABC5A3, sync_slot: 2, new: 0x50D9BA46,
+        // the event classes (each derived from 696, ctor 0x50ac89d0): 1513 / 1514 (0x50ac8d0d: id d0, +28 the CBC
+        // id d1, +32 a1, +36 / +40 the two stack words; 44 bytes, 0x50cec2bb), 697 (0x50ac89f8: +28 d0, +32 u16 d1;
+        // 36 bytes, 0x50cec316), 711 (0x50ac8c70: +28 the media kind, +32 d1, +36 a1; 40 bytes, 0x50bb8a00)
+        events: { result: [0x50AC8D0D, 44], media: [0x50AC89F8, 36], mount: [0x50AC8C70, 40] },
+        ids: { progress: 1513, result: 1514 },
+        // The media control request the menu's Card Formatting sends (TRA 1511, OlyHfwOpeMdaCtrl 0x50ac937f; its
+        // class's ctor 0x50ac052e: +32 u8 the command, +34 u16 the media, +36 u16 the option; X: Format Card's Yes
+        // sends command 1, media 0). The HLS function component CmpCst_Function (CmpCst_Function.cpp), which takes it
+        // (rcvReqFncMediaCtrlStart 0x50ceb3be), does not run in camapp 1. Its parts the lab calls: getMediaCtrlCBC
+        // 0x50cebeea (command -> the callback id: 1 -> 16), the start table 0x60364a44 (24 bytes a command, filled
+        // at boot; X: command 1's entries are executeMediaFormatStart 0x50ceb9b0, getMediaProgress 0x50ceb96c and
+        // executeMediaFormatEnd 0x50ceba28), getMediaProgress (entered by calls; api_media 0x503f093a's percent of
+        // the file layer's progress words 0x62ae4cd4 / 0x62ae4cd8). executeMediaFormatStart calls api_media's
+        // format 0x503f0820 (API 0xe0005) with the media: for media 0 or 1 it posts FILECLBK {reply queue (the API's,
+        // the halfword 0x600431d0; X: 6), token, 0x34, block} (0x503f08fb) and returns the token (X: 0xf00a0000); the
+        // file module's progress events 0x04020011 (0x508902cd) and its reply {u16 status, token, block} to the API
+        // queue (0x508a4bd5, X) follow. At the end (rcvReqFncMediaCtrlStartComplete 0x50cec0ff, status 0): for each
+        // slot whose media status (api 0x503f0bd7) has bit 0 clear and whose mount state (0x50aca51d) is mounted it
+        // sets 15261 + slot to 1 (0x50ab4f75; 0x50cec212..0x50cec25e), sends 1513 {CBC, 3, 100, 0} (0x50cec2e3) and
+        // 697 {1, media} (0x50cec334), stores kind 72 and result 0, and for the format starts a request whose
+        // completion (cbMediaCtrlResult 0x50ceb6c1) sends 1514 {CBC, 72, 0, 0} (0x50ceb71e); each progress event
+        // sends 1513 {CBC, 3, percent, 0} (0x50cebeb4). An error status ends in kinds 70 / 71 / 118 (0x50cec268..)
+        ctrl: { request: 1511, cmd: 32, media: 34, option: 36, format: 1, cbc: 0x50CEBEEA, progress: 0x50CEB96C,
+          api: 0x503F0820, reply_queue: 0x600431D0, progress_event: 0x04020011, kinds: { progress: 3, done: 72 },
+          status: 0x503F0BD7, flag: [0x50AB4F75, 15261] },
+        // The HLS mount state words, by media kind (getter 0x50aca51d, setter 0x50aca6b1(kind d0, a0 -> value)):
+        // CapMed_MediaManager's unmountPreprocess (0x50bb8292) sets 0 (0x50bb8288), S-CARD's start value is 8.
+        // CapMed's notifications to the application's media control (event 711 through the reception's slot 2):
+        // {kind, flag, 0} at a card's change (0x50bb8a1b), {kind, 1, 2} at the REC mount's end (notifyRecMountEnd,
+        // 0x50bb8de9), {kind, 1, 4} (0x50bb8d55), {kind, 1, 8} at mountProcEnd (0x50bb8c6c). The reactive's 711
+        // handler (0x50acaeb5) posts the application's 29 (with the card switch's EV, 0x50424f9a) for a change with
+        // the flag 1, 30 for one with 0, 193 / 194 / 195 for the states 2 / 4 / 8 (X: 29, 193, 30)
+        mount: { get: 0x50ACA51D, set: 0x50ACA6B1, unmounted: 0, mounted: 8, rec_end: 2, end: 8 },
+        // The card slots: the media kind, and the card switch UI_IN decodes (port 1 byte 1 bits 0 and 1; the level
+        // getter 0x5014c015). The file layer registers its callback for both codes with UI_IN at its init
+        // (0x50877e75..0x50877e92, 0x5014c420(code, 3, fn); the callback 0x5087ace0 / 0x5087acec -> 0x5087bb09 marks
+        // the slot's card as changed, X: it runs at each toggle) and logsec waits 740 ms before a mount's sdmem
+        // command 2 when UI_IN's last code is the slot's (0x508ac202). Level 0 is a card in the slot (I: the start
+        // the lab's card mounts at, round 1, has 0; 0x501ea9f1 clears a bit when the level is not 0)
+        // UI_IN publishes a switch's change as the module event 0x02020000 | code (X: 0x02021506 at each toggle,
+        // from 0x5014c417) through the module event post 0x50025095, which the file layer's progress uses too
+        slots: [{ kind: 4, switch: 0x1506 }, { kind: 8, switch: 0x1518 }],
+        switch_level: 0x5014C015, switch_event: 0x02020000, publish: 0x50025095,
+      },
     },
   },
   E146: {

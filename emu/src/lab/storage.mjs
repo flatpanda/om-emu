@@ -35,7 +35,9 @@
 //               the HLS media layer would send them (it does not run in the lab; which requests it sends, and in which
 //               order, is I): the FAT mount; on a card with no file system the format (the request Card Formatting
 //               makes, I) and the mount again; the DCF process's card-in and list commands; the DCF numbering mount,
-//               which leaves the drive mounted (the drive status's bit 0x1000)
+//               which leaves the drive mounted (the drive status's bit 0x1000). The same at a runtime insertion
+//               (src/lab/media.mjs S-MEDIA), and at a removal the DCF process's card out; after a format from the menu
+//               the DCF numbering mount again, for the next file number (src/lab/media.mjs S-MDACTRL)
 import { FirmwareError, where, disasm } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { RTOS } from './rtos.mjs';
@@ -66,7 +68,9 @@ export class Storage {
     this.commands = 0;             // SD commands answered
     this.flushes = 0;              // K-CFLUSH calls from the file system answered
     this.fileclbk = null;          // FILECLBK's task id
-    this.mounted = false;          // the drive status's mount bit after the insertion
+    this.mounted = false;          // the drive status's mount bit after the insertion (false while the card is out)
+    this.removals = 0;             // runtime removals and insertions (src/lab/media.mjs)
+    this.insertions = 0;
     this.formatted = false;        // the insertion formatted the card
     this.dcf = null;               // the DCF numbering mount's next folder and file
     this.next_file = null;         // S-RECFILE: the next picture's file number
@@ -127,55 +131,75 @@ export class Storage {
   }
   // One message to the file module's queue, with no reply queue (FILECLBK replies to queue 0 with nothing), and lab
   // time runs in slices until FILECLBK waits on its queue again; returns the parameter block's bytes
-  request(code, param, size, label) {
+  request(code, param, size, label, who = 'S-CARD') {
     const lab = this.lab, s = this.s;
     const payload = lab.alloc(pack('<IIII', 0, 0, code, param), 4);
     const desc = lab.alloc(pack('<II', payload, 16), 4);
     const r = lab.call(OLYQEWR, { d0: this.f.fileclbk.queue, d1: FOREVER, a0: desc }, null, null, 2000000);
-    if (r.d0 !== 0) throw new StorageError(`S-CARD: ${label}: OlyQeWr to the file module's queue = ${r.d0 | 0}`);
+    if (r.d0 !== 0) throw new StorageError(`${who}: ${label}: OlyQeWr to the file module's queue = ${r.d0 | 0}`);
     const t0 = lab.lab_time();
     for (;;) {
-      s.settle(`S-CARD ${label}`);
+      s.settle(`${who} ${label}`);
       if (this.idle()) break;
-      if (lab.lab_time() - t0 > REQUEST_LIMIT_MS * 1e6) throw new StorageError(`S-CARD: ${label}: FILECLBK still busy after ${REQUEST_LIMIT_MS} ms of lab time`);
-      lab.elapse(REQUEST_SLICE_MS, `S-CARD ${label}`);
+      if (lab.lab_time() - t0 > REQUEST_LIMIT_MS * 1e6) throw new StorageError(`${who}: ${label}: FILECLBK still busy after ${REQUEST_LIMIT_MS} ms of lab time`);
+      lab.elapse(REQUEST_SLICE_MS, `${who} ${label}`);
     }
     const ms = Math.round((lab.lab_time() - t0) / 1e5) / 10;
     return [lab.sim.read(param, size), ms];
   }
-  _fat(code, label) {
+  _fat(code, label, who) {
     const blk = this.lab.alloc(new Uint8Array(128), 4);
     this.lab.sim.write(blk + 4, pack('<HH', 0, DRIVE));
-    const [b, ms] = this.request(code, blk, 128, label);
+    const [b, ms] = this.request(code, blk, 128, label, who);
     const err = b[48] | b[49] << 8;
     this.log.push([label, `error 0x${err.toString(16)} after ${ms} ms`]);
     return err;
   }
-  insert() {
+  // The insertion's requests (S-CARD); at runtime (who S-MEDIA) the card is S-SDCARD's again before them
+  insert(who = 'S-CARD') {
     const lab = this.lab, f = this.f, c = f.codes;
-    let err = this._fat(c.mount, 'mount');
+    if (!this.card.present) throw new StorageError(`${who}: the insertion's requests with the card out of the slot`);
+    let err = this._fat(c.mount, 'mount', who);
     if (err === f.unformatted) {
-      err = this._fat(c.format, 'format');
-      if (err !== 0) throw new StorageError(`S-CARD: the format returned 0x${err.toString(16)}`);
+      err = this._fat(c.format, 'format', who);
+      if (err !== 0) throw new StorageError(`${who}: the format returned 0x${err.toString(16)}`);
       this.formatted = true;
-      err = this._fat(c.mount, 'mount');
+      err = this._fat(c.mount, 'mount', who);
     }
-    if (err !== 0) throw new StorageError(`S-CARD: the FAT mount returned 0x${err.toString(16)}`);
-    for (const [cmd, label] of [[DCF_CARD_IN, 'dcf card in'], [DCF_LISTS, 'dcf lists']]) {
-      const prm = lab.alloc(pack('<HHIII', cmd, DRIVE, 0, 0, 0), 4);
-      const [, ms] = this.request(c.dcf, prm, 16, label);
-      this.log.push([label, `detect state ${lab.sim.read(f.detect + 2 * DRIVE, 2)[0]} after ${ms} ms`]);
-    }
-    const blk = lab.alloc(pack('<HH', 0, DRIVE), 4);
-    lab.sim.write(blk + 4, new Uint8Array(124));
-    const [b, ms] = this.request(c.number, blk, 48, 'dcf number');
-    this.dcf = { folder: b[42] | b[43] << 8, file: b[44] | b[45] << 8 };
-    this.next_file = this.dcf.file;
-    this.log.push(['dcf number', `next folder ${this.dcf.folder}, file ${this.dcf.file} after ${ms} ms`]);
+    if (err !== 0) throw new StorageError(`${who}: the FAT mount returned 0x${err.toString(16)}`);
+    for (const [cmd, label] of [[DCF_CARD_IN, 'dcf card in'], [DCF_LISTS, 'dcf lists']]) this._dcf(cmd, label, who);
+    this.renumber(who);
     this.drive_status = this.status_word();
     this.mounted = (this.drive_status & DRIVE_MOUNTED) !== 0;
     this.log.push(['drive', `status ${h8(this.drive_status)}`]);
-    if (!this.mounted) throw new StorageError(`S-CARD: the drive status after the insertion is ${h8(this.drive_status)}, not mounted (0x1000)`);
+    if (!this.mounted) throw new StorageError(`${who}: the drive status after the insertion is ${h8(this.drive_status)}, not mounted (0x1000)`);
+  }
+  // A DCF process command {u16 command, u16 drive}
+  _dcf(cmd, label, who) {
+    const lab = this.lab, prm = lab.alloc(pack('<HHIII', cmd, DRIVE, 0, 0, 0), 4);
+    const [, ms] = this.request(this.f.codes.dcf, prm, 16, label, who);
+    this.log.push([label, `detect state ${lab.sim.read(this.f.detect + 2 * DRIVE, 2)[0]} after ${ms} ms`]);
+  }
+  // The DCF numbering mount: the next folder and file (S-RECFILE's names)
+  renumber(who) {
+    const lab = this.lab, blk = lab.alloc(pack('<HH', 0, DRIVE), 4);
+    lab.sim.write(blk + 4, new Uint8Array(124));
+    const [b, ms] = this.request(this.f.codes.number, blk, 48, 'dcf number', who);
+    this.dcf = { folder: b[42] | b[43] << 8, file: b[44] | b[45] << 8 };
+    this.next_file = this.dcf.file;
+    this.log.push(['dcf number', `next folder ${this.dcf.folder}, file ${this.dcf.file} after ${ms} ms`]);
+  }
+  // S-MEDIA's removal: the card is out of the slot (S-SDCARD answers nothing), then the DCF process's card out and
+  // sdmem's card info cleared (the next mount initialises the card again)
+  remove(who = 'S-MEDIA') {
+    this._dcf(this.f.card_out, 'dcf card out', who);
+    const req = this.lab.alloc(new Uint8Array(128), 4);                          // drive 0: sdmem's card info cleared
+    const [b] = this.request(this.f.card_info, req, 64, 'sdmem card info', who);
+    this.log.push(['sdmem card info', `status 0x${(b[60] | b[61] << 8).toString(16)}`]);
+    this.drive_status = this.status_word();
+    this.mounted = false;
+    this.removals += 1;
+    this.log.push(['drive', `status ${h8(this.drive_status)}`]);
   }
   // A fileif request (models.mjs storage.fileif): the block's result word
   fileif(code, args, label) {
@@ -244,6 +268,8 @@ export class Storage {
   // the host keeps the card when the session ends, if the firmware wrote to it
   close() { if (this.host && this.card.take_dirty()) this.host.save(this.card); }
   take_log() { return this.log.splice(0); }
+  // the slot at run time (a card input's record, src/lab/play.mjs)
+  slot() { return { present: this.card.present, mounted: this.mounted, removals: this.removals, insertions: this.insertions }; }
   status() {
     return { mounted: this.mounted, formatted: this.formatted, dcf: this.dcf, drive_status: this.drive_status === null ? null : h8(this.drive_status),
       card: { sectors: this.card.sectors, stored: this.card.data.size, reads: this.card.reads, writes: this.card.writes },

@@ -9,7 +9,8 @@
 // the browser player's pure parts, its node host, webgate B6's page inputs on a node Player and its Worker in a node
 // worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
-// (test_camapp.mjs), the SCPU's clock and request server (test_scpu.mjs), the HDMI port and a plug in play on E143,
+// (test_camapp.mjs), the SCPU's clock and request server (test_scpu.mjs), the publication audit
+// (test_pubaudit.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the firmware
 // rules of src/fw/facts.mjs (test_facts.mjs) and the firmware map (test_fwmap.mjs:
 // the machine's coverage option, the static map's determinism and pinned headline, the labels' keys, run.mjs under
@@ -131,6 +132,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipp
   console.log(`SCPU clock, ports and request server (S-SCPU): ${sc.checks - sc.bad.length}/${sc.checks}`);
   sc.bad.forEach((x) => console.log('  ', x));
   bad += sc.bad.length;
+}
+// the publication audit (bin/pubaudit.mjs) on a throwaway repository with made-up firmware
+{
+  const { pubauditTests } = await import('../test/test_pubaudit.mjs');
+  const pa = await pubauditTests();
+  console.log(`publication audit: ${pa.checks - pa.bad.length}/${pa.checks}`);
+  pa.bad.forEach((x) => console.log('  ', x));
+  bad += pa.bad.length;
 }
 // the HDMI port: its device and sink without firmware, then a plug in play: E143 here, E146 and E147 each in a process
 // of its own (the model is fixed when the lab is imported)

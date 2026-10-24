@@ -9,8 +9,9 @@
 // the firmware map's units (test_fwmap.mjs: the machine's coverage option off and on, fwmap's decoder against the
 // interpreter's transfer forms, the coverage union, the block aggregation), the SCPU's clock and request server
 // (test_scpu.mjs), the HDMI port's device and sink (test_hdmi.mjs), the accelerometer stand-in's sample
-// (test_acc.mjs) and the debug API's argument checks, halt, trace filters and live-route units (test_live.mjs
-// liveUnits: a machine on a blank image).
+// (test_acc.mjs), the debug API's argument checks, halt, trace filters and live-route units (test_live.mjs
+// liveUnits: a machine on a blank image) and the publication audit's rules on a throwaway repository
+// (test_pubaudit.mjs).
 // bin/test.mjs runs all of these too, with everything else.
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
@@ -26,6 +27,7 @@ import { scpuUnits } from '../test/test_scpu.mjs';
 import { hdmiUnits } from '../test/test_hdmi.mjs';
 import { accUnits } from '../test/test_acc.mjs';
 import { liveUnits } from '../test/test_live.mjs';
+import { pubauditTests } from '../test/test_pubaudit.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -57,6 +59,7 @@ report('SCPU clock, ports and request server (S-SCPU)', scpuUnits());
 report('HDMI port: transmitter, hot-plug pin, sink (S-HDMISINK)', hdmiUnits());
 report('accelerometer sample (S-ACCSAMPLE)', accUnits());
 report('debug API: argument checks, halt, trace filters, live route', await liveUnits());
+report('publication audit (throwaway repository, made-up firmware)', await pubauditTests());
 const fa = factsTests();
 report(`firmware facts (${fa.models} unpacked main blocks)`, fa);
 const pu = purity();

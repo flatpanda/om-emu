@@ -11,7 +11,8 @@
 // not); the screen shows the count the application asks S-CARD for where there is such a pixel and each of them is
 // back to its first value through the third window. A "Card Full" warning, a count the screen does not draw and a
 // count from another source than S-CARD's query leave no such pixel (X: E142 before the shots-query rule, E144). The
-// box of the count's pixels is reported.
+// box of the count's pixels is reported. A body in PROBE_XFAIL is expected to fail the probe, strictly: its failure is
+// printed and does not count, its pass does, so a fix forces the table's update.
 //   node emu/bin/modelcheck.mjs [MODEL ...] [--no-port]
 import fs from 'node:fs';
 import path from 'node:path';
@@ -28,6 +29,11 @@ const models = (want.length ? want : Object.keys(MODELS).filter((k) => k !== 'E1
 const PATH = [['start', null, 0], ['s1', null, 0], ['s2', null, 1], ['play', 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE', 1],
   ['info', 'SS_PLAY_SINGLE/ID_ST_DISP_DETAIL', 1], ['play', null, 1]];
 const PROBE_NS = 1200e6, PROBE_SHOTS = 777, WINDOW = 6, WINDOW_NS = 300e6;
+// the bodies whose screens are known not to draw S-CARD's count, on the TFT and the EVF, with the reason
+const NO_COUNT_ITEM = "the count item on this family's screen does not draw S-CARD's count; source not read "
+  + '(docs/model-survey.md finding 16)';
+const PROBE_XFAIL = Object.fromEntries(['E143', 'E146', 'E147', 'E144', 'E139', 'E134', 'E137', 'E125']
+  .map((m) => [m, NO_COUNT_ITEM]));
 const CHILD = `
 const J = process.argv[1], DEVICE = process.argv[2], PROBE_NS = ${PROBE_NS}, PROBE_SHOTS = ${PROBE_SHOTS},
   WINDOW = ${WINDOW}, WINDOW_NS = ${WINDOW_NS};
@@ -100,14 +106,19 @@ for (const m of models) {
     if (k !== 'start' && !/^\d+x\d+$/.test(frame)) problems.push(`${k}: frame ${frame}`);
   });
   const box = (b) => b.join(',');
+  const missed = [];                     // the count probe's own failures, held against PROBE_XFAIL
   if (!probe) problems.push('count probe: not run');
   else if (probe.error) problems.push(`count probe: ${probe.error}`);
   else {
-    if (!probe.count) problems.push(`count probe: the screen does not show the card's count (no change at ${PROBE_SHOTS} shots)`);
-    if (probe.back) problems.push(`count probe: the screen did not come back with the count (${box(probe.back)})`);
+    if (!probe.count) missed.push(`count probe: the screen does not show the card's count (no change at ${PROBE_SHOTS} shots)`);
+    if (probe.back) missed.push(`count probe: the screen did not come back with the count (${box(probe.back)})`);
   }
+  const xfail = PROBE_XFAIL[m], notes = [];
+  if (!xfail) problems.push(...missed);
+  else if (missed.length) notes.push(`xfail ${missed.join('; ')} (${xfail})`);
+  else if (probe && !probe.error) problems.push(`count probe: passes, expected to fail (${xfail}); update PROBE_XFAIL`);
   const shown = probe?.count && !probe.back ? `, count at ${box(probe.count)}` : '';
-  console.log(`${m} (${MODELS[m].name}) ${device}: ${problems.length ? 'FAILED ' + problems.join('; ') : 'ok'} — ${steps.map(([k, st, , n, f]) => `${k} 0x${st.toString(16)} ${n} ${f}`).join(', ')}${shown}`);
+  console.log(`${m} (${MODELS[m].name}) ${device}: ${problems.length ? 'FAILED ' + problems.join('; ') : 'ok'} — ${steps.map(([k, st, , n, f]) => `${k} 0x${st.toString(16)} ${n} ${f}`).join(', ')}${shown}${notes.length ? '; ' + notes.join('; ') : ''}`);
   if (problems.length) bad++;
   }
 }

@@ -14,7 +14,7 @@
 // What runs:
 // - node (B2): web/runner.mjs with the pure sha256 (src/util/sha256.mjs) on the blocks unpacked from the .BIN by
 //   src/fw/olyfw.mjs (the resource block cut to its prefix): stage0, shoot-tft, shoot-tft in 1 M slices, play-perf
-//   from its inputs and the play workload without them (its digest must be a981d0a3041b1d55); traces to
+//   from its inputs and the play workload without them (its digest must be 33b134deb36a03ef); traces to
 //   out/web/node/, compared by bin/run.mjs's comparator with the same scenarios run by bin/run.mjs in this process (the
 //   lab path the node tools take: node's crypto, the image and resource block files).
 // - Chrome (B5): the same jobs in web/worker.mjs (web/gate.html), first with the .BIN handed to the file input

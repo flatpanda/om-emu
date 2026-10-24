@@ -6,7 +6,8 @@
 // state changes. The values the card reports are the lab's choice (a card of `sectors` 512-byte blocks, default 8
 // GiB, class 10, AU 4 MiB, 3.3 V only, no UHS), not a captured card's. A command the card does not take (UHS-II's,
 // one the specification has but this card does not implement) gets no response, which is what a card does with a
-// command it does not know.
+// command it does not know. A card out of the slot (present false) answers nothing at all, as an empty slot does; its
+// sectors stay as they were, so the same card goes back in with its files.
 //
 // Commands reach exec() as the firmware's SD command layer builds them (src/lab/storage.mjs has the evidence): the
 // index in bits 0..5, bit 6 for an application command (the CMD55 before it is the host's), the response type in
@@ -18,6 +19,7 @@ export const NO_RESPONSE = 0x1405;        // the firmware's status for a command
 const R1_APP_CMD = 0x20, R1_READY = 0x100, R1_OUT_OF_RANGE = 1 << 31, UHS2 = 1 << 30;
 const OCR_DONE = 1 << 31, OCR_CCS = 1 << 30, OCR_VDD = 0xff8000;
 const STATES = { idle: 0, ready: 1, ident: 2, stby: 3, tran: 4, data: 5, rcv: 6, prg: 7 };
+const ADDRESSED = new Set(['stby', 'tran', 'data', 'rcv', 'prg']);    // the states with a published RCA (data transfer mode)
 
 // CRC7 (x^7 + x^3 + 1) over bytes, as the CID and CSD carry it in their last byte (<< 1 | 1)
 export function crc7(bytes) {
@@ -58,7 +60,11 @@ export class SdCard {
     this.dirty = false;                    // written since the last take_dirty()
     this.log = [];                         // [index, acmd, arg, status] of every command, the last 200
     this.erase = [0, 0];
+    this.present = true;                   // in the slot (src/lab/storage.mjs takes it out and puts it back)
   }
+  // Out of the slot: power is lost, so the card comes back in its idle state
+  remove() { this.present = false; this.state = 'idle'; this.selected = false; this.bus4 = false; }
+  insert() { this.present = true; }
   // ---- the registers
   ocr() { return (OCR_DONE | OCR_CCS | OCR_VDD) >>> 0; }   // power-up done, SDHC, 2.7-3.6 V; S18A clear: no UHS-I signalling
   cid() {
@@ -118,7 +124,7 @@ export class SdCard {
   }
   _exec(code, index, acmd, arg, count, blockSize) {
     const none = { status: NO_RESPONSE };
-    if (code & UHS2) return none;            // UHS-II: this card has no UHS-II interface
+    if (!this.present || (code & UHS2)) return none;     // an empty slot; UHS-II: this card has no UHS-II interface
     const ok = (w0 = 0, data = null, write = false) => ({ status: 0, resp: [w0 >>> 0, 0, 0, 0], data, write });
     const r1 = () => this.status() | (acmd ? R1_APP_CMD : 0);
     if (acmd) {
@@ -146,7 +152,7 @@ export class SdCard {
         if ((arg >>> 16) === this.rca) { if (this.state === 'stby') this.state = 'tran'; this.selected = true; } else { if (this.state === 'tran') this.state = 'stby'; this.selected = false; }
         return ok(before);
       }
-      case 13: if ((arg >>> 16) !== this.rca) return none; return ok(r1());
+      case 13: if ((arg >>> 16) !== this.rca || !ADDRESSED.has(this.state)) return none; return ok(r1());   // from stand-by on (an RCA)
       case 16: return ok(r1());                    // SET_BLOCKLEN: 512 on an SDHC card
       case 23: return ok(r1());                    // SET_BLOCK_COUNT
       case 55: return ok(this.status() | R1_APP_CMD);

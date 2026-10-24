@@ -2,7 +2,8 @@
 //   storageUnits    without firmware: the card's registers as the firmware reads them (CSD 2.0's C_SIZE at bits 69..48,
 //                   the host's response words: bits 127..8; CRC7), its command state machine (CMD0, CMD8's pattern,
 //                   ACMD41, CMD2, CMD3's RCA, CMD9, CMD7, CMD13's state, reads and writes, CMD6, ACMD13 / ACMD51, erase,
-//                   UHS-II and unknown commands unanswered, out of range), the saved card's round trip and refusals;
+//                   UHS-II and unknown commands unanswered, out of range), the saved card's round trip and refusals,
+//                   a card out of the slot and back (nothing answered while out; back in idle, its sectors kept);
 //                   and the independent FAT reader on a FAT32 volume this test builds (MBR, BPB, FSInfo, a directory, a
 //                   long name, a two-cluster file), with a looping chain and an exFAT volume refused; the picture
 //                   file's JPEG through the independent decoder (refs/jpeg.mjs): its size, sampling and block means
@@ -118,6 +119,16 @@ export function storageUnits() {
   ok(back.sectors === c.sectors && back.data.size === c.data.size && back.read(5, 1)[3] === 9, 'cardImage round trip');
   ok(throwsLike(() => cardFromImage(new Uint8Array(20)), /OMSD/) && throwsLike(() => cardFromImage(cardImage(c).subarray(0, 500)), /bytes for/), 'a broken card image is refused');
   ok(c.take_dirty() === true && c.take_dirty() === false, 'take_dirty reports a write once');
+  // out of the slot and back: no command is answered while it is out; back in, the card is idle with its sectors
+  const o = new SdCard({ sectors: 8388608 });
+  o.exec(cmd(0, 3), 0); o.exec(cmd(41, 7, true), 0x40300000); o.exec(cmd(2, 6), 0);
+  const orca = o.exec(cmd(3, 4), 0).resp[0] >>> 16;
+  o.exec(cmd(7, 5), orca << 16); o.writeSector(9, new Uint8Array(512).fill(3));
+  o.remove();
+  ok(!o.present && o.exec(cmd(0, 3), 0).status === NO_RESPONSE && o.exec(cmd(13, 4), orca << 16).status === NO_RESPONSE, 'a card out of the slot answers nothing');
+  o.insert();
+  ok(o.present && o.state === 'idle' && o.exec(cmd(13, 4), orca << 16).status === NO_RESPONSE, 'back in, the card is idle: CMD13 to its old RCA gets no response');
+  ok(o.exec(cmd(17, 4), 9).status === NO_RESPONSE && o.read(9, 1)[0] === 3, 'no read before the card init; its sectors are kept');
   // the FAT reader on the test's own volume
   const f = buildFat32(), p = mbrPartition(f.read(0, 1));
   ok(p && p.type === 0x0c && p.start === f.start && p.active, `MBR: one FAT32 LBA partition at ${f.start}: ${JSON.stringify(p)}`);

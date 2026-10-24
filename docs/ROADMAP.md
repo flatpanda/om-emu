@@ -53,7 +53,8 @@ not reconciled.
    natively, 2026-10-23), the HDMI plug down to the EDID (`--hdmi on`, 2026-10-23) and the accelerometer at its sample
    cache (2026-10-23, hle-gaps.md 4.7.3: ACC_MAIN, PER_SLOPE, the level gauge following a tilt input and Level Adjust
    completing natively on E143 and E146); left of step 2: persistence by default (S-NVRAM opt-in) and the power-off
-   sequence.
+   sequence. The SCPU survey (2026-10-23, `docs/om1-scpu-spec.md`) puts a transport-level SCPU device before any LLE
+   of the sub-CPU (SCPU track below).
 4. **Debug API follow-ups** (Debug API follow-ups below): the route to a running play session (F31), the attached
    watch log's lab time, halt and trace filters are in (2026-10-23); left are the gate gaps (items 1-3, 6, 7).
 5. **Emulator architecture** phases 2-5: finish phase 2's typed seams (machine port, options object, composed lab
@@ -426,6 +427,29 @@ Each listed once; the owner document has the evidence.
 | Display flow | the M8 follow-ups above; eye sensor -> cmd 2 (openDevice's caller); the camera's live-view requests (the mvr builders); timers fire only in time mode (H-TIMER otherwise), and inside display steps their ticks are lost as overruns | vsc spec §9, §10.10; intc/timer spec §4 |
 | Text and resources | U4-U6, U9, U10, U13, U14, U16, U17 for widgets other than the menu's; U2 / U8 answered for the Setup tab only; whether the camera can hit the DrawText skip-count issue behind H-STACK | text spec §9, §10 |
 | ND128 | the composition limit downstream of the frame count; 128-frame safety; preview and EXIF; updater acceptance; other readers of the ND parameter still see 6 | `analysis/nd128/README.md` "Verification and its limits" |
+
+## SCPU track: from S-SCPU to the sub-CPU's own firmware
+
+Survey done 2026-10-23 (`docs/om1-scpu-spec.md`): `blk0e560000` is a Cortex-M4F image for an STM32L4-class part,
+loaded at `0x08000000` (E143 and E146 byte-identical, E147 its own build; E139 and E134 carry other SCPU lineages).
+The MN link is SPI2 slave plus three pins, and the command table of hle-gaps.md 4.7.1 maps onto a two-level dispatch
+table. The sub-CPU handles batteries, charging, USB PD, the RTC and backup words. Keys and the accelerometer are not
+on it, so an LLE would retire S-SCPU and run PER_SCPU's start and inbound path natively, but would not touch the
+input or accelerometer stand-ins.
+
+| Step | Content | Size (I) |
+|---|---|---|
+| 1 | settle the open link items statically: the PC2 / PC3 roles, the inbound message layouts, the `0x85` message-to-state map, the `0x88` reply | 2-3 days |
+| 2 | S-SCPUDEV: a transport-level SCPU device at PER_SIO channel 2 and pins 102 / 103 / 107 speaking the frame protocol with handlers from the D table; PER_SCPU's start, gate, watchdog and poll path native; S-SCPU retired behind a flag and the store-init session compared | 1-1.5 weeks |
+| 3 | a Thumb-2 instruction census of the image (`tools/`) | 1-2 days |
+| 4 | a pure-JS Cortex-M4 core (`emu/src/core/`), checked against a QEMU M4 board in the VM | 2-3 weeks |
+| 5 | the STM32L4 system block and the must-behave peripherals (RCC, FLASH, PWR, GPIO, EXTI, SPI2 + DMA, LPUART1, RTC); X target: the console prompt "SUB> " and the 13 tasks | 1-2 weeks |
+| 6 | the SCPU core behind step 2's seam: `0x85 {2}` answered by the real firmware, `comm trace on` frames equal to S-SCPUDEV's | 1 week |
+| 7 | battery, charger and PD device models only where the firmware's own errors demand them | open |
+
+Recommended: steps 1-2 as part of HLE step 2's power-off work; steps 3-7 only when an SCPU behaviour the MN side
+shows cannot be written from the D table. Risks: the I2C devices' identities and the battery protocol are unknown, and
+silence from them may change what the power manager reports to the MN.
 
 ## Longer term: full-boot LLE
 

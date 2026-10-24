@@ -439,7 +439,7 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   `.BIN`); an IS controller with its own firmware and update path, reached through the generic PER_SIO driver
   (`0x5005f49f` from `0x50144f14`) and GPIO helpers in the `0x9b880000` pin block, on a SIO channel not decoded (?).
   The gyro sits on the IS side (I): the body sees offsets and zero tables, not raw samples. No E143 block holds the IS
-  controller's firmware (`blk0e560000` is the SCPU's).
+  controller's firmware (`blk0e560000` is the SCPU's, `docs/om1-scpu-spec.md`).
 - **The BC driver (D):** BC_MAIN, BC_INDICATOR, the `bc_ssc` serial link, `bc_stab` / `stage` / `blc_sync`; 34-42k
   instructions in `0x5012d000..0x50152000`.
 - **Seams:** the lens at its device (seam C: one external MCU, one serial device, the record layout already D, and
@@ -598,7 +598,15 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   4.7.1.
 - **Inputs from the SCPU (D):** UI_IN's port init `0x5014e3ab` (called by its module init) registers `0x5014e534` as an
   IRQ 320 callback; it reads the port byte (`0x5004df3f`) and pushes it as group 0's image: the power lever, the Fn
-  lever and S1 are sampled by the SCPU. Native in the lab since 2026-10-23 (4.7.2).
+  lever and S1 arrive through the window's port bits. Native in the lab since 2026-10-23 (4.7.2). The SCPU firmware has
+  no key module (E139's has one), so whether those bits come from the sub-CPU or from the window block's own pins is ?
+  (scpu spec 4.3).
+- **The sub-CPU itself (scpu spec):** an STM32L4-class Cortex-M4F (I) running `blk0e560000` (E143 = E146, E147 its own
+  build) under eForce uC3: SPI2 slave with DMA on the MN link, PB12 as the request input, PC2 / PC3 as outputs (I: pin
+  102 and the message line), the command table of 4.7.1 mapped to its handlers, battery packs on two UARTs, chargers
+  and a USB PD controller on I2C, an RTC, and a debug console on LPUART1. It holds no accelerometer or eye-sensor code.
+  The survey recommends a transport-level SCPU device at PER_SIO channel 2 and pins 102 / 103 / 107 before any LLE
+  (scpu spec 8).
 - **Accelerometer (D):** ACC_MAIN's probe reads register 0x0f of device channel 6 and wants 0x6a (I: the WHO_AM_I of
   ST's LSM6DSL / LSM6DSM family); the bus is SPI over PER_SIO (`[PER_ACC_SPI] per_sio_open_error`, ACC_SPI). Samples
   land in the cache `0x62963f60..0x62963f6c` and bump the counter `0x6034d9d4`. Level Adjust's loop
@@ -707,16 +715,16 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
 | `0x81` | - / 9, the same layout | `0x5012c88d` (SCTIME_GET_DATA_WAIT 0xf8) | get the date; status 0 = valid (`0x5012b76f`) |
 | `0x06` | 6: `{index, u32 value LE, byte}` / - | `0x5005a770` "ScpuBkupW" (PER_SCPU_BK_REG_WRITE_W.. 0xf5) | write a backed-up word; the only caller writes index 2, byte 0 (`0x5005a6e2`) |
 | `0x86` | 2: `{index, byte}` / 4: u32 LE | `0x5005a809` "ScpuBkupR" (PER_SCPU_BK_REG_READ_WA.. 0xf6) | read it; the only caller reads index 2, byte 0 (`0x5005a6ef`) |
-| `0x02` | 2 / - | `0x50052bc9` (no direct caller) | GPIO extension write (I, beside `0x82`) |
-| `0x82` | 1 / 1 | `0x50052ca7` (semaphore PER_GIO_EXT_R 0x6c) | GPIO extension read (I) |
+| `0x02` | 2 / - | `0x50052bc9` (no direct caller) | GPIO write `{port, value}` on the SCPU's logical pin table (D on the SCPU side, scpu spec 3.3, 4.1) |
+| `0x82` | 1 / 1 | `0x50052ca7` (semaphore PER_GIO_EXT_R 0x6c) | GPIO read `{port}` -> level (D on the SCPU side) |
 | `0x04` | 4n + 5: `{u32 address, n, n words}` / - | `0x5005d07d` (PER_SCPU_MEMRW_WAIT 0xf1) | SCPU memory write ("per scpu wmem") |
 | `0x84` | 5: `{u32 address, n}` / 4n | `0x5005d127` (0xf1) | SCPU memory read ("rmem") |
 | `0x80` | - / 4: u32 | `0x5005d2e8` (PER_SCPU_GETVER_WAIT 0xf3) | the SCPU binary's creation time ("per scpu ver"; `0x5005d218` adds 32400 s and prints "SCPU Build: mm/dd hh:mm") |
-| `0x85` | 3: `{mode, x, y}` / 3 at `0xa32c94e9` | PER_SCPU (mode 2); the power-off path `0x5005cdfd` from `0x50044ca8` (1 or 3 by camera state `0xa011`; PER_SCPU_SYSCTRL_WAIT 0xf2, then pin 102 polled low, returns rx[2]); `0x5005cf4e` (4 or 5, no direct caller) | system control: the modes' meanings are ? |
+| `0x85` | 3: `{mode, x, y}` / 3 at `0xa32c94e9` | PER_SCPU (mode 2); the power-off path `0x5005cdfd` from `0x50044ca8` (1 or 3 by camera state `0xa011`; PER_SCPU_SYSCTRL_WAIT 0xf2, then pin 102 polled low, returns rx[2]); `0x5005cf4e` (4 or 5, no direct caller) | system control (D on the SCPU side, scpu spec 3.2-3.3): 2 = power on, which the SCPU requires before any command but `0x85` and `0x02`; modes 1..5 post system-control messages 6, 5, 5, 9, 7; which power state each selects is ? |
 | `0x07` | - / - | `0x5005d464` | the SCPU firmware update: `0x510369f8` ("[scpu]Start !") transfers the image (`0x51036bd6`), sends `0x85 {2}`, `0x07`, then polls `0x87` |
 | `0x87` | - / 1 | `0x5005d480` (PER_SCPU_GETFIRMUP_COMP 0xf4) | update state, polled while it reads 1 |
 | `0x88` | - / 2 | `0x5005d36a` from UI_IN `0x5014bf91` (PER_SCPU_GET_PORT_SCAN_ 0xd7) | port scan: retried up to 5000 times while rx[1] is not 0 (errlog `0x19002710`), then rx[0] bit 0 -> UI_IN group 4 `0x0400` |
-| `0x12`, `0x13`, `0x14` | short writes, batched | the power manager through `0x5004322c` (semaphore PWR_COMM_SCPU 0x68, flag PWR_COMM_SND_SCPU_WAIT 0xee; builders `0x500433f9`, `0x50043452`, `0x500435dc`, `0x50043a47`, `0x50043abd`) | formats ? |
+| `0x12`, `0x13`, `0x14` | short writes, batched | the power manager through `0x5004322c` (semaphore PWR_COMM_SCPU 0x68, flag PWR_COMM_SND_SCPU_WAIT 0xee; builders `0x500433f9`, `0x50043452`, `0x500435dc`, `0x50043a47`, `0x50043abd`) | SCPU handlers `0x801570b`, `0x801535f`, `0x8015345` (and `0x80150a5` for an `0x11` with no MN sender) in its power manager; formats ? |
 | `0x40` | n / - | `0x5102b8f7` (semaphore PC_PD_COMMUNICATION 0x7c; "USB SCPU_CONN", "PCPDC" beside it) | USB power delivery (I) |
 
 The flag and semaphore names are the object-name table's (D); the commands' meanings beyond the strings are I.
@@ -771,7 +779,8 @@ The flag and semaphore names are the object-name table's (D); the commands' mean
     write to `+0xec` is a bus error (A-SCPU-3).
   - Not covered: PER_SCPU's start (`0x85 {2}`, the reset pulse, the watchdog), the inbound path (poll frames, the
     `0x08` / `0x11..0x13` / `0x40` messages), every other command. The faithful later seam is still an SCPU device at
-    PER_SIO channel 2 and pins 102 / 103.
+    PER_SIO channel 2 and pins 102 / 103; the SCPU side of that link (SPI2 slave mode 0, the frame classes, the
+    power-on gate, the dispatch table) is in `docs/om1-scpu-spec.md` section 3.
 
 #### 4.7.2 The event and port words, IRQ 320 and UI_IN's group 0 (D unless tagged)
 

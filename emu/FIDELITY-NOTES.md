@@ -368,13 +368,13 @@ Each note was checked against the cited code. Paths are relative to the reposito
 
 **Confidence:** medium
 
-### 7.9 The remaining-shots count: S-CARD answers the application's query; most bodies' screens do not show it
+### 7.9 The card: S-CARD's count and the slot's detect state; no file system
 
-**Where:** `emu/src/lab/camapp.mjs` (S-CARD), `emu/src/fw/facts.mjs` (`shotsQuery`), `emu/bin/modelcheck.mjs` (the count probe)
+**Where:** `emu/src/lab/camapp.mjs` (S-CARD), `emu/src/fw/facts.mjs` (`shotsQuery`, `cardDetect`), `emu/bin/modelcheck.mjs` (the count probe)
 
-**Emulator:** S-CARD answers the function `OlyHfwOpeShoot::getAvailableShootCount` calls for the count (E143 `0x50419164`, the query proper; E142, E140 and E145 a module-0x2800c wrapper) with 999 less the images; the count functions below it, which would read the card's file system, do not run. The camera's own answer on a card the lab does not have would be the file system's.
+**Emulator:** S-CARD answers the function `OlyHfwOpeShoot::getAvailableShootCount` calls for the count (E143 `0x50419164`, the query proper; E142, E140 and E145 a module-0x2800c wrapper) with 999 less the images, and writes 2, inserted, to the card driver's detect state of the first slot (E143 `0xa33af3d4`) before the application starts, so the file layer's drive status reports the card present (bit `0x80`) and the GUI's shooting-screen count asks for the slot's count. Every screen of the default set then draws that count (bin/modelcheck.mjs's count probe, X). The count functions below the query, which would read the card's file system, do not run; the driver's card init after an insertion (state 3) does not run either. The movie time in media (E143 `0x503f1bcd`), which reads the DCF remain movie time, is not answered: it returns 0, and the E142 lineage's and E144's screens show an orange `0:00:00` movie time (X).
 
-**Expected / concern:** Only the E142 lineage's screens (E142, E140, E130) draw the count S-CARD gives: their GUI's count item asks through the HLS API `0x20116` (E142 `0x50e1af20`). On E143, the E143 family and the E144 family the screen does not show it: the application's method is asked only by the GUI's card-full test and, on E143, a buffer-count builder (X on E143 and E144: the API handler's return addresses), and their frames are identical at 999 and 777 shots (X; the EVF shows an orange 0, the TFT no count). Where their count item takes its value is not read, so their count is wrong on the screen.
+**Expected / concern:** On the camera the driver reaches state 2 on the card's insertion event and 3 after the card's init; which event that is, and what else reads states 2 and 3, is not read, so a consumer that wants an initialised card (state 3, `0x5087bc42`) still sees none. The second slot of the two-slot bodies stays empty.
 
 **Confidence:** medium
 

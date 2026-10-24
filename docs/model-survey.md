@@ -40,15 +40,15 @@ through a reference place more; "Per-body status" has their figures).
 | Code | Body | fw | Main | Base | Res | Paired | Unmapped | Lab |
 |---|---|---|---|---|---|---|---|---|
 | E143 | OM-1 | 1900 | 32.0 | 0x60021020 (7.5%) | olycompress | - | - | the lab's build |
-| E146 | OM-1 II | 1300 | 32.0 | 0x60021020 (7.6%) | olycompress | 5.55M | 3 | modelcheck's path passes (TFT and EVF); its count probe fails (finding 16) |
-| E147 | OM-3 | 1100 | 32.0 | 0x60021020 (7.5%) | olycompress | 5.25M | 5 | modelcheck's path passes; its count probe fails |
-| E144 | OM-5 | 1200 | 23.7, 2 sections | 0x60021020 (6.6%) | olycompress | 2.15M | 45 | modelcheck's path passes (TFT and EVF); its count probe fails |
-| E139 | E-M1 III | 1600 | 26.0, 2 sections | 0x60021020 (6.6%) | olycompress | 2.08M | 44 | through E144: modelcheck's path passes (TFT and EVF); its count probe fails |
-| E134 | E-M1X | 2400 | 26.0 | 0x60021020 (6.5%) | plain | 2.03M | 46 | through E139: modelcheck's path passes (TFT and EVF; the touch task's send, finding 11); its count probe fails |
-| E137 | E-M5 III | 1700 | 23.9 | 0x60021020 (6.7%) | plain | 1.71M | 68 | through E144: modelcheck's path passes (TFT and EVF); its count probe fails |
+| E146 | OM-1 II | 1300 | 32.0 | 0x60021020 (7.6%) | olycompress | 5.55M | 3 | modelcheck passes (TFT and EVF; the count probe since finding 18) |
+| E147 | OM-3 | 1100 | 32.0 | 0x60021020 (7.5%) | olycompress | 5.25M | 5 | modelcheck passes (since finding 18 with the count probe) |
+| E144 | OM-5 | 1200 | 23.7, 2 sections | 0x60021020 (6.6%) | olycompress | 2.15M | 45 | modelcheck passes (TFT and EVF; the count probe since finding 18) |
+| E139 | E-M1 III | 1600 | 26.0, 2 sections | 0x60021020 (6.6%) | olycompress | 2.08M | 44 | through E144: modelcheck passes (TFT and EVF; the count probe since finding 18) |
+| E134 | E-M1X | 2400 | 26.0 | 0x60021020 (6.5%) | plain | 2.03M | 46 | through E139: modelcheck passes (TFT and EVF; the touch task's send, finding 11; the count probe since finding 18) |
+| E137 | E-M5 III | 1700 | 23.9 | 0x60021020 (6.7%) | plain | 1.71M | 68 | through E144: modelcheck passes (TFT and EVF; the count probe since finding 18) |
 | E142 | E-P7 | 1100 | 25.0 | 0x60020020 (7.2%) | plain | 1.47M | 74 | through E144: modelcheck passes (no EVF; the callback ids, finding 12; the shots query and the count probe, findings 15 and 16) |
 | E140 | E-M10 IV | 1100 | 25.0 | 0x60020020 (7.2%) | plain | 1.44M | 77 | through E142: modelcheck passes (TFT and EVF; format 9 and the lens record, finding 13; findings 15 and 16) |
-| E125 | E-M1 II | 3700 | 22.0 | 0x60021020 (7.1%) | plain | 1.29M | 71 | through E134: modelcheck's path passes (TFT and EVF); its count probe fails |
+| E125 | E-M1 II | 3700 | 22.0 | 0x60021020 (7.1%) | plain | 1.29M | 71 | through E134: modelcheck passes (TFT and EVF; the count probe since finding 18) |
 | E145 | TG-7 | 1103 | 19.5 | 0x60021020 (7.5%) | plain | 1.10M | 81 | through E142: the start ends in its date and time setting (`0x1103`, finding 17); after MENU (the screen's Cancel) S1 stops at S-AFOSD, its frame plane having no AF upload of that shape |
 | E133 | E-PL9 | 1101 | 25.0 | 0x60400020 (7.2%) | plain | 1.04M | 83 | through E142: kernel, display start, touch start and the camera application's start, then the application's task waits inside the GUI creator: `H-GUIBYAPP: GUI tasks [], timer tasks [] after the application's start` |
 | E130 | E-M10 III | 1200 | 25.0 | 0x60400020 (6.9%) | plain | 1.02M | 82 | through E142: modelcheck passes (TFT and EVF; findings 11, 14 and 16) |
@@ -219,15 +219,15 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    window and another through the second must exist and be back through the third (pixels that change within a window
    are left out: E146's ISO item blinks from about 2.4 s after S1 on, X). It fails E142 and E140 before finding 15 and
    passes them after it, and passes E130; the count is at 660,448-710,473 on the 720 x 480 TFT and 929,718-1010,759 on
-   the EVF (X). It fails E143, E146, E147, E144, E139, E134, E137 and E125 on the TFT and the EVF: their screens do not
-   follow S-CARD's count (the EVF shows an orange 0, the TFT no count; identical frames at 999 and 777, X), though their
-   application's method is answered. Only the E142 lineage's GUI has a count item that asks the API (E142
-   `0x50e1af20`, through API slot 36, storing the count at +8 of the item; the store's byte form occurs once on each of
-   E142, E140 and E130 and on none of E143, E144 and E134, X). Ruled out on E143 (X): the API's GUI clients in a session
-   are the card-full test and a buffer-count builder (`0x511f82a0`, which gets 999); the slot-in-media count (API slot
-   752, `getRemainCountInMediaSlot`, handler `0x50b54505`, which calls the count function directly) is called from none
-   of its 26 GUI sites; 555 forced from the buffer count `0x504169b2` and 777 written to the Wi-Fi component's word
-   `0xa320c08c` leave the EVF's 0 as it was. Where their count item takes its value is not read.
+   the EVF (X). Until finding 18 it failed E143, E146, E147, E144, E139, E134, E137 and E125 on the TFT and the EVF:
+   their screens did not follow S-CARD's count (the EVF shows an orange 0, the TFT no count; identical frames at 999 and
+   777, X), though their application's method is answered. Only the E142 lineage's GUI has a count item that asks the
+   API (E142 `0x50e1af20`, through API slot 36, storing the count at +8 of the item; the store's byte form occurs once
+   on each of E142, E140 and E130 and on none of E143, E144 and E134, X). Ruled out on E143 (X): the API's GUI clients
+   in a session are the card-full test and a buffer-count builder (`0x511f82a0`, which gets 999); the slot-in-media
+   count (API slot 752, `getRemainCountInMediaSlot`, handler `0x50b54505`, which calls the count function directly) is
+   called from none of its 26 GUI sites; 555 forced from the buffer count `0x504169b2` and 777 written to the Wi-Fi
+   component's word `0xa320c08c` leave the EVF's 0 as it was. The cause is the card's detect state (finding 18).
 17. **E145's start ends in its date and time setting** (2026-10-23). The frame of `0x1103` is the TG-7's date and time
    entry (Y, M, D and Time all "--", "Cancel" at the foot, X); MENU, the screen's Cancel, takes it to `0x108`
    ID_ST_CA_REQ_DISP with the clock warning E143 shows at its start (X). `0x1103` is the third state of E145's SS_MENU
@@ -236,6 +236,22 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    only the state table's first 12 parents (E143's count, `menu.mjs` state_names); the firmware's lookup bounds it at
    12 on E143 (`cmp 12,d3` at `0x5124b478`) and at 18 on E145 (`0x50de87bf`), whose 18 include SS_MENU (D), so the
    SS_MENU states of E145 and E142 print unnamed. After MENU, S1 stops at S-AFOSD as before (finding 14).
+18. **The card is in the slot's detect state** (2026-10-23). E143's shooting-screen count updater (`0x511ff915`, one
+   of the GUI's per-refresh items, run 9 times in a session, X) returns before it asks for the slot's count
+   (getRemainCountInMediaSlot, API slot 752) where `0x5120054d` gives 0 (X): that gate takes the media control's
+   getExistMedia (`0xa`, both slots, X) and, for each, getMediaStateInfo's field +4 (D), which the HLS media layer
+   (`0x50ac95fa`) sets from the file layer's drive status bit `0x80` (D); the drive status was `0x600` for both drives
+   (X). The drive status (`0x508a8327`) sets bit `0x80` where `0x5087bc22` finds the drive's halfword in the card
+   driver's detect table (`0xa33af3d4` + 2 x drive) at 2 or 3 (D); the driver's init writes 1 to every drive
+   (`0x5087bc5e`) and its insertion handler 2 where it finds 1 (`0x5087bd4c`, D); which event runs the handler is not
+   read. S-CARD sets drive 0 to 2 before the application starts, read per build by the rule `cardDetect` (fact
+   `card.detect`: the test has the same form on all 18 images, its drive bound 2 on E143, E146, E139, E134 and E125, the
+   bodies with two slots, 1 on the other 13, X). With it E143's TFT top bar shows the first slot and `999` (`998` after
+   S2) and its EVF the same at the bottom right, where an orange 0 stood, and the count probe passes on every body of
+   the default set, the E143 and E144 families included (X: frames; modelcheck). E144's and E125's screens also show the
+   slot icon and, newly drawn, an orange movie time `0:00:00` (ROADMAP Next stops; the other bodies' not looked at).
+   Forcing the drive status to `0x680` had given the same screen (X). The golden sessions that show the shooting screen
+   record the count; every compose that changed differs from the one before only in the count's box (X).
 
 ## Per-body status
 
@@ -245,8 +261,9 @@ E139, E134, E137, E140, E125 and E130 on the TFT and the EVF and E142 (no EVF) o
 `checked`; E134, E142, E140 and E130 since the second round of step 7, findings 11 to 14, X). Since the third round
 modelcheck also checks the screen's remaining-shots count after S1 (the count probe, finding 16): E142, E140 and E130
 pass it, E142 and E140 since their shots query is placed where their application asks (finding 15; they had shown
-"Card Full"); E146, E147, E144, E139, E134, E137 and E125 fail it on the TFT and the EVF, as E143 does, their screens
-not following S-CARD's count (the EVF an orange 0, the TFT no count, X), so modelcheck's default set exits 1. The
+"Card Full"); E146, E147, E144, E139, E134, E137 and E125 pass it since S-CARD's card is in the first slot's detect
+state (finding 18), as E143 does: before, their screens did not follow S-CARD's count (the EVF an orange 0, the TFT no
+count, X). The
 S-PANELDONE stand-in answers three to five panel-flag waits in the starts of E139, E134, E125 and E130, which ran
 natively before with the same results (X), so on those bodies it replaces a native path that worked, without a visible
 effect (`ROADMAP.md` "Next stops").
@@ -295,10 +312,10 @@ USB-disconnect power-off (X): its USB connection `0x0400` has polarity 1, so the
 start runs the first open's power-up and the change task (`display.change_entry` `0x5021007a`), then sends cmd 5
 synchronously to the touch task's queue 151 (the id word `0x60041972`, from `0x50210cc4`), which S-TPSEND serves by
 running the touch task's loop for it (finding 11); `bin/modelcheck.mjs` passes on the EVF too (X), its frame the 1024 x
-768 EVF shooting screen with an orange 0 shots left, as E143's EVF, though S-CARD answers its application's query 4
-times (findings 15 and 16, X). Open: what S1 runs beyond the GUI state is not checked; the lab reads the touch I2C
-hooks' arguments in E143's layout, where E134's length is the caller's (4,sp) (D), so the i2c records are not
-trustworthy on ported bodies.
+768 EVF shooting screen with an orange 0 shots left, as E143's EVF, though S-CARD answered its application's query 4
+times (findings 15 and 16, X); since finding 18 it shows the first slot and 999 shots (X). Open: what S1 runs beyond the
+GUI state is not checked; the lab reads the touch I2C hooks' arguments in E143's layout, where E134's length is the
+caller's (4,sp) (D), so the i2c records are not trustworthy on ported bodies.
 
 **E137 (E-M5 III).** Ported through E144 (E144's board traits, no SCPU backup, font limit `0x9fc00` and E144's EVF
 code, D) and boots natively to its shooting screen; the TFT session stays in `0x108` and takes S1 (X). It has no hand

@@ -17,8 +17,21 @@ repository is not under that license.
 Live result (X, reproducible with `run-isc.sh`): the A53 sends its port-27
 start-completion `{01 00 00 00}`; a port-26 kind-3 request is received by the
 A53 over IRQ 14, which forks its survival child and replies on port 27 echoing
-the requested size; and `hhhr` answers a port-30 request with a 112-byte reply
-on port 31 to node 0. See `docs/a53-spec.md` 9.
+the requested size; `hhhr` answers a port-30 request with a 112-byte reply on
+port 31 to node 0; and the A53's own `ISC_alloc_mem` now succeeds against the
+peer's shared-memory pool (`dbgterm_server` takes the first free block). With the
+`mn_sio_uart` console captured, the A53 boot log is visible through
+`isc_start`/`sccore start!!`/`dbgterm server start!!`. See `docs/a53-spec.md`
+9 / 9.1 / 10. The socket/CGI daemons launch only from the kind-1 wifi script and
+were not brought up end to end in the headless oracle (spec 10 item 7).
+
+Two fixes over the first bring-up: (1) the MN view `0x63fe0000` and the A53 view
+`0x2_a3fe0000` of the shared memory are now **one** backing region, so a buffer
+written on one side is the bytes the other reads -- needed for the socket
+`/dev/mem` buffer alias and the CGI pool buffers; (2) the peer writes a valid
+memblock pool header at the pool base (decoded from `memblock_init`/`_alloc`/
+`findrun` and the MN builder `0x50aa63c5`), without which every A53
+`ISC_alloc_mem`/`attach` failed.
 
 Firmware and extracted filesystems are untrusted data: run them only inside the
 VM, never on the macOS host. Nothing extracted is committed; re-derive it by
@@ -34,8 +47,8 @@ path/offset as below.
 | `dmesg.mjs` | read the Linux 4.14 printk ring out of a RAM dump |
 | `dis-daemons.sh` | disassemble `iscdrv.ko` + the ISC daemons and print each port's ISC calls |
 | `iscports.mjs` | helper: list `ISC_*` calls with their node/port immediates |
-| `iscpeer.mjs` | **the MN half of ISC outside QEMU**: control block + FIFOs + doorbell, with a `selftest` and a `live` mode |
-| `om-isc.c` | the QEMU sysbus device: backs the ISC windows + irqcon banks, bridges doorbells |
+| `iscpeer.mjs` | **the MN half of ISC outside QEMU**: control block + FIFOs + doorbell + the `alloc_mem` pool + socket/CGI records, with a `selftest` and a `live` mode (incl. a `scenario=socket` driver) |
+| `om-isc.c` | the QEMU sysbus device: backs the ISC windows (one backing for both pool views) + irqcon banks, bridges doorbells, captures the `mn_sio_uart` console |
 | `om-isc-qemu.patch` | the board hook (`hw/arm/virt.c`) + `hw/misc/meson.build` line for the device |
 | `build-qemu.sh` | fetch + patch + build the aarch64 QEMU with the device (into `$HOME/qemu-om`) |
 | `run-isc.sh` | boot the A53 live and run the MN peer; capture the ISC traffic |
@@ -81,8 +94,15 @@ IMG=$IMG bash run-isc.sh 55 \
     26000:4:30:000000...<48 hex 00>     # an hhhr job (count 0)
 #   -> [peer] RX node 0 port 31 [...112 bytes...]   hhhr's reply to CPU 0
 
+# drive a live socket sequence over ports 3/4 (socket -> bind -> listen ->
+# close). isc_socket is started by the wifi script, so send kind-1 first:
+IMG=$IMG bash run-isc.sh 70 \
+    12000:4:26:0100000000000000 \       # kind-1: start /etc/init.d/wifi
+    scenario=socket afterMs=40000 port=8099
+#   (accept + a real client need an in-guest TCP peer; see docs/a53-spec.md 10)
+
 # the MN-side transport also self-checks with no QEMU at all:
-node iscpeer.mjs selftest     # control-block magic + FIFO round-trip
+node iscpeer.mjs selftest     # cb magic + FIFO + the alloc_mem pool round-trip
 
 # static side: the static harness (stock VM qemu) and the daemon decode
 IMG=$IMG bash qrun.sh 25 && node dmesg.mjs /tmp/a53run/ram.bin | tail
@@ -99,10 +119,12 @@ shown (`iscdrv.ko` offsets, or kernel VAs against `vmlinux.elf`); doorbell/IRQ
 numbers cross-check the MN side in `docs/hle-gaps.md` 4.11.1.
 
 - **`mn_sio_uart` console** `0x9a500600` (D, `mn_sio_uart_serial_out`
-  `0xffffff80082934e8`): TX byte at `membase+0x18`, status at `+0x44` bit 15 =
-  "not ready". That is the whole model for console output; already reached on
-  virt (phase a). The real block is `ntcj,mn-sio-1-uart`; the virt UART stood in
-  for phases a/b.
+  `0xffffff80082934e8`, `console_putchar` `0xffffff8008293c00`): TX byte at
+  `membase+0x18`; `console_putchar` writes it only when status `+0x44` bit 15 is
+  clear **and** `+0x1c` is non-zero (the TX-ready flag the loader seeds). The real
+  block is `ntcj,mn-sio-1-uart`. `om-isc` now models it (read `+0x1c` -> 1, else
+  0; TX `+0x18` -> QEMU stderr) so the A53 boot/daemon log is captured live -- a
+  dev aid, not required for ISC itself.
 - **`irqcon`** four MN INTC banks `0x99200000 / 0x99300000 / 0x99b00000 /
   0x99b80000` (D, `nep1.dts` `irqcon@99200000`, and the same four in iscdrv's
   `.rodata+0x110`). GIC parents SPI `0x1c0/0x1c2/0x1c4/0x1c6`. A53-side use
@@ -126,10 +148,20 @@ numbers cross-check the MN side in `docs/hle-gaps.md` 4.11.1.
 - **SCCORE control** `0x97f00b80`, `0x80` bytes (D, `scc_init`
   `0xffffff80085833e4` ioremaps it). Plain storage for phase c.
 - **ISC control block** `0x97f00c00`, `0x400` bytes, and **shared memory**
-  128 KiB per node at `0x63fe0000` (nodes 0..3) / `0x2_a3fe0000` (node 4)
+  128 KiB at `0x63fe0000` (MN view) / `0x2_a3fe0000` (A53 view)
   (D, `iscdrv.ko` `.data`: `config_isc_cb_addr/size`, `config_isc_mem_addr[5]`,
-  `config_isc_channel_nr=0x30`, `config_isc_drv_lock_id=7`). Layout and the FIFO
-  format are in `iscpeer.mjs` and `docs/hle-gaps.md` 4.11.1.
+  `config_isc_channel_nr=0x30`, `config_isc_drv_lock_id=7`). The two views are the
+  **same** physical memory (the A53 reaches an MN buffer through `/dev/mem` at
+  `(addr & 0x3fffffff) | 0x2_80000000`, D `isc_socket.dis 0x12b3c`), so `om-isc`
+  backs both with one region. The shared memory is an `ISC_alloc_mem` memblock
+  pool whose header + free-list the MN writes at the pool base (D,
+  `memblock_init` `iscdrv.ko+0x34f8`, `memblock_alloc` `+0x3558`, `findrun`
+  `+0x3250`, and the MN builder `0x50aa63c5`): `+0` u16 shift, `+2` u16 nblocks,
+  `+4` u16 head, `+8` a run-length doubly-linked free list (`link[i]={lo,hi}`,
+  sentinel `link[0]`; a run of length L at block i records L at `link[i+1].lo` /
+  `link[i+L-1].lo`, or sets bitmap2 bit i when L==1), then two bitmaps. Layout, the
+  FIFO format, and the pool are implemented in `iscpeer.mjs`; also `docs/a53-spec.md`
+  9.1 and `docs/hle-gaps.md` 4.11.1.
 - **`mn-mmc`** SDIO `0x9ac02000` (CYW43455): model as "no card / no SDIO
   device" so `isc_olnet`'s Wi-Fi bring-up fails cleanly (see `docs/a53-spec.md`
   6). Not needed for ISC itself.
@@ -148,11 +180,13 @@ every piece:
 - **Backing at the true addresses.** `om-isc` aliases one shared
   `memory-backend-file` into system memory at `0x97000000` (lock, normal RAM so
   the LL/SC monitor works), `0x97f00b80` (scc), `0x97f00c00` (control block +
-  FIFOs), `0x63fe0000` and `0x2_a3fe0000` (the bulk `alloc_mem` pool), all at
-  *higher priority* than the machine RAM so they override it. `run-isc.sh` also
-  passes `mem=0x5140000` so the kernel's own RAM stays the A53's real 81 MiB and
-  these windows are not "RAM" to `__ioremap` (which then succeeds). The peer
-  (`iscpeer.mjs live`) mmaps the same file and reads/writes the control block and
+  FIFOs), and the bulk `alloc_mem` pool -- with **both** `0x63fe0000` and
+  `0x2_a3fe0000` aliasing the one pool region so a buffer is coherent across the
+  MN and A53 views -- all at *higher priority* than the machine RAM so they
+  override it. `run-isc.sh` also passes `mem=0x5140000` so the kernel's own RAM
+  stays the A53's real 81 MiB and these windows are not "RAM" to `__ioremap`
+  (which then succeeds). The peer (`iscpeer.mjs live`) mmaps the same file,
+  publishes the control block and the memblock pool header, and reads/writes the
   FIFOs directly; its address->offset map matches the device's `O_*` layout.
 - **The receive interrupt.** The A53's `isc_receive_wait` sleeps on the IRQ-14
   waitqueue with no timeout, so MN->A53 needs a real interrupt. `om-isc` models
@@ -179,3 +213,15 @@ The `om-isc` device logs any offset it does not model via `LOG_UNIMP` and reads 
   `{40 00 00 00}`), a full MN->A53->MN round-trip.
 - `hhhr` answers a 48-byte port-30 request with a 112-byte reply on port 31 to
   node 0 (CPU 0) -- matching the static decode.
+- The A53's own `ISC_alloc_mem` succeeds against the peer's pool: `dbgterm_server`
+  takes the first free block (bitmap bit set, free-list head advances). Before the
+  pool-header fix every A53 `alloc`/`attach` returned an error.
+- Console captured: the A53 boots through `Starting OLYMPUS APP...` / `sccore
+  start!!` / `dbgterm server start!!`.
+- **Not yet live:** `isc_socket`/`isc_cgi` end to end. They launch only from the
+  port-26 kind-1 wifi script; kind-1 is received and `sccore` runs
+  `system(".../wifi start &")`, but the wifi daemons do not surface and a port-3
+  `socket()` (consumed by the A53's iscdrv) draws no port-4 reply. The record
+  formats and the pool/alias they need are decoded and in place (`docs/a53-spec.md`
+  9.1); this is a harness gap (no in-guest TCP/HTTP client; wifi-script daemons not
+  surfacing). See `docs/a53-spec.md` 10 item 7.

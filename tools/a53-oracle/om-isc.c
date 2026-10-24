@@ -40,19 +40,32 @@ OBJECT_DECLARE_SIMPLE_TYPE(OmIscState, OM_ISC)
 #define A_LOCK   0x97000000ULL
 #define A_SCC    0x97f00b80ULL
 #define A_CB     0x97f00c00ULL
-#define A_MEM_MN 0x63fe0000ULL       /* nodes 0..3 shared mem (A53 writes)  */
-#define A_MEM_A  0x2a3fe0000ULL      /* node 4 shared mem (peer writes)     */
+/* The mn_sio_uart console (ttyS0) at 0x9a500600: TX byte at +0x18, status word
+ * at +0x44 bit15 = "not ready" (D, kernel mn_sio_uart_console_putchar
+ * 0xffffff8008293c00 / serial_in/out). Without a model these MMIO writes land in
+ * machine RAM and the guest console is lost; this region forwards each TX byte to
+ * QEMU's stderr so the oracle can show the A53 boot/daemon log (dev aid only). */
+#define A_UART   0x9a500600ULL
+#define WUART    0x100
+#define UART_TX  0x18
+#define UART_ST  0x44
+/* The MN view (0x63fe0000) and the A53 view (0x2_a3fe0000) are the SAME
+ * physical shared memory: the A53 reaches an MN buffer through /dev/mem at
+ * (addr & 0x3fffffff) | 0x2_80000000, so 0x63fe0000 -> 0x2_a3fe0000 (D,
+ * isc_socket.dis 0x12b3c). Both windows must therefore alias ONE backing
+ * region, or a buffer written on one side is invisible on the other. */
+#define A_MEM_MN 0x63fe0000ULL       /* MN view of the shared pool          */
+#define A_MEM_A  0x2a3fe0000ULL      /* A53 view of the SAME shared pool    */
 #define WLOCK 0x200
 #define WSCC  0x80
 #define WCB   0x400
-#define WMEM  0x20000                /* 128 KiB per node                    */
+#define WMEM  0x20000                /* 128 KiB shared pool                 */
 /* shared backend-file layout (must match iscpeer.mjs FileMem) */
 #define O_LOCK 0x00000
 #define O_SCC  0x01000
 #define O_CB   0x02000
-#define O_MMN  0x10000
-#define O_MA   0x30000
-#define BACKEND_MIN (O_MA + WMEM)    /* 0x50000 */
+#define O_MEM  0x10000               /* one region, aliased by both views   */
+#define BACKEND_MIN (O_MEM + WMEM)   /* 0x30000 */
 
 /* irqcon banks (D, nep1.dts + iscdrv .rodata+0x110). */
 static const hwaddr bank_base[4] = {
@@ -70,11 +83,35 @@ struct OmIscState {
     SysBusDevice parent_obj;
     HostMemoryBackend *memdev;
     CharFrontend chr;
-    MemoryRegion lock, scc, cb, mem_mn, mem_a;
+    MemoryRegion lock, scc, cb, mem_mn, mem_a, uart;
     MemoryRegion bank[4];
     BankCtx bctx[4];
     qemu_irq irq[4];
     uint32_t pending[4];
+};
+
+/* mn_sio_uart console: the transmitter is always ready, so the guest writes the
+ * byte without spinning. console_putchar (0xffffff8008293c00) gates the TX store
+ * on status(+0x44) bit15 clear AND reg(+0x1c) != 0 (the loader normally seeds
+ * +0x1c=1); so +0x44 reads 0 and +0x1c reads 1. TX byte at +0x18 -> stderr. */
+#define UART_RDY 0x1c
+static uint64_t uart_read(void *opaque, hwaddr off, unsigned size)
+{
+    return off == UART_RDY ? 1 : 0;
+}
+
+static void uart_write(void *opaque, hwaddr off, uint64_t val, unsigned size)
+{
+    if (off == UART_TX) {
+        fputc((int)(val & 0xff), stderr);
+        fflush(stderr);
+    }
+}
+
+static const MemoryRegionOps uart_ops = {
+    .read = uart_read, .write = uart_write,
+    .endianness = DEVICE_LITTLE_ENDIAN,
+    .valid.min_access_size = 1, .valid.max_access_size = 4,
 };
 
 static uint64_t bank_read(void *opaque, hwaddr off, unsigned size)
@@ -153,8 +190,14 @@ static void om_isc_realize(DeviceState *dev, Error **errp)
     alias(s, &s->lock,   be, "om-isc.lock", O_LOCK, WLOCK, A_LOCK);
     alias(s, &s->scc,    be, "om-isc.scc",  O_SCC,  WSCC,  A_SCC);
     alias(s, &s->cb,     be, "om-isc.cb",   O_CB,   WCB,   A_CB);
-    alias(s, &s->mem_mn, be, "om-isc.mmn",  O_MMN,  WMEM,  A_MEM_MN);
-    alias(s, &s->mem_a,  be, "om-isc.ma",   O_MA,   WMEM,  A_MEM_A);
+    /* both views alias the one O_MEM region, so a write through either
+     * physical window lands in the same bytes (D, see A_MEM_* above). */
+    alias(s, &s->mem_mn, be, "om-isc.mem.mn", O_MEM, WMEM, A_MEM_MN);
+    alias(s, &s->mem_a,  be, "om-isc.mem.a",  O_MEM, WMEM, A_MEM_A);
+
+    /* mn_sio_uart console capture (overlay over machine RAM, dev aid). */
+    memory_region_init_io(&s->uart, OBJECT(s), &uart_ops, s, "om-isc.uart", WUART);
+    memory_region_add_subregion_overlap(get_system_memory(), A_UART, &s->uart, 10);
 
     for (int n = 0; n < 4; n++) {
         char nm[16];

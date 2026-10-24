@@ -1389,6 +1389,36 @@ export function shotsQuery(img) {
   return 0x50000000 + q[0];
 }
 
+// The card slots' detect states (fact 'card.detect', src/lab/camapp.mjs S-CARD): the file layer's drive status (E143
+// 0x508a8327) sets its card-present bit 0x80 where `call T; exthu d0; cmp 0,d0; beq; or 128,d2` (1c a0 00 c8 05 f8 e6
+// 80, E143 at 0x508a83bb) finds the drive's state 2 or 3: T (E143 0x5087bc22) is `mov d0,d1; exthu d1; cmp N,d1; bge`,
+// then the drive's halfword in the table T loads, `mov imm32,a0` (fc dc), `movhu (d0,a0),d0; cmp 2,d0; beq; cmp
+// 3,d0` (D). The driver's init writes 1 to every drive (E143 0x5087bc5e) and its insertion handler 2 where it finds 1
+// (0x5087bd4c), the card's init then 3 (0x5087be64, D); which event runs the handler is not read. On E143, E146, E139,
+// E134 and E125 N is 2, on the other 13 images 1, the bodies with two card slots and with one (D; the number of slots
+// is the bodies', not read from the firmware). The GUI's shooting-screen count asks for a slot's count only where the
+// media control reports the slot present (E143's updater 0x511ff915 through 0x5120054d, getMediaStateInfo +4, which
+// is the status bit 0x80, D), so with every drive at 1 the E143 and E144 families showed no count or an orange 0 (X).
+// Exactly one such test on each of the 18 expanded images, T of the same form on all (X, a byte scan). Returns {table
+// (the run-time address of drive 0's halfword), drives (N)}; throws unless one.
+export const CARD_DETECT_E143 = { table: 0xA33AF3D4, drives: 2 };
+const DETECT_TEST = [0x1c, 0xa0, 0x00, 0xc8, 0x05, 0xf8, 0xe6, 0x80];
+const DETECT_FORM = [0x81, 0x1d, 0xa5, null, 0xc2, null, 0x1c, 0xe0, 0xfc, 0xdc, null, null, null, null, 0xf4, 0x80, 0xa0,
+  0x02, 0xc8, null, 0xa0, 0x03];
+export function cardDetect(img) {
+  const tests = [];
+  for (let o = img.indexOf(0xf8); o >= 0; o = img.indexOf(0xf8, o + 1)) {
+    const at = o - 5;
+    if (at < 7 || !bytesAt(img, at, DETECT_TEST)) continue;
+    const c = [7, 5].map((n) => ({ n, c: callAt(img, at - n) })).find(({ n, c }) => c?.len === n);
+    if (c) tests.push(c.c.to);
+  }
+  if (tests.length !== 1) throw new Error(`cardDetect: ${tests.length} card-present tests in the drive status, want one`);
+  const t = tests[0];
+  if (!bytesAt(img, t, DETECT_FORM)) throw new Error(`cardDetect: the test ${h8(0x50000000 + t)} is not the detect-state read`);
+  return { table: u32(img, t + 10), drives: img[t + 3] };
+}
+
 // The event broker's init (fact 'broker.init', and through bin/port.mjs the place of E143's BROKER_E143 0x502a48b6,
 // src/lab/camapp.mjs BROKER_INIT, which the lab calls as the boot chain's wrapper does): it opens with its queue's id
 // word, `movhu (W),d0; exth d0; call` (fc ac W 18, then call d16 or d32), and clears its slots in a loop that starts
@@ -1927,8 +1957,8 @@ export function readPlacedFacts({ img, at }) {
 // {change_task, change_entry, queue_word, queue_id, task_init, frame_wait, timer_sleep, sync, face_colour}}, {timer:
 // {reload_less_one}}, {dial: {select, select_end, table_ptr, table0}}, {touch_panel: {driver}}, {lens: {mount}}, {iic:
 // {waits}}, {touch: {i2c_write, i2c_read}}, {touch_api: {open}}, {shooting: {start, end, auto_through}}, {func_direct:
-// {run, id}}, {broker: {init}}, {card: {shots_query}}, {power_off: {usb_disconnect}}, {gui: {stride, height, banks,
-// kind3}}, {recview: {word, standby}} and {cbs: {NAME: code}} (no memories, take, task init, frame wait, timer sleep,
+// {run, id}}, {broker: {init}}, {card: {shots_query, detect}}, {power_off: {usb_disconnect}}, {gui: {stride, height,
+// banks, kind3}}, {recview: {word, standby}} and {cbs: {NAME: code}} (no memories, take, task init, frame wait, timer sleep,
 // sync, face colour, timer, dial, touch, touch_api, shooting, func_direct, power_off, recview or cbs part where its
 // rule reads none). Throws for a reset_head with no rule here, and where a rule throws.
 export function readFacts({ img, family, resLoad }) {
@@ -1970,7 +2000,7 @@ export function readFacts({ img, family, resLoad }) {
   const direct = funcDirect(img);
   if (direct !== undefined) facts.func_direct = direct;
   facts.broker = { init: brokerInit(img) };
-  facts.card = { shots_query: shotsQuery(img) };
+  facts.card = { shots_query: shotsQuery(img), detect: cardDetect(img) };
   const usbOff = usbPowerOff(img);
   if (usbOff !== undefined) facts.power_off = { usb_disconnect: usbOff };
   facts.gui = guiCanvas(img);

@@ -328,6 +328,14 @@ const ERRLOG_FOUND = {
 // and on the other bodies the function their application's getAvailableShootCount calls for the count (D: E142's,
 // E140's and E145's module-0x2800c wrapper, which S-CARD answers in their sessions, X; E133's, E130's, E129's and
 // E132's wrapper of that module; the E118 family's with no trace)
+// The card slots' detect states (card.detect; src/fw/facts.mjs cardDetect): the table the drive status's card-present
+// test reads and its drive bound, as a separate byte scan for that test found them (X; E143's D at 0x5087bc22)
+const DETECT_FOUND = {
+  E143: [0xA33AF3D4, 2], E146: [0xA33E2088, 2], E147: [0xA33C9C50, 1], E144: [0xA27018B8, 1], E139: [0xA27487C0, 2],
+  E134: [0xA290FE74, 2], E137: [0xA2680C10, 1], E142: [0xA2787684, 1], E140: [0xA2785998, 1], E125: [0xA27A10F8, 2],
+  E145: [0xA2219288, 1], E133: [0xA2B16D0C, 1], E130: [0xA2B6A660, 1], E129: [0xA2B747D8, 1], E132: [0xA2B74D4C, 1],
+  E118: [0xA1C47794, 1], E122: [0xA1C878DC, 1], E120: [0xA1C46B78, 1],
+};
 const SHOTS_FOUND = {
   E143: 0x50419164, E146: 0x50414A5F, E147: 0x50422B7E, E144: 0x502FAB48, E139: 0x502F7CEB, E134: 0x50313E2D,
   E137: 0x502EC70F, E142: 0x502C79DB, E140: 0x502D63A0, E125: 0x50307376, E145: 0x502CEB73, E133: 0x502DAB10,
@@ -434,7 +442,7 @@ const E143_FACTS = {
   timer: { reload_less_one: false }, dial: { select: 0x5014B7C7, select_end: 0x1A, table_ptr: 0xA32DAAB0, table0: 0x60223DBC },
   touch_panel: { driver: true }, lens: { mount: true }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
-  broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143 }, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143,
+  broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] } }, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143,
   cbs: CBS_FOUND.E143,
 };
 
@@ -565,6 +573,8 @@ export function factsTests() {
     if (got.errlog && PORTS[code]) ok(PORTS[code][0x50047313] === got.errlog.entry, `${code}: A() of errlog ${hx(PORTS[code][0x50047313])}, the rule's ${hx(got.errlog.entry)}`);
     // the remaining-shots query, and the port's place of E143's at the rule's (bin/port.mjs, how 'shots-method')
     ok(got.card?.shots_query === SHOTS_FOUND[code], `${code}: card ${hx(got.card ?? got)}, found ${hx(SHOTS_FOUND[code])}`);
+    // the card slots' detect states (cardDetect)
+    ok(same([got.card?.detect?.table, got.card?.detect?.drives], DETECT_FOUND[code]), `${code}: card detect ${hx(got.card?.detect)}, found ${hx(DETECT_FOUND[code])}`);
     if (got.card && PORTS[code]) ok(PORTS[code][0x50419164] === got.card.shots_query, `${code}: A() of the shots query ${hx(PORTS[code][0x50419164])}, the rule's ${hx(got.card.shots_query)}`);
     // CPU 0's init task and OlyTaWu, and the port's places of E143's at the rules' (bin/port.mjs, how 'task-table',
     // 'wup-opening')

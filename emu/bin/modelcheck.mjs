@@ -29,11 +29,10 @@ const models = (want.length ? want : Object.keys(MODELS).filter((k) => k !== 'E1
 const PATH = [['start', null, 0], ['s1', null, 0], ['s2', null, 1], ['play', 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE', 1],
   ['info', 'SS_PLAY_SINGLE/ID_ST_DISP_DETAIL', 1], ['play', null, 1]];
 const PROBE_NS = 1200e6, PROBE_SHOTS = 777, WINDOW = 6, WINDOW_NS = 300e6;
-// the bodies whose screens are known not to draw S-CARD's count, on the TFT and the EVF, with the reason
-const NO_COUNT_ITEM = "the count item on this family's screen does not draw S-CARD's count; source not read "
-  + '(docs/model-survey.md finding 16)';
-const PROBE_XFAIL = Object.fromEntries(['E143', 'E146', 'E147', 'E144', 'E139', 'E134', 'E137', 'E125']
-  .map((m) => [m, NO_COUNT_ITEM]));
+// the bodies whose screens are known not to draw S-CARD's count, on the TFT and the EVF: model -> the reason. Empty
+// since S-CARD's card is in slot 1's detect state (docs/model-survey.md finding 18); the E143 and E144 families were
+// in it before
+const PROBE_XFAIL = {};
 const CHILD = `
 const J = process.argv[1], DEVICE = process.argv[2], PROBE_NS = ${PROBE_NS}, PROBE_SHOTS = ${PROBE_SHOTS},
   WINDOW = ${WINDOW}, WINDOW_NS = ${WINDOW_NS};

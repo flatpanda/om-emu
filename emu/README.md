@@ -372,11 +372,34 @@ arguments: keys, options, lab-time targets, addresses; no firmware bytes), the f
 blocks only in that browser's Origin Private File System; the page embeds no firmware, and `bin/webgate.mjs` checks that
 it sends nothing but GETs for its own files.
 
+### Publication audit
+
+`bin/pubaudit.mjs` checks what a push would publish: every blob in a ref's history (each blob once, with every path
+it was committed at) and every commit's identity and message. It fails (exit 1, with blob, path and commit per
+finding) on forbidden paths (`fw/`, `unpacked/`, `emu/out/`, `*.bin`, `.claude/`, scratch, key and ignored files),
+blobs over 1 MiB, content that is not text, home and temporary directories, email addresses, tokens and keys, long
+hex or base64 runs, commits by an identity that is not noreply, and firmware: any 47 bytes or more of a local `.BIN`
+(descrambled) found in a binary blob or decoded from text (hex runs, number lists, base64, listings), or a run of
+quoted firmware text over 128 bytes. Short listings (up to 512 matching bytes per file) and quoted strings pass. The
+rules and the reviewed exceptions (`ALLOW`, each with its reason) are in the tool's header. Names that must never
+appear can be added locally with `git config --add pubaudit.marker TEXT`; they stay in `.git/config`.
+
+Before each push to the public repository, audit only what is not public yet:
+
+```sh
+git fetch https://github.com/flatpanda/om-emu.git main    # FETCH_HEAD: what is already published
+node emu/bin/pubaudit.mjs release --since FETCH_HEAD       # the commits about to go out; push only when clean
+node emu/bin/pubaudit.mjs release                          # the whole history: after a rule change
+```
+
+The firmware rule reads `fw/` (about 4 s for the 2.9 GB of `.BIN` files; `--fw PATH` for other places); without
+firmware the run warns and skips that rule. `--explain N` prints what each firmware finding matched.
+
 ## Tests
 
 | Command | What it covers | Needs |
 |---|---|---|
-| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units, the SCPU clock, port words and request server (S-SCPU), the HDMI port's device and sink, the accelerometer stand-in's sample | node; runs on any checkout in a few seconds |
+| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units, the SCPU clock, port words and request server (S-SCPU), the HDMI port's device and sink, the accelerometer stand-in's sample, the publication audit's rules on a throwaway repository | node and git; runs on any checkout in a few seconds |
 | `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts, the node host, the command-line tools, the scene, the camera application, an HDMI plug in play on E143, E146 and E147, check_level on E146, the firmware map and the regression net's controls | the E143 firmware blocks (E146's and E147's for the HDMI plug, E146's for check_level) and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
 | `node emu/bin/golden.mjs check` | every scenario, every lab of the traced check runs and every check run's output against `golden.json`: what the panels show, what the devices see and what the checks conclude must not change | the firmware |
 | `node emu/bin/checks.mjs [CHECK \| RUN ...]` | every run of `checks/runs.json`, judged on its exit status | the firmware |

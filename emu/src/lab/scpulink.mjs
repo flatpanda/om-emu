@@ -57,7 +57,7 @@ export class ScpuLink {
   bring_up() {
     const lab = this.lab, devs = lab.sim.m.devices;
     if (!devs.linkpins) throw new LinkError(`H-SCPUSTART: ${MODEL}'s board gives no pins for the sub-CPU link (src/fw/board.mjs scpu_link): its PER_SCPU cannot run, and the lab has no other path for its SCPU requests`);
-    if (BOARD.scpu.events?.message === undefined) throw new LinkError('H-SCPUSTART: the board gives no message port (scpu.events.message)');
+    if (BOARD.scpu.events?.message === undefined && BOARD.scpu.message === undefined) throw new LinkError('H-SCPUSTART: the board gives no message port (scpu.events.message or scpu.message)');
     if (!lab.nk?.intc) throw new LinkError('H-SCPUSTART: the link needs K-native with native interrupts');
     this.pins = devs.linkpins;
     this.window = devs.scpu;

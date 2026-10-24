@@ -127,7 +127,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipp
   bad += ca.bad.length;
 }
 // the SCPU interface's clock and ports, the link's pins and the sub-CPU's model (S-SCPUDEV) without firmware, then the
-// link at a play session's start: E143 here, E146 and E147 (the link) and E139 and E134 (its start stops at the link)
+// link at a play session's start: E143 here, E146, E147, E139 and E134
 // each in a process of its own (the model is fixed when the lab is imported)
 {
   const { scpuUnits, scpuSession } = await import('../test/test_scpu.mjs');

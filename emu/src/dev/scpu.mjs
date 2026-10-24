@@ -12,7 +12,10 @@ const hex8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 // the model's offsets (src/fw/board.mjs: E143's above; a later SCPU compacts its map, e.g. E144 command 0xa4, clock 0x98/0x9c)
 const { command: COMMAND, clock: [CLK0, CLK1], ticks: TICKS } = BOARD.scpu, RANGES = BOARD.scpu.storage;
 const EV = BOARD.scpu.events ?? null;
-const storage = (off) => RANGES.some(([lo, hi]) => off >= lo && off <= hi) || (!TICKS && (off === CLK0 || off === CLK1));
+// a board without the event and port model may give the word whose bit 31 is the sub-CPU's message line (scpu.message:
+// E139's and E134's port 3, 0x64, inside their storage), read as the line's level
+const MSG = EV ? null : BOARD.scpu.message ?? null;
+const storage = (off) => off !== MSG && (RANGES.some(([lo, hi]) => off >= lo && off <= hi) || (!TICKS && (off === CLK0 || off === CLK1)));
 const NS = 1e9;
 // the doorbell's command: bits 31..24 the command, bits 23..0 its argument
 export const SET_INPUTS = 1;
@@ -97,7 +100,8 @@ export class Scpu {
   }
   // the sub-CPU's message line (src/lab/scpulink.mjs)
   setMessage(level) {
-    if (EV?.message === undefined) throw new Error('Scpu: the board has no message port (scpu.events.message)');
+    if (MSG !== null) { this.message = level ? 1 : 0; return; }
+    if (EV?.message === undefined) throw new Error('Scpu: the board has no message port (scpu.events.message or scpu.message)');
     const before = this.levels();
     this.message = level ? 1 : 0;
     this.changed(before);
@@ -112,6 +116,7 @@ export class Scpu {
     if (TICKS && off === CLK0) return this.seconds();
     if (TICKS && off === CLK1) return this.phase();
     if (EV && off === EV.pending) return this.pending;
+    if (off === MSG) return (this.message << 31) >>> 0;
     const k = this.port(off);
     if (k >= 0) return ((this.levels() >>> k) & 1) << 31 >>> 0;
     if (dbg || storage(off)) return this.reg[off >> 2];
@@ -136,7 +141,7 @@ export class Scpu {
       this.intc.setLine(EV.irq, this.pending !== 0);
       return;
     }
-    if (this.port(off) >= 0) return this.unknown('write', off, size, value, dbg);   // A-SCPU-4
+    if (this.port(off) >= 0 || off === MSG) return this.unknown('write', off, size, value, dbg);   // A-SCPU-4
     if (dbg || storage(off)) { this.reg[off >> 2] = value; return; }
     if (off === COMMAND) {
       this.reg[off >> 2] = value;

@@ -169,8 +169,8 @@ export const FAMILIES = {
     // and their start then stops at the NAND controller the lab does not model (X)
     // The event and port words (E143's 0x98, 0xa0..0xb8) lie in the storage 0x40..0x94: events null (not modelled)
     scpu: { command: 0xa4, clock: [0x98, 0x9c], ticks: false, storage: [[0x00, 0x00], [0x08, 0x3c], [0x40, 0x94]], events: null },
-    // the sub-CPU link's pins: not read on this family (E139's PER_SCPU is not E143's: another fatal path, 0x50052fe6,
-    // and pin calls, D; its GIO tables were not read)
+    // the sub-CPU link's pins: not read for the family; E139 and E134, the bodies that run PER_SCPU, give theirs (pins
+    // 77 / 76 / 57 in the family's GIO block, src/fw/models.mjs)
     scpu_link: UNKNOWN,
     // the HDMI port: not read on this family
     hdmi: UNKNOWN,

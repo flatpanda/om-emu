@@ -364,8 +364,22 @@ export const MODELS = {
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
     // the SCPU clock ticks, as on E143 (src/fw/board.mjs: the family's stands still): its start, S1 and S2 run as with
-    // the clock standing still (X: bin/modelcheck.mjs)
-    board: { family: 'E144', scpu: { ticks: true } },
+    // the clock standing still (X: bin/modelcheck.mjs). The sub-CPU link (src/dev/linkpins.mjs, src/lab/scpulink.mjs):
+    // its PER_SCPU is E143's but for its pins, ready 77, request 76 and reset 57 (0x50051ed3..0x50051ede, 0x5005362a, D); the GIO driver maps a
+    // pin through the board variant's remap table (0x61a22bfc by (0x61f0e4bc), the variant byte BSS in the lab: table 0, which leaves
+    // the three alone), its words are (0x600251f4)[pin]: 0x9b80092c, 0x9b800b8c, 0x9b800bac, the level in bit 4 and the
+    // output in bit 0 as on E143 (0x500020f3, 0x5004c5ad), and pin 77's slot (0x600258e0)[77] = 67 is a group slot: record 0x600259b4 +
+    // 32 x 67 = {77, its pin word, IRQ 40, the group handler, status 0x9b801e4c, enable 0x9b801f28, type-0 bit 0x40,
+    // type-1 bit 0x80}, the words shared with the group's other pins (D); the message line is port 3, the word 0x64
+    // (the port byte reader 0x50048fbd reads bit 31 of 0x58..0x68, D)
+    board: {
+      family: 'E144', scpu: { ticks: true, message: 0x64 },
+      scpu_link: {
+        ready: { pin: 77, word: 0x9B800BAC, status: 0x9B801E4C, enable: 0x9B801F28, bits: [0x40, 0x80], irq: 40, shared: true },
+        request: { pin: 76, word: 0x9B800B8C },
+        reset: { pin: 57, word: 0x9B80092C },
+      },
+    },
     // the map from E144 pairs 7.29M instructions with 14 conflicts, the one from E143 2.18M with 110 (X: port.json
     // port_via.map and map, bin/port.mjs)
     port_via: 'E144',
@@ -383,6 +397,8 @@ export const MODELS = {
     // at 0x50051013 and 0x50051020 pass index 2, byte 0 (D)
     scpu: { words: [[2, 0]], quiet: [] },
     overrides: {
+      '0x5005b424': { to: '0x50051e16', why: 'PER_SCPU\'s task entry (src/lab/scpulink.mjs PER_SCPU_TASK), which the map from E144 (whose PER_SCPU differs) pairs with a generic table walker at 0x50051cbc: 0x50051e16 runs the reset check 0x5005360d (pin 57 pulsed when the cause is 0 or 8) and the init 0x50051eb2 (block flag, the IRQ 320 callback, pin 77\'s mode, handler and enable, pin 76 = 1, the 0x85 {2} send 0x5005364e), then loops on PER_SCPU_RECEIVE through the table machine with event 11 deferred outside states 0 and 2 (0x50051e25..0x50051e8b), as E143\'s 0x5005b424 (D)' },
+      '0x50002b5d': { to: '0x500022c3', why: 'the GIO init\'s slot reset (src/lab/scpulink.mjs GIO_SLOTS), which the map places inside another function (0x50001e0e): 0x500022c3 writes 255 and five zero words to each of the 232 slot states from 0xa26bb79c, the free mark the mode function 0x5004c5ee takes a slot by (0x5004c948), as E143\'s 0x50002b5d for its 325 (D)' },
       '0x5014e374': { to: '0x5011080a', why: 'the joystick decoder publish return, as the map from E143 places it (E144 has no joystick and gives null): the UI_IN code has E143\'s branch on 0x1235/0x1234 (D cmp at 0x50110999/0x501109a5 and 0x50110a59/0x50110a65, E143 0x5014c07a/0x5014c086 and 0x5014c13a/0x5014c146), and 0x501107fe..0x5011080a is E143\'s 0x5014e368..0x5014e374, the call of the publisher 0x500257d0 with d1 0, a0 0 (D; play)' },
     },
   },
@@ -395,8 +411,22 @@ export const MODELS = {
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
     // the SCPU clock ticks, as on E143 (src/fw/board.mjs: the family's stands still): its start, S1 and S2 run as with
-    // the clock standing still (X: bin/modelcheck.mjs)
-    board: { family: 'E144', scpu: { ticks: true } },
+    // the clock standing still (X: bin/modelcheck.mjs). The sub-CPU link (src/dev/linkpins.mjs, src/lab/scpulink.mjs):
+    // its PER_SCPU is E143's but for its pins, ready 77, request 76 and reset 57 (0x500528ac..0x500528b7, 0x50053fad, D); the GIO driver maps a
+    // pin through the board variant's remap table (0x61c2299c by (0x6214512c), the variant byte BSS in the lab: table 0, which leaves
+    // the three alone), its words are (0x60024054)[pin]: 0x9b80092c, 0x9b800b8c, 0x9b800bac, the level in bit 4 and the
+    // output in bit 0 as on E143 (0x5004cfb1), and pin 77's slot (0x60024740)[77] = 67 is a group slot: record 0x60024814 +
+    // 32 x 67 = {77, its pin word, IRQ 40, the group handler, status 0x9b801e4c, enable 0x9b801f28, type-0 bit 0x40,
+    // type-1 bit 0x80}, the words shared with the group's other pins (D); the message line is port 3, the word 0x64
+    // (the port byte reader 0x500486b8 reads bit 31 of 0x58..0x68, D)
+    board: {
+      family: 'E144', scpu: { ticks: true, message: 0x64 },
+      scpu_link: {
+        ready: { pin: 77, word: 0x9B800BAC, status: 0x9B801E4C, enable: 0x9B801F28, bits: [0x40, 0x80], irq: 40, shared: true },
+        request: { pin: 76, word: 0x9B800B8C },
+        reset: { pin: 57, word: 0x9B80092C },
+      },
+    },
     // the map from E139 pairs 8.12M instructions with 34 conflicts, the one from E144 5.88M with 47; through E139, 106
     // of the overrides carry, 15 against the direct map's answer and 11 fail, through E144 102, 22 and 16 (X: port.json
     // port_via.map, carried, carry_failed, bin/port.mjs with each; since the frame-wait knob left the seeds and E144's
@@ -411,6 +441,8 @@ export const MODELS = {
     // completion and nothing waiting for it (0x50109328..0x50109342, D; its meaning is ?)
     scpu: { words: [[23, 0]], quiet: [0x21] },
     overrides: {
+      '0x5005b424': { to: '0x500527ef', why: 'PER_SCPU\'s task entry (src/lab/scpulink.mjs PER_SCPU_TASK), which neither map places right: 0x500527ef runs the reset check 0x50053f90 (pin 57 pulsed when the cause is 0 or 8) and the init 0x5005288b (pins 77 and 76 as E139\'s, the 0x85 {2} send 0x50053fd1), then loops on PER_SCPU_RECEIVE through the table machine (0x500527fe..0x50052864), as E139\'s 0x50051e16 and E143\'s 0x5005b424 (D)' },
+      '0x50002b5d': { to: '0x50001ce5', why: 'the GIO init\'s slot reset (src/lab/scpulink.mjs GIO_SLOTS), which neither map places: 0x50001ce5 writes 255 and five zero words to each slot state from 0xa28a1e30, the free mark the mode function 0x5004cff0 takes a slot by, as E139\'s 0x500022c3 (D)' },
       '0x50023bab': { to: '0x5021050d', why: 'the EVF vtotal getter (display.mjs DEVICE.evf), which neither map places (E139\'s is the direct map\'s alignment 0x50021641): after the retf at 0x5021050a, `movbu (0x62316834),d1; mov 819,d2; cmp 1,d1` with 787 for mode 1 and 900 for a 20000 us period read through 0x50210666, as E139\'s 0x50021641 (D)' },
       '0x5014b7c7': { to: '0x501092da', why: 'the dial init (menu.mjs DIAL_INIT), which neither map places: like E143\'s it selects the board\'s dial table (src/fw/facts.mjs dialStore) and clears the dial counters, the 16-byte slots from 0xa28b9ecc, the map\'s DIAL_COUNTERS (0x501092f7..0x50109327), after a call of 0x501091eb, which clears ten bytes from 0xa28b9f10 and the three after them; then it posts a message through 0x50053de3 (0x50109342), which E143\'s does not; its one caller is 0x50108d5f (D)' },
     },

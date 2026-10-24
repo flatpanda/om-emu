@@ -20,8 +20,11 @@
 // interrupt (0x5005c989, 0x5005c9dc, D), as a level interrupt needs, and the sub-CPU raises and drops PC3 back to back
 // when it has a reply ready (0x8012eb6..0x8012eca, D), which an edge armed after the rise would miss; the enable writes
 // the type's bit to the status before it enables (0x500523e2..ec), which clears a stale latch and keeps a held level.
-// Any other offset, width or alignment, a status bit outside bits, and a debugger write are UNKNOWN (bus error, printed
-// for a CPU access).
+// On a board whose pin 102 has a group slot (ready.shared: E139's and E134's pin 77, D: its record's group handler and
+// status and enable words), the words also hold the group's other pins' bits: theirs are storage, a status write
+// clearing them, and nothing sets them (I: those pins are not modelled; the IRQ is the group's, high while any bit of
+// status & enable is set, and only the ready pin's can be). Any other offset, width or alignment, a status bit outside
+// bits on a dedicated slot, and a debugger write are UNKNOWN (bus error, printed for a CPU access).
 import { BUS, K_MMIO, addRegion, ctx } from '../core/mem.mjs';
 
 const hex8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
@@ -33,7 +36,7 @@ export class LinkPins {
   constructor(machine, intc, cfg) {
     this.m = machine;
     this.intc = intc;
-    this.cfg = { ready: { ...cfg.ready, bits: [...cfg.ready.bits] }, request: { ...cfg.request }, reset: { ...cfg.reset } };
+    this.cfg = { ready: { ...cfg.ready, bits: [...cfg.ready.bits], shared: !!cfg.ready.shared }, request: { ...cfg.request }, reset: { ...cfg.reset } };
     this.level = { ready: 0, request: 0, reset: 0 };
     this.words = { ready: [0, 0], request: [0, 0], reset: [0, 0] };       // +4, +8
     this.status = 0;
@@ -93,7 +96,7 @@ export class LinkPins {
     return word === 'status' ? this.status : this.enable;
   }
   irqWrite(word, value, size, dbg) {
-    const r = this.cfg.ready, bits = r.bits[0] | r.bits[1];
+    const r = this.cfg.ready, bits = r.shared ? 0xFFFFFFFF : r.bits[0] | r.bits[1];
     if (dbg || size !== 4 || (value & ~bits)) return this.unknown(`om1.link-pin-ready-${word}`, 'write', r[word], size, value, dbg);
     if (word === 'status') this.status = (this.status & ~value) >>> 0;
     else this.enable = value >>> 0;

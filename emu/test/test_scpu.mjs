@@ -20,7 +20,7 @@
 //              that is not a write of its own)
 //   scpuSession  (firmware; the model of OM_EMU_MODEL) a play session's start through the link: the stand-ins, the
 //              frames of PER_SCPU's start and the store init with their replies, IRQ 119 attached, the pins in
-//              PER_SCPU's order, PER_SCPU waiting with no errlog of its own; E139 and E134 stop at the link's start
+//              PER_SCPU's order, PER_SCPU waiting with no errlog of its own; a body without the link's pins stops at its start
 //   node emu/test/test_scpu.mjs [--session]      (OM_EMU_MODEL=E146 node emu/test/test_scpu.mjs --session: another body)
 import { createMachine, SCPU_DOORBELL } from '../src/machine.mjs';
 import { SET_INPUTS } from '../src/dev/scpu.mjs';
@@ -112,7 +112,10 @@ function pinTests(ok) {
   ok(word('reset', 4) === 0x123, 'the configuration word is storage');
   ok(throwsAs(() => pins.wordWrite('ready', 0, 1, 4, false), BUS), 'a store to the input pin is a bus error');
   ok(throwsAs(() => pins.wordWrite('request', 0, 2, 4, false), BUS), 'an output store other than 0 or 1 is a bus error');
-  ok(throwsAs(() => sw(4), BUS), 'a status bit outside the two is a bus error');
+  if (L.ready.shared) {
+    en(b0 | 4); sw(4);
+    ok(pins.irqRead('enable', 4, false) === (b0 | 4), 'a shared group\'s other enable bits are storage');
+  } else ok(throwsAs(() => sw(4), BUS), 'a status bit outside the two is a bus error');
 }
 
 function memoryTests(ok) {
@@ -261,7 +264,7 @@ export function scpuUnits() {
 // PER_SCPU's registration (E143 exactly; elsewhere the frames are the API's requests in order), the pins move in
 // PER_SCPU's order (the reset pulse, the ready line, then per transaction
 // request low, ready low, ready high, ...), PER_SCPU waits for its next message with no errlog of its own and the
-// transfers are full duplex on its channel; on a board without them (E139, E134) the session's start stops naming it.
+// transfers are full duplex on its channel; on a board without the pins the session's start stops naming them.
 export async function scpuSession() {
   const bad = [];
   let checks = 0;
@@ -288,7 +291,8 @@ export async function scpuSession() {
   const posted = sl.scpu_requests.map((r) => '0x' + r.request.slice(0, 2));
   ok(frames[0]?.cmd === '0x85' && frames[0].data === '020000' && frames[0].reply === '0585028501', `${MODEL}: PER_SCPU's start sends 0x85 {2} first, answered [5, 0x85, 2, 0x85, 1]: ${JSON.stringify(frames[0])}`);
   ok(posted.length > 0 && JSON.stringify(cmds.slice(1)) === JSON.stringify(posted), `${MODEL}: every request the API posted reaches the sub-CPU as a frame, in order: ${JSON.stringify(cmds)} for ${JSON.stringify(posted)}`);
-  ok(sl.scpu_waits.length === posted.length && sl.scpu_waits.every((w) => w.rc === 0), `${MODEL}: the requesters' waits return E_OK: ${JSON.stringify(sl.scpu_waits)}`);
+  const waited = sl.scpu_requests.filter((r) => r.request.slice(40, 48) !== '00000000').length;   // a completion at +20
+  ok(sl.scpu_waits.length === waited && sl.scpu_waits.every((w) => w.rc === 0), `${MODEL}: the requesters' waits return E_OK: ${JSON.stringify(sl.scpu_waits)}`);
   if (MODEL === 'E143') {
     ok(JSON.stringify(cmds) === JSON.stringify(['0x85', '0x06', '0x01', '0x86']) && frames[3].reply === '06861c020080' && sl.scpu_replies[0]?.bytes === '1c020080', `E143: 0x06, 0x01, 0x86 with the word read back: ${JSON.stringify(frames)}`);
     ok(frames[2].data === 'e60701010000000500', `E143: the reset date's frame cut to 10 bytes, its status 10501 reaching the sub-CPU as 5: ${frames[2].data}`);
@@ -300,7 +304,8 @@ export async function scpuSession() {
   ok(lab.nk.state(link.tid) === 4 && lab.scpu_dev.state === 'idle' && lab.scpu_dev.powered && !link.open, `${MODEL}: PER_SCPU waits, the sub-CPU idle with its gate open, the channel closed`);
   const own = lab.kernel.errors.filter(([c]) => (c >>> 16) === 0x1900).map(([c]) => '0x' + c.toString(16));
   ok(own.length === 0, `${MODEL}: no errlog of PER_SCPU's or PER_SIO's: ${own}`);
-  ok(link.channel === 2 && link.config.clock === 6000000 && link.transfers.every((t) => t.tx.length === t.rx.length), `${MODEL}: channel ${link.channel}, clock ${link.config.clock}, ${link.transfers.length} transfers`);
+  ok(link.config.channel === link.channel && link.config.clock > 0 && link.transfers.every((t) => t.tx.length === t.rx.length), `${MODEL}: channel ${link.channel}, clock ${link.config.clock}, ${link.transfers.length} transfers`);
+  if (MODEL === 'E143') ok(link.channel === 2 && link.config.clock === 6000000, `E143: channel 2 at 6 MHz: ${link.channel}, ${link.config.clock}`);
   pl.close_session();
   return { checks, bad };
 }

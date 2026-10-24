@@ -57,6 +57,8 @@ export const ALLOW = [
     reason: 'the recorded ISA vectors: instruction encodings and register values, memory from a seeded generator (about 1.3 MB)' },
   { rule: 'firmware', path: 'artifacts/nd128/manifest.json', blob: 'aef7d3028a',
     reason: "the ND128 patch's preimage at its patch site (58 bytes of E143 code), as tools/om1_nd128.py records it" },
+  { rule: 'binary', path: 'docs/img/om3-setup-menu.png', blob: '222dc7de78',
+    reason: "the README's screenshot of the emulated OM-3 setup menu, reviewed for publication" },
 ];
 
 // ---- path rules

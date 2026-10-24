@@ -90,7 +90,13 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   insertion as the file module's requests (S-CARD): the firmware formats a blank card itself (FAT32, `OM SYSTEM`) and
   mounts it, and counts the remaining shots and the movie time from it. Each picture taken is also written to the card
   as `C:\DCIM\100OMSYS\P1010001.JPG` and on, through the file module's own file requests (S-RECFILE: a JPEG of
-  S-SCENE's frame at the capture, each 8 x 8 block its mean). The card stays in the slot across a player's power
+  S-SCENE's frame at the capture, each 8 x 8 block its mean). Card Formatting from the menu formats it: the menu's
+  Yes reaches the file module through api_media's own format call (S-MDACTRL, `src/lab/media.mjs`, `docs/hle-gaps.md`
+  4.8.3, in place of the HLS function component), its progress bar runs and the application returns to the menu. The
+  input `{"type": "card", "action": "remove"}` takes the card out of the slot while the camera runs and `"insert"`
+  puts it back: the card switch changes as a body's does and UI_IN decodes it natively, S-MEDIA (in place of the HLS
+  media manager) has the firmware unmount and mount it again, and the shooting screen drops the card's counts and
+  shows them again. The card stays in the slot across a player's power
   cycles; `OM_EMU_CARD=FILE` keeps it between sessions (`host/card.mjs`). On the other bodies the card has no file
   system (S-CARD: the HLS mount state, every picture taken kept as an image of folder 100, a remaining-shots answer of
   999 less the images to the application's getAvailableShootCount, the first slot's card detect state at inserted and
@@ -336,7 +342,7 @@ frame as RGBA, the session log) and sends every other request to the Worker. The
   interpreter and the one machine buffer; `dev/` the devices; `machine.mjs` the board and its gdbstub-equivalent API
   (with budgeted continues: `cont({budget})`, `resume`, `abort`); `lab/` the harness (the HLE layers, the native
   kernel, display, text, menu, navigation, the play session, the Player, the camera application's stand-ins, the
-  scene, the accelerometer's stand-in, and the card with the file system: `sdcard.mjs`, `storage.mjs`, `jpeg.mjs`); `fw/` the `.BIN` unpacker, the model table (`models.mjs`), the per-model address tables (`ports.mjs`, written
+  scene, the accelerometer's stand-in, and the card with the file system: `sdcard.mjs`, `storage.mjs`, `media.mjs`, `jpeg.mjs`); `fw/` the `.BIN` unpacker, the model table (`models.mjs`), the per-model address tables (`ports.mjs`, written
   by `bin/port.mjs`), the cross-build map (`xmap.mjs`, `place.mjs`), the firmware rules (`facts.mjs`) and the boards
   (`board.mjs`); `debug/` the debug API; `trace/` the trace writer; `util/` sha256 for the Worker, bytes and hex text
   (`bytes`, `hex`), counts (`tally`), value text and equality for messages and checks (`show`, `equal`), the numbers
@@ -411,7 +417,7 @@ firmware the run warns and skips that rule. `--explain N` prints what each firmw
 | Command | What it covers | Needs |
 |---|---|---|
 | `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units, the SCPU clock, port words and request server (S-SCPU), the HDMI port's device and sink, the accelerometer stand-in's sample, the SD card model, the FAT reader and the JPEG pair, the publication audit's rules on a throwaway repository | node and git; runs on any checkout in a few seconds |
-| `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts, the node host, the command-line tools, the scene, the camera application, an HDMI plug in play on E143, E146 and E147, check_level on E146, the card and the file system in play on E143 (a blank card formatted and mounted by the firmware, read back independently; the counts from the card; a picture's file written and found again), the firmware map and the regression net's controls | the E143 firmware blocks (E146's and E147's for the HDMI plug, E146's for check_level) and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
+| `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts, the node host, the command-line tools, the scene, the camera application, an HDMI plug in play on E143, E146 and E147, check_level on E146, the card and the file system in play on E143 (a blank card formatted and mounted by the firmware, read back independently; the counts from the card; a picture's file written and found again; Card Formatting from the menu, read back; the card taken out and put back), the firmware map and the regression net's controls | the E143 firmware blocks (E146's and E147's for the HDMI plug, E146's for check_level) and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
 | `node emu/bin/golden.mjs check` | every scenario, every lab of the traced check runs and every check run's output against `golden.json`: what the panels show, what the devices see and what the checks conclude must not change | the firmware |
 | `node emu/bin/checks.mjs [CHECK \| RUN ...]` | every run of `checks/runs.json`, judged on its exit status | the firmware |
 | `node emu/bin/checktrace.mjs RUN [--slice N]` | the labs one check run creates, traced (golden records them) | as checks.mjs |

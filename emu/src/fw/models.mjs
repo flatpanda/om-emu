@@ -101,6 +101,58 @@ export const MODELS = {
     // 0x5000314c / 0x50003156 run the heap's get 0x5000319c / release 0x50003466 with pool 2, whose block size is 16512
     // (the table 0x60029908) and whose memory is 0x62424700.. (0x50003211), S-HEAP's (D)
     heap_pool: { get: 0x5000314C, put: 0x50003156, bytes: 16512 },
+    // The file system's bring-up 0x5088fc8d, called by the boot task (task 43, 0x5002417a at 0x500242ab; D): queues and
+    // semaphores, FILEFGND (0x50894e37, task 14) through 0x50894d42, logsec's init 0x508ac195 (with the SD host init
+    // 0x508acbed: GPIO pins and power 0x508b0121, IRQs 225/227/228 and 229/231/232 attached by 0x508af1ea), the file
+    // layer 0x50888c4a (whose 0x5088d075 reads the file system's NAND area: 0x500022c2(dst, 0x41a00000, 0x80000,
+    // 0x10200), a valid area starting 1, 'OLYM' at 0x1c000 + 0x200 x drive, 0x5088d14e; writes 0x10100 by 0x5088d0bd),
+    // the card driver's detect states (1 for both drives, 0x5087bc5e) and DCFPROC_SUB (0x5087cda8, task 2) through
+    // 0x5087cd68 (X: the lab ran it, those two tasks started). FILECLBK (0x5088fcfc, task 13) serves the file module's
+    // queue 0x1f (FILECLBK_UEXEC, targets 14/15/17/23): a 16-byte message {reply queue, word, code, parameter}, the
+    // code's class by (code & 0xf0) through 0x60a10578 (0x5088fd8a); while it handles one, 0x62ae4cd0 holds the message
+    // (cleared at the loop's top, 0x5088fd0b). Codes: 0x51 the FAT mount (dosfat op 0, 0x5088167d -> 0x50882ebd: sdmem
+    // command 2, the MBR and boot sector; 0xe08 when the card has no file system), 0x55 the format (op 5, 0x508816ad ->
+    // 0x508848ba), the dosfat block's +4 op, +6 drive, +48 the error (0x5088fde0, 0x508812f2); 0xf0 a DCF process
+    // command {u16 command, u16 drive} (0x5089009d -> 0x5087bce9: 1 the card in, detect 1 -> 2; 3 the card's lists,
+    // 2 -> 3); 0x31 the DCF numbering mount (dcfnum op 0, 0x5088ff40 -> 0x50877ea8 -> 0x5087825a; its block's +2 drive,
+    // +42 the next folder, +44 the next file), which sets the DCF state word's bit 16, the drive status's mount bit
+    // 0x1000 (0x508a83e7; X). The SD command layer 0x508ad03c(command): +4 the driver job, +8 the completion (by
+    // `calls`, a0 the command, d0 the status; 0x508ad065 calls it at once for a busy port), +12 the port, +24 the
+    // command code, +28 the argument, +32..+44 the response, +48 the buffer, +52 the block count, +56 the block size,
+    // +74 the status (D: 0x508b1a41, 0x508b1a7d, 0x508b23d1 build it; 0x508b3fcf completes). The SD host's register
+    // pages (port 0 0x99000000, port 1 0x9a300000, 0x5002539c) and the GPIO page the init's pins and power are in; the
+    // SD core's +0x3c bit 13, which the clock setter 0x508acf2b polls before it writes the clock (TMIO's SD_INFO2
+    // SCLKDIVEN, I). The album manager's per-drive init 0x508b67e8 (called by the DCF numbering mount at 0x5087853a,
+    // its result unused), which starts ALBM_MAIN (0x508b7e91, 0x508beba7) on its first call; ALBM_MAIN's first request
+    // (0x5048ee61) allocates its id through 0x5050a086, the only udf07 site (docs/om1-udf-spec.md row 14: keeps
+    // faulting; X). The cache flush 0x5004e68a is called by the file layer (0x508881fa, X). The drive status 0x508a8327.
+    storage: {
+      init: 0x5088FC8D, tasks: [0x50894E37, 0x5087CDA8],
+      fileclbk: { entry: 0x5088FCFC, queue: 0x1F, busy: 0x62AE4CD0 },
+      codes: { mount: 0x51, format: 0x55, dcf: 0xF0, number: 0x31 },
+      unformatted: 0xE08,
+      nand: { access: 0x500022C2, area: [0x41A00000, 0x80000], read: 0x10200, write: 0x10100 },
+      command: 0x508AD03C,
+      host: { pages: [[0x99000000, 0x10000], [0x9A300000, 0x10000], [0x9B880000, 0x1000]], idle: [[0x9900203C, 0x2000], [0x9A30203C, 0x2000]] },
+      album_init: 0x508B67E8,
+      code: [0x50872000, 0x508B4700],
+      status: 0x508A8327, detect: 0xA33AF3D4,
+      // the movie time query (0x5042da58) takes the time left from the movie module's copy, which the DCF remain count
+      // fills from the card (0x5045c4ac, called from 0x50448d83, X), and converts the movie info's frame rate (+720 of
+      // the static info 0xa32ed128, which the movie module's set-up 0x5045c3fd fills; not run in the lab, so 0) for the
+      // recording's time code: 0x5044949b takes 23, 24, 25, 30, 50 or 60 and logs this code for any other (D); the time
+      // left is computed before it (0x5045ada2)
+      // S-RECFILE's file requests (FILECLBK's codes 0x10000 + n through fileif's table 0x60a125dc, 0x50894eb3; its
+      // block: +0 the result, +4.. the arguments): 1 fopen(path, mode) -> FILE (0x508a5da9; the mode letters through
+      // 0x60a16b20: r w a + b c d e h), 3 fwrite(buffer, size, count, FILE) -> count (0x508a6b87), 2 fclose(FILE)
+      // (0x508a63ce), as the FlashAir configuration writer calls them ('wb' / 'ab', 0x5101efe0, D); 12 mkdir(path)
+      // (0x508a7c61; X: it made C:\DCIM). The drive letter 'C' is drive 0 (0x508a8149, X). The DCF names: the folder
+      // '100OMSYS' and the first file 'P1010001JPG', the DCF module's initial names (0x508749a6, 0x508749ce, D); a
+      // camera's file name carries its clock's month and day (I)
+      fileif: { open: 0x10001, close: 0x10002, write: 0x10003, mkdir: 0x1000C },
+      names: { drive: 'C', folder: 'OMSYS', file: 'P101', ext: 'JPG' },
+      errlog: [[0x39000903, 'the movie time query\'s frame rate is 0: the movie module\'s info is not set up in the lab (the time left is the card\'s)']],
+    },
   },
   E146: {
     name: 'OM-1 II', bin: 'OLY_E_146_1300_0000_0000.BIN', version: '1.3', res_block: 'blk02000000.OE.0101.bin', checked: true,

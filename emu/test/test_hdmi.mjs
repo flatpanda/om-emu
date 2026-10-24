@@ -23,6 +23,7 @@ import { BUS } from '../src/core/mem.mjs';
 import { BOARD } from '../src/fw/board.mjs';
 import { PLUG, EDID, W_EDID_LEN, W_DDC_READS } from '../src/dev/hdmi.mjs';
 import { sinkEdid, SINK_NAME, SINK_VICS } from '../src/lab/edid.mjs';
+import { EXPECTED_ERRLOG } from '../src/lab/display.mjs';
 
 const throwsAs = (fn, cls) => { try { fn(); return false; } catch (e) { if (e === cls || e instanceof cls) return true; throw e; } };
 const le32 = (v) => new Uint8Array([v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255]);
@@ -120,7 +121,9 @@ export async function hdmiSession() {
   ok(attached(irq)[0] === 1 << 5 && attached(irq)[1] !== 0, `${MODEL}: the HDMI init attached IRQ ${irq} at level 5: ${attached(irq)}`);
   ok(JSON.stringify(rec.uiin_codes) === '["0x02020501"]', `${MODEL}: UI_IN forwards the connect report: ${JSON.stringify(rec.uiin_codes)}`);
   ok((rec.dispq ?? []).some((d) => d.cmd === 18), `${MODEL}: the camera application sends DISPLAY cmd 18: ${JSON.stringify(rec.dispq ?? [])}`);
-  ok(Object.keys(rec.errlog ?? {}).length === 0, `${MODEL}: no errlog: ${JSON.stringify(rec.errlog)}`);
+  // the logs the lab expects (display.mjs EXPECTED_ERRLOG: E143's movie time query with the card native) aside
+  const own = Object.keys(rec.errlog ?? {}).filter((c) => !EXPECTED_ERRLOG.has(parseInt(c, 16)));
+  ok(own.length === 0, `${MODEL}: no errlog: ${JSON.stringify(rec.errlog)}`);
   if (MODEL === 'E143') {
     const rd = (a, n) => [...lab.sim.read(a, n)], P = E143_PARSE, edid = sinkEdid();
     ok(JSON.stringify(rd(P.mfg, 2)) === JSON.stringify([edid[8], edid[9]]) && JSON.stringify(rd(P.product, 2)) === JSON.stringify([edid[10], edid[11]]),
@@ -145,7 +148,7 @@ export async function hdmiSession() {
   lab.sim.write(HDMI_WINDOW + W_EDID_LEN, le32(edid.length));
   lab.cpu_store(HDMI_DOORBELL, (PLUG << 24) >>> 0);
   s.idle_slice(lab.lab_time() + 100e6);
-  const errs = lab.kernel.errors.slice(e0).map(([c]) => '0x' + c.toString(16));
+  const errs = lab.kernel.errors.slice(e0).filter(([c]) => !EXPECTED_ERRLOG.has(c)).map(([c]) => '0x' + c.toString(16));
   ok(s.hdmi_status().ddc_reads === 6 && s.hdmi_status().edid_state === '0xff', `${MODEL}: a bad checksum: six reads of block 0, EDID state 0xff: ${JSON.stringify(s.hdmi_status())}`);
   ok(JSON.stringify(errs) === JSON.stringify(['0x37009108', '0x37008206']), `${MODEL}: the errlog of the read and of the hot-plug handler: ${JSON.stringify(errs)}`);
   ok(lab.uiin_codes.slice(c0).some(([, c]) => c === 0x02020501), `${MODEL}: the connect report is still sent: ${JSON.stringify(lab.uiin_codes.slice(c0))}`);

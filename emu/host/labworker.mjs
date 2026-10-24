@@ -14,6 +14,7 @@ import { PortQueue, F_KILL } from './portqueue.mjs';
 import { stackOf } from '../checks/lib/errors.mjs';
 import { installChildTrace, tracedPlay } from '../checks/lib/childtrace.mjs';
 import { fileNvram } from './nvram.mjs';
+import { fileCard } from './card.mjs';
 import { debugHost } from './debughost.mjs';
 
 const { args: a, flags, port, out, argv } = workerData;
@@ -49,6 +50,8 @@ const env = {
   onLogTrim: (n) => post({ type: 'logtrim', n }),
   // OM_EMU_NVRAM=FILE: the camera keeps its settings and clock between sessions in FILE (menu.mjs S-NVRAM)
   ...(process.env.OM_EMU_NVRAM ? { nvram: fileNvram(process.env.OM_EMU_NVRAM) } : {}),
+  // OM_EMU_CARD=FILE: the card in the first slot is kept between sessions in FILE (storage.mjs, host/card.mjs)
+  ...(process.env.OM_EMU_CARD ? { card: fileCard(process.env.OM_EMU_CARD) } : {}),
 };
 let pl = null;
 try {

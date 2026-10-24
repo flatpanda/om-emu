@@ -37,6 +37,7 @@ import { show } from '../util/show.mjs';
 import { decimalInt, intLiteral } from '../util/parse.mjs';
 import { setKey } from '../util/tracejson.mjs';
 import { LiveDebug } from '../debug/live.mjs';
+import { memoryCard } from './sdcard.mjs';
 
 export const PNG_CACHE = 8, SLICE_NS = 50000000, GATE_SLICE_NS = 10000000, GATE_LIMIT_NS = 2000000000, BEHIND_NS = 250000000;
 export const DIAL_CAP = 8, TOUCH_MIN_NS = 20000000, TOUCH_GAP_CAP_NS = 2000000000, TOUCH_TAP_CAP_NS = 320000000;
@@ -227,7 +228,9 @@ export function replayEntries(file, text) {
 export class Player {
   constructor(a, env) {
     this.a = a;
-    this.env = env;
+    // the card in the first slot (storage.mjs) stays in the slot across the player's sessions (a power cycle): the
+    // host's (env.card, OM_EMU_CARD), else one in memory for the player's life
+    this.env = MODEL_INFO.storage && !env.card ? { ...env, card: memoryCard() } : env;
     this.wall = env.wallClock ?? (() => performance.now() / 1000);
     this.q = env.queue ?? new ArrayQueue();
     this.stop = false;
@@ -364,6 +367,7 @@ export class Player {
     if (this.session?.lab?.scpu_server) used.push('S-SCPU');                                // a body whose SCPU keeps its date and backed-up words
     if (this.session?.scpu_port) used.push('H-SCPUIRQ', 'H-UIINPORT', 'H-SCPUPORT');        // a body whose group 0 comes through the SCPU's ports
     if (this.session?.hdmi_port) used.push('H-GIOSLOTS', 'S-HDMISINK', 'A-HDMI-1');          // --hdmi on: the HDMI port, its sink
+    if (this.session?.storage) used.push('H-FILEINIT', 'H-FILECLBK', 'S-SDHOST', 'S-SDCARD', 'S-FSNAND', 'S-ALBM', 'S-RECFILE');   // the file system native on a card (storage.mjs)
     if (this.session?.acc) used.push('H-ACCINIT', 'S-ACCREG', 'S-ACCSAMPLE', 'H-SLOPEINIT', 'A-ACC-1', 'A-ACC-2', 'A-ACC-3');   // a body whose accelerometer is stood in at its sample cache
     // the model's own stand-ins (src/fw/models.mjs return_stubs and call_skips, src/lab/play.mjs), each by its name
     for (const [, , name] of MODEL_INFO.return_stubs ?? []) used.push(name);

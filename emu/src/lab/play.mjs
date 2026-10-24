@@ -12,6 +12,7 @@ import { SET_INPUTS } from '../dev/scpu.mjs';
 import { PLUG, EDID, W_EDID_LEN, W_CABLE, W_DDC_READS } from '../dev/hdmi.mjs';
 import { sinkEdid } from './edid.mjs';
 import { Accelerometer } from './acc.mjs';
+import { Storage } from './storage.mjs';
 import { imageView } from '../fw/image.mjs';
 import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143 } from '../fw/facts.mjs';
 import * as D from './display.mjs';
@@ -795,6 +796,11 @@ export class PlaySession extends N.NavSession {
     this.playview_hold = false;    // S-PLAYVIEW: a card image's frame shown
     this.camapp = null;            // S-CAMAPP (camapp.mjs), from the bring-up on
     this.acc = null;               // the accelerometer (acc.mjs) on a body that gives it (models.mjs acc)
+    this.storage = null;           // the card and the file system (storage.mjs) on a body that gives them (models.mjs storage)
+  }
+  close() {
+    if (this.storage) { const st = this.storage; this.storage = null; st.close(); }
+    super.close();
   }
   // Steps are renumbered with a counter that trim() does not cut.
   begin(tag) {
@@ -869,7 +875,8 @@ export class PlaySession extends N.NavSession {
     this.ipi_bring_up();
     if (o.mutant !== 'no-aeinit') this.aeinit_bring_up();   // without it the interpolation's div fault comes back
     if (MODEL_INFO.acc) this.acc_bring_up();
-    this.end('play-bring-up', 'bring-up', [], [], { idle_codes: this.idle_codes.map(h8) });
+    if (MODEL_INFO.storage && !globalThis.process?.env?.OM_NO_STORAGE) this.storage_bring_up();
+    this.end('play-bring-up', 'bring-up', [], [], { idle_codes: this.idle_codes.map(h8), ...(this.storage && { storage: { ...this.storage.status(), log: this.storage.take_log() } }) });
     // S-CAMAPP: the application starts, creates the GUI (H-GUIBYAPP) and takes it to its screen, on the EVF for an EVF
     // start (S-OUTDISP: its own 131 with lOutput 7); start 'menu' then presses MENU
     this.begin(`${String(this.steps.length).padStart(2, '0')}-S-CAMAPP start`);
@@ -916,6 +923,13 @@ export class PlaySession extends N.NavSession {
     const why = this.acc.probe_problem();
     if (why) throw new PlayError(`H-ACCINIT: ${why}`);
     this.acc.prime();
+  }
+  // H-FILEINIT, H-FILECLBK, S-SDHOST, S-SDCARD, S-FSNAND, S-ALBM and the card's insertion (storage.mjs): the file
+  // system's bring-up natively in the boot's place and the card mounted by the firmware's own path, before the
+  // application starts, which asks for the card's state at its start
+  storage_bring_up() {
+    this.storage = new Storage(this, MODEL_INFO.storage);
+    this.storage.bring_up();
   }
   // the SCPU interface's port levels (bit k port k), through the lab's doorbell (src/dev/scpu.mjs)
   port_levels(levels) { this.lab.cpu_store(SCPU_DOORBELL, (SET_INPUTS << 24 | levels) >>> 0); }
@@ -1746,6 +1760,12 @@ export class PlaySession extends N.NavSession {
   // through image, and the live-view plane shows black until ctrl 1 (I: what the camera's plane shows meanwhile). Called
   // while the firmware runs: the frame changes at the next composite (scene_frame).
   scene_through(on) { this.through_off = !on; }
+  // S-RECFILE (storage.mjs): the frame of a picture's file, S-SCENE's frame rendered again from the scene kept with the
+  // capture (camapp.mjs S-CARD's view), or black for a capture without the live view
+  picture_frame(view) {
+    const [src] = D.LV_SCALED[this.device];
+    return view ? SC.renderFrame(view.scene, src[0], src[1], view.t, view.frame_no) : this.black_frame();
+  }
   black_frame() {
     const [src] = D.LV_SCALED[this.device];
     const row = new Uint8Array(2 * src[0]);

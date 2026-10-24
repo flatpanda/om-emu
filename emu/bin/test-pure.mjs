@@ -9,9 +9,9 @@
 // the firmware map's units (test_fwmap.mjs: the machine's coverage option off and on, fwmap's decoder against the
 // interpreter's transfer forms, the coverage union, the block aggregation), the SCPU's clock and request server
 // (test_scpu.mjs), the HDMI port's device and sink (test_hdmi.mjs), the accelerometer stand-in's sample
-// (test_acc.mjs), the debug API's argument checks, halt, trace filters and live-route units (test_live.mjs
-// liveUnits: a machine on a blank image) and the publication audit's rules on a throwaway repository
-// (test_pubaudit.mjs).
+// (test_acc.mjs), the SD card model and the FAT reader (test_storage.mjs), the debug API's argument checks, halt,
+// trace filters and live-route units (test_live.mjs liveUnits: a machine on a blank image) and the publication
+// audit's rules on a throwaway repository (test_pubaudit.mjs).
 // bin/test.mjs runs all of these too, with everything else.
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
@@ -26,6 +26,7 @@ import { fwmapUnits } from '../test/test_fwmap.mjs';
 import { scpuUnits } from '../test/test_scpu.mjs';
 import { hdmiUnits } from '../test/test_hdmi.mjs';
 import { accUnits } from '../test/test_acc.mjs';
+import { storageUnits } from '../test/test_storage.mjs';
 import { liveUnits } from '../test/test_live.mjs';
 import { pubauditTests } from '../test/test_pubaudit.mjs';
 
@@ -58,6 +59,7 @@ report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnit
 report('SCPU clock, ports and request server (S-SCPU)', scpuUnits());
 report('HDMI port: transmitter, hot-plug pin, sink (S-HDMISINK)', hdmiUnits());
 report('accelerometer sample (S-ACCSAMPLE)', accUnits());
+report('SD card and FAT reader (S-SDCARD, refs/fat.mjs)', storageUnits());
 report('debug API: argument checks, halt, trace filters, live route', await liveUnits());
 report('publication audit (throwaway repository, made-up firmware)', await pubauditTests());
 const fa = factsTests();

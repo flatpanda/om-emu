@@ -11,7 +11,8 @@
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
 // (test_camapp.mjs), the SCPU's clock and request server (test_scpu.mjs), the publication audit
 // (test_pubaudit.mjs), the HDMI port and a plug in play on E143,
-// E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the firmware
+// E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the card and the
+// file system on E143 (test_storage.mjs), the firmware
 // rules of src/fw/facts.mjs (test_facts.mjs) and the firmware map (test_fwmap.mjs:
 // the machine's coverage option, the static map's determinism and pinned headline, the labels' keys, run.mjs under
 // OM_COVERAGE). The fixtures they compare with are emu's own (test/fixtures, checks/fixtures, golden.json): a
@@ -165,6 +166,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipp
   console.log(`accelerometer: sample units ${au.checks - au.bad.length}/${au.checks}; check_level on E146 ${r.status === 0 ? 'ok' : 'FAILED'}`);
   [...au.bad, ...(r.status === 0 ? [] : (r.stdout + r.stderr).trim().split('\n').map((l) => `E146: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += au.bad.length + (r.status === 0 ? 0 : 1);
+}
+// the card and the file system (storage.mjs): the card model and the FAT reader without firmware, then play sessions on
+// E143 whose card the firmware formats and mounts itself
+{
+  const { storageUnits, storageSession } = await import('../test/test_storage.mjs');
+  const su = storageUnits(), ss = await storageSession();
+  console.log(`card and file system: card model and FAT reader ${su.checks - su.bad.length}/${su.checks}; in play ${ss.checks - ss.bad.length}/${ss.checks}`);
+  [...su.bad, ...ss.bad].forEach((x) => console.log('  ', x));
+  bad += su.bad.length + ss.bad.length;
 }
 // the camera's non-volatile state kept between sessions (S-NVRAM): no date prompt, a setting kept across sessions
 {

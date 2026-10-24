@@ -83,9 +83,18 @@ information, S2 the capture display and the rec view. What runs below it is stoo
 - module requests are answered (S-MODACK), the HLS transaction layer's exec succeeds (S-TRAACK), and the modules'
   notifications of a release (focus, exposure, rec view) are posted as the callbacks the HLS would make of them
   (S-RELSEQ); no image is captured. The focus result and the exposure time come from S-SCENE when its live view is on.
-- A card is in the SD slot (S-CARD: the HLS mount state, every picture taken kept as an image of folder 100, a
-  remaining-shots answer of 999 less the images to the application's getAvailableShootCount, the first slot's card
-  detect state at inserted and a movie time left of an hour less what has been recorded), the system timer module's
+- A card is in the SD slot. On E143 it is an 8 GiB SDHC card behind the firmware's SD command layer (S-SDCARD,
+  `src/lab/sdcard.mjs`), and the firmware's own storage stack runs on it (`src/lab/storage.mjs`, `docs/hle-gaps.md`
+  4.8.2): the file system's bring-up and the file tasks natively before the application starts (H-FILEINIT,
+  H-FILECLBK; the SD host's registers S-SDHOST, its NAND area S-FSNAND, the album manager S-ALBM), the card's
+  insertion as the file module's requests (S-CARD): the firmware formats a blank card itself (FAT32, `OM SYSTEM`) and
+  mounts it, and counts the remaining shots and the movie time from it. Each picture taken is also written to the card
+  as `C:\DCIM\100OMSYS\P1010001.JPG` and on, through the file module's own file requests (S-RECFILE: a JPEG of
+  S-SCENE's frame at the capture, each 8 x 8 block its mean). The card stays in the slot across a player's power
+  cycles; `OM_EMU_CARD=FILE` keeps it between sessions (`host/card.mjs`). On the other bodies the card has no file
+  system (S-CARD: the HLS mount state, every picture taken kept as an image of folder 100, a remaining-shots answer of
+  999 less the images to the application's getAvailableShootCount, the first slot's card detect state at inserted and
+  a movie time left of an hour less what has been recorded). The system timer module's
   long timers run out (S-LONGTIMER), and a lens is on the mount (S-LENS: an attach flag, a lens-ready byte and a
   12-40mm F2.8 PRO record, so the screen shows S-AF and the AF target).
 - A half press in focus shows the green AF frame and focus mark. They are CPU 3's (its task DISP_FRAME draws them into
@@ -116,6 +125,8 @@ node emu/bin/play.mjs --no-browser --idle off    # its server alone (HTTP API; -
 node emu/bin/play.mjs --hdmi on                  # with the HDMI port; the input {"type": "hdmi", "action": "plug"}
 OM_EMU_NVRAM=~/.om-emu.json sh emu/play.sh       # keep the settings and the clock between sessions (S-NVRAM): no date
                                                  # prompt at power-on, menu changes back in the next session
+OM_EMU_CARD=emu/out/card/E143.omsd sh emu/play.sh   # keep the card between sessions (E143): formatted once, the
+                                                 # pictures' files stay on it (src/lab/sdcard.mjs cardImage)
 node emu/bin/nav.mjs --time --png each 'DOWN OK MENU'     # a scripted menu session: a line and a PNG per step
 node emu/bin/run.mjs all --trace emu/out/js      # the replayed scenarios, traced (37 labs, about 3 min)
 node emu/bin/run.mjs stage2 --slice 1000000      # the same in budgeted continues of 1 M instructions
@@ -325,7 +336,7 @@ frame as RGBA, the session log) and sends every other request to the Worker. The
   interpreter and the one machine buffer; `dev/` the devices; `machine.mjs` the board and its gdbstub-equivalent API
   (with budgeted continues: `cont({budget})`, `resume`, `abort`); `lab/` the harness (the HLE layers, the native
   kernel, display, text, menu, navigation, the play session, the Player, the camera application's stand-ins, the
-  scene and the accelerometer's stand-in); `fw/` the `.BIN` unpacker, the model table (`models.mjs`), the per-model address tables (`ports.mjs`, written
+  scene, the accelerometer's stand-in, and the card with the file system: `sdcard.mjs`, `storage.mjs`, `jpeg.mjs`); `fw/` the `.BIN` unpacker, the model table (`models.mjs`), the per-model address tables (`ports.mjs`, written
   by `bin/port.mjs`), the cross-build map (`xmap.mjs`, `place.mjs`), the firmware rules (`facts.mjs`) and the boards
   (`board.mjs`); `debug/` the debug API; `trace/` the trace writer; `util/` sha256 for the Worker, bytes and hex text
   (`bytes`, `hex`), counts (`tally`), value text and equality for messages and checks (`show`, `equal`), the numbers
@@ -333,8 +344,8 @@ frame as RGBA, the session log) and sends every other request to the Worker. The
   throughout; the Player's HTTP API and session logs are plain JSON (`JSON.stringify` / `JSON.parse`).
 - `refs/`: the checks' independent references (the menu reference with its raster and navigation rules, the font, the
   settings tables, the OSD bitmap format, the MT19937 generator with CPython-compatible seeding (`mt19937`), the
-  reference compositor and register formulas, the live-view formulas, the ISA and interrupt expectations), Worker-safe
-  and importing only `refs/`.
+  reference compositor and register formulas, the live-view formulas, the ISA and interrupt expectations, a FAT reader
+  `fat.mjs` and a baseline JPEG decoder `jpeg.mjs` for the card's files), Worker-safe and importing only `refs/`.
 - `checks/`: one node command per check, `checks/lib/` their helpers, `checks/runs.json` the run table.
 - `scenarios/`: the scenario replayers (`kernel.mjs`, `osd_replay.mjs`, `session_replay.mjs`, `bind.mjs`) and the
   replayed scenarios' inputs (`scenarios/calls/`).
@@ -399,13 +410,13 @@ firmware the run warns and skips that rule. `--explain N` prints what each firmw
 
 | Command | What it covers | Needs |
 |---|---|---|
-| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units, the SCPU clock, port words and request server (S-SCPU), the HDMI port's device and sink, the accelerometer stand-in's sample, the publication audit's rules on a throwaway repository | node and git; runs on any checkout in a few seconds |
-| `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts, the node host, the command-line tools, the scene, the camera application, an HDMI plug in play on E143, E146 and E147, check_level on E146, the firmware map and the regression net's controls | the E143 firmware blocks (E146's and E147's for the HDMI plug, E146's for check_level) and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
+| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units, the SCPU clock, port words and request server (S-SCPU), the HDMI port's device and sink, the accelerometer stand-in's sample, the SD card model, the FAT reader and the JPEG pair, the publication audit's rules on a throwaway repository | node and git; runs on any checkout in a few seconds |
+| `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts, the node host, the command-line tools, the scene, the camera application, an HDMI plug in play on E143, E146 and E147, check_level on E146, the card and the file system in play on E143 (a blank card formatted and mounted by the firmware, read back independently; the counts from the card; a picture's file written and found again), the firmware map and the regression net's controls | the E143 firmware blocks (E146's and E147's for the HDMI plug, E146's for check_level) and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
 | `node emu/bin/golden.mjs check` | every scenario, every lab of the traced check runs and every check run's output against `golden.json`: what the panels show, what the devices see and what the checks conclude must not change | the firmware |
 | `node emu/bin/checks.mjs [CHECK \| RUN ...]` | every run of `checks/runs.json`, judged on its exit status | the firmware |
 | `node emu/bin/checktrace.mjs RUN [--slice N]` | the labs one check run creates, traced (golden records them) | as checks.mjs |
 | `node emu/bin/bench.mjs SCENARIO --passes 5` | MIPS and cost per stop; exit 1 if a pass does not repeat pass 0 | the firmware |
-| `node emu/bin/playperf.mjs` | the play workload on the Player; exit 1 unless its digest is `a981d0a3041b1d55` | the firmware |
+| `node emu/bin/playperf.mjs` | the play workload on the Player; exit 1 unless its digest is `33b134deb36a03ef` | the firmware |
 | `node emu/bin/snapgate.mjs kernel-5c osd shoot-tft` | snapshot detours leave the sessions and the end state unchanged | the firmware |
 | `OM_FW_DIR=fw node emu/bin/webgate.mjs --rounds 4` | headless Chrome: the Worker against node and `bin/run.mjs`, the page (keys, touch, canvas, session log), no uploads; about 5 min | the `.BIN`, Chrome |
 | `node emu/bin/modelcheck.mjs` | the ported models marked `checked` in `src/fw/models.mjs` (E146, E147, E144, E139, E134, E137, E142, E140, E125, E130), or those named: start, S1, S2, PLAY, INFO, PLAY on the TFT, and start, S1, S2 on the EVF of a body with one; GUI states by name; after S1 the count probe: the screen must change with S-CARD's remaining-shots count and only there (all pass; a body expected to fail it goes in PROBE_XFAIL with its reason, strictly: a pass of an expected failure fails the run) | the models' firmware |

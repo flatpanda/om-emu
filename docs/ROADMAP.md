@@ -147,8 +147,21 @@ the survey table.
 
 ### Next stops
 
+- **The card on the other bodies:** on E143 the file system runs natively on a card since 2026-10-23 (hle-gaps.md
+  4.8.2; its addresses are E143's hand facts, `src/fw/models.mjs` storage). A body gets it once rules find, in every
+  image, the file system's bring-up, FILECLBK's entry, queue and busy word, its message codes, the SD command layer,
+  the NAND access and its area, the album manager's init and the fileif codes; until then S-CARD keeps their card
+  without a file system.
+- **The card, next on E143:** REC_FILE's own DCF steps (the DCF fnode its media writer uses, `0x5054aa70`), so the
+  firmware's image count follows a picture in the same session and S-CARD's image list retires; the HLS media layer's
+  insertion (EV_MEDIA_MOUNT_REC) in place of S-CARD's requests; the second slot; an SDXC card (exFAT); the SD host at
+  its registers with its interrupts (seam A); playback of the card's files (a JPEG decoder at the codec seam); Card
+  Formatting from the menu (the format runs natively from the file module's request; the menu's Yes sends TRA 1511 to
+  the media component, which only the HLS components run, so S-TRAACK answers it);
+  the movie module's set-up, whose frame rate the movie time query reads (it logs `0x39000903`).
 - **The movie time of the E142 lineage and the E144 family:** E142, E140 and E130, and since survey finding 18 E144
-  and E125 (the others not looked at), show an orange `0:00:00` where E143 shows S-CARD's `1:00:00` (frames, X). E143's
+  and E125 (the others not looked at), show an orange `0:00:00` where E143 showed S-CARD's `1:00:00` and shows the
+  card's time since its file system runs natively (frames, X). E143's
   movie item asks getMovieCountdownTime, whose time-left wrapper reaches S-CARD's movie query (`0x503f3dd3`); E142's
   getMovieTimeInMedia runs in its sessions (E142 `0x5076da59`, X); its time comes from the movie time in media (E142
   `0x502ae8f3`, the place of E143's `0x503f1bcd`, module `0x5000e`), which asks the DCF remain movie time (`0x505fd798`)
@@ -212,7 +225,7 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
 | 3 | interrupt acceptance anywhere, then the machine-owned time model | not started: architecture phases 3 and 4 |
 | 4 | CPU 2, then CPU 3, then CPU 1, natively | not started |
 | 5 | task-start and module-init infrastructure; the HLS component bring-up as the coverage workload's default | not started |
-| 6 | storage at the sdmem seam | not started |
+| 6 | storage at the sdmem seam | started (2026-10-23, hle-gaps.md 4.8.2) on E143, one layer lower, at the SD command layer: an 8 GiB SDHC card (S-SDCARD) the firmware formats (FAT32) and mounts itself, with the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, dosfat and the DCF modules native; the remaining shots and the movie time counted by the firmware from the card; the picture's file written at S2 through the file module (S-RECFILE, in place of REC_FILE) and found by the firmware's DCF scan at the next mount. Open: REC_FILE natively, the second slot, exFAT, the other bodies |
 | 7 | TAKE native with the lens, BC, the sensor control plane and the shutter (the strobe beside it) | not started |
 | 8 | by gain: still capture, live-view statistics and EXP, AF, movie and audio, playback, USB, the power manager, wireless after CPU 1, GPU / C3D, the rest | not started |
 

@@ -39,7 +39,7 @@ through a reference place more; "Per-body status" has their figures).
 
 | Code | Body | fw | Main | Base | Res | Paired | Unmapped | Lab |
 |---|---|---|---|---|---|---|---|---|
-| E143 | OM-1 | 1900 | 32.0 | 0x60021020 (7.5%) | olycompress | - | - | the lab's build |
+| E143 | OM-1 | 1900 | 32.0 | 0x60021020 (7.5%) | olycompress | - | - | the lab's build; its card a real FAT32 card since finding 19 |
 | E146 | OM-1 II | 1300 | 32.0 | 0x60021020 (7.6%) | olycompress | 5.55M | 3 | modelcheck passes (TFT and EVF; the count probe since finding 18) |
 | E147 | OM-3 | 1100 | 32.0 | 0x60021020 (7.5%) | olycompress | 5.25M | 5 | modelcheck passes (since finding 18 with the count probe) |
 | E144 | OM-5 | 1200 | 23.7, 2 sections | 0x60021020 (6.6%) | olycompress | 2.15M | 45 | modelcheck passes (TFT and EVF; the count probe since finding 18) |
@@ -252,6 +252,14 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    slot icon and, newly drawn, an orange movie time `0:00:00` (ROADMAP Next stops; the other bodies' not looked at).
    Forcing the drive status to `0x680` had given the same screen (X). The golden sessions that show the shooting screen
    record the count; every compose that changed differs from the one before only in the count's box (X).
+19. **E143's card is a real one** (2026-10-23, `docs/hle-gaps.md` 4.8.2). On the lab's build the file system runs
+   natively on an SDHC card at the SD command layer, which the firmware formats (FAT32) and mounts itself; the card
+   driver's detect state now comes from the DCF process's card-in (3 after its lists, X) and S-CARD's count and movie
+   time answers are retired there: E143's TFT top bar shows `803` and `[05:25]` on the 8 GiB card (X: frames). The
+   seam's addresses are E143's hand facts (`src/fw/models.mjs` storage), not rules: the other bodies keep S-CARD's card
+   without a file system, so the E142 lineage's and the E144 family's orange `0:00:00` stays (ROADMAP Next stops).
+   `bin/modelcheck.mjs` still excludes E143 from its default set; its count probe sets S-CARD's count, which E143 no
+   longer asks.
 
 ## Per-body status
 

@@ -140,7 +140,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **AV codec back end** (4.5) | 0 | none for HLE: seam S6 bypasses it | CPU 1; the codec engines; IRQs 303-306 | 416,471 / 411,438 (overlay segment 8, CPU 1) | ?: native needs register-level codec models, no documentation | native movie encode and playback below the HLS (I) |
 | **CPUs 1-3 and inter-core** (4.6) | S: K-OTHERCPU, K-BOOTSYNC, K-IPI, no start barrier; S-CPU2 (one post), S-CPU3, S-DISPFRAME on CPU 0; any other doorbell is an error | run CPUs 1-3 natively on one bus; per-core `0x8000` page, INTC bank n to core n, `+0x808/+0x80c` IRQ 324, `+0x810/+0x814` IRQ 325, `+0x800/+0x804` ISC IRQ 323, ticks 139..141. A53: "off" or ISC node 4 | a machine refactor (per-core CPU state), a per-core kernel lab, flash reads for CPU 2's loader and CPU 3's boot jobs, ROADMAP phases 3-4 | 5,422 keyed; 441,542 reachable only from CPU 1-3 tasks (a lower bound) | 5-7 weeks for the cores | the histogram, a native DISP_FRAME, cross-core owners (AUD_MAIN, AVM) can start; three stand-ins and four kernel stand-ins retire |
 | **SCPU, power, clock, on-board sensors, persistence** (4.7) | S: S-SCPU, the request server at the request API (since 2026-10-23: `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1); the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / opt-in S-NVRAM; N: the ACC module init, ACC_MAIN, PER_SLOPE, the level gauge and Level Adjust with the accelerometer at its sample cache (since 2026-10-23, 4.7.3; H-ACCINIT, S-ACCREG, S-ACCSAMPLE, H-SLOPEINIT) | the accelerometer at the PER_SIO transfer and its data-ready pin (ACC_SENS_MAIN native); PER_ROTATE; S-NVRAM's NAND seam as the default | lab time; the UI_IN, SCPU and PER_SIO inits, the GIO init for the data-ready pin; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, rotation, eye sensor (Level Adjust and the level gauge in, 4.7.3) |
-| **Card and file system** (4.8) | S: S-CARD; the DCF remain count runs and says "not mounted" (X) | a block device at the sdmem request `0x508b1cdc` with a host FAT32 / exFAT image; sd_mount's result beside it | task starts (EYEFI's init chain, FILECLBK, FILEFGND, DCFPROC_SUB), IRQs anywhere (completions are IRQ to flag) | 115,103 / 108,887 (17k of it self-test and debug) | 3-5 weeks | a card that fills, real files in DCIM, Card Formatting, both slots |
+| **Card and file system** (4.8) | N on E143 since 2026-10-23 (4.8.2): the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, the format, dosfat, DCF and the shots / movie-time counts natively on an 8 GiB SDHC card at the SD command layer (S-SDCARD, S-SDHOST, S-FSNAND, S-ALBM, H-FILEINIT, H-FILECLBK); the picture's file at S2 through the file module (S-RECFILE); S: S-CARD's insertion requests, its HLS mount state and image list; the other bodies keep S-CARD's card with no file system | the SD host's registers and interrupts with a card model (seam A), the rule-found seam on the other bodies, REC_FILE natively | the HLS media layer (which sends the insertion), REC_MAIN / REC_FILE (the picture's file), the movie module's set-up (the movie time query's frame rate), IRQs anywhere for the SD host | 115,103 / 108,887 (17k of it self-test and debug) | 1-2 weeks left: REC_FILE's DCF steps, both slots, exFAT, the other bodies | a card that fills, real files in DCIM, Card Formatting (natively, in), both slots |
 | **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
 | **HDMI and DisplayPort** (4.9) | N with `--hdmi on` (since 2026-10-23, E143, E146, E147): a plug runs the hot-plug pin's IRQ 109, the HDMI init, two E-DDC reads with IRQ 239, the EDID's checks and parse and the connect report to UI_IN natively (H-GIOSLOTS, S-HDMISINK); off by default, and either way the DISPLAY OPEN of HDMI is not reached (X) | TX byte registers at `0x99c07000` (HPD / RxSense byte 8, DDC `0xa80..0xa83`, the buffer `0xc00`, IRQ 239) and the GIO pin 77 (`0x9b881540`, IRQ 109), both modelled; then the HDMI open and VSC channel 0 | the camera application's output switch (?), VSC channel 0 in the compositor, an unplug (A-HDMI-1) | about 11k (3.3k plus the TX / DP driver's 7.7k) | 2-3 weeks left (the open and channel 0) | the HDMI output a TV shows |
 | **USB** (4.10) | 0 on E143 | the event level first (EV_USB_CONNECTED 8, EV_USB_RXDETECT `0x040d00d2`, the select screen); later a DWC3-family device at `0x9a600000` (IRQ 223) | SCPU (PD, power source), ADC flag `0xbf`, the PC_* tasks, storage for MSC | 121,861 / 117,704 | 1-2 weeks events; 4-8 weeks data path | the USB select screen, charging state; later MSC, MTP, PTP |
@@ -957,7 +957,8 @@ subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a91
 ### 4.8 Card, file system and playback
 
 - **Tasks (CPU 0, D):** DCFPROC_SUB 0x02 (queue 0x0d), FILECLBK 0x0d (queue FILECLBK_UEXEC 0x1f, targets 14 / 15 / 17 /
-  23), FILEFGND 0x0e, EYEFI 0x40 `0x5088fc7e` (its entry calls the file system's bring-up before its loop, I), REC_FILE
+  23), FILEFGND 0x0e, EYEFI 0x40 `0x5088fc7e` (a loop of 10 s sleeps, D; the file system's bring-up `0x5088fc8d` after
+  it is the boot task's call, 4.8.2), REC_FILE
   0x1b, MOVE_FILEREAD / WRITE, AVM_FILE_CPUSW; PLAY_MAIN 0x19, PLAY_LOAD 0x18, PLAY_IMAGE 0x17, PLAY_DECODE 0x76,
   PLAY_LOAD_DRAW 0x77, PLAY_SOUND 0x1a (queue PLAY_EXEC 0x3f, targets 3 / 21 / 31); ALBM_MAIN, a movie-clip album
   manager (about 14k). CPU 1: AVM_FILE 0x905c, FILEISCAM 0x100f.
@@ -980,10 +981,9 @@ subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a91
 - **Playback:** with S-PLAYSEQ, S-PLAYCOMP and S-PLAYVIEW kept, real files need a JPEG decoder at the codec seam (4.3's
   C2 `decode_jpeg`, `play_img.c`): 2-4 weeks on top of storage. A native path needs the HLS play components (310k),
   segment 9's PLAY_* / MOVP / MOVE, the AV back end for movies and the CIC engine for RAW: a block of its own.
-- **First step:** in a probe session, let EYEFI's init chain (`0x508a49f9`, `0x50894d42`, `0x508ac195`, `0x50888c4a`,
-  `0x508a533e`, `0x50877de4`) and FILECLBK, FILEFGND and DCFPROC_SUB start, with the SD ports' pages (`0x99000000`,
-  `0x9a300000`, 64 KiB each) as a logging device that faults on the first read; record the mount path down to the first
-  SD register access and the sdmem commands it sends in order. The request / completion contract is read (4.8.1).
+- **First step:** done (2026-10-23, 4.8.2): the bring-up and the mount ran natively, with the seam one layer below the
+  one recommended here (the SD command layer, not the sdmem request: sdmem's own card state, which the mount fills and
+  the format and the transfers read, then needs no stand-in).
 
 #### 4.8.1 The sdmem request contract (D unless tagged)
 
@@ -1031,6 +1031,70 @@ subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a91
   status in `+60` and the completion through `0x50894ddb(+32, request, status)`, so FILEFGND keeps calling it; the range
   and write-protect checks as the table gives them; card info that the mount accepts. Which commands the mount sends,
   in which order, and what each must leave in the card info, is ? until the first step's probe has run.
+
+#### 4.8.2 The card on E143, round 1 (2026-10-23; D unless tagged)
+
+The file system runs natively on a card on E143 (`emu/src/lab/storage.mjs`, `emu/src/lab/sdcard.mjs`; every address
+with its evidence in `emu/src/fw/models.mjs` E143 `storage`). The seam and what was found on the way:
+
+- **Bring-up:** the file system's bring-up is `0x5088fc8d`, the boot task 43's call (`0x5002417a` at `0x500242ab`), not
+  EYEFI's (its entry `0x5088fc7e` only sleeps): queues and semaphores, FILEFGND through `0x50894d42`, logsec's init
+  `0x508ac195` with the SD host's init `0x508acbed` (GPIO pins and power `0x508b0121`, IRQs 225 / 227 / 228 and 229 /
+  231 / 232 attached, sdmem's and the PHY's state), the file layer `0x50888c4a`, whose `0x5088d075` reads the file
+  system's NAND area (`0x500022c2(dst, 0x41a00000, 0x80000, 0x10200)`, the generic NAND access; `0x10100` writes), the
+  card driver's detect states (`0x5087bc5e`, both drives 1) and DCFPROC_SUB (`0x5087cd68`). H-FILEINIT runs it in the
+  play bring-up and H-FILECLBK starts FILECLBK (task 13), whose start is not traced (X).
+- **FILECLBK's protocol:** a 16-byte message on queue 0x1f, `{reply queue (0: none), word, code, parameter}`; the code's
+  class by `code & 0xffff0000` (0: by `code & 0xf0` through `0x60a10578`; `0x10000` fileif `0x50894eb3`; `0x20000`
+  `0x5089504f`; `0x80000` / `0x100000` dcfif `0x50876792`); the reply `{u16 status, word, parameter}` to the reply
+  queue. Class 1 (codes `0x10..0x1e`) carries sdmem requests (`0x13` command 2, the card mount); `0x50..0x58` dosfat's
+  command `0x508812f2` (`0x51` op 0 the FAT mount `0x50882ebd`: sdmem command 2, then the MBR and the boot sector,
+  `0xe08` on a card with no file system; `0x55` op 5 the format `0x508848ba`; the block's +4 op, +6 drive, +48 the
+  error); `0x30..0x3a` dcfnum's dispatcher `0x50877ea8` (`0x31` op 0 the DCF numbering mount `0x5087825a`: the block's
+  +42 next folder, +44 next file, and the DCF state word's bit 16, the drive status's mount bit `0x1000`); `0xf0` the
+  DCF process `0x5087bce9` (`{u16 command, u16 drive}`: 1 card in, detect state 1 -> 2; 3 the lists, 2 -> 3); fileif
+  `0x10000 + n` with a block `{result, arguments}`: 1 fopen(path, mode), 2 fclose, 3 fwrite(buffer, size, count,
+  FILE), 12 mkdir (X), as the FlashAir configuration writer `0x5101efe0` uses them. Drive letters: `C` is drive 0, `D`
+  drive 1 (`0x508a8149`, X).
+- **The seam:** the SD command layer `0x508ad03c(command)`, below sdmem and sd_mount: the command's +24 code (index
+  bits 0..5, bit 6 an application command, bits 8..10 the response type: 3 none, 4 R1 / R3 / R6 / R7, 5 R1b, 6 R2, 7 R3;
+  bit 30 UHS-II), +28 argument, +32..+44 the response (an R2 as the host gives it: bits 127..8 in four words, bits
+  39..8 first; sdmem_format `0x508b338e` reads the CSD's C_SIZE at `(w1 >> 8) & 0x3fffff`), +48 buffer, +52 count, +56
+  block size, +74 status, +8 the completion (by `calls`, a0 the command, d0 the status; `0x1405` for no response). The
+  layer completes at once for a busy port (`0x508ad065`), so S-SDCARD completes each command at once too. The driver's
+  other job kinds (power, clock, bus width, the UHS-II PHY) run natively on the SD host's register pages, which keep
+  what is written (S-SDHOST; the clock setter `0x508acf2b` polls SD_INFO2 bit 13, which reads set). The UHS-II path is
+  tried first on port 0 (`0x508af03a`): its PHY link-up wait (`0x508b4011`) times out after about 120 ms of lab time
+  and sd_mount falls back to the SD interface (X): CMD0, CMD8, ACMD41, CMD2, CMD3, CMD9, CMD7, CMD13, ACMD51, ACMD6,
+  CMD6 (query and set), ACMD13, ACMD42, CMD16, then the transfers (CMD17 / 18 / 24 / 25; after a transfer the job asks the
+  card's status with CMD13). Sector addresses are blocks on an SDHC card (the OCR's CCS).
+- **The insertion** (S-CARD, I: the HLS media layer that sends it does not run): `0x51` (on a blank card `0xe08`, then
+  `0x55` and `0x51` again), `0xf0` 1 and 3, `0x31`. The firmware formats an 8 GiB card as FAT32: an MBR with one
+  partition (type `0x0c`) at LBA 8192, 64 sectors per cluster, 4122 reserved sectors, two FATs of 2035 sectors, FSInfo
+  at 1, the backup boot sector at 6, the label `OM SYSTEM` (X, read back by `emu/refs/fat.mjs`); FSInfo's free count is
+  the FAT's. Lab time: the UHS-II timeout and logsec's 740 ms wait before a mount's sdmem command 2 (`0x508ac1dd`, where
+  the card switch's state reads `0x1506`) make about 2.5 s at a blank card's start.
+- **The DCF numbering mount** starts the album manager (`0x508b67e8` -> `0x508beba7`, ALBM_MAIN), whose first request
+  (`0x5048ee61`) allocates its id through `0x5050a086`, the only udf07 site (docs/om1-udf-spec.md row 14): S-ALBM returns
+  from the album manager's init at once (its result is unused, `0x5087853a`).
+- **The counts:** the remaining-shots query `0x50419164` and the movie time query `0x5042da58` run natively (S-CARD's
+  answers retired on E143): 803 shots and 5:25 of 4K 60p on 8 GiB, fewer on 4 GiB (X). The movie time left comes from
+  DCF remain (`0x5087da1b` -> `0x5045c4ac` stores it in the movie module's copy `0xa32ed404`); the query's time code
+  converts the movie info's frame rate (`0xa32ed128` +720, which the movie module's set-up `0x5045c3fd` fills, not run:
+  0) and logs `0x39000903` (`0x5044949b`), after the time left is computed.
+- **The picture's file** (S-RECFILE, in place of REC_FILE): mkdir `C:\DCIM` and `C:\DCIM\100OMSYS`, fopen
+  `P1010001.JPG` `wb`, fwrite, fclose through FILECLBK, the bytes a JPEG the lab encodes. Read back independently: the
+  directory entry, its size and bytes, a baseline JPEG decoded by `emu/refs/jpeg.mjs` and macOS ImageIO (X); the next
+  session's DCF numbering mount reports file 2 next and the firmware's own image count (type 1) counts it (X). REC_FILE
+  would build its file through the DCF fnode API (`rec_media.c` `0x5054aa70` sends dosfat op 4, code `0x54`, over a
+  REC file context with `pDcfFnode`): not read.
+- **Card Formatting from the menu** (X): Setup, Card Formatting, card 1, Format Card, Yes shows "Busy"; the
+  application's media control sends TRA 1511 (`0x50ac940d`, OlyHfwOpeMdaCtrl), which S-TRAACK answers: the media
+  component that would send the file module the format does not run in camapp 1, so nothing reaches the card. (With
+  the HLS components, control camapp 2, MENU did not open the menu in one try; not followed.)
+- **Open:** the other bodies (rules for the bring-up, the FILECLBK codes and the command layer), the second slot,
+  exFAT (an SDXC card), the HLS media layer's own insertion and EV_MEDIA_MOUNT_REC, REC_FILE natively, the SD host at
+  its registers with interrupts (seam A), playback of the files (a JPEG decoder at the codec seam).
 
 ### 4.9 HDMI and DisplayPort
 
@@ -1285,7 +1349,9 @@ The order follows what each step unblocks: the keystones first, because each lat
    bring-up (`control camapp 2`) as the default of the coverage workload, so the HLS half of TAKE (196k, 1.3% run) is
    measured before TAKE is attempted.
 6. **Storage at the sdmem seam.** It needs steps 3 and 5 but not TAKE, and gives a real card, counts and Card
-   Formatting. Capture, movie, playback, USB and wireless all write or read through it.
+   Formatting. Capture, movie, playback, USB and wireless all write or read through it. Started on E143 (2026-10-23,
+   4.8.2) one layer lower, at the SD command layer, without steps 3 and 5: the command layer completes at once, and the
+   four tasks the file system needs are started by name.
 7. **TAKE native with its neighbours:** the lens at its serial seam (or LENS_EXEC answered) and BC_EXEC answered; the
    sensor control plane far enough for TAKE's through start (TAKE_FUNC command 25); the shutter at its control plane,
    with the strobe (shutter-sized, partly native) planned beside it. This is the step that makes S1 / S2 / REC reach the

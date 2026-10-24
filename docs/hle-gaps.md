@@ -17,7 +17,7 @@ from the module map (section 2.2). Every effort figure is a rough estimate of fo
   components).
 - **What does not:** every block below the camera application that the user reaches through a shot, a recording, a
   card, a cable, a radio or the power lever. Each is a harness answer at the HLS or module level (S-RELSEQ, S-MODACK,
-  S-TRAACK, S-CARD, S-SCENE, S-EXPOSE, S-LENS, S-CPU2, S-SCPU, H-POWER and others) or is not modelled at all. None
+  S-TRAACK, S-CARD, S-SCENE, S-EXPOSE, S-LENS, S-CPU2, S-SCPUDEV, H-POWER and others) or is not modelled at all. None
   of their tasks runs in a lab (X: a full S1 + S2 and a REC post no module request; the kernel lab's task-start guard
   refuses their entries, `emu/src/lab/kernel.mjs`), and their MMIO is lab-stub space that faults on first touch.
 - **In code:** the lab executes 287,101 of the main block's 5,186,071 instructions (5.54%), about 6.1% of the code a
@@ -117,7 +117,7 @@ not run), **0** nothing. Code column: instructions keyed to the block / gap-rele
 | Text and resources | N (M4) | S-RES, Genifa | 28,861 (9.09%) | U items (text spec) |
 | GUI and menu | N (M5, M6, M10B) | S-SEND, S-PROP | 621,898 (19.31%) | navigation rules observed, not decoded; the 53 screen classes of gap@0x510ef2bf (35k) are unnamed (?) |
 | Inputs | N from UI_IN up (M10); group 0 from IRQ 320 up (4.7.2) | S-KEYBITS (groups 1..3), H-EYESTATE, S-TPINT, S-TPREG, H-DIALSTEP | 43,895 (20.85%) | the raw-bit producers (4.7) |
-| Settings store | N: the property store `0x503c4974..0x503db10c` and the LowAPI property unit gap@0x503edeea | S-SCPU, S-SETSAVE / S-FLASHSAVE or S-NVRAM | 50,515 (31.24%) | persistence by default (4.7) |
+| Settings store | N: the property store `0x503c4974..0x503db10c` and the LowAPI property unit gap@0x503edeea | S-SCPUDEV, S-SETSAVE / S-FLASHSAVE or S-NVRAM | 50,515 (31.24%) | persistence by default (4.7) |
 | Camera application (CA_MAIN, HLS) | N since 2026-10-15, in part: 99k gap-relevant instructions unrun | S-RELSEQ, S-MODACK, S-TRAACK, S-CARD below it | 320,057 (18.64%) | the HLS shooting sequence (196k, 4.1) and the playback components (310k, 4.8) are 1-2% run |
 
 Of the application's executed instructions, at least 9,456 of 28,686 in one part of the map are C++ static
@@ -139,7 +139,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **Movie and audio** (4.5) | S: S-RELSEQ's movie callbacks, S-CARD's movie time, S-CPU2's zero level snapshot, S-MODACK for AUD_EXEC | S3 TAKE_FUNC commands 30 / 31 / 68 / 69, S4 the mvr IF (CPU 2), S5 AUD_LEVEL_MONITOR, S6 a host AVM writing a MOV through the firmware's DFS calls, S7 AUD_EXEC | TAKE (commands 30 / 31 / 68 / 69 wait on CPU 2's MOV_COMMAND, SDET_EXEC and WB_MOV, 4.1.1), CPU 2 (MVR, audio level), sensor, storage, EXP_MOVIE / FCS_MOVIE | 134,137 / 124,319 | 10-15 weeks (stages A-C) | a playable .MOV on the card, the firmware's recording sequence, audio meters, beeps |
 | **AV codec back end** (4.5) | 0 | none for HLE: seam S6 bypasses it | CPU 1; the codec engines; IRQs 303-306 | 416,471 / 411,438 (overlay segment 8, CPU 1) | ?: native needs register-level codec models, no documentation | native movie encode and playback below the HLS (I) |
 | **CPUs 1-3 and inter-core** (4.6) | S: K-OTHERCPU, K-BOOTSYNC, K-IPI, no start barrier; S-CPU2 (one post), S-CPU3, S-DISPFRAME on CPU 0; any other doorbell is an error | run CPUs 1-3 natively on one bus; per-core `0x8000` page, INTC bank n to core n, `+0x808/+0x80c` IRQ 324, `+0x810/+0x814` IRQ 325, `+0x800/+0x804` ISC IRQ 323, ticks 139..141. A53: "off" or ISC node 4 | a machine refactor (per-core CPU state), a per-core kernel lab, flash reads for CPU 2's loader and CPU 3's boot jobs, ROADMAP phases 3-4 | 5,422 keyed; 441,542 reachable only from CPU 1-3 tasks (a lower bound) | 5-7 weeks for the cores | the histogram, a native DISP_FRAME, cross-core owners (AUD_MAIN, AVM) can start; three stand-ins and four kernel stand-ins retire |
-| **SCPU, power, clock, on-board sensors, persistence** (4.7) | S: S-SCPU, the request server at the request API (since 2026-10-23: `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1); the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / opt-in S-NVRAM; N: the ACC module init, ACC_MAIN, PER_SLOPE, the level gauge and Level Adjust with the accelerometer at its sample cache (since 2026-10-23, 4.7.3; H-ACCINIT, S-ACCREG, S-ACCSAMPLE, H-SLOPEINIT) | the accelerometer at the PER_SIO transfer and its data-ready pin (ACC_SENS_MAIN native); PER_ROTATE; S-NVRAM's NAND seam as the default | lab time; the UI_IN, SCPU and PER_SIO inits, the GIO init for the data-ready pin; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, rotation, eye sensor (Level Adjust and the level gauge in, 4.7.3) |
+| **SCPU, power, clock, on-board sensors, persistence** (4.7) | N: PER_SCPU, its start and its transactions, over the link to S-SCPUDEV, the sub-CPU's transport-level model (since 2026-10-23: `0x85`, `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1; S-SIO2, H-SCPUSTART); S: the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / opt-in S-NVRAM; N: the ACC module init, ACC_MAIN, PER_SLOPE, the level gauge and Level Adjust with the accelerometer at its sample cache (since 2026-10-23, 4.7.3; H-ACCINIT, S-ACCREG, S-ACCSAMPLE, H-SLOPEINIT) | the accelerometer at the PER_SIO transfer and its data-ready pin (ACC_SENS_MAIN native); PER_ROTATE; S-NVRAM's NAND seam as the default | lab time; the UI_IN, SCPU and PER_SIO inits, the GIO init for the data-ready pin; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, rotation, eye sensor (Level Adjust and the level gauge in, 4.7.3) |
 | **Card and file system** (4.8) | N on E143 since 2026-10-23 (4.8.2): the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, the format, dosfat, DCF and the shots / movie-time counts natively on an 8 GiB SDHC card at the SD command layer (S-SDCARD, S-SDHOST, S-FSNAND, S-ALBM, H-FILEINIT, H-FILECLBK); the picture's file at S2 through the file module (S-RECFILE); since 2026-10-24 (4.8.3) Card Formatting from the menu (S-MDACTRL) and the card's removal and insertion (S-MEDIA), the application's media control native; S: S-CARD's insertion requests, its HLS mount state and image list; the other bodies keep S-CARD's card with no file system | the SD host's registers and interrupts with a card model (seam A), the rule-found seam on the other bodies, REC_FILE natively | the HLS media layer (which sends the insertion), REC_MAIN / REC_FILE (the picture's file), the movie module's set-up (the movie time query's frame rate), IRQs anywhere for the SD host | 115,103 / 108,887 (17k of it self-test and debug) | 1-2 weeks left: REC_FILE's DCF steps, both slots, exFAT, the other bodies | a card that fills, real files in DCIM, both slots |
 | **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
 | **HDMI and DisplayPort** (4.9) | N with `--hdmi on` (since 2026-10-23, E143, E146, E147): a plug runs the hot-plug pin's IRQ 109, the HDMI init, two E-DDC reads with IRQ 239, the EDID's checks and parse and the connect report to UI_IN natively (H-GIOSLOTS, S-HDMISINK); off by default, and either way the DISPLAY OPEN of HDMI is not reached (X) | TX byte registers at `0x99c07000` (HPD / RxSense byte 8, DDC `0xa80..0xa83`, the buffer `0xc00`, IRQ 239) and the GIO pin 77 (`0x9b881540`, IRQ 109), both modelled; then the HDMI open and VSC channel 0 | the camera application's output switch (?), VSC channel 0 in the compositor, an unplug (A-HDMI-1) | about 11k (3.3k plus the TX / DP driver's 7.7k) | 2-3 weeks left (the open and channel 0) | the HDMI output a TV shows |
@@ -593,20 +593,20 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   (4.7.2).
 - **The request API (D, 4.7.1):** `0x5005cd17` sends a 28-byte request `{+0 u8 cmd, +4 s_size, +8 tx, +12 r_size,
   +16 rx, +20 completion, +24 arg}` inside a 36-byte message to PER_SCPU_RECEIVE (timeout 5000). PER_SCPU carries it
-  to the SCPU over PER_SIO channel 2 and two pins, not through the window, writes the reply into rx and then calls the
-  completion, which sets the requester's flag. The command set, the transaction and what a server must answer are in
-  4.7.1.
+  to the SCPU over PER_SIO channel 2 and three pins, not through the window, writes the reply into rx and then calls
+  the completion, which sets the requester's flag. The command set and the transaction are in 4.7.1; since 2026-10-23
+  PER_SCPU runs natively in the lab against the sub-CPU's model (4.7.1, Built).
 - **Inputs from the SCPU (D):** UI_IN's port init `0x5014e3ab` (called by its module init) registers `0x5014e534` as an
   IRQ 320 callback; it reads the port byte (`0x5004df3f`) and pushes it as group 0's image: the power lever, the Fn
   lever and S1 arrive through the window's port bits. Native in the lab since 2026-10-23 (4.7.2). The SCPU firmware has
   no key module (E139's has one), so whether those bits come from the sub-CPU or from the window block's own pins is ?
   (scpu spec 4.3).
 - **The sub-CPU itself (scpu spec):** an STM32L4-class Cortex-M4F (I) running `blk0e560000` (E143 = E146, E147 its own
-  build) under eForce uC3: SPI2 slave with DMA on the MN link, PB12 as the request input, PC2 / PC3 as outputs (I: pin
-  102 and the message line), the command table of 4.7.1 mapped to its handlers, battery packs on two UARTs, chargers
-  and a USB PD controller on I2C, an RTC, and a debug console on LPUART1. It holds no accelerometer or eye-sensor code.
-  The survey recommends a transport-level SCPU device at PER_SIO channel 2 and pins 102 / 103 / 107 before any LLE
-  (scpu spec 8).
+  build) under eForce uC3: SPI2 slave with DMA on the MN link, PB12 as the request input, PC3 as pin 102 and PC2 as the
+  message line (D, scpu spec 3.1), the command table of 4.7.1 mapped to its handlers, battery packs on two UARTs,
+  chargers and a USB PD controller on I2C, an RTC, and a debug console on LPUART1. It holds no accelerometer or
+  eye-sensor code. The transport-level model the survey recommended before any LLE is built (S-SCPUDEV, 4.7.1; scpu
+  spec 8 step 2).
 - **Accelerometer (D):** ACC_MAIN's probe reads register 0x0f of device channel 6 and wants 0x6a (I: the WHO_AM_I of
   ST's LSM6DSL / LSM6DSM family); the bus is SPI over PER_SIO (`[PER_ACC_SPI] per_sio_open_error`, ACC_SPI). Samples
   land in the cache `0x62963f60..0x62963f6c` and bump the counter `0x6034d9d4`. Level Adjust's loop
@@ -643,7 +643,8 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   natively (4.7.2) and the session left open, the application takes the code and the GUI stays in shooting for 5 s of
   lab time, with no write to `+0x9c` (X); the sequence's owner, the power manager (PWR_MAIN), does not run.
 - **Steps (I):** 1, a host server for 0x01 / 0x81 / 0x06 / 0x86 with the clock ticking from lab time and S-NVRAM as the
-  default: 4-6 days (done 2026-10-23 at the request API, 4.7.1; S-NVRAM stays opt-in, `docs/ROADMAP.md`). 2, the event /
+  default: 4-6 days (done 2026-10-23 at the request API, then the same day PER_SCPU natively over the link to a
+  transport-level model of the sub-CPU, 4.7.1; S-NVRAM stays opt-in, `docs/ROADMAP.md`). 2, the event /
   port registers with IRQ 320 and UI_IN's registration: group-0 keys and the power lever natively, 3-5 days (done
   2026-10-23 for the keys and the lever's code, 4.7.2; the power-off sequence waits for the power manager). 3, the
   accelerometer at the PER_SIO seam or the sample cache: Level Adjust, level gauge, rotation, 1-1.5 weeks (done
@@ -654,7 +655,8 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   request server of 4.7.1's last bullet: the four D commands answered (rx written, `+20` called), every other command
   refused by its name, and `+0xe8 / +0xec` ticking with lab time. Step 2 followed the same day (4.7.2): the event and
   port words with IRQ 320, UI_IN's group 0 natively, and step 3 at the sample cache (4.7.3): ACC_MAIN and PER_SLOPE
-  natively, the level gauge following a tilt input and Level Adjust completing. Next is step 4, the eye sensor.
+  natively, the level gauge following a tilt input and Level Adjust completing. S-SCPU then gave way to the link
+  (4.7.1, Built): PER_SCPU runs natively against S-SCPUDEV. Next is step 4, the eye sensor.
 
 #### 4.7.1 The PER_SCPU request server (D unless tagged)
 
@@ -663,7 +665,7 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   with `0x5005f4ae` / `0x5005f587`) between two pins: PER_SCPU drives pin 103 low to request (`0x5005b72d(103, 0)`) and
   the SCPU answers with edges on pin 102 (callbacks `0x5005c989`, `0x5005c9dc`); pin 107 resets the SCPU (pulsed at
   `0x5005b9ab`, and at the task start `0x5005cec5` with "SCPU RST!" when the cause halfword `(0xa32bff5e)` is 0, 10 or
-  11). The pin roles are I from their use. Frames are `[length, command, data]` with length = data bytes + 2 in both
+  11). The pin roles are D on both ends (the sub-CPU's PC3 is pin 102, its PB12 pin 103, scpu spec 3.1). Frames are `[length, command, data]` with length = data bytes + 2 in both
   directions (tx built at `0x5005bf6f..0x5005bf8a`; rx read as one length byte, then length - 1 bytes, `0x5005ca2d`). A
   request with more than 10 tx bytes or more than 253 rx bytes is split into `0x0f`-framed chunks (states 11..18).
 - **Task and message:** PER_SCPU receives from the data queue PER_SCPU_RECEIVE ("PER_CMDM_DTQR", id `(0x600431bc)` =
@@ -731,56 +733,83 @@ The flag and semaphore names are the object-name table's (D); the commands' mean
 
 - **What a session sends (X, a play session with S1 and a menu open and close):** only the store init's three requests:
   `0x06 {2, value, 0}` (from `0x5012c547`), `0x01` with the reset date (`0x5012b78c`) and `0x86 {2, 0}` (`0x5012c70a`),
-  whose waits on 0xf5, 0xf7 and 0xf6 run natively since S-SCPU answers the requests (settings spec section 4; X: they
-  return E_OK at once). The `0x06` writes `0x8000021c` and the `0x86` reads it back (X). Backup word 2 holds the
+  whose waits on 0xf5, 0xf7 and 0xf6 run natively (settings spec section 4; X: they return E_OK, since 2026-10-23 after
+  PER_SCPU's transactions with the sub-CPU's model, before that at once with S-SCPU). The `0x06` writes `0x8000021c` and the `0x86` reads it back (X). Backup word 2 holds the
   time-zone setting, packed by `0x5012c685..0x5012c700` with bit 31 = valid (the 12-byte record `0xa32d7270`; minute
   fields up to 780 per zone, `0x5012c5c8`; field meanings I), so a reply of 0 means no record. The clock setting
   (`0x5012b7a7`, called from api_system.c) writes both the window clock (`0x5005a587`) and the SCPU's date (`0x01`); at
   boot `0x5012b767` (called from `0x500248b4`, not run in the lab) reads `0x81` and with status 0 sets the window clock
   from it, else resets it to 1970 (I: the window counter does not keep time over power-off, the SCPU's date does).
-- **The request server (the seam, I from the above):** take each request where PER_SCPU would (the data queue: the word
-  is a slot pointer; read the 36 bytes and clear the slot's bit in `(0xa32c9498)` as `0x5005cb62..0x5005cb7f` does), or
-  at the request API `0x5005cd17`, which carries the same 28 bytes without the queue. Per command: write r_size bytes to
-  rx when rx is not 0, then call `+20` with a0 = `+24` in task context. `0x01`: keep the date (S-NVRAM's clock offset,
-  then `_s_sctime` in `emu/src/lab/menu.mjs`); `0x81`: answer the kept date (status 0 in rx bytes 7..8 was the first
-  reading; S-SCPU answers the kept status, below); `0x06` / `0x86`: keep and return a word per index (S-NVRAM's store
-  for index 2; 0 on a blank camera). Every other command stops the session naming it: the firmware's own refusal calls
-  the completion with rx unwritten, which a stand-in must not imitate. The firmware checks: the date's status and range
-  (2000..2099, `0x5012b9ab`), the `0x88` reply's rx[1] = 0, and after a window clock write that `+0xe8` reads back
-  within 5 s of the value written (`0x5005a71f..2a`, else ten retries with errlog `0x19001005` and the signature
-  cleared). The window clock: `+0xe8` counts seconds since 1970 in local time and `+0xec` bits 14..5 the 1/1024 s phase
-  (readers `0x5005a5c9..0x5005a5f0`, `0x5005a6bb`); a write sets `+0xe8` and, when its second argument is 1, `+0xec` = 0
-  (`0x5004e337..0x5004e359`), then commits with `+0xf4`. PER_SCPU's own start (`0x85 {2}`, the reset pulse, the
-  watchdog) and the inbound path have no counterpart at this seam; the faithful later seam is an SCPU device at PER_SIO
-  channel 2 and pins 102 / 103, now that the frames are D.
-- **Built: S-SCPU** (2026-10-23, `emu/src/lab/scpuserver.mjs`, D for the transport and the layouts, I for what the
-  sub-CPU keeps). The seam is the request API `0x5005cd17`, hooked: the request arrives whole in a0, the hook needs no
-  address but the API's own (already in every backup body's port), and it owns no firmware state. The data-queue seam
-  would run the API's trace record, allocation and post natively, but the server would then free the pool's slots
-  (`0xa32c9498`) and drive the queue for a task that does not run, two more addresses of internal state, for no
-  behaviour the camera shows. Per request: refused outside a task's context (the nesting byte `sns_ctx` reads), the
-  command looked up, its tx and rx sizes checked against its senders', r_size bytes written to rx when rx is not 0, then
-  `+20` called natively with a0 = `+24` through a `calls` trampoline (`HLE.finish_after`), and the API returns 0 (its
-  callers do not read it). The completion's flag latches, so the requester's own OlyEvWt, native, returns at once.
-  - The sub-CPU's memory (`ScpuMemory`): the date as the last `0x01` set it, status included, advancing with lab time
-    (whole seconds), answered by `0x81` with the kept status (I: the reset path sends status 10501 and the boot read
-    `0x5012b767` resets the clock unless the status is 0, so echoing the status keeps a reset camera asking for the
-    date; the alternative reading, a status the sub-CPU makes itself, has no evidence either); a get before any set
-    stops the session (a blank sub-CPU's answer is ?). One word per index, 0 when blank (settings spec A-SCPU-2); the
-    body's words are its fact `scpu.words` (E143, E146, E147, E139: index 2, byte 0; E134: index 23), any other refused.
-  - A body's writes without data, completion or wait are its fact `scpu.quiet`: none on E143, E146, E147 and E139;
-    E134's dial init sends `0x21` (its meaning is ?), taken without an effect.
-  - Under S-NVRAM the same memory lives in the host's file and its date advances with the host's local time; the boot
-    stand-in sets the window clock from it whatever the status (as before, so a kept camera starts without the date
-    prompt).
-  - The window clock ticks with lab time on the E143 board (E143, E146, E147) and on E139 and E134 (their MODELS
+- **The firmware's checks of a reply (D):** the date's status and range (2000..2099, `0x5012b9ab`), the `0x88` reply's
+  rx[1] = 0, and after a window clock write that `+0xe8` reads back within 5 s of the value written (`0x5005a71f..2a`,
+  else ten retries with errlog `0x19001005` and the signature cleared). The window clock: `+0xe8` counts seconds since
+  1970 in local time and `+0xec` bits 14..5 the 1/1024 s phase (readers `0x5005a5c9..0x5005a5f0`, `0x5005a6bb`); a write
+  sets `+0xe8` and, when its second argument is 1, `+0xec` = 0 (`0x5004e337..0x5004e359`), then commits with `+0xf4`.
+- **Retired: S-SCPU** (2026-10-23, the same day): a request server hooked at the request API `0x5005cd17` that answered
+  the four commands, wrote rx and called `+20` natively before the API returned; PER_SCPU, its start and its inbound
+  path did not run. Its memory model (the date echoed with its status, a get before any set refused) gave way to the
+  sub-CPU's handlers (below).
+- **Built: the link (S-SCPUDEV, S-SIO2, H-SCPUSTART; 2026-10-23,** `emu/src/lab/scpudev.mjs`, `emu/src/lab/scpulink.mjs`,
+  `emu/src/dev/linkpins.mjs`; scpu spec 3 and 8). PER_SCPU runs natively: the lab starts its static task where the
+  store init's requests need it (H-SCPUSTART: act_tsk, as the boot chain's `0x50024072` does, after the GIO init's
+  slot reset H-GIOSLOTS, which PER_SCPU's registration of pin 102 needs), and the sub-CPU is at the far end of the
+  wires PER_SCPU uses:
+  - **The pins (register level, `src/dev/linkpins.mjs`, board `scpu_link`):** pin words 102 / 103 / 107 at
+    `0x9b881b80` / `0x9b881bc0` / `0x9b881cc0` (+0 the level in bit 4 and the output in bit 0, +4 / +8 storage) and pin
+    102's dedicated GIO interrupt (slot 191: status `0x9b883060`, enable `0x9b8831a0`, type-0 bit 1, type-1 bit 2, IRQ
+    119), D from the GIO driver's tables, the same on E146 and E147. PER_SCPU's mode call attaches IRQ 119 natively and
+    the GIO handler `0x50052a44` calls its callbacks in interrupt context. A-LINKPINS-1 (I): type 0 is the high level and
+    type 1 the low level, a status bit holds while its level does (the callbacks disable the interrupt first, and the
+    sub-CPU raises and drops PC3 back to back, D).
+  - **S-SIO2 (PER_SIO's channel API, the one channel PER_SCPU opens):** open `0x5005f0f7` (the callback called), the
+    configuration `0x5005f4ae` (channel 2, clock 6,000,000, X), a transfer `0x5005f587` (descriptor {+0 channel, +1
+    directions, +2 / +3 tx / rx count, +4 tx, +8 rx, +12 tx callback, +16 its argument, +20 rx callback}, D from
+    `0x5005f619`) and close `0x5005f25f`. A transfer's bytes go to the sub-CPU at once and its answer into rx; the end is
+    delivered at the next idle point in interrupt context, rx callback (a0 = the descriptor) then tx callback (a0 = its
+    argument), as the driver's glue `0x5005f7e9` / `0x5005f831` calls them (D). PER_SIO's registers, its init
+    `0x5005f464` and interrupt handlers are not modelled; another channel's calls run natively as before (the EVF
+    panel's channel 0, into the lab stub), another kind of transfer on PER_SCPU's channel stops the session.
+  - **The message line:** port 3 of the window is the sub-CPU's PC2 (board `scpu.events.message`), high while no
+    message is posted; the lab's doorbell may not pull it low.
+  - **S-SCPUDEV:** the sub-CPU's side from its code (scpu spec 3.2, 3.3): the 10-byte receive, the command manager's
+    transitions, the power-on gate (a frame it refuses stops the session, as it stops the sub-CPU), the reply framing,
+    long writes and reads; the handlers of `0x85` (reply `{mode, 0x85 or for mode 1 its second byte, 1}`, the gate
+    opened at the release of `0x85 {2}`), `0x01` / `0x81` (backup register 1 and the RTC: status 0 sets the RTC, any
+    other status clears register 1; a get answers 2019-01-01 status 10501 while register 1 is 0), `0x06` / `0x86`
+    (register index + byte; the body's words are its fact `scpu.words`, others refused) and a body's quiet writes
+    (`scpu.quiet`: E134's `0x21`). Every other command stops the session naming its handler. No message is posted, so
+    no poll. Its RTC advances with lab time, or with the host's clock under S-NVRAM, whose file keeps the RTC's offset
+    and the backup registers (`clock_status` derived from register 1; a file without register 1 takes it from its
+    `clock_status`). A-SCPUDEV-1 (I): the sub-CPU acts at the MN's idle points, one action per step, in zero lab time;
+    a transfer's end comes first (`src/lab/kernel.mjs` LabTask `idle_step`).
+  - **What a session does (X, E143):** the task pulses pin 107 (its cause halfword is 0 in the lab), waits
+    for pin 102 high, sends `0x85 {2, 0, 0}` (reply `[5, 0x85, 2, 0x85, 1]`; PER_SCPU's state 0 -> 3 .. 10 -> 2), then
+    the store init's `0x06 {2, 0x8000021c, 0}`, `0x01` with the reset date (the 11-byte frame cut to 10: status 10501
+    arrives as 5, which clears register 1 as 10501 would) and `0x86 {2, 0}` (reply `[6, 0x86, 0x8000021c]`), each as
+    PER_SCPU's states 3 .. 10; the requesters' waits return E_OK, no errlog of PER_SCPU's or PER_SIO's, the task back at
+    its queue. 26 level changes on the pins, 8 transfers, every edge taken as IRQ 119 at the idle point. E146 sends the
+    same three; E147's store init sends `0x86 {2, 0}` only (answered 0: a blank camera), as every request the API posts
+    reaches the sub-CPU as a frame in order (X, test_scpu.mjs).
+  - **Bodies:** E143, E146, E147 (the same PER_SCPU, pins and GIO tables, D), and E139 and E134: their PER_SCPU is
+    E143's (the same task loop, init, state machine and frame constants: 10-byte short frames, 253-byte chunks, the
+    poll `0x8f`, the `0x85` gate, D) but for its pins, ready 77, request 76 and reset 57 (E139 `0x50051ed3..de`,
+    `0x5005362a`; E134 `0x500528ac..b7`, `0x50053fad`), its reset causes (0 and 8) and its PER_SIO channel (5, 8 MHz,
+    X). Their pins sit in the E144 family's GIO block (words `0x9b80092c`, `0x9b800b8c`, `0x9b800bac`) and pin 77 has a
+    group slot (IRQ 40, status `0x9b801e4c`, enable `0x9b801f28`, bits 0x40 / 0x80, words shared with the group's
+    other pins), D from their GIO tables (MODELS board `scpu_link`); their message line is port 3, window word `0x64`
+    (their port byte readers, D; board `scpu.message`). The ports place PER_SCPU's task entry and the slot reset by
+    hand (MODELS overrides, D). Their sub-CPUs run other firmware lineages (scpu spec 2) whose images carry the same
+    command manager (its log strings, the master-monitor timer and the power-on gate's messages, D); their receive
+    count, gate code and handlers are not read, so the model answers them as E143's sub-CPU (I). X: both store inits
+    run over the link as E143's (`0x85 {2}`, `0x06` / `0x01` / `0x86` on index 2 (E139) or 23 (E134), and E134's
+    quiet `0x21` at its dial init), the waits E_OK.
+  - **Not covered:** the inbound path (no message is ever posted: the poll and `0x08` / `0x11..0x13` / `0x40` do not
+    run), `0x85`'s system-control effects beyond the gate, the watchdog's and the reset's error paths (the sub-CPU always
+    answers), every command but the five, PER_SIO at the register level.
+  - **The window clock** ticks with lab time on the E143 board (E143, E146, E147) and on E139 and E134 (their MODELS
     boards). The other E144-family bodies keep it still: E137's and E130's operating-time count (E137 `0x5004d531`)
     writes a NAND record once the counter advances, and their start then stops at the NAND controller (X). A nonzero
     write to `+0xec` is a bus error (A-SCPU-3).
-  - Not covered: PER_SCPU's start (`0x85 {2}`, the reset pulse, the watchdog), the inbound path (poll frames, the
-    `0x08` / `0x11..0x13` / `0x40` messages), every other command. The faithful later seam is still an SCPU device at
-    PER_SIO channel 2 and pins 102 / 103; the SCPU side of that link (SPI2 slave mode 0, the frame classes, the
-    power-on gate, the dispatch table) is in `docs/om1-scpu-spec.md` section 3.
 
 #### 4.7.2 The event and port words, IRQ 320 and UI_IN's group 0 (D unless tagged)
 
@@ -815,7 +844,8 @@ The flag and semaphore names are the object-name table's (D); the commands' mean
   decode no code.
 - **Not reached:** the port scan `0x88` (`0x5005d36a`, 4.7.1's table) has two senders, UI_IN's module init
   (`0x5014bfb2`) and a record handler of UI_IN's ring processor (`0x5014c7da`, a record kind the lab never pushes);
-  neither runs, so S-SCPU does not serve it (its rx[0] bit 0 would set group 4's `0x0400`; what the SCPU answers is ?).
+  neither runs, and S-SCPUDEV refuses it (its rx[0] bit 0 would set group 4's `0x0400`; the sub-CPU's reply is {the
+  scan's result, busy}, scpu spec 3.3, whose result bits are ?).
   `+0x9c` (request bits: `0x5004dffc` sets bit n, `0x5004e02c` reads one, seven calls each at `0x519d2153..0x519d221b`,
   ?; `0x5004dfd0` writes 127 at the end of the power-off, 4.7) and `+0x94` / IRQ 321 (the transfer channels) have no
   user in the lab and stay bus errors.
@@ -825,9 +855,9 @@ The flag and semaphore names are the object-name table's (D); the commands' mean
   either direction sets the port's event bit (I: UI_IN decodes both edges of S1 and the levers from this one event).
   The lab sets the levels through a doorbell (`0x89a40000`, command 1). At bring-up, H-SCPUIRQ sets the idle levels
   (`0x3c`: S1 and the request lines high), writes 127 to `+0x98` as the init does and attaches IRQ 320 at level 5
-  through the firmware's attach; H-UIINPORT registers UI_IN's callback through `0x5004ded1` (any other registration is
-  refused, so PER_SCPU's callback, whose events would fill PER_SCPU_RECEIVE's 16 slots with no reader, cannot be
-  added) and runs `0x5014e51e`; group 0's inputs then set the levels (H-SCPUPORT) and the CPU takes IRQ 320 at the idle
+  through the firmware's attach; H-UIINPORT registers UI_IN's callback through `0x5004ded1` (a later registration of
+  another is refused; PER_SCPU registers its own natively at its start since 2026-10-23, before UI_IN's, and acts on
+  port 3, the sub-CPU's message line, 4.7.1) and runs `0x5014e51e`; group 0's inputs then set the levels (H-SCPUPORT) and the CPU takes IRQ 320 at the idle
   point: handler, callback, push and flag run natively, and UI_IN decodes the change (X: S1 down and up post
   `0x02000100` / `0x02010100`, the Fn lever `0x02021223` both ways, the power lever `0x0202000c`). No interrupt
   delivery beyond the idle point is needed: a key arrives while the CPU idles. H-POWER still closes the session after

@@ -43,18 +43,20 @@ not reconciled.
 ## Next, in recommended order
 
 1. **Depth on the ported bodies** (Multi-model step 7): ten bodies pass `bin/modelcheck.mjs` since 2026-10-23, its
-   count probe included; left are the movie time the E142 lineage and the E144 family show (an orange `0:00:00`) and
-   E145's AF upload (Multi-model "Next stops").
+   count probe included, E139 and E134 with PER_SCPU native over the sub-CPU link as E143, E146 and E147 (SCPU track
+   step 2); left are the movie time the E142 lineage and the E144 family show (an orange `0:00:00`) and E145's AF
+   upload (Multi-model "Next stops").
 2. **The open stops of the remaining bodies** (Multi-model "Next stops"): E145's start, E133's GUI creator, E129's
    settings store, E132's deferred serial send, then the E118 family's board port.
 3. **HLE of E143, step 2** (HLE of E143 below; step 1's static decodes are done): the cheap CPU 0 wins (a ticking
-   clock, persistence by default, native group-0 keys and power lever, Level Adjust, the HDMI EDID). The SCPU request
-   server and the ticking clock are in (S-SCPU, 2026-10-23), so are the SCPU port registers and IRQ 320 (group 0
+   clock, persistence by default, native group-0 keys and power lever, Level Adjust, the HDMI EDID). The ticking clock
+   is in, and PER_SCPU runs natively against a transport-level model of the sub-CPU (S-SCPUDEV, 2026-10-23, in place of
+   the request server S-SCPU; SCPU track step 2), so are the SCPU port registers and IRQ 320 (group 0
    natively, 2026-10-23), the HDMI plug down to the EDID (`--hdmi on`, 2026-10-23) and the accelerometer at its sample
    cache (2026-10-23, hle-gaps.md 4.7.3: ACC_MAIN, PER_SLOPE, the level gauge following a tilt input and Level Adjust
    completing natively on E143 and E146); left of step 2: persistence by default (S-NVRAM opt-in) and the power-off
-   sequence. The SCPU survey (2026-10-23, `docs/om1-scpu-spec.md`) puts a transport-level SCPU device before any LLE
-   of the sub-CPU (SCPU track below).
+   sequence. The SCPU survey (2026-10-23, `docs/om1-scpu-spec.md`) put the transport-level model before any LLE of the
+   sub-CPU; it is built (SCPU track below).
 4. **Debug API follow-ups** (Debug API follow-ups below): the route to a running play session (F31), the attached
    watch log's lab time, halt and trace filters are in (2026-10-23); left are the gate gaps (items 1-3, 6, 7).
 5. **Emulator architecture** phases 2-5: finish phase 2's typed seams (machine port, options object, composed lab
@@ -183,7 +185,8 @@ the survey table.
   written, I); IMG planes (live view, playback) are not modelled.
 - **The E143 family's USB connection:** E143, E146 and E147 keep `0x0400` at state 0, which on the E144 family is a
   cable (survey finding 9); their starts publish no USB connection from it (X). On them it is the SCPU port scan's,
-  reported through the group-4 producer: serving the port scan (`0x88`, S-SCPU) would set it the firmware's way.
+  reported through the group-4 producer: answering the port scan (`0x88`, which S-SCPUDEV refuses: its result bits
+  are ?) would set it the firmware's way.
 - **E137's display sync:** S-DISPSYNC stands in for the camera's release of the start's display sync (stopRecView's
   sync-word clear, then an image sync of the kind the pending state takes). What the camera waits for before the
   release is not known (I: once its through image shows). E143's GUI asks for the sync at a recording's start too
@@ -324,7 +327,7 @@ alignment. The navigation rules are observed (X), not decoded: the 0x9031 / 0x90
 `0x511bde6b`, the page and tab edges. The camera path above sendEvent (the reader of queue 6, long-press and repeat
 timing), the physical rotation of the dials (the board byte `0x97f00254` selects between two dial tables; which board
 the OM-1 is, is not known), sub-screens that list media and the Card Formatting actions, My Menu's page count and
-internal page, the 18 key-selected settings (settings spec section 2), the SCPU's replies beyond the four commands S-SCPU answers, the flash
+internal page, the 18 key-selected settings (settings spec section 2), the SCPU's replies beyond the five commands S-SCPUDEV answers, the flash
 controller `0x98d01800` (settings do not persist without S-NVRAM), the settings module init chain `0x503dae30` (not
 run), mode-dependent defaults (`0x605e9198`), and the store-init order (menu spec §12-§13, settings spec §4).
 
@@ -443,19 +446,21 @@ Each listed once; the owner document has the evidence.
 | Text and resources | U4-U6, U9, U10, U13, U14, U16, U17 for widgets other than the menu's; U2 / U8 answered for the Setup tab only; whether the camera can hit the DrawText skip-count issue behind H-STACK | text spec §9, §10 |
 | ND128 | the composition limit downstream of the frame count; 128-frame safety; preview and EXIF; updater acceptance; other readers of the ND parameter still see 6 | `analysis/nd128/README.md` "Verification and its limits" |
 
-## SCPU track: from S-SCPU to the sub-CPU's own firmware
+## SCPU track: from S-SCPUDEV to the sub-CPU's own firmware
 
 Survey done 2026-10-23 (`docs/om1-scpu-spec.md`): `blk0e560000` is a Cortex-M4F image for an STM32L4-class part,
 loaded at `0x08000000` (E143 and E146 byte-identical, E147 its own build; E139 and E134 carry other SCPU lineages).
 The MN link is SPI2 slave plus three pins, and the command table of hle-gaps.md 4.7.1 maps onto a two-level dispatch
 table. The sub-CPU handles batteries, charging, USB PD, the RTC and backup words. Keys and the accelerometer are not
-on it, so an LLE would retire S-SCPU and run PER_SCPU's start and inbound path natively, but would not touch the
-input or accelerometer stand-ins.
+on it, so an LLE would retire S-SCPUDEV and run the inbound path natively, but would not touch the input or
+accelerometer stand-ins. Step 2 is built (2026-10-23, hle-gaps.md 4.7.1, scpu spec 8): PER_SCPU, its start, its state
+machine and its transactions run natively over S-SIO2 and the pins 102 / 103 / 107 against S-SCPUDEV on E143, E146
+and E147, and on E139 and E134 (their own pins and channel; their sub-CPUs answered as E143's, I).
 
 | Step | Content | Size (I) |
 |---|---|---|
-| 1 | settle the open link items statically: the PC2 / PC3 roles, the inbound message layouts, the `0x85` message-to-state map, the `0x88` reply | 2-3 days |
-| 2 | S-SCPUDEV: a transport-level SCPU device at PER_SIO channel 2 and pins 102 / 103 / 107 speaking the frame protocol with handlers from the D table; PER_SCPU's start, gate, watchdog and poll path native; S-SCPU retired behind a flag and the store-init session compared | 1-1.5 weeks |
+| 1 | settle the open link items statically: the PC2 / PC3 roles, the inbound message layouts, the `0x85` message-to-state map, the `0x88` reply | partly done (2026-10-23): PC3 is pin 102 and PC2 the message line, `0x85`'s reply, the date's and backup registers' semantics, the `0x88` reply's shape (scpu spec 3); left: the inbound message layouts, `0x85`'s message-to-state map, the port scan's result bits |
+| 2 | S-SCPUDEV: a transport-level SCPU device at PER_SIO channel 2 and pins 102 / 103 / 107 speaking the frame protocol with handlers from the D table; PER_SCPU's start, gate, watchdog and poll path native; S-SCPU retired and the store-init session compared | done (2026-10-23): the same three requests, now as frames, the waits E_OK; S-SCPU removed rather than kept behind a flag; the watchdog's and poll's paths are native but not reached (the model always answers and posts no message) |
 | 3 | a Thumb-2 instruction census of the image (`tools/`) | 1-2 days |
 | 4 | a pure-JS Cortex-M4 core (`emu/src/core/`), checked against a QEMU M4 board in the VM | 2-3 weeks |
 | 5 | the STM32L4 system block and the must-behave peripherals (RCC, FLASH, PWR, GPIO, EXTI, SPI2 + DMA, LPUART1, RTC); X target: the console prompt "SUB> " and the 13 tasks | 1-2 weeks |

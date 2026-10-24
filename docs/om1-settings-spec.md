@@ -1,6 +1,6 @@
 > Status (2026-10): implemented by `emu/src/lab/menu.mjs` (store phase, `store='native'`), `emu/refs/settings.mjs`
-> (offline decoder and reference), `emu/src/dev/scpu.mjs` (`om1.scpu`) and `emu/src/lab/scpuserver.mjs` (S-SCPU, the
-> sub-CPU's answers, since 2026-10-23); checked by `emu/checks/check_nav.mjs`
+> (offline decoder and reference), `emu/src/dev/scpu.mjs` (`om1.scpu`) and `emu/src/lab/scpudev.mjs` /
+> `emu/src/lab/scpulink.mjs` (S-SCPUDEV, the sub-CPU at the far end of PER_SCPU's link, since 2026-10-23); checked by `emu/checks/check_nav.mjs`
 > (groups 0-2b, 4) and `emu/checks/check_menu.mjs`. Consolidated from three analysis reports
 > that are not part of this repository (settings store, event path, page 6 / EVF layout) and what the M6
 > implementation read or executed (marked "M6"). Corrections to those reports are listed in section 9.
@@ -122,7 +122,7 @@ the same block "retained registers"; both views are one device. Every firmware a
 
 Lab assumptions: **A-SCPU-1** a command completes before the first poll (the poll loop's exit value, like the
 panel-stub presets); **A-SCPU-2** reset 0 everywhere = a camera whose backup memory is blank, matching the zero flash
-copy the registry reads (and, since S-SCPU, a blank sub-CPU memory: its backed-up words read 0); **A-SCPU-3** the
+copy the registry reads (and, since S-SCPU and now S-SCPUDEV, a blank sub-CPU memory: its backup registers read 0); **A-SCPU-3** the
 clock's phase word takes 0 only (its one writer, `0x5004e355`, writes 0; what another value does is ?); **A-SCPU-4** a
 port word's bits other than bit 31 read 0 (the firmware's one reader in the lab takes bit 31 only; what the
 configuration bits read back is ?). What a window
@@ -134,9 +134,9 @@ The image addresses 35 distinct offsets with `0x98e000xx` immediates (`check_nav
 0xe8, 0xec and 0xf4 are among them, 0x0c..0x3c are reached only through the indexed reader/writer.
 
 The window is not the SCPU's command channel: the requests of `0x5005cd17` (date, backed-up words, port scan, system
-control, ...) travel as frames on PER_SIO channel 2 between pins 103 and 102, driven by the task PER_SCPU, which the
-lab does not run; hle-gaps.md 4.7.1 owns that protocol and its command set (D). S-SCPU answers the commands the
-sessions send at the request API (section 4).
+control, ...) travel as frames on PER_SIO channel 2 between pins 103 and 102, driven by the task PER_SCPU, which runs
+natively in the lab since 2026-10-23 against S-SCPUDEV, the sub-CPU's model at the far end; hle-gaps.md 4.7.1 owns
+that protocol and its command set (D).
 
 ## 4. Init path and its stand-ins (M6, X)
 
@@ -149,7 +149,8 @@ The display path reads four kinds through the camera-state read `0x500417da`; th
 2. Settings-DB init `0x503c5473` returns (blank path, `0x503eefdf` != 0): steps 1-3 as in the STORE report (reset
    `0x503d9cdd` -> `0x503d9bf3`, region overrides); step 4 `0x504205d2` -> `0x5012b78c` fills a date struct
    (status 10501, `0x5012b91f`), sends it to the SCPU task (`0x5012c7d9` -> request `0x5005cd17`, wait flag 0xf7;
-   S-SCPU keeps it)
+   PER_SCPU carries it to S-SCPUDEV, whose RTC takes it: its status 10501, cut to 5 by the 10-byte frame, clears the
+   RTC's valid flag)
    and calls `0x5005a57c` = `0x5005a6fa(0, 1)`, which sets the clock to 0: register sequence R f4, W e8 = 0,
    W ec = 0, W f4 = 0x20041001, R f4, R e8, R 0x00, W 0x00 = 0xa8; the last call `0x503eee94` is skipped
    (S-FLASHSAVE: it would save the freshly reset stores E and M to flash, see the table).
@@ -158,7 +159,7 @@ The display path reads four kinds through the camera-state read `0x500417da`; th
 |---|---|---|
 | K-CFLUSH | `0x5004e68a` returns at once; only from the call at `0x50040863` (return `0x5004086a`), others raise; 4 calls per session (check_nav group 2) | cache maintenance with a cross-core handshake: clears bit 1 (mask 2) of low-RAM `(0x8070)` (`0x5004e693..9a`), then loops while bit 3 (`btst 8` = mask 8) of it is set (`0x5004e69d..ac`); reads 1024 words each at `0x28a00000`/`0x28a80000`; sets bit 4 (mask 16) of a per-core register picked by `(0x8050)`: `0x98100000` for 0, `+ 0x400` for 1, `+ 0x800` for 2, `+ 0x1000` for any other value (`0x5004e6ce..0x5004e70e`, unmapped), and polls until that bit is clear again (`0x5004e716..27` for 0). Who clears bit 3 of `(0x8070)` and the register bit is not shown by this code (?) |
 | K-CRT-134D | `0x3ffe134d` returns the board's SCPU counter (`menu.mjs` `SCPU_CLOCK`: `0x98e000e8`; `0x98e00098` on the E144 family, whose window reads it: E144 `0x516824a1`, E137 `0x51462486`, D), as the window code does; from any caller | `call 0x3ffe134d; mov d0,(0x62965138)`; no other abs32 reference to `0x62965138`; per-core C-runtime window (lands mid-instruction at `0x5000236d`); the window code at `0x51a7034d` is `mov (0x98e000e8),d0; retf`, so the real call returns SCPU register `0xe8` (D, cores spec 8). E137 also reads it in an operating-time count that E143 and E144 stub out with a `retf` (E143 `0x5005a6db`, E144 `0x50050dc9`): `0x5004d531` adds the time since the start (`0x61f275f4`, kept by `0x5004d521`) to a NAND record at `0x40680000` through `0x50039157` when the counter has advanced, logs `0x19001003` when it went back and does nothing when it is equal; on the E144 family's board the lab's counter stands still (`emu/src/fw/board.mjs` scpu.ticks), so the start's count writes nothing (D; X, a probe of `0x50039157`); with a ticking counter E137's and E130's starts reach the NAND controller and stop there (X, 2026-10-23), so a NAND model comes first |
-| S-SCPU | the request API `0x5005cd17` is answered in the sub-CPU's place (`emu/src/lab/scpuserver.mjs`, since 2026-10-23 in place of S-SCPU-MSG, which answered the four waits instead): `0x06` keeps the backed-up word, `0x86` writes it to rx, `0x01` keeps the date (status included) and `0x81` answers it advanced by lab time; then the request's completion runs natively, so the waits on the four SCPU flags `(0x6004315a/5c/5e/60)` run natively and return at once (observed at their returns `0x5005a7f9`, `0x5005a85f`, `0x5012c87d`, `0x5012c8d3`). Any other command, size, word or context stops the session. Per session: `0x06 {2, 0x8000021c, 0}`, `0x01` with the reset date, `0x86 {2, 0}`, whose reply `1c020080` the reader `0x5005a86c` takes (X, `check_nav` STORE notes) | PER_SCPU, which the lab does not run, would carry each request to the sub-CPU over PER_SIO channel 2, write the reply and call the completion in its own task (hle-gaps.md 4.7.1, D). The flags are PER_SCPU_BK_REG_WRITE_W.. (0xf5), PER_SCPU_BK_REG_READ_WA.. (0xf6), SCTIME_SET_DATA_WAIT (0xf7) and SCTIME_GET_DATA_WAIT (0xf8) in the object-name table. What the sub-CPU keeps (the date with its status, one word per index) is I |
+| S-SCPUDEV | the sub-CPU at the far end of PER_SCPU's link (`emu/src/lab/scpudev.mjs`, since 2026-10-23 in place of S-SCPU, which answered at the request API `0x5005cd17`, itself in place of S-SCPU-MSG): PER_SCPU runs natively (H-SCPUSTART) and carries each request as a frame over PER_SIO channel 2 (S-SIO2) and pins 102 / 103; the model answers per its firmware's handlers: `0x06` writes backup register 2, `0x86` reads it, `0x01` with status 0 sets the RTC and its valid flag (register 1) and with another status clears the flag, `0x81` answers the RTC or, without the flag, 2019-01-01 with status 10501. The requests' waits on the four SCPU flags `(0x6004315a/5c/5e/60)` run natively and return E_OK (observed at `0x5005a7f9`, `0x5005a85f`, `0x5012c87d`, `0x5012c8d3`). Any other command or word stops the session. Per session: `0x85 {2}` (PER_SCPU's start), `0x06 {2, 0x8000021c, 0}`, `0x01` with the reset date, `0x86 {2, 0}`, whose reply `1c020080` the reader `0x5005a86c` takes (X, `check_nav` STORE notes) | the transport and the handlers are D on both ends (hle-gaps.md 4.7.1, scpu spec 3); the sub-CPU acting at the MN's idle points (A-SCPUDEV-1), the zeros it shifts out while receiving, and its state across a reset are I |
 | S-FLASHSAVE | `0x503eee94` returns, d0 unchanged; only from the call at `0x503c5530` (return `0x503c5537`), others raise | a save of stores E and M to flash: it builds the request {mode 1, B 0, F 0, E 1, M 1, 0} (`0x503eeec3..d5`) for `0x50041f56`, whose mode 1 (`0x50041f7a..0x500420b6`) is the save path (success prints `FS.` `F1S.` `BS.` `ES.` `MS.`, strings `0x601151a4..b9`; loads print `lD`/`lR`). Per flagged store `0x5003f5dd` returns 0 if the RAM object equals the current flash slot (`0x50003881`), else picks the next slot (`0x5003f4ba`), copies, calls K-CFLUSH and programs the flash controller `0x98d01800` (unmapped; `0x5003d9da`/`0x5003d95c`). The DB init's last call on the blank path, its d0 discarded (`0x503c5537 mov a2,d0; ret`); skipping it loses nothing while persistence is not modelled |
 | S-PROP (extended) | property 4513 answered with the display device at return sites `0x503d72c5` and `0x503d2551` too, reached once the descriptor hash exists; the native value after init is 0 (pinned in `check_nav_notes.txt`) | `0x503d72c5` is a bit-4 test (`and 16,d0; cmp 16` at `0x503d72c5..cd`). `0x503d2551` is the raw property read in the setting-rule evaluator `0x503d23e7..0x503d25a6`: it compares exth(value) with the rule entry's s16 at (2,a2) (`0x503d2568..72`) and ANDs the entries of a group. All 11 rule entries for 4513 (`0x605c9e84`, `0x605c9eac`, `0x605c9ed4`, `0x605c9fdc`, `0x605c9ffc`, `0x605ca01c`, `0x605cce70..0x605ccee8`) require 4513 == 8, next to terms on 44, 1417, 453 (finder style) and 451. TFT (1) gives the same outcome as the native 0; EVF (8) makes the term true: in a 13-step EVF navigation run 2 of the 10 groups that read 4513 there evaluated true (TFT: 0 of 10; X, rule result a2 at `0x503d2585`). Which rules those are and what they change is ? |
 | S-PERSIST | experiment inputs written raw with `0x503ee412(id, value)` after the DB init and before GUI creation; each read back through the getter | stands in for a persisted store M (the store S-FLASHSAVE would save) that the lab cannot load: every listed id and every seed id checked has its data object in the M list (layout `0x600e6034`): 3009 kind 0x85e1, 1881 0x3e91, 1882 0x3ef1, 1883..1924 0x3f01..0x44a1, seeds 32 0x81d2, 21 0x8211, 115 0x9502 (`Settings.slot`); ids 3009 (one of the 18 language setting values), 1881, 1882, the cursor memories (the union of the tab table's +8 lists, 1883..1924, My Menu's 1920..1924 included; `persist_ids` in `menu.mjs`) and validated seeds; scalar descriptor ids only (the firmware's own lookup `0x503da999`, type != 6, value in the allowed list, no key selector at custom object +20, section 2); a raw set sends no notifications |
@@ -235,7 +236,7 @@ independent dump, plus the investigation's executed spot values.
 ## 7. Persistence
 
 None by default: the store is RAM. Values survive leaving and reopening the menu within a session; a new session
-starts from the blank-store defaults plus its S-PERSIST inputs, and from a blank sub-CPU memory (S-SCPU). S-NVRAM
+starts from the blank-store defaults plus its S-PERSIST inputs, and from a blank sub-CPU memory (S-SCPUDEV). S-NVRAM
 (opt-in, `OM_EMU_NVRAM=FILE` on the node host) keeps the stores' flash images, the window's backed-up words and the
 sub-CPU's memory in a file. Blockers: the flash controller `0x98d01800/04` (`0x500014e6`)
 and the per-unit flash contents (store F at flash `0x400a0000`, 128 KiB). The blank path saves stores E and M to flash

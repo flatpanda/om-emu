@@ -60,8 +60,11 @@ lab. Its inputs are session-log inputs, so `--replay` repeats them.
 lab's unset clock, the date prompt), and S1 and S2 are the application's: S1 cancels the prompt and shows the shooting
 information, S2 the capture display and the rec view. What runs below it is stood in:
 
-- the sub-CPU's side of the firmware's SCPU requests is answered (S-SCPU, `src/lab/scpuserver.mjs`): the date and the
-  backed-up time-zone word are kept for the session, and the SCPU clock ticks with lab time. On E143, E146 and E147
+- the firmware's PER_SCPU runs natively against a model of the sub-CPU at the far end of its link (S-SCPUDEV,
+  `src/lab/scpudev.mjs`, over PER_SIO's channel S-SIO2 and the GIO pins 102 / 103 / 107, `src/lab/scpulink.mjs`,
+  `src/dev/linkpins.mjs`; E143, E146, E147, E139 and E134): the start's reset pulse and
+  `0x85 {2}` handshake and the store init's requests are frames on the link, the sub-CPU's RTC and backup words are
+  kept for the session, and the SCPU clock ticks with lab time. On E143, E146 and E147
   the power lever, the Fn lever and S1 are the SCPU interface's port levels (H-SCPUPORT): IRQ 320, its handler and
   UI_IN's callback run natively; the lab attaches the IRQ and registers the callback in place of the inits that would
   (H-SCPUIRQ, H-UIINPORT).
@@ -416,7 +419,7 @@ firmware the run warns and skips that rule. `--explain N` prints what each firmw
 
 | Command | What it covers | Needs |
 |---|---|---|
-| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units, the SCPU clock, port words and request server (S-SCPU), the HDMI port's device and sink, the accelerometer stand-in's sample, the SD card model, the FAT reader and the JPEG pair, the publication audit's rules on a throwaway repository | node and git; runs on any checkout in a few seconds |
+| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units, the SCPU clock, port words, the link's pins and the sub-CPU's model (S-SCPUDEV), the HDMI port's device and sink, the accelerometer stand-in's sample, the SD card model, the FAT reader and the JPEG pair, the publication audit's rules on a throwaway repository | node and git; runs on any checkout in a few seconds |
 | `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts, the node host, the command-line tools, the scene, the camera application, an HDMI plug in play on E143, E146 and E147, check_level on E146, the card and the file system in play on E143 (a blank card formatted and mounted by the firmware, read back independently; the counts from the card; a picture's file written and found again; Card Formatting from the menu, read back; the card taken out and put back), the firmware map and the regression net's controls | the E143 firmware blocks (E146's and E147's for the HDMI plug, E146's for check_level) and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
 | `node emu/bin/golden.mjs check` | every scenario, every lab of the traced check runs and every check run's output against `golden.json`: what the panels show, what the devices see and what the checks conclude must not change | the firmware |
 | `node emu/bin/checks.mjs [CHECK \| RUN ...]` | every run of `checks/runs.json`, judged on its exit status | the firmware |

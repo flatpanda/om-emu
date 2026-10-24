@@ -1198,8 +1198,13 @@ and E147; off by default. Addresses are E143's (disassembly notation) unless a b
   block and its magic/FIFO contract) are decoded in `docs/a53-spec.md` §3. ISC has been brought **up live** (X): a
   patched QEMU with a small `om-isc` device backs these windows and raises A53 IRQ 14 on the MN→A53 doorbell, and
   `tools/a53-oracle/iscpeer.mjs` plays the MN half (the same encoding as `0x6034d018` / `0x50aa324b`) — the port-27
-  start-complete, a port-26 kind-3 round-trip and an `hhhr` 30/31 exchange all run end to end. See
-  `tools/a53-oracle/README.md` and `docs/a53-spec.md` §4 phase (c).
+  start-complete, a port-26 kind-3 round-trip and an `hhhr` 30/31 exchange all run end to end. The shared memory is one
+  backing region for both the MN (`0x63fe0000`) and A53 (`0x2_a3fe0000`) views, and the peer writes the `ISC_alloc_mem`
+  memblock pool header so the A53's own `alloc`/`attach` succeed (the socket `/dev/mem` buffer alias and the CGI pool both
+  depend on this); the 64-byte socket and 32-byte CGI record field layouts are decoded and paired with the MN CPU-1
+  marshallers in `docs/a53-spec.md` §9.1. The socket/CGI daemons launch only from the kind-1 wifi script and were not
+  brought up end to end in the headless oracle (`docs/a53-spec.md` §10 item 7). See `tools/a53-oracle/README.md` and
+  `docs/a53-spec.md` §4 phase (c).
 
 ### 4.12 Detection, GPU / C3D, strobe
 

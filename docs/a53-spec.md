@@ -179,16 +179,22 @@ These phases are the device budget for an in-emulator LLE, whatever engine runs 
   RAM covering the windows the control-block `__ioremap` returns NULL, because arm64 refuses to ioremap what the machine
   presents as RAM. A patched QEMU (`om-isc-qemu.patch` + `om-isc.c`, built by `build-qemu.sh`) fixes this: a small
   sysbus device backs the lock (`0x97000000`, as normal RAM so the LL/SC monitor works), scc (`0x97f00b80`), the control
-  block + FIFOs (`0x97f00c00`) and the `alloc_mem` pool (`0x63fe0000` / `0x2_a3fe0000`) from a shared
-  memory-backend-file at the true physical addresses (high priority over machine RAM; `mem=0x5140000` keeps the
-  kernel's own RAM the real 81 MiB so the windows are not RAM and ioremap succeeds). It models the four `irqcon` banks
+  block + FIFOs (`0x97f00c00`) and the `alloc_mem` pool from a shared memory-backend-file at the true physical addresses
+  (high priority over machine RAM; `mem=0x5140000` keeps the kernel's own RAM the real 81 MiB so the windows are not RAM
+  and ioremap succeeds). The two pool views `0x63fe0000` (MN) and `0x2_a3fe0000` (A53) now alias **one** backing region,
+  so a buffer written on one side is the bytes the other reads (required for the socket `/dev/mem` alias and the CGI pool
+  buffers), and the peer writes a valid memblock pool header at the pool base so the A53's `ISC_alloc_mem`/`attach` succeed
+  (§9.1, §10 item 6). The device also captures the `mn_sio_uart` console (`0x9a500600`, TX at `+0x18`) to QEMU's stderr,
+  so the A53 boot/daemon log is visible. It models the four `irqcon` banks
   and, on an MN→A53 doorbell from the peer, sets `bank0+0x880` bit 14 and raises GIC SPI `0x1c0` — which the A53's
   `irqcon` driver hardwires (`irqcon_postcore_init` requires `irq-0x1c0 <= 7`, D at `0xffffff8008583268`), so virt's GIC
   is widened to 512 IRQs in the patch. `irqcon` then demuxes bit 14 to `isc_receive_interrupt`. The MN half runs outside
   QEMU as `iscpeer.mjs` (control-block magic `0x10f7`, node count, cb-relative FIFO offsets, `isc_send`/`isc_receive`
   FIFO format). **Measured:** `isc_start` succeeds; the A53 posts the port-27 start-complete `{01 00 00 00}`; a port-26
-  kind-3 request is received over IRQ 14 and answered on port 27 with the requested size echoed back; and `hhhr` answers
-  a port-30 request with a 112-byte port-31 reply to node 0. Reproduce with `run-isc.sh`; details in
+  kind-3 request is received over IRQ 14 and answered on port 27 with the requested size echoed back; `hhhr` answers
+  a port-30 request with a 112-byte port-31 reply to node 0; and the A53's own `ISC_alloc_mem` now succeeds against the
+  peer's pool (`dbgterm_server` takes the first free block). The socket/CGI daemons launch only from the kind-1 wifi script
+  and were not brought up in the headless oracle (§10 item 7). Reproduce with `run-isc.sh`; details in
   `tools/a53-oracle/README.md`.
 
 **Custom vs standard, restated.** Custom (registers must be modelled from the kernel's aarch64 code, done above for the
@@ -305,6 +311,55 @@ unavailable. `sccore`'s port-26 kind-1 "wifi start" still runs the init script (
 the socket/CGI/file relays are **radio-independent** and would answer normally — they are the endpoints the emulator
 actually needs. This matches the MN-side seam in `docs/hle-gaps.md` §4.11 (network tasks report "not available").
 
+**Live, with the console captured (X, `run-isc.sh` + the oracle's `mn_sio_uart` capture).** The A53 boots to userspace
+and runs its boot daemons: `Starting OLYMPUS APP...`, then `sccore start!!` and `dbgterm server start!!` (S99oly starts
+`dbgterm_server`, `sccore`, `hhhr`). These are the radio-independent boot daemons and they are alive: `sccore` answers
+port 26 (kind-3 round-trips, §9), `hhhr` answers 30/31, and `dbgterm_server`'s `ISC_alloc_mem` succeeds against the
+oracle's pool (its later `ISC_attach_mem` returns -1 only because the MN peer does not implement dbgterm's port-15
+handshake). A port-26 **kind-1** is received and processed by `sccore`'s live port-26 thread (proven by a kind-3 reply in
+the same run), which calls `system("/etc/init.d/wifi start &")`; the wifi-script daemons (`isc_socket`, `isc_olnet`,
+`wifi_*`, `lighttpd`, `isc_cgi`, `blebridge`) are started only from there and did **not** surface on the captured
+console, so `isc_socket`/CGI could not be exercised end to end in the headless oracle (see §9.1 and §10).
+
+### 9.1 The 64-byte socket record and 32-byte CGI record (field layouts, D)
+
+Read from both ends: the A53 handlers (`isc_socket`/`isc_cgi`, armhf) and the MN CPU-1 marshallers in the E143 main
+block (disasm notation = body offset + `0x50000000`). The A53 receives on port 3 (socket) / 11..16 (CGI) and replies the
+same record on port 4 / 11..13,16 to node 1. The MN request/reply helper is `0x517dd738` (socket) / `0x517dc3a3` (CGI);
+both bottom out in the ISC service stubs `ISC_send_timeout` `0x5002bf41 -> 0x50aa2fe0` and `ISC_receive` `0x5002bf4f ->
+0x50aa303c` (and `alloc`/`attach` `0x5002bf77`/`0x5002bf81` for bulk data).
+
+**Socket record** (64 B; `+0` u32 op 1..16, `+4..+0xb` echoed request id, then per-op fields). The A53 dispatch is the
+`tbb` jump at `isc_socket+0x1068`; each op's A53 handler and the MN CPU-1 wrapper that builds the record are paired:
+
+| op | call | request fields (D, A53 handler) | reply field (D) | MN CPU-1 wrapper (D) |
+|---|---|---|---|---|
+| 1 | socket | `+0x10` domain, `+0x14` type, `+0x18` proto | `+0x1c` fd | `0x517dd8c9` |
+| 2 | bind | `+0x10` fd, `+0x14` sockaddr[16], `+0x24` len | `+0x28` ret | `0x517dd8f9` (memcpy's the 16-B sockaddr) |
+| 3 | connect | `+0x10` fd, `+0x14` sockaddr, `+0x24` len | `+0x28` ret | (via the same helpers) |
+| 4 | listen | `+0x10` fd, `+0x14` backlog | `+0x18` ret | `0x517dd935` |
+| 5 | accept | `+0x10` fd, `+0x14` addr out, `+0x24` len in/out | `+0x28` fd | `0x517dd961` (copies addr back) |
+| 6 | send | `+0x10` fd, `+0x14` MN buf addr, `+0x18` len, `+0x1c` flags | `+0x20` ret | `0x517dd9c0` |
+| 7 | sendto | …+`+0x20` sockaddr, `+0x30` len | `+0x34` ret | `0x517dd9f7` (memcpy's the sockaddr) |
+| 8 | recv | `+0x10` fd, `+0x14` MN buf, `+0x18` len, `+0x1c` flags | `+0x20` ret | `0x517dda42` |
+| 10 | shutdown | `+0x10` fd, `+0x14` how | `+0x18`/`+0x14` ret | `0x517dda79` |
+| 11 | close | `+0x10` fd | `+0x14` ret | `0x517ddaa5` |
+| 12 | select | `+0x10` a 24-B ISC mem handle (nfds/fdsets/timeval block) | per block | `0x517ddace` (allocs 4 KiB) |
+
+The `+4..+0xb` bytes are the MN's request id, echoed verbatim (the MN helper `0x517dd738` stamps them and matches them on
+the reply). For bulk `send`/`recv`, the A53 does **not** use the memblock pool: it maps the MN buffer directly through
+`/dev/mem` at `(addr & 0x3fffffff) | 0x2_80000000` (`isc_socket.dis 0x12b3c`), i.e. the shared-memory alias the oracle
+now backs as one region (§4 phase c, `tools/a53-oracle`), so a buffer the MN writes at `0x63fe0000+X` is the bytes the
+A53 reads at `0x2_a3fe0000+X`.
+
+**CGI record** (32-B control record on ports 11/12/13/16) + a `0x3444`-byte info block in a pooled buffer (D,
+`isc_cgi.dis`: `malloc 0x3444`, `ISC_alloc_mem 16 KiB` at CGIInit). Info block: `+0` 1 first/2 later chunk, `+4` content
+length, `+8` chunk length, `+0xc` method (1 GET / 2 POST), `+0x10` URI len (≤ `0x3ff`), `+0x14` URI, `+0x414` body
+(≤ 12288), `+0x3414` REMOTE_ADDR[16], `+0x3424` log name[32]. MN CPU-1: `CGIInit` `0x517dc442` (ISC_alloc_mem via the CGI
+request helper, then the request loop `0x517dc636`, which runs `ISC_dcache_clean_inv_range` `0x50aa30ce` over the
+12416-byte reply buffer). The CGI body moves through `ISC_attach_mem` pool buffers, so CGI needs the pool header the
+oracle now writes (§4 phase c). (D; not exercised live — see §10.)
+
 ## 10. Open questions
 
 1. The exact meaning of the `0x988003xx`/`0x988004xx` reset/clock/power bits `0x5003bcd9` programs before release (?).
@@ -312,12 +367,25 @@ actually needs. This matches the MN-side seam in `docs/hle-gaps.md` §4.11 (netw
    at init, and the oracle receives it. The port-26 request kinds 1/2/3 are decoded and kind 3 round-trips live (§9);
    which MN request code maps to A53 power-*off* vs the kinds above is still ? (the MN side `SYS_CA53_PWR_MNG`
    `0x5003c8f4` was not re-scanned here).
-3. ~~Per-port payload formats~~ — **largely resolved (§9, D; sccore + hhhr confirmed live, X):** message lengths and the
-   sccore/hhhr/socket/cgi bodies are decoded. The exact field layouts inside the 64-byte socket and 32-byte CGI records,
-   and the `isc_file`/`olnet`/`ble` record contents, remain partly ? (lengths read, field semantics not fully named):
-   exercising those ports live needs their marshalling decoded, and pairing with the MN-side CPU 1 senders in the E143
-   main block.
+3. ~~Per-port payload formats~~ — **resolved (§9/§9.1, D; sccore + hhhr confirmed live, X):** message lengths and the
+   sccore/hhhr bodies are decoded and round-trip live; the 64-byte socket record and 32-byte CGI record field layouts are
+   now named (§9.1, D) and paired with the MN CPU-1 marshallers in the E143 block. The `isc_file`/`olnet`/`ble` record
+   contents remain partly ? (lengths read, fields not fully named).
 4. The precise `mapinfo` record layout and whether production ever takes the "from sd" path (the strings exist:
    `<arm load4>`, `<arm jtag sd0..2>`) (?).
 5. ~~The control-block magic~~ — **resolved (X):** `0x10f7` (`0x1000 | (config byte-sum & 0xff)`), confirmed by
    `isc_start` succeeding live against `iscpeer.mjs`'s published control block.
+6. ~~The `ISC_alloc_mem` pool~~ — **resolved (D + X):** the 128 KiB shared memory is a memblock allocator whose header +
+   free-list must pre-exist at the pool base (shift/nblocks/head, a run-length doubly-linked list, two bitmaps; decoded
+   from `memblock_init`/`memblock_alloc`/`findrun` and the MN builder `0x50aa63c5`). `iscpeer.mjs` now writes it and the
+   A53's own `ISC_alloc_mem` succeeds live (`dbgterm_server` takes block 1; before the fix every alloc/attach failed). The
+   two shared-memory views are now one backing region, so the socket `/dev/mem` buffer alias and the CGI pool buffers are
+   coherent across both sides.
+7. **`isc_socket`/`isc_cgi` end to end — not yet exercised live (X, the stop).** These daemons launch only from the
+   port-26 kind-1 wifi script. In the headless oracle, kind-1 is received and `sccore` calls `system(".../wifi start &")`,
+   but the wifi-script daemons do not surface on the captured console and a port-3 `socket()` request (delivered to and
+   consumed by the A53's iscdrv) draws no port-4 reply — so `isc_socket` is not serving port 3 in the run window. The
+   socket accept and CGI HTTP paths also need an in-guest TCP/HTTP client (no NIC is configured in `run-isc.sh`). Why the
+   backgrounded wifi script yields no visible daemon start is ? (orphaned-stdout vs. an early script failure; not pinned
+   down without an in-guest shell/strace). The record formats and the pool/alias they rely on are decoded and in place
+   (§9.1), so this is a harness gap, not a protocol gap.

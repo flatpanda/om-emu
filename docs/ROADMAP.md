@@ -471,6 +471,24 @@ Recommended: steps 1-2 as part of HLE step 2's power-off work; steps 3-7 only wh
 shows cannot be written from the D table. Risks: the I2C devices' identities and the battery protocol are unknown, and
 silence from them may change what the power manager reports to the MN.
 
+## Subject-detection track
+
+Survey done 2026-10-25 (`docs/om1-subject-spec.md`): the OM-1's subject networks run on a dedicated engine, DML at
+`0x9c180000` (IRQ 285), programmed by CPU 3's MDET_DL code; the five per-kind models are resource `0x800f` of the
+large-data block (unchanged on E146 / E147, which add HUMAN); PDT / TRC (`0x9be00000`) track, and E143's face engines
+detect faces. The models carry no layer schedule, so a reproduced network (as e7-bird-network did for a Nikon) needs
+the register builders decoded and the engine's numerics, which cannot be checked without an OM-1.
+
+| Step | Content | Size (I) |
+|---|---|---|
+| A | S-SUBJECT at DISP_FRAME's inputs: scene-derived subject frames in MDET's frame table, UP_FACE / UP_LOCKON posted, when the subject-detection setting is on; first settle the table's records and the setting (spec U1, U2) | about 1 week |
+| B | S-SUBJECT at MDET's results to the AF module | 2-3 weeks after native FCS |
+| C | MDET natively on CPU 3 with S-DML, a register-level engine model whose output heads decode to the scene's boxes | 4-6 weeks after HLE step 4's CPU 3 |
+| D | a reproduced DML network | months; bit-exactness ? |
+
+Recommended: A as soon as the frame table is decoded (it needs no CPU 3); C with HLE step 4; D only with hardware to
+check against.
+
 ## Longer term: full-boot LLE
 
 Booting the image from reset needs the real processor variant, the boot entry, the full memory map and the peripheral

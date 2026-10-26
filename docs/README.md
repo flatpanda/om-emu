@@ -23,6 +23,7 @@ or its harness chooses to behave, treat it as the model's assumption, not as har
 | [om1-text-spec.md](om1-text-spec.md) | GUI text: resource records, string tables, language loading, fonts, DrawText |
 | [om1-menu-spec.md](om1-menu-spec.md) | menu pages: data, the GUI path, the reference, navigation, the EVF layout, screens beyond the menu |
 | [om1-settings-spec.md](om1-settings-spec.md) | the settings store and the SCPU interface |
+| [om1-subject-spec.md](om1-subject-spec.md) | subject detection: the DML network engine and the PDT / TRC and face engines, the models in the large-data block across bodies, the interface to AF and DISP_FRAME, the seams and a plan |
 | [om1-scpu-spec.md](om1-scpu-spec.md) | the sub-CPU's own firmware: MCU, image, the MN link from its side, peripherals, RTOS, console, the LLE plan |
 | [om1-input-spec.md](om1-input-spec.md) | keys, dials, switches and touch in the lab: UI_IN, the touch driver, the stand-ins |
 | [om1-shutter-spec.md](om1-shutter-spec.md) | what S1, S2 and REC reach in the firmware, the image sensor stand-in (S-SCENE), and the camera application running natively |

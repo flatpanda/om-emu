@@ -41,14 +41,47 @@
 //     D); released, the sub-CPU boots and is idle with PC3 high (I: where its code first raises PC3 is not found) and
 //     the gate closed (its flag is RAM, 0x20008390); its RTC and backup registers keep their contents (I: the backup
 //     domain, which a reset of the core leaves alone).
+// The inbound direction (docs/om1-scpu-spec.md 3.4, D unless tagged): a task of the sub-CPU hands the command manager
+// a message for the MN (0x80133dc: a 28-byte request {+0 command, +4 length, +8 data, +20 completion, +24 argument},
+// the MN's own request layout, as event 9 of the manager's queue). The manager's loop takes it before its table
+// (0x8012912..0x8012944): while the power-off flag is set (context +22) the message is dropped and its completion
+// called; in any state but idle it joins the waiting queue (context +40) and PC2 drops; idle (0x8012c0b) with PB12 high
+// it becomes the current message (context +116) and PC2 drops (state 1, a message waiting), with PB12 low it joins the
+// queue. The MN's poll [2, 0x8f] is answered with the current message's frame [length, command, data], padded to 4,
+// or [4, 0, 0, 0] without one, PC2 rising first (0x8012e84, 0x8012e1a); at the poll's release its completion runs
+// and the message is gone (0x8018c54, 0x801315c). Every release then drops PC2 again for a current message or the
+// queue's next one (state 1), else the manager is idle (0x8013122..0x8013156; the idle release 0x8012bef the same).
+// post(command, data) hands the model such a message; port(name, level) moves an input of the port scan (below).
 // The handlers (the sub-CPU's, docs/om1-scpu-spec.md 3.3; ScpuMemory below): 0x85 system control (a read, 3 bytes: the
 // mode, for mode 1 its second byte and else the context's command byte, then 1: 0x8016217 reads its second byte
-// through the caller's r4, the context, D; mode 2 opens the gate at the release, mode 1 closes it; the system-control
-// messages modes 1..5 post are not modelled, their power states are ?), 0x01 / 0x81 the date, 0x06 / 0x86 a backup
-// register. The words a body uses are its fact scpu.words, [index, byte], and a request for another is refused (no
-// caller sends one); a body's fact scpu.quiet lists writes taken without an effect (E134's 0x21: what it means is ?).
-// Every other command stops the session naming it and its handler: the MN's sessions send none, and an answer the
-// sub-CPU makes from its hardware (0x82, 0x88, 0x80, ...) is not known.
+// through the caller's r4, the context, D; for mode 1 the handler also keeps that byte for the system-control task;
+// at the release, 0x801305c..0x8013112: modes 1..5 drop every waiting message with its completion, then mode 1 sets
+// the power-off flag and closes the gate, 2 clears the flag and opens the gate, 3 sets the flag and closes the gate,
+// 4 sets the flag, 5 clears it, and each posts the system-control task its message, 6, 5, 9, 7 and 5; mode 6 does
+// nothing), 0x01 / 0x81 the date, 0x06 / 0x86 a backup register, 0x88 the port scan. The words a body uses are its
+// fact scpu.words, [index, byte], and a request for another is refused (no caller sends one); a body's fact
+// scpu.quiet lists writes taken without an effect (E134's 0x21: what it means is ?). Every other command stops the
+// session naming it and its handler: the MN's sessions send none, and an answer the sub-CPU makes from its hardware
+// (0x82, 0x80, ...) is not known.
+// The power states (the system-control task, sys_ctrl_task.c: its table 0x8008804, 6 states x 14 events, the state
+// names it prints at 0x16d40..0x16db0, D): 0 steady (after a reset), 1 steady_wait, 2 bkground, 3 pwr_save,
+// 4 hibernation, 5 standby. The messages 0x85 posts move it so (D): from steady, 5 (modes 2, 5) stays steady; 6 (mode
+// 1) goes to bkground when PC13 reads low (0x80166d0), else to pwr_save when mode 1's second byte was 1, else to
+// standby (0x80163a3); 9 (mode 3) to pwr_save (0x801648d); 7 (mode 4) to hibernation (0x80163ed). From steady_wait and
+// bkground, 5 goes to steady; every other pair of these is the task's illegal message (0x8016373: logged, the state
+// kept). Its other messages (the sub-CPU's own wake and charge events) are not modelled, and nor is the wake from a
+// power-off: with the flag set the manager ignores PB12's request (0x8012922) until the system-control task clears it
+// (0x8013572), so a request then stops the session.
+// The port scan (per_port_scan.c, D): its task samples GIO ports 45 and 37, PC13 and PC5 (the table 0x80128e0), with
+// a debounce of 3 samples (0x8012828, thresholds set at 0x80127da) into a result byte, bit 0 PC13 and bit 1 PC5
+// (0x8012866..0x801289a). The 0x88 handler (0x80126d7) answers {result, busy}, the result only while the scan is not
+// busy, and then enables the scan's report (its flag, set by 0x801289e). A change of the result goes to the power
+// manager (0x80126a2 -> message 10, the levels inverted), whose handler (0x801a436) posts the MN the message 0x08
+// {PC13's level} when PC13's level changed, through the port scan's sender (0x801271c), which sends only while the
+// report is enabled. The MN takes bit 0 of the reply and of the message alike (its 0x5005d44c): UI_IN's group-4
+// switch 0x0400. In the model the result follows the levels at once (I: the 3-sample debounce on the scan's cyclic
+// timer is not timed), the scan is never busy (I: busy is set by 0x8012664, whose caller is not read), the report is
+// disabled by a reset, and PC5's other effects in the power manager (0x801a49a -> 0x801acb0) are not modelled.
 import { FirmwareError } from './hle.mjs';
 import { bytesHex } from '../util/bytes.mjs';
 
@@ -56,6 +89,18 @@ export class ScpuError extends FirmwareError {}
 
 export const DATE_BYTES = 9, RX_BYTES = 10, CONTEXT_BYTES = 20;
 export const SET_DATE = 0x01, GET_DATE = 0x81, WRITE_WORD = 0x06, READ_WORD = 0x86, SYSCTRL = 0x85, POLL = 0x8f, CHUNK = 0x0f, GIO_WRITE = 0x02;
+export const PORT_SCAN = 0x88, SCAN_REPORT = 0x08;
+// the port scan's inputs, by the GIO port the scan reads (0x80128e0) and the result bit it gives (D)
+export const SCAN_PORTS = { PC13: { gio: 45, bit: 0 }, PC5: { gio: 37, bit: 1 } };
+// The levels the model starts with (a model choice): PC13 low gives the result bit 0, which the MN turns into UI_IN's
+// switch 0x0400 at state 0, the state the lab's idle image of the E143 family keeps it in (src/lab/play.mjs
+// IDLE_SWITCH_STATES); PC5's level is ? (the MN masks its bit off)
+export const SCAN_IDLE = { PC13: 0, PC5: 0 };
+// the power states (the system-control task's, by number) and the message each 0x85 mode posts it (0x80130c0..)
+export const POWER_STATES = ['steady', 'steady_wait', 'bkground', 'pwr_save', 'hibernation', 'standby'];
+const SYSCTRL_MESSAGE = { 1: 6, 2: 5, 3: 9, 4: 7, 5: 5 };
+// the longest message the poll's reply carries: its length byte is length + 2 (0x8012e40..0x8012e54)
+export const MESSAGE_MAX = 253;
 // the date a get answers while the RTC is not valid, and its status (0x80114ec, 0x8011540: 2019-01-01 00:00:00, 10501)
 export const RTC_DEFAULT = [2019, 1, 1, 0, 0, 0], RTC_INVALID = 10501, RTC_VALID_REG = 1;
 const hx = (v, n = 2) => '0x' + (v >>> 0).toString(16).padStart(n, '0');
@@ -129,7 +174,7 @@ export class ScpuMemory {
 
 // the command manager's states (the sub-CPU's table 0x8004ea8 has six: 0 idle, 1 a message waiting, 2 receiving, 3
 // transmitting, 4 waiting for the release, 5 a long write); RESET is the model's, while the reset line is held
-const S = { IDLE: 'idle', RX: 'receive', TX: 'transmit', RELEASE: 'release', LONG: 'long write', RESET: 'reset' };
+const S = { IDLE: 'idle', MESSAGE: 'message waiting', RX: 'receive', TX: 'transmit', RELEASE: 'release', LONG: 'long write', RESET: 'reset' };
 // the sub-CPU's handlers of the MN's commands (docs/om1-scpu-spec.md 3.3), named in a refusal
 const HANDLERS = new Map([[0x01, 0x80116ab], [0x81, 0x8011709], [0x02, 0x800cfe7], [0x82, 0x800cfef], [0x04, 0x8018b2f], [0x84, 0x8018b67],
   [0x06, 0x8017b05], [0x86, 0x8017b27], [0x07, 0x80125a1], [0x87, 0x80125a7], [0x80, 0x8015ec3], [0x85, 0x8016217], [0x88, 0x80126d7],
@@ -152,10 +197,45 @@ export class ScpuDev {
     this.rx = null;                          // the armed receive {buf, count, got}
     this.tx = null;                          // the armed transmit {bytes, pos}
     this.long = null;                        // a long write {cmd, size, buf, got} or a long read {left}
-    this.events = [];                        // the command manager's queue: request, release, rx, tx, boot
+    this.events = [];                        // the command manager's queue: request, release, rx, tx, boot, message
     this.actions = [];                       // level changes not yet made: [line, level]
     this.frames = [];                        // every frame taken: {cmd, data, reply} (hex), the link's oracle
+    // the inbound direction: messages posted and not yet taken by the manager, the current message (context +116),
+    // the waiting queue (context +40), the power-off flag (context +22); each message {cmd, data, fate}, fate null
+    // until it is 'sent' (its poll released), 'dropped' (its completion called unsent) or 'lost' (a reset)
+    this.inbox = [];
+    this.slot = null;
+    this.queue = [];
+    this.dropping = false;
+    this.power = POWER_STATES[0];            // the system-control task's state
+    this.offArg = 0;                         // mode 1's second byte, kept by the 0x85 handler (the task's +21)
+    this.scan = { ...SCAN_IDLE };            // the port scan's input levels
+    this.scanReport = false;                 // the scan's report enabled (by a 0x88 read)
+    this.log = [];                           // the sub-CPU's own events: messages, power states (text)
   }
+  // ---- the model's inputs on the sub-CPU's side (an LLE's own tasks make these)
+  // A message for the MN (0x80133dc's request): command (bit 7 clear, not 0 or 0x0f) and data bytes; returns the
+  // message, whose fate says what became of it
+  post(cmd, data = []) {
+    const bytes = Uint8Array.from(data);
+    if (!Number.isInteger(cmd) || cmd <= 0 || cmd > 0x7f || cmd === CHUNK) this.fail(`post ${cmd}: not a message command (1..0x7f, not 0x0f)`);
+    if (bytes.length > MESSAGE_MAX) this.fail(`post ${hx(cmd)} with ${bytes.length} bytes: the poll's reply carries ${MESSAGE_MAX} at most`);
+    if (this.state === S.RESET) this.fail(`post ${hx(cmd)} while the reset is held: the sub-CPU does not run`);
+    const m = { cmd, data: bytes, fate: null };
+    this.inbox.push(m);
+    this.events.push('message');
+    return m;
+  }
+  // A level of the port scan's inputs (SCAN_PORTS): the result follows it, and a change of PC13's level posts the
+  // report 0x08 {level} once a 0x88 read has enabled it (the power manager's 0x801a436 through 0x801271c)
+  port(name, level) {
+    if (!Object.hasOwn(SCAN_PORTS, name)) this.fail(`no scan port ${name} (${Object.keys(SCAN_PORTS).join(', ')})`);
+    const v = level ? 1 : 0;
+    if (this.scan[name] === v) return null;
+    this.scan[name] = v;
+    return name === 'PC13' && this.scanReport ? this.post(SCAN_REPORT, [v]) : null;
+  }
+  scanResult() { return Object.entries(SCAN_PORTS).reduce((r, [n, p]) => r | this.scan[n] << p.bit, 0); }
   // lines: {ready(level), message(level)}; inputs: the MN's lines' levels now {request, reset}, taken without an event
   // (the sub-CPU has been running before the MN's code looks at it: idle, as the reset pulse would leave it)
   connect(lines, inputs) {
@@ -217,12 +297,35 @@ export class ScpuDev {
     this.events.length = 0; this.actions.length = 0;
     this.rx = null; this.tx = null; this.long = null;
     this.powered = false;
+    for (const m of [...this.inbox, ...(this.slot ? [this.slot] : []), ...this.queue]) m.fate = 'lost';
+    this.inbox = []; this.slot = null; this.queue = [];
+    this.dropping = false; this.power = POWER_STATES[0]; this.offArg = 0; this.scanReport = false;
     this.drive('ready', 0);
+    this.drive('message', 1);                // I: an input while the reset is held, as PC3
+  }
+  // a message dropped: its completion called without a send (0x8012962)
+  drop(m, why) { m.fate = 'dropped'; this.log.push(`dropped ${hx(m.cmd)} ${bytesHex(m.data)}: ${why}`); }
+  // the manager's loop takes a posted message before its table (0x8012912..0x8012944) and idle's handler (0x8012c0b)
+  message() {
+    const m = this.inbox.shift();
+    if (this.dropping) return this.drop(m, 'the power-off flag');
+    if (this.state === S.IDLE && this.input.request) { this.slot = m; this.later('message', 0); this.state = S.MESSAGE; return; }
+    this.queue.push(m);
+    if (this.state !== S.IDLE) this.later('message', 0);
+  }
+  // after a release: the current message or the queue's next drops PC2 (state 1), else idle (0x8013122..0x8013156)
+  next() {
+    if (!this.slot && this.queue.length) this.slot = this.queue.shift();
+    if (this.slot) { this.later('message', 0); this.state = S.MESSAGE; } else this.state = S.IDLE;
   }
   armRx(buf, count) { this.rx = { buf, count, got: 0 }; }
   armTx(bytes) { this.tx = { bytes, pos: 0 }; }
   handle(ev) {
     const bad = () => this.fail(`event ${ev} in state ${this.state}: the command manager has no transition (its invalid handler 0x80132f1)`);
+    if (this.state !== S.RESET) {
+      if (ev === 'message') return this.message();
+      if (ev === 'request' && this.dropping) return this.fail(`a request after a power-off (0x85 mode ${this.ctx[2]}, the sub-CPU ${this.power}): the command manager ignores it while its power-off flag is set (0x8012922), and the system-control task's wake that clears the flag (0x8013572) is not modelled`);
+    }
     switch (this.state) {
       case S.RESET:
         if (ev !== 'boot') return bad();
@@ -232,7 +335,10 @@ export class ScpuDev {
         return;
       case S.IDLE:
         if (ev === 'request') { this.armRx(this.ctx, RX_BYTES); this.later('ready', 0); this.state = S.RX; return; }
-        if (ev === 'release') { this.later('ready', 1); return; }               // 0x8012bef, no message waiting
+        if (ev === 'release') { this.later('ready', 1); return this.next(); }   // 0x8012bef
+        return bad();
+      case S.MESSAGE:                                                           // the receive, the message kept (0x8012d11)
+        if (ev === 'request') { this.armRx(this.ctx, RX_BYTES); this.later('ready', 0); this.state = S.RX; return; }
         return bad();
       case S.RX:
         if (ev === 'request') return;                                         // 0x8012d2d
@@ -268,10 +374,9 @@ export class ScpuDev {
     if (cmd === CHUNK) return this.longStart();
     const data = c.slice(2, len);
     if (cmd === POLL) {
-      // no message is ever posted (the model has no source for one, docs/om1-scpu-spec.md 3.2), so the poll's reply is
-      // the empty frame (0x8012e60..0x8012e7c) and PC2 is released (0x8012e9e)
+      // PC2 released (0x8012e9e), the current message's frame or the empty one (0x8012e1a, 0x8012e60..0x8012e7c)
       this.later('message', 1);
-      return this.reply(cmd, data, new Uint8Array([4, 0, 0, 0]));
+      return this.reply(cmd, data, this.slot ? this.replyFrame(this.slot.cmd, this.slot.data) : new Uint8Array([4, 0, 0, 0]));
     }
     if (cmd & 0x80) return this.reply(cmd, data, this.replyFrame(cmd, this.read(cmd, data)));
     this.write(cmd, data);
@@ -311,12 +416,38 @@ export class ScpuDev {
     this.later('ready', 1);
     this.state = S.RELEASE;
   }
-  // the release (0x801305d): 0x85's power effects, then idle (no message waiting)
+  // the release (0x801305d): a poll's message delivered, 0x85's effects, then the next message or idle
   release() {
     const cmd = this.ctx[1], mode = this.ctx[2];
-    if (cmd === SYSCTRL && mode === 2) this.powered = true;
-    if (cmd === SYSCTRL && mode === 1) this.powered = false;
-    this.state = S.IDLE;
+    if (cmd === POLL && this.slot) {
+      this.slot.fate = 'sent';
+      this.log.push(`sent ${hx(this.slot.cmd)} ${bytesHex(this.slot.data)}`);
+      this.slot = null;
+    }
+    if (cmd === SYSCTRL && mode !== 6) {
+      const id = SYSCTRL_MESSAGE[mode];
+      if (id === undefined) this.fail(`0x85 mode ${mode}: the message its release posts the system-control task is not known (modes 1..6 are read)`);
+      for (const m of this.queue.splice(0)) this.drop(m, `the release of 0x85 mode ${mode}`);
+      if (mode === 1 || mode === 3) this.powered = false;
+      if (mode === 2) this.powered = true;
+      this.dropping = mode === 1 || mode === 3 || mode === 4;
+      this.sysctrl(id);
+    }
+    this.next();
+  }
+  // the system-control task takes a message from 0x85 (its table 0x8008804, the messages 5, 6, 7 and 9 only)
+  sysctrl(id) {
+    const from = this.power;
+    let to = null;
+    if (from === 'steady') {
+      if (id === 5) to = 'steady';
+      else if (id === 6) to = !this.scan.PC13 ? 'bkground' : this.offArg === 1 ? 'pwr_save' : 'standby';
+      else if (id === 7) to = 'hibernation';
+      else if (id === 9) to = 'pwr_save';
+    } else if ((from === 'steady_wait' || from === 'bkground') && id === 5) to = 'steady';
+    if (to === null) { this.log.push(`system control: message ${id} illegal in state ${from}`); return; }
+    if (to !== from) this.log.push(`system control: message ${id}, ${from} -> ${to}`);
+    this.power = to;
   }
   // a long write's header [7, 0x0f, u32 size, command] (0x8012f1a) and its chunks (0x8013181)
   longStart() {
@@ -347,7 +478,7 @@ export class ScpuDev {
   size(cmd, data, n, name) { if (data.length !== n) this.fail(`${name} (${hx(cmd)}) with ${data.length} data bytes: its senders send ${n}`); }
   unknown(cmd, data) {
     const h = HANDLERS.get(cmd);
-    return this.fail(`command ${hx(cmd)} (data ${bytesHex(data)}): not modelled (${h ? `the sub-CPU's handler ${hx(h, 7)}; ` : 'no handler in the sub-CPU\'s table; '}only 0x85, 0x01 / 0x81 and 0x06 / 0x86${this.quiet.size ? ` and the body's quiet ${[...this.quiet].map((c) => hx(c)).join(', ')}` : ''} are)`);
+    return this.fail(`command ${hx(cmd)} (data ${bytesHex(data)}): not modelled (${h ? `the sub-CPU's handler ${hx(h, 7)}; ` : 'no handler in the sub-CPU\'s table; '}only 0x85, 0x01 / 0x81, 0x06 / 0x86 and 0x88${this.quiet.size ? ` and the body's quiet ${[...this.quiet].map((c) => hx(c)).join(', ')}` : ''} are)`);
   }
   // the register a word request {index, ..., byte} names, refused unless the body uses it
   word(data) {
@@ -368,7 +499,16 @@ export class ScpuDev {
       const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, this.memory.reg(this.word(data)), true);
       return b;
     }
-    if (cmd === SYSCTRL) { this.size(cmd, data, 3, 'system control'); return new Uint8Array([data[0], data[0] === 1 ? data[1] : SYSCTRL, 1]); }
+    if (cmd === SYSCTRL) {
+      this.size(cmd, data, 3, 'system control');
+      if (data[0] === 1) this.offArg = data[1];                             // kept for the system-control task (0x8016248..4e)
+      return new Uint8Array([data[0], data[0] === 1 ? data[1] : SYSCTRL, 1]);
+    }
+    if (cmd === PORT_SCAN) {                                                // {result, busy}, the report enabled (0x80126d7)
+      this.size(cmd, data, 0, 'port scan');
+      this.scanReport = true;
+      return new Uint8Array([this.scanResult(), 0]);
+    }
     return this.unknown(cmd, data);
   }
 }

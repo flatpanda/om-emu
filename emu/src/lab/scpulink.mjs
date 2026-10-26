@@ -1,6 +1,7 @@
 // The MN's side of the sub-CPU link in the lab (docs/hle-gaps.md 4.7.1, docs/om1-scpu-spec.md 3 and 8): the firmware's
 // PER_SCPU runs natively (its start with the reset pulse and the 0x85 {2} handshake, every request through its state
-// machine; its watchdog and poll path are native too but not reached: the model answers at once and posts no message),
+// machine; its poll and inbound dispatch run when the model posts a message; its watchdog is native but not reached:
+// the model answers at once),
 // and the sub-CPU is at the far end of the wires PER_SCPU uses: the three GIO pins (src/dev/linkpins.mjs, register
 // level, the GIO driver and its interrupt native), PER_SIO's channel (S-SIO2, below) and the window's port 3
 // (src/dev/scpu.mjs, the message line). The sub-CPU is S-SCPUDEV (src/lab/scpudev.mjs), or anything with its seam

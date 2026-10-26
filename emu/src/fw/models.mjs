@@ -192,8 +192,10 @@ export const MODELS = {
     g4set: G4SET_UNCHECKED,
     // the SCPU's backed-up words the firmware writes and reads, [index, byte], and its writes without data or an
     // answer (src/lab/scpudev.mjs S-SCPUDEV; E143's [2, 0] and none): the time-zone record's write and read wrappers
-    // at 0x5005c164 and 0x5005c171 pass index 2, byte 0 (D)
-    scpu: { words: [[2, 0]], quiet: [] },
+    // at 0x5005c164 and 0x5005c171 pass index 2, byte 0 (D); port_scan: UI_IN's port-scan request 0x5005edec and the
+    // inbound 0x08 handler 0x5005eec0 are E143's 0x5005d36a and 0x5005d43e instruction for instruction (D;
+    // src/lab/play.mjs H-UIINSCAN)
+    scpu: { words: [[2, 0]], quiet: [], port_scan: true },
     // as E143's (D): the SCPU init 0x5004f6d7 attaches 0x5004fc7f at level 5 (0x5004f910..1b); UI_IN's port init
     // registers 0x50152295 (0x5015226f..75); its start stage calls 0x5015227f (0x5014fd27)
     scpu_port: { irq: [0x5004FC7F, 5], register: 0x5004F953, callback: 0x50152295, old_state: 0x5015227F },
@@ -244,8 +246,9 @@ export const MODELS = {
     prop_sites: [0x503DAF24],
     // the SCPU's backed-up words the firmware writes and reads, [index, byte], and its writes without data or an
     // answer (src/lab/scpudev.mjs S-SCPUDEV; E143's [2, 0] and none): the time-zone record's write and read wrappers
-    // at 0x50057330 and 0x5005733d pass index 2, byte 0 (D)
-    scpu: { words: [[2, 0]], quiet: [] },
+    // at 0x50057330 and 0x5005733d pass index 2, byte 0 (D); port_scan: UI_IN's port-scan request 0x50059f64 and the
+    // inbound 0x08 handler 0x5005a038 are E143's instruction for instruction (D; src/lab/play.mjs H-UIINSCAN)
+    scpu: { words: [[2, 0]], quiet: [], port_scan: true },
     // as E143's (D): the SCPU init attaches 0x5004f9bc at level 5 (0x5004f64c..57), its registration 0x5004f690 keeps
     // its count at 0xa32bff60 (E143's 0xa32bff5c); UI_IN's port init registers 0x501595dc (0x501595b6..bc); its start
     // stage calls 0x501595c6 (0x5015707b)
@@ -360,8 +363,9 @@ export const MODELS = {
     g4set: G4SET_UNCHECKED,
     // the SCPU's backed-up words the firmware writes and reads, [index, byte], and its writes without data or an
     // answer (src/lab/scpudev.mjs S-SCPUDEV; E143's [2, 0] and none): the time-zone record's write and read wrappers
-    // at 0x50051013 and 0x50051020 pass index 2, byte 0 (D)
-    scpu: { words: [[2, 0]], quiet: [] },
+    // at 0x50051013 and 0x50051020 pass index 2, byte 0 (D); port_scan false: no port-scan request of E143's shape
+    // in the image (X: a byte scan for 0x5005d36a's head finds none; its sub-CPU is another lineage, with keys)
+    scpu: { words: [[2, 0]], quiet: [], port_scan: false },
     overrides: {
       '0x5005b424': { to: '0x50051e16', why: 'PER_SCPU\'s task entry (src/lab/scpulink.mjs PER_SCPU_TASK), which the map from E144 (whose PER_SCPU differs) pairs with a generic table walker at 0x50051cbc: 0x50051e16 runs the reset check 0x5005360d (pin 57 pulsed when the cause is 0 or 8) and the init 0x50051eb2 (block flag, the IRQ 320 callback, pin 77\'s mode, handler and enable, pin 76 = 1, the 0x85 {2} send 0x5005364e), then loops on PER_SCPU_RECEIVE through the table machine with event 11 deferred outside states 0 and 2 (0x50051e25..0x50051e8b), as E143\'s 0x5005b424 (D)' },
       '0x50002b5d': { to: '0x500022c3', why: 'the GIO init\'s slot reset (src/lab/scpulink.mjs GIO_SLOTS), which the map places inside another function (0x50001e0e): 0x500022c3 writes 255 and five zero words to each of the 232 slot states from 0xa26bb79c, the free mark the mode function 0x5004c5ee takes a slot by (0x5004c948), as E143\'s 0x50002b5d for its 325 (D)' },
@@ -410,8 +414,9 @@ export const MODELS = {
     // the SCPU's backed-up words the firmware writes and reads, [index, byte], and its writes without data or an
     // answer (src/lab/scpudev.mjs S-SCPUDEV; E143's [2, 0] and none): the time-zone record's write and read wrappers
     // at 0x5005239a and 0x500523a7 pass index 23, byte 0 (D); the dial init sends 0x21 with no data, no
-    // completion and nothing waiting for it (0x50109328..0x50109342, D; its meaning is ?)
-    scpu: { words: [[23, 0]], quiet: [0x21] },
+    // completion and nothing waiting for it (0x50109328..0x50109342, D; its meaning is ?); port_scan false: no
+    // port-scan request of E143's shape in the image (X: a byte scan for 0x5005d36a's head finds none)
+    scpu: { words: [[23, 0]], quiet: [0x21], port_scan: false },
     overrides: {
       '0x5005b424': { to: '0x500527ef', why: 'PER_SCPU\'s task entry (src/lab/scpulink.mjs PER_SCPU_TASK), which neither map places right: 0x500527ef runs the reset check 0x50053f90 (pin 57 pulsed when the cause is 0 or 8) and the init 0x5005288b (pins 77 and 76 as E139\'s, the 0x85 {2} send 0x50053fd1), then loops on PER_SCPU_RECEIVE through the table machine (0x500527fe..0x50052864), as E139\'s 0x50051e16 and E143\'s 0x5005b424 (D)' },
       '0x50002b5d': { to: '0x50001ce5', why: 'the GIO init\'s slot reset (src/lab/scpulink.mjs GIO_SLOTS), which neither map places: 0x50001ce5 writes 255 and five zero words to each slot state from 0xa28a1e30, the free mark the mode function 0x5004cff0 takes a slot by, as E139\'s 0x500022c3 (D)' },

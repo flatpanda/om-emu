@@ -367,6 +367,7 @@ export class Player {
     if (this.session?.lab?.tp_sends?.length) used.push('S-TPSEND');                         // a synchronous send to the touch task
     if (this.session?.lab?.scpu_link) used.push('H-SCPUSTART', 'S-SIO2', 'S-SCPUDEV', 'A-SCPUDEV-1', 'A-LINKPINS-1');   // a body whose PER_SCPU runs natively against the sub-CPU's model
     if (this.session?.scpu_port) used.push('H-SCPUIRQ', 'H-UIINPORT', 'H-SCPUPORT');        // a body whose group 0 comes through the SCPU's ports
+    if (this.session?.uiin_scan) used.push('H-UIINSCAN');                                    // UI_IN's port scan over the link
     if (this.session?.hdmi_port || this.session?.lab?.scpu_link) used.push('H-GIOSLOTS');   // the GIO slots, for the HDMI pin or the link's pin 102
     if (this.session?.hdmi_port) used.push('S-HDMISINK', 'A-HDMI-1');                       // --hdmi on: the HDMI port, its sink
     if (this.session?.storage) used.push('H-FILEINIT', 'H-FILECLBK', 'S-SDHOST', 'S-SDCARD', 'S-FSNAND', ...(this.session.storage.f.album_init !== null ? ['S-ALBM'] : []), 'S-RECFILE');   // the file system native on a card (storage.mjs; S-ALBM where the body has an album manager)

@@ -438,7 +438,7 @@ function b7_bracket(nav, observed) {
 
 // The listed-site rules of K-CFLUSH and S-FLASHSAVE, S-SCPUDEV's refusals and the S-PERSIST phase rule, called directly
 // with a recording finish: an unlisted caller must raise MenuError, a command S-SCPUDEV does not model ScpuError (its
-// read handlers called as a frame would: the port scan 0x88, which UI_IN sends and no session does, and a read of the
+// read handlers called as a frame would: a GIO read 0x82, whose answer comes from the sub-CPU's pins, and a read of the
 // backed-up word 3, which no caller reads). K-CRT-134D takes any caller since the multi-model work:
 // it returns the SCPU counter the window code reads (`mov (0x98e000e8),d0; retf`, D), which E137's operating-time count
 // calls too.
@@ -448,7 +448,7 @@ function stand_in_rules(lab) {
   const read = (cmd, data) => () => lab.scpu_dev.read(cmd, new Uint8Array(data));
   for (const [label, fn, regs, error] of [
     ['K-CFLUSH unlisted caller', (h, r) => lab._k_cflush(h, r), { mdr: runtime(0x5004086C) }, MM.MenuError],
-    ['S-SCPUDEV command 0x88', read(0x88, []), {}, ScpuError],
+    ['S-SCPUDEV command 0x82', read(0x82, [18]), {}, ScpuError],
     ['S-SCPUDEV backed-up word 3', read(0x86, [3, 0]), {}, ScpuError],
     ['S-FLASHSAVE unlisted caller', (h, r) => lab._s_flash_save(h, r), { d0: 0, mdr: runtime(0x503C5534) }, MM.MenuError]]) {
     try {

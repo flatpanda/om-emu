@@ -17,10 +17,17 @@
 //              poll's empty reply, a long write in chunks and a long read in chunks padded to 4, and the refusals
 //              (the gate before the power-on, a second power-on, an unmodelled command, an unlisted word, a wrong
 //              size, clocking an unarmed SPI, an event the command manager has no transition for, a quiet command
-//              that is not a write of its own)
+//              that is not a write of its own); the inbound direction: a message drops the message line while idle
+//              and the poll's reply carries it, a second waits in the queue, one during a transaction drops the line
+//              at once, one taken with the request line low waits for the release; 0x88 answers {result, busy} and
+//              enables the report, PC13's changes then come as 0x08; 0x85's releases drop the queue and set the
+//              power-off flag, the gate and the power state (bkground, pwr_save, standby, hibernation, steady); a
+//              reset loses the messages
 //   scpuSession  (firmware; the model of OM_EMU_MODEL) a play session's start through the link: the stand-ins, the
 //              frames of PER_SCPU's start and the store init with their replies, IRQ 119 attached, the pins in
-//              PER_SCPU's order, PER_SCPU waiting with no errlog of its own; a body without the link's pins stops at its start
+//              PER_SCPU's order, PER_SCPU waiting with no errlog of its own; H-UIINSCAN's 0x88 where the body has it;
+//              the inbound path natively: 0x08 {0} polled and dispatched to the producer, PC13 high reported as 0x08
+//              {1} and decoded by UI_IN as the switch 0x0400; a body without the link's pins stops at its start
 //   node emu/test/test_scpu.mjs [--session]      (OM_EMU_MODEL=E146 node emu/test/test_scpu.mjs --session: another body)
 import { createMachine, SCPU_DOORBELL } from '../src/machine.mjs';
 import { SET_INPUTS } from '../src/dev/scpu.mjs';
@@ -228,7 +235,7 @@ function devTests(ok) {
   const p2 = mn.longRead(0x84, 256);
   ok(p2.length === 2 && bytesHex(p2[1]) === '01010100', `a long read's last chunk padded to 4: ${p2.map((x) => bytesHex(x).slice(0, 12))}`);
   dev.read = orig;
-  ok(throwsAs(() => mn.send(0x88, []), ScpuError), 'an unmodelled read (the port scan) stops the session');
+  ok(throwsAs(() => mn.send(0x82, [18]), ScpuError), 'an unmodelled read (a GIO read) stops the session');
   const [, m4] = booted(now, []);
   m4.send(0x85, [2, 0, 0]);
   ok(throwsAs(() => m4.send(0x86, [3, 0]), ScpuError), 'an unlisted backup word is refused');
@@ -246,6 +253,82 @@ function devTests(ok) {
   void d2; void d5;
 }
 
+// The inbound direction, as PER_SCPU drives it: a message drops the message line, the MN polls [2, 0x8f] while the
+// line is low (its IRQ 320 callback when idle, its completion step after a transaction) and the reply carries it.
+function inboundTests(ok) {
+  const now = { t: 1000 };
+  const on = () => { const [d, m] = booted(now, []); m.send(0x85, [2, 0, 0]); return [d, m]; };
+  const poll = (m) => m.send(0x8f, [], true);
+  const msgLog = (m) => m.log.filter(([n]) => n === 'message').map(([, v]) => v).join('');
+  // one message while idle
+  const [d1, m1] = on();
+  const a = d1.post(0x08, [1]);
+  m1.drain();
+  ok(m1.st.message === 0 && d1.state === 'message waiting' && a.fate === null, `a message while idle drops the line: ${m1.st.message}, ${d1.state}`);
+  ok(poll(m1) === '04080100' && a.fate === 'sent' && m1.st.message === 1 && d1.state === 'idle', `the poll's reply carries it, padded to 4, and its release delivers it: ${d1.frames.at(-1).reply}, ${a.fate}`);
+  ok(poll(m1) === '04000000', 'a poll without a message: the empty reply');
+  // two messages: the second waits in the queue and drops the line again at the first one's release
+  const [d2, m2] = on();
+  const b1 = d2.post(0x12, [5]), b2 = d2.post(0x13, [0, 1, 0x34, 0x12, 0x78, 0x56]);
+  m2.drain();
+  ok(poll(m2) === '04120500' && b1.fate === 'sent' && b2.fate === null && m2.st.message === 0, `the first message, the line low again for the queued one: ${d2.frames.at(-1).reply}`);
+  ok(poll(m2) === '0813000134127856' && b2.fate === 'sent' && m2.st.message === 1, `then the second: ${d2.frames.at(-1).reply}`);
+  // a message during a transaction: queued, the line drops at once; served after the release
+  const [d3, m3] = on();
+  d3.pin('request', 0); m3.until(0);
+  const c = d3.post(0x40, [1, 2, 3]);
+  d3.exchange(new Uint8Array([4, 0x86, 2, 0, 0, 0, 0, 0, 0, 0])); m3.until(1);
+  ok(m3.st.message === 0 && c.fate === null, 'a message during a transaction drops the line at once');
+  m3.until(0); const l = d3.exchange(new Uint8Array(1)); d3.exchange(new Uint8Array(l[0] - 1)); m3.until(1);
+  d3.pin('request', 1); m3.drain();
+  ok(d3.state === 'message waiting' && poll(m3) === '0540010203' && c.fate === 'sent', `served after the release: ${d3.frames.at(-1).reply}`);
+  // a message taken while the MN's request line is already low: queued without the line, which drops at the release
+  const [d4, m4] = on();
+  d4.post(0x08, [0]);
+  d4.pin('request', 0);
+  m4.until(0);
+  const early = msgLog(m4);
+  d4.exchange(new Uint8Array([4, 0x86, 2, 0, 0, 0, 0, 0, 0, 0])); m4.until(1);
+  m4.until(0); const l4 = d4.exchange(new Uint8Array(1)); d4.exchange(new Uint8Array(l4[0] - 1)); m4.until(1);
+  d4.pin('request', 1); m4.drain();
+  ok(early === '' && m4.st.message === 0 && poll(m4) === '04080000', `idle with the request line low: queued, the line low only after the release (${early || 'none'} before)`);
+  // the port scan: 0x88 answers {result, busy} and enables the report; PC13's changes are then posted as 0x08
+  const [d5, m5] = on();
+  ok(d5.port('PC13', 1) === null && m5.st.message === 1, 'before a 0x88 read a level change posts nothing');
+  ok(m5.send(0x88, []) === '04880100' && d5.scanReport, `0x88: {result, busy}: ${d5.frames.at(-1).reply}`);
+  const r = d5.port('PC13', 0);
+  m5.drain();
+  ok(r?.cmd === 0x08 && m5.st.message === 0 && poll(m5) === '04080000', `then a change of PC13 is posted as 0x08 {level}: ${d5.frames.at(-1).reply}`);
+  ok(d5.port('PC5', 1) === null && m5.send(0x88, []) === '04880200', `PC5 is result bit 1 and posts nothing: ${d5.frames.at(-1).reply}`);
+  ok(throwsAs(() => d5.port('PA0', 1), ScpuError), 'a port the scan does not read is refused');
+  // 0x85's releases: the queue dropped, the power-off flag, the gate and the power state
+  const [d6, m6] = on();
+  d6.port('PC13', 1);
+  const k1 = d6.post(0x08, [1]), k2 = d6.post(0x08, [0]);
+  m6.drain();
+  m6.send(0x85, [1, 1, 0]);
+  ok(k2.fate === 'dropped' && k1.fate === null && m6.st.message === 0 && d6.power === 'pwr_save' && !d6.powered && d6.dropping,
+    `0x85 {1, 1}, PC13 high: the queued message dropped, the current one kept, pwr_save, the gate closed: ${k2.fate} ${k1.fate} ${d6.power} ${d6.powered}`);
+  const k3 = d6.post(0x08, [1]); m6.drain();
+  ok(k3.fate === 'dropped', 'a message after a power-off is dropped with its completion');
+  ok(throwsAs(() => poll(m6), ScpuError), 'a request after a power-off stops the session: the wake is not modelled');
+  const offTo = (pc13, mode, x) => { const [d, m] = on(); d.port('PC13', pc13); m.send(0x85, [mode, x, 0]); return [d.power, d.powered, d.dropping].join(' '); };
+  ok(offTo(0, 1, 1) === 'bkground false true', `0x85 {1}, PC13 low: bkground: ${offTo(0, 1, 1)}`);
+  ok(offTo(1, 1, 0) === 'standby false true', `0x85 {1, 0}, PC13 high: standby: ${offTo(1, 1, 0)}`);
+  ok(offTo(1, 3, 0) === 'pwr_save false true', `0x85 {3}: pwr_save, the gate closed: ${offTo(1, 3, 0)}`);
+  ok(offTo(1, 4, 0) === 'hibernation true true', `0x85 {4}: hibernation, the gate kept: ${offTo(1, 4, 0)}`);
+  ok(offTo(1, 5, 0) === 'steady true false', `0x85 {5}: steady: ${offTo(1, 5, 0)}`);
+  const [d7] = on();
+  d7.power = 'pwr_save'; d7.sysctrl(5);
+  ok(d7.power === 'pwr_save' && /illegal in state pwr_save/.test(d7.log.at(-1)), 'a message the state has no transition for is the task\'s illegal message: logged, the state kept');
+  // a reset loses the messages and releases the line
+  const [d8, m8] = on();
+  const z = d8.post(0x08, [1]); m8.drain();
+  m8.boot();
+  ok(z.fate === 'lost' && m8.st.message === 1 && !d8.scanReport && d8.power === 'steady', `a reset: the message lost, the line high: ${z.fate} ${m8.st.message}`);
+  ok(throwsAs(() => d8.post(0x88, []), ScpuError) && throwsAs(() => d8.post(0x08, new Uint8Array(254)), ScpuError), 'a post of a read command or of more than 253 bytes is refused');
+}
+
 export function scpuUnits() {
   const bad = [];
   let checks = 0;
@@ -255,6 +338,7 @@ export function scpuUnits() {
   pinTests(ok);
   memoryTests(ok);
   devTests(ok);
+  inboundTests(ok);
   return { checks, bad };
 }
 
@@ -276,6 +360,8 @@ export async function scpuSession() {
   const { boardKnows } = await import('../src/fw/board.mjs');
   const { HANDLER_TABLE } = await import('../src/lab/irq.mjs');
   const { EXPECTED_ERRLOG } = await import('../src/lab/display.mjs');
+  const { G4_SET, G4_IMAGE } = await import('../src/lab/play.mjs');
+  const { MODEL_INFO } = await import('../src/fw/model.mjs');
   const env = { rom: loadImage(), resBlock: loadBlock(), createHash, wallClock: () => performance.now() / 1000 };
   const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, env);
   if (!boardKnows('scpu_link')) {
@@ -292,10 +378,14 @@ export async function scpuSession() {
   const posted = sl.scpu_requests.map((r) => '0x' + r.request.slice(0, 2));
   ok(frames[0]?.cmd === '0x85' && frames[0].data === '020000' && frames[0].reply === '0585028501', `${MODEL}: PER_SCPU's start sends 0x85 {2} first, answered [5, 0x85, 2, 0x85, 1]: ${JSON.stringify(frames[0])}`);
   ok(posted.length > 0 && JSON.stringify(cmds.slice(1)) === JSON.stringify(posted), `${MODEL}: every request the API posted reaches the sub-CPU as a frame, in order: ${JSON.stringify(cmds)} for ${JSON.stringify(posted)}`);
-  const waited = sl.scpu_requests.filter((r) => r.request.slice(40, 48) !== '00000000').length;   // a completion at +20
+  // the store init's requests (H-UIINSCAN's 0x88 waits at a site of its own, checked by the scan's bring-up)
+  const waited = sl.scpu_requests.filter((r) => r.request.slice(0, 2) !== '88' && r.request.slice(40, 48) !== '00000000').length;   // a completion at +20
   ok(sl.scpu_waits.length === waited && sl.scpu_waits.every((w) => w.rc === 0), `${MODEL}: the requesters' waits return E_OK: ${JSON.stringify(sl.scpu_waits)}`);
+  const scan = s.uiin_scan ?? null, scans = MODEL_INFO.scpu?.port_scan ?? MODEL === 'E143';
+  ok(scans ? scan?.reply === '04880000' && scan.report && cmds.at(-1) === '0x88' : scan === null && !cmds.includes('0x88'),
+    `${MODEL}: H-UIINSCAN ${scans ? 'asks the port scan, answered {0, not busy}, the report enabled' : 'does not run (no port-scan request)'}: ${JSON.stringify(scan)}, ${JSON.stringify(cmds)}`);
   if (MODEL === 'E143') {
-    ok(JSON.stringify(cmds) === JSON.stringify(['0x85', '0x06', '0x01', '0x86']) && frames[3].reply === '06861c020080' && sl.scpu_replies[0]?.bytes === '1c020080', `E143: 0x06, 0x01, 0x86 with the word read back: ${JSON.stringify(frames)}`);
+    ok(JSON.stringify(cmds) === JSON.stringify(['0x85', '0x06', '0x01', '0x86', '0x88']) && frames[3].reply === '06861c020080' && sl.scpu_replies[0]?.bytes === '1c020080', `E143: 0x06, 0x01, 0x86 with the word read back, then the port scan: ${JSON.stringify(frames)}`);
     ok(frames[2].data === 'e60701010000000500', `E143: the reset date's frame cut to 10 bytes, its status 10501 reaching the sub-CPU as 5: ${frames[2].data}`);
   }
   const irq = BOARD.scpu_link.ready.irq, intc = lab.nk.intc;
@@ -308,8 +398,33 @@ export async function scpuSession() {
   ok(own.length === 0, `${MODEL}: no errlog of PER_SCPU's or PER_SIO's: ${own}`);
   ok(link.config.channel === link.channel && link.config.clock > 0 && link.transfers.every((t) => t.tx.length === t.rx.length), `${MODEL}: channel ${link.channel}, clock ${link.config.clock}, ${link.transfers.length} transfers`);
   if (MODEL === 'E143') ok(link.channel === 2 && link.config.clock === 6000000, `E143: channel 2 at 6 MHz: ${link.channel}, ${link.config.clock}`);
+  if (scans) inboundSession(ok, s, MODEL, G4_SET, G4_IMAGE);
   pl.close_session();
   return { checks, bad };
+}
+
+// (firmware) The inbound direction in play: the sub-CPU's message drops port 3, IRQ 320's PER_SCPU callback starts
+// the poll, the reply is dispatched natively to the 0x08 handler, which gives bit 0 to the group-4 producer as the
+// switch 0x0400. First the message 0x08 {0} (the idle state: the producer called, nothing decoded), then PC13 high,
+// which the sub-CPU reports as 0x08 {1}: UI_IN takes the switch to its other state and passes the code on; the
+// application then filters it by module 9's state (0x50abb01d), where S-TAKEOVER's scope ends the session (X)
+function inboundSession(ok, s, MODEL, G4_SET, G4_IMAGE) {
+  const lab = s.lab, dev = lab.scpu_dev, calls = [];
+  lab.observe(G4_SET, (l, r) => calls.push([r.d0 & 0xFFFF, r.d1 & 0xFFFF]), 'test-g4set');
+  const g4 = () => bytesHex(lab.sim.read(G4_IMAGE, 2)), img0 = g4(), d0 = lab.uiin_decoded.length, e0 = lab.kernel.errors.length;
+  const m0 = dev.post(0x08, [0]);
+  s.settle('the sub-CPU\'s 0x08 {0}');
+  const own = () => lab.kernel.errors.slice(e0).filter(([c]) => (c >>> 16) === 0x1900).map(([c]) => '0x' + c.toString(16));
+  ok(m0.fate === 'sent' && dev.frames.at(-1).cmd === '0x8f' && dev.frames.at(-1).reply === '04080000' && JSON.stringify(calls) === '[[1024,0]]'
+    && g4() === img0 && lab.uiin_decoded.length === d0 && !own().length && dev.out.message === 1,
+  `${MODEL}: 0x08 {0} polled natively (${dev.frames.at(-1).reply}), its handler called the producer with ${JSON.stringify(calls)}, group 4 ${g4()} kept, nothing decoded, no errlog`);
+  let stop = null;
+  try { dev.port('PC13', 1); s.settle('PC13 high'); } catch (e) { stop = e; }
+  const decoded = lab.uiin_decoded.slice(d0).map(([, c]) => c & 0xFFFF);
+  ok(dev.frames.at(-1).reply === '04080100' && JSON.stringify(calls.at(-1)) === '[1024,1]' && g4() !== img0 && decoded.includes(0x0400),
+    `${MODEL}: PC13 high: the report 0x08 {1} (${dev.frames.at(-1).reply}), the producer called with ${JSON.stringify(calls.at(-1))}, group 4 ${img0} -> ${g4()}, UI_IN decoded ${JSON.stringify(decoded.map((c) => c.toString(16)))}`);
+  ok(stop === null || /S-TAKEOVER scope: module 9 state read from .*0x50abb01d/.test(stop.message.split('\n')[0]),
+    `${MODEL}: the application's reaction ends at S-TAKEOVER's scope or runs: ${stop?.message.split('\n')[0] ?? 'ran'}`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

@@ -68,6 +68,14 @@ const g4set = () => fact('g4set', true);
 // handler, UI_IN's callback, its push and its flag run natively; a body without it pushes group 0 with S-KEYBITS
 const scpuPort = () => (BOARD.scpu.events && MODEL_INFO.scpu_port) || null;
 export const SCPU_PORT_GROUP = 0;
+// H-UIINSCAN: UI_IN's module init (not run) asks the sub-CPU for its port scan, 0x5005d36a at 0x5014bfb2: the request
+// 0x88 over the link (retried while the reply's busy byte is set, errlog 0x19002710 after 5000), and the reply's bit 0
+// into group 4's switch 0x0400 through the group-4 producer (0x5005d44c -> 0x5014d537), D. The lab runs it in the
+// init's place on a body whose sub-CPU link runs and whose UI_IN has the request (fact scpu.port_scan): the sub-CPU
+// (S-SCPUDEV) answers from its scan's levels and enables its report, so later changes of the switch come as the
+// sub-CPU's message 0x08, which PER_SCPU's poll takes and its handler 0x5005d43e gives the same producer (D)
+export const UIIN_PORT_SCAN = A(0x5005D36A);
+const uiinScan = () => fact('scpu.port_scan', true);
 // The HDMI port (--hdmi on, a body with src/fw/models.mjs hdmi; src/dev/hdmi.mjs, docs/hle-gaps.md 4.9): the machine
 // gets the transmitter, the hot-plug pin and the sink, the lab runs H-GIOSLOTS, and the input hdmi plug puts the sink
 // (S-HDMISINK, src/lab/edid.mjs) on the port and lets HDMI_PLUG_MS of lab time run, in which the firmware takes the
@@ -872,6 +880,7 @@ export class PlaySession extends N.NavSession {
     }
     if (this.scpu_port) this.scpu_port_bring_up();
     for (let g = 0; g < GROUP_BYTES.length; g++) if (GROUP_LIVE[g] && !(this.scpu_port && g === SCPU_PORT_GROUP)) this.push_group(g);
+    if (lab.scpu_link && uiinScan()) this.uiin_scan_bring_up();
     this.idle_codes = lab.uiin_codes.map(([, c]) => c);
     if (this.touch_on) this.touch_bring_up();
     if ((o.us_clock ?? 'lab') === 'lab') lab.sim.write(IRQ.TIMER_DEBUG + IRQ.T_USMODE, pack('<I', 1));
@@ -917,6 +926,22 @@ export class PlaySession extends N.NavSession {
     lab.call(old_state, null, null, null, 2000);
     const old = lab.sim.read(g0.old, 1)[0];
     if (old !== port) throw new PlayError(`H-UIINPORT: group ${SCPU_PORT_GROUP}'s old state (${h8(g0.old)}) is 0x${fx(old, 2)} after ${h8(old_state)}, not the port byte 0x${fx(port, 2)}`);
+  }
+  // H-UIINSCAN (UIIN_PORT_SCAN): the request natively from the lab task, then a settle; checked: one 0x88 frame, its
+  // reply's busy byte 0, no errlog of PER_SCPU's, group 4's image (UI_IN's, through the producer) still the idle image,
+  // so no code decoded
+  uiin_scan_bring_up() {
+    const lab = this.lab, dev = lab.scpu_dev, f0 = dev.frames.length, c0 = lab.uiin_decoded.length, e0 = lab.kernel.errors.length;
+    refuseUnmapped(UIIN_PORT_SCAN, 'H-UIINSCAN');
+    lab.call(UIIN_PORT_SCAN, null, null, null, 200000);
+    this.settle('H-UIINSCAN');
+    const frames = dev.frames.slice(f0), g4 = lab.sim.read(G4_IMAGE, 2), decoded = lab.uiin_decoded.slice(c0).map(([, c]) => c);
+    const own = lab.kernel.errors.slice(e0).filter(([c]) => (c >>> 16) === 0x1900).map(([c]) => h8(c));
+    if (frames.length !== 1 || frames[0].cmd !== '0x88' || frames[0].reply?.slice(6, 8) !== '00' || own.length || decoded.length
+      || (g4set() && (g4[0] !== this.images[4][0] || g4[1] !== this.images[4][1]))) {
+      throw new PlayError(`H-UIINSCAN: after the port scan ${h8(UIIN_PORT_SCAN)}: frames ${show(frames)}, errlog ${show(own)}, codes decoded ${show(decoded.map(hex))}, group 4 ${bytesHex(g4)} (idle ${bytesHex(this.images[4])}): not one 0x88 answered with the idle image kept`);
+    }
+    this.uiin_scan = { reply: frames[0].reply, report: dev.scanReport };
   }
   // H-ACCINIT, S-ACCREG, S-ACCSAMPLE and H-SLOPEINIT (acc.mjs): the ACC module init and PER_SLOPE's init natively in
   // the boot's place, before the application starts, since its GUI starts PER_SLOPE for the gauge (startLevel at the

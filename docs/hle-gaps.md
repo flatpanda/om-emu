@@ -701,7 +701,12 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   `0x6011af98` (`0x5005b355`; the handler gets a0 = `{u32 length - 2, data pointer}` at `0xa32c6c24`): `0x08` ->
   `0x5005d43e` (data bit 0 -> UI_IN group 4 `0x0400`, as the `0x88` reply), `0x11` / `0x12` / `0x13` -> `0x50045138` /
   `0x50045171` / `0x500451aa` (in the power-manager code gap@0x50039c16), `0x40` -> `0x5000441b`; any other logs
-  `0x1900270c`.
+  `0x1900270c`. The poll starts from idle on event 5 (`0x5005bc2a`) and after every transaction while port bit 3 is low;
+  every read's frame passes the dispatch, which skips bit-7 commands. The layouts from both ends (read 2026-10-25,
+  scpu spec 3.4): `0x08` {PC13's level} from the sub-CPU's port scan, bit 0 the switch `0x0400` (D both ends); `0x12`
+  {5}, the sub-CPU's answer to the MN's `0x12` {5} (flag `(0x6004314e)` bit `0x10000`, D); `0x13` {0, flag, u16, u16}
+  and `0x11` {0, a, b, 1, ...} (8 or 57 bytes) from its power manager and battery task, byte 0 checked by the MN's
+  handlers (D), the fields' meanings ?; `0x40` n bytes from its USB PD interface (layout ?).
 - **Gating and failures:** the task's init sets a block flag `(0xa32c94f3)` = 1 and sends `0x85 {2, 0, 0}` as its first
   request (`0x5005cf0a`, no completion), whose completion step clears the flag (`0x5005c306`). While the flag is set
   every command but `0x85` is refused (`0x5005bd2a`: errlog `0x1900270e` or `0x1900270a`, the completion called, rx not
@@ -722,10 +727,10 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
 | `0x04` | 4n + 5: `{u32 address, n, n words}` / - | `0x5005d07d` (PER_SCPU_MEMRW_WAIT 0xf1) | SCPU memory write ("per scpu wmem") |
 | `0x84` | 5: `{u32 address, n}` / 4n | `0x5005d127` (0xf1) | SCPU memory read ("rmem") |
 | `0x80` | - / 4: u32 | `0x5005d2e8` (PER_SCPU_GETVER_WAIT 0xf3) | the SCPU binary's creation time ("per scpu ver"; `0x5005d218` adds 32400 s and prints "SCPU Build: mm/dd hh:mm") |
-| `0x85` | 3: `{mode, x, y}` / 3 at `0xa32c94e9` | PER_SCPU (mode 2); the power-off path `0x5005cdfd` from `0x50044ca8` (1 or 3 by camera state `0xa011`; PER_SCPU_SYSCTRL_WAIT 0xf2, then pin 102 polled low, returns rx[2]); `0x5005cf4e` (4 or 5, no direct caller) | system control (D on the SCPU side, scpu spec 3.2-3.3): 2 = power on, which the SCPU requires before any command but `0x85` and `0x02`; modes 1..5 post system-control messages 6, 5, 5, 9, 7; which power state each selects is ? |
+| `0x85` | 3: `{mode, x, y}` / 3 at `0xa32c94e9` | PER_SCPU (mode 2); the power-off path `0x5005cdfd` from `0x50044ca8` (by the setting `0xa011`: 19 -> {1, 1}, 9 -> {3}, else {1, 0}, `0x5005ce1d..4d`; PER_SCPU_SYSCTRL_WAIT 0xf2, then pin 102 polled low, returns rx[2]); `0x5005cf4e` (4 or 5, no direct caller) | system control (D on the SCPU side, scpu spec 3.3-3.4): 2 = power on (steady), which the SCPU requires before any command but `0x85` and `0x02`; 1 = power off, to bkground with PC13 low, else pwr_save for x = 1 and standby otherwise; 3 = pwr_save; 4 = hibernation; 5 = back to steady; 1, 3, 4 also make the sub-CPU drop its messages and ignore requests until its own wake |
 | `0x07` | - / - | `0x5005d464` | the SCPU firmware update: `0x510369f8` ("[scpu]Start !") transfers the image (`0x51036bd6`), sends `0x85 {2}`, `0x07`, then polls `0x87` |
 | `0x87` | - / 1 | `0x5005d480` (PER_SCPU_GETFIRMUP_COMP 0xf4) | update state, polled while it reads 1 |
-| `0x88` | - / 2 | `0x5005d36a` from UI_IN `0x5014bf91` (PER_SCPU_GET_PORT_SCAN_ 0xd7) | port scan: retried up to 5000 times while rx[1] is not 0 (errlog `0x19002710`), then rx[0] bit 0 -> UI_IN group 4 `0x0400` |
+| `0x88` | - / 2 | `0x5005d36a` from UI_IN `0x5014bf91` (PER_SCPU_GET_PORT_SCAN_ 0xd7) | port scan: retried up to 5000 times while rx[1] is not 0 (errlog `0x19002710`), then rx[0] bit 0 -> UI_IN group 4 `0x0400`; the sub-CPU's reply is {result, busy}, result bit 0 PC13 and bit 1 PC5, and the read enables its report `0x08` (D, scpu spec 3.4) |
 | `0x12`, `0x13`, `0x14` | short writes, batched | the power manager through `0x5004322c` (semaphore PWR_COMM_SCPU 0x68, flag PWR_COMM_SND_SCPU_WAIT 0xee; builders `0x500433f9`, `0x50043452`, `0x500435dc`, `0x50043a47`, `0x50043abd`) | SCPU handlers `0x801570b`, `0x801535f`, `0x8015345` (and `0x80150a5` for an `0x11` with no MN sender) in its power manager; formats ? |
 | `0x40` | n / - | `0x5102b8f7` (semaphore PC_PD_COMMUNICATION 0x7c; "USB SCPU_CONN", "PCPDC" beside it) | USB power delivery (I) |
 
@@ -777,11 +782,20 @@ The flag and semaphore names are the object-name table's (D); the commands' mean
     opened at the release of `0x85 {2}`), `0x01` / `0x81` (backup register 1 and the RTC: status 0 sets the RTC, any
     other status clears register 1; a get answers 2019-01-01 status 10501 while register 1 is 0), `0x06` / `0x86`
     (register index + byte; the body's words are its fact `scpu.words`, others refused) and a body's quiet writes
-    (`scpu.quiet`: E134's `0x21`). Every other command stops the session naming its handler. No message is posted, so
-    no poll. Its RTC advances with lab time, or with the host's clock under S-NVRAM, whose file keeps the RTC's offset
-    and the backup registers (`clock_status` derived from register 1; a file without register 1 takes it from its
-    `clock_status`). A-SCPUDEV-1 (I): the sub-CPU acts at the MN's idle points, one action per step, in zero lab time;
-    a transfer's end comes first (`src/lab/kernel.mjs` LabTask `idle_step`).
+    (`scpu.quiet`: E134's `0x21`). Every other command stops the session naming its handler. Since 2026-10-25 the
+    inbound direction (scpu spec 3.4, D): a message posted to the model (`post(command, data)`) drops the message line
+    when the manager is idle (else it waits in the queue, and the line drops at once while a transaction runs), the
+    poll is answered with its frame and the release delivers it; `0x88` answers {the scan's result, not busy} from the
+    model's levels of PC13 and PC5 (both low in the lab, a model choice: PC13 low keeps the switch `0x0400` at the
+    idle image's state) and enables the report, so a later change of PC13 is posted as `0x08` {level}; `0x85`'s
+    release drops the waiting messages, sets the power-off flag (modes 1, 3, 4), the gate (1 and 3 close it, 2 opens
+    it) and the power state (steady, bkground, pwr_save, standby, hibernation, by the system-control task's table); a
+    request after a power-off stops the session (the sub-CPU's wake is not read). I: the scan's result follows the
+    levels at once (its 3-sample debounce is not timed) and the scan is never busy. Its RTC advances with lab time,
+    or with the host's clock under S-NVRAM, whose file keeps the RTC's offset and the backup registers
+    (`clock_status` derived from register 1; a file without register 1 takes it from its `clock_status`). A-SCPUDEV-1
+    (I): the sub-CPU acts at the MN's idle points, one action per step, in zero lab time; a transfer's end comes first
+    (`src/lab/kernel.mjs` LabTask `idle_step`).
   - **What a session does (X, E143):** the task pulses pin 107 (its cause halfword is 0 in the lab), waits
     for pin 102 high, sends `0x85 {2, 0, 0}` (reply `[5, 0x85, 2, 0x85, 1]`; PER_SCPU's state 0 -> 3 .. 10 -> 2), then
     the store init's `0x06 {2, 0x8000021c, 0}`, `0x01` with the reset date (the 11-byte frame cut to 10: status 10501
@@ -803,9 +817,21 @@ The flag and semaphore names are the object-name table's (D); the commands' mean
     count, gate code and handlers are not read, so the model answers them as E143's sub-CPU (I). X: both store inits
     run over the link as E143's (`0x85 {2}`, `0x06` / `0x01` / `0x86` on index 2 (E139) or 23 (E134), and E134's
     quiet `0x21` at its dial init), the waits E_OK.
-  - **Not covered:** the inbound path (no message is ever posted: the poll and `0x08` / `0x11..0x13` / `0x40` do not
-    run), `0x85`'s system-control effects beyond the gate, the watchdog's and the reset's error paths (the sub-CPU always
-    answers), every command but the five, PER_SIO at the register level.
+  - **H-UIINSCAN (2026-10-25, `src/lab/play.mjs`):** UI_IN's module init's port scan `0x5005d36a` runs natively at the
+    play bring-up on E143, E146 and E147 (fact `scpu.port_scan`: their request and `0x08` handler are E143's instruction
+    for instruction, D; E139 and E134 have no request of that shape, X): the `0x88` transaction over the link, rx[0]
+    bit 0 into `0x5014d537(0x0400, 0)`, group 4 unchanged, no code (X, E143; checked at the bring-up).
+  - **The inbound path in play (X, E143, test_scpu.mjs --session):** the model's `0x08` {0} drops port 3, IRQ 320's
+    PER_SCPU callback posts event 5, PER_SCPU polls `[2, 0x8f]`, the reply `[4, 8, 0, 0]` reaches the dispatch and
+    `0x5005d43e` calls the producer with (0x0400, 0): nothing decoded, no errlog. PC13 high then posts `0x08` {1}: the
+    producer takes the switch to its other state and UI_IN decodes `0x0400` and passes it on; the application's filter
+    of the code `0x02020400` reads module 9's state at `0x50abb01d` (the same test as the listed reader `0x50abb039`, D),
+    where S-TAKEOVER's scope stops the session, and allowing it leads to a further module-9 reader at `0x50b7a2de` (X):
+    what the camera does on the USB switch is past the lab's stand-ins, so no input sets PC13.
+  - **Not covered:** the sources of the battery, power-manager and USB PD messages (the model posts only the port
+    scan's `0x08`; `post` can send any), the sub-CPU's wake after a power-off and its own power events, the watchdog's
+    and the reset's error paths (the sub-CPU always answers), every command but the six, PER_SIO at the register
+    level.
   - **The window clock** ticks with lab time on the E143 board (E143, E146, E147) and on E139 and E134 (their MODELS
     boards). The other E144-family bodies keep it still: E137's and E130's operating-time count (E137 `0x5004d531`)
     writes a NAND record once the counter advances, and their start then stops at the NAND controller (X). A nonzero
@@ -842,10 +868,10 @@ The flag and semaphore names are the object-name table's (D); the commands' mean
   `0x50024b7d`) first calls
   `0x5014e51e`, which sets group 0's old state `0xa32dade8` (and `0x62988828`) from the port byte: the levels at power-on
   decode no code.
-- **Not reached:** the port scan `0x88` (`0x5005d36a`, 4.7.1's table) has two senders, UI_IN's module init
-  (`0x5014bfb2`) and a record handler of UI_IN's ring processor (`0x5014c7da`, a record kind the lab never pushes);
-  neither runs, and S-SCPUDEV refuses it (its rx[0] bit 0 would set group 4's `0x0400`; the sub-CPU's reply is {the
-  scan's result, busy}, scpu spec 3.3, whose result bits are ?).
+- **The port scan:** `0x88` (`0x5005d36a`, 4.7.1's table) has two senders, UI_IN's module init (`0x5014bfb2`) and a
+  record handler of UI_IN's ring processor (`0x5014c7da`, a record kind the lab never pushes). Since 2026-10-25 the
+  lab runs the first in the init's place (H-UIINSCAN, 4.7.1) and S-SCPUDEV answers it: rx[0] bit 0 is the sub-CPU's
+  PC13, which sets group 4's `0x0400` through the producer (scpu spec 3.4).
   `+0x9c` (request bits: `0x5004dffc` sets bit n, `0x5004e02c` reads one, seven calls each at `0x519d2153..0x519d221b`,
   ?; `0x5004dfd0` writes 127 at the end of the power-off, 4.7) and `+0x94` / IRQ 321 (the transfer channels) have no
   user in the lab and stay bus errors.
@@ -1766,7 +1792,8 @@ Corrections to earlier readings, each now owned here or by the document named.
     to the shutter spec items 14, 16, 20 and 43.
 20. **SCPU commands do not use the `0x98e00000` window** (D, 4.7.1): PER_SCPU frames them on PER_SIO channel 2 between
     pins 103 and 102. `0x07` is the SCPU firmware update's command, not a port scan; the port state comes as the reply
-    to `0x88` and as the SCPU's own message `0x08`. None of the 19 call sites of the request API sends `0x05`.
+    to `0x88` and as the SCPU's own message `0x08` (both its port scan's PC13, scpu spec 3.4). None of the 19 call
+    sites of the request API sends `0x05`.
     PER_SCPU's 100 timer is its start watchdog.
 21. **`0x50aa4c98` is the ISC service gate** (D, 4.11.1), not a per-port dispatcher: intercepting it answers service
     calls (send, receive, memory), not messages. The ring layout is the control block's FIFOs at `0x97f00c00`, read from

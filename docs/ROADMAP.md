@@ -189,9 +189,13 @@ the survey table.
 - **The kind-2 VSC:** which register selects a channel's timing bank (the model follows the last vertical total
   written, I); IMG planes (live view, playback) are not modelled.
 - **The E143 family's USB connection:** E143, E146 and E147 keep `0x0400` at state 0, which on the E144 family is a
-  cable (survey finding 9); their starts publish no USB connection from it (X). On them it is the SCPU port scan's,
-  reported through the group-4 producer: answering the port scan (`0x88`, which S-SCPUDEV refuses: its result bits
-  are ?) would set it the firmware's way.
+  cable (survey finding 9); their starts publish no USB connection from it (X). On them it is the SCPU port scan's
+  PC13, reported through the group-4 producer: since 2026-10-25 the port scan runs natively at the bring-up
+  (H-UIINSCAN) with PC13 low in the model, which keeps state 0, and a change of PC13 arrives as the sub-CPU's
+  message `0x08` (hle-gaps.md 4.7.1). Open: on the sub-CPU, PC13 low selects bkground at a power-off and calls
+  its USB PD interface with 1 (`0x8015d44`), which reads like a cable present (I), so the lab's idle state 0 may
+  be "connected"; and the application's reaction to the switch reads module 9 at sites S-TAKEOVER does not cover
+  (X), so no input moves PC13 yet.
 - **E137's display sync:** S-DISPSYNC stands in for the camera's release of the start's display sync (stopRecView's
   sync-word clear, then an image sync of the kind the pending state takes). What the camera waits for before the
   release is not known (I: once its through image shows). E143's GUI asks for the sync at a recording's start too
@@ -464,8 +468,8 @@ and E147, and on E139 and E134 (their own pins and channel; their sub-CPUs answe
 
 | Step | Content | Size (I) |
 |---|---|---|
-| 1 | settle the open link items statically: the PC2 / PC3 roles, the inbound message layouts, the `0x85` message-to-state map, the `0x88` reply | partly done (2026-10-23): PC3 is pin 102 and PC2 the message line, `0x85`'s reply, the date's and backup registers' semantics, the `0x88` reply's shape (scpu spec 3); left: the inbound message layouts, `0x85`'s message-to-state map, the port scan's result bits |
-| 2 | S-SCPUDEV: a transport-level SCPU device at PER_SIO channel 2 and pins 102 / 103 / 107 speaking the frame protocol with handlers from the D table; PER_SCPU's start, gate, watchdog and poll path native; S-SCPU retired and the store-init session compared | done (2026-10-23): the same three requests, now as frames, the waits E_OK; S-SCPU removed rather than kept behind a flag; the watchdog's and poll's paths are native but not reached (the model always answers and posts no message) |
+| 1 | settle the open link items statically: the PC2 / PC3 roles, the inbound message layouts, the `0x85` message-to-state map, the `0x88` reply | done (2026-10-23, 2026-10-25): PC3 is pin 102 and PC2 the message line, `0x85`'s reply, the date's and backup registers' semantics, the inbound path and the layouts of `0x08`, `0x11..0x13`, `0x40` from both ends, `0x85`'s power states, the port scan's bits (scpu spec 3.4); left: the fields' meanings of the battery, power-manager and USB PD messages |
+| 2 | S-SCPUDEV: a transport-level SCPU device at PER_SIO channel 2 and pins 102 / 103 / 107 speaking the frame protocol with handlers from the D table; PER_SCPU's start, gate, watchdog and poll path native; S-SCPU retired and the store-init session compared | done (2026-10-23): the same three requests, now as frames, the waits E_OK; S-SCPU removed rather than kept behind a flag; the watchdog's path is native but not reached (the model always answers); since 2026-10-25 the poll and inbound dispatch run against the model's messages, `0x88` is answered (UI_IN's port scan native, H-UIINSCAN) and the port scan's report `0x08` is posted on a change of PC13 |
 | 3 | a Thumb-2 instruction census of the image (`tools/`) | done (2026-10-27): `bin/m4census.mjs`, 43,049 instructions in 176 encodings by recursive descent, the decoder equal to objdump on all of them; six FP instructions, no FP arithmetic (scpu spec 8) |
 | 4 | a pure-JS Cortex-M4 core (`emu/src/core/`), checked against a QEMU M4 board in the VM | done (2026-10-27): `src/core/m4/`, the ARMv7E-M integer set, the FPU's transfers, the exception model with the lazy FP context, NVIC / SCB / SysTick; against QEMU 11.1.2 `mps2-an386` on generated cases, 144,647 compared with no difference (`tools/m4-oracle/`, 2,191 recorded vectors in `test-pure`); the image runs from reset through its kernel start (one SVC, the first task on PSP) to its first STM32 access, FLASH ACR, after 58,852 instructions (scpu spec 8) |
 | 5 | the STM32L4 system block and the must-behave peripherals (RCC, FLASH, PWR, GPIO, EXTI, SPI2 + DMA, LPUART1, RTC); X target: the console prompt "SUB> " and the 13 tasks | 1-2 weeks |

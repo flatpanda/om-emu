@@ -421,6 +421,17 @@ lab's stand-ins for its key mapping, request sequences and display-switch re-ent
   §9).
 
 **The player's hosts (M10).**
+- The page's run-time inputs (written 2026-10-28, not yet run; `emu/README.md` "The card, the HDMI port, the tilt and
+  the session's options"): both players' panel for the card (Take out / Put in, the card's files read with
+  `refs/fat.mjs` between ticks, JPEG thumbnails and a viewer decoded by `refs/jpeg.mjs`, a download), the HDMI plug
+  (an unplug sent and refused by the lab, A-HDMI-1), the tilt, the session's options (`GET /api/session`), subject
+  detection's frames in the scene panel, and in the browser the start options HDMI port, native lens and S-NVRAM kept
+  in OPFS. To run: `test-pure` (cardTests), `test_web` (the Worker's card routes), `test_host` (case `card`), webgate's
+  B6b and the pages' `?selftest=1`. Open: node's options stay fixed by its command line and environment (the page shows
+  them; a restart with others, as the model switch does, is not offered); the scene takes no subjects of its own at run
+  time (its patterns' only), so the panel offers none; an exFAT card (the storage track's SDXC card) lists only once
+  `web/cardfiles.mjs` takes the exFAT reader beside `refs/fat.mjs`; a list read while the firmware writes can show a
+  file as it was before (the card out of the slot is the settled view).
 - The host memory probe covers the main isolate only: `host/memprobe.mjs` (`OM_HOST_MEM`) samples node's main isolate
   after a forced GC, which holds the HTTP front and the proxy. The harness (PlaySession, the Player and the lab's lists)
   runs in the lab worker, whose heap grew 16-20 MB in a 60 s window (X) and is bounded by nothing, and external memory

@@ -9,8 +9,8 @@
 // start with no operation or two, fast programming without a mass erase before it), WRPERR (an address in a
 // write-protected or PCROP area of the option bytes), with OPERR when ERRIE, and the FLASH interrupt (IRQ 4) from
 // EOP / EOPIE and OPERR / ERRIE. The array is the flash's bytes the bus serves (the core fetches and reads them); it
-// changes only here, and every change is reported (changed(offset, length): the machine passes it to the bus's code
-// listeners, src/core/m4/bus.mjs onCodeWrite, where a decode cache hears it).
+// changes only here, and every change is reported (changed(offset, length): the machine passes it to the bus's
+// written, src/core/m4/bus.mjs, whose page versions the decode cache checks).
 // Model shortcuts (I): an operation's bytes change when it starts and BSY stays set for its duration (the STM32L43x
 // datasheet's typical tPROG, fast row, tERASE and tME as recalled, not checked: ?); a write to the array while BSY waits
 // for the operation's end (it completes at once, the stall's time is not charged), an instruction fetch from flash

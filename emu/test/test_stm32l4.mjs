@@ -199,16 +199,20 @@ export function stm32Units() {
     eq('FLASH a locked CR ignores writes', g.read(0x14, 4) & 1, 0);
   }
 
-  // ---- the bus: a ROM region's writes through its handler, the code-write notification at every address
+  // ---- the bus: a ROM region's writes through its handler; a change reported at one address is seen at both, the
+  // flash and its boot alias sharing their code pages (bus.mjs pageVer, what the decode cache checks)
   {
-    const bus = new MemoryBus(), got = [], heard = [];
+    const bus = new MemoryBus(), got = [];
     bus.rom(0x08000000, new Uint8Array(0x1000), (off, size, v) => got.push(`${off}:${size}:${v}`));
     bus.alias(0, 0x08000000, 0x1000);
-    bus.onCodeWrite((a, n) => heard.push(`${hex(a)}+${n}`));
     bus.write32(0x08000010, 7); bus.write16(0x20, 9);
     eq('bus a ROM region\'s writes reach its handler, the alias\'s at the region\'s offsets', got.join(' '), '16:4:7 32:2:9');
-    bus.codeWritten(0x08000100, 8);
-    eq('bus a code write heard at the alias and at the region', heard.join(' '), '0x100+8 0x8000100+8');
+    const p = bus.codePage(0x08000100);
+    eq('bus the boot alias shares the flash\'s code page', bus.codePage(0x100), p);
+    bus.pageVer[p] |= 1;                                                  // as the decode cache marks a page it decoded from
+    const v = bus.pageVer[p];
+    bus.written(0x100, 8);
+    eq('bus a change reported at the alias makes the page\'s version new and even', bus.pageVer[p] !== v && !(bus.pageVer[p] & 1), true);
   }
 
   // ---- GPIO, SYSCFG and EXTI: levels, pulls, edges to the NVIC
@@ -619,11 +623,12 @@ export function stm32Units() {
   { // flash erase and programming through the bus: both addresses, the decode cache, PGSERR for a stray write
     const { m, w, r } = machine();
     m.run({ cycles: 100 });
-    eq('the core decoded its loop from flash', m.cpu.dcache.has(0x08000300), true);
+    const kept = (pc) => m.cpu.dc.lookup(pc) !== null;                     // the decode cache's record for pc (cpu.mjs dc)
+    eq('the core decoded its loop from flash', kept(0x08000300), true);
     w(0x40022008, 0x45670123); w(0x40022008, 0xcdef89ab);                 // FLASH KEYR
     w(0x40022014, 2); w(0x40022014, 2 | (1 << 16));                        // PER page 0, STRT
     eq('a page erase reaches the bytes the core fetches, at both addresses', [m.bus.read16(0x08000300), m.bus.read16(0x300)].map(hex).join(' '), '0xffff 0xffff');
-    eq('the decode cache forgets the erased code', m.cpu.dcache.has(0x08000300) || m.cpu.dcache.has(0x08000302), false);
+    eq('the decode cache forgets the erased code', kept(0x08000300) || kept(0x08000302), false);
     w(0x40022014, 1);                                                      // PG
     w(0x08000400, 0x11111111); w(0x08000404, 0x22222222);                  // waits for the erase, then programs
     eq('a double word programmed through the bus, seen at both addresses', [r(0x08000400), r(0x404)].map(hex).join(' '), '0x11111111 0x22222222');

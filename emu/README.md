@@ -213,7 +213,7 @@ the image uses (RCC, FLASH, PWR, GPIO, EXTI / SYSCFG, DMA, the U(S)ARTs, I2C, SP
 the USB device), the board's answers (`board.mjs`: nothing attached), the event scheduler and the machine
 (`stm32l4.mjs`) with its run loop and standby. Written 2026-10-28, not yet run: the other low-power modes (Stop 0, 1
 and 2 with the peripherals' clock domains, Shutdown), flash erase and programming (the flash's bytes change only
-through the flash interface, and the bus tells the core's decode cache through `bus.onCodeWrite`), I2C slave mode and
+through the flash interface, which reports each change with `bus.written` for the core's decode cache), I2C slave mode and
 the timers' slave modes. Like the core, it is outside `bin/port.mjs`'s literal scan: its
 constants are the STM32's address map and registers, not MN addresses. `bin/scpu.mjs` boots the image to its debug
 console's prompt "SUB> " and types lines into it. S-SCPUDEV stays the lab's sub-CPU by default; with

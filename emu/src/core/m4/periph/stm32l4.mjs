@@ -9,9 +9,9 @@
 //   m.boot();                                  // to the debug console's first prompt "SUB> "
 //   m.command('help');                         // the console's answer
 //   m.nrst(true); m.nrst(false);               // a pulse on the NRST pin (the MN's reset line in the lab)
-// The flash's bytes change only through the flash interface (flash.mjs: erase and programming); the bus reports each
-// change to its code listeners (bus.onCodeWrite(fn(addr, len)), src/core/m4/bus.mjs), once at 0x08000000 and once at
-// the boot alias 0, and the core's decode cache listens there.
+// The flash's bytes change only through the flash interface (flash.mjs: erase and programming); each change is
+// reported with bus.written(addr, len) (src/core/m4/bus.mjs), whose page versions make the core's decode cache
+// (dcache.mjs) decode the changed code again, at 0x08000000 and at the boot alias 0, which share their pages.
 import { CortexM4, STEP_OK, STEP_SLEEP } from '../cpu.mjs';
 import { MemoryBus } from '../bus.mjs';
 import { Unmapped, FLASH, FLASH_SIZE, SRAM, SRAM_SIZE } from '../boot.mjs';
@@ -57,9 +57,6 @@ export class Stm32l4 {
     this.bus.alias(0, FLASH, FLASH_SIZE);
     this.sram = this.bus.ram(SRAM, SRAM_SIZE);
     this.cpu = new CortexM4({ bus: this.bus, irqs: 83, prioBits: 4 });
-    // the core's decode cache (cpu.mjs: decoded instructions of cacheable code by pc) forgets what flash programming
-    // changed, an instruction that starts up to 2 bytes before the range included
-    this.bus.onCodeWrite((a, n) => { for (let p = Math.max(0, a - 2); p < a + n; p += 2) this.cpu.dcache.delete(p); });
     this.sched = new Scheduler(this.cpu);
     this.irqSrc = new Map();
     const sched = this.sched, irq = (n, h) => this.irq(n, h), hclkHz = () => this.rcc.hclkHz();
@@ -70,7 +67,7 @@ export class Stm32l4 {
     // reset and clocks, flash interface, power
     this.rcc = this.attach(BASE.RCC, new Rcc({ hse: this.board.hse, lse: this.board.lse, dbp: () => this.pwr.dbp() }));
     this.flashIf = this.attach(BASE.FLASH, new FlashInterface({ array: this.flash, sched, irq, irqn: 4, hclkHz,
-      changed: (off, n) => this.bus.codeWritten(FLASH + off, n) }));
+      changed: (off, n) => this.bus.written(FLASH + off, n) }));
     this.pwr = this.attach(BASE.PWR, new Pwr());
     // GPIO A..D and H (the LQFP64 part's ports), EXTI and SYSCFG; EXTI's events go to the core's event input
     this.gpio = new Gpio();
@@ -274,6 +271,7 @@ export class Stm32l4 {
     if (from === 'standby') this.pwr.standbyExit(flags);
     else { this.rcc.set(CSR, this.rcc.get(CSR) | BORRSTF | PINRSTF); this.pwr.shutdownExit(flags); }
     this.sram.fill(0, 0, SRAM_SIZE - keep);
+    this.bus.written(SRAM, SRAM_SIZE - keep);
     for (const d of this.resettable) d.reset();
     this.irqSrc.clear();
     this.cpu.reset();

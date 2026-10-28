@@ -2,7 +2,7 @@
 // Overview of On-Disk Format, version 1.03) and the MBR's partition table, for checking what the firmware wrote to the
 // lab's card (src/lab/sdcard.mjs). It imports only refs/ (test_pure.mjs) and reads through read(lba, count) -> bytes
 // (512-byte sectors), so it shares no code with the firmware or the lab. FAT12 / FAT16 / FAT32 and long file names;
-// an exFAT volume is recognised and refused.
+// an exFAT volume is recognised and refused here (refs/exfat.mjs reads it; refs/volume.mjs picks the reader).
 import { ValueError } from './errors.mjs';
 
 const u16 = (b, o) => b[o] | b[o + 1] << 8;
@@ -82,8 +82,10 @@ export class FatVolume {
     if (u32(b, 0) !== 0x41615252 || u32(b, 484) !== 0x61417272) return null;
     return { free: u32(b, 488), next: u32(b, 492) };
   }
-  // the entries of a directory (cluster 0: the FAT12/16 root): {name, short, attr, cluster, size, time, date}
-  list(cluster = this.rootCluster) {
+  // the entries of a directory (cluster 0: the FAT12/16 root; a directory's entry, as refs/exfat.mjs takes it, by its
+  // cluster): {name, short, attr, cluster, size, time, date}
+  list(dir = this.rootCluster) {
+    const cluster = dir !== null && typeof dir === 'object' ? dir.cluster : dir ?? this.rootCluster;
     let bytes;
     if (cluster === 0) {
       const n = Math.ceil(this.rootEntries * 32 / 512);

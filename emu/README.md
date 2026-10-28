@@ -109,7 +109,11 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   999 less the images to the application's getAvailableShootCount, the first slot's card detect state at inserted and
   a movie time left of an hour less what has been recorded). The system timer module's
   long timers run out (S-LONGTIMER), and a lens is on the mount (S-LENS: an attach flag, a lens-ready byte and a
-  12-40mm F2.8 PRO record, so the screen shows S-AF and the AF target).
+  12-40mm F2.8 PRO record, so the screen shows S-AF and the AF target). On E143 `OM_EMU_LENS=native` puts the lens
+  on the mount natively instead: the lens tasks, the lens driver and its serial driver LENS_SSC run against a model of
+  the lens serial controller (`src/dev/lensssc.mjs`), S-LENSMCU (`src/lab/lensmcu.mjs`) answers its frames as the
+  12-40mm F2.8 PRO, and the zoom ring and the lens lock pin switch fw_121c reach the driver; a touch on the shooting
+  screen then leaves the camera application answering no key (`docs/hle-gaps.md` 4.4.2).
 - A half press in focus shows the green AF frame and focus mark. They are CPU 3's (its task DISP_FRAME draws them into
   the TFT's face-frame plane), so S-DISPFRAME runs DISP_FRAME on the lab CPU for each post to it, S-TAKEFRAME sets the
   frame display mode the TAKE module would, S-AFOSD uploads the indicator and the AF frame the AF module would, and
@@ -125,7 +129,9 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   shooting panel over a black image area): S-CAMAPP starts the OXF main thread (task 57 HIGHLEVEL_MAIN), S-BOOTDONE
   sends the camera base and the still-shooting category the events the modules' start would bring, so the shoot mode
   and Cmp_ShootingComponent are created natively, and S-CPU3 takes their remote calls to CPU 3 off the ring.
-- REC records at mode-dial position 7 once the LLPSW firmware key is released; while it records, the GUI shows its
+- REC records at mode-dial position 7 once the LLPSW firmware key is released (with the native lens it reads
+  released from the start: the lens is locked on the mount, and pressing it detaches the lens); while it records, the
+  GUI shows its
   movie recording screen (the card, a red REC mark with the recording's time, the time left, the movie mode, shutter,
   aperture and a blinking ISO).
 - OK opens the Super Control Panel, MENU the menu (the live view stops behind it, S-THROUGH; closing it skips the
@@ -141,6 +147,8 @@ sh emu/play.sh                                   # the interactive player (bin/p
 node emu/bin/play.mjs --no-browser --idle off    # its server alone (HTTP API; --debug-api for the debug tokens and
                                                  # the live debug route, below)
 node emu/bin/play.mjs --hdmi on                  # with the HDMI port; the input {"type": "hdmi", "action": "plug"}
+OM_EMU_LENS=native sh emu/play.sh                # E143's lens natively (S-LENSMCU) in place of S-LENS; a touch on
+                                                 # the shooting screen then stops the application's keys (open)
 OM_EMU_NVRAM=~/.om-emu.json sh emu/play.sh       # keep the settings and the clock between sessions (S-NVRAM): no date
                                                  # prompt at power-on, menu changes back in the next session
 OM_EMU_CARD=emu/out/card/E143.omsd sh emu/play.sh   # keep the card between sessions (E143): formatted once, the

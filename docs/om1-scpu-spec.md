@@ -1,4 +1,4 @@
-> Status (2026-10-23): section 8's step 2 is built, and the part of step 1 it needed is settled (section 3.1's pins, 3.2's transport, 3.4's handlers). The firmware was read statically (byte scans, a disassembly in a scratch directory); it was never executed. The lab's sub-CPU is S-SCPUDEV (`emu/src/lab/scpudev.mjs`), a transport-level model at the far end of the MN's link: PER_SCPU runs natively against it over PER_SIO's channel (S-SIO2) and the GIO pins 102 / 103 / 107 (`emu/src/dev/linkpins.mjs`, `emu/src/lab/scpulink.mjs`; hle-gaps.md 4.7.1). S-SCPU, the request server at the MN's request API, is retired. Section 8 is the plan.
+> Status (2026-10-27): section 8's steps 3 and 4 are built: an instruction census of the image and a pure-JS Cortex-M4 core (`emu/src/core/m4/`) checked against QEMU's Cortex-M4; the core runs the image from its reset vector to its first STM32 peripheral access (section 8, "Steps 3-4, built"). Status (2026-10-23): section 8's step 2 is built, and the part of step 1 it needed is settled (section 3.1's pins, 3.2's transport, 3.4's handlers). The firmware was read statically (byte scans, a disassembly in a scratch directory); it was never executed. The lab's sub-CPU is S-SCPUDEV (`emu/src/lab/scpudev.mjs`), a transport-level model at the far end of the MN's link: PER_SCPU runs natively against it over PER_SIO's channel (S-SIO2) and the GIO pins 102 / 103 / 107 (`emu/src/dev/linkpins.mjs`, `emu/src/lab/scpulink.mjs`; hle-gaps.md 4.7.1). S-SCPU, the request server at the MN's request API, is retired. Section 8 is the plan.
 
 # OM-1 sub-CPU (SCPU) firmware
 
@@ -9,7 +9,7 @@ Firmware = the E143 v1.9 `.BIN`'s block at file offset `0x0e560000` (`unpacked/E
 | Item | Finding | Evidence |
 |---|---|---|
 | Instruction set | ARMv7E-M Thumb-2 | D: 32-bit Thumb encodings throughout (`orr.w`, `b.w`, `tbb`, `udiv`, `ldrex`), DSP `smulbb` in ordinary code (e.g. `0x800b5ce`) |
-| FPU | present and enabled, not used by the application | D: the reset path's first call `0x8027df0` ORs `0xf00000` into CPACR (`0xe000ed88`) and writes FPSCR; the RTOS's context switch restores `s16-s31` when EXC_RETURN bit 4 is clear (`0x80212c2`) and touches FPCCR (`0xe000ef34`, `0x8017878`). Only three VFP instructions exist in the whole code (that restore, one `vmrs`, one `vmsr`), so no task ever has an FP context |
+| FPU | present and enabled, not used by the application | D: the reset path's first call `0x8027df0` ORs `0xf00000` into CPACR (`0xe000ed88`) and writes FPSCR; the RTOS's context switch restores `s16-s31` when EXC_RETURN bit 4 is clear (`0x80212c2`) and touches FPCCR (`0xe000ef34`, `0x8017878`). The census (section 8, steps 3-4) finds six FP instructions and no FP arithmetic: the reset path's `vmsr` (`0x8027e0c`), two `vmrs` (`0x80211ea`, `0x802151a`) and the s16-s31 transfers of the context switch (`vpush` `0x802121e`, `vldm` `0x80212c2`, `vstm` `0x80214a8`); this row said three before the census (D). Whether a task ever runs with an FP context is ? (the reset path's `vmsr` sets CONTROL.FPCA before the kernel starts; the first task runs with it clear, X in the JS core) |
 | Core | Cortex-M4F | I from the two rows above (M4 = v7E-M + single-precision FPU; an M7 would bring caches, which nothing configures) |
 | Vector table | 99 entries (16 system + 83 IRQs) at `0x08000000`, VTOR written `0x08000000` | D: table `0x000..0x18b` of the block, strings start at `0x18c`; VTOR / AIRCR (`0x05fa0300`) / CCR.STKALIGN written at `0x80244dc..f4` |
 | Peripheral map | the STM32L4 map | D: GPIOA..H at `0x48000000 + 0x400n` (A, B, C, D, H used), RCC `0x40021000` with AHB1ENR `+0x48`, AHB2ENR `+0x4c`, APB1ENR1 `+0x58`, APB2ENR `+0x60`, CCIPR `+0x88`, BDCR `+0x90`, CSR `+0x94`; FLASH `0x40022000`; PWR `0x40007000` (+0, +4, +8, +0x10, +0x18, +0x20); EXTI `0x40010400`, SYSCFG EXTICR `0x40010008`; DMA1 / DMA2 `0x40020000` / `0x40020400` with channel registers at `+0x08 + 0x14 (n - 1)`; ADC `0x50040000` (common `0x50040300`); TIM2 `0x40000000`, TIM1 `0x40012c00`, TIM15 / TIM16 `0x40014000` / `0x40014400`; SPI2 `0x40003800`; USART2 `0x40004400`, USART1 `0x40013800`, LPUART1 `0x40008000`; I2C1 / I2C2 `0x40005400` / `0x40005800`; USB FS device `0x40006800`; RTC `0x40002800`. ADC at `0x50040000` excludes the G4 (whose RCC is the same) |
@@ -172,3 +172,45 @@ Total to step 6: about 6-8 weeks, of which steps 1-2 (1.5-2 weeks) deliver most 
 | every other command (`0x02`, `0x82`, `0x04`, `0x84`, `0x07`, `0x87`, `0x80`, `0x88`, `0x11..0x14`, `0x40`) stops the session naming its handler | no session sends one; the answers that come from the sub-CPU's hardware are ? |
 
 The seam for step 6 is S-SCPUDEV's interface (`connect`, `pin`, `exchange`, `step`): an LLE puts the Cortex-M4 there, the MN side (S-SIO2, the pins, the window's port 3) unchanged; its frame log (`store_log.scpu_frames`) is the oracle the LLE is checked against. The store init's session (X, E143; E146 the same, E147's store init sends `0x86` only): PER_SCPU's start (the reset pulse, pin 102 high, `0x85 {2}` answered `[5, 0x85, 2, 0x85, 1]`) and the three requests as frames `0x06 {2, 0x8000021c, 0}`, `0x01` with the reset date (cut: status 10501 arrives as 5), `0x86 {2, 0}` answered `[6, 0x86, 0x8000021c]`; the waits return E_OK as with S-SCPU. E139 and E134 run with the link too: their PER_SCPU is E143's but for its pins (77 / 76 / 57) and PER_SIO channel (5), and their sub-CPU images, another lineage, carry the same command manager (its log strings and the power-on gate's messages, D); their handlers are not read, so the model answers them as E143's sub-CPU (I; hle-gaps.md 4.7.1).
+
+**Steps 3-4, built (2026-10-27).** The census and the core; what is D, X and I:
+
+- **The census** (`node emu/bin/m4census.mjs`, `emu/src/core/m4/census.mjs`; step 3). Recursive descent from the 98
+  vector-table handlers, then one round of code pointers in data (438 aligned odd words whose walk decodes cleanly),
+  following B / BL / CBZ / TBB targets (a table bounded by the CMP before it): 43,049 instructions (30,926 16-bit,
+  12,123 32-bit), 110,344 code bytes, in 176 encodings and 41 executor operations; no UNDEFINED, coprocessor or FP
+  data-processing encoding is reached (D). The decoder agrees with GNU objdump on every one of them: lengths all equal,
+  mnemonics all equal but objdump's `mov.w rd, rm, lsl #n` spelling of the shifts (X, `tools/m4-oracle/objcheck.mjs`
+  in the VM). The mix: the integer Thumb-2 set with UDIV / SDIV, MLS, UMULL / UMLAL, the DSP's SMULBB / SMLABB /
+  SMLATT, CLZ / RBIT / REV, BFI / BFC / UBFX, LDREXB / STREXB, TBB, LDRD / STRD, MRS / MSR, SVC, WFI, BKPT (11), the
+  barriers, and the six FP instructions of section 1. No TBH, no LDREX / STREX of words, no saturation and no parallel
+  arithmetic; the core implements those too.
+- **The core** (`emu/src/core/m4/`: `decode.mjs` the Thumb / Thumb-2 decoder, `cpu.mjs` the executor and the
+  exception model, `sys.mjs` the system control space, `bus.mjs` a memory bus, `boot.mjs` the SCPU's flash and SRAM;
+  step 4). The whole ARMv7E-M integer instruction set (the DSP extension included) and the FPU's register file, its
+  loads, stores and transfers (VLDR / VSTR / VLDM / VSTM / VPUSH / VPOP, VMOV, VMRS / VMSR); FP data processing throws
+  Unimplemented. Exceptions per the ARMv7-M ARM: the 8- and 26-word frames with STKALIGN, MSP / PSP and CONTROL,
+  EXC_RETURN and its integrity checks, the lazy FP context (FPCCR.LSPEN, FPCAR, LSPACT and the preservation on the
+  next FP instruction), PRIMASK / BASEPRI / FAULTMASK and PRIGROUP, fault escalation to HardFault and lockup. The
+  system block: NVIC (83 IRQs, 4 priority bits as the STM32L4's, level lines and pulses), SCB (VTOR, AIRCR with
+  SYSRESETREQ, SCR, CCR, SHPR, SHCSR, CFSR / HFSR / MMFAR / BFAR, CPACR), SysTick (the processor clock or HCLK / 8),
+  DWT's CYCCNT, the FPU's FPCCR / FPCAR / FPDSCR, the MPU's registers (kept, not enforced). One cycle per instruction.
+  Peripherals attach to the bus (the STM32L4's are step 5).
+- **Checked against QEMU** (X; `tools/m4-oracle/`, QEMU 11.1.2 `mps2-an386` in the VM, on generated code only):
+  200,000 generated cases (seeds 1..200,000; sequences of 1-5 instructions with random registers, flags, stacks,
+  CONTROL, PRIMASK, BASEPRI, FPU enable, S registers and an 8 KiB data window) gave 144,647 compared end states and no
+  difference, over all 360 encodings the generator draws; 32,365 of them end in a HardFault entry and 986 in an
+  SVCall entry, so the frames (the 26-word one with FPCA set), CFSR / HFSR and the escalation are compared as well
+  (the other 55,353 left the shared layout on the JS core and were not run). 150,000 more (seeds from 1,000,001, an
+  earlier weighting of the UNDEFINED encodings): 117,969 compared, no difference. The recorded vectors
+  (`emu/test/fixtures/m4_vectors.json`, 2,191 cases over 359 encodings) replay on the JS core in `bin/test-pure.mjs` without QEMU; a core with ADC's carry-in dropped
+  fails 20 of them. Where QEMU departs from the ARMv7-M ARM the core follows the manual and the oracle avoids the case
+  (a coprocessor other than cp10 / cp11 raises NOCP; LDRH / LDRSH to pc is a NOP; STREX checks alignment with the
+  monitor clear; `tools/m4-oracle/README.md`).
+- **On the firmware** (X; `node emu/bin/m4smoke.mjs`, `test/test_m4.mjs` m4Firmware): from the reset vector (SP
+  `0x20010000`, pc `0x80277a4`) on flash and SRAM alone, the image runs 58,852 instructions: the FPU enable and FPSCR,
+  the IAR data initialisation (the `.bss` clear and the `.data` decompression of section 2), the NVIC / SCB set-up
+  (`0x80244a8`) and the kernel's start, which takes one SVC and enters the first task on PSP (CONTROL.SPSEL set). The
+  first access to an unmodelled address is the FLASH controller's ACR read at `0x40022000` from `0x800a534` (I: the
+  HAL's init setting the flash latency and prefetch). That is where step 5 starts.
+

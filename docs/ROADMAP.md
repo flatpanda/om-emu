@@ -461,14 +461,15 @@ and E147, and on E139 and E134 (their own pins and channel; their sub-CPUs answe
 |---|---|---|
 | 1 | settle the open link items statically: the PC2 / PC3 roles, the inbound message layouts, the `0x85` message-to-state map, the `0x88` reply | partly done (2026-10-23): PC3 is pin 102 and PC2 the message line, `0x85`'s reply, the date's and backup registers' semantics, the `0x88` reply's shape (scpu spec 3); left: the inbound message layouts, `0x85`'s message-to-state map, the port scan's result bits |
 | 2 | S-SCPUDEV: a transport-level SCPU device at PER_SIO channel 2 and pins 102 / 103 / 107 speaking the frame protocol with handlers from the D table; PER_SCPU's start, gate, watchdog and poll path native; S-SCPU retired and the store-init session compared | done (2026-10-23): the same three requests, now as frames, the waits E_OK; S-SCPU removed rather than kept behind a flag; the watchdog's and poll's paths are native but not reached (the model always answers and posts no message) |
-| 3 | a Thumb-2 instruction census of the image (`tools/`) | 1-2 days |
-| 4 | a pure-JS Cortex-M4 core (`emu/src/core/`), checked against a QEMU M4 board in the VM | 2-3 weeks |
+| 3 | a Thumb-2 instruction census of the image (`tools/`) | done (2026-10-27): `bin/m4census.mjs`, 43,049 instructions in 176 encodings by recursive descent, the decoder equal to objdump on all of them; six FP instructions, no FP arithmetic (scpu spec 8) |
+| 4 | a pure-JS Cortex-M4 core (`emu/src/core/`), checked against a QEMU M4 board in the VM | done (2026-10-27): `src/core/m4/`, the ARMv7E-M integer set, the FPU's transfers, the exception model with the lazy FP context, NVIC / SCB / SysTick; against QEMU 11.1.2 `mps2-an386` on generated cases, 144,647 compared with no difference (`tools/m4-oracle/`, 2,191 recorded vectors in `test-pure`); the image runs from reset through its kernel start (one SVC, the first task on PSP) to its first STM32 access, FLASH ACR, after 58,852 instructions (scpu spec 8) |
 | 5 | the STM32L4 system block and the must-behave peripherals (RCC, FLASH, PWR, GPIO, EXTI, SPI2 + DMA, LPUART1, RTC); X target: the console prompt "SUB> " and the 13 tasks | 1-2 weeks |
 | 6 | the SCPU core behind step 2's seam: `0x85 {2}` answered by the real firmware, `comm trace on` frames equal to S-SCPUDEV's | 1 week |
 | 7 | battery, charger and PD device models only where the firmware's own errors demand them | open |
 
 Recommended: steps 1-2 as part of HLE step 2's power-off work; steps 3-7 only when an SCPU behaviour the MN side
-shows cannot be written from the D table. Risks: the I2C devices' identities and the battery protocol are unknown, and
+shows cannot be written from the D table. Steps 3-4 were built ahead of that (2026-10-27) as a contained piece;
+step 5 starts at the FLASH controller. Risks: the I2C devices' identities and the battery protocol are unknown, and
 silence from them may change what the power manager reports to the MN.
 
 ## Subject-detection track

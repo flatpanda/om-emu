@@ -51,6 +51,7 @@ machine  createMachine(): board address map, device wiring, cont/resume/step, sn
            |
 core     cpu.mjs (R, S, step)   interp.mjs (decode cache, run, TB-look irq timing)   mem.mjs (page tables, buffer, DIRTY)
 dev      intc  timer(+Clock)  vsc/vsccompose  engine  bus  stub  scpu  hdmi (option)   (debug windows + doorbell MMIO in guest space)
+sub-CPU  core/m4/ (Cortex-M4)  core/m4/periph/ (STM32L4 peripherals, board, Stm32l4 machine)   apart from the lab: bin/m4smoke, bin/scpu
 support  fw/ (olyfw, labfw, models, ports, xmap, facts, board)   util/ (bytes, hex, show, equal, parse, tally, tracejson)   trace/   debug/
 verify   test/ (bin/test.mjs, bin/test-pure.mjs, fixtures/)   checks/ (runs.json, fixtures/)   scenarios/   golden.json   bin/*gate
 measure  bin/fwmap.mjs + fwmap/ (static map, coverage via createMachine's coverage option, report by module and block)

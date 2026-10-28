@@ -688,7 +688,8 @@ Open) and the only lens on the other bodies.
   message line (D, scpu spec 3.1), the command table of 4.7.1 mapped to its handlers, battery packs on two UARTs,
   chargers and a USB PD controller on I2C, an RTC, and a debug console on LPUART1. It holds no accelerometer or
   eye-sensor code. The transport-level model the survey recommended before any LLE is built (S-SCPUDEV, 4.7.1; scpu
-  spec 8 step 2).
+  spec 8 step 2). Apart from the lab, the image itself boots to its debug console on a pure-JS Cortex-M4 with STM32L4
+  peripheral models (scpu spec 8 steps 3-5, 2026-10-28); connecting it in S-SCPUDEV's place is step 6.
 - **Accelerometer (D):** ACC_MAIN's probe reads register 0x0f of device channel 6 and wants 0x6a (I: the WHO_AM_I of
   ST's LSM6DSL / LSM6DSM family); the bus is SPI over PER_SIO (`[PER_ACC_SPI] per_sio_open_error`, ACC_SPI). Samples
   land in the cache `0x62963f60..0x62963f6c` and bump the counter `0x6034d9d4`. Level Adjust's loop

@@ -1,4 +1,4 @@
-> Status (2026-10-27): section 8's steps 3 and 4 are built: an instruction census of the image and a pure-JS Cortex-M4 core (`emu/src/core/m4/`) checked against QEMU's Cortex-M4; the core runs the image from its reset vector to its first STM32 peripheral access (section 8, "Steps 3-4, built"). Status (2026-10-25): section 8's step 2 is built, and step 1 is settled but for the hardware meaning of a few bits: section 3.1's pins, 3.2's transport, 3.3's handlers, and since 2026-10-25 section 3.4's inbound direction (the message path, the poll's reply, the layouts of `0x08`, `0x11..0x13` and `0x40` from both ends), the `0x88` port scan's result bits and the power state each `0x85` mode selects. S-SCPUDEV serves `0x88` and posts the port scan's report `0x08`, which PER_SCPU polls and dispatches natively. The firmware was read statically (byte scans, a disassembly in a scratch directory); it was never executed. The lab's sub-CPU is S-SCPUDEV (`emu/src/lab/scpudev.mjs`), a transport-level model at the far end of the MN's link: PER_SCPU runs natively against it over PER_SIO's channel (S-SIO2) and the GIO pins 102 / 103 / 107 (`emu/src/dev/linkpins.mjs`, `emu/src/lab/scpulink.mjs`; hle-gaps.md 4.7.1). S-SCPU, the request server at the MN's request API, is retired. Section 8 is the plan.
+> Status (2026-10-28): section 8's step 5 is built: the STM32L4 peripherals the image uses are modelled at register level (`emu/src/core/m4/periph/`), and the image boots from reset to its debug console's prompt "SUB> " on LPUART1 (after 89,724 core cycles, 16.8 ms of SCPU time), starts its RTOS tasks and answers console commands; on a board with nothing attached it goes to standby about 3 s after reset, and a wake-up pin brings it back (section 8, "Step 5, built"). Status (2026-10-27): section 8's steps 3 and 4 are built: an instruction census of the image and a pure-JS Cortex-M4 core (`emu/src/core/m4/`) checked against QEMU's Cortex-M4; the core runs the image from its reset vector to its first STM32 peripheral access (section 8, "Steps 3-4, built"). Status (2026-10-25): section 8's step 2 is built, and step 1 is settled but for the hardware meaning of a few bits: section 3.1's pins, 3.2's transport, 3.3's handlers, and since 2026-10-25 section 3.4's inbound direction (the message path, the poll's reply, the layouts of `0x08`, `0x11..0x13` and `0x40` from both ends), the `0x88` port scan's result bits and the power state each `0x85` mode selects. S-SCPUDEV serves `0x88` and posts the port scan's report `0x08`, which PER_SCPU polls and dispatches natively. The firmware was read statically (byte scans, a disassembly in a scratch directory); it was never executed. The lab's sub-CPU is S-SCPUDEV (`emu/src/lab/scpudev.mjs`), a transport-level model at the far end of the MN's link: PER_SCPU runs natively against it over PER_SIO's channel (S-SIO2) and the GIO pins 102 / 103 / 107 (`emu/src/dev/linkpins.mjs`, `emu/src/lab/scpulink.mjs`; hle-gaps.md 4.7.1). S-SCPU, the request server at the MN's request API, is retired. Section 8 is the plan.
 
 # OM-1 sub-CPU (SCPU) firmware
 
@@ -98,7 +98,7 @@ The handler addresses are D (the tables of section 3.2). The roles of `0x02`, `0
 
 ### 4.1 GIO, the logical pin layer (D)
 
-The table `0x8005f00` (pointer stored at `0x20009cf0` by the GIO init `0x800cd54`) has 52 entries `{u32 GPIO port, u16 pin mask, u16 EXTI line mask or 0xffff}`: ports 0..15 = PA0..PA15, 16..31 = PB0..PB15, 32..47 = PC0..PC15, 48 = PD2, 49 = PH0, 50 = PH1, 51 = PH3. EXTI-capable: 0 (PA0), 28 (PB12), 37 (PC5), 39 (PC7), 40 (PC8), 41 (PC9), 45 (PC13); a 16-entry line table at `0x80060a0` names their NVIC IRQs (6..10 for lines 0..4, 23 for 5..9, 40 for 10..15). API: read `0x800cdc4`, write `0x800cdea`, register an edge callback `0x800ce12(port, {mode 1/2/3, callback, arg})`, enable `0x800ceae`, disable `0x800cf04`. On hardware phase < 4 (`0x800e79e`; "[SC_INFO] HW PHASE ERROR", "develop pahase") ports 37 and 39 swap (`0x800cfc8`). The debug block `gio` reads and writes ports by number ("gio w 35 1", "gio r 18"). Ports used with constants elsewhere: reads of 0, 18, 24, 28, 36, 37, 41, 45; writes of 18, 24, 34, 35, 36, 44; edge callbacks on 0, 28, 37, 41, 45 (call sites in the comm, power manager, charge and USB PD code). Their signals beyond the comm lines are ? ("PER_GIO_SCUSBMUXSEL" names one, I: a USB mux select).
+The table `0x8005f00` (pointer stored at `0x20009cf0` by the GIO init `0x800cd54`) has 52 entries `{u32 GPIO port, u16 pin mask, u16 EXTI line mask or 0xffff}`: ports 0..15 = PA0..PA15, 16..31 = PB0..PB15, 32..47 = PC0..PC15, 48 = PD2, 49 = PH0, 50 = PH1, 51 = PH3. EXTI-capable: 0 (PA0), 28 (PB12), 37 (PC5), 39 (PC7), 40 (PC8), 41 (PC9), 45 (PC13); a 16-entry line table at `0x80060a0` names their NVIC IRQs (6..10 for lines 0..4, 23 for 5..9, 40 for 10..15). API: read `0x800cdc4`, write `0x800cdea`, register an edge callback `0x800ce12(port, {mode 1/2/3, callback, arg})`, enable `0x800ceae`, disable `0x800cf04`. On hardware phase < 4 (`0x800e79e`; "[SC_INFO] HW PHASE ERROR", "develop pahase") ports 37 and 39 swap (`0x800cfc8`). The phase is read once from three strap pins (D, read 2026-10-28): PA6, PC6 and PB9 (`0x800e6c4..0x800e6de`) form a 3-bit code (PA6 bit 0, PC6 bit 1, PB9 bit 2) that the table `0x800e7f4` maps to the phase (codes 0..7 to 0, 1, 2, 4, 3, 5, 6, 7; a code missing from the table would leave 0xff and print "[SC_INFO] HW PHASE ERROR", but all eight are there), and afterwards each strap that read 1 gets a pull-down and each that read 0 no pull (`0x800e708..0x800e786`). The firmware reads them with pull-ups, so a board that drives none of them gives phase 7 (X on the step 5 machine, "develop pahase : 00000007"); the camera's straps are ?. The debug block `gio` reads and writes ports by number ("gio w 35 1", "gio r 18"). Ports used with constants elsewhere: reads of 0, 18, 24, 28, 36, 37, 41, 45; writes of 18, 24, 34, 35, 36, 44; edge callbacks on 0, 28, 37, 41, 45 (call sites in the comm, power manager, charge and USB PD code). Their signals beyond the comm lines are ? ("PER_GIO_SCUSBMUXSEL" names one, I: a USB mux select).
 
 ### 4.2 Peripherals and what an emulator would model
 
@@ -126,6 +126,7 @@ The table `0x8005f00` (pointer stored at `0x20009cf0` by the GIO init `0x800cd54
 ### 5.1 Objects (D, the name table `0x5168..0x55d4`)
 
 - Tasks (13): CMD_MANAGER, SYSTEM_CTRL, FIRMUP_COMP_EXEC, PORT_SCAN_MAIN, PWR_MNG, MAIN, USB_PD_MAIN, USB_PD_INTR, CHARGE, BAT_INFO, POWER_SUPPLY, USB_PD_EXEC, DBG_MAIN.
+- The kernel's object table (read 2026-10-28; the configuration `0x8005af4`, its type bytes through +0, control blocks through +20, initialisers through +4, the last id at +36) holds 71 objects whose type nibbles count 13 x `0x40`, 2 x `0x50`, 20 x `0x60`, 8 x `0x70` and 3 x `0x30`, the numbers of tasks, semaphores, event flags, data queues and cyclic handlers above (D for the counts, I for the types from them), plus 16 x `0x10` and 8 x `0x80` (?). The tasks are ids 17..29 in the name table's order (I; D for four whose entries the spec places: 17 `0x80128e9` the command manager's loop, 18 `0x80161df` the system-control task, 20 `0x8012629` the port scan, 26 `0x8019a2d` beside the battery task's code); 22 (MAIN, `0x8009eb9`) and 29 (DBG_MAIN, `0x800c9e9`, the lowest priority 15) carry the type bit `0x02` that makes the kernel start them (`0x80175a2`).
 - Semaphores: PD_CMD_SYNC, PD_GET_CMDBUF_SYNC. Event flags (20): USB_PD_I2C, USB_PD_INTR, BAT_TEMP_AD_EVENT, BAT_INFO_DATA_DONE, USB_PD_SEND, USB_PD_CMD_WAIT, USB_PD_DEVCMD_WAIT, CHARGE_DBG_I2C_ACCESS_DONE, CHARGE_USB_PD_PWR_INFO, the four *_SYSTEM_STOP_REQ_DONE, CHARGE_VSYS_CONTROL_DONE, PORT_SCAN_TASK_MAIN, PWRMNG_BINFO_GET_DONE, PWRMNG_USB_PD_PWR_INFO, BAT_INFO_DBG_DATA_DONE, PER_IOEXP_PBH_REG_SET_DONE, PWRMNG_REQ_BINFO_EXEC_DONE. Data queues (8): COM_CMDM_RECEIVE, USB_PD_MAIN, CHARGE_RECEIVE, SYSTEM_RECEIVE, BAT_INFO_RECEIVE, POWER_SUPPLY_RECEIVE, USB_PD_EXEC, PWR_MNG_RECEIVE. Cyclic handlers: CYC_SYS, CYC_SYSTIMER, CYC_PWR_MNG_EXEC.
 - Wrappers with the MN's names: OlyTaSt / OlyTaSp / OlyTaSS / OlyTaSL ("[OlTa]Err..."), OlyQueueRead / OlyQueueWrite / i_OlyQueueWrite, OlyEventSet / Wait ("[OlEv]"), semaphores ("[OlSm]"), a two-pool heap (SCHEAP small / middle, debug block `heap`).
 
@@ -135,7 +136,7 @@ Distinct handlers: NMI, HardFault (a fault dump: "In Hard Fault Handler", "SCB->
 
 ### 5.3 The debug console (D)
 
-LPUART1 at 115200 (section 4.2), prompt "SUB> ", a line editor ("rx_buffer FULL!!", ANSI clear), "Usage: SUB> {blockname} {command} ...". The block table `0x5098` (`{handler, name}` pairs): mem_put, mdump, mdump2, mdump4, phase, olyq, sctime, heap, sysctrl, sysmem, comm, psupp, bkup, adconv, pbhioe, pbhioedrv, binfo, help, plus one more whose name is a short string at `0x5020` (?); `gio`, `chg` and the USB PD commands (send, check, dump, write, read, notify) have their own usage texts. Useful as an oracle: `comm trace on` logs every link frame ("[CMDM] TX <<<:", "RX >>>:"), `comm gettx` / `getst` dump the request and state histories, `sysctrl get` the system state, `binfo r all 0` a pack's readings. An emulator that models LPUART1 gets these for free; on a camera the port is test pads at best (?).
+LPUART1 at 115200 (section 4.2), prompt "SUB> ", a line editor ("rx_buffer FULL!!", ANSI clear), "Usage: SUB> {blockname} {command} ...". The block table `0x5098` (`{handler, name}` pairs): mem_put, mdump, mdump2, mdump4, phase, olyq, sctime, heap, sysctrl, sysmem, comm, psupp, bkup, adconv, pbhioe, pbhioedrv, binfo, help, plus one more whose name is a short string at `0x5020` (?); `gio`, `chg` and the USB PD commands (send, check, dump, write, read, notify) have their own usage texts. The console's own `help` (X, 2026-10-28, section 8 step 5) lists 22 blocks: mem_put mdump mdump2 mdump4 phase olyq sctime heap sysctrl sysmem comm pwr chg psupp gio bkup adconv pbhioe pbhioedrv binfo pd help, so pwr, chg, gio and pd are blocks too; E147's image lists the same without pbhioe and pbhioedrv. Useful as an oracle: `comm trace on` logs every link frame ("[CMDM] TX <<<:", "RX >>>:"), `comm gettx` / `getst` dump the request and state histories, `sysctrl get` the system state, `binfo r all 0` a pack's readings. An emulator that models LPUART1 gets these for free; on a camera the port is test pads at best (?).
 
 ## 6. What an LLE would retire
 
@@ -154,7 +155,7 @@ LPUART1 at 115200 (section 4.2), prompt "SUB> ", a line editor ("rx_buffer FULL!
 |---|---|---|
 | A-SCPU-MCU | an STM32L43x / L44x class part, Cortex-M4F, 256 KiB flash, 64 KiB SRAM | section 1 (map D, part I) |
 | A-SCPU-PINS | PB12 = MN pin 103 (request); PC3 = MN pin 102 (ready); PC2 = the message line, port bit 3 | section 3.1 (D, but PB12 = NSS I) |
-| A-SCPU-BAT | USART1 / USART2 talk to the two battery packs | section 4.2 (I) |
+| A-SCPU-BAT | USART1 / USART2 talk to the two battery packs: USART2 the body's, USART1 the PBH's | section 4.2 (I); the ports per pack X (section 8 step 5, `binfo r all 0` / `1`) |
 
 ## 8. Feasibility and plan
 
@@ -173,7 +174,7 @@ LPUART1 at 115200 (section 4.2), prompt "SUB> ", a line editor ("rx_buffer FULL!
 2. Transport HLE (S-SCPUDEV): MN-side SIO channel 2 model as far as PER_SCPU uses it, the pin handshake, `0x85` gate, the four commands S-SCPU serves today, polls answered with "no message"; retire S-SCPU behind a flag and compare the store-init session against today's (same three requests, same results). 1-1.5 weeks.
 3. A Thumb-2 census tool (`tools/`): every instruction form the image uses, from a recursive-descent walk of the code from the vectors and the pointer tables (the tables of section 3.2 and 5.3). 1-2 days.
 4. The Cortex-M4 core in `emu/src/core/` with its own test vectors (QEMU's `-M netduinoplus2` or a similar M4 board as the oracle inside the VM, per the repo's rule that QEMU is only an oracle). 2-3 weeks.
-5. The STM32L4 system and the must-behave peripherals, then boot the image to the console prompt (X target: "SUB> " on LPUART1, the 13 tasks created). 1-2 weeks.
+5. The STM32L4 system and the must-behave peripherals, then boot the image to the console prompt (X target: "SUB> " on LPUART1, the 13 tasks created). 1-2 weeks. Done (2026-10-28, "Step 5, built" below).
 6. Plug the SCPU into the step 2 seam: `0x85 {2}` answered by the real firmware, `comm trace on` frames equal to the HLE's for the store-init session. 1 week.
 7. Device models only as the firmware's own errors demand (packs, chargers, PD controller), each from code evidence. Open-ended.
 
@@ -237,3 +238,71 @@ The seam for step 6 is S-SCPUDEV's interface (`connect`, `pin`, `exchange`, `ste
   first access to an unmodelled address is the FLASH controller's ACR read at `0x40022000` from `0x800a534` (I: the
   HAL's init setting the flash latency and prefetch). That is where step 5 starts.
 
+
+**Step 5, built (2026-10-28).** The STM32L4 peripherals and the machine; what is D, X and I:
+
+- **The machine** (`emu/src/core/m4/periph/`, pure JS beside the core and not part of the lab): `stm32l4.mjs` puts the
+  step 4 core, the flash, the SRAM and the peripheral models on one bus, keeps the peripherals' events on the core's
+  cycle counter (`sched.mjs`; one cycle per instruction at HCLK, as in step 4), sleeps through WFI by jumping to the
+  next event, and models standby (below). `board.mjs` holds what the board answers, every default "absent / idle"
+  and labelled there: no pin driven, LSE present and HSE absent, every ADC channel 0 (?), no I2C device acknowledging
+  (I), nothing received from the battery UARTs (I), no SPI2 master. An access to an address no model holds, a
+  register or mode a model does not implement (`regs.mjs` Unmodelled) and a low-power mode other than standby stop
+  the run naming it; the image reaches none of them in 60 s of SCPU time on the default board nor with the commands
+  below. `node emu/bin/scpu.mjs [--line TEXT]... [--drive PIN=LEVEL]...` boots to the prompt and types lines;
+  `emu/test/test_stm32l4.mjs` holds the models' units (test-pure) and the firmware checks (test.mjs).
+- **The models** follow the register semantics of RM0394 (the STM32L43x..L46x reference manual): RCC (reset values,
+  ready flags, the system clock switch, the clock tree to HCLK, PCLK1 / PCLK2, the timers' and the UARTs' kernel
+  clocks, the peripheral reset bits, BDCR behind PWR's DBP), FLASH (ACR, the unlock sequences, OPTR's factory value;
+  erase and programming stop), PWR, GPIO A..D and H (modes, pulls, BSRR / BRR, the lock sequence, analog pins reading
+  0), EXTI with SYSCFG's port selection (edges to pending to the NVIC lines 6..10, 23, 40, the RTC's lines 18 / 20),
+  DMA1 / DMA2 with CSELR (one item per request per cycle on the bus), USART1 / USART2 / LPUART1 (frame timing from
+  BRR and the kernel clock, TXE / TC / RXNE / IDLE, interrupts, DMA requests), I2C1 / I2C2 as master (address, bytes,
+  NBYTES / RELOAD / AUTOEND, NACK followed by STOP, interrupts), SPI2 as slave (the 32-bit FIFOs, data packing, DMA
+  requests, an exchange() for the master), TIM1 / TIM2 / TIM15 / TIM16 as time bases (prescaler, ARR preload,
+  repetition counter, one-pulse, update and output-compare flags and interrupts), the RTC (calendar on LSE through
+  PRER, init mode, RSF, write protection, alarms, the wake-up timer, 32 backup registers), ADC1 (power-up,
+  calibration, software-started sequences, EOC / EOS / OVR, DMA) and the USB device as registers with no host. The
+  models' own simplifications are I and named in each file's header (oscillators and the regulator settle at once, a
+  conversion takes a fixed 200 cycles, a UART's far end is never overrun, alternate-function signals do not reach
+  IDR, PWR's pull registers act only in standby).
+- **What the image sets up (X, register values from the run):** the clock moves from MSI 4 MHz to HSI16 as SYSCLK (CFGR
+  `0x2005`: HCLK and PCLK1 16 MHz, PCLK2 8 MHz), turns PLLSAI1 on for the USB's 48 MHz (CCIPR `0x14000000`) and LSE for
+  the RTC (BDCR `0x8103`); FLASH ACR `0x700` (latency 0, prefetch and caches on); SysTick 1 ms on the processor clock
+  (RVR 15999, the kernel tick); TIM15 PSC 15, ARR 1000 with the CC1 interrupt at CCR1 0, an interrupt every 1.001 ms on
+  IRQ 24 (a HAL time base, I); TIM1 PWM mode 1 on channel 1 at 1 kHz with CCR1 540 of 2000 (27 %) and MOE, PA8 in AF1
+  (TIM1_CH1, I from the AF table); TIM2 PWM on channel 2 (PSC 4, ARR 1999, CCR2 540) but not started; LPUART1 at 115200
+  (BRR `0x8ae4` from PCLK1), 8N1, transmit polled, receive by interrupt; USART1 / USART2 at 9600 (BRR `0x341` from
+  PCLK2, `0x683` from PCLK1), 9-bit words with even parity (CR1 `0x140d`), their DMA channels configured (DMA1 6 / 7,
+  DMA2 6 / 7, request 2) but nothing sent; SPI2 slave 8-bit with DMA1 4 / 5; I2C1 / I2C2 with TIMINGR `0x0010061a` (I2C1
+  later `0x00100c14`); the ADC's regulator and calibration, channel 9 as a continuous sequence (SQR1 `0x240`, CFGR
+  `0x80002000`), never started; the USB device's init (CNTR `0x3`, `0x1`, `0`, `0x9e80`); the RTC's PRER `0x007f00ff` (1
+  Hz from LSE), no calendar write, backup register 4 written 2; EXTI lines 0, 5, 7, 8, 9 and 13 unmasked (PA0, PC5, PC7,
+  PC8, PC9, PC13 by EXTICR), line 12 on port B (PB12, the link's request) selected and still masked; the NVIC IRQs
+  14..18, 24, 31..34 and 67..70 enabled; PWR CR1 `0x303` (DBP, range 1, LPMS standby), CR3 `0x8413` (WKUP1, WKUP2, WKUP5
+  and APC), CR4 `0x12` (WKUP2 and WKUP5 active low), PUCRC `0x2020` (PC5, PC13 pulled up in standby).
+- **The console (X):** the first output is the prompt, at 89,724 core cycles (16.8 ms of SCPU time, about 20 ms on the
+  host), then "Build: --/-- --:--" and the charger's "[CHG]<d05> b[0] Nack Detect[0x0004]" (I2C1 address `0x09` NACKs;
+  `0x0004` is the HAL's acknowledge-failure code, I). `help` lists the 22 blocks of section 5.3; `comm trace on` answers
+  "[CMDM] Strat trace CMD data."; `sysctrl get` "now_state :  00000000" (steady); `phase` "develop pahase : 00000007"
+  (section 4.1's straps on their pull-ups); `sctime gettime` 2019-01-01 0:00:00 (backup register 1 is 0, section 3.3);
+  `gio r 45` 1 (PC13 on its pull-up); `chg read 3F 0` "[CHARGE_DBG] REG READ NG!"; `pd read 0 4` "usb_pd_i2c_read :
+  USB_PD_STATE_VBUS_NO_DETECT" with no I2C2 access; `binfo r all 0` (the body pack) sends the 8-word command `00 00 00
+  00 35 30 00 9a` (9-bit words, even parity) three times on USART2, gets no answer and prints 51 zero bytes, and `binfo
+  r all 1` (the PBH) does the same on USART1. One second after reset the kernel's task table (section 5.1) has 11 of the
+  13 tasks started and blocked (state bytes 4, 5 and `0x44`; I: uITRON's waiting state is 4), MAIN started and back to
+  dormant (`0x10`), FIRMUP_COMP_EXEC dormant: the RTOS and its tasks run.
+- **Standby (X):** on the default board the system-control task gets message 17 (one of 3.4's ids 16..18) 3.03 s after
+  reset, prints "!!! standby... !!! 2019/1/1 0:0:00" and enters standby through `0x8016928` and the HAL's entry
+  `0x800bce4` (LPMS 3, SLEEPDEEP, WFI). The sender of message 17 is ?. The machine models standby (RM0394 5.3.9): the
+  core and the peripherals but the backup domain lose their state, SRAM is cleared (I: undefined after standby; SRAM2
+  kept with CR3.RRS), time runs on, and an enabled wake-up pin at its active level (the board's level, else the standby
+  pull with APC) or an RTC alarm / wake-up with its interrupt enabled ends it with a system reset and PWR SR1.SBF.
+  Driving PC13 low (WKUP2, the USB connection by 3.4's reading, I) wakes it: the image boots again to the prompt and 3 s
+  later goes to bkground (`sysctrl get` 2), as 3.4 reads `0x80163a3` for PC13 low. PC13 low from reset gives bkground at
+  3.03 s and no standby (and I2C1 address `0x32` instead of `0x09`, no log line; that device is ?).
+- **E147** (X; its block, a different build, extracted from `fw/` into a scratch directory): it boots the same way,
+  the prompt at 86,883 cycles, the same console without the pbhioe / pbhioedrv blocks, phase 7, and the same standby.
+- **For step 6:** S-SCPUDEV keeps PC13 low (bkground at a power-off); the machine's default leaves PC13 on its
+  pull-up, so the board's PC13 has to be chosen there, and the default board reaches standby 3 s after reset unless
+  something keeps the sub-CPU in steady (whether the MN's `0x85 {2}` does is ?).

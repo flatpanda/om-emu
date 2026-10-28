@@ -165,6 +165,8 @@ node emu/bin/fwmap.mjs                           # the firmware map: static map,
 node emu/bin/m4census.mjs                        # the SCPU image's Thumb-2 instruction census (the Cortex-M4 core's scope)
 node emu/bin/m4smoke.mjs                         # the Cortex-M4 core on the SCPU image from reset to its first
                                                  # unmodelled access
+node emu/bin/scpu.mjs --line help                # the SCPU image on the STM32L4 machine to its console prompt, then
+                                                 # console lines (--line ...; --drive PC13=0 sets a pin's level)
 ```
 
 **The SCPU's core.** `src/core/m4/` is a Cortex-M4 (ARMv7E-M) core for the sub-CPU's firmware
@@ -172,6 +174,13 @@ node emu/bin/m4smoke.mjs                         # the Cortex-M4 core on the SCP
 (`decode.mjs`, also the census's), the executor and exception model (`cpu.mjs`), the system control space (`sys.mjs`),
 a memory bus peripherals attach to (`bus.mjs`) and the SCPU's flash and SRAM (`boot.mjs`). Its oracle, QEMU's
 Cortex-M4 in the VM on generated code, is `tools/m4-oracle/`; the vectors it recorded replay in `test-pure`.
+`src/core/m4/periph/` is the SCPU's STM32L4 around it (section 8 step 5): register-level models of the peripherals
+the image uses (RCC, FLASH, PWR, GPIO, EXTI / SYSCFG, DMA, the U(S)ARTs, I2C, SPI2, the timers, the RTC, the ADC and
+the USB device), the board's answers (`board.mjs`: nothing attached), the event scheduler and the machine
+(`stm32l4.mjs`) with its run loop and standby. Like the core, it is outside `bin/port.mjs`'s literal scan: its
+constants are the STM32's address map and registers, not MN addresses. `bin/scpu.mjs` boots the image to its debug
+console's prompt "SUB> " and types lines into it; the machine is not connected to the lab (S-SCPUDEV stays the lab's
+sub-CPU).
 
 `bin/play.mjs` is the play server and `bin/nav.mjs` the scripted menu tool (`host/playcli.mjs`, `host/navcli.mjs`). The
 server answers every request with the router the browser uses (`src/lab/playapi.mjs`) on node's main thread and runs
@@ -368,8 +377,8 @@ frame as RGBA, the session log) and sends every other request to the Worker. The
 ## Layout
 
 - `src/`: the machine and the harness, with no node APIs, so that it runs in a Web Worker. `core/` the CPU, the
-  interpreter and the one machine buffer, and `core/m4/` the SCPU's Cortex-M4 core; `dev/` the devices; `machine.mjs`
-  the board and its gdbstub-equivalent API (with budgeted continues: `cont({budget})`, `resume`, `abort`); `lab/` the harness (the HLE layers, the native
+  interpreter and the one machine buffer, and `core/m4/` the SCPU's Cortex-M4 core with its STM32L4 peripherals and
+  machine in `core/m4/periph/`; `dev/` the devices; `machine.mjs` the board and its gdbstub-equivalent API (with budgeted continues: `cont({budget})`, `resume`, `abort`); `lab/` the harness (the HLE layers, the native
   kernel, display, text, menu, navigation, the play session, the Player, the camera application's stand-ins, the
   scene and its subject frames (`subject.mjs`), the accelerometer's stand-in, and the card with the file system: `sdcard.mjs`, `storage.mjs`, `media.mjs`, `jpeg.mjs`); `fw/` the `.BIN` unpacker, the model table (`models.mjs`), the per-model address tables (`ports.mjs`, written
   by `bin/port.mjs`), the cross-build map (`xmap.mjs`, `place.mjs`), the firmware rules (`facts.mjs`) and the boards
@@ -445,8 +454,8 @@ firmware the run warns and skips that rule. `--explain N` prints what each firmw
 
 | Command | What it covers | Needs |
 |---|---|---|
-| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units, the SCPU clock, port words, the link's pins and the sub-CPU's model (S-SCPUDEV), the HDMI port's device and sink, the accelerometer stand-in's sample, the SD card model, the FAT reader and the JPEG pair, S-SUBJECT's subject boxes and transform, the publication audit's rules on a throwaway repository, the Cortex-M4 core's hand-written vectors and the differential vectors QEMU recorded for it (`test/test_m4.mjs`, `test/fixtures/m4_vectors.json`) | node and git; runs on any checkout in a few seconds |
-| `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts, the node host, the command-line tools, the scene, the camera application, an HDMI plug in play on E143, E146 and E147, check_level on E146, the card and the file system in play on E143 (a blank card formatted and mounted by the firmware, read back independently; the counts from the card; a picture's file written and found again; Card Formatting from the menu, read back; the card taken out and put back; the same but for the menu and the card input on E146, E147, E144 and E142, each in a process of its own), subject frames DISP_FRAME draws on the scene's rider while subject detection is on (S-SUBJECT), the Cortex-M4 core on the SCPU image from reset to its first unmodelled access, the firmware map and the regression net's controls | the E143 firmware blocks (the SCPU block too; E146's and E147's for the HDMI plug and the card, E146's for check_level, E144's and E142's for the card) and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
+| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the browser driver's pure parts, the scene model, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units, the SCPU clock, port words, the link's pins and the sub-CPU's model (S-SCPUDEV), the HDMI port's device and sink, the accelerometer stand-in's sample, the SD card model, the FAT reader and the JPEG pair, S-SUBJECT's subject boxes and transform, the publication audit's rules on a throwaway repository, the Cortex-M4 core's hand-written vectors and the differential vectors QEMU recorded for it (`test/test_m4.mjs`, `test/fixtures/m4_vectors.json`), the SCPU's STM32L4 peripheral models one by one (`test/test_stm32l4.mjs`) | node and git; runs on any checkout in a few seconds |
+| `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts, the node host, the command-line tools, the scene, the camera application, an HDMI plug in play on E143, E146 and E147, check_level on E146, the card and the file system in play on E143 (a blank card formatted and mounted by the firmware, read back independently; the counts from the card; a picture's file written and found again; Card Formatting from the menu, read back; the card taken out and put back; the same but for the menu and the card input on E146, E147, E144 and E142, each in a process of its own), subject frames DISP_FRAME draws on the scene's rider while subject detection is on (S-SUBJECT), the Cortex-M4 core on the SCPU image from reset to its first unmodelled access, the SCPU image on the STM32L4 machine to its console prompt, console commands, its standby and the wake-up, the firmware map and the regression net's controls | the E143 firmware blocks (the SCPU block too; E146's and E147's for the HDMI plug and the card, E146's for check_level, E144's and E142's for the card) and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
 | `node emu/bin/golden.mjs check` | every scenario, every lab of the traced check runs and every check run's output against `golden.json`: what the panels show, what the devices see and what the checks conclude must not change | the firmware |
 | `node emu/bin/checks.mjs [CHECK \| RUN ...]` | every run of `checks/runs.json`, judged on its exit status | the firmware |
 | `node emu/bin/checktrace.mjs RUN [--slice N]` | the labs one check run creates, traced (golden records them) | as checks.mjs |

@@ -72,51 +72,73 @@ export function lowImage(code) {
 export const endOf = (kase) => CODE + 2 * kase.code.length;
 
 class Drop extends Error {}
+const STUBS = new Set(Array.from({ length: 14 }, (_, i) => STUB(i + 2)));
 
-// run a case on the JS core: its result, or { drop } when the case leaves the layout (an access outside the window, a
-// write to low memory, the system space, more than MAX_STEPS steps, pc outside the code, an Unimplemented)
-export function runJs(kase, { prioBits = 4 } = {}) {
+// a case's machine on the JS core at the case's initial state: { cpu, bus, st, win, end, restart }. Low memory is ROM
+// (a write to it leaves the layout), so the cached tier keeps the case's decoded instructions; restart() puts the same
+// machine back to the initial state with those kept (cpu.resetCore), a second pass of the same code. tier, mutant: the
+// core's (cpu.mjs), with a decode cache of 256 slots (the case's code at CODE takes at most 10, none shared); Bus: the
+// bus class (a MemoryBus).
+export function setupJs(kase, { prioBits = 4, tier = 'reference', mutant = 0, Bus = MemoryBus } = {}) {
   const st = initialState(kase.seed);
   for (const [k, v] of Object.entries(kase.set || {})) st.r[Number(k)] = v | 0;
   const low = lowImage(kase.code), win = st.window.slice();
-  const bus = new MemoryBus({ unmapped: (a, size, w) => { throw new Drop(`${w ? 'write' : 'read'} 0x${(a >>> 0).toString(16)}`); } });
-  bus.device(0, LOW, { read: (o, size) => (size === 1 ? low[o] : size === 2 ? low[o] | (low[o + 1] << 8) : (low[o] | (low[o + 1] << 8) | (low[o + 2] << 16) | (low[o + 3] << 24)) | 0),
-    write: (o) => { throw new Drop(`write to low memory 0x${o.toString(16)}`); } });
+  const bus = new Bus({ unmapped: (a, size, w) => { throw new Drop(`${w ? 'write' : 'read'} 0x${(a >>> 0).toString(16)}`); } });
+  bus.rom(0, low);
   bus.add({ base: WINDOW, end: WINDOW + WSIZE, bytes: win, rom: false });
-  const cpu = new CortexM4({ bus, prioBits });
+  const cpu = new CortexM4({ bus, prioBits, tier, mutant, dcacheBits: 8 });
   const sys = cpu.sys;
-  sys.cpacr = st.fp ? 0x00f00000 : 0;
   // the state the QEMU prologue makes: MSP, PSP, BASEPRI, PRIMASK, CONTROL, then the registers
-  cpu.setMsp(st.msp);
-  cpu.psp = st.psp;
-  cpu.basepri = st.basepri; cpu.primask = st.primask;
-  cpu.switchStack(() => { cpu.control = st.control & 2; });
-  cpu.control |= st.control & 4;
-  for (let k = 0; k < 13; k++) cpu.r[k] = st.r[k];
-  cpu.r[13] = st.r[13]; cpu.r[14] = st.r[14];
-  cpu.setXpsr(st.xpsr);
-  cpu.s.set(st.s); cpu.fpscr = st.fpscr;
-  cpu.pc = CODE; cpu.irqDirty = true;
-  const touch = sys.read.bind(sys), touchW = sys.write.bind(sys);
+  const start = () => {
+    sys.cpacr = st.fp ? 0x00f00000 : 0;
+    cpu.setMsp(st.msp);
+    cpu.psp = st.psp;
+    cpu.basepri = st.basepri; cpu.primask = st.primask;
+    cpu.switchStack(() => { cpu.control = st.control & 2; });
+    cpu.control |= st.control & 4;
+    for (let k = 0; k < 13; k++) cpu.r[k] = st.r[k];
+    cpu.r[13] = st.r[13]; cpu.r[14] = st.r[14];
+    cpu.setXpsr(st.xpsr);
+    cpu.s.set(st.s); cpu.fpscr = st.fpscr;
+    cpu.pc = CODE; cpu.irqDirty = true;
+  };
+  start();
   sys.read = () => { throw new Drop('system space read'); };
   sys.write = () => { throw new Drop('system space write'); };
-  const end = endOf(kase), stubs = new Set(Array.from({ length: 14 }, (_, i) => STUB(i + 2)));
-  let steps = 0;
+  const restart = () => {
+    win.set(st.window); bus.written(WINDOW, WSIZE);
+    cpu.resetCore();
+    start();
+  };
+  return { cpu, bus, st, win, end: endOf(kase), restart };
+}
+// the case has ended: pc at END or at an exception's stub
+export const caseOver = (m) => m.cpu.pc === m.end || STUBS.has(m.cpu.pc);
+// one step of a case: null, or why the case leaves the layout (runJs's drop)
+export function stepCase(m) {
+  const cpu = m.cpu;
   try {
-    for (; steps < MAX_STEPS; steps++) {
-      if (cpu.pc === end || stubs.has(cpu.pc)) break;
-      if (cpu.pc < CODE || cpu.pc > end) throw new Drop(`pc 0x${(cpu.pc >>> 0).toString(16)}`);
-      const r = cpu.step();
-      if (r !== STEP_OK) throw new Drop(`step result ${r}`);
-    }
-    if (steps === MAX_STEPS) throw new Drop('steps');
+    if (cpu.pc < CODE || cpu.pc > m.end) throw new Drop(`pc 0x${(cpu.pc >>> 0).toString(16)}`);
+    const r = cpu.step();
+    if (r !== STEP_OK) throw new Drop(`step result ${r}`);
+    return null;
   } catch (e) {
-    if (e instanceof Drop) return { drop: e.message };
-    if (e.name === 'Unimplemented') return { drop: e.message };
+    if (e instanceof Drop || e.name === 'Unimplemented') return e.message;
     throw e;
   }
-  sys.read = touch; sys.write = touchW;
-  return result(cpu, st.window, win, steps);
+}
+
+// run a case on the JS core: its result, or { drop } when the case leaves the layout (an access outside the window, a
+// write to low memory, the system space, more than MAX_STEPS steps, pc outside the code, an Unimplemented)
+export function runJs(kase, opts = {}) {
+  const m = setupJs(kase, opts);
+  let steps = 0;
+  for (; steps < MAX_STEPS && !caseOver(m); steps++) {
+    const drop = stepCase(m);
+    if (drop) return { drop };
+  }
+  if (steps === MAX_STEPS) return { drop: 'steps' };
+  return result(m.cpu, m.st.window, m.win, steps);
 }
 
 function result(cpu, before, after, steps) {

@@ -2,6 +2,10 @@
 > byte statistics and hashes of the model items, computed in place by scratch scripts that are not committed) and
 > disassembled with the MN10300 objdump inside the om-emu VM; nothing was executed and no model data was extracted.
 > Nothing here is wired into `emu/` yet; section 5 is the plan.
+>
+> Update (2026-10-27): U1 and U2 are read (section 5.1: MDET's frame table, how DISP_FRAME reads it, the setting), and
+> step A runs: S-SUBJECT (`emu/src/lab/subject.mjs`) writes S-SCENE's subjects into MDET's table and posts UP_FACE, and
+> DISP_FRAME draws the frames natively. Corrections in section 4.3.
 
 # OM-1 subject detection
 
@@ -247,13 +251,14 @@ the lens driver (`0x50817e11` from `0x5013f077`) and the init chain `0x501e94a5`
   (`mdet_laf_set_fcs_af_info`, `mdet_laf_set_fcs_ip_info`).
 - **Display (D).** DISP_FRAME's request types (`0x50344830..`): UP_FACE, UP_LOCKON, UP_AF, UP_ASSIST, with draws
   `draw_face`, `draw_lockon`, `draw_aftarget`, `draw_assist`, `draw_afmark`. On CPU 0 they are `0x50025747` (UP_FACE,
-  flag 1, no data), `0x50025764` (UP_LOCKON, 5 halfwords to `0xa3208c14`, flag 2), `0x500257ce` (UP_AF, the upload
-  S-AFOSD uses) and `0x50025799` (UP_ASSIST, 4 halfwords to `0xa320ad08`, flag 8), all waking DISP_FRAME through
-  `0x5002588e` (the type numbers 1, 2, 4 by table order, with UP_AF = 3 the anchor: I). MDET posts UP_FACE
-  (`0x5082afee`, `0x50839dba`) after writing its frame table: a flag `0xa337efb2`, a rectangle's four corners as eight
-  halfwords at `0xa337efb4..0xa337efc2`, a count `0xa337efc4` and up to eight 16-byte records from `0xa337efc6`
-  (`0x5082aeb2..0x5082af98`, D); FACE posts it too (`0x5051c6e9`, `0x5051c9ee`). How DISP_FRAME reads that table (all
-  the readers found are MDET's own code) and the records' field meanings are ?.
+  flag 1, no data), `0x50025764` (UP_LOCKON, 5 halfwords to `0xa3209014`, flag 2), `0x500257ce` (UP_AF, the upload
+  S-AFOSD uses) and `0x50025799` (UP_ASSIST, 4 halfwords to `0xa320b108`, flag 8), all waking DISP_FRAME through
+  `0x5002588e`; each acts only when the frame mode `0xa3209010` has its bit (1, 2, 4, 8; D, the `btst` at the head of
+  each). MDET posts UP_FACE (`0x5082afee`, `0x50839dba`) after writing its frame table at `0xa337efa1..` (section 5.1:
+  its layout, and DISP_FRAME's read of it through FACE's `0x5052202c` and MDET's getter `0x5083a299`); FACE posts it
+  too (`0x5051c6e9`, `0x5051c9ee`). Corrected 2026-10-27: the survey read the UP_LOCKON and UP_ASSIST destinations as
+  `0xa3208c14` and `0xa320ad08` (the `mov imm32` values are `0xa3209014` and `0xa320b108`), and the table as starting at
+  `0xa337efb2`, which is its second record's flag.
 - **Other (D, names).** EXIF (`mdet_laf_deeplearning_info_exif`, `mdet_laf_detectiontarget_info_exif`); a power
   saver that stops the network while nothing is detected (`mdet_power_manager_judge_dl_power_saving`, the print at
   `0x509c85ef`); a card logger (`MDETDATA`, gap@0x50816fed).
@@ -262,7 +267,7 @@ the lens driver (`0x50817e11` from `0x5013f077`) and the init chain `0x501e94a5`
 
 | Seam | Where | Needs | Stand-in |
 |---|---|---|---|
-| S1 display | DISP_FRAME's inputs: MDET's frame table + UP_FACE, UP_LOCKON | what exists now (S-DISPFRAME runs DISP_FRAME on the lab CPU) | synthetic frames from the scene |
+| S1 display | DISP_FRAME's inputs: MDET's frame table + UP_FACE, UP_LOCKON | what exists now (S-DISPFRAME runs DISP_FRAME on the lab CPU) | synthetic frames from the scene: S-SUBJECT (5.1) |
 | S2 MDET result | `mdet_laf_*` getters FCS calls; the subject record (4.3) | native FCS (AF module) | S-SUBJECT returns scene-derived records |
 | S3 DML device | `0x9c180000`, IRQ 285, the output buffer | CPU 3 natively; the `0x800f` read path; the output head layout | S-DML: on start, write heads that decode to the scene's boxes |
 | S4 the network | the engine's arithmetic | layer schedule, numerics | a reproduced DML (5.4) |
@@ -271,7 +276,7 @@ the lens driver (`0x50817e11` from `0x5013f077`) and the init chain `0x501e94a5`
 
 | Step | Content | Depends on | Size | Retires / adds |
 |---|---|---|---|---|
-| A | S-SUBJECT at seam S1: S-SCENE's layers report screen boxes (the rider, the ball) with a kind; when the camera's subject-detection setting is on, write MDET's frame table and post UP_FACE (and UP_LOCKON for the tracked one) so DISP_FRAME draws subject frames natively, as S-AFOSD does for the AF frame | static: the frame table's record layout and how DISP_FRAME reads it (U1); the setting's property and its value per kind (U2) | about 1 week | adds S-SUBJECT; nothing retires |
+| A | S-SUBJECT at seam S1: S-SCENE's layers report screen boxes (the rider, the ball) with a kind; when the camera's subject-detection setting is on, write MDET's frame table and post UP_FACE (and UP_LOCKON for the tracked one) so DISP_FRAME draws subject frames natively, as S-AFOSD does for the AF frame | static: the frame table's record layout and how DISP_FRAME reads it (U1); the setting's property and its value per kind (U2) | about 1 week; done 2026-10-27 (5.1: UP_FACE only, UP_LOCKON is the AF module's) | adds S-SUBJECT; nothing retires |
 | B | S-SUBJECT moves to seam S2: the subject records answered to the AF module, which then chooses the AF point and uploads frames itself | native AF module (hle-gaps 4.4: TakeReady, CPU 1 and 3; months) | 2-3 weeks after that | S-AFOSD's frame part and step A's display writes |
 | C | MDET natively on CPU 3 with S-DML: a register-file model at `0x9c180000` (start `+0x010`, status `+0x004` bit 14 W1C, IRQ 285, the gates and clock 50), the `0x800f` load through the flash-read path, and on each start output heads synthesised so that MDET's own `get_dml_result` / `judge_dml_result` / stabilisation produce the scene's boxes | ROADMAP HLE step 4 (CPU 3); a flash read model or a resource reader at `0x501a921f`; the output head layout read from the post-processing code (U4); PDT / TRC and, on E143, the face engines as models or stand-ins | 4-6 weeks after CPU 3 | S-SUBJECT retires; adds S-DML (and S-FACE on E143) |
 | D | A reproduced DML: run the real network on the frame | the layer schedule from the register builders (U3); the engine's arithmetic (U5); a reference to check against | months; bit-exactness ? | S-DML's synthetic heads |
@@ -286,6 +291,96 @@ emulator would read them at run time like the rest of the image, and none enter 
 Risks: the DML window `0x95xxxxxx` and the work buffer `0xb64e7c80` may need memory the lab does not map (U6);
 which core owns IRQ 285 (2.1); each kind change reloads 9.4 MB, which matters for the time model only.
 
+### 5.1 Step A: the frame table, the setting and S-SUBJECT (2026-10-27)
+
+Read statically in the VM's objdump, then checked by running the code in the lab (X where marked).
+
+**MDET's frame table (U1, D).** The writer (`0x5082ac64..0x5082af98`, which ends in UP_FACE) and the getter
+`0x5083a299` (trace id 227) agree on this layout:
+
+| Address | Field |
+|---|---|
+| `0xa337efa1` | main record valid (byte) |
+| `0xa337efa2..0xa337efb1` | main record |
+| `0xa337efb2` | part record valid |
+| `0xa337efb4..0xa337efc3` | part record |
+| `0xa337efc4` | list count (byte) |
+| `0xa337efc6 + 16 n` | list record n, n < 8 |
+
+A record is four corners `(x, y)` as halfwords in the order top left, top right, bottom left, bottom right: the writer
+builds each list record from a box `{x0, y0, x1, y1}` at `0xa33790b2 + 8 n` (valid when `0xa337d53c + n` is 1,
+`0x5082af40..0x5082af91`), the main record from subject 0's box or from a centre and size at `0xa3379060..66`
+(`0x5082ad59..0x5082ae6e`), the part record from `0xa33790f2..f8`. It fills the main and part records only while the
+byte `0xa337f082` is 1 (`0x5082acb3`, `0x5082ad02`, `0x5082ae7d`), and the list then starts at subject 1; otherwise every
+subject is a list record. What `0xa337f082 = 1` is (a selected or tracked subject, I) is open (U9).
+
+The getter fills a 166-byte record for its caller: +0 an aspect code from the byte pair `0xa3378119` / `0xa337811a`
+((4, 3) 1, (3, 2) 2, (16, 9) 3, (6, 6) 4, (3, 4) 9, (17, 9) 10; another pair is logged and gives 1,
+`0x5083a368..0x5083a420`), +1 / +2 the main record, +18 / +20 the part, +36 the count, +38 the list. It gives code 1
+and no records when the byte `0xa337f084` (`0x50839ed0`, MDET running, I) is not 1 or the pair and the halfword
+`0xa3378116` are all zero, and a count of 0 when `0xa337f07a` is 0 and `0xa337813f` is 1, or `0xa337bbdc & 6` is 2 or 6.
+
+**How DISP_FRAME reads it (U1, D).** DISP_FRAME's draw (`0x5100d99e`) runs draw_face (`0x5100d751`) when bit 1 of its
+pending mode is set (`0x5100dc03`). draw_face asks FACE's `0x5052202c` for an 88-byte record: FACE's own double buffer
+(`0xa32f3d54 + 88 x`, by `0xa32f3e04`) when FACE's mode byte `0xa32f3e06` is 1, else MDET's getter, each record turned
+into a centre, width and height by `0x50523fe3` (`x0 + (x1 - x0) / 2`, `y0 + (y2 - y0) / 2`, `x1 - x0`, `y2 - y0`):
++0 / +2 main, +10 / +12 part, +20 count, +22 + 8 n the list, +86 the aspect code. draw_face takes the records only when
+that code equals the draw buffer's +12781, DISP_FRAME's own aspect code (`0x5100d469`: in still shooting the value of
+the settings object `0x3081`, settings id 269; in movie mode, `0x506e6475`, 1, 3 or 10 from the objects `0xf021` and
+`0xf031`). `0x5100dfef` then makes the frames: each list record kind 1 colour 3, the main record kind 7 colour 4 (when
+fewer than 8 frames), the part kind 8 colour 4 when the mode has bit `0x10` (TAKE's request 32); x is mirrored to
+`640 - x` under mode bit `0x80`. `0x50025a8a` takes each to its top left (`centre - (size / 2 - 1)`) and through the
+output's transform (`0x500259bd`: `v * num / den + offset` per axis, clipped by `0x50025963`), a 24-byte row
+`{width, height, x num, x den, y num, y den, x offset, y offset, clip x0, y0, x1, y1}` of the table `0x60365754`: a
+pointer per output, indexed by `0x500258e8(output state, object 0x8971's value, 0x500258d4())` (the draw buffer's
++12780, +12782, +12783), and a row per aspect code (`0x50025931`: 1, 3, 2, 4, 9, 10 -> rows 0..5). `0x510161c6` draws
+them (I). The TFT's rows: 4:3 `{900 x 600, x 10/8 + 50, y 10/8, clip 50..850 x 0..600}`, 16:9 `{45/32, y - 37, clip y
+47..553}`, 1:1 clip x 150..750, 3:4 clip x 225..675 (D, the table). So MDET's coordinates are a 640 x 480 frame for
+every aspect with the image letterboxed in it (I; the mirror at 640 agrees). On the panel colour 3 is grey 170 and a
+list frame a 2-pixel rectangle (X).
+
+**The setting (U2, D).** Subject detection is settings id 1682, the data object `0x1e71` (six values, default 0).
+TAKE reads it through the property read `0x500417da(0x1e71, 0, 0)` (`0x5039ac9b`, `0x5039bb08`, `0x506d8017`) into
+its context +206 and hands it to take_mov (`0x503a4882` stores `0x62a411a3`), whose `0x503a48ac` calls
+`mdet_dl_change_mode` when MDET runs and the kind changes from one kind to another; the values are MDET's kinds
+(`0x50338100`): 0 OFF, 1 MOTOR_SPORTS, 2 AIRPLANE, 3 TRAIN, 4 BIRD, 5 ANIMAL. X: at 1 the shooting screen shows its
+motorsport icon. How `mdet_dl_start` gets the first kind (TAKE_MOV `0x506da276`) is not read.
+
+**The frame mode (D, I).** The subject frames' bit 1 is TAKE's request 1 (`0x5039f583`). TAKE's live-view request
+`0x506d8dea` sets it unless one of its conditions clears it (`0x506d8e8f..0x506d8f3b`, among them the AF module's
+answer through `0x506eab07` and fields of TAKE's records), adds request 2 (lockon) when the AF module's answer through
+`0x506eac4f` has bit 0 and request 4 (AF frames) with its bit 1. The lab's S-TAKEFRAME sets mode 4 (shutter spec
+section 7 item 50, I); without bit 1 no subject frame is drawn (X).
+
+**UP_LOCKON (D).** take_mov's `0x503a4d99` posts it with the record MDET's `0x5082e2c0` fills (halfwords +4, +6,
++12, +14 and the byte +10, a state), when its record's +24 is 1 and the AF module's answer through `0x506eac4f` has
+bit 0; draw_lockon (`0x5100d7e7`) draws one frame whose colours follow the state (1: 3 and 6, 2: 5 and 7, other: 0
+and 1; 0: none). So the tracked subject's frame is the AF module's request (step B); step A does not post it.
+
+**S-SUBJECT (step A).** `emu/src/lab/subject.mjs`, with the firmware's side in `emu/src/fw/models.mjs` `subject`
+(E143). After lab time passes, with the application on its shooting screen and S-SCENE's live view showing the live
+scene, it reads the setting through the property read as TAKE does; for a kind (1..5) it takes S-SCENE's subjects of
+that class (`scene.mjs subjectsAt`: the rider stands for motorsports, the harness's choice), places each where the lab
+shows S-SCENE's frame on the panel, takes it into DISP_FRAME's plane and back through the transform DISP_FRAME will use
+(read with the firmware's own index and row functions), and writes them as list records, larger first; the main and
+part flags 0; the aspect pair whose code equals DISP_FRAME's (`0x5100d469`, run natively); `0xa337f084` 1; the frame
+mode with bit 1 added (I); then UP_FACE (`0x50025747`) natively. It writes again when the boxes, the kind or the output
+change, at most once per S-SCENE frame step (1/15 s of lab time; S-SCENE now renders a moving scene at the step's start
+so that both agree); at OFF, another kind with no subject, the menu, a rec view or playback it empties the table, posts
+UP_FACE and takes the bit away. Labels: the record layout, the getter's conditions, the aspect map, the transforms and
+the setting are D; the scene's subjects and their class are the harness's; list records rather than a main record, the
+mode bit's timing and MDET's aspect pair are I.
+
+Evidence (X, E143): on the TFT the firmware draws a grey 2-pixel frame on the rider (4:3: MDET box `204, 203, 436,
+447`, drawn at x 306..596); with the rider moving at 3 m/s the frame moves with it frame step by frame step, clipped
+at the 4:3 area's edge; at 16:9 and 3:4 the frame follows the letterbox's clip; on the EVF it lands on the rider too
+(the plane drawn at twice its size); at BIRD or OFF there is none; S1 adds S-AFOSD's green AF frame beside it.
+`emu/test/test_subject.mjs`: the subject box against the pixels S-SCENE renders, the transform taken back and forward,
+and in play the drawn frame's four edges on the rider's panel box (at least 70% of each; the GUI's exposure scale
+covers part of the bottom edge), absent at OFF and BIRD, moving with the rider, and a `--replay` ending on the same
+frame. Without the mode bit, or with an aspect pair of another code, the same session draws nothing (X, the controls
+run by hand).
+
 ## 6. Corrections to other documents
 
 - `emu/fwmap/E143.labels.json`, gap@0x507f66d5: "DISP_SYNC device driver: 0x9c180000 ..." should read DISP_SYNC
@@ -293,12 +388,16 @@ which core owns IRQ 285 (2.1); each kind change reloads 9.4 MB, which matters fo
   this survey (docs only).
 - `docs/om1-cores-spec.md` §4 lists IRQs 278 / 279 / 286 / 287 for detection; IRQ 285 (DML) and its core belong
   beside them.
+- The three "frame bitmaps" DISP_FRAME's start loads (12417, 61473, 35185; `emu/src/lab/camapp.mjs` S-DISPFRAME,
+  `docs/om1-shutter-spec.md` section 7 items 49-50) are the data pointers of the settings objects `0x3081`, `0xf021`
+  and `0x8971`: `0x500417b0` returns an object's data, and the draws read the values through the property read
+  `0x500417da` with them (`0x5100d475..0x5100d4b5`, `0x5100da04..0x5100da12`; D). Changed with step A (2026-10-27).
 
 ## 7. Open questions
 
-- **U1** The 16-byte records of MDET's frame table (`0xa337efc6..`) and the path by which DISP_FRAME reads them on
-  UP_FACE; the five halfwords of UP_LOCKON.
-- **U2** The subject-detection setting: its property id and how its value reaches `mdet_dl_change_mode`.
+- **U1** Read (section 5.1): MDET's frame table, FACE's and MDET's getters and DISP_FRAME's draw_face; UP_LOCKON's
+  record. What the fifth halfword's other byte and the lockon box's fields are beyond position and state is ?.
+- **U2** Read (section 5.1): settings id 1682, object `0x1e71`, TAKE's context +206, take_mov, `mdet_dl_change_mode`.
 - **U3** The layer schedule: what the eight register groups and the thirteen `+0x400` blocks hold, and the tables
   `dml_set_*` read.
 - **U4** The output heads: their buffer, shapes and encoding, from `get_dml_result` / `get_dml_data_set`.
@@ -306,3 +405,8 @@ which core owns IRQ 285 (2.1); each kind change reloads 9.4 MB, which matters fo
 - **U6** What the `0x95xxxxxx` window is.
 - **U7** What PDT stands for and what it computes; which face IRQ is which engine; the face engines' clock name.
 - **U8** E134's detection lineage (blocks `0x010f` and `0x0111`) and E139's.
+- **U9** MDET's state `0xa337f082 = 1`, in which its writer fills the main record (drawn as kind 7, colour 4) and the
+  part record (kind 8, under frame mode bit `0x10`): when MDET enters it (a selected or tracked subject, I) and which
+  of TAKE's conditions sets request 32.
+- **U10** When TAKE's live-view request clears the subject-frame bit (`0x506d8dea`'s conditions in a running camera),
+  and how `mdet_dl_start` is given the first kind.

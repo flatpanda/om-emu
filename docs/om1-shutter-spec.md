@@ -943,8 +943,8 @@ S-TAKEOVER); nothing in the lab's behaviour changes. What it shows on E143 v1.9:
    `0x501ea067` -> `0x5100d04a`; the names CTRL_TYPE, UP_AF, draw_afmark, ... at `0x50344834` are this log's), copies
    the frames to shared memory (`0xa320901e`, count at `0xa320b106`, the indicator at `0xa3209011`) as the flag
    byte `0xa3209010` allows, and wakes flag 0x3001 (`0x5002588e`). The task woken is DISP_FRAME (id 0x300d, entry
-   `0x5100d05a`, on CPU 3: om1-cores-spec), which loads three frame bitmaps (resources 12417, 61473, 35185), waits on
-   the flag (`0x5100d153`), and draws through the display controller (`0x5100d1b8`, `0x501c3b1e`, `0x501c453b`). The
+   `0x5100d05a`, on CPU 3: om1-cores-spec), which takes the data pointers of three settings objects (12417, 61473,
+   35185; read as frame bitmaps here before, corrected in the subject spec section 6), waits on the flag (`0x5100d153`), and draws through the display controller (`0x5100d1b8`, `0x501c3b1e`, `0x501c453b`). The
    lab has no CPU 3 and the AF module does not run, so neither side happens. Called by hand at the end of focusing,
    the upload writes nothing (the flag byte is 0: DISP_FRAME sets its configuration at its own start,
    `0x50025e20(5, ..)`), and one draw of DISP_FRAME stops at the lab's cache-flush guard (K-CFLUSH, `0x5100d2a7`).
@@ -972,8 +972,8 @@ S-TAKEOVER); nothing in the lab's behaviour changes. What it shows on E143 v1.9:
    AF module's upload (`0x500257ce`, upload_af_info `0x508c8554`; the indicator byte is 1 or 9 by the AF status,
    `0x508c9238`). Each post reaches CPU 3 as a remote call of `0x5002587a` on ring [3][0] with the flag bits as argument
    (S-CPU3's posts, item 39, were these). The stand-ins: S-DISPFRAME (DISP_FRAME's start: colour table `0x51016eb1`,
-   bitmaps 12417, 61473, 35185; the TFT face colours from the table; the TFT frame-state byte 0; a turn of the loop per
-   drained post; the cache-flush stand-in K-CFLUSH lets its flush at `0x5100d2a7` through), S-TAKEFRAME (mode 4 after
+   settings objects 12417, 61473, 35185; the TFT face colours from the table; the TFT frame-state byte 0; a turn of
+   the loop per drained post; the cache-flush stand-in K-CFLUSH lets its flush at `0x5100d2a7` through), S-TAKEFRAME (mode 4 after
    CA_MAIN starts), S-AFOSD (at END_FOCUS in focus: indicator 1 and one frame at 400, 300, 60 x 60, the AF target;
    not in focus: indicator 9, no frame; at the S1 release: none), S-LENS's lens-ready byte, and the VSC model's opt-in
    A19 (IMG3 format 2: 8-bit indices, 0 transparent, 1..7 the words at +0xD00), on for the TFT in camapp mode. A half

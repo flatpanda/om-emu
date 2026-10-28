@@ -491,13 +491,13 @@ the register builders decoded and the engine's numerics, which cannot be checked
 
 | Step | Content | Size (I) |
 |---|---|---|
-| A | S-SUBJECT at DISP_FRAME's inputs: scene-derived subject frames in MDET's frame table, UP_FACE / UP_LOCKON posted, when the subject-detection setting is on; first settle the table's records and the setting (spec U1, U2) | about 1 week |
-| B | S-SUBJECT at MDET's results to the AF module | 2-3 weeks after native FCS |
+| A | S-SUBJECT at DISP_FRAME's inputs: scene-derived subject frames in MDET's frame table, UP_FACE posted, when the subject-detection setting (settings id 1682) names a kind. Done 2026-10-27 (spec 5.1: U1 and U2 read, the frames drawn natively; UP_LOCKON is the AF module's request, so it moves to B) | about 1 week |
+| B | S-SUBJECT at MDET's results to the AF module, which then asks for the tracking frame (UP_LOCKON) itself | 2-3 weeks after native FCS |
 | C | MDET natively on CPU 3 with S-DML, a register-level engine model whose output heads decode to the scene's boxes | 4-6 weeks after HLE step 4's CPU 3 |
 | D | a reproduced DML network | months; bit-exactness ? |
 
-Recommended: A as soon as the frame table is decoded (it needs no CPU 3); C with HLE step 4; D only with hardware to
-check against.
+Recommended: A is done; C with HLE step 4; D only with hardware to check against. Small follow-ups of A: when
+MDET fills its main and part records (spec U9) and when TAKE clears the subject-frame bit (U10).
 
 ## Longer term: full-boot LLE
 

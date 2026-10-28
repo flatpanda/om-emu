@@ -1509,6 +1509,14 @@ and E147; off by default. Addresses are E143's (disassembly notation) unless a b
   face engines `0x99600000` / `0x99a00000` exist on E143 only. TAKE drives MDET through `0x5080a5e2..0x5080ab02`;
   results go to FCS's AF points and to DISP_FRAME (UP_FACE). The seams and a plan (a display-level S-SUBJECT first)
   are in that spec's sections 4.4 and 5.
+- **Subject frames on the display (2026-10-27, spec 5.1; S-SUBJECT, `emu/src/lab/subject.mjs`).** MDET's frame table
+  is read (D): main and part records (filled only in MDET's state `0xa337f082 = 1`, ?), a count and up to eight list
+  records at `0xa337efa1..`, each four corners; DISP_FRAME's draw_face takes them through FACE's `0x5052202c` and MDET's
+  getter `0x5083a299` when the getter's aspect code matches its own and the frame mode has bit 1, and maps them through
+  a per-output, per-aspect transform (`0x60365754`). The setting is settings id 1682 (object `0x1e71`, MDET's kind,
+  D). S-SUBJECT writes S-SCENE's subjects of the setting's kind as list records and posts UP_FACE; DISP_FRAME draws
+  them natively on the TFT and the EVF, following the scene's rider (X). UP_LOCKON (tracking) is the AF module's
+  request (D) and stays with step B; nothing is retired. Open: U9, U10 of the spec.
 - **GPU and C3D (D):** one stack seen from both ends: C3D (gap@0x5101aef5) makes 108 call edges into the DMP "K3000"
   GPU driver core (gap@0x51767cd6), plus a 15.6k GPU tail of gap@0x51740e22. Tasks: C3D_EXE_BRIDGE and C3D on CPU 0,
   C3D_EXE and C3D_UPDATE on CPU 1. Devices `0x9bc80000` (30 references) and `0x9bd00000` (10) are referenced only from

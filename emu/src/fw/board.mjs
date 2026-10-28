@@ -80,6 +80,25 @@ export const FAMILIES = {
     // 0x60026788, record 0x600268f4 + 32 x 124): its group's status and enable words, the pin's type-0 bit and the
     // group's IRQ 109 (D; E146 and E147: the same words, bit and IRQ in their tables, D)
     hdmi: { tx: 0x99C07000, lanes: 0x99C08000, irq: 239, hpd: { level: 0x9B881540, level_bit: 0x10, status: 0x9B883038, enable: 0x9B883178, bit: 0x40, irq: 109 } },
+    // the lens mount (src/dev/lensssc.mjs; docs/hle-gaps.md 4.4.1, 4.4.2): the lens serial controller's registers
+    // (every operand of LENS_SSC 0x502c0ea5..0x502c2193) and its IRQ 14 (the open 0x502c0e4e attaches 0x502c12c0 at
+    // level 3); the units the lens path writes a few words of: the FCS unit, whose two words the open clears
+    // (0x502c0e99, 0x502c0e9f; the unit's extent from FCS's operands, 0x50957687..0x5095799e), and the mechanism unit
+    // (0x9b900000, 271 registers, docs/hle-gaps.md section 7), whose power-on the lens attach calls (0x5010b957,
+    // 0x5010b978, 0x5010b9bb, 0x5010b9e8, 0x5010ba15); the lens-detect pin 172 (read by 0x502c0b0a, its word
+    // (0x60025ff8)[172], the level in bit 4 as every GIO pin's, 0x50002a35). E143's (D); E146 and E147 sit on the
+    // same board, their lens drivers not read (X: a scan of their main blocks finds the controller's base 7 and 9 times
+    // from 0x502d8696 and 0x502e9f56, as E143's 8 from 0x502c0ea7, and the trigger words twice each; the devices are
+    // passive until a lab connects a lens, which only E143's does)
+    lens: {
+      ssc: 0x9B980000, irq: 14, detect: { pin: 172, word: 0x9B882C80 },
+      units: [{ name: 'fcs', base: 0x9BF00000, size: 0x770, words: [0x000, 0x068] },
+        { name: 'mec', base: 0x9B900000, size: 0x1000, words: [0x000, 0x004, 0x020, 0x024, 0x028] }],
+    },
+    // the deferred-call triggers (src/dev/dpc.mjs): the six words the posts write 1 to and the IRQs their init
+    // 0x50050279 attaches (53 and 54 on CPUs 0..3 through 0x50053fcd, 55..58 on the calling core through 0x50053f76;
+    // the words 0x9b880044..0x9b880058, D)
+    dpc: { triggers: 0x9B880044, irqs: [53, 54, 55, 56, 57, 58] },
     core_byte: 0x97F00254,
     // the interrupt vectors' page, the high half of the level slots' run-time addresses: E143's vector init loads
     // 0x60030020..0x60030080 (0x5000f09b, D; src/fw/facts.mjs vectorPage, which reads the same on E146 and E147)
@@ -182,8 +201,8 @@ export const FAMILIES = {
     // the sub-CPU link's pins: not read for the family; E139 and E134, the bodies that run PER_SCPU, give theirs (pins
     // 77 / 76 / 57 in the family's GIO block, src/fw/models.mjs)
     scpu_link: UNKNOWN,
-    // the HDMI port: not read on this family
-    hdmi: UNKNOWN,
+    // the HDMI port, the lens mount and the deferred-call triggers: not read on this family
+    hdmi: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN,
     // per body, read by src/fw/facts.mjs (coreByte; resetHead's library and preload rows; vectorPage: 0x6003xxxx on
     // E144, 0x6041xxxx on the 0x60400020 bodies, X; dramSize: 256 MiB on E144, 512 MiB on the 0x60400020 bodies, X)
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,
@@ -240,7 +259,7 @@ export const FAMILIES = {
       kernel_ticks: UNKNOWN, soft_tick: UNKNOWN, hw_channels: UNKNOWN, hw_entries: UNKNOWN,
     },
     // the VSC name table is not in the E144 form; the engine's and the SCPU's registers were not read
-    vsc: UNKNOWN, engine: UNKNOWN, scpu: UNKNOWN, scpu_link: UNKNOWN, hdmi: UNKNOWN,
+    vsc: UNKNOWN, engine: UNKNOWN, scpu: UNKNOWN, scpu_link: UNKNOWN, hdmi: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN,
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,
     // E143's scratch DRAM holds E122's icons record (the loader's destination 0xa1fa6c00, 0x730a00 bytes decoded: X,
     // src/fw/facts.mjs resLoader and resources.mjs record): the lab's scratch is E144's lab region, which E118, E120

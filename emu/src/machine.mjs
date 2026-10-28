@@ -18,6 +18,8 @@ import { Stub } from './dev/stub.mjs';
 import { Scpu } from './dev/scpu.mjs';
 import { Hdmi } from './dev/hdmi.mjs';
 import { LinkPins } from './dev/linkpins.mjs';
+import { LensSsc } from './dev/lensssc.mjs';
+import { DpcTriggers } from './dev/dpc.mjs';
 
 export { Unported, TbUndecidable };
 export class HostStopped extends Error {       // a run or write call after a host error stopped the machine mid-instruction
@@ -127,6 +129,10 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   const hdmiPort = hdmi ? new Hdmi(m, intc, HDMI_WINDOW, HDMI_DOORBELL) : null;
   // the sub-CPU link's GIO pins, on a board that gives them (src/dev/linkpins.mjs; the lab wires the sub-CPU)
   const linkPins = boardKnows('scpu_link') ? new LinkPins(m, intc, BOARD.scpu_link) : null;
+  // the lens mount's controller, the FCS unit's words and the detect pin, and the deferred-call triggers, on a board
+  // that gives them (src/dev/lensssc.mjs, src/dev/dpc.mjs; passive until the lab connects a lens or a post writes)
+  const lensSsc = boardKnows('lens') ? new LensSsc(m, intc, bus, BOARD.lens) : null;
+  const dpc = boardKnows('dpc') ? new DpcTriggers(m, intc, BOARD.dpc) : null;
   const engine = new Engine(m, bus, intc);
   const vsc = new Vsc(m, lclock, intc, bus, rom);
   const timer = new Timer(m, lclock, intc);
@@ -179,7 +185,8 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   // Every CPU fault writes its trap line (after any device line the faulting access wrote).
   const trap = (f) => { for (const line of trapLines(f, R[PC])) m.stderr(line); };
   Object.assign(m, {
-    devices: { intc, timer, engine, vsc, bus, stub, scpu, clock: lclock, ...(hdmiPort ? { hdmi: hdmiPort } : {}), ...(linkPins ? { linkpins: linkPins } : {}) },
+    devices: { intc, timer, engine, vsc, bus, stub, scpu, clock: lclock, ...(hdmiPort ? { hdmi: hdmiPort } : {}), ...(linkPins ? { linkpins: linkPins } : {}),
+      ...(lensSsc ? { lens: lensSsc } : {}), ...(dpc ? { dpc } : {}) },
     getRegs() { live(); return getRegs(); },
     // 'p' / 'P' (registers 0..15 as cpu.mjs getRegs / setRegs, and the lab registers 16..19: HI, unit C,
     // unit D, unit V); null for a register the stub does not have.

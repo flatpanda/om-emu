@@ -12,7 +12,7 @@
 // (test_camapp.mjs), the SCPU's clock, ports, link pins and sub-CPU model (test_scpu.mjs), the publication audit
 // (test_pubaudit.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the card and the
-// file system on E143, E146, E147, E144 and E142 (test_storage.mjs), subject detection's frames on E143
+// file system on E143, E146, E147, E144 and E142 and SDXC cards on E143 (test_storage.mjs), subject detection's frames on E143
 // (test_subject.mjs), the lens on the mount natively on E143 (test_lens.mjs), the SCPU's Cortex-M4 core
 // (test_m4.mjs: hand-written vectors, QEMU's recorded vectors, the SCPU image from reset to its first unmodelled
 // access), the SCPU's STM32L4 machine (test_stm32l4.mjs: the peripheral models, the SCPU image to its console prompt,
@@ -179,20 +179,22 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipp
   [...au.bad, ...(r.status === 0 ? [] : (r.stdout + r.stderr).trim().split('\n').map((l) => `E146: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += au.bad.length + (r.status === 0 ? 0 : 1);
 }
-// the card and the file system (storage.mjs): the card model and the FAT reader without firmware, then play sessions
-// whose card the firmware formats and mounts itself: E143 here, and E146, E147, E144 and E142 (the OM-1 family, the
-// E144 family and the E142 lineage) each in a process of its own (the model is fixed when the lab is imported)
+// the card and the file system (storage.mjs): the card model and the FAT and exFAT readers without firmware, then play
+// sessions whose card the firmware formats and mounts itself: E143 here (an 8 GiB SDHC card, then blank 64 and 128 GiB
+// SDXC cards, whose findings print as notes), and E146, E147, E144 and E142 (the OM-1 family, the E144 family and the
+// E142 lineage) each in a process of its own (the model is fixed when the lab is imported)
 {
-  const { storageUnits, storageSession } = await import('../test/test_storage.mjs');
+  const { storageUnits, storageSession, storageSdxc } = await import('../test/test_storage.mjs');
   const { spawnSync } = await import('node:child_process');
-  const su = storageUnits(), ss = await storageSession();
+  const su = storageUnits(), ss = await storageSession(), sx = await storageSdxc();
   const others = ['E146', 'E147', 'E144', 'E142'].map((m) => {
     const r = spawnSync(process.execPath, [new URL('../test/test_storage.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
     return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
   });
-  console.log(`card and file system: card model and FAT reader ${su.checks - su.bad.length}/${su.checks}; in play (E143) ${ss.checks - ss.bad.length}/${ss.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
-  [...su.bad, ...ss.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
-  bad += su.bad.length + ss.bad.length + others.filter(([, rc]) => rc !== 0).length;
+  console.log(`card and file system: card model, FAT and exFAT readers ${su.checks - su.bad.length}/${su.checks}; in play (E143) ${ss.checks - ss.bad.length}/${ss.checks}; SDXC (E143) ${sx.checks - sx.bad.length}/${sx.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  sx.notes.forEach((x) => console.log('   note:', x));
+  [...su.bad, ...ss.bad, ...sx.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += su.bad.length + ss.bad.length + sx.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // subject detection's frames (S-SUBJECT): the scene's subject boxes and DISP_FRAME's transform without firmware, then
 // a play session on E143 whose DISP_FRAME draws the frames on the scene's rider while the setting names motorsports

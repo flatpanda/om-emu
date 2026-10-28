@@ -4,9 +4,17 @@
 //                   words: bits 127..8; CRC7), its command state machine (CMD0, CMD8's pattern,
 //                   ACMD41, CMD2, CMD3's RCA, CMD9, CMD7, CMD13's state, reads and writes, CMD6, ACMD13 / ACMD51, erase,
 //                   UHS-II and unknown commands unanswered, out of range), the saved card's round trip and refusals,
-//                   a card out of the slot and back (nothing answered while out; back in idle, its sectors kept);
-//                   and the independent FAT reader on a FAT32 volume this test builds (MBR, BPB, FSInfo, a directory, a
-//                   long name, a two-cluster file), with a looping chain and an exFAT volume refused; the picture
+//                   a card out of the slot and back (nothing answered while out; back in idle, its sectors kept); an
+//                   SDXC card by its capacity (C_SIZE above 32 GiB, the SCR's SD_SECURITY 4, its AU), the size option
+//                   (cardSectors) and the capacity limits, a 128 GiB card that stores only what is written and erases
+//                   to its end by its stored sectors; the independent FAT reader on a FAT32 volume this test builds
+//                   (MBR, BPB, FSInfo, a directory, a long name, a two-cluster file), with a looping chain and an
+//                   exFAT volume refused; the independent exFAT reader (refs/exfat.mjs) on an exFAT volume this test
+//                   builds (MBR type 0x07, the boot region and its checksum, the FAT, the allocation bitmap, a
+//                   compressed up-case table, the label, a benign entry and a deleted set skipped, a contiguous
+//                   directory and file, a two-name-entry file whose chain skips a cluster, its valid data length),
+//                   each checksum and the name hash refused when wrong, a looping chain, a cluster the bitmap does
+//                   not allocate and one it leaks reported; refs/volume.mjs picking the reader; the picture
 //                   file's JPEG through the independent decoder (refs/jpeg.mjs): its size, sampling and block means
 //   storageSession  (firmware) play sessions on the body of OM_EMU_MODEL (E143 by default; its card_fs native): the
 //                   file system's bring-up and the card's insertion (H-FILEINIT, S-SDCARD, S-CARD) leave the drive
@@ -21,15 +29,25 @@
 //                   Formatting from the menu (S-MDACTRL): the card read back is freshly formatted, the counts reset and
 //                   the application returns to the menu; the card out and back in (S-MEDIA): the drive unmounted and the
 //                   screen without the counts, then mounted again by the firmware with the counts back
-//   node emu/test/test_storage.mjs [--session]
-import { SdCard, NO_RESPONSE, SECTOR, crc7, r2Words, cardImage, cardFromImage } from '../src/lab/sdcard.mjs';
+//   storageSdxc     (firmware) blank 64 and 128 GiB SDXC cards on the body of OM_EMU_MODEL: formatted and mounted by
+//                   the firmware, read back independently whichever file system it chose (refs/volume.mjs) and
+//                   consistent, S2's file found with its bytes, the remaining shots counted; what the firmware chose
+//                   (exFAT or not, the layout, the cluster size) and the counts are reported as notes, to be measured
+//                   (written 2026-10-28, not yet run)
+//   node emu/test/test_storage.mjs [--session] [--sdxc]
+import { SdCard, NO_RESPONSE, SECTOR, crc7, r2Words, cardImage, cardFromImage, cardSectors } from '../src/lab/sdcard.mjs';
 import { FatVolume, mbrPartition } from '../refs/fat.mjs';
+import { ExfatVolume } from '../refs/exfat.mjs';
+import { openVolume } from '../refs/volume.mjs';
 import { jpegOfFrame } from '../src/lab/jpeg.mjs';
 import { decodeJpeg } from '../refs/jpeg.mjs';
 import { MODELS } from '../src/fw/models.mjs';
 
 const throwsLike = (fn, re) => { try { fn(); return false; } catch (e) { return re.test(e.message); } };
 const cmd = (index, rt, acmd = false) => index | (acmd ? 0x40 : 0) | rt << 8;
+// the remaining-shots and movie time queries (S-CARD's queries before: camapp.mjs SHOTS_QUERY, MOVIE_TIME_QUERY), at
+// the model's addresses (A: src/fw/model.mjs)
+const cardQueries = (A) => ({ SHOTS: A(0x50419164), MOVIE: A(0x5042DA58) });
 
 // A FAT32 volume built here, for the reader: [read(lba, n), the files' bytes]. 70000 sectors at LBA 2048, 512-byte
 // clusters: 69416 clusters, past FAT16's 65524, so FAT32 by the specification's cluster count
@@ -71,6 +89,80 @@ function buildFat32() {
   entry(dcim, '.          ', 0x10, 3, 0); entry(dcim + 32, '..         ', 0x10, 0, 0);
   const read = (lba, n) => disk.slice(lba * SECTOR, (lba + n) * SECTOR);
   return { read, data, disk, start, fat, setFat };
+}
+
+// An exFAT volume built here from the exFAT specification, for the reader, with this test's own checksums: an MBR with
+// one partition (type 0x07) at LBA 64 of 1024 sectors; the FAT at +24 (8 sectors), the cluster heap at +32: 992
+// one-sector clusters. Cluster 2 the allocation bitmap, 3 a compressed up-case table (0xffff 0x61: the code points
+// below 'a' to themselves, then a..z to A..Z), 4 the root (the label 'TEST', the bitmap, the up-case table, a volume
+// GUID, DCIM, 'A Long Picture Name.jpg', a deleted set), 5 DCIM (contiguous: its FAT entry 0), 6 and 8 the long-named
+// file's chain (700 bytes, 600 valid; 7 free and filled with 0xee), 9 and 10 DCIM's P1010001.JPG (1000 bytes,
+// contiguous)
+function buildExfat() {
+  const start = 64, length = 1024, fatOffset = 24, fatLength = 8, heap = 32, count = length - heap;
+  const disk = new Uint8Array((start + length) * SECTOR);
+  const put16 = (o, v) => { disk[o] = v & 255; disk[o + 1] = v >> 8 & 255; };
+  const put32 = (o, v) => { for (let i = 0; i < 4; i++) disk[o + i] = (v >>> (8 * i)) & 255; };
+  const put64 = (o, v) => { put32(o, v % 0x100000000); put32(o + 4, Math.floor(v / 0x100000000)); };
+  const sec = (s) => (start + s) * SECTOR, cl = (c) => sec(heap + c - 2);
+  const sum32 = (b, skip = []) => { let c = 0; b.forEach((v, i) => { if (!skip.includes(i)) c = ((c & 1 ? 0x80000000 : 0) + (c >>> 1) + v) >>> 0; }); return c; };
+  const sum16 = (b, skip = []) => { let c = 0; b.forEach((v, i) => { if (!skip.includes(i)) c = ((c & 1 ? 0x8000 : 0) + (c >>> 1) + v) & 0xffff; }); return c; };
+  const utf16 = (t) => Uint8Array.from([...t].flatMap((ch) => [ch.charCodeAt(0) & 255, ch.charCodeAt(0) >> 8]));
+  const ts = (46 << 25 | 10 << 21 | 28 << 16 | 12 << 11 | 34 << 5 | 5) >>> 0;   // 2026-10-28 12:34:10
+  // the MBR
+  disk[446 + 4] = 0x07; put32(446 + 8, start); put32(446 + 12, length); disk[510] = 0x55; disk[511] = 0xaa;
+  // the boot sector and the extended boot sectors' signatures
+  const b = sec(0);
+  disk.set([0xeb, 0x76, 0x90], b); disk.set([...'EXFAT   '].map((ch) => ch.charCodeAt(0)), b + 3);
+  put64(b + 64, start); put64(b + 72, length); put32(b + 80, fatOffset); put32(b + 84, fatLength); put32(b + 88, heap);
+  put32(b + 92, count); put32(b + 96, 4); put32(b + 100, 0x1234abcd); put16(b + 104, 0x100);
+  disk[b + 108] = 9; disk[b + 109] = 0; disk[b + 110] = 1; disk[b + 111] = 0x80; disk[b + 112] = 1; disk[b + 510] = 0x55; disk[b + 511] = 0xaa;
+  for (let s = 1; s <= 8; s++) { disk[sec(s) + 510] = 0x55; disk[sec(s) + 511] = 0xaa; }
+  // the FAT: the bitmap, the up-case table, the root and the long-named file's 6 -> 8 chained; DCIM and the picture not
+  const fat = sec(fatOffset), setFat = (c, v) => put32(fat + 4 * c, v);
+  setFat(0, 0xfffffff8); setFat(1, 0xffffffff);
+  for (const c of [2, 3, 4, 8]) setFat(c, 0xffffffff);
+  setFat(6, 8);
+  for (const c of [2, 3, 4, 5, 6, 8, 9, 10]) disk[cl(2) + ((c - 2) >> 3)] |= 1 << ((c - 2) & 7);
+  const up = [0xffff, 0x61, ...Array.from({ length: 26 }, (_, i) => 0x41 + i)];
+  up.forEach((v, i) => put16(cl(3) + 2 * i, v));
+  const upBytes = disk.slice(cl(3), cl(3) + 2 * up.length);
+  // a file's entry set: the file entry, the stream extension, its name entries; sealed with its set checksum
+  const reseal = (at) => put16(at + 2, sum16(disk.subarray(at, at + 32 * (1 + disk[at + 1])), [2, 3]));
+  const fileSet = (at, name, attr, cluster, size, { contiguous = false, valid = size } = {}) => {
+    const n = Math.ceil(name.length / 15);
+    disk[at] = 0x85; disk[at + 1] = 1 + n; put16(at + 4, attr); put32(at + 8, ts); put32(at + 12, ts); put32(at + 16, ts);
+    const st = at + 32;
+    disk[st] = 0xc0; disk[st + 1] = 1 | (contiguous ? 2 : 0); disk[st + 3] = name.length; put16(st + 4, sum16(utf16(name.toUpperCase())));
+    put64(st + 8, valid); put32(st + 20, cluster); put64(st + 24, size);
+    for (let i = 0; i < name.length; i++) { const e = at + 64 + 32 * Math.floor(i / 15); disk[e] = 0xc1; put16(e + 2 + 2 * (i % 15), name.charCodeAt(i)); }
+    reseal(at);
+    return at + 32 * (2 + n);
+  };
+  let r = cl(4);
+  disk[r] = 0x83; disk[r + 1] = 4; disk.set(utf16('TEST'), r + 2); r += 32;
+  disk[r] = 0x81; put32(r + 20, 2); put64(r + 24, Math.ceil(count / 8)); r += 32;
+  disk[r] = 0x82; put32(r + 4, sum32(upBytes)); put32(r + 20, 3); put64(r + 24, upBytes.length); r += 32;
+  disk[r] = 0xa0; r += 32;                      // the volume GUID: benign, no secondaries
+  const dcimAt = r;
+  r = fileSet(r, 'DCIM', 0x10, 5, SECTOR, { contiguous: true });
+  const longAt = r;
+  r = fileSet(r, 'A Long Picture Name.jpg', 0x20, 6, 700, { valid: 600 });
+  const goneAt = r;
+  fileSet(r, 'GONE.JPG', 0x20, 7, 10);
+  for (let k = 0; k < 3; k++) disk[goneAt + 32 * k] &= 0x7f;     // deleted: the set's in-use bits clear
+  const picAt = cl(5);
+  fileSet(picAt, 'P1010001.JPG', 0x20, 9, 1000, { contiguous: true });
+  const long = Uint8Array.from({ length: 700 }, (_, i) => (i * 7 + 3) & 255), pic = Uint8Array.from({ length: 1000 }, (_, i) => (i * 13 + 1) & 255);
+  disk.set(long.subarray(0, 512), cl(6)); disk.fill(0xee, cl(7), cl(8)); disk.set(long.subarray(512), cl(8));
+  disk.set(pic.subarray(0, 512), cl(9)); disk.set(pic.subarray(512), cl(10));
+  // the boot checksum over sectors 0..10 (VolumeFlags and PercentInUse left out) repeated over sector 11; the backup
+  // boot region a copy of the main one
+  const bootSum = sum32(disk.subarray(sec(0), sec(11)), [106, 107, 112]);
+  for (let i = 0; i < 128; i++) put32(sec(11) + 4 * i, bootSum);
+  disk.copyWithin(sec(12), sec(0), sec(12));
+  const read = (lba, n) => disk.slice(lba * SECTOR, (lba + n) * SECTOR);
+  return { read, disk, start, count, sec, cl, setFat, reseal, ts, long, pic, dcimAt, longAt, picAt };
 }
 
 export function storageUnits() {
@@ -140,6 +232,28 @@ export function storageUnits() {
   o.insert();
   ok(o.present && o.state === 'idle' && o.exec(cmd(13, 4), orca << 16).status === NO_RESPONSE, 'back in, the card is idle: CMD13 to its old RCA gets no response');
   ok(o.exec(cmd(17, 4), 9).status === NO_RESPONSE && o.read(9, 1)[0] === 3, 'no read before the card init; its sectors are kept');
+  // an SDXC card: the capacity alone makes it one (the same OCR and CSD version, C_SIZE above 32 GiB), its SCR says
+  // SD_SECURITY 4 (version 3.xx) where SDHC says 3, its AU the lab's 16 MiB (32 MiB above 128 GiB)
+  const xc = new SdCard({ sectors: cardSectors('64G') }), xw = r2Words(xc.csd());
+  ok(xc.kind === 'SDXC' && card.kind === 'SDHC' && xc.sectors === 134217728, `64 GiB: ${xc.kind} of ${xc.sectors} sectors; the default card ${card.kind}`);
+  ok(((xw[3] >>> 22) & 3) === 1 && (((xw[1] >>> 8) & 0x3fffff) + 1) * 1024 === xc.sectors && xc.csd()[15] >> 1 === crc7(xc.csd().subarray(0, 15)), 'SDXC CSD: structure 1 (2.0), the firmware\'s capacity read gives its sectors, its CRC7');
+  ok(xc.ocr() === card.ocr() && (xc.ocr() >>> 30) === 3, 'SDXC OCR: the same as SDHC\'s (power-up done, CCS)');
+  ok(((xc.scr()[1] >> 4) & 7) === 4 && ((card.scr()[1] >> 4) & 7) === 3 && (xc.scr()[1] & 0xf) === 5 && (xc.scr()[2] & 0x80) !== 0, `SCR: SD_SECURITY 4 on SDXC, 3 on SDHC, 1- and 4-bit bus, SD_SPEC3: ${xc.scr()[1].toString(16)} / ${card.scr()[1].toString(16)}`);
+  const au = (sectors) => new SdCard({ sectors }).ssr()[10] >> 4;
+  ok(card.ssr()[10] >> 4 === 9 && xc.ssr()[10] >> 4 === 0xc && au(cardSectors(128)) === 0xc && au(cardSectors(256)) === 0xe, 'SD Status AU_SIZE: 4 MiB on SDHC, 16 MiB on SDXC to 128 GiB, 32 MiB above');
+  ok(cardSectors(8) === 16777216 && cardSectors('128GiB') === 268435456 && cardSectors(' 64g ') === 134217728 && throwsLike(() => cardSectors('64 MB'), /GiB/), 'cardSectors: GiB as a number or text');
+  ok(new SdCard({ sectors: 4294705152 }).kind === 'SDXC' && throwsLike(() => new SdCard({ sectors: 4294705152 + 1024 }), /SDXC/) && new SdCard({ sectors: cardSectors(32) }).kind === 'SDHC' && new SdCard({ sectors: cardSectors(32) + 1024 }).kind === 'SDXC', 'the capacity limits: SDHC to 32 GiB, SDXC above it to C_SIZE 0x3FFEFF, one 512 KiB unit past that refused');
+  // a 128 GiB card stores only the sectors written, and an erase to its end goes by them
+  const big = new SdCard({ sectors: cardSectors(128) });
+  big.exec(cmd(0, 3), 0); big.exec(cmd(41, 7, true), 0x40300000); big.exec(cmd(2, 6), 0);
+  const brca = big.exec(cmd(3, 4), 0).resp[0] >>> 16;
+  big.exec(cmd(7, 5), brca << 16);
+  big.writeSector(big.sectors - 1, new Uint8Array(512).fill(1)); big.writeSector(1000, new Uint8Array(512).fill(2));
+  ok(big.data.size === 2 && cardFromImage(cardImage(big)).sectors === big.sectors && cardImage(big).length === 16 + 2 * 516, 'a 128 GiB card holds two sectors after two writes, and saves as them');
+  ok(big.exec(cmd(17, 4), big.sectors - 1).data[0] === 1 && (big.exec(cmd(17, 4), big.sectors).resp[0] >>> 31) === 1, 'its last sector reads; one past it is OUT_OF_RANGE');
+  big.take_dirty();
+  big.exec(cmd(32, 4), 2000); big.exec(cmd(33, 4), big.sectors - 1); big.exec(cmd(38, 5), 0);
+  ok(!big.data.has(big.sectors - 1) && big.data.has(1000) && big.take_dirty(), 'an erase from sector 2000 to the end: the stored sector in range gone, the one before kept');
   // the FAT reader on the test's own volume
   const f = buildFat32(), p = mbrPartition(f.read(0, 1));
   ok(p && p.type === 0x0c && p.start === f.start && p.active, `MBR: one FAT32 LBA partition at ${f.start}: ${JSON.stringify(p)}`);
@@ -156,6 +270,35 @@ export function storageUnits() {
   ok(throwsLike(() => v.chain(4), /loops/), 'a looping chain is refused');
   const ex = new Uint8Array(512); ex.set([...'EXFAT   '].map((ch) => ch.charCodeAt(0)), 3);
   ok(throwsLike(() => new FatVolume(() => ex, 0), /exFAT/), 'an exFAT volume is refused');
+  ok(openVolume(f.read) instanceof FatVolume && openVolume(f.read).start === f.start, 'refs/volume.mjs reads the FAT32 card with refs/fat.mjs');
+  // the exFAT reader on the test's own volume
+  const x = buildExfat(), xp = mbrPartition(x.read(0, 1)), xv = openVolume(x.read);
+  ok(xp && xp.type === 0x07 && xp.start === x.start, `MBR: one exFAT partition (type 0x07) at ${x.start}: ${JSON.stringify(xp)}`);
+  ok(xv instanceof ExfatVolume && xv.type === 'exFAT' && xv.start === x.start && xv.label === 'TEST' && xv.spc === 1 && xv.clusters === x.count && xv.serial === 0x1234abcd && xv.fsType === 'EXFAT   ',
+    `refs/volume.mjs reads it with refs/exfat.mjs: ${xv.type} '${xv.label}', ${xv.spc} sector(s) a cluster, ${xv.clusters} clusters`);
+  const xnames = xv.list().map((e) => e.name);
+  ok(JSON.stringify(xnames) === JSON.stringify(['DCIM', 'A Long Picture Name.jpg']), `the root (the label, bitmap, up-case table, volume GUID and a deleted set skipped): ${xnames}`);
+  const lp = xv.find('a long picture NAME.JPG'), lwant = Uint8Array.from(x.long).fill(0, 600);
+  ok(lp && !lp.dir && !lp.contiguous && lp.size === 700 && lp.validSize === 600 && JSON.stringify(xv.chain(lp.cluster)) === '[6,8]', `found by its name up-cased by the volume's table; its FAT chain skips cluster 7: ${JSON.stringify(lp && { size: lp.size, valid: lp.validSize, cluster: lp.cluster })}`);
+  ok(lp && xv.data(lp).every((v, i) => v === lwant[i]), 'its bytes, zeros past its valid data length');
+  const pe = xv.find('dcim/p1010001.jpg');
+  ok(pe && pe.contiguous && pe.size === 1000 && pe.date === x.ts >>> 16 && pe.time === (x.ts & 0xffff) && xv.data(pe).every((v, i) => v === x.pic[i]), 'a contiguous (NoFatChain) file in a contiguous directory, its FAT entries 0: its bytes and its modified time');
+  ok(xv.find('DCIM')?.dir && xv.list(xv.find('DCIM')).length === 1 && xv.find('DCIM/NONE.JPG') === null && xv.find('DCIM/P1010001.JPG/X') === null, 'a subdirectory by its entry; a missing name and a path through a file: null');
+  ok(xv.freeClusters() === x.count - 8 && xv.fsInfo() === null && xv.backupMatches() && xv.check().length === 0, `free clusters by the bitmap ${xv.freeClusters()} of ${x.count}; no FSInfo; the backup boot region the main one's; consistent: ${xv.check()}`);
+  // what the reader refuses or reports: each on a fresh volume with one thing changed
+  const changed = (change) => { const y = buildExfat(); change(y); return y; };
+  const vol = (y) => new ExfatVolume(y.read, y.start);
+  ok(throwsLike(() => vol(changed((y) => { y.disk[y.sec(0) + 100] ^= 1; })), /boot checksum/), 'a changed volume serial: the boot checksum refused');
+  const flagged = vol(changed((y) => { y.disk[y.sec(0) + 106] = 2; y.disk[y.sec(0) + 112] = 50; }));
+  ok(flagged.dirty && flagged.percentInUse === 50, 'VolumeFlags and PercentInUse are outside the boot checksum (a dirty volume opens)');
+  ok(throwsLike(() => vol(changed((y) => { y.disk[y.cl(3) + 10] ^= 1; })), /up-case/), 'a changed up-case table: its checksum refused');
+  ok(throwsLike(() => vol(changed((y) => { y.disk[y.dcimAt + 4] ^= 1; })).list(), /set checksum/), 'a changed file entry: its set checksum refused');
+  ok(throwsLike(() => vol(changed((y) => { y.disk[y.dcimAt + 36] ^= 1; y.reseal(y.dcimAt); })).list(), /name hash/), 'a wrong name hash under a right set checksum: refused');
+  ok(throwsLike(() => vol(changed((y) => y.setFat(8, 6))).chain(6), /loops/), 'a looping chain is refused');
+  const unmarked = vol(changed((y) => { y.disk[y.cl(2) + 1] &= 0xfe; })).check();
+  ok(unmarked.length === 1 && /cluster 10 .*P1010001\.JPG.* free in the bitmap/.test(unmarked[0]), `a file's cluster free in the bitmap is reported: ${unmarked}`);
+  const leaked = vol(changed((y) => { y.disk[y.cl(2)] |= 1 << 5; })).check();
+  ok(leaked.length === 1 && /1 cluster\(s\) allocated .*the first 7/.test(leaked[0]), `a cluster the bitmap allocates to nothing is reported: ${leaked}`);
   // the picture file's JPEG (src/lab/jpeg.mjs) through the independent decoder: a 4:2:2 frame of 37 x 21 (edges
   // replicated), each 8 x 8 block its mean in every component
   const fw = 37, fh = 21, frows = [];
@@ -186,7 +329,7 @@ export async function storageSession() {
   const { BOARD } = await import('../src/fw/board.mjs');
   if (!STORAGE) return { checks: 1, bad: [`${MODEL}: src/fw/models.mjs card_fs does not run the card's file system natively`] };
   const resBlock = loadBlock();
-  const SHOTS = A(0x50419164), MOVIE = A(0x5042DA58);          // S-CARD's queries before (camapp.mjs SHOTS_QUERY, MOVIE_TIME_QUERY)
+  const { SHOTS, MOVIE } = cardQueries(A);
   // the first picture's file: the DCF module's initial names (src/fw/facts.mjs fileSystem names)
   // the bodies whose DCF remain movie time answers 0 on the card (the E144 family but the E142 lineage; X, its reason
   // ?, docs/hle-gaps.md 4.8.4): strictly, so an answer flags the table; S-SCENE's live view on the E143 family only
@@ -401,9 +544,84 @@ export async function storageSession() {
   return { checks, bad };
 }
 
+// A card's volume in one line: the MBR's partition and the file system's layout (for the notes)
+function layout(p, v) {
+  const part = p ? `MBR partition type 0x${p.type.toString(16)} at ${p.start} (${p.sectors} sectors)` : 'no MBR';
+  const geo = v.type === 'exFAT'
+    ? `FAT at +${v.fatOffset} (${v.nfats} x ${v.fatLength} sectors), cluster heap at +${v.heapOffset}, root at cluster ${v.rootCluster}, revision ${v.revision >> 8}.${v.revision & 0xff}, serial 0x${v.serial.toString(16)}, PercentInUse ${v.percentInUse}`
+    : `${v.reserved} reserved sectors, ${v.nfats} FATs of ${v.fatSize} sectors, serial 0x${v.serial.toString(16)}`;
+  return `${part}; ${v.type} '${v.label.trim()}', ${v.spc * SECTOR / 1024} KiB clusters, ${v.clusters} of them, ${v.freeClusters()} free; ${geo}`;
+}
+
+// (firmware) blank SDXC cards (64 and 128 GiB) in a player on the body of OM_EMU_MODEL (E143 by default; its card_fs
+// native). What the firmware does with a card above 32 GiB is not read: as the SD File System Specification has an
+// SDXC card formatted (I, as recalled: exFAT in an MBR partition of type 0x07 that starts at the boundary unit, 32768
+// sectors, with 128 KiB clusters at these capacities), dosfat's format may follow it or not (?). So this checks only
+// what holds whichever file system the firmware picks (the insertion formats the blank card and mounts it, the volume
+// reads back independently through refs/volume.mjs and is consistent, S2's picture file is found with its bytes, the
+// firmware counts remaining shots from the card) and reports what it finds as notes: the insertion's lab times, the
+// partition and the file system's layout, the remaining shots and the movie time (to be measured; 803 shots and 5:25
+// on the 8 GiB card, docs/hle-gaps.md 4.8.2; the shooting screen draws the query's answer, modelcheck's count probe)
+export async function storageSdxc(sizes = [64, 128]) {
+  const bad = [], notes = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { loadImage, loadBlock, createHash } = await import('../checks/lib/env.mjs');
+  const { Player } = await import('../src/lab/player.mjs');
+  const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+  const { A, MODEL } = await import('../src/fw/model.mjs');
+  const { STORAGE } = await import('../src/lab/storage.mjs');
+  const { BOARD } = await import('../src/fw/board.mjs');
+  if (!STORAGE) return { checks: 1, bad: [`${MODEL}: src/fw/models.mjs card_fs does not run the card's file system natively`], notes };
+  const { SHOTS, MOVIE } = cardQueries(A), rom = loadImage(), resBlock = loadBlock();
+  const names = STORAGE.names, FILE1 = `DCIM/100${names.folder}/${names.file}0001.${names.ext}`, LIVE_VIEW = BOARD.family === 'E143';
+  for (const gib of sizes) {
+    const card = new SdCard({ sectors: cardSectors(gib) }), tag = `${MODEL} ${gib} GiB ${card.kind}`;
+    const read = (lba, n) => card.read(lba, n);
+    const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true },
+      { rom, resBlock, createHash, wallClock: () => performance.now() / 1000, card: { open: () => card, save() {} } });
+    try {
+      pl.open_session();
+      const st = pl.session.steps.find((x) => x.storage)?.storage;
+      ok(st && st.mounted && st.formatted, `${tag}: the insertion formatted the blank card and mounted it: ${JSON.stringify(st && { mounted: st.mounted, formatted: st.formatted, drive_status: st.drive_status })}`);
+      notes.push(`${tag}: the insertion: ${(st?.log ?? []).filter(([k]) => ['mount', 'format', 'drive'].includes(k)).map(([k, d]) => `${k} ${d}`).join('; ')}`);
+      const vol = openVolume(read);
+      notes.push(`${tag}: ${layout(mbrPartition(read(0, 1)), vol)}`);
+      ok(vol.start + vol.total <= card.sectors, `${tag}: the volume (${vol.total} sectors at ${vol.start}) fits the card's ${card.sectors}`);
+      if (vol.type === 'exFAT') {
+        const problems = vol.check();
+        ok(problems.length === 0 && vol.backupMatches(), `${tag}: the firmware's exFAT volume is consistent (refs/exfat.mjs check) and its backup boot region the main one's: ${problems.slice(0, 5).join('; ')}`);
+      } else {
+        const fsi = vol.fsInfo(), free = vol.freeClusters();
+        ok(fsi !== null && fsi.free === free, `${tag}: FSInfo's free count ${fsi?.free} is the FAT's ${free}`);
+      }
+      // S2 with S-SCENE's live view (the E143 family): the picture's file through the file module (S-RECFILE)
+      for (const inp of [...(LIVE_VIEW ? [{ type: 'scene', change: { liveview: true } }] : []), { type: 'token', token: 'WAIT:100' }, { type: 'key', id: 's1', action: 'down' },
+        { type: 'key', id: 's2', action: 'down' }, { type: 'token', token: 'WAIT:700' }, { type: 'key', id: 's2', action: 'up' }, { type: 'key', id: 's1', action: 'up' }]) pl.run_input(inp);
+      const s = pl.session, lab = s.lab, img = s.camapp.images[0];
+      const want = img ? jpegOfFrame(s.picture_frame(s.camapp.views.get(img.release) ?? null)) : null;
+      const vol2 = openVolume(read), e = vol2.find(FILE1);
+      ok(e && !e.dir && want && e.size === want.length && vol2.data(e).every((b, i) => b === want[i]), `${tag}: S2's file ${FILE1} read back with the JPEG's bytes: ${JSON.stringify(e && { size: e.size, cluster: e.cluster })}, the JPEG ${want?.length} bytes`);
+      if (vol2.type === 'exFAT') {
+        const problems = vol2.check();
+        ok(problems.length === 0, `${tag}: the volume is consistent after the file: ${problems.slice(0, 5).join('; ')}`);
+      }
+      // the counts once the shooting screen shows them (S1 has left the date prompt)
+      s.idle_slice(lab.lab_time() + 1500e6);
+      const shots = lab.call(SHOTS, { d0: 0 }, null, null, 2000000).d0 | 0, buf = lab.alloc(new Uint8Array(24), 4);
+      lab.call(MOVIE, { a0: buf }, null, null, 2000000);
+      const m = lab.sim.read(buf, 24), movie = (m[0] | m[1] << 8 | m[2] << 16 | m[3] << 24) >>> 0;
+      ok(shots > 0, `${tag}: the firmware counts remaining shots from the card: ${shots}`);
+      notes.push(`${tag}: remaining shots ${shots}, movie time ${movie} (the query's first word, as storageSession reads it), with one picture on the card: to be measured`);
+    } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 400)}`); }
+    try { pl.close_session(); } catch { /* closed */ }
+  }
+  return { checks, bad, notes };
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const u = storageUnits();
-  console.log(`card and FAT reader units: ${u.checks - u.bad.length}/${u.checks}`);
+  console.log(`card, FAT and exFAT reader units: ${u.checks - u.bad.length}/${u.checks}`);
   u.bad.forEach((x) => console.log('  ', x));
   let n = u.bad.length;
   if (process.argv.includes('--session')) {
@@ -411,6 +629,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log(`card and file system in play: ${s.checks - s.bad.length}/${s.checks}`);
     s.bad.forEach((x) => console.log('  ', x));
     n += s.bad.length;
+  }
+  if (process.argv.includes('--sdxc')) {
+    const x = await storageSdxc();
+    console.log(`SDXC cards in play: ${x.checks - x.bad.length}/${x.checks}`);
+    x.notes.forEach((t) => console.log('   note:', t));
+    x.bad.forEach((t) => console.log('  ', t));
+    n += x.bad.length;
   }
   process.exitCode = n ? 1 : 0;
 }

@@ -3,15 +3,17 @@
 // and the handlers of the commands the lab's sessions send. The MN side (PER_SIO's channel and the three GIO pins) is
 // src/lab/scpulink.mjs and src/dev/linkpins.mjs; this module needs neither and runs without firmware (the tests).
 //
-// The seam (what a later LLE, the sub-CPU's own firmware on a Cortex-M4 model, puts in this model's place):
+// The seam (what the sub-CPU's own firmware on the Cortex-M4 and STM32L4 machine, src/lab/scpum4.mjs, puts in this
+// model's place with OM_EMU_SCPU=native):
 //   connect({ready(level), message(level)}, {request, reset})
 //                                            the sub-CPU's two outputs: PC3, MN pin 102 (ready), and PC2, the line
 //                                            the MN reads as port 3 of its SCPU window (message); and the MN's two
 //                                            lines' levels when the link is made
 //   pin(name, level)                         the MN's outputs: 'request' (MN pin 103, the sub-CPU's PB12) and
 //                                            'reset' (MN pin 107, its reset)
-//   exchange(bytes) -> bytes                 one SPI transfer the MN clocks as master: the bytes the sub-CPU shifts
-//                                            out, as many as it shifted in
+//   exchange(bytes, hz) -> bytes             one SPI transfer the MN clocks as master at hz (its configured clock;
+//                                            this model takes it at once): the bytes the sub-CPU shifts out, as many
+//                                            as it shifted in
 //   step() -> boolean                        the sub-CPU moves on to its next action seen on the link (one level
 //                                            change, or the handling of one event); false when it has none
 // A-SCPUDEV-1 (I): the sub-CPU acts only when the link steps it, which the lab does at the MN's idle points
@@ -188,6 +190,7 @@ export class ScpuDev {
     this.words = words;
     for (const c of quiet) if (c & 0x80 || c === CHUNK || [SET_DATE, WRITE_WORD, SYSCTRL, GIO_WRITE].includes(c)) throw new ScpuError(`S-SCPUDEV: quiet command ${hx(c)}: not a write of its own`);
     this.quiet = new Set(quiet);
+    this.labels = ['S-SCPUDEV', 'A-SCPUDEV-1'];   // what the session's stand-ins name (player.mjs)
     this.lines = null;
     this.state = S.IDLE;
     this.out = { ready: 1, message: 1 };     // the levels of PC3 and PC2: running, idle, no message

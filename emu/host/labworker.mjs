@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { workerData, parentPort } from 'node:worker_threads';
-import { loadImage, loadBlock, createHash } from '../checks/lib/env.mjs';
+import { loadImage, loadBlock, createHash, scpuEnv } from '../checks/lib/env.mjs';
 import { Player } from '../src/lab/player.mjs';
 import { PortQueue, F_KILL } from './portqueue.mjs';
 import { stackOf } from '../checks/lib/errors.mjs';
@@ -52,6 +52,8 @@ const env = {
   ...(process.env.OM_EMU_NVRAM ? { nvram: fileNvram(process.env.OM_EMU_NVRAM) } : {}),
   // OM_EMU_CARD=FILE: the card in the first slot is kept between sessions in FILE (storage.mjs, host/card.mjs)
   ...(process.env.OM_EMU_CARD ? { card: fileCard(process.env.OM_EMU_CARD) } : {}),
+  // OM_EMU_SCPU=native: the sub-CPU's own firmware in S-SCPUDEV's place, on E143 and E146 (menu.mjs scpu_native)
+  ...scpuEnv(),
 };
 let pl = null;
 try {

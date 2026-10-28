@@ -4,16 +4,19 @@
 // return) and run until the next prompt. Prints the console's text as the firmware sent it and a summary per step: SCPU time, core
 // cycles and instructions, standby. --drive sets a pin's level from the board (PC13=0, PB12=1; -1 releases it).
 // Exit 0 when the prompt came and every line was answered with a prompt, 1 when the run stopped at something not
-// modelled (named on stderr) or a prompt did not come.
+// modelled (named on stderr) or a prompt did not come. IMAGE defaults to the model's SCPU block (OM_EMU_MODEL, E143 by
+// default; src/fw/models.mjs scpu_lle, the block the lab loads with OM_EMU_SCPU=native).
 //   node emu/bin/scpu.mjs [IMAGE] [--line TEXT]... [--settle S] [--wait S] [--drive PIN=LEVEL]... [--after S]
 import fs from 'node:fs';
 import path from 'node:path';
 import { Stm32l4 } from '../src/core/m4/periph/stm32l4.mjs';
 import { parseArgs } from '../checks/lib/args.mjs';
 import { exitFor } from '../checks/lib/env.mjs';
+import { MODEL, MODEL_INFO } from '../src/fw/model.mjs';
+import { scpuPath } from '../src/fw/models.mjs';
 
 const REPO = path.resolve(new URL('../../', import.meta.url).pathname);
-export const SCPU_IMAGE = path.join(REPO, 'unpacked/E143/OLY_E_143_1900_0000_0000.BIN.blk0e560000.OE.0107.bin');
+export const SCPU_IMAGE = MODEL_INFO.scpu_lle ? path.join(REPO, scpuPath(MODEL_INFO)) : null;
 const SPEC = [
   { opt: '--line', type: 'str', repeat: true, metavar: 'TEXT' },
   { opt: '--boot', type: 'number', default: 5, metavar: 'S' },           // the most SCPU time to the first prompt
@@ -32,7 +35,8 @@ for (const d of opts.drive) {
   drive[`P${m[1]}${m[2]}`] = Number(m[3]);
 }
 const file = opts.image || SCPU_IMAGE;
-if (!fs.existsSync(file)) { process.stderr.write(`scpu.mjs: no ${file} (node emu/bin/fetch-fw.mjs unpacks it)\n`); process.exit(1); }
+if (!file) { process.stderr.write(`scpu.mjs: ${MODEL} gives no SCPU image the machine is known to boot (src/fw/models.mjs scpu_lle): pass IMAGE\n`); process.exit(2); }
+if (!fs.existsSync(file)) { process.stderr.write(`scpu.mjs: no ${file} (a full unpack of the .BIN makes it: BLOBS.md, tools/olyfw.py --dump)\n`); process.exit(1); }
 
 const m = new Stm32l4(new Uint8Array(fs.readFileSync(file)), { drive });
 const t0 = Date.now();

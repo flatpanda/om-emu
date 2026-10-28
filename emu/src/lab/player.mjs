@@ -366,7 +366,7 @@ export class Player {
     if (this.session?.camapp?.subject?.used) used.push('S-SUBJECT');                         // subject detection's frames drawn (subject.mjs)
     if (this.session?.lab?.panel_answered) used.push('S-PANELDONE');                        // a panel driver's serial completion wait answered
     if (this.session?.lab?.tp_sends?.length) used.push('S-TPSEND');                         // a synchronous send to the touch task
-    if (this.session?.lab?.scpu_link) used.push('H-SCPUSTART', 'S-SIO2', 'S-SCPUDEV', 'A-SCPUDEV-1', 'A-LINKPINS-1');   // a body whose PER_SCPU runs natively against the sub-CPU's model
+    if (this.session?.lab?.scpu_link) used.push('H-SCPUSTART', 'S-SIO2', ...this.session.lab.scpu_dev.labels, 'A-LINKPINS-1');   // a body whose PER_SCPU runs natively against the sub-CPU's model (S-SCPUDEV) or its own firmware (scpum4.mjs)
     if (this.session?.scpu_port) used.push('H-SCPUIRQ', 'H-UIINPORT', 'H-SCPUPORT');        // a body whose group 0 comes through the SCPU's ports
     if (this.session?.uiin_scan) used.push('H-UIINSCAN');                                    // UI_IN's port scan over the link
     if (this.session?.hdmi_port || this.session?.lab?.scpu_link) used.push('H-GIOSLOTS');   // the GIO slots, for the HDMI pin or the link's pin 102

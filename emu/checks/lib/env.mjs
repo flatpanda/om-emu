@@ -9,7 +9,7 @@ import { UsageError } from './args.mjs';
 import { stackOf } from './errors.mjs';
 import { WrongFirmware } from '../../src/fw/labfw.mjs';
 import { MODEL_INFO } from '../../src/fw/model.mjs';
-import { romPath, resPath } from '../../src/fw/models.mjs';
+import { romPath, resPath, scpuPath } from '../../src/fw/models.mjs';
 import { resPrefix } from '../../src/fw/resprefix.mjs';
 import { coverageOption } from './coverage.mjs';
 
@@ -49,6 +49,22 @@ export function checkBlock(b, file = BLOCK) {
 let image = null, block = null;
 export function loadImage() { return image ??= expandImage(checkImage(readBytes(ORIGINAL))); }   // the run-time image (src/fw/expand.mjs)
 export function loadBlock() { return block ??= checkBlock(readBytes(BLOCK)); }
+// The sub-CPU's own image for OM_EMU_SCPU=native (src/lab/scpum4.mjs; src/fw/models.mjs scpu_lle): the body's SCPU
+// block from unpacked/<code>, refused when it is not the one scpu_lle pins; null on a body without one (its lab keeps
+// S-SCPUDEV). bin/fetch-fw.mjs makes only the main and resource blocks; a full unpack makes this one (BLOBS.md).
+let scpuImage;
+export function loadScpuImage() {
+  if (scpuImage !== undefined) return scpuImage;
+  const lle = MODEL_INFO.scpu_lle;
+  if (!lle) return (scpuImage = null);
+  const file = path.join(REPO, scpuPath(MODEL_INFO));
+  if (!fs.existsSync(file)) throw new Error(`${file}: no SCPU block (bin/fetch-fw.mjs unpacks the main and resource blocks only; every block: BLOBS.md, tools/olyfw.py --dump)`);
+  const b = readBytes(file), h = sha256(b);
+  if (h !== lle.sha256) throw new Error(`${file}: sha256 ${h.slice(0, 16)}..., src/fw/models.mjs scpu_lle pins ${lle.sha256.slice(0, 16)}...`);
+  return (scpuImage = b);
+}
+// A lab env's sub-CPU: with OM_EMU_SCPU=native, on a body that gives scpu_lle, its own firmware (env.scpu, scpuImage)
+export const scpuEnv = () => (process.env.OM_EMU_SCPU === 'native' && MODEL_INFO.scpu_lle ? { scpu: 'native', scpuImage: loadScpuImage() } : {});
 
 // The env of src/lab (HLE, OsdLab, Simulator): the image, sha256, and no session (beginSession absent) unless a tracer
 // installed one with traceLabs (bin/checktrace.mjs: beginSession(lab), slice), so every lab a check creates is traced.
@@ -58,10 +74,11 @@ export function traceLabs(fields) { TRACE = fields; }
 // run_script, run_long_wait and run_language): bin/checktrace.mjs appends it as a 'result' event to the current lab's
 // trace; nothing happens unless a tracer installed onResult.
 export function resultHook(fn, value) { if (TRACE && TRACE.onResult) TRACE.onResult(fn, value); }
-// extra.machine adds to the run's machine options (envMachine()); extra.rom replaces the run-time image.
+// extra.machine adds to the run's machine options (envMachine()); extra.rom replaces the run-time image. With
+// OM_EMU_SCPU=native the sub-CPU's image too (scpuEnv).
 export function labEnv(extra = {}) {
   const { machine = {}, ...rest } = extra;
-  return { createHash, ...(TRACE ?? {}), ...rest, rom: rest.rom ?? loadImage(), machine: { ...envMachine(), ...machine } };
+  return { createHash, ...(TRACE ?? {}), ...scpuEnv(), ...rest, rom: rest.rom ?? loadImage(), machine: { ...envMachine(), ...machine } };
 }
 
 // The machine options of a run (src/lab/sim.mjs env.machine): OM_MACHINE, white-space separated NAME=VALUE pairs,

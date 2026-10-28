@@ -16,7 +16,8 @@
 // (test_subject.mjs), the lens on the mount natively on E143 (test_lens.mjs), the SCPU's Cortex-M4 core
 // (test_m4.mjs: hand-written vectors, QEMU's recorded vectors, the SCPU image from reset to its first unmodelled
 // access), the SCPU's STM32L4 machine (test_stm32l4.mjs: the peripheral models, the SCPU image to its console prompt,
-// console commands, its standby and the wake-up), the firmware
+// console commands, its standby and the wake-up), the SCPU's own firmware behind the link against S-SCPUDEV on E143
+// and E146 (test_scpum4.mjs), the firmware
 // rules of src/fw/facts.mjs (test_facts.mjs) and the firmware map (test_fwmap.mjs:
 // the machine's coverage option, the static map's determinism and pinned headline, the labels' keys, run.mjs under
 // OM_COVERAGE). The fixtures they compare with are emu's own (test/fixtures, checks/fixtures, golden.json): a
@@ -249,6 +250,18 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipp
   console.log(`SCPU STM32L4 machine: peripheral models ${su.checks - su.bad.length}/${su.checks}; the SCPU image to its console and standby ${sf.checks - sf.bad.length}/${sf.checks}${sf.skipped.length ? `, ${sf.skipped.length} SKIPPED (no E143 SCPU block)` : ''}`);
   [...su.bad, ...sf.bad, ...sf.skipped.map((x) => `SKIPPED ${x}`)].forEach((x) => console.log('  ', x));
   bad += su.bad.length + sf.bad.length + sf.skipped.length;
+}
+// the SCPU's own firmware behind the link (OM_EMU_SCPU=native): the bridge's units, then a play session's start against
+// S-SCPUDEV's: E143 here, E146 in a process of its own (the model is fixed when the lab is imported)
+{
+  const { scpuM4Units, scpuM4Session } = await import('../test/test_scpum4.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const mu = scpuM4Units(), ms = await scpuM4Session();
+  const r = spawnSync(process.execPath, [new URL('../test/test_scpum4.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E146' }, encoding: 'utf8' });
+  const e146 = r.status === 0 ? [] : (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || /SKIPPED|Error/.test(l)).map((l) => `E146: ${l.trim()}`);
+  console.log(`the SCPU's own firmware behind the link: units ${mu.checks - mu.bad.length}/${mu.checks}; in play against S-SCPUDEV (E143) ${ms.checks - ms.bad.length}/${ms.checks}${ms.skipped.length ? `, ${ms.skipped.length} SKIPPED` : ''}; E146 ${r.status === 0 ? 'ok' : 'FAILED'}`);
+  [...mu.bad, ...ms.bad, ...ms.skipped.map((x) => `SKIPPED ${x}`), ...e146].forEach((x) => console.log('  ', x));
+  bad += mu.bad.length + ms.bad.length + ms.skipped.length + (r.status === 0 ? 0 : 1);
 }
 // the firmware map (bin/fwmap.mjs) and the machine's coverage option
 {

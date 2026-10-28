@@ -15,6 +15,7 @@ import { EXEC_SLOTS, EXPECTED_RECORDS, KIND3_RECORD, KIND3_AREA, NRECORDS, REGIS
 import { RTOS } from './rtos.mjs';
 import { ScpuDev, ScpuMemory } from './scpudev.mjs';
 import { ScpuLink, PER_SCPU_TASK } from './scpulink.mjs';
+import { ScpuM4 } from './scpum4.mjs';
 import { ValueError, RuntimeError, AssertionError } from './errors.mjs';
 import { packRegs } from './sim.mjs';
 import { show } from '../util/show.mjs';
@@ -622,9 +623,10 @@ export class MenuLab extends T.TextDisplayLab {
     // (src/lab/scpulink.mjs, src/lab/scpudev.mjs); the requests (the API's entry), the requesters' waits (OlyEvWt
     // 0x5002bdd8 on their flags) and the replies' readers run natively and are observed. A model whose SCPU keeps no
     // backup words or clock (SCPU_BACKUP; E144: no Sctime/ScpuBkup requests, D) has none of these sites, and the lab
-    // does not start its PER_SCPU
+    // does not start its PER_SCPU. The sub-CPU is S-SCPUDEV, or its own firmware (scpu_native)
     if (SCPU_BACKUP) {
-      this.scpu_dev = new ScpuDev(this.scpu_memory, { words: fact('scpu.words', [[2, 0]]), quiet: fact('scpu.quiet', []) });
+      this.scpu_dev = this.scpu_native() ? this.scpu_m4(nvram)
+        : new ScpuDev(this.scpu_memory, { words: fact('scpu.words', [[2, 0]]), quiet: fact('scpu.quiet', []) });
       this.store_log.scpu_frames = this.scpu_dev.frames;
       this.scpu_link = new ScpuLink(this, this.scpu_dev);
       this.scpu_link.bring_up();
@@ -664,6 +666,17 @@ export class MenuLab extends T.TextDisplayLab {
     const dbErrlog = db.errlog.filter(([c]) => !D.EXPECTED_ERRLOG.has(parseInt(c, 16)));
     if ((JSON.stringify(db.prints) !== JSON.stringify(dbPrints) && !backupSave) || dbErrlog.length) throw new MenuError(`settings-DB init: prints ${show(db.prints)}, errlog ${show(dbErrlog.slice(0, 4))}`);
     this.store_log.scpu = this.scpu_registers();
+  }
+  // The sub-CPU's own firmware at the far end of the link (src/lab/scpum4.mjs; docs/om1-scpu-spec.md section 8 step 6),
+  // opt-in (env.scpu 'native', node's OM_EMU_SCPU=native) on a body whose SCPU image the STM32L4 machine is known to
+  // boot (src/fw/models.mjs scpu_lle: E143, and E146 with the same image); the host passes the image (env.scpuImage,
+  // node: checks/lib/env.mjs scpuEnv). Elsewhere, and by default, S-SCPUDEV
+  scpu_native() { return !!MODEL_INFO.scpu_lle && (this.env.scpu ?? globalThis.process?.env?.OM_EMU_SCPU) === 'native'; }
+  scpu_m4(nvram) {
+    if (nvram) throw new MenuError('OM_EMU_SCPU=native with S-NVRAM: the sub-CPU\'s own backup domain (its RTC and backup registers) is not kept between sessions; use one or the other');
+    const image = this.env.scpuImage;
+    if (!image) throw new MenuError(`OM_EMU_SCPU=native: the host passed no SCPU image (env.scpuImage: ${MODEL_INFO.name}'s ${MODEL_INFO.scpu_lle.block}; node: checks/lib/env.mjs scpuEnv)`);
+    return new ScpuM4(image, { now: () => this.lab_time(), lle: MODEL_INFO.scpu_lle });
   }
   // S-NVRAM's boot: the saved images (nvram.load()) into their mirrors (the NAND read the lab does not run), the
   // replace-info state, the SCPU window's backed-up words. Returns the set of restored store letters.

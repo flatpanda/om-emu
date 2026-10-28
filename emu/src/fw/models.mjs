@@ -73,6 +73,13 @@ const G4SET_UNCHECKED = false;
 // (src/lab/display.mjs EXPECTED_ERRLOG); hls, the HLS media side's addresses (src/lab/media.mjs: Card Formatting from
 // the menu, the card out and in; E143's only). Every body gives it, one that does not run it with its reason (why);
 // such a body keeps S-CARD's card without a file system (src/lab/camapp.mjs)
+//
+// `scpu_lle`: the sub-CPU's own firmware, which the lab can run on the STM32L4 machine in S-SCPUDEV's place (opt-in,
+// src/lab/scpum4.mjs; docs/om1-scpu-spec.md section 8 step 6), given only for a body whose image that machine is
+// known to boot: block, the SCPU block's file name in unpacked/<code> beside the main block's (scpuPath; a full unpack
+// of the .BIN makes it, BLOBS.md), and sha256, its digest; pins, the image's link pins (the MN's request line in, the
+// ready and message lines out, scpu spec 3.1); gate, the SRAM byte of its command manager's power-on flag (in the
+// image's address notation). A body without it keeps S-SCPUDEV
 export const MODELS = {
   E143: {
     name: 'OM-1', bin: 'OLY_E_143_1900_0000_0000.BIN', version: '1.9', res_block: 'blk02000000.OE.0101.bin',
@@ -82,6 +89,14 @@ export const MODELS = {
     res_len: 10031072, res_sha256: '03a18d68e950ab0f55df3f1379d26ace4ee654a6e4a276bc8872daa1e9ebfa6c',
     panels: { tft: [900, 600], evf: [1600, 1200] },
     board: { family: 'E143' },
+    // the SCPU's block at file offset 0x0e560000 (docs/om1-scpu-spec.md section 2; X: it boots on the STM32L4 machine,
+    // section 8 step 5); pins (D, section 3.1): PB12 the request's EXTI input, PC3 pin 102, PC2 the message line;
+    // gate: the literal pool word 0x80135c4 the power-on gate 0x8012d72 and the release 0x801305d reach their flag
+    // object through holds 0x20008390, whose byte +0 is the flag (D)
+    scpu_lle: {
+      block: 'blk0e560000.OE.0107.bin', sha256: '2d930ac588014c250391d6af3a49fe7372852fc5eafbac5d2ac73df04be94807',
+      pins: { request: 'PB12', ready: 'PC3', message: 'PC2' }, gate: 0x20008390,
+    },
     // the SCPU init 0x5004dc55 attaches 0x5004e1fd at level 5 (0x5004de8e..99); 0x5004ded1 adds a callback to its
     // table of 4; UI_IN's port init 0x5014e3ab registers 0x5014e534 (0x5014e50e..14); UI_IN's start stage 0x5014bfc6
     // calls 0x5014e51e (D)
@@ -240,6 +255,12 @@ export const MODELS = {
     vsc_extra: [0x6800, 0x1400],
     touch: false,
     g4set: G4SET_UNCHECKED,
+    // the SCPU's block at file offset 0x0e520000, byte-identical to E143's (docs/om1-scpu-spec.md section 2; D: the same
+    // sha256), so E143's pins and gate
+    scpu_lle: {
+      block: 'blk0e520000.OE.0107.bin', sha256: '2d930ac588014c250391d6af3a49fe7372852fc5eafbac5d2ac73df04be94807',
+      pins: { request: 'PB12', ready: 'PC3', message: 'PC2' }, gate: 0x20008390,
+    },
     // the SCPU's backed-up words the firmware writes and reads, [index, byte], and its writes without data or an
     // answer (src/lab/scpudev.mjs S-SCPUDEV; E143's [2, 0] and none): the time-zone record's write and read wrappers
     // at 0x5005c164 and 0x5005c171 pass index 2, byte 0 (D); port_scan: UI_IN's port-scan request 0x5005edec and the
@@ -716,3 +737,5 @@ export const MODELS = {
 export const codeOf = (m) => 'E' + m.bin.slice(6, 9);
 export const romPath = (m) => `unpacked/${codeOf(m)}/${m.bin}.blk00000000.OE.0100.bin`;
 export const resPath = (m) => `unpacked/${codeOf(m)}/${m.bin}.${m.res_block}`;
+// the SCPU block of a body that gives scpu_lle, else null
+export const scpuPath = (m) => (m.scpu_lle ? `unpacked/${codeOf(m)}/${m.bin}.${m.scpu_lle.block}` : null);

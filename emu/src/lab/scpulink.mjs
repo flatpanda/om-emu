@@ -5,7 +5,8 @@
 // and the sub-CPU is at the far end of the wires PER_SCPU uses: the three GIO pins (src/dev/linkpins.mjs, register
 // level, the GIO driver and its interrupt native), PER_SIO's channel (S-SIO2, below) and the window's port 3
 // (src/dev/scpu.mjs, the message line). The sub-CPU is S-SCPUDEV (src/lab/scpudev.mjs), or anything with its seam
-// (connect, pin, exchange, step).
+// (connect, pin, exchange, step): with OM_EMU_SCPU=native its own firmware on the STM32L4 machine (src/lab/scpum4.mjs),
+// which takes a transfer's bytes at the configured clock (exchange's second argument).
 //
 // H-SCPUSTART, at the store init (src/lab/menu.mjs, where the boot chain would have started the task long before): the
 // GIO init's slot reset (H-GIOSLOTS: the GIO init does not run, and PER_SCPU's registration of pin 102 needs a free
@@ -41,7 +42,7 @@ const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 const DESC_BYTES = 28, CONFIG_BYTES = 16;
 
 export class ScpuLink {
-  // lab: the MenuLab; dev: the sub-CPU (S-SCPUDEV)
+  // lab: the MenuLab; dev: the sub-CPU (S-SCPUDEV, or src/lab/scpum4.mjs ScpuM4)
   constructor(lab, dev) {
     this.lab = lab;
     this.dev = dev;
@@ -130,7 +131,7 @@ export class ScpuLink {
     if (!this.open || !this.config) this.fail(r, `transfer on channel ${ch} before its open and configuration`);
     if (dirs !== 3 || txN !== rxN || !txN || !rxBuf || txCb === 0xFFFFFFFF) this.fail(r, `transfer ${bytesHex(d)}: only a full-duplex transfer of equal counts into a buffer, ended by interrupt, is modelled`);
     const out = txBuf ? sim.read(txBuf, txN).slice() : new Uint8Array(txN);
-    const back = this.dev.exchange(out);
+    const back = this.dev.exchange(out, this.config.clock);
     sim.write(rxBuf, back);
     this.transfers.push({ tx: bytesHex(out), rx: bytesHex(back) });
     this.ends.push({ rx: rxCb, tx: txCb, desc: r.a0 >>> 0, arg: txArg });

@@ -15,7 +15,9 @@
 // trace filters and live-route units (test_live.mjs liveUnits: a machine on a blank image) and the publication
 // audit's rules on a throwaway repository (test_pubaudit.mjs), and the SCPU's Cortex-M4 core: its decoder, executor and
 // exception model on hand-written vectors and the QEMU-recorded differential vectors (test_m4.mjs), and the SCPU's STM32L4
-// peripheral models one by one against the reference manual's register semantics (test_stm32l4.mjs stm32Units).
+// peripheral models one by one against the reference manual's register semantics (test_stm32l4.mjs stm32Units), and
+// the bridge that puts the SCPU's own firmware behind the link (test_scpum4.mjs scpuM4Units: its clock, the frame log
+// rebuilt from the wire, the byte mover).
 // bin/test.mjs runs all of these too, with everything else.
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
@@ -37,6 +39,7 @@ import { liveUnits } from '../test/test_live.mjs';
 import { pubauditTests } from '../test/test_pubaudit.mjs';
 import { m4Units, m4Vectors } from '../test/test_m4.mjs';
 import { stm32Units } from '../test/test_stm32l4.mjs';
+import { scpuM4Units } from '../test/test_scpum4.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -75,6 +78,7 @@ report('publication audit (throwaway repository, made-up firmware)', await pubau
 report('Cortex-M4 core: decoder, executor, exceptions (hand-written)', m4Units());
 { const v = m4Vectors(); report(`Cortex-M4 core against QEMU's recorded vectors (${v.cases} cases)`, v); }
 report('SCPU STM32L4 peripheral models (RCC, FLASH, GPIO / EXTI, U(S)ART, DMA, I2C, SPI, timers, RTC, ADC)', stm32Units());
+report('the SCPU\'s own firmware behind the link: clock, frame log from the wire, byte mover', scpuM4Units());
 const fa = factsTests();
 report(`firmware facts (${fa.models} unpacked main blocks)`, fa);
 const pu = purity();

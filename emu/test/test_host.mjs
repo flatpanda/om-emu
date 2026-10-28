@@ -8,7 +8,9 @@
 // next_input on the host's queue (PortQueue) against none on the headless one, --debug-api's SIGUSR2 lab kill (the
 // error status without the lab's fields, then Restart: fix2); the HTTP front (fix1: a refused POST answered before its
 // body, a ?sync=1 timeout that is not a number refused, the request's error on stderr for a failed pagetest write, a
-// busy --port's message); an --out with '..' in the stopped line (fix2).
+// busy --port's message); an --out with '..' in the stopped line (fix2); the Card panel's routes (GET /api/session,
+// /api/card, /api/card/file, /api/card/image: the card the firmware formatted, a picture's file and its PNG, the card
+// out of the slot and back, none of the reads logged).
 //   node emu/test/test_host.mjs
 import fs from 'node:fs';
 import path from 'node:path';
@@ -321,6 +323,44 @@ async function httpFront(bad) {
   if (rc !== 0) bad.push(`front: exit ${rc} (want 0, handler errors do not change it)`);
   return notes.join('; ');
 }
+// The Card panel's routes over HTTP (src/lab/playapi.mjs, the lab worker's env.cardView, the main thread's decoder and
+// PNG): the session's options; the card the firmware formatted at the start (FAT32 'OM SYSTEM'); after S2 the
+// picture's file listed, its bytes a JPEG, its picture a PNG; a missing file 404; the card out of the slot read as it
+// is (the file still there), then back in and mounted again; none of the reads in the session log
+async function cardRoutes(bad) {
+  const pl = await startPlay('card', ['--idle', 'off']);
+  const notes = [];
+  try {
+    const sess = await pl.json('GET', '/api/session');
+    if (sess.host !== 'node' || sess.hdmi !== 'off' || sess.card_image !== true || !['native', 'stand-in'].includes(sess.lens)) bad.push(`GET /api/session: ${JSON.stringify(sess)}`);
+    const c0 = await pl.req('GET', '/api/card'), d0 = JSON.parse(c0.body);
+    if (c0.status !== 200 || d0.volume?.type !== 'FAT32' || d0.volume?.label !== 'OM SYSTEM' || d0.slot?.present !== true || d0.slot?.mounted !== true) bad.push(`GET /api/card at the start: ${c0.status} ${String(c0.body).slice(0, 300)}`);
+    const log0 = (await pl.json('GET', '/api/log')).inputs.length;
+    for (const inp of [{ type: 'token', token: 'WAIT:100' }, { type: 'key', id: 's1', action: 'down' }, { type: 'key', id: 's2', action: 'down' }, { type: 'token', token: 'WAIT:700' },
+      { type: 'key', id: 's2', action: 'up' }, { type: 'key', id: 's1', action: 'up' }]) await pl.input(inp);
+    const FILE = 'DCIM/100OMSYS/P1010001.JPG';
+    const d1 = JSON.parse((await pl.req('GET', '/api/card')).body), e = d1.files?.find((f) => f.path === FILE);
+    if (!e || !(e.size > 0)) bad.push(`GET /api/card after S2: no ${FILE} in ${JSON.stringify(d1.files?.map((f) => f.path))}`);
+    const q = encodeURIComponent(FILE);
+    const f = await pl.req('GET', `/api/card/file?path=${q}`);
+    if (f.status !== 200 || f.headers['content-type'] !== 'image/jpeg' || f.body.length !== e?.size || f.body[0] !== 0xff || f.body[1] !== 0xd8) bad.push(`GET /api/card/file: ${f.status} ${f.headers['content-type']} ${f.body.length} bytes`);
+    const im = await pl.req('GET', `/api/card/image?path=${q}&max=96`);
+    if (im.status !== 200 || im.headers['content-type'] !== 'image/png' || !im.body.subarray(0, 8).equals(Buffer.from('\x89PNG\r\n\x1a\n', 'latin1')) || !/^\d+x\d+$/.test(im.headers['x-image-size'] ?? '')) bad.push(`GET /api/card/image: ${im.status} ${im.headers['content-type']} ${im.headers['x-image-size']}`);
+    const nf = await pl.req('GET', '/api/card/file?path=NOPE.JPG');
+    if (nf.status !== 404) bad.push(`GET /api/card/file of a missing file: ${nf.status} ${String(nf.body).slice(0, 200)}`);
+    const out = await pl.input({ type: 'card', action: 'remove' });
+    const d2 = JSON.parse((await pl.req('GET', '/api/card')).body);
+    const back = await pl.input({ type: 'card', action: 'insert' });
+    const d3 = JSON.parse((await pl.req('GET', '/api/card')).body);
+    if (out?.error || d2.slot?.present !== false || !d2.files?.some((x) => x.path === FILE) || back?.error || d3.slot?.present !== true || d3.slot?.mounted !== true) {
+      bad.push(`the card out and back: remove ${JSON.stringify(out?.error)}, read out ${JSON.stringify(d2.slot)} with ${d2.files?.length} files, insert ${JSON.stringify(back?.error)}, read in ${JSON.stringify(d3.slot)}`);
+    }
+    const logged = (await pl.json('GET', '/api/log')).inputs.slice(log0).map((x) => x.input.type);
+    if (logged.includes('cardfiles') || logged.filter((t) => t === 'card').length !== 2) bad.push(`the session log after the card reads: ${JSON.stringify(logged)}`);
+    notes.push(`card routes: ${FILE} ${e?.size} bytes, picture ${im.headers['x-image-size']}`);
+    return notes.join('; ');
+  } finally { await pl.close(); }
+}
 // fix2: an --out with '..': the session goes to <out>/y and the stopped line names that session.json
 async function dotdot(bad) {
   const out = `${TMP}/dotdot/x/../y`;
@@ -349,7 +389,7 @@ async function busyPort(bad) {
 
 export async function hostTests({ only = null } = {}) {
   const bad = [], notes = [];
-  const cases = { order: orderWait, pl8b, busy: busyStatus, stops, stopped: stoppedSeq, labkill: labKill, front: httpFront, port: busyPort, dotdot };
+  const cases = { order: orderWait, pl8b, busy: busyStatus, stops, stopped: stoppedSeq, labkill: labKill, front: httpFront, port: busyPort, dotdot, card: cardRoutes };
   let checks = 0;
   try {
     for (const [name, f] of Object.entries(cases)) {

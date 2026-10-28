@@ -1,7 +1,8 @@
 // The worker-safety rule of src/, scenarios/, refs/ and web/, the browser player's Worker and page modules
 // (README "Layout"): pure ES modules, no node: imports, no process, Buffer, fs or crypto; hashing and file access are
 // passed in from bin/ (or, in the Worker, src/util/sha256.mjs and the File the page hands over). Plus the import rules
-// below, and web/ imports only src/, scenarios/ and web/. host/ (the node host of bin/play.mjs
+// below, and web/ imports only src/, scenarios/, web/ and refs/ (web/cardfiles.mjs: the Card panel reads the card with
+// the independent FAT reader and JPEG decoder, which src/ may not import). host/ (the node host of bin/play.mjs
 // and bin/nav.mjs, node-only) is imported by none of src/, scenarios/, refs/ and web/.
 // And the retired py-prefixed helpers stay retired: no module under src/, scenarios/, refs/, web/, host/, checks/,
 // fwmap/ or bin/ is named py*.mjs, imports one, or uses a name of py and a capital letter outside its comments.
@@ -23,7 +24,7 @@ function importRule(file, code) {
     const target = path.relative(ROOT, path.resolve(path.dirname(file), spec)).split(path.sep)[0];
     if (dir === 'refs' && target !== 'refs') out.push(`refs/ imports ${spec} (outside refs/)`);
     if ((dir === 'src' || dir === 'scenarios') && (target === 'refs' || target === 'checks' || target === 'web' || target === 'host')) out.push(`${dir}/ imports ${spec} (${target}/)`);
-    if (dir === 'web' && !['src', 'scenarios', 'web'].includes(target)) out.push(`web/ imports ${spec} (${target}/)`);
+    if (dir === 'web' && !['src', 'scenarios', 'web', 'refs'].includes(target)) out.push(`web/ imports ${spec} (${target}/)`);
   }
   return out;
 }

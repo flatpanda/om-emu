@@ -1,7 +1,7 @@
 // The page side of the browser player: starts web/worker.mjs, hands it the firmware File (from the file input; the
 // bytes stay in this browser) and answers the page's API calls the way the play server (bin/play.mjs) does, over
 // postMessage. api(path, body) replaces play.html's fetch-based api(): it returns a Response-like object ({ok, status,
-// headers: {get}, json(), text()}, plus `frame` = {w, h, rgba} for a 200 /api/frame). The status and frame long polls
+// headers: {get}, json(), text(), bytes(), blob()}, plus `frame` = {w, h, rgba} for a 200 /api/frame). The status and frame long polls
 // (GET /api/status?after=N, /api/frame?after=N, 25 s) and GET /api/log are answered here from what the Worker pushed
 // (every published status, the newest frame, the session-log entries), so they never wait for a busy Worker, as
 // the node host's HTTP front never waits for the Player; every other request goes to the Worker's router
@@ -14,11 +14,14 @@ import { createHash } from '../src/util/sha256.mjs';
 const dec = new TextDecoder();
 const now = () => (performance.timeOrigin + performance.now()) / 1000;
 
+// bytes() and blob(): the body as it came (a card file's bytes, a card picture's RGBA), as fetch's Response gives them
 function response(status, headers, body, frame = null) {
   const h = new Map(headers.map(([k, v]) => [k.toLowerCase(), v]));
   const text = () => (body instanceof Uint8Array ? dec.decode(body) : String(body ?? ''));
+  const bytes = () => (body instanceof Uint8Array ? body : new TextEncoder().encode(String(body ?? '')));
   return { ok: status >= 200 && status < 300, status, headers: { get: (k) => h.get(k.toLowerCase()) ?? null }, frame,
-    text: async () => text(), json: async () => JSON.parse(text()) };
+    text: async () => text(), json: async () => JSON.parse(text()), bytes: async () => bytes(),
+    blob: async () => new Blob([bytes()], { type: h.get('content-type') ?? '' }) };
 }
 const jsonRes = (status, doc) => response(status, [['Content-Type', 'application/json']], new TextEncoder().encode(JSON.stringify(doc)));
 

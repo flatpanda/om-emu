@@ -1,7 +1,10 @@
 // The browser player's Worker (a module Worker): the same session code as node, the Player paced against the host
 // clock, and the play API over postMessage. The protocol (shared with the node host's server, which hosts this code in a
 // worker thread):
-//   page -> worker  {type: 'boot', file?, args?}            the .BIN as a File (never uploaded), or the OPFS cache
+//   page -> worker  {type: 'boot', file?, args?}            the .BIN as a File (never uploaded), or the OPFS cache;
+//                                                            args: the page's options (playerArgs), and the env
+//                                                            opt-ins lens: 'native' and nvram: true (S-NVRAM in OPFS)
+//                   {type: 'clear-nvram'}                    forget S-NVRAM's kept document (progress nvram-cleared)
 //                   {type: 'req', id, method, path, body, t_page}   an API request (src/lab/playapi.mjs); t_page: the
 //                                                            page's send time in seconds (timeOrigin + now), the t_wall
 //                                                            of an input it submits
@@ -9,7 +12,8 @@
 //                   {type: 'clear-cache'}, {type: 'quit'}   quit: the loop stops after its tick, as a signal stops
 //                                                            bin/play.mjs (/api/quit is a queued control instead: 3d)
 //                   {type: 'gate', job, file?}               bin/webgate.mjs only: run web/runner.mjs (no Player)
-//   worker -> page  {type: 'progress', stage, ...}, {type: 'error', message, stack}
+//   worker -> page  {type: 'progress', stage, ...}, {type: 'error', message, stack}  (stage nvram-error: a kept
+//                                                            settings write failed, the session runs on)
 //                   {type: 'status', doc}                    every published status (status_doc)
 //                   {type: 'frame', seq, device, lab_ns, sha16, w, h, rgba, rgba_sha16}   the newest frame, its RGBA
 //                                                            buffer transferred; one in flight until acknowledged
@@ -33,6 +37,8 @@ import { rgbaOf } from './frame.mjs';
 import * as OPFS from './opfs.mjs';
 import { runScenario, playWorkload } from './runner.mjs';
 import { blobs } from '../src/lab/resources.mjs';
+import { CARD_VIEW, jpegRgba } from './cardfiles.mjs';
+import { browserNvram } from './nvram.mjs';
 
 const wallClock = () => (performance.timeOrigin + performance.now()) / 1000;
 const post = (m, transfer = []) => postMessage(m, transfer);
@@ -92,8 +98,15 @@ async function boot(msg) {
     const fw = await firmware(msg.file ?? null, { cache: msg.cache !== false });
     post({ type: 'progress', stage: 'firmware', from: fw.from, rom: fw.rom.length, res: fw.res.length, manifest: fw.manifest, T: fw.T });
     a = playerArgs(msg.args);
+    // the opt-ins the lab takes in its env (the page's lens=native and nvram=1): the lens natively (src/lab/play.mjs
+    // lens_native), the camera's state kept in this browser (S-NVRAM, web/nvram.mjs)
+    const lens = msg.args?.lens === 'native';
+    const nvram = msg.args?.nvram ? browserNvram(await OPFS.loadNvram(), OPFS.storeNvram,
+      (e) => post({ type: 'progress', stage: 'nvram-error', message: String(e?.message ?? e) }), `this browser (OPFS ${OPFS.NVRAM_DIR})`) : null;
     const env = {
       rom: fw.rom, resBlock: fw.res, createHash, wallClock, asyncHost: true, refuseUnported: true,
+      cardView: CARD_VIEW,                // the Card panel's reads of the card's files (web/cardfiles.mjs)
+      ...(lens ? { lens: 'native' } : {}), ...(nvram ? { nvram } : {}),
       onStatus: (doc) => { post({ type: 'status', doc }); api?.notify(); },
       onFrame: (w, h, raw, meta) => {
         api.onFrame(w, h, raw, meta);
@@ -104,7 +117,8 @@ async function boot(msg) {
       logSink: (name, text) => { if (name === 'session.jsonl') post({ type: 'log', entries: text.split('\n').filter(Boolean).map((l) => JSON.parse(l)) }); },
     };
     player = new Player(a, env);
-    api = new PlayApi(player, { tables: Tables.of(fw.rom), frameRgba: (w, h, raw) => rgbaOf(w, h, raw), onSubmit: () => driver?.kick() });
+    api = new PlayApi(player, { tables: Tables.of(fw.rom), frameRgba: (w, h, raw) => rgbaOf(w, h, raw), onSubmit: () => driver?.kick(),
+      cardImage: jpegRgba, session: { host: 'browser', lens: lens ? 'native' : 'stand-in', nvram: nvram ? nvram.file : null, card: null } });
     driver = new Driver(player);
   } catch (err) {                       // nothing started: the page may boot again (another file, the cache)
     player = api = driver = null;
@@ -167,6 +181,7 @@ onmessage = (e) => {
     else if (msg.type === 'gate') gate(msg).catch(fail);
     else if (msg.type === 'clear-cache') OPFS.clear().then(() => post({ type: 'progress', stage: 'cache-cleared' }), fail);
     else if (msg.type === 'cache-info') OPFS.info().then((m) => post({ type: 'progress', stage: 'cache', manifest: m }), fail);
+    else if (msg.type === 'clear-nvram') OPFS.clearNvram().then(() => post({ type: 'progress', stage: 'nvram-cleared' }), fail);
     else if (msg.type === 'quit') { if (player) { player.set_stop(); driver.kick(); } }
     else fail(new Error(`worker: message type ${msg.type}`));
   } catch (err) { fail(err); }

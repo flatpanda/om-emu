@@ -14,7 +14,11 @@
 //   on, ?sync=1 timeouts past setTimeout's limit and ones it refuses, web/page.mjs's polls once the session has stopped (they must reject, not resolve
 //   at once forever), and web/worker.mjs hosted in a node worker thread (test/workershim.mjs): a file that is no .BIN
 //   and a container that is not E143 refused with the boot offered again, and with $OM_BIN / $OM_FW_DIR the E143
-//   .BIN booted, an unported token refused, a ?sync=1 request answered when the session quits.
+//   .BIN booted, an unported token refused, the card the firmware formatted read through GET /api/card and the
+//   session's options through GET /api/session, a ?sync=1 request answered when the session quits;
+// - the Card panel and the session options without firmware (cardTests): base64, the card's reader
+//   (web/cardfiles.mjs) on a FAT16 volume built here, the router's /api/session and card routes on a headless Player,
+//   the node server's PNG of a picture, web/page.mjs's binary answers, the browser's S-NVRAM host (web/nvram.mjs).
 //   node emu/test/test_web.mjs [--no-api]   (--no-api: skip the Player sessions of B4 and B6's page inputs, about 15 s)
 // Writes its temporary files under emu/out/test-web/.
 import fs from 'node:fs';
@@ -34,6 +38,13 @@ import { LabError } from '../src/lab/errors.mjs';
 import { PagePlayer } from '../web/page.mjs';
 import { fwPaths, synthBlock } from './test_unpack.mjs';
 import { Worker as NodeWorker } from 'node:worker_threads';
+import zlib from 'node:zlib';
+import { SdCard, SECTOR } from '../src/lab/sdcard.mjs';
+import { jpegOfFrame } from '../src/lab/jpeg.mjs';
+import { bytesBase64, base64Bytes } from '../src/util/bytes.mjs';
+import { CARD_VIEW, cardList, cardFile, jpegRgba } from '../web/cardfiles.mjs';
+import { browserNvram } from '../web/nvram.mjs';
+import { pngRgba } from '../host/server.mjs';
 
 const REPO = path.resolve(new URL('../../', import.meta.url).pathname);
 const OUT = path.join(REPO, 'emu/out/test-web');
@@ -392,6 +403,203 @@ export async function pageTests() {
   return { checks: 4, bad };
 }
 
+// ---- the Card panel and the session options without firmware
+// A FAT16 volume on an SD card, built here for the Card panel's reader: an MBR whose one partition starts at LBA 64,
+// 8192 sectors of one cluster each (8095 clusters: FAT16 by the specification's count), the files
+// DCIM/100OMSYS/P1010001.JPG and 'My Pic 1.jpg' (a long name) in the root, both the JPEG of a 32 x 16 frame of four
+// flat 16 x 8 tiles (src/lab/jpeg.mjs jpegOfFrame: each block its mean, so a tile decodes to its own values).
+const TILE = (tx, ty) => [40 + 60 * tx + 100 * ty, 90 + 50 * tx, 160 - 40 * ty];      // Y, Cb, Cr
+function cardFrame() {
+  const w = 32, h = 16, rows = [];
+  for (let y = 0; y < h; y++) {
+    const r = new Uint8Array(2 * w);
+    for (let x = 0; x < w; x++) { const [Y, Cb, Cr] = TILE(x >> 4, y >> 3); r[2 * x] = Y; r[2 * x + 1] = x & 1 ? Cr : Cb; }
+    rows.push(r);
+  }
+  return [w, h, rows];
+}
+export function fat16Card() {
+  const START = 64, TOTAL = 8192, RESERVED = 1, FATS = 2, FAT_SECTORS = 32, ROOT_ENTRIES = 512;
+  const vol = new Uint8Array(TOTAL * SECTOR), mbr = new Uint8Array(SECTOR);
+  const ascii = (s) => [...s].map((c) => c.charCodeAt(0));
+  const put16 = (b, o, v) => { b[o] = v & 255; b[o + 1] = v >> 8 & 255; };
+  const put32 = (b, o, v) => { for (let i = 0; i < 4; i++) b[o + i] = v >>> (8 * i) & 255; };
+  mbr[446 + 4] = 6; put32(mbr, 446 + 8, START); put32(mbr, 446 + 12, TOTAL); mbr[510] = 0x55; mbr[511] = 0xaa;
+  vol.set([0xeb, 0x3c, 0x90], 0); vol.set(ascii('TESTFAT '), 3);
+  put16(vol, 11, SECTOR); vol[13] = 1; put16(vol, 14, RESERVED); vol[16] = FATS; put16(vol, 17, ROOT_ENTRIES); put16(vol, 19, TOTAL);
+  vol[21] = 0xf8; put16(vol, 22, FAT_SECTORS); vol[38] = 0x29; put32(vol, 39, 2026); vol.set(ascii('CARDTEST   '), 43); vol.set(ascii('FAT16   '), 54);
+  vol[510] = 0x55; vol[511] = 0xaa;
+  const ROOT = RESERVED + FATS * FAT_SECTORS, DATA = ROOT + ROOT_ENTRIES * 32 / SECTOR;      // sectors 65 and 97
+  const fat = (c, v) => { for (let k = 0; k < FATS; k++) put16(vol, (RESERVED + k * FAT_SECTORS) * SECTOR + 2 * c, v); };
+  const at = (c) => (DATA + c - 2) * SECTOR;                                                // a cluster's first byte
+  const DATE = (2026 - 1980) << 9 | 10 << 5 | 28, TIME = 12 << 11 | 34 << 5 | 28;          // 2026-10-28 12:34:56
+  const entry = (o, name, attr, cluster, size) => {
+    vol.set(ascii(name), o); vol[o + 11] = attr; put16(vol, o + 22, TIME); put16(vol, o + 24, DATE); put16(vol, o + 26, cluster); put32(vol, o + 28, size);
+  };
+  const jpeg = jpegOfFrame(cardFrame());
+  let next = 5;
+  const file = (o, name) => {                     // the JPEG in a chain of clusters from next
+    const n = Math.ceil(jpeg.length / SECTOR), first = next;
+    for (let i = 0; i < n; i++) { fat(first + i, i + 1 < n ? first + i + 1 : 0xffff); vol.set(jpeg.subarray(i * SECTOR, (i + 1) * SECTOR), at(first + i)); }
+    next += n;
+    entry(o, name, 0x20, first, jpeg.length);
+  };
+  fat(0, 0xfff8); fat(1, 0xffff);
+  const root = ROOT * SECTOR;
+  entry(root, 'DCIM       ', 0x10, 2, 0); fat(2, 0xffff);
+  // 'My Pic 1.jpg' as one long-name entry (its 12 characters and the terminator fill the entry's 13), then its short one
+  const lfn = root + 32, chars = [...'My Pic 1.jpg'].map((c) => c.charCodeAt(0)).concat([0]);
+  vol[lfn] = 0x41; vol[lfn + 11] = 0x0f;
+  chars.forEach((c, i) => put16(vol, lfn + (i < 5 ? 1 + 2 * i : i < 11 ? 14 + 2 * (i - 5) : 28 + 2 * (i - 11)), c));
+  file(root + 64, 'MYPIC1~1JPG');
+  entry(at(2), '.          ', 0x10, 2, 0); entry(at(2) + 32, '..         ', 0x10, 0, 0); entry(at(2) + 64, '100OMSYS   ', 0x10, 4, 0); fat(4, 0xffff);
+  entry(at(4), '.          ', 0x10, 4, 0); entry(at(4) + 32, '..         ', 0x10, 2, 0);
+  file(at(4) + 64, 'P1010001JPG');
+  const card = new SdCard();
+  card.writeSector(0, mbr);
+  for (let s = 0; s < TOTAL; s++) { const b = vol.subarray(s * SECTOR, (s + 1) * SECTOR); if (b.some((v) => v)) card.writeSector(START + s, b); }
+  return { card, jpeg };
+}
+
+// The Card panel's parts and the session options, without firmware: base64 (src/util/bytes.mjs); the card's reader
+// (web/cardfiles.mjs: the listing, a file, a refused volume and path, the JPEG drawn as RGBA at full size and scaled
+// down); the router's /api/session and card routes on a headless Player (no session: the card stays readable) with
+// their refusals (no reader, no decoder, bad paths and sizes) and the PNG the node server answers (host/server.mjs
+// pngRgba, inflated here); the card reads outside the session log; web/page.mjs's bytes() and blob(); the browser's
+// S-NVRAM host (web/nvram.mjs: the document host/nvram.mjs keeps, writes one at a time, a failed write reported).
+export async function cardTests() {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+  // base64
+  for (let n = 0; n < 12; n++) {
+    const b = Uint8Array.from({ length: n }, (_, i) => (i * 97 + n * 31) & 255), t = bytesBase64(b);
+    ok(t === Buffer.from(b).toString('base64') && same(base64Bytes(t), b), `base64 of ${n} bytes: ${t}`);
+  }
+  ok(same(base64Bytes(bytesBase64(Uint8Array.from({ length: 256 }, (_, i) => i))), Uint8Array.from({ length: 256 }, (_, i) => i)), 'base64 round trip of every byte');
+  for (const t of ['abc', 'ab=c', '====', 'A===', 'QQ=A', 'Q Q=']) ok(base64Bytes(t) === null, `base64Bytes(${JSON.stringify(t)}) refused`);
+  // the reader
+  const { card, jpeg } = fat16Card(), read = (lba, n) => card.read(lba, n);
+  const reads0 = card.reads;
+  const list = cardList(read);
+  const want = [['DCIM', true], ['DCIM/100OMSYS', true], ['DCIM/100OMSYS/P1010001.JPG', false], ['My Pic 1.jpg', false]];
+  ok(JSON.stringify(list.files?.map((f) => [f.path, f.dir])) === JSON.stringify(want), `cardList files: ${JSON.stringify(list.files?.map((f) => f.path))}`);
+  ok(list.volume?.type === 'FAT16' && list.volume.label === 'CARDTEST' && list.volume.start === 64 && list.volume.cluster_bytes === 512 && list.volume.free_bytes === null && list.truncated === false,
+    `cardList volume: ${JSON.stringify(list.volume)}`);
+  const f1 = list.files?.[2];
+  ok(f1?.size === jpeg.length && f1.mtime === '2026-10-28 12:34:56', `cardList file entry: ${JSON.stringify(f1)}`);
+  ok(card.reads === reads0, `the reader counts no card reads (SdCard.read): ${card.reads - reads0}`);
+  const got = cardFile(read, 'DCIM/100OMSYS/P1010001.JPG');
+  ok(got.name === 'P1010001.JPG' && got.size === jpeg.length && same(base64Bytes(got.base64), jpeg), `cardFile: ${JSON.stringify({ ...got, base64: got.base64?.length })}`);
+  ok(/no such file/.test(cardFile(read, 'NOPE.JPG').error) && /a directory/.test(cardFile(read, 'DCIM').error), 'cardFile refuses a missing file and a directory');
+  const blank = new SdCard();
+  ok(/boot signature/.test(cardList((lba, n) => blank.read(lba, n)).error ?? ''), `a blank card: ${JSON.stringify(cardList((lba, n) => blank.read(lba, n)))}`);
+  const ex = new SdCard(), exb = new Uint8Array(SECTOR);
+  exb.set([...'EXFAT   '].map((c) => c.charCodeAt(0)), 3); exb[510] = 0x55; exb[511] = 0xaa; ex.writeSector(0, exb);
+  ok(/exFAT/.test(cardList((lba, n) => ex.read(lba, n)).error ?? ''), 'an exFAT volume is refused with the reason');
+  // the picture: every pixel its tile's colour (ycc_to_rgb), at full size and scaled to 8 x 4
+  const tileRgb = (x, y, w, h) => { const [Y, Cb, Cr] = TILE(Math.floor(x * 32 / w) >> 4, Math.floor(y * 16 / h) >> 3); return yccToRgb(Y | Cb << 8 | Cr << 16); };
+  for (const [max, w, h] of [[0, 32, 16], [8, 8, 4], [64, 32, 16]]) {
+    const img = jpegRgba(jpeg, max);
+    let worst = 0;
+    if (img.rgba) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const c = tileRgb(x + 0.5, y + 0.5, w, h), o = 4 * (y * w + x);
+      for (let k = 0; k < 3; k++) worst = Math.max(worst, Math.abs(img.rgba[o + k] - c[k]));
+      if (img.rgba[o + 3] !== 255) worst = 999;
+    }
+    ok(img.w === w && img.h === h && img.width === 32 && img.height === 16 && img.rgba?.length === 4 * w * h && worst === 0, `jpegRgba max ${max}: ${img.w} x ${img.h} of ${img.width} x ${img.height}, worst difference ${worst}`);
+  }
+  ok(/SOI/.test(jpegRgba(new Uint8Array(16)).error ?? ''), 'jpegRgba refuses bytes that are no JPEG');
+  // the router on a headless Player: no session, the card readable; nothing logged
+  const mkPlayer = (env) => new Player({ ...PLAYER_PARSER, no_browser: true, debug_api: false, idle: 'off', a15: 'off', out: '<out>', no_wait_on_error: false },
+    { rom: null, resBlock: null, wallClock: () => performance.now() / 1000, card: { open: () => card, save() {}, file: 'kept.omsd' }, ...env });
+  const pl = mkPlayer({ cardView: CARD_VIEW });
+  const api = new PlayApi(pl, { tables: null, frameRgba: () => null, cardImage: jpegRgba, session: { host: 'test', lens: 'stand-in' } });
+  const get = async (a, p) => {
+    const r = a.handle({ method: 'GET', path: p, headers: {} });
+    while (a.player.q.length || a.player.held.length) a.player.tick();
+    const res = await r;
+    const h = new Map(res.headers.map(([k, v]) => [k.toLowerCase(), v]));
+    return { status: res.status, type: h.get('content-type'), h, body: res.body, doc: () => JSON.parse(new TextDecoder().decode(res.body)) };
+  };
+  const s = await get(api, '/api/session');
+  ok(JSON.stringify(s.doc()) === JSON.stringify({ host: 'test', lens: 'stand-in', nvram: null, card: null, hdmi: 'off', debug_api: false, card_image: true }), `GET /api/session: ${JSON.stringify(s.doc())}`);
+  const c = await get(api, '/api/card'), cd = c.doc();
+  ok(c.status === 200 && JSON.stringify(cd.slot) === JSON.stringify({ present: true, mounted: false, session: false, file: 'kept.omsd' }) && cd.files?.length === 4 && cd.volume?.type === 'FAT16',
+    `GET /api/card: ${c.status} ${JSON.stringify(cd).slice(0, 300)}`);
+  const f = await get(api, '/api/card/file?path=DCIM%2F100OMSYS%2FP1010001.JPG');
+  ok(f.status === 200 && f.type === 'image/jpeg' && same(f.body, jpeg) && f.h.get('content-disposition') === 'attachment; filename="P1010001.JPG"', `GET /api/card/file: ${f.status} ${f.type} ${f.body.length} bytes, ${f.h.get('content-disposition')}`);
+  const lf = await get(api, '/api/card/file?path=My%20Pic%201.jpg');
+  ok(lf.status === 200 && same(lf.body, jpeg) && lf.h.get('content-disposition') === 'attachment; filename="My Pic 1.jpg"', `GET /api/card/file of a long name: ${lf.status}`);
+  const nf = await get(api, '/api/card/file?path=NOPE.JPG');
+  ok(nf.status === 404 && /no such file/.test(nf.doc().error) && nf.doc().slot?.present === true, `a missing file: ${nf.status} ${JSON.stringify(nf.doc())}`);
+  for (const [p, want] of [['/api/card/file', 'path'], ['/api/card/file?path=%E0%A4%A', 'path'], ['/api/card/image?path=a.jpg&max=5000', 'max'], ['/api/card/image?path=a.jpg&max=x', 'max'],
+    ['/api/card?timeout=x', 'timeout']]) {
+    const r = await get(api, p);
+    ok(r.status === 400 && r.doc().error === want, `${p}: ${r.status} ${JSON.stringify(r.doc())} (want 400 ${want})`);
+  }
+  const im = await get(api, '/api/card/image?path=DCIM%2F100OMSYS%2FP1010001.JPG&max=8');
+  ok(im.status === 200 && im.type === 'application/octet-stream' && im.h.get('x-image-width') === '8' && im.h.get('x-image-height') === '4' && im.h.get('x-image-size') === '32x16' &&
+    same(im.body, jpegRgba(jpeg, 8).rgba), `GET /api/card/image (RGBA): ${im.status} ${im.type} ${im.h.get('x-image-width')} x ${im.h.get('x-image-height')}`);
+  const pngApi = new PlayApi(pl, { tables: null, cardImage: jpegRgba, imagePng: pngRgba });
+  const pg = await get(pngApi, '/api/card/image?path=DCIM%2F100OMSYS%2FP1010001.JPG&max=8');
+  {
+    const b = Buffer.from(pg.body), ihdr = b.indexOf('IHDR'), idat = b.indexOf('IDAT'), len = idat >= 4 ? b.readUInt32BE(idat - 4) : 0;
+    const rows = idat >= 0 ? zlib.inflateSync(b.subarray(idat + 4, idat + 4 + len)) : Buffer.alloc(0), rgba = jpegRgba(jpeg, 8).rgba;
+    let match = rows.length === 4 * (1 + 3 * 8);
+    for (let y = 0; match && y < 4; y++) for (let x = 0; x < 8; x++) for (let k = 0; k < 3; k++) if (rows[y * 25 + 1 + 3 * x + k] !== rgba[4 * (y * 8 + x) + k]) match = false;
+    ok(pg.status === 200 && pg.type === 'image/png' && b.subarray(0, 8).equals(Buffer.from('\x89PNG\r\n\x1a\n', 'latin1')) && b.readUInt32BE(ihdr + 4) === 8 && b.readUInt32BE(ihdr + 8) === 4 && match,
+      `GET /api/card/image (PNG, host/server.mjs pngRgba): ${pg.status} ${pg.type}, rows ${match ? 'equal to' : 'not'} the RGBA`);
+  }
+  const ni = await get(new PlayApi(pl, { tables: null }), '/api/card/image?path=DCIM%2F100OMSYS%2FP1010001.JPG');
+  ok(ni.status === 501 && ni.doc().error === 'image', `/api/card/image without a decoder: ${ni.status}`);
+  const nj = await get(api, '/api/card/image?path=DCIM');
+  ok(nj.status === 404 && /a directory/.test(nj.doc().error), `/api/card/image of a directory: ${nj.status} ${JSON.stringify(nj.doc())}`);
+  card.remove();
+  const out = (await get(api, '/api/card')).doc();
+  card.insert();
+  ok(out.slot?.present === false && out.files?.length === 4, `the card out of the slot is read as it is: ${JSON.stringify(out.slot)}, ${out.files?.length} files`);
+  ok(pl.log.length === 0 && pl.input_seq === 8, `card reads stay out of the session log: ${pl.log.length} entries after ${pl.input_seq} inputs (want 0 after 8; a refused request queues none)`);
+  const noView = new PlayApi(mkPlayer({}), { tables: null });
+  const nv = await get(noView, '/api/card');
+  ok(nv.status === 409 && /reads no card files/.test(nv.doc().error), `a host without a reader: ${nv.status} ${JSON.stringify(nv.doc())}`);
+  const op = mkPlayer({ cardView: CARD_VIEW });
+  op.submit({ type: 'cardfiles', op: 'erase' });
+  op.tick();
+  const opRes = op.pop_result(1);
+  ok(/op "erase" \(list, read\)/.test(opRes?.error ?? '') && opRes.card === undefined && opRes.dropped === false, `an unknown cardfiles op: ${JSON.stringify(opRes)}`);
+  // web/page.mjs: a binary answer's bytes and blob
+  const PPb = new PagePlayer();
+  PPb.worker = { postMessage() {} };
+  const pr = PPb.api('/api/card/file?path=x');
+  PPb.message({ type: 'res', id: 1, status: 200, headers: [['Content-Type', 'image/jpeg']], body: jpeg });
+  const rb = await pr, blob = await rb.blob();
+  ok(same(await rb.bytes(), jpeg) && blob.size === jpeg.length && blob.type === 'image/jpeg', `page.mjs bytes() and blob(): ${blob.size} bytes, ${blob.type}`);
+  // web/nvram.mjs: the document host/nvram.mjs keeps; writes one at a time, the last one holding every save
+  const texts = [];
+  let fails = 0, errors = 0;
+  const nvram = browserNvram(null, (t) => new Promise((resolve, reject) => setTimeout(() => (fails-- > 0 ? reject(new Error('quota')) : (texts.push(t), resolve())), 5)), () => { errors++; });
+  const settle = async () => { for (let p; (p = nvram.pending()) !== null;) await p; };
+  ok(nvram.load() === null, 'S-NVRAM in the browser: nothing kept at first');
+  const M = Uint8Array.from({ length: 300 }, (_, i) => i & 255), E = Uint8Array.of(1, 2, 3);
+  nvram.save('M', M); nvram.save('E', E); nvram.saveScpu({ 0: 168 }); nvram.saveScpuMemory({ clock_offset: -60, clock_status: 1, words: { 2: 7 } });
+  await settle();
+  const last = JSON.parse(texts.at(-1) ?? 'null'), back = nvram.load();
+  ok(texts.length === 2 && last?.version === 1 && same(base64Bytes(last.M), M) && same(base64Bytes(last.E), E) && last.scpu?.[0] === 168 && last.clock_offset === -60 && last.scpu_words?.[2] === 7,
+    `S-NVRAM writes: ${texts.length} (want 2: the one the first save started, then one for the saves during it), the last ${texts.at(-1)?.slice(0, 120)}`);
+  ok(same(back.M, M) && same(back.E, E) && back.clock_status === 1 && back.scpu_words[2] === 7, `S-NVRAM load: ${JSON.stringify({ ...back, M: back.M?.length, E: back.E?.length })}`);
+  fails = 1;
+  nvram.save('E', Uint8Array.of(9));
+  await settle();
+  nvram.save('E', Uint8Array.of(8));
+  await settle();
+  ok(errors === 1 && same(base64Bytes(JSON.parse(texts.at(-1)).E), Uint8Array.of(8)), `S-NVRAM: a failed write reported (${errors}) and the next save written`);
+  const kept = browserNvram({ version: 1, M: bytesBase64(M), clock_offset: 5 }, async () => {}, () => {});
+  ok(same(kept.load().M, M) && kept.load().E === null && kept.load().clock_offset === 5 && kept.load().scpu === null, 'S-NVRAM: a kept document loads as host/nvram.mjs loads its file');
+  return { checks, bad };
+}
+
 // web/worker.mjs in a node worker thread (test/workershim.mjs): {checks, bad, skipped}
 export async function workerTests() {
   const bad = [], skipped = [];
@@ -475,6 +683,15 @@ export async function workerTests() {
         if (dh?.doc?.stop !== 'halt' || dh.doc.id !== 'h' || !/does not block/.test(db?.doc?.error?.message ?? '') || ds?.doc?.state !== 'halted' || early || dr?.doc?.state !== 'running' || !dial || dial.status !== 200) {
           bad.push(`worker: the debug route: halt ${JSON.stringify(dh?.doc)?.slice(0, 120)}, break ${JSON.stringify(db?.doc)?.slice(0, 160)}, state ${ds?.doc?.state}, the dial answered while halted ${early}, resume ${dr?.doc?.state}, the held dial ${dial ? dial.status : 'unanswered'}`);
         }
+        // the Card panel's routes in the Worker: the card the firmware formatted at the start (FAT32), read with
+        // refs/fat.mjs (web/cardfiles.mjs as env.cardView); the session's options as the Worker hosts them
+        checks++;
+        const cardDoc = await req(12, 'GET', '/api/card');
+        const sess = await req(13, 'GET', '/api/session');
+        if (cardDoc?.status !== 200 || cardDoc.doc.volume?.type !== 'FAT32' || cardDoc.doc.error !== undefined || cardDoc.doc.slot?.present !== true || cardDoc.doc.slot?.session !== true ||
+          sess?.status !== 200 || sess.doc.host !== 'browser' || sess.doc.lens !== 'stand-in' || sess.doc.nvram !== null || sess.doc.card_image !== true) {
+          bad.push(`worker: GET /api/card ${JSON.stringify(cardDoc)?.slice(0, 300)}, GET /api/session ${JSON.stringify(sess)?.slice(0, 200)}`);
+        }
         // a ?sync=1 request in flight when the session quits is answered (result null or the record), then 'stopped'
         checks++;
         const k = seen.length;
@@ -553,10 +770,11 @@ export async function driverTests() {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const s = shaTests(), y = yccTests(), c = controlsTests(), d = await driverTests(), j = bodyTests(), rb = await resultBoxTests(), p = await pageTests(), w = await workerTests();
+  const s = shaTests(), y = yccTests(), c = controlsTests(), d = await driverTests(), j = bodyTests(), rb = await resultBoxTests(), p = await pageTests(), cd = await cardTests(), w = await workerTests();
   console.log(`sha256 (B2): ${s.checks - s.bad.length}/${s.checks} (${s.mbps} MB/s); ycc_to_rgb (B4): ${y.checks - y.bad.length}/${y.checks}; playui rows: ${c.checks - c.bad.length}/${c.checks}; driver (B3): ${d.checks - d.bad.length}/${d.checks}; ` +
-    `request bodies: ${j.checks - j.bad.length}/${j.checks}; wait_result: ${rb.checks - rb.bad.length}/${rb.checks}; page after stop: ${p.checks - p.bad.length}/${p.checks}; worker host: ${w.checks - w.bad.length}/${w.checks}${w.skipped.length ? ` (${w.skipped.length} SKIPPED)` : ''}`);
-  const all = [...s.bad, ...y.bad, ...c.bad, ...d.bad, ...j.bad, ...rb.bad, ...p.bad, ...w.bad];
+    `request bodies: ${j.checks - j.bad.length}/${j.checks}; wait_result: ${rb.checks - rb.bad.length}/${rb.checks}; page after stop: ${p.checks - p.bad.length}/${p.checks}; card panel and session options: ${cd.checks - cd.bad.length}/${cd.checks}; ` +
+    `worker host: ${w.checks - w.bad.length}/${w.checks}${w.skipped.length ? ` (${w.skipped.length} SKIPPED)` : ''}`);
+  const all = [...s.bad, ...y.bad, ...c.bad, ...d.bad, ...j.bad, ...rb.bad, ...p.bad, ...cd.bad, ...w.bad];
   if (!process.argv.includes('--no-api')) {
     const a = await hostApiTests(), pi = await pageInputsTests();
     console.log(`node host on a Player (B4): ${a.checks - a.bad.length}/${a.checks}; B6's page inputs on a Player: ${pi.checks - pi.bad.length}/${pi.checks}`);

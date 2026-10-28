@@ -26,7 +26,9 @@
 //   ok, the frame seq advanced, the GUI is in the listed state, and the canvas read back equals the RGBA node computes
 //   for the composite whose sha16 the Player published; the page's session log equals node's run of the inputs the
 //   page sent (wall fields removed); screenshots. Then a paced page from the cache
-//   (idle wall): 10 lab seconds, the real-time ratio.
+//   (idle wall): 10 lab seconds, the real-time ratio. Then the page's life cycle (B6b): files the Worker refuses, then
+//   E143 with the debug API (tokens), the Card, HDMI and session options panel (the card read with refs/fat.mjs, Take
+//   out and Put in, the HDMI control without the port) and Quit.
 // - B7: every network request of the page and its Workers (Network domain, auto-attached Worker sessions) is a GET to
 //   the gate's own origin with no body.
 // Firmware-derived output stays under emu/out/web/. Chrome runs in its own process group with a temporary profile
@@ -503,6 +505,24 @@ if (!argv.includes('--skip-page') && !QUICK) {
   const intc = await token('INTC');
   if (intc.status !== 200 || !intc.body.result?.record || intc.body.result.error) fail(`B6b: INTC after STORE answered ${JSON.stringify(intc).slice(0, 300)}`);
   log(`page life cycle: WINDOWS -> ${win.status} ${String(win.body.result?.error).slice(0, 90)}; STORE after it -> record ${store.body.result?.record?.token ?? null}; INTC -> record ${intc.body.result?.record?.token ?? null}, phase ${intc.phase}`);
+  // the Card, HDMI and session options panel: the card the firmware formatted at the start, read in the Worker with
+  // refs/fat.mjs and shown; the panel's Take out and Put in (S-MEDIA), each followed by a read; the HDMI control
+  // without the port (no ?hdmi=on): disabled, with the reason
+  const cardDoc = await life.ev(`(async () => { const r = await window.__player.api('/api/card'); return { status: r.status, doc: await r.json() }; })()`, 120000);
+  if (cardDoc.status !== 200 || cardDoc.doc.volume?.type !== 'FAT32' || cardDoc.doc.slot?.present !== true) fail(`B6b: GET /api/card answered ${JSON.stringify(cardDoc).slice(0, 300)}`);
+  await life.ev(`document.getElementById('cardpanel').open = true, true`);
+  const cardText = (want) => until3(`(() => { const t = document.getElementById('card-state').textContent; return t.includes('FAT32') && ${want} ? t : null; })()`, 120000);
+  const shown = await cardText(`t.startsWith('in the slot, mounted') && !document.getElementById('card-remove').disabled`);
+  if (!shown) fail('B6b: the Card panel did not show the card in the slot, mounted, with its FAT32 volume');
+  await life.ev(`document.getElementById('card-remove').click(), true`);
+  const out = await cardText(`t.startsWith('out of the slot') && (window.__playPage.status.stand_ins || []).includes('S-MEDIA') && !document.getElementById('card-insert').disabled`);
+  if (!out) fail('B6b: Take out did not leave the card out of the slot (S-MEDIA) with its volume still read');
+  await life.ev(`document.getElementById('card-insert').click(), true`);
+  const back = await cardText(`t.startsWith('in the slot, mounted')`);
+  if (!back) fail('B6b: Put in did not bring the card back, mounted by the firmware');
+  const hdmi = await life.ev(`(() => ({ plug: document.getElementById('hdmi-plug').disabled, unplug: document.getElementById('hdmi-unplug').disabled, text: document.getElementById('hdmi-state').textContent }))()`);
+  if (!hdmi.plug || !hdmi.unplug || !hdmi.text.startsWith('no HDMI port')) fail(`B6b: the HDMI control without the port: ${JSON.stringify(hdmi)}`);
+  log(`page life cycle: Card panel ${shown ?? '-'} -> out: ${out ?? '-'} -> back: ${back ?? '-'}; HDMI: ${hdmi.text}`);
   await life.ev(`document.getElementById('quit').click(), true`);
   const answers = [];
   for (let i = 0; i < 6; i++) { await sleep(500); answers.push(await life.evWithin(`(() => ({ phase: window.__playPage.status.phase, ovl: document.getElementById('ovl').textContent }))()`, 5000)); }

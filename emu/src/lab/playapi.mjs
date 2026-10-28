@@ -29,12 +29,27 @@
 //   request of the debug API's JSON-lines protocol, queued as {type: 'debug', ...}; the answer is its response object
 //   ({id, ok, ...}) once it ran, or after ?timeout=S (default 300) {ok: false, error: {type: 'Timeout'}}; an input the
 //   Player refused before the route (no session) answers {ok: false, error: {type: 'Refused', message}}.
+// - GET /api/session: what the session was started with that the page cannot change: the host's opt-ins
+//   (opts.session: {host, lens ('native' or 'stand-in'), nvram (where S-NVRAM keeps the camera's state, or null), card
+//   (where the card is kept between sessions, or null: in memory)}), the HDMI port's option, whether the debug API is
+//   on, and whether /api/card/image answers.
+// - GET /api/card, /api/card/file?path=P, /api/card/image?path=P&max=N: the card's files (the players' Card panel),
+//   each a {type: 'cardfiles'} input on the queue (src/lab/player.mjs card_files: read between ticks by the host's
+//   env.cardView, web/cardfiles.mjs), answered once it ran (?timeout=S, default 60; none: 504). /api/card answers the
+//   card's document ({slot, volume, files, truncated}, or {slot, error} for a volume the reader refuses); /file a
+//   file's bytes (image/jpeg for a .JPG or .JPEG name, else application/octet-stream; Content-Disposition attachment);
+//   /image a JPEG decoded by opts.cardImage(bytes, max) (web/cardfiles.mjs jpegRgba; 501 without it), as PNG with
+//   opts.imagePng(w, h, rgba) (the node server) or as raw RGBA with X-Image-Width and X-Image-Height (the browser),
+//   X-Image-Size the picture's own width x height; 422 for a file the decoder refuses. P is percent-decoded; max is
+//   the drawn picture's larger side, 0 (default) for its own size. 409 for the Player's refusal (no reader, no card on
+//   this body), 404 {error, slot} for a file the volume does not give.
 // The host calls notify() after every published status and frame and when the Player stops,
 // and onFrame(w, h, raw, meta) from the Player's env.onFrame, which keeps the newest composite for /api/frame.
 // Worker-safe.
 import { controlsDoc, screensDoc } from './playui.mjs';
 import { jsonType } from './player.mjs';
 import { decimalInt, decimalNumber } from '../util/parse.mjs';
+import { base64Bytes } from '../util/bytes.mjs';
 import { MODEL } from '../fw/model.mjs';
 import { MODELS } from '../fw/models.mjs';
 import { modelDoc } from '../fw/modeldoc.mjs';
@@ -53,6 +68,10 @@ export function readBody(raw) {
   }
 }
 const isDict = (v) => v !== null && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Uint8Array) && !(v instanceof Map);
+// the largest side /api/card/image draws (web/cardfiles.mjs IMAGE_MAX), and how long a card read waits by default (s)
+export const CARD_IMAGE_MAX = 4096, CARD_TIMEOUT_S = 60;
+// a file name as a quoted-string of Content-Disposition: printable ASCII, without quotes and backslashes
+const dispositionName = (name) => name.replace(/[^ -~]|["\\]/g, '_');
 
 // A request path split at its first '?', and its query as an object (later keys win, a bare key maps to '').
 // Values are taken as they are (no percent-decoding).
@@ -163,7 +182,53 @@ export class PlayApi {
     }
     if (path === '/api/log') return this.send(200, { inputs: [...pl.log] });
     if (path === '/api/model') return this.send(200, modelDoc(MODEL));
+    if (path === '/api/session') return this.send(200, this.sessionDoc());
+    if (path === '/api/card' || path === '/api/card/file' || path === '/api/card/image') return this.card(path, args);
     return this.send(404, { error: 'not found' });
+  }
+  sessionDoc() {
+    const a = this.player.a;
+    return { host: null, lens: 'stand-in', nvram: null, card: null, ...(this.opts.session ?? {}), hdmi: a.hdmi ?? 'off', debug_api: !!a.debug_api,
+      card_image: !!this.opts.cardImage };
+  }
+  // GET /api/card, /api/card/file and /api/card/image (the header says what each answers)
+  card(path, args) {
+    const pl = this.player;
+    const timeout = Object.hasOwn(args, 'timeout') ? decimalNumber(args.timeout) : CARD_TIMEOUT_S;
+    if (timeout === null) return this.send(400, { error: 'timeout' });
+    let file = null, max = 0;
+    if (path !== '/api/card') {
+      try { file = decodeURIComponent(Object.hasOwn(args, 'path') ? args.path : ''); } catch (e) {
+        if (!(e instanceof URIError)) throw e;
+        return this.send(400, { error: 'path' });
+      }
+      if (!file) return this.send(400, { error: 'path' });
+      if (path === '/api/card/image') {
+        if (!this.opts.cardImage) return this.send(501, { error: 'image' });
+        max = intArg(args, 'max');
+        if (max === null || max < 0 || max > CARD_IMAGE_MAX) return this.send(400, { error: 'max' });
+      }
+    }
+    const seq = pl.submit(file === null ? { type: 'cardfiles', op: 'list' } : { type: 'cardfiles', op: 'read', path: file });
+    this.opts.onSubmit?.(seq);
+    return pl.wait_result(seq, timeout).then((res) => {
+      if (res === null) return this.send(504, { error: `no answer in ${timeout} s` });
+      if (res.error !== null) return this.send(409, { error: res.error });
+      const c = res.card;
+      if (file === null) return this.send(200, c);
+      if (c.error !== undefined) return this.send(404, { error: c.error, slot: c.slot });
+      const bytes = base64Bytes(c.base64);
+      if (bytes === null || bytes.length !== c.size) throw new Error(`playapi: the card read of ${file} answered base64 that is not its ${c.size} bytes`);
+      if (path === '/api/card/file') {
+        const type = /\.jpe?g$/i.test(c.name) ? 'image/jpeg' : 'application/octet-stream';
+        return this.send(200, bytes, type, [['Content-Disposition', `attachment; filename="${dispositionName(c.name)}"`]]);
+      }
+      const img = this.opts.cardImage(bytes, max);
+      if (img.error !== undefined) return this.send(422, { error: img.error });
+      const size = ['X-Image-Size', `${img.width}x${img.height}`];
+      if (this.opts.imagePng) return this.send(200, this.opts.imagePng(img.w, img.h, img.rgba), 'image/png', [size]);
+      return this.send(200, img.rgba, 'application/octet-stream', [['X-Image-Width', String(img.w)], ['X-Image-Height', String(img.h)], size]);
+    });
   }
   frameResponse(after) {
     const pl = this.player, fr = pl.frame, seq = pl.frame_seq;

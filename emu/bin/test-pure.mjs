@@ -3,7 +3,8 @@
 // on any checkout with node (npm run test:pure, a few seconds). The recorded ISA vectors
 // (test/fixtures/isa_vectors.json) on both engines, the core's two tiers in lockstep and its length tables
 // (test_core.mjs), the pure sha256, the router's request bodies, the browser player's driver, result box and page
-// after a stop, the scene stand-in's model, the decode-cache checks, the command-line parser of the checks and tools
+// after a stop, the players' Card panel and session options (the card's reader, the card routes on a headless
+// Player, the browser's S-NVRAM host), the scene stand-in's model, the decode-cache checks, the command-line parser of the checks and tools
 // (test_args.mjs), the worker purity rule (and no py-prefixed module or name), the firmware rules of
 // src/fw/facts.mjs (test_facts.mjs: firmware-optional, each unpacked main block checked against its MODELS entry) and
 // the firmware map's units (test_fwmap.mjs: the machine's coverage option off and on, fwmap's decoder against the
@@ -24,7 +25,7 @@ import { vectors } from '../test/test_vectors.mjs';
 import { coreTests } from '../test/test_core.mjs';
 import { purity } from '../test/test_pure.mjs';
 import { cache } from '../test/test_regress.mjs';
-import { shaTests, bodyTests, driverTests, resultBoxTests, pageTests } from '../test/test_web.mjs';
+import { shaTests, bodyTests, driverTests, resultBoxTests, pageTests, cardTests } from '../test/test_web.mjs';
 import { sceneUnits } from '../test/test_scene.mjs';
 import { factsTests } from '../test/test_facts.mjs';
 import { argsTests } from '../test/test_args.mjs';
@@ -64,6 +65,7 @@ report('request bodies', bodyTests());
 report('driver', await driverTests());
 report('wait_result', await resultBoxTests());
 report('page after a stop', await pageTests());
+report('Card panel and session options (web/cardfiles.mjs, the card routes, web/nvram.mjs)', await cardTests());
 report('scene stand-in (S-SCENE)', sceneUnits());
 report('command-line parser', argsTests());
 report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnits());

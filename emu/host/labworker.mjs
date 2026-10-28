@@ -17,6 +17,7 @@ import { fileNvram } from './nvram.mjs';
 import { fileCard } from './card.mjs';
 import { memoryCard, cardSectors } from '../src/lab/sdcard.mjs';
 import { debugHost } from './debughost.mjs';
+import { CARD_VIEW } from '../web/cardfiles.mjs';
 
 const { args: a, flags, port, out, argv } = workerData;
 const post = (m, transfer) => parentPort.postMessage(m, transfer);
@@ -59,6 +60,7 @@ const env = {
     : process.env.OM_EMU_CARD_SIZE ? { card: memoryCard(cardSize) } : {}),
   // OM_EMU_SCPU=native: the sub-CPU's own firmware in S-SCPUDEV's place, on E143 and E146 (menu.mjs scpu_native)
   ...scpuEnv(),
+  cardView: CARD_VIEW,               // the Card panel's reads of the card's files (web/cardfiles.mjs, refs/fat.mjs)
 };
 let pl = null;
 try {

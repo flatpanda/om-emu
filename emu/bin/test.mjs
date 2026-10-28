@@ -38,7 +38,7 @@ import { checksTests } from '../test/test_checks.mjs';
 import { argsTests } from '../test/test_args.mjs';
 import { watchUnits, snapshotUnits, protocolUnits, limitUnits, attachUnits } from '../test/test_debug.mjs';
 import { unpackTests } from '../test/test_unpack.mjs';
-import { shaTests, yccTests, controlsTests, hostApiTests, pageInputsTests, driverTests, bodyTests, resultBoxTests, pageTests, workerTests } from '../test/test_web.mjs';
+import { shaTests, yccTests, controlsTests, hostApiTests, pageInputsTests, driverTests, bodyTests, resultBoxTests, pageTests, cardTests, workerTests } from '../test/test_web.mjs';
 
 // the temporary OM_CHECK_OUT directories of checktrace runs that ended by a signal, which they could not remove
 {
@@ -95,10 +95,10 @@ const up = await unpackTests(), sh = shaTests(), yc = yccTests(), ct = controlsT
 console.log(`browser player: unpacker (B1) ${up.checks - up.bad.length}/${up.checks}${up.skipped.length ? `, ${up.skipped.length} SKIPPED (no firmware: set OM_FW_DIR or OM_BIN)` : ''}; sha256 (B2) ${sh.checks - sh.bad.length}/${sh.checks}; ycc_to_rgb over 2^24 words (B4) ${yc.checks - yc.bad.length}/${yc.checks}; node host on a Player (B4) ${ap.checks - ap.bad.length}/${ap.checks}; B6's page inputs on a Player ${pi.checks - pi.bad.length}/${pi.checks}; playui rows ${ct.checks - ct.bad.length}/${ct.checks}; driver (B3) ${dr.checks - dr.bad.length}/${dr.checks}`);
 [...up.bad, ...up.skipped.map((x) => `SKIPPED ${x}`), ...sh.bad.slice(0, 10), ...yc.bad, ...ap.bad, ...pi.bad, ...ct.bad, ...dr.bad].forEach((x) => console.log('  ', x));
 bad += up.bad.length + up.skipped.length + sh.bad.length + yc.bad.length + ap.bad.length + pi.bad.length + ct.bad.length + dr.bad.length;
-const pj = bodyTests(), rbx = await resultBoxTests(), pg = await pageTests(), wk = await workerTests();
-console.log(`browser player hosts: request bodies ${pj.checks - pj.bad.length}/${pj.checks}; wait_result ${rbx.checks - rbx.bad.length}/${rbx.checks}; page after a stop ${pg.checks - pg.bad.length}/${pg.checks}; Worker in a node worker thread ${wk.checks - wk.bad.length}/${wk.checks}${wk.skipped.length ? `, ${wk.skipped.length} SKIPPED (no firmware: set OM_FW_DIR or OM_BIN)` : ''}`);
-[...pj.bad, ...rbx.bad, ...pg.bad, ...wk.bad, ...wk.skipped.map((x) => `SKIPPED ${x}`)].forEach((x) => console.log('  ', x));
-bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipped.length;
+const pj = bodyTests(), rbx = await resultBoxTests(), pg = await pageTests(), cdt = await cardTests(), wk = await workerTests();
+console.log(`browser player hosts: request bodies ${pj.checks - pj.bad.length}/${pj.checks}; wait_result ${rbx.checks - rbx.bad.length}/${rbx.checks}; page after a stop ${pg.checks - pg.bad.length}/${pg.checks}; Card panel and session options ${cdt.checks - cdt.bad.length}/${cdt.checks}; Worker in a node worker thread ${wk.checks - wk.bad.length}/${wk.checks}${wk.skipped.length ? `, ${wk.skipped.length} SKIPPED (no firmware: set OM_FW_DIR or OM_BIN)` : ''}`);
+[...pj.bad, ...rbx.bad, ...pg.bad, ...cdt.bad, ...wk.bad, ...wk.skipped.map((x) => `SKIPPED ${x}`)].forEach((x) => console.log('  ', x));
+bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.length + wk.skipped.length;
 // The node host over real HTTP (G-host)
 {
   const { hostTests } = await import('../test/test_host.mjs');

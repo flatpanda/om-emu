@@ -19,7 +19,8 @@ import { Tables } from '../src/lab/play.mjs';
 import { PlayApi } from '../src/lab/playapi.mjs';
 import { newFlags } from './portqueue.mjs';
 import { PlayerProxy, wallClock } from './proxy.mjs';
-import { createPlayServer, pngCache } from './server.mjs';
+import { createPlayServer, pngCache, pngRgba } from './server.mjs';
+import { jpegRgba } from '../web/cardfiles.mjs';
 import { installSignals, installLabKill } from './signals.mjs';
 import { installMemProbe } from './memprobe.mjs';
 import { stackOf } from '../checks/lib/errors.mjs';
@@ -113,7 +114,12 @@ export async function main(argv) {
     switchTo = code;
     return null;
   };
+  // the opt-ins the lab worker's environment gives it (labworker.mjs, src/lab/play.mjs lens_native), for the page's
+  // session line (GET /api/session): fixed for the process, set in the environment before the start
+  const session = { host: 'node', lens: process.env.OM_EMU_LENS === 'native' ? 'native' : 'stand-in', nvram: process.env.OM_EMU_NVRAM || null,
+    card: process.env.OM_EMU_CARD || null };
   const api = new PlayApi(proxy, { tables: Tables.of(rom), framePng: pngCache(), check, page: new Uint8Array(fs.readFileSync(PAGE)),
+    session, cardImage: jpegRgba, imagePng: pngRgba,     // the Card panel's pictures, decoded here on the main thread
     onPagetest: (body) => {            // <out>/pagetest.json: a write that fails is the request's error (host/server.mjs)
       try { fs.writeFileSync(path.join(out, 'pagetest.json'), JSON.stringify(body)); } catch (e) { throw new RuntimeError(e.message); }
     },

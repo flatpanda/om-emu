@@ -1,6 +1,7 @@
 // The node host's HTTP front: node:http on 127.0.0.1, every request answered by the shared
 // router (src/lab/playapi.mjs PlayApi) on the main thread, and the PNG frames (filter 0 rows, zlib level
-// 1, RGB by src/lab/display.mjs ycc_to_rgb), cached by composite sha (PNG_CACHE). What node's own HTTP parser answers
+// 1, RGB by src/lab/display.mjs ycc_to_rgb), cached by composite sha (PNG_CACHE), and the card pictures' PNGs
+// (pngRgba). What node's own HTTP parser answers
 // before the router (a malformed request line or header) and the environment headers (Server, Date, Connection /
 // Keep-Alive) are declared differences. Node-only (host/).
 import http from 'node:http';
@@ -32,6 +33,20 @@ export function pngRaw(w, h, raw) {
       if (c === undefined) { c = ycc_to_rgb(wd); cache.set(wd, c); }
       rows[o++] = c[0]; rows[o++] = c[1]; rows[o++] = c[2];
     }
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr.set([8, 2, 0, 0, 0], 8);
+  return new Uint8Array(Buffer.concat([Buffer.from('\x89PNG\r\n\x1a\n', 'latin1'), chunk('IHDR', ihdr),
+    chunk('IDAT', zlib.deflateSync(rows, { level: 1 })), chunk('IEND', Buffer.alloc(0))]));
+}
+// The PNG (RGB, filter 0 rows, zlib level 1) of RGBA bytes, alpha dropped: a card picture the router decoded
+// (src/lab/playapi.mjs /api/card/image, web/cardfiles.mjs jpegRgba)
+export function pngRgba(w, h, rgba) {
+  if (rgba.length !== 4 * w * h) throw new Error(`pngRgba: ${rgba.length} bytes for ${w}x${h}`);
+  const rows = Buffer.alloc(h * (3 * w + 1));
+  for (let y = 0, o = 0, i = 0; y < h; y++) {
+    rows[o++] = 0;
+    for (let x = 0; x < w; x++, i += 4) { rows[o++] = rgba[i]; rows[o++] = rgba[i + 1]; rows[o++] = rgba[i + 2]; }
   }
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr.set([8, 2, 0, 0, 0], 8);

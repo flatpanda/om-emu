@@ -26,13 +26,16 @@
 // Debug inputs ({type: 'debug', op, ...}, --debug-api only) go to the live debug route (src/debug/live.mjs), made at the
 // first one: they run between ticks, outside the session log and the B7 gate, and answer with the result's debug field;
 // a halted session ticks only debug inputs and controls (the others wait held, in their order).
+// Card reads ({type: 'cardfiles', op, path?}, the players' Card panel) go to env.cardView (web/cardfiles.mjs, the
+// host's reader of the card's files): between ticks, with or without a session, outside the session log and the B7
+// gate, answering with the result's card field (card_files).
 import * as P from './play.mjs';
 import { PlaySession, PlayError, BY_ID, MODE_DIAL, B7_GATE } from './play.mjs';
 import { LabError, ValueError, KeyError } from './errors.mjs';
 import { Unported } from '../core/mem.mjs';
 import { HostStopped } from '../machine.mjs';
 import { S } from '../core/cpu.mjs';
-import { MODEL_INFO } from '../fw/model.mjs';
+import { MODEL, MODEL_INFO } from '../fw/model.mjs';
 import { show } from '../util/show.mjs';
 import { decimalInt, intLiteral } from '../util/parse.mjs';
 import { setKey } from '../util/tracejson.mjs';
@@ -543,13 +546,15 @@ export class Player {
     }
   }
   // A debug input's answer: the live route's response object, as the result's debug field.
-  finish_debug(inp, answer) { this.finish(inp, null, null, answer); }
-  finish(inp, rec, error = null, debug = undefined) {
+  finish_debug(inp, answer) { this.finish(inp, null, null, { debug: answer }); }
+  // extra: the fields an answer that is not a record adds to the result (a debug input's debug, a card read's card);
+  // an input with one is not dropped
+  finish(inp, rec, error = null, extra = null) {
     if (inp === this.current) this.current = null;
     const lr = rec ? light(rec) : null;
     if (lr !== null && error === null) lr.frame = this.frame ? this.frame[3] : null;
-    const res = { record: lr, error, dropped: !rec && error === null && debug === undefined, frame_seq: this.frame_seq };
-    if (debug !== undefined) res.debug = debug;
+    const res = { record: lr, error, dropped: !rec && error === null && extra === null, frame_seq: this.frame_seq };
+    if (extra !== null) Object.assign(res, extra);
     if (this.stop) this.stop_seen = true;                // a quit control's stop takes effect with its result
     this.box.put(inp.seq, res);
     this.env.onResult?.(inp.seq, res);
@@ -579,6 +584,26 @@ export class Player {
     this.live ??= new LiveDebug(this, this.env.debugHost ?? {});
     const answer = this.live.handle(inp);
     if (answer !== null) this.finish_debug(inp, answer);
+  }
+  // A read of the card's files ({type: 'cardfiles', op: 'list'} or {op: 'read', path}: the players' Card panel,
+  // src/lab/playapi.mjs /api/card): the card in the first slot as its sectors stand between ticks (the session's,
+  // in the slot or out of it, or the one the host keeps while no session runs), read by the host's reader
+  // (env.cardView, web/cardfiles.mjs: refs/fat.mjs, not the firmware). Nothing of the lab runs; it stays outside the
+  // session log, the GUI's event gate and --replay, as a debug input does. The answer is the result's card field:
+  // {slot: {present, mounted, session, file}, ...the reader's answer} (its error field when the volume cannot be read);
+  // the result's error is a refusal (no reader, no card on this body, an unknown op).
+  card_files(inp) {
+    const view = this.env.cardView ?? null, op = get(inp, 'op'), path = get(inp, 'path');
+    let why = null;
+    if (view === null) why = 'cardfiles: this host reads no card files (env.cardView)';
+    else if (!STORAGE || !this.env.card) why = `cardfiles: ${MODEL} has no card with a file system in the lab (S-CARD)`;
+    else if (op !== 'list' && op !== 'read') why = `cardfiles: op ${field(inp, 'op', 40)} (list, read)`;
+    else if (op === 'read' && (typeof path !== 'string' || !path)) why = `cardfiles read: path ${field(inp, 'path', 80)} is not a file's path`;
+    if (why !== null) { this.finish(inp, null, why); return; }
+    const st = this.session?.storage ?? null, card = st ? st.card : this.env.card.open();
+    const read = (lba, count) => card.read(lba, count);
+    const slot = { present: card.present, mounted: st ? st.mounted : false, session: st !== null, file: this.env.card.file ?? null };
+    this.finish(inp, null, null, { card: { slot, ...(op === 'list' ? view.list(read) : view.read(read, path)) } });
   }
   run() {
     // the --replay file's entries (env.readReplay: the host's file read); a read error or a malformed file is raised
@@ -630,6 +655,7 @@ export class Player {
       const inp = this.next_input(true);
       if (inp === null) return;
       if (get(inp, 'type') === 'control') this.control(inp);
+      else if (get(inp, 'type') === 'cardfiles') this.card_files(inp);    // the card stays readable while off
       else this.finish(inp, null, `no session (${this.phase})`);
       return;
     }
@@ -738,6 +764,7 @@ export class Player {
     const t = get(inp, 'type');
     if (t === 'control') { this.control(inp); return; }
     if (t === 'debug') { this.debug_input(inp); return; }
+    if (t === 'cardfiles') { this.card_files(inp); return; }
     const held_ns = this.hold_for_gate(inp);
     if (this.session === null) { this.finish(inp, null, 'no session'); return; }
     this.set_phase('busy');

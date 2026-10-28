@@ -1,10 +1,42 @@
-// Bytes: hex text of a Uint8Array and back, and little-endian struct packing (pack / unpack / unpackFrom) of the
-// formats the lab reads and writes guest memory in.
+// Bytes: hex text of a Uint8Array and back, base64 text and back, and little-endian struct packing (pack / unpack /
+// unpackFrom) of the formats the lab reads and writes guest memory in.
 const HEX = Array.from({ length: 256 }, (_, i) => i.toString(16).padStart(2, '0'));
 export function bytesHex(b) { let s = ''; for (let i = 0; i < b.length; i++) s += HEX[b[i]]; return s; }
 export function hexBytes(s) {
   const out = new Uint8Array(s.length >> 1);
   for (let i = 0; i < out.length; i++) out[i] = parseInt(s.substr(2 * i, 2), 16);
+  return out;
+}
+
+// base64 (RFC 4648 section 4, padded) of bytes, and the bytes of such a text: null for a text that is not one (a
+// length that is not a multiple of 4, a character outside the alphabet, padding other than at the end). Byte payloads
+// in the hosts' JSON messages (the card's files, src/lab/player.mjs cardfiles; web/nvram.mjs)
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+const B64_VALUE = new Map([...B64].map((c, i) => [c, i]));
+export function bytesBase64(b) {
+  const parts = [];
+  for (let i = 0; i < b.length; i += 3) {
+    const n = b[i] << 16 | (i + 1 < b.length ? b[i + 1] << 8 : 0) | (i + 2 < b.length ? b[i + 2] : 0);
+    parts.push(B64[n >> 18 & 63] + B64[n >> 12 & 63] + (i + 1 < b.length ? B64[n >> 6 & 63] : '=') + (i + 2 < b.length ? B64[n & 63] : '='));
+  }
+  return parts.join('');
+}
+export function base64Bytes(s) {
+  if (typeof s !== 'string' || s.length % 4) return null;
+  const pad = s.endsWith('==') ? 2 : s.endsWith('=') ? 1 : 0;
+  const out = new Uint8Array(s.length / 4 * 3 - pad);
+  for (let i = 0, o = 0; i < s.length; i += 4) {
+    let n = 0;
+    for (let k = 0; k < 4; k++) {
+      const c = s[i + k], last = i + 4 === s.length;
+      const v = c === '=' && last && k >= 4 - pad ? 0 : B64_VALUE.get(c);
+      if (v === undefined) return null;
+      n = n << 6 | v;
+    }
+    out[o++] = n >> 16 & 255;
+    if (o < out.length) out[o++] = n >> 8 & 255;
+    if (o < out.length) out[o++] = n & 255;
+  }
   return out;
 }
 

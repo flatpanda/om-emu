@@ -115,6 +115,14 @@ td code, .mono { font: 11px ui-monospace, monospace; }
 .scene input[type=range], .scene select { width: 100%; }
 .scene .read { font: 12px ui-monospace, monospace; color: var(--text); white-space: pre-wrap; margin-top: 8px; }
 .scene h4 { margin: 10px 0 2px; font-size: 12px; color: var(--dim); font-weight: 600; grid-column: 1 / -1; }
+/* the card, the HDMI port and the session's options */
+.ports .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 8px 0; }
+.ports .row .lbl { min-width: 44px; }
+.ports .row .note { margin: 0; }
+.tb:disabled { opacity: .45; cursor: not-allowed; }
+.cardfiles td { vertical-align: middle; }
+canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; display: block; }
+.cardview canvas { max-width: 100%; height: auto; background: #000; border-radius: 6px; display: block; margin-top: 6px; }
 @media (max-width: 900px) {
   .mid { grid-template-columns: 1fr; }
   .col { flex-direction: row; flex-wrap: wrap; justify-content: center; }
@@ -130,6 +138,14 @@ td code, .mono { font: 11px ui-monospace, monospace; }
   <button class="tb" id="fwcache" disabled>Start from the cached firmware</button>
   <button class="tb" id="fwclear">Forget the cached firmware</button>
   <span class="note" id="fwstatus"></span>
+</div>
+<div class="toolbar" id="optbar">
+  <span class="lbl">Start options</span>
+  <label class="tb" title="--hdmi on: the HDMI port modelled (E143, E146, E147); the Card, HDMI and session options panel then plugs a sink in (S-HDMISINK); an unplug is refused (A-HDMI-1)"><input type="checkbox" id="opt-hdmi"> HDMI port</label>
+  <label class="tb" title="the lens on the mount natively (E143): the lens tasks and drivers against S-LENSMCU as the 12-40mm F2.8 PRO, in place of S-LENS. A touch on the shooting screen then leaves the camera application answering no key (docs/hle-gaps.md 4.4.2)"><input type="checkbox" id="opt-lens"> Native lens</label>
+  <label class="tb" title="S-NVRAM: the camera's settings and clock kept in this browser (OPFS) between sessions, in place of S-SETSAVE: a camera whose clock was set starts without the date prompt"><input type="checkbox" id="opt-nvram"> Keep the settings</label>
+  <button class="tb" id="nvclear">Forget the kept settings</button>
+  <span class="note" id="optnote">Fixed for the session once it starts. The native lens: a touch on the shooting screen then stops the camera application's keys (open).</span>
 </div>
 
 <div class="cam" id="cam">
@@ -248,6 +264,33 @@ td code, .mono { font: 11px ui-monospace, monospace; }
     <div id="sc-layers" style="display:contents"></div>
   </div>
   <div class="read" id="sc-read"></div>
+  <p class="note">Subject detection: the scene's subjects are its patterns' (the moving scene's rider stands for a motorsport
+  subject); the scene takes no subjects of its own at run time. The camera's own setting chooses the kind (id 1682, 1
+  motorsports to 5 animals: its menu, or the debug API's token SET:1682=1), and while it names the kind of a subject the
+  live view shows, DISP_FRAME draws the frames natively from the boxes S-SUBJECT writes where CPU 3's MDET would.</p>
+  <div class="read" id="sc-subject"></div>
+</details>
+<details class="scene ports" id="cardpanel">
+  <summary>Card, HDMI, tilt and the session's options</summary>
+  <p class="note" id="sess-line">reading the session…</p>
+  <div class="row"><span class="lbl">HDMI</span>
+    <button class="tb" id="hdmi-plug" disabled>Plug in</button><button class="tb" id="hdmi-unplug" disabled>Unplug</button>
+    <span class="note" id="hdmi-state"></span></div>
+  <div class="row"><span class="lbl">Card</span>
+    <button class="tb" id="card-remove" disabled>Take out</button><button class="tb" id="card-insert" disabled>Put in</button>
+    <button class="tb" id="card-read">Read the card</button>
+    <span class="note" id="card-state"></span></div>
+  <div class="row"><span class="lbl">Tilt</span>
+    <label class="note">roll <input type="range" id="tilt-roll" min="-45" max="45" step="1" value="0"> <output id="tilt-roll-v">0°</output></label>
+    <label class="note">pitch <input type="range" id="tilt-pitch" min="-45" max="45" step="1" value="0"> <output id="tilt-pitch-v">0°</output></label>
+    <span class="note">the tilt input: the accelerometer's sample (S-ACCSAMPLE; E143, E146), which the level gauge follows; which way each sign turns the camera is not known (A-ACC-3)</span></div>
+  <p class="note">Take out and Put in are the card inputs (S-MEDIA: the card switch changes as a body's does, UI_IN decodes it
+  and the firmware unmounts and mounts the card; E143). The list is the card's sectors read between the lab's steps with
+  the independent FAT reader (refs/fat.mjs), not through the firmware: a file being written can show as it was before, and
+  the card out of the slot is the settled view. Pictures are decoded with the independent JPEG decoder (refs/jpeg.mjs);
+  a picture's file is S-RECFILE's, S-SCENE's frame at the capture with each 8 x 8 block its mean.</p>
+  <div id="card-files" class="cardfiles"></div>
+  <div class="cardview" id="card-view" hidden><div class="note" id="card-caption"></div><canvas id="card-canvas" width="1" height="1"></canvas></div>
 </details>
 <div class="tabs" id="tabs">
   <button data-tab="keys" class="sel">Keys</button><button data-tab="screens">Screens</button>
@@ -298,6 +341,13 @@ function send(inp) {
   const body = Object.assign({}, inp, { client: CLIENT, cseq: ++cseq, t_client: performance.now() });
   api('/api/input', body).catch(() => {});
   logEvent('→ ' + JSON.stringify(inp));
+}
+// send, then the input's result (?sync=1): {record, error, ...}, or null when no answer came (the session stopped)
+async function sendWait(inp) {
+  if (stopped) return null;
+  const body = Object.assign({}, inp, { client: CLIENT, cseq: ++cseq, t_client: performance.now() });
+  logEvent('→ ' + JSON.stringify(inp));
+  try { return (await (await api('/api/input?sync=1', body)).json()).result; } catch (e) { return null; }
 }
 
 // ---- keyboard -------------------------------------------------------------------------------------------------------
@@ -496,6 +546,8 @@ function showStatus(s) {
   else eb.innerHTML = '';
   if (s.dropped && Object.keys(s.dropped).length) $('s-last').title = 'dropped: ' + JSON.stringify(s.dropped);
   showScene(s.scene);
+  showSubject(s);
+  showPorts(s);
 }
 function note(t) { $('s-last').textContent = t; logEvent('! ' + t); }
 // ---- S-SCENE controls ------------------------------------------------------------------------------------------------
@@ -585,6 +637,149 @@ function showScene(sc) {
     (caps ? `\ncaptures (S2):\n${caps}` : '') +
     ((sc.clips || []).length ? '\nclips (REC):\n' + sc.clips.map((c) => `#${c.n} ${c.end_ns === null ? 'recording since ' + (c.start_ns / 1e9).toFixed(2) + ' s lab time' : c.seconds + ' s'}`).join('\n') : '');
 }
+// ---- subject detection's frames (S-SUBJECT), read from the status --------------------------------------------------
+const SUBJECT_KINDS = { 1: 'motorsports', 2: 'airplanes', 3: 'trains', 4: 'birds', 5: 'animals' };    // src/lab/subject.mjs KINDS
+function showSubject(s) {
+  const sub = s.camapp && s.camapp.subject;
+  $('sc-subject').textContent = !sub ? 'subject frames (S-SUBJECT): none drawn in this session'
+    : `subject frames (S-SUBJECT): ${sub.frames}${sub.frames ? ` on the ${sub.device}, setting 1682 = ${sub.kind} (${SUBJECT_KINDS[sub.kind] || '?'})` : ' now'}`;
+}
+// ---- the card, the HDMI port and the session's options (GET /api/session, /api/card, /api/card/file, /api/card/image) --
+// this page's host: the Worker (web/worker.mjs), its options fixed at the start (the start options above, the page's
+// query); the card routes answer through web/page.mjs, and a picture comes as raw RGBA, drawn as a frame is
+const HDMI_HOW = 'reload the page with the HDMI port start option (?hdmi=on; E143, E146, E147)';
+const SESSION_HOW = 'These are fixed when the session starts: the start options above the camera (the page\'s query: hdmi=on, lens=native, nvram=1).';
+const cardApi = (p) => PP.api(p);
+async function drawCardImage(r, canvas) {
+  const w = +r.headers.get('X-Image-Width'), h = +r.headers.get('X-Image-Height'), rgba = await r.bytes();
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(rgba.buffer, rgba.byteOffset, rgba.length), w, h), 0, 0);
+}
+const UNPLUG_WHY = 'the lab refuses an unplug (A-HDMI-1: what the transmitter and the hot-plug pin show when the cable comes out is not read)';
+const CARD_THUMBS = 24;             // thumbnails drawn per read of the card, the newest files first
+let SESSION = null, CARD = null, cardImages = null, cardReading = null, cardAgain = false;
+const fmtBytes = (n) => (n == null ? '' : n >= 2 ** 20 ? (n / 2 ** 20).toFixed(1) + ' MiB' : n >= 1024 ? (n / 1024).toFixed(1) + ' KiB' : n + ' B');
+const isJpeg = (p) => /\.jpe?g$/i.test(p);
+const LIVE = new Set(['running', 'busy', 'waiting-gui']);
+async function loadSession() {
+  try { SESSION = await (await api('/api/session')).json(); } catch (e) { SESSION = null; $('sess-line').textContent = 'the session options could not be read: ' + e.message; return; }
+  showPorts(STATUS);
+}
+// The session line: what the session was started with, and whether the lab runs it (the stand-ins in use)
+function sessionText(d, s) {
+  const used = new Set(s.stand_ins || []);
+  const lens = d.lens !== 'native' ? 'the lens stood in (S-LENS)'
+    : used.has('S-LENSMCU') ? 'the lens natively (S-LENSMCU answers as the 12-40mm F2.8 PRO); a touch on the shooting screen then leaves the camera application answering no key (docs/hle-gaps.md 4.4.2)'
+    : 'the native lens asked for, but S-LENS stands in (this body has no native lens in the lab, src/fw/models.mjs lens_native, or no session runs)';
+  const nv = !d.nvram ? 'the settings not kept (S-SETSAVE: every start is a blank camera at the date prompt)'
+    : `the settings and the clock kept in ${d.nvram} (S-NVRAM${used.has('S-NVRAM') ? '' : ', not in use yet'}: a camera whose clock was set starts without the date prompt)`;
+  const card = d.card ? `the card kept in ${d.card}` : 'the card kept in memory while this player runs';
+  return `Session: ${d.hdmi === 'on' ? 'the HDMI port' : 'no HDMI port'} · ${lens} · ${nv} · ${card}. ${SESSION_HOW}`;
+}
+function showPorts(s) {
+  if (!SESSION) return;
+  $('sess-line').textContent = sessionText(SESSION, s);
+  // HDMI (the status's hdmi: the port as the lab sees it, only in a session started with it)
+  const port = s.hdmi, plug = $('hdmi-plug'), un = $('hdmi-unplug');
+  let text;
+  if (SESSION.hdmi !== 'on') text = `no HDMI port in this session: ${HDMI_HOW}`;
+  else if (!port) text = LIVE.has(s.phase) ? `no HDMI port on ${MODEL && MODEL.model ? MODEL.model : 'this body'} in the lab (src/fw/models.mjs hdmi)` : `no session (${s.phase})`;
+  else text = `cable ${port.cable} · DDC reads ${port.ddc_reads} · the driver's EDID state ${port.edid_state}` + (port.cable === 'in' ? ` · Unplug: ${UNPLUG_WHY}` : '');
+  plug.disabled = !port || port.cable === 'in' || !LIVE.has(s.phase);
+  un.disabled = !port || port.cable !== 'in' || !LIVE.has(s.phase);
+  plug.title = port ? 'S-HDMISINK: a 1080p60 sink with the lab\'s EDID on the port; the firmware takes the hot-plug interrupt and reads the EDID over the DDC itself' : text;
+  un.title = port ? UNPLUG_WHY + '; the button sends the input, and the lab\'s refusal shows in the status line' : text;
+  $('hdmi-state').textContent = text;
+  showCardButtons(s);
+  // a new picture on the card (S-RECFILE): read it again while the panel is open
+  const n = s.camapp ? s.camapp.card_images : null;
+  if ($('cardpanel').open && n != null && n !== cardImages) { cardImages = n; cardRefresh(); }
+}
+function showCardButtons(s) {
+  const slot = CARD && CARD.slot, live = LIVE.has(s.phase);
+  $('card-remove').disabled = !(slot && slot.session && slot.present && live);
+  $('card-insert').disabled = !(slot && slot.session && !slot.present && live);
+}
+// GET /api/card: the card's document, then the list and the thumbnails; one read at a time (a call meanwhile reads
+// again after it)
+function cardRefresh() {
+  if (cardReading) { cardAgain = true; return cardReading; }
+  cardReading = (async () => {
+    $('card-state').textContent = 'reading the card…';
+    try {
+      const r = await cardApi('/api/card'), d = await r.json();
+      CARD = r.status === 200 ? d : { error: d.error || `status ${r.status}` };
+    } catch (e) { CARD = { error: e.message }; }
+    showCard();
+  })().finally(() => { cardReading = null; if (cardAgain) { cardAgain = false; cardRefresh(); } });
+  return cardReading;
+}
+function showCard() {
+  const c = CARD, slot = c.slot, files = c.files || [];
+  const where = !slot ? '' : (slot.present ? 'in the slot' : 'out of the slot') +
+    (!slot.session ? ' (no session: the kept card)' : slot.present ? (slot.mounted ? ', mounted by the firmware' : ', not mounted') : '');
+  const vol = c.volume ? `${c.volume.type} "${c.volume.label}" · ${files.filter((f) => !f.dir).length} files` +
+    (c.volume.free_bytes != null ? ` · ${fmtBytes(c.volume.free_bytes)} free (FSInfo)` : '') + (c.truncated ? ' · the list is cut' : '') : `not read: ${c.error}`;
+  $('card-state').textContent = [where, vol, slot && slot.file ? `kept in ${slot.file}` : ''].filter(Boolean).join(' · ');
+  showCardButtons(STATUS);
+  const rows = files.map((f, i) => `<tr><td>${!f.dir && isJpeg(f.path) ? `<canvas class="thumb" data-thumb="${i}" width="1" height="1"></canvas>` : ''}</td>` +
+    `<td class="mono">${esc(f.path)}${f.dir ? '/' : ''}</td><td>${f.dir ? '' : fmtBytes(f.size)}</td><td class="mono">${esc(f.mtime || '')}</td>` +
+    `<td>${f.dir ? '' : (isJpeg(f.path) ? `<button class="tb" data-view="${i}">View</button> ` : '') + `<button class="tb" data-get="${i}">Download</button>`}</td></tr>`).join('');
+  $('card-files').innerHTML = !c.files ? '' : rows ? `<table><tr><th></th><th>File</th><th>Size</th><th>Date</th><th></th></tr>${rows}</table>` : '<p class="note">no files on the card</p>';
+  $('card-files').querySelectorAll('[data-view]').forEach((b) => { b.onclick = () => cardView(files[+b.dataset.view].path); });
+  $('card-files').querySelectorAll('[data-get]').forEach((b) => { b.onclick = () => cardDownload(files[+b.dataset.get].path); });
+  cardThumbs(c);
+}
+// The thumbnails, one request at a time, the newest files first (the DCF numbers grow), while this read is shown
+async function cardThumbs(c) {
+  const cells = [...$('card-files').querySelectorAll('[data-thumb]')].slice(-CARD_THUMBS).reverse();
+  for (const cv of cells) {
+    if (CARD !== c) return;
+    const f = c.files[+cv.dataset.thumb];
+    try {
+      const r = await cardApi(`/api/card/image?path=${encodeURIComponent(f.path)}&max=96`);
+      if (r.status === 200) await drawCardImage(r, cv); else cv.title = (await r.json()).error;
+    } catch (e) { cv.title = e.message; }
+  }
+}
+async function cardView(path) {
+  $('card-view').hidden = false;
+  $('card-caption').textContent = `${path}: decoding…`;
+  try {
+    const r = await cardApi(`/api/card/image?path=${encodeURIComponent(path)}&max=1600`);
+    if (r.status !== 200) { $('card-caption').textContent = `${path}: ${(await r.json()).error}`; return; }
+    await drawCardImage(r, $('card-canvas'));
+    $('card-caption').textContent = `${path}: ${r.headers.get('X-Image-Size')}, decoded by refs/jpeg.mjs (drawn at ${$('card-canvas').width} x ${$('card-canvas').height})`;
+  } catch (e) { $('card-caption').textContent = `${path}: ${e.message}`; }
+}
+async function cardDownload(path) {
+  try {
+    const r = await cardApi(`/api/card/file?path=${encodeURIComponent(path)}`);
+    if (r.status !== 200) { note(`card ${path}: ${(await r.json()).error}`); return; }
+    const url = URL.createObjectURL(await r.blob()), a = document.createElement('a');
+    a.href = url; a.download = path.split('/').pop();
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  } catch (e) { note(`card ${path}: ${e.message}`); }
+}
+// the card input (S-MEDIA), then the card read again; the lab's refusal (another body, a busy media layer) is noted
+async function cardInput(action) {
+  $('card-remove').disabled = $('card-insert').disabled = true;
+  const res = await sendWait({ type: 'card', action });
+  if (res && res.error) note('refused: ' + res.error);
+  await cardRefresh();
+}
+$('hdmi-plug').onclick = () => send({ type: 'hdmi', action: 'plug' });
+$('hdmi-unplug').onclick = () => send({ type: 'hdmi', action: 'unplug' });       // refused by the lab (A-HDMI-1), not here
+$('card-remove').onclick = () => cardInput('remove');
+$('card-insert').onclick = () => cardInput('insert');
+$('card-read').onclick = () => cardRefresh();
+for (const id of ['tilt-roll', 'tilt-pitch']) {
+  $(id).addEventListener('input', () => { $(id + '-v').textContent = $(id).value + '°'; });
+  $(id).addEventListener('change', () => send({ type: 'tilt', roll: Number($('tilt-roll').value), pitch: Number($('tilt-pitch').value) }));
+}
+$('cardpanel').addEventListener('toggle', () => { if ($('cardpanel').open) { loadSession(); cardRefresh(); } });
+
 function logEvent(t) { const el = $('eventlog'); el.textContent = (t + '\n' + el.textContent).slice(0, 40000); }
 function logRecord(r) {
   const ui = (r.uiin || []).map((u) => `${u.code} ${u.ev || ''}`).join(', ');
@@ -647,15 +842,26 @@ $('quit').onclick = () => { api('/api/quit', {}).catch(() => {}); };
 // ---- firmware and start (the browser player) ------------------------------------------------------------------------
 const Q = new URLSearchParams(location.search);
 const ARGS = {};
-for (const k of ['lang', 'device', 'a15', 'start', 'tab', 'idle', 'touch', 'us_clock', 'compose']) if (Q.has(k)) ARGS[k] = Q.get(k);
-for (const k of ['no_bgdraw', 'debug_api']) if (Q.get(k) === '1') ARGS[k] = true;
+for (const k of ['lang', 'device', 'a15', 'start', 'tab', 'idle', 'touch', 'us_clock', 'compose', 'hdmi', 'lens']) if (Q.has(k)) ARGS[k] = Q.get(k);
+for (const k of ['no_bgdraw', 'debug_api', 'nvram']) if (Q.get(k) === '1') ARGS[k] = true;
+// the start options (HDMI port, native lens, kept settings): the query's, changed here until the start (the query
+// follows, so a reload keeps them)
+const START_OPTS = [['opt-hdmi', 'hdmi', 'on'], ['opt-lens', 'lens', 'native'], ['opt-nvram', 'nvram', '1']];
+for (const [id, k, on] of START_OPTS) {
+  $(id).checked = Q.get(k) === on;
+  $(id).onchange = (e) => {
+    if (e.target.checked) { Q.set(k, on); ARGS[k] = k === 'nvram' ? true : on; } else { Q.delete(k); delete ARGS[k]; }
+    history.replaceState(null, '', '?' + Q.toString());
+  };
+}
+$('nvclear').onclick = () => PP.worker && PP.worker.postMessage({ type: 'clear-nvram' });
 const fwStatus = (t) => { $('fwstatus').textContent = t; };
 const MiB = (n) => (n / 2 ** 20).toFixed(1) + ' MiB';
 let bootError = null;                // the message of a boot that failed (the file input is offered again)
 PP.onEvent = (m) => {
   if (m.type === 'boot-failed') {
     started = false; bootError = m.message;
-    $('fwfile').disabled = false; $('fwfile').value = '';
+    $('fwfile').disabled = false; $('fwfile').value = ''; startOpts(true);
     PP.worker.postMessage({ type: 'cache-info' });
     fwStatus('could not start: ' + m.message);
     $('ovl').textContent = 'could not start: ' + m.message + '\nchoose the firmware .BIN above, or the model it is for'; $('screen').classList.add('show-ovl');
@@ -666,7 +872,10 @@ PP.onEvent = (m) => {
   else if (m.type === 'progress' && m.stage === 'firmware') fwStatus(`firmware ${m.from === 'cache' ? 'from the cache in this browser' : 'unpacked and cached in this browser'}: main code ${MiB(m.rom)}, resources ${MiB(m.res)} (${JSON.stringify(m.T)} ms)`);
   else if (m.type === 'progress' && m.stage === 'cache') { $('fwcache').disabled = !m.manifest || started; if (m.manifest && bootError === null) fwStatus(`cached firmware: ${m.manifest.bin.name} (${MiB(m.manifest.bin.size)}); choose a .BIN to replace it`); }
   else if (m.type === 'progress' && m.stage === 'cache-cleared') { $('fwcache').disabled = true; fwStatus('the cached firmware is gone from this browser'); }
+  else if (m.type === 'progress' && m.stage === 'nvram-cleared') $('optnote').textContent = 'the kept settings are gone from this browser (a running session with them keeps its own until it saves again)';
+  else if (m.type === 'progress' && m.stage === 'nvram-error') $('optnote').textContent = 'S-NVRAM: a save was not kept in this browser: ' + m.message;
 };
+const startOpts = (on) => { for (const [id] of START_OPTS) $(id).disabled = !on; };
 // The model: src/fw/model.mjs reads ?model= here as the Worker does (web/page.mjs gives it this page's query), and throws
 // for a code MODELS does not have; then no Worker starts and the picker offers the models. A pick reloads the page with
 // ?model=CODE and its other options kept: that model's firmware comes from its own cache in this browser (web/opfs.mjs)
@@ -677,7 +886,7 @@ $('model').innerHTML = (MODEL.error ? '<option value="" disabled>choose a model<
 $('model').value = MODEL.model ?? '';
 $('model').onchange = (e) => { Q.set('model', e.target.value); location.search = Q.toString(); };
 let started = false;
-const go = (file) => { if (started) return; started = true; bootError = null; $('fwfile').disabled = true; $('fwcache').disabled = true; PP.boot(file, ARGS); init(); };
+const go = (file) => { if (started) return; started = true; bootError = null; $('fwfile').disabled = true; $('fwcache').disabled = true; startOpts(false); PP.boot(file, ARGS); init(); };
 $('screen').classList.add('show-ovl');
 if (MODEL.error) {
   $('fwfile').disabled = $('fwclear').disabled = true;
@@ -709,7 +918,7 @@ async function init() {
       BYID[c.id] = c;
       for (const k of [c.key, c.alt_key]) if (k && !k.includes(' ') && c.kind !== 'dial' && c.kind !== 'modedial') KEYMAP[k] = c.id;
     }
-    wireButtons(); fill(CONTROLS, screens);
+    wireButtons(); fill(CONTROLS, screens); loadSession();
   } catch (e) { $('ovl').textContent = 'the Worker did not answer: ' + e.message; $('screen').classList.add('show-ovl'); return; }
   statusLoop(); frames();
   if (new URLSearchParams(location.search).get('selftest') === '1') selftest();
@@ -761,6 +970,15 @@ async function selftest() {
   }
   key('PageDown', 'keydown', true); await sleep(150); key('PageDown', 'keyup', true);
   step('Shift+PageDown: multi-selector down-right (UI_IN 0x02021234)', await until(() => $('eventlog').textContent.includes('0x02021234'), 20000) && STATUS.mode_dial === (m0 + 2) % 10, { mode: STATUS.mode_dial });
+  // the Card, HDMI and session options panel: the session's options, the card the firmware formatted at the start read
+  // with refs/fat.mjs, and the HDMI control's state (no port without --hdmi on)
+  const sess = await (await api('/api/session')).json();
+  step('session options (GET /api/session)', typeof sess.lens === 'string' && (sess.hdmi === 'on' || sess.hdmi === 'off'), { session: sess });
+  $('cardpanel').open = true;
+  step('Card panel: the card read (refs/fat.mjs)', await until(() => CARD && (CARD.volume || CARD.error), 30000) && !!(CARD.volume && CARD.volume.type),
+    { card: CARD && { slot: CARD.slot, volume: CARD.volume, error: CARD.error, files: (CARD.files || []).length } });
+  step('HDMI control', sess.hdmi === 'on' ? !!STATUS.hdmi : $('hdmi-plug').disabled && $('hdmi-state').textContent.startsWith('no HDMI port'),
+    { hdmi: STATUS.hdmi || null, text: $('hdmi-state').textContent });
   R.buttons = { wired: document.querySelectorAll('[data-ctl].b.wired').length, decoded: document.querySelectorAll('[data-ctl].b.decoded').length, none: document.querySelectorAll('[data-ctl].b.none').length };
   R.keymap = KEYMAP;
   R.events = $('eventlog').textContent.slice(0, 3000);

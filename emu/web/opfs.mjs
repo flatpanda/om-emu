@@ -4,7 +4,8 @@
 // nothing is uploaded, and clear() removes it. Writes use a sync access handle (dedicated Workers only); a cached block
 // whose sha256 differs from the manifest's is refused (and the cache cleared), so a damaged cache never boots a lab, and
 // so is a manifest whose digests are not the model's (src/fw/labfw.mjs: a cache written before that check existed).
-// One directory per model (src/fw/model.mjs MODEL), so each body's firmware stays cached beside the others.
+// One directory per model (src/fw/model.mjs MODEL), so each body's firmware stays cached beside the others. The
+// camera's kept settings (S-NVRAM, opt-in) live beside it in a directory of their own (loadNvram, storeNvram).
 import { checkFirmware } from '../src/fw/labfw.mjs';
 import { MODEL } from '../src/fw/model.mjs';
 
@@ -85,4 +86,29 @@ export async function load(createHash) {
 export async function clear() {
   const root = await navigator.storage.getDirectory();
   try { await root.removeEntry(DIR, { recursive: true }); } catch { /* nothing cached */ }
+}
+
+// S-NVRAM's document for the browser player (web/nvram.mjs: the camera's settings stores, the SCPU's backed-up words
+// and the sub-CPU's memory, as host/nvram.mjs's file holds them): one JSON file in a directory of its own per model,
+// apart from the firmware, so forgetting the firmware keeps it and forgetting it keeps the firmware.
+export const NVRAM_DIR = `nvram-${MODEL}`, NVRAM_FILE = 'nvram.json';
+// The document, or null when none is kept; a file that is not JSON is an error that says how to drop it.
+export async function loadNvram() {
+  const root = await navigator.storage.getDirectory();
+  let bytes;
+  try { bytes = await get(await root.getDirectoryHandle(NVRAM_DIR), NVRAM_FILE); } catch (e) {
+    if (e?.name === 'NotFoundError') return null;
+    throw e;
+  }
+  try { return JSON.parse(new TextDecoder().decode(bytes)); } catch (e) {
+    throw new Error(`OPFS ${NVRAM_DIR}/${NVRAM_FILE}: ${e.message} (forget the kept settings to start blank)`);
+  }
+}
+export async function storeNvram(text) {
+  const root = await navigator.storage.getDirectory();
+  await put(await root.getDirectoryHandle(NVRAM_DIR, { create: true }), NVRAM_FILE, new TextEncoder().encode(text));
+}
+export async function clearNvram() {
+  const root = await navigator.storage.getDirectory();
+  try { await root.removeEntry(NVRAM_DIR, { recursive: true }); } catch { /* none kept */ }
 }

@@ -15,6 +15,7 @@ import { stackOf } from '../checks/lib/errors.mjs';
 import { installChildTrace, tracedPlay } from '../checks/lib/childtrace.mjs';
 import { fileNvram } from './nvram.mjs';
 import { fileCard } from './card.mjs';
+import { memoryCard, cardSectors } from '../src/lab/sdcard.mjs';
 import { debugHost } from './debughost.mjs';
 
 const { args: a, flags, port, out, argv } = workerData;
@@ -33,6 +34,7 @@ function sink(name, text) {
 // OM_CHILD_TRACE (golden traces of child labs, checks/lib/childtrace.mjs): every lab of an --idle off or --replay session traced in this
 // thread, written when the loop ends (argv: the server's own command line, from the main thread)
 const trace = tracedPlay(argv) ? installChildTrace({ argv, install: false }) : null;
+const cardSize = process.env.OM_EMU_CARD_SIZE ? { sectors: cardSectors(process.env.OM_EMU_CARD_SIZE) } : {};
 const env = {
   rom: loadImage(), resBlock: loadBlock(), createHash, ...(trace?.fields ?? {}),
   deflate: (b, level) => new Uint8Array(zlib.deflateSync(b, { level })),
@@ -50,8 +52,11 @@ const env = {
   onLogTrim: (n) => post({ type: 'logtrim', n }),
   // OM_EMU_NVRAM=FILE: the camera keeps its settings and clock between sessions in FILE (menu.mjs S-NVRAM)
   ...(process.env.OM_EMU_NVRAM ? { nvram: fileNvram(process.env.OM_EMU_NVRAM) } : {}),
-  // OM_EMU_CARD=FILE: the card in the first slot is kept between sessions in FILE (storage.mjs, host/card.mjs)
-  ...(process.env.OM_EMU_CARD ? { card: fileCard(process.env.OM_EMU_CARD) } : {}),
+  // OM_EMU_CARD=FILE: the card in the first slot is kept between sessions in FILE (storage.mjs, host/card.mjs);
+  // OM_EMU_CARD_SIZE=GiB: a new card's capacity (8 by default; above 32 an SDXC card, sdcard.mjs), kept in memory
+  // for the player's life without OM_EMU_CARD
+  ...(process.env.OM_EMU_CARD ? { card: fileCard(process.env.OM_EMU_CARD, cardSize) }
+    : process.env.OM_EMU_CARD_SIZE ? { card: memoryCard(cardSize) } : {}),
   // OM_EMU_SCPU=native: the sub-CPU's own firmware in S-SCPUDEV's place, on E143 and E146 (menu.mjs scpu_native)
   ...scpuEnv(),
 };

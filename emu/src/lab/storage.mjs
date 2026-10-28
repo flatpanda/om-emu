@@ -19,10 +19,10 @@
 //               does not run in the lab (which task it is, ?), is answered 0 at its send (the send from that request
 //               only; the E144 family's E144, E137, E142, E140, E125 and E130 meet it once at the bring-up, X; E143's,
 //               E146's, E147's and E139's requests return before their send, X)
-//   S-SDCARD    the card (src/lab/sdcard.mjs, an 8 GiB SDHC card) at the SD command layer (storage.command): each command
-//               the firmware sends is answered there, its response, its data and its status written into the command
-//               and its completion called at once, as the layer itself does for a busy port; sd_mount's card init,
-//               the transfers and the format run natively above it
+//   S-SDCARD    the card (src/lab/sdcard.mjs: an 8 GiB SDHC card, or the host's capacity, SDXC above 32 GiB) at the
+//               SD command layer (storage.command): each command the firmware sends is answered there, its response,
+//               its data and its status written into the command and its completion called at once, as the layer
+//               itself does for a busy port; sd_mount's card init, the transfers and the format run natively above it
 //   S-FSNAND    the file system's NAND area (storage.nand.area: 512 KiB of NAND on E143, 384 or 256 KiB of the E144
 //               family's flash) behind its access (storage.nand.access): it reads erased (0xff) on a camera that
 //               never saved it (the lab's NAND and flash are not modelled), and the firmware's writes are kept for the
@@ -312,7 +312,7 @@ export class Storage {
   slot() { return { present: this.card.present, mounted: this.mounted, removals: this.removals, insertions: this.insertions }; }
   status() {
     return { mounted: this.mounted, formatted: this.formatted, dcf: this.dcf, drive_status: this.drive_status === null ? null : h8(this.drive_status),
-      card: { sectors: this.card.sectors, stored: this.card.data.size, reads: this.card.reads, writes: this.card.writes },
+      card: { kind: this.card.kind, sectors: this.card.sectors, stored: this.card.data.size, reads: this.card.reads, writes: this.card.writes },
       commands: this.commands, flushes: this.flushes, nand_writes: this.nand_writes, files: this.files.length, next_file: this.next_file };
   }
 }

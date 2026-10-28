@@ -1,10 +1,16 @@
-// S-SDCARD's card: an SDHC memory card at the SD command level, with its data in a sparse sector store. Pure JS (node
-// and the browser player's Worker); src/lab/storage.mjs puts it behind the firmware's SD command layer.
+// S-SDCARD's card: an SDHC or SDXC memory card at the SD command level, with its data in a sparse sector store. Pure
+// JS (node and the browser player's Worker); src/lab/storage.mjs puts it behind the firmware's SD command layer.
 //
 // What the card answers is the SD Physical Layer Simplified Specification's (version 3.01 and later): the
 // registers (OCR, CID, CSD version 2.0, SCR, the SD Status and CMD6's switch status) and the commands' responses and
 // state changes. The values the card reports are the lab's choice (a card of `sectors` 512-byte blocks, default 8
-// GiB, class 10, AU 4 MiB, 3.3 V only, no UHS), not a captured card's. A command the card does not take (UHS-II's,
+// GiB, class 10, 3.3 V only, no UHS), not a captured card's. The capacity alone makes the card SDHC (above 2 GiB, at
+// most 32 GiB) or SDXC (above 32 GiB, at most C_SIZE 0x3FFEFF, just under 2 TiB): both are high-capacity cards with
+// the same OCR (CCS set) and CSD version 2.0, whose 22-bit C_SIZE counts 512 KiB units; an SDXC card differs in the
+// SCR's SD_SECURITY (4, version 3.xx, where SDHC reports 3) and in the larger AU its SD Status may report (the lab's
+// choice: 4 MiB on SDHC, 16 MiB on SDXC up to 128 GiB and 32 MiB above, the SD File System Specification's boundary
+// units for those capacities as far as recalled, I). The store keeps only the sectors written with something other
+// than zeros, so a 128 GiB card costs nothing until it is written. A command the card does not take (UHS-II's,
 // one the specification has but this card does not implement) gets no response, which is what a card does with a
 // command it does not know. A card out of the slot (present false) answers nothing at all, as an empty slot does; its
 // sectors stay as they were, so the same card goes back in with its files.
@@ -20,6 +26,17 @@ const R1_APP_CMD = 0x20, R1_READY = 0x100, R1_OUT_OF_RANGE = 1 << 31, UHS2 = 1 <
 const OCR_DONE = 1 << 31, OCR_CCS = 1 << 30, OCR_VDD = 0xff8000;
 const STATES = { idle: 0, ready: 1, ident: 2, stby: 3, tran: 4, data: 5, rcv: 6, prg: 7 };
 const ADDRESSED = new Set(['stby', 'tran', 'data', 'rcv', 'prg']);    // the states with a published RCA (data transfer mode)
+const GIB = 2097152;                      // sectors in a GiB
+const SDHC_MIN = 2 * GIB, SDHC_MAX = 32 * GIB, SDXC_MAX = (0x3ffeff + 1) * 1024;   // capacity limits in sectors
+const AU_4M = 9, AU_16M = 0xc, AU_32M = 0xe;                          // the SD Status's AU_SIZE codes
+
+// A card's capacity in sectors from its size in GiB (a number, or text such as '64', '64G' or '64GiB': a host's
+// card-size option); the card itself checks that it is an SDHC or SDXC capacity
+export function cardSectors(size) {
+  const m = /^\s*(\d+)\s*(?:G|GiB)?\s*$/i.exec(String(size));
+  if (!m) throw new RangeError(`cardSectors: '${size}' is not a size in GiB (such as 8, 64G or 128GiB)`);
+  return Number(m[1]) * GIB;
+}
 
 // CRC7 (x^7 + x^3 + 1) over bytes, as the CID and CSD carry it in their last byte (<< 1 | 1)
 export function crc7(bytes) {
@@ -44,13 +61,14 @@ export function r2Words(reg) {
 }
 
 export class SdCard {
-  // sectors: the capacity in 512-byte blocks, a multiple of 1024 above 2 GiB (an SDHC card, CSD version 2.0: C_SIZE
-  // counts 512 KiB units); data: an optional Map sector -> Uint8Array(512) to start from (a saved card)
-  constructor({ sectors = 16777216, data = null } = {}) {
-    if (!Number.isInteger(sectors) || sectors % 1024 || sectors <= 4194304 || sectors > 67108864) {
-      throw new RangeError(`SdCard: ${sectors} sectors is not an SDHC capacity (a multiple of 1024 above 2 GiB, at most 32 GiB)`);
+  // sectors: the capacity in 512-byte blocks, a multiple of 1024 above 2 GiB (CSD version 2.0: C_SIZE counts 512 KiB
+  // units): SDHC up to 32 GiB, SDXC above; data: an optional Map sector -> Uint8Array(512) to start from (a saved card)
+  constructor({ sectors = 8 * GIB, data = null } = {}) {
+    if (!Number.isInteger(sectors) || sectors % 1024 || sectors <= SDHC_MIN || sectors > SDXC_MAX) {
+      throw new RangeError(`SdCard: ${sectors} sectors is not an SDHC or SDXC capacity (a multiple of 1024 above 2 GiB, at most ${SDXC_MAX} sectors)`);
     }
     this.sectors = sectors;
+    this.kind = sectors > SDHC_MAX ? 'SDXC' : 'SDHC';
     this.data = data ?? new Map();
     this.rca = 0x1234;
     this.state = 'idle';
@@ -66,7 +84,7 @@ export class SdCard {
   remove() { this.present = false; this.state = 'idle'; this.selected = false; this.bus4 = false; }
   insert() { this.present = true; }
   // ---- the registers
-  ocr() { return (OCR_DONE | OCR_CCS | OCR_VDD) >>> 0; }   // power-up done, SDHC, 2.7-3.6 V; S18A clear: no UHS-I signalling
+  ocr() { return (OCR_DONE | OCR_CCS | OCR_VDD) >>> 0; }   // power-up done, CCS (SDHC or SDXC), 2.7-3.6 V; S18A clear: no UHS-I signalling
   cid() {
     // MID 0, OID 'EM', PNM 'OMEMU', PRV 1.0, PSN 1, MDT October 2026
     return withCrc(Uint8Array.of(0x00, 0x45, 0x4d, 0x4f, 0x4d, 0x45, 0x4d, 0x55, 0x10, 0, 0, 0, 1, 0x01, 0xaa, 0));
@@ -77,13 +95,15 @@ export class SdCard {
     const c = this.sectors / 1024 - 1;
     return withCrc(Uint8Array.of(0x40, 0x0e, 0x00, 0x32, 0x5b, 0x59, 0x00, (c >> 16) & 0x3f, (c >> 8) & 0xff, c & 0xff, 0x7f, 0x80, 0x0a, 0x40, 0x00, 0));
   }
-  // SCR: SD_SPEC 2 with SD_SPEC3 (version 3.0x), SD_SECURITY 3 (SDHC), 1- and 4-bit bus
-  scr() { return Uint8Array.of(0x02, 0x35, 0x80, 0x00, 0, 0, 0, 0); }
-  // SD Status: the bus width, SPEED_CLASS 4 (class 10), AU_SIZE 9 (4 MiB), ERASE_SIZE 1 AU, ERASE_TIMEOUT 1 s,
-  // ERASE_OFFSET 1 s
+  // SCR: SD_SPEC 2 with SD_SPEC3 (version 3.0x), SD_SECURITY 3 (SDHC, version 2.00) or 4 (SDXC, version 3.xx), 1- and
+  // 4-bit bus
+  scr() { return Uint8Array.of(0x02, (this.kind === 'SDXC' ? 0x40 : 0x30) | 0x05, 0x80, 0x00, 0, 0, 0, 0); }
+  // the SD Status's AU_SIZE code: 4 MiB on SDHC; on SDXC 16 MiB up to 128 GiB, 32 MiB above (the lab's choice)
+  auSize() { return this.kind === 'SDHC' ? AU_4M : this.sectors <= 128 * GIB ? AU_16M : AU_32M; }
+  // SD Status: the bus width, SPEED_CLASS 4 (class 10), AU_SIZE, ERASE_SIZE 1 AU, ERASE_TIMEOUT 1 s, ERASE_OFFSET 1 s
   ssr() {
     const b = new Uint8Array(64);
-    b[0] = this.bus4 ? 0x80 : 0; b[8] = 4; b[10] = 0x90; b[12] = 1; b[13] = 0x05;
+    b[0] = this.bus4 ? 0x80 : 0; b[8] = 4; b[10] = this.auSize() << 4; b[12] = 1; b[13] = 0x05;
     return b;
   }
   // CMD6's status: 200 mA, group 1 (access mode) supports default and high speed, the other groups their default; the
@@ -173,8 +193,11 @@ export class SdCard {
       case 32: this.erase[0] = arg; return ok(r1());
       case 33: this.erase[1] = arg; return ok(r1());
       case 38: {                                    // ERASE: the blocks read 0 after it (SCR DATA_STAT_AFTER_ERASE 0)
-        const [a, b] = this.erase;
-        for (let s = a; s <= b && s < this.sectors; s++) if (this.data.delete(s)) this.dirty = true;
+        const [a, b] = this.erase, last = Math.min(b, this.sectors - 1);
+        // by the stored sectors when the range is the larger (a whole SDXC card is 2^28 sectors and more)
+        const span = last - a + 1, gone = span > this.data.size ? [...this.data.keys()].filter((s) => s >= a && s <= last) : null;
+        if (gone) for (const s of gone) { this.data.delete(s); this.dirty = true; }
+        else for (let s = a; s <= last; s++) if (this.data.delete(s)) this.dirty = true;
         return ok(r1());
       }
       default: return none;
@@ -201,8 +224,9 @@ export function cardFromImage(bytes) {
 }
 
 // A card kept in memory between sessions (src/lab/player.mjs: a player's power cycle keeps the card in the slot):
-// env.card's {open(), save(card)}, the browser player's and node's without OM_EMU_CARD
-export function memoryCard() {
+// env.card's {open(), save(card)}, the browser player's and node's without OM_EMU_CARD; sectors: its capacity (the
+// default card's when null; node's OM_EMU_CARD_SIZE)
+export function memoryCard({ sectors = null } = {}) {
   let card = null;
-  return { open: () => (card ??= new SdCard()), save: (c) => { card = c; } };
+  return { open: () => (card ??= new SdCard(sectors === null ? {} : { sectors })), save: (c) => { card = c; } };
 }

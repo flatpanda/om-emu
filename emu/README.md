@@ -103,8 +103,10 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   cycles; `OM_EMU_CARD=FILE` keeps it between sessions (`host/card.mjs`). E146, E147, E144, E139, E137, E142, E140,
   E125 and E130 run the same file system on the same card (their seams read from their firmware by
   `src/fw/facts.mjs` fileSystem; on the E144 family the SD driver's request for the card's supply is answered,
-  S-SDPOWER): a blank card formatted and mounted, the counts from it, each picture's file written; the menu's Card
-  Formatting and the card input stay E143's (`docs/hle-gaps.md` 4.8.4). On the other bodies the card has no file
+  S-SDPOWER): a blank card formatted and mounted, the counts from it, each picture's file written (the movie time left
+  on E144, E139, E137 and E125 is an orange `0:00:00`: the blank settings store's movie mode, UHD 4K at 60p, is one
+  they cannot record, `docs/hle-gaps.md` 4.8.5); the menu's Card Formatting and the card input stay E143's
+  (`docs/hle-gaps.md` 4.8.4). On the other bodies the card has no file
   system (S-CARD: the HLS mount state, every picture taken kept as an image of folder 100, a remaining-shots answer of
   999 less the images to the application's getAvailableShootCount, the first slot's card detect state at inserted and
   a movie time left of an hour less what has been recorded). The system timer module's

@@ -45,9 +45,9 @@ not reconciled.
 
 1. **Depth on the ported bodies** (Multi-model step 7): ten bodies pass `bin/modelcheck.mjs` since 2026-10-23, its
    count probe included, E139 and E134 with PER_SCPU native over the sub-CPU link as E143, E146 and E147 (SCPU track
-   step 2), and nine of them with the card's file system native (2026-10-25, hle-gaps.md 4.8.4); left are the movie
-   time the E144 family shows (an orange `0:00:00`; the E142 lineage's comes from the card now) and E145's AF upload
-   (Multi-model "Next stops").
+   step 2), and nine of them with the card's file system native (2026-10-25, hle-gaps.md 4.8.4); left is E145's AF
+   upload (Multi-model "Next stops"). The E144 family's orange movie time `0:00:00` is the firmware's answer for the
+   blank store's movie mode, which those bodies cannot record (2026-10-27, hle-gaps.md 4.8.5).
 2. **The open stops of the remaining bodies** (Multi-model "Next stops"): E145's start, E133's GUI creator, E129's
    settings store, E132's deferred serial send, then the E118 family's board port.
 3. **HLE of E143, step 2** (HLE of E143 below; step 1's static decodes are done): the cheap CPU 0 wins (a ticking
@@ -166,10 +166,12 @@ the survey table.
   value of its mount state); the media control's other commands (erase all, copy, unlock); an SDXC card (exFAT); the SD
   host at its registers with its interrupts and card detect (seam A); playback of the card's files (a JPEG decoder at
   the codec seam); the movie module's set-up, whose frame rate the movie time query reads (it logs `0x39000903`).
-- **The movie time of the E144 family:** with the card native (2026-10-25, hle-gaps.md 4.8.4) the E142 lineage shows
-  the card's time (E142 and E140 `0:10:45`, E130 `0:37:22`, X: frames); E144, E139, E137 and E125 still show an orange
-  `0:00:00` beside the card's count, E144's DCF remain movie time (`0x50672715`) answering 0 where E142's answers for
-  the same arguments (the difference not read). Before: E142, E140 and E130, and since survey finding 18 E144
+- **The movie time of the E144 family:** read (2026-10-27, hle-gaps.md 4.8.5), nothing to model. With the card native
+  (2026-10-25, hle-gaps.md 4.8.4) the E142 lineage shows the card's time (E142 and E140 `0:10:45`, E130 `0:37:22`, X:
+  frames); E144, E139, E137 and E125 show an orange `0:00:00` beside the card's count because the blank store's
+  movie mode (settings id 696 = 1: UHD 4K at 60p) is one their codec rate tables have no rate for, so the bitrate
+  check fails (`0x3a040001`, `0x39000105`) and the count is 0; with a mode the table has, the same native path draws
+  the card's time (E144: `0:36:59` in FHD, X). Open there: whether a body leaves the factory in that mode. Before: E142, E140 and E130, and since survey finding 18 E144
   and E125 (the others not looked at), showed an orange `0:00:00` where E143 showed S-CARD's `1:00:00` and shows the
   card's time since its file system runs natively (frames, X). E143's
   movie item asks getMovieCountdownTime, whose time-left wrapper reaches S-CARD's movie query (`0x503f3dd3`); E142's

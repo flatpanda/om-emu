@@ -1388,13 +1388,50 @@ its code:
   E130 `0:37:22`, from the card (E142's DCF remain movie time `0x505fd798`, which returned 0 on S-CARD's card).
   The E144 family's (E144, E139, E137, E125) stays orange `0:00:00` beside the card's count: E144's DCF remain movie
   time (`0x50672715`) returns 0 for the movie item's arguments (drive 0, 8, 4, 1), where E142's returns 387000 for
-  the same; its first helper (E144 `0x50672c57`) gives 0 for 4 on both, so the difference is in the second
-  (`0x50672cfe`) or its inputs, not read (?). The OM-1 family's query answers the card's time after S1 (E146 5:25),
-  0 before it at the date prompt (X; why is ?).
+  the same. Why is read in 4.8.5: the blank store's movie mode is UHD 4K at 60p, which these bodies' rate tables do
+  not have. The OM-1 family's query answers the card's time after S1 (E146 5:25), 0 before it at the date prompt (X;
+  why is ?).
 - **Not done here:** the HLS side (S-MDACTRL, S-MEDIA: Card Formatting from the menu, the card out and in) stays
   E143's (`card_fs.hls`); on the other native bodies the media control's TRA 1511 is answered by S-TRAACK alone (I:
   the menu would stay at "Busy", as on E143 before round 2; not run) and the card input is refused. REC_FILE and the
   second slot were not attempted.
+
+#### 4.8.5 The E144 family's movie time (2026-10-27; D unless tagged)
+
+The orange `0:00:00` on E144, E139, E137 and E125 is the firmware's own answer for the settings the lab's blank store
+holds, not a missing model: their default movie mode is UHD 4K at 60p, and their codec rate tables have no rate for 4K
+at 60p or 50p. Nothing in the lab changes; the addresses are E144's.
+
+- **The movie mode:** the movie settings are data objects indexed by a mode: settings id 696 is object `0xf021` element
+  0, the mode (the id table `0x60514fec`); ids 697..704 and 848 are `0xf031[0..8]`, the resolution code; 705..712 and
+  849 `0xf041`; 721..728 and 851 `0xf061`, the frame rate (the descriptors from `0x6050de50` allow 24, 25, 30, 50 and 60
+  for 721, 722, 723 and 728, the ones read); 729..736 and 852 `0xf072`. The getters `0x5032a00d` (the mode),
+  `0x5032a021` (the frame rate), `0x5032a036` (the size class: 1 for the codes 8 and 9, else `0xf041[mode]`) and
+  `0x5032a069` (`0xf072`) read them. The blank store's defaults (the table `0x604d8f38`, which the blank-store fill
+  `0x502bc906` sets through the property set `0x502d07d3`): id 696 = 1, `0xf031` = 6 8 6 6 6 3 4 9 6 and `0xf061` = 30
+  60 60 60 60 30 30 30 60, so mode 1 is code 8 at 60p. X: the only writes to the mode's byte (`0x6240645b`) in a session
+  are the object's zero fill and that fill's set of 1 (return `0x502bc919`). E139, E137 and E125 read the same mode,
+  code and rate (X, their getters); E142's default mode is 7, code 8 at 30p (X); E143's is mode 1 at 60p too (X), which
+  the OM-1 records.
+- **The rate check:** the shooting screen's movie time is module `0x5000e`'s answer (`0x502d3fcf`), which calls the DCF
+  remain movie time (`0x502d4030`) with the drive, the mode's resolution code (8 at the default, X) and 4, 1, every 200
+  ms of lab time (X). Its count (`0x50672eb9`) takes the card's free space (`0x50673dd2`; X: `0x3f800` on the 8 GiB
+  card, its unit not read) and the bitrate (`0x50674098` -> `0x5030f8f3`), which builds the movie's parameters (`0x5032553f`) and checks
+  them (`0x503e09ae` -> `0x503e88ff`): the rate is the word of the table `0x6057559c` at size class x 80 + frame rate x
+  16 + 4 x a third index (frame rates 60, 50, 30, 25, 24 -> 0..4; the third from the parameters' +6, 1, 2, 4, 8 -> 0..3,
+  meaning ?). A zero word logs `0x3a040001` (source line 1942, `0x503e8ac3`) and returns `0xa003`; the bitrate then logs
+  `0x39000105` (`0x5030f979`) and is 0, and so is the time left (X: both logs, on E144 and E139). E144's table has class
+  1 (4K) at 30, 25 and 24 only, 100 Mb/s, in one column of the third index (D, read from the image); E142's default,
+  code 8 at 30p, answers 387000 (X).
+- **The time with a mode the table has (X, the mode set through the property set `0x502d07d3` after S1):** the same
+  native path answers and the screen draws the time in white with the mode's icon, where the default draws no movie
+  icon. On the 8 GiB card: mode 0 1331400 (`0:36:59`, the icon `FHD HS 60p`), mode 2 762000, mode 5 2913000, mode 6
+  8748000, mode 8 793200; mode 7 (code 9 at 30p) 0, the default's screen (where in the chain it fails is ?). The unit is
+  1/600 s (387000 is E142's `0:10:45`, 195000 E143's `5:25`). Code 8 at 30p (the count called with 8 in mode 7) answers
+  387000, `0:10:45`, as on E142: 645 s at the table's 100 Mb/s is 8.06 GB, on a card of 8.59 GB (I: how the count turns free
+  space and rate into time is not read).
+- **Open:** whether a body leaves the factory with the blank store's mode 1 (?), and whether the camera's movie menu can
+  select code 8 at 60p on these bodies (not read).
 
 ### 4.9 HDMI and DisplayPort
 

@@ -249,7 +249,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    bodies with two slots, 1 on the other 13, X). With it E143's TFT top bar shows the first slot and `999` (`998` after
    S2) and its EVF the same at the bottom right, where an orange 0 stood, and the count probe passes on every body of
    the default set, the E143 and E144 families included (X: frames; modelcheck). E144's and E125's screens also show the
-   slot icon and, newly drawn, an orange movie time `0:00:00` (ROADMAP Next stops; the other bodies' not looked at).
+   slot icon and, newly drawn, an orange movie time `0:00:00` (the blank store's movie mode, which these bodies cannot
+   record: `docs/hle-gaps.md` 4.8.5).
    Forcing the drive status to `0x680` had given the same screen (X). The golden sessions that show the shooting screen
    record the count; every compose that changed differs from the one before only in the count's box (X).
 19. **E143's card is a real one** (2026-10-23, `docs/hle-gaps.md` 4.8.2). On the lab's build the file system runs

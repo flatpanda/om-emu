@@ -51,7 +51,7 @@ machine  createMachine(): board address map, device wiring, cont/resume/step, sn
            |
 core     cpu.mjs (R, S, step)   interp.mjs (decode cache, run, TB-look irq timing)   mem.mjs (page tables, buffer, DIRTY)
 dev      intc  timer(+Clock)  vsc/vsccompose  engine  bus  stub  scpu  hdmi (option)   (debug windows + doorbell MMIO in guest space)
-sub-CPU  core/m4/ (Cortex-M4)  core/m4/periph/ (STM32L4 peripherals, board, Stm32l4 machine)   apart from the lab: bin/m4smoke, bin/scpu
+sub-CPU  core/m4/ (Cortex-M4; reference and decode-cache tiers)  core/m4/periph/ (STM32L4 peripherals, board, Stm32l4 machine)   apart from the lab: bin/m4smoke, bin/scpu
 support  fw/ (olyfw, labfw, models, ports, xmap, facts, board)   util/ (bytes, hex, show, equal, parse, tally, tracejson)   trace/   debug/
 verify   test/ (bin/test.mjs, bin/test-pure.mjs, fixtures/)   checks/ (runs.json, fixtures/)   scenarios/   golden.json   bin/*gate
 measure  bin/fwmap.mjs + fwmap/ (static map, coverage via createMachine's coverage option, report by module and block)
@@ -104,7 +104,9 @@ In order of authority:
 - **Self-modifying code and the decode cache.** Self-modifying code is invalidated by physical offset in 256-byte
   chunks with bounded swap-remove reverse lists, which makes the `0x6` / `0xA` DRAM aliases correct by construction.
   The decode cache is structure-of-arrays typed arrays (monomorphic, GC-free), and `CODEPG` keeps non-code writes fast
-  (`src/core/interp.mjs`).
+  (`src/core/interp.mjs`). The SCPU's Cortex-M4 does the same with a version per 256-byte page of each backing buffer
+  (flash and its boot alias share theirs): a write makes a code page's version new, and a decoded instruction hits only
+  at the version it was decoded at (`src/core/m4/dcache.mjs`, `bus.mjs`; written, not yet run).
 - **Precise faults.** Every instruction completes all its memory accesses before it writes registers, with a defined
   count rule, so the state after a fault is well defined and a retry is reliable (`src/core/cpu.mjs`). A 400,000-state
   `step()` against `run(1)` differential found no divergence and caught an injected mutant (`test/test_core.mjs`).

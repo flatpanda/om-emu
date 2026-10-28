@@ -5,11 +5,14 @@
 // cycles and instructions, standby. --drive sets a pin's level from the board (PC13=0, PB12=1; -1 releases it).
 // Exit 0 when the prompt came and every line was answered with a prompt, 1 when the run stopped at something not
 // modelled (named on stderr) or a prompt did not come. IMAGE defaults to the model's SCPU block (OM_EMU_MODEL, E143 by
-// default; src/fw/models.mjs scpu_lle, the block the lab loads with OM_EMU_SCPU=native).
+// default; src/fw/models.mjs scpu_lle, the block the lab loads with OM_EMU_SCPU=native). --tier picks the core's
+// execution tier (src/core/m4/cpu.mjs: cached, the default, or reference; the wall time printed last compares them).
 //   node emu/bin/scpu.mjs [IMAGE] [--line TEXT]... [--settle S] [--wait S] [--drive PIN=LEVEL]... [--after S]
+//                         [--tier cached|reference]
 import fs from 'node:fs';
 import path from 'node:path';
 import { Stm32l4 } from '../src/core/m4/periph/stm32l4.mjs';
+import { TIERS } from '../src/core/m4/cpu.mjs';
 import { parseArgs } from '../checks/lib/args.mjs';
 import { exitFor } from '../checks/lib/env.mjs';
 import { MODEL, MODEL_INFO } from '../src/fw/model.mjs';
@@ -24,6 +27,7 @@ const SPEC = [
   { opt: '--wait', type: 'number', default: 5, metavar: 'S' },           // the most SCPU time to each line's prompt
   { opt: '--after', type: 'number', default: 0, metavar: 'S' },          // SCPU time after the last line
   { opt: '--drive', type: 'str', repeat: true, metavar: 'PIN=LEVEL' },
+  { opt: '--tier', type: 'str', choices: TIERS, default: 'cached' },
   { name: 'image', positional: true, required: false },
 ];
 let opts;
@@ -39,6 +43,7 @@ if (!file) { process.stderr.write(`scpu.mjs: ${MODEL} gives no SCPU image the ma
 if (!fs.existsSync(file)) { process.stderr.write(`scpu.mjs: no ${file} (a full unpack of the .BIN makes it: BLOBS.md, tools/olyfw.py --dump)\n`); process.exit(1); }
 
 const m = new Stm32l4(new Uint8Array(fs.readFileSync(file)), { drive });
+m.cpu.setTier(opts.tier);
 const t0 = Date.now();
 let printed = 0;
 const flush = () => {
@@ -65,5 +70,5 @@ else {
   if (ok && opts.after > 0) { r = summary(`${opts.after} s more`, m.run({ seconds: opts.after })); if (r.reason === 'stop') ok = false; }
 }
 flush();
-process.stderr.write(`[scpu] ${ok ? 'ok' : 'FAILED'} in ${Date.now() - t0} ms\n`);
+process.stderr.write(`[scpu] ${ok ? 'ok' : 'FAILED'} in ${Date.now() - t0} ms (${opts.tier} tier)\n`);
 process.exit(ok ? 0 : 1);

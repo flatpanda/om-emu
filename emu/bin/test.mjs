@@ -15,7 +15,8 @@
 // file system on E143, E146, E147, E144 and E142 (test_storage.mjs), subject detection's frames on E143
 // (test_subject.mjs), the lens on the mount natively on E143 (test_lens.mjs), the SCPU's Cortex-M4 core
 // (test_m4.mjs: hand-written vectors, QEMU's recorded vectors, the SCPU image from reset to its first unmodelled
-// access), the firmware
+// access), the SCPU's STM32L4 machine (test_stm32l4.mjs: the peripheral models, the SCPU image to its console prompt,
+// console commands, its standby and the wake-up), the firmware
 // rules of src/fw/facts.mjs (test_facts.mjs) and the firmware map (test_fwmap.mjs:
 // the machine's coverage option, the static map's determinism and pinned headline, the labels' keys, run.mjs under
 // OM_COVERAGE). The fixtures they compare with are emu's own (test/fixtures, checks/fixtures, golden.json): a
@@ -240,6 +241,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipp
   console.log(`Cortex-M4 core: units ${mu.checks - mu.bad.length}/${mu.checks}; QEMU vectors ${mv.checks - mv.bad.length}/${mv.checks}; the SCPU image from reset ${mf.checks - mf.bad.length}/${mf.checks}${mf.skipped.length ? `, ${mf.skipped.length} SKIPPED (no E143 SCPU block)` : ''}`);
   [...mu.bad, ...mv.bad.slice(0, 20), ...mf.bad, ...mf.skipped.map((x) => `SKIPPED ${x}`)].forEach((x) => console.log('  ', x));
   bad += mu.bad.length + mv.bad.length + mf.bad.length + mf.skipped.length;
+}
+// the SCPU's STM32L4 machine: the peripheral models, the SCPU image to its console prompt and its commands
+{
+  const { stm32Units, stm32Firmware } = await import('../test/test_stm32l4.mjs');
+  const su = stm32Units(), sf = await stm32Firmware();
+  console.log(`SCPU STM32L4 machine: peripheral models ${su.checks - su.bad.length}/${su.checks}; the SCPU image to its console and standby ${sf.checks - sf.bad.length}/${sf.checks}${sf.skipped.length ? `, ${sf.skipped.length} SKIPPED (no E143 SCPU block)` : ''}`);
+  [...su.bad, ...sf.bad, ...sf.skipped.map((x) => `SKIPPED ${x}`)].forEach((x) => console.log('  ', x));
+  bad += su.bad.length + sf.bad.length + sf.skipped.length;
 }
 // the firmware map (bin/fwmap.mjs) and the machine's coverage option
 {

@@ -469,7 +469,8 @@ accelerometer stand-ins. Step 2 is built (2026-10-23, hle-gaps.md 4.7.1, scpu sp
 machine and its transactions run natively over S-SIO2 and the pins 102 / 103 / 107 against S-SCPUDEV on E143, E146
 and E147, and on E139 and E134 (their own pins and channel; their sub-CPUs answered as E143's, I). Steps 3-5 are
 built (2026-10-27, 2026-10-28): the sub-CPU's own firmware runs on a pure-JS Cortex-M4 with STM32L4 peripheral models
-to its debug console, apart from the lab.
+to its debug console, apart from the lab. Step 6 is written but not yet run (2026-10-28): the machine behind
+S-SCPUDEV's seam, opt-in with `OM_EMU_SCPU=native` on E143 and E146.
 
 | Step | Content | Size (I) |
 |---|---|---|
@@ -478,13 +479,14 @@ to its debug console, apart from the lab.
 | 3 | a Thumb-2 instruction census of the image (`tools/`) | done (2026-10-27): `bin/m4census.mjs`, 43,049 instructions in 176 encodings by recursive descent, the decoder equal to objdump on all of them; six FP instructions, no FP arithmetic (scpu spec 8) |
 | 4 | a pure-JS Cortex-M4 core (`emu/src/core/`), checked against a QEMU M4 board in the VM | done (2026-10-27): `src/core/m4/`, the ARMv7E-M integer set, the FPU's transfers, the exception model with the lazy FP context, NVIC / SCB / SysTick; against QEMU 11.1.2 `mps2-an386` on generated cases, 144,647 compared with no difference (`tools/m4-oracle/`, 2,191 recorded vectors in `test-pure`); the image runs from reset through its kernel start (one SVC, the first task on PSP) to its first STM32 access, FLASH ACR, after 58,852 instructions (scpu spec 8) |
 | 5 | the STM32L4 system block and the must-behave peripherals (RCC, FLASH, PWR, GPIO, EXTI, SPI2 + DMA, LPUART1, RTC); X target: the console prompt "SUB> " and the 13 tasks | done (2026-10-28): `src/core/m4/periph/`, register-level models of RCC, FLASH, PWR, GPIO, EXTI / SYSCFG, DMA1 / 2, USART1 / 2, LPUART1, I2C1 / 2 (no device answers), SPI2 (no master), TIM1 / 2 / 15 / 16, RTC, ADC and the USB device (no host), with standby and its wake-up pins; the image prints "SUB> " after 89,724 cycles (16.8 ms of SCPU time), its tasks run, and it answers `help`, `comm trace on`, `sysctrl get` and the other blocks (`bin/scpu.mjs`, `test/test_stm32l4.mjs`); with nothing attached it goes to standby 3 s after reset and PC13 low wakes it (scpu spec 8) |
-| 6 | the SCPU core behind step 2's seam: `0x85 {2}` answered by the real firmware, `comm trace on` frames equal to S-SCPUDEV's | 1 week |
+| 6 | the SCPU core behind step 2's seam: `0x85 {2}` answered by the real firmware, `comm trace on` frames equal to S-SCPUDEV's | written 2026-10-28, not yet run: `src/lab/scpum4.mjs` behind `OM_EMU_SCPU=native` on E143 and E146 (MODELS `scpu_lle`; E147's block is not unpacked), the image's PB12 / PC3 / PC2 and NRST wired to the MN's pins, the transfers' bytes through SPI2 and its DMA at the link's clock, the sub-CPU's time in step with lab time but for answer windows (50 ms after each input of the MN's, 0.5 s after a reset) in which it runs on while the MN waits in zero lab time (A-SCPUM4-1..3), PC13 and PC5 held low (S-SCPUBOARD); the oracle is S-SCPUDEV's frame log rebuilt from the wire, compared in `test/test_scpum4.mjs` (scpu spec 8, "Step 6, written") |
 | 7 | battery, charger and PD device models only where the firmware's own errors demand them | open |
 
 Recommended: steps 1-2 as part of HLE step 2's power-off work; steps 3-7 only when an SCPU behaviour the MN side
 shows cannot be written from the D table. Steps 3-5 were built ahead of that (2026-10-27, 2026-10-28) as a contained
-piece; step 6 starts from S-SCPUDEV's seam with the board's PC13 to choose (the lab keeps it low, the machine's default
-leaves it on its pull-up) and the standby the sub-CPU enters 3 s after reset when nothing keeps it in steady. Risks:
+piece; step 6 starts from S-SCPUDEV's seam with the board's PC13 held low as the lab's model keeps it (the machine's
+default leaves it on its pull-up, and the sub-CPU then enters standby 3 s after reset). Its verification run is next:
+`node emu/test/test_scpum4.mjs --session` on E143 and E146, then a play session with `OM_EMU_SCPU=native`. Risks:
 the I2C devices' identities and the battery protocol are unknown, and silence from them may change what the power
 manager reports to the MN (the charger at I2C1 `0x09` NACKs and the packs never answer on the step 5 machine).
 

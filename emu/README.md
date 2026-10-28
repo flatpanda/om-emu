@@ -151,6 +151,9 @@ node emu/bin/play.mjs --no-browser --idle off    # its server alone (HTTP API; -
 node emu/bin/play.mjs --hdmi on                  # with the HDMI port; the input {"type": "hdmi", "action": "plug"}
 OM_EMU_LENS=native sh emu/play.sh                # E143's lens natively (S-LENSMCU) in place of S-LENS; a touch on
                                                  # the shooting screen then stops the application's keys (open)
+OM_EMU_SCPU=native sh emu/play.sh                # E143's and E146's sub-CPU as its own firmware on the STM32L4 machine
+                                                 # in place of S-SCPUDEV (written 2026-10-28, not yet run; needs the
+                                                 # SCPU block in unpacked/, BLOBS.md)
 OM_EMU_NVRAM=~/.om-emu.json sh emu/play.sh       # keep the settings and the clock between sessions (S-NVRAM): no date
                                                  # prompt at power-on, menu changes back in the next session
 OM_EMU_CARD=emu/out/card/E143.omsd sh emu/play.sh   # keep the card between sessions (E143): formatted once, the
@@ -181,8 +184,11 @@ the image uses (RCC, FLASH, PWR, GPIO, EXTI / SYSCFG, DMA, the U(S)ARTs, I2C, SP
 the USB device), the board's answers (`board.mjs`: nothing attached), the event scheduler and the machine
 (`stm32l4.mjs`) with its run loop and standby. Like the core, it is outside `bin/port.mjs`'s literal scan: its
 constants are the STM32's address map and registers, not MN addresses. `bin/scpu.mjs` boots the image to its debug
-console's prompt "SUB> " and types lines into it; the machine is not connected to the lab (S-SCPUDEV stays the lab's
-sub-CPU).
+console's prompt "SUB> " and types lines into it. S-SCPUDEV stays the lab's sub-CPU by default; with
+`OM_EMU_SCPU=native` (env.scpu 'native') on E143 and E146 the lab puts this machine with the body's SCPU image at the
+far end of the MN's link in its place (`src/lab/scpum4.mjs`, `docs/om1-scpu-spec.md` section 8 step 6: PB12, PC3 and
+PC2 wired to the MN's pins, its reset line to NRST, the transfers' bytes through SPI2 at the link's clock, its time
+in step with lab time but for the answer windows it gets while the MN waits, S-SCPUBOARD and A-SCPUM4-1..3). Written 2026-10-28, not yet run.
 
 `bin/play.mjs` is the play server and `bin/nav.mjs` the scripted menu tool (`host/playcli.mjs`, `host/navcli.mjs`). The
 server answers every request with the router the browser uses (`src/lab/playapi.mjs`) on node's main thread and runs
@@ -466,6 +472,7 @@ firmware the run warns and skips that rule. `--explain N` prints what each firmw
 | `node emu/bin/snapgate.mjs kernel-5c osd shoot-tft` | snapshot detours leave the sessions and the end state unchanged | the firmware |
 | `OM_FW_DIR=fw node emu/bin/webgate.mjs --rounds 4` | headless Chrome: the Worker against node and `bin/run.mjs`, the page (keys, touch, canvas, session log), no uploads; about 5 min | the `.BIN`, Chrome |
 | `node emu/bin/modelcheck.mjs` | the ported models marked `checked` in `src/fw/models.mjs` (E146, E147, E144, E139, E134, E137, E142, E140, E125, E130), or those named: start, S1, S2, PLAY, INFO, PLAY on the TFT, and start, S1, S2 on the EVF of a body with one; GUI states by name; after S1 the count probe: the screen must change with the remaining-shots query's answer (S-CARD's count, or on a body whose card is native the firmware's, replaced for one window by the probe's own answer of the query) and only there; on a body whose card is native the card check: mounted, the shots counted from it, each picture's file found again by `refs/fat.mjs` with its size (all pass; a body expected to fail it goes in PROBE_XFAIL with its reason, strictly: a pass of an expected failure fails the run) | the models' firmware |
+| `node emu/test/test_scpum4.mjs [--session]` | written 2026-10-28, not yet run (also wired into both suites above): the bridge that puts the SCPU's own firmware behind the link, its clock (A-SCPUM4-1), the frame log rebuilt from the wire against S-SCPUDEV's own, the byte mover through SPI2 and DMA1 (pure); with `--session` a play session's start with S-SCPUDEV and with the SCPU's firmware (`OM_EMU_SCPU=native`), whose frame log, transfers and pin levels must equal S-SCPUDEV's (`OM_EMU_MODEL=E146` for E146) | the E143 (or E146) firmware blocks and SCPU block for `--session` |
 | `node emu/test/test_fwmap.mjs` | the coverage option off and on, the static map's determinism and headline, the labels' keys, `run.mjs` under `OM_COVERAGE` (also in both suites above) | the E143 main block for the second half |
 
 What the tests compare with is emu's own data, and it is regression data, not a specification

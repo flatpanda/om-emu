@@ -14,19 +14,20 @@ export class Unmapped extends Error {
 
 export const FLASH = 0x08000000, FLASH_SIZE = 0x40000, SRAM = 0x20000000, SRAM_SIZE = 0x10000;
 
-export function scpuMachine(image) {
+// tier: the core's execution tier (cpu.mjs TIERS; its default when absent)
+export function scpuMachine(image, { tier } = {}) {
   const flash = new Uint8Array(FLASH_SIZE).fill(0xff);
   flash.set(image.subarray(0, FLASH_SIZE));
   const bus = new MemoryBus({ unmapped: (a, size, w, v) => { throw new Unmapped(a, size, w, v); } });
   bus.rom(FLASH, flash);
   bus.alias(0, FLASH, FLASH_SIZE);
   bus.ram(SRAM, SRAM_SIZE);
-  return { bus, cpu: new CortexM4({ bus, irqs: 83, prioBits: 4 }) };
+  return { bus, cpu: new CortexM4({ bus, irqs: 83, prioBits: 4, ...(tier ? { tier } : {}) }) };
 }
 
 // run from reset for at most limit steps: how far the image gets before its first access to an unmodelled address
-export function smoke(image, limit = 5e6) {
-  const { cpu } = scpuMachine(image);
+export function smoke(image, limit = 5e6, { tier } = {}) {
+  const { cpu } = scpuMachine(image, { tier });
   const entered = new Map();
   const enter = cpu.enter.bind(cpu);
   cpu.enter = (n, ret) => { entered.set(n, (entered.get(n) || 0) + 1); return enter(n, ret); };

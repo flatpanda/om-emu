@@ -5,18 +5,27 @@
 // space in sys.mjs. Pseudocode references are the ARMv7-M ARM's (DDI 0403E).
 //
 // The bus: an object with read8 / read16 / read32 (unsigned or signed values; the core masks), write8 / write16 /
-// write32, and optionally codeCacheable(addr) (true where code never changes, e.g. flash: decoded instructions there
-// are cached). Accesses come aligned to their size (the core splits unaligned word and halfword accesses into bytes);
-// the core handles 0xe0000000..0xe00fffff (the PPB) itself. A bus throws BusError for an access the hardware answers
-// with a bus error (the core takes a BusFault) and anything else to stop the run (that error propagates out of step()
-// with the core at the start of the instruction, its registers unchanged; a store multiple may have stored part of
-// its list).
+// write32, and for the cached tier codePage(addr), pageVer and codeEpoch (bus.mjs MemoryBus: the versions of the
+// pages code is decoded from). Accesses come aligned to their size (the core splits unaligned word and halfword
+// accesses into bytes); the core handles 0xe0000000..0xe00fffff (the PPB) itself. A bus throws BusError for an access
+// the hardware answers with a bus error (the core takes a BusFault) and anything else to stop the run (that error
+// propagates out of step() with the core at the start of the instruction, its registers unchanged; a store multiple
+// may have stored part of its list).
+//
+// Two execution tiers, as the MN core has (src/core/cpu.mjs step, interp.mjs run): 'reference' fetches and decodes
+// every instruction each time it runs; 'cached' (the default) keeps decoded instructions by address in a decode cache
+// that writes to their code pages invalidate (dcache.mjs, bus.mjs). They differ only in where step() gets the
+// decoded instruction from, so registers, flags, memory, exceptions, SysTick's ticks and the cycle count are the same
+// instruction by instruction (test/test_m4.mjs: the two tiers in lockstep). The tier is the constructor's option, or
+// setTier() for a machine that builds the core itself (periph/stm32l4.mjs); a bus without codePage runs the cached
+// tier as the reference.
 //
 // Not modelled: the MPU's checks (its registers are kept), the debug halting state (BKPT stops the run instead, unless
 // haltOnBkpt is false), FP data processing (Unimplemented), exception-entry faults (Unimplemented), tail-chaining and
 // late arrival (an exception return pops, then the next step takes what is pending: the same states, more stacking),
 // cycle timing (one cycle per instruction), the bit-band regions (the bus may implement them).
 import { decode } from './decode.mjs';
+import { DecodeCache, DC_BITS } from './dcache.mjs';
 import { ALU_AND, ALU_EOR, ALU_ORR, ALU_ORN, ALU_BIC, ALU_MOV, ALU_MVN, ALU_ADD, ALU_ADC, ALU_SUB, ALU_SBC, ALU_RSB, ALU_TST,
   ALU_TEQ, ALU_CMP, ALU_CMN, popcount } from './decode.mjs';
 import { SystemBlock, CFSR, HFSR_FORCED, HFSR_DEBUGEVT, EXC_HARDFAULT, EXC_MEMMANAGE, EXC_BUSFAULT, EXC_USAGEFAULT, EXC_SVCALL,
@@ -34,9 +43,12 @@ const usage = (bit) => new Fault(EXC_USAGEFAULT, bit);
 
 // step() results
 export const STEP_OK = 0, STEP_SLEEP = 1, STEP_BKPT = 2, STEP_LOCKUP = 3, STEP_RESET = 4;
+// the execution tiers (the header)
+export const TIERS = ['cached', 'reference'];
 
 export class CortexM4 {
-  constructor({ bus, irqs = 83, prioBits = 4, refDiv = 8, haltOnBkpt = true } = {}) {
+  // tier: 'cached' or 'reference'; dcacheBits: the decode cache's size (2^bits slots); mutant: dcache.mjs's (tests only)
+  constructor({ bus, irqs = 83, prioBits = 4, refDiv = 8, haltOnBkpt = true, tier = 'cached', dcacheBits = DC_BITS, mutant = 0 } = {}) {
     this.bus = bus;
     // r0..r14 (r13 the current stack pointer, the other one banked in msp / psp); r[15] holds pc + 4 only while an
     // instruction executes (what reads of pc see), the program counter itself is pc
@@ -44,14 +56,30 @@ export class CortexM4 {
     this.s = new Int32Array(32);                 // S0..S31 as raw words
     this.sys = new SystemBlock(this, { irqs, prioBits, refDiv });
     this.haltOnBkpt = haltOnBkpt;
-    this.dcache = new Map();
+    this.dcacheBits = dcacheBits;
+    this.mutant = mutant;
+    this.dc = null;                              // the cached tier's DecodeCache, null on the reference tier
+    this.setTier(tier);
     this.insns = 0;
     this.cycles = 0;
     this.reset();
   }
+  setTier(tier) {
+    if (!TIERS.includes(tier)) throw new RangeError(`tier ${tier}: one of ${TIERS.join(', ')}`);
+    this.tier = tier;
+    this.dc = tier === 'cached' && typeof this.bus.codePage === 'function'
+      ? new DecodeCache(this.bus, { bits: this.dcacheBits, mutant: this.mutant }) : null;
+  }
 
-  // ---- reset (B1.5.5 TakeReset): SP_main and the entry from the vector table at VTOR = 0
+  // ---- reset: the core's (resetCore), and the decoded instructions dropped, so a model that rewrites memory behind
+  // the bus at a reset (the standby exit's SRAM clear, periph/stm32l4.mjs) cannot leave stale code in the cache
   reset() {
+    if (this.dc) this.dc.flush();
+    this.resetCore();
+  }
+  // B1.5.5 TakeReset: SP_main and the entry from the vector table at VTOR = 0 (the decoded instructions kept: for a
+  // test that runs the same code again)
+  resetCore() {
     this.r.fill(0); this.s.fill(0);
     this.sys.reset();
     this.n = 0; this.z = 0; this.c = 0; this.v = 0; this.q = 0; this.ge = 0;
@@ -191,7 +219,7 @@ export class CortexM4 {
     let d;
     try {
       if (!this.t) throw usage(CFSR.INVSTATE);
-      d = this.fetch(pc);
+      d = this.dc ? this.fetchCached(pc) : this.fetch(pc);
     } catch (e) {
       if (e instanceof BusError) return this.fault(new Fault(EXC_BUSFAULT, CFSR.IBUSERR), pc, it);
       if (e instanceof Fault) return this.fault(e, pc, it);
@@ -234,13 +262,17 @@ export class CortexM4 {
     return STEP_OK;
   }
 
+  // the reference tier's fetch: the instruction's halfwords from memory, decoded
   fetch(pc) {
-    const cache = this.bus.codeCacheable && this.bus.codeCacheable(pc >>> 0);
-    if (cache) { const d = this.dcache.get(pc); if (d) return d; }
     const hw1 = this.fetch16(pc);
     const hw2 = (hw1 >>> 11) >= 0x1d ? this.fetch16(pc + 2) : 0;
-    const d = decode(hw1, hw2);
-    if (cache) this.dcache.set(pc, d);
+    return decode(hw1, hw2);
+  }
+  // the cached tier's: the record kept for pc while its code page is unwritten, else fetch() and keep it
+  fetchCached(pc) {
+    const dc = this.dc;
+    let d = dc.lookup(pc);
+    if (d === null) { d = this.fetch(pc); dc.fill(pc, d, this.it); }
     return d;
   }
   fetch16(a) {

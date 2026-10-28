@@ -77,6 +77,7 @@ import { hex } from '../util/hex.mjs';
 import * as SC from './scene.mjs';
 import { jpegOfFrame } from './jpeg.mjs';
 import { HlsMedia } from './media.mjs';
+import { SubjectFrames } from './subject.mjs';
 import { A, ON_LAB_MODEL, MODEL_INFO, IMAGE_BASE, knob, fact, isUnmapped } from '../fw/model.mjs';
 import { DISPLAY_SYNC_E143, RECVIEW_E143, CBS_E143, LENS_ZOOM_TABLE_E143, CARD_DETECT_E143 } from '../fw/facts.mjs';
 //   S-CARD     a card in the SD slot. On a body whose file system runs natively (storage.mjs; MODELS card_fs)
@@ -237,14 +238,16 @@ const LENS_ZOOM = [12, 14, 17, 20, 25, 30, 35, 40], LENS_AP = [761, 2283];    //
 const BV_OBJECTS = [0xC12A, 0xC0BA, 0xC0CA], PROP_SET = A(0x5004188B), EXPOSE_CALC = A(0x50597E82);
 const AE_PLAN = A(0x62A919DC), PLAN = { tv: 6, sv: 10, av: 14 }, STATE_SHOOTING = 0x0108;
 // S-DISPFRAME: CPU 3's task DISP_FRAME (id 0x300d, entry 0x5100d05a; the same image) run on the lab CPU. Its start: the
-// frame colour table (0x51016eb1) and the three frame bitmaps (resources 12417, 61473, 35185 -> 0x62f4fe60/64/68). The
+// frame colour table (0x51016eb1) and the data pointers of three settings objects (12417, 61473, 35185 = 0x3081, 0xf021,
+// 0x8971 -> 0x62f4fe60/64/68; 0x500417b0 returns an object's data, and the draws read the values through the property
+// read with them, 0x5100d469 and 0x5100da04: the still aspect among them; called frame bitmaps here before, D). The
 // TFT channel's eight face-plane colours (+0xD00, 0x501e061a), which the channel setup converts from that table
 // (0x501db1b4: 0x51016e3e, then Cr Cb Y as below) and which the lab's TFT bring-up set from a table not yet filled. Each
 // post to CPU 3 (ring [3][0], function 0x5002587a, argument = the bits of DISP_FRAME's flag) runs one turn of its loop
 // (0x5100d0a5..0x5100d150, ported in dispframe_turn) natively: 0x5100dfbc, then 0x5100d19e (erase) or 0x5100d1b8 (draw).
 // A build that traces its face colour setter has it placed by src/fw/facts.mjs faceColourSet (bin/port.mjs).
-const DF_COLOUR_INIT = A(0x51016EB1), DF_COLOUR = A(0x51016E3E), RES_LOAD = A(0x500417B0), FACE_COLOUR_SET = A(0x501E061A);
-const DF_BITMAPS = [[12417, A(0x62F4FE60)], [61473, A(0x62F4FE64)], [35185, A(0x62F4FE68)]];
+const DF_COLOUR_INIT = A(0x51016EB1), DF_COLOUR = A(0x51016E3E), PROP_DATA = A(0x500417B0), FACE_COLOUR_SET = A(0x501E061A);
+const DF_SETTINGS = [[12417, A(0x62F4FE60)], [61473, A(0x62F4FE64)], [35185, A(0x62F4FE68)]];
 const DF_STATE = A(0x5100DFBC), DF_ERASE = A(0x5100D19E), DF_DRAW = A(0x5100D1B8), DF_FLUSH_RETURN = A(0x5100D2A7), K_CFLUSH = A(0x5004E68A);
 const DF_MODE = A(0xA3209010), DF_MASK = A(0xA3209012), DF_PENDING = A(0x62F4FE57), TFT_CHANNEL = 2, EVF_CHANNEL = 1, FACE_COLOURS = 8;
 const TFT_FRAME_STATE = A(0xA32DDAF6);
@@ -283,10 +286,11 @@ export const CAMAPP_STAND_INS = {
   "S-PLAYSEQ": "the play module's notifications: each asynchronous HLS play request (OlyHfwOpePlyComAsyncRsb::execute 0x50ad26fb) is finished after the step by its notify function (0x50ad2bc2) with the request's id and kind 2, as the module would: startPlayService (0) makes PlyCom's callback post CBS_END and the GUI leave ID_ST_PREPARE, startSingleFrame (8) and moveCurrent (9) make the single-frame callback post CBS_FINISH_DRAW and the GUI show the image. While a request's transaction runs (S-TRAACK) the module's answer is written: canMoveCurrent (sync 344) can move whenever there are two images or more (they wrap around), moveCurrent's result is 1 and the image shown moves (direction 3 left, 4 right). That every request finishes at once, with result 0 and no other data, is an inference from the callbacks (I)",
   "S-PLAYCOMP": "the play component's answers (Cmp_PlayComponentBase, which only the HLS components create; OlyHfwOpePlyCom's wrappers 0x50acf156..0x50acf356 are answered in its place) for the image S-PLAYSEQ shows, the newest: getNumber its index, file number and folder 100, getStillInfo its exposure time, f-number, bias and ISO (from S-SCENE at the capture; 1/125 s alone without it) and the picture size 5184 x 3888, the type 0, not protected, no recording; a move's completion clears the single-move state (0x60362a7c), as the component's start_single_move_current does. The other wrappers answer 0, each logged (I)",
   "S-PLAYVIEW": "(with S-SCENE's live view) while the GUI shows a card image, from startSingleFrame's finish to endPlayService (sync request 1), the live-view plane holds the frame S-SCENE renders again from the scene kept with the image (black for an image taken without it): the camera would decode the file onto its image plane, which the lab does not have (I: same plane, same scaling as S-RECVIEW)",
-  "S-DISPFRAME": "CPU 3's task DISP_FRAME on the lab CPU: its start (the frame colour table 0x51016eb1, the three frame bitmaps), the TFT and EVF channels' eight face-plane colours converted from that table as the channel setup does (0x501db1b4), the TFT frame-state byte 0xa32ddaf6 at 0 (the value of a display setup with the configuration word 0xFACE, I), and one turn of its loop, natively, for each post to its flag (ring [3][0], function 0x5002587a); its 1 ms sleeps while it waits for the frame plane's buffer swap (0x5100d398..) run on the display clock (A10), so the VSC latches the new address at a frame boundary. It draws the AF frames and the focus indicator into its 8-bit plane (VSC IMG3, format 2); the composite shows the plane under the A19 opt-in",
+  "S-DISPFRAME": "CPU 3's task DISP_FRAME on the lab CPU: its start (the frame colour table 0x51016eb1, the data pointers of the three settings objects its draws read), the TFT and EVF channels' eight face-plane colours converted from that table as the channel setup does (0x501db1b4), the TFT frame-state byte 0xa32ddaf6 at 0 (the value of a display setup with the configuration word 0xFACE, I), and one turn of its loop, natively, for each post to its flag (ring [3][0], function 0x5002587a); its 1 ms sleeps while it waits for the frame plane's buffer swap (0x5100d398..) run on the display clock (A10), so the VSC latches the new address at a frame boundary. It draws the AF frames, the focus indicator and S-SUBJECT's subject frames into its 8-bit plane (VSC IMG3, format 2); the composite shows the plane under the A19 opt-in",
   "S-RECVIEW": "(with S-SCENE's live view) from START_RECVIEW to END_RECVIEW the live-view plane holds the frame S-SCENE rendered at the capture (S2 down, the exposure in use) instead of the live scene; the camera would show the developed image through its playback path, which the lab does not run (I)",
   "S-TAKEFRAME": "the frame display mode the TAKE module sets for the live view (0x5039f583 -> 0x500256d9): 4, the AF frames and the indicator (the mask TAKE requests in S-AF is I)",
   "S-AFOSD": "the AF module's OSD upload (upload_af_info 0x508c8554 -> 0x500257ce) at S-RELSEQ's END_FOCUS: in focus, indicator 1 and one frame at the AF target (centre 400, 300, 60 x 60 in DISP_FRAME's coordinates, I); not in focus, indicator 9 and no frame (I); at the S1 release, none",
+  "S-SUBJECT": "(with S-SCENE's live view, while the camera's subject-detection setting names a kind) the subject detection CPU 3's MDET would run: S-SCENE's subjects of that kind (the rider stands for motorsports) written into MDET's frame table as list records (four corners each, through DISP_FRAME's own transform taken back, so they land on the subject as the panel shows it), the getter's aspect pair and active byte set, the frame mode's subject bit added (I) and UP_FACE posted (0x50025747); DISP_FRAME reads the table through FACE's and MDET's getters and draws the frames natively (subject.mjs; docs/om1-subject-spec.md 5.1)",
   "S-LENS": "a lens on the mount, the M.Zuiko 12-40mm F2.8 PRO: lens 0's attach and data-valid flags (0xa32d4b9a, 0xa32d4b98) are 1 and its record (0xa32caa8c -> the driver's static 0xa3193780) is filled through the driver's current copies and its own commits 0x502ac838 / 0x502acb96, the zoom entries at +1164; the field layout is the record dump's (0x50118662, 0x50118ab7, 0x50118d20), the values I (12-40 mm, F2.8-F22 as APEX x 256 761 / 2283); the driver's derived apertures and focal lengths run natively; the lens-ready byte 0xa32d4b94 is 1 (0x50127ba2 answers 1, not 0x21, which DISP_FRAME requires, I); set before the application starts",
   "S-EXPOSE": "the brightness the exposure plan follows: the AE result objects 0xc12a / 0xc0ba / 0xc0ca (TAKE_EXPOSE's command handler 0x50596187 writes them; one per metering mode, I) set through the property setter 0x5004188b to the scene's BV = (EV100 - 5) x 256 (S-SCENE's scene, else its default EV 12), the zoom step nearest its focal length; take_expose_calculate 0x50597e82 runs natively, once the application has started and after each input on the shooting screen; its plan (0x62a919dc +6 Tv, +10 Sv, +14 Av) is the shutter, aperture and ISO the screen shows and, in S-SCENE's auto, the live view's and the captures' exposure. The camera meters the live view continuously (its LV AE task, not run)",
   "S-OUTDISP": "while the lab's display switch (SWITCH: H-CONNECT 131 with lOutput 7) has the EVF open, the application's getOutputDisplay (0x5104fd44) answers 6 (INTERNAL_EVF), the device H-CONNECT's lOutput 7 stands for; on the TFT it runs natively. Without it the application, told of the GUI's change, answers the TFT (its EVF branch needs a monitor position the lab's switch bits do not give, docs/om1-shutter-spec.md section 7 item 53) and sends 131 with lOutput 2, and the two alternate. The camera decides from the eye sensor, the monitor position and the settings (I)",
@@ -330,6 +334,8 @@ export class CamApp {
     this.play_exec = null;     // S-PLAYSEQ: the play request whose transaction runs next
     this.components = !!session.opts.camapp_components;   // S-BOOTDONE / S-CPU3: the HLS components run (control camapp 2)
     this.media = null;         // S-MDACTRL / S-MEDIA (media.mjs): with the file system native
+    // S-SUBJECT (subject.mjs): subject detection's frames, on a body that gives its facts (models.mjs subject)
+    this.subject = MODEL_INFO.subject ? new SubjectFrames(session, this, MODEL_INFO.subject, (mode) => this.frame_mode(mode), FRAME_MODE_AF) : null;
     this.shoot_mode = false;   // S-BOOTDONE: 420 sent
     this.boot_finished = false; // S-BOOTDONE: the category left its state 3
     this.started = false;
@@ -375,9 +381,7 @@ export class CamApp {
     s.settle('S-CAMAPP CA_MAIN');
     lab.gui_await();                                                                // H-GUIBYAPP
     this.pump();
-    lab.call(FRAME_MODE_SET, { d0: FRAME_MODE_AF }, null, null, 2000000);           // S-TAKEFRAME
-    s.settle('S-TAKEFRAME');
-    this.drain_cpu3();
+    this.frame_mode(FRAME_MODE_AF);                                                 // S-TAKEFRAME
     this.started = true;
     this.expose();                                                                  // S-EXPOSE
   }
@@ -441,7 +445,7 @@ export class CamApp {
     lab.wrap(K_CFLUSH, (prev) => (h, r) => (disasm(r.mdr) === DF_FLUSH_RETURN ? h.finish(r) : prev(h, r)), 'K-CFLUSH');
     lab.wrap(OLYTASS, (prev) => (h, r) => (DF_SWAP_SLEEPS.has(disasm(r.mdr)) ? lab._sleep(h, r) : prev(h, r)), 'S-DISPFRAME (swap wait)');
     lab.call(DF_COLOUR_INIT, null, null, null, 2000000);
-    for (const [id, at] of DF_BITMAPS) lab.sim.write(at, pack('<I', lab.call(RES_LOAD, { d0: id }, null, null, 5000000).a0 >>> 0));
+    for (const [id, at] of DF_SETTINGS) lab.sim.write(at, pack('<I', lab.call(PROP_DATA, { d0: id }, null, null, 5000000).a0 >>> 0));
     const rgb = lab.alloc(new Uint8Array(8), 4), word = lab.alloc(new Uint8Array(4), 4);
     for (let i = 0; i < FACE_COLOURS; i++) {
       lab.call(DF_COLOUR, { d0: i, a0: rgb, a1: rgb + 1, d1: rgb + 2 }, null, null, 200000);
@@ -474,6 +478,13 @@ export class CamApp {
     else lab.call(DF_DRAW, { d0: st, d1: a2 }, null, null, 20000000);
     s.settle('S-DISPFRAME');
     this.log.push(['dispframe', `flag ${h8(a2)} pending ${h8(pend)} state ${st}`]);
+  }
+  // S-TAKEFRAME: the frame display mode the TAKE module sets (0x500256d9), S-SUBJECT's too (its subject bit)
+  frame_mode(mode) {
+    const s = this.s;
+    s.lab.call(FRAME_MODE_SET, { d0: mode }, null, null, 2000000);
+    s.settle('S-TAKEFRAME');
+    this.drain_cpu3();
   }
   // S-AFOSD: the AF module's OSD upload of the indicator and frames (cx, cy, w, h each)
   af_upload(indicator, frames) {
@@ -856,6 +867,7 @@ export class CamApp {
       this.post(name, param);
       if (name === 'UPDATE_SHOOTING_TIME' && this.recording !== null) this.at(1e9, name, param + 1);
     }
+    this.subject?.tick();                                                           // S-SUBJECT
   }
   take_log() { const out = this.log; this.log = []; return out; }
   status() {
@@ -863,6 +875,7 @@ export class CamApp {
       recording_s: this.recording === null ? null : +((this.s.lab.lab_time() - this.recording) / 1e9).toFixed(1),
       card_used_s: +(this.card_used_ms / 1000).toFixed(1), card_images: this.images.length,
       components: this.boot_finished,
-      reactive: this.reactive === null ? null : h8(this.reactive) };
+      reactive: this.reactive === null ? null : h8(this.reactive),
+      ...(this.subject?.used ? { subject: this.subject.status() } : {}) };
   }
 }

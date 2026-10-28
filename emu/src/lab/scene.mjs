@@ -262,6 +262,38 @@ export function focusAt(scene, t_s = 0, aspect = 2 / 3) {
   return null;
 }
 
+// The subjects of the patterns, for S-SUBJECT (subject.mjs): the class a camera's subject detection would put the
+// pattern in and its extent on the layer's plane [X0, Y0, X1, Y1] (m, the pattern's own coordinates). The rider's
+// two-wheeler stands for a motorsport subject (the harness's choice: the scene is synthetic); its extent runs from the
+// wheels' outer edges and their bottom to the top of the head, without the ground strip. The ball is no class's.
+export const SUBJECTS = {
+  rider: { subject: 'motorsports', extent: [-0.9, -1.6, 0.9, 0.29] },
+};
+// The subjects visible at lab time t_s: for each layer whose pattern is a subject, each copy of it (a moving layer
+// wraps around, so two copies can be in the frame at once) that overlaps the frame, as { layer, subject, box } with
+// box [u0, v0, u1, v1] in fractions of the frame (u to the right, v down), clipped to it, and area its clipped area.
+// aspect: the rendered frame's height over its width. The projection is renderFrame's and focusAt's.
+export function subjectsAt(scene, t_s = 0, aspect = 2 / 3) {
+  const out = [];
+  for (const layer of scene.layers) {
+    const sub = SUBJECTS[layer.pattern];
+    if (!sub) continue;
+    const width = SENSOR_MM[0] * layer.depth_m / scene.lens.focal_mm, height = width * aspect;   // the frame on this layer, m
+    const [X0, Y0, X1, Y1] = sub.extent, shift = layer.speed * t_s, span = width * 1.25;
+    // the pattern at X shows at frame X + shift + k span for the k that wrap it into view (k = 0 for a still layer)
+    const ks = layer.speed ? [-1, 0, 1].map((d) => Math.round(-shift / span) + d) : [0];
+    for (const k of ks) {
+      const off = shift + k * span;
+      const u0 = 0.5 + (X0 + off) / width, u1 = 0.5 + (X1 + off) / width;
+      const v0 = 0.5 - Y1 / height, v1 = 0.5 - Y0 / height;
+      const box = [clamp(u0, 0, 1), clamp(v0, 0, 1), clamp(u1, 0, 1), clamp(v1, 0, 1)];
+      const area = (box[2] - box[0]) * (box[3] - box[1]);
+      if (area > 0) out.push({ layer: layer.name, subject: sub.subject, box, area });
+    }
+  }
+  return out;
+}
+
 // What the page shows next to the frame: the exposure in use and the circle of confusion of each layer.
 export function sceneReport(scene) {
   const e = exposureOf(scene);

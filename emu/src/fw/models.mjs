@@ -176,6 +176,41 @@ export const MODELS = {
         switch_level: 0x5014C015, switch_event: 0x02020000, publish: 0x50025095,
       },
     },
+    // Subject detection's frames on the display (src/lab/subject.mjs S-SUBJECT; docs/om1-subject-spec.md 4.3 and 5.1).
+    // D unless tagged. setting: the subject-detection setting, the data object 0x1e71 (settings id 1682, six values,
+    // default 0), which TAKE reads through the property read 0x500417da(0x1e71, 0, 0) (0x5039ac95..9b, 0x5039bb03..08,
+    // 0x506d8011..17) into its context +206 and hands to take_mov (0x503a4882 -> 0x62a411a3 -> mdet_dl_change_mode
+    // 0x5080a79a, 0x503a48ac..ce); its value is MDET's kind, whose names are at 0x50338100 (0 OFF, 1 MOTOR_SPORTS,
+    // 2 AIRPLANE, 3 TRAIN, 4 BIRD, 5 ANIMAL; 0x50812dc9 maps 1..5 to the learning items). table: MDET's frame table, as
+    // its writer 0x5082ac64..0x5082af98 fills it and its getter 0x5083a299 (trace id 227) copies it: main {flag, the
+    // record}, subject 0's box (0xa33790b2..b8, or the centre and size at 0xa3379060..66), written only while the byte
+    // 0xa337f082 is 1 (0x5082acb3, 0x5082ad02..0x5082ae76; what that state is, ?); part {flag, record}, a box at
+    // 0xa33790f2..f8 taken in the same state when 0xa337811b is 1 (0x5082ae7d..0x5082af1a); count and list, the
+    // subjects' boxes (0xa33790b2 + 8 n, valid at 0xa337d53c + n; n from 0, or from 1 in that state, up to 8 records,
+    // 0x5082af23..0x5082af98). A record is four corners (x, y) as halfwords, top left,
+    // top right, bottom left, bottom right (the writer's order; FACE's 0x50523fe3 takes x0, y0, x1 and the third
+    // corner's y for the centre, width and height). active: the byte 0x50839ed0 returns, which the getter requires
+    // (else no frames) and the writer requires before it posts UP_FACE (0x5082af9a..0x5082afee). aspect: the pair of
+    // bytes the getter maps to the frame's aspect code (0x5083a368..0x5083a3f8; all zero: no frames): code -> pair
+    // below. up_face: the frame plane's UP_FACE (flag 1 to DISP_FRAME when the frame mode has bit 1, 0x50025747).
+    // DISP_FRAME's side (S-DISPFRAME runs it): draw_face 0x5100d751 asks FACE's 0x5052202c for an 88-byte record, which
+    // takes MDET's table through the getter unless FACE's own mode byte 0xa32f3e06 is 1, and draws only when its
+    // aspect code equals the one DISP_FRAME computes for the frame (0x5100d469: the still aspect, object 0x3081 /
+    // settings id 269, or the movie's; aspect_code); 0x5100dfef turns the list into frames of kind 1 colour 3, the
+    // main record into kind 7 colour 4 and the part into kind 8 colour 4 when the mode has bit 0x10. The frames' plane
+    // coordinates come from a 24-byte transform {width, height, x num, x den, y num, y den, x offset, y offset, clip x0,
+    // y0, x1, y1} (0x500259bd), picked from the table 0x60365754 (a pointer per output, 0x500258e8(state, object 0x8971,
+    // 0x500258d4()) the index; 0x5100d77d..0x5100d7a5) and the aspect (0x50025931(code) the row)
+    subject: {
+      setting: 0x1E71, prop_read: 0x500417DA,
+      table: { main: [0xA337EFA1, 0xA337EFA2], part: [0xA337EFB2, 0xA337EFB4], count: 0xA337EFC4, list: 0xA337EFC6, max: 8 },
+      active: 0xA337F084, aspect: [0xA3378119, 0xA337811A],
+      aspect_pairs: { 1: [4, 3], 2: [3, 2], 3: [16, 9], 4: [6, 6], 9: [3, 4], 10: [17, 9] },
+      up_face: 0x50025747,
+      face_mode: 0xA32F3E06,
+      aspect_code: 0x5100D469, state: 0x5100DFBC,
+      transform: { table: 0x60365754, index: 0x500258E8, object: [0x8971, 0x62F4FE68], device: 0x500258D4, row: 0x50025931 },
+    },
   },
   E146: {
     name: 'OM-1 II', bin: 'OLY_E_146_1300_0000_0000.BIN', version: '1.3', res_block: 'blk02000000.OE.0101.bin', checked: true,

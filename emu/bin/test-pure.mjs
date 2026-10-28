@@ -9,7 +9,8 @@
 // the firmware map's units (test_fwmap.mjs: the machine's coverage option off and on, fwmap's decoder against the
 // interpreter's transfer forms, the coverage union, the block aggregation), the SCPU's clock, ports and link
 // (test_scpu.mjs), the HDMI port's device and sink (test_hdmi.mjs), the accelerometer stand-in's sample
-// (test_acc.mjs), the SD card model and the FAT reader (test_storage.mjs), the debug API's argument checks, halt,
+// (test_acc.mjs), the SD card model and the FAT reader (test_storage.mjs), S-SUBJECT's subject boxes and transform
+// (test_subject.mjs), the debug API's argument checks, halt,
 // trace filters and live-route units (test_live.mjs liveUnits: a machine on a blank image) and the publication
 // audit's rules on a throwaway repository (test_pubaudit.mjs), and the SCPU's Cortex-M4 core: its decoder, executor and
 // exception model on hand-written vectors and the QEMU-recorded differential vectors (test_m4.mjs).
@@ -28,6 +29,7 @@ import { scpuUnits } from '../test/test_scpu.mjs';
 import { hdmiUnits } from '../test/test_hdmi.mjs';
 import { accUnits } from '../test/test_acc.mjs';
 import { storageUnits } from '../test/test_storage.mjs';
+import { subjectUnits } from '../test/test_subject.mjs';
 import { liveUnits } from '../test/test_live.mjs';
 import { pubauditTests } from '../test/test_pubaudit.mjs';
 import { m4Units, m4Vectors } from '../test/test_m4.mjs';
@@ -62,6 +64,7 @@ report('SCPU clock, ports, link pins and the sub-CPU (S-SCPUDEV)', scpuUnits());
 report('HDMI port: transmitter, hot-plug pin, sink (S-HDMISINK)', hdmiUnits());
 report('accelerometer sample (S-ACCSAMPLE)', accUnits());
 report('SD card and FAT reader (S-SDCARD, refs/fat.mjs)', storageUnits());
+report('subject frames: the scene\'s subject boxes, DISP_FRAME\'s transform taken back (S-SUBJECT)', subjectUnits());
 report('debug API: argument checks, halt, trace filters, live route', await liveUnits());
 report('publication audit (throwaway repository, made-up firmware)', await pubauditTests());
 report('Cortex-M4 core: decoder, executor, exceptions (hand-written)', m4Units());

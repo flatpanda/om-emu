@@ -750,6 +750,8 @@ export class PlayLab extends N.NavLab {
 
 // S-SCENE's live-view bank (display.mjs LV_BANKS: 0x0A, the bank check_liveview's M7 runs use)
 const SCENE_BANK = 0x0A;
+// S-SCENE's frame step for a moving scene: 1/15 s of lab time (player.mjs scene_moved publishes a frame per step)
+const SCENE_STEP_NS = 1e9 / 15;
 
 // A time-mode NavSession with play inputs. kw: the keyword arguments (opts, lang, device, start, tag, a15, ...).
 export class PlaySession extends N.NavSession {
@@ -1765,10 +1767,18 @@ export class PlaySession extends N.NavSession {
     }
     return null;
   }
-  scene_render() {
+  scene_render(t_s = this.lab.lab_time() / 1e9) {
     const sc = this.scene, [src] = D.LV_SCALED[this.device];
     sc.frame_no += 1;
-    return SC.renderFrame(sc, src[0], src[1], this.lab.lab_time() / 1e9, sc.frame_no);
+    return SC.renderFrame(sc, src[0], src[1], t_s, sc.frame_no);
+  }
+  // The live view's step and its time (s): a moving scene is rendered once per 1/15 s of lab time, at the step's
+  // start (so S-SUBJECT's subjects, subject.mjs, are where the shown frame has them); a still one at step 0, now.
+  scene_step() {
+    const sc = this.scene, now = this.lab.lab_time();
+    if (!sc.layers.some((l) => l.speed)) return { step: 0, t: now / 1e9 };
+    const step = Math.floor(now / SCENE_STEP_NS);
+    return { step, t: (step * SCENE_STEP_NS) / 1e9 };
   }
   // The scene's frame for the next composite: rendered again when the scene changed or one of its layers moves (then
   // at most every 1/15 s of lab time).
@@ -1780,11 +1790,11 @@ export class PlaySession extends N.NavSession {
       if (lv.key !== 'through off') { lv.key = 'through off'; this.lab.load_lv_frame(this.black_frame(), SCENE_BANK, 1, D.LV_SCALED_CROP); }
       return;
     }
-    const moving = sc.layers.some((l) => l.speed);
-    const key = JSON.stringify([sc.preset, sc.layers, sc.ev, sc.lens, sc.exposure, moving ? Math.floor(this.lab.lab_time() / (1e9 / 15)) : 0]);
+    const { step, t } = this.scene_step();
+    const key = JSON.stringify([sc.preset, sc.layers, sc.ev, sc.lens, sc.exposure, step]);
     if (key === lv.key) return;
     lv.key = key;
-    this.lab.load_lv_frame(this.scene_render(), SCENE_BANK, 1, D.LV_SCALED_CROP);
+    this.lab.load_lv_frame(this.scene_render(t), SCENE_BANK, 1, D.LV_SCALED_CROP);
   }
   // S-RECVIEW (camapp mode, at the application's START_RECVIEW / END_RECVIEW callbacks): while the GUI shows its rec
   // view, the live-view plane holds the frame of the last capture instead of the live scene. The camera would show the

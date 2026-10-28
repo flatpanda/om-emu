@@ -12,8 +12,9 @@
 // (test_camapp.mjs), the SCPU's clock, ports, link pins and sub-CPU model (test_scpu.mjs), the publication audit
 // (test_pubaudit.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the card and the
-// file system on E143, E146, E147, E144 and E142 (test_storage.mjs), the SCPU's Cortex-M4 core (test_m4.mjs:
-// hand-written vectors, QEMU's recorded vectors, the SCPU image from reset to its first unmodelled access), the firmware
+// file system on E143, E146, E147, E144 and E142 (test_storage.mjs), subject detection's frames on E143
+// (test_subject.mjs), the SCPU's Cortex-M4 core (test_m4.mjs: hand-written vectors, QEMU's recorded vectors, the SCPU
+// image from reset to its first unmodelled access), the firmware
 // rules of src/fw/facts.mjs (test_facts.mjs) and the firmware map (test_fwmap.mjs:
 // the machine's coverage option, the static map's determinism and pinned headline, the labels' keys, run.mjs under
 // OM_COVERAGE). The fixtures they compare with are emu's own (test/fixtures, checks/fixtures, golden.json): a
@@ -189,6 +190,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipp
   console.log(`card and file system: card model and FAT reader ${su.checks - su.bad.length}/${su.checks}; in play (E143) ${ss.checks - ss.bad.length}/${ss.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
   [...su.bad, ...ss.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += su.bad.length + ss.bad.length + others.filter(([, rc]) => rc !== 0).length;
+}
+// subject detection's frames (S-SUBJECT): the scene's subject boxes and DISP_FRAME's transform without firmware, then
+// a play session on E143 whose DISP_FRAME draws the frames on the scene's rider while the setting names motorsports
+{
+  const { subjectUnits, subjectSession } = await import('../test/test_subject.mjs');
+  const su = subjectUnits(), ss = await subjectSession();
+  console.log(`subject frames (S-SUBJECT): boxes and transform ${su.checks - su.bad.length}/${su.checks}; in play ${ss.checks - ss.bad.length}/${ss.checks}`);
+  [...su.bad, ...ss.bad].forEach((x) => console.log('  ', x));
+  bad += su.bad.length + ss.bad.length;
 }
 // the camera's non-volatile state kept between sessions (S-NVRAM): no date prompt, a setting kept across sessions
 {

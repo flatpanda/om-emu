@@ -163,7 +163,10 @@ the survey table.
   media writer uses, `0x5054aa70`, in the recording modules the capture pipeline drives), so the firmware's image count
   follows a picture in the same session and S-CARD's image list retires; the HLS media manager itself (camapp 2 does
   not create it) in place of S-CARD's and S-MEDIA's requests; the second slot (its switch `0x1518`, and S-CARD's start
-  value of its mount state); the media control's other commands (erase all, copy, unlock); an SDXC card (exFAT); the SD
+  value of its mount state); the media control's other commands (erase all, copy, unlock); an SDXC card (exFAT:
+  written, not yet run, 2026-10-28, hle-gaps.md 4.8.6: S-SDCARD's card SDXC above 32 GiB by `OM_EMU_CARD_SIZE`, an
+  independent exFAT reader `refs/exfat.mjs`, and a test that has the firmware format and mount a 64 and a 128 GiB
+  card and reports the file system, its layout and the remaining shots it finds; next: run it); the SD
   host at its registers with its interrupts and card detect (seam A); playback of the card's files (a JPEG decoder at
   the codec seam); the movie module's set-up, whose frame rate the movie time query reads (it logs `0x39000903`).
 - **The movie time of the E144 family:** read (2026-10-27, hle-gaps.md 4.8.5), nothing to model. With the card native
@@ -242,7 +245,7 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
 | 3 | interrupt acceptance anywhere, then the machine-owned time model | not started: architecture phases 3 and 4 |
 | 4 | CPU 2, then CPU 3, then CPU 1, natively | not started |
 | 5 | task-start and module-init infrastructure; the HLS component bring-up as the coverage workload's default | not started |
-| 6 | storage at the sdmem seam | started (2026-10-23, hle-gaps.md 4.8.2) on E143, one layer lower, at the SD command layer: an 8 GiB SDHC card (S-SDCARD) the firmware formats (FAT32) and mounts itself, with the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, dosfat and the DCF modules native; the remaining shots and the movie time counted by the firmware from the card; the picture's file written at S2 through the file module (S-RECFILE, in place of REC_FILE) and found by the firmware's DCF scan at the next mount; Card Formatting from the menu and the card's removal and insertion at run time (2026-10-24, 4.8.3). Open: REC_FILE natively, the second slot, exFAT, the other bodies |
+| 6 | storage at the sdmem seam | started (2026-10-23, hle-gaps.md 4.8.2) on E143, one layer lower, at the SD command layer: an 8 GiB SDHC card (S-SDCARD) the firmware formats (FAT32) and mounts itself, with the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, dosfat and the DCF modules native; the remaining shots and the movie time counted by the firmware from the card; the picture's file written at S2 through the file module (S-RECFILE, in place of REC_FILE) and found by the firmware's DCF scan at the next mount; Card Formatting from the menu and the card's removal and insertion at run time (2026-10-24, 4.8.3); an SDXC card and an exFAT reader written, not yet run (2026-10-28, 4.8.6). Open: REC_FILE natively, the second slot, exFAT (the run of 4.8.6), the other bodies |
 | 7 | TAKE native with the lens, BC, the sensor control plane and the shutter (the strobe beside it) | started (2026-10-28) with the lens on E143 at its serial controller, opt-in (hle-gaps.md 4.4.2): the lens tasks, driver and LENS_SSC run natively, S-LENSMCU answers as the 12-40. Open: the camera application's wait after a touch with the native lens (why S-LENS is still the default), the lens's real replies, the lens-ready byte, the other bodies; TAKE, BC, the sensor and the shutter not started |
 | 8 | by gain: still capture, live-view statistics and EXP, AF, movie and audio, playback, USB, the power manager, wireless after CPU 1, GPU / C3D, the rest | not started |
 

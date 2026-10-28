@@ -1128,7 +1128,9 @@ subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a91
   the format and the transfers read, then needs no stand-in). Round 2 (2026-10-24, 4.8.3): Card Formatting from the
   menu and the card's removal and insertion at run time, with the HLS function component and media manager stood in
   at their seams. Round 3 (2026-10-25, 4.8.4): the seams read by a rule in every image that has them, and the card
-  native on nine more bodies (E146, E147, E144, E139, E137, E142, E140, E125, E130).
+  native on nine more bodies (E146, E147, E144, E139, E137, E142, E140, E125, E130). Round 4 (2026-10-28, 4.8.6;
+  written, not yet run): an SDXC card by its capacity, an independent exFAT reader, and a test that has the firmware
+  format and mount a 64 and a 128 GiB card and reports what it finds.
 
 #### 4.8.1 The sdmem request contract (D unless tagged)
 
@@ -1237,9 +1239,9 @@ found on the way:
 - **Card Formatting from the menu** (X, round 1): Setup, Card Formatting, card 1, Format Card, Yes showed "Busy"; the
   application's media control sends TRA 1511 (`0x50ac940d`, OlyHfwOpeMdaCtrl), which S-TRAACK answers. Round 2 (4.8.3)
   found the component that takes it and stands it in.
-- **Open:** the other bodies (round 3, 4.8.4), the second slot, exFAT (an SDXC card), REC_FILE natively, the SD host
-  at its registers with interrupts (seam A), playback of the files (a JPEG decoder at the codec seam); round 2's open
-  points are in 4.8.3.
+- **Open:** the other bodies (round 3, 4.8.4), the second slot, exFAT (an SDXC card: written, not yet run, 4.8.6),
+  REC_FILE natively, the SD host at its registers with interrupts (seam A), playback of the files (a JPEG decoder at
+  the codec seam); round 2's open points are in 4.8.3.
 
 #### 4.8.3 The card on E143, round 2: the menu's format, removal and insertion (2026-10-24; D unless tagged)
 
@@ -1329,8 +1331,8 @@ to the card switch), and are stood in at their seams with the firmware's own eve
 - **Open:** the second slot (S-CARD sets both slots' mount state to 8 at the start, so the format sets slot 2's flag
   15262 too; slot 2's switch `0x1518` is not stood in); the HLS components' own runs (the function component and the
   media manager in camapp 2); the media control's other commands (2, 3, 5, 6: erase all, copy, unlock, ...); the SD
-  host's card detect (seam A); a card the firmware cannot mount (unreadable, exFAT); what the camera draws without a
-  card ("No Card", the card icon).
+  host's card detect (seam A); a card the firmware cannot mount (unreadable; an SDXC card, 4.8.6, is written but not
+  yet run); what the camera draws without a card ("No Card", the card icon).
 
 #### 4.8.4 The card on more bodies, round 3 (2026-10-25; D unless tagged)
 
@@ -1434,6 +1436,53 @@ at 60p or 50p. Nothing in the lab changes; the addresses are E144's.
   space and rate into time is not read).
 - **Open:** whether a body leaves the factory with the blank store's mode 1 (?), and whether the camera's movie menu can
   select code 8 at 60p on these bodies (not read).
+
+#### 4.8.6 An SDXC card and an exFAT reader, round 4 (2026-10-28; written, not yet run)
+
+Code and tests only: nothing of this round has run (the machine was kept free; verification is a later round), so
+nothing here is X. What the SD and exFAT specifications say is from memory of them, not checked against the documents
+in this round (I); what the firmware does with an SDXC card is not read (?), and the test is written to report it.
+
+- **The card (S-SDCARD, `emu/src/lab/sdcard.mjs`):** the capacity is the card's one parameter, and above 32 GiB the card
+  is SDXC (`kind`); SDHC stays the default (8 GiB). By the SD Physical Layer specification (I) an SDXC card answers as
+  an SDHC card does but for: CSD version 2.0's 22-bit C_SIZE past 32 GiB (64 GiB is C_SIZE 131071, 128 GiB 262143; the
+  largest C_SIZE 0x3FFEFF, just under 2 TiB, is the model's limit), the SCR's SD_SECURITY 4 (version 3.xx; SDHC 3),
+  and the larger AU its SD Status may report (the lab's choice: 16 MiB up to 128 GiB, 32 MiB above; SDHC keeps 4
+  MiB). The OCR (CCS set), CID, CMD6's status and the command state machine are unchanged. The firmware reads C_SIZE
+  with the 22-bit mask `(w1 >> 8) & 0x3fffff` (sdmem_format, 4.8.2, D), and the card info's capacity is a u32 of
+  sectors (4.8.1, D), which holds 2^28 for 128 GiB; whether sd_mount or sdmem_format branch on the capacity or the
+  SCR is not read (?). The store stays sparse (only the sectors written with something other than zeros), and CMD38
+  now erases by the stored sectors when the range is the larger, so an erase of a whole 128 GiB card costs nothing.
+- **The host's choice:** node's `OM_EMU_CARD_SIZE` (GiB: `64`, `64G`, `128GiB`; `cardSectors`) sizes a new card, in
+  memory for the player's life or in `OM_EMU_CARD`'s file (`emu/host/card.mjs`, which refuses a saved card of another
+  capacity rather than stand one for the other). The browser player has no size input yet (its card is the default).
+- **The exFAT reader (`emu/refs/exfat.mjs`):** independent, written from Microsoft's exFAT specification (I), Worker-safe
+  and importing only `refs/`: the boot sector's fields and rules (bytes 11..63 zero, 512-byte sectors, revision 1.x),
+  the boot region's checksum (sectors 0..10 but VolumeFlags and PercentInUse, repeated over sector 11) and the backup
+  region, the active FAT, the allocation bitmap, the up-case table with its checksum and its compressed runs, the
+  volume label, entry sets with their set checksums and name hashes (over the name up-cased by the volume's own
+  table), contiguous (NoFatChain) and FAT-chained files and directories, the valid data length, and a consistency
+  check (every cluster in use allocated in the bitmap and taken once, no cluster allocated to nothing). A mismatch is
+  an error, not a guess. It gives the surface `emu/refs/fat.mjs` gives its callers (type, label, spc, clusters, list,
+  find, data, chain, freeClusters, fsInfo; list also takes a directory's entry, in both readers), and
+  `emu/refs/volume.mjs` openVolume picks the reader by the boot sector, so a card of either kind reads the same way.
+- **What the firmware is expected to do (I) and what the test reports:** dosfat carries both FAT and exFAT (4.8, D).
+  The SD File System Specification has an SDXC card formatted exFAT, in an MBR partition of type 0x07 that starts at
+  the boundary unit (32768 sectors at 64 GiB), with 128 KiB clusters from 32 to 128 GB and 256 KiB above (I, as
+  recalled; the lab's 128 GiB card is 137 GB, so either row may apply, ?). Whether the camera's format follows it, and
+  with which cluster size, is ?. `emu/test/test_storage.mjs` storageSdxc (`--sdxc`; in `emu/bin/test.mjs` on E143)
+  puts a blank 64 and a 128 GiB card in a player and checks what holds whichever file system the firmware picks: the
+  insertion formats and mounts the card, the volume reads back through `refs/volume.mjs` and is consistent (exFAT's
+  check and backup region, or FAT32's FSInfo against its FAT), S2's file is found with the JPEG's bytes, and the
+  firmware counts remaining shots from the card; it prints as notes the insertion's lab times, the partition and the
+  layout, the remaining shots and the movie time (to be measured: 803 shots and 5:25 on the 8 GiB card, 4.8.2;
+  whether the count saturates on a large card, ?). The units (`storageUnits`, in `test-pure`) build an exFAT volume
+  by hand and read it back, with each checksum, the name hash, a looping chain and the bitmap's mismatches caught,
+  and check the SDXC registers and the sparse 128 GiB card.
+- **Open:** the run (the next round); the browser player's card size; `emu/bin/modelcheck.mjs` still reads its card
+  with `refs/fat.mjs` (its card is the default SDHC one; `refs/volume.mjs` would read either); the HLS side on an
+  SDXC card (Card Formatting from the menu, the card out and in: S-MDACTRL and S-MEDIA are unchanged and not tried
+  with it); exFAT on the other native bodies.
 
 ### 4.9 HDMI and DisplayPort
 

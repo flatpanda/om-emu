@@ -745,7 +745,7 @@ const X = {
   // ---- system
   hint(c, d) {
     if (d.imm === 3) { if (!c.sys.wakes()) c.sleeping = true; }        // WFI
-    else if (d.imm === 2) { if (c.event) c.event = 0; else if (!c.sys.wakes()) c.sleeping = true; }   // WFE
+    else if (d.imm === 2) { if (c.event) c.event = 0; else if (!c.sys.wakes()) c.sleeping = 'wfe'; }   // WFE ('wfe': an external event ends it too)
     else if (d.imm === 4) c.event = 1;                                // SEV (a single core: its own event register)
   },
   barrier() {},

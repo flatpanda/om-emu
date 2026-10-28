@@ -104,6 +104,21 @@ export const MODELS = {
       refs: 0x6034D9B0, axes: 0x6034E170,
       slope: { init: 0x5005FB31, main: 0x5005FB9C, get: 0x5005F982 },
     },
+    // The lens on the mount natively (src/lab/lens.mjs, src/lab/lensmcu.mjs; docs/hle-gaps.md 4.4.2): the
+    // deferred-call init 0x50050279 (the boot head's, 0x50000270); the lens module init 0x502a5d10 (boot call
+    // 0x50024ab6), the lens data cache load 0x502a6371 and the task variables 0x502a5dff (USTART_L, 0x5002420e and
+    // 0x50024222); the task entries of LENS_MAIN, LENS_COMMAND and LENS_ASKDATA (the static task table 0x50018ac0,
+    // 0x50018aa4, 0x50018a88); LENS_EXEC's queue-id word (0x60043220, LENS_MAIN's receive 0x502a5e55) and OlyQeWr,
+    // through which TAKE_FUNC posts its command 1 (0x502cd9d1..0x502cd9f2); the lens caches' NAND (the area table
+    // 0x602a4a24: 7 areas of 0x40000 from 0x416e0000) and the NAND access's read operation (0x501a9896); LLPSW's bit
+    // in UI_IN's group 1 [group, byte, bit] (src/lab/play.mjs FW_KEYS); the driver's lens-0 flags (data valid 0x501269fc,
+    // attach 0x50126a14, the sync layer's lens-ready byte 0x502c3946) (D)
+    lens_native: {
+      dpc_init: 0x50050279, module_init: 0x502A5D10, cache_init: 0x502A6371, task_vars: 0x502A5DFF,
+      tasks: [0x502A5E37, 0x50115A08, 0x502A8193], exec_queue: 0x60043220, queue_write: 0x5002C151, camera_on: 1,
+      cache_area: [0x416E0000, 0x1C0000], nand_read: 0x10200, llpsw: [1, 1, 4],
+      flags: { valid: 0xA32D4B98, attach: 0xA32D4B9A, ready: 0xA32D4B94 },
+    },
     // 0x5000314c / 0x50003156 run the heap's get 0x5000319c / release 0x50003466 with pool 2, whose block size is 16512
     // (the table 0x60029908) and whose memory is 0x62424700.. (0x50003211), S-HEAP's (D)
     heap_pool: { get: 0x5000314C, put: 0x50003156, bytes: 16512 },

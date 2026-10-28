@@ -353,7 +353,7 @@ export class Player {
     if (a.x_mutant !== 'no-aeinit') used.push('H-AEINIT');
     if ((a.a15 ?? 'auto') !== 'off') used.push('A15');
     if (a.x_mutant !== 'no-dispq') used.push('S-DISPQ');                                     // :2519
-    used.push('H-GUIBYAPP', 'S-CAMAPP', 'S-MODACK', 'S-RVSTANDBY', 'S-TRAACK', 'S-RELSEQ', 'S-CARD', 'S-LENS', 'S-EXPOSE', 'S-LONGTIMER', 'S-DISPFRAME', 'S-TAKEFRAME', 'S-AFOSD', 'S-CPU3', 'S-RECVIEW', this.env.nvram ? 'S-NVRAM' : 'S-SETSAVE', 'S-OUTDISP', 'S-THROUGH', 'S-PLAYSEQ', 'S-PLAYCOMP', 'S-PLAYVIEW', ...(this.camapp_components ? ['S-BOOTDONE'] : []));   // the camera application runs natively
+    used.push('H-GUIBYAPP', 'S-CAMAPP', 'S-MODACK', 'S-RVSTANDBY', 'S-TRAACK', 'S-RELSEQ', 'S-CARD', ...(this.session?.lens ? [] : ['S-LENS']), 'S-EXPOSE', 'S-LONGTIMER', 'S-DISPFRAME', 'S-TAKEFRAME', 'S-AFOSD', 'S-CPU3', 'S-RECVIEW', this.env.nvram ? 'S-NVRAM' : 'S-SETSAVE', 'S-OUTDISP', 'S-THROUGH', 'S-PLAYSEQ', 'S-PLAYCOMP', 'S-PLAYVIEW', ...(this.camapp_components ? ['S-BOOTDONE'] : []));   // the camera application runs natively
     if ((a.device ?? 'tft') === 'evf' && a.x_mutant !== 'evf-store-after-open') used.push('H-STOREFIRST');   // :2521
     if (!a.no_bgdraw) used.push('S-BGDRAW');
     if (this.idle === 'wall') used.push('H-IDLE');
@@ -376,6 +376,7 @@ export class Player {
     const media = this.session?.camapp?.media;
     if (media?.formats || media?.ctrl) used.push('S-MDACTRL');                               // a Card Formatting from the menu (media.mjs)
     if (this.session?.storage?.removals || this.session?.storage?.insertions) used.push('S-MEDIA');   // a card taken out or put back (media.mjs)
+    if (this.session?.lens) used.push('H-DPCINIT', 'H-LENSINIT', 'S-LENSNAND', 'H-LENSON', 'S-LENSMCU', 'A-LENSSSC-1', 'A-LENSMCU-1', 'A-LENSMCU-2', 'A-LENSMCU-3', 'A-DPC-1');   // the lens on the mount natively (lens.mjs)
     if (this.session?.acc) used.push('H-ACCINIT', 'S-ACCREG', 'S-ACCSAMPLE', 'H-SLOPEINIT', 'A-ACC-1', 'A-ACC-2', 'A-ACC-3');   // a body whose accelerometer is stood in at its sample cache
     // the model's own stand-ins (src/fw/models.mjs return_stubs and call_skips, src/lab/play.mjs), each by its name
     for (const [, , name] of MODEL_INFO.return_stubs ?? []) used.push(name);

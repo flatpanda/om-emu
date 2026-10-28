@@ -13,8 +13,9 @@
 // (test_pubaudit.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the card and the
 // file system on E143, E146, E147, E144 and E142 (test_storage.mjs), subject detection's frames on E143
-// (test_subject.mjs), the SCPU's Cortex-M4 core (test_m4.mjs: hand-written vectors, QEMU's recorded vectors, the SCPU
-// image from reset to its first unmodelled access), the firmware
+// (test_subject.mjs), the lens on the mount natively on E143 (test_lens.mjs), the SCPU's Cortex-M4 core
+// (test_m4.mjs: hand-written vectors, QEMU's recorded vectors, the SCPU image from reset to its first unmodelled
+// access), the firmware
 // rules of src/fw/facts.mjs (test_facts.mjs) and the firmware map (test_fwmap.mjs:
 // the machine's coverage option, the static map's determinism and pinned headline, the labels' keys, run.mjs under
 // OM_COVERAGE). The fixtures they compare with are emu's own (test/fixtures, checks/fixtures, golden.json): a
@@ -216,13 +217,21 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipp
   fk.bad.forEach((x) => console.log('  ', x));
   bad += fk.bad.length;
 }
-// the 12-40 on the mount and the camera's own exposure plan for the scene (S-LENS, S-EXPOSE)
+// the 12-40 on the mount (S-LENS, or natively with S-LENSMCU) and the camera's own exposure plan (S-EXPOSE)
 {
   const { exposeSessions } = await import('../test/test_expose.mjs');
   const ex = await exposeSessions();
-  console.log(`lens and exposure plan (S-LENS, S-EXPOSE) in play: ${ex.checks - ex.bad.length}/${ex.checks}`);
+  console.log(`lens and exposure plan (S-EXPOSE) in play: ${ex.checks - ex.bad.length}/${ex.checks}`);
   ex.bad.forEach((x) => console.log('  ', x));
   bad += ex.bad.length;
+}
+// the lens on the mount natively: the serial controller, the deferred-call triggers, S-LENSMCU, the driver's start
+{
+  const { lensUnits, lensSession } = await import('../test/test_lens.mjs');
+  const lu = lensUnits(), ls = await lensSession();
+  console.log(`the native lens: units ${lu.checks - lu.bad.length}/${lu.checks}; in play ${ls.checks - ls.bad.length}/${ls.checks}`);
+  [...lu.bad, ...ls.bad].forEach((x) => console.log('  ', x));
+  bad += lu.bad.length + ls.bad.length;
 }
 // the SCPU's Cortex-M4 core: hand-written vectors, QEMU's recorded vectors, the SCPU image from its reset vector
 {

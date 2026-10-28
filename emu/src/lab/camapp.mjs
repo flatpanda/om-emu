@@ -105,8 +105,9 @@ import { DISPLAY_SYNC_E143, RECVIEW_E143, CBS_E143, LENS_ZOOM_TABLE_E143, CARD_D
 //              returns as not mounted instead of reading the free clusters of a volume that does not exist
 //   S-PLAYSEQ  the play module's notifications of the HLS play requests (see RSB_EXECUTE); S-PLAYCOMP answers for the
 //              play component the HLS components would create (PLAY_COMPONENT); S-PLAYVIEW (play.mjs) shows the image
-//   S-LENS     a lens on the mount, the M.Zuiko 12-40mm F2.8 PRO: lens 0's attach flag (0xa32d4b9a, read by 0x50126a20)
-//              and its data-valid flag (0xa32d4b98, 0x50126a08) are 1, so getLensConnection (0x504106f8) answers 1 and
+//   S-LENS     (unless the lens runs natively: E143 with OM_EMU_LENS=native, src/lab/lens.mjs and S-LENSMCU,
+//              docs/hle-gaps.md 4.4.2) a lens on the mount, the M.Zuiko 12-40mm F2.8 PRO: lens 0's attach
+//              flag (0xa32d4b9a, read by 0x50126a20) and its data-valid flag (0xa32d4b98, 0x50126a08) are 1, so getLensConnection (0x504106f8) answers 1 and
 //              the application leaves MF (S-AF on the screen, the AF target shown). Its record is the one the lens
 //              driver's init (0x502ac2ce) points 0xa32caa8c at (static 0xa3193780), filled as the driver fills it: the
 //              current STATE, CHARACTER and zoom-entry copies (0x502ac60b 0/1/2) written, then committed by the driver's
@@ -291,7 +292,7 @@ export const CAMAPP_STAND_INS = {
   "S-TAKEFRAME": "the frame display mode the TAKE module sets for the live view (0x5039f583 -> 0x500256d9): 4, the AF frames and the indicator (the mask TAKE requests in S-AF is I)",
   "S-AFOSD": "the AF module's OSD upload (upload_af_info 0x508c8554 -> 0x500257ce) at S-RELSEQ's END_FOCUS: in focus, indicator 1 and one frame at the AF target (centre 400, 300, 60 x 60 in DISP_FRAME's coordinates, I); not in focus, indicator 9 and no frame (I); at the S1 release, none",
   "S-SUBJECT": "(with S-SCENE's live view, while the camera's subject-detection setting names a kind) the subject detection CPU 3's MDET would run: S-SCENE's subjects of that kind (the rider stands for motorsports) written into MDET's frame table as list records (four corners each, through DISP_FRAME's own transform taken back, so they land on the subject as the panel shows it), the getter's aspect pair and active byte set, the frame mode's subject bit added (I) and UP_FACE posted (0x50025747); DISP_FRAME reads the table through FACE's and MDET's getters and draws the frames natively (subject.mjs; docs/om1-subject-spec.md 5.1)",
-  "S-LENS": "a lens on the mount, the M.Zuiko 12-40mm F2.8 PRO: lens 0's attach and data-valid flags (0xa32d4b9a, 0xa32d4b98) are 1 and its record (0xa32caa8c -> the driver's static 0xa3193780) is filled through the driver's current copies and its own commits 0x502ac838 / 0x502acb96, the zoom entries at +1164; the field layout is the record dump's (0x50118662, 0x50118ab7, 0x50118d20), the values I (12-40 mm, F2.8-F22 as APEX x 256 761 / 2283); the driver's derived apertures and focal lengths run natively; the lens-ready byte 0xa32d4b94 is 1 (0x50127ba2 answers 1, not 0x21, which DISP_FRAME requires, I); set before the application starts",
+  "S-LENS": "(unless the lens runs natively: E143 with OM_EMU_LENS=native, S-LENSMCU) a lens on the mount, the M.Zuiko 12-40mm F2.8 PRO: lens 0's attach and data-valid flags (0xa32d4b9a, 0xa32d4b98) are 1 and its record (0xa32caa8c -> the driver's static 0xa3193780) is filled through the driver's current copies and its own commits 0x502ac838 / 0x502acb96, the zoom entries at +1164; the field layout is the record dump's (0x50118662, 0x50118ab7, 0x50118d20), the values I (12-40 mm, F2.8-F22 as APEX x 256 761 / 2283); the driver's derived apertures and focal lengths run natively; the lens-ready byte 0xa32d4b94 is 1 (0x50127ba2 answers 1, not 0x21, which DISP_FRAME requires, I); set before the application starts",
   "S-EXPOSE": "the brightness the exposure plan follows: the AE result objects 0xc12a / 0xc0ba / 0xc0ca (TAKE_EXPOSE's command handler 0x50596187 writes them; one per metering mode, I) set through the property setter 0x5004188b to the scene's BV = (EV100 - 5) x 256 (S-SCENE's scene, else its default EV 12), the zoom step nearest its focal length; take_expose_calculate 0x50597e82 runs natively, once the application has started and after each input on the shooting screen; its plan (0x62a919dc +6 Tv, +10 Sv, +14 Av) is the shutter, aperture and ISO the screen shows and, in S-SCENE's auto, the live view's and the captures' exposure. The camera meters the live view continuously (its LV AE task, not run)",
   "S-OUTDISP": "while the lab's display switch (SWITCH: H-CONNECT 131 with lOutput 7) has the EVF open, the application's getOutputDisplay (0x5104fd44) answers 6 (INTERNAL_EVF), the device H-CONNECT's lOutput 7 stands for; on the TFT it runs natively. Without it the application, told of the GUI's change, answers the TFT (its EVF branch needs a monitor position the lab's switch bits do not give, docs/om1-shutter-spec.md section 7 item 53) and sends 131 with lOutput 2, and the two alternate. The camera decides from the eye sensor, the monitor position and the settings (I)",
   "S-THROUGH": "(with S-SCENE's live view) the application's through-image control OlyHfwOpeShoot::ctrlAutoThrough (0x50abd373; ctrl 0 as the menu opens, 1 as it closes, D from its log) stops and restarts S-SCENE's frames: while stopped the live-view plane shows black (I: what the camera's plane shows while the through image is stopped)",
@@ -352,14 +353,14 @@ export class CamApp {
     this.install();
     for (const a of CARD_STATE) lab.sim.write(a, pack('<I', CARD_MOUNTED));       // S-CARD
     if (!s.storage) lab.sim.write(CARD_DETECT.table, pack('<H', CARD_INSERTED));    // natively: the DCF card-in (storage.mjs)
-    if (LENS_MOUNT) {                                                               // S-LENS
+    if (this.slens()) {                                                             // S-LENS
       lab.sim.write(LENS_ATTACHED, Uint8Array.of(1));
       lab.sim.write(LENS_READY, Uint8Array.of(1));
     }
     const rv = fact('recview', RECVIEW_E143);                                       // S-RVSTANDBY
     lab.sim.write(rv.word, pack('<I', rv.standby));
     this.dispframe_start();                                                         // S-DISPFRAME
-    if (LENS_MOUNT) this.lens_mount();                                              // S-LENS
+    if (this.slens()) this.lens_mount();                                            // S-LENS
     lab.call(HL_CREATE, null, null, null, 2000000);
     lab.call(HL_INIT, null, null, null, 2000000);
     s.settle('S-CAMAPP HighLevel');
@@ -385,6 +386,8 @@ export class CamApp {
     this.started = true;
     this.expose();                                                                  // S-EXPOSE
   }
+  // S-LENS applies on a body with a lens mount whose lens does not run natively (play.mjs lens, lens.mjs)
+  slens() { return LENS_MOUNT && !this.s.lens; }
   // S-LENS: the 12-40 mounted (see S-LENS above)
   lens_mount() {
     const lab = this.s.lab, sim = lab.sim;
@@ -412,6 +415,7 @@ export class CamApp {
   // S-LENS: the zoom step nearest focal_mm (L_ZMENC), committed, and the driver's current focal length again
   lens_zoom(focal_mm) {
     const lab = this.s.lab;
+    if (this.s.lens) { this.s.lens.zoom(focal_mm); return; }        // the native lens: its zoom ring (lens.mjs)
     if (!LENS_MOUNT) return;
     let z = 0;
     LENS_ZOOM.forEach((fl, i) => { if (Math.abs(fl - focal_mm) < Math.abs(LENS_ZOOM[z] - focal_mm)) z = i; });

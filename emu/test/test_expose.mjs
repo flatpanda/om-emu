@@ -1,4 +1,5 @@
-// S-LENS and S-EXPOSE (src/lab/camapp.mjs): the 12-40 on the mount and the camera's own exposure plan
+// The 12-40 on the mount (S-LENS, src/lab/camapp.mjs; on E143 natively, src/lab/lens.mjs with S-LENSMCU) and
+// S-EXPOSE, the camera's own exposure plan
 //   exposeSessions  one session: the lens driver's derived focal lengths (35 mm equivalents) are the 12-40's; the plan
 //                   the application gets at its start keeps Tv + Av - Sv = BV for the default scene (EV 12); a brighter
 //                   S-SCENE scene gives a shorter shutter time or a smaller aperture, a darker one a longer time or a
@@ -24,7 +25,7 @@ export async function exposeSessions() {
   const s = pl.session, lab = s.lab;
   s.idle_slice(lab.lab_time() + 1500e6);
   const fl = Object.fromEntries(Object.entries(FOCAL).map(([k, a]) => [k, lab.sim.u32(a)]));
-  ok(fl.wide === 24 && fl.tele === 80 && fl.now === 50, `S-LENS: 35 mm focal lengths ${JSON.stringify(fl)}, want wide 24, tele 80, now 50 (25 mm)`);
+  ok(fl.wide === 24 && fl.tele === 80 && fl.now === 50, `the lens: 35 mm focal lengths ${JSON.stringify(fl)}, want wide 24, tele 80, now 50 (25 mm)`);
   const p0 = s.camapp.plan;
   ok(p0 !== undefined && p0 !== null, 'S-EXPOSE: the application has a plan once it has started');
   const bal = (p) => p.tv + p.av - p.sv - p.bv;
@@ -46,7 +47,7 @@ export async function exposeSessions() {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const r = await exposeSessions();
-  console.log(`S-LENS and S-EXPOSE: ${r.checks - r.bad.length}/${r.checks}`);
+  console.log(`the lens and S-EXPOSE: ${r.checks - r.bad.length}/${r.checks}`);
   r.bad.forEach((x) => console.log('  ', x));
   process.exit(r.bad.length ? 1 : 0);
 }

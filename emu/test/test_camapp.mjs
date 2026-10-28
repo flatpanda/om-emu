@@ -8,8 +8,9 @@
 //                  the captured frame (S-RECVIEW) and the live view moves on after it; PLAY shows the newer of the
 //                  two pictures taken (S-CARD, S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW), right and left move between them
 //                  and wrap around, PLAY returns;
-//                  REC with LLPSW pressed starts nothing; LLPSW released and the mode dial at 7, REC starts a recording
-//                  (the screen changes, and a second later again: the REC mark's time) and REC again ends it, its time off S-CARD's movie time left;
+//                  REC with LLPSW pressed starts nothing; LLPSW released (from the start with the native lens: S-LENSMCU
+//                  in place of S-LENS) and the mode dial at 7, REC starts a recording
+//                  (the screen changes, and settles: the 'ISO Auto' and 'L0' items go) and REC again ends it, its time off S-CARD's movie time left;
 //                  --replay of the session log ends on the same frame;
 //                  control camapp 2 starts the HLS components as well (S-BOOTDONE, S-CPU3); OK opens the Super Control
 //                  Panel, MENU opens and closes the menu (S-SETSAVE), PLAY shows playback and returns, the menu stops the
@@ -37,7 +38,9 @@ export async function camappSession() {
       dir = pl.out;
       let s = await pl.status();
       ok(s.camapp?.started === true, `the application runs from the start: ${JSON.stringify(s.camapp ?? null)}`);
-      ok(['S-CAMAPP', 'S-MODACK', 'S-TRAACK', 'S-RELSEQ', 'S-CARD', 'S-LENS', 'S-LONGTIMER', 'S-DISPFRAME', 'S-TAKEFRAME', 'S-AFOSD', 'S-CPU3', 'S-RECVIEW'].every((x) => s.stand_ins.includes(x)) && !s.stand_ins.includes('S-CAMSEQ') && !s.stand_ins.includes('S-KEYMAP'),
+      // the lens: S-LENS's values, or the native lens on the mount (src/lab/lens.mjs, S-LENSMCU) on a body that has it
+      const native_lens = s.stand_ins.includes('S-LENSMCU');
+      ok(['S-CAMAPP', 'S-MODACK', 'S-TRAACK', 'S-RELSEQ', 'S-CARD', native_lens ? 'S-LENSMCU' : 'S-LENS', 'S-LONGTIMER', 'S-DISPFRAME', 'S-TAKEFRAME', 'S-AFOSD', 'S-CPU3', 'S-RECVIEW'].every((x) => s.stand_ins.includes(x)) && !s.stand_ins.includes('S-CAMSEQ') && !s.stand_ins.includes('S-KEYMAP'),
         `the stand-ins: ${s.stand_ins}`);
       ok(s.gui === '0x0108', `the application takes the GUI to its screen: ${s.gui} ${s.gui_name}`);
       ok(s.camapp?.components === false && !s.stand_ins.includes('S-BOOTDONE'), `the HLS components are not started (${s.camapp?.components})`);
@@ -91,10 +94,12 @@ export async function camappSession() {
       ok(sha(pf3) === sha(pf1), 'left goes back');
       const [p4] = await view('play');
       ok(p4.gui === '0x0108', `PLAY returns to shooting: ${p4.gui}`);
-      // REC: refused while LLPSW reads pressed (the idle image), RECORDING_MOVIE at mode-dial position 7 once released
+      // REC: refused while LLPSW reads pressed (the idle image), RECORDING_MOVIE at mode-dial position 7 once released;
+      // with the native lens LLPSW reads released from the start (the lens is locked on the mount, src/lab/lens.mjs
+      // lock), so the switch stays and REC is refused at the mode dial's position only
       await pl.key('rec', 'down'); await pl.key('rec', 'up');
-      ok((await pl.status()).camapp?.recording_s === null, 'REC with LLPSW pressed starts no recording');
-      await pl.key('fw_121c', 'down');
+      ok((await pl.status()).camapp?.recording_s === null, 'REC with LLPSW pressed (or the mode dial off 7) starts no recording');
+      if (!native_lens) await pl.key('fw_121c', 'down');
       await pl.input({ type: 'switch', id: 'mode_dial', value: 7 });
       await pl.input({ type: 'token', token: 'WAIT:100' });
       const [f4] = await pl.frame();
@@ -105,7 +110,10 @@ export async function camappSession() {
       ok(s.camapp?.recording_s >= 1.5 && sha(f5) !== sha(f4), `REC starts a recording, the screen changes: ${s.camapp?.recording_s} s`);
       await pl.input({ type: 'token', token: 'WAIT:1000' });
       const [f5b] = await pl.frame();
-      ok(sha(f5b) !== sha(f5), 'the recording screen counts on (the REC mark\'s time)');
+      // the recording screen drops the 'ISO Auto' and 'L0' items: with S-LENS between 1.5 and 2.5 s after
+      // REC, with the native lens before 1.5 s (I: the frames). The REC mark's time stays 00:00 in the lab either way
+      // (X: master 93016b8's frames), so the change checked here is not the time.
+      ok(sha(f5b) !== sha(f4) && (native_lens || sha(f5b) !== sha(f5)), 'the recording screen settles (the ISO Auto and L0 items go)');
       await pl.key('rec', 'down'); await pl.key('rec', 'up');
       await pl.input({ type: 'token', token: 'WAIT:100' });
       s = await pl.status();

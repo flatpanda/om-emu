@@ -13,6 +13,7 @@ import { PLUG, EDID, W_EDID_LEN, W_CABLE, W_DDC_READS } from '../dev/hdmi.mjs';
 import { sinkEdid } from './edid.mjs';
 import { Accelerometer } from './acc.mjs';
 import { Storage, STORAGE } from './storage.mjs';
+import { NativeLens } from './lens.mjs';
 import { imageView } from '../fw/image.mjs';
 import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143 } from '../fw/facts.mjs';
 import * as D from './display.mjs';
@@ -811,7 +812,16 @@ export class PlaySession extends N.NavSession {
     this.camapp = null;            // S-CAMAPP (camapp.mjs), from the bring-up on
     this.acc = null;               // the accelerometer (acc.mjs) on a body that gives it (models.mjs acc)
     this.storage = null;           // the card and the file system (storage.mjs) on a body that runs them (models.mjs card_fs)
+    // the lens on the mount natively (lens.mjs), opt-in (env.lens 'native', node's OM_EMU_LENS=native), on a body that
+    // gives it (models.mjs lens_native) and runs the card's file system, whose NAND access the lens data cache shares
+    // (S-LENSNAND); its lock pin switch released in the idle image before the groups are pushed. Elsewhere, and by
+    // default, S-LENS (camapp.mjs): with the native lens a touch on the shooting screen leaves the camera application
+    // answering no key, a wait the lab does not answer (docs/hle-gaps.md 4.4.2)
+    this.lens = MODEL_INFO.lens_native && this.lens_native() && this.storage_runs() ? new NativeLens(this, MODEL_INFO.lens_native) : null;
+    if (this.lens) this.lens.lock(this.images);
   }
+  storage_runs() { return !!STORAGE && !globalThis.process?.env?.OM_NO_STORAGE; }
+  lens_native() { return (this.env.lens ?? globalThis.process?.env?.OM_EMU_LENS) === 'native'; }
   close() {
     if (this.storage) { const st = this.storage; this.storage = null; st.close(); }
     super.close();
@@ -890,8 +900,10 @@ export class PlaySession extends N.NavSession {
     this.ipi_bring_up();
     if (o.mutant !== 'no-aeinit') this.aeinit_bring_up();   // without it the interpolation's div fault comes back
     if (MODEL_INFO.acc) this.acc_bring_up();
-    if (STORAGE && !globalThis.process?.env?.OM_NO_STORAGE) this.storage_bring_up();
-    this.end('play-bring-up', 'bring-up', [], [], { idle_codes: this.idle_codes.map(h8), ...(this.storage && { storage: { ...this.storage.status(), log: this.storage.take_log() } }) });
+    if (this.storage_runs()) this.storage_bring_up();
+    if (this.lens) this.lens.bring_up();
+    this.end('play-bring-up', 'bring-up', [], [], { idle_codes: this.idle_codes.map(h8), ...(this.storage && { storage: { ...this.storage.status(), log: this.storage.take_log() } }),
+      ...(this.lens && { lens: { ...this.lens.status(), log: this.lens.take_log() } }) });
     // S-CAMAPP: the application starts, creates the GUI (H-GUIBYAPP) and takes it to its screen, on the EVF for an EVF
     // start (S-OUTDISP: its own 131 with lOutput 7); start 'menu' then presses MENU
     this.begin(`${String(this.steps.length).padStart(2, '0')}-S-CAMAPP start`);

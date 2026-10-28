@@ -11,7 +11,8 @@
 // (test_scpu.mjs), the HDMI port's device and sink (test_hdmi.mjs), the accelerometer stand-in's sample
 // (test_acc.mjs), the SD card model and the FAT reader (test_storage.mjs), the debug API's argument checks, halt,
 // trace filters and live-route units (test_live.mjs liveUnits: a machine on a blank image) and the publication
-// audit's rules on a throwaway repository (test_pubaudit.mjs).
+// audit's rules on a throwaway repository (test_pubaudit.mjs), and the SCPU's Cortex-M4 core: its decoder, executor and
+// exception model on hand-written vectors and the QEMU-recorded differential vectors (test_m4.mjs).
 // bin/test.mjs runs all of these too, with everything else.
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
@@ -29,6 +30,7 @@ import { accUnits } from '../test/test_acc.mjs';
 import { storageUnits } from '../test/test_storage.mjs';
 import { liveUnits } from '../test/test_live.mjs';
 import { pubauditTests } from '../test/test_pubaudit.mjs';
+import { m4Units, m4Vectors } from '../test/test_m4.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -62,6 +64,8 @@ report('accelerometer sample (S-ACCSAMPLE)', accUnits());
 report('SD card and FAT reader (S-SDCARD, refs/fat.mjs)', storageUnits());
 report('debug API: argument checks, halt, trace filters, live route', await liveUnits());
 report('publication audit (throwaway repository, made-up firmware)', await pubauditTests());
+report('Cortex-M4 core: decoder, executor, exceptions (hand-written)', m4Units());
+{ const v = m4Vectors(); report(`Cortex-M4 core against QEMU's recorded vectors (${v.cases} cases)`, v); }
 const fa = factsTests();
 report(`firmware facts (${fa.models} unpacked main blocks)`, fa);
 const pu = purity();

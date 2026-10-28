@@ -12,7 +12,8 @@
 // (test_camapp.mjs), the SCPU's clock, ports, link pins and sub-CPU model (test_scpu.mjs), the publication audit
 // (test_pubaudit.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the card and the
-// file system on E143 (test_storage.mjs), the firmware
+// file system on E143 (test_storage.mjs), the SCPU's Cortex-M4 core (test_m4.mjs: hand-written vectors, QEMU's recorded
+// vectors, the SCPU image from reset to its first unmodelled access), the firmware
 // rules of src/fw/facts.mjs (test_facts.mjs) and the firmware map (test_fwmap.mjs:
 // the machine's coverage option, the static map's determinism and pinned headline, the labels' keys, run.mjs under
 // OM_COVERAGE). The fixtures they compare with are emu's own (test/fixtures, checks/fixtures, golden.json): a
@@ -206,6 +207,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + wk.bad.length + wk.skipp
   console.log(`lens and exposure plan (S-LENS, S-EXPOSE) in play: ${ex.checks - ex.bad.length}/${ex.checks}`);
   ex.bad.forEach((x) => console.log('  ', x));
   bad += ex.bad.length;
+}
+// the SCPU's Cortex-M4 core: hand-written vectors, QEMU's recorded vectors, the SCPU image from its reset vector
+{
+  const { m4Units, m4Vectors, m4Firmware } = await import('../test/test_m4.mjs');
+  const mu = m4Units(), mv = m4Vectors(), mf = m4Firmware();
+  console.log(`Cortex-M4 core: units ${mu.checks - mu.bad.length}/${mu.checks}; QEMU vectors ${mv.checks - mv.bad.length}/${mv.checks}; the SCPU image from reset ${mf.checks - mf.bad.length}/${mf.checks}${mf.skipped.length ? `, ${mf.skipped.length} SKIPPED (no E143 SCPU block)` : ''}`);
+  [...mu.bad, ...mv.bad.slice(0, 20), ...mf.bad, ...mf.skipped.map((x) => `SKIPPED ${x}`)].forEach((x) => console.log('  ', x));
+  bad += mu.bad.length + mv.bad.length + mf.bad.length + mf.skipped.length;
 }
 // the firmware map (bin/fwmap.mjs) and the machine's coverage option
 {

@@ -8,16 +8,21 @@
 // set; a byte waits while RXNE is still set (I: the far end is never overrun; the line's own pace is not modelled for
 // a slow reader), IDLE sets one frame after the last. TEACK / REACK follow TE / RE at once while UE is set (I).
 // Interrupts from ISR and the enables of CR1 / CR3; DMA requests (CR3.DMAT while TXE, DMAR while RXNE) where the
-// machine wired a channel (else Unmodelled). Not modelled: synchronous, smartcard, IrDA, LIN, RS-485 driver enable,
-// auto baud rate, the receiver timeout, character match, wake-up from stop, hardware flow control (each throws
-// Unmodelled when enabled).
+// machine wired a channel (else Unmodelled). Wake-up from Stop (RM0394, the USART's and the LPUART's wake-up from Stop
+// mode): with CR1.UESM the UART works in a Stop mode when its kernel clock runs there (the machine decides,
+// stm32l4.mjs, by wakeCapable()), and the wake-up event CR3.WUS selects sets ISR.WUF (cleared by ICR.WUCF, and with
+// UESM), with its interrupt by CR3.WUFIE: a start bit (WUS 2) when a frame begins, RXNE (WUS 3) when it is received
+// (I: WUF is set in any mode while UESM is set). An address match (WUS 0) with WUFIE, and the reserved WUS 1, throw
+// Unmodelled when a frame arrives. Not modelled:
+// synchronous, smartcard, IrDA, LIN, RS-485 driver enable, auto baud rate, the receiver timeout, character match,
+// hardware flow control (each throws Unmodelled when enabled).
 import { Regs, Unmodelled, merge } from './regs.mjs';
 
 export const CR1 = 0x00, CR2 = 0x04, CR3 = 0x08, BRR = 0x0c, GTPR = 0x10, RTOR = 0x14, RQR = 0x18, ISR = 0x1c,
   ICR = 0x20, RDR = 0x24, TDR = 0x28;
-export const PE = 1, FE = 2, NF = 4, ORE = 8, IDLE = 16, RXNE = 32, TC = 64, TXE = 128, BUSY = 1 << 16, TEACK = 1 << 21,
-  REACK = 1 << 22;
-const UE = 1, RE = 4, TE = 8;
+export const PE = 1, FE = 2, NF = 4, ORE = 8, IDLE = 16, RXNE = 32, TC = 64, TXE = 128, BUSY = 1 << 16, WUF = 1 << 20,
+  TEACK = 1 << 21, REACK = 1 << 22;
+const UE = 1, UESM = 2, RE = 4, TE = 8, WUFIE = 1 << 22;
 
 export class Usart extends Regs {
   // name, lp (an LPUART), sched, irq, irqn, kernelHz() / hclkHz(), onTx(byte)
@@ -70,7 +75,8 @@ export class Usart extends Regs {
     switch (off) {
       case CR1: {
         this.cr1 = merge(this.cr1, v, mask, this.lp ? 0x10003fff : 0x1fffffff);
-        if (this.cr1 & ((1 << 26) | (1 << 27) | (1 << 14) | (1 << 1))) throw new Unmodelled(`${this.name} receiver timeout, end of block, character match or wake-up (CR1 0x${this.cr1.toString(16)})`);
+        if (this.cr1 & ((1 << 26) | (1 << 27) | (1 << 14))) throw new Unmodelled(`${this.name} receiver timeout, end of block or character match (CR1 0x${this.cr1.toString(16)})`);
+        if (!(this.cr1 & UESM)) this.isr &= ~WUF;
         this.enables();
         return;
       }
@@ -133,17 +139,30 @@ export class Usart extends Regs {
     }, `${this.name} tx`);
   }
 
+  // the UART can work in a Stop mode (its kernel clock is the machine's to judge)
+  wakeCapable() { return (this.cr1 & UE) !== 0 && (this.cr1 & UESM) !== 0; }
+  // a receive event that may be CR3.WUS's wake-up event: 2 a start bit, 3 RXNE
+  wakeEvent(kind) {
+    if (!(this.cr1 & UESM)) return;
+    const wus = (this.cr3 >>> 20) & 3;
+    if (wus === 1) throw new Unmodelled(`${this.name} the reserved wake-up selection CR3.WUS = 1`);
+    if (wus === 0) { if (this.cr3 & WUFIE) throw new Unmodelled(`${this.name} wake-up on an address match (CR3.WUS = 0)`); return; }
+    if (wus === kind) { this.isr |= WUF; this.update(); }
+  }
+
   // ---- the board's side of the receive line
   receive(bytes) { for (const b of bytes) this.rxQueue.push(b & 0x1ff); this.pump(); }
   pump() {
     if (this.rxEv || !this.rxQueue.length || !(this.cr1 & UE) || !(this.cr1 & RE) || (this.isr & RXNE)) return;
     this.idleEv = this.sched.cancel(this.idleEv);
     this.isr |= BUSY;
+    this.wakeEvent(2);
     this.rxEv = this.sched.after(this.frameCycles(), () => {
       this.rxEv = null;
       if (!(this.cr1 & UE) || !(this.cr1 & RE)) return;
       this.rdr = this.rxQueue.shift();
       this.isr |= RXNE; this.isr &= ~BUSY;
+      this.wakeEvent(3);
       if (!this.rxQueue.length) this.idleEv = this.sched.after(this.frameCycles(), () => { this.idleEv = null; this.isr |= IDLE; this.update(); }, `${this.name} idle`);
       this.dmaLines(); this.update();
     }, `${this.name} rx`);
@@ -156,7 +175,8 @@ export class Usart extends Regs {
   update() {
     const c1 = this.cr1, c3 = this.cr3, s = this.isr;
     const on = ((c1 & (1 << 8)) && (s & PE)) || ((c1 & (1 << 7)) && (s & TXE)) || ((c1 & (1 << 6)) && (s & TC)) ||
-      ((c1 & (1 << 5)) && (s & (RXNE | ORE))) || ((c1 & (1 << 4)) && (s & IDLE)) || ((c3 & 1) && (s & (FE | NF | ORE)));
+      ((c1 & (1 << 5)) && (s & (RXNE | ORE))) || ((c1 & (1 << 4)) && (s & IDLE)) || ((c3 & 1) && (s & (FE | NF | ORE))) ||
+      ((c3 & WUFIE) && (s & WUF));
     this.irq(this.irqn, !!on);
   }
 }

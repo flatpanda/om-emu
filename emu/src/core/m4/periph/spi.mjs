@@ -6,7 +6,8 @@
 // the board's: exchange(byte) clocks one frame, the slave shifting out its transmit FIFO's head (0 when it is empty,
 // I: the underrun pattern is not modelled) and taking the master's byte into its receive FIFO. On the step 5 machine
 // alone nothing is ever clocked (the transmit FIFO fills and stays full); in the lab the MN clocks it
-// (src/lab/scpum4.mjs). Master mode, CRC, TI mode, frames other than 8 bits and bidirectional mode throw Unmodelled.
+// (src/lab/scpum4.mjs). In a Stop mode the SPI has no clock: the master's exchange then throws Unmodelled (clocked(),
+// the machine's). Master mode, CRC, TI mode, frames other than 8 bits and bidirectional mode throw Unmodelled.
 import { Regs, Unmodelled, merge } from './regs.mjs';
 
 export const CR1 = 0x00, CR2 = 0x04, SR = 0x08, DR = 0x0c, CRCPR = 0x10, RXCRCR = 0x14, TXCRCR = 0x18;
@@ -17,6 +18,7 @@ export class Spi extends Regs {
     super(name);
     Object.assign(this, { irq, irqn });
     this.dmaTx = null; this.dmaRx = null;
+    this.clocked = () => true;                   // false while the chip is in a Stop mode (the machine's)
     this.reset();
   }
   reset() {
@@ -86,6 +88,7 @@ export class Spi extends Regs {
   }
   // the master clocks one frame: the slave's byte out, the master's in
   exchange(byte) {
+    if (!this.clocked()) throw new Unmodelled(`${this.name} clocked by its master while the chip is in a Stop mode`);
     if (!(this.cr1 & SPE)) return 0;
     const out = this.txf.length ? this.txf.shift() : 0;
     if (this.cr1 & (1 << 10)) { /* RXONLY: still receives */ }

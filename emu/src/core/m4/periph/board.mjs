@@ -12,8 +12,11 @@
 // - USART1 / USART2 (the battery packs, section 4.2): nothing is ever received (I).
 // - SPI2 (the MN link, section 3.1): no master clocks it (in the lab, step 6, the MN does: src/lab/scpum4.mjs, whose
 //   board, S-SCPUBOARD, is this one with the port scan's inputs PC13 and PC5 held low and the link's lines wired).
+// - no master on I2C1 / I2C2 addresses the chip, and no timer input (TI1, TI2, ETR) is driven (I).
 // A board object may override any of: drive {pin name: level}, analog(channel) -> 12-bit value, i2c(bus, address7)
-// -> a device (i2c.mjs) or null, uartTx(name, byte) (a hook on what the firmware sends), hse, lse.
+// -> a device (i2c.mjs) or null, uartTx(name, byte) (a hook on what the firmware sends), hse, lse. What a board does
+// over time goes to the machine's models directly: m.gpio.drive(pin, level), m.usart1.receive(bytes),
+// m.i2c1.masterTransfer({addr, write, read}) (a master addressing the chip as a slave), m.tim1.input('TI1', level).
 export const DEFAULT_BOARD = Object.freeze({
   drive: {},
   analog: () => 0,

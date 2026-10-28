@@ -1,8 +1,10 @@
 // The STM32L4's power controller (RM0394 section 5.4, at 0x40007000): CR1 (low-power mode selection, backup domain
 // write access DBP, voltage scaling, low-power run), CR2..CR4, the status registers SR1 / SR2 with SCR clearing SR1,
 // and the GPIO pull-up / pull-down control registers used in standby. A voltage scaling change completes at once
-// (SR2.VOSF stays 0, I: the regulator's settling time is not modelled) and SR2.REGLPF follows CR1.LPR. Entering a
-// low-power mode (stop, standby, shutdown) is the machine's to refuse: lowPowerMode() reports CR1.LPMS.
+// (SR2.VOSF stays 0, I: the regulator's settling time is not modelled) and SR2.REGLPF follows CR1.LPR. The low-power
+// modes are the machine's (stm32l4.mjs): lowPowerMode() reports CR1.LPMS (0..2 Stop 0..2, 3 Standby, 4..7 Shutdown),
+// standbyPull() the pulls CR3.APC applies in Standby and Shutdown, and the exits from Standby and Shutdown leave the
+// wake-up flags in SR1 (standbyExit, shutdownExit). A Stop mode changes nothing here.
 import { PlainRegs } from './regs.mjs';
 
 export const CR1 = 0x00, CR2 = 0x04, CR3 = 0x08, CR4 = 0x0c, SR1 = 0x10, SR2 = 0x14, SCR = 0x18;
@@ -24,6 +26,12 @@ export class Pwr extends PlainRegs {
     this.resetRegs();
     for (const [o, v] of keep) this.set(o, v);
     this.set(SR1, sr1 | (1 << 8));
+  }
+  // the exit from Shutdown (RM0394 5.3.10): a brown-out reset, so all of PWR is reset (I: CR3, CR4 and the pulls as
+  // well), but for SR1's wake-up flags, which tell the wake-up source (I); SBF stays clear
+  shutdownExit(sr1) {
+    this.resetRegs();
+    this.set(SR1, sr1 & 0x801f);
   }
   // the levels the standby pulls give a pin (APC set): 1 pull-up, 0 pull-down, -1 none
   standbyPull(port, pin) {

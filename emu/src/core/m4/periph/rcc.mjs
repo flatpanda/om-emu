@@ -5,7 +5,8 @@
 // times are not modelled; the HAL polls the flags), except a crystal the board lacks (board.mjs: HSE absent, LSE
 // present), whose ready flag never sets. A peripheral reset bit (xxxRSTR) resets the peripherals the machine registered
 // for it when the bit goes 1. BDCR, in the backup domain, takes writes only with PWR CR1.DBP set and survives a system
-// reset; its BDRST resets the backup domain (the RTC).
+// reset; its BDRST resets the backup domain (the RTC). The exit from a Stop mode (stopWake) leaves the system clock
+// on MSI or HSI16 by CFGR.STOPWUCK with the other oscillators and the PLLs off.
 import { PlainRegs, merge } from './regs.mjs';
 
 export const MSI_HZ = [100e3, 200e3, 400e3, 800e3, 1e6, 2e6, 4e6, 8e6, 16e6, 24e6, 32e6, 48e6];
@@ -46,6 +47,19 @@ export class Rcc extends PlainRegs {
     this.resetRegs();
     this.set(BDCR, bdcr);
     this.set(CSR, (this.get(CSR) & 0x00ffffff) | flags);
+  }
+  // the exit from a Stop mode (RM0394 5.3.6..5.3.8 and the CR / CFGR bit descriptions of 6.4.1 and 6.4.3): hardware
+  // cleared HSEON, PLLON, PLLSAI1ON, HSION and MSION at the entry, and sets MSION or HSION at the exit by STOPWUCK
+  // (CFGR bit 15), whose oscillator becomes the system clock; MSI comes back at the range it had (CR.MSIRANGE or
+  // CSR.MSISRANGE as MSIRGSEL selects, both kept), the AHB and APB prescalers stay, and LSE / LSI ran on (BDCR, CSR).
+  // The clock users see it as a clock change.
+  stopWake() {
+    for (const u of this.clockUsers) u.before();
+    const hsi = (this.get(CFGR) >>> 15) & 1;
+    const cr = this.get(CR) & ~((1 << 0) | (1 << 8) | (1 << 16) | (1 << 24) | (1 << 26));
+    this.writeCr(cr | (hsi ? 1 << 8 : 1 << 0));
+    this.set(CFGR, (this.get(CFGR) & ~0xf) | (hsi ? 0x5 : 0));                   // SW and SWS: HSI16 or MSI
+    for (const u of this.clockUsers) u.after();
   }
   // a peripheral reset by bit `bit` of reset register `reg`
   resetLine(reg, bit, dev) {

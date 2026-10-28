@@ -3,8 +3,12 @@
 // and 32..40 (IMR2 .. PR2); a GPIO edge on line n (SYSCFG_EXTICR selects the port of each of lines 0..15) or an
 // internal line's rising edge (the RTC's alarm on 18, tamper / timestamp on 19, wake-up timer on 20, from rtc.mjs)
 // sets the line's pending bit when its edge is selected, and the NVIC line of its group follows the OR of pending and
-// unmasked (lines 0..4 IRQs 6..10, 5..9 IRQ 23, 10..15 IRQ 40, 16 IRQ 1, 18 IRQ 41, 19 IRQ 2, 20 IRQ 3). Events (EMR)
-// and the direct lines (17, 21 .. 40: USB, I2C wake-up, UARTs, LPTIM, comparators) raise nothing (not modelled).
+// unmasked (lines 0..4 IRQs 6..10, 5..9 IRQ 23, 10..15 IRQ 40, 16 IRQ 1, 18 IRQ 41, 19 IRQ 2, 20 IRQ 3). A selected
+// edge, or a software trigger, on a configurable line whose EMR bit is set also sends an event to the core (onEvent(n):
+// the machine's event input, which ends a WFE and with it a Stop mode entered by WFE; RM0394 section 14's event
+// mode and 5.3.6..5.3.8). The direct lines (17, 23 .. 40: USB, I2C wake-up, UARTs, LPTIM) raise nothing here: in a
+// Stop mode the peripherals that run there wake the core with their own interrupts (stm32l4.mjs; I: the direct
+// lines' masks are not consulted).
 import { Regs, merge } from './regs.mjs';
 
 export const IMR1 = 0x00, EMR1 = 0x04, RTSR1 = 0x08, FTSR1 = 0x0c, SWIER1 = 0x10, PR1 = 0x14,
@@ -18,6 +22,7 @@ export class Exti extends Regs {
     super('EXTI');
     this.irq = irq;                                  // irq(n, level)
     this.syscfg = null;
+    this.onEvent = null;                             // onEvent(line): an event to the core
     this.reset();
   }
   reset() {
@@ -40,7 +45,7 @@ export class Exti extends Regs {
       case EMR1: this.emr[0] = merge(this.emr[0], v, mask); break;
       case RTSR1: this.rtsr[0] = merge(this.rtsr[0], v, mask, CONFIGURABLE); break;
       case FTSR1: this.ftsr[0] = merge(this.ftsr[0], v, mask, CONFIGURABLE); break;
-      case SWIER1: this.pr[0] = (this.pr[0] | (v & mask & CONFIGURABLE)) >>> 0; break;
+      case SWIER1: this.pr[0] = (this.pr[0] | (v & mask & CONFIGURABLE)) >>> 0; this.events(v & mask & CONFIGURABLE); break;
       case PR1: this.pr[0] = (this.pr[0] & ~(v & mask)) >>> 0; break;
       case IMR2: this.imr[1] = merge(this.imr[1], v, mask, 0xff); break;
       case EMR2: this.emr[1] = merge(this.emr[1], v, mask, 0xff); break;
@@ -56,7 +61,13 @@ export class Exti extends Regs {
   edge(n, rising) {
     const bit = (1 << n) >>> 0;
     if (!(CONFIGURABLE & bit)) return;
-    if ((rising ? this.rtsr[0] : this.ftsr[0]) & bit) { this.pr[0] = (this.pr[0] | bit) >>> 0; this.refresh(); }
+    if ((rising ? this.rtsr[0] : this.ftsr[0]) & bit) { this.pr[0] = (this.pr[0] | bit) >>> 0; this.refresh(); this.events(bit); }
+  }
+  // the events of the lines in `bits` whose EMR bit is set
+  events(bits) {
+    const ev = (bits & this.emr[0]) >>> 0;
+    if (!ev || !this.onEvent) return;
+    for (let n = 0; n < 32; n++) if ((ev >>> n) & 1) this.onEvent(n);
   }
   // a GPIO pin's change: line `pin` when SYSCFG selects its port
   gpio(port, pin, level) {

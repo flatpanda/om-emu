@@ -1,11 +1,12 @@
 // The STM32L4's SPI (RM0394 section 40; SPI2 at 0x40003800) in slave mode at register level: CR1 / CR2, SR with the
 // FIFO levels, DR with data packing (a byte access moves one frame of up to 8 bits, a halfword access two), the
 // 32-bit transmit and receive FIFOs with TXE (transmit FIFO at most half full), RXNE (by FRXTH, one byte or two),
-// OVR when the receive FIFO is full, the interrupt (SPI2 IRQ 36) and the DMA requests (TXDMAEN while TXE, RXDMAEN
-// while RXNE). The master is the board's: exchange(byte) clocks one frame, the slave shifting out its transmit FIFO's
-// head (0 when it is empty, I: the underrun pattern is not modelled) and taking the master's byte into its receive
-// FIFO. With no master (this step) nothing is ever clocked: the transmit FIFO fills and stays full. Master mode, CRC,
-// TI mode, frames other than 8 bits and bidirectional mode throw Unmodelled.
+// OVR when the receive FIFO is full (the byte is lost; cleared by a read of DR followed by a read of SR, the RM's
+// overrun flag), the interrupt (SPI2 IRQ 36) and the DMA requests (TXDMAEN while TXE, RXDMAEN while RXNE). The master is
+// the board's: exchange(byte) clocks one frame, the slave shifting out its transmit FIFO's head (0 when it is empty,
+// I: the underrun pattern is not modelled) and taking the master's byte into its receive FIFO. On the step 5 machine
+// alone nothing is ever clocked (the transmit FIFO fills and stays full); in the lab the MN clocks it
+// (src/lab/scpum4.mjs). Master mode, CRC, TI mode, frames other than 8 bits and bidirectional mode throw Unmodelled.
 import { Regs, Unmodelled, merge } from './regs.mjs';
 
 export const CR1 = 0x00, CR2 = 0x04, SR = 0x08, DR = 0x0c, CRCPR = 0x10, RXCRCR = 0x14, TXCRCR = 0x18;
@@ -20,6 +21,7 @@ export class Spi extends Regs {
   }
   reset() {
     this.cr1 = 0; this.cr2 = 0x0700; this.crcpr = 7; this.ovr = false;
+    this.ovrRead = false;                        // OVR's clearing sequence: DR read while OVR, SR read next
     this.txf = []; this.rxf = [];
     if (this.irq) this.update();
   }
@@ -37,11 +39,16 @@ export class Spi extends Regs {
     switch (off) {
       case CR1: return this.cr1;
       case CR2: return this.cr2;
-      case SR: return this.sr();
+      case SR: {
+        const s = this.sr();
+        if (this.ovrRead) { this.ovrRead = false; if (s & OVR) { this.ovr = false; this.update(); } }
+        return s;
+      }
       case DR: {
         const n = size === 1 ? 1 : 2;
         let v = 0;
         for (let i = 0; i < n; i++) v |= (this.rxf.length ? this.rxf.shift() : 0) << (8 * i);
+        this.ovrRead = this.ovr;
         this.lines();
         return v;
       }

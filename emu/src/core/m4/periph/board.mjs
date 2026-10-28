@@ -10,7 +10,8 @@
 // - I2C1 / I2C2: no device acknowledges its address (I; the chargers, the PBH IO expander and the USB PD controller
 //   are not modelled, section 4.2).
 // - USART1 / USART2 (the battery packs, section 4.2): nothing is ever received (I).
-// - SPI2 (the MN link, section 3.1): no master clocks it (step 6 connects the MN).
+// - SPI2 (the MN link, section 3.1): no master clocks it (in the lab, step 6, the MN does: src/lab/scpum4.mjs, whose
+//   board, S-SCPUBOARD, is this one with the port scan's inputs PC13 and PC5 held low and the link's lines wired).
 // A board object may override any of: drive {pin name: level}, analog(channel) -> 12-bit value, i2c(bus, address7)
 // -> a device (i2c.mjs) or null, uartTx(name, byte) (a hook on what the firmware sends), hse, lse.
 export const DEFAULT_BOARD = Object.freeze({

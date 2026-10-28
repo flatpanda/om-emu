@@ -1,7 +1,8 @@
 // The SCPU's STM32L4 machine (src/core/m4/periph/, docs/om1-scpu-spec.md section 8 step 5):
 // - stm32Units: each peripheral model on its own, against the reference manual's register semantics (RM0394): RCC's
-//   ready flags and clock tree, the flash interface's unlock, GPIO with EXTI and SYSCFG, the U(S)ART's frame timing and
-//   flags, DMA, I2C with an absent and a present device, SPI's FIFOs, a timer's update and compare, the RTC's calendar,
+//   ready flags and clock tree, the flash interface's unlock, GPIO with EXTI and SYSCFG (and what the chip drives on a
+//   pin: an output, an open-drain 1 released), the U(S)ART's frame timing and flags, DMA, I2C with an absent and a
+//   present device, SPI's FIFOs and its overrun's clearing, a timer's update and compare, the RTC's calendar,
 //   protection and wake-up timer, the ADC's conversion;
 // - stm32Firmware: the E143 SCPU image on the machine from reset to the debug console's prompt, console commands and
 //   their answers, the standby the default board leads to and the wake-up from it (needs the unpacked E143 SCPU
@@ -106,6 +107,8 @@ export function stm32Units() {
     const gpio = new Gpio(), pc = gpio.add(2), exti = new Exti(irq.set), sys = new Syscfg();
     exti.syscfg = sys;
     gpio.onChange((port, pin, level) => exti.gpio(port, pin, level));
+    const outs = [];
+    gpio.onOutput((port, pin, level) => outs.push(`${port}:${pin}=${level}`));
     eq('GPIOC analog after reset: IDR reads 0', pc.read(0x10, 4), 0);
     pc.write(0x00, 4, 0xffffffff & ~(3 << 26));                          // PC13 input
     pc.write(0x0c, 4, 1 << 26);                                          // pull-up
@@ -115,6 +118,12 @@ export function stm32Units() {
     eq('GPIO BSRR sets the output', (pc.read(0x14, 4) >>> 2) & 1, 1);
     pc.write(0x18, 4, 1 << 18);
     eq('GPIO BSRR resets the output', (pc.read(0x10, 4) >>> 2) & 1, 0);
+    pc.write(0x04, 4, 1 << 2);                                           // PC2 open-drain: its 0 still driven
+    pc.write(0x18, 4, 1 << 2);                                           // its 1 releases the pin
+    eq('GPIO what the chip drives: an output its ODR bit, an open-drain 1 nothing', outs.join(' '), '2:2=0 2:2=1 2:2=0 2:2=-1');
+    eq('GPIO driven() of a released pin', gpio.driven('PC2'), -1);
+    pc.write(0x00, 4, pc.read(0x00, 4) | (3 << 4));                       // PC2 analog again
+    eq('GPIO an input pin drives nothing', gpio.driven('PC13'), -1);
     sys.write(0x14, 4, 2 << 4);                                          // EXTICR4: line 13 on port C
     exti.write(0x0c, 4, 1 << 13); exti.write(0x00, 4, exti.read(0x00, 4) | (1 << 13));
     gpio.drive('PC13', 0);
@@ -232,6 +241,12 @@ export function stm32Units() {
     eq('SPI the master shifts the FIFO out in order', [spi.exchange(1), spi.exchange(2)].join(','), '161,162');
     eq('SPI RXNE with one byte (FRXTH)', spi.read(0x08, 4) & 1, 1);
     eq('SPI DR byte read', spi.read(0x0c, 1), 1);
+    for (const b of [3, 4, 5, 6]) spi.exchange(b);                        // the receive FIFO full with 2..5: 6 is lost
+    eq('SPI OVR with the receive FIFO full', (spi.read(0x08, 4) >>> 6) & 1, 1);
+    eq('SPI OVR kept by an SR read alone', (spi.read(0x08, 4) >>> 6) & 1, 1);
+    eq('SPI the bytes before the overrun kept', spi.read(0x0c, 1), 2);
+    eq('SPI OVR read set by the SR read that clears it (after a DR read)', (spi.read(0x08, 4) >>> 6) & 1, 1);
+    eq('SPI OVR clear after DR then SR', (spi.read(0x08, 4) >>> 6) & 1, 0);
     throws('SPI master mode', () => spi.write(0x00, 4, 0x44));
   }
 

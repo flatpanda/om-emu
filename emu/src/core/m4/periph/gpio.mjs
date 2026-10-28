@@ -5,7 +5,11 @@
 // input or alternate-function pin reads the level the board drives on it (drive(pin, level)), else its pull (up 1,
 // down 0), else 0 for a floating pin (I). Alternate-function signals (a UART's TX, SPI's MISO) are the peripheral
 // models' own and do not reach IDR. Every change of a pin's input level goes to the listeners (EXTI's edge detector,
-// the board) as (port, pin, level), an output pin's included (so the board sees PC2 / PC3, the link's lines).
+// the board) as (port, pin, level), an output pin's included (so the board sees PC2 / PC3, the link's lines). What the
+// chip itself drives on a pin goes to the output listeners (onOutput) as (port, pin, level), level -1 when it stops
+// driving it: an output pin drives its ODR bit, an open-drain output only a 0 (its 1 releases the pin), every other
+// mode nothing (an alternate function's signal is the peripheral model's own, as above). A far end that must tell a
+// released pin from a driven 0 (the MN link's lines, src/lab/scpum4.mjs) listens there.
 import { Regs, merge } from './regs.mjs';
 
 export const MODER = 0x00, OTYPER = 0x04, OSPEEDR = 0x08, PUPDR = 0x0c, IDR = 0x10, ODR = 0x14, BSRR = 0x18, LCKR = 0x1c,
@@ -25,7 +29,7 @@ export class GpioPort extends Regs {
     const [moder, ospeedr, pupdr] = RESET[this.index] || [0xffffffff, 0, 0];
     this.moder = moder; this.otyper = 0; this.ospeedr = ospeedr; this.pupdr = pupdr; this.odr = 0;
     this.afr = [0, 0]; this.lckr = 0; this.lockStep = 0;
-    if (this.levels === undefined) this.levels = this.compute(); else this.update();
+    if (this.levels === undefined) { this.levels = this.compute(); [this.dmask, this.dval] = this.computeDriven(); } else this.update();
   }
   mode(pin) { return (this.moder >>> (2 * pin)) & 3; }
   level(pin) {
@@ -37,12 +41,25 @@ export class GpioPort extends Regs {
     return pull === 1 ? 1 : 0;
   }
   compute() { let v = 0; for (let p = 0; p < 16; p++) v |= this.level(p) << p; return v >>> 0; }
-  // recompute the levels and report the changed pins
+  // the pins the chip drives and their levels, as masks [driven, value]: an output pin, but an open-drain one whose ODR
+  // bit is 1 (a released pin)
+  computeDriven() {
+    let driven = 0;
+    for (let p = 0; p < 16; p++) if (this.mode(p) === 1 && !((this.otyper >>> p) & (this.odr >>> p) & 1)) driven |= 1 << p;
+    return [driven >>> 0, (this.odr & driven) >>> 0];
+  }
+  // what the chip drives on a pin: its level, or -1 for none
+  driven(pin) { return (this.dmask >>> pin) & 1 ? (this.dval >>> pin) & 1 : -1; }
+  // recompute the levels and report the changed pins, then what the chip drives and its changes
   update() {
     const old = this.levels, now = this.compute();
     this.levels = now;
     const diff = old ^ now;
     if (diff) for (let p = 0; p < 16; p++) if ((diff >>> p) & 1) this.gpio.changed(this.index, p, (now >>> p) & 1);
+    const om = this.dmask, ov = this.dval, [dm, dv] = this.computeDriven();
+    this.dmask = dm; this.dval = dv;
+    const dd = (dm ^ om) | ((dv ^ ov) & dm & om);
+    if (dd) for (let p = 0; p < 16; p++) if ((dd >>> p) & 1) this.gpio.outputChanged(this.index, p, this.driven(p));
   }
   setDrive(pin, level) { this.drive[pin] = level < 0 ? -1 : level ? 1 : 0; this.update(); }
 
@@ -99,12 +116,17 @@ export class Gpio {
   constructor() {
     this.ports = [];
     this.listeners = [];
+    this.outputs = [];
   }
   add(index) { const p = new GpioPort(this, index); this.ports[index] = p; return p; }
   port(name) { return this.ports[PORT_NAMES.indexOf(name)]; }
   // 'PC2' -> level; drive('PB12', 1), drive('PB12', -1) to release
   pin(name) { const p = this.port(name[1]); return p.level(Number(name.slice(2))); }
   drive(name, level) { this.port(name[1]).setDrive(Number(name.slice(2)), level); }
+  // 'PC3' -> what the chip drives on it: 0, 1 or -1 (none)
+  driven(name) { return this.port(name[1]).driven(Number(name.slice(2))); }
   onChange(fn) { this.listeners.push(fn); }
   changed(port, pin, level) { for (const f of this.listeners) f(port, pin, level); }
+  onOutput(fn) { this.outputs.push(fn); }
+  outputChanged(port, pin, level) { for (const f of this.outputs) f(port, pin, level); }
 }

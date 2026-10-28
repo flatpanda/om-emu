@@ -7,13 +7,14 @@
 //   const m = new Stm32l4(image);
 //   m.boot();                                  // to the debug console's first prompt "SUB> "
 //   m.command('help');                         // the console's answer
+//   m.nrst(true); m.nrst(false);               // a pulse on the NRST pin (the MN's reset line in the lab)
 import { CortexM4, STEP_OK, STEP_SLEEP } from '../cpu.mjs';
 import { MemoryBus } from '../bus.mjs';
 import { Unmapped, FLASH, FLASH_SIZE, SRAM, SRAM_SIZE } from '../boot.mjs';
 import { Unmodelled } from './regs.mjs';
 import { Scheduler } from './sched.mjs';
 import { DEFAULT_BOARD } from './board.mjs';
-import { Rcc, CCIPR, BDCR, HSI16_HZ, AHB1RSTR, AHB2RSTR, APB1RSTR1, APB1RSTR2, APB2RSTR } from './rcc.mjs';
+import { Rcc, CCIPR, BDCR, CSR, HSI16_HZ, AHB1RSTR, AHB2RSTR, APB1RSTR1, APB1RSTR2, APB2RSTR } from './rcc.mjs';
 import { FlashInterface } from './flash.mjs';
 import { Pwr, CR3, CR4 } from './pwr.mjs';
 import { Gpio } from './gpio.mjs';
@@ -36,6 +37,8 @@ export const BASE = {
 };
 // the debug console's prompt (docs/om1-scpu-spec.md section 5.3, the image's .data string)
 export const PROMPT = 'SUB> ';
+// RCC CSR's pin reset flag (RM0394 RCC_CSR bit 26)
+const PINRSTF = 1 << 26;
 
 export class Stm32l4 {
   // image: the SCPU block (loaded at 0x08000000); board: overrides of DEFAULT_BOARD
@@ -87,7 +90,7 @@ export class Stm32l4 {
       device: (a) => this.board.i2c(bus, a) }));
     this.i2c1 = i2c('I2C1', BASE.I2C1, 1, [31, 32], 12);
     this.i2c2 = i2c('I2C2', BASE.I2C2, 2, [33, 34], 14);
-    // SPI2, the MN link's slave (no master in this step)
+    // SPI2, the MN link's slave (its master the MN in the lab, src/lab/scpum4.mjs; none on this machine alone)
     this.spi2 = this.attach(BASE.SPI2, new Spi({ name: 'SPI2', irq, irqn: 36 }));
     // the RTC in the backup domain (BDCR.BDRST resets it); its time follows the clock changes RCC makes
     this.rtc = this.attach(BASE.RTC, new Rtc({ sched, exti: this.exti, rtcHz: () => this.rcc.rtcHz(), hclkHz, dbp: () => this.pwr.dbp() }));
@@ -129,6 +132,7 @@ export class Stm32l4 {
       this.adc, this.usb];
     this.standby = false;
     this.standbys = 0;                            // standby entries so far
+    this.resetHeld = false;                       // the NRST pin held low (nrst)
   }
   attach(base, dev, size = 0x400) { this.bus.device(base, size, dev); return dev; }
 
@@ -196,6 +200,31 @@ export class Stm32l4 {
     this.rtc.clockChanged();
   }
 
+  // ---- the NRST pin (RM0394 6.1.2: a pin reset is a system reset), for a board that drives it (the MN's reset line in
+  // the lab, src/lab/scpum4.mjs). Held low (nrst(true)): the core and every peripheral but the backup domain (the RTC,
+  // its backup registers, BDCR) are reset and stay so, nothing runs, and time and the RTC run on (run() lets cycles
+  // pass to the next event); released (nrst(false)): the core starts from its reset vector. RCC CSR keeps its reset
+  // flags and sets PINRSTF; PWR is reset whole (I: only an exit from standby keeps CR3, CR4 and the pulls); SRAM keeps
+  // its contents (I: a reset does not clear it, and the image's start clears .bss and initialises .data itself). A pin
+  // reset ends standby. The board's pin levels stay (they are not the chip's).
+  nrst(held) {
+    if (held === this.resetHeld) return;
+    if (held) {
+      this.rtc.advance();
+      this.foldTime();
+      this.standby = false;
+      this.cpu.sleeping = false;
+      this.rcc.systemReset();
+      this.rcc.set(CSR, this.rcc.get(CSR) | PINRSTF);
+      this.pwr.reset();
+      for (const d of this.resettable) d.reset();
+      this.irqSrc.clear();
+      this.cpu.reset();
+      this.rtc.clockChanged();
+    }
+    this.resetHeld = held;
+  }
+
   // SCPU time in seconds: the core's cycles at the HCLK of each stretch
   foldTime() {
     const c = this.cpu.cycles;
@@ -216,8 +245,8 @@ export class Stm32l4 {
   idle(k) { this.cpu.cycles += k; this.cpu.sys.tick(k); }
   // run until until() is true (checked after every event and every `check` steps), `cycles` more core cycles (or
   // `seconds` at the HCLK of the start) have passed, or the run stops; returns { reason: 'until' | 'cycles' | 'stop' |
-  // 'standby', error? } ('standby': in standby with no event to come and no limit). A stop leaves the core at the
-  // instruction that made the access.
+  // 'standby' | 'reset', error? } ('standby', 'reset': in standby or held in reset with no event to come and no
+  // limit). A stop leaves the core at the instruction that made the access.
   run({ cycles = Infinity, seconds = null, until = null, check = 1000 } = {}) {
     if (seconds !== null) cycles = Math.round(seconds * this.rcc.hclkHz());
     const cpu = this.cpu, sched = this.sched, q = sched.q, end = cpu.cycles + cycles;
@@ -225,6 +254,14 @@ export class Stm32l4 {
     try {
       for (;;) {
         if (cpu.cycles >= end) return { reason: 'cycles' };
+        if (this.resetHeld) {                       // NRST low: nothing runs; time, and the backup domain's events, go on
+          const t = Math.min(sched.next(), end);
+          if (t === Infinity) return { reason: 'reset' };
+          if (t > cpu.cycles) cpu.cycles = t;
+          sched.fire();
+          if (until && until()) return { reason: 'until' };
+          continue;
+        }
         if (this.standby) {
           const flags = this.wakeFlags();
           if (flags) { this.exitStandby(flags); continue; }

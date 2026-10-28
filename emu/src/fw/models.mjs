@@ -67,6 +67,12 @@ const G4SET_UNCHECKED = false;
 // `heap_pool`: the firmware heap's block get and release of its pool 2 (get, put, the pool's block bytes), which Level
 // Adjust's sampling loop calls instead of malloc and free; S-HEAP (src/lab/play.mjs), whose memory is that pool's,
 // serves them too. A body without it runs them natively
+//
+// `card_fs`: whether the card's file system runs natively (src/lab/storage.mjs; docs/hle-gaps.md 4.8.4): native, at
+// the seams src/fw/facts.mjs fileSystem reads (fact storage); errlog, the error logs its card's queries make in the lab
+// (src/lab/display.mjs EXPECTED_ERRLOG); hls, the HLS media side's addresses (src/lab/media.mjs: Card Formatting from
+// the menu, the card out and in; E143's only). Every body gives it, one that does not run it with its reason (why);
+// such a body keeps S-CARD's card without a file system (src/lab/camapp.mjs)
 export const MODELS = {
   E143: {
     name: 'OM-1', bin: 'OLY_E_143_1900_0000_0000.BIN', version: '1.9', res_block: 'blk02000000.OE.0101.bin',
@@ -101,67 +107,17 @@ export const MODELS = {
     // 0x5000314c / 0x50003156 run the heap's get 0x5000319c / release 0x50003466 with pool 2, whose block size is 16512
     // (the table 0x60029908) and whose memory is 0x62424700.. (0x50003211), S-HEAP's (D)
     heap_pool: { get: 0x5000314C, put: 0x50003156, bytes: 16512 },
-    // The file system's bring-up 0x5088fc8d, called by the boot task (task 43, 0x5002417a at 0x500242ab; D): queues and
-    // semaphores, FILEFGND (0x50894e37, task 14) through 0x50894d42, logsec's init 0x508ac195 (with the SD host init
-    // 0x508acbed: GPIO pins and power 0x508b0121, IRQs 225/227/228 and 229/231/232 attached by 0x508af1ea), the file
-    // layer 0x50888c4a (whose 0x5088d075 reads the file system's NAND area: 0x500022c2(dst, 0x41a00000, 0x80000,
-    // 0x10200), a valid area starting 1, 'OLYM' at 0x1c000 + 0x200 x drive, 0x5088d14e; writes 0x10100 by 0x5088d0bd),
-    // the card driver's detect states (1 for both drives, 0x5087bc5e) and DCFPROC_SUB (0x5087cda8, task 2) through
-    // 0x5087cd68 (X: the lab ran it, those two tasks started). FILECLBK (0x5088fcfc, task 13) serves the file module's
-    // queue 0x1f (FILECLBK_UEXEC, targets 14/15/17/23): a 16-byte message {reply queue, word, code, parameter}, the
-    // code's class by (code & 0xf0) through 0x60a10578 (0x5088fd8a); while it handles one, 0x62ae4cd0 holds the message
-    // (cleared at the loop's top, 0x5088fd0b). Codes: 0x51 the FAT mount (dosfat op 0, 0x5088167d -> 0x50882ebd: sdmem
-    // command 2, the MBR and boot sector; 0xe08 when the card has no file system), 0x55 the format (op 5, 0x508816ad ->
-    // 0x508848ba), the dosfat block's +4 op, +6 drive, +48 the error (0x5088fde0, 0x508812f2); 0xf0 a DCF process
-    // command {u16 command, u16 drive} (0x5089009d -> 0x5087bce9: 1 the card in, detect 1 -> 2; 3 the card's lists,
-    // 2 -> 3); 0x31 the DCF numbering mount (dcfnum op 0, 0x5088ff40 -> 0x50877ea8 -> 0x5087825a; its block's +2 drive,
-    // +42 the next folder, +44 the next file), which sets the DCF state word's bit 16, the drive status's mount bit
-    // 0x1000 (0x508a83e7; X). The SD command layer 0x508ad03c(command): +4 the driver job, +8 the completion (by
-    // `calls`, a0 the command, d0 the status; 0x508ad065 calls it at once for a busy port), +12 the port, +24 the
-    // command code, +28 the argument, +32..+44 the response, +48 the buffer, +52 the block count, +56 the block size,
-    // +74 the status (D: 0x508b1a41, 0x508b1a7d, 0x508b23d1 build it; 0x508b3fcf completes). The SD host's register
-    // pages (port 0 0x99000000, port 1 0x9a300000, 0x5002539c) and the GPIO page the init's pins and power are in; the
-    // SD core's +0x3c bit 13, which the clock setter 0x508acf2b polls before it writes the clock (TMIO's SD_INFO2
-    // SCLKDIVEN, I). The album manager's per-drive init 0x508b67e8 (called by the DCF numbering mount at 0x5087853a,
-    // its result unused), which starts ALBM_MAIN (0x508b7e91, 0x508beba7) on its first call; ALBM_MAIN's first request
-    // (0x5048ee61) allocates its id through 0x5050a086, the only udf07 site (docs/om1-udf-spec.md row 14: keeps
-    // faulting; X). The cache flush 0x5004e68a is called by the file layer (0x508881fa, X). The drive status 0x508a8327.
-    storage: {
-      init: 0x5088FC8D, tasks: [0x50894E37, 0x5087CDA8],
-      fileclbk: { entry: 0x5088FCFC, queue: 0x1F, busy: 0x62AE4CD0 },
-      codes: { mount: 0x51, format: 0x55, dcf: 0xF0, number: 0x31 },
-      unformatted: 0xE08,
-      nand: { access: 0x500022C2, area: [0x41A00000, 0x80000], read: 0x10200, write: 0x10100 },
-      command: 0x508AD03C,
-      host: { pages: [[0x99000000, 0x10000], [0x9A300000, 0x10000], [0x9B880000, 0x1000]], idle: [[0x9900203C, 0x2000], [0x9A30203C, 0x2000]] },
-      album_init: 0x508B67E8,
-      code: [0x50872000, 0x508B4700],
-      status: 0x508A8327, detect: 0xA33AF3D4,
-      // the movie time query (0x5042da58) takes the time left from the movie module's copy, which the DCF remain count
-      // fills from the card (0x5045c4ac, called from 0x50448d83, X), and converts the movie info's frame rate (+720 of
-      // the static info 0xa32ed128, which the movie module's set-up 0x5045c3fd fills; not run in the lab, so 0) for the
-      // recording's time code: 0x5044949b takes 23, 24, 25, 30, 50 or 60 and logs this code for any other (D); the time
-      // left is computed before it (0x5045ada2)
-      // S-RECFILE's file requests (FILECLBK's codes 0x10000 + n through fileif's table 0x60a125dc, 0x50894eb3; its
-      // block: +0 the result, +4.. the arguments): 1 fopen(path, mode) -> FILE (0x508a5da9; the mode letters through
-      // 0x60a16b20: r w a + b c d e h), 3 fwrite(buffer, size, count, FILE) -> count (0x508a6b87), 2 fclose(FILE)
-      // (0x508a63ce), as the FlashAir configuration writer calls them ('wb' / 'ab', 0x5101efe0, D); 12 mkdir(path)
-      // (0x508a7c61; X: it made C:\DCIM). The drive letter 'C' is drive 0 (0x508a8149, X). The DCF names: the folder
-      // '100OMSYS' and the first file 'P1010001JPG', the DCF module's initial names (0x508749a6, 0x508749ce, D); a
-      // camera's file name carries its clock's month and day (I)
-      fileif: { open: 0x10001, close: 0x10002, write: 0x10003, mkdir: 0x1000C },
-      names: { drive: 'C', folder: 'OMSYS', file: 'P101', ext: 'JPG' },
+    // The card's file system runs natively (src/lab/storage.mjs; docs/hle-gaps.md 4.8.2): its seams are read by
+    // src/fw/facts.mjs fileSystem (fact storage; E143's values STORAGE_E143 there, with their evidence), the SD host's
+    // pages are the board's (src/fw/board.mjs sd). errlog: the logs its card's queries make in the lab. The movie
+    // time query (0x5042da58) takes the time left from the movie module's copy, which the DCF remain count fills from
+    // the card (0x5045c4ac, called from 0x50448d83, X), and converts the movie info's frame rate (+720 of the static
+    // info 0xa32ed128, which the movie module's set-up 0x5045c3fd fills; not run in the lab, so 0) for the recording's
+    // time code: 0x5044949b takes 23, 24, 25, 30, 50 or 60 and logs this code for any other (D); the time left is
+    // computed before it (0x5045ada2)
+    card_fs: {
+      native: true,
       errlog: [[0x39000903, 'the movie time query\'s frame rate is 0: the movie module\'s info is not set up in the lab (the time left is the card\'s)']],
-      // The DCF process's card out (FILECLBK 0xf0, {u16 command 2, u16 drive}; 0x5087bd75): for a drive in detect
-      // state 2, 3 or 4 it sets 1 and, from 2, unmounts (0x5087c987, 0x508748f5, 0x5087c9dd); X: the drive status
-      // loses 0x80 (0x13780 -> 0x13700), the card-in after it mounts again
-      card_out: 2,
-      // FILECLBK's sdmem class (codes 0x10..0x1e, 0x50890114: the table 0x60a105f8 gives the sdmem command, the block
-      // is a 128-byte sdmem request sent through logsec's synchronous call 0x508ac1dd): 0x12 is command 1, which
-      // clears the port's card info (0x508b2b51). Without it a mount after a removal reads the removed card's
-      // state and fails (X: CMD17, CMD13 four times and CMD0 unanswered by the card that came back, the FAT mount
-      // 0x1405). Which component sends it on a body is not read (I)
-      card_info: 0x12,
       // The HLS side of the card (src/lab/media.mjs; docs/hle-gaps.md 4.8.3). D unless tagged.
       // reception: OlyHfwReception's singleton getter (0x6035f0fc, made by 0x50af8959) and its vtable slot 2
       // (0x50af8c96: the receive body 0x50af89f9 with d0 = 1), which hands an event to every receptor of its list
@@ -256,6 +212,7 @@ export const MODELS = {
     },
     // as E143's (D): pool 2's get 0x5000314d and release 0x50003157, block 16512 (the table 0x60029910), memory 0x62424700
     heap_pool: { get: 0x5000314D, put: 0x50003157, bytes: 16512 },
+    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
     // as E143's (D): the GIO init 0x50002a21 ends with 0x50002b5e (0x50002a2e), slots at 0xa32c1f74; the EDID state is
     // the word 0x62a67880 its getter 0x501d8647 reads. The hot-plug handler's work runs in the display init's HDMI task
     // 0x501dc568 (extra_tasks), not in task 16 as E143's
@@ -293,6 +250,13 @@ export const MODELS = {
     // its count at 0xa32bff60 (E143's 0xa32bff5c); UI_IN's port init registers 0x501595dc (0x501595b6..bc); its start
     // stage calls 0x501595c6 (0x5015707b)
     scpu_port: { irq: [0x5004F9BC, 5], register: 0x5004F690, callback: 0x501595DC, old_state: 0x501595C6 },
+    // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card). errlog: the file system's first call
+    // of the SCPU clock's API (0x50135923 -> 0x5005720a; what it asks is ?) comes at the bring-up before anything ran the
+    // SCPU clock's wait 0x50057348, which sets the interface's state field (0x98e00000 bits 2..7) to 42; the API logs
+    // this code for any other state (0x50057211..0x5005721d, D); the field is 42 4 ms later (X: 0 at 323 ms, 42 at
+    // 327 ms; the wait's `mov 42,d0; call 0x5004fb2c` at 0x50057378, D). On E143 and E146 the field is 42 before the
+    // bring-up (X); which boot step sets it first on the camera is ?
+    card_fs: { native: true, errlog: [[0x19001004, 'the file system\'s first call of the SCPU clock\'s API finds its state not yet set (the clock\'s first wait sets it)']] },
     // as E146's (D): the GIO init 0x50002a11 ends with 0x50002b50 (0x50002a1e), slots at 0xa32c1c44; the EDID state
     // word 0x62a655e4 (its getter at 0x501e078a); the hot-plug work runs in the HDMI task 0x501e3eca
     hdmi: { gio_slots: 0x50002B50, state: [0x62A655E4, 4] },
@@ -318,6 +282,7 @@ export const MODELS = {
     res_len: 7835616, res_sha256: '1bc282d99c073bee159fbffa85c27b48782a7c083cfcc55bd086410790960b36',
     panels: { tft: [720, 480], evf: [1024, 768] },
     overrides: OVERRIDES_E144,
+    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
     g4set: G4SET_UNCHECKED,
     // the menus are the older Menu_Viewer / Cursor_2CNL framework, not ListMenu (src/fw/ports.mjs FACTS menu.list_menu,
     // read by src/fw/facts.mjs listMenu): no tab/page tables, variable 226 a 382-byte publish (D, the menu-entry chain
@@ -363,6 +328,7 @@ export const MODELS = {
     res_len: 11726816, res_sha256: '0d4c92407626a32ae4173fc2d6efc5360d75b5c271f088339830ffe1455e157e',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
+    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
     // the SCPU clock ticks, as on E143 (src/fw/board.mjs: the family's stands still): its start, S1 and S2 run as with
     // the clock standing still (X: bin/modelcheck.mjs). The sub-CPU link (src/dev/linkpins.mjs, src/lab/scpulink.mjs):
     // its PER_SCPU is E143's but for its pins, ready 77, request 76 and reset 57 (0x50051ed3..0x50051ede, 0x5005362a, D); the GIO driver maps a
@@ -410,6 +376,12 @@ export const MODELS = {
     res_len: 22175200, res_sha256: '1b390ea79011cf8a4946344c909078b320f8dc46000ab9f07018b8e0c76e9176',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
+    // the card's file system stays S-CARD's: on a native card (the rule's seams are found; the bring-up, the format,
+    // the mount and the counts run, X) S-RECFILE's first fopen never completes: FILECLBK blocks in a write without
+    // timeout to UI_IN's request queue (the halfword 0x6004192e; the write at 0x5010c35f, reached from the file
+    // layer's 0x5064f152), which nothing reads in the lab (X: 53 writes, no read in 10 s of lab time). E143's and
+    // E144's fopen make no such write (X); why E134's does is ?
+    card_fs: { native: false, why: 'S-RECFILE\'s fopen blocks on a write to UI_IN\'s request queue that nothing reads in the lab' },
     // the SCPU clock ticks, as on E143 (src/fw/board.mjs: the family's stands still): its start, S1 and S2 run as with
     // the clock standing still (X: bin/modelcheck.mjs). The sub-CPU link (src/dev/linkpins.mjs, src/lab/scpulink.mjs):
     // its PER_SCPU is E143's but for its pins, ready 77, request 76 and reset 57 (0x500528ac..0x500528b7, 0x50053fad, D); the GIO driver maps a
@@ -455,6 +427,7 @@ export const MODELS = {
     res_len: 24465888, res_sha256: '4d0643ac1b46c33c074f5fad669d197c80a62d9590586904e68a53379ff9712f',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
+    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
     board: { family: 'E144' },
     // the map from E144 pairs 7.94M instructions with 107 conflicts, the one from E139 7.43M with 99; through E144, 119
     // of the overrides carry (66 not null), 14 against the direct map's answer and 12 fail, through E139 109 (64), 15
@@ -475,6 +448,7 @@ export const MODELS = {
     res_len: 22091232, res_sha256: '61d008779b2952a50936d58aa45390a7b1e918f4edcd49f20b3c82d235dac9da',
     // TFT 1.037M dots; no EVF
     panels: { tft: [720, 480], evf: null },
+    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
     board: { family: 'E144' },
     // the map from E144 pairs 3.47M instructions with 116 conflicts, the one from E139 4.63M with 115, the one from
     // E137 3.92M with 141; through E144, 116 of the overrides carry (63 not null), 16 against the direct map's answer
@@ -500,6 +474,7 @@ export const MODELS = {
     res_len: 21919200, res_sha256: '483aa7d7b8b64f11d851f5e9083ceea479b22905f0b338ff9229600e5d315aa6',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
+    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
     board: { family: 'E144' },
     // the map from E142 pairs 6.56M instructions with 81 conflicts, the one from E144 3.49M with 111; through E142, 134
     // of the overrides carry (60 nulls) and none fails, through E144 118 (53) and 8 fail (X: port.json port_via.map,
@@ -523,6 +498,7 @@ export const MODELS = {
     res_len: 23330784, res_sha256: 'bd25f933ce5572b799776b5eaadc11876cd096e78a4182c71cebc44649ad386e',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
+    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
     board: { family: 'E144' },
     // the map from E134 pairs 4.22M instructions with 28 conflicts, the one from E139 3.85M (37), from E144 4.72M
     // (51); through E134 108 of the overrides carry (54 nulls) and 7 fail, 60 lab addresses stay unplaced, through
@@ -559,6 +535,7 @@ export const MODELS = {
     res_len: 13577184, res_sha256: '5404cb456e2f5cddb7fa1ace6fa3210b6b2ea3e55908d71c3140434880b7fd98',
     // TFT 1.04M dots; no EVF
     panels: { tft: [720, 480], evf: null },
+    card_fs: { native: false, why: 'its start stops before the application (docs/ROADMAP.md, Multi-model next stops); the rule finds the seams, not run' },
     board: { family: 'E144' },
     // the map from E142 pairs 2.01M instructions with 121 conflicts, the one from E140 2.17M (116), from E144 1.83M
     // (117); through E142 120 of the overrides carry (60 nulls) and 14 fail, 77 lab addresses stay unplaced, through
@@ -578,6 +555,7 @@ export const MODELS = {
     res_len: 21456352, res_sha256: 'd777456e3c2e41db6a55458cb8ec37d1a6589391f8103b3ec38be7cae59aaa43',
     // TFT 1.037M dots; no EVF
     panels: { tft: [720, 480], evf: null },
+    card_fs: { native: false, why: 'its start stops before the application (docs/ROADMAP.md, Multi-model next stops); the rule finds the seams, not run' },
     board: { family: 'E144' },
     // the map from E143 pairs 1.04M instructions; from E142 2.24M with 122 conflicts, from E140 2.35M (120), from E125
     // 5.20M (84), from E145 2.04M (79); through E142 120 of the overrides carry (60 nulls) and 12 fail, through E140
@@ -596,6 +574,7 @@ export const MODELS = {
     res_len: 21476832, res_sha256: 'a21935005597087e0a43f0a99cee28376c142a4e55339d76ab2ed8286228cb15',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
+    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
     board: { family: 'E144' },
     // the map from E143 pairs 1.02M instructions; from E142 2.11M with 45 conflicts, from E140 2.15M (47), from E145
     // 1.98M (71); through E142 118 of the overrides carry (60 nulls) and 14 fail, through E140 117 (60) and 16, through
@@ -617,6 +596,7 @@ export const MODELS = {
     res_len: 17276384, res_sha256: '110a674b5dfe8d127eb241b24c4cb60a5675ce14a1d435687a53eb36c6663f1b',
     // the vendor's specification gives the TFT as 460K dots, not its pixel geometry (I: unchecked); no EVF
     panels: { tft: null, evf: null },
+    card_fs: { native: false, why: 'its start stops before the application (docs/ROADMAP.md, Multi-model next stops); the rule finds the seams, not run' },
     board: { family: 'E144' },
     // the map from E143 pairs 0.94M instructions; from E145 2.61M with 33 conflicts, from E142 1.76M (129), from E140
     // 1.84M (117); through E145 137 of the overrides carry (72 nulls) and 2 fail, through E142 116 (60) and 16, through
@@ -635,6 +615,7 @@ export const MODELS = {
     res_len: 18550240, res_sha256: 'd0fa5807f2e4fbbf384b464082c35a9a59355c12fb73830987d15d08d4b162bc',
     // a TG-5 (the reply's model_name TG-5(KOUICHIRO)): its TFT of 460K dots, no geometry given; no EVF
     panels: { tft: null, evf: null },
+    card_fs: { native: false, why: 'its start stops before the application (docs/ROADMAP.md, Multi-model next stops); the rule finds the seams, not run' },
     board: { family: 'E144' },
     // as E129, a TG-5 whose main block has E129's size and base: E145 is taken; the map from E145 pairs 2.68M
     // instructions with 20 conflicts, 137 of the overrides carry (72 nulls) and 2 fail (X: port.json port_via.map,
@@ -651,6 +632,7 @@ export const MODELS = {
     res_len: 19291104, res_sha256: 'b1e448561edfc9c56a08fd5fa5c3d6307fc4741149bb40d951940e82364ccc5f',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
+    card_fs: { native: false, why: 'the lab does not load on this family; src/fw/facts.mjs fileSystem finds no SD command layer of its form' },
     board: { family: 'E118' },
   },
   E122: {
@@ -661,6 +643,7 @@ export const MODELS = {
     res_len: 19767776, res_sha256: '8509050a3374abf6237254ad0a2627fa33aaccf7612e2dafae7e6ba481e77407',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
+    card_fs: { native: false, why: 'the lab does not load on this family; src/fw/facts.mjs fileSystem finds no SD command layer of its form' },
     board: { family: 'E118' },
   },
   E120: {
@@ -671,6 +654,7 @@ export const MODELS = {
     res_len: 18415584, res_sha256: 'f12ebf2598496f11bfdecff105f933a9f60c2cfff6a479258e9c6c34cb9236f0',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
+    card_fs: { native: false, why: 'the lab does not load on this family; src/fw/facts.mjs fileSystem finds no SD command layer of its form' },
     board: { family: 'E118' },
   },
 };

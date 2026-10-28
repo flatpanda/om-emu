@@ -1,7 +1,7 @@
 // The board of the model this copy of the lab runs (src/fw/model.mjs): where the on-chip SRAM and the hardware
 // semaphores sit, the interrupt controller's banks, IRQ count and register offsets, the timer block's channels and
 // register layout, the SCPU interface's register offsets, the HDMI port's registers, the flash-library window, the
-// interrupt vectors' page and the MMIO pages the lab's stub allows. The machine (src/machine.mjs), the devices (src/dev/) and the lab's views of
+// interrupt vectors' page, the MMIO pages the lab's stub allows and the SD host's (sd). The machine (src/machine.mjs), the devices (src/dev/) and the lab's views of
 // them read BOARD.
 //
 // A model's board is its family's (FAMILIES, named by its MODELS entry's board.family), then the facts bin/port.mjs
@@ -110,6 +110,16 @@ export const FAMILIES = {
     // board. E143's lab runs both natively (its start reaches neither, X), and the frame wait's stand-in needs the TFT
     // and the EVF on one VSC channel, which kind 1 does not have (TFT 2, EVF 1); E146 and E147 run E143's path
     display_wait_stand_ins: false,
+    // the SD host (src/lab/storage.mjs S-SDHOST): pages [address, size] the lab's stub keeps what the firmware writes
+    // in, and idle [address, value] its presets. The two ports' register pages (port 0 0x99000000, port 1 0x9a300000,
+    // from the table 0x6004773c the base getter 0x5002539c reads; the SD core at +0x2000, D) and the GPIO page of the
+    // init's card pins and power (0x9b880000, 0x508b0121, D); the SD core's SD_INFO2 (+0x3c) reads its bit 13 set,
+    // which the clock setter 0x508acf2b polls before it writes the clock (TMIO's SCLKDIVEN, the bus idle, I). E143's
+    // addresses; E146 and E147 run on them (X: their cards mount)
+    sd: {
+      pages: [[0x99000000, 0x10000], [0x9A300000, 0x10000], [0x9B880000, 0x1000]],
+      idle: [[0x9900203C, 0x2000], [0x9A30203C, 0x2000]],
+    },
   },
   // E144 (OM-5). D: read from the E144 code (the evidence per field; disassembly notation). The same facts hold on
   // E139, E134, E137, E142, E140, E125, E145, E133, E130, E129 and E132 (X: each fact found by a byte pattern from the
@@ -197,6 +207,14 @@ export const FAMILIES = {
     stub_presets: [],
     // the display waits' stand-ins (see FAMILIES.E143): E134's TFT open blocked natively in both (X)
     display_wait_stand_ins: true,
+    // the SD host (see FAMILIES.E143): E143's two port bases (E144's SD driver reads them from 0x607d0de8, which holds
+    // 0x99000000 and 0x9a300000, D), SD_INFO2 at +0x203c bit 13 polled as E143's (E144 0x506a1871, D); the card's pins
+    // and power in the GPIO page 0x9b802000 (E144 0x506a3aec writes 0x9b802064; its other pin writes are in the stub
+    // page 0x9b800000, D). Assumed for the family (I): the cards of E139, E137, E142, E140, E125 and E130 mount on them (X)
+    sd: {
+      pages: [[0x99000000, 0x10000], [0x9A300000, 0x10000], [0x9B802000, 0x1000]],
+      idle: [[0x9900203C, 0x2000], [0x9A30203C, 0x2000]],
+    },
   },
   // E118 (E-M5 II), E120 and E122, the 2015-16 bodies: the E144 family's MMIO bases, but another controller and timer
   // layout (X: the same scan as E144's family; E118's addresses). Every fact the scan did not establish is UNKNOWN.
@@ -229,7 +247,7 @@ export const FAMILIES = {
     // and E122 load no more of than E143 and E144 do (a few stray `fc xx imm32` matches per 64 KiB, X: a census)
     scratch: { from: 0xA2021000, size: 0x31F000, base: 0x8A021000 },
     reset_head: 'flash-copy',
-    stub_pages: UNKNOWN, stub_presets: UNKNOWN, display_wait_stand_ins: UNKNOWN,
+    stub_pages: UNKNOWN, stub_presets: UNKNOWN, display_wait_stand_ins: UNKNOWN, sd: UNKNOWN,
   },
 };
 

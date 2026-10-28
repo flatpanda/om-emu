@@ -38,6 +38,7 @@ import { decimalInt, intLiteral } from '../util/parse.mjs';
 import { setKey } from '../util/tracejson.mjs';
 import { LiveDebug } from '../debug/live.mjs';
 import { memoryCard } from './sdcard.mjs';
+import { STORAGE } from './storage.mjs';
 
 export const PNG_CACHE = 8, SLICE_NS = 50000000, GATE_SLICE_NS = 10000000, GATE_LIMIT_NS = 2000000000, BEHIND_NS = 250000000;
 export const DIAL_CAP = 8, TOUCH_MIN_NS = 20000000, TOUCH_GAP_CAP_NS = 2000000000, TOUCH_TAP_CAP_NS = 320000000;
@@ -230,7 +231,7 @@ export class Player {
     this.a = a;
     // the card in the first slot (storage.mjs) stays in the slot across the player's sessions (a power cycle): the
     // host's (env.card, OM_EMU_CARD), else one in memory for the player's life
-    this.env = MODEL_INFO.storage && !env.card ? { ...env, card: memoryCard() } : env;
+    this.env = STORAGE && !env.card ? { ...env, card: memoryCard() } : env;
     this.wall = env.wallClock ?? (() => performance.now() / 1000);
     this.q = env.queue ?? new ArrayQueue();
     this.stop = false;
@@ -368,7 +369,8 @@ export class Player {
     if (this.session?.scpu_port) used.push('H-SCPUIRQ', 'H-UIINPORT', 'H-SCPUPORT');        // a body whose group 0 comes through the SCPU's ports
     if (this.session?.hdmi_port || this.session?.lab?.scpu_link) used.push('H-GIOSLOTS');   // the GIO slots, for the HDMI pin or the link's pin 102
     if (this.session?.hdmi_port) used.push('S-HDMISINK', 'A-HDMI-1');                       // --hdmi on: the HDMI port, its sink
-    if (this.session?.storage) used.push('H-FILEINIT', 'H-FILECLBK', 'S-SDHOST', 'S-SDCARD', 'S-FSNAND', 'S-ALBM', 'S-RECFILE');   // the file system native on a card (storage.mjs)
+    if (this.session?.storage) used.push('H-FILEINIT', 'H-FILECLBK', 'S-SDHOST', 'S-SDCARD', 'S-FSNAND', ...(this.session.storage.f.album_init !== null ? ['S-ALBM'] : []), 'S-RECFILE');   // the file system native on a card (storage.mjs; S-ALBM where the body has an album manager)
+    if (this.session?.storage?.powered) used.push('S-SDPOWER');                           // a card supply request answered
     const media = this.session?.camapp?.media;
     if (media?.formats || media?.ctrl) used.push('S-MDACTRL');                               // a Card Formatting from the menu (media.mjs)
     if (this.session?.storage?.removals || this.session?.storage?.insertions) used.push('S-MEDIA');   // a card taken out or put back (media.mjs)

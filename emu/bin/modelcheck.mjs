@@ -11,7 +11,11 @@
 // not); the screen shows the count the application asks S-CARD for where there is such a pixel and each of them is
 // back to its first value through the third window. A "Card Full" warning, a count the screen does not draw and a
 // count from another source than S-CARD's query leave no such pixel (X: E142 before the shots-query rule, E144). The
-// box of the count's pixels is reported. A body in PROBE_XFAIL is expected to fail the probe, strictly: its failure is
+// box of the count's pixels is reported. On a body whose card's file system runs natively (src/fw/models.mjs card_fs)
+// the query is the firmware's, which counts from the card: the probe answers it at PROBE_SHOTS for its second window
+// with a hook of its own, removed for the third; and the card check follows the path: the card mounted, the shots the
+// query answered before the probe from the card, and each picture's file found again on the card by refs/fat.mjs
+// with its size. A body in PROBE_XFAIL is expected to fail the probe, strictly: its failure is
 // printed and does not count, its pass does, so a fix forces the table's update.
 //   node emu/bin/modelcheck.mjs [MODEL ...] [--no-port]
 import fs from 'node:fs';
@@ -29,6 +33,8 @@ const models = (want.length ? want : Object.keys(MODELS).filter((k) => k !== 'E1
 const PATH = [['start', null, 0], ['s1', null, 0], ['s2', null, 1], ['play', 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE', 1],
   ['info', 'SS_PLAY_SINGLE/ID_ST_DISP_DETAIL', 1], ['play', null, 1]];
 const PROBE_NS = 1200e6, PROBE_SHOTS = 777, WINDOW = 6, WINDOW_NS = 300e6;
+// the remaining-shots query (E143's, src/lab/camapp.mjs SHOTS_QUERY; the child places it through A())
+const SHOTS_QUERY = 0x50419164;
 // the bodies whose screens are known not to draw S-CARD's count, on the TFT and the EVF: model -> the reason. Empty
 // since S-CARD's card is in slot 1's detect state (docs/model-survey.md finding 18); the E143 and E144 families were
 // in it before
@@ -41,6 +47,10 @@ const zlib = await import('node:zlib');
 const { loadImage, loadBlock } = await import(J + '/bin/run.mjs');
 const { Player } = await import(J + '/src/lab/player.mjs');
 const { PLAYER_PARSER } = await import(J + '/scenarios/session_replay.mjs');
+const { A } = await import(J + '/src/fw/model.mjs');
+const { runtime } = await import(J + '/src/lab/hle.mjs');
+const { FatVolume, mbrPartition } = await import(J + '/refs/fat.mjs');
+const SHOTS_QUERY = ${SHOTS_QUERY}, card = {};
 const env = { rom: loadImage(), resBlock: loadBlock(), createHash, deflate: (b, l) => new Uint8Array(zlib.deflateSync(b, { level: l })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)) };
 const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, device: DEVICE }, { ...env, wallClock: () => performance.now() / 1000 });
 pl.open_session();
@@ -74,14 +84,32 @@ for (const k of JSON.parse(process.argv[3])) {
   s.key(k, 'down'); s.camapp.pump(); s.idle_slice(lab.lab_time() + 150e6); s.key(k, 'up'); s.camapp.pump(); s.idle_slice(lab.lab_time() + 1200e6); rec(k);
   if (k !== 's1') continue;
   try {
-    const keep = s.camapp.card_shots, a = window_();
-    s.camapp.card_shots = PROBE_SHOTS; s.idle_slice(lab.lab_time() + PROBE_NS); const b = window_();
-    s.camapp.card_shots = keep; s.idle_slice(lab.lab_time() + PROBE_NS); const c = window_();
+    // the count the query answers: S-CARD's, or with the card's file system native the firmware's own, which the probe
+    // replaces for its second window by an answer of the query at PROBE_SHOTS (a hook of its own, then removed)
+    const q = A(SHOTS_QUERY), set = (n) => {
+      if (!s.storage) { s.camapp.card_shots = n; return; }
+      if (n === null) lab.hooks.delete(runtime(q)); else lab.hook(q, (h, r) => h.finish(r, { d0: n }), 'count probe');
+    };
+    if (s.storage) card.shots = lab.call(q, { d0: 0 }, null, null, 2000000).d0 | 0;
+    const keep = s.storage ? null : s.camapp.card_shots, a = window_();
+    set(PROBE_SHOTS); s.idle_slice(lab.lab_time() + PROBE_NS); const b = window_();
+    set(keep); s.idle_slice(lab.lab_time() + PROBE_NS); const c = window_();
     const count = (i) => a.stable[i] && b.stable[i] && a.val[i] !== b.val[i], n = a.val.length;
     probe = { count: boxOf(a.w, n, count), back: boxOf(a.w, n, (i) => count(i) && (!c.stable[i] || c.val[i] !== a.val[i])) };
   } catch (e) { probe = { error: e.message.split('\\n')[0].slice(0, 120) }; }
 }
-console.log(JSON.stringify({ steps: out, probe }));
+// with the card's file system native: the card read back independently (refs/fat.mjs), each picture's file found at
+// its path with its size
+if (s.storage) {
+  const st = s.storage, c = st.card;
+  Object.assign(card, { mounted: st.mounted, formatted: st.formatted, files: st.files.length, found: 0 });
+  try {
+    const vol = new FatVolume((lba, n) => c.read(lba, n), mbrPartition(c.read(0, 1)).start);
+    card.label = vol.label.trim();
+    for (const f of st.files) { const e = vol.find(f.path.slice(3).replaceAll('\\\\', '/')); if (e && !e.dir && e.size === f.size) card.found += 1; }
+  } catch (e) { card.error = e.message.slice(0, 120); }
+}
+console.log(JSON.stringify({ steps: out, probe, card: s.storage ? card : null }));
 `;
 let bad = 0;
 for (const m of models) {
@@ -95,8 +123,8 @@ for (const m of models) {
   const path_ = device === 'evf' ? PATH.slice(0, 3) : PATH;
   const r = spawnSync(process.execPath, ['--max-old-space-size=6144', '--input-type=module', '-e', CHILD, path.join(REPO, 'emu'), device, JSON.stringify(path_.slice(1).map((p) => p[0]))], { encoding: 'utf8', env: { ...process.env, OM_EMU_MODEL: m }, maxBuffer: 1 << 26 });
   const line = r.stdout.trim().split('\n').pop();
-  let steps, probe;
-  try { ({ steps, probe } = JSON.parse(line)); } catch { console.log(`${m} (${MODELS[m].name}) ${device}: FAILED ${(r.stderr || r.stdout).split('\n').filter(Boolean).slice(-3).join(' | ').slice(0, 600)}`); bad++; continue; }
+  let steps, probe, card;
+  try { ({ steps, probe, card } = JSON.parse(line)); } catch { console.log(`${m} (${MODELS[m].name}) ${device}: FAILED ${(r.stderr || r.stdout).split('\n').filter(Boolean).slice(-3).join(' | ').slice(0, 600)}`); bad++; continue; }
   const problems = [];
   steps.forEach(([k, state, name, images, frame], i) => {
     const [, wantState, wantImages] = path_[i];
@@ -116,7 +144,13 @@ for (const m of models) {
   if (!xfail) problems.push(...missed);
   else if (missed.length) notes.push(`xfail ${missed.join('; ')} (${xfail})`);
   else if (probe && !probe.error) problems.push(`count probe: passes, expected to fail (${xfail}); update PROBE_XFAIL`);
-  const shown = probe?.count && !probe.back ? `, count at ${box(probe.count)}` : '';
+  // the card with its file system native: mounted, counted from, and each picture's file read back
+  const pictures = steps[steps.length - 1][3];
+  if (card && (!card.mounted || !(card.shots > 0) || card.files !== pictures || card.found !== card.files || card.error)) {
+    problems.push(`card: ${JSON.stringify(card)}, want mounted, shots from the card and ${pictures} file(s) read back`);
+  }
+  const shown = (probe?.count && !probe.back ? `, count at ${box(probe.count)}` : '')
+    + (card ? `; card '${card.label}' ${card.formatted ? 'formatted, ' : ''}${card.shots} shots, ${card.found} file(s) read back` : '');
   console.log(`${m} (${MODELS[m].name}) ${device}: ${problems.length ? 'FAILED ' + problems.join('; ') : 'ok'} — ${steps.map(([k, st, , n, f]) => `${k} 0x${st.toString(16)} ${n} ${f}`).join(', ')}${shown}${notes.length ? '; ' + notes.join('; ') : ''}`);
   if (problems.length) bad++;
   }

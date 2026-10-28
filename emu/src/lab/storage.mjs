@@ -1,36 +1,43 @@
-// The card and the file system (docs/hle-gaps.md 4.8; src/fw/models.mjs storage has the evidence for every address):
-// an SD card in the first slot behind the firmware's SD command layer, and the firmware's own storage stack above it,
-// natively: sdmem, sd_mount, sdmem_format, logsec, dosfat (FAT / exFAT), the DCF modules, fileif, and the file tasks
-// FILECLBK, FILEFGND and DCFPROC_SUB. On a body whose MODELS entry gives `storage` (E143); elsewhere S-CARD keeps its
-// card without a file system (src/lab/camapp.mjs).
+// The card and the file system (docs/hle-gaps.md 4.8, 4.8.4): an SD card in the first slot behind the firmware's SD
+// command layer, and the firmware's own storage stack above it, natively: sdmem, sd_mount, sdmem_format, logsec, dosfat
+// (FAT / exFAT), the DCF modules, fileif, and the file tasks FILECLBK, FILEFGND and DCFPROC_SUB. On a body whose MODELS
+// entry runs it (card_fs native: E143, E146, E147 and the E144 family's E144, E139, E137, E142, E140, E125, E130), at
+// the seams src/fw/facts.mjs fileSystem reads in its firmware (with the evidence; STORAGE_E143 for the lab's build);
+// elsewhere S-CARD keeps its card without a file system (src/lab/camapp.mjs), each body's card_fs with the reason.
 //
 //   H-FILEINIT  the file system's bring-up (the boot task's call, storage.init) natively before the application starts:
 //               its queues and semaphores, logsec's and the SD host's init, the file layer, the card driver's detect
-//               states, and the two tasks it starts (FILEFGND, DCFPROC_SUB); then FILECLBK, the file module's task,
-//               started (act_tsk; the boot's start of it is not traced)
-//   S-SDHOST    the SD host's registers (both ports' pages and the GPIO page of the card's pins and power) are lab-stub
-//               pages that keep what the firmware writes; the SD core's SD_INFO2 reads its clock-divider bit set, the
-//               one bit the host's set-up polls (I: TMIO's SCLKDIVEN, the bus idle). No interrupt is ever raised: the
-//               UHS-II PHY's link-up wait runs out (about 120 ms of lab time), as with a card without UHS-II, and the
-//               firmware falls back to the SD interface
+//               states, and the tasks it starts (FILEFGND, DCFPROC_SUB and on some bodies a third, by the static ids
+//               their starts read: storage.tasks); then FILECLBK, the file module's task, started (act_tsk; the boot's
+//               start of it is not traced)
+//   S-SDHOST    the SD host's registers (the board's pages, src/fw/board.mjs sd: both ports' and the GPIO page of the
+//               card's pins and power) are lab-stub pages that keep what the firmware writes; the SD core's SD_INFO2
+//               reads its clock-divider bit set, the one bit the host's set-up polls (I: TMIO's SCLKDIVEN, the bus
+//               idle). No interrupt is ever raised: the UHS-II PHY's link-up wait runs out (about 120 ms of lab time),
+//               as with a card without UHS-II, and the firmware falls back to the SD interface
+//   S-SDPOWER   the SD driver's card supply request (storage.card_power), a synchronous send to a queue whose receiver
+//               does not run in the lab (which task it is, ?), is answered 0 at its send (the send from that request
+//               only; the E144 family's E144, E137, E142, E140, E125 and E130 meet it once at the bring-up, X; E143's,
+//               E146's, E147's and E139's requests return before their send, X)
 //   S-SDCARD    the card (src/lab/sdcard.mjs, an 8 GiB SDHC card) at the SD command layer (storage.command): each command
 //               the firmware sends is answered there, its response, its data and its status written into the command
 //               and its completion called at once, as the layer itself does for a busy port; sd_mount's card init,
 //               the transfers and the format run natively above it
-//   S-FSNAND    the file system's NAND area (storage.nand.area, 512 KiB of flash) behind the NAND access storage.nand.access: it reads
-//               erased (0xff) on a camera that never saved it (the lab's NAND is not modelled), and the firmware's
-//               writes are kept for the session
-//   S-ALBM      the album manager's per-drive init returns at once: ALBM_MAIN, which it would start, allocates its first
-//               request's id with udf07 (docs/om1-udf-spec.md row 14, kept faulting), and the movie module it asks does
-//               not run
+//   S-FSNAND    the file system's NAND area (storage.nand.area: 512 KiB of NAND on E143, 384 or 256 KiB of the E144
+//               family's flash) behind its access (storage.nand.access): it reads erased (0xff) on a camera that
+//               never saved it (the lab's NAND and flash are not modelled), and the firmware's writes are kept for the
+//               session
+//   S-ALBM      the album manager's per-drive init (where the rule finds one) returns at once: ALBM_MAIN, which it
+//               would start, allocates its first request's id with udf07 (docs/om1-udf-spec.md row 14, kept faulting),
+//               and the movie module it asks does not run
 //   S-RECFILE   the picture's file at a release's END_SHOOTING_PICTURE (src/lab/camapp.mjs S-CARD), in place of
 //               REC_FILE, which does not run: the file module's own file requests (mkdir, fopen 'wb', fwrite in
 //               chunks, fclose; the FlashAir configuration writer's calls) put a JPEG the lab encodes
 //               (src/lab/jpeg.mjs: S-SCENE's frame at the capture, each 8 x 8 block its mean, or a black frame) at
-//               the DCF name the numbering mount gave (folder 100: C:\DCIM\100OMSYS, file P1010001.JPG and on; the
-//               DCF module's initial names, D; the camera's names carry its clock's month and day, I). The DCF
-//               database is not told of the file (REC_FILE's DCF steps are not read): the firmware's image count
-//               stays 0 until the next mount, and the next file number is the lab's
+//               the DCF name the numbering mount gave (folder 100: C:\DCIM\100OMSYS or 100OLYMP, file P1010001.JPG
+//               and on; the DCF module's initial names, storage.names, D; the camera's names carry its clock's month
+//               and day, I). The DCF database is not told of the file (REC_FILE's DCF steps are not read): the
+//               firmware's image count stays 0 until the next mount, and the next file number is the lab's
 //   S-CARD      (the insertion) the media control's requests on a card insertion, sent to the file module's queue as
 //               the HLS media layer would send them (it does not run in the lab; which requests it sends, and in which
 //               order, is I): the FAT mount; on a card with no file system the format (the request Card Formatting
@@ -38,14 +45,31 @@
 //               which leaves the drive mounted (the drive status's bit 0x1000). The same at a runtime insertion
 //               (src/lab/media.mjs S-MEDIA), and at a removal the DCF process's card out; after a format from the menu
 //               the DCF numbering mount again, for the next file number (src/lab/media.mjs S-MDACTRL)
-import { FirmwareError, where, disasm } from './hle.mjs';
+import { FirmwareError, where, disasm, runtime } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { RTOS } from './rtos.mjs';
 import { K_CFLUSH } from './menu.mjs';
 import { STUB } from './display.mjs';
 import { SdCard, SECTOR } from './sdcard.mjs';
+import { MODEL, MODEL_INFO, fact } from '../fw/model.mjs';
+import { BOARD } from '../fw/board.mjs';
+import { STORAGE_E143, STORAGE_LIB, CARD_DETECT_E143 } from '../fw/facts.mjs';
 
 export class StorageError extends FirmwareError {}
+
+// The facts of this body's file system, or null where its MODELS entry does not run it (card_fs, each body's with its
+// reason): the seams src/fw/facts.mjs fileSystem reads (fact 'storage'), the storage library's own numbers
+// (STORAGE_LIB there, with their evidence), the card driver's detect table (fact 'card.detect'), its board's SD host
+// pages (src/fw/board.mjs sd), and the HLS side (src/lab/media.mjs) where the entry gives it
+export function storageFacts() {
+  const cf = MODEL_INFO.card_fs;
+  if (!cf?.native) return null;
+  const f = fact('storage', STORAGE_E143);
+  if (!f) throw new StorageError(`${MODEL}: src/fw/models.mjs card_fs is native but src/fw/facts.mjs fileSystem found no file system`);
+  const { drive, ...lib } = STORAGE_LIB;
+  return { ...f, ...lib, names: { ...f.names, drive }, detect: fact('card.detect', CARD_DETECT_E143).table, host: BOARD.sd, hls: cf.hls ?? null };
+}
+export const STORAGE = storageFacts();
 
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 const OLYQEWR = [...RTOS].find(([, n]) => n === 'OlyQeWr')[0];
@@ -56,7 +80,7 @@ const DCF_CARD_IN = 1, DCF_LISTS = 3;
 const ERASED = 0xff, WRITE_CHUNK = 32768;
 
 export class Storage {
-  // session: the PlaySession; f: MODEL_INFO.storage. The card: the host's (env.card: {open() -> SdCard, save(card)},
+  // session: the PlaySession; f: STORAGE. The card: the host's (env.card: {open() -> SdCard, save(card)},
   // node's OM_EMU_CARD, host/card.mjs), else a blank one for the session
   constructor(session, f) {
     this.s = session; this.lab = session.lab; this.f = f;
@@ -67,6 +91,7 @@ export class Storage {
     this.log = [];                 // [kind, detail] of every stand-in action at the bring-up and the insertion
     this.commands = 0;             // SD commands answered
     this.flushes = 0;              // K-CFLUSH calls from the file system answered
+    this.powered = 0;              // S-SDPOWER: the card supply requests answered
     this.fileclbk = null;          // FILECLBK's task id
     this.mounted = false;          // the drive status's mount bit after the insertion (false while the card is out)
     this.removals = 0;             // runtime removals and insertions (src/lab/media.mjs)
@@ -84,17 +109,32 @@ export class Storage {
     this.install_host();
     lab.hook(f.command, (h, r) => this._command(h, r), 'S-SDCARD');
     lab.hook(f.nand.access, (h, r) => this._nand(h, r), 'S-FSNAND');
-    lab.hook(f.album_init, (h, r) => { this.log.push(['albm', `drive ${r.d0 & 0xFF}: not started`]); h.finish(r, { d0: 0 }); }, 'S-ALBM');
-    const [lo, hi] = f.code;
+    if (f.card_power !== null) {
+      const { send, ret } = f.card_power, power = (prev) => (h, r) => {
+        if (r.mdr >>> 0 !== runtime(ret)) return prev(h, r);
+        const b = lab.sim.read(r.a0 >>> 0, 4);
+        this.powered += 1;
+        this.log.push(['power', `the card's supply request {${b[1]}, ${b[2]}, ${b[3]}}: answered`]);
+        return h.finish(r, { d0: 0 });
+      };
+      if (lab.hooks.has(runtime(send))) lab.wrap(send, power);   // (the hook keeps its name)
+      else lab.hook(send, power((h, r) => lab.passthrough(r)), 'S-SDPOWER');
+    }
+    if (f.album_init !== null) lab.hook(f.album_init, (h, r) => { this.log.push(['albm', `drive ${r.d0 & 0xFF}: not started`]); h.finish(r, { d0: 0 }); }, 'S-ALBM');
     lab.wrap(K_CFLUSH, (prev) => (h, r) => {
-      const ra = disasm(r.mdr);
-      if (ra < lo || ra >= hi) return prev(h, r);
+      if (disasm(r.mdr) !== f.cflush) return prev(h, r);
       this.flushes += 1;
       return h.finish(r);
     }, 'K-CFLUSH');
-    for (const e of f.tasks) lab.lt.allow.add(e);
+    // the tasks the bring-up starts, by their static ids (the words of the image the starts read)
+    const entries = new Map([...lab.nk.tasks()].map(([t, [e]]) => [t, e]));
+    const tids = f.tasks.map((w) => lab.sim.read(w, 1)[0] | lab.sim.read(w + 1, 1)[0] << 8);
+    for (const t of tids) {
+      if (!entries.has(t)) throw new StorageError(`H-FILEINIT: the bring-up starts task ${t}, which is not a static task`);
+      lab.lt.allow.add(entries.get(t));
+    }
     lab.call(f.init, null, null, null, 2000000);
-    for (const e of f.tasks) this._task(e, 'H-FILEINIT');
+    for (const t of tids) this._task(entries.get(t), 'H-FILEINIT');
     this.s.settle('H-FILEINIT');
     lab.lt.allow.add(f.fileclbk.entry);
     const tid = this._tid(f.fileclbk.entry, 'H-FILECLBK');
@@ -201,7 +241,7 @@ export class Storage {
     this.removals += 1;
     this.log.push(['drive', `status ${h8(this.drive_status)}`]);
   }
-  // A fileif request (models.mjs storage.fileif): the block's result word
+  // A fileif request (storage.fileif, src/fw/facts.mjs STORAGE_LIB): the block's result word
   fileif(code, args, label) {
     const prm = this.lab.alloc(pack('<IIIII', 0, ...[...args, 0, 0, 0, 0].slice(0, 4)), 4);
     const [b] = this.request(code, prm, 4, label);

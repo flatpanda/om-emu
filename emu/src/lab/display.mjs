@@ -92,9 +92,9 @@ export const EXPECTED_ERRLOG = new Map([[0x1C005002, 'camera state store 0x50041
   // (`mov 150,d1; call W`), and on its timeout logs this code; held on E144, E139, E142 and E140 only (X, a scan of
   // the 18 expanded images for its `mov imm32,d0`; each body's site and IRQ in its src/fw/models.mjs entry, D)
   [0x37005206, 'device open: its 150 ms interrupt wait times out (the interrupt is not modelled)']]);
-// a body whose file system runs natively (src/fw/models.mjs storage, src/lab/storage.mjs) adds the logs its card's
+// a body whose file system runs natively (src/fw/models.mjs card_fs, src/lab/storage.mjs) adds the logs its card's
 // queries make in the lab (each with its evidence in the model's entry)
-for (const [code, why] of MODEL_INFO.storage?.errlog ?? []) EXPECTED_ERRLOG.set(code, why);
+for (const [code, why] of (MODEL_INFO.card_fs?.native && MODEL_INFO.card_fs.errlog) || []) EXPECTED_ERRLOG.set(code, why);
 export const TASK_STACKS = [A(0xA20F0000), A(0xA20C0000), A(0xA2090000)];
 export const TASK_CALLERS = [A(0xA2100300), A(0xA2100340), A(0xA2100380)];
 export const TIMER_INIT = A(0x50058959);

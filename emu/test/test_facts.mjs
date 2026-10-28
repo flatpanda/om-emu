@@ -33,7 +33,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
-  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143 } from '../src/fw/facts.mjs';
+  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -336,6 +336,22 @@ const DETECT_FOUND = {
   E145: [0xA2219288, 1], E133: [0xA2B16D0C, 1], E130: [0xA2B6A660, 1], E129: [0xA2B747D8, 1], E132: [0xA2B74D4C, 1],
   E118: [0xA1C47794, 1], E122: [0xA1C878DC, 1], E120: [0xA1C46B78, 1],
 };
+// The card's file system seams (storage; src/fw/facts.mjs fileSystem): E143's as src/fw/models.mjs gave them by hand
+// before the rule (D, its storage entry; the tasks then by their entries 0x50894e37 and 0x5087cda8, whose starts read
+// the id words), and of a body of each lineage the bring-up, FILECLBK's entry and busy word, the NAND access and the
+// drive status as read in their code (D: E146 0x508a9a6d / 0x508a9adc, the busy store at 0x508a9ad3; E144 0x50685108 /
+// 0x50685177, its area read 0x5068251a; E134 0x50659a4e / 0x50659ac4, whose FILECLBK sets no byte first; E125's drive
+// status after its `clr d2`, 0x5061cb03); none on the E118 family (X: its SD command layer has another form)
+const STORAGE_FOUND = {
+  E143: { init: 0x5088FC8D, tasks: [0x60042D42, 0x60042D2A], fileclbk: { entry: 0x5088FCFC, queue: 0x1F, busy: 0x62AE4CD0 },
+    nand: { access: 0x500022C2, area: [0x41A00000, 0x80000], read: 0x10200, write: 0x10100 }, command: 0x508AD03C,
+    album_init: 0x508B67E8, status: 0x508A8327 },
+  E146: { init: 0x508A9A6D, fileclbk: { entry: 0x508A9ADC, queue: 0x1F, busy: 0x62B3CDC8 } },
+  E144: { init: 0x50685108, fileclbk: { entry: 0x50685177, queue: 0x22, busy: 0x6214F900 }, nand: { access: 0x5003B76C, area: [0x406A0000, 0x60000], read: 0x102, write: 0 } },
+  E134: { init: 0x50659A4E, fileclbk: { entry: 0x50659AC4, queue: 0x22, busy: 0x623A935C } },
+  E125: { status: 0x5061CB03 },
+  E118: null, E122: null, E120: null,
+};
 const SHOTS_FOUND = {
   E143: 0x50419164, E146: 0x50414A5F, E147: 0x50422B7E, E144: 0x502FAB48, E139: 0x502F7CEB, E134: 0x50313E2D,
   E137: 0x502EC70F, E142: 0x502C79DB, E140: 0x502D63A0, E125: 0x50307376, E145: 0x502CEB73, E133: 0x502DAB10,
@@ -442,7 +458,7 @@ const E143_FACTS = {
   timer: { reload_less_one: false }, dial: { select: 0x5014B7C7, select_end: 0x1A, table_ptr: 0xA32DAAB0, table0: 0x60223DBC },
   touch_panel: { driver: true }, lens: { mount: true }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
-  broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] } }, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143,
+  broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] } }, storage: STORAGE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143,
   cbs: CBS_FOUND.E143,
 };
 
@@ -575,6 +591,10 @@ export function factsTests() {
     ok(got.card?.shots_query === SHOTS_FOUND[code], `${code}: card ${hx(got.card ?? got)}, found ${hx(SHOTS_FOUND[code])}`);
     // the card slots' detect states (cardDetect)
     ok(same([got.card?.detect?.table, got.card?.detect?.drives], DETECT_FOUND[code]), `${code}: card detect ${hx(got.card?.detect)}, found ${hx(DETECT_FOUND[code])}`);
+    // the card's file system seams (fileSystem): the fields found by reading each body's code
+    const sf = STORAGE_FOUND[code];
+    if (sf === null) ok(got.storage === undefined, `${code}: storage ${hx(got.storage)}, found none`);
+    else if (sf) ok(Object.keys(sf).every((k) => same(got.storage?.[k], sf[k])), `${code}: storage ${hx(got.storage ?? got)}, found ${hx(sf)}`);
     if (got.card && PORTS[code]) ok(PORTS[code][0x50419164] === got.card.shots_query, `${code}: A() of the shots query ${hx(PORTS[code][0x50419164])}, the rule's ${hx(got.card.shots_query)}`);
     // CPU 0's init task and OlyTaWu, and the port's places of E143's at the rules' (bin/port.mjs, how 'task-table',
     // 'wup-opening')

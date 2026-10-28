@@ -1,4 +1,4 @@
-// The HLS media side of the card, on a body whose file system runs natively (src/lab/storage.mjs; MODEL_INFO.storage.hls
+// The HLS media side of the card, on a body whose file system runs natively (src/lab/storage.mjs; MODEL_INFO.card_fs.hls
 // in src/fw/models.mjs has the evidence for every address, docs/hle-gaps.md 4.8.3 the record). The camera application's
 // media control (OlyHfwOpeMdaCtrl: its requests, its receptor and its reactive) runs natively; the two HLS components
 // it talks to, the function component CmpCst_Function and the media manager CapMed_MediaManager, do not run in the lab

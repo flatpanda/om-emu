@@ -12,7 +12,7 @@ import { SET_INPUTS } from '../dev/scpu.mjs';
 import { PLUG, EDID, W_EDID_LEN, W_CABLE, W_DDC_READS } from '../dev/hdmi.mjs';
 import { sinkEdid } from './edid.mjs';
 import { Accelerometer } from './acc.mjs';
-import { Storage } from './storage.mjs';
+import { Storage, STORAGE } from './storage.mjs';
 import { imageView } from '../fw/image.mjs';
 import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143 } from '../fw/facts.mjs';
 import * as D from './display.mjs';
@@ -800,7 +800,7 @@ export class PlaySession extends N.NavSession {
     this.playview_hold = false;    // S-PLAYVIEW: a card image's frame shown
     this.camapp = null;            // S-CAMAPP (camapp.mjs), from the bring-up on
     this.acc = null;               // the accelerometer (acc.mjs) on a body that gives it (models.mjs acc)
-    this.storage = null;           // the card and the file system (storage.mjs) on a body that gives them (models.mjs storage)
+    this.storage = null;           // the card and the file system (storage.mjs) on a body that runs them (models.mjs card_fs)
   }
   close() {
     if (this.storage) { const st = this.storage; this.storage = null; st.close(); }
@@ -879,7 +879,7 @@ export class PlaySession extends N.NavSession {
     this.ipi_bring_up();
     if (o.mutant !== 'no-aeinit') this.aeinit_bring_up();   // without it the interpolation's div fault comes back
     if (MODEL_INFO.acc) this.acc_bring_up();
-    if (MODEL_INFO.storage && !globalThis.process?.env?.OM_NO_STORAGE) this.storage_bring_up();
+    if (STORAGE && !globalThis.process?.env?.OM_NO_STORAGE) this.storage_bring_up();
     this.end('play-bring-up', 'bring-up', [], [], { idle_codes: this.idle_codes.map(h8), ...(this.storage && { storage: { ...this.storage.status(), log: this.storage.take_log() } }) });
     // S-CAMAPP: the application starts, creates the GUI (H-GUIBYAPP) and takes it to its screen, on the EVF for an EVF
     // start (S-OUTDISP: its own 131 with lOutput 7); start 'menu' then presses MENU
@@ -933,7 +933,7 @@ export class PlaySession extends N.NavSession {
   // system's bring-up natively in the boot's place and the card mounted by the firmware's own path, before the
   // application starts, which asks for the card's state at its start
   storage_bring_up() {
-    this.storage = new Storage(this, MODEL_INFO.storage);
+    this.storage = new Storage(this, STORAGE);
     this.storage.bring_up();
   }
   // the SCPU interface's port levels (bit k port k), through the lab's doorbell (src/dev/scpu.mjs)
@@ -1312,13 +1312,14 @@ export class PlaySession extends N.NavSession {
     this.begin(`${String(this.steps.length).padStart(2, '0')}-${tag}`);
     return this.wait_until(lab.lab_time() + TILT_MS * 1000000, tag, true, { kind: 'tilt', extra: () => ({ acc: this.acc.status(), gauge: this.acc.gauge() }) });
   }
-  // The card in the first slot (a body with the file system native, src/fw/models.mjs storage): 'remove' takes it out
-  // (S-SDCARD's card answers no command), 'insert' puts the same card back. The slot's card switch changes as a
-  // body's does (S-KEYBITS' bit of UI_IN's group, which UI_IN decodes natively and the file layer's callback takes),
-  // and S-MEDIA (media.mjs) runs the media manager's part of the change in the step; then CARD_MS of lab time
+  // The card in the first slot (a body with the file system native and its HLS side, src/fw/models.mjs card_fs.hls):
+  // 'remove' takes it out (S-SDCARD's card answers no command), 'insert' puts the same card back. The slot's card
+  // switch changes as a body's does (S-KEYBITS' bit of UI_IN's group, which UI_IN decodes natively and the file
+  // layer's callback takes), and S-MEDIA (media.mjs) runs the media manager's part of the change in the step; then
+  // CARD_MS of lab time
   card_input(action) {
     const st = this.storage, media = this.camapp?.media ?? null;
-    if (!st || !media) throw new ValueError(`card: ${MODEL} has no card in the lab with its file system (src/fw/models.mjs storage)`);
+    if (!st || !media) throw new ValueError(`card: ${MODEL} has no card in the lab with its file system and its HLS media side (src/fw/models.mjs card_fs)`);
     if (action !== 'remove' && action !== 'insert') throw new ValueError(`card: action ${show(action)} (remove, insert)`);
     if ((action === 'remove') !== st.card.present) throw new ValueError(`card ${action}: the card is ${st.card.present ? 'in' : 'out of'} the slot already`);
     if (media.busy()) throw new ValueError(`card ${action}: the media layer is busy (a format or a card change runs)`);

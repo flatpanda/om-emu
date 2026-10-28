@@ -1419,6 +1419,231 @@ export function cardDetect(img) {
   return { table: u32(img, t + 10), drives: img[t + 3] };
 }
 
+// The register immediates a straight run of code leaves at offset `to` (from `from`): {d0..d3, a0..a3}, a value or
+// null. Tracked: mov imm32 / imm16 / imm8 to Dn or An, clr Dn, mov Rm,Rn within Dn or An, and the compares and
+// branches, which change no register; any other instruction forgets every register, so a value is only one the run
+// loads and keeps in plain sight (the storage rule's NAND access calls).
+function immediatesAt(img, from, to) {
+  const s16 = (o) => (img[o] | img[o + 1] << 8) << 16 >> 16;
+  const R = { d0: null, d1: null, d2: null, d3: null, a0: null, a1: null, a2: null, a3: null };
+  const D = ['d0', 'd1', 'd2', 'd3'], An = ['a0', 'a1', 'a2', 'a3'];
+  for (let p = from; p < to;) {
+    const op = img[p], o2 = img[p + 1], len = callAt(img, p)?.len ?? insnLength(op, o2);
+    if (op === 0xfc && (o2 & 0xfc) === 0xcc) R[D[o2 & 3]] = u32(img, p + 2);                                  // mov imm32,Dn
+    else if (op === 0xfc && (o2 & 0xfc) === 0xdc) R[An[o2 & 3]] = u32(img, p + 2);                             // mov imm32,An
+    else if (op >= 0x2c && op <= 0x2f) R[D[op & 3]] = s16(p + 1) >>> 0;                                       // mov imm16,Dn
+    else if (op >= 0x24 && op <= 0x27) R[An[op & 3]] = img[p + 1] | img[p + 2] << 8;                           // mov imm16,An
+    else if (op >= 0x80 && op <= 0x9f && (op >> 2 & 3) === (op & 3)) R[(op < 0x90 ? D : An)[op & 3]] = (o2 << 24 >> 24) >>> 0;   // mov imm8
+    else if (op >= 0x80 && op <= 0x9f) { const r = op < 0x90 ? D : An; R[r[op & 3]] = R[r[op >> 2 & 3]]; }   // mov Rm,Rn
+    else if (op <= 0x0c && (op & 3) === 0) R[D[op >> 2]] = 0;                                                  // clr Dn
+    else if (!((op >= 0xa0 && op <= 0xbf) || (op >= 0xc0 && op <= 0xca))) for (const k of Object.keys(R)) R[k] = null;   // cmp, branches: none
+    p += len;
+  }
+  return R;
+}
+// The offset of the one hit of pat in img[from, to) (null bytes match any), or null for none; throws for two or more.
+function oneAt(img, pat, rule, what, from = 0, to = img.length) {
+  const at = [];
+  for (let o = img.indexOf(pat[0], from); o >= 0 && o + pat.length <= to; o = img.indexOf(pat[0], o + 1)) if (bytesAt(img, o, pat)) at.push(o);
+  if (at.length > 1) throw new Error(`${rule}: ${at.length} ${what} (${at.map((o) => h8(0x50000000 + o)).join(', ')}), want one`);
+  return at.length ? at[0] : null;
+}
+const le32 = (v) => [v & 0xff, v >>> 8 & 0xff, v >>> 16 & 0xff, v >>> 24];
+
+// The card's file system (fact 'storage', src/lab/storage.mjs; docs/hle-gaps.md 4.8.2): the seams the lab runs it at,
+// in a library the bodies share instruction for instruction but for addresses, registers' allocation and a few
+// immediate forms (X: every pattern below on each expanded image). D unless tagged, from E143's code:
+// - FILECLBK, the file module's task, opens its loop with `clr d0; mov d0,(busy); movhu (Q),d0; mov a2,a0; exth d0;
+//   mov 16,d1` (E143 0x5088fd0b; the receive of its queue, whose id is the halfword Q of the static queue-id table),
+//   one per image; its entry is the `movm [a2],(sp); add -20,sp` (cf 20 f8 fe ec) within FCB_HEAD bytes before it
+//   (E143 0x5088fcfc; on nine images a `mov 1,d0; movbu d0,(abs32)` follows it, not on E134, E125, E133, E130, E129,
+//   E132 and the E118 family, X), and the file system's bring-up ends right before that entry with `clr d0; mov
+//   d0,(busy); ret [],4` (E143 0x5088fcf2). The bring-up (init) opens with the queue's creation, `movhu (Q),d0; mov
+//   imm32,a0; exth d0; mov 16,d1; mov 10,a1` (E143 0x5088fc8d, the boot task's call), within FS_INIT bytes before its
+//   end. fileclbk {entry, queue (the id: 0x1f on the E143 family, E145, E129 and E132, 0x22 on the others, X), busy
+//   (the word that holds the message FILECLBK handles)}
+// - tasks: the tasks the bring-up's callees start, each callee ending `movhu (W),d0; exth d0; call OlyTaSt; clr d0;
+//   ret` (E143 0x50894d42 FILEFGND's id word 0x60042d42, 0x5087cd68 DCFPROC_SUB's 0x60042d2a; a third, 0x44..0x47, on
+//   E125, E133, E130, E129, E132 and the E118 family, X), all through one OlyTaSt: their id words (run-time addresses;
+//   the static queue and task ids are data of the image)
+// - nand: the file layer's NAND area read (E143 0x5088d075) opens `movbu (flag),d1; mov d0,d2; cmp 0,d1; bne` and
+//   calls the NAND access with a1 the area, d0 its size and d1 the read operation, then sets the flag (`exthu d0; cmp
+//   0,d0; bne; mov 1,d0; movbu d0,(flag)`); its writer is the next function, which adds the area to its offset (`add
+//   imm32,d2`) and calls the same access with its write operation in d1. access, area [address, size], read, write:
+//   E143 0x500022c2, [0x41a00000, 0x80000], 0x10200, 0x10100; the E144 family's flash access 0x5003b76c (E144),
+//   [0x406a0000, 0x60000], 0x102, 0 (D; the others X: 384 or 256 KiB, read 0x102 or 0x103, write 0). The immediates
+//   by a straight-line walk (immediatesAt): E143's `mov imm32` forms, E144's `mov imm16,d1` and `clr d1`
+//   (0x50682537 `mov 258,d1`, 0x50682572 `clr d1`)
+// - command: the SD command layer, `mov a0,a3; cmp 0,a3; bne; ret`, then the port's busy test, whose completion is
+//   `mov (8,a3),a1; mov 0x1403,d0; movhu d0,(74,a3); mov a3,a0; calls (a1)` (E143 0x508ad03c, SD_COMMAND)
+// - album_init: the album manager's per-drive init (E143 0x508b67e8), `mov d0,d3; mov d3,d2; extbu d2; mov d2,d0;
+//   call; exthu d0; cmp 0,d0; beq; movhu (abs32),d0; cmp 1,d0; bge +5; ret`, which starts ALBM_MAIN once
+//   (`movbu (F),d1; cmp 0,d1; bne; call; mov 1,d0; movbu d0,(F)`, E143 0x508b681e); null where none is found: on E145,
+//   E129 and E132 (whose DCF numbering mount was not read: whether they have an album manager is ?), X
+// - status: the file layer's drive status (E143 0x508a8327), `exthu d0; mov d0,a2; cmp 7,a2; beq; cmp 2,a2; beq; cmp
+//   0,a2; beq; cmp 1,a2; beq`, the function that holds cardDetect's card-present test within STATUS_SPAN bytes; its
+//   entry is after the return before it, whole instructions within STATUS_HEAD bytes (E125's `clr d2` first,
+//   0x5061cb03, X)
+// - card_power: the SD driver's request for the card's supply (E143 0x508b0301, E144 0x506a3fb5) builds an 8-byte
+//   request `mov 8,d0; call (alloc); mov a0,a2; mov imm8,d0; movbu d0,(1,a2); exthu d2; cmp 0,d2; beq; mov 255,d0;
+//   bra; clr d0; movbu d0,(2,a2)`, after a return; its calls are the alloc, on some a check, the send and the free
+//   (`mov a2,a0` before it): {send: the send's callee, ret: its return address} (E143 0x50059656 / 0x508b033c, E144
+//   0x5004fea9 / 0x506a3ff0, the send a synchronous one to a queue, 0x60041854; null on E145, E133, E129 and E132, X)
+// - cflush: the return address of the file system's one call of the cache flush (K-CFLUSH, src/lab/menu.mjs), in
+//   the FAT's free count: `mov 1,d0; call (lock); mov d0,d2; call (flush); mov d2,d0; call (unlock); mov (12,sp),a0;
+//   mov -1,d0; mov d0,(8164,a0)` (E143 0x508881e9, return 0x508881fa; the flush is the place the port gives E143's
+//   0x5004e68a on all 15 images that hold it, X)
+// - names: the DCF module's initial folder and file names (E143 0x508749a2 / 0x508749ca: `mov 8,a0; add a3,a0; mov
+//   imm32,a1; call` before `mov 100,d0; movhu d0,(22,a3)`, and `mov 12,a0; add a2,a0; mov imm32,a1; call` before
+//   `mov 1,d0; mov d0,(40,a2)`): '100OMSYS' (the E143 family, E144 and E145) or '100OLYMP', and 'P1010001JPG' on all
+//   18 (X), as {folder: the folder's name past its number, file: the file name's first four letters, ext}
+// Found on 15 of the 18 expanded images; the E118 family's SD command layer has another form, so it has none (X).
+// Returns undefined where FILECLBK's loop is not found or a seam is missing; throws for a seam found twice or a
+// bring-up, a task start or a NAND call of another shape.
+export const STORAGE_E143 = {
+  init: 0x5088FC8D, tasks: [0x60042D42, 0x60042D2A], fileclbk: { entry: 0x5088FCFC, queue: 0x1F, busy: 0x62AE4CD0 },
+  nand: { access: 0x500022C2, area: [0x41A00000, 0x80000], read: 0x10200, write: 0x10100 },
+  command: 0x508AD03C, album_init: 0x508B67E8, status: 0x508A8327, cflush: 0x508881FA,
+  card_power: { send: 0x50059656, ret: 0x508B033C },
+  names: { folder: 'OMSYS', file: 'P101', ext: 'JPG' },
+};
+// The storage library's own numbers, which the seams above share on every body that has them (src/lab/storage.mjs;
+// D on E143, from its code; the same on the others is X: their sessions mount, format, count and write with them).
+// FILECLBK's message is {reply queue (0: none), word, code, parameter} (16 bytes, as the API's senders post it,
+// 0x503f08fb), the code's class by code & 0xffff0000, then by code & 0xf0 through the table 0x60a10578 (0x5088fd8a).
+// codes: 0x51 the FAT mount (dosfat op 0, 0x5088167d -> 0x50882ebd: sdmem command 2, the MBR and the boot sector),
+// 0x55 the format (op 5, 0x508816ad -> 0x508848ba), the dosfat block's +4 op, +6 drive, +48 the error (0x5088fde0,
+// 0x508812f2); unformatted, the mount's error on a card with no file system; 0xf0 a DCF process command {u16 command,
+// u16 drive} (0x5089009d -> 0x5087bce9: 1 the card in, detect 1 -> 2; 3 the card's lists, 2 -> 3); card_out, its
+// command 2 (0x5087bd75: for a drive in detect state 2, 3 or 4 it sets 1 and, from 2, unmounts, 0x5087c987,
+// 0x508748f5, 0x5087c9dd; X: the drive status loses 0x80, 0x13780 -> 0x13700, the card-in after it mounts again);
+// 0x31 the DCF numbering mount (dcfnum op 0, 0x5088ff40 -> 0x50877ea8 -> 0x5087825a; its block's +2 drive, +42 the
+// next folder, +44 the next file), which sets the DCF state word's bit 16, the drive status's mount bit 0x1000
+// (0x508a83e7; X). card_info: of the sdmem class (codes 0x10..0x1e, 0x50890114, the table 0x60a105f8; the block a
+// 128-byte sdmem request sent through logsec's synchronous call 0x508ac1dd), 0x12 is sdmem command 1, which clears
+// the port's card info (0x508b2b51); without it a mount after a removal reads the removed card's state and fails (X:
+// CMD17, CMD13 four times and CMD0 unanswered by the card that came back, the FAT mount 0x1405); which component sends
+// it on a body is not read (I). fileif, the file requests S-RECFILE makes (FILECLBK's codes 0x10000 + n through
+// fileif's table 0x60a125dc, 0x50894eb3; the block +0 the result, +4.. the arguments): 1 fopen(path, mode) -> FILE
+// (0x508a5da9; the mode letters through 0x60a16b20: r w a + b c d e h), 3 fwrite(buffer, size, count, FILE) -> count
+// (0x508a6b87), 2 fclose(FILE) (0x508a63ce), as the FlashAir configuration writer calls them ('wb' / 'ab',
+// 0x5101efe0); 12 mkdir(path) (0x508a7c61; X: it made C:\DCIM). drive: the letter of drive 0 (0x508a8149, X). The SD
+// command the command layer takes: +8 the completion (by `calls`, a0 the command, d0 the status), +24 the command
+// code, +28 the argument, +32..+44 the response, +48 the buffer, +52 the block count, +56 the block size, +74 the
+// status (0x508b1a41, 0x508b1a7d, 0x508b23d1 build it; 0x508b3fcf completes)
+export const STORAGE_LIB = {
+  codes: { mount: 0x51, format: 0x55, dcf: 0xF0, number: 0x31 }, unformatted: 0xE08, card_out: 2, card_info: 0x12,
+  fileif: { open: 0x10001, close: 0x10002, write: 0x10003, mkdir: 0x1000C }, drive: 'C',
+};
+const FCB_HEAD = 0x14, FS_INIT = 0x100, ALBM_SPAN = 0x60, STATUS_HEAD = 8, FS_WALK = 64, STATUS_SPAN = 0x100, NAND_SPAN = 0x40;
+const FCB_LOOP = [0x00, 0xfc, 0x81, null, null, null, null, 0xfc, 0xac, null, null, null, null, 0x98, 0x18, 0x85, 0x10];
+const FCB_ENTRY = [0xcf, 0x20, 0xf8, 0xfe, 0xec];
+const SD_COMMAND = [0x93, 0xbf, 0x00, 0xc9, 0x05, 0xdf, null, null, 0x8a, 0x0c, 0xf1, 0x5e, 0xf1, 0xe8, 0xf0, 0x60, 0xfc, 0xcf,
+  null, null, null, null, 0x54, 0xf1, 0xec, 0xf3, 0x00, 0xa0, 0x00, 0xc8, null, 0xf8, 0x27, 0x08, 0x2c, 0x03, 0x14, 0xf8, 0x73,
+  0x4a, 0x9c, 0xf0, 0xf1];
+const ALBM_INIT = [0x83, 0x8e, 0x16, 0x88, 0xdd, null, null, null, null, null, null, 0x1c, 0xa0, 0x00, 0xc8, null, 0xfc, 0xac,
+  null, null, null, null, 0xa0, 0x01, 0xc2, 0x05, 0xdf];
+const ALBM_ONCE = [0xfc, 0xa9, null, null, null, null, 0xa5, 0x00, 0xc9];
+const DRIVE_STATUS = [0x1c, 0xf1, 0xe2, 0xba, 0x07, 0xc8, null, 0xba, 0x02, 0xc8, null, 0xba, 0x00, 0xc8, null, 0xba, 0x01, 0xc8];
+const FS_FLUSH = [0x80, 0x01, 0xdd, null, null, null, null, null, null, 0x82, 0xdd, null, null, null, null, null, null, 0x88, 0xdd,
+  null, null, null, null, null, null, 0x5c, 0x0c, 0x80, 0xff, 0xfa, 0x10, 0xe4, 0x1f];
+const DCF_FOLDER = [0x90, 0x08, 0xf1, 0x7c, 0xfc, 0xdd, null, null, null, null, 0xdd, null, null, null, null, null, null, 0x80, 0x64, 0xf8, 0x73, 0x16];
+const DCF_FILE = [0x90, 0x0c, 0xf1, 0x78, 0xfc, 0xdd, null, null, null, null, 0xdd, null, null, null, null, null, null, 0x80, 0x01, 0xf8, 0x12, 0x28];
+const NAND_OPEN = [0x82, 0xa5, 0x00, 0xc9];
+const FLUSH_RETURN = 17;                // FS_FLUSH's second call, the flush (at +10, 7 bytes), returns here
+const SD_POWER = [0xdf, null, null, 0x82, 0x80, 0x08, 0xdd, null, null, null, null, null, null, 0x92, 0x80, null, 0xf8, 0x52, 0x01, 0x1e, 0xaa, 0x00, 0xc8,
+  null, 0x2c, 0xff, 0x00, 0xca, null, 0x00, 0xf8, 0x52, 0x02];
+export function fileSystem(img) {
+  const rule = 'fileSystem', { base } = imageBase(img), D = (o) => h8(0x50000000 + o);
+  const loop = oneAt(img, FCB_LOOP, rule, "FILECLBK loop tops");
+  if (loop === null) return undefined;
+  const busy = u32(img, loop + 3), qw = u32(img, loop + 9);
+  let entry = -1;
+  for (let o = loop - FCB_ENTRY.length; o >= loop - FCB_HEAD && entry < 0; o--) if (bytesAt(img, o, FCB_ENTRY)) entry = o;
+  if (entry < 0 || !bytesAt(img, entry - 10, [0x00, 0xfc, 0x81, ...le32(busy), 0xdf, 0x00, 0x04])) throw new Error(`${rule}: FILECLBK's loop at ${D(loop)} has no entry after the bring-up's end`);
+  const init = oneAt(img, [0xfc, 0xac, ...le32(qw), 0xfc, 0xdc, null, null, null, null, 0x18, 0x85, 0x10, 0x95, 0x0a], rule, 'bring-up openings', entry - FS_INIT, entry);
+  if (init === null) throw new Error(`${rule}: no bring-up creating FILECLBK's queue (${h8(qw)}) before ${D(entry)}`);
+  const fileclbk = { entry: 0x50000000 + entry, queue: img[qw - base] | img[qw - base + 1] << 8, busy };
+  // the bring-up's callees that start a task
+  const tasks = [], taSt = new Set();
+  for (let p = init; p < entry;) {
+    const c = callAt(img, p);
+    if (c) {
+      for (let q = c.to, n = 0; n < FS_WALK && !isRet(img, q); n++) {
+        const t = img[q] === 0xfc && img[q + 1] === 0xac && img[q + 6] === 0x18 ? callAt(img, q + 7) : null;
+        if (t && img[q + 7 + t.len] === 0x00 && isRet(img, q + 8 + t.len)) { tasks.push(u32(img, q + 2)); taSt.add(t.to); break; }
+        q += callAt(img, q)?.len ?? insnLength(img[q], img[q + 1]);
+      }
+    }
+    p += c?.len ?? insnLength(img[p], img[p + 1]);
+  }
+  if (tasks.length < 2 || taSt.size !== 1) throw new Error(`${rule}: the bring-up ${D(init)} starts ${tasks.length} tasks through ${taSt.size} functions, want two or more through one`);
+  // the NAND area's read and its writer
+  const reads = [];
+  for (let o = img.indexOf(0xa9); o >= 0; o = img.indexOf(0xa9, o + 1)) {
+    const at = o - 1;
+    if (img[at] !== 0xfc || !bytesAt(img, at + 6, NAND_OPEN)) continue;
+    const flag = u32(img, at + 2), set = [0x1c, 0xa0, 0x00, 0xc9, null, 0x80, 0x01, 0xfc, 0x82, ...le32(flag)];
+    for (let p = at + 6 + NAND_OPEN.length + 1, n = 0; n < 12; n++) {
+      const c = callAt(img, p);
+      if (c && bytesAt(img, p + c.len, set)) { reads.push({ at, call: p, to: c.to }); break; }
+      p += c?.len ?? insnLength(img[p], img[p + 1]);
+    }
+  }
+  if (reads.length > 1) throw new Error(`${rule}: ${reads.length} NAND area reads (${reads.map((r) => D(r.at)).join(', ')}), want one`);
+  const rd = reads[0];
+  let nand;
+  if (rd) {
+    const R = immediatesAt(img, rd.at + 6 + NAND_OPEN.length + 1, rd.call), area = R.a1;
+    if (area === null || R.d0 === null || R.d1 === null) throw new Error(`${rule}: the NAND area read ${D(rd.at)} calls ${D(rd.to)} with a1 ${R.a1}, d0 ${R.d0}, d1 ${R.d1}, not all immediates`);
+    const add = [0xfc, 0xc2, ...le32(area)];
+    let write = null, p = rd.call + callAt(img, rd.call).len;
+    for (let c = callAt(img, p); p < rd.call + 2 * NAND_SPAN && c?.to !== rd.to; c = callAt(img, p)) p += c?.len ?? insnLength(img[p], img[p + 1]);
+    const at = oneAt(img, add, rule, 'adds of the NAND area', rd.call, p);
+    if (callAt(img, p)?.to === rd.to && at !== null) write = immediatesAt(img, at, p).d1;
+    if (write === null) throw new Error(`${rule}: no writer of the NAND area ${h8(area)} after its read ${D(rd.at)}`);
+    nand = { access: 0x50000000 + rd.to, area: [area, R.d0], read: R.d1, write };
+  }
+  const command = oneAt(img, SD_COMMAND, rule, 'SD command layers');
+  const albm = oneAt(img, ALBM_INIT, rule, 'album manager inits');
+  if (albm !== null && oneAt(img, ALBM_ONCE, rule, 'album manager start flags', albm, albm + ALBM_SPAN) === null) throw new Error(`${rule}: the album manager init ${D(albm)} has no start-once flag`);
+  const status = [];
+  const test = (() => { for (let o = img.indexOf(0xf8); o >= 0; o = img.indexOf(0xf8, o + 1)) if (o >= 5 && bytesAt(img, o - 5, DETECT_TEST)) return o - 5; return -1; })();
+  for (let o = img.indexOf(0x1c); o >= 0; o = img.indexOf(0x1c, o + 1)) if (bytesAt(img, o, DRIVE_STATUS) && test > o && test - o <= STATUS_SPAN) status.push(o);
+  // its entry: after the return before it, a few whole instructions before the test of the drive (E125's `clr d2`, X)
+  if (status.length === 1) {
+    const whole = (from, to) => { let p = from; while (p < to) p += insnLength(img[p], img[p + 1]); return p === to; };
+    const at = status[0], k = [...Array(STATUS_HEAD).keys()].find((n) => isRet(img, at - n - 3) && whole(at - n, at));
+    if (k === undefined) throw new Error(`${rule}: the drive status at ${D(at)} follows no return within ${STATUS_HEAD} bytes`);
+    status[0] = at - k;
+  }
+  if (status.length > 1) throw new Error(`${rule}: ${status.length} drive status functions, want one`);
+  const flush = oneAt(img, FS_FLUSH, rule, 'cache flushes in the free count');
+  const power = oneAt(img, SD_POWER, rule, "SD card power requests");
+  let card_power = null;
+  if (power !== null) {                          // its calls: the request's alloc, a check (some bodies), the send, the free
+    const calls = [];
+    for (let p = power + 3, n = 0; n < FS_WALK && !isRet(img, p); n++) {
+      const c = callAt(img, p);
+      if (c) calls.push({ at: p, ...c });
+      p += c?.len ?? insnLength(img[p], img[p + 1]);
+    }
+    const send = calls[calls.length - 2];
+    if (calls.length < 3 || img[calls[calls.length - 1].at - 1] !== 0x98) throw new Error(`${rule}: the SD card power request ${D(power + 3)} makes ${calls.length} calls, the last not the request's free`);
+    card_power = { send: 0x50000000 + send.to, ret: 0x50000000 + send.at + send.len };
+  }
+  const folder = oneAt(img, DCF_FOLDER, rule, "DCF folder names"), file = oneAt(img, DCF_FILE, rule, 'DCF file names');
+  const str = (o) => { let e = o; while (img[e]) e++; return String.fromCharCode(...img.subarray(o, e)); };
+  if ([nand, command, status[0], flush, folder, file].some((v) => v === undefined || v === null)) return undefined;
+  const fname = str(u32(img, folder + 6) - base), name = str(u32(img, file + 6) - base);
+  if (!/^\d{3}[A-Z_]{5} *$/.test(fname) || !/^[A-Z_][0-9A-Z]{3}\d{4}[A-Z]{3}$/.test(name)) throw new Error(`${rule}: the DCF names ${JSON.stringify([fname, name])} are not a folder's and a file's`);
+  return {
+    init: 0x50000000 + init, tasks, fileclbk, nand, command: 0x50000000 + command, album_init: albm === null ? null : 0x50000000 + albm,
+    status: 0x50000000 + status[0], cflush: 0x50000000 + flush + FLUSH_RETURN, card_power,
+    names: { folder: fname.slice(3).trimEnd(), file: name.slice(0, 4), ext: name.slice(8) },
+  };
+}
+
 // The event broker's init (fact 'broker.init', and through bin/port.mjs the place of E143's BROKER_E143 0x502a48b6,
 // src/lab/camapp.mjs BROKER_INIT, which the lab calls as the boot chain's wrapper does): it opens with its queue's id
 // word, `movhu (W),d0; exth d0; call` (fc ac W 18, then call d16 or d32), and clears its slots in a loop that starts
@@ -1957,7 +2182,7 @@ export function readPlacedFacts({ img, at }) {
 // {change_task, change_entry, queue_word, queue_id, task_init, frame_wait, timer_sleep, sync, face_colour}}, {timer:
 // {reload_less_one}}, {dial: {select, select_end, table_ptr, table0}}, {touch_panel: {driver}}, {lens: {mount}}, {iic:
 // {waits}}, {touch: {i2c_write, i2c_read}}, {touch_api: {open}}, {shooting: {start, end, auto_through}}, {func_direct:
-// {run, id}}, {broker: {init}}, {card: {shots_query, detect}}, {power_off: {usb_disconnect}}, {gui: {stride, height,
+// {run, id}}, {broker: {init}}, {card: {shots_query, detect}}, {storage: {init, tasks, fileclbk, nand, command, album_init, status, cflush, names}}, {power_off: {usb_disconnect}}, {gui: {stride, height,
 // banks, kind3}}, {recview: {word, standby}} and {cbs: {NAME: code}} (no memories, take, task init, frame wait, timer sleep,
 // sync, face colour, timer, dial, touch, touch_api, shooting, func_direct, power_off, recview or cbs part where its
 // rule reads none). Throws for a reset_head with no rule here, and where a rule throws.
@@ -2001,6 +2226,8 @@ export function readFacts({ img, family, resLoad }) {
   if (direct !== undefined) facts.func_direct = direct;
   facts.broker = { init: brokerInit(img) };
   facts.card = { shots_query: shotsQuery(img), detect: cardDetect(img) };
+  const storage = fileSystem(img);
+  if (storage !== undefined) facts.storage = storage;
   const usbOff = usbPowerOff(img);
   if (usbOff !== undefined) facts.power_off = { usb_disconnect: usbOff };
   facts.gui = guiCanvas(img);

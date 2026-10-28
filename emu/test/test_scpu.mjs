@@ -275,6 +275,7 @@ export async function scpuSession() {
   const { MODEL } = await import('../src/fw/model.mjs');
   const { boardKnows } = await import('../src/fw/board.mjs');
   const { HANDLER_TABLE } = await import('../src/lab/irq.mjs');
+  const { EXPECTED_ERRLOG } = await import('../src/lab/display.mjs');
   const env = { rom: loadImage(), resBlock: loadBlock(), createHash, wallClock: () => performance.now() / 1000 };
   const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, env);
   if (!boardKnows('scpu_link')) {
@@ -302,7 +303,8 @@ export async function scpuSession() {
   const pins = lab.sim.m.devices.linkpins.log.map(([n, v]) => `${({ ready: 'r', reset: 's', request: 'q' })[n]}${v}`).join(' ');
   ok(pins.startsWith('r1 s1 r0 s0 q1 r1 q0 r0 r1 r0 r1 q1 '), `${MODEL}: the pins in PER_SCPU's order (r ready, s reset, q request): ${pins}`);
   ok(lab.nk.state(link.tid) === 4 && lab.scpu_dev.state === 'idle' && lab.scpu_dev.powered && !link.open, `${MODEL}: PER_SCPU waits, the sub-CPU idle with its gate open, the channel closed`);
-  const own = lab.kernel.errors.filter(([c]) => (c >>> 16) === 0x1900).map(([c]) => '0x' + c.toString(16));
+  // (a log the body's entry expects is not PER_SCPU's: E147's card's file system asks the SCPU clock first, models.mjs)
+  const own = lab.kernel.errors.filter(([c]) => (c >>> 16) === 0x1900 && !EXPECTED_ERRLOG.has(c >>> 0)).map(([c]) => '0x' + c.toString(16));
   ok(own.length === 0, `${MODEL}: no errlog of PER_SCPU's or PER_SIO's: ${own}`);
   ok(link.config.channel === link.channel && link.config.clock > 0 && link.transfers.every((t) => t.tx.length === t.rx.length), `${MODEL}: channel ${link.channel}, clock ${link.config.clock}, ${link.transfers.length} transfers`);
   if (MODEL === 'E143') ok(link.channel === 2 && link.config.clock === 6000000, `E143: channel 2 at 6 MHz: ${link.channel}, ${link.config.clock}`);

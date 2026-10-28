@@ -1016,7 +1016,8 @@ subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a91
   one recommended here (the SD command layer, not the sdmem request: sdmem's own card state, which the mount fills and
   the format and the transfers read, then needs no stand-in). Round 2 (2026-10-24, 4.8.3): Card Formatting from the
   menu and the card's removal and insertion at run time, with the HLS function component and media manager stood in
-  at their seams.
+  at their seams. Round 3 (2026-10-25, 4.8.4): the seams read by a rule in every image that has them, and the card
+  native on nine more bodies (E146, E147, E144, E139, E137, E142, E140, E125, E130).
 
 #### 4.8.1 The sdmem request contract (D unless tagged)
 
@@ -1068,7 +1069,8 @@ subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a91
 #### 4.8.2 The card on E143, round 1 (2026-10-23; D unless tagged)
 
 The file system runs natively on a card on E143 (`emu/src/lab/storage.mjs`, `emu/src/lab/sdcard.mjs`; every address
-with its evidence in `emu/src/fw/models.mjs` E143 `storage`). The seam and what was found on the way:
+with its evidence in `emu/src/fw/facts.mjs` STORAGE_E143 and STORAGE_LIB since round 3, 4.8.4). The seam and what was
+found on the way:
 
 - **Bring-up:** the file system's bring-up is `0x5088fc8d`, the boot task 43's call (`0x5002417a` at `0x500242ab`), not
   EYEFI's (its entry `0x5088fc7e` only sleeps): queues and semaphores, FILEFGND through `0x50894d42`, logsec's init
@@ -1124,9 +1126,9 @@ with its evidence in `emu/src/fw/models.mjs` E143 `storage`). The seam and what 
 - **Card Formatting from the menu** (X, round 1): Setup, Card Formatting, card 1, Format Card, Yes showed "Busy"; the
   application's media control sends TRA 1511 (`0x50ac940d`, OlyHfwOpeMdaCtrl), which S-TRAACK answers. Round 2 (4.8.3)
   found the component that takes it and stands it in.
-- **Open:** the other bodies (rules for the bring-up, the FILECLBK codes and the command layer), the second slot,
-  exFAT (an SDXC card), REC_FILE natively, the SD host at its registers with interrupts (seam A), playback of the files
-  (a JPEG decoder at the codec seam); round 2's open points are in 4.8.3.
+- **Open:** the other bodies (round 3, 4.8.4), the second slot, exFAT (an SDXC card), REC_FILE natively, the SD host
+  at its registers with interrupts (seam A), playback of the files (a JPEG decoder at the codec seam); round 2's open
+  points are in 4.8.3.
 
 #### 4.8.3 The card on E143, round 2: the menu's format, removal and insertion (2026-10-24; D unless tagged)
 
@@ -1218,6 +1220,72 @@ to the card switch), and are stood in at their seams with the firmware's own eve
   media manager in camapp 2); the media control's other commands (2, 3, 5, 6: erase all, copy, unlock, ...); the SD
   host's card detect (seam A); a card the firmware cannot mount (unreadable, exFAT); what the camera draws without a
   card ("No Card", the card icon).
+
+#### 4.8.4 The card on more bodies, round 3 (2026-10-25; D unless tagged)
+
+The seams of 4.8.2 are read from each image by a rule (`emu/src/fw/facts.mjs` fileSystem, fact `storage`; E143's
+values STORAGE_E143, the library's message codes and block layouts STORAGE_LIB, the SD host's pages the board's
+`sd`), and a body runs its card natively where its `emu/src/fw/models.mjs` entry says so (`card_fs`, each body that
+does not with its reason). The storage stack is one library on all 18 images, the same instructions but for
+addresses, register allocation and a few immediate forms (X, a byte scan per seam), so the rule finds each seam by
+its code:
+
+- **FILECLBK and the bring-up:** FILECLBK's loop opens `clr d0; mov d0,(busy); movhu (Q),d0; mov a2,a0; exth d0; mov
+  16,d1` (one per image, X), its entry is the `movm [a2],(sp); add -20,sp` just before (nine images then set a byte,
+  `mov 1,d0; movbu d0,(abs32)`, the others do not), and the bring-up ends right before that entry with `clr d0; mov
+  d0,(busy); ret [],4` and opens with the creation of Q's queue (E143 `0x5088fc8d`, E146 `0x508a9a6d`, E144
+  `0x50685108`, E134 `0x50659a4e`). The queue's id is the halfword Q of the static queue-id table: `0x1f` on the E143
+  family, E145, E129 and E132, `0x22` on the others (X). The tasks the bring-up starts are its callees that end
+  `movhu (W),d0; exth d0; call OlyTaSt; clr d0; ret`: FILEFGND and DCFPROC_SUB, and a third on E125, E133, E130, E129,
+  E132 and the E118 family (ids `0x44`..`0x47`, which task is ?); the lab finds each by its static id (H-FILEINIT).
+- **The NAND area:** the file layer's area read `movbu (flag),d1; mov d0,d2; cmp 0,d1; bne`, then the access called
+  with a1 the area, d0 its size, d1 the read operation, then the flag set; its writer, the next function, adds the area
+  (`add imm32,d2`) and calls the same access with its write operation. E143 family: the NAND access `0x500022c2`,
+  `0x41a00000`, 512 KiB, `0x10200` / `0x10100`; the E144 family: its flash access (E144 `0x5003b76c`, the one
+  S-SETSAVE's save writes through), 384 KiB (E144 at `0x406a0000`, E139, E134, E137, E125) or 256 KiB (the others),
+  operations `0x102` (E125, E133, E130, E129, E132: `0x103`) and 0 (X; the immediates by a straight-line walk, D on
+  E143 and E144). S-FSNAND keeps it, erased at the start.
+- **The SD command layer** (`mov a0,a3; cmp 0,a3; bne; ret`, then the busy port's completion with `0x1403`), the
+  **drive status** (`exthu d0; mov d0,a2; cmp 7,a2; ...`, the function holding cardDetect's card-present test; its
+  entry after the return before it, E125's after a `clr d2`, `0x5061cb03`), the **album manager's init** (none found
+  on E145, E129 and E132: there S-ALBM is not installed, ?), the file system's one **cache flush** call (the return
+  K-CFLUSH answers; E143 `0x508881fa`, the flush the port's place of E143's `0x5004e68a` on all 15, X) and the **DCF
+  names** (`100OMSYS` on the E143 family, E144 and E145, `100OLYMP` on the others; `P1010001JPG` on all, X).
+- **The card's supply (S-SDPOWER):** the SD driver's power request builds `{_, device, 0 or 255, 1, 0}` and sends it
+  synchronously (E144 `0x506a3fb5`, the send `0x5004fea9` to the queue of the halfword `0x60041854`, 65); the lab
+  does not run its receiver (which task it is, a power manager by the request's use, is I), so the bring-up stopped
+  there ("its receiver does not run in the lab"). S-SDPOWER answers that send 0, and only from the request. X: met on
+  E144, E137, E142, E140 (device 9), E125 and E130 (33), once at the bring-up with 0; E143's, E146's, E147's and
+  E139's requests return before their send (I: their check, E143 `0x508b088e`, gives non-zero). What 0 and 255
+  select is ?.
+- **The SD host's pages:** the same two port bases on the E144 family as on E143 (`0x99000000`, `0x9a300000`; E144's
+  port table `0x607d0de8`, read by its SD driver, D), the card's pins and power in the GPIO page `0x9b802000` (E144
+  `0x9b802064`, `0x506a3aec`; E143's `0x9b880000`), SD_INFO2 at `+0x203c` bit 13 polled as on E143 (E144
+  `0x506a1871`, D).
+- **Bodies (X: `emu/bin/modelcheck.mjs` with the card check, `emu/test/test_storage.mjs --session` on E146, E147,
+  E144 and E142):** native on E143, E146, E147, E144, E139, E137, E142, E140, E125 and E130: the blank card formatted
+  by the firmware (FAT32; label `OM SYSTEM` on the E143 family and E144, `NO NAME` on the others), mounted, the
+  remaining shots from the card (803 on the OM-1 family's 8 GiB card, 826 on E144, E139, E137, E142 and E140, 1607 on
+  E125, 2018 on E130), S2's file written and read back independently (`emu/refs/fat.mjs`: its directory entry and
+  size), and the count probe's screen follows the query. E147's file system calls the SCPU clock's API at the
+  bring-up before the clock's state field (`0x98e00000` bits 2..7) is 42, and the API logs `0x19001004` (expected
+  in its `card_fs`; on E143 and E146 the field is 42 by then, X). S-SCENE's live view runs on the E143 family only
+  (its banks are E143's), so an E144-family picture's file holds a black frame. Not native: E134 (on a native card
+  S-RECFILE's first fopen never completes: FILECLBK blocks in a write with no timeout to UI_IN's request queue,
+  `0x6004192e`, at `0x5010c35f`, which nothing reads in the lab, 53 writes in 10 s; E143's and E144's fopen make no
+  such write; why E134's does is ?), E145, E133, E129 and E132 (their starts stop before the application, ROADMAP),
+  the E118 family (not loaded; no SD command layer of the rule's form). They keep S-CARD.
+- **The movie time (goal 2, X: frames):** the E142 lineage's orange `0:00:00` is gone: E142 and E140 show `0:10:45`,
+  E130 `0:37:22`, from the card (E142's DCF remain movie time `0x505fd798`, which returned 0 on S-CARD's card).
+  The E144 family's (E144, E139, E137, E125) stays orange `0:00:00` beside the card's count: E144's DCF remain movie
+  time (`0x50672715`) returns 0 for the movie item's arguments (drive 0, 8, 4, 1), where E142's returns 387000 for
+  the same; its first helper (E144 `0x50672c57`) gives 0 for 4 on both, so the difference is in the second
+  (`0x50672cfe`) or its inputs, not read (?). The OM-1 family's query answers the card's time after S1 (E146 5:25),
+  0 before it at the date prompt (X; why is ?).
+- **Not done here:** the HLS side (S-MDACTRL, S-MEDIA: Card Formatting from the menu, the card out and in) stays
+  E143's (`card_fs.hls`); on the other native bodies the media control's TRA 1511 is answered by S-TRAACK alone (I:
+  the menu would stay at "Busy", as on E143 before round 2; not run) and the card input is refused. REC_FILE and the
+  second slot were not attempted.
 
 ### 4.9 HDMI and DisplayPort
 

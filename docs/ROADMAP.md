@@ -44,8 +44,9 @@ not reconciled.
 
 1. **Depth on the ported bodies** (Multi-model step 7): ten bodies pass `bin/modelcheck.mjs` since 2026-10-23, its
    count probe included, E139 and E134 with PER_SCPU native over the sub-CPU link as E143, E146 and E147 (SCPU track
-   step 2); left are the movie time the E142 lineage and the E144 family show (an orange `0:00:00`) and E145's AF
-   upload (Multi-model "Next stops").
+   step 2), and nine of them with the card's file system native (2026-10-25, hle-gaps.md 4.8.4); left are the movie
+   time the E144 family shows (an orange `0:00:00`; the E142 lineage's comes from the card now) and E145's AF upload
+   (Multi-model "Next stops").
 2. **The open stops of the remaining bodies** (Multi-model "Next stops"): E145's start, E133's GUI creator, E129's
    settings store, E132's deferred serial send, then the E118 family's board port.
 3. **HLE of E143, step 2** (HLE of E143 below; step 1's static decodes are done): the cheap CPU 0 wins (a ticking
@@ -149,11 +150,12 @@ the survey table.
 
 ### Next stops
 
-- **The card on the other bodies:** on E143 the file system runs natively on a card since 2026-10-23 (hle-gaps.md
-  4.8.2; its addresses are E143's hand facts, `src/fw/models.mjs` storage). A body gets it once rules find, in every
-  image, the file system's bring-up, FILECLBK's entry, queue and busy word, its message codes, the SD command layer,
-  the NAND access and its area, the album manager's init and the fileif codes; until then S-CARD keeps their card
-  without a file system.
+- **The card on the other bodies:** done for nine (2026-10-25, hle-gaps.md 4.8.4): a rule reads the file system's
+  seams in each image (`src/fw/facts.mjs` fileSystem), and E146, E147, E144, E139, E137, E142, E140, E125 and E130
+  format a blank card, mount it, count from it and write S2's file (`src/fw/models.mjs` card_fs, S-SDPOWER for the
+  E144 family's card supply). Left: E134, whose first fopen blocks on UI_IN's request queue (S-CARD kept); the HLS
+  side (Card Formatting from the menu, the card out and in) on the bodies other than E143; E145, E133, E129 and E132
+  once their starts run.
 - **The card, next on E143:** Card Formatting from the menu and the card's removal and insertion while the camera
   runs are done (2026-10-24, hle-gaps.md 4.8.3: S-MDACTRL and S-MEDIA stand in for the HLS function component and
   media manager, the application's media control runs natively). Next: REC_FILE's own DCF steps (the DCF fnode its
@@ -163,8 +165,11 @@ the survey table.
   value of its mount state); the media control's other commands (erase all, copy, unlock); an SDXC card (exFAT); the SD
   host at its registers with its interrupts and card detect (seam A); playback of the card's files (a JPEG decoder at
   the codec seam); the movie module's set-up, whose frame rate the movie time query reads (it logs `0x39000903`).
-- **The movie time of the E142 lineage and the E144 family:** E142, E140 and E130, and since survey finding 18 E144
-  and E125 (the others not looked at), show an orange `0:00:00` where E143 showed S-CARD's `1:00:00` and shows the
+- **The movie time of the E144 family:** with the card native (2026-10-25, hle-gaps.md 4.8.4) the E142 lineage shows
+  the card's time (E142 and E140 `0:10:45`, E130 `0:37:22`, X: frames); E144, E139, E137 and E125 still show an orange
+  `0:00:00` beside the card's count, E144's DCF remain movie time (`0x50672715`) answering 0 where E142's answers for
+  the same arguments (the difference not read). Before: E142, E140 and E130, and since survey finding 18 E144
+  and E125 (the others not looked at), showed an orange `0:00:00` where E143 showed S-CARD's `1:00:00` and shows the
   card's time since its file system runs natively (frames, X). E143's
   movie item asks getMovieCountdownTime, whose time-left wrapper reaches S-CARD's movie query (`0x503f3dd3`); E142's
   getMovieTimeInMedia runs in its sessions (E142 `0x5076da59`, X); its time comes from the movie time in media (E142

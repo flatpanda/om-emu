@@ -13,7 +13,9 @@
 // (test_acc.mjs), the SD card model (SDHC and SDXC) and the FAT and exFAT readers (test_storage.mjs), S-SUBJECT's
 // subject boxes and transform (test_subject.mjs), the lens serial controller, the deferred-call triggers and S-LENSMCU's replies (test_lens.mjs),
 // the debug API's argument checks, halt,
-// trace filters and live-route units (test_live.mjs liveUnits: a machine on a blank image) and the publication
+// trace filters and live-route units (test_live.mjs liveUnits: a machine on a blank image), its trace rules and edge
+// cases (test_debug.mjs traceRuleUnits: halfword device accesses, code on the lab stub, the bus window, code-fetch
+// faults, a watch hit in an interrupt entry) and the publication
 // audit's rules on a throwaway repository (test_pubaudit.mjs), and the SCPU's Cortex-M4 core: its decoder, executor and
 // exception model on hand-written vectors and the QEMU-recorded differential vectors (test_m4.mjs), and the SCPU's STM32L4
 // peripheral models one by one against the reference manual's register semantics (test_stm32l4.mjs stm32Units), and
@@ -37,6 +39,7 @@ import { storageUnits } from '../test/test_storage.mjs';
 import { subjectUnits } from '../test/test_subject.mjs';
 import { lensUnits } from '../test/test_lens.mjs';
 import { liveUnits } from '../test/test_live.mjs';
+import { traceRuleUnits } from '../test/test_debug.mjs';
 import { pubauditTests } from '../test/test_pubaudit.mjs';
 import { m4Units, m4Vectors } from '../test/test_m4.mjs';
 import { stm32Units } from '../test/test_stm32l4.mjs';
@@ -76,6 +79,7 @@ report('SD card and FAT / exFAT readers (S-SDCARD, refs/fat.mjs, refs/exfat.mjs)
 report('subject frames: the scene\'s subject boxes, DISP_FRAME\'s transform taken back (S-SUBJECT)', subjectUnits());
 report('the lens serial controller, deferred-call triggers and the lens (S-LENSMCU)', lensUnits());
 report('debug API: argument checks, halt, trace filters, live route', await liveUnits());
+report('debug API: trace rules and edge cases (halfword device accesses, stub code, bus window, fetch faults, interrupt entry)', traceRuleUnits());
 report('publication audit (throwaway repository, made-up firmware)', await pubauditTests());
 report('Cortex-M4 core: decoder, executor, exceptions (hand-written)', m4Units());
 { const v = m4Vectors(); report(`Cortex-M4 core against QEMU's recorded vectors (${v.cases} cases)`, v); }

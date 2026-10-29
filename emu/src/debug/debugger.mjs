@@ -177,7 +177,9 @@ export class Debugger {
   // ---- watchpoints: [{id, lo, hi (exclusive) | len, kind 'r' | 'w' | 'rw', action 'stop' | 'log'}] per CPU virtual
   // address ([] clears). A stop ends a continue after the accessing instruction (stop 'watch', the hit in .watch:
   // {id, kind (a number, mem.mjs's mask: 1 r, 2 w, 3 rw), addr, hit (the reported address: the watchpoint's lo),
-  // size, dir, value, pc, insns}); a log entry (the same fields) only records the access.
+  // size, dir, value, pc, insns}); a log entry (the same fields) only records the access. A hit by an interrupt entry's
+  // stores (the PSW and pc pushed below SP) ends the continue after the entry, before the handler's first instruction:
+  // the record's pc and insns are the interrupted instruction's (the entry is no instruction of its own).
   watch(list) {
     const ws = list.map((w, i) => {
       const lo = Number(w.lo) >>> 0, hi = w.hi !== undefined ? Number(w.hi) : lo + Number(w.len);

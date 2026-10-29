@@ -1,7 +1,8 @@
 // The debug API's units: the watchpoint mechanism (fast entries off on watched pages, a store that does not re-enable
 // them, read/write/access kinds, stop after the accessing instruction, a log entry that changes nothing), the snapshot
-// round trip, the JSON-lines errors, the trace-file, watch-log and stderr limits, and the debugger on a lab session
-// with disasm's line filter.
+// round trip, the JSON-lines errors, the trace-file, watch-log and stderr limits, the debugger on a lab session
+// with disasm's line filter, and (firmware-free, also in bin/test-pure.mjs) the trace rules and edge cases no firmware
+// session reaches (traceRuleUnits).
 //   node emu/test/test_debug.mjs
 import fs from 'node:fs';
 import os from 'node:os';
@@ -343,9 +344,205 @@ export function attachUnits() {
   return { checks: n, bad };
 }
 
+// ---- the trace rules and edge cases no firmware session reaches (firmware-free: a machine on a blank image) -------
+// ROADMAP "Debug API follow-ups" items 1-3. No session of the golden workload, the native lens, the HDMI plug or the
+// E144 bring-up makes a halfword device access (X, 2026-10-29: every sub-word CPU access there is the ISC lock bytes
+// and the HDMI EDID bytes), so the halfword gate is a JSON-lines session of its own on the lab stub's registers, which
+// take every width:
+//   halfwordSession  movhu and movbu stores and loads on stub registers through the Protocol (the interpreter's inline
+//                    forms in a continue, the helper's in single steps) and debugger reads of 2 bytes: the qemu-format
+//                    lines with the stored halfword and byte (sub-word values of a register with high bits), the
+//                    loads' values, cpu 0 with the instruction's pc and cpu -1 for the debugger
+//   stubFetch        code run from the lab stub: a memory_region_ops_read line of size 1 per byte read, the
+//                    translator's reads of every byte in order, then the helper's of op, the prefix byte and the
+//                    operands it decodes; an exec line per instruction; the data access between them; at the insn
+//                    limit the translator's reads, then fault 7 (2 for a byte the stub denies)
+//   busWindow        CPU accesses through the bus window's pages off bus DRAM: a live-view range is RAM (the store
+//                    reaches the bus, the loads read it back) and an unbacked range a bus fault, with no trace line
+//                    either way; debugger reads there neither
+//   fetchFault       a code-fetch fault in an instruction's bytes (its op byte, the prefix byte, byte 1 of a form
+//                    without a prefix, a later operand byte): no exec line in either trace mode or a single step, fault
+//                    2 at the instruction's pc with the first byte it cannot read as the address, not counted; at the
+//                    insn limit fault 2 too, not 7 (a fault in byte 1 of a two-byte form was counted, with an exec line
+//                    in one-insn mode only, before 2026-10-29: FIDELITY-NOTES 3.3)
+//   entryWatch       a stopping watchpoint on the stack slot an interrupt entry stores the pc to: the continue stops
+//                    after the entry, before the handler's first instruction (the stop's pc the handler's, the hit's
+//                    pc and insns the interrupted instruction's), and a continue from there runs as without the watch
+const BLANK = new Uint8Array(0x1000);
+const STUB_ALLOW = 0x89900100;                       // the lab stub's allow table (src/dev/stub.mjs): {base, size, flags}
+const le32s = (...ws) => Buffer.concat(ws.map((w) => { const b = Buffer.alloc(4); b.writeUInt32LE(w >>> 0); return b; }));
+export function traceRuleUnits() {
+  const bad = [];
+  let n = 0;
+  const check = (what, ok, detail = '') => { n++; if (!ok) bad.push(`trace rules: ${what}${detail ? ` (${detail})` : ''}`); };
+  for (const [name, f] of [['halfwordSession', halfwordSession], ['stubFetch', stubFetch], ['busWindow', busWindow], ['fetchFault', fetchFault], ['entryWatch', entryWatch]]) {
+    try { f(check); } catch (e) { check(`${name} threw ${e.name}: ${e.message}`, false); }
+  }
+  return { checks: n, bad };
+}
+const fresh = (opts = {}) => Debugger.create({ rom: BLANK, createHash }, opts);
+const h8 = (v) => (v >>> 0).toString(16).padStart(8, '0');
+
+function halfwordSession(check) {
+  const files = new Map();
+  const P = new Protocol({ env: { createHash }, defaultImage: 'blank', loadImage: () => BLANK, disasm: null,
+    openSink: (p) => { const l = []; files.set(p, l); return { write: (x) => l.push(x), close() {}, commit() {}, discard() {} }; } });
+  const ask = (q) => { const r = P.handle(q); if (!r.ok) throw new Error(`${q.op}: ${r.error.type} ${r.error.message}`); return r; };
+  // movhu d0,(a0); movhu (a0),d1; movbu d0,(a1); movbu (a1),d2; nop
+  const prog = 'f070f064f051f049cb', regs = { pc: '0xa3000000', d0: '0x12345678', a0: '0x98000002', a1: '0x98000005' };
+  ask({ op: 'load' });
+  ask({ op: 'write', addr: STUB_ALLOW, hex: le32s(0x98000000, 0x1000, 1).toString('hex') });
+  ask({ op: 'write', addr: '0xa3000000', hex: prog });
+  ask({ op: 'reset', regs });
+  ask({ op: 'trace', mmio: 'run' });
+  const c = ask({ op: 'cont', stops: ['0xa3000008'] });
+  check('halfword session: the continue ends at the breakpoint with the loads\' values', c.stop === 'break' && c.regs.d1 === '0x00005678' && c.regs.d2 === '0x00000078', JSON.stringify(c.regs));
+  ask({ op: 'trace', mmio: 'steps' });
+  ask({ op: 'reset', regs });
+  const s = ask({ op: 'step', n: 4 });
+  check('halfword session: four single steps end where the continue did', s.regs.pc === '0xa3000008' && s.regs.d1 === '0x00005678' && s.regs.d2 === '0x00000078', JSON.stringify(s.regs));
+  ask({ op: 'trace', mmio: 'debugger' });
+  const r2 = ask({ op: 'read', addr: '0x98000002', size: 2 }), r4 = ask({ op: 'read', addr: '0x98000004', size: 2 });
+  check('halfword session: debugger reads of 2 bytes', r2.hex === '7856' && r4.hex === '0078', `${r2.hex} ${r4.hex}`);
+  ask({ op: 'trace', off: true });
+  const line = (dir, cpu, a, v, size, pc) => `memory_region_ops_${dir} cpu ${cpu} addr 0x${a.toString(16)} value 0x${v.toString(16)} size ${size} name 'om1.lab-stub' pc ${pc === null ? '-' : h8(pc)}`;
+  const cpu = [line('write', 0, 0x98000002, 0x5678, 2, 0xa3000000), line('read', 0, 0x98000002, 0x5678, 2, 0xa3000002),
+    line('write', 0, 0x98000005, 0x78, 1, 0xa3000004), line('read', 0, 0x98000005, 0x78, 1, 0xa3000006)];
+  const same = (got, want) => JSON.stringify(got) === JSON.stringify(want);
+  check('halfword session: the continue\'s lines (inline forms): the stored halfword and byte, the loads, the pcs', same(files.get('run'), cpu), JSON.stringify(files.get('run')));
+  check('halfword session: the single steps\' lines (the helper) are the same', same(files.get('steps'), cpu), JSON.stringify(files.get('steps')));
+  check('halfword session: the debugger\'s reads trace cpu -1 at their size', same(files.get('debugger'), [line('read', -1, 0x98000002, 0x5678, 2, null), line('read', -1, 0x98000004, 0x7800, 2, null)]), JSON.stringify(files.get('debugger')));
+  ask({ op: 'quit' });
+}
+
+function stubFetch(check) {
+  const d = fresh(), P0 = 0x98000100;
+  d.write(STUB_ALLOW, le32s(0x98000000, 0x1000, 1));
+  // nop; add 5,d0; movhu (a0),d1; nop, stored into the stub by CPU word stores (it refuses debugger writes), and the
+  // halfword the movhu reads
+  for (const [a, w] of [[P0, 0xf00528cb], [P0 + 4, 0xcbcbcb64], [0x98000000, 0xbeef0000]]) d.cpuStore(a, w);
+  d.reset({ pc: P0, a0: 0x98000002 });
+  const mmio = [], exec = [];
+  d.traceMmio((r) => mmio.push([r.dir, r.addr, r.size, r.value, r.pc, r.cpu, r.name]));
+  d.traceExec((r) => exec.push(r.pc));
+  const o = d.cont({ stops: [P0 + 6] });
+  d.traceMmio(null); d.traceExec(null);
+  check('stub fetch: the program ran to the breakpoint', o.stop === 'break' && o.regs.pc === P0 + 6 && o.regs.d0 === 5 && o.regs.d1 === 0xbeef && o.regs.insns === 4, JSON.stringify(o.regs));
+  const code = [0xcb, 0x28, 0x05, 0xf0, 0x64, 0xcb];
+  const byte = (at, pc) => ['r', P0 + at, 1, code[at], P0 + pc, 0, 'om1.lab-stub'];
+  const want = [byte(0, 0), byte(0, 0),                                     // nop: the translator's read, the helper's
+    byte(1, 1), byte(2, 1), byte(1, 1), byte(2, 1),                         // add 5,d0: op and imm8, then op and imm8
+    byte(3, 3), byte(4, 3), byte(3, 3), byte(4, 3), ['r', 0x98000002, 2, 0xbeef, P0 + 3, 0, 'om1.lab-stub'],
+    byte(5, 5), byte(5, 5)];
+  check('stub fetch: each code byte read is a size-1 line, the translator\'s reads then the helper\'s', JSON.stringify(mmio) === JSON.stringify(want), JSON.stringify(mmio));
+  check('stub fetch: an exec line per instruction', JSON.stringify(exec) === JSON.stringify([P0, P0 + 1, P0 + 3, P0 + 5]), JSON.stringify(exec));
+  d.close();
+  // at the insn limit the instruction is fetched as the translator fetches it, through the device, then fault 7 (before
+  // 2026-10-29 the fetch's MMIO signal escaped as a host error that stopped the machine); a byte the stub denies is a
+  // fetch fault, 2
+  for (const [how, allowed] of [['cont', true], ['step', true], ['cont', false]]) {
+    const e = fresh({ insnLimit: 1 });
+    e.write(STUB_ALLOW, le32s(0x98000000, 0x1000, 1));
+    e.cpuStore(P0, 0xf00528cb);
+    if (!allowed) e.write(STUB_ALLOW, le32s(0x98000000, P0 + 2 - 0x98000000, 1));   // byte 1 of add 5,d0 left out
+    e.reset({ pc: P0 });
+    const lines = [];
+    e.traceMmio((r) => lines.push([r.addr - P0, r.size, r.err]));
+    const o = how === 'cont' ? e.cont() : (e.step(), e.step());
+    const want = allowed ? { stop: 'limit', fault: 7, insns: 2, lines: [[0, 1, false], [0, 1, false], [1, 1, false], [2, 1, false]] }
+      : { stop: 'fault', fault: 2, insns: 1, lines: [[0, 1, false], [0, 1, false], [1, 1, false], [2, 1, true]] };
+    const got = { stop: o.stop, fault: o.fault, insns: o.regs.insns, lines };
+    check(`stub fetch at the insn limit (${how}${allowed ? '' : ', a denied byte'}): ${want.stop} ${want.fault}, the bytes read once each through the stub`, JSON.stringify(got) === JSON.stringify(want), JSON.stringify(got));
+    e.close();
+  }
+}
+
+function busWindow(check) {
+  const d = fresh(), mmio = [];
+  d.traceMmio((r) => mmio.push([r.dir, r.addr, r.value, r.size, r.name]));
+  d.cpuStore(0x98100058, 0x12161514);          // the window register: segment 0x12, bus 0x90000000 at 0xB8000000
+  // mov d0,(a0); mov (a0),d1; movbu (a0),d2; mov (a1),d3 with a0 on the live-view range 0x95F6C000.. (bus 0x95F70000)
+  // and a1 on bus 0x90000000, which no range backs
+  d.write(0xa3000000, Uint8Array.from([0x60, 0x74, 0xf0, 0x48, 0x7d]));
+  d.reset({ pc: 0xa3000000, d0: 0x12345678, a0: 0xbdf70000, a1: 0xb8000000 });
+  const o = d.cont({ budget: 10 });
+  const t = new Uint8Array(4);
+  d.m.devices.bus.read(0x95f70000, t);
+  check('bus window: the live-view page is RAM through the window (the store on the bus, both loads read it)', o.regs.d1 === 0x12345678 && o.regs.d2 === 0x78 && Buffer.from(t).toString('hex') === '78563412', `${JSON.stringify(o.regs)} bus ${Buffer.from(t).toString('hex')}`);
+  check('bus window: the load from the unbacked page is a bus fault', o.stop === 'fault' && o.fault === 2 && o.regs.pc === 0xa3000004, JSON.stringify(o));
+  let unbacked = null;
+  try { d.read(0xb8000000, 4); } catch (e) { unbacked = e.message; }
+  check('bus window: debugger reads through it (the live-view page read, the unbacked one E14)', Buffer.from(d.read(0xbdf70000, 4)).toString('hex') === '78563412' && /E14/.test(unbacked ?? ''), String(unbacked));
+  check('bus window: no trace line but the window register\'s store', JSON.stringify(mmio) === JSON.stringify([['w', 0x98100058, 0x12161514, 4, 'om1.buswin']]), JSON.stringify(mmio));
+  d.close();
+}
+
+function fetchFault(check) {
+  // [bytes, where the first byte goes, the first byte the fetch cannot read]: 0x40000 is the first unassigned byte after
+  // the lab's low RAM
+  const END = 0x40000;
+  const forms = [['the op byte', [], END], ['byte 1 of add imm8,d0 (28 xx)', [0x28], END], ['byte 1 of bra (ca xx)', [0xca], END],
+    ['byte 1 of mov imm16,d0 (2c xx xx)', [0x2c], END], ['byte 2 of mov imm16,d0', [0x2c, 0x01], END],
+    ['the prefix byte (f0 xx)', [0xf0], END], ['an imm32 byte of mov imm32,d0 (fc cc xx xx xx xx)', [0xfc, 0xcc, 0x01], END]];
+  for (const [what, bytes, addr] of forms) {
+    const at = END - bytes.length - 2, pc = END - bytes.length;          // two nops, then the instruction
+    const got = {};
+    for (const mode of ['cont', 'native', 'one-insn', 'step', 'limit']) {
+      const d = fresh({ oneInsn: mode === 'one-insn', ...(mode === 'limit' ? { insnLimit: 2 } : {}) });
+      d.write(at, Uint8Array.from([0xcb, 0xcb, ...bytes]));
+      d.reset({ pc: at });
+      const lines = [];
+      if (mode !== 'cont' && mode !== 'limit') d.traceExec((r) => lines.push(r.pc), { mode: mode === 'one-insn' ? 'one-insn' : 'native' });
+      let o;
+      if (mode === 'step') { for (let i = 0; i < 4; i++) { o = d.step(); if (o.stop !== 'break') break; } } else o = d.cont({ budget: 50 });
+      got[mode] = { stop: o.stop, fault: o.fault, pc: o.regs.pc, insns: o.regs.insns, lines, trap: o.stderr.at(-1) };
+      d.close();
+    }
+    const trap = `om-emu: MN10300 trap reason=2 pc=0x${h8(pc)} address=0x${h8(addr)}`;
+    const want = { stop: 'fault', fault: 2, pc, insns: 2, trap };
+    const ok = Object.entries(got).every(([mode, g]) => Object.entries(want).every(([k, v]) => g[k] === v) && (mode === 'cont' || mode === 'limit' || JSON.stringify(g.lines) === JSON.stringify([at, at + 1])));
+    check(`fetch fault in ${what}: fault 2 at the first byte not read, not counted, no exec line (continue, native, one-insn, step, insn limit)`, ok, JSON.stringify(got));
+  }
+}
+
+function entryWatch(check) {
+  const SP0 = 0xa2200000, MAIN = 0xa3000000;
+  const run = (watched) => {
+    const d = fresh({ insnLimit: 0 });
+    const handler = (S.vectorPage | 0x0100) >>> 0;
+    d.write(MAIN, Uint8Array.from([0xcb, 0xca, 0xff]));               // nop; bra back to it
+    d.write(handler, Uint8Array.from([0x40, 0xca, 0xff]));            // the handler: inc d0; bra back to it
+    d.write(0x8000 + 4 * 3, Uint8Array.from([0x00, 0x01]));           // IVAR3: the handler at the vector page + 0x100
+    d.reset({ pc: MAIN });
+    d.cpuStore(0x99200000 + 4 * 100, 1 << 3);                         // IRQ 100 at level 3
+    d.write(0x89A00008, Uint8Array.of(2));                            // gate mode 2: every look may accept
+    d.write(0x89A03000 + 100, Uint8Array.of(1));                      // its test line ...
+    d.cpuStore(0x89A20000, 1);                                        // ... applied (doorbell command 1)
+    d.reset({ pc: MAIN, sp: SP0, psw: 0x0f00 });
+    const irqs = [];
+    d.traceIrq((r) => irqs.push(r.kind));
+    if (watched) d.watch([{ id: 'pc slot', lo: SP0 - 4, len: 4, kind: 'w' }]);
+    const first = d.cont({ budget: 40 });
+    const out = { first, handler, irqs, stack: [d.u32(SP0 - 8), d.u32(SP0 - 4)] };
+    out.end = watched ? d.cont({ budget: 40 }) : first;
+    if (d.paused()) d.halt();
+    d.close();
+    return out;
+  };
+  const plain = run(false), w = run(true), f = w.first;
+  check('watch in an interrupt entry: the continue stops after the entry, before the handler\'s first instruction',
+    f.stop === 'watch' && f.regs.pc === w.handler && f.regs.sp === SP0 - 8 && (f.regs.psw & 0x0f00) === 0x0300 && f.regs.insns === 0 && f.regs.d0 === 0, JSON.stringify(f.regs));
+  check('watch in an interrupt entry: the hit is the pc store, with the interrupted instruction\'s pc and insns',
+    f.watch?.id === 'pc slot' && f.watch.addr === SP0 - 4 && f.watch.dir === 'w' && f.watch.size === 4 && f.watch.value === MAIN && f.watch.pc === MAIN && f.watch.insns === 0, JSON.stringify(f.watch));
+  check('watch in an interrupt entry: the entry\'s frame is on the stack at the stop', w.stack[0] === 0x0f00 && w.stack[1] === MAIN, JSON.stringify(w.stack));
+  check('watch in an interrupt entry: a continue from the stop runs as the continue without the watch (one acceptance)',
+    w.end.stop === 'paused' && JSON.stringify(w.end.regs) === JSON.stringify(plain.end.regs) && plain.end.regs.d0 === 20 && JSON.stringify(w.irqs) === JSON.stringify(plain.irqs) && plain.irqs.join() === 'accepted',
+    `${JSON.stringify(w.end.regs)} vs ${JSON.stringify(plain.end.regs)}; irqs ${w.irqs} / ${plain.irqs}`);
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   let n = 0;
-  for (const [name, f] of [['watch', watchUnits], ['snapshot', snapshotUnits], ['protocol', protocolUnits], ['limits', limitUnits], ['attach', attachUnits]]) {
+  for (const [name, f] of [['watch', watchUnits], ['snapshot', snapshotUnits], ['protocol', protocolUnits], ['limits', limitUnits], ['attach', attachUnits], ['trace rules', traceRuleUnits]]) {
     const r = f();
     console.log(`${name}: ${JSON.stringify({ ...r, bad: r.bad.length })}`);
     r.bad.forEach((x) => console.log('  ', x));

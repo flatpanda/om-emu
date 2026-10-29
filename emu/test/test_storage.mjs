@@ -578,7 +578,7 @@ export async function storageSdxc(sizes = [64, 128]) {
   for (const gib of sizes) {
     const card = new SdCard({ sectors: cardSectors(gib) }), tag = `${MODEL} ${gib} GiB ${card.kind}`;
     const read = (lba, n) => card.read(lba, n);
-    const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true },
+    const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, debug_api: true },
       { rom, resBlock, createHash, wallClock: () => performance.now() / 1000, card: { open: () => card, save() {} } });
     try {
       pl.open_session();

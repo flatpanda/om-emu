@@ -655,9 +655,11 @@ export async function stm32Firmware(file = path.join(ROOT, 'unpacked/E143/OLY_E_
 
   // nothing attached, nothing typed: the standby about 3.03 s after reset, with no Stop or Shutdown mode and no flash
   // erase or programming on the way (the low-power, flash, I2C slave and timer slave models leave the boot path as it
-  // was; the prompt's cycle is checked below)
+  // was; the prompt's cycle is checked below). run() counts its seconds at the HCLK it starts with, the reset's MSI
+  // until the image raises it, so the run to the standby starts at the prompt.
   {
     const s = new Stm32l4(image);
+    ok('boot with nothing attached', s.boot());
     ok('standby with nothing attached', s.run({ seconds: 5, until: () => s.standby }));
     const t = s.seconds();
     checks++; if (!(t > 3.0 && t < 3.06)) bad.push(`the standby at ${t.toFixed(4)} s, not about 3.03 s`);

@@ -376,6 +376,7 @@ export class Player {
     if (this.session?.lab?.scpu_link) used.push('H-SCPUSTART', 'S-SIO2', ...this.session.lab.scpu_dev.labels, 'A-LINKPINS-1');   // a body whose PER_SCPU runs natively against the sub-CPU's model (S-SCPUDEV) or its own firmware (scpum4.mjs)
     if (this.session?.scpu_port) used.push('H-SCPUIRQ', 'H-UIINPORT', 'H-SCPUPORT');        // a body whose group 0 comes through the SCPU's ports
     if (this.session?.uiin_scan) used.push('H-UIINSCAN');                                    // UI_IN's port scan over the link
+    if (this.session?.power_manager) used.push('H-PWRSTART', 'S-IOEXP', 'S-SHUTDOWN', 'S-PWRLOG', 'H-SCPUPOLL');   // the power manager natively, and the power-off at the lever's off (power.mjs)
     if (this.session?.hdmi_port || this.session?.lab?.scpu_link) used.push('H-GIOSLOTS');   // the GIO slots, for the HDMI pin or the link's pin 102
     if (this.session?.hdmi_port) used.push('S-HDMISINK', 'A-HDMI-1');                       // --hdmi on: the HDMI port, its sink
     if (this.session?.storage) used.push('H-FILEINIT', 'H-FILECLBK', 'S-SDHOST', 'S-SDCARD', 'S-FSNAND', ...(this.session.storage.f.album_init !== null ? ['S-ALBM'] : []), 'S-RECFILE');   // the file system native on a card (storage.mjs; S-ALBM where the body has an album manager)
@@ -944,6 +945,8 @@ export class Player {
     if (act === 'down') act = 'off';
     if (act === 'off') {
       const rec = s.switch_input('power', 1 - s.bit_of('power'));
+      const off = s.power_down();                    // the firmware's power-off to its last write, where the body runs it
+      if (off !== null) rec.power_off = { lab_ns: off.lab_ns, frames: off.frames, pins: off.pins, ready: off.ready, scpu: off.scpu, request_word: off.request_word };
       this.close_session();
       this.set_phase('off');
       return rec;

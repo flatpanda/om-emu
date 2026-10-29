@@ -137,6 +137,34 @@ export const MODELS = {
     // 0x5000314c / 0x50003156 run the heap's get 0x5000319c / release 0x50003466 with pool 2, whose block size is 16512
     // (the table 0x60029908) and whose memory is 0x62424700.. (0x50003211), S-HEAP's (D)
     heap_pool: { get: 0x5000314C, put: 0x50003156, bytes: 16512 },
+    // The power-off natively (src/lab/power.mjs; docs/hle-gaps.md 4.7.4), D unless tagged. shutdown: the HFW's
+    // CameraCommon object, the getter 0x50afccd5 (its singleton 0x60361140, made by 0x50afd238 with the vtable
+    // 0x60e02ea4), whose slot 2 is shutDown 0x50afd2d7 (the id 0x10102 it logs, the name table 0x6035f100 slot 1
+    // "CameraCommon::shutDown"; the shell's "sdk api shutdown mode reason" calls it through the same slot,
+    // 0x50b05169..79): it calls OlyHfwPower's startShutDown 0x50af654b (through 0x50abe7e0), which saves the settings
+    // (the flash save 0x503eee94, return 0x50af6a15), saves the RAM log (api 0xc0036 0x50420fd4 -> 0x518f7381: the
+    // banks' off words, then 2 MiB from 0x63ae0000 to the NAND at 0x4e820000 through the NAND access, return
+    // 0x518f742f) and runs api_system's power-off 0x5041fa85 -> 0x50044ca8, which ends with the window's last write
+    // (0x5004dfd0 at 0x50044de7; the next instruction 0x50044dee). mode and reason: API_SHUTDOWN_NORMAL 1 and
+    // API_SHUTDOWN_REASON_BUTTON 1 (the shell's usage text 0x60e10b2c..0x60e10b6f; that the lever is BUTTON is I).
+    // ioexp: the IO expanders' request posts, the body's 0x50056a85 (PER_IOEXP, its data queue 0x600431be; the
+    // power-off's 0x50055fe4 / 0x50055fd3 send 6 or 5) and the PBH's 0x50054ede (PER_IOEXP_PBH, 0x600431c0; 0x500541d9
+    // / 0x500541c8 send 5 or 4, and the GIO extension's write 0x500541f3 sends 1 with {+0 the pins' mask, +4 a byte,
+    // +8 its request's first word, +16 the request's callback, +20 its argument}, 0x50054237..0x5005425a), and
+    // their completion flags' id words, whose bit 1 the callers wait for (0x50056c93: 0x60043170; 0x500550f4:
+    // 0x60043180); write: the request the GIO extension's write sends, whose callback the API calls itself while the
+    // PBH's state 0xa32c4915 is 5 (0x5005421d..33). poll: the power-off's wait for pin 102 low after its 0x85
+    // (0x5005ceaf..ba, the GIO read 0x5000297f of pin 102). pwr: the power manager's start, as the boot starter
+    // 0x50023eca makes it: its init 0x50044eb6 (0x500240c4: the start-up message {0x100, 0x20} through the task's
+    // handler 0x5004408f) and PWR_MAIN's static task (task 10, the id word 0x60042d3a, OlyTaSt at 0x500240d2), entry
+    // 0x50043cdb (it waits on its flag, the word 0x60042f86, for its queue's messages, the word 0x600431d8)
+    power_native: {
+      pwr: { init: 0x50044EB6, task: 0x50043CDB },
+      shutdown: { object: 0x50AFCCD5, slot: 2, entry: 0x50AFD2D7, mode: 1, reason: 1 },
+      flash_save: 0x50AF6A15, log: { nand: [0x4E820000, 0x200000], ret: 0x518F742F }, end: 0x50044DEE,
+      ioexp: { body: { post: 0x50056A85, flag: 0x60043170 }, pbh: { post: 0x50054EDE, flag: 0x60043180 }, write: 1 },
+      poll: { at: 0x5005CEAF, pin: 102 },
+    },
     // The card's file system runs natively (src/lab/storage.mjs; docs/hle-gaps.md 4.8.2): its seams are read by
     // src/fw/facts.mjs fileSystem (fact storage; E143's values STORAGE_E143 there, with their evidence), the SD host's
     // pages are the board's (src/fw/board.mjs sd). errlog: the logs its card's queries make in the lab. The movie

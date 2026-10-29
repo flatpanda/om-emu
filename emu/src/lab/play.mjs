@@ -14,6 +14,7 @@ import { sinkEdid } from './edid.mjs';
 import { Accelerometer } from './acc.mjs';
 import { Storage, STORAGE } from './storage.mjs';
 import { NativeLens } from './lens.mjs';
+import { IoExpanders, PowerOff, startPowerManager } from './power.mjs';
 import { imageView } from '../fw/image.mjs';
 import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143, DPC_E143 } from '../fw/facts.mjs';
 import * as D from './display.mjs';
@@ -812,6 +813,8 @@ export class PlaySession extends N.NavSession {
     this.camapp = null;            // S-CAMAPP (camapp.mjs), from the bring-up on
     this.acc = null;               // the accelerometer (acc.mjs) on a body that gives it (models.mjs acc)
     this.storage = null;           // the card and the file system (storage.mjs) on a body that runs them (models.mjs card_fs)
+    this.ioexp = null;             // S-IOEXP and the power manager (power.mjs) on a body that gives power_native
+    this.power_manager = null;
     // the lens on the mount natively (lens.mjs), opt-in (env.lens 'native', node's OM_EMU_LENS=native), on a body that
     // gives it (models.mjs lens_native) and runs the card's file system, whose NAND access the lens data cache shares
     // (S-LENSNAND); its lock pin switch released in the idle image before the groups are pushed. Elsewhere, and by
@@ -895,6 +898,7 @@ export class PlaySession extends N.NavSession {
     if (this.scpu_port) this.scpu_port_bring_up();
     for (let g = 0; g < GROUP_BYTES.length; g++) if (GROUP_LIVE[g] && !(this.scpu_port && g === SCPU_PORT_GROUP)) this.push_group(g);
     if (lab.scpu_link && uiinScan()) this.uiin_scan_bring_up();
+    if (lab.scpu_link && MODEL_INFO.power_native) this.power_manager_bring_up();
     this.idle_codes = lab.uiin_codes.map(([, c]) => c);
     if (this.touch_on) this.touch_bring_up();
     if ((o.us_clock ?? 'lab') === 'lab') lab.sim.write(IRQ.TIMER_DEBUG + IRQ.T_USMODE, pack('<I', 1));
@@ -903,7 +907,7 @@ export class PlaySession extends N.NavSession {
     if (o.mutant !== 'no-aeinit') this.aeinit_bring_up();   // without it the interpolation's div fault comes back
     if (MODEL_INFO.acc) this.acc_bring_up();
     if (this.storage_runs()) this.storage_bring_up();
-    if (fact('power.task', null) != null) this.power_bring_up();          // (null or undefined: no power task)
+    if (fact('power.task', null) != null) this.power_task_bring_up();     // (null or undefined: no power task)
     if (this.lens) this.lens.bring_up();
     this.end('play-bring-up', 'bring-up', [], [], { idle_codes: this.idle_codes.map(h8), ...(this.storage && { storage: { ...this.storage.status(), log: this.storage.take_log() } }),
       ...(this.lens && { lens: { ...this.lens.status(), log: this.lens.take_log() } }) });
@@ -940,7 +944,7 @@ export class PlaySession extends N.NavSession {
   // which the charger's requests use), and waits on its queue (X: E132). E132's camera application start makes the
   // charger's requests, whose transfer computed its channel's clock divisor from the unset configuration and divided
   // by zero before (X; docs/model-survey.md)
-  power_bring_up() {
+  power_task_bring_up() {
     const lab = this.lab, entry = fact('power.task', null);
     const ids = [...lab.nk.tasks()].filter(([, [e]]) => e === entry).map(([t]) => t);
     if (ids.length !== 1 || lab.nk.state(ids[0]) !== 0x10) throw new PlayError(`H-PWRTASK: static tasks with entry ${h8(entry)}: ${show(ids)}, not one dormant`);
@@ -1008,6 +1012,13 @@ export class PlaySession extends N.NavSession {
       throw new PlayError(`H-UIINSCAN: after the port scan ${h8(UIIN_PORT_SCAN)}: frames ${show(frames)}, errlog ${show(own)}, codes decoded ${show(decoded.map(hex))}, group 4 ${bytesHex(g4)} (idle ${bytesHex(this.images[4])}): not one 0x88 answered with the idle image kept`);
     }
     this.uiin_scan = { reply: frames[0].reply, report: dev.scanReport };
+  }
+  // S-IOEXP and H-PWRSTART (power.mjs): the IO expanders' requests answered from here on, then the power manager
+  // started natively, as the boot starter would have started it
+  power_manager_bring_up() {
+    this.ioexp = new IoExpanders(this.lab, MODEL_INFO.power_native.ioexp);
+    this.ioexp.install();
+    this.power_manager = startPowerManager(this, MODEL_INFO.power_native.pwr);
   }
   // H-ACCINIT, S-ACCREG, S-ACCSAMPLE and H-SLOPEINIT (acc.mjs): the ACC module init and PER_SLOPE's init natively in
   // the boot's place, before the application starts, since its GUI starts PER_SLOPE for the gauge (startLevel at the
@@ -1376,6 +1387,17 @@ export class PlaySession extends N.NavSession {
     const extra = this.extra(c, value, codes, decoded);
     if (c.kind === 'modedial') extra.mode_dial_index = this.lab.sim.u32(MODE_DIAL_INDEX);
     return this.end(`switch ${cid} ${value}`, 'switch', posted, [], extra);
+  }
+  // H-POWER after the power lever's off (src/lab/power.mjs): on a body that gives power_native and runs PER_SCPU over
+  // the link, the firmware's own power-off from the HFW's shutDown to its last write, as a step of its own; null
+  // elsewhere (the player closes the session at once, as before)
+  power_down() {
+    if (!MODEL_INFO.power_native || !this.lab.scpu_link || !this.ioexp) return null;
+    const lab = this.lab, n0 = lab.log.length;
+    this.begin(`${String(this.steps.length).padStart(2, '0')}-power off`);
+    const off = new PowerOff(this, MODEL_INFO.power_native).run();
+    this.end('power off', 'power', [], [[0, lab.log.length - n0]], { power_off: off });
+    return off;
   }
   // The HDMI cable (see HDMI_PLUG_MS): plug only. An unplug is refused (A-HDMI-1: what the transmitter and the pin
   // show when the cable comes out is not read), and so is a second plug.

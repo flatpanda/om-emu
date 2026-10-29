@@ -12,7 +12,9 @@
 //                  the latter's labels and not S-SCPUDEV; its frame log (PER_SCPU's 0x85 {2}, the store init's
 //                  requests, H-UIINSCAN's 0x88) equals S-SCPUDEV's, and so do the transfers' bytes both ways and the
 //                  pins' levels from the first request on; the gate open in the sub-CPU's SRAM; PER_SCPU waiting with
-//                  no errlog of its own; the sub-CPU's time no further ahead of lab time than A-SCPUM4-1's answer windows
+//                  no errlog of its own; the sub-CPU's time no further ahead of lab time than A-SCPUM4-1's answer windows;
+//                  on a body that runs its power-off (power.mjs, E143), the lever's off: the power-off's frames (0x85
+//                  {1, 0, 0} and its reply), the pins and the lab time of its end equal S-SCPUDEV's, pin 102 low at the end
 //   node emu/test/test_scpum4.mjs [--session]      (OM_EMU_MODEL=E146 node emu/test/test_scpum4.mjs --session)
 import { MemoryBus } from '../src/core/m4/bus.mjs';
 import { Scheduler } from '../src/core/m4/periph/sched.mjs';
@@ -176,6 +178,7 @@ export async function scpuM4Session() {
   const p0 = new Player({ ...PLAYER_PARSER, ...PLAY_ARGS }, { ...base, scpu: 'off' });
   p0.open_session();
   const ref = linkRecord(p0);
+  const offRef = MODEL_INFO.power_native ? powerOff(p0) : null;
   p0.close_session();
   const p1 = new Player({ ...PLAYER_PARSER, ...PLAY_ARGS }, { ...base, scpu: 'native', scpuImage });
   try { p1.open_session(); } catch (e) {
@@ -199,9 +202,21 @@ export async function scpuM4Session() {
   // (a run stops at most a SysTick period, 1 ms, past its target while the sub-CPU sleeps, or LOOK_EVERY instructions)
   const t = dev.m.seconds(), now = lab.lab_time(), ahead = t - dev.clock.due(now);
   ok(t > 0 && t <= dev.clock.limit(now) + 0.002, `${MODEL}: the sub-CPU ran ${t.toFixed(4)} s, ${ahead.toFixed(4)} s ahead of lab time, within its answer windows (to ${dev.clock.limit(now).toFixed(4)} s)`);
+  if (offRef) {
+    // the power lever's off (power.mjs): the power-off's 0x85 and the link's pins through the sub-CPU's own firmware
+    // as through S-SCPUDEV, the sub-CPU's link stopped (pin 102 low) as it leaves steady, the session at its end
+    const off = powerOff(p1);
+    ok(off.frames === offRef.frames && off.pins === offRef.pins && off.ready === 0 && off.request_word === 127 && off.lab_ns === offRef.lab_ns,
+      `${MODEL}: the power-off through the sub-CPU's own firmware: frames ${off.frames}, pins ${off.pins}, ready ${off.ready}, request word ${off.request_word}, lab time ${off.lab_ns}, against S-SCPUDEV's ${offRef.frames}, ${offRef.pins}, ${offRef.lab_ns}`);
+  }
   if (bad.length) bad.push(`${MODEL}: the sub-CPU's console: ${JSON.stringify(dev.consoleText().slice(-1500))}`);
   p1.close_session();
   return { checks, bad, skipped };
+}
+// the power lever's off on a session (power.mjs): what the power-off carried on the link, as text to compare
+function powerOff(pl) {
+  const off = pl.power('off').power_off;
+  return { frames: JSON.stringify(off.frames), pins: off.pins.join(' '), ready: off.ready, request_word: off.request_word, lab_ns: off.lab_ns.join('..') };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

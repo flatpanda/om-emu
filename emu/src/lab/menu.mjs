@@ -774,8 +774,9 @@ export class MenuLab extends T.TextDisplayLab {
   }
   _s_flash_save(hle, r) {
     // (a later model's application saves at more places, read by a rule: src/fw/facts.mjs appSaves; E143's lab takes
-    // the DB init's only, as before)
-    if (disasm(r.mdr) !== FLASH_SAVE_RETURN && !fact('store.app_saves', []).includes(disasm(r.mdr))) {
+    // the DB init's only, as before, and the returns a stand-in lists for the path it runs: flash_save_listed, the
+    // power-off's settings save, src/lab/power.mjs)
+    if (disasm(r.mdr) !== FLASH_SAVE_RETURN && !fact('store.app_saves', []).includes(disasm(r.mdr)) && !this.flash_save_listed?.has(disasm(r.mdr))) {
       throw new MenuError(`S-FLASHSAVE: 0x503eee94 called from ${where(r.mdr)}; only the DB init's last call (return 0x503c5537) is listed: the flash controller is not modelled`);
     }
     this.store_log.flash_save.push(h8(disasm(r.mdr)));

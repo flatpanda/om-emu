@@ -12,8 +12,11 @@
 // and the session goes on. Every session must be identical to the same scenario run without detours in the same
 // process (bin/run.mjs's comparator: the logical view, then the finals), and so must the machine's whole state at the
 // end (guest memory, the CPU, every device: its sha256).
-// Cross-check, at the first detour point of each session: one detour of kind (b) runs three times from the same
-// snapshot, each with its exec trace hashed (native mode), and the three digests and end states must be equal.
+// Cross-checks: a detour runs three times from the same snapshot, each run with its exec trace hashed (native mode),
+// and the three digests, instruction counts and end states must be equal. At the first detour point of each machine
+// one of kind (b), which ends in a fault within a few hundred instructions on every scenario above (22 to 687,
+// 2026-10-29); then at each later detour point the turn's detour, until one runs at least LONG instructions (the
+// detour that follows at that point is the same run a fourth time). A session whose detours all stay shorter says so.
 // Reports the detours (how each ended), snapshot sizes and the snapshot and restore times. Exit 1 on a difference.
 import os from 'node:os';
 import path from 'node:path';
@@ -44,6 +47,7 @@ if (names.includes('osd')) await osdDoc(calls);      // osd's generated inputs: 
 // xorshift32, seeded per detour: the detours are the same on every run
 function rng(seed) { let x = (seed * 2654435761) >>> 0 || 1; return () => { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x; }; }
 const STUB = 0xA2100400;
+const LONG = 10000;                        // a long cross-check: a detour of at least this many instructions
 function cpuStore(m, addr, value) {        // a CPU store over the machine API
   m.dbgWrite(STUB, Uint8Array.of(0x60));
   const r = m.getRegs().slice();
@@ -59,17 +63,23 @@ for (const name of names) {
   const docs = Object.fromEntries(plain.sessions.map((s) => [s.name, JSON.parse(JSON.stringify(dump(s.tracer, createHash, { source: name, rc: plain.rc, env: {}, stdout: [] })))]));
   const conts = plain.sessions.reduce((a, s) => a + s.hle.sim.m.stats.conts, 0);
   const K = Math.max(1, Math.floor(conts / per));
-  const st = { detours: 0, ends: {}, snapMs: [], restoreMs: [], bytes: [], cross: null, insns: 0 };
+  const st = { detours: 0, ends: {}, snapMs: [], restoreMs: [], bytes: [], cross: [], longest: 0, insns: 0 };
   let busy = false;
   const off = onMachine((m) => {
-    let n = 0, crossed = false;
+    let n = 0, crossed = false, long = false;
     const cont = m.cont;
     m.cont = function (opts) {
       if (++n % K === 0 && !busy) {
         busy = true;
+        const at = n;                             // the detours' own continues count on (n), their seed stays
         try {
-          if (!crossed) { crossed = true; st.cross = crossCheck(m, n); }
-          detour(m, n, st);
+          if (!crossed) { crossed = true; st.cross.push(crossCheck(m, at, 'b')); }
+          else if (!long) {
+            const x = crossCheck(m, at, 'abc'[st.detours % 3]);
+            st.longest = Math.max(st.longest, x.insns);
+            if (x.insns >= LONG || !x.ok) { long = true; st.cross.push(x); }
+          }
+          detour(m, at, st);
         } finally { busy = false; }
       }
       return cont.call(m, opts);
@@ -85,8 +95,9 @@ for (const name of names) {
   if (err) { fail(`${name}: threw ${err.name}: ${err.message.split('\n')[0]}`); continue; }
   if (rc !== 0) fail(`${name}: the scenario's own checks failed (rc ${rc})`);
   if (st.detours < 10 && conts >= 10) fail(`${name}: only ${st.detours} detours`);
-  if (!st.cross || !st.cross.ok) fail(`${name}: cross-check: ${JSON.stringify(st.cross)}`);
-  else console.log(`  cross-check: one detour ran three times from one snapshot, exec digest ${st.cross.digests[0].slice(0, 16)} and end ${st.cross.ends[0]} each time (${st.cross.insns} instructions traced)`);
+  if (!st.cross.length || !st.cross.every((x) => x.ok)) fail(`${name}: cross-check: ${JSON.stringify(st.cross)}`);
+  else for (const x of st.cross) console.log(`  cross-check (${x.kind}): one detour ran three times from one snapshot, exec digest ${x.digests[0].slice(0, 16)} and end ${x.ends[0]} each time (${x.insns} instructions traced)`);
+  if (!st.cross.some((x) => x.insns >= LONG)) console.log(`  cross-check: no detour of ${LONG} instructions or more to cross-check (the longest tried ran ${st.longest})`);
   const got = stateDigest(sessions.at(-1).hle.sim.m);
   if (got !== want) fail(`${name}: the machine state at the end differs from the run without detours (${got.slice(0, 16)} != ${want.slice(0, 16)})`);
   else console.log(`  end state (memory, CPU, devices) identical to the run without detours: ${got.slice(0, 16)}`);
@@ -154,17 +165,17 @@ function detour(m, n, st, forceKind = null, onEnd = null) {
   st.detours++;
 }
 
-// One detour of kind (b) three times from one snapshot, each with its exec trace hashed (native mode).
-function crossCheck(m, n) {
-  const digests = [], ends = [];
-  let insns = 0;
+// One detour of the given kind three times from one snapshot, each run with its exec trace hashed (native mode).
+function crossCheck(m, n, kind) {
+  const digests = [], ends = [], counts = [];
   for (let k = 0; k < 3; k++) {
     const h = createHash('sha256');
     let c = 0;
     m.setExecTrace((pc, op) => { c++; h.update(`${pc} ${op} ${R[0]} ${R[8]} ${R[10]}\n`); }, { mode: 'native' });
-    detour(m, n, { ends: {}, snapMs: [], restoreMs: [], bytes: [], insns: 0, detours: 0 }, 'b', (end, regs) => ends.push(`${end} ${regs}`));
+    detour(m, n, { ends: {}, snapMs: [], restoreMs: [], bytes: [], insns: 0, detours: 0 }, kind, (end, regs) => ends.push(`${end} ${regs}`));
     m.setExecTrace(null);
-    digests.push(h.digest('hex')); insns = c;
+    digests.push(h.digest('hex')); counts.push(c);
   }
-  return { ok: digests.every((d) => d === digests[0]) && ends.every((e) => e === ends[0]) && insns > 0, digests, ends: ends.map((e) => e.split(' ').slice(0, 2).join(' ')), insns };
+  const same = (a) => a.every((x) => x === a[0]);
+  return { kind, ok: same(digests) && same(ends) && same(counts) && counts[0] > 0, digests, ends: ends.map((e) => e.split(' ').slice(0, 2).join(' ')), insns: counts[0] };
 }

@@ -60,7 +60,9 @@ not reconciled.
    sequence. The SCPU survey (2026-10-23, `docs/om1-scpu-spec.md`) put the transport-level model before any LLE of the
    sub-CPU; it is built (SCPU track below).
 4. **Debug API follow-ups** (Debug API follow-ups below): the route to a running play session (F31), the attached
-   watch log's lab time, halt and trace filters are in (2026-10-23); left are the gate gaps (items 1-3, 6, 7).
+   watch log's lab time, halt and trace filters are in (2026-10-23), and the gate gaps 1-3 and 6 are closed, the
+   two code-fetch bugs they found fixed (2026-10-29); left are item 4's limits of the browser Worker's route and item
+   7, the browser player on other browsers.
 5. **Emulator architecture** phases 2-5: finish phase 2's typed seams (machine port, options object, composed lab
    features), then ground the CPU and interrupts in the manual, then the time model. Phases 3 and 4 are also step 3 of
    the HLE plan: every device seam below the camera application waits on them.
@@ -251,13 +253,30 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
 
 ## Debug API follow-ups
 
-1. **No recorded vector for halfword device accesses.** The MMIO hook's 2-byte path and sub-word store values are
-   pinned by a unit test only; a session or vector with a `movhu` to a device register would close it.
-2. **MMIO-trace rules no session reaches:** code fetched from the lab stub (traced byte by byte) and CPU accesses
-   through the bus window's off-DRAM pages (no trace line), correct by construction only.
-3. **Edge cases no gate covers:** a code-fetch fault in an instruction's operand bytes writes no exec-trace line,
-   because `step()` fetches every byte before the exec hook; a watch hit inside interrupt entry stops the continue
-   before the handler's first instruction; the snapshot gate's cross-check detours are short (22 to 687 instructions).
+1. **Halfword device accesses:** done (2026-10-29). No firmware session makes one (X: every sub-word CPU access of the
+   golden workload, a native-lens session with an HDMI plug and an E144 session's start is the ISC lock bytes or the HDMI
+   EDID bytes), so the gate is a JSON-lines session of its own (`test/test_debug.mjs` traceRuleUnits, firmware-free,
+   in both suites): `movhu` and `movbu` stores and loads on the lab stub's registers, which take every width, in a
+   continue (the inline forms) and in single steps (the helper), and debugger reads of 2 bytes, compared line by line
+   in the qemu format (the stored halfword and byte of a register with high bits, the loads' values, the pcs, cpu -1).
+2. **MMIO-trace rules no session reaches:** done (2026-10-29), in the same units: code run from the lab stub traces a
+   size-1 read per code byte, the translator's reads of every byte in order, then the helper's of op, the prefix byte
+   and the operands it decodes, with an exec line per instruction; CPU and debugger accesses through the bus window's
+   pages off bus DRAM write no line (a live-view range is RAM, the store reaches the bus; an unbacked one is a bus
+   fault). The gate found that at the insn limit an instruction on the lab stub stopped the machine with a host error
+   (`limitFault()` fetched without the MMIO path, whose signal escaped): it is now fetched through the device, then
+   fault 7 (fault 2 for a byte the stub denies).
+3. **Edge cases:** done (2026-10-29). A code-fetch fault writes no exec line in either trace mode or a step, for the op
+   byte, the prefix byte, byte 1 and later operand bytes; the gate found that byte 1 of a non-prefix form was not
+   fetched up front (`step()`, `decode()`, `limitFault()`), so a 2-byte form's fault there was counted, with an exec
+   line in the one-instruction mode only, and longer forms named pc+2 (`emu/FIDELITY-NOTES.md` 3.3, fixed); and the
+   debug API reported a fetch fault at the insn limit as the limit (stop `limit`, fault 7, under a trap line of fault
+   2): it is now the fault. A watch hit in an interrupt entry's stores stops the continue after the entry, before the
+   handler's first instruction: kept as right and documented (`emu/README.md` "The debug API": the stop next to the
+   access, no instruction between them whose own hits it would hide), gated with a continue from the stop equal to the
+   run without the watchpoint. The snapshot gate cross-checks one long detour per machine besides the short one
+   (99,205, 200,002 and 103,598 instructions on kernel-5c, osd and shoot-tft): the short ones are short in the
+   session's own code (kind (b)'s junk page plays no part: the same detour without it ended at the same count).
 4. **Feature requests:** done (2026-10-23). F31, the live route (`src/debug/live.mjs`, `emu/README.md` "The debug
    API"): debug inputs `{type: 'debug', op, ...}` on the play session's own input queue, through `POST /api/debug` or
    `bin/debug.mjs --attach URL` (JSON lines), `--debug-api` only, handled between ticks through
@@ -275,7 +294,9 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
    wrapped by `>>> 0`), every register or stored value outside 32 bits (`setRegs`, `reset`, `cpuStore`, also in the
    library as a ValueError and on `bin/debug.mjs`'s command line as a usage error), and negative counts (`size`,
    `words`, `since`, `limit`, `advance`), a zero `disasm` `n`, watch `len` or `budget`.
-6. **`web/index.html`'s EVF layout class** is not checked by any gate.
+6. **`web/index.html`'s EVF layout class:** done (2026-10-29). `bin/webgate.mjs` B6b presses LV (V) on the page and
+   back: the screen has the class `evf` with the first frame drawn from the EVF (1600 x 1200) and loses it with the
+   first frame from the TFT (900 x 600).
 7. The browser player was measured in Chrome on one machine; other browsers and platforms are untested.
 
 ## Emulator architecture

@@ -244,13 +244,15 @@ Each note was checked against the cited code. Paths are relative to the reposito
 
 **Confidence:** medium
 
-### 5.5 OSD bitmap format 9 decoded from the resources' data
+### 5.5 OSD bitmap formats 9 and 1 decoded from the data
 
-**Where:** `emu/src/dev/engine.mjs` (`cmdBitmap`, case 0x09), `emu/refs/osdfmt.mjs` (`TOKEN`)
+**Where:** `emu/src/dev/engine.mjs` (`cmdBitmap`, cases 0x09 and 0x01), `emu/refs/osdfmt.mjs` (`TOKEN`)
 
 **Emulator:** A bitmap of format 9 is a byte stream of 8-bit tokens, a 2-bit colour index over a 6-bit run (run = low six bits + 1), mapped through the command's inline table as formats 2 and 0x0A are. The layout comes from the E144 family's resource blocks, where every format-9 bitmap found decodes so to exactly its width x lines, and from E140's AF frame, which draws them with a four-colour inline table.
 
-**Expected / concern:** No format-9 bitmap is wider than 32 or has a run over 32, so bit 5 could as well be a third colour bit that is always 0; the engine's own definition of the format is not read. Format 1, which would be to 9 what 2 is to 0x0A, stays an error.
+A bitmap of format 1 (2026-10-29) is a stream of 4-bit tokens, low nibble first, a 2-bit colour index over a 2-bit run, through the inline table: E145's capture display draws two such bitmaps from DRAM, and both decode so to exactly width x lines, ending where the descriptor after each begins, with no run across a row end (high nibble first, 12 runs cross one; `docs/model-survey.md` finding 20).
+
+**Expected / concern:** No format-9 bitmap is wider than 32 or has a run over 32, so bit 5 could as well be a third colour bit that is always 0; the engine's own definition of either format is not read. Format 1 rests on two bitmaps and a noisy scan of the resource blocks (303 places on E145 decode so, where a format no bitmap has finds 27), not on the engine's documentation; that format 1 is not the 8-bit twin of 9 (as 2 is of 0x0A) is shown by those two bitmaps only.
 
 **Confidence:** medium
 

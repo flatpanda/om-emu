@@ -159,13 +159,20 @@ export class Engine {
       // AF frame draws them with the table [0, 0x21, 0x20, 0x1f] (D). None is wider than 32 or has a run over 32,
       // so that bit 5 is the run's and not the colour's is I
       case 0x09: bits = 8; runbits = 6; perWord = 0; break;
+      // a 4-bit token, low nibble first (16 to a 64-bit word), a 2-bit colour index over a 2-bit run, through the
+      // inline table's first four entries: E145's capture display draws two GUI bitmaps of this format from DRAM
+      // (32 x 56 and 32 x 32), and both decode so to exactly width x lines, ending at the descriptor that follows
+      // each, with no run across a row end; read high nibble first, 12 runs cross one (X). In the resource blocks
+      // 303 places on E145 and 344 on E142 decode so (84 and 172 high nibble first; a format no bitmap has, 5, finds
+      // 27 such places on E145, X, a byte scan), 44 x 32 and 200 x 40 the most common sizes
+      case 0x01: bits = 4; runbits = 2; perWord = 16; break;
       case 0x03: bits = 10; runbits = 2; perWord = 6; break;
       case 0x0B: bits = 12; runbits = 4; perWord = 5; break;
       default: return this.fail(E.BMP_FORMAT, src, (hdr[0] | hdr[1] << 8 | hdr[2] << 16 | hdr[3] << 24) >>> 0);
     }
     const lut = (w[0] & 0x800) !== 0, inlineLut = (w[0] & 0x1000) !== 0;
     const map = new Uint8Array(256);
-    if (bits === 8) {
+    if (bits <= 8) {                      // the run-length formats' colour index goes through the inline table
       if (!lut || !inlineLut) return this.fail(E.BMP_LUT, w[0], fmt);
       for (let i = 0; i < 16; i++) map[i] = w[4 + (i >> 2)] >>> (8 * (i % 4));
     } else if (inlineLut) {
@@ -203,7 +210,8 @@ export class Engine {
         px.fill(t >>> runbits, count, count + run);
         count += run;
       }
-      if (!code && perWord && used === tokens && (hi >>> 28)) code = this.fail(E.BMP_TOKEN, src + 4 + pos, hi);
+      // a word's bits past its last token (the 10- and 12-bit formats' top four) must be clear
+      if (!code && perWord && used === tokens && bits * perWord < 64 && (hi >>> (bits * perWord - 32))) code = this.fail(E.BMP_TOKEN, src + 4 + pos, hi);
       pos += perWord ? 8 : 1;
     }
     const keyMode = this.dget(D.KEY_MODE), skipKeys = keyMode === 1, refuse = keyMode !== 1 && keyMode !== 2;

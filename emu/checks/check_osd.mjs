@@ -448,7 +448,9 @@ function unknowns(s) {
   const cases = [
     ['GUARD', () => lab.rectangle(1500, 1100, 200, 200, 3, 1, 2)],
     ['BMP_SCALE', () => lab.bitmap(10, 10, icon.address, null, 1, 1, 40, 20)],
-    ['BMP_FORMAT', () => lab.bitmap(10, 10, lab.alloc(cat(fmt.make_header(8, 4, 0x01), new Uint8Array(64)), 8), new Uint8Array([0, 1, 2, 3]), 1, 1)],
+    // (format 5: no bitmap record of E143's resources has it, X; format 1, the case before, is E145's 4-bit form since
+    // 2026-10-29, docs/model-survey.md finding 20)
+    ['BMP_FORMAT', () => lab.bitmap(10, 10, lab.alloc(cat(fmt.make_header(8, 4, 0x05), new Uint8Array(64)), 8), new Uint8Array([0, 1, 2, 3]), 1, 1)],
   ];
   for (const [name, draw] of cases) {
     drawing(lab, () => { draw(); }, { expect: [name] });

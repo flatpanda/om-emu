@@ -16,7 +16,9 @@
 //                the driver's record filled from the replies (ID, name, zoom steps, wide and tele, the zoom entries,
 //                the status word, the zoom step S-SCENE's default focal length gives, the aperture), the driver's
 //                35 mm focal lengths derived natively from it (24, 80, 50 mm), the zoom ring at 40 mm (the state's last
-//                step, 80 mm), no error log; the lens lock pin switch
+//                step, 80 mm), no error log; a touch on the shooting screen forwarded to the GUI by the application
+//                itself, the GUI's two answers taken natively and no lab post (S-TOUCHMAP, S-CAFWD not in use), then OK
+//                opening the Super Control Panel and S1 returning; the lens lock pin switch
 //                pressed (fw_121c): the lens detached (the data-valid and attach flags 0, the aperture shown as none),
 //                released: the lens's start again and the flags back
 //   node emu/test/test_lens.mjs [--session]
@@ -162,6 +164,27 @@ export async function lensSession() {
   s.idle_slice(lab.lab_time() + 500e6);
   const polls = L.mcu.counts.get('c1 80');
   ok(polls >= 10, `the state poll runs on (about every 100 ms): ${polls} polls`);
+  // a touch on the shooting screen: the application forwards it to the GUI itself and takes the GUI's answers (event
+  // 35 from PostEventToCA, natively), the lab posts none (no S-TOUCHMAP, S-CAFWD); OK then opens the Super Control
+  // Panel, as with S-LENS
+  ok(s.app_touch && !used.includes('S-TOUCHMAP') && !used.includes('S-CAFWD'), `the application forwards the touches: ${used.filter((x) => /TOUCH|CAFWD/.test(x))}`);
+  let seq = 10;
+  const input = (inp) => { const q = seq++; pl.apply({ ...inp, t_wall: pl.wall(), seq: q }); return pl.box.pop(q); };
+  const gui = () => lab.state();
+  ok(gui() === 0x0108, `the shooting screen before the touch: 0x${gui().toString(16)}`);
+  const c0 = lab.cafwd.length;
+  const down = input({ type: 'touch', action: 'down', x: 300, y: 200 }), up = input({ type: 'touch', action: 'up', x: 300, y: 200 });
+  s.idle_slice(lab.lab_time() + 300e6);
+  const answers = lab.cafwd.slice(c0);
+  ok(answers.length === 2 && answers.every((c) => c.event === 35 && c.caller === '0x5124f6ae') && !down.record.touch_posted.length && !up.record.touch_posted.length,
+    `the GUI answers the application's two forwards, the lab posts none: ${JSON.stringify(answers)} ${JSON.stringify([down.record.touch_posted, up.record.touch_posted])}`);
+  input({ type: 'key', id: 'ok', action: 'down' });
+  input({ type: 'key', id: 'ok', action: 'up' });
+  ok(gui() === 0x0403, `after the touch OK opens the Super Control Panel: 0x${gui().toString(16)}`);
+  input({ type: 'key', id: 's1', action: 'down' });
+  input({ type: 'key', id: 's1', action: 'up' });
+  s.idle_slice(lab.lab_time() + 300e6);
+  ok(gui() === 0x0108, `and S1 returns to the shooting screen: 0x${gui().toString(16)}`);
   // the lock pin switch: pressed, the lens detaches; released, it starts again
   pl.apply({ type: 'key', id: 'fw_121c', action: 'down', t_wall: pl.wall(), seq: 1 });
   s.idle_slice(lab.lab_time() + 500e6);

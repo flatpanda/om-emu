@@ -142,12 +142,12 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
 <div class="toolbar" id="optbar">
   <span class="lbl">Start options</span>
   <label class="tb" title="--hdmi on: the HDMI port modelled (E143, E146, E147); the Card, HDMI and session options panel then plugs a sink in (S-HDMISINK); an unplug is refused (A-HDMI-1)"><input type="checkbox" id="opt-hdmi"> HDMI port</label>
-  <label class="tb" title="the lens on the mount natively (E143): the lens tasks and drivers against S-LENSMCU as the 12-40mm F2.8 PRO, in place of S-LENS. A touch on the shooting screen then leaves the camera application answering no key (docs/hle-gaps.md 4.4.2)"><input type="checkbox" id="opt-lens"> Native lens</label>
+  <label class="tb" title="the lens on the mount natively (E143): the lens tasks and drivers against S-LENSMCU as the 12-40mm F2.8 PRO, in place of S-LENS (docs/hle-gaps.md 4.4.2)"><input type="checkbox" id="opt-lens"> Native lens</label>
   <label class="tb" title="S-NVRAM: the camera's settings and clock kept in this browser (OPFS) between sessions, in place of S-SETSAVE: a camera whose clock was set starts without the date prompt"><input type="checkbox" id="opt-nvram"> Keep the settings</label>
   <button class="tb" id="nvclear">Forget the kept settings</button>
   <label class="tb" title="S-SDCARD's capacity (card_size, in GiB): the card the session starts with, in memory while this player runs. Above 32 GiB an SDXC card, which E143's firmware formats exFAT (docs/hle-gaps.md 4.8.6); the Card panel reads it with refs/exfat.mjs">Card <select id="opt-card" aria-label="card size">
     <option value="">8 GiB SDHC</option><option value="64">64 GiB SDXC</option><option value="128">128 GiB SDXC</option></select></label>
-  <span class="note" id="optnote">Fixed for the session once it starts. The native lens: a touch on the shooting screen then stops the camera application's keys (open).</span>
+  <span class="note" id="optnote">Fixed for the session once it starts.</span>
 </div>
 
 <div class="cam" id="cam">
@@ -674,7 +674,7 @@ async function loadSession() {
 function sessionText(d, s) {
   const used = new Set(s.stand_ins || []);
   const lens = d.lens !== 'native' ? 'the lens stood in (S-LENS)'
-    : used.has('S-LENSMCU') ? 'the lens natively (S-LENSMCU answers as the 12-40mm F2.8 PRO); a touch on the shooting screen then leaves the camera application answering no key (docs/hle-gaps.md 4.4.2)'
+    : used.has('S-LENSMCU') ? 'the lens natively (S-LENSMCU answers as the 12-40mm F2.8 PRO; docs/hle-gaps.md 4.4.2)'
     : 'the native lens asked for, but S-LENS stands in (this body has no native lens in the lab, src/fw/models.mjs lens_native, or no session runs)';
   const nv = !d.nvram ? 'the settings not kept (S-SETSAVE: every start is a blank camera at the date prompt)'
     : `the settings and the clock kept in ${d.nvram} (S-NVRAM${used.has('S-NVRAM') ? '' : ', not in use yet'}: a camera whose clock was set starts without the date prompt)`;

@@ -587,6 +587,12 @@ export class PlayLab extends N.NavLab {
     this.cafwd.push({ step: this.step_tag, event: ev, param: params[0], params, caller: h8(disasm(r.mdr)) });
     try { hle.finish(r, { d0: 0 }); } catch (e) { if (!(e instanceof FirmwareError)) throw e; hle.finish_calls(r, { d0: 0 }); }
   }
+  // The GUI's touch answer to the camera application, natively (a session whose application forwards the touches
+  // itself, PlaySession.app_touch): recorded as S-CAFWD records it, and passed on
+  _obs_cafwd(lab, r) {
+    const [ev, ...params] = unpack('<5I', this.sim.read(r.a1, 20));
+    if (ev === CA_TOUCH_EVENT) this.cafwd.push({ step: this.step_tag, event: ev, param: params[0], params, caller: h8(disasm(r.mdr)) });
+  }
   // S-TPSEND: a synchronous send to the touch task's queue from a display run runs the touch task's loop for that
   // message on a lab stack, as a DISPLAY send runs the DISPLAY loop: its wait on its flag returns the queue's bit, its
   // receive gets the message with word 0, the reply queue, at 0, so it replies to no one and waits again, which ends
@@ -818,10 +824,20 @@ export class PlaySession extends N.NavSession {
     // the lens on the mount natively (lens.mjs), opt-in (env.lens 'native', node's OM_EMU_LENS=native), on a body that
     // gives it (models.mjs lens_native) and runs the card's file system, whose NAND access the lens data cache shares
     // (S-LENSNAND); its lock pin switch released in the idle image before the groups are pushed. Elsewhere, and by
-    // default, S-LENS (camapp.mjs): with the native lens a touch on the shooting screen leaves the camera application
-    // answering no key, a wait the lab does not answer (docs/hle-gaps.md 4.4.2)
+    // default, S-LENS (camapp.mjs)
     this.lens = MODEL_INFO.lens_native && this.lens_native() && this.storage_runs() ? new NativeLens(this, MODEL_INFO.lens_native) : null;
     if (this.lens) this.lens.lock(this.images);
+    // Whether the camera application forwards the touches to the GUI itself (docs/hle-gaps.md 4.4.2, D unless
+    // tagged): its event task (entry 0x5108ba1b, task 165 in the lab) takes the touch events 0x03000072..78 and posts
+    // each to the GUI as index 109 with its kind (0x5108ba30), then waits for the GUI's answer 0x0400001f, the GUI's
+    // forward of event 35 through the CA caller (0x51084994); it skips this while its touch inhibit mask (0x603660b4,
+    // 0x5104d642) is not 0. The mask's bit 20 is set while the application's condition 30 is false (the mask table
+    // 0x612c4714), which follows the lens's attach: false with S-LENS (its record and flags do not turn it on) and
+    // with the native lens detached by LLPSW, true with the native lens attached (X). Where the application forwards,
+    // S-TOUCHMAP and S-CAFWD do not apply: a lab post besides the application's would be a second touch, and
+    // S-CAFWD's answer of 0 kept the GUI's answer from the waiting task, which then forwarded no key (the stop of the
+    // native lens until 2026-10-29)
+    this.app_touch = this.lens !== null;
   }
   storage_runs() { return !!STORAGE && !globalThis.process?.env?.OM_NO_STORAGE; }
   lens_native() { return (this.env.lens ?? globalThis.process?.env?.OM_EMU_LENS) === 'native'; }
@@ -1088,7 +1104,8 @@ export class PlaySession extends N.NavSession {
     lab.hooks.set(runtime(D.TP_I2C_READ), [(h, r) => lab._s_tpreg(h, r), 'S-TPREG']);
     lab.observe(HFW_CALLBACK, (l, r) => lab._hfw(l, r), 'obs-hfw-touch');
     for (const [addr, [, st]] of HFW_STATUS) lab.observe(addr, lab._hfw_status(st), `obs-hfw-${st}`);
-    if ((this.opts.touch ?? 'gui') === 'gui' && this.opts.mutant !== 'no-cafwd') lab.hook(CA_CALL, (h, r) => lab._s_cafwd(h, r), 'S-CAFWD');
+    if (this.app_touch) lab.observe(CA_CALL, (l, r) => lab._obs_cafwd(l, r), 'obs-cafwd');
+    else if ((this.opts.touch ?? 'gui') === 'gui' && this.opts.mutant !== 'no-cafwd') lab.hook(CA_CALL, (h, r) => lab._s_cafwd(h, r), 'S-CAFWD');
     lab.step('H-TPINIT touch init 0x501e3dca (boot call from 0x50024ca6) from the lab task', () => lab.call(TOUCH_INIT, null, null, null, 20000));
     const tid = unpack('<h', lab.sim.read(TOUCH_TASK_ID, 2))[0];
     lab.lt.allow.add(TOUCH_TASK);
@@ -1609,7 +1626,8 @@ export class PlaySession extends N.NavSession {
     return { gestures: lab.gestures.slice(g0), tp_status: lab.tp_status.slice(s0).map(([, st]) => st), touch_posted: posted,
       cafwd: lab.cafwd.filter((c) => c.step === lab.step_tag), tp_image: bytesHex(lab.tp_image), tp_reads: lab.tp_reads.slice(r0) };
   }
-  // S-TOUCHMAP: post index 109 for every HFW status not yet posted; returns the posts.
+  // S-TOUCHMAP: post index 109 for every HFW status not yet posted; returns the posts (none where the application
+  // forwards the touches itself, app_touch).
   touch_to_gui() {
     const lab = this.lab;
     const posted = [];
@@ -1618,7 +1636,7 @@ export class PlaySession extends N.NavSession {
       const gs = lab.status_gesture.get(this.touch_mapped) ?? null;
       this.touch_mapped += 1;
       const km = TOUCHMAP.get(st);
-      if ((this.opts.touch ?? 'gui') !== 'gui' || !km || gs === null) continue;
+      if ((this.opts.touch ?? 'gui') !== 'gui' || this.app_touch || !km || gs === null) continue;
       this.post_touch(km[0], gs.x, gs.y);
       posted.push({ status: st, kind: km[0], name: km[1], x: gs.x, y: gs.y });
     }

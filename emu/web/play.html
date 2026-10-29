@@ -642,7 +642,7 @@ async function loadSession() {
 function sessionText(d, s) {
   const used = new Set(s.stand_ins || []);
   const lens = d.lens !== 'native' ? 'the lens stood in (S-LENS)'
-    : used.has('S-LENSMCU') ? 'the lens natively (S-LENSMCU answers as the 12-40mm F2.8 PRO); a touch on the shooting screen then leaves the camera application answering no key (docs/hle-gaps.md 4.4.2)'
+    : used.has('S-LENSMCU') ? 'the lens natively (S-LENSMCU answers as the 12-40mm F2.8 PRO; docs/hle-gaps.md 4.4.2)'
     : 'the native lens asked for, but S-LENS stands in (this body has no native lens in the lab, src/fw/models.mjs lens_native, or no session runs)';
   const nv = !d.nvram ? 'the settings not kept (S-SETSAVE: every start is a blank camera at the date prompt)'
     : `the settings and the clock kept in ${d.nvram} (S-NVRAM${used.has('S-NVRAM') ? '' : ', not in use yet'}: a camera whose clock was set starts without the date prompt)`;

@@ -803,7 +803,7 @@ export class CamApp {
   // reach the application's queue together, as the modules' notifications would while it runs. E145's application
   // defers the GUI's event 19 while its release runs, its state table answering it by posting it to itself again,
   // until END_SHOOTING_PICTURE ends the state; posted only after END_EXPOSE's settle, that callback never came and
-  // the deferral spun (docs/model-survey.md finding 20)
+  // the deferral spun (docs/model-survey.md finding 22)
   post_all(list) {
     const s = this.s, lab = s.lab;
     for (const [name, param] of list) {

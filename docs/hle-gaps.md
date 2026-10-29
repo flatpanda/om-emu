@@ -1393,9 +1393,11 @@ its code:
   (its banks are E143's), so an E144-family picture's file holds a black frame. Not native: E134 (on a native card
   S-RECFILE's first fopen never completes: FILECLBK blocks in a write with no timeout to UI_IN's request queue,
   `0x6004192e`, at `0x5010c35f`, which nothing reads in the lab, 53 writes in 10 s; E143's and E144's fopen make no
-  such write; why E134's does is ?), E145, E129 and E132 (their starts stop before the application, ROADMAP),
+  such write; why E134's does is ?), E129 and E132 (their starts stop before the application, ROADMAP),
   the E118 family (not loaded; no SD command layer of the rule's form). They keep S-CARD. E133's card is native since
-  its start runs (2026-10-29: 2018 shots on the blank card, S2's file read back, X).
+  its start runs (2026-10-29: 2018 shots on the blank card, S2's file read back, X), and E145's (TG-7) since its start
+  runs to the shooting screen (2026-10-29, `docs/model-survey.md` finding 22: the blank card formatted `OM SYSTEM`,
+  mounted, 1362 shots and `0:37:22` from the 8 GiB card, S2's file read back; X: `bin/modelcheck.mjs`, frames).
 - **The movie time (goal 2, X: frames):** the E142 lineage's orange `0:00:00` is gone: E142 and E140 show `0:10:45`,
   E130 `0:37:22`, from the card (E142's DCF remain movie time `0x505fd798`, which returned 0 on S-CARD's card).
   The E144 family's (E144, E139, E137, E125) stays orange `0:00:00` beside the card's count: E144's DCF remain movie

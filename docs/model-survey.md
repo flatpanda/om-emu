@@ -49,7 +49,7 @@ through a reference place more; "Per-body status" has their figures).
 | E142 | E-P7 | 1100 | 25.0 | 0x60020020 (7.2%) | plain | 1.47M | 74 | through E144: modelcheck passes (no EVF; the callback ids, finding 12; the shots query and the count probe, findings 15 and 16) |
 | E140 | E-M10 IV | 1100 | 25.0 | 0x60020020 (7.2%) | plain | 1.44M | 77 | through E142: modelcheck passes (TFT and EVF; format 9 and the lens record, finding 13; findings 15 and 16) |
 | E125 | E-M1 II | 3700 | 22.0 | 0x60021020 (7.1%) | plain | 1.29M | 71 | through E134: modelcheck passes (TFT and EVF; the count probe since finding 18) |
-| E145 | TG-7 | 1103 | 19.5 | 0x60021020 (7.5%) | plain | 1.10M | 81 | through E142: the start ends in its date and time setting (`0x1103`, finding 17); after MENU (the screen's Cancel) S1 stops at S-AFOSD, its frame plane having no AF upload of that shape |
+| E145 | TG-7 | 1103 | 19.5 | 0x60021020 (7.5%) | plain | 1.10M | 81 | through E142: modelcheck passes (TFT, the card native, the count probe; MENU answers its date and time setting at the start, finding 22) |
 | E133 | E-PL9 | 1101 | 25.0 | 0x60400020 (7.2%) | plain | 1.04M | 83 | through E142: modelcheck passes (TFT, no EVF; the count probe and its card native) since UI_IN's boot key is the power switch's (finding 20); before, its start went to the battery insertion's boot service, which creates no GUI |
 | E130 | E-M10 III | 1200 | 25.0 | 0x60400020 (6.9%) | plain | 1.02M | 82 | through E142: modelcheck passes (TFT and EVF; findings 11, 14 and 16) |
 | E129 | TG-5 | 1101 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: kernel, display start, settings store (since S-BOOTSTAGE, finding 20) and the camera application's start, which waits for the internal charger's transfer on serial channel 9 as E132's: `all tasks blocked (lab task 153 state WAI)` |
@@ -289,6 +289,56 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    request's send. The board now has the triggers (src/dev/dpc.mjs) and H-DPCINIT runs the init at every play
    bring-up (E143's too); a post before the bring-up would be refused, and none of the eleven checked bodies' sessions
    makes one (X).
+22. **E145 through modelcheck's path** (2026-10-29). Four stops, each read and fixed where it lies; E145 is in
+   `bin/modelcheck.mjs`'s default set (`MODELS` `checked`) with its card native.
+   - *The date prompt.* The start ends in `0x1103`, the TG-7's date and time setting on the unset clock (finding
+     17); MENU (the screen's Cancel) and S1 both leave it, for `0x108` and the clock warning, which S1 clears to the
+     shooting screen as on the other bodies (X: frames). modelcheck takes MENU after the start for E145 (its
+     `START_PROMPT`, strict: a start that ends elsewhere fails). A set clock was the other way: it would drop the
+     prompt by putting a state in the camera that only a user's clock setting gives (S-NVRAM does that, opt-in), and
+     on E143 it would drop the start's date prompt from every golden session; the prompt and its cancel are the
+     firmware's own path on a camera whose clock was never set, so MENU it is.
+   - *The AF upload.* On the clamp form of the frame plane (the E144 family) each upload after the mode set opens by
+     reading the mode byte and comparing it with its mode: 1 (the place of E143's UP_FACE), 2 (five halfwords, the
+     place of E143's UP_LOCKON `0x50025764`, whose four callers' places it shares) and 3 (the AF upload, a count and
+     8-byte frames, E143's UP_AF `0x500257ce`) (D, `src/fw/facts.mjs` framePlane). E145 has modes 1 (`0x500226e9`) and
+     2 (`0x5002272c`) and no mode 3 (D); its TAKE module does ask the set for mode 3 (`mov 3,d0` at `0x5026da0d`, D)
+     and CPU 3's DISP_FRAME reads the mode-3 count and frames (`0xa213a860`, `0xa213a498`, at `0x50ae07ae` and
+     `0x50ae07da`, D), but no code of the image stores to either address in either DRAM view (X, a byte scan); its AF
+     is TAKE_FOCUS's (`take_focus_get_af_frame_rect`), with no FCS layer and no `osd:upload_af_info()` (X, a string
+     scan). So S-AFOSD gives E145 no upload (fact `frame_plane`, its mode-3 upload null) and logs that; the TG-5s
+     (E129, E132) have no mode 3 either. The rule's mode-3 upload is the port's place of UP_AF on all eleven clamp-form
+     bodies (E144, E139, E134, E137, E142, E140, E125, E133, E130; E130's had been a hand override, now retired), and
+     its mode 1 is the place of UP_FACE wherever that is placed (X: `test_facts` PLANE_FOUND, the port). The shooting
+     screen shows the GUI's own AF target brackets (X: frames).
+   - *The capture display's bitmaps.* S2's display draws two GUI bitmaps of OSD format 1 from DRAM (32 x 56, 32 x 32),
+     which the engine model refused (BMP_FORMAT). Read as 4-bit tokens, low nibble first, a 2-bit colour over a
+     2-bit run, both decode to exactly width x lines, ending at the descriptor that follows each, with no run across
+     a row end (X; high nibble first, 12 runs cross one); `src/dev/engine.mjs` decodes format 1 so. The resource
+     blocks hold 303 places on E145 and 344 on E142 that decode so (X, a noisy byte scan: a format no bitmap has finds
+     27).
+   - *The application's deferral.* S2 then stopped in END_EXPOSE's settle (more than 400,000 stub calls; with more,
+     the instruction limit): the GUI posts event 19 to the application (PostEventToCA `0x50debc86` from
+     `0x50d939ad`, param 1), whose code `0x4000013` the state in force during the release answers by posting it to
+     itself again (state table rows `0x50eae6c0` and `0x50eb1c60`: `0x4000013`, stay, action `0x50c06881`, which
+     sets the state's next event to `0x4000013`, posted by the main loop at `0x50bf862f`, D), about 5,000 times in
+     the settle (X). The state ends with END_SHOOTING_PICTURE (X: posted with END_EXPOSE, the loop ends at once).
+     S-RELSEQ posted each callback and settled before the next, though END_EXPOSE and END_SHOOTING_PICTURE fall at
+     the same lab time; it now posts the callbacks due at one lab time together and settles once
+     (`src/lab/camapp.mjs` post_all), so the deferred event waits behind END_SHOOTING_PICTURE as it would on the
+     camera, where the modules' notifications arrive while the application spins. On E143 this moves golden's `keys`
+     session only: its steps after S2 come 83.4 ms of lab time (5 TFT frames) earlier, the composes unchanged but
+     for their frame number and time (X; re-recorded).
+   With these: start `0x1103`, MENU `0x108`, S1, S2 (one image), PLAY `0x608` SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE, INFO
+   `0x60b` ID_ST_DISP_DETAIL, PLAY back to `0x108`; the count probe finds the count at 1289,447-1420,473; the blank
+   8 GiB card formatted `OM SYSTEM`, 1362 shots and `0:37:22` from it, S2's file read back (X: modelcheck, frames).
+   **Why the TFT area is 1440 wide.** The TG-7's video area is 1440 x 480 at (44, 21), and its three OSD planes are
+   720-wide GUI canvases (stride 896) that the OSD resizer doubles horizontally (step `0x800`, half a source pixel
+   per sample; X: the TFT channel's registers in a session). Its through-image size table holds E142's TFT rows
+   with every width doubled (E142 `0x501c5fb0`: 640 x 480, 720 x 480, 720 x 404, ...; E145 `0x501e2bc8`: 1280 x 480,
+   1440 x 480, 1440 x 404, ...; the EVF rows the same, D). So the display path runs at two samples per panel pixel
+   and the frames' 1440 samples per line carry 720 pixels: they look stretched twice horizontally, and halving them
+   gives the panel's picture (I). Why the panel takes two samples per pixel is not read (?).
 
 ## Per-body status
 
@@ -456,7 +506,10 @@ start ends in `0x1103`, the state the event-0 trial above reached, and S1 still 
 (X; that it no longer takes OLY_USB_CONNECTED is I, its events were not traced again); S-NOPOWEROFF is retired (its
 post is not reached, X). Its frame plane has no function of the AF upload's shape (finding 14), so S-AFOSD has nothing
 to call on it; what the TG-7 uploads its AF frame through is not read. `0x1103` is its date and time setting, which
-MENU cancels to `0x108` (finding 17, X); S1 then stops at S-AFOSD.
+MENU cancels to `0x108` (finding 17, X); S1 then stopped at S-AFOSD. Since 2026-10-29 (finding 22) S-AFOSD gives it no
+upload (its frame plane has no mode 3, and nothing writes the mode-3 frames, D / X), S2's OSD format 1 is decoded and
+S-RELSEQ posts same-time callbacks together, and `bin/modelcheck.mjs` passes on the TFT (MENU after the start), the
+card's file system native and the count probe included (X).
 
 **E130 (E-M10 III).** Ported through E142 (the map from E142 pairs 2.11M instructions against 1.02M from E143; through
 E142 118 overrides carry and 14 fail; through E145 the start stops earlier, at the settings store's unplaced init, X)
@@ -568,8 +621,8 @@ take about 1.1 s per body. Under heavy load the full re-port after E144's inter-
 ## Not covered
 
 The new OM System PEN (expected as E148) is not on the update server. Lens and accessory firmware are out of scope.
-Besides E143, E146 and E147, eight bodies pass the player with a picture (the shooting screen in their frame, S1 taken,
-the player settled running): E144, E139, E134, E137, E142, E140, E125 and E130. E133 passes modelcheck since 2026-10-29. E145 reaches its POWER_ON state with a
-one-colour frame after the whole start natively (kernel, display start, settings store, camera application, GUI); E129
+Besides E143, E146 and E147, nine bodies pass the player with a picture (the shooting screen in their frame, S1 taken,
+the player settled running): E144, E139, E134, E137, E142, E140, E125, E130 and, after MENU at its date and time
+setting, E145 (finding 22). E133 passes modelcheck since 2026-10-29. E129
 and E132 run to the camera application's start, where the internal charger's transfer waits; the E118 family runs no firmware code
 in the lab yet, so nothing above says how far it boots. The next steps are in `ROADMAP.md` "Multi-model".

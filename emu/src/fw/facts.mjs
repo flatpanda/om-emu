@@ -2178,6 +2178,52 @@ function frameModeSet(img, request) {
   return (0x50000000 + c.to) >>> 0;
 }
 
+// The frame plane's uploads on the clamp form (fact 'frame_plane', and through bin/port.mjs the place of E143's
+// AF_UPLOAD_E143, src/lab/camapp.mjs S-AFOSD), read after the frame display mode set (the TAKE clamp's, frameModeSet,
+// else the port's place of E143's). The set compares the requested number with 1, 2 and 3 (`cmp k,d3`, E142
+// 0x50025c1b..0x50025c45, E145 0x50022663..0x5002268d, D) and keeps it in the mode byte (E142 0xa26a367c, E145
+// 0xa213a48c); each upload that follows it opens, after a return and at most two register moves, with `movbu
+// (mode),Dn` and acts only while the byte is k, the first `cmp k,Dn` within TEST_SPAN bytes (after a trace call on
+// E142, `mov k,d0; mov Dn,d1; call`; at once on E134; E142 mode 1 0x50025ca1, mode 2 0x50025ce4, mode 3 0x50025d21;
+// E145 mode 1 0x500226e9, mode 2 0x5002272c; D). Mode 1 posts the plane's flag 16 and carries nothing (the place of E143's
+// UP_FACE, 0x50025747), mode 2 copies five halfwords (E143's UP_LOCKON 0x50025764 has that copy and the same four
+// callers' places, take_mov, the through-image helpers and the TAKE piece: E145 0x5027453c, 0x502749da, 0x50311913,
+// 0x504e256c, D) and mode 3 is the AF upload (a frame count and frames of 8 bytes, the place of E143's UP_AF
+// 0x500257ce; E130's 0x50022dd8, called only by its AF module's 0x50605bc1 with `mov 3,d0`, its body E142's without
+// the opening trace call 0x50025e99, D). E145 (the TG-7) has modes 1 and 2 only: its set takes 3 (`mov 3,d0` at
+// 0x5026da0d in its TAKE module) and CPU 3's DISP_FRAME reads the mode-3 count and frames (0xa213a860, 0xa213a498 at
+// 0x50ae07ae, 0x50ae07da, D), but no code stores to either in either DRAM view (X, a byte scan of the image for the
+// addresses), and its AF is TAKE_FOCUS's, with no FCS layer and no "osd:upload_af_info()" (X, a string scan). The
+// mask form (the E143 family's set, a bit per request) is not read. Returns {mode, uploads: [mode 1, mode 2, mode 3]}
+// (null for a mode with no upload), or undefined where set is not the clamp form; throws where a mode has two uploads.
+export const AF_UPLOAD_E143 = 0x500257CE;
+const PLANE_SPAN = 0x200, CLAMP_SPAN = 0x60, TEST_SPAN = 0x18, PLANE_PREFIX = new Set([0x86, 0x92]);   // mov d1,d2; mov a0,a2
+// `movbu (abs32),Dn` (fc a8..ab) at o: n, else -1; `cmp imm8,Dn` (a0, a5, aa, af) at o: [n, imm8], else null
+const byteLoad = (img, o) => (img[o] === 0xfc && (img[o + 1] & 0xfc) === 0xa8 ? img[o + 1] & 3 : -1);
+const cmpImm = (img, o) => (img[o] >= 0xa0 && img[o] <= 0xaf && (img[o] - 0xa0) % 5 === 0 ? [(img[o] - 0xa0) / 5, img[o + 1]] : null);
+function framePlane(img, set) {
+  const p = set - 0x50000000;
+  let mi = p;
+  while (mi < p + CLAMP_SPAN && byteLoad(img, mi) < 0) mi++;
+  const ks = new Set();
+  for (let o = p; o < p + CLAMP_SPAN; o++) { const c = cmpImm(img, o); if (c) ks.add(c[1]); }
+  if (mi === p + CLAMP_SPAN || ![1, 2, 3].every((k) => ks.has(k))) return undefined;
+  const mode = u32(img, mi + 2), uploads = [null, null, null];
+  for (let o = p; o < p + PLANE_SPAN; o++) {
+    const n = byteLoad(img, o);
+    if (n < 0 || u32(img, o + 2) !== mode) continue;
+    let e = o;
+    while (e > o - 2 && PLANE_PREFIX.has(img[e - 1]) && !isRet(img, e - 3)) e--;
+    if (!isRet(img, e - 3)) continue;
+    let k = null;
+    for (let q = o + 6; q < o + TEST_SPAN && k === null; q++) { const c = cmpImm(img, q); if (c && c[0] === n) k = c[1]; }
+    if (k === null || k < 1 || k > FRAME_MODE_MAX) continue;
+    if (uploads[k - 1] !== null) throw new Error(`framePlane: two mode-${k} uploads after ${h8(set)}: ${h8(uploads[k - 1])}, ${h8(0x50000000 + e)}`);
+    uploads[k - 1] = (0x50000000 + e) >>> 0;
+  }
+  return { mode, uploads };
+}
+
 // The id of the output-device property (fact 'prop.device', src/lab/display.mjs DisplayLab prop_device, S-PROP), the
 // immediate of the `mov imm16,d0` just before each property read whose return the lab answers
 // (PROP_DEVICE_SITES_E143, the GUI's and the application's; E143 4513 at 0x503eff59 and 0x50b76db4, D). E125 and E145
@@ -2203,16 +2249,17 @@ function propDevice(img, sites) {
 // {text: {lang_setting}}, {ae: {init, regions, table, rows (the row form's only)}}, {frame_period: {tft, evf}}, {rtos:
 // {init_task, ta_wu, tsnd_sites}}, {store: {db_save, app_saves}}, {hw_timer: {ptr} or {table}}, {crt: {clock_read}},
 // {touch_args: {write_len, read_len}}, {dial: {select, select_end, table_ptr, table0}}, {ui_in: {task}}, {touch_start:
-// {init, id_word}}, {frame_mode: {set}} and {prop: {device}} (no app, play, text or frame_period part where
-// MODULE_STATE_GET, the component getter, the language loader or both vtotal functions are not placed, no ae part where
-// AE_INTERP is not and aeRows finds no run; no sends where OlyQeWr is not, no loop or start where CPU 0's kcb or
-// OlyQeRd is not, no dispq part without either; no init_task or ta_wu where CPU 0's kcb or wup_tsk is not, no
+// {init, id_word}}, {frame_mode: {set}}, {frame_plane: {mode, uploads}} and {prop: {device}} (no app, play, text or
+// frame_period part where MODULE_STATE_GET, the component getter, the language loader or both vtotal functions are
+// not placed, no ae part where AE_INTERP is not and aeRows finds no run; no sends where OlyQeWr is not, no loop or
+// start where CPU 0's kcb or OlyQeRd is not, no dispq part without either; no init_task or ta_wu where CPU 0's kcb or wup_tsk is not, no
 // tsnd_sites where tsnd_dtq is not; no store part where the flash save is not, no db_save where the DB init is not; no
 // hw_timer part where the hardware-timer init is not, no crt part where the clock read's call is not; no touch_args
 // part where touchArgs reads neither length; no dial part where the dial table pointer is not or dialStore reads none,
 // as where readFacts' dialSelect reads the select; no touch_start part where CPU 0's kcb, the touch task or OlyTaSt is
 // not or touchStart finds no start; no ui_in part where CPU 0's kcb or UI_IN's flag word is not; no frame_mode part
-// where the TAKE frame-mode request is not placed or is not a clamp; no prop part where a property read site is not).
+// where the TAKE frame-mode request is not placed or is not a clamp; no frame_plane part where neither it nor the port
+// places the frame display mode set, or the set is not the clamp form; no prop part where a property read site is not).
 // Throws where both AE forms are found.
 export function readPlacedFacts({ img, at }) {
   const facts = {}, getter = at(MODULE_STATE_GET), loader = at(LANG_LOADER), interp = at(AE_INTERP), component = at(COMPONENT_GETTER_E143);
@@ -2253,6 +2300,8 @@ export function readPlacedFacts({ img, at }) {
   if (tpTask !== null && evWt !== null && qerd !== null) facts.touch_task = touchQueue(img, tpTask, evWt, qerd);
   const modeSet = takeFrame !== null ? frameModeSet(img, takeFrame) : undefined;
   if (modeSet !== undefined) facts.frame_mode = { set: modeSet };
+  const planeSet = modeSet ?? at(FRAME_MODE_SET_E143), plane = planeSet !== null ? framePlane(img, planeSet) : undefined;
+  if (plane !== undefined) facts.frame_plane = plane;
   if (!propSites.includes(null)) facts.prop = { device: propDevice(img, propSites) };
   const focalNow = at(LENS_FOCAL_NOW_E143), zoomTable = focalNow !== null ? lensZoomTable(img, focalNow) : undefined;
   const lensRecord = at(LENS_RECORD_E143);
@@ -2370,7 +2419,8 @@ export function rulePlaces(facts) {
 // pointer at the word the hardware-timer init keeps it in, unplaced where the init indexes a fixed table (hwTimer,
 // 'timer-init'); the C-runtime clock read at the target of the call at the place of E143's
 // (crtClockRead, 'call-target'); the frame display mode set at the one the TAKE request's clamp calls (frameModeSet,
-// 'take-clamp').
+// 'take-clamp'); the AF upload at the frame plane's mode-3 upload, unplaced where the plane has none (framePlane,
+// 'plane-mode').
 export function placedRulePlaces(facts, e143, place) {
   const out = new Map();
   if (facts.store?.db_save !== undefined) out.set(DB_SAVE_RETURN_E143, { to: facts.store.db_save, how: 'db-save' });
@@ -2388,6 +2438,7 @@ export function placedRulePlaces(facts, e143, place) {
   if (facts.hw_timer) out.set(HW_TIMER_PTR_E143, { to: facts.hw_timer.ptr ?? null, how: 'timer-init' });
   if (facts.crt) out.set(K_CRT_134D_E143, { to: facts.crt.clock_read, how: 'call-target' });
   if (facts.frame_mode) out.set(FRAME_MODE_SET_E143, { to: facts.frame_mode.set, how: 'take-clamp' });
+  if (facts.frame_plane) out.set(AF_UPLOAD_E143, { to: facts.frame_plane.uploads[2], how: 'plane-mode' });
   if (facts.play) {
     const here = facts.play.wrappers, pairs = new Map();
     for (const w of componentWrappers(e143, COMPONENT_GETTER_E143)) {

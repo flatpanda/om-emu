@@ -26,7 +26,8 @@
 //               and kind-3 area against GUI_FOUND, the rec view component's state word against RECVIEW_FOUND, CPU 0's
 //               init task and OlyTaWu against RTOS_FOUND and A(), the DB init's and the application's flash saves
 //               against STORE_FOUND, APP_SAVES_FOUND and APP_SAVES_COUNT, the touch I2C length arguments against
-//               TOUCH_ARGS_FOUND, the frame display mode set against FRAME_MODE_FOUND and A(), the output-device
+//               TOUCH_ARGS_FOUND, the frame display mode set against FRAME_MODE_FOUND and A(), the frame plane's
+//               uploads against PLANE_FOUND and A() of the AF upload, the output-device
 //               property against PROP_DEVICE_FOUND, and the loader's slots and image-record destinations against A()
 //               (src/fw/ports.mjs PORTS); imageView's reads and its refusal outside the image
 //   node emu/test/test_facts.mjs
@@ -292,6 +293,15 @@ const CRT_FOUND = { E143: 0x3FFE134D, E144: 0x36FDFCA1, E125: 0x36FDFD0B };
 // E143, whose request maps bits to a mask (D: 0x5039f583..0x5039f622), E144's hand override's (D: the call at
 // 0x5028dd90), E125's (D: the call at 0x5029ae3b, after the clamp to 0..3)
 const FRAME_MODE_FOUND = { E143: undefined, E144: 0x500257D4, E125: 0x50021E55 };
+// The frame plane's uploads on the clamp form (frame_plane; src/fw/facts.mjs framePlane): none read on E143 (the mask
+// form); E142's mode byte and its three uploads, E130's AF upload as its hand override gave it before the rule, E145's
+// two uploads and no third (D: E142 0x50025ca1, 0x50025ce4, 0x50025d21; E130 0x50022dd8; E145 0x500226e9, 0x5002272c
+// and the plane's end after them, 0x50022769 posting flag 256)
+const PLANE_FOUND = {
+  E143: undefined, E142: { mode: 0xA26A367C, uploads: [0x50025CA1, 0x50025CE4, 0x50025D21] },
+  E130: { mode: 0xA2AB74C0, uploads: [0x50022D69, 0x50022DA4, 0x50022DD8] },
+  E145: { mode: 0xA213A48C, uploads: [0x500226E9, 0x5002272C, null] },
+};
 // The output-device property's id (prop.device; src/fw/facts.mjs propDevice), the `mov imm16,d0` before the reads
 // S-PROP answers (D: E143 0x503eff59, E134 0x502ebabc, E125 0x502dc5fb, E145 0x502af089)
 const PROP_DEVICE_FOUND = { E143: 4513, E134: 4513, E125: 4013, E145: 4013 };
@@ -661,6 +671,12 @@ export function factsTests() {
       const fm = FRAME_MODE_FOUND[code];
       ok(placed?.frame_mode?.set === fm, `${code}: frame_mode ${hx(placed?.frame_mode ?? placed)}, found ${hx(fm)}`);
       if (PORTS[code]) ok(PORTS[code][0x500256D9] === fm, `${code}: A() of the frame display mode set ${hx(PORTS[code][0x500256D9])}, the rule's ${hx(fm)}`);
+    }
+    // the frame plane's uploads, and the port's A() of E143's AF upload at the mode-3 one (null: unplaced)
+    if (Object.hasOwn(PLANE_FOUND, code) && (code === 'E143' || PORTS[code])) {
+      const fp = PLANE_FOUND[code];
+      ok(same(placed?.frame_plane, fp), `${code}: frame_plane ${hx(placed?.frame_plane ?? placed)}, found ${hx(fp)}`);
+      if (PORTS[code]) ok(PORTS[code][0x500257CE] === fp.uploads[2], `${code}: A() of the AF upload ${hx(PORTS[code][0x500257CE])}, the rule's ${hx(fp.uploads[2])}`);
     }
     const pd = PROP_DEVICE_FOUND[code];
     if (pd && (code === 'E143' || PORTS[code])) ok(placed?.prop?.device === pd, `${code}: prop.device ${hx(placed?.prop ?? placed)}, found ${pd}`);

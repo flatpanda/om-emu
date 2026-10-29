@@ -110,15 +110,15 @@ Each note was checked against the cited code. Paths are relative to the reposito
 
 **Confidence:** high
 
-### 3.3 Page-crossing non-prefix instruction: wrong fault address and fault counted
+### 3.3 Page-crossing non-prefix instruction: wrong fault address and fault counted (fixed 2026-10-29)
 
-**Where:** `emu/src/core/cpu.mjs:158-166`, `emu/src/core/interp.mjs:261-272`, `emu/src/core/cpu.mjs:570-579`
+**Where:** `emu/src/core/cpu.mjs` step and limitFault, `emu/src/core/interp.mjs` decode
 
-**Emulator:** For non-prefix forms, the up-front code fetch in `step()`, `decode()` and `limitFault()` reads byte 0 and then bytes 2 onward. Byte 1 (pc+1) is not read until execution (for example `cv(next, …)`). Only the `refetch` path reads byte 1 in order (`cpu.mjs:161-162`). Suppose pc+1 is the first unmapped byte. For a 2-byte form the fault then happens during execution and is counted, as a fault of the instruction. For forms of 3 or more bytes the fetch fault reports pc+2 as the address, not pc+1.
+**Emulator:** Until 2026-10-29 the up-front code fetch of a non-prefix form in `step()`, `decode()` and `limitFault()` read byte 0 and then bytes 2 onward, leaving byte 1 to the execution. With pc+1 the first unmapped byte, a 2-byte form then faulted in its execution and was counted (with an exec-trace line in the one-instruction mode only), and a longer form reported pc+2 as the fault address. All three now read every byte once, in order, as the MMIO refetch path already did: the fault is the uncounted fetch fault 2 at the instruction's pc with the first byte that cannot be read as its address, before the insn limit's fault 7, in every mode (`emu/test/test_debug.mjs` traceRuleUnits fetchFault). No session of the golden workload meets the case.
 
-**Expected / concern:** Hardware sees the fault on the first byte it cannot fetch, so this case should give an uncounted fetch fault at pc+1.
+**Expected / concern:** None left of the note; the hardware sees the fault on the first byte it cannot fetch.
 
-**Confidence:** medium
+**Confidence:** high (the fix), as for the note before it
 
 ### 3.4 Lcc re-fetches the loop head from memory instead of using LIR
 

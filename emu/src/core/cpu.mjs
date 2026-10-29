@@ -164,14 +164,16 @@ export function step(refetch = false) {
   const pc = R[PC];
   let next = (pc + 1) | 0, target = 0, jump = false, addr, imm, value, mask;
   let op, p = 0;
-  try {   // code fetch (all bytes, as the translator does): fault 2, not counted
+  try {   // code fetch (all bytes, as the translator does): fault 2 at the first byte it cannot read, not counted
     op = cb(pc);
-    if (op >= 0xf0 && op <= 0xfe && op !== 0xf7) p = cb(pc + 1);
-    if (refetch) {            // the translator's reads: every byte once, in order (byte 1 of a non-prefix form too)
-      for (let i = p || (op >= 0xf0 && op <= 0xfe && op !== 0xf7) ? 2 : 1, ln = insnLength(op, p); i < ln; i++) cb(pc + i);
-      op = cb(pc);            // the helper's: op, the prefix byte, then its operands as it decodes
+    const pre = op >= 0xf0 && op <= 0xfe && op !== 0xf7;
+    if (pre) p = cb(pc + 1);
+    // the translator's reads: every byte once, in order (byte 1 of a non-prefix form too)
+    for (let i = pre ? 2 : 1, ln = insnLength(op, p); i < ln; i++) cb(pc + i);
+    if (refetch) {            // the helper's: op, the prefix byte, then its operands as it decodes
+      op = cb(pc);
       p = op >= 0xf0 && op <= 0xfe && op !== 0xf7 ? cb(pc + 1) : 0;
-    } else for (let i = 2, ln = insnLength(op, p); i < ln; i++) cb(pc + i);
+    }
   } catch (e) { if (e instanceof Fault) { R[FAULT] = e.code; e.done = true; } throw e; }   // code fetch: not counted
   if (XT !== null) XT(pc, op);
   if (CV !== null) CV(pc);
@@ -587,9 +589,9 @@ export function setRegs(r16) {
 export function limitFault() {
   const pc = R[PC];
   try {
-    const op = cb(pc);
-    const p = op >= 0xf0 && op <= 0xfe && op !== 0xf7 ? cb(pc + 1) : 0;
-    for (let i = 2, n = insnLength(op, p); i < n; i++) cb(pc + i);
+    const op = cb(pc), pre = op >= 0xf0 && op <= 0xfe && op !== 0xf7;
+    const p = pre ? cb(pc + 1) : 0;
+    for (let i = pre ? 2 : 1, n = insnLength(op, p); i < n; i++) cb(pc + i);
   } catch (e) { if (!(e instanceof Fault)) throw e; R[FAULT] = e.code; return e; }
   R[FAULT] = 7; S.insns++;
   return new Fault(7, pc);

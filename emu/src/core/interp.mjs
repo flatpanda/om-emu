@@ -260,9 +260,10 @@ function decode(pc, i) {
   let op, p = 0, len;
   try {
     op = cb(pc);
-    if (op >= 0xf0 && op <= 0xfe && op !== 0xf7) p = cb(pc + 1);
+    const pre = op >= 0xf0 && op <= 0xfe && op !== 0xf7;
+    if (pre) p = cb(pc + 1);
     len = insnLength(op, p);
-    for (let j = 2; j < len; j++) cb(pc + j);
+    for (let j = pre ? 2 : 1; j < len; j++) cb(pc + j);          // every byte, byte 1 of a non-prefix form too
   } catch (e) {
     if (e instanceof MmioFetch) { MMIO = true; return; }      // a byte on readable MMIO: no slot (run() runs it)
     if (e instanceof Fault) { R[FAULT] = e.code; e.done = true; }

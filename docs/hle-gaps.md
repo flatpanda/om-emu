@@ -1131,7 +1131,9 @@ subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a91
   at their seams. Round 3 (2026-10-25, 4.8.4): the seams read by a rule in every image that has them, and the card
   native on nine more bodies (E146, E147, E144, E139, E137, E142, E140, E125, E130). Round 4 (2026-10-28, run
   2026-10-29, 4.8.6): an SDXC card by its capacity and an independent exFAT reader; the firmware formats a blank 64
-  or 128 GiB card exFAT and mounts it (X).
+  or 128 GiB card exFAT and mounts it (X). Round 5 (2026-10-29, 4.8.6): the players and modelcheck read exFAT, the
+  browser player takes a card size, the menu's format and the card out and in on E143 with an SDXC card, and nine
+  more bodies with one (X).
 
 #### 4.8.1 The sdmem request contract (D unless tagged)
 
@@ -1486,10 +1488,57 @@ the firmware's code for a card above 32 GiB is not read (?).
   The units (`storageUnits`, in `test-pure`) build an exFAT volume by hand and read it back, with each checksum, the
   name hash, a looping chain and the bitmap's mismatches caught, and check the SDXC registers and the sparse 128 GiB
   card.
-- **Open:** the browser player's card size; `emu/bin/modelcheck.mjs` still reads its card
-  with `refs/fat.mjs` (its card is the default SDHC one; `refs/volume.mjs` would read either); the HLS side on an
-  SDXC card (Card Formatting from the menu, the card out and in: S-MDACTRL and S-MEDIA are unchanged and not tried
-  with it); exFAT on the other native bodies.
+- **Round 5 (2026-10-29; X unless tagged): the tooling, the HLS side and the other bodies.**
+  - The tooling: `emu/web/cardfiles.mjs` (both players' Card panel) and `emu/bin/modelcheck.mjs` read the card through
+    `emu/refs/volume.mjs`, so FAT and exFAT alike; the panel's free count is exFAT's allocation bitmap's (FAT32's
+    FSInfo as before), its slot record gives the card's kind and capacity, and `GET /api/session` the size asked for
+    (`card_size`, GiB or null). The browser player's start options take the size (`?card_size=GiB`, a Card menu of 8,
+    64 and 128 GiB, as node's `OM_EMU_CARD_SIZE`); `modelcheck.mjs --card-size GiB` puts a blank card of that size in
+    each native body's slot, and an exFAT volume must also pass `refs/exfat.mjs`'s consistency check. Checked by
+    `test_web` (an exFAT volume listed and read, one with a broken boot checksum refused, the session's and the slot's
+    fields) and webgate's page life cycle (the 64 GiB card picked with the menu in headless Chrome, its exFAT volume
+    listed, Take out and Put in).
+  - The HLS side on E143 with a 64 GiB card (`emu/test/test_storage.mjs` storageSdxc, the checks of the 8 GiB card's,
+    4.8.3): Card Formatting from the menu after a picture formats the card exFAT again with the layout the insertion's
+    format gave it (the partition at 32768, 128 KiB clusters, 523,008 of them, the root at cluster 4, the serial
+    `0x54210000` again), finished within 1.9 s of lab time (the 8 GiB card's 1.6 to 3.5 s); read back, the volume is
+    consistent and its backup boot region the main one's, the picture gone and the free count the fresh volume's; the
+    firmware's image count is 0 and its next file 1, and the application leaves Busy for the menu. The card out and
+    in: the drive unmounts and the screen loses the counts; back in, the firmware mounts the card again 876 ms after
+    the insertion (logsec's 740 ms wait, 4.8.3, then the mount), without a format (the boot sector unchanged), 6,456
+    remaining shots before and after. S-MDACTRL and S-MEDIA needed no change.
+  - The other bodies with a blank 64 GiB card (`modelcheck.mjs --no-port --card-size 64`, the TFT and the EVF; the
+    shots the query answers after S1, the card empty):
+
+  | Body | File system | Partition | Label | Remaining shots | The path |
+  |---|---|---|---|---|---|
+  | E146, E147 | exFAT, 128 KiB clusters | MBR, at 32768 | `OM SYSTEM` | 6,456 | ok on the TFT and the EVF, S2's file read back |
+  | E139, E137, E140 | exFAT, 128 KiB clusters | MBR, at 32768 | none | 6,618 | ok on the TFT and the EVF, S2's file read back |
+  | E142 | exFAT, 128 KiB clusters | MBR, at 32768 | none | 6,618 | ok on the TFT (no EVF), S2's file read back |
+  | E125, E130 | exFAT, 128 KiB clusters | MBR, at 32768 | none | 9999 | ok on the TFT and the EVF, S2's file read back |
+  | E144 | exFAT, 128 KiB clusters | MBR, at 32768 | `OM SYSTEM` | - | stops at the camera application's start (below) |
+
+    The 8 GiB card's counts were 803, 826, 1607 and 2018 (4.8.4); with 64 GiB the OM-1 family's and E143's 6,456 and
+    the E142 lineage's 6,618 are about 8 times theirs, and E125's and E130's 9999 is where their counts stop (I: a
+    cap; 8 x 1607 is past it). The E142 lineage and E125 / E130 label the exFAT volume with nothing, as their FAT32
+    is `NO NAME` (4.8.4); the E143 family and E144 `OM SYSTEM`. E134 keeps S-CARD and was not tried.
+  - **E144 stops (X; the addresses E144's):** the format and the mount succeed (exFAT `OM SYSTEM` in an MBR
+    partition at 32768, 128 KiB clusters, consistent), then the camera application's start ends in S-MODACK's reply
+    with Fault 6 at `0x5032574f`, `divu d1,d3` with d1 = 0, in the function at `0x5032553f` that builds the movie's
+    parameters (4.8.5). The divide is in a branch taken only for the drive's kind 3: after the parameters' check
+    `0x5032d626` answers 0, `0x503301b8(drive)` answers 3 (that 3 is exFAT is I: a 32 GiB SDHC card, FAT32 at 8192
+    with 32 KiB clusters, starts as the 8 GiB one does, and on the 8 GiB card the check answers `0xff12` after the rate
+    check's `0xa003`, 4.8.5, and the function returns before the branch). The divisor is the size at sp+84 in 512-byte
+    units rounded up, and that size is 0 (the movie mode getter answers 1, UHD 4K at 60p, with either card, X); why
+    the check passes and the size is 0 with this card is ?. The hardware raises no fault there
+    (`emu/FIDELITY-NOTES.md` 3.2): the quotient goes to a compare that keeps it or sets 0, so the camera would carry
+    on with a value that is not known. The same stop with 128 GiB. `modelcheck.mjs` holds it in SDXC_XFAIL, strictly. E139 and E137 read the same 4K 60p default
+    (4.8.5) and run on: whether their builds have the branch is not read (E144's instruction run is not in their images,
+    but their register allocation may differ, ?).
+- **Open:** E144 with an SDXC card (why its check passes with a size of 0; then a defined answer at that seam, a
+  stand-in with its label, never a guessed value); the HLS side on the other bodies (4.8.4), so the menu's format and
+  the card out and in stay E143's; the node player's size is an environment variable only (no command-line option);
+  movie files on exFAT (none is written in the lab).
 
 ### 4.9 HDMI and DisplayPort
 

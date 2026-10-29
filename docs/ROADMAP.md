@@ -168,7 +168,10 @@ the survey table.
   value of its mount state); the media control's other commands (erase all, copy, unlock); an SDXC card (done
   2026-10-29, hle-gaps.md 4.8.6: S-SDCARD's card SDXC above 32 GiB by `OM_EMU_CARD_SIZE`, an independent exFAT
   reader `refs/exfat.mjs`; the firmware formats a blank 64 or 128 GiB card exFAT in an MBR partition and mounts it,
-  X; next: the HLS side with it, exFAT on the other bodies); the SD
+  X; the tooling, the HLS side and the other bodies with it on 2026-10-29, 4.8.6 round 5: the Card panel and
+  modelcheck read exFAT, the browser player takes a card size, the menu's format gives the card exFAT again and the
+  card out and in mounts it again, X; eight more bodies format a 64 GiB card exFAT and run on, and E144 stops at the
+  application's start on a divide by zero emu refuses, FIDELITY-NOTES 3.2); the SD
   host at its registers with its interrupts and card detect (seam A); playback of the card's files (a JPEG decoder at
   the codec seam); the movie module's set-up, whose frame rate the movie time query reads (it logs `0x39000903`).
 - **The movie time of the E144 family:** read (2026-10-27, hle-gaps.md 4.8.5), nothing to model. With the card native
@@ -247,7 +250,7 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
 | 3 | interrupt acceptance anywhere, then the machine-owned time model | not started: architecture phases 3 and 4 |
 | 4 | CPU 2, then CPU 3, then CPU 1, natively | not started |
 | 5 | task-start and module-init infrastructure; the HLS component bring-up as the coverage workload's default | not started |
-| 6 | storage at the sdmem seam | started (2026-10-23, hle-gaps.md 4.8.2) on E143, one layer lower, at the SD command layer: an 8 GiB SDHC card (S-SDCARD) the firmware formats (FAT32) and mounts itself, with the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, dosfat and the DCF modules native; the remaining shots and the movie time counted by the firmware from the card; the picture's file written at S2 through the file module (S-RECFILE, in place of REC_FILE) and found by the firmware's DCF scan at the next mount; Card Formatting from the menu and the card's removal and insertion at run time (2026-10-24, 4.8.3); an SDXC card the firmware formats exFAT, read back by an independent exFAT reader (2026-10-29, 4.8.6). Open: REC_FILE natively, the second slot, exFAT on the other bodies, the other bodies |
+| 6 | storage at the sdmem seam | started (2026-10-23, hle-gaps.md 4.8.2) on E143, one layer lower, at the SD command layer: an 8 GiB SDHC card (S-SDCARD) the firmware formats (FAT32) and mounts itself, with the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, dosfat and the DCF modules native; the remaining shots and the movie time counted by the firmware from the card; the picture's file written at S2 through the file module (S-RECFILE, in place of REC_FILE) and found by the firmware's DCF scan at the next mount; Card Formatting from the menu and the card's removal and insertion at run time (2026-10-24, 4.8.3); an SDXC card the firmware formats exFAT, read back by an independent exFAT reader (2026-10-29, 4.8.6), formatted again from the menu and mounted again after the card out and in, and formatted exFAT by nine more bodies, which run on but E144 (a divide by zero emu refuses, 4.8.6 round 5). Open: REC_FILE natively, the second slot, E144 with an SDXC card, the other bodies |
 | 7 | TAKE native with the lens, BC, the sensor control plane and the shutter (the strobe beside it) | started (2026-10-28) with the lens on E143 at its serial controller, opt-in (hle-gaps.md 4.4.2): the lens tasks, driver and LENS_SSC run natively, S-LENSMCU answers as the 12-40. Open: the camera application's wait after a touch with the native lens (why S-LENS is still the default), the lens's real replies, the lens-ready byte, the other bodies; TAKE, BC, the sensor and the shutter not started |
 | 8 | by gain: still capture, live-view statistics and EXP, AF, movie and audio, playback, USB, the power manager, wireless after CPU 1, GPU / C3D, the rest | not started |
 
@@ -451,9 +454,9 @@ lab's stand-ins for its key mapping, request sequences and display-switch re-ent
   webgate's B6b (the Card panel's read, Take out and Put in in headless Chrome); the pages' `?selftest=1` does not drive
   the panel. Open: node's options stay fixed by its command line and environment (the page shows
   them; a restart with others, as the model switch does, is not offered); the scene takes no subjects of its own at run
-  time (its patterns' only), so the panel offers none; an exFAT card (the storage track's SDXC card) lists only once
-  `web/cardfiles.mjs` takes the exFAT reader beside `refs/fat.mjs`; a list read while the firmware writes can show a
-  file as it was before (the card out of the slot is the settled view).
+  time (its patterns' only), so the panel offers none; a list read while the firmware writes can show a file as it was
+  before (the card out of the slot is the settled view). Since 2026-10-29 the panel reads an exFAT card too
+  (`refs/volume.mjs`) and the browser takes the card's size as a start option (`card_size`, hle-gaps.md 4.8.6).
 - The host memory probe covers the main isolate only: `host/memprobe.mjs` (`OM_HOST_MEM`) samples node's main isolate
   after a forced GC, which holds the HTTP front and the proxy. The harness (PlaySession, the Player and the lab's lists)
   runs in the lab worker, whose heap grew 16-20 MB in a 60 s window (X) and is bounded by nothing, and external memory

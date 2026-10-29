@@ -33,7 +33,7 @@ Every milestone runs in emu and is covered by the check its row names; the `chec
 | Hosts and the debug API | the player on node (an HTTP server with the lab in a worker thread) and in the browser (a module Worker), the JSON-lines debug API | `emu/bin/test.mjs`, `golden.json` | `emu/README.md` |
 | The camera application | every play session runs the firmware's camera application (CA_MAIN) natively (S-CAMAPP, 2026-10-15): power-on to the shooting screen, S1, S2 and the rec view, REC, playback, the Super Control Panel and the menu; the lab's own stand-ins for it are gone | `test_camapp`, `golden.json` | shutter spec §7 |
 | Exposure | a 12-40mm F2.8 PRO on the mount and the scene's brightness fed to the camera's own exposure plan (S-EXPOSE); the screen shows the planned shutter, aperture and ISO | `golden.json` | shutter spec §7 item 60 |
-| The lens natively (E143, opt-in) | with `OM_EMU_LENS=native`: the lens tasks, the lens driver, LENS_SSC and IRQ 14 against a model of the lens serial controller, with S-LENSMCU answering the driver's frames as the 12-40mm F2.8 PRO (2026-10-28); the deferred calls (IRQs 53..58); the zoom ring and the lens lock pin switch reach the driver. S-LENS stays the default: with the native lens a touch leaves the camera application answering no key | `test_lens` | hle-gaps.md §4.4.2 |
+| The lens natively (E143, the default) | the lens tasks, the lens driver, LENS_SSC and IRQ 14 against a model of the lens serial controller, with S-LENSMCU answering the driver's frames as the 12-40mm F2.8 PRO (2026-10-28); the deferred calls (IRQs 53..58); the zoom ring and the lens lock pin switch reach the driver; the camera application forwards the touches itself (2026-10-29: the touch's stop was S-CAFWD swallowing the GUI's answer). The default since 2026-10-29; `OM_EMU_LENS=stand-in` takes S-LENS, the other bodies' lens | `test_lens`, `golden.json` | hle-gaps.md §4.4.2 |
 | Multi-model, steps 1-4 and part of 7 | 17 bodies besides E143 have ports; E146, E147, E144, E139, E134, E137, E140, E125 and E130 shoot, play back and run the EVF through `bin/modelcheck.mjs`, E142, E133 and E145 (no EVF) on the TFT, each with the screen's remaining-shots count (the count probe); E129 and E132 stop in their start, the E118 family at import (Multi-model below) | `emu/bin/modelcheck.mjs`, `test_facts` | `docs/model-survey.md` |
 
 Instruction counts: the ISA row's 1,684,013 reachable instructions come from a reachability scan that is no longer in
@@ -269,7 +269,7 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
 | 4 | CPU 2, then CPU 3, then CPU 1, natively | not started |
 | 5 | task-start and module-init infrastructure; the HLS component bring-up as the coverage workload's default | not started |
 | 6 | storage at the sdmem seam | started (2026-10-23, hle-gaps.md 4.8.2) on E143, one layer lower, at the SD command layer: an 8 GiB SDHC card (S-SDCARD) the firmware formats (FAT32) and mounts itself, with the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, dosfat and the DCF modules native; the remaining shots and the movie time counted by the firmware from the card; the picture's file written at S2 through the file module (S-RECFILE, in place of REC_FILE) and found by the firmware's DCF scan at the next mount; Card Formatting from the menu and the card's removal and insertion at run time (2026-10-24, 4.8.3); an SDXC card the firmware formats exFAT, read back by an independent exFAT reader (2026-10-29, 4.8.6), formatted again from the menu and mounted again after the card out and in, and formatted exFAT by nine more bodies, which run on but E144 (a divide by zero emu refuses, 4.8.6 round 5). Open: REC_FILE natively, the second slot, E144 with an SDXC card, the other bodies |
-| 7 | TAKE native with the lens, BC, the sensor control plane and the shutter (the strobe beside it) | started (2026-10-28) with the lens on E143 at its serial controller, opt-in (hle-gaps.md 4.4.2): the lens tasks, driver and LENS_SSC run natively, S-LENSMCU answers as the 12-40. Open: the camera application's wait after a touch with the native lens (why S-LENS is still the default), the lens's real replies, the lens-ready byte, the other bodies; TAKE, BC, the sensor and the shutter not started |
+| 7 | TAKE native with the lens, BC, the sensor control plane and the shutter (the strobe beside it) | started (2026-10-28) with the lens on E143 at its serial controller (hle-gaps.md 4.4.2): the lens tasks, driver and LENS_SSC run natively, S-LENSMCU answers as the 12-40; the default since 2026-10-29, when the touch's stop was found (the application's event task waited for the GUI's answer, which S-CAFWD swallowed) and S-TOUCHMAP and S-CAFWD gave way to the application's own forward. Open: the lens's real replies (and with them the lens-ready byte, whose writer waits on the lens ID's first bytes and function words), E146 and E147 (their lens drivers not read, E143's addresses partly unported); TAKE, BC, the sensor and the shutter not started |
 | 8 | by gain: still capture, live-view statistics and EXP, AF, movie and audio, playback, USB, the power manager, wireless after CPU 1, GPU / C3D, the rest | not started |
 
 ## Debug API follow-ups
@@ -441,8 +441,9 @@ lab's stand-ins for its key mapping, request sequences and display-switch re-ent
   `0x0400` is.
 - The encoder: H-DIALSTEP calls the counter writer `0x5014bae6` per detent; the encoder position read `0x50059fa4` and
   which dial is main and which rotation is "+" are open.
-- Touch: S-TOUCHMAP maps HFW statuses to GUI touch kinds by name and S-CAFWD drops the GUI's forward to the camera
-  (STS_TOUCH_EV_RESPONCE, the HFW client; LONGPRESS never comes); S-TPINT sets the touch flag from the lab task (a GPIO
+- Touch: with S-LENS, S-TOUCHMAP maps HFW statuses to GUI touch kinds by name and S-CAFWD drops the GUI's forward to
+  the camera (STS_TOUCH_EV_RESPONCE, the HFW client; LONGPRESS never comes); with E143's native lens, the default since
+  2026-10-29, the camera application forwards the touches and takes the GUI's answers itself (hle-gaps.md 4.4.2); S-TPINT sets the touch flag from the lab task (a GPIO
   interrupt model, IRQ 132, `0x500525ee`, would replace it); H-TOUCHGAP's 20 ms between samples keeps the driver's
   5-slot gesture queue, which has no bound check, from faulting (X); the controller's real report rate is unknown.
 - Fn-type buttons (wired 2026-10-15): a dial turn, alone or with +/- held, leaves the shown compensation at 0.0; AFL,
@@ -490,7 +491,7 @@ lab's stand-ins for its key mapping, request sequences and display-switch re-ent
 
 **Exposure.** The plan runs at the application's start and after each input on the shooting screen, not continuously
 (the camera's LV AE task with its 18 x 18 grids does not run; the live-view statistics seam, hle-gaps.md §4.2, would run
-it); one lens, the 12-40 at the zoom step nearest the scene's focal length (S-LENS's record, or S-LENSMCU's replies with the opt-in native lens) (the lens table `0x506ea4f3` names the
+it); one lens, the 12-40 at the zoom step nearest the scene's focal length (S-LENSMCU's replies on E143 by default, S-LENS's record elsewhere and with `OM_EMU_LENS=stand-in`) (the lens table `0x506ea4f3` names the
 others, their characteristics are not in the firmware); why the application does not apply a dial turn to the exposure
 compensation (input spec §9).
 

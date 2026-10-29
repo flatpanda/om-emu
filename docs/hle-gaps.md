@@ -20,8 +20,8 @@ from the module map (section 2.2). Every effort figure is a rough estimate of fo
   S-TRAACK, S-CARD, S-SCENE, S-EXPOSE, S-LENS, S-CPU2, S-SCPUDEV, H-POWER and others) or is not modelled at all. None
   of their tasks runs in a lab (X: a full S1 + S2 and a REC post no module request; the kernel lab's task-start guard
   refuses their entries, `emu/src/lab/kernel.mjs`), and their MMIO is lab-stub space that faults on first touch. The
-  exception is the lens on E143, opt-in: its tasks, driver and serial driver run natively against a device model
-  (4.4.2).
+  exception is the lens on E143, by default since 2026-10-29: its tasks, driver and serial driver run natively against
+  a device model (4.4.2).
 - **In code:** the lab executes 287,101 of the main block's 5,186,071 instructions (5.54%), about 6.1% of the code a
   camera runs in normal use (section 2.2). The largest unrun blocks are playback (613k instructions), AF / lens / IS
   (505k), still capture (421k), the AV codec back end (411k), the sensor / ISP / live view (321k) and the TAKE module
@@ -135,7 +135,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **Sensor / ISP front end, live view** (4.2) | S: S-SCENE paints bank `0x0A` and calls TH with H-REQ; S-EXPOSE per input, no LV AE; 33 camera IRQs unwired | A: MVR_IMG's TH request builders (CPU 2); B: AE / AWB statistics at the callback table `0x629a7c64`; D (target): control plane plus HLE pixel and statistics producers | CPU 2, TAKE (the through commands 25 / 27 / 28 that TRA 991 reaches, 4.1.2), IRQs anywhere and time (VD-paced), shutter, DISP_SYNC | 327,531 / 320,730, plus about 25k of MVR's live-view part | 10-16 weeks (seam D open-ended) | the camera's live-view geometry per device, frame cadence, continuous metering, AWB, AE lock, LV modes, magnify |
 | **EXP exposure module** (inside the sensor block, 4.2) | S: only the plan `take_expose_calculate` `0x50597e82` runs, under S-EXPOSE and H-AEINIT | native, fed by seam B's statistics | seam B, the TAKE_EXPOSE and EXP_MOVIE tasks | about 107k (EXP 96k plus TAKE_EXPOSE 13.6k), one MMIO reference: device-free | part of seam B (3-5 weeks) | continuous metering, AE / AF BV, flicker detection, face and spot AE |
 | **Still capture, image processing, recording** (4.3) | S: S-RELSEQ, S-RECVIEW, S-CARD, S-TAKEFRAME; X: S2 posts no module request | C1 DRAM capture, C2 the imgpro_mdl API, C3 CIC, C4 storage (shared with 4.8), C5 the CPU 2 halves | TAKE, the sensor (C1), CPU 2, storage, the A53 for Handheld High Res (I) | 429,679 / 421,478, of which the imgpro library about 275k behind about 10 imgpro_mdl entries | 6-9 weeks | S2 writes a real JPEG / ORF with the firmware's EXIF and DCF name; the rec view shows the firmware's view image |
-| **AF and lens** (4.4) | S: S-LENS (record values I), by default; on E143 opt-in the lens runs natively down to its serial controller (S-LENSMCU, 4.4.2); S-RELSEQ's END_FOCUS, S-AFOSD's fixed frame; X: no request reaches FCS, BC or TAKE_EXEC | lens: the serial device `0x9b980000` (IRQ 14) and the edge unit `0x9b883e40` (IRQ 60); AF: the module seam TAKE_FOCUS `0x5d` / FCS_EXEC `0x1b` | TakeReady (TAKE), task starts and the lens inits, sensor VD for LENS_SYNC, CPU 1 (FCS_IP, flag 0x92) and CPU 3 (MDET) for native FCS, IRQs anywhere, time | 510,248 / 504,870 with IS: FCS 372k (about 100k CPU-1-only), lens about 84k | lens 2-3 weeks; AF 2-3 weeks once TakeReady runs; native FCS months | the lens identified by the firmware, zoom and MF, the firmware's AF decision and frames |
+| **AF and lens** (4.4) | S: S-LENS (record values I) on the other bodies and selectable on E143, where the lens runs natively down to its serial controller by default (S-LENSMCU, 4.4.2); S-RELSEQ's END_FOCUS, S-AFOSD's fixed frame; X: no request reaches FCS, BC or TAKE_EXEC | lens: the serial device `0x9b980000` (IRQ 14) and the edge unit `0x9b883e40` (IRQ 60); AF: the module seam TAKE_FOCUS `0x5d` / FCS_EXEC `0x1b` | TakeReady (TAKE), task starts and the lens inits, sensor VD for LENS_SYNC, CPU 1 (FCS_IP, flag 0x92) and CPU 3 (MDET) for native FCS, IRQs anywhere, time | 510,248 / 504,870 with IS: FCS 372k (about 100k CPU-1-only), lens about 84k | lens 2-3 weeks; AF 2-3 weeks once TakeReady runs; native FCS months | the lens identified by the firmware, zoom and MF, the firmware's AF decision and frames |
 | **Body IS (BC)** (4.4) | 0: no BC, no gyro, no IS state | the module seam BC_EXEC `0x09`; BC native only with a capture of the IS link | TAKE (TAKE_FUNC sends to BC_EXEC), the IS controller's serial channel (?) | 34-42k / about 34k (inside AF / lens / IS) | about 1 week at BC_EXEC | IS mode and indicator, IS EXIF |
 | **Subject detection** (4.12) | 0 | surveyed 2026-10-25 (`docs/om1-subject-spec.md`): S1 DISP_FRAME's inputs (MDET's frame table and UP_FACE), S2 MDET's results to FCS, S3 the DML engine `0x9c180000` (IRQ 285) | CPU 3, the DML, PDT / TRC and face engines, the `0x800f` model load, take_mov's YC frames, native FCS for S2 | 84,500 / 81,771 keyed; about 127k with the SDET and FACE units | S1 about 1 week; S3 4-6 weeks after CPU 3; a reproduced network months | subject and face frames, C-AF tracking |
 | **Movie and audio** (4.5) | S: S-RELSEQ's movie callbacks, S-CARD's movie time, S-CPU2's zero level snapshot, S-MODACK for AUD_EXEC | S3 TAKE_FUNC commands 30 / 31 / 68 / 69, S4 the mvr IF (CPU 2), S5 AUD_LEVEL_MONITOR, S6 a host AVM writing a MOV through the firmware's DFS calls, S7 AUD_EXEC | TAKE (commands 30 / 31 / 68 / 69 wait on CPU 2's MOV_COMMAND, SDET_EXEC and WB_MOV, 4.1.1), CPU 2 (MVR, audio level), sensor, storage, EXP_MOVIE / FCS_MOVIE | 134,137 / 124,319 | 10-15 weeks (stages A-C) | a playable .MOV on the card, the firmware's recording sequence, audio meters, beeps |
@@ -449,11 +449,11 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   the AF info block written as the module writes it; IS at BC_EXEC. Seam C advances only as far as the parsers make the
   expected answers readable; an unknown packet stops with an error. Native FCS (the AF data path) is LLE-scale work:
   it needs CPU 1, the sensor pipeline and the `0x9bf00000` unit.
-- **First step (done on E143, opt-in, 4.4.2):** the serial layer is read (4.4.1) with the table from a lens command id
-  to its frame; LENS_MAIN, LENS_COMMAND and LENS_ASKDATA run with `0x9b980000` as a device model whose far end,
-  S-LENSMCU, refuses the first frame it does not know. Next: what the camera application waits for after a touch with
-  the native lens (4.4.2, open), so that it can be the default; the lens's own replies in place of S-LENSMCU's
-  assumed values; the bodies other than E143.
+- **First step (done on E143, 4.4.2; the default since 2026-10-29):** the serial layer is read (4.4.1) with the table
+  from a lens command id to its frame; LENS_MAIN, LENS_COMMAND and LENS_ASKDATA run with `0x9b980000` as a device
+  model whose far end, S-LENSMCU, refuses the first frame it does not know; the camera application's touch path runs
+  with it (4.4.2, the touch). Next: the lens's own replies in place of S-LENSMCU's assumed values (which would also
+  settle the lens-ready byte); the bodies other than E143, starting with E146 and E147's lens drivers.
 
 #### 4.4.1 The lens serial layer (D unless tagged)
 
@@ -499,14 +499,15 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   that earlier replies filled, not response parsers. The table from a command id to its frame and the parsers that
   fill the record from the replies are read in 4.4.2.
 
-#### 4.4.2 The lens on the mount natively (E143, opt-in; D unless tagged)
+#### 4.4.2 The lens on the mount natively (E143, the default since 2026-10-29; D unless tagged)
 
-With `OM_EMU_LENS=native` (a host's `env.lens`) E143's lens runs natively: LENS_MAIN, LENS_COMMAND and LENS_ASKDATA,
+E143's lens runs natively (opt-in from 2026-10-28, the default since 2026-10-29; `OM_EMU_LENS=stand-in`, a host's
+`env.lens` 'stand-in' or the page's `?lens=stand-in` takes S-LENS instead): LENS_MAIN, LENS_COMMAND and LENS_ASKDATA,
 the lens driver, its sync layer, LENS_SSC and IRQ 14, and the deferred calls the power and detect paths post. The seam
 is the lens serial controller's registers (`emu/src/dev/lensssc.mjs`) with the lens's microcontroller at its far end
 (S-LENSMCU, `emu/src/lab/lensmcu.mjs`); the lab's part is in `emu/src/lab/lens.mjs` (model facts `lens_native`,
-`emu/src/fw/models.mjs`; board facts `lens` and `dpc`, `emu/src/fw/board.mjs`). S-LENS stays the default (below,
-Open) and the only lens on the other bodies.
+`emu/src/fw/models.mjs`; board facts `lens` and `dpc`, `emu/src/fw/board.mjs`). S-LENS stays selectable and the only
+lens on the other bodies (below, Open).
 
 - **The controller (`0x9b980000`, IRQ 14):** a frame engine. The driver writes the header to `+0x048` (class, code, two
   parameter bytes), the data count to `+0x044` with its bytes in the transmit FIFO `+0x05c..` (only for the modes 9761
@@ -566,21 +567,58 @@ Open) and the only lens on the other bodies.
   0 (A-LENSMCU-1), the protocol version 0x130a with no block mode (A-LENSMCU-2), one byte a zoom step in id 71's table
   (A-LENSMCU-3; with none, `c1 fe` with no data is logged as error `0x40`, `0x502c1558`, X). A frame it does not know
   stops the session with the frame named.
-- **What changes against S-LENS (X):** the lens module's state event `0x04060051` (published by `0x502a765c` through
-  the ring) reaches the camera application, which leaves the date prompt for the shooting screen at the start (with the
-  publish skipped the prompt stays, as with S-LENS); sessions without the camera application show the focal length
-  25 mm where S-LENS, which only runs with it, leaves `---`; the +/- button opens SETVAL (GUI `0x0202`) where with
-  S-LENS the shooting screen stays; the shooting screen's redraws hold CPU 0 for 10-14 ms at a time, so ACC_MAIN's
-  80 ms cycle runs 11 times a second, not 12 or 13 (check_level L2).
-- **Open:** why it is not the default: after any touch on the shooting screen (the GUI takes 0x9100 three times and
-  then 0x9a30, which with S-LENS it does not) the camera application forwards no key to the GUI (no `0xf001` for OK;
-  MENU and the mode dial publish no frame either) and stays so (X: 3 s); no lens request or frame follows the touch,
-  the lens tasks' states do not change, and with the state event skipped or the record's and the flags' differences
-  from S-LENS written back before the touch it hangs the same, so what the application waits for is ?. The
-  lens-ready byte `0xa32d4b94` stays 0 natively (S-LENS wrote 1; its writer is ?; the AF frame on S1
-  shows regardless, X); the lens's real replies (its flags, function words, tables, version and the check byte's
-  value) are ?; E146 and E147 share E143's board (their LENS_SSC uses the same base, X: a scan) but their lens
-  driver's addresses are not read, and the E144 family and E118 have no `lens` board fact: they keep S-LENS.
+- **The touch (2026-10-29):** until then a touch on the shooting screen left the camera application forwarding no key
+  (no `0xf001` for OK; MENU and the mode dial published no frame) with the native lens. The waiting task is the
+  application's event task (entry `0x5108ba1b`, task 165 in the lab; X: its stack and a trace): it takes the touch
+  events `0x03000072..78` (TOUCH, LONG TOUCH, RELEASE, TAP, SLIDE, DOUBLE TAP, FLICK, the kinds 1..7 of S-TOUCHMAP,
+  `0x5108ba30`), posts each to the GUI as index 109 with its kind and position (`0x5108b827`), and waits forever on its
+  reply queue (`0x5108bd42` -> `0x50b01d55`, timeout -1) for the GUI's answer `0x0400001f` (`0x5108bb97`), which is the
+  GUI's event 35 through the CA caller `0x51084994` (PostEventToCA, return `0x5124f6ae`: input spec, S-CAFWD), with
+  the GUI's result (55 for a touch on the shooting screen, X). S-CAFWD answered event 35 with 0 and passed nothing on,
+  so the task never got its answer and forwarded no key after it. With S-LENS the task never forwards: it skips the
+  forward while its touch inhibit mask `(0x603660b4)` is not 0 (`0x5104d642`, `0x5104ce64`: 259 entries of the mask
+  table `0x612c4714`, {event, condition, set or clear, bits}), and the mask keeps bit 20 while the application's
+  condition 30 is false (entries 185 and 186), which follows the lens's attach (X: false with S-LENS, whose record and
+  flags do not turn it on, and with the native lens detached by LLPSW; true with the native lens attached, from its
+  start's event). So S-TOUCHMAP and S-CAFWD stood in for a forward that S-LENS turned off; with the native lens the
+  application forwards the touches itself and they do not apply (`emu/src/lab/play.mjs` app_touch: no lab post, the
+  GUI's answers taken natively and recorded). X: a touch and then OK opens the Super Control Panel with the frames of
+  S-LENS's session, S1 returns, the GUI's two answers per tap; the shooting screen's icons answer as on a camera: the
+  wireless icon (90, 30) opens Wi-Fi Connection (GUI `0x0b02`), the touch-mode icon (35, 465) turns to its next mode,
+  where with S-LENS's lab posts the screen stayed (the players' page check B6 now taps the touch-mode icon).
+- **What changes against S-LENS (X, 2026-10-29):** the screens are S-LENS's but for what the application does with
+  the lens module's state event `0x04060051` (published by `0x502a765c` through the ring), which S-LENS never sends:
+  about 120 ms after the start's screen the application, now knowing the lens attached (condition 30), leaves the
+  date prompt for the shooting screen (S-LENS keeps the prompt until S1) and shows the focal length, 25 mm, on it for
+  a while (x 155..222, y 502..529 of the TFT; again after the menu and playback return to it); the +/- button opens
+  SETVAL (GUI `0x0202`) where with S-LENS the shooting screen stays; touches go through the application (above). The
+  settings, the exposure (shutter, aperture, ISO), the AF frame and every other screen are the same. The devices see
+  the lens's start (14 frames in about 30 ms, IRQ 14 and the deferred calls' IRQs 53..58) and its state poll about
+  every 100 ms; the ACC_MAIN cycle around the event takes 129 ms where the others take 81..102 (check_level L2 now
+  measures from 500 ms after the start). Sessions without the camera
+  application show the focal length 25 mm where S-LENS, which only runs with it, leaves `---`. Whether the camera
+  leaves its date prompt on the lens's event is ? (on the camera the lens's start may finish before the prompt shows).
+- **The lens-ready byte `0xa32d4b94`:** written 1 only by the state poll's completion (`0x502c38c7`: `0x502c3946`,
+  `0x502c3a18`; also `0x502c3fa5`: `0x502c4033`, `0x502c40b1`), when the driver's predicates on the lens hold:
+  `0x502c41ba` (`0x502afe5a`: the lens ID's byte 0 is 0 and byte 1 is not; then by the protocol version the function
+  word 2's bit 5, `0x502afb5a`, and record `+119244` bit 5 clear) and `0x50126ec0` (function word 2's bits 4 and 5,
+  `0x502afb4d`, `0x502afb5a`); else it writes 0 (`0x502c3608`, `0x502c41b1`). S-LENSMCU's ID (S-LENS's, `00 00 19 10
+  00 00`) has byte 1 0 and its function words are 0 (A-LENSMCU-1), so the byte stays 0 natively (X: every poll takes
+  the not-ready path). The 12-40's real ID bytes 0..1 and function words are ?, so S-LENSMCU does not invent them; the
+  AF frame on S1 shows regardless (X). It is not the touch's cause (the touch hangs with S-LENS's 1 written back, X).
+- **The heap's growth (X, a lab artifact, I):** S-HEAP's live blocks grow by about 5 a second on the idle shooting
+  screen with either lens (25 blocks in 5 s natively, 24 with S-LENS); the growth is OlyHfwOpeShoot::getHistogramData
+  (`0x50ada57e`): each call allocates a 40-byte event (`0x50ada615`, operator new `0x50d9ba46`), attaches it to an HLS
+  transaction (`0x50ac0be0`) and executes it (`0x50af7cbe`), which S-TRAACK returns 0 for without delivering it; on the
+  camera the transaction's receiver would consume and delete the event (I: the Rhapsody framework deletes an event
+  once it is dispatched). 34 such blocks in 5 s with the native lens against 18 with S-LENS (the screen's redraws);
+  S-HEAP's 2.4 MiB would last a few hours of lab time. The fix belongs to S-TRAACK, not to the lens.
+- **Open:** S-LENSMCU's assumed values (A-LENSMCU-1..3) and the lens's real replies (its flags, function words,
+  tables, version, the ID's first bytes and the check byte's value) are ?. E146 and E147 share E143's board (their
+  LENS_SSC uses the same base, X: a scan) but their lens drivers are not read, and the port of E143's addresses is
+  partial (X, `emu/src/fw/ports.mjs`: E146 has no place for the three lens tasks' entries or the driver's lens-0 flags,
+  E147 none for the tasks' entries and OlyQeWr's site); the E144 family and E118 have no `lens` board fact: they keep
+  S-LENS.
 
 ### 4.5 Movie, audio and the AV back end
 

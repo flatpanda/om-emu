@@ -21,6 +21,7 @@ import { newFlags } from './portqueue.mjs';
 import { PlayerProxy, wallClock } from './proxy.mjs';
 import { createPlayServer, pngCache, pngRgba } from './server.mjs';
 import { jpegRgba } from '../web/cardfiles.mjs';
+import { cardGiB } from '../src/lab/sdcard.mjs';
 import { installSignals, installLabKill } from './signals.mjs';
 import { installMemProbe } from './memprobe.mjs';
 import { stackOf } from '../checks/lib/errors.mjs';
@@ -117,7 +118,7 @@ export async function main(argv) {
   // the opt-ins the lab worker's environment gives it (labworker.mjs, src/lab/play.mjs lens_native), for the page's
   // session line (GET /api/session): fixed for the process, set in the environment before the start
   const session = { host: 'node', lens: process.env.OM_EMU_LENS === 'native' ? 'native' : 'stand-in', nvram: process.env.OM_EMU_NVRAM || null,
-    card: process.env.OM_EMU_CARD || null };
+    card: process.env.OM_EMU_CARD || null, card_size: process.env.OM_EMU_CARD_SIZE ? cardGiB(process.env.OM_EMU_CARD_SIZE) : null };
   const api = new PlayApi(proxy, { tables: Tables.of(rom), framePng: pngCache(), check, page: new Uint8Array(fs.readFileSync(PAGE)),
     session, cardImage: jpegRgba, imagePng: pngRgba,     // the Card panel's pictures, decoded here on the main thread
     onPagetest: (body) => {            // <out>/pagetest.json: a write that fails is the request's error (host/server.mjs)

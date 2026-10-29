@@ -37,6 +37,8 @@ export function cardSectors(size) {
   if (!m) throw new RangeError(`cardSectors: '${size}' is not a size in GiB (such as 8, 64G or 128GiB)`);
   return Number(m[1]) * GIB;
 }
+// the same size option as a number of GiB (the players' session documents, src/lab/playapi.mjs card_size)
+export const cardGiB = (size) => cardSectors(size) / GIB;
 
 // CRC7 (x^7 + x^3 + 1) over bytes, as the CID and CSD carry it in their last byte (<< 1 | 1)
 export function crc7(bytes) {

@@ -332,7 +332,7 @@ async function cardRoutes(bad) {
   const notes = [];
   try {
     const sess = await pl.json('GET', '/api/session');
-    if (sess.host !== 'node' || sess.hdmi !== 'off' || sess.card_image !== true || !['native', 'stand-in'].includes(sess.lens)) bad.push(`GET /api/session: ${JSON.stringify(sess)}`);
+    if (sess.host !== 'node' || sess.hdmi !== 'off' || sess.card_image !== true || sess.card_size !== null || !['native', 'stand-in'].includes(sess.lens)) bad.push(`GET /api/session: ${JSON.stringify(sess)}`);
     const c0 = await pl.req('GET', '/api/card'), d0 = JSON.parse(c0.body);
     if (c0.status !== 200 || d0.volume?.type !== 'FAT32' || d0.volume?.label !== 'OM SYSTEM' || d0.slot?.present !== true || d0.slot?.mounted !== true) bad.push(`GET /api/card at the start: ${c0.status} ${String(c0.body).slice(0, 300)}`);
     const log0 = (await pl.json('GET', '/api/log')).inputs.length;

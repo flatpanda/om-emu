@@ -145,6 +145,8 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
   <label class="tb" title="the lens on the mount natively (E143): the lens tasks and drivers against S-LENSMCU as the 12-40mm F2.8 PRO, in place of S-LENS. A touch on the shooting screen then leaves the camera application answering no key (docs/hle-gaps.md 4.4.2)"><input type="checkbox" id="opt-lens"> Native lens</label>
   <label class="tb" title="S-NVRAM: the camera's settings and clock kept in this browser (OPFS) between sessions, in place of S-SETSAVE: a camera whose clock was set starts without the date prompt"><input type="checkbox" id="opt-nvram"> Keep the settings</label>
   <button class="tb" id="nvclear">Forget the kept settings</button>
+  <label class="tb" title="S-SDCARD's capacity (card_size, in GiB): the card the session starts with, in memory while this player runs. Above 32 GiB an SDXC card, which E143's firmware formats exFAT (docs/hle-gaps.md 4.8.6); the Card panel reads it with refs/exfat.mjs">Card <select id="opt-card" aria-label="card size">
+    <option value="">8 GiB SDHC</option><option value="64">64 GiB SDXC</option><option value="128">128 GiB SDXC</option></select></label>
   <span class="note" id="optnote">Fixed for the session once it starts. The native lens: a touch on the shooting screen then stops the camera application's keys (open).</span>
 </div>
 
@@ -649,7 +651,7 @@ function showSubject(s) {
 // this page's host: the Worker (web/worker.mjs), its options fixed at the start (the start options above, the page's
 // query); the card routes answer through web/page.mjs, and a picture comes as raw RGBA, drawn as a frame is
 const HDMI_HOW = 'reload the page with the HDMI port start option (?hdmi=on; E143, E146, E147)';
-const SESSION_HOW = 'These are fixed when the session starts: the start options above the camera (the page\'s query: hdmi=on, lens=native, nvram=1).';
+const SESSION_HOW = 'These are fixed when the session starts: the start options above the camera (the page\'s query: hdmi=on, lens=native, nvram=1, card_size=GiB).';
 const cardApi = (p) => PP.api(p);
 async function drawCardImage(r, canvas) {
   const w = +r.headers.get('X-Image-Width'), h = +r.headers.get('X-Image-Height'), rgba = await r.bytes();
@@ -659,6 +661,8 @@ async function drawCardImage(r, canvas) {
 const UNPLUG_WHY = 'the lab refuses an unplug (A-HDMI-1: what the transmitter and the hot-plug pin show when the cable comes out is not read)';
 const CARD_THUMBS = 24;             // thumbnails drawn per read of the card, the newest files first
 let SESSION = null, CARD = null, cardImages = null, cardReading = null, cardAgain = false;
+// a card's capacity from its sectors (the slot's), as 'N GiB' (sectors of 512 bytes)
+const cardGiB = (sectors) => `${+(sectors / 2097152).toFixed(2)} GiB`;
 const fmtBytes = (n) => (n == null ? '' : n >= 2 ** 20 ? (n / 2 ** 20).toFixed(1) + ' MiB' : n >= 1024 ? (n / 1024).toFixed(1) + ' KiB' : n + ' B');
 const isJpeg = (p) => /\.jpe?g$/i.test(p);
 const LIVE = new Set(['running', 'busy', 'waiting-gui']);
@@ -674,7 +678,7 @@ function sessionText(d, s) {
     : 'the native lens asked for, but S-LENS stands in (this body has no native lens in the lab, src/fw/models.mjs lens_native, or no session runs)';
   const nv = !d.nvram ? 'the settings not kept (S-SETSAVE: every start is a blank camera at the date prompt)'
     : `the settings and the clock kept in ${d.nvram} (S-NVRAM${used.has('S-NVRAM') ? '' : ', not in use yet'}: a camera whose clock was set starts without the date prompt)`;
-  const card = d.card ? `the card kept in ${d.card}` : 'the card kept in memory while this player runs';
+  const card = (d.card ? `the card kept in ${d.card}` : 'the card kept in memory while this player runs') + (d.card_size != null ? ` (a new card of ${d.card_size} GiB)` : '');
   return `Session: ${d.hdmi === 'on' ? 'the HDMI port' : 'no HDMI port'} · ${lens} · ${nv} · ${card}. ${SESSION_HOW}`;
 }
 function showPorts(s) {
@@ -720,8 +724,9 @@ function showCard() {
   const where = !slot ? '' : (slot.present ? 'in the slot' : 'out of the slot') +
     (!slot.session ? ' (no session: the kept card)' : slot.present ? (slot.mounted ? ', mounted by the firmware' : ', not mounted') : '');
   const vol = c.volume ? `${c.volume.type} "${c.volume.label}" · ${files.filter((f) => !f.dir).length} files` +
-    (c.volume.free_bytes != null ? ` · ${fmtBytes(c.volume.free_bytes)} free (FSInfo)` : '') + (c.truncated ? ' · the list is cut' : '') : `not read: ${c.error}`;
-  $('card-state').textContent = [where, vol, slot && slot.file ? `kept in ${slot.file}` : ''].filter(Boolean).join(' · ');
+    (c.volume.free_bytes != null ? ` · ${fmtBytes(c.volume.free_bytes)} free (${c.volume.type === 'exFAT' ? 'the allocation bitmap' : 'FSInfo'})` : '') + (c.truncated ? ' · the list is cut' : '') : `not read: ${c.error}`;
+  const size = slot && slot.sectors ? `a ${cardGiB(slot.sectors)} ${slot.kind} card` : '';
+  $('card-state').textContent = [where, size, vol, slot && slot.file ? `kept in ${slot.file}` : ''].filter(Boolean).join(' · ');
   showCardButtons(STATUS);
   const rows = files.map((f, i) => `<tr><td>${!f.dir && isJpeg(f.path) ? `<canvas class="thumb" data-thumb="${i}" width="1" height="1"></canvas>` : ''}</td>` +
     `<td class="mono">${esc(f.path)}${f.dir ? '/' : ''}</td><td>${f.dir ? '' : fmtBytes(f.size)}</td><td class="mono">${esc(f.mtime || '')}</td>` +
@@ -843,7 +848,7 @@ $('quit').onclick = () => { api('/api/quit', {}).catch(() => {}); };
 // ---- firmware and start (the browser player) ------------------------------------------------------------------------
 const Q = new URLSearchParams(location.search);
 const ARGS = {};
-for (const k of ['lang', 'device', 'a15', 'start', 'tab', 'idle', 'touch', 'us_clock', 'compose', 'hdmi', 'lens']) if (Q.has(k)) ARGS[k] = Q.get(k);
+for (const k of ['lang', 'device', 'a15', 'start', 'tab', 'idle', 'touch', 'us_clock', 'compose', 'hdmi', 'lens', 'card_size']) if (Q.has(k)) ARGS[k] = Q.get(k);
 for (const k of ['no_bgdraw', 'debug_api', 'nvram']) if (Q.get(k) === '1') ARGS[k] = true;
 // the start options (HDMI port, native lens, kept settings): the query's, changed here until the start (the query
 // follows, so a reload keeps them)
@@ -852,6 +857,17 @@ for (const [id, k, on] of START_OPTS) {
   $(id).checked = Q.get(k) === on;
   $(id).onchange = (e) => {
     if (e.target.checked) { Q.set(k, on); ARGS[k] = k === 'nvram' ? true : on; } else { Q.delete(k); delete ARGS[k]; }
+    history.replaceState(null, '', '?' + Q.toString());
+  };
+}
+// the card's size: the query's card_size (a size the menu does not offer is added to it; the Worker refuses one the
+// card does not take), changed here until the start
+{
+  const sel = $('opt-card'), q = Q.get('card_size');
+  if (q && ![...sel.options].some((o) => o.value === q)) sel.add(new Option(`${q} GiB`, q));
+  sel.value = q ?? '';
+  sel.onchange = () => {
+    if (sel.value) { Q.set('card_size', sel.value); ARGS.card_size = sel.value; } else { Q.delete('card_size'); delete ARGS.card_size; }
     history.replaceState(null, '', '?' + Q.toString());
   };
 }
@@ -876,7 +892,7 @@ PP.onEvent = (m) => {
   else if (m.type === 'progress' && m.stage === 'nvram-cleared') $('optnote').textContent = 'the kept settings are gone from this browser (a running session with them keeps its own until it saves again)';
   else if (m.type === 'progress' && m.stage === 'nvram-error') $('optnote').textContent = 'S-NVRAM: a save was not kept in this browser: ' + m.message;
 };
-const startOpts = (on) => { for (const [id] of START_OPTS) $(id).disabled = !on; };
+const startOpts = (on) => { for (const id of [...START_OPTS.map(([i]) => i), 'opt-card']) $(id).disabled = !on; };
 // The model: src/fw/model.mjs reads ?model= here as the Worker does (web/page.mjs gives it this page's query), and throws
 // for a code MODELS does not have; then no Worker starts and the picker offers the models. A pick reloads the page with
 // ?model=CODE and its other options kept: that model's firmware comes from its own cache in this browser (web/opfs.mjs)

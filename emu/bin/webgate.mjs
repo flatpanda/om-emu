@@ -27,9 +27,10 @@
 //   for the composite whose sha16 the Player published; the page's session log equals node's run of the inputs the
 //   page sent (wall fields removed); screenshots. Then a paced page from the cache
 //   (idle wall): 10 lab seconds, the real-time ratio. Then the page's life cycle (B6b): files the Worker refuses, then
-//   E143 with the debug API (tokens), the Card, HDMI and session options panel (the card read with refs/fat.mjs, Take
-//   out and Put in, the HDMI control without the port), the EVF layout (LV to the EVF and back: the screen's class evf
-//   and the canvas size follow the frames' device) and Quit.
+//   E143 with the debug API (tokens) and a 64 GiB card chosen with the card size start option, the Card, HDMI and
+//   session options panel (the SDXC card the firmware formatted exFAT, read with refs/exfat.mjs; Take out and Put in;
+//   the HDMI control without the port), the EVF layout (LV to the EVF and back: the screen's class evf and the canvas
+//   size follow the frames' device) and Quit.
 // - B7: every network request of the page and its Workers (Network domain, auto-attached Worker sessions) is a GET to
 //   the gate's own origin with no body.
 // Firmware-derived output stays under emu/out/web/. Chrome runs in its own process group with a temporary profile
@@ -474,9 +475,10 @@ if (!argv.includes('--skip-page') && !QUICK) {
   await paced.close();
 
   // B6b, the page's life cycle: a file that is no .BIN, then another firmware's .BIN (refused as not the model's), each
-  // offering the file input again; then E143 with --debug-api: the WINDOWS token (no zlib in the Worker) answered as a
-  // refused input with the session running on, then STORE and INTC answered with their records; then Quit:
-  // the page must keep answering (its poll loops end).
+  // offering the file input again; then E143 with --debug-api and a 64 GiB card (the card size start option, set
+  // before the start: the query follows it): the WINDOWS token (no zlib in the Worker) answered as a refused input with
+  // the session running on, then STORE and INTC answered with their records; then Quit: the page must keep answering
+  // (its poll loops end).
   const life = await openPage(`${ORIGIN}/web/index.html?idle=off&debug_api=1`, PAGE_READY);
   const until3 = async (expr, ms = 120000) => { const end = performance.now() + ms; while (performance.now() < end) { const v = await life.ev(expr); if (v) return v; await sleep(100); } return null; };
   const offered = `(() => { const t = document.getElementById('fwstatus').textContent; return !document.getElementById('fwfile').disabled && t.startsWith('could not start') ? t : null; })()`;
@@ -496,6 +498,8 @@ if (!argv.includes('--skip-page') && !QUICK) {
     const cached = await life.ev(`(async () => { const m = await new Promise((r) => { const w = window.__player; const f = w.onEvent; w.onEvent = (e) => { f(e); if (e.type === 'progress' && e.stage === 'cache') { w.onEvent = f; r(e.manifest); } }; w.worker.postMessage({ type: 'cache-info' }); }); return m ? m.rom.sha256 : null; })()`);
     if (cached !== null && cached !== MODEL_INFO.rom_sha256) fail(`B6b: the OPFS cache holds a main code block ${cached} after ${path.basename(other)}`);
   } else log(`page life cycle: no other firmware .BIN (${other ?? 'set --other-bin or OM_FW_DIR'}): its refusal is not checked here (test_unpack.mjs checks a synthetic one)`);
+  const sized = await life.ev(`(() => { const s = document.getElementById('opt-card'); if (s.disabled) return null; s.value = '64'; s.dispatchEvent(new Event('change')); return location.search; })()`);
+  if (!sized || !sized.includes('card_size=64')) fail(`B6b: the card size start option did not set the query: ${sized}`);
   await life.setFile('#fwfile');
   if (!await until3(`(() => { const s = window.__playPage.status; return !!(s && s.phase === 'running' && window.__playPage.drawn); })()`)) fail('B6b: the .BIN after two refused files did not start a session');
   const token = (t) => life.ev(`(async () => { const r = await window.__player.api('/api/token?sync=1', { token: '${t}' }); return { status: r.status, body: await r.json(), phase: window.__playPage.status.phase }; })()`, 120000);
@@ -506,15 +510,17 @@ if (!argv.includes('--skip-page') && !QUICK) {
   const intc = await token('INTC');
   if (intc.status !== 200 || !intc.body.result?.record || intc.body.result.error) fail(`B6b: INTC after STORE answered ${JSON.stringify(intc).slice(0, 300)}`);
   log(`page life cycle: WINDOWS -> ${win.status} ${String(win.body.result?.error).slice(0, 90)}; STORE after it -> record ${store.body.result?.record?.token ?? null}; INTC -> record ${intc.body.result?.record?.token ?? null}, phase ${intc.phase}`);
-  // the Card, HDMI and session options panel: the card the firmware formatted at the start, read in the Worker with
-  // refs/fat.mjs and shown; the panel's Take out and Put in (S-MEDIA), each followed by a read; the HDMI control
-  // without the port (no ?hdmi=on): disabled, with the reason
+  // the Card, HDMI and session options panel: the 64 GiB SDXC card the firmware formatted exFAT at the start, read in
+  // the Worker with refs/exfat.mjs (refs/volume.mjs) and shown; the session's card size; the panel's Take out and Put
+  // in (S-MEDIA), each followed by a read; the HDMI control without the port (no ?hdmi=on): disabled, with the reason
   const cardDoc = await life.ev(`(async () => { const r = await window.__player.api('/api/card'); return { status: r.status, doc: await r.json() }; })()`, 120000);
-  if (cardDoc.status !== 200 || cardDoc.doc.volume?.type !== 'FAT32' || cardDoc.doc.slot?.present !== true) fail(`B6b: GET /api/card answered ${JSON.stringify(cardDoc).slice(0, 300)}`);
+  if (cardDoc.status !== 200 || cardDoc.doc.volume?.type !== 'exFAT' || cardDoc.doc.slot?.present !== true || cardDoc.doc.slot?.kind !== 'SDXC' || cardDoc.doc.slot?.sectors !== 64 * 2097152) fail(`B6b: GET /api/card answered ${JSON.stringify(cardDoc).slice(0, 300)}`);
+  const sess = await life.ev(`(async () => (await window.__player.api('/api/session')).json())()`);
+  if (sess.card_size !== 64 || sess.host !== 'browser') fail(`B6b: GET /api/session answered ${JSON.stringify(sess)}`);
   await life.ev(`document.getElementById('cardpanel').open = true, true`);
-  const cardText = (want) => until3(`(() => { const t = document.getElementById('card-state').textContent; return t.includes('FAT32') && ${want} ? t : null; })()`, 120000);
+  const cardText = (want) => until3(`(() => { const t = document.getElementById('card-state').textContent; return t.includes('a 64 GiB SDXC card') && t.includes('exFAT') && ${want} ? t : null; })()`, 120000);
   const shown = await cardText(`t.startsWith('in the slot, mounted') && !document.getElementById('card-remove').disabled`);
-  if (!shown) fail('B6b: the Card panel did not show the card in the slot, mounted, with its FAT32 volume');
+  if (!shown) fail('B6b: the Card panel did not show the 64 GiB SDXC card in the slot, mounted, with its exFAT volume');
   await life.ev(`document.getElementById('card-remove').click(), true`);
   const out = await cardText(`t.startsWith('out of the slot') && (window.__playPage.status.stand_ins || []).includes('S-MEDIA') && !document.getElementById('card-insert').disabled`);
   if (!out) fail('B6b: Take out did not leave the card out of the slot (S-MEDIA) with its volume still read');

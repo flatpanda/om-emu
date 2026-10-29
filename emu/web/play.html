@@ -629,6 +629,8 @@ async function drawCardImage(r, canvas) {
 const UNPLUG_WHY = 'the lab refuses an unplug (A-HDMI-1: what the transmitter and the hot-plug pin show when the cable comes out is not read)';
 const CARD_THUMBS = 24;             // thumbnails drawn per read of the card, the newest files first
 let SESSION = null, CARD = null, cardImages = null, cardReading = null, cardAgain = false;
+// a card's capacity from its sectors (the slot's), as 'N GiB' (sectors of 512 bytes)
+const cardGiB = (sectors) => `${+(sectors / 2097152).toFixed(2)} GiB`;
 const fmtBytes = (n) => (n == null ? '' : n >= 2 ** 20 ? (n / 2 ** 20).toFixed(1) + ' MiB' : n >= 1024 ? (n / 1024).toFixed(1) + ' KiB' : n + ' B');
 const isJpeg = (p) => /\.jpe?g$/i.test(p);
 const LIVE = new Set(['running', 'busy', 'waiting-gui']);
@@ -644,7 +646,7 @@ function sessionText(d, s) {
     : 'the native lens asked for, but S-LENS stands in (this body has no native lens in the lab, src/fw/models.mjs lens_native, or no session runs)';
   const nv = !d.nvram ? 'the settings not kept (S-SETSAVE: every start is a blank camera at the date prompt)'
     : `the settings and the clock kept in ${d.nvram} (S-NVRAM${used.has('S-NVRAM') ? '' : ', not in use yet'}: a camera whose clock was set starts without the date prompt)`;
-  const card = d.card ? `the card kept in ${d.card}` : 'the card kept in memory while this player runs';
+  const card = (d.card ? `the card kept in ${d.card}` : 'the card kept in memory while this player runs') + (d.card_size != null ? ` (a new card of ${d.card_size} GiB)` : '');
   return `Session: ${d.hdmi === 'on' ? 'the HDMI port' : 'no HDMI port'} · ${lens} · ${nv} · ${card}. ${SESSION_HOW}`;
 }
 function showPorts(s) {
@@ -690,8 +692,9 @@ function showCard() {
   const where = !slot ? '' : (slot.present ? 'in the slot' : 'out of the slot') +
     (!slot.session ? ' (no session: the kept card)' : slot.present ? (slot.mounted ? ', mounted by the firmware' : ', not mounted') : '');
   const vol = c.volume ? `${c.volume.type} "${c.volume.label}" · ${files.filter((f) => !f.dir).length} files` +
-    (c.volume.free_bytes != null ? ` · ${fmtBytes(c.volume.free_bytes)} free (FSInfo)` : '') + (c.truncated ? ' · the list is cut' : '') : `not read: ${c.error}`;
-  $('card-state').textContent = [where, vol, slot && slot.file ? `kept in ${slot.file}` : ''].filter(Boolean).join(' · ');
+    (c.volume.free_bytes != null ? ` · ${fmtBytes(c.volume.free_bytes)} free (${c.volume.type === 'exFAT' ? 'the allocation bitmap' : 'FSInfo'})` : '') + (c.truncated ? ' · the list is cut' : '') : `not read: ${c.error}`;
+  const size = slot && slot.sectors ? `a ${cardGiB(slot.sectors)} ${slot.kind} card` : '';
+  $('card-state').textContent = [where, size, vol, slot && slot.file ? `kept in ${slot.file}` : ''].filter(Boolean).join(' · ');
   showCardButtons(STATUS);
   const rows = files.map((f, i) => `<tr><td>${!f.dir && isJpeg(f.path) ? `<canvas class="thumb" data-thumb="${i}" width="1" height="1"></canvas>` : ''}</td>` +
     `<td class="mono">${esc(f.path)}${f.dir ? '/' : ''}</td><td>${f.dir ? '' : fmtBytes(f.size)}</td><td class="mono">${esc(f.mtime || '')}</td>` +

@@ -588,9 +588,10 @@ export class Player {
   // A read of the card's files ({type: 'cardfiles', op: 'list'} or {op: 'read', path}: the players' Card panel,
   // src/lab/playapi.mjs /api/card): the card in the first slot as its sectors stand between ticks (the session's,
   // in the slot or out of it, or the one the host keeps while no session runs), read by the host's reader
-  // (env.cardView, web/cardfiles.mjs: refs/fat.mjs, not the firmware). Nothing of the lab runs; it stays outside the
-  // session log, the GUI's event gate and --replay, as a debug input does. The answer is the result's card field:
-  // {slot: {present, mounted, session, file}, ...the reader's answer} (its error field when the volume cannot be read);
+  // (env.cardView, web/cardfiles.mjs: refs/fat.mjs or refs/exfat.mjs, not the firmware). Nothing of the lab runs; it
+  // stays outside the session log, the GUI's event gate and --replay, as a debug input does. The answer is the result's
+  // card field: {slot: {present, mounted, session, file, kind ('SDHC' or 'SDXC'), sectors (its capacity)}, ...the
+  // reader's answer} (its error field when the volume cannot be read);
   // the result's error is a refusal (no reader, no card on this body, an unknown op).
   card_files(inp) {
     const view = this.env.cardView ?? null, op = get(inp, 'op'), path = get(inp, 'path');
@@ -602,7 +603,8 @@ export class Player {
     if (why !== null) { this.finish(inp, null, why); return; }
     const st = this.session?.storage ?? null, card = st ? st.card : this.env.card.open();
     const read = (lba, count) => card.read(lba, count);
-    const slot = { present: card.present, mounted: st ? st.mounted : false, session: st !== null, file: this.env.card.file ?? null };
+    const slot = { present: card.present, mounted: st ? st.mounted : false, session: st !== null, file: this.env.card.file ?? null,
+      kind: card.kind, sectors: card.sectors };
     this.finish(inp, null, null, { card: { slot, ...(op === 'list' ? view.list(read) : view.read(read, path)) } });
   }
   run() {

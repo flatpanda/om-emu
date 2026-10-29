@@ -172,11 +172,12 @@ export class LabTask {
     this.settle_sem = null; this.settling = false; this.settle_log = []; this._settle_current = null;
     this._irq_open = false; this.native_opens = 0; this._accepted_seen = 0;
     this.strict_levels = true; this.time_mode = false; this.elapse_log = []; this.idle_again_limit = 1000;
-    // a device beside the CPU that moves on at the idle point (src/lab/scpulink.mjs, the sub-CPU): idle_step() is
-    // called at each idle point with no interrupt presented, before on_idle, and returns false (nothing to do),
-    // 'again' (it did something: look at the interrupts again) or 'ready' (it ran firmware code in interrupt context
-    // that may have made a task ready: dispatch)
-    this.idle_step = null; this.idle_step_limit = 10000;
+    // the devices beside the CPU that move on at the idle point (src/lab/scpulink.mjs, the sub-CPU; src/lab/power.mjs,
+    // S-IOEXP's completions), in the order they were added: each idle step is called at each idle point with no
+    // interrupt presented, before on_idle, until one returns other than false (nothing to do): 'again' (it did
+    // something: look at the interrupts again) or 'ready' (it ran firmware code in interrupt context that may have
+    // made a task ready: dispatch)
+    this.idle_steps = []; this.idle_step_limit = 10000;
   }
   tcb(tid) { return this.nk.tcb(tid); }
   state(tid) { return this.nk.state(tid); }
@@ -273,8 +274,9 @@ export class LabTask {
         }
         this._irq_open = false;
       }
-      if (this.idle_step) {
-        const step = this.idle_step();
+      if (this.idle_steps.length) {
+        let step = false;
+        for (const fn of this.idle_steps) if ((step = fn()) !== false) break;
         if (step === 'again') {
           steps += 1;
           if (steps > this.idle_step_limit) throw new FirmwareError(`idle: the device beside the CPU took ${steps - 1} steps at one idle point and presented no interrupt`);

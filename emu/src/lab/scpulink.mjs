@@ -75,8 +75,7 @@ export class ScpuLink {
     lab.hook(SIO_CONFIG, (h, r) => this._config(h, r), 'S-SIO2 configure');
     lab.hook(SIO_TRANSFER, (h, r) => this._transfer(h, r), 'S-SIO2 transfer');
     lab.hook(SIO_CLOSE, (h, r) => this._close(h, r), 'S-SIO2 close');
-    if (lab.lt.idle_step) throw new LinkError('H-SCPUSTART: the lab task already steps a device at its idle point');
-    lab.lt.idle_step = () => this.idle_step();
+    lab.lt.idle_steps.push(() => this.idle_step());
     if (!lab.hdmi) lab.step('H-GIOSLOTS (the sub-CPU link)', () => lab.call(GIO_SLOTS, null, null, null, 20000));
     lab.lt.allow.add(PER_SCPU_TASK);
     const ev0 = lab.kernel.events.length;
@@ -89,7 +88,7 @@ export class ScpuLink {
       throw new LinkError(`H-SCPUSTART: after PER_SCPU's start: task ${this.tid} state 0x${lab.nk.state(this.tid).toString(16)}, the sub-CPU's gate ${this.dev.powered ? 'open' : 'closed'} in state ${this.dev.state}, frames ${JSON.stringify(frames)}, channel ${this.open ? 'open' : 'closed'}, ${this.ends.length} transfer ends pending: not waiting after 0x85 {2}`);
     }
   }
-  // the lab task's idle point (src/lab/kernel.mjs LabTask idle_step): a transfer's end first (the MN's driver
+  // the lab task's idle point (src/lab/kernel.mjs LabTask idle_steps): a transfer's end first (the MN's driver
   // interrupts as the last byte is clocked), then the sub-CPU's next action
   idle_step() {
     if (this.ends.length) {

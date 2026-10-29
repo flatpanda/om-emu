@@ -97,7 +97,7 @@ export const FAMILIES = {
     },
     // the deferred-call triggers (src/dev/dpc.mjs): the six words the posts write 1 to and the IRQs their init
     // 0x50050279 attaches (53 and 54 on CPUs 0..3 through 0x50053fcd, 55..58 on the calling core through 0x50053f76;
-    // the words 0x9b880044..0x9b880058, D)
+    // the words 0x9b880044..0x9b880058, D; src/fw/facts.mjs deferredCalls reads the same on E143, E146 and E147, X)
     dpc: { triggers: 0x9B880044, irqs: [53, 54, 55, 56, 57, 58] },
     core_byte: 0x97F00254,
     // the interrupt vectors' page, the high half of the level slots' run-time addresses: E143's vector init loads
@@ -201,7 +201,8 @@ export const FAMILIES = {
     // the sub-CPU link's pins: not read for the family; E139 and E134, the bodies that run PER_SCPU, give theirs (pins
     // 77 / 76 / 57 in the family's GIO block, src/fw/models.mjs)
     scpu_link: UNKNOWN,
-    // the HDMI port, the lens mount and the deferred-call triggers: not read on this family
+    // the HDMI port and the lens mount: not read on this family; the deferred-call triggers per body, read by
+    // src/fw/facts.mjs (deferredCalls: the six words 0x9b800030..0x9b800044 and IRQs 29..34 on every body of the family)
     hdmi: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN,
     // per body, read by src/fw/facts.mjs (coreByte; resetHead's library and preload rows; vectorPage: 0x6003xxxx on
     // E144, 0x6041xxxx on the 0x60400020 bodies, X; dramSize: 256 MiB on E144, 512 MiB on the 0x60400020 bodies, X)

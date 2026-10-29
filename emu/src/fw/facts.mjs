@@ -833,6 +833,27 @@ function uiInTask(img, kcb, flag) {
   return taskRunningTo(img, kcb, halfLoads(img, flag, true), UI_IN_SPAN, 'uiInTask', `a load of the flag word ${h8(flag)}`);
 }
 
+// The power task (fact 'power.task', src/lab/play.mjs H-PWRTASK), read at the port's place of E143's CPU 0 kcb
+// (KCB0_E143): the static task whose entry first calls the power module's init, which calls the internal charger's
+// init, the function that loads the name "PWR_INTCHA_IICWAIT" for the event flag its transfers complete with and sets
+// the charger's IIC channel up (E132: task 11, entry 0x500400b7, its call of 0x5003f48d at 0x500400bc, which calls the
+// charger init 0x5003fa04 at 0x5003f4dd; the init's channel 9 at 400 kHz with the completion callbacks 0x5003fe46
+// and 0x5003fe5a in 0xa2b1610c.., D). The boot starts the task; the lab, ending the init task, does not. The name on
+// E144, E142, E140, E137, E145, E129 and E132, not on the other 11 images (X, a byte scan). Returns the entry
+// (disassembly notation), null where the name is not held; throws unless one load of it (of its copies: two on
+// each, X) and one such task.
+const PWR_NAME = 'PWR_INTCHA_IICWAIT', PWR_SPAN = 0x200, PWR_TASK_SPAN = 0x40;
+function powerTask(img, kcb) {
+  const names = findString(img, PWR_NAME, { nul: true, after: true });
+  if (!names.length) return null;
+  const { base } = imageBase(img), loads = names.flatMap((o) => loadsOf(img, (base + o) >>> 0));
+  if (loads.length !== 1) throw new Error(`powerTask: ${loads.length} loads of the name ${PWR_NAME}, want one`);
+  const init = entryOf(img, loads[0], PWR_SPAN);
+  if (init === undefined) throw new Error(`powerTask: the load of ${PWR_NAME} at ${h8(0x50000000 + loads[0])} is in no called function`);
+  const modules = new Set(callsTo(img, init).map((at) => entryOf(img, at, PWR_SPAN)).filter((e) => e !== undefined));
+  return taskRunningTo(img, kcb, [...modules].flatMap((m) => callsTo(img, m)), PWR_TASK_SPAN, 'powerTask', `a call of the power init calling ${h8(0x50000000 + init)}`);
+}
+
 // The touch task's start in the boot (fact 'touch_start', and through bin/port.mjs the places of E143's touch init
 // TOUCH_INIT_E143 0x501e3dca and the touch task's id word TOUCH_TASK_ID_E143 0x60042dcc, src/lab/play.mjs H-TPINIT,
 // which calls the init and starts the task by the id it reads there), read at the port's places of E143's CPU 0 kcb
@@ -1417,6 +1438,71 @@ export function cardDetect(img) {
   const t = tests[0];
   if (!bytesAt(img, t, DETECT_FORM)) throw new Error(`cardDetect: the test ${h8(0x50000000 + t)} is not the detect-state read`);
   return { table: u32(img, t + 10), drives: img[t + 3] };
+}
+
+// The deferred calls (board dpc, src/dev/dpc.mjs; fact 'dpc.init', src/lab/play.mjs H-DPCINIT): a post puts a call on
+// its core's ring, enables the ring's IRQ for that core and writes 1 to the IRQ's trigger word, and the IRQ's handler
+// runs the ring (E143 0x500503d4, IRQ 53; E132 0x5004a236: the ring 0x5004a34c, the enable 0x5004be41(29, core), the
+// word 0x9b800030, D). The init, which the boot head calls before the kernel (E143 0x50050279 from 0x50000270, E132
+// 0x5004a115 from 0x500002ea, D), clears the rings, writes 0 to the first two words, `mov d0,(W); mov d0,(W+4)`,
+// attaches their IRQs on every core and disables them, then writes 0 to the other four, `mov d0,(W+8)` .. `(W+20)`,
+// and attaches theirs on its own core, each IRQ loaded by `mov N,d0` before its attach (E143: W 0x9b880044, IRQs
+// 53..58; E132: W 0x9b800030, IRQs 29..34, on three cores, D). One such init on each of the 15 expanded images but the
+// E118 family's (X, a byte scan of the 18: W 0x9b880044 and IRQs 53..58 on the E143 family, W 0x9b800030 and IRQs
+// 29..34 on the others). Returns {init (disassembly notation), triggers: W, irqs: the six IRQs in their words' order},
+// or undefined where no init stores six words so and loads six consecutive IRQs; throws for two, or one that no call
+// enters.
+export const DPC_E143 = { init: 0x50050279 };
+const DPC_WORDS = 6, DPC_SPAN = 0x180, MMIO = [0x90000000, 0xA0000000];
+export function deferredCalls(img) {
+  const store = (o, w) => img[o] === 0xfc && img[o + 1] === 0x81 && u32(img, o + 2) === w;
+  const found = [];
+  for (let p = img.indexOf(0xfc); p >= 0 && p + 12 <= img.length; p = img.indexOf(0xfc, p + 1)) {
+    const w = u32(img, p + 2);
+    if (img[p + 1] !== 0x81 || w < MMIO[0] || w >= MMIO[1] || !store(p + 6, w + 4) || store(p - 6, w - 4)) continue;
+    let q = p + 12;
+    while (q + 24 <= Math.min(img.length, p + DPC_SPAN) && ![0, 1, 2, 3].every((i) => store(q + 6 * i, w + 8 + 4 * i))) q++;
+    if (q + 24 > Math.min(img.length, p + DPC_SPAN)) continue;
+    // the IRQs: the operands of `mov imm8,d0` (80 NN) from the first store to the init's return, in first-load order
+    const irqs = [];
+    let r = p;
+    for (; r - p <= DPC_SPAN && (r < q + 24 || !isRet(img, r)); r += callAt(img, r)?.len ?? insnLength(img[r], img[r + 1])) {
+      if (img[r] === 0x80 && !irqs.includes(img[r + 1])) irqs.push(img[r + 1]);
+    }
+    // the six words' IRQs are six consecutive lines (E143 53..58, E132 29..34, D)
+    if (r - p <= DPC_SPAN && irqs.length === DPC_WORDS && irqs.every((n, i) => n === irqs[0] + i)) found.push({ p, w, irqs });
+  }
+  if (!found.length) return undefined;
+  if (found.length > 1) throw new Error(`deferredCalls: ${found.length} trigger inits (${found.map((f) => h8(0x50000000 + f.p)).join(', ')}), want one`);
+  const { p, w, irqs } = found[0], init = entryOf(img, p, DPC_SPAN);
+  if (init === undefined) throw new Error(`deferredCalls: the trigger init's stores at ${h8(0x50000000 + p)} have no entry a call reaches`);
+  return { init: 0x50000000 + init, triggers: w, irqs };
+}
+// The boot's state that the lab's start leaves unset because the boot steps that set it do not run (fact 'boot',
+// src/lab/menu.mjs S-BOOTSTAGE, src/lab/play.mjs S-BOOTKEY):
+// - stage, the ready word of the image's stages: the boot readies the run-time image in stages, and code that needs a
+//   stage's part waits for or tests its bit, n - 1 for stage n, through the one test `mov (W),d1; add -1,d0; mov 1,d2;
+//   asl d0,d2; mov d2,d0; and d1,d0; beq; mov 1,d0; bra; clr d0; retf [d2],4` (E143 0x50024dcf, W 0xa32df1f4, which
+//   the per-segment step 0x50024eda sets after CPU 2's overlay loader has read the segment, docs/om1-cores-spec.md
+//   3.6; E129 0x50022e30, W 0xa2b4d2cc, which the stage step 0x50022f51(n) sets once the loader 0x50022ec0 has marked
+//   the stage's part read in 0xa2b4d2d0, D);
+// - key, UI_IN's boot key, the code of the key that started the camera: UI_IN's init (E143 0x5014e3ab, from its start
+//   stage) takes it from its key table at the sub-CPU's wake factor, `asl2 d0; mov (d0,a0),d0; mov d0,(W); cmp
+//   0x1000003,d0`, or stores 0x1000001 for a factor past the table (E143 0x5014e4bb..d4, W 0xa32dab30; E133
+//   0x500f5e8c..ba, W 0xa2ae718c, D), and UI_IN's getter answers it (E143 0x5014c3bf, E133 0x500f45ce: the camera
+//   application's wake-up judgement, the display start and the power path read it, D).
+// Each test and store exactly once on each of the 15 expanded images but the E118 family's, which hold neither (X, a
+// byte scan of the 18). Returns {key, stage}, the two run-time words, or undefined where neither is held; throws for
+// two of either, or one without the other.
+export const BOOT_E143 = { key: 0xA32DAB30, stage: 0xA32DF1F4 };
+const STAGE_TEST = [0xfc, 0xa5, null, null, null, null, 0x28, 0xff, 0x8a, 0x01, 0xf2, 0x92, 0x88, 0xf2, 0x04, 0xc8, 0x06,
+  0x80, 0x01, 0xca, 0x03, 0x00, 0xde, 0x80, 0x04];
+const BOOT_KEY_STORE = [0x54, 0xf3, 0x00, 0xfc, 0x81, null, null, null, null, 0xfc, 0xc8, 0x03, 0x00, 0x00, 0x01];
+export function bootState(img) {
+  const stage = oneAt(img, STAGE_TEST, 'bootState', 'stage-bit tests'), key = oneAt(img, BOOT_KEY_STORE, 'bootState', 'boot key stores');
+  if (stage === null && key === null) return undefined;
+  if (stage === null || key === null) throw new Error(`bootState: ${stage === null ? 'no stage-bit test' : 'no boot key store'}, but the other`);
+  return { key: u32(img, key + 5), stage: u32(img, stage + 2) };
 }
 
 // The register immediates a straight run of code leaves at offset `to` (from `from`): {d0..d3, a0..a3}, a value or
@@ -2160,6 +2246,7 @@ export function readPlacedFacts({ img, at }) {
   const dial = dialPtr !== null ? dialStore(img, dialPtr) : undefined;
   if (dial !== undefined) facts.dial = dial;
   if (kcb !== null && uiFlag !== null) facts.ui_in = { task: uiInTask(img, kcb, uiFlag) };
+  if (kcb !== null) facts.power = { task: powerTask(img, kcb) };
   const tpStart = kcb !== null && tpTask !== null && taSt !== null ? touchStart(img, kcb, tpTask, taSt) : undefined;
   if (tpStart !== undefined) facts.touch_start = tpStart;
   const evWt = at(OLYEVWT_E143);
@@ -2182,9 +2269,9 @@ export function readPlacedFacts({ img, at }) {
 // {change_task, change_entry, queue_word, queue_id, task_init, frame_wait, timer_sleep, sync, face_colour}}, {timer:
 // {reload_less_one}}, {dial: {select, select_end, table_ptr, table0}}, {touch_panel: {driver}}, {lens: {mount}}, {iic:
 // {waits}}, {touch: {i2c_write, i2c_read}}, {touch_api: {open}}, {shooting: {start, end, auto_through}}, {func_direct:
-// {run, id}}, {broker: {init}}, {card: {shots_query, detect}}, {storage: {init, tasks, fileclbk, nand, command, album_init, status, cflush, names}}, {power_off: {usb_disconnect}}, {gui: {stride, height,
+// {run, id}}, {broker: {init}}, {card: {shots_query, detect}}, {boot: {key, stage}}, {dpc: {init}} (with board.dpc), {storage: {init, tasks, fileclbk, nand, command, album_init, status, cflush, names}}, {power_off: {usb_disconnect}}, {gui: {stride, height,
 // banks, kind3}}, {recview: {word, standby}} and {cbs: {NAME: code}} (no memories, take, task init, frame wait, timer sleep,
-// sync, face colour, timer, dial, touch, touch_api, shooting, func_direct, power_off, recview or cbs part where its
+// sync, face colour, timer, dial, touch, touch_api, shooting, func_direct, boot, dpc, power_off, recview or cbs part where its
 // rule reads none). Throws for a reset_head with no rule here, and where a rule throws.
 export function readFacts({ img, family, resLoad }) {
   const facts = {};
@@ -2226,6 +2313,10 @@ export function readFacts({ img, family, resLoad }) {
   if (direct !== undefined) facts.func_direct = direct;
   facts.broker = { init: brokerInit(img) };
   facts.card = { shots_query: shotsQuery(img), detect: cardDetect(img) };
+  const boot = bootState(img);
+  if (boot !== undefined) facts.boot = boot;
+  const dpc = deferredCalls(img);
+  if (dpc !== undefined) { facts.board.dpc = { triggers: dpc.triggers, irqs: dpc.irqs }; facts.dpc = { init: dpc.init }; }
   const storage = fileSystem(img);
   if (storage !== undefined) facts.storage = storage;
   const usbOff = usbPowerOff(img);

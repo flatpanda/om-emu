@@ -446,10 +446,16 @@ const GUI_FOUND = {
 // The rec view component's state word and standby value (recview; D: E143 entryStandby 0x50c65ff2 -> 0x50c66a25 ->
 // 0x50ab5fe7, E142 0x508f1cee -> 0x508f2721 -> 0x5074b31c, whose word E142's getRecViewState gate 0x5074b283 reads)
 const RECVIEW_FOUND = { E143: { word: 0x6035E9C8, standby: 1 }, E142: { word: 0x61FA73A0, standby: 1 } };
+// The boot's state words (bootState; D: E133's UI_IN init stores its boot key at 0x500f5e95 and its getter 0x500f45ce
+// reads it, E129's stage test 0x50022e30 reads its ready word, which the stage step 0x50022f51 sets at 0x5002302e)
+// and the deferred calls' init (deferredCalls; D: E132's boot head calls 0x5004a115 at 0x500002ea, which zeroes the
+// words 0x9b800030..0x9b800044 and attaches IRQs 29..34)
+const BOOT_FOUND = { E133: { key: 0xA2AE718C }, E129: { stage: 0xA2B4D2CC } };
+const DPC_FOUND = { E132: { init: 0x5004A115, board: { triggers: 0x9B800030, irqs: [29, 30, 31, 32, 33, 34] } } };
 // E143's own facts: its loader's limits, its menus are ListMenu (src/lab/menu.mjs LIST_MENU) with their memories, its
 // traits and its dial select (src/lab/menu.mjs dialSelect)
 const E143_FACTS = {
-  board: { vector_page: 0x60030000, dram_size: 384 << 20 },
+  board: { vector_page: 0x60030000, dpc: { triggers: 0x9B880044, irqs: [53, 54, 55, 56, 57, 58] }, dram_size: 384 << 20 },
   res: { font_limit: E143_LOADER.font[1], string_limit: E143_LOADER.string[1] },
   menu: { list_menu: true, tab_memory: 1881, page_memory: 1882, take: 0x510C2A2E },
   kernel: { cpus: 4 }, errlog: { entry: ERRLOG_FOUND.E143 }, scpu: { backup: true },
@@ -458,7 +464,8 @@ const E143_FACTS = {
   timer: { reload_less_one: false }, dial: { select: 0x5014B7C7, select_end: 0x1A, table_ptr: 0xA32DAAB0, table0: 0x60223DBC },
   touch_panel: { driver: true }, lens: { mount: true }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
-  broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] } }, storage: STORAGE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143,
+  broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] } },
+  boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, dpc: { init: 0x50050279 }, storage: STORAGE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143,
   cbs: CBS_FOUND.E143,
 };
 
@@ -618,6 +625,9 @@ export function factsTests() {
     if (TOUCH_ARGS_FOUND[code] && (code === 'E143' || PORTS[code])) ok(same(placed?.touch_args, TOUCH_ARGS_FOUND[code]), `${code}: touch_args ${hx(placed?.touch_args ?? placed)}, found ${hx(TOUCH_ARGS_FOUND[code])}`);
     if (GUI_FOUND[code]) ok(same(got.gui, GUI_FOUND[code]), `${code}: gui ${hx(got.gui ?? got)}, found ${hx(GUI_FOUND[code])}`);
     if (RECVIEW_FOUND[code]) ok(same(got.recview, RECVIEW_FOUND[code]), `${code}: recview ${hx(got.recview ?? got)}, found ${hx(RECVIEW_FOUND[code])}`);
+    for (const [k, v] of Object.entries(BOOT_FOUND[code] ?? {})) ok(got.boot?.[k] === v, `${code}: boot.${k} ${hx(got.boot ?? got)}, found ${hx(v)}`);
+    const dpcf = DPC_FOUND[code];
+    if (dpcf) ok(got.dpc?.init === dpcf.init && same(got.board?.dpc, dpcf.board), `${code}: dpc ${hx(got.dpc ?? got)} board.dpc ${hx(got.board?.dpc)}, found ${hx(dpcf)}`);
     if (Object.hasOwn(CHANGE_ENTRY_FOUND, code)) ok(got.display?.change_entry === CHANGE_ENTRY_FOUND[code], `${code}: display.change_entry ${hx(got.display?.change_entry)}, found ${hx(CHANGE_ENTRY_FOUND[code])}`);
     if (Object.hasOwn(POWER_OFF_FOUND, code)) ok(got.power_off?.usb_disconnect === POWER_OFF_FOUND[code], `${code}: power_off ${hx(got.power_off ?? got)}, found ${hx(POWER_OFF_FOUND[code] ?? 'none')}`);
     // the play component's wrappers, and every place the port gave one of E143's among them (bin/port.mjs, how

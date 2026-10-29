@@ -286,8 +286,9 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
     <span class="note">the tilt input: the accelerometer's sample (S-ACCSAMPLE; E143, E146), which the level gauge follows; which way each sign turns the camera is not known (A-ACC-3)</span></div>
   <p class="note">Take out and Put in are the card inputs (S-MEDIA: the card switch changes as a body's does, UI_IN decodes it
   and the firmware unmounts and mounts the card; E143). The list is the card's sectors read between the lab's steps with
-  the independent FAT reader (refs/fat.mjs), not through the firmware: a file being written can show as it was before, and
-  the card out of the slot is the settled view. Pictures are decoded with the independent JPEG decoder (refs/jpeg.mjs);
+  the independent FAT and exFAT readers (refs/fat.mjs, refs/exfat.mjs: refs/volume.mjs picks one by the card's boot
+  sector), not through the firmware: a file being written can show as it was before, and the card out of the slot is
+  the settled view. Pictures are decoded with the independent JPEG decoder (refs/jpeg.mjs);
   a picture's file is S-RECFILE's, S-SCENE's frame at the capture with each 8 x 8 block its mean.</p>
   <div id="card-files" class="cardfiles"></div>
   <div class="cardview" id="card-view" hidden><div class="note" id="card-caption"></div><canvas id="card-canvas" width="1" height="1"></canvas></div>
@@ -971,11 +972,11 @@ async function selftest() {
   key('PageDown', 'keydown', true); await sleep(150); key('PageDown', 'keyup', true);
   step('Shift+PageDown: multi-selector down-right (UI_IN 0x02021234)', await until(() => $('eventlog').textContent.includes('0x02021234'), 20000) && STATUS.mode_dial === (m0 + 2) % 10, { mode: STATUS.mode_dial });
   // the Card, HDMI and session options panel: the session's options, the card the firmware formatted at the start read
-  // with refs/fat.mjs, and the HDMI control's state (no port without --hdmi on)
+  // with refs/volume.mjs, and the HDMI control's state (no port without --hdmi on)
   const sess = await (await api('/api/session')).json();
   step('session options (GET /api/session)', typeof sess.lens === 'string' && (sess.hdmi === 'on' || sess.hdmi === 'off'), { session: sess });
   $('cardpanel').open = true;
-  step('Card panel: the card read (refs/fat.mjs)', await until(() => CARD && (CARD.volume || CARD.error), 30000) && !!(CARD.volume && CARD.volume.type),
+  step('Card panel: the card read (refs/volume.mjs)', await until(() => CARD && (CARD.volume || CARD.error), 30000) && !!(CARD.volume && CARD.volume.type),
     { card: CARD && { slot: CARD.slot, volume: CARD.volume, error: CARD.error, files: (CARD.files || []).length } });
   step('HDMI control', sess.hdmi === 'on' ? !!STATUS.hdmi : $('hdmi-plug').disabled && $('hdmi-state').textContent.startsWith('no HDMI port'),
     { hdmi: STATUS.hdmi || null, text: $('hdmi-state').textContent });

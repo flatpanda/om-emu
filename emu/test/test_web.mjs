@@ -45,6 +45,7 @@ import { bytesBase64, base64Bytes } from '../src/util/bytes.mjs';
 import { CARD_VIEW, cardList, cardFile, jpegRgba } from '../web/cardfiles.mjs';
 import { browserNvram } from '../web/nvram.mjs';
 import { pngRgba } from '../host/server.mjs';
+import { buildExfat } from './test_storage.mjs';
 
 const REPO = path.resolve(new URL('../../', import.meta.url).pathname);
 const OUT = path.join(REPO, 'emu/out/test-web');
@@ -462,8 +463,9 @@ export function fat16Card() {
 }
 
 // The Card panel's parts and the session options, without firmware: base64 (src/util/bytes.mjs); the card's reader
-// (web/cardfiles.mjs: the listing, a file, a refused volume and path, the JPEG drawn as RGBA at full size and scaled
-// down); the router's /api/session and card routes on a headless Player (no session: the card stays readable) with
+// (web/cardfiles.mjs: the listing, a file, a refused volume and path on FAT16, the same on an exFAT volume
+// test/test_storage.mjs builds, with its contiguous directory, a valid data length short of the size and the free count
+// from the allocation bitmap, and a broken boot checksum refused; the JPEG drawn as RGBA at full size and scaled down); the router's /api/session and card routes on a headless Player (no session: the card stays readable) with
 // their refusals (no reader, no decoder, bad paths and sizes) and the PNG the node server answers (host/server.mjs
 // pngRgba, inflated here); the card reads outside the session log; web/page.mjs's bytes() and blob(); the browser's
 // S-NVRAM host (web/nvram.mjs: the document host/nvram.mjs keeps, writes one at a time, a failed write reported).
@@ -495,9 +497,19 @@ export async function cardTests() {
   ok(/no such file/.test(cardFile(read, 'NOPE.JPG').error) && /a directory/.test(cardFile(read, 'DCIM').error), 'cardFile refuses a missing file and a directory');
   const blank = new SdCard();
   ok(/boot signature/.test(cardList((lba, n) => blank.read(lba, n)).error ?? ''), `a blank card: ${JSON.stringify(cardList((lba, n) => blank.read(lba, n)))}`);
-  const ex = new SdCard(), exb = new Uint8Array(SECTOR);
-  exb.set([...'EXFAT   '].map((c) => c.charCodeAt(0)), 3); exb[510] = 0x55; exb[511] = 0xaa; ex.writeSector(0, exb);
-  ok(/exFAT/.test(cardList((lba, n) => ex.read(lba, n)).error ?? ''), 'an exFAT volume is refused with the reason');
+  // an exFAT volume (refs/volume.mjs picks refs/exfat.mjs): 992 one-sector clusters, 8 of them allocated
+  const ex = buildExfat(), exList = cardList(ex.read);
+  const exWant = [['DCIM', true], ['DCIM/P1010001.JPG', false], ['A Long Picture Name.jpg', false]];
+  ok(JSON.stringify(exList.files?.map((f) => [f.path, f.dir])) === JSON.stringify(exWant) && exList.files[1].size === 1000 && exList.files[2].size === 700 && exList.files[2].mtime === '2026-10-28 12:34:10',
+    `cardList on exFAT: ${JSON.stringify(exList.files ?? exList)}`);
+  ok(JSON.stringify(exList.volume) === JSON.stringify({ type: 'exFAT', label: 'TEST', start: 64, clusters: 992, cluster_bytes: 512, free_bytes: 984 * 512 }) && exList.truncated === false,
+    `cardList exFAT volume: ${JSON.stringify(exList.volume)}`);
+  const exPic = cardFile(ex.read, 'dcim/p1010001.jpg'), exLong = cardFile(ex.read, 'A Long Picture Name.jpg');
+  const longWant = Uint8Array.from({ length: 700 }, (_, i) => (i < 600 ? ex.long[i] : 0));
+  ok(exPic.name === 'P1010001.JPG' && same(base64Bytes(exPic.base64), ex.pic) && same(base64Bytes(exLong.base64 ?? ''), longWant),
+    `cardFile on exFAT: ${exPic.error ?? exPic.name} ${exPic.size}; the long name's bytes past its valid data length read as zeros: ${exLong.error ?? exLong.size}`);
+  ex.disk[ex.sec(11)] ^= 1;                    // the boot checksum's first byte
+  ok(/boot checksum/.test(cardList(ex.read).error ?? ''), `an exFAT volume whose boot checksum does not hold is refused with the reason: ${JSON.stringify(cardList(ex.read))}`);
   // the picture: every pixel its tile's colour (ycc_to_rgb), at full size and scaled to 8 x 4
   const tileRgb = (x, y, w, h) => { const [Y, Cb, Cr] = TILE(Math.floor(x * 32 / w) >> 4, Math.floor(y * 16 / h) >> 3); return yccToRgb(Y | Cb << 8 | Cr << 16); };
   for (const [max, w, h] of [[0, 32, 16], [8, 8, 4], [64, 32, 16]]) {

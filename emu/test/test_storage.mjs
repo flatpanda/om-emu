@@ -97,8 +97,8 @@ function buildFat32() {
 // below 'a' to themselves, then a..z to A..Z), 4 the root (the label 'TEST', the bitmap, the up-case table, a volume
 // GUID, DCIM, 'A Long Picture Name.jpg', a deleted set), 5 DCIM (contiguous: its FAT entry 0), 6 and 8 the long-named
 // file's chain (700 bytes, 600 valid; 7 free and filled with 0xee), 9 and 10 DCIM's P1010001.JPG (1000 bytes,
-// contiguous)
-function buildExfat() {
+// contiguous). Also the Card panel's exFAT volume (test/test_web.mjs cardTests)
+export function buildExfat() {
   const start = 64, length = 1024, fatOffset = 24, fatLength = 8, heap = 32, count = length - heap;
   const disk = new Uint8Array((start + length) * SECTOR);
   const put16 = (o, v) => { disk[o] = v & 255; disk[o + 1] = v >> 8 & 255; };

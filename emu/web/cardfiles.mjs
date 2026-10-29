@@ -1,12 +1,13 @@
-// The card's files for the players' Card panel: the card in the first slot read with the independent FAT reader
-// (refs/fat.mjs), never through the firmware or the lab's own code, and a picture file decoded with the independent
-// baseline JPEG decoder (refs/jpeg.mjs). The hosts hand CARD_VIEW to the Player as env.cardView (the browser player's
-// Worker, web/worker.mjs; the node host's lab thread, host/labworker.mjs), which runs it between ticks on the card as
-// it stands (src/lab/player.mjs card_files), and jpegRgba to the router as opts.cardImage (src/lab/playapi.mjs
+// The card's files for the players' Card panel: the card in the first slot read with the independent readers, FAT
+// (refs/fat.mjs) or exFAT (refs/exfat.mjs) as refs/volume.mjs picks them by the card's boot sector, never through the
+// firmware or the lab's own code, and a picture file decoded with the independent baseline JPEG decoder
+// (refs/jpeg.mjs). The hosts hand CARD_VIEW to the Player as env.cardView (the browser player's Worker,
+// web/worker.mjs; the node host's lab thread, host/labworker.mjs), which runs it between ticks on the card as it
+// stands (src/lab/player.mjs card_files), and jpegRgba to the router as opts.cardImage (src/lab/playapi.mjs
 // /api/card/image). Pure JS, Worker-safe; it imports refs/ for the readers, which src/ may not (test/test_pure.mjs).
 // What the volume shows between ticks is what the card's sectors hold then: a file the firmware is writing, or a FAT
 // it has not flushed, can read as it was before (the card out of the slot is the settled view).
-import { FatVolume, mbrPartition } from '../refs/fat.mjs';
+import { openVolume } from '../refs/volume.mjs';
 import { decodeJpeg } from '../refs/jpeg.mjs';
 import { RefError, ValueError } from '../refs/errors.mjs';
 import { ycc_to_rgb } from '../src/lab/display.mjs';
@@ -19,13 +20,16 @@ const FREE_UNKNOWN = -1 >>> 0;
 // the largest side of a decoded picture (the viewer's; a thumbnail asks for less)
 export const IMAGE_MAX = 4096;
 
-// The volume of the card: the first partition of its MBR, else a volume from sector 0 (a card without an MBR)
-function volumeOf(read) {
-  const p = mbrPartition(read(0, 1));
-  return new FatVolume(read, p ? p.start : 0);
+// The volume's free clusters where it keeps the count: FAT32's FSInfo (the count the firmware wrote, null when it says
+// it does not know), exFAT's allocation bitmap (one bit a cluster, read whole); null for FAT12 / FAT16, whose count
+// would take a walk of the whole FAT
+function freeClusters(vol) {
+  if (vol.type === 'exFAT') return vol.freeClusters();
+  const info = vol.fsInfo();
+  return info && info.free !== FREE_UNKNOWN ? info.free : null;
 }
-// A directory entry's date and time (FAT's: the year from 1980, two-second units) as 'YYYY-MM-DD hh:mm:ss'; null for
-// an entry with no date
+// A directory entry's date and time (FAT's, which exFAT's timestamps keep in their high and low halves: the year from
+// 1980, two-second units) as 'YYYY-MM-DD hh:mm:ss'; null for an entry with no date
 function fatTime(date, time) {
   if (!date) return null;
   const p = (n) => String(n).padStart(2, '0');
@@ -39,36 +43,39 @@ function refused(fn) {
   }
 }
 
-// The volume and its files: {volume: {type, label, start, clusters, cluster_bytes, free_bytes (FAT32's FSInfo count,
-// null without one)}, files: [{path ('DCIM/100OMSYS/P1010001.JPG'), size (null for a directory), dir, mtime}],
-// truncated}, the files in directory order, each directory followed by its entries; or {error} when the volume is not
-// one refs/fat.mjs reads (a blank card, an exFAT volume, a broken chain).
+// The volume and its files: {volume: {type ('FAT12', 'FAT16', 'FAT32' or 'exFAT'), label, start, clusters,
+// cluster_bytes, free_bytes (freeClusters above; null where the volume keeps no count)}, files: [{path
+// ('DCIM/100OMSYS/P1010001.JPG'), size (null for a directory), dir, mtime}], truncated}, the files in directory order,
+// each directory followed by its entries; or {error} when the volume is not one the readers read (a blank card, a
+// broken chain, an exFAT checksum that does not hold).
 // read(lba, count): the card's sectors (src/lab/sdcard.mjs SdCard.read, which counts no access).
 export function cardList(read) {
   return refused(() => {
-    const vol = volumeOf(read), files = [];
+    const vol = openVolume(read), files = [];
     let truncated = false;
-    const walk = (cluster, dir, depth) => {
-      for (const e of vol.list(cluster)) {
+    // a directory by its entry (null: the root): an exFAT directory may be contiguous, which its cluster alone does not
+    // say; refs/fat.mjs takes the entry too
+    const walk = (at, dir, depth) => {
+      for (const e of vol.list(at)) {
         if (e.short === '.' || e.short === '..') continue;
         if (files.length >= LIST_MAX) { truncated = true; return; }
         const path = dir ? `${dir}/${e.name}` : e.name;
         files.push({ path, size: e.dir ? null : e.size, dir: e.dir, mtime: fatTime(e.date, e.time) });
-        if (e.dir && depth < LIST_DEPTH && e.cluster >= 2) walk(e.cluster, path, depth + 1);
+        if (e.dir && depth < LIST_DEPTH && e.cluster >= 2) walk(e, path, depth + 1);
       }
     };
-    walk(vol.rootCluster, '', 0);
-    const info = vol.fsInfo();
+    walk(null, '', 0);
+    const free = freeClusters(vol);
     return { volume: { type: vol.type, label: vol.label.trimEnd(), start: vol.start, clusters: vol.clusters, cluster_bytes: vol.spc * vol.bps,
-      free_bytes: info && info.free !== FREE_UNKNOWN ? info.free * vol.spc * vol.bps : null }, files, truncated };
+      free_bytes: free === null ? null : free * vol.spc * vol.bps }, files, truncated };
   });
 }
 
 // One file's bytes as base64 (the hosts' messages are JSON): {path, name, size, base64}, or {error} (no such file, a
-// directory, a file past FILE_MAX, a volume refs/fat.mjs does not read).
+// directory, a file past FILE_MAX, a volume the readers do not read).
 export function cardFile(read, path) {
   return refused(() => {
-    const vol = volumeOf(read), e = vol.find(path);
+    const vol = openVolume(read), e = vol.find(path);
     if (e === null) throw new ValueError(`${path}: no such file on the card`);
     if (e.dir) throw new ValueError(`${path}: a directory`);
     if (e.size > FILE_MAX) throw new ValueError(`${path}: ${e.size} bytes, past the ${FILE_MAX} the Card panel reads`);

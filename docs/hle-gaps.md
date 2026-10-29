@@ -1210,11 +1210,13 @@ the GUI stayed in shooting with no write to `+0x9c` (X), and the power manager d
   side (D, scpu spec 3.4): `0x85 {1}` moves the system-control task out of steady, and every such transition stops
   the command manager's link first (`0x80134e0`: PB12's edge off; `0x8013498`: GIO port 35, PC3, low; from bkground's
   `0x801678c` while the state it reads is steady, pwr_save's `0x80167e2`, standby's `0x8016872` and hibernation's
-  `0x8016810`), which S-SCPUDEV now does too. X (E143, `test_scpu.mjs --session`, `test_scpum4.mjs --session`): the
-  sequence runs from the call (lab 2.855 s) to its end at 2.956 s; the link carries `0x85 {1, 0, 0}` answered
+  `0x8016810`), which S-SCPUDEV now does too. X (E143, `test_scpu.mjs --session`, `test_scpum4.mjs --session`, with
+  S-LENS): the sequence runs from the call (lab 2.855 s) to its end at 2.956 s; the link carries `0x85 {1, 0, 0}` answered
   `[5, 0x85, 1, 0, 1]`; the MN finds pin 102 low at its first poll; the sub-CPU is in bkground (PC13 low); S-IOEXP
   took the PBH's GIO extension writes of pins `0x20000` and `0x80000` (word 1), the body's 6 and the PBH's 5; no
-  errlog; the request word 127. The frames, the pins and the lab time of the end are the same with the sub-CPU's own
+  errlog (with the native lens, E143's default since 2026-10-29 (4.4.2), the sequence makes two movie time queries,
+  which log the card's `0x39000903`, a code the lab expects (`src/fw/models.mjs` card_fs errlog; X, what asks for
+  them is not read)); the request word 127. The frames, the pins and the lab time of the end are the same with the sub-CPU's own
   firmware (`OM_EMU_SCPU=native`), whose system-control task drops PC3 0.7 ms of its time after the release
   (`0x80134ae`, X). The lever's on then starts a new session, as before.
 - **The sub-CPU's own errors (SCPU track step 7):** with its own firmware the sub-CPU logs `[PBH IOEDRV] TX Error :

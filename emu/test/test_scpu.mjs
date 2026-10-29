@@ -5,7 +5,8 @@
 //              phase, a 0 to the phase word restarts it and another value is a bus error; ports: a port reads its
 //              level in bit 31, the message port the sub-CPU's line (high at first), a level change either way sets
 //              the port's event bit and raises IRQ 320, a write clears the bits it names, a doorbell store pulling the
-//              message port low, a port write and an event bit past the ports are bus errors; the link's pins: the
+//              message port low and an event bit past the ports are bus errors, a port write keeps its configuration
+//              word without an effect (A-SCPU-4); the link's pins: the
 //              ready pin's level in bit 4, the outputs' stores reach the far end once per change, the status holds the
 //              bit of the level the pin has (A-LINKPINS-1), a write clears only a bit whose level has gone, IRQ 119
 //              follows status & enable, a store to the input, an output store other than 0 or 1 and a status bit
@@ -84,7 +85,9 @@ function portTests(ok) {
   scpu.setMessage(1);
   wr(ev.pending, 0x7f);
   ok(throwsAs(() => bell((SET_INPUTS << 24 | (0x38 & ~msg)) >>> 0), BUS), 'a doorbell store pulling the message port low is a bus error');
-  ok(throwsAs(() => wr(ev.ports, 0x80000000), BUS), 'a port write is a bus error');
+  wr(ev.ports, 0x8000ffee);
+  ok(scpu.config[0] === 0x8000ffee && port(0) === 0 && rd(ev.pending) === 0 && intc.line[ev.irq] === 0, 'a port write keeps the configuration word and moves no level or event (A-SCPU-4)');
+  ok(throwsAs(() => scpu.write(ev.ports, 0, 4, true), BUS), 'a debugger cannot write a port');
   ok(throwsAs(() => wr(ev.pending, 1 << ev.count), BUS), 'an event bit past the ports is a bus error');
   ok(throwsAs(() => bell(0x3c), BUS) && throwsAs(() => bell((SET_INPUTS << 24 | 1 << ev.count) >>> 0), BUS), 'a doorbell store other than the command is a bus error');
   ok(scpu.read(ev.pending, 4, true) === 0 && throwsAs(() => scpu.write(ev.pending, 4, 4, true), BUS), 'a debugger reads the events and cannot clear them');

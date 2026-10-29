@@ -26,6 +26,10 @@ export const FAMILIES = {
     intc: {
       banks: [0x99200000, 0x99300000, 0x99B00000, 0x99B80000], irqs: 356,
       presented: 0x700, ipi_set: 0x808, ipi_clear: 0x80c, kick: 0x810, ctl: 0x884,
+      // off: the word the power-off's 0x50039def writes 0x100 into in each of the four banks before its RAM log's
+      // save (0x50039df2..0x50039e04, then a 10 ms dly_tsk; called by 0x518f7381, D); its meaning is ? (I: the
+      // other CPUs' interrupts stopped), so the lab stores it
+      off: 0x800,
       irq_ipi: 324, irq_osd_engine: 310, irq_vsc0: 46,
     },
     // groups: [first channel, last channel, IE offset, status offset, irq or null (one IRQ per channel: irq_base + n)]
@@ -56,8 +60,12 @@ export const FAMILIES = {
     // level is the sub-CPU's message line, PC2 of the sub-CPU (PER_SCPU's IRQ 320 callback 0x5005c8d9 acts on event
     // bit 3 with port bit 3 low and polls the sub-CPU then, D; the sub-CPU drives PC2 low to post a message,
     // 0x8012c42, and high when it answers the poll, 0x8012e9e, D; docs/om1-scpu-spec.md 3.1)
+    // storage 0x90 and 0x9c: the power-off's words (docs/hle-gaps.md 4.7.4, D): 0x5004e50a writes 0xffffffff to 0x90
+    // (the wake / reset cause word, I) with its commit; 0x5004dffc writes 1 << n to 0x9c and 0x5004e02c reads its bit
+    // n, and 0x5004dfd0 writes 127 there and commits, the sequence's last write (its meaning, a power cut, is I); no
+    // reader of 0x90 runs in the lab
     scpu: {
-      command: 0xf4, clock: [0xe8, 0xec], ticks: true, storage: [[0x00, 0x00], [0x08, 0x3c]],
+      command: 0xf4, clock: [0xe8, 0xec], ticks: true, storage: [[0x00, 0x00], [0x08, 0x3c], [0x90, 0x90], [0x9c, 0x9c]],
       events: { pending: 0x98, ports: 0xa0, count: 7, irq: 320, message: 3 },
     },
     // The MN's GIO pins of the sub-CPU link (src/dev/linkpins.mjs, src/lab/scpulink.mjs; docs/om1-scpu-spec.md 3.1):

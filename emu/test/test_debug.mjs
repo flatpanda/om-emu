@@ -302,7 +302,7 @@ export function limitUnits() {
     // the stderr ring: 1,100 faulting continues write 2,200 lines; since 0 answers the kept ones and how many are gone
     expect({ op: 'load' }, (r) => r.ok, 'load for stderr');
     expect({ op: 'write', addr: '0xa3000000', hex: '70' }, (r) => r.ok, 'a faulting read');
-    for (let i = 0; i < 1100; i++) { ask({ op: 'reset', regs: { pc: '0xa3000000', a0: '0x98e0009c' } }); ask({ op: 'cont' }); }
+    for (let i = 0; i < 1100; i++) { ask({ op: 'reset', regs: { pc: '0xa3000000', a0: '0x98e00094' } }); ask({ op: 'cont' }); }
     expect({ op: 'stderr' }, (r) => r.ok && r.count === 2200 && r.first === 1000 && r.dropped === 1000 && r.lines.length === 1200, 'stderr since 0 after the ring dropped 1,000');
     expect({ op: 'stderr', since: 2100 }, (r) => r.ok && r.first === 2100 && r.dropped === 0 && r.lines.length === 100, 'stderr since 2100');
     expect({ op: 'quit' }, (r) => r.ok, 'quit');

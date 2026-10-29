@@ -13,7 +13,7 @@ export const DEBUG_BASE = 0x89A00000, DEBUG_SIZE = 0x10000, DOORBELL_BASE = 0x89
 export const IRQ_OSD_ENGINE = B.irq_osd_engine, IRQ_IPI = B.irq_ipi;
 export const IRQ_VSC = (c) => B.irq_vsc0 + 2 * c, IRQ_TIMER = timerIrq;
 const BANK_BASE = B.banks;
-const PRESENTED = B.presented, IPI_SET = B.ipi_set, IPI_CLEAR = B.ipi_clear, KICK = B.kick, CTL = B.ctl;
+const PRESENTED = B.presented, IPI_SET = B.ipi_set, IPI_CLEAR = B.ipi_clear, KICK = B.kick, CTL = B.ctl, OFF = B.off ?? null;   // off: the E143 board's only
 const D = {
   MAGIC: 0x000, VERSION: 0x004, GATE_MODE: 0x008, GATE_PC: 0x00C, PRESENTED_TOTAL: 0x010, ACCEPTED_TOTAL: 0x014,
   REQUEST: 0x018, LEVEL_MASK: 0x01C, ERR_TOTAL: 0x020, IPI_WRITES: 0x024, DOORBELL_RESULT: 0x028, IPI_REPEATS: 0x02C,
@@ -37,6 +37,7 @@ export class Intc {
     this.m = machine;
     this.level = BANK_BASE.map(() => new Uint32Array(IRQS));
     this.r884 = new Uint32Array(BANKS); this.r810 = new Uint32Array(BANKS); this.pending = new Uint32Array(BANKS);
+    this.off = new Uint32Array(BANKS);  // the board's off word (src/fw/board.mjs intc.off), stored: its meaning is ?
     this.line = new Uint8Array(IRQS); this.test = new Uint8Array(IRQS); this.driven = new Uint8Array(IRQS);
     this.presentedMask = 0;
     this.setIrq = null;                      // the machine's set_irq callback
@@ -159,6 +160,7 @@ export class Intc {
         return data;
       }
       if (off === CTL) return this.r884[b];
+      if (off === OFF) return this.off[b];
       if (off === KICK) return this.r810[b];
       if (off === IPI_SET) return this.pending[b];
     }
@@ -178,6 +180,7 @@ export class Intc {
         return;
       }
       if (off === CTL) { this.r884[b] = value; return; }
+      if (off === OFF) { this.off[b] = value; return; }
       if (off === KICK) { this.r810[b] = value; this.dset(D.IPI_WRITES, this.dget(D.IPI_WRITES) + 1); return; }
       if (off === IPI_SET) { this.ipiSet(b, value); return; }
       if (off === IPI_CLEAR) { this.ipiClear(b, value); return; }

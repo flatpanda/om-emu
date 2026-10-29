@@ -29,8 +29,9 @@ export const SET_INPUTS = 1;
 //
 // The event and port words (docs/hle-gaps.md 4.7.2; board scpu.events {pending, ports, count, irq}): port k (the word
 // at ports + 4k, k < count) reads its input level in bit 31, which the firmware's port byte reader packs into bit k of
-// a byte (D); its other bits read 0 (A-SCPU-4: the configuration the firmware's port setter writes there is not
-// modelled, and a write is UNKNOWN). The event word holds a pending bit per port: bit k is set when
+// a byte (D); its other bits read 0 (A-SCPU-4: the configuration word the firmware's port setter writes there, which
+// UI_IN's power-off path writes, docs/hle-gaps.md 4.7.4, is kept but has no effect: its meaning is ?, and nothing
+// reads it back but the level bit). The event word holds a pending bit per port: bit k is set when
 // port k's level changes, either way (I: the firmware's callbacks pair event bit k with port bit k and act on both
 // edges, D), and IRQ 320's line is high while a bit is pending. A write clears the bits it has set (I: the IRQ 320
 // handler writes back the word it read, the SCPU init writes 127, D); a bit outside the ports is UNKNOWN. The levels
@@ -51,6 +52,7 @@ export class Scpu {
     this.inputs = 0;
     this.message = 1;                    // the sub-CPU's message line (events.message), released
     this.pending = 0;
+    this.config = new Uint32Array(EV ? EV.count : 0);   // the port setter's configuration words (A-SCPU-4)
     addRegion({ base: SCPU_BASE, size: 0x100, kind: K_MMIO, name: 'om1.scpu',
       dev: { read: (a, w, dbg) => this.read(a - SCPU_BASE, w, dbg), write: (a, v, w, dbg) => this.write(a - SCPU_BASE, v, w, dbg) } });
     if (EV) {
@@ -141,7 +143,8 @@ export class Scpu {
       this.intc.setLine(EV.irq, this.pending !== 0);
       return;
     }
-    if (this.port(off) >= 0 || off === MSG) return this.unknown('write', off, size, value, dbg);   // A-SCPU-4
+    if (this.port(off) >= 0 && !dbg) { this.config[this.port(off)] = value >>> 0; return; }   // A-SCPU-4
+    if (this.port(off) >= 0 || off === MSG) return this.unknown('write', off, size, value, dbg);
     if (dbg || storage(off)) { this.reg[off >> 2] = value; return; }
     if (off === COMMAND) {
       this.reg[off >> 2] = value;

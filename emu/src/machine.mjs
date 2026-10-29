@@ -184,6 +184,9 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   const notPaused = (what) => { if (chain !== null) throw new Error(`${what}: a continue is paused (resume or abort it first)`); };
   // Every CPU fault writes its trap line (after any device line the faulting access wrote).
   const trap = (f) => { for (const line of trapLines(f, R[PC])) m.stderr(line); };
+  // The insn limit reached: fault 7, unless the next instruction's code fetch faults first (fault 2, not counted;
+  // cpu.mjs limitFault), which the stop then reports.
+  const limitStop = () => { const f = limitFault(); trap(f); return f.code === 7 ? { kind: 'limit', code: 7 } : { kind: 'fault', code: f.code }; };
   Object.assign(m, {
     devices: { intc, timer, engine, vsc, bus, stub, scpu, clock: lclock, ...(hdmiPort ? { hdmi: hdmiPort } : {}), ...(linkPins ? { linkpins: linkPins } : {}),
       ...(lensSsc ? { lens: lensSsc } : {}), ...(dpc ? { dpc } : {}) },
@@ -268,7 +271,7 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
           const r = run(budget, resumed);
           if (r === RUN_VISIT) { if (mem.WHIT !== null) continue; visit = true; continue; }
           if (r === RUN_LIMIT) {
-            if (S.limit && S.insns >= S.limit) { lastStop = { kind: 'limit', code: 7 }; trap(limitFault()); }
+            if (S.limit && S.insns >= S.limit) lastStop = limitStop();
             else { result = 'paused'; lastStop = { kind: 'paused', code: 0 }; break; }
           } else if (r === RUN_FAULT) { lastStop = { kind: 'fault', code: S.fault.code }; trap(S.fault); }
           else if (r === RUN_BP) lastStop = { kind: 'break', code: 0 };
@@ -303,7 +306,7 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
       lastStop = { kind: 'break', code: 0 };
       if (pendingDebug) { pendingDebug = false; return; }
       const account = () => { stats.insns += S.insns - i0; stats.guestMs += clock() - t0; };
-      if (S.limit && S.insns + 1 > S.limit) { lastStop = { kind: 'limit', code: 7 }; trap(limitFault()); }
+      if (S.limit && S.insns + 1 > S.limit) lastStop = limitStop();
       else try { stepAny(); } catch (e) {          // (an instruction fetched from MMIO: interp.mjs)
         if (!(e instanceof Fault)) { account(); failed = e; mem.clearWatchHit(); throw e; }
         lastStop = { kind: 'fault', code: e.code };

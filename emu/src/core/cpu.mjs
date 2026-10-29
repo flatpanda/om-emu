@@ -2,7 +2,7 @@
 // and instruction lengths. Every instruction does all of its
 // memory accesses before it writes a register, so a fault leaves the registers as they were; a faulting
 // instruction counts in insns, a code-fetch fault does not.
-import { Fault, cb, ld8, ld16, ld32, st8, st16, st32 } from './mem.mjs';
+import { Fault, MmioFetch, FETCH, cb, ld8, ld16, ld32, st8, st16, st32 } from './mem.mjs';
 export { Fault };
 
 export const Z = 1, N = 2, C = 4, V = 8;
@@ -585,13 +585,21 @@ export function setRegs(r16) {
   R[PSW] &= 0xffff; R[UNDEF] = 0; R[HAZ] = 0;            // a debugger-written PSW is defined and takes effect
 }
 // insns + 1 > insn-limit faults 7 after the code fetch (a fetch fault comes first and is not counted);
-// the limit fault counts. Returns the Fault (for the machine's stderr line).
+// the limit fault counts. Returns the Fault (for the machine's stderr line). An instruction with a byte on readable
+// MMIO is fetched as the translator fetches it (step's refetch, mem.mjs cbIo): every byte once, through the device.
 export function limitFault() {
   const pc = R[PC];
-  try {
+  const fetch = () => {
     const op = cb(pc), pre = op >= 0xf0 && op <= 0xfe && op !== 0xf7;
     const p = pre ? cb(pc + 1) : 0;
     for (let i = pre ? 2 : 1, n = insnLength(op, p); i < n; i++) cb(pc + i);
+  };
+  try {
+    try { fetch(); } catch (e) {
+      if (!(e instanceof MmioFetch)) throw e;
+      FETCH.io = true;
+      try { fetch(); } finally { FETCH.io = false; }
+    }
   } catch (e) { if (!(e instanceof Fault)) throw e; R[FAULT] = e.code; return e; }
   R[FAULT] = 7; S.insns++;
   return new Fault(7, pc);

@@ -1,4 +1,4 @@
-> Status (2026-10-28, latest): section 8's step 5 is extended, written but not yet run: the STM32L4 machine models Stop 0 / 1 / 2 and Shutdown, flash erase and programming, I2C slave mode and the timers' slave modes, with the boot path to the prompt and the standby meant to be unchanged (section 8, "Step 5, extended"). Status (2026-10-28, decode cache): the Cortex-M4 core has a second execution tier, a decode cache checked against the reference tier in lockstep; written, not yet run (section 8, "The decode-cache tier, written"). Status (2026-10-28, later): section 8's step 6 is written but not yet run: the image on the step 5 machine behind S-SCPUDEV's seam, opt-in with `OM_EMU_SCPU=native` on E143 and E146 (`emu/src/lab/scpum4.mjs`; section 8, "Step 6, written"); nothing of it is X yet. Status (2026-10-28): section 8's step 5 is built: the STM32L4 peripherals the image uses are modelled at register level (`emu/src/core/m4/periph/`), and the image boots from reset to its debug console's prompt "SUB> " on LPUART1 (after 89,724 core cycles, 16.8 ms of SCPU time), starts its RTOS tasks and answers console commands; on a board with nothing attached it goes to standby about 3 s after reset, and a wake-up pin brings it back (section 8, "Step 5, built"). Status (2026-10-27): section 8's steps 3 and 4 are built: an instruction census of the image and a pure-JS Cortex-M4 core (`emu/src/core/m4/`) checked against QEMU's Cortex-M4; the core runs the image from its reset vector to its first STM32 peripheral access (section 8, "Steps 3-4, built"). Status (2026-10-25): section 8's step 2 is built, and step 1 is settled but for the hardware meaning of a few bits: section 3.1's pins, 3.2's transport, 3.3's handlers, and since 2026-10-25 section 3.4's inbound direction (the message path, the poll's reply, the layouts of `0x08`, `0x11..0x13` and `0x40` from both ends), the `0x88` port scan's result bits and the power state each `0x85` mode selects. S-SCPUDEV serves `0x88` and posts the port scan's report `0x08`, which PER_SCPU polls and dispatches natively. The firmware was read statically (byte scans, a disassembly in a scratch directory); it was never executed. The lab's sub-CPU is S-SCPUDEV (`emu/src/lab/scpudev.mjs`), a transport-level model at the far end of the MN's link: PER_SCPU runs natively against it over PER_SIO's channel (S-SIO2) and the GIO pins 102 / 103 / 107 (`emu/src/dev/linkpins.mjs`, `emu/src/lab/scpulink.mjs`; hle-gaps.md 4.7.1). S-SCPU, the request server at the MN's request API, is retired. Section 8 is the plan.
+> Status (2026-10-29): run and checked, so X where it says so: section 8's step 5 extension (Stop 0 / 1 / 2 and Shutdown, flash erase and programming, I2C slave mode, the timers' slave modes) leaves the boot path as it was (the prompt at 89,724 cycles, the standby 3.03 s after reset, no Stop, Shutdown or flash operation on the way); the Cortex-M4 core's decode-cache tier is the default, in lockstep with the reference tier and about 1.8 times as fast on the image; and step 6 is built: the image on the step 5 machine behind S-SCPUDEV's seam, opt-in with `OM_EMU_SCPU=native` on E143 and E146 (`emu/src/lab/scpum4.mjs`), gives the store-init session the same frame log, the same transfers' bytes and the same pin levels from the first request on as S-SCPUDEV (section 8, "Step 5, extended", "Step 6, built", "The decode-cache tier"). Status (2026-10-28): section 8's step 5 is built: the STM32L4 peripherals the image uses are modelled at register level (`emu/src/core/m4/periph/`), and the image boots from reset to its debug console's prompt "SUB> " on LPUART1 (after 89,724 core cycles, 16.8 ms of SCPU time), starts its RTOS tasks and answers console commands; on a board with nothing attached it goes to standby about 3 s after reset, and a wake-up pin brings it back (section 8, "Step 5, built"). Status (2026-10-27): section 8's steps 3 and 4 are built: an instruction census of the image and a pure-JS Cortex-M4 core (`emu/src/core/m4/`) checked against QEMU's Cortex-M4; the core runs the image from its reset vector to its first STM32 peripheral access (section 8, "Steps 3-4, built"). Status (2026-10-25): section 8's step 2 is built, and step 1 is settled but for the hardware meaning of a few bits: section 3.1's pins, 3.2's transport, 3.3's handlers, and since 2026-10-25 section 3.4's inbound direction (the message path, the poll's reply, the layouts of `0x08`, `0x11..0x13` and `0x40` from both ends), the `0x88` port scan's result bits and the power state each `0x85` mode selects. S-SCPUDEV serves `0x88` and posts the port scan's report `0x08`, which PER_SCPU polls and dispatches natively. The firmware was read statically (byte scans, a disassembly in a scratch directory); it was never executed. The lab's sub-CPU is S-SCPUDEV (`emu/src/lab/scpudev.mjs`), a transport-level model at the far end of the MN's link: PER_SCPU runs natively against it over PER_SIO's channel (S-SIO2) and the GIO pins 102 / 103 / 107 (`emu/src/dev/linkpins.mjs`, `emu/src/lab/scpulink.mjs`; hle-gaps.md 4.7.1). S-SCPU, the request server at the MN's request API, is retired. Section 8 is the plan.
 
 # OM-1 sub-CPU (SCPU) firmware
 
@@ -175,7 +175,7 @@ LPUART1 at 115200 (section 4.2), prompt "SUB> ", a line editor ("rx_buffer FULL!
 3. A Thumb-2 census tool (`tools/`): every instruction form the image uses, from a recursive-descent walk of the code from the vectors and the pointer tables (the tables of section 3.2 and 5.3). 1-2 days.
 4. The Cortex-M4 core in `emu/src/core/` with its own test vectors (QEMU's `-M netduinoplus2` or a similar M4 board as the oracle inside the VM, per the repo's rule that QEMU is only an oracle). 2-3 weeks.
 5. The STM32L4 system and the must-behave peripherals, then boot the image to the console prompt (X target: "SUB> " on LPUART1, the 13 tasks created). 1-2 weeks. Done (2026-10-28, "Step 5, built" below).
-6. Plug the SCPU into the step 2 seam: `0x85 {2}` answered by the real firmware, `comm trace on` frames equal to the HLE's for the store-init session. 1 week. Written 2026-10-28, not yet run ("Step 6, written" below): the oracle is S-SCPUDEV's frame log rebuilt from the wire rather than the console's trace.
+6. Plug the SCPU into the step 2 seam: `0x85 {2}` answered by the real firmware, `comm trace on` frames equal to the HLE's for the store-init session. 1 week. Done (2026-10-29, "Step 6, built" below): the oracle is S-SCPUDEV's frame log rebuilt from the wire rather than the console's trace.
 7. Device models only as the firmware's own errors demand (packs, chargers, PD controller), each from code evidence. Open-ended.
 
 Total to step 6: about 6-8 weeks, of which steps 1-2 (1.5-2 weeks) deliver most of the MN-side value on their own.
@@ -307,7 +307,7 @@ The seam for step 6 is S-SCPUDEV's interface (`connect`, `pin`, `exchange`, `ste
   pull-up, so the board's PC13 has to be chosen there, and the default board reaches standby 3 s after reset unless
   something keeps the sub-CPU in steady (whether the MN's `0x85 {2}` does is ?). Step 6 holds it low (below).
 
-**Step 5, extended (written 2026-10-28; not yet run, so nothing here is X).** The four things step 5 left stopping the
+**Step 5, extended (written 2026-10-28, run 2026-10-29).** The four things step 5 left stopping the
 run are modelled from RM0394 at register level, behind the same structure (a file per peripheral, the event
 scheduler, "unmodelled stops the run and names it" for what is still left out); the file headers name each model
 shortcut as I:
@@ -322,24 +322,23 @@ shortcut as I:
 | I2C slave | own addresses OAR1 (7-bit) and OAR2 with OA2MSK (the reserved addresses refused when masked), the general call with GCEN; ADDR with DIR and ADDCODE, SCL stretched until ADDRCF, a write's bytes in RXDR (stretched while RXNE), a read's bytes from TXDR with TXIS (a byte written ahead stays in TXDR at the master's NACK, ISR.TXE flushes it), NACKF, STOPF, a repeated START; WUPEN for Stop 0 / 1. The board's master is `I2c.masterTransfer({addr, write, read, hz, done})`. SBC, NOSTRETCH in slave mode, DMA, 10-bit addresses and a second master on a busy bus stop the run. SMBus: step 5's notes record the I2C controllers' TIMINGR only, so no SMBus bit is evidenced in the image's configuration and SMBHEN, SMBDEN and PECEN still stop the run | RM0394 section 37's slave mode; the master's own SCL rate I |
 | timer slave modes | SMCR.SMS / TS on TIM1 and TIM2 (with the encoder modes and ETR) and TIM15 (without; TIM16 has no slave mode controller): reset, gated, trigger, reset + trigger, external clock 1 (through the prescaler) and encoder modes 1..3, TIF and its interrupt (DIER.TIE; TIM1's IRQ 26), TRGO by CR2.MMS 0..2 to the other timers' ITR inputs (TIM1 ITR0 = TIM15, ITR1 = TIM2; TIM2 ITR0 = TIM1; TIM15 ITR0 = TIM1), the board's inputs by `Timer.input('TI1' / 'TI2' / 'ETR', level)`. External clock mode 2, ETPS, both-edge polarity as a trigger, gated mode on TI1F_ED, an unwired ITR and MMS 3..7 used by a slave stop the run | the timers' slave mode sections of RM0394 26..28; the ITR table as recalled (?); encoder mode 1 counting TI1's edges as the HAL's TIM_ENCODERMODE_TI1 names it (?, the RM texts differ); filters and MSM pass edges at once (I) |
 
-`bus.mjs` (the ROM write handler and the code-write hook) and one line of `cpu.mjs` (a WFE's sleep is marked
+`bus.mjs` (the ROM write handler) and one line of `cpu.mjs` (a WFE's sleep is marked
 `'wfe'`, so the machine can tell it from a WFI's: an EXTI event ends only a WFE) are the core's only changes. The
-units (`emu/test/test_stm32l4.mjs` stm32Units, not yet run) drive register sequences against these semantics: the
-flash's unlock, erase, programming, error flags and lock; the bus's write handler and code-write fan-out; EXTI's
+units (`emu/test/test_stm32l4.mjs` stm32Units, 190 checks, all passing) drive register sequences against these semantics: the
+flash's unlock, erase, programming, error flags and lock; the bus's write handler and the shared code pages of the flash and its alias; EXTI's
 events; an I2C slave's address match and a byte each way; gated, trigger, external clock 1 from another timer's TRGO
 and encoder counting; and on a synthetic image (a vector table and a WFI or WFE loop) Stop 2 woken by an EXTI
 interrupt with MSI after it and a timer and SysTick standing still, Stop 1 woken by the RTC wake-up timer 1 s later with
 HSI16 after it, Stop 0 by WFE ended by an EXTI event, Shutdown ended by WKUP1 with a brown-out reset and the backup
 domain kept, and flash erase and programming seen at both addresses and by the decode cache. The firmware check
-(stm32Firmware) adds a fresh machine with nothing attached: its standby at about 3.03 s with no Stop, Shutdown or flash
-operation on the way, beside the prompt's 89,724 cycles it already checks. What only a run can settle (?): that the
-boot path is unchanged (the prompt's cycle count, the console, the standby time); that the flash buffer's new write
-path costs the core nothing measurable; whether the image's firmware-update path (`0x07` / `0x87`, section 2) programs
-its own flash through these sequences or stops on something still unmodelled (OPTSTRT, OBL_LAUNCH); and whether the
-power manager's pwr_save and hibernation states (section 3.4) use a Stop mode, which the machine would now enter
-instead of stopping the run.
+(stm32Firmware) adds a fresh machine with nothing attached, booted to the prompt and run on: its standby at 3.03 s
+with no Stop, Shutdown or flash operation on the way, beside the prompt's 89,724 cycles it already checks; all 26
+firmware checks pass (X, 2026-10-29), so the boot path, the console and the standby time are unchanged. Not settled
+(?): whether the image's firmware-update path (`0x07` / `0x87`, section 2) programs its own flash through these
+sequences or stops on something still unmodelled (OPTSTRT, OBL_LAUNCH), and whether the power manager's pwr_save and
+hibernation states (section 3.4) use a Stop mode, which the machine would now enter instead of stopping the run.
 
-**Step 6, written (2026-10-28; not yet run, so nothing here is X).** `emu/src/lab/scpum4.mjs` (ScpuM4) implements
+**Step 6, built (written 2026-10-28, run 2026-10-29).** `emu/src/lab/scpum4.mjs` (ScpuM4) implements
 S-SCPUDEV's seam (`connect`, `pin`, `exchange`, `step`, and the fields the lab reads: `out`, `frames`, `powered`,
 `state`, `pending`) with the SCPU image on the step 5 machine, so `scpulink.mjs` and the MN side run unchanged:
 
@@ -354,17 +353,18 @@ S-SCPUDEV's seam (`connect`, `pin`, `exchange`, `step`, and the fields the lab r
 | PC13 | the board holds PC13 and PC5 low (S-SCPUBOARD), S-SCPUDEV's levels: PC13 low gives the port scan's result bit 0 that keeps UI_IN's switch `0x0400` at the lab's idle image (H-UIINSCAN checks that), and it selects bkground at a power-off and keeps the sub-CPU out of the standby the pull-up leads to 3 s after reset (step 5, X); the camera's levels are ? | I |
 | the oracle | the frame log is rebuilt from the wire (`WireFrames`: per transaction of the request line, the command frame cut to the 10 bytes the MN clocks, a long write's chunks, a read's reply up to its length byte) in S-SCPUDEV's form, so `store_log.scpu_frames` compares as it is; `powered` reads the power-on flag at `0x20008390` (the pool word `0x80135c4`, D); post() and the scan's report flag are not available (the sub-CPU's own tasks post its messages) | D (the transport, 3.2), I (the zeros past the tenth byte, as S-SCPUDEV logs them) |
 
-The tests (`emu/test/test_scpum4.mjs`, not yet run): pure units for the clock, for `WireFrames` against S-SCPUDEV's own
+The tests (`emu/test/test_scpum4.mjs`): pure units for the clock, for `WireFrames` against S-SCPUDEV's own
 log under a scripted MN, and for the byte mover with the real SPI and DMA models; a session test that starts a play
 session with S-SCPUDEV and with the image and requires the same frame log (`0x85 {2}`, the store init's `0x06`, `0x01`,
-`0x86` and H-UIINSCAN's `0x88`), the same transfers' bytes and the same pin levels from the first request on. What
-only a run can settle (?): when the image first raises PC3 after reset (S-SCPUDEV assumes at once; the MN waits for it
-after its reset pulse) and what PC2 does before the comm task's init; whether `0x88` is answered not busy at once;
-whether the sub-CPU posts messages of its own (battery, power manager, USB PD) during the start, which would add polls
-to the log; whether the MN's `0x85 {2}` keeps it from the 3-s message 17 (with PC13 low that message leads to
-bkground; whether the command manager answers the same there is ?); and whether the 0.5 s window covers its boot and 50 ms each answer.
+`0x86` and H-UIINSCAN's `0x88`), the same transfers' bytes and the same pin levels from the first request on. All
+pass on E143 and E146 (X, 2026-10-29: the units 15 of 15, the session 8 of 8 on each body): the image boots and
+answers within its windows, PER_SCPU's start runs to its wait with no errlog of its own or PER_SIO's, `0x88` is
+answered without a retry and the sub-CPU posts nothing of its own during the start (either would change the log).
+Not settled (?): when the image first raises PC3 after reset (the session's log starts at the first request), and
+whether the MN's `0x85 {2}` keeps it from the 3-s message 17 over a longer session (with PC13 low that message leads
+to bkground; whether the command manager answers the same there is ?).
 
-**The decode-cache tier, written (2026-10-28; not yet run, so nothing here is X).** Until now the core decoded every
+**The decode-cache tier (written 2026-10-28, run 2026-10-29).** Until now the core decoded every
 instruction each time it ran, but for code in ROM regions (the flash), whose decoded instructions a map kept on the
 reasoning that flash never changes (I; flash programming, the other track's work, breaks that). The core now has two
 execution tiers, as the MN core has (`emu/src/core/cpu.mjs` step and `interp.mjs` run, `test/test_core.mjs`):
@@ -377,7 +377,7 @@ execution tiers, as the MN core has (`emu/src/core/cpu.mjs` step and `interp.mjs
 | not cached | code in a device region or unmapped (the fetch's own fault or stop stays the reference's), a 32-bit instruction whose halfwords lie in two pages | I |
 | selection | `new CortexM4({ tier })`, `cpu.setTier()` for a machine that builds its core (`Stm32l4`), `--tier cached\|reference` on `bin/scpu.mjs` and `bin/m4smoke.mjs` | a tool choice |
 
-The tests (`emu/test/test_m4.mjs`, written, not yet run): the hand-written vectors and the QEMU-recorded vectors on
+The tests (`emu/test/test_m4.mjs`): the hand-written vectors and the QEMU-recorded vectors on
 each tier; the two tiers in lockstep after every instruction (registers, flags, the special and system registers,
 SysTick, the cycle count, each step's bus writes) on the hand-written programs, on the cache's hazards (code in SRAM
 storing over an instruction it ran, over a 32-bit instruction's second halfword, over one across a page boundary; code
@@ -385,7 +385,7 @@ run at the alias and written at `0x08000000`; a write behind the bus reported wi
 inside and outside an IT block) and on every recorded vector twice, the second pass from the cache alone; two mutants
 (a hit that ignores the page's version, the IT state baked into a kept record) the lockstep must catch; with the E143
 block, the image's start in lockstep to its first unmodelled access with SRAM equal at the stop, and on the step 5
-machine the prompt at 89,724 cycles and `help` at the same cycle and with the same text on both tiers. What only a
-run can settle (?): that all of it passes, and the speedup, not measured: `node emu/bin/scpu.mjs --tier reference
---after 3` against `--tier cached --after 3` (the last line's wall time; `bin/m4smoke.mjs --tier` likewise for the
-start alone).
+machine the prompt at 89,724 cycles and `help` at the same cycle and with the same text on both tiers. All pass (X,
+2026-10-29: the units 563, the QEMU vectors 6,574 and the firmware's 21 checks). On the image (`node emu/bin/scpu.mjs
+--tier reference` against `--tier cached`, with `--line help` or `--settle 4`) the cached tier takes 0.53 to 0.55 of
+the reference tier's wall time, the same cycles and instructions on both.

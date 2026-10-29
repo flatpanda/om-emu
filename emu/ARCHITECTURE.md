@@ -106,7 +106,7 @@ In order of authority:
   The decode cache is structure-of-arrays typed arrays (monomorphic, GC-free), and `CODEPG` keeps non-code writes fast
   (`src/core/interp.mjs`). The SCPU's Cortex-M4 does the same with a version per 256-byte page of each backing buffer
   (flash and its boot alias share theirs): a write makes a code page's version new, and a decoded instruction hits only
-  at the version it was decoded at (`src/core/m4/dcache.mjs`, `bus.mjs`; written, not yet run).
+  at the version it was decoded at (`src/core/m4/dcache.mjs`, `bus.mjs`).
 - **Precise faults.** Every instruction completes all its memory accesses before it writes registers, with a defined
   count rule, so the state after a fault is well defined and a retry is reliable (`src/core/cpu.mjs`). A 400,000-state
   `step()` against `run(1)` differential found no divergence and caught an injected mutant (`test/test_core.mjs`).

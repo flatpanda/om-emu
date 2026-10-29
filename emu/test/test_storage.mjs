@@ -32,8 +32,8 @@
 //   storageSdxc     (firmware) blank 64 and 128 GiB SDXC cards on the body of OM_EMU_MODEL: formatted and mounted by
 //                   the firmware, read back independently whichever file system it chose (refs/volume.mjs) and
 //                   consistent, S2's file found with its bytes, the remaining shots counted; what the firmware chose
-//                   (exFAT or not, the layout, the cluster size) and the counts are reported as notes, to be measured
-//                   (written 2026-10-28, not yet run)
+//                   (exFAT on E143, docs/hle-gaps.md 4.8.6: the layout, the cluster size) and the counts are reported
+//                   as notes
 //   node emu/test/test_storage.mjs [--session] [--sdxc]
 import { SdCard, NO_RESPONSE, SECTOR, crc7, r2Words, cardImage, cardFromImage, cardSectors } from '../src/lab/sdcard.mjs';
 import { FatVolume, mbrPartition } from '../refs/fat.mjs';
@@ -554,14 +554,13 @@ function layout(p, v) {
 }
 
 // (firmware) blank SDXC cards (64 and 128 GiB) in a player on the body of OM_EMU_MODEL (E143 by default; its card_fs
-// native). What the firmware does with a card above 32 GiB is not read: as the SD File System Specification has an
-// SDXC card formatted (I, as recalled: exFAT in an MBR partition of type 0x07 that starts at the boundary unit, 32768
-// sectors, with 128 KiB clusters at these capacities), dosfat's format may follow it or not (?). So this checks only
-// what holds whichever file system the firmware picks (the insertion formats the blank card and mounts it, the volume
-// reads back independently through refs/volume.mjs and is consistent, S2's picture file is found with its bytes, the
-// firmware counts remaining shots from the card) and reports what it finds as notes: the insertion's lab times, the
-// partition and the file system's layout, the remaining shots and the movie time (to be measured; 803 shots and 5:25
-// on the 8 GiB card, docs/hle-gaps.md 4.8.2; the shooting screen draws the query's answer, modelcheck's count probe)
+// native). The firmware's code for a card above 32 GiB is not read; E143's format gives the card exFAT in an MBR
+// partition (X, docs/hle-gaps.md 4.8.6), and another body's may differ. So this checks only what holds whichever
+// file system the firmware picks (the insertion formats the blank card and mounts it, the volume reads back
+// independently through refs/volume.mjs and is consistent, S2's picture file is found with its bytes, the firmware
+// counts remaining shots from the card) and reports what it finds as notes: the insertion's lab times, the partition
+// and the file system's layout, the remaining shots and the movie time (803 shots and 5:25 on the 8 GiB
+// card, docs/hle-gaps.md 4.8.2; the shooting screen draws the query's answer, modelcheck's count probe)
 export async function storageSdxc(sizes = [64, 128]) {
   const bad = [], notes = [];
   let checks = 0;
@@ -612,7 +611,7 @@ export async function storageSdxc(sizes = [64, 128]) {
       lab.call(MOVIE, { a0: buf }, null, null, 2000000);
       const m = lab.sim.read(buf, 24), movie = (m[0] | m[1] << 8 | m[2] << 16 | m[3] << 24) >>> 0;
       ok(shots > 0, `${tag}: the firmware counts remaining shots from the card: ${shots}`);
-      notes.push(`${tag}: remaining shots ${shots}, movie time ${movie} (the query's first word, as storageSession reads it), with one picture on the card: to be measured`);
+      notes.push(`${tag}: remaining shots ${shots}, movie time ${movie} (the query's first word, as storageSession reads it), with one picture on the card`);
     } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 400)}`); }
     try { pl.close_session(); } catch { /* closed */ }
   }

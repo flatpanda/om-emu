@@ -9,8 +9,7 @@
 //   timer, the ADC's conversion; and the machine on a synthetic image: Stop 2 woken by an EXTI interrupt (MSI after
 //   it, a timer and SysTick stopped while stopped), Stop 1 woken by the RTC wake-up timer (HSI16 after it by
 //   STOPWUCK), Stop 0 entered by WFE and ended by an EXTI event, Shutdown ended by a wake-up pin's reset, and flash
-//   erase and programming seen at both of the flash's addresses and by the core's decode cache (written 2026-10-28,
-//   not yet run);
+//   erase and programming seen at both of the flash's addresses and by the core's decode cache;
 // - stm32Firmware: the E143 SCPU image on the machine from reset to the debug console's prompt, console commands and
 //   their answers, the standby the default board leads to and the wake-up from it, and, on a fresh machine, that the
 //   boot path to the standby at about 3.03 s enters no Stop or Shutdown mode and no flash operation (needs the unpacked

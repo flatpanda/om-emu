@@ -689,9 +689,10 @@ Open) and the only lens on the other bodies.
   chargers and a USB PD controller on I2C, an RTC, and a debug console on LPUART1. It holds no accelerometer or
   eye-sensor code. The transport-level model the survey recommended before any LLE is built (S-SCPUDEV, 4.7.1; scpu
   spec 8 step 2). Apart from the lab, the image itself boots to its debug console on a pure-JS Cortex-M4 with STM32L4
-  peripheral models (scpu spec 8 steps 3-5, 2026-10-28); connecting it in S-SCPUDEV's place is step 6, written
-  2026-10-28 and not yet run: opt-in with `OM_EMU_SCPU=native` on E143 and E146 (`emu/src/lab/scpum4.mjs`, scpu spec 8
-  "Step 6, written"), the MN side (PER_SCPU, S-SIO2, the pins) unchanged.
+  peripheral models (scpu spec 8 steps 3-5, 2026-10-28); connecting it in S-SCPUDEV's place is step 6, built
+  2026-10-29: opt-in with `OM_EMU_SCPU=native` on E143 and E146 (`emu/src/lab/scpum4.mjs`, scpu spec 8 "Step 6,
+  built"), the MN side (PER_SCPU, S-SIO2, the pins) unchanged, and the store-init session's frame log, transfers and
+  pins from the first request on S-SCPUDEV's (X).
 - **Accelerometer (D):** ACC_MAIN's probe reads register 0x0f of device channel 6 and wants 0x6a (I: the WHO_AM_I of
   ST's LSM6DSL / LSM6DSM family); the bus is SPI over PER_SIO (`[PER_ACC_SPI] per_sio_open_error`, ACC_SPI). Samples
   land in the cache `0x62963f60..0x62963f6c` and bump the counter `0x6034d9d4`. Level Adjust's loop
@@ -1128,9 +1129,9 @@ subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a91
   the format and the transfers read, then needs no stand-in). Round 2 (2026-10-24, 4.8.3): Card Formatting from the
   menu and the card's removal and insertion at run time, with the HLS function component and media manager stood in
   at their seams. Round 3 (2026-10-25, 4.8.4): the seams read by a rule in every image that has them, and the card
-  native on nine more bodies (E146, E147, E144, E139, E137, E142, E140, E125, E130). Round 4 (2026-10-28, 4.8.6;
-  written, not yet run): an SDXC card by its capacity, an independent exFAT reader, and a test that has the firmware
-  format and mount a 64 and a 128 GiB card and reports what it finds.
+  native on nine more bodies (E146, E147, E144, E139, E137, E142, E140, E125, E130). Round 4 (2026-10-28, run
+  2026-10-29, 4.8.6): an SDXC card by its capacity and an independent exFAT reader; the firmware formats a blank 64
+  or 128 GiB card exFAT and mounts it (X).
 
 #### 4.8.1 The sdmem request contract (D unless tagged)
 
@@ -1239,7 +1240,7 @@ found on the way:
 - **Card Formatting from the menu** (X, round 1): Setup, Card Formatting, card 1, Format Card, Yes showed "Busy"; the
   application's media control sends TRA 1511 (`0x50ac940d`, OlyHfwOpeMdaCtrl), which S-TRAACK answers. Round 2 (4.8.3)
   found the component that takes it and stands it in.
-- **Open:** the other bodies (round 3, 4.8.4), the second slot, exFAT (an SDXC card: written, not yet run, 4.8.6),
+- **Open:** the other bodies (round 3, 4.8.4), the second slot, exFAT beyond E143's format and mount (4.8.6),
   REC_FILE natively, the SD host at its registers with interrupts (seam A), playback of the files (a JPEG decoder at
   the codec seam); round 2's open points are in 4.8.3.
 
@@ -1331,8 +1332,8 @@ to the card switch), and are stood in at their seams with the firmware's own eve
 - **Open:** the second slot (S-CARD sets both slots' mount state to 8 at the start, so the format sets slot 2's flag
   15262 too; slot 2's switch `0x1518` is not stood in); the HLS components' own runs (the function component and the
   media manager in camapp 2); the media control's other commands (2, 3, 5, 6: erase all, copy, unlock, ...); the SD
-  host's card detect (seam A); a card the firmware cannot mount (unreadable; an SDXC card, 4.8.6, is written but not
-  yet run); what the camera draws without a card ("No Card", the card icon).
+  host's card detect (seam A); a card the firmware cannot mount (unreadable; an SDXC card it formats and mounts,
+  4.8.6); what the camera draws without a card ("No Card", the card icon).
 
 #### 4.8.4 The card on more bodies, round 3 (2026-10-25; D unless tagged)
 
@@ -1437,11 +1438,11 @@ at 60p or 50p. Nothing in the lab changes; the addresses are E144's.
 - **Open:** whether a body leaves the factory with the blank store's mode 1 (?), and whether the camera's movie menu can
   select code 8 at 60p on these bodies (not read).
 
-#### 4.8.6 An SDXC card and an exFAT reader, round 4 (2026-10-28; written, not yet run)
+#### 4.8.6 An SDXC card and an exFAT reader, round 4 (2026-10-28; run 2026-10-29)
 
-Code and tests only: nothing of this round has run (the machine was kept free; verification is a later round), so
-nothing here is X. What the SD and exFAT specifications say is from memory of them, not checked against the documents
-in this round (I); what the firmware does with an SDXC card is not read (?), and the test is written to report it.
+Written without running anything, then run in a later round (2026-10-29): what the firmware does with the card is X
+from that run. What the SD and exFAT specifications say is from memory of them, not checked against the documents (I);
+the firmware's code for a card above 32 GiB is not read (?).
 
 - **The card (S-SDCARD, `emu/src/lab/sdcard.mjs`):** the capacity is the card's one parameter, and above 32 GiB the card
   is SDXC (`kind`); SDHC stays the default (8 GiB). By the SD Physical Layer specification (I) an SDXC card answers as
@@ -1466,20 +1467,26 @@ in this round (I); what the firmware does with an SDXC card is not read (?), and
   an error, not a guess. It gives the surface `emu/refs/fat.mjs` gives its callers (type, label, spc, clusters, list,
   find, data, chain, freeClusters, fsInfo; list also takes a directory's entry, in both readers), and
   `emu/refs/volume.mjs` openVolume picks the reader by the boot sector, so a card of either kind reads the same way.
-- **What the firmware is expected to do (I) and what the test reports:** dosfat carries both FAT and exFAT (4.8, D).
-  The SD File System Specification has an SDXC card formatted exFAT, in an MBR partition of type 0x07 that starts at
-  the boundary unit (32768 sectors at 64 GiB), with 128 KiB clusters from 32 to 128 GB and 256 KiB above (I, as
-  recalled; the lab's 128 GiB card is 137 GB, so either row may apply, ?). Whether the camera's format follows it, and
-  with which cluster size, is ?. `emu/test/test_storage.mjs` storageSdxc (`--sdxc`; in `emu/bin/test.mjs` on E143)
-  puts a blank 64 and a 128 GiB card in a player and checks what holds whichever file system the firmware picks: the
-  insertion formats and mounts the card, the volume reads back through `refs/volume.mjs` and is consistent (exFAT's
-  check and backup region, or FAT32's FSInfo against its FAT), S2's file is found with the JPEG's bytes, and the
-  firmware counts remaining shots from the card; it prints as notes the insertion's lab times, the partition and the
-  layout, the remaining shots and the movie time (to be measured: 803 shots and 5:25 on the 8 GiB card, 4.8.2;
-  whether the count saturates on a large card, ?). The units (`storageUnits`, in `test-pure`) build an exFAT volume
-  by hand and read it back, with each checksum, the name hash, a looping chain and the bitmap's mismatches caught,
-  and check the SDXC registers and the sparse 128 GiB card.
-- **Open:** the run (the next round); the browser player's card size; `emu/bin/modelcheck.mjs` still reads its card
+- **What the firmware does (X, E143, 2026-10-29):** dosfat carries both FAT and exFAT (4.8, D), and the firmware
+  formats a blank SDXC card exFAT, as the SD File System Specification has it (I, as recalled). `emu/test/test_storage.mjs`
+  storageSdxc (`--sdxc`; in `emu/bin/test.mjs` on E143) puts a blank 64 and a 128 GiB card in a player; on both:
+  - the insertion: the mount fails with `0xe08` after 125 ms, the format succeeds after 905 ms and the mount after
+    745 ms (lab times), drive status `0x00013780`;
+  - the layout: an MBR partition of type 0x07 at sector 32768, ending 262,144 sectors (128 MiB) before the card's end
+    (133,922,816 and 268,140,544 sectors long); exFAT revision 1.0 labelled "OM SYSTEM", 128 KiB clusters (523,008 and
+    1,047,296 of them: the cluster heap ends where the partition does), one FAT of 16,384 sectors at +16384, the heap
+    at +32768, the root at cluster 4, PercentInUse 255 (not available), volume serial `0x54210000`. The 128 GiB card
+    (137 GB) keeps 128 KiB clusters, not the 256 KiB the recalled table gives above 128 GB;
+  - `refs/exfat.mjs` reads the volume back and finds it consistent, its backup boot region equal to the main one,
+    before and after S2, whose file is found with the JPEG's bytes;
+  - the firmware counts from the card, with one picture on it: 6,456 remaining shots and 2,638 s of movie (43:58) on
+    64 GiB, 12,929 and 5,287 s (1:28:07) on 128 GiB, about 8 and 16 times the 8 GiB card's 803 and 5:25 (4.8.2), so
+    neither count saturates.
+
+  The units (`storageUnits`, in `test-pure`) build an exFAT volume by hand and read it back, with each checksum, the
+  name hash, a looping chain and the bitmap's mismatches caught, and check the SDXC registers and the sparse 128 GiB
+  card.
+- **Open:** the browser player's card size; `emu/bin/modelcheck.mjs` still reads its card
   with `refs/fat.mjs` (its card is the default SDHC one; `refs/volume.mjs` would read either); the HLS side on an
   SDXC card (Card Formatting from the menu, the card out and in: S-MDACTRL and S-MEDIA are unchanged and not tried
   with it); exFAT on the other native bodies.

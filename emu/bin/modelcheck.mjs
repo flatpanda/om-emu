@@ -14,18 +14,29 @@
 // box of the count's pixels is reported. On a body whose card's file system runs natively (src/fw/models.mjs card_fs)
 // the query is the firmware's, which counts from the card: the probe answers it at PROBE_SHOTS for its second window
 // with a hook of its own, removed for the third; and the card check follows the path: the card mounted, the shots the
-// query answered before the probe from the card, and each picture's file found again on the card by refs/fat.mjs
-// with its size. A body in PROBE_XFAIL is expected to fail the probe, strictly: its failure is
-// printed and does not count, its pass does, so a fix forces the table's update.
-//   node emu/bin/modelcheck.mjs [MODEL ...] [--no-port]
+// query answered before the probe from the card, and each picture's file found again on the card with its size by the
+// independent reader refs/volume.mjs picks (refs/fat.mjs or refs/exfat.mjs, whichever file system the firmware
+// formatted; an exFAT volume must also pass the reader's consistency check). --card-size GiB puts a blank card of that
+// capacity in the slot in place of the default 8 GiB SDHC one (src/lab/sdcard.mjs cardSectors: above 32 an SDXC card),
+// and the line says which file system the body's firmware gave it. A body in PROBE_XFAIL is expected to fail the
+// probe, strictly: its failure is printed and does not count, its pass does, so a fix forces the table's update.
+//   node emu/bin/modelcheck.mjs [MODEL ...] [--no-port] [--card-size GiB]
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { MODELS, romPath } from '../src/fw/models.mjs';
+import { SdCard, cardSectors } from '../src/lab/sdcard.mjs';
 
 const REPO = path.resolve(new URL('../../', import.meta.url).pathname);
 const args = process.argv.slice(2), noPort = args.includes('--no-port');
-const want = args.filter((a) => !a.startsWith('--'));
+const sizeAt = args.indexOf('--card-size');
+if (sizeAt >= 0 && !(sizeAt + 1 < args.length)) { console.error('modelcheck: --card-size needs a size in GiB'); process.exit(2); }
+// the card's capacity in sectors (null: the default card), checked here so that a size the card model refuses stops
+// the run before any child
+const SECTORS = sizeAt >= 0 ? cardSectors(args[sizeAt + 1]) : null;
+const unknown = args.filter((a, i) => a.startsWith('--') && a !== '--no-port' && a !== '--card-size' && i !== sizeAt + 1);
+if (unknown.length) { console.error(`modelcheck: unknown option ${unknown[0]} (--no-port, --card-size GiB)`); process.exit(2); }
+const want = args.filter((a, i) => !a.startsWith('--') && !(sizeAt >= 0 && i === sizeAt + 1));
 const models = (want.length ? want : Object.keys(MODELS).filter((k) => k !== 'E143' && MODELS[k].checked))
   .filter((k) => fs.existsSync(path.join(REPO, romPath(MODELS[k]))));
 
@@ -39,9 +50,16 @@ const SHOTS_QUERY = 0x50419164;
 // since S-CARD's card is in slot 1's detect state (docs/model-survey.md finding 18); the E143 and E144 families were
 // in it before
 const PROBE_XFAIL = {};
+// the bodies known to stop with an SDXC card (--card-size above 32 GiB), on the TFT and the EVF: model -> [what their
+// child's output must hold, the reason]. Strictly, as PROBE_XFAIL: a body that runs the path, or stops elsewhere, fails
+// the run. E144: its firmware formats the card exFAT, then at the camera application's start its movie parameters'
+// exFAT branch divides by a size of 0 (divu at 0x5032574f), which emu refuses with a strictness fault the hardware
+// does not raise (Fault 6, emu/FIDELITY-NOTES.md 3.2; docs/hle-gaps.md 4.8.6)
+const SDXC_XFAIL = { E144: [/stopped at 0x[0-9a-f]+ \(disasm 0x5032574f\) fault=6/, 'the movie parameters\' exFAT branch divides by 0 at 0x5032574f (Fault 6)'] };
+const SDXC = SECTORS !== null && new SdCard({ sectors: SECTORS }).kind === 'SDXC';
 const CHILD = `
 const J = process.argv[1], DEVICE = process.argv[2], PROBE_NS = ${PROBE_NS}, PROBE_SHOTS = ${PROBE_SHOTS},
-  WINDOW = ${WINDOW}, WINDOW_NS = ${WINDOW_NS};
+  WINDOW = ${WINDOW}, WINDOW_NS = ${WINDOW_NS}, SECTORS = ${SECTORS};
 const { createHash } = await import('node:crypto');
 const zlib = await import('node:zlib');
 const { loadImage, loadBlock } = await import(J + '/bin/run.mjs');
@@ -49,9 +67,10 @@ const { Player } = await import(J + '/src/lab/player.mjs');
 const { PLAYER_PARSER } = await import(J + '/scenarios/session_replay.mjs');
 const { A } = await import(J + '/src/fw/model.mjs');
 const { runtime } = await import(J + '/src/lab/hle.mjs');
-const { FatVolume, mbrPartition } = await import(J + '/refs/fat.mjs');
+const { openVolume } = await import(J + '/refs/volume.mjs');
+const { memoryCard } = await import(J + '/src/lab/sdcard.mjs');
 const SHOTS_QUERY = ${SHOTS_QUERY}, card = {};
-const env = { rom: loadImage(), resBlock: loadBlock(), createHash, deflate: (b, l) => new Uint8Array(zlib.deflateSync(b, { level: l })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)) };
+const env = { rom: loadImage(), resBlock: loadBlock(), createHash, ...(SECTORS === null ? {} : { card: memoryCard({ sectors: SECTORS }) }), deflate: (b, l) => new Uint8Array(zlib.deflateSync(b, { level: l })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)) };
 const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, device: DEVICE }, { ...env, wallClock: () => performance.now() / 1000 });
 pl.open_session();
 const s = pl.session, lab = s.lab, out = [];
@@ -98,14 +117,15 @@ for (const k of JSON.parse(process.argv[3])) {
     probe = { count: boxOf(a.w, n, count), back: boxOf(a.w, n, (i) => count(i) && (!c.stable[i] || c.val[i] !== a.val[i])) };
   } catch (e) { probe = { error: e.message.split('\\n')[0].slice(0, 120) }; }
 }
-// with the card's file system native: the card read back independently (refs/fat.mjs), each picture's file found at
-// its path with its size
+// with the card's file system native: the card read back independently (refs/volume.mjs: refs/fat.mjs or
+// refs/exfat.mjs, an exFAT volume checked for consistency), each picture's file found at its path with its size
 if (s.storage) {
   const st = s.storage, c = st.card;
-  Object.assign(card, { mounted: st.mounted, formatted: st.formatted, files: st.files.length, found: 0 });
+  Object.assign(card, { kind: c.kind, gib: c.sectors / 2097152, mounted: st.mounted, formatted: st.formatted, files: st.files.length, found: 0 });
   try {
-    const vol = new FatVolume((lba, n) => c.read(lba, n), mbrPartition(c.read(0, 1)).start);
-    card.label = vol.label.trim();
+    const vol = openVolume((lba, n) => c.read(lba, n));
+    Object.assign(card, { type: vol.type, label: vol.label.trim(), start: vol.start, cluster_kib: vol.spc / 2 });
+    if (vol.type === 'exFAT') { const p = vol.check(); if (p.length) card.error = 'exFAT check: ' + p.slice(0, 3).join('; ').slice(0, 200); }
     for (const f of st.files) { const e = vol.find(f.path.slice(3).replaceAll('\\\\', '/')); if (e && !e.dir && e.size === f.size) card.found += 1; }
   } catch (e) { card.error = e.message.slice(0, 120); }
 }
@@ -122,6 +142,13 @@ for (const m of models) {
   for (const device of MODELS[m].panels?.evf === null ? ['tft'] : ['tft', 'evf']) {
   const path_ = device === 'evf' ? PATH.slice(0, 3) : PATH;
   const r = spawnSync(process.execPath, ['--max-old-space-size=6144', '--input-type=module', '-e', CHILD, path.join(REPO, 'emu'), device, JSON.stringify(path_.slice(1).map((p) => p[0]))], { encoding: 'utf8', env: { ...process.env, OM_EMU_MODEL: m }, maxBuffer: 1 << 26 });
+  const xs = SDXC ? SDXC_XFAIL[m] : null;
+  if (xs) {
+    const stopped = r.status !== 0 && xs[0].test(r.stdout + r.stderr);
+    console.log(`${m} (${MODELS[m].name}) ${device}: ${stopped ? 'xfail' : 'FAILED, expected to stop (update SDXC_XFAIL):'} with a ${SECTORS / 2097152} GiB SDXC card: ${xs[1]}${stopped ? '' : ` | ${(r.stderr || r.stdout).split('\n').filter(Boolean).slice(-2).join(' | ').slice(0, 400)}`}`);
+    if (!stopped) bad++;
+    continue;
+  }
   const line = r.stdout.trim().split('\n').pop();
   let steps, probe, card;
   try { ({ steps, probe, card } = JSON.parse(line)); } catch { console.log(`${m} (${MODELS[m].name}) ${device}: FAILED ${(r.stderr || r.stdout).split('\n').filter(Boolean).slice(-3).join(' | ').slice(0, 600)}`); bad++; continue; }
@@ -150,7 +177,7 @@ for (const m of models) {
     problems.push(`card: ${JSON.stringify(card)}, want mounted, shots from the card and ${pictures} file(s) read back`);
   }
   const shown = (probe?.count && !probe.back ? `, count at ${box(probe.count)}` : '')
-    + (card ? `; card '${card.label}' ${card.formatted ? 'formatted, ' : ''}${card.shots} shots, ${card.found} file(s) read back` : '');
+    + (card ? `; card ${card.gib} GiB ${card.kind}: ${card.type ?? '?'} '${card.label}'${card.cluster_kib ? ` at sector ${card.start} (${card.cluster_kib} KiB clusters)` : ''} ${card.formatted ? 'formatted, ' : ''}${card.shots} shots, ${card.found} file(s) read back` : '');
   console.log(`${m} (${MODELS[m].name}) ${device}: ${problems.length ? 'FAILED ' + problems.join('; ') : 'ok'} — ${steps.map(([k, st, , n, f]) => `${k} 0x${st.toString(16)} ${n} ${f}`).join(', ')}${shown}${notes.length ? '; ' + notes.join('; ') : ''}`);
   if (problems.length) bad++;
   }

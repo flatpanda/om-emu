@@ -311,7 +311,7 @@ export const CAMAPP_STAND_INS = {
   "S-LONGTIMER": "the system timer module's long timers (1000 ms and more, set through api_system.c 0x5041fd71 / 0x5041fd0d by the HLS timer service): when one is due in lab time the module's event 0x03010000 | number is published, as the module would",
   "S-BOOTDONE": "the HLS components' boot completion: the camera base (Cab_CameraBase) and the still-shooting category wait in their state 3 for event 415, which their capabilities would send once the modules report ready; S-BOOTDONE dispatches 415 to each waiting there, and 420 (the shooting mode) to the camera base waiting in its state 11, so the shoot mode, the category and Cmp_ShootingComponent are created and run on the OXF main thread (HIGHLEVEL_MAIN, started by S-CAMAPP). The component's sub-CPU status read (0x5012b8b7) returns 0",
   "S-CPU3": "the posts to CPU 3 (remote calls of 0x5002587a through ring [3][0], each setting bits of DISP_FRAME's flag) are taken off the ring and acknowledged after each step, and S-DISPFRAME runs a turn of DISP_FRAME for their bits; the lab has no CPU 3",
-  "S-RELSEQ": "the modules' notifications of a release as the callbacks the HLS shooting reactive posts for them (0x50af4451, CBC_SHOOTING_COMMON), while the application's shooting service runs (from startShootingService 0x50ae1124 to endShootingService 0x50ad7e8a; in playback S1 only takes the application back to shooting): S1 down -> START_FOCUS, END_FOCUS (OK, or NG when S-SCENE's live view has nothing focusable under its AF point); S2 down -> START_SHOOTING_PICTURE, START_EXPOSE, END_EXPOSE after the shutter time in use, END_SHOOTING_PICTURE, START_RECVIEW, END_RECVIEW 500 ms later; the application's RECORDING_MOVIE function starts a recording (READY_MOVIE, START_SHOOTING_MOVIE, START_RECORDING_MOVIE, UPDATE_SHOOTING_TIME every second) or ends it (STOP_SHOOTING_MOVIE, END_RECORDING_MOVIE); meanwhile the shooting phase query 0x50ab57e9 answers the movie phases of the shooting component's sequence (113 ready, 114 ready finish, 115 recording, 117 end), so getMovieState is 1 and the GUI lays out its REC mark. The order follows the callbacks' names (I). No image is developed: S-RECVIEW shows the capture's frame",
+  "S-RELSEQ": "the modules' notifications of a release as the callbacks the HLS shooting reactive posts for them (0x50af4451, CBC_SHOOTING_COMMON), while the application's shooting service runs (from startShootingService 0x50ae1124 to endShootingService 0x50ad7e8a; in playback S1 only takes the application back to shooting): S1 down -> START_FOCUS, END_FOCUS (OK, or NG when S-SCENE's live view has nothing focusable under its AF point); S2 down -> START_SHOOTING_PICTURE, START_EXPOSE, END_EXPOSE after the shutter time in use, END_SHOOTING_PICTURE, START_RECVIEW, END_RECVIEW 500 ms later; the application's RECORDING_MOVIE function starts a recording (READY_MOVIE, START_SHOOTING_MOVIE, START_RECORDING_MOVIE, UPDATE_SHOOTING_TIME every second) or ends it (STOP_SHOOTING_MOVIE, END_RECORDING_MOVIE); meanwhile the shooting phase query 0x50ab57e9 answers the movie phases of the shooting component's sequence (113 ready, 114 ready finish, 115 recording, 117 end), so getMovieState is 1 and the GUI lays out its REC mark. The callbacks due at one lab time (END_EXPOSE and END_SHOOTING_PICTURE) are posted together before the application runs, as the modules' notifications would reach its queue while it works (E145's application defers an event until END_SHOOTING_PICTURE, X). The order follows the callbacks' names (I). No image is developed: S-RECVIEW shows the capture's frame",
 };
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 
@@ -798,23 +798,33 @@ export class CamApp {
     }
     throw new FirmwareError(`S-RELSEQ: the HLS shooting reactive (vtable ${h8(SHOOT_REACTIVE_VT)}) is not on the heap`);
   }
-  post(name, param = 0) {
+  post(name, param = 0) { this.post_all([[name, param]]); }
+  // S-RELSEQ's callbacks [name, param], posted one after another before one settle: the callbacks due at one lab time
+  // reach the application's queue together, as the modules' notifications would while it runs. E145's application
+  // defers the GUI's event 19 while its release runs, its state table answering it by posting it to itself again,
+  // until END_SHOOTING_PICTURE ends the state; posted only after END_EXPOSE's settle, that callback never came and
+  // the deferral spun (docs/model-survey.md finding 20)
+  post_all(list) {
     const s = this.s, lab = s.lab;
-    this.log.push(['cbs', `${name}(${param})`]);
-    if (Object.hasOwn(MOVIE_PHASE, name)) this.movie_phase = MOVIE_PHASE[name];
-    lab.call(SHOOT_POST, { a0: this.find_reactive(), d0: CBS[name], d1: param }, null, null, 50000000);
-    s.settle(`S-RELSEQ ${name}`);
+    for (const [name, param] of list) {
+      this.log.push(['cbs', `${name}(${param})`]);
+      if (Object.hasOwn(MOVIE_PHASE, name)) this.movie_phase = MOVIE_PHASE[name];
+      lab.call(SHOOT_POST, { a0: this.find_reactive(), d0: CBS[name], d1: param }, null, null, 50000000);
+    }
+    s.settle(`S-RELSEQ ${list.map(([name]) => name).join(', ')}`);
     this.pump();
-    if (name === 'START_RECVIEW' || name === 'END_RECVIEW') s.scene_recview?.(name === 'START_RECVIEW');   // S-RECVIEW
-    if (name === 'END_SHOOTING_PICTURE' && s.storage && !s.storage.mounted) {      // S-CARD: no card mounted
-      this.log.push(['card', 'no card mounted: no image, no file']);
-    } else if (name === 'END_SHOOTING_PICTURE') {                                   // S-CARD
-      const img = { number: this.images.length + 1, release: this.release };
-      this.images.push(img);
-      this.log.push(['card', `image ${CARD_FOLDER}-${String(img.number).padStart(4, '0')} saved`]);
-      if (s.storage) {                                                               // S-RECFILE (storage.mjs)
-        img.file = s.storage.write_picture(jpegOfFrame(s.picture_frame(this.views.get(img.release) ?? null)));
-        this.log.push(['card', `file ${img.file.path}, ${img.file.size} bytes`]);
+    for (const [name] of list) {
+      if (name === 'START_RECVIEW' || name === 'END_RECVIEW') s.scene_recview?.(name === 'START_RECVIEW');   // S-RECVIEW
+      if (name === 'END_SHOOTING_PICTURE' && s.storage && !s.storage.mounted) {      // S-CARD: no card mounted
+        this.log.push(['card', 'no card mounted: no image, no file']);
+      } else if (name === 'END_SHOOTING_PICTURE') {                                   // S-CARD
+        const img = { number: this.images.length + 1, release: this.release };
+        this.images.push(img);
+        this.log.push(['card', `image ${CARD_FOLDER}-${String(img.number).padStart(4, '0')} saved`]);
+        if (s.storage) {                                                               // S-RECFILE (storage.mjs)
+          img.file = s.storage.write_picture(jpegOfFrame(s.picture_frame(this.views.get(img.release) ?? null)));
+          this.log.push(['card', `file ${img.file.path}, ${img.file.size} bytes`]);
+        }
       }
     }
   }
@@ -876,9 +886,10 @@ export class CamApp {
     this.drain_cpu3();
     const now = this.s.lab.lab_time();
     while (this.timed.length && this.timed[0][0] <= now) {
-      const [, name, param] = this.timed.shift();
-      this.post(name, param);
-      if (name === 'UPDATE_SHOOTING_TIME' && this.recording !== null) this.at(1e9, name, param + 1);
+      const due = this.timed[0][0], batch = [];
+      while (this.timed.length && this.timed[0][0] === due) batch.push(this.timed.shift());
+      this.post_all(batch.map(([, name, param]) => [name, param]));
+      for (const [, name, param] of batch) if (name === 'UPDATE_SHOOTING_TIME' && this.recording !== null) this.at(1e9, name, param + 1);
     }
     this.subject?.tick();                                                           // S-SUBJECT
   }

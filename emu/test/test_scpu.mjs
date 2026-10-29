@@ -312,15 +312,16 @@ function inboundTests(ok) {
   m6.send(0x85, [1, 1, 0]);
   ok(k2.fate === 'dropped' && k1.fate === null && m6.st.message === 0 && d6.power === 'pwr_save' && !d6.powered && d6.dropping,
     `0x85 {1, 1}, PC13 high: the queued message dropped, the current one kept, pwr_save, the gate closed: ${k2.fate} ${k1.fate} ${d6.power} ${d6.powered}`);
+  ok(m6.st.ready === 0 && /the link stopped/.test(d6.log.at(-1)), `leaving steady, the system-control task stops the link: PC3 low (${m6.st.ready}, ${d6.log.at(-1)})`);
   const k3 = d6.post(0x08, [1]); m6.drain();
   ok(k3.fate === 'dropped', 'a message after a power-off is dropped with its completion');
-  ok(throwsAs(() => poll(m6), ScpuError), 'a request after a power-off stops the session: the wake is not modelled');
-  const offTo = (pc13, mode, x) => { const [d, m] = on(); d.port('PC13', pc13); m.send(0x85, [mode, x, 0]); return [d.power, d.powered, d.dropping].join(' '); };
-  ok(offTo(0, 1, 1) === 'bkground false true', `0x85 {1}, PC13 low: bkground: ${offTo(0, 1, 1)}`);
-  ok(offTo(1, 1, 0) === 'standby false true', `0x85 {1, 0}, PC13 high: standby: ${offTo(1, 1, 0)}`);
-  ok(offTo(1, 3, 0) === 'pwr_save false true', `0x85 {3}: pwr_save, the gate closed: ${offTo(1, 3, 0)}`);
-  ok(offTo(1, 4, 0) === 'hibernation true true', `0x85 {4}: hibernation, the gate kept: ${offTo(1, 4, 0)}`);
-  ok(offTo(1, 5, 0) === 'steady true false', `0x85 {5}: steady: ${offTo(1, 5, 0)}`);
+  ok(throwsAs(() => { d6.pin('request', 0); m6.drain(); }, ScpuError), 'a request after a power-off stops the session: the wake is not modelled');
+  const offTo = (pc13, mode, x) => { const [d, m] = on(); d.port('PC13', pc13); m.send(0x85, [mode, x, 0]); return [d.power, d.powered, d.dropping, m.st.ready].join(' '); };
+  ok(offTo(0, 1, 1) === 'bkground false true 0', `0x85 {1}, PC13 low: bkground, PC3 low: ${offTo(0, 1, 1)}`);
+  ok(offTo(1, 1, 0) === 'standby false true 0', `0x85 {1, 0}, PC13 high: standby, PC3 low: ${offTo(1, 1, 0)}`);
+  ok(offTo(1, 3, 0) === 'pwr_save false true 0', `0x85 {3}: pwr_save, the gate closed, PC3 low: ${offTo(1, 3, 0)}`);
+  ok(offTo(1, 4, 0) === 'hibernation true true 0', `0x85 {4}: hibernation, the gate kept, PC3 low: ${offTo(1, 4, 0)}`);
+  ok(offTo(1, 5, 0) === 'steady true false 1', `0x85 {5}: steady, the link kept: ${offTo(1, 5, 0)}`);
   const [d7] = on();
   d7.power = 'pwr_save'; d7.sysctrl(5);
   ok(d7.power === 'pwr_save' && /illegal in state pwr_save/.test(d7.log.at(-1)), 'a message the state has no transition for is the task\'s illegal message: logged, the state kept');

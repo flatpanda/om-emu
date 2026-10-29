@@ -60,20 +60,24 @@
 // at the release, 0x801305c..0x8013112: modes 1..5 drop every waiting message with its completion, then mode 1 sets
 // the power-off flag and closes the gate, 2 clears the flag and opens the gate, 3 sets the flag and closes the gate,
 // 4 sets the flag, 5 clears it, and each posts the system-control task its message, 6, 5, 9, 7 and 5; mode 6 does
-// nothing), 0x01 / 0x81 the date, 0x06 / 0x86 a backup register, 0x88 the port scan. The words a body uses are its
+// nothing), 0x01 / 0x81 the date, 0x06 / 0x86 a backup register, 0x88 the port scan, 0x82 a GIO port's level
+// (0x800cfef -> 0x800cdc4: one byte, the pin's; the model's levels are the port scan's inputs, ports 45 PC13 and 37
+// PC5, and another port is refused) and the power manager's 0x12 {5}, which the sub-CPU answers with its own message
+// 0x12 {5} (below, PWR_SYNC; the MN's power manager waits for it, docs/hle-gaps.md 4.7.4). The words a body uses are its
 // fact scpu.words, [index, byte], and a request for another is refused (no caller sends one); a body's fact
 // scpu.quiet lists writes taken without an effect (E134's 0x21: what it means is ?). Every other command stops the
 // session naming it and its handler: the MN's sessions send none, and an answer the sub-CPU makes from its hardware
-// (0x82, 0x80, ...) is not known.
+// (0x82 of another port, 0x80, ...) is not known.
 // The power states (the system-control task, sys_ctrl_task.c: its table 0x8008804, 6 states x 14 events, the state
 // names it prints at 0x16d40..0x16db0, D): 0 steady (after a reset), 1 steady_wait, 2 bkground, 3 pwr_save,
 // 4 hibernation, 5 standby. The messages 0x85 posts move it so (D): from steady, 5 (modes 2, 5) stays steady; 6 (mode
 // 1) goes to bkground when PC13 reads low (0x80166d0), else to pwr_save when mode 1's second byte was 1, else to
 // standby (0x80163a3); 9 (mode 3) to pwr_save (0x801648d); 7 (mode 4) to hibernation (0x80163ed). From steady_wait and
 // bkground, 5 goes to steady; every other pair of these is the task's illegal message (0x8016373: logged, the state
-// kept). Its other messages (the sub-CPU's own wake and charge events) are not modelled, and nor is the wake from a
-// power-off: with the flag set the manager ignores PB12's request (0x8012922) until the system-control task clears it
-// (0x8013572), so a request then stops the session.
+// kept). Leaving steady, the task stops the link: PC3 drops (below, sysctrl). Its other messages (the sub-CPU's own
+// wake and charge events) are not modelled, and nor is the wake from a power-off: with the flag set the manager
+// ignores PB12's request (0x8012922) until the system-control task clears it (0x8013572), so a request then stops the
+// session.
 // The port scan (per_port_scan.c, D): its task samples GIO ports 45 and 37, PC13 and PC5 (the table 0x80128e0), with
 // a debounce of 3 samples (0x8012828, thresholds set at 0x80127da) into a result byte, bit 0 PC13 and bit 1 PC5
 // (0x8012866..0x801289a). The 0x88 handler (0x80126d7) answers {result, busy}, the result only while the scan is not
@@ -91,7 +95,10 @@ export class ScpuError extends FirmwareError {}
 
 export const DATE_BYTES = 9, RX_BYTES = 10, CONTEXT_BYTES = 20;
 export const SET_DATE = 0x01, GET_DATE = 0x81, WRITE_WORD = 0x06, READ_WORD = 0x86, SYSCTRL = 0x85, POLL = 0x8f, CHUNK = 0x0f, GIO_WRITE = 0x02;
-export const PORT_SCAN = 0x88, SCAN_REPORT = 0x08;
+export const PORT_SCAN = 0x88, SCAN_REPORT = 0x08, GIO_READ = 0x82, PWR_WRITE = 0x12;
+// the power manager's handshake: the MN's 0x12 {5} becomes its message 12 (0x801570b -> 0x801534c), whose handler
+// answers with the message 0x12 {5} (0x801a53c -> 0x801526e), D (docs/om1-scpu-spec.md 3.3, 3.4)
+const PWR_SYNC = 5;
 // the port scan's inputs, by the GIO port the scan reads (0x80128e0) and the result bit it gives (D)
 export const SCAN_PORTS = { PC13: { gio: 45, bit: 0 }, PC5: { gio: 37, bit: 1 } };
 // The levels the model starts with (a model choice): PC13 low gives the result bit 0, which the MN turns into UI_IN's
@@ -188,7 +195,7 @@ export class ScpuDev {
   constructor(memory, { words, quiet }) {
     this.memory = memory;
     this.words = words;
-    for (const c of quiet) if (c & 0x80 || c === CHUNK || [SET_DATE, WRITE_WORD, SYSCTRL, GIO_WRITE].includes(c)) throw new ScpuError(`S-SCPUDEV: quiet command ${hx(c)}: not a write of its own`);
+    for (const c of quiet) if (c & 0x80 || c === CHUNK || [SET_DATE, WRITE_WORD, SYSCTRL, GIO_WRITE, PWR_WRITE].includes(c)) throw new ScpuError(`S-SCPUDEV: quiet command ${hx(c)}: not a write of its own`);
     this.quiet = new Set(quiet);
     this.labels = ['S-SCPUDEV', 'A-SCPUDEV-1'];   // what the session's stand-ins name (player.mjs)
     this.lines = null;
@@ -450,6 +457,11 @@ export class ScpuDev {
     } else if ((from === 'steady_wait' || from === 'bkground') && id === 5) to = 'steady';
     if (to === null) { this.log.push(`system control: message ${id} illegal in state ${from}`); return; }
     if (to !== from) this.log.push(`system control: message ${id}, ${from} -> ${to}`);
+    // leaving steady, the task's transition stops the command manager's link first: PB12's edge interrupt off
+    // (0x80134e0) and PC3 low (0x8013498: GIO port 35 = 0), from bkground's 0x801678c (through 0x80134a0, while the
+    // state it reads is steady), pwr_save's 0x80167e2 (0x80134e6), standby's 0x8016872 (0x8013488) and
+    // hibernation's 0x8016810 (0x8013510), D; the MN polls pin 102 low after its power-off (docs/hle-gaps.md 4.7.4)
+    if (from === 'steady' && to !== 'steady') { this.later('ready', 0); this.log.push('the link stopped: PC3 low'); }
     this.power = to;
   }
   // a long write's header [7, 0x0f, u32 size, command] (0x8012f1a) and its chunks (0x8013181)
@@ -481,7 +493,7 @@ export class ScpuDev {
   size(cmd, data, n, name) { if (data.length !== n) this.fail(`${name} (${hx(cmd)}) with ${data.length} data bytes: its senders send ${n}`); }
   unknown(cmd, data) {
     const h = HANDLERS.get(cmd);
-    return this.fail(`command ${hx(cmd)} (data ${bytesHex(data)}): not modelled (${h ? `the sub-CPU's handler ${hx(h, 7)}; ` : 'no handler in the sub-CPU\'s table; '}only 0x85, 0x01 / 0x81, 0x06 / 0x86 and 0x88${this.quiet.size ? ` and the body's quiet ${[...this.quiet].map((c) => hx(c)).join(', ')}` : ''} are)`);
+    return this.fail(`command ${hx(cmd)} (data ${bytesHex(data)}): not modelled (${h ? `the sub-CPU's handler ${hx(h, 7)}; ` : 'no handler in the sub-CPU\'s table; '}only 0x85, 0x01 / 0x81, 0x06 / 0x86, 0x88, 0x82 of the scan's ports and 0x12 {5}${this.quiet.size ? ` and the body's quiet ${[...this.quiet].map((c) => hx(c)).join(', ')}` : ''} are)`);
   }
   // the register a word request {index, ..., byte} names, refused unless the body uses it
   word(data) {
@@ -492,6 +504,7 @@ export class ScpuDev {
   write(cmd, data) {
     if (cmd === SET_DATE) { this.size(cmd, data, DATE_BYTES, 'set date'); this.memory.setDate(data); return; }
     if (cmd === WRITE_WORD) { this.size(cmd, data, 6, 'write backup word'); this.memory.setReg(this.word(data), new DataView(data.buffer, data.byteOffset + 1, 4).getUint32(0, true)); return; }
+    if (cmd === PWR_WRITE && data[0] === PWR_SYNC) { this.size(cmd, data, 1, 'power manager sync'); this.post(PWR_WRITE, [PWR_SYNC]); return; }
     if (this.quiet.has(cmd)) return;
     this.unknown(cmd, data);
   }
@@ -506,6 +519,12 @@ export class ScpuDev {
       this.size(cmd, data, 3, 'system control');
       if (data[0] === 1) this.offArg = data[1];                             // kept for the system-control task (0x8016248..4e)
       return new Uint8Array([data[0], data[0] === 1 ? data[1] : SYSCTRL, 1]);
+    }
+    if (cmd === GIO_READ) {                                                 // {port} -> its level (0x800cfef -> 0x800cdc4)
+      this.size(cmd, data, 1, 'GIO read');
+      const pin = Object.keys(SCAN_PORTS).find((n) => SCAN_PORTS[n].gio === data[0]);
+      if (pin === undefined) this.fail(`GIO read of port ${data[0]}: only the levels of the port scan's inputs (${Object.entries(SCAN_PORTS).map(([n, p]) => `${p.gio} ${n}`).join(', ')}) are modelled`);
+      return new Uint8Array([this.scan[pin]]);
     }
     if (cmd === PORT_SCAN) {                                                // {result, busy}, the report enabled (0x80126d7)
       this.size(cmd, data, 0, 'port scan');

@@ -2,8 +2,10 @@
 // button mapping, whose value-to-function step (0x5104be42) reads the button's setting value, and the buttons with a
 // screen of their own open it:
 //   fnKeySessions  one session (on a fresh S-NVRAM file, so no date prompt): ISO opens the ISO bar (GUI 0x0414), Drive
-//                  and AF/metering open SETVAL (0x0202), each closed by a half press; +/-, AF-ON, |o| and the two front
-//                  buttons leave the shooting screen; AEL/AFL and BKT are refused as not wired
+//                  and AF/metering open SETVAL (0x0202), each closed by a half press; +/- opens SETVAL too with the
+//                  native lens on the mount (E143's default; with S-LENS, which leaves the application without a lens,
+//                  it leaves the shooting screen); AF-ON, |o| and the two front buttons leave the shooting screen; AEL/AFL
+//                  and BKT are refused as not wired
 //   node emu/test/test_fnkeys.mjs
 import fs from 'node:fs';
 import path from 'node:path';
@@ -11,8 +13,8 @@ import zlib from 'node:zlib';
 
 const J = path.resolve(new URL('..', import.meta.url).pathname);
 const VALUE_TO_FUNCTION = 0x5104BE42;
-// [control, the button setting's default value, the GUI state the press leaves]
-const KEYS = [['iso', 6, 0x0414], ['exp', 3341, 0x0108], ['drive', 3412, 0x0202], ['afmeter', 3413, 0x0202],
+// [control, the button setting's default value, the GUI state the press leaves (null: +/-, by the lens)]
+const KEYS = [['iso', 6, 0x0414], ['exp', 3341, null], ['drive', 3412, 0x0202], ['afmeter', 3413, 0x0202],
   ['afon', 69, 0x0108], ['lvkey', 452, 0x0108], ['front1', 84, 0x0108], ['front2', 106, 0x0108]];
 
 export async function fnKeySessions() {
@@ -36,7 +38,8 @@ export async function fnKeySessions() {
   const press = (k) => { s.key(k, 'down'); s.camapp.pump(); s.idle_slice(lab.lab_time() + 150e6); s.key(k, 'up'); s.camapp.pump(); s.idle_slice(lab.lab_time() + 1200e6); };
   const gui = () => `0x${lab.state().toString(16)}`;
   ok(lab.state() === 0x0108, `the session starts on the shooting screen: GUI ${gui()}`);
-  for (const [k, value, state] of KEYS) {
+  for (const [k, value, want] of KEYS) {
+    const state = want ?? (s.lens ? 0x0202 : 0x0108);
     values.length = 0;
     press(k);
     ok(values.includes(value), `${k}: the mapping reads ${value}: ${JSON.stringify([...new Set(values)])}`);

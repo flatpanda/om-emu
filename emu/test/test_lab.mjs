@@ -114,11 +114,14 @@ export function trimTests() {
     };
     const name = (obj) => Object.entries(owners).find(([, o]) => o === obj)?.[0];
     const listed = new Set(s.trim_lists().map(([obj, n]) => `${name(obj)}.${n}`));
+    idle(20);                  // past the start's one-off records (S-DISPQ's one idle request, from about 2 s on)
     const a = sizes();
     idle(20);
     checks++;
-    // bounded caches, not logs: the call-frame analyses per function, the names of the opt-in assumptions in use
-    const bounded = new Set(['lab.frames', 'lab.assumptions_in_use']);
+    // bounded caches, not logs: the call-frame analyses per function, the names of the opt-in assumptions in use; and
+    // not the harness's: S-HEAP's blocks are the guest heap's, which grows by about 5 blocks a second on the idle
+    // shooting screen with either lens (the events S-TRAACK keeps, docs/hle-gaps.md 4.4.2) up to its area's end
+    const bounded = new Set(['lab.frames', 'lab.assumptions_in_use', 'lab.heap_sizes', 'lab.heap_free']);
     const grows = [...sizes()].filter(([k, n]) => n > (a.get(k) ?? 0) && !listed.has(k) && !bounded.has(k)).map(([k, n]) => `${k} ${a.get(k) ?? 0} -> ${n}`);
     if (grows.length) bad.push(`trim: grows while idling and trim() does not cut it: ${grows.join(', ')}`);
     const intc = lab.nk.intc;

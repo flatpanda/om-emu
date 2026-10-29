@@ -797,7 +797,7 @@ function logRecord(r) {
     const el = $('touchlog');
     const gs = (r.gestures || []).map((x) => `${x.name}(${x.x},${x.y})`).join(' ');
     const tp = (r.touch_posted || []).map((x) => `${x.status}->${x.name}`).join(' ');
-    const ca = (r.cafwd || []).map((x) => `S-CAFWD param ${x.param} from ${x.caller}`).join(' ');
+    const ca = (r.cafwd || []).map((x) => `the GUI's answer ${x.param} from ${x.caller}`).join(' ');
     el.textContent = (`#${r.n} ${r.token}: driver ${gs || '-'} | HFW ${(r.tp_status || []).join(',') || '-'} | GUI ${tp || '-'} | ${ca || ''}\n` + el.textContent).slice(0, 40000);
   }
 }
@@ -964,11 +964,13 @@ async function selftest() {
   step('M key again: shooting screen', await until(() => STATUS.gui === '0x0108', 20000), { gui: STATUS.gui });
   await sleep(800);
   const r = cv.getBoundingClientRect();
-  const at = { clientX: r.left + 90 / 900 * r.width, clientY: r.top + 30 / 600 * r.height, pointerId: 7, bubbles: true, isPrimary: true };
+  // the touch-mode icon (35, 465 of the 900 x 600 composite): a touch the camera application takes on the shooting
+  // screen, as test/test_web.mjs PAGE_B6_INPUTS's
+  const at = { clientX: r.left + 35 / 900 * r.width, clientY: r.top + 465 / 600 * r.height, pointerId: 7, bubbles: true, isPrimary: true };
   cv.dispatchEvent(new PointerEvent('pointerdown', at));
   await sleep(300);
   cv.dispatchEvent(new PointerEvent('pointerup', at));
-  step('mouse on the monitor: GUI touch', await until(() => $('touchlog').textContent.includes('TOUCH'), 20000), { log: $('touchlog').textContent.slice(0, 300) });
+  step('mouse on the monitor: GUI touch', await until(() => $('touchlog').textContent.includes('answer'), 20000), { log: $('touchlog').textContent.slice(0, 300) });
   await sleep(1000);
   R.canvas_touch = cv.toDataURL('image/png');
   const m0 = STATUS.mode_dial || 0;

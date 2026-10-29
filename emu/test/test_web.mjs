@@ -134,13 +134,16 @@ export function controlsTests() {
 // grouped by the page check that waits for each group; webgate requires the page's sent inputs to be these. gui: the
 // state the group must end in. OK comes before the mode dial: after a dial change to any position but 8 setting 820
 // reads 0 and the camera application's OK path skips (0x5106675d..66: 0x51052dc8 is 1 when 820 is 0), so no frame
-// follows (X); why 820 reads 0 there is ?, the mode change is an open item (docs/om1-input-spec.md section 9).
+// follows (X); why 820 reads 0 there is ?, the mode change is an open item (docs/om1-input-spec.md section 9). The
+// touch is on the shooting screen's touch-mode icon, which the camera application, forwarding the touch itself with the
+// native lens, turns to its next mode (X); at (90, 30), the wireless icon, it opens Wi-Fi Connection (X), so the touch
+// is no longer there (docs/hle-gaps.md 4.4.2).
 const KEY = (id) => [{ type: 'key', id, action: 'down' }, { type: 'key', id, action: 'up' }];
 export const PAGE_B6_INPUTS = [
   { what: 'key KeyM', inputs: KEY('menu'), gui: '0x0b02' },
   { what: 'key ArrowDown', inputs: KEY('down'), gui: '0x0b02' },
   { what: 'key KeyM', inputs: KEY('menu'), gui: '0x0108' },
-  { what: 'touch (90, 30)', inputs: [{ type: 'touch', action: 'down', x: 90, y: 30 }, { type: 'touch', action: 'up', x: 90, y: 30 }], gui: '0x0108' },
+  { what: 'touch (35, 465)', inputs: [{ type: 'touch', action: 'down', x: 35, y: 465 }, { type: 'touch', action: 'up', x: 35, y: 465 }], gui: '0x0108' },
   { what: 'key Enter', inputs: KEY('ok'), gui: '0x0403' },
   { what: 'PageUp twice quickly', inputs: [{ type: 'switch', id: 'mode_dial', step: 1 }, { type: 'switch', id: 'mode_dial', step: 1 }], mode_dial: 2 },
 ];
@@ -701,7 +704,7 @@ export async function workerTests() {
         const cardDoc = await req(12, 'GET', '/api/card');
         const sess = await req(13, 'GET', '/api/session');
         if (cardDoc?.status !== 200 || cardDoc.doc.volume?.type !== 'FAT32' || cardDoc.doc.error !== undefined || cardDoc.doc.slot?.present !== true || cardDoc.doc.slot?.session !== true ||
-          sess?.status !== 200 || sess.doc.host !== 'browser' || sess.doc.lens !== 'stand-in' || sess.doc.nvram !== null || sess.doc.card_size !== null || sess.doc.card_image !== true ||
+          sess?.status !== 200 || sess.doc.host !== 'browser' || sess.doc.lens !== 'native' || sess.doc.nvram !== null || sess.doc.card_size !== null || sess.doc.card_image !== true ||
           cardDoc.doc.slot?.kind !== 'SDHC') {
           bad.push(`worker: GET /api/card ${JSON.stringify(cardDoc)?.slice(0, 300)}, GET /api/session ${JSON.stringify(sess)?.slice(0, 200)}`);
         }

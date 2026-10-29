@@ -401,20 +401,20 @@ if (!argv.includes('--skip-page') && !QUICK) {
   await shot('page-menu');
   await key('ArrowDown', 'ArrowDown', 40);
   await key('KeyM', 'm', 77);
-  // one touch on the shooting screen's monitor (900 x 600 composite coordinates 90, 30, as in the inputs scenario), as the
-  // page's pointer handlers read it
+  // one touch on the shooting screen's monitor (900 x 600 composite coordinates 35, 465: the touch-mode icon, test/test_web.mjs
+  // PAGE_B6_INPUTS), as the page's pointer handlers read it
   {
-    const { gui } = planned('touch (90, 30)');
+    const { gui } = planned('touch (35, 465)');
     const before = await state();
     const rect = await page.ev(`(() => { const r = document.getElementById('cv').getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; })()`);
-    const x = rect.x + 90 / 900 * rect.w, y = rect.y + 30 / 600 * rect.h;
+    const x = rect.x + 35 / 900 * rect.w, y = rect.y + 465 / 600 * rect.h;
     await page.S('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
     await page.S('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
     await sleep(150);
     await page.S('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
     const ok = await until(`(() => { const s = window.__playPage.status; return !!(s && s.last && s.last.input && s.last.input.type === 'touch' && s.last.input.action === 'up' && s.frame_seq > ${before.frame_seq} && s.gui === ${JSON.stringify(gui)}) && ${settled}; })()`, 60000);
     const after = await state();
-    checks.push({ what: 'touch (90, 30)', ok, before_seq: before.frame_seq, ...after });
+    checks.push({ what: 'touch (35, 465)', ok, before_seq: before.frame_seq, ...after });
     if (!ok) fail(`B6 touch: no result with a new frame and GUI ${gui} (frame_seq ${before.frame_seq} -> ${after.frame_seq}, GUI ${after.gui} ${after.gui_name})`);
   }
   await shot('page-touch');

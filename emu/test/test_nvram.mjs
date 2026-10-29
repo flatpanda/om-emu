@@ -1,6 +1,6 @@
 // S-NVRAM, the camera's non-volatile state kept between sessions (src/lab/menu.mjs, host/nvram.mjs):
 //   nvramSessions  on a fresh file the first session starts on the shooting screen where a session without it shows
-//                  the date prompt; the blank store's saves of E and M reach the file; a setting changed in the session
+//                  the date prompt (at the start's frame); the blank store's saves of E and M reach the file; a setting changed in the session
 //                  and saved as the menu closes (the native menu-close save, posted to the flash task) is back in the
 //                  next session, whose registry bootstrap restores M and E; bin/play.mjs with OM_EMU_NVRAM lists
 //                  S-NVRAM and not S-SETSAVE
@@ -25,19 +25,23 @@ export async function nvramSessions() {
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { fileNvram } = await import('../host/nvram.mjs');
   const base = { rom: loadImage(), resBlock: loadBlock(), createHash, deflate: (b, l) => new Uint8Array(zlib.deflateSync(b, { level: l })), wallClock: () => performance.now() / 1000 };
-  const open = (nvram) => {
+  // the session idles idle_ms after its start (the comparison with a session without S-NVRAM takes the start's frame:
+  // with the native lens, E143's default, the application leaves the date prompt for the shooting screen when the lens
+  // module's state event comes, about 120 ms later, docs/hle-gaps.md 4.4.2)
+  const open = (nvram, idle_ms = 1500) => {
     const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, { ...base, ...(nvram ? { nvram } : {}) });
     pl.open_session();
     const s = pl.session;
-    s.idle_slice(s.lab.lab_time() + 1500e6);
+    s.idle_slice(s.lab.lab_time() + idle_ms * 1e6);
     return s;
   };
   const frame = (s) => Buffer.from(s.frame('boundary', true)[2]).toString('base64');
   const press = (s, k) => { s.key(k, 'down'); s.camapp.pump(); s.idle_slice(s.lab.lab_time() + 150e6); s.key(k, 'up'); s.camapp.pump(); s.idle_slice(s.lab.lab_time() + 1200e6); };
-  const plain = frame(open(null));
+  const plain = frame(open(null, 0));
   const nvram = fileNvram(file);
-  let s = open(nvram);
+  let s = open(nvram, 0);
   ok(frame(s) !== plain, 'S-NVRAM: the first session starts without the date prompt a session without it shows');
+  s.idle_slice(s.lab.lab_time() + 1500e6);
   ok(JSON.stringify(s.lab.store_log.nvram.loaded) === '[]', `a fresh file restores nothing: ${JSON.stringify(s.lab.store_log.nvram.loaded)}`);
   const saved = nvram.load();
   ok(saved?.M?.length === 0x40000 && saved?.E?.length === 0x30000 && saved?.scpu?.[0] === 0xa8,

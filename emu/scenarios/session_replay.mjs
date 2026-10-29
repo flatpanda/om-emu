@@ -155,7 +155,7 @@ export { KeyError, AssertionError, ValueError, RuntimeError, FirmwareError };
 // call's mark. A later lab of the session is traced as NAME#2, NAME#3, ...; the inputs list the names in `labs`, and a
 // replay that opens others throws Divergence.
 export const CALLS2_FORMAT = 'om-emu-player-inputs/1';
-export const WORKLOAD_DIGEST = '33b134deb36a03ef';
+export const WORKLOAD_DIGEST = '364806f182da750f';
 // The play parser's defaults and the keys the recording adds: the ctor's kwargs must have exactly
 // these keys.
 export const PLAYER_PARSER = { lang: 'en', device: 'tft', evf_layout: false, a15: 'auto', start: 'shooting', tab: '7,1,1', idle: 'wall',

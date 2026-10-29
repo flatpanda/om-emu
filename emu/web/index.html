@@ -142,7 +142,7 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
 <div class="toolbar" id="optbar">
   <span class="lbl">Start options</span>
   <label class="tb" title="--hdmi on: the HDMI port modelled (E143, E146, E147); the Card, HDMI and session options panel then plugs a sink in (S-HDMISINK); an unplug is refused (A-HDMI-1)"><input type="checkbox" id="opt-hdmi"> HDMI port</label>
-  <label class="tb" title="the lens on the mount natively (E143): the lens tasks and drivers against S-LENSMCU as the 12-40mm F2.8 PRO, in place of S-LENS (docs/hle-gaps.md 4.4.2)"><input type="checkbox" id="opt-lens"> Native lens</label>
+  <label class="tb" title="lens=stand-in: S-LENS, the lens record written by the lab, in place of the native lens (E143's default: the lens tasks and drivers against S-LENSMCU as the 12-40mm F2.8 PRO, docs/hle-gaps.md 4.4.2); the other bodies always have S-LENS"><input type="checkbox" id="opt-lens"> Stand-in lens</label>
   <label class="tb" title="S-NVRAM: the camera's settings and clock kept in this browser (OPFS) between sessions, in place of S-SETSAVE: a camera whose clock was set starts without the date prompt"><input type="checkbox" id="opt-nvram"> Keep the settings</label>
   <button class="tb" id="nvclear">Forget the kept settings</button>
   <label class="tb" title="S-SDCARD's capacity (card_size, in GiB): the card the session starts with, in memory while this player runs. Above 32 GiB an SDXC card, which E143's firmware formats exFAT (docs/hle-gaps.md 4.8.6); the Card panel reads it with refs/exfat.mjs">Card <select id="opt-card" aria-label="card size">
@@ -651,7 +651,7 @@ function showSubject(s) {
 // this page's host: the Worker (web/worker.mjs), its options fixed at the start (the start options above, the page's
 // query); the card routes answer through web/page.mjs, and a picture comes as raw RGBA, drawn as a frame is
 const HDMI_HOW = 'reload the page with the HDMI port start option (?hdmi=on; E143, E146, E147)';
-const SESSION_HOW = 'These are fixed when the session starts: the start options above the camera (the page\'s query: hdmi=on, lens=native, nvram=1, card_size=GiB).';
+const SESSION_HOW = 'These are fixed when the session starts: the start options above the camera (the page\'s query: hdmi=on, lens=stand-in, nvram=1, card_size=GiB).';
 const cardApi = (p) => PP.api(p);
 async function drawCardImage(r, canvas) {
   const w = +r.headers.get('X-Image-Width'), h = +r.headers.get('X-Image-Height'), rgba = await r.bytes();
@@ -673,9 +673,9 @@ async function loadSession() {
 // The session line: what the session was started with, and whether the lab runs it (the stand-ins in use)
 function sessionText(d, s) {
   const used = new Set(s.stand_ins || []);
-  const lens = d.lens !== 'native' ? 'the lens stood in (S-LENS)'
-    : used.has('S-LENSMCU') ? 'the lens natively (S-LENSMCU answers as the 12-40mm F2.8 PRO; docs/hle-gaps.md 4.4.2)'
-    : 'the native lens asked for, but S-LENS stands in (this body has no native lens in the lab, src/fw/models.mjs lens_native, or no session runs)';
+  const lens = used.has('S-LENSMCU') ? 'the lens natively (S-LENSMCU answers as the 12-40mm F2.8 PRO; docs/hle-gaps.md 4.4.2)'
+    : d.lens === 'stand-in' ? 'the lens stood in (S-LENS), as asked'
+    : 'the lens stood in (S-LENS: this body has no native lens in the lab, src/fw/models.mjs lens_native, or no session runs)';
   const nv = !d.nvram ? 'the settings not kept (S-SETSAVE: every start is a blank camera at the date prompt)'
     : `the settings and the clock kept in ${d.nvram} (S-NVRAM${used.has('S-NVRAM') ? '' : ', not in use yet'}: a camera whose clock was set starts without the date prompt)`;
   const card = (d.card ? `the card kept in ${d.card}` : 'the card kept in memory while this player runs') + (d.card_size != null ? ` (a new card of ${d.card_size} GiB)` : '');
@@ -850,9 +850,9 @@ const Q = new URLSearchParams(location.search);
 const ARGS = {};
 for (const k of ['lang', 'device', 'a15', 'start', 'tab', 'idle', 'touch', 'us_clock', 'compose', 'hdmi', 'lens', 'card_size']) if (Q.has(k)) ARGS[k] = Q.get(k);
 for (const k of ['no_bgdraw', 'debug_api', 'nvram']) if (Q.get(k) === '1') ARGS[k] = true;
-// the start options (HDMI port, native lens, kept settings): the query's, changed here until the start (the query
-// follows, so a reload keeps them)
-const START_OPTS = [['opt-hdmi', 'hdmi', 'on'], ['opt-lens', 'lens', 'native'], ['opt-nvram', 'nvram', '1']];
+// the start options (HDMI port, the stand-in lens, kept settings): the query's, changed here until the start (the
+// query follows, so a reload keeps them)
+const START_OPTS = [['opt-hdmi', 'hdmi', 'on'], ['opt-lens', 'lens', 'stand-in'], ['opt-nvram', 'nvram', '1']];
 for (const [id, k, on] of START_OPTS) {
   $(id).checked = Q.get(k) === on;
   $(id).onchange = (e) => {

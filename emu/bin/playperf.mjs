@@ -7,7 +7,7 @@
 // frame is ever published. Prints one JSON line:
 // the phases (name, wall seconds, lab ns, continues + steps, instructions), startup, the frame shas, lab_ns, hook_log and
 // the workload digest (scenarios/session_replay.mjs workloadDigest: the sha256 of the spaced JSON of [frames, lab time,
-// hook-log length, GUI state, the last 2,000 hook-log entries], first 16 hex digits). Exit 1 when the digest is not 33b134deb36a03ef (pinned).
+// hook-log length, GUI state, the last 2,000 hook-log entries], first 16 hex digits). Exit 1 when the digest is not 364806f182da750f (pinned).
 //   node emu/bin/playperf.mjs [--slice N] [--dump FILE (the JSON that is hashed)]
 import fs from 'node:fs';
 import os from 'node:os';

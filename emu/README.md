@@ -57,12 +57,11 @@ lab. Its inputs are session-log inputs, so `--replay` repeats them.
 
 **The card, the HDMI port, the tilt and the session's options.** The page's panel of that name (both players)
 reaches the run-time inputs below from the page. The session line says what the session was
-started with (`GET /api/session`): the HDMI port, the lens (S-LENS, or natively with S-LENSMCU and its caveat: a touch
-on the shooting screen then leaves the camera application answering no key), the settings (S-NVRAM or S-SETSAVE) and
-where the card is kept, with the size asked for a new one. These are fixed for a session: on node by `--hdmi on` and
-`OM_EMU_LENS`, `OM_EMU_NVRAM`, `OM_EMU_CARD` and `OM_EMU_CARD_SIZE` in the server's environment, in the browser by the
-start options above the camera (`?hdmi=on`, `?lens=native`, `?nvram=1`, and the Card menu's `?card_size=GiB`: 64 or
-128 GiB, an SDXC card). HDMI: Plug in sends `{"type": "hdmi", "action": "plug"}` in a session with the port (the
+started with (`GET /api/session`): the HDMI port, the lens (natively with S-LENSMCU, E143's default, or S-LENS), the
+settings (S-NVRAM or S-SETSAVE) and where the card is kept, with the size asked for a new one. These are fixed for a
+session: on node by `--hdmi on` and `OM_EMU_LENS`, `OM_EMU_NVRAM`, `OM_EMU_CARD` and `OM_EMU_CARD_SIZE` in the server's
+environment, in the browser by the start options above the camera (`?hdmi=on`, `?lens=stand-in`, `?nvram=1`, and the
+Card menu's `?card_size=GiB`: 64 or 128 GiB, an SDXC card). HDMI: Plug in sends `{"type": "hdmi", "action": "plug"}` in a session with the port (the
 cable, the DDC reads and the driver's EDID state from the status), and is disabled with the reason without one; Unplug
 sends the unplug, which the lab refuses (A-HDMI-1), and the refusal shows in the status line. Card: Take out and Put in
 are the card inputs (S-MEDIA, E143's HLS media side; another body refuses them with the reason), and the list is the
@@ -141,12 +140,14 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   system (S-CARD: the HLS mount state, every picture taken kept as an image of folder 100, a remaining-shots answer of
   999 less the images to the application's getAvailableShootCount, the first slot's card detect state at inserted and
   a movie time left of an hour less what has been recorded). The system timer module's
-  long timers run out (S-LONGTIMER), and a lens is on the mount (S-LENS: an attach flag, a lens-ready byte and a
-  12-40mm F2.8 PRO record, so the screen shows S-AF and the AF target). On E143 `OM_EMU_LENS=native` puts the lens
-  on the mount natively instead: the lens tasks, the lens driver and its serial driver LENS_SSC run against a model of
-  the lens serial controller (`src/dev/lensssc.mjs`), S-LENSMCU (`src/lab/lensmcu.mjs`) answers its frames as the
-  12-40mm F2.8 PRO, and the zoom ring and the lens lock pin switch fw_121c reach the driver; a touch on the shooting
-  screen then leaves the camera application answering no key (`docs/hle-gaps.md` 4.4.2).
+  long timers run out (S-LONGTIMER), and a lens is on the mount. On E143 it is there natively (since 2026-10-29 the
+  default): the lens tasks, the lens driver and its serial driver LENS_SSC run against a model of the lens serial
+  controller (`src/dev/lensssc.mjs`), S-LENSMCU (`src/lab/lensmcu.mjs`) answers its frames as the 12-40mm F2.8 PRO,
+  the zoom ring and the lens lock pin switch fw_121c reach the driver, and the camera application, which learns of the
+  lens from the lens module, forwards the touches to the GUI itself (`docs/hle-gaps.md` 4.4.2). `OM_EMU_LENS=stand-in`
+  (the page's `?lens=stand-in`) takes S-LENS instead, and the other bodies always have it: an attach flag, a lens-ready
+  byte and a 12-40mm F2.8 PRO record, so the screen shows S-AF and the AF target; the application then counts no
+  lens attached for its touch path, which S-TOUCHMAP and S-CAFWD stand in for.
 - A half press in focus shows the green AF frame and focus mark. They are CPU 3's (its task DISP_FRAME draws them into
   the TFT's face-frame plane), so S-DISPFRAME runs DISP_FRAME on the lab CPU for each post to it, S-TAKEFRAME sets the
   frame display mode the TAKE module would, S-AFOSD uploads the indicator and the AF frame the AF module would, and
@@ -180,8 +181,7 @@ sh emu/play.sh                                   # the interactive player (bin/p
 node emu/bin/play.mjs --no-browser --idle off    # its server alone (HTTP API; --debug-api for the debug tokens and
                                                  # the live debug route, below)
 node emu/bin/play.mjs --hdmi on                  # with the HDMI port; the input {"type": "hdmi", "action": "plug"}
-OM_EMU_LENS=native sh emu/play.sh                # E143's lens natively (S-LENSMCU) in place of S-LENS; a touch on
-                                                 # the shooting screen then stops the application's keys (open)
+OM_EMU_LENS=stand-in sh emu/play.sh              # S-LENS in place of E143's native lens (S-LENSMCU, the default)
 OM_EMU_SCPU=native sh emu/play.sh                # E143's and E146's sub-CPU as its own firmware on the STM32L4 machine
                                                  # in place of S-SCPUDEV (needs the
                                                  # SCPU block in unpacked/, BLOBS.md)
@@ -531,7 +531,7 @@ firmware the run warns and skips that rule. `--explain N` prints what each firmw
 | `node emu/bin/checks.mjs [CHECK \| RUN ...]` | every run of `checks/runs.json`, judged on its exit status | the firmware |
 | `node emu/bin/checktrace.mjs RUN [--slice N]` | the labs one check run creates, traced (golden records them) | as checks.mjs |
 | `node emu/bin/bench.mjs SCENARIO --passes 5` | MIPS and cost per stop; exit 1 if a pass does not repeat pass 0 | the firmware |
-| `node emu/bin/playperf.mjs` | the play workload on the Player; exit 1 unless its digest is `33b134deb36a03ef` | the firmware |
+| `node emu/bin/playperf.mjs` | the play workload on the Player; exit 1 unless its digest is `364806f182da750f` | the firmware |
 | `node emu/bin/snapgate.mjs kernel-5c osd shoot-tft` | snapshot detours leave the sessions and the end state unchanged; detours run three times from one snapshot trace identically, a short one and one of at least 10,000 instructions per session (99,205, 200,002 and 103,598 on these three, 2026-10-29) | the firmware |
 | `OM_FW_DIR=fw node emu/bin/webgate.mjs --rounds 4` | headless Chrome: the Worker against node and `bin/run.mjs`, the page (keys, touch, canvas, session log; the Card panel's read, Take out and Put in with a 64 GiB card picked by the Card start option, and the HDMI control without the port; the EVF layout's class and canvas size after LV to the EVF and back), no uploads; about 5 min | the `.BIN`, Chrome |
 | `node emu/bin/modelcheck.mjs` | the ported models marked `checked` in `src/fw/models.mjs` (E146, E147, E144, E139, E134, E137, E142, E140, E125, E130, E133, E145), or those named: start (E145: then MENU at its date and time setting, `START_PROMPT`), S1, S2, PLAY, INFO, PLAY on the TFT, and start, S1, S2 on the EVF of a body with one; GUI states by name; after S1 the count probe: the screen must change with the remaining-shots query's answer (S-CARD's count, or on a body whose card is native the firmware's, replaced for one window by the probe's own answer of the query) and only there; on a body whose card is native the card check: mounted, the shots counted from it, each picture's file found again by `refs/volume.mjs` (FAT or exFAT) with its size (all pass; a body expected to fail it goes in PROBE_XFAIL with its reason, strictly: a pass of an expected failure fails the run); `--card-size GiB` puts a blank card of that size in the slot (with an SDXC card E144 is expected to stop, SDXC_XFAIL, as strictly) | the models' firmware |

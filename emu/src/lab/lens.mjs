@@ -1,7 +1,7 @@
-// The lens on the mount, natively (models.mjs lens_native; opt-in, play.mjs lens_native: env.lens 'native', node's
-// OM_EMU_LENS=native; docs/hle-gaps.md 4.4.2): the firmware's lens tasks, its lens driver, its serial driver
-// LENS_SSC and its interrupt run natively against the lens serial controller (src/dev/lensssc.mjs) with the lens's
-// microcontroller at the far end (S-LENSMCU, src/lab/lensmcu.mjs). What the lab
+// The lens on the mount, natively (models.mjs lens_native; the default, play.mjs lens_option: env.lens 'stand-in',
+// node's OM_EMU_LENS=stand-in, takes S-LENS instead; docs/hle-gaps.md 4.4.2): the firmware's lens tasks, its lens
+// driver, its serial driver LENS_SSC and its interrupt run natively against the lens serial controller
+// (src/dev/lensssc.mjs) with the lens's microcontroller at the far end (S-LENSMCU, src/lab/lensmcu.mjs). What the lab
 // does in the boot's and the other modules' place:
 //   H-DPCINIT   the deferred-call init (pre-kernel, 0x50050279: the rings cleared, IRQs 53..58 attached), run before
 //               the lens init, as the boot head runs it before the kernel: the lens's power and detect paths post

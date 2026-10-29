@@ -115,9 +115,9 @@ export async function main(argv) {
     switchTo = code;
     return null;
   };
-  // the opt-ins the lab worker's environment gives it (labworker.mjs, src/lab/play.mjs lens_native), for the page's
+  // the options the lab worker's environment gives it (labworker.mjs, src/lab/play.mjs lens_option), for the page's
   // session line (GET /api/session): fixed for the process, set in the environment before the start
-  const session = { host: 'node', lens: process.env.OM_EMU_LENS === 'native' ? 'native' : 'stand-in', nvram: process.env.OM_EMU_NVRAM || null,
+  const session = { host: 'node', lens: process.env.OM_EMU_LENS || 'native', nvram: process.env.OM_EMU_NVRAM || null,
     card: process.env.OM_EMU_CARD || null, card_size: process.env.OM_EMU_CARD_SIZE ? cardGiB(process.env.OM_EMU_CARD_SIZE) : null };
   const api = new PlayApi(proxy, { tables: Tables.of(rom), framePng: pngCache(), check, page: new Uint8Array(fs.readFileSync(PAGE)),
     session, cardImage: jpegRgba, imagePng: pngRgba,     // the Card panel's pictures, decoded here on the main thread

@@ -4,9 +4,10 @@
 //   L1  the probe ran natively through S-ACCREG: open (6, 107), the WHO_AM_I read answered with the value the probe
 //       wants, the two set-up writes, close; the probe's success halfword is 1; ACC_MAIN waits in its cycle; the
 //       stand-ins are listed
-//   L2  samples reach the cache: over 1 s of lab time the counter moves once per ACC_MAIN cycle (12 or 13, A-ACC-2),
-//       the raw cache (the firmware's raw accessor) is the level sample, the firmware's pose-0 reference (0, -16384,
-//       0), and the corrected cache equals it (blank factory data: the correction's gate is closed, D)
+//   L2  samples reach the cache: over 1 s of lab time (from 500 ms after the start) the counter moves once per ACC_MAIN
+//       cycle (12 or 13, A-ACC-2), the raw cache (the firmware's raw accessor) is the level sample, the firmware's
+//       pose-0 reference (0, -16384, 0), and the corrected cache equals it (blank factory data: the correction's gate
+//       is closed, D)
 //   L3  the gauge follows a tilt: the gauge's getter (natively) reads the horizon within 0.2 degree of the roll and
 //       the vertical within 0.2 degree of pitch / 3, both valid, body orientation 0, for five tilts; and the TFT
 //       composite of the shooting screen's gauge (INFO) is green on the arc and the bar when level and loses the
@@ -96,6 +97,9 @@ function l1() {
 function l2(mutant = null) {
   const g = new Group('L2 samples');
   withPlayer(mutant, (pl, s, lab) => {
+    // from 500 ms after the shooting screen: on E143 the native lens's attach reaches the application about 120 ms
+    // after it, and the application's work on it held CPU 0 through one 129 ms ACC_MAIN cycle, 11 in the second (X)
+    s.wait(500);
     const [, c0] = cache(lab, 'raw');
     s.wait(1000);
     const [raw, c1] = cache(lab, 'raw'), [corrected, c2] = cache(lab, 'corrected');

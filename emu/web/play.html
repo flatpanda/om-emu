@@ -619,7 +619,7 @@ function showSubject(s) {
 // this page's host: the play server (bin/play.mjs), its options fixed at its start; the card routes answer their
 // errors as JSON, so they are fetched whatever their status; a picture comes as a PNG (host/server.mjs pngRgba)
 const HDMI_HOW = 'start the play server with --hdmi on (E143, E146, E147)';
-const SESSION_HOW = 'These are fixed when the play server starts: --hdmi on, and OM_EMU_LENS=native, OM_EMU_NVRAM=FILE and OM_EMU_CARD=FILE in its environment (emu/README.md "Run").';
+const SESSION_HOW = 'These are fixed when the play server starts: --hdmi on, and OM_EMU_LENS=stand-in, OM_EMU_NVRAM=FILE and OM_EMU_CARD=FILE in its environment (emu/README.md "Run").';
 const cardApi = (p) => fetch(p, { headers: H });
 async function drawCardImage(r, canvas) {
   const bm = await createImageBitmap(await r.blob());
@@ -641,9 +641,9 @@ async function loadSession() {
 // The session line: what the session was started with, and whether the lab runs it (the stand-ins in use)
 function sessionText(d, s) {
   const used = new Set(s.stand_ins || []);
-  const lens = d.lens !== 'native' ? 'the lens stood in (S-LENS)'
-    : used.has('S-LENSMCU') ? 'the lens natively (S-LENSMCU answers as the 12-40mm F2.8 PRO; docs/hle-gaps.md 4.4.2)'
-    : 'the native lens asked for, but S-LENS stands in (this body has no native lens in the lab, src/fw/models.mjs lens_native, or no session runs)';
+  const lens = used.has('S-LENSMCU') ? 'the lens natively (S-LENSMCU answers as the 12-40mm F2.8 PRO; docs/hle-gaps.md 4.4.2)'
+    : d.lens === 'stand-in' ? 'the lens stood in (S-LENS), as asked'
+    : 'the lens stood in (S-LENS: this body has no native lens in the lab, src/fw/models.mjs lens_native, or no session runs)';
   const nv = !d.nvram ? 'the settings not kept (S-SETSAVE: every start is a blank camera at the date prompt)'
     : `the settings and the clock kept in ${d.nvram} (S-NVRAM${used.has('S-NVRAM') ? '' : ', not in use yet'}: a camera whose clock was set starts without the date prompt)`;
   const card = (d.card ? `the card kept in ${d.card}` : 'the card kept in memory while this player runs') + (d.card_size != null ? ` (a new card of ${d.card_size} GiB)` : '');

@@ -3,9 +3,10 @@
 // worker thread):
 //   page -> worker  {type: 'boot', file?, args?}            the .BIN as a File (never uploaded), or the OPFS cache;
 //                                                            args: the page's options (playerArgs), and the env
-//                                                            opt-ins lens: 'native', nvram: true (S-NVRAM in OPFS) and
-//                                                            card_size: GiB (a new card's capacity, in memory for the
-//                                                            Worker's life; above 32 an SDXC card)
+//                                                            options lens: 'stand-in' (S-LENS; the native lens is the
+//                                                            default), nvram: true (S-NVRAM in OPFS) and card_size:
+//                                                            GiB (a new card's capacity, in memory for the Worker's
+//                                                            life; above 32 an SDXC card)
 //                   {type: 'clear-nvram'}                    forget S-NVRAM's kept document (progress nvram-cleared)
 //                   {type: 'req', id, method, path, body, t_page}   an API request (src/lab/playapi.mjs); t_page: the
 //                                                            page's send time in seconds (timeOrigin + now), the t_wall
@@ -101,11 +102,11 @@ async function boot(msg) {
     const fw = await firmware(msg.file ?? null, { cache: msg.cache !== false });
     post({ type: 'progress', stage: 'firmware', from: fw.from, rom: fw.rom.length, res: fw.res.length, manifest: fw.manifest, T: fw.T });
     a = playerArgs(msg.args);
-    // the opt-ins the lab takes in its env (the page's lens=native, nvram=1 and card_size=GiB): the lens natively
-    // (src/lab/play.mjs lens_native), the camera's state kept in this browser (S-NVRAM, web/nvram.mjs), a card of that
-    // capacity in the slot (src/lab/sdcard.mjs; opened here, so that a size the card does not take fails the boot with
-    // its reason)
-    const lens = msg.args?.lens === 'native';
+    // the options the lab takes in its env (the page's lens=stand-in, nvram=1 and card_size=GiB): the lens stood in by
+    // S-LENS in place of the native lens, the default (src/lab/play.mjs lens_option), the camera's state kept in this
+    // browser (S-NVRAM, web/nvram.mjs), a card of that capacity in the slot (src/lab/sdcard.mjs; opened here, so that a
+    // size the card does not take fails the boot with its reason)
+    const lens = msg.args?.lens === 'stand-in' ? 'stand-in' : 'native';
     const cardSize = msg.args?.card_size ? cardGiB(msg.args.card_size) : null;
     const card = cardSize !== null ? memoryCard({ sectors: cardSectors(cardSize) }) : null;
     card?.open();
@@ -114,7 +115,7 @@ async function boot(msg) {
     const env = {
       rom: fw.rom, resBlock: fw.res, createHash, wallClock, asyncHost: true, refuseUnported: true,
       cardView: CARD_VIEW,                // the Card panel's reads of the card's files (web/cardfiles.mjs)
-      ...(lens ? { lens: 'native' } : {}), ...(nvram ? { nvram } : {}),
+      lens, ...(nvram ? { nvram } : {}),
       ...(card ? { card } : {}),
       onStatus: (doc) => { post({ type: 'status', doc }); api?.notify(); },
       onFrame: (w, h, raw, meta) => {
@@ -127,7 +128,7 @@ async function boot(msg) {
     };
     player = new Player(a, env);
     api = new PlayApi(player, { tables: Tables.of(fw.rom), frameRgba: (w, h, raw) => rgbaOf(w, h, raw), onSubmit: () => driver?.kick(),
-      cardImage: jpegRgba, session: { host: 'browser', lens: lens ? 'native' : 'stand-in', nvram: nvram ? nvram.file : null, card: null, card_size: cardSize } });
+      cardImage: jpegRgba, session: { host: 'browser', lens, nvram: nvram ? nvram.file : null, card: null, card_size: cardSize } });
     driver = new Driver(player);
   } catch (err) {                       // nothing started: the page may boot again (another file, the cache)
     player = api = driver = null;

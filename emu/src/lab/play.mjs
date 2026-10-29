@@ -821,11 +821,12 @@ export class PlaySession extends N.NavSession {
     this.storage = null;           // the card and the file system (storage.mjs) on a body that runs them (models.mjs card_fs)
     this.ioexp = null;             // S-IOEXP and the power manager (power.mjs) on a body that gives power_native
     this.power_manager = null;
-    // the lens on the mount natively (lens.mjs), opt-in (env.lens 'native', node's OM_EMU_LENS=native), on a body that
-    // gives it (models.mjs lens_native) and runs the card's file system, whose NAND access the lens data cache shares
-    // (S-LENSNAND); its lock pin switch released in the idle image before the groups are pushed. Elsewhere, and by
-    // default, S-LENS (camapp.mjs)
-    this.lens = MODEL_INFO.lens_native && this.lens_native() && this.storage_runs() ? new NativeLens(this, MODEL_INFO.lens_native) : null;
+    // the lens on the mount natively (lens.mjs), the default on a body that gives it (models.mjs lens_native) and runs
+    // the card's file system, whose NAND access the lens data cache shares (S-LENSNAND); its lock pin switch released
+    // in the idle image before the groups are pushed. Elsewhere, and with the lens option 'stand-in', S-LENS
+    // (camapp.mjs)
+    const native = this.lens_option() === 'native';
+    this.lens = MODEL_INFO.lens_native && native && this.storage_runs() ? new NativeLens(this, MODEL_INFO.lens_native) : null;
     if (this.lens) this.lens.lock(this.images);
     // Whether the camera application forwards the touches to the GUI itself (docs/hle-gaps.md 4.4.2, D unless
     // tagged): its event task (entry 0x5108ba1b, task 165 in the lab) takes the touch events 0x03000072..78 and posts
@@ -840,7 +841,12 @@ export class PlaySession extends N.NavSession {
     this.app_touch = this.lens !== null;
   }
   storage_runs() { return !!STORAGE && !globalThis.process?.env?.OM_NO_STORAGE; }
-  lens_native() { return (this.env.lens ?? globalThis.process?.env?.OM_EMU_LENS) === 'native'; }
+  // the lens option (env.lens, node's OM_EMU_LENS): 'native' (the default) or 'stand-in' (S-LENS)
+  lens_option() {
+    const v = this.env.lens ?? globalThis.process?.env?.OM_EMU_LENS ?? 'native';
+    if (v !== 'native' && v !== 'stand-in') throw new ValueError(`the lens option ${show(v)}: native or stand-in`);
+    return v;
+  }
   close() {
     if (this.storage) { const st = this.storage; this.storage = null; st.close(); }
     super.close();

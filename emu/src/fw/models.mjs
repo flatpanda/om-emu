@@ -604,14 +604,14 @@ export const MODELS = {
     dcf_mount_test: { at: 0x505F49D0, reg: 'd0' },
   },
   E145: {
-    name: 'TG-7', bin: 'OLY_E_145_1103_0000_0000.BIN', version: '1.1', res_block: 'blk01380000.OE.0101.bin',
+    name: 'TG-7', bin: 'OLY_E_145_1103_0000_0000.BIN', version: '1.1', res_block: 'blk01380000.OE.0101.bin', checked: true,
     rom_len: 20447168, rom_sha256: 'e52660cc0aad6057831d15f721c5d4bd159fc728cdbf78772a35ec11c33e8c47',
     // the reset head's jump into the run-time copy at 0x500000b6: mov 0x600210f9,a0; jmp (a0) (D)
     image_base: 0x60021020,
     res_len: 13577184, res_sha256: '5404cb456e2f5cddb7fa1ace6fa3210b6b2ea3e55908d71c3140434880b7fd98',
     // TFT 1.04M dots; no EVF
     panels: { tft: [720, 480], evf: null },
-    card_fs: { native: false, why: 'its start stops before the application (docs/ROADMAP.md, Multi-model next stops); the rule finds the seams, not run' },
+    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
     board: { family: 'E144' },
     // the map from E142 pairs 2.01M instructions with 121 conflicts, the one from E140 2.17M (116), from E144 1.83M
     // (117); through E142 120 of the overrides carry (60 nulls) and 14 fail, 77 lab addresses stay unplaced, through

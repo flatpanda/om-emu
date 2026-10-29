@@ -4,7 +4,9 @@
 // and one on the EVF (a body with one: MODELS panels.evf) through the path every model must take: start, S1, S2 (a
 // picture on the card), PLAY (single-frame playback), INFO, PLAY (back to shooting). Each step's GUI state (by its name
 // in the model's own state table: the numbers differ, E143's playback is 0x508, the E144 family's 0x608) and card
-// count is checked, and after S1 the screen's remaining-shots count (the count probe below); exit 1 on any failure.
+// count is checked, and after S1 the screen's remaining-shots count (the count probe below); exit 1 on any failure. A
+// body whose start waits at a prompt S1 does not answer (START_PROMPT: E145's date and time setting) takes the
+// prompt's key after the start.
 // The count probe, after S1: three windows of WINDOW frames WINDOW_NS apart, at S-CARD's count, at PROBE_SHOTS and at
 // the count again, each after PROBE_NS of idle. A pixel is the count's where it holds one value through the first
 // window and another through the second (a pixel that changes within a window, as E146's blinking ISO item, X, is
@@ -57,6 +59,13 @@ const PROBE_XFAIL = {};
 // does not raise (Fault 6, emu/FIDELITY-NOTES.md 3.2; docs/hle-gaps.md 4.8.6)
 const SDXC_XFAIL = { E144: [/stopped at 0x[0-9a-f]+ \(disasm 0x5032574f\) fault=6/, 'the movie parameters\' exFAT branch divides by 0 at 0x5032574f (Fault 6)'] };
 const SDXC = SECTORS !== null && new SdCard({ sectors: SECTORS }).kind === 'SDXC';
+// the bodies whose start waits for the user at a prompt S1 does not take to the shooting screen: model -> {state, the
+// prompt's GUI state; key, the key that answers it; after, the GUI state's name after it; why}, a step of the path
+// after the start, held strictly: a start that ends elsewhere fails, so the table follows the firmware
+const START_PROMPT = {
+  E145: { state: 0x1103, key: 'menu', after: 'SS_COMMON/ID_ST_CA_REQ_DISP',
+    why: 'the TG-7 opens its date and time setting at power-on on an unset clock (docs/model-survey.md finding 17); MENU, the screen\'s Cancel, leaves it for the clock warning, which S1 then clears as on the other bodies (S1 too leaves the setting, but only for the warning, X)' },
+};
 const CHILD = `
 const J = process.argv[1], DEVICE = process.argv[2], PROBE_NS = ${PROBE_NS}, PROBE_SHOTS = ${PROBE_SHOTS},
   WINDOW = ${WINDOW}, WINDOW_NS = ${WINDOW_NS}, SECTORS = ${SECTORS};
@@ -140,7 +149,8 @@ for (const m of models) {
   // the EVF runs the path up to S2: playback on the EVF navigates, but its composite uses a PLANC (0xb2) and the
   // highlight block the VSC model has not observed (open, on E143 too)
   for (const device of MODELS[m].panels?.evf === null ? ['tft'] : ['tft', 'evf']) {
-  const path_ = device === 'evf' ? PATH.slice(0, 3) : PATH;
+  const prompt = START_PROMPT[m], full = prompt ? [PATH[0], [prompt.key, prompt.after, 0], ...PATH.slice(1)] : PATH;
+  const path_ = device === 'evf' ? full.slice(0, full.indexOf(PATH[2]) + 1) : full;
   const r = spawnSync(process.execPath, ['--max-old-space-size=6144', '--input-type=module', '-e', CHILD, path.join(REPO, 'emu'), device, JSON.stringify(path_.slice(1).map((p) => p[0]))], { encoding: 'utf8', env: { ...process.env, OM_EMU_MODEL: m }, maxBuffer: 1 << 26 });
   const xs = SDXC ? SDXC_XFAIL[m] : null;
   if (xs) {
@@ -153,6 +163,7 @@ for (const m of models) {
   let steps, probe, card;
   try { ({ steps, probe, card } = JSON.parse(line)); } catch { console.log(`${m} (${MODELS[m].name}) ${device}: FAILED ${(r.stderr || r.stdout).split('\n').filter(Boolean).slice(-3).join(' | ').slice(0, 600)}`); bad++; continue; }
   const problems = [];
+  if (prompt && steps[0][1] !== prompt.state) problems.push(`start: GUI state 0x${steps[0][1].toString(16)}, want the prompt 0x${prompt.state.toString(16)} (START_PROMPT: ${prompt.why})`);
   steps.forEach(([k, state, name, images, frame], i) => {
     const [, wantState, wantImages] = path_[i];
     if (wantState !== null && name !== wantState) problems.push(`${k}: GUI state 0x${state.toString(16)} ${name}, want ${wantState}`);

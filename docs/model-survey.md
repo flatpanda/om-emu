@@ -50,10 +50,10 @@ through a reference place more; "Per-body status" has their figures).
 | E140 | E-M10 IV | 1100 | 25.0 | 0x60020020 (7.2%) | plain | 1.44M | 77 | through E142: modelcheck passes (TFT and EVF; format 9 and the lens record, finding 13; findings 15 and 16) |
 | E125 | E-M1 II | 3700 | 22.0 | 0x60021020 (7.1%) | plain | 1.29M | 71 | through E134: modelcheck passes (TFT and EVF; the count probe since finding 18) |
 | E145 | TG-7 | 1103 | 19.5 | 0x60021020 (7.5%) | plain | 1.10M | 81 | through E142: the start ends in its date and time setting (`0x1103`, finding 17); after MENU (the screen's Cancel) S1 stops at S-AFOSD, its frame plane having no AF upload of that shape |
-| E133 | E-PL9 | 1101 | 25.0 | 0x60400020 (7.2%) | plain | 1.04M | 83 | through E142: kernel, display start, touch start and the camera application's start, then the application's task waits inside the GUI creator: `H-GUIBYAPP: GUI tasks [], timer tasks [] after the application's start` |
+| E133 | E-PL9 | 1101 | 25.0 | 0x60400020 (7.2%) | plain | 1.04M | 83 | through E142: modelcheck passes (TFT, no EVF; the count probe and its card native) since UI_IN's boot key is the power switch's (finding 20); before, its start went to the battery insertion's boot service, which creates no GUI |
 | E130 | E-M10 III | 1200 | 25.0 | 0x60400020 (6.9%) | plain | 1.02M | 82 | through E142: modelcheck passes (TFT and EVF; findings 11, 14 and 16) |
-| E129 | TG-5 | 1101 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: kernel and display start, then the settings store's registry bootstrap waits for the boot's stage-1 bit: `registry bootstrap 0x50040aeb: all tasks blocked (lab task 153 state WAI)` |
-| E132 | TG-5 (KOUICHIRO) | 1300 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: kernel, display start and settings store, then blocks in the camera application's start on a serial request (channel 9) whose send is deferred to an interrupt the lab does not raise: `all tasks blocked (lab task 155 state WAI)` |
+| E129 | TG-5 | 1101 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: kernel, display start, settings store (since S-BOOTSTAGE, finding 20) and the camera application's start, which waits for the internal charger's transfer on serial channel 9 as E132's: `all tasks blocked (lab task 153 state WAI)` |
+| E132 | TG-5 (KOUICHIRO) | 1300 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: kernel, display start, settings store and the camera application's start, whose charger request on serial channel 9 runs its deferred send (IRQ 29, finding 21) and then waits for the transfer's completion, which the lab does not model: `all tasks blocked (lab task 155 state WAI)` |
 | E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | stops at import: board fact `intc.irq_osd_engine` unknown (family E118) |
 | E122 | PEN-F | 3101 | 20.4 | 0x60021020 (7.2%) | plain | 0.79M | 123 | stops at import, as E118 |
 | E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | stops at import, as E118 |
@@ -261,13 +261,42 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    without a file system, so the E142 lineage's and the E144 family's orange `0:00:00` stays (ROADMAP Next stops).
    `bin/modelcheck.mjs` still excludes E143 from its default set; its count probe sets S-CARD's count, which E143 no
    longer asks.
+20. **The boot's state the lab's start left unset** (2026-10-29). Two words the boot sets before the application,
+   which the lab's start never set, read by a rule on each body (`src/fw/facts.mjs` bootState: one stage test and one
+   boot key store on each of the 15 expanded images but the E118 family's, X). UI_IN's boot key, the code of the key
+   that started the camera, which UI_IN's module init takes from the sub-CPU's wake factor and its key table (E143
+   `0x5014e3ab`, word `0xa32dab30`; E133 `0x500f5d85` from `0x500f41fe`, word `0xa2ae718c`, D), and the stages' ready
+   word, in which the boot's stage step marks each stage of the run-time image (E129 `0x50022f51(n)` sets bit n-1 of
+   `0xa2b4d2cc` once the loader `0x50022ec0` has marked the stage read; E143's per-segment step `0x50024eda` sets bit
+   n-1 of `0xa32df1f4`, `docs/om1-cores-spec.md` 3.6, D). E133's camera application judges its boot service from the
+   wake-up issue (`0x50c5b440` <- `0x5071c204`): with the key and the second factor 0 the issue is 4,
+   API_WUI_INSERT_BATTERY (`0x5071c46d`), whose service (8) creates no GUI; the key 0x000C, the power switch's code,
+   gives 1, API_WUI_POWER_BUTTON (`0x5071c3b7..c7`, D). E130's issue maps 4 to 1 while module 9 is in state 2
+   (`0x5072bd5e..7b`, D; its first issue 1, X), a step on E134, E137, E142, E140, E125, E129, E132 and E145, not on
+   E143, E146, E147, E144, E139 and E133 (X, a byte scan): E133 was the one body it stopped. S-BOOTKEY sets the key
+   before UI_IN starts, S-BOOTSTAGE stage 1's bit before the store's start; UI_IN's init itself stops at the SCPU
+   window's offset 4, which the family's board does not model (X, a trial). With both: E133 passes modelcheck, E129's
+   store starts, E143's frames of start, S1, S2 and PLAY are as before, and the ten other bodies' modelcheck output is
+   the same line for line (X).
+21. **The deferred calls on the E144 family** (2026-10-29, `docs/hle-gaps.md` 4.4.2). The family's deferred calls
+   interrupt their core through IRQs 29..34, one trigger word each at `0x9b800030..0x9b800044` (E143's 53..58 at
+   `0x9b880044..`): a post (E132 `0x5004a236`, E143 `0x500503d4`) puts the call on its core's ring, enables the IRQ
+   for its core and writes 1 to the word; the init, which the boot head runs before the kernel (E132 `0x5004a115` from
+   `0x500002ea`), clears the rings and words and attaches IRQs 29 and 30 on the three cores and 31..34 on its own (D;
+   the init, words and IRQs on all 15 bodies but the E118 family's by `src/fw/facts.mjs` deferredCalls, X). The words
+   lay in the lab-stub page `0x9b800000`, which kept a 1 and raised nothing. Of the starts, E144's, E142's, E130's and
+   E133's post nothing (X: observers on every post's store over the play session), E132's posts its charger
+   request's send. The board now has the triggers (src/dev/dpc.mjs) and H-DPCINIT runs the init at every play
+   bring-up (E143's too); a post before the bring-up would be refused, and none of the eleven checked bodies' sessions
+   makes one (X).
 
 ## Per-body status
 
 The state as of 2026-10-23. Each body's `MODELS` entry (`src/fw/models.mjs`) carries the numbers its `port_via` choice
 rests on and the evidence of every hand value. On that date `bin/modelcheck.mjs --no-port` passes E146, E147, E144,
 E139, E134, E137, E140, E125 and E130 on the TFT and the EVF and E142 (no EVF) on the TFT (their `MODELS` entries are
-`checked`; E134, E142, E140 and E130 since the second round of step 7, findings 11 to 14, X). Since the third round
+`checked`; E134, E142, E140 and E130 since the second round of step 7, findings 11 to 14, X), and since 2026-10-29
+E133 on the TFT (finding 20, X). Since the third round
 modelcheck also checks the screen's remaining-shots count after S1 (the count probe, finding 16): E142, E140 and E130
 pass it, E142 and E140 since their shots query is placed where their application asks (finding 15; they had shown
 "Card Full"); E146, E147, E144, E139, E134, E137 and E125 pass it since S-CARD's card is in the first slot's detect
@@ -444,28 +473,64 @@ at the DRAM's top is I. S-PANELDONE answers three panel-flag waits in its start 
 Open: which touch controller it polls is not checked against S-TPREG's; its zoom table (+644) and lens buffer are the
 rules', not checked against a lens attach.
 
-**E133 (E-PL9).** Ported through E142 (2.24M instructions paired, against 1.04M directly). It runs the kernel, the
-display start, the touch start and the camera application's start, then stops in H-GUIBYAPP: the application's task
-(62) waits inside the GUI creator (E133 `0x50c7b065`, E143 `0x5108bdc7`) on a synchronous call's reply (`0x506eb516`,
-E143 `0x50ac5e4a`), and so does a task the creator started (150, entry `0x50c7ad48`). E130, nearly the same build,
-passes there; what the reply waits for is not read (X).
+**E133 (E-PL9).** Ported through E142 (2.24M instructions paired, against 1.04M directly). Since 2026-10-29
+`bin/modelcheck.mjs` passes on the TFT (no EVF), the count probe and the card included (its card's file system native:
+card 'NO NAME' formatted, 2018 shots, S2's file read back; playback `0x608`, INFO `0x60b`, X), and its `MODELS`
+entry is `checked`; the shooting screen is the E-PL9's (P, S-IS ON, ISO-A 200, L N, FHD 60p, `0:37:23` and 2018 from
+the card, X: frame). Before, its start ran the kernel, the display start, the touch start and the camera
+application's start and stopped in H-GUIBYAPP with no GUI task. Root cause (finding 20, D/X): the application's
+helper thread (task 149, entry `0x50c7ad48`, E143 `0x5108ba1b`) calls the GUI creator (`0x50c7af0c` from
+`0x50c5acaf`) only when the boot service it judges (`0x50c5b440`) is not 8, 9 or 16, and it judged 8, the battery
+insertion's service: the wake-up issue (`0x5071c204`) was 4, API_WUI_INSERT_BATTERY (`0x5071c46d`), because UI_IN's
+boot key (`0xa2ae718c`) and the second factor (`0x62399284`) were 0. E130 gets 4 from the same inputs and maps it to
+1, API_WUI_POWER_BUTTON, while module 9 is in state 2 (`0x5072bd5e..7b`; its first issue 1 and the creator called from
+`0x50c2e971`, X); E133's issue has no such step (D). The waits the survey had read as a synchronous call's reply
+(tasks 62 and 150 in `0x506eb4a7`, E143 `0x50ac5ddb`) are the threads' message receives, where E130's threads 62, 148
+and 149 wait too once their start is done (X). S-BOOTKEY gives the boot key the power switch's code 0x000C, which
+the issue maps to 1 (`0x5071c3b7..c7`, D). Open: the second factor's source; the E-PL9's power key code is taken from
+the issue's own test, not from its key matrix.
 
 **E129 (TG-5).** Ported through E145 (2.61M instructions paired, against 0.94M directly). The TG-5's panel driver (E129
 `0x5015b466`) sends its command list over serial channel 2 with GPIO 117 around each send and waits on a completion
 flag with no timeout (D); S-PANELDONE answers that wait in every display run on the E144 family's board (the port
 places E143's EVF panel completion flag at the TG-5 panel's, X: 86 waits answered in the TFT open), so the TFT open
 passes. A serial-channel model was not taken: the driver feeds a TX register byte by byte from its interrupt (E129
-`0x5005094d`, the register block `0x9a200000`, D), whose IRQ and status bits are not read. It then stops in the
+`0x5005094d`, the register block `0x9a200000`, D), whose IRQ and status bits are not read. It stopped in the
 settings store's registry bootstrap (`menu.mjs` store_init, `0x50040aeb`): its flash read (E129 `0x5003ddcd`) polls
-bit 0 of the boot-stage word `0xa2b4d2cc` with 2 ms sleeps, which the stage-1 step of the boot sets (`0x50022f51(1)`,
-called at `0x5002282d`, D); the lab ends the init task before the boot runs it, so the bit is never set (X).
+bit 0 of the stage word `0xa2b4d2cc` with 2 ms sleeps (`0x50022e49(1)`), which the stage step of the boot sets
+(`0x50022f51(1)`, called at `0x5002282d`, D); the lab ends the init task before the boot runs it, so the bit was never
+set (X). Since 2026-10-29 S-BOOTSTAGE sets it before the store's start (finding 20): the store, the play bring-up
+(H-DPCINIT, H-PWRTASK, its task 11 at `0x500400df`) and the HighLevel create run, and the start stops where E132's
+does, in the charger's transfer (the wait at `0x5003fc39`, every task blocked, X). The step's flash read (stage 1's
+part read in `0xa2b4d2d0` by the loader `0x50022ec0`), its region set-up of the block `0x99700000` (not modelled) and
+its hook list (empty for stage 1, `0x50173c78`) are not run (D).
 
 **E132 (TG-5).** Ported through E145 (2.68M instructions paired, against 0.94M). Its registry bootstrap has no such
-wait (D). It stops in CamApp.start (`camapp.mjs`), every task blocked: the lab task requests serial channel 9 (E132
-`0x5003fbaf`), whose grant callback `0x5003fd9a` ran and posted the send `0x5003fdb1` as a deferred call (a per-CPU
-queue, then `0x5004be41(29, cpu)` and a write of 1 to `0x9b800030`, D), and waits 3000 ms for the flag `0x60421358`;
-the deferred send never runs (X), and the lab models no interrupt the `0x9b800030` write would raise (the store
-`fc 81 30 00 80 9b` is at two places on each of the nine E144-family bodies searched, X).
+wait (D). It stopped in CamApp.start (`camapp.mjs`), every task blocked: the lab task requests serial channel 9 (E132
+`0x5003fbaf`), whose grant callback `0x5003fd9a` ran and posted the send `0x5003fdb1` as a deferred call, and waits
+3000 ms for the flag `0x60421358` (the wait at `0x5003fbf6`); the deferred send never ran (X). The deferred call
+(finding 21, D): the post `0x5004a236` puts the call on its core's ring (`0x5004a34c`), enables IRQ 29 for that core
+(`0x5004be41` -> `0x50035066`) and writes 1 to `0x9b800030`, a word of the lab-stub page `0x9b800000`, which kept it
+and raised nothing (X); the deferred calls' init `0x5004a115` (boot head `0x500002ea`) attaches IRQ 29 and 30 on the
+three cores and 31..34 on its own. Since 2026-10-29 the E144 family's board has the six triggers (`0x9b800030..44`,
+IRQs 29..34) and H-DPCINIT runs the init at the bring-up: the send then runs in IRQ 29's handler at the next idle
+point (X). The request is the internal charger's (`0x5003fa92`, reached from the HighLevel create through the
+power module's `0x5003f8e2`, D): open channel 9, a write, a 3000 ms wait, a write with a read back, a 3000 ms wait,
+close, and the byte read compared with the one written (`0x5003fc70..7e`, a mismatch to `0x5003fe6e(2)`, D);
+the send's transfer layer (`0x5004b96e`, E143 `0x5005373f`; the write `0x5004ba70`, E143 `0x50053863`) divided by
+zero in the channel's clock divisor (`0x50051c53`: 24 MHz over a rate of 0, X), because the channel's configuration
+(channel 9, 400 kHz and the completion callbacks `0x5003fe46` / `0x5003fe5a` at `0xa2b1610c..`) is set by the charger
+init `0x5003fa04`, which the power module's init `0x5003f48d` calls at the entry of the power task (11, `0x500400b7`)
+that the boot starts (D). With H-PWRTASK starting that task (X: it then waits on its queue), the transfer starts on
+PER_SIO channel 9 at its registers (the stub page `0x9a200000`), whose completion interrupt is not modelled, and the
+request's 3000 ms wait is a harness call's, where no lab time passes: every task blocked (X). Next: the channel's
+transfers and their completion, at the controller's registers or at the layer's transfer starts (E132 `0x500506cb`,
+`0x500509be`, E143 `0x5005dc03`, `0x5005def6`; the completions `0x5004bb3a`, `0x5004bb6f` registered through
+`0x50051145`), with the charger at the far end (its registers' behaviour is not known; a register file that keeps
+what is written would pass the read-back, I). A trial, not landed (X): with the charger command answered 0 at its call
+from `0x5003f931`, the start creates the GUI and ends in `0x10c` SS_COMMON/ID_ST_FOLDER_OMT_PROGRESS_BAR, a 960 x 480
+frame with "Busy" and a bar; 8 s of idle there reach 300,000 stub calls in the panel driver (`0x5015b55f`); S1 stops
+at S-AFOSD (`0x500257ce` has no place in E132's build, as on E145, finding 14).
 
 **E118 (E-M5 II), E122 (PEN-F), E120 (E-M10 II).** They stop at import on 18 board facts their family scaffold leaves
 unread (`FAMILIES.E118`, `src/fw/board.mjs`: the interrupt controller's IPI, kick and control registers and its
@@ -504,7 +569,7 @@ take about 1.1 s per body. Under heavy load the full re-port after E144's inter-
 
 The new OM System PEN (expected as E148) is not on the update server. Lens and accessory firmware are out of scope.
 Besides E143, E146 and E147, eight bodies pass the player with a picture (the shooting screen in their frame, S1 taken,
-the player settled running): E144, E139, E134, E137, E142, E140, E125 and E130. E145 reaches its POWER_ON state with a
-one-colour frame after the whole start natively (kernel, display start, settings store, camera application, GUI); E133
-and E132 run to the camera application's start and E129 into the settings store; the E118 family runs no firmware code
+the player settled running): E144, E139, E134, E137, E142, E140, E125 and E130. E133 passes modelcheck since 2026-10-29. E145 reaches its POWER_ON state with a
+one-colour frame after the whole start natively (kernel, display start, settings store, camera application, GUI); E129
+and E132 run to the camera application's start, where the internal charger's transfer waits; the E118 family runs no firmware code
 in the lab yet, so nothing above says how far it boots. The next steps are in `ROADMAP.md` "Multi-model".

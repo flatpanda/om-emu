@@ -531,6 +531,10 @@ Open) and the only lens on the other bodies.
   `0x5005043f` (54), `0x500504aa` (55), `0x500504d9` (56) put a call on a ring of 32 (`0x50050508`), enable the IRQ
   and write 1 to its word; the handlers (`0x50050539..`) run the ring; the init `0x50050279` runs before the kernel
   (boot `0x50000270`). A word written 1 holds its IRQ high until written 0 (A-DPC-1, I; `emu/src/dev/dpc.mjs`).
+  Since 2026-10-29 a rule reads the init, the words and the IRQs on every body (`emu/src/fw/facts.mjs` deferredCalls:
+  the E144 family's six words at `0x9b800030..0x9b800044` with IRQs 29..34, X), the E144 family's board has the
+  triggers, and H-DPCINIT runs at every play bring-up without the native lens too (`emu/src/lab/play.mjs`); E132's
+  start is the one that posts (`docs/model-survey.md` finding 21).
 - **The lab's part:** H-DPCINIT (the deferred-call init), H-LENSINIT (the module init `0x502a5d10`, boot call
   `0x50024ab6`; USTART_L's cache load `0x502a6371`, `0x5002420e`; the task variables `0x502a5dff`, `0x50024222`; in that
   order, since the module init `0x50125747` clears the ready byte `0x6296d206` the load sets; then the three tasks),
@@ -1389,8 +1393,9 @@ its code:
   (its banks are E143's), so an E144-family picture's file holds a black frame. Not native: E134 (on a native card
   S-RECFILE's first fopen never completes: FILECLBK blocks in a write with no timeout to UI_IN's request queue,
   `0x6004192e`, at `0x5010c35f`, which nothing reads in the lab, 53 writes in 10 s; E143's and E144's fopen make no
-  such write; why E134's does is ?), E145, E133, E129 and E132 (their starts stop before the application, ROADMAP),
-  the E118 family (not loaded; no SD command layer of the rule's form). They keep S-CARD.
+  such write; why E134's does is ?), E145, E129 and E132 (their starts stop before the application, ROADMAP),
+  the E118 family (not loaded; no SD command layer of the rule's form). They keep S-CARD. E133's card is native since
+  its start runs (2026-10-29: 2018 shots on the blank card, S2's file read back, X).
 - **The movie time (goal 2, X: frames):** the E142 lineage's orange `0:00:00` is gone: E142 and E140 show `0:10:45`,
   E130 `0:37:22`, from the card (E142's DCF remain movie time `0x505fd798`, which returned 0 on S-CARD's card).
   The E144 family's (E144, E139, E137, E125) stays orange `0:00:00` beside the card's count: E144's DCF remain movie

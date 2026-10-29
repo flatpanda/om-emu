@@ -89,7 +89,11 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   kept for the session, and the SCPU clock ticks with lab time. On E143, E146 and E147
   the power lever, the Fn lever and S1 are the SCPU interface's port levels (H-SCPUPORT): IRQ 320, its handler and
   UI_IN's callback run natively; the lab attaches the IRQ and registers the callback in place of the inits that would
-  (H-SCPUIRQ, H-UIINPORT).
+  (H-SCPUIRQ, H-UIINPORT). On E143 the power manager (PWR_MAIN) starts natively at the bring-up (H-PWRSTART; its IO
+  expanders' requests are answered at their tasks' seam, S-IOEXP), and the lever's off runs the firmware's own
+  power-off from the HFW's shutDown (S-SHUTDOWN, in place of the HLS component that would call it) through the
+  sub-CPU's `0x85 {1}` to the SCPU window's last write, where the session ends (H-POWER; `src/lab/power.mjs`,
+  `docs/hle-gaps.md` 4.7.4); elsewhere the off closes the session at once.
 - With `--hdmi on` (E143, E146, E147; off by default) the HDMI port is modelled: the transmitter's registers, its
   DDC and IRQ 239, and the hot-plug GIO pin with its IRQ 109 (`src/dev/hdmi.mjs`). The input `{"type": "hdmi",
   "action": "plug"}` puts a lab sink on it (S-HDMISINK: a 1080p60 EDID with a CTA-861 block composed for the lab,

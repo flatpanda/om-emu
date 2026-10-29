@@ -728,10 +728,11 @@ Open) and the only lens on the other bodies.
   store mirrors M `0xa36fd280` and E `0xa377d280` saved by `0x5003f5dd`. The settings init chain `0x503dae30` (17 module
   inits) is called once from the boot chain at `0x501e9060`; the lab runs none of them.
 - **Power-off (D calls, I meaning):** `0x50044d8e..0x50044de7` sends on a channel, arms channel A, tests the camera
-  state, calls the IO expanders and ends with `0x5004dfd0` (`+0x9c` = 127). An HLE of the lever lets this run and ends
-  the session at that write instead of H-POWER's immediate close. Not reachable yet: with the lever's off decoded
-  natively (4.7.2) and the session left open, the application takes the code and the GUI stays in shooting for 5 s of
-  lab time, with no write to `+0x9c` (X); the sequence's owner, the power manager (PWR_MAIN), does not run.
+  state, calls the IO expanders and ends with `0x5004dfd0` (`+0x9c` = 127). Native since 2026-10-29 on E143 (4.7.4):
+  at the lever's off the lab runs the HFW's shutDown in the HLS component's place (S-SHUTDOWN), the sequence runs to
+  that write, which ends the session (H-POWER), and PWR_MAIN runs natively from the bring-up (H-PWRSTART, S-IOEXP).
+  Before, with the lever's off decoded natively (4.7.2) and the session left open, the GUI stayed in shooting with no
+  write to `+0x9c` (X): the sequence's caller is the HLS camera-common component, not the power manager.
 - **Steps (I):** 1, a host server for 0x01 / 0x81 / 0x06 / 0x86 with the clock ticking from lab time and S-NVRAM as the
   default: 4-6 days (done 2026-10-23 at the request API, then the same day PER_SCPU natively over the link to a
   transport-level model of the sub-CPU, 4.7.1; S-NVRAM stays opt-in, `docs/ROADMAP.md`). 2, the event /
@@ -740,7 +741,9 @@ Open) and the only lens on the other bodies.
   accelerometer at the PER_SIO seam or the sample cache: Level Adjust, level gauge, rotation, 1-1.5 weeks (done
   2026-10-23 at the sample cache for Level Adjust and the gauge, 4.7.3; rotation open). 4, the eye
   sensor (I2C plus GPIO interrupt) driving the native chain to `0x50050efd`: 1 week. 5, the power manager: 2+ weeks,
-  gated by hardware numbers. 6, a NAND register model and store F: 1-2 weeks, only for a full boot.
+  gated by hardware numbers (started 2026-10-29, 4.7.4: PWR_MAIN natively with the IO expanders stood in, and the
+  power-off natively from shutDown; open: the expanders' chips, the battery and its messages). 6, a NAND register
+  model and store F: 1-2 weeks, only for a full boot.
 - **First step: done** (2026-10-23). The PER_SCPU dispatch is read (4.7.1) and S-SCPU-MSG is replaced by S-SCPU, the
   request server of 4.7.1's last bullet: the four D commands answered (rx written, `+20` called), every other command
   refused by its name, and `+0xe8 / +0xec` ticking with lab time. Step 2 followed the same day (4.7.2): the event and
@@ -813,7 +816,7 @@ Open) and the only lens on the other bodies.
 | `0x06` | 6: `{index, u32 value LE, byte}` / - | `0x5005a770` "ScpuBkupW" (PER_SCPU_BK_REG_WRITE_W.. 0xf5) | write a backed-up word; the only caller writes index 2, byte 0 (`0x5005a6e2`) |
 | `0x86` | 2: `{index, byte}` / 4: u32 LE | `0x5005a809` "ScpuBkupR" (PER_SCPU_BK_REG_READ_WA.. 0xf6) | read it; the only caller reads index 2, byte 0 (`0x5005a6ef`) |
 | `0x02` | 2 / - | `0x50052bc9` (no direct caller) | GPIO write `{port, value}` on the SCPU's logical pin table (D on the SCPU side, scpu spec 3.3, 4.1) |
-| `0x82` | 1 / 1 | `0x50052ca7` (semaphore PER_GIO_EXT_R 0x6c) | GPIO read `{port}` -> level (D on the SCPU side) |
+| `0x82` | 1 / 1 | `0x50052ca7` (semaphore PER_GIO_EXT_R 0x6c) | GPIO read `{port}` -> level (D on the SCPU side); the power manager's start reads port 45, PC13 (4.7.4, X) |
 | `0x04` | 4n + 5: `{u32 address, n, n words}` / - | `0x5005d07d` (PER_SCPU_MEMRW_WAIT 0xf1) | SCPU memory write ("per scpu wmem") |
 | `0x84` | 5: `{u32 address, n}` / 4n | `0x5005d127` (0xf1) | SCPU memory read ("rmem") |
 | `0x80` | - / 4: u32 | `0x5005d2e8` (PER_SCPU_GETVER_WAIT 0xf3) | the SCPU binary's creation time ("per scpu ver"; `0x5005d218` adds 32400 s and prints "SCPU Build: mm/dd hh:mm") |
@@ -821,12 +824,14 @@ Open) and the only lens on the other bodies.
 | `0x07` | - / - | `0x5005d464` | the SCPU firmware update: `0x510369f8` ("[scpu]Start !") transfers the image (`0x51036bd6`), sends `0x85 {2}`, `0x07`, then polls `0x87` |
 | `0x87` | - / 1 | `0x5005d480` (PER_SCPU_GETFIRMUP_COMP 0xf4) | update state, polled while it reads 1 |
 | `0x88` | - / 2 | `0x5005d36a` from UI_IN `0x5014bf91` (PER_SCPU_GET_PORT_SCAN_ 0xd7) | port scan: retried up to 5000 times while rx[1] is not 0 (errlog `0x19002710`), then rx[0] bit 0 -> UI_IN group 4 `0x0400`; the sub-CPU's reply is {result, busy}, result bit 0 PC13 and bit 1 PC5, and the read enables its report `0x08` (D, scpu spec 3.4) |
-| `0x12`, `0x13`, `0x14` | short writes, batched | the power manager through `0x5004322c` (semaphore PWR_COMM_SCPU 0x68, flag PWR_COMM_SND_SCPU_WAIT 0xee; builders `0x500433f9`, `0x50043452`, `0x500435dc`, `0x50043a47`, `0x50043abd`) | SCPU handlers `0x801570b`, `0x801535f`, `0x8015345` (and `0x80150a5` for an `0x11` with no MN sender) in its power manager; formats ? |
+| `0x12`, `0x13`, `0x14` | short writes, batched | the power manager through `0x5004322c` (semaphore PWR_COMM_SCPU 0x68, flag PWR_COMM_SND_SCPU_WAIT 0xee; builders `0x500433f9`, `0x50043452`, `0x500435dc`, `0x50043a47`, `0x50043abd`) | SCPU handlers `0x801570b`, `0x801535f`, `0x8015345` (and `0x80150a5` for an `0x11` with no MN sender) in its power manager; formats ? but for `0x12 {5}`, the start's handshake, which the sub-CPU answers with its message `0x12 {5}` (4.7.4) |
 | `0x40` | n / - | `0x5102b8f7` (semaphore PC_PD_COMMUNICATION 0x7c; "USB SCPU_CONN", "PCPDC" beside it) | USB power delivery (I) |
 
 The flag and semaphore names are the object-name table's (D); the commands' meanings beyond the strings are I.
 
-- **What a session sends (X, a play session with S1 and a menu open and close):** only the store init's three requests:
+- **What a session sends (X, a play session with S1 and a menu open and close):** the store init's three requests (and,
+  since 2026-10-25, H-UIINSCAN's `0x88`; since 2026-10-29 on E143 the power manager's start, `0x82 {45}`, `0x12 {5}`
+  and the poll of the sub-CPU's answer, and at a power-off `0x85 {1, 0, 0}`, 4.7.4):
   `0x06 {2, value, 0}` (from `0x5012c547`), `0x01` with the reset date (`0x5012b78c`) and `0x86 {2, 0}` (`0x5012c70a`),
   whose waits on 0xf5, 0xf7 and 0xf6 run natively (settings spec section 4; X: they return E_OK, since 2026-10-23 after
   PER_SCPU's transactions with the sub-CPU's model, before that at once with S-SCPU). The `0x06` writes `0x8000021c` and the `0x86` reads it back (X). Backup word 2 holds the
@@ -920,7 +925,7 @@ The flag and semaphore names are the object-name table's (D); the commands' mean
     what the camera does on the USB switch is past the lab's stand-ins, so no input sets PC13.
   - **Not covered:** the sources of the battery, power-manager and USB PD messages (the model posts only the port
     scan's `0x08`; `post` can send any), the sub-CPU's wake after a power-off and its own power events, the watchdog's
-    and the reset's error paths (the sub-CPU always answers), every command but the six, PER_SIO at the register
+    and the reset's error paths (the sub-CPU always answers), every command but the six (eight since 2026-10-29: `0x82` of the scan's ports and `0x12 {5}`, 4.7.4), PER_SIO at the register
     level.
   - **The window clock** ticks with lab time on the E143 board (E143, E146, E147) and on E139 and E134 (their MODELS
     boards). The other E144-family bodies keep it still: E137's and E130's operating-time count (E137 `0x5004d531`)
@@ -963,11 +968,12 @@ The flag and semaphore names are the object-name table's (D); the commands' mean
   lab runs the first in the init's place (H-UIINSCAN, 4.7.1) and S-SCPUDEV answers it: rx[0] bit 0 is the sub-CPU's
   PC13, which sets group 4's `0x0400` through the producer (scpu spec 3.4).
   `+0x9c` (request bits: `0x5004dffc` sets bit n, `0x5004e02c` reads one, seven calls each at `0x519d2153..0x519d221b`,
-  ?; `0x5004dfd0` writes 127 at the end of the power-off, 4.7) and `+0x94` / IRQ 321 (the transfer channels) have no
-  user in the lab and stay bus errors.
+  ?; `0x5004dfd0` writes 127 at the end of the power-off, 4.7) is storage since 2026-10-29 (4.7.4); `+0x94` / IRQ 321
+  (the transfer channels) have no user in the lab and stay bus errors.
 - **Built (2026-10-23, `emu/src/dev/scpu.mjs`, `emu/src/lab/play.mjs`):** the device models `+0x98` (pending bits, a
-  write clears, I) and the port words (bit 31 the level the lab sets, the other bits 0, A-SCPU-4; a write is a bus
-  error, since nothing in the lab configures a port), and drives IRQ 320 while a bit is pending; a level change of
+  write clears, I) and the port words (bit 31 the level the lab sets, the other bits 0, A-SCPU-4; a write was a bus
+  error until UI_IN's power-off wrote them, 2026-10-29: now it keeps the configuration word without an effect, 4.7.4),
+  and drives IRQ 320 while a bit is pending; a level change of
   either direction sets the port's event bit (I: UI_IN decodes both edges of S1 and the levers from this one event).
   The lab sets the levels through a doorbell (`0x89a40000`, command 1). At bring-up, H-SCPUIRQ sets the idle levels
   (`0x3c`: S1 and the request lines high), writes 127 to `+0x98` as the init does and attaches IRQ 320 at level 5
@@ -1099,6 +1105,90 @@ subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a91
   tables `0x6011a080` / `0x6011a1e8`, event `0x4020310`), PER_ACC_PWRMGR_MAIN, the gyroscope words, the data-ready pin
   and ACC_SENS_MAIN, factory calibration data (store F) and the temperature compensation (calibration type 255 on the
   templates).
+
+#### 4.7.4 The power manager and the power-off, natively (E143, 2026-10-29; D unless tagged)
+
+Read and built 2026-10-29 (`emu/src/lab/power.mjs`; the addresses with their evidence in `emu/src/fw/models.mjs`
+power_native). Before it, 4.7's power-off bullet: with the lever's off decoded natively and the session left open,
+the GUI stayed in shooting with no write to `+0x9c` (X), and the power manager did not run.
+
+- **Why PWR_MAIN did not run (X, D):** PWR_MAIN is task 10, entry `0x50043cdb`, created dormant from the static task
+  table. The boot's task starter `0x50023eca` (called by the init task `0x5002cca5`) starts it: after PER_SCPU's start
+  (`0x50024072`), the body IO expander's init `0x50055e10` (`0x50024095`, which starts PER_IOEXP, task 136), the PBH
+  expander's `0x500540fc` (`0x5002409c`, PER_IOEXP_PBH, task 140) and `0x50059649` (`0x500240b0`), it runs the power
+  manager's init `0x50044eb6` (`0x500240c4`) and starts the task through OlyTaSt (`0x500240cb..d2`, the id word
+  `0x60042d3a`). The lab runs none of the starter, so all four tasks stayed dormant in every session (X).
+- **What it waits for (D):** its loop waits (OlyEvWt `0x5002bdd8`, no timeout) on flag 11 (the word `0x60042f86`) for
+  pattern 7: bit 2, the messages of its queue 10 (the word `0x600431d8`; each dispatched by `0x50043f55` over its
+  event table, events 1..13), bit 4 (`0x50043f55(6, 0)`) and bit 1 (`0x50043e6d`). The init runs the start-up message
+  `{0x100, 0x20}` through the task's own handler `0x5004408f` on its caller's task: a GIO read of the sub-CPU's port 45
+  (`0x82 {0x2d}`: PC13), the power manager's handshake with the sub-CPU (`0x12 {5}`, which the sub-CPU answers with
+  its own message `0x12 {5}`, scpu spec 3.4) and two writes of the PBH expander's GIO extension pins (X).
+- **What it needed (X):** started alone, its init stops at the GIO read (S-SCPUDEV refused `0x82`) or, with the
+  sub-CPU's own firmware, blocks in the PBH expander API's wait (`0x50055716`): the expanders' tasks do not run. They
+  talk to their chips through PER_SIO's transfer layer (`0x5005373f`, `0x5005384b`, `0x500538bf`, the one the
+  accelerometer's register API uses), the body's on channel 10 (its open at `0x50057dff`), and take a GIO interrupt
+  (`0x500503d4`, `0x50054012`); their logs name PL061-like registers (`[IOEXP]IS`, `IBE`, `IEV`, `IE`, `RIS`, `MIS`,
+  `DATA0..2`; the chips' identities are ?). A request posts a 36-byte message to the task's data queue (body
+  `0x50056a85`, queue word `0x600431be`; PBH `0x50054ede`, `0x600431c0`) and its caller waits for bit 1 of the task's
+  flag with a timeout (body `0x50056c93`, `0x60043170`, 1000; PBH `0x500550f4`, `0x60043180`, 1500); a timeout logs and
+  stops the system through `0x5003cc5c(1)` and a branch to itself (`0x50056cde`, `0x5005513f`; X: the power-off did,
+  before S-IOEXP). Built: **S-IOEXP** completes each posted request at the next idle point as the task would: the
+  flag's bit 1 for a request without data, the callback with its argument for the GIO extension's write (`0x500541f3`:
+  request 1 with `{+0 pins, +4 a byte, +8 the word, +16 callback, +20 argument}`, `0x50054237..5a`; I: that the task's
+  completion calls it as the API's own direct path does while the PBH's state `0xa32c4915` is 5, `0x5005421d..33`); any
+  other request stops the session. **H-PWRSTART** runs the init and starts PWR_MAIN at the play bring-up, after
+  H-UIINSCAN; **S-SCPUDEV** answers `0x82` for the scan's two ports (its levels: PC13 0) and `0x12 {5}` with the
+  message `0x12 {5}` (the sub-CPU's handlers `0x800cfef` and `0x801570b` -> `0x801534c`, D). X (E143): the start's
+  frames are `0x82 {2d}` -> `[4, 0x82, 0, 0]`, `0x12 {5}` and the poll `[2, 0x8f]` -> `[4, 0x12, 5, 0]`, the same from the
+  sub-CPU's own firmware (test_scpum4); PWR_MAIN then waits on its flag and sends nothing more in 5 s of lab time; the
+  init takes 4 ms of lab time (its 1 ms sleeps), and golden's screens are unchanged but for two EVF sessions' compose
+  headers, whose frame numbers move by one frame.
+- **The power-off's path (D):** the lever's off is UI_IN's `0x0202000c` (EV_POWER_SW_OFF) to the application's queue 6;
+  the HFW passes it on (OlyHfwSystemEventForwarding, OlyHfwOpeKeyCtl) to the HLS, whose camera-common component
+  (CmpCCom_CameraCommonComponent, `0x50d034a8..0x50d05ef3`, never entered in the lab, camapp 2 included: X) would
+  call the HFW's CameraCommon::shutDown. That is slot 2 of the object the getter `0x50afccd5` returns (vtable
+  `0x60e02ea4`; `0x50afd2d7`, the id `0x10102` it logs, "CameraCommon::shutDown" in the name table `0x6035f100`); the
+  shell's "sdk api shutdown mode reason" calls the same slot (`0x50b05169..79`, with API_SHUTDOWN_NORMAL 1, ..._EMERGENCY
+  2 and the reasons BUTTON 1 .. EASY_TRANS 13 in its usage text). shutDown -> `0x50abe7e0` -> OlyHfwPower's startShutDown
+  `0x50af654b` (its other caller is the factory reset's `0x50af96d2`; the sequence `0x50044ca8` below has four more
+  callers, the firmware update's `0x51034f23` and three in code not read): it saves the settings (the flash save `0x503eee94` from `0x50af6a0e`), saves the RAM log (api
+  `0xc0036` `0x50420fd4` -> `0x518f7381`: the callbacks of the table `0x60379ef0`, 50 ms, `0x50039def` writing 0x100 to
+  `+0x800` of the four interrupt-controller banks, then a checksum of 2 MiB from `0x63ae0000` and their write to the
+  NAND at `0x4e820000`) and runs api_system's power-off `0x5041fa85` -> `0x50044ca8`, which writes the window's wake
+  word (`0x5004e50a`: `+0x90` = 0xffffffff), posts the power manager its message (`0x500454a0`, handled at once by
+  `0x5004408f` with event 33, X), has UI_IN reconfigure the window's ports (`0x5014c7fe` -> `0x5004e3fc`), reaches the
+  file module (queue 31, X), sends the IO expanders their power-off commands (setting `0xa011` 9: body 5 and PBH 4,
+  else body 6 and PBH 5; `0x50044da8..0x50044ddd`), sends the sub-CPU `0x85` (`0x5005cdfd`: `{1, 1, 0}` for setting
+  19, `{3}` for 9, else `{1, 0, 0}`) and polls pin 102 until it reads low (`0x5005ceaf..ba`, no idle point), and ends
+  with `0x5004dfd0`: `+0x9c` = 127 and its commit (I: the power cut).
+- **Built: S-SHUTDOWN, H-POWER, S-PWRLOG, H-SCPUPOLL.** At the lever's off (after the switch step, in which UI_IN decodes
+  it natively) the lab calls shutDown(1, 1) through the object's vtable on the lab task in lab time, in place of the
+  HLS component (that the lever's reason is BUTTON is I), and ends the session at `0x50044dee`, past the call of the
+  last write; the settings' save is listed with S-FLASHSAVE's (with S-NVRAM it runs natively); the RAM log's NAND
+  write is answered done, not kept (S-PWRLOG); at each poll of pin 102 the sub-CPU acts as at an idle point
+  (H-SCPUPOLL, I). The devices: the window's `+0x90` and `+0x9c` are storage and a port write keeps its
+  configuration word (A-SCPU-4), the interrupt controller's `+0x800` is storage (its meaning is ?). On the sub-CPU's
+  side (D, scpu spec 3.4): `0x85 {1}` moves the system-control task out of steady, and every such transition stops
+  the command manager's link first (`0x80134e0`: PB12's edge off; `0x8013498`: GIO port 35, PC3, low; from bkground's
+  `0x801678c` while the state it reads is steady, pwr_save's `0x80167e2`, standby's `0x8016872` and hibernation's
+  `0x8016810`), which S-SCPUDEV now does too. X (E143, `test_scpu.mjs --session`, `test_scpum4.mjs --session`): the
+  sequence runs from the call (lab 2.855 s) to its end at 2.956 s; the link carries `0x85 {1, 0, 0}` answered
+  `[5, 0x85, 1, 0, 1]`; the MN finds pin 102 low at its first poll; the sub-CPU is in bkground (PC13 low); S-IOEXP
+  took the PBH's GIO extension writes of pins `0x20000` and `0x80000` (word 1), the body's 6 and the PBH's 5; no
+  errlog; the request word 127. The frames, the pins and the lab time of the end are the same with the sub-CPU's own
+  firmware (`OM_EMU_SCPU=native`), whose system-control task drops PC3 0.7 ms of its time after the release
+  (`0x80134ae`, X). The lever's on then starts a new session, as before.
+- **The sub-CPU's own errors (SCPU track step 7):** with its own firmware the sub-CPU logs `[PBH IOEDRV] TX Error :
+  AF[0x0004]` over and over and `[CHG]<d05> b[0] Nack Detect[0x0004]` from the start on: the PBH grip's IO expander and
+  the charger do not acknowledge on its I2C buses (S-SCPUBOARD attaches nothing). Neither stops anything the MN sees in
+  the start, the power manager's start or the power-off (X: the same frames as S-SCPUDEV's), so no battery, charger or
+  PD model is demanded yet.
+- **Not modelled:** what the HLS component does around shutDown (the GUI, the live view's end, the lens), the other
+  shutdown reasons and modes (USB, battery, sleep, emergency), the expanders' chips and their pins' effects, the RAM
+  log's content, the meanings of `+0x800`, `+0x90` and the port words' configuration, the power-on (the lever's on
+  opens a new lab session; the boot is not run) and the sub-CPU's wake. E146 and E147 keep H-POWER's immediate close
+  (their power_native is not placed).
 
 ### 4.8 Card, file system and playback
 

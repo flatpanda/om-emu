@@ -82,7 +82,7 @@ firmware rules on every body that is unpacked. The full suite (`node emu/bin/tes
 |---|---|
 | `emu/` | the emulator: `src/` (CPU, devices, machine, the lab, firmware tools), `bin/` (command-line tools), `host/` (node hosts), `web/` (the browser player), `checks/` (with its fixtures), `refs/`, `scenarios/`, `test/` (with the ISA vectors) and `golden.json` (the regression reference) |
 | `docs/` | the firmware and hardware specs, the roadmap, the model survey and the firmware container format |
-| `analysis/` | firmware-patch investigations: [the OM-1 to OM-1 Mark II feature gap](analysis/feature-gap/README.md), [lens-gated features](analysis/lens-gates/README.md), [ND128](analysis/nd128/README.md) |
+| `analysis/` | firmware-patch investigations: [the OM-1 to OM-1 Mark II feature gap](analysis/feature-gap/README.md), [lens-gated features](analysis/lens-gates/README.md), [ND128](analysis/nd128/README.md), [a study of fishcu/oly_fw_analysis](analysis/oly-fw-analysis/README.md) |
 | `artifacts/nd128/` | the ND128 candidate's manifest (patch sites and digests; the image itself is built locally) |
 | `tools/` | `olyfw.py` (a Python container unpacker), `om1_nd128.py` (builds the ND128 candidate), `mn10300dis.sh` (spot disassembly with a locally built `mn10300-objdump`), `omfw_download.sh` (the updater request with curl) |
 | `BLOBS.md`, `BLOBS.sha256` | every large file the lab uses, where it comes from, how to make it, and its digest |

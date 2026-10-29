@@ -592,6 +592,7 @@ output identical to the harness-driven M2-M6 runs. Size: months.
 | Configurable burst fps | scoped as about one struct and two functions | map the drive-handler delta, E146 `0x503b95a6` vs E143 `0x503b8e73` | `analysis/feature-gap/README.md` step 2 |
 | GPS location state | a thin accessor on existing state, low value | trace `getGpsLocationState` from the menu / SDK side | `analysis/feature-gap/README.md` step 3 |
 | Lens-gated features (focus stacking, 50 fps SH2) | each gate mapped; a one-site patch un-greys the menu for every lens; untested on a non-listed lens | the open questions of the note (which lenses set the capability bits) | `analysis/lens-gates/README.md` |
+| HSL colour wheel (after fishcu/oly_fw_analysis's PEN-F patch) | studied 2026-10-29: E143 holds the PEN-F's COLOR table and builder call (`0x504f4cfa`), its Color Creator 2 settings are saturation only; no candidate | run E143's own update validator on a repack in emu (the note's follow-up 1), then the E143 HSL map | `analysis/oly-fw-analysis/README.md` |
 
 Before any flashing: the offline unpack -> patch -> repack -> checksum loop is done (all six blocks round-trip byte for
 byte; `docs/firmware-container.md`); what remains is whether the camera accepts a no-op image. Nothing has been written

@@ -31,7 +31,7 @@ or its harness chooses to behave, treat it as the model's assumption, not as har
 The emulator's own documents are in `emu/` ([README](../emu/README.md), [ARCHITECTURE](../emu/ARCHITECTURE.md),
 [FIDELITY-NOTES](../emu/FIDELITY-NOTES.md)); the firmware-patch investigations are in `analysis/`
 ([feature gap](../analysis/feature-gap/README.md), [lens gates](../analysis/lens-gates/README.md),
-[ND128](../analysis/nd128/README.md)).
+[ND128](../analysis/nd128/README.md), [the oly_fw_analysis study](../analysis/oly-fw-analysis/README.md)).
 
 ## Evidence tags
 

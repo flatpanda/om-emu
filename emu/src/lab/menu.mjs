@@ -22,6 +22,7 @@ import { show } from '../util/show.mjs';
 import { pack, unpack, unpackFrom, bytesHex } from '../util/bytes.mjs';
 import { hex, hexDigits as fx } from '../util/hex.mjs';
 import { Tally } from '../util/tally.mjs';
+import { BOOT_E143 } from '../fw/facts.mjs';
 // an om1.scpu command line on stderr (src/dev/scpu.mjs): its value, pc and count
 const SCPU_COMMAND = /^om-emu: scpu command 0x([0-9a-f]+) pc 0x([0-9a-f]+) #([0-9]+)(?: |$)/;
 
@@ -51,6 +52,9 @@ export const PROP_GUI_SITES = [A(0x503EFF61)];
 export const DROPPED_SENDS = [[A(0x600431D8), 10, A(0x50045474)]];
 export const LAB_PRI = 60, GUI_START_MS = 2000, GUI_START_SLICE_MS = 100;
 export const EV_WRAPPERS = new Set(['OlyEvSt', 'iOlyEvSt', 'OlyEvWt', 'OlyEvCl', 'OlyEvDl']);
+// the boot's state the lab's start leaves unset (src/fw/facts.mjs bootState): UI_IN's boot key (S-BOOTKEY,
+// src/lab/play.mjs) and the stages' ready word (S-BOOTSTAGE); read where used
+export const bootFacts = () => fact('boot', BOOT_E143);
 export const REGISTRY_INIT = A(0x50040AEB), SETTINGS_DB_INIT = A(0x503C5473), GETTER = A(0x503C49AB), PROP_SET = A(0x503EE412);
 export const API_SET = A(0x50AC4AFE), API_WRITE = A(0x50B4F28B), DESC_LOOKUP = A(0x503DA999), CUSTOM_LOOKUP = A(0x503C681F);
 export const KEY_SELECTORS = new Map([[A(0x503C589B), 64], [A(0x503C58B9), 141]]);
@@ -640,6 +644,7 @@ export class MenuLab extends T.TextDisplayLab {
         this.observe(ra, (lab, r) => lab.store_log.scpu_waits.push({ flag, site: h8(ra), rc: r.d0 | 0 }), 'obs-scpu-wait');
       }
     }
+    this.boot_stage();
     const reg = this.native(REGISTRY_INIT, null, 'registry bootstrap 0x50040aeb');
     // with saved images the bootstrap restores those stores ('xlR.'); one it rejects is a broken save, not a blank camera
     const wantPrints = REGISTRY_PRINTS.map((p) => (loaded?.has(p[0]) ? p.replace('lD.', 'lR.') : p));
@@ -666,6 +671,21 @@ export class MenuLab extends T.TextDisplayLab {
     const dbErrlog = db.errlog.filter(([c]) => !D.EXPECTED_ERRLOG.has(parseInt(c, 16)));
     if ((JSON.stringify(db.prints) !== JSON.stringify(dbPrints) && !backupSave) || dbErrlog.length) throw new MenuError(`settings-DB init: prints ${show(db.prints)}, errlog ${show(dbErrlog.slice(0, 4))}`);
     this.store_log.scpu = this.scpu_registers();
+  }
+  // S-BOOTSTAGE: the boot's first stage readied, its bit (bit 0) set in the stages' ready word (fact 'boot.stage',
+  // src/fw/facts.mjs bootState) before the store's start, as the boot's stage step would have set it (E129: the stage
+  // step for stage 1 in the init task's chain; E143: the per-segment step for segment 1, D), which the lab, ending the
+  // init task (src/lab/kernel.mjs), does not run. The lab's image holds every stage's code, so the stage is in place;
+  // the step's other work is not done (E129: the stage's loaded mark, the current stage, the region set-up of a block
+  // the lab does not model and the stage's hook list, empty for stage 1, D). E129's settings flash read waits for the
+  // bit (2 ms sleeps, no timeout, D), and without it the store's registry bootstrap blocked (X); E143's and the other
+  // bodies' starts test it at most and run as before with it (X: E143's screens, bin/modelcheck.mjs). The later stages
+  // stay unset (?: which of their tests the lab's sessions reach). The addresses are in docs/model-survey.md (E129)
+  boot_stage() {
+    const word = bootFacts().stage, b = this.sim.read(word, 1)[0];
+    if (b & 1) throw new MenuError(`S-BOOTSTAGE: the stage word ${h8(word)} has stage 1's bit before the store's start`);
+    this.sim.write(word, Uint8Array.of(b | 1));
+    this.boot_staged = true;
   }
   // The sub-CPU's own firmware at the far end of the link (src/lab/scpum4.mjs; docs/om1-scpu-spec.md section 8 step 6),
   // opt-in (env.scpu 'native', node's OM_EMU_SCPU=native) on a body whose SCPU image the STM32L4 machine is known to

@@ -624,14 +624,14 @@ export const MODELS = {
     g4set: G4SET_UNCHECKED,
   },
   E133: {
-    name: 'E-PL9', bin: 'OLY_E_133_1101_0000_0000.BIN', version: '1.1', res_block: 'blk01900000.OE.0101.bin',
+    name: 'E-PL9', bin: 'OLY_E_133_1101_0000_0000.BIN', version: '1.1', res_block: 'blk01900000.OE.0101.bin', checked: true,
     rom_len: 26214336, rom_sha256: '8e39c335d54fd8ddea189db82fe708159f43f9995bba42c2cd47dd22b8814267',
     // the reset head's jump into the run-time copy at 0x500000b6: mov 0x604000f9,a0; jmp (a0) (D)
     image_base: 0x60400020,
     res_len: 21456352, res_sha256: 'd777456e3c2e41db6a55458cb8ec37d1a6589391f8103b3ec38be7cae59aaa43',
     // TFT 1.037M dots; no EVF
     panels: { tft: [720, 480], evf: null },
-    card_fs: { native: false, why: 'its start stops before the application (docs/ROADMAP.md, Multi-model next stops); the rule finds the seams, not run' },
+    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
     board: { family: 'E144' },
     // the map from E143 pairs 1.04M instructions; from E142 2.24M with 122 conflicts, from E140 2.35M (120), from E125
     // 5.20M (84), from E145 2.04M (79); through E142 120 of the overrides carry (60 nulls) and 12 fail, through E140

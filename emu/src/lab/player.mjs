@@ -364,6 +364,10 @@ export class Player {
     if (a.touch === 'gui') used.push('S-CAFWD', 'S-TOUCHMAP');
     if (a.us_clock === 'lab') used.push('A-USLAB');
     if (this.scene_used) used.push('S-SCENE', 'H-REQ');                                      // the image sensor stand-in's live view
+    if (this.session?.dpc_init) used.push('H-DPCINIT', 'A-DPC-1');                         // the deferred calls' init at the bring-up
+    if (this.session?.power_tid) used.push('H-PWRTASK');                                    // the power task started
+    if (this.session?.boot_key !== undefined) used.push('S-BOOTKEY');                       // UI_IN's boot key: the power switch
+    if (this.session?.lab?.boot_staged) used.push('S-BOOTSTAGE');                          // the boot's first stage readied
     if (this.session?.lab?.iic_answered) used.push('S-IICWAIT');                            // a body whose firmware waits on the IIC bus
     if (this.session?.camapp?.dispsync_released) used.push('S-DISPSYNC');                   // a body whose GUI synced its display updates
     if (this.session?.camapp?.subject?.used) used.push('S-SUBJECT');                         // subject detection's frames drawn (subject.mjs)

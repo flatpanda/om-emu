@@ -15,7 +15,7 @@ import { Accelerometer } from './acc.mjs';
 import { Storage, STORAGE } from './storage.mjs';
 import { NativeLens } from './lens.mjs';
 import { imageView } from '../fw/image.mjs';
-import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143 } from '../fw/facts.mjs';
+import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143, DPC_E143 } from '../fw/facts.mjs';
 import * as D from './display.mjs';
 import * as IRQ from './irq.mjs';
 import * as K from './kernel.mjs';
@@ -872,6 +872,7 @@ export class PlaySession extends N.NavSession {
     const lab = this.lab, o = this.opts;
     lab.play_init(o);
     this.begin('play-bring-up');
+    if (!this.lens && lab.sim.m.devices.dpc) this.dpc_bring_up();
     const tid = [];
     for (const [t, [e]] of lab.nk.tasks()) if (e === UI_IN) tid.push(t);
     if (tid.length !== 1) throw new PlayError(`UI_IN: static tasks with entry ${h8(UI_IN)}: ${show(tid)}`);
@@ -880,6 +881,7 @@ export class PlaySession extends N.NavSession {
     if (lab.sim.u32(wp) || lab.sim.u32(rp)) throw new PlayError(`UI_IN ring pointers already set: ${h8(lab.sim.u32(wp))} ${h8(lab.sim.u32(rp))}`);
     lab.call(UI_IN_RING_INIT, null, null, null, 10);
     if (lab.sim.u32(wp) !== start || lab.sim.u32(rp) !== start) throw new PlayError('H-UIINRING: the ring init did not set the ring pointers');
+    this.boot_key_bring_up();
     lab.lt.allow.add(UI_IN);
     const [rc] = lab.nk.svc('act_tsk', { d0: this.uiin_tid });
     if (rc !== K.E_OK) throw new PlayError(`H-UIIN: act_tsk(${this.uiin_tid}) = ${rc}`);
@@ -901,6 +903,7 @@ export class PlaySession extends N.NavSession {
     if (o.mutant !== 'no-aeinit') this.aeinit_bring_up();   // without it the interpolation's div fault comes back
     if (MODEL_INFO.acc) this.acc_bring_up();
     if (this.storage_runs()) this.storage_bring_up();
+    if (fact('power.task', null) != null) this.power_bring_up();          // (null or undefined: no power task)
     if (this.lens) this.lens.bring_up();
     this.end('play-bring-up', 'bring-up', [], [], { idle_codes: this.idle_codes.map(h8), ...(this.storage && { storage: { ...this.storage.status(), log: this.storage.take_log() } }),
       ...(this.lens && { lens: { ...this.lens.status(), log: this.lens.take_log() } }) });
@@ -912,6 +915,55 @@ export class PlaySession extends N.NavSession {
     lab.gui_adopt();                                 // H-GUIBYAPP
     this.end('S-CAMAPP start', 'camapp', [], [], { camapp: this.camapp.status() });
     if ((o.start ?? 'shooting') === 'menu') { this.key('menu', 'down'); this.key('menu', 'up'); }
+  }
+  // H-DPCINIT: the deferred calls' init (fact 'dpc.init', src/fw/facts.mjs deferredCalls), which the boot head runs
+  // before the kernel and the lab does not, natively at the bring-up on a board with the deferred-call triggers
+  // (src/dev/dpc.mjs, board dpc): the call rings cleared, the six trigger words written 0, their IRQs attached (the
+  // first two on every core, disabled until a post enables them). A post then raises its IRQ, and the handler runs the
+  // call at the MN's next idle point (A-DPC-1). With the native lens the lens's bring-up runs it (src/lab/lens.mjs). On
+  // the E144 family's board the triggers were lab-stub words before, which kept a post's 1 and raised nothing: E132's
+  // start posts the send of its first serial request so (X; docs/model-survey.md)
+  dpc_bring_up() {
+    const lab = this.lab, dev = lab.sim.m.devices.dpc, writes = dev.writes, init = fact('dpc', DPC_E143).init;
+    if (writes) throw new PlayError(`H-DPCINIT: ${writes} trigger writes before the deferred calls' init (words ${show([...dev.words])}): a post before the bring-up`);
+    refuseUnmapped(init, 'H-DPCINIT');
+    lab.call(init, null, null, null, 200000);
+    const missing = dev.cfg.irqs.filter((n) => !lab.sim.u32(IRQ.HANDLER_TABLE + 4 * n));
+    if (dev.writes - writes !== dev.cfg.irqs.length || dev.words.some((w) => w) || missing.length) {
+      throw new PlayError(`H-DPCINIT: after ${h8(init)}: ${dev.writes - writes} trigger writes, words ${show([...dev.words])}, IRQs without a handler ${show(missing)}`);
+    }
+    this.dpc_init = true;
+  }
+  // H-PWRTASK: the power task (fact 'power.task', src/fw/facts.mjs powerTask), which the boot starts and the lab, ending
+  // the init task, did not: started natively at the bring-up with act_tsk and settled. Its entry runs the power
+  // module's init, the internal charger's with it (the charger's IIC channel configuration and its completion flag,
+  // which the charger's requests use), and waits on its queue (X: E132). E132's camera application start makes the
+  // charger's requests, whose transfer computed its channel's clock divisor from the unset configuration and divided
+  // by zero before (X; docs/model-survey.md)
+  power_bring_up() {
+    const lab = this.lab, entry = fact('power.task', null);
+    const ids = [...lab.nk.tasks()].filter(([, [e]]) => e === entry).map(([t]) => t);
+    if (ids.length !== 1 || lab.nk.state(ids[0]) !== 0x10) throw new PlayError(`H-PWRTASK: static tasks with entry ${h8(entry)}: ${show(ids)}, not one dormant`);
+    lab.lt.allow.add(entry);
+    const [rc] = lab.nk.svc('act_tsk', { d0: ids[0] });
+    if (rc !== K.E_OK) throw new PlayError(`H-PWRTASK: act_tsk(${ids[0]}) = ${rc}`);
+    this.settle('H-PWRTASK');
+    if (lab.nk.state(ids[0]) !== 4) throw new PlayError(`H-PWRTASK: the power task ${ids[0]} is ${show(lab.task_states())} after its start, not waiting`);
+    this.power_tid = ids[0];
+  }
+  // S-BOOTKEY: UI_IN's boot key (fact 'boot.key', src/fw/facts.mjs bootState), the code of the key that started the
+  // camera, which UI_IN's module init records from the sub-CPU's wake factor (its call of the recording init does not
+  // run, H-UIINRING), set to the power switch's code (CONTROLS power, 0x000C): the session's camera is started by its
+  // power lever or button. The camera application's wake-up judgement maps that code to API_WUI_POWER_BUTTON and
+  // starts the shooting service from it (D). With the word at 0, the judgement's default is a battery insertion
+  // (API_WUI_INSERT_BATTERY), and E133's start went to the boot service that creates no GUI (X); E130 and eight other
+  // bodies map that default to the power button while module 9 is in state 2 (S-TAKEOVER, D). The addresses are in
+  // docs/model-survey.md (E133)
+  boot_key_bring_up() {
+    const lab = this.lab, word = MM.bootFacts().key, key = BY_ID.get('power').uiin[3];
+    if (lab.sim.u32(word) !== 0) throw new PlayError(`S-BOOTKEY: UI_IN's boot key ${h8(word)} is 0x${lab.sim.u32(word).toString(16)} before UI_IN's start`);
+    lab.sim.write(word, pack('<I', key));
+    this.boot_key = key;
   }
   // H-SCPUIRQ: what the SCPU init (not run) does for the event word: the ports at the idle image's levels, their
   // events cleared as the init clears them (127 to the event word), IRQ 320 attached to its handler at the init's level

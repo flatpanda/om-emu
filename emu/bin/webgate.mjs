@@ -28,7 +28,8 @@
 //   page sent (wall fields removed); screenshots. Then a paced page from the cache
 //   (idle wall): 10 lab seconds, the real-time ratio. Then the page's life cycle (B6b): files the Worker refuses, then
 //   E143 with the debug API (tokens), the Card, HDMI and session options panel (the card read with refs/fat.mjs, Take
-//   out and Put in, the HDMI control without the port) and Quit.
+//   out and Put in, the HDMI control without the port), the EVF layout (LV to the EVF and back: the screen's class evf
+//   and the canvas size follow the frames' device) and Quit.
 // - B7: every network request of the page and its Workers (Network domain, auto-attached Worker sessions) is a GET to
 //   the gate's own origin with no body.
 // Firmware-derived output stays under emu/out/web/. Chrome runs in its own process group with a temporary profile
@@ -523,6 +524,20 @@ if (!argv.includes('--skip-page') && !QUICK) {
   const hdmi = await life.ev(`(() => ({ plug: document.getElementById('hdmi-plug').disabled, unplug: document.getElementById('hdmi-unplug').disabled, text: document.getElementById('hdmi-state').textContent }))()`);
   if (!hdmi.plug || !hdmi.unplug || !hdmi.text.startsWith('no HDMI port')) fail(`B6b: the HDMI control without the port: ${JSON.stringify(hdmi)}`);
   log(`page life cycle: Card panel ${shown ?? '-'} -> out: ${out ?? '-'} -> back: ${back ?? '-'}; HDMI: ${hdmi.text}`);
+  // the EVF layout: LV (V) switches to the EVF and back; the screen takes the class evf with the first frame drawn
+  // from the EVF (its X-Device), at the EVF composite's size, and drops it with the first frame from the TFT
+  const layout = `(() => { const p = window.__playPage, s = p.status, d = p.drawn, c = document.getElementById('cv'); return s && d && s.phase === 'running' && s.queue === 0 && d.seq === s.frame_seq ? { device: s.device, drawn: d.device, evf: document.getElementById('screen').classList.contains('evf'), w: c.width, h: c.height } : null; })()`;
+  await life.ev('document.activeElement && document.activeElement.blur(), true');
+  const lv = async (want) => {
+    await life.S('Input.dispatchKeyEvent', { type: 'keyDown', code: 'KeyV', key: 'v', windowsVirtualKeyCode: 86 });
+    await sleep(120);
+    await life.S('Input.dispatchKeyEvent', { type: 'keyUp', code: 'KeyV', key: 'v', windowsVirtualKeyCode: 86 });
+    return until3(`(() => { const x = ${layout}; return x && x.device === '${want}' && x.drawn === '${want}' ? x : null; })()`, 60000);
+  };
+  const toEvf = await lv('evf'), toTft = await lv('tft');
+  if (!toEvf || !toEvf.evf || toEvf.w !== 1600 || toEvf.h !== 1200) fail(`B6b: the EVF layout after LV: ${JSON.stringify(toEvf)} (want the class evf on a 1600 x 1200 frame from the EVF)`);
+  if (!toTft || toTft.evf || toTft.w !== 900 || toTft.h !== 600) fail(`B6b: the TFT layout after LV again: ${JSON.stringify(toTft)} (want no class evf on a 900 x 600 frame from the TFT)`);
+  log(`page life cycle: LV -> ${JSON.stringify(toEvf)}; LV -> ${JSON.stringify(toTft)}`);
   await life.ev(`document.getElementById('quit').click(), true`);
   const answers = [];
   for (let i = 0; i < 6; i++) { await sleep(500); answers.push(await life.evWithin(`(() => ({ phase: window.__playPage.status.phase, ovl: document.getElementById('ovl').textContent }))()`, 5000)); }

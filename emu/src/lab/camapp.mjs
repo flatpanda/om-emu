@@ -54,7 +54,13 @@
 //              local handler is ever registered (the request that would add one is never built, on the camera too), so
 //              every transaction takes the remote path to the active state's components, where the shooting component
 //              CmpSht_ShootingComponent_NEW answers TRA 990 and 991; it runs only with the HLS components (camapp 2),
-//              and the remote channel answers 0xf0000001 (docs/hle-gaps.md 4.1.2, D)
+//              and the remote channel answers 0xf0000001 (docs/hle-gaps.md 4.1.2, D). The request is consumed as the
+//              exec consumes one itself: its senders allocate it (operator new) and leave it to the exec, which deletes
+//              it through its own vt[1] (the event's delete, which honours its delete-after-consume flag) where a
+//              local handler took it or no receiver is there, and hands it to the receiver on the remote path (D); so
+//              S-TRAACK, in the remote receiver's place, deletes it through vt[1] natively before it returns (I: that
+//              the receiver deletes it once dispatched). Without it every request stayed allocated (X: about 5 blocks
+//              a second on the idle shooting screen, getHistogramData's 40-byte events)
 //   S-RELSEQ   the modules' notifications of a release, as the callbacks the HLS shooting reactive posts for them
 //              (0x50af4451, CBC_SHOOTING_COMMON): S1 down -> START_FOCUS, END_FOCUS(1, or 0 when the S-SCENE live view
 //              is on and nothing focusable is under its AF point); S2 down -> START_SHOOTING_PICTURE, START_EXPOSE, then
@@ -162,6 +168,8 @@ const OLYQEWR = A(0x5002C151), API_SEND_RETURN = A(0x503EBA07);
 // comment) and image-event flag (a0, as stopRecView passes it)
 const DISPSYNC_REQUEST = 3, DISPSYNC_OFF = 0, DISPSYNC_PANELS = 2, DISPSYNC_KIND = 1, DISPSYNC_IMAGE = 1;
 const TRA_EXEC_CALLS = A(0x50AF7CB9), TRA_EXEC_CALL = A(0x50AF7CBE);
+// S-TRAACK: the request's vtable slot the exec deletes a consumed request through (docs/hle-gaps.md 4.1.2, D)
+const REQUEST_DELETE_SLOT = 1;
 const SHOOT_POST = A(0x50AF4451), SHOOT_REACTIVE_VT = A(0x60DFF400);
 const HEAP = A(0x62424700), HEAP_END = A(0x6268D380);
 // the callbacks' ids, by name in the build's CBS name table (src/fw/facts.mjs cbsIds): a build may number one
@@ -341,6 +349,7 @@ export class CamApp {
     this.play_pending = [];    // S-PLAYSEQ: play requests to finish after the step
     this.play_cur = null;      // S-PLAYCOMP: the index of the image shown
     this.play_exec = null;     // S-PLAYSEQ: the play request whose transaction runs next
+    this.tra_deleted = 0;      // S-TRAACK: the requests deleted after their exec
     this.components = !!session.opts.camapp_components;   // S-BOOTDONE / S-CPU3: the HLS components run (control camapp 2)
     this.media = null;         // S-MDACTRL / S-MEDIA (media.mjs): with the file system native
     // S-SUBJECT (subject.mjs): subject detection's frames, on a body that gives its facts (models.mjs subject)
@@ -545,7 +554,11 @@ export class CamApp {
       if (b && this.media && (b[0] | (b[1] << 8)) === this.media.f.ctrl.request) this.media.control(req);   // S-MDACTRL
       if (this.play_exec !== null) this.play_answer(this.play_exec);                // S-PLAYSEQ
       this.play_exec = null;
-      if (calls) h.finish_calls(r, { d0: 0 }); else h.finish(r, { d0: 0 });
+      if (!req) { if (calls) h.finish_calls(r, { d0: 0 }); else h.finish(r, { d0: 0 }); return; }
+      // the request consumed: its vt[1] natively, then 0
+      const del = disasm(lab.sim.u32(lab.sim.u32(req) + 4 * REQUEST_DELETE_SLOT));
+      this.tra_deleted += 1;
+      if (calls) h.finish_calls_after(r, del, { a0: req }); else h.finish_after(r, del, { a0: req });
     };
     const sync = fact('display.sync', DISPLAY_SYNC_E143);
     this.dispsync_fns = sync;

@@ -15,6 +15,10 @@
 //                  control camapp 2 starts the HLS components as well (S-BOOTDONE, S-CPU3); OK opens the Super Control
 //                  Panel, MENU opens and closes the menu (S-SETSAVE), PLAY shows playback and returns, the menu stops the
 //                  through image (S-THROUGH), LV switches to the EVF and back with the application re-entering (S-OUTDISP)
+//   heapSession    S-HEAP's live blocks over a long idle on the shooting screen, with the native lens and with S-LENS:
+//                  from HEAP_FROM_S to HEAP_TO_S of lab time no block allocated stays allocated, and S-TRAACK has
+//                  deleted its requests (the histogram's events, about 5 a second); before S-TRAACK deleted them the
+//                  live blocks grew by about 5 a second (docs/hle-gaps.md 4.4.2)
 //   node emu/test/test_camapp.mjs
 import fs from 'node:fs';
 import path from 'node:path';
@@ -167,9 +171,36 @@ export async function camappSession() {
   return { checks, bad };
 }
 
+// the idle's window (lab seconds from the session's start): past the start's one-off allocations (S-LENS's session
+// keeps five blocks it allocates in its first 10 s, X: none of them later)
+const HEAP_FROM_S = 10, HEAP_TO_S = 25;
+export async function heapSession() {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { loadImage, loadBlock, createHash } = await import('../checks/lib/env.mjs');
+  const { Player } = await import('../src/lab/player.mjs');
+  const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+  const env = { rom: loadImage(), resBlock: loadBlock(), createHash, wallClock: () => performance.now() / 1000 };
+  for (const lens of [null, 'stand-in']) {
+    const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, { ...env, ...(lens && { lens }) });
+    pl.open_session();
+    const s = pl.session, lab = s.lab, name = lens ?? 'the native lens';
+    const idle = (to) => { while (lab.lab_time() < to * 1e9) { s.idle_slice(Math.min(to * 1e9, lab.lab_time() + 50e6)); s.frame(); } };
+    idle(HEAP_FROM_S);
+    const live = new Set(lab.heap_sizes.keys()), d0 = s.camapp.tra_deleted;
+    idle(HEAP_TO_S);
+    const kept = [...lab.heap_sizes.keys()].filter((a) => !live.has(a)), deleted = s.camapp.tra_deleted - d0;
+    ok(kept.length === 0 && deleted >= 4 * (HEAP_TO_S - HEAP_FROM_S),
+      `${name}: from ${HEAP_FROM_S} s to ${HEAP_TO_S} s of idle ${kept.length} blocks allocated stay allocated (${kept.slice(0, 8).map((a) => `${lab.heap_sizes.get(a)} bytes`).join(', ')}), S-TRAACK deleted ${deleted} requests; live ${live.size} -> ${lab.heap_sizes.size}`);
+    pl.close_session();
+  }
+  return { checks, bad };
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const r = await camappSession();
-  console.log(`camapp session: ${r.checks - r.bad.length}/${r.checks}`);
-  r.bad.forEach((x) => console.log('  ', x));
-  process.exit(r.bad.length ? 1 : 0);
+  const r = await camappSession(), h = await heapSession();
+  console.log(`camapp session: ${r.checks - r.bad.length}/${r.checks}; the heap over an idle: ${h.checks - h.bad.length}/${h.checks}`);
+  [...r.bad, ...h.bad].forEach((x) => console.log('  ', x));
+  process.exit(r.bad.length || h.bad.length ? 1 : 0);
 }

@@ -133,11 +133,11 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 }
 // the camera application running natively (S-CAMAPP and its stand-ins): S1, S2 and the rec view in a play session
 {
-  const { camappSession } = await import('../test/test_camapp.mjs');
-  const ca = await camappSession();
-  console.log(`camera application (S-CAMAPP) in play: ${ca.checks - ca.bad.length}/${ca.checks}`);
-  ca.bad.forEach((x) => console.log('  ', x));
-  bad += ca.bad.length;
+  const { camappSession, heapSession } = await import('../test/test_camapp.mjs');
+  const ca = await camappSession(), hp = await heapSession();
+  console.log(`camera application (S-CAMAPP) in play: ${ca.checks - ca.bad.length}/${ca.checks}; S-HEAP over an idle: ${hp.checks - hp.bad.length}/${hp.checks}`);
+  [...ca.bad, ...hp.bad].forEach((x) => console.log('  ', x));
+  bad += ca.bad.length + hp.bad.length;
 }
 // the SCPU interface's clock and ports, the link's pins and the sub-CPU's model (S-SCPUDEV) without firmware, then the
 // link at a play session's start: E143 here, E146, E147, E139 and E134

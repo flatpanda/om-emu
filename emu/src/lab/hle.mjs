@@ -14,6 +14,9 @@ export const HEAP = A(0x62424700), HEAP_END = A(0x6268D380);
 export const SAVED = { d2: 0x22222222, d3: 0x33333333, a2: 0xaaaa2222, a3: 0xaaaa3333 };
 export const MEMCPY = A(0x3FFE18EA), MEMSET = A(0x3FFE19F6), MALLOC = A(0x50002FDC), FREE = A(0x5000300E);
 export const CORE_INDEX = 0x8050;
+// finish_calls_after's frame below the hooked function's return address: the 4-byte slot fn's `calls` writes, with
+// room above it for what fn may store there (16 bytes; that fn needs no more than 12 is I)
+const CALLS_AFTER_FRAME = 16;
 export const HLE_WINDOW = 0x89A30000;
 export { FirmwareError, REGS, SP, BASE };
 
@@ -162,6 +165,24 @@ export class HLE {
     if (this.sim.packet('G' + packRegs(r)) !== 'OK') throw new AssertionError('');
   }
   finish_calls(regs, results = {}) {
+    this._reached_by_calls(regs);
+    this.sim.write(RETURN, bytes(0xf0, 0xfc));
+    const r = { ...regs, pc: RETURN, fault: 0 };
+    for (const [name, value] of Object.entries(results)) r[name] = value >>> 0;
+    if (this.sim.packet('G' + packRegs(r)) !== 'OK') throw new AssertionError('');
+  }
+  // finish_after() for a function reached by `calls`: fn(args) through `calls` from a frame of CALLS_AFTER_FRAME bytes
+  // below the return address the hooked function's `calls` left at (sp), which fn's own `calls` would overwrite, then
+  // 0 in d0 and `rets` to that address
+  finish_calls_after(regs, fn, args) {
+    this._reached_by_calls(regs);
+    refuseUnmapped(fn, 'finish_calls_after');
+    this.sim.write(RETURN, cat(bytes(0xfc, 0xff), u32le(runtime(fn) - RETURN), bytes(0xf8, 0xfe, CALLS_AFTER_FRAME, 0x00, 0xf0, 0xfc)));
+    const r = { ...regs, pc: RETURN, fault: 0, sp: (regs.sp - CALLS_AFTER_FRAME) >>> 0 };
+    for (const [name, value] of Object.entries(args)) r[name] = value >>> 0;
+    if (this.sim.packet('G' + packRegs(r)) !== 'OK') throw new AssertionError('');
+  }
+  _reached_by_calls(regs) {
     const ra = regs.mdr, here = regs.pc;
     const top = this.sim.u32(regs.sp);
     if (top !== ra) {
@@ -173,10 +194,6 @@ export class HLE {
       let h = ''; for (const b of before) h += b.toString(16).padStart(2, '0');
       throw new FirmwareError(`stub at ${where(here)} not reached by CALLS (mdr ${where(ra)}, bytes before ${h})`);
     }
-    this.sim.write(RETURN, bytes(0xf0, 0xfc));
-    const r = { ...regs, pc: RETURN, fault: 0 };
-    for (const [name, value] of Object.entries(results)) r[name] = value >>> 0;
-    if (this.sim.packet('G' + packRegs(r)) !== 'OK') throw new AssertionError('');
   }
   call(fn, regs = null, stack = null, frame = null, limit = 5000) {
     refuseUnmapped(fn, 'call');

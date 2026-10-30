@@ -352,6 +352,22 @@ export function guiTake(img) {
   if (found.length > 1) throw new Error(`guiTake: message takes at ${found.map((o) => h8(0x50000000 + o)).join(', ')}, want one`);
   return found.length ? 0x50000000 + found[0] : undefined;
 }
+// The GUI caller's word (fact 'menu.caller', and through bin/port.mjs the place of E143's GUICALLER_E143 0x60368b88,
+// src/lab/menu.mjs GUICALLER, whose object's first two bytes are the GUI state): the GUI task, after its take, hands
+// the message to the caller object, `mov (396,sp),d0; mov (408,sp),a1; mov (412,sp),d1; mov (abs32),a0; call` (E143
+// 0x510c2ab7, 0x89 bytes after the take; E122 0x50b98363, E118 0x50b933c8, 0x4f after it, D). Found once after the
+// take within GUI_CALLER_SPAN bytes on each of the 18 expanded images, at the place every port had for E143's but
+// E118's and E120's, which their maps placed by a section delta at no word their code loads (E118 0x615e9af4, where
+// their GUI task loads 0x615e9970; E120 0x615e8358, where it loads 0x615e81d4; X, a byte scan). Returns the word, or
+// undefined without a take; throws for a take with no hand-over after it.
+const GUI_CALLER = [0xfa, 0xb4, 0x8c, 0x01, 0xfa, 0xb1, 0x98, 0x01, 0xfa, 0xb5, 0x9c, 0x01, 0xfc, 0xa0], GUI_CALLER_SPAN = 0x100;
+export const GUICALLER_E143 = 0x60368B88;
+export function guiCaller(img, take) {
+  if (take === undefined) return undefined;
+  const t = take - 0x50000000;
+  for (let o = t; o < t + GUI_CALLER_SPAN; o++) if (bytesAt(img, o, GUI_CALLER)) return u32(img, o + GUI_CALLER.length);
+  throw new Error(`guiCaller: no hand-over to the caller object within 0x${GUI_CALLER_SPAN.toString(16)} bytes after the take ${h8(take)}`);
+}
 
 // Whether the SCPU keeps the camera's backup words and clock (fact 'scpu.backup'): the image holds the trace names of
 // those requests, "ScpuBkupW" (with "ScpuBkupR", "SctimeWrite"; E143's poster 0x5005cd17 sends them, D). E143, E146,
@@ -2945,7 +2961,7 @@ export function readPlacedFacts({ img, at }) {
 // sram, sram_size), resLoad its resource block's load address (src/lab/resources.mjs loadAddress). Returns {board:
 // {core_byte, library, preload, vector_page, dram_size}} for a family whose reset head copies with the flash-copy
 // routine (only vector_page and dram_size for reset_head null, the E143 family's), {res: {font_limit, string_limit}},
-// {menu: {list_menu, tab_memory, page_memory, take}}, {kernel: {cpus, handlers}}, {errlog: {entry}}, {scpu: {backup}}, {display:
+// {menu: {list_menu, tab_memory, page_memory, take, caller}}, {kernel: {cpus, handlers}}, {errlog: {entry}}, {scpu: {backup}}, {display:
 // {change_task, change_entry, queue_word, queue_id, task_init, frame_wait, timer_sleep, sync, face_colour}}, {timer:
 // {reload_less_one}}, {dial: {select, select_end, table_ptr, table0}}, {touch_panel: {driver}}, {lens: {mount}}, {iic:
 // {waits}}, {touch: {i2c_write, i2c_read}}, {touch_api: {open}}, {shooting: {start, end, auto_through}}, {func_direct:
@@ -2966,7 +2982,8 @@ export function readFacts({ img, family, resLoad }) {
   const { font, string } = resLoader(img, resLoad);
   facts.res = { font_limit: font.limit, string_limit: string.limit };
   const take = guiTake(img);
-  facts.menu = { list_menu: listMenu(img), ...menuMemory(img), ...(take !== undefined && { take }) };
+  const caller = guiCaller(img, take);
+  facts.menu = { list_menu: listMenu(img), ...menuMemory(img), ...(take !== undefined && { take, caller }) };
   const cpus = kernelCpus(img), handlers = handlerTables(img, cpus);
   facts.kernel = { cpus, ...(handlers !== undefined && { handlers }) };
   facts.errlog = { entry: errlogEntry(img) };
@@ -3022,8 +3039,8 @@ export function readFacts({ img, family, resLoad }) {
 // The E143 addresses the rules place in a body (bin/port.mjs rulePairs, src/fw/place.mjs placer): E143 address -> {to,
 // how}. rulePlaces(facts), from readFacts' result: E143's touch-panel I2C functions at the traced ones (touchI2c, how
 // 'touch-trace'); the shooting service's start and end at their traces' loads (shootingService, 'service-trace'); the
-// GUI task's take after its receive loop (guiTake, 'take-loop'); the function direct start after its checks
-// (funcDirect, 'direct-checks'); the event broker init by its opening and slot loop (brokerInit, 'broker-slots'); the
+// GUI task's take after its receive loop (guiTake, 'take-loop') and its caller word after it (guiCaller,
+// 'take-caller'); the function direct start after its checks (funcDirect, 'direct-checks'); the event broker init by its opening and slot loop (brokerInit, 'broker-slots'); the
 // error log by its test of the id's module (errlogEntry, 'module-test'); the interrupt handler tables at the attach's
 // stores (handlerTables, 'attach-stores'); the remaining-shots query at the callee whose
 // result the application's getAvailableShootCount stores (shotsQuery, 'shots-method'); the touch panel's open by its
@@ -3035,6 +3052,7 @@ export function rulePlaces(facts) {
     ...Object.entries(facts.touch ?? {}).map(([k, to]) => [TOUCH_E143[k], { to, how: 'touch-trace' }]),
     ...Object.entries(facts.shooting ?? {}).map(([k, to]) => [SHOOTING_E143[k], { to, how: 'service-trace' }]),
     ...(facts.menu.take !== undefined ? [[GUI_TAKE_E143, { to: facts.menu.take, how: 'take-loop' }]] : []),
+    ...(facts.menu.caller !== undefined ? [[GUICALLER_E143, { to: facts.menu.caller, how: 'take-caller' }]] : []),
     ...(facts.func_direct ? [[FUNC_DIRECT_E143, { to: facts.func_direct.run, how: 'direct-checks' }]] : []),
     [BROKER_E143, { to: facts.broker.init, how: 'broker-slots' }],
     [ERRLOG_E143, { to: facts.errlog.entry, how: 'module-test' }],

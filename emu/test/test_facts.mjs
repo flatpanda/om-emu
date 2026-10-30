@@ -21,7 +21,7 @@
 //               touch panel's traced I2C functions against TOUCH_FOUND, the device open's frame wait and the
 //               software-timer sleep against FRAME_WAIT_FOUND and TIMER_SLEEP_FOUND, the shooting service's traces
 //               against SHOOTING_FOUND, the AE init against AE_FOUND and A(), the GUI task's take against TAKE_FOUND,
-//               the kernel's interrupt handler tables against HANDLERS_FOUND, the frame period words against PERIOD_FOUND and A(), the function direct start against DIRECT_FOUND and
+//               its caller word against CALLER_FOUND and A(), the kernel's interrupt handler tables against HANDLERS_FOUND, the frame period words against PERIOD_FOUND and A(), the function direct start against DIRECT_FOUND and
 //               A(), the event broker init against BROKER_FOUND and A(), the error log against ERRLOG_FOUND and A(),
 //               the touch panel's open against TP_OPEN_FOUND and A(), the play component's wrappers against
 //               WRAPPERS_FOUND and A(), the USB-disconnect power-off against POWER_OFF_FOUND, the power manager's
@@ -325,6 +325,10 @@ const SHOOTING_FOUND = { E139: { start: 0x5081C17B, end: 0x5081271B, auto_throug
 // the compare after the load, where its hand override had the load 0x50d04700; E137 0x50c5ee9a; E118 0x50b93379 and
 // E120 0x509140e2, the compares after the loads of their second loops, whose a3 is set before the first)
 const TAKE_FOUND = { E143: 0x510C2A2E, E144: 0x50D1C54D, E139: 0x50CC49A6, E134: 0x50D04704, E137: 0x50C5EE9A, E118: 0x50B93379, E120: 0x509140E2 };
+// The GUI caller's word (menu.caller; src/fw/facts.mjs guiCaller): E143's as the lab gives it (src/lab/menu.mjs
+// GUICALLER), E122's as its port placed it, and E118's and E120's as their GUI tasks load it after the take (D: E118
+// 0x50b933d4, E120 0x5091413d), where their ports had placed none of their code's words
+const CALLER_FOUND = { E143: 0x60368B88, E122: 0x6160C04C, E118: 0x615E9970, E120: 0x615E81D4 };
 // The kernel's interrupt handler tables (kernel.handlers; src/fw/facts.mjs handlerTables): E143's as the lab gives it
 // (src/lab/irq.mjs HANDLER_TABLE), the others' where their ports placed E143's before the rule (E146 and E147 at E143's
 // own address, kept), each the first of the attach's stores (D: E144 0x5003408b, E122 0x5004c82e); E118's and E120's,
@@ -552,7 +556,7 @@ const SIO_FOUND = { E132: { tx_start: 0x500506CB, rx_start: 0x500509BE, done: [0
 const E143_FACTS = {
   board: { vector_page: 0x60030000, dpc: { triggers: 0x9B880044, irqs: [53, 54, 55, 56, 57, 58] }, dram_size: 384 << 20 },
   res: { font_limit: E143_LOADER.font[1], string_limit: E143_LOADER.string[1] },
-  menu: { list_menu: true, tab_memory: 1881, page_memory: 1882, take: 0x510C2A2E },
+  menu: { list_menu: true, tab_memory: 1881, page_memory: 1882, take: 0x510C2A2E, caller: CALLER_FOUND.E143 },
   kernel: { cpus: 4, handlers: HANDLERS_FOUND.E143 }, errlog: { entry: ERRLOG_FOUND.E143 }, scpu: { backup: true },
   display: { change_task: true, change_entry: null, queue_word: 0x600432D4, queue_id: 0x88, task_init: 0x501C2F13, init_2nd: null, frame_wait: 0x60043088, timer_sleep: 0x501C2E94,
     sync: { request: 0x503E4DD5, image_sync: 0x503E50EC, sync_set: 0x50AB43CD } },
@@ -761,6 +765,9 @@ export function factsTests() {
       ok(!off.length, `${code}: A() of E143's play component wrappers ${hx(off)}, not among the rule's`);
     }
     if (Object.hasOwn(TAKE_FOUND, code)) ok(got.menu?.take === TAKE_FOUND[code], `${code}: menu.take ${hx(got.menu ?? got)}, found ${hx(TAKE_FOUND[code] ?? 'none')}`);
+    if (Object.hasOwn(CALLER_FOUND, code)) ok(got.menu?.caller === CALLER_FOUND[code], `${code}: menu.caller ${hx(got.menu ?? got)}, found ${hx(CALLER_FOUND[code])}`);
+    // every body with a take has its caller where its port places E143's (the rule's place)
+    if (got.menu?.take !== undefined && PORTS[code]) ok(PORTS[code][0x60368B88] === got.menu.caller, `${code}: A(GUICALLER) ${hx(PORTS[code][0x60368B88])}, the rule's ${hx(got.menu.caller)}`);
     if (Object.hasOwn(HANDLERS_FOUND, code)) ok(got.kernel?.handlers === HANDLERS_FOUND[code], `${code}: kernel.handlers ${hx(got.kernel ?? got)}, found ${hx(HANDLERS_FOUND[code])}`);
     // the frame period words at the port's places of the vtotal functions, and the port's A() of E143's words
     const pf = PERIOD_FOUND[code];

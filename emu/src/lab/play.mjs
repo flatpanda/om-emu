@@ -336,12 +336,13 @@ export const POSITION_SWITCHES = [];
 export const IDLE_SWITCH_STATES = [[0x000C, 0], [0x0400, 1]], PRODUCER_CODE = 0x0501;
 export const STATE_SWITCHES = [];             // [[group, byte, bit, level]] of IDLE_SWITCH_STATES, apply_uiin_layout
 // The dial's position at the session's start: P's (position 0 where the build names no P). The start takes its mode
-// from the store, P on the blank store (setting 24 MODE_EXPOSE 3, the P screen; X), and the application changes its
-// mode on the dial's change event only: the GUI's handler calls the changeMode API (0x10216: 0x50b4e4cc -> the user-setting
-// manager's 0x50b7b01c, whose other caller 0x50b7bc72 is not on the start's path; D), and no changeMode runs before the
-// first dial input, although the application polls the dial from the start (X). UI_IN's first scan decodes the dial at
-// the bring-up, before the application exists. Whether the camera's start reads the dial (and a store saved at another
-// mode, S-NVRAM's, then starts there) is ?
+// from the store, P on the blank store (setting 24 MODE_EXPOSE 3, the P screen; X), and no changeMode runs before the
+// first input although the application polls the dial from the start (X); the GUI's dial handler calls the changeMode
+// API (0x10216: 0x50b4e4cc -> the user-setting manager's 0x50b7b01c, whose other caller 0x50b7bc72 is not on the
+// start's path; D). UI_IN's first scan decodes the dial at the bring-up, before the application exists. With the dial
+// at position 0 (S) under the P screen the application acted on the mismatch at an Fn lever change: three changeMode
+// calls to S, the menu closed (X, golden's inputs scenario). Whether the camera's start reads the dial (and a store
+// saved at another mode, S-NVRAM's, then starts there) is ?
 export function mode_start() {
   const k = MODE_DIAL.names.findIndex((p) => p.name === 'P');
   return k < 0 ? 0 : k;

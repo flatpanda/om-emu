@@ -1,7 +1,8 @@
 // The power manager and the camera's power-off natively (docs/hle-gaps.md 4.7.4), on a body whose src/fw/models.mjs
 // entry gives power_native (E143, E146, E147), at the addresses src/fw/facts.mjs powerOff reads from its firmware (fact
-// 'power.off'; E143's POWER_OFF_E143 there, with the evidence for every address). At the play bring-up the power manager's task, PWR_MAIN, starts as the boot
-// starter would start it, with the IO expanders it talks to stood in at their tasks' seam; at the power lever's off
+// 'power.off'; E143's POWER_OFF_E143 there, with the evidence for every address). At the play bring-up the power
+// manager's task, PWR_MAIN, starts as the boot starter would start it, with the IO expanders it talks to (where the
+// body has them) stood in at their tasks' seam; at the power lever's off
 // (decoded natively: UI_IN through IRQ 320, H-SCPUPORT; the application takes its code) the lab runs the power-off the
 // firmware's own code makes of it and ends the session at its last write, instead of closing at once (H-POWER).
 //
@@ -10,7 +11,8 @@
 //               would have run it long before (it runs before UI_IN's module init there); then a settle. The init runs
 //               its start-up message through the task's handler on the lab task: a GIO read of the sub-CPU's PC13
 //               (0x82 {45}), the power manager's handshake with the sub-CPU (0x12 {5}, answered by the sub-CPU's own
-//               message 0x12 {5}, which the MN polls), and two writes of the PBH expander's GIO extension (X);
+//               message 0x12 {5}, which the MN polls), and on E143 and E146 two writes of the PBH expander's GIO
+//               extension (X);
 //               PWR_MAIN then waits on its flag for its queue's messages. Checked: the task waiting, every frame of the
 //               start answered, no errlog. The task is the static task whose id the starter's id word holds
 //   S-IOEXP     the IO expanders' tasks, PER_IOEXP and PER_IOEXP_PBH, do not run (their PER_SIO channels, their chips
@@ -20,17 +22,18 @@
 //               for; the GIO extension's write (the PBH's request 1 with the pins' mask, its word, a callback and its
 //               argument) by the callback with the argument, which the API calls itself while the PBH is in its state 5
 //               (I: that the task's completion calls it alike). What the expanders' pins do is not modelled; any other
-//               request stops the session. A body whose power-off sends no expander a command (E147) has none in the lab
+//               request stops the session. A body whose power-off sends no expander a command (E147) has none in the
+//               lab
 //   S-SHUTDOWN  the HLS component that turns EV_POWER_SW_OFF into the shutdown, the camera-common component
 //               (CmpCCom_CameraCommonComponent), is not created in the lab (no HLS component in camapp 1, and camapp
 //               2's bring-up does not create it: X, it never ran). In its place the lab calls the HFW's CameraCommon
 //               object's shutDown(mode, reason) through the object's own vtable slot, as the shell's "sdk api
 //               shutdown" does, with API_SHUTDOWN_NORMAL and API_SHUTDOWN_REASON_BUTTON (the values its usage text
-//               gives; I: the lever's reason), on
-//               the lab task and in lab time: while the call waits, lab time runs to the next event, as an idle slice
-//               does. From there the firmware runs: OlyHfwPower's startShutDown, the settings' save, the RAM log's save,
-//               the file module's power-off, api_system's power-off sequence with the IO expanders' power-off commands,
-//               the GIO extension's pins, the window's ports and wake word, the sub-CPU's 0x85 power-off over the link
+//               gives; I: the lever's reason), on the lab task and in lab time: while the call waits, lab time runs to
+//               the next event, as an idle slice does. From there the firmware runs: OlyHfwPower's startShutDown, the
+//               settings' save, the RAM log's save, the file module's power-off, api_system's power-off sequence with
+//               the IO expanders' power-off commands (and the GIO extension's pins, where the body has them), the
+//               window's ports and wake word, the sub-CPU's 0x85 power-off over the link
 //               (PER_SCPU natively, to S-SCPUDEV or the sub-CPU's own firmware) and, last, 127 into the window's
 //               request word. The session ends at the instruction after that write's call (power.off end)
 //   S-PWRLOG    the RAM log's save to the NAND (2 MiB to its own area): the NAND access is answered done, nothing kept

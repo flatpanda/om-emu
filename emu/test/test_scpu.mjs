@@ -29,7 +29,7 @@
 //              PER_SCPU's order, PER_SCPU waiting with no errlog of its own; H-UIINSCAN's 0x88 where the body has it;
 //              the inbound path natively: 0x08 {0} polled and dispatched to the producer, PC13 high reported as 0x08
 //              {1} and decoded by UI_IN as the switch 0x0400; a body without the link's pins stops at its start; on
-//              a body that runs its power manager and power-off (power.mjs, E143): the power manager's start frames
+//              a body that runs its power manager and power-off (power.mjs: E143, E146, E147): the power manager's start frames
 //              (0x82 {45}, 0x12 {5} and its answer), then the lever's off to the window's last write: 0x85 {1, 0, 0}
 //              answered, the sub-CPU in bkground with pin 102 low, the IO expanders' power-off requests, the session
 //              closed, and the lever's on starting a new one
@@ -398,8 +398,10 @@ export async function scpuSession() {
   if (MODEL === 'E143') {
     ok(JSON.stringify(before) === JSON.stringify(['0x85', '0x06', '0x01', '0x86', '0x88']) && frames[3].reply === '06861c020080' && sl.scpu_replies[0]?.bytes === '1c020080', `E143: 0x06, 0x01, 0x86 with the word read back, then the port scan: ${JSON.stringify(frames)}`);
     ok(frames[2].data === 'e60701010000000500', `E143: the reset date's frame cut to 10 bytes, its status 10501 reaching the sub-CPU as 5: ${frames[2].data}`);
+  }
+  if (MODEL_INFO.power_native) {
     ok(JSON.stringify(pm) === JSON.stringify([{ cmd: '0x82', data: '2d', reply: '04820000' }, { cmd: '0x12', data: '05', reply: null }, { cmd: '0x8f', data: '', reply: '04120500' }]),
-      `E143: the power manager's start reads PC13 (0x82 {45}: 0) and syncs (0x12 {5}, answered by the message 0x12 {5} the MN polls): ${JSON.stringify(pm)}`);
+      `${MODEL}: the power manager's start reads PC13 (0x82 {45}: 0) and syncs (0x12 {5}, answered by the message 0x12 {5} the MN polls): ${JSON.stringify(pm)}`);
   }
   const irq = BOARD.scpu_link.ready.irq, intc = lab.nk.intc;
   ok(intc.level(irq) === 1 << 5 && lab.sim.u32(HANDLER_TABLE + 4 * irq) !== 0, `${MODEL}: PER_SCPU's registration attached pin 102's IRQ ${irq} at level 5: ${intc.level(irq)}`);
@@ -413,20 +415,26 @@ export async function scpuSession() {
   if (MODEL === 'E143') ok(link.channel === 2 && link.config.clock === 6000000, `E143: channel 2 at 6 MHz: ${link.channel}, ${link.config.clock}`);
   if (scans) inboundSession(ok, s, MODEL, G4_SET, G4_IMAGE);
   pl.close_session();
-  if (MODEL_INFO.power_native) powerSession(ok, new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, env), MODEL, EXPECTED_ERRLOG);
+  if (MODEL_INFO.power_native) {
+    const { POWER_OFF } = await import('../src/lab/power.mjs');
+    powerSession(ok, new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, env), MODEL, EXPECTED_ERRLOG, POWER_OFF);
+  }
   return { checks, bad };
 }
 
-// (firmware) The power lever's off on a body that runs its power-off (power.mjs; docs/hle-gaps.md 4.7.4): the firmware
-// from the HFW's shutDown to the window's last write, the session closed after it; the sub-CPU's 0x85 {1, 0, 0}
-// answered, the sub-CPU in bkground (PC13 low) with its link stopped (pin 102 low, polled by the MN); the IO expanders'
-// power-off commands; then the lever's on brings up a new session. The error log may hold only the codes the lab
-// expects (src/lab/display.mjs EXPECTED_ERRLOG): with the native lens the power-off makes two movie time queries,
-// which log the card's 0x39000903 (models.mjs card_fs errlog; X, what asks for them is not read)
-function powerSession(ok, pl, MODEL, EXPECTED_ERRLOG) {
+// (firmware) The power lever's off on a body that runs its power-off (power.mjs; docs/hle-gaps.md 4.7.4; E143, E146,
+// E147): the firmware from the HFW's shutDown to the window's last write, the session closed after it; the sub-CPU's
+// 0x85 {1, 0, 0} answered, the sub-CPU in bkground (PC13 low) with its link stopped (pin 102 low, polled by the MN);
+// the IO expanders' power-off commands on a body with them (E143's and E146's: the GIO extension's two writes from the
+// power manager's start, the body's 6 and the PBH's 5; none on E147); then the lever's on brings up a new session at
+// the first one's screen. The error log may hold only the codes the lab expects (src/lab/display.mjs EXPECTED_ERRLOG):
+// with the native lens the power-off makes two movie time queries, which log the card's 0x39000903 (models.mjs card_fs
+// errlog; X, what asks for them is not read)
+function powerSession(ok, pl, MODEL, EXPECTED_ERRLOG, POWER_OFF) {
   pl.open_session();
-  const s = pl.session, lab = s.lab, dev = lab.scpu_dev, used = pl.stand_ins_in_use();
-  ok(s.power_manager && lab.nk.state(s.power_manager.tid) === 4 && ['H-PWRSTART', 'S-IOEXP', 'S-SHUTDOWN', 'S-PWRLOG', 'H-SCPUPOLL'].every((x) => used.includes(x)),
+  const s = pl.session, lab = s.lab, dev = lab.scpu_dev, used = pl.stand_ins_in_use(), screen = s.screen();
+  const stand = ['H-PWRSTART', 'S-SHUTDOWN', 'S-PWRLOG', 'H-SCPUPOLL', ...(POWER_OFF.ioexp ? ['S-IOEXP'] : [])];
+  ok(s.power_manager && lab.nk.state(s.power_manager.tid) === 4 && stand.every((x) => used.includes(x)) && used.includes('S-IOEXP') === !!POWER_OFF.ioexp,
     `${MODEL}: the power manager waits for its messages, the power-off's stand-ins listed: ${used.filter((x) => /PWR|IOEXP|SHUTDOWN|POLL/.test(x))}`);
   const rec = pl.power('off'), off = rec.power_off, step = s.steps.at(-1).power_off;
   ok(off && JSON.stringify(off.frames) === JSON.stringify([{ cmd: '0x85', data: '010000', reply: '0585010001' }]) && off.ready === 0 && off.request_word === 127 && off.scpu.power === 'bkground',
@@ -434,10 +442,11 @@ function powerSession(ok, pl, MODEL, EXPECTED_ERRLOG) {
   const unexpected = step.errlog.filter((c) => !EXPECTED_ERRLOG.has(Number(c)));
   ok(JSON.stringify(off.pins.slice(-1)) === '["ready 0"]' && step.polls >= 1 && unexpected.length === 0 && pl.session === null && pl.phase === 'off',
     `${MODEL}: the MN polled pin 102 low (${step.polls}), no unexpected errlog (${step.errlog}), the session closed (phase ${pl.phase}): pins ${off.pins.join(' ')}`);
-  ok(JSON.stringify(step.ioexp.map((x) => `${x.expander} ${x.cmd}`)) === JSON.stringify(['pbh 1', 'pbh 1', 'body 6', 'pbh 5']) && step.log.some(([k]) => k === 'pwrlog') && step.log.some(([k]) => k === 'end'),
-    `${MODEL}: the IO expanders' power-off requests (the GIO extension's two writes, the body's 6, the PBH's 5), the RAM log's save, the end: ${JSON.stringify(step.log)}`);
+  const requests = POWER_OFF.ioexp ? ['pbh 1', 'pbh 1', 'body 6', 'pbh 5'] : [];
+  ok(JSON.stringify(step.ioexp.map((x) => `${x.expander} ${x.cmd}`)) === JSON.stringify(requests) && step.log.some(([k]) => k === 'pwrlog') && step.log.some(([k]) => k === 'end'),
+    `${MODEL}: the IO expanders' power-off requests (${requests.length ? 'the GIO extension\'s two writes, the body\'s 6, the PBH\'s 5' : 'none: no IO expanders'}), the RAM log's save, the end: ${JSON.stringify(step.log)}`);
   pl.control({ op: 'power', value: 1 });
-  ok(pl.session !== null && pl.phase !== 'error' && pl.session.screen() === 'shooting', `${MODEL}: the lever's on brings up a new session (${pl.phase}, ${pl.session?.screen()})`);
+  ok(pl.session !== null && pl.phase !== 'error' && pl.session.screen() === screen, `${MODEL}: the lever's on brings up a new session at the first one's screen ${screen} (${pl.phase}, ${pl.session?.screen()})`);
   pl.close_session();
 }
 

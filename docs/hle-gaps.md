@@ -2008,6 +2008,11 @@ and E147; off by default. Addresses are E143's (disassembly notation) unless a b
 - **Next:** an unplug (A-HDMI-1: which of 0x92's bits the transmitter sets when detect and sense fall, and the GIO edge
   type's other bit), a cable in at power-on (whether the pin's type 0 is an edge or a level, ?), the camera
   application's output switch, then the HDMI open and VSC channel 0 in the compositor.
+- **The E118 family's outputs (D, E122):** its DISPLAY OPEN names the device by a code (1 TFT, 2 NTSC, 3 PAL, 4 HDMI,
+  5 VF-2, 6 the built-in EVF, 13 VF-3, the rest HDMI modes; `docs/om1-vsc-spec.md` section 12). NTSC and PAL time the
+  channel at 262 lines of 858, write the TV encoder block `0x99100000` (`0x502fe38a`) and send AUD_EXEC function 36 with
+  the argument 2 on the open and function 37 on the close (`0x502f6ba0`, `0x502f6cf2`; the TV's sound, I). The lab
+  opened NTSC for the EVF until 2026-10-30 (`docs/model-survey.md` finding 35); no video output is opened now.
 
 ### 4.10 USB, PTP and PictBridge
 

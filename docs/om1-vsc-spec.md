@@ -470,3 +470,43 @@ E = 7 u32 pointers P0..P6 (+0..+24) to u16 arrays, then bytes b28..b33. Writes (
 ### 11.4 What the data suggest, and what is unknown
 
 In the entries P0 and P4 rise from 0 to about 1010-1022 (10-bit), P1 and P3 rise to about 14000-15000, P5 falls: CMM1 looks like a curve from a 10-bit code to a wider linear range and CMM2 like a curve back (I). CMMSET1[29:28] = 1 exactly in the states whose output is BT709 (3, 5, 7) (I). Unknown (?): the knot interpolation, the colour domain the curves act in (RGB or YCbCr), the matrix stage with CMMSET1[26:24] = 0 and COEF unwritten, where the stage sits relative to the mixer (before or after, A14), and whether it acts on IMG1 only. The model therefore keeps every CMM register in the never-written class: a composite after ON is FEATURE_UNOBSERVED with 66 errors, and stays so after OFF (the registers stay written). A STILL request (prm_pic_mode 0, any drange) selects state 0 and writes no CMM register as long as no CMM state was set before (byte `0xa32ddb81[ch]` 0); once an ON has run, OFF leaves the 66 written registers and every later composite stays FEATURE_UNOBSERVED (G6). Whether the camera's own live-view request is STILL is open (section 10.10).
+
+## 12. The later kinds: E144 (kind 2) and the E118 family (kind 3)
+
+The later bodies' VSCs are not E143's (`emu/src/fw/board.mjs` FAMILIES, `emu/src/dev/vsc.mjs` kinds 2 and 3). One
+compositor serves both, `emu/src/dev/vsccompose2.mjs`, whose head lists each register's meaning with its evidence;
+this section records what the kind-3 one (E118 E-M5 II, E120 E-M10 II, E122 PEN-F; read on E122, disassembly
+notation) was found to share and not share with kind 2 (2026-10-30, `docs/model-survey.md` findings 35 and 36).
+
+- **Shared (D on E122, X: the same values as E144's):** the video area AREA22 `{hstart << 16 | width}`, AREA23
+  `{vstart << 16 | vstart}` (`+1` in the low half for device code 3), AREA24 the height (halved unless the byte
+  `0xa1c5ca50` is 1, `0x503093cc..0x503093e2`; a field mode, I),
+  stored at `0x50309398..0x503093e2` from the device's getters `0x50309d05` (`{hstart, vstart}`, `{width, height}`,
+  the canvas `{width, height}`):
+  TFT `{30, 8}` 720 x 480 with a 720 x 480 canvas, the built-in EVF `{48, 38}` 1024 x 768 with a 640 x 480 canvas;
+  BG1 (`0x50307b41`); DMA7's enable bits and DMA12..DMA14 from the commit `0x50309dc5`; the strides DMA18..DMA20 = 14
+  (896-byte canvas rows, `0x503098c2`); the plane areas AREA10 / 13 / 16; the OSD scaler words (`0x50308314`
+  horizontal bit 0 and +4, `0x50308389` vertical bit 4 and +12, `4 ceil((src - 1) 1024 / dst)`), four per plane.
+- **Palettes:** three groups by the palette id of the writer `0x50307aea`: id 0, 128 words at `+0x800` / `+0xa00`
+  (the writer fills `+0x800` while bit 16 of `0x1b8` is set and `+0xa00` while it is clear, the commit flips the bit
+  after an upload, `0x50309f0d`); id 1, 32 words at `+0x680`; id 2, 32 words at `+0x600` (both copied whole by the
+  commit, `0x50309ec9..0x50309f05`); `0x700..0x7ff` has a writer of its own (`0x50307b33`), not read for the planes
+  (?). Id 0 holds GUI layer 2's palette (256 entries, 128 uploaded), id 1 layer 1's (32), id 2 layer 0's (32)
+  (`0x50304c05`, `0x50304ce5`, `0x50304db6`; the layer bounds `0x60d46130`). OSD1 takes the display record's osd word
+  2, OSD3 word 0 (`0x50303c6d..0x50303ca2`), and the scaler setters index the planes the same way, so plane q takes
+  palette id q (D) if osd word k is GUI layer k (I). Entry `tra << 24 | Cr << 16 | Cb << 8 | Y` (`0x50307ace`, the
+  GUI's RGB through the firmware's BT.601, `0x50304c0c..0x50304c6b`).
+- **Formats:** `0x1b0` = `0x111` and `0x1b4` = `0x11` at every open (`0x503097fb..0x50309845`), E143's OSDFMT1 and
+  OSDFMT2 values, where kind 2 keeps its mix word `0x111111` at `0x1b0`; `0x1a4` = 3, `0x1a8` = `0x1100710` (but for
+  code 4), `0x1ac` = `0x10f` are written too; their meanings are ? and the compositor does not read them.
+- **Level:** OSD7..OSD9 (`0x2e0..0x2e8`) = `2 floor(p 128 / 100)` for p percent (`0x502f9408..0x502f9427`): E143's
+  PLANC form, `0x100` at 100 %; the built-in EVF's 70 % gives `0xb2`, E144's EVF has `0xcc` (X). The compositor draws
+  any level but 0 as full on both kinds; E143's refuses a PLANC other than `0x100` (section 3), and what a lower level
+  does is ? on all three.
+- **Pixel index:** OSD1's low 7 bits (I, as kind 2); OSD2 and OSD3 index 32 entries, and a pixel of 32 or more is
+  refused (PAL_FIELD, not drawn): no code read says what the chip does with it (?).
+- **Device codes:** the DISPLAY OPEN's parameter is a byte of two device codes, the main VSC's in the low nibble and
+  the sub VSC's in the high one (`0x502f6af7`), named by `0x502fbf76`: 1 TFT, 2 NTSC, 3 PAL, 4 HDMI, 5 VF-2, 6 BI_EVF,
+  13 VF-3, the others HDMI modes. Code 2 times the channel at 262 lines of 858 (`0x50302567`), writes the encoder
+  block `0x99100000` (`0x502fe38a`) and sends AUD_EXEC function 36 (`0x502f6ba0`); code 6 takes BI_EVF's 825 lines
+  (`0x502fa8eb`). The lab opens code 6 for the EVF (`emu/src/fw/facts.mjs` evfCode).

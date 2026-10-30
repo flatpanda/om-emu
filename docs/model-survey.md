@@ -450,8 +450,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    - the VSC is a kind of its own (`src/dev/vsc.mjs` kind 3): two channels of 0x2000, no name table in the image (X: no
      register name string), so its register file is the offsets the family's code names (the census, and the OSD scaler
      words its writers index, D), the vertical total in SYNC2's low 11 bits (I), latched copies of four registers at
-     +0x1c00 (D for the reads, I that they are the latched values), plain storage from +0x600 (I); its compositor is not
-     written (COMPOSE answers FEATURE_UNOBSERVED).
+     +0x1c00 (D for the reads, I that they are the latched values), plain storage from +0x600 (I); its compositor was
+     not written then (COMPOSE answered FEATURE_UNOBSERVED; finding 36).
    Three rules learned the family's forms: the hardware-timer table of 8-byte entries (`hwTimer`), a constant vtotal
    function with no period getter after it (`framePeriod` null: no frame period the lab can read, so A-PERIOD assumes
    E143's TFT period), and no boot state words (`bootState`). E122 ports through E130 (113 unmapped through E125, 114
@@ -469,6 +469,39 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    (X). E118 and E120 port through E122 (170 and 173 of its overrides carried, X); their dial inits take a fixed table,
    and the leg map put four of their level handlers wrong, which the kernel's own table corrects (X); they stop at the
    GUI message take, which `guiTake` finds on neither (X).
+35. **The E118 family's EVF is device code 6** (2026-10-30, `docs/om1-vsc-spec.md` section 12). E122's EVF start
+   stopped at a synchronous send to queue 8, cmd 1, from the display code (`0x502f6ba0..0x502f6bb6`). Queue 8 is
+   AUD_EXEC (its object-name record `0x51114fac`, E143's id too; the task AUD_MAIN, 97 here, 82 on E143), the message
+   its function 36 with the argument 2, which AUD_EXEC's dispatch (`0x50ac4905..`, the table `0x60d719dc`) passes on
+   through `0x50ac53cd` (D; to CPU 2 as E143's AUD_MAIN does, I); function 37 follows when the device is left
+   (`0x502f6cf2`). The send is the display's own for the device codes 2 and 3 (the switch `0x502f6b13`), and the
+   lab had asked for code 2: E122's DISPLAY OPEN takes a byte of two device codes, the main VSC's in the low nibble
+   and the sub VSC's in the high one (`0x502f6af7`), and its name switch `0x502fbf76` calls them 1 TFT, 2 NTSC, 3 PAL,
+   4 HDMI, 5 VF-2, 6 BI_EVF, 13 VF-3, the rest HDMI modes (D). With E143's EVF mask 2 the lab had opened the NTSC
+   video output: the channel at 262 lines of 858 (`0x50302567`), the TV encoder block `0x99100000` and the control
+   word `0x98a00000` written (`0x502fe38a`, `0x5030b87a`, called for codes 2 and 3 only, `0x503037a8..b3`), AREA22
+   `0xb50280` (640 wide) and the AUD request, the TV's sound (I) (D, X: the dump). The output-device property's writer
+   gives 8, the value the lab answers for the EVF, for code 6 (`0x5018494d` `cmp 6`, then 4014 = 8; 5 gives 4, else
+   1, D), E143's for code 2 (`0x501e8ad4`): the rule `evfCode` (fact `prop.evf_code`) reads that compare on every
+   body, 2 on the 15 bodies of the E143 and E144 families, 6 on E118, E120 and E122 (X), and the lab's OPEN sends it
+   (`src/lab/display.mjs` DEVICE code). E122's EVF start now opens the built-in EVF (1024 x 768 at `{48, 38}`, 825
+   lines, the 640 x 480 canvas scaled by 0x11 / 0x9fc / 0x9fc, the OSD level `0xb2`) and runs to the TFT's stop,
+   UI_IN's forward (X), without the two stub pages finding 28 had added for the TV's blocks (removed from the board;
+   X: the start without them); no stand-in was added. E118 and E120 have the same send (`0x502d0b7e`, `0x502c4544`) and the
+   same writer (`cmp 6`, X); their starts stop before the open (finding 28).
+36. **The kind-3 VSC's compositor** (2026-10-30, `docs/om1-vsc-spec.md` section 12, `src/dev/vsccompose2.mjs`).
+   E122's display code writes kind 2's register forms at kind 2's offsets below 0x314 (D at the writers; X: its TFT
+   and EVF opens leave E144's values in the area, background, stride and scaler words), so kind 2's compositor serves
+   kind 3 with three differences: the palettes are three groups by palette id (OSD1 128 entries at `+0x800` / `+0xa00`
+   by bit 16 of `0x1b8`, OSD2 32 at `+0x680`, OSD3 32 at `+0x600`; that plane q takes id q rests on the display
+   record's osd word k being GUI layer k, I), the format words `0x1b0` / `0x1b4` hold E143's OSDFMT1 / OSDFMT2 values
+   `0x111` / `0x11` where kind 2's mix word holds `0x111111`, and OSD2's and OSD3's pixels index 32 entries (a larger
+   one is refused, PAL_FIELD). The EVF's OSD level `0xb2` (70 %, the writer `0x502f9408`) is drawn as full, as kind 2
+   draws E144's EVF `0xcc` (what a level below `0x100` does is ?). At E122's stop the composite is the firmware's
+   state: the TFT 720 x 480 at `{30, 8}` and the EVF 1024 x 768 at `{48, 38}`, both the open's background `0x80800b`
+   (RGB 11, 11, 11) with no plane enabled (DMA7 0, DMA12..DMA14 never written; the open uploaded the palette groups
+   from RAM still zero) (X: the composite's words, 345,600 and 786,432 of `0x80800b`). `test/test_vsc3.mjs` drives
+   the device on E122's board without firmware (18 checks).
 
 29. **UI_IN's forward and the DISPLAY loop's replies, read by shape** (2026-10-30). The lab records the codes UI_IN
    passes on where its post tests the sink word (E143's forward `0x5014c3eb`, called at three places of the post with
@@ -841,9 +874,10 @@ passes; S1 does not stop at S-AFOSD since the framePlane rule gates it (finding 
 **E118 (E-M5 II), E122 (PEN-F), E120 (E-M10 II).** Until 2026-10-30 they stopped at import on 18 board facts their
 family scaffold left unread (`intc.irq_osd_engine` first, X). The board is read since (finding 28): E122's start runs
 natively through the kernel, the timers, the display init and open, the settings store and the dial init and stops at
-the play bring-up's UI_IN observer on the TFT (on the EVF at the display code's send to queue 8). E118 and E120, ported
-through E122, stopped earlier, at the GUI message take's observer while the lab was set up; since findings 32 to 34
-(2026-10-30) they run to E122's two stops (X: the tft and evf children, each body's own run).
+the play bring-up's UI_IN observer on the TFT, and on the EVF since it opens the built-in EVF (finding 35; it had
+opened the NTSC output and stopped at its send to queue 8). E118 and E120, ported through E122, stopped earlier, at the
+GUI message take's observer while the lab was set up; since findings 32 to 34 (2026-10-30) they run to E122's stop at
+UI_IN.
 
 ## The chained port
 

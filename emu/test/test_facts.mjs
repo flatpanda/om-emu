@@ -31,13 +31,14 @@
 //               against STORE_FOUND, APP_SAVES_FOUND and APP_SAVES_COUNT, the touch I2C length arguments against
 //               TOUCH_ARGS_FOUND, the frame display mode set against FRAME_MODE_FOUND and A(), the frame plane's
 //               uploads against PLANE_FOUND and A() of the AF upload, the output-device
-//               property against PROP_DEVICE_FOUND, and the loader's slots and image-record destinations against A()
-//               (src/fw/ports.mjs PORTS); imageView's reads and its refusal outside the image
+//               property against PROP_DEVICE_FOUND, the mode dial's table and names against MODE_DIAL_FOUND, and the
+//               loader's slots and image-record destinations against A() (src/fw/ports.mjs PORTS); imageView's reads
+//               and its refusal outside the image
 //   node emu/test/test_facts.mjs
 import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
-  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143 } from '../src/fw/facts.mjs';
+  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -497,6 +498,11 @@ const GUI_FOUND = {
 };
 // The rec view component's state word and standby value (recview; D: E143 entryStandby 0x50c65ff2 -> 0x50c66a25 ->
 // 0x50ab5fe7, E142 0x508f1cee -> 0x508f2721 -> 0x5074b31c, whose word E142's getRecViewState gate 0x5074b283 reads)
+// The mode dial's code table and the names of its codes (mode_dial; src/fw/facts.mjs modeDial): E143's as the lab gives
+// them (D: the table 0x602243a0 its dial-index reader 0x5014c0de reads, the MODEDIAL_ pairs 0x51a389fb), and E147's, whose
+// table 0x60240b00 holds MY_MODE5 63 where E143's has MOVIE, named by its modedial_to_code table 0x5034c894 (D)
+const MODE_DIAL_FOUND = { E143: MODE_DIAL_E143, E147: { table: 0x60240B00, names: [[1, 'P'], [2, 'A'], [3, 'S'], [4, 'M'], [53, 'MY_MODE1'],
+  [54, 'MY_MODE2'], [55, 'MY_MODE3'], [56, 'MY_MODE4'], [62, 'B'], [63, 'MY_MODE5']] } };
 const RECVIEW_FOUND = { E143: { word: 0x6035E9C8, standby: 1 }, E142: { word: 0x61FA73A0, standby: 1 } };
 // The boot's state words (bootState; D: E133's UI_IN init stores its boot key at 0x500f5e95 and its getter 0x500f45ce
 // reads it, E129's stage test 0x50022e30 reads its ready word, which the stage step 0x50022f51 sets at 0x5002302e)
@@ -524,7 +530,7 @@ const E143_FACTS = {
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
   broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] } },
   boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143,
-  cbs: CBS_FOUND.E143,
+  cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143,
 };
 
 export function factsTests() {
@@ -641,6 +647,7 @@ export function factsTests() {
       const got = [e.flags.valid, e.flags.attach, e.flags.ready, e.exec_queue].map(a), want = [ld.flags.valid, ld.flags.attach, ld.flags.ready, ld.exec_queue];
       ok(same(got, want), `${code}: A() of the lens flags and LENS_EXEC's queue word ${hx(got)}, the rule's ${hx(want)}`);
     }
+    if (MODE_DIAL_FOUND[code]) ok(same(got.mode_dial, MODE_DIAL_FOUND[code]), `${code}: mode_dial ${hx(got.mode_dial ?? got)}, found ${hx(MODE_DIAL_FOUND[code])}`);
     if (CBS_FOUND[code]) ok(same(got.cbs, CBS_FOUND[code]), `${code}: cbs ${hx(got.cbs ?? got)}, found ${hx(CBS_FOUND[code])}`);
     if (SYNC_FOUND[code]) ok(same(got.display?.sync, SYNC_FOUND[code]), `${code}: display.sync ${hx(got.display ?? got)}, found ${hx(SYNC_FOUND[code])}`);
     ok(got.touch_panel?.driver === !NO_TOUCH_DRIVER.includes(code), `${code}: touch_panel ${hx(got.touch_panel ?? got)}, found ${NO_TOUCH_DRIVER.includes(code) ? 'no driver' : 'a driver'}`);

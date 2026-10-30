@@ -67,6 +67,12 @@ const loadsOf = (img, v) => {
   for (let p = img.indexOf(0xfc); p >= 0; p = img.indexOf(0xfc, p + 1)) if (loadAt(img, p) === v) at.push(p);
   return at;
 };
+// the offsets of the words (u32, any alignment) that hold v
+const wordsOf = (img, v) => {
+  const at = [], b0 = v & 0xff;
+  for (let p = img.indexOf(b0); p >= 0 && p + 4 <= img.length; p = img.indexOf(b0, p + 1)) if (u32(img, p) === v) at.push(p);
+  return at;
+};
 // the offsets of the `movhu (abs32),Dn` loads (fc ac..af) of word (null: of any word): of d0 only, or with anyReg,
 // of any Dn
 const halfLoads = (img, word, anyReg = false) => {
@@ -620,6 +626,72 @@ export function cbsIds(img) {
     out[name] = codes.get(name);
   }
   return out;
+}
+
+// The mode dial's positions (fact 'mode_dial', src/lab/play.mjs MODE_DIAL): UI_IN's dial query answers the position
+// k (the dial's k-th 0x1901 entry in its group's entry order) with the k-th word of a code table, `cmp 6401,d2` ...
+// `mov imm32,a0` (fa ca 01 19 .. fc dc imm32 f3 94) at E143 0x5014c10b, the table 0x602243a0 (3, 4, 62, 53, 54, 55,
+// 56, 10, 1, 2 for positions 0..9, then 0; D), and the build names the codes in two tables of its own: MODEDIAL_<name>
+// pairs {u32 code, u32 *name} (E143 0x51a389fb: P 1, A 2, S 3, M 4, B 62, MOVIE 10, MY_MODE1..4 53..56, ...) and the
+// modedial_to_code table {u32 *name, u32 code} from NON 0 and P 1 (E143 0x5034416c, which has no B; E147's
+// 0x5034c894 has MY_MODE5 63, which its MODEDIAL_ pairs lack). The reader is held once on each of the 16 unpacked
+// bodies that have it (E118 and E120 hold none, X, a byte scan of each); a few codes have no name in their build (E134's
+// 62, which E143 names B; the 61 of E142, E140, E133 and E130; the 60 of E129 and E132, X). The application takes the
+// code as its dial state: on E143 the HLS changeMode gets it as modeDial and the GUI's getModeDialState answers the
+// API enum's value of its name for each of the ten positions (P 9, A 10, S 11, M 12, B 28, MY_SET1..4 15..18,
+// MOVIE 5; X, docs/om1-input-spec.md section 9). Returns {table, names: [[code, name]]}: the table's run-time address
+// and the name of each code of its run (up to its first 0, at most MODE_DIAL_RUN words) that the build names, by
+// code; table null and no names where the build holds no reader; throws for two readers or two names of one code.
+export const MODE_DIAL_E143 = { table: 0x602243A0, names: [[1, 'P'], [2, 'A'], [3, 'S'], [4, 'M'], [10, 'MOVIE'], [53, 'MY_MODE1'],
+  [54, 'MY_MODE2'], [55, 'MY_MODE3'], [56, 'MY_MODE4'], [62, 'B']] };
+const MODE_DIAL_QUERY = [0xfa, 0xca, 0x01, 0x19], MODE_DIAL_LOAD = 24, MODE_DIAL_RUN = 16, MODEDIAL = 'MODEDIAL_';
+export function modeDial(img) {
+  const { base } = imageBase(img), at = [];
+  for (let o = img.indexOf(MODE_DIAL_QUERY[0]); o >= 0; o = img.indexOf(MODE_DIAL_QUERY[0], o + 1)) {
+    if (!bytesAt(img, o, MODE_DIAL_QUERY)) continue;
+    for (let k = o + MODE_DIAL_QUERY.length; k < o + MODE_DIAL_LOAD; k++) if (img[k] === 0xfc && img[k + 1] === 0xdc && img[k + 6] === 0xf3 && img[k + 7] === 0x94) at.push(k);
+  }
+  if (!at.length) return { table: null, names: [] };
+  if (at.length > 1) throw new Error(`modeDial: dial table reads at ${at.map((k) => h8(0x50000000 + k)).join(', ')}, want one`);
+  const table = u32(img, at[0] + 2), codes = [];
+  for (let k = 0; k < MODE_DIAL_RUN; k++) {
+    const o = table - base + 4 * k;
+    if (o < 0 || o + 4 > img.length) throw new Error(`modeDial: the dial table ${h8(table)} is not in the image`);
+    const c = u32(img, o);
+    if (c === 0) break;
+    codes.push(c);
+  }
+  // the build's names: a string at the run-time address a, or null
+  const cstr = (a) => {
+    const o = a - base;
+    if (o < 0 || o >= img.length) return null;
+    let e = o;
+    while (e < img.length && e - o < 64 && img[e] >= 0x20 && img[e] < 0x7f) e++;
+    return img[e] === 0 && e > o ? String.fromCharCode(...img.subarray(o, e)) : null;
+  };
+  const names = new Map(), name = (code, n) => {
+    if (names.has(code) && names.get(code) !== n) throw new Error(`modeDial: code ${code} is both ${names.get(code)} and ${n}`);
+    names.set(code, n);
+  };
+  for (const s of findString(img, MODEDIAL + 'P', { nul: true, after: true })) {
+    for (const p of wordsOf(img, base + s)) {
+      if (u32(img, p - 4) !== 1) continue;
+      for (let q = p - 4; q + 8 <= img.length; q += 8) {
+        const n = cstr(u32(img, q + 4));
+        if (n === null || !n.startsWith(MODEDIAL)) break;
+        name(u32(img, q), n.slice(MODEDIAL.length));
+      }
+    }
+  }
+  for (let o = 0; o + 16 <= img.length; o += 4) {
+    if (u32(img, o + 12) !== 1 || u32(img, o + 4) !== 0 || cstr(u32(img, o)) !== 'NON' || cstr(u32(img, o + 8)) !== 'P') continue;
+    for (let q = o; q + 8 <= img.length; q += 8) {
+      const n = cstr(u32(img, q));
+      if (n === null || !/^[A-Z][A-Z0-9_]*$/.test(n)) break;
+      name(u32(img, q + 4), n);
+    }
+  }
+  return { table, names: [...new Set(codes)].filter((c) => names.has(c)).sort((x, y) => x - y).map((c) => [c, names.get(c)]) };
 }
 
 // The flag the display's device open waits on once per frame (fact 'display.frame_wait', src/lab/menu.mjs S-FRAMEWAIT):
@@ -2721,6 +2793,7 @@ export function readFacts({ img, family, resLoad }) {
   if (recview !== undefined) facts.recview = recview;
   const cbs = cbsIds(img);
   if (cbs !== undefined) facts.cbs = cbs;
+  facts.mode_dial = modeDial(img);
   return facts;
 }
 

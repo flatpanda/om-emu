@@ -17,7 +17,7 @@ import { NativeLens } from './lens.mjs';
 import { IoExpanders, PowerOff, POWER_OFF, startPowerManager } from './power.mjs';
 import { SioBus } from './sio.mjs';
 import { imageView } from '../fw/image.mjs';
-import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143, DPC_E143 } from '../fw/facts.mjs';
+import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143, DPC_E143, MODE_DIAL_E143 } from '../fw/facts.mjs';
 import * as D from './display.mjs';
 import * as IRQ from './irq.mjs';
 import * as K from './kernel.mjs';
@@ -290,8 +290,28 @@ export function set_bit(img, b, bit, v) {
   else img[b] &= ~(1 << bit) & 0xFF;
 }
 // the mode dial: its group and its positions [byte, bit, polarity] in entry order (E143: group 2, ten positions at bits
-// 0..9, polarity 1; a ported model's are its own, apply_uiin_layout)
-export const MODE_DIAL = { group: 2, positions: Array.from({ length: 10 }, (_, k) => [k >> 3, k % 8, 1]) };
+// 0..9, polarity 1; a ported model's are its own, apply_uiin_layout), and what each position is (names, below)
+export const MODE_DIAL = { group: 2, positions: Array.from({ length: 10 }, (_, k) => [k >> 3, k % 8, 1]), names: [] };
+// What a mode-dial position is: UI_IN's dial query answers position k with the k-th code of its dial table, the build
+// names the codes (fact mode_dial, src/fw/facts.mjs modeDial, D) and the application takes the code as its mode (X).
+// E143's ten positions are S, M, B, MY_MODE1..4, MOVIE, P, A. On the page: P, A, S, M and B as named, MY_MODEn as Cn
+// (the dial's custom positions C1..C4: I, by the names), MOVIE as Movie and the other bodies' I_AUTO, ARTFILTER and
+// SCENE_NAVIGATION as the dial labels iAUTO, ART and SCN (I); any other name as the build has it, and a code the build
+// does not name (or a position past the table's run) as "position k". Which way round the positions lie on the body
+// and whether the dial turns past its ends is not in the firmware (?): the page steps them in entry order, wrapping.
+const MODE_LABELS = { MOVIE: 'Movie', I_AUTO: 'iAUTO', ARTFILTER: 'ART', SCENE_NAVIGATION: 'SCN' };
+export const mode_label = (name) => MODE_LABELS[name] ?? name.replace(/^MY_MODE(\d)$/, 'C$1');
+// [{code, name, label}] of each position, the codes read from the dial table in the run-time image v
+export function mode_dial_names(v, n) {
+  const dial = fact('mode_dial', MODE_DIAL_E143), names = new Map(dial.names);
+  let run = dial.table !== null;                     // (none: no reader in the build) the table's run ends at its first 0
+  return Array.from({ length: n }, (_, k) => {
+    const code = run ? v.u32(dial.table + 4 * k) : null;
+    if (code === 0) run = false;
+    const name = run ? names.get(code) ?? null : null;
+    return { code: run ? code : null, name, label: name === null ? `position ${k}` : mode_label(name) };
+  });
+}
 // a ported model's other position switches (one code on several bits, one bit at its polarity per position, like
 // E147's creative dial 0x1909): [[group, byte, bit, polarity] of the idle position], set in the idle image. The idle
 // position is the second: on E147 the first makes S2 ask for the dial to be turned (X); which position is which
@@ -384,6 +404,7 @@ export function apply_uiin_layout(image) {
       code0.join() === CODE0_KEYS.join() && monitor.join() === MONITOR_OPEN.join() &&
       CONTROLS.every((c) => !c.uiin || c.uiin[3] === MODE_DIAL_CODE || c.uiin[3] === 0 || (at.get(c.uiin[3]) ?? []).join() === c.uiin.join());
     if (!same) throw new PlayError('UI_IN tables: the E143 image is not the key matrix of CONTROLS');
+    MODE_DIAL.names = mode_dial_names(imageView(image, IMAGE_BASE, MODEL), MODE_DIAL.positions.length);
     LAYOUT_APPLIED = true;
     return;
   }
@@ -407,6 +428,7 @@ export function apply_uiin_layout(image) {
     else { c.status = 'not-wired'; c.reason = `0x${c.uiin[3].toString(16)} is not in ${MODEL}'s UI_IN tables`; c.uiin = null; }
   }
   for (const c of CONTROLS) if (c.uiin && c.uiin[3] !== MODE_DIAL_CODE) UIIN_ENTRIES.set(c.uiin.slice(0, 3).join(','), c.uiin);
+  MODE_DIAL.names = mode_dial_names(imageView(image, IMAGE_BASE, MODEL), MODE_DIAL.positions.length);
   LAYOUT_APPLIED = true;
 }
 // True when the code at site (disassembly address) is a 7-byte `call d32` (0xdd) of target.
@@ -2010,7 +2032,8 @@ export class PlaySession extends N.NavSession {
     return { gui: h4(s), gui_name: lab.state_names.get(s) ?? '?', panel: lab.panels.length ? lab.panels[lab.panels.length - 1][1] : null,
       screen: this.screen(), device: this.device, tp_mask: mask,
       tp_gestures: [...GESTURES].sort((a, b) => a[0] - b[0]).filter(([b]) => mask && (mask & b)).map(([, n]) => n),
-      lab_ns: lab.lab_time(), gate: lab.sim.u32(B7_GATE), pressed: [...this.pressed].sort(), mode_dial: this.mode_index, bits,
+      lab_ns: lab.lab_time(), gate: lab.sim.u32(B7_GATE), pressed: [...this.pressed].sort(), mode_dial: this.mode_index,
+      mode_dial_positions: MODE_DIAL.names, bits,
       dispq: this.dispq_total + (lab.dispq ? lab.dispq.length : 0), menu, engine_total: lab.exec_history.length + this.exec_trimmed,
       harness_entries: lists, heap, layout: lab.b2_snapshot(), a15: this.a15_status(), a15_frames: this.a15_frames, switches: this.switches,
       eye: lab.sim.read(EYE_WORD, 1)[0], xcpu: lab.xcpu_log ? lab.xcpu_log.length : 0, xcpu_waiting: lab.xcpu_waiting ?? 0,

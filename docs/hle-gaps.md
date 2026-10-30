@@ -1356,7 +1356,7 @@ and the session left open, the GUI stayed in shooting with no write to `+0x9c` (
 #### 4.7.5 PER_SIO's serial controller and the TG-5's internal charger (E129, E132, 2026-10-29; D unless tagged)
 
 The TG-5s' camera application start writes the internal charger's register 1 and reads it back over PER_SIO's channel
-9, where the start had stopped (`docs/model-survey.md` finding 26). E132's addresses (E129's are the same code a few
+9, where the start had stopped (`docs/model-survey.md` finding 24). E132's addresses (E129's are the same code a few
 bytes on; E143's places in brackets):
 
 - **The layers.** PER_SIO's channel API opens and closes a channel (`0x500520ce` [`0x5005f0f7`], `0x5005221a`

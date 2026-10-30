@@ -1,5 +1,5 @@
 // PER_SIO's serial controller in the lab for the channels a body's devices sit on (S-SIOIIC; docs/hle-gaps.md 4.7.5,
-// docs/model-survey.md finding 26, which gives E132's addresses for what is read here). The controller's register
+// docs/model-survey.md finding 24, which gives E132's addresses for what is read here). The controller's register
 // blocks (lab-stub pages on the E144 family's board), its interrupts and its driver's per-mode starts are not
 // modelled; PER_SIO's channel API and its IIC layer run natively above it, and so does the driver's completion
 // dispatch. The seam is the driver's two transfer starts (src/fw/facts.mjs sioDriver, fact 'sio'), which PER_SIO's

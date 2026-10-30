@@ -1,5 +1,5 @@
 // The TG-5's internal charger at the far end of PER_SIO's channel 9 (S-CHARGER, behind S-SIOIIC, src/lab/sio.mjs;
-// E129, E132; the addresses in src/fw/models.mjs E132 sio_devices and docs/model-survey.md finding 26). What the
+// E129, E132; the addresses in src/fw/models.mjs E132 sio_devices and docs/model-survey.md finding 24). What the
 // firmware's code shows of it is all the model answers. The power module's charger request (d0 a request code: its
 // type, register and value index in nibbles 2, 1 and 0) writes one of its table's values to register 0, 1 or 2 (0 <-
 // 8, 9 or 2; 1 <- 0xa2, 0x96, 0x94, 0x97, 0x95 or 0x93; 2 <- 9) as the IIC write [0x36, register, value], waits for

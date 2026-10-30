@@ -52,8 +52,8 @@ through a reference place more; "Per-body status" has their figures).
 | E145 | TG-7 | 1103 | 19.5 | 0x60021020 (7.5%) | plain | 1.10M | 81 | through E142: modelcheck passes (TFT, the card native, the count probe; MENU answers its date and time setting at the start, finding 22) |
 | E133 | E-PL9 | 1101 | 25.0 | 0x60400020 (7.2%) | plain | 1.04M | 83 | through E142: modelcheck passes (TFT, no EVF; the count probe and its card native) since UI_IN's boot key is the power switch's (finding 20); before, its start went to the battery insertion's boot service, which creates no GUI |
 | E130 | E-M10 III | 1200 | 25.0 | 0x60400020 (6.9%) | plain | 1.02M | 82 | through E142: modelcheck passes (TFT and EVF; findings 11, 14 and 16) |
-| E129 | TG-5 | 1101 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; MENU answers its date and time setting at the start) since the charger's transfers on serial channel 9 are served (S-SIOIIC, S-CHARGER, finding 26); its settings store since S-BOOTSTAGE (finding 20) |
-| E132 | TG-5 (KOUICHIRO) | 1300 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; its date and time setting has no Cancel, the clock is set) since the charger's transfers are served and S-MODACK answers its industrial category and logger modules (finding 26); its deferred send since finding 21 |
+| E129 | TG-5 | 1101 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; MENU answers its date and time setting at the start) since the charger's transfers on serial channel 9 are served (S-SIOIIC, S-CHARGER, finding 24); its settings store since S-BOOTSTAGE (finding 20) |
+| E132 | TG-5 (KOUICHIRO) | 1300 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; its date and time setting has no Cancel, the clock is set) since the charger's transfers are served and S-MODACK answers its industrial category and logger modules (finding 24); its deferred send since finding 21 |
 | E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | stops at import: board fact `intc.irq_osd_engine` unknown (family E118) |
 | E122 | PEN-F | 3101 | 20.4 | 0x60021020 (7.2%) | plain | 0.79M | 123 | stops at import, as E118 |
 | E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | stops at import, as E118 |
@@ -356,7 +356,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    64 GiB card exFAT, no label, at 32768 with 128 KiB clusters, 6,618 shots (X: `bin/modelcheck.mjs`, with and without
    `--card-size 64`). Its movie time from the card is 0, as on the E144 family: the blank store's mode 1 at 60 fps
    (X: the getters) and the rate check's logs `0x3a040001` and `0x39000105` (X; `docs/hle-gaps.md` 4.8.5).
-26. **The TG-5s through modelcheck's path** (2026-10-29, `docs/hle-gaps.md` 4.7.5). Three stops, each read where it
+24. **The TG-5s through modelcheck's path** (2026-10-29, `docs/hle-gaps.md` 4.7.5). Three stops, each read where it
    lies; E129 and E132 are in `bin/modelcheck.mjs`'s default set (`MODELS` `checked`), their cards native.
    - *The charger's transfers.* The start's charger request writes register 1 = 0xa2 and reads it back over PER_SIO's
      channel 9, an IIC channel at 400 kHz (address 0x1b), and waited 3000 ms for a completion no controller gave
@@ -397,7 +397,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
      other bodies' are black, and their text is pink (X); whether that is the panel's palette or the lab's
      composition is not read (?). S1 shows the GUI's AF target brackets; S-AFOSD gives the TG-5s no upload (they
      have no mode-3 frame plane, finding 22).
-29. **The native lens on E146 and E147** (2026-10-29, `docs/hle-gaps.md` 4.4.3). Their lens drivers are E143's but
+25. **The native lens on E146 and E147** (2026-10-29, `docs/hle-gaps.md` 4.4.3). Their lens drivers are E143's but
    for the addresses of their variables and entry points, the debug log's line numbers and the order of a few
    instructions in one send (X: LENS_SSC, the edge unit's handler, the init chain, the power-on and detect paths and
    type 6's frame switch walked instruction by instruction from the map's places). A rule reads the addresses the lab's
@@ -411,7 +411,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    starts LENS_ASKDATA but not LENS_MAIN in E143's shape, and E142, E140, E133, E130 and the E118 family miss another
    of its shapes (X), so they keep S-LENS. modelcheck is unchanged on E146 and E147.
 
-32. **The power-off across the OM-1 line** (2026-10-29, `docs/hle-gaps.md` 4.7.4). The power manager's start and the
+26. **The power-off across the OM-1 line** (2026-10-29, `docs/hle-gaps.md` 4.7.4). The power manager's start and the
    power-off are read by one rule (`src/fw/facts.mjs` powerOff, fact `power.off`) from shapes the three OM-1-line builds
    share: the boot starter's start of the task named PWR_MAIN, the SCPU window's last write (`mov 127,d0; mov
    d0,(0x98e0009c)`) and the 0x85 sender called right before it, the shell's "sdk api shutdown" with its usage text,
@@ -442,7 +442,7 @@ effect (`ROADMAP.md` "Next stops").
 
 **E146 (OM-1 II), E147 (OM-3).** `bin/modelcheck.mjs` passes on the TFT and the EVF: start, S1, S2 (a picture on the
 card), PLAY, INFO, PLAY. Their TFT start keeps the composite's UNWRITTEN error. E147 shoots and plays back. Since
-2026-10-29 both run the lens natively by default, as E143 does (finding 29).
+2026-10-29 both run the lens natively by default, as E143 does (finding 25).
 
 **E144 (OM-5).** Boots natively to its shooting screen (kernel, display open, settings store, camera application, GUI;
 the kind-2 VSC compositor draws the OSD planes), takes S1, and the player settles running with the shooting screen in
@@ -641,7 +641,7 @@ set (X). Since 2026-10-29 S-BOOTSTAGE sets it before the store's start (finding 
 (H-DPCINIT, H-PWRTASK, its task 11 at `0x500400df`) and the HighLevel create run, and the start stops where E132's
 does, in the charger's transfer (the wait at `0x5003fc39`, every task blocked, X). The step's flash read (stage 1's
 part read in `0xa2b4d2d0` by the loader `0x50022ec0`), its region set-up of the block `0x99700000` (not modelled) and
-its hook list (empty for stage 1, `0x50173c78`) are not run (D). Since 2026-10-29 (finding 26) the charger's
+its hook list (empty for stage 1, `0x50173c78`) are not run (D). Since 2026-10-29 (finding 24) the charger's
 transfers are served (S-SIOIIC, S-CHARGER, H-SIOMAP) and the card is native: the start ends in the date and time
 setting, which MENU cancels, and `bin/modelcheck.mjs` passes.
 
@@ -670,7 +670,7 @@ transfers and their completion, at the controller's registers or at the layer's 
 what is written would pass the read-back, I). A trial, not landed (X): with the charger command answered 0 at its call
 from `0x5003f931`, the start creates the GUI and ends in `0x10c` SS_COMMON/ID_ST_FOLDER_OMT_PROGRESS_BAR, a 960 x 480
 frame with "Busy" and a bar; 8 s of idle there reach 300,000 stub calls in the panel driver (`0x5015b55f`); S1 stops
-at S-AFOSD (`0x500257ce` has no place in E132's build, as on E145, finding 14). Since 2026-10-29 (finding 26): the
+at S-AFOSD (`0x500257ce` has no place in E132's build, as on E145, finding 14). Since 2026-10-29 (finding 24): the
 transfers are served (S-SIOIIC, S-CHARGER, H-SIOMAP); the "Busy" screen was the industrial category update's, whose
 request to CATEGORY_MAIN S-MODACK now answers (modack_queues), as LOGGER_MAIN's; the card is native; the start ends in
 the date and time setting without Cancel, the clock set by modelcheck's prompt answer, and `bin/modelcheck.mjs`
@@ -714,6 +714,6 @@ take about 1.1 s per body. Under heavy load the full re-port after E144's inter-
 The new OM System PEN (expected as E148) is not on the update server. Lens and accessory firmware are out of scope.
 Besides E143, E146 and E147, nine bodies pass the player with a picture (the shooting screen in their frame, S1 taken,
 the player settled running): E144, E139, E134, E137, E142, E140, E125, E130 and, after MENU at its date and time
-setting, E145 (finding 22). E133 passes modelcheck since 2026-10-29, E129 and E132 too (finding 26: E129 after MENU,
+setting, E145 (finding 22). E133 passes modelcheck since 2026-10-29, E129 and E132 too (finding 24: E129 after MENU,
 E132 after its clock is set at its date and time setting); the E118 family runs no firmware code in the lab yet, so
 nothing above says how far it boots. The next steps are in `ROADMAP.md` "Multi-model".

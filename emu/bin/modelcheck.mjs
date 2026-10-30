@@ -70,9 +70,9 @@ const START_PROMPT = {
   E145: { state: 0x1103, key: 'menu', after: 'SS_COMMON/ID_ST_CA_REQ_DISP',
     why: 'the TG-7 opens its date and time setting at power-on on an unset clock (docs/model-survey.md finding 17); MENU, the screen\'s Cancel, leaves it for the clock warning, which S1 then clears as on the other bodies (S1 too leaves the setting, but only for the warning, X)' },
   E129: { state: 0x1103, key: 'menu', after: 'SS_COMMON/ID_ST_CA_REQ_DISP',
-    why: 'the TG-5 opens the same date and time setting as the TG-7 at power-on on an unset clock, with Cancel on MENU (X: frames; docs/model-survey.md finding 26)' },
+    why: 'the TG-5 opens the same date and time setting as the TG-7 at power-on on an unset clock, with Cancel on MENU (X: frames; docs/model-survey.md finding 24)' },
   E132: { state: 0x1103, keys: ['up', 'ok', 'up', 'ok', 'up', 'ok', 'up', 'ok', 'up', 'ok'], after: 'SS_COMMON/ID_ST_CA_REQ_DISP',
-    why: 'the industrial TG-5 opens the date and time setting at power-on on an unset clock with Set on OK and no Cancel; UP gives each of the five fields its first value (2017.01.01 00:00) and OK takes the next, the fifth OK sets the clock (X: frames; docs/model-survey.md finding 26)' },
+    why: 'the industrial TG-5 opens the date and time setting at power-on on an unset clock with Set on OK and no Cancel; UP gives each of the five fields its first value (2017.01.01 00:00) and OK takes the next, the fifth OK sets the clock (X: frames; docs/model-survey.md finding 24)' },
 };
 const CHILD = `
 const J = process.argv[1], DEVICE = process.argv[2], PROBE_NS = ${PROBE_NS}, PROBE_SHOTS = ${PROBE_SHOTS},

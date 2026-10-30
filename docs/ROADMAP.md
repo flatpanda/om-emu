@@ -50,7 +50,7 @@ not reconciled.
    2026-10-29, its card native too (`docs/model-survey.md` finding 22). The E144 family's orange movie time `0:00:00` is the firmware's answer for the
    blank store's movie mode, which those bodies cannot record (2026-10-27, hle-gaps.md 4.8.5).
 2. **The open stops of the remaining bodies** (Multi-model "Next stops"): the E118 family's board port. E133, E145 and
-   the TG-5s (E129, E132: their charger's transfers on serial channel 9, `docs/model-survey.md` finding 26) pass
+   the TG-5s (E129, E132: their charger's transfers on serial channel 9, `docs/model-survey.md` finding 24) pass
    modelcheck since 2026-10-29.
 3. **HLE of E143, step 2** (HLE of E143 below; step 1's static decodes are done): the cheap CPU 0 wins (a ticking
    clock, persistence by default, native group-0 keys and power lever, Level Adjust, the HDMI EDID). The ticking clock
@@ -247,7 +247,7 @@ the survey table.
   words (IRQs 29..34); the other starts of the family post nothing (E144, E142, E130, E133 measured). With the triggers
   on the board, H-DPCINIT at the bring-up and the power task started (H-PWRTASK, its charger init sets the channel's
   configuration), the send runs and the request waits for the internal charger's transfer on PER_SIO channel 9.
-- **The TG-5s through modelcheck** (done 2026-10-29, finding 26, hle-gaps.md 4.7.5): the serial controller driver's
+- **The TG-5s through modelcheck** (done 2026-10-29, finding 24, hle-gaps.md 4.7.5): the serial controller driver's
   transfer starts are the seam (S-SIOIIC, a rule reads the driver's parts on 15 bodies), the charger at the far end
   (S-CHARGER: what the request's code shows, the read-back's register file I), PER_SIO's channel map set by its own
   setter (H-SIOMAP: it had never been set, every channel's index a byte of low memory, which also made the panel's

@@ -81,6 +81,10 @@ const G4SET_UNCHECKED = false;
 // the menu, the card out and in; E143 and E146). Every body gives it, one that does not run it with its reason (why);
 // such a body keeps S-CARD's card without a file system (src/lab/camapp.mjs)
 //
+// `ui_out`: UI_OUT, the module of the camera's lamps, where the lab runs it (src/lab/play.mjs H-UIOUTSTART: E134,
+// whose file layer asks it for the card's access lamp): init, its init's entry, and task, its static task's entry. A
+// body without it does not run UI_OUT
+//
 // `scpu_lle`: the sub-CPU's own firmware, which the lab can run on the STM32L4 machine in S-SCPUDEV's place (opt-in,
 // src/lab/scpum4.mjs; docs/om1-scpu-spec.md section 8 step 6), given only for a body whose image that machine is
 // known to boot: block, the SCPU block's file name in unpacked/<code> beside the main block's (scpuPath; a full unpack
@@ -510,12 +514,20 @@ export const MODELS = {
     res_len: 22175200, res_sha256: '1b390ea79011cf8a4946344c909078b320f8dc46000ab9f07018b8e0c76e9176',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
-    // the card's file system stays S-CARD's: on a native card (the rule's seams are found; the bring-up, the format,
-    // the mount and the counts run, X) S-RECFILE's first fopen never completes: FILECLBK blocks in a write without
-    // timeout to UI_IN's request queue (the halfword 0x6004192e; the write at 0x5010c35f, reached from the file
-    // layer's 0x5064f152), which nothing reads in the lab (X: 53 writes, no read in 10 s of lab time). E143's and
-    // E144's fopen make no such write (X); why E134's does is ?
-    card_fs: { native: false, why: 'S-RECFILE\'s fopen blocks on a write to UI_IN\'s request queue that nothing reads in the lab' },
+    // UI_OUT, the module of the camera's lamps (src/lab/play.mjs H-UIOUTSTART; D unless tagged): the boot calls its
+    // init 0x5010cb57 after its checkpoint "2_9" (0x50180afd), then starts the task whose id is the halfword
+    // 0x600413fa (41; the static row of task 41 at 0x500180a8 holds the entry 0x5010cbda) and names it "UI_OUT"
+    // (0x50180b04..0x50180b18). The lamp request 0x5010c328 ({lamp id, u16, word}; the id checked through the table
+    // 0x5010caa2 reads) sends a 44-byte message to the queue of the halfword 0x6004192e (117), which the init sets up
+    // (0x5010cb61), with no timeout (0x50030432(queue, -1) at 0x5010c35f). X: with the init and the task run, the task
+    // waits, and a session's 72 lamp requests to the shooting screen, S2 and PLAY all complete
+    ui_out: { init: 0x5010CB57, task: 0x5010CBDA },
+    // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card), since UI_OUT runs: E134's file
+    // layer asks for the card's access lamp around its accesses (0x5066dea4: lamp 6, 0xffff and 500 to start, 0 to
+    // stop, I: a blink of 500 ms; from the file layer's 0x50648255, 0x506483cf, 0x5064840c, 0x50648540, 0x50648562 and
+    // 0x506595b8), and with UI_OUT not run the 54th send blocked FILECLBK in S-RECFILE's first fopen (X: 53 sends, no
+    // read in 10 s of lab time). E143's and E144's file layers make no such request (X)
+    card_fs: { native: true },
     // the SCPU clock ticks, as on E143 (src/fw/board.mjs: the family's stands still): its start, S1 and S2 run as with
     // the clock standing still (X: bin/modelcheck.mjs). The sub-CPU link (src/dev/linkpins.mjs, src/lab/scpulink.mjs):
     // its PER_SCPU is E143's but for its pins, ready 77, request 76 and reset 57 (0x500528ac..0x500528b7, 0x50053fad, D); the GIO driver maps a

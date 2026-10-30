@@ -1,7 +1,7 @@
 // The card and the file system (docs/hle-gaps.md 4.8, 4.8.4): an SD card in the first slot behind the firmware's SD
 // command layer, and the firmware's own storage stack above it, natively: sdmem, sd_mount, sdmem_format, logsec, dosfat
 // (FAT / exFAT), the DCF modules, fileif, and the file tasks FILECLBK, FILEFGND and DCFPROC_SUB. On a body whose MODELS
-// entry runs it (card_fs native: E143, E146, E147 and the E144 family's E144, E139, E137, E142, E140, E125, E130), at
+// entry runs it (card_fs native: E143, E146, E147, E144, E139, E137, E142, E140, E125, E130, E133, E145 and E134), at
 // the seams src/fw/facts.mjs fileSystem reads in its firmware (with the evidence; STORAGE_E143 for the lab's build);
 // elsewhere S-CARD keeps its card without a file system (src/lab/camapp.mjs), each body's card_fs with the reason.
 //

@@ -929,6 +929,7 @@ export class PlaySession extends N.NavSession {
     this.ipi_bring_up();
     if (o.mutant !== 'no-aeinit') this.aeinit_bring_up();   // without it the interpolation's div fault comes back
     if (MODEL_INFO.acc) this.acc_bring_up();
+    if (MODEL_INFO.ui_out) this.ui_out_bring_up();         // before the file layer, which sends to it (E134)
     if (this.storage_runs()) this.storage_bring_up();
     if (MODEL_INFO.sio_devices) this.sio_bring_up();
     if (fact('power.task', null) != null) this.power_task_bring_up();     // (null or undefined: no power task)
@@ -985,6 +986,23 @@ export class PlaySession extends N.NavSession {
     this.settle('H-PWRTASK');
     if (lab.nk.state(ids[0]) !== 4) throw new PlayError(`H-PWRTASK: the power task ${ids[0]} is ${show(lab.task_states())} after its start, not waiting`);
     this.power_tid = ids[0];
+  }
+  // H-UIOUTSTART: UI_OUT, the module of the camera's lamps (MODELS ui_out: E134), which the boot starts (its init,
+  // then act_tsk of its static task) and the lab, ending the init task, did not: its init natively at the bring-up,
+  // then its task started and settled to its wait on its queue, which takes the lamps' requests (a send without a
+  // timeout). E134's file layer asks it for the card's access lamp at each access, so with nobody reading the queue
+  // it filled and the file module's task blocked in a send (X: S-RECFILE's first fopen, 53 sends; docs/hle-gaps.md 4.8.7)
+  ui_out_bring_up() {
+    const lab = this.lab, { init, task } = MODEL_INFO.ui_out;
+    const ids = [...lab.nk.tasks()].filter(([, [e]]) => e === task).map(([t]) => t);
+    if (ids.length !== 1 || lab.nk.state(ids[0]) !== 0x10) throw new PlayError(`H-UIOUTSTART: static tasks with entry ${h8(task)}: ${show(ids)}, not one dormant`);
+    lab.call(init, null, null, null, 2000000);
+    lab.lt.allow.add(task);
+    const [rc] = lab.nk.svc('act_tsk', { d0: ids[0] });
+    if (rc !== K.E_OK) throw new PlayError(`H-UIOUTSTART: act_tsk(${ids[0]}) = ${rc}`);
+    this.settle('H-UIOUTSTART');
+    if (lab.nk.state(ids[0]) !== 4) throw new PlayError(`H-UIOUTSTART: UI_OUT's task ${ids[0]} is ${show(lab.task_states())} after its start, not waiting`);
+    this.ui_out_tid = ids[0];
   }
   // S-BOOTKEY: UI_IN's boot key (fact 'boot.key', src/fw/facts.mjs bootState), the code of the key that started the
   // camera, which UI_IN's module init records from the sub-CPU's wake factor (its call of the recording init does not

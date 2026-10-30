@@ -12,7 +12,7 @@
 // (test_camapp.mjs), the SCPU's clock, ports, link pins and sub-CPU model (test_scpu.mjs), the publication audit
 // (test_pubaudit.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the card and the
-// file system on E143, E146, E147, E144 and E142 and SDXC cards on E143 (test_storage.mjs), subject detection's frames on E143
+// file system on E143, E146, E147, E144, E142 and E134 and SDXC cards on E143 (test_storage.mjs), subject detection's frames on E143
 // (test_subject.mjs), the lens on the mount natively on E143 (test_lens.mjs), the SCPU's Cortex-M4 core
 // (test_m4.mjs: hand-written vectors, QEMU's recorded vectors, the SCPU image from reset to its first unmodelled
 // access), the SCPU's STM32L4 machine (test_stm32l4.mjs: the peripheral models, the SCPU image to its console prompt,
@@ -189,13 +189,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 }
 // the card and the file system (storage.mjs): the card model and the FAT and exFAT readers without firmware, then play
 // sessions whose card the firmware formats and mounts itself: E143 here (an 8 GiB SDHC card, then blank 64 and 128 GiB
-// SDXC cards, whose findings print as notes), and E146, E147, E144 and E142 (the OM-1 family, the E144 family and the
-// E142 lineage) each in a process of its own (the model is fixed when the lab is imported)
+// SDXC cards, whose findings print as notes), and E146, E147, E144, E142 and E134 (the OM-1 family, the E144 family,
+// the E142 lineage and the E-M1X, whose card needs UI_OUT) each in a process of its own (the model is fixed when the
+// lab is imported); E146's with the HLS media side (Card Formatting from the menu, the card out and in)
 {
   const { storageUnits, storageSession, storageSdxc } = await import('../test/test_storage.mjs');
   const { spawnSync } = await import('node:child_process');
   const su = storageUnits(), ss = await storageSession(), sx = await storageSdxc();
-  const others = ['E146', 'E147', 'E144', 'E142'].map((m) => {
+  const others = ['E146', 'E147', 'E144', 'E142', 'E134'].map((m) => {
     const r = spawnSync(process.execPath, [new URL('../test/test_storage.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
     return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
   });

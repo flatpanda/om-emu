@@ -334,10 +334,11 @@ export async function storageSession() {
   const resBlock = loadBlock();
   const { SHOTS, MOVIE } = cardQueries(A);
   // the first picture's file: the DCF module's initial names (src/fw/facts.mjs fileSystem names)
-  // the bodies whose DCF remain movie time answers 0 on the card (the E144 family but the E142 lineage; X, its reason
-  // ?, docs/hle-gaps.md 4.8.4): strictly, so an answer flags the table; S-SCENE's live view on the E143 family only
-  // (its banks are E143's: on the E144 family 0x50534dd1's address is not the table's, X)
-  const MOVIE_ZERO = ['E144', 'E139', 'E137', 'E125'].includes(MODEL), LIVE_VIEW = BOARD.family === 'E143';
+  // the bodies whose DCF remain movie time answers 0 on the card (the E144 family but the E142 lineage, and E134: the
+  // blank store's 4K 60p mode has no rate in their tables, docs/hle-gaps.md 4.8.5; E134 X, its mode 1 at 60 and the
+  // rate check's logs 0x3a040001 and 0x39000105): strictly, so an answer flags the table; S-SCENE's live view on the
+  // E143 family only (its banks are E143's: on the E144 family 0x50534dd1's address is not the table's, X)
+  const MOVIE_ZERO = ['E144', 'E139', 'E137', 'E125', 'E134'].includes(MODEL), LIVE_VIEW = BOARD.family === 'E143';
   const names = STORAGE.names, DIR = `DCIM/100${names.folder}`, FILE1 = `${DIR}/${names.file}0001.${names.ext}`;
   let saved = null;
   const session = (card) => {

@@ -229,3 +229,18 @@ export function languages(image, block) {
 export function load(sim, block) {
   for (const [address, data] of blobs(block)) sim.write(((address & 0x3FFFFFFF) | 0x40000000) >>> 0, data);
 }
+// Whether the two image records overlap where the loader puts them (src/fw/facts.mjs resLoader, D; the sizes from the
+// records' heads, X): E118's icons record ends 0x400 bytes past the bitmaps record's load address, over the end of
+// its font table, whose records the GUI's start searches (docs/model-survey.md finding 44 has the addresses). The
+// firmware loads each record when it is asked for, the icons record at the GUI's start and the bitmaps record later
+// (X: the lab's requests), so what it reads after a request is that record's; on such a body the lab writes a record
+// again at its request (rewrite), after load()'s write of both. No other body's records overlap (X: the 17 others'
+// bitmaps loads lie past their icons record's end).
+export function overlap(block) {
+  const [[a0, d0], [a1, d1]] = blobs(block);
+  return a0 < a1 + d1.length && a1 < a0 + d0.length;
+}
+export function rewrite(sim, block, i) {
+  const [address, data] = blobs(block)[i];
+  sim.write(((address & 0x3FFFFFFF) | 0x40000000) >>> 0, data);
+}

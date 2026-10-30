@@ -96,7 +96,10 @@ export const GuiMixin = (Base) => class extends Base {
     let address, limit;
     if (kind === 0 && record >= fonts[0] && record <= fonts[1]) [address, limit] = R.FONT_SLOT;
     else if (kind === 2 && record >= strings[0] && record <= strings[1]) [address, limit] = R.STRING_SLOT;
-    else if (kind === 1 && record === images[0]) [address, limit] = [R.BLOB_LOADS[0], null];
+    else if (kind === 1 && record === images[0]) {
+      [address, limit] = [R.BLOB_LOADS[0], null];
+      if (R.overlap(this.block)) R.rewrite(this.sim, this.block, 0);   // the icons record as loaded now (R.overlap)
+    }
     else throw new FirmwareError(`S-RES: (record ${record}, kind ${kind}) not modelled`);
     if (kind === 0 || kind === 2) {
       const want = kind === 0 ? entry.font_record : entry.strings_record;

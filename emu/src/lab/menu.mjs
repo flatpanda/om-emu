@@ -972,6 +972,7 @@ export class MenuLab extends T.TextDisplayLab {
       const bitmaps = R.layout(this.block).images[1];
       if ((r.d0 & 0xFFFF) !== bitmaps || (r.d1 & 0xFFFF) !== 1) throw new MenuError(`S-RES from ${where(r.mdr)}: (${r.d0 & 0xFFFF}, ${r.d1 & 0xFFFF})`);
       this.loaded.push([bitmaps, 1]);
+      if (R.overlap(this.block)) R.rewrite(this.sim, this.block, 1);   // the bitmaps record as loaded now (R.overlap)
       hle.finish_calls(r, { d0: R.BLOB_LOADS[1] });
       return;
     }

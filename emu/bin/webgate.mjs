@@ -21,7 +21,8 @@
 //   (DOM.setFileInputFiles) on a fresh profile (the unpack path; the first job fills the OPFS cache), then from the
 //   OPFS cache; every trace must be byte-identical to node's, and identical to bin/run.mjs's.
 // - Chrome (B6): web/index.html?idle=off with the .BIN through its file input: four keys (Input.dispatchKeyEvent), one
-//   touch (Input.dispatchMouseEvent) and two quick PageUps, as test/test_web.mjs PAGE_B6_INPUTS lists them (the page
+//   touch (Input.dispatchMouseEvent), two quick PageUps and the mode dial's arrows and its P position clicked at their
+//   centres (the dial must show each position's name), as test/test_web.mjs PAGE_B6_INPUTS lists them (the page
 //   must send those inputs; the regular gate runs them on a node Player); after each key and the touch, the result is
 //   ok, the frame seq advanced, the GUI is in the listed state, and the canvas read back equals the RGBA node computes
 //   for the composite whose sha16 the Player published; the page's session log equals node's run of the inputs the
@@ -425,15 +426,36 @@ if (!argv.includes('--skip-page') && !QUICK) {
   // two inputs sent before the first is taken (the page's selftest's "PageUp twice quickly"): both must arrive
   {
     const { mode_dial: steps } = planned('PageUp twice quickly');
-    const m0 = await page.ev('window.__playPage.status.mode_dial || 0');
+    const m0 = await page.ev('window.__playPage.status.mode_dial || 0'), n = await page.ev('window.__playPage.status.mode_dial_positions.length');
     for (let i = 0; i < 2; i++) {
       await page.S('Input.dispatchKeyEvent', { type: 'keyDown', code: 'PageUp', key: 'PageUp', windowsVirtualKeyCode: 33 });
       await page.S('Input.dispatchKeyEvent', { type: 'keyUp', code: 'PageUp', key: 'PageUp', windowsVirtualKeyCode: 33 });
     }
-    const ok = await until(`(() => { const s = window.__playPage.status; return !!(s && s.mode_dial === ${(m0 + steps) % 10}) && ${settled}; })()`, 60000);
+    const ok = await until(`(() => { const s = window.__playPage.status; return !!(s && s.mode_dial === ${(m0 + steps) % n}) && ${settled}; })()`, 60000);
     const after = await state();
     checks.push({ what: 'PageUp twice quickly', ok, ...after });
-    if (!ok) fail(`B6 two quick inputs: mode dial ${m0} -> ${await page.ev('window.__playPage.status.mode_dial')}, want ${(m0 + steps) % 10}`);
+    if (!ok) fail(`B6 two quick inputs: mode dial ${m0} -> ${await page.ev('window.__playPage.status.mode_dial')}, want ${(m0 + steps) % n}`);
+  }
+  // the mode dial with the mouse, each click at the control's centre (Input.dispatchMouseEvent: a control another
+  // element covers does not get it): the next and previous arrows, then a position on the ring; after each, the dial
+  // shows the status's position by its name
+  {
+    const { mode_dial_at: pick, mode_label: name } = planned('mode dial by mouse: next, previous, P');
+    const shown = `(() => { const s = window.__playPage.status, p = (s.mode_dial_positions || [])[s.mode_dial]; return !!p && document.getElementById('modeval').textContent === p.label; })()`;
+    const m0 = await page.ev('window.__playPage.status.mode_dial'), n = await page.ev('window.__playPage.status.mode_dial_positions.length');
+    for (const [what, selector, want] of [['▶', '[data-mode="+1"]', (m0 + 1) % n], ['◀', '[data-mode="-1"]', m0], [name, `#mode .pos[data-pos="${pick}"]`, pick]]) {
+      const c = await page.ev(`(() => { const e = document.querySelector(${JSON.stringify(selector)}); if (!e) return null; e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, text: e.textContent }; })()`);
+      if (!c) { fail(`B6 mode dial ${what}: no ${selector} on the page`); continue; }
+      await page.S('Input.dispatchMouseEvent', { type: 'mouseMoved', x: c.x, y: c.y });
+      await page.S('Input.dispatchMouseEvent', { type: 'mousePressed', x: c.x, y: c.y, button: 'left', clickCount: 1 });
+      await page.S('Input.dispatchMouseEvent', { type: 'mouseReleased', x: c.x, y: c.y, button: 'left', clickCount: 1 });
+      const ok = await until(`(() => { const s = window.__playPage.status; return !!(s && s.mode_dial === ${want}) && ${shown} && ${settled}; })()`, 60000);
+      const got = await page.ev(`({ mode: window.__playPage.status.mode_dial, shown: document.getElementById('modeval').textContent })`);
+      if (!ok) fail(`B6 mode dial ${what} (${selector}, "${c.text}"): mode dial ${got.mode} showing "${got.shown}", want ${want}`);
+      else log(`page mode dial ${what}: position ${got.mode} "${got.shown}"`);
+    }
+    const end = await page.ev(`document.getElementById('modeval').textContent`);
+    if (end !== name) fail(`B6 mode dial: the dial shows "${end}" at position ${pick}, want "${name}"`);
   }
   if (!plan.next().done) fail('B6: PAGE_B6_INPUTS has checks the page did not run');
   const sent = await page.ev('window.__player.sent');

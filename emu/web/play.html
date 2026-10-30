@@ -44,11 +44,17 @@ h1 .refused { color: var(--err); }
         overflow: hidden; touch-action: none; }
 .dial button { border: 0; background: transparent; color: #fff; font: 700 16px system-ui; cursor: pointer; }
 .dial button:hover { background: #ffffff18; }
-.mode { width: 84px; height: 84px; border-radius: 50%; border: 2px solid var(--wired); background: #18191b; position: relative; }
-.mode span { position: absolute; inset: 0; display: grid; place-items: center; font: 700 20px system-ui; }
-.mode button { position: absolute; left: 0; right: 0; height: 50%; border: 0; background: transparent; color: var(--dim); cursor: pointer; }
-.mode button:first-of-type { top: 0; } .mode button:last-of-type { bottom: 0; }
-.mode button:hover { background: #ffffff12; }
+/* the mode dial: its positions round the ring in the firmware's entry order, the one in use lit, its name in the
+   middle (which takes no clicks); a position's button turns the dial to it, the arrows below step it */
+.mode { width: 128px; height: 128px; border-radius: 50%; border: 2px solid var(--wired); background: #18191b; position: relative; }
+.mode .pos { position: absolute; width: 30px; height: 20px; margin: -10px 0 0 -15px; padding: 0; border: 0; border-radius: 10px;
+             background: transparent; color: var(--dim); font: 600 10px system-ui, sans-serif; cursor: pointer; white-space: nowrap; }
+.mode .pos:hover { background: #ffffff18; color: var(--text); }
+.mode .pos.on { background: var(--accent); color: #000; }
+.mode .now { position: absolute; inset: 36px; display: grid; place-items: center; border-radius: 50%; background: #0d0e10;
+             font: 700 20px system-ui, sans-serif; text-align: center; line-height: 1.1; pointer-events: none; }
+.mode .now.long { font-size: 12px; }
+.modestep { display: flex; gap: 8px; }
 .pad { display: grid; grid-template-columns: 44px 52px 44px; grid-template-rows: 40px 52px 40px; gap: 4px; place-items: center; }
 .pad .b { min-width: 40px; padding: 0; }
 .pad .ok { width: 52px; height: 52px; }
@@ -135,9 +141,10 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
 <div class="cam" id="cam">
   <div class="top">
     <div class="col"><div class="lbl">Mode</div>
-      <div class="mode" id="mode" title="Mode dial (PageUp / PageDown); position names are not known">
-        <button data-mode="+1" aria-label="mode dial next">▲</button><span id="modeval">0</span><button data-mode="-1" aria-label="mode dial previous">▼</button>
-      </div></div>
+      <div class="mode" id="mode" title="Mode dial: click a position to turn the dial to it">
+        <div class="now" id="modeval">–</div>
+      </div>
+      <div class="modestep"><button class="b wired" data-mode="-1" title="Mode dial: the previous position (PageDown)" aria-label="mode dial previous">◀<kbd>PgDn</kbd></button><button class="b wired" data-mode="+1" title="Mode dial: the next position (PageUp)" aria-label="mode dial next">▶<kbd>PgUp</kbd></button></div></div>
     <div class="col"><div class="lbl">Power</div><button class="b" data-ctl="power" id="powerbtn">ON</button></div>
     <div class="col"><div class="lbl">Top</div><div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="b" data-ctl="afmeter">AF/⊡</button><button class="b" data-ctl="drive">Drive</button><button class="b" data-ctl="bkt">BKT</button></div></div>
@@ -227,7 +234,7 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
   S2 records a capture with the exposure in use and REC starts and ends a clip: all three are the stand-in's, not the firmware's.
   The firmware's camera application answers S1 and S2 itself (the date prompt, the shooting information, the focus
   confirmation, the capture display for the shutter time in use, the rec view), with the modules' notifications of a release
-  stood in (S-RELSEQ). REC records at mode-dial position 7 after the LLPSW firmware key (Firmware keys, 1.1.4 0x121c) is
+  stood in (S-RELSEQ). REC records with the mode dial at Movie (position 7) after the LLPSW firmware key (Firmware keys, 1.1.4 0x121c) is
   released; with LLPSW pressed, as the lab's idle image has it, the application refuses the key's function.</p>
   <div class="grid">
     <label><span>Live view</span><select id="sc-lv"><option value="0">off</option><option value="1">on</option></select><output></output></label>
@@ -384,6 +391,34 @@ addEventListener('blur', () => {
 });
 function press(id, on) { document.querySelectorAll(`[data-ctl="${id}"]`).forEach((b) => b.classList.toggle('down', on)); }
 function modeStep(d) { send({ type: 'switch', id: 'mode_dial', step: d }); }   // relative: the server adds it to the position it has
+function modePick(k) { if (k !== STATUS.mode_dial) send({ type: 'switch', id: 'mode_dial', value: k }); }   // absolute
+// The mode dial from the status: its positions (mode_dial_positions: each one's code, the firmware's name of it and the
+// label shown, "position k" for a code the build does not name) round the ring in entry order, the current one lit
+// and named in the middle. Which way round they lie on the body, and whether its dial turns past its ends, the
+// firmware does not tell: the steps wrap, as the server's do.
+let modeKey = null;
+function showModeDial(s) {
+  const ps = s.mode_dial_positions || [], k = s.mode_dial ?? 0, dial = $('mode');
+  const key = ps.map((p) => p.label).join('|');
+  if (key !== modeKey) {
+    modeKey = key;
+    dial.querySelectorAll('.pos').forEach((b) => b.remove());
+    ps.forEach((p, i) => {
+      const a = 2 * Math.PI * i / ps.length, b = document.createElement('button');
+      b.className = 'pos'; b.dataset.pos = String(i);
+      b.style.left = `${50 + 37 * Math.sin(a)}%`; b.style.top = `${50 - 37 * Math.cos(a)}%`;
+      b.textContent = p.name === null ? String(i) : p.label;
+      b.title = `Mode dial position ${i}: ${p.label}` + (p.name === null ? (p.code === null ? ' (not in the dial table)' : ` (code ${p.code}, which this firmware does not name)`) : ` (the firmware's MODEDIAL_${p.name}, code ${p.code})`);
+      b.setAttribute('aria-label', `mode dial: ${p.label}`);
+      b.addEventListener('click', () => modePick(i));
+      dial.appendChild(b);
+    });
+  }
+  const p = ps[k], label = p ? p.label : ps.length ? `position ${k}` : '–';           // (no session: no positions)
+  $('modeval').textContent = label;
+  $('modeval').classList.toggle('long', label.length > 3);
+  dial.querySelectorAll('.pos').forEach((b) => { const on = +b.dataset.pos === k; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+}
 
 // ---- buttons ----------------------------------------------------------------------------------------------------------
 function wireButtons() {
@@ -497,7 +532,7 @@ function showStatus(s) {
   for (const e of s.log_tail || []) {
     if (e.idx > lastLogged && e.record) { lastLogged = e.idx; logRecord(e.record); }
   }
-  $('modeval').textContent = s.mode_dial ?? 0;
+  showModeDial(s);
   if (s.bits) $('monstate').textContent = `monitor bit ${s.bits.monitor}, rotate ${s.bits.rotate}, lever ${s.bits.lever}` +
     (s.tp_mask != null ? ` · touch gestures the GUI enabled: ${(s.tp_gestures || []).join(' ') || 'none'} (0x${s.tp_mask.toString(16)})` +
       ((s.tp_mask & 16) ? '' : ' — set when the shooting screen was built on the EVF; it is rebuilt on the next switch back or MENU twice') : '');
@@ -785,7 +820,7 @@ function fill(controls, screens) {
     const gui = c.gui.map((i, k) => i == null ? '' : `${['on', 'long', 'off'][k]} ${i} <code>${esc(c.gui_names[k])}</code>`).filter(Boolean).join('<br>');
     return `<tr><td><b>${esc(c.key)}</b></td><td>${esc(c.name)}</td><td class="st-${c.status}">${c.status}</td><td>${ui}</td><td>${gui || '–'}</td><td>${esc(c.reason || c.note || '')}</td></tr>`;
   }).join('');
-  $('tab-keys').innerHTML = `<p class="note">Keys go through the firmware's own key decoder UI_IN (task 84) natively, and the firmware's camera application turns the decoded EV into the GUI's input itself. Dials: [ ] (main), , . (sub), mouse wheel; each detent goes through the firmware's counter writer and UI_IN's dial step. Multi-selector: Shift + arrows, Shift + Home / PageUp / End / PageDown for the diagonals, Shift + Enter to press (the press and the directions go through UI_IN's joystick decoder; the camera application's own query names the direction). Mode dial: PageUp / PageDown.</p>
+  $('tab-keys').innerHTML = `<p class="note">Keys go through the firmware's own key decoder UI_IN (task 84) natively, and the firmware's camera application turns the decoded EV into the GUI's input itself. Dials: [ ] (main), , . (sub), mouse wheel; each detent goes through the firmware's counter writer and UI_IN's dial step. Multi-selector: Shift + arrows, Shift + Home / PageUp / End / PageDown for the diagonals, Shift + Enter to press (the press and the directions go through UI_IN's joystick decoder; the camera application's own query names the direction). Mode dial: PageUp / PageDown (or the arrows under it) turn it one position, wrapping (whether the body's dial stops at its ends is not known); a click on a position turns it there. Each position's name is the firmware's (UI_IN's dial table and the build's names of its codes: S, M, B, C1..C4, Movie, P, A in entry order on the OM-1).</p>
     <table><tr><th>Key</th><th>Control</th><th>Status</th><th>UI_IN (group.byte.bit, code, EV)</th><th>GUI (sendEvent index, message)</th><th>Note</th></tr>${rows}</table>`;
   const fw = controls.filter((c) => c.kind.startsWith('fw'));
   $('tab-fw').innerHTML = `<p class="note">Every other entry of UI_IN groups 0-4. Pressing one pushes its bit natively (group 4 through the firmware's own group-4 producer 0x5014d537); the decoded code shows in the status line. The CEC keys have a GUI index by name; the monitor joint 0x2403 and headphone 0x1711 switches go to 208 / 209 by explicit rows; LLPSW 0x121c and HDMI 0x0501 go through the switch table's pick (0x50424f9a, native) to 66 / 67 and 121. The others (grey) are decoded only: no EV name, or no GUI message for it.</p><div class="fw">` +
@@ -799,7 +834,7 @@ function fill(controls, screens) {
     <tr><td>Setup Menu, all tabs and pages, help, popups, sub-screens</td><td>0x0b02 / 329 …</td><td>MENU, keys, dials</td><td>native; the live view stops behind it (S-THROUGH); closing it skips the settings' flash save (S-SETSAVE)</td></tr>
     <tr><td>Playback, no picture</td><td>0x0505 / 324</td><td>PLAY before any S2</td><td>native "No Picture"</td></tr>
     <tr><td>Super Control Panel and its cells' screens</td><td>0x0403 / 467 …</td><td>OK on the shooting screen, then arrows / dials / OK</td><td>native</td></tr>
-    <tr><td>Focus confirmation, recording screen, rec view</td><td>0x0108</td><td>S1, REC (mode dial 7, LLPSW released), S2</td><td>native (S-DISPFRAME runs CPU 3's DISP_FRAME; S-RECVIEW holds the capture's frame)</td></tr>
+    <tr><td>Focus confirmation, recording screen, rec view</td><td>0x0108</td><td>S1, REC (mode dial at Movie, LLPSW released), S2</td><td>native (S-DISPFRAME runs CPU 3's DISP_FRAME; S-RECVIEW holds the capture's frame)</td></tr>
     <tr><td>Every screen above on the EVF</td><td>layout byte 2 (0 in menus)</td><td>LV (V), eye sensor (N), or --device evf</td><td>the GUI is told (H-CONNECT 131) and the application re-enters the screen (S-OUTDISP); the EVF's bottom bar and repaint are still wrong (docs/om1-shutter-spec.md section 7 item 56)</td></tr>
     <tr><td>Playback of the pictures taken</td><td>0x0508 / 0x050b</td><td>S2, then PLAY; left / right, INFO; PLAY or S1 back</td><td>native GUI; S-CARD keeps the images, S-PLAYSEQ finishes the play module's requests, S-PLAYCOMP answers for the play component, S-PLAYVIEW shows the frame S-SCENE renders again from the scene kept with the image</td></tr></table>`;
   $('tab-standins').innerHTML = '<table><tr><th>Label</th><th>In use</th><th>What and why</th></tr>' +
@@ -866,6 +901,37 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function until(pred, ms) { const t0 = performance.now(); while (performance.now() - t0 < ms) { if (pred()) return true; await sleep(50); } return false; }
 function key(code, type, shiftKey) { window.dispatchEvent(new KeyboardEvent(type, { code, key: code.replace('Key', '').toLowerCase(), shiftKey: !!shiftKey, bubbles: true })); }
 async function tap(code) { key(code, 'keydown'); await sleep(150); key(code, 'keyup'); }
+// What a pointer at a control's centre reaches (elementFromPoint, the control scrolled into view): the control itself
+// or its content, or whatever covers it. A click at the centre goes to that, so a covered control does not get it;
+// both are true when it reached the control.
+function hitsAtCentre(el) {
+  el.scrollIntoView({ block: 'center', inline: 'center' });
+  const r = el.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+  return { hit, own: !!hit && (hit === el || el.contains(hit)) };
+}
+function clickAtCentre(el) { const { hit, own } = hitsAtCentre(el); if (hit) hit.click(); return own; }
+// the mode dial shows the status's position by its name, lit on the ring
+const modeShown = () => {
+  const p = (STATUS.mode_dial_positions || [])[STATUS.mode_dial], on = document.querySelector('#mode .pos.on');
+  return !!p && $('modeval').textContent === p.label && !!on && +on.dataset.pos === STATUS.mode_dial;
+};
+// The mode dial with the mouse: the next and previous arrows and the position half way round, each clicked at its
+// centre; then every visible control of the camera is the one a click at its centre reaches. Returns the position
+// the dial is left at.
+async function modeDialSteps(step, nd) {
+  const at = (k) => until(() => STATUS.mode_dial === k && STATUS.phase === 'running', 20000);
+  const m1 = STATUS.mode_dial;
+  step('mode dial: the name shown', modeShown(), { mode: m1, shown: $('modeval').textContent });
+  const next = clickAtCentre(document.querySelector('[data-mode="+1"]'));
+  step('mode dial: ▶ at its centre, the next position', next && await at((m1 + 1) % nd) && modeShown(), { hit: next, mode: STATUS.mode_dial, shown: $('modeval').textContent });
+  const prev = clickAtCentre(document.querySelector('[data-mode="-1"]'));
+  step('mode dial: ◀ at its centre, the previous position', prev && await at(m1) && modeShown(), { hit: prev, mode: STATUS.mode_dial, shown: $('modeval').textContent });
+  const k = (m1 + (nd >> 1)) % nd, pick = clickAtCentre(document.querySelector(`#mode .pos[data-pos="${k}"]`));
+  step(`mode dial: position ${k} picked on the ring`, pick && await at(k) && modeShown(), { hit: pick, mode: STATUS.mode_dial, shown: $('modeval').textContent });
+  const covered = [...document.querySelectorAll('#cam button')].filter((b) => b.checkVisibility() && !hitsAtCentre(b).own).map((b) => b.outerHTML.slice(0, 80));
+  step('every camera control is what its centre hits', covered.length === 0, { covered });
+  return k;
+}
 async function selftest() {
   const R = { steps: [] };
   const step = (name, ok, extra) => R.steps.push({ name, ok, ...(extra || {}) });
@@ -893,9 +959,10 @@ async function selftest() {
   step('mouse on the monitor: GUI touch', await until(() => $('touchlog').textContent.includes('answer'), 20000), { log: $('touchlog').textContent.slice(0, 300) });
   await sleep(1000);
   R.canvas_touch = cv.toDataURL('image/png');
-  const m0 = STATUS.mode_dial || 0;
+  const m0 = STATUS.mode_dial || 0, nd = (STATUS.mode_dial_positions || []).length;
   for (let i = 0; i < 2; i++) { key('PageUp', 'keydown'); key('PageUp', 'keyup'); }   // faster than one input runs
-  step('PageUp twice quickly: mode dial two positions', await until(() => STATUS.mode_dial === (m0 + 2) % 10 && STATUS.phase === 'running', 20000), { m0, mode: STATUS.mode_dial });
+  step('PageUp twice quickly: mode dial two positions', nd > 0 && await until(() => STATUS.mode_dial === (m0 + 2) % nd && STATUS.phase === 'running', 20000), { m0, mode: STATUS.mode_dial });
+  const md = await modeDialSteps(step, nd);
   // a firmware key pressed on its button and released off it (synthetic pointers cannot be captured): the up still goes
   const fwb = document.querySelector('[data-fw="fw_2005"]');
   const pressed = () => (STATUS.pressed || []).includes('fw_2005');
@@ -908,7 +975,7 @@ async function selftest() {
          ((STATUS.dropped || {})['key repeat'] || 0) === rep0, { pressed: STATUS.pressed, dropped: STATUS.dropped });
   }
   key('PageDown', 'keydown', true); await sleep(150); key('PageDown', 'keyup', true);
-  step('Shift+PageDown: multi-selector down-right (UI_IN 0x02021234)', await until(() => $('eventlog').textContent.includes('0x02021234'), 20000) && STATUS.mode_dial === (m0 + 2) % 10, { mode: STATUS.mode_dial });
+  step('Shift+PageDown: multi-selector down-right (UI_IN 0x02021234)', await until(() => $('eventlog').textContent.includes('0x02021234'), 20000) && STATUS.mode_dial === md, { mode: STATUS.mode_dial });
   // the Card, HDMI and session options panel: the session's options, the card the firmware formatted at the start read
   // with refs/volume.mjs, and the HDMI control's state (no port without --hdmi on)
   const sess = await (await api('/api/session')).json();

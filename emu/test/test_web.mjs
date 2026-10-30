@@ -5,8 +5,9 @@
 // - B4: web/frame.mjs's converter over all 2^24 words against the digest pinned from emu (YCC_SHA256), and
 //   src/lab/playapi.mjs on a node Player (hostApiTests): the browser host's refusal of unported tokens, ?sync=1
 //   timeouts, the logged input;
-// - B6's page inputs (PAGE_B6_INPUTS, webgate's keys and touch) on a node Player: a new frame and the GUI state after
-//   each, so a sequence the page check would fail on fails here without Chrome (pageInputsTests);
+// - B6's page inputs (PAGE_B6_INPUTS, webgate's keys, touch and mode dial) on a node Player: a new frame and the GUI
+//   state after each key and touch, the dial's position and name after its groups, so a sequence the page check would
+//   fail on fails here without Chrome (pageInputsTests);
 // - playui.mjs's rows against play.mjs's CONTROLS on every shared field;
 // - B3's driver unit: web/driver.mjs with an injected scheduler (no spin while the lab is ahead, an immediate wake on
 //   input, a kick ending a wait, 20 ms otherwise, an order deadline);
@@ -132,12 +133,14 @@ export function controlsTests() {
 
 // B6's page inputs (bin/webgate.mjs): the Player inputs web/index.html sends for webgate's keys and touch, in order,
 // grouped by the page check that waits for each group; webgate requires the page's sent inputs to be these. gui: the
-// state the group must end in. OK comes before the mode dial: after a dial change to any position but 8 setting 820
-// reads 0 and the camera application's OK path skips (0x5106675d..66: 0x51052dc8 is 1 when 820 is 0), so no frame
-// follows (X); why 820 reads 0 there is ?, the mode change is an open item (docs/om1-input-spec.md section 9). The
+// state the group must end in. OK comes before the mode dial: once the dial has left P, setting 820 reads 0 with most
+// other settings and the camera application's OK path skips (0x5106675d..66: 0x51052dc8 is 1 when 820 is 0), so no
+// frame follows (X); why the settings read 0 then is ? (docs/om1-input-spec.md section 9). The
 // touch is on the shooting screen's touch-mode icon, which the camera application, forwarding the touch itself with the
 // native lens, turns to its next mode (X); at (90, 30), the wireless icon, it opens Wi-Fi Connection (X), so the touch
-// is no longer there (docs/hle-gaps.md 4.4.2).
+// is no longer there (docs/hle-gaps.md 4.4.2). mode_dial: the positions the group moves the dial; mode_dial_at and
+// mode_label: the position it ends at and that position's name (the mouse group: the dial's arrows at their centres,
+// then E143's P on its ring, position 8: src/fw/facts.mjs MODE_DIAL_E143).
 const KEY = (id) => [{ type: 'key', id, action: 'down' }, { type: 'key', id, action: 'up' }];
 export const PAGE_B6_INPUTS = [
   { what: 'key KeyM', inputs: KEY('menu'), gui: '0x0b02' },
@@ -146,9 +149,12 @@ export const PAGE_B6_INPUTS = [
   { what: 'touch (35, 465)', inputs: [{ type: 'touch', action: 'down', x: 35, y: 465 }, { type: 'touch', action: 'up', x: 35, y: 465 }], gui: '0x0108' },
   { what: 'key Enter', inputs: KEY('ok'), gui: '0x0403' },
   { what: 'PageUp twice quickly', inputs: [{ type: 'switch', id: 'mode_dial', step: 1 }, { type: 'switch', id: 'mode_dial', step: 1 }], mode_dial: 2 },
+  { what: 'mode dial by mouse: next, previous, P', inputs: [{ type: 'switch', id: 'mode_dial', step: 1 }, { type: 'switch', id: 'mode_dial', step: -1 },
+    { type: 'switch', id: 'mode_dial', value: 8 }], mode_dial_at: 8, mode_label: 'P' },
 ];
 // B6 without Chrome: PAGE_B6_INPUTS on a node Player as webgate's node side runs them (idle off, one input at a time).
-// Each key and touch group must publish a new frame and end in its GUI state; the two dial steps move the dial two.
+// Each key and touch group must publish a new frame and end in its GUI state; a dial group must leave the dial where
+// it says (mode_dial, or mode_dial_at with that position's name).
 export async function pageInputsTests() {
   const bad = [];
   const rom = new Uint8Array(fs.readFileSync(E + '00000000.OE.0100.bin')), resBlock = new Uint8Array(fs.readFileSync(E + '02000000.OE.0101.bin'));
@@ -167,7 +173,11 @@ export async function pageInputsTests() {
       const s = pl.status_doc;
       if (s.phase !== 'running') { bad.push(`page inputs ${g.what}: phase ${s.phase} ${JSON.stringify(s.error)?.slice(0, 300)}`); break; }
       if (g.gui && (s.frame_seq <= seq0 || s.gui !== g.gui)) bad.push(`page inputs ${g.what}: frame_seq ${seq0} -> ${s.frame_seq}, GUI ${s.gui} ${s.gui_name} (want a new frame, GUI ${g.gui})`);
-      if (g.mode_dial !== undefined && s.mode_dial !== (dial0 + g.mode_dial) % 10) bad.push(`page inputs ${g.what}: mode dial ${dial0} -> ${s.mode_dial}`);
+      const n = s.mode_dial_positions.length;
+      if (g.mode_dial !== undefined && s.mode_dial !== (dial0 + g.mode_dial) % n) bad.push(`page inputs ${g.what}: mode dial ${dial0} -> ${s.mode_dial}`);
+      if (g.mode_dial_at !== undefined && (s.mode_dial !== g.mode_dial_at || s.mode_dial_positions[s.mode_dial].label !== g.mode_label)) {
+        bad.push(`page inputs ${g.what}: mode dial ${dial0} -> ${s.mode_dial} ${JSON.stringify(s.mode_dial_positions[s.mode_dial])}, want ${g.mode_dial_at} ${g.mode_label}`);
+      }
     }
   } finally {
     if (pl.session !== null) pl.close_session();

@@ -108,8 +108,10 @@ export async function camappSession() {
       await pl.key('rec', 'down'); await pl.key('rec', 'up');
       ok((await pl.status()).camapp?.recording_s === null, 'REC with LLPSW pressed (or the mode dial off 7) starts no recording');
       if (!native_lens) await pl.key('fw_121c', 'down');
+      // since the mode change runs (H-STOREINIT) the application takes REC from between 300 and 600 ms of lab time after
+      // the change to Movie, not 100 ms (X; what it waits for is not traced): 1 s
       await pl.input({ type: 'switch', id: 'mode_dial', value: 7 });
-      await pl.input({ type: 'token', token: 'WAIT:100' });
+      await pl.input({ type: 'token', token: 'WAIT:1000' });
       const [f4] = await pl.frame();
       await pl.key('rec', 'down'); await pl.key('rec', 'up');
       await pl.input({ type: 'token', token: 'WAIT:1500' });

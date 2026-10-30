@@ -15,6 +15,7 @@ import { Accelerometer } from './acc.mjs';
 import { Storage, STORAGE } from './storage.mjs';
 import { NativeLens } from './lens.mjs';
 import { IoExpanders, PowerOff, startPowerManager } from './power.mjs';
+import { SioBus } from './sio.mjs';
 import { imageView } from '../fw/image.mjs';
 import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143, DPC_E143 } from '../fw/facts.mjs';
 import * as D from './display.mjs';
@@ -929,6 +930,7 @@ export class PlaySession extends N.NavSession {
     if (o.mutant !== 'no-aeinit') this.aeinit_bring_up();   // without it the interpolation's div fault comes back
     if (MODEL_INFO.acc) this.acc_bring_up();
     if (this.storage_runs()) this.storage_bring_up();
+    if (MODEL_INFO.sio_devices) this.sio_bring_up();
     if (fact('power.task', null) != null) this.power_task_bring_up();     // (null or undefined: no power task)
     if (this.lens) this.lens.bring_up();
     this.end('play-bring-up', 'bring-up', [], [], { idle_codes: this.idle_codes.map(h8), ...(this.storage && { storage: { ...this.storage.status(), log: this.storage.take_log() } }),
@@ -959,6 +961,13 @@ export class PlaySession extends N.NavSession {
       throw new PlayError(`H-DPCINIT: after ${h8(init)}: ${dev.writes - writes} trigger writes, words ${show([...dev.words])}, IRQs without a handler ${show(missing)}`);
     }
     this.dpc_init = true;
+  }
+  // S-SIOIIC: PER_SIO's serial controller for the channels the body's devices sit on (src/lab/sio.mjs, src/fw/models.mjs
+  // sio_devices: the TG-5's internal charger on channel 9), served at its driver's transfer starts before the power
+  // task's start configures the charger's channel
+  sio_bring_up() {
+    this.sio = new SioBus(this.lab);
+    this.sio.bring_up();
   }
   // H-PWRTASK: the power task (fact 'power.task', src/fw/facts.mjs powerTask), which the boot starts and the lab, ending
   // the init task, did not: started natively at the bring-up with act_tsk and settled. Its entry runs the power

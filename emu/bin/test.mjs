@@ -245,6 +245,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...lu.bad, ...ls.bad].forEach((x) => console.log('  ', x));
   bad += lu.bad.length + ls.bad.length;
 }
+// PER_SIO's served IIC transfers and the TG-5's charger, without firmware (the TG-5s' sessions are bin/modelcheck.mjs's)
+{
+  const { sioUnits } = await import('../test/test_sio.mjs');
+  const su = sioUnits();
+  console.log(`PER_SIO IIC and the TG-5's charger: units ${su.checks - su.bad.length}/${su.checks}`);
+  su.bad.forEach((x) => console.log('  ', x));
+  bad += su.bad.length;
+}
 // the SCPU's Cortex-M4 core: hand-written vectors, QEMU's recorded vectors, the SCPU image from its reset vector
 {
   const { m4Units, m4Vectors, m4Firmware } = await import('../test/test_m4.mjs');

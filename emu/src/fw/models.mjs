@@ -64,6 +64,13 @@ const G4SET_UNCHECKED = false;
 // init, its task entry (task 78) and the gauge's getter. A body without it keeps the accelerometer and PER_SLOPE off
 // (the gauge reads the BSS)
 //
+// `sio_devices`: the devices on PER_SIO's channels the lab has, [{channel, device}] (src/lab/sio.mjs S-SIOIIC and
+// H-SIOMAP; a device name of its DEVICES, 'charger': src/lab/charger.mjs S-CHARGER). A body without it runs PER_SIO's
+// channels natively against lab-stub pages, its channel map unset
+//
+// `modack_queues`: the module queues of the body's API target table that E143's has no counterpart of, [queue id,
+// its name in the object-name table], which S-MODACK answers too (src/lab/camapp.mjs module_queues)
+//
 // `heap_pool`: the firmware heap's block get and release of its pool 2 (get, put, the pool's block bytes), which Level
 // Adjust's sampling loop calls instead of malloc and free; S-HEAP (src/lab/play.mjs), whose memory is that pool's,
 // serves them too. A body without it runs them natively
@@ -692,15 +699,17 @@ export const MODELS = {
     // rule framePlane (src/fw/facts.mjs) placed it at the same 0x50022dd8, the plane's mode-3 upload (2026-10-29)
   },
   E129: {
-    name: 'TG-5', bin: 'OLY_E_129_1101_0000_0000.BIN', version: '1.1', res_block: 'blk01900000.OE.0101.bin',
+    name: 'TG-5', bin: 'OLY_E_129_1101_0000_0000.BIN', version: '1.1', res_block: 'blk01900000.OE.0101.bin', checked: true,
     rom_len: 26214336, rom_sha256: 'a57f3d72282b2f923bcc38e53f1159f51af708c219e065986936064ca4cf93a5',
     // the reset head's jump into the run-time copy at 0x500000b6: mov 0x604000f9,a0; jmp (a0) (D)
     image_base: 0x60400020,
     res_len: 17276384, res_sha256: '110a674b5dfe8d127eb241b24c4cb60a5675ce14a1d435687a53eb36c6663f1b',
     // the vendor's specification gives the TFT as 460K dots, not its pixel geometry (I: unchecked); no EVF
     panels: { tft: null, evf: null },
-    card_fs: { native: false, why: 'its start stops before the application (docs/ROADMAP.md, Multi-model next stops); the rule finds the seams, not run' },
-    board: { family: 'E144' },
+    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // the family's stub pages and the serial controllers' blocks of channels 9, 2 and 3, as E132's (its sessions write
+    // those blocks and no other, X)
+    board: { family: 'E144', stub_pages: [0x98800000, 0x98F20000, 0x9A200000, 0x9B800000, 0x9B801000, 0x9BC00000, 0x9BD00000, 0x9A100000, 0x98500000, 0x98600000] },
     // the map from E143 pairs 0.94M instructions; from E145 2.61M with 33 conflicts, from E142 1.76M (129), from E140
     // 1.84M (117); through E145 137 of the overrides carry (72 nulls) and 2 fail, through E142 116 (60) and 16, through
     // E140 117 (60) and 16 (X: port.json port_via.map, carried, carry_failed, bin/port.mjs with each). Through E142 and
@@ -709,23 +718,56 @@ export const MODELS = {
     port_via: 'E145',
     // the shared stand-in (G4SET_UNCHECKED)
     g4set: G4SET_UNCHECKED,
+    // PER_SIO's devices the lab has (src/lab/sio.mjs S-SIOIIC): the internal charger on channel 9 (S-CHARGER,
+    // src/lab/charger.mjs), as E132's: its start writes register 1 and reads it back over the same transfers (X)
+    sio_devices: [{ channel: 9, device: 'charger' }],
   },
   E132: {
-    name: 'TG-5 (KOUICHIRO)', bin: 'OLY_E_132_1300_0000_0000.BIN', version: '1.3', res_block: 'blk01900000.OE.0101.bin',
+    name: 'TG-5 (KOUICHIRO)', bin: 'OLY_E_132_1300_0000_0000.BIN', version: '1.3', res_block: 'blk01900000.OE.0101.bin', checked: true,
     rom_len: 26214336, rom_sha256: 'e3ecb52bb83d376ff97b2543293e7a20c44490671fae5c1ebad327c8584c09f7',
     // the reset head's jump into the run-time copy at 0x500000b6: mov 0x604000f9,a0; jmp (a0) (D)
     image_base: 0x60400020,
     res_len: 18550240, res_sha256: 'd0fa5807f2e4fbbf384b464082c35a9a59355c12fb73830987d15d08d4b162bc',
     // a TG-5 (the reply's model_name TG-5(KOUICHIRO)): its TFT of 460K dots, no geometry given; no EVF
     panels: { tft: null, evf: null },
-    card_fs: { native: false, why: 'its start stops before the application (docs/ROADMAP.md, Multi-model next stops); the rule finds the seams, not run' },
-    board: { family: 'E144' },
+    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // the family's stub pages (src/fw/board.mjs FAMILIES.E144) and the register blocks of the serial controllers its
+    // channels use once PER_SIO's channel map is set (H-SIOMAP, src/lab/sio.mjs): channel map 0x604aa840 (core 0's,
+    // the setter's table 0x604aa830 / 0x604aa86c), channel 9 -> index 7, 2 -> index 2 and 3 -> index 3, and the
+    // driver's register table 0x604aa1a8 (132 bytes an index): index 7's registers at 0x9a100000.., index 2's at
+    // 0x98500000.., index 3's at 0x98600000.. (D). The driver's configurations write them; the transfers on channel 9
+    // are S-SIOIIC's, on channel 2 the panel's, on channel 3 the IIC bus driver's (the compass's and the
+    // accelerometer's, whose waits S-IICWAIT answers) (I: the pages keep what is written, as the family's)
+    board: { family: 'E144', stub_pages: [0x98800000, 0x98F20000, 0x9A200000, 0x9B800000, 0x9B801000, 0x9BC00000, 0x9BD00000, 0x9A100000, 0x98500000, 0x98600000] },
     // as E129, a TG-5 whose main block has E129's size and base: E145 is taken; the map from E145 pairs 2.68M
     // instructions with 20 conflicts, 137 of the overrides carry (72 nulls) and 2 fail (X: port.json port_via.map,
     // carried, carry_failed); the other references were not measured
     port_via: 'E145',
     // the shared stand-in (G4SET_UNCHECKED)
     g4set: G4SET_UNCHECKED,
+    // PER_SIO's devices the lab has (src/lab/sio.mjs S-SIOIIC): the internal charger on channel 9 (S-CHARGER,
+    // src/lab/charger.mjs), which the charger init 0x5003fa04 configures (0x5003fa27: channel 9 at 400 kHz, D) and the
+    // camera application's start writes and reads back (X). The charger request 0x5003fa92: its table of register
+    // values 0x5003fb04..0x5003fb84, the address bytes 0x36 at 0x5003faeb and 0x37 at 0x5003fc2b, the read-back test
+    // 0x5003fc70..7e (a mismatch to the error path 0x5003fe6e(2)), the type-2 read 0x5003fc87..0x5003fd12, the
+    // completion waits' errlogs 0x1d003003 / 0x1d003004; the IIC layer's write 0x5004ba70 and write-read 0x5004bac8
+    // (its restart list through 0x5004ba5c -> 0x500505e1 mode 2) start the driver's 0x500506cb and 0x500509be with a1
+    // 0 (the polled path 0x50050821), and the interrupt's ends 0x50051719..0x50051770 and 0x500519f2..0x50051a84
+    // dispatch through 0x50051814 (D)
+    sio_devices: [{ channel: 9, device: 'charger' }],
+    // module queues of its API target table (0x608542fc, by target) that E143's has no counterpart of, which S-MODACK
+    // answers as it answers E143's (src/lab/camapp.mjs module_queues): target 38 -> 0xe6 and 43 -> 0xdf, named
+    // CATEGORY_MAIN and LOGGER_MAIN in the object-name table (name[24] + u16 id, their records at 0x512ef790 and
+    // 0x512ef6da, D). Their tasks do not run in the lab. CATEGORY_MAIN: the start's error factor check (0x50be0796,
+    // setErrorFactor) asks isCategoryUpdate first (0x50be13b8), which on this body (an industrial TG-5,
+    // OlyHfwOpeIndustrial, the CALS quality) is a real check: the synchronous DISPLAY cmd 43 (0x5029c9e9 ->
+    // 0x50299470), whose status 0 reads as "update" (the DISPLAY loop's reply word (36,sp), cleared at 0x501ecf4f, is
+    // not set by cmd 43's handler 0x501ed607, D; that the send returns it, I); so the start shows "Update folder
+    // Allocation"'s progress screen (factor 22 -> request 267 -> GUI 0x10c, "Busy") and updateCategoryInfo
+    // (0x50710d83) posts its request to CATEGORY_MAIN (D; E145 has the same check as a stub that returns 0,
+    // 0x50743489, D). Without the answer the screen stayed (X). LOGGER_MAIN: its request is posted at the start;
+    // without the answer the session stops after the clock is set, the application's queue 6 full (X; why is ?)
+    modack_queues: [[0xE6, 'CATEGORY_MAIN'], [0xDF, 'LOGGER_MAIN']],
   },
   E118: {
     name: 'E-M5 II', bin: 'OLY_E_118_4100_0000_0000.BIN', version: '4.1', res_block: 'blk01460000.OE.0101.bin',

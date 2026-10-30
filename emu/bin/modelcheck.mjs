@@ -60,11 +60,16 @@ const PROBE_XFAIL = {};
 const SDXC_XFAIL = { E144: [/stopped at 0x[0-9a-f]+ \(disasm 0x5032574f\) fault=6/, 'the movie parameters\' exFAT branch divides by 0 at 0x5032574f (Fault 6)'] };
 const SDXC = SECTORS !== null && new SdCard({ sectors: SECTORS }).kind === 'SDXC';
 // the bodies whose start waits for the user at a prompt S1 does not take to the shooting screen: model -> {state, the
-// prompt's GUI state; key, the key that answers it; after, the GUI state's name after it; why}, a step of the path
-// after the start, held strictly: a start that ends elsewhere fails, so the table follows the firmware
+// prompt's GUI state; key, the key that answers it, or keys, the keys in their order; after, the GUI state's name
+// after the last; why}, steps of the path after the start, held strictly: a start that ends elsewhere fails, so the
+// table follows the firmware
 const START_PROMPT = {
   E145: { state: 0x1103, key: 'menu', after: 'SS_COMMON/ID_ST_CA_REQ_DISP',
     why: 'the TG-7 opens its date and time setting at power-on on an unset clock (docs/model-survey.md finding 17); MENU, the screen\'s Cancel, leaves it for the clock warning, which S1 then clears as on the other bodies (S1 too leaves the setting, but only for the warning, X)' },
+  E129: { state: 0x1103, key: 'menu', after: 'SS_COMMON/ID_ST_CA_REQ_DISP',
+    why: 'the TG-5 opens the same date and time setting as the TG-7 at power-on on an unset clock, with Cancel on MENU (X: frames; docs/model-survey.md finding 26)' },
+  E132: { state: 0x1103, keys: ['up', 'ok', 'up', 'ok', 'up', 'ok', 'up', 'ok', 'up', 'ok'], after: 'SS_COMMON/ID_ST_CA_REQ_DISP',
+    why: 'the industrial TG-5 opens the date and time setting at power-on on an unset clock with Set on OK and no Cancel; UP gives each of the five fields its first value (2017.01.01 00:00) and OK takes the next, the fifth OK sets the clock (X: frames; docs/model-survey.md finding 26)' },
 };
 const CHILD = `
 const J = process.argv[1], DEVICE = process.argv[2], PROBE_NS = ${PROBE_NS}, PROBE_SHOTS = ${PROBE_SHOTS},
@@ -149,7 +154,8 @@ for (const m of models) {
   // the EVF runs the path up to S2: playback on the EVF navigates, but its composite uses a PLANC (0xb2) and the
   // highlight block the VSC model has not observed (open, on E143 too)
   for (const device of MODELS[m].panels?.evf === null ? ['tft'] : ['tft', 'evf']) {
-  const prompt = START_PROMPT[m], full = prompt ? [PATH[0], [prompt.key, prompt.after, 0], ...PATH.slice(1)] : PATH;
+  const prompt = START_PROMPT[m], answer = prompt ? (prompt.keys ?? [prompt.key]).map((k, i, ks) => [k, i === ks.length - 1 ? prompt.after : null, 0]) : [];
+  const full = [PATH[0], ...answer, ...PATH.slice(1)];
   const path_ = device === 'evf' ? full.slice(0, full.indexOf(PATH[2]) + 1) : full;
   const r = spawnSync(process.execPath, ['--max-old-space-size=6144', '--input-type=module', '-e', CHILD, path.join(REPO, 'emu'), device, JSON.stringify(path_.slice(1).map((p) => p[0]))], { encoding: 'utf8', env: { ...process.env, OM_EMU_MODEL: m }, maxBuffer: 1 << 26 });
   const xs = SDXC ? SDXC_XFAIL[m] : null;

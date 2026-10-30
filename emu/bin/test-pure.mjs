@@ -12,6 +12,7 @@
 // (test_scpu.mjs), the HDMI port's device and sink (test_hdmi.mjs), the accelerometer stand-in's sample
 // (test_acc.mjs), the SD card model (SDHC and SDXC) and the FAT and exFAT readers (test_storage.mjs), S-SUBJECT's
 // subject boxes and transform (test_subject.mjs), the lens serial controller, the deferred-call triggers and S-LENSMCU's replies (test_lens.mjs),
+// PER_SIO's served IIC transfers and the TG-5's charger (test_sio.mjs),
 // the debug API's argument checks, halt,
 // trace filters and live-route units (test_live.mjs liveUnits: a machine on a blank image), its trace rules and edge
 // cases (test_debug.mjs traceRuleUnits: halfword device accesses, code on the lab stub, the bus window, code-fetch
@@ -39,6 +40,7 @@ import { accUnits } from '../test/test_acc.mjs';
 import { storageUnits } from '../test/test_storage.mjs';
 import { subjectUnits } from '../test/test_subject.mjs';
 import { lensUnits } from '../test/test_lens.mjs';
+import { sioUnits } from '../test/test_sio.mjs';
 import { liveUnits } from '../test/test_live.mjs';
 import { traceRuleUnits } from '../test/test_debug.mjs';
 import { pubauditTests } from '../test/test_pubaudit.mjs';
@@ -81,6 +83,7 @@ report('accelerometer sample (S-ACCSAMPLE)', accUnits());
 report('SD card and FAT / exFAT readers (S-SDCARD, refs/fat.mjs, refs/exfat.mjs)', storageUnits());
 report('subject frames: the scene\'s subject boxes, DISP_FRAME\'s transform taken back (S-SUBJECT)', subjectUnits());
 report('the lens serial controller, deferred-call triggers and the lens (S-LENSMCU)', lensUnits());
+report('PER_SIO\'s served IIC transfers and the TG-5\'s charger (S-SIOIIC, S-CHARGER)', sioUnits());
 report('debug API: argument checks, halt, trace filters, live route', await liveUnits());
 report('debug API: trace rules and edge cases (halfword device accesses, stub code, bus window, fetch faults, interrupt entry)', traceRuleUnits());
 report('publication audit (throwaway repository, made-up firmware)', await pubauditTests());

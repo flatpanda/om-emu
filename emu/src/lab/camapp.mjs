@@ -78,7 +78,7 @@ import * as SC from './scene.mjs';
 import { jpegOfFrame } from './jpeg.mjs';
 import { HlsMedia } from './media.mjs';
 import { SubjectFrames } from './subject.mjs';
-import { A, ON_LAB_MODEL, MODEL_INFO, IMAGE_BASE, knob, fact, isUnmapped } from '../fw/model.mjs';
+import { A, MODEL, ON_LAB_MODEL, MODEL_INFO, IMAGE_BASE, knob, fact, isUnmapped } from '../fw/model.mjs';
 import { DISPLAY_SYNC_E143, RECVIEW_E143, CBS_E143, LENS_ZOOM_TABLE_E143, CARD_DETECT_E143 } from '../fw/facts.mjs';
 //   S-CARD     a card in the SD slot. On a body whose file system runs natively (storage.mjs; MODELS card_fs)
 //              the card is a real block device (S-SDCARD) the firmware formats and mounts itself, and of S-CARD only
@@ -147,10 +147,14 @@ export const MODULE_QUEUES = new Set([0x76, 0x3F, 0x64, 0x5A, 0x47, 0x1F, 0x03, 
 // the same queues by their id words in the static queue-id table (0x600431c6, id n at +2(n - 1)), which a ported
 // model's copy names in its own table (its ids differ: E147 numbers DISPLAY 0x89); module_queues() reads them
 export const MODULE_QUEUE_WORDS = [A(0x600432B0), A(0x60043242), A(0x6004328C), A(0x60043278), A(0x60043252), A(0x60043202), A(0x600431CA), A(0x600431D6), A(0x600432A6), A(0x60043220), A(0x600431C6), A(0x60043280), A(0x600432BE), A(0x600431FA), A(0x600432BC), A(0x600431D4), A(0x60043226), A(0x60043320), A(0x600432F4), A(0x60043362)];
+// A body's API target table can name module queues E143's has no counterpart of (src/fw/models.mjs modack_queues:
+// [queue id, its name in the object-name table]; E132's CATEGORY_MAIN and LOGGER_MAIN): S-MODACK answers them too
 export function module_queues(image) {
   const ids = MODULE_QUEUE_WORDS.map((a) => image[a - IMAGE_BASE] | image[a - IMAGE_BASE + 1] << 8);
   if (ON_LAB_MODEL && ids.join() !== [...MODULE_QUEUES].join()) throw new Error('module_queues: E143 table is not MODULE_QUEUES');
-  return new Set(ids);
+  const more = (MODEL_INFO.modack_queues ?? []).map(([q]) => q);
+  if (more.some((q) => ids.includes(q))) throw new Error(`module_queues: ${MODEL}'s modack_queues ${more.join(', ')} repeat a queue of E143's table (${ids.join(', ')})`);
+  return new Set([...ids, ...more]);
 }
 const OLYQEWR = A(0x5002C151), API_SEND_RETURN = A(0x503EBA07);
 // S-DISPSYNC: the request type that waits for an image sync; the release's sync-word store (value, panels: both, as
@@ -279,7 +283,7 @@ const FUNC_DIRECT_RUN = A(0x51068E37), FUNC_RECORDING_MOVIE = 27;
 export const CAMAPP_STAND_INS = {
   "H-GUIBYAPP": "the lab's bring-up does not create the GUI (the creator 0x5108bc37): the application's start does, from CA_MAIN's code (0x510609ce), as on the camera; the lab takes the GUI's task and OSD records after it. Created twice, the lab's idle GUI kept a root of output 0 and one of the two buffers of OSD layer 1 (the registry 0x62b26528), so the shown root's double buffer had layer 1 on one side only: on the EVF the bottom bar and most of the information were missing in every other frame (docs/om1-shutter-spec.md section 7 item 59)",
 "S-CAMAPP": "the camera application runs natively in every session: the boot chain's HighLevel steps (0x50ab222a, 0x50ab22bc), the event broker init 0x502a48b6 and act_tsk(58) at bring-up; its task entries are allowed, its nine module-9 readers join S-TAKEOVER's, its output-device read (0x50b76dbe) joins S-PROP; the application maps keys and moves the GUI itself (docs/om1-shutter-spec.md section 7); control camapp 2 starts a session with the HLS components running too",
-  "S-MODACK": "the module tasks do not run: every request the application's API sender posts to a module queue (OlyQeWr returning to 0x503eba07) is answered after the step with [status 0, token, word 3] to the reply queue in its word 0, the layout of DISPLAY's replies (0x501c48bf); every synchronous send (0x5002e39d) the lab otherwise refuses returns E_OK. Nothing a module would write back is written (I)",
+  "S-MODACK": "the module tasks do not run: every request the application's API sender posts to a module queue (OlyQeWr returning to 0x503eba07; E143's target table's module queues, and those a body's src/fw/models.mjs modack_queues adds: E132's CATEGORY_MAIN and LOGGER_MAIN) is answered after the step with [status 0, token, word 3] to the reply queue in its word 0, the layout of DISPLAY's replies (0x501c48bf); every synchronous send (0x5002e39d) the lab otherwise refuses returns E_OK. Nothing a module would write back is written (I)",
   "S-DISPSYNC": "the release of the GUI's synced display updates: while the application's sync word for a panel is set (CameraCommon::setDispSync, which E137's GUI asks for at the start), the GUI's update is a request of type 3, which leaves its buffers pending until an image sync; their one sender, the shooting sequence's stopRecView, does not run in an idle session, so E137's screen stayed blank (X). After each step the lab releases each device with such a request: both panels' sync words cleared through the application's setter, as stopRecView does, then the image sync of kind 1, whose event the display manager takes in the state the type-3 request leaves, and the pending buffers are committed (D). stopRecView's kind 2 is not taken there: under it E137's screen came only at its GUI's next update, a 250 ms redraw of a blinking item, and E125's GUI, which sends none, kept a one-colour frame (X). When the camera releases the sync at the start is not known (I: once its through image shows)",
   "S-RVSTANDBY": "the rec view component in standby: the shooting components' RecView does not run; its entryStandby would store state 1 in the application's state word (fact recview), which starts at 0, and getRecViewState takes 0 for a rec view, so E142's GUI showed the rec view's items at the start (EVT_REC_DISP_RECVIEW, 0xf005) instead of the shooting screen (X). The lab stores 1 before the application starts; that the camera's component is in standby then is I",
   "S-TRAACK": "the HLS transaction layer's synchronous exec (0x50af7cb9 / 0x50af7cbe) returns 0: no local handler is ever registered (on the camera either), so every transaction goes to the active state's components, where the shooting component CmpSht_ShootingComponent_NEW answers TRA 990 and 991; it runs only with the HLS components, and the remote channel answers 0xf0000001 (startShootingService fails on TRA 990 without it, X). With the file system native and its HLS side (card_fs.hls: E143) the media control's start (TRA 1511) also goes to S-MDACTRL (media.mjs)",

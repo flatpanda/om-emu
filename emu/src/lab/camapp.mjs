@@ -263,7 +263,7 @@ const DF_COLOUR_INIT = A(0x51016EB1), DF_COLOUR = A(0x51016E3E), PROP_DATA = A(0
 const DF_SETTINGS = [[12417, A(0x62F4FE60)], [61473, A(0x62F4FE64)], [35185, A(0x62F4FE68)]];
 const DF_STATE = A(0x5100DFBC), DF_ERASE = A(0x5100D19E), DF_DRAW = A(0x5100D1B8), DF_FLUSH_RETURN = A(0x5100D2A7), K_CFLUSH = A(0x5004E68A);
 const DF_MODE = A(0xA3209010), DF_MASK = A(0xA3209012), DF_PENDING = A(0x62F4FE57), TFT_CHANNEL = 2, EVF_CHANNEL = 1, FACE_COLOURS = 8;
-const TFT_FRAME_STATE = A(0xA32DDAF6);
+const TFT_FRAME_STATE = A(0xA32DDAF6), DF_FUNCTIONS = [DF_COLOUR_INIT, DF_COLOUR, FACE_COLOUR_SET, DF_STATE, DF_ERASE, DF_DRAW];
 // DISP_FRAME's wait for the frame plane's buffer swap (0x5100d398..: while the channel's shown address is one of its two
 // buffers, OlyTaSS(1) and read again, 0x501c4291) sleeps on the display clock (A10, as the display task's sleeps do):
 // natively the lab task would sleep with no timer to wake it.
@@ -376,8 +376,10 @@ export class CamApp {
       lab.sim.write(LENS_READY, Uint8Array.of(1));
     }
     const rv = fact('recview', RECVIEW_E143);                                       // S-RVSTANDBY
-    lab.sim.write(rv.word, pack('<I', rv.standby));
-    this.dispframe_start();                                                         // S-DISPFRAME
+    if (rv) lab.sim.write(rv.word, pack('<I', rv.standby));                         // (null: no RecView trace, facts.mjs)
+    // S-DISPFRAME, where the port places DISP_FRAME's start and loop (the E118 family's three cores run no CPU 3 task
+    // and the port places only some of them, X; whether and where it draws its AF frames is ?)
+    if (DF_FUNCTIONS.every((a) => !isUnmapped(a))) this.dispframe_start();
     if (this.slens()) this.lens_mount();                                            // S-LENS
     lab.call(HL_CREATE, null, null, null, 2000000);
     lab.call(HL_INIT, null, null, null, 2000000);
@@ -501,18 +503,24 @@ export class CamApp {
     s.settle('S-DISPFRAME');
     this.log.push(['dispframe', `flag ${h8(a2)} pending ${h8(pend)} state ${st}`]);
   }
-  // S-TAKEFRAME: the frame display mode the TAKE module sets (0x500256d9), S-SUBJECT's too (its subject bit)
+  // S-TAKEFRAME: the frame display mode the TAKE module sets (0x500256d9), S-SUBJECT's too (its subject bit). A build
+  // with no frame plane of this form (fact frame_plane null, src/fw/models.mjs: the E118 family's) is given none
   frame_mode(mode) {
     const s = this.s;
+    if (isUnmapped(FRAME_MODE_SET) && fact('frame_plane', null) === null) {
+      this.log.push(['takeframe', `none: the build has no frame plane of E143's form (mode ${mode})`]);
+      return;
+    }
     s.lab.call(FRAME_MODE_SET, { d0: mode }, null, null, 2000000);
     s.settle('S-TAKEFRAME');
     this.drain_cpu3();
   }
   // S-AFOSD: the AF module's OSD upload of the indicator and frames (cx, cy, w, h each). A build whose frame plane has
-  // no AF upload (fact frame_plane, its mode-3 upload null: E145, src/fw/facts.mjs framePlane) is given none
+  // no AF upload (fact frame_plane, its mode-3 upload null: E145, src/fw/facts.mjs framePlane), or that has no frame
+  // plane of this form (frame_plane null), is given none
   af_upload(indicator, frames) {
     const s = this.s, lab = s.lab;
-    if (isUnmapped(AF_UPLOAD) && fact('frame_plane', null)?.uploads[2] === null) {
+    if (isUnmapped(AF_UPLOAD) && (fact('frame_plane', null)?.uploads[2] ?? null) === null) {
       this.log.push(['afosd', `none: the frame plane has no AF upload (indicator ${indicator}, ${frames.length} frame(s))`]);
       return;
     }
@@ -561,9 +569,10 @@ export class CamApp {
       this.tra_deleted += 1;
       if (calls) h.finish_calls_after(r, del, { a0: req }); else h.finish_after(r, del, { a0: req });
     };
+    // (none on a build without the display manager's sync request, src/fw/facts.mjs displaySync: the E118 family's)
     const sync = fact('display.sync', DISPLAY_SYNC_E143);
     this.dispsync_fns = sync;
-    lab.observe(sync.request, (l, r) => { if ((r.d0 >>> 0) === DISPSYNC_REQUEST) this.dispsync.add(r.d1 >>> 0); }, 'S-DISPSYNC');
+    if (sync) lab.observe(sync.request, (l, r) => { if ((r.d0 >>> 0) === DISPSYNC_REQUEST) this.dispsync.add(r.d1 >>> 0); }, 'S-DISPSYNC');
     lab.observe(SHOOTING_START, () => { this.shooting = true; }, 'S-RELSEQ (shooting service)');
     lab.observe(SHOOTING_END, () => { this.shooting = false; }, 'S-RELSEQ (shooting service end)');
     const fd = fact('func_direct.id', { sp: 28 });

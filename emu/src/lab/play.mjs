@@ -336,8 +336,12 @@ export const POSITION_SWITCHES = [];
 // pushes from its own image (H-G4SET; the HDMI plug's report, a lens or grip input): there the USB connection is the
 // SCPU port scan's, reported through that producer (docs/hle-gaps.md 4.7, the 0x88 reply), which does not run, and the
 // lab's level would be undone by the producer's next push (X: E146, E147). So the E143 family keeps 0x0400 at state
-// 0, as E143's own idle image above does; its starts publish no USB connection (X; what state 0 is there is I)
-export const IDLE_SWITCH_STATES = [[0x000C, 0], [0x0400, 1]], PRODUCER_CODE = 0x0501;
+// 0, as E143's own idle image above does; its starts publish no USB connection (X; what state 0 is there is I). The
+// composite video cable 0x0500 (the E118 family's; its switch-table names EV_CONPOSITE_CONNECTED for state 0 and
+// _DISCONNECTED, D) with no cable (state 1): at state 0 E122's application took the composite output as connected
+// (getCompositeState: the switch query on 0x0500, docs/model-survey.md finding 31, D), so its output choice answered
+// VIDEO where the GUI had the TFT, and it asked the GUI for an output change after every panel refresh, for good (X)
+export const IDLE_SWITCH_STATES = [[0x000C, 0], [0x0400, 1], [0x0500, 1]], PRODUCER_CODE = 0x0501;
 export const STATE_SWITCHES = [];             // [[group, byte, bit, level]] of IDLE_SWITCH_STATES, apply_uiin_layout
 // The dial's position at the session's start: P's (position 0 where the build names no P). The start takes its mode
 // from the store, P on the blank store (setting 24 MODE_EXPOSE 3, the P screen; X), and no changeMode runs before the
@@ -675,6 +679,7 @@ export class PlayLab extends N.NavLab {
   }
   // ---- M10B: the A15 bracket recorder, chained behind the B2 observer that already hooks 0x501e04b7
   install_brackets() {
+    if (isUnmapped(CTRL_OR)) { this.brackets = null; return; }   // no CTRL3 OR placed (src/lab/menu.mjs B2 observers): no brackets
     this.brackets = new Map();
     const prev = this.hooks.get(runtime(CTRL_OR));
     const rec = (hle, r) => {

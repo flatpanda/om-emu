@@ -520,7 +520,9 @@ export class MenuLab extends T.TextDisplayLab {
         this.hook_rt(ra, back, 'obs-b2-return');
       }
     };
-    for (const [address, name] of B2_OBSERVED) this.observe(address, entry(name, address), `obs-${name}`);
+    // (ctrl_or, the VSC's CTRL3 read-modify-write, only where the port places it: the kind-3 VSC's builds, the E118
+    // family's, have no counterpart the map finds, X; src/lab/play.mjs install_brackets)
+    for (const [address, name] of B2_OBSERVED) if (name !== 'ctrl_or' || !isUnmapped(address)) this.observe(address, entry(name, address), `obs-${name}`);
     const point = (name, reg) => (lab, r) => {
       const v = r[reg] >>> 0;
       let extra = null;

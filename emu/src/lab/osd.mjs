@@ -157,6 +157,9 @@ export class OsdLab extends HLE {
     install_core_index(this.sim, cpu);
     this.data = DATA;
     for (const ctor of mm_ctors(this.image)) this.calls(ctor);
+    // H-MMINIT: a build whose boot chain sets up memory managers in a module init of their own besides the constructors
+    // (MODELS mm_init, with its evidence there), which the lab's start, ending the init task, skips: natively here
+    if (MODEL_INFO.mm_init) this.call(MODEL_INFO.mm_init, null, null, null, 200000);
     if (kernel === 'native' && !this.own_kernel) this.kernel_native();
     this.native_init();
   }

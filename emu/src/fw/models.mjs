@@ -868,6 +868,24 @@ export const MODELS = {
     // which the lab stub reads 0, and maps id 0 to 4 through the pairs at 0x60026864 (0:4, 3:3, 5:1, 6:2, 7:0; any other
     // id halts at 0x50002388, D); board 4 takes index 1, the table 0x601c3054 (X). Which revision a PEN-F has is ?
     dial: { select: 0x50176F46, select_end: 0x59, table_ptr: 0xA1C57F34, table0: 0x601C3054, board: 4 },
+    // the shared stand-in (G4SET_UNCHECKED)
+    g4set: G4SET_UNCHECKED,
+    // H-MMINIT: the boot chain's stage 3 calls 0x50483a1f right after its trace "3_8" (0x50186771; E143's chain starts a
+    // task there, 0x501e96e4..): it sets up two slot managers at 0xa18a37f4 and 0xa18a382c (their ids from the static
+    // words 0x60040e58.., their tables by 0x504849df..0x5048537b), whose methods the application's property reads reach
+    // (0x502caa17 -> 0x50483c43 -> 0x504854cf, `calls ((36,a2))`); without it the application's start called address
+    // 0 (X). The lab's start, ending the init task, skips the chain (D)
+    mm_init: 0x50483A1F,
+    // the GUI state log (0x50cefddb, E143's STATE_LOG) takes the old state in d1 (0x6160c060) and the new one, just
+    // stored, in a0 (0x6160c064), as E144's (its one caller 0x50b983a0, D)
+    state_log_regs: ['d1', 'a0'],
+    // no frame plane of E143's form (src/lab/camapp.mjs S-TAKEFRAME, S-AFOSD): src/fw/facts.mjs framePlane reads none and
+    // the map places neither the frame display mode set (E143 0x500256d9) nor the AF upload (0x500257ce) (X); where its
+    // AF frames are drawn is ?
+    frame_plane: null,
+    // the touch panel is not modelled on it: the lab's touch start needs the panel's open and the HFW callbacks, which
+    // src/fw/facts.mjs touchOpen does not read in its build and the map does not place (X: port.json)
+    touch: false,
     extra_tasks: [
       0x502F90F5,   // a display task (static row 0x51, stack 0x800) that the display task init starts (OlyTaSt at
                     // 0x502f8f6a, after its mailbox 0x5004adef); it waits on the flag in 0x60041034 and drives the VSC

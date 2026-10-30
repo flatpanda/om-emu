@@ -34,7 +34,7 @@ Other bodies, through ports (as of 2026-10-21):
 | OM-5, E-M1 III, E-M1X, E-M5 III, E-P7, E-M10 IV, E-M1 II, E-M10 III | E144, E139, E134, E137, E142, E140, E125, E130 | shooting screen with its picture and S1 on the TFT; S2 and the EVF are open |
 | TG-7 | E145 | the start ends in POWER_ON with a one-colour frame |
 | E-PL9, TG-5 | E133, E129, E132 | the start runs part way, then every task waits |
-| PEN-F | E122 | the start runs natively through the display open, the settings store and the dial init, then stops at the input task (UI_IN) on the TFT, at an earlier display send on the EVF; no frame yet (2026-10-30) |
+| PEN-F | E122 | the start runs natively to its camera application's shooting screen state on the TFT (the GUI draws the clock warning into its OSD layers; no frame yet: the kind-3 VSC has no compositor), and stops at about 3 s, or at S1, in the movie time, whose module the card's file system creates; the EVF start stops at a display send (2026-10-30) |
 | E-M5 II, E-M10 II | E118, E120 | the kernel's init runs, then the start stops in the lab's set-up (the GUI task's message take is not placed; 2026-10-30) |
 | 14 older bodies (E-PL5, E-M1, E-M10, TG-4, E-PL8 and others) | E100-E126 | surveyed, not tried |
 

@@ -1713,8 +1713,9 @@ its code:
   S-RECFILE's first fopen never completes: FILECLBK blocks in a write with no timeout to UI_IN's request queue,
   `0x6004192e`, at `0x5010c35f`, which nothing reads in the lab, 53 writes in 10 s; E143's and E144's fopen make no
   such write; why E134's does is ?), E129 and E132 (their starts stop before the application, ROADMAP),
-  the E118 family (its starts stop before the application, `docs/model-survey.md` finding 28; no SD command layer of
-  the rule's form). They keep S-CARD. E134's card is native since
+  the E118 family (no SD command layer of the rule's form; E122's start reaches the application since 2026-10-30, and
+  its movie time then divides by the movie module's object, which the card's file system init creates and the lab
+  does not run, `docs/model-survey.md` finding 31). They keep S-CARD. E134's card is native since
   2026-10-29 (4.8.7: the queue is UI_OUT's, the module of the camera's lamps, which its file layer asks for the card's
   access lamp; H-UIOUTSTART runs UI_OUT). E133's card is native since
   its start runs (2026-10-29: 2018 shots on the blank card, S2's file read back, X), and E145's (TG-7) since its start

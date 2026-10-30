@@ -55,7 +55,7 @@ through a reference place more; "Per-body status" has their figures).
 | E129 | TG-5 | 1101 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; MENU answers its date and time setting at the start) since the charger's transfers on serial channel 9 are served (S-SIOIIC, S-CHARGER, finding 24); its settings store since S-BOOTSTAGE (finding 20) |
 | E132 | TG-5 (KOUICHIRO) | 1300 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; its date and time setting has no Cancel, the clock is set) since the charger's transfers are served and S-MODACK answers its industrial category and logger modules (finding 24); its deferred send since finding 21 |
 | E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | through E122: the kernel's init runs, the start stops at the GUI message take's observer (finding 28) |
-| E122 | PEN-F | 3101 | 20.4 | 0x60021020 (7.2%) | plain | 0.79M | 123 | through E130: the start runs natively to the play bring-up and stops at UI_IN's forward observer (finding 28) |
+| E122 | PEN-F | 3101 | 20.4 | 0x60021020 (7.2%) | plain | 0.79M | 123 | through E130: the start runs natively to the shooting screen state `0x0108` (the GUI draws the clock warning) and stops at the first long timer or S1 in the movie time (findings 28, 31) |
 | E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | through E122: as E118 (finding 28) |
 | E113 | E-M10 | 1400 | 18.0 | 0x7d991020 (7.4%) | plain | 0.88M | 155 | not tried (base) |
 | E109 | E-M1 | 4600 | 17.0 | 0x6daf1020 (7.2%) | plain | 0.76M | 139 | not tried (base) |
@@ -469,6 +469,64 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    (X). E118 and E120 port through E122 (170 and 173 of its overrides carried, X); their dial inits take a fixed table,
    and the leg map put four of their level handlers wrong, which the kernel's own table corrects (X); they stop at the
    GUI message take, which `guiTake` finds on neither (X).
+
+29. **UI_IN's forward and the DISPLAY loop's replies, read by shape** (2026-10-30). The lab records the codes UI_IN
+   passes on where its post tests the sink word (E143's forward `0x5014c3eb`, called at three places of the post with
+   the code in d0). E122 has no such function: its post `0x50178f5e` tests the sink inline at three places, `mov
+   (sink),Dn; cmp 0,Dn; beq`, then loads the code into d0 for the module event post, from d2 at `0x5017919f` and from a2
+   at `0x50179230` and `0x501792ba` (D). One rule (`src/fw/facts.mjs` uiInForward, fact `ui_in.forward`) reads the
+   sites from the post's place and the sink word's: a callee of the post with the test near its entry is one site with
+   the code in d0, an inline test is a site with the register its `mov Rx,d0` names. It gives the map's forward on all
+   15 bodies the maps place it on, and three inline sites on each of E118, E120 and E122 (X); the play bring-up observes
+   every site (`obs-uiin-fwd`). On E122 S1 forwards `0x02000100` and its release `0x02010100` (X). The DISPLAY loop's
+   two replies to a request's sender (S-DISPQ's `DISPQ_REPLY_RETURNS`, E143 `0x501c4913` / `0x501c4974` in a function
+   of their own) are inline in E122's loop (`0x502f5ac7`, `0x502f5b26`, D); a second rule (displayReplies, fact
+   `dispq.replies`) reads them as the pair of 12-byte reply sends within the loop or its callees, the maps' pair on
+   the 15 bodies they place it on and one pair on each of the E118 family (X).
+
+30. **The static constructor tables' counts** (2026-10-30). The module loader runs each module's constructors through
+   one block per module, `mov N,d2; cmp 0,d2; beq; mov T,a2` and the loop `mov (a2),a0; add -32,sp; calls (a0)`, N / 4
+   pointers from T (E143 `0x501e60ae..0x501e6124`, D). The lab ran E143's tables of modules 6 and 7 with E143's counts
+   48 and 64 on every body, and the memory managers' table (module 2) at the map's place. A rule
+   (`src/fw/facts.mjs` ctorTables, fact `ctors`) reads every block's [T, N / 4] (each table ends in 0xffffffff after
+   its count, X on all 18): E143 15, 48, 64 and 6, E122 11, 39, 63 and 14, E146 14, 49, 69, 6, E144 13, 47, 69, 5,
+   E142 12, 38, 75, 5; E120 has three tables (11, 101, 14). The lab runs the first (the memory managers') and those
+   after it but the last (E143's module 8, which the lab's start does not load), with the loader's counts: the maps
+   placed E143's three tables at the rule's first three on all 15 bodies they place (X), so before this the lab called
+   past the end of the shorter tables (E144's 47, E142's 38: calls of 0xffffffff, which fault and were not checked on
+   the play path) and left the ends of the longer ones unrun (E146's 49th and its five of 69, E142's eleven of 75).
+   On E122 the map had put the memory managers' table on another table (`0x60427c30`; E122's is `0x6069b240`, D), so
+   none of its eleven ran and the application's start called through a memory manager's empty vtable (X).
+   With the loader's counts the 14 bodies `bin/modelcheck.mjs` checks pass as before (X).
+
+31. **E122 (PEN-F) to its shooting screen state** (2026-10-30). Past UI_IN (finding 29) the start met, in order, each
+   read where it lies (X: the stop, D: the code): the shared H-G4SET stand-in (`g4set` as the other ported bodies');
+   the touch start, whose panel open and HFW callbacks the port does not place (`touch: false`); the VSC's CTRL3 OR
+   (`0x501e04b7`, the A15 brackets), which the kind-3 VSC's build lacks (no observer, no brackets); the inter-CPU
+   doorbell init, which the map had put on a trace function (`0x50002de5`): E122's is `0x5004ae84`, which calls the
+   place of E143's first callee and attaches IRQ 120 for cores 0..2 with the handler at E143's IPI_HANDLER0's place
+   (override); no display sync request, no RecView trace, no play component getter (sync and recview null, no play
+   wrappers: S-DISPSYNC, S-RVSTANDBY and S-PLAYCOMP stand for nothing there); no DISP_FRAME start of E143's form
+   (S-DISPFRAME not run); the event broker's init, which opens with two calls on its queue's id (`0x501a8270`, the
+   rule had taken the second); the memory managers' constructors (finding 30) and a module init of the boot chain's
+   stage 3, `0x50483a1f` after the trace "3_8", which sets up two slot managers the application's property reads
+   reach (H-MMINIT); the composite cable `0x0500` (EV_CONPOSITE_CONNECTED at state 0): at the idle image's state 0
+   getCompositeState (`0x506d4e29`, the switch query `0x502f3f8f(0x02020500)`) reported a cable, the application's
+   output choice answered VIDEO where the GUI had the TFT, and it asked for an output change after every panel refresh
+   (CA events `0x09000018` -> EVT_REQ_CHG_OUTPUT_DISPLAY); the idle image now has no cable (`IDLE_SWITCH_STATES`); no
+   frame plane of E143's form (`frame_plane: null`, S-TAKEFRAME and S-AFOSD give none). The start then reaches the GUI
+   state `0x0108` SS_COMMON/ID_ST_CA_REQ_DISP in 1.5 s, as E143's, and the OSD engine draws the clock warning (a clock
+   and Y/M/D, the date being unset) into OSD layer 2's records (X: the records read back as images; no frame, since
+   the kind-3 VSC has no compositor). Next stop: at the first long timer (about 3 s) and at S1 the application's
+   movie time, `api_movie_CalculateMediaTime_Record_Movie` (`0x502d1710` -> `0x50565f13`), divides by a word of the
+   movie module's object, whose pointer (`0x618c0ff0`) is 0 (`0x5056f5c6`, Fault 6): E143 creates the object in its
+   file system's init (`0x5088fc8d`, its call at `0x5088fcb6` -> `0x50888c4a` -> `0x50880db8`, X: run in its session),
+   E122 in `0x5056900d` (its call of `0x5056ef9c` stores it, D), reached from `0x50577796` (called at `0x5057f1b6`),
+   which the lab does not run; that this is E122's file system init is I (its card is not native: `fileSystem` reads
+   no SD layer of its form). With that API answered by hand (exploration only, not in the lab) S1, S2, PLAY and INFO ran
+   to SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE and ID_ST_DISP_DETAIL and the GUI drew the shooting screen (P, 1250, ISO-A 200,
+   999 shots, X), and the second PLAY met the same division through another movie API: the card's file system (or a
+   stand-in for the movie APIs) is the next step. The EVF start still stops at the send to queue 8 (finding 28).
 
 ## Per-body status
 

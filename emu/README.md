@@ -32,8 +32,9 @@ emu/play.sh --model E144       # another camera model (OM-5); --model list shows
 The model is E143 (OM-1 v1.9) unless `--model CODE` names another body of `src/fw/models.mjs` (`OM_EMU_MODEL` in the
 environment does the same; the option wins); `bin/play.mjs`, `bin/nav.mjs` and `bin/fetch-fw.mjs` take the same option.
 `--model list` prints each one's code, name, firmware version and whether its firmware is on disk. A body whose port is
-not finished stops during its start: the status's phase is `error` with the reason, and the page shows it (the E118
-family's do, since their board's facts are read, 2026-10-30); a body the lab does not load on (one whose board family
+not finished stops during its start or soon after: the status's phase is `error` with the reason, and the page shows
+it (the E118 family's do, since their board's facts are read, 2026-10-30; E122's start reaches its shooting screen
+state and stops at about 3 s in the movie time, `docs/model-survey.md` finding 31); a body the lab does not load on (one whose board family
 leaves a fact the import needs unread, src/fw/board.mjs) is refused at start with the reason, exit 1. The
 page's model menu switches a running server to another body (`POST /api/model`): the session stops as Quit stops it,
 the server restarts on that model at the same URL, and the page reloads. It refuses, with the reason under the menu and

@@ -397,6 +397,19 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
      other bodies' are black, and their text is pink (X); whether that is the panel's palette or the lab's
      composition is not read (?). S1 shows the GUI's AF target brackets; S-AFOSD gives the TG-5s no upload (they
      have no mode-3 frame plane, finding 22).
+29. **The native lens on E146 and E147** (2026-10-29, `docs/hle-gaps.md` 4.4.3). Their lens drivers are E143's but
+   for the addresses of their variables and entry points, the debug log's line numbers and the order of a few
+   instructions in one send (X: LENS_SSC, the edge unit's handler, the init chain, the power-on and detect paths and
+   type 6's frame switch walked instruction by instruction from the map's places). A rule reads the addresses the lab's
+   lens needs (`src/fw/facts.mjs` lensDriver, fact `lens_driver`: the boot's starts of LENS_MAIN and LENS_ASKDATA by
+   their names, LENS_COMMAND by its receive, USTART_L's calls, the flags' accessors, the lens-ready byte and the lens
+   caches' table), equal to E143's hand values on E143 and to a reading of each body's code on E146 and E147 (D,
+   `test_facts`). The one difference that mattered was outside the driver: E147's lens lock pin switch LLPSW is bit 6
+   of UI_IN group 1 byte 0 (E143's and E146's bit 4 of byte 1), so with E143's bit its lens never powered on; the lab
+   now takes the bit from the body's UI_IN tables. Both bodies' starts send E143's 15 frames, and the driver's record
+   then holds what S-LENS writes (X). The rule finds no such driver on the other 15 bodies: the E144 family's boot
+   starts LENS_ASKDATA but not LENS_MAIN in E143's shape, and E142, E140, E133, E130 and the E118 family miss another
+   of its shapes (X), so they keep S-LENS. modelcheck is unchanged on E146 and E147.
 
 ## Per-body status
 
@@ -415,7 +428,8 @@ natively before with the same results (X), so on those bodies it replaces a nati
 effect (`ROADMAP.md` "Next stops").
 
 **E146 (OM-1 II), E147 (OM-3).** `bin/modelcheck.mjs` passes on the TFT and the EVF: start, S1, S2 (a picture on the
-card), PLAY, INFO, PLAY. Their TFT start keeps the composite's UNWRITTEN error. E147 shoots and plays back.
+card), PLAY, INFO, PLAY. Their TFT start keeps the composite's UNWRITTEN error. E147 shoots and plays back. Since
+2026-10-29 both run the lens natively by default, as E143 does (finding 29).
 
 **E144 (OM-5).** Boots natively to its shooting screen (kernel, display open, settings store, camera application, GUI;
 the kind-2 VSC compositor draws the OSD planes), takes S1, and the player settles running with the shooting screen in

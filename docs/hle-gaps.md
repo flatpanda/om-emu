@@ -20,8 +20,8 @@ from the module map (section 2.2). Every effort figure is a rough estimate of fo
   S-TRAACK, S-CARD, S-SCENE, S-EXPOSE, S-LENS, S-CPU2, S-SCPUDEV, H-POWER and others) or is not modelled at all. None
   of their tasks runs in a lab (X: a full S1 + S2 and a REC post no module request; the kernel lab's task-start guard
   refuses their entries, `emu/src/lab/kernel.mjs`), and their MMIO is lab-stub space that faults on first touch. The
-  exception is the lens on E143, by default since 2026-10-29: its tasks, driver and serial driver run natively against
-  a device model (4.4.2).
+  exception is the lens on E143, E146 and E147, by default since 2026-10-29: its tasks, driver and serial driver run
+  natively against a device model (4.4.2, 4.4.3).
 - **In code:** the lab executes 287,101 of the main block's 5,186,071 instructions (5.54%), about 6.1% of the code a
   camera runs in normal use (section 2.2). The largest unrun blocks are playback (613k instructions), AF / lens / IS
   (505k), still capture (421k), the AV codec back end (411k), the sensor / ISP / live view (321k) and the TAKE module
@@ -452,8 +452,9 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
 - **First step (done on E143, 4.4.2; the default since 2026-10-29):** the serial layer is read (4.4.1) with the table
   from a lens command id to its frame; LENS_MAIN, LENS_COMMAND and LENS_ASKDATA run with `0x9b980000` as a device
   model whose far end, S-LENSMCU, refuses the first frame it does not know; the camera application's touch path runs
-  with it (4.4.2, the touch). Next: the lens's own replies in place of S-LENSMCU's assumed values (which would also
-  settle the lens-ready byte); the bodies other than E143, starting with E146 and E147's lens drivers.
+  with it (4.4.2, the touch). E146 and E147 run it too, their default since 2026-10-29 (4.4.3). Next: the lens's own
+  replies in place of S-LENSMCU's assumed values (which would also settle the lens-ready byte); the E144 family's lens
+  driver, another lineage's (4.4.3, Open).
 
 #### 4.4.1 The lens serial layer (D unless tagged)
 
@@ -499,15 +500,16 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   that earlier replies filled, not response parsers. The table from a command id to its frame and the parsers that
   fill the record from the replies are read in 4.4.2.
 
-#### 4.4.2 The lens on the mount natively (E143, the default since 2026-10-29; D unless tagged)
+#### 4.4.2 The lens on the mount natively (E143, the default since 2026-10-29; E146 and E147 in 4.4.3; D unless tagged)
 
 E143's lens runs natively (opt-in from 2026-10-28, the default since 2026-10-29; `OM_EMU_LENS=stand-in`, a host's
 `env.lens` 'stand-in' or the page's `?lens=stand-in` takes S-LENS instead): LENS_MAIN, LENS_COMMAND and LENS_ASKDATA,
 the lens driver, its sync layer, LENS_SSC and IRQ 14, and the deferred calls the power and detect paths post. The seam
 is the lens serial controller's registers (`emu/src/dev/lensssc.mjs`) with the lens's microcontroller at its far end
 (S-LENSMCU, `emu/src/lab/lensmcu.mjs`); the lab's part is in `emu/src/lab/lens.mjs` (model facts `lens_native`,
-`emu/src/fw/models.mjs`; board facts `lens` and `dpc`, `emu/src/fw/board.mjs`). S-LENS stays selectable and the only
-lens on the other bodies (below, Open).
+`emu/src/fw/models.mjs`; the driver's addresses by the rule `lensDriver`, fact `lens_driver`, `emu/src/fw/facts.mjs`;
+board facts `lens` and `dpc`, `emu/src/fw/board.mjs`). S-LENS stays selectable and the only lens on the bodies other
+than E143, E146 and E147 (4.4.3).
 
 - **The controller (`0x9b980000`, IRQ 14):** a frame engine. The driver writes the header to `+0x048` (class, code, two
   parameter bytes), the data count to `+0x044` with its bytes in the transmit FIFO `+0x05c..` (only for the modes 9761
@@ -614,11 +616,81 @@ lens on the other bodies (below, Open).
   once it is dispatched). 34 such blocks in 5 s with the native lens against 18 with S-LENS (the screen's redraws);
   S-HEAP's 2.4 MiB would last a few hours of lab time. The fix belongs to S-TRAACK, not to the lens.
 - **Open:** S-LENSMCU's assumed values (A-LENSMCU-1..3) and the lens's real replies (its flags, function words,
-  tables, version, the ID's first bytes and the check byte's value) are ?. E146 and E147 share E143's board (their
-  LENS_SSC uses the same base, X: a scan) but their lens drivers are not read, and the port of E143's addresses is
-  partial (X, `emu/src/fw/ports.mjs`: E146 has no place for the three lens tasks' entries or the driver's lens-0 flags,
-  E147 none for the tasks' entries and OlyQeWr's site); the E144 family and E118 have no `lens` board fact: they keep
-  S-LENS.
+  tables, version, the ID's first bytes and the check byte's value) are ?. E146 and E147: 4.4.3. The E144 family and
+  E118 have no `lens` board fact and no `lens_driver` fact: they keep S-LENS.
+
+#### 4.4.3 The lens on E146 and E147 natively (2026-10-29; D unless tagged)
+
+Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default too (`emu/src/fw/models.mjs`
+`lens_native`), as on E143 (4.4.2), with S-LENS selectable the same way (`OM_EMU_LENS=stand-in`, `?lens=stand-in`).
+
+- **The addresses, by a rule.** The lab's lens takes the driver's entry points, queue, flags and cache area from the
+  body's fact `lens_driver`, which `emu/src/fw/facts.mjs` `lensDriver` reads at the port's places of E143's CPU 0 kcb,
+  OlyTaSt, OlyQeRd and LENS_COMMAND's queue word (E143's values are `LENS_DRIVER_E143`, the hand values
+  `models.mjs` gave before): LENS_MAIN and LENS_ASKDATA by the boot's starts that load their names after OlyTaSt, the
+  module init by the call before them, LENS_COMMAND as the static task that runs to a receive on its queue, LENS_EXEC's
+  queue as LENS_MAIN's first receive, the cache load and the task variables by USTART_L's two calls (the second's
+  function ends right before LENS_MAIN's entry), the data-valid and attach flags by their four accessors before the
+  record getter's first call, the lens-ready byte by its getter and clearer before the predicate the state poll's
+  completion calls, and the lens caches' NAND by the flash area driver's table. The deferred-call init is fact
+  `dpc`'s, the NAND read operation fact `storage`'s and LLPSW's bit the body's UI_IN tables' (`play.mjs` CONTROLS);
+  TAKE_FUNC's camera-on command is 1 on all three (`mov 1,d0; mov d0,(24,sp)`: E143 `0x502cd9d1`, E146 `0x502e579d`,
+  E147 `0x502f7063`, each before its post to the queue the rule reads). The rule reads:
+
+  | | E143 | E146 | E147 |
+  |---|---|---|---|
+  | module init, cache load, task variables | `0x502a5d10`, `0x502a6371`, `0x502a5dff` | `0x502bcfa8`, `0x502bd609`, `0x502bd097` | `0x502ce868`, `0x502ceec9`, `0x502ce957` |
+  | LENS_MAIN, LENS_COMMAND, LENS_ASKDATA | `0x502a5e37`, `0x50115a08`, `0x502a8193` | `0x502bd0cf`, `0x50115a08`, `0x502bf42b` | `0x502ce98f`, `0x5011f82d`, `0x502d0ceb` |
+  | LENS_EXEC's queue word | `0x60043220` | `0x6004325e` | `0x600431d0` |
+  | flags: data valid, attach, lens ready | `0xa32d4b98`, `0xa32d4b9a`, `0xa32d4b94` | E143's | `0xa32d3d30`, `0xa32d3d32`, `0xa32d3d2c` |
+  | the lens caches' NAND | 7 x 256 KiB from `0x416e0000` | E143's | E143's |
+
+  E146's and E147's are as read in their code (D: the boot's starts at E146 `0x50024b7e` / `0x50024b9d` and E147
+  `0x50024afd` / `0x50024b1c`; the flags' accessors from E146 `0x50126ccb` and E147 `0x50130af0`; the ready byte's
+  store E146 `0x502db176`, E147 `0x502eca36`; the area tables E146 `0x602b9f84`, E147 `0x602cb290`, E143's seven rows),
+  and `emu/test/test_facts.mjs` checks the rule against them (LENS_DRIVER_FOUND) and the map's places of the flags and
+  the queue word, which S-LENS and the camera application use, against the rule's (equal on both). 4.4.2's port gap
+  was smaller than it read: E146's flags and E147's OlyQeWr lie at E143's addresses, which the port does not list, and
+  only the task entries, which no lab literal named, had no place. The rule finds no `lens_driver` on the other 15
+  bodies (X): on E144, E139, E134, E137 and E125 the boot starts LENS_ASKDATA but not LENS_MAIN in E143's shape, E142
+  and E140 have no lens-ready byte of that shape, E133 and E130 no module init call before LENS_MAIN's start, the E118
+  family no task-variables call before LENS_MAIN's entry, and the bodies with a built-in lens (E145, E129, E132) no
+  start of LENS_ASKDATA so.
+- **Where the drivers differ (X: a walk of each function from the map's place, instruction by instruction).** LENS_SSC
+  (`0x502c0e4e..0x502c2193`: the open, the reset, the sends and IRQ 14's handler), the edge unit's handler and
+  callbacks (`0x5012232e..0x501225c0`), the init chain (`0x50122abf..0x50122f2b`), the lens power-on and detect paths
+  (`0x502c091e..0x502c0c00`) and type 6's frame switch (the table `0x602f33bc`'s 100 cases at the same offsets from the
+  first, their code equal over 741 bytes) are E143's on both bodies but for the addresses of the driver's variables,
+  the displacements of calls to moved callees, the debug log's line numbers (`mov 60,d0` -> 70 in the init chain's log
+  calls, `mov 745,a0` -> 749 in a send's) and, in the send `0x502c112e`, the order of a `clr d2` and the stores after
+  its trace call. The frames, command ids and classes, the controller's base `0x9b980000`, IRQ 14 at level 3, the edge
+  unit at `0x9b883e40` and the deferred calls' words and IRQs 53..58 are E143's (the edge unit is not modelled: no
+  frame of the start reaches it, as on E143). The built-in lens tables `0x60214d4c` and `0x60216758` differ in their
+  pointer words only (a byte compare at the map's places). LLPSW is E147's own: bit 6 of group 1 byte 0 in its UI_IN
+  tables (E143's and E146's bit 4 of byte 1); with E143's bit the lens never powered on (no frame in 1 s of the start),
+  so the lab takes the bit from the body's tables.
+- **What runs (X, 2026-10-29).** Each body's start sends E143's 15 frames (the wake-up, `b0 f2`, `c0 f6`, `c0 f4`, `a0
+  f5`, `c1 f9`, `c1 02`, `c3 f0` with 1147 bytes, `c2 f3`, `c1 fe`, `81 e4`, `c1 01`, `c1 2f`, `60 f0`, then the state
+  poll `c1 80`) and polls the state about every 100 ms. The driver's record holds the 12-40's ID, name, 8 zoom steps,
+  12..40 mm, the zoom entries' focal lengths and apertures, status `0x8000` and the aperture wide open, equal to what
+  S-LENS writes (read back in both modes after the start), and the driver derives the 35 mm focal lengths 24, 80 and 24
+  mm (E147's words `0xa32d3d48..50`, which its derives store; E146's E143's); the zoom ring at 40 mm gives step 7 and 80
+  mm; LLPSW pressed detaches the lens and released starts it again (`emu/test/test_lens.mjs`, a process per body, 13
+  checks each). The exposure plan is S-LENS's. The screens are S-LENS's (frames at the start, S1, MENU, PLAY, INFO) but
+  for the focal length: back on the shooting screen from the menu or playback the application shows "12mm" for about 3 s
+  where S-LENS leaves `---` (x 157..222, y 502..529 of the TFT), as E143 shows 25 mm (4.4.2); the only other pixels that
+  differed were the blinking ISO item's (`bin/modelcheck.mjs`'s note), caught in another phase. Both bodies' starts end
+  at `0x102` with either lens, so E143's leaving of the date prompt on the lens's event does not show, and the lens
+  stays at its first step (12 mm) until S-EXPOSE turns the ring on the shooting screen.
+- **The touch:** E146 and E147 run with the touch driver off (`models.mjs` `touch: false`), so the application's touch
+  forward of 4.4.2 is not reached on them, and the lab posts no touch with either lens.
+- **An error log the native sessions met:** on the shooting screen both bodies log `0x39000903`, E143's expected movie
+  time query log (its time code conversion finds the movie info's frame rate 0), about ten times a second with either
+  lens (X); their conversion is E143's `0x5044949b` but for the log's line number (E146 `0x5043fa3d`, E147
+  `0x5044de66`, X), so it is now expected on them too (`models.mjs` card_fs errlog; the lens session's error check
+  found it).
+- **Open:** the lens's real replies (4.4.2), as on E143; the E144 family's lens driver, another lineage (the shapes
+  above are not its), which a reading of its own would bring to the native lens.
 
 ### 4.5 Movie, audio and the AV back end
 

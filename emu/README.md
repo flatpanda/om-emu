@@ -56,11 +56,11 @@ the stand-in's, because the camera modules that would run AF, the release and th
 lab. Its inputs are session-log inputs, so `--replay` repeats them.
 
 **The card, the HDMI port, the tilt and the session's options.** The page's panel of that name (both players)
-reaches the run-time inputs below from the page. The session line says what the session was
-started with (`GET /api/session`): the HDMI port, the lens (natively with S-LENSMCU, E143's default, or S-LENS), the
-settings (S-NVRAM or S-SETSAVE) and where the card is kept, with the size asked for a new one. These are fixed for a
-session: on node by `--hdmi on` and `OM_EMU_LENS`, `OM_EMU_NVRAM`, `OM_EMU_CARD` and `OM_EMU_CARD_SIZE` in the server's
-environment, in the browser by the start options above the camera (`?hdmi=on`, `?lens=stand-in`, `?nvram=1`, and the
+reaches the run-time inputs below from the page. The session line says what the session was started with
+(`GET /api/session`): the HDMI port, the lens (natively with S-LENSMCU, the default on E143, E146 and E147, or
+S-LENS), the settings (S-NVRAM or S-SETSAVE) and where the card is kept, with the size asked for a new one. These are
+fixed for a session: on node by `--hdmi on` and `OM_EMU_LENS`, `OM_EMU_NVRAM`, `OM_EMU_CARD` and `OM_EMU_CARD_SIZE`
+in the server's environment, in the browser by the start options above the camera (`?hdmi=on`, `?lens=stand-in`, `?nvram=1`, and the
 Card menu's `?card_size=GiB`: 64 or 128 GiB, an SDXC card). HDMI: Plug in sends `{"type": "hdmi", "action": "plug"}` in a session with the port (the
 cable, the DDC reads and the driver's EDID state from the status), and is disabled with the reason without one; Unplug
 sends the unplug, which the lab refuses (A-HDMI-1), and the refusal shows in the status line. Card: Take out and Put in
@@ -143,12 +143,13 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   system (S-CARD: the HLS mount state, every picture taken kept as an image of folder 100, a remaining-shots answer of
   999 less the images to the application's getAvailableShootCount, the first slot's card detect state at inserted and
   a movie time left of an hour less what has been recorded). The system timer module's
-  long timers run out (S-LONGTIMER), and a lens is on the mount. On E143 it is there natively (since 2026-10-29 the
-  default): the lens tasks, the lens driver and its serial driver LENS_SSC run against a model of the lens serial
-  controller (`src/dev/lensssc.mjs`), S-LENSMCU (`src/lab/lensmcu.mjs`) answers its frames as the 12-40mm F2.8 PRO,
-  the zoom ring and the lens lock pin switch fw_121c reach the driver, and the camera application, which learns of the
-  lens from the lens module, forwards the touches to the GUI itself (`docs/hle-gaps.md` 4.4.2). `OM_EMU_LENS=stand-in`
-  (the page's `?lens=stand-in`) takes S-LENS instead, and the other bodies always have it: an attach flag, a lens-ready
+  long timers run out (S-LONGTIMER), and a lens is on the mount. On E143, E146 and E147 it is there natively (since
+  2026-10-29 the default): the lens tasks, the lens driver and its serial driver LENS_SSC run against a model of the
+  lens serial controller (`src/dev/lensssc.mjs`), S-LENSMCU (`src/lab/lensmcu.mjs`) answers its frames as the 12-40mm
+  F2.8 PRO, the zoom ring and the lens lock pin switch fw_121c reach the driver, and on E143 the camera application,
+  which learns of the lens from the lens module, forwards the touches to the GUI itself (`docs/hle-gaps.md` 4.4.2;
+  E146's and E147's driver addresses are read by `src/fw/facts.mjs` lensDriver, 4.4.3). `OM_EMU_LENS=stand-in` (the
+  page's `?lens=stand-in`) takes S-LENS instead, and the other bodies always have it: an attach flag, a lens-ready
   byte and a 12-40mm F2.8 PRO record, so the screen shows S-AF and the AF target; the application then counts no
   lens attached for its touch path, which S-TOUCHMAP and S-CAFWD stand in for.
 - A half press in focus shows the green AF frame and focus mark. They are CPU 3's (its task DISP_FRAME draws them into
@@ -184,7 +185,8 @@ sh emu/play.sh                                   # the interactive player (bin/p
 node emu/bin/play.mjs --no-browser --idle off    # its server alone (HTTP API; --debug-api for the debug tokens and
                                                  # the live debug route, below)
 node emu/bin/play.mjs --hdmi on                  # with the HDMI port; the input {"type": "hdmi", "action": "plug"}
-OM_EMU_LENS=stand-in sh emu/play.sh              # S-LENS in place of E143's native lens (S-LENSMCU, the default)
+OM_EMU_LENS=stand-in sh emu/play.sh              # S-LENS in place of the native lens (S-LENSMCU, the default on
+                                                 # E143, E146 and E147)
 OM_EMU_SCPU=native sh emu/play.sh                # E143's and E146's sub-CPU as its own firmware on the STM32L4 machine
                                                  # in place of S-SCPUDEV (needs the
                                                  # SCPU block in unpacked/, BLOBS.md)

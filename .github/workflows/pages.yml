@@ -1,0 +1,48 @@
+# Publishes the browser player as a GitHub Pages project site (https://<owner>.github.io/<repo>/): emu/index.html, the
+# landing page, and exactly the files the player loads (emu/bin/site.mjs; emu/README.md "The browser player"). The
+# site holds no firmware: a visitor gives the player the camera's .BIN in their own browser. Needs the repository's
+# Pages source set to "GitHub Actions". Actions are pinned to commits (the tag in the comment).
+name: pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '26'
+      - name: Test the site's path logic
+        run: node emu/test/test_site.mjs
+      - name: Build the site
+        run: node emu/bin/site.mjs _site
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

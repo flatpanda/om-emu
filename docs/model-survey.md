@@ -686,6 +686,93 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    the 1024 x 768 device from the 640 x 480 canvas (X). The lab's other EVF masks (the through permit, the IMG fit,
    H-RESEND's check) were not met (the family runs no through image).
 
+44. **What a chained port takes from its reference** (2026-10-30, track e118-e120-facts). A body with `port_via`
+   carries its reference's effective overrides and the knobs its `carry` lists (`src/fw/place.mjs` carryOverrides,
+   `src/fw/knobs.mjs`), nothing else: every other field of the reference's `MODELS` entry is the body's to decide,
+   read by a rule where the shape repeats or given in its own entry with its evidence. `test/test_facts.mjs` now
+   checks it: a chained body gives or reads each field its reference gives, but the firmware's identity, the port's
+   own fields, the knobs not carried and the stand-ins a body owns by nature (`return_stubs`, `call_skips`,
+   `vsync_alias_flags`, `ui_out`). E122's fields, decided on E118 and E120 (D at each place, X at the stops):
+   - `state_log_regs` became a rule (`src/fw/facts.mjs` stateLog, fact `state_log.regs`): the state log's one caller
+     stores the new state at W and loads W - 4 and W into the log's arguments (E143 `0x510c2af0..0x510c2b0a`: a0, a1;
+     E118 `0x50b933ef..0x50b93405`, E120 `0x50914158..0x5091416e`, E122 `0x50b9838a..0x50b983a0`: d1, a0). It reads
+     a0, a1 on E143, E146, E147, E144 and E145 and d1, a0 on the 13 others (X, the 18 images); E139's and E122's hand
+     values go. E134, E137, E142, E140, E125, E133, E130, E129 and E132 had taken the lab's a0, a1, so their `state`
+     events named the wrong registers' values (the GUI state the lab reads from the caller's object was right, D);
+   - `mm_init` became a rule (mmInit, fact `mm_init`): the call right after the boot chain's `"3_8"` trace, E122
+     `0x50483a1f` (its hand value), E118 `0x5046ae65`, E120 `0x50447041`, the same module's init in another form (two
+     slots set up, then the slots' calls; all three near one place of E143's code, X: `bin/xwhere.mjs`); null where
+     the chain starts a task there (E143 `0x501e96f1`, E144 `0x5018f813`) or holds no such trace (X, the 18);
+   - `g4set` (the shared stand-in, as on every ported body), `touch: false` (the panel's open, E143 `0x501e40da`,
+     unplaced on both) and `frame_plane: null` (framePlane reads none; the frame display mode set and the AF upload
+     unplaced) are given per body (X: `port.json`); `IDLE_SWITCH_STATES`' composite cable `0x0500` applies by code
+     (both tables hold it, X); E122 gives no `return_stubs` or `call_skips`.
+   Past `g4set` the starts met three addresses their maps had wrong or not: E118's function direct start, which
+   funcDirect had not found because its opening also keeps a1 at (28,sp) (`0x50b78a12`; the start `0x50b78a3a`, the
+   id in d3, D: the rule now takes that store; the 17 others unchanged, X); the GUI task, which both maps had put on
+   another task's opening of the same form (E118 `0x50c3d339`, E120 `0x509bd6e4`), read now by its start trace
+   `"[GUI App]:Start Gui Task"` (guiTask, fact `menu.task`; E118 `0x50b93162`, the entry its application starts, X;
+   E120 `0x50913ecb`; the 13 other bodies holding the trace keep their places, X); and E120's CA_MAIN, which neither map
+   places (override `0x508eaf45`: its object of 68 bytes, constructor and run as E122's `0x50b738ce` in short call
+   forms, D). The PWR_EXEC queue word (finding 34): S-MODACK reads E143's 20 module-queue id words through the port,
+   and by the object-name table five read another queue's id on the family (XTC_APP_EXEC `0x80` by name, `0x7a` read;
+   TFT_EXEC `0x6e`, `0x68`; LENS_COMMAND `0x34`, `0x31`; FCS_EXEC `0x1e`, none; PWR_EXEC `0x86`, `0x80` on E118 and
+   E122, none on E120; X). Up to the stops below the applications post to one module queue, 104, which S-MODACK
+   answers (X), and to none of these. The two readings differ on 13 of the 15 other bodies as well (E146's XTC_APP_EXEC
+   `0x77` by name, `0x76` read, X); that the name table's id is the queue's holds on E143 (X) and is I elsewhere. Next:
+   the module queues read from each build's API target table by a rule.
+
+45. **E118's EVF waits for its serial transmitter** (2026-10-30). The trap 7 at `0x5006e002` was the display run's
+   budget running out in the serial driver's polled send (`0x5006dfc3`): after its byte loop (`0x5006e24b`, which
+   writes `+0x18` while `+0x1c` is not 0) it waits until the channel's `+0x1c` equals the depth word the channel's init
+   keeps (`0x611515c0 + 4 x ch`: 16, 16, 16, 16, 64 for channels 0..4, X at the stop; the channel records
+   `0x6011c034 + 0x60 x ch` name `+0x18` and `+0x1c` at +24 and +28, D). E118's EVF panel takes its command list over
+   channel 2 (`0x98500000`) at 4 MHz in that polled mode, a GPIO pin (139) around each command (`0x502d3b20..`, D); a
+   lab-stub page read `+0x1c` as 0. The family's board now presets each enabled channel's `+0x1c` to its depth, a
+   transmitter that is idle (that `+0x1c` counts free entries is I); E118's EVF open completes, E122's and E120's
+   stops are unchanged (X).
+
+46. **E118 (E-M5 II) to its shooting screen state** (2026-10-30). Past the open, E118's start faulted in its GUI task
+   (`0x50b8f68d`, a bus error at `0xc000002c`): the search for font record 147 (`0x50b8f675`) in the font table of the
+   icons record (the table at record offset `0x808848`, 78-byte records) ran off the table's end, whose records from
+   the 26th were the bitmaps record's bytes (X). E118's loader puts the icons record at `0xa24e2c00` and the bitmaps
+   record at `0xa2cebc00` (resLoader, D), and the icons record is `0x809400` bytes (its head, X): 0x400 bytes overlap.
+   The lab wrote both records at its start, the bitmaps record last; the firmware asks for the icons record at the
+   GUI's start and for the bitmaps record later (X: the lab's request log). On a body whose records overlap the lab
+   now writes each record again at its request (`src/lab/resources.mjs` overlap; E118 alone of the 18, X). E118's TFT
+   and EVF starts then reach the GUI state `0x0108` SS_COMMON/ID_ST_CA_REQ_DISP (X), at 0.2 s of lab time, with E122's
+   events (POWER_ON `0x9601`, `0x9b01`, the application's `0xf001`), and the OSD engine draws the clock warning (a
+   clock and Y/M/D) into OSD layer 2's records on both, the EVF's centred for its 640-wide canvas, and fills layer 1's
+   640 x 480 area on the EVF (X: the records read back as images). The composite is one value (finding 36's open,
+   track e122-frame). At the first long timer (about 2.2 s) the start stops on both devices where E122's does,
+   in the movie time's division by the movie module's object word (`0x5055ee88`, E122's `0x5056f5c6` code; the object
+   pointer `0x6189b858` is 0, X): track e122-card-movie's stop. S1 was not tried past it.
+
+47. **E120 (E-M10 II) at POWER_ON** (2026-10-30). With findings 44 to 46 E120's TFT start runs the application and the
+   GUI natively and stays in `0x0102` POWER_ON (X: 4 s of lab time, the OSD records only filled, the frame one value).
+   Its GUI takes E118's events up to `0x9b01` and no `0xf001`. The application takes the same events in the same order
+   on both (X: the event its main loop has handled, E118 `0x50b6b3da` (200,sp), E120 `0x508ebc8e` (196,sp)):
+   `0x05000000`, `0x04000000`, `0x04000016` (after which it asks the GUI for `0x9b01`), `0x0900001b` (E120 `0x0900001a`),
+   `0x05000003`, `0x09000023` (E120 `0x09000022`), `0x09000009`. Handling `0x09000023` E118 asks for `0xf001` (its
+   request list sent through the GUI's request table, `0x50b777d5`, D); handling `0x09000022` E120 does not. The two
+   runs read the same settings in that handler up to setting 44 (0 on both, X), after which E118 reads 1508, 683 and
+   402 and E120 the properties 26, 478, 24, 4 and 434 (X): the branch is ?. Compared and alike: the queue traffic (the
+   DISPLAY cmd 33 reply and S-MODACK's answer to queue 104 on queue 6), the module-9 readers, the UI_IN layout (monitor
+   bit, switch states); E118 also asks the touch panel for its swivel (`Set_Touch_Panel_Swivel`, a synchronous send to
+   TOUCHPANEL 156, cmd 10, which S-MODACK's fallback returns), which E120's tilting monitor has no counterpart of.
+   E120's EVF start stops on E122's EVF stop, `tsnd_dtq` with timeout -1 to the full queue 156 (from `0x500484bb`;
+   queue 156 is TOUCHPANEL, the touch task's, which the lab does not start on the family: track e122-frame's stop).
+   Also measured: E120's device open waits in a loop of its own (`0x502d9b0c`: a 2 ms sleep until the word
+   `0x61879784` is 1, with a timeout, 28 ms per call from the open's command list at `0x502d01c5`) for a callback
+   (`0x502da12c`) that the pin driver's attach registers for GIO pin 30 (`0x502d99cf` -> `0x500647ed`, the attach
+   taking pins below 224 and keeping a callback per pin, D; which line pin 30 is, ?; the callback also sets bit 1 of
+   the touch task's flag word `0x60040f52`, D). The lab raises no pin interrupt: the callback never runs (X, 0 hits in
+   2 s after the bring-up), every wait times out, and the TFT open takes 300 s of lab time, the EVF's 500 s (X; E122's
+   TFT open takes 300 s as well, E118's well under one). With the wait answered at once (exploration, not landed) the
+   TFT open takes 0.19 s and the start still stays at POWER_ON (X), so it is not the stop's cause. Frames: E118's OSD
+   records (`e118tft-rec4-kind2.png`, `e118evf-rec4-kind2.png`, `e118evf-rec2-kind1.png` in the track's scratch), no
+   composite yet on any of the three.
+
 ## Per-body status
 
 The state as of 2026-10-23. Each body's `MODELS` entry (`src/fw/models.mjs`) carries the numbers its `port_via` choice
@@ -725,7 +812,7 @@ which register selects a kind-2 channel's timing bank is ?.
 **E139 (E-M1 III).** Ported through E144 and boots natively to its shooting screen as E144 does; the TFT session stays
 in `0x108` ID_ST_CA_REQ_DISP and takes S1 (UI_IN codes `0x2000100` down, `0x2010100` up), with the same events as E144's
 (X). Its own `MODELS` values: one override (the joystick publish return, which E144, with no joystick, cannot carry) and
-the state log's argument registers (`state_log_regs`: one argument fewer than E143's, D); E144's S-NOPOWEROFF went with
+the state log's argument registers (one argument fewer than E143's, D; finding 44); E144's S-NOPOWEROFF went with
 the idle image's switch states (finding 9). Its application reads a source state (the charge source, I) through a
 measurement in 50 ms steps before it creates the GUI (D), which the lab runs in lab time (`MenuLab.gui_await`). E144
 keeps the function-direct id in d3, not at (28,sp) as E143 does; `funcDirect` reads the id's place per body (d3 on E146,
@@ -944,7 +1031,10 @@ natively through the kernel, the timers, the display init and open, the settings
 the play bring-up's UI_IN observer on the TFT, and on the EVF since it opens the built-in EVF (finding 35; it had
 opened the NTSC output and stopped at its send to queue 8). E118 and E120, ported through E122, stopped earlier, at the
 GUI message take's observer while the lab was set up; since findings 32 to 34 (2026-10-30) they run to E122's stop at
-UI_IN. With UI_IN's forward read by shape (finding 29) the three run past it; finding 37 has where each stops now.
+UI_IN. With UI_IN's forward read by shape (finding 29) the three run past it; finding 37 has where each stopped then.
+Since findings 44 to 46 (2026-10-30) E118's TFT and EVF starts reach the shooting screen state `0x0108` with the clock
+warning in the OSD records and stop at about 2.2 s in E122's movie-time division; E120's TFT start stays in POWER_ON
+(finding 47, ?) and its EVF start stops on E122's EVF stop, the full TOUCHPANEL queue 156.
 
 ## The chained port
 
@@ -955,7 +1045,9 @@ map to the body (`src/fw/place.mjs` `carryOverrides`): an address the leg places
 `code-entry`), calls, votes or an alignment is taken, a table slot or a section delta only where the direct map
 agrees, and a null unless a fact (`kernel.cpus`, `scpu.backup`, ...) differs between the two builds, where the direct
 map answers. The knobs the body lists in `carry` (`cflush_returns`, `block_save`) are carried and checked call by call
-(`src/fw/knobs.mjs`). Then a lab literal the direct map leaves unplaced and nothing carried answers takes the
+(`src/fw/knobs.mjs`). Nothing else carries: a reference's other `MODELS` fields are each body's to read by a rule
+or give with its evidence, which `test/test_facts.mjs` checks (finding 44). Then a lab literal the direct map leaves
+unplaced and nothing carried answers takes the
 reference's own direct-map answer through the leg (`fillUnplaced`), so an address the reference places only through its
 own map needs no hand copy per body. A rule's answer (`rulePlaces`, `placedRulePlaces`) wins over a carried one, and
 `port.json` lists the overrides a rule places as it lists those the map places, what was carried, what failed

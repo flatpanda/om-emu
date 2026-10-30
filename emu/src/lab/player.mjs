@@ -366,6 +366,8 @@ export class Player {
     if (this.scene_used) used.push('S-SCENE', 'H-REQ');                                      // the image sensor stand-in's live view
     if (this.session?.dpc_init) used.push('H-DPCINIT', 'A-DPC-1');                         // the deferred calls' init at the bring-up
     if (this.session?.power_tid) used.push('H-PWRTASK');                                    // the power task started
+    if (MODEL_INFO.boot_drivers) used.push('H-DRVINIT');                                    // the reset path's early driver inits (display.mjs)
+    if (MODEL_INFO.frame_period_us) used.push('A-PERIOD');                                  // a frame period the build keeps nowhere
     if (this.session?.sio) used.push('H-SIOMAP', 'S-SIOIIC', 'A-SIOIIC-1', ...this.session.sio.labels);   // PER_SIO's devices (sio.mjs)
     if (this.session?.ui_out_tid) used.push('H-UIOUTSTART');                                // UI_OUT started (E134)
     if (this.session?.boot_key !== undefined) used.push('S-BOOTKEY');                       // UI_IN's boot key: the power switch

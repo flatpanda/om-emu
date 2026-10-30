@@ -20,6 +20,7 @@
 // differ from the family's or no rule of src/fw/facts.mjs reads them yet, each with its evidence; a fact the port
 // reads (FACTS[code].board) is not given here too. `checked`: in bin/modelcheck.mjs's default set, which it passes.
 import { OVERRIDES_E144 } from './overrides-E144.mjs';
+import { OVERRIDES_E122 } from './overrides-E122.mjs';
 
 // The VSC register blocks the kind-1 compositor composes without (board vsc.unapplied; src/dev/vsccompose.mjs A21):
 // the highlight block (HIAREA1..3, HIBC, HILIGHT1..4: 0x48c..0x494, 0x4cc, 0x5d0..0x5dc), which E147's playback detail
@@ -819,7 +820,35 @@ export const MODELS = {
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
     card_fs: { native: false, why: 'the lab does not load on this family; src/fw/facts.mjs fileSystem finds no SD command layer of its form' },
-    board: { family: 'E118' },
+    board: { family: 'E118' }, port_via: 'E130',
+    overrides: OVERRIDES_E122,
+    // the early driver inits the reset path runs through 0x50062ed4 (called at 0x50000278, before the kernel): four
+    // entries of the table 0x6012b74c, of which 0x50001b8d does the work (the GIO pins' configuration, 0x9b800000 and
+    // 0x9b801000, and at 0x50001e0d..0x50001e6c the timer pool: its 15 records and the free masks 0xa1c3ac48 = 0x7fff,
+    // 0xa1c3ac4c = 0x3f) and the other three return (D). The software-timer init allocates its channels from that pool
+    // and logs 0x19001802 when it finds none free (0x5006600d, X: without the step); the lab's start enters at the
+    // kernel, so H-DRVINIT runs it (src/lab/display.mjs)
+    boot_drivers: 0x50062ED4,
+    // no disp_sync module of E143's form (0x507f2fe0, its work table "disp_sync_work": no such string, X); its display
+    // module keeps a disp_sync parameter of its own (disp_update_image_disp_sync_param, 0x502cb203.., D), so the display
+    // start has no disp_sync init to run (src/lab/display.mjs)
+    disp_sync_init: false,
+    // A-PERIOD: the TFT's and the EVF's vtotal functions return constants (0x50302e5f 495 lines, 0x502fa8eb 825, D) and
+    // no frame period getter follows them (src/fw/facts.mjs framePeriod null, X); the period is ?, the lab assumes E143's
+    // TFT period word's 16683 us (59.94 Hz) for both, which sets only the lab clock's line time
+    frame_period_us: { tft: 16683, evf: 16683 },
+    // the dial-table select (src/lab/menu.mjs dial_init), of a form src/fw/facts.mjs dialSelect and dialStore do not
+    // read: the dial module init 0x50176f46 (E143's DIAL_INIT's place, src/fw/overrides-E122.mjs) stores the board's id
+    // table from the preloaded table 0x615fc838 into 0xa1c57f34, indexed through 16 {board byte, index} pairs at
+    // 0x601c2fec (D). The board byte is 4: H-DRVINIT's board-id read (0x50001d91) packs three strap pins' level bits,
+    // which the lab stub reads 0, and maps id 0 to 4 through the pairs at 0x60026864 (0:4, 3:3, 5:1, 6:2, 7:0; any other
+    // id halts at 0x50002388, D); board 4 takes index 1, the table 0x601c3054 (X). Which revision a PEN-F has is ?
+    dial: { select: 0x50176F46, select_end: 0x59, table_ptr: 0xA1C57F34, table0: 0x601C3054, board: 4 },
+    extra_tasks: [
+      0x502F90F5,   // a display task (static row 0x51, stack 0x800) that the display task init starts (OlyTaSt at
+                    // 0x502f8f6a, after its mailbox 0x5004adef); it waits on the flag in 0x60041034 and drives the VSC
+                    // driver's 0x503078b9 and 0x5030a68b (D); no E143 code pairs with it (X: xwhere)
+    ],
   },
   E120: {
     name: 'E-M10 II', bin: 'OLY_E_120_1400_0000_0000.BIN', version: '1.4', res_block: 'blk01460000.OE.0101.bin',

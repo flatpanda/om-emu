@@ -316,8 +316,10 @@ const TAKE_FOUND = { E143: 0x510C2A2E, E144: 0x50D1C54D, E139: 0x50CC49A6, E134:
 // 0x50022011 and 0x50021740 / 0x5002201a), E134's EVF word as its hand override gave it (D: getter 0x50210666, setter
 // 0x5021066f), E137's EVF word at its getter 0x5002106f (D: the setter at 0x50021078 is E144's), E145's at its
 // setters (D: TFT 0x501ed5ee, EVF 0x501ec907, which follows a getter of another word), E125's at its setters, which
-// store d0 at once (D: TFT 0x5022abad, EVF 0x50172b10, after the getters 0x5022ab9b and 0x50172b07)
+// store d0 at once (D: TFT 0x5022abad, EVF 0x50172b10, after the getters 0x5022ab9b and 0x50172b07); E122's vtotal
+// functions return constants (D: TFT 0x50302e5f 495, EVF 0x502fa8eb 825) with no getter within 4 KiB (X), so none
 const PERIOD_FOUND = {
+  E122: { tft: null, evf: null },
   E143: { tft: 0xA32DB47C, evf: 0xA32DB428 }, E144: { tft: 0x620C62E8, evf: 0x620BFB98 },
   E139: { tft: 0x621057DC, evf: 0x620FF098 }, E134: { tft: 0x6231C74C, evf: 0x6231682C },
   E137: { tft: 0x62105B8C, evf: 0x620FF45C }, E145: { tft: 0x61CD28D4, evf: 0x61CCC97C },
@@ -325,8 +327,9 @@ const PERIOD_FOUND = {
 };
 // The hardware-timer table (hw_timer; src/fw/facts.mjs hwTimer) as read at the inits: E143's and E144's pointer words
 // (D: stored at 0x500642f4 and 0x50055de4, the lab's HW_TIMER_PTR and E144's map place), E125's fixed table (D:
-// `add 0x600cd6d0,a0` at 0x50057695, no pointer word)
-const HW_TIMER_FOUND = { E143: { ptr: 0xA32CA47C }, E144: { ptr: 0xA2681E2C }, E125: { table: 0x600CD6D0 } };
+// `add 0x600cd6d0,a0` at 0x50057695, no pointer word), E122's fixed table of 8-byte entries (D: `asl 3,d2; mov
+// d2,a0; add 0x6012fa78,a0` at 0x5006eda3, the enable `movhu (4,a0),d0; cmp 1,d0` at 0x5006edb4)
+const HW_TIMER_FOUND = { E143: { ptr: 0xA32CA47C }, E144: { ptr: 0xA2681E2C }, E125: { table: 0x600CD6D0 }, E122: { table: 0x6012FA78, entry: 8, enable: 4 } };
 // The display init's second part (display.init_2nd; src/fw/facts.mjs displayInit2nd): E125's (D: the guarded call
 // 0x50228cd8 in its DISPLAY loop's OPEN case, guard word 0x61f8f0c4)
 const INIT_2ND_FOUND = { E143: null, E144: null, E125: { entry: 0x50170A21, once: 0x61F8F0C4 } };
@@ -512,8 +515,9 @@ const PROP_STORE_FOUND = { E143: PROP_STORE_E143, E122: { init: 0x502CF141, obje
 // The boot's state words (bootState; D: E133's UI_IN init stores its boot key at 0x500f5e95 and its getter 0x500f45ce
 // reads it, E129's stage test 0x50022e30 reads its ready word, which the stage step 0x50022f51 sets at 0x5002302e)
 // and the deferred calls' init (deferredCalls; D: E132's boot head calls 0x5004a115 at 0x500002ea, which zeroes the
-// words 0x9b800030..0x9b800044 and attaches IRQs 29..34)
-const BOOT_FOUND = { E133: { key: 0xA2AE718C }, E129: { stage: 0xA2B4D2CC } };
+// words 0x9b800030..0x9b800044 and attaches IRQs 29..34); E122 has neither word (X: no stage test or boot key store of
+// the forms; its UI_IN keeps its key state elsewhere, D: 0x50176d9e..)
+const BOOT_FOUND = { E133: { key: 0xA2AE718C }, E129: { stage: 0xA2B4D2CC }, E122: { key: null, stage: null } };
 const DPC_FOUND = { E132: { init: 0x5004A115, board: { triggers: 0x9B800030, irqs: [29, 30, 31, 32, 33, 34] } } };
 // The serial controller's driver (sioDriver; D: E132's IIC write 0x5004ba70 calls the transfer start 0x500506cb, its
 // write-read the receive start 0x500509be; the registration 0x50051145 its IIC configuration calls fills 0xa2b19ea8 and

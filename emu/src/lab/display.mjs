@@ -23,9 +23,11 @@ import { gui_palette } from './osdfmt.mjs';
 import { TOUCH_ARGS_E143, DISPLAY_START_E143 } from '../fw/facts.mjs';
 
 // the model's VSC (src/fw/board.mjs; E143: 0x9bb80000, channels of 0x8000, the output block 0x9bb98000)
-const BV = BOARD.vsc, GEN2 = BV.kind === 2;
+// kinds 2 and 3 (LATER): the TFT and the EVF on channel 0, no output block; kind 3 has one timing bank for both
+// (src/dev/vsc.mjs), so the channel takes the line time of the device the session opens (DisplayLab.open)
+const BV = BOARD.vsc, GEN2 = BV.kind === 2, K3 = BV.kind === 3, LATER = GEN2 || K3;
 export const VSC = BV.base, VSC_CHANNEL = Array.from({ length: BV.channels }, (_, c) => BV.base + BV.stride * c);
-export const VSC_OUTBLOCK = GEN2 ? null : 0x9BB98000;
+export const VSC_OUTBLOCK = LATER ? null : 0x9BB98000;
 export const OUTPUT = 0x89000000, DEBUG = 0x89800000, DOORBELL = 0x89810000, STUB = 0x89900000, DOORBELL_STUB = A(0xA2100400);
 export const CMD_ADVANCE = 1, CMD_RUN_TO_FRAME = 2, CMD_COMPOSE = 3, CMD_CLEAR = 4, CMD_RUN_TO_EVENT = 5;
 export const DBG_ERR_TOTAL = 0x08, DBG_NOTE_TOTAL = 0x0C, DBG_T = 0x10, DBG_LAST_RESULT = 0x1C, DBG_ARG0 = 0x20;
@@ -42,16 +44,17 @@ export const HDR = ['channel', 'width', 'height', 'frame', 'errors', 'pal_unwrit
   'mix_flags', 't_lo', 't_hi', 'status', 'assumed', 'view'];
 export const PAL_BASE = 0x4400;
 
-// channel: the VSC channel of the device (E143 TFT 2, EVF 1, HDMI 0; kind 2: TFT and EVF on 0, HDMI 1, D 0x5002361c)
+// channel: the VSC channel of the device (E143 TFT 2, EVF 1, HDMI 0; kind 2: TFT and EVF on 0, HDMI 1, D 0x5002361c;
+// kind 3 as kind 2, src/fw/board.mjs FAMILIES.E118)
 export const DEVICE = {
-  tft: { mask: 1, channel: GEN2 ? 0 : 2, prop: 1, vtotal_fn: A(0x501D8ABA), period: A(0xA32DB47C) },
-  evf: { mask: 2, channel: GEN2 ? 0 : 1, prop: 8, vtotal_fn: A(0x50023BAB), period: A(0xA32DB428) },
+  tft: { mask: 1, channel: LATER ? 0 : 2, prop: 1, vtotal_fn: A(0x501D8ABA), period: A(0xA32DB47C) },
+  evf: { mask: 2, channel: LATER ? 0 : 1, prop: 8, vtotal_fn: A(0x50023BAB), period: A(0xA32DB428) },
 };
 export const PERIODS_US = [16683, 20000, 10000, 8341];
 export const VSC_IRQ = VSC_CHANNEL.map((_, c) => BOARD.intc.irq_vsc0 + 2 * c);
 // the vsync event flag id word of each channel (E143 ch0 HDMI, ch1 EVF, ch2 TFT; kind 2 ch0 TFT and EVF, ch1 HDMI)
 const VSYNC_E143 = [A(0x6004305E), A(0x600430DE), A(0x60043178)];
-export const VSYNC_FLAG_IDS = GEN2 ? [VSYNC_E143[1], VSYNC_E143[0]] : VSYNC_E143;
+export const VSYNC_FLAG_IDS = LATER ? [VSYNC_E143[1], VSYNC_E143[0]] : VSYNC_E143;
 // flags a channel's ISR sets besides its own (E144's ch0 also sets 0x600417b2, waited by another task: MODEL_INFO)
 export const VSYNC_ALIAS_IDS = MODEL_INFO.vsync_alias_flags ?? [];
 export const OLYEVCL = A(0x5002BEDD), OLYQERD = A(0x5002C067), OLYQEWR = A(0x5002C151), OLYTASS = A(0x5002C6E5);
@@ -104,13 +107,14 @@ export const HW_TIMER_PTR = A(0xA32CA47C);
 const hwTimerTable = (sim) => { const t = fact('hw_timer', { ptr: HW_TIMER_PTR }); return t.table ?? sim.u32(t.ptr); };
 export const HW_TIMER_GUARD_RETURNS = new Map([[A(0x50064323), 0x5201], [A(0x50064352), 0x5202], [A(0x5006437D), 0]]);
 export const HW_TIMER_PROGRAM = [A(0x50064478), A(0x5006449B), A(0x500644FA)];
-export const HW_TIMER_CHANNELS = BOARD.timer.hw_channels;   // range(16, 32) (src/fw/board.mjs)
+// the timer facts of the boot steps (src/fw/board.mjs timer): read where a step needs them, so a board that does not
+// give them yet still loads (the E118 family's)
+const hwTimerChannels = () => BOARD.timer.hw_channels;   // E143 [16, 32)
 // the software tick's period in lab ns as the boot step programs it: the tick asks for 2000, its reload (E143: 2.001
 // ms, X), or 1999 where the timer start takes one off (2.000 ms; E144/E146/E147: reload 1999, 0x50055f4d, D; E147 X;
 // fact timer.reload_less_one, src/fw/facts.mjs timerReloadLessOne)
 export const softTickPeriod = () => (fact('timer.reload_less_one', false) ? 2000000 : 2001000);
 export const TICK_INIT = A(0x5003121C), HW_TIMER_INIT = A(0x500642DD), TICK_ISR = A(0x50031198);
-export const KERNEL_TICK_CHANNELS = BOARD.timer.kernel_ticks, SOFT_TICK_CHANNEL = BOARD.timer.soft_tick;   // src/fw/board.mjs
 export const DEFER_INIT = A(0x5005304D), DEFER_TASK = A(0x500530F7);
 export const TIMER_TABLE = A(0xA32C5620), TIMER_SLOTS = 32, HW_TIMER_TABLE = A(0xA32C5500), HW_TIMER_SLOTS = 12;
 export const TICK_HANDLE = A(0xA32C5930), TICK_CALLBACK = A(0x50058FFC), EVF_TIMER_HANDLE = A(0xA32C1F4C), TIMER_DELETE = A(0x500589D7);
@@ -358,10 +362,11 @@ export class VscDebug {
   // Map {name: value or null}: one read per run of consecutive named, flagged offsets.
   // Kind 2's latched values are the *_VL words (+0x400): its mirror bank lists the registers that have one.
   bank(c, mirror = false) {
-    const base = VSC_CHANNEL[c] + (mirror ? (GEN2 ? 0x400 : 0x2000) : 0);
+    const base = VSC_CHANNEL[c] + (mirror ? (GEN2 ? 0x400 : K3 ? BV.latch : 0x2000) : 0);
     const flags = this.flags(c, mirror ? 'm' : 'w');
-    const listed = [...this.names].filter(([, name]) => !(mirror && (name === 'INTEN1' || name === 'INTST1' || name === 'MONI3'))
-      && !(GEN2 && (name.endsWith('_VL') || (mirror && !this.offsets.has(name + '_VL')))));
+    const listed = [...this.names].filter(([off, name]) => !(mirror && (name === 'INTEN1' || name === 'INTST1' || name === 'MONI3'))
+      && !(GEN2 && (name.endsWith('_VL') || (mirror && !this.offsets.has(name + '_VL'))))
+      && !(K3 && mirror && !BV.latched.includes(off)));
     const wanted = listed.filter(([off]) => flags[off >> 2]).map(([off]) => off).sort((a, b) => a - b);
     const values = new Map();
     let run = [];
@@ -719,7 +724,8 @@ export class DisplayLab extends OsdLab {
     refuseUnmapped(HW_TIMER_PTR, 'H-TIMER');
     const ptr = this.sim.u32(HW_TIMER_PTR);
     const low = new Map();
-    for (let ch = HW_TIMER_CHANNELS[0]; ch < HW_TIMER_CHANNELS[1]; ch++) low.set(ch, u16(this.sim.read(6 * ch + 2, 2), 0));
+    const [first, end] = hwTimerChannels();
+    for (let ch = first; ch < end; ch++) low.set(ch, u16(this.sim.read(6 * ch + 2, 2), 0));
     if (ptr || [...low.values()].some((v) => v)) {
       throw new FirmwareError(`H-TIMER: hardware timer table pointer ${h8(HW_TIMER_PTR)} = 0x${ptr.toString(16)}, low-RAM u16 at 6 * ch + 2 = ${show(low)}: the guard needs 0 and 0`);
     }
@@ -762,7 +768,7 @@ export class DisplayLab extends OsdLab {
     const problems = [];
     if (rec.stub.length) problems.push(`lab-stub accesses ${show(rec.stub.slice(0, 4).map((x) => [hex(x.addr), where(x.pc)]))}`);
     if (this.kernel.errors.length > err0) problems.push(`error log ${show(this.kernel.errors.slice(err0).map((e) => hex(e[0])))}`);
-    const bad = log.filter(([fn, ch, rv]) => rv !== HW_TIMER_GUARD_RETURNS.get(fn) || !inRange(ch, HW_TIMER_CHANNELS))
+    const bad = log.filter(([fn, ch, rv]) => rv !== HW_TIMER_GUARD_RETURNS.get(fn) || !inRange(ch, hwTimerChannels()))
       .map(([fn, ch, rv]) => [h8(fn), ch, rv]);
     if (bad.length || !log.length) {
       const want = [...HW_TIMER_GUARD_RETURNS].map(([k, v]) => `${show(hex(k))}: ${show(hex(v))}`).join(', ');
@@ -795,11 +801,15 @@ export class DisplayLab extends OsdLab {
       if (status && (r.d0 & 0xFFFF)) problems.push(`${label}: returned 0x${r.d0.toString(16)}`);
       log.push([h8(fn), r.d0 & 0xFFFF]);
     };
+    // H-DRVINIT: a build whose reset path runs a table of early driver inits before the kernel (MODELS boot_drivers,
+    // with its evidence there), the lab's start, which enters at the kernel, skips; it runs here, natively, before the
+    // timers whose pool one of them sets up
+    if (MODEL_INFO.boot_drivers) run(`H-DRVINIT early driver inits ${h8(MODEL_INFO.boot_drivers)}`, MODEL_INFO.boot_drivers, 20000, false);
     // the tick init's d0 is no status: the boot does not read it (`mov 3,d0` after the call 0x5002ccd7, D), and builds
     // whose init ends without setting it return the last register value (E130's ends `or 1,d0; mov d0,(a0); ret`, the
     // timer block's IE word, where E143's and E133's clear d0 first, D); its channels are checked below instead
     run('H-BOOTTIME kernel tick timers 0x5003121c (boot call 0x5002ccd7)', TICK_INIT, 20000, false);
-    const bad = new Map();
+    const bad = new Map(), { kernel_ticks: KERNEL_TICK_CHANNELS, soft_tick: SOFT_TICK_CHANNEL } = BOARD.timer;
     for (const n of KERNEL_TICK_CHANNELS) {
       const c = timer.channel(n);
       if (!(c.running === 1 && c.period === 1000000 && c.reload === 999)) bad.set(n, c);
@@ -810,21 +820,25 @@ export class DisplayLab extends OsdLab {
       problems.push(`IRQ ${IRQ.irq_timer(1)}: level register 0x${intc.level(IRQ.irq_timer(1)).toString(16)}, handler ${h8(this.sim.u32(IRQ.HANDLER_TABLE + 4 * IRQ.irq_timer(1)))}`);
     }
     run('H-BOOTTIME hardware timer init 0x500642dd (boot call 0x5002cd7b)', HW_TIMER_INIT);
-    const table = hwTimerTable(this.sim);
+    const table = hwTimerTable(this.sim), { entry = 6, enable = 2 } = fact('hw_timer', { ptr: HW_TIMER_PTR });
     const enabled = [];
-    for (let ch = 0; ch < BOARD.timer.hw_entries; ch++) if (table && u16(this.sim.read(table + 6 * ch + 2, 2), 0) === 1) enabled.push(ch);
+    for (let ch = 0; ch < BOARD.timer.hw_entries; ch++) if (table && u16(this.sim.read(table + entry * ch + enable, 2), 0) === 1) enabled.push(ch);
     const attached = [];
     for (let ch = 1; ch < 33; ch++) {
       if (IRQ.irq_timer(ch) < 0) continue;                   // no such channel on the model's board
       for (let b = 0; b < IRQ.BANKS.length; b++) if (intc.bank_level(b, IRQ.irq_timer(ch))) { attached.push(ch); break; }
     }
     run('H-BOOTTIME software timer init 0x50058959 (boot call 0x5002cd82)', TIMER_INIT);
-    const soft = timer.channel(SOFT_TICK_CHANNEL);
-    if (!soft.running || soft.period !== softTickPeriod() || !((timer.ie() >>> (SOFT_TICK_CHANNEL - 1)) & 1)) {
-      problems.push(`software tick channel ${SOFT_TICK_CHANNEL}: ${show(soft)}, IE 0x${timer.ie().toString(16)}`);
+    // a board whose software-timer init starts no channel of its own (timer.soft_tick null, src/fw/board.mjs) has
+    // nothing to check here
+    if (SOFT_TICK_CHANNEL !== null) {
+      const soft = timer.channel(SOFT_TICK_CHANNEL);
+      if (!soft.running || soft.period !== softTickPeriod() || !((timer.ie() >>> (SOFT_TICK_CHANNEL - 1)) & 1)) {
+        problems.push(`software tick channel ${SOFT_TICK_CHANNEL}: ${show(soft)}, IE 0x${timer.ie().toString(16)}`);
+      }
+      const level = intc.level(IRQ.irq_timer(SOFT_TICK_CHANNEL));
+      if (level !== 1 << 3) problems.push(`IRQ ${IRQ.irq_timer(SOFT_TICK_CHANNEL)} level register 0x${level.toString(16)}, want 1 << 3`);
     }
-    const level = intc.level(IRQ.irq_timer(SOFT_TICK_CHANNEL));
-    if (level !== 1 << 3) problems.push(`IRQ ${IRQ.irq_timer(SOFT_TICK_CHANNEL)} level register 0x${level.toString(16)}, want 1 << 3`);
     if (!this.skip_defer) {
       this.lt.allow.add(DEFER_TASK);
       run('H-DEFER task 16 init 0x5005304d', DEFER_INIT, 200000);
@@ -862,7 +876,8 @@ export class DisplayLab extends OsdLab {
     if (this.hdmi) this.gio_slots();
     this.step('display task init 0x501c2f13', () => this.call(DISPLAY_TASK_INIT));
     if (this.hdmi) this.hpd_attached();
-    this.step('disp_sync init 0x507f2fe0', () => this.call(DISP_SYNC_INIT));
+    // a build without E143's disp_sync module (MODELS disp_sync_init false, with its evidence) has no init to run
+    if (MODEL_INFO.disp_sync_init !== false) this.step('disp_sync init 0x507f2fe0', () => this.call(DISP_SYNC_INIT));
     // H-DISPINIT2: where the display init leaves the devices' setup (their frame period words among it) to the first
     // DISPLAY OPEN, which runs it once behind a guard word, the lab runs it here, between the init and the OPEN as
     // natively, but on the lab task, and sets the guard as the OPEN does, so that the OPEN skips it (fact
@@ -870,7 +885,10 @@ export class DisplayLab extends OsdLab {
     const init2 = fact('display.init_2nd', null);
     if (init2) this.step('H-DISPINIT2 display init, second part', () => { this.sim.word(init2.once, 1); this.call(init2.entry); });
     for (const [dev, d] of Object.entries(DEVICE)) {
-      const period = this.sim.u32(d.period);
+      // A-PERIOD: a build whose vtotal functions return a constant keeps no frame period word (src/fw/facts.mjs
+      // framePeriod null); its MODELS entry gives the period the lab assumes for the device (frame_period_us)
+      const assumed = MODEL_INFO.frame_period_us?.[dev];
+      const period = assumed ?? this.sim.u32(d.period);
       if (!PERIODS_US.includes(period)) {
         throw new FirmwareError(`${dev}: frame period word ${h8(d.period)} = ${period}, not one of (${PERIODS_US.join(', ')}): no line time (no default)`);
       }
@@ -882,10 +900,11 @@ export class DisplayLab extends OsdLab {
       // shown device's timing until the firmware programs the other's (E144's EVF open first waits for a TFT frame
       // as it powers the TFT down, X)
       if (GEN2 && dev === 'evf') this.vsc.set_line_ns_evf(d.channel, line);
-      else this.vsc.set_line_ns(d.channel, line);
+      else if (!K3) this.vsc.set_line_ns(d.channel, line);
     }
   }
   open(device) {
+    if (K3) this.vsc.set_line_ns(lookup(DEVICE, device).channel, this.line_ns.get(device).line_ns);
     this.props.set(this.prop_device, lookup(DEVICE, device).prop);
     this.step(`DISPLAY cmd 2 OPEN ${device} (mask ${lookup(DEVICE, device).mask})`, () => {
       this.display_cmd(2, pack('<I', lookup(DEVICE, device).mask));

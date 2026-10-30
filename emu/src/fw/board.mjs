@@ -244,40 +244,98 @@ export const FAMILIES = {
       idle: [[0x9900203C, 0x2000], [0x9A30203C, 0x2000]],
     },
   },
-  // E118 (E-M5 II), E120 and E122, the 2015-16 bodies: the E144 family's MMIO bases, but another controller and timer
-  // layout (X: the same scan as E144's family; E118's addresses). Every fact the scan did not establish is UNKNOWN.
+  // E118 (E-M5 II), E120 and E122, the 2015-16 bodies: the E144 family's MMIO bases, but another controller, timer and
+  // VSC layout. Read from E122's code (D, its addresses below; disassembly notation) and checked on E118 and E120 by
+  // the same census of the 32-bit addresses `fc xx imm32` loads (X) unless said otherwise.
   E118: {
     // the board byte getter 0x5000238d `movbu (0x8ff00188),d0`; highest offset used 0x3fc (the window: I, E144's)
     sram: 0x8FF00000, sram_size: 0x1000,
     // the lock's offsets 0x0..0x6
     isc: { base: 0x8FE00000, stride: 2, groups: 4 },
-    // the three banks of E144's, offsets +0x300..+0x314 and +0x400 only (none of +0x408..+0x414: no IPI set/clear,
-    // kick or control register the lab's controller could use); irq < 122 (`cmp 122,d3` at 0x5004c75f); the IPI,
-    // VSC and engine IRQs: no attach the scan recognises
+    // three banks, irq < 122 (`cmp 122,d3` at E118 0x5004c75f); the level registers +4 irq (0x1a8, 0x1e4 the last);
+    // presented +0x200 + 4 level, (irq + 1) x 4, the level handlers 0x5004c5d6..0x5004c725 indexing the handler table
+    // 0xa1bf3984 by it; the inter-CPU doorbell one step below E144's: pending set +0x308 and clear +0x30c (stores to
+    // the three banks 0x5004b549..0x5004ba18), the kernel kick +0x310 (0x5000f07b..0x5000f0ca), K-INTC's +0x314 = 1
+    // (0x50049d44, after the last level register's clear, where E144 writes +0x414 and E143 +0x884), the IPI IRQ 120
+    // (attached at level 2 for each CPU, 0x5004ae89..0x5004aec2; fishcu/oly_fw_analysis found the doorbell first,
+    // analysis/oly-fw-analysis/README.md 2.1); the OSD engine's IRQ 109 (attached at level 5 to 0x50a5a92c, the
+    // engine ISR the map pairs with E143's, at 0x50a5a52b) and the VSC's 21 + 2 c for channel c (21 at 0x503035e7 to
+    // the ISR 0x50305c16, which acts on channel 0's INTST1; 23 at 0x50306451 to 0x5030722b, channel 1's). +0x300,
+    // +0x304 and +0x400 are written only on halt paths (0x5004f798, 0x5004f7a7, 0x5004f426) the lab does not run
     intc: {
       banks: [0x99200000, 0x99300000, 0x99B00000], irqs: 122,
-      presented: UNKNOWN, ipi_set: UNKNOWN, ipi_clear: UNKNOWN, kick: UNKNOWN, ctl: UNKNOWN,
-      irq_ipi: UNKNOWN, irq_osd_engine: UNKNOWN, irq_vsc0: UNKNOWN,
+      presented: 0x200, ipi_set: 0x308, ipi_clear: 0x30c, kick: 0x310, ctl: 0x314,
+      irq_ipi: 120, irq_osd_engine: 109, irq_vsc0: 21,
     },
-    // the channel table 0x6011d3e4: 10 records {ctl, reload, counter}, no IE or status words; the us free-run is
-    // channel 9, reload 0x3fffffff (0x500030a8, register 0x9890004c); the kernel tick is IRQ 58 (0x5004f26f), on a
-    // channel not read
+    // the channel table 0x6012fb5c: 10 records {ctl, reload, counter}; the IE word +0x78 and the write-1-to-clear status
+    // +0x7c hold bit n - 1 of channels 1..8 (the mask records 0x6012fae4, the start 0x5006f284 and the ISR's clear
+    // 0x5006f420; every reference to +0x7c stores, so the status is not read), one IRQ per channel, 57 + n (the IRQ
+    // bytes 0x6012fc06 the attach 0x5006f146 reads: 58..65); the prescaler, channel 0's reload, 191 (0x50003094); the
+    // us free-run channel 9, reload 0x3fffffff (0x500030af), read at 0x50001ecf. The tick init the boot calls for CPU 0
+    // (0x5004d779) starts channel 1 at reload 999 on IRQ 58 (CPUs 1 and 2 start channels 2 and 3 from their own
+    // inits, 0x5004d806, 0x5004d863). The software-timer init 0x50065e50 starts no channel (X: after it only channels 1
+    // and 9 run): its timers count in 2 ms units (0x50066238) from a source not read (?), so soft_tick is null. The
+    // hardware-timer init 0x5006ed9b walks 10 entries (the table 0x6012fa78) and its guard functions take an entry
+    // index below 10 (`cmp 10,d2`, 0x5006eddb); hw_channels is the range the lab checks those indices against
     timer: {
-      channels: 10, reload: 0x28, counter: 0x50, us_channel: 9, us_reload: 0x3fffffff, groups: [],
-      prescaler: UNKNOWN, irq_base: UNKNOWN, status_readable: UNKNOWN,
-      kernel_ticks: UNKNOWN, soft_tick: UNKNOWN, hw_channels: UNKNOWN, hw_entries: UNKNOWN,
+      channels: 10, reload: 0x28, counter: 0x50, us_channel: 9, us_reload: 0x3fffffff, prescaler: 191,
+      groups: [[1, 8, 0x78, 0x7c, null]], irq_base: 57, status_readable: false,
+      kernel_ticks: [1], soft_tick: null, hw_channels: [0, 10], hw_entries: 10,
     },
-    // the VSC name table is not in the E144 form; the engine's and the SCPU's registers were not read
-    vsc: UNKNOWN, engine: UNKNOWN, scpu: UNKNOWN, scpu_link: UNKNOWN, hdmi: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN,
+    // the VSC (src/dev/vsc.mjs kind 3): two channels of 0x2000 (channel 1's INTEN1/INTST1 at 0x9c00200c/0x9c002014, its
+    // ISR's status read 0x5030a80e); no name table in the image (no "INTEN1" string, X), so the register file is the
+    // offsets the family's code names: the census of every `fc xx` 32-bit load in 0x9c000000..0x9c004000 on all three
+    // bodies (X), and the scaler words the OSD scaler writers index (0x50308314, 0x50308389: words 82..85, 88..91 and
+    // 94..97 for the three planes, D). The roles named are the ones the code shows: INTEN1 / INTST1 (W1C) from the ISRs,
+    // SYNC2 0x22c from the timing writers 0x50308ed9 and 0x50309ab5 (the vertical total in its low half, I: the
+    // latched copy's low 11 bits are compared with MONI3's, 0x503090cf..0x503090e4), MONI3 0x2bc, whose every reader
+    // masks 0x7ff (0x502f94b2, 0x50308ec5, 0x503090d5). Latched copies at +0x1c00 (0x1c38 / 0x38 at 0x50308d92..d99,
+    // 0x1c3c / 0x3c, 0x1c40, 0x1e2c / 0x22c, D; that they are the latched values is I, by E144's *_VL); palettes and
+    // tables from +0x600 (the palette writer 0x50307aea's banks 0x600, 0x680, 0x800 / 0xa00 by bit 16 of 0x1b8, and
+    // 0x700; the byte table 0x1600, 0x50308b50), plain storage up to the latched copies (I). The frame raises INTST1
+    // bit 0, on which both ISRs set their channel's vsync flag (0x50305b9e, 0x503071b3); the others they test (bits 4,
+    // 5) are not modelled
+    vsc: {
+      kind: 3, base: 0x9C000000, size: 0x4000, channels: 2, stride: 0x2000, reg_end: 0x314,
+      registers: words([0x000, 0x020], [0x030, 0x088], [0x0A4, 0x118], [0x130, 0x130], [0x148, 0x154], [0x160, 0x16C],
+        [0x178, 0x184], [0x190, 0x1C8], [0x1FC, 0x27C], [0x288, 0x2B0], [0x2BC, 0x2BC], [0x2C4, 0x2C8], [0x2E0, 0x2E8],
+        [0x304, 0x310]),
+      regs: { INTEN1: 0x00C, INTST1: 0x014, SYNC2: 0x22C, MONI3: 0x2BC },
+      latch: 0x1C00, latched: [0x038, 0x03C, 0x040, 0x22C], store: [0x600, 0x1C00], line_bits: 11, irq_mask: 0x0001,
+    },
+    // the OSD engine at E144's base with E144's form: registers 0x00..0x50 only (the census, 0x50a5a5a7..0x50a5b166),
+    // no LUT registers, the list base 0x18 a byte address (0x50a5b0ee stores the 64-aligned address itself, with the
+    // end +0x8000 at 0x1c), a command's high address bits 29..30 in w0 (the fill builder near 0x50a5ab4f: `and
+    // 0x60000000` into w0, the rest << 3 into w2, D: E144's kind-2 encoding); the guards are the lab's
+    engine: { base: 0x9C100000, guards: 16, lut: false, list_shift: 0, enc: 2 },
+    // the SCPU interface: E144's compacted map, command 0xa4 and clock 0x98 / 0x9c (the init 0x5005c1a3.. writes
+    // 0x74, 0x6c, 0x78, 0x84, 0x80, 0x7c, 0x88, 0x40 in E144's order, 0x500478df..), storage 0x00..0x94: the word array
+    // from 0x04 (the getter 0x5005c970 and setter 0x5005c95b index 15 words, E144's from 0x08) and 0x40..0x94 as E144's
+    scpu: { command: 0xa4, clock: [0x98, 0x9c], ticks: false, storage: [[0x00, 0x94]], events: null },
+    scpu_link: UNKNOWN, hdmi: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN,
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,
     // E143's scratch DRAM holds E122's icons record (the loader's destination 0xa1fa6c00, 0x730a00 bytes decoded: X,
     // src/fw/facts.mjs resLoader and resources.mjs record): the lab's scratch is E144's lab region, which E118, E120
     // and E122 load no more of than E143 and E144 do (a few stray `fc xx imm32` matches per 64 KiB, X: a census)
     scratch: { from: 0xA2021000, size: 0x31F000, base: 0x8A021000 },
     reset_head: 'flash-copy',
-    stub_pages: UNKNOWN, stub_presets: UNKNOWN, display_wait_stand_ins: UNKNOWN, sd: UNKNOWN,
+    // the stub's pages, as E122's start writes and reads them (X: each one a denied access first): the GIO pin words
+    // 0x9b800000 / 0x9b801000 and the pull / mux block 0x99e20000 of the early driver init's pin configuration
+    // (H-DRVINIT, 0x50001be9..0x50001d38, D), the clock block 0x98800000 (the clock query 0x5006e243 reads 0x9880004c),
+    // the five enabled serial channels' blocks 0x98200000, 0x98300000, 0x98500000, 0x98600000, 0x98400000 (the table
+    // 0x6012e7c0 and its enables 0x6012e7a0; 0x500699a2 sets bit 8 of each), and the encoder block 0x9bd00000 the
+    // dial init clears (0x5017c22f)
+    stub_pages: [0x9B800000, 0x9B801000, 0x99E20000, 0x98800000, 0x98200000, 0x98300000, 0x98500000, 0x98600000,
+      0x98400000, 0x9BD00000],
+    stub_presets: [],
+    // the display waits' stand-ins: without them E122's display start blocks, every task waiting (X)
+    display_wait_stand_ins: true,
+    sd: UNKNOWN,
   },
 };
+
+// the word offsets of the closed ranges [first, last]
+function words(...ranges) { return ranges.flatMap(([a, b]) => Array.from({ length: (b - a) / 4 + 1 }, (_, i) => a + 4 * i)); }
 
 const isPlain = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 // The board of family + derived + hand (see the head of this file): `what` names it in errors. A field that stays

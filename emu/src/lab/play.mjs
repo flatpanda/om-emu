@@ -1052,6 +1052,7 @@ export class PlaySession extends N.NavSession {
   // bodies map that default to the power button while module 9 is in state 2 (S-TAKEOVER, D). The addresses are in
   // docs/model-survey.md (E133)
   boot_key_bring_up() {
+    if (MM.bootFacts().key === null) return;          // a build without UI_IN's boot key word (the E118 family's)
     const lab = this.lab, word = MM.bootFacts().key, key = BY_ID.get('power').uiin[3];
     if (lab.sim.u32(word) !== 0) throw new PlayError(`S-BOOTKEY: UI_IN's boot key ${h8(word)} is 0x${lab.sim.u32(word).toString(16)} before UI_IN's start`);
     lab.sim.write(word, pack('<I', key));

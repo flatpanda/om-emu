@@ -1933,15 +1933,16 @@ export function sioDriver(img) {
 //   0x500f5e8c..ba, W 0xa2ae718c, D), and UI_IN's getter answers it (E143 0x5014c3bf, E133 0x500f45ce: the camera
 //   application's wake-up judgement, the display start and the power path read it, D).
 // Each test and store exactly once on each of the 15 expanded images but the E118 family's, which hold neither (X, a
-// byte scan of the 18). Returns {key, stage}, the two run-time words, or undefined where neither is held; throws for
-// two of either, or one without the other.
+// byte scan of the 18). Returns {key, stage}, the two run-time words, both null where neither is held (the lab then
+// sets neither: no code of the build tests a stage bit or reads a boot key of this form); throws for two of either,
+// or one without the other.
 export const BOOT_E143 = { key: 0xA32DAB30, stage: 0xA32DF1F4 };
 const STAGE_TEST = [0xfc, 0xa5, null, null, null, null, 0x28, 0xff, 0x8a, 0x01, 0xf2, 0x92, 0x88, 0xf2, 0x04, 0xc8, 0x06,
   0x80, 0x01, 0xca, 0x03, 0x00, 0xde, 0x80, 0x04];
 const BOOT_KEY_STORE = [0x54, 0xf3, 0x00, 0xfc, 0x81, null, null, null, null, 0xfc, 0xc8, 0x03, 0x00, 0x00, 0x01];
 export function bootState(img) {
   const stage = oneAt(img, STAGE_TEST, 'bootState', 'stage-bit tests'), key = oneAt(img, BOOT_KEY_STORE, 'bootState', 'boot key stores');
-  if (stage === null && key === null) return undefined;
+  if (stage === null && key === null) return { key: null, stage: null };
   if (stage === null || key === null) throw new Error(`bootState: ${stage === null ? 'no stage-bit test' : 'no boot key store'}, but the other`);
   return { key: u32(img, key + 5), stage: u32(img, stage + 2) };
 }
@@ -2544,6 +2545,10 @@ function aeRows(img) {
 export const FRAME_PERIOD_E143 = { tft: { vtotal: 0x501D8ABA, word: 0xA32DB47C }, evf: { vtotal: 0x50023BAB, word: 0xA32DB428 } };
 const PERIOD_SPAN = 0x200, PERIOD_STORE = 0x40;
 const PERIOD_GETTER = [0xfc, 0xa4, null, null, null, null, 0xde, 0x00, 0x00];
+// a vtotal function that returns a constant, `mov imm16,d0; retf`, with no such getter run after it: the rule answers
+// null (E122's TFT 0x50302e5f returns 495 and its EVF's 0x502fa8eb a constant too, and no `mov (W),d0; retf` lies
+// within 4 KiB of either, X; E144's 0x50021f23 also returns 495, but its period getter follows, D)
+const VTOTAL_CONSTANT = [0x2c, null, null, 0xde, 0x00, 0x00];
 function framePeriod(img, vtotal) {
   for (let o = vtotal - 0x50000000, end = o + PERIOD_SPAN; o < end; o++) {
     if (!bytesAt(img, o, PERIOD_GETTER)) continue;
@@ -2555,6 +2560,7 @@ function framePeriod(img, vtotal) {
     }
     o = p - 1;
   }
+  if (bytesAt(img, vtotal - 0x50000000, VTOTAL_CONSTANT)) return null;
   throw new Error(`framePeriod: no 'mov (W),d0; retf' run with its setter storing one W within ${PERIOD_SPAN} bytes after the vtotal function at ${h8(vtotal)}`);
 }
 
@@ -2565,15 +2571,23 @@ function framePeriod(img, vtotal) {
 // E125's has one table and indexes it in place, `mov d2,a0; add T,a0` (T 0x600cd6d0 at 0x50057693, 26 entries of 6
 // bytes, D): {table: T}, and no pointer word. The pointer form on E143, E146, E147, E144, E139, E134, E137, E142,
 // E140, E145, E133 and E130, its W the map's place of E143's where the map places it, the table form on E125 (X, a
-// scan of HW_TIMER_SPAN bytes at the port's places; the init is not placed on E129, E132 and the E118 family).
-// Throws unless exactly one form.
+// scan of HW_TIMER_SPAN bytes at the port's places; the init is not placed on E129 and E132). The E118 family's
+// table form indexes entries of 8 bytes with the enable word at +4 (E122 0x5006eda3 `asl 3,d2`, then `movhu (4,a0),d0;
+// cmp 1,d0`, 10 entries at 0x6012fa78, D; E143's and E125's 6 bytes, enable at +2, `udfu01 6,d2`): {table, entry,
+// enable} where the entry is not 6 bytes. Throws unless exactly one form.
 export const HW_TIMER_INIT_E143 = 0x500642DD, HW_TIMER_PTR_E143 = 0xA32CA47C;
-const HW_TIMER_SPAN = 0x30;
+const HW_TIMER_SPAN = 0x30, HW_TIMER_ENABLE_SPAN = 0x10;
 function hwTimer(img, init) {
   const found = [];
   for (let o = init - 0x50000000, end = o + HW_TIMER_SPAN; o < end; o++) {
     if (bytesAt(img, o, [0xfc, 0x85]) && bytesAt(img, o + 6, [0x0c, 0xfc, 0xa0]) && u32(img, o + 2) === u32(img, o + 9)) found.push({ ptr: u32(img, o + 2) });
-    if (bytesAt(img, o, [0xf1, 0xe8, 0xfc, 0xd0])) found.push({ table: u32(img, o + 4) });
+    if (!bytesAt(img, o, [0xf1, 0xe8, 0xfc, 0xd0])) continue;
+    if (bytesAt(img, o - 3, [0xf9, 0x16, 0x06])) { found.push({ table: u32(img, o + 4) }); continue; }
+    if (!bytesAt(img, o - 3, [0xf8, 0xc2, 0x03])) throw new Error(`hwTimer: the table walk at ${h8(0x50000000 + o)} indexes its entries by neither 'udfu01 6,d2' nor 'asl 3,d2'`);
+    let enable = null;
+    for (let q = o + 8; q < o + 8 + HW_TIMER_ENABLE_SPAN && enable === null; q++) if (bytesAt(img, q, [0xf8, 0x60, null, 0xa0, 0x01])) enable = img[q + 2];
+    if (enable === null) throw new Error(`hwTimer: no 'movhu (k,a0),d0; cmp 1,d0' after the table walk at ${h8(0x50000000 + o)}`);
+    found.push({ table: u32(img, o + 4), entry: 8, enable });
   }
   if (found.length !== 1) throw new Error(`hwTimer: ${found.length} table pointer or fixed table forms within ${HW_TIMER_SPAN} bytes after the hardware-timer init at ${h8(init)}, want 1`);
   return found[0];
@@ -2808,8 +2822,7 @@ export function readFacts({ img, family, resLoad }) {
   if (direct !== undefined) facts.func_direct = direct;
   facts.broker = { init: brokerInit(img) };
   facts.card = { shots_query: shotsQuery(img), detect: cardDetect(img) };
-  const boot = bootState(img);
-  if (boot !== undefined) facts.boot = boot;
+  facts.boot = bootState(img);
   const dpc = deferredCalls(img);
   if (dpc !== undefined) { facts.board.dpc = { triggers: dpc.triggers, irqs: dpc.irqs }; facts.dpc = { init: dpc.init }; }
   const sio = sioDriver(img);

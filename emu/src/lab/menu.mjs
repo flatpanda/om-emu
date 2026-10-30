@@ -696,6 +696,7 @@ export class MenuLab extends T.TextDisplayLab {
   // bodies' starts test it at most and run as before with it (X: E143's screens, bin/modelcheck.mjs). The later stages
   // stay unset (?: which of their tests the lab's sessions reach). The addresses are in docs/model-survey.md (E129)
   boot_stage() {
+    if (bootFacts().stage === null) return;          // a build without the stage test (the E118 family's)
     const word = bootFacts().stage, b = this.sim.read(word, 1)[0];
     if (b & 1) throw new MenuError(`S-BOOTSTAGE: the stage word ${h8(word)} has stage 1's bit before the store's start`);
     this.sim.write(word, Uint8Array.of(b | 1));
@@ -853,7 +854,8 @@ export class MenuLab extends T.TextDisplayLab {
     }
     const table = this.sim.u32(DIAL_TABLE_PTR);
     this.store_log.dial = { board, table: h8(table) };
-    if (board !== 0 || table !== sel.table0) throw new MenuError(`dial-table init: board byte ${board}, table ${h8(table)} (expected ${h8(sel.table0)})`);
+    // the board byte is 0 but where the lab's start decodes the board's strap pins (sel.board, MODELS dial)
+    if (board !== (sel.board ?? 0) || table !== sel.table0) throw new MenuError(`dial-table init: board byte ${board}, table ${h8(table)} (expected ${sel.board ?? 0}, ${h8(sel.table0)})`);
   }
   // ---- the menu
   // EVENT: sendEvent(0x87) from the lab task, then settle; the GUI must reach 0x0b02.

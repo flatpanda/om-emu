@@ -21,7 +21,12 @@ import { compose2 } from './vsccompose2.mjs';
 // (CH.TIMING, published: 0 SYNC2, 1 SYNC8), at that bank's line time (the harness's CH.LINE_NS, CH.LINE_NS_EVF), and a
 // change of bank starts a new frame there (I: the firmware's timing writer stores one of the two per device,
 // src/fw/board.mjs; what selects the bank on the chip is ?).
-const V = BOARD.vsc, GEN2 = V.kind === 2;
+// Kind 3 (the E118 family): kind 2's register file without a name table (the board lists the offsets the family's code
+// names, src/dev/vscregs.mjs) and without the EVF bank, two channels of 0x2000, the latched copies of a few registers
+// at +vsc.latch (+0x1c00) instead of +0x400, plain storage vsc.store (palettes and tables) below them, the vertical
+// total and MONI3's line count in vsc.line_bits bits; no compositor yet (COMPOSE answers FEATURE_UNOBSERVED).
+const V = BOARD.vsc, GEN2 = V.kind === 2, K3 = V.kind === 3, LATER = GEN2 || K3;
+const LINE_MASK = K3 ? (1 << V.line_bits) - 1 : GEN2 ? 0x3FFF : 0x7FFF;
 export const VSC_BASE = V.base, VSC_SIZE = V.size, CHANNELS = V.channels, CHAN_STRIDE = V.stride;
 export const REG_WORDS = V.reg_end / 4, PAL_BASE = 0x4400, PAL_WORDS = 0x1800 / 4, LUT_BASE = 0x5C00, LUT_WORDS = 0xC00 / 4;
 export const OUT_SRAM = 0x4000, OSRAM_WORDS = 0x1000 / 4;
@@ -46,7 +51,9 @@ export const CH = { RUNNING: 0x00, FRAMES: 0x04, FIELD: 0x08, MONI3: 0x0C, IRQ: 
 const CMD_ADVANCE = 1, CMD_RUN_TO_FRAME = 2, CMD_COMPOSE = 3, CMD_CLEAR = 4, CMD_RUN_TO_EVENT = 5;
 export const R = V.regs;
 // kind 2's storage after the register file and the *_VL mirror words (the copy of the register 0x400 below)
-const STORE = [0x800, 0x4000], STORE_FLAGGED = 0xC00, VL = 0x400;
+const STORE = K3 ? V.store : [0x800, 0x4000], STORE_FLAGGED = K3 ? (V.store[1] - V.store[0]) / 4 : 0xC00, VL = 0x400;
+// kind 3's latched copies: [first local offset, the registers that have one]
+const LATCH = K3 ? V.latch : null, LATCHED = new Set(K3 ? V.latched : []);
 const SERIAL_START = 0x3214, SERIAL_DONE = 0x8000;
 export const FACE_FIRST = 0xD00, FACE_LAST = 0xD1C;
 export const chanDbg = (c, f) => D.CHAN + D.CHAN_SIZE * c + f;
@@ -105,7 +112,7 @@ export class Vsc {
     this.chanValid = new Uint8Array(REG_WORDS); this.outValid = new Uint8Array(REG_WORDS);
     this.chanRegs = t.chan.map(([off]) => off);              // ascending (vscregs.mjs checks)
     for (const off of this.chanRegs) this.chanValid[off / 4] = 1;
-    if (!GEN2) for (let off = FACE_FIRST; off <= FACE_LAST; off += 4) this.chanValid[off / 4] = 1;
+    if (!LATER) for (let off = FACE_FIRST; off <= FACE_LAST; off += 4) this.chanValid[off / 4] = 1;
     for (const [off] of t.out) this.outValid[off / 4] = 1;
     // kind 2: the latched copies (2 in chanValid: read-only, the register at off - 0x400)
     if (GEN2) for (const [off, name] of t.chan) if (name.endsWith('_VL')) this.chanValid[off / 4] = 2;
@@ -143,6 +150,7 @@ export class Vsc {
     if (!ch.running || !this.lineNs(c)) return 0;
     const lines = udiv(this.clock.t - ch.frameStart, this.lineNs(c)) % 4294967296;
     if (GEN2) return ((lines & 0x3FFF) | (lines & 0x3FFF) << 16) >>> 0;   // the TFT/HDMI and the EVF counter
+    if (K3) return (lines & LINE_MASK) >>> 0;                           // every reader masks the count (src/fw/board.mjs)
     return ((lines & 0x7FFF) | (ch.field === 0 ? 1 << 16 : 0)) >>> 0;
   }
   // the register holding the vertical total: E143 SYNC2; kind 2 that of the channel's bank, SYNC2 or SYNC8 (EVF)
@@ -167,7 +175,7 @@ export class Vsc {
   }
   // A channel starts running at the current lab time once it has a line time (harness) and a written vertical total.
   chanSync(c) {
-    const vr = this.vreg(c), ch = this.ch[c], lines = ch.w[vr / 4] & (GEN2 ? 0x3FFF : 0x7FFF);
+    const vr = this.vreg(c), ch = this.ch[c], lines = ch.w[vr / 4] & LINE_MASK;
     if (ch.running && !this.lineNs(c)) ch.running = false;
     if (!ch.running && this.lineNs(c) && this.dbg[this.wFlags(c) + vr / 4] && lines) {
       ch.running = true; ch.frameStart = this.clock.t; ch.field = 0; ch.curLen = lines;
@@ -185,7 +193,7 @@ export class Vsc {
     ch.frames = (ch.frames + 1) >>> 0;
     ch.frameStart = at;
     // kind 2 has no second-field register (progressive, I)
-    const f1 = ch.w[this.vreg(c) / 4] & (GEN2 ? 0x3FFF : 0x7FFF), f2 = GEN2 ? 0 : ch.w[R.SYNC4 / 4] & 0x7FFF;
+    const f1 = ch.w[this.vreg(c) / 4] & LINE_MASK, f2 = LATER ? 0 : ch.w[R.SYNC4 / 4] & 0x7FFF;
     if (f2) { ch.field ^= 1; ch.curLen = ch.field ? f2 : f1; } else { ch.field = 0; ch.curLen = f1; }
     if (!ch.curLen || !this.lineNs(c)) ch.running = false;
   }
@@ -204,7 +212,7 @@ export class Vsc {
 
   // ---- register file
   sramWord(c, local) {            // [array, index, flag byte offset in dbg] or null
-    if (GEN2) {                     // kind 2: plain storage, flagged in the palette flags while they last
+    if (LATER) {                    // kinds 2 and 3: plain storage, flagged in the palette flags while they last
       if (local < STORE[0] || local >= STORE[1]) return null;
       const ch = this.ch[c], i = (local - STORE[0]) / 4;
       ch.store ??= new Uint32Array((STORE[1] - STORE[0]) / 4);
@@ -236,7 +244,7 @@ export class Vsc {
       throw BUS;
     }
     if (!dbg) this.dset(D.CPU_ACCESSES, this.dget(D.CPU_ACCESSES) + 1);
-    if (c === 3 && !GEN2) {                          // output block: stored only
+    if (c === 3 && !LATER) {                         // output block: stored only
       let arr, i, flag;
       const reg = local < 4 * REG_WORDS && this.outValid[local / 4] !== 0;
       if (reg) { arr = this.ow; i = local / 4; flag = D.OUT_FLAGS + i; }
@@ -252,7 +260,7 @@ export class Vsc {
     }
     const ch = this.ch[c];
     if (!dbg) this.chanSync(c);
-    if (local < (GEN2 ? STORE[0] : 0x2000)) {
+    if (local < (LATER ? STORE[0] : 0x2000)) {
       if (local >= 4 * REG_WORDS || !this.chanValid[local / 4]) {
         if (!dbg) this.recordError(E.REG_UNKNOWN, c, local, 0, 0, 0, 0);
         throw BUS;
@@ -272,7 +280,17 @@ export class Vsc {
       if (!dbg) this.publish();
       return data;
     }
-    if (local < 0x4000 && !GEN2) {
+    if (K3 && local >= LATCH) {                     // kind 3's latched copy
+      const off = local - LATCH;
+      if (!LATCHED.has(off)) {
+        if (!dbg) this.recordError(E.REG_UNKNOWN, c, local, 0, 0, 0, 0);
+        throw BUS;
+      }
+      const data = ch.m[off / 4];
+      if (!dbg && !this.dbg[this.mFlags(c) + off / 4]) this.note(NOTE.MIRROR_RESET_READ, c, local, ch.latched ? 1 : 0);
+      return data;
+    }
+    if (local < 0x4000 && !LATER) {
       const off = local - 0x2000;
       if (off >= 4 * REG_WORDS || !this.chanValid[off / 4]) {
         if (!dbg) this.recordError(E.REG_UNKNOWN, c, local, 0, 0, 0, 0);
@@ -302,7 +320,7 @@ export class Vsc {
     if (dbg) throw BUS;
     if (size !== 4 || (addr & 3)) { this.recordError(E.WIDTH, c, local, value, size, 0, 0); throw BUS; }
     this.dset(D.CPU_ACCESSES, this.dget(D.CPU_ACCESSES) + 1);
-    if (c === 3 && !GEN2) {
+    if (c === 3 && !LATER) {
       if (local < 4 * REG_WORDS && this.outValid[local / 4]) {
         this.ow[local / 4] = value; this.dbg[D.OUT_FLAGS + local / 4] = 1;
       } else if (local >= OUT_SRAM && local < OUT_SRAM + 4 * OSRAM_WORDS) {
@@ -311,7 +329,7 @@ export class Vsc {
       return;
     }
     const ch = this.ch[c];
-    if (local < (GEN2 ? STORE[0] : 0x2000)) {
+    if (local < (LATER ? STORE[0] : 0x2000)) {
       if (local >= 4 * REG_WORDS || !this.chanValid[local / 4]) { this.recordError(E.REG_UNKNOWN, c, local, value, 1, 0, 0); throw BUS; }
       if (local === R.MONI3) { this.recordError(E.RO_WRITE, c, local, value, 0, 0, 0); throw BUS; }
       if (this.chanValid[local / 4] === 2) { this.recordError(E.MIRROR_WRITE, c, local, value, 0, 0, 0); throw BUS; }
@@ -325,7 +343,7 @@ export class Vsc {
       this.publish();
       return;
     }
-    if (local < 0x4000 && !GEN2) { this.recordError(E.MIRROR_WRITE, c, local, value, 0, 0, 0); throw BUS; }
+    if ((local < 0x4000 && !LATER) || (K3 && local >= LATCH)) { this.recordError(E.MIRROR_WRITE, c, local, value, 0, 0, 0); throw BUS; }
     const s = this.sramWord(c, local);
     if (s === null) { this.recordError(E.REG_UNKNOWN, c, local, value, 1, 0, 0); throw BUS; }
     s[0][s[1]] = value;
@@ -364,7 +382,9 @@ export class Vsc {
         break;
       case CMD_COMPOSE: {          // host time counted as compose time (machine stats.composeMs; measurement only)
         const t0 = this.m.clock();
-        this.tables(); result = GEN2 ? compose2(this, c) : compose(this, c);
+        this.tables();
+        if (K3) { this.recordError(E.FEATURE_UNOBSERVED, c, 0, 0, 0, 0, 0); result = E.FEATURE_UNOBSERVED; }   // no kind-3 compositor yet
+        else result = GEN2 ? compose2(this, c) : compose(this, c);
         this.m.stats.composeMs += this.m.clock() - t0;
         break;
       }

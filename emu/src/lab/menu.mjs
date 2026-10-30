@@ -2,7 +2,7 @@
 // (MenuLab: K-native boot, RTOS routing, CTORS, the native and the empty (S-STORE) settings store
 // and its stand-ins, S-PERSIST, the dial-table init, GUI creation and settle, the observers, B2's S-TAKEOVER and
 // H-CONNECT; persist_ids, state_names, inputs_for). Addresses are disassembly notation unless marked run-time.
-import { A, isUnmapped, refuseUnmapped, MODEL_INFO, IMAGE_BASE, fact, knob } from '../fw/model.mjs';
+import { A, isUnmapped, refuseUnmapped, MODEL_INFO, IMAGE_BASE, ON_LAB_MODEL, fact, knob } from '../fw/model.mjs';
 import { BOARD } from '../fw/board.mjs';
 import * as D from './display.mjs';
 import * as K from './kernel.mjs';
@@ -22,7 +22,7 @@ import { show } from '../util/show.mjs';
 import { pack, unpack, unpackFrom, bytesHex } from '../util/bytes.mjs';
 import { hex, hexDigits as fx } from '../util/hex.mjs';
 import { Tally } from '../util/tally.mjs';
-import { BOOT_E143, PROP_STORE_E143 } from '../fw/facts.mjs';
+import { BOOT_E143, PROP_STORE_E143, CTORS_E143 } from '../fw/facts.mjs';
 // an om1.scpu command line on stderr (src/dev/scpu.mjs): its value, pc and count
 const SCPU_COMMAND = /^om-emu: scpu command 0x([0-9a-f]+) pc 0x([0-9a-f]+) #([0-9]+)(?: |$)/;
 
@@ -107,7 +107,13 @@ export const SCPU_BACKED = [0x00, ...Array.from({ length: 14 }, (_, i) => 0x08 +
 // ScpuMemory), in S-NVRAM's file when there is one
 export const PANEL_FLAG = A(0x60043188);                                   // the panel driver's serial completion flag id (E143's EVF panel; S-PANELDONE)
 export const NATIVE_HOOK_LIMIT = 2000000;
-export const CTOR_TABLES = new Map([[6, [A(0x60EF9AD0), 48]], [7, [A(0x615C71D4), 64]]]);
+// the static constructor tables the lab runs after the memory managers' (src/lab/osd.mjs mm_ctors), as [table, count]
+// (src/fw/facts.mjs ctorTables): the modules' tables after the first and before the last, E143's modules 6 and 7 (the
+// last, E143's module 8, the lab's start does not load). The counts are the loader's: E143 48 and 64, E122 39 and 63,
+// E146 49 and 69, E144 47 and 69 (X; before 2026-10-30 the lab ran E143's counts on every build, which called past
+// the end of shorter tables and left the rest of longer ones unrun)
+export const CTOR_TABLES = fact('ctors', CTORS_E143).slice(1, -1);
+if (ON_LAB_MODEL && CTOR_TABLES.map(([t]) => t).join() !== [A(0x60EF9AD0), A(0x615C71D4)].join()) throw new Error('CTOR_TABLES: not E143\'s tables of modules 6 and 7');
 export const RPC_ENTRIES = [[A(0x50AF8487), A(0x50AF848C)], [A(0x50AC7347), A(0x50AC734C)]];
 export const RPC_ORIGINS = [['finder-style', [A(0x5120CC98), A(0x5120CC9A)]], ['background-jpeg', [A(0x512504F1), A(0x512504F8)]]];
 export const RES_BITMAPS_CALLERS = [A(0x51251C22), A(0x51251C53)];   // the bitmaps record's loads (E143 record 37)
@@ -555,9 +561,8 @@ export class MenuLab extends T.TextDisplayLab {
     if (this.state() !== STATE_POWER_ON) throw new MenuError(`H-CONNECT: GUI state ${this.state_name(this.state())}, not POWER_ON`);
     return log;
   }
-  run_static_ctors(modules = [6, 7]) {
-    for (const m of modules) {
-      const [table, n] = CTOR_TABLES.get(m);
+  run_static_ctors() {
+    for (const [m, [table, n]] of CTOR_TABLES.entries()) {
       for (let i = 0; i < n; i++) {
         const fn = disasm(this.sim.u32(table + 4 * i));
         const ev0 = this.kernel.events.length;

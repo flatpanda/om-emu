@@ -10,23 +10,22 @@ import { show } from '../util/show.mjs';
 import { pack, unpack } from '../util/bytes.mjs';
 import { hexDigits as fx } from '../util/hex.mjs';
 import { gui_palette } from './osdfmt.mjs';
-import { A, ON_LAB_MODEL, IMAGE_BASE, fact } from '../fw/model.mjs';
+import { A, ON_LAB_MODEL, IMAGE_BASE, MODEL_INFO, fact } from '../fw/model.mjs';
+import { CTORS_E143 } from '../fw/facts.mjs';
 import { BOARD } from '../fw/board.mjs';
 
 export { EngineError };
 export const MM_CTORS = [A(0x50533B80), A(0x50533D1E), A(0x50533EBF), A(0x5053405E), A(0x50534202), A(0x505343B8), A(0x5053454A),
   A(0x505346C1), A(0x50534883), A(0x50535769), A(0x50535D3B), A(0x50535D7F), A(0x50535EBA), A(0x50535FE7), A(0x50536482)];
-// The image's static constructor list for the memory managers (run-time pointers, ended by 0xFFFFFFFF), which
-// MM_CTORS lists for E143; a later model's list differs in length (E147 has 13), so the lab runs the image's own.
+// The image's static constructor list for the memory managers (run-time pointers), which MM_CTORS lists for E143; a
+// later model's list differs in length (E147 has 13), so the lab runs the image's own: the first of the modules'
+// constructor tables as the module loader runs them, with its count (src/fw/facts.mjs ctorTables: E143's module 2,
+// E122's module 3, whose table the map did not place, D; each ended by 0xFFFFFFFF after its count)
 export const MM_CTOR_TABLE = A(0x60714E78);
 export function mm_ctors(image) {
-  const out = [];
-  for (let o = MM_CTOR_TABLE - IMAGE_BASE; ; o += 4) {
-    const w = (image[o] | image[o + 1] << 8 | image[o + 2] << 16 | image[o + 3] << 24) >>> 0;
-    if (w === 0xFFFFFFFF) break;
-    out.push(disasm(w));
-    if (out.length > 64) throw new Error('mm_ctors: no end of the constructor list');
-  }
+  const [[table, n]] = fact('ctors', CTORS_E143), out = [];
+  if (ON_LAB_MODEL && table !== MM_CTOR_TABLE) throw new Error('mm_ctors: the E143 table is not MM_CTOR_TABLE');
+  for (let o = table - IMAGE_BASE, k = 0; k < n; o += 4, k++) out.push(disasm((image[o] | image[o + 1] << 8 | image[o + 2] << 16 | image[o + 3] << 24) >>> 0));
   if (ON_LAB_MODEL && out.join() !== MM_CTORS.join()) throw new Error('mm_ctors: the E143 table is not MM_CTORS');
   return out;
 }

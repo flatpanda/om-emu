@@ -377,6 +377,10 @@ const PLANE_FOUND = {
 // The output-device property's id (prop.device; src/fw/facts.mjs propDevice), the `mov imm16,d0` before the reads
 // S-PROP answers (D: E143 0x503eff59, E134 0x502ebabc, E125 0x502dc5fb, E145 0x502af089)
 const PROP_DEVICE_FOUND = { E143: 4513, E134: 4513, E125: 4013, E145: 4013 };
+// The EVF's device code (prop.evf_code; src/fw/facts.mjs evfCode), the `cmp imm8,d0` before the property writer's
+// `mov prop,d0; mov 8,d1` (D: E143 0x501e8ad4 `cmp 2`, E125 2 before 0x50188f34, E122 0x5018494d `cmp 6`, E118 6
+// before 0x50174b39), and its place in the build's device-name switch (E122 0x502fbf76: 6 BI_EVF, D)
+const EVF_CODE_FOUND = { E143: 2, E125: 2, E122: 6, E118: 6 };
 // The function direct start past its checks and its id's place (func_direct; src/fw/facts.mjs funcDirect) as read at
 // the functions (D: E143's lab FUNC_DIRECT_RUN, the id at (28,sp); E146 0x51076f24, E147 0x51081609, E144 0x50cf85ca
 // and E134 0x50ce448f, their maps' places, E139 0x50ca35f0, its hand override's; E137 0x50c4413f and E125
@@ -800,6 +804,8 @@ export function factsTests() {
     }
     const pd = PROP_DEVICE_FOUND[code];
     if (pd && (code === 'E143' || PORTS[code])) ok(placed?.prop?.device === pd, `${code}: prop.device ${hx(placed?.prop ?? placed)}, found ${pd}`);
+    const ec = EVF_CODE_FOUND[code];
+    if (ec && (code === 'E143' || PORTS[code])) ok(placed?.prop?.evf_code === ec, `${code}: prop.evf_code ${hx(placed?.prop ?? placed)}, found ${ec}`);
     if (Object.hasOwn(INIT_2ND_FOUND, code)) ok(same(got.display?.init_2nd, INIT_2ND_FOUND[code]), `${code}: display.init_2nd ${hx(got.display ?? got)}, found ${hx(INIT_2ND_FOUND[code])}`);
     const ae = placed?.ae, af = AE_FOUND[code];
     if (af && (code === 'E143' || PORTS[code])) ok(ae && Object.keys(af).every((k) => same(ae[k], af[k])), `${code}: ae ${hx(ae ?? placed)}, found ${hx(af)}`);

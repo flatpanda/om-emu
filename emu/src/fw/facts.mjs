@@ -2865,9 +2865,9 @@ function framePlane(img, set) {
 // (PROP_DEVICE_SITES_E143, the GUI's and the application's; E143 4513 at 0x503eff59 and 0x50b76db4, D). E125 and E145
 // read 4013 there (E125 0x502dc5fb and 0x5083e0d3, E145 0x502af089 and 0x50758962, D), so S-PROP did not answer them
 // and the GUI read no output device (E145, docs/model-survey.md). 4513 on E143, E146, E147, E144, E139, E134, E137, E142
-// and E140, 4013 on E125, E145, E133, E130, E129 and E132; the sites are not placed on the E118 family (X, a byte read
-// before each port's place of the two sites). Throws where a placed site has no such read before it or the sites
-// disagree.
+// and E140, 4013 on E125, E145, E133, E130, E129 and E132 (X, a byte read before each port's place of the two sites),
+// 4014 on the E118 family (the first site placed by src/fw/overrides-E122.mjs). Throws where a placed site has no such
+// read before it or the sites disagree.
 export const PROP_DEVICE_SITES_E143 = [0x503EFF61, 0x50B76DBE];
 function propDevice(img, sites) {
   const ids = sites.map((site) => {
@@ -2879,13 +2879,39 @@ function propDevice(img, sites) {
   return ids[0];
 }
 
+// The EVF's device code (fact 'prop.evf_code', src/lab/display.mjs DEVICE: the parameter of the lab's DISPLAY OPEN of
+// the EVF), the display's code that the output-device property's writer turns into the EVF's value 8 (the value the
+// lab's S-PROP answers for the EVF): every `mov prop,d0; mov 8,d1` inside a `mov (abs32),d0; cmp imm8,d0; bne` that
+// skips it, the imm8. E143's writer is `cmp 2` (0x501e8ad4, then 4513 = 8 at 0x501e8ae5, D), the open's EVF
+// parameter 2; E122's is `cmp 6` (0x5018494d, then 4014 = 8; 5 gives 4, else 1, D), and 6 is the built-in EVF in its
+// display's device codes (the name switch 0x502fbf76: 1 TFT, 2 NTSC, 3 PAL, 4 HDMI, 5 VF-2, 6 BI_EVF, 13 VF-3, D),
+// which take 2 as the NTSC video output: its timing 262 lines of 858 (0x50302567), its encoder block 0x99100000
+// (0x502fe38a) and an AUD_EXEC request (0x502f6ba0), where 6 takes BI_EVF's 825 lines (0x502fa8eb, D). 2 on the 15
+// bodies of the E143 and E144 families, 6 on E118, E120 and E122 (X). Throws where two such writers disagree; undefined
+// where there is none.
+export const EVF_PROP_VALUE = 8;
+const EVF_GUARD_SPAN = 0x40;
+function evfCode(img, propId) {
+  const codes = new Set();
+  for (let o = img.indexOf(0x2c); o >= 0; o = img.indexOf(0x2c, o + 1)) {
+    if ((img[o + 1] | img[o + 2] << 8) !== propId || img[o + 3] !== 0x85 || img[o + 4] !== EVF_PROP_VALUE) continue;
+    for (let g = o - 10; g >= o - EVF_GUARD_SPAN; g--) {
+      if (img[g] !== 0xfc || img[g + 1] !== 0xa4 || img[g + 6] !== 0xa0 || img[g + 8] !== 0xc9) continue;
+      const bne = g + 8, to = bne + (img[bne + 1] << 24 >> 24);
+      if (to > o) { codes.add(img[g + 7]); break; }
+    }
+  }
+  if (codes.size > 1) throw new Error(`evfCode: the writers of property ${propId} = ${EVF_PROP_VALUE} test the codes ${[...codes].join(', ')}`);
+  return codes.size ? [...codes][0] : undefined;
+}
+
 // What the rules that read code relative to an E143 function read from one body (src/fw/ports.mjs FACTS[code], with
 // readFacts'; bin/port.mjs): img its run-time image, at(address) the build's address of an E143 one (the port's
 // placement; null: not placed). Returns {app: {module9_readers}}, {dispq: {sends, loop, start, replies}}, {play:
 // {wrappers}}, {text: {lang_setting}}, {ae: {init, regions, table, rows (the row form's only)}}, {frame_period: {tft,
 // evf}}, {rtos: {init_task, ta_wu, tsnd_sites}}, {store: {db_save, app_saves}}, {hw_timer: {ptr} or {table}}, {crt:
 // {clock_read}}, {touch_args: {write_len, read_len}}, {dial: {select, select_end, table_ptr, table0}}, {ui_in: {task,
-// forward}}, {touch_start: {init, id_word}}, {frame_mode: {set}}, {frame_plane: {mode, uploads}}, {prop: {device}} and
+// forward}}, {touch_start: {init, id_word}}, {frame_mode: {set}}, {frame_plane: {mode, uploads}}, {prop: {device, evf_code}} and
 // {lens_driver: {module_init, cache_init, task_vars, tasks, exec_queue, flags, cache_area}} (no app, text or
 // frame_period part where MODULE_STATE_GET, the language loader or both vtotal functions are not placed, no play
 // wrappers where the component getter is not, no ae part where AE_INTERP is not and aeRows finds no run; no sends where OlyQeWr is not, no loop or
@@ -2946,7 +2972,10 @@ export function readPlacedFacts({ img, at }) {
   if (modeSet !== undefined) facts.frame_mode = { set: modeSet };
   const planeSet = modeSet ?? at(FRAME_MODE_SET_E143), plane = planeSet !== null ? framePlane(img, planeSet) : undefined;
   if (plane !== undefined) facts.frame_plane = plane;
-  if (!propSites.includes(null)) facts.prop = { device: propDevice(img, propSites) };
+  if (!propSites.includes(null)) {
+    const device = propDevice(img, propSites), evf = evfCode(img, device);
+    facts.prop = { device, ...(evf !== undefined && { evf_code: evf }) };
+  }
   const focalNow = at(LENS_FOCAL_NOW_E143), zoomTable = focalNow !== null ? lensZoomTable(img, focalNow) : undefined;
   const lensRecord = at(LENS_RECORD_E143);
   if (zoomTable !== undefined && lensRecord !== null) facts.lens_record = { zoom_table: zoomTable, static: lensStatic(img, lensRecord) };

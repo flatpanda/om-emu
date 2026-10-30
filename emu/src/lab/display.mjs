@@ -45,10 +45,12 @@ export const HDR = ['channel', 'width', 'height', 'frame', 'errors', 'pal_unwrit
 export const PAL_BASE = 0x4400;
 
 // channel: the VSC channel of the device (E143 TFT 2, EVF 1, HDMI 0; kind 2: TFT and EVF on 0, HDMI 1, D 0x5002361c;
-// kind 3 as kind 2, src/fw/board.mjs FAMILIES.E118)
+// kind 3 as kind 2, src/fw/board.mjs FAMILIES.E118); code: the DISPLAY OPEN's parameter, the display's code of the
+// device (E143's mask: TFT 1, EVF 2; the EVF's per build, src/fw/facts.mjs evfCode: 2 on the E143 and E144 families,
+// 6 on the E118 family, whose 2 is the NTSC video output; their TFT is 1, D: docs/om1-vsc-spec.md section 12)
 export const DEVICE = {
-  tft: { mask: 1, channel: LATER ? 0 : 2, prop: 1, vtotal_fn: A(0x501D8ABA), period: A(0xA32DB47C) },
-  evf: { mask: 2, channel: LATER ? 0 : 1, prop: 8, vtotal_fn: A(0x50023BAB), period: A(0xA32DB428) },
+  tft: { mask: 1, code: 1, channel: LATER ? 0 : 2, prop: 1, vtotal_fn: A(0x501D8ABA), period: A(0xA32DB47C) },
+  evf: { mask: 2, code: fact('prop.evf_code', 2), channel: LATER ? 0 : 1, prop: 8, vtotal_fn: A(0x50023BAB), period: A(0xA32DB428) },
 };
 export const PERIODS_US = [16683, 20000, 10000, 8341];
 export const VSC_IRQ = VSC_CHANNEL.map((_, c) => BOARD.intc.irq_vsc0 + 2 * c);
@@ -905,9 +907,10 @@ export class DisplayLab extends OsdLab {
   }
   open(device) {
     if (K3) this.vsc.set_line_ns(lookup(DEVICE, device).channel, this.line_ns.get(device).line_ns);
-    this.props.set(this.prop_device, lookup(DEVICE, device).prop);
-    this.step(`DISPLAY cmd 2 OPEN ${device} (mask ${lookup(DEVICE, device).mask})`, () => {
-      this.display_cmd(2, pack('<I', lookup(DEVICE, device).mask));
+    const d = lookup(DEVICE, device);
+    this.props.set(this.prop_device, d.prop);
+    this.step(`DISPLAY cmd 2 OPEN ${device} (${d.code === d.mask ? 'mask' : 'code'} ${d.code})`, () => {
+      this.display_cmd(2, pack('<I', d.code));
       this.drain_display_change();
     });
     this.device = device;

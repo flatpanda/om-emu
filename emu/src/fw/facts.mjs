@@ -694,6 +694,37 @@ export function modeDial(img) {
   return { table, names: [...new Set(codes)].filter((c) => names.has(c)).sort((x, y) => x - y).map((c) => [c, names.get(c)]) };
 }
 
+// The property store's module init (fact 'prop_store', src/lab/menu.mjs H-STOREINIT): the fifth init of the settings
+// init chain (E143 0x503dae30, called once from the boot at 0x501e9060, before the settings-DB init at 0x501e907b), at
+// E143 0x503ee2d6 (the chain's call 0x503dae75). It clears the store's object caches, sets id 6000's cell and keeps the
+// data pointers of three objects in three words at P, P + 4, P + 8: `mov imm32,d0; call R; mov a0,(abs32)` three times
+// back to back (fc cc K .. dd .. fc 80 P, 19 bytes each; E143 0x503ee368: kinds 0x85d4, 0x8b64, 0x8b54 through the
+// registry's 0x500417b0, P 0x62a65e0c), then reads its cache switch, `mov imm16,d0; mov 0,a0; clr d1` (2c .. .. 90 00 04;
+// kind 3505), and clears the staged-write flag. The three are the mode store: the nine banks (P, 0x503ee82b), the two
+// rows of every id 0..2128 that the mode recall lists 0x605f9134 select (P + 4, 0x503ee85c / 0x503ee885) and the
+// working copy of every id (P + 8, 0x503ee8b1 / 0x503ee8d7), whose data a mode change copies with its pointer (the stage
+// 0x503eeba1, docs/om1-settings-spec.md section 2.2; D). One such run on each of the 18 unpacked bodies, preceded by a
+// called entry (X, a byte scan of each). Returns {init, objects}: the init's entry (disassembly notation) and P (run
+// time), or undefined where the build holds no such run; throws for two runs or a run with no entry.
+export const PROP_STORE_E143 = { init: 0x503EE2D6, objects: 0x62A65E0C };
+const PROP_STORE_UNIT = 19, PROP_STORE_SPAN = 0x100;
+export function propStore(img) {
+  const unit = (k, want) => img[k] === 0xfc && img[k + 1] === 0xcc && img[k + 6] === 0xdd && img[k + 13] === 0xfc && img[k + 14] === 0x80 &&
+    (want === null || u32(img, k + 15) === want);
+  const callee = (k) => callAt(img, k + 6).to, found = [];
+  for (let o = img.indexOf(0xfc); o >= 0; o = img.indexOf(0xfc, o + 1)) {
+    if (!unit(o, null)) continue;
+    const p = u32(img, o + 15), u2 = o + PROP_STORE_UNIT, u3 = u2 + PROP_STORE_UNIT, tail = u3 + PROP_STORE_UNIT;
+    if (!unit(u2, p + 4) || !unit(u3, p + 8) || callee(u2) !== callee(o) || callee(u3) !== callee(o)) continue;
+    if (bytesAt(img, tail, [0x2c, null, null, 0x90, 0x00, 0x04])) found.push([o, p]);
+  }
+  if (!found.length) return undefined;
+  if (found.length > 1) throw new Error(`propStore: object-pointer runs at ${found.map(([o]) => h8(0x50000000 + o)).join(', ')}, want one`);
+  const [[at, objects]] = found, e = entryOf(img, at, PROP_STORE_SPAN);
+  if (e === undefined) throw new Error(`propStore: no called entry within ${PROP_STORE_SPAN} bytes before the run at ${h8(0x50000000 + at)}`);
+  return { init: 0x50000000 + e, objects };
+}
+
 // The flag the display's device open waits on once per frame (fact 'display.frame_wait', src/lab/menu.mjs S-FRAMEWAIT):
 // the open loops over its frame count, each pass a 28 ms wait on the flag, `mov 28,d0; mov d0,(4,sp); movhu (abs32),d0;
 // mov (d8,sp),a0; exth d0; mov 1,d1; mov 1,a1; call OlyEvWt` (E143 0x501d7e74, word 0x60043088; E144 0x50181d06 and
@@ -2734,9 +2765,9 @@ export function readPlacedFacts({ img, at }) {
 // {reload_less_one}}, {dial: {select, select_end, table_ptr, table0}}, {touch_panel: {driver}}, {lens: {mount}}, {iic:
 // {waits}}, {touch: {i2c_write, i2c_read}}, {touch_api: {open}}, {shooting: {start, end, auto_through}}, {func_direct:
 // {run, id}}, {broker: {init}}, {card: {shots_query, detect}}, {boot: {key, stage}}, {dpc: {init}} (with board.dpc), {sio: {tx_start, rx_start, done, dispatch, restart, channels}}, {storage: {init, tasks, fileclbk, nand, command, album_init, status, cflush, names}}, {power_off: {usb_disconnect}}, {gui: {stride, height,
-// banks, kind3}}, {recview: {word, standby}} and {cbs: {NAME: code}} (no memories, take, task init, frame wait, timer sleep,
-// sync, face colour, timer, dial, touch, touch_api, shooting, func_direct, boot, dpc, sio, power_off, recview or cbs part where its
-// rule reads none). Throws for a reset_head with no rule here, and where a rule throws.
+// banks, kind3}}, {recview: {word, standby}}, {cbs: {NAME: code}}, {mode_dial: {table, names}} and {prop_store: {init,
+// objects}} (no memories, take, task init, frame wait, timer sleep, sync, face colour, timer, dial, touch, touch_api,
+// shooting, func_direct, boot, dpc, sio, power_off, recview, cbs or prop_store part where its rule reads none). Throws for a reset_head with no rule here, and where a rule throws.
 export function readFacts({ img, family, resLoad }) {
   const facts = {};
   if (family.reset_head === 'flash-copy') {
@@ -2794,6 +2825,8 @@ export function readFacts({ img, family, resLoad }) {
   const cbs = cbsIds(img);
   if (cbs !== undefined) facts.cbs = cbs;
   facts.mode_dial = modeDial(img);
+  const propStoreInit = propStore(img);
+  if (propStoreInit !== undefined) facts.prop_store = propStoreInit;
   return facts;
 }
 

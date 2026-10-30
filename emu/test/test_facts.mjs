@@ -38,7 +38,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
-  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143 } from '../src/fw/facts.mjs';
+  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
+  PROP_STORE_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -504,6 +505,10 @@ const GUI_FOUND = {
 const MODE_DIAL_FOUND = { E143: MODE_DIAL_E143, E147: { table: 0x60240B00, names: [[1, 'P'], [2, 'A'], [3, 'S'], [4, 'M'], [53, 'MY_MODE1'],
   [54, 'MY_MODE2'], [55, 'MY_MODE3'], [56, 'MY_MODE4'], [62, 'B'], [63, 'MY_MODE5']] } };
 const RECVIEW_FOUND = { E143: { word: 0x6035E9C8, standby: 1 }, E142: { word: 0x61FA73A0, standby: 1 } };
+// The property store's module init and its object words (prop_store; src/fw/facts.mjs propStore): E143's (D: the
+// settings init chain 0x503dae30 calls 0x503ee2d6 at 0x503dae75; its pointer stores 0x503ee375..0x503ee39b) and E122's
+// (D: 0x502cf141, its pointer stores from 0x502cf1d3); the rule finds one on each of the 18 unpacked bodies (X)
+const PROP_STORE_FOUND = { E143: PROP_STORE_E143, E122: { init: 0x502CF141, objects: 0x61896ED4 } };
 // The boot's state words (bootState; D: E133's UI_IN init stores its boot key at 0x500f5e95 and its getter 0x500f45ce
 // reads it, E129's stage test 0x50022e30 reads its ready word, which the stage step 0x50022f51 sets at 0x5002302e)
 // and the deferred calls' init (deferredCalls; D: E132's boot head calls 0x5004a115 at 0x500002ea, which zeroes the
@@ -530,7 +535,7 @@ const E143_FACTS = {
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
   broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] } },
   boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143,
-  cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143,
+  cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143, prop_store: PROP_STORE_FOUND.E143,
 };
 
 export function factsTests() {
@@ -648,6 +653,7 @@ export function factsTests() {
       ok(same(got, want), `${code}: A() of the lens flags and LENS_EXEC's queue word ${hx(got)}, the rule's ${hx(want)}`);
     }
     if (MODE_DIAL_FOUND[code]) ok(same(got.mode_dial, MODE_DIAL_FOUND[code]), `${code}: mode_dial ${hx(got.mode_dial ?? got)}, found ${hx(MODE_DIAL_FOUND[code])}`);
+    ok(typeof got.prop_store?.init === 'number' && (!PROP_STORE_FOUND[code] || same(got.prop_store, PROP_STORE_FOUND[code])), `${code}: prop_store ${hx(got.prop_store ?? got)}, found ${hx(PROP_STORE_FOUND[code] ?? 'one')}`);
     if (CBS_FOUND[code]) ok(same(got.cbs, CBS_FOUND[code]), `${code}: cbs ${hx(got.cbs ?? got)}, found ${hx(CBS_FOUND[code])}`);
     if (SYNC_FOUND[code]) ok(same(got.display?.sync, SYNC_FOUND[code]), `${code}: display.sync ${hx(got.display ?? got)}, found ${hx(SYNC_FOUND[code])}`);
     ok(got.touch_panel?.driver === !NO_TOUCH_DRIVER.includes(code), `${code}: touch_panel ${hx(got.touch_panel ?? got)}, found ${NO_TOUCH_DRIVER.includes(code) ? 'no driver' : 'a driver'}`);

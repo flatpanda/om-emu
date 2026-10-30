@@ -108,6 +108,8 @@ Each note was checked against the cited code. Paths are relative to the reposito
 
 **Expected / concern:** These are not ISA behaviours. Real hardware produces some flag or result value and carries on, or for division takes a defined exception path. Code that is legal on hardware, such as testing a flag after a shift or dividing by zero in a guarded path, stops the emulator.
 
+One such divide is met in the lab (2026-10-29): E144 with an exFAT card divides by 0 at `0x5032574f` (its movie parameters, with the blank settings store's 4K 60p mode, `docs/hle-gaps.md` 4.8.7), and the quotient then decides a compare (the quotient kept, or 0). The manual gives that divide V=1 and leaves Dn, MDR, N and Z undefined (`docs/mn10300-isa-spec.md` 4.6 and 8 item 1), so there is no value to model and it stays a stop; a hardware capture of DIVU by 0 would settle it.
+
 **Confidence:** high
 
 ### 3.3 Page-crossing non-prefix instruction: wrong fault address and fault counted (fixed 2026-10-29)

@@ -161,9 +161,12 @@ the survey table.
 - **The card on the other bodies:** done for nine (2026-10-25, hle-gaps.md 4.8.4) and E145 (2026-10-29): a rule reads the file system's
   seams in each image (`src/fw/facts.mjs` fileSystem), and E146, E147, E144, E139, E137, E142, E140, E125, E130 and E145
   format a blank card, mount it, count from it and write S2's file (`src/fw/models.mjs` card_fs, S-SDPOWER for the
-  E144 family's card supply). Left: E134, whose first fopen blocks on UI_IN's request queue (S-CARD kept); the HLS
-  side (Card Formatting from the menu, the card out and in) on the bodies other than E143; E133's, E129's and
-  E132's cards are native since their starts run (2026-10-29).
+  E144 family's card supply). E134 since 2026-10-29 (hle-gaps.md 4.8.7, model-survey finding 23): its first fopen
+  blocked on UI_OUT's queue, the lamps' module its file layer asks for the card's access lamp, which H-UIOUTSTART now
+  runs. The HLS side (Card Formatting from the menu, the card out and in) on E146 since 2026-10-29 (4.8.7). Left:
+  the HLS side on E147 (Format Card's Yes does not reach S-MDACTRL, the card input finds no UI_IN code; not read)
+  and on the E144 family (its own function component); E133's, E129's and E132's cards are native since their
+  starts run (2026-10-29).
 - **The card, next on E143:** Card Formatting from the menu and the card's removal and insertion while the camera
   runs are done (2026-10-24, hle-gaps.md 4.8.3: S-MDACTRL and S-MEDIA stand in for the HLS function component and
   media manager, the application's media control runs natively). Next: REC_FILE's own DCF steps (the DCF fnode its
@@ -176,7 +179,9 @@ the survey table.
   X; the tooling, the HLS side and the other bodies with it on 2026-10-29, 4.8.6 round 5: the Card panel and
   modelcheck read exFAT, the browser player takes a card size, the menu's format gives the card exFAT again and the
   card out and in mounts it again, X; eight more bodies format a 64 GiB card exFAT and run on, and E144 stops at the
-  application's start on a divide by zero emu refuses, FIDELITY-NOTES 3.2); the SD
+  application's start on its own divide by zero, read in 4.8.7: the blank store's 4K 60p mode has no rate on E144,
+  its movie parameters do not test that query, and exFAT's second query passes without the table; the manual
+  leaves the result undefined, so the stop stays, FIDELITY-NOTES 3.2); the SD
   host at its registers with its interrupts and card detect (seam A); playback of the card's files (a JPEG decoder at
   the codec seam); the movie module's set-up, whose frame rate the movie time query reads (it logs `0x39000903`).
 - **The movie time of the E144 family:** read (2026-10-27, hle-gaps.md 4.8.5), nothing to model. With the card native
@@ -275,7 +280,7 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
 | 3 | interrupt acceptance anywhere, then the machine-owned time model | not started: architecture phases 3 and 4 |
 | 4 | CPU 2, then CPU 3, then CPU 1, natively | not started |
 | 5 | task-start and module-init infrastructure; the HLS component bring-up as the coverage workload's default | not started |
-| 6 | storage at the sdmem seam | started (2026-10-23, hle-gaps.md 4.8.2) on E143, one layer lower, at the SD command layer: an 8 GiB SDHC card (S-SDCARD) the firmware formats (FAT32) and mounts itself, with the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, dosfat and the DCF modules native; the remaining shots and the movie time counted by the firmware from the card; the picture's file written at S2 through the file module (S-RECFILE, in place of REC_FILE) and found by the firmware's DCF scan at the next mount; Card Formatting from the menu and the card's removal and insertion at run time (2026-10-24, 4.8.3); an SDXC card the firmware formats exFAT, read back by an independent exFAT reader (2026-10-29, 4.8.6), formatted again from the menu and mounted again after the card out and in, and formatted exFAT by nine more bodies, which run on but E144 (a divide by zero emu refuses, 4.8.6 round 5). Open: REC_FILE natively, the second slot, E144 with an SDXC card, the other bodies |
+| 6 | storage at the sdmem seam | started (2026-10-23, hle-gaps.md 4.8.2) on E143, one layer lower, at the SD command layer: an 8 GiB SDHC card (S-SDCARD) the firmware formats (FAT32) and mounts itself, with the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, dosfat and the DCF modules native; the remaining shots and the movie time counted by the firmware from the card; the picture's file written at S2 through the file module (S-RECFILE, in place of REC_FILE) and found by the firmware's DCF scan at the next mount; Card Formatting from the menu and the card's removal and insertion at run time (2026-10-24, 4.8.3); an SDXC card the firmware formats exFAT, read back by an independent exFAT reader (2026-10-29, 4.8.6), formatted again from the menu and mounted again after the card out and in, and formatted exFAT by nine more bodies, which run on but E144 (its firmware's own divide by zero, whose result the manual leaves undefined, 4.8.7); the HLS side on E146 and E134's card native (2026-10-29, 4.8.7). Open: REC_FILE natively, the second slot, the HLS side on E147 and the E144 family, E129 and E132 |
 | 7 | TAKE native with the lens, BC, the sensor control plane and the shutter (the strobe beside it) | started (2026-10-28) with the lens on E143 at its serial controller (hle-gaps.md 4.4.2): the lens tasks, driver and LENS_SSC run natively, S-LENSMCU answers as the 12-40; the default since 2026-10-29, when the touch's stop was found (the application's event task waited for the GUI's answer, which S-CAFWD swallowed) and S-TOUCHMAP and S-CAFWD gave way to the application's own forward. Open: the lens's real replies (and with them the lens-ready byte, whose writer waits on the lens ID's first bytes and function words), E146 and E147 (their lens drivers not read, E143's addresses partly unported); TAKE, BC, the sensor and the shutter not started |
 | 8 | by gain: still capture, live-view statistics and EXP, AF, movie and audio, playback, USB, the power manager, wireless after CPU 1, GPU / C3D, the rest | not started |
 

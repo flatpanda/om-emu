@@ -44,7 +44,7 @@ through a reference place more; "Per-body status" has their figures).
 | E147 | OM-3 | 1100 | 32.0 | 0x60021020 (7.5%) | olycompress | 5.25M | 5 | modelcheck passes (since finding 18 with the count probe) |
 | E144 | OM-5 | 1200 | 23.7, 2 sections | 0x60021020 (6.6%) | olycompress | 2.15M | 45 | modelcheck passes (TFT and EVF; the count probe since finding 18) |
 | E139 | E-M1 III | 1600 | 26.0, 2 sections | 0x60021020 (6.6%) | olycompress | 2.08M | 44 | through E144: modelcheck passes (TFT and EVF; the count probe since finding 18) |
-| E134 | E-M1X | 2400 | 26.0 | 0x60021020 (6.5%) | plain | 2.03M | 46 | through E139: modelcheck passes (TFT and EVF; the touch task's send, finding 11; the count probe since finding 18) |
+| E134 | E-M1X | 2400 | 26.0 | 0x60021020 (6.5%) | plain | 2.03M | 46 | through E139: modelcheck passes (TFT and EVF; the touch task's send, finding 11; the count probe since finding 18; the card native since finding 23) |
 | E137 | E-M5 III | 1700 | 23.9 | 0x60021020 (6.7%) | plain | 1.71M | 68 | through E144: modelcheck passes (TFT and EVF; the count probe since finding 18) |
 | E142 | E-P7 | 1100 | 25.0 | 0x60020020 (7.2%) | plain | 1.47M | 74 | through E144: modelcheck passes (no EVF; the callback ids, finding 12; the shots query and the count probe, findings 15 and 16) |
 | E140 | E-M10 IV | 1100 | 25.0 | 0x60020020 (7.2%) | plain | 1.44M | 77 | through E142: modelcheck passes (TFT and EVF; format 9 and the lens record, finding 13; findings 15 and 16) |
@@ -339,6 +339,23 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    1440 x 480, 1440 x 404, ...; the EVF rows the same, D). So the display path runs at two samples per panel pixel
    and the frames' 1440 samples per line carry 720 pixels: they look stretched twice horizontally, and halving them
    gives the panel's picture (I). Why the panel takes two samples per pixel is not read (?).
+23. **E134's card waits for its lamps' module** (2026-10-29, `docs/hle-gaps.md` 4.8.7). On a native card E134's
+   S-RECFILE fopen never completed: FILECLBK blocked in a send with no timeout (`0x50030432(queue, -1)` at
+   `0x5010c35f`) to the queue of the halfword `0x6004192e` (117), after 53 sends that nothing read (X, round 3). The
+   queue is not UI_IN's, as recorded then: the sender is the lamp request `0x5010c328` ({lamp id, u16, word}, a
+   44-byte message), whose queue the init `0x5010cb57` sets up, and the boot calls that init after its checkpoint
+   "2_9" (`0x50180afd`), then starts task 41 (the halfword `0x600413fa`; its static row's entry `0x5010cbda`) and names
+   it "UI_OUT" (D). E134's file layer asks UI_OUT for the card's access lamp around its accesses (`0x5066dea4`: lamp 6
+   with 500 or 0; six call sites in the file layer, D; that lamp 6 is the access lamp and 500 a blink in ms is I),
+   which E143's and E144's file layers do not (X). Nothing on E134 runs UI_OUT in the lab (X: its init and its task
+   entry never reached), so every lamp request stayed in the queue until it was full. H-UIOUTSTART (`src/lab/play.mjs`,
+   MODELS `ui_out`, E134 only) runs the init natively at the play bring-up, before the file system's, and starts the
+   task, which then waits on the queue and takes each request natively (X: 72 lamp requests in a session to S2 and
+   PLAY, all complete; the session made no stop in UI_OUT). E134's card is native since: the blank 8 GiB card formatted
+   FAT32 `NO NAME` at 8192 with 32 KiB clusters, 826 shots, S2's file read back, on the TFT and the EVF; a blank
+   64 GiB card exFAT, no label, at 32768 with 128 KiB clusters, 6,618 shots (X: `bin/modelcheck.mjs`, with and without
+   `--card-size 64`). Its movie time from the card is 0, as on the E144 family: the blank store's mode 1 at 60 fps
+   (X: the getters) and the rate check's logs `0x3a040001` and `0x39000105` (X; `docs/hle-gaps.md` 4.8.5).
 26. **The TG-5s through modelcheck's path** (2026-10-29, `docs/hle-gaps.md` 4.7.5). Three stops, each read where it
    lies; E129 and E132 are in `bin/modelcheck.mjs`'s default set (`MODELS` `checked`), their cards native.
    - *The charger's transfers.* The start's charger request writes register 1 = 0xa2 and reads it back over PER_SIO's

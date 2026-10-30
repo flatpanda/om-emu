@@ -1330,7 +1330,8 @@ bytes on; E143's places in brackets):
   2026-10-29, 4.8.6): an SDXC card by its capacity and an independent exFAT reader; the firmware formats a blank 64
   or 128 GiB card exFAT and mounts it (X). Round 5 (2026-10-29, 4.8.6): the players and modelcheck read exFAT, the
   browser player takes a card size, the menu's format and the card out and in on E143 with an SDXC card, and nine
-  more bodies with one (X).
+  more bodies with one (X). Round 6 (2026-10-29, 4.8.7): E144's stop with an SDXC card read to its cause (the
+  firmware's own divide by 0), the HLS side on E146, and E134's card native once its lamps' module UI_OUT runs (X).
 
 #### 4.8.1 The sdmem request contract (D unless tagged)
 
@@ -1587,7 +1588,9 @@ its code:
   S-RECFILE's first fopen never completes: FILECLBK blocks in a write with no timeout to UI_IN's request queue,
   `0x6004192e`, at `0x5010c35f`, which nothing reads in the lab, 53 writes in 10 s; E143's and E144's fopen make no
   such write; why E134's does is ?), E129 and E132 (their starts stop before the application, ROADMAP),
-  the E118 family (not loaded; no SD command layer of the rule's form). They keep S-CARD. E133's card is native since
+  the E118 family (not loaded; no SD command layer of the rule's form). They keep S-CARD. E134's card is native since
+  2026-10-29 (4.8.7: the queue is UI_OUT's, the module of the camera's lamps, which its file layer asks for the card's
+  access lamp; H-UIOUTSTART runs UI_OUT). E133's card is native since
   its start runs (2026-10-29: 2018 shots on the blank card, S2's file read back, X), and E145's (TG-7) since its start
   runs to the shooting screen (2026-10-29, `docs/model-survey.md` finding 22: the blank card formatted `OM SYSTEM`,
   mounted, 1362 shots and `0:37:22` from the 8 GiB card, S2's file read back; X: `bin/modelcheck.mjs`, frames).
@@ -1599,9 +1602,9 @@ its code:
   not have. The OM-1 family's query answers the card's time after S1 (E146 5:25), 0 before it at the date prompt (X;
   why is ?).
 - **Not done here:** the HLS side (S-MDACTRL, S-MEDIA: Card Formatting from the menu, the card out and in) stays
-  E143's (`card_fs.hls`); on the other native bodies the media control's TRA 1511 is answered by S-TRAACK alone (I:
-  the menu would stay at "Busy", as on E143 before round 2; not run) and the card input is refused. REC_FILE and the
-  second slot were not attempted.
+  E143's (`card_fs.hls`; E146's too since 4.8.7); on the other native bodies the media control's TRA 1511 is answered
+  by S-TRAACK alone (I: the menu would stay at "Busy", as on E143 before round 2; not run) and the card input is
+  refused. REC_FILE and the second slot were not attempted.
 
 #### 4.8.5 The E144 family's movie time (2026-10-27; D unless tagged)
 
@@ -1721,7 +1724,8 @@ the firmware's code for a card above 32 GiB is not read (?).
     The 8 GiB card's counts were 803, 826, 1607 and 2018 (4.8.4); with 64 GiB the OM-1 family's and E143's 6,456 and
     the E142 lineage's 6,618 are about 8 times theirs, and E125's and E130's 9999 is where their counts stop (I: a
     cap; 8 x 1607 is past it). The E142 lineage and E125 / E130 label the exFAT volume with nothing, as their FAT32
-    is `NO NAME` (4.8.4); the E143 family and E144 `OM SYSTEM`. E134 keeps S-CARD and was not tried.
+    is `NO NAME` (4.8.4); the E143 family and E144 `OM SYSTEM`. E134 kept S-CARD and was not tried (since 4.8.7 it
+    formats a 64 GiB card exFAT, no label, 6,618 shots, and runs on).
   - **E144 stops (X; the addresses E144's):** the format and the mount succeed (exFAT `OM SYSTEM` in an MBR
     partition at 32768, 128 KiB clusters, consistent), then the camera application's start ends in S-MODACK's reply
     with Fault 6 at `0x5032574f`, `divu d1,d3` with d1 = 0, in the function at `0x5032553f` that builds the movie's
@@ -1730,7 +1734,7 @@ the firmware's code for a card above 32 GiB is not read (?).
     with 32 KiB clusters, starts as the 8 GiB one does, and on the 8 GiB card the check answers `0xff12` after the rate
     check's `0xa003`, 4.8.5, and the function returns before the branch). The divisor is the size at sp+84 in 512-byte
     units rounded up, and that size is 0 (the movie mode getter answers 1, UHD 4K at 60p, with either card, X); why
-    the check passes and the size is 0 with this card is ?. The hardware raises no fault there
+    the check passes and the size is 0 with this card was ? here (read in 4.8.7). The hardware raises no fault there
     (`emu/FIDELITY-NOTES.md` 3.2): the quotient goes to a compare that keeps it or sets 0, so the camera would carry
     on with a value that is not known. The same stop with 128 GiB. `modelcheck.mjs` holds it in SDXC_XFAIL, strictly. E139 and E137 read the same 4K 60p default
     (4.8.5) and run on: whether their builds have the branch is not read (E144's instruction run is not in their images,
@@ -1738,7 +1742,57 @@ the firmware's code for a card above 32 GiB is not read (?).
 - **Open:** E144 with an SDXC card (why its check passes with a size of 0; then a defined answer at that seam, a
   stand-in with its label, never a guessed value); the HLS side on the other bodies (4.8.4), so the menu's format and
   the card out and in stay E143's; the node player's size is an environment variable only (no command-line option);
-  movie files on exFAT (none is written in the lab).
+  movie files on exFAT (none is written in the lab). The first two are read or done in 4.8.7.
+
+#### 4.8.7 E144's divide, the HLS side on E146 and E134's card, round 6 (2026-10-29; D unless tagged)
+
+- **E144 with an SDXC card: the firmware's own divide by 0 (addresses E144's).** The movie-parameter function
+  `0x5032553f` builds two requests from the movie mode's getters (4.8.5: mode 1, code 8, 60 fps, size class 1) and
+  asks two rate queries. The first, `0x5032d4f9(0, sp+72)` -> `0x503e099b` -> the rate table `0x503e88ff`, fills
+  the request's sizes (+8, +12: sp+80, sp+84) only on success; for 4K at 60p the table has no word, so it answers
+  `0xff12` and leaves them as the memset left them, 0 (X: the errlog `0x3a040001`, the stack). This build does not
+  test that answer (the call at `0x503255ba` is followed by `mov sp,a2`). The second, `0x5032d626(0, sp+92)` ->
+  `0x503e09ae`, first asks the drive's file system (`0x5068bbea` -> `0x506a0809`: for a mounted drive the volume's
+  FAT width, 12 or 16 -> 1, 32 -> 2, 64 -> 3, else `0xffff`; X: 3 on the exFAT card), and for 3 answers from
+  constants by frame rate without the rate table (60p: 7,169,663 and 429,600 at `0x503e0a99..0x503e0aa6`, X on the
+  stack), so it returns 0 on an exFAT card where it returns `0xff12` on FAT32 (the rate table again). With 0 the
+  function asks `0x503301b8` (the same file-system query, 3) and runs its exFAT branch, then divides by the first
+  request's +12 in 512-byte units rounded up, 0, at `0x5032574f` (and at `0x50325779` on the branch where
+  `0x503282bb` sets its byte; not reached in the lab). So the divide is the firmware's own result for the blank
+  store's movie mode, which E144 cannot record, with an exFAT card. Checked the other way (X): with the mode's byte
+  (`0x6240645b`) set to 0 (FHD 60p, which the table has) before the function, the divisor is 0x63b2 and the start,
+  S1 and S2 (its file on the card) run.
+- **How emu models it:** it does not. The manual gives DIVU by 0 V=1 and leaves Dn, MDR, N and Z undefined
+  (`docs/mn10300-isa-spec.md` 4.6, 8 item 1), and here the quotient decides the compare after it (kept when above 0,
+  else 0), which becomes the movie time: no value can be given without a guess, so the core keeps Fault 6
+  (`emu/FIDELITY-NOTES.md` 3.2) and `bin/modelcheck.mjs` keeps E144 in SDXC_XFAIL with this reason. Whether a real
+  E144 can hold mode 1 at 60p (the factory's store, a reset's defaults) is ? (4.8.5); with a mode the body records
+  it runs on with an SDXC card (above).
+- **Why E139, E137 and E125 run on (goal b):** their movie-parameter functions (E139 `0x50322361`, E137
+  `0x50315c81`, E125 `0x50331ce3`, by the map) test the first rate query's answer and leave with `0x9d08` on any
+  error (E139 `0x503223d8..0x503223eb`, E137 `0x50315cf8..0x50315d0b`, E125 `0x50331d34..0x50331d47`) before any
+  divide, and have no exFAT branch before it (their unit is a fixed 8 MiB shift, `lsr 23`). E143's tests the answer
+  too (`0x504487fe..0x5044883c`), and its table has 4K at 60p.
+- **The HLS side on E146 (goal c; `src/fw/models.mjs` E146 card_fs.hls):** each function S-MDACTRL and S-MEDIA call,
+  and the senders and the reactive whose ids and sizes they rely on, paired by the map and compared with E143's
+  instruction for instruction, absolute addresses and source line numbers masked: identical but for three ids (the
+  media control request TRA 1509, the progress 1511 and the result 1512; E143's 1511, 1513 and 1514) and the API's
+  reply queue halfword (`0x6004320e`, read at `0x503ecb06`; the map's data pairing gave `0x60043200`). X:
+  `emu/test/test_storage.mjs --session` on E146 runs E143's checks of the menu's format and of the card out and in
+  (40 of 40, as E143), and `--sdxc` with a 64 GiB card (30 of 30): the menu's format exFAT again within 1,929 ms of
+  lab time, the layout the insertion gave; out and in, the mount 962.6 ms after the insertion, 6,456 shots before
+  and after. E147 was tried with its own addresses (the same comparison; its UI_IN level getter has 7 groups and
+  other special codes) and not landed: Format Card's Yes did not reach S-MDACTRL, and the card input found a
+  control row without a UI_IN code (`play.mjs` card_input); neither is read. E144's HLS function component is
+  another build (no `CmpCst_Function.cpp`; getMediaCtrlCBC and getMediaProgress do not pair): not attempted.
+- **E134's card (goal d; `docs/model-survey.md` finding 23):** the queue FILECLBK blocked on is UI_OUT's, the module of
+  the camera's lamps, not UI_IN's: E134's file layer asks it for the card's access lamp around its accesses, and
+  nothing ran UI_OUT. H-UIOUTSTART runs its init and starts its task at the play bring-up (MODELS `ui_out`); the
+  card is native on E134 since (X: modelcheck with the 8 GiB card, 826 shots, and with a 64 GiB card, exFAT, 6,618
+  shots; `test_storage.mjs --session`, 22 of 22, in `bin/test.mjs`). Its movie time is 0, as on the E144 family
+  (4.8.5; X: mode 1 at 60, the logs `0x3a040001` and `0x39000105`).
+- **Open:** the HLS side on E147 (the two failures above) and on the E144 family (its own function component); a
+  real E144's movie mode at the factory; the hardware's DIVU by 0 (a capture would settle 3.2).
 
 ### 4.9 HDMI and DisplayPort
 

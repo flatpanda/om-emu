@@ -51,7 +51,7 @@ not reconciled.
    blank store's movie mode, which those bodies cannot record (2026-10-27, hle-gaps.md 4.8.5).
 2. **The open stops of the remaining bodies** (Multi-model "Next stops"): the E118 family past its board port (E122
    runs modelcheck's path on the TFT with its card native since 2026-10-30, findings 41 and 42; E118 at E122's
-   shooting screen state and E120 at POWER_ON, findings 44 to 47). E133, E145 and
+   shooting screen state and E120 at POWER_ON, findings 43 to 46). E133, E145 and
    the TG-5s (E129, E132: their charger's transfers on serial channel 9, `docs/model-survey.md` finding 24) pass
    modelcheck since 2026-10-29.
 3. **HLE of E143, step 2** (HLE of E143 below; step 1's static decodes are done): the cheap CPU 0 wins (a ticking
@@ -100,7 +100,7 @@ bodies; the bodies whose image runs at a `0x60xxxxxx` base pair 0.76M-2.08M inst
 | ported | E144 OM-5, E139 E-M1 III | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe included |
 | A | E134 E-M1X | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe included |
 | B | E137 E-M5 III, E142 E-P7, E140 E-M10 IV, E125 E-M1 II, E145 TG-7 | E137, E140 and E125: `bin/modelcheck.mjs`'s path passes on the TFT and the EVF, E142 and E145 (no EVF) on the TFT; the count probe passes on all five; E145 with MENU at its date and time setting (`0x1103`) after the start (2026-10-29) |
-| C | E133 E-PL9, E130 E-M10 III, E129 / E132 TG-5, E118 E-M5 II, E122 PEN-F, E120 E-M10 II | E130: `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe too; E133, E129 and E132 on the TFT (2026-10-29), their cards native; the E118 family's board is ported (2026-10-30): E122's start runs natively to the shooting screen state and stops at about 3 s or S1 in the movie time (2026-10-30), its EVF after the application's start on a full queue; E118's TFT and EVF to the shooting screen state and E122's movie-time stop, E120's TFT to POWER_ON and its EVF to E122's EVF stop (findings 44 to 47) |
+| C | E133 E-PL9, E130 E-M10 III, E129 / E132 TG-5, E118 E-M5 II, E122 PEN-F, E120 E-M10 II | E130: `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe too; E133, E129 and E132 on the TFT (2026-10-29), their cards native; the E118 family's board is ported (2026-10-30): E122's start runs natively to the shooting screen state and stops at about 3 s or S1 in the movie time (2026-10-30), its EVF after the application's start on a full queue; E118's TFT and EVF to the shooting screen state and E122's movie-time stop, E120's TFT to POWER_ON and its EVF to E122's EVF stop (findings 43 to 46) |
 | D | E100, E101, E106-E113, E115, E117, E121, E126 | not tried |
 | - | the new OM System PEN (E148?) | not served yet (E148-E199 answer nothing, 2026-10-19): re-probe |
 
@@ -147,11 +147,11 @@ The plan:
    to 31); E118 and E120 port through E122 and run to its earlier stop at UI_IN (findings 32 to 34: their GUI take,
    handler tables and GUI caller read by rules, E122's display task and the PWM block). A chained port takes nothing
    but its reference's overrides and carried knobs; E122's other fields are read by rules or given per body on E118
-   and E120 (finding 44), and E118 reaches E122's shooting screen state on the TFT and the EVF (findings 45, 46).
+   and E120 (finding 43), and E118 reaches E122's shooting screen state on the TFT and the EVF (findings 44, 45).
    E122's card and file system run natively since 2026-10-30 (findings 41, 42: the family's forms of five storage
    seams read by the rule), which ended its movie time's divide by 0, and its TFT start runs modelcheck's path; its
    frames compose in the firmware's palette on both panels (findings 38 to 40). Next: E122 through modelcheck, then
-   E118's card and E120's POWER_ON (finding 47, ?).
+   E118's card and E120's POWER_ON (finding 46, ?).
    The kind-3 VSC composes (kind 2's compositor with the family's palette groups and format words) and the EVF opens
    the built-in EVF, the family's device code 6, where the lab had opened the NTSC output (findings 35 and 36). Since
    2026-10-30 E122's TFT and EVF frames show its clock warning: the palettes by GUI layer (finding 38), S-DISPSYNC
@@ -285,18 +285,18 @@ the survey table.
   after the first S1, finding 42), the playback's file information (`000-0000`, ?), the EVF's queue 156 and the
   kind-3 compositor for a frame.
   E118 and E120 stopped at the GUI message take's observer (E143 0x510c2a2e); since 2026-10-30 they run past UI_IN
-  (findings 32-34, 37), and with E122's other fields read or given (finding 44), the family's serial transmitters
-  idle (finding 45) and E118's overlapping image records loaded at their requests (finding 46) E118's TFT and EVF
+  (findings 32-34, 37), and with E122's other fields read or given (finding 43), the family's serial transmitters
+  idle (finding 44) and E118's overlapping image records loaded at their requests (finding 45) E118's TFT and EVF
   reach `0x0108` and stop at E122's movie time; E120's TFT stays in POWER_ON (no request for `0xf001`, ?) and its EVF
-  stops at E122's EVF stop (finding 47).
+  stops at E122's EVF stop (finding 46).
   With the three tracks together (finding 37) E122's composite was one colour at the clock warning, and its EVF stopped
-  after the application's start on a full queue 156 (TOUCHPANEL's, findings 40, 47); since findings 38 to 40 both
+  after the application's start on a full queue 156 (TOUCHPANEL's, findings 40, 46); since findings 38 to 40 both
   panels show the clock warning and, with the movie time answered by hand (exploration), S1's shooting screen. Open on
   the family: S-MODACK's module queue ids, five of which the port's words read as another queue's (PWR_EXEC `0x86` by
-  name; no request to them is seen yet, finding 44), to be read from the API target table; E120's open waits for a GIO
+  name; no request to them is seen yet, finding 43), to be read from the API target table; E120's open waits for a GIO
   pin 30 interrupt's callback (a flag polled with 2 ms sleeps; which line the pin is, ?), which the lab never raises,
   so its opens take 300 s and 500 s of lab time (not the POWER_ON stop's cause, X); E120's POWER_ON: its handler of
-  the application's sub-event `0x09000022` asks the GUI for nothing where E118's asks for `0xf001` (finding 47, ?).
+  the application's sub-event `0x09000022` asks the GUI for nothing where E118's asks for `0xf001` (finding 46, ?).
   E122's EVF start opens device code 6, BI_EVF (finding 35). Open in the kind-3 compositor (findings 36, 38): what
   OSD1's and OSD2's pixels of 32 or more do (refused, PAL_FIELD), the planes' order on the chip (OSD3, GUI layer 2,
   drawn last, I), and what an OSD level below `0x100` does (the EVF's `0xb2` is drawn as full, as E144's `0xcc`).

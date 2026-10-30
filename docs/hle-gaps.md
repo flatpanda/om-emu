@@ -1417,7 +1417,7 @@ bytes on; E143's places in brackets):
   runs H-SIOMAP: their PER_SIO users are S-SIO2, S-IICWAIT and the panels' lab-stub pages); E144's charger over IIC
   channel 6 (S-INTCHA's return stub) as a second S-SIOIIC device; the charger's chip and its reset values; why
   LOGGER_MAIN's unanswered request fills the application's queue 6 once the clock is set (X, ?).
-- **The E118 family's channels (2026-10-30, `docs/model-survey.md` finding 45).** Their blocks
+- **The E118 family's channels (2026-10-30, `docs/model-survey.md` finding 44).** Their blocks
   (`0x98200000`..`0x98600000`, five enabled) are lab-stub pages with one preset each: the transmit level word `+0x1c`
   reads the channel's FIFO depth (16, 64 for channel 4), an idle transmitter, so the driver's polled send, which waits
   for that value, returns (E118's EVF panel commands over channel 2); that the word counts free entries is I, and

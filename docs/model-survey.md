@@ -747,7 +747,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    read (?). The EVF stops where it did (finding 37, queue 156). E122 is not in modelcheck's checked set: the count
    probe and the EVF fail.
 
-44. **What a chained port takes from its reference** (2026-10-30, track e118-e120-facts). A body with `port_via`
+43. **What a chained port takes from its reference** (2026-10-30). A body with `port_via`
    carries its reference's effective overrides and the knobs its `carry` lists (`src/fw/place.mjs` carryOverrides,
    `src/fw/knobs.mjs`), nothing else: every other field of the reference's `MODELS` entry is the body's to decide,
    read by a rule where the shape repeats or given in its own entry with its evidence. `test/test_facts.mjs` now
@@ -783,7 +783,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    `0x77` by name, `0x76` read, X); that the name table's id is the queue's holds on E143 (X) and is I elsewhere. Next:
    the module queues read from each build's API target table by a rule.
 
-45. **E118's EVF waits for its serial transmitter** (2026-10-30). The trap 7 at `0x5006e002` was the display run's
+44. **E118's EVF waits for its serial transmitter** (2026-10-30). The trap 7 at `0x5006e002` was the display run's
    budget running out in the serial driver's polled send (`0x5006dfc3`): after its byte loop (`0x5006e24b`, which
    writes `+0x18` while `+0x1c` is not 0) it waits until the channel's `+0x1c` equals the depth word the channel's init
    keeps (`0x611515c0 + 4 x ch`: 16, 16, 16, 16, 64 for channels 0..4, X at the stop; the channel records
@@ -793,7 +793,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    transmitter that is idle (that `+0x1c` counts free entries is I); E118's EVF open completes, E122's and E120's
    stops are unchanged (X).
 
-46. **E118 (E-M5 II) to its shooting screen state** (2026-10-30). Past the open, E118's start faulted in its GUI task
+45. **E118 (E-M5 II) to its shooting screen state** (2026-10-30). Past the open, E118's start faulted in its GUI task
    (`0x50b8f68d`, a bus error at `0xc000002c`): the search for font record 147 (`0x50b8f675`) in the font table of the
    icons record (the table at record offset `0x808848`, 78-byte records) ran off the table's end, whose records from
    the 26th were the bitmaps record's bytes (X). E118's loader puts the icons record at `0xa24e2c00` and the bitmaps
@@ -809,7 +809,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    in the movie time's division by the movie module's object word (`0x5055ee88`, E122's `0x5056f5c6` code; the object
    pointer `0x6189b858` is 0, X): track e122-card-movie's stop. S1 was not tried past it.
 
-47. **E120 (E-M10 II) at POWER_ON** (2026-10-30). With findings 44 to 46 E120's TFT start runs the application and the
+46. **E120 (E-M10 II) at POWER_ON** (2026-10-30). With findings 43 to 45 E120's TFT start runs the application and the
    GUI natively and stays in `0x0102` POWER_ON (X: 4 s of lab time, the OSD records only filled, the frame one value).
    Its GUI takes E118's events up to `0x9b01` and no `0xf001`. The application takes the same events in the same order
    on both (X: the event its main loop has handled, E118 `0x50b6b3da` (200,sp), E120 `0x508ebc8e` (196,sp)):
@@ -873,7 +873,7 @@ which register selects a kind-2 channel's timing bank is ?.
 **E139 (E-M1 III).** Ported through E144 and boots natively to its shooting screen as E144 does; the TFT session stays
 in `0x108` ID_ST_CA_REQ_DISP and takes S1 (UI_IN codes `0x2000100` down, `0x2010100` up), with the same events as E144's
 (X). Its own `MODELS` values: one override (the joystick publish return, which E144, with no joystick, cannot carry) and
-the state log's argument registers (one argument fewer than E143's, D; finding 44); E144's S-NOPOWEROFF went with
+the state log's argument registers (one argument fewer than E143's, D; finding 43); E144's S-NOPOWEROFF went with
 the idle image's switch states (finding 9). Its application reads a source state (the charge source, I) through a
 measurement in 50 ms steps before it creates the GUI (D), which the lab runs in lab time (`MenuLab.gui_await`). E144
 keeps the function-direct id in d3, not at (28,sp) as E143 does; `funcDirect` reads the id's place per body (d3 on E146,
@@ -1093,9 +1093,9 @@ the play bring-up's UI_IN observer on the TFT, and on the EVF since it opens the
 opened the NTSC output and stopped at its send to queue 8). E118 and E120, ported through E122, stopped earlier, at the
 GUI message take's observer while the lab was set up; since findings 32 to 34 (2026-10-30) they run to E122's stop at
 UI_IN. With UI_IN's forward read by shape (finding 29) the three run past it; finding 37 has where each stopped then.
-Since findings 44 to 46 (2026-10-30) E118's TFT and EVF starts reach the shooting screen state `0x0108` with the clock
+Since findings 43 to 45 (2026-10-30) E118's TFT and EVF starts reach the shooting screen state `0x0108` with the clock
 warning in the OSD records and stop at about 2.2 s in E122's movie-time division; E120's TFT start stays in POWER_ON
-(finding 47, ?) and its EVF start stops on E122's EVF stop, the full TOUCHPANEL queue 156.
+(finding 46, ?) and its EVF start stops on E122's EVF stop, the full TOUCHPANEL queue 156.
 Since findings 41 and 42 (2026-10-30) E122's card is native and its TFT runs modelcheck's path but for the count
 probe (no composite yet).
 
@@ -1109,7 +1109,7 @@ map to the body (`src/fw/place.mjs` `carryOverrides`): an address the leg places
 agrees, and a null unless a fact (`kernel.cpus`, `scpu.backup`, ...) differs between the two builds, where the direct
 map answers. The knobs the body lists in `carry` (`cflush_returns`, `block_save`) are carried and checked call by call
 (`src/fw/knobs.mjs`). Nothing else carries: a reference's other `MODELS` fields are each body's to read by a rule
-or give with its evidence, which `test/test_facts.mjs` checks (finding 44). Then a lab literal the direct map leaves
+or give with its evidence, which `test/test_facts.mjs` checks (finding 43). Then a lab literal the direct map leaves
 unplaced and nothing carried answers takes the
 reference's own direct-map answer through the leg (`fillUnplaced`), so an address the reference places only through its
 own map needs no hand copy per body. A rule's answer (`rulePlaces`, `placedRulePlaces`) wins over a carried one, and

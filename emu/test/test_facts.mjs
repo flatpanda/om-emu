@@ -48,6 +48,7 @@ import { expandImage } from '../src/fw/expand.mjs';
 import { FAMILIES, UNKNOWN, mergeBoard, boardOf } from '../src/fw/board.mjs';
 import { MODELS, romPath, resPath } from '../src/fw/models.mjs';
 import { PORTS, FACTS } from '../src/fw/ports.mjs';
+import { KNOBS } from '../src/fw/knobs.mjs';
 
 const REPO = path.resolve(new URL('../../', import.meta.url).pathname);
 const head = (file, n = 0x400) => {
@@ -388,12 +389,14 @@ const EVF_CODE_FOUND = { E143: 2, E125: 2, E122: 6, E118: 6 };
 // the functions (D: E143's lab FUNC_DIRECT_RUN, the id at (28,sp); E146 0x51076f24, E147 0x51081609, E144 0x50cf85ca
 // and E134 0x50ce448f, their maps' places, E139 0x50ca35f0, its hand override's; E137 0x50c4413f and E125
 // 0x50d29229, which their maps left unplaced; E146, E144, E137 and E125 keep the id in d3), E142 0x50cc0285 (the id
-// in d2; it holds no start trace, D), and none on E118, which has no function of this shape (X)
+// in d2; it holds no start trace, D) and E118 0x50b78a3a (the id in d3, entry 0x50b78a12, which also keeps its a1 at
+// (28,sp); the call there is of E143's 0x5104cd3c's place 0x50b6e6be, D)
 const DIRECT_FOUND = {
   E146: { run: 0x51076F24, id: { reg: 'd3' } }, E147: { run: 0x51081609, id: { sp: 28 } },
   E144: { run: 0x50CF85CA, id: { reg: 'd3' } }, E139: { run: 0x50CA35F0, id: { sp: 28 } },
   E134: { run: 0x50CE448F, id: { sp: 28 } }, E137: { run: 0x50C4413F, id: { reg: 'd3' } },
-  E125: { run: 0x50D29229, id: { reg: 'd3' } }, E142: { run: 0x50CC0285, id: { reg: 'd2' } }, E118: undefined,
+  E125: { run: 0x50D29229, id: { reg: 'd3' } }, E142: { run: 0x50CC0285, id: { reg: 'd2' } },
+  E118: { run: 0x50B78A3A, id: { reg: 'd3' } },
 };
 // The event broker init (broker.init; src/fw/facts.mjs brokerInit) as read at the functions (D: E143's lab
 // BROKER_INIT, E139's hand override's place before the rule, E137's, called by its wrapper 0x501dbcc5), and the
@@ -558,12 +561,24 @@ const DPC_FOUND = { E132: { init: 0x5004A115, board: { triggers: 0x9B800030, irq
 // list at 0xa2b19f28; the channel map word 0xa2b1c84c, set by 0x50052089 at the end of PER_SIO's channel init 0x50052016;
 // E143's are E132's places in E143, D: its channel init 0x5005f03f ends in 0x5005f0b2)
 const SIO_FOUND = { E132: { tx_start: 0x500506CB, rx_start: 0x500509BE, done: [0xA2B19EA8, 0xA2B19EC8], dispatch: 0x50051814, restart: 0xA2B19F28, channels: 0xA2B1C84C, map_init: 0x50052089 } };
+// The GUI task's entry (menu.task; src/fw/facts.mjs guiTask) as read at the functions that load its start trace (D:
+// E143's lab GUI_TASK; E118's, the entry its application starts, X; E120's and E122's the same opening), none where the
+// trace is not held (E137, E142, E140, X); the port places E143's GUI_TASK there (checked below)
+const GUI_TASK_FOUND = { E143: 0x5115BA0C, E122: 0x50C51E56, E118: 0x50B93162, E120: 0x50913ECB, E137: undefined };
+// The boot chain's stage-3 module init (mm_init; src/fw/facts.mjs mmInit): the call after the "3_8" trace on the E118
+// family (D: E122 0x50186771, E118 0x501765c7, E120 0x5016c018), none where a task is started there or the trace is not
+// held (E143 0x501e96f1, E144 0x5018f813, D; E134, X)
+const MM_INIT_FOUND = { E143: null, E144: null, E134: null, E122: 0x50483A1F, E118: 0x5046AE65, E120: 0x50447041 };
+// The GUI state log's registers (state_log.regs; src/fw/facts.mjs stateLog) as read at its one caller (D: E143
+// 0x510c2b0a a0 and a1; E139 0x50cc4a51, its value by hand before the rule, E122 0x50b983a0, E118 0x50b93405 and E120
+// 0x5091416e, d1 and a0)
+const STATE_LOG_FOUND = { E143: ['a0', 'a1'], E139: ['d1', 'a0'], E122: ['d1', 'a0'], E118: ['d1', 'a0'], E120: ['d1', 'a0'] };
 // E143's own facts: its loader's limits, its menus are ListMenu (src/lab/menu.mjs LIST_MENU) with their memories, its
 // traits and its dial select (src/lab/menu.mjs dialSelect)
 const E143_FACTS = {
   board: { vector_page: 0x60030000, dpc: { triggers: 0x9B880044, irqs: [53, 54, 55, 56, 57, 58] }, dram_size: 384 << 20 },
   res: { font_limit: E143_LOADER.font[1], string_limit: E143_LOADER.string[1] },
-  menu: { list_menu: true, tab_memory: 1881, page_memory: 1882, take: 0x510C2A2E, caller: CALLER_FOUND.E143 },
+  menu: { list_menu: true, tab_memory: 1881, page_memory: 1882, take: 0x510C2A2E, caller: CALLER_FOUND.E143, task: GUI_TASK_FOUND.E143 },
   kernel: { cpus: 4, handlers: HANDLERS_FOUND.E143 }, errlog: { entry: ERRLOG_FOUND.E143 }, scpu: { backup: true },
   display: { change_task: true, change_entry: null, queue_word: 0x600432D4, queue_id: 0x88, task_init: 0x501C2F13, init_2nd: null, frame_wait: 0x60043088, timer_sleep: 0x501C2E94,
     sync: { request: 0x503E4DD5, image_sync: 0x503E50EC, sync_set: 0x50AB43CD, kind: 1, panels: [2] } },
@@ -571,7 +586,7 @@ const E143_FACTS = {
   touch_panel: { driver: true }, lens: { mount: true }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
   broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] } },
-  boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143,
+  boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, mm_init: null, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143,
   cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143, prop_store: PROP_STORE_FOUND.E143, ctors: CTORS_E143,
 };
 
@@ -606,6 +621,21 @@ export function factsTests() {
     let b;
     try { b = boardOf(code); } catch (e) { b = e.message; }
     ok(b?.family === MODELS[code].board?.family, `boardOf(${code}): ${typeof b === 'string' ? b : b.family}`);
+  }
+  // A chained port carries its reference's overrides and the knobs it lists in `carry`, nothing else: each other field
+  // the reference's MODELS entry gives is the body's to decide, given in its own entry with its evidence or read by a
+  // rule (src/fw/ports.mjs FACTS), so a body does not run with a stand-in of its reference's left out unnoticed (E118 and
+  // E120 through E122 stopped at fact() on g4set, docs/model-survey.md finding 37). Not to decide: the firmware's
+  // identity and the port's own fields, the knobs not listed in `carry` and the stand-ins that are a body's own by
+  // nature (src/fw/knobs.mjs: return_stubs, call_skips, vsync_alias_flags), and ui_out, the lamps' module, which the lab
+  // runs where the card's file system is native and needs it (E134; E125, ported through it, keeps S-CARD's card)
+  const OWN = new Set(['name', 'bin', 'version', 'res_block', 'rom_len', 'rom_sha256', 'image_base', 'res_len', 'res_sha256',
+    'panels', 'card_fs', 'board', 'port_via', 'overrides', 'carry', 'checked', 'return_stubs', 'call_skips',
+    'vsync_alias_flags', 'ui_out', ...Object.keys(KNOBS)]);
+  for (const [code, m] of Object.entries(MODELS)) {
+    if (!m.port_via) continue;
+    const open = Object.keys(MODELS[m.port_via]).filter((k) => !OWN.has(k) && !Object.hasOwn(m, k) && !Object.hasOwn(FACTS[code] ?? {}, k));
+    ok(!open.length, `${code}: ${m.port_via}'s (port_via) ${open.join(', ')}: neither given in ${code}'s MODELS entry nor read (FACTS)`);
   }
   // the rules on every model with both blocks unpacked
   for (const [code, m] of Object.entries(MODELS)) {
@@ -647,6 +677,11 @@ export function factsTests() {
       const q = PORTS[code]?.[0x600432D4] ?? 0x600432D4;
       ok(got.display?.queue_word === q, `${code}: display.queue_word ${hx(got.display ?? got)}, A() ${hx(q)}`);
     }
+    if (Object.hasOwn(GUI_TASK_FOUND, code)) ok(got.menu?.task === GUI_TASK_FOUND[code], `${code}: menu.task ${hx(got.menu ?? got)}, found ${hx(GUI_TASK_FOUND[code] ?? 'none')}`);
+    // the port places E143's GUI task at the rule's (bin/port.mjs, how 'task-trace')
+    if (got.menu?.task !== undefined && PORTS[code]) ok(PORTS[code][0x5115BA0C] === got.menu.task, `${code}: A() of the GUI task ${hx(PORTS[code][0x5115BA0C])}, the rule's ${hx(got.menu.task)}`);
+    if (Object.hasOwn(MM_INIT_FOUND, code)) ok(got.mm_init === MM_INIT_FOUND[code], `${code}: mm_init ${hx(got.mm_init ?? got)}, found ${hx(MM_INIT_FOUND[code])}`);
+    if (STATE_LOG_FOUND[code]) ok(same(placed?.state_log?.regs, STATE_LOG_FOUND[code]), `${code}: state_log ${hx(placed?.state_log ?? placed)}, found ${hx(STATE_LOG_FOUND[code])}`);
     if (TASK_INIT_FOUND[code]) ok(got.display?.task_init === TASK_INIT_FOUND[code], `${code}: display.task_init ${hx(got.display ?? got)}, found ${hx(TASK_INIT_FOUND[code])}`);
     // the port places E143's display task init at the rule's (bin/port.mjs, how 'queue-init')
     if (got.display?.task_init !== undefined && PORTS[code]) ok(PORTS[code][0x501C2F13] === got.display.task_init, `${code}: A() of the display task init ${hx(PORTS[code][0x501C2F13])}, the rule's ${hx(got.display.task_init)}`);

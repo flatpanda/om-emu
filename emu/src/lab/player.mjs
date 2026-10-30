@@ -35,7 +35,7 @@ import { LabError, ValueError, KeyError } from './errors.mjs';
 import { Unported } from '../core/mem.mjs';
 import { HostStopped } from '../machine.mjs';
 import { S } from '../core/cpu.mjs';
-import { MODEL, MODEL_INFO } from '../fw/model.mjs';
+import { MODEL, MODEL_INFO, fact } from '../fw/model.mjs';
 import { show } from '../util/show.mjs';
 import { decimalInt, intLiteral } from '../util/parse.mjs';
 import { setKey } from '../util/tracejson.mjs';
@@ -367,7 +367,7 @@ export class Player {
     if (this.session?.dpc_init) used.push('H-DPCINIT', 'A-DPC-1');                         // the deferred calls' init at the bring-up
     if (this.session?.power_tid) used.push('H-PWRTASK');                                    // the power task started
     if (MODEL_INFO.boot_drivers) used.push('H-DRVINIT');                                    // the reset path's early driver inits (display.mjs)
-    if (MODEL_INFO.mm_init) used.push('H-MMINIT');                                          // the boot chain's memory-manager init (osd.mjs)
+    if (fact('mm_init', null)) used.push('H-MMINIT');                                       // the boot chain's stage-3 module init (osd.mjs)
     if (MODEL_INFO.frame_period_us) used.push('A-PERIOD');                                  // a frame period the build keeps nowhere
     if (this.session?.sio) used.push('H-SIOMAP', 'S-SIOIIC', 'A-SIOIIC-1', ...this.session.sio.labels);   // PER_SIO's devices (sio.mjs)
     if (this.session?.ui_out_tid) used.push('H-UIOUTSTART');                                // UI_OUT started (E134)

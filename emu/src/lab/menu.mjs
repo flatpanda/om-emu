@@ -31,8 +31,9 @@ export const EYEFI_TASK = A(0x50ABA579), CHANGE_TASK = D.CHANGE_LOOP;
 export const SEND_EVENT = A(0x5115B286), MENU_EVENT = 0x87, EV_MAP = A(0x614B5A14), SET_EVENT = A(0x510BA2C2), DISPATCH = A(0x510C2A2E);
 export const STATE_LOG = A(0x5124BA59), GUICALLER = A(0x60368B88), STATE_TABLE = A(0x61596FB8);
 // the registers STATE_LOG takes the old and the new GUI state in: E143's caller passes them as its third and fourth
-// arguments (D), a model whose log takes one argument fewer in others (MODEL_INFO.state_log_regs)
-const [STATE_LOG_FROM, STATE_LOG_TO] = MODEL_INFO.state_log_regs ?? ['a0', 'a1'];
+// arguments, a0 and a1 (D); a build whose log takes one argument fewer passes them in d1 and a0 (src/fw/facts.mjs
+// stateLog, fact 'state_log.regs')
+const stateLogRegs = () => fact('state_log.regs', ['a0', 'a1']);
 export const STATE_POWER_ON = 0x0102, STATE_MENU = 0x0B02;
 export const MODULE_STATE_SET = A(0x50AB6299), MODULE_STATE_GET = A(0x50AB5780), TAKEOVER_MODULE = 9, TAKEOVER_STATE = 2;
 export const TAKEOVER_READERS = [A(0x50ABCFD7), A(0x50ABCFE2)];
@@ -1036,7 +1037,8 @@ export class MenuLab extends T.TextDisplayLab {
       lab.events.push(['take', h4(w[0])]);
       lab.draw_log.push({ op: 'message', id: w[0] });
     };
-    const onState = (lab, r) => lab.events.push(['state', h4(r.d0), lab.state_name(r[STATE_LOG_FROM]), lab.state_name(r[STATE_LOG_TO])]);
+    const [from, to] = stateLogRegs();
+    const onState = (lab, r) => lab.events.push(['state', h4(r.d0), lab.state_name(r[from]), lab.state_name(r[to])]);
     this.observe(SET_EVENT, onSet, 'obs-GESetEvent');
     this.observe(DISPATCH, onTake, 'obs-dispatch');
     this.observe(STATE_LOG, onState, 'obs-state');

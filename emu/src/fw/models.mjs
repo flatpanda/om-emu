@@ -485,10 +485,6 @@ export const MODELS = {
     carry: ['cflush_returns', 'block_save'],
     // the device open's interrupt wait (its timeout's errlog 0x37005206 expected, src/lab/display.mjs
     // EXPECTED_ERRLOG): IRQ 88 (0x5018b4dc), called at 0x501827eb, the code at 0x50182800 (D)
-    // the GUI state log (0x50eb0f4d, E143's STATE_LOG) takes three arguments, not E143's four: its one caller passes
-    // the event in d0, the old state (0x61e8bedc) in d1 and the new one (0x61e8bee0, just stored) in a0 (D
-    // 0x50cc4a41..51), where E143's passes the same two from the same offsets of its GUI block in a0, a1 (D)
-    state_log_regs: ['d1', 'a0'],
     g4set: G4SET_UNCHECKED,
     // the SCPU's backed-up words the firmware writes and reads, [index, byte], and its writes without data or an
     // answer (src/lab/scpudev.mjs S-SCPUDEV; E143's [2, 0] and none): the time-zone record's write and read wrappers
@@ -826,6 +822,9 @@ export const MODELS = {
     // 0x18f70, as on E122 and E120) holds 0x602f3fed (D), which the display task init starts (X: the kernel's start of
     // it from that step); the same opening as E122's 0x502f90f5 in another order (D), which the map does not pair
     extra_tasks: [0x502D2FCD],
+    g4set: G4SET_UNCHECKED,
+    touch: false,
+    frame_plane: null,
     overrides: {
       '0x5014b7c7': { to: '0x5016558b', why: 'the dial init (DIAL_INIT): the dial module init, which sets up the dial slots from 0xa1c184a8 with the fixed id table 0x601b1e58 (D); E122\'s, which selects a table by board, does not carry (menu)' },
       '0x5002e758': { to: '0x5004c674', why: 'LEVEL_HANDLERS[2]: the kernel\'s level-handler table kcb[88] after its init holds 0x5004c674 (X); the leg map put levels 2 and 3 on level 1\'s handler and levels 4 and 5 one handler late (irq)' },
@@ -874,15 +873,6 @@ export const MODELS = {
     dial: { select: 0x50176F46, select_end: 0x59, table_ptr: 0xA1C57F34, table0: 0x601C3054, board: 4 },
     // the shared stand-in (G4SET_UNCHECKED)
     g4set: G4SET_UNCHECKED,
-    // H-MMINIT: the boot chain's stage 3 calls 0x50483a1f right after its trace "3_8" (0x50186771; E143's chain starts a
-    // task there, 0x501e96e4..): it sets up two slot managers at 0xa18a37f4 and 0xa18a382c (their ids from the static
-    // words 0x60040e58.., their tables by 0x504849df..0x5048537b), whose methods the application's property reads reach
-    // (0x502caa17 -> 0x50483c43 -> 0x504854cf, `calls ((36,a2))`); without it the application's start called address
-    // 0 (X). The lab's start, ending the init task, skips the chain (D)
-    mm_init: 0x50483A1F,
-    // the GUI state log (0x50cefddb, E143's STATE_LOG) takes the old state in d1 (0x6160c060) and the new one, just
-    // stored, in a0 (0x6160c064), as E144's (its one caller 0x50b983a0, D)
-    state_log_regs: ['d1', 'a0'],
     // no frame plane of E143's form (src/lab/camapp.mjs S-TAKEFRAME, S-AFOSD): src/fw/facts.mjs framePlane reads none and
     // the map places neither the frame display mode set (E143 0x500256d9) nor the AF upload (0x500257ce) (X); where its
     // AF frames are drawn is ?
@@ -921,8 +911,12 @@ export const MODELS = {
     // E122's display task (src/fw/models.mjs E122, E118): the static task table's row 0x51, whose entry word (image
     // offset 0x18f70) holds 0x602e7a9d (D), which the display task init starts (X: the kernel's start of it from that step)
     extra_tasks: [0x502C6A7D],
+    g4set: G4SET_UNCHECKED,
+    touch: false,
+    frame_plane: null,
     overrides: {
       '0x5014b7c7': { to: '0x5015d3a6', why: 'the dial init (DIAL_INIT): the dial module init, which sets up the dial slots from 0xa1c17b80 with the fixed id table 0x601a8810 (D); E122\'s, which selects a table by board, does not carry (menu)' },
+      '0x51049ebb': { to: '0x508eaf45', why: 'CA_MAIN, the camera application\'s main task: its object of 68 bytes created, its constructor 0x5090c80e and run 0x5090c824 called, then 0x508eafe2, as E122\'s 0x50b738ce in short call forms (D); neither map places it (camapp)' },
       '0x5002e758': { to: '0x5004c624', why: 'LEVEL_HANDLERS[2]: the kernel\'s level-handler table kcb[88] after its init holds 0x5004c624 (X); the leg map put levels 2 and 3 on level 1\'s handler and levels 4 and 5 one handler late (irq)' },
       '0x5002e715': { to: '0x5004c5e6', why: 'LEVEL_HANDLERS[3]: the kernel\'s level-handler table kcb[88] after its init holds 0x5004c5e6 (X); the leg map put levels 2 and 3 on level 1\'s handler and levels 4 and 5 one handler late (irq)' },
       '0x5002e6d2': { to: '0x5004c5a8', why: 'LEVEL_HANDLERS[4]: the kernel\'s level-handler table kcb[88] after its init holds 0x5004c5a8 (X); the leg map put levels 2 and 3 on level 1\'s handler and levels 4 and 5 one handler late (irq)' },

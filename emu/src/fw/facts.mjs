@@ -368,6 +368,51 @@ export function guiCaller(img, take) {
   for (let o = t; o < t + GUI_CALLER_SPAN; o++) if (bytesAt(img, o, GUI_CALLER)) return u32(img, o + GUI_CALLER.length);
   throw new Error(`guiCaller: no hand-over to the caller object within 0x${GUI_CALLER_SPAN.toString(16)} bytes after the take ${h8(take)}`);
 }
+// The GUI task's entry (fact 'menu.task', and through bin/port.mjs the place of E143's GUI_TASK_E143 0x5115ba0c,
+// src/lab/menu.mjs GUI_TASK, the entry the GUI creator starts): `add -8,sp; mov <"[GUI App]:Start Gui Task">,d0; mov
+// d0,(4,sp); call <trace>; call <the GUI loop>; ret` (E143 0x5115ba0c, E122 0x50c51e56, E118 0x50b93162, which E118's
+// application starts, X; D). Held and loaded once at such an opening on the 15 of the 18 expanded images that hold
+// the string, at the place every port had for E143's but E118's and E120's (E120 0x50913ecb), whose maps put it on
+// another task's opening of that form (E118 0x50c3d339, E120 0x509bd6e4, which call no GUI loop; X, a byte scan);
+// E137, E142 and E140 hold no such string (X). Returns the entry (disassembly notation), or undefined where the string is not held; throws for
+// a string loaded more than once or not at such an opening.
+const GUI_TASK_TRACE = '[GUI App]:Start Gui Task', GUI_TASK_OPEN = [0xf8, 0xfe, 0xf8, 0xfc, 0xcc];
+export const GUI_TASK_E143 = 0x5115BA0C;
+export function guiTask(img) {
+  const { base } = imageBase(img);
+  const loads = findString(img, GUI_TASK_TRACE, { nul: true }).flatMap((o) => loadsOf(img, base + o));
+  if (!loads.length) return undefined;
+  if (loads.length > 1 || !bytesAt(img, loads[0] - 3, GUI_TASK_OPEN)) throw new Error(`guiTask: "${GUI_TASK_TRACE}" loaded at ${loads.map((p) => h8(0x50000000 + p)).join(', ')}, want one, after \`add -8,sp\``);
+  return 0x50000000 + loads[0] - 3;
+}
+// The registers the GUI state log takes the old and the new GUI state in (fact 'state_log.regs', src/lab/menu.mjs
+// STATE_LOG's observer): the log's one caller, in the GUI task after the hand-over, stores the new state, `mov d0,(W)`
+// (fc 81 W), and before the call loads the old one, W - 4, and the new one, W, into the log's arguments, `mov
+// (abs32),Rn` (fc a0..a3: An, fc a4..a7: Dn) (E143 0x510c2af0..0x510c2b0a: a0 and a1, the third and fourth arguments
+// after the event in d0 and the message's (408,sp) in d1; E122 0x50b9838a..0x50b983a0, E118 0x50b933ef..0x50b93405 and
+// E120 0x50914158..0x5091416e: d1 and a0, after the event in d0; E139 0x50cc4a41..0x50cc4a51, as E122's, its value by
+// hand before the rule; D). Returns [old, new], or undefined where the log has not one call; throws where its one
+// call has no such store within STATE_LOG_SPAN bytes before it, or no load of the two words between them.
+const STATE_LOG_SPAN = 0x30;
+export const STATE_LOG_E143 = 0x5124BA59;
+export function stateLog(img, log) {
+  const sites = callsTo(img, log - 0x50000000);
+  if (sites.length !== 1) return undefined;
+  const call = sites[0];
+  for (let s = call - 6; s >= Math.max(0, call - STATE_LOG_SPAN); s--) {
+    if (img[s] !== 0xfc || img[s + 1] !== 0x81) continue;
+    const w = u32(img, s + 2), regs = new Map();
+    let p = s + 6;
+    for (; p < call; p += insnLength(img[p], img[p + 1])) {
+      if (img[p] === 0xfc && (img[p + 1] & 0xf8) === 0xa0) regs.set(u32(img, p + 2), `${img[p + 1] & 4 ? 'd' : 'a'}${img[p + 1] & 3}`);
+    }
+    if (p !== call) continue;
+    const from = regs.get((w - 4) >>> 0), to = regs.get(w);
+    if (from === undefined || to === undefined) throw new Error(`stateLog: the call ${h8(0x50000000 + call)} after the store of ${h8(w)} at ${h8(0x50000000 + s)} loads ${from === undefined ? 'not the old state' : 'not the new state'}`);
+    return [from, to];
+  }
+  throw new Error(`stateLog: no store of the new state within 0x${STATE_LOG_SPAN.toString(16)} bytes before the call ${h8(0x50000000 + call)}`);
+}
 
 // Whether the SCPU keeps the camera's backup words and clock (fact 'scpu.backup'): the image holds the trace names of
 // those requests, "ScpuBkupW" (with "ScpuBkupR", "SctimeWrite"; E143's poster 0x5005cd17 sends them, D). E143, E146,
@@ -2167,6 +2212,29 @@ export function bootState(img) {
   if (stage === null || key === null) throw new Error(`bootState: ${stage === null ? 'no stage-bit test' : 'no boot key store'}, but the other`);
   return { key: u32(img, key + 5), stage: u32(img, stage + 2) };
 }
+// The boot chain's stage-3 module init that the lab's start skips (fact 'mm_init', src/lab/osd.mjs H-MMINIT): the
+// chain traces each step, `mov <"3_8">,a0; call trace`, and then starts the step. The E143 and E144 families start a
+// task there, `movhu (id),d0; exth d0; call` (E143 0x501e96f1, E144 0x5018f813, D); the E118 family calls a module's
+// init directly, the call right after the trace's (E122 0x50186771 -> 0x50483a1f, which sets up two slot managers at
+// 0xa18a37f4 and 0xa18a382c, their ids from the static words 0x60040e58.., whose methods the application's property
+// reads reach, 0x502caa17 -> 0x50483c43 -> 0x504854cf `calls ((36,a2))`: without it E122's application start called
+// address 0, X; E118 0x501765c7 -> 0x5046ae65 and E120 0x5016c018 ->
+// 0x50447041, the same module's init in another form, two slots set up and then the slots' calls, D; the three
+// near one place of E143's code, 0x50532e62, X: bin/xwhere.mjs). "3_8" is held, NUL-led and loaded once, on E143,
+// E146, E147, E144, E139, E142, E140 and the E118 family, on no other of the 18 (X, a byte scan). Returns the init
+// (disassembly notation), or null where the string is not held or a task is started there; throws for a string
+// loaded more than once or a load not followed by a call.
+const MM_INIT_TRACE = '3_8';
+export function mmInit(img) {
+  const { base } = imageBase(img);
+  const loads = findString(img, MM_INIT_TRACE, { nul: true, after: true }).flatMap((o) => loadsOf(img, base + o));
+  if (!loads.length) return null;
+  if (loads.length > 1) throw new Error(`mmInit: "${MM_INIT_TRACE}" loaded at ${loads.map((p) => h8(0x50000000 + p)).join(', ')}, want one`);
+  const trace = callAt(img, loads[0] + 6);
+  if (!trace) throw new Error(`mmInit: the load of "${MM_INIT_TRACE}" at ${h8(0x50000000 + loads[0])} is not followed by a call`);
+  const step = callAt(img, loads[0] + 6 + trace.len);
+  return step ? 0x50000000 + step.to : null;
+}
 
 // The register immediates a straight run of code leaves at offset `to` (from `from`): {d0..d3, a0..a3}, a value or
 // null. Tracked: mov imm32 / imm16 / imm8 to Dn or An, clr Dn, mov Rm,Rn within Dn or An, and the compares and
@@ -2429,7 +2497,8 @@ export function brokerInit(img) {
 // the function opens after a return with register moves, among them the one that keeps its id d0, and then copies
 // its argument's six words onto its frame, `mov sp,a0; inc4 a0; mov -6,d1; setlb; mov (aN),d0; inc4 aN; mov d0,(a0);
 // inc4 a0; inc d1; lne` (E143 0x51068e05; aN a1, or a2 on E147 0x510815dc, D). It keeps the id at `mov d0,(d8,sp)`
-// (42 d8: id {sp: d8}) or in a register, `mov d0,dN` (id {reg: 'dN'}), once among the moves. Its checks
+// (42 d8: id {sp: d8}) or in a register, `mov d0,dN` (id {reg: 'dN'}), once among the moves; E118's also keeps its
+// argument a1 at (28,sp), `mov a1,(d8,sp)` (47 d8, 0x50b78a14, D), which keeps no id. Its checks
 // each return on failure, `bne +5; ret` (c9 05 df/de ..); the start is the last check's branch target before the
 // first return past the checks that is not a check's: E143 0x51068e37 (the id at (28,sp), entry 0x51068e01, trace
 // "startFuncDirectSubAppStateShootingFuncDirect %d %d %d" loaded at 0x51068e46), E139 0x50ca35f0 (the id at (28,sp),
@@ -2438,12 +2507,13 @@ export function brokerInit(img) {
 // 0x50c44150 after the start), E142 0x50cc0285 (the id in d2, entry 0x50cc024a; no such trace, and its range checks
 // after the start, `cmp 1,d2; bge +5; ret` and `cmp 90,d2`, index a jump table by d2 - 1), each then calling the
 // start's function (E143 0x5104cd3c; E144 0x50cdeca7, E139 0x50c8b4ff, E137 0x50c31d39, E142 0x50ca93ee), D. One
-// function has this shape on each of the 18 expanded images but E118's, which has none; on the eight that hold the
+// function has this shape on each of the 18 expanded images (X, a byte scan; E118's 0x50b78a3a, the id in d3, entry
+// 0x50b78a12, its range check `cmp 84,d3`, D, since its a1 store is taken); on the eight that hold the
 // trace (E143, E146, E147, E144, E139, E134, E137, E125) the start is the one the trace's load after it chose before
 // (X, a byte scan of each image). That the id stays where the entry kept it until the start is read on E143, E139,
 // E144, E137 and E142 (D: no write of it in between), not checked by the rule. Returns {run, id} (disassembly
 // notation), or undefined where no function has this shape; throws for two.
-const FD_COPY = [0x3c, 0x50, 0x85, 0xfa, 0xdb], FD_COPY_TAIL = [0x60, 0x50, 0x44, 0xd9], FD_MOVES = 4, FD_WALK = 64;
+const FD_COPY = [0x3c, 0x50, 0x85, 0xfa, 0xdb], FD_COPY_TAIL = [0x60, 0x50, 0x44, 0xd9], FD_MOVES = 5, FD_WALK = 64;
 export const FUNC_DIRECT_E143 = 0x51068E37;
 const isCopy = (img, p) => bytesAt(img, p, FD_COPY) && (img[p + 5] & 0xfc) === 0x70 && img[p + 6] === (0x50 | (img[p + 5] & 3))
   && bytesAt(img, p + 7, FD_COPY_TAIL);
@@ -2451,11 +2521,13 @@ export function funcDirect(img) {
   const found = [];
   for (let e = 3; e + 32 <= img.length; e++) {
     if (!isRet(img, e - 3)) continue;
-    // the moves before the copy: Am -> An (9x), Dm -> Dn (8x, m != n), An <-> Dn (f1 dx / f1 ex); the id's keep
+    // the moves before the copy: Am -> An (9x), Dm -> Dn (8x, m != n), An <-> Dn (f1 dx / f1 ex), An -> (d8,sp) (43 /
+    // 47 / 4b / 4f d8); the id's keep
     let p = e, id = null, keeps = 0;
     for (let k = 0; k < FD_MOVES && !isCopy(img, p); k++) {
       const x = img[p];
-      if (x === 0x42) { id = { sp: img[p + 1] }; keeps++; p += 2; } else if ((x & 0xf0) === 0x80 && (x >> 2 & 3) !== (x & 3)) {
+      if (x === 0x42) { id = { sp: img[p + 1] }; keeps++; p += 2; } else if ((x & 0xf3) === 0x43) p += 2;
+      else if ((x & 0xf0) === 0x80 && (x >> 2 & 3) !== (x & 3)) {
         if ((x & 0xfc) === 0x80) { id = { reg: `d${x & 3}` }; keeps++; }
         p++;
       } else if ((x & 0xf0) === 0x90 && (x >> 2 & 3) !== (x & 3)) p++;
@@ -2956,12 +3028,13 @@ function evfCode(img, propId) {
 
 // What the rules that read code relative to an E143 function read from one body (src/fw/ports.mjs FACTS[code], with
 // readFacts'; bin/port.mjs): img its run-time image, at(address) the build's address of an E143 one (the port's
-// placement; null: not placed). Returns {app: {module9_readers}}, {dispq: {sends, loop, start, replies}}, {play:
+// placement; null: not placed). Returns {app: {module9_readers}}, {state_log: {regs}}, {dispq: {sends, loop, start, replies}}, {play:
 // {wrappers}}, {text: {lang_setting}}, {ae: {init, regions, table, rows (the row form's only)}}, {frame_period: {tft,
 // evf}}, {rtos: {init_task, ta_wu, tsnd_sites}}, {store: {db_save, app_saves}}, {hw_timer: {ptr} or {table}}, {crt:
 // {clock_read}}, {touch_args: {write_len, read_len}}, {dial: {select, select_end, table_ptr, table0}}, {ui_in: {task,
 // forward}}, {touch_start: {init, id_word}}, {frame_mode: {set}}, {frame_plane: {mode, uploads}}, {prop: {device, evf_code}} and
-// {lens_driver: {module_init, cache_init, task_vars, tasks, exec_queue, flags, cache_area}} (no app, text or
+// {lens_driver: {module_init, cache_init, task_vars, tasks, exec_queue, flags, cache_area}} (no state_log part where
+// the GUI state log is not placed or has not one call; no app, text or
 // frame_period part where MODULE_STATE_GET, the language loader or both vtotal functions are not placed, no play
 // wrappers where the component getter is not, no ae part where AE_INTERP is not and aeRows finds no run; no sends where OlyQeWr is not, no loop or
 // start where CPU 0's kcb or OlyQeRd is not, no replies without the loop and OlyQeWr, no dispq part without either;
@@ -2982,8 +3055,10 @@ export function readPlacedFacts({ img, at }) {
   const dbInit = at(DB_INIT_E143), flashSave = at(FLASH_SAVE_E143);
   const tpWrite = at(TOUCH_E143.i2c_write), tpRead = at(TOUCH_E143.i2c_read), hwInit = at(HW_TIMER_INIT_E143), crtCall = at(K_CRT_CALL_E143);
   const dialPtr = at(DIAL_TABLE_PTR_E143), uiFlag = at(UI_IN_FLAG_E143), tpTask = at(TOUCH_TASK_E143), taSt = at(OLYTAST_E143);
-  const takeFrame = at(TAKE_FRAME_E143), propSites = PROP_DEVICE_SITES_E143.map(at);
+  const takeFrame = at(TAKE_FRAME_E143), propSites = PROP_DEVICE_SITES_E143.map(at), stateLogFn = at(STATE_LOG_E143);
   if (getter !== null) facts.app = { module9_readers: moduleReaders(img, getter) };
+  const stateRegs = stateLogFn !== null ? stateLog(img, stateLogFn) : undefined;
+  if (stateRegs !== undefined) facts.state_log = { regs: stateRegs };
   const loop = kcb !== null && qerd !== null ? displayLoop(img, kcb, qerd) : null;
   const dispq = { ...(qewr !== null && { sends: displaySends(img, qewr) }), ...(loop !== null && { loop, start: displayStart(img, loop, qerd) }),
     ...(loop !== null && qewr !== null && { replies: displayReplies(img, loop, qewr) }) };
@@ -3039,17 +3114,17 @@ export function readPlacedFacts({ img, at }) {
 // sram, sram_size), resLoad its resource block's load address (src/lab/resources.mjs loadAddress). Returns {board:
 // {core_byte, library, preload, vector_page, dram_size}} for a family whose reset head copies with the flash-copy
 // routine (only vector_page and dram_size for reset_head null, the E143 family's), {res: {font_limit, string_limit}},
-// {menu: {list_menu, tab_memory, page_memory, take, caller}}, {kernel: {cpus, handlers}}, {errlog: {entry}}, {scpu: {backup}}, {display:
+// {menu: {list_menu, tab_memory, page_memory, take, caller, task}}, {kernel: {cpus, handlers}}, {errlog: {entry}}, {scpu: {backup}}, {display:
 // {change_task, change_entry, queue_word, queue_id, task_init, frame_wait, timer_sleep, sync, face_colour}}, {timer:
 // {reload_less_one}}, {dial: {select, select_end, table_ptr, table0}}, {touch_panel: {driver}}, {lens: {mount}}, {iic:
 // {waits}}, {touch: {i2c_write, i2c_read}}, {touch_api: {open}}, {shooting: {start, end, auto_through}}, {func_direct:
 // {run, id}}, {broker: {init}}, {card: {shots_query, detect}}, {boot: {key, stage}}, {dpc: {init}} (with board.dpc), {sio: {tx_start, rx_start, done, dispatch, restart, channels}}, {storage: {init, tasks, fileclbk, nand, command, album_init, status, cflush, names}}, {power_off: {usb_disconnect}}, {gui: {stride, height,
 // banks, kind3}}, {recview: {word, standby}}, {cbs: {NAME: code}}, {mode_dial: {table, names}}, {prop_store: {init,
-// objects}} and {ctors: [[table, count]]} (no memories, take, handlers, task init, timer sleep, face colour, timer,
+// objects}}, {mm_init} and {ctors: [[table, count]]} (no memories, take, GUI task, handlers, task init, timer sleep, face colour, timer,
 // dial, touch, touch_api, shooting, func_direct, boot, dpc, sio, power_off, cbs or prop_store part where its rule reads
 // none; sync null where its rule reads none, E118's and E120's, whose display sync forms are not read, and recview null
 // where its rule reads none, the E118 family's, which has no RecView trace; the frame wait null where its rule reads none, E120's, which S-FRAMEWAIT then leaves out,
-// src/lab/menu.mjs). Throws for a reset_head with no rule here, and where a rule throws.
+// src/lab/menu.mjs; mm_init null where its rule reads none, every body but the E118 family's). Throws for a reset_head with no rule here, and where a rule throws.
 export function readFacts({ img, family, resLoad }) {
   const facts = {};
   if (family.reset_head === 'flash-copy') {
@@ -3060,8 +3135,8 @@ export function readFacts({ img, family, resLoad }) {
   const { font, string } = resLoader(img, resLoad);
   facts.res = { font_limit: font.limit, string_limit: string.limit };
   const take = guiTake(img);
-  const caller = guiCaller(img, take);
-  facts.menu = { list_menu: listMenu(img), ...menuMemory(img), ...(take !== undefined && { take, caller }) };
+  const caller = guiCaller(img, take), task = guiTask(img);
+  facts.menu = { list_menu: listMenu(img), ...menuMemory(img), ...(take !== undefined && { take, caller }), ...(task !== undefined && { task }) };
   const cpus = kernelCpus(img), handlers = handlerTables(img, cpus);
   facts.kernel = { cpus, ...(handlers !== undefined && { handlers }) };
   facts.errlog = { entry: errlogEntry(img) };
@@ -3093,6 +3168,7 @@ export function readFacts({ img, family, resLoad }) {
   facts.broker = { init: brokerInit(img) };
   facts.card = { shots_query: shotsQuery(img), detect: cardDetect(img) };
   facts.boot = bootState(img);
+  facts.mm_init = mmInit(img);
   const dpc = deferredCalls(img);
   if (dpc !== undefined) { facts.board.dpc = { triggers: dpc.triggers, irqs: dpc.irqs }; facts.dpc = { init: dpc.init }; }
   const sio = sioDriver(img);
@@ -3118,7 +3194,7 @@ export function readFacts({ img, family, resLoad }) {
 // how}. rulePlaces(facts), from readFacts' result: E143's touch-panel I2C functions at the traced ones (touchI2c, how
 // 'touch-trace'); the shooting service's start and end at their traces' loads (shootingService, 'service-trace'); the
 // GUI task's take after its receive loop (guiTake, 'take-loop') and its caller word after it (guiCaller,
-// 'take-caller'); the function direct start after its checks (funcDirect, 'direct-checks'); the event broker init by its opening and slot loop (brokerInit, 'broker-slots'); the
+// 'take-caller'); the GUI task's entry at its start trace's load (guiTask, 'task-trace'); the function direct start after its checks (funcDirect, 'direct-checks'); the event broker init by its opening and slot loop (brokerInit, 'broker-slots'); the
 // error log by its test of the id's module (errlogEntry, 'module-test'); the interrupt handler tables at the attach's
 // stores (handlerTables, 'attach-stores'); the remaining-shots query at the callee whose
 // result the application's getAvailableShootCount stores (shotsQuery, 'shots-method'); the touch panel's open by its
@@ -3131,6 +3207,7 @@ export function rulePlaces(facts) {
     ...Object.entries(facts.shooting ?? {}).map(([k, to]) => [SHOOTING_E143[k], { to, how: 'service-trace' }]),
     ...(facts.menu.take !== undefined ? [[GUI_TAKE_E143, { to: facts.menu.take, how: 'take-loop' }]] : []),
     ...(facts.menu.caller !== undefined ? [[GUICALLER_E143, { to: facts.menu.caller, how: 'take-caller' }]] : []),
+    ...(facts.menu.task !== undefined ? [[GUI_TASK_E143, { to: facts.menu.task, how: 'task-trace' }]] : []),
     ...(facts.func_direct ? [[FUNC_DIRECT_E143, { to: facts.func_direct.run, how: 'direct-checks' }]] : []),
     [BROKER_E143, { to: facts.broker.init, how: 'broker-slots' }],
     [ERRLOG_E143, { to: facts.errlog.entry, how: 'module-test' }],

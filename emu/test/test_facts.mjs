@@ -22,7 +22,8 @@
 //               the frame period words against PERIOD_FOUND and A(), the function direct start against DIRECT_FOUND and
 //               A(), the event broker init against BROKER_FOUND and A(), the error log against ERRLOG_FOUND and A(),
 //               the touch panel's open against TP_OPEN_FOUND and A(), the play component's wrappers against
-//               WRAPPERS_FOUND and A(), the USB-disconnect power-off against POWER_OFF_FOUND, the GUI canvas, OSD banks
+//               WRAPPERS_FOUND and A(), the USB-disconnect power-off against POWER_OFF_FOUND, the serial controller's driver
+//               against SIO_FOUND, the GUI canvas, OSD banks
 //               and kind-3 area against GUI_FOUND, the rec view component's state word against RECVIEW_FOUND, CPU 0's
 //               init task and OlyTaWu against RTOS_FOUND and A(), the DB init's and the application's flash saves
 //               against STORE_FOUND, APP_SAVES_FOUND and APP_SAVES_COUNT, the touch I2C length arguments against
@@ -34,7 +35,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
-  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143 } from '../src/fw/facts.mjs';
+  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, SIO_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -462,6 +463,12 @@ const RECVIEW_FOUND = { E143: { word: 0x6035E9C8, standby: 1 }, E142: { word: 0x
 // words 0x9b800030..0x9b800044 and attaches IRQs 29..34)
 const BOOT_FOUND = { E133: { key: 0xA2AE718C }, E129: { stage: 0xA2B4D2CC } };
 const DPC_FOUND = { E132: { init: 0x5004A115, board: { triggers: 0x9B800030, irqs: [29, 30, 31, 32, 33, 34] } } };
+// The serial controller's driver (sioDriver; D: E132's IIC write 0x5004ba70 calls the transfer start 0x500506cb, its
+// write-read the receive start 0x500509be; the registration 0x50051145 its IIC configuration calls fills 0xa2b19ea8 and
+// 0xa2b19ec8, which the interrupt's ends dispatch through 0x50051814; the control 0x500505e1's mode 2 stores the restart
+// list at 0xa2b19f28; the channel map word 0xa2b1c84c, set by 0x50052089 at the end of PER_SIO's channel init 0x50052016;
+// E143's are E132's places in E143, D: its channel init 0x5005f03f ends in 0x5005f0b2)
+const SIO_FOUND = { E132: { tx_start: 0x500506CB, rx_start: 0x500509BE, done: [0xA2B19EA8, 0xA2B19EC8], dispatch: 0x50051814, restart: 0xA2B19F28, channels: 0xA2B1C84C, map_init: 0x50052089 } };
 // E143's own facts: its loader's limits, its menus are ListMenu (src/lab/menu.mjs LIST_MENU) with their memories, its
 // traits and its dial select (src/lab/menu.mjs dialSelect)
 const E143_FACTS = {
@@ -475,7 +482,7 @@ const E143_FACTS = {
   touch_panel: { driver: true }, lens: { mount: true }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
   broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] } },
-  boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, dpc: { init: 0x50050279 }, storage: STORAGE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143,
+  boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143,
   cbs: CBS_FOUND.E143,
 };
 
@@ -638,6 +645,7 @@ export function factsTests() {
     for (const [k, v] of Object.entries(BOOT_FOUND[code] ?? {})) ok(got.boot?.[k] === v, `${code}: boot.${k} ${hx(got.boot ?? got)}, found ${hx(v)}`);
     const dpcf = DPC_FOUND[code];
     if (dpcf) ok(got.dpc?.init === dpcf.init && same(got.board?.dpc, dpcf.board), `${code}: dpc ${hx(got.dpc ?? got)} board.dpc ${hx(got.board?.dpc)}, found ${hx(dpcf)}`);
+    if (SIO_FOUND[code]) ok(same(got.sio, SIO_FOUND[code]), `${code}: sio ${hx(got.sio ?? got)}, found ${hx(SIO_FOUND[code])}`);
     if (Object.hasOwn(CHANGE_ENTRY_FOUND, code)) ok(got.display?.change_entry === CHANGE_ENTRY_FOUND[code], `${code}: display.change_entry ${hx(got.display?.change_entry)}, found ${hx(CHANGE_ENTRY_FOUND[code])}`);
     if (Object.hasOwn(POWER_OFF_FOUND, code)) ok(got.power_off?.usb_disconnect === POWER_OFF_FOUND[code], `${code}: power_off ${hx(got.power_off ?? got)}, found ${hx(POWER_OFF_FOUND[code] ?? 'none')}`);
     // the play component's wrappers, and every place the port gave one of E143's among them (bin/port.mjs, how

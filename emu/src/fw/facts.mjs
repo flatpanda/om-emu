@@ -1478,6 +1478,67 @@ export function deferredCalls(img) {
   if (init === undefined) throw new Error(`deferredCalls: the trigger init's stores at ${h8(0x50000000 + p)} have no entry a call reaches`);
   return { init: 0x50000000 + init, triggers: w, irqs };
 }
+// The serial controller's driver under PER_SIO's channels (fact 'sio', src/lab/sio.mjs S-SIOBUS), the layer that
+// PER_SIO's IIC calls start their transfers through (E132: the IIC write 0x5004ba70 and write-read 0x5004bac8 call
+// the transfer start 0x500506cb, the write-read the receive start 0x500509be before it, D):
+// - tx_start and rx_start, the controller index's transfer and receive starts: the index's mode byte from its record
+//   picks the start of that mode, `mov d0,d2; extbu d2; <scale> d2; mov a1,d3; mov d2,a1; add REC,a1; clr d2; movbu
+//   d2,(2,a1); movbu (1,a1),d2; mov TX,a1; asl2 d2; mov (d2,a1),a2; extbu d0; exthu d1; extbu d3; mov d3,a1; calls
+//   (a2)`, and the receive start the same with `mov 1,d2` and its own table (E132 0x500506cb and 0x500509be, records
+//   of 8 bytes, `asl 3,d2`; E143 0x5005dc03 and 0x5005def6, of 20, `udfu01 20,d2`; D);
+// - done, the two completion tables [transfer, receive], by the index, that the registration `extbu d1; cmp 1,d1;
+//   bne; ... mov T1,a1; mov a0,(d2,a1); cmp 2,d1; bne; ... mov T2,a1; mov a0,(d0,a1); retf` fills (E132 0x50051145,
+//   which PER_SIO's IIC configuration 0x5004b96e calls with its own completions; the other registration of that form
+//   before it, 0x50051124, fills tables no dispatch reads so, D), and dispatch, the function the controller's
+//   interrupt calls a completion through, `mov T1,a0; call D` with d0 the index and d1 the status, 0 or 0xffff (E132
+//   0x50051814 from 0x5005176c and 0x5005166c; it reads the table's entry with interrupts locked and calls it with
+//   d0 and d1, D);
+// - restart, the table of each index's restart list {count, positions} (the control 0x500505e1's mode 2 stores it,
+//   `extbu d0; asl2 d0; mov RS,a1; mov a0,(d0,a1); ret`, E132 0x50050644; a transfer's loop restarts before the
+//   byte at each position, 0x50050866, and the interrupt clears the entry at the transfer's end, 0x5005171d, D);
+// - channels, the word that points to the channel map, a byte per channel's halfword: PER_SIO's channel to its
+//   controller index, `extbu d0; mov (M),a0; add d0,d0; movbu (d0,a0),d0; retf` (E132 0x5005238c, M 0xa2b1c84c, D),
+//   and map_init, the function that sets the word, the one store `mov d0,(M)`: it picks the running core's map from
+//   the board's table (E132 0x50052089, its store at 0x500520bc; the end of PER_SIO's channel init 0x50052016, which
+//   the boot calls at 0x50022205; E143 0x5005f0b2 and 0x5005f03f, D).
+// Each part exactly once on each of the 15 expanded images but the E118 family's, whose driver has the starts and
+// registration but no such dispatch, restart store or map (X, a byte scan of the 18). Returns {tx_start, rx_start,
+// done, dispatch, restart, channels, map_init} (code in disassembly notation, the tables and the word run-time
+// addresses), or undefined where a part is missing; throws for two of one.
+export const SIO_E143 = { tx_start: 0x5005DC03, rx_start: 0x5005DEF6, done: [0xA32C96B0, 0xA32C96DC], dispatch: 0x5005ED65, restart: 0xA32C9760, channels: 0xA32C9E48, map_init: 0x5005F0B2 };
+const SIO_W = [null, null, null, null];
+const SIO_REG = [0x15, 0xa5, 0x01, 0xc9, 0x0d, 0x82, 0x16, 0x56, 0xfc, 0xdd, ...SIO_W, 0xf3, 0xc9, 0xa5, 0x02, 0xc9, 0x0c, 0x14, 0x54, 0xfc, 0xdd, ...SIO_W, 0xf3, 0xc1, 0xde, 0x80, 0x04];
+const SIO_TX = [0xf1, 0xd7, 0xf1, 0xe9, 0xfc, 0xd1, ...SIO_W, 0x08, 0xf8, 0x59, 0x02, 0xf8, 0x49, 0x01, 0xfc, 0xdd, ...SIO_W, 0x56, 0xf3, 0xa9, 0x14, 0x1d, 0x17, 0xf1, 0xed, 0xf0, 0xf2];
+const SIO_RX = [0xf1, 0xea, 0xfc, 0xd2, ...SIO_W, 0x8a, 0x01, 0xf8, 0x5a, 0x02, 0xf8, 0x4a, 0x01, 0xfc, 0xde, ...SIO_W, 0x56, 0xf3, 0xaa, 0x14, 0x19, 0xf1, 0xd6, 0x1a, 0xf1, 0xe9, 0xf0, 0xf2];
+const SIO_RESTART = [0x14, 0x54, 0xfc, 0xdd, ...SIO_W, 0xf3, 0xc1, 0xdf, 0x00, 0x04];
+const SIO_MAP = [0x14, 0xfc, 0xa0, ...SIO_W, 0xe0, 0xf4, 0x00, 0xde, 0x00, 0x00];
+const SIO_HEAD = [0x82, 0x16], SIO_SCALE = 3;          // a start's `mov d0,d2; extbu d2` and its 3-byte scale before the pattern
+const SIO_MAP_SPAN = 0x80;
+export function sioDriver(img) {
+  const all = (pat) => { const at = []; for (let p = img.indexOf(pat[0]); p >= 0 && p + pat.length <= img.length; p = img.indexOf(pat[0], p + 1)) if (bytesAt(img, p, pat)) at.push(p); return at; };
+  const one = (what, at) => { if (at.length > 1) throw new Error(`sioDriver: ${at.length} ${what} (${at.map((p) => h8(0x50000000 + p)).join(', ')}), want one`); return at[0]; };
+  // the registrations whose first table a dispatch is called with: `mov T1,a0` (fc dc T1) then a call
+  const dispatches = (t) => new Set(loadsOf(img, t).filter((p) => img[p + 1] === 0xdc).map((p) => callAt(img, p + 6)?.to).filter((to) => to !== undefined));
+  const regs = all(SIO_REG).map((p) => ({ p, done: [u32(img, p + 10), u32(img, p + 24)] })).map((r) => ({ ...r, to: dispatches(r.done[0]) })).filter((r) => r.to.size);
+  const reg = one('completion registrations with a dispatch', regs.map((r) => r.p));
+  const tx = one('transfer starts', all(SIO_TX)), rx = one('receive starts', all(SIO_RX));
+  const restart = one('restart-list stores', all(SIO_RESTART)), map = one('channel maps', all(SIO_MAP));
+  if ([reg, tx, rx, restart, map].includes(undefined)) return undefined;
+  const r = regs.find((x) => x.p === reg);
+  if (r.to.size !== 1) throw new Error(`sioDriver: the completion table ${h8(r.done[0])} is dispatched through ${r.to.size} functions, want one`);
+  const start = (p, what) => {
+    const e = p - SIO_SCALE - SIO_HEAD.length;
+    if (!bytesAt(img, e, SIO_HEAD)) throw new Error(`sioDriver: the ${what} at ${h8(0x50000000 + p)} does not open with mov d0,d2; extbu d2`);
+    return 0x50000000 + e;
+  };
+  if (u32(img, tx + 6) !== u32(img, rx + 4)) throw new Error(`sioDriver: the transfer and receive starts index records ${h8(u32(img, tx + 6))} and ${h8(u32(img, rx + 4))}`);
+  const channels = u32(img, map + 3), set = all([0xfc, 0x81, ...[0, 8, 16, 24].map((s) => (channels >>> s) & 0xff)]);   // mov d0,(M)
+  if (set.length !== 1) throw new Error(`sioDriver: ${set.length} stores of d0 to the channel map's word ${h8(channels)}, want one`);
+  const mapInit = entryOf(img, set[0], SIO_MAP_SPAN);
+  if (mapInit === undefined) throw new Error(`sioDriver: the store of the channel map's word at ${h8(0x50000000 + set[0])} is in no called function`);
+  return { tx_start: start(tx, 'transfer start'), rx_start: start(rx, 'receive start'), done: r.done, dispatch: 0x50000000 + [...r.to][0],
+    restart: u32(img, restart + 4), channels, map_init: 0x50000000 + mapInit };
+}
 // The boot's state that the lab's start leaves unset because the boot steps that set it do not run (fact 'boot',
 // src/lab/menu.mjs S-BOOTSTAGE, src/lab/play.mjs S-BOOTKEY):
 // - stage, the ready word of the image's stages: the boot readies the run-time image in stages, and code that needs a
@@ -2318,9 +2379,9 @@ export function readPlacedFacts({ img, at }) {
 // {change_task, change_entry, queue_word, queue_id, task_init, frame_wait, timer_sleep, sync, face_colour}}, {timer:
 // {reload_less_one}}, {dial: {select, select_end, table_ptr, table0}}, {touch_panel: {driver}}, {lens: {mount}}, {iic:
 // {waits}}, {touch: {i2c_write, i2c_read}}, {touch_api: {open}}, {shooting: {start, end, auto_through}}, {func_direct:
-// {run, id}}, {broker: {init}}, {card: {shots_query, detect}}, {boot: {key, stage}}, {dpc: {init}} (with board.dpc), {storage: {init, tasks, fileclbk, nand, command, album_init, status, cflush, names}}, {power_off: {usb_disconnect}}, {gui: {stride, height,
+// {run, id}}, {broker: {init}}, {card: {shots_query, detect}}, {boot: {key, stage}}, {dpc: {init}} (with board.dpc), {sio: {tx_start, rx_start, done, dispatch, restart, channels}}, {storage: {init, tasks, fileclbk, nand, command, album_init, status, cflush, names}}, {power_off: {usb_disconnect}}, {gui: {stride, height,
 // banks, kind3}}, {recview: {word, standby}} and {cbs: {NAME: code}} (no memories, take, task init, frame wait, timer sleep,
-// sync, face colour, timer, dial, touch, touch_api, shooting, func_direct, boot, dpc, power_off, recview or cbs part where its
+// sync, face colour, timer, dial, touch, touch_api, shooting, func_direct, boot, dpc, sio, power_off, recview or cbs part where its
 // rule reads none). Throws for a reset_head with no rule here, and where a rule throws.
 export function readFacts({ img, family, resLoad }) {
   const facts = {};
@@ -2366,6 +2427,8 @@ export function readFacts({ img, family, resLoad }) {
   if (boot !== undefined) facts.boot = boot;
   const dpc = deferredCalls(img);
   if (dpc !== undefined) { facts.board.dpc = { triggers: dpc.triggers, irqs: dpc.irqs }; facts.dpc = { init: dpc.init }; }
+  const sio = sioDriver(img);
+  if (sio !== undefined) facts.sio = sio;
   const storage = fileSystem(img);
   if (storage !== undefined) facts.storage = storage;
   const usbOff = usbPowerOff(img);

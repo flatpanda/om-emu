@@ -1,7 +1,7 @@
-// COMPOSE(c) of the kind-2 VSC (E144, src/fw/board.mjs): the latched registers of channel c mixed into the output
-// RAM as vsccompose.mjs does for E143 (u32 Cr << 16 | Cb << 8 | Y per pixel of the video area, the same debug-window
-// header and plane records). The register meanings below were read from E144's code and from the values its display
-// stack writes (D: code, X: a lab run's register dump):
+// COMPOSE(c) of the kind-2 VSC (E144, src/fw/board.mjs) and of the kind-3 one (the E118 family): the latched registers
+// of channel c mixed into the output RAM as vsccompose.mjs does for E143 (u32 Cr << 16 | Cb << 8 | Y per pixel of the
+// video area, the same debug-window header and plane records). The register meanings below were read from E144's code
+// and from the values its display stack writes (D: code, X: a lab run's register dump):
 //   video area     AREA22 {hstart << 16 | width}, AREA23 {vstart << 16 | vstart}, AREA24 height (0x5002293c, D)
 //   background     BG1, Cr << 16 | Cb << 8 | Y (X: 0x80800b)
 //   DMA enable     DMA7, bit 5 - p for plane p (IMG1..IMG3, OSD1..OSD3; the commit 0x50187cad, D)
@@ -20,15 +20,49 @@
 //   pixel index    the low 7 bits of the 8-bit pixel (I: the GUI fills with 255 and 127, entry 127 is transparent in
 //                  all three palettes, X)
 //   mix            OSD4 must hold 0x111111 (the value every open writes, X)
+// Kind 3 keeps every word above at its kind-2 offset (read from E122's code, docs/om1-vsc-spec.md section 12 has the
+// sites; X: the TFT's and the EVF's opens leave E144's values there, e.g. AREA22 0x1e02d0 / 0x300400, BG1 0x80800b,
+// the EVF's scaler 0x11, 0x9fc, 0, 0x9fc): the video area from the device's getters, BG1, DMA7 and the OSD planes'
+// addresses from the commit (OSD1..OSD3 = DMA12..DMA14, enabled for an area width of 16 or more), the strides
+// DMA18..DMA20 (14: the GUI canvas's 896-byte rows), the scaler words (bit 0 and +4 horizontal, bit 4 and +12
+// vertical, each 4 ceil((src - 1) 1024 / dst)), D; its scaler has four words a plane (+8 zero). It differs in:
+//   palettes       three groups by the palette writer's id: OSD1 128 words at +0x800, the other bank +0xa00 while bit
+//                  16 of 0x1b8 is set (the writer fills +0x800 while the bit is set and +0xa00 while it is clear, the
+//                  commit flips the bit after an upload, D; that the bank shown is the one not written is I, as kinds 1
+//                  and 2), OSD2 32 words at +0x680 and OSD3 32 words at +0x600, single (the commit copies them whole,
+//                  D). The plane of a palette id: the commit takes OSD1's address from the display record's osd word 2
+//                  and OSD3's from word 0, and the palette set uploads id 0 from GUI layer 2's palette (256 entries),
+//                  id 1 from layer 1's (32), id 2 from layer 0's (32), D; that osd word k is GUI layer k is I
+//   pixel index    OSD1's the low 7 bits (I, as kind 2); OSD2's and OSD3's below 32, a larger one is not drawn and is
+//                  counted (PAL_FIELD: no code read says what the chip does with it, ?)
+//   formats        0x1b0 = 0x111 and 0x1b4 = 0x11, the values every open writes (D); E143's OSDFMT1 and OSDFMT2 hold
+//                  the same, kind 2's mix word 0x1b0 another (I): checked as kind 2's mix
+//   level          OSD7..OSD9 as kind 2's enable words; the display sets them to 2 floor(p 128 / 100) for a level of p
+//                  percent (D; 0x100 at 100 %, E143's PLANC form), the EVF's 0xb2 (70 %, X)
+// On both kinds a level other than 0 is drawn as full (E144's EVF writes 0xcc, X; what the chip does with a level
+// below 0x100 is ?, as E143's PLANC, docs/om1-vsc-spec.md section 3, which E143's compositor refuses).
 // IMG planes are not modelled yet: an enabled one is skipped with FMT_UNMODELLED.
-import { E, NOTE, D, CH, OUTPUT_SIZE, chanDbg } from './vsc.mjs';
+import { BOARD } from '../fw/board.mjs';
+import { E, NOTE, D, CH, OUTPUT_SIZE, STORE_BASE, chanDbg } from './vsc.mjs';
 import { blendLut, osdCol } from './vsccompose.mjs';
 
 const R = { DMA7: 0x030, DMA12: 0x044, DMA18: 0x05C, AREA10: 0x0C8, AREA22: 0x0F8, AREA23: 0x0FC, AREA24: 0x100,
-  BG1: 0x190, OSD4: 0x1B0, OSD7: 0x2E0, OSD14: 0x364, RSZ: [0x104, 0x118, 0x130, 0x148, 0x160, 0x178] };
+  BG1: 0x190, OSD7: 0x2E0, RSZ: [0x104, 0x118, 0x130, 0x148, 0x160, 0x178] };
 const HDR = { CHANNEL: 0, WIDTH: 1, HEIGHT: 2, FRAME: 3, ERRORS: 4, PAL_UNWRITTEN: 5, SKIPPED: 6, DRAWN: 7, OX: 8, OY: 9,
   MIX_FLAGS: 10, T_LO: 11, T_HI: 12, STATUS: 13, ASSUMED: 14, VIEW: 15 };
-const PLANES = 6, P_OSD1 = 3, PAL = 0x800, RSZ_ZERO = [8, 16, 20];
+const PLANES = 6, P_OSD1 = 3;
+// What differs by kind (see the head): mix, the words every open writes, [offset, value]; rszZero, the scaler words
+// after the control that must be zero; palette(q), OSD plane q's palette: sel, the word holding its bank bit (null:
+// one bank), bit, banks [shown while the bit is clear, while it is set] (byte offsets in the channel), entries, mask
+// (the pixel bits that index it; null: a pixel of entries or more is not drawn)
+const KINDS = {
+  2: { mix: [[0x1B0, 0x111111]], rszZero: [8, 16, 20],
+    palette: (q) => ({ sel: 0x364 + 8 * q, bit: 0x10, banks: [0x800 + 0x800 * q, 0xA00 + 0x800 * q], entries: 128, mask: 0x7F }) },
+  3: { mix: [[0x1B0, 0x111], [0x1B4, 0x11]], rszZero: [8],
+    palette: (q) => (q === 0 ? { sel: 0x1B8, bit: 0x10000, banks: [0x800, 0xA00], entries: 128, mask: 0x7F }
+      : { sel: null, bit: 0, banks: [q === 1 ? 0x680 : 0x600], entries: 32, mask: null }) },
+};
+const K = KINDS[BOARD.vsc.kind] ?? null;
 
 export function compose2(v, c) {
   const ch = v.ch[c], m = ch.m, mf = v.mFlags(c), t = v.clock.t, out = v.out;
@@ -42,14 +76,16 @@ export function compose2(v, c) {
   for (let i = 0; i < 6 * 8; i++) v.dset(D.PLANE + 4 * i, 0);
   run: {
     if (!ch.latched) { cerror(E.NOT_LATCHED, 0, 0, 0, 0, 0); status = E.NOT_LATCHED; break run; }
-    let a22, a23, a24, bg, dmaen, mix;
+    let a22, a23, a24, bg, dmaen;
     if ((a22 = need(R.AREA22)) === null || (a23 = need(R.AREA23)) === null || (a24 = need(R.AREA24)) === null ||
-        (bg = need(R.BG1)) === null || (dmaen = need(R.DMA7)) === null || (mix = need(R.OSD4)) === null) { status = E.UNWRITTEN; break run; }
+        (bg = need(R.BG1)) === null || (dmaen = need(R.DMA7)) === null) { status = E.UNWRITTEN; break run; }
+    const mix = [];
+    for (const [off] of K.mix) { const x = need(off); if (x === null) { status = E.UNWRITTEN; break run; } mix.push(x); }
     const ox = a22 >>> 16, vw = a22 & 0xFFFF, oy = a23 >>> 16, vh = a24 & 0xFFFF;
     if (!vw || !vh || vw * vh * 4 > OUTPUT_SIZE || (a23 & 0xFFFF) !== oy) { cerror(E.WINDOW, R.AREA22, a22, a23, a24, 0); status = E.WINDOW; break run; }
     if (bg >>> 24) { cerror(E.BG_FIELD, R.BG1, bg, 0, 0, 0); status = E.BG_FIELD; break run; }
     if (dmaen & ~0x3F) { cerror(E.DMA_FIELD, R.DMA7, dmaen, 0, 0, 0); status = E.DMA_FIELD; break run; }
-    if (mix !== 0x111111) { hdr[HDR.MIX_FLAGS] |= 1; cerror(E.MIX_UNOBSERVED, R.OSD4, mix, 1, 0, 0); }
+    K.mix.forEach(([off, want], k) => { if (mix[k] !== want) { hdr[HDR.MIX_FLAGS] |= 1 << k; cerror(E.MIX_UNOBSERVED, off, mix[k], k + 1, 0, 0); } });
     const order = [];
     let seen = 0;
     for (let i = 0; i < PLANES; i++) { order.push(v.dbg[chanDbg(c, CH.ORDER) + i]); seen |= order[i] < PLANES ? 1 << order[i] : 0x80; }
@@ -64,11 +100,11 @@ export function compose2(v, c) {
       const p = order[n], info = D.PLANE + 32 * p;
       if (!(dmaen & (0x20 >>> p)) || !(view & (1 << p))) continue;
       if (p < P_OSD1) { cerror(E.FMT_UNMODELLED, 0, p, 0, 0, 0); v.dset(info, E.FMT_UNMODELLED); hdr[HDR.SKIPPED] |= 1 << p; continue; }
-      const q = p - P_OSD1;
-      let base, ld, w1, w2, w3, planc, rsz, sel;
+      const q = p - P_OSD1, P = K.palette(q);
+      let base, ld, w1, w2, w3, planc, rsz, sel = 0;
       if ((base = need(R.DMA12 + 4 * q)) === null || (ld = need(R.DMA18 + 4 * q)) === null || (w1 = need(R.AREA10 + 12 * q)) === null ||
           (w2 = need(R.AREA10 + 12 * q + 4)) === null || (w3 = need(R.AREA10 + 12 * q + 8)) === null ||
-          (planc = need(R.OSD7 + 4 * q)) === null || (rsz = need(R.RSZ[p])) === null || (sel = need(R.OSD14 + 8 * q)) === null) {
+          (planc = need(R.OSD7 + 4 * q)) === null || (rsz = need(R.RSZ[p])) === null || (P.sel !== null && (sel = need(P.sel)) === null)) {
         v.dset(info, E.UNWRITTEN); hdr[HDR.SKIPPED] |= 1 << p; continue;
       }
       const xs = w1 >>> 16, ys = w2 >>> 16, pw = w1 & 0xFFFF, ph = w3 & 0xFFFF, stride = ld * 64;
@@ -78,7 +114,7 @@ export function compose2(v, c) {
       if (planc === 0) { v.noteRecord(NOTE.PLANC_ZERO, c, R.OSD7 + 4 * q, p); v.dset(info, 0x101); continue; }
       let sh = 4096, sv = 4096;
       if (rsz) {
-        const zero = RSZ_ZERO.find((k) => mw(R.RSZ[p] + k) && m[(R.RSZ[p] + k) / 4]);
+        const zero = K.rszZero.find((k) => mw(R.RSZ[p] + k) && m[(R.RSZ[p] + k) / 4]);
         if ((rsz & ~0x11) || zero !== undefined) {
           cerror(E.RSZ_UNMODELLED, R.RSZ[p] + (zero ?? 0), zero === undefined ? rsz : m[(R.RSZ[p] + zero) / 4], p, 0, 0); v.dset(info, E.RSZ_UNMODELLED); hdr[HDR.SKIPPED] |= 1 << p; continue;
         }
@@ -87,29 +123,33 @@ export function compose2(v, c) {
         }
         if (!sh || !sv || ((sh | sv) >>> 16)) { cerror(E.RSZ_UNMODELLED, R.RSZ[p], sh, sv, p, 0); v.dset(info, E.RSZ_UNMODELLED); hdr[HDR.SKIPPED] |= 1 << p; continue; }
       }
-      if (sel & ~0x10) { cerror(E.OSDCP2_FIELD, R.OSD14 + 8 * q, sel, p, 0, 0); v.dset(info, E.OSDCP2_FIELD); hdr[HDR.SKIPPED] |= 1 << p; continue; }
+      if (sel & ~P.bit) { cerror(E.OSDCP2_FIELD, P.sel, sel, p, 0, 0); v.dset(info, E.OSDCP2_FIELD); hdr[HDR.SKIPPED] |= 1 << p; continue; }
       const cols = new Int32Array(pw);
       for (let i = 0; i < pw; i++) cols[i] = osdCol(i, sh);
       const sw = cols[pw - 1] + 1, lastRow = Math.floor((ph - 1) * sv / 4096);
       if (!stride || !v.bus.span(base, lastRow * stride + sw)) { cerror(E.DMA_RANGE, R.DMA12 + 4 * q, base, stride, p, 0); v.dset(info, E.DMA_RANGE); hdr[HDR.SKIPPED] |= 1 << p; continue; }
-      const x0 = xs - ox, y0 = ys - oy, bank = (PAL + 0x800 * q + (sel & 0x10 ? 0x200 : 0)) / 4;
-      const pal = ch.store, pf = v.palFlags(c) + bank - PAL / 4;
+      // the shown bank: its first word's index in the channel's storage and in its palette flags
+      const bankOff = P.banks[sel & P.bit ? 1 : 0], first = (bankOff - STORE_BASE) / 4;
+      const x0 = xs - ox, y0 = ys - oy, pal = ch.store, pf = v.palFlags(c) + first;
       v.dset(info, 0x100);
-      [x0, y0, pw, ph, base, stride, 0x9C000000 + 0x4000 * c + 4 * bank].forEach((x, i) => v.dset(info + 4 + 4 * i, x));
+      [x0, y0, pw, ph, base, stride, BOARD.vsc.base + BOARD.vsc.stride * c + bankOff].forEach((x, i) => v.dset(info + 4 + 4 * i, x));
       const row = new Uint8Array(sw);
-      let unwritten = 0, firstUnwritten = 0;
+      let unwritten = 0, firstUnwritten = 0, outside = 0, firstOutside = 0;
       for (let j = 0; j < ph; j++) {
         v.bus.read((base + Math.floor(j * sv / 4096) * stride) >>> 0, row, 0, sw);
         const d0 = (y0 + j) * vw + x0;
         for (let i = 0; i < pw; i++) {
-          const idx = row[cols[i]] & 0x7F, e = bank - PAL / 4 + idx;
+          let idx = row[cols[i]];
+          if (P.mask !== null) idx &= P.mask;
+          else if (idx >= P.entries) { if (!outside++) firstOutside = idx; continue; }
           if (!v.dbg[pf + idx]) { if (!unwritten++) firstUnwritten = idx; continue; }
-          const word = pal[e], tr = ((word >>> 24) & 0x1F) << 16, dst = out[d0 + i];
+          const word = pal[first + idx], tr = ((word >>> 24) & 0x1F) << 16, dst = out[d0 + i];
           out[d0 + i] = L[tr | (word & 0xFF) << 8 | (dst & 0xFF)] | L[tr | (word >>> 8 & 0xFF) << 8 | (dst >>> 8 & 0xFF)] << 8
             | L[tr | (word >>> 16 & 0xFF) << 8 | (dst >>> 16 & 0xFF)] << 16;
         }
       }
-      if (unwritten) { cerror(E.PAL_UNWRITTEN, 4 * bank, unwritten, p, firstUnwritten, 0); palUnwritten = (palUnwritten + unwritten) >>> 0; }
+      if (unwritten) { cerror(E.PAL_UNWRITTEN, bankOff, unwritten, p, firstUnwritten, 0); palUnwritten = (palUnwritten + unwritten) >>> 0; }
+      if (outside) cerror(E.PAL_FIELD, bankOff, outside, p, firstOutside, 0);
       hdr[HDR.DRAWN] |= 1 << p;
     }
   }

@@ -3,7 +3,7 @@
 // mirror bank +0x2000, palettes +0x4400 and LUT +0x5C00, the output block, the written/latched/palette flags in the
 // debug window, notes and errors, the channel clock on the lab clock (frame boundaries, RUN_TO_FRAME,
 // RUN_TO_EVENT), the doorbell with its error paths, and COMPOSE with its IMG planes (vsccompose.mjs, draw_img
-// included).
+// included; kinds 2 and 3: vsccompose2.mjs).
 import { MODEL_INFO } from '../fw/model.mjs';
 import { BOARD } from '../fw/board.mjs';
 import { BUS, K_MMIO, K_ROMD, addRegion, allocWindow, buf, U8, ctx } from '../core/mem.mjs';
@@ -24,7 +24,8 @@ import { compose2 } from './vsccompose2.mjs';
 // Kind 3 (the E118 family): kind 2's register file without a name table (the board lists the offsets the family's code
 // names, src/dev/vscregs.mjs) and without the EVF bank, two channels of 0x2000, the latched copies of a few registers
 // at +vsc.latch (+0x1c00) instead of +0x400, plain storage vsc.store (palettes and tables) below them, the vertical
-// total and MONI3's line count in vsc.line_bits bits; no compositor yet (COMPOSE answers FEATURE_UNOBSERVED).
+// total and MONI3's line count in vsc.line_bits bits. Its COMPOSE is kind 2's with the family's palette groups and
+// formats (vsccompose2.mjs).
 const V = BOARD.vsc, GEN2 = V.kind === 2, K3 = V.kind === 3, LATER = GEN2 || K3;
 const LINE_MASK = K3 ? (1 << V.line_bits) - 1 : GEN2 ? 0x3FFF : 0x7FFF;
 export const VSC_BASE = V.base, VSC_SIZE = V.size, CHANNELS = V.channels, CHAN_STRIDE = V.stride;
@@ -51,7 +52,11 @@ export const CH = { RUNNING: 0x00, FRAMES: 0x04, FIELD: 0x08, MONI3: 0x0C, IRQ: 
 const CMD_ADVANCE = 1, CMD_RUN_TO_FRAME = 2, CMD_COMPOSE = 3, CMD_CLEAR = 4, CMD_RUN_TO_EVENT = 5;
 export const R = V.regs;
 // kind 2's storage after the register file and the *_VL mirror words (the copy of the register 0x400 below)
-const STORE = K3 ? V.store : [0x800, 0x4000], STORE_FLAGGED = K3 ? (V.store[1] - V.store[0]) / 4 : 0xC00, VL = 0x400;
+const STORE = K3 ? V.store : [0x800, 0x4000];
+// kinds 2 and 3: the plain storage's first local offset (a stored word at offset o is ch.store[(o - STORE_BASE) / 4],
+// flagged in the palette flags at that index)
+export const STORE_BASE = STORE[0];
+const STORE_FLAGGED = K3 ? (V.store[1] - V.store[0]) / 4 : 0xC00, VL = 0x400;
 // kind 3's latched copies: [first local offset, the registers that have one]
 const LATCH = K3 ? V.latch : null, LATCHED = new Set(K3 ? V.latched : []);
 const SERIAL_START = 0x3214, SERIAL_DONE = 0x8000;
@@ -383,8 +388,7 @@ export class Vsc {
       case CMD_COMPOSE: {          // host time counted as compose time (machine stats.composeMs; measurement only)
         const t0 = this.m.clock();
         this.tables();
-        if (K3) { this.recordError(E.FEATURE_UNOBSERVED, c, 0, 0, 0, 0, 0); result = E.FEATURE_UNOBSERVED; }   // no kind-3 compositor yet
-        else result = GEN2 ? compose2(this, c) : compose(this, c);
+        result = LATER ? compose2(this, c) : compose(this, c);
         this.m.stats.composeMs += this.m.clock() - t0;
         break;
       }

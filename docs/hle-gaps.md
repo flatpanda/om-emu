@@ -249,6 +249,12 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   transaction dispatcher `0x62afd244`, returned by `0x50af7ff4`; each handler object's vt[0](id, request, out)), then
   sends the request through the receiver substance (this->vt[9], vt[35], vt[41]), the remote path through which the
   State Mediator hands it to the active state's components (shutter spec item 43).
+- **The request is the exec's to consume (2026-10-29):** its senders allocate it (operator new) and do not delete it
+  after the exec (getHistogramData `0x50ada615..0x50ada652`); the exec deletes it through its vt[1]
+  after a local handler answered (`0x50af7d3a..41`) and when no receiver is there (`0x50af7dfd..04`), and on the remote
+  path passes it to the substance's vt[41] (`0x50af7d7f..8b`) and does not touch it after. vt[1] is the event base's
+  delete (`0x50d9a1ee`: the word `+8` non-zero, then vt[0] and operator delete). S-TRAACK, which answers the exec,
+  deletes it the same way (4.4.2, the heap's growth).
 - **TRA 485 never happens:** the system-transaction handler `0x50af89f4` (slot 4 of the reception's vtable
   `0x60dffdd0`, OlyHfwReception.cpp) takes 428 (an EVFW observer registration, `0x50af8df9`), 429, 431, 440, 441, 443
   (`0x50b7e1d6`), 483, 484, 485 (adds the handler at request +28 to the local list, `0x50af7fa8`), 486 (removes it,
@@ -608,13 +614,30 @@ than E143, E146 and E147 (4.4.3).
   00 00`) has byte 1 0 and its function words are 0 (A-LENSMCU-1), so the byte stays 0 natively (X: every poll takes
   the not-ready path). The 12-40's real ID bytes 0..1 and function words are ?, so S-LENSMCU does not invent them; the
   AF frame on S1 shows regardless (X). It is not the touch's cause (the touch hangs with S-LENS's 1 written back, X).
-- **The heap's growth (X, a lab artifact, I):** S-HEAP's live blocks grow by about 5 a second on the idle shooting
-  screen with either lens (25 blocks in 5 s natively, 24 with S-LENS); the growth is OlyHfwOpeShoot::getHistogramData
-  (`0x50ada57e`): each call allocates a 40-byte event (`0x50ada615`, operator new `0x50d9ba46`), attaches it to an HLS
-  transaction (`0x50ac0be0`) and executes it (`0x50af7cbe`), which S-TRAACK returns 0 for without delivering it; on the
-  camera the transaction's receiver would consume and delete the event (I: the Rhapsody framework deletes an event
-  once it is dispatched). 34 such blocks in 5 s with the native lens against 18 with S-LENS (the screen's redraws);
-  S-HEAP's 2.4 MiB would last a few hours of lab time. The fix belongs to S-TRAACK, not to the lens.
+- **The heap's growth (fixed 2026-10-29, in S-TRAACK):** S-HEAP's live blocks grew by about 5 a second on the idle
+  shooting screen with either lens (X: 73 blocks of 40 bytes in 15 s, natively and with S-LENS). The cause (D):
+  OlyHfwOpeShoot::getHistogramData (`0x50ada57e`) builds a transaction on its stack (`0x50af7bed`), allocates a 40-byte
+  request (TRA 944: operator new `0x50d9ba46` at `0x50ada615`, the constructor `0x50ac0be0`, vtable `0x60de1a98`) and
+  hands it to the exec (`0x50af7cbe`), then destroys only the transaction (`0x50af7c19`); the exec consumes the request
+  (4.1.2: it deletes it through its vt[1] where a local handler took it or no receiver is there, and hands it to the
+  receiver on the remote path), which S-TRAACK, answering the exec with 0, skipped, so nothing freed it. S-TRAACK now
+  deletes the request through its vt[1] natively before it returns 0, as the exec does (I: that the receiver deletes it
+  once dispatched); vt[1] (`0x50d9a1ee`) frees an event only when its delete-after-consume word `+8` is set (else it
+  keeps it, as the exec would), through vt[0] (the destructor, `0x50ac255c` for TRA 944) and operator delete
+  (`0x50d9ba32` -> free `0x5000300e`). X: from 10 s to 25 s of idle no block allocated stays allocated, with the native
+  lens and with S-LENS (S-TRAACK deleted the requests, about 5 a second; `emu/test/test_camapp.mjs` heapSession, whose
+  check fails with the deletion taken out: 73 blocks); S-LENS's session keeps five blocks it allocates in its first 10
+  s (68, 192, 968, 2536 and 6416 bytes, the same at 30 s). Other stand-ins that take an object: S-MEDIA hands its events
+  to the reception's own synchronous slot, as the firmware's senders do (CapMed's 711 at `0x50bb8a23..30` deletes
+  nothing after it), so they stay the firmware's. Open (X, a workload of S1, S2, the menu and playback, each block
+  still allocated at the end traced to its allocation and to the hooks it was passed to in a register): each pass
+  keeps about 40 blocks: 26 of 28 bytes (event 294, vtable `0x60ef3504`, built at `0x50d7e10b` and passed to a target's
+  vt[1], `0x50d7e130..37`; no stand-in sees them; I: a send to a reactive whose OXF thread does not run without the
+  HLS components), 7 of 72 bytes (the request object `0x50ac722a` builds and sends through its method `0x50ac734c`,
+  which S-RPC answers 0 at its entry; natively the method deletes its object through `0x50ac72e3` on its failure
+  paths, `0x50ac7393` and `0x50ac743c`, and keeps it after its reply wait, where who frees it is ?), 6 of 192 bytes
+  (`0x505fe9ae`, passed to no stand-in), one of 32 and two one-offs; which of them the camera frees, and where, is
+  ?.
 - **Open:** S-LENSMCU's assumed values (A-LENSMCU-1..3) and the lens's real replies (its flags, function words,
   tables, version, the ID's first bytes and the check byte's value) are ?. E146 and E147: 4.4.3. The E144 family and
   E118 have no `lens` board fact and no `lens_driver` fact: they keep S-LENS.
@@ -1216,11 +1239,12 @@ subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a91
   and ACC_SENS_MAIN, factory calibration data (store F) and the temperature compensation (calibration type 255 on the
   templates).
 
-#### 4.7.4 The power manager and the power-off, natively (E143, 2026-10-29; D unless tagged)
+#### 4.7.4 The power manager and the power-off, natively (E143, E146, E147, 2026-10-29; D unless tagged)
 
-Read and built 2026-10-29 (`emu/src/lab/power.mjs`; the addresses with their evidence in `emu/src/fw/models.mjs`
-power_native). Before it, 4.7's power-off bullet: with the lever's off decoded natively and the session left open,
-the GUI stayed in shooting with no write to `+0x9c` (X), and the power manager did not run.
+Read and built 2026-10-29 (`emu/src/lab/power.mjs`; the addresses read from each body's firmware by
+`emu/src/fw/facts.mjs` powerOff, fact `power.off`, with E143's evidence at POWER_OFF_E143 there; `emu/src/fw/models.mjs`
+power_native names the bodies that run it). Before it, 4.7's power-off bullet: with the lever's off decoded natively
+and the session left open, the GUI stayed in shooting with no write to `+0x9c` (X), and the power manager did not run.
 
 - **Why PWR_MAIN did not run (X, D):** PWR_MAIN is task 10, entry `0x50043cdb`, created dormant from the static task
   table. The boot's task starter `0x50023eca` (called by the init task `0x5002cca5`) starts it: after PER_SCPU's start
@@ -1299,8 +1323,35 @@ the GUI stayed in shooting with no write to `+0x9c` (X), and the power manager d
 - **Not modelled:** what the HLS component does around shutDown (the GUI, the live view's end, the lens), the other
   shutdown reasons and modes (USB, battery, sleep, emergency), the expanders' chips and their pins' effects, the RAM
   log's content, the meanings of `+0x800`, `+0x90` and the port words' configuration, the power-on (the lever's on
-  opens a new lab session; the boot is not run) and the sub-CPU's wake. E146 and E147 keep H-POWER's immediate close
-  (their power_native is not placed).
+  opens a new lab session; the boot is not run) and the sub-CPU's wake. The bodies but E143, E146 and E147 keep
+  H-POWER's immediate close: the rule finds no start of PWR_MAIN on any other ported body (X), and their sub-CPU
+  lineages differ (E139, E134) or they have no link (the rest).
+- **E146 and E147 (2026-10-29):** the addresses are read by a rule, not ported from E143's: `powerOff` finds the boot
+  starter's start of the task named "PWR_MAIN" (`call init; movhu (W),d0; exth d0; call OlyTaSt; mov NAME,a0`; the lab
+  now starts the static task whose id W holds, where it named E143's entry), the window's last write `mov 127,d0; mov
+  d0,(0x98e0009c)` and its one call right after another (the 0x85 sender, whose pin-102 loop gives the poll), the IO
+  expanders' commands the sequence calls before that send (`mov imm8,d0; mov 0,a0; call post; call wait; ret`, the
+  wait's flag word), the shell's "sdk api shutdown" (the getter and the slot of its `calls`, the trace id it logs, the
+  function that opens with that id and is held in a vtable, mode and reason from its usage text), startShutDown's call
+  of the flash save (the function that loads its trace) and the RAM log's NAND write (the one whose function sums the
+  area but its last 64 bytes, `cmp size-64,Dn`; three other immediate NAND writes sum nothing). On E143 it reads
+  POWER_OFF_E143 (test_facts); on E146 and E147 the values read by hand (test_facts POWER_SEQ_FOUND: E146 init
+  `0x50045abd` with id word `0x60042d62`, shutDown `0x50b08199` of the getter `0x50b07b86`, end `0x500459f5`, poll
+  `0x5005e931`, the expanders' posts `0x50058507` / `0x50056960` with flags `0x6004319e` / `0x600431ae`, the RAM log's
+  write returning to `0x5190a069`; E147 init `0x500459f2` with `0x60042ce2`, shutDown `0x50b12b11` of `0x50b124fa`, end
+  `0x5004592a`, poll `0x50059aa9`, the RAM log `0x519123af`); on the 15 other ported bodies it finds nothing (X). E147's
+  sequence (`0x50045807`) sends no IO expander a command: it has none (X: their task names only in a name list no code
+  loads), so S-IOEXP does not run there, and its power manager's start completes without one. X (`test_scpu.mjs
+  --session` on each, S-LENS on E146 and E147, which have no native lens): the power manager's start sends E143's
+  frames, `0x82 {2d}` -> `[4, 0x82, 0, 0]`, `0x12 {5}`, the poll `[2, 0x8f]` -> `[4, 0x12, 5, 0]`, and waits; the
+  power-off runs from the call at lab 2.738 s to its end at 2.839 s (E147 2.837 s), the link carries `0x85 {1, 0, 0}`
+  answered `[5, 0x85, 1, 0, 1]`, pin 102 is low at the first poll, the sub-CPU in bkground, the request word 127, no
+  errlog the lab does not expect; S-IOEXP took on E146 E143's requests (the PBH's GIO extension writes of pins `0x20000`
+  and `0x80000`, the body's 6, the PBH's 5), on E147 none. With the sub-CPU's own firmware on E146
+  (`OM_EMU_SCPU=native`, `test_scpum4.mjs --session`) the frames, the pins and the lab time of the end equal
+  S-SCPUDEV's. The lever's on then brings up a new session at the first one's screen (`power-on` on E146 and E147, their
+  GUI state at the start). With the power manager started at their bring-up E146 and E147 pass modelcheck with the
+  other ten bodies (X: an 8 GiB card, and a 64 GiB one with E144's expected failure).
 
 #### 4.7.5 PER_SIO's serial controller and the TG-5's internal charger (E129, E132, 2026-10-29; D unless tagged)
 

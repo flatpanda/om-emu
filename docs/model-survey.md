@@ -411,6 +411,19 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    starts LENS_ASKDATA but not LENS_MAIN in E143's shape, and E142, E140, E133, E130 and the E118 family miss another
    of its shapes (X), so they keep S-LENS. modelcheck is unchanged on E146 and E147.
 
+32. **The power-off across the OM-1 line** (2026-10-29, `docs/hle-gaps.md` 4.7.4). The power manager's start and the
+   power-off are read by one rule (`src/fw/facts.mjs` powerOff, fact `power.off`) from shapes the three OM-1-line builds
+   share: the boot starter's start of the task named PWR_MAIN, the SCPU window's last write (`mov 127,d0; mov
+   d0,(0x98e0009c)`) and the 0x85 sender called right before it, the shell's "sdk api shutdown" with its usage text,
+   startShutDown's flash save and the RAM log's NAND write. It finds them on E143, E146 and E147 and on none of the
+   other 15 ported bodies (X). On E139 and E134, whose sub-CPU link the lab runs too (another lineage of PER_SCPU,
+   `src/fw/models.mjs` scpu port_scan false), it finds no start of PWR_MAIN. E147's sequence sends no IO expander a
+   command (D: `0x50045807`, `mov 40977,d0` for the setting and then `0x5004fba2` straight to the 0x85 sender), and its
+   image holds no expander code (X: PER_IOEXP's names only in a name list no code loads), where E143's and E146's send
+   the body expander 6 or 5 and the PBH grip's 5 or 4: that the OM-3 lacks them because it takes no grip is I (the
+   expanders' roles are read from their names). E146 and E147 then run E143's power-off frame for frame (X:
+   `test_scpu.mjs --session`).
+
 ## Per-body status
 
 The state as of 2026-10-23. Each body's `MODELS` entry (`src/fw/models.mjs`) carries the numbers its `port_via` choice

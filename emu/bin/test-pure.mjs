@@ -20,7 +20,8 @@
 // exception model on hand-written vectors and the QEMU-recorded differential vectors (test_m4.mjs), and the SCPU's STM32L4
 // peripheral models one by one against the reference manual's register semantics (test_stm32l4.mjs stm32Units), and
 // the bridge that puts the SCPU's own firmware behind the link (test_scpum4.mjs scpuM4Units: its clock, the frame log
-// rebuilt from the wire, the byte mover).
+// rebuilt from the wire, the byte mover), and the published site's files and the
+// browser player's download command (test_site.mjs).
 // bin/test.mjs runs all of these too, with everything else.
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
@@ -44,6 +45,7 @@ import { pubauditTests } from '../test/test_pubaudit.mjs';
 import { m4Units, m4Vectors } from '../test/test_m4.mjs';
 import { stm32Units } from '../test/test_stm32l4.mjs';
 import { scpuM4Units } from '../test/test_scpum4.mjs';
+import { siteTests } from '../test/test_site.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -69,6 +71,7 @@ report('driver', await driverTests());
 report('wait_result', await resultBoxTests());
 report('page after a stop', await pageTests());
 report('Card panel and session options (web/cardfiles.mjs, the card routes, web/nvram.mjs)', await cardTests());
+report('the published site\'s files and the player\'s download command (bin/site.mjs, src/fw/updater.mjs)', siteTests());
 report('scene stand-in (S-SCENE)', sceneUnits());
 report('command-line parser', argsTests());
 report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnits());

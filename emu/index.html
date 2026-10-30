@@ -1,0 +1,64 @@
+<!doctype html>
+<!-- The site's landing page (bin/site.mjs SITE_ROOTS: the published site is this page and what the player under web/
+     loads). Static: no script, no external resource; every link to the site is relative, so it works under any
+     path prefix (https://<user>.github.io/om-emu/) and at a local server's root. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OM-Emu</title>
+<link rel="icon" href="data:,">
+<meta name="description" content="OM System and Olympus camera firmware emulated in JavaScript, in your browser.">
+<style>
+:root { --bg: #f6f7f8; --panel: #ffffff; --line: #d9dde2; --text: #1d2024; --dim: #5d656e; --accent: #1f6fd1; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #15171a; --panel: #1d2024; --line: #30353b; --text: #d9dde2; --dim: #8b939c; --accent: #6aa9ff; }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 system-ui, sans-serif; }
+main { max-width: 720px; margin: 0 auto; padding: 40px 16px 64px; }
+h1 { font-size: 26px; margin: 0 0 6px; }
+h2 { font-size: 16px; margin: 28px 0 6px; }
+p { margin: 0 0 10px; }
+.lead { color: var(--dim); margin-bottom: 22px; }
+a { color: var(--accent); }
+.go { display: inline-block; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600;
+      padding: 10px 18px; border-radius: 8px; }
+.go:hover { filter: brightness(1.08); }
+code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--panel); border: 1px solid var(--line);
+       border-radius: 4px; padding: 1px 4px; overflow-wrap: anywhere; }
+.box { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-top: 22px; }
+footer { color: var(--dim); font-size: 13px; margin-top: 36px; }
+</style>
+</head>
+<body>
+<main>
+<h1>OM-Emu</h1>
+<p class="lead">The firmware of OM System and Olympus cameras, run in JavaScript in your browser: the OM-1's own menus,
+shooting screen and camera application on an emulated board, with the camera's buttons, dials and touch screen on the
+page.</p>
+<p><a class="go" id="player" href="web/index.html">Open the player</a></p>
+
+<div class="box">
+<h2 style="margin-top:0">Your firmware stays in your browser</h2>
+<p>This site holds no camera firmware and has no server of its own: it is a set of static files. The player asks for
+the camera's firmware file (for the OM-1 v1.9, <code>OLY_E_143_1900_0000_0000.BIN</code>), reads it in a Web Worker in
+this browser, checks it against the release the emulator is written for, and keeps the unpacked parts in this
+browser's private storage (the Origin Private File System) so a later visit starts without it. Nothing is
+uploaded.</p>
+</div>
+
+<h2>Getting the firmware</h2>
+<p>OM System's site does not offer the <code>.BIN</code> itself: its update tools fetch it from OM System's update
+service, and that service does not let a web page on another site fetch it. The player names the file each camera
+needs and shows a one-line command that downloads it from OM System's servers; choose or drop the file on the player
+afterwards. The download is subject to OM Digital Solutions' software licence, as with their own updaters.</p>
+
+<h2>Requirements</h2>
+<p>A recent desktop browser with module Workers and the Origin Private File System (tested in Chrome).</p>
+
+<footer>An independent research project, not affiliated with OM Digital Solutions or Olympus.
+Source: <a href="https://github.com/flatpanda/om-emu">github.com/flatpanda/om-emu</a>.</footer>
+</main>
+</body>
+</html>

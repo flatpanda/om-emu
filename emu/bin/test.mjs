@@ -99,6 +99,14 @@ const pj = bodyTests(), rbx = await resultBoxTests(), pg = await pageTests(), cd
 console.log(`browser player hosts: request bodies ${pj.checks - pj.bad.length}/${pj.checks}; wait_result ${rbx.checks - rbx.bad.length}/${rbx.checks}; page after a stop ${pg.checks - pg.bad.length}/${pg.checks}; Card panel and session options ${cdt.checks - cdt.bad.length}/${cdt.checks}; Worker in a node worker thread ${wk.checks - wk.bad.length}/${wk.checks}${wk.skipped.length ? `, ${wk.skipped.length} SKIPPED (no firmware: set OM_FW_DIR or OM_BIN)` : ''}`);
 [...pj.bad, ...rbx.bad, ...pg.bad, ...cdt.bad, ...wk.bad, ...wk.skipped.map((x) => `SKIPPED ${x}`)].forEach((x) => console.log('  ', x));
 bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.length + wk.skipped.length;
+// the published site's path logic and the player's download command (bin/site.mjs, src/fw/updater.mjs)
+{
+  const { siteTests } = await import('../test/test_site.mjs');
+  const st = siteTests();
+  console.log(`site and download command: ${st.checks - st.bad.length}/${st.checks}`);
+  st.bad.forEach((x) => console.log('  ', x));
+  bad += st.bad.length;
+}
 // The node host over real HTTP (G-host)
 {
   const { hostTests } = await import('../test/test_host.mjs');

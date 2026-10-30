@@ -169,10 +169,15 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   shooting panel over a black image area): S-CAMAPP starts the OXF main thread (task 57 HIGHLEVEL_MAIN), S-BOOTDONE
   sends the camera base and the still-shooting category the events the modules' start would bring, so the shoot mode
   and Cmp_ShootingComponent are created natively, and S-CPU3 takes their remote calls to CPU 3 off the ring.
-- REC records at mode-dial position 7 once the LLPSW firmware key is released (with the native lens it reads
-  released from the start: the lens is locked on the mount, and pressing it detaches the lens); while it records, the
-  GUI shows its
-  movie recording screen (the card, a red REC mark with the recording's time, the time left, the movie mode, shutter,
+- The mode dial shows each position by the firmware's name for it: UI_IN's dial table gives the position's mode code
+  and the build names the codes (fact `mode_dial`, `src/fw/facts.mjs` modeDial), so E143's positions 0..9 are S, M,
+  B, C1..C4 (MY_MODE1..4), Movie, P and A (`docs/om1-input-spec.md` section 2). The application takes the change (its
+  dial state follows each position), but the shooting screen then shows no mode letter: once the dial has left P most
+  settings read 0 (section 9). The page's arrows and PageUp / PageDown step the dial, wrapping (the body's ends are
+  not known); a click on its ring picks a position.
+- REC records with the mode dial at Movie (position 7) once the LLPSW firmware key is released (with the native lens
+  it reads released from the start: the lens is locked on the mount, and pressing it detaches the lens); while it
+  records, the GUI shows its movie recording screen (the card, a red REC mark with the recording's time, the time left, the movie mode, shutter,
   aperture and a blinking ISO).
 - OK opens the Super Control Panel, MENU the menu (the live view stops behind it, S-THROUGH; closing it skips the
   settings' flash save, S-SETSAVE), PLAY playback (the pictures taken, newest first, through S-PLAYSEQ, S-PLAYCOMP and

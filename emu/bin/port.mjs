@@ -228,7 +228,7 @@ function port(code) {
   // hand copy is to be deleted (listed at the end).
   const handGiven = [];
   for (const [part, read] of Object.entries(facts)) {
-    for (const [k, v] of Object.entries(read)) {
+    for (const [k, v] of Object.entries(read ?? {})) {
       if (!Object.hasOwn(M[part] ?? {}, k)) continue;
       if (JSON.stringify(M[part][k]) !== JSON.stringify(v)) throw new Error(`${code}: src/fw/models.mjs ${part}.${k} ${JSON.stringify(M[part][k])}, src/fw/facts.mjs reads ${JSON.stringify(v)}`);
       handGiven.push(`${part}.${k}`);

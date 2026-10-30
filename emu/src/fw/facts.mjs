@@ -725,6 +725,34 @@ export function propStore(img) {
   return { init: 0x50000000 + e, objects };
 }
 
+// The modules' static constructor tables (fact 'ctors', src/lab/osd.mjs MM_CTOR_TABLE and src/lab/menu.mjs
+// CTOR_TABLES), as the module loader's constructor runner reads them: for a module, `mov N,d2; cmp 0,d2; beq; mov
+// T,a2` and on to the loop `mov (a2),a0; add -32,sp; calls (a0); add 32,sp; inc4 a2; add -4,d2; bgt` (directly or by a
+// `jmp`), which calls the N / 4 run-time pointers from T. E143's loader calls one block per module after loading it
+// (0x50024f8d.., the module number in d0: 2 -> 0x501e60ae, 4, 6 -> 0x501e60d8, 7 -> 0x501e60ed, 9, and 8 -> 0x501e6124,
+// which has a loop of its own) and sets the module's bit in 0xa32df1f4 (D); E122's runner selects the block itself
+// (0x5004ca6c: 2, 3 -> 0x5004ca97, 4 -> 0x5004caac, 5 -> 0x5004cac1, 6 -> 0x5004cad6; D). The tables with N > 0 in the
+// order of their blocks: E143's [0x60714e78, 15] (the memory managers'), [0x60ef9ad0, 48], [0x615c71d4, 64] and
+// [0x617d0310, 6]; E122's [0x6069b240, 11], [0x60a4fdd0, 39], [0x60fdc1a0, 63] and [0x610f1e1c, 14], each table ended
+// by 0xffffffff after its N pointers (D). The lab runs the first three by their rank, as on E143 (the fourth is
+// E143's module 8, which the lab's start does not load; that E122's is its counterpart is I). Returns [[T, N / 4]]
+// (run time), or throws where no block reaches a loop.
+export const CTORS_E143 = [[0x60714E78, 15], [0x60EF9AD0, 48], [0x615C71D4, 64], [0x617D0310, 6]];
+const CTOR_LOOP = [0xf0, 0x02, 0xf8, 0xfe, 0xe0, 0xf0, 0xf0, 0xf8, 0xfe, 0x20, 0x52, 0x2a, 0xfc, 0xc1, 0xf3];
+const CTOR_BLOCK = [0xfc, 0xce, null, null, null, null, 0xaa, 0x00, 0xc8, null, 0xfc, 0xde];
+export function ctorTables(img) {
+  const loops = new Set();
+  for (let o = img.indexOf(0xf0); o >= 0; o = img.indexOf(0xf0, o + 1)) if (bytesAt(img, o, CTOR_LOOP)) loops.add(o);
+  const out = [];
+  for (let o = img.indexOf(0xfc); o >= 0; o = img.indexOf(0xfc, o + 1)) {
+    if (!bytesAt(img, o, CTOR_BLOCK)) continue;
+    const next = o + CTOR_BLOCK.length + 4, to = img[next] === 0xdc ? next + s32(img, next + 1) : next;
+    if (loops.has(to) && u32(img, o + 2) > 0) out.push([u32(img, o + CTOR_BLOCK.length), u32(img, o + 2) / 4]);
+  }
+  if (!out.length) throw new Error('ctorTables: no constructor block reaches the runner\'s loop');
+  return out;
+}
+
 // The flag the display's device open waits on once per frame (fact 'display.frame_wait', src/lab/menu.mjs S-FRAMEWAIT):
 // the open loops over its frame count, each pass a 28 ms wait on the flag, `mov 28,d0; mov d0,(4,sp); movhu (abs32),d0;
 // mov (d8,sp),a0; exth d0; mov 1,d1; mov 1,a1; call OlyEvWt` (E143 0x501d7e74, word 0x60043088; E144 0x50181d06 and
@@ -909,6 +937,45 @@ function displayStart(img, entry, qerd) {
   }
   return sites;
 }
+// The DISPLAY loop's replies (fact 'dispq.replies', and through bin/port.mjs the places of E143's
+// DISPLAY_REPLIES_E143, src/lab/play.mjs DISPQ_REPLY_RETURNS, the returns S-DISPQ answers): the two sends (OlyQeWr) by
+// which the loop answers a request's sender, for status 0 and status 4 (status 2 keeps the sender's words for the
+// status-4 reply), each a 12-byte message `mov 12,d0; mov d0,(length word)` with `mov -1,d1` (the send's wait) within
+// REPLY_WINDOW bytes before the call, the two within REPLY_PAIR bytes of each other. E143's are in a function of their
+// own, 0x501c48bf, which the loop calls at 0x501c38a3 (the sends at 0x501c490c and 0x501c496d, D); E122's in the loop
+// itself, 0x502f5ac0 and 0x502f5b1f, its message block 0xa1c5a7d0 (D); E120's message is on the stack (0x502c34e9,
+// 0x502c352d, D). The same pair of sends serves other tasks' replies too (two to five such pairs on each of the 18
+// expanded images, X): the loop's is the pair that lies within LOOP_BODY bytes after the loop's entry or within
+// REPLY_FN bytes after the callee of a call made there. It is the pair the maps placed on all 15 bodies they placed it
+// on, and one on E118, E120 and E122, which no map placed (X). Returns the two sends' returns (disassembly notation);
+// throws unless exactly one such pair.
+export const DISPLAY_REPLIES_E143 = [0x501C4913, 0x501C4974];
+const REPLY_WINDOW = 0x30, REPLY_PAIR = 0x70, LOOP_BODY = 0x1800, REPLY_FN = 0x80;
+function displayReplies(img, loop, qewr) {
+  const e = loop - 0x50000000, sends = [];
+  for (const c of callsWhere(img, (t) => t === qewr - 0x50000000)) {
+    let s = c.at - REPLY_WINDOW;
+    while (s < c.at && !wholeTo(img, s, c.at)) s++;
+    let length = false, wait = false;
+    for (let p = s; p < c.at; p += insnLength(img[p], img[p + 1])) {
+      if (img[p] === 0x80 && img[p + 1] === 0x0c && (img[p + 2] === 0x42 || (img[p + 2] === 0xfc && img[p + 3] === 0x81))) length = true;
+      if (img[p] === 0x85 && img[p + 1] === 0xff) wait = true;
+    }
+    if (length && wait) sends.push(c);
+  }
+  const scan = callScan(img), callees = [];
+  for (let i = 0; i < scan.at.length; i++) if (scan.at[i] >= e && scan.at[i] < e + LOOP_BODY) callees.push(scan.to[i]);
+  const near = (at) => (at > e && at < e + LOOP_BODY) || callees.some((t) => at > t && at < t + REPLY_FN);
+  const pairs = [];
+  for (let i = 0; i + 1 < sends.length; i++) {
+    const [a, b] = [sends[i], sends[i + 1]];
+    if (b.at - a.at <= REPLY_PAIR && near(a.at)) pairs.push([a, b].map((c) => 0x50000000 + c.at + c.len));
+  }
+  if (pairs.length !== 1) throw new Error(`displayReplies: ${pairs.length} pairs of reply sends (${pairs.map((p) => p.map(h8).join('/')).join(', ')}) at the DISPLAY loop ${h8(loop)}, want one`);
+  return pairs[0];
+}
+// whether the instructions from offset `from` end exactly at offset `to`
+const wholeTo = (img, from, to) => { let p = from; while (p < to) p += insnLength(img[p], img[p + 1]); return p === to; };
 // The entry of the one static task (taskRows) whose instructions run from its entry, with no return between, to one
 // of the sites (image offsets) within span bytes; throws unless exactly one.
 function taskRunningTo(img, kcb, sites, span, rule, what) {
@@ -934,6 +1001,53 @@ export const UI_IN_E143 = 0x5014B736, UI_IN_FLAG_E143 = 0x60043010;
 const UI_IN_SPAN = 0x80;
 function uiInTask(img, kcb, flag) {
   return taskRunningTo(img, kcb, halfLoads(img, flag, true), UI_IN_SPAN, 'uiInTask', `a load of the flag word ${h8(flag)}`);
+}
+
+// UI_IN's forward sites (fact 'ui_in.forward', src/lab/play.mjs obs-uiin-fwd), read at the port's places of E143's
+// post (UI_IN_POST_E143 0x5014c956, play.mjs UI_IN_POST) and its sink word (UI_IN_SINK_E143 0xa32daba4): the places
+// where a code the post passes on is tested against the sink, `mov (sink),Dn; cmp 0,Dn; beq; mov Rx,d0` (and the
+// module event post with d0 after it), each with the register Rx that holds the code there. E143's post calls its
+// forward 0x5014c3eb at three places (0x5014ca0d, 0x5014ca52, 0x5014ca72), whose test at 0x5014c402 passes on its
+// argument (d0 at the entry, kept in d2, D): a callee of the post with the test within FWD_SPAN bytes of its entry,
+// with no return between, is one site at its entry with the code in d0. E122's post 0x50178f5e has no such callee and
+// the test inline at three places, the code in d2 at 0x5017919f (the S1 press after S2) and in a2 at 0x50179230
+// and 0x501792ba (D). The post's body runs to the next function a call enters (POST_SPAN at most). Returns [{at,
+// reg}] in the order of the body (disassembly notation); throws for none.
+export const UI_IN_POST_E143 = 0x5014C956, UI_IN_SINK_E143 = 0xA32DABA4;
+const POST_SPAN = 0x800, FWD_SPAN = 0x40;
+// the register a sink test at offset p passes on: the source of the last `mov Dm,d0` ('d1'..'d3') or `mov Am,d0`
+// ('a0'..'a3') between the beq and the first call within SINK_ARGS bytes after it, or null
+const SINK_ARGS = 0x10;
+function sinkTest(img, p, sink) {
+  if (img[p] !== 0xfc || (img[p + 1] & 0xfc) !== 0xa4 || cached(u32(img, p + 2)) !== cached(sink)) return null;
+  const n = img[p + 1] & 3;
+  if (img[p + 6] !== (0xa0 | n << 2 | n) || img[p + 7] !== 0 || img[p + 8] !== 0xc8) return null;
+  let reg = null;
+  for (let q = p + 10; q < p + 10 + SINK_ARGS; q += insnLength(img[q], img[q + 1])) {
+    if (callAt(img, q)) return reg;
+    if ((img[q] & 0xf3) === 0x80 && (img[q] & 0x0c) !== 0) reg = 'd' + (img[q] >> 2 & 3);
+    else if (img[q] === 0xf1 && (img[q + 1] & 0xf3) === 0xd0) reg = 'a' + (img[q + 1] >> 2 & 3);
+  }
+  return null;
+}
+export function uiInForward(img, post, sink) {
+  const e = post - 0x50000000, { to } = callScan(img);
+  let end = e + POST_SPAN;
+  for (const t of to) if (t > e && t < end && isRet(img, t - 3)) end = t;
+  const sites = [], callees = new Set();
+  for (let p = e; p < end;) {
+    const c = callAt(img, p), reg = c ? null : sinkTest(img, p, sink);
+    if (reg !== null) sites.push({ at: 0x50000000 + p, reg });
+    if (c && !callees.has(c.to)) {
+      callees.add(c.to);
+      for (let q = c.to; q < c.to + FWD_SPAN && !isRet(img, q); q += callAt(img, q)?.len ?? insnLength(img[q], img[q + 1])) {
+        if (sinkTest(img, q, sink) !== null) { sites.push({ at: 0x50000000 + c.to, reg: 'd0' }); break; }
+      }
+    }
+    p += c?.len ?? insnLength(img[p], img[p + 1]);
+  }
+  if (!sites.length) throw new Error(`uiInForward: no test of the sink ${h8(sink)} in the post ${h8(post)}..${h8(0x50000000 + end)} or its callees`);
+  return sites;
 }
 
 // The power task (fact 'power.task', src/lab/play.mjs H-PWRTASK), read at the port's place of E143's CPU 0 kcb
@@ -2179,8 +2293,10 @@ export function fileSystem(img) {
 // 0x502a48b6: W 0x600431d0, 20-byte slots, its wrapper 0x502a48a0; E139 0x501ee6f6, W 0x600415d4, 16 bytes, its hand
 // override's place; E137 0x501dbcdb, W 0x60040f24, 12 bytes, its wrapper 0x501dbcc5 calling it, then 0x502b8a82 on 0
 // as E143's calls 0x503e049a, D). Exactly one such opening on each of the 18 expanded images, the place the maps gave
-// on E146, E147, E144, E134 and E145 (X, a byte scan; the maps place none on the other bodies but E139). Returns the
-// entry (disassembly notation); throws for none or two.
+// on E146, E147, E144, E134 and E145 (X, a byte scan; the maps place none on the other bodies but E139). An opening of
+// the same queue right before it (`movhu (W),d0; exth d0; call`, d16 or d32) is the init's own first: E122's init
+// 0x501a8270 makes two calls with the queue's id before its loop (0x501a8314, 0x501a831e), its wrapper 0x501a825a
+// calls it (D); the init is then the first opening. Returns the entry (disassembly notation); throws for none or two.
 export const BROKER_E143 = 0x502A48B6;
 const BROKER_OPEN = [0xfc, 0xac, null, null, null, null, 0x18], BROKER_START = [0x00, 0x04, 0xdb], BROKER_END = [0xa5, 0x64, 0xd0];
 const BROKER_LOOP = 0x40;
@@ -2190,7 +2306,12 @@ export function brokerInit(img) {
     if (!bytesAt(img, o, BROKER_OPEN)) continue;
     const c = callAt(img, o + BROKER_OPEN.length), p = c ? o + BROKER_OPEN.length + c.len : -1;
     if (!c || !bytesAt(img, p, BROKER_START)) continue;
-    for (let k = p; k < p + BROKER_LOOP; k++) if (bytesAt(img, k, BROKER_END)) { found.push(0x50000000 + o); break; }
+    // the first of the openings of the same queue that run up to it
+    const before = (e) => [5, 7].map((n) => e - BROKER_OPEN.length - n).find((b) => bytesAt(img, b, BROKER_OPEN)
+      && u32(img, b + 2) === u32(img, o + 2) && callAt(img, b + BROKER_OPEN.length)?.len === e - b - BROKER_OPEN.length);
+    let e = o;
+    for (let b = before(e); b !== undefined; b = before(e)) e = b;
+    for (let k = p; k < p + BROKER_LOOP; k++) if (bytesAt(img, k, BROKER_END)) { found.push(0x50000000 + e); break; }
   }
   if (found.length !== 1) throw new Error(`brokerInit: ${found.length} event broker inits (${found.map(h8).join(', ')}), want one`);
   return found[0];
@@ -2356,7 +2477,9 @@ function moduleReaders(img, getter) {
 // is the first call or `calls` after it, before a return. E143 16, the lab's PLAY_COMPONENT one by one; E146, E147,
 // E144, E139 and E134 16 or 18, among them each place their maps and E144's two former overrides gave E143's (D:
 // E144 0x5084e75c, 0x5084e87d); E125 17, E142 and E140 10, E137 10, E132 and E133 9, E129, E130 and E145 8; the E118
-// family places no getter (X, a byte scan of each expanded image at the port's place of the getter). E137's ten:
+// family places no getter (X, a byte scan of each expanded image at the port's place of the getter): it has no
+// wrappers, and the port places none of E143's (its map had put getActualMagnification on E122's 0x506ab4fd, a
+// constructor, D). E137's ten:
 // 0x507bc059 .. 0x507bc178, each `mov 0,a0; call 0x50a4ee46; call 0x50a4eddb` then its method (D); of them
 // 0x507bc0ab (method 0x50915d1a) has no E143 counterpart the port finds, and 0x507bc119 takes a1 and returns a u16
 // where E143's isMovementAllowed, which the port pairs with it by its method's 'align' place, takes d0 (D; that they
@@ -2700,21 +2823,23 @@ function propDevice(img, sites) {
 
 // What the rules that read code relative to an E143 function read from one body (src/fw/ports.mjs FACTS[code], with
 // readFacts'; bin/port.mjs): img its run-time image, at(address) the build's address of an E143 one (the port's
-// placement; null: not placed). Returns {app: {module9_readers}}, {dispq: {sends, loop, start}}, {play: {wrappers}},
-// {text: {lang_setting}}, {ae: {init, regions, table, rows (the row form's only)}}, {frame_period: {tft, evf}}, {rtos:
-// {init_task, ta_wu, tsnd_sites}}, {store: {db_save, app_saves}}, {hw_timer: {ptr} or {table}}, {crt: {clock_read}},
-// {touch_args: {write_len, read_len}}, {dial: {select, select_end, table_ptr, table0}}, {ui_in: {task}}, {touch_start:
-// {init, id_word}}, {frame_mode: {set}}, {frame_plane: {mode, uploads}}, {prop: {device}} and {lens_driver: {module_init,
-// cache_init, task_vars, tasks, exec_queue, flags, cache_area}} (no app, play, text or
-// frame_period part where MODULE_STATE_GET, the component getter, the language loader or both vtotal functions are
-// not placed, no ae part where AE_INTERP is not and aeRows finds no run; no sends where OlyQeWr is not, no loop or
-// start where CPU 0's kcb or OlyQeRd is not, no dispq part without either; no init_task or ta_wu where CPU 0's kcb or wup_tsk is not, no
+// placement; null: not placed). Returns {app: {module9_readers}}, {dispq: {sends, loop, start, replies}}, {play:
+// {wrappers}}, {text: {lang_setting}}, {ae: {init, regions, table, rows (the row form's only)}}, {frame_period: {tft,
+// evf}}, {rtos: {init_task, ta_wu, tsnd_sites}}, {store: {db_save, app_saves}}, {hw_timer: {ptr} or {table}}, {crt:
+// {clock_read}}, {touch_args: {write_len, read_len}}, {dial: {select, select_end, table_ptr, table0}}, {ui_in: {task,
+// forward}}, {touch_start: {init, id_word}}, {frame_mode: {set}}, {frame_plane: {mode, uploads}}, {prop: {device}} and
+// {lens_driver: {module_init, cache_init, task_vars, tasks, exec_queue, flags, cache_area}} (no app, text or
+// frame_period part where MODULE_STATE_GET, the language loader or both vtotal functions are not placed, no play
+// wrappers where the component getter is not, no ae part where AE_INTERP is not and aeRows finds no run; no sends where OlyQeWr is not, no loop or
+// start where CPU 0's kcb or OlyQeRd is not, no replies without the loop and OlyQeWr, no dispq part without either;
+// no init_task or ta_wu where CPU 0's kcb or wup_tsk is not, no
 // tsnd_sites where tsnd_dtq is not; no store part where the flash save is not, no db_save where the DB init is not; no
 // hw_timer part where the hardware-timer init is not, no crt part where the clock read's call is not; no touch_args
 // part where touchArgs reads neither length; no dial part where the dial table pointer is not or dialStore reads none,
 // as where readFacts' dialSelect reads the select; no touch_start part where CPU 0's kcb, the touch task or OlyTaSt is
-// not or touchStart finds no start; no ui_in part where CPU 0's kcb or UI_IN's flag word is not; no frame_mode part
-// where the TAKE frame-mode request is not placed or is not a clamp; no frame_plane part where neither it nor the port
+// not or touchStart finds no start; no ui_in task where CPU 0's kcb or UI_IN's flag word is not, no forward where
+// UI_IN's post or sink word is not; no frame_mode part where the TAKE frame-mode request is not placed or is not a
+// clamp; no frame_plane part where neither it nor the port
 // places the frame display mode set, or the set is not the clamp form; no prop part where a property read site is not;
 // no lens_driver part where CPU 0's kcb, OlyTaSt, OlyQeRd or LENS_COMMAND's queue word is not or the boot starts no
 // lens task). Throws where both AE forms are found.
@@ -2727,9 +2852,11 @@ export function readPlacedFacts({ img, at }) {
   const takeFrame = at(TAKE_FRAME_E143), propSites = PROP_DEVICE_SITES_E143.map(at);
   if (getter !== null) facts.app = { module9_readers: moduleReaders(img, getter) };
   const loop = kcb !== null && qerd !== null ? displayLoop(img, kcb, qerd) : null;
-  const dispq = { ...(qewr !== null && { sends: displaySends(img, qewr) }), ...(loop !== null && { loop, start: displayStart(img, loop, qerd) }) };
+  const dispq = { ...(qewr !== null && { sends: displaySends(img, qewr) }), ...(loop !== null && { loop, start: displayStart(img, loop, qerd) }),
+    ...(loop !== null && qewr !== null && { replies: displayReplies(img, loop, qewr) }) };
   if (Object.keys(dispq).length) facts.dispq = dispq;
-  if (component !== null) facts.play = { wrappers: componentWrappers(img, component) };
+  // (no wrappers where the getter is not placed: then bin/port.mjs places none of E143's, placedRulePlaces)
+  facts.play = { wrappers: component !== null ? componentWrappers(img, component) : [] };
   if (loader !== null) facts.text = { lang_setting: langSetting(img, loader) };
   const rows = aeRows(img);
   if (interp !== null && rows) throw new Error(`readPlacedFacts: the AE interpolation is placed at ${h8(interp)} and aeRows finds a row form at ${h8(rows.init)}`);
@@ -2749,7 +2876,9 @@ export function readPlacedFacts({ img, at }) {
   if (Object.keys(touchLen).length) facts.touch_args = touchLen;
   const dial = dialPtr !== null ? dialStore(img, dialPtr) : undefined;
   if (dial !== undefined) facts.dial = dial;
-  if (kcb !== null && uiFlag !== null) facts.ui_in = { task: uiInTask(img, kcb, uiFlag) };
+  const uiPost = at(UI_IN_POST_E143), uiSink = at(UI_IN_SINK_E143);
+  const uiIn = { ...(kcb !== null && uiFlag !== null && { task: uiInTask(img, kcb, uiFlag) }), ...(uiPost !== null && uiSink !== null && { forward: uiInForward(img, uiPost, uiSink) }) };
+  if (Object.keys(uiIn).length) facts.ui_in = uiIn;
   if (kcb !== null) facts.power = { task: powerTask(img, kcb), ...(flashSave !== null && { off: powerOff(img, flashSave) }) };
   const tpStart = kcb !== null && tpTask !== null && taSt !== null ? touchStart(img, kcb, tpTask, taSt) : undefined;
   if (tpStart !== undefined) facts.touch_start = tpStart;
@@ -2779,9 +2908,11 @@ export function readPlacedFacts({ img, at }) {
 // {reload_less_one}}, {dial: {select, select_end, table_ptr, table0}}, {touch_panel: {driver}}, {lens: {mount}}, {iic:
 // {waits}}, {touch: {i2c_write, i2c_read}}, {touch_api: {open}}, {shooting: {start, end, auto_through}}, {func_direct:
 // {run, id}}, {broker: {init}}, {card: {shots_query, detect}}, {boot: {key, stage}}, {dpc: {init}} (with board.dpc), {sio: {tx_start, rx_start, done, dispatch, restart, channels}}, {storage: {init, tasks, fileclbk, nand, command, album_init, status, cflush, names}}, {power_off: {usb_disconnect}}, {gui: {stride, height,
-// banks, kind3}}, {recview: {word, standby}}, {cbs: {NAME: code}}, {mode_dial: {table, names}} and {prop_store: {init,
-// objects}} (no memories, take, task init, frame wait, timer sleep, sync, face colour, timer, dial, touch, touch_api,
-// shooting, func_direct, boot, dpc, sio, power_off, recview, cbs or prop_store part where its rule reads none). Throws for a reset_head with no rule here, and where a rule throws.
+// banks, kind3}}, {recview: {word, standby}}, {cbs: {NAME: code}}, {mode_dial: {table, names}}, {prop_store: {init,
+// objects}} and {ctors: [[table, count]]} (no memories, take, task init, frame wait, timer sleep, face colour, timer, dial, touch, touch_api,
+// shooting, func_direct, boot, dpc, sio, power_off, cbs or prop_store part where its rule reads none; sync and recview
+// null where their rules read none, the E118 family's builds, which have no display sync request and no RecView
+// trace). Throws for a reset_head with no rule here, and where a rule throws.
 export function readFacts({ img, family, resLoad }) {
   const facts = {};
   if (family.reset_head === 'flash-copy') {
@@ -2803,7 +2934,7 @@ export function readFacts({ img, family, resLoad }) {
     ...(taskInit !== undefined && { task_init: taskInit }),
     init_2nd: displayInit2nd(img),
     ...(frame !== undefined && { frame_wait: frame }), ...(sleep !== undefined && { timer_sleep: sleep }),
-    ...(sync !== undefined && { sync }), ...(faceColour !== undefined && { face_colour: faceColour }),
+    sync: sync ?? null, ...(faceColour !== undefined && { face_colour: faceColour }),
   };
   const lessOne = timerReloadLessOne(img);
   if (lessOne !== undefined) facts.timer = { reload_less_one: lessOne };
@@ -2834,12 +2965,13 @@ export function readFacts({ img, family, resLoad }) {
   facts.gui = guiCanvas(img);
   facts.board.dram_size = dramSize(facts.gui);
   const recview = recViewStandby(img);
-  if (recview !== undefined) facts.recview = recview;
+  facts.recview = recview ?? null;
   const cbs = cbsIds(img);
   if (cbs !== undefined) facts.cbs = cbs;
   facts.mode_dial = modeDial(img);
   const propStoreInit = propStore(img);
   if (propStoreInit !== undefined) facts.prop_store = propStoreInit;
+  facts.ctors = ctorTables(img);
   return facts;
 }
 
@@ -2891,6 +3023,7 @@ export function placedRulePlaces(facts, e143, place) {
   if (facts.rtos?.init_task !== undefined) out.set(INIT_TASK_E143, { to: facts.rtos.init_task, how: 'task-table' });
   if (facts.rtos?.ta_wu !== undefined) out.set(OLYTAWU_E143, { to: facts.rtos.ta_wu, how: 'wup-opening' });
   if (facts.dispq?.loop !== undefined) out.set(DISPLAY_LOOP_E143, { to: facts.dispq.loop, how: 'queue-receive' });
+  for (const [k, to] of (facts.dispq?.replies ?? []).entries()) out.set(DISPLAY_REPLIES_E143[k], { to, how: 'reply-pair' });
   if (facts.ui_in) out.set(UI_IN_E143, { to: facts.ui_in.task, how: 'flag-wait' });
   if (facts.touch_start) {
     out.set(TOUCH_INIT_E143, { to: facts.touch_start.init, how: 'task-start' });

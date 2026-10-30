@@ -11,7 +11,8 @@
 //               display task init against TASK_INIT_FOUND and A(), the face colour setter against FACE_COLOUR_FOUND and
 //               A(), readPlacedFacts (at the places of src/fw/ports.mjs PORTS) with readFacts against FACTS, its
 //               DISPLAY sends against DISPQ_FOUND, the DISPLAY task loop against LOOP_FOUND and A(), its start-up
-//               against START_FOUND, the UI_IN task against UI_IN_FOUND and A(), the touch task's start against
+//               against START_FOUND, its replies against REPLIES_FOUND and A(), the UI_IN task against UI_IN_FOUND
+//               and A(), its forward sites against UI_IN_FWD_FOUND and A(), the touch task's start against
 //               TOUCH_START_FOUND and A(), the calls of tsnd_dtq against TSND_COUNT and A(), the display sync against
 //               SYNC_FOUND, its module-9 readers against MODULE9_FOUND and E143's lab lists, its language setting
 //               against LANG_FOUND, the menu memories against MEMORY_FOUND, the touch-panel driver against
@@ -31,7 +32,8 @@
 //               against STORE_FOUND, APP_SAVES_FOUND and APP_SAVES_COUNT, the touch I2C length arguments against
 //               TOUCH_ARGS_FOUND, the frame display mode set against FRAME_MODE_FOUND and A(), the frame plane's
 //               uploads against PLANE_FOUND and A() of the AF upload, the output-device
-//               property against PROP_DEVICE_FOUND, the mode dial's table and names against MODE_DIAL_FOUND, and the
+//               property against PROP_DEVICE_FOUND, the mode dial's table and names against MODE_DIAL_FOUND, the
+//               constructor tables against CTORS_FOUND, A() and their 0xFFFFFFFF ends, and the
 //               loader's slots and image-record destinations against A() (src/fw/ports.mjs PORTS); imageView's reads
 //               and its refusal outside the image
 //   node emu/test/test_facts.mjs
@@ -39,7 +41,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
   TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
-  PROP_STORE_E143 } from '../src/fw/facts.mjs';
+  PROP_STORE_E143, CTORS_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -55,6 +57,7 @@ const head = (file, n = 0x400) => {
 const jump = (b, at, target) => b.set([0xfc, 0xdc, target & 0xff, target >>> 8 & 0xff, target >>> 16 & 0xff, target >>> 24, 0xf0, 0xf4], at);
 const throws = (f, cls = Error) => { try { f(); return false; } catch (e) { return e instanceof cls; } };
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const u32 = (b, o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0;
 // whether a 7-byte call to `to` is at `at` (disassembly notation) of a run-time image
 const is7call = (img, at, to) => { const c = callAt(img, at - 0x50000000); return c?.len === 7 && 0x50000000 + c.to === to; };
 const hx = (v) => JSON.stringify(v, (k, x) => (typeof x === 'number' ? '0x' + x.toString(16) : x));
@@ -164,6 +167,16 @@ const START_FOUND = { E143: DISPLAY_START_E143, E125: [0x50228B02, 0x50228B15], 
 // 0x54, D) and E125's, which no port placed before the rule (task 0x5e: a 16 ms poll first, the flag word's load
 // 0x32 bytes in, D)
 const UI_IN_FOUND = { E143: 0x5014B736, E125: 0x500FEBDE };
+// UI_IN's forward sites (ui_in.forward; src/fw/facts.mjs uiInForward): E143's forward as the lab gives it
+// (src/lab/play.mjs UI_IN_FWD, D) and E122's three inline tests of the sink in its post (D)
+const UI_IN_FWD_FOUND = { E143: [{ at: 0x5014C3EB, reg: 'd0' }],
+  E122: [{ at: 0x5017919F, reg: 'd2' }, { at: 0x50179230, reg: 'a2' }, { at: 0x501792BA, reg: 'a2' }] };
+// The DISPLAY loop's replies (dispq.replies; src/fw/facts.mjs displayReplies): E143's as the lab gives them
+// (src/lab/play.mjs DISPQ_REPLY_RETURNS, D) and E122's in its loop (D)
+const REPLIES_FOUND = { E143: [0x501C4913, 0x501C4974], E122: [0x502F5AC7, 0x502F5B26] };
+// The modules' constructor tables (ctors; src/fw/facts.mjs ctorTables): E143's and E122's as their runners' blocks
+// give them (D: E143 0x501e60ae.., 0x501e6124; E122 0x5004ca97..0x5004cad6)
+const CTORS_FOUND = { E143: CTORS_E143, E122: [[0x6069B240, 11], [0x60A4FDD0, 39], [0x60FDC1A0, 63], [0x610F1E1C, 14]] };
 // The touch task's start in the boot (touch_start; src/fw/facts.mjs touchStart): E143's as the lab gives it
 // (src/lab/play.mjs TOUCH_INIT and TOUCH_TASK_ID, the boot's call at 0x50024ca6, D), and E134's and E125's, where the
 // maps placed the init at another start's (D)
@@ -366,9 +379,10 @@ const DIRECT_FOUND = {
 // The event broker init (broker.init; src/fw/facts.mjs brokerInit) as read at the functions (D: E143's lab
 // BROKER_INIT, E139's hand override's place before the rule, E137's, called by its wrapper 0x501dbcc5), and the
 // places of E143's the maps gave (E146, E147, E144, E134, E145), which the rule's agree with (X)
+// E122's init opens with two calls on the queue's id and is called by its wrapper 0x501a825a (D)
 const BROKER_FOUND = {
   E143: 0x502A48B6, E139: 0x501EE6F6, E137: 0x501DBCDB, E146: 0x502BBB36, E147: 0x502CD3BA, E144: 0x501ECFE6,
-  E134: 0x501E3E93, E145: 0x501E44E1,
+  E134: 0x501E3E93, E145: 0x501E44E1, E122: 0x501A8270,
 };
 // The error log (errlog.entry; src/fw/facts.mjs errlogEntry): E143's as the lab gives it (src/lab/rtos.mjs ERRLOG,
 // D), the places of E143's the maps gave (E146, E147, E144, E139, E134, E137, E142, E140, E125, E145), and on the
@@ -539,7 +553,7 @@ const E143_FACTS = {
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
   broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] } },
   boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143,
-  cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143, prop_store: PROP_STORE_FOUND.E143,
+  cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143, prop_store: PROP_STORE_FOUND.E143, ctors: CTORS_E143,
 };
 
 export function factsTests() {
@@ -635,7 +649,14 @@ export function factsTests() {
     if (placed?.dispq?.loop !== undefined && PORTS[code]) ok((PORTS[code][0x501C3035] === undefined ? 0x501C3035 : PORTS[code][0x501C3035]) === placed.dispq.loop, `${code}: A() of the DISPLAY loop ${hx(PORTS[code][0x501C3035])}, the rule's ${hx(placed.dispq.loop)}`);
     // the UI_IN task, and the port's place of E143's at the rule's (bin/port.mjs, how 'flag-wait')
     if (UI_IN_FOUND[code] && (code === 'E143' || PORTS[code])) ok(placed?.ui_in?.task === UI_IN_FOUND[code], `${code}: ui_in.task ${hx(placed?.ui_in ?? placed)}, found ${hx(UI_IN_FOUND[code])}`);
-    if (placed?.ui_in !== undefined && PORTS[code]) ok((PORTS[code][0x5014B736] === undefined ? 0x5014B736 : PORTS[code][0x5014B736]) === placed.ui_in.task, `${code}: A() of the UI_IN task ${hx(PORTS[code][0x5014B736])}, the rule's ${hx(placed.ui_in.task)}`);
+    if (placed?.ui_in?.task !== undefined && PORTS[code]) ok((PORTS[code][0x5014B736] === undefined ? 0x5014B736 : PORTS[code][0x5014B736]) === placed.ui_in.task, `${code}: A() of the UI_IN task ${hx(PORTS[code][0x5014B736])}, the rule's ${hx(placed.ui_in.task)}`);
+    // UI_IN's forward sites, and where the port places E143's forward, the rule's one site at it
+    if (UI_IN_FWD_FOUND[code] && (code === 'E143' || PORTS[code])) ok(same(placed?.ui_in?.forward, UI_IN_FWD_FOUND[code]), `${code}: ui_in.forward ${hx(placed?.ui_in ?? placed)}, found ${hx(UI_IN_FWD_FOUND[code])}`);
+    const fwd = PORTS[code]?.[0x5014C3EB];
+    if (typeof fwd === 'number') ok(same(placed?.ui_in?.forward, [{ at: fwd, reg: 'd0' }]), `${code}: ui_in.forward ${hx(placed?.ui_in ?? placed)}, A() of the forward ${hx(fwd)}`);
+    // the DISPLAY loop's replies, and the port's places of E143's at the rule's (bin/port.mjs, how 'reply-pair')
+    if (REPLIES_FOUND[code] && (code === 'E143' || PORTS[code])) ok(same(placed?.dispq?.replies, REPLIES_FOUND[code]), `${code}: dispq.replies ${hx(placed?.dispq ?? placed)}, found ${hx(REPLIES_FOUND[code])}`);
+    if (placed?.dispq?.replies !== undefined && PORTS[code]) ok(same([0x501C4913, 0x501C4974].map((v) => PORTS[code][v]), placed.dispq.replies), `${code}: A() of the DISPLAY replies ${hx([0x501C4913, 0x501C4974].map((v) => PORTS[code][v]))}, the rule's ${hx(placed.dispq.replies)}`);
     // the touch task's start, and the port's places of E143's touch init and id word at the rule's (how 'task-start')
     const tps = placed?.touch_start;
     if (TOUCH_START_FOUND[code] && (code === 'E143' || PORTS[code])) ok(same(tps, TOUCH_START_FOUND[code]), `${code}: touch_start ${hx(tps ?? placed)}, found ${hx(TOUCH_START_FOUND[code])}`);
@@ -658,6 +679,12 @@ export function factsTests() {
     }
     if (MODE_DIAL_FOUND[code]) ok(same(got.mode_dial, MODE_DIAL_FOUND[code]), `${code}: mode_dial ${hx(got.mode_dial ?? got)}, found ${hx(MODE_DIAL_FOUND[code])}`);
     ok(typeof got.prop_store?.init === 'number' && (!PROP_STORE_FOUND[code] || same(got.prop_store, PROP_STORE_FOUND[code])), `${code}: prop_store ${hx(got.prop_store ?? got)}, found ${hx(PROP_STORE_FOUND[code] ?? 'one')}`);
+    // the constructor tables as found, and where the port places E143's three the lab runs (the memory managers' and
+    // modules 6 and 7), the rule's first three; every table ended by 0xFFFFFFFF after its count
+    if (CTORS_FOUND[code]) ok(same(got.ctors, CTORS_FOUND[code]), `${code}: ctors ${hx(got.ctors ?? got)}, found ${hx(CTORS_FOUND[code])}`);
+    const tables = [0x60714E78, 0x60EF9AD0, 0x615C71D4].map((v) => (code === 'E143' ? v : PORTS[code]?.[v]));
+    if (code === 'E143' || (PORTS[code] && got.ctors?.length === 4 && !['E118', 'E122'].includes(code))) ok(same(tables, got.ctors?.slice(0, 3).map(([t]) => t)), `${code}: A() of the constructor tables ${hx(tables)}, the rule's ${hx(got.ctors ?? got)}`);
+    for (const [t, n] of got.ctors ?? []) ok(u32(run, t - m.image_base + 4 * n) === 0xFFFFFFFF, `${code}: the constructor table ${hx(t)} is not ended after its ${n} pointers`);
     if (CBS_FOUND[code]) ok(same(got.cbs, CBS_FOUND[code]), `${code}: cbs ${hx(got.cbs ?? got)}, found ${hx(CBS_FOUND[code])}`);
     if (SYNC_FOUND[code]) ok(same(got.display?.sync, SYNC_FOUND[code]), `${code}: display.sync ${hx(got.display ?? got)}, found ${hx(SYNC_FOUND[code])}`);
     ok(got.touch_panel?.driver === !NO_TOUCH_DRIVER.includes(code), `${code}: touch_panel ${hx(got.touch_panel ?? got)}, found ${NO_TOUCH_DRIVER.includes(code) ? 'no driver' : 'a driver'}`);

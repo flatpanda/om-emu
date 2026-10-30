@@ -326,9 +326,12 @@ export const FAMILIES = {
     // 0x6012e7c0 and its enables 0x6012e7a0; 0x500699a2 sets bit 8 of each), and the encoder block 0x9bd00000 the
     // dial init clears (0x5017c22f), and on the EVF the block 0x99100000 its open writes four words of (+0x00, +0x04,
     // +0x24, +0x28 at 0x502fe38a, the only references) and the control word 0x98a00000 its start sets (bit 15, then
-    // 0x100 or 0 by the mode, 0x5030b87a)
+    // 0x100 or 0 by the mode, 0x5030b87a); and the PWM block 0x9bc00000 (the E144 family's), which E118's and E120's TFT
+    // opens reach (X, 2026-10-30): its channel enable clears +0x00 for the first user and the channel's bit in +0x04
+    // (E118 0x5006bf92, the stores at 0x5006bfb2 and 0x5006bfdf; E120's at 0x5006977a; E122's at 0x50067f1f, which its
+    // start does not reach, D)
     stub_pages: [0x9B800000, 0x9B801000, 0x99E20000, 0x98800000, 0x98200000, 0x98300000, 0x98500000, 0x98600000,
-      0x98400000, 0x9BD00000, 0x99100000, 0x98A00000],
+      0x98400000, 0x9BD00000, 0x99100000, 0x98A00000, 0x9BC00000],
     stub_presets: [],
     // the display waits' stand-ins: without them E122's display start blocks, every task waiting (X)
     display_wait_stand_ins: true,

@@ -822,6 +822,10 @@ export const MODELS = {
     // the dial init 0x5016558b takes one fixed id table, 0x601b1e58 (`mov 0x601b1e58,d0` for its slot set-up from 0xa1c184a8), with
     // no board select and no table pointer (D): src/lab/menu.mjs dial_init runs it alone
     dial: { table_ptr: null, table0: 0x601B1E58 },
+    // E122's display task (src/fw/models.mjs E122): the static task table's row 0x51, whose entry word (image offset
+    // 0x18f70, as on E122 and E120) holds 0x602f3fed (D), which the display task init starts (X: the kernel's start of
+    // it from that step); the same opening as E122's 0x502f90f5 in another order (D), which the map does not pair
+    extra_tasks: [0x502D2FCD],
     overrides: {
       '0x5014b7c7': { to: '0x5016558b', why: 'the dial init (DIAL_INIT): the dial module init, which sets up the dial slots from 0xa1c184a8 with the fixed id table 0x601b1e58 (D); E122\'s, which selects a table by board, does not carry (menu)' },
       '0x5002e758': { to: '0x5004c674', why: 'LEVEL_HANDLERS[2]: the kernel\'s level-handler table kcb[88] after its init holds 0x5004c674 (X); the leg map put levels 2 and 3 on level 1\'s handler and levels 4 and 5 one handler late (irq)' },
@@ -914,6 +918,9 @@ export const MODELS = {
     // the dial init 0x5015d3a6 takes one fixed id table, 0x601a8810 (`mov 0x601a8810,d0` for its slot set-up from 0xa1c17b80), with
     // no board select and no table pointer (D): src/lab/menu.mjs dial_init runs it alone
     dial: { table_ptr: null, table0: 0x601A8810 },
+    // E122's display task (src/fw/models.mjs E122, E118): the static task table's row 0x51, whose entry word (image
+    // offset 0x18f70) holds 0x602e7a9d (D), which the display task init starts (X: the kernel's start of it from that step)
+    extra_tasks: [0x502C6A7D],
     overrides: {
       '0x5014b7c7': { to: '0x5015d3a6', why: 'the dial init (DIAL_INIT): the dial module init, which sets up the dial slots from 0xa1c17b80 with the fixed id table 0x601a8810 (D); E122\'s, which selects a table by board, does not carry (menu)' },
       '0x5002e758': { to: '0x5004c624', why: 'LEVEL_HANDLERS[2]: the kernel\'s level-handler table kcb[88] after its init holds 0x5004c624 (X); the leg map put levels 2 and 3 on level 1\'s handler and levels 4 and 5 one handler late (irq)' },

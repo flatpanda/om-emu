@@ -26,15 +26,20 @@
 // addresses from the commit (OSD1..OSD3 = DMA12..DMA14, enabled for an area width of 16 or more), the strides
 // DMA18..DMA20 (14: the GUI canvas's 896-byte rows), the scaler words (bit 0 and +4 horizontal, bit 4 and +12
 // vertical, each 4 ceil((src - 1) 1024 / dst)), D; its scaler has four words a plane (+8 zero). It differs in:
-//   palettes       three groups by the palette writer's id: OSD1 128 words at +0x800, the other bank +0xa00 while bit
-//                  16 of 0x1b8 is set (the writer fills +0x800 while the bit is set and +0xa00 while it is clear, the
-//                  commit flips the bit after an upload, D; that the bank shown is the one not written is I, as kinds 1
-//                  and 2), OSD2 32 words at +0x680 and OSD3 32 words at +0x600, single (the commit copies them whole,
-//                  D). The plane of a palette id: the commit takes OSD1's address from the display record's osd word 2
-//                  and OSD3's from word 0, and the palette set uploads id 0 from GUI layer 2's palette (256 entries),
-//                  id 1 from layer 1's (32), id 2 from layer 0's (32), D; that osd word k is GUI layer k is I
-//   pixel index    OSD1's the low 7 bits (I, as kind 2); OSD2's and OSD3's below 32, a larger one is not drawn and is
-//                  counted (PAL_FIELD: no code read says what the chip does with it, ?)
+//   palettes       three groups by the palette writer's id, each the palette of one GUI layer (the palette set uploads
+//                  id 0 from GUI layer 2's palette, 256 entries, id 1 from layer 1's, 32, id 2 from layer 0's, 32, D):
+//                  id 0 128 words at +0x800, the other bank +0xa00 while bit 4 of 0x1b8 is set (the writer fills
+//                  +0x800 while the bit is set and +0xa00 while it is clear, `btst 16` at 0x50307af4, and the commit
+//                  flips the bit after an upload, 0x50309f14..0x50309f24, D; that the bank shown is the one not written
+//                  is I, as kinds 1 and 2), id 1 32 words at +0x680 and id 2 32 words at +0x600, single (the commit
+//                  copies them whole, D). The plane of a GUI layer: the GUI's update puts layer 2 - k's buffer in the
+//                  display record's osd word k (0x506c0aa3..0x506c0b25, each word with that layer's dirty flag, D) and
+//                  the commit takes OSD1's address from word 2 and OSD3's from word 0 (D), so OSD1 shows GUI layer 0
+//                  with palette id 2, OSD2 layer 1 with id 1 and OSD3 layer 2 with id 0 (X: E122's clock warning, layer
+//                  2's indices 13..33 and its fill 255 in OSD3, layer 0's fill 31 in OSD1, layer 1's 5 in OSD2)
+//   pixel index    OSD3's the low 7 bits (I, as kind 2: layer 2's fill 255 takes entry 127, transparent, X); OSD1's
+//                  and OSD2's below 32, a larger one is not drawn and is counted (PAL_FIELD: no code read says what
+//                  the chip does with it, ?)
 //   formats        0x1b0 = 0x111 and 0x1b4 = 0x11, the values every open writes (D); E143's OSDFMT1 and OSDFMT2 hold
 //                  the same, kind 2's mix word 0x1b0 another (I): checked as kind 2's mix
 //   level          OSD7..OSD9 as kind 2's enable words; the display sets them to 2 floor(p 128 / 100) for a level of p
@@ -59,7 +64,7 @@ const KINDS = {
   2: { mix: [[0x1B0, 0x111111]], rszZero: [8, 16, 20],
     palette: (q) => ({ sel: 0x364 + 8 * q, bit: 0x10, banks: [0x800 + 0x800 * q, 0xA00 + 0x800 * q], entries: 128, mask: 0x7F }) },
   3: { mix: [[0x1B0, 0x111], [0x1B4, 0x11]], rszZero: [8],
-    palette: (q) => (q === 0 ? { sel: 0x1B8, bit: 0x10000, banks: [0x800, 0xA00], entries: 128, mask: 0x7F }
+    palette: (q) => (q === 2 ? { sel: 0x1B8, bit: 0x10, banks: [0x800, 0xA00], entries: 128, mask: 0x7F }
       : { sel: null, bit: 0, banks: [q === 1 ? 0x680 : 0x600], entries: 32, mask: null }) },
 };
 const K = KINDS[BOARD.vsc.kind] ?? null;

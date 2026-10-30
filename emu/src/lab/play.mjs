@@ -295,10 +295,11 @@ export const MODE_DIAL = { group: 2, positions: Array.from({ length: 10 }, (_, k
 // What a mode-dial position is: UI_IN's dial query answers position k with the k-th code of its dial table, the build
 // names the codes (fact mode_dial, src/fw/facts.mjs modeDial, D) and the application takes the code as its mode (X).
 // E143's ten positions are S, M, B, MY_MODE1..4, MOVIE, P, A. On the page: P, A, S, M and B as named, MY_MODEn as Cn
-// (the dial's custom positions C1..C4: I, by the names), MOVIE as Movie and the other bodies' I_AUTO, ARTFILTER and
-// SCENE_NAVIGATION as the dial labels iAUTO, ART and SCN (I); any other name as the build has it, and a code the build
-// does not name (or a position past the table's run) as "position k". Which way round the positions lie on the body
-// and whether the dial turns past its ends is not in the firmware (?): the page steps them in entry order, wrapping.
+// (the dial's custom positions C1..C4: E143's shooting screen shows P with C1..C4 there, X), MOVIE as Movie and the
+// other bodies' I_AUTO, ARTFILTER and SCENE_NAVIGATION as the dial labels iAUTO, ART and SCN (I); any other name as the
+// build has it, and a code the build does not name (or a position past the table's run) as "position k". Which way
+// round the positions lie on the body and whether the dial turns past its ends is not in the firmware (?): the page
+// steps them in entry order, wrapping.
 const MODE_LABELS = { MOVIE: 'Movie', I_AUTO: 'iAUTO', ARTFILTER: 'ART', SCENE_NAVIGATION: 'SCN' };
 export const mode_label = (name) => MODE_LABELS[name] ?? name.replace(/^MY_MODE(\d)$/, 'C$1');
 // [{code, name, label}] of each position, the codes read from the dial table in the run-time image v
@@ -334,6 +335,17 @@ export const POSITION_SWITCHES = [];
 // 0, as E143's own idle image above does; its starts publish no USB connection (X; what state 0 is there is I)
 export const IDLE_SWITCH_STATES = [[0x000C, 0], [0x0400, 1]], PRODUCER_CODE = 0x0501;
 export const STATE_SWITCHES = [];             // [[group, byte, bit, level]] of IDLE_SWITCH_STATES, apply_uiin_layout
+// The dial's position at the session's start: P's (position 0 where the build names no P). The start takes its mode
+// from the store, P on the blank store (setting 24 MODE_EXPOSE 3, the P screen; X), and the application changes its
+// mode on the dial's change event only: the GUI's handler calls the changeMode API (0x10216: 0x50b4e4cc -> the user-setting
+// manager's 0x50b7b01c, whose other caller 0x50b7bc72 is not on the start's path; D), and no changeMode runs before the
+// first dial input, although the application polls the dial from the start (X). UI_IN's first scan decodes the dial at
+// the bring-up, before the application exists. Whether the camera's start reads the dial (and a store saved at another
+// mode, S-NVRAM's, then starts there) is ?
+export function mode_start() {
+  const k = MODE_DIAL.names.findIndex((p) => p.name === 'P');
+  return k < 0 ? 0 : k;
+}
 // the dial group's image at position k: k's bit at its polarity, every other position's at the other value
 export function mode_image(k) {
   const img = new Uint8Array(GROUP_BYTES[MODE_DIAL.group]);
@@ -349,7 +361,7 @@ export function idle_images() {
   }
   for (const [g, b, bit] of CODE0_KEYS) set_bit(imgs[g], b, bit, 1);
   set_bit(imgs[MONITOR_OPEN[0]], MONITOR_OPEN[1], MONITOR_OPEN[2], 1);
-  imgs[MODE_DIAL.group].set(mode_image(0));
+  imgs[MODE_DIAL.group].set(mode_image(mode_start()));
   for (const [g, b, bit, pol] of POSITION_SWITCHES) set_bit(imgs[g], b, bit, pol);
   for (const [g, b, bit, level] of STATE_SWITCHES) set_bit(imgs[g], b, bit, level);
   return imgs;
@@ -819,7 +831,7 @@ export class PlaySession extends N.NavSession {
     if (opts.mutant === 'monitor-inverted') set_bit(this.images[MONITOR_OPEN[0]], MONITOR_OPEN[1], MONITOR_OPEN[2], 0);   // the monitor reads closed: touches rejected
     this.pressed = new Set();
     this.shutter_held = new Set();
-    this.mode_index = 0;
+    this.mode_index = mode_start();
     this.js_held = null; this.js_posted = null;
     this.play_log = [];
     this.notes = [];

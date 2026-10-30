@@ -133,9 +133,10 @@ export function controlsTests() {
 
 // B6's page inputs (bin/webgate.mjs): the Player inputs web/index.html sends for webgate's keys and touch, in order,
 // grouped by the page check that waits for each group; webgate requires the page's sent inputs to be these. gui: the
-// state the group must end in. OK comes before the mode dial: once the dial has left P, setting 820 reads 0 with most
-// other settings and the camera application's OK path skips (0x5106675d..66: 0x51052dc8 is 1 when 820 is 0), so no
-// frame follows (X); why the settings read 0 then is ? (docs/om1-input-spec.md section 9). The
+// state the group must end in. OK comes before the mode dial, which it had to until the lab ran the store's module init
+// (H-STOREINIT, 2026-10-30): before, once the dial had left P, setting 820 read 0 with most other settings and the camera
+// application's OK path skipped (0x5106675d..66: 0x51052dc8 is 1 when 820 is 0), so no frame followed (X;
+// docs/om1-input-spec.md section 2, "The mode change"); the order is kept, so the page's inputs stay as they were. The
 // touch is on the shooting screen's touch-mode icon, which the camera application, forwarding the touch itself with the
 // native lens, turns to its next mode (X); at (90, 30), the wireless icon, it opens Wi-Fi Connection (X), so the touch
 // is no longer there (docs/hle-gaps.md 4.4.2). mode_dial: the positions the group moves the dial; mode_dial_at and

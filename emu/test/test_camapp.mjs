@@ -19,6 +19,10 @@
 //                  from HEAP_FROM_S to HEAP_TO_S of lab time no block allocated stays allocated, and S-TRAACK has
 //                  deleted its requests (the histogram's events, about 5 a second); before S-TRAACK deleted them the
 //                  live blocks grew by about 5 a second (docs/hle-gaps.md 4.4.2)
+//   modeDialSession  the mode dial in play (E143): it starts at P, the start's mode; each position's change sets its
+//                  mode (MODE_EXPOSE, the custom banks' MODE_RAW, B's MODE_DIAL_B_ONOFF) and keeps the other settings,
+//                  each position shows a screen of its own, and away from P OK opens the Super Control Panel and MENU
+//                  the menu; with the mode store's object words cleared (no H-STOREINIT) a change zeroes the settings
 //   node emu/test/test_camapp.mjs
 import fs from 'node:fs';
 import path from 'node:path';
@@ -198,9 +202,69 @@ export async function heapSession() {
   return { checks, bad };
 }
 
+// The mode dial's positions as the application takes them (E143; docs/om1-input-spec.md section 2): the setting each
+// position's mode change sets on the blank store, by the position's name (X, 2026-10-30): MODE_EXPOSE (24) P 3, A 4,
+// S 5, M 6, Movie 76, and 3 (P) in the custom banks C1..C4, which also set MODE_RAW (22); B sets MODE_DIAL_B_ONOFF
+// (1444). Without H-STOREINIT the first change away from P set 612 settings to 0, MODE_HQ_Q (12) and MODE_HDMI_INFO
+// (820) among them, and every screen after it was the same, with no mode letter
+const DIAL_EXPOSE = { P: 3, A: 4, S: 5, M: 6, MOVIE: 76, MY_MODE1: 3, MY_MODE2: 3, MY_MODE3: 3, MY_MODE4: 3 };
+const MODE_EXPOSE = 24, MODE_RAW = 22, MODE_DIAL_B = 1444, KEPT = [[12, 1], [820, 1]];
+export async function modeDialSession() {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { createHash } = await import('node:crypto');
+  const { loadImage, loadBlock, createHash: envHash } = await import('../checks/lib/env.mjs');
+  const { Player } = await import('../src/lab/player.mjs');
+  const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+  const { propStoreInit } = await import('../src/lab/menu.mjs');
+  const env = { rom: loadImage(), resBlock: loadBlock(), createHash: envHash, wallClock: () => performance.now() / 1000 };
+  const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, env);
+  pl.open_session();
+  const s = pl.session, lab = s.lab;
+  try {
+    const idle = (ms) => s.idle_slice(lab.lab_time() + ms * 1e6);
+    const key = (k) => { s.key(k, 'down'); s.camapp.pump(); idle(100); s.key(k, 'up'); s.camapp.pump(); idle(500); };
+    const shot = () => createHash('sha256').update(Uint32Array.from(s.frame()[2])).digest('hex');
+    const names = s.status().mode_dial_positions.map((p) => p.name), n = names.length, p0 = s.mode_index;
+    ok(names[p0] === 'P' && lab.get(MODE_EXPOSE) === DIAL_EXPOSE.P, `the dial starts at P, where the start's mode is: position ${p0} (${names[p0]}), MODE_EXPOSE ${lab.get(MODE_EXPOSE)}`);
+    idle(1000);
+    key('s1');
+    const frames = new Map();
+    // every position once, round from P and back to it
+    for (let i = 1; i <= n; i++) {
+      const k = (p0 + i) % n, name = names[k];
+      s.switch_input('mode_dial', k); s.camapp.pump(); idle(2000);
+      const got = { expose: lab.get(MODE_EXPOSE), raw: lab.get(MODE_RAW), b: lab.get(MODE_DIAL_B), gui: s.status().gui };
+      const want = { expose: DIAL_EXPOSE[name] ?? got.expose, raw: name.startsWith('MY_MODE') ? 1 : 0, b: name === 'B' ? 1 : 0, gui: '0x0108' };
+      ok(JSON.stringify(got) === JSON.stringify(want), `position ${k} (${name}): ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
+      const kept = KEPT.map(([id]) => lab.get(id));
+      ok(JSON.stringify(kept) === JSON.stringify(KEPT.map(([, v]) => v)), `position ${k} (${name}): settings ${KEPT.map(([id]) => id).join(', ')} read ${kept}, want ${KEPT.map(([, v]) => v)}`);
+      frames.set(k, shot());
+    }
+    ok(new Set(frames.values()).size === n, `each position shows a screen of its own: ${new Set(frames.values()).size} distinct of ${n}`);
+    // OK and MENU away from P (OK did nothing there before)
+    const S = names.indexOf('S');
+    s.switch_input('mode_dial', S); s.camapp.pump(); idle(2000);
+    key('ok');
+    ok(s.status().gui === '0x0403', `at S, OK opens the Super Control Panel: ${s.status().gui}`);
+    key('ok'); key('menu');
+    ok(s.status().gui === '0x0b02', `at S, MENU opens the menu: ${s.status().gui}`);
+    key('menu');
+    // negative control: the mode store's object words cleared, as before H-STOREINIT: the next change zeroes the kept settings
+    const { objects } = propStoreInit();
+    lab.sim.write(objects, new Uint8Array(12));
+    s.switch_input('mode_dial', names.indexOf('A')); s.camapp.pump(); idle(2000);
+    const lost = KEPT.map(([id]) => lab.get(id));
+    ok(lost.every((v) => v === 0), `control: with the object words cleared a change reads settings ${KEPT.map(([id]) => id).join(', ')} as ${lost}, want 0`);
+  } catch (e) { bad.push(`session: ${e.message.slice(0, 600)}`); }
+  pl.close_session();
+  return { checks, bad };
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const r = await camappSession(), h = await heapSession();
-  console.log(`camapp session: ${r.checks - r.bad.length}/${r.checks}; the heap over an idle: ${h.checks - h.bad.length}/${h.checks}`);
-  [...r.bad, ...h.bad].forEach((x) => console.log('  ', x));
-  process.exit(r.bad.length || h.bad.length ? 1 : 0);
+  const r = await camappSession(), h = await heapSession(), m = await modeDialSession();
+  console.log(`camapp session: ${r.checks - r.bad.length}/${r.checks}; the heap over an idle: ${h.checks - h.bad.length}/${h.checks}; the mode dial: ${m.checks - m.bad.length}/${m.checks}`);
+  [...r.bad, ...h.bad, ...m.bad].forEach((x) => console.log('  ', x));
+  process.exit(r.bad.length || h.bad.length || m.bad.length ? 1 : 0);
 }

@@ -9,8 +9,8 @@
 // the browser player's pure parts, its node host, webgate B6's page inputs on a node Player and its Worker in a node
 // worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
-// (test_camapp.mjs), the SCPU's clock, ports, link pins and sub-CPU model (test_scpu.mjs), the publication audit
-// (test_pubaudit.mjs), the HDMI port and a plug in play on E143,
+// (test_camapp.mjs, with the mode dial's positions), the SCPU's clock, ports, link pins and sub-CPU model
+// (test_scpu.mjs), the publication audit (test_pubaudit.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the card and the
 // file system on E143, E146, E147, E144, E142 and E134 and SDXC cards on E143 (test_storage.mjs), subject detection's frames on E143
 // (test_subject.mjs), the lens on the mount natively on E143, E146 and E147 (test_lens.mjs), the SCPU's Cortex-M4 core
@@ -133,11 +133,11 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 }
 // the camera application running natively (S-CAMAPP and its stand-ins): S1, S2 and the rec view in a play session
 {
-  const { camappSession, heapSession } = await import('../test/test_camapp.mjs');
-  const ca = await camappSession(), hp = await heapSession();
-  console.log(`camera application (S-CAMAPP) in play: ${ca.checks - ca.bad.length}/${ca.checks}; S-HEAP over an idle: ${hp.checks - hp.bad.length}/${hp.checks}`);
-  [...ca.bad, ...hp.bad].forEach((x) => console.log('  ', x));
-  bad += ca.bad.length + hp.bad.length;
+  const { camappSession, heapSession, modeDialSession } = await import('../test/test_camapp.mjs');
+  const ca = await camappSession(), hp = await heapSession(), md = await modeDialSession();
+  console.log(`camera application (S-CAMAPP) in play: ${ca.checks - ca.bad.length}/${ca.checks}; S-HEAP over an idle: ${hp.checks - hp.bad.length}/${hp.checks}; the mode dial's positions: ${md.checks - md.bad.length}/${md.checks}`);
+  [...ca.bad, ...hp.bad, ...md.bad].forEach((x) => console.log('  ', x));
+  bad += ca.bad.length + hp.bad.length + md.bad.length;
 }
 // the SCPU interface's clock and ports, the link's pins and the sub-CPU's model (S-SCPUDEV) without firmware, then the
 // link at a play session's start: E143 here, E146, E147, E139 and E134

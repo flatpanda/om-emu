@@ -657,6 +657,30 @@ export class PlayLab extends N.NavLab {
     if (this.sim.packet('G' + packRegs(saved)) !== 'OK') throw new AssertionError('');
     hle.finish(saved, { d0: 0 });
   }
+  // S-TPSEND, asynchronous: a message OlyQeWr puts on the touch task's queue from a task (not a display run) while the
+  // touch task does not run in the lab (before H-TPINIT, or on a body whose touch panel is not modelled, MODELS touch
+  // false) runs the touch task's loop for it on a lab stack in the same way, its own word 0 naming the reply queue;
+  // OlyQeWr returns 0. Natively the touch task, which the boot chain starts before the display opens (E122
+  // 0x50186200..0x5018620e, D), takes it. A display run's message is queued natively as before: E122's and E118's opens
+  // put cmd 4 there (E122 0x50302973..), and the queue's one slot holds it; run, E118's cmd 4 boots the touch IC, which
+  // the lab does not model ("TP BOOTLOAD ERROR", then every task blocked, X). On E122's EVF the application's
+  // Set_Touch_Panel_Ctrl_Area (API 0xd001f, 0x502f4c28 -> 0x5030bda9) then sends cmd 8, TP_SET_CTRL_AREA, which waited
+  // for good on the full queue (X). It wraps OlyQeWr's routing (menu.mjs route_rtos), so it holds from the start on
+  route_rtos() {
+    super.route_rtos();
+    if (TOUCH_QUEUE === null) return;
+    this.wrap(OLYQEWR, (prev) => (hle, r) => (this.touch_native || this.in_display_run() || (r.d0 & 0xFFFF) !== this._queue(TOUCH_QUEUE.queue) ? prev(hle, r) : this._tpsend_async(hle, r)));
+  }
+  _tpsend_async(hle, r) {
+    const saved = { ...r }, [p, n] = unpack('<II', this.sim.read(r.a0, 8));
+    if (n !== 16) throw new PlayError(`S-TPSEND: a ${n}-byte message to the touch task's queue from ${where(r.mdr)}`);
+    const msg = this.sim.read(p, n), cmd = unpack('<I', msg.subarray(8, 12))[0];
+    this.kernel.events.push(['send', `queue ${r.d0 & 0xFFFF} cmd ${cmd} (asynchronous)`, `param 0x${unpack('<I', msg.subarray(12, 16))[0].toString(16)}`, where(r.mdr)]);
+    (this.tp_sends ??= []).push([cmd, h8(disasm(r.mdr))]);
+    this.task_message(TOUCH_TASK, TOUCH_QUEUE.queue, msg, `touch cmd ${cmd}`, undefined, { flag: TOUCH_QUEUE.flag, bit: TOUCH_QUEUE.bit });
+    if (this.sim.packet('G' + packRegs(saved)) !== 'OK') throw new AssertionError('');
+    hle.finish(saved, { d0: 0 });
+  }
   // S-TPREG
   _s_tpreg(hle, r) {
     const n = D.tpLength(this, r, 'read'), slave = r.d0 & 0xFF, reg = r.d1 & 0xFF;
@@ -1193,6 +1217,7 @@ export class PlaySession extends N.NavSession {
     lab.step('H-TPINIT touch init 0x501e3dca (boot call from 0x50024ca6) from the lab task', () => lab.call(TOUCH_INIT, null, null, null, 20000));
     const tid = unpack('<h', lab.sim.read(TOUCH_TASK_ID, 2))[0];
     lab.lt.allow.add(TOUCH_TASK);
+    lab.touch_native = true;                          // the touch task takes its queue's messages itself (S-TPSEND)
     const [rc] = lab.nk.svc('act_tsk', { d0: tid });
     if (rc !== K.E_OK) throw new PlayError(`H-TPINIT: act_tsk(${tid}) = ${rc}`);
     this.touch_tid = tid;

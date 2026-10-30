@@ -10,8 +10,9 @@ two disagree. It ends with ranked follow-ups.
 
 How it was read: the repository was cloned read-only outside the tree and its documents, patch manifest
 (`patches/hsl/pen-f/patch.json`), assembly sources and analysis JSON were read; none of its code (Python tools,
-camera client, builder) was run, and the release archives were not downloaded (release notes through the GitHub API
-only). Every cross-check below was made on om-emu's own pinned images with small pure-JS scans and the VM's
+camera client, builder) was run. The 2026-10-17 release archive was then downloaded with the user's consent, its
+sha256 checked against the release's, and its two images diffed statically against our stock E122 (3.1 below); it was
+never run. Every cross-check below was made on om-emu's own pinned images with small pure-JS scans and the VM's
 `mn10300-objdump`; no excerpt of either is committed.
 
 **Licence.** Its `RIGHTS-AND-PROVENANCE.md` says the analysis tools and writing carry **no repository-wide licence**;
@@ -172,7 +173,9 @@ Their decoder is an independent implementation of the scheme in `docs/firmware-c
   (D). PEN-F's equivalents are 919-930 and 931-966.
 - Their H/L storage reuses the second part of each stored saturation setting (a part the COLOR mode filters never
   select), as tagged words that decode to neutral when invalid; it rides the stock bank save, recall and checksum.
-  Whether E143's settings have such second parts is ?.
+  E143's store has the same two rows per id: `0x503ee85c(id, k)` reads `(0x62a65e10)[k * 2129 + id]`, `0x503ee885`
+  writes, `0x503ee82b` handles the banks, paired with E122's `0x602f06e7` / `0x602f0710` by the cross-build map (X),
+  and its mode-recall lists (`0x605f9134`) select only row 0 for ids 921-956 (X), as E122's do for 931-966 (3.1).
 - OM Workspace settings backup: the camera exports named records per bank and Workspace keeps unknown names, so
   extending the exporter and importer adds a record without touching Workspace (their physical test).
 
@@ -222,6 +225,66 @@ What transfers: running the firmware's **own** update validator on a candidate b
 head/tail check (follow-up 2), per-range before-hashes in the ND128 manifest, and code-space qualification for any
 patch larger than an in-place rewrite. What does not: their acceptance result is the PEN-F's updater; E143's shares
 the error map (2.2) but its full validation is unread.
+
+### 3.1 The released image, diffed against our stock E122
+
+`PEN-F-HSL-alpha-20261017.zip` (sha256 `75bbaf52...`, as the release states) holds two 44,433,408-byte update files,
+`install-alpha/DCOLYMP/E1229999.BIN` and `restore-stock/DCOLYMP/E1229999.BIN`, and the authors' manifest and range
+list. Diffed with small scripts outside the tree, disassembly in the VM only (X unless tagged):
+
+- **The update file is a prefix of the vendor file.** It is the ordinary container holding only the first two blocks,
+  `0x0100` main (load `0x403a0000`, version `0x3101`) and `0x0101` resources (load `0x41800000`); `src/fw/olyfw.mjs`
+  reads it unchanged. `restore-stock` is byte for byte the first 44,433,408 bytes of our
+  `OLY_E_122_3101_0000_0000.BIN`, and its main block is `unpacked/E122`'s (`MODELS.E122.rom_sha256`): the patch's base
+  is stock 3101. Each block's tail checksum (sum32 over head, descrambled body and tail = 0, as `olyfw.mjs` models it)
+  is the only header change: main `0xbb5c812e` -> `0x8b071a9a`, OSD `0xf4e5b95d` -> `0x6c02e1e2`. The camera's SD
+  updater lives in the main block (the pattern `E122????BIN` at `0x60d84070`, D) and is not touched; the version stays
+  3101, so a patched camera reports stock firmware (D).
+- **The diff equals their map.** 5,145 changed bytes in the main block and 725 in the OSD block, plus 4 checksum bytes
+  each, 5,878 in all, as a plain compare of the files; every changed byte lies in one of the range list's 154 payload
+  rows, each row's count and offset agreeing. Merged at a 16-byte gap: 60 runs in the main block, of which 7 (4,682
+  bytes) are new code and data in `0xff` padding and 53 (463 bytes) in-place edits (24 hook sites: a 5-byte `jmp` or a
+  re-targeted call, the displaced instructions replayed), and one in the OSD block (the 52 x 26 "Value" bitmap).
+- **Placement in the overlay segments (D).** E122 loads its main block in segments, as E143 does: the table at
+  `0x60026d7c`, each segment's copy end from `0x600420c1` (`0x601cb000`, `0x60428000`, `0x6069b800`, `0x60a50000`,
+  `0x60fdc800`, ...), the loader `0x600421e1` setting bit n-1 of the loaded mask `0xa1c58404`. The five new areas end
+  just below their segments' copy ends, so the loader brings them in. The patch keeps writable state there through
+  the uncached alias (the H/L table at `0x60427e24`, the editor's axis byte at `0x6069b7b8`, 45 capture rows at
+  `0x6069b590`), and code that touches segment 3's state first tests bit 2 of the mask, but for one jump from segment
+  2 into segment 3 (`0x60253c7f` -> `0x6069b38c`), safe only if segment 3 is always loaded before a capture (I); one
+  test reads the mask through the cached alias (`0x61c58404` at `0x60fdc75b`) where the others use `0xa1c58404` (D).
+- **The mechanism (D unless tagged).** No hidden feature is switched on: the twelve-colour saturation editor (ids
+  931-966) gains H and L. The 36 descriptors point from the -5..+5 lists to the stock -7..+7 list ids 967, 970 and
+  973 use (`0x603dfde6`). H and L live in row 1 of those ids (the store's two rows, `0x602f06e7` / `0x602f0710`), as a
+  word tagged `H1` with its complement as a check (decoder `0x60427c70`, setter `0x60427cb4`); the stock recall lists
+  never select row 1 for 931-966 (X). In screens 5042-5044 a key event (`0x9016`; that it is the Delete key is I)
+  cycles the axis S, L, H; the wheel builder `0x6081b83a..0x6081b8e2` is rewritten in place, two settings-class
+  vtable entries (`0x609a4640`, slots 10 and 43) and the setter call `0x6073659d` are redirected, and a title painter
+  adds "Saturation" / "Hue" / "Lightness". After the stock call `0x604f7272` the hook at `0x604f7506` writes each
+  colour's hue (+0, from 7000..-7000) and lightness (+4, from -300..300) into its 24-byte record (that these fields
+  exist in the stock engine is I). Captures snapshot H/L per job (the processing object grows by 24 bytes at the
+  `malloc` `0x600233bd`), and for ORFs two 3,028-byte processing blocks are rewritten through a small XOR-chain coder
+  (`0x601caa50`; what the blocks are in the ORF is ?). The settings backup gains an 88-byte line
+  `2,PENF_HSL_V1,` + 72 hex digits, with its import.
+- **The Wi-Fi property path.** The camera's Wi-Fi HTTP property get and set (`0x60aa23c7`, `0x60aa26f0`) and the
+  message receiver `0x607ab916` are hooked: id `0xffff` answers `1LSH`, and tagged values `0x4850..0x4852` write S, H
+  or L for ids 931-966, and 967-975 and 916-918, gated by `0x60fdc704`. It is the manifest's Wi-Fi group, for their
+  camera client; their README does not describe what it lets an associated Wi-Fi client write.
+- **Risks the diff shows** beyond those their README states: the version unchanged (patched and stock look alike); the
+  unguarded jump above; the cached-alias mask read; other stock readers of row 1 for the saturation ids not
+  enumerated (?); engine indexes 11-14 reaching the consumers of `0x602fc3a7` (?).
+
+For om-emu's patch track this adds two points to the table above: a candidate may ship as a prefix holding only the
+changed blocks (a two-block stock prefix is the smallest no-op probe of the "does the camera accept it" question on
+E143, ?), and added code belongs in `0xff` padding inside a segment's copy range with the loaded mask tested before
+its state is touched (E143 has 152 to 1,940 such bytes at the end of each of its 10 segments, X; that om-emu's
+`OVERLAY_SEGMENTS` ends are the loader's copy ends is I; state in code segments is riskier on E143's non-coherent
+cores, I). On E143 the patch's hook sites have counterparts by the cross-build map (the GUI dispatch `0x510bb971`,
+the commit's end `0x503eedc9`, the refresh `0x503d9727`, the processing object's constructor `0x50491699`, which
+allocates 9,312 bytes against E122's 14,920; the boot near `0x503c4b0a`, the backup lookup near `0x519c8d16` and the
+Wi-Fi receiver near `0x50bd95d2`, I), and the wheel builder `0x50c92aea` reads id 1084 and then 921.. through the
+getter `0x503c4ba8` (E122's `0x602b9f84`, D / X); E143's colour-engine writer (E122's `0x604f7272`), the wheel's
+geometry and the editor's screen ids were not found.
 
 ## 4. An HSL-style unlock on the OM-1 (E143)
 
@@ -302,9 +365,11 @@ event-per-assumption trace is close to what om-emu's stand-in lists already give
 7. **Their OM-5 burst note for feature-gap step 2** (configurable burst fps): the rate list is the first of several
    limits (a run-time copy, the frame-handle ring and the image pools); check E143's pools before scoping that edit.
    Size: reading. Payoff: avoids a menu-only edit.
+8. **E143's code space and row 1** (from 3.1): confirm that `OVERLAY_SEGMENTS`' ends are the loader's copy ends, so
+   the `0xff` tails are known to be loaded, and list every stock reader of row 1 for ids 921-956 on E143 (and 931-966
+   on E122). Size: 1-2 days. Payoff: the two preconditions of any added-code patch on the OM-1.
 
-**The release archive.** Downloading the 28 MB patched release for a static diff against our stock E122 would add
-little: the manifest already lists every changed range with its stock hash (all verified here) and the assembly
-source of the added code, and their README says the build reproduces the release byte for byte. The diff would
-confirm only their after-hashes. Not worth asking for until E122 runs in the lab, when running the patched image
-would be a test of the board port.
+**The release archive.** It was diffed after all (3.1): the diff confirms the manifest byte for byte and adds what
+the manifest does not say in prose (the update file's shape, the segment-loaded checks and their one gap, the Wi-Fi
+property path's reach). Running the patched image waits for E122 to run in the lab, when it would also be a test of
+the board port.

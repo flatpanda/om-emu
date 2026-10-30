@@ -100,7 +100,7 @@ bodies; the bodies whose image runs at a `0x60xxxxxx` base pair 0.76M-2.08M inst
 | ported | E144 OM-5, E139 E-M1 III | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe included |
 | A | E134 E-M1X | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe included |
 | B | E137 E-M5 III, E142 E-P7, E140 E-M10 IV, E125 E-M1 II, E145 TG-7 | E137, E140 and E125: `bin/modelcheck.mjs`'s path passes on the TFT and the EVF, E142 and E145 (no EVF) on the TFT; the count probe passes on all five; E145 with MENU at its date and time setting (`0x1103`) after the start (2026-10-29) |
-| C | E133 E-PL9, E130 E-M10 III, E129 / E132 TG-5, E118 E-M5 II, E122 PEN-F, E120 E-M10 II | E130: `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe too; E133, E129 and E132 on the TFT (2026-10-29), their cards native; the E118 family's board is ported (2026-10-30): E122's start runs natively to the shooting screen state and stops at about 3 s or S1 in the movie time (2026-10-30), E118's and E120's run to its earlier stop at UI_IN (findings 32 to 34) |
+| C | E133 E-PL9, E130 E-M10 III, E129 / E132 TG-5, E118 E-M5 II, E122 PEN-F, E120 E-M10 II | E130: `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe too; E133, E129 and E132 on the TFT (2026-10-29), their cards native; the E118 family's board is ported (2026-10-30): E122's start runs natively to the shooting screen state and stops at about 3 s or S1 in the movie time (2026-10-30), its EVF after the application's start on a full queue; E118's and E120's past UI_IN to the lab's `g4set` (findings 32 to 37) |
 | D | E100, E101, E106-E113, E115, E117, E121, E126 | not tried |
 | - | the new OM System PEN (E148?) | not served yet (E148-E199 answer nothing, 2026-10-19): re-probe |
 
@@ -273,10 +273,12 @@ the survey table.
   system on the E118 family (`src/fw/facts.mjs` fileSystem reads no SD layer of its form), or a stand-in for its movie
   APIs; then modelcheck's path (with one movie API answered by hand S1, S2, PLAY and INFO ran, X), the EVF's queue 8
   and the kind-3 compositor for a frame.
-  E118 and E120 stopped at the GUI message take's observer (E143 0x510c2a2e); since 2026-10-30 they reach E122's
-  earlier stops, UI_IN on the TFT and queue 8 on the EVF (`docs/model-survey.md` findings 32-34). Open on them: the PWR_EXEC module queue word
-  (the name table gives 0x86, the ports 0x80 or none, finding 34) before S-MODACK runs; what E120's device open waits
-  on per frame (?).
+  E118 and E120 stopped at the GUI message take's observer (E143 0x510c2a2e); since 2026-10-30 they run past UI_IN
+  to the lab's `g4set`, which only E122's entry gives (findings 32-34, 37); E118's EVF faults earlier (0x5006e002, ?).
+  With the three tracks together (finding 37) E122's composite is one colour at the clock warning, and its EVF stops
+  after the application's start on a full queue 156. Open on E118 and E120: the PWR_EXEC module queue word (the name
+  table gives 0x86, the ports 0x80 or none, finding 34) before S-MODACK runs; what E120's device open waits on per
+  frame (?).
   E122's EVF start opens device code 6, BI_EVF (finding 35). Open in the kind-3 compositor (finding 36): which GUI
   layer each osd word of the display record carries (the plane-palette pairing rests on word k = layer k, I), what
   OSD2's and OSD3's pixels of 32 or more do (refused, PAL_FIELD), and what an OSD level below `0x100` does (the EVF's

@@ -54,9 +54,9 @@ through a reference place more; "Per-body status" has their figures).
 | E130 | E-M10 III | 1200 | 25.0 | 0x60400020 (6.9%) | plain | 1.02M | 82 | through E142: modelcheck passes (TFT and EVF; findings 11, 14 and 16) |
 | E129 | TG-5 | 1101 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; MENU answers its date and time setting at the start) since the charger's transfers on serial channel 9 are served (S-SIOIIC, S-CHARGER, finding 24); its settings store since S-BOOTSTAGE (finding 20) |
 | E132 | TG-5 (KOUICHIRO) | 1300 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; its date and time setting has no Cancel, the clock is set) since the charger's transfers are served and S-MODACK answers its industrial category and logger modules (finding 24); its deferred send since finding 21 |
-| E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | through E122: the start runs natively to E122's stops, UI_IN's forward observer on the TFT and the send to queue 8 on the EVF (findings 28, 32-34) |
-| E122 | PEN-F | 3101 | 20.4 | 0x60021020 (7.2%) | plain | 0.79M | 123 | through E130: the start runs natively to the shooting screen state `0x0108` (the GUI draws the clock warning) and stops at the first long timer or S1 in the movie time (findings 28, 31) |
-| E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | through E122: as E118, no per-frame wait in its device open (findings 28, 32-34) |
+| E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | through E122: the start runs natively past UI_IN and stops at the lab's `g4set`, which E122's entry gives and E118's not; the EVF faults earlier (findings 28, 32-34, 37) |
+| E122 | PEN-F | 3101 | 20.4 | 0x60021020 (7.2%) | plain | 0.79M | 123 | through E130: the start runs natively to the shooting screen state `0x0108` (the GUI draws the clock warning; the composite is one colour) and stops at the first long timer or S1 in the movie time; the EVF after the application's start on a full queue (findings 28, 31, 35-37) |
+| E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | through E122: as E118 on the TFT and the EVF (its EVF stops at `g4set` too), no per-frame wait in its device open (findings 28, 32-34, 37) |
 | E113 | E-M10 | 1400 | 18.0 | 0x7d991020 (7.4%) | plain | 0.88M | 155 | not tried (base) |
 | E109 | E-M1 | 4600 | 17.0 | 0x6daf1020 (7.2%) | plain | 0.76M | 139 | not tried (base) |
 | E126 | E-PL8 | 1100 | 18.0 | 0x7d971020 (8.2%) | plain | 0.74M | 140 | not tried (base) |
@@ -619,6 +619,16 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    0x501db1b4, X); the lab names them only in its stand-ins' descriptions, through no A() (X, a grep), so nothing waits
    on them.
 
+37. **The E118 family's starts with findings 29 to 36 together** (2026-10-30; X: a play session per body and device,
+   2.5 s of lab time, its error or its composite). E122's TFT start reaches the GUI state `0x0108`
+   SS_COMMON/ID_ST_CA_REQ_DISP as in finding 31; its composite (finding 36's compositor, 720x480) holds one value, so
+   the clock warning the OSD engine draws into OSD layer 2's records does not reach the composed planes yet (which osd
+   word carries which GUI layer is finding 36's open I). E122's EVF start, now opening device code 6 (finding 35), runs
+   past the camera application's start (S-CAMAPP) and stops on `tsnd_dtq` with timeout -1 to a full queue 156 (from
+   `0x500484bb`). E118's and E120's TFT starts and E120's EVF start run past UI_IN and stop at the lab's `g4set`
+   (H-G4SET), which E122's `MODELS` entry gives and theirs not (finding 34: E122's non-override facts are to be given
+   per body). E118's EVF start faults earlier, a trap 7 at `0x5006e002` (not read yet, ?).
+
 ## Per-body status
 
 The state as of 2026-10-23. Each body's `MODELS` entry (`src/fw/models.mjs`) carries the numbers its `port_via` choice
@@ -877,7 +887,7 @@ natively through the kernel, the timers, the display init and open, the settings
 the play bring-up's UI_IN observer on the TFT, and on the EVF since it opens the built-in EVF (finding 35; it had
 opened the NTSC output and stopped at its send to queue 8). E118 and E120, ported through E122, stopped earlier, at the
 GUI message take's observer while the lab was set up; since findings 32 to 34 (2026-10-30) they run to E122's stop at
-UI_IN.
+UI_IN. With UI_IN's forward read by shape (finding 29) the three run past it; finding 37 has where each stops now.
 
 ## The chained port
 

@@ -54,9 +54,9 @@ through a reference place more; "Per-body status" has their figures).
 | E130 | E-M10 III | 1200 | 25.0 | 0x60400020 (6.9%) | plain | 1.02M | 82 | through E142: modelcheck passes (TFT and EVF; findings 11, 14 and 16) |
 | E129 | TG-5 | 1101 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; MENU answers its date and time setting at the start) since the charger's transfers on serial channel 9 are served (S-SIOIIC, S-CHARGER, finding 24); its settings store since S-BOOTSTAGE (finding 20) |
 | E132 | TG-5 (KOUICHIRO) | 1300 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; its date and time setting has no Cancel, the clock is set) since the charger's transfers are served and S-MODACK answers its industrial category and logger modules (finding 24); its deferred send since finding 21 |
-| E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | stops at import: board fact `intc.irq_osd_engine` unknown (family E118) |
-| E122 | PEN-F | 3101 | 20.4 | 0x60021020 (7.2%) | plain | 0.79M | 123 | stops at import, as E118 |
-| E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | stops at import, as E118 |
+| E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | through E122: the kernel's init runs, the start stops at the GUI message take's observer (finding 28) |
+| E122 | PEN-F | 3101 | 20.4 | 0x60021020 (7.2%) | plain | 0.79M | 123 | through E130: the start runs natively to the play bring-up and stops at UI_IN's forward observer (finding 28) |
+| E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | through E122: as E118 (finding 28) |
 | E113 | E-M10 | 1400 | 18.0 | 0x7d991020 (7.4%) | plain | 0.88M | 155 | not tried (base) |
 | E109 | E-M1 | 4600 | 17.0 | 0x6daf1020 (7.2%) | plain | 0.76M | 139 | not tried (base) |
 | E126 | E-PL8 | 1100 | 18.0 | 0x7d971020 (8.2%) | plain | 0.74M | 140 | not tried (base) |
@@ -435,6 +435,41 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    On E146 a play session stepping its dial (E143's ten positions) changes mode exactly as E143 does (the same
    settings change at each position, P marked C1 at C1; X); the other bodies' mode changes are not measured.
 
+28. **The E118 family's board** (2026-10-30). The family's board facts were read from E122's code and checked on E118
+   and E120 by the census of `fc xx imm32` loads (X; `src/fw/board.mjs` FAMILIES.E118 has every address):
+   - the interrupt controller is E144's one step lower: presented +0x200 + 4 level (the level handlers index the handler
+     table by its (irq + 1) x 4), the inter-CPU doorbell +0x308 / +0x30c, the kernel kick +0x310, K-INTC's +0x314 (D;
+     the doorbell and kick as fishcu/oly_fw_analysis had them, `analysis/oly-fw-analysis/README.md` 2.1). The scaffold
+     had looked for E144's +0x408.. and found none. IRQs: the doorbell 120, the OSD engine 109, the VSC 21 and 23 (D:
+     their attaches and handlers);
+   - the timer keeps E143's {ctl, reload, counter} records in ten channels, with one IE word +0x78 and one
+     write-1-to-clear status word +0x7c for channels 1..8 and one IRQ each, 57 + n (D); the software-timer init starts
+     no channel of its own (X), so the board gives no software tick (`timer.soft_tick` null);
+   - the OSD engine and the SCPU interface are E144's forms (D: the engine's registers 0x00..0x50 and its command
+     encoding, the SCPU init's register order); the SCPU's word array starts at +0x04;
+   - the VSC is a kind of its own (`src/dev/vsc.mjs` kind 3): two channels of 0x2000, no name table in the image (X: no
+     register name string), so its register file is the offsets the family's code names (the census, and the OSD scaler
+     words its writers index, D), the vertical total in SYNC2's low 11 bits (I), latched copies of four registers at
+     +0x1c00 (D for the reads, I that they are the latched values), plain storage from +0x600 (I); its compositor is not
+     written (COMPOSE answers FEATURE_UNOBSERVED).
+   Three rules learned the family's forms: the hardware-timer table of 8-byte entries (`hwTimer`), a constant vtotal
+   function with no period getter after it (`framePeriod` null: no frame period the lab can read, so A-PERIOD assumes
+   E143's TFT period), and no boot state words (`bootState`). E122 ports through E130 (113 unmapped through E125, 114
+   through E130 with 122 of its overrides carried, 116 direct; through E142, E137, E144 and E140 the port stopped at the
+   hardware-timer rule on a carried place, X) with its own overrides (`src/fw/overrides-E122.mjs`). Its start then met,
+   in order (X): the level-0 slot and the inline IVARs (as E144's), the GUI's output-device property (id 4014), the
+   touch I2C write, the vsync flags, the hardware-timer init, the software-timer init's empty pool (H-DRVINIT: the reset
+   path's early driver inits, which the lab's start skips, set it up; they also configure the GIO pins and read the
+   board id from three strap pins, which the stub reads 0: board byte 4), a display task the display init starts
+   (`extra_tasks`), no disp_sync module, the frame period, a scaler register the census missed, the stub pages of the
+   serial channels, the clock block, the pin mux and the encoder, the SCPU word array, the boot state, the dial init
+   (its table by the board byte) and then UI_IN's forward, which E122 inlines at three sites of its post (D): the next
+   stop. On the EVF the start stops earlier: after two more stub pages (0x99100000, 0x98a00000, which its open writes),
+   at a synchronous send to queue 8 from the display code (returning to 0x502f6bbd), whose receiver the lab does not run
+   (X). E118 and E120 port through E122 (170 and 173 of its overrides carried, X); their dial inits take a fixed table,
+   and the leg map put four of their level handlers wrong, which the kernel's own table corrects (X); they stop at the
+   GUI message take, which `guiTake` finds on neither (X).
+
 ## Per-body status
 
 The state as of 2026-10-23. Each body's `MODELS` entry (`src/fw/models.mjs`) carries the numbers its `port_via` choice
@@ -687,12 +722,12 @@ request to CATEGORY_MAIN S-MODACK now answers (modack_queues), as LOGGER_MAIN's;
 the date and time setting without Cancel, the clock set by modelcheck's prompt answer, and `bin/modelcheck.mjs`
 passes; S1 does not stop at S-AFOSD since the framePlane rule gates it (finding 22).
 
-**E118 (E-M5 II), E122 (PEN-F), E120 (E-M10 II).** They stop at import on 18 board facts their family scaffold leaves
-unread (`FAMILIES.E118`, `src/fw/board.mjs`: the interrupt controller's IPI, kick and control registers and its
-OSD-engine, VSC and IPI lines, the timer's tick tables, the VSC, OSD engine and SCPU), and `src/dev/intc.mjs` reads
-`intc.irq_osd_engine` at import (X). The family scan found none of E144's IPI / kick / control offsets on this
-controller and no IE or status words in its timer records, so some of these are absent rather than unread: the family
-needs a board port whose devices accept "no such register", not one more value.
+**E118 (E-M5 II), E122 (PEN-F), E120 (E-M10 II).** Until 2026-10-30 they stopped at import on 18 board facts their
+family scaffold left unread (`intc.irq_osd_engine` first, X). The board is read since (finding 28): E122's start runs
+natively through the kernel, the timers, the display init and open, the settings store and the dial init and stops at
+the play bring-up's UI_IN observer on the TFT (on the EVF at the display code's send to queue 8); E118 and E120, ported
+through E122, stop earlier, at the GUI message take's observer while the lab is set up (X: `bin/modelcheck.mjs E118 E122
+E120 --no-port`, each FAILED with that stop).
 
 ## The chained port
 
@@ -726,5 +761,5 @@ The new OM System PEN (expected as E148) is not on the update server. Lens and a
 Besides E143, E146 and E147, nine bodies pass the player with a picture (the shooting screen in their frame, S1 taken,
 the player settled running): E144, E139, E134, E137, E142, E140, E125, E130 and, after MENU at its date and time
 setting, E145 (finding 22). E133 passes modelcheck since 2026-10-29, E129 and E132 too (finding 24: E129 after MENU,
-E132 after its clock is set at its date and time setting); the E118 family runs no firmware code in the lab yet, so
-nothing above says how far it boots. The next steps are in `ROADMAP.md` "Multi-model".
+E132 after its clock is set at its date and time setting); the E118 family's starts run part way (finding 28). The next
+steps are in `ROADMAP.md` "Multi-model".

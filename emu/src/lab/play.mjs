@@ -14,7 +14,7 @@ import { sinkEdid } from './edid.mjs';
 import { Accelerometer } from './acc.mjs';
 import { Storage, STORAGE } from './storage.mjs';
 import { NativeLens } from './lens.mjs';
-import { IoExpanders, PowerOff, startPowerManager } from './power.mjs';
+import { IoExpanders, PowerOff, POWER_OFF, startPowerManager } from './power.mjs';
 import { SioBus } from './sio.mjs';
 import { imageView } from '../fw/image.mjs';
 import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143, DPC_E143 } from '../fw/facts.mjs';
@@ -822,7 +822,8 @@ export class PlaySession extends N.NavSession {
     this.camapp = null;            // S-CAMAPP (camapp.mjs), from the bring-up on
     this.acc = null;               // the accelerometer (acc.mjs) on a body that gives it (models.mjs acc)
     this.storage = null;           // the card and the file system (storage.mjs) on a body that runs them (models.mjs card_fs)
-    this.ioexp = null;             // S-IOEXP and the power manager (power.mjs) on a body that gives power_native
+    this.ioexp = null;             // S-IOEXP and the power manager (power.mjs) on a body that gives power_native (IO
+                                   // expanders: on a body whose power-off has them)
     this.power_manager = null;
     // the lens on the mount natively (lens.mjs), the default on a body that gives it (models.mjs lens_native) and runs
     // the card's file system, whose NAND access the lens data cache shares (S-LENSNAND); its lock pin switch released
@@ -924,7 +925,7 @@ export class PlaySession extends N.NavSession {
     if (this.scpu_port) this.scpu_port_bring_up();
     for (let g = 0; g < GROUP_BYTES.length; g++) if (GROUP_LIVE[g] && !(this.scpu_port && g === SCPU_PORT_GROUP)) this.push_group(g);
     if (lab.scpu_link && uiinScan()) this.uiin_scan_bring_up();
-    if (lab.scpu_link && MODEL_INFO.power_native) this.power_manager_bring_up();
+    if (lab.scpu_link && POWER_OFF) this.power_manager_bring_up();
     this.idle_codes = lab.uiin_codes.map(([, c]) => c);
     if (this.touch_on) this.touch_bring_up();
     if ((o.us_clock ?? 'lab') === 'lab') lab.sim.write(IRQ.TIMER_DEBUG + IRQ.T_USMODE, pack('<I', 1));
@@ -1068,9 +1069,11 @@ export class PlaySession extends N.NavSession {
   // S-IOEXP and H-PWRSTART (power.mjs): the IO expanders' requests answered from here on, then the power manager
   // started natively, as the boot starter would have started it
   power_manager_bring_up() {
-    this.ioexp = new IoExpanders(this.lab, MODEL_INFO.power_native.ioexp);
-    this.ioexp.install();
-    this.power_manager = startPowerManager(this, MODEL_INFO.power_native.pwr);
+    if (POWER_OFF.ioexp) {
+      this.ioexp = new IoExpanders(this.lab, POWER_OFF.ioexp);
+      this.ioexp.install();
+    }
+    this.power_manager = startPowerManager(this, POWER_OFF.pwr);
   }
   // H-ACCINIT, S-ACCREG, S-ACCSAMPLE and H-SLOPEINIT (acc.mjs): the ACC module init and PER_SLOPE's init natively in
   // the boot's place, before the application starts, since its GUI starts PER_SLOPE for the gauge (startLevel at the
@@ -1445,10 +1448,10 @@ export class PlaySession extends N.NavSession {
   // the link, the firmware's own power-off from the HFW's shutDown to its last write, as a step of its own; null
   // elsewhere (the player closes the session at once, as before)
   power_down() {
-    if (!MODEL_INFO.power_native || !this.lab.scpu_link || !this.ioexp) return null;
+    if (!POWER_OFF || !this.lab.scpu_link || !this.power_manager) return null;
     const lab = this.lab, n0 = lab.log.length;
     this.begin(`${String(this.steps.length).padStart(2, '0')}-power off`);
-    const off = new PowerOff(this, MODEL_INFO.power_native).run();
+    const off = new PowerOff(this, POWER_OFF).run();
     this.end('power off', 'power', [], [[0, lab.log.length - n0]], { power_off: off });
     return off;
   }

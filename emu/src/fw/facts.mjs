@@ -854,6 +854,159 @@ function powerTask(img, kcb) {
   return taskRunningTo(img, kcb, [...modules].flatMap((m) => callsTo(img, m)), PWR_TASK_SPAN, 'powerTask', `a call of the power init calling ${h8(0x50000000 + init)}`);
 }
 
+// The power manager and the power-off natively (fact 'power.off', src/lab/power.mjs; docs/hle-gaps.md 4.7.4), read
+// at the port's place of E143's flash save (FLASH_SAVE_E143) and the file system's NAND access (fileSystem). E143's
+// values (POWER_OFF_E143) with their evidence, D unless tagged; each part below is read by its shape, the same on E146
+// and E147 (X: read on each, test/test_facts.mjs POWER_OFF_FOUND):
+// - pwr: the boot starter 0x50023eca's start of the power manager, `call init; movhu (W),d0; exth d0; call OlyTaSt;
+//   mov NAME,a0` with NAME the task's name "PWR_MAIN" (0x500240c4..0x500240d9): {init, id_word}, the init 0x50044eb6
+//   (which runs the start-up message {0x100, 0x20} through the task's handler 0x5004408f) and W 0x60042d3a, which
+//   holds PWR_MAIN's static task id (10; entry 0x50043cdb, which waits on its flag, the word 0x60042f86, for its
+//   queue's messages, the word 0x600431d8)
+// - end: the SCPU window's last write, `mov 127,d0; mov d0,(0x98e0009c)` (0x5004dfe0 in 0x5004dfd0), whose one call
+//   right after another call is api_system's power-off sequence's (0x5041fa85 -> 0x50044ca8); that call sends the
+//   sub-CPU its 0x85 (0x5005cdfd at 0x50044de0: `{1, 1, 0}` for setting 19, `{3}` for 9, else `{1, 0, 0}`), and end
+//   is the address after the last write's call (0x50044de7, end 0x50044dee)
+// - poll: in the 0x85 sender, up to its first return, the wait for the ready pin after the send, `mov pin,d0; call;
+//   cmp 0,d0; bne` back to the mov (0x5005ceaf..ba, the GIO read 0x5000297f): {at, pin}, pin 102
+// - ioexp: the IO expanders' power-off commands the sequence calls before the 0x85 sender (by setting 0xa011, 9: the
+//   body's 5 and the PBH's 4, else 6 and 5; 0x50044da8..0x50044ddd), each `mov imm8,d0; mov 0,a0; call post; call
+//   wait; ret`, the wait opening `mov imm16,d0; mov d0,(4,sp); movhu (flag),d0` (the timeout, then the completion
+//   flag's id word, whose bit 1 the caller waits for): {body, pbh}: {post, flag} in the order the sequence first calls
+//   them (the body's commands 0x50055fe4 / 0x50055fd3 send 6 or 5 through the post 0x50056a85, PER_IOEXP's data queue
+//   0x600431be, and wait in 0x50056c93 on 0x60043170; the PBH's 0x500541d9 / 0x500541c8 send 5 or 4 through
+//   0x50054ede, PER_IOEXP_PBH's 0x600431c0, and wait in 0x500550f4 on 0x60043180; I: that the order names them on
+//   another body), or null where the sequence calls none (E147: no IO expander code, X)
+// - shutdown: the shell's "sdk api shutdown mode reason", the function that loads the usage text
+//   "API_SHUTDOWN_NORMAL ..." (0x50b05071), calls the HFW's CameraCommon getter and a slot of the object's vtable
+//   within SHELL_SPAN bytes: `call getter; mov (a0),a1; mov (12,sp),d0; mov (16,sp),d1; mov (N,a1),a1; calls (a1);
+//   mov d0,d2; mov ID,d0` (0x50b05169..0x50b0517c: the getter 0x50afccd5, its singleton 0x60361140 made by 0x50afd238
+//   with the vtable 0x60e02ea4, slot 2, ID 0x10102,
+//   the trace id "CameraCommon::shutDown" has in the name table 0x6035f100). entry: the one function whose opening
+//   (after a return, with none before the load) loads ID within SHUTDOWN_HEAD bytes, CameraCommon::shutDown
+//   0x50afd2d7 (the load at +0x10), whose run-time address the image holds as a word (the vtable 0x60e02ea4's slot 2);
+//   mode and reason: the usage text's values of API_SHUTDOWN_NORMAL and API_SHUTDOWN_REASON_BUTTON (1 and 1; the
+//   text 0x60e10b2c..0x60e10b6f; that the lever is BUTTON is I)
+// - flash_save: the return address of the one call of the flash save in OlyHfwPower's startShutDown 0x50af654b
+//   (reached from shutDown through 0x50abe7e0), the function that loads its trace "OlyHfwPower::startShutDown
+//   nextShootTime = %d" (0x50af6c52): the call at 0x50af6a0e, return 0x50af6a15
+// - log: the RAM log's save (api 0xc0036 0x50420fd4 -> 0x518f7381: the callbacks of the table 0x60379ef0, 50 ms,
+//   0x50039def writing 0x100 to +0x800 of the four interrupt-controller banks, a checksum of 2 MiB from 0x63ae0000)
+//   to the NAND: the one call of the NAND access after `mov area,a1; mov size,d0; mov op,d1` with the access's write
+//   operation and an area other than the file system's whose function, before it, compares a sum's index with `cmp
+//   size-64,Dn` (the area's words but its last 64 bytes; 0x518f73ec `cmp 0x1fffc0,d3`; the NAND's three other such
+//   writes, two in 0x5180a8.. and the shell's 1 MiB at 0x518f7b2d, sum nothing, X): the call 0x518f7428, 0x4e820000,
+//   0x200000: {nand: [area, size], ret}
+// Returns null where no load of "PWR_MAIN" starts a task; throws where a part is missing or found twice.
+export const POWER_OFF_E143 = {
+  pwr: { init: 0x50044EB6, id_word: 0x60042D3A },
+  shutdown: { object: 0x50AFCCD5, slot: 2, entry: 0x50AFD2D7, mode: 1, reason: 1 },
+  flash_save: 0x50AF6A15, log: { nand: [0x4E820000, 0x200000], ret: 0x518F742F }, end: 0x50044DEE,
+  ioexp: { body: { post: 0x50056A85, flag: 0x60043170 }, pbh: { post: 0x50054EDE, flag: 0x60043180 } },
+  poll: { at: 0x5005CEAF, pin: 102 },
+};
+// The power-off's library numbers, the same on every body that runs it (src/lab/power.mjs): ioexp_write, the PBH
+// expander's request the GIO extension's write sends (E143 0x500541f3: request 1 with {+0 the pins' mask, +4 a byte,
+// +8 its request's first word, +16 the request's callback, +20 its argument}, 0x50054237..0x5005425a, D; E146's, X:
+// its power manager's start sends it), whose callback the API calls itself while the PBH's state 0xa32c4915 is 5
+// (0x5005421d..33, D)
+export const POWER_OFF_LIB = { ioexp_write: 1 };
+const PWR_MAIN_NAME = 'PWR_MAIN', SCPU_LAST_WRITE = [0x80, 0x7f, 0xfc, 0x81, 0x9c, 0x00, 0xe0, 0x98];   // 0x98e0009c: src/dev/scpu.mjs
+const LAST_WRITE_HEAD = 0x40, LOG_SPAN = 0x100, SEQUENCE_SPAN = 0x200, SENDER_SPAN = 0x200, SHELL_SPAN = 0x200, SHUTDOWN_HEAD = 0x20, START_SPAN = 0x800;
+const SHUTDOWN_USAGE = 'API_SHUTDOWN_NORMAL', SHUTDOWN_BUTTON = 'API_SHUTDOWN_REASON_BUTTON', START_SHUTDOWN = 'OlyHfwPower::startShutDown nextShootTime';
+// `mov area,a1; mov size,d0; mov op,d1` before the NAND access's call (the RAM log's, E143 0x518f7416)
+const LOG_LOADS = [0xfc, 0xdd, null, null, null, null, 0xfc, 0xcc, null, null, null, null, 0xfc, 0xcd, null, null, null, null];
+const SLOT_CALL = [0xf0, 0x04, 0x58, null, 0x59, null, 0xf8, 0x25, null, 0xf0, 0xf1, 0x82, 0xfc, 0xcc];
+function powerOff(img, save) {
+  const rule = 'powerOff', { base } = imageBase(img), D = (o) => h8(0x50000000 + o);
+  const callBefore = (p) => [callAt(img, p - 7), callAt(img, p - 5)].find((c, k) => c?.len === 7 - 2 * k);
+  const walk = (from, to, each) => { for (let p = from; p < to && !isRet(img, p);) { const c = callAt(img, p); each(p, c); p += c?.len ?? insnLength(img[p], img[p + 1]); } };
+  // pwr
+  const starts = [];
+  for (const o of findString(img, PWR_MAIN_NAME, { nul: true, after: true })) {
+    for (const p of loadsOf(img, (base + o) >>> 0)) {
+      const taSt = img[p + 1] === 0xdc ? callBefore(p) : undefined, s = taSt ? p - taSt.len : -1;
+      if (!taSt || img[s - 1] !== 0x18 || img[s - 7] !== 0xfc || img[s - 6] !== 0xac) continue;
+      const init = callBefore(s - 7);
+      if (init) starts.push({ init: 0x50000000 + init.to, id_word: u32(img, s - 5) });
+    }
+  }
+  if (!starts.length) return null;
+  if (starts.length > 1) throw new Error(`${rule}: ${starts.length} starts of ${PWR_MAIN_NAME}, want one`);
+  // end, and the 0x85 sender before it
+  const hit = oneAt(img, SCPU_LAST_WRITE, rule, 'last writes of the SCPU window\'s request word');
+  const last = hit === null ? undefined : entryOf(img, hit, LAST_WRITE_HEAD);
+  if (last === undefined) throw new Error(`${rule}: no called function writes 127 to the SCPU window's request word`);
+  const seqs = callsTo(img, last).map((at) => ({ at, len: callAt(img, at).len, sender: callBefore(at) })).filter((c) => c.sender);
+  if (seqs.length !== 1) throw new Error(`${rule}: ${seqs.length} calls of the last write ${D(last)} right after a call, want one`);
+  const [{ at: lastCall, len, sender }] = seqs, sendAt = lastCall - sender.len;
+  // poll, in the sender
+  const polls = [];
+  walk(sender.to, sender.to + SENDER_SPAN, (p, c) => {
+    if (img[p] !== 0x80 || !(c = callAt(img, p + 2)) || !bytesAt(img, p + 2 + c.len, [0xa0, 0x00, 0xc9])) return;
+    const br = p + 2 + c.len + 2;
+    if (br + (img[br + 1] << 24 >> 24) === p) polls.push({ at: 0x50000000 + p, pin: img[p + 1] });
+  });
+  if (polls.length !== 1) throw new Error(`${rule}: the 0x85 sender ${D(sender.to)} polls a pin ${polls.length} times, want once`);
+  // ioexp, in the sequence before the sender
+  const seq = entryOf(img, sendAt, SEQUENCE_SPAN), posts = new Map();
+  if (seq === undefined) throw new Error(`${rule}: the 0x85 send at ${D(sendAt)} is in no called function`);
+  walk(seq, sendAt, (p, c) => {
+    const t = c?.to;
+    if (!c || !bytesAt(img, t, [0x80, null, 0x90, 0x00])) return;
+    const post = callAt(img, t + 4), wait = post && callAt(img, t + 4 + post.len);
+    if (!wait || !isRet(img, t + 4 + post.len + wait.len) || !bytesAt(img, wait.to, [0x2c, null, null, 0x42, 0x04, 0xfc, 0xac])) return;
+    const flag = u32(img, wait.to + 7), was = posts.get(post.to);
+    if (was !== undefined && was !== flag) throw new Error(`${rule}: the expander post ${D(post.to)} waits on two flags`);
+    posts.set(post.to, flag);
+  });
+  if (posts.size !== 0 && posts.size !== 2) throw new Error(`${rule}: the sequence ${D(seq)} sends ${posts.size} IO expanders their power-off commands, want none or two`);
+  const ex = [...posts].map(([post, flag]) => ({ post: 0x50000000 + post, flag }));
+  // shutdown
+  const text = (o) => { let e = o; while (img[e]) e++; return String.fromCharCode(...img.subarray(o, e)); };
+  const value = (name) => {
+    const at = findString(img, name + ' ', { after: true }), m = at.length === 1 ? /= 0x([0-9a-f]+)$/i.exec(text(at[0])) : null;
+    if (!m) throw new Error(`${rule}: ${at.length} usage lines of ${name} with a value, want one`);
+    return { at: at[0], value: parseInt(m[1], 16) };
+  };
+  const usage = value(SHUTDOWN_USAGE), button = value(SHUTDOWN_BUTTON), shell = loadsOf(img, (base + usage.at) >>> 0);
+  if (shell.length !== 1) throw new Error(`${rule}: ${shell.length} loads of the shutdown usage text, want one`);
+  const slots = [];
+  walk(shell[0], shell[0] + SHELL_SPAN, (p, c) => { if (c && bytesAt(img, p + c.len, SLOT_CALL)) slots.push({ getter: c.to, at: p + c.len }); });
+  if (!slots.length) throw new Error(`${rule}: the shell's shutdown ${D(shell[0])} calls no getter's vtable slot within ${SHELL_SPAN} bytes`);
+  const { getter, at: slotAt } = slots[0], id = u32(img, slotAt + SLOT_CALL.length);
+  const entries = new Set();
+  for (const l of loadsOf(img, id)) {
+    for (let e = l - SHUTDOWN_HEAD; e < l; e++) if (isRet(img, e - 3) && runsTo(img, e, l)) { entries.add(e); break; }
+  }
+  const entry = [...entries][0], word = [0, 8, 16, 24].map((k) => (base + entry) >>> k & 0xff);
+  if (entries.size !== 1 || oneAt(img, word, rule, 'words of the shutdown entry') === null) throw new Error(`${rule}: ${entries.size} functions open with the shutdown's trace id ${h8(id)}${entries.size === 1 ? ', none held as a word' : ''}, want one in a vtable`);
+  // flash_save, in startShutDown
+  const traces = findString(img, START_SHUTDOWN, { after: true }).flatMap((o) => loadsOf(img, (base + o) >>> 0));
+  const start = traces.length === 1 ? entryOf(img, traces[0], START_SPAN) : undefined, saves = [];
+  if (start === undefined) throw new Error(`${rule}: ${traces.length} loads of startShutDown's trace${traces.length === 1 ? ' in no called function' : ''}, want one`);
+  walk(start, start + START_SPAN * 2, (p, c) => { if (c && c.to === save - 0x50000000) saves.push(0x50000000 + p + c.len); });
+  if (saves.length !== 1) throw new Error(`${rule}: startShutDown ${D(start)} calls the flash save ${h8(save)} ${saves.length} times, want once`);
+  // log
+  const nand = fileSystem(img)?.nand, logs = [];
+  if (!nand) throw new Error(`${rule}: fileSystem reads no NAND access`);
+  for (const c of callsWhere(img, (t) => t === nand.access - 0x50000000)) {
+    const at = c.at - LOG_LOADS.length, area = u32(img, at + 2);
+    if (!bytesAt(img, at, LOG_LOADS) || u32(img, at + 14) !== nand.write || area === nand.area[0]) continue;
+    // the save's checksum: `cmp size-64,Dn`, the area's words but its last 64 bytes, before the write
+    const size = u32(img, at + 8), fn = entryOf(img, at, LOG_SPAN);
+    let sums = false;
+    if (fn !== undefined) walk(fn, at, (p) => { sums ||= img[p] === 0xfc && (img[p + 1] & 0xfc) === 0xc8 && u32(img, p + 2) === size - 64; });
+    if (sums) logs.push({ nand: [area, size], ret: 0x50000000 + c.at + c.len });
+  }
+  if (logs.length !== 1) throw new Error(`${rule}: ${logs.length} NAND writes of an area its function sums, want one`);
+  return {
+    pwr: starts[0], shutdown: { object: 0x50000000 + getter, slot: img[slotAt + 8] / 4, entry: 0x50000000 + entry, mode: usage.value, reason: button.value },
+    flash_save: saves[0], log: logs[0], end: 0x50000000 + lastCall + len,
+    ioexp: ex.length ? { body: ex[0], pbh: ex[1] } : null, poll: polls[0],
+  };
+}
+
 // The touch task's start in the boot (fact 'touch_start', and through bin/port.mjs the places of E143's touch init
 // TOUCH_INIT_E143 0x501e3dca and the touch task's id word TOUCH_TASK_ID_E143 0x60042dcc, src/lab/play.mjs H-TPINIT,
 // which calls the init and starts the task by the id it reads there), read at the port's places of E143's CPU 0 kcb
@@ -2480,7 +2633,7 @@ export function readPlacedFacts({ img, at }) {
   const dial = dialPtr !== null ? dialStore(img, dialPtr) : undefined;
   if (dial !== undefined) facts.dial = dial;
   if (kcb !== null && uiFlag !== null) facts.ui_in = { task: uiInTask(img, kcb, uiFlag) };
-  if (kcb !== null) facts.power = { task: powerTask(img, kcb) };
+  if (kcb !== null) facts.power = { task: powerTask(img, kcb), ...(flashSave !== null && { off: powerOff(img, flashSave) }) };
   const tpStart = kcb !== null && tpTask !== null && taSt !== null ? touchStart(img, kcb, tpTask, taSt) : undefined;
   if (tpStart !== undefined) facts.touch_start = tpStart;
   const evWt = at(OLYEVWT_E143);

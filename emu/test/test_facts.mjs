@@ -23,8 +23,9 @@
 //               the frame period words against PERIOD_FOUND and A(), the function direct start against DIRECT_FOUND and
 //               A(), the event broker init against BROKER_FOUND and A(), the error log against ERRLOG_FOUND and A(),
 //               the touch panel's open against TP_OPEN_FOUND and A(), the play component's wrappers against
-//               WRAPPERS_FOUND and A(), the USB-disconnect power-off against POWER_OFF_FOUND, the serial controller's driver
-//               against SIO_FOUND, the GUI canvas, OSD banks
+//               WRAPPERS_FOUND and A(), the USB-disconnect power-off against POWER_OFF_FOUND, the power manager's
+//               start and the power-off sequence against POWER_SEQ_FOUND, the serial controller's driver against
+//               SIO_FOUND, the GUI canvas, OSD banks
 //               and kind-3 area against GUI_FOUND, the rec view component's state word against RECVIEW_FOUND, CPU 0's
 //               init task and OlyTaWu against RTOS_FOUND and A(), the DB init's and the application's flash saves
 //               against STORE_FOUND, APP_SAVES_FOUND and APP_SAVES_COUNT, the touch I2C length arguments against
@@ -36,7 +37,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
-  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, SIO_E143, LENS_DRIVER_E143 } from '../src/fw/facts.mjs';
+  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -167,6 +168,31 @@ const UI_IN_FOUND = { E143: 0x5014B736, E125: 0x500FEBDE };
 const TOUCH_START_FOUND = {
   E143: { init: 0x501E3DCA, id_word: 0x60042DCC }, E134: { init: 0x50217D43, id_word: 0x6004145E },
   E125: { init: 0x5022D065, id_word: 0x60040CAA },
+};
+// The power manager's start and the power-off (power.off; src/fw/facts.mjs powerOff): E143's as src/fw/models.mjs gave
+// them by hand before the rule (POWER_OFF_E143, D; the task by its static id word now, not its entry), E146's and
+// E147's as read by hand (D, 2026-10-29: E146 the starter's call 0x500241a1 and id word 0x60042d62, the sequence's
+// expander commands 0x50057a66 / 0x50055c5b with their waits 0x50058715 / 0x50056b76, the 0x85 sender 0x5005e87f's
+// poll 0x5005e931, the last write 0x5004fa52 at 0x500459ee, the RAM log's write 0x5190a062, shutDown 0x50b08199
+// loading 0x10102 at +0x10; E147 the starter's 0x50024120 with 0x60042ce2, the sequence 0x50045807 calling no
+// expander, the sender 0x500599f7's poll 0x50059aa9, the last write 0x5004f78f at 0x50045923, the RAM log's write
+// 0x519123a8), and none on the bodies whose firmware holds no start of PWR_MAIN (X)
+const POWER_SEQ_FOUND = {
+  E143: POWER_OFF_E143,
+  E146: {
+    pwr: { init: 0x50045ABD, id_word: 0x60042D62 },
+    shutdown: { object: 0x50B07B86, slot: 2, entry: 0x50B08199, mode: 1, reason: 1 },
+    flash_save: 0x50B017E1, log: { nand: [0x4E820000, 0x200000], ret: 0x5190A069 }, end: 0x500459F5,
+    ioexp: { body: { post: 0x50058507, flag: 0x6004319E }, pbh: { post: 0x50056960, flag: 0x600431AE } },
+    poll: { at: 0x5005E931, pin: 102 },
+  },
+  E147: {
+    pwr: { init: 0x500459F2, id_word: 0x60042CE2 },
+    shutdown: { object: 0x50B124FA, slot: 2, entry: 0x50B12B11, mode: 1, reason: 1 },
+    flash_save: 0x50B0C09E, log: { nand: [0x4E820000, 0x200000], ret: 0x519123AF }, end: 0x5004592A,
+    ioexp: null, poll: { at: 0x50059AA9, pin: 102 },
+  },
+  E144: null, E139: null, E134: null, E137: null, E142: null, E140: null,
 };
 // The touch task's command queue (touch_task; src/fw/facts.mjs touchQueue): E143's as the lab gives it
 // (src/fw/facts.mjs TOUCH_TASK_QUEUE_E143: the flag its loop waits on at 0x501e3ef2, the queue it receives from at
@@ -603,6 +629,8 @@ export function factsTests() {
     const tq = placed?.touch_task;
     if (TOUCH_QUEUE_FOUND[code] && (code === 'E143' || PORTS[code])) ok(same(tq, TOUCH_QUEUE_FOUND[code]), `${code}: touch_task ${hx(tq ?? placed)}, found ${hx(TOUCH_QUEUE_FOUND[code])}`);
     if (tq !== undefined && PORTS[code]) ok((PORTS[code][TP_FLAG_E143] ?? TP_FLAG_E143) === tq.flag, `${code}: A() of the touch flag word ${hx(PORTS[code][TP_FLAG_E143])}, the rule's ${hx(tq)}`);
+    // the power-off's facts, where the rule reads them
+    if (code in POWER_SEQ_FOUND && (code === 'E143' || PORTS[code])) ok(same(placed?.power?.off, POWER_SEQ_FOUND[code]), `${code}: power.off ${hx(placed?.power ?? placed)}, found ${hx(POWER_SEQ_FOUND[code])}`);
     if (LENS_TABLE_FOUND[code] && (code === 'E143' || PORTS[code])) ok(placed?.lens_record?.zoom_table === LENS_TABLE_FOUND[code], `${code}: lens_record ${hx(placed?.lens_record ?? placed)}, found ${LENS_TABLE_FOUND[code]}`);
     // the lens driver, and the port's places of E143's lens flags and LENS_EXEC's queue word (the map's, which S-LENS and
     // the camera application's module queues use) at the rule's

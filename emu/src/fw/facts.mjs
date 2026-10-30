@@ -2278,7 +2278,13 @@ const le32 = (v) => [v & 0xff, v >>> 8 & 0xff, v >>> 16 & 0xff, v >>> 24];
 //   d0,(busy); ret [],4` (E143 0x5088fcf2). The bring-up (init) opens with the queue's creation, `movhu (Q),d0; mov
 //   imm32,a0; exth d0; mov 16,d1; mov 10,a1` (E143 0x5088fc8d, the boot task's call), within FS_INIT bytes before its
 //   end. fileclbk {entry, queue (the id: 0x1f on the E143 family, E145, E129 and E132, 0x22 on the others, X), busy
-//   (the word that holds the message FILECLBK handles)}
+//   (the word that holds the message FILECLBK handles), reply (the reply to the message's sender, `mov (a0),d1; cmp
+//   0,d1; beq` with the status in d0, which the loop calls after its dispatch, `mov a2,a0; exthu d0; call`, within
+//   FCB_REPLY bytes: E143 0x508900c4 from 0x5088fd6b, E122 0x50577e41 from 0x50577a79)}
+// - fat_error: where dosfat leaves its error for the requester, the request block's +48 (`movhu Dm,(48,An)` before the
+//   error return's `mov imm32,a0; ... mov imm16,d1`, three places on each of 15 images, E143 0x508813e4, 0x5088163f,
+//   0x50881736, X), or null where it does not (the E118 family: E122's dosfat ends 0x5056958e without it, D), where
+//   only FILECLBK's reply carries it
 // - tasks: the tasks the bring-up's callees start, each callee ending `movhu (W),d0; exth d0; call OlyTaSt; clr d0;
 //   ret` (E143 0x50894d42 FILEFGND's id word 0x60042d42, 0x5087cd68 DCFPROC_SUB's 0x60042d2a; a third, 0x44..0x47, on
 //   E125, E133, E130, E129, E132 and the E118 family, X), all through one OlyTaSt: their id words (run-time addresses;
@@ -2290,17 +2296,31 @@ const le32 = (v) => [v & 0xff, v >>> 8 & 0xff, v >>> 16 & 0xff, v >>> 24];
 //   E143 0x500022c2, [0x41a00000, 0x80000], 0x10200, 0x10100; the E144 family's flash access 0x5003b76c (E144),
 //   [0x406a0000, 0x60000], 0x102, 0 (D; the others X: 384 or 256 KiB, read 0x102 or 0x103, write 0). The immediates
 //   by a straight-line walk (immediatesAt): E143's `mov imm32` forms, E144's `mov imm16,d1` and `clr d1`
-//   (0x50682537 `mov 258,d1`, 0x50682572 `clr d1`)
-// - command: the SD command layer, `mov a0,a3; cmp 0,a3; bne; ret`, then the port's busy test, whose completion is
-//   `mov (8,a3),a1; mov 0x1403,d0; movhu d0,(74,a3); mov a3,a0; calls (a1)` (E143 0x508ad03c, SD_COMMAND)
+//   (0x50682537 `mov 258,d1`, 0x50682572 `clr d1`). The E118 family has no such read: its file layer keeps a record in
+//   flash, which the drive status reads (E122 0x5056482c from 0x50562cf8): `call G; mov M,a0; mov AREA,a1; add
+//   511,d0; and -512,d0; mov 259,d1; call ACCESS`, G returning the record's size (0x50579b21 `mov 47480,d0`), then the
+//   record after it, 1024 bytes at the rounded size (`add AREA,d1; mov d1,a1; mov 1024,d0; mov 259,d1`, 0x5056492e,
+//   0x50564e61, which checks it for "OLYM") and the write `mov AREA,a1; clr d1` (0x50564d94); its area is the two
+//   records (nandRecord: E122 0x500510c1, [0x402a0000, 0xbe00], 0x103, 0; E118 and E120 at 0x40280000, X)
+// - command: the SD command layer, `mov a0,aN; cmp 0,aN; bne; ret`, then its busy test, whose completion is `mov
+//   (8,aN),a1; mov 0x1403,d0; movhu d0,(S,aN)` and `calls (a1)`, then the command's clear before it is issued, `clr d0;
+//   movhu d0,(S,aN); movhu d0,(S-2,aN); mov R,aM; add aN,aM` and the four words from (aM) zeroed (E143 0x508ad03c: a3,
+//   a port's busy word in a table, S 74, R 32; E122 0x50581242: a2, one busy word, S 62, R 28; one on each of the 18
+//   images, X). command_fields: the command's status S, its response R (the four words the card's response goes in),
+//   and the fields around R in the same order on both forms (code R - 8, argument R - 4, buffer R + 16, block count
+//   R + 20, block size R + 24; E143 0x508ad560 (24,a0), 0x508ad581 (52,a0); E122 0x50581563.. and 0x505814dc..: the
+//   argument's halves to SD_ARG0/1, the code to SD_CMD, the buffer, count and size to the DMA wrapper and SD_SIZE)
 // - album_init: the album manager's per-drive init (E143 0x508b67e8), `mov d0,d3; mov d3,d2; extbu d2; mov d2,d0;
 //   call; exthu d0; cmp 0,d0; beq; movhu (abs32),d0; cmp 1,d0; bge +5; ret`, which starts ALBM_MAIN once
-//   (`movbu (F),d1; cmp 0,d1; bne; call; mov 1,d0; movbu d0,(F)`, E143 0x508b681e); null where none is found: on E145,
+//   (`movbu (F),d1; cmp 0,d1; bne; call; mov 1,d0; movbu d0,(F)`, E143 0x508b681e); on the E118 family the init
+//   (E122 0x505885df, from the DCF numbering mount 0x50563142) tests its state byte, `movbu (S),d0; cmp 1,d0; bne`,
+//   and in state 1 logs "[ALBM]init exec" (the one load of that trace), else starts TSK_ALBM_MAIN (0x5058d097) unless
+//   in state 2, then sends it command 1 synchronously (0x5058d14d, queue 201); null where none is found: on E145,
 //   E129 and E132 (whose DCF numbering mount was not read: whether they have an album manager is ?), X
 // - status: the file layer's drive status (E143 0x508a8327), `exthu d0; mov d0,a2; cmp 7,a2; beq; cmp 2,a2; beq; cmp
-//   0,a2; beq; cmp 1,a2; beq`, the function that holds cardDetect's card-present test within STATUS_SPAN bytes; its
-//   entry is after the return before it, whole instructions within STATUS_HEAD bytes (E125's `clr d2` first,
-//   0x5061cb03, X)
+//   0,a2; beq; cmp 1,a2; beq` (on the E118 family `mov d0,d3; exthu d3` and the compares with 2, 1, 0 and 7, E122
+//   0x5057e8e3), the function that holds cardDetect's card-present test within STATUS_SPAN bytes; its entry is after
+//   the return before it, whole instructions within STATUS_HEAD bytes (E125's `clr d2` first, 0x5061cb03, X)
 // - card_power: the SD driver's request for the card's supply (E143 0x508b0301, E144 0x506a3fb5) builds an 8-byte
 //   request `mov 8,d0; call (alloc); mov a0,a2; mov imm8,d0; movbu d0,(1,a2); exthu d2; cmp 0,d2; beq; mov 255,d0;
 //   bra; clr d0; movbu d0,(2,a2)`, after a return; its calls are the alloc, on some a check, the send and the free
@@ -2309,18 +2329,20 @@ const le32 = (v) => [v & 0xff, v >>> 8 & 0xff, v >>> 16 & 0xff, v >>> 24];
 // - cflush: the return address of the file system's one call of the cache flush (K-CFLUSH, src/lab/menu.mjs), in
 //   the FAT's free count: `mov 1,d0; call (lock); mov d0,d2; call (flush); mov d2,d0; call (unlock); mov (12,sp),a0;
 //   mov -1,d0; mov d0,(8164,a0)` (E143 0x508881e9, return 0x508881fa; the flush is the place the port gives E143's
-//   0x5004e68a on all 15 images that hold it, X)
+//   0x5004e68a on all 15 images that hold it, X); the E118 family loads the object with `mov (abs32),a0` (E122
+//   0x5056f46f, return 0x5056f480, the object word 0x618c0ff0)
 // - names: the DCF module's initial folder and file names (E143 0x508749a2 / 0x508749ca: `mov 8,a0; add a3,a0; mov
 //   imm32,a1; call` before `mov 100,d0; movhu d0,(22,a3)`, and `mov 12,a0; add a2,a0; mov imm32,a1; call` before
 //   `mov 1,d0; mov d0,(40,a2)`): '100OMSYS' (the E143 family, E144 and E145) or '100OLYMP', and 'P1010001JPG' on all
 //   18 (X), as {folder: the folder's name past its number, file: the file name's first four letters, ext}
-// Found on 15 of the 18 expanded images; the E118 family's SD command layer has another form, so it has none (X).
+// Found on all 18 expanded images (X; the E118 family's since its forms above, 2026-10-30).
 // Returns undefined where FILECLBK's loop is not found or a seam is missing; throws for a seam found twice or a
 // bring-up, a task start or a NAND call of another shape.
 export const STORAGE_E143 = {
-  init: 0x5088FC8D, tasks: [0x60042D42, 0x60042D2A], fileclbk: { entry: 0x5088FCFC, queue: 0x1F, busy: 0x62AE4CD0 },
-  nand: { access: 0x500022C2, area: [0x41A00000, 0x80000], read: 0x10200, write: 0x10100 },
-  command: 0x508AD03C, album_init: 0x508B67E8, status: 0x508A8327, cflush: 0x508881FA,
+  init: 0x5088FC8D, tasks: [0x60042D42, 0x60042D2A], fileclbk: { entry: 0x5088FCFC, queue: 0x1F, busy: 0x62AE4CD0, reply: 0x508900C4 },
+  fat_error: 48, nand: { access: 0x500022C2, area: [0x41A00000, 0x80000], read: 0x10200, write: 0x10100 },
+  command: 0x508AD03C, command_fields: { code: 24, arg: 28, resp: 32, buffer: 48, count: 52, block: 56, status: 74 },
+  album_init: 0x508B67E8, status: 0x508A8327, cflush: 0x508881FA,
   card_power: { send: 0x50059656, ret: 0x508B033C },
   names: { folder: 'OMSYS', file: 'P101', ext: 'JPG' },
 };
@@ -2352,24 +2374,59 @@ export const STORAGE_LIB = {
   codes: { mount: 0x51, format: 0x55, dcf: 0xF0, number: 0x31 }, unformatted: 0xE08, card_out: 2, card_info: 0x12,
   fileif: { open: 0x10001, close: 0x10002, write: 0x10003, mkdir: 0x1000C }, drive: 'C',
 };
-const FCB_HEAD = 0x14, FS_INIT = 0x100, ALBM_SPAN = 0x60, STATUS_HEAD = 8, FS_WALK = 64, STATUS_SPAN = 0x100, NAND_SPAN = 0x40;
+const FAT_ERROR = 48, FAT_ERROR_SPAN = 10;
+const FCB_HEAD = 0x14, FCB_REPLY = 0x80, FS_INIT = 0x100, ALBM_SPAN = 0x60, STATUS_HEAD = 8, FS_WALK = 64, STATUS_SPAN = 0x100, NAND_SPAN = 0x40;
 const FCB_LOOP = [0x00, 0xfc, 0x81, null, null, null, null, 0xfc, 0xac, null, null, null, null, 0x98, 0x18, 0x85, 0x10];
 const FCB_ENTRY = [0xcf, 0x20, 0xf8, 0xfe, 0xec];
-const SD_COMMAND = [0x93, 0xbf, 0x00, 0xc9, 0x05, 0xdf, null, null, 0x8a, 0x0c, 0xf1, 0x5e, 0xf1, 0xe8, 0xf0, 0x60, 0xfc, 0xcf,
-  null, null, null, null, 0x54, 0xf1, 0xec, 0xf3, 0x00, 0xa0, 0x00, 0xc8, null, 0xf8, 0x27, 0x08, 0x2c, 0x03, 0x14, 0xf8, 0x73,
-  0x4a, 0x9c, 0xf0, 0xf1];
+const SD_BUSY = 0x30, SD_CLEAR = 0x60;
+const SD_OPEN = (n) => [0x90 | n, 0xb0 | n << 2 | n, 0x00, 0xc9, 0x05, 0xdf];              // mov a0,aN; cmp 0,aN; bne +5; ret
+const SD_DONE = (n) => [0xf8, 0x24 | n, 0x08, 0x2c, 0x03, 0x14, 0xf8, 0x70 | n];           // mov (8,aN),a1; mov 0x1403,d0; movhu d0,(S,aN)
+// clr d0; movhu d0,(S,aN); movhu d0,(S-2,aN); mov R,aM; add aN,aM; mov d0,(12,aM); mov d0,(8,aM); mov d0,(4,aM); mov d0,(aM)
+const SD_CLEAR_AT = (img, p, n, s) => {
+  const m = img[p + 7] & 3;
+  if (!bytesAt(img, p, [0x00, 0xf8, 0x70 | n, s, 0xf8, 0x70 | n, s - 2, 0x90 | m << 2 | m, null, 0xf1, 0x70 | n << 2 | m])) return null;
+  return bytesAt(img, p + 11, [0xf8, 0x10 | m, 0x0c, 0xf8, 0x10 | m, 0x08, 0xf8, 0x10 | m, 0x04, 0x60 | m]) ? img[p + 8] : null;
+};
 const ALBM_INIT = [0x83, 0x8e, 0x16, 0x88, 0xdd, null, null, null, null, null, null, 0x1c, 0xa0, 0x00, 0xc8, null, 0xfc, 0xac,
   null, null, null, null, 0xa0, 0x01, 0xc2, 0x05, 0xdf];
 const ALBM_ONCE = [0xfc, 0xa9, null, null, null, null, 0xa5, 0x00, 0xc9];
-const DRIVE_STATUS = [0x1c, 0xf1, 0xe2, 0xba, 0x07, 0xc8, null, 0xba, 0x02, 0xc8, null, 0xba, 0x00, 0xc8, null, 0xba, 0x01, 0xc8];
-const FS_FLUSH = [0x80, 0x01, 0xdd, null, null, null, null, null, null, 0x82, 0xdd, null, null, null, null, null, null, 0x88, 0xdd,
-  null, null, null, null, null, null, 0x5c, 0x0c, 0x80, 0xff, 0xfa, 0x10, 0xe4, 0x1f];
+const ALBM_TRACE = '[ALBM]init exec\n', ALBM_STATE = [0xfc, 0xa8, null, null, null, null, 0xa0, 0x01, 0xc9, null];
+const DRIVE_STATUS = [[0x1c, 0xf1, 0xe2, 0xba, 0x07, 0xc8, null, 0xba, 0x02, 0xc8, null, 0xba, 0x00, 0xc8, null, 0xba, 0x01, 0xc8],
+  [0x83, 0x1f, 0xaf, 0x02, 0xc8, null, 0xaf, 0x01, 0xc8, null, 0xaf, 0x00, 0xc8, null, 0xaf, 0x07, 0xc8]];
+const FS_FLUSH_CALLS = [0x80, 0x01, 0xdd, null, null, null, null, null, null, 0x82, 0xdd, null, null, null, null, null, null, 0x88, 0xdd,
+  null, null, null, null, null, null];
+const FS_FLUSH = [[...FS_FLUSH_CALLS, 0x5c, 0x0c, 0x80, 0xff, 0xfa, 0x10, 0xe4, 0x1f],
+  [...FS_FLUSH_CALLS, 0xfc, 0xa0, null, null, null, null, 0x80, 0xff, 0xfa, 0x10, 0xe4, 0x1f]];
+// the E118 family's area: the record read and the record after it (NAND_RECORD, NAND_NEXT) and the write
+const NAND_RECORD = [0xfc, 0xdc, null, null, null, null, 0xfc, 0xdd, null, null, null, null, 0xfa, 0xc0, 0xff, 0x01, 0xfc, 0xe0,
+  0x00, 0xfe, 0xff, 0xff, 0x2d, null, null, 0xdd];
+const NAND_SIZE = [0xfc, 0xcc, null, null, null, null, 0xde, 0x00, 0x00];
 const DCF_FOLDER = [0x90, 0x08, 0xf1, 0x7c, 0xfc, 0xdd, null, null, null, null, 0xdd, null, null, null, null, null, null, 0x80, 0x64, 0xf8, 0x73, 0x16];
 const DCF_FILE = [0x90, 0x0c, 0xf1, 0x78, 0xfc, 0xdd, null, null, null, null, 0xdd, null, null, null, null, null, null, 0x80, 0x01, 0xf8, 0x12, 0x28];
 const NAND_OPEN = [0x82, 0xa5, 0x00, 0xc9];
 const FLUSH_RETURN = 17;                // FS_FLUSH's second call, the flush (at +10, 7 bytes), returns here
 const SD_POWER = [0xdf, null, null, 0x82, 0x80, 0x08, 0xdd, null, null, null, null, null, null, 0x92, 0x80, null, 0xf8, 0x52, 0x01, 0x1e, 0xaa, 0x00, 0xc8,
   null, 0x2c, 0xff, 0x00, 0xca, null, 0x00, 0xf8, 0x52, 0x02];
+// The E118 family's area (fileSystem's nand, its second form): the record read `call G; mov M,a0; mov AREA,a1; add
+// 511,d0; and -512,d0; mov READ,d1; call ACCESS`, G `mov N,d0; retf` (the record's size), once; the record after it,
+// `add AREA,d1; mov d1,a1; mov LEN,d0; mov READ,d1; call ACCESS`, and the write, `mov AREA,a1; clr d1; call ACCESS`.
+// Returns the nand fact, its size the record's rounded to 512 bytes and the next's, or undefined where no record read
+// is found; throws for two, or a record read without its next record or its write.
+function nandRecord(img, rule) {
+  const D = (o) => h8(0x50000000 + o), at = [];
+  for (let o = img.indexOf(0xfa); o >= 0; o = img.indexOf(0xfa, o + 1)) {
+    const r = o - 12, c = r >= 7 ? callAt(img, r - 7) : null;
+    if (c?.len === 7 && bytesAt(img, r, NAND_RECORD) && bytesAt(img, c.to, NAND_SIZE)) at.push({ r, size: u32(img, c.to + 2) });
+  }
+  if (at.length > 1) throw new Error(`${rule}: ${at.length} NAND record reads (${at.map((a) => D(a.r)).join(', ')}), want one`);
+  if (!at.length) return undefined;
+  const { r, size } = at[0], area = u32(img, r + 8), read = img[r + 23] | img[r + 24] << 8, access = callAt(img, r + 25).to;
+  const ends = (pat, k) => { const v = []; for (let o = img.indexOf(pat[0]); o >= 0; o = img.indexOf(pat[0], o + 1)) if (bytesAt(img, o, pat) && callAt(img, o + k)?.to === access) v.push(o); return v; };
+  const next = ends([0xfc, 0xc1, ...le32(area), 0xf1, 0xe5, 0x2c, null, null, 0x2d, read & 0xff, read >> 8, 0xdd], 14);
+  const lens = new Set(next.map((o) => img[o + 9] | img[o + 10] << 8)), write = ends([0xfc, 0xdd, ...le32(area), 0x04, 0xdd], 7);
+  if (lens.size !== 1 || !write.length) throw new Error(`${rule}: the NAND record read ${D(r)} has ${lens.size} next record sizes and ${write.length} writes, want one and some`);
+  return { access: 0x50000000 + access, area: [area, (size + 511 & ~511) + [...lens][0]], read, write: 0 };
+}
 export function fileSystem(img) {
   const rule = 'fileSystem', { base } = imageBase(img), D = (o) => h8(0x50000000 + o);
   const loop = oneAt(img, FCB_LOOP, rule, "FILECLBK loop tops");
@@ -2380,7 +2437,11 @@ export function fileSystem(img) {
   if (entry < 0 || !bytesAt(img, entry - 10, [0x00, 0xfc, 0x81, ...le32(busy), 0xdf, 0x00, 0x04])) throw new Error(`${rule}: FILECLBK's loop at ${D(loop)} has no entry after the bring-up's end`);
   const init = oneAt(img, [0xfc, 0xac, ...le32(qw), 0xfc, 0xdc, null, null, null, null, 0x18, 0x85, 0x10, 0x95, 0x0a], rule, 'bring-up openings', entry - FS_INIT, entry);
   if (init === null) throw new Error(`${rule}: no bring-up creating FILECLBK's queue (${h8(qw)}) before ${D(entry)}`);
-  const fileclbk = { entry: 0x50000000 + entry, queue: img[qw - base] | img[qw - base + 1] << 8, busy };
+  // the reply: the loop's first `mov a2,a0; exthu d0; call R` after its dispatch
+  let reply = null;
+  for (let p = loop; p < loop + FCB_REPLY && reply === null; p++) if (img[p] === 0x98 && img[p + 1] === 0x1c && callAt(img, p + 2)) reply = 0x50000000 + callAt(img, p + 2).to;
+  if (reply === null) throw new Error(`${rule}: FILECLBK's loop at ${D(loop)} makes no reply within 0x${FCB_REPLY.toString(16)} bytes`);
+  const fileclbk = { entry: 0x50000000 + entry, queue: img[qw - base] | img[qw - base + 1] << 8, busy, reply };
   // the bring-up's callees that start a task
   const tasks = [], taSt = new Set();
   for (let p = init; p < entry;) {
@@ -2420,13 +2481,38 @@ export function fileSystem(img) {
     if (callAt(img, p)?.to === rd.to && at !== null) write = immediatesAt(img, at, p).d1;
     if (write === null) throw new Error(`${rule}: no writer of the NAND area ${h8(area)} after its read ${D(rd.at)}`);
     nand = { access: 0x50000000 + rd.to, area: [area, R.d0], read: R.d1, write };
+  } else nand = nandRecord(img, rule);
+  // the SD command layer: its opening, the busy port's completion and the command's clear, of either form
+  const layers = [];
+  for (let o = img.indexOf(0xc9); o >= 0; o = img.indexOf(0xc9, o + 1)) {
+    const at = o - 3, n = img[at] & 3;
+    if (at < 3 || !isRet(img, at - 3) || !bytesAt(img, at, SD_OPEN(n)) || n === 0) continue;
+    let done = -1;
+    for (let p = at + 6; p < at + SD_BUSY && done < 0; p++) if (bytesAt(img, p, SD_DONE(n))) done = p;
+    if (done < 0) continue;
+    const status = img[done + SD_DONE(n).length];
+    for (let p = done; p < done + SD_CLEAR; p++) {
+      const resp = SD_CLEAR_AT(img, p, n, status);
+      if (resp !== null) { layers.push({ at, status, resp }); break; }
+    }
   }
-  const command = oneAt(img, SD_COMMAND, rule, 'SD command layers');
-  const albm = oneAt(img, ALBM_INIT, rule, 'album manager inits');
+  if (layers.length > 1) throw new Error(`${rule}: ${layers.length} SD command layers (${layers.map((l) => D(l.at)).join(', ')}), want one`);
+  const command = layers.length ? layers[0].at : null;
+  // the command's fields around its response, in the same order on both forms (E143 0x508ad4fa and 0x508ad560..,
+  // E122 0x50581563.. and 0x505814dc..: the code 8 bytes before it, the argument 4, the buffer, the block count and
+  // the block size 16, 20 and 24 after it, D)
+  const fields = layers.length ? ((s, r) => ({ code: r - 8, arg: r - 4, resp: r, buffer: r + 16, count: r + 20, block: r + 24, status: s }))(layers[0].status, layers[0].resp) : null;
+  let albm = oneAt(img, ALBM_INIT, rule, 'album manager inits');
   if (albm !== null && oneAt(img, ALBM_ONCE, rule, 'album manager start flags', albm, albm + ALBM_SPAN) === null) throw new Error(`${rule}: the album manager init ${D(albm)} has no start-once flag`);
+  if (albm === null) {                           // the E118 family's: its trace's load, ALBM_STATE before it
+    const loads = findString(img, ALBM_TRACE, { nul: true, after: true }).flatMap((o) => loadsOf(img, base + o)).filter((p) => img[p + 1] === 0xdc);
+    if (loads.length > 1) throw new Error(`${rule}: "${ALBM_TRACE.trim()}" loaded ${loads.length} times, want one`);
+    if (loads.length && !bytesAt(img, loads[0] - ALBM_STATE.length, ALBM_STATE)) throw new Error(`${rule}: the load of "${ALBM_TRACE.trim()}" at ${D(loads[0])} does not follow the album manager's state test`);
+    if (loads.length) albm = loads[0] - ALBM_STATE.length;
+  }
   const status = [];
   const test = (() => { for (let o = img.indexOf(0xf8); o >= 0; o = img.indexOf(0xf8, o + 1)) if (o >= 5 && bytesAt(img, o - 5, DETECT_TEST)) return o - 5; return -1; })();
-  for (let o = img.indexOf(0x1c); o >= 0; o = img.indexOf(0x1c, o + 1)) if (bytesAt(img, o, DRIVE_STATUS) && test > o && test - o <= STATUS_SPAN) status.push(o);
+  for (const form of DRIVE_STATUS) for (let o = img.indexOf(form[0]); o >= 0; o = img.indexOf(form[0], o + 1)) if (bytesAt(img, o, form) && test > o && test - o <= STATUS_SPAN) status.push(o);
   // its entry: after the return before it, a few whole instructions before the test of the drive (E125's `clr d2`, X)
   if (status.length === 1) {
     const whole = (from, to) => { let p = from; while (p < to) p += insnLength(img[p], img[p + 1]); return p === to; };
@@ -2435,7 +2521,9 @@ export function fileSystem(img) {
     status[0] = at - k;
   }
   if (status.length > 1) throw new Error(`${rule}: ${status.length} drive status functions, want one`);
-  const flush = oneAt(img, FS_FLUSH, rule, 'cache flushes in the free count');
+  const flushes = FS_FLUSH.map((form) => oneAt(img, form, rule, 'cache flushes in the free count')).filter((o) => o !== null);
+  if (flushes.length > 1) throw new Error(`${rule}: cache flushes in the free count of both forms (${flushes.map(D).join(', ')}), want one`);
+  const flush = flushes[0] ?? null;
   const power = oneAt(img, SD_POWER, rule, "SD card power requests");
   let card_power = null;
   if (power !== null) {                          // its calls: the request's alloc, a check (some bodies), the send, the free
@@ -2449,13 +2537,20 @@ export function fileSystem(img) {
     if (calls.length < 3 || img[calls[calls.length - 1].at - 1] !== 0x98) throw new Error(`${rule}: the SD card power request ${D(power + 3)} makes ${calls.length} calls, the last not the request's free`);
     card_power = { send: 0x50000000 + send.to, ret: 0x50000000 + send.at + send.len };
   }
+  // dosfat's error in its request's block: `movhu Dm,(48,An)`, then the error return's file and line loads
+  let fatError = null;
+  for (let o = img.indexOf(0xf8); o >= 0 && fatError === null; o = img.indexOf(0xf8, o + 1)) {
+    if ((img[o + 1] & 0xf0) !== 0x70 || img[o + 2] !== FAT_ERROR) continue;
+    for (let k = 3; k < FAT_ERROR_SPAN; k++) if (img[o + k] === 0xfc && img[o + k + 1] === 0xdc && img[o + k + 6] === 0x2d) { fatError = FAT_ERROR; break; }
+  }
   const folder = oneAt(img, DCF_FOLDER, rule, "DCF folder names"), file = oneAt(img, DCF_FILE, rule, 'DCF file names');
   const str = (o) => { let e = o; while (img[e]) e++; return String.fromCharCode(...img.subarray(o, e)); };
   if ([nand, command, status[0], flush, folder, file].some((v) => v === undefined || v === null)) return undefined;
   const fname = str(u32(img, folder + 6) - base), name = str(u32(img, file + 6) - base);
   if (!/^\d{3}[A-Z_]{5} *$/.test(fname) || !/^[A-Z_][0-9A-Z]{3}\d{4}[A-Z]{3}$/.test(name)) throw new Error(`${rule}: the DCF names ${JSON.stringify([fname, name])} are not a folder's and a file's`);
   return {
-    init: 0x50000000 + init, tasks, fileclbk, nand, command: 0x50000000 + command, album_init: albm === null ? null : 0x50000000 + albm,
+    init: 0x50000000 + init, tasks, fileclbk, fat_error: fatError, nand, command: 0x50000000 + command, command_fields: fields,
+    album_init: albm === null ? null : 0x50000000 + albm,
     status: 0x50000000 + status[0], cflush: 0x50000000 + flush + FLUSH_RETURN, card_power,
     names: { folder: fname.slice(3).trimEnd(), file: name.slice(0, 4), ext: name.slice(8) },
   };

@@ -434,16 +434,25 @@ const DETECT_FOUND = {
 // the id words), and of a body of each lineage the bring-up, FILECLBK's entry and busy word, the NAND access and the
 // drive status as read in their code (D: E146 0x508a9a6d / 0x508a9adc, the busy store at 0x508a9ad3; E144 0x50685108 /
 // 0x50685177, its area read 0x5068251a; E134 0x50659a4e / 0x50659ac4, whose FILECLBK sets no byte first; E125's drive
-// status after its `clr d2`, 0x5061cb03); none on the E118 family (X: its SD command layer has another form)
+// status after its `clr d2`, 0x5061cb03), and FILECLBK's reply (`mov (a0),d1; cmp 0,d1; beq`: E143 0x508900c4, E146
+// 0x508a9ea4, E144 0x50685533, E134 0x50659e95, D); the E118 family's forms as read in E122's code (D: the bring-up
+// 0x5057799c called at 0x501867d3, FILECLBK 0x50577a0c and its reply 0x50577e41, the record read 0x5056482c and its
+// size 0x50579b21, the command layer 0x50581242 with its status at +62 and its response at +28, the album manager's
+// init 0x505885df, the drive status 0x5057e8e3, the flush's return 0x5056f480, dosfat's end 0x5056958e storing no
+// error); dosfat's error store E143 0x50881736 (D)
 const STORAGE_FOUND = {
-  E143: { init: 0x5088FC8D, tasks: [0x60042D42, 0x60042D2A], fileclbk: { entry: 0x5088FCFC, queue: 0x1F, busy: 0x62AE4CD0 },
+  E143: { init: 0x5088FC8D, tasks: [0x60042D42, 0x60042D2A], fileclbk: { entry: 0x5088FCFC, queue: 0x1F, busy: 0x62AE4CD0, reply: 0x508900C4 },
     nand: { access: 0x500022C2, area: [0x41A00000, 0x80000], read: 0x10200, write: 0x10100 }, command: 0x508AD03C,
-    album_init: 0x508B67E8, status: 0x508A8327 },
-  E146: { init: 0x508A9A6D, fileclbk: { entry: 0x508A9ADC, queue: 0x1F, busy: 0x62B3CDC8 } },
-  E144: { init: 0x50685108, fileclbk: { entry: 0x50685177, queue: 0x22, busy: 0x6214F900 }, nand: { access: 0x5003B76C, area: [0x406A0000, 0x60000], read: 0x102, write: 0 } },
-  E134: { init: 0x50659A4E, fileclbk: { entry: 0x50659AC4, queue: 0x22, busy: 0x623A935C } },
+    command_fields: { code: 24, arg: 28, resp: 32, buffer: 48, count: 52, block: 56, status: 74 }, album_init: 0x508B67E8, status: 0x508A8327,
+    fat_error: 48 },
+  E146: { init: 0x508A9A6D, fileclbk: { entry: 0x508A9ADC, queue: 0x1F, busy: 0x62B3CDC8, reply: 0x508A9EA4 } },
+  E144: { init: 0x50685108, fileclbk: { entry: 0x50685177, queue: 0x22, busy: 0x6214F900, reply: 0x50685533 }, nand: { access: 0x5003B76C, area: [0x406A0000, 0x60000], read: 0x102, write: 0 } },
+  E134: { init: 0x50659A4E, fileclbk: { entry: 0x50659AC4, queue: 0x22, busy: 0x623A935C, reply: 0x50659E95 } },
   E125: { status: 0x5061CB03 },
-  E118: null, E122: null, E120: null,
+  E122: { init: 0x5057799C, fileclbk: { entry: 0x50577A0C, queue: 0x22, busy: 0x618C8FF8, reply: 0x50577E41 },
+    nand: { access: 0x500510C1, area: [0x402A0000, 0xBE00], read: 0x103, write: 0 }, command: 0x50581242,
+    command_fields: { code: 20, arg: 24, resp: 28, buffer: 44, count: 48, block: 52, status: 62 }, album_init: 0x505885DF,
+    status: 0x5057E8E3, cflush: 0x5056F480, fat_error: null },
 };
 const SHOTS_FOUND = {
   E143: 0x50419164, E146: 0x50414A5F, E147: 0x50422B7E, E144: 0x502FAB48, E139: 0x502F7CEB, E134: 0x50313E2D,

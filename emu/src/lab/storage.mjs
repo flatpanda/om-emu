@@ -1,7 +1,8 @@
 // The card and the file system (docs/hle-gaps.md 4.8, 4.8.4): an SD card in the first slot behind the firmware's SD
 // command layer, and the firmware's own storage stack above it, natively: sdmem, sd_mount, sdmem_format, logsec, dosfat
 // (FAT / exFAT), the DCF modules, fileif, and the file tasks FILECLBK, FILEFGND and DCFPROC_SUB. On a body whose MODELS
-// entry runs it (card_fs native: E143, E146, E147, E144, E139, E137, E142, E140, E125, E130, E133, E145 and E134), at
+// entry runs it (card_fs native: E143, E146, E147, E144, E139, E137, E142, E140, E125, E130, E133, E145, E134, E129,
+// E132 and E122), at
 // the seams src/fw/facts.mjs fileSystem reads in its firmware (with the evidence; STORAGE_E143 for the lab's build);
 // elsewhere S-CARD keeps its card without a file system (src/lab/camapp.mjs), each body's card_fs with the reason.
 //
@@ -21,10 +22,12 @@
 //               E146's, E147's and E139's requests return before their send, X)
 //   S-SDCARD    the card (src/lab/sdcard.mjs: an 8 GiB SDHC card, or the host's capacity, SDXC above 32 GiB) at the
 //               SD command layer (storage.command): each command the firmware sends is answered there, its response,
-//               its data and its status written into the command and its completion called at once, as the layer
-//               itself does for a busy port; sd_mount's card init, the transfers and the format run natively above it
+//               its data and its status written into the command (at its fields, storage.command_fields: the E118
+//               family's lie 4 to 12 bytes lower than E143's) and its completion called at once, as the layer itself
+//               does for a busy port; sd_mount's card init, the transfers and the format run natively above it
 //   S-FSNAND    the file system's NAND area (storage.nand.area: 512 KiB of NAND on E143, 384 or 256 KiB of the E144
-//               family's flash) behind its access (storage.nand.access): it reads erased (0xff) on a camera that
+//               family's flash, the E118 family's two file-layer records in flash) behind its access
+//               (storage.nand.access): it reads erased (0xff) on a camera that
 //               never saved it (the lab's NAND and flash are not modelled), and the firmware's writes are kept for the
 //               session
 //   S-ALBM      the album manager's per-drive init (where the rule finds one) returns at once: ALBM_MAIN, which it
@@ -78,6 +81,9 @@ const WAI = 4, REQUEST_SLICE_MS = 5, REQUEST_LIMIT_MS = 10000, FOREVER = -1 >>> 
 const DRIVE = 0, DRIVE_MOUNTED = 0x1000;
 const DCF_CARD_IN = 1, DCF_LISTS = 3;
 const ERASED = 0xff, WRITE_CHUNK = 32768;
+// the word of the lab's FILECLBK messages, its low half a count; a reply of REQUEUE puts the message back on the queue
+// (`cmp 0xfff0,d0` at the reply's caller, docs/hle-gaps.md 4.8.8, D)
+const REQUEST_TAG = 0x4C41 << 16, REQUEUE = 0xFFF0;
 
 export class Storage {
   // session: the PlaySession; f: STORAGE. The card: the host's (env.card: {open() -> SdCard, save(card)},
@@ -101,6 +107,8 @@ export class Storage {
     this.next_file = null;         // S-RECFILE: the next picture's file number
     this.files = [];               // S-RECFILE: the pictures' files written, {path, size}
     this.drive_status = null;
+    this.tag = 0;                  // the lab's dosfat requests read by the reply: the last one's tag and its status
+    this.reply = null;
   }
   // H-FILEINIT, H-FILECLBK, S-SDHOST, S-SDCARD, S-FSNAND, S-ALBM, then the insertion (S-CARD); in the play bring-up,
   // before the application starts
@@ -170,10 +178,11 @@ export class Storage {
     return (lab.nk.state(t) & 0xF) === WAI && !lab.nk.timed_waiters().includes(t) && lab.sim.u32(this.f.fileclbk.busy) === 0;
   }
   // One message to the file module's queue, with no reply queue (FILECLBK replies to queue 0 with nothing), and lab
-  // time runs in slices until FILECLBK waits on its queue again; returns the parameter block's bytes
-  request(code, param, size, label, who = 'S-CARD') {
+  // time runs in slices until FILECLBK waits on its queue again; word: the message's word; returns the parameter
+  // block's bytes and the lab time it took
+  request(code, param, size, label, who = 'S-CARD', word = 0) {
     const lab = this.lab, s = this.s;
-    const payload = lab.alloc(pack('<IIII', 0, 0, code, param), 4);
+    const payload = lab.alloc(pack('<IIII', 0, word, code, param), 4);
     const desc = lab.alloc(pack('<II', payload, 16), 4);
     const r = lab.call(OLYQEWR, { d0: this.f.fileclbk.queue, d1: FOREVER, a0: desc }, null, null, 2000000);
     if (r.d0 !== 0) throw new StorageError(`${who}: ${label}: OlyQeWr to the file module's queue = ${r.d0 | 0}`);
@@ -187,11 +196,27 @@ export class Storage {
     const ms = Math.round((lab.lab_time() - t0) / 1e5) / 10;
     return [lab.sim.read(param, size), ms];
   }
+  // A dosfat request: its error, in the block where dosfat stores it (storage.fat_error, +48), else the status
+  // FILECLBK replies with (the E118 family's dosfat does not store it, docs/hle-gaps.md 4.8.8, D)
   _fat(code, label, who) {
     const blk = this.lab.alloc(new Uint8Array(128), 4);
     this.lab.sim.write(blk + 4, pack('<HH', 0, DRIVE));
-    const [b, ms] = this.request(code, blk, 128, label, who);
-    const err = b[48] | b[49] << 8;
+    const lab = this.lab, at = this.f.fat_error;
+    let b, ms, err;
+    if (at !== null) {
+      [b, ms] = this.request(code, blk, 128, label, who);
+      err = b[at] | b[at + 1] << 8;
+    } else {
+      // FILECLBK's reply (a0 the message, d0 its status), observed while the request is out: its word is the tag
+      const reply = this.f.fileclbk.reply, tag = (REQUEST_TAG | (this.tag = (this.tag + 1) & 0xFFFF)) >>> 0;
+      this.reply = null;
+      lab.observe(reply, (l, r) => {
+        if (l.sim.u32((r.a0 >>> 0) + 4) === tag && (r.d0 & 0xFFFF) !== REQUEUE) this.reply = r.d0 & 0xFFFF;
+      }, 'obs-fileclbk-reply');
+      try { [, ms] = this.request(code, blk, 128, label, who, tag); } finally { lab.hooks.delete(runtime(reply)); }
+      err = this.reply;
+    }
+    if (err === null) throw new StorageError(`${who}: ${label}: FILECLBK made no reply`);
     this.log.push([label, `error 0x${err.toString(16)} after ${ms} ms`]);
     return err;
   }
@@ -277,19 +302,19 @@ export class Storage {
   status_word(drive = DRIVE) { return this.lab.call(this.f.status, { d0: drive }, null, null, 200000).d0 >>> 0; }
   // S-SDCARD: one SD command answered by the card
   _command(h, r) {
-    const sim = this.lab.sim, c = r.a0 >>> 0;
-    const code = sim.u32(c + 24), arg = sim.u32(c + 28), buf = sim.u32(c + 48), count = sim.u32(c + 52), bsize = sim.u32(c + 56);
+    const sim = this.lab.sim, c = r.a0 >>> 0, L = this.f.command_fields;
+    const code = sim.u32(c + L.code), arg = sim.u32(c + L.arg), buf = sim.u32(c + L.buffer), count = sim.u32(c + L.count), bsize = sim.u32(c + L.block);
     const x = this.card.exec(code, arg, count, bsize);
     this.commands += 1;
     if (x.status === 0) {
-      sim.write(c + 32, pack('<IIII', ...x.resp));
+      sim.write(c + L.resp, pack('<IIII', ...x.resp));
       if (x.data) sim.write(buf, x.data.subarray(0, Math.min(x.data.length, count * bsize || x.data.length)));
       if (x.write) {
         const b = sim.read(buf, count * SECTOR);
         for (let i = 0; i < count; i++) this.card.writeSector(arg + i, b.subarray(SECTOR * i, SECTOR * (i + 1)));
       }
     }
-    sim.write(c + 74, pack('<H', x.status));
+    sim.write(c + L.status, pack('<H', x.status));
     h.finish_after(r, disasm(sim.u32(c + 8)), { a0: c, d0: x.status });
   }
   // S-FSNAND: the NAND access for the file system's area: read (op f.nand.read) or write (f.nand.write) of d0 bytes

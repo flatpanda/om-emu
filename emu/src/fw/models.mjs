@@ -804,7 +804,7 @@ export const MODELS = {
     res_len: 19291104, res_sha256: 'b1e448561edfc9c56a08fd5fa5c3d6307fc4741149bb40d951940e82364ccc5f',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
-    card_fs: { native: false, why: 'the family\'s starts do not reach the card yet (docs/model-survey.md finding 28); src/fw/facts.mjs fileSystem finds no SD command layer of its form' },
+    card_fs: { native: false, why: 'its start stops before the play bring-up runs the file system (docs/model-survey.md finding 37); src/fw/facts.mjs fileSystem reads its seams (finding 41), as on E122, whose card is native' },
     board: { family: 'E118' },
     // through E122 (port_via): the family's reference, whose overrides it takes over (the evidence at E122's entry)
     port_via: 'E122',
@@ -841,7 +841,10 @@ export const MODELS = {
     res_len: 19767776, res_sha256: '8509050a3374abf6237254ad0a2627fa33aaccf7612e2dafae7e6ba481e77407',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
-    card_fs: { native: false, why: 'the family\'s starts do not reach the card yet (docs/model-survey.md finding 28); src/fw/facts.mjs fileSystem finds no SD command layer of its form' },
+    // the card native since 2026-10-30 (docs/model-survey.md finding 41): src/fw/facts.mjs fileSystem reads the family's
+    // forms; the blank 8 GiB card formatted FAT32 'NO NAME' at 8192 with 32 KiB clusters, 1470 shots and 0:37:19 from
+    // it, S2's file read back (X: bin/modelcheck.mjs, the OSD records)
+    card_fs: { native: true },
     board: { family: 'E118' },
     // the map from E143 leaves 116 of the lab's addresses unplaced; through E125 113 (107 of its overrides carried, 62
     // nulls, 26 failed), through E130 114 (122 carried, 71 nulls, 18 failed); through E142, E137, E144 and E140 the
@@ -894,7 +897,7 @@ export const MODELS = {
     res_len: 18415584, res_sha256: 'f12ebf2598496f11bfdecff105f933a9f60c2cfff6a479258e9c6c34cb9236f0',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
-    card_fs: { native: false, why: 'the family\'s starts do not reach the card yet (docs/model-survey.md finding 28); src/fw/facts.mjs fileSystem finds no SD command layer of its form' },
+    card_fs: { native: false, why: 'its start stops before the play bring-up runs the file system (docs/model-survey.md finding 37); src/fw/facts.mjs fileSystem reads its seams (finding 41), as on E122, whose card is native' },
     board: { family: 'E118' },
     // through E122 (port_via): the family's reference, whose overrides it takes over (the evidence at E122's entry)
     port_via: 'E122',

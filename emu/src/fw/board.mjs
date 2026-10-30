@@ -342,7 +342,11 @@ export const FAMILIES = {
     stub_presets: [[0x9820001C, 16], [0x9830001C, 16], [0x9850001C, 16], [0x9860001C, 16], [0x9840001C, 64]],
     // the display waits' stand-ins: without them E122's display start blocks, every task waiting (X)
     display_wait_stand_ins: true,
-    sd: UNKNOWN,
+    // the SD host (see FAMILIES.E143): one port, 0x99000000, whose DMA wrapper, SD core (+0x2000) and PHY (+0x6000)
+    // E122's SD driver writes (0x505812c4..0x505813bd, 0x505814dc.., 0x50581563..), SD_INFO2 at +0x203c bit 13
+    // polled before the clock is set (0x5058108c, D); the card's pin word 0x9b80018c lies in the stub page 0x9b800000.
+    // The PEN-F's card mounts on it (X, 2026-10-30)
+    sd: { pages: [[0x99000000, 0x10000]], idle: [[0x9900203C, 0x2000]] },
   },
 };
 

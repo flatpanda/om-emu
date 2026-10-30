@@ -54,10 +54,13 @@ const SHOTS_QUERY = 0x50419164;
 const PROBE_XFAIL = {};
 // the bodies known to stop with an SDXC card (--card-size above 32 GiB), on the TFT and the EVF: model -> [what their
 // child's output must hold, the reason]. Strictly, as PROBE_XFAIL: a body that runs the path, or stops elsewhere, fails
-// the run. E144: its firmware formats the card exFAT, then at the camera application's start its movie parameters'
-// exFAT branch divides by a size of 0 (divu at 0x5032574f), which emu refuses with a strictness fault the hardware
-// does not raise (Fault 6, emu/FIDELITY-NOTES.md 3.2; docs/hle-gaps.md 4.8.6)
-const SDXC_XFAIL = { E144: [/stopped at 0x[0-9a-f]+ \(disasm 0x5032574f\) fault=6/, 'the movie parameters\' exFAT branch divides by 0 at 0x5032574f (Fault 6)'] };
+// the run. E144: its firmware formats the card exFAT, then at the camera application's start its movie parameters
+// (0x5032553f) divide by 0 at 0x5032574f, the firmware's own result for this state (docs/hle-gaps.md 4.8.7, D): the
+// blank store's movie mode, UHD 4K at 60p, has no rate in E144's table, so the first rate query fails and leaves its
+// size 0, which this build does not test (E143's, E139's, E137's and E125's do); the second query answers from
+// constants for an exFAT volume, so the exFAT branch runs and divides by that size. The manual leaves a divide by 0's
+// result undefined (docs/mn10300-isa-spec.md 4.6, 8 item 1), so emu stops there (Fault 6, emu/FIDELITY-NOTES.md 3.2)
+const SDXC_XFAIL = { E144: [/stopped at 0x[0-9a-f]+ \(disasm 0x5032574f\) fault=6/, 'its movie parameters divide by the 4K 60p rate query\'s size 0 at 0x5032574f with an exFAT card (Fault 6; the result is undefined)'] };
 const SDXC = SECTORS !== null && new SdCard({ sectors: SECTORS }).kind === 'SDXC';
 // the bodies whose start waits for the user at a prompt S1 does not take to the shooting screen: model -> {state, the
 // prompt's GUI state; key, the key that answers it, or keys, the keys in their order; after, the GUI state's name

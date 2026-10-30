@@ -58,6 +58,10 @@ export const UI_IN_RING = [A(0xA32DAB9C), A(0xA32DABA0), A(0xA32DAB54)], UI_IN_F
 // gives them back: E143 0x88, E146 and E147 0x89, E144 0x8c from the queue name table and 0x60514cb8, D)
 export const displayQueue = () => [fact('display.queue_word', 0x600432D4), fact('display.queue_id', 0x88)];
 export const UI_IN_POST = A(0x5014C956), UI_IN_FWD = A(0x5014C3EB), UI_IN_SINK = A(0xA32DABA4), UI_IN_POST_EXT = A(0x50025095);
+// where the post passes a code on to the sink (src/fw/facts.mjs uiInForward): E143's forward, called at three places of
+// its post with the code in d0 (D); a build that inlines the forward (the E118 family) has the sink's test at three
+// places of its post, each with the code in a register of its own (D)
+const uiInForward = () => fact('ui_in.forward', [{ at: UI_IN_FWD, reg: 'd0' }]);
 export const UI_IN_DIRECT = new Map([[A(0x5014BC0C), 'dial step'], [A(0x5014E374), 'joystick']]);
 export const G4_IMAGE = A(0x629887E4), JS_DIR_CODE = 0x1234, JS_QUERY = A(0x50425355);
 // H-G4SET: whether group 4 (E143: HDMI, CEC, lens) goes through the firmware's own group-4 producer G4_SET, read when
@@ -467,7 +471,7 @@ export class PlayLab extends N.NavLab {
     this.tp_reads = [];
     this.status_gesture = new Map();
     this.observe(UI_IN_POST, (lab, r) => lab.uiin_decoded.push([lab.step_tag, r.d0]), 'obs-uiin-post');
-    this.observe(UI_IN_FWD, (lab, r) => lab.uiin_codes.push([lab.step_tag, r.d0]), 'obs-uiin-fwd');
+    for (const { at, reg } of uiInForward()) this.observe(at, (lab, r) => lab.uiin_codes.push([lab.step_tag, r[reg]]), 'obs-uiin-fwd');
     this.uiin_direct = new Tally();
     this.observe(UI_IN_POST_EXT, (lab, r) => this._uiin_post_ext(lab, r), 'obs-uiin-post-ext');
     this.heap_sizes = new Map();

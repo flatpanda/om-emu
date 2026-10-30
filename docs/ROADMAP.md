@@ -49,9 +49,9 @@ not reconciled.
    step 2), and nine of them with the card's file system native (2026-10-25, hle-gaps.md 4.8.4); E145 joined them on
    2026-10-29, its card native too (`docs/model-survey.md` finding 22). The E144 family's orange movie time `0:00:00` is the firmware's answer for the
    blank store's movie mode, which those bodies cannot record (2026-10-27, hle-gaps.md 4.8.5).
-2. **The open stops of the remaining bodies** (Multi-model "Next stops"): the E118 family past its board port (E122's
-   movie time, whose module its card's file system creates, after its start reached the shooting screen state on
-   2026-10-30, findings 29 to 31; E118 at the same stop and E120 at POWER_ON, findings 44 to 47). E133, E145 and
+2. **The open stops of the remaining bodies** (Multi-model "Next stops"): the E118 family past its board port (E122
+   runs modelcheck's path on the TFT with its card native since 2026-10-30, findings 41 and 42; E118 at E122's
+   shooting screen state and E120 at POWER_ON, findings 44 to 47). E133, E145 and
    the TG-5s (E129, E132: their charger's transfers on serial channel 9, `docs/model-survey.md` finding 24) pass
    modelcheck since 2026-10-29.
 3. **HLE of E143, step 2** (HLE of E143 below; step 1's static decodes are done): the cheap CPU 0 wins (a ticking
@@ -148,7 +148,10 @@ The plan:
    handler tables and GUI caller read by rules, E122's display task and the PWM block). A chained port takes nothing
    but its reference's overrides and carried knobs; E122's other fields are read by rules or given per body on E118
    and E120 (finding 44), and E118 reaches E122's shooting screen state on the TFT and the EVF (findings 45, 46).
-   Next: E122's movie time (the card's file system), then modelcheck's path; E120's POWER_ON (finding 47, ?).
+   E122's card and file system run natively since 2026-10-30 (findings 41, 42: the family's forms of five storage
+   seams read by the rule), which ended its movie time's divide by 0, and its TFT start runs modelcheck's path; its
+   frames compose in the firmware's palette on both panels (findings 38 to 40). Next: E122 through modelcheck, then
+   E118's card and E120's POWER_ON (finding 47, ?).
    The kind-3 VSC composes (kind 2's compositor with the family's palette groups and format words) and the EVF opens
    the built-in EVF, the family's device code 6, where the lab had opened the NTSC output (findings 35 and 36). Since
    2026-10-30 E122's TFT and EVF frames show its clock warning: the palettes by GUI layer (finding 38), S-DISPSYNC
@@ -272,11 +275,15 @@ the survey table.
 - **The E118 family** (findings 28 to 31): the board is ported. Since 2026-10-30 UI_IN's forward sites and the
   DISPLAY loop's replies are read by shape (the E118 family forwards inline), the constructor tables by the module
   loader's own counts on every body (finding 30), and E122's start reaches the shooting screen state `0x0108` with the
-  GUI drawing the clock warning (finding 31). Next on E122: the movie time at the first long timer and at S1 divides
-  by the movie module's object, which its file system's init creates (I) and the lab does not run: the card's file
-  system on the E118 family (`src/fw/facts.mjs` fileSystem reads no SD layer of its form), or a stand-in for its movie
-  APIs; then modelcheck's path (with one movie API answered by hand S1, S2, PLAY and INFO ran, X). The EVF's queue 8
-  and the frame are done (findings 35, 38 to 40).
+  GUI drawing the clock warning (finding 31). The movie time's divide by 0 at the first long timer and at S1 was the
+  file system's volume object, which the file system's bring-up creates: since 2026-10-30 `src/fw/facts.mjs`
+  fileSystem reads the family's forms (its SD command layer's fields, the file layer's flash records, the album
+  manager's init, the drive status, the flush) and the lab reads dosfat's result from FILECLBK's reply where dosfat
+  does not store it in its block (the family);
+  E122's card is native and its TFT runs S1, S2 (its picture on the card), PLAY, INFO and PLAY (findings 41, 42).
+  Open on E122: the count probe (no composite yet, and the application asks for the count only at its start and
+  after the first S1, finding 42), the playback's file information (`000-0000`, ?), the EVF's queue 156 and the
+  kind-3 compositor for a frame.
   E118 and E120 stopped at the GUI message take's observer (E143 0x510c2a2e); since 2026-10-30 they run past UI_IN
   (findings 32-34, 37), and with E122's other fields read or given (finding 44), the family's serial transmitters
   idle (finding 45) and E118's overlapping image records loaded at their requests (finding 46) E118's TFT and EVF

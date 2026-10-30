@@ -1462,6 +1462,7 @@ bytes on; E143's places in brackets):
   browser player takes a card size, the menu's format and the card out and in on E143 with an SDXC card, and nine
   more bodies with one (X). Round 6 (2026-10-29, 4.8.7): E144's stop with an SDXC card read to its cause (the
   firmware's own divide by 0), the HLS side on E146, and E134's card native once its lamps' module UI_OUT runs (X).
+  Round 7 (2026-10-30, 4.8.8): the E118 family's forms of five seams read by the rule, and E122's card native.
 
 #### 4.8.1 The sdmem request contract (D unless tagged)
 
@@ -1719,8 +1720,9 @@ its code:
   `0x6004192e`, at `0x5010c35f`, which nothing reads in the lab, 53 writes in 10 s; E143's and E144's fopen make no
   such write; why E134's does is ?), E129 and E132 (their starts stop before the application, ROADMAP),
   the E118 family (no SD command layer of the rule's form; E122's start reaches the application since 2026-10-30, and
-  its movie time then divides by the movie module's object, which the card's file system init creates and the lab
-  does not run, `docs/model-survey.md` finding 31). They keep S-CARD. E134's card is native since
+  its movie time then divided by the file system's volume object, which the file system's bring-up creates and the
+  lab did not run, `docs/model-survey.md` finding 31; E122's card is native since 2026-10-30, 4.8.8). They keep
+  S-CARD. E134's card is native since
   2026-10-29 (4.8.7: the queue is UI_OUT's, the module of the camera's lamps, which its file layer asks for the card's
   access lamp; H-UIOUTSTART runs UI_OUT). E133's card is native since
   its start runs (2026-10-29: 2018 shots on the blank card, S2's file read back, X), and E145's (TG-7) since its start
@@ -1925,6 +1927,39 @@ the firmware's code for a card above 32 GiB is not read (?).
   (4.8.5; X: mode 1 at 60, the logs `0x3a040001` and `0x39000105`).
 - **Open:** the HLS side on E147 (the two failures above) and on the E144 family (its own function component); a
   real E144's movie mode at the factory; the hardware's DIVU by 0 (a capture would settle 3.2).
+
+#### 4.8.8 The E118 family's card, round 7 (2026-10-30; D unless tagged, addresses E122's)
+
+The PEN-F's camera application divided by 0 in its movie time (`0x5056f5c6`) because the file system's volume object
+(`0x618c0ff0`), which the file layer's init creates, did not exist: the lab ran the file system's bring-up only on a
+body whose card is native, and `src/fw/facts.mjs` fileSystem found none on the E118 family (`docs/model-survey.md`
+findings 31, 41). The family runs the other bodies' storage library; the rule now reads its five seams of another form:
+
+| Seam | E143's form | The E118 family's (E122) |
+|---|---|---|
+| SD command layer | `0x508ad03c`: `mov a0,a3`, a busy word per port, status +74, response +32 | `0x50581242`: `mov a0,a2`, one busy word, status +62, response +28; code, argument, buffer, count and size at the same places around the response (`command_fields`) |
+| File layer's flash | the NAND area read `0x5088d075`, 512 KiB at `0x41a00000` | two records the drive status reads at `0x402a0000` through `0x500510c1` (op `0x103` read, 0 write): 47480 bytes rounded to 512, then 1024 (`[0x402a0000, 0xbe00]`) |
+| Album manager's init | `0x508b67e8`, starting ALBM_MAIN once | `0x505885df`: TSK_ALBM_MAIN (task 90) and a synchronous command 1 on queue 201; found by its trace "[ALBM]init exec" |
+| Drive status | `exthu d0; mov d0,a2; cmp 7,a2; ...` | `mov d0,d3; exthu d3; cmp 2,d3; cmp 1; cmp 0; cmp 7` (`0x5057e8e3`) |
+| Cache flush's return | the object from `(12,sp)` (`0x508881fa`) | the object from `(0x618c0ff0)` (`0x5056f480`) |
+
+- **The dosfat result:** E122's dosfat (`0x505691b4`) does not store its error in the request's block (E143's does at
+  +48 when its caller's flag allows, `0x50881732..0x50881736`); FILECLBK replies with it (`0x50577e41`, `{u16 status,
+  word, parameter}` to the message's reply queue, none for the lab's; a status of `0xfff0` puts the message back on
+  FILECLBK's queue instead, E143 `0x508900ec`, E122 `0x50577e67`). The rule reads whether dosfat stores it
+  (`storage.fat_error`, +48 on the other 15 bodies, null on the family); where it does not, the lab's mount and
+  format requests carry a tag in their word and read the status from an observer at the reply (fact
+  `storage.fileclbk.reply`), installed while the request is out.
+- **The SD host:** one port at `0x99000000` (DMA wrapper, SD core +0x2000, PHY +0x6000), SD_INFO2 bit 13 polled at
+  `0x5058108c` (`src/fw/board.mjs` E118 `sd`); no UHS-II attempt (X: the card's command log starts CMD0, CMD8, ACMD41).
+- **E122 (X, `bin/modelcheck.mjs E122`):** the blank 8 GiB card mounts with `0xe08` after 275 ms of lab time, the
+  firmware formats it FAT32 `NO NAME` at sector 8192 with 32 KiB clusters in 165 ms and mounts it, drive status
+  `0x3780`; 1470 shots and `00:37:19` (FHD 60p) on the shooting screen; S2's file `C:\DCIM\100OLYMP\P1010001.JPG`
+  read back by `refs/volume.mjs`. S-FSNAND logs the record's read, a write of 48128 bytes and the next record's read
+  at the insertion. A blank 64 GiB card (`--card-size 64`): exFAT with no label at sector 32768, 128 KiB clusters,
+  9999 shots (the cap of 4.8.6), S2's file read back, the path as with 8 GiB (X).
+- **Not done:** E118 and E120 keep S-CARD until their starts reach the play bring-up's file system (their rule
+  values are read, X); the HLS side (S-MDACTRL, S-MEDIA) is E143's and E146's only.
 
 ### 4.9 HDMI and DisplayPort
 

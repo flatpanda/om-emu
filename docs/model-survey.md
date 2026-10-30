@@ -686,6 +686,67 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    the 1024 x 768 device from the 640 x 480 canvas (X). The lab's other EVF masks (the through permit, the IMG fit,
    H-RESEND's check) were not met (the family runs no through image).
 
+41. **The E118 family's card and file system** (2026-10-30, `docs/hle-gaps.md` 4.8.8). The movie time's divide by 0
+   (finding 31) was not the movie module's: the object `0x618c0ff0` is the file system's volume object, which the
+   file layer's init creates (`0x5056fc92` -> `0x5056900d`, its store `0x5056ef9c`, D) and whose free count at +8164
+   the FAT's cache flush sets to -1 (`0x5056f488..0x5056f490`, as E143's `0x50888202..`); the movie time divides by
+   its word +8168 (`0x5056f5bb..0x5056f5c6`, D; what that word holds is ?). That init is the file system's bring-up's
+   call, as on E143: the bring-up `0x5057799c` (the boot chain's call at `0x501867d3`; E143's `0x5088fc8d` from
+   `0x500242ab`), which the lab ran only on the bodies whose card is native (H-FILEINIT). `0x50577796`, named in
+   finding 31, is not on that path (a drive flag test called at `0x5057f1b6`, D). The family's file system is the
+   other bodies' library, instruction for instruction in the parts read (the bring-up, FILECLBK's loop and class
+   dispatch, the dosfat and dcfnum handlers, the 45 places of the unformatted error `0xe08`, X), with five seams of
+   another form, which `src/fw/facts.mjs` fileSystem now reads (D at E122's, the same on E118 and E120 by the rule, X):
+   - *The SD command layer* `0x50581242`: `mov a0,a2; cmp 0,a2` and one busy word (`0xa1c87d70`) where E143 has a
+     table per port, the command's status at +62 and its response at +28 (E143 +74, +32), the code, argument,
+     buffer, block count and size in the same order around the response (+20, +24, +44, +48, +52: the issue
+     `0x50581563..` writes the code to SD_CMD and the argument's halves to SD_ARG, `0x505814dc..` the buffer, count
+     and size to the DMA wrapper and SD_SIZE). The rule reads the layer by its opening, the busy completion and the
+     command's clear, and gives the fields (`command_fields`), which S-SDCARD now takes from the fact: one SD host,
+     port 0 at `0x99000000`, SD_INFO2 bit 13 polled at `0x5058108c` (the board's `sd`, D).
+   - *The file layer's flash record* in place of E143's NAND area: the drive status reads a record of
+     `0x50579b21`'s 47480 bytes, rounded to 512, from `0x402a0000` with the flash access `0x500510c1` op `0x103`
+     (`0x5056482c`), the 1024 bytes after it (checked for "OLYM", `0x50564950`), and writes with op 0 (`0x50564d94`):
+     S-FSNAND keeps the two records, `[0x402a0000, 0xbe00]` (E118 and E120 at `0x40280000`, X).
+   - *The album manager's init* `0x505885df`, from the DCF numbering mount (`0x50563142`): it starts TSK_ALBM_MAIN
+     (task 90, `0x5058d097`) and sends it command 1 synchronously on queue 201 (`0x5058d14d`), which the lab does not
+     run; read by its trace "[ALBM]init exec" (only the E118 family holds it, X), and S-ALBM returns from it as on the
+     other bodies.
+   - *The drive status* `0x5057e8e3` (`mov d0,d3; exthu d3` and the compares in another order) and *the flush's
+     return* `0x5056f480` (the object by `mov (abs32),a0` where E143 reads it from the stack).
+   - *The dosfat error* is not stored in the request's block (E143 stores it at +48, `0x50881736`; E122's dosfat ends
+     `0x5056958e` without it, D): FILECLBK replies it to the sender (`0x50577e41`, `{u16 status, ...}`). The rule
+     reads where dosfat leaves it (`storage.fat_error`: +48 on the 15 other bodies, three stores each, null on the
+     family, X), and where it is null the lab's mount and format requests read the reply's status through an
+     observer at the reply (`storage.fileclbk.reply`), installed only while the request is out (on E143 an observer
+     at the reply for the whole session changed golden's output layer with screens and devices identical, X).
+   With these E122's card is native (`src/fw/models.mjs` card_fs): the bring-up starts FILEFGND, DCFPROC_SUB and the
+   third task, the SD init needs no UHS-II fallback (CMD0, CMD8, ACMD41 .. CMD16, X: the card's log), the blank 8 GiB
+   card mounts with `0xe08` after 275 ms, the firmware formats it FAT32 `NO NAME` at sector 8192 with 32 KiB clusters
+   (165 ms) and mounts it, the drive status is `0x3780`, and the DCF numbering mount gives folder 100, file 1 (X). The
+   movie time no longer divides by 0: the screen shows `00:37:19` (FHD F 60p) and 1470 shots, which the firmware
+   counts from the card (X: OSD layer 2's records after S1, read back as an image in false colour).
+   E118's and E120's cards stay S-CARD's (`card_fs` false): their starts stop before the play bring-up runs the file
+   system (finding 37), so it is not tried on them.
+
+42. **E122 through modelcheck's path** (2026-10-30). With its card native, E122's TFT start, S1, S2, PLAY, INFO and
+   PLAY run without a stop: `0x0108` SS_COMMON/ID_ST_CA_REQ_DISP after the start, S1 and S2 (one picture,
+   `P1010001.JPG` in `100OLYMP`, read back by `refs/volume.mjs`), PLAY `0x0608` SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE, INFO
+   `0x060b` ID_ST_DISP_DETAIL, PLAY back to `0x0108` (X: `bin/modelcheck.mjs E122 --no-port`; with `--card-size 64`
+   the same path on an exFAT card, 9999 shots). It fails the count
+   probe only: the composite holds one value (the kind-3 compositor's open, finding 36), so no pixel follows the count.
+   The probe would also fail on the screen's cadence: E122's count is the application's getAvailableShootCount
+   (`0x506b3aff`, its trace "OlyHfwOpeShoot::getAvailableShootCount start"), which asks the query (`0x502e3440`)
+   six times in the 4 s after the start, once in the 3 s after the first S1 and not in the 3 s after a second S1
+   (X: an observer on the query), where the E142 lineage's GUI item asks at each refresh (finding 16): with the
+   query answered 777 right after S1 the count drawn in OSD layer 2's records reads 777, and with the answer removed
+   it stays 777 for 4 s (X: the records), so the probe's third window would find no pixel back at its first value
+   (I). What makes the application ask again is ?. PLAY's screen draws the file number `000-0000` and `0` in its
+   records, INFO's detail `0x0` and `0mm` (X), where the picture is `100-0001`: E122 has no play component wrappers
+   (finding 31, S-PLAYCOMP stands for nothing there), and what fills the playback's file information on it is not
+   read (?). The EVF stops where it did (finding 37, queue 156). E122 is not in modelcheck's checked set: the count
+   probe and the EVF fail.
+
 44. **What a chained port takes from its reference** (2026-10-30, track e118-e120-facts). A body with `port_via`
    carries its reference's effective overrides and the knobs its `carry` lists (`src/fw/place.mjs` carryOverrides,
    `src/fw/knobs.mjs`), nothing else: every other field of the reference's `MODELS` entry is the body's to decide,
@@ -1035,6 +1096,8 @@ UI_IN. With UI_IN's forward read by shape (finding 29) the three run past it; fi
 Since findings 44 to 46 (2026-10-30) E118's TFT and EVF starts reach the shooting screen state `0x0108` with the clock
 warning in the OSD records and stop at about 2.2 s in E122's movie-time division; E120's TFT start stays in POWER_ON
 (finding 47, ?) and its EVF start stops on E122's EVF stop, the full TOUCHPANEL queue 156.
+Since findings 41 and 42 (2026-10-30) E122's card is native and its TFT runs modelcheck's path but for the count
+probe (no composite yet).
 
 ## The chained port
 

@@ -1,8 +1,11 @@
-// The lens on the mount, natively (models.mjs lens_native; the default, play.mjs lens_option: env.lens 'stand-in',
-// node's OM_EMU_LENS=stand-in, takes S-LENS instead; docs/hle-gaps.md 4.4.2): the firmware's lens tasks, its lens
-// driver, its serial driver LENS_SSC and its interrupt run natively against the lens serial controller
-// (src/dev/lensssc.mjs) with the lens's microcontroller at the far end (S-LENSMCU, src/lab/lensmcu.mjs). What the lab
-// does in the boot's and the other modules' place:
+// The lens on the mount, natively (models.mjs lens_native: E143, E146 and E147; the default, play.mjs lens_option:
+// env.lens 'stand-in', node's OM_EMU_LENS=stand-in, takes S-LENS instead; docs/hle-gaps.md 4.4.2, 4.4.3): the firmware's
+// lens tasks, its lens driver, its serial driver LENS_SSC and its interrupt run natively against the lens serial
+// controller (src/dev/lensssc.mjs) with the lens's microcontroller at the far end (S-LENSMCU, src/lab/lensmcu.mjs). The
+// driver's entry points, queue, flags and cache area are the body's, read by src/fw/facts.mjs lensDriver (fact
+// lens_driver; E143's addresses below, LENS_DRIVER_E143 there); the deferred-call init is fact dpc's, the NAND read
+// operation the card's (fact storage) and LLPSW's bit the body's UI_IN tables' (play.mjs CONTROLS). What the lab does in
+// the boot's and the other modules' place:
 //   H-DPCINIT   the deferred-call init (pre-kernel, 0x50050279: the rings cleared, IRQs 53..58 attached), run before
 //               the lens init, as the boot head runs it before the kernel: the lens's power and detect paths post
 //               their continuations as deferred calls (0x5005043f, 0x500503d4), which the triggers' IRQs run at the
@@ -27,8 +30,10 @@
 // power-on sequence (0x501240b8: the power pin 125, a 10 ms settle, the wake-up frame, the connection request), the
 // init chain (0x50122689 on: the frames of src/lab/lensmcu.mjs) and the state poll. The bring-up runs lab time until
 // the driver's lens-0 data-valid and attach flags are set and the chain has reached the state poll, and checks it.
-import { A } from '../fw/model.mjs';
+import { fact } from '../fw/model.mjs';
+import { LENS_DRIVER_E143, DPC_E143, STORAGE_E143 } from '../fw/facts.mjs';
 import { FirmwareError, where } from './hle.mjs';
+import { OLYQEWR } from './display.mjs';
 import * as K from './kernel.mjs';
 import * as N from './nav.mjs';
 import { LensMcu, LENS_1240, LensError, frameName } from './lensmcu.mjs';
@@ -40,22 +45,31 @@ const pack32 = (...w) => { const b = new Uint8Array(4 * w.length); const dv = ne
 
 // the lab time the bring-up gives the lens's start, at most, and the step it runs it in
 export const LENS_START_MS = 1000, LENS_STEP_MS = 10;
+// H-LENSON's command, TAKE_FUNC's camera-on: word 2 of its request to LENS_EXEC, `mov 1,d0; mov d0,(24,sp)` before
+// the post (0x502cd9c7..0x502cd9f2, D; E146's and E147's TAKE_FUNC the same, D)
+export const LENS_CAMERA_ON = 1;
 
 export class NativeLens {
-  // session: the PlaySession; f: the model's lens_native facts (src/fw/models.mjs)
-  constructor(session, f) {
+  // session: the PlaySession; llpsw: LLPSW's entry of the body's UI_IN tables [group, byte, bit, code, type, polarity]
+  // (play.mjs CONTROLS)
+  constructor(session, llpsw) {
     this.s = session;
-    this.f = f;
+    this.f = fact('lens_driver', LENS_DRIVER_E143);
+    this.dpc_init = fact('dpc', DPC_E143).init;
+    this.nand_read = fact('storage', STORAGE_E143).nand.read;
+    this.llpsw = llpsw;
     this.mcu = new LensMcu(LENS_1240);
     this.ssc = null;
     this.nand = new Map();               // S-LENSNAND: written blocks, flash address -> bytes
     this.log = [];                       // [kind, detail] of every stand-in action
     this.started = false;
   }
-  // the idle image's LLPSW released: a lens locked on the mount (before UI_IN's groups are pushed)
+  // the idle image's LLPSW released, its bit at the other level than the entry's polarity (E143's bit 0 reads as
+  // EV_PRESS_LLPSW): a lens locked on the mount (before UI_IN's groups are pushed)
   lock(images) {
-    const [g, b, bit] = this.f.llpsw;
-    images[g][b] |= 1 << bit;
+    if (!this.llpsw) throw new NativeLensError('the mount: LLPSW (0x121c) is not in the body\'s UI_IN tables');
+    const [g, b, bit, , , pol] = this.llpsw;
+    if (pol) images[g][b] &= ~(1 << bit) & 0xFF; else images[g][b] |= 1 << bit;
   }
   bring_up() {
     const s = this.s, lab = s.lab, f = this.f, devs = lab.sim.m.devices;
@@ -66,12 +80,12 @@ export class NativeLens {
     if (!s.storage) throw new NativeLensError('S-LENSNAND: the lens data cache needs the NAND access the card\'s file system serves (src/lab/storage.mjs S-FSNAND)');
     const access = s.storage.f.nand.access;
     lab.wrap(access, (prev) => (h, r) => this._nand(h, r, prev), 'S-FSNAND, S-LENSNAND');
-    lab.step('H-DPCINIT the deferred-call init 0x50050279 (pre-kernel)', () => lab.call(A(f.dpc_init), null, null, null, 200000));
-    lab.step('H-LENSINIT the lens module init 0x502a5d10 (boot call 0x50024ab6)', () => lab.call(A(f.module_init), null, null, null, 2000000));
-    lab.step('H-LENSINIT the lens data cache load 0x502a6371 (USTART_L)', () => lab.call(A(f.cache_init), null, null, null, 2000000));
-    lab.step('H-LENSINIT the lens task variables 0x502a5dff (USTART_L)', () => lab.call(A(f.task_vars), null, null, null, 200000));
+    lab.step('H-DPCINIT the deferred-call init 0x50050279 (pre-kernel)', () => lab.call(this.dpc_init, null, null, null, 200000));
+    lab.step('H-LENSINIT the lens module init 0x502a5d10 (boot call 0x50024ab6)', () => lab.call(f.module_init, null, null, null, 2000000));
+    lab.step('H-LENSINIT the lens data cache load 0x502a6371 (USTART_L)', () => lab.call(f.cache_init, null, null, null, 2000000));
+    lab.step('H-LENSINIT the lens task variables 0x502a5dff (USTART_L)', () => lab.call(f.task_vars, null, null, null, 200000));
     this.tids = [];
-    for (const e of f.tasks.map(A)) {
+    for (const e of f.tasks) {
       const t = [...lab.nk.tasks()].filter(([, [en]]) => en === e).map(([id]) => id);
       if (t.length !== 1 || lab.nk.state(t[0]) !== 0x10) throw new NativeLensError(`H-LENSINIT: static tasks with entry ${h8(e)}: ${JSON.stringify(t)}, not one dormant`);
       lab.lt.allow.add(e);
@@ -81,12 +95,12 @@ export class NativeLens {
     }
     s.settle('H-LENSINIT lens tasks');
     // H-LENSON
-    const q = lab.sim.read(A(f.exec_queue), 2), queue = q[0] | q[1] << 8;
+    const q = lab.sim.read(f.exec_queue, 2), queue = q[0] | q[1] << 8;
     const buf = lab.alloc(new Uint8Array(12), 4);
-    const payload = lab.alloc(pack32(0, 1, f.camera_on, buf), 4), desc = lab.alloc(pack32(payload, 16), 4);
-    const r = lab.call(A(f.queue_write), { d0: queue, d1: 0xFFFFFFFF, a0: desc }, null, null, 2000000);
+    const payload = lab.alloc(pack32(0, 1, LENS_CAMERA_ON, buf), 4), desc = lab.alloc(pack32(payload, 16), 4);
+    const r = lab.call(OLYQEWR, { d0: queue, d1: 0xFFFFFFFF, a0: desc }, null, null, 2000000);
     if (r.d0 !== 0) throw new NativeLensError(`H-LENSON: the request to LENS_EXEC (queue ${queue}) = ${h8(r.d0)}`);
-    this.log.push(['lens-on', `queue ${queue}, command ${f.camera_on}`]);
+    this.log.push(['lens-on', `queue ${queue}, command ${LENS_CAMERA_ON}`]);
     s.settle('H-LENSON');
     const t0 = lab.lab_time();
     while (!this.ready() && lab.lab_time() - t0 < LENS_START_MS * 1e6) this.run(LENS_STEP_MS);
@@ -124,9 +138,9 @@ export class NativeLens {
     // a read of no bytes reads nothing: the lens tables' flash area (area 2, 0x501a9322) has no extent in the lab,
     // whose flash area init does not run (its table 0xa32db32c is 0), so the lens data lookup 0x502ae5d9 reads 0
     // bytes at 0 and logs the lens as not found (X)
-    if (n === 0 && op === this.f.nand_read) { this.log.push(['nand', `read 0 bytes at ${h8(flash)} from ${where(r.mdr)}`]); return h.finish(r, { d0: 0 }); }
+    if (n === 0 && op === this.nand_read) { this.log.push(['nand', `read 0 bytes at ${h8(flash)} from ${where(r.mdr)}`]); return h.finish(r, { d0: 0 }); }
     if (flash < base || flash + n > base + size) return prev(h, r);
-    if (op !== this.f.nand_read) throw new NativeLensError(`S-LENSNAND: NAND access 0x${op.toString(16)} of ${n} bytes at flash ${h8(flash)} from ${where(r.mdr)}: only reads are modelled`);
+    if (op !== this.nand_read) throw new NativeLensError(`S-LENSNAND: NAND access 0x${op.toString(16)} of ${n} bytes at flash ${h8(flash)} from ${where(r.mdr)}: only reads are modelled`);
     const out = new Uint8Array(n).fill(0xFF);
     for (const [at, bytes] of this.nand) {
       const lo = Math.max(at, flash), hi = Math.min(at + bytes.length, flash + n);

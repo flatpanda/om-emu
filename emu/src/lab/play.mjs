@@ -220,6 +220,8 @@ export const FW_KEYS = [
 ];
 export const FW_GUI = new Map([[0x3001, 118], [0x3002, 114], [0x3003, 115], [0x3004, 116], [0x3005, 117], [0x3006, 111], [0x3007, 113], [0x3008, 112], [0x3009, 110]]);
 export const FW_SWITCH_GUI = new Map([[0x2403, 208], [0x1711, 209]]);
+// the lens lock pin switch, whose release lets the lens power on (src/lab/lens.mjs)
+export const LLPSW = 0x121C;
 export const SWITCH_PICK = new Map([[0x121C, { EV_PRESS_LLPSW: 66, EV_RELEASE_LLPSW: 67 }], [0x0501, { EV_HDMI_CONNECTED: 121, EV_HDMI_DISCONNECTED: 121 }]]);
 export const SWITCH_PICK_GUI = new Map([[0x121C, [66, null, 67]], [0x0501, [121, null, null]]]);
 export const NO_EV = new Set([0x1229, 0x2007, 0x1506, 0x1518, 0x1712, 0x2006, 0x0400]);
@@ -824,10 +826,11 @@ export class PlaySession extends N.NavSession {
     this.power_manager = null;
     // the lens on the mount natively (lens.mjs), the default on a body that gives it (models.mjs lens_native) and runs
     // the card's file system, whose NAND access the lens data cache shares (S-LENSNAND); its lock pin switch released
-    // in the idle image before the groups are pushed. Elsewhere, and with the lens option 'stand-in', S-LENS
-    // (camapp.mjs)
+    // in the idle image before the groups are pushed (its entry of the body's UI_IN tables, CONTROLS). Elsewhere, and
+    // with the lens option 'stand-in', S-LENS (camapp.mjs)
     const native = this.lens_option() === 'native';
-    this.lens = MODEL_INFO.lens_native && native && this.storage_runs() ? new NativeLens(this, MODEL_INFO.lens_native) : null;
+    const llpsw = CONTROLS.find((c) => c.uiin?.[3] === LLPSW)?.uiin ?? null;
+    this.lens = MODEL_INFO.lens_native && native && this.storage_runs() ? new NativeLens(this, llpsw) : null;
     if (this.lens) this.lens.lock(this.images);
     // Whether the camera application forwards the touches to the GUI itself (docs/hle-gaps.md 4.4.2, D unless
     // tagged): its event task (entry 0x5108ba1b, task 165 in the lab) takes the touch events 0x03000072..78 and posts

@@ -1188,15 +1188,139 @@ export const touchDriver = (img) => {
 // application has no API 0x20041 (E145's API entries run 0x2003f, 0x20040, 0x20043, X) and whose images hold none of
 // the record dump's field names (L_ZMENCdiv, L_FLwide, L_NAME, X). Throws where two tests are found.
 export function lensMount(img) {
+  return lensRecordGetter(img) !== undefined;
+}
+// The driver's record getter G of getLensConnection's test (lensMount's rule; image offset), undefined where no test
+// is found; throws for two
+function lensRecordGetter(img) {
   const test = [0x08, 0xb0, 0x00, 0xc8, 0x04, 0x8a, 0x01], sites = [];
-  for (let o = 1; o + 7 + test.length <= img.length; o++) {
-    if (img[o] !== 0xdd || img[o - 1] !== 0x00 || img[o + 5] !== 0x00 || img[o + 6] !== 0x04) continue;
+  for (let o = img.indexOf(0xdd, 1); o >= 0 && o + 7 + test.length <= img.length; o = img.indexOf(0xdd, o + 1)) {
+    if (img[o - 1] !== 0x00 || img[o + 5] !== 0x00 || img[o + 6] !== 0x04) continue;
     if (!test.every((b, k) => img[o + 7 + k] === b)) continue;
     const f = callAt(img, o).to;
-    if (f >= 0 && img[f] === 0x1c && callAt(img, f + 1) && img[f + 1 + callAt(img, f + 1).len] === 0xdf) sites.push(o - 1);
+    if (f >= 0 && img[f] === 0x1c && callAt(img, f + 1) && img[f + 1 + callAt(img, f + 1).len] === 0xdf) sites.push({ at: o - 1, getter: callAt(img, f + 1).to });
   }
-  if (sites.length > 1) throw new Error(`lensMount: ${sites.length} lens record tests (${sites.map((o) => (0x50000000 + o).toString(16)).join(', ')})`);
-  return sites.length === 1;
+  if (sites.length > 1) throw new Error(`lensMount: ${sites.length} lens record tests (${sites.map((s) => (0x50000000 + s.at).toString(16)).join(', ')})`);
+  return sites[0]?.getter;
+}
+
+// The lens driver's entry points and flags that the native lens runs (fact 'lens_driver', src/lab/lens.mjs; docs/
+// hle-gaps.md 4.4.2), read at the port's places of E143's CPU 0 kcb (KCB0_E143), OlyTaSt (OLYTAST_E143), OlyQeRd
+// (OLYQERD_E143) and LENS_COMMAND's queue-id word (LENS_COMMAND_QUEUE_E143 0x60043226, the module queue 0x31 of the
+// target table, src/lab/camapp.mjs MODULE_QUEUE_WORDS). D on E143, from its code:
+// - tasks [LENS_MAIN, LENS_COMMAND, LENS_ASKDATA]: the boot starts LENS_MAIN and LENS_ASKDATA right after the lens
+//   module init, each `movhu (W),d0; [mov imm32,a2;] exth d0; call OlyTaSt; mov <its name>,a0` (E143 0x50024aca and
+//   0x50024ae9, the names "LENS_MAIN" and "LENS_ASKDATA" with their NUL, the trace's), W the task's id word: the entry
+//   of the static task (taskRows) of the id W holds (0x5c 0x502a5e37 and 0x5a 0x502a8193, the table's rows at
+//   0x50018ac0 and 0x50018a88). LENS_COMMAND, which another init starts by its id word alone (0x501e9b6e), is the
+//   static task that runs, with no return between, to a receive on its queue, the queue-id word's `movhu (Q),d0` with
+//   OlyQeRd its first call (task 0x5b, 0x50115a08, the row at 0x50018aa4: the load at 0x50115a2a); exec_queue:
+//   LENS_MAIN's queue LENS_EXEC, its entry's first such receive (0x502a5e55)
+// - module_init: the call before LENS_MAIN's start and the trace before it, `call I; mov T,a0; call; movhu (W),d0`
+//   (0x50024ab6); cache_init, task_vars: USTART_L's lens data cache load and task variables, `call C; mov T,a0; call;
+//   call V` (0x5002420e, 0x50024222), V the function whose instructions run to the return that ends right before
+//   LENS_MAIN's entry (0x502a5dff, its `ret [],8` at 0x502a5e34)
+// - flags {valid, attach, ready}: lens 0's data-valid and attach flags (byte arrays by lens), whose accessors lie four
+//   in a row, valid's setter and getter, then attach's, `extbu d0; mov F,a0; movbu d1,(d0,a0)` to set and `movbu
+//   (d0,a0),d0` to get, each then `retf` (0x501269fc..0x50126a2b); the attach getter is the first call of the record
+//   getter that getLensConnection's test calls (lensRecordGetter, 0x502ac597). ready, the sync layer's lens-ready
+//   byte: its getter and clearer, `movbu (R),d0; retf; clr d0; movbu d0,(R); retf` (0x502c41a7, 0x502c41b0), end
+//   right before the predicate on the lens (0x502c41ba) that the state poll's completion calls before it writes 1 to
+//   R, `mov 1,d0; movbu d0,(R)` within READY_SPAN bytes of the call (0x502c38ef, the store 0x502c3944)
+// - cache_area [base, size]: the lens data caches' NAND, the rows {u32 base, u32 size, 0, 0} of the flash area
+//   driver's lens-cache table that follow one another from its first, `asl 4,d2; mov d2,a1; add T,a1; mov a1,(abs32)`
+//   (0x501a9597, T 0x602a4a24: 7 areas of 0x40000 from 0x416e0000; a string follows the table)
+// On E146 and E147 every one of them reads (X: their code at the places, the boot starts and USTART_L's calls in
+// E143's shapes; the same 15 frames of the lens's start, docs/hle-gaps.md 4.4.2). Returns {module_init, cache_init,
+// task_vars, tasks, exec_queue, flags, cache_area} (disassembly notation, run-time words), or undefined where a part
+// is not found in E143's shape; throws for a part found twice.
+export const LENS_COMMAND_QUEUE_E143 = 0x60043226;
+export const LENS_DRIVER_E143 = {
+  module_init: 0x502A5D10, cache_init: 0x502A6371, task_vars: 0x502A5DFF,
+  tasks: [0x502A5E37, 0x50115A08, 0x502A8193], exec_queue: 0x60043220,
+  flags: { valid: 0xA32D4B98, attach: 0xA32D4B9A, ready: 0xA32D4B94 }, cache_area: [0x416E0000, 0x1C0000],
+};
+const LENS_FLAG_GET = [0x14, 0xfc, 0xdc, null, null, null, null, 0xf4, 0x00, 0xde, 0x00, 0x00];
+const LENS_FLAG_SET = [0x14, 0xfc, 0xdc, null, null, null, null, 0xf4, 0x50, 0xde, 0x00, 0x00];
+const LENS_READY_PAIR = [0xfc, 0xa8, null, null, null, null, 0xde, 0x00, 0x00, 0x00, 0xfc, 0x82, null, null, null, null, 0xde, 0x00, 0x00];
+const LENS_CACHE_TABLE = [0xf8, 0xc2, 0x04, 0xf1, 0xe9, 0xfc, 0xd1, null, null, null, null, 0xfc, 0x84];
+const LENS_TASK_SPAN = 0x80, LENS_VARS_SPAN = 0x100, READY_SPAN = 0x80, RECEIVE_WALK = 6;
+// Whether the `movhu (Q),d0` at offset p is a receive: its first call within RECEIVE_WALK instructions is OlyQeRd
+function isReceive(img, p, qerd) {
+  if (!bytesAt(img, p, [0xfc, 0xac])) return false;
+  for (let q = p, k = 0; k < RECEIVE_WALK; k++) {
+    const c = callAt(img, q);
+    if (c) return 0x50000000 + c.to === qerd;
+    q += insnLength(img[q], img[q + 1]);
+  }
+  return false;
+}
+export function lensDriver(img, { kcb, taSt, qerd, commandQueue }) {
+  const { base } = imageBase(img), rows = taskRows(img, kcb, 'lensDriver'), byId = new Map(rows.map((r) => [r.id, r.entry]));
+  // the boot's starts: the name's load right after `movhu (W),d0; [mov imm32,a2;] exth d0; call OlyTaSt`
+  const names = ['LENS_MAIN', 'LENS_ASKDATA'], addr = new Map(names.flatMap((n) => findString(img, n, { nul: true, after: true }).map((o) => [(base + o) >>> 0, n])));
+  // one walk of the fc-prefixed instructions: the names' loads, LENS_COMMAND's queue word's loads and the getter-clearer
+  // pairs of a byte (the ready byte's candidates)
+  const loads = new Map(names.map((n) => [n, []])), commandLoads = [], pairs = [];
+  for (let p = img.indexOf(0xfc); p >= 0 && p + 6 <= img.length; p = img.indexOf(0xfc, p + 1)) {
+    const v = loadAt(img, p), o2 = img[p + 1];
+    if (v !== null && addr.has(v)) loads.get(addr.get(v)).push(p);
+    else if (o2 === 0xac && u32(img, p + 2) === commandQueue) commandLoads.push(p);
+    else if (o2 === 0xa8 && bytesAt(img, p, LENS_READY_PAIR) && u32(img, p + 2) === u32(img, p + 12)) pairs.push(p);
+  }
+  const start = (name) => {
+    const found = [];
+    for (const p of loads.get(name)) {
+      const c = [5, 7].map((len) => [p - len, callAt(img, p - len)]).find(([at, x]) => x?.len === p - at && 0x50000000 + x.to === taSt);
+      if (!c || img[c[0] - 1] !== 0x18) continue;
+      const w = [c[0] - 7, c[0] - 13].find((q) => bytesAt(img, q, [0xfc, 0xac]) && (q === c[0] - 7 || bytesAt(img, q + 6, [0xfc, 0xde])));
+      if (w !== undefined) found.push({ at: w, word: u32(img, w + 2) });
+    }
+    if (found.length > 1) throw new Error(`lensDriver: ${found.length} starts of ${name} (${found.map((f) => h8(0x50000000 + f.at)).join(', ')}), want one`);
+    if (!found.length) return undefined;
+    const { at, word } = found[0], id = img[word - base] | img[word - base + 1] << 8;
+    return byId.has(id) ? { at, entry: byId.get(id) } : undefined;
+  };
+  const main = start('LENS_MAIN'), ask = start('LENS_ASKDATA');
+  if (!main || !ask) return undefined;
+  // the module init: `call I,[],8; mov T,a0; call` before LENS_MAIN's start
+  const init = callAt(img, main.at - 20);
+  if (init?.len !== 7 || !bytesAt(img, main.at - 13, [0xfc, 0xdc]) || callAt(img, main.at - 7)?.len !== 7) return undefined;
+  // the receives: LENS_MAIN's queue (its entry's first receive), and the task that runs to LENS_COMMAND's
+  const e = main.entry - 0x50000000;
+  let q = e;
+  while (q < e + LENS_TASK_SPAN && !isRet(img, q) && !isReceive(img, q, qerd)) q += callAt(img, q)?.len ?? insnLength(img[q], img[q + 1]);
+  if (!isReceive(img, q, qerd)) return undefined;
+  const exec = u32(img, q + 2), sites = commandLoads.filter((p) => isReceive(img, p, qerd));
+  const command = rows.filter(({ entry }) => { const t = entry - 0x50000000; return sites.some((at) => at > t && at - t <= LENS_TASK_SPAN && runsTo(img, t, at)); });
+  if (command.length > 1) throw new Error(`lensDriver: ${command.length} static tasks (${command.map((r) => h8(r.entry)).join(', ')}) run to a receive on LENS_COMMAND's queue ${h8(commandQueue)}, want one`);
+  // USTART_L's calls: `call C; mov T,a0; call; call V`, V ending right before LENS_MAIN's entry
+  const vars = !isRet(img, e - 3) ? [] : callsWhere(img, (t) => t < e && e - t <= LENS_VARS_SPAN && runsTo(img, t, e - 3))
+    .filter((c) => c.len === 7 && callAt(img, c.at - 7)?.len === 7 && bytesAt(img, c.at - 13, [0xfc, 0xdc]) && callAt(img, c.at - 20)?.len === 7);
+  if (vars.length > 1) throw new Error(`lensDriver: ${vars.length} calls of a function ending before LENS_MAIN's entry after a call and a trace (${vars.map((c) => h8(0x50000000 + c.at)).join(', ')}), want one`);
+  // the flags: the attach getter is the record getter's first call, the other three accessors before it
+  const g = lensRecordGetter(img);
+  let p = g, att;
+  for (let k = 0; g !== undefined && k < 16 && att === undefined; k++) { const c = callAt(img, p); if (c) att = c.to; else p += insnLength(img[p], img[p + 1]); }
+  const flag = (o, pat) => (o !== undefined && bytesAt(img, o, pat) ? u32(img, o + 3) : null);
+  const attach = flag(att, LENS_FLAG_GET), valid = flag(att - 24, LENS_FLAG_GET);
+  const flagsHold = attach !== null && valid !== null && flag(att - 12, LENS_FLAG_SET) === attach && flag(att - 36, LENS_FLAG_SET) === valid;
+  // the ready byte: the getter-clearer pair before the predicate whose caller then writes the byte 1
+  const ready = [];
+  for (const o of pairs) {
+    const r = u32(img, o + 2), set = [0x80, 0x01, 0xfc, 0x82, ...le32(r)];
+    if (callsTo(img, o + LENS_READY_PAIR.length).some((c) => { for (let k = c; k < c + READY_SPAN; k++) if (bytesAt(img, k, set)) return true; return false; })) ready.push(r);
+  }
+  if (ready.length > 1) throw new Error(`lensDriver: ${ready.length} lens-ready bytes (${ready.map(h8).join(', ')}), want one`);
+  // the lens caches' NAND: the table's rows that follow one another
+  const t = oneAt(img, LENS_CACHE_TABLE, 'lensDriver', 'lens-cache table reads');
+  if (command.length !== 1 || vars.length !== 1 || !flagsHold || ready.length !== 1 || t === null) return undefined;
+  const table = u32(img, t + 7) - base, area = [u32(img, table), 0];
+  for (let k = table; u32(img, k) === area[0] + area[1] && u32(img, k + 4) > 0 && !u32(img, k + 8) && !u32(img, k + 12); k += 16) area[1] += u32(img, k + 4);
+  return {
+    module_init: 0x50000000 + init.to, cache_init: 0x50000000 + callAt(img, vars[0].at - 20).to, task_vars: 0x50000000 + vars[0].to,
+    tasks: [main.entry, command[0].entry, ask.entry], exec_queue: exec, flags: { valid, attach, ready: ready[0] }, cache_area: area,
+  };
 }
 
 // Where the lens record keeps its zoom table (fact 'lens_record.zoom_table', src/lab/camapp.mjs S-LENS, which writes
@@ -2310,7 +2434,8 @@ function propDevice(img, sites) {
 // {text: {lang_setting}}, {ae: {init, regions, table, rows (the row form's only)}}, {frame_period: {tft, evf}}, {rtos:
 // {init_task, ta_wu, tsnd_sites}}, {store: {db_save, app_saves}}, {hw_timer: {ptr} or {table}}, {crt: {clock_read}},
 // {touch_args: {write_len, read_len}}, {dial: {select, select_end, table_ptr, table0}}, {ui_in: {task}}, {touch_start:
-// {init, id_word}}, {frame_mode: {set}}, {frame_plane: {mode, uploads}} and {prop: {device}} (no app, play, text or
+// {init, id_word}}, {frame_mode: {set}}, {frame_plane: {mode, uploads}}, {prop: {device}} and {lens_driver: {module_init,
+// cache_init, task_vars, tasks, exec_queue, flags, cache_area}} (no app, play, text or
 // frame_period part where MODULE_STATE_GET, the component getter, the language loader or both vtotal functions are
 // not placed, no ae part where AE_INTERP is not and aeRows finds no run; no sends where OlyQeWr is not, no loop or
 // start where CPU 0's kcb or OlyQeRd is not, no dispq part without either; no init_task or ta_wu where CPU 0's kcb or wup_tsk is not, no
@@ -2320,8 +2445,9 @@ function propDevice(img, sites) {
 // as where readFacts' dialSelect reads the select; no touch_start part where CPU 0's kcb, the touch task or OlyTaSt is
 // not or touchStart finds no start; no ui_in part where CPU 0's kcb or UI_IN's flag word is not; no frame_mode part
 // where the TAKE frame-mode request is not placed or is not a clamp; no frame_plane part where neither it nor the port
-// places the frame display mode set, or the set is not the clamp form; no prop part where a property read site is not).
-// Throws where both AE forms are found.
+// places the frame display mode set, or the set is not the clamp form; no prop part where a property read site is not;
+// no lens_driver part where CPU 0's kcb, OlyTaSt, OlyQeRd or LENS_COMMAND's queue word is not or the boot starts no
+// lens task). Throws where both AE forms are found.
 export function readPlacedFacts({ img, at }) {
   const facts = {}, getter = at(MODULE_STATE_GET), loader = at(LANG_LOADER), interp = at(AE_INTERP), component = at(COMPONENT_GETTER_E143);
   const qewr = at(OLYQEWR_E143), qerd = at(OLYQERD_E143), kcb = at(KCB0_E143), wup = at(WUP_TSK_E143), tsnd = at(TSND_DTQ_E143);
@@ -2367,6 +2493,9 @@ export function readPlacedFacts({ img, at }) {
   const focalNow = at(LENS_FOCAL_NOW_E143), zoomTable = focalNow !== null ? lensZoomTable(img, focalNow) : undefined;
   const lensRecord = at(LENS_RECORD_E143);
   if (zoomTable !== undefined && lensRecord !== null) facts.lens_record = { zoom_table: zoomTable, static: lensStatic(img, lensRecord) };
+  const lensQueue = at(LENS_COMMAND_QUEUE_E143);
+  const lens = kcb !== null && taSt !== null && qerd !== null && lensQueue !== null ? lensDriver(img, { kcb, taSt, qerd, commandQueue: lensQueue }) : undefined;
+  if (lens !== undefined) facts.lens_driver = lens;
   return facts;
 }
 

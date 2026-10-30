@@ -15,7 +15,8 @@
 //               TOUCH_START_FOUND and A(), the calls of tsnd_dtq against TSND_COUNT and A(), the display sync against
 //               SYNC_FOUND, its module-9 readers against MODULE9_FOUND and E143's lab lists, its language setting
 //               against LANG_FOUND, the menu memories against MEMORY_FOUND, the touch-panel driver against
-//               NO_TOUCH_DRIVER, the lens mount against NO_LENS_MOUNT, the IIC driver's wait against IIC_FOUND, the
+//               NO_TOUCH_DRIVER, the lens mount against NO_LENS_MOUNT, the lens driver against LENS_DRIVER_FOUND and
+//               A() of its flags and queue word, the IIC driver's wait against IIC_FOUND, the
 //               touch panel's traced I2C functions against TOUCH_FOUND, the device open's frame wait and the
 //               software-timer sleep against FRAME_WAIT_FOUND and TIMER_SLEEP_FOUND, the shooting service's traces
 //               against SHOOTING_FOUND, the AE init against AE_FOUND and A(), the GUI task's take against TAKE_FOUND,
@@ -35,7 +36,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
-  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, SIO_E143 } from '../src/fw/facts.mjs';
+  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, SIO_E143, LENS_DRIVER_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -219,6 +220,20 @@ const NO_TOUCH_DRIVER = ['E145', 'E129', 'E132'];
 // E132 (TG-5), the built-in-lens bodies, whose application loads no API id 0x20041 (getLensConnection on E143, D:
 // 0x504106fc; X, a byte scan); the other 15 hold its one lens record test (X)
 const NO_LENS_MOUNT = ['E145', 'E129', 'E132'];
+// The lens driver's entry points, LENS_EXEC's queue, the lens-0 flags and the lens caches' NAND (lens_driver;
+// src/fw/facts.mjs lensDriver) at the port's places: E143's as src/fw/models.mjs gave them by hand before the rule
+// (lens_native, D), E146's and E147's as read in their code (D: the boot's starts of LENS_MAIN and LENS_ASKDATA at
+// E146 0x50024b7e / 0x50024b9d and E147 0x50024afd / 0x50024b1c, after the module init's call; LENS_COMMAND's receive
+// at E146 0x50115a2a and E147 0x5011f84f; the flags' accessors from E146 0x50126cbf and E147 0x50130ae4; the ready
+// byte's store after the state poll at E146 0x502db176 and E147 0x502eca36; the lens-cache tables E146 0x602b9f84 and
+// E147 0x602cb290, E143's rows), none on the other 15 bodies (X: the rule's E143 shapes are not all there)
+const LENS_DRIVER_FOUND = {
+  E143: LENS_DRIVER_E143,
+  E146: { module_init: 0x502BCFA8, cache_init: 0x502BD609, task_vars: 0x502BD097, tasks: [0x502BD0CF, 0x50115A08, 0x502BF42B],
+    exec_queue: 0x6004325E, flags: { valid: 0xA32D4B98, attach: 0xA32D4B9A, ready: 0xA32D4B94 }, cache_area: [0x416E0000, 0x1C0000] },
+  E147: { module_init: 0x502CE868, cache_init: 0x502CEEC9, task_vars: 0x502CE957, tasks: [0x502CE98F, 0x5011F82D, 0x502D0CEB],
+    exec_queue: 0x600431D0, flags: { valid: 0xA32D3D30, attach: 0xA32D3D32, ready: 0xA32D3D2C }, cache_area: [0x416E0000, 0x1C0000] },
+};
 // The IIC bus driver's completion wait (iic.waits; src/fw/facts.mjs iicWaits), as read (D: E143's at 0x5004cbf6,
 // waiting on (0x60043086), which its callback 0x5004cb95 sets; E145's at 0x50044d60, the compass WHOAMI read's at
 // 0x50044c97, callback 0x50044cff, flag (0x60041508)); E134 has another driver and none (D: 0x50042df1); the other
@@ -589,6 +604,15 @@ export function factsTests() {
     if (TOUCH_QUEUE_FOUND[code] && (code === 'E143' || PORTS[code])) ok(same(tq, TOUCH_QUEUE_FOUND[code]), `${code}: touch_task ${hx(tq ?? placed)}, found ${hx(TOUCH_QUEUE_FOUND[code])}`);
     if (tq !== undefined && PORTS[code]) ok((PORTS[code][TP_FLAG_E143] ?? TP_FLAG_E143) === tq.flag, `${code}: A() of the touch flag word ${hx(PORTS[code][TP_FLAG_E143])}, the rule's ${hx(tq)}`);
     if (LENS_TABLE_FOUND[code] && (code === 'E143' || PORTS[code])) ok(placed?.lens_record?.zoom_table === LENS_TABLE_FOUND[code], `${code}: lens_record ${hx(placed?.lens_record ?? placed)}, found ${LENS_TABLE_FOUND[code]}`);
+    // the lens driver, and the port's places of E143's lens flags and LENS_EXEC's queue word (the map's, which S-LENS and
+    // the camera application's module queues use) at the rule's
+    if (code === 'E143' || PORTS[code]) ok(same(placed?.lens_driver, LENS_DRIVER_FOUND[code]), `${code}: lens_driver ${hx(placed?.lens_driver ?? placed)}, found ${hx(LENS_DRIVER_FOUND[code] ?? 'none')}`);
+    const ld = placed?.lens_driver;
+    if (ld && PORTS[code]) {
+      const a = (v) => (PORTS[code][v] === undefined ? v : PORTS[code][v]), e = LENS_DRIVER_E143;
+      const got = [e.flags.valid, e.flags.attach, e.flags.ready, e.exec_queue].map(a), want = [ld.flags.valid, ld.flags.attach, ld.flags.ready, ld.exec_queue];
+      ok(same(got, want), `${code}: A() of the lens flags and LENS_EXEC's queue word ${hx(got)}, the rule's ${hx(want)}`);
+    }
     if (CBS_FOUND[code]) ok(same(got.cbs, CBS_FOUND[code]), `${code}: cbs ${hx(got.cbs ?? got)}, found ${hx(CBS_FOUND[code])}`);
     if (SYNC_FOUND[code]) ok(same(got.display?.sync, SYNC_FOUND[code]), `${code}: display.sync ${hx(got.display ?? got)}, found ${hx(SYNC_FOUND[code])}`);
     ok(got.touch_panel?.driver === !NO_TOUCH_DRIVER.includes(code), `${code}: touch_panel ${hx(got.touch_panel ?? got)}, found ${NO_TOUCH_DRIVER.includes(code) ? 'no driver' : 'a driver'}`);

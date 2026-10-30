@@ -33,6 +33,30 @@ The current bodies' files:
 | OM-3 v1.1 | E147 | `OLY_E_147_1100_0000_0000.BIN` | 240,517,120 |
 | OM-5 v1.2 | E144 | `OLY_E_144_1200_0000_0000.BIN` | 92,274,688 |
 
+### From a web page
+
+The browser player cannot fetch the `.BIN` itself, because neither server sends CORS headers. Measured from this
+host with curl on 2026-10-29, with `Origin: https://flatpanda.github.io`:
+
+- The API, preflight (`OPTIONS`, `Access-Control-Request-Method: POST`, `Access-Control-Request-Headers:
+  content-type`): `200`, `allow: POST, OPTIONS`, no `Access-Control-Allow-Origin`.
+- The API, `POST` (with `User-Agent: Olympus` and `text/xml`, and again with a browser's `User-Agent` and
+  `text/plain`, the form a page could send without a preflight): `200`, the same 4,142-byte reply both times
+  (`OLY_E_143_1900_0000_0000.BIN`, 240,779,264 bytes, `up_date` 2025/11/04), no `Access-Control-Allow-Origin`.
+  The API therefore does not require the `Olympus` user agent, but a page still cannot read the reply.
+- The signed CDN URL (`dl01.om-digitalsolutions.net/dslr/1430/v1900/...`, CloudFront in front of S3): the preflight
+  for a `Range` header gets `403`; `HEAD` gets `200` and a ranged `GET` gets `206` (`content-type:
+  application/octet-stream`, `accept-ranges: bytes`), but neither has `Access-Control-Allow-Origin`. The URL without
+  its signature gets `403`.
+
+The file is the raw `.BIN`, with no archive around it. OM System's support pages
+(`explore.omsystem.com/c/en/firmware`, the per-body support pages, the update instructions) offer no `.BIN` either:
+they point to OM Workspace (USB) and OM Image Share (Wi-Fi), which fetch the file themselves. The player therefore
+names the model's `.BIN`. It shows `emu/src/fw/updater.mjs` `fetchCommand()`, a one-line curl command that asks the
+API and saves the file under its own name (tried with a 1 KiB range on 2026-10-29: the bytes matched
+`fw/OLY_E_143_1900_0000_0000.BIN`), and it takes the file from its file input or from a drop on the page. It goes
+through no relay or proxy.
+
 ## The container
 
 The encoding is the long-known Olympus `oly_fw_manip` scheme (community tool with C++ source, mirrored at

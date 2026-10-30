@@ -416,7 +416,8 @@ The open items are in `docs/ROADMAP.md` "Debug API follow-ups".
 
 `web/index.html` is the player's page (`web/play.html`) running the lab in a module Worker (`web/worker.mjs`). Serve
 `emu/` from any static server on localhost (for example `python3 -m http.server -d emu 8000 --bind 127.0.0.1`), open
-`http://127.0.0.1:8000/web/index.html` and choose the camera's firmware file (the page names it: E143's is
+`http://127.0.0.1:8000/` (the landing page, `emu/index.html`) or `http://127.0.0.1:8000/web/index.html`, and choose the
+camera's firmware file or drop it anywhere on the page (the page names it: E143's is
 `OLY_E_143_1900_0000_0000.BIN`). The Worker reads it block by block (`src/fw/olyfw.mjs`: the container walk,
 descramble and checksum), keeps the main code block and the part of the resource block the lab can read
 (`src/fw/resprefix.mjs`, 9.6 of 58 MiB), and caches both in the browser's Origin Private File System, so a later visit
@@ -441,6 +442,33 @@ target or 20 ms) and answers the page's API calls with `src/lab/playapi.mjs`. Th
 `web/page.mjs`, which answers the status and frame long polls from what the Worker pushes (every status, the newest
 frame as RGBA, the session log) and sends every other request to the Worker. The message protocol is in
 `web/worker.mjs`'s header. `web/gate.html` and `web/runner.mjs` are `bin/webgate.mjs`'s Worker-side runner.
+
+**Where the firmware comes from.** The page's "Where to get" panel names the model's `.BIN`. OM System's support site
+offers no `.BIN`: its update tools (OM Workspace, OM Image Share) fetch it from the vendor's updater API. Neither that
+API nor the signed CDN URL its reply names sends CORS headers, so a page on another origin cannot fetch the file, and
+the player goes through no relay (the headers seen on 2026-10-29 are in `docs/firmware-container.md` "From a web
+page"). The panel instead shows `src/fw/updater.mjs` `fetchCommand()`, a one-line curl command for macOS and Linux
+that asks the same API and saves the `.BIN` under its own name in the current directory. It also names `fetch-fw.mjs`
+for a clone. The API serves each body's latest release only, so a release newer than the model's is refused with
+the name of the file the model needs.
+
+**The published site.** `node emu/bin/site.mjs DIR` writes the static site. It holds `emu/index.html` (the landing
+page, which links to the player and says that the firmware stays in the visitor's browser) and exactly the files the
+player loads, found by following every relative reference from the landing page (`--list` prints them: 123 files,
+2.4 MiB, all under `web/`, `src/`, `scenarios/` and `refs/`). It holds no firmware, nothing of `emu/out/`, no test or
+node-only module and not `web/gate.html`. A reference that is absolute (it would leave the site's sub-path), bare,
+outside `emu/`, into `out/` or of another file type stops the build. The site needs no server code and no custom
+headers (no COOP/COEP: the Worker uses no SharedArrayBuffer, and OPFS's sync access handles need none), only a
+JavaScript content type for `.mjs`. `.github/workflows/pages.yml` runs on a push to `main`, the public repository's
+branch, or by hand: it runs `test/test_site.mjs`, builds the site and deploys it with `actions/upload-pages-artifact`
+and `actions/deploy-pages` to the repository's project site, `https://<owner>.github.io/<repo>/`. For the public
+repository that is `https://flatpanda.github.io/om-emu/`. The repository's Pages source must be set to "GitHub
+Actions".
+`OM_FW_DIR=fw node emu/bin/sitegate.mjs` builds the site and serves it under `/om-emu/` from a plain static server
+(GitHub Pages' content types, nothing else). In headless Chrome it then opens the landing page, follows its link,
+checks the firmware panel, chooses the `.BIN` through the file input and waits for the shooting screen (GUI `0x0108`).
+A second page started by dropping the `.BIN` must reach it too. Every request must be a body-less GET under the
+prefix, every answer a 200, and no page or Worker may throw. Screenshots go to `emu/out/web/site/`.
 
 ## Layout
 
@@ -533,6 +561,7 @@ firmware the run warns and skips that rule. `--explain N` prints what each firmw
 | `node emu/bin/bench.mjs SCENARIO --passes 5` | MIPS and cost per stop; exit 1 if a pass does not repeat pass 0 | the firmware |
 | `node emu/bin/playperf.mjs` | the play workload on the Player; exit 1 unless its digest is `364806f182da750f` | the firmware |
 | `node emu/bin/snapgate.mjs kernel-5c osd shoot-tft` | snapshot detours leave the sessions and the end state unchanged; detours run three times from one snapshot trace identically, a short one and one of at least 10,000 instructions per session (99,205, 200,002 and 103,598 on these three, 2026-10-29) | the firmware |
+| `OM_FW_DIR=fw node emu/bin/sitegate.mjs` | the published site (`bin/site.mjs`) from a plain static server under `/om-emu/` in headless Chrome: the landing page and its link, the firmware panel, the `.BIN` by the file input and by a drop to the shooting screen, only GETs under the prefix, all answered; under a minute | the `.BIN`, Chrome |
 | `OM_FW_DIR=fw node emu/bin/webgate.mjs --rounds 4` | headless Chrome: the Worker against node and `bin/run.mjs`, the page (keys, touch, canvas, session log; the Card panel's read, Take out and Put in with a 64 GiB card picked by the Card start option, and the HDMI control without the port; the EVF layout's class and canvas size after LV to the EVF and back), no uploads; about 5 min | the `.BIN`, Chrome |
 | `node emu/bin/modelcheck.mjs` | the ported models marked `checked` in `src/fw/models.mjs` (E146, E147, E144, E139, E134, E137, E142, E140, E125, E130, E133, E145), or those named: start (E145: then MENU at its date and time setting, `START_PROMPT`), S1, S2, PLAY, INFO, PLAY on the TFT, and start, S1, S2 on the EVF of a body with one; GUI states by name; after S1 the count probe: the screen must change with the remaining-shots query's answer (S-CARD's count, or on a body whose card is native the firmware's, replaced for one window by the probe's own answer of the query) and only there; on a body whose card is native the card check: mounted, the shots counted from it, each picture's file found again by `refs/volume.mjs` (FAT or exFAT) with its size (all pass; a body expected to fail it goes in PROBE_XFAIL with its reason, strictly: a pass of an expected failure fails the run); `--card-size GiB` puts a blank card of that size in the slot (with an SDXC card E144 is expected to stop, SDXC_XFAIL, as strictly) | the models' firmware |
 | `node emu/test/test_scpum4.mjs [--session]` | also in both suites above: the bridge that puts the SCPU's own firmware behind the link, its clock (A-SCPUM4-1), the frame log rebuilt from the wire against S-SCPUDEV's own, the byte mover through SPI2 and DMA1 (pure); with `--session` a play session's start with S-SCPUDEV and with the SCPU's firmware (`OM_EMU_SCPU=native`), whose frame log, transfers and pin levels must equal S-SCPUDEV's (`OM_EMU_MODEL=E146` for E146) | the E143 (or E146) firmware blocks and SCPU block for `--session` |

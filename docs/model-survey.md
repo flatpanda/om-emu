@@ -54,9 +54,9 @@ through a reference place more; "Per-body status" has their figures).
 | E130 | E-M10 III | 1200 | 25.0 | 0x60400020 (6.9%) | plain | 1.02M | 82 | through E142: modelcheck passes (TFT and EVF; findings 11, 14 and 16) |
 | E129 | TG-5 | 1101 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; MENU answers its date and time setting at the start) since the charger's transfers on serial channel 9 are served (S-SIOIIC, S-CHARGER, finding 24); its settings store since S-BOOTSTAGE (finding 20) |
 | E132 | TG-5 (KOUICHIRO) | 1300 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; its date and time setting has no Cancel, the clock is set) since the charger's transfers are served and S-MODACK answers its industrial category and logger modules (finding 24); its deferred send since finding 21 |
-| E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | through E122: the kernel's init runs, the start stops at the GUI message take's observer (finding 28) |
+| E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | through E122: the start runs natively to E122's stops, UI_IN's forward observer on the TFT and the send to queue 8 on the EVF (findings 28, 32-34) |
 | E122 | PEN-F | 3101 | 20.4 | 0x60021020 (7.2%) | plain | 0.79M | 123 | through E130: the start runs natively to the shooting screen state `0x0108` (the GUI draws the clock warning) and stops at the first long timer or S1 in the movie time (findings 28, 31) |
-| E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | through E122: as E118 (finding 28) |
+| E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | through E122: as E118, no per-frame wait in its device open (findings 28, 32-34) |
 | E113 | E-M10 | 1400 | 18.0 | 0x7d991020 (7.4%) | plain | 0.88M | 155 | not tried (base) |
 | E109 | E-M1 | 4600 | 17.0 | 0x6daf1020 (7.2%) | plain | 0.76M | 139 | not tried (base) |
 | E126 | E-PL8 | 1100 | 18.0 | 0x7d971020 (8.2%) | plain | 0.74M | 140 | not tried (base) |
@@ -528,6 +528,64 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    999 shots, X), and the second PLAY met the same division through another movie API: the card's file system (or a
    stand-in for the movie APIs) is the next step. The EVF start still stops at the send to queue 8 (finding 28).
 
+32. **E120's own stop and the E118 family's GUI take** (2026-10-30). E120's own tft child stopped where E118's did, in
+   the lab's set-up: `hook obs-dispatch: the E143 address 0x510c2a2e has no place in E120's build` (X; finding 28 had
+   reported it as E118's). Their GUI task sets a3 = sp + 396 early, `mov sp,a3` before a vtable call and `add 396,a3`
+   after it (E118 0x50b932e9, 0x50b932ec), then waits in a loop of its own for message 38401 (`cmp 38401,d0; bne`,
+   E118 0x50b93344, E120 0x509140ad), passes that message by value to GESetEvent (E118 0x50b8c4d7, the port's place of
+   E143's 0x510ba2c2) and only then runs the receive loop, from `mov 32768,d3` on, with no a3 set-up before it (D).
+   E122's GUI task has one loop and no such wait (D, 0x50b982f6..). 0x9601 is the GUI's first event and first take in
+   E143's and E144's starts (X: their sessions' events), so the wait drops nothing a start sends before it (I).
+   `src/fw/facts.mjs` guiTake now matches the loop from its `mov 32768,dN`, with a3 set right before it or as the last
+   `add 396,a3` within 0x100 bytes before it after a `mov sp,a3`: E118's take is 0x50b93379, E120's 0x509140e2 (the
+   `cmp d3,d0` after the load, as E134's), and the other 16 builds keep theirs (X, the rule on the 18 images).
+
+33. **The family's handler tables, display task and PWM block** (2026-10-30). Past the take, E118's start stopped in
+   H-BOOTTIME's hardware-timer init: `attach(irq 29, level 6) from 0x50066cc3: returned 0, handler table 0x00000000,
+   want 0x600880e6` (X; E120 the same). Their ports had kept E143's handler-table address 0xa32600c0: the direct map
+   has no vote for it, and a chained port takes the reference's answer only for an unplaced address, not for a kept one
+   (E122's own map voted 0xa1bf3984). Their attach writes the tables at 0xa1bb3994 + k x 0x1e8 (D: E118 0x5004c80f,
+   E120 0x5004c7bf). A rule reads every build's tables at the attach's run of one `mov imm32,An; mov d0,(d3,An)` per
+   CPU (`src/fw/facts.mjs` handlerTables, fact `kernel.handlers`; E143 0x5002e95b, E144 0x5003408b, E122 0x5004c82e,
+   D), and places E143's table: the 16 other builds keep their places (X). Every chained port keeps some lab addresses
+   at E143's where its reference places them (from 1 on E139 to 16 on E122, X: the ports' kept lists against their
+   references' places); no other one has been met at a stop. Then:
+   - E120 has no per-frame wait in its device open: `frameWait` finds none (X), and the VSC command handler that
+     holds E122's and E118's (`mov 135,d0` beside it, E122 0x503027e9, E118 0x502db856) has no counterpart in its
+     image (X, a byte scan); what its open waits on per frame is ?. Its `display.frame_wait` is null, and S-FRAMEWAIT
+     leaves it out (`src/fw/model.mjs` fact() gives a read null as undefined; the use takes `?? null`);
+   - the display task init starts E122's display task (`extra_tasks`) on both: the static task table's row 0x51,
+     whose entry word sits at the same image offset 0x18f70 on all three (D), E118 0x502d2fcd and E120 0x502c6a7d,
+     the same opening as E122's 0x502f90f5 in another order (D), which the map does not pair;
+   - their TFT opens enable a channel of the PWM block 0x9bc00000, the E144 family's, through the same channel enable
+     (E118 0x5006bf92, D), which the family's board now keeps as a stub page; E122's start does not reach it (X).
+
+34. **E118 and E120 at E122's level** (2026-10-30). Their starts now run natively through the kernel, the timers
+   (H-DRVINIT), the display init and open, the settings store (H-STOREINIT) and the dial init, and stop where E122's
+   do (X, each body's own tft and evf children): on the TFT at the play bring-up's UI_IN forward observer (E143
+   0x5014c3eb, which E122 inlines, finding 28), on the EVF at the synchronous send to queue 8 from the display code
+   (E118 0x502d0b98, E120 0x502c4560; E122's 0x502f6bbd). Both are E122's stops, so E122's mechanisms serve them: the
+   two bodies port through E122 and take its overrides, but its other `MODELS` fields (`g4set`, `return_stubs`,
+   `call_skips`, ...) do not carry and are to be given per body. With the UI_IN observer and the S-DISPQ reply returns
+   (E143 0x501c4913, 0x501c4974, unplaced on all three) passed by hand in a scratch run (not committed, X), E118's and
+   E120's GUI state read faulted: the GUI caller's word (E143 0x60368b88) had no vote, and their maps placed it by a
+   section delta at a word no code of theirs loads. A rule reads it after the take, where the GUI task hands each
+   message to its caller object (`src/fw/facts.mjs` guiCaller, fact `menu.caller`: E118 0x615e9970, E120 0x615e81d4,
+   D; the other 16 builds keep their places, X). The scratch run then met, on all three in the same order, the
+   missing `g4set`, the touch panel's open (E143 0x501e40da, unplaced on all three) and the VSC control bracket's
+   observer (E143 0x501e04b7, E118), all on E122's path. Specific to E118 and E120, read for later:
+   - the board byte: their boot driver init reads the strap id with `and 3` (E118) or `and 7` (E120) and maps id 0 to
+     board 3 (E118's pairs at 0x60026860 0:3, 1:2, 2:1, 3:0; E120's at 0x60026804 0:3, 4:2, 6:1, 7:0, any other id
+     halting; E122's maps it to 4, D); the getter has four callers on each (X), and their dial inits take one table;
+   - the module queue word of PWR_EXEC (E143 0x600432bc, id 0x7c), carried from E144's override: the family's name
+     table entry PWR_EXEC holds 0x86 on all three (X, the entry's bytes; E143's holds 0x7c), E118's and E122's ports
+     place the word at the queue table's entry of 0x80, and E120's leaves it unplaced (the direct map and the leg
+     disagree, carry_failed); whether the entry is the queue's is I. S-MODACK reads these ids at the application's
+     start (`src/lab/camapp.mjs` module_queues), where an unplaced word reads as id 0.
+   E118's carry_failed list also holds three display functions E122 and E120 place (E143 0x501c6a93, 0x501c6aca and
+   0x501db1b4, X); the lab names them only in its stand-ins' descriptions, through no A() (X, a grep), so nothing waits
+   on them.
+
 ## Per-body status
 
 The state as of 2026-10-23. Each body's `MODELS` entry (`src/fw/models.mjs`) carries the numbers its `port_via` choice
@@ -783,9 +841,9 @@ passes; S1 does not stop at S-AFOSD since the framePlane rule gates it (finding 
 **E118 (E-M5 II), E122 (PEN-F), E120 (E-M10 II).** Until 2026-10-30 they stopped at import on 18 board facts their
 family scaffold left unread (`intc.irq_osd_engine` first, X). The board is read since (finding 28): E122's start runs
 natively through the kernel, the timers, the display init and open, the settings store and the dial init and stops at
-the play bring-up's UI_IN observer on the TFT (on the EVF at the display code's send to queue 8); E118 and E120, ported
-through E122, stop earlier, at the GUI message take's observer while the lab is set up (X: `bin/modelcheck.mjs E118 E122
-E120 --no-port`, each FAILED with that stop).
+the play bring-up's UI_IN observer on the TFT (on the EVF at the display code's send to queue 8). E118 and E120, ported
+through E122, stopped earlier, at the GUI message take's observer while the lab was set up; since findings 32 to 34
+(2026-10-30) they run to E122's two stops (X: the tft and evf children, each body's own run).
 
 ## The chained port
 

@@ -52,8 +52,8 @@ through a reference place more; "Per-body status" has their figures).
 | E145 | TG-7 | 1103 | 19.5 | 0x60021020 (7.5%) | plain | 1.10M | 81 | through E142: modelcheck passes (TFT, the card native, the count probe; MENU answers its date and time setting at the start, finding 22) |
 | E133 | E-PL9 | 1101 | 25.0 | 0x60400020 (7.2%) | plain | 1.04M | 83 | through E142: modelcheck passes (TFT, no EVF; the count probe and its card native) since UI_IN's boot key is the power switch's (finding 20); before, its start went to the battery insertion's boot service, which creates no GUI |
 | E130 | E-M10 III | 1200 | 25.0 | 0x60400020 (6.9%) | plain | 1.02M | 82 | through E142: modelcheck passes (TFT and EVF; findings 11, 14 and 16) |
-| E129 | TG-5 | 1101 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: kernel, display start, settings store (since S-BOOTSTAGE, finding 20) and the camera application's start, which waits for the internal charger's transfer on serial channel 9 as E132's: `all tasks blocked (lab task 153 state WAI)` |
-| E132 | TG-5 (KOUICHIRO) | 1300 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: kernel, display start, settings store and the camera application's start, whose charger request on serial channel 9 runs its deferred send (IRQ 29, finding 21) and then waits for the transfer's completion, which the lab does not model: `all tasks blocked (lab task 155 state WAI)` |
+| E129 | TG-5 | 1101 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; MENU answers its date and time setting at the start) since the charger's transfers on serial channel 9 are served (S-SIOIIC, S-CHARGER, finding 26); its settings store since S-BOOTSTAGE (finding 20) |
+| E132 | TG-5 (KOUICHIRO) | 1300 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; its date and time setting has no Cancel, the clock is set) since the charger's transfers are served and S-MODACK answers its industrial category and logger modules (finding 26); its deferred send since finding 21 |
 | E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | stops at import: board fact `intc.irq_osd_engine` unknown (family E118) |
 | E122 | PEN-F | 3101 | 20.4 | 0x60021020 (7.2%) | plain | 0.79M | 123 | stops at import, as E118 |
 | E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | stops at import, as E118 |
@@ -339,6 +339,47 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    1440 x 480, 1440 x 404, ...; the EVF rows the same, D). So the display path runs at two samples per panel pixel
    and the frames' 1440 samples per line carry 720 pixels: they look stretched twice horizontally, and halving them
    gives the panel's picture (I). Why the panel takes two samples per pixel is not read (?).
+26. **The TG-5s through modelcheck's path** (2026-10-29, `docs/hle-gaps.md` 4.7.5). Three stops, each read where it
+   lies; E129 and E132 are in `bin/modelcheck.mjs`'s default set (`MODELS` `checked`), their cards native.
+   - *The charger's transfers.* The start's charger request writes register 1 = 0xa2 and reads it back over PER_SIO's
+     channel 9, an IIC channel at 400 kHz (address 0x1b), and waited 3000 ms for a completion no controller gave
+     (finding 21 and the E132 status). S-SIOIIC (`src/lab/sio.mjs`) serves the serial controller driver's transfer
+     and receive starts for the channels a body's devices sit on, the layers above them native (PER_SIO's channel
+     API, its IIC layer, the driver's completion dispatch, the charger request); S-CHARGER (`src/lab/charger.mjs`)
+     answers only what the request's code shows (registers 0..2 keep what is written, I). A rule reads the driver's
+     parts on each body (`src/fw/facts.mjs` sioDriver, the 15 expanded images but the E118 family's, X). PER_SIO's
+     channel map had never been set (its setter ends PER_SIO's channel init, a boot step the lab does not run): every
+     channel's controller index was a byte of low memory, and the charger's transfer went to index 0 (X). H-SIOMAP
+     runs the firmware's setter at the bring-up; the TG-5's channels 9, 2 and 3 then reach controllers 7, 2 and 3,
+     whose register blocks are lab-stub pages (`src/fw/models.mjs` board stub_pages, D from the driver's register
+     table). The earlier trial's 300,000 stub calls in the panel driver were its open loop retrying every 1 ms on an
+     index another channel held (the open flag is the index's, D; which channel held it is not read); with the map
+     set they are not seen (X).
+   - *E129's card.* With S-CARD's card the start divides by zero in the file system's free-cluster count (the
+     cluster size of the absent volume, `0x50546d48`, X); with the card's file system native (as E133's and E145's)
+     the start ends in the date and time setting `0x1103`, the TG-7's, with Cancel on MENU (X: frames), so modelcheck
+     answers it with MENU (`START_PROMPT`). Start, MENU `0x108`, S1, S2 (one image), PLAY `0x608`, INFO `0x60b`, PLAY
+     `0x108`; the count probe at 845,447-946,473; the blank card formatted (FAT32 on 8 GiB, exFAT on 64), 2629 shots,
+     S2's file read back (X: modelcheck).
+   - *E132's "Busy".* The start ended in `0x10c`, a progress screen with "Busy": the industrial TG-5 (its quality
+     items include CALS) asks isCategoryUpdate first in its error-factor check (`0x50be0796`, setErrorFactor, then
+     date, card, lens and battery cover), and its check (OlyHfwOpeIndustrial::checkUpdateCategoryInfo) is true when
+     its synchronous DISPLAY cmd 43 returns 0; DISPLAY's reply word for cmd 43 is 0 (D), so the start shows "Update
+     folder Allocation"'s progress (error factor 22, display request 267) and updateCategoryInfo posts its request to
+     CATEGORY_MAIN (queue 0xe6, target 38 of its API target table), a module task the lab does not run and E143's
+     table has no counterpart of, so S-MODACK did not answer it and the screen stayed (X). E145 has the same check as
+     a stub that returns 0 (D). `src/fw/models.mjs` modack_queues gives S-MODACK E132's CATEGORY_MAIN and
+     LOGGER_MAIN (target 43, queue 0xdf; without its answer the session stops once the clock is set, the
+     application's queue 6 full, X, why is ?). The start then ends in the date and time setting with Set and no
+     Cancel (X: frames): modelcheck's prompt answer is UP and OK on each of the five fields (2017.01.01 00:00), the
+     fifth OK setting the clock, then the path: S1, S2, PLAY, INFO, PLAY, the count probe at 845,448-946,473, the card
+     as E129's (9999 shots) (X: modelcheck).
+   - *Not changed:* the twelve bodies modelcheck checked before pass as before, with a 64 GiB card too (E144's
+     expected stop), and E143's golden sessions are identical (X); no body but the TG-5s runs H-SIOMAP or S-SIOIIC,
+     and the rule's facts are only read there. The TG-5s' frames have a teal background where the
+     other bodies' are black, and their text is pink (X); whether that is the panel's palette or the lab's
+     composition is not read (?). S1 shows the GUI's AF target brackets; S-AFOSD gives the TG-5s no upload (they
+     have no mode-3 frame plane, finding 22).
 
 ## Per-body status
 
@@ -556,7 +597,9 @@ set (X). Since 2026-10-29 S-BOOTSTAGE sets it before the store's start (finding 
 (H-DPCINIT, H-PWRTASK, its task 11 at `0x500400df`) and the HighLevel create run, and the start stops where E132's
 does, in the charger's transfer (the wait at `0x5003fc39`, every task blocked, X). The step's flash read (stage 1's
 part read in `0xa2b4d2d0` by the loader `0x50022ec0`), its region set-up of the block `0x99700000` (not modelled) and
-its hook list (empty for stage 1, `0x50173c78`) are not run (D).
+its hook list (empty for stage 1, `0x50173c78`) are not run (D). Since 2026-10-29 (finding 26) the charger's
+transfers are served (S-SIOIIC, S-CHARGER, H-SIOMAP) and the card is native: the start ends in the date and time
+setting, which MENU cancels, and `bin/modelcheck.mjs` passes.
 
 **E132 (TG-5).** Ported through E145 (2.68M instructions paired, against 0.94M). Its registry bootstrap has no such
 wait (D). It stopped in CamApp.start (`camapp.mjs`), every task blocked: the lab task requests serial channel 9 (E132
@@ -583,7 +626,11 @@ transfers and their completion, at the controller's registers or at the layer's 
 what is written would pass the read-back, I). A trial, not landed (X): with the charger command answered 0 at its call
 from `0x5003f931`, the start creates the GUI and ends in `0x10c` SS_COMMON/ID_ST_FOLDER_OMT_PROGRESS_BAR, a 960 x 480
 frame with "Busy" and a bar; 8 s of idle there reach 300,000 stub calls in the panel driver (`0x5015b55f`); S1 stops
-at S-AFOSD (`0x500257ce` has no place in E132's build, as on E145, finding 14).
+at S-AFOSD (`0x500257ce` has no place in E132's build, as on E145, finding 14). Since 2026-10-29 (finding 26): the
+transfers are served (S-SIOIIC, S-CHARGER, H-SIOMAP); the "Busy" screen was the industrial category update's, whose
+request to CATEGORY_MAIN S-MODACK now answers (modack_queues), as LOGGER_MAIN's; the card is native; the start ends in
+the date and time setting without Cancel, the clock set by modelcheck's prompt answer, and `bin/modelcheck.mjs`
+passes; S1 does not stop at S-AFOSD since the framePlane rule gates it (finding 22).
 
 **E118 (E-M5 II), E122 (PEN-F), E120 (E-M10 II).** They stop at import on 18 board facts their family scaffold leaves
 unread (`FAMILIES.E118`, `src/fw/board.mjs`: the interrupt controller's IPI, kick and control registers and its
@@ -623,6 +670,6 @@ take about 1.1 s per body. Under heavy load the full re-port after E144's inter-
 The new OM System PEN (expected as E148) is not on the update server. Lens and accessory firmware are out of scope.
 Besides E143, E146 and E147, nine bodies pass the player with a picture (the shooting screen in their frame, S1 taken,
 the player settled running): E144, E139, E134, E137, E142, E140, E125, E130 and, after MENU at its date and time
-setting, E145 (finding 22). E133 passes modelcheck since 2026-10-29. E129
-and E132 run to the camera application's start, where the internal charger's transfer waits; the E118 family runs no firmware code
-in the lab yet, so nothing above says how far it boots. The next steps are in `ROADMAP.md` "Multi-model".
+setting, E145 (finding 22). E133 passes modelcheck since 2026-10-29, E129 and E132 too (finding 26: E129 after MENU,
+E132 after its clock is set at its date and time setting); the E118 family runs no firmware code in the lab yet, so
+nothing above says how far it boots. The next steps are in `ROADMAP.md` "Multi-model".

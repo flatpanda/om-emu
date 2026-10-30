@@ -35,7 +35,7 @@ Every milestone runs in emu and is covered by the check its row names; the `chec
 | The camera application | every play session runs the firmware's camera application (CA_MAIN) natively (S-CAMAPP, 2026-10-15): power-on to the shooting screen, S1, S2 and the rec view, REC, playback, the Super Control Panel and the menu; the lab's own stand-ins for it are gone | `test_camapp`, `golden.json` | shutter spec §7 |
 | Exposure | a 12-40mm F2.8 PRO on the mount and the scene's brightness fed to the camera's own exposure plan (S-EXPOSE); the screen shows the planned shutter, aperture and ISO | `golden.json` | shutter spec §7 item 60 |
 | The lens natively (E143, the default) | the lens tasks, the lens driver, LENS_SSC and IRQ 14 against a model of the lens serial controller, with S-LENSMCU answering the driver's frames as the 12-40mm F2.8 PRO (2026-10-28); the deferred calls (IRQs 53..58); the zoom ring and the lens lock pin switch reach the driver; the camera application forwards the touches itself (2026-10-29: the touch's stop was S-CAFWD swallowing the GUI's answer). The default since 2026-10-29; `OM_EMU_LENS=stand-in` takes S-LENS, the other bodies' lens | `test_lens`, `golden.json` | hle-gaps.md §4.4.2 |
-| Multi-model, steps 1-4 and part of 7 | 17 bodies besides E143 have ports; E146, E147, E144, E139, E134, E137, E140, E125 and E130 shoot, play back and run the EVF through `bin/modelcheck.mjs`, E142, E133 and E145 (no EVF) on the TFT, each with the screen's remaining-shots count (the count probe); E129 and E132 stop in their start, the E118 family at import (Multi-model below) | `emu/bin/modelcheck.mjs`, `test_facts` | `docs/model-survey.md` |
+| Multi-model, steps 1-4 and part of 7 | 17 bodies besides E143 have ports; E146, E147, E144, E139, E134, E137, E140, E125 and E130 shoot, play back and run the EVF through `bin/modelcheck.mjs`, E142, E133, E145, E129 and E132 (no EVF) on the TFT, each with the screen's remaining-shots count (the count probe); the E118 family stops at import (Multi-model below) | `emu/bin/modelcheck.mjs`, `test_facts` | `docs/model-survey.md` |
 
 Instruction counts: the ISA row's 1,684,013 reachable instructions come from a reachability scan that is no longer in
 the repository. `node emu/bin/fwmap.mjs` finds 5,186,071 instructions in the main block, because it also follows code
@@ -49,8 +49,9 @@ not reconciled.
    step 2), and nine of them with the card's file system native (2026-10-25, hle-gaps.md 4.8.4); E145 joined them on
    2026-10-29, its card native too (`docs/model-survey.md` finding 22). The E144 family's orange movie time `0:00:00` is the firmware's answer for the
    blank store's movie mode, which those bodies cannot record (2026-10-27, hle-gaps.md 4.8.5).
-2. **The open stops of the remaining bodies** (Multi-model "Next stops"): the TG-5s' (E129, E132)
-   charger transfer on serial channel 9, then the E118 family's board port. E133 and E145 pass modelcheck since 2026-10-29.
+2. **The open stops of the remaining bodies** (Multi-model "Next stops"): the E118 family's board port. E133, E145 and
+   the TG-5s (E129, E132: their charger's transfers on serial channel 9, `docs/model-survey.md` finding 26) pass
+   modelcheck since 2026-10-29.
 3. **HLE of E143, step 2** (HLE of E143 below; step 1's static decodes are done): the cheap CPU 0 wins (a ticking
    clock, persistence by default, native group-0 keys and power lever, Level Adjust, the HDMI EDID). The ticking clock
    is in, and PER_SCPU runs natively against a transport-level model of the sub-CPU (S-SCPUDEV, 2026-10-23, in place of
@@ -94,7 +95,7 @@ bodies; the bodies whose image runs at a `0x60xxxxxx` base pair 0.76M-2.08M inst
 | ported | E144 OM-5, E139 E-M1 III | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe included |
 | A | E134 E-M1X | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe included |
 | B | E137 E-M5 III, E142 E-P7, E140 E-M10 IV, E125 E-M1 II, E145 TG-7 | E137, E140 and E125: `bin/modelcheck.mjs`'s path passes on the TFT and the EVF, E142 and E145 (no EVF) on the TFT; the count probe passes on all five; E145 with MENU at its date and time setting (`0x1103`) after the start (2026-10-29) |
-| C | E133 E-PL9, E130 E-M10 III, E129 / E132 TG-5, E118 E-M5 II, E122 PEN-F, E120 E-M10 II | E130: `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe too; E133 on the TFT (2026-10-29), its card native; E129 and E132 stop in their start at the charger's transfer; the E118 family stops at import on its board |
+| C | E133 E-PL9, E130 E-M10 III, E129 / E132 TG-5, E118 E-M5 II, E122 PEN-F, E120 E-M10 II | E130: `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe too; E133, E129 and E132 on the TFT (2026-10-29), their cards native; the E118 family stops at import on its board |
 | D | E100, E101, E106-E113, E115, E117, E121, E126 | not tried |
 | - | the new OM System PEN (E148?) | not served yet (E148-E199 answer nothing, 2026-10-19): re-probe |
 
@@ -133,7 +134,7 @@ The plan:
    stops on E134 and 10 on E137, most of which became rules that serve every body (`docs/model-survey.md` finding 8).
 4. E142 (E-P7) and E140 (E-M10 IV) at `0x60020020`, then E125 and E145. **Done** (2026-10-20; E145 2026-10-29,
    `docs/model-survey.md` finding 22).
-5. Tier C. E130 (E-M10 III) and E133 (E-PL9, 2026-10-29) are **done**; E129 and E132 stop in their start; the E118
+5. Tier C. E130 (E-M10 III), E133 (E-PL9), E129 and E132 (TG-5, 2026-10-29) are **done**; the E118
    family needs a board port
    (its interrupt controller lacks E144's IPI, kick and control registers, so its devices must accept "no such
    register", not one more value).
@@ -161,8 +162,8 @@ the survey table.
   seams in each image (`src/fw/facts.mjs` fileSystem), and E146, E147, E144, E139, E137, E142, E140, E125, E130 and E145
   format a blank card, mount it, count from it and write S2's file (`src/fw/models.mjs` card_fs, S-SDPOWER for the
   E144 family's card supply). Left: E134, whose first fopen blocks on UI_IN's request queue (S-CARD kept); the HLS
-  side (Card Formatting from the menu, the card out and in) on the bodies other than E143; E129 and E132
-  once their starts run (E133's card is native since its start runs, 2026-10-29).
+  side (Card Formatting from the menu, the card out and in) on the bodies other than E143; E133's, E129's and
+  E132's cards are native since their starts run (2026-10-29).
 - **The card, next on E143:** Card Formatting from the menu and the card's removal and insertion while the camera
   runs are done (2026-10-24, hle-gaps.md 4.8.3: S-MDACTRL and S-MEDIA stand in for the HLS function component and
   media manager, the application's media control runs natively). Next: REC_FILE's own DCF steps (the DCF fnode its
@@ -237,11 +238,16 @@ the survey table.
   IRQ 29 on the posting core, raised by the write of 1 to `0x9b800030`, the first of the E144 family's six trigger
   words (IRQs 29..34); the other starts of the family post nothing (E144, E142, E130, E133 measured). With the triggers
   on the board, H-DPCINIT at the bring-up and the power task started (H-PWRTASK, its charger init sets the channel's
-  configuration), the send runs and the request waits for the internal charger's transfer on PER_SIO channel 9. Next:
-  that channel's transfers and their completion (the controller at `0x9a200000` at its registers, or a seam at the
-  transfer layer's starts, as S-SIO2 serves PER_SCPU's channel on E143), with the charger at the far end; then, as a
-  trial with the request answered showed, the start's "Busy" screen (`0x10c`), the panel driver's stub-call storm and
-  S1 at S-AFOSD's unplaced AF upload, as E145's.
+  configuration), the send runs and the request waits for the internal charger's transfer on PER_SIO channel 9.
+- **The TG-5s through modelcheck** (done 2026-10-29, finding 26, hle-gaps.md 4.7.5): the serial controller driver's
+  transfer starts are the seam (S-SIOIIC, a rule reads the driver's parts on 15 bodies), the charger at the far end
+  (S-CHARGER: what the request's code shows, the read-back's register file I), PER_SIO's channel map set by its own
+  setter (H-SIOMAP: it had never been set, every channel's index a byte of low memory, which also made the panel's
+  open loop spin); E129 with its card native ends in the date setting MENU cancels; E132's "Busy" was the industrial
+  category update's request to CATEGORY_MAIN, a module queue E143's target table lacks (S-MODACK answers it and
+  LOGGER_MAIN by `modack_queues`), its date setting has no Cancel and the clock is set. Open: the controller at its
+  registers; the channel map on the other bodies (E143's too); E144's charger (S-INTCHA) as an S-SIOIIC device; why
+  LOGGER_MAIN's unanswered request fills queue 6 (?); the TG-5 frames' teal background (?).
 - **The E118 family** needs its board port before any of its code runs.
 - **S-PANELDONE's gate:** on the E144 family's board it answers every display run's wait on the panel flag, also on
   E139, E134, E125 and E130, whose waits ran natively before with the same results (X). Read which of those waits find

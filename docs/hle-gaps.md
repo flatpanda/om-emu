@@ -1230,6 +1230,69 @@ the GUI stayed in shooting with no write to `+0x9c` (X), and the power manager d
   opens a new lab session; the boot is not run) and the sub-CPU's wake. E146 and E147 keep H-POWER's immediate close
   (their power_native is not placed).
 
+#### 4.7.5 PER_SIO's serial controller and the TG-5's internal charger (E129, E132, 2026-10-29; D unless tagged)
+
+The TG-5s' camera application start writes the internal charger's register 1 and reads it back over PER_SIO's channel
+9, where the start had stopped (`docs/model-survey.md` finding 26). E132's addresses (E129's are the same code a few
+bytes on; E143's places in brackets):
+
+- **The layers.** PER_SIO's channel API opens and closes a channel (`0x500520ce` [`0x5005f0f7`], `0x5005221a`
+  [`0x5005f25f`]); a channel's controller index comes from the channel map (`0x5005238c`: a byte per channel's
+  halfword at the map the word `0xa2b1c84c` points to), and the channel state, its open flag at `+128`, is the
+  index's (`0x5005213d..4d`), not the channel's. PER_SIO's IIC layer configures a channel and starts its transfers:
+  `0x5004b96e` [`0x5005373f`] (completions registered by the request type's bits, the lower configuration
+  `0x50050261`), the write `0x5004ba70` [`0x50053863`], the restart list `0x5004ba5c` [`0x5005384b`] and the write-read
+  `0x5004bac8` [`0x500538bf`], each into the controller driver's transfer start `0x500506cb` [`0x5005dc03`] and, for
+  the write-read first, its receive start `0x500509be` [`0x5005def6`], with a1 0 (ended by interrupt; 1 takes a polled
+  loop, `0x50050821`). The driver's interrupt (`0x50051600..`) moves the bytes, restarts before each restart position,
+  clears the index's restart list at the transfer's end (`0x5005171d`) and calls the completions through
+  `0x50051814` [`0x5005ed65`] (d0 the index, d1 0 or 0xffff on an error, a0 the transfer table `0xa2b19ea8` or the
+  receive table `0xa2b19ec8`, filled by `0x50051145` [`0x5005e6a5`]); the IIC layer's own completions
+  (`0x5004bb3a`, `0x5004bb6f`) clear its busy words and call the user's callbacks.
+- **The channel map was unset.** PER_SIO's channel init (`0x50052016` [`0x5005f03f`], from the boot at `0x50022205`)
+  ends in the map's setter `0x50052089` [`0x5005f0b2`], which picks the running core's map from the board's table
+  (`0x604aa830` / `0x604aa86c`). The lab does not run the boot, so on every body the word is 0 and each channel's
+  index was a byte of low memory: the charger's transfer went to index 0 (`0x9a200000`, a lab-stub page), and channels
+  shared an index's open flag (X: E132). On a TG-5 the map is channel 9 -> index 7 (registers `0x9a100000..`), 2 ->
+  2 (`0x98500000..`) and 3 -> 3 (`0x98600000..`), the register table `0x604aa1a8` (132 bytes an index).
+- **The charger.** Its init `0x5003fa04` (from the power task's start, H-PWRTASK) configures channel 9 at 400 kHz
+  with the completion callbacks `0x5003fe46` / `0x5003fe5a`, which set the flag `(0x60421358)`. The request
+  `0x5003fa92(code)` takes its type, register and value index from the code's nibbles, opens the channel, writes
+  `[0x36, register, value]`, waits 3000 ms for the flag (its timeout logs `0x1d003003`), reads the register back with
+  `[0x36, register]`, a restart and `[0x37]` and one byte, waits again (`0x1d003004`), closes, and compares the byte
+  with the value (a mismatch to `0x5003fe6e(2)`); its type 2 reads a register without the write. The table
+  `0x5003fb04..0x5003fb84` writes 8, 9 or 2 to register 0, 0xa2, 0x96, 0x94, 0x97, 0x95 or 0x93 to register 1 and 9
+  to register 2. The start writes register 1 = 0xa2 and reads it back (X).
+- **The seam (2026-10-29).** S-SIOIIC (`src/lab/sio.mjs`) serves the driver's two starts for the channels a body's
+  devices sit on (`src/fw/models.mjs` sio_devices), and nothing below them runs: the transfer's bytes are split at its
+  restart list into IIC segments handed to the device, and its end is delivered at the MN's next idle point
+  (A-SIOIIC-1) in interrupt context as the interrupt delivers it: the restart list cleared, the transfer's then the
+  receive's completion dispatched natively with status 0, the received bytes written first. The IIC layer, the
+  channel API, the completions and the charger's request run natively. H-SIOMAP runs the map's setter at the bring-up;
+  the controllers' register blocks the TG-5s' channels reach are lab-stub pages (`src/fw/models.mjs` board
+  stub_pages), which the driver's configurations write. The driver's parts are read on every body by a rule
+  (`src/fw/facts.mjs` sioDriver: the 15 expanded images but the E118 family's, X). S-CHARGER
+  (`src/lab/charger.mjs`): address 0x1b, registers 0..2 keep what is written (I), a read of one not written stops the
+  session (its reset value is ?). Why not the controller at its registers: its status bits and interrupt lines are not
+  read (the driver polls `(96,regs)` bit 1 and `(56,regs)` bit 15, `0x50050885..`, `0x50050743..`), and the
+  transfer start is the narrowest seam above which every layer the charger uses runs natively. S-SIO2 (4.7.1) keeps
+  serving PER_SCPU's SPI channel on E143 at the channel API.
+- **Then.** E129's start runs to the date and time setting `0x1103` (with the card's file system native; with S-CARD
+  its free-cluster count divides by the absent volume's cluster size at `0x50546d48`, X) and `bin/modelcheck.mjs`
+  passes; E132's start showed "Busy" (`0x10c`), the industrial TG-5's "Update folder Allocation" progress: its
+  error-factor check asks isCategoryUpdate (`0x50be13b8`), true on its DISPLAY cmd 43's status 0, and
+  updateCategoryInfo (`0x50710d83`) posts to CATEGORY_MAIN, a module task the lab does not run whose queue E143's
+  target table has no counterpart of (`src/fw/models.mjs` E132 modack_queues: S-MODACK answers it and LOGGER_MAIN).
+  Its date setting then has Set and no Cancel; setting the clock takes it to the shooting screen and modelcheck's path
+  passes (X). The panel driver's 300,000 stub calls of the earlier trial were its open loop (`0x5015b540..5f`: the open,
+  then a 1 ms sleep while it answers busy) on an index another channel held under the unset map (I: which channel
+  held it is not read); with the map set it is not seen (X).
+- **Open:** the controller at its registers (its status bits, its interrupt lines and the error status 0xffff path);
+  the other bodies' unset channel map, E143's included, whose channels still share an index (no body but the TG-5s
+  runs H-SIOMAP: their PER_SIO users are S-SIO2, S-IICWAIT and the panels' lab-stub pages); E144's charger over IIC
+  channel 6 (S-INTCHA's return stub) as a second S-SIOIIC device; the charger's chip and its reset values; why
+  LOGGER_MAIN's unanswered request fills the application's queue 6 once the clock is set (X, ?).
+
 ### 4.8 Card, file system and playback
 
 - **Tasks (CPU 0, D):** DCFPROC_SUB 0x02 (queue 0x0d), FILECLBK 0x0d (queue FILECLBK_UEXEC 0x1f, targets 14 / 15 / 17 /

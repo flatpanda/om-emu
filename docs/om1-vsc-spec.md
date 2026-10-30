@@ -488,14 +488,22 @@ notation) was found to share and not share with kind 2 (2026-10-30, `docs/model-
   (896-byte canvas rows, `0x503098c2`); the plane areas AREA10 / 13 / 16; the OSD scaler words (`0x50308314`
   horizontal bit 0 and +4, `0x50308389` vertical bit 4 and +12, `4 ceil((src - 1) 1024 / dst)`), four per plane.
 - **Palettes:** three groups by the palette id of the writer `0x50307aea`: id 0, 128 words at `+0x800` / `+0xa00`
-  (the writer fills `+0x800` while bit 16 of `0x1b8` is set and `+0xa00` while it is clear, the commit flips the bit
-  after an upload, `0x50309f0d`); id 1, 32 words at `+0x680`; id 2, 32 words at `+0x600` (both copied whole by the
-  commit, `0x50309ec9..0x50309f05`); `0x700..0x7ff` has a writer of its own (`0x50307b33`), not read for the planes
-  (?). Id 0 holds GUI layer 2's palette (256 entries, 128 uploaded), id 1 layer 1's (32), id 2 layer 0's (32)
-  (`0x50304c05`, `0x50304ce5`, `0x50304db6`; the layer bounds `0x60d46130`). OSD1 takes the display record's osd word
-  2, OSD3 word 0 (`0x50303c6d..0x50303ca2`), and the scaler setters index the planes the same way, so plane q takes
-  palette id q (D) if osd word k is GUI layer k (I). Entry `tra << 24 | Cr << 16 | Cb << 8 | Y` (`0x50307ace`, the
-  GUI's RGB through the firmware's BT.601, `0x50304c0c..0x50304c6b`).
+  (the writer fills `+0x800` while bit 4 of `0x1b8` is set and `+0xa00` while it is clear, `btst 16` at `0x50307af4`,
+  a mask; the commit flips the bit after an upload, `0x50309f14..0x50309f24`); id 1, 32 words at `+0x680`; id 2, 32
+  words at `+0x600` (both copied whole by the commit, `0x50309ec9..0x50309f05`); `0x700..0x7ff` has a writer of its own
+  (`0x50307b33`), not read for the planes (?). Id 0 holds GUI layer 2's palette (256 entries, 128 uploaded), id 1 layer
+  1's (32), id 2 layer 0's (32) (`0x50304c05`, `0x50304ce5`, `0x50304db6`; the layer bounds `0x60d46130`). The GUI's
+  update puts layer 2 - k's buffer in the display record's osd word k, each with that layer's dirty flag
+  (`0x506c0aa3..0x506c0b25`, D), and the commit takes OSD1's address from word 2 and OSD3's from word 0
+  (`0x50303c6d..0x50303ca2`, `0x50309e58..0x50309eb4`): OSD1 shows GUI layer 0 with palette id 2, OSD2 layer 1 with
+  id 1, OSD3 layer 2 with id 0 (D; X: at E122's clock warning OSD3 holds layer 2's indices 13..33 on its fill 255,
+  OSD1 layer 0's fill 31, OSD2 layer 1's fill 5). Entry `tra << 24 | Cr << 16 | Cb << 8 | Y` (`0x50307ace`, the GUI's
+  RGB through the firmware's BT.601, `0x50304c0c..0x50304c6b`). Until 2026-10-30 (`docs/model-survey.md` finding 38)
+  this section read the bank bit as bit 16 and plane q as palette id q, which put the 128-entry group on OSD1.
+- **Commit path:** the GUI's update (`api_disp_Disp_Update_Osd` `0x502c9c6c`) reaches the commit `0x50309dc5`
+  through the display sync module's manager blocks (`0x50483cda`; the commit's call at `0x50303d6f` when one executes,
+  X), immediately for sync type 1 and, for type 3, only with an image request or a release
+  (`docs/model-survey.md` finding 39; the lab's S-DISPSYNC sends the image sync of kind 0, which commits a pending OSD).
 - **Formats:** `0x1b0` = `0x111` and `0x1b4` = `0x11` at every open (`0x503097fb..0x50309845`), E143's OSDFMT1 and
   OSDFMT2 values, where kind 2 keeps its mix word `0x111111` at `0x1b0`; `0x1a4` = 3, `0x1a8` = `0x1100710` (but for
   code 4), `0x1ac` = `0x10f` are written too; their meanings are ? and the compositor does not read them.
@@ -503,8 +511,9 @@ notation) was found to share and not share with kind 2 (2026-10-30, `docs/model-
   PLANC form, `0x100` at 100 %; the built-in EVF's 70 % gives `0xb2`, E144's EVF has `0xcc` (X). The compositor draws
   any level but 0 as full on both kinds; E143's refuses a PLANC other than `0x100` (section 3), and what a lower level
   does is ? on all three.
-- **Pixel index:** OSD1's low 7 bits (I, as kind 2); OSD2 and OSD3 index 32 entries, and a pixel of 32 or more is
-  refused (PAL_FIELD, not drawn): no code read says what the chip does with it (?).
+- **Pixel index:** OSD3's low 7 bits (I, as kind 2: layer 2's fill 255 takes entry 127, transparent, X); OSD1 and
+  OSD2 index 32 entries, and a pixel of 32 or more is refused (PAL_FIELD, not drawn): no code read says what the chip
+  does with it (?).
 - **Device codes:** the DISPLAY OPEN's parameter is a byte of two device codes, the main VSC's in the low nibble and
   the sub VSC's in the high one (`0x502f6af7`), named by `0x502fbf76`: 1 TFT, 2 NTSC, 3 PAL, 4 HDMI, 5 VF-2, 6 BI_EVF,
   13 VF-3, the others HDMI modes. Code 2 times the channel at 262 lines of 858 (`0x50302567`), writes the encoder

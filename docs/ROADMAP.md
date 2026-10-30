@@ -149,7 +149,10 @@ The plan:
    card's file system), then modelcheck's path; E118 and E120 follow with their own copies of E122's non-override
    facts.
    The kind-3 VSC composes (kind 2's compositor with the family's palette groups and format words) and the EVF opens
-   the built-in EVF, the family's device code 6, where the lab had opened the NTSC output (findings 35 and 36).
+   the built-in EVF, the family's device code 6, where the lab had opened the NTSC output (findings 35 and 36). Since
+   2026-10-30 E122's TFT and EVF frames show its clock warning: the palettes by GUI layer (finding 38), S-DISPSYNC
+   releasing its display sync module's synced updates (finding 39) and S-TPSEND serving its touch queue for the EVF
+   (finding 40).
 6. Tier D: no work planned. Their ports place 60-80% of what tier A places; the survey keeps them as a record.
 7. **Depth on the bodies that reach their shooting screen** (proposed 2026-10-21). Take E144, E139, E134, E137, E142,
    E140, E125 and E130 through modelcheck's path: S2 writes a card image, playback shows it, the menu opens; then the
@@ -271,19 +274,21 @@ the survey table.
   GUI drawing the clock warning (finding 31). Next on E122: the movie time at the first long timer and at S1 divides
   by the movie module's object, which its file system's init creates (I) and the lab does not run: the card's file
   system on the E118 family (`src/fw/facts.mjs` fileSystem reads no SD layer of its form), or a stand-in for its movie
-  APIs; then modelcheck's path (with one movie API answered by hand S1, S2, PLAY and INFO ran, X), the EVF's queue 8
-  and the kind-3 compositor for a frame.
+  APIs; then modelcheck's path (with one movie API answered by hand S1, S2, PLAY and INFO ran, X). The EVF's queue 8
+  and the frame are done (findings 35, 38 to 40).
   E118 and E120 stopped at the GUI message take's observer (E143 0x510c2a2e); since 2026-10-30 they run past UI_IN
   to the lab's `g4set`, which only E122's entry gives (findings 32-34, 37); E118's EVF faults earlier (0x5006e002, ?).
-  With the three tracks together (finding 37) E122's composite is one colour at the clock warning, and its EVF stops
-  after the application's start on a full queue 156. Open on E118 and E120: the PWR_EXEC module queue word (the name
+  With the three tracks together (finding 37) E122's composite was one colour at the clock warning, and its EVF stopped
+  after the application's start on a full queue 156; since findings 38 to 40 both panels show the clock warning and,
+  with the movie time answered by hand (exploration), S1's shooting screen. Open on E118 and E120: the PWR_EXEC module queue word (the name
   table gives 0x86, the ports 0x80 or none, finding 34) before S-MODACK runs; what E120's device open waits on per
   frame (?).
-  E122's EVF start opens device code 6, BI_EVF (finding 35). Open in the kind-3 compositor (finding 36): which GUI
-  layer each osd word of the display record carries (the plane-palette pairing rests on word k = layer k, I), what
-  OSD2's and OSD3's pixels of 32 or more do (refused, PAL_FIELD), and what an OSD level below `0x100` does (the EVF's
-  `0xb2` is drawn as full, as E144's `0xcc`). The lab's other EVF masks (the through permit, the IMG fit, H-RESEND's
-  check) are still E143's 2 on the family.
+  E122's EVF start opens device code 6, BI_EVF (finding 35). Open in the kind-3 compositor (findings 36, 38): what
+  OSD1's and OSD2's pixels of 32 or more do (refused, PAL_FIELD), the planes' order on the chip (OSD3, GUI layer 2,
+  drawn last, I), and what an OSD level below `0x100` does (the EVF's `0xb2` is drawn as full, as E144's `0xcc`).
+  When the camera releases E122's display sync (I: with the through image, which the family does not run) and E118's
+  and E120's display syncs' forms (the rule reads none, finding 39). The lab's other EVF masks (the through permit,
+  the IMG fit, H-RESEND's check) are still E143's 2 on the family, not met by its starts (finding 40).
 - **S-PANELDONE's gate:** on the E144 family's board it answers every display run's wait on the panel flag, also on
   E139, E134, E125 and E130, whose waits ran natively before with the same results (X). Read which of those waits find
   the flag already set, and answer at once only the waits that would otherwise block, as the TG-5's completion wait

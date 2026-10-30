@@ -629,6 +629,63 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    (H-G4SET), which E122's `MODELS` entry gives and theirs not (finding 34: E122's non-override facts are to be given
    per body). E118's EVF start faults earlier, a trap 7 at `0x5006e002` (not read yet, ?).
 
+38. **The kind-3 composite's palettes are by GUI layer** (2026-10-30, `docs/om1-vsc-spec.md` section 12,
+   `src/dev/vsccompose2.mjs`; corrects finding 36). With E122's GUI updates committed (finding 39) the TFT composite
+   refused two things (X): `0x1b8` held `0x10`, a stray bit to the bank bit 16 finding 36 had read (OSDCP2_FIELD), and
+   OSD3 drew 335,536 pixels of 255 against a 32-entry palette (PAL_FIELD). Both readings were wrong (D): the palette
+   writer's `btst 16,d2` (`0x50307af4`) and the commit's flip (`0x50309f14..0x50309f24`, `and -17` / `or 16`) take
+   16 as a mask, so the bank bit is bit 4; and the GUI's update puts GUI layer 2 - k's buffer in the display record's
+   osd word k (`0x506c0aa3..0x506c0b25`: word 0 is checked with layer 2's dirty flag, `0x506c1c63(2)` and
+   `0x50a5ccb5`, word 2 with layer 0's), so with the commit's OSD1 = word 2 and OSD3 = word 0 OSD1 shows GUI layer 0
+   (palette id 2, `+0x600`), OSD2 layer 1 (id 1, `+0x680`) and OSD3 layer 2 (id 0, the 128-entry banks), as on E143
+   (OSD3 = GUI layer 2). The planes' contents agree (X, the three buffers' histograms at the clock warning): OSD3 holds
+   layer 2's indices 13..33 on its fill 255 (entry 127 of id 0, transparent), OSD1 layer 0's fill 31 (entry 31 of id
+   2, transparent), OSD2 layer 1's fill 5 (entry 5 of id 1, `0x19808000`, black at 25 / 31). The compositor takes
+   plane q's palette by id 2 - q and the bit `0x10`; the TFT composite then shows the clock warning (an orange clock
+   and Y/M/D on the dimmed background, 8 values, X) in the firmware's own palette, the geometry of the false-colour
+   dump of layer 2's records. `test/test_vsc3.mjs` (21 checks) drives the three layers as the clock warning leaves
+   them. Which of OSD1 and OSD2 the chip draws on top is not read (the compositor keeps kind 2's order, OSD3 last; I).
+39. **E122's display sync** (2026-10-30, `src/fw/facts.mjs` displaySync, `src/lab/camapp.mjs` S-DISPSYNC). The
+   one-value composite at E122's shooting screen state (finding 37) was no compositor question: after the open's two
+   commits of empty planes (`0x50309dc5`, X) the commit was not called again, DMA12..DMA14 stayed unwritten, and the
+   GUI's updates sat in a display sync module E143 does not have. Its request is `api_disp_Disp_Update_Osd`
+   (`0x502c9c6c`, d0 the sync type, d1 the device code) -> `Disp_Sync_Update_Osd` (`0x50483b96` -> `0x50483cda`), which
+   queues the OSD handles in the device's manager block (`0xa18a37f4 + 56 n`, the blocks MODELS mm_init sets up, D):
+   type 3 is command 4, which from state 0 or 3 leaves the block in state 3 and commits nothing (`0x50484370..0x504843ae`,
+   D); an image request (commands 1, 3, 5, the through image's) commits both. The GUI sends type 3 while the TFT's sync
+   word (`0x61600a24`, getDispSync `0x50694c65`) is set (`0x506c0d01..0x506c0dd4`, D), and the application sets it with
+   CameraCommon::setDispSync (API `0x1012d`, `0x506d5889`) at its start and again after about 2.5 s (X; E143's
+   application calls it too, X). Natively the through image releases it (I); the lab runs no through image. The rule `displaySync` now reads this form: the
+   request by the name its trace loads (`mov "api_disp_Disp_Update_Osd",a0`), taken where no entry loads the id
+   `0x10035`, the image sync by the id `0x10037` as before (`0x502c9f95`), and, through the image sync's one caller, a
+   wrapper (`0x502c07ea`), stopRecView's two calls of it, each after a clear of one panel's sync word through the
+   setter `0x50695318` (d1 0 the TFT, 1 the EVF, D). Its kinds differ from the other bodies': kind 1 passes the block
+   command 12, which the handler (`0x50484490`) does not take (X: the state stays 3), kind 2 command 16 (the image),
+   kind 0 command 17, which commits the OSD in states 1 and 3 (`0x504844dd..0x504844f7`, D; X). The fact gains the
+   release's kind and panels (1 and [2] on the 15 other bodies, 0 and [0, 1] on E122), and S-DISPSYNC sends those. E122's
+   TFT and EVF starts then draw the clock warning (X, `0x0108`). E118 loads the request's name but has no image sync of
+   the id, E120 neither (X): the rule reads none there, and their display syncs' forms are ?. With the movie time
+   answered by hand (exploration only, track 2's stop) S1 composed the shooting screen on both panels (P, 1250, -.-,
+   +2.7, ISO-A 200, 999, COLOR 1, S-IS AUTO, a touch icon on the TFT, X).
+40. **E122's EVF and the touch task's queue** (2026-10-30, `src/lab/play.mjs` S-TPSEND). The full queue 156 after the
+   application's start (finding 37) is the touch task's (`touch_task` queue word `0x600411d2`, flag `0x60040ff8`, bit 8,
+   read by the rule since finding 11; the task `0x5030ba09`, "[TP]touchpanel_main", static id 98, which the boot chain's
+   stage starts after its init `0x5030b96f` joins the queue to the flag, `0x50186200..0x5018620e`, D). The lab starts
+   no touch task on E122 (MODELS touch false, the panel's open unplaced), and the queue holds one message: both opens
+   put cmd 4 there (`0x50302973..0x50302984`; the EVF's under the DISPLAY OPEN of code 6, `0x502f6b7b`), which fills
+   it, and on the EVF the application's Set_Touch_Panel_Ctrl_Area (API `0xd001f`, `0x502f4c28` -> `0x5030bda9`) then
+   sends cmd 8, TP_SET_CTRL_AREA, whose tsnd_dtq waited for good (X; the TFT start sends no second message). Not a
+   device the display waits on and no EVF mask. S-TPSEND now also stands in for an asynchronous send to the touch
+   task's queue from a task (not a display run) while the touch task does not run in the lab (before H-TPINIT, or
+   with the panel not modelled): it runs the touch task's loop for the message as the synchronous S-TPSEND does (its
+   flag wait returns the bit, its receive gets the message), wrapping OlyQeWr's routing. A display run's message is
+   queued natively as before: run through the loop, E118's open's cmd 4 boots its touch IC, which the lab does not
+   model ("TP BOOTLOAD ERROR", then every task blocked, X), where queued it leaves E118 at its earlier stop. On E122's
+   EVF it runs the application's three cmd 8 (X; the open's synchronous cmd 5, `0x50302ac2`, is the synchronous
+   S-TPSEND's, as before). E122's EVF start then runs past the application's start to the clock warning, composed on
+   the 1024 x 768 device from the 640 x 480 canvas (X). The lab's other EVF masks (the through permit, the IMG fit,
+   H-RESEND's check) were not met (the family runs no through image).
+
 ## Per-body status
 
 The state as of 2026-10-23. Each body's `MODELS` entry (`src/fw/models.mjs`) carries the numbers its `port_via` choice

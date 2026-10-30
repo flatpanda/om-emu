@@ -2429,6 +2429,15 @@ Corrections to earlier readings, each now owned here or by the document named.
     session makes, HDMI's and the touch panel's, were refused without a word (X: the coverage of the GIO mode function,
     and IRQ 132 attached for the touch panel once the slots are free); H-GIOSLOTS runs the slot reset with `--hdmi on`
     only.
+24. **The E118 family's display sync holds the GUI's updates for the through image** (D, X, 2026-10-30;
+    `docs/model-survey.md` findings 38 to 40): E122's GUI commits its OSD planes through a display sync module of its
+    own (`api_disp_Disp_Update_Osd` `0x502c9c6c` -> manager blocks `0xa18a37f4 + 56 n`), whose synced type 3, sent while
+    the application's sync word is set, waits for an image request the lab's missing through image would make; S-DISPSYNC
+    releases it with the image sync of kind 0 (`0x502c9f95`, the release kind of this form, read by `displaySync`).
+    The kind-3 VSC's planes take the GUI's layers in reverse (OSD1 layer 0, OSD3 layer 2) with their palettes, the
+    128-entry banks by bit 4 of `0x1b8`. The touch task's queue takes asynchronous sends from the display opens, which
+    its one slot holds, and from the application, which S-TPSEND serves while the lab runs no touch task (E122's panel
+    is not modelled).
 
 ## 10. Open questions
 

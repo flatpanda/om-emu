@@ -424,6 +424,17 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    expanders' roles are read from their names). E146 and E147 then run E143's power-off frame for frame (X:
    `test_scpu.mjs --session`).
 
+27. **The property store's own init on every body** (2026-10-30, `docs/om1-settings-spec.md` section 2.2). E143's
+   mode changes committed 0 into most settings because the store's module init, the fifth of the settings init chain
+   the lab does not run, had not set the mode store's three pointer words. One rule reads that init on every build
+   (`src/fw/facts.mjs` propStore, fact `prop_store`): three back-to-back `mov imm32,d0; call; mov a0,(abs32)` stores to
+   consecutive words, then `mov imm16,d0; mov 0,a0; clr d1` (the cache switch's read of kind 3505 on every build), its
+   entry 0x92 bytes before the run on all 18 unpacked bodies (X, a byte scan; E143 `0x503ee2d6`, E122 `0x502cf141`).
+   The lab runs it at every body's store init (H-STOREINIT), and its three words are non-zero after it on each body
+   `bin/modelcheck.mjs` starts. modelcheck is unchanged: 14 bodies ok, and at 64 GiB all ok but E144's known SDXC xfail.
+   On E146 a play session stepping its dial (E143's ten positions) changes mode exactly as E143 does (the same
+   settings change at each position, P marked C1 at C1; X); the other bodies' mode changes are not measured.
+
 ## Per-body status
 
 The state as of 2026-10-23. Each body's `MODELS` entry (`src/fw/models.mjs`) carries the numbers its `port_via` choice

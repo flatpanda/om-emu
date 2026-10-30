@@ -119,7 +119,7 @@ not run), **0** nothing. Code column: instructions keyed to the block / gap-rele
 | Text and resources | N (M4) | S-RES, Genifa | 28,861 (9.09%) | U items (text spec) |
 | GUI and menu | N (M5, M6, M10B) | S-SEND, S-PROP | 621,898 (19.31%) | navigation rules observed, not decoded; the 53 screen classes of gap@0x510ef2bf (35k) are unnamed (?) |
 | Inputs | N from UI_IN up (M10); group 0 from IRQ 320 up (4.7.2) | S-KEYBITS (groups 1..3), H-EYESTATE, S-TPINT, S-TPREG, H-DIALSTEP | 43,895 (20.85%) | the raw-bit producers (4.7) |
-| Settings store | N: the property store `0x503c4974..0x503db10c` and the LowAPI property unit gap@0x503edeea | S-SCPUDEV, S-SETSAVE / S-FLASHSAVE or S-NVRAM | 50,515 (31.24%) | persistence by default (4.7) |
+| Settings store | N: the property store `0x503c4974..0x503db10c` and the LowAPI property unit gap@0x503edeea | S-SCPUDEV, S-SETSAVE / S-FLASHSAVE or S-NVRAM; H-STOREINIT runs the store's module init (since 2026-10-30) | 50,515 (31.24%) | persistence by default (4.7) |
 | Camera application (CA_MAIN, HLS) | N since 2026-10-15, in part: 99k gap-relevant instructions unrun | S-RELSEQ, S-MODACK, S-TRAACK, S-CARD below it | 320,057 (18.64%) | the HLS shooting sequence (196k, 4.1) and the playback components (310k, 4.8) are 1-2% run |
 
 Of the application's executed instructions, at least 9,456 of 28,686 in one part of the map are C++ static
@@ -859,7 +859,9 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   cache (the axes, the scale, the calibration) is read in 4.7.3, with what is built.
 - **Flash (D):** NAND controller `0x98d01100..0x98d011c0`, `0x98d01800/04`, completion IRQ 237, 2048-byte pages;
   store mirrors M `0xa36fd280` and E `0xa377d280` saved by `0x5003f5dd`. The settings init chain `0x503dae30` (17 module
-  inits) is called once from the boot chain at `0x501e9060`; the lab runs none of them.
+  inits) is called once from the boot chain at `0x501e9060`; the lab runs only its fifth, the property store's own init
+  `0x503ee2d6`, since 2026-10-30 (H-STOREINIT: without its pointers a mode change committed 0 into most settings,
+  settings spec section 2.2).
 - **Power-off (D calls, I meaning):** `0x50044d8e..0x50044de7` sends on a channel, arms channel A, tests the camera
   state, calls the IO expanders and ends with `0x5004dfd0` (`+0x9c` = 127). Native since 2026-10-29 on E143 (4.7.4):
   at the lever's off the lab runs the HFW's shutDown in the HLS component's place (S-SHUTDOWN), the sequence runs to
@@ -2139,7 +2141,7 @@ and E147; off by default. Addresses are E143's (disassembly notation) unless a b
 | Interrupt acceptance at any instruction boundary, native delivery (F03, F27) | every device seam: SD (225-232), lens (14, 60), sensor (15-42, 243-247), SCPU (321), ISC (323); not HDMI's IRQs 109 and 239 or SCPU's 320, which their waiters take at the idle point (4.7.2, 4.9, X) | idle point only (H-IRQGATE) | ROADMAP phase 3; X: accepting anywhere moved 21 of 30 acceptances with identical output |
 | A machine-owned time model, time mode by default (F06, F26) | sensor VD cadence, LENS_SYNC up to 240 fps, the lens command times, the SCPU clock, the accelerometer sampler, SD and DDC timeouts, cross-core timed waits | opt-in time mode; ticks lost inside display steps | ROADMAP phase 4, M9 follow-ups |
 | More CPUs (per-core state, `0x8000` page, INTC banks, kicks, ticks) | live view, capture, movie, audio, AF, detection, wireless, histogram | CPU 0 only | 4.6 |
-| Task starts and module inits from the boot chain (USTART2..5; init chains such as `0x503dae30`, `0x501ea63c..0x501ea78f`, EYEFI's) | every block | entries refused by the kernel lab's guard; inits skipped | every block's footprint (section 4) |
+| Task starts and module inits from the boot chain (USTART2..5; init chains such as `0x503dae30`, `0x501ea63c..0x501ea78f`, EYEFI's) | every block | entries refused by the kernel lab's guard; inits skipped (of `0x503dae30` the property store's init runs, H-STOREINIT) | every block's footprint (section 4) |
 | TAKE and the HLS transactions (the shooting component's answers to TRA 990 / 991, the capabilities' observer events, TakeReady) | capture, AF, movie, live view, shutter, remote release | S-RELSEQ, S-TRAACK | shutter spec items 14, 16, 20, 43; 4.1.1-4.1.3 |
 | Shared peripheral transports: PER_SIO `0x5005f25f` (25 callers: touch, eye, accelerometer, power IC, audio channel 14, BC `0x5005f49f`), IIC `0x5004ca40`, the pin / GPIO block `0x9b88xxxx` (lens edge IRQ 60, SD pins, touch, audio, the A53 UART probe), the clock-gate helper `0x50061c3a` (lens clocks 5 / 17, mechanism clocks 105 / 106) and the `0x9b5008xx` gates, PER_ADCONV | SCPU and sensors, lens, IS, audio, touch, shutter, sensor, USB (VBUS) | S-TPREG, S-IICWAIT, S-GPIO-TP per call site; the I2C map init `0x5005f0b2` not run | 4.4, 4.7, section 7 |
 | A flash read model (NAND `0x98d01800`, IRQ 237) | CPU 2's overlay loader, CPU 3's AJ and MLS jobs, the store load, store F | S-NVRAM at the write call; no read model | 4.6, 4.7 |

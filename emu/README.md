@@ -171,10 +171,14 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   and Cmp_ShootingComponent are created natively, and S-CPU3 takes their remote calls to CPU 3 off the ring.
 - The mode dial shows each position by the firmware's name for it: UI_IN's dial table gives the position's mode code
   and the build names the codes (fact `mode_dial`, `src/fw/facts.mjs` modeDial), so E143's positions 0..9 are S, M,
-  B, C1..C4 (MY_MODE1..4), Movie, P and A (`docs/om1-input-spec.md` section 2). The application takes the change (its
-  dial state follows each position), but the shooting screen then shows no mode letter: once the dial has left P most
-  settings read 0 (section 9). The page's arrows and PageUp / PageDown step the dial, wrapping (the body's ends are
-  not known); a click on its ring picks a position.
+  B, C1..C4 (MY_MODE1..4), Movie, P and A (`docs/om1-input-spec.md` section 2). A session starts with the dial at P,
+  the mode its start takes from the store. The application takes each change and the settings store changes mode
+  natively, so the shooting screen shows the position's mode: P, A, S, M and B with their exposure readouts, P marked
+  C1..C4 (the custom banks, on the blank store P with RAW), the movie screen at Movie; OK and the menus work away from
+  P too. This needs the store's own module init, which the lab runs between the registry bootstrap and the DB init
+  (H-STOREINIT; without it a change committed 0 into most settings, `docs/om1-settings-spec.md` section 2.2). The
+  page's arrows and PageUp / PageDown step the dial, wrapping (the body's ends are not known); a click on its ring picks
+  a position.
 - REC records with the mode dial at Movie (position 7) once the LLPSW firmware key is released (with the native lens
   it reads released from the start: the lens is locked on the mount, and pressing it detaches the lens); while it
   records, the GUI shows its movie recording screen (the card, a red REC mark with the recording's time, the time left, the movie mode, shutter,

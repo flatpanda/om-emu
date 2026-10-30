@@ -14,9 +14,10 @@ cited address, **I** inference that a check tests, **?** unknown.
 ## 1. Result
 
 The lab builds the camera's settings store the way a camera with blank backup memory and blank flash does: the
-data-object registry bootstrap `0x50040aeb` and the settings-DB init `0x503c5473` run natively on K-native, after
-DISPLAY OPEN and before the GUI task exists (X). The DB init takes its blank-store path, which resets every id to
-the firmware's default table. Every settings read afterwards (the GUI's 0x50b7b618 included) is the firmware getter
+data-object registry bootstrap `0x50040aeb`, the property store's module init `0x503ee2d6` (since 2026-10-30) and the
+settings-DB init `0x503c5473` run natively on K-native, after DISPLAY OPEN and before the GUI task exists (X). The DB
+init takes its blank-store path, which resets every id to the firmware's default table. A mode change recalls and
+commits the mode's settings natively (section 2.2). Every settings read afterwards (the GUI's 0x50b7b618 included) is the firmware getter
 on that store; the harness answers no settings read except S-PROP's property 4513 at its listed return sites
 (section 4), two of which are in the store itself. Menu writes go through the user-setting manager natively
 (section 5).
@@ -102,6 +103,58 @@ gate's name for "calibrated" is a guess from its use). The user table's template
 factory table's for y) are what a blank store starts with; the code never compares them with the factory table but in
 `0x5004aa9f`, which sets "adjusted" when they differ across gravity, and on the templates they do not.
 
+### 2.2 The mode store and a mode change (D unless tagged; 2026-10-30)
+
+Besides each id's property element, ids 0..2128 have a mode store of three data objects, whose data pointers the
+store's module init keeps in three words:
+
+| Object | Pointer word | Layout | Access |
+|---|---|---|---|
+| `0x85d4` | `(0x62a65e0c)` | the banks: 9 x 2 x 2129 u32, element `bank * 4258 + row * 2129 + id` | read `0x503ee82b(id, bank, row)`; `0x503ee7b3(bank)` copies bank `bank` into the rows, `0x503ee7ef(bank)` the rows into it |
+| `0x8b64` | `(0x62a65e10)` | the rows: 2 x 2129 u32, element `row * 2129 + id` | `0x503ee85c(id, row)` reads, `0x503ee885(id, row, value)` writes |
+| `0x8b54` | `(0x62a65e14)` | the working copy: 2129 u32, element `id` | `0x503ee8b1(id)` reads, `0x503ee8d7(id, value)` writes |
+
+The setter's plain path writes the working copy with the property (`0x503c5c09`: `0x503ee8d7`, then `0x503ee412`;
+section 2). The mode recall lists `0x605f9134` are rows of 12 bytes `{u16 a, u16 b, u32 *list, u16 n}` up to `a` = 0,
+the list's entries `{u16 id, u8 row, u8}`: `0x503d9e3f(a, b)` copies each entry's row value into the working copy,
+`0x503d9ea4(a, b)` the working copy into the rows. The mode-dependent defaults `0x605e9198` have the same row form with
+8-byte entries `{u16 id, u32 value}`: `0x503da39f(a, b)` writes them into the working copy. The DB init's reset
+`0x503d9cdd` resets every id (`0x503d9bf3`, which writes the default into the property, the working copy and both rows),
+saves the rows into banks 0..8 (`0x503ee7ef`), and for n = 1..4 applies the defaults of 34, 59, 99 and 100 in turn
+(`0x503da39f(34, 0)` for n = 1, ...), calls `0x503d3f6c(n)` and `0x503d3f6c(4 + n)` (not traced) and resets again.
+
+Two RAM arrays stage a change: A at `0x62a65e18` (4 bytes per id 0..2128, then the 3000s, 4000s, 4500s, 10000s and
+15000s) and B at `0x62a686e0` (the same form). A mode change (the sequence `0x503d39bb..0x503d3b4a`, reached from the
+user-setting manager's changeMode `0x50b7b01c`) recalls the new mode's list and its defaults (`0x503d9e3f`,
+`0x503da39f`; X: `(5, 0)` at a change to S, `(3, 0)` back to P), sets the staged-write flag (`0x503eee7d(1)`, byte
+`0x62a6afa8`; while it is 1 the raw write `0x503ee412` leaves the property alone), stages B from the working copy
+(`0x503eeba1`: B cleared, then `0x3ffe18ea(B, (0x62a65e14), 8516)`, the 3000s, 4000s, 4500s and 15000s from their
+properties), copies B into A (`0x503eec88`), runs the setting rules, commits A (`0x503eecf7`: every property of ids
+0..2128, 3000..3035 and 15000..15287 that differs from A is written and listed), copies B back into the working copy
+(`0x503eedcf`) and clears the flag. `0x3ffe18ea` is taken as `memcpy(a0 destination, a1 source, d0 bytes)` (I: the
+directions of `0x503eeba1` and `0x503eedcf` are opposite, and the run below agrees).
+
+**What the lab lacked (X).** The three pointer words are set by the store's own module init `0x503ee2d6`, the fifth of
+the settings init chain `0x503dae30`, which the boot calls at `0x501e9060`, before the DB init (`0x501eac35` at
+`0x501e907b`); it reads the data pointers with the registry's `0x500417b0(kind)`, sets id 6000's cell from the word at
+`0x60624052`, reads its cache switch (kind 3505, element 0: 0 in the lab, so the per-id object caches stay off) and
+clears the staged-write flag. The lab ran none of the chain, so the words were 0: the element accessors, given the
+pointer 0, still reached the objects (X: they read the values the reset wrote), and the reset filled the banks, rows and
+working copy, but the stage copied 8516 bytes from address 0, all zeros, and the commit wrote 0 into every setting that
+was not 0: 612 of the 632 settings the first change away from P changed (12 1 -> 0, 18 60 -> 0, 107 5400 -> 0, 820 1 ->
+0, ...), with the working copy, the rows and the banks still holding the right values (X: a play session reading each
+layer of 12, 18, 107, 820, 51, 24, 112 before and after the change). Run post hoc, the init made the next changes
+behave. Since 2026-10-30 the lab runs it natively between the registry bootstrap and the DB init (H-STOREINIT,
+`emu/src/lab/menu.mjs` store_init; its address and the three words on each body by `emu/src/fw/facts.mjs` propStore,
+which finds it on all 18 unpacked bodies). The chain's other sixteen inits still do not run.
+
+**A change, measured (X; `emu/test/test_camapp.mjs` modeDialSession).** On the blank store each position's change sets
+its mode: MODE_EXPOSE (setting 24; the names are the 52-byte records of the resource block `blk05a00000`) 3 at P, 4 at
+A, 5 at S, 6 at M and 76 at Movie, with MODE_CAMERA (26) alike; B sets MODE_DIAL_B_ONOFF (1444) to 1; C1..C4 recall the
+custom banks, which hold P with MODE_RAW (22) 1. A change touches 0 to 14 settings, and MODE_HQ_Q (12) and
+MODE_HDMI_INFO (820) keep their values; the shooting screen shows the mode (P, A, S, M, B, P with C1..C4 and LF+RAW, the
+movie screen), and OK and MENU work at every position tried (S, P).
+
 ## 3. The SCPU interface `0x98e00000` (`om1.scpu`)
 
 `0x98e00000..0x98e000ff` is the firmware's register window to the sub-CPU that keeps the clock and the backup words:
@@ -142,13 +195,15 @@ that protocol and its command set (D).
 
 ## 4. Init path and its stand-ins (M6, X)
 
-Order of a session (`MenuLab.bring_up` in `emu/src/lab/menu.mjs` with `store='native'`): K-native boot and lab task, routing, CTORS, CHANGE task, DISPLAY OPEN; store init; S-PERSIST inputs; dial-table init; GUI creation. The store init runs before the GUI because the GUI's bring-up reads settings (3009 for the language load); on the camera the order between the init task's `0x501eac42` and GUI creation is ? (store-init order). Running it before DISPLAY OPEN would be closer to boot (the registry bootstrap follows the flash read at `0x500093ec`); M8 adds that order as an option (`MenuLab(store_first=True)`, `emu/bin/nav.mjs --store-first`): the store init runs after display task init and before the first OPEN. check_nav N8 and the player's EVF starts (H-STOREFIRST, PLAYFIX: the EVF OPEN's eye-callback registration then reads property 1947's default 1 and arms no burn-in timer, vsc spec section 9 item 10) use it. With it the TFT OPEN reads the store: the display message handler `0x501d8e24` (after the state read `0x500417da(0x7701)` at `0x501d7e0b`) gets mode 1/2 instead of 0 and ORs bit 6 into CTRL3 and CTRL2 through `0x501e04b7` (returns `0x501d8e6f`, `0x501d8e8a`, executed), so that first TFT composite rests on A15 (vsc spec section 7); in the default order it logs `0x37005208` instead. After a switch to the EVF and back the TFT is not at CTRL3 `0x41` (check_nav N8); why the second OPEN leaves no bit 6 is not traced.
+Order of a session (`MenuLab.bring_up` in `emu/src/lab/menu.mjs` with `store='native'`): K-native boot and lab task, routing, CTORS, CHANGE task, DISPLAY OPEN; store init (the registry bootstrap, the store's module init, the DB init: the boot's order, section 2.2); S-PERSIST inputs; dial-table init; GUI creation. The store init runs before the GUI because the GUI's bring-up reads settings (3009 for the language load); on the camera the order between the init task's `0x501eac42` and GUI creation is ? (store-init order). Running it before DISPLAY OPEN would be closer to boot (the registry bootstrap follows the flash read at `0x500093ec`); M8 adds that order as an option (`MenuLab(store_first=True)`, `emu/bin/nav.mjs --store-first`): the store init runs after display task init and before the first OPEN. check_nav N8 and the player's EVF starts (H-STOREFIRST, PLAYFIX: the EVF OPEN's eye-callback registration then reads property 1947's default 1 and arms no burn-in timer, vsc spec section 9 item 10) use it. With it the TFT OPEN reads the store: the display message handler `0x501d8e24` (after the state read `0x500417da(0x7701)` at `0x501d7e0b`) gets mode 1/2 instead of 0 and ORs bit 6 into CTRL3 and CTRL2 through `0x501e04b7` (returns `0x501d8e6f`, `0x501d8e8a`, executed), so that first TFT composite rests on A15 (vsc spec section 7); in the default order it logs `0x37005208` instead. After a switch to the EVF and back the TFT is not at CTRL3 `0x41` (check_nav N8); why the second OPEN leaves no bit 6 is not traced.
 
 The display path reads four kinds through the camera-state read `0x500417da`; the data-object table `0x606217e4` (`{u16 kind, u16 index}` per id, section 2) gives their ids (D): `0xe831` = 587, `0x4671` = 1947, `0xd7f9` = 449, `0x8279` = 31. On the native store they read 1, 1, 0, 0, the settings reference's defaults (check_nav N8); in the kernel-less labs the store is empty and they read 0 with `0x1c005002`. Kind `0xe831` decides the EVF switch's PLANC path (vsc spec section 9.3). Which menu rows write them is ?.
 
 1. Registry bootstrap `0x50040aeb`: prints `FlD.` `BlD.` `ElD.` `MlD.` (every store built from its image template,
    "l D"), no errlog.
-2. Settings-DB init `0x503c5473` returns (blank path, `0x503eefdf` != 0): steps 1-3 as in the STORE report (reset
+2. The property store's module init `0x503ee2d6` (H-STOREINIT, since 2026-10-30; section 2.2): returns 0, prints
+   nothing, sets the mode store's three pointer words.
+3. Settings-DB init `0x503c5473` returns (blank path, `0x503eefdf` != 0): steps 1-3 as in the STORE report (reset
    `0x503d9cdd` -> `0x503d9bf3`, region overrides); step 4 `0x504205d2` -> `0x5012b78c` fills a date struct
    (status 10501, `0x5012b91f`), sends it to the SCPU task (`0x5012c7d9` -> request `0x5005cd17`, wait flag 0xf7;
    PER_SCPU carries it to S-SCPUDEV, whose RTC takes it: its status 10501, cut to 5 by the 10-byte frame, clears the

@@ -332,7 +332,14 @@ export const FAMILIES = {
     // opens the built-in EVF (device code 6, docs/model-survey.md finding 35; X: E122's EVF start without them)
     stub_pages: [0x9B800000, 0x9B801000, 0x99E20000, 0x98800000, 0x98200000, 0x98300000, 0x98500000, 0x98600000,
       0x98400000, 0x9BD00000, 0x9BC00000],
-    stub_presets: [],
+    // the serial channels' transmit level word +0x1c (the channel records 0x6011c034 + 0x60 x ch name it at +28, E118
+    // D) reads each channel's FIFO depth, its transmitter idle: the driver's byte loop writes +0x18 while +0x1c is not 0
+    // (E118 0x5006e24b), and its polled send then waits until +0x1c equals the depth word the channel's init keeps
+    // (0x611515c0 + 4 x ch: 16, 16, 16, 16, 64 for channels 0..4 at E118's EVF open, X; 0x5006dff0..0x5006e008, D).
+    // E118's EVF panel takes its command list over channel 2 (0x98500000) at 4 MHz in that polled mode, a GPIO pin
+    // around each command (0x502d3b20.., D): a stub page's unwritten 0 kept that wait from ending (trap 7 at the
+    // display run's limit, X). That +0x1c counts the transmitter's free entries is I
+    stub_presets: [[0x9820001C, 16], [0x9830001C, 16], [0x9850001C, 16], [0x9860001C, 16], [0x9840001C, 64]],
     // the display waits' stand-ins: without them E122's display start blocks, every task waiting (X)
     display_wait_stand_ins: true,
     sd: UNKNOWN,

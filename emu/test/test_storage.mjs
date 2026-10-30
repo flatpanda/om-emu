@@ -25,7 +25,7 @@
 //                   card; a saved card (env.card) mounts in the next session without a format, and a player keeps
 //                   its card across a power cycle; S2 with the live view writes the picture's file (S-RECFILE): its
 //                   directory entry, size and bytes read back independently, the JPEG decoded (refs/jpeg.mjs) to the
-//                   capture's block means, and the next session's DCF numbering mount and image count find it; where the body runs the HLS media side (card_fs.hls: E143) Card
+//                   capture's block means, and the next session's DCF numbering mount and image count find it; where the body runs the HLS media side (card_fs.hls: E143, E146) Card
 //                   Formatting from the menu (S-MDACTRL): the card read back is freshly formatted, the counts reset and
 //                   the application returns to the menu; the card out and back in (S-MEDIA): the drive unmounted and the
 //                   screen without the counts, then mounted again by the firmware with the counts back
@@ -469,7 +469,7 @@ export async function storageSession() {
   return { checks, bad };
 }
 
-// The HLS media side on a card (src/fw/models.mjs card_fs.hls: E143), whichever file system the firmware gave it at
+// The HLS media side on a card (src/fw/models.mjs card_fs.hls: E143, E146), whichever file system the firmware gave it at
 // the insertion (refs/volume.mjs reads either). ok(cond, what) counts a check, bad collects a throw, notes what the
 // firmware did (the layout, the lab times).
 //

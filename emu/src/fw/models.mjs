@@ -78,7 +78,7 @@ const G4SET_UNCHECKED = false;
 // `card_fs`: whether the card's file system runs natively (src/lab/storage.mjs; docs/hle-gaps.md 4.8.4): native, at
 // the seams src/fw/facts.mjs fileSystem reads (fact storage); errlog, the error logs its card's queries make in the lab
 // (src/lab/display.mjs EXPECTED_ERRLOG); hls, the HLS media side's addresses (src/lab/media.mjs: Card Formatting from
-// the menu, the card out and in; E143's only). Every body gives it, one that does not run it with its reason (why);
+// the menu, the card out and in; E143 and E146). Every body gives it, one that does not run it with its reason (why);
 // such a body keeps S-CARD's card without a file system (src/lab/camapp.mjs)
 //
 // `scpu_lle`: the sub-CPU's own firmware, which the lab can run on the STM32L4 machine in S-SCPUDEV's place (opt-in,
@@ -320,7 +320,31 @@ export const MODELS = {
     },
     // as E143's (D): pool 2's get 0x5000314d and release 0x50003157, block 16512 (the table 0x60029910), memory 0x62424700
     heap_pool: { get: 0x5000314D, put: 0x50003157, bytes: 16512 },
-    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card), and its HLS side (src/lab/media.mjs;
+    // docs/hle-gaps.md 4.8.7): E143's (its entry has the meaning of each field), each function paired by the map
+    // (bin/xto.mjs) and compared with E143's instruction for instruction but for absolute addresses and source line
+    // numbers (D): the reception's getter, slot 2 and the receive body, operator new, the event classes' ctors (697,
+    // 711 and 696 as E143's; the senders allocate 44, 36 and 40 bytes), the media control's class ctor (0x50aca769),
+    // getMediaCtrlCBC, getMediaProgress, executeMediaFormatStart (the progress event 0x04020011), api_media's format
+    // and media status, the flag setter, the mount state getter and setter, UI_IN's level getter and the module event
+    // post. Three ids differ: the media control request is TRA 1509 (its ctor's id; E143's 1511), the progress and
+    // the result 1511 and 1512 (cbMediaCtrlResult 0x50cfbf3c, the progress send 0x50cfc6e5, the sender 0x50cfcb36 and
+    // the reactive's state 6 0x50ad5b24 test them; E143's 1513 and 1514); the API's reply queue is the halfword
+    // 0x6004320e (api_media's format reads it at 0x503ecb06; the map's data pairing, 0x60043200, is not it)
+    card_fs: {
+      native: true,
+      hls: {
+        reception: 0x50AC655A, sync_slot: 2, new: 0x50DACAF5,
+        events: { result: [0x50AD32E7, 44], media: [0x50AD2FD2, 36], mount: [0x50AD324A, 40] },
+        ids: { progress: 1511, result: 1512 },
+        ctrl: { request: 1509, cmd: 32, media: 34, option: 36, format: 1, cbc: 0x50CFC765, progress: 0x50CFC1E7,
+          api: 0x503ECA4D, reply_queue: 0x6004320E, progress_event: 0x04020011, kinds: { progress: 3, done: 72 },
+          status: 0x503ECE04, flag: [0x50ABEF30, 15261] },
+        mount: { get: 0x50AD4AF7, set: 0x50AD4C8B, unmounted: 0, mounted: 8, rec_end: 2, end: 8 },
+        slots: [{ kind: 4, switch: 0x1506 }, { kind: 8, switch: 0x1518 }],
+        switch_level: 0x5014FD76, switch_event: 0x02020000, publish: 0x50025160,
+      },
+    },
     // as E143's (D): the GIO init 0x50002a21 ends with 0x50002b5e (0x50002a2e), slots at 0xa32c1f74; the EDID state is
     // the word 0x62a67880 its getter 0x501d8647 reads. The hot-plug handler's work runs in the display init's HDMI task
     // 0x501dc568 (extra_tasks), not in task 16 as E143's

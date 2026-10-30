@@ -318,19 +318,36 @@ export function menuMemory(img) {
 // frame in a loop, `mov sp,a3; add 396,a3; mov 32768,dN; mov a3,a0; mov -1,d0; call; exth d0; cmp 0,d0; beq` back to
 // the `mov a3,a0`, and then loads the message, `mov (396,sp),d0`. The take is the instruction after that load: E143's
 // call 0x510c2a2e (loop 0x510c2a1b..28), E144's call 0x50d1c54d, E139's 0x50cc49a6, E134's `cmp d3,d0` 0x50d04704,
-// which has no call between the load and the compare (D). dN is d3, or d2 on E144, E145 and E122. One such loop on
-// each of the 18 expanded images but E118 and E120, whose loops have no a3 = sp + 396 before them, and on E146, E147,
-// E144 and E139 the take is where their maps placed E143's (X, a byte scan). Returns the take (disassembly notation),
-// or undefined for none; throws for two.
-const TAKE_LOOP = [0x3f, 0xfa, 0xd3, 0x8c, 0x01, 0xfc, null, 0x00, 0x80, 0x00, 0x00, 0x9c, 0x80, 0xff];
-const TAKE_TEST = [0x18, 0xa0, 0x00, 0xc8, 0xf3], TAKE_LOAD = [0xfa, 0xb4, 0x8c, 0x01];
+// which has no call between the load and the compare (D). dN is d3, or d2 on E144, E145 and E122. The E118 family's
+// GUI task (its loop at E118 0x50b93362, E120 0x509140cb, D) sets a3 earlier in its function, `mov sp,a3` before a vtable call and
+// `add 396,a3` after it (E118 0x50b932e9 / 0x50b932ec), first waits in a loop of its own for message 38401 (`cmp
+// 38401,d0; bne`, E118 0x50b93344) and then runs the same loop from `mov 32768,d3` on, with no a3 set-up before it:
+// so the loop is matched from its `mov 32768,dN`, and a3 = sp + 396 either right before it or as the last `add
+// 396,a3` within 0x100 bytes before it, with a `mov sp,a3` in the 4 bytes before that add (calls keep a3, the ABI's
+// callee-saved register). One such loop on each of the 18 expanded images (X, a byte scan): on E146, E147, E144 and
+// E139 the take is where their maps placed E143's, on E118 and E120 it is the `cmp d3,d0` after the load, as E134's
+// (E118 0x50b93379, E120 0x509140e2). Returns the take (disassembly notation), or undefined for none; throws for two.
+const TAKE_LOOP = [0xfc, null, 0x00, 0x80, 0x00, 0x00, 0x9c, 0x80, 0xff], TAKE_A3 = [0x3f, 0xfa, 0xd3, 0x8c, 0x01];
+const TAKE_TEST = [0x18, 0xa0, 0x00, 0xc8], TAKE_LOAD = [0xfa, 0xb4, 0x8c, 0x01], TAKE_A3_SPAN = 0x100;
 export const GUI_TAKE_E143 = 0x510C2A2E;
+// whether a3 holds sp + 396 at the loop head h: `mov sp,a3; add 396,a3` right before it, or the last `add 396,a3`
+// within TAKE_A3_SPAN bytes before it with a `mov sp,a3` in the 4 bytes before that
+const takeA3 = (img, h) => {
+  if (bytesAt(img, h - TAKE_A3.length, TAKE_A3)) return true;
+  for (let p = h - TAKE_A3.length + 1; p >= Math.max(1, h - TAKE_A3_SPAN); p--) {
+    if (bytesAt(img, p, TAKE_A3.slice(1))) return img.subarray(Math.max(0, p - 4), p).includes(0x3f);
+  }
+  return false;
+};
 export function guiTake(img) {
   const found = [];
-  for (let o = img.indexOf(0x3f); o >= 0; o = img.indexOf(0x3f, o + 1)) {
-    if (!bytesAt(img, o, TAKE_LOOP) || (img[o + 6] & 0xfc) !== 0xcc) continue;
-    const c = callAt(img, o + TAKE_LOOP.length), t = c && o + TAKE_LOOP.length + c.len;
-    if (c && bytesAt(img, t, TAKE_TEST) && bytesAt(img, t + TAKE_TEST.length, TAKE_LOAD)) found.push(t + TAKE_TEST.length + TAKE_LOAD.length);
+  for (let o = img.indexOf(0xfc); o >= 0; o = img.indexOf(0xfc, o + 1)) {
+    if (!bytesAt(img, o, TAKE_LOOP) || (img[o + 1] & 0xfc) !== 0xcc) continue;
+    const head = o + 6, c = callAt(img, o + TAKE_LOOP.length), t = c && o + TAKE_LOOP.length + c.len;
+    // `exth d0; cmp 0,d0; beq` back to the loop's `mov a3,a0` (the branch's displacement is from its own address)
+    if (!c || !bytesAt(img, t, TAKE_TEST) || t + 3 + (img[t + 4] << 24 >> 24) !== head) continue;
+    if (!bytesAt(img, t + 5, TAKE_LOAD) || !takeA3(img, o)) continue;
+    found.push(t + 5 + TAKE_LOAD.length);
   }
   if (found.length > 1) throw new Error(`guiTake: message takes at ${found.map((o) => h8(0x50000000 + o)).join(', ')}, want one`);
   return found.length ? 0x50000000 + found[0] : undefined;
@@ -870,6 +887,31 @@ export function kernelCpus(img) {
   // each stub is 11 bytes and its bra (2) or jmp (3)
   if (!at.length || at.some((o, i) => i > 0 && o - at[i - 1] > CPU_STUB.length + 3)) throw new Error(`kernelCpus: kernel-entry stubs at ${at.map((o) => h8(0x50000000 + o)).join(', ') || 'none'}, want one run`);
   return at.length;
+}
+
+// The kernel's interrupt handler tables (fact 'kernel.handlers', and through bin/port.mjs the place of E143's
+// HANDLER_TABLE_E143 0xa32600c0, src/lab/irq.mjs and src/lab/rtos.mjs HANDLER_TABLE, which the attach observer checks
+// after each attach): one table per CPU, which the kernel's attach writes the handler into at the irq's slot, `mov
+// imm32,An; mov d0,(d3,An)` for each CPU's table in a run (d3 the irq x 4), the tables a fixed stride apart in the
+// uncached view of DRAM (E143 0x5002e95b: 0xa32600c0 + k x 0x590 for its 4 CPUs; E144 0x5003408b: 0xa262ead8 + k x
+// 0x2d8; E122 0x5004c82e: 0xa1bf3984 + k x 0x1e8, D). One such run of kernel.cpus stores on each of the 18 expanded
+// images, at the place every port had for E143's (the E118 family's map gave E118 and E120 none: E143's address was
+// kept, where their attach writes 0xa1bb3994, D; X, a byte scan; the other runs of the form are of 2 stores, of MMIO,
+// of the cached view or of a stride below 0x100). Returns the first table, or undefined where none is found; throws
+// for two.
+const handlerStore = (img, o) => img[o] === 0xfc && (img[o + 1] & 0xfc) === 0xdc && img[o + 6] === 0xf3 && img[o + 7] === (0x4c | (img[o + 1] & 3));
+export const HANDLER_TABLE_E143 = 0xA32600C0;
+export function handlerTables(img, cpus) {
+  const found = new Set();
+  for (let o = img.indexOf(0xfc); o >= 0; o = img.indexOf(0xfc, o + 1)) {
+    if (!handlerStore(img, o) || handlerStore(img, o - 8)) continue;
+    let n = 1; while (handlerStore(img, o + 8 * n)) n++;
+    const t = Array.from({ length: n }, (_, k) => u32(img, o + 8 * k + 2)), stride = t[1] - t[0];
+    if (n !== cpus || stride < 0x100 || t.some((v, k) => v !== t[0] + k * stride || v < 0xA0000000 || v >= 0xC0000000)) continue;
+    found.add(t[0]);
+  }
+  if (found.size > 1) throw new Error(`handlerTables: handler-table stores of ${[...found].map(h8).join(', ')}, want one`);
+  return found.size ? [...found][0] : undefined;
 }
 
 // CPU 0's init task (fact 'rtos.init_task', and through bin/port.mjs the place of E143's INIT_TASK_E143 0x5002cca5,
@@ -2903,16 +2945,17 @@ export function readPlacedFacts({ img, at }) {
 // sram, sram_size), resLoad its resource block's load address (src/lab/resources.mjs loadAddress). Returns {board:
 // {core_byte, library, preload, vector_page, dram_size}} for a family whose reset head copies with the flash-copy
 // routine (only vector_page and dram_size for reset_head null, the E143 family's), {res: {font_limit, string_limit}},
-// {menu: {list_menu, tab_memory, page_memory, take}}, {kernel: {cpus}}, {errlog: {entry}}, {scpu: {backup}}, {display:
+// {menu: {list_menu, tab_memory, page_memory, take}}, {kernel: {cpus, handlers}}, {errlog: {entry}}, {scpu: {backup}}, {display:
 // {change_task, change_entry, queue_word, queue_id, task_init, frame_wait, timer_sleep, sync, face_colour}}, {timer:
 // {reload_less_one}}, {dial: {select, select_end, table_ptr, table0}}, {touch_panel: {driver}}, {lens: {mount}}, {iic:
 // {waits}}, {touch: {i2c_write, i2c_read}}, {touch_api: {open}}, {shooting: {start, end, auto_through}}, {func_direct:
 // {run, id}}, {broker: {init}}, {card: {shots_query, detect}}, {boot: {key, stage}}, {dpc: {init}} (with board.dpc), {sio: {tx_start, rx_start, done, dispatch, restart, channels}}, {storage: {init, tasks, fileclbk, nand, command, album_init, status, cflush, names}}, {power_off: {usb_disconnect}}, {gui: {stride, height,
 // banks, kind3}}, {recview: {word, standby}}, {cbs: {NAME: code}}, {mode_dial: {table, names}}, {prop_store: {init,
-// objects}} and {ctors: [[table, count]]} (no memories, take, task init, frame wait, timer sleep, face colour, timer, dial, touch, touch_api,
-// shooting, func_direct, boot, dpc, sio, power_off, cbs or prop_store part where its rule reads none; sync and recview
-// null where their rules read none, the E118 family's builds, which have no display sync request and no RecView
-// trace). Throws for a reset_head with no rule here, and where a rule throws.
+// objects}} and {ctors: [[table, count]]} (no memories, take, handlers, task init, timer sleep, face colour, timer,
+// dial, touch, touch_api, shooting, func_direct, boot, dpc, sio, power_off, cbs or prop_store part where its rule reads
+// none; sync and recview null where their rules read none, the E118 family's builds, which have no display sync request
+// and no RecView trace; the frame wait null where its rule reads none, E120's, which S-FRAMEWAIT then leaves out,
+// src/lab/menu.mjs). Throws for a reset_head with no rule here, and where a rule throws.
 export function readFacts({ img, family, resLoad }) {
   const facts = {};
   if (family.reset_head === 'flash-copy') {
@@ -2924,7 +2967,8 @@ export function readFacts({ img, family, resLoad }) {
   facts.res = { font_limit: font.limit, string_limit: string.limit };
   const take = guiTake(img);
   facts.menu = { list_menu: listMenu(img), ...menuMemory(img), ...(take !== undefined && { take }) };
-  facts.kernel = { cpus: kernelCpus(img) };
+  const cpus = kernelCpus(img), handlers = handlerTables(img, cpus);
+  facts.kernel = { cpus, ...(handlers !== undefined && { handlers }) };
   facts.errlog = { entry: errlogEntry(img) };
   facts.scpu = { backup: scpuBackup(img) };
   const frame = frameWait(img), sleep = timerSleep(img), sync = displaySync(img);
@@ -2933,7 +2977,7 @@ export function readFacts({ img, family, resLoad }) {
     change_task: displayChangeTask(img), change_entry: displayChangeEntry(img), ...displayQueue(img),
     ...(taskInit !== undefined && { task_init: taskInit }),
     init_2nd: displayInit2nd(img),
-    ...(frame !== undefined && { frame_wait: frame }), ...(sleep !== undefined && { timer_sleep: sleep }),
+    frame_wait: frame ?? null, ...(sleep !== undefined && { timer_sleep: sleep }),
     sync: sync ?? null, ...(faceColour !== undefined && { face_colour: faceColour }),
   };
   const lessOne = timerReloadLessOne(img);
@@ -2980,7 +3024,8 @@ export function readFacts({ img, family, resLoad }) {
 // 'touch-trace'); the shooting service's start and end at their traces' loads (shootingService, 'service-trace'); the
 // GUI task's take after its receive loop (guiTake, 'take-loop'); the function direct start after its checks
 // (funcDirect, 'direct-checks'); the event broker init by its opening and slot loop (brokerInit, 'broker-slots'); the
-// error log by its test of the id's module (errlogEntry, 'module-test'); the remaining-shots query at the callee whose
+// error log by its test of the id's module (errlogEntry, 'module-test'); the interrupt handler tables at the attach's
+// stores (handlerTables, 'attach-stores'); the remaining-shots query at the callee whose
 // result the application's getAvailableShootCount stores (shotsQuery, 'shots-method'); the touch panel's open by its
 // trace (touchOpen, 'open-trace'); the display task init as the function that creates the DISPLAY queue
 // (displayTaskInit, 'queue-init'); the face plane's colour setter at the one that loads its trace (faceColourSet,
@@ -2993,6 +3038,7 @@ export function rulePlaces(facts) {
     ...(facts.func_direct ? [[FUNC_DIRECT_E143, { to: facts.func_direct.run, how: 'direct-checks' }]] : []),
     [BROKER_E143, { to: facts.broker.init, how: 'broker-slots' }],
     [ERRLOG_E143, { to: facts.errlog.entry, how: 'module-test' }],
+    ...(facts.kernel.handlers !== undefined ? [[HANDLER_TABLE_E143, { to: facts.kernel.handlers, how: 'attach-stores' }]] : []),
     [SHOTS_QUERY_E143, { to: facts.card.shots_query, how: 'shots-method' }],
     ...(facts.touch_api ? [[TP_OPEN_E143, { to: facts.touch_api.open, how: 'open-trace' }]] : []),
     ...(facts.display.task_init !== undefined ? [[DISPLAY_TASK_INIT_E143, { to: facts.display.task_init, how: 'queue-init' }]] : []),

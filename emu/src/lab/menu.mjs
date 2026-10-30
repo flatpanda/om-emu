@@ -276,10 +276,11 @@ export class MenuLab extends T.TextDisplayLab {
     const panel = this._queue(PANEL_FLAG);
     this.panel_answered = 0;                       // S-PANELDONE: the waits answered so far (the player lists it once one was)
     // S-FRAMEWAIT's flag (src/fw/facts.mjs frameWait, the word the device open waits on per frame); E143's null: the
-    // lab leaves its open's wait native, as before (its start does not reach it, X)
+    // lab leaves its open's wait native, as before (its start does not reach it, X); null too on a build with no such
+    // wait (E120, X; fact() gives a read null as undefined, hence the ?? null)
     // the display waits' stand-ins, on a board that takes them (src/fw/board.mjs display_wait_stand_ins)
     const standIns = BOARD.display_wait_stand_ins;
-    const frameWord = standIns ? fact('display.frame_wait', null) : null, frameFlag = frameWord === null ? null : this._queue(frameWord);
+    const frameWord = standIns ? fact('display.frame_wait', null) ?? null : null, frameFlag = frameWord === null ? null : this._queue(frameWord);
     this.vsync_ids = vsync;
     const scoped = (name, stub, useStub) => (hle, r) => {
       if (useStub(r)) { this.route_log.add([name, 'stand-in']); return stub(hle, r); }

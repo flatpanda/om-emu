@@ -21,7 +21,7 @@
 //               touch panel's traced I2C functions against TOUCH_FOUND, the device open's frame wait and the
 //               software-timer sleep against FRAME_WAIT_FOUND and TIMER_SLEEP_FOUND, the shooting service's traces
 //               against SHOOTING_FOUND, the AE init against AE_FOUND and A(), the GUI task's take against TAKE_FOUND,
-//               the frame period words against PERIOD_FOUND and A(), the function direct start against DIRECT_FOUND and
+//               the kernel's interrupt handler tables against HANDLERS_FOUND, the frame period words against PERIOD_FOUND and A(), the function direct start against DIRECT_FOUND and
 //               A(), the event broker init against BROKER_FOUND and A(), the error log against ERRLOG_FOUND and A(),
 //               the touch panel's open against TP_OPEN_FOUND and A(), the play component's wrappers against
 //               WRAPPERS_FOUND and A(), the USB-disconnect power-off against POWER_OFF_FOUND, the power manager's
@@ -322,8 +322,16 @@ const SHOOTING_FOUND = { E139: { start: 0x5081C17B, end: 0x5081271B, auto_throug
   E134: { start: 0x5084050B, end: 0x50836B06, auto_through: 0x5081C396 }, E145: { start: 0x506CD5F7, end: 0x506C409A, auto_through: 0x506AAD24 } };
 // The GUI task's take (menu.take; src/fw/facts.mjs guiTake) as read after its receive loops (D: E143's call
 // 0x510c2a2e, the lab's DISPATCH; E144 0x50d1c54d and E139 0x50cc49a6, the calls their maps placed; E134 0x50d04704,
-// the compare after the load, where its hand override had the load 0x50d04700; E137 0x50c5ee9a), none on E118, E120
-const TAKE_FOUND = { E143: 0x510C2A2E, E144: 0x50D1C54D, E139: 0x50CC49A6, E134: 0x50D04704, E137: 0x50C5EE9A, E118: undefined, E120: undefined };
+// the compare after the load, where its hand override had the load 0x50d04700; E137 0x50c5ee9a; E118 0x50b93379 and
+// E120 0x509140e2, the compares after the loads of their second loops, whose a3 is set before the first)
+const TAKE_FOUND = { E143: 0x510C2A2E, E144: 0x50D1C54D, E139: 0x50CC49A6, E134: 0x50D04704, E137: 0x50C5EE9A, E118: 0x50B93379, E120: 0x509140E2 };
+// The kernel's interrupt handler tables (kernel.handlers; src/fw/facts.mjs handlerTables): E143's as the lab gives it
+// (src/lab/irq.mjs HANDLER_TABLE), the others' where their ports placed E143's before the rule (E146 and E147 at E143's
+// own address, kept), each the first of the attach's stores (D: E144 0x5003408b, E122 0x5004c82e); E118's and E120's,
+// which their ports had kept at E143's address, at their attach's stores (D: E118 0x5004c80f, E120 0x5004c7bf)
+const HANDLERS_FOUND = { E143: 0xA32600C0, E146: 0xA32600C0, E147: 0xA32600C0, E144: 0xA262EAD8, E139: 0xA266EAD8,
+  E134: 0xA2853C1C, E137: 0xA25F08B8, E142: 0xA26CA7BC, E140: 0xA26CA7BC, E125: 0xA2701C0C, E145: 0xA216ADD8,
+  E133: 0xA2A8770C, E130: 0xA2ADEF0C, E129: 0xA2ACAF0C, E132: 0xA2ACAF0C, E122: 0xA1BF3984, E118: 0xA1BB3994, E120: 0xA1BB3994 };
 // The frame period words (frame_period; src/fw/facts.mjs framePeriod) as found before the rule: E143's as the lab
 // gives them (src/lab/display.mjs DEVICE), E144's and E139's as their maps placed them (D: their getters 0x50021935 /
 // 0x50022011 and 0x50021740 / 0x5002201a), E134's EVF word as its hand override gave it (D: getter 0x50210666, setter
@@ -545,7 +553,7 @@ const E143_FACTS = {
   board: { vector_page: 0x60030000, dpc: { triggers: 0x9B880044, irqs: [53, 54, 55, 56, 57, 58] }, dram_size: 384 << 20 },
   res: { font_limit: E143_LOADER.font[1], string_limit: E143_LOADER.string[1] },
   menu: { list_menu: true, tab_memory: 1881, page_memory: 1882, take: 0x510C2A2E },
-  kernel: { cpus: 4 }, errlog: { entry: ERRLOG_FOUND.E143 }, scpu: { backup: true },
+  kernel: { cpus: 4, handlers: HANDLERS_FOUND.E143 }, errlog: { entry: ERRLOG_FOUND.E143 }, scpu: { backup: true },
   display: { change_task: true, change_entry: null, queue_word: 0x600432D4, queue_id: 0x88, task_init: 0x501C2F13, init_2nd: null, frame_wait: 0x60043088, timer_sleep: 0x501C2E94,
     sync: { request: 0x503E4DD5, image_sync: 0x503E50EC, sync_set: 0x50AB43CD } },
   timer: { reload_less_one: false }, dial: { select: 0x5014B7C7, select_end: 0x1A, table_ptr: 0xA32DAAB0, table0: 0x60223DBC },
@@ -753,6 +761,7 @@ export function factsTests() {
       ok(!off.length, `${code}: A() of E143's play component wrappers ${hx(off)}, not among the rule's`);
     }
     if (Object.hasOwn(TAKE_FOUND, code)) ok(got.menu?.take === TAKE_FOUND[code], `${code}: menu.take ${hx(got.menu ?? got)}, found ${hx(TAKE_FOUND[code] ?? 'none')}`);
+    if (Object.hasOwn(HANDLERS_FOUND, code)) ok(got.kernel?.handlers === HANDLERS_FOUND[code], `${code}: kernel.handlers ${hx(got.kernel ?? got)}, found ${hx(HANDLERS_FOUND[code])}`);
     // the frame period words at the port's places of the vtotal functions, and the port's A() of E143's words
     const pf = PERIOD_FOUND[code];
     if (pf && (code === 'E143' || PORTS[code])) {

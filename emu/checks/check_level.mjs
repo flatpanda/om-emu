@@ -5,9 +5,9 @@
 //       wants, the two set-up writes, close; the probe's success halfword is 1; ACC_MAIN waits in its cycle; the
 //       stand-ins are listed
 //   L2  samples reach the cache: over 1 s of lab time (from 500 ms after the start) the counter moves once per ACC_MAIN
-//       cycle (12 or 13, A-ACC-2), the raw cache (the firmware's raw accessor) is the level sample, the firmware's
-//       pose-0 reference (0, -16384, 0), and the corrected cache equals it (blank factory data: the correction's gate
-//       is closed, D)
+//       cycle (11 to 13: A-ACC-2's 80 ms, some cycles stretched), the raw cache (the firmware's raw accessor) is the
+//       level sample, the firmware's pose-0 reference (0, -16384, 0), and the corrected cache equals it (blank factory
+//       data: the correction's gate is closed, D)
 //   L3  the gauge follows a tilt: the gauge's getter (natively) reads the horizon within 0.2 degree of the roll and
 //       the vertical within 0.2 degree of pitch / 3, both valid, body orientation 0, for five tilts; and the TFT
 //       composite of the shooting screen's gauge (INFO) is green on the arc and the bar when level and loses the
@@ -98,12 +98,16 @@ function l2(mutant = null) {
   const g = new Group('L2 samples');
   withPlayer(mutant, (pl, s, lab) => {
     // from 500 ms after the shooting screen: on E143 the native lens's attach reaches the application about 120 ms
-    // after it, and the application's work on it held CPU 0 through one 129 ms ACC_MAIN cycle, 11 in the second (X)
+    // after it, and the application's work on it held CPU 0 through one 129 ms ACC_MAIN cycle, 11 in the second (X).
+    // 11 to 13 cycles a second: an 80 ms cycle (A-ACC-2) that other tasks' work stretches to about 100 ms comes a few
+    // times a second with either lens; on E146 with the native lens three of them fall in the first second after the
+    // shooting screen, while the application shows the lens's focal length (X: 11 there, 12 with S-LENS; docs/hle-gaps.md
+    // 4.4.3)
     s.wait(500);
     const [, c0] = cache(lab, 'raw');
     s.wait(1000);
     const [raw, c1] = cache(lab, 'raw'), [corrected, c2] = cache(lab, 'corrected');
-    g.true('the counter moves once per ACC_MAIN cycle over 1 s', c1 - c0 >= 12 && c1 - c0 <= 13, `${c0} -> ${c1}`);
+    g.true('the counter moves once per ACC_MAIN cycle over 1 s', c1 - c0 >= 11 && c1 - c0 <= 13, `${c0} -> ${c1}`);
     g.eq('the raw cache is the level sample', raw, [0, -16384, 0]);
     g.eq('the corrected cache equals the raw one (blank factory data)', [corrected, c2], [raw, c1]);
     g.eq('the level sample is the pose-0 reference', s.acc.level, [0, -16384, 0]);

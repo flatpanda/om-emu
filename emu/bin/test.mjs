@@ -13,7 +13,7 @@
 // (test_pubaudit.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the card and the
 // file system on E143, E146, E147, E144, E142 and E134 and SDXC cards on E143 (test_storage.mjs), subject detection's frames on E143
-// (test_subject.mjs), the lens on the mount natively on E143 (test_lens.mjs), the SCPU's Cortex-M4 core
+// (test_subject.mjs), the lens on the mount natively on E143, E146 and E147 (test_lens.mjs), the SCPU's Cortex-M4 core
 // (test_m4.mjs: hand-written vectors, QEMU's recorded vectors, the SCPU image from reset to its first unmodelled
 // access), the SCPU's STM32L4 machine (test_stm32l4.mjs: the peripheral models, the SCPU image to its console prompt,
 // console commands, its standby and the wake-up), the SCPU's own firmware behind the link against S-SCPUDEV on E143
@@ -238,13 +238,19 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   ex.bad.forEach((x) => console.log('  ', x));
   bad += ex.bad.length;
 }
-// the lens on the mount natively: the serial controller, the deferred-call triggers, S-LENSMCU, the driver's start
+// the lens on the mount natively: the serial controller, the deferred-call triggers, S-LENSMCU, the driver's start:
+// E143 here, E146 and E147 each in a process of its own (the model is fixed when the lab is imported)
 {
   const { lensUnits, lensSession } = await import('../test/test_lens.mjs');
+  const { spawnSync } = await import('node:child_process');
   const lu = lensUnits(), ls = await lensSession();
-  console.log(`the native lens: units ${lu.checks - lu.bad.length}/${lu.checks}; in play ${ls.checks - ls.bad.length}/${ls.checks}`);
-  [...lu.bad, ...ls.bad].forEach((x) => console.log('  ', x));
-  bad += lu.bad.length + ls.bad.length;
+  const others = ['E146', 'E147'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_lens.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
+  });
+  console.log(`the native lens: units ${lu.checks - lu.bad.length}/${lu.checks}; in play (E143) ${ls.checks - ls.bad.length}/${ls.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  [...lu.bad, ...ls.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += lu.bad.length + ls.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // PER_SIO's served IIC transfers and the TG-5's charger, without firmware (the TG-5s' sessions are bin/modelcheck.mjs's)
 {

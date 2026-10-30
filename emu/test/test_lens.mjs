@@ -10,18 +10,19 @@
 //                with the check byte of the classes 0x8x and 0xcx; the characteristics block's fields; the state's
 //                zoom step and aperture; the zoom ring's nearest step; an unknown frame or state parameter refused,
 //                named)
-//   lensSession  (firmware, E143) a play session with the native lens (env.lens 'native'): its stand-ins listed and
-//                S-LENS not, the lens's start
+//   lensSession  (firmware: E143, or E146 / E147 with OM_EMU_MODEL) a play session with the native lens (env.lens
+//                'native'): its stand-ins listed and S-LENS not, the lens's start
 //                (the frames in the driver's order, then the state poll), IRQ 14 attached at level 3 by the lens open,
 //                the driver's record filled from the replies (ID, name, zoom steps, wide and tele, the zoom entries,
 //                the status word, the zoom step S-SCENE's default focal length gives, the aperture), the driver's
-//                35 mm focal lengths derived natively from it (24, 80, 50 mm), the zoom ring at 40 mm (the state's last
-//                step, 80 mm), no error log; a touch on the shooting screen forwarded to the GUI by the application
+//                35 mm focal lengths derived natively from it (24, 80, 50 mm; E146 and E147 at S-SCENE's default
+//                step, 12 mm: 24, 80, 24), the zoom ring at 40 mm (the state's last step, 80 mm), no error log; on a
+//                body with the touch panel (E143) a touch on the shooting screen forwarded to the GUI by the application
 //                itself, the GUI's two answers taken natively and no lab post (S-TOUCHMAP, S-CAFWD not in use), then OK
 //                opening the Super Control Panel and S1 returning; the lens lock pin switch
 //                pressed (fw_121c): the lens detached (the data-valid and attach flags 0, the aperture shown as none),
 //                released: the lens's start again and the flags back
-//   node emu/test/test_lens.mjs [--session]
+//   node emu/test/test_lens.mjs [--session]      (OM_EMU_MODEL=E146 node emu/test/test_lens.mjs --session: another body)
 import { createMachine } from '../src/machine.mjs';
 import { BUS } from '../src/core/mem.mjs';
 import { BOARD } from '../src/fw/board.mjs';
@@ -119,9 +120,12 @@ export function lensUnits() {
   return { checks, bad };
 }
 
-// the driver's record (its pointer 0xa32caa8c; fields from the record dump 0x50118662, 0x50118ab7, 0x50118d20) and the
-// 35 mm focal lengths it derives (0x50129a3e / 0x50129980 / 0x501299a2: wide, tele, now)
-const RECORD_PTR = 0xA32CAA8C, FOCAL = [0xA32D4BB0, 0xA32D4BB4, 0xA32D4BB8];
+// the driver's record (its pointer 0xa32caa8c, at the port's place; fields from the record dump 0x50118662,
+// 0x50118ab7, 0x50118d20) and the 35 mm focal lengths it derives (0x50129a3e / 0x50129980 / 0x501299a2: wide, tele,
+// now), by body: E146's at E143's words, E147's the words its derives store (D: E146 0x50129d8b, 0x50129d95,
+// 0x50129ccc; E147 0x50133bb0, 0x50133bba, 0x50133af1), which the port does not place (no lab literal)
+const RECORD_PTR = 0xA32CAA8C;
+const FOCAL = { E143: [0xA32D4BB0, 0xA32D4BB4, 0xA32D4BB8], E146: [0xA32D4BB0, 0xA32D4BB4, 0xA32D4BB8], E147: [0xA32D3D48, 0xA32D3D4C, 0xA32D3D50] };
 const START = ['00 00', 'b0 f2', 'c0 f6', 'c0 f4', 'a0 f5', 'c1 f9', 'c1 02', 'c3 f0', 'c2 f3', 'c1 fe', '81 e4', 'c1 01', 'c1 2f', '60 f0', 'c1 80'];
 
 export async function lensSession() {
@@ -133,6 +137,9 @@ export async function lensSession() {
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { HANDLER_TABLE } = await import('../src/lab/irq.mjs');
   const { EXPECTED_ERRLOG } = await import('../src/lab/display.mjs');
+  const { A, MODEL } = await import('../src/fw/model.mjs');
+  const focal = FOCAL[MODEL];
+  if (!focal) return { checks: 1, bad: [`${MODEL}: no native lens here (the bodies with one: ${Object.keys(FOCAL)})`] };
   const env = { rom: loadImage(), resBlock: loadBlock(), createHash, wallClock: () => performance.now() / 1000, lens: 'native' };
   const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, env);
   pl.open_session();
@@ -143,14 +150,17 @@ export async function lensSession() {
   const intc = lab.nk.intc, irq = BOARD.lens.irq;
   ok(intc.level(irq) === 1 << 3 && lab.sim.u32(HANDLER_TABLE + 4 * irq) !== 0, `the lens open attached IRQ ${irq} at level 3: ${intc.level(irq)}`);
   s.idle_slice(lab.lab_time() + 1500e6);
-  const rec = lab.sim.u32(RECORD_PTR), rd = (o, n) => [...lab.sim.read(rec + o, n)], u16 = (o) => lab.sim.u32(rec + o) & 0xffff;
+  const rec = lab.sim.u32(A(RECORD_PTR)), rd = (o, n) => [...lab.sim.read(rec + o, n)], u16 = (o) => lab.sim.u32(rec + o) & 0xffff;
   const name = String.fromCharCode(...rd(1106, 32)).replace(/\0.*$/, '');
   ok(JSON.stringify(rd(1100, 6)) === JSON.stringify(LENS_1240.id) && name === LENS_1240.name && rd(1138, 1)[0] === LENS_1240.zoom.length && u16(1144) === 12 && u16(1146) === 40,
     `the record's identity: ID ${rd(1100, 6)}, name ${JSON.stringify(name)}, ${rd(1138, 1)} steps, ${u16(1144)}..${u16(1146)} mm`);
   ok(LENS_1240.zoom.every((fl, i) => u16(1164 + 16 * i) === fl && u16(1166 + 16 * i) === LENS_1240.ap[0] && u16(1168 + 16 * i) === LENS_1240.ap[1]), 'the zoom entries: focal length and apertures per step');
-  ok(lab.sim.u32(rec + 4) === 0x8000 && rd(8, 1)[0] === 4 && u16(16) === LENS_1240.ap[0], `the state: status 0x${lab.sim.u32(rec + 4).toString(16)}, zoom step ${rd(8, 1)}, aperture ${u16(16)}`);
-  const fl = FOCAL.map((a) => lab.sim.u32(a));
-  ok(JSON.stringify(fl) === '[24,80,50]', `the 35 mm focal lengths the driver derives: ${fl}`);
+  // the zoom step S-SCENE's default focal length gives (25 mm, step 4), which S-EXPOSE turns the ring to on the shooting
+  // screen; E146's and E147's starts end before it (their GUI at 0x102, X), so the lens stays at its first step there
+  const step = lab.state() === 0x0108 ? 4 : 0;
+  ok(lab.sim.u32(rec + 4) === 0x8000 && rd(8, 1)[0] === step && u16(16) === LENS_1240.ap[0], `the state: status 0x${lab.sim.u32(rec + 4).toString(16)}, zoom step ${rd(8, 1)} (want ${step}), aperture ${u16(16)}`);
+  const fl = focal.map((a) => lab.sim.u32(a));
+  ok(JSON.stringify(fl) === JSON.stringify([24, 80, 2 * LENS_1240.zoom[step]]), `the 35 mm focal lengths the driver derives: ${fl}`);
   // the bring-up's three 0x100000ff logs (0x5089d53e, 0x5089d853) are the session's without the native lens too (X:
   // master 93016b8's play session logs the same three)
   const unexpected = (from) => lab.kernel.errors.slice(from).filter(([c]) => !EXPECTED_ERRLOG.has(c) && !(from === 0 && c === 0x100000ff)).map(([c, , , w]) => `0x${c.toString(16)} at ${w}`);
@@ -159,14 +169,30 @@ export async function lensSession() {
   // the zoom ring: the lens reports the step in its state, the driver derives the focal length from it
   s.camapp.lens_zoom(40);
   s.idle_slice(lab.lab_time() + 500e6);
-  ok(rd(8, 1)[0] === LENS_1240.zoom.length - 1 && lab.sim.u32(FOCAL[2]) === 80, `the zoom ring at 40 mm: step ${rd(8, 1)}, ${lab.sim.u32(FOCAL[2])} mm (35 mm)`);
+  ok(rd(8, 1)[0] === LENS_1240.zoom.length - 1 && lab.sim.u32(focal[2]) === 80, `the zoom ring at 40 mm: step ${rd(8, 1)}, ${lab.sim.u32(focal[2])} mm (35 mm)`);
   s.camapp.lens_zoom(25);
   s.idle_slice(lab.lab_time() + 500e6);
   const polls = L.mcu.counts.get('c1 80');
   ok(polls >= 10, `the state poll runs on (about every 100 ms): ${polls} polls`);
   // a touch on the shooting screen: the application forwards it to the GUI itself and takes the GUI's answers (event
   // 35 from PostEventToCA, natively), the lab posts none (no S-TOUCHMAP, S-CAFWD); OK then opens the Super Control
-  // Panel, as with S-LENS
+  // Panel, as with S-LENS. A body whose touch driver the lab does not run (E146, E147: models.mjs touch) has no touch
+  if (s.touch_on) touchChecks(ok, pl, s, lab, used);
+  // the lock pin switch: pressed, the lens detaches; released, it starts again (its bit the body's: E147's group 1 byte
+  // 0 bit 6, E143's byte 1 bit 4)
+  pl.apply({ type: 'key', id: 'fw_121c', action: 'down', t_wall: pl.wall(), seq: 1 });
+  s.idle_slice(lab.lab_time() + 500e6);
+  ok(L.flags().valid === 0 && L.flags().attach === 0, `LLPSW pressed: the lens detached: ${JSON.stringify(L.flags())}`);
+  const n0 = L.mcu.frames.length;
+  pl.apply({ type: 'key', id: 'fw_121c', action: 'down', t_wall: pl.wall(), seq: 2 });
+  s.idle_slice(lab.lab_time() + 800e6);
+  const again = L.mcu.frames.slice(n0).map(([n]) => n.slice(0, 5));
+  ok(L.flags().valid === 1 && L.flags().attach === 1 && JSON.stringify(again.slice(0, START.length)) === JSON.stringify(START), `LLPSW released: the lens's start again: ${JSON.stringify(L.flags())} ${JSON.stringify(again.slice(0, 16))}`);
+  ok(unexpected(e0).length === 0, `no error log across the detach and the start again: ${unexpected(e0)}`);
+  pl.close_session();
+  return { checks, bad };
+}
+function touchChecks(ok, pl, s, lab, used) {
   ok(s.app_touch && !used.includes('S-TOUCHMAP') && !used.includes('S-CAFWD'), `the application forwards the touches: ${used.filter((x) => /TOUCH|CAFWD/.test(x))}`);
   let seq = 10;
   const input = (inp) => { const q = seq++; pl.apply({ ...inp, t_wall: pl.wall(), seq: q }); return pl.box.pop(q); };
@@ -185,18 +211,6 @@ export async function lensSession() {
   input({ type: 'key', id: 's1', action: 'up' });
   s.idle_slice(lab.lab_time() + 300e6);
   ok(gui() === 0x0108, `and S1 returns to the shooting screen: 0x${gui().toString(16)}`);
-  // the lock pin switch: pressed, the lens detaches; released, it starts again
-  pl.apply({ type: 'key', id: 'fw_121c', action: 'down', t_wall: pl.wall(), seq: 1 });
-  s.idle_slice(lab.lab_time() + 500e6);
-  ok(L.flags().valid === 0 && L.flags().attach === 0, `LLPSW pressed: the lens detached: ${JSON.stringify(L.flags())}`);
-  const n0 = L.mcu.frames.length;
-  pl.apply({ type: 'key', id: 'fw_121c', action: 'down', t_wall: pl.wall(), seq: 2 });
-  s.idle_slice(lab.lab_time() + 800e6);
-  const again = L.mcu.frames.slice(n0).map(([n]) => n.slice(0, 5));
-  ok(L.flags().valid === 1 && L.flags().attach === 1 && JSON.stringify(again.slice(0, START.length)) === JSON.stringify(START), `LLPSW released: the lens's start again: ${JSON.stringify(L.flags())} ${JSON.stringify(again.slice(0, 16))}`);
-  ok(unexpected(e0).length === 0, `no error log across the detach and the start again: ${unexpected(e0)}`);
-  pl.close_session();
-  return { checks, bad };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

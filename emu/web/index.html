@@ -167,7 +167,7 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
 <div class="toolbar" id="optbar">
   <span class="lbl">Start options</span>
   <label class="tb" title="--hdmi on: the HDMI port modelled (E143, E146, E147); the Card, HDMI and session options panel then plugs a sink in (S-HDMISINK); an unplug is refused (A-HDMI-1)"><input type="checkbox" id="opt-hdmi"> HDMI port</label>
-  <label class="tb" title="lens=stand-in: S-LENS, the lens record written by the lab, in place of the native lens (E143's default: the lens tasks and drivers against S-LENSMCU as the 12-40mm F2.8 PRO, docs/hle-gaps.md 4.4.2); the other bodies always have S-LENS"><input type="checkbox" id="opt-lens"> Stand-in lens</label>
+  <label class="tb" title="lens=stand-in: S-LENS, the lens record written by the lab, in place of the native lens (the default on E143, E146 and E147: the lens tasks and drivers against S-LENSMCU as the 12-40mm F2.8 PRO, docs/hle-gaps.md 4.4.2, 4.4.3); the other bodies always have S-LENS"><input type="checkbox" id="opt-lens"> Stand-in lens</label>
   <label class="tb" title="S-NVRAM: the camera's settings and clock kept in this browser (OPFS) between sessions, in place of S-SETSAVE: a camera whose clock was set starts without the date prompt"><input type="checkbox" id="opt-nvram"> Keep the settings</label>
   <button class="tb" id="nvclear">Forget the kept settings</button>
   <label class="tb" title="S-SDCARD's capacity (card_size, in GiB): the card the session starts with, in memory while this player runs. Above 32 GiB an SDXC card, which E143's firmware formats exFAT (docs/hle-gaps.md 4.8.6); the Card panel reads it with refs/exfat.mjs">Card <select id="opt-card" aria-label="card size">

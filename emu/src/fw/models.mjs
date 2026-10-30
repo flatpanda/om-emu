@@ -38,6 +38,10 @@ const G4SET_UNCHECKED = false;
 // (src/lab/play.mjs IDLE_SWITCH_STATES) no body's start reaches the post (X: E144, E139, E137, E142, E140, E125, E145,
 // E130), so the call runs as the firmware's
 
+// The movie time query's log on the shooting screen (E143's card_fs below, where it is read; E146's and E147's): its
+// time code conversion finds the movie info's frame rate 0, the movie module's set-up not run in the lab
+const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0: the movie module\'s info is not set up in the lab (the time left is the card\'s)'];
+
 // `scpu_port`: UI_IN's group 0 through the SCPU interface's port and event words (src/lab/play.mjs H-SCPUIRQ,
 // H-UIINPORT, H-SCPUPORT; docs/hle-gaps.md 4.7.2), in the model's disassembly notation: irq [handler, level], the IRQ
 // 320 handler the SCPU init attaches; register, the IRQ 320 callback registration; callback, UI_IN's callback, which
@@ -178,7 +182,7 @@ export const MODELS = {
     // computed before it (0x5045ada2)
     card_fs: {
       native: true,
-      errlog: [[0x39000903, 'the movie time query\'s frame rate is 0: the movie module\'s info is not set up in the lab (the time left is the card\'s)']],
+      errlog: [MOVIE_TIME_ERRLOG],
       // The HLS side of the card (src/lab/media.mjs; docs/hle-gaps.md 4.8.3). D unless tagged.
       // reception: OlyHfwReception's singleton getter (0x6035f0fc, made by 0x50af8959) and its vtable slot 2
       // (0x50af8c96: the receive body 0x50af89f9 with d0 = 1), which hands an event to every receptor of its list
@@ -286,6 +290,11 @@ export const MODELS = {
     vsc_extra: [0x6800, 0x1400],
     touch: false,
     g4set: G4SET_UNCHECKED,
+    // the lens on the mount natively, the default (src/lab/lens.mjs; docs/hle-gaps.md 4.4.3): its driver is E143's
+    // but for addresses, the debug log's line numbers and the order of a few instructions (X: its serial layer, init
+    // chain, power-on and detect paths and frame table compared with E143's instruction for instruction), the addresses
+    // read by src/fw/facts.mjs lensDriver; its start sends E143's 15 frames (X)
+    lens_native: true,
     // the SCPU's block at file offset 0x0e520000, byte-identical to E143's (docs/om1-scpu-spec.md section 2; D: the same
     // sha256), so E143's pins and gate
     scpu_lle: {
@@ -326,9 +335,13 @@ export const MODELS = {
     // post. Three ids differ: the media control request is TRA 1509 (its ctor's id; E143's 1511), the progress and
     // the result 1511 and 1512 (cbMediaCtrlResult 0x50cfbf3c, the progress send 0x50cfc6e5, the sender 0x50cfcb36 and
     // the reactive's state 6 0x50ad5b24 test them; E143's 1513 and 1514); the API's reply queue is the halfword
-    // 0x6004320e (api_media's format reads it at 0x503ecb06; the map's data pairing, 0x60043200, is not it)
+    // 0x6004320e (api_media's format reads it at 0x503ecb06; the map's data pairing, 0x60043200, is not it). errlog:
+    // E143's movie time query's (MOVIE_TIME_ERRLOG), from the same time code conversion (E146 0x5043fa3d: E143's
+    // 0x5044949b instruction for instruction but for the log's line number, X), on the shooting screen with either
+    // lens (X)
     card_fs: {
       native: true,
+      errlog: [MOVIE_TIME_ERRLOG],
       hls: {
         reception: 0x50AC655A, sync_slot: 2, new: 0x50DACAF5,
         events: { result: [0x50AD32E7, 44], media: [0x50AD2FD2, 36], mount: [0x50AD324A, 40] },
@@ -368,6 +381,9 @@ export const MODELS = {
     // the touch init starts the touch task itself and both wait for the controller's I2C completion (X): not modelled
     touch: false,
     g4set: G4SET_UNCHECKED,
+    // the lens on the mount natively, the default, as on E146 (src/lab/lens.mjs; docs/hle-gaps.md 4.4.3; X: the same
+    // compares and frames); LLPSW is bit 6 of group 1 byte 0 in its UI_IN tables (E143's bit 4 of byte 1)
+    lens_native: true,
     // property 4513 (the output device) reads the play path makes from one more site than E143's GUI (X)
     prop_sites: [0x503DAF24],
     // the SCPU's backed-up words the firmware writes and reads, [index, byte], and its writes without data or an
@@ -385,7 +401,7 @@ export const MODELS = {
     // this code for any other state (0x50057211..0x5005721d, D); the field is 42 4 ms later (X: 0 at 323 ms, 42 at
     // 327 ms; the wait's `mov 42,d0; call 0x5004fb2c` at 0x50057378, D). On E143 and E146 the field is 42 before the
     // bring-up (X); which boot step sets it first on the camera is ?
-    card_fs: { native: true, errlog: [[0x19001004, 'the file system\'s first call of the SCPU clock\'s API finds its state not yet set (the clock\'s first wait sets it)']] },
+    card_fs: { native: true, errlog: [[0x19001004, 'the file system\'s first call of the SCPU clock\'s API finds its state not yet set (the clock\'s first wait sets it)'], MOVIE_TIME_ERRLOG] },
     // as E146's (D): the GIO init 0x50002a11 ends with 0x50002b50 (0x50002a1e), slots at 0xa32c1c44; the EDID state
     // word 0x62a655e4 (its getter at 0x501e078a); the hot-plug work runs in the HDMI task 0x501e3eca
     hdmi: { gio_slots: 0x50002B50, state: [0x62A655E4, 4] },

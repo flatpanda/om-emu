@@ -356,7 +356,7 @@ export class Player {
     if (a.x_mutant !== 'no-aeinit') used.push('H-AEINIT');
     if ((a.a15 ?? 'auto') !== 'off') used.push('A15');
     if (a.x_mutant !== 'no-dispq') used.push('S-DISPQ');                                     // :2519
-    used.push('H-GUIBYAPP', 'S-CAMAPP', 'S-MODACK', 'S-RVSTANDBY', 'S-TRAACK', 'S-RELSEQ', 'S-CARD', ...(this.session?.lens ? [] : ['S-LENS']), 'S-EXPOSE', 'S-LONGTIMER', 'S-DISPFRAME', 'S-TAKEFRAME', 'S-AFOSD', 'S-CPU3', 'S-RECVIEW', this.env.nvram ? 'S-NVRAM' : 'S-SETSAVE', 'S-OUTDISP', 'S-THROUGH', 'S-PLAYSEQ', 'S-PLAYCOMP', 'S-PLAYVIEW', ...(this.camapp_components ? ['S-BOOTDONE'] : []));   // the camera application runs natively
+    used.push('H-GUIBYAPP', 'S-CAMAPP', 'S-MODACK', 'S-RVSTANDBY', 'S-TRAACK', 'S-RELSEQ', 'S-CARD', ...(this.session?.lens ? [] : ['S-LENS']), 'S-EXPOSE', 'S-LONGTIMER', 'S-DISPFRAME', 'S-TAKEFRAME', 'S-AFOSD', 'S-CPU3', 'S-RECVIEW', this.env.nvram ? 'S-NVRAM' : 'S-SETSAVE', 'H-STOREINIT', 'S-OUTDISP', 'S-THROUGH', 'S-PLAYSEQ', 'S-PLAYCOMP', 'S-PLAYVIEW', ...(this.camapp_components ? ['S-BOOTDONE'] : []));   // the camera application runs natively
     if ((a.device ?? 'tft') === 'evf' && a.x_mutant !== 'evf-store-after-open') used.push('H-STOREFIRST');   // :2521
     if (!a.no_bgdraw) used.push('S-BGDRAW');
     if (this.idle === 'wall') used.push('H-IDLE');

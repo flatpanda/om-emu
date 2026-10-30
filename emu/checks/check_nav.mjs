@@ -1013,7 +1013,7 @@ export async function check(mode = 'default', write_notes = false) {
   for (const run of runs) {
     const s = run.store;
     if (!pred(!!s)) { p2.push(`${run.name}: no store record`); continue; }
-    if (!pred(deepEqual(s.phases.map((x) => x[2]), [MM.REGISTRY_PRINTS, []]) && !s.phases.some((x) => x[3].length))) p2.push(`${run.name}: store phases ${show(s.phases)}`);
+    if (!pred(deepEqual(s.phases.map((x) => x[2]), [MM.REGISTRY_PRINTS, [], []]) && !s.phases.some((x) => x[3].length))) p2.push(`${run.name}: store phases ${show(s.phases)}`);
     if (!pred(deepEqual(sortStr(s.waits.map((w) => w.flag)), ['0xf5', '0xf6', '0xf7']) && s.waits.every((w) => w.rc === 0)
       && deepEqual(s.requests.map((q) => q.request.slice(0, 2)), ['06', '01', '86']))) p2.push(`${run.name}: S-SCPU requests ${show(s.requests)}, waits ${show(s.waits)}`);
     if (!pred(deepEqual(s.crt, ['0x5005a6d2']) && deepEqual(s.flash, ['0x503c5537']) && deepEqual(s.cflush, new Map([[MM.K_CFLUSH_RETURN, 4]])))) p2.push(`${run.name}: K-CRT-134D ${show(s.crt)}, S-FLASHSAVE ${show(s.flash)}, K-CFLUSH ${show(s.cflush)}`);

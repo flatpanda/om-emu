@@ -22,7 +22,7 @@ import { show } from '../util/show.mjs';
 import { pack, unpack, unpackFrom, bytesHex } from '../util/bytes.mjs';
 import { hex, hexDigits as fx } from '../util/hex.mjs';
 import { Tally } from '../util/tally.mjs';
-import { BOOT_E143 } from '../fw/facts.mjs';
+import { BOOT_E143, PROP_STORE_E143 } from '../fw/facts.mjs';
 // an om1.scpu command line on stderr (src/dev/scpu.mjs): its value, pc and count
 const SCPU_COMMAND = /^om-emu: scpu command 0x([0-9a-f]+) pc 0x([0-9a-f]+) #([0-9]+)(?: |$)/;
 
@@ -56,6 +56,9 @@ export const EV_WRAPPERS = new Set(['OlyEvSt', 'iOlyEvSt', 'OlyEvWt', 'OlyEvCl',
 // src/lab/play.mjs) and the stages' ready word (S-BOOTSTAGE); read where used
 export const bootFacts = () => fact('boot', BOOT_E143);
 export const REGISTRY_INIT = A(0x50040AEB), SETTINGS_DB_INIT = A(0x503C5473), GETTER = A(0x503C49AB), PROP_SET = A(0x503EE412);
+// the property store's module init and its three object words (src/fw/facts.mjs propStore; H-STOREINIT): read where the
+// store starts
+export const propStoreInit = () => fact('prop_store', PROP_STORE_E143);
 export const API_SET = A(0x50AC4AFE), API_WRITE = A(0x50B4F28B), DESC_LOOKUP = A(0x503DA999), CUSTOM_LOOKUP = A(0x503C681F);
 export const KEY_SELECTORS = new Map([[A(0x503C589B), 64], [A(0x503C58B9), 141]]);
 export const DIAL_INIT = A(0x5014B7C7), DIAL_TABLE_PTR = A(0xA32DAAB0), DIAL_BOARD = BOARD.core_byte;
@@ -650,6 +653,17 @@ export class MenuLab extends T.TextDisplayLab {
     const wantPrints = REGISTRY_PRINTS.map((p) => (loaded?.has(p[0]) ? p.replace('lD.', 'lR.') : p));
     if (JSON.stringify(reg.prints) !== JSON.stringify(wantPrints) || reg.errlog.length) {
       throw new MenuError(`registry bootstrap: prints ${show(reg.prints)}, errlog ${show(reg.errlog)}; expected ${show(wantPrints)} and none`);
+    }
+    // H-STOREINIT: the property store's own module init, the settings init chain's fifth (src/fw/facts.mjs propStore),
+    // which the boot runs after the registry bootstrap and before the DB init (E143: the chain 0x503dae30 at 0x501e9060,
+    // the DB init through 0x501eac35 at 0x501e907b, D); the lab runs none of the chain's other inits. It keeps the mode
+    // store's three data pointers (the banks, the recalled rows, the working copy); without them a mode change staged
+    // the working copy from address 0 and wrote zeros into every setting it holds (X: 612 settings read 0 once the
+    // dial had left P, docs/om1-settings-spec.md section 2.2)
+    const ps = propStoreInit(), si = this.native(ps.init, null, `property store init ${h8(ps.init)}`);
+    const objects = [0, 4, 8].map((k) => this.sim.u32(ps.objects + k));
+    if (si.d0 !== 0 || si.prints.length || si.errlog.length || objects.includes(0)) {
+      throw new MenuError(`H-STOREINIT ${h8(ps.init)}: d0 ${si.d0}, prints ${show(si.prints)}, errlog ${show(si.errlog)}, object words ${h8(ps.objects)}: ${objects.map(h8).join(' ')}`);
     }
     const db = this.native(SETTINGS_DB_INIT, null, 'settings-DB init 0x503c5473');
     if (nvram) this.nvram_clock();

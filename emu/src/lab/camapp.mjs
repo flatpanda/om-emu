@@ -36,12 +36,14 @@
 //              shooting sequence's stopRecView, does not run in an idle session, so E137's screen stayed one colour
 //              and then showed only its wait clock (X). After the step (or idle slice) the lab releases each device
 //              with such a request: the sync words of both panels cleared through the application's setter, as
-//              stopRecView does, then the image sync of kind 1, the one whose event the manager takes in the state the
-//              type-3 request leaves, which commits the pending buffers (D, displaySync has the manager's table).
-//              stopRecView's kind 2 is not taken in that state: under it E137's screen came only with its GUI's next
-//              update, a 250 ms redraw of a blinking item that the clear made an ordinary request, and E125's GUI,
-//              which sends no further update, kept a one-colour frame (X). When the camera releases the sync at the
-//              start is not known (I: once its through image shows)
+//              stopRecView does, then the image sync of the fact's kind, the one whose event the manager takes in the
+//              state the type-3 request leaves, which commits the pending buffers (D, displaySync has the manager's
+//              table): kind 1 with the setter's both-panel value 2, and on E122's display sync module kind 0 with one
+//              call per panel (0, 1). stopRecView's kind 2 is not taken in that state: under it E137's screen came only
+//              with its GUI's next update, a 250 ms redraw of a blinking item that the clear made an ordinary request,
+//              and E125's GUI, which sends no further update, kept a one-colour frame (X); E122's composite had no OSD
+//              plane enabled (X). When the camera releases the sync at the start is not known (I: once its through
+//              image shows)
 //   S-RVSTANDBY the rec view component in standby: the shooting components' RecView, which does not run, would
 //              store its standby state (1) in the application's state word as its entryStandby does (fact recview,
 //              src/fw/facts.mjs recViewStandby, which has the evidence); the word starts at 0, which getRecViewState
@@ -163,10 +165,10 @@ export function module_queues(image) {
   return new Set([...ids, ...more]);
 }
 const OLYQEWR = A(0x5002C151), API_SEND_RETURN = A(0x503EBA07);
-// S-DISPSYNC: the request type that waits for an image sync; the release's sync-word store (value, panels: both, as
-// stopRecView passes them), its image sync's kind (the one the type-3 request's pending state takes, displaySync's
-// comment) and image-event flag (a0, as stopRecView passes it)
-const DISPSYNC_REQUEST = 3, DISPSYNC_OFF = 0, DISPSYNC_PANELS = 2, DISPSYNC_KIND = 1, DISPSYNC_IMAGE = 1;
+// S-DISPSYNC: the request type that waits for an image sync; the release's sync-word store (its value; the panels'
+// d1 values, as stopRecView passes them, and the image sync's kind, the one the type-3 request's pending state takes,
+// are the fact's, displaySync's comment) and image-event flag (a0, as stopRecView passes it)
+const DISPSYNC_REQUEST = 3, DISPSYNC_OFF = 0, DISPSYNC_IMAGE = 1;
 const TRA_EXEC_CALLS = A(0x50AF7CB9), TRA_EXEC_CALL = A(0x50AF7CBE);
 // S-TRAACK: the request's vtable slot the exec deletes a consumed request through (docs/hle-gaps.md 4.1.2, D)
 const REQUEST_DELETE_SLOT = 1;
@@ -569,7 +571,7 @@ export class CamApp {
       this.tra_deleted += 1;
       if (calls) h.finish_calls_after(r, del, { a0: req }); else h.finish_after(r, del, { a0: req });
     };
-    // (none on a build without the display manager's sync request, src/fw/facts.mjs displaySync: the E118 family's)
+    // (none on a build whose display sync the rule does not read, src/fw/facts.mjs displaySync: E118's and E120's)
     const sync = fact('display.sync', DISPLAY_SYNC_E143);
     this.dispsync_fns = sync;
     if (sync) lab.observe(sync.request, (l, r) => { if ((r.d0 >>> 0) === DISPSYNC_REQUEST) this.dispsync.add(r.d1 >>> 0); }, 'S-DISPSYNC');
@@ -658,9 +660,10 @@ export class CamApp {
         const [code] = this.dispsync;
         this.dispsync.delete(code);
         this.dispsync_released += 1;
-        this.log.push(['dispsync', `sync words cleared, image sync kind ${DISPSYNC_KIND} for device ${code}`]);
-        lab.call(this.dispsync_fns.sync_set, { d0: DISPSYNC_OFF, d1: DISPSYNC_PANELS }, null, null, 2000);
-        lab.call(this.dispsync_fns.image_sync, { d0: DISPSYNC_KIND, d1: code, a0: DISPSYNC_IMAGE }, null, null, 2000000);
+        const { sync_set: set, image_sync: image, kind, panels } = this.dispsync_fns;
+        this.log.push(['dispsync', `sync words cleared, image sync kind ${kind} for device ${code}`]);
+        for (const panel of panels) lab.call(set, { d0: DISPSYNC_OFF, d1: panel }, null, null, 2000);
+        lab.call(image, { d0: kind, d1: code, a0: DISPSYNC_IMAGE }, null, null, 2000000);
         s.settle('S-DISPSYNC');
         continue;
       }

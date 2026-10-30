@@ -547,47 +547,96 @@ const displaySends = (img, qewr) => queueCalls(img, qewr).map((c) => c.ret);
 // - sync_set: the image sync has one caller, the shooting sequence's stopRecView (E137 0x5097983b, E143 0x50cb34be),
 //   which first clears both panels' sync words, `clr d0; mov 2,d1; call` within RELEASE_SPAN bytes before it (E137
 //   0x509797eb, D), and then sends kind 2 with a0 1. The setter (E137 0x507a2fa4, E143 0x50ab43cd) stores d0 into the
-//   TFT's word for d1 0, the EVF's (0x61e9983c) for 1, both for 2 (D).
+//   TFT's word for d1 0, the EVF's (0x61e9983c) for 1, both for 2 (D). The release (kind, panels): kind 1, the
+//   setter called once with d1 2.
 // One request, one image sync with one caller and that caller's setter on each of E143, E146, E147, E144, E139, E134,
-// E137, E142, E140, E145, E125, E133, E130, E129 and E132; the E118 family has no request (X, a byte scan of each
-// expanded image; a second candidate after a return inside the image sync, at +14, is no call target). Returns
-// {request, image_sync, sync_set}, or undefined where the request or the image sync is missing; throws for two
-// candidates of one id, an image sync without exactly one caller, or a caller without exactly one such clear.
-export const DISPLAY_SYNC_E143 = { request: 0x503E4DD5, image_sync: 0x503E50EC, sync_set: 0x50AB43CD };
-const DISPLAY_API = { request: 0x10035, image_sync: 0x10037 }, API_HEAD = 16, RELEASE_SPAN = 0x80;
-const CLEAR_BOTH = [0x00, 0x85, 0x02];
-export function displaySync(img) {
-  const cand = new Map();
-  for (const [k, id] of Object.entries(DISPLAY_API)) {
-    const at = [];
-    for (const p of loadsOf(img, id)) {
-      for (let e = p - 1; e >= p - API_HEAD; e--) {
-        if (!isRet(img, e - 3)) continue;
-        let q = e;
-        while (q < p) q += insnLength(img[q], img[q + 1]);
-        if (q === p) at.push(e);
-      }
+// E137, E142, E140, E145, E125, E133, E130, E129 and E132 (X, a byte scan of each expanded image; a second candidate
+// after a return inside the image sync, at +14, is no call target).
+// The E118 family has a display sync module of another form (E122, D): its request is api_disp_Disp_Update_Osd
+// (0x502c9c6c), whose trace loads its name, `mov "api_disp_Disp_Update_Osd",a0` (fc dc imm32), where the others load
+// the id (REQUEST_NAME, taken only where no entry loads the id): d0 the sync type, d1 the device code (1 the TFT, 2 the
+// EVF: the GUI's 0x506c09e4..0x506c0a04). Type 3 queues the OSD update in the device's manager block (0x618a37f4 +
+// 56 n, set up by MODELS mm_init) as command 4 (0x50483cda), which leaves the block in state 3 from 0 or 3 and
+// commits nothing (0x50484370..0x504843ae; the commit 0x50309dc5 not called after the GUI's update, X); an image
+// update (commands 1, 3, 5, the through image's) commits both. The GUI sends type 3 while the TFT's sync word
+// (0x61600a24, getDispSync 0x50694c65) is set and neither layer-custom word is (0x506c0d01..0x506c0dd4, D); the
+// application's setDispSync (API 0x1012d, 0x506d5889 -> 0x5069cc64 -> 0x50695318) sets it at the start (X, 1.5 s).
+// Its image sync (id 0x10037, 0x502c9f95, D) takes d0 the kind, d1 the device code, a0 1 for the display sync's own
+// blocks; kind 1 passes the block's command 12 (0x50483e97), which the handler 0x50484490 does not take (X: the state
+// stays 3, nothing committed), kind 2 command 16, the image's commit, and kind 0 command 17 (0x50483f11), which
+// commits the OSD in states 1 and 3 and the image in 2 and 4 (0x504844dd..0x504844f7, D; X: kind 0 commits the
+// pending OSD), so the family's release kind is 0. The image sync's one caller is a wrapper (0x502c07ea, by the
+// release's codes 15, 16, 18 for kinds 1, 2, 0), whose two callers are stopRecView's (0x508119af, 0x508119d5): each
+// after a clear of one panel's sync word, `clr d0; mov d0,d1; call` (the TFT) and `clr d0; mov 1,d1; call` (the EVF,
+// 0x5081199c, 0x508119bf), for its setter takes d1 1 for the EVF and any other value for the TFT (0x50695318, D). The
+// release: kind 0, the setter called with d1 0 and 1. E118 loads the request's name (0x502b1480) but has no image
+// sync of the id, and E120 holds neither (X, a byte scan of each expanded image): the rule reads none on them, and
+// their display syncs' forms are ?.
+// Returns {request, image_sync, sync_set, kind, panels}, or undefined where the request or the image sync is missing;
+// throws for two candidates of one id or name, an image sync without exactly one caller, or a caller without exactly
+// one clear of both panels or, through a wrapper, one clear of each panel.
+export const DISPLAY_SYNC_E143 = { request: 0x503E4DD5, image_sync: 0x503E50EC, sync_set: 0x50AB43CD, kind: 1, panels: [2] };
+const DISPLAY_API = { request: 0x10035, image_sync: 0x10037 }, API_HEAD = 16, RELEASE_SPAN = 0x80, WRAPPER_SPAN = 0x80;
+const REQUEST_NAME = 'api_disp_Disp_Update_Osd';
+const CLEAR_BOTH = [0x00, 0x85, 0x02], CLEAR_TFT = [0x00, 0x81], CLEAR_EVF = [0x00, 0x85, 0x01];
+// the entries (call targets after a return) from which the code runs straight to a `mov imm32,Rn` of value within
+// API_HEAD bytes
+function apiEntries(img, value) {
+  const at = [];
+  for (const p of loadsOf(img, value)) {
+    for (let e = p - 1; e >= p - API_HEAD; e--) {
+      if (!isRet(img, e - 3)) continue;
+      let q = e;
+      while (q < p) q += insnLength(img[q], img[q + 1]);
+      if (q === p) at.push(e);
     }
-    cand.set(k, at);
+  }
+  return at;
+}
+export function displaySync(img) {
+  const cand = new Map(Object.entries(DISPLAY_API).map(([k, id]) => [k, apiEntries(img, id)]));
+  if (!cand.get('request').length) {
+    const { base } = imageBase(img), names = findString(img, REQUEST_NAME, { nul: true, after: true });
+    cand.set('request', names.flatMap((o) => apiEntries(img, base + o)));
   }
   const all = new Set([...cand.values()].flat()), callers = new Map();
   for (const c of callsWhere(img, (t) => all.has(t))) callers.set(c.to, [...(callers.get(c.to) ?? []), c.at]);
   const out = {};
   for (const [k, at] of cand) {
     const hits = at.filter((e) => callers.has(e));
-    if (hits.length > 1) throw new Error(`displaySync: ${hits.length} ${k} entries (API id 0x${DISPLAY_API[k].toString(16)}): ${hits.map((e) => h8(0x50000000 + e)).join(', ')}, want 1`);
+    if (hits.length > 1) throw new Error(`displaySync: ${hits.length} ${k} entries (API id 0x${DISPLAY_API[k].toString(16)} or its name): ${hits.map((e) => h8(0x50000000 + e)).join(', ')}, want 1`);
     if (hits.length) out[k] = 0x50000000 + hits[0];
   }
   if (out.request === undefined || out.image_sync === undefined) return undefined;
   const release = callers.get(out.image_sync - 0x50000000);
   if (release.length !== 1) throw new Error(`displaySync: the image sync ${h8(out.image_sync)} has ${release.length} callers, want 1`);
-  const sets = [];
-  for (let p = release[0] - RELEASE_SPAN; p < release[0]; p++) {
-    const c = bytesAt(img, p, CLEAR_BOTH) && callAt(img, p + CLEAR_BOTH.length);
-    if (c) sets.push(0x50000000 + c.to);
+  // the setters a pattern's calls reach within RELEASE_SPAN bytes before c, the nearest first
+  const clears = (c, pat) => {
+    const sets = [];
+    for (let p = c - pat.length; p >= c - RELEASE_SPAN; p--) {
+      const s = bytesAt(img, p, pat) && callAt(img, p + pat.length);
+      if (s) sets.push({ at: p, to: 0x50000000 + s.to });
+    }
+    return sets;
+  };
+  const both = clears(release[0], CLEAR_BOTH);
+  if (both.length > 1) throw new Error(`displaySync: ${both.length} 'clr d0; mov 2,d1; call' within 0x${RELEASE_SPAN.toString(16)} bytes before the image sync's call at ${h8(0x50000000 + release[0])}, want 1`);
+  if (both.length) return { ...out, sync_set: both[0].to, kind: 1, panels: [2] };
+  // the E118 family's form: the call is a wrapper's (the nearest entry before it, a call target after a return), whose
+  // callers each follow their nearest clear of one panel
+  let w = release[0];
+  while (w > release[0] - WRAPPER_SPAN && !(isRet(img, w - 3) && callsTo(img, w).length)) w--;
+  const wcalls = w > release[0] - WRAPPER_SPAN ? callsTo(img, w) : [];
+  const panels = new Map();
+  for (const c of wcalls) {
+    const near = [[0, clears(c, CLEAR_TFT)[0]], [1, clears(c, CLEAR_EVF)[0]]].filter(([, s]) => s).sort((a, b) => b[1].at - a[1].at)[0];
+    if (near) panels.set(near[0], [...(panels.get(near[0]) ?? []), near[1].to]);
   }
-  if (sets.length !== 1) throw new Error(`displaySync: ${sets.length} 'clr d0; mov 2,d1; call' within 0x${RELEASE_SPAN.toString(16)} bytes before the image sync's call at ${h8(0x50000000 + release[0])}, want 1`);
-  return { ...out, sync_set: sets[0] };
+  const sets = new Set([...panels.values()].flat());
+  if (!wcalls.length || panels.size !== 2 || sets.size !== 1) {
+    throw new Error(`displaySync: no 'clr d0; mov 2,d1; call' within 0x${RELEASE_SPAN.toString(16)} bytes before the image sync's call at ${h8(0x50000000 + release[0])}, and ${wcalls.length ? `its wrapper ${h8(0x50000000 + w)}'s ${wcalls.length} callers follow clears of panels [${[...panels.keys()].join(', ')}] through ${[...sets].map(h8).join(', ') || 'no setter'}` : 'no wrapper entry before it'}, want both panels through one setter`);
+  }
+  return { ...out, sync_set: [...sets][0], kind: 0, panels: [0, 1] };
 }
 
 // The rec view component's state word and its standby value (fact 'recview', src/lab/camapp.mjs S-RVSTANDBY): each
@@ -2998,8 +3047,8 @@ export function readPlacedFacts({ img, at }) {
 // banks, kind3}}, {recview: {word, standby}}, {cbs: {NAME: code}}, {mode_dial: {table, names}}, {prop_store: {init,
 // objects}} and {ctors: [[table, count]]} (no memories, take, handlers, task init, timer sleep, face colour, timer,
 // dial, touch, touch_api, shooting, func_direct, boot, dpc, sio, power_off, cbs or prop_store part where its rule reads
-// none; sync and recview null where their rules read none, the E118 family's builds, which have no display sync request
-// and no RecView trace; the frame wait null where its rule reads none, E120's, which S-FRAMEWAIT then leaves out,
+// none; sync null where its rule reads none, E118's and E120's, whose display sync forms are not read, and recview null
+// where its rule reads none, the E118 family's, which has no RecView trace; the frame wait null where its rule reads none, E120's, which S-FRAMEWAIT then leaves out,
 // src/lab/menu.mjs). Throws for a reset_head with no rule here, and where a rule throws.
 export function readFacts({ img, family, resLoad }) {
   const facts = {};

@@ -226,8 +226,11 @@ const CBS_FOUND = { E143: CBS_E143, ...Object.fromEntries(['E142', 'E140', 'E133
 // interpolations' index, E140 0x500d9660 `add 1156,a2`, D)
 const LENS_TABLE_FOUND = { E143: LENS_ZOOM_TABLE_E143, E140: 1156, E130: 644 };
 // The display sync's functions as read at the code (display.sync; D: E137's request 0x502bd2d2 and image sync
-// 0x502bd5bc by their API ids, the setter 0x507a2fa4 its release calls at 0x509797ee)
-const SYNC_FOUND = { E137: { request: 0x502BD2D2, image_sync: 0x502BD5BC, sync_set: 0x507A2FA4 } };
+// 0x502bd5bc by their API ids, the setter 0x507a2fa4 its release calls at 0x509797ee, released with kind 1 for both
+// panels; E122's request 0x502c9c6c by its name, its image sync 0x502c9f95 by its id, the setter 0x50695318 stopRecView
+// calls per panel at 0x5081199e and 0x508119c2, released with kind 0)
+const SYNC_FOUND = { E137: { request: 0x502BD2D2, image_sync: 0x502BD5BC, sync_set: 0x507A2FA4, kind: 1, panels: [2] },
+  E122: { request: 0x502C9C6C, image_sync: 0x502C9F95, sync_set: 0x50695318, kind: 0, panels: [0, 1] } };
 // The module-9 state readers (app.module9_readers) as src/fw/models.mjs gave them by hand before the rule (E144, E139:
 // D, each call checked), and E143's lab lists, which E143's readers must hold (src/lab/camapp.mjs CA_MODULE9_READERS,
 // src/lab/menu.mjs TAKEOVER_READERS)
@@ -563,7 +566,7 @@ const E143_FACTS = {
   menu: { list_menu: true, tab_memory: 1881, page_memory: 1882, take: 0x510C2A2E, caller: CALLER_FOUND.E143 },
   kernel: { cpus: 4, handlers: HANDLERS_FOUND.E143 }, errlog: { entry: ERRLOG_FOUND.E143 }, scpu: { backup: true },
   display: { change_task: true, change_entry: null, queue_word: 0x600432D4, queue_id: 0x88, task_init: 0x501C2F13, init_2nd: null, frame_wait: 0x60043088, timer_sleep: 0x501C2E94,
-    sync: { request: 0x503E4DD5, image_sync: 0x503E50EC, sync_set: 0x50AB43CD } },
+    sync: { request: 0x503E4DD5, image_sync: 0x503E50EC, sync_set: 0x50AB43CD, kind: 1, panels: [2] } },
   timer: { reload_less_one: false }, dial: { select: 0x5014B7C7, select_end: 0x1A, table_ptr: 0xA32DAAB0, table0: 0x60223DBC },
   touch_panel: { driver: true }, lens: { mount: true }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
   func_direct: { run: 0x51068E37, id: { sp: 28 } },

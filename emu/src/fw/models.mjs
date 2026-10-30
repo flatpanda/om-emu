@@ -808,8 +808,27 @@ export const MODELS = {
     res_len: 19291104, res_sha256: 'b1e448561edfc9c56a08fd5fa5c3d6307fc4741149bb40d951940e82364ccc5f',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
-    card_fs: { native: false, why: 'the lab does not load on this family; src/fw/facts.mjs fileSystem finds no SD command layer of its form' },
+    card_fs: { native: false, why: 'the family\'s starts do not reach the card yet (docs/model-survey.md finding 30); src/fw/facts.mjs fileSystem finds no SD command layer of its form' },
     board: { family: 'E118' },
+    // through E122 (port_via): the family's reference, whose overrides it takes over (the evidence at E122's entry)
+    port_via: 'E122',
+    // as E122's (src/fw/models.mjs E122, the evidence there): the reset path's early driver inits, the table walk
+    // 0x50065a9d (called at 0x50000293; the same code as E122's 0x50062ed4, X: twin.mjs bytes with the calls and addresses
+    // masked), no disp_sync module ("disp_sync_work" absent, X), the frame period assumed (A-PERIOD; the rule reads no
+    // period word on it either, src/fw/facts.mjs framePeriod null, X)
+    boot_drivers: 0x50065A9D,
+    disp_sync_init: false,
+    frame_period_us: { tft: 16683, evf: 16683 },
+    // the dial init 0x5016558b takes one fixed id table, 0x601b1e58 (`mov 0x601b1e58,d0` for its slot set-up from 0xa1c184a8), with
+    // no board select and no table pointer (D): src/lab/menu.mjs dial_init runs it alone
+    dial: { table_ptr: null, table0: 0x601B1E58 },
+    overrides: {
+      '0x5014b7c7': { to: '0x5016558b', why: 'the dial init (DIAL_INIT): the dial module init, which sets up the dial slots from 0xa1c184a8 with the fixed id table 0x601b1e58 (D); E122\'s, which selects a table by board, does not carry (menu)' },
+      '0x5002e758': { to: '0x5004c674', why: 'LEVEL_HANDLERS[2]: the kernel\'s level-handler table kcb[88] after its init holds 0x5004c674 (X); the leg map put levels 2 and 3 on level 1\'s handler and levels 4 and 5 one handler late (irq)' },
+      '0x5002e715': { to: '0x5004c636', why: 'LEVEL_HANDLERS[3]: the kernel\'s level-handler table kcb[88] after its init holds 0x5004c636 (X); the leg map put levels 2 and 3 on level 1\'s handler and levels 4 and 5 one handler late (irq)' },
+      '0x5002e6d2': { to: '0x5004c5f8', why: 'LEVEL_HANDLERS[4]: the kernel\'s level-handler table kcb[88] after its init holds 0x5004c5f8 (X); the leg map put levels 2 and 3 on level 1\'s handler and levels 4 and 5 one handler late (irq)' },
+      '0x5002e68f': { to: '0x5004c5ba', why: 'LEVEL_HANDLERS[5]: the kernel\'s level-handler table kcb[88] after its init holds 0x5004c5ba (X); the leg map put levels 2 and 3 on level 1\'s handler and levels 4 and 5 one handler late (irq)' },
+    },
   },
   E122: {
     name: 'PEN-F', bin: 'OLY_E_122_3101_0000_0000.BIN', version: '3.1', res_block: 'blk01460000.OE.0101.bin',
@@ -819,8 +838,13 @@ export const MODELS = {
     res_len: 19767776, res_sha256: '8509050a3374abf6237254ad0a2627fa33aaccf7612e2dafae7e6ba481e77407',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
-    card_fs: { native: false, why: 'the lab does not load on this family; src/fw/facts.mjs fileSystem finds no SD command layer of its form' },
-    board: { family: 'E118' }, port_via: 'E130',
+    card_fs: { native: false, why: 'the family\'s starts do not reach the card yet (docs/model-survey.md finding 30); src/fw/facts.mjs fileSystem finds no SD command layer of its form' },
+    board: { family: 'E118' },
+    // the map from E143 leaves 116 of the lab's addresses unplaced; through E125 113 (107 of its overrides carried, 62
+    // nulls, 26 failed), through E130 114 (122 carried, 71 nulls, 18 failed); through E142, E137, E144 and E140 the
+    // port stops at the hardware-timer rule on a carried place (X: bin/port.mjs with each). E130 is taken, the family's
+    // reference for E118 and E120 (port_via E122), with E122's own overrides first
+    port_via: 'E130',
     overrides: OVERRIDES_E122,
     // the early driver inits the reset path runs through 0x50062ed4 (called at 0x50000278, before the kernel): four
     // entries of the table 0x6012b74c, of which 0x50001b8d does the work (the GIO pins' configuration, 0x9b800000 and
@@ -858,8 +882,27 @@ export const MODELS = {
     res_len: 18415584, res_sha256: 'f12ebf2598496f11bfdecff105f933a9f60c2cfff6a479258e9c6c34cb9236f0',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
-    card_fs: { native: false, why: 'the lab does not load on this family; src/fw/facts.mjs fileSystem finds no SD command layer of its form' },
+    card_fs: { native: false, why: 'the family\'s starts do not reach the card yet (docs/model-survey.md finding 30); src/fw/facts.mjs fileSystem finds no SD command layer of its form' },
     board: { family: 'E118' },
+    // through E122 (port_via): the family's reference, whose overrides it takes over (the evidence at E122's entry)
+    port_via: 'E122',
+    // as E122's (src/fw/models.mjs E122, the evidence there): the reset path's early driver inits, the table walk
+    // 0x50064732 (called at 0x50000293; the same code as E122's 0x50062ed4, X: twin.mjs bytes with the calls and addresses
+    // masked), no disp_sync module ("disp_sync_work" absent, X), the frame period assumed (A-PERIOD; the rule reads no
+    // period word on it either, src/fw/facts.mjs framePeriod null, X)
+    boot_drivers: 0x50064732,
+    disp_sync_init: false,
+    frame_period_us: { tft: 16683, evf: 16683 },
+    // the dial init 0x5015d3a6 takes one fixed id table, 0x601a8810 (`mov 0x601a8810,d0` for its slot set-up from 0xa1c17b80), with
+    // no board select and no table pointer (D): src/lab/menu.mjs dial_init runs it alone
+    dial: { table_ptr: null, table0: 0x601A8810 },
+    overrides: {
+      '0x5014b7c7': { to: '0x5015d3a6', why: 'the dial init (DIAL_INIT): the dial module init, which sets up the dial slots from 0xa1c17b80 with the fixed id table 0x601a8810 (D); E122\'s, which selects a table by board, does not carry (menu)' },
+      '0x5002e758': { to: '0x5004c624', why: 'LEVEL_HANDLERS[2]: the kernel\'s level-handler table kcb[88] after its init holds 0x5004c624 (X); the leg map put levels 2 and 3 on level 1\'s handler and levels 4 and 5 one handler late (irq)' },
+      '0x5002e715': { to: '0x5004c5e6', why: 'LEVEL_HANDLERS[3]: the kernel\'s level-handler table kcb[88] after its init holds 0x5004c5e6 (X); the leg map put levels 2 and 3 on level 1\'s handler and levels 4 and 5 one handler late (irq)' },
+      '0x5002e6d2': { to: '0x5004c5a8', why: 'LEVEL_HANDLERS[4]: the kernel\'s level-handler table kcb[88] after its init holds 0x5004c5a8 (X); the leg map put levels 2 and 3 on level 1\'s handler and levels 4 and 5 one handler late (irq)' },
+      '0x5002e68f': { to: '0x5004c56a', why: 'LEVEL_HANDLERS[5]: the kernel\'s level-handler table kcb[88] after its init holds 0x5004c56a (X); the leg map put levels 2 and 3 on level 1\'s handler and levels 4 and 5 one handler late (irq)' },
+    },
   },
 };
 export const codeOf = (m) => 'E' + m.bin.slice(6, 9);

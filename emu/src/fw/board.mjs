@@ -324,9 +324,11 @@ export const FAMILIES = {
     // (H-DRVINIT, 0x50001be9..0x50001d38, D), the clock block 0x98800000 (the clock query 0x5006e243 reads 0x9880004c),
     // the five enabled serial channels' blocks 0x98200000, 0x98300000, 0x98500000, 0x98600000, 0x98400000 (the table
     // 0x6012e7c0 and its enables 0x6012e7a0; 0x500699a2 sets bit 8 of each), and the encoder block 0x9bd00000 the
-    // dial init clears (0x5017c22f)
+    // dial init clears (0x5017c22f), and on the EVF the block 0x99100000 its open writes four words of (+0x00, +0x04,
+    // +0x24, +0x28 at 0x502fe38a, the only references) and the control word 0x98a00000 its start sets (bit 15, then
+    // 0x100 or 0 by the mode, 0x5030b87a)
     stub_pages: [0x9B800000, 0x9B801000, 0x99E20000, 0x98800000, 0x98200000, 0x98300000, 0x98500000, 0x98600000,
-      0x98400000, 0x9BD00000],
+      0x98400000, 0x9BD00000, 0x99100000, 0x98A00000],
     stub_presets: [],
     // the display waits' stand-ins: without them E122's display start blocks, every task waiting (X)
     display_wait_stand_ins: true,

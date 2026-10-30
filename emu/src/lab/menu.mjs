@@ -843,8 +843,15 @@ export class MenuLab extends T.TextDisplayLab {
   // another function, E139's encoder init (src/fw/facts.mjs dialSelect), that function runs through its pointer store
   // and returns there: the rest drives the encoder's registers, and no E143 session runs E143's encoder init (X, a
   // passthrough hook on it never fired through a tft start).
+  // A build whose dial init takes one fixed table (MODELS dial table_ptr null, with the table as table0: E118, E120)
+  // runs DIAL_INIT alone; there is no pointer to read back.
   dial_init() {
     const board = this.sim.read(DIAL_BOARD, 1)[0], sel = dialSelect();
+    if (sel.table_ptr === null) {
+      this.call(DIAL_INIT, null, null, null, 1000);
+      this.store_log.dial = { board, table: h8(sel.table0) };
+      return;
+    }
     if (sel.table_ptr !== DIAL_TABLE_PTR) throw new MenuError(`dial-table init: the select stores ${h8(sel.table_ptr)}, the map's pointer is ${h8(DIAL_TABLE_PTR)}`);
     this.call(DIAL_INIT, null, null, null, 1000);
     if (sel.select !== DIAL_INIT) {

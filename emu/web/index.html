@@ -7,6 +7,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OM-Emu (browser)</title>
+<link rel="icon" href="data:,">
 <style>
 :root {
   --bg: #15171a; --panel: #1d2024; --line: #30353b; --text: #d9dde2; --dim: #8b939c;
@@ -106,6 +107,14 @@ td code, .mono { font: 11px ui-monospace, monospace; }
        padding: 8px; border-radius: 6px; }
 .fw { display: flex; flex-wrap: wrap; gap: 8px; }
 .note { color: var(--dim); font-size: 12px; margin: 6px 0; }
+/* where the firmware comes from (the .BIN's name, the download command) */
+.fwhelp { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
+.fwhelp summary { cursor: pointer; font-weight: 600; }
+.fwhelp p { margin: 6px 0; max-width: 980px; }
+.fwhelp a { color: var(--accent); }
+.fwhelp pre { font: 11px/1.45 ui-monospace, monospace; white-space: pre-wrap; word-break: break-all; background: #111316;
+              border: 1px solid var(--line); border-radius: 6px; padding: 8px; margin: 6px 0; max-height: 9em; overflow: auto; }
+body.dropping .wrap { outline: 2px dashed var(--accent); outline-offset: 4px; border-radius: 8px; }
 /* S-SCENE: the image sensor stand-in's controls */
 .scene { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 8px 0; }
 .scene summary { cursor: pointer; font-weight: 600; }
@@ -139,6 +148,22 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
   <button class="tb" id="fwclear">Forget the cached firmware</button>
   <span class="note" id="fwstatus"></span>
 </div>
+<details class="fwhelp" id="fwhelp" open>
+  <summary>Where to get <span id="fwname">the firmware</span></summary>
+  <p>The player runs the camera's own firmware file, which this site does not hold: choose it above or drop it anywhere
+  on this page. It is read in this browser and never uploaded.</p>
+  <p>OM System's <a href="https://explore.omsystem.com/c/en/firmware" target="_blank" rel="noopener">firmware page</a>
+  lists the releases but offers no <code>.BIN</code>: its update tools fetch the file from OM System's update service.
+  That service and its download server send no CORS headers (checked 2026-10-29), so this page cannot fetch the file
+  for you, and it goes through no relay. In a terminal (macOS or Linux), this command asks the same service and saves
+  <code id="fwbin">the file</code> in the current directory:</p>
+  <pre id="fwcmd"></pre>
+  <button class="tb" id="fwcopy">Copy the command</button>
+  <p class="note">The service hands out each camera's latest release only: if OM System has published a newer one than
+  the release this player runs, the player refuses it and names the file it needs. The download is subject to OM
+  Digital Solutions' software licence, which the service's reply carries. With the repository cloned,
+  <code id="fwnode">node emu/bin/fetch-fw.mjs</code> does the same and also unpacks the blocks for the node tools.</p>
+</details>
 <div class="toolbar" id="optbar">
   <span class="lbl">Start options</span>
   <label class="tb" title="--hdmi on: the HDMI port modelled (E143, E146, E147); the Card, HDMI and session options panel then plugs a sink in (S-HDMISINK); an unplug is refused (A-HDMI-1)"><input type="checkbox" id="opt-hdmi"> HDMI port</label>
@@ -320,6 +345,7 @@ if (location.protocol === 'file:') {
 <script type="module">
 import { PagePlayer } from './page.mjs';
 import { MODEL_LIST, modelDoc } from '../src/fw/modeldoc.mjs';
+import { fetchCommand } from '../src/fw/updater.mjs';
 const PP = new PagePlayer();
 window.__player = PP;
 const $ = (id) => document.getElementById(id);
@@ -887,7 +913,7 @@ PP.onEvent = (m) => {
   else if (m.type === 'error') { fwStatus('error: ' + m.message); $('ovl').textContent = 'error: ' + m.message; $('screen').classList.add('show-ovl'); }
   else if (m.type === 'progress' && m.stage === 'unpack') fwStatus(`unpacking ${m.name} (${MiB(m.size)}) in this browser…`);
   else if (m.type === 'progress' && m.stage === 'firmware') fwStatus(`firmware ${m.from === 'cache' ? 'from the cache in this browser' : 'unpacked and cached in this browser'}: main code ${MiB(m.rom)}, resources ${MiB(m.res)} (${JSON.stringify(m.T)} ms)`);
-  else if (m.type === 'progress' && m.stage === 'cache') { $('fwcache').disabled = !m.manifest || started; if (m.manifest && bootError === null) fwStatus(`cached firmware: ${m.manifest.bin.name} (${MiB(m.manifest.bin.size)}); choose a .BIN to replace it`); }
+  else if (m.type === 'progress' && m.stage === 'cache') { $('fwcache').disabled = !m.manifest || started; if (m.manifest) $('fwhelp').open = false; if (m.manifest && bootError === null) fwStatus(`cached firmware: ${m.manifest.bin.name} (${MiB(m.manifest.bin.size)}); choose or drop a .BIN to replace it`); }
   else if (m.type === 'progress' && m.stage === 'cache-cleared') { $('fwcache').disabled = true; fwStatus('the cached firmware is gone from this browser'); }
   else if (m.type === 'progress' && m.stage === 'nvram-cleared') $('optnote').textContent = 'the kept settings are gone from this browser (a running session with them keeps its own until it saves again)';
   else if (m.type === 'progress' && m.stage === 'nvram-error') $('optnote').textContent = 'S-NVRAM: a save was not kept in this browser: ' + m.message;
@@ -903,7 +929,7 @@ $('model').innerHTML = (MODEL.error ? '<option value="" disabled>choose a model<
 $('model').value = MODEL.model ?? '';
 $('model').onchange = (e) => { Q.set('model', e.target.value); location.search = Q.toString(); };
 let started = false;
-const go = (file) => { if (started) return; started = true; bootError = null; $('fwfile').disabled = true; $('fwcache').disabled = true; startOpts(false); PP.boot(file, ARGS); init(); };
+const go = (file) => { if (started) return; started = true; bootError = null; $('fwfile').disabled = true; $('fwcache').disabled = true; $('fwhelp').open = false; startOpts(false); PP.boot(file, ARGS); init(); };
 $('screen').classList.add('show-ovl');
 if (MODEL.error) {
   $('fwfile').disabled = $('fwclear').disabled = true;
@@ -913,13 +939,24 @@ if (MODEL.error) {
   document.title = `OM-Emu (browser) · ${MODEL.name} (${MODEL.model})`;
   $('sub').textContent = `firmware ${MODEL.bin}, emulated in this browser (emu in a Web Worker)`;
   $('s-model').textContent = MODEL.model;
-  fwStatus(`Choose the camera's firmware file (${MODEL.bin}). It is read here; nothing is uploaded.`);
+  fwStatus(`Choose or drop the camera's firmware file (${MODEL.bin}). It is read here; nothing is uploaded.`);
+  // where the .BIN comes from: its name and the command that downloads it from the vendor's updater API (the page
+  // cannot: no CORS, src/fw/updater.mjs); a file dropped on the page starts as the file input does
+  $('fwname').textContent = MODEL.bin;
+  $('fwbin').textContent = MODEL.bin;
+  $('fwnode').textContent = `node emu/bin/fetch-fw.mjs --model ${MODEL.model}`;
+  $('fwcmd').textContent = fetchCommand(MODEL.model);
+  $('fwcopy').onclick = () => navigator.clipboard.writeText($('fwcmd').textContent).then(() => { $('fwcopy').textContent = 'Copied'; }, () => { $('fwcopy').textContent = 'Select the command to copy it'; });
+  const files = (e) => !!e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+  addEventListener('dragover', (e) => { if (!files(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = started ? 'none' : 'copy'; document.body.classList.toggle('dropping', !started); });
+  addEventListener('dragleave', (e) => { if (!e.relatedTarget) document.body.classList.remove('dropping'); });
+  addEventListener('drop', (e) => { if (!files(e)) return; e.preventDefault(); document.body.classList.remove('dropping'); if (e.dataTransfer.files[0]) go(e.dataTransfer.files[0]); });
   PP.start();
   PP.worker.postMessage({ type: 'cache-info' });
   $('fwfile').addEventListener('change', (e) => { if (e.target.files[0]) go(e.target.files[0]); });
   $('fwcache').onclick = () => go(null);
   $('fwclear').onclick = () => PP.worker.postMessage({ type: 'clear-cache' });
-  $('ovl').textContent = 'choose the firmware .BIN above (or start from the cache)';
+  $('ovl').textContent = 'choose or drop the firmware .BIN (or start from the cache)';
   if (Q.get('cache') === '1') go(null);
 }
 window.__playPage = { get drawn() { return drawn; }, get status() { return STATUS; }, canvas: () => g.getImageData(0, 0, cv.width, cv.height).data,

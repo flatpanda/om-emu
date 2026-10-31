@@ -294,7 +294,8 @@ export const FAMILIES = {
     // tables from +0x600 (the palette writer 0x50307aea's banks 0x600, 0x680, 0x800 / 0xa00 by bit 16 of 0x1b8, and
     // 0x700; the byte table 0x1600, 0x50308b50), plain storage up to the latched copies (I). The frame raises INTST1
     // bit 0, on which both ISRs set their channel's vsync flag (0x50305b9e, 0x503071b3); the others they test (bits 4,
-    // 5) are not modelled
+    // 5) are not modelled. levels: whether the build's code names the OSD level words OSD7..OSD9 (+0x2e0..+0x2e8; read
+    // per body by src/fw/facts.mjs vscLevels: E122 and E120 do, E118 does not, X)
     vsc: {
       kind: 3, base: 0x9C000000, size: 0x4000, channels: 2, stride: 0x2000, reg_end: 0x314,
       registers: words([0x000, 0x020], [0x030, 0x088], [0x0A4, 0x118], [0x130, 0x130], [0x148, 0x154], [0x160, 0x16C],
@@ -302,6 +303,7 @@ export const FAMILIES = {
         [0x304, 0x310]),
       regs: { INTEN1: 0x00C, INTST1: 0x014, SYNC2: 0x22C, MONI3: 0x2BC },
       latch: 0x1C00, latched: [0x038, 0x03C, 0x040, 0x22C], store: [0x600, 0x1C00], line_bits: 11, irq_mask: 0x0001,
+      levels: UNKNOWN,
     },
     // the OSD engine at E144's base with E144's form: registers 0x00..0x50 only (the census, 0x50a5a5a7..0x50a5b166),
     // no LUT registers, the list base 0x18 a byte address (0x50a5b0ee stores the 64-aligned address itself, with the

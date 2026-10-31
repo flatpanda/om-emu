@@ -11,21 +11,29 @@
 //     a figure, drawn in the order OSD1, OSD2, OSD3 (the top)
 //   the EVF's scaler (0x11, 0x9fc, 0, 0x9fc): the canvas's corners at the area's, a scaler word +8 refused
 //   the format words 0x1b0 / 0x111 and 0x1b4 / 0x11 (MIX_UNOBSERVED otherwise), a level 0 not drawn (PLANC_ZERO), the
-//     EVF's level 0xb2 drawn, nothing composed before the first frame (NOT_LATCHED)
-// The model is fixed when src/ is imported, so the cases run in a child with OM_EMU_MODEL=E122.
-//   node emu/test/test_vsc3.mjs          (the child: OM_EMU_MODEL=E122 node emu/test/test_vsc3.mjs --child)
+//     EVF's level 0xb2 drawn, nothing composed before the first frame (NOT_LATCHED), a plane whose level word is
+//     unwritten skipped (UNWRITTEN)
+// and on E118's board (BOARD.vsc.levels false: its code names no level word, src/fw/facts.mjs vscLevels) a plane drawn
+// at the full level with no level word written, its ASSUMED bit set and noted.
+// The model is fixed when src/ is imported, so the cases run in a child per board: OM_EMU_MODEL=E122, then E118.
+//   node emu/test/test_vsc3.mjs          (a child: OM_EMU_MODEL=E122 node emu/test/test_vsc3.mjs --child)
 import { spawnSync } from 'node:child_process';
 
 const SELF = new URL(import.meta.url).pathname;
 
+const BOARDS = ['E122', 'E118'];
 export function vsc3Units() {
-  const r = spawnSync(process.execPath, [SELF, '--child'], { env: { ...process.env, OM_EMU_MODEL: 'E122' }, encoding: 'utf8' });
-  const last = r.stdout.trim().split('\n').pop() ?? '';
-  try {
-    const res = JSON.parse(last);
-    if (r.status === 0 && Number.isInteger(res.checks)) return res;
-  } catch { /* reported below */ }
-  return { checks: 1, bad: [`the E122 child exited ${r.status}: ${(r.stdout + r.stderr).trim().slice(-600)}`] };
+  const out = { checks: 0, bad: [] };
+  for (const model of BOARDS) {
+    const r = spawnSync(process.execPath, [SELF, '--child'], { env: { ...process.env, OM_EMU_MODEL: model }, encoding: 'utf8' });
+    const last = r.stdout.trim().split('\n').pop() ?? '';
+    let res = null;
+    try { res = JSON.parse(last); } catch { /* reported below */ }
+    if (r.status === 0 && Number.isInteger(res?.checks)) { out.checks += res.checks; out.bad.push(...res.bad.map((b) => `${model}: ${b}`)); } else {
+      out.checks += 1; out.bad.push(`the ${model} child exited ${r.status}: ${(r.stdout + r.stderr).trim().slice(-600)}`);
+    }
+  }
+  return out;
 }
 
 async function child() {
@@ -62,7 +70,7 @@ async function child() {
       if (frame) bell(2);
       const status = bell(3), h = (i) => v.dget(V.D.HDR + 4 * i);
       const w = h(1);
-      return { status, w, h: h(2), ox: h(8), oy: h(9), drawn: h(7), skipped: h(6), mix: h(10), px: (x, y) => v.out[y * w + x], errors: errors(), notes: notes() };
+      return { status, w, h: h(2), ox: h(8), oy: h(9), drawn: h(7), skipped: h(6), mix: h(10), assumed: h(14), px: (x, y) => v.out[y * w + x], errors: errors(), notes: notes() };
     };
     const canvas = (w, h, fill, rects = []) => {
       const b = new Uint8Array(ROW * h).fill(fill);
@@ -72,18 +80,39 @@ async function child() {
     return { m, v, reg, compose, canvas };
   };
   // the TFT's open (X, E122): area {30, 8} 720 x 480, BG1, the format words; the planes' areas, strides and levels
-  const tft = (t) => {
+  // (E118's open writes no level word, D)
+  const tft = (t, levels = true) => {
     t.reg(0x0F8, 0x1E02D0); t.reg(0x0FC, 0x80008); t.reg(0x100, 0x1E0); t.reg(0x190, BG); t.reg(0x030, 0);
     t.reg(0x1B0, 0x111); t.reg(0x1B4, 0x11);
     for (let q = 0; q < 3; q++) {
       t.reg(0x0C8 + 12 * q, 0x1E02D0); t.reg(0x0CC + 12 * q, 0x80008); t.reg(0x0D0 + 12 * q, 0x1E0);
-      t.reg(0x05C + 4 * q, ROW / 64); t.reg(0x2E0 + 4 * q, 0x100); t.reg(0x148 + 0x18 * q, 0);
+      t.reg(0x05C + 4 * q, ROW / 64); if (levels) t.reg(0x2E0 + 4 * q, 0x100); t.reg(0x148 + 0x18 * q, 0);
     }
     t.reg(0x22C, 0x1EF);
   };
   const ycc = (tra, y, cb, cr) => (tra << 24 | cr << 16 | cb << 8 | y) >>> 0;
   const RED = ycc(31, 76, 85, 255), GREEN = ycc(31, 150, 44, 21), CLEAR = ycc(0, 16, 128, 128);
   const codes = (r) => r.errors.map((e) => e.code);
+  // OSD3 with its level word unwritten: skipped on a board whose code sets the levels, drawn at the full level with
+  // its ASSUMED bit on one whose code names none (E118's)
+  const unleveled = () => {
+    const t = fresh();
+    tft(t, false);
+    t.canvas(720, 480, 0xFF, [[100, 50, 40, 20, 1]]);
+    t.reg(0x030, 1); t.reg(0x04C, CANVAS); t.reg(0x1B8, 0x10); t.reg(0xA00 + 4 * 127, CLEAR); t.reg(0xA00 + 4, RED);
+    return t.compose();
+  };
+  if (!BOARD.vsc.levels) {
+    const r = unleveled();
+    ok(r.status === 0 && r.drawn === 1 << 5 && r.assumed === 1 << 5 && !r.errors.length, `no level words: status ${r.status} drawn ${hex(r.drawn)} assumed ${hex(r.assumed)} errors ${JSON.stringify(r.errors)}`);
+    ok(r.px(100, 50) === (RED & 0xFFFFFF) && r.px(0, 0) === BG, `no level words, OSD3 at the full level: ${hex(r.px(100, 50))} ${hex(r.px(0, 0))}`);
+    ok(r.notes.some((n) => n.kind === V.NOTE.ASSUMED && n.off === 0x2E8), `no level words, noted: ${JSON.stringify(r.notes)}`);
+    return { checks, bad };
+  }
+  {
+    const r = unleveled();
+    ok(r.skipped === 1 << 5 && !r.drawn && r.errors.some((e) => e.code === V.E.UNWRITTEN && e.off === 0x2E8) && r.px(100, 50) === BG, `level word unwritten: skipped ${hex(r.skipped)} ${JSON.stringify(r.errors)}`);
+  }
 
   // nothing composed before the first boundary; the start's state: the background only
   {

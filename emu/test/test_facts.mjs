@@ -229,9 +229,21 @@ const LENS_TABLE_FOUND = { E143: LENS_ZOOM_TABLE_E143, E140: 1156, E130: 644 };
 // The display sync's functions as read at the code (display.sync; D: E137's request 0x502bd2d2 and image sync
 // 0x502bd5bc by their API ids, the setter 0x507a2fa4 its release calls at 0x509797ee, released with kind 1 for both
 // panels; E122's request 0x502c9c6c by its name, its image sync 0x502c9f95 by its id, the setter 0x50695318 stopRecView
-// calls per panel at 0x5081199e and 0x508119c2, released with kind 0)
+// calls per panel at 0x5081199e and 0x508119c2, released with kind 0; E118's request 0x502b147a and image sync
+// 0x502b16ec by their names, the setter 0x506a6b0f stopRecView calls per panel at 0x5082200b and 0x5082202f; E120's
+// record form, api_disp_Disp_Sync_Update_Osd_Multi_Ext 0x502a6042 and api_disp_Disp_Sync_Force_Update_Multi_Ext
+// 0x502a663b by their names, the setter 0x50653b0f stopRecView calls per panel at 0x507ccd61 and 0x507ccd85 before its
+// own calls of the image sync, the request's type at +16 and device at +20 (0x502a6062..0x502a607b), the synced type 5
+// (the GUI's 0x5067b98e), the release's code 18 at +0 and device at +4 (0x502a664b..0x502a6693))
 const SYNC_FOUND = { E137: { request: 0x502BD2D2, image_sync: 0x502BD5BC, sync_set: 0x507A2FA4, kind: 1, panels: [2] },
-  E122: { request: 0x502C9C6C, image_sync: 0x502C9F95, sync_set: 0x50695318, kind: 0, panels: [0, 1] } };
+  E122: { request: 0x502C9C6C, image_sync: 0x502C9F95, sync_set: 0x50695318, kind: 0, panels: [0, 1] },
+  E118: { request: 0x502B147A, image_sync: 0x502B16EC, sync_set: 0x506A6B0F, kind: 0, panels: [0, 1] },
+  E120: { request: 0x502A6042, image_sync: 0x502A663B, sync_set: 0x50653B0F, kind: 0, panels: [0, 1],
+    record: { type: 16, device: 20, synced: 5, code: 18, code_at: 0, device_at: 4 } } };
+// Whether a kind-3 VSC body's code names the OSD level words (board.vsc.levels; D: E122's open stores 0x100 to them at
+// 0x503097ba..0x503097c6, E120's at 0x502d6c9c..; E118's open 0x502e1b48 stores none and no word of its image holds
+// their addresses) and the bodies of another VSC kind, which have no such fact
+const LEVELS_FOUND = { E122: true, E120: true, E118: false };
 // The module-9 state readers (app.module9_readers) as src/fw/models.mjs gave them by hand before the rule (E144, E139:
 // D, each call checked), and E143's lab lists, which E143's readers must hold (src/lab/camapp.mjs CA_MODULE9_READERS,
 // src/lab/menu.mjs TAKEOVER_READERS)
@@ -750,6 +762,7 @@ export function factsTests() {
     for (const [t, n] of got.ctors ?? []) ok(u32(run, t - m.image_base + 4 * n) === 0xFFFFFFFF, `${code}: the constructor table ${hx(t)} is not ended after its ${n} pointers`);
     if (CBS_FOUND[code]) ok(same(got.cbs, CBS_FOUND[code]), `${code}: cbs ${hx(got.cbs ?? got)}, found ${hx(CBS_FOUND[code])}`);
     if (SYNC_FOUND[code]) ok(same(got.display?.sync, SYNC_FOUND[code]), `${code}: display.sync ${hx(got.display ?? got)}, found ${hx(SYNC_FOUND[code])}`);
+    ok(got.board?.vsc?.levels === LEVELS_FOUND[code], `${code}: board.vsc ${hx(got.board?.vsc ?? got)}, found ${LEVELS_FOUND[code] === undefined ? 'none (not kind 3)' : `levels ${LEVELS_FOUND[code]}`}`);
     ok(got.touch_panel?.driver === !NO_TOUCH_DRIVER.includes(code), `${code}: touch_panel ${hx(got.touch_panel ?? got)}, found ${NO_TOUCH_DRIVER.includes(code) ? 'no driver' : 'a driver'}`);
     ok(got.lens?.mount === !NO_LENS_MOUNT.includes(code), `${code}: lens ${hx(got.lens ?? got)}, found ${NO_LENS_MOUNT.includes(code) ? 'no mount' : 'a mount'}`);
     if (IIC_FOUND[code]) ok(same(got.iic?.waits, IIC_FOUND[code]), `${code}: iic ${hx(got.iic ?? got)}, found ${hx(IIC_FOUND[code])}`);

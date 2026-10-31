@@ -43,7 +43,10 @@
 //   formats        0x1b0 = 0x111 and 0x1b4 = 0x11, the values every open writes (D); E143's OSDFMT1 and OSDFMT2 hold
 //                  the same, kind 2's mix word 0x1b0 another (I): checked as kind 2's mix
 //   level          OSD7..OSD9 as kind 2's enable words; the display sets them to 2 floor(p 128 / 100) for a level of p
-//                  percent (D; 0x100 at 100 %, E143's PLANC form), the EVF's 0xb2 (70 %, X)
+//                  percent (D; 0x100 at 100 %, E143's PLANC form), the EVF's 0xb2 (70 %, X). A build whose code names
+//                  no level word (BOARD.vsc.levels false, src/fw/facts.mjs vscLevels: E118's open writes none, D) has
+//                  its planes drawn at the full level with the plane's ASSUMED bit (what the chip's unwritten level
+//                  word holds is ?; I: E118's clock warning then shows as E122's does)
 // On both kinds a level other than 0 is drawn as full (E144's EVF writes 0xcc, X; what the chip does with a level
 // below 0x100 is ?, as E143's PLANC, docs/om1-vsc-spec.md section 3, which E143's compositor refuses).
 // IMG planes are not modelled yet: an enabled one is skipped with FMT_UNMODELLED.
@@ -68,6 +71,9 @@ const KINDS = {
       : { sel: null, bit: 0, banks: [q === 1 ? 0x680 : 0x600], entries: 32, mask: null }) },
 };
 const K = KINDS[BOARD.vsc.kind] ?? null;
+// kind 3: whether the build sets the level words (a build that names none draws its planes at the full level)
+const LEVELS = BOARD.vsc.kind !== 3 || BOARD.vsc.levels;
+const FULL_LEVEL = 0x100;
 
 export function compose2(v, c) {
   const ch = v.ch[c], m = ch.m, mf = v.mFlags(c), t = v.clock.t, out = v.out;
@@ -109,7 +115,7 @@ export function compose2(v, c) {
       let base, ld, w1, w2, w3, planc, rsz, sel = 0;
       if ((base = need(R.DMA12 + 4 * q)) === null || (ld = need(R.DMA18 + 4 * q)) === null || (w1 = need(R.AREA10 + 12 * q)) === null ||
           (w2 = need(R.AREA10 + 12 * q + 4)) === null || (w3 = need(R.AREA10 + 12 * q + 8)) === null ||
-          (planc = need(R.OSD7 + 4 * q)) === null || (rsz = need(R.RSZ[p])) === null || (P.sel !== null && (sel = need(P.sel)) === null)) {
+          (planc = LEVELS ? need(R.OSD7 + 4 * q) : FULL_LEVEL) === null || (rsz = need(R.RSZ[p])) === null || (P.sel !== null && (sel = need(P.sel)) === null)) {
         v.dset(info, E.UNWRITTEN); hdr[HDR.SKIPPED] |= 1 << p; continue;
       }
       const xs = w1 >>> 16, ys = w2 >>> 16, pw = w1 & 0xFFFF, ph = w3 & 0xFFFF, stride = ld * 64;
@@ -117,6 +123,7 @@ export function compose2(v, c) {
         cerror(E.WINDOW, R.AREA10 + 12 * q, w1, w2, w3, 0); v.dset(info, E.WINDOW); hdr[HDR.SKIPPED] |= 1 << p; continue;
       }
       if (planc === 0) { v.noteRecord(NOTE.PLANC_ZERO, c, R.OSD7 + 4 * q, p); v.dset(info, 0x101); continue; }
+      if (!LEVELS) { hdr[HDR.ASSUMED] |= 1 << p; v.noteRecord(NOTE.ASSUMED, c, R.OSD7 + 4 * q, p); }
       let sh = 4096, sv = 4096;
       if (rsz) {
         const zero = K.rszZero.find((k) => mw(R.RSZ[p] + k) && m[(R.RSZ[p] + k) / 4]);

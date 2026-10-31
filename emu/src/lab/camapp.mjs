@@ -38,8 +38,10 @@
 //              with such a request: the sync words of both panels cleared through the application's setter, as
 //              stopRecView does, then the image sync of the fact's kind, the one whose event the manager takes in the
 //              state the type-3 request leaves, which commits the pending buffers (D, displaySync has the manager's
-//              table): kind 1 with the setter's both-panel value 2, and on E122's display sync module kind 0 with one
-//              call per panel (0, 1). stopRecView's kind 2 is not taken in that state: under it E137's screen came only
+//              table): kind 1 with the setter's both-panel value 2, and on the E118 family's display sync modules kind
+//              0 with one call per panel (0, 1); on E120's record form the request's type (5, its async update) and
+//              device are the record's fields, and the release passes a record of code 18, kind 0's, and the device
+//              (the fact's record). stopRecView's kind 2 is not taken in that state: under it E137's screen came only
 //              with its GUI's next update, a 250 ms redraw of a blinking item that the clear made an ordinary request,
 //              and E125's GUI, which sends no further update, kept a one-colour frame (X); E122's composite had no OSD
 //              plane enabled (X). When the camera releases the sync at the start is not known (I: once its through
@@ -80,7 +82,7 @@
 import { FirmwareError, where, runtime, disasm, SP } from './hle.mjs';
 import { AssertionError } from './errors.mjs';
 import { packRegs } from './sim.mjs';
-import { pack } from '../util/bytes.mjs';
+import { pack, unpack } from '../util/bytes.mjs';
 import { hex } from '../util/hex.mjs';
 import * as SC from './scene.mjs';
 import { jpegOfFrame } from './jpeg.mjs';
@@ -167,8 +169,10 @@ export function module_queues(image) {
 const OLYQEWR = A(0x5002C151), API_SEND_RETURN = A(0x503EBA07);
 // S-DISPSYNC: the request type that waits for an image sync; the release's sync-word store (its value; the panels'
 // d1 values, as stopRecView passes them, and the image sync's kind, the one the type-3 request's pending state takes,
-// are the fact's, displaySync's comment) and image-event flag (a0, as stopRecView passes it)
-const DISPSYNC_REQUEST = 3, DISPSYNC_OFF = 0, DISPSYNC_IMAGE = 1;
+// are the fact's, displaySync's comment) and image-event flag (a0, as stopRecView passes it). On E120's record form
+// (the fact's record) the request's type and device code and the release's code and device are fields of the record
+// a0 points to, and the synced type is the record's
+const DISPSYNC_REQUEST = 3, DISPSYNC_OFF = 0, DISPSYNC_IMAGE = 1, DISPSYNC_RECORD = 8;
 const TRA_EXEC_CALLS = A(0x50AF7CB9), TRA_EXEC_CALL = A(0x50AF7CBE);
 // S-TRAACK: the request's vtable slot the exec deletes a consumed request through (docs/hle-gaps.md 4.1.2, D)
 const REQUEST_DELETE_SLOT = 1;
@@ -571,10 +575,15 @@ export class CamApp {
       this.tra_deleted += 1;
       if (calls) h.finish_calls_after(r, del, { a0: req }); else h.finish_after(r, del, { a0: req });
     };
-    // (none on a build whose display sync the rule does not read, src/fw/facts.mjs displaySync: E118's and E120's)
-    const sync = fact('display.sync', DISPLAY_SYNC_E143);
+    // (none on a build whose display sync the rule does not read, src/fw/facts.mjs displaySync)
+    const sync = fact('display.sync', DISPLAY_SYNC_E143), rec = sync?.record;
     this.dispsync_fns = sync;
-    if (sync) lab.observe(sync.request, (l, r) => { if ((r.d0 >>> 0) === DISPSYNC_REQUEST) this.dispsync.add(r.d1 >>> 0); }, 'S-DISPSYNC');
+    if (sync) {
+      lab.observe(sync.request, (l, r) => {
+        const [type, code] = rec ? [unpack('<H', l.sim.read(r.a0 + rec.type, 2))[0], l.sim.u32(r.a0 + rec.device)] : [r.d0 >>> 0, r.d1 >>> 0];
+        if (type === (rec?.synced ?? DISPSYNC_REQUEST)) this.dispsync.add(code);
+      }, 'S-DISPSYNC');
+    }
     lab.observe(SHOOTING_START, () => { this.shooting = true; }, 'S-RELSEQ (shooting service)');
     lab.observe(SHOOTING_END, () => { this.shooting = false; }, 'S-RELSEQ (shooting service end)');
     const fd = fact('func_direct.id', { sp: 28 });
@@ -660,10 +669,14 @@ export class CamApp {
         const [code] = this.dispsync;
         this.dispsync.delete(code);
         this.dispsync_released += 1;
-        const { sync_set: set, image_sync: image, kind, panels } = this.dispsync_fns;
+        const { sync_set: set, image_sync: image, kind, panels, record: rec } = this.dispsync_fns;
         this.log.push(['dispsync', `sync words cleared, image sync kind ${kind} for device ${code}`]);
         for (const panel of panels) lab.call(set, { d0: DISPSYNC_OFF, d1: panel }, null, null, 2000);
-        lab.call(image, { d0: kind, d1: code, a0: DISPSYNC_IMAGE }, null, null, 2000000);
+        if (rec) {
+          const b = new Uint8Array(DISPSYNC_RECORD), dv = new DataView(b.buffer);
+          dv.setUint16(rec.code_at, rec.code, true); dv.setUint32(rec.device_at, code, true);
+          lab.call(image, { a0: lab.alloc(b, 4) }, null, null, 2000000);
+        } else lab.call(image, { d0: kind, d1: code, a0: DISPSYNC_IMAGE }, null, null, 2000000);
         s.settle('S-DISPSYNC');
         continue;
       }

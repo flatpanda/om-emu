@@ -599,7 +599,7 @@ const displaySends = (img, qewr) => queueCalls(img, qewr).map((c) => c.ret);
 // after a return inside the image sync, at +14, is no call target).
 // The E118 family has a display sync module of another form (E122, D): its request is api_disp_Disp_Update_Osd
 // (0x502c9c6c), whose trace loads its name, `mov "api_disp_Disp_Update_Osd",a0` (fc dc imm32), where the others load
-// the id (REQUEST_NAME, taken only where no entry loads the id): d0 the sync type, d1 the device code (1 the TFT, 2 the
+// the id (by name only where no entry loads the id): d0 the sync type, d1 the device code (1 the TFT, 2 the
 // EVF: the GUI's 0x506c09e4..0x506c0a04). Type 3 queues the OSD update in the device's manager block (0x618a37f4 +
 // 56 n, set up by MODELS mm_init) as command 4 (0x50483cda), which leaves the block in state 3 from 0 or 3 and
 // commits nothing (0x50484370..0x504843ae; the commit 0x50309dc5 not called after the GUI's update, X); an image
@@ -614,22 +614,53 @@ const displaySends = (img, qewr) => queueCalls(img, qewr).map((c) => c.ret);
 // release's codes 15, 16, 18 for kinds 1, 2, 0), whose two callers are stopRecView's (0x508119af, 0x508119d5): each
 // after a clear of one panel's sync word, `clr d0; mov d0,d1; call` (the TFT) and `clr d0; mov 1,d1; call` (the EVF,
 // 0x5081199c, 0x508119bf), for its setter takes d1 1 for the EVF and any other value for the TFT (0x50695318, D). The
-// release: kind 0, the setter called with d1 0 and 1. E118 loads the request's name (0x502b1480) but has no image
-// sync of the id, and E120 holds neither (X, a byte scan of each expanded image): the rule reads none on them, and
-// their display syncs' forms are ?.
-// Returns {request, image_sync, sync_set, kind, panels}, or undefined where the request or the image sync is missing;
-// throws for two candidates of one id or name, an image sync without exactly one caller, or a caller without exactly
-// one clear of both panels or, through a wrapper, one clear of each panel.
+// release: kind 0, the setter called with d1 0 and 1. E118 has the same API (D): the request 0x502b147a by its name
+// (0x502b1480) and an image sync with no id load, read by the name its trace loads (0x502b16f2, `mov
+// "api_disp_dummy_Disp_Update_Force_Disp_Sync",a0`; E122's 0x502c9fad loads it too, after the id), with E122's argument
+// checks and codes (0x502b173e..0x502b1801), the wrapper 0x502a9281 and stopRecView's two calls of it after the
+// per-panel clears through the setter 0x506a6b0f (0x5082200b, 0x5082202f). Its display sync module is another one
+// (2026-10-30, D): the request maps type 3 to the module's async OSD update (exec 5, 0x502b1513..0x502b1521; with bit
+// 31 set exec 3, which waits), which from the idle state 8 leaves the device's state byte at 2 and commits nothing
+// (0x5046af6d -> 0x5046b691, 0x5046b7c7..0x5046b7cb); code 18 (kind 0, a0 1: 0x5046b188 -> 0x5046b1a2), admitted in
+// states 0..3 (0x5046bb6e), commits the OSD in states 0 and 2 and the image in 1 and 3 (0x5046b281..0x5046b2b2, the
+// commit 0x5046c0c0 with 1 or 2) and leaves state 8: the same release, kind 0 (X: the GUI's type-3 updates at 0.22 s
+// and 2.2 s committed by the VSC commit 0x502e2174 after it). E120 has neither name and the same module (its force path
+// 0x5044737e is E118's 0x5046b1a2, D) behind the API's record form (2026-10-30, D): the request
+// api_disp_Disp_Sync_Update_Osd_Multi_Ext (0x502a6042, its name loaded 0x13 bytes in, NAME_HEAD) takes a0 a record of
+// the OSD handles, the u16 type at +16 and the device code at +20 (1 the TFT; 0x502a6062..0x502a607b), and passes the
+// type to the module as the exec (3 waits, 5 is the async update, else 1; 0x502a608b..0x502a6097 -> 0x50447127); the
+// GUI's synced update sends type 5 (0x5067b98e, X: at 0x0108 with the OSD handles, nothing committed after it). The
+// image sync api_disp_Disp_Sync_Force_Update_Multi_Ext (0x502a663b) takes a0 a record of the u16 code at +0 and the
+// device code at +4 (0x502a664b..0x502a665e), the codes the other forms' wrapper passes, 15, 16 and 18 (the compares
+// 0x502a6689..0x502a6693, which the rule checks), 18 into the force path's a0 0 (0x502a66a4 -> 0x50447364): kind 0's
+// release. Its two callers are stopRecView's own (0x507ccd72, 0x507ccd98), each after a clear of one panel through the
+// setter 0x50653b0f (d1 1 the EVF, else the TFT; 0x507ccd5f, 0x507ccd82). The fact gains the record's fields
+// (MULTI_EXT; X: with the movie time answered and the GUI's 0xf001 posted by hand, exploration only, E120's TFT start
+// composed its shooting screen after one release of code 18 for device 1).
+// Returns {request, image_sync, sync_set, kind, panels} (and record on the record form), or undefined where the request
+// or the image sync is missing; throws for two candidates of one id or name, a request and an image sync of two forms,
+// a record form's image sync without the three code compares, an image sync of another form without exactly one caller,
+// or a caller without exactly one clear of both panels or, through a wrapper (the record form: directly), one clear of
+// each panel.
 export const DISPLAY_SYNC_E143 = { request: 0x503E4DD5, image_sync: 0x503E50EC, sync_set: 0x50AB43CD, kind: 1, panels: [2] };
 const DISPLAY_API = { request: 0x10035, image_sync: 0x10037 }, API_HEAD = 16, RELEASE_SPAN = 0x80, WRAPPER_SPAN = 0x80;
-const REQUEST_NAME = 'api_disp_Disp_Update_Osd';
+// the names a trace loads where no entry loads the id, in order: the E118 family's register form, then E120's record
+// form (MULTI_EXT names the record's fields)
+const DISPLAY_API_NAMES = {
+  request: ['api_disp_Disp_Update_Osd', 'api_disp_Disp_Sync_Update_Osd_Multi_Ext'],
+  image_sync: ['api_disp_dummy_Disp_Update_Force_Disp_Sync', 'api_disp_Disp_Sync_Force_Update_Multi_Ext'],
+};
+const MULTI_EXT = { type: 16, device: 20, synced: 5, code: 18, code_at: 0, device_at: 4 }, MULTI_EXT_HEAD = 0x60;
+const CMP_D0 = (n) => [0xa0, n];
 const CLEAR_BOTH = [0x00, 0x85, 0x02], CLEAR_TFT = [0x00, 0x81], CLEAR_EVF = [0x00, 0x85, 0x01];
 // the entries (call targets after a return) from which the code runs straight to a `mov imm32,Rn` of value within
-// API_HEAD bytes
-function apiEntries(img, value) {
+// head bytes (API_HEAD for an id; NAME_HEAD for a name, which E120's request loads after clearing its locals, 0x13
+// bytes in, 0x502a6042..0x502a6055, D)
+const NAME_HEAD = 0x20;
+function apiEntries(img, value, head = API_HEAD) {
   const at = [];
   for (const p of loadsOf(img, value)) {
-    for (let e = p - 1; e >= p - API_HEAD; e--) {
+    for (let e = p - 1; e >= p - head; e--) {
       if (!isRet(img, e - 3)) continue;
       let q = e;
       while (q < p) q += insnLength(img[q], img[q + 1]);
@@ -640,9 +671,12 @@ function apiEntries(img, value) {
 }
 export function displaySync(img) {
   const cand = new Map(Object.entries(DISPLAY_API).map(([k, id]) => [k, apiEntries(img, id)]));
-  if (!cand.get('request').length) {
-    const { base } = imageBase(img), names = findString(img, REQUEST_NAME, { nul: true, after: true });
-    cand.set('request', names.flatMap((o) => apiEntries(img, base + o)));
+  const { base } = imageBase(img), named = {};
+  for (const [k, names] of Object.entries(DISPLAY_API_NAMES)) {
+    for (const name of cand.get(k).length ? [] : names) {
+      const at = findString(img, name, { nul: true, after: true }).flatMap((o) => apiEntries(img, base + o, NAME_HEAD));
+      if (at.length) { cand.set(k, at); named[k] = name; break; }
+    }
   }
   const all = new Set([...cand.values()].flat()), callers = new Map();
   for (const c of callsWhere(img, (t) => all.has(t))) callers.set(c.to, [...(callers.get(c.to) ?? []), c.at]);
@@ -653,8 +687,16 @@ export function displaySync(img) {
     if (hits.length) out[k] = 0x50000000 + hits[0];
   }
   if (out.request === undefined || out.image_sync === undefined) return undefined;
+  const multi = named.request === DISPLAY_API_NAMES.request[1];
+  if (multi !== (named.image_sync === DISPLAY_API_NAMES.image_sync[1])) throw new Error(`displaySync: the request ${h8(out.request)} by ${named.request ?? 'its id'} and the image sync ${h8(out.image_sync)} by ${named.image_sync ?? 'its id'}, want one form`);
+  const record = multi ? { record: MULTI_EXT } : {};
+  if (multi) {
+    const head = img.subarray(out.image_sync - 0x50000000, out.image_sync - 0x50000000 + MULTI_EXT_HEAD);
+    const codes = [15, 16, MULTI_EXT.code].filter((n) => head.some((x, k) => bytesAt(head, k, CMP_D0(n))));
+    if (codes.length !== 3) throw new Error(`displaySync: the image sync ${h8(out.image_sync)} compares the code with ${codes.join(', ') || 'none'} of 15, 16, ${MULTI_EXT.code} within 0x${MULTI_EXT_HEAD.toString(16)} bytes, want all three`);
+  }
   const release = callers.get(out.image_sync - 0x50000000);
-  if (release.length !== 1) throw new Error(`displaySync: the image sync ${h8(out.image_sync)} has ${release.length} callers, want 1`);
+  if (!multi && release.length !== 1) throw new Error(`displaySync: the image sync ${h8(out.image_sync)} has ${release.length} callers, want 1`);
   // the setters a pattern's calls reach within RELEASE_SPAN bytes before c, the nearest first
   const clears = (c, pat) => {
     const sets = [];
@@ -664,14 +706,14 @@ export function displaySync(img) {
     }
     return sets;
   };
-  const both = clears(release[0], CLEAR_BOTH);
+  const both = multi ? [] : clears(release[0], CLEAR_BOTH);
   if (both.length > 1) throw new Error(`displaySync: ${both.length} 'clr d0; mov 2,d1; call' within 0x${RELEASE_SPAN.toString(16)} bytes before the image sync's call at ${h8(0x50000000 + release[0])}, want 1`);
   if (both.length) return { ...out, sync_set: both[0].to, kind: 1, panels: [2] };
   // the E118 family's form: the call is a wrapper's (the nearest entry before it, a call target after a return), whose
-  // callers each follow their nearest clear of one panel
+  // callers each follow their nearest clear of one panel; on the record form the image sync's own callers do
   let w = release[0];
-  while (w > release[0] - WRAPPER_SPAN && !(isRet(img, w - 3) && callsTo(img, w).length)) w--;
-  const wcalls = w > release[0] - WRAPPER_SPAN ? callsTo(img, w) : [];
+  while (!multi && w > release[0] - WRAPPER_SPAN && !(isRet(img, w - 3) && callsTo(img, w).length)) w--;
+  const wcalls = multi ? release : w > release[0] - WRAPPER_SPAN ? callsTo(img, w) : [];
   const panels = new Map();
   for (const c of wcalls) {
     const near = [[0, clears(c, CLEAR_TFT)[0]], [1, clears(c, CLEAR_EVF)[0]]].filter(([, s]) => s).sort((a, b) => b[1].at - a[1].at)[0];
@@ -679,9 +721,22 @@ export function displaySync(img) {
   }
   const sets = new Set([...panels.values()].flat());
   if (!wcalls.length || panels.size !== 2 || sets.size !== 1) {
-    throw new Error(`displaySync: no 'clr d0; mov 2,d1; call' within 0x${RELEASE_SPAN.toString(16)} bytes before the image sync's call at ${h8(0x50000000 + release[0])}, and ${wcalls.length ? `its wrapper ${h8(0x50000000 + w)}'s ${wcalls.length} callers follow clears of panels [${[...panels.keys()].join(', ')}] through ${[...sets].map(h8).join(', ') || 'no setter'}` : 'no wrapper entry before it'}, want both panels through one setter`);
+    throw new Error(`displaySync: no 'clr d0; mov 2,d1; call' within 0x${RELEASE_SPAN.toString(16)} bytes before the image sync's call at ${h8(0x50000000 + release[0])}, and ${wcalls.length ? `${multi ? 'its' : `its wrapper ${h8(0x50000000 + w)}'s`} ${wcalls.length} callers follow clears of panels [${[...panels.keys()].join(', ')}] through ${[...sets].map(h8).join(', ') || 'no setter'}` : 'no wrapper entry before it'}, want both panels through one setter`);
   }
-  return { ...out, sync_set: [...sets][0], kind: 0, panels: [0, 1] };
+  return { ...out, sync_set: [...sets][0], kind: 0, panels: [0, 1], ...record };
+}
+
+// The kind-3 VSC's OSD level words (fact 'board.vsc.levels', src/dev/vsccompose2.mjs): channel 0's OSD7..OSD9
+// (+0x2e0..+0x2e8), which E122's TFT open sets to 0x100 (`mov 256,d0` and the three stores 0x503097b7..0x503097c6)
+// and its level setter to 2 floor(p 128 / 100) for p percent (0x502f9408.., the EVF's 70 %), E120's at 0x502d6c9c and
+// 0x502c6d90 (D). E118's open (0x502e1b48) has no such stores, and no word of E118's image holds any of the three
+// addresses (X, a byte scan): its code names no level word. Whether the build names them, all three or none: true on
+// E122 and E120, false on E118 (X). Throws for a build that names some of them only.
+export const VSC_LEVEL_WORDS = [0x2E0, 0x2E4, 0x2E8];
+export function vscLevels(img, base) {
+  const named = VSC_LEVEL_WORDS.map((o) => wordsOf(img, base + o).length > 0);
+  if (named.some((n) => n !== named[0])) throw new Error(`vscLevels: the build names the level words ${VSC_LEVEL_WORDS.filter((o, k) => named[k]).map((o) => h8(base + o)).join(', ')} only, want all three or none`);
+  return named[0];
 }
 
 // The rec view component's state word and its standby value (fact 'recview', src/lab/camapp.mjs S-RVSTANDBY): each
@@ -3206,9 +3261,9 @@ export function readPlacedFacts({ img, at }) {
 
 // What the rules read from one body (src/fw/ports.mjs FACTS[code], written by bin/port.mjs): img is its main block
 // expanded in place (src/fw/expand.mjs with preload []), family its board family's facts (src/fw/board.mjs: reset_head,
-// sram, sram_size), resLoad its resource block's load address (src/lab/resources.mjs loadAddress). Returns {board:
+// sram, sram_size, vsc), resLoad its resource block's load address (src/lab/resources.mjs loadAddress). Returns {board:
 // {core_byte, library, preload, vector_page, dram_size}} for a family whose reset head copies with the flash-copy
-// routine (only vector_page and dram_size for reset_head null, the E143 family's), {res: {font_limit, string_limit}},
+// routine (only vector_page and dram_size for reset_head null, the E143 family's; and vsc: {levels} on a kind-3 VSC's), {res: {font_limit, string_limit}},
 // {menu: {list_menu, tab_memory, page_memory, take, caller, task}}, {kernel: {cpus, handlers}}, {errlog: {entry}}, {scpu: {backup}}, {display:
 // {change_task, change_entry, queue_word, queue_id, task_init, frame_wait, timer_sleep, sync, face_colour}}, {timer:
 // {reload_less_one}}, {dial: {select, select_end, table_ptr, table0}}, {touch_panel: {driver}}, {lens: {mount}}, {iic:
@@ -3217,7 +3272,7 @@ export function readPlacedFacts({ img, at }) {
 // banks, kind3}}, {recview: {word, standby}}, {cbs: {NAME: code}}, {mode_dial: {table, names}}, {prop_store: {init,
 // objects}}, {mm_init} and {ctors: [[table, count]]} (no memories, take, GUI task, handlers, task init, timer sleep, face colour, timer,
 // dial, touch, touch_api, shooting, func_direct, boot, dpc, sio, power_off, cbs or prop_store part where its rule reads
-// none; sync null where its rule reads none, E118's and E120's, whose display sync forms are not read, and recview null
+// none; sync null where its rule reads none, E120's, whose display sync form is not read, and recview null
 // where its rule reads none, the E118 family's, which has no RecView trace; the frame wait null where its rule reads none, E120's, which S-FRAMEWAIT then leaves out,
 // src/lab/menu.mjs; mm_init null where its rule reads none, every body but the E118 family's). Throws for a reset_head with no rule here, and where a rule throws.
 export function readFacts({ img, family, resLoad }) {
@@ -3227,6 +3282,7 @@ export function readFacts({ img, family, resLoad }) {
     facts.board = { core_byte: coreByte(img, family.sram, family.sram_size), library, preload };
   } else if (family.reset_head !== null) throw new Error(`readFacts: board reset_head ${JSON.stringify(family.reset_head)} has no rule here`);
   facts.board = { ...facts.board, vector_page: vectorPage(img) };
+  if (family.vsc.kind === 3) facts.board.vsc = { levels: vscLevels(img, family.vsc.base) };
   const { font, string } = resLoader(img, resLoad);
   facts.res = { font_limit: font.limit, string_limit: string.limit };
   const take = guiTake(img);

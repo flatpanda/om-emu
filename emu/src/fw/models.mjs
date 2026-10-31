@@ -804,7 +804,11 @@ export const MODELS = {
     res_len: 19291104, res_sha256: 'b1e448561edfc9c56a08fd5fa5c3d6307fc4741149bb40d951940e82364ccc5f',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
-    card_fs: { native: false, why: 'its start stops before the play bring-up runs the file system (docs/model-survey.md finding 37); src/fw/facts.mjs fileSystem reads its seams (finding 41), as on E122, whose card is native' },
+    // the card native since 2026-10-30 (docs/model-survey.md finding 51): its SD driver switches a card line through
+    // the sub-CPU (src/lab/storage.mjs S-SDSWITCH) and its movie record time divides by the movie info's frame rate
+    // (src/lab/camapp.mjs S-MOVRATE); the blank 8 GiB card formatted FAT32 'NO NAME' at 8192 with 32 KiB clusters,
+    // 2116 shots and 0:37:19 from it, S2's file read back (X: bin/modelcheck.mjs, the OSD records)
+    card_fs: { native: true },
     board: { family: 'E118' },
     // through E122 (port_via): the family's reference, whose overrides it takes over (the evidence at E122's entry)
     port_via: 'E122',
@@ -897,7 +901,9 @@ export const MODELS = {
     res_len: 18415584, res_sha256: 'f12ebf2598496f11bfdecff105f933a9f60c2cfff6a479258e9c6c34cb9236f0',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
-    card_fs: { native: false, why: 'its start stops before the play bring-up runs the file system (docs/model-survey.md finding 37); src/fw/facts.mjs fileSystem reads its seams (finding 41), as on E122, whose card is native' },
+    // the card native since 2026-10-30 (docs/model-survey.md finding 51): the play bring-up mounts it before the start
+    // stays at POWER_ON, the blank 8 GiB card formatted FAT32 and DCF folder 100, file 1 (X: a play session per device)
+    card_fs: { native: true },
     board: { family: 'E118' },
     // through E122 (port_via): the family's reference, whose overrides it takes over (the evidence at E122's entry)
     port_via: 'E122',

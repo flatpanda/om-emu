@@ -314,6 +314,8 @@ export const FAMILIES = {
     // 0x74, 0x6c, 0x78, 0x84, 0x80, 0x7c, 0x88, 0x40 in E144's order, 0x500478df..), storage 0x00..0x94: the word array
     // from 0x04 (the getter 0x5005c970 and setter 0x5005c95b index 15 words, E144's from 0x08) and 0x40..0x94 as E144's
     scpu: { command: 0xa4, clock: [0x98, 0x9c], ticks: false, storage: [[0x00, 0x94]], events: null },
+    // the deferred-call triggers per body, read by src/fw/facts.mjs (deferredCalls: four words 0x9b8000f4..0x9b800100
+    // and IRQs 30..33 on all three, in the stub page 0x9b800000 before 2026-10-30)
     scpu_link: UNKNOWN, hdmi: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN,
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,
     // E143's scratch DRAM holds E122's icons record (the loader's destination 0xa1fa6c00, 0x730a00 bytes decoded: X,

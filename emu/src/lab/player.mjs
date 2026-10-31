@@ -389,6 +389,8 @@ export class Player {
     if (this.session?.hdmi_port) used.push('S-HDMISINK', 'A-HDMI-1');                       // --hdmi on: the HDMI port, its sink
     if (this.session?.storage) used.push('H-FILEINIT', 'H-FILECLBK', 'S-SDHOST', 'S-SDCARD', 'S-FSNAND', ...(this.session.storage.f.album_init !== null ? ['S-ALBM'] : []), 'S-RECFILE');   // the file system native on a card (storage.mjs; S-ALBM where the body has an album manager)
     if (this.session?.storage?.powered) used.push('S-SDPOWER');                           // a card supply request answered
+    if (this.session?.storage?.switches) used.push('S-SDSWITCH');                         // a card line request answered
+    if (this.session?.camapp?.movie_rate_answered) used.push('S-MOVRATE');                 // the record time with frame rate 0
     const media = this.session?.camapp?.media;
     if (media?.formats || media?.ctrl) used.push('S-MDACTRL');                               // a Card Formatting from the menu (media.mjs)
     if (this.session?.storage?.removals || this.session?.storage?.insertions) used.push('S-MEDIA');   // a card taken out or put back (media.mjs)

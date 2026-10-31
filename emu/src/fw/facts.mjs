@@ -2203,6 +2203,27 @@ export function cardDetect(img) {
   return { table: u32(img, t + 10), drives: img[t + 3] };
 }
 
+// The movie record time's division by the movie info's frame rate (fact 'card.movie_rate', src/lab/camapp.mjs
+// S-MOVRATE): the movie time query (E143's MOVIE_TIME_QUERY 0x5042da58, the place E118 0x5051875a) fills the movie
+// module's record time into its caller's struct through a function (E118 0x50535bf4) that opens `mov a0,a2; clr d2;
+// cmp 0,a2; bne; mov E,d2` (E: its answer for no struct, 0x9d05) and divides a frame count by the frame rate byte R
+// without a test, `mov (W),d1; movbu (R),d0; divu d0,d1; mul 1000,d1` (0x50535c34..0x50535c42, D). The rate is the
+// movie module's set-up's (0x50535c83, its +6, from the record sequence's state handlers 0x50547042 and 0x50547f09,
+// D), which the lab does not run: E143's query finds the same rate 0 in its time code conversion and logs 0x39000903
+// (MODELS card_fs errlog; E118 has that conversion too, 0x50534891). One such division on E118, none on the other 17
+// images (X, a byte scan: E122's and E120's record time multiplies a word by 1000 there). Returns {fn, rate, error}
+// or null where none.
+const MOVIE_RATE_DIV = [0xfc, 0xa8, null, null, null, null, 0xf2, 0x71, 0xfb, 0x15, 0xe8, 0x03];
+const MOVIE_RATE_OPEN = [0x92, 0x08, 0xba, 0x00, 0xc9, 0x0a, 0xfc, 0xce], MOVIE_RATE_SPAN = 0x80;
+export function movieRate(img) {
+  const at = oneAt(img, MOVIE_RATE_DIV, 'movieRate', 'divisions by a frame rate byte');
+  if (at === null) return null;
+  for (let o = at; o > at - MOVIE_RATE_SPAN; o--) {
+    if (bytesAt(img, o, MOVIE_RATE_OPEN)) return { fn: 0x50000000 + o, rate: u32(img, at + 2), error: u32(img, o + MOVIE_RATE_OPEN.length) };
+  }
+  throw new Error(`movieRate: the division by the frame rate at ${h8(0x50000000 + at)} has no opening within 0x${MOVIE_RATE_SPAN.toString(16)} bytes`);
+}
+
 // The deferred calls (board dpc, src/dev/dpc.mjs; fact 'dpc.init', src/lab/play.mjs H-DPCINIT): a post puts a call on
 // its core's ring, enables the ring's IRQ for that core and writes 1 to the IRQ's trigger word, and the IRQ's handler
 // runs the ring (E143 0x500503d4, IRQ 53; E132 0x5004a236: the ring 0x5004a34c, the enable 0x5004be41(29, core), the
@@ -2210,30 +2231,37 @@ export function cardDetect(img) {
 // 0x5004a115 from 0x500002ea, D), clears the rings, writes 0 to the first two words, `mov d0,(W); mov d0,(W+4)`,
 // attaches their IRQs on every core and disables them, then writes 0 to the other four, `mov d0,(W+8)` .. `(W+20)`,
 // and attaches theirs on its own core, each IRQ loaded by `mov N,d0` before its attach (E143: W 0x9b880044, IRQs
-// 53..58; E132: W 0x9b800030, IRQs 29..34, on three cores, D). One such init on each of the 15 expanded images but the
-// E118 family's (X, a byte scan of the 18: W 0x9b880044 and IRQs 53..58 on the E143 family, W 0x9b800030 and IRQs
-// 29..34 on the others). Returns {init (disassembly notation), triggers: W, irqs: the six IRQs in their words' order},
-// or undefined where no init stores six words so and loads six consecutive IRQs; throws for two, or one that no call
-// enters.
+// 53..58; E132: W 0x9b800030, IRQs 29..34, on three cores, D). The E118 family's init has four words, two of each kind:
+// W 0x9b8000f4 and W+4 with IRQs 30 and 31 on every core, W+8 and W+12 with 32 and 33 on its own (E122 0x5005f419,
+// E118 0x50061d01; its posts write 1 to them, E118 0x50061e42, and the handlers of 30 and 31 disable their IRQ, those
+// of 32 and 33 write 0, 0x50061f37..0x50061fcb, as E143's, D). One such init on each of the 18 expanded images (X, a
+// byte scan: W 0x9b880044 and IRQs 53..58 on the E143 family, W 0x9b8000f4 and 30..33 on the E118 family, W
+// 0x9b800030 and 29..34 on the others). Returns {init (disassembly notation), triggers: W, irqs: the IRQs in their
+// words' order}, or undefined where no init stores four or six words so and loads as many consecutive IRQs; throws
+// for two, or one that no call enters.
 export const DPC_E143 = { init: 0x50050279 };
-const DPC_WORDS = 6, DPC_SPAN = 0x180, MMIO = [0x90000000, 0xA0000000];
+const DPC_WORDS = 6, DPC_FORMS = [4, 6], DPC_SPAN = 0x180, MMIO = [0x90000000, 0xA0000000];
 export function deferredCalls(img) {
   const store = (o, w) => img[o] === 0xfc && img[o + 1] === 0x81 && u32(img, o + 2) === w;
   const found = [];
   for (let p = img.indexOf(0xfc); p >= 0 && p + 12 <= img.length; p = img.indexOf(0xfc, p + 1)) {
     const w = u32(img, p + 2);
-    if (img[p + 1] !== 0x81 || w < MMIO[0] || w >= MMIO[1] || !store(p + 6, w + 4) || store(p - 6, w - 4)) continue;
+    if (img[p + 1] !== 0x81 || w < MMIO[0] || w >= MMIO[1] || !store(p + 6, w + 4) || store(p - 6, w - 4) || store(p + 12, w + 8)) continue;
+    // the run of the other words' stores, from W+8: four on the E143 and E144 families, two on the E118 family's
     let q = p + 12;
-    while (q + 24 <= Math.min(img.length, p + DPC_SPAN) && ![0, 1, 2, 3].every((i) => store(q + 6 * i, w + 8 + 4 * i))) q++;
-    if (q + 24 > Math.min(img.length, p + DPC_SPAN)) continue;
+    const end = Math.min(img.length, p + DPC_SPAN);
+    while (q + 12 <= end && !(store(q, w + 8) && store(q + 6, w + 12))) q++;
+    if (q + 12 > end) continue;
+    let k = 2;
+    while (k < DPC_WORDS - 2 && store(q + 6 * k, w + 8 + 4 * k)) k++;
     // the IRQs: the operands of `mov imm8,d0` (80 NN) from the first store to the init's return, in first-load order
     const irqs = [];
     let r = p;
-    for (; r - p <= DPC_SPAN && (r < q + 24 || !isRet(img, r)); r += callAt(img, r)?.len ?? insnLength(img[r], img[r + 1])) {
+    for (; r - p <= DPC_SPAN && (r < q + 6 * k || !isRet(img, r)); r += callAt(img, r)?.len ?? insnLength(img[r], img[r + 1])) {
       if (img[r] === 0x80 && !irqs.includes(img[r + 1])) irqs.push(img[r + 1]);
     }
-    // the six words' IRQs are six consecutive lines (E143 53..58, E132 29..34, D)
-    if (r - p <= DPC_SPAN && irqs.length === DPC_WORDS && irqs.every((n, i) => n === irqs[0] + i)) found.push({ p, w, irqs });
+    // the words' IRQs are as many consecutive lines (E143 53..58, E132 29..34, E122 30..33, D)
+    if (r - p <= DPC_SPAN && irqs.length === 2 + k && DPC_FORMS.includes(irqs.length) && irqs.every((n, i) => n === irqs[0] + i)) found.push({ p, w, irqs });
   }
   if (!found.length) return undefined;
   if (found.length > 1) throw new Error(`deferredCalls: ${found.length} trigger inits (${found.map((f) => h8(0x50000000 + f.p)).join(', ')}), want one`);
@@ -2443,6 +2471,16 @@ const le32 = (v) => [v & 0xff, v >>> 8 & 0xff, v >>> 16 & 0xff, v >>> 24];
 //   bra; clr d0; movbu d0,(2,a2)`, after a return; its calls are the alloc, on some a check, the send and the free
 //   (`mov a2,a0` before it): {send: the send's callee, ret: its return address} (E143 0x50059656 / 0x508b033c, E144
 //   0x5004fea9 / 0x506a3ff0, the send a synchronous one to a queue, 0x60041854; null on E145, E133, E129 and E132, X)
+// - card_switch: the SD driver's switch of a card line it sets right after the supply (on and off, the byte d0 == 1
+//   kept in a word after it): E122 and E120 set a GIO pin (E122 0x50582b1b: pin 74 through 0x50582ace; E120 pin 59), E118
+//   asks its sub-CPU through the body control's request entry (0x5015ee69, the request's u16 code from 2 to 44 through
+//   the table 0x601b14dc), whose request 42 goes out over the sub-CPU's serial link and calls the request's callback
+//   when the sub-CPU answers (D): the driver (0x5057e30c, from the SD init's 0x5057e083) builds a 24-byte request `mov
+//   24,d0; call (alloc); mov a0,a2; mov 20,a3; add a0,a3; clr d0; movhu d0,(a3); mov CODE,d0; movhu d0,(a2); mov
+//   CB,d0; mov d0,(4,a2); mov 16,a0; add a2,a0; mov a0,(12,a2); mov a2,(8,a2)`, the byte at +16 the switch, sends it
+//   and, sent, sleeps 1 ms at a time until its callback (0x5057e2fe: the status to +18, 1 to +20) has run, `exthu d0;
+//   cmp 0,d0; bne; movhu (a3),d0; cmp 0,d0; bne` (0x5057e34a). {send, ret: the send's return, callback, code}, or null
+//   where no driver builds such a request (the other 17, X); which line it is, ?
 // - cflush: the return address of the file system's one call of the cache flush (K-CFLUSH, src/lab/menu.mjs), in
 //   the FAT's free count: `mov 1,d0; call (lock); mov d0,d2; call (flush); mov d2,d0; call (unlock); mov (12,sp),a0;
 //   mov -1,d0; mov d0,(8164,a0)` (E143 0x508881e9, return 0x508881fa; the flush is the place the port gives E143's
@@ -2460,7 +2498,7 @@ export const STORAGE_E143 = {
   fat_error: 48, nand: { access: 0x500022C2, area: [0x41A00000, 0x80000], read: 0x10200, write: 0x10100 },
   command: 0x508AD03C, command_fields: { code: 24, arg: 28, resp: 32, buffer: 48, count: 52, block: 56, status: 74 },
   album_init: 0x508B67E8, status: 0x508A8327, cflush: 0x508881FA,
-  card_power: { send: 0x50059656, ret: 0x508B033C },
+  card_power: { send: 0x50059656, ret: 0x508B033C }, card_switch: null,
   names: { folder: 'OMSYS', file: 'P101', ext: 'JPG' },
 };
 // The storage library's own numbers, which the seams above share on every body that has them (src/lab/storage.mjs;
@@ -2524,6 +2562,11 @@ const NAND_OPEN = [0x82, 0xa5, 0x00, 0xc9];
 const FLUSH_RETURN = 17;                // FS_FLUSH's second call, the flush (at +10, 7 bytes), returns here
 const SD_POWER = [0xdf, null, null, 0x82, 0x80, 0x08, 0xdd, null, null, null, null, null, null, 0x92, 0x80, null, 0xf8, 0x52, 0x01, 0x1e, 0xaa, 0x00, 0xc8,
   null, 0x2c, 0xff, 0x00, 0xca, null, 0x00, 0xf8, 0x52, 0x02];
+// the E118 form of card_switch: the request's build up to its callback, then its fields (CARD_SWITCH_TAIL after CB)
+const CARD_SWITCH = [0x80, 0x18, 0xdd, null, null, null, null, null, null, 0x92, 0x9f, 0x14, 0xf1, 0x73, 0x00, 0xf0, 0x73, 0x80, null, 0xf0, 0x72,
+  0xfc, 0xcc];
+const CARD_SWITCH_TAIL = [0xf8, 0x12, 0x04, 0x90, 0x10, 0xf1, 0x78, 0xf8, 0x32, 0x0c, 0xf8, 0x3a, 0x08];
+const CARD_SWITCH_POLL = [0x1c, 0xa0, 0x00, 0xc9, null, 0xf0, 0x63, 0xa0, 0x00, 0xc9], CARD_SWITCH_SPAN = 0x30;
 // The E118 family's area (fileSystem's nand, its second form): the record read `call G; mov M,a0; mov AREA,a1; add
 // 511,d0; and -512,d0; mov READ,d1; call ACCESS`, G `mov N,d0; retf` (the record's size), once; the record after it,
 // `add AREA,d1; mov d1,a1; mov LEN,d0; mov READ,d1; call ACCESS`, and the write, `mov AREA,a1; clr d1; call ACCESS`.
@@ -2654,6 +2697,17 @@ export function fileSystem(img) {
     if (calls.length < 3 || img[calls[calls.length - 1].at - 1] !== 0x98) throw new Error(`${rule}: the SD card power request ${D(power + 3)} makes ${calls.length} calls, the last not the request's free`);
     card_power = { send: 0x50000000 + send.to, ret: 0x50000000 + send.at + send.len };
   }
+  // the card line's switch by a request (E118's form): its send the first call after the request's fields, then the poll
+  let card_switch = null;
+  const sw = oneAt(img, CARD_SWITCH, rule, 'card line switch requests');
+  if (sw !== null) {
+    const cb = u32(img, sw + CARD_SWITCH.length), tail = sw + CARD_SWITCH.length + 4;
+    if (!bytesAt(img, tail, CARD_SWITCH_TAIL)) throw new Error(`${rule}: the card line switch request ${D(sw)} does not keep its callback, self and switch pointer`);
+    let p = tail + CARD_SWITCH_TAIL.length, c = null;
+    for (; p < tail + CARD_SWITCH_SPAN && !(c = callAt(img, p)); p += insnLength(img[p], img[p + 1]));
+    if (!c || !bytesAt(img, p + c.len, CARD_SWITCH_POLL)) throw new Error(`${rule}: the card line switch request ${D(sw)} is not sent and polled`);
+    card_switch = { send: 0x50000000 + c.to, ret: 0x50000000 + p + c.len, callback: cb - base + 0x50000000, code: img[sw + 18] };
+  }
   // dosfat's error in its request's block: `movhu Dm,(48,An)`, then the error return's file and line loads
   let fatError = null;
   for (let o = img.indexOf(0xf8); o >= 0 && fatError === null; o = img.indexOf(0xf8, o + 1)) {
@@ -2668,7 +2722,7 @@ export function fileSystem(img) {
   return {
     init: 0x50000000 + init, tasks, fileclbk, fat_error: fatError, nand, command: 0x50000000 + command, command_fields: fields,
     album_init: albm === null ? null : 0x50000000 + albm,
-    status: 0x50000000 + status[0], cflush: 0x50000000 + flush + FLUSH_RETURN, card_power,
+    status: 0x50000000 + status[0], cflush: 0x50000000 + flush + FLUSH_RETURN, card_power, card_switch,
     names: { folder: fname.slice(3).trimEnd(), file: name.slice(0, 4), ext: name.slice(8) },
   };
 }
@@ -3330,7 +3384,7 @@ export function readPlacedFacts({ img, at }) {
 // {change_task, change_entry, queue_word, queue_id, task_init, frame_wait, timer_sleep, sync, face_colour}}, {timer:
 // {reload_less_one}}, {dial: {select, select_end, table_ptr, table0}}, {touch_panel: {driver}}, {lens: {mount}}, {iic:
 // {waits}}, {touch: {i2c_write, i2c_read}}, {touch_api: {open}}, {touch_int: {wait, poll, word}}, {shooting: {start, end, auto_through}}, {func_direct:
-// {run, id}}, {broker: {init}}, {card: {shots_query, detect}}, {boot: {key, stage}}, {dpc: {init}} (with board.dpc), {sio: {tx_start, rx_start, done, dispatch, restart, channels}}, {storage: {init, tasks, fileclbk, nand, command, album_init, status, cflush, names}}, {power_off: {usb_disconnect}}, {gui: {stride, height,
+// {run, id}}, {broker: {init}}, {card: {shots_query, detect, movie_rate}}, {boot: {key, stage}}, {dpc: {init}} (with board.dpc), {sio: {tx_start, rx_start, done, dispatch, restart, channels}}, {storage: {init, tasks, fileclbk, nand, command, album_init, status, cflush, names}}, {power_off: {usb_disconnect}}, {gui: {stride, height,
 // banks, kind3}}, {recview: {word, standby}}, {cbs: {NAME: code}}, {mode_dial: {table, names}}, {prop_store: {init,
 // objects}}, {mm_init} and {ctors: [[table, count]]} (no memories, take, GUI task, handlers, task init, timer sleep, face colour, timer,
 // dial, touch, touch_api, shooting, func_direct, boot, dpc, sio, power_off, cbs or prop_store part where its rule reads
@@ -3380,7 +3434,7 @@ export function readFacts({ img, family, resLoad }) {
   const direct = funcDirect(img);
   if (direct !== undefined) facts.func_direct = direct;
   facts.broker = { init: brokerInit(img) };
-  facts.card = { shots_query: shotsQuery(img), detect: cardDetect(img) };
+  facts.card = { shots_query: shotsQuery(img), detect: cardDetect(img), movie_rate: movieRate(img) };
   facts.boot = bootState(img);
   facts.mm_init = mmInit(img);
   const dpc = deferredCalls(img);

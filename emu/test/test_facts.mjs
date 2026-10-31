@@ -451,7 +451,9 @@ const DETECT_FOUND = {
 // 0x5057799c called at 0x501867d3, FILECLBK 0x50577a0c and its reply 0x50577e41, the record read 0x5056482c and its
 // size 0x50579b21, the command layer 0x50581242 with its status at +62 and its response at +28, the album manager's
 // init 0x505885df, the drive status 0x5057e8e3, the flush's return 0x5056f480, dosfat's end 0x5056958e storing no
-// error); dosfat's error store E143 0x50881736 (D)
+// error); dosfat's error store E143 0x50881736 (D); the card line's switch by a request, E118's (D: the request built
+// at 0x5057e30c, sent through 0x5015ee69 and polled from 0x5057e34a, its callback 0x5057e2fe, code 42), none where
+// a pin is set (E122 0x50582b1b, D)
 const STORAGE_FOUND = {
   E143: { init: 0x5088FC8D, tasks: [0x60042D42, 0x60042D2A], fileclbk: { entry: 0x5088FCFC, queue: 0x1F, busy: 0x62AE4CD0, reply: 0x508900C4 },
     nand: { access: 0x500022C2, area: [0x41A00000, 0x80000], read: 0x10200, write: 0x10100 }, command: 0x508AD03C,
@@ -464,7 +466,8 @@ const STORAGE_FOUND = {
   E122: { init: 0x5057799C, fileclbk: { entry: 0x50577A0C, queue: 0x22, busy: 0x618C8FF8, reply: 0x50577E41 },
     nand: { access: 0x500510C1, area: [0x402A0000, 0xBE00], read: 0x103, write: 0 }, command: 0x50581242,
     command_fields: { code: 20, arg: 24, resp: 28, buffer: 44, count: 48, block: 52, status: 62 }, album_init: 0x505885DF,
-    status: 0x5057E8E3, cflush: 0x5056F480, fat_error: null },
+    status: 0x5057E8E3, cflush: 0x5056F480, fat_error: null, card_switch: null },
+  E118: { card_switch: { send: 0x5015EE69, ret: 0x5057E34A, callback: 0x5057E2FE, code: 42 } },
 };
 const SHOTS_FOUND = {
   E143: 0x50419164, E146: 0x50414A5F, E147: 0x50422B7E, E144: 0x502FAB48, E139: 0x502F7CEB, E134: 0x50313E2D,
@@ -584,7 +587,12 @@ const PROP_STORE_FOUND = { E143: PROP_STORE_E143, E122: { init: 0x502CF141, obje
 // words 0x9b800030..0x9b800044 and attaches IRQs 29..34); E122 has neither word (X: no stage test or boot key store of
 // the forms; its UI_IN keeps its key state elsewhere, D: 0x50176d9e..)
 const BOOT_FOUND = { E133: { key: 0xA2AE718C }, E129: { stage: 0xA2B4D2CC }, E122: { key: null, stage: null } };
-const DPC_FOUND = { E132: { init: 0x5004A115, board: { triggers: 0x9B800030, irqs: [29, 30, 31, 32, 33, 34] } } };
+// The E118 family's init has four words (D: E118 0x50061d01 zeroes 0x9b8000f4..0x9b800100 and attaches IRQs 30..33)
+const DPC_FOUND = { E132: { init: 0x5004A115, board: { triggers: 0x9B800030, irqs: [29, 30, 31, 32, 33, 34] } },
+  E118: { init: 0x50061D01, board: { triggers: 0x9B8000F4, irqs: [30, 31, 32, 33] } } };
+// The movie record time's division by the frame rate (card.movie_rate; src/fw/facts.mjs movieRate): E118's (D: the
+// function 0x50535bf4, its divu by the byte 0xa1c2fad8 at 0x50535c40, its error for no struct 0x9d05); none on E143
+const MOVIE_RATE_FOUND = { E143: null, E122: null, E118: { fn: 0x50535BF4, rate: 0xA1C2FAD8, error: 0x9D05 } };
 // The serial controller's driver (sioDriver; D: E132's IIC write 0x5004ba70 calls the transfer start 0x500506cb, its
 // write-read the receive start 0x500509be; the registration 0x50051145 its IIC configuration calls fills 0xa2b19ea8 and
 // 0xa2b19ec8, which the interrupt's ends dispatch through 0x50051814; the control 0x500505e1's mode 2 stores the restart
@@ -615,7 +623,7 @@ const E143_FACTS = {
   timer: { reload_less_one: false }, dial: { select: 0x5014B7C7, select_end: 0x1A, table_ptr: 0xA32DAAB0, table0: 0x60223DBC },
   touch_panel: { driver: true }, lens: { mount: true }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
-  broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] } },
+  broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] }, movie_rate: null },
   boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, mm_init: null, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143, touch_int: null,
   cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143, prop_store: PROP_STORE_FOUND.E143, ctors: CTORS_E143,
 };
@@ -827,6 +835,7 @@ export function factsTests() {
     for (const [k, v] of Object.entries(BOOT_FOUND[code] ?? {})) ok(got.boot?.[k] === v, `${code}: boot.${k} ${hx(got.boot ?? got)}, found ${hx(v)}`);
     const dpcf = DPC_FOUND[code];
     if (dpcf) ok(got.dpc?.init === dpcf.init && same(got.board?.dpc, dpcf.board), `${code}: dpc ${hx(got.dpc ?? got)} board.dpc ${hx(got.board?.dpc)}, found ${hx(dpcf)}`);
+    if (Object.hasOwn(MOVIE_RATE_FOUND, code)) ok(same(got.card?.movie_rate, MOVIE_RATE_FOUND[code]), `${code}: card.movie_rate ${hx(got.card?.movie_rate)}, found ${hx(MOVIE_RATE_FOUND[code])}`);
     if (SIO_FOUND[code]) ok(same(got.sio, SIO_FOUND[code]), `${code}: sio ${hx(got.sio ?? got)}, found ${hx(SIO_FOUND[code])}`);
     if (Object.hasOwn(CHANGE_ENTRY_FOUND, code)) ok(got.display?.change_entry === CHANGE_ENTRY_FOUND[code], `${code}: display.change_entry ${hx(got.display?.change_entry)}, found ${hx(CHANGE_ENTRY_FOUND[code])}`);
     if (Object.hasOwn(POWER_OFF_FOUND, code)) ok(got.power_off?.usb_disconnect === POWER_OFF_FOUND[code], `${code}: power_off ${hx(got.power_off ?? got)}, found ${hx(POWER_OFF_FOUND[code] ?? 'none')}`);

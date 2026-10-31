@@ -2,9 +2,9 @@
 // command layer, and the firmware's own storage stack above it, natively: sdmem, sd_mount, sdmem_format, logsec, dosfat
 // (FAT / exFAT), the DCF modules, fileif, and the file tasks FILECLBK, FILEFGND and DCFPROC_SUB. On a body whose MODELS
 // entry runs it (card_fs native: E143, E146, E147, E144, E139, E137, E142, E140, E125, E130, E133, E145, E134, E129,
-// E132 and E122), at
-// the seams src/fw/facts.mjs fileSystem reads in its firmware (with the evidence; STORAGE_E143 for the lab's build);
-// elsewhere S-CARD keeps its card without a file system (src/lab/camapp.mjs), each body's card_fs with the reason.
+// E132 and the E118 family's E122, E118 and E120: every body since 2026-10-30), at the seams src/fw/facts.mjs
+// fileSystem reads in its firmware (with the evidence; STORAGE_E143 for the lab's build); a body that did not run it
+// would keep S-CARD's card without a file system (src/lab/camapp.mjs), its card_fs with the reason.
 //
 //   H-FILEINIT  the file system's bring-up (the boot task's call, storage.init) natively before the application starts:
 //               its queues and semaphores, logsec's and the SD host's init, the file layer, the card driver's detect
@@ -20,6 +20,11 @@
 //               does not run in the lab (which task it is, ?), is answered 0 at its send (the send from that request
 //               only; the E144 family's E144, E137, E142, E140, E125 and E130 meet it once at the bring-up, X; E143's,
 //               E146's, E147's and E139's requests return before their send, X)
+//   S-SDSWITCH  the SD driver's switch of a card line by a request to the sub-CPU (storage.card_switch: E118's,
+//               whose request goes out over the sub-CPU's serial link, which the lab does not model; E122 and E120 set
+//               a GIO pin), answered at its send: the request's callback is called with status 0, as the sub-CPU's
+//               answer would have it called (I: that the sub-CPU answers 0), and the send returns 0. Without it the
+//               driver's poll for the callback slept 1 ms at a time for good (X: E118's bring-up, to the 2,000,000-call limit)
 //   S-SDCARD    the card (src/lab/sdcard.mjs: an 8 GiB SDHC card, or the host's capacity, SDXC above 32 GiB) at the
 //               SD command layer (storage.command): each command the firmware sends is answered there, its response,
 //               its data and its status written into the command (at its fields, storage.command_fields: the E118
@@ -81,6 +86,7 @@ const WAI = 4, REQUEST_SLICE_MS = 5, REQUEST_LIMIT_MS = 10000, FOREVER = -1 >>> 
 const DRIVE = 0, DRIVE_MOUNTED = 0x1000;
 const DCF_CARD_IN = 1, DCF_LISTS = 3;
 const ERASED = 0xff, WRITE_CHUNK = 32768;
+const SWITCH_BYTE = 16;           // S-SDSWITCH: the request's switch byte (src/fw/facts.mjs fileSystem card_switch, D)
 // the word of the lab's FILECLBK messages, its low half a count; a reply of REQUEUE puts the message back on the queue
 // (`cmp 0xfff0,d0` at the reply's caller, docs/hle-gaps.md 4.8.8, D)
 const REQUEST_TAG = 0x4C41 << 16, REQUEUE = 0xFFF0;
@@ -98,6 +104,7 @@ export class Storage {
     this.commands = 0;             // SD commands answered
     this.flushes = 0;              // K-CFLUSH calls from the file system answered
     this.powered = 0;              // S-SDPOWER: the card supply requests answered
+    this.switches = 0;             // S-SDSWITCH: the card line's requests answered
     this.fileclbk = null;          // FILECLBK's task id
     this.mounted = false;          // the drive status's mount bit after the insertion (false while the card is out)
     this.removals = 0;             // runtime removals and insertions (src/lab/media.mjs)
@@ -127,6 +134,17 @@ export class Storage {
       };
       if (lab.hooks.has(runtime(send))) lab.wrap(send, power);   // (the hook keeps its name)
       else lab.hook(send, power((h, r) => lab.passthrough(r)), 'S-SDPOWER');
+    }
+    if (f.card_switch) {
+      const { send, ret, callback } = f.card_switch, sw = (prev) => (h, r) => {
+        if (r.mdr >>> 0 !== runtime(ret)) return prev(h, r);
+        const req = r.a0 >>> 0, on = lab.sim.read(req + SWITCH_BYTE, 1)[0];
+        this.switches += 1;
+        this.log.push(['switch', `the card line's request ${lab.sim.read(req, 2)[0] | lab.sim.read(req + 1, 1)[0] << 8} (switch ${on}): answered`]);
+        return h.finish_after(r, callback, { a0: req, d0: 0 });
+      };
+      if (lab.hooks.has(runtime(send))) lab.wrap(send, sw);
+      else lab.hook(send, sw((h, r) => lab.passthrough(r)), 'S-SDSWITCH');
     }
     if (f.album_init !== null) lab.hook(f.album_init, (h, r) => { this.log.push(['albm', `drive ${r.d0 & 0xFF}: not started`]); h.finish(r, { d0: 0 }); }, 'S-ALBM');
     lab.wrap(K_CFLUSH, (prev) => (h, r) => {

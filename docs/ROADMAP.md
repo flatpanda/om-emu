@@ -35,7 +35,7 @@ Every milestone runs in emu and is covered by the check its row names; the `chec
 | The camera application | every play session runs the firmware's camera application (CA_MAIN) natively (S-CAMAPP, 2026-10-15): power-on to the shooting screen, S1, S2 and the rec view, REC, playback, the Super Control Panel and the menu; the lab's own stand-ins for it are gone | `test_camapp`, `golden.json` | shutter spec §7 |
 | Exposure | a 12-40mm F2.8 PRO on the mount and the scene's brightness fed to the camera's own exposure plan (S-EXPOSE); the screen shows the planned shutter, aperture and ISO | `golden.json` | shutter spec §7 item 60 |
 | The lens natively (E143, E146, E147; the default) | the lens tasks, the lens driver, LENS_SSC and IRQ 14 against a model of the lens serial controller, with S-LENSMCU answering the driver's frames as the 12-40mm F2.8 PRO (2026-10-28); the deferred calls (IRQs 53..58); the zoom ring and the lens lock pin switch reach the driver; the camera application forwards the touches itself (2026-10-29: the touch's stop was S-CAFWD swallowing the GUI's answer). The default since 2026-10-29, on E146 and E147 too, their driver's addresses read by a rule (`lensDriver`, fact `lens_driver`; 2026-10-29); `OM_EMU_LENS=stand-in` takes S-LENS, the other bodies' lens | `test_lens` (E143, E146, E147), `test_facts`, `golden.json` | hle-gaps.md §4.4.2, §4.4.3 |
-| Multi-model, steps 1-4 and part of 7 | 17 bodies besides E143 have ports; E146, E147, E144, E139, E134, E137, E140, E125 and E130 shoot, play back and run the EVF through `bin/modelcheck.mjs`, E142, E133, E145, E129 and E132 (no EVF) on the TFT, each with the screen's remaining-shots count (the count probe); the E118 family's board is ported and E122 runs the path on the TFT and the EVF (its count probe an expected failure; Multi-model below) | `emu/bin/modelcheck.mjs`, `test_facts` | `docs/model-survey.md` |
+| Multi-model, steps 1-4 and part of 7 | 17 bodies besides E143 have ports; E146, E147, E144, E139, E134, E137, E140, E125 and E130 shoot, play back and run the EVF through `bin/modelcheck.mjs`, E142, E133, E145, E129 and E132 (no EVF) on the TFT, each with the screen's remaining-shots count (the count probe); the E118 family's board is ported and E122 and E118 run the path on the TFT and the EVF (their count probes expected failures; Multi-model below) | `emu/bin/modelcheck.mjs`, `test_facts` | `docs/model-survey.md` |
 
 Instruction counts: the ISA row's 1,684,013 reachable instructions come from a reachability scan that is no longer in
 the repository. `node emu/bin/fwmap.mjs` finds 5,186,071 instructions in the main block, because it also follows code
@@ -50,9 +50,8 @@ not reconciled.
    2026-10-29, its card native too (`docs/model-survey.md` finding 22). The E144 family's orange movie time `0:00:00` is the firmware's answer for the
    blank store's movie mode, which those bodies cannot record (2026-10-27, hle-gaps.md 4.8.5).
 2. **The open stops of the remaining bodies** (Multi-model "Next stops"): the E118 family past its board port (E122
-   passes modelcheck on the TFT and the EVF with its card native since 2026-10-30, findings 41, 42 and 47; E118 at
-   E122's shooting screen state, stopping in the movie time, findings 43 to 47, and E120 there too since findings 54 to
-   56). E133, E145 and
+   passes modelcheck on the TFT and the EVF with its card native since 2026-10-30, findings 41, 42 and 47; E118 too
+   since findings 51 and 52, its composite one colour; E120 at POWER_ON, findings 43 to 47, its card native). E133, E145 and
    the TG-5s (E129, E132: their charger's transfers on serial channel 9, `docs/model-survey.md` finding 24) pass
    modelcheck since 2026-10-29.
 3. **HLE of E143, step 2** (HLE of E143 below; step 1's static decodes are done): the cheap CPU 0 wins (a ticking
@@ -101,7 +100,7 @@ bodies; the bodies whose image runs at a `0x60xxxxxx` base pair 0.76M-2.08M inst
 | ported | E144 OM-5, E139 E-M1 III | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe included |
 | A | E134 E-M1X | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe included |
 | B | E137 E-M5 III, E142 E-P7, E140 E-M10 IV, E125 E-M1 II, E145 TG-7 | E137, E140 and E125: `bin/modelcheck.mjs`'s path passes on the TFT and the EVF, E142 and E145 (no EVF) on the TFT; the count probe passes on all five; E145 with MENU at its date and time setting (`0x1103`) after the start (2026-10-29) |
-| C | E133 E-PL9, E130 E-M10 III, E129 / E132 TG-5, E118 E-M5 II, E122 PEN-F, E120 E-M10 II | E130: `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe too; E133, E129 and E132 on the TFT (2026-10-29), their cards native; the E118 family's board is ported (2026-10-30): E122 passes `bin/modelcheck.mjs` on the TFT and the EVF with its card native and its frames composed (2026-10-30, findings 38 to 42, 47; the count probe an expected failure); E118's TFT and EVF to the shooting screen state and the movie time's divide by 0 (its card's file system not native; its frames show the clock warning, finding 48), E120's TFT and EVF to POWER_ON (findings 43 to 47; its display sync read, finding 49) |
+| C | E133 E-PL9, E130 E-M10 III, E129 / E132 TG-5, E118 E-M5 II, E122 PEN-F, E120 E-M10 II | E130: `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe too; E133, E129 and E132 on the TFT (2026-10-29), their cards native; the E118 family's board is ported (2026-10-30): E122 passes `bin/modelcheck.mjs` on the TFT and the EVF with its card native and its frames composed (2026-10-30, findings 38 to 42, 47; the count probe an expected failure); E118 passes it on the TFT and the EVF with its card native (2026-10-30, findings 51 to 53; its composite one colour, the count probe an expected failure), E120's TFT and EVF to POWER_ON (findings 43 to 47; its card native, finding 51) |
 | D | E100, E101, E106-E113, E115, E117, E121, E126 | not tried |
 | - | the new OM System PEN (E148?) | not served yet (E148-E199 answer nothing, 2026-10-19): re-probe |
 
@@ -156,8 +155,12 @@ The plan:
    E118's and E120's display syncs are read (findings 48, 49: E118's frames show its clock warning).
    E120 passed POWER_ON on 2026-10-30 (finding 54: the rec view word, read by form where the RecView trace is not
    held) and stops where E118 does; the touch controller's INT wait (GIO pin 30) no longer makes E120's and E122's
-   opens take 300 s and 500 s (finding 55, S-TPINTWAIT). Next: the family's card (native on E118, its start ends in
-   more than 2,000,000 stand-in calls, ?, and then on E120) and E118's and E120's display syncs.
+   opens take 300 s and 500 s (finding 55, S-TPINTWAIT).
+   E118's card is native since 2026-10-30 (finding 51: its card line's request to the sub-CPU answered, S-SDSWITCH;
+   the family's deferred-call triggers read) and E118 passes modelcheck on the TFT and the EVF (finding 52: its
+   movie record time's division by the unset frame rate stood in, S-MOVRATE; the count probe an expected failure),
+   E120's card is native too; PLAY and INFO draw the picture's number on the family (finding 53). Next: E118's
+   display sync, E120's POWER_ON (finding 46, ?) and INFO's still information on the family (finding 53, ?).
    The kind-3 VSC composes (kind 2's compositor with the family's palette groups and format words) and the EVF opens
    the built-in EVF, the family's device code 6, where the lab had opened the NTSC output (findings 35 and 36). Since
    2026-10-30 E122's TFT and EVF frames show its clock warning: the palettes by GUI layer (finding 38), S-DISPSYNC
@@ -289,9 +292,10 @@ the survey table.
   E122's card is native and its TFT runs S1, S2 (its picture on the card), PLAY, INFO and PLAY (findings 41, 42).
   With findings 38 to 40 its frames compose and E122 passes modelcheck on the TFT and the EVF (finding 47). Open on
   E122: what makes the application ask for the count again (finding 42; the probe is in PROBE_XFAIL until then), the
-  playback's file information (`000-0000`, ?); its opens take 0.18 s and 0.33 s of lab time since finding 55.
-  Open on E118: its card's file system (native, its start ends in more than 2,000,000 stand-in calls, ?) and its
-  display sync's form (finding 47).
+  playback's still information (INFO's size, focal length and date; the file number since finding 53) and the pin
+  wait that makes its opens take 300 s and 500 s of lab time. E118's card is native and E118 passes modelcheck on
+  the TFT and the EVF since findings 51 and 52 (2026-10-30); open on E118: its display sync's form (finding 47) and
+  the movie module's set-up, whose frame rate its record time divides by (S-MOVRATE while it is 0).
   E118 and E120 stopped at the GUI message take's observer (E143 0x510c2a2e); since 2026-10-30 they run past UI_IN
   (findings 32-34, 37), and with E122's other fields read or given (finding 43), the family's serial transmitters
   idle (finding 44) and E118's overlapping image records loaded at their requests (finding 45) E118's TFT and EVF

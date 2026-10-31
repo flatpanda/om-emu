@@ -1462,7 +1462,8 @@ bytes on; E143's places in brackets):
   browser player takes a card size, the menu's format and the card out and in on E143 with an SDXC card, and nine
   more bodies with one (X). Round 6 (2026-10-29, 4.8.7): E144's stop with an SDXC card read to its cause (the
   firmware's own divide by 0), the HLS side on E146, and E134's card native once its lamps' module UI_OUT runs (X).
-  Round 7 (2026-10-30, 4.8.8): the E118 family's forms of five seams read by the rule, and E122's card native.
+  Round 7 (2026-10-30, 4.8.8): the E118 family's forms of five seams read by the rule, and E122's card native;
+  then E118's and E120's, with E118's card line through its sub-CPU and its movie record time stood in (4.8.8).
 
 #### 4.8.1 The sdmem request contract (D unless tagged)
 
@@ -1958,8 +1959,21 @@ findings 31, 41). The family runs the other bodies' storage library; the rule no
   read back by `refs/volume.mjs`. S-FSNAND logs the record's read, a write of 48128 bytes and the next record's read
   at the insertion. A blank 64 GiB card (`--card-size 64`): exFAT with no label at sector 32768, 128 KiB clusters,
   9999 shots (the cap of 4.8.6), S2's file read back, the path as with 8 GiB (X).
-- **Not done:** E118 and E120 keep S-CARD until their starts reach the play bring-up's file system (their rule
-  values are read, X); the HLS side (S-MDACTRL, S-MEDIA) is E143's and E146's only.
+- **E118 and E120 (2026-10-30, `docs/model-survey.md` findings 51 to 53, addresses E118's):** E118's bring-up
+  polled for good (1 ms sleeps, more than 2,000,000 stand-in calls) for the answer to its SD driver's switch of a card
+  line, which it asks of the sub-CPU through its body control's request 42 (`0x5057e30c` -> `0x5015ee69`, out by a
+  deferred call over the link the lab does not model), where E122 and E120 set a GIO pin. The rule reads the request
+  (`storage.card_switch`) and S-SDSWITCH answers it at its send (its callback with status 0). The family's
+  deferred-call triggers (four words from `0x9b8000f4`, IRQs 30..33) are read by deferredCalls and modelled since.
+  Both cards mount as E122's (FAT32 `NO NAME`, DCF 100 / 1, X); E118's movie record time then divided by the movie
+  info's frame rate, 0 without the movie module's set-up (`0x50535c40`; E143's query logs `0x39000903` for the same
+  rate), which S-MOVRATE answers with the function's own error (fact `card.movie_rate`). E118 passes
+  `bin/modelcheck.mjs` on the TFT and the EVF: 2116 shots and `00:37:19` on the 8 GiB card, S2's file read back (X).
+- **The playback's file number:** the family's OlyHfwOpePlyCom::getNumber sends the play module the synchronous
+  request 5 (E122 `0x506aacfa`; E143 only with its mode word at 3, `0x50ace1db`) and reads +4 the index, +8 the file
+  and +10 the folder from the response block; S-PLAYSEQ answers it from the image shown, so PLAY and INFO draw
+  `100-0001` (X). INFO's size, focal length and date come from api_play_Get_StillInfo_ExifData (`0x30089`), not read.
+- **Not done:** INFO's still information on the family; the HLS side (S-MDACTRL, S-MEDIA) is E143's and E146's only.
 
 ### 4.9 HDMI and DisplayPort
 

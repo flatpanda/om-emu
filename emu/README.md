@@ -133,10 +133,12 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   player's Card start option) gives a new card another capacity, above 32 GiB an SDXC card, which the firmware formats
   exFAT (`docs/hle-gaps.md` 4.8.6; `refs/exfat.mjs` reads it back), and formats exFAT again from the menu; the card
   out and in mounts it again. E146, E147, E144, E139, E137, E142, E140,
-  E125, E130, E133, E145, E129, E132 and E134 run the same file system on the same card (their seams read from their firmware by
-  `src/fw/facts.mjs` fileSystem; on the E144 family the SD driver's request for the card's supply is answered,
-  S-SDPOWER; on E134 its lamps' module UI_OUT runs, H-UIOUTSTART, since its file layer asks it for the card's access
-  lamp): a blank card formatted and mounted, the counts from it, each picture's file written (the movie time left
+  E125, E130, E133, E145, E129, E132, E134 and the E118 family's E122, E118 and E120 run the same file system on the
+  same card (their seams read from their firmware by `src/fw/facts.mjs` fileSystem; on the E144 family the SD
+  driver's request for the card's supply is answered, S-SDPOWER; on E134 its lamps' module UI_OUT runs, H-UIOUTSTART,
+  since its file layer asks it for the card's access lamp; on E118 the SD driver's request to the sub-CPU for a card
+  line is answered, S-SDSWITCH, and its movie record time's division by the movie module's unset frame rate is stood
+  in, S-MOVRATE, `docs/model-survey.md` findings 51, 52): a blank card formatted and mounted, the counts from it, each picture's file written (the movie time left
   on E144, E139, E137 and E125 is an orange `0:00:00`: the blank settings store's movie mode, UHD 4K at 60p, is one
   they cannot record, `docs/hle-gaps.md` 4.8.5; E134's query answers 0 for the same reason); the menu's Card
   Formatting and the card input run on E143 and E146 (`docs/hle-gaps.md` 4.8.7) and are refused on the others. With a

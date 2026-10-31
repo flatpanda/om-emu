@@ -947,6 +947,65 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    the port's words read as another queue's (X: OlyQeWr from the sender's return `0x502a9076`), so S-MODACK's ids from
    the API target table are not needed yet. E120 is not in modelcheck's checked set.
 
+51. **E118's card and the sub-CPU's card line** (2026-10-30, `docs/hle-gaps.md` 4.8.8). With E118's card native the
+   file system's bring-up (H-FILEINIT, a lab call) ended in more than 2,000,000 stand-in calls: 1,999,982 of them
+   OlyTaSS(1) from the sleep wrapper `0x505768bd` (X: the callers of the hle's stand-ins, the stack at the sleep). The
+   sleep is the poll of the SD driver's switch of a card line (`0x5057e30c`, from the SD init's `0x5057e06c` with d0 1,
+   `0x5057e083`), which the driver makes right after the card's supply on each body, in two forms (D): E122 sets GIO
+   pin 74 (`0x50582b1b` -> `0x50582ace`), E120 pin 59 (`0x505566e4`), and E118 asks its body control for it, a
+   24-byte request of code 42 with a callback (`0x5057e2fe`: the status to +18, 1 to +20) through the request entry
+   `0x5015ee69` (codes 2..44 through the table `0x601b14dc`), and sleeps 1 ms at a time until the callback has run.
+   Request 42 writes register `0xdd` of the sub-CPU's link with the switch byte (`0x5015f30a`) and goes out through a
+   deferred call (`0x50160421` -> the post `0x50061df8`), the transaction's completion calling the request's callback
+   (`0x5015f367` .. `0x5015f3ab`, D); the module's dumps name the link's lines (`--bc_scpu--` RST, CS, RDY, RQ, TRG and
+   `--bc_ssc--`, D; that it is the sub-CPU's serial link is I by those names), which the lab does not model. Which card
+   line it is, ?. `src/fw/facts.mjs` fileSystem reads the request form as `storage.card_switch` {send, ret, callback,
+   code} (E118 `0x5015ee69`, `0x5057e34a`, `0x5057e2fe`, 42; null on E122 and E120; X), and S-SDSWITCH answers it at
+   its send: the callback with status 0 (I: the sub-CPU's answer), then 0 from the send (`src/lab/storage.mjs`). Seven
+   E144-family bodies hold the same request (E134, E137, E125, E133, E130, E129, E132, X), behind a test that is false
+   in their build (E130 `0x505f3f03`: `0x505f39f8(2)`, 2 == 1, D), so their sessions never send it (X: E130's, no
+   send). The deferred call's trigger was a stub word: the family's deferred-call init has four words where the other
+   bodies' have six, `0x9b8000f4` and `+4` with IRQs 30 and 31 on every core, `+8` and `+12` with 32 and 33 on its own
+   core (E118 `0x50061d01`, E122 `0x5005f419`, E120 `0x50060a1d`; the handlers disable 30 and 31 and write 0 to 32 and
+   33, `0x50061f37..0x50061fcb`, as E143's, D). deferredCalls reads that form too (the 15 others unchanged, X), so the
+   family's board has the triggers (`src/dev/dpc.mjs`) and H-DPCINIT runs its init; the family's sessions post nothing
+   up to modelcheck's path's end (X: the init's four writes only). With S-SDSWITCH E118's bring-up mounts the blank 8
+   GiB card as E122's does (`0xe08`, the firmware's FAT32 format `NO NAME` at sector 8192 with 32 KiB clusters, the
+   mount, drive status `0x3780`, DCF folder 100, file 1, X), and E120's too (X, its TFT and EVF starts, which stay at
+   POWER_ON `0x0102`): the card is native on all three. E118's start then runs past the movie time's division
+   (finding 45's stop) to the next long timer's (finding 52).
+52. **E118's movie record time and modelcheck's path** (2026-10-30). Past the volume object, E118's start stopped at
+   about 5.6 s of lab time in a Fault 6 at `0x50535c40`, a `divu` by the byte `0xa1c2fad8` (X: S-LONGTIMER's settle;
+   the stack: `0x5051876b`, `0x502b75ec`, `0x506c512e`). The function (`0x50535bf4`) fills the movie module's record
+   time for api_movie_Get_Time_Record_Movie (`0x502b75d3` -> `0x5051875a`, the place of E143's movie time query
+   `0x5042da58`, which getMovieTime calls), dividing a frame count by the frame rate byte without a test
+   (`0x50535c34..0x50535c42`, D); E122's and E120's record time multiplies a word by 1000 there (E122 `0x5054664a`,
+   D). The rate is the movie module's set-up's (`0x50535c83`, its +6, called from the record sequence's state
+   handlers `0x50547042` and `0x50547f09`, D), which the lab does not run: E143's own query finds the same rate 0 and
+   logs `0x39000903` from its rate conversion, which E118 holds too (`0x50534891`, D). `src/fw/facts.mjs` movieRate
+   reads the unchecked division (fact `card.movie_rate`: E118 `{fn 0x50535bf4, rate 0xa1c2fad8, error 0x9d05}`, null
+   on the other 17, X), and S-MOVRATE (`src/lab/camapp.mjs`) returns the function's own error for no struct (`0x9d05`)
+   while the rate is 0, without the division; the query then answers its error, as E143's does. E118 then runs
+   `bin/modelcheck.mjs`'s path on both panels (X): on the TFT start, S1, S2, PLAY `0x0608` SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE,
+   INFO `0x060b` ID_ST_DISP_DETAIL and PLAY back to `0x0108`, on the EVF start, S1 and S2 (and, in a play session,
+   PLAY, INFO and PLAY as on the TFT, X), the card formatted FAT32, 2116 shots, S2's `P1010001.JPG` read back by
+   `refs/volume.mjs`; with `--card-size 64` exFAT and 9999 shots (X). OSD layer 2's records (read back as images in
+   false colour) show the shooting screen after S1: P, 8000, -.-, ISO-A 200, S-AF, S-IS AUTO, WB AUTO, 4:3, LN, FHD F
+   60p, `00:37:19` and 2116 from the card (X). Only the count probe fails: the composite holds one value (its display
+   sync's form is not read, findings 39 and 47), so no pixel follows the count. E118 is in modelcheck's checked set
+   with its TFT and EVF, the probe in PROBE_XFAIL with that reason.
+53. **The family's playback file number** (2026-10-30). PLAY and INFO drew `000-0000` and `0` on E122 (finding 42).
+   OlyHfwOpePlyCom::getNumber has two branches on E143 (D): with its mode word (`0x60360c74`) not 3 it asks the play
+   component through the wrapper `0x50acf1a8` (S-PLAYCOMP's getNumber), with 3 it sends the play module the
+   synchronous request 5 (`0x50ace1db`) and reads the response block (`0x50ad46b4`) back: +4 the index, +8 the file
+   number and +10 the folder as halfwords (`0x50ace206..0x50ace225`). The E118 family's getNumber is that second
+   branch alone (E122 `0x506aacfa`, the reads `0x506aad25..0x506aad43`, D), which S-PLAYSEQ left unanswered. S-PLAYSEQ
+   now answers request 5 from the image shown, its DCF name's numbers where the card is native (S-RECFILE's file;
+   `src/lab/camapp.mjs`); the index counts from 1 as the component's does (I). E122's and E118's PLAY and INFO then
+   draw `100-0001` and `1` (X: E122's composite, both bodies' OSD records). INFO's detail still draws `0x0`, `0mm` and
+   the date `0001.00.00 00:00` on both: they come from api_play_Get_StillInfo_ExifData (API `0x30089`, E122
+   `0x502e16b2`), which reads the play module's information for the picture, not read (?).
+
 ## Per-body status
 
 The state as of 2026-10-23. Each body's `MODELS` entry (`src/fw/models.mjs`) carries the numbers its `port_via` choice
@@ -1218,6 +1277,10 @@ POWER_ON E120's GUI draws only transparent fills, so its frame is the background
 Since findings 54 to 56 (2026-10-30) E120's TFT and EVF starts reach `0x0108` with the clock warning in the OSD
 records and stop where E118's do, in the movie time's division, and E120's and E122's opens take under 0.4 s of lab
 time where they took 300 s and 500 s.
+Since findings 51 and 52 (2026-10-30) E118's card is native (its card line's request to the sub-CPU answered by
+S-SDSWITCH, its record time's division by S-MOVRATE) and E118 passes modelcheck on the TFT and the EVF, the count
+probe an expected failure (its composite one value), and is in the checked set; E120's card is native too and its
+start stays in POWER_ON. Both bodies' PLAY and INFO draw the picture's `100-0001` since finding 53.
 
 ## The chained port
 
@@ -1253,5 +1316,6 @@ The new OM System PEN (expected as E148) is not on the update server. Lens and a
 Besides E143, E146 and E147, nine bodies pass the player with a picture (the shooting screen in their frame, S1 taken,
 the player settled running): E144, E139, E134, E137, E142, E140, E125, E130 and, after MENU at its date and time
 setting, E145 (finding 22). E133 passes modelcheck since 2026-10-29, E129 and E132 too (finding 24: E129 after MENU,
-E132 after its clock is set at its date and time setting); the E118 family's starts run part way (finding 28). The next
+E132 after its clock is set at its date and time setting); E122 and E118 pass it too (findings 47, 52), E120 stays at
+POWER_ON (finding 46). The next
 steps are in `ROADMAP.md` "Multi-model".

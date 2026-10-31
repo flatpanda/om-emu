@@ -747,13 +747,40 @@ export function vscLevels(img, base) {
 // 0x5076f065, API 0x20146) reports a rec view whenever W is not 1 (its gate 0x5074b283, D), and W starts at 0 (X, the
 // expanded image). The name is held once, loaded once and the chain found on each of E143, E146, E147, E144, E139,
 // E134, E137, E142, E140, E125, E145, E133, E130, E129 and E132, n 1 on all; the E118 family does not hold it (X, a
-// byte scan of each expanded image). Returns {word, standby}, or undefined where the name is not held; throws for a
-// name held or loaded twice, or a chain other than the above.
+// byte scan of each expanded image). There the component is the same code without its traces (E120: the helper
+// 0x50791b40 and its entries 0x507913b3.. in E143's order, the standby entry third, `mov 1,d0` as E143's 0x50c65ff2,
+// D), and the word and value are read by form (recViewByForm): W is the one word whose setter `mov d0,(W); retf` the
+// helpers call (each `mov a0,a2; mov d0,d2; call S; mov d2,d0; mov a2,a0`; two per build, entries 2, 3, 1, 4, 5, 6
+// and 2, 3, 1, 4 after `mov n,d0`, X on all 18), and the standby value is the state the application's rec view gate
+// takes for none, `clr d2; call G; cmp n,d0; beq`, G `mov (W),d0; retf` (E120 0x50654ba2, the first call of
+// getRecViewState's inner function 0x50672f5e, n 1, D; E118's 0x506a7c75 and E122's 0x50696381 take 0 for none as
+// well). On the 15 bodies holding the trace the form gives the trace rule's word, and the gate's value is its n (X;
+// E144 holds a second gate, of 2). Returns {word, standby}, or undefined where neither the name nor the form is
+// held; throws for a name held or loaded twice, a chain other than the above, or a form that is not one word with
+// one gate.
 export const RECVIEW_E143 = { word: 0x6035E9C8, standby: 1 };
 const RECVIEW_TRACE = '[RecView] entryStandby ', RECVIEW_WALK = 8, RECVIEW_STATE = [0x92, 0x82];
+function recViewByForm(img) {
+  const words = new Map();                                    // W -> the helpers' offsets
+  for (const c of callsWhere(img, (t) => img[t] === 0xfc && img[t + 1] === 0x81 && img[t + 6] === 0xde)) {
+    const r = c.at - RECVIEW_STATE.length, e = c.at + c.len;
+    if (!bytesAt(img, r, RECVIEW_STATE) || img[e] !== 0x88 || img[e + 1] !== 0x98) continue;
+    const w = u32(img, c.to + 2);
+    words.set(w, [...(words.get(w) ?? []), r]);
+  }
+  if (!words.size) return undefined;
+  if (words.size !== 1) throw new Error(`recViewByForm: setters of ${[...words.keys()].map(h8).join(', ')} called through 'mov a0,a2; mov d0,d2; call S; mov d2,d0; mov a2,a0', want one word`);
+  const [[word, helpers]] = words;
+  const states = new Set(helpers.flatMap((r) => callsTo(img, r).filter((p) => img[p - 2] === 0x80).map((p) => img[p - 1])));
+  const gates = callsWhere(img, (t) => img[t] === 0xfc && img[t + 1] === 0xa4 && u32(img, t + 2) === word && img[t + 6] === 0xde)
+    .filter((c) => img[c.at - 1] === 0x08 && img[c.at + c.len] === 0xa0 && img[c.at + c.len + 2] === 0xc8);
+  const standby = gates.length === 1 ? img[gates[0].at + gates[0].len + 1] : null;
+  if (standby === null || !states.has(standby)) throw new Error(`recViewByForm: ${gates.length} gates 'clr d2; call G; cmp n,d0; beq' of ${h8(word)}${gates.length === 1 ? ` (n ${standby}, not an entry's state of ${[...states].join(', ')})` : ''}, want one`);
+  return { word, standby };
+}
 export function recViewStandby(img) {
   const { base } = imageBase(img), at = findString(img, RECVIEW_TRACE, { nul: true });
-  if (!at.length) return undefined;
+  if (!at.length) return recViewByForm(img);
   const loads = loadsOf(img, base + at[0]).filter((o) => img[o + 1] === 0xcc);              // mov <name>,d0
   if (at.length > 1 || loads.length !== 1) throw new Error(`recViewStandby: "${RECVIEW_TRACE}" ${at.length} times, loaded ${loads.length} times, want one each`);
   let q = loads[0], traced = false;
@@ -1740,6 +1767,7 @@ export function touchOpen(img) {
   if (at.length !== 1 || entries.length !== 1 || entries[0] === null) throw new Error(`touchOpen: the open's trace name held ${at.length} times, loaded ${loads.length} times, ${entries.filter((e) => e !== null).length} at a function's opening, want one each`);
   return 0x50000000 + entries[0];
 }
+
 
 // Whether the build holds a touch-panel driver (fact 'touch_panel.driver'; src/lab/display.mjs HAS_TOUCH, which hooks
 // the touch I2C functions only on such a build, and src/lab/play.mjs, which runs one without as --touch off): the
@@ -3272,8 +3300,8 @@ export function readPlacedFacts({ img, at }) {
 // banks, kind3}}, {recview: {word, standby}}, {cbs: {NAME: code}}, {mode_dial: {table, names}}, {prop_store: {init,
 // objects}}, {mm_init} and {ctors: [[table, count]]} (no memories, take, GUI task, handlers, task init, timer sleep, face colour, timer,
 // dial, touch, touch_api, shooting, func_direct, boot, dpc, sio, power_off, cbs or prop_store part where its rule reads
-// none; sync null where its rule reads none, E120's, whose display sync form is not read, and recview null
-// where its rule reads none, the E118 family's, which has no RecView trace; the frame wait null where its rule reads none, E120's, which S-FRAMEWAIT then leaves out,
+// none; sync and recview null where their rules read none (none of the 18); the frame wait null where its rule reads
+// none, E120's, which S-FRAMEWAIT then leaves out,
 // src/lab/menu.mjs; mm_init null where its rule reads none, every body but the E118 family's). Throws for a reset_head with no rule here, and where a rule throws.
 export function readFacts({ img, family, resLoad }) {
   const facts = {};

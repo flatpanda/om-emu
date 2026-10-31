@@ -382,7 +382,7 @@ export class CamApp {
       lab.sim.write(LENS_READY, Uint8Array.of(1));
     }
     const rv = fact('recview', RECVIEW_E143);                                       // S-RVSTANDBY
-    if (rv) lab.sim.write(rv.word, pack('<I', rv.standby));                         // (null: no RecView trace, facts.mjs)
+    if (rv) lab.sim.write(rv.word, pack('<I', rv.standby));                         // (null: no rec view word read, facts.mjs)
     // S-DISPFRAME, where the port places DISP_FRAME's start and loop (the E118 family's three cores run no CPU 3 task
     // and the port places only some of them, X; whether and where it draws its AF frames is ?)
     if (DF_FUNCTIONS.every((a) => !isUnmapped(a))) this.dispframe_start();

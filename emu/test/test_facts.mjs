@@ -559,12 +559,16 @@ const GUI_FOUND = {
 };
 // The rec view component's state word and standby value (recview; D: E143 entryStandby 0x50c65ff2 -> 0x50c66a25 ->
 // 0x50ab5fe7, E142 0x508f1cee -> 0x508f2721 -> 0x5074b31c, whose word E142's getRecViewState gate 0x5074b283 reads)
+// and, read by form where the trace is not held, E120's (D: the standby entry 0x507913eb -> 0x50791b40 -> 0x50654c29,
+// the word its gate 0x50654ba2 reads, which takes 1 for none), E118's (0x507e4e41 -> 0x506a7cff, its gate 0x506a7c75)
+// and E122's (0x507d53b9, its gate 0x50696381)
 // The mode dial's code table and the names of its codes (mode_dial; src/fw/facts.mjs modeDial): E143's as the lab gives
 // them (D: the table 0x602243a0 its dial-index reader 0x5014c0de reads, the MODEDIAL_ pairs 0x51a389fb), and E147's, whose
 // table 0x60240b00 holds MY_MODE5 63 where E143's has MOVIE, named by its modedial_to_code table 0x5034c894 (D)
 const MODE_DIAL_FOUND = { E143: MODE_DIAL_E143, E147: { table: 0x60240B00, names: [[1, 'P'], [2, 'A'], [3, 'S'], [4, 'M'], [53, 'MY_MODE1'],
   [54, 'MY_MODE2'], [55, 'MY_MODE3'], [56, 'MY_MODE4'], [62, 'B'], [63, 'MY_MODE5']] } };
-const RECVIEW_FOUND = { E143: { word: 0x6035E9C8, standby: 1 }, E142: { word: 0x61FA73A0, standby: 1 } };
+const RECVIEW_FOUND = { E143: { word: 0x6035E9C8, standby: 1 }, E142: { word: 0x61FA73A0, standby: 1 },
+  E120: { word: 0x615E07A0, standby: 1 }, E118: { word: 0x615DEC74, standby: 1 }, E122: { word: 0x61600A74, standby: 1 } };
 // The property store's module init and its object words (prop_store; src/fw/facts.mjs propStore): E143's (D: the
 // settings init chain 0x503dae30 calls 0x503ee2d6 at 0x503dae75; its pointer stores 0x503ee375..0x503ee39b) and E122's
 // (D: 0x502cf141, its pointer stores from 0x502cf1d3); the rule finds one on each of the 18 unpacked bodies (X)

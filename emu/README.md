@@ -34,7 +34,7 @@ environment does the same; the option wins); `bin/play.mjs`, `bin/nav.mjs` and `
 `--model list` prints each one's code, name, firmware version and whether its firmware is on disk. A body whose port is
 not finished stops during its start or soon after: the status's phase is `error` with the reason, and the page shows
 it (the E118 family's do, since their board's facts are read, 2026-10-30; E122's start reaches its shooting screen
-state, framed on both panels, and runs on with its card native, `docs/model-survey.md` findings 31 and 38 to 42); a body the lab does not load on (one whose board family
+state, framed on both panels, and runs modelcheck's path with its card native, `docs/model-survey.md` findings 31, 38 to 42 and 47); a body the lab does not load on (one whose board family
 leaves a fact the import needs unread, src/fw/board.mjs) is refused at start with the reason, exit 1. The
 page's model menu switches a running server to another body (`POST /api/model`): the session stops as Quit stops it,
 the server restarts on that model at the same URL, and the page reloads. It refuses, with the reason under the menu and

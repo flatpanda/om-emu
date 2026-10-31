@@ -54,9 +54,9 @@ through a reference place more; "Per-body status" has their figures).
 | E130 | E-M10 III | 1200 | 25.0 | 0x60400020 (6.9%) | plain | 1.02M | 82 | through E142: modelcheck passes (TFT and EVF; findings 11, 14 and 16) |
 | E129 | TG-5 | 1101 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; MENU answers its date and time setting at the start) since the charger's transfers on serial channel 9 are served (S-SIOIIC, S-CHARGER, finding 24); its settings store since S-BOOTSTAGE (finding 20) |
 | E132 | TG-5 (KOUICHIRO) | 1300 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; its date and time setting has no Cancel, the clock is set) since the charger's transfers are served and S-MODACK answers its industrial category and logger modules (finding 24); its deferred send since finding 21 |
-| E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | through E122: the start runs natively past UI_IN and stops at the lab's `g4set`, which E122's entry gives and E118's not; the EVF faults earlier (findings 28, 32-34, 37) |
-| E122 | PEN-F | 3101 | 20.4 | 0x60021020 (7.2%) | plain | 0.79M | 123 | through E130: the start runs natively to the shooting screen state `0x0108` (the GUI draws the clock warning; the composite is one colour) and stops at the first long timer or S1 in the movie time; the EVF after the application's start on a full queue (findings 28, 31, 35-37) |
-| E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | through E122: as E118 on the TFT and the EVF (its EVF stops at `g4set` too), no per-frame wait in its device open (findings 28, 32-34, 37) |
+| E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | through E122: the start runs natively to the shooting screen state `0x0108` on the TFT and the EVF (the composite one colour) and stops in the movie time, its card not native (findings 28, 32-34, 37, 43-45, 47) |
+| E122 | PEN-F | 3101 | 20.4 | 0x60021020 (7.2%) | plain | 0.79M | 123 | through E130: `bin/modelcheck.mjs` passes on the TFT and the EVF with its card native, the frames composed (the count probe an expected failure; findings 28, 31, 35-42, 47) |
+| E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | through E122: the start runs the application and the GUI natively and stays in POWER_ON `0x0102` on the TFT and the EVF (findings 28, 32-34, 37, 43, 46, 47) |
 | E113 | E-M10 | 1400 | 18.0 | 0x7d991020 (7.4%) | plain | 0.88M | 155 | not tried (base) |
 | E109 | E-M1 | 4600 | 17.0 | 0x6daf1020 (7.2%) | plain | 0.76M | 139 | not tried (base) |
 | E126 | E-PL8 | 1100 | 18.0 | 0x7d971020 (8.2%) | plain | 0.74M | 140 | not tried (base) |
@@ -804,10 +804,10 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    and EVF starts then reach the GUI state `0x0108` SS_COMMON/ID_ST_CA_REQ_DISP (X), at 0.2 s of lab time, with E122's
    events (POWER_ON `0x9601`, `0x9b01`, the application's `0xf001`), and the OSD engine draws the clock warning (a
    clock and Y/M/D) into OSD layer 2's records on both, the EVF's centred for its 640-wide canvas, and fills layer 1's
-   640 x 480 area on the EVF (X: the records read back as images). The composite is one value (finding 36's open,
-   track e122-frame). At the first long timer (about 2.2 s) the start stops on both devices where E122's does,
+   640 x 480 area on the EVF (X: the records read back as images). The composite is one value (finding 36's open;
+   since findings 38 and 39 the display sync's, finding 47). At the first long timer (about 2.2 s) the start stops on both devices where E122's does,
    in the movie time's division by the movie module's object word (`0x5055ee88`, E122's `0x5056f5c6` code; the object
-   pointer `0x6189b858` is 0, X): track e122-card-movie's stop. S1 was not tried past it.
+   pointer `0x6189b858` is 0, X), the file system's volume object, which finding 41 brings up on E122. S1 was not tried past it.
 
 46. **E120 (E-M10 II) at POWER_ON** (2026-10-30). With findings 43 to 45 E120's TFT start runs the application and the
    GUI natively and stays in `0x0102` POWER_ON (X: 4 s of lab time, the OSD records only filled, the frame one value).
@@ -822,7 +822,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    bit, switch states); E118 also asks the touch panel for its swivel (`Set_Touch_Panel_Swivel`, a synchronous send to
    TOUCHPANEL 156, cmd 10, which S-MODACK's fallback returns), which E120's tilting monitor has no counterpart of.
    E120's EVF start stops on E122's EVF stop, `tsnd_dtq` with timeout -1 to the full queue 156 (from `0x500484bb`;
-   queue 156 is TOUCHPANEL, the touch task's, which the lab does not start on the family: track e122-frame's stop).
+   queue 156 is TOUCHPANEL, the touch task's, which the lab does not start on the family; finding 40).
    Also measured: E120's device open waits in a loop of its own (`0x502d9b0c`: a 2 ms sleep until the word
    `0x61879784` is 1, with a timeout, 28 ms per call from the open's command list at `0x502d01c5`) for a callback
    (`0x502da12c`) that the pin driver's attach registers for GIO pin 30 (`0x502d99cf` -> `0x500647ed`, the attach
@@ -830,9 +830,23 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    the touch task's flag word `0x60040f52`, D). The lab raises no pin interrupt: the callback never runs (X, 0 hits in
    2 s after the bring-up), every wait times out, and the TFT open takes 300 s of lab time, the EVF's 500 s (X; E122's
    TFT open takes 300 s as well, E118's well under one). With the wait answered at once (exploration, not landed) the
-   TFT open takes 0.19 s and the start still stays at POWER_ON (X), so it is not the stop's cause. Frames: E118's OSD
-   records (`e118tft-rec4-kind2.png`, `e118evf-rec4-kind2.png`, `e118evf-rec2-kind1.png` in the track's scratch), no
-   composite yet on any of the three.
+   TFT open takes 0.19 s and the start still stays at POWER_ON (X), so it is not the stop's cause.
+
+47. **The E118 family with findings 38 to 46 together** (2026-10-30; X: a play session per body and device to 5 s of
+   lab time after the start, the composite read back, and `bin/modelcheck.mjs`). E122 (PEN-F) runs without a stop on
+   both panels and its composites show the shooting screen in the firmware's palette (P, 1250, -.-, +2.7 and the
+   exposure scale, ISO-A 200, S-AF, the movie mode FHD 60p, 00:37:19 and 1470 from the card; 19 values on the
+   720 x 480 TFT, 11 on the 1024 x 768 EVF); its device opens still take 300 s and 500 s of lab time (finding 46's pin
+   wait). `bin/modelcheck.mjs E122` passes the path on the TFT (start, S1, S2, PLAY `0x0608`, INFO `0x060b`, PLAY back
+   to `0x0108`) and the EVF (start, S1, S2), the card formatted FAT32 and counting 1470 shots on the 8 GiB card, exFAT
+   and 9999 at 64 GiB, S2's picture read back by `refs/volume.mjs` on both. Only the count probe fails, for finding
+   42's cause (the application asks for the count at its start and after the first S1 only): E122 is in modelcheck's
+   checked set, the probe in its PROBE_XFAIL, strictly, so a probe that passes fails the run. E118 (E-M5 II) reaches
+   `0x0108` on both panels and stops at about 5 s of lab time in the movie time's division (`0x5055ee88`, Fault 6,
+   finding 45), its composite one value: its GUI's updates wait in its display sync, whose form the rule does not
+   read (finding 39). With its card's file system native (exploration, not landed) its start ends in more than
+   2,000,000 stand-in calls (which stand-in, ?), so its card stays out. E120 (E-M10 II) stays in POWER_ON `0x0102` on
+   the TFT and, past queue 156 since finding 40, on the EVF (finding 46), its composite one value.
 
 ## Per-body status
 
@@ -1097,7 +1111,8 @@ Since findings 43 to 45 (2026-10-30) E118's TFT and EVF starts reach the shootin
 warning in the OSD records and stop at about 2.2 s in E122's movie-time division; E120's TFT start stays in POWER_ON
 (finding 46, ?) and its EVF start stops on E122's EVF stop, the full TOUCHPANEL queue 156.
 Since findings 41 and 42 (2026-10-30) E122's card is native and its TFT runs modelcheck's path but for the count
-probe (no composite yet).
+probe; with findings 38 to 46 together E122 passes modelcheck on the TFT and the EVF, the count probe an expected
+failure, and is in its checked set, E118 stops in the movie time and E120 stays in POWER_ON on both panels (finding 47).
 
 ## The chained port
 

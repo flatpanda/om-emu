@@ -295,7 +295,7 @@ export class Storage {
     for (let i = 0; i < text.length; i++) b[i] = text.charCodeAt(i);
     return this.lab.alloc(b, 4);
   }
-  // S-RECFILE: the picture's bytes to its DCF file; returns {path, size}
+  // S-RECFILE: the picture's bytes to its DCF file; returns {path, size, folder, number}
   write_picture(bytes) {
     const { fileif: c, names: n } = this.f, lab = this.lab;
     if (this.next_file === null || this.next_file > 9999) throw new StorageError(`S-RECFILE: no DCF file number (${this.next_file})`);
@@ -311,8 +311,8 @@ export class Storage {
     }
     const rc = this.fileif(c.close, [fp], 'fclose');
     if (rc !== 0) throw new StorageError(`S-RECFILE: fclose(${path}) = ${rc}`);
+    const file = { path, size: bytes.length, folder: this.dcf.folder, number: this.next_file };
     this.next_file += 1;
-    const file = { path, size: bytes.length };
     this.files.push(file);
     return file;
   }

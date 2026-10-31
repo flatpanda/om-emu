@@ -117,7 +117,8 @@ import { DISPLAY_SYNC_E143, RECVIEW_E143, CBS_E143, LENS_ZOOM_TABLE_E143, CARD_D
 //              info's frame rate without a test: while that rate, the movie module's set-up's, is 0 it returns its
 //              error for no struct (see the hook)
 //   S-PLAYSEQ  the play module's notifications of the HLS play requests (see RSB_EXECUTE); S-PLAYCOMP answers for the
-//              play component the HLS components would create (PLAY_COMPONENT); S-PLAYVIEW (play.mjs) shows the image
+//              play component the HLS components would create (PLAY_COMPONENT); S-PLAYVIEW (play.mjs) shows the image;
+//              the synchronous getNumber (5) is answered from the image shown where PlyCom asks no component
 //   S-LENS     (unless the lens runs natively, the default on E143, E146 and E147: src/lab/lens.mjs and S-LENSMCU,
 //              docs/hle-gaps.md 4.4.2, 4.4.3; OM_EMU_LENS=stand-in takes S-LENS there) a lens on the mount, the M.Zuiko 12-40mm F2.8 PRO: lens 0's attach
 //              flag (0xa32d4b9a, read by 0x50126a20) and its data-valid flag (0xa32d4b98, 0x50126a08) are 1, so getLensConnection (0x504106f8) answers 1 and
@@ -215,7 +216,7 @@ const IMAGE_COUNT = A(0x503FEEA4), IMAGE_TYPE = 1, CARD_FOLDER = 100;
 // turn them into EVT_GUI_END_PLAY_SINGLE_READY (0x5123bd97) and EVT_GUI_END_PLAY_SINGLE_DISPLAY (0x5123bdd2). A
 // synchronous request's id is set at 0x50ad4166 (OlyHfwOpePlyComSyncRsb): 1 is endPlayService (0x50acf764).
 const RSB_EXECUTE = A(0x50AD26FB), RSB_REQUEST = 236, SYNC_REQUEST = A(0x50AD4166), NOTIFY_DONE = 2;
-const PLAY_START = 0, PLAY_SINGLE_FRAME = 8, PLAY_MOVE = 9, SYNC_PLAY_END = 1, SYNC_CAN_MOVE = 344;
+const PLAY_START = 0, PLAY_SINGLE_FRAME = 8, PLAY_MOVE = 9, SYNC_PLAY_END = 1, SYNC_GET_NUMBER = 5, SYNC_CAN_MOVE = 344;
 const SYNC_RESPONSE = A(0x60360C88), SYNC_RESPONSE_GET = A(0x50AD46B4), RSB_RESULT = A(0x60360C64);
 const MOVE_LEFT = 3, MOVE_RIGHT = 4, MOVE_RESULT = 1;
 // The single move's state (u16; set to 1 by moveCurrent through the hook 0x50ce4c65 registered at 0x50ce46f6; the next
@@ -751,10 +752,18 @@ export class CamApp {
   // (kind 1: its data copied into the waiting result's buffer, *(*RSB_RESULT + 8), 0x50ad3d95), written as the notify
   // would write them. canMoveCurrent (sync 344, direction u16 at +0 of its parameters): +8 1 (it can: the images
   // wrap around, I), +16 0 (no page change); moveCurrent (9, direction u16 at +16 of the request: 3 left, 4 right):
-  // the move result at +4 of the data (MOVE_RESULT, I), and the image shown moves.
+  // the move result at +4 of the data (MOVE_RESULT, I), and the image shown moves. getNumber (sync 5), which
+  // OlyHfwOpePlyCom::getNumber sends where it asks no play component (E143 with its mode word at 3, the E118 family
+  // always, D; the addresses in docs/model-survey.md finding 53): +4 the image's index, +8 its file number, +10 its
+  // folder (u16), as both read them back (D); the index counts from 1 as the component's getNumber does (I).
   play_answer(p) {
     const lab = this.s.lab, n = this.images.length;
-    if (p.sync === SYNC_CAN_MOVE) {
+    if (p.sync === SYNC_GET_NUMBER) {
+      const res = lab.sim.u32(SYNC_RESPONSE) >>> 0, img = this.play_cur === null ? null : this.images[this.play_cur];
+      if (!res) throw new FirmwareError('S-PLAYSEQ: getNumber before the response block exists');
+      lab.sim.write(res + 4, pack('<IHH', img ? this.play_cur + 1 : 0, img ? img.number : 0, img ? img.folder : 0));
+      this.log.push(['play', `getNumber: ${img ? `image ${this.play_cur + 1}, ${img.folder}-${String(img.number).padStart(4, '0')}` : 'no image'}`]);
+    } else if (p.sync === SYNC_CAN_MOVE) {
       const res = lab.sim.u32(SYNC_RESPONSE) >>> 0;
       if (!res) throw new FirmwareError('S-PLAYSEQ: canMoveCurrent before the response block exists');
       lab.sim.write(res + 8, pack('<III', n > 1 ? 1 : 0, 0, 0));
@@ -777,7 +786,7 @@ export class CamApp {
     const lab = this.s.lab, img = this.play_cur === null ? null : this.images[this.play_cur];
     const put = (at, fmt, ...v) => lab.sim.write(at >>> 0, pack(fmt, ...v));
     if (name === 'getNumber') {                    // a1 index, d0 file number, d1 folder (0x50acf1a8 -> 0x50c4680f)
-      put(r.a1, '<I', img ? this.play_cur + 1 : 0); put(r.d0, '<I', img ? img.number : 0); put(r.d1, '<I', img ? CARD_FOLDER : 0);
+      put(r.a1, '<I', img ? this.play_cur + 1 : 0); put(r.d0, '<I', img ? img.number : 0); put(r.d1, '<I', img ? img.folder : 0);
     } else if (name === 'getStillInfo' && img) {   // a1 the struct (the component's vt+240)
       const cap = this.views.get(img.release)?.capture ?? null, info = r.a1 >>> 0;
       const t = cap ? cap.shutter_s : DEFAULT_SHUTTER_S;
@@ -878,13 +887,14 @@ export class CamApp {
       if (name === 'END_SHOOTING_PICTURE' && s.storage && !s.storage.mounted) {      // S-CARD: no card mounted
         this.log.push(['card', 'no card mounted: no image, no file']);
       } else if (name === 'END_SHOOTING_PICTURE') {                                   // S-CARD
-        const img = { number: this.images.length + 1, release: this.release };
+        const img = { folder: CARD_FOLDER, number: this.images.length + 1, release: this.release };
         this.images.push(img);
-        this.log.push(['card', `image ${CARD_FOLDER}-${String(img.number).padStart(4, '0')} saved`]);
         if (s.storage) {                                                               // S-RECFILE (storage.mjs)
           img.file = s.storage.write_picture(jpegOfFrame(s.picture_frame(this.views.get(img.release) ?? null)));
-          this.log.push(['card', `file ${img.file.path}, ${img.file.size} bytes`]);
+          img.folder = img.file.folder; img.number = img.file.number;                 // its DCF name's numbers
         }
+        this.log.push(['card', `image ${img.folder}-${String(img.number).padStart(4, '0')} saved`]);
+        if (img.file) this.log.push(['card', `file ${img.file.path}, ${img.file.size} bytes`]);
       }
     }
   }

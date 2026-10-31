@@ -1768,6 +1768,40 @@ export function touchOpen(img) {
   return 0x50000000 + entries[0];
 }
 
+// The touch panel controller's interrupt wait (fact 'touch_int', src/lab/menu.mjs S-TPINTWAIT): the touch driver
+// waits for the controller's INT, GIO pin 30, with a function of its own: `mov d1,d2; clr d1; mov d1,(4,sp); cmp 1,d0;
+// bne; mov d1,(W)` (d0 1 clears the word first), then 2 ms sleeps until `mov (W),d1; cmp 1,d1; beq` finds W 1 or d1
+// ms have passed on the us clock, and returns 1 on the timeout (E120 0x502d9b0c, W 0x61879784, the poll 0x502d9b4c;
+// E122 0x5030c426, W 0x6189f508, D). The pin's callback, which the driver's set-up attaches to pin 30 (E120 0x502d99a2:
+// the GIO class-0 set-up and attach 0x500647b6 / 0x500647ed, the callback 0x502da12c), stores 1 in W while the
+// driver waits for the INT, and otherwise sets bit 1 of the touch task's flag (D). Its one caller logging the
+// timeout, "TP INT TIME OUT\n", is the end of the device open's command list (`call wait; exthu d0; cmp 0,d0; beq;
+// mov <name>,a0`, a 150 ms wait: E120 0x502d0296, E122 0x50302930, D). The name is held once by E118, E120, E122,
+// E134, E137, E125, E133 and E130, by none of the other 10 (X, a string count over each expanded image); E118 loads
+// it after a wait of another form, inline in its touch driver's command list (0x502e3fe3..0x502e400c, D), the five
+// others after no such call (X), and the rule reads none on them. Returns {wait,
+// poll, word} (the functions' offsets in disassembly notation, W at run time), or undefined where the name is not held
+// or not loaded after such a call; throws for a name held twice or a callee of another form.
+const TP_INT_TRACE = 'TP INT TIME OUT\n', TP_INT_SPAN = 0x60;
+const TP_INT_OPENING = [0x86, 0x04, 0x46, 0x04, 0xa0, 0x01, 0xc9, 0x08, 0xfc, 0x85];     // ... mov d1,(W)
+export function touchIntWait(img) {
+  const { base } = imageBase(img), at = findString(img, TP_INT_TRACE, { nul: true });
+  if (!at.length) return undefined;
+  if (at.length > 1) throw new Error(`touchIntWait: "TP INT TIME OUT" held ${at.length} times, want one`);
+  // mov <name>,a0 right after `call wait (d32); exthu d0; cmp 0,d0; beq`
+  const sites = loadsOf(img, base + at[0]).filter((o) => img[o + 1] === 0xdc && img[o - 12] === 0xdd
+    && bytesAt(img, o - 5, [0x1c, 0xa0, 0x00, 0xc8]));
+  if (sites.length !== 1) return undefined;
+  const w = callAt(img, sites[0] - 12).to, word = u32(img, w + TP_INT_OPENING.length);
+  let poll = -1;
+  if (bytesAt(img, w, TP_INT_OPENING)) {
+    for (let p = w; p < w + TP_INT_SPAN; p += insnLength(img[p], img[p + 1])) {
+      if (img[p] === 0xfc && img[p + 1] === 0xa5 && u32(img, p + 2) === word && bytesAt(img, p + 6, [0xa5, 0x01, 0xc8])) { poll = p; break; }
+    }
+  }
+  if (poll < 0) throw new Error(`touchIntWait: the timeout's wait ${h8(0x50000000 + w)} is not 'mov d1,d2; clr d1; mov d1,(4,sp); cmp 1,d0; bne; mov d1,(W)' with a poll 'mov (W),d1; cmp 1,d1; beq' within 0x${TP_INT_SPAN.toString(16)} bytes`);
+  return { wait: 0x50000000 + w, poll: 0x50000000 + poll, word };
+}
 
 // Whether the build holds a touch-panel driver (fact 'touch_panel.driver'; src/lab/display.mjs HAS_TOUCH, which hooks
 // the touch I2C functions only on such a build, and src/lab/play.mjs, which runs one without as --touch off): the
@@ -3295,13 +3329,14 @@ export function readPlacedFacts({ img, at }) {
 // {menu: {list_menu, tab_memory, page_memory, take, caller, task}}, {kernel: {cpus, handlers}}, {errlog: {entry}}, {scpu: {backup}}, {display:
 // {change_task, change_entry, queue_word, queue_id, task_init, frame_wait, timer_sleep, sync, face_colour}}, {timer:
 // {reload_less_one}}, {dial: {select, select_end, table_ptr, table0}}, {touch_panel: {driver}}, {lens: {mount}}, {iic:
-// {waits}}, {touch: {i2c_write, i2c_read}}, {touch_api: {open}}, {shooting: {start, end, auto_through}}, {func_direct:
+// {waits}}, {touch: {i2c_write, i2c_read}}, {touch_api: {open}}, {touch_int: {wait, poll, word}}, {shooting: {start, end, auto_through}}, {func_direct:
 // {run, id}}, {broker: {init}}, {card: {shots_query, detect}}, {boot: {key, stage}}, {dpc: {init}} (with board.dpc), {sio: {tx_start, rx_start, done, dispatch, restart, channels}}, {storage: {init, tasks, fileclbk, nand, command, album_init, status, cflush, names}}, {power_off: {usb_disconnect}}, {gui: {stride, height,
 // banks, kind3}}, {recview: {word, standby}}, {cbs: {NAME: code}}, {mode_dial: {table, names}}, {prop_store: {init,
 // objects}}, {mm_init} and {ctors: [[table, count]]} (no memories, take, GUI task, handlers, task init, timer sleep, face colour, timer,
 // dial, touch, touch_api, shooting, func_direct, boot, dpc, sio, power_off, cbs or prop_store part where its rule reads
-// none; sync and recview null where their rules read none (none of the 18); the frame wait null where its rule reads
-// none, E120's, which S-FRAMEWAIT then leaves out,
+// none; sync and recview null where their rules read none (none of the 18); touch_int null where its rule reads
+// none, every body but E120 and E122; the frame wait null where its rule reads none, E120's, which S-FRAMEWAIT then
+// leaves out,
 // src/lab/menu.mjs; mm_init null where its rule reads none, every body but the E118 family's). Throws for a reset_head with no rule here, and where a rule throws.
 export function readFacts({ img, family, resLoad }) {
   const facts = {};
@@ -3360,6 +3395,7 @@ export function readFacts({ img, family, resLoad }) {
   facts.board.dram_size = dramSize(facts.gui);
   const recview = recViewStandby(img);
   facts.recview = recview ?? null;
+  facts.touch_int = touchIntWait(img) ?? null;
   const cbs = cbsIds(img);
   if (cbs !== undefined) facts.cbs = cbs;
   facts.mode_dial = modeDial(img);

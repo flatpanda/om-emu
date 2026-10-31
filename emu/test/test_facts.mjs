@@ -569,6 +569,11 @@ const MODE_DIAL_FOUND = { E143: MODE_DIAL_E143, E147: { table: 0x60240B00, names
   [54, 'MY_MODE2'], [55, 'MY_MODE3'], [56, 'MY_MODE4'], [62, 'B'], [63, 'MY_MODE5']] } };
 const RECVIEW_FOUND = { E143: { word: 0x6035E9C8, standby: 1 }, E142: { word: 0x61FA73A0, standby: 1 },
   E120: { word: 0x615E07A0, standby: 1 }, E118: { word: 0x615DEC74, standby: 1 }, E122: { word: 0x61600A74, standby: 1 } };
+// The touch controller's INT wait (touch_int; src/fw/facts.mjs touchIntWait): E120's and E122's (D: the waits
+// 0x502d9b0c and 0x5030c426, called before the "TP INT TIME OUT" trace at 0x502d0296 and 0x50302930, their polls of
+// the word the pin-30 callback 0x502da12c / its E122 counterpart sets); none on E118 (its wait is inline, D) and E143
+const TOUCH_INT_FOUND = { E120: { wait: 0x502D9B0C, poll: 0x502D9B4C, word: 0x61879784 },
+  E122: { wait: 0x5030C426, poll: 0x5030C466, word: 0x6189F508 }, E118: null, E143: null };
 // The property store's module init and its object words (prop_store; src/fw/facts.mjs propStore): E143's (D: the
 // settings init chain 0x503dae30 calls 0x503ee2d6 at 0x503dae75; its pointer stores 0x503ee375..0x503ee39b) and E122's
 // (D: 0x502cf141, its pointer stores from 0x502cf1d3); the rule finds one on each of the 18 unpacked bodies (X)
@@ -611,7 +616,7 @@ const E143_FACTS = {
   touch_panel: { driver: true }, lens: { mount: true }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
   broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] } },
-  boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, mm_init: null, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143,
+  boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, mm_init: null, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143, touch_int: null,
   cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143, prop_store: PROP_STORE_FOUND.E143, ctors: CTORS_E143,
 };
 
@@ -817,6 +822,7 @@ export function factsTests() {
     if (placed?.store?.db_save !== undefined && PORTS[code]) ok(PORTS[code][0x503C5537] === placed.store.db_save, `${code}: A() of the DB init's flash save return ${hx(PORTS[code][0x503C5537])}, the rule's ${hx(placed.store.db_save)}`);
     if (TOUCH_ARGS_FOUND[code] && (code === 'E143' || PORTS[code])) ok(same(placed?.touch_args, TOUCH_ARGS_FOUND[code]), `${code}: touch_args ${hx(placed?.touch_args ?? placed)}, found ${hx(TOUCH_ARGS_FOUND[code])}`);
     if (GUI_FOUND[code]) ok(same(got.gui, GUI_FOUND[code]), `${code}: gui ${hx(got.gui ?? got)}, found ${hx(GUI_FOUND[code])}`);
+    if (Object.hasOwn(TOUCH_INT_FOUND, code)) ok(same(got.touch_int, TOUCH_INT_FOUND[code]), `${code}: touch_int ${hx(got.touch_int ?? got)}, found ${hx(TOUCH_INT_FOUND[code] ?? 'none')}`);
     if (RECVIEW_FOUND[code]) ok(same(got.recview, RECVIEW_FOUND[code]), `${code}: recview ${hx(got.recview ?? got)}, found ${hx(RECVIEW_FOUND[code])}`);
     for (const [k, v] of Object.entries(BOOT_FOUND[code] ?? {})) ok(got.boot?.[k] === v, `${code}: boot.${k} ${hx(got.boot ?? got)}, found ${hx(v)}`);
     const dpcf = DPC_FOUND[code];

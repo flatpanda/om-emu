@@ -346,6 +346,21 @@ export class MenuLab extends T.TextDisplayLab {
       else if (name === 'OlyTaSS') this.wrap(address, (stub) => scoped(name, stub, () => this.in_display_run() || this.lab_task_call()), name + '(scoped)');
       else this.observe(address, (lab, r) => lab._native_call(name, r), name + '(native)');
     }
+    // S-TPINTWAIT (the E118 family's touch driver, src/fw/facts.mjs touchIntWait): the touch panel controller's INT, GIO
+    // pin 30, which the lab does not model (no controller, no GIO interrupt on the family's board). The driver waits for
+    // it in 2 ms sleeps until a word is 1, which the pin's callback stores while the driver waits, with a timeout on the
+    // us clock; the device open's command list ends in such a wait (150 ms, "TP INT TIME OUT" on the timeout). Without
+    // the INT every wait ran to its timeout, and since the us clock counts CPU reads until the play bring-up (H-USCOUNT)
+    // the 150 ms took 300 s of lab time (E120's and E122's TFT opens, X). At the wait's poll the lab stores 1 in the word
+    // as the callback would: the INT comes within the wait's first sleep (I: how long the controller takes is ?)
+    const tpInt = fact('touch_int', null) ?? null;                // (fact() gives a read null as undefined)
+    this.tp_ints = 0;
+    if (tpInt !== null) this.observe(tpInt.poll, (lab) => {
+      if (lab.sim.u32(tpInt.word) === 1) return;
+      lab.sim.write(tpInt.word, pack('<I', 1));
+      lab.tp_ints += 1;
+      lab.route_log.add(['touch INT wait', 'S-TPINTWAIT']);
+    }, 'S-TPINTWAIT');
     // S-TIMERSLEEP (a later model): the display code's sleep on the software timer (src/fw/facts.mjs timerSleep), d0
     // ms (I) on a one-shot timer slot whose callback sets the flag it then waits for without timeout. Outside time
     // mode the lab's software timer does not run (H-TIMER leaves its tick's hardware unprogrammed; E134's TFT open

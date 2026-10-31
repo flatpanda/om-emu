@@ -382,6 +382,16 @@ A bitmap of format 1 (2026-10-29) is a stream of 4-bit tokens, low nibble first,
 
 **Confidence:** medium
 
+### 7.10 The touch controller's INT on the E118 family (S-TPINTWAIT)
+
+**Where:** `emu/src/lab/menu.mjs` (`route_rtos`), `emu/src/fw/facts.mjs` (`touchIntWait`, with the evidence)
+
+**Emulator:** E120's and E122's touch drivers wait for the touch panel controller's INT, GIO pin 30, in 2 ms sleeps until a word is 1, which the pin's callback stores while the driver waits; the device open's command list ends in such a wait of 150 ms. The lab models neither the controller nor a GIO interrupt on the family's board: at the wait's poll it stores 1 in the word, as the callback would, so each wait returns after its first sleep.
+
+**Expected / concern:** On the camera the INT comes when the controller is ready; how long that takes is not known, so the open's time is the lab's (about 0.2 s on the TFT, 0.3 to 0.4 s on the EVF). Without the stand-in every wait ran to its timeout, and since the us clock counts CPU reads until the play bring-up (H-USCOUNT, A-USLAB from then on) the 150 ms took 300 s of lab time. The callback's other branch (the touch task's flag, a touch's data ready) is never taken: the lab raises no touch.
+
+**Confidence:** medium
+
 ## 8. What the tests establish
 
 ### 8.1 Above the ISA, the tests are emu's own regression data

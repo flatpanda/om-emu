@@ -894,15 +894,15 @@ export const MODELS = {
     ],
   },
   E120: {
-    name: 'E-M10 II', bin: 'OLY_E_120_1400_0000_0000.BIN', version: '1.4', res_block: 'blk01460000.OE.0101.bin',
+    name: 'E-M10 II', bin: 'OLY_E_120_1400_0000_0000.BIN', version: '1.4', res_block: 'blk01460000.OE.0101.bin', checked: true,
     rom_len: 21364672, rom_sha256: '309682c05a96d3079ebcae598169d487fea7f8b2531d8ae99445d63e80ea7a39',
     // the reset head's jump into the run-time copy at 0x500000d1: mov 0x60021114,a0; jmp (a0) (D)
     image_base: 0x60021020,
     res_len: 18415584, res_sha256: 'f12ebf2598496f11bfdecff105f933a9f60c2cfff6a479258e9c6c34cb9236f0',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
-    // the card native since 2026-10-30 (docs/model-survey.md finding 50): the play bring-up mounts it before the start
-    // stays at POWER_ON, the blank 8 GiB card formatted FAT32 and DCF folder 100, file 1 (X: a play session per device)
+    // the card native since 2026-10-30 (docs/model-survey.md finding 50): the play bring-up mounts it, the blank 8 GiB
+    // card formatted FAT32 and DCF folder 100, file 1 (X: a play session per device, and modelcheck's path, finding 56)
     card_fs: { native: true },
     board: { family: 'E118' },
     // through E122 (port_via): the family's reference, whose overrides it takes over (the evidence at E122's entry)

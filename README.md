@@ -35,7 +35,7 @@ Other bodies, through ports (as of 2026-10-21):
 | TG-7 | E145 | the start ends in POWER_ON with a one-colour frame |
 | E-PL9, TG-5 | E133, E129, E132 | the start runs part way, then every task waits |
 | PEN-F | E122 | start, S1, S2, playback on the TFT and the built-in EVF with the card's file system native (`emu/bin/modelcheck.mjs` passes; the firmware formats and mounts the card, counts 1470 shots from it and writes S2's picture to it); the frames show the shooting screen the GUI draws, in its own palette; the count probe is an expected failure, as the application asks for the count only on events (2026-10-30) |
-| E-M5 II, E-M10 II | E118, E120 | E-M5 II: the start runs natively to its camera application's shooting screen state on the TFT and the EVF (the GUI draws the clock warning into its OSD layers; the composite is still one colour, its display sync's form unread) and stops at about 5 s in the movie time, its card's file system not yet native; E-M10 II: the start runs the application and the GUI natively and stays at the power-on state on the TFT and the EVF (2026-10-30) |
+| E-M5 II, E-M10 II | E118, E120 | E-M5 II: the start runs natively to its camera application's shooting screen state on the TFT and the EVF (its frames show the clock warning on both panels) and stops at about 5 s in the movie time, its card's file system not yet native; E-M10 II: the start runs the application and the GUI natively and stays at the power-on state on the TFT and the EVF, where its GUI draws nothing visible (2026-10-30) |
 | 14 older bodies (E-PL5, E-M1, E-M10, TG-4, E-PL8 and others) | E100-E126 | surveyed, not tried |
 
 [docs/model-survey.md](docs/model-survey.md) has the evidence per body; [docs/ROADMAP.md](docs/ROADMAP.md) has the

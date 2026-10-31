@@ -504,13 +504,20 @@ notation) was found to share and not share with kind 2 (2026-10-30, `docs/model-
   through the display sync module's manager blocks (`0x50483cda`; the commit's call at `0x50303d6f` when one executes,
   X), immediately for sync type 1 and, for type 3, only with an image request or a release
   (`docs/model-survey.md` finding 39; the lab's S-DISPSYNC sends the image sync of kind 0, which commits a pending OSD).
+  E118's commit `0x502e2174` and E120's `0x502d72a7` are the same function; their GUIs reach it through a display sync
+  module of another form (findings 48 and 49: E118's API with no id on its image sync, E120's taking records), which
+  the same release commits (2026-10-30).
 - **Formats:** `0x1b0` = `0x111` and `0x1b4` = `0x11` at every open (`0x503097fb..0x50309845`), E143's OSDFMT1 and
   OSDFMT2 values, where kind 2 keeps its mix word `0x111111` at `0x1b0`; `0x1a4` = 3, `0x1a8` = `0x1100710` (but for
   code 4), `0x1ac` = `0x10f` are written too; their meanings are ? and the compositor does not read them.
 - **Level:** OSD7..OSD9 (`0x2e0..0x2e8`) = `2 floor(p 128 / 100)` for p percent (`0x502f9408..0x502f9427`): E143's
   PLANC form, `0x100` at 100 %; the built-in EVF's 70 % gives `0xb2`, E144's EVF has `0xcc` (X). The compositor draws
   any level but 0 as full on both kinds; E143's refuses a PLANC other than `0x100` (section 3), and what a lower level
-  does is ? on all three.
+  does is ? on all three. E118's code names no level word (its open `0x502e1b48` stores none and no word of its image
+  holds the three addresses, X; E120's sets them as E122's, `0x502d6c9c`): the rule `vscLevels` reads this per body
+  (`board.vsc.levels`), and on a body whose code names none the compositor draws each plane at the full level with the
+  plane's bit in the header's ASSUMED word and a note (what the chip does with its unwritten level word is ?;
+  finding 48, 2026-10-30).
 - **Pixel index:** OSD3's low 7 bits (I, as kind 2: layer 2's fill 255 takes entry 127, transparent, X); OSD1 and
   OSD2 index 32 entries, and a pixel of 32 or more is refused (PAL_FIELD, not drawn): no code read says what the chip
   does with it (?).

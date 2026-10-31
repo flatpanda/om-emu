@@ -2477,7 +2477,11 @@ Corrections to earlier readings, each now owned here or by the document named.
     The kind-3 VSC's planes take the GUI's layers in reverse (OSD1 layer 0, OSD3 layer 2) with their palettes, the
     128-entry banks by bit 4 of `0x1b8`. The touch task's queue takes asynchronous sends from the display opens, which
     its one slot holds, and from the application, which S-TPSEND serves while the lab runs no touch task (E122's panel
-    is not modelled).
+    is not modelled). E118 and E120 (findings 48 and 49, 2026-10-30) have another display sync module, a state byte
+    per device (`0x5046b691`; E120's force path `0x5044737e`), whose asynchronous OSD update waits in state 2 for the
+    same release (code 18, kind 0); E118's image sync is named by its trace only, E120's API takes records
+    (`api_disp_Disp_Sync_Update_Osd_Multi_Ext`, `api_disp_Disp_Sync_Force_Update_Multi_Ext`), both read by
+    `displaySync`. E118's code names no OSD level word (`vscLevels`), and its planes are drawn at the full level (?).
 
 ## 10. Open questions
 

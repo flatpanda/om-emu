@@ -847,6 +847,52 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    read (finding 39). With its card's file system native (exploration, not landed) its start ends in more than
    2,000,000 stand-in calls (which stand-in, ?), so its card stays out. E120 (E-M10 II) stays in POWER_ON `0x0102` on
    the TFT and, past queue 156 since finding 40, on the EVF (finding 46), its composite one value.
+48. **E118's display sync and its planes without level words** (2026-10-30, `src/fw/facts.mjs` displaySync and
+   vscLevels, `src/dev/vsccompose2.mjs`, `docs/om1-vsc-spec.md` section 12). E118's one-value composite was its display
+   sync's, as E122's had been (finding 39): its GUI sends api_disp_Disp_Update_Osd (`0x502b147a`, through the API
+   dispatcher's call at `0x502a91fa`) type 1 at 0.19 s, whose commit enabled no plane, then type 3 at 0.22 s and at 2.2
+   s, and the VSC's commit (`0x502e2174`, the function of E122's `0x50309dc5`) ran after none of the type-3 requests (X:
+   observers). E118 has E122's API (D): the request's checks, the image sync api_disp_dummy_Disp_Update_Force_Disp_Sync
+   (`0x502b16ec`, E122's argument checks and codes 15, 16, 18), whose trace loads its name and no API id, so the rule
+   had found none; the wrapper `0x502a9281`; stopRecView's two calls of it after the per-panel clears through the setter
+   `0x506a6b0f` (`0x5082200b`, `0x5082202f`). Its display sync module is another one (D): the request maps type 3 to the
+   module's asynchronous OSD update (exec 5; with bit 31 set exec 3, which waits; `0x502b1513..0x502b1521`), which from
+   the idle state 8 leaves the device's state byte at 2 and commits nothing (`0x5046b691`, `0x5046b7c7..0x5046b7cb`);
+   the force path's code 18 (kind 0 with a0 1: `0x5046b188` -> `0x5046b1a2`), admitted in states 0 to 3 (`0x5046bb6e`),
+   commits the OSD in states 0 and 2 (`0x5046b28a`, the module's commit `0x5046c0c0` with 1) and leaves state 8. The
+   rule now reads the image sync by that name where no entry loads its id, as it reads the request, and gives E118
+   E122's release (kind 0, panels 0 and 1); with S-DISPSYNC sending it the commit follows each synced update (X: at
+   0.235 s and 2.27 s, with the GUI's buffers). The composite then refused OSD7..OSD9 unwritten (UNWRITTEN at
+   `+0x2e0..+0x2e8`): E118's open (`0x502e1b48`) stores no level where E122's stores `0x100` (`0x503097b7..0x503097c6`),
+   and no word of E118's image holds the three addresses (X, a byte scan; E120's code sets them, `0x502d6c9c`, D). A
+   rule (vscLevels, fact `board.vsc.levels`) reads whether a kind-3 build names them: true on E122 and E120, false on
+   E118 (X). On a build that names none the compositor draws each plane at the full level, the plane's bit set in the
+   header's ASSUMED word with a note (what the chip does with its unwritten level word is ?). E118's TFT and EVF
+   composites show the clock warning, an orange clock and Y/M/D (8 values on 720 x 480 and on 1024 x 768, X), until the
+   movie time's division stops the start at 4.3 s of lab time (finding 45). E122's facts and frames are unchanged (X: 19
+   and 11 values at 5 s, golden), and the 15 other bodies' display sync facts too (X: the rule on the 18 images).
+   `test/test_vsc3.mjs` drives a plane without level words on E118's board (25 checks).
+49. **E120's display sync takes records** (2026-10-30, `src/fw/facts.mjs` displaySync, `src/lab/camapp.mjs` S-DISPSYNC).
+   E120's one-value composite at POWER_ON is the firmware's state: its GUI's three layers hold only their fills, layers
+   0 and 1 index 31 and layer 2 255 on the 800 x 600 canvas, each a transparent entry (palette ids 2 and 1 entry 31, id
+   0 entry 127, transparency 0), and its one display update is a type-1 request with no OSD handle, so the VSC's commit
+   (`0x502d72a7`, the same function) runs only for the open's two empty commits and DMA12..DMA14 stay unwritten (X: the
+   records, palettes and observers at 5 s). E120 holds neither of E118's names: its display API takes records (the
+   `_Multi_Ext` functions, D). api_disp_Disp_Sync_Update_Osd_Multi_Ext (`0x502a6042`) takes a0 a record of the OSD
+   handles, the u16 type at +16 and the device code at +20 (1 the TFT; `0x502a6062..0x502a607b`) and passes the type to
+   the module as its exec (3, 5, else 1; `0x502a608b..0x502a6097` -> `0x50447127`), whose force path is E118's
+   (`0x5044737e`, E118's `0x5046b1a2`); api_disp_Disp_Sync_Force_Update_Multi_Ext (`0x502a663b`) takes a record of the
+   u16 code (15, 16, 18; `0x502a6687..0x502a6693`) and the device code at +4, code 18 into the force path
+   (`0x50447364`). stopRecView calls it itself (`0x507ccd72`, `0x507ccd98`), each call after a clear of one panel's sync
+   word through the setter `0x50653b0f` (`0x507ccd61`, `0x507ccd85`). The GUI's synced update is type 5 (`0x5067b98e`),
+   the asynchronous one. The rule reads this form by its two names (a name may be loaded up to 0x20 bytes into the
+   function: E120's request clears its locals first) and gives the record's fields (`record`: type +16, device +20,
+   synced type 5, code 18 at +0, device +4), and S-DISPSYNC reads the request's type and device from the record and
+   releases with a record of code 18. Exploration only (not in the lab): with the GUI's `0xf001` posted after the start
+   (E118's application asks for it, E120's does not, finding 46) and the movie time answered, E120's GUI reached
+   `0x0108`, sent type 5 with its three layers' buffers and nothing was committed; S-DISPSYNC's release then composed
+   its shooting screen on the TFT and the EVF (P, 1", -.-, 0.0 and the exposure scale, ISO-A LOW, S-IS AUTO, L N, FHD F
+   60p, 00:00:00, 999: 22 values on the TFT, 14 on the EVF, X). In the lab E120 stays in POWER_ON.
 
 ## Per-body status
 
@@ -1113,6 +1159,9 @@ warning in the OSD records and stop at about 2.2 s in E122's movie-time division
 Since findings 41 and 42 (2026-10-30) E122's card is native and its TFT runs modelcheck's path but for the count
 probe; with findings 38 to 46 together E122 passes modelcheck on the TFT and the EVF, the count probe an expected
 failure, and is in its checked set, E118 stops in the movie time and E120 stays in POWER_ON on both panels (finding 47).
+Since findings 48 and 49 (2026-10-30) E118's TFT and EVF frames show its clock warning up to that stop (its display sync
+released by S-DISPSYNC, its planes drawn without level words), and E120's display sync is read in its record form; at
+POWER_ON E120's GUI draws only transparent fills, so its frame is the background.
 
 ## The chained port
 

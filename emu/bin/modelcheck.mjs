@@ -52,11 +52,11 @@ const SHOTS_QUERY = 0x50419164;
 // E143 and E144 families were in it until S-CARD's card was in slot 1's detect state (docs/model-survey.md finding 18).
 // E122's screen draws the count its query answers (X: OSD layer 2's records), but its application asks only on events,
 // once in the 3 s after the first S1 and not after a second (finding 42), so the probe's answer is never asked for.
-// E118's OSD records draw the card's count (X: 2116 on the 8 GiB card, finding 52), but its composite holds one value:
+// E118's OSD records draw the card's count (X: 2116 on the 8 GiB card, finding 51), but its composite holds one value:
 // its GUI's updates wait in its display sync, whose form the rule does not read (findings 39, 47)
 const PROBE_XFAIL = {
   E122: 'its application asks for the count only at its start and after the first S1, docs/model-survey.md finding 42',
-  E118: 'its composite holds one value, its display sync\'s form not read, docs/model-survey.md findings 47 and 52',
+  E118: 'its composite holds one value, its display sync\'s form not read, docs/model-survey.md findings 47 and 51',
 };
 // the bodies known to stop with an SDXC card (--card-size above 32 GiB), on the TFT and the EVF: model -> [what their
 // child's output must hold, the reason]. Strictly, as PROBE_XFAIL: a body that runs the path, or stops elsewhere, fails

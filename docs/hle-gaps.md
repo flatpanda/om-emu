@@ -1959,7 +1959,7 @@ findings 31, 41). The family runs the other bodies' storage library; the rule no
   read back by `refs/volume.mjs`. S-FSNAND logs the record's read, a write of 48128 bytes and the next record's read
   at the insertion. A blank 64 GiB card (`--card-size 64`): exFAT with no label at sector 32768, 128 KiB clusters,
   9999 shots (the cap of 4.8.6), S2's file read back, the path as with 8 GiB (X).
-- **E118 and E120 (2026-10-30, `docs/model-survey.md` findings 51 to 53, addresses E118's):** E118's bring-up
+- **E118 and E120 (2026-10-30, `docs/model-survey.md` findings 50 to 52, addresses E118's):** E118's bring-up
   polled for good (1 ms sleeps, more than 2,000,000 stand-in calls) for the answer to its SD driver's switch of a card
   line, which it asks of the sub-CPU through its body control's request 42 (`0x5057e30c` -> `0x5015ee69`, out by a
   deferred call over the link the lab does not model), where E122 and E120 set a GIO pin. The rule reads the request

@@ -894,60 +894,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    its shooting screen on the TFT and the EVF (P, 1", -.-, 0.0 and the exposure scale, ISO-A LOW, S-IS AUTO, L N, FHD F
    60p, 00:00:00, 999: 22 values on the TFT, 14 on the EVF, X). In the lab E120 stays in POWER_ON.
 
-54. **E120 (E-M10 II) past POWER_ON: the rec view word** (2026-10-30, `src/fw/facts.mjs` recViewStandby,
-   `src/lab/camapp.mjs` S-RVSTANDBY). The camera application's own trace function (E118 `0x50b8af78`, E120
-   `0x5090bce1`: `mov <name>,a1; call` at every step, its strings read at each call, X) shows where finding 46's two
-   runs part: handling `0x09000023` E118 logs "isRecviewOnSubAppMdlRecview", "Recview OFF DISP", then
-   ">>>setCameraAppData", the date setup's timer and "end sendEventToGui" (the request for `0xf001`); handling
-   `0x09000022` E120 logs "Recview ON DISP" and asks the GUI for nothing (X). getRecViewState (API `0x20145` on both,
-   the method E120 `0x506d2c1d` -> `0x50672f5e`, E118 `0x5072699a` -> `0x506c6453`) first calls a gate on the RecView
-   component's state word W: E120's (`0x50654ba2`) reports a rec view unless W is 1, E118's (`0x506a7c75`) and E122's
-   (`0x50696381`) unless W is 0 or 1 (D). W starts at 0 (E120 `0x615e07a0`, X). Past E120's gate the method reads the
-   properties 26, 478, 24, 4, 434, 109 and 600 (`0x50672f96..0x50673070`): these were finding 46's reads after setting
-   44, not the cause. S-RVSTANDBY stores the component's standby state 1 in W on the other bodies, but its rule reads W
-   from the "[RecView] entryStandby " trace, which the family does not hold. The component is E143's code without its
-   traces: the state helper `0x50791b40` (`mov a0,a2; mov d0,d2; call` the setter `0x50654c29`, `mov d0,(W); retf`)
-   with the entries `0x507913b3..` in E143's order and states (2, 3, 1, 4, 5, 6, and 0 by `clr d0`; the standby entry
-   third, `mov 1,d0` as E143's `0x50c65ff2`), and a second helper `0x507976dd` with 2, 3, 1, 4 as E143's `0x50c6ce93`
-   (D). Where the trace is not held the rule now reads W by that form, the one word whose setter the helpers call, and
-   the standby value from the gate `clr d2; call G; cmp n,d0; beq`, G `mov (W),d0; retf`. On the 15 bodies holding the
-   trace the form gives the trace rule's word and the gate its n (X; E144 holds a second gate, of 2); E118 reads
-   `0x615dec74`, E122 `0x61600a74`, E120 `0x615e07a0`, all 1. With W 1 E120's TFT and EVF starts take `0xf001` and
-   reach `0x0108` SS_COMMON/ID_ST_CA_REQ_DISP, and the OSD engine draws the clock warning (a clock and
-   Y/M/D) into OSD layer 2's records on both, the EVF's centred for its 640-wide canvas (X: the records read back as
-   images); E118's and E122's stops and E122's modelcheck path are unchanged (their gates took 0 as none already, X).
-55. **The E118 family's GIO pin 30 is the touch controller's INT** (2026-10-30, `src/fw/facts.mjs` touchIntWait,
-   `src/lab/menu.mjs` S-TPINTWAIT). E120's open-time wait (finding 46, `0x502d9b0c`) belongs to the touch panel driver:
-   its set-up `0x502d99a2`, which the device open's command list calls (`0x502d016b`), configures pin 30 and attaches
-   the callback `0x502da12c` through the GIO driver's class-0 functions (`0x500647b6`, `0x500647ed`; the tables at
-   `0x601151b4..`, E143's driver's form), and enables it (`0x50064823`). The callback stores 1 in `0x61879784` while
-   the driver waits (`0x61879788` 0) and otherwise disables the pin and sets bit 1 of the touch task's flag word (a
-   touch's data ready, I). The wait (2 ms sleeps until the word is 1, a timeout of d1 ms on the us clock) ends the
-   command list with 150 ms, and its timeout logs "TP INT TIME OUT" (`0x502d0296..0x502d02a8`; E122 `0x50302930`, the
-   wait `0x5030c426`, D): pin 30 is the touch panel controller's interrupt line. The lab models neither the controller
-   nor a GIO interrupt on the family's board, so every wait timed out, and the us clock counts CPU reads until the play
-   bring-up turns A-USLAB on (`0x50001ef1` reads channel 9's counter `0x98900074`; H-USCOUNT): the 150 ms took 300 s
-   of lab time (X: the wait's elapsed count 150001 after 300 s). A rule reads the wait, its poll and the word from the
-   call before that trace (fact `touch_int`: E120 `0x502d9b0c`, `0x502d9b4c`, `0x61879784`; E122 `0x5030c426`,
-   `0x5030c466`, `0x6189f508`; null on the 16 others: the name is held by E118, E134, E137, E125, E133 and E130 too,
-   E118 loading it after a wait inline in its touch driver's command list, `0x502e3fe3..`, which its open does not
-   reach, and the others after no such call, X). S-TPINTWAIT stores 1 in the word at the poll, as the callback would
-   on the INT, so each wait returns after its first sleep (how long the controller takes is ?). The opens' lab time
-   (X, the DISPLAY OPEN step): E120 TFT 300.19 s -> 0.19 s, EVF 500.39 s -> 0.39 s; E122 TFT 300.18 s -> 0.18 s, EVF
-   500.33 s -> 0.33 s; E118 0.19 s and 0.13 s, unchanged. E122 passes `bin/modelcheck.mjs` as before (X).
-56. **E120 to E118's stop** (2026-10-30; X: a play session per device and `bin/modelcheck.mjs E120`). With findings
-   54 and 55 E120's TFT and EVF starts run their opens in under 0.4 s, reach `0x0108` and draw the clock warning into
-   the OSD records; the composite holds one value, the GUI's updates waiting in the display sync whose form the rule
-   does not read on E120 (finding 39). At the first long timer, about 2.7 s after the start, and at S1 the start stops
-   where E118's does (finding 45): in the movie time's division by the file system's volume object word +8168
-   (`0x505372b0`, the instruction for instruction counterpart of E118's `0x5055ee88`, Fault 6; the object pointer
-   `0x61899518`), which finding 41 brings up natively on E122 and the card's file system is the next step for. Up to
-   that stop E120's application sends through its API sender to two queues only, 104 (TAKE_FUNC by the family's
-   object-name table, which S-MODACK answers) and 146 (DISPLAY, S-DISPQ's), and to none of the five finding 43 found
-   the port's words read as another queue's (X: OlyQeWr from the sender's return `0x502a9076`), so S-MODACK's ids from
-   the API target table are not needed yet. E120 is not in modelcheck's checked set.
-
-51. **E118's card and the sub-CPU's card line** (2026-10-30, `docs/hle-gaps.md` 4.8.8). With E118's card native the
+50. **E118's card and the sub-CPU's card line** (2026-10-30, `docs/hle-gaps.md` 4.8.8). With E118's card native the
    file system's bring-up (H-FILEINIT, a lab call) ended in more than 2,000,000 stand-in calls: 1,999,982 of them
    OlyTaSS(1) from the sleep wrapper `0x505768bd` (X: the callers of the hle's stand-ins, the stack at the sleep). The
    sleep is the poll of the SD driver's switch of a card line (`0x5057e30c`, from the SD init's `0x5057e06c` with d0 1,
@@ -973,8 +920,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    GiB card as E122's does (`0xe08`, the firmware's FAT32 format `NO NAME` at sector 8192 with 32 KiB clusters, the
    mount, drive status `0x3780`, DCF folder 100, file 1, X), and E120's too (X, its TFT and EVF starts, which stay at
    POWER_ON `0x0102`): the card is native on all three. E118's start then runs past the movie time's division
-   (finding 45's stop) to the next long timer's (finding 52).
-52. **E118's movie record time and modelcheck's path** (2026-10-30). Past the volume object, E118's start stopped at
+   (finding 45's stop) to the next long timer's (finding 51).
+51. **E118's movie record time and modelcheck's path** (2026-10-30). Past the volume object, E118's start stopped at
    about 5.6 s of lab time in a Fault 6 at `0x50535c40`, a `divu` by the byte `0xa1c2fad8` (X: S-LONGTIMER's settle;
    the stack: `0x5051876b`, `0x502b75ec`, `0x506c512e`). The function (`0x50535bf4`) fills the movie module's record
    time for api_movie_Get_Time_Record_Movie (`0x502b75d3` -> `0x5051875a`, the place of E143's movie time query
@@ -994,7 +941,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    60p, `00:37:19` and 2116 from the card (X). Only the count probe fails: the composite holds one value (its display
    sync's form is not read, findings 39 and 47), so no pixel follows the count. E118 is in modelcheck's checked set
    with its TFT and EVF, the probe in PROBE_XFAIL with that reason.
-53. **The family's playback file number** (2026-10-30). PLAY and INFO drew `000-0000` and `0` on E122 (finding 42).
+52. **The family's playback file number** (2026-10-30). PLAY and INFO drew `000-0000` and `0` on E122 (finding 42).
    OlyHfwOpePlyCom::getNumber has two branches on E143 (D): with its mode word (`0x60360c74`) not 3 it asks the play
    component through the wrapper `0x50acf1a8` (S-PLAYCOMP's getNumber), with 3 it sends the play module the
    synchronous request 5 (`0x50ace1db`) and reads the response block (`0x50ad46b4`) back: +4 the index, +8 the file
@@ -1005,6 +952,59 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    draw `100-0001` and `1` (X: E122's composite, both bodies' OSD records). INFO's detail still draws `0x0`, `0mm` and
    the date `0001.00.00 00:00` on both: they come from api_play_Get_StillInfo_ExifData (API `0x30089`, E122
    `0x502e16b2`), which reads the play module's information for the picture, not read (?).
+
+53. **E120 (E-M10 II) past POWER_ON: the rec view word** (2026-10-30, `src/fw/facts.mjs` recViewStandby,
+   `src/lab/camapp.mjs` S-RVSTANDBY). The camera application's own trace function (E118 `0x50b8af78`, E120
+   `0x5090bce1`: `mov <name>,a1; call` at every step, its strings read at each call, X) shows where finding 46's two
+   runs part: handling `0x09000023` E118 logs "isRecviewOnSubAppMdlRecview", "Recview OFF DISP", then
+   ">>>setCameraAppData", the date setup's timer and "end sendEventToGui" (the request for `0xf001`); handling
+   `0x09000022` E120 logs "Recview ON DISP" and asks the GUI for nothing (X). getRecViewState (API `0x20145` on both,
+   the method E120 `0x506d2c1d` -> `0x50672f5e`, E118 `0x5072699a` -> `0x506c6453`) first calls a gate on the RecView
+   component's state word W: E120's (`0x50654ba2`) reports a rec view unless W is 1, E118's (`0x506a7c75`) and E122's
+   (`0x50696381`) unless W is 0 or 1 (D). W starts at 0 (E120 `0x615e07a0`, X). Past E120's gate the method reads the
+   properties 26, 478, 24, 4, 434, 109 and 600 (`0x50672f96..0x50673070`): these were finding 46's reads after setting
+   44, not the cause. S-RVSTANDBY stores the component's standby state 1 in W on the other bodies, but its rule reads W
+   from the "[RecView] entryStandby " trace, which the family does not hold. The component is E143's code without its
+   traces: the state helper `0x50791b40` (`mov a0,a2; mov d0,d2; call` the setter `0x50654c29`, `mov d0,(W); retf`)
+   with the entries `0x507913b3..` in E143's order and states (2, 3, 1, 4, 5, 6, and 0 by `clr d0`; the standby entry
+   third, `mov 1,d0` as E143's `0x50c65ff2`), and a second helper `0x507976dd` with 2, 3, 1, 4 as E143's `0x50c6ce93`
+   (D). Where the trace is not held the rule now reads W by that form, the one word whose setter the helpers call, and
+   the standby value from the gate `clr d2; call G; cmp n,d0; beq`, G `mov (W),d0; retf`. On the 15 bodies holding the
+   trace the form gives the trace rule's word and the gate its n (X; E144 holds a second gate, of 2); E118 reads
+   `0x615dec74`, E122 `0x61600a74`, E120 `0x615e07a0`, all 1. With W 1 E120's TFT and EVF starts take `0xf001` and
+   reach `0x0108` SS_COMMON/ID_ST_CA_REQ_DISP, and the OSD engine draws the clock warning (a clock and
+   Y/M/D) into OSD layer 2's records on both, the EVF's centred for its 640-wide canvas (X: the records read back as
+   images); E118's and E122's stops and E122's modelcheck path are unchanged (their gates took 0 as none already, X).
+54. **The E118 family's GIO pin 30 is the touch controller's INT** (2026-10-30, `src/fw/facts.mjs` touchIntWait,
+   `src/lab/menu.mjs` S-TPINTWAIT). E120's open-time wait (finding 46, `0x502d9b0c`) belongs to the touch panel driver:
+   its set-up `0x502d99a2`, which the device open's command list calls (`0x502d016b`), configures pin 30 and attaches
+   the callback `0x502da12c` through the GIO driver's class-0 functions (`0x500647b6`, `0x500647ed`; the tables at
+   `0x601151b4..`, E143's driver's form), and enables it (`0x50064823`). The callback stores 1 in `0x61879784` while
+   the driver waits (`0x61879788` 0) and otherwise disables the pin and sets bit 1 of the touch task's flag word (a
+   touch's data ready, I). The wait (2 ms sleeps until the word is 1, a timeout of d1 ms on the us clock) ends the
+   command list with 150 ms, and its timeout logs "TP INT TIME OUT" (`0x502d0296..0x502d02a8`; E122 `0x50302930`, the
+   wait `0x5030c426`, D): pin 30 is the touch panel controller's interrupt line. The lab models neither the controller
+   nor a GIO interrupt on the family's board, so every wait timed out, and the us clock counts CPU reads until the play
+   bring-up turns A-USLAB on (`0x50001ef1` reads channel 9's counter `0x98900074`; H-USCOUNT): the 150 ms took 300 s
+   of lab time (X: the wait's elapsed count 150001 after 300 s). A rule reads the wait, its poll and the word from the
+   call before that trace (fact `touch_int`: E120 `0x502d9b0c`, `0x502d9b4c`, `0x61879784`; E122 `0x5030c426`,
+   `0x5030c466`, `0x6189f508`; null on the 16 others: the name is held by E118, E134, E137, E125, E133 and E130 too,
+   E118 loading it after a wait inline in its touch driver's command list, `0x502e3fe3..`, which its open does not
+   reach, and the others after no such call, X). S-TPINTWAIT stores 1 in the word at the poll, as the callback would
+   on the INT, so each wait returns after its first sleep (how long the controller takes is ?). The opens' lab time
+   (X, the DISPLAY OPEN step): E120 TFT 300.19 s -> 0.19 s, EVF 500.39 s -> 0.39 s; E122 TFT 300.18 s -> 0.18 s, EVF
+   500.33 s -> 0.33 s; E118 0.19 s and 0.13 s, unchanged. E122 passes `bin/modelcheck.mjs` as before (X).
+55. **E120 to E118's stop** (2026-10-30; X: a play session per device and `bin/modelcheck.mjs E120`). With findings
+   54 and 55 E120's TFT and EVF starts run their opens in under 0.4 s, reach `0x0108` and draw the clock warning into
+   the OSD records; the composite holds one value, the GUI's updates waiting in the display sync whose form the rule
+   does not read on E120 (finding 39). At the first long timer, about 2.7 s after the start, and at S1 the start stops
+   where E118's does (finding 45): in the movie time's division by the file system's volume object word +8168
+   (`0x505372b0`, the instruction for instruction counterpart of E118's `0x5055ee88`, Fault 6; the object pointer
+   `0x61899518`), which finding 41 brings up natively on E122 and the card's file system is the next step for. Up to
+   that stop E120's application sends through its API sender to two queues only, 104 (TAKE_FUNC by the family's
+   object-name table, which S-MODACK answers) and 146 (DISPLAY, S-DISPQ's), and to none of the five finding 43 found
+   the port's words read as another queue's (X: OlyQeWr from the sender's return `0x502a9076`), so S-MODACK's ids from
+   the API target table are not needed yet. E120 is not in modelcheck's checked set.
 
 ## Per-body status
 
@@ -1274,13 +1274,13 @@ failure, and is in its checked set, E118 stops in the movie time and E120 stays 
 Since findings 48 and 49 (2026-10-30) E118's TFT and EVF frames show its clock warning up to that stop (its display sync
 released by S-DISPSYNC, its planes drawn without level words), and E120's display sync is read in its record form; at
 POWER_ON E120's GUI draws only transparent fills, so its frame is the background.
-Since findings 54 to 56 (2026-10-30) E120's TFT and EVF starts reach `0x0108` with the clock warning in the OSD
+Since findings 53 to 55 (2026-10-30) E120's TFT and EVF starts reach `0x0108` with the clock warning in the OSD
 records and stop where E118's do, in the movie time's division, and E120's and E122's opens take under 0.4 s of lab
 time where they took 300 s and 500 s.
-Since findings 51 and 52 (2026-10-30) E118's card is native (its card line's request to the sub-CPU answered by
+Since findings 50 and 51 (2026-10-30) E118's card is native (its card line's request to the sub-CPU answered by
 S-SDSWITCH, its record time's division by S-MOVRATE) and E118 passes modelcheck on the TFT and the EVF, the count
 probe an expected failure (its composite one value), and is in the checked set; E120's card is native too and its
-start stays in POWER_ON. Both bodies' PLAY and INFO draw the picture's `100-0001` since finding 53.
+start stays in POWER_ON. Both bodies' PLAY and INFO draw the picture's `100-0001` since finding 52.
 
 ## The chained port
 
@@ -1316,6 +1316,6 @@ The new OM System PEN (expected as E148) is not on the update server. Lens and a
 Besides E143, E146 and E147, nine bodies pass the player with a picture (the shooting screen in their frame, S1 taken,
 the player settled running): E144, E139, E134, E137, E142, E140, E125, E130 and, after MENU at its date and time
 setting, E145 (finding 22). E133 passes modelcheck since 2026-10-29, E129 and E132 too (finding 24: E129 after MENU,
-E132 after its clock is set at its date and time setting); E122 and E118 pass it too (findings 47, 52), E120 stays at
+E132 after its clock is set at its date and time setting); E122 and E118 pass it too (findings 47, 51), E120 stays at
 POWER_ON (finding 46). The next
 steps are in `ROADMAP.md` "Multi-model".

@@ -331,7 +331,7 @@ export const CAMAPP_STAND_INS = {
   "A-SCPUM4-1": "(OM_EMU_SCPU=native) the sub-CPU's time runs in step with lab time: before it takes an input of the MN's (a pin, a transfer) it runs up to the lab time of that input, and at the MN's idle points up to the lab's now; each input also opens an answer window of 50 ms of its own time (0.5 s after its power-on or reset) in which it runs on at the idle points while lab time stands still, stopping at each change of its link lines, which reach the MN one per idle point (A-SCPUDEV-1's order); a transfer's bytes pass its SPI2 at the link's clock, eight bit times of its own each, in zero lab time. The windows let it boot and answer while the MN waits on it in zero lab time and stay short of its command manager's 1000-tick monitor",
   "A-SCPUM4-2": "(OM_EMU_SCPU=native) a link line the sub-CPU does not drive (its pin not an output, an open-drain 1, the reset held) reads as S-SCPUDEV's lines while its reset is held: pin 102 low, the message line high; what the board makes of a released pin is ?",
   "A-SCPUM4-3": "(OM_EMU_SCPU=native) MN pin 107 high holds the sub-CPU's NRST low, S-SCPUDEV's polarity: a pin reset of the STM32L4 that keeps its backup domain (the RTC, the backup registers) and its SRAM; the sub-CPU is powered on at the link's start with a blank backup domain (the camera's has run since its battery went in, ?)",
-  "S-MOVRATE": "(a body whose movie record time divides by the movie info's frame rate without a test: E118, X) while that rate, which the movie module's set-up gives and the lab does not run, is 0, the record time returns its own error for no struct without the division, so the movie time query answers its error, as E143's query does with its frame rate 0 log (docs/model-survey.md finding 52)",
+  "S-MOVRATE": "(a body whose movie record time divides by the movie info's frame rate without a test: E118, X) while that rate, which the movie module's set-up gives and the lab does not run, is 0, the record time returns its own error for no struct without the division, so the movie time query answers its error, as E143's query does with its frame rate 0 log (docs/model-survey.md finding 51)",
   "S-LONGTIMER": "the system timer module's long timers (1000 ms and more, set through api_system.c 0x5041fd71 / 0x5041fd0d by the HLS timer service): when one is due in lab time the module's event 0x03010000 | number is published, as the module would",
   "S-BOOTDONE": "the HLS components' boot completion: the camera base (Cab_CameraBase) and the still-shooting category wait in their state 3 for event 415, which their capabilities would send once the modules report ready; S-BOOTDONE dispatches 415 to each waiting there, and 420 (the shooting mode) to the camera base waiting in its state 11, so the shoot mode, the category and Cmp_ShootingComponent are created and run on the OXF main thread (HIGHLEVEL_MAIN, started by S-CAMAPP). The component's sub-CPU status read (0x5012b8b7) returns 0",
   "S-CPU3": "the posts to CPU 3 (remote calls of 0x5002587a through ring [3][0], each setting bits of DISP_FRAME's flag) are taken off the ring and acknowledged after each step, and S-DISPFRAME runs a turn of DISP_FRAME for their bits; the lab has no CPU 3",
@@ -646,7 +646,7 @@ export class CamApp {
     // (not run in the lab) gives (fact card.movie_rate, src/fw/facts.mjs movieRate: E118's, which divides without the
     // test E143's time code conversion makes): while the rate is 0 the record time returns the error it gives for no
     // struct, without the division, and the movie time query answers its error as E143's does with its rate-0 log
-    // (src/fw/models.mjs MOVIE_TIME_ERRLOG; docs/model-survey.md finding 52)
+    // (src/fw/models.mjs MOVIE_TIME_ERRLOG; docs/model-survey.md finding 51)
     const mr = fact('card.movie_rate', null) ?? null;
     if (mr) lab.hook(mr.fn, (h, r) => {
       if (lab.sim.read(mr.rate, 1)[0] !== 0) { lab.passthrough(r); return; }
@@ -754,7 +754,7 @@ export class CamApp {
   // wrap around, I), +16 0 (no page change); moveCurrent (9, direction u16 at +16 of the request: 3 left, 4 right):
   // the move result at +4 of the data (MOVE_RESULT, I), and the image shown moves. getNumber (sync 5), which
   // OlyHfwOpePlyCom::getNumber sends where it asks no play component (E143 with its mode word at 3, the E118 family
-  // always, D; the addresses in docs/model-survey.md finding 53): +4 the image's index, +8 its file number, +10 its
+  // always, D; the addresses in docs/model-survey.md finding 52): +4 the image's index, +8 its file number, +10 its
   // folder (u16), as both read them back (D); the index counts from 1 as the component's getNumber does (I).
   play_answer(p) {
     const lab = this.s.lab, n = this.images.length;

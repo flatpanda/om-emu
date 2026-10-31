@@ -54,9 +54,9 @@ through a reference place more; "Per-body status" has their figures).
 | E130 | E-M10 III | 1200 | 25.0 | 0x60400020 (6.9%) | plain | 1.02M | 82 | through E142: modelcheck passes (TFT and EVF; findings 11, 14 and 16) |
 | E129 | TG-5 | 1101 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; MENU answers its date and time setting at the start) since the charger's transfers on serial channel 9 are served (S-SIOIIC, S-CHARGER, finding 24); its settings store since S-BOOTSTAGE (finding 20) |
 | E132 | TG-5 (KOUICHIRO) | 1300 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; its date and time setting has no Cancel, the clock is set) since the charger's transfers are served and S-MODACK answers its industrial category and logger modules (finding 24); its deferred send since finding 21 |
-| E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | through E122: the start runs natively to the shooting screen state `0x0108` on the TFT and the EVF (the composite one colour) and stops in the movie time, its card not native (findings 28, 32-34, 37, 43-45, 47) |
+| E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | through E122: `bin/modelcheck.mjs` passes on the TFT and the EVF with its card native, the frames composed (the count probe an expected failure; findings 28, 32-34, 37, 43-45, 48, 50-52, 56) |
 | E122 | PEN-F | 3101 | 20.4 | 0x60021020 (7.2%) | plain | 0.79M | 123 | through E130: `bin/modelcheck.mjs` passes on the TFT and the EVF with its card native, the frames composed (the count probe an expected failure; findings 28, 31, 35-42, 47) |
-| E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | through E122: the start runs the application and the GUI natively and stays in POWER_ON `0x0102` on the TFT and the EVF (findings 28, 32-34, 37, 43, 46, 47) |
+| E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | through E122: `bin/modelcheck.mjs` passes on the TFT and the EVF with its card native, the frames composed (the count probe an expected failure; findings 28, 32-34, 37, 43, 46, 49, 50, 53-56) |
 | E113 | E-M10 | 1400 | 18.0 | 0x7d991020 (7.4%) | plain | 0.88M | 155 | not tried (base) |
 | E109 | E-M1 | 4600 | 17.0 | 0x6daf1020 (7.2%) | plain | 0.76M | 139 | not tried (base) |
 | E126 | E-PL8 | 1100 | 18.0 | 0x7d971020 (8.2%) | plain | 0.74M | 140 | not tried (base) |
@@ -995,7 +995,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    (X, the DISPLAY OPEN step): E120 TFT 300.19 s -> 0.19 s, EVF 500.39 s -> 0.39 s; E122 TFT 300.18 s -> 0.18 s, EVF
    500.33 s -> 0.33 s; E118 0.19 s and 0.13 s, unchanged. E122 passes `bin/modelcheck.mjs` as before (X).
 55. **E120 to E118's stop** (2026-10-30; X: a play session per device and `bin/modelcheck.mjs E120`). With findings
-   54 and 55 E120's TFT and EVF starts run their opens in under 0.4 s, reach `0x0108` and draw the clock warning into
+   53 and 54 E120's TFT and EVF starts run their opens in under 0.4 s, reach `0x0108` and draw the clock warning into
    the OSD records; the composite holds one value, the GUI's updates waiting in the display sync whose form the rule
    does not read on E120 (finding 39). At the first long timer, about 2.7 s after the start, and at S1 the start stops
    where E118's does (finding 45): in the movie time's division by the file system's volume object word +8168
@@ -1005,6 +1005,20 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    object-name table, which S-MODACK answers) and 146 (DISPLAY, S-DISPQ's), and to none of the five finding 43 found
    the port's words read as another queue's (X: OlyQeWr from the sender's return `0x502a9076`), so S-MODACK's ids from
    the API target table are not needed yet. E120 is not in modelcheck's checked set.
+
+56. **The E118 family with findings 48 to 55 together** (2026-10-30; X: a play session per body and device to 5 s of
+   lab time after the start, the composite read back, and `bin/modelcheck.mjs`). The three run without a stop on both
+   panels and their composites show the shooting screen in the firmware's palette: E118 (E-M5 II) P, 8000, -.-, ISO-A
+   200, the movie mode FHD 60p, 00:37:19 and 2116 shots from the card (21 values on the 720 x 480 TFT, 13 on the
+   1024 x 768 EVF); E120 (E-M10 II) P, 4000, -.-, 0.0 and the exposure scale, ISO-A LOW, flash ±0.0, 00:37:19 and 2116
+   (19 and 11); E122 as before (19 and 11). Their opens take under 0.4 s of lab time (finding 54). `bin/modelcheck.mjs`
+   passes the path on E118 and E120 as on E122: the TFT's start, S1, S2, PLAY `0x0608`, INFO `0x060b` and PLAY back to
+   `0x0108`, the EVF's start, S1 and S2, the card formatted FAT32 with 2116 shots on the 8 GiB card (exFAT and 9999
+   at 64 GiB), S2's picture read back by `refs/volume.mjs`. The count probe fails on all three for finding 42's cause,
+   now measured on each: with the query answered with the card's own count by a hook, the application asks six times
+   in the 4 s after the start, once in the 3 s after the first S1 and not in the 3 s after a second (X, E118, E120 and
+   E122 alike), so the probe's answer at its second window is never asked for. E118 and E120 join E122 in
+   modelcheck's checked set, the three in PROBE_XFAIL with that one reason (E118's had been its one-value composite).
 
 ## Per-body status
 
@@ -1278,9 +1292,10 @@ Since findings 53 to 55 (2026-10-30) E120's TFT and EVF starts reach `0x0108` wi
 records and stop where E118's do, in the movie time's division, and E120's and E122's opens take under 0.4 s of lab
 time where they took 300 s and 500 s.
 Since findings 50 and 51 (2026-10-30) E118's card is native (its card line's request to the sub-CPU answered by
-S-SDSWITCH, its record time's division by S-MOVRATE) and E118 passes modelcheck on the TFT and the EVF, the count
-probe an expected failure (its composite one value), and is in the checked set; E120's card is native too and its
-start stays in POWER_ON. Both bodies' PLAY and INFO draw the picture's `100-0001` since finding 52.
+S-SDSWITCH, its record time's division by S-MOVRATE) and E118 passes modelcheck on the TFT and the EVF; E120's card is
+native too. Both bodies' PLAY and INFO draw the picture's `100-0001` since finding 52. With findings 48 to 55 together
+E118 and E120 compose their shooting screens on both panels and pass modelcheck on the TFT and the EVF, the count
+probes expected failures, and are in its checked set with E122 (finding 56).
 
 ## The chained port
 

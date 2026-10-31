@@ -797,7 +797,7 @@ export const MODELS = {
     modack_queues: [[0xE6, 'CATEGORY_MAIN'], [0xDF, 'LOGGER_MAIN']],
   },
   E118: {
-    name: 'E-M5 II', bin: 'OLY_E_118_4100_0000_0000.BIN', version: '4.1', res_block: 'blk01460000.OE.0101.bin',
+    name: 'E-M5 II', bin: 'OLY_E_118_4100_0000_0000.BIN', version: '4.1', res_block: 'blk01460000.OE.0101.bin', checked: true,
     rom_len: 21364672, rom_sha256: 'ecd9603c4a264a358d91ef110a05f9236055e6369399f7c7de5985b21a2fd96a',
     // the reset head's jump into the run-time copy at 0x500000d1: mov 0x60021114,a0; jmp (a0) (D)
     image_base: 0x60021020,

@@ -834,7 +834,7 @@ export const MODELS = {
     },
   },
   E122: {
-    name: 'PEN-F', bin: 'OLY_E_122_3101_0000_0000.BIN', version: '3.1', res_block: 'blk01460000.OE.0101.bin',
+    name: 'PEN-F', bin: 'OLY_E_122_3101_0000_0000.BIN', version: '3.1', res_block: 'blk01460000.OE.0101.bin', checked: true,
     rom_len: 21364672, rom_sha256: 'a2eb1d1f1afe47cce148e9aae0a04dfb82547d9de9437d342e012341140913f4',
     // the reset head's jump into the run-time copy at 0x500000b6: mov 0x600210f9,a0; jmp (a0) (D)
     image_base: 0x60021020,

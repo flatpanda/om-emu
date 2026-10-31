@@ -48,10 +48,13 @@ const PATH = [['start', null, 0], ['s1', null, 0], ['s2', null, 1], ['play', 'SS
 const PROBE_NS = 1200e6, PROBE_SHOTS = 777, WINDOW = 6, WINDOW_NS = 300e6;
 // the remaining-shots query (E143's, src/lab/camapp.mjs SHOTS_QUERY; the child places it through A())
 const SHOTS_QUERY = 0x50419164;
-// the bodies whose screens are known not to draw S-CARD's count, on the TFT and the EVF: model -> the reason. Empty
-// since S-CARD's card is in slot 1's detect state (docs/model-survey.md finding 18); the E143 and E144 families were
-// in it before
-const PROBE_XFAIL = {};
+// the bodies whose screens are known not to follow the probe's count, on the TFT and the EVF: model -> the reason. The
+// E143 and E144 families were in it until S-CARD's card was in slot 1's detect state (docs/model-survey.md finding 18).
+// E122's screen draws the count its query answers (X: OSD layer 2's records), but its application asks only on events,
+// once in the 3 s after the first S1 and not after a second (finding 42), so the probe's answer is never asked for
+const PROBE_XFAIL = {
+  E122: 'its application asks for the count only at its start and after the first S1, docs/model-survey.md finding 42',
+};
 // the bodies known to stop with an SDXC card (--card-size above 32 GiB), on the TFT and the EVF: model -> [what their
 // child's output must hold, the reason]. Strictly, as PROBE_XFAIL: a body that runs the path, or stops elsewhere, fails
 // the run. E144: its firmware formats the card exFAT, then at the camera application's start its movie parameters

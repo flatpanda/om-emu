@@ -160,8 +160,9 @@ The plan:
    all of it together E118 and E120 pass modelcheck on the TFT and the EVF as E122 does, their frames composed, and
    are in its checked set (finding 56). The frame rate is the movie recorder's set-up's, which runs at a movie take
    or a movie's playback on CPU 2, not at the start: it is 0 on the camera too until then, and S-MOVRATE stands in
-   for the MN103's DIVU by 0 alone, the record time native (finding 60, 2026-10-31). Next: INFO's still information
-   on the family (finding 52, ?).
+   for the MN103's DIVU by 0 alone, the record time native (finding 60, 2026-10-31). INFO shows the picture's date,
+   size, exposure and focal length on the three (2026-10-31, finding 57: S-PLAYSEQ answers the play module's request
+   3 from the picture's record; the Exif path does not run).
    The kind-3 VSC composes (kind 2's compositor with the family's palette groups and format words) and the EVF opens
    the built-in EVF, the family's device code 6, where the lab had opened the NTSC output (findings 35 and 36). Since
    2026-10-30 E122's TFT and EVF frames show its clock warning: the palettes by GUI layer (finding 38), S-DISPSYNC
@@ -299,10 +300,10 @@ the survey table.
   overlapping image records loaded at their requests (findings 43 to 45), E120 past POWER_ON with the rec view word
   (finding 53), and with their display syncs read (findings 48, 49) and their cards native (findings 50, 51) both
   pass modelcheck on the TFT and the EVF (finding 56). Open on the family: what makes the application ask for the
-  remaining-shots count again (findings 42, 56; the three in PROBE_XFAIL until then); INFO's still information (size,
-  focal length and date, finding 52, ?); the MN103's DIVU by 0 in E118's record time, which divides by a frame rate
-  that is 0 before a movie take on the camera too (S-MOVRATE, finding 60: a hardware capture would settle it, as for
-  E144's); S-MODACK's module queue ids, five of which the port's words read as another
+  remaining-shots count again (findings 42, 56; the three in PROBE_XFAIL until then); the picture's Exif and the play
+  module's load of it, which INFO's still information stands in for (finding 57); the MN103's DIVU by 0 in E118's
+  record time, which divides by a frame rate that is 0 before a movie take on the camera too (S-MOVRATE, finding 60:
+  a hardware capture would settle it, as for E144's); S-MODACK's module queue ids, five of which the port's words read as another
   queue's (PWR_EXEC `0x86` by name; no request to them seen on the three's paths, findings 43, 55), to be read from
   the API target table once a start sends to one; how long the touch controller takes to raise its INT, which
   S-TPINTWAIT gives at the wait's first poll (finding 54, ?), and the us clock counting CPU reads until the play

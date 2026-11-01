@@ -1979,8 +1979,19 @@ findings 31, 41). The family runs the other bodies' storage library; the rule no
 - **The playback's file number:** the family's OlyHfwOpePlyCom::getNumber sends the play module the synchronous
   request 5 (E122 `0x506aacfa`; E143 only with its mode word at 3, `0x50ace1db`) and reads +4 the index, +8 the file
   and +10 the folder from the response block; S-PLAYSEQ answers it from the image shown, so PLAY and INFO draw
-  `100-0001` (X). INFO's size, focal length and date come from api_play_Get_StillInfo_ExifData (`0x30089`), not read.
-- **Not done:** INFO's still information on the family; the HLS side (S-MDACTRL, S-MEDIA) is E143's and E146's only.
+  `100-0001` (X).
+- **INFO's still information (2026-10-31, `docs/model-survey.md` findings 57 and 58):** the family's getStillInfo
+  sends the play module the synchronous request 3 (E122 `0x506aae96`), which S-PLAYSEQ left unanswered: the
+  converter read getNumber's leftovers from the shared response block (0x0, 0mm, `0001.00.00`). On the camera the HLS
+  play component answers it from api_play_Get_StillInfo_ExifData (`0x502e16b2`), which reads the Exif tags of the
+  image the play module loaded into its play buffer (`play_exif_search_tag`); neither runs in the lab, and S2's
+  picture is S-RECFILE's JPEG without Exif. S-PLAYSEQ now answers request 3 from the picture's own record: the
+  camera's clock at the capture (its getter, fact `clock.real_time`), the JPEG's size, the release's exposure and
+  S-LENS's focal length, in the layout the build's converter reads (fact `play.still`); and the histogram request 7
+  empty. INFO on E122 shows `2016.01.01 00:00` (its unset clock's default; E118's and E120's `2015.01.01`),
+  `1620x1080` (the lab's frame), `125` and `25mm` (X).
+- **Not done:** the HLS side (S-MDACTRL, S-MEDIA) is E143's and E146's only; the picture's Exif (the lab's JPEG has
+  none) and the play module's own load of it.
 
 ### 4.9 HDMI and DisplayPort
 

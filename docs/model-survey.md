@@ -951,7 +951,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    `src/lab/camapp.mjs`); the index counts from 1 as the component's does (I). E122's and E118's PLAY and INFO then
    draw `100-0001` and `1` (X: E122's composite, both bodies' OSD records). INFO's detail still draws `0x0`, `0mm` and
    the date `0001.00.00 00:00` on both: they come from api_play_Get_StillInfo_ExifData (API `0x30089`, E122
-   `0x502e16b2`), which reads the play module's information for the picture, not read (?).
+   `0x502e16b2`), which reads the play module's information for the picture, not read (?; finding 57).
 
 53. **E120 (E-M10 II) past POWER_ON: the rec view word** (2026-10-30, `src/fw/facts.mjs` recViewStandby,
    `src/lab/camapp.mjs` S-RVSTANDBY). The camera application's own trace function (E118 `0x50b8af78`, E120
@@ -1020,6 +1020,56 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    E122 alike), so the probe's answer at its second window is never asked for. E118 and E120 join E122 in
    modelcheck's checked set, the three in PROBE_XFAIL with that one reason (E118's had been its one-value composite).
 
+57. **The family's INFO still information** (2026-10-31, `src/lab/camapp.mjs` S-PLAYSEQ, `src/fw/facts.mjs`
+   stillFields and realTimeGetter, `test/test_playinfo.mjs`; addresses E122's). INFO's `0x0`, `0mm` and
+   `0001.00.00 00:00` (finding 52) were no Exif read: api_play_Get_StillInfo_ExifData (`0x502e16b2`) is not called on
+   the lab's path (X: an observer, 0 calls). The family's OlyHfwOpePlyCom::getStillInfo (`0x506aae51`) is E143's
+   second branch alone, as its getNumber (finding 52): it sends the play module the synchronous request 3 (`mov
+   3,d0` `0x506aae93`; E143 with its mode word at 3, `0x50ace3d4`; the ids follow PlyCom's name table, 0
+   startPlayService .. 3 getStillInfo .. 5 getNumber, D) and hands the response block to the converter E143's
+   component branch uses (`0x506a9cc9`, E143's `0x50acc981`, paired by the port), which S-PLAYSEQ left unanswered:
+   the converter read what getNumber's answer left in the shared block (+8 the file number 1, drawn as the year
+   `0001`; D, finding 52's answer). On the
+   camera the request is a transaction the HLS play component answers (the method `0x5078b672`, D) by
+   api_play_Get_StillInfo_ExifData with the image's play-buffer handle (`0x5078b6c1`), which reads the image's Exif
+   tags through `play_exif_search_tag` (`0x50ad1fb5`: DateTimeOriginal `0x9003`, PixelX/YDimension `0xa002`,
+   `0xa003`, ExposureTime `0x829a` .., D) from the record the play module filled when it loaded the file (the play
+   buffer's table at `0xa1c929dc`, `playbuff_get_img_info`; the current handle `0x6189a4f4`, set by
+   api_play_Set_Current_ImageHandle `0x502dc680` and Set_Bank `0x502dcfaa` from the play module's code, D). Neither
+   the components nor the play module's load runs in the lab, and S2's picture holds no Exif to read: it is
+   S-RECFILE's JPEG of the lab's frame (`src/lab/jpeg.mjs`, JFIF only). Not native, then: S-PLAYSEQ answers request
+   3 from the picture's own record, kept at its END_SHOOTING_PICTURE: the date the camera's clock gives (its getter
+   api_sctime_GET_REAL_TIME `0x502ee369` called natively, fact `clock.real_time`, read by the name its trace loads on
+   the family alone: E118 `0x502cb0db`, E120 `0x502be4d7`, X), the size of the JPEG on the card, the release's
+   exposure (S-PLAYCOMP's) and the focal length of the lens at the capture (S-LENS's zoom step, in tenths of a mm).
+   The layout is the converter's (D, E143's and E122's side by side): the date at +8 (u16 year, then month, day,
+   hour, minute, second bytes), the size at +16, the exposure time, f-number and bias rationals at +48, +56 and +72 on
+   both, but the focal length E143's u32 +148, E122's u32 +136, the ISO E143's u32 +100, E122's u16 +90; the rule
+   (fact `play.still`) reads the copies to the GUI record's +56 (focalLength, by the dump `0x50acd02d`) and +88 at the
+   port's place of the converter, or the first call after the getStillInfo wrapper's one call (X, the 18: E143,
+   E146, E147 148/100; the E118 family, E137, E142, E140, E145, E133, E130, E129 136/90; E144, E139, E125 144/98; E134
+   and E132 another form, null). An exploration with test values gave the units (X: the GUI drew 25 as `2.5mm`, ISO
+   200 at +90). The family's clock is not set in the lab: its getter answers its default with the status 10501, E122
+   2016-01-01 00:00:00, E118 and E120 2015-01-01 (X, at the start, S2 and INFO; which date the camera's recording
+   writes with that status is ?). INFO on the TFT then shows (X, the composite): E122 `2016.01.01 00:00`, `125`,
+   `25mm`, `1620x1080`, `100-0001`; E118 and E120 the same with `2015.01.01` (the size the lab's frame, 1620 x 1080;
+   25 mm S-EXPOSE's zoom step for the default scene); E118's EVF the same (X). E122's and E120's EVF PLAY stops at
+   the key's UI_IN group 5 with more than 300,000 stand-in calls (memset, OlyTaSS), with these answers and without
+   them (X), not read. `test/test_playinfo.mjs` reads the GUI's record at the
+   converter's return on E122, E118 and E120 against the card's JPEG (decoded by `refs/jpeg.mjs`), the clock and the
+   lens (9 checks each), and on E143 that S-PLAYCOMP's answer is unchanged (5184 x 3888, no date, no focal length).
+58. **The playback histogram and S-PLAYCOMP's ISO** (2026-10-31). INFO's histogram drew a bar on the family (X, before
+   finding 57): getHistogram sends request 7 (E122 `0x506aaaa0`, E143's always) and copies the response's flag byte
+   at +4 and the bins from +8 (and three more pairs at +1032/+1036, +2060/+2064, +3088/+3092; E143
+   `0x50acdeb0..0x50acdf8e`, E122 `0x506aab09..0x506aabe7`, D), which held getNumber's index and file number; with
+   request 3 answered they held the still information. S-PLAYSEQ now answers request 7 with flags and bins 0, an
+   empty histogram (the module counts the decoded picture's levels; the lab decodes none, I), and the cells stay
+   empty (X). E143's INFO sends request 7 too (X), its block 0 there but for canMoveCurrent's +8 with two pictures.
+   S-PLAYCOMP wrote the ISO of an S-SCENE capture at E143's u32 +100 on every body with component wrappers, where
+   ten of them (the E144 family but E134 and E132) read it at u16 +90 or +98 and E134's and E132's converters are of
+   a form the rule does not read (finding 57): it now writes it where the build's converter reads it, and none on
+   E134 and E132 (logged). E143's, E146's and E147's are unchanged (+100).
+
 60. **The E118 family's movie recorder set-up runs at a movie take** (2026-10-31, `src/fw/facts.mjs` movieRate,
    `src/lab/camapp.mjs` S-MOVRATE; corrects finding 51, which took the set-up for one the lab skips). E118's frame rate
    byte `0xa1c2fad8` has two writers: the set-up `0x50535c83` (its +6) and a setter `0x50535cbb` (X: a byte scan finds
@@ -1068,6 +1118,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    E147's) is the camera's state (I), not the lab's gap: the errlog's description says so now. The movie module's
    set-up is a movie take's on every body read; running it natively is a movie take's work (TAKE_FUNC, TAKE_MOV and,
    on the E118 family, CPU 2), not a start's.
+
 
 ## Per-body status
 

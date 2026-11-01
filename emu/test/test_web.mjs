@@ -16,7 +16,8 @@
 //   at once forever), and web/worker.mjs hosted in a node worker thread (test/workershim.mjs): a file that is no .BIN
 //   and a container that is not E143 refused with the boot offered again, and with $OM_BIN / $OM_FW_DIR the E143
 //   .BIN booted, an unported token refused, the card the firmware formatted read through GET /api/card and the
-//   session's options through GET /api/session, a ?sync=1 request answered when the session quits;
+//   session's options through GET /api/session, a ?sync=1 request answered when the session quits; with $OM_FW_DIR
+//   every other model whose .BIN is there booted in its own Worker to running with a frame;
 // - the Card panel and the session options without firmware (cardTests): base64, the card's reader
 //   (web/cardfiles.mjs) on a FAT16 volume built here, the router's /api/session and card routes on a headless Player,
 //   the node server's PNG of a picture, web/page.mjs's binary answers, the browser's S-NVRAM host (web/nvram.mjs).
@@ -47,6 +48,7 @@ import { CARD_VIEW, cardList, cardFile, jpegRgba } from '../web/cardfiles.mjs';
 import { browserNvram } from '../web/nvram.mjs';
 import { pngRgba } from '../host/server.mjs';
 import { buildExfat } from './test_storage.mjs';
+import { MODELS } from '../src/fw/models.mjs';
 
 const REPO = path.resolve(new URL('../../', import.meta.url).pathname);
 const OUT = path.join(REPO, 'emu/out/test-web');
@@ -735,7 +737,45 @@ export async function workerTests() {
     await w.terminate();
     fs.rmSync(tmp, { recursive: true, force: true });
   }
-  return { checks, bad, skipped };
+  const others = await modelWorkerTests();
+  return { checks: checks + others.checks, bad: [...bad, ...others.bad], skipped };
+}
+
+// Every other model whose .BIN is in $OM_FW_DIR (fw/ from E140 on, fw/old/ below, as BLOBS.md files them), booted in a
+// Worker of its own (OM_EMU_MODEL in its env, as the page's ?model= gives it) until it runs with a frame: the Worker
+// must hand the player the run-time image (src/fw/expand.mjs), which the E144 and E118 families' blocks need (their
+// compressed sections and the reset head's copies) and the E143 family's do not, so the E143 boot above cannot tell.
+// A .BIN not on disk is left out, not counted as skipped.
+async function modelWorkerTests() {
+  const bad = [];
+  let checks = 0;
+  const dir = process.env.OM_FW_DIR;
+  if (!dir) return { checks, bad };
+  for (const [code, m] of Object.entries(MODELS)) {
+    const bin = path.join(dir, Number(code.slice(1)) < 140 ? 'old' : '', m.bin);
+    if (code === 'E143' || !fs.existsSync(bin)) continue;
+    checks++;
+    const w = new NodeWorker(new URL('./workershim.mjs', import.meta.url), { env: { ...process.env, OM_EMU_MODEL: code } });
+    const end = await new Promise((resolve) => {
+      let frame = false, running = false;
+      const timer = setTimeout(() => resolve('no frame in 120 s'), 120000);
+      const done = (why) => { clearTimeout(timer); resolve(why); };
+      w.on('error', (e) => done(`thread error: ${String(e?.message ?? e)}`));
+      w.on('message', (msg) => {
+        if (msg.type === 'boot-failed') done(`boot failed: ${msg.message}`);
+        else if (msg.type === 'status' && msg.doc.phase === 'error') done(`error: ${msg.doc.error?.message ?? JSON.stringify(msg.doc.error)}`);
+        else if (msg.type === 'frame' || (msg.type === 'status' && msg.doc.phase === 'running')) {
+          frame ||= msg.type === 'frame';
+          running ||= msg.type === 'status';
+          if (frame && running) done(null);
+        }
+      });
+      w.postMessage({ type: 'boot', binPath: bin, cache: false });   // the lab paced to the wall clock, which draws
+    });
+    await w.terminate();
+    if (end) bad.push(`worker with ${code}: ${String(end).split('\n')[0].slice(0, 300)}`);
+  }
+  return { checks, bad };
 }
 
 // B3: the driver with an injected scheduler and a stub Player.

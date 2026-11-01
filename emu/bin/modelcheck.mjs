@@ -20,8 +20,10 @@
 // independent reader refs/volume.mjs picks (refs/fat.mjs or refs/exfat.mjs, whichever file system the firmware
 // formatted; an exFAT volume must also pass the reader's consistency check). --card-size GiB puts a blank card of that
 // capacity in the slot in place of the default 8 GiB SDHC one (src/lab/sdcard.mjs cardSectors: above 32 an SDXC card),
-// and the line says which file system the body's firmware gave it. A body in PROBE_XFAIL is expected to fail the
-// probe, strictly: its failure is printed and does not count, its pass does, so a fix forces the table's update.
+// and the line says which file system the body's firmware gave it. A body whose application asks for the count only
+// when its shooting screen is drawn again (PROBE_REDRAW) has the screen redrawn before each window by a key that
+// cycles it back to the view it had, as a user would. A body in PROBE_XFAIL is expected to fail the probe, strictly:
+// its failure is printed and does not count, its pass does, so a fix forces the table's update.
 //   node emu/bin/modelcheck.mjs [MODEL ...] [--no-port] [--card-size GiB]
 import fs from 'node:fs';
 import path from 'node:path';
@@ -49,13 +51,19 @@ const PROBE_NS = 1200e6, PROBE_SHOTS = 777, WINDOW = 6, WINDOW_NS = 300e6;
 // the remaining-shots query (E143's, src/lab/camapp.mjs SHOTS_QUERY; the child places it through A())
 const SHOTS_QUERY = 0x50419164;
 // the bodies whose screens are known not to follow the probe's count, on the TFT and the EVF: model -> the reason. The
-// E143 and E144 families were in it until S-CARD's card was in slot 1's detect state (docs/model-survey.md finding 18).
-// The E118 family's screens draw the count their query answers (X: OSD layer 2's records), but their applications ask
-// only on events: six times in the 4 s after the start, once in the 3 s after the first S1 and not after a second (X:
-// E118, E120 and E122 alike, docs/model-survey.md findings 42 and 56), so the probe's answer is never asked for
-const EVENT_COUNT = 'its application asks for the count only at its start and after the first S1, '
-  + 'docs/model-survey.md findings 42 and 56';
-const PROBE_XFAIL = { E118: EVENT_COUNT, E120: EVENT_COUNT, E122: EVENT_COUNT };
+// E143 and E144 families were in it until S-CARD's card was in slot 1's detect state (docs/model-survey.md finding 18),
+// the E118 family until PROBE_REDRAW (finding 63)
+const PROBE_XFAIL = {};
+// the bodies whose application asks for the count only when the GUI draws the shooting screen again: model -> the
+// key that redraws it. The probe presses the key until the screen is back to its frame before the first
+// press (at most REDRAW_MAX times: a key that does not cycle back fails the probe), then as many times before each of
+// its windows, the first included, so that all three are taken on the same view. The E118 family's shooting screen
+// asks the query from its count item (E122 0x50ca1608) when the screen object's update runs all its items
+// (0x50c96925), on the GUI's camera events: the start, the shooting information's 3 s timer, the return from
+// playback, INFO, a shot; not on an S1 that changes nothing on the screen nor at idle (X: E118, E120, E122,
+// docs/model-survey.md finding 63). INFO cycles the four views of the shooting screen back to the first on both
+// panels (X), where PLAY and back, which also redraws, stalls on E120's and E122's EVF
+const REDRAW_MAX = 8, PROBE_REDRAW = { E118: 'info', E120: 'info', E122: 'info' };
 // the bodies known to stop with an SDXC card (--card-size above 32 GiB), on the TFT and the EVF: model -> [what their
 // child's output must hold, the reason]. Strictly, as PROBE_XFAIL: a body that runs the path, or stops elsewhere, fails
 // the run. E144: its firmware formats the card exFAT, then at the camera application's start its movie parameters
@@ -80,7 +88,8 @@ const START_PROMPT = {
 };
 const CHILD = `
 const J = process.argv[1], DEVICE = process.argv[2], PROBE_NS = ${PROBE_NS}, PROBE_SHOTS = ${PROBE_SHOTS},
-  WINDOW = ${WINDOW}, WINDOW_NS = ${WINDOW_NS}, SECTORS = ${SECTORS};
+  WINDOW = ${WINDOW}, WINDOW_NS = ${WINDOW_NS}, SECTORS = ${SECTORS}, REDRAW = process.argv[4] || null,
+  REDRAW_MAX = ${REDRAW_MAX};
 const { createHash } = await import('node:crypto');
 const zlib = await import('node:zlib');
 const { loadImage, loadBlock } = await import(J + '/bin/run.mjs');
@@ -119,11 +128,29 @@ const boxOf = (w, n, want) => {
   }
   return box;
 };
+// a key pressed as a step of the path: 150 ms down, then 1200 ms of idle
+const press = (k) => { s.key(k, 'down'); s.camapp.pump(); s.idle_slice(lab.lab_time() + 150e6); s.key(k, 'up'); s.camapp.pump(); s.idle_slice(lab.lab_time() + 1200e6); };
+// PROBE_REDRAW's key, where the body has one: pressed until the screen is back to its frame and GUI state before the
+// first press, n times; redraw() then presses it n times and checks the GUI state came back
+const cycle = () => {
+  const bytes = () => s.frame('boundary', true)[2].slice(), f0 = bytes(), state = lab.state();
+  for (let n = 1; n <= REDRAW_MAX; n++) {
+    press(REDRAW);
+    const f = bytes();
+    if (lab.state() === state && f.length === f0.length && f.every((v, i) => v === f0[i])) return { n, state };
+  }
+  throw new Error(REDRAW + ' did not bring the screen back to its frame in ' + REDRAW_MAX + ' presses');
+};
 let probe = null;
 for (const k of JSON.parse(process.argv[3])) {
-  s.key(k, 'down'); s.camapp.pump(); s.idle_slice(lab.lab_time() + 150e6); s.key(k, 'up'); s.camapp.pump(); s.idle_slice(lab.lab_time() + 1200e6); rec(k);
+  press(k); rec(k);
   if (k !== 's1') continue;
   try {
+    const turn = REDRAW ? cycle() : null, redraw = () => {
+      if (!turn) return;
+      for (let i = 0; i < turn.n; i++) press(REDRAW);
+      if (lab.state() !== turn.state) throw new Error(REDRAW + ' x' + turn.n + ' left GUI state 0x' + lab.state().toString(16));
+    };
     // the count the query answers: S-CARD's, or with the card's file system native the firmware's own, which the probe
     // replaces for its second window by an answer of the query at PROBE_SHOTS (a hook of its own, then removed)
     const q = A(SHOTS_QUERY), set = (n) => {
@@ -132,10 +159,10 @@ for (const k of JSON.parse(process.argv[3])) {
     };
     if (s.storage) card.shots = lab.call(q, { d0: 0 }, null, null, 2000000).d0 | 0;
     const keep = s.storage ? null : s.camapp.card_shots, a = window_();
-    set(PROBE_SHOTS); s.idle_slice(lab.lab_time() + PROBE_NS); const b = window_();
-    set(keep); s.idle_slice(lab.lab_time() + PROBE_NS); const c = window_();
+    set(PROBE_SHOTS); redraw(); s.idle_slice(lab.lab_time() + PROBE_NS); const b = window_();
+    set(keep); redraw(); s.idle_slice(lab.lab_time() + PROBE_NS); const c = window_();
     const count = (i) => a.stable[i] && b.stable[i] && a.val[i] !== b.val[i], n = a.val.length;
-    probe = { count: boxOf(a.w, n, count), back: boxOf(a.w, n, (i) => count(i) && (!c.stable[i] || c.val[i] !== a.val[i])) };
+    probe = { count: boxOf(a.w, n, count), back: boxOf(a.w, n, (i) => count(i) && (!c.stable[i] || c.val[i] !== a.val[i])), redraw: turn ? turn.n : 0 };
   } catch (e) { probe = { error: e.message.split('\\n')[0].slice(0, 120) }; }
 }
 // with the card's file system native: the card read back independently (refs/volume.mjs: refs/fat.mjs or
@@ -164,7 +191,7 @@ for (const m of models) {
   const prompt = START_PROMPT[m], answer = prompt ? (prompt.keys ?? [prompt.key]).map((k, i, ks) => [k, i === ks.length - 1 ? prompt.after : null, 0]) : [];
   const full = [PATH[0], ...answer, ...PATH.slice(1)];
   const path_ = device === 'evf' ? full.slice(0, full.indexOf(PATH[2]) + 1) : full;
-  const r = spawnSync(process.execPath, ['--max-old-space-size=6144', '--input-type=module', '-e', CHILD, path.join(REPO, 'emu'), device, JSON.stringify(path_.slice(1).map((p) => p[0]))], { encoding: 'utf8', env: { ...process.env, OM_EMU_MODEL: m }, maxBuffer: 1 << 26 });
+  const r = spawnSync(process.execPath, ['--max-old-space-size=6144', '--input-type=module', '-e', CHILD, path.join(REPO, 'emu'), device, JSON.stringify(path_.slice(1).map((p) => p[0])), PROBE_REDRAW[m] ?? ''], { encoding: 'utf8', env: { ...process.env, OM_EMU_MODEL: m }, maxBuffer: 1 << 26 });
   const xs = SDXC ? SDXC_XFAIL[m] : null;
   if (xs) {
     const stopped = r.status !== 0 && xs[0].test(r.stdout + r.stderr);
@@ -200,7 +227,7 @@ for (const m of models) {
   if (card && (!card.mounted || !(card.shots > 0) || card.files !== pictures || card.found !== card.files || card.error)) {
     problems.push(`card: ${JSON.stringify(card)}, want mounted, shots from the card and ${pictures} file(s) read back`);
   }
-  const shown = (probe?.count && !probe.back ? `, count at ${box(probe.count)}` : '')
+  const shown = (probe?.count && !probe.back ? `, count at ${box(probe.count)}${probe.redraw ? ` (redrawn by ${probe.redraw} x ${PROBE_REDRAW[m].toUpperCase()})` : ''}` : '')
     + (card ? `; card ${card.gib} GiB ${card.kind}: ${card.type ?? '?'} '${card.label}'${card.cluster_kib ? ` at sector ${card.start} (${card.cluster_kib} KiB clusters)` : ''} ${card.formatted ? 'formatted, ' : ''}${card.shots} shots, ${card.found} file(s) read back` : '');
   console.log(`${m} (${MODELS[m].name}) ${device}: ${problems.length ? 'FAILED ' + problems.join('; ') : 'ok'} — ${steps.map(([k, st, , n, f]) => `${k} 0x${st.toString(16)} ${n} ${f}`).join(', ')}${shown}${notes.length ? '; ' + notes.join('; ') : ''}`);
   if (problems.length) bad++;

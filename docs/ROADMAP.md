@@ -35,7 +35,7 @@ Every milestone runs in emu and is covered by the check its row names; the `chec
 | The camera application | every play session runs the firmware's camera application (CA_MAIN) natively (S-CAMAPP, 2026-10-15): power-on to the shooting screen, S1, S2 and the rec view, REC, playback, the Super Control Panel and the menu; the lab's own stand-ins for it are gone | `test_camapp`, `golden.json` | shutter spec §7 |
 | Exposure | a 12-40mm F2.8 PRO on the mount and the scene's brightness fed to the camera's own exposure plan (S-EXPOSE); the screen shows the planned shutter, aperture and ISO | `golden.json` | shutter spec §7 item 60 |
 | The lens natively (E143, E146, E147; the default) | the lens tasks, the lens driver, LENS_SSC and IRQ 14 against a model of the lens serial controller, with S-LENSMCU answering the driver's frames as the 12-40mm F2.8 PRO (2026-10-28); the deferred calls (IRQs 53..58); the zoom ring and the lens lock pin switch reach the driver; the camera application forwards the touches itself (2026-10-29: the touch's stop was S-CAFWD swallowing the GUI's answer). The default since 2026-10-29, on E146 and E147 too, their driver's addresses read by a rule (`lensDriver`, fact `lens_driver`; 2026-10-29); `OM_EMU_LENS=stand-in` takes S-LENS, the other bodies' lens | `test_lens` (E143, E146, E147), `test_facts`, `golden.json` | hle-gaps.md §4.4.2, §4.4.3 |
-| Multi-model, steps 1-4 and part of 7 | 17 bodies besides E143 have ports; E146, E147, E144, E139, E134, E137, E140, E125 and E130 shoot, play back and run the EVF through `bin/modelcheck.mjs`, E142, E133, E145, E129 and E132 (no EVF) on the TFT, each with the screen's remaining-shots count (the count probe); the E118 family's board is ported and E122, E118 and E120 run the path on the TFT and the EVF, their frames composed (their count probes expected failures; Multi-model below) | `emu/bin/modelcheck.mjs`, `test_facts` | `docs/model-survey.md` |
+| Multi-model, steps 1-4 and part of 7 | 17 bodies besides E143 have ports; E146, E147, E144, E139, E134, E137, E140, E125 and E130 shoot, play back and run the EVF through `bin/modelcheck.mjs`, E142, E133, E145, E129 and E132 (no EVF) on the TFT, each with the screen's remaining-shots count (the count probe); the E118 family's board is ported and E122, E118 and E120 run the path on the TFT and the EVF, their frames composed, the count probe with INFO's redraw (2026-10-31; Multi-model below) | `emu/bin/modelcheck.mjs`, `test_facts` | `docs/model-survey.md` |
 
 Instruction counts: the ISA row's 1,684,013 reachable instructions come from a reachability scan that is no longer in
 the repository. `node emu/bin/fwmap.mjs` finds 5,186,071 instructions in the main block, because it also follows code
@@ -51,9 +51,9 @@ not reconciled.
    blank store's movie mode, which those bodies cannot record (2026-10-27, hle-gaps.md 4.8.5).
 2. **The open stops of the remaining bodies** (Multi-model "Next stops"): the E118 family past its board port (E122,
    E118 and E120 pass modelcheck on the TFT and the EVF since 2026-10-30, their cards native and their frames
-   composed, findings 38 to 56; their count probes expected failures). E133, E145 and
-   the TG-5s (E129, E132: their charger's transfers on serial channel 9, `docs/model-survey.md` finding 24) pass
-   modelcheck since 2026-10-29.
+   composed, findings 38 to 56; their count probes since 2026-10-31, the screen redrawn by INFO, finding 63). E133,
+   E145 and the TG-5s (E129, E132: their charger's transfers on serial channel 9, `docs/model-survey.md` finding
+   24) pass modelcheck since 2026-10-29.
 3. **HLE of E143, step 2** (HLE of E143 below; step 1's static decodes are done): the cheap CPU 0 wins (a ticking
    clock, persistence by default, native group-0 keys and power lever, Level Adjust, the HDMI EDID). The ticking clock
    is in, and PER_SCPU runs natively against a transport-level model of the sub-CPU (S-SCPUDEV, 2026-10-23, in place of
@@ -100,7 +100,7 @@ bodies; the bodies whose image runs at a `0x60xxxxxx` base pair 0.76M-2.08M inst
 | ported | E144 OM-5, E139 E-M1 III | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe included |
 | A | E134 E-M1X | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe included |
 | B | E137 E-M5 III, E142 E-P7, E140 E-M10 IV, E125 E-M1 II, E145 TG-7 | E137, E140 and E125: `bin/modelcheck.mjs`'s path passes on the TFT and the EVF, E142 and E145 (no EVF) on the TFT; the count probe passes on all five; E145 with MENU at its date and time setting (`0x1103`) after the start (2026-10-29) |
-| C | E133 E-PL9, E130 E-M10 III, E129 / E132 TG-5, E118 E-M5 II, E122 PEN-F, E120 E-M10 II | E130: `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe too; E133, E129 and E132 on the TFT (2026-10-29), their cards native; the E118 family's board is ported (2026-10-30): E122, E118 and E120 pass `bin/modelcheck.mjs` on the TFT and the EVF with their cards native and their frames composed (2026-10-30, findings 38 to 56; their count probes expected failures, the applications asking for the count only on events) |
+| C | E133 E-PL9, E130 E-M10 III, E129 / E132 TG-5, E118 E-M5 II, E122 PEN-F, E120 E-M10 II | E130: `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe too; E133, E129 and E132 on the TFT (2026-10-29), their cards native; the E118 family's board is ported (2026-10-30): E122, E118 and E120 pass `bin/modelcheck.mjs` on the TFT and the EVF with their cards native and their frames composed (2026-10-30, findings 38 to 56), the count probe since 2026-10-31 with the screen redrawn by INFO before each window (finding 63: the applications ask for the count only when the shooting screen is redrawn) |
 | D | E100, E101, E106-E113, E115, E117, E121, E126 | not tried |
 | - | the new OM System PEN (E148?) | not served yet (E148-E199 answer nothing, 2026-10-19): re-probe |
 
@@ -151,7 +151,8 @@ The plan:
    E122's card and file system run natively since 2026-10-30 (findings 41, 42: the family's forms of five storage
    seams read by the rule), which ended its movie time's divide by 0, and its TFT start runs modelcheck's path; its
    frames compose in the firmware's palette on both panels (findings 38 to 40), and E122 passes modelcheck on the TFT
-   and the EVF (finding 47; the count probe an expected failure: the application asks for the count only on events).
+   and the EVF (finding 47; the count probe since finding 63, the screen redrawn by INFO: the application asks for the
+   count only when the shooting screen is redrawn).
    E118's and E120's display syncs are read (findings 48, 49), E120 passed POWER_ON (finding 53: the rec view word,
    read by form where the RecView trace is not held), the touch controller's INT wait (GIO pin 30) no longer makes
    E120's and E122's opens take 300 s and 500 s (finding 54, S-TPINTWAIT), and the family's cards are native
@@ -299,11 +300,13 @@ the survey table.
   32-34, 37), to `0x0108` with E122's other fields read or given, the family's serial transmitters idle and E118's
   overlapping image records loaded at their requests (findings 43 to 45), E120 past POWER_ON with the rec view word
   (finding 53), and with their display syncs read (findings 48, 49) and their cards native (findings 50, 51) both
-  pass modelcheck on the TFT and the EVF (finding 56). Open on the family: what makes the application ask for the
-  remaining-shots count again (findings 42, 56; the three in PROBE_XFAIL until then); the picture's Exif and the play
-  module's load of it, which INFO's still information stands in for (finding 57); the MN103's DIVU by 0 in E118's
-  record time, which divides by a frame rate that is 0 before a movie take on the camera too (S-MOVRATE, finding 60:
-  a hardware capture would settle it, as for E144's); S-MODACK's module queue ids, five of which the port's words read as another
+  pass modelcheck on the TFT and the EVF (finding 56). The three ask for the remaining-shots count when the
+  shooting screen is redrawn (the start, the shooting information's 3 s timer, PLAY back, INFO, a shot) and pass the
+  count probe with INFO's redraw (finding 63). Open on the family: after S2 the screen shows no OSD until INFO (what
+  ends the rec view's screen, finding 64, ?); E120's and E122's EVF PLAY, which stops in a 40 ms poll (finding 63);
+  the picture's Exif and the play module's load of it, which INFO's still information stands in for (finding 57); the
+  MN103's DIVU by 0 in E118's record time, which divides by a frame rate that is 0 before a movie take on the camera
+  too (S-MOVRATE, finding 60: a hardware capture would settle it, as for E144's); S-MODACK's module queue ids, five of which the port's words read as another
   queue's (PWR_EXEC `0x86` by name; no request to them seen on the three's paths, findings 43, 55), to be read from
   the API target table once a start sends to one; how long the touch controller takes to raise its INT, which
   S-TPINTWAIT gives at the wait's first poll (finding 54, ?), and the us clock counting CPU reads until the play

@@ -54,9 +54,9 @@ through a reference place more; "Per-body status" has their figures).
 | E130 | E-M10 III | 1200 | 25.0 | 0x60400020 (6.9%) | plain | 1.02M | 82 | through E142: modelcheck passes (TFT and EVF; findings 11, 14 and 16) |
 | E129 | TG-5 | 1101 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; MENU answers its date and time setting at the start) since the charger's transfers on serial channel 9 are served (S-SIOIIC, S-CHARGER, finding 24); its settings store since S-BOOTSTAGE (finding 20) |
 | E132 | TG-5 (KOUICHIRO) | 1300 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; its date and time setting has no Cancel, the clock is set) since the charger's transfers are served and S-MODACK answers its industrial category and logger modules (finding 24); its deferred send since finding 21 |
-| E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | through E122: `bin/modelcheck.mjs` passes on the TFT and the EVF with its card native, the frames composed (the count probe an expected failure; findings 28, 32-34, 37, 43-45, 48, 50-52, 56) |
-| E122 | PEN-F | 3101 | 20.4 | 0x60021020 (7.2%) | plain | 0.79M | 123 | through E130: `bin/modelcheck.mjs` passes on the TFT and the EVF with its card native, the frames composed (the count probe an expected failure; findings 28, 31, 35-42, 47) |
-| E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | through E122: `bin/modelcheck.mjs` passes on the TFT and the EVF with its card native, the frames composed (the count probe an expected failure; findings 28, 32-34, 37, 43, 46, 49, 50, 53-56) |
+| E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | through E122: `bin/modelcheck.mjs` passes on the TFT and the EVF with its card native, the frames composed, the count probe with INFO's redraw (findings 28, 32-34, 37, 43-45, 48, 50-52, 56, 63) |
+| E122 | PEN-F | 3101 | 20.4 | 0x60021020 (7.2%) | plain | 0.79M | 123 | through E130: `bin/modelcheck.mjs` passes on the TFT and the EVF with its card native, the frames composed, the count probe with INFO's redraw (findings 28, 31, 35-42, 47, 63) |
+| E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | through E122: `bin/modelcheck.mjs` passes on the TFT and the EVF with its card native, the frames composed, the count probe with INFO's redraw (findings 28, 32-34, 37, 43, 46, 49, 50, 53-56, 63) |
 | E113 | E-M10 | 1400 | 18.0 | 0x7d991020 (7.4%) | plain | 0.88M | 155 | not tried (base) |
 | E109 | E-M1 | 4600 | 17.0 | 0x6daf1020 (7.2%) | plain | 0.76M | 139 | not tried (base) |
 | E126 | E-PL8 | 1100 | 18.0 | 0x7d971020 (8.2%) | plain | 0.74M | 140 | not tried (base) |
@@ -1119,6 +1119,45 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    set-up is a movie take's on every body read; running it natively is a movie take's work (TAKE_FUNC, TAKE_MOV and,
    on the E118 family, CPU 2), not a start's.
 
+63. **The E118 family asks for the count when its shooting screen is redrawn** (2026-10-31; X: an observer on the shots
+   query with the return addresses on its stack, on the count item and on the screen's update, and the composite read
+   back; read on E122, measured alike on E118 and E120). E122's getAvailableShootCount (`0x506b3aff`) has no direct
+   caller: it is a slot of OlyHfwOpeShoot's vtable (the word at `0x509571d0`, D), reached through the HLS API (the
+   return `0x50715b76`, X). Two GUI clients ask it (X): the card-full test (`0x50b7b26c`, E143's `0x51055c38` by the
+   port's pairing) and the shooting screen's count item (`0x50ca1608`: it asks the API through its object and stores the
+   count at +8 of its block, the form of the E142 lineage's item, finding 16, D). The item's update (`0x50c9ae11`) asks
+   where its screen's update word +1952 is 0, or 1 with +1956 among the eight values of its table (D); it runs only from
+   the screen object's update (`0x50c96925`, a vtable word at `0x50f52ee4`), which calls the updates of the 115 items of
+   its table (`0x50c96dd4..0x50c96e19`, D). That update runs when the GUI task takes message 0xf000 (its state table's
+   dispatch `0x50baaa32`, called at `0x50b98375`, X) after the GUI's camera-event handler (`0x50b97a00`, the event in
+   d0) posts GUI event 0xf001 for an application event. Measured (X; the start's and the S1s' counts the same on the
+   three): the start, one redraw on the events `0x03000058`, `0x03000057`, `0x03000055` and `0x09000022` (the item once,
+   the card-full test five times: finding 42's six queries); the first S1, one redraw about 3 s after it, on
+   `0x03000057`, the end of the shooting information's 3 s timer (I: E143's timer 3 posts that event,
+   `docs/om1-shutter-spec.md` item 41), which no later S1 starts again (why is ?); a later S1, none: S1's own events
+   (`0x01000002`, `0x01000003`, `0x03000032`, `0x03000033`) post no redraw, and no redraw ran in 6 s of idle after it;
+   PLAY back to shooting, one at the screen's entry and one on `0x03000057` 3 s later; INFO, redraws on its key's events
+   (`0x0100002a`, `0x0100002b`) and `0x09000022`, 26 queries in four presses. So the lab delivers the events the
+   family's application asks on; where the E142 lineage's and the E143 family's GUIs ask at their refreshes (findings
+   16, 18), the family's asks only when the screen is redrawn. INFO cycles the shooting screen's four views back to the
+   first on both panels of the three: the frame after four presses is the one before the first, pixel for pixel, after
+   one, two or three 12833 to 47207 pixels differ (X). PLAY and back also redraws with the count on the TFTs and E118's EVF,
+   but on E120's and E122's EVF PLAY stops at the step's bound in a task that polls a word every 40 ms (E122
+   `0x502f936b..0x502f938f`, the word `0xa1c5a80c`, D; not read further). `bin/modelcheck.mjs` now takes PROBE_REDRAW:
+   for these three, INFO pressed until the screen is back (four presses, X), then four presses before each of the
+   probe's windows (26 queries each time, X). The count follows the query to 777 and back on the three on both panels:
+   the TFT's box at 643,443-710,469 (E118, E120) and 645,444-710,469 (E122), the EVF's at 902,710-1010,753 and
+   905,712-1010,753 (X, `bin/modelcheck.mjs`); the three are out of PROBE_XFAIL, which is empty, and the other 14
+   bodies' probes run as before.
+64. **The family's screen after a shot** (2026-10-31; X: the composite after S2 on E118, E120 and E122's TFTs). At S2
+   E122's item asks once, at the shot's start (with the events `0x01000004` and `0x0300000c`), and the card-full test
+   four times after `0x03000001`. The screen then shows no OSD for at least 9 s and after an S1, until INFO, which
+   brings back the shooting screen with the count before the shot (2116 on E118; whether the card's count after one of
+   the lab's pictures is the same is not read, ?). On the camera the shooting screen comes back after the rec view; what
+   ends it there, and whether the lab withholds that event, is ?. Not exercised: a setting change (E122's MENU, and OK a
+   second time in the super control panel `0x0407`, stop in an event storm, X; the panel's open asked the count twice)
+   and the card's insertion.
+
 
 ## Per-body status
 
@@ -1396,6 +1435,8 @@ S-SDSWITCH, its record time's division by S-MOVRATE, since finding 60 the DIVU b
 native too. Both bodies' PLAY and INFO draw the picture's `100-0001` since finding 52. With findings 48 to 55 together
 E118 and E120 compose their shooting screens on both panels and pass modelcheck on the TFT and the EVF, the count
 probes expected failures, and are in its checked set with E122 (finding 56).
+Since finding 63 (2026-10-31) the three pass the count probe on both panels, their screens redrawn by INFO before each
+window (PROBE_REDRAW): their application asks for the count only when the shooting screen is redrawn.
 
 ## The chained port
 

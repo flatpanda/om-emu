@@ -1158,6 +1158,61 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    second time in the super control panel `0x0407`, stop in an event storm, X; the panel's open asked the count twice)
    and the card's insertion.
 
+66. **The us clock counted CPU reads until the play bring-up, on every body** (2026-10-31, `docs/om1-intc-timer-spec.md`
+   section 3.1). Each board's us clock is one free-running counter of the one timer model (`src/dev/timer.mjs`):
+   E143's family channel 33 (`0x98900284`, read by `0x50002bfa`), the E144 family's channel 27 (`+0x14c`, E144 reads
+   it at `0x50002397`), the E118 family's channel 9 (`0x98900074`, read at `0x50001ec8` / `0x50001ecf` / `0x50001ef1`
+   on E118 / E122 / E120; `src/fw/board.mjs` `us_channel`, D). H-USCOUNT, one count per CPU read and lab time
+   ignored, is M2's stand-in for the hardware's counter at 1 MHz (A-TMR-2), from before the lab had a clock: it kept
+   every timed poll moving, deterministically. M10 added A-USLAB (the lab us plus every CPU read) as the player's
+   opt-in only and wrote it on after the touch bring-up inside the play bring-up, so that the other labs' outputs and
+   the play session's bring-up, which M10's play checks compared with the nav lab's, stayed the same; no failure
+   with it from the start is recorded, it was not tried (commit history: M2 `ab32095`, M10 `ebf28ea`). So on all 18
+   bodies every wait on the clock before the play bring-up lasted as many CPU reads as its microseconds. A census
+   of the clock's CPU reads with their callers up to the end of each start (X: an observer of the counter's reads,
+   the caller from the stack; 18 bodies, TFT and EVF sessions) found three kinds of wait there:
+   - *A wait with sleeps between its reads*, which the reads stretched: the E144 family's open-time wait, 2 ms
+     sleeps (`0x50030a0b(2)`) until the word `0x620c662c` is 1 or the d1 ms have passed on the us clock (E144
+     `0x5018a924..0x5018a987`, D), called with 150 ms by the open (`0x50181ef8`), whose timeout logs `0x37005206`
+     through `0x50041d51` (`0x50181f05..0x50181f18`, D); E120's touch INT wait's form (finding 54), the touch
+     controller's INT by that form and the 150 ms (I; its pin and callback on E144 are not read, ?). One read per
+     sleep: 150,001 reads and 300 s of lab time on the TFT of E144, E139, E134, E137, E142, E140, E125, E133 and
+     E130 (callers E144 `0x5018a969`, E139 `0x5018b521`, E142 `0x5016c71a`, E140 `0x5016c5e9`, E134 `0x5021827a`,
+     E137 `0x501771cb`, E125 `0x5022d50b`, E133 `0x501f8abc`, E130 `0x50207ce6`), and on the EVF a second wait of 40
+     ms after the first (E144: 190,002 reads, 380 s; E125 250,002 reads, 500 s). The E118 family's touch INT wait
+     was this kind before S-TPINTWAIT (finding 54). The E144 family's starts thus reached the play bring-up at 300.1
+     to 300.4 s of lab time on the TFT and 380.3 to 500.3 s on the EVF; modelcheck passed them so.
+   - *A busy wait inside one lab instant*, which takes as many reads either way: 25 us at the start's timer steps on
+     every body (26 reads; E143 `0x50003a7e`, E144 `0x50003198`, E118 `0x50002e4d`), 210 us on the TG-5s' TFT
+     (E129 `0x50051cb2` / `0x50051cba`), and E118's EVF serial loop at 32 ms (`0x5006f318` / `0x5006f320`, 147
+     reads).
+   - *Loops that end on a condition and read the clock for a timeout or a log*, whose lab time the clock does not
+     set: E120's and E122's EVF loop (`0x5006cadb`, `0x5006b280`: 111 rounds over 140 ms), E147's EVF loops at 28.7
+     to 35.4 ms (`0x501d35c8`, `0x501d35e9`, `0x501d36a4`), E143's display power sequence's timestamps (one read
+     per step, logged with the step: `0x501d8844` .. `0x501c6170`).
+67. **The us clock on lab time from the reset** (2026-10-31, `src/dev/timer.mjs` usCount, `src/lab/play.mjs`). Every
+   lab's us clock now counts the lab microseconds since its load from the reset (A-USLAB, the timer window's USMODE 1
+   by default), and a CPU read gets at least one count more than the read before: a busy wait still ends in zero lab
+   time (CPU execution takes no lab time), and the counts it ran ahead are not counted again once lab time passes
+   them, where M10's A-USLAB added every read since the reset to the lab us. The player's `--us-clock reads` writes
+   USMODE 0 (H-USCOUNT) at the lab's creation, before the bring-up; the switch inside the play bring-up is gone. The
+   census again (X), the play bring-up's lab time before -> after: E144 TFT 300.44 -> 0.53 s, EVF 380.64 -> 0.75 s;
+   E139 300.26 -> 0.34, 380.32 -> 0.43; E142 and E140 300.28 -> 0.43, 380.48 -> 0.67; E134 300.20 -> 0.35, 380.28 ->
+   0.47; E137 300.26 -> 0.34, 380.44 -> 0.55; E125 300.20 -> 0.35, 500.29 -> 0.53; E133 TFT 300.11 -> 0.26 (its EVF
+   session stops before, on more than 300,000 stand-in calls, as on master); E130 300.11 -> 0.26, 380.31 -> 0.50. The
+   open-time wait now takes its 150 ms (76 reads) on the TFT and 190 ms with the EVF's second wait (97 reads over
+   222 ms; E125 127 reads over 346 ms), still running to its timeout: the lab raises no INT. The other 18 x 2
+   sessions' bring-up times are unchanged (E143 TFT 202.2 ms, EVF 446.7 ms; E146, E147, E145, E129, E132, E118,
+   E120 and E122 alike), and so are the busy waits' read counts. S-TPINTWAIT's reason stays, its cost changes: without
+   it E120's TFT open takes 0.34 s instead of 0.19 s and its EVF open 0.29 s longer (X), no longer 300 s and 500 s.
+   E143's golden sessions keep their screens, devices and outputs, and their stops and hooks keep their names and lab
+   times (X: shoot-tft's trace against master's, 59,724 events of the same kinds at the same lab times); the
+   register and memory digests differ from 206.19 ms of lab time on, the first reads after the play bring-up, where
+   A-USLAB had added the 69 reads made since the reset and every later one. playperf's digest is unchanged; check_irq
+   I9 checks the new rule (mutant 30 still caught) and check_perf's P6 and P10b register digests change with the
+   same instruction counts. Next: the E144 family's wait could be read by its form for S-TPINTWAIT, as finding 54's
+   rule reads E120's and E122's.
+
 
 ## Per-body status
 
@@ -1173,7 +1228,9 @@ state (finding 18), as E143 does: before, their screens did not follow S-CARD's 
 count, X). The
 S-PANELDONE stand-in answers three to five panel-flag waits in the starts of E139, E134, E125 and E130, which ran
 natively before with the same results (X), so on those bodies it replaces a native path that worked, without a visible
-effect (`ROADMAP.md` "Next stops").
+effect (`ROADMAP.md` "Next stops"). Since 2026-10-31 the us clock runs on lab time from the reset (findings 66, 67):
+the nine E144-family bodies reach the play bring-up at 0.26 to 0.75 s of lab time, where their open-time wait of 150
+ms, counted in CPU reads, had made it 300 s on the TFT and 380 to 500 s on the EVF.
 
 **E146 (OM-1 II), E147 (OM-3).** `bin/modelcheck.mjs` passes on the TFT and the EVF: start, S1, S2 (a picture on the
 card), PLAY, INFO, PLAY. Their TFT start keeps the composite's UNWRITTEN error. E147 shoots and plays back. Since

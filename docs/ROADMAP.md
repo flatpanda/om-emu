@@ -309,8 +309,8 @@ the survey table.
   too (S-MOVRATE, finding 60: a hardware capture would settle it, as for E144's); S-MODACK's module queue ids, five of which the port's words read as another
   queue's (PWR_EXEC `0x86` by name; no request to them seen on the three's paths, findings 43, 55), to be read from
   the API target table once a start sends to one; how long the touch controller takes to raise its INT, which
-  S-TPINTWAIT gives at the wait's first poll (finding 54, ?), and the us clock counting CPU reads until the play
-  bring-up (H-USCOUNT), which turned that wait's 150 ms timeout into 300 s.
+  S-TPINTWAIT gives at the wait's first poll (finding 54, ?); without it the wait would now cost its 150 ms timeout,
+  not 300 s, since the us clock runs on lab time from the reset (2026-10-31, findings 66, 67).
   E122's EVF start opens device code 6, BI_EVF (finding 35). Open in the kind-3 compositor (findings 36, 38): what
   OSD1's and OSD2's pixels of 32 or more do (refused, PAL_FIELD), the planes' order on the chip (OSD3, GUI layer 2,
   drawn last, I), and what an OSD level below `0x100` does (the EVF's `0xb2` is drawn as full, as E144's `0xcc`).
@@ -497,6 +497,14 @@ store in the lab (vsc spec §10).
 - Time mode as the default: opt-in; inside display steps the stand-ins move the clock without servicing the timers,
   so periodic channels count overruns there and those ticks are lost (also why the Genifa clock runs about 0.945 ms per
   lab ms on the Super Control Panel, X; menu spec §15).
+- The us clock on lab time from the reset: done (2026-10-31, model-survey findings 66, 67, intc/timer spec 3.1).
+  H-USCOUNT (one count per CPU read, M2) had held on every lab and, in the player, until its bring-up switched
+  A-USLAB on, so a wait with sleeps between its reads lasted as many reads as its microseconds: the nine E144-family
+  bodies' open-time wait of 150 ms took 300 s of lab time on the TFT, 380 to 500 s on the EVF. Every lab now counts
+  lab microseconds from the reset, at least one count per read (busy waits still end in zero lab time); those starts
+  take 0.6 to 3.2 s, and E143's golden sessions keep their screens, devices, outputs and stops at their lab times.
+  Open: the E144 family's wait of that form is the touch controller's INT by its form (I) and runs to its timeout
+  (finding 67), which S-TPINTWAIT's rule could read next; how long a busy wait's instructions take (FIDELITY 1.1).
 - Timers not yet traced as they first fire: Genifa timers 537 and 554 and task 16's bit-2 path `0x50053199` /
   `0x500532b2` (kernel spec §9.5).
 - A-VEC, A-IAGR, A-TMR-1..5, A-INTC-ORDER; the meaning of udf12/13/21 (A-UNIT); TRAP, NMI, level 0; K-IPI and
@@ -583,7 +591,7 @@ Each listed once; the owner document has the evidence.
 | Memory map | 256 KiB of low RAM is a lab assumption; the OE header at `0x60021000` is zero in the lab; the bus space and the `0xb8000000` window are modelled as A16 / A17 (the physical backing of the live-view bank ranges ?, `0x9810004c` unmodelled); the camera's use of the lab region `0x62021000..0x62321000`; bank `0x5f` read as a bus address (I); which core runs the GUI (core id at `0x8050`, string `OSDDRAW_CPU2`); ROM past the image is zero-filled | cores spec §2, §3.4, §6; FIDELITY 4.1-4.3; vsc spec §9 |
 | Panel-side stand-ins | lab-stub reads of never-written addresses return 0 (`STUB_UNWRITTEN`: 25 TFT and 16 EVF entries in `check_display_notes.txt`), including `0x99800004`, which drives the OSD2 / OSD3 HDLY; the five stub presets are only the firmware poll loops' exit values | vsc spec A13, §9; FIDELITY 4.2, 7.4 |
 | RTOS and text stand-ins | kernel-less labs only on request (`--kernel none`); K-native accepts interrupts only at the idle point (H-IRQGATE); kcb+56's meaning; task 16's caller (H-DEFER); `get_tid` returns the DISPLAY task in display runs; synchronous message delivery; OlyTaSS's unit is ms (A10); S-RES copies resources with no resource task or flash; H-SWITCH replaces the untraced camera sequence after a language change (U7) | kernel spec §8, §9; text spec §3, §7, U7, U11; FIDELITY 7.3 |
-| Inputs | the raw-bit producers; the UI_IN board variant; what group-4 `0x0400` is; LONGPRESS; the CA chain to the display-switch sender `0x5105053c`; A-USLAB (one count = 1 us of lab time) | input spec; intc/timer spec §5 |
+| Inputs | the raw-bit producers; the UI_IN board variant; what group-4 `0x0400` is; LONGPRESS; the CA chain to the display-switch sender `0x5105053c`; A-USLAB (one count = 1 us of lab time from the reset, at least one per CPU read) | input spec; intc/timer spec §3.1, §5 |
 | Menu | the row state s and the cursor-memory path; the paint pass's FILL colours; the dropped queue-10 send (S-SEND); classes 0x0105 and 0x8013; handlers `0x511bf596`, `0x511bf765`, `0x511bf8d2`; the camera's MENU event; dial direction; the observed navigation rules; B2's two inputs (S-TAKEOVER, H-CONNECT) and the normal-boot route behind them; the "Setup Menu" title list `0x6153a7ac` and its user | menu spec §10, §12, §13, §14 |
 | Settings store and SCPU | SCPU command semantics, reg-0 bits other than the signature, the TX / RX block, the SCPU task's replies, the clock tick (A-SCPU-1/2); flash contents and controller; the module init chain `0x503dae30` but its property-store init (H-STOREINIT); the custom sets' reset steps `0x503d3f6c`; mode-dependent defaults in the reference; whether the camera's start reads the mode dial; the store-init order; which menu rows write the display kinds `0xe831` / `0x4671` / `0xd7f9` / `0x8279` | settings spec §3-§7 |
 | OSD engine | LUT index-0 transparency (U1; the lab can run either hypothesis, menu pages differ by 0-20 pixels); status bit 1; COPY order on overlap; opcodes `0x41` / `0x60` (not executed, FIDELITY 5.3); bitmap formats `0x01`, `0x05..0x07` and header bits 2/3; clipping; scaling; hardware trigger `0x30`; buffer kind -> palette choice; LUT slots past 128; the bitmap header width (the firmware reads 10 bits, but 13 resources wider than 1024 match only a 12-bit read); the engine finishes inside the CPU store that starts it (FIDELITY 1.3) | vsc spec §7; text spec U1; FIDELITY 1.3, 5.3 |

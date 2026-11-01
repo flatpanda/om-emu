@@ -29,6 +29,7 @@
 // is posted from inside the tick, and a busy Worker's postMessage is delivered at once, so the page sees status and
 // frames while a long input runs (the page answers the status and frame long polls from what was pushed).
 import { labFirmware } from '../src/fw/labfw.mjs';
+import { expandImage } from '../src/fw/expand.mjs';
 import { MODEL_INFO } from '../src/fw/model.mjs';
 import { createHash } from '../src/util/sha256.mjs';
 import { Player } from '../src/lab/player.mjs';
@@ -101,6 +102,8 @@ async function boot(msg) {
   try {
     const fw = await firmware(msg.file ?? null, { cache: msg.cache !== false });
     post({ type: 'progress', stage: 'firmware', from: fw.from, rom: fw.rom.length, res: fw.res.length, manifest: fw.manifest, T: fw.T });
+    // The cache holds the verified original block; the player and its tables need the runtime image.
+    fw.rom = expandImage(fw.rom);
     a = playerArgs(msg.args);
     // the options the lab takes in its env (the page's lens=stand-in, nvram=1 and card_size=GiB): the lens stood in by
     // S-LENS in place of the native lens, the default (src/lab/play.mjs lens_option), the camera's state kept in this
@@ -170,7 +173,7 @@ async function gate(msg) {
   const fw = await firmware(msg.file ?? null, { cache: msg.cache !== false });
   const job = msg.job, t0 = performance.now();
   let slices = 0;
-  const env = { rom: fw.rom, resBlock: fw.res, createHash, ...(job.slice ? { slice: job.slice, onSlice: () => { slices++; } } : {}) };
+  const env = { rom: expandImage(fw.rom), resBlock: fw.res, createHash, ...(job.slice ? { slice: job.slice, onSlice: () => { slices++; } } : {}) };
   let out;
   if (job.name === 'play-perf-workload') out = playWorkload(env);
   else if (job.name === 'lz4') {                  // the LZ4 decode of the two resource blobs (resources.blobs), timed

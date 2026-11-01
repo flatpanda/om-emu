@@ -446,6 +446,29 @@ export const MODELS = {
     // (src/fw/ports.mjs FACTS.E144)
     board: { family: 'E144' },
   },
+  E148: {
+    name: 'OM-5 II', bin: 'OLY_E_148_1100_0000_0000.BIN', version: '1.1', res_block: 'blk017c0000.OE.0101.bin', checked: true,
+    rom_len: 24903616, rom_sha256: 'f9c6b0bb37675a2b031ccf09292796ab5793994b8ce2053dcfd7f9fe68035cd8',
+    // the reset head's jump into the run-time copy at 0x500000b6: mov 0x600210f9,a0; jmp (a0) (D)
+    image_base: 0x60021020,
+    res_len: 12582848, res_sha256: 'b31199742b06197e17bf3386ab48f3a936c8c333dd1b3b8a04a419bef862a369',
+    panels: { tft: [720, 480], evf: [1024, 768] },
+    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // its family's group-4 stand-in (H-G4SET not applied; the producer, the port's place of E143's, is not checked on
+    // E144 either, and its start and S1 run so; X: modelcheck)
+    g4set: G4SET_UNCHECKED,
+    // its board family's (src/fw/board.mjs FAMILIES.E144; the same MMIO family the survey reads, ISC 0x8fe00000,
+    // VSC 0x9c000000, engine 0x9c100000), as E144's
+    board: { family: 'E144' },
+    // through E144 (port_via): the map from E144 pairs 9.50M instructions with 41 conflicts, the one from E143 2.47M
+    // with 66 (X: port.json port_via.map and map, bin/port.mjs), and the OM-5 it succeeds has the same main block size
+    // and its resource block at the same file offset
+    port_via: 'E144',
+    // E144's knobs this body takes through that map (src/fw/knobs.mjs; src/fw/ports.mjs KNOBS): its state block's save
+    // 0x50003c39 has E144's 0x50003a64 line for line (its first read 0x50003c3d is of 0x61e5d500 where E144's 0x50003a66
+    // reads 0x61e635f4, and its cache flush 0x50048f9f returns to 0x50003c75 as E144's 0x5004821b does to 0x50003aa0; D)
+    carry: ['cflush_returns', 'block_save'],
+  },
   // The bodies at the run-time bases 0x60021020, 0x60020020 and 0x60400020 (docs/model-survey.md tiers A-C). Each
   // entry's .BIN is the one the updater API serves for its code (the name: its reply's model_name; the reply is not
   // committed), pinned in BLOBS.sha256; rom_* and res_* are the main block's and the resource prefix's

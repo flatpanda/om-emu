@@ -149,8 +149,8 @@ export const FAMILIES = {
     },
   },
   // E144 (OM-5). D: read from the E144 code (the evidence per field; disassembly notation). The same facts hold on
-  // E139, E134, E137, E142, E140, E125, E145, E133, E130, E129 and E132 (X: each fact found by a byte pattern from the
-  // site cited here, or by a census of the 32-bit addresses `fc xx imm32` loads), except the core byte's address,
+  // E139, E134, E137, E142, E140, E125, E145, E133, E130, E129, E132 and E148 (X: each fact found by a byte pattern from
+  // the site cited here, or by a census of the 32-bit addresses `fc xx imm32` loads), except the core byte's address,
   // which is read per body. The timer's bookkeeping fields (prescaler, status_readable, soft_tick, hw_channels,
   // hw_entries) and the VSC's and engine's behaviour beyond their register names were checked on E144 only.
   E144: {

@@ -267,8 +267,9 @@ const LANG_FOUND = {
   E145: 3009, E125: 1709, E129: 1709, E130: 1709, E132: 1709, E133: 1709, E118: 1509, E120: 1509, E122: 1509,
 };
 // The ListMenu open's tab and page memories (menu.tab_memory, menu.page_memory) as read at the loads (D: E143
-// 0x511bd163/0x511bd183, E146 0x511cbf5e/0x511cbf7e, E147 0x511ddac2/0x511ddae2); the other 15 bodies have none (X)
-const MEMORY_FOUND = { E143: [1881, 1882], E146: [1881, 1882], E147: [1909, 1910] };
+// 0x511bd163/0x511bd183, E146 0x511cbf5e/0x511cbf7e, E147 0x511ddac2/0x511ddae2, E148 0x50e77adb/0x50e77afb, whose
+// getter is read at the settings object's vtable slot 8 rather than 12); the other 16 bodies have none (X)
+const MEMORY_FOUND = { E143: [1881, 1882], E146: [1881, 1882], E147: [1909, 1910], E148: [1909, 1910] };
 // The bodies without a touch-panel driver (touch_panel.driver false; src/fw/facts.mjs touchDriver): E145, whose image
 // holds no "tp_drv_" string and whose boot calls no touch init where E142's does (X, a string count; D, E142
 // 0x5002562d), and E129 and E132 (TG-5), which hold the driver's debug callback's trace but load it nowhere; the
@@ -428,6 +429,7 @@ const ERRLOG_FOUND = {
   E143: 0x50047313, E146: 0x50047F1A, E147: 0x50047A34, E144: 0x50041D51, E139: 0x50043A9F, E134: 0x500453BD,
   E137: 0x5003E9A9, E142: 0x500417E8, E140: 0x50041672, E125: 0x50041A17, E145: 0x500407F2, E133: 0x50040112,
   E130: 0x5003FDA7, E129: 0x50040967, E132: 0x50040943, E118: 0x5000318E, E122: 0x50003195, E120: 0x500031B7,
+  E148: 0x500421E7,
 };
 // The remaining-shots query (card.shots_query; src/fw/facts.mjs shotsQuery): E143's as the lab gives it
 // (src/lab/camapp.mjs SHOTS_QUERY, D), the places of E143's the maps gave (E146, E147, E144, E139, E134, E137, E125),
@@ -440,7 +442,7 @@ const DETECT_FOUND = {
   E143: [0xA33AF3D4, 2], E146: [0xA33E2088, 2], E147: [0xA33C9C50, 1], E144: [0xA27018B8, 1], E139: [0xA27487C0, 2],
   E134: [0xA290FE74, 2], E137: [0xA2680C10, 1], E142: [0xA2787684, 1], E140: [0xA2785998, 1], E125: [0xA27A10F8, 2],
   E145: [0xA2219288, 1], E133: [0xA2B16D0C, 1], E130: [0xA2B6A660, 1], E129: [0xA2B747D8, 1], E132: [0xA2B74D4C, 1],
-  E118: [0xA1C47794, 1], E122: [0xA1C878DC, 1], E120: [0xA1C46B78, 1],
+  E118: [0xA1C47794, 1], E122: [0xA1C878DC, 1], E120: [0xA1C46B78, 1], E148: [0xA2750A68, 1],
 };
 // The card's file system seams (storage; src/fw/facts.mjs fileSystem): E143's as src/fw/models.mjs gave them by hand
 // before the rule (D, its storage entry; the tasks then by their entries 0x50894e37 and 0x5087cda8, whose starts read
@@ -474,6 +476,7 @@ const SHOTS_FOUND = {
   E143: 0x50419164, E146: 0x50414A5F, E147: 0x50422B7E, E144: 0x502FAB48, E139: 0x502F7CEB, E134: 0x50313E2D,
   E137: 0x502EC70F, E142: 0x502C79DB, E140: 0x502D63A0, E125: 0x50307376, E145: 0x502CEB73, E133: 0x502DAB10,
   E130: 0x502E943F, E129: 0x502BB7E3, E132: 0x502BD1C7, E118: 0x502C2877, E122: 0x502E3440, E120: 0x502BD9A9,
+  E148: 0x502FED34,
 };
 // CPU 0's init task and OlyTaWu (rtos.init_task, rtos.ta_wu; src/fw/facts.mjs initTask, taWu) at the port's places of
 // the kcb and wup_tsk: E143's as the lab gives them (src/lab/kernel.mjs INIT_TASK_ENTRY, src/lab/rtos.mjs; D: the

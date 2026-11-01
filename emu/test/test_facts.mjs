@@ -591,8 +591,8 @@ const BOOT_FOUND = { E133: { key: 0xA2AE718C }, E129: { stage: 0xA2B4D2CC }, E12
 const DPC_FOUND = { E132: { init: 0x5004A115, board: { triggers: 0x9B800030, irqs: [29, 30, 31, 32, 33, 34] } },
   E118: { init: 0x50061D01, board: { triggers: 0x9B8000F4, irqs: [30, 31, 32, 33] } } };
 // The movie record time's division by the frame rate (card.movie_rate; src/fw/facts.mjs movieRate): E118's (D: the
-// function 0x50535bf4, its divu by the byte 0xa1c2fad8 at 0x50535c40, its error for no struct 0x9d05); none on E143
-const MOVIE_RATE_FOUND = { E143: null, E122: null, E118: { fn: 0x50535BF4, rate: 0xA1C2FAD8, error: 0x9D05 } };
+// function 0x50535bf4, its divu by the byte 0xa1c2fad8 at 0x50535c40); none on E143
+const MOVIE_RATE_FOUND = { E143: null, E122: null, E118: { div: 0x50535C40, rate: 0xA1C2FAD8 } };
 // The serial controller's driver (sioDriver; D: E132's IIC write 0x5004ba70 calls the transfer start 0x500506cb, its
 // write-read the receive start 0x500509be; the registration 0x50051145 its IIC configuration calls fills 0xa2b19ea8 and
 // 0xa2b19ec8, which the interrupt's ends dispatch through 0x50051814; the control 0x500505e1's mode 2 stores the restart

@@ -2206,20 +2206,20 @@ export function cardDetect(img) {
 // The movie record time's division by the movie info's frame rate (fact 'card.movie_rate', src/lab/camapp.mjs
 // S-MOVRATE): the movie time query (E143's MOVIE_TIME_QUERY 0x5042da58, the place E118 0x5051875a) fills the movie
 // module's record time into its caller's struct through a function (E118 0x50535bf4) that opens `mov a0,a2; clr d2;
-// cmp 0,a2; bne; mov E,d2` (E: its answer for no struct, 0x9d05) and divides a frame count by the frame rate byte R
-// without a test, `mov (W),d1; movbu (R),d0; divu d0,d1; mul 1000,d1` (0x50535c34..0x50535c42, D). The rate is the
-// movie module's set-up's (0x50535c83, its +6, from the record sequence's state handlers 0x50547042 and 0x50547f09,
-// D), which the lab does not run: E143's query finds the same rate 0 in its time code conversion and logs 0x39000903
-// (MODELS card_fs errlog; E118 has that conversion too, 0x50534891). One such division on E118, none on the other 17
-// images (X, a byte scan: E122's and E120's record time multiplies a word by 1000 there). Returns {fn, rate, error}
-// or null where none.
+// cmp 0,a2; bne; mov E,d2` (E: its answer for no struct) and divides a frame count by the frame rate byte R without a
+// test, `mov (W),d1; movbu (R),d0; divu d0,d1; mul 1000,d1` (0x50535c34..0x50535c42, D), the quotient stored at +20.
+// The rate is the movie recorder's set-up's (0x50535c83, its +6), which runs on CPU 2 at a movie take's start or a
+// movie's playback (docs/model-survey.md finding 60, D): until then it is 0 on the camera too, and the divide is the
+// MN103's DIVU by 0 (emu/FIDELITY-NOTES.md 3.2). One such division on E118, none on the other 17 images (X, a byte
+// scan: E122's and E120's record time multiplies a word by 1000 there). Returns {div (the divu), rate} or null where
+// none; throws where the division is not in a function of that opening.
 const MOVIE_RATE_DIV = [0xfc, 0xa8, null, null, null, null, 0xf2, 0x71, 0xfb, 0x15, 0xe8, 0x03];
 const MOVIE_RATE_OPEN = [0x92, 0x08, 0xba, 0x00, 0xc9, 0x0a, 0xfc, 0xce], MOVIE_RATE_SPAN = 0x80;
 export function movieRate(img) {
   const at = oneAt(img, MOVIE_RATE_DIV, 'movieRate', 'divisions by a frame rate byte');
   if (at === null) return null;
   for (let o = at; o > at - MOVIE_RATE_SPAN; o--) {
-    if (bytesAt(img, o, MOVIE_RATE_OPEN)) return { fn: 0x50000000 + o, rate: u32(img, at + 2), error: u32(img, o + MOVIE_RATE_OPEN.length) };
+    if (bytesAt(img, o, MOVIE_RATE_OPEN)) return { div: 0x50000000 + at + 6, rate: u32(img, at + 2) };
   }
   throw new Error(`movieRate: the division by the frame rate at ${h8(0x50000000 + at)} has no opening within 0x${MOVIE_RATE_SPAN.toString(16)} bytes`);
 }

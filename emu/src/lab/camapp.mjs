@@ -113,9 +113,10 @@ import { DISPLAY_SYNC_E143, RECVIEW_E143, CBS_E143, LENS_ZOOM_TABLE_E143, CARD_D
 //              count tests only the status's error bits (MODEL_INFO.dcf_mount_test, src/fw/models.mjs) gets the
 //              mount test at its error-bit test: with the mount bit clear the stand-in sets error bit 0, so the count
 //              returns as not mounted instead of reading the free clusters of a volume that does not exist
-//   S-MOVRATE  (fact card.movie_rate: E118) the native movie time query's record time, which divides by the movie
-//              info's frame rate without a test: while that rate, the movie module's set-up's, is 0 it returns its
-//              error for no struct (see the hook)
+//   S-MOVRATE  (fact card.movie_rate: E118) the MN103's DIVU by 0 in the native movie time query's record time,
+//              which divides by the movie info's frame rate without a test: that rate is 0 until a movie take or a
+//              movie's playback runs the movie recorder's set-up, on the camera too; the divide alone is stood in
+//              for, its quotient 0 (see the hook)
 //   S-PLAYSEQ  the play module's notifications of the HLS play requests (see RSB_EXECUTE); S-PLAYCOMP answers for the
 //              play component the HLS components would create (PLAY_COMPONENT); S-PLAYVIEW (play.mjs) shows the image;
 //              the synchronous getNumber (5) is answered from the image shown where PlyCom asks no component
@@ -331,7 +332,7 @@ export const CAMAPP_STAND_INS = {
   "A-SCPUM4-1": "(OM_EMU_SCPU=native) the sub-CPU's time runs in step with lab time: before it takes an input of the MN's (a pin, a transfer) it runs up to the lab time of that input, and at the MN's idle points up to the lab's now; each input also opens an answer window of 50 ms of its own time (0.5 s after its power-on or reset) in which it runs on at the idle points while lab time stands still, stopping at each change of its link lines, which reach the MN one per idle point (A-SCPUDEV-1's order); a transfer's bytes pass its SPI2 at the link's clock, eight bit times of its own each, in zero lab time. The windows let it boot and answer while the MN waits on it in zero lab time and stay short of its command manager's 1000-tick monitor",
   "A-SCPUM4-2": "(OM_EMU_SCPU=native) a link line the sub-CPU does not drive (its pin not an output, an open-drain 1, the reset held) reads as S-SCPUDEV's lines while its reset is held: pin 102 low, the message line high; what the board makes of a released pin is ?",
   "A-SCPUM4-3": "(OM_EMU_SCPU=native) MN pin 107 high holds the sub-CPU's NRST low, S-SCPUDEV's polarity: a pin reset of the STM32L4 that keeps its backup domain (the RTC, the backup registers) and its SRAM; the sub-CPU is powered on at the link's start with a blank backup domain (the camera's has run since its battery went in, ?)",
-  "S-MOVRATE": "(a body whose movie record time divides by the movie info's frame rate without a test: E118, X) while that rate, which the movie module's set-up gives and the lab does not run, is 0, the record time returns its own error for no struct without the division, so the movie time query answers its error, as E143's query does with its frame rate 0 log (docs/model-survey.md finding 51)",
+  "S-MOVRATE": "(a body whose movie record time divides by the movie info's frame rate without a test: E118, X) the MN103's DIVU by 0, whose quotient the manual leaves undefined (emu/FIDELITY-NOTES.md 3.2): the rate is the movie recorder's set-up's, which runs on CPU 2 at a movie take's start or a movie's playback, so it is 0 on the camera too until then (docs/model-survey.md finding 60). While it is 0 the divide is not executed, its quotient taken as 0, and the record time runs on natively and fills its block; the quotient goes only to the block's +20, which two of the query's seven callers read, neither met in the lab's start. What the camera's quotient is, ?",
   "S-LONGTIMER": "the system timer module's long timers (1000 ms and more, set through api_system.c 0x5041fd71 / 0x5041fd0d by the HLS timer service): when one is due in lab time the module's event 0x03010000 | number is published, as the module would",
   "S-BOOTDONE": "the HLS components' boot completion: the camera base (Cab_CameraBase) and the still-shooting category wait in their state 3 for event 415, which their capabilities would send once the modules report ready; S-BOOTDONE dispatches 415 to each waiting there, and 420 (the shooting mode) to the camera base waiting in its state 11, so the shoot mode, the category and Cmp_ShootingComponent are created and run on the OXF main thread (HIGHLEVEL_MAIN, started by S-CAMAPP). The component's sub-CPU status read (0x5012b8b7) returns 0",
   "S-CPU3": "the posts to CPU 3 (remote calls of 0x5002587a through ring [3][0], each setting bits of DISP_FRAME's flag) are taken off the ring and acknowledged after each step, and S-DISPFRAME runs a turn of DISP_FRAME for their bits; the lab has no CPU 3",
@@ -642,18 +643,25 @@ export class CamApp {
       this.log.push(['card', `movie time from ${where(r.mdr)}: ${left} ms left, ${ms} ms recording`]);
       h.finish(r, { d0: 0 });
     }, 'S-CARD (movie time)');
-    // S-MOVRATE: the movie record time's division by the movie info's frame rate, which the movie module's set-up
-    // (not run in the lab) gives (fact card.movie_rate, src/fw/facts.mjs movieRate: E118's, which divides without the
-    // test E143's time code conversion makes): while the rate is 0 the record time returns the error it gives for no
-    // struct, without the division, and the movie time query answers its error as E143's does with its rate-0 log
-    // (src/fw/models.mjs MOVIE_TIME_ERRLOG; docs/model-survey.md finding 51)
+    // S-MOVRATE: the movie record time's division by the movie info's frame rate (fact card.movie_rate,
+    // src/fw/facts.mjs movieRate: E118's, which divides without the test E143's time code conversion makes). The rate
+    // is the movie recorder's set-up's, 0 until a movie take or a movie's playback, on the camera too
+    // (docs/model-survey.md finding 60), and the MN103's DIVU by 0 leaves its quotient undefined
+    // (emu/FIDELITY-NOTES.md 3.2): while the rate is 0 the divide is not executed, its quotient taken as 0 (the
+    // camera's is ?; MDR, which the function sets again before its next divide, is left), and the record time runs on
+    // natively
     const mr = fact('card.movie_rate', null) ?? null;
-    if (mr) lab.hook(mr.fn, (h, r) => {
-      if (lab.sim.read(mr.rate, 1)[0] !== 0) { lab.passthrough(r); return; }
-      this.movie_rate_answered += 1;
-      if (this.movie_rate_answered === 1) this.log.push(['card', `movie record time from ${where(r.mdr)}: frame rate 0, ${hex(mr.error)}`]);
-      h.finish(r, { d0: mr.error });
-    }, 'S-MOVRATE');
+    if (mr) {
+      const o = mr.div - 0x50000000;
+      if (lab.image[o] !== 0xF2 || lab.image[o + 1] !== 0x71) throw new FirmwareError(`S-MOVRATE: ${h8(mr.div)} is not divu d0,d1`);
+      lab.hook(mr.div, (h, r) => {
+        if (lab.sim.read(mr.rate, 1)[0] !== 0) { lab.passthrough(r); return; }
+        this.movie_rate_answered += 1;
+        if (this.movie_rate_answered === 1) this.log.push(['card', `movie record time's divu at ${where(r.pc)}: frame rate 0, quotient 0 (dividend ${hex(r.d1)})`]);
+        if (lab.sim.packet('G' + packRegs({ ...r, d1: 0, pc: (r.pc + 2) >>> 0, fault: 0 })) !== 'OK') throw new AssertionError('');
+        lab.passthrough(r);
+      }, 'S-MOVRATE');
+    }
     lab.hook(TRA_EXEC_CALLS, (h, r) => tra(h, r, true), 'S-TRAACK (calls)');
     lab.assume('A20', true);                                                       // playback's entry writes HILIGHT1 = 0
     lab.observe(AUTO_THROUGH, (l, r) => this.s.scene_through?.((r.d0 >>> 0) !== 0), 'S-THROUGH');

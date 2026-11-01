@@ -35,7 +35,7 @@ Every milestone runs in emu and is covered by the check its row names; the `chec
 | The camera application | every play session runs the firmware's camera application (CA_MAIN) natively (S-CAMAPP, 2026-10-15): power-on to the shooting screen, S1, S2 and the rec view, REC, playback, the Super Control Panel and the menu; the lab's own stand-ins for it are gone | `test_camapp`, `golden.json` | shutter spec §7 |
 | Exposure | a 12-40mm F2.8 PRO on the mount and the scene's brightness fed to the camera's own exposure plan (S-EXPOSE); the screen shows the planned shutter, aperture and ISO | `golden.json` | shutter spec §7 item 60 |
 | The lens natively (E143, E146, E147; the default) | the lens tasks, the lens driver, LENS_SSC and IRQ 14 against a model of the lens serial controller, with S-LENSMCU answering the driver's frames as the 12-40mm F2.8 PRO (2026-10-28); the deferred calls (IRQs 53..58); the zoom ring and the lens lock pin switch reach the driver; the camera application forwards the touches itself (2026-10-29: the touch's stop was S-CAFWD swallowing the GUI's answer). The default since 2026-10-29, on E146 and E147 too, their driver's addresses read by a rule (`lensDriver`, fact `lens_driver`; 2026-10-29); `OM_EMU_LENS=stand-in` takes S-LENS, the other bodies' lens | `test_lens` (E143, E146, E147), `test_facts`, `golden.json` | hle-gaps.md §4.4.2, §4.4.3 |
-| Multi-model, steps 1-4 and part of 7 | 17 bodies besides E143 have ports; E146, E147, E144, E139, E134, E137, E140, E125 and E130 shoot, play back and run the EVF through `bin/modelcheck.mjs`, E142, E133, E145, E129 and E132 (no EVF) on the TFT, each with the screen's remaining-shots count (the count probe); the E118 family's board is ported and E122, E118 and E120 run the path on the TFT and the EVF, their frames composed, the count probe with INFO's redraw (2026-10-31; Multi-model below) | `emu/bin/modelcheck.mjs`, `test_facts` | `docs/model-survey.md` |
+| Multi-model, steps 1-4 and part of 7 | 17 bodies besides E143 have ports; E146, E147, E148, E144, E139, E134, E137, E140, E125 and E130 shoot, play back and run the EVF through `bin/modelcheck.mjs`, E142, E133, E145, E129 and E132 (no EVF) on the TFT, each with the screen's remaining-shots count (the count probe); the E118 family's board is ported and E122, E118 and E120 run the path on the TFT and the EVF, their frames composed, the count probe with INFO's redraw (2026-11-01, E148's card native too; Multi-model below) | `emu/bin/modelcheck.mjs`, `test_facts` | `docs/model-survey.md` |
 
 Instruction counts: the ISA row's 1,684,013 reachable instructions come from a reachability scan that is no longer in
 the repository. `node emu/bin/fwmap.mjs` finds 5,186,071 instructions in the main block, because it also follows code
@@ -47,7 +47,8 @@ not reconciled.
 1. **Depth on the ported bodies** (Multi-model step 7): ten bodies pass `bin/modelcheck.mjs` since 2026-10-23, its
    count probe included (eleven with E133 since 2026-10-29), E139 and E134 with PER_SCPU native over the sub-CPU link as E143, E146 and E147 (SCPU track
    step 2), and nine of them with the card's file system native (2026-10-25, hle-gaps.md 4.8.4); E145 joined them on
-   2026-10-29, its card native too (`docs/model-survey.md` finding 22). The E144 family's orange movie time `0:00:00` is the firmware's answer for the
+   2026-10-29, its card native too (`docs/model-survey.md` finding 22), and so did E148 on 2026-11-01, its card native
+   and its menus the ListMenu build E147's is (finding 65). The E144 family's orange movie time `0:00:00` is the firmware's answer for the
    blank store's movie mode, which those bodies cannot record (2026-10-27, hle-gaps.md 4.8.5).
 2. **The open stops of the remaining bodies** (Multi-model "Next stops"): the E118 family past its board port (E122,
    E118 and E120 pass modelcheck on the TFT and the EVF since 2026-10-30, their cards native and their frames
@@ -96,13 +97,13 @@ bodies; the bodies whose image runs at a `0x60xxxxxx` base pair 0.76M-2.08M inst
 
 | Tier | Bodies | Where it stands |
 |---|---|---|
-| ported | E146 OM-1 II, E147 OM-3 | `bin/modelcheck.mjs` passes on the TFT and the EVF, the count probe included |
+| ported | E146 OM-1 II, E147 OM-3, E148 OM-5 II | `bin/modelcheck.mjs` passes on the TFT and the EVF, the count probe included; E148 since 2026-11-01, its card native (`docs/model-survey.md` finding 65) |
 | ported | E144 OM-5, E139 E-M1 III | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe included |
 | A | E134 E-M1X | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe included |
 | B | E137 E-M5 III, E142 E-P7, E140 E-M10 IV, E125 E-M1 II, E145 TG-7 | E137, E140 and E125: `bin/modelcheck.mjs`'s path passes on the TFT and the EVF, E142 and E145 (no EVF) on the TFT; the count probe passes on all five; E145 with MENU at its date and time setting (`0x1103`) after the start (2026-10-29) |
 | C | E133 E-PL9, E130 E-M10 III, E129 / E132 TG-5, E118 E-M5 II, E122 PEN-F, E120 E-M10 II | E130: `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe too; E133, E129 and E132 on the TFT (2026-10-29), their cards native; the E118 family's board is ported (2026-10-30): E122, E118 and E120 pass `bin/modelcheck.mjs` on the TFT and the EVF with their cards native and their frames composed (2026-10-30, findings 38 to 56), the count probe since 2026-10-31 with the screen redrawn by INFO before each window (finding 61: the applications ask for the count only when the shooting screen is redrawn) |
 | D | E100, E101, E106-E113, E115, E117, E121, E126 | not tried |
-| - | the new OM System PEN (E148?) | not served yet (E148-E199 answer nothing, 2026-10-19): re-probe |
+| - | the new OM System PEN | not served as of the 2026-10-19 probe (E148-E199 answered nothing; E148 has since been served as the OM-5 II, finding 65): re-probe |
 
 The status of each body, its first stop and the evidence are in `docs/model-survey.md` ("Per-body status").
 

@@ -1710,9 +1710,10 @@ its code:
   `0x9b802064`, `0x506a3aec`; E143's `0x9b880000`), SD_INFO2 at `+0x203c` bit 13 polled as on E143 (E144
   `0x506a1871`, D).
 - **Bodies (X: `emu/bin/modelcheck.mjs` with the card check, `emu/test/test_storage.mjs --session` on E146, E147,
-  E144 and E142):** native on E143, E146, E147, E144, E139, E137, E142, E140, E125 and E130: the blank card formatted
-  by the firmware (FAT32; label `OM SYSTEM` on the E143 family and E144, `NO NAME` on the others), mounted, the
-  remaining shots from the card (803 on the OM-1 family's 8 GiB card, 826 on E144, E139, E137, E142 and E140, 1607 on
+  E144 and E142):** native on E143, E146, E147, E148, E144, E139, E137, E142, E140, E125 and E130: the blank card formatted
+  by the firmware (FAT32; label `OM SYSTEM` on the E143 family, E148 and E144, `NO NAME` on the others), mounted, the
+  remaining shots from the card (803 on the OM-1 family's 8 GiB card, 826 on E148, E144, E139, E137, E142 and E140,
+  1607 on
   E125, 2018 on E130), S2's file written and read back independently (`emu/refs/fat.mjs`: its directory entry and
   size), and the count probe's screen follows the query. E147's file system calls the SCPU clock's API at the
   bring-up before the clock's state field (`0x98e00000` bits 2..7) is 42, and the API logs `0x19001004` (expected

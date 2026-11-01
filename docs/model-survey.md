@@ -16,7 +16,8 @@ status and in `emu/src/lab/playui.mjs`.
 ## How it was run
 
 1. Probe: `node emu/bin/fw-survey.mjs probe 100 199` asks the API for `OLY<code>000000000` over E100..E199. 32 codes
-   answer (table below); E148..E199 answer nothing, so the new OM System PEN is still not served (X).
+   answer (table below); E148..E199 answered nothing on 2026-10-19, and E148 has since been served v1.1 on 2026-10-28 as
+   the OM-5 Mark II (finding 65), so the new OM System PEN is still not served (X).
 2. Fetch: `node emu/bin/fw-survey.mjs fetch <code> ...` puts each `.BIN` with its reply under `fw/` (E140 and later) or
    `fw/old/`; the digests are in `BLOBS.sha256`. The six `.BIN`s pinned before this survey (E118, E122, E125, E134,
    E139, E142) downloaded again with the same digests, so none of these releases changed since 2026-10-06 (X).
@@ -42,6 +43,7 @@ through a reference place more; "Per-body status" has their figures).
 | E143 | OM-1 | 1900 | 32.0 | 0x60021020 (7.5%) | olycompress | - | - | the lab's build; its card a real FAT32 card since finding 19 |
 | E146 | OM-1 II | 1300 | 32.0 | 0x60021020 (7.6%) | olycompress | 5.55M | 3 | modelcheck passes (TFT and EVF; the count probe since finding 18) |
 | E147 | OM-3 | 1100 | 32.0 | 0x60021020 (7.5%) | olycompress | 5.25M | 5 | modelcheck passes (since finding 18 with the count probe) |
+| E148 | OM-5 II | 1100 | 23.7, 2 sections | 0x60021020 (7.5%) | olycompress | 2.47M | 49 | through E144: modelcheck passes (TFT and EVF; the count probe and its card native; the ListMenu memories 1909/1910 read at vtable slot 8, finding 65) |
 | E144 | OM-5 | 1200 | 23.7, 2 sections | 0x60021020 (6.6%) | olycompress | 2.15M | 45 | modelcheck passes (TFT and EVF; the count probe since finding 18) |
 | E139 | E-M1 III | 1600 | 26.0, 2 sections | 0x60021020 (6.6%) | olycompress | 2.08M | 44 | through E144: modelcheck passes (TFT and EVF; the count probe since finding 18) |
 | E134 | E-M1X | 2400 | 26.0 | 0x60021020 (6.5%) | plain | 2.03M | 46 | through E139: modelcheck passes (TFT and EVF; the touch task's send, finding 11; the count probe since finding 18; the card native since finding 23) |
@@ -106,7 +108,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    rather than per model: the mode dial (the UI_IN group records point into RAM the reset head fills, now preloaded
    from the reset head, `resetHead`, with the group count from the firmware's own search, `play.mjs` `uiin_layout`),
    the resource origin (plain blocks, item 5), the language table (the lab had subtracted E143's base), E143's
-   ListMenu tab tables (a fact read by `listMenu`: present on E143, E146 and E147 only), the RTOS hook OlyTaWu and
+   ListMenu tab tables (a fact read by `listMenu`: present on E143, E146, E147 and, since finding 65, E148), the RTOS
+   hook OlyTaWu and
    CPU 0's init task (`taWu`, `initTask`), errlog (`errlogEntry`: the callee after `mov imm32,d0` that tests the id's
    module, `lsr 24,Dn; cmp imm8,Dn`), the interrupt vectors' page (`vectorPage`: `0x6041xxxx` on the `0x60400020`
    bodies, `0x6003xxxx` elsewhere), the CHANGE task (`displayChangeTask`, by its start trace "[CHG] CHG MAIN S"), the
@@ -1212,12 +1215,33 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    I9 checks the new rule (mutant 30 still caught) and check_perf's P6 and P10b register digests change with the
    same instruction counts. Next: the E144 family's wait could be read by its form for S-TPINTWAIT, as finding 54's
    rule reads E120's and E122's.
+65. **The OM-5 II (E148) and modelcheck's path** (2026-11-01). The updater's reply for E148 is not the PEN the probe
+   expected: `model_name` "OM-5 Mark II", `file_name` `OLY_E_148_1100_0000_0000.BIN`, `up_date` 2026/10/28, 90,832,896
+   bytes (D: `fw/E148_reply.xml`). Its main block is 23.7 MiB with two olycompress sections at 0x60021020 (7.5%), its
+   resource block 12,582,848 bytes, and its MMIO is the E144 family's (ISC 0x8fe00000, VSC 0x9c000000, the engine at
+   0x9c100000; X, `bin/fw-survey.mjs`). The cross-build maps agree: 9,503,564 instructions pair with E144's build and
+   2,471,331 with E143's (X, `bin/port.mjs`), so its hardware layer and most of its application are E144's, and its port
+   is chained through E144 (`port_via`; `carry` `cflush_returns` and `block_save`; finding 43), which takes 98 of E144's
+   117 overrides over (47 of them nulls) with 19 failing, 6 nulls gated by a fact and 2 addresses filled from E144's map
+   (X: `emu/out/port/E148/port.json`). Its GUI is not E144's: the image holds `Menu_ListMenu_Tab_Menu_` and
+   `Menu_Viewer` (D, a string read), and its ListMenu open reads the settings object's getter at vtable slot 8, not 12,
+   for the tab and the page memories 1909 and 1910 (0x50e77adb, 0x50e77afb, D), E147's ids. `src/fw/facts.mjs`
+   menuMemory now tries the slot at 12 and at 8, the tab and the page at the same one; E143, E146 and E147 find their
+   pairs as before and no other body finds one (X). The port translates 900 addresses, leaves 49 unmapped and 7
+   collisions (X). `bin/modelcheck.mjs E148` passes on the TFT and the EVF (start 0x0108, S1, S2, PLAY, INFO, PLAY; the
+   count at 186,3,228,29 on the TFT and 282,5,350,48 on the EVF) and its card is native: an 8 GiB SDHC card, FAT32
+   "OM SYSTEM" at sector 8192 in 32 KiB clusters, formatted, 826 shots counted and one file read back (X). The menu does
+   not come up: nav's bring-up reads an address the map cannot place (0x62b3e364, a text module's data, `src/lab/text.mjs`
+   check_init) and 18 of the lab's menu addresses are unmapped, the bar the E144 family's own menu trials stop at (X:
+   `bin/nav.mjs --model E144` stops at its GUI buffer tables), so E148 is at the family's: the shooting path and
+   playback, not the menu. Pinned in `BLOBS.sha256` with its five unpacked blocks.
 
 
 ## Per-body status
 
-The state as of 2026-10-23. Each body's `MODELS` entry (`src/fw/models.mjs`) carries the numbers its `port_via` choice
-rests on and the evidence of every hand value. On that date `bin/modelcheck.mjs --no-port` passes E146, E147, E144,
+The state as of 2026-10-23, and of E148 since 2026-11-01 (finding 65). Each body's `MODELS` entry (`src/fw/models.mjs`)
+carries the numbers its `port_via` choice rests on and the evidence of every hand value. On that date
+`bin/modelcheck.mjs --no-port` passes E146, E147, E144,
 E139, E134, E137, E140, E125 and E130 on the TFT and the EVF and E142 (no EVF) on the TFT (their `MODELS` entries are
 `checked`; E134, E142, E140 and E130 since the second round of step 7, findings 11 to 14, X), and since 2026-10-29
 E133 on the TFT (finding 20, X). Since the third round
@@ -1251,6 +1275,14 @@ card image, playback `0x608` SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE, INFO `0x60b`, bac
 start powers the TFT down, the EVF up and runs the DISPLAY_CHANGE task natively, and whose frame is the 1024 x 768
 EVF shooting screen (finding 10, X). Open: IMG planes (live view, playback) are not modelled on the kind-2 VSC yet;
 which register selects a kind-2 channel's timing bank is ?.
+
+**E148 (OM-5 II).** Ported through E144 (the map pairs 9.5M instructions with E144's build against 2.47M with E143's;
+finding 65) and boots natively to its shooting screen; `bin/modelcheck.mjs` passes on the TFT and the EVF with the count
+probe and its card native, an 8 GiB SDHC card the firmware formats and counts 826 shots from (X). Its GUI is the ListMenu
+generation: the tab and page memories are 1909 and 1910, E147's ids, read at the settings object's vtable slot 8 where
+E143, E146 and E147 read slot 12 (`src/fw/facts.mjs` menuMemory; finding 65). Open: the menu's bring-up reads unplaced
+data (0x62b3e364) and 18 of the lab's menu addresses are unmapped, as on the family; 19 of E144's carried overrides fail
+and 49 addresses stay unmapped (`port.json`; finding 65).
 
 **E139 (E-M1 III).** Ported through E144 and boots natively to its shooting screen as E144 does; the TFT session stays
 in `0x108` ID_ST_CA_REQ_DISP and takes S1 (UI_IN codes `0x2000100` down, `0x2010100` up), with the same events as E144's
@@ -1525,7 +1557,8 @@ take about 1.1 s per body. Under heavy load the full re-port after E144's inter-
 
 ## Not covered
 
-The new OM System PEN (expected as E148) is not on the update server. Lens and accessory firmware are out of scope.
+The new OM System PEN was expected as E148, which the updater now serves as the OM-5 Mark II (finding 65); the PEN is
+still not on the update server. Lens and accessory firmware are out of scope.
 Besides E143, E146 and E147, nine bodies pass the player with a picture (the shooting screen in their frame, S1 taken,
 the player settled running): E144, E139, E134, E137, E142, E140, E125, E130 and, after MENU at its date and time
 setting, E145 (finding 22). E133 passes modelcheck since 2026-10-29, E129 and E132 too (finding 24: E129 after MENU,

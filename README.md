@@ -26,11 +26,11 @@ and the Super Control Panel, S1 / S2 and REC with a synthetic scene on the live 
 the TFT and the EVF. Scripted menu sessions (`emu/bin/nav.mjs`) and a debug API (`emu/bin/debug.mjs`: registers,
 memory, breakpoints, traces) drive the same machine without the page.
 
-Other bodies, through ports (as of 2026-10-31):
+Other bodies, through ports (as of 2026-11-01):
 
 | Body | Code | Status |
 |---|---|---|
-| OM-1 Mark II, OM-3, OM-5, E-M1 III, E-M1X, E-M5 III, E-M10 IV, E-M1 II, E-M10 III | E146, E147, E144, E139, E134, E137, E140, E125, E130 | start, S1, S2, playback on the TFT and the EVF (`emu/bin/modelcheck.mjs` passes, the screen's remaining-shots count included) |
+| OM-1 Mark II, OM-3, OM-5 II, OM-5, E-M1 III, E-M1X, E-M5 III, E-M10 IV, E-M1 II, E-M10 III | E146, E147, E148, E144, E139, E134, E137, E140, E125, E130 | start, S1, S2, playback on the TFT and the EVF (`emu/bin/modelcheck.mjs` passes, the screen's remaining-shots count included; E148's card runs natively too, 2026-11-01) |
 | E-P7, E-PL9, TG-7, TG-5 | E142, E133, E145, E129, E132 | start, S1, S2, playback on the TFT, which is their only panel (`emu/bin/modelcheck.mjs` passes) |
 | PEN-F | E122 | start, S1, S2, playback on the TFT and the built-in EVF with the card's file system native (`emu/bin/modelcheck.mjs` passes; the firmware formats and mounts the card, counts 1470 shots from it and writes S2's picture to it); the frames show the shooting screen the GUI draws, in its own palette; the count follows the card's query on screen once INFO redraws it, as the application asks for the count only when the shooting screen is redrawn (2026-10-31) |
 | E-M5 II, E-M10 II | E118, E120 | start, S1, S2, playback on the TFT and the EVF with the card's file system native (`emu/bin/modelcheck.mjs` passes; the firmware formats and mounts the card, counts 2116 shots from it and writes S2's picture to it); the frames show the shooting screen the GUI draws, in its own palette; the count follows the card's query on screen once INFO redraws it, as on the PEN-F (2026-10-31) |

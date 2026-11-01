@@ -1709,28 +1709,26 @@ its code:
   port table `0x607d0de8`, read by its SD driver, D), the card's pins and power in the GPIO page `0x9b802000` (E144
   `0x9b802064`, `0x506a3aec`; E143's `0x9b880000`), SD_INFO2 at `+0x203c` bit 13 polled as on E143 (E144
   `0x506a1871`, D).
-- **Bodies (X: `emu/bin/modelcheck.mjs` with the card check, `emu/test/test_storage.mjs --session` on E146, E147,
-  E144 and E142):** native on E143, E146, E147, E148, E144, E139, E137, E142, E140, E125 and E130: the blank card formatted
+- **Bodies (X: `emu/bin/modelcheck.mjs` with the card check, `emu/test/test_storage.mjs --session` on E146, E147, E144
+  and E142):** native on E143, E146, E147, E148, E144, E139, E137, E142, E140, E125 and E130: the blank card formatted
   by the firmware (FAT32; label `OM SYSTEM` on the E143 family, E148 and E144, `NO NAME` on the others), mounted, the
-  remaining shots from the card (803 on the OM-1 family's 8 GiB card, 826 on E148, E144, E139, E137, E142 and E140,
-  1607 on
-  E125, 2018 on E130), S2's file written and read back independently (`emu/refs/fat.mjs`: its directory entry and
-  size), and the count probe's screen follows the query. E147's file system calls the SCPU clock's API at the
-  bring-up before the clock's state field (`0x98e00000` bits 2..7) is 42, and the API logs `0x19001004` (expected
-  in its `card_fs`; on E143 and E146 the field is 42 by then, X). S-SCENE's live view runs on the E143 family only
-  (its banks are E143's), so an E144-family picture's file holds a black frame. Not native: E134 (on a native card
-  S-RECFILE's first fopen never completes: FILECLBK blocks in a write with no timeout to UI_IN's request queue,
-  `0x6004192e`, at `0x5010c35f`, which nothing reads in the lab, 53 writes in 10 s; E143's and E144's fopen make no
-  such write; why E134's does is ?), E129 and E132 (their starts stop before the application, ROADMAP),
-  the E118 family (no SD command layer of the rule's form; E122's start reaches the application since 2026-10-30, and
-  its movie time then divided by the file system's volume object, which the file system's bring-up creates and the
-  lab did not run, `docs/model-survey.md` finding 31; E122's card is native since 2026-10-30, 4.8.8). They keep
-  S-CARD. E134's card is native since
-  2026-10-29 (4.8.7: the queue is UI_OUT's, the module of the camera's lamps, which its file layer asks for the card's
-  access lamp; H-UIOUTSTART runs UI_OUT). E133's card is native since
-  its start runs (2026-10-29: 2018 shots on the blank card, S2's file read back, X), and E145's (TG-7) since its start
-  runs to the shooting screen (2026-10-29, `docs/model-survey.md` finding 22: the blank card formatted `OM SYSTEM`,
-  mounted, 1362 shots and `0:37:22` from the 8 GiB card, S2's file read back; X: `bin/modelcheck.mjs`, frames).
+  remaining shots from the card (803 on the OM-1 family's 8 GiB card, 826 on E148, E144, E139, E137, E142 and E140, 1607
+  on E125, 2018 on E130), S2's file written and read back independently (`emu/refs/fat.mjs`: its directory entry and
+  size), and the count probe's screen follows the query. E147's file system calls the SCPU clock's API at the bring-up
+  before the clock's state field (`0x98e00000` bits 2..7) is 42, and the API logs `0x19001004` (expected in its
+  `card_fs`; on E143 and E146 the field is 42 by then, X). S-SCENE's live view runs on the E143 family only (its banks
+  are E143's), so an E144-family picture's file holds a black frame. Not native: E134 (on a native card S-RECFILE's
+  first fopen never completes: FILECLBK blocks in a write with no timeout to UI_IN's request queue, `0x6004192e`, at
+  `0x5010c35f`, which nothing reads in the lab, 53 writes in 10 s; E143's and E144's fopen make no such write; why
+  E134's does is ?), E129 and E132 (their starts stop before the application, ROADMAP), the E118 family (no SD command
+  layer of the rule's form; E122's start reaches the application since 2026-10-30, and its movie time then divided by
+  the file system's volume object, which the file system's bring-up creates and the lab did not run,
+  `docs/model-survey.md` finding 31; E122's card is native since 2026-10-30, 4.8.8). They keep S-CARD. E134's card is
+  native since 2026-10-29 (4.8.7: the queue is UI_OUT's, the module of the camera's lamps, which its file layer asks for
+  the card's access lamp; H-UIOUTSTART runs UI_OUT). E133's card is native since its start runs (2026-10-29: 2018 shots
+  on the blank card, S2's file read back, X), and E145's (TG-7) since its start runs to the shooting screen (2026-10-29,
+  `docs/model-survey.md` finding 22: the blank card formatted `OM SYSTEM`, mounted, 1362 shots and `0:37:22` from the 8
+  GiB card, S2's file read back; X: `bin/modelcheck.mjs`, frames).
 - **The movie time (goal 2, X: frames):** the E142 lineage's orange `0:00:00` is gone: E142 and E140 show `0:10:45`,
   E130 `0:37:22`, from the card (E142's DCF remain movie time `0x505fd798`, which returned 0 on S-CARD's card).
   The E144 family's (E144, E139, E137, E125) stays orange `0:00:00` beside the card's count: E144's DCF remain movie

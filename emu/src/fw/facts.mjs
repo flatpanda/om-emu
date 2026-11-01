@@ -1803,6 +1803,30 @@ export function touchIntWait(img) {
   return { wait: 0x50000000 + w, poll: 0x50000000 + poll, word };
 }
 
+// The camera's clock read (fact 'clock.real_time', src/lab/camapp.mjs S-CARD: the date of a picture taken):
+// api_sctime_GET_REAL_TIME, whose trace loads its name (E122 0x502ee369 -> 0x5016892e -> the RTC driver's get
+// 0x50068dbc, D), fills a0's record {u16 year, month, day, hour, minute, second, pad, u16 status} (the status at +8,
+// `movhu d0,(8,a3)` 0x50068e14; a caller in the application, 0x5071bfb5, takes +0 as a u16 and +2..+6 as bytes in
+// that order and fails for a status not 0, 0x5071bfbc..0x5071bfe9, D; the hour, minute and second's order is I). In the lab the E118 family's
+// clock is not set: it answers its default with the status 10501, E122 2016-01-01 00:00:00, E118 and E120 2015-01-01
+// (X, at the start, S2 and INFO), the status E143's sub-CPU answers with its own default (src/lab/scpudev.mjs
+// RTC_INVALID). The name is held by the E118
+// family's three of the 18 expanded images, each loaded by one entry with callers (X); the E143 and E144 families read
+// their clock through the sub-CPU (scpu.backup) or otherwise (not read). Returns the entry, or null where the name is
+// not held; throws for two entries.
+const REAL_TIME_NAME = 'api_sctime_GET_REAL_TIME';
+export function realTimeGetter(img) {
+  const { base } = imageBase(img), entries = new Set();
+  // an entry with callers from which the code runs to the load with no return on the way (apiEntries also gives the
+  // function before it, E122 0x502ee34c, which returns 6 bytes before the load)
+  const straight = (e, p) => { for (let q = e; q < p; q += insnLength(img[q], img[q + 1])) if (isRet(img, q)) return false; return true; };
+  for (const o of findString(img, REAL_TIME_NAME, { nul: true, after: true })) {
+    for (const p of loadsOf(img, base + o)) for (const e of apiEntries(img, base + o, NAME_HEAD)) if (e < p && p - e <= NAME_HEAD && straight(e, p) && callsTo(img, e).length) entries.add(e);
+  }
+  if (entries.size > 1) throw new Error(`realTimeGetter: ${entries.size} entries load "${REAL_TIME_NAME}": ${[...entries].map((e) => h8(0x50000000 + e)).join(', ')}, want one`);
+  return entries.size ? 0x50000000 + [...entries][0] : null;
+}
+
 // Whether the build holds a touch-panel driver (fact 'touch_panel.driver'; src/lab/display.mjs HAS_TOUCH, which hooks
 // the touch I2C functions only on such a build, and src/lab/play.mjs, which runs one without as --touch off): the
 // driver's debug callback logs "--- tp_drv_dbg_callback ---", which its code loads (`mov imm32,Rn` of the string's
@@ -2955,6 +2979,67 @@ export function componentWrappers(img, getter) {
   return out;
 }
 
+// The still information's layout (fact 'play.still', src/lab/camapp.mjs S-PLAYSEQ and S-PLAYCOMP): OlyHfwOpePlyCom's
+// getStillInfo hands the play component's still information (E143 0x50ace3a9, the component's buffer) or the play
+// module's answer to the synchronous request 3 (0x50ace3d4, the response block; the E118 family's getStillInfo sends
+// the request alone, E122 0x506aae96) to one converter (E143 0x50acc981, E122 0x506a9cc9), d0 the information, a1 the
+// GUI's record, whose dump (0x50acd02d) names the record's fields: +0 createDate.year .. +56 focalLength. The converter
+// is the same code on both, the date (+8 u16 year, then month, day, hour, minute, second bytes), the picture size (+16
+// u16 x 2), the exposure time (+48), f-number (+56) and bias (+72) rationals at the same offsets, but later fields
+// moved: E143's focal length is its u32 +148, E122's +136, E143's ISO (the GUI's +88) its u32 +100, E122's u16 +90
+// (D, the two converters side by side; X: the GUI drew E122's ISO 200 and 2.5mm for 25 at those, the focal length in
+// tenths of a mm). The converter copies such a field by `mov (d,Am),d0` or `movhu (d,Am),d0` (d8 or d16; Am a3, or a0
+// reloaded from the stack, E129 0x5068af64), then `mov G,a0; add d3,a0`, G the GUI record's offset; the rule walks the
+// converter from its entry to its first return and reads the copies to the GUI's STILL_GUI offsets. The converter is
+// the one the port places (stillConverter), else the first call after the one call of the getStillInfo wrapper (E143
+// 0x50acf1fa, S-PLAYCOMP's; E144's converter 0x5084c88b, which the port leaves unplaced, D). E143, E146 and E147 {focal
+// 148/4, iso 100/4}; the E118 family, E137, E142, E140, E145, E133, E130, E129 {136/4, 90/2}; E144, E139, E125
+// {144/4, 98/2} (X, the rule at each port's converter). E134's converter keeps the information in d3 and the record
+// elsewhere (0x5082c39f: `mov 56,a0; add d3,a0; mov (a0),d0` reads the f-number, D), E132's another form too: forms
+// the rule does not read, null (X). Returns {focal: {at, size},
+// iso: {at, size}}, or null where the walk finds no such copy; throws where a field is copied twice or not at all
+// while the other is, or the walk finds no return within STILL_WALK instructions.
+export const STILL_CONVERT_E143 = 0x50ACC981, STILL_WRAPPER_E143 = 0x50ACF1FA;
+export const STILL_E143 = { focal: { at: 148, size: 4 }, iso: { at: 100, size: 4 } };
+const STILL_GUI = { focal: 56, iso: 88 }, STILL_WALK = 2000, STILL_AFTER = 12;
+export function stillFields(img, convert) {
+  let p = convert - 0x50000000;
+  const copies = new Map();
+  for (let k = 0; k < STILL_WALK; k++) {
+    if (isRet(img, p)) {
+      if (!copies.size) return null;
+      const out = {};
+      for (const [name, g] of Object.entries(STILL_GUI)) {
+        const c = copies.get(g) ?? [];
+        if (c.length !== 1) throw new Error(`stillFields: the converter ${h8(convert)} copies ${c.length} fields to the GUI record's +${g} (${name}), want 1`);
+        out[name] = c[0];
+      }
+      return out;
+    }
+    const op = img[p], o2 = img[p + 1], c = callAt(img, p);
+    // mov (d8,Am),d0 f8 0m d8 / (d16) fa 0m d16; movhu f8 6m / fa 6m
+    const load = (op === 0xf8 || op === 0xfa) && ((o2 & 0xfc) === 0x00 || (o2 & 0xfc) === 0x60)
+      ? { at: op === 0xf8 ? img[p + 2] : img[p + 2] | img[p + 3] << 8, size: (o2 & 0xfc) === 0x00 ? 4 : 2, len: op === 0xf8 ? 3 : 4 } : null;
+    if (load && img[p + load.len] === 0x90 && img[p + load.len + 2] === 0xf1 && img[p + load.len + 3] === 0x6c) {
+      const g = img[p + load.len + 1];
+      copies.set(g, [...(copies.get(g) ?? []), { at: load.at, size: load.size }]);
+    }
+    p += c ? c.len : insnLength(op, o2);
+  }
+  throw new Error(`stillFields: no return within ${STILL_WALK} instructions of the converter ${h8(convert)}`);
+}
+// the converter at the port's place, or after the getStillInfo wrapper's one call (null: neither)
+function stillConverter(img, at) {
+  const placed = at(STILL_CONVERT_E143), wrapper = at(STILL_WRAPPER_E143);
+  if (placed !== null) return placed;
+  if (wrapper === null) return null;
+  const calls = callsTo(img, wrapper - 0x50000000);
+  if (calls.length !== 1) throw new Error(`stillConverter: the getStillInfo wrapper ${h8(wrapper)} has ${calls.length} callers, want 1`);
+  let p = calls[0] + callAt(img, calls[0]).len;
+  for (let k = 0; k < STILL_AFTER; k++, p += insnLength(img[p], img[p + 1])) { const d = callAt(img, p); if (d) return 0x50000000 + d.to; }
+  throw new Error(`stillConverter: no call within ${STILL_AFTER} instructions after the getStillInfo wrapper's call at ${h8(0x50000000 + calls[0])}`);
+}
+
 // The language's settings-store id (fact 'text.lang_setting', src/lab/text.mjs LANG_SETTING): the language loader
 // (E143's 0x51257bfb, at its place in the build) gets the settings object with a call and reads the language through
 // the object's vtable, `mov imm16,d0` then `calls (An)` (E143: mov 3009,d0 at 0x51257c0b, mov (12,a2),a2, calls (a2)
@@ -3330,7 +3415,8 @@ export function readPlacedFacts({ img, at }) {
     ...(loop !== null && qewr !== null && { replies: displayReplies(img, loop, qewr) }) };
   if (Object.keys(dispq).length) facts.dispq = dispq;
   // (no wrappers where the getter is not placed: then bin/port.mjs places none of E143's, placedRulePlaces)
-  facts.play = { wrappers: component !== null ? componentWrappers(img, component) : [] };
+  const convert = stillConverter(img, at);
+  facts.play = { wrappers: component !== null ? componentWrappers(img, component) : [], ...(convert !== null && { still: stillFields(img, convert) }) };
   if (loader !== null) facts.text = { lang_setting: langSetting(img, loader) };
   const rows = aeRows(img);
   if (interp !== null && rows) throw new Error(`readPlacedFacts: the AE interpolation is placed at ${h8(interp)} and aeRows finds a row form at ${h8(rows.init)}`);
@@ -3450,6 +3536,7 @@ export function readFacts({ img, family, resLoad }) {
   const recview = recViewStandby(img);
   facts.recview = recview ?? null;
   facts.touch_int = touchIntWait(img) ?? null;
+  facts.clock = { real_time: realTimeGetter(img) };
   const cbs = cbsIds(img);
   if (cbs !== undefined) facts.cbs = cbs;
   facts.mode_dial = modeDial(img);

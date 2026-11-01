@@ -13,7 +13,8 @@
 // (test_camapp.mjs, with the mode dial's positions), the SCPU's clock, ports, link pins and sub-CPU model
 // (test_scpu.mjs), the publication audit (test_pubaudit.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the card and the
-// file system on E143, E146, E147, E144, E142 and E134 and SDXC cards on E143 (test_storage.mjs), subject detection's frames on E143
+// file system on E143, E146, E147, E144, E142 and E134 and SDXC cards on E143 (test_storage.mjs), INFO's still information
+// in playback on E143 and the E118 family (test_playinfo.mjs), subject detection's frames on E143
 // (test_subject.mjs), the lens on the mount natively on E143, E146 and E147 (test_lens.mjs), the SCPU's Cortex-M4 core
 // (test_m4.mjs: hand-written vectors, QEMU's recorded vectors, the SCPU image from reset to its first unmodelled
 // access), the SCPU's STM32L4 machine (test_stm32l4.mjs: the peripheral models, the SCPU image to its console prompt,
@@ -206,6 +207,22 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   sx.notes.forEach((x) => console.log('   note:', x));
   [...su.bad, ...ss.bad, ...sx.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += su.bad.length + ss.bad.length + sx.bad.length + others.filter(([, rc]) => rc !== 0).length;
+}
+// INFO's still information in playback: E143 here (S-PLAYCOMP's answer, as before), and the E118 family each in a
+// process of its own, at once (S-PLAYSEQ's answer to the play module's request 3 from the picture's own record)
+{
+  const { playInfoSession } = await import('../test/test_playinfo.mjs');
+  const { spawn } = await import('node:child_process');
+  const pi = await playInfoSession();
+  const others = await Promise.all(['E122', 'E118', 'E120'].map((m) => new Promise((done) => {
+    const c = spawn(process.execPath, [new URL('../test/test_playinfo.mjs', import.meta.url).pathname], { env: { ...process.env, OM_EMU_MODEL: m } });
+    let out = '';
+    c.stdout.on('data', (d) => { out += d; }); c.stderr.on('data', (d) => { out += d; });
+    c.on('close', (rc) => done([m, rc, out.trim().split('\n')]));
+  })));
+  console.log(`INFO's still information: E143 ${pi.checks - pi.bad.length}/${pi.checks}; ${others.map(([m, rc, lines]) => `${m} ${rc === 0 ? lines[0].split(': ').pop() : 'FAILED'}`).join(', ')}`);
+  [...pi.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += pi.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // subject detection's frames (S-SUBJECT): the scene's subject boxes and DISP_FRAME's transform without firmware, then
 // a play session on E143 whose DISP_FRAME draws the frames on the scene's rider while the setting names motorsports

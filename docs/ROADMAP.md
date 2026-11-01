@@ -156,10 +156,12 @@ The plan:
    read by form where the RecView trace is not held), the touch controller's INT wait (GIO pin 30) no longer makes
    E120's and E122's opens take 300 s and 500 s (finding 54, S-TPINTWAIT), and the family's cards are native
    (finding 50: E118's card line's request to the sub-CPU answered, S-SDSWITCH; finding 51: E118's movie record time's
-   division by the unset frame rate stood in, S-MOVRATE); PLAY and INFO draw the picture's number (finding 52). With
+   division by the frame rate stood in, S-MOVRATE); PLAY and INFO draw the picture's number (finding 52). With
    all of it together E118 and E120 pass modelcheck on the TFT and the EVF as E122 does, their frames composed, and
-   are in its checked set (finding 56). Next: INFO's still information on the family (finding 52, ?) and the movie
-   module's set-up (S-MOVRATE while its frame rate is 0).
+   are in its checked set (finding 56). The frame rate is the movie recorder's set-up's, which runs at a movie take
+   or a movie's playback on CPU 2, not at the start: it is 0 on the camera too until then, and S-MOVRATE stands in
+   for the MN103's DIVU by 0 alone, the record time native (finding 60, 2026-10-31). Next: INFO's still information
+   on the family (finding 52, ?).
    The kind-3 VSC composes (kind 2's compositor with the family's palette groups and format words) and the EVF opens
    the built-in EVF, the family's device code 6, where the lab had opened the NTSC output (findings 35 and 36). Since
    2026-10-30 E122's TFT and EVF frames show its clock warning: the palettes by GUI layer (finding 38), S-DISPSYNC
@@ -210,7 +212,9 @@ the survey table.
   its movie parameters do not test that query, and exFAT's second query passes without the table; the manual
   leaves the result undefined, so the stop stays, FIDELITY-NOTES 3.2); the SD
   host at its registers with its interrupts and card detect (seam A); playback of the card's files (a JPEG decoder at
-  the codec seam); the movie module's set-up, whose frame rate the movie time query reads (it logs `0x39000903`).
+  the codec seam); a movie take natively (TAKE_FUNC, TAKE_MOV), which runs the movie module's set-up: its frame rate,
+  which the movie time query reads, is 0 before a take on the camera too, so the query's `0x39000903` is the camera's
+  (2026-10-31, model-survey findings 60, 61).
 - **The movie time of the E144 family:** read (2026-10-27, hle-gaps.md 4.8.5), nothing to model. With the card native
   (2026-10-25, hle-gaps.md 4.8.4) the E142 lineage shows the card's time (E142 and E140 `0:10:45`, E130 `0:37:22`, X:
   frames); E144, E139, E137 and E125 show an orange `0:00:00` beside the card's count because the blank store's
@@ -296,8 +300,9 @@ the survey table.
   (finding 53), and with their display syncs read (findings 48, 49) and their cards native (findings 50, 51) both
   pass modelcheck on the TFT and the EVF (finding 56). Open on the family: what makes the application ask for the
   remaining-shots count again (findings 42, 56; the three in PROBE_XFAIL until then); INFO's still information (size,
-  focal length and date, finding 52, ?); the movie module's set-up, whose frame rate E118's record time divides by
-  (S-MOVRATE while it is 0, finding 51); S-MODACK's module queue ids, five of which the port's words read as another
+  focal length and date, finding 52, ?); the MN103's DIVU by 0 in E118's record time, which divides by a frame rate
+  that is 0 before a movie take on the camera too (S-MOVRATE, finding 60: a hardware capture would settle it, as for
+  E144's); S-MODACK's module queue ids, five of which the port's words read as another
   queue's (PWR_EXEC `0x86` by name; no request to them seen on the three's paths, findings 43, 55), to be read from
   the API target table once a start sends to one; how long the touch controller takes to raise its INT, which
   S-TPINTWAIT gives at the wait's first poll (finding 54, ?), and the us clock counting CPU reads until the play

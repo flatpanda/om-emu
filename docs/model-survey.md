@@ -1020,6 +1020,55 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    E122 alike), so the probe's answer at its second window is never asked for. E118 and E120 join E122 in
    modelcheck's checked set, the three in PROBE_XFAIL with that one reason (E118's had been its one-value composite).
 
+60. **The E118 family's movie recorder set-up runs at a movie take** (2026-10-31, `src/fw/facts.mjs` movieRate,
+   `src/lab/camapp.mjs` S-MOVRATE; corrects finding 51, which took the set-up for one the lab skips). E118's frame rate
+   byte `0xa1c2fad8` has two writers: the set-up `0x50535c83` (its +6) and a setter `0x50535cbb` (X: a byte scan finds
+   the address seven times, two stores and five loads); it lies past the image's end (`0x61481020`), a BSS byte, 0 at
+   the start as in the lab. Both run on CPU 2, in MVR_MAIN (static task 8194, entry `0x505433eb`, D): its loop takes
+   the bits of its flag (`0x60041384`) to the movie recorder's dispatcher `0x5053fcec` (which the other MVR tasks
+   call too) with its queues (the words `0x600413ac`, `0x600413ae`, `0x600413b8`: `0x2001`, `0x2002`, `0x2007`, X), which
+   gives them row 0 of the handler table `0x60652e60`, the record sequence's state machine `0x5054388e`: a message's
+   command becomes an event (`0x505436a9`; queue `0x2001`'s commands 1..32 by the table `0x60653c84`) and the state's
+   row of 31 events of 8 bytes at `0x6065305c` its handler (D). The set-up's one caller `0x50534fdf` (which clears the
+   info first, `0x50535be0`) is called by the handlers of state 2 / event 2 (`0x50547042`) and of state 0 / event 8
+   (`0x50547f09`, which calls the setter too, through `0x505246c5`), D. Event 2 is command 16 on queue `0x2001`, which
+   TAKE_FUNC's command 30 sends (`0x502045c3`: it sets its movie bit `0x8000`, sends 2563, 2560 and 3072 to two other
+   modules and 4 to the queue at `0x600413b4`, then 16, `0x502046c1`): a movie take's start. Event 8 is command 81 on
+   queue `0x2007`, which PLAY_IMAGE (CPU 0's task 29) sends synchronously (`0x50b1b9a2`, from `0x50b1b9c0`): a movie's
+   playback. TAKE_FUNC's other synchronous sends to the queue (through `0x50206369` and `0x50207728`) carry the
+   commands 1 to 3 and 18 to 23 and 26 (D); what its four 16-byte posts there (`0x501b52f0`, from its commands 28, 31,
+   34 and 35) carry is not read (?); the CPU-2 code only reads the queue word (X: the 22 places that load it). So on a camera the movie recorder is set up at a movie take or a movie's playback and never at
+   the start: before the first one the rate is 0 there too, and the record time `0x50535bf4` divides by it, the
+   MN103's DIVU by 0, which sets V and leaves the quotient undefined (`emu/FIDELITY-NOTES.md` 3.2), where the emulator
+   faults. The lab runs neither sender as a task (the start sends TAKE_FUNC, queue 104, its commands 13 and 18 only,
+   whose handlers send to the queues at `0x60041150` and `0x60041154`, X and D; S-MODACK answers them) and has no CPU 2.
+   E122 and E120 have E118's state machine (the engine's `udfu01 248` row at E122 `0x505541a7`, E120 `0x5051c531`;
+   their set-ups E122 `0x505466cf`, E120 `0x5050e919`, each called from the handlers of state 2 / event 2 and state 0
+   / event 8, X), and their record times store a word times 1000 where E118's divides (finding 51), so their rate's 0
+   divides nothing. What the division computes: at E118's shooting screen the words before the rate hold 134340 and
+   104400 (X, 8.8 s), 2239 s and 1740 s at 60p, the screen's `00:37:19` and a 29-minute clip (I, by the values), and
+   the quotient times 1000 goes to the record time's +20. Of the query's seven callers two read +20 (`0x502b7571` at
+   `0x502b75a0`, `0x502b885f` at `0x502b891d` when its a2 is set); the others read +24, +28, +32 or +36 (D), and in the
+   lab's start only `0x502b75d3` (+28) and `0x502b8999` (+32, +36) call it (X: three calls in 9 s). S-MOVRATE now
+   stands in for the divide alone: while the rate is 0 the `divu` is not executed and its quotient is taken as 0 (fact
+   `card.movie_rate` {div `0x50535c40`, rate `0xa1c2fad8`}), and the record time runs natively, filling its block and
+   returning 0, where it returned its error for no struct (`0x9d05`) before (`0x502b7571` answers 0 either way). The
+   camera's quotient is ?.
+   E118's frames are unchanged (X: the TFT and the EVF at 5 s, the TFT at 9 s) and it passes modelcheck as before.
+   What would retire the stand-in: the MN103's DIVU by 0 on hardware (as for E144's movie parameters, FIDELITY-NOTES
+   3.2), not a set-up the lab skips.
+61. **E143's movie module set-up runs in TAKE_MOV's take job** (2026-10-31). E143's set-up `0x5045c3fd` copies its
+   728-byte info into `0xa32ed128` (+720 the rate the movie time query's conversion `0x5044949b` reads), and the image
+   loads that address only there and in one copy-out (`0x5045c4bb`; X, a byte scan). Its chain is on CPU 0 (D):
+   TAKE_MOV (task 112, entry `0x506e4326`) runs the take jobs of its list (`0x62a484d4`, its flag's bit 1;
+   `0x506e458b` -> `0x506e4618`), whose `0x506e46f0` calls the movie API `0x5042d4cb` -> `0x5042d4d4` -> `0x5045afb6`
+   or `0x5045b010` -> `0x504361d4` / `0x5043b907` -> the set-up; the jobs are posted by `0x506e43fe`, a handler of
+   TAKE_MOV's function table (built at `0x506da030`), from which request of the application is ?. So E143's rate, too,
+   is 0 before a movie take on the camera, and the query's log `0x39000903` there (MOVIE_TIME_ERRLOG, also E146's and
+   E147's) is the camera's state (I), not the lab's gap: the errlog's description says so now. The movie module's
+   set-up is a movie take's on every body read; running it natively is a movie take's work (TAKE_FUNC, TAKE_MOV and,
+   on the E118 family, CPU 2), not a start's.
+
 ## Per-body status
 
 The state as of 2026-10-23. Each body's `MODELS` entry (`src/fw/models.mjs`) carries the numbers its `port_via` choice
@@ -1292,7 +1341,7 @@ Since findings 53 to 55 (2026-10-30) E120's TFT and EVF starts reach `0x0108` wi
 records and stop where E118's do, in the movie time's division, and E120's and E122's opens take under 0.4 s of lab
 time where they took 300 s and 500 s.
 Since findings 50 and 51 (2026-10-30) E118's card is native (its card line's request to the sub-CPU answered by
-S-SDSWITCH, its record time's division by S-MOVRATE) and E118 passes modelcheck on the TFT and the EVF; E120's card is
+S-SDSWITCH, its record time's division by S-MOVRATE, since finding 60 the DIVU by 0 alone) and E118 passes modelcheck on the TFT and the EVF; E120's card is
 native too. Both bodies' PLAY and INFO draw the picture's `100-0001` since finding 52. With findings 48 to 55 together
 E118 and E120 compose their shooting screens on both panels and pass modelcheck on the TFT and the EVF, the count
 probes expected failures, and are in its checked set with E122 (finding 56).

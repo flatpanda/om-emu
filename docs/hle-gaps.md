@@ -1562,7 +1562,7 @@ found on the way:
   answers retired on E143): 803 shots and 5:25 of 4K 60p on 8 GiB, fewer on 4 GiB (X). The movie time left comes from
   DCF remain (`0x5087da1b` -> `0x5045c4ac` stores it in the movie module's copy `0xa32ed404`); the query's time code
   converts the movie info's frame rate (`0xa32ed128` +720, which the movie module's set-up `0x5045c3fd` fills at a
-  movie take, TAKE_MOV's take job: 0 before one, on the camera too, `docs/model-survey.md` finding 61) and logs
+  movie take, TAKE_MOV's take job: 0 before one, on the camera too, `docs/model-survey.md` finding 60) and logs
   `0x39000903` (`0x5044949b`), after the time left is computed.
 - **The picture's file** (S-RECFILE, in place of REC_FILE): mkdir `C:\DCIM` and `C:\DCIM\100OMSYS`, fopen
   `P1010001.JPG` `wb`, fwrite, fclose through FILECLBK, the bytes a JPEG the lab encodes. Read back independently: the
@@ -1969,7 +1969,7 @@ findings 31, 41). The family runs the other bodies' storage library; the rule no
   Both cards mount as E122's (FAT32 `NO NAME`, DCF 100 / 1, X); E118's movie record time then divided by the movie
   info's frame rate (`0x50535c40`; E143's query logs `0x39000903` for the same rate). E118 passes
   `bin/modelcheck.mjs` on the TFT and the EVF: 2116 shots and `00:37:19` on the 8 GiB card, S2's file read back (X).
-- **The movie recorder's frame rate (2026-10-31, `docs/model-survey.md` findings 60 and 61):** the rate is the movie
+- **The movie recorder's frame rate (2026-10-31, `docs/model-survey.md` findings 59 and 60):** the rate is the movie
   module's set-up's, which runs at a movie take's start or a movie's playback and never at the start, on every body
   read: on the E118 family in MVR_MAIN's record sequence on CPU 2 (state 2 / event 2, TAKE_FUNC's command 30's MVR
   command 16; state 0 / event 8, PLAY_IMAGE's command 81), on E143 in TAKE_MOV's take job. Before the first take the

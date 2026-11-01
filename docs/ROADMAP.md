@@ -51,7 +51,7 @@ not reconciled.
    blank store's movie mode, which those bodies cannot record (2026-10-27, hle-gaps.md 4.8.5).
 2. **The open stops of the remaining bodies** (Multi-model "Next stops"): the E118 family past its board port (E122,
    E118 and E120 pass modelcheck on the TFT and the EVF since 2026-10-30, their cards native and their frames
-   composed, findings 38 to 56; their count probes since 2026-10-31, the screen redrawn by INFO, finding 63). E133,
+   composed, findings 38 to 56; their count probes since 2026-10-31, the screen redrawn by INFO, finding 61). E133,
    E145 and the TG-5s (E129, E132: their charger's transfers on serial channel 9, `docs/model-survey.md` finding
    24) pass modelcheck since 2026-10-29.
 3. **HLE of E143, step 2** (HLE of E143 below; step 1's static decodes are done): the cheap CPU 0 wins (a ticking
@@ -100,7 +100,7 @@ bodies; the bodies whose image runs at a `0x60xxxxxx` base pair 0.76M-2.08M inst
 | ported | E144 OM-5, E139 E-M1 III | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe included |
 | A | E134 E-M1X | `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe included |
 | B | E137 E-M5 III, E142 E-P7, E140 E-M10 IV, E125 E-M1 II, E145 TG-7 | E137, E140 and E125: `bin/modelcheck.mjs`'s path passes on the TFT and the EVF, E142 and E145 (no EVF) on the TFT; the count probe passes on all five; E145 with MENU at its date and time setting (`0x1103`) after the start (2026-10-29) |
-| C | E133 E-PL9, E130 E-M10 III, E129 / E132 TG-5, E118 E-M5 II, E122 PEN-F, E120 E-M10 II | E130: `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe too; E133, E129 and E132 on the TFT (2026-10-29), their cards native; the E118 family's board is ported (2026-10-30): E122, E118 and E120 pass `bin/modelcheck.mjs` on the TFT and the EVF with their cards native and their frames composed (2026-10-30, findings 38 to 56), the count probe since 2026-10-31 with the screen redrawn by INFO before each window (finding 63: the applications ask for the count only when the shooting screen is redrawn) |
+| C | E133 E-PL9, E130 E-M10 III, E129 / E132 TG-5, E118 E-M5 II, E122 PEN-F, E120 E-M10 II | E130: `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23), the count probe too; E133, E129 and E132 on the TFT (2026-10-29), their cards native; the E118 family's board is ported (2026-10-30): E122, E118 and E120 pass `bin/modelcheck.mjs` on the TFT and the EVF with their cards native and their frames composed (2026-10-30, findings 38 to 56), the count probe since 2026-10-31 with the screen redrawn by INFO before each window (finding 61: the applications ask for the count only when the shooting screen is redrawn) |
 | D | E100, E101, E106-E113, E115, E117, E121, E126 | not tried |
 | - | the new OM System PEN (E148?) | not served yet (E148-E199 answer nothing, 2026-10-19): re-probe |
 
@@ -151,7 +151,7 @@ The plan:
    E122's card and file system run natively since 2026-10-30 (findings 41, 42: the family's forms of five storage
    seams read by the rule), which ended its movie time's divide by 0, and its TFT start runs modelcheck's path; its
    frames compose in the firmware's palette on both panels (findings 38 to 40), and E122 passes modelcheck on the TFT
-   and the EVF (finding 47; the count probe since finding 63, the screen redrawn by INFO: the application asks for the
+   and the EVF (finding 47; the count probe since finding 61, the screen redrawn by INFO: the application asks for the
    count only when the shooting screen is redrawn).
    E118's and E120's display syncs are read (findings 48, 49), E120 passed POWER_ON (finding 53: the rec view word,
    read by form where the RecView trace is not held), the touch controller's INT wait (GIO pin 30) no longer makes
@@ -161,7 +161,7 @@ The plan:
    all of it together E118 and E120 pass modelcheck on the TFT and the EVF as E122 does, their frames composed, and
    are in its checked set (finding 56). The frame rate is the movie recorder's set-up's, which runs at a movie take
    or a movie's playback on CPU 2, not at the start: it is 0 on the camera too until then, and S-MOVRATE stands in
-   for the MN103's DIVU by 0 alone, the record time native (finding 60, 2026-10-31). INFO shows the picture's date,
+   for the MN103's DIVU by 0 alone, the record time native (finding 59, 2026-10-31). INFO shows the picture's date,
    size, exposure and focal length on the three (2026-10-31, finding 57: S-PLAYSEQ answers the play module's request
    3 from the picture's record; the Exif path does not run).
    The kind-3 VSC composes (kind 2's compositor with the family's palette groups and format words) and the EVF opens
@@ -216,7 +216,7 @@ the survey table.
   host at its registers with its interrupts and card detect (seam A); playback of the card's files (a JPEG decoder at
   the codec seam); a movie take natively (TAKE_FUNC, TAKE_MOV), which runs the movie module's set-up: its frame rate,
   which the movie time query reads, is 0 before a take on the camera too, so the query's `0x39000903` is the camera's
-  (2026-10-31, model-survey findings 60, 61).
+  (2026-10-31, model-survey findings 59, 60).
 - **The movie time of the E144 family:** read (2026-10-27, hle-gaps.md 4.8.5), nothing to model. With the card native
   (2026-10-25, hle-gaps.md 4.8.4) the E142 lineage shows the card's time (E142 and E140 `0:10:45`, E130 `0:37:22`, X:
   frames); E144, E139, E137 and E125 show an orange `0:00:00` beside the card's count because the blank store's
@@ -302,15 +302,15 @@ the survey table.
   (finding 53), and with their display syncs read (findings 48, 49) and their cards native (findings 50, 51) both
   pass modelcheck on the TFT and the EVF (finding 56). The three ask for the remaining-shots count when the
   shooting screen is redrawn (the start, the shooting information's 3 s timer, PLAY back, INFO, a shot) and pass the
-  count probe with INFO's redraw (finding 63). Open on the family: after S2 the screen shows no OSD until INFO (what
-  ends the rec view's screen, finding 64, ?); E120's and E122's EVF PLAY, which stops in a 40 ms poll (finding 63);
+  count probe with INFO's redraw (finding 61). Open on the family: after S2 the screen shows no OSD until INFO (what
+  ends the rec view's screen, finding 62, ?); E120's and E122's EVF PLAY, which stops in a 40 ms poll (finding 61);
   the picture's Exif and the play module's load of it, which INFO's still information stands in for (finding 57); the
   MN103's DIVU by 0 in E118's record time, which divides by a frame rate that is 0 before a movie take on the camera
-  too (S-MOVRATE, finding 60: a hardware capture would settle it, as for E144's); S-MODACK's module queue ids, five of which the port's words read as another
+  too (S-MOVRATE, finding 59: a hardware capture would settle it, as for E144's); S-MODACK's module queue ids, five of which the port's words read as another
   queue's (PWR_EXEC `0x86` by name; no request to them seen on the three's paths, findings 43, 55), to be read from
   the API target table once a start sends to one; how long the touch controller takes to raise its INT, which
   S-TPINTWAIT gives at the wait's first poll (finding 54, ?); without it the wait would now cost its 150 ms timeout,
-  not 300 s, since the us clock runs on lab time from the reset (2026-10-31, findings 66, 67).
+  not 300 s, since the us clock runs on lab time from the reset (2026-10-31, findings 63, 64).
   E122's EVF start opens device code 6, BI_EVF (finding 35). Open in the kind-3 compositor (findings 36, 38): what
   OSD1's and OSD2's pixels of 32 or more do (refused, PAL_FIELD), the planes' order on the chip (OSD3, GUI layer 2,
   drawn last, I), and what an OSD level below `0x100` does (the EVF's `0xb2` is drawn as full, as E144's `0xcc`).
@@ -497,14 +497,14 @@ store in the lab (vsc spec §10).
 - Time mode as the default: opt-in; inside display steps the stand-ins move the clock without servicing the timers,
   so periodic channels count overruns there and those ticks are lost (also why the Genifa clock runs about 0.945 ms per
   lab ms on the Super Control Panel, X; menu spec §15).
-- The us clock on lab time from the reset: done (2026-10-31, model-survey findings 66, 67, intc/timer spec 3.1).
+- The us clock on lab time from the reset: done (2026-10-31, model-survey findings 63, 64, intc/timer spec 3.1).
   H-USCOUNT (one count per CPU read, M2) had held on every lab and, in the player, until its bring-up switched
   A-USLAB on, so a wait with sleeps between its reads lasted as many reads as its microseconds: the nine E144-family
   bodies' open-time wait of 150 ms took 300 s of lab time on the TFT, 380 to 500 s on the EVF. Every lab now counts
   lab microseconds from the reset, at least one count per read (busy waits still end in zero lab time); those starts
   take 0.6 to 3.2 s, and E143's golden sessions keep their screens, devices, outputs and stops at their lab times.
   Open: the E144 family's wait of that form is the touch controller's INT by its form (I) and runs to its timeout
-  (finding 67), which S-TPINTWAIT's rule could read next; how long a busy wait's instructions take (FIDELITY 1.1).
+  (finding 64), which S-TPINTWAIT's rule could read next; how long a busy wait's instructions take (FIDELITY 1.1).
 - Timers not yet traced as they first fire: Genifa timers 537 and 554 and task 16's bit-2 path `0x50053199` /
   `0x500532b2` (kernel spec §9.5).
 - A-VEC, A-IAGR, A-TMR-1..5, A-INTC-ORDER; the meaning of udf12/13/21 (A-UNIT); TRAP, NMI, level 0; K-IPI and

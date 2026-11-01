@@ -2233,7 +2233,7 @@ export function cardDetect(img) {
 // cmp 0,a2; bne; mov E,d2` (E: its answer for no struct) and divides a frame count by the frame rate byte R without a
 // test, `mov (W),d1; movbu (R),d0; divu d0,d1; mul 1000,d1` (0x50535c34..0x50535c42, D), the quotient stored at +20.
 // The rate is the movie recorder's set-up's (0x50535c83, its +6), which runs on CPU 2 at a movie take's start or a
-// movie's playback (docs/model-survey.md finding 60, D): until then it is 0 on the camera too, and the divide is the
+// movie's playback (docs/model-survey.md finding 59, D): until then it is 0 on the camera too, and the divide is the
 // MN103's DIVU by 0 (emu/FIDELITY-NOTES.md 3.2). One such division on E118, none on the other 17 images (X, a byte
 // scan: E122's and E120's record time multiplies a word by 1000 there). Returns {div (the divu), rate} or null where
 // none; throws where the division is not in a function of that opening.

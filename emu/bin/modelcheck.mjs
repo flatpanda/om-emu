@@ -52,7 +52,7 @@ const PROBE_NS = 1200e6, PROBE_SHOTS = 777, WINDOW = 6, WINDOW_NS = 300e6;
 const SHOTS_QUERY = 0x50419164;
 // the bodies whose screens are known not to follow the probe's count, on the TFT and the EVF: model -> the reason. The
 // E143 and E144 families were in it until S-CARD's card was in slot 1's detect state (docs/model-survey.md finding 18),
-// the E118 family until PROBE_REDRAW (finding 63)
+// the E118 family until PROBE_REDRAW (finding 61)
 const PROBE_XFAIL = {};
 // the bodies whose application asks for the count only when the GUI draws the shooting screen again: model -> the
 // key that redraws it. The probe presses the key until the screen is back to its frame before the first
@@ -61,7 +61,7 @@ const PROBE_XFAIL = {};
 // asks the query from its count item (E122 0x50ca1608) when the screen object's update runs all its items
 // (0x50c96925), on the GUI's camera events: the start, the shooting information's 3 s timer, the return from
 // playback, INFO, a shot; not on an S1 that changes nothing on the screen nor at idle (X: E118, E120, E122,
-// docs/model-survey.md finding 63). INFO cycles the four views of the shooting screen back to the first on both
+// docs/model-survey.md finding 61). INFO cycles the four views of the shooting screen back to the first on both
 // panels (X), where PLAY and back, which also redraws, stalls on E120's and E122's EVF
 const REDRAW_MAX = 8, PROBE_REDRAW = { E118: 'info', E120: 'info', E122: 'info' };
 // the bodies known to stop with an SDXC card (--card-size above 32 GiB), on the TFT and the EVF: model -> [what their

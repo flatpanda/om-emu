@@ -54,9 +54,9 @@ through a reference place more; "Per-body status" has their figures).
 | E130 | E-M10 III | 1200 | 25.0 | 0x60400020 (6.9%) | plain | 1.02M | 82 | through E142: modelcheck passes (TFT and EVF; findings 11, 14 and 16) |
 | E129 | TG-5 | 1101 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; MENU answers its date and time setting at the start) since the charger's transfers on serial channel 9 are served (S-SIOIIC, S-CHARGER, finding 24); its settings store since S-BOOTSTAGE (finding 20) |
 | E132 | TG-5 (KOUICHIRO) | 1300 | 25.0 | 0x60400020 (7.1%) | plain | 0.94M | 93 | through E145: modelcheck passes (TFT, no EVF; the card native, the count probe; its date and time setting has no Cancel, the clock is set) since the charger's transfers are served and S-MODACK answers its industrial category and logger modules (finding 24); its deferred send since finding 21 |
-| E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | through E122: `bin/modelcheck.mjs` passes on the TFT and the EVF with its card native, the frames composed, the count probe with INFO's redraw (findings 28, 32-34, 37, 43-45, 48, 50-52, 56, 63) |
-| E122 | PEN-F | 3101 | 20.4 | 0x60021020 (7.2%) | plain | 0.79M | 123 | through E130: `bin/modelcheck.mjs` passes on the TFT and the EVF with its card native, the frames composed, the count probe with INFO's redraw (findings 28, 31, 35-42, 47, 63) |
-| E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | through E122: `bin/modelcheck.mjs` passes on the TFT and the EVF with its card native, the frames composed, the count probe with INFO's redraw (findings 28, 32-34, 37, 43, 46, 49, 50, 53-56, 63) |
+| E118 | E-M5 II | 4100 | 20.4 | 0x60021020 (7.2%) | plain | 0.80M | 123 | through E122: `bin/modelcheck.mjs` passes on the TFT and the EVF with its card native, the frames composed, the count probe with INFO's redraw (findings 28, 32-34, 37, 43-45, 48, 50-52, 56, 61) |
+| E122 | PEN-F | 3101 | 20.4 | 0x60021020 (7.2%) | plain | 0.79M | 123 | through E130: `bin/modelcheck.mjs` passes on the TFT and the EVF with its card native, the frames composed, the count probe with INFO's redraw (findings 28, 31, 35-42, 47, 61) |
+| E120 | E-M10 II | 1400 | 20.4 | 0x60021020 (7.4%) | plain | 0.76M | 122 | through E122: `bin/modelcheck.mjs` passes on the TFT and the EVF with its card native, the frames composed, the count probe with INFO's redraw (findings 28, 32-34, 37, 43, 46, 49, 50, 53-56, 61) |
 | E113 | E-M10 | 1400 | 18.0 | 0x7d991020 (7.4%) | plain | 0.88M | 155 | not tried (base) |
 | E109 | E-M1 | 4600 | 17.0 | 0x6daf1020 (7.2%) | plain | 0.76M | 139 | not tried (base) |
 | E126 | E-PL8 | 1100 | 18.0 | 0x7d971020 (8.2%) | plain | 0.74M | 140 | not tried (base) |
@@ -1070,7 +1070,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    a form the rule does not read (finding 57): it now writes it where the build's converter reads it, and none on
    E134 and E132 (logged). E143's, E146's and E147's are unchanged (+100).
 
-60. **The E118 family's movie recorder set-up runs at a movie take** (2026-10-31, `src/fw/facts.mjs` movieRate,
+59. **The E118 family's movie recorder set-up runs at a movie take** (2026-10-31, `src/fw/facts.mjs` movieRate,
    `src/lab/camapp.mjs` S-MOVRATE; corrects finding 51, which took the set-up for one the lab skips). E118's frame rate
    byte `0xa1c2fad8` has two writers: the set-up `0x50535c83` (its +6) and a setter `0x50535cbb` (X: a byte scan finds
    the address seven times, two stores and five loads); it lies past the image's end (`0x61481020`), a BSS byte, 0 at
@@ -1107,7 +1107,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    E118's frames are unchanged (X: the TFT and the EVF at 5 s, the TFT at 9 s) and it passes modelcheck as before.
    What would retire the stand-in: the MN103's DIVU by 0 on hardware (as for E144's movie parameters, FIDELITY-NOTES
    3.2), not a set-up the lab skips.
-61. **E143's movie module set-up runs in TAKE_MOV's take job** (2026-10-31). E143's set-up `0x5045c3fd` copies its
+60. **E143's movie module set-up runs in TAKE_MOV's take job** (2026-10-31). E143's set-up `0x5045c3fd` copies its
    728-byte info into `0xa32ed128` (+720 the rate the movie time query's conversion `0x5044949b` reads), and the image
    loads that address only there and in one copy-out (`0x5045c4bb`; X, a byte scan). Its chain is on CPU 0 (D):
    TAKE_MOV (task 112, entry `0x506e4326`) runs the take jobs of its list (`0x62a484d4`, its flag's bit 1;
@@ -1119,7 +1119,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    set-up is a movie take's on every body read; running it natively is a movie take's work (TAKE_FUNC, TAKE_MOV and,
    on the E118 family, CPU 2), not a start's.
 
-63. **The E118 family asks for the count when its shooting screen is redrawn** (2026-10-31; X: an observer on the shots
+61. **The E118 family asks for the count when its shooting screen is redrawn** (2026-10-31; X: an observer on the shots
    query with the return addresses on its stack, on the count item and on the screen's update, and the composite read
    back; read on E122, measured alike on E118 and E120). E122's getAvailableShootCount (`0x506b3aff`) has no direct
    caller: it is a slot of OlyHfwOpeShoot's vtable (the word at `0x509571d0`, D), reached through the HLS API (the
@@ -1149,7 +1149,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    the TFT's box at 643,443-710,469 (E118, E120) and 645,444-710,469 (E122), the EVF's at 902,710-1010,753 and
    905,712-1010,753 (X, `bin/modelcheck.mjs`); the three are out of PROBE_XFAIL, which is empty, and the other 14
    bodies' probes run as before.
-64. **The family's screen after a shot** (2026-10-31; X: the composite after S2 on E118, E120 and E122's TFTs). At S2
+62. **The family's screen after a shot** (2026-10-31; X: the composite after S2 on E118, E120 and E122's TFTs). At S2
    E122's item asks once, at the shot's start (with the events `0x01000004` and `0x0300000c`), and the card-full test
    four times after `0x03000001`. The screen then shows no OSD for at least 9 s and after an S1, until INFO, which
    brings back the shooting screen with the count before the shot (2116 on E118; whether the card's count after one of
@@ -1158,7 +1158,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    second time in the super control panel `0x0407`, stop in an event storm, X; the panel's open asked the count twice)
    and the card's insertion.
 
-66. **The us clock counted CPU reads until the play bring-up, on every body** (2026-10-31, `docs/om1-intc-timer-spec.md`
+63. **The us clock counted CPU reads until the play bring-up, on every body** (2026-10-31, `docs/om1-intc-timer-spec.md`
    section 3.1). Each board's us clock is one free-running counter of the one timer model (`src/dev/timer.mjs`):
    E143's family channel 33 (`0x98900284`, read by `0x50002bfa`), the E144 family's channel 27 (`+0x14c`, E144 reads
    it at `0x50002397`), the E118 family's channel 9 (`0x98900074`, read at `0x50001ec8` / `0x50001ecf` / `0x50001ef1`
@@ -1190,7 +1190,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
      set: E120's and E122's EVF loop (`0x5006cadb`, `0x5006b280`: 111 rounds over 140 ms), E147's EVF loops at 28.7
      to 35.4 ms (`0x501d35c8`, `0x501d35e9`, `0x501d36a4`), E143's display power sequence's timestamps (one read
      per step, logged with the step: `0x501d8844` .. `0x501c6170`).
-67. **The us clock on lab time from the reset** (2026-10-31, `src/dev/timer.mjs` usCount, `src/lab/play.mjs`). Every
+64. **The us clock on lab time from the reset** (2026-10-31, `src/dev/timer.mjs` usCount, `src/lab/play.mjs`). Every
    lab's us clock now counts the lab microseconds since its load from the reset (A-USLAB, the timer window's USMODE 1
    by default), and a CPU read gets at least one count more than the read before: a busy wait still ends in zero lab
    time (CPU execution takes no lab time), and the counts it ran ahead are not counted again once lab time passes
@@ -1228,7 +1228,7 @@ state (finding 18), as E143 does: before, their screens did not follow S-CARD's 
 count, X). The
 S-PANELDONE stand-in answers three to five panel-flag waits in the starts of E139, E134, E125 and E130, which ran
 natively before with the same results (X), so on those bodies it replaces a native path that worked, without a visible
-effect (`ROADMAP.md` "Next stops"). Since 2026-10-31 the us clock runs on lab time from the reset (findings 66, 67):
+effect (`ROADMAP.md` "Next stops"). Since 2026-10-31 the us clock runs on lab time from the reset (findings 63, 64):
 the nine E144-family bodies reach the play bring-up at 0.26 to 0.75 s of lab time, where their open-time wait of 150
 ms, counted in CPU reads, had made it 300 s on the TFT and 380 to 500 s on the EVF.
 
@@ -1488,11 +1488,11 @@ Since findings 53 to 55 (2026-10-30) E120's TFT and EVF starts reach `0x0108` wi
 records and stop where E118's do, in the movie time's division, and E120's and E122's opens take under 0.4 s of lab
 time where they took 300 s and 500 s.
 Since findings 50 and 51 (2026-10-30) E118's card is native (its card line's request to the sub-CPU answered by
-S-SDSWITCH, its record time's division by S-MOVRATE, since finding 60 the DIVU by 0 alone) and E118 passes modelcheck on the TFT and the EVF; E120's card is
+S-SDSWITCH, its record time's division by S-MOVRATE, since finding 59 the DIVU by 0 alone) and E118 passes modelcheck on the TFT and the EVF; E120's card is
 native too. Both bodies' PLAY and INFO draw the picture's `100-0001` since finding 52. With findings 48 to 55 together
 E118 and E120 compose their shooting screens on both panels and pass modelcheck on the TFT and the EVF, the count
 probes expected failures, and are in its checked set with E122 (finding 56).
-Since finding 63 (2026-10-31) the three pass the count probe on both panels, their screens redrawn by INFO before each
+Since finding 61 (2026-10-31) the three pass the count probe on both panels, their screens redrawn by INFO before each
 window (PROBE_REDRAW): their application asks for the count only when the shooting screen is redrawn.
 
 ## The chained port

@@ -41,7 +41,7 @@ const G4SET_UNCHECKED = false;
 
 // The movie time query's log on the shooting screen (E143's card_fs below, where it is read; E146's and E147's): its
 // time code conversion finds the movie info's frame rate 0, which the movie module's set-up fills only at a movie take
-// (docs/model-survey.md finding 61), so the camera logs it too before its first one (I)
+// (docs/model-survey.md finding 60), so the camera logs it too before its first one (I)
 const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0: the movie module\'s info is set up at a movie take, none yet (the time left is the card\'s)'];
 
 // `scpu_port`: UI_IN's group 0 through the SCPU interface's port and event words (src/lab/play.mjs H-SCPUIRQ,
@@ -159,7 +159,7 @@ export const MODELS = {
     // time query (0x5042da58) takes the time left from the movie module's copy, which the DCF remain count fills from
     // the card (0x5045c4ac, called from 0x50448d83, X), and converts the movie info's frame rate (+720 of the static
     // info 0xa32ed128, which the movie module's set-up 0x5045c3fd copies in from TAKE_MOV's take job, D; the image
-    // loads the address there and in one copy-out only, X: so 0 before a movie take; docs/model-survey.md finding 61)
+    // loads the address there and in one copy-out only, X: so 0 before a movie take; docs/model-survey.md finding 60)
     // for the recording's time code: 0x5044949b takes 23, 24, 25, 30, 50 or 60 and logs this code for any other (D);
     // the time left is computed before it (0x5045ada2)
     card_fs: {
@@ -808,7 +808,7 @@ export const MODELS = {
     panels: { tft: [720, 480], evf: [1024, 768] },
     // the card native since 2026-10-30 (docs/model-survey.md finding 50): its SD driver switches a card line through
     // the sub-CPU (src/lab/storage.mjs S-SDSWITCH) and its movie record time divides by the movie info's frame rate,
-    // 0 before a movie take (src/lab/camapp.mjs S-MOVRATE, docs/model-survey.md finding 60); the blank 8 GiB card
+    // 0 before a movie take (src/lab/camapp.mjs S-MOVRATE, docs/model-survey.md finding 59); the blank 8 GiB card
     // formatted FAT32 'NO NAME' at 8192 with 32 KiB clusters, 2116 shots and 0:37:19 from it, S2's file read back (X:
     // bin/modelcheck.mjs, the OSD records)
     card_fs: { native: true },

@@ -27,6 +27,8 @@ export function siteTests() {
   const specs = references(mod, 'module').map((r) => r.spec);
   ok(JSON.stringify(specs) === JSON.stringify(['./x.mjs', './side.mjs', '../y/z.mjs', './dyn.mjs', './worker.mjs']), `module references: ${JSON.stringify(specs)}`);
   ok(references(mod, 'module')[0].line === 2, 'a multi-line import is found on its from line');
+  const crlf = references(mod.replace(/\n/g, '\r\n'), 'module').map((r) => r.spec);
+  ok(JSON.stringify(crlf) === JSON.stringify(specs), `module references with CRLF line ends: ${JSON.stringify(crlf)}`);
   const html = '<link rel="icon" href="data:,"><a href="web/index.html">p</a> <a href="https://x.org/">e</a> <a href="#top">t</a>\n' +
     '<a href="//cdn.example/x.js">c</a> <a href="mailto:a@b.c">m</a> <img src="img/a.png">\n<script type="module">\nimport { P } from \'./page.mjs\';\n</script>';
   const hs = references(html, 'html').map((r) => r.spec);

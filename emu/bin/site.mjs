@@ -18,11 +18,11 @@ export const SITE_TYPES = ['.html', '.mjs', '.js', '.css', '.json', '.svg', '.pn
 
 // The references of one file's text: [{spec, line}], relative or not (siteFiles judges them). kind: 'html' or 'module'.
 // In modules, // comments are dropped (a reference in a comment is no load); in HTML, external links (a scheme, //host,
-// #, mailto:) are not references to the site.
+// #, mailto:) are not references to the site. Lines end in LF or CRLF (a checkout with core.autocrlf).
 export function references(text, kind) {
   const out = [];
   const add = (spec, line) => out.push({ spec, line });
-  const lines = text.split('\n');
+  const lines = text.split(/\r?\n/);
   const IMPORT = /(?:\bfrom\s+|\bimport\s*\(\s*|\bimport\s+)['"]([^'"]+)['"]/g;
   const URLREF = /\bnew\s+URL\(\s*['"]([^'"]+)['"]\s*(?:\+[^,]*)?,\s*import\.meta\.url\s*\)/g;
   const ATTR = /\b(?:src|href)\s*=\s*["']([^"']+)["']/g;

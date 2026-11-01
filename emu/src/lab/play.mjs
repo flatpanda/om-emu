@@ -961,6 +961,13 @@ export class PlaySession extends N.NavSession {
     }
   }
   // ---- bring-up
+  // The us clock from the reset: on lab time (A-USLAB, the timer's default), or with --us-clock reads one count per CPU
+  // read (H-USCOUNT, a comparison choice)
+  lab_created(lab) {
+    const us = this.opts.us_clock ?? 'lab';
+    if (!['lab', 'reads'].includes(us)) throw new ValueError(`us_clock ${show(us)}: lab or reads`);
+    if (us === 'reads') lab.sim.write(IRQ.TIMER_DEBUG + IRQ.T_USMODE, pack('<I', 0));
+  }
   enter() {
     super.enter();
     try { this.play_bring_up(); } catch (e) { this.close(); throw e; }
@@ -996,7 +1003,6 @@ export class PlaySession extends N.NavSession {
     if (lab.scpu_link && POWER_OFF) this.power_manager_bring_up();
     this.idle_codes = lab.uiin_codes.map(([, c]) => c);
     if (this.touch_on) this.touch_bring_up();
-    if ((o.us_clock ?? 'lab') === 'lab') lab.sim.write(IRQ.TIMER_DEBUG + IRQ.T_USMODE, pack('<I', 1));
     this.takeover_bring_up();
     this.ipi_bring_up();
     if (o.mutant !== 'no-aeinit') this.aeinit_bring_up();   // without it the interpolation's div fault comes back

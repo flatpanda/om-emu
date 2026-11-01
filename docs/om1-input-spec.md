@@ -153,7 +153,7 @@ The player (`emu/src/lab/player.mjs`) runs lab time in ELAPSE slices of at most 
 | S-BGDRAW | `0x50b3dcca` returns 0 to callers `0x510c9a07` and `0x510c9cf5` | menu spec section 15 |
 | S-CAFWD, S-TOUCHMAP | section 6 | C1, C9 (X); by name (I) |
 | H-TPINIT, H-TPSTART, S-TPREG, S-TPINT, S-GPIO-TP | section 5 | touch investigation (X), D as cited |
-| A-USLAB | the us clock counts lab us (timer window USMODE 1) | intc/timer spec sections 3, 5 |
+| A-USLAB | the us clock counts lab us from the reset, at least one per CPU read (timer window USMODE 1, every lab since 2026-10-31) | intc/timer spec sections 3.1, 5 |
 | S-HEAP | the `malloc`/`free` stand-ins of `emu/src/lab/hle.mjs` with reuse: free() puts the block on a per-size list that malloc() takes from first; malloc(0) gets a unique 16-byte block | the bump allocator never reuses and runs out (2.4 MB) after about 12 menu entries (about 200 KB each) or 20 minutes on the shooting screen (2 KB per lab second) (X); the bump stand-in returns the same address to consecutive malloc(0) calls, which the firmware frees twice (`0x50d9ba43` from `0x511702b8`/`0x511702ce`, X) |
 | H-POWER | the power lever off closes the session (after UI_IN decodes `0x0202000c`), on starts a new one | not the camera's power sequence |
 | H-IDLE | section 7 | runtime investigation (X) |

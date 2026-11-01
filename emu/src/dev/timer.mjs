@@ -1,6 +1,6 @@
 // OM-1 timer block (0x98900000) on the lab clock and its debug window 0x89a10000, and the lab clock itself,
-// A-USLAB (USMODE 1) and the mutant negative controls 28..30 included. Times are
-// integer ns held in Numbers (exact below 2^53 ns, about 104 lab days).
+// the us clock on lab time (A-USLAB, USMODE 1, from the reset) and the mutant negative controls 28..30 included. Times
+// are integer ns held in Numbers (exact below 2^53 ns, about 104 lab days).
 import { BUS, K_MMIO, K_ROMD, addRegion, allocWindow, buf, U8, ctx } from '../core/mem.mjs';
 import { IRQ_TIMER } from './intc.mjs';
 import { BOARD } from '../fw/board.mjs';
@@ -60,13 +60,14 @@ export class Timer {
     const c0 = this.ch[0], c33 = this.ch[US];                      // H-RESETTIMER
     c0.ctl = 0x80; c0.reload = L.prescaler ?? 0; c0.running = true; c0.ctlWritten = true;
     c33.ctl = 0x80; c33.reload = L.us_reload; c33.running = true; c33.ctlWritten = true;
-    this.count33 = L.us_reload; this.usBase = 0;
+    this.usBase = 0; this.usLast = -1;                            // the us clock's count since its load (usCount)
     for (let n = 1; n <= LAST; n++) intc.drive(IRQ_TIMER(n));
     addRegion({ base: TIMER_BASE, size: TIMER_SIZE, kind: K_MMIO, name: 'om1.timer',
       dev: { read: (a, w, dbg) => this.read(a - TIMER_BASE, w, dbg), write: (a, v, w, dbg) => this.write(a - TIMER_BASE, v, w, dbg) } });
     const off = allocWindow(TIMER_DEBUG_SIZE);
     this.d32 = new Uint32Array(buf, off, TIMER_DEBUG_SIZE / 4);
-    this.dset(D.MAGIC, 0x524D4954); this.dset(D.VERSION, 1);
+    this.dset(D.MAGIC, 0x524D4954); this.dset(D.VERSION, 2);
+    this.dset(D.USMODE, 1);                                        // A-USLAB from the reset; 0 is H-USCOUNT
     addRegion({ base: TIMER_DEBUG_BASE, size: TIMER_DEBUG_SIZE, kind: K_ROMD, off, name: 'om1.lab-timer-debug',
       dev: { romdWrite: (a, v, w) => this.error('write (lab debug window)', a - TIMER_BASE, w, v, false) } });
     clock.add({ next: () => this.clockNext(), fire: (at) => this.clockFire(at), publish: () => this.publish() });
@@ -132,6 +133,16 @@ export class Timer {
       c.next = c.t0 + c.period;
     }
   }
+  // The us clock (channel 33 on E143): a down-counter from its reload, one count per lab microsecond since its load
+  // (A-USLAB, USMODE 1, the default from the reset: A-TMR-2, the hardware's free-running counter at 1 MHz), and at
+  // least one count past the last CPU read (H-USCOUNT's rule): CPU execution takes no lab time, so a busy wait on the
+  // clock inside one lab instant still ends, after as many reads as its microseconds, and the counts it ran ahead are
+  // not counted again once lab time passes them. USMODE 0 is H-USCOUNT alone (one count per CPU read, lab time
+  // ignored); mutant 30 ignores lab time in USMODE 1 too. Returns the count the next CPU read gets.
+  usCount() {
+    const lab = this.dget(D.USMODE) === 1 && this.m.mutant !== MUT_USLAB_NO_TIME ? Math.floor((this.clock.t - this.usBase) / 1000) : 0;
+    return Math.max(lab, this.usLast + 1);
+  }
   read(off, size, dbg) {
     if (size !== 4 || (off & 3)) return this.error('read', off, size, 0, dbg);
     if (off < 4 * CHANNELS) {
@@ -144,15 +155,9 @@ export class Timer {
     }
     if (off >= RELOAD && off < RELOAD + 4 * CHANNELS) return this.ch[(off - RELOAD) >> 2].reload;
     if (off === COUNTER + 4 * US) {
-      let data = this.count33;
-      if (this.dget(D.USMODE) === 1) {          // A-USLAB: lab microseconds since the last load, plus the reads
-        const reload = BigInt(this.ch[US].reload), span = reload + 1n;
-        const us = this.m.mutant === MUT_USLAB_NO_TIME ? 0n : BigInt(Math.floor((this.clock.t - this.usBase) / 1000));
-        const reads = BigInt.asUintN(64, reload - BigInt(this.count33));
-        data = Number(BigInt.asUintN(32, reload - BigInt.asUintN(32, BigInt.asUintN(64, us + reads) % span)));
-      }
-      if (!dbg) this.count33 = this.count33 ? this.count33 - 1 : this.ch[US].reload;   // H-USCOUNT
-      return data;
+      const n = this.usCount();
+      if (!dbg) this.usLast = n;                // a debugger read changes nothing: it sees what the next CPU read gets
+      return (this.ch[US].reload - n % (this.ch[US].reload + 1)) >>> 0;
     }
     for (const g of GROUPS) {
       if (off === g[2]) return (this.ie & groupMask(g)) >>> (g[0] - 1);
@@ -174,7 +179,7 @@ export class Timer {
     }
     if (off >= RELOAD && off < RELOAD + 4 * CHANNELS) {
       this.ch[(off - RELOAD) >> 2].reload = value;
-      if (off === RELOAD + 4 * US) { this.count33 = value; this.usBase = this.clock.t; }
+      if (off === RELOAD + 4 * US) { this.usBase = this.clock.t; this.usLast = -1; }
       this.publish();
       return;
     }

@@ -362,7 +362,7 @@ export class Player {
     if (this.idle === 'wall') used.push('H-IDLE');
     if (a.touch !== 'off') used.push('H-TPINIT', 'H-TPSTART', 'S-TPREG', 'S-TPINT', 'S-GPIO-TP', 'H-TOUCHGAP');
     if (a.touch === 'gui' && !this.session?.app_touch) used.push('S-CAFWD', 'S-TOUCHMAP');   // not where the application forwards them (play.mjs app_touch)
-    if (a.us_clock === 'lab') used.push('A-USLAB');
+    used.push(a.us_clock === 'reads' ? 'H-USCOUNT' : 'A-USLAB');                              // the us clock from the reset
     if (this.scene_used) used.push('S-SCENE', 'H-REQ');                                      // the image sensor stand-in's live view
     if (this.session?.dpc_init) used.push('H-DPCINIT', 'A-DPC-1');                         // the deferred calls' init at the bring-up
     if (this.session?.power_tid) used.push('H-PWRTASK');                                    // the power task started

@@ -66,10 +66,16 @@ export function timerSchedule(t0, channels, horizon) {
   }
   return [...want].sort((a, b) => a[0] - b[0]).map(([t, chs]) => [t, chs.sort((a, b) => a - b)]);
 }
-// I9 (A-USLAB): channel 33 reads reload - ((lab us + CPU reads) mod (reload + 1))
-export function uslab(reload, t, reads) {
-  const R = BigInt(reload), us = BigInt(Math.floor(t / 1000));
-  return Number(R - ((us + BigInt(reads)) % (R + 1n)));
+// I9 (A-USLAB): channel 33 reads reload - (count mod (reload + 1)), the count being the lab us since the load or, read
+// again inside one lab instant, one more than the read before (counts): the counts of the reads, in order, as
+// [lab us at the read] in, the values out
+export function uslab(reload, usAtReads, last = -1) {
+  const R = BigInt(reload), out = [];
+  for (const us of usAtReads) {
+    last = Math.max(us, last + 1);
+    out.push(Number(R - (BigInt(last) % (R + 1n))));
+  }
+  return out;
 }
 // I5 T2: the signed 64-bit product of two u32 read as signed: [low word, high word]
 export function product64(a, b) {

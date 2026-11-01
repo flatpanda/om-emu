@@ -192,6 +192,7 @@ export class NavSession {
       store_first: this.store_first, evf_layout: this.evf_layout, time: this.time, hdmi: this.hdmi });
     this.lab.b2_options = { ...this.b2_options };
     try {
+      this.lab_created(this.lab);
       if (this.a15) this.lab.assume('A15', true);
       this.lab.bring_up(this.device);
       const [rc] = this.lab.nk.svc('chg_pri', { d0: 0, d1: NAV_PRI });
@@ -207,6 +208,8 @@ export class NavSession {
     }
     return this;
   }
+  // The lab, created and not yet brought up: the machine is at its reset (a subclass sets its lab choices here)
+  lab_created(lab) {}
   // Is sid a store id a Setup row reads through the getter (menudata.mjs store_reads)?
   scalar_hint(sid) {
     for (const t of M.tabs(this.img)) if (t.id === MM.SETUP_TAB) for (const p of t.pages) if (M.store_reads(this.img, p).has(sid)) return true;

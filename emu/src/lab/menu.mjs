@@ -350,9 +350,10 @@ export class MenuLab extends T.TextDisplayLab {
     // pin 30, which the lab does not model (no controller, no GIO interrupt on the family's board). The driver waits for
     // it in 2 ms sleeps until a word is 1, which the pin's callback stores while the driver waits, with a timeout on the
     // us clock; the device open's command list ends in such a wait (150 ms, "TP INT TIME OUT" on the timeout). Without
-    // the INT every wait ran to its timeout, and since the us clock counts CPU reads until the play bring-up (H-USCOUNT)
-    // the 150 ms took 300 s of lab time (E120's and E122's TFT opens, X). At the wait's poll the lab stores 1 in the word
-    // as the callback would: the INT comes within the wait's first sleep (I: how long the controller takes is ?)
+    // the INT every wait runs to its timeout: 150 ms of lab time since the us clock runs on lab time from the reset
+    // (A-USLAB; E120's TFT open 0.34 s instead of 0.19 s, X), 300 s while it counted CPU reads before the play bring-up
+    // (H-USCOUNT). At the wait's poll the lab stores 1 in the word as the callback would: the INT comes within the wait's
+    // first sleep (I: how long the controller takes is ?)
     const tpInt = fact('touch_int', null) ?? null;                // (fact() gives a read null as undefined)
     this.tp_ints = 0;
     if (tpInt !== null) this.observe(tpInt.poll, (lab) => {

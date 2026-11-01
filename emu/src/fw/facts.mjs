@@ -288,29 +288,35 @@ export function resLoader(img, resLoad) {
 // (src/lab/menu.mjs, fact 'menu.list_menu'): the image holds the trace strings of its tab menu's classes,
 // "Menu_ListMenu_Tab_Menu_VM_Actuator::Initialize .." and "Menu_ListMenu_Tab_Menu_Viewer not supprt .." (E143 block
 // offsets 0x1506274 and 0x150c7ca, D; the first lies 0x68 bytes past E143's tab table at 0x6152722c). E143, E146 and
-// E147 hold both; the 12 E144-family and the 3 E118-family bodies hold no "ListMenu" string at all, their menus being
-// the older Menu_Viewer / Cursor_2CNL classes (X, a string count over each expanded image).
+// E147 hold both, and so does E148, the family's second ListMenu build (D: its 0x11c3798 and 0x11ca476); the other 12
+// E144-family bodies and the 3 E118-family bodies hold no "ListMenu" string at all, their menus being the older
+// Menu_Viewer / Cursor_2CNL classes (X, a string count over each expanded image).
 export const listMenu = (img) => hasString(img, 'Menu_ListMenu_Tab_Menu_');
 
 // The ListMenu open's tab and page memories (facts 'menu.tab_memory', 'menu.page_memory'; src/lab/menu.mjs
 // MENU_MEMORY): opening at the remembered place, it reads the tab's store id, then the page's, each through the
-// settings object's vtable +12 into a stack word and stores it less one, `mov sp,a1; mov (12,a2),a2; add 8,a1; mov
-// tab,d0; calls (a2); mov (8,sp),d0; mov 1,d1; sub d1,d0`, and 0x20 bytes on the same with 12 and the page (E143
-// 0x511bd15d: 1881, 1882, the tab index stored at (86,a3), D). Found once on E143 (1881, 1882), E146 (1881, 1882, at
-// 0x511cbf58) and E147 (1909, 1910, at 0x511ddabc, D), the bodies with ListMenu, and on none of the 15 others (X, a
-// byte scan of each expanded image). Returns {tab_memory, page_memory}, or undefined where no such pair is found;
+// settings object's vtable into a stack word and stores it less one, `mov sp,a1; mov (slot,a2),a2; add 8,a1; mov
+// tab,d0; calls (a2); mov (8,sp),d0; mov 1,d1; sub d1,d0`, and 0x20 bytes on the same for the page, whose add and load
+// are 4 higher (E143 0x511bd15d: slot 12, 1881, 1882, the tab index stored at (86,a3), D). Found once on E143 (1881,
+// 1882), E146 (1881, 1882, at 0x511cbf58) and E147 (1909, 1910, at 0x511ddabc, D), the bodies with ListMenu, and on none
+// of the 16 others (X, a byte scan of each expanded image); E148, the second ListMenu build of the E144 family, reads
+// the getter at slot 8 (0x50e77adb: 1909, 1910, the page at 0x50e77afb, D), so the slot is tried at both 12 and 8, the
+// tab and the page at the same one. Returns {tab_memory, page_memory}, or undefined where no such pair is found;
 // throws for two.
-const memRead = (sp) => [0x3d, 0xf8, 0x2a, 0x0c, 0x21, sp, 0x2c, null, null, 0xf0, 0xf2, 0x58, sp, 0x85, 0x01, 0xf1, 0x04];
-const MEM_TAB = memRead(0x08), MEM_PAGE = memRead(0x0c), MEM_GAP = 0x20;
+const memRead = (sp, slot) => [0x3d, 0xf8, 0x2a, slot, 0x21, sp, 0x2c, null, null, 0xf0, 0xf2, 0x58, sp, 0x85, 0x01, 0xf1, 0x04];
+const MEM_SLOTS = [0x0c, 0x08], MEM_GAP = 0x20;
 export function menuMemory(img) {
   const found = [];
-  for (let o = img.indexOf(0x3d); o >= 0; o = img.indexOf(0x3d, o + 1)) {
-    if (bytesAt(img, o, MEM_TAB) && bytesAt(img, o + MEM_GAP, MEM_PAGE)) found.push(o);
+  for (const slot of MEM_SLOTS) {
+    const tab = memRead(0x08, slot), page = memRead(0x0c, slot);
+    for (let o = img.indexOf(0x3d); o >= 0; o = img.indexOf(0x3d, o + 1)) {
+      if (bytesAt(img, o, tab) && bytesAt(img, o + MEM_GAP, page)) found.push({ o, slot });
+    }
   }
   if (!found.length) return undefined;
-  if (found.length > 1) throw new Error(`menuMemory: tab and page memory reads at ${found.map((o) => h8(0x50000000 + o)).join(', ')}, want one`);
+  if (found.length > 1) throw new Error(`menuMemory: tab and page memory reads at ${found.map((x) => h8(0x50000000 + x.o)).join(', ')}, want one`);
   const id = (o) => img[o + 7] | img[o + 8] << 8;
-  return { tab_memory: id(found[0]), page_memory: id(found[0] + MEM_GAP) };
+  return { tab_memory: id(found[0].o), page_memory: id(found[0].o + MEM_GAP) };
 }
 
 // The GUI task's take of a message (fact 'menu.take', and through bin/port.mjs the place of E143's take GUI_TAKE_E143

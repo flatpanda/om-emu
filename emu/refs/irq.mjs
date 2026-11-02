@@ -44,12 +44,15 @@ export function registration(img) {
 }
 // I6: the attach routine's clamp, `mov imm8,d0` (80 06) at 0x5002e947: [opcode, constant]
 export const attachClamp = (img) => [img[0x2E947], img[0x2E948]];
-// I10: the A-IPI descriptor [target][core] = {write index *, read index *, ring, bit} at 0x60092cd4 + 64 t + 16 c, and
-// the doorbell registers 0x60092dd4[target]
+// I10: the A-IPI descriptor [target][core] = {write index *, read index *, ring, bit} at
+// 0x60092cd4 + 16 * cores * target + 16 * core, and the doorbell registers 0x60092dd4[target]. A target's row is one
+// 16-byte descriptor per CPU, so its stride is 16 x the body's CPU count: E143's 4 give 64 (D); the 3-CPU bodies (the
+// E144 and E118 families) give 48 (E144's 0x60056392 and E148's 0x600563b2: `mul 48,d1`, then their own table base;
+// X). src/lab/play.mjs reads the body's count from fact('kernel.cpus').
 export const IPI_DESC = 0x60092CD4, IPI_REGS = 0x60092DD4;
-export function ipiDescriptors(img) {
+export function ipiDescriptors(img, cores = 4) {
   const desc = new Map();
-  for (let t = 0; t < 4; t++) for (let c = 0; c < 4; c++) desc.set(`${t},${c}`, rtData(img, IPI_DESC + 64 * t + 16 * c, '<IIIB'));
+  for (let t = 0; t < cores; t++) for (let c = 0; c < cores; c++) desc.set(`${t},${c}`, rtData(img, IPI_DESC + 16 * cores * t + 16 * c, '<IIIB'));
   return desc;
 }
 export const ipiRegisters = (img) => rtData(img, IPI_REGS, '<4I');

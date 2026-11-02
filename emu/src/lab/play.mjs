@@ -791,9 +791,11 @@ export class PlayLab extends N.NavLab {
     this.observe(XCPU_WAIT_RETURN, (lab, r) => this._xcpu_wait_return(lab, r), 'obs-xcpu-wait');
   }
   static _bracket_state() { return bracketState(); }
-  // (write index *, read index *, ring, bit) of ring [target][core] from the image's table 0x60092cd4 (D).
+  // (write index *, read index *, ring, bit) of ring [target][core] from the image's table (D): 16-byte descriptors,
+  // one row per CPU, so its base moves 16 x the body's CPU count per target (E143's 4: 64; the E144 family's 3: 48,
+  // E148's post 0x600563b2 `mul 48,d1` then `mov 0x6007b03c,a0`; E147's 4: 64).
   ipi_desc(target, core) {
-    const b = this.sim.read(IRQ.IPI_DESC + 64 * target + 16 * core, 13);
+    const b = this.sim.read(IRQ.IPI_DESC + 16 * fact('kernel.cpus', 4) * target + 16 * core, 13);
     return [...unpack('<III', b.subarray(0, 12)), b[12]];
   }
   // S-CPU2: at the return of the GUI's post to CPU 2, serve exactly the allow-listed post as CPU 2's task 0x200e would

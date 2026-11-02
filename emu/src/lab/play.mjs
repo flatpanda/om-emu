@@ -1392,6 +1392,7 @@ export class PlaySession extends N.NavSession {
     const ms = Math.ceil((target - now) / 1000000);
     lab.step_tag = 'idle';
     lab.step_sets = 0;
+    lab.step_queued = 0;
     lab.step_storm = N.STORM + Math.ceil(ms * N.WAIT_STORM_PER_MS);
     lab.set_callers = new Tally();
     this.marks = { log: lab.log.length, events: lab.events.length };

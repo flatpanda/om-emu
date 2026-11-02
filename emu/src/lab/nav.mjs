@@ -108,6 +108,8 @@ export class NavLab extends MM.MenuLab {
     this.step_tag = 'bring-up';
     this.posting = false;
     this.step_sets = 0;
+    this.step_queued = 0;
+    this.pending_events = new Set();
     this.step_storm = STORM;
     this.set_callers = new Tally();
     super.preinit({ ...opts, store: 'native' });
@@ -120,14 +122,27 @@ export class NavLab extends MM.MenuLab {
     // is not identified, so only E143's is observed
     if (ON_LAB_MODEL) this.observe(VAR_SET, (lab, r) => this._var(lab, r), 'obs-var226');
     this.hook(MM.API_WRITE, (h, r) => this._vt4(h, r), 'obs-vt4');
+    // The event storm guard counts the GESetEvent calls that queue an event. GESetEvent does not queue an event that is
+    // already pending (E143's SET_EVENT: 0x1002 and 0x1100 by their pending bytes, the others by a scan of the pending
+    // list, D; the addresses are in docs/model-survey.md, 2026-11-02), so a set of an event set and not taken since
+    // does no work: the lab counts it as pending from its set to its take (I: the dispatch takes it off the list). The
+    // E142 lineage's menu open sets 0x1002 about 980 times and takes it 3 times (X), which a count of every call
+    // refused as a storm; a GUI that defers an event into itself again (check_nav N3's MENU) takes it before each set,
+    // so every set counts
     this.wrap(MM.DISPATCH, (take) => (hle, r) => {
       if (this.posting) throw new NavError(`GUI ran during post (dispatch ${h8(MM.DISPATCH)} reached before sendEvent returned): the lab task does not outrank the GUI task`);
+      this.pending_events.delete(this.sim.u32(r.sp + 396));
       return take(hle, r);
     });
     this.wrap(MM.SET_EVENT, (put) => (hle, r) => {
       this.step_sets += 1;
       this.set_callers.add(h8(disasm(r.mdr)));
-      if (this.step_sets > this.step_storm) throw new NavError(`event storm: more than ${this.step_storm} GESetEvent calls in step ${this.step_tag}`);
+      const id = this.sim.u32(r.sp + 28);
+      if (!this.pending_events.has(id)) {
+        this.pending_events.add(id);
+        this.step_queued += 1;
+        if (this.step_queued > this.step_storm) throw new NavError(`event storm: more than ${this.step_storm} GESetEvent calls in step ${this.step_tag}`);
+      }
       return put(hle, r);
     });
   }
@@ -264,6 +279,7 @@ export class NavSession {
     lab.harvest();
     lab.step_tag = tag;
     lab.step_sets = 0;
+    lab.step_queued = 0;
     lab.step_storm = STORM;
     lab.set_callers = new Tally();
     this.marks = { events: lab.events.length, draws: lab.draw_log.length, exec: lab.exec_history.length,

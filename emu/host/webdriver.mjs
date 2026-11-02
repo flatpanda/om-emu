@@ -120,7 +120,8 @@ async function call(base, method, p, body) {
   let doc;
   try { doc = JSON.parse(text); } catch { throw new WebDriverError('unknown error', `${method} ${p}: HTTP ${r.status} ${text.slice(0, 300)}`); }
   const v = doc.value;
-  if (v && typeof v === 'object' && v.error) throw new WebDriverError(v.error, `${method} ${p}: ${v.message}`);
+  // an error comes with a status of 400 or more (W3C WebDriver, 6.6); a script's own result may hold an 'error' key
+  if (!r.ok && v && typeof v === 'object' && v.error) throw new WebDriverError(v.error, `${method} ${p}: ${v.message}`);
   return v;
 }
 

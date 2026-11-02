@@ -2,11 +2,15 @@
 // The ported models' smoke test: for each model whose firmware is unpacked (src/fw/models.mjs), update its address
 // table in src/fw/ports.mjs (bin/port.mjs) and run, in a child on emu/ with OM_EMU_MODEL, a play session on the TFT
 // and one on the EVF (a body with one: MODELS panels.evf) through the path every model must take: start, S1, S2 (a
-// picture on the card), PLAY (single-frame playback), INFO, PLAY (back to shooting). Each step's GUI state (by its name
+// picture on the card), PLAY (single-frame playback), INFO, PLAY (back to shooting), then the menu (MENU_PATH: MENU,
+// DOWN, MENU; on the EVF after S2, MENU_EVF_XFAIL's bodies expected to fail). Each step's GUI state (by its name
 // in the model's own state table: the numbers differ, E143's playback is 0x508, the E144 family's 0x608) and card
 // count is checked, and after S1 the screen's remaining-shots count (the count probe below); exit 1 on any failure. A
 // body whose start waits at a prompt S1 does not answer (START_PROMPT: E145's date and time setting) takes the
-// prompt's key after the start.
+// prompt's key after the start. The menu's steps are judged by what they change, since the menu's GUI states are named
+// on few builds (the E144 family's SS_MENU lies past the state table's first 12 parents, src/lab/menu.mjs state_names):
+// MENU must leave the shooting screen's state for another and change the frame (the menu drawn), DOWN keep that state
+// and change the frame (the cursor or the tab moved), the second MENU bring back the shooting screen's state.
 // The count probe, after S1: three windows of WINDOW frames WINDOW_NS apart, at S-CARD's count, at PROBE_SHOTS and at
 // the count again, each after PROBE_NS of idle. A pixel is the count's where it holds one value through the first
 // window and another through the second (a pixel that changes within a window, as E146's blinking ISO item, X, is
@@ -47,6 +51,19 @@ const models = (want.length ? want : Object.keys(MODELS).filter((k) => k !== 'E1
 // [key, GUI state name after it, card images after it]
 const PATH = [['start', null, 0], ['s1', null, 0], ['s2', null, 1], ['play', 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE', 1],
   ['info', 'SS_PLAY_SINGLE/ID_ST_DISP_DETAIL', 1], ['play', null, 1]];
+// the menu after the path: [key, null (no state name), card images, what the step must do (see the head)]
+const MENU_PATH = [['menu', null, 1, 'open'], ['down', null, 1, 'move'], ['menu', null, 1, 'close']];
+// the bodies whose menu is known not to run on the EVF: model -> [what the step's error must hold, the reason], held
+// strictly as PROBE_XFAIL. E146 and E147: the menu's composite has the EVF's dimmed plane, PLANC 0xb2, which E143's
+// compositor refuses (as for playback above). E122 and E120: at MENU on the EVF the press runs to the hook-stop limit
+// with the lab clock at about 3000 s, sleeping in OlyTaSS (X, 2026-11-02; why: ?), where their TFTs and E118's EVF open
+// the menu
+const PLANC_B2 = [/^error: composite NONE: \["PLANC_UNOBSERVED .* value 0x000000b2/, 'the menu\'s EVF composite has a plane at PLANC 0xb2, which E143\'s compositor refuses'];
+const MENU_EVF_XFAIL = {
+  E146: PLANC_B2, E147: PLANC_B2,
+  E122: [/^error: .*more than 300000 stub calls/, 'MENU on the EVF runs to the hook-stop limit with the lab clock at 3000 s (not read)'],
+  E120: [/^error: .*more than 300000 stub calls/, 'MENU on the EVF runs to the hook-stop limit with the lab clock at 3000 s (not read)'],
+};
 const PROBE_NS = 1200e6, PROBE_SHOTS = 777, WINDOW = 6, WINDOW_NS = 300e6;
 // the remaining-shots query (E143's, src/lab/camapp.mjs SHOTS_QUERY; the child places it through A())
 const SHOTS_QUERY = 0x50419164;
@@ -104,7 +121,7 @@ const env = { rom: loadImage(), resBlock: loadBlock(), createHash, ...(SECTORS =
 const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, device: DEVICE }, { ...env, wallClock: () => performance.now() / 1000 });
 pl.open_session();
 const s = pl.session, lab = s.lab, out = [];
-const rec = (k) => { let frame = null; try { const [w, h] = s.frame('boundary', true); frame = w + 'x' + h; } catch (e) { frame = 'error: ' + e.message.split('\\n')[0].slice(0, 120); } out.push([k, lab.state(), lab.state_names.get(lab.state()) ?? '?', s.camapp.status().card_images, frame]); };
+const rec = (k) => { let frame = null, digest = null; try { const [w, h, raw] = s.frame('boundary', true); frame = w + 'x' + h; digest = createHash('sha256').update(raw).digest('hex').slice(0, 16); } catch (e) { frame = 'error: ' + e.message.split('\\n')[0].slice(0, 120); } out.push([k, lab.state(), lab.state_names.get(lab.state()) ?? '?', s.camapp.status().card_images, frame, digest]); };
 s.idle_slice(lab.lab_time() + 1500e6); rec('start');
 // the count probe's window: WINDOW frames (the composite's words) WINDOW_NS apart, each pixel's first value and whether
 // it held it through the window
@@ -143,7 +160,10 @@ const cycle = () => {
 };
 let probe = null;
 for (const k of JSON.parse(process.argv[3])) {
-  press(k); rec(k);
+  // a step that stops the session ends the path: its error in place of the frame, no step after it (the card is
+  // still read back below)
+  try { press(k); } catch (e) { out.push([k, lab.state(), lab.state_names.get(lab.state()) ?? '?', s.camapp.status().card_images, 'error: ' + e.message.split('\\n')[0].slice(0, 200), null]); break; }
+  rec(k);
   if (k !== 's1') continue;
   try {
     const turn = REDRAW ? cycle() : null, redraw = () => {
@@ -190,7 +210,7 @@ for (const m of models) {
   for (const device of MODELS[m].panels?.evf === null ? ['tft'] : ['tft', 'evf']) {
   const prompt = START_PROMPT[m], answer = prompt ? (prompt.keys ?? [prompt.key]).map((k, i, ks) => [k, i === ks.length - 1 ? prompt.after : null, 0]) : [];
   const full = [PATH[0], ...answer, ...PATH.slice(1)];
-  const path_ = device === 'evf' ? full.slice(0, full.indexOf(PATH[2]) + 1) : full;
+  const path_ = [...(device === 'evf' ? full.slice(0, full.indexOf(PATH[2]) + 1) : full), ...MENU_PATH], menuAt = path_.length - MENU_PATH.length;
   const r = spawnSync(process.execPath, ['--max-old-space-size=6144', '--input-type=module', '-e', CHILD, path.join(REPO, 'emu'), device, JSON.stringify(path_.slice(1).map((p) => p[0])), PROBE_REDRAW[m] ?? ''], { encoding: 'utf8', env: { ...process.env, OM_EMU_MODEL: m }, maxBuffer: 1 << 26 });
   const xs = SDXC ? SDXC_XFAIL[m] : null;
   if (xs) {
@@ -202,14 +222,29 @@ for (const m of models) {
   const line = r.stdout.trim().split('\n').pop();
   let steps, probe, card;
   try { ({ steps, probe, card } = JSON.parse(line)); } catch { console.log(`${m} (${MODELS[m].name}) ${device}: FAILED ${(r.stderr || r.stdout).split('\n').filter(Boolean).slice(-3).join(' | ').slice(0, 600)}`); bad++; continue; }
-  const problems = [];
+  const problems = [], notes = [];
   if (prompt && steps[0][1] !== prompt.state) problems.push(`start: GUI state 0x${steps[0][1].toString(16)}, want the prompt 0x${prompt.state.toString(16)} (START_PROMPT: ${prompt.why})`);
   steps.forEach(([k, state, name, images, frame], i) => {
     const [, wantState, wantImages] = path_[i];
     if (wantState !== null && name !== wantState) problems.push(`${k}: GUI state 0x${state.toString(16)} ${name}, want ${wantState}`);
     if (images !== wantImages) problems.push(`${k}: ${images} images, want ${wantImages}`);
-    if (k !== 'start' && !/^\d+x\d+$/.test(frame)) problems.push(`${k}: frame ${frame}`);
+    if (k !== 'start' && i < menuAt && !/^\d+x\d+$/.test(frame)) problems.push(`${k}: frame ${frame}`);
   });
+  // the menu (MENU_PATH): each step against the state and frame before it, held against MENU_EVF_XFAIL on the EVF; a
+  // step not run because an earlier one stopped the session is that one's problem
+  const menuMissed = [], shoot = steps[menuAt - 1];
+  steps.slice(menuAt).forEach(([k, state, , , frame, digest], j) => {
+    const prev = steps[menuAt + j - 1], what = MENU_PATH[j][3];
+    if (!/^\d+x\d+$/.test(frame)) { menuMissed.push(`menu ${k.toUpperCase()} (${what}): frame ${frame}`); return; }
+    if (what === 'open' && (state === shoot[1] || digest === shoot[5])) menuMissed.push(`menu ${k.toUpperCase()}: GUI state 0x${state.toString(16)}${digest === shoot[5] ? ', the frame unchanged' : ''}, want the menu over the shooting screen's 0x${shoot[1].toString(16)}`);
+    if (what === 'move' && (state !== prev[1] || digest === prev[5])) menuMissed.push(`menu ${k.toUpperCase()}: GUI state 0x${state.toString(16)}${digest === prev[5] ? ', the frame unchanged' : ''}, want the menu's 0x${prev[1].toString(16)} with the frame changed`);
+    if (what === 'close' && state !== shoot[1]) menuMissed.push(`menu ${k.toUpperCase()}: GUI state 0x${state.toString(16)}, want the shooting screen's 0x${shoot[1].toString(16)} back`);
+  });
+  const mx = device === 'evf' ? MENU_EVF_XFAIL[m] : null;
+  if (!mx) problems.push(...menuMissed);
+  else if (menuMissed.some((x) => mx[0].test(x.replace(/^menu \S+ \(\w+\): frame /, '')))) notes.push(`xfail ${menuMissed.join('; ').slice(0, 200)} (${mx[1]})`);
+  else if (!menuMissed.length && steps.length === path_.length) problems.push(`menu: passes on the EVF, expected to fail (${mx[1]}); update MENU_EVF_XFAIL`);
+  else problems.push(...menuMissed);
   const box = (b) => b.join(',');
   const missed = [];                     // the count probe's own failures, held against PROBE_XFAIL
   if (!probe) problems.push('count probe: not run');
@@ -218,7 +253,7 @@ for (const m of models) {
     if (!probe.count) missed.push(`count probe: the screen does not show the card's count (no change at ${PROBE_SHOTS} shots)`);
     if (probe.back) missed.push(`count probe: the screen did not come back with the count (${box(probe.back)})`);
   }
-  const xfail = PROBE_XFAIL[m], notes = [];
+  const xfail = PROBE_XFAIL[m];
   if (!xfail) problems.push(...missed);
   else if (missed.length) notes.push(`xfail ${missed.join('; ')} (${xfail})`);
   else if (probe && !probe.error) problems.push(`count probe: passes, expected to fail (${xfail}); update PROBE_XFAIL`);

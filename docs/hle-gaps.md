@@ -735,12 +735,22 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   AUD_WATCH_DOG, REC_SOUND, PLAY_SOUND, AVM_*_0. CPU 1: AVM_CPUSW, AVM_FILE, AVMDL_THREAD00..20, the AVPI VDE / VEN
   BACD tasks 0x1041..0x1050, MASTER_0, CORE_0..3, CABAC_0..3. CPU 2: MVR_MAIN 0x2002, MVR_MOVIE, MVR_IMG*, MVR_CALC,
   MVR_ENC, MVR_WIFI, MVR_RECVIEW, MVR_EXEC, EXP_MOVIE2/3, WB_MOV, SDET, AUD_LEVEL_MONITOR, AUD_WAKEUP, MOVP_AUDIO_SUB.
-- **MMIO and IRQs:** audio `0x9bb00000..0x9bb003c0` (211 references, 192 stores; role ?) and `0x9b700000..0x9b70011c`
-  (about 62; role ?), both only in the audio driver gap@0x50aa6fe0; pin `0x9b882f40`; the sound IC over PER_SIO channel
-  14 (I), with register parameter lists by name (power-on, 48k / 96k, mic, limiter, wind cut, headphone and speaker
-  volume). No audio IRQ attach was found among the 127 attach sites (?). The codec engines are three identical banks
-  `0x99400000`, `0x99410000`, `0x99420000` (137 references each) and `0x99500000`, with IRQs 303-306 (level 5, CPU 1
-  only, handlers in segment 8). `0x9a000000` is not a device (section 9 item 5).
+- **MMIO and IRQs (D unless tagged; 2026-11-02):** the audio driver gap@0x50aa6fe0 drives two devices and the sound
+  IC. `0x9b700000..0x9b70011c` is the audio serial (I2S-like) port: double-buffered DMA from memory to the sound IC,
+  TX and RX, IRQ 43 at level 3 (attached by `0x50aa9515`: `0x50053f76(43, 3, 0x60aca102 = 0x50aa90e2)`, with the
+  interrupt enables +0x2c = 0xf and +0x50 = 0x38). `0x9bb00000..0x9bb003c0` is the SCA, a memory-to-memory sample
+  converter and mixer (aud_seq_sca_open / exec), IRQ 45 at level 5 (handler `0x50aab51d`, attached at `0x50aab67e`);
+  the driver uses it for a source and destination both 128-byte aligned (the converter table `0x6035e59c`) and to mix
+  two players (`0x50aa7b73`), and it carries no PCM to the sound IC. Both IRQs go through the attach wrapper
+  `0x50053f76` (X: both attached natively in a session with `--audio on`); the earlier note here that no audio IRQ
+  attach was found was wrong. The sound IC is a Wolfson WM8946 (the string "dev_ctrl_wm8946_sub_adj_calc_adcvol") on
+  PER_SIO channel 14: exec_data `0x50a632c5` sends 4-byte frames {address, data} at 4 MHz, a read 2 bytes out and 2 in
+  (bit 7 of the first set), chip select GPIO 139 / 140, with register parameter lists by name (power-on, 48k / 96k,
+  mic, limiter, wind cut, headphone and speaker volume; executor `0x50a63ecc`, a shadow at `0xa33dcd6c`); the output
+  volume is the codec's (output_vol_list `0x60dc5298`: registers 0x0a, 0x0b, 0x28, 0x29, 0x47). Pin `0x9b882f40` (0x4440
+  or 0x33333 at the play start). The codec engines are three identical banks `0x99400000`, `0x99410000`, `0x99420000`
+  (137 references each) and `0x99500000`, with IRQs 303-306 (level 5, CPU 1 only, handlers in segment 8).
+  `0x9a000000` is not a device (section 9 item 5).
 - **Operation sounds (D unless tagged; 2026-11-02, the leads from azqeurio/om-c-firmware's "db firmware" 0.3.2, whose
   OM-1 1.9 tables address this image, each checked here):** the sound API's singleton `0x50b56569` returns the object
   `0x62afee0c` (vtable `0x60e3881c`): slot 0 play `0x50b569a4` (call entry `0x50b569a9`; d0 the sound id, d1 the
@@ -753,8 +763,11 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   `0x501a921f`). The table loader `0x501a8ca0`, called only by USTART_L, reads each type's index from a flash head:
   types 0 / 1 `0x41ec0000` (blk02000000), 3 `0x4e1e0000` (blk0e360000), `0x8000` `0x458c0000` (blk05a00000) and 2
   `0x4e420000`, where no block of the `.BIN` loads (the images block ends at `0x4e3e0000`): the update file does not
-  carry the sounds (I), which fits finding no RIFF data in it. The driver's converter table `0x6035e50c` has a plain
-  memcpy entry `0x50aa7439` (`0x5000290a`), the copy om-c scales. In the lab (X, a probe of S1 then S2, before
+  carry the sounds (I), which fits finding no RIFF data in it. The driver's converter table `0x6035e50c` (a source or
+  destination not 128-byte aligned) has a plain copy entry `0x50aa7439`, which calls the flash library's memcpy at
+  `0x50aa7445`, the call om-c redirects for its sounds (I, its notes). That memcpy is run-time `0x5000290a` (the lab's
+  notation `0x3ffe18ea`, `emu/src/fw/place.mjs`): the general copy of thousands of call sites, not an audio converter
+  (om-c's notes name it as if it were). In the lab (X, a probe of S1 then S2, before
   H-RESINIT, H-UIOUTSTART and S-AFLOCK): the singleton runs only at S2, twice from IOlyApiShooting (`0x51059373`, `0x51059919`, via
   `0x5108c19f`), which then asks +68; play, UI_OUT and the loader never run, both MMIO blocks above are never accessed
   and the four resource tables read 0 (since H-RESINIT, below, the loader runs and the tables are set; the bullet after it has the AF beep's request). om-c's
@@ -827,14 +840,34 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   camapp 2 session whether anything below CA_MAIN calls `0x503f1a00` / `0x503f1af9` on REC.
 - **The host's audio output (since 2026-11-02):** the lab has a channel for sound to its hosts' pages
   (`emu/src/lab/audio.mjs`: PCM events of a lab time, a rate, one or two channels and 16-bit samples, played with
-  WebAudio by both players), which S-SHUTTERSND feeds today (`docs/om1-shutter-spec.md` section 7 item 61). PCM the
-  firmware makes would go out the same way: `session.audio.emit()` with a copy of each block where the native output
-  is copied (48 kHz stereo PCM16 through `0x5000290a`, at most 768 bytes a call, per om-c's notes, I), consecutive
-  blocks timed back to back. That needs the sound engine to play first: at the lab's release it is not asked to (X,
-  of the lab only: S-RELSEQ stands in for the release and the capture's begin `0x50b8467c` does not run; on the camera
-  the stock release plays nothing either, I, `docs/om1-shutter-spec.md` section 7 item 61), its sound table is erased
-  in the lab (H-RESINIT runs the loader, but the update carries no sounds; above), and which of the lab's inputs would
-  ask it for a sound is ?.
+  WebAudio by both players), which S-SHUTTERSND feeds (`docs/om1-shutter-spec.md` section 7 item 61) and, with
+  `--audio on`, the audio port's model (below): what the port plays goes out as events of source `native`, consecutive
+  slots back to back. The sound engine is not asked to play at the lab's release (X, of the lab only: S-RELSEQ stands
+  in for the release and the capture's begin `0x50b8467c` does not run; on the camera the stock release plays nothing
+  either, I, `docs/om1-shutter-spec.md` section 7 item 61), its table loader `0x501a8ca0` does not run in the lab, and
+  which of the lab's inputs would ask it for a sound is ?.
+- **The play path natively (`--audio on`, E143, off by default; 2026-11-02; `emu/src/dev/audio.mjs`,
+  `emu/src/lab/audiohw.mjs`, `emu/src/lab/wm8946.mjs`):** below UI_OUT the driver runs natively against a TX model of
+  the audio port. H-AUDSTART starts AUD_MAIN as USTART2 does (act_tsk 0x52; its stage-6 wait answered by the stage
+  bit), S-AUDCPU2 answers its CPU 2 starts and posts AUD_WAKEUP's reply (flag 0xf9), and AUD_MAIN's driver init
+  attaches IRQ 43 and 45 and starts AUD_COPY_DATA and AUD_WATCH_DOG itself. S-WM8946 serves channel 14 at PER_SIO's
+  channel API (a register file). AUD_EXEC posted as UI_OUT's sound handler `0x5014f7e0` posts it (a player from
+  `0x50aa9715`, cmd 0x22, cmd 0x41 with the usr_wave descriptor `0xa32db094` {+0 wav_mode, +4 io_adr, +8 io_length,
+  +12 play_count, +20 max_duration, +24 time_scale, +28 Channel, +30 BitsPerSample, +44 post_next_bank, +48
+  post_next_adr, +68 post_end, +72 cb_HRS, +76 cb_AIR, the names of aud_seq_play's log, D}, cmd 0x45) plays a 48 kHz
+  16-bit stereo WAV natively (X, `emu/test/test_audiohw.mjs`): aud_seq_play `0x50aac292` and the play start
+  `0x50aac5a2`, AUD_COPY_DATA's cmd 1 and 0x80000002 (the prefill of 8 periods of 768 bytes into the ring
+  `0xa403b800`, each through the memcpy converter `0x50aa7439` for a source off 128-byte alignment, then the gain stage
+  `0x50aa8a63`, 0 dB at volume 100), the sound IC's list, the TX open `0x50aa8d9b` (the template `0x60dbf2b4` copied
+  by `0x50aab154`), IRQ 43 with status bit 4 and the TX-ready callback `0x50aad28a` (flag 0xed), the TX start, then
+  IRQ 43 every 4 ms of lab time, each re-arming the finished slot (`0x50aa8ef3`) and posting AUD_COPY_DATA cmd 3,
+  until the firmware disables TX and the port stops after the sound's last period with no underrun; the WAV's samples
+  come out unchanged and in order. While the port plays, the lab's time jumps (the vsync wait's and the sleeps'
+  stand-ins) go event by event and run IRQ 43's handler at each slot's end (H-AUDTIME; one jump past several slot
+  ends left the port to underrun, X). Not modelled: RX, the SCA (a 128-byte aligned source or two players stop the
+  session), the 96 kHz / 24-bit template, the codec's volume on the PCM (the lab passes the port's samples as they
+  are), AUD_WAKEUP's power-on list. With UI_OUT running (H-UIOUTSTART's E143 port) and a sound table (type 2) the
+  firmware's own play request would reach this path; neither is in this change.
 
 ### 4.6 CPUs 1-3, inter-core services and the A53
 

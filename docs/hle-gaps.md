@@ -770,6 +770,13 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   and WB_MOV queues and on the mvr IF helpers; whether they wake TAKE_MOV is ?. Next, the registration through which
   CapMov_MovieRecorderSLR gets its Notify* observers (the CmpMov_Notify* observer classes of 4.1.3); then check in a
   camapp 2 session whether anything below CA_MAIN calls `0x503f1a00` / `0x503f1af9` on REC.
+- **The host's audio output (since 2026-11-02):** the lab has a channel for sound to its hosts' pages
+  (`emu/src/lab/audio.mjs`: PCM events of a lab time, a rate, one or two channels and 16-bit samples, played with
+  WebAudio by both players), which S-SHUTTERSND feeds today (`docs/om1-shutter-spec.md` section 7 item 61). PCM the
+  firmware makes would go out the same way: `session.audio.emit()` with a copy of each block where the native output
+  is copied (48 kHz stereo PCM16 through `0x5000290a`, at most 768 bytes a call, per om-c's notes, I), consecutive
+  blocks timed back to back. That needs the sound engine to play first: at a release it is not asked to (X), its
+  table loader `0x501a8ca0` does not run in the lab, and which of the lab's inputs would ask it for a sound is ?.
 
 ### 4.6 CPUs 1-3, inter-core services and the A53
 

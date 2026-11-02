@@ -10,7 +10,7 @@
 // nothing: unsupported() names why, info() and loadNvram() find nothing, clear() and clearNvram() have nothing to
 // remove, and store() and storeNvram() throw that reason, as they throw any failure of a browser whose OPFS is there but
 // refuses (WebKitGTK 2.54 with its Storage API switched on: getDirectory rejects with UnknownError in an automation
-// session, createSyncAccessHandle with NotSupportedError outside one; docs/model-survey.md finding 79). The Worker then
+// session, createSyncAccessHandle with NotSupportedError outside one; docs/model-survey.md finding 78). The Worker then
 // runs from the .BIN alone.
 import { checkFirmware } from '../src/fw/labfw.mjs';
 import { MODEL } from '../src/fw/model.mjs';

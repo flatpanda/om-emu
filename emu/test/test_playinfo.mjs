@@ -1,5 +1,5 @@
 // INFO's still information in playback (src/lab/camapp.mjs still_record: S-PLAYSEQ's getStillInfo and getHistogram,
-// S-PLAYCOMP's getStillInfo, S-CARD's capture record; docs/model-survey.md findings 57 and 81):
+// S-PLAYCOMP's getStillInfo, S-CARD's capture record; docs/model-survey.md findings 57 and 80):
 //   playInfoSession  (firmware) a play session on the body of OM_EMU_MODEL (E143 by default): start, S1, S2 (one
 //                    picture), PLAY and INFO, each step's GUI state checked, and the GUI's still information record as
 //                    the firmware's own converter (fact play.still's convert: src/fw/facts.mjs stillFields) fills it,

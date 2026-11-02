@@ -165,7 +165,7 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   byte and a 12-40mm F2.8 PRO record, so the screen shows S-AF and the AF target; the application then counts no
   lens attached for its touch path, which S-TOUCHMAP and S-CAFWD stand in for. A touch reaches the driver through
   S-TPREG, which answers the controller the driver reads: E143's at slave `0x70`, and since 2026-11-02 the E144
-  family's at `0x48` (`src/lab/touchpanel.mjs`; `docs/model-survey.md` finding 76), where a tap on the touch mode icon
+  family's at `0x48` (`src/lab/touchpanel.mjs`; `docs/model-survey.md` finding 75), where a tap on the touch mode icon
   or in the super control panel reaches the GUI as on E143.
 - A half press in focus shows the green AF frame and focus mark. They are CPU 3's (its task DISP_FRAME draws them into
   the TFT's face-frame plane), so S-DISPFRAME runs DISP_FRAME on the lab CPU for each post to it, S-TAKEFRAME sets the
@@ -513,7 +513,7 @@ offers no cache, and disables "Keep the settings"; a browser whose OPFS is there
 the error named. `--browser webkit-storage` switches WebKitGTK's Storage API, OPFS and access handles
 on, as Safari ships them: in WebKitGTK 2.54 its `getDirectory` rejects in an automation session (UnknownError) and its
 `createSyncAccessHandle` is not supported outside one, so Safari's own cache path is untested
-(`docs/model-survey.md` findings 78-80). Safari itself on macOS is driven by `safaridriver`, which its user must enable
+(`docs/model-survey.md` findings 77-79). Safari itself on macOS is driven by `safaridriver`, which its user must enable
 once (`safaridriver --enable`, an administrator's password, and Safari's Develop menu > Allow Remote Automation, with
 the Develop menu shown from Settings > Advanced); the gate has no Safari entry. Screenshots go to
 `emu/out/web/<browser>/`.

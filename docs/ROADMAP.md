@@ -214,7 +214,7 @@ the survey table.
 - **The card, next on E143:** Card Formatting from the menu and the card's removal and insertion while the camera
   runs are done (2026-10-24, hle-gaps.md 4.8.3: S-MDACTRL and S-MEDIA stand in for the HLS function component and
   media manager, the application's media control runs natively). REC_FILE's own DCF steps since 2026-11-02
-  (hle-gaps.md 4.8.9, `docs/model-survey.md` findings 72 to 74): S-RECFILE records S2's picture as REC's recorder
+  (hle-gaps.md 4.8.9, `docs/model-survey.md` findings 71 to 73): S-RECFILE records S2's picture as REC's recorder
   (`0x519f9dd7`) does, the fnode of the next DCF number, the cluster reservation, the chain write, the directory entry
   and the registration each run natively, so the firmware's image count and next number follow the picture in the
   same session and S-CARD's image count and list retire (on E143, E146, E147, E144 and E148, whose recorder the rule
@@ -247,10 +247,10 @@ the survey table.
   `0x502ae8f3`, the place of E143's `0x503f1bcd`, module `0x5000e`), which asks the DCF remain movie time (`0x505fd798`)
   and returns 0 (X): S-CARD's card has no file system. Answering it is the seam; its unit is not read (forcing 3600
   shows `0:00:06` on E142's TFT, X).
-- **The GUI state table's length:** done (2026-11-02, survey finding 83): the lab names as many parents as each build's
+- **The GUI state table's length:** done (2026-11-02, survey finding 82): the lab names as many parents as each build's
   name lookup searches (rule stateTableBound, fact `gui_states.parents`): 12 on E143, E146, E147 and E148, 18 on the
   other 15, whose SS_MENU (`0x11`) and five more parents printed unnamed before.
-- **INFO's still information on E143 and the E144 family:** done (2026-11-02, survey findings 81 and 82):
+- **INFO's still information on E143 and the E144 family:** done (2026-11-02, survey findings 80 and 81):
   S-PLAYCOMP writes the picture's own record as S-PLAYSEQ does (the camera's clock at the capture, now read natively
   on every body by E143's `0x5005a59e` at its place, the JPEG's size, the exposure, the lens's focal length at the
   build's offsets, E134's and E132's included), where it wrote 5184 x 3888 and left the date and focal length to
@@ -258,7 +258,7 @@ the survey table.
   `test_playinfo` covers the 19 bodies. Open: the picture's Exif and the play module's load of it (the native path),
   the built-in lenses' focal length (E145, E129, E132 show 0 mm), and E143's INFO composite, refused for its
   highlight and shadow registers (`0x48c..0x4cc`, `0x5d0..0x5dc`, never-written class).
-- **Touch on the E144 family:** done (2026-11-02, survey findings 75, 76): the controller at slave `0x48`, which every
+- **Touch on the E144 family:** done (2026-11-02, survey findings 74, 75): the controller at slave `0x48`, which every
   body but the E143 family reads, is modelled from its driver's report parser (`src/lab/touchpanel.mjs`), the touch
   init runs before the display open where the open arms the driver (H-TPINIT), and S-TOUCHMAP posts the build's index
   of the touch message; a tap on the touch mode icon cycles it on E144, E148, E139, E134, E137, E142, E140, E125, E130
@@ -266,8 +266,8 @@ the survey table.
   event codes and status bit (I / ?, FIDELITY 7.11); the control area (the application's Set_Touch_Panel_Ctrl_Area is
   not called in the lab); touch AF's tap, which reaches HFW and is dropped with S-CAFWD's forward, as on E143 with
   S-LENS; touch on the EVF; the E118 family's touch, off until H-TPSTART's open and HFW callbacks are placed (finding
-  77; its controller is the same). The event map's shift on E137, E142, E140, E125, E130 and E133 (two entries fewer
-  before E143's 109) also moves MENU_EVENT and CONNECT_EVENT there (finding 76).
+  76; its controller is the same). The event map's shift on E137, E142, E140, E125, E130 and E133 (two entries fewer
+  before E143's 109) also moves MENU_EVENT and CONNECT_EVENT there (finding 75).
 - **E145's AF upload:** read (2026-10-29, survey finding 22): the TG-7's frame plane has modes 1 and 2 only, its
   mode 2 the place of E143's UP_LOCKON, and nothing writes the mode-3 frames DISP_FRAME reads, so S-AFOSD gives it
   no upload (rule framePlane, which also places UP_AF on the other clamp-form bodies and retires E130's override;
@@ -430,7 +430,7 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
    back: the screen has the class `evf` with the first frame drawn from the EVF (1600 x 1200) and loses it with the
    first frame from the TFT (900 x 600).
 7. **Other browsers:** Firefox and WebKit done (2026-11-02, `bin/browsergate.mjs`, `docs/model-survey.md` findings
-   78-80). Over WebDriver in a Linux VM, Firefox 159 runs the published player as Chrome does (the `.BIN` to the
+   77-79). Over WebDriver in a Linux VM, Firefox 159 runs the published player as Chrome does (the `.BIN` to the
    shooting screen, keys, a touch, a picture in the Card panel, the OPFS cache, E144 by `?model=`) with no change to
    the page. WebKitGTK 2.54 ships the Storage API off, and master's page could not start there (`navigator.storage` is
    undefined); the Worker now runs from the `.BIN` alone where OPFS is missing or refuses, and the page says why, so
@@ -548,7 +548,7 @@ store in the lab (vsc spec §10).
   lab microseconds from the reset, at least one count per read (busy waits still end in zero lab time); those starts
   take 0.6 to 3.2 s, and E143's golden sessions keep their screens, devices, outputs and stops at their lab times.
   The E144 family's wait of that form is the touch controller's INT, read by its form and answered by S-TPINTWAIT
-  since 2026-11-02 (finding 75: the starts 150 ms sooner on the TFT, 190 to 250 ms on the EVF). Open: how long a busy
+  since 2026-11-02 (finding 74: the starts 150 ms sooner on the TFT, 190 to 250 ms on the EVF). Open: how long a busy
   wait's instructions take (FIDELITY 1.1).
 - Timers not yet traced as they first fire: Genifa timers 537 and 554 and task 16's bit-2 path `0x50053199` /
   `0x500532b2` (kernel spec §9.5).
@@ -570,7 +570,7 @@ lab's stand-ins for its key mapping, request sequences and display-switch re-ent
   `0x0400` is.
 - The encoder: H-DIALSTEP calls the counter writer `0x5014bae6` per detent; the encoder position read `0x50059fa4` and
   which dial is main and which rotation is "+" are open.
-- Touch: the E144 family's controller at slave `0x48` since 2026-11-02 (survey finding 76, FIDELITY 7.11). With S-LENS,
+- Touch: the E144 family's controller at slave `0x48` since 2026-11-02 (survey finding 75, FIDELITY 7.11). With S-LENS,
   S-TOUCHMAP maps HFW statuses to GUI touch kinds by name and S-CAFWD drops the GUI's forward to
   the camera (STS_TOUCH_EV_RESPONCE, the HFW client; LONGPRESS never comes); with E143's native lens, the default since
   2026-10-29 (E146's and E147's touch is off), the camera application forwards the touches and takes the GUI's answers itself (hle-gaps.md 4.4.2); S-TPINT sets the touch flag from the lab task (a GPIO

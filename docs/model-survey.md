@@ -238,7 +238,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    (D), so the TG-7 opens its initial settings at power-on with the clock unset, where E143 warns (I). The lab names
    only the state table's first 12 parents (E143's count, `menu.mjs` state_names); the firmware's lookup bounds it at
    12 on E143 (`cmp 12,d3` at `0x5124b478`) and at 18 on E145 (`0x50de87bf`), whose 18 include SS_MENU (D), so the
-   SS_MENU states of E145 and E142 print unnamed (named since finding 83). After MENU, S1 stops at S-AFOSD as before
+   SS_MENU states of E145 and E142 print unnamed (named since finding 82). After MENU, S1 stops at S-AFOSD as before
    (finding 14).
 18. **The card is in the slot's detect state** (2026-10-23). E143's shooting-screen count updater (`0x511ff915`, one
    of the GUI's per-refresh items, run 9 times in a session, X) returns before it asks for the slot's count
@@ -1062,7 +1062,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    them (X), not read (finding 70 reads it). `test/test_playinfo.mjs` reads the GUI's record at the
    converter's return on E122, E118 and E120 against the card's JPEG (decoded by `refs/jpeg.mjs`), the clock and the
    lens (9 checks each), and on E143 that S-PLAYCOMP's answer is unchanged (5184 x 3888, no date, no focal length;
-   the picture's record since finding 81).
+   the picture's record since finding 80).
 58. **The playback histogram and S-PLAYCOMP's ISO** (2026-10-31). INFO's histogram drew a bar on the family (X, before
    finding 57): getHistogram sends request 7 (E122 `0x506aaaa0`, E143's always) and copies the response's flag byte
    at +4 and the bins from +8 (and three more pairs at +1032/+1036, +2060/+2064, +3088/+3092; E143
@@ -1339,7 +1339,31 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    scan), and its EVF played back before. The scheduler now also runs at S1 and S2 (armed there before, never raised);
    the family's modelcheck results are unchanged, and `bin/modelcheck.mjs` runs the three's EVF through the whole
    path (EVF_PLAY). `test/test_vsc3.mjs` checks the compare on E122's and E118's boards.
-75. **The E144 family's touch INT wait, read by its form** (2026-11-02, `src/fw/facts.mjs` touchIntWait, `src/lab/menu.mjs`
+71. **REC's whole-file recorder on five bodies** (2026-11-02, `src/fw/facts.mjs` recorder, `docs/hle-gaps.md` 4.8.9).
+   E143's `0x519f9dd7` records a file from a buffer through REC_FILE's own steps: three blocks of 64, 100 and 116
+   bytes, then the lock, the camera's clock read (`0x5012b7cd`), the DCF open (FILECLBK code `0x32`), the cluster
+   reservation (`0xf1`), the chain write (`0x54`), the directory entry (`0x66`), the registration (`0x33`), the cancel
+   on an error (`0x36`) and the unlock (D). The rule finds it by the three allocations and reads the calls after them:
+   one on E143, E146, E147, E144 and E148, none on the other 13 images (X, a byte scan); its clock reads are E146
+   `0x5012bafe`, E147 `0x50135923`, E144 `0x500f024e`, E148 `0x500f0271`, and the open's, the entry's and the
+   registration's builders each send their code once (E144's and E148's after an `exth d0`, E144 `0x50400745`; X).
+   E143's rec_file functions call the same builders (`0x5053f591`, `0x505408b5`, `0x50540950`, `0x5053f875`); the
+   older 13 bodies' recording modules are not read, and S-RECFILE writes through fileif there.
+
+72. **The DCF database's counts** (2026-11-02, `src/fw/facts.mjs` dcfCounts). The media API's image count
+   (`0x503feea4`) reads a table of 52 bytes a slot through `0x502d1799` (+4 + 4 x type for types 1..8, +40 type 255,
+   +44 type 9, +48 type 33), to which the registration's count update adds (`0x50874b48`); the getter is the same
+   instructions on each of the 18 images, once (X, a byte scan): E143 `0xa33aa5b4`, E146 `0xa33dd268`, E147
+   `0xa33c4f1c`, E144 `0xa26fcbe8`, E148 `0xa274bd98`, E122 `0xa1c874f0`. The lab reads the count there where the
+   database holds the pictures, so a status read calls no firmware.
+
+73. **The DCF names by the clock, and fileif beside a pending fnode** (2026-11-02, X on E143). The DCF open names the
+   file `P`, the time stamp's month in hex, its day and the number (`0x5087a253`): `PB020001.JPG` for a stamp of
+   2026-11-02. E143's clock read answers 2022-01-01 00:00:00 with status 10501 in the lab (its sub-CPU's clock not
+   set), so S2's files keep the names `P1010001.JPG` and on. A fopen through fileif of the name an open fnode holds
+   wrote a directory entry with a scrambled short name, and fileif's entries carry the file layer's date (2022-01-01)
+   rather than the stamp: REC's directory entry (`0x66`) is what gives the file its name and date.
+74. **The E144 family's touch INT wait, read by its form** (2026-11-02, `src/fw/facts.mjs` touchIntWait, `src/lab/menu.mjs`
    S-TPINTWAIT; the next stop of finding 64). The rule had found the wait from the "TP INT TIME OUT" trace, which only
    E120 and E122 load after it; it now finds the wait by its own form, one of two openings that clear the word W when
    called with d0 1, followed by the poll `mov (W),d1; cmp 1,d1; beq` (D): E120's `mov d1,d2; clr d1; mov d1,(4,sp);
@@ -1360,14 +1384,14 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    239.78, E134 469.46 -> 279.46, E137 546.55 -> 356.55, E142 and E140 666.09 -> 476.09, E125 531.07 -> 280.93 (its
    EVF wait is 100 ms), E130 501.09 -> 311.09 (E133's EVF session stops before, on more than 300,000 stand-in calls,
    as on master). E120 and E122 are unchanged (TFT 194.00 and 175.41, EVF 392.97 and 332.92 ms).
-76. **Touch on the E144 family** (2026-11-02, `src/lab/play.mjs` H-TPINIT, S-TPREG, S-TOUCHMAP, `src/lab/touchpanel.mjs`,
+75. **Touch on the E144 family** (2026-11-02, `src/lab/play.mjs` H-TPINIT, S-TPREG, S-TOUCHMAP, `src/lab/touchpanel.mjs`,
    `test/test_touch.mjs`; X: a play session per body on the TFT, taps through the player's router as webgate's B6
    sends them). Before, on the ten bodies whose touch the lab runs (E144, E148, E139, E134, E137, E142, E140, E125,
    E130, E133), a tap reached nothing: the touch task took the flag's bit 1 and ran its INT handler (E144
    `0x5018af22`), which returned at once, the driver's armed word `0x620c6630` being 0 (`0x5018af23..0x5018af2f`,
    D; no I2C read, no HFW callback, X). Three stops, in the order they were met:
    - *The touch init after the display open.* The open's command list powers the panel up, waits for its INT (finding
-     75) and then arms the driver for the INT's data (`0x5018a9a4`: W 0, `0x620c6630` 1, called at `0x50181f1f`, D);
+     74) and then arms the driver for the INT's data (`0x5018a9a4`: W 0, `0x620c6630` 1, called at `0x50181f1f`, D);
      the lab ran the boot's touch init (H-TPINIT, E144 `0x50189dc3`, called by the boot at `0x500251a8`, before the
      display opens) in the play bring-up, after the start's open, and the init's driver set-up `0x5018a7e7` clears
      both words (`0x5018a81b..0x5018a826`, D; X: armed at 525.1 ms, cleared at 525.1 ms by H-TPINIT). The lab now
@@ -1404,12 +1428,12 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    tap on the live view in touch AF mode reaches HFW (PRESS, CLICK) and changes nothing on screen, on E144 as on
    E143 with S-LENS: S-CAFWD drops the GUI's forward to the camera. `test/test_touch.mjs` taps the icon on E143 and
    the ten (bin/test.mjs).
-77. **The E118 family's touch** (2026-11-02, X). Their touch stays off (`src/fw/models.mjs` touch false): H-TPSTART
+76. **The E118 family's touch** (2026-11-02, X). Their touch stays off (`src/fw/models.mjs` touch false): H-TPSTART
    needs the panel's open and the HFW callbacks, which `src/fw/facts.mjs` touchOpen does not read on their builds and
    the maps do not place. Their drivers read the same controller at slave `0x48` with the same register addresses as
    the E144 family's (X: the read calls' immediates; E120's read `0x502d9bd2` opens as E144's, D), so S-TPREG's model
    would serve them once the open is placed. E120's and E122's INT waits are unchanged (finding 54).
-78. **The browser player in Firefox** (2026-11-02, `bin/browsergate.mjs`). In the OrbStack VM (Arch Linux ARM,
+77. **The browser player in Firefox** (2026-11-02, `bin/browsergate.mjs`). In the OrbStack VM (Arch Linux ARM,
    aarch64), Firefox 159.0 headless through geckodriver 0.37.1, on the published site (`bin/site.mjs`, 127 files,
    2.66 MiB) served under `/om-emu/`: the landing page's link, the E143 `.BIN` through the file input (unpacked in
    0.37-0.49 s, written to OPFS in 0.09-0.13 s), the shooting screen (0x0108) at 2.84 lab s, the canvas read back
@@ -1425,22 +1449,22 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    Neither browser has `SharedArrayBuffer` on the site (no COOP/COEP, `crossOriginIsolated` false; X), which the player
    does not use (its `Atomics` are the node host's shared flags only). The pace at `--idle wall` over 10 s of the wall
    clock: 0.93-0.99 x real time, 0.79 with the host's test suite running beside it (X; reported, not judged).
-79. **The browser player in WebKit** (2026-11-02, `web/opfs.mjs`). WebKitGTK 2.54.2's MiniBrowser through
+78. **The browser player in WebKit** (2026-11-02, `web/opfs.mjs`). WebKitGTK 2.54.2's MiniBrowser through
    WebKitWebDriver on Xvfb, the engine Safari is built on. Master's page could not start there: "could not start:
    undefined is not an object (evaluating 'navigator.storage.getDirectory')" (X), because WebKitGTK ships the Storage
    API off (MiniBrowser `--features=help` lists StorageAPI, FileSystem and AccessHandle as off; `navigator.storage` is
    undefined in the page and the Worker, X), and the Worker's cache write ran before the Player. `web/opfs.mjs` now
    checks for OPFS and its sync access handles (`unsupported()`), and the Worker runs from the `.BIN` alone when the
    cache cannot be written: the page says the firmware is not cached and why, offers no cache on the next visit and
-   disables "Keep the settings". With that, WebKit runs everything finding 78 lists but the cache, with the same
+   disables "Keep the settings". With that, WebKit runs everything finding 77 lists but the cache, with the same
    canvas digests, at 0.99 x real time (X). With the Storage API, OPFS and the access handles switched on (the
    gate's `webkit-storage`, as Safari ships them) the page and the Worker have `getDirectory`, but in an automation
    session it rejects with "UnknownError: The operation failed for an unknown transient reason" (X), so the same
    uncached path runs and names that error (master's page stopped there with the same message, X); outside
    automation, in a MiniBrowser with a profile directory, `getDirectory` and `getFileHandle` work and
    `createSyncAccessHandle` throws "NotSupportedError: Backend does not support this operation" (X). So WebKitGTK
-   cannot stand in for Safari's cache path; Safari itself is not run (finding 80).
-80. **Driving the browsers, and what is left** (2026-11-02, `host/webdriver.mjs`). Classic W3C WebDriver over HTTP
+   cannot stand in for Safari's cache path; Safari itself is not run (finding 79).
+79. **Driving the browsers, and what is left** (2026-11-02, `host/webdriver.mjs`). Classic W3C WebDriver over HTTP
    with node's `fetch` serves both drivers; WebDriver BiDi and Playwright were not needed. What the gate had to learn
    (X): MiniBrowser takes the automation session only when started with `--automation` (without it the new-session
    request never answers), opens at 1024 x 768 whatever the X screen's size (the gate sets the window rect), and
@@ -1453,7 +1477,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    password), and in Safari, Settings > Advanced > show the features for web developers, then Develop > Allow Remote
    Automation. Those are host settings this round did not change, so Safari's OPFS and sync access handles stay
    untested; the same WebDriver commands would apply, and the gate has no Safari entry.
-81. **INFO's still information on E143 and the E144 family, and the camera's clock read on every body** (2026-11-02,
+80. **INFO's still information on E143 and the E144 family, and the camera's clock read on every body** (2026-11-02,
    `src/lab/camapp.mjs` still_record and clock(), `test/test_playinfo.mjs`). On E143, E146, E147 and the E144 family
    PlyCom's getStillInfo asks the play component, whose wrapper (E143 `0x50acf1fa`) S-PLAYCOMP answers in the
    component's struct, which goes to the same converter as the E118 family's answer to request 3 (finding 57, D). It
@@ -1483,7 +1507,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    of the two stand-ins answering (8 checks; 9 with the histogram on the E118 family), each passing (X). E132's start
    waits at its date setting, which the test answers as modelcheck does (finding 24). golden's keys session takes the
    clock read as one more native call at its S2 (one stop; screen, devices and output identical), recorded tooling-only.
-82. **E134's and E132's still converters** (2026-11-02, `src/fw/facts.mjs` stillFields). The rule read neither form
+81. **E134's and E132's still converters** (2026-11-02, `src/fw/facts.mjs` stillFields). The rule read neither form
    (finding 57: null, so S-PLAYCOMP wrote no ISO there and S-PLAYSEQ refused). Both keep the GUI's record on the
    stack and form a field's address in d1, the load to d0 and `mov (12,sp),d1` in either order, then `add G,d1` (E134
    `0x5082c3b9..0x5082c3be` with the information in d3, `movhu (98,a0),d0` to the GUI's +88, `mov (144,a0),d0` to +56
@@ -1493,7 +1517,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    the other 17 unchanged (X, the rule at each port's converter). The fact now carries the converter too (`convert`),
    which the test observes on every body (E144's, E139's and E125's are unplaced by the map: the call after the
    wrapper's one call, finding 57).
-83. **The GUI state table's bound by a rule** (2026-11-02, `src/fw/facts.mjs` stateTableBound, fact
+82. **The GUI state table's bound by a rule** (2026-11-02, `src/fw/facts.mjs` stateTableBound, fact
    `gui_states.parents`, `src/lab/menu.mjs` state_names). The lab named the state table's first 12 parents on every
    body (finding 17). The firmware's name lookup loads the table and ends its search at `cmp N,d3; lcs; cmp N,d3;
    bcc` (E143 `0x5124b459`, the load at `0x5124b467`, 12 at `0x5124b478`; E145 18 at `0x50de87bf`; D); the rule
@@ -1504,30 +1528,6 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    finding 17). No E143 output
    changes (its bound is the lab's 12); on the 15 a state of those parents prints its name where it printed `?`.
 
-72. **REC's whole-file recorder on five bodies** (2026-11-02, `src/fw/facts.mjs` recorder, `docs/hle-gaps.md` 4.8.9).
-   E143's `0x519f9dd7` records a file from a buffer through REC_FILE's own steps: three blocks of 64, 100 and 116
-   bytes, then the lock, the camera's clock read (`0x5012b7cd`), the DCF open (FILECLBK code `0x32`), the cluster
-   reservation (`0xf1`), the chain write (`0x54`), the directory entry (`0x66`), the registration (`0x33`), the cancel
-   on an error (`0x36`) and the unlock (D). The rule finds it by the three allocations and reads the calls after them:
-   one on E143, E146, E147, E144 and E148, none on the other 13 images (X, a byte scan); its clock reads are E146
-   `0x5012bafe`, E147 `0x50135923`, E144 `0x500f024e`, E148 `0x500f0271`, and the open's, the entry's and the
-   registration's builders each send their code once (E144's and E148's after an `exth d0`, E144 `0x50400745`; X).
-   E143's rec_file functions call the same builders (`0x5053f591`, `0x505408b5`, `0x50540950`, `0x5053f875`); the
-   older 13 bodies' recording modules are not read, and S-RECFILE writes through fileif there.
-
-73. **The DCF database's counts** (2026-11-02, `src/fw/facts.mjs` dcfCounts). The media API's image count
-   (`0x503feea4`) reads a table of 52 bytes a slot through `0x502d1799` (+4 + 4 x type for types 1..8, +40 type 255,
-   +44 type 9, +48 type 33), to which the registration's count update adds (`0x50874b48`); the getter is the same
-   instructions on each of the 18 images, once (X, a byte scan): E143 `0xa33aa5b4`, E146 `0xa33dd268`, E147
-   `0xa33c4f1c`, E144 `0xa26fcbe8`, E148 `0xa274bd98`, E122 `0xa1c874f0`. The lab reads the count there where the
-   database holds the pictures, so a status read calls no firmware.
-
-74. **The DCF names by the clock, and fileif beside a pending fnode** (2026-11-02, X on E143). The DCF open names the
-   file `P`, the time stamp's month in hex, its day and the number (`0x5087a253`): `PB020001.JPG` for a stamp of
-   2026-11-02. E143's clock read answers 2022-01-01 00:00:00 with status 10501 in the lab (its sub-CPU's clock not
-   set), so S2's files keep the names `P1010001.JPG` and on. A fopen through fileif of the name an open fnode holds
-   wrote a directory entry with a scrambled short name, and fileif's entries carry the file layer's date (2022-01-01)
-   rather than the stamp: REC's directory entry (`0x66`) is what gives the file its name and date.
 
 
 ## Per-body status

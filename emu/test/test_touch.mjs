@@ -1,5 +1,5 @@
 // The touch panel in play (src/lab/play.mjs H-TPINIT, S-TPREG and the touch input path; src/lab/touchpanel.mjs, the
-// controllers by slave; docs/model-survey.md finding 75):
+// controllers by slave; docs/model-survey.md finding 74):
 //   touchSession  (firmware) a play session on the TFT of the body of OM_EMU_MODEL (E143 by default) and a tap (down,
 //                 up) on the shooting screen's touch mode icon, which cycles the touch shutter's mode: the touch
 //                 driver must read the controller, HFW's callback must see the tap's press at the pixel tapped and its

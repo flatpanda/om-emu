@@ -1452,7 +1452,7 @@ bytes on; E143's places in brackets):
   bit `0x1000` comes from the device state's bit 16, `0x508a83e7`; the lab's state is `0x8600`). A, the SD host
   registers with a card model, is the faithful later step (3-6 weeks, optional). Formatting (`sdmem_format.c`, dosfat)
   runs natively under B.
-- **INFO's still information (2026-11-02, `docs/model-survey.md` findings 81 and 82):** S-PLAYCOMP (E143, E146, E147,
+- **INFO's still information (2026-11-02, `docs/model-survey.md` findings 80 and 81):** S-PLAYCOMP (E143, E146, E147,
   the E144 family) and S-PLAYSEQ (the E118 family) write the same record of the picture shown, in the build's
   converter's layout: the camera's clock at the capture (E143's read `0x5005a59e` at its place, run natively; each
   build's default with the status 10501 while the window clock counts from 1970), the JPEG's size, the release's

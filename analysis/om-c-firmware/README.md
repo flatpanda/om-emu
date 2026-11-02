@@ -15,9 +15,9 @@ were compared with om-emu's pinned images by small scripts that only read bytes;
 `tools/mn10300dis.sh`, the fwmap report and probe sessions of `emu/bin/play.mjs --debug-api`. No excerpt of om-c's
 code, sounds, fonts, translations or encoded templates is committed.
 
-**Licence.** The repository and the release archive carry no licence file (D: the repository holds one 15-byte
-`README.md`; the archive has none). So nothing here is copied or closely paraphrased: facts and addresses only,
-attributed to azqeurio/om-c-firmware where used, as the [fishcu note](../oly-fw-analysis/README.md) does.
+**Licence.** The repository and the release archive carry no licence file (X: the repository holds one 15-byte
+`README.md`; the archive's listing has none). So nothing here is copied or closely paraphrased: facts and addresses
+only, attributed to azqeurio/om-c-firmware where used, as the [fishcu note](../oly-fw-analysis/README.md) does.
 
 Related notes: [fishcu/oly_fw_analysis](../oly-fw-analysis/README.md), [lens-gated features](../lens-gates/README.md),
 [feature gap OM-1 vs OM-1 Mark II](../feature-gap/README.md), [the .BIN container](../../docs/firmware-container.md).
@@ -183,11 +183,11 @@ not (X); the rules fire on the condition's change.
 Two records of the resource block `blk02000000` are replaced in place at their stock sizes (D): record 10 (Japanese
 strings, offset `0x3421e0`, `0x2f200` bytes) and record 28 (the Japanese font, `0x7019e0`, `0x67800`). The
 `OlympusLanguage_jpntft` tag stays, so Korean appears where Japanese was (setting 3009 = 0). om-emu's readers take
-them unchanged (X, scratch run on om-c's records, not committed): `StringTable` reads 4,702 strings with no error
-(string 23 is "한국어"), `refs/font.mjs` reads 847 glyphs on 45 pages, 609 of them Hangul, with the stock header; and
-the lab draws the Setup menu natively in Korean with nothing visibly wrong (engine BITMAP refusals not checked).
-om-c's packer puts all L2 pages first and the glyphs after them, which om-emu reads, so the per-page order in
-`docs/om1-text-spec.md` section 4 describes stock blobs, not a reader requirement (I).
+them unchanged (X, scratch run on om-c's records, not committed): `StringTable` reads 4,702 strings with no error,
+`refs/font.mjs` reads 847 glyphs on 45 pages, 609 of them Hangul, with the stock header; and the lab draws the Setup
+menu natively in Korean with nothing visibly wrong (engine BITMAP refusals not checked). om-c's packer puts all L2
+pages first and the glyphs after them, which om-emu reads, so the per-page order in `docs/om1-text-spec.md` section 4
+describes stock blobs, not a reader requirement (I).
 
 The custom rows of the shutter sound use the descriptor literal path, and om-c hooks its widening `0x51188312` to draw
 Hangul there: that routine sign-extends each byte (`extb`) into the record's UTF-16 at +12, cleared for 94 bytes, with
@@ -253,14 +253,23 @@ which is why om-c's feature exists (I). In the lab, with S1 then S2 (X, probe se
   `(0xa32db098)` / `(0xa32db09c)` (D); for its own ids om-c writes its WAV's address and size there and jumps to
   `0x5014f98a`, the next instruction.
 - **The stock sound data.** The loader `0x501a8ca0` stores `(0xa32db17c)` / `(0xa32db180)` after reading a 1,024-byte
-  index from flash `0x4e420000` through `0x501a986a` (D; four code references to `0x4e420000`, one at `0x50000766`).
-  That address lies past every block the updater carries (the loaded blocks tile `0x41ec0000..0x4e3e0000`, D from the
-  `.BIN` headers), and no RIFF/WAVE data is in any of the six E143 blocks beyond three 4-second header templates at
-  `0x60dc7cdc`, `0x60dc7d68`, `0x60dc7e54` (X). So where the camera keeps its operation sounds is unknown (?); om-c
-  never uses them and embeds its own.
-- **Volume.** A native 48 kHz stereo PCM16 conversion copies sound data to its output buffer through `0x5000290a`
-  (E143's memcpy, `emu/src/fw/place.mjs`); om-c redirects that copy for its sound range to a 126-byte routine that
-  shifts the samples (0, 6.25, 12.5, 25, 50, 100 %; their statement, I).
+  index from flash `0x4e420000` through `0x501a986a` (D). The code holds four references to `0x4e420000`: the
+  loader's, two in the type-2 write path `0x501a98c8` and one in the flash access guard `0x50000735` at `0x50000766`
+  (D). The guard, which the NAND access `0x500022c2` calls for each write and erase, accepts a range `[a0, a0 + d0]`
+  (NAND address, length) only inside `[0x40090000, 0x41ec0000]`, `[0x4e420000, 0x4e460000]` (the window `0x50000766`
+  opens) or `[0x4e820000, 0x50000000]`, or with op `0x10101`; anything else logs "[FLSH]Flash Access Guard Error!!!"
+  and halts (D, `0x50000735..0x50000803`). So at run time the sound index may be rewritten and the firmware blocks may
+  not. That address lies past every block the updater carries (the three data blocks, resources `blk02000000`, large
+  data `blk05a00000` and images `blk0e360000`, tile `0x41ec0000..0x4e3e0000`; the main code block loads at
+  `0x50000000`, the misc block at 0 and the SCPU image at `0x08000000`; D from the `.BIN` headers), and no RIFF/WAVE
+  data is in any of the six E143 blocks beyond three 4-second header templates at `0x60dc7cdc`, `0x60dc7d68`,
+  `0x60dc7e54` (X). So where the camera keeps its operation sounds is unknown (?); om-c never uses them and embeds its
+  own.
+- **Volume.** The audio driver copies 48 kHz stereo PCM16 sound data to its output buffer through the converter
+  table's plain entry `0x50aa7439` (d0 the source, d1 the destination, a0 the length), a wrapper whose call at
+  `0x50aa7445` goes to E143's memcpy (run-time `0x5000290a`, notation `0x3ffe18ea`, `emu/src/fw/place.mjs`; D). om-c
+  redirects that copy for its sound range to a 126-byte routine that shifts the samples (0, 6.25, 12.5, 25, 50, 100 %;
+  their statement, I).
 - **Settings and menu.** The slot (Off / 1 / 2 / 3) and volume (0..5) live in stock settings 1021 (`MODE_ELECTRIC_BEEP`)
   and 827 (`MODE_SHUT_SOUND_VOL`), names from the stock name table (X; om-c's menu code compares keys with both, D),
   read and written through the property getter `0x503ee3bf` and the setter entry `0x503ee40d` (D: its `movm` prologue;
@@ -335,8 +344,8 @@ survey.
 
 ## 8. Open questions
 
-- Where the operation sounds live: flash `0x4e420000` is outside the updater; what the reference at `0x50000766` maps;
-  what the play method's id `0x10501` lookup and vtable +68 query return; why IOlyApiShooting asks at S2.
+- Where the operation sounds live: flash `0x4e420000` is outside the updater, in a window the flash guard leaves
+  writable (4); what the play method's id `0x10501` lookup and vtable +68 query return; why IOlyApiShooting asks at S2.
 - Whether stock E143 uses settings 1021 and 827 at all.
 - A real ring lens's ID bytes, its flags byte and its answer to `81 10`; what record +119168 and +9444 bits mean;
   whether OM lenses ignore p2 bit 0 (om-c's 2-bytes-short path suggests so); the ring value's unit.

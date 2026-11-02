@@ -128,8 +128,8 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   browser player's Worker), the Player hands them over after each tick, and both pages play them with WebAudio
   through `GET /api/audio?after=N` (a long poll; the browser's page answers it from the Worker's messages). A page
   plays sound (and polls for it) once a key press or a click on it has started its audio context; its Sound button
-  mutes it. A `--replay`'s sound is dropped, and the gates, golden, the checks and `nav.mjs` emit none. PCM the firmware makes itself would go out the same way
-  (`docs/hle-gaps.md` 4.5).
+  mutes it. A `--replay`'s sound is dropped, and the gates, golden, the checks and `nav.mjs` emit none. PCM the
+  firmware makes itself would go out the same way (`docs/hle-gaps.md` 4.5).
 - A card is in the SD slot. On E143 it is an 8 GiB SDHC card behind the firmware's SD command layer (S-SDCARD,
   `src/lab/sdcard.mjs`), and the firmware's own storage stack runs on it (`src/lab/storage.mjs`, `docs/hle-gaps.md`
   4.8.2): the file system's bring-up and the file tasks natively before the application starts (H-FILEINIT,
@@ -234,7 +234,7 @@ OM_EMU_CARD=emu/out/card/E143.omsd sh emu/play.sh   # keep the card between sess
 OM_EMU_CARD_SIZE=64 sh emu/play.sh               # a blank 64 GiB SDXC card in place of the 8 GiB SDHC one, formatted
                                                  # exFAT by the firmware (docs/hle-gaps.md 4.8.6)
 node emu/bin/nav.mjs --time --png each 'DOWN OK MENU'     # a scripted menu session: a line and a PNG per step
-node emu/bin/play.mjs --patch FILE                # the player on the stock blocks with FILE's patches ("Patch overlays")
+node emu/bin/play.mjs --patch FILE                # the player on the stock blocks with FILE's patches (Patch overlays)
 node emu/bin/run.mjs all --trace emu/out/js      # the replayed scenarios, traced (37 labs, about 3 min)
 node emu/bin/run.mjs stage2 --slice 1000000      # the same in budgeted continues of 1 M instructions
 node emu/bin/golden.mjs check [--jobs N]         # emu against its own recorded outputs (golden.json), about 20 min
@@ -534,15 +534,15 @@ the name of the file the model needs.
 **The published site.** `node emu/bin/site.mjs DIR` writes the static site. It holds `emu/index.html` (the landing
 page, which links to the player and says that the firmware stays in the visitor's browser) and exactly the files the
 player loads, found by following every relative reference from the landing page (`--list` prints them: 131 files,
-2.7 MiB on 2026-11-02, all under `web/`, `src/`, `scenarios/` and `refs/`). It holds no firmware, nothing of `emu/out/`, no test or
-node-only module and not `web/gate.html`. A reference that is absolute (it would leave the site's sub-path), bare,
-outside `emu/`, into `out/` or of another file type stops the build. The site needs no server code and no custom
-headers (no COOP/COEP: the Worker uses no SharedArrayBuffer, and OPFS's sync access handles need none), only a
-JavaScript content type for `.mjs`. `.github/workflows/pages.yml` runs on a push to `main`, the public repository's
-branch, or by hand: it runs `test/test_site.mjs`, builds the site and deploys it with `actions/upload-pages-artifact`
-and `actions/deploy-pages` to the repository's project site, `https://<owner>.github.io/<repo>/`. For the public
-repository that is `https://flatpanda.github.io/om-emu/`. The repository's Pages source must be set to "GitHub
-Actions".
+2.7 MiB on 2026-11-02, all under `web/`, `src/`, `scenarios/` and `refs/`). It holds no firmware, nothing of
+`emu/out/`, no test or node-only module and not `web/gate.html`. A reference that is absolute (it would leave the
+site's sub-path), bare, outside `emu/`, into `out/` or of another file type stops the build. The site needs no server
+code and no custom headers (no COOP/COEP: the Worker uses no SharedArrayBuffer, and OPFS's sync access handles need
+none), only a JavaScript content type for `.mjs`. `.github/workflows/pages.yml` runs on a push to `main`, the public
+repository's branch, or by hand: it runs `test/test_site.mjs`, builds the site and deploys it with
+`actions/upload-pages-artifact` and `actions/deploy-pages` to the repository's project site,
+`https://<owner>.github.io/<repo>/`. For the public repository that is `https://flatpanda.github.io/om-emu/`. The
+repository's Pages source must be set to "GitHub Actions".
 `OM_FW_DIR=fw node emu/bin/sitegate.mjs` builds the site and serves it under `/om-emu/` from a plain static server
 (GitHub Pages' content types, nothing else). In headless Chrome it then opens the landing page, follows its link,
 checks the firmware panel, chooses the `.BIN` through the file input and waits for the shooting screen (GUI `0x0108`).

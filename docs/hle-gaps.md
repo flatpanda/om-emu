@@ -752,11 +752,46 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   types 0 / 1 `0x41ec0000` (blk02000000), 3 `0x4e1e0000` (blk0e360000), `0x8000` `0x458c0000` (blk05a00000) and 2
   `0x4e420000`, where no block of the `.BIN` loads (the images block ends at `0x4e3e0000`): the update file does not
   carry the sounds (I), which fits finding no RIFF data in it. The driver's converter table `0x6035e50c` has a plain
-  memcpy entry `0x50aa7439` (`0x5000290a`), the copy om-c scales. In the lab (X, a probe of S1 then S2): the
-  singleton runs only at S2, twice from IOlyApiShooting (`0x51059373`, `0x51059919`, via `0x5108c19f`), which then
-  asks +68; play, UI_OUT and the loader never run, both MMIO blocks above are never accessed and the four resource
-  tables read 0. om-c's electronic shutter sound calls play from hooks on CapBuf_TakeBuff's calls of `0x50b8467c` (a
-  buffer list append) and `0x50b87d56`, which S-RELSEQ's stand-in never reaches.
+  memcpy entry `0x50aa7439` (`0x5000290a`), the copy om-c scales. In the lab (X, a probe of S1 then S2, before
+  H-RESINIT): the singleton runs only at S2, twice from IOlyApiShooting (`0x51059373`, `0x51059919`, via
+  `0x5108c19f`), which then asks +68; play, UI_OUT and the loader never run, both MMIO blocks above are never accessed
+  and the four resource tables read 0 (since H-RESINIT, below, the loader runs and the tables are set). om-c's
+  electronic shutter sound calls play from hooks on CapBuf_TakeBuff's calls of `0x50b8467c` (a buffer list append)
+  and `0x50b87d56`, which S-RELSEQ's stand-in never reaches.
+- **The resource tables (since 2026-11-02; H-RESINIT, S-RESNAND: `emu/src/lab/resnand.mjs`, `emu/src/fw/nand.mjs`; D
+  unless tagged):** the loader `0x501a8ca0` reads, each through `0x501a986a` (the source rounded down to 512, the
+  destination up to 16; for mode 1 the generic NAND access `0x500022c2` with its read operation `0x10200`), the sound
+  index at `0x4e420000` (1024 bytes, type 2), the images block's at `0x4e1e0000` (12288, type 3), the large-data block's
+  at `0x458c0000` (1024, type `0x8000`), the sub-indexes the large-data index's first twelve entries name (their sizes
+  from `0x602a49f4`, types `0x8001..0x800f` through the byte map `0x602a49e3`) and the resource block's at `0x41ec0000`
+  (2048, types 0 and 1), and stores each buffer and the buffer + 32, past the block's own OE head
+  (`0x501a8cd2..0x501a8de3`). An index is that head (res_version `0x501a971e` answers its `+0x10` << 16) and 16-byte
+  entries `{address, size, 0, 0}` (res_size `0x501a976d`; res_read `0x501a921f`, type 2 at `0x501a9322`, the
+  `0x8002..0x8005` of the lens data lookup `0x502ae5d9` at `0x501a9633`). The NAND holds each block of the update at its
+  head's load address as head + descrambled body + tail (I; X: the tables' versions are the heads' `0x0100`, and the
+  twelve sub-blocks begin with OE heads at their own addresses). The play bring-up runs the loader natively in
+  USTART_L's place (its call `0x500241d8`), before H-LENSINIT's cache load (`0x5002420e`), where the host gives the NAND
+  (`env.nand`: an extract of 3.4 MB, the heads, the indexes and the records of at most 64 KiB, pinned in MODELS
+  `res_nand`, which provisioning writes to `unpacked/<code>/` for the node hosts and the browser keeps in its cache).
+  X (E143, `emu/test/test_resnand.mjs`): 16 reads; res_size(0, 0) = `0xe2800`, (3, 0) = `0x2800`, (`0x8000`, 0) =
+  `0x167fc00`; res_version `0x01000000`. The sound area is not in the update (factory data, I): S-RESNAND reads it
+  erased unless the host gives an image (`env.soundArea`; the builder `soundArea()` makes one in the TG-7's format,
+  `docs/firmware-container.md`), and keeps the firmware's writes and erases inside the flash access guard's window for
+  it (`0x50000735`: `0x4e420000..0x4e460000`; the type-2 write `0x501a98c8` erases up to entry 1 with `0x10300` and
+  writes with `0x10100` at `0x501a9a1e..0x501a9ab4`, X: run natively and read back). It serves the area over that
+  window, or the host's image where it is longer (up to the RAM log at `0x4e820000`; the area's extent is I). Erased,
+  res_size(2, 0) = `0xffffffff` and res_version(2) = `0xffff0000` (X), and USTART_L's own load of sound 0
+  (`0x5002433b` / `0x50024353`: res_read(2, 0, `0xa4000000`, res_size + 1024)), which the lab runs too, wraps its size
+  to 1023: res_read sets its last entry (`0x501a934e`), takes its error path (`0x501a93d5`), logs `0x1f000003` and
+  leaves the descriptor `{0, 0}` at `0xa32db188`, which a later load into `0xa4000000` answers without a read
+  (`0x501a9333..47`) (D; X); with an image it leaves `{0xa4000000, size + 1024}` (X). What changes in the lab: the lens
+  data lookup reads its lens's record (type `0x8002`, 13824 bytes at `0x4709de00`) where it read 0 bytes at 0 (X), the
+  erased area's one `0x1f000003` at the bring-up, and nothing else a camera would show: golden's play sessions keep
+  their screens, their interrupts (each IRQ and its pc) and lab times, and differ otherwise only in what the loader's
+  run adds to the harness's books (its instructions in the interrupt rows' instruction counts, two more harness steps,
+  its 16 NAND reads, the step records, X). Open: the OM-1's own sound area (its entries, which ids are which sounds,
+  their format, its extent; a NAND read from a camera would settle it); E146 and E147 (their sound index at
+  `0x4e3e0000`, X) are not given `res_nand` yet.
 - **The AV back end (D):** AVFW / AVPI plug-ins: the firmware's own MP4 / MOV muxer and demuxer, H.264 / HEVC encode
   and decode drivers, rate control, audio codecs, a TS multiplexer (12.4k, use ?), the StlCA_IF still codec (format ?).
 - **Seams:** S3 + S4 + S5 + S6 + S7 recommended, S1 (today's callbacks) kept until S2 (the HLS observers'
@@ -777,8 +812,9 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   is copied (48 kHz stereo PCM16 through `0x5000290a`, at most 768 bytes a call, per om-c's notes, I), consecutive
   blocks timed back to back. That needs the sound engine to play first: at the lab's release it is not asked to (X,
   of the lab only: S-RELSEQ stands in for the release and the capture's begin `0x50b8467c` does not run; on the camera
-  the stock release plays nothing either, I, `docs/om1-shutter-spec.md` section 7 item 61), its table loader
-  `0x501a8ca0` does not run in the lab, and which of the lab's inputs would ask it for a sound is ?.
+  the stock release plays nothing either, I, `docs/om1-shutter-spec.md` section 7 item 61), its sound table is erased
+  in the lab (H-RESINIT runs the loader, but the update carries no sounds; above), and which of the lab's inputs would
+  ask it for a sound is ?.
 
 ### 4.6 CPUs 1-3, inter-core services and the A53
 

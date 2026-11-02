@@ -13,10 +13,11 @@ is in [ARCHITECTURE.md](ARCHITECTURE.md) and the known departures from the hardw
 - The model's firmware, which is never stored in this repository: `node emu/bin/fetch-fw.mjs [--model CODE]` downloads
   the `.BIN` from the vendor's updater API, checks it against `BLOBS.sha256`, unpacks the main code block and the
   resource block into `unpacked/<code>/` and checks both against `src/fw/models.mjs` (for the OM-1, about 240 MB
-  downloaded, 90 MB kept). The player does this itself on first use. The node hosts' play sessions on E143 also read
-  the `.BIN` itself, where `fetch-fw.mjs` keeps it in `fw/` (or `$OM_FW_DIR`, `$OM_BIN`), for the NAND blocks the
-  resource tables are loaded from (`checks/lib/env.mjs` loadNand, `src/lab/resnand.mjs`); without it they stop with
-  that reason.
+  downloaded, 90 MB kept). On E143 it also writes there the extract of the NAND blocks the play bring-up loads the
+  resource tables from (`<bin>.nand.bin`, 3.4 MB, checked against its MODELS digest; `checks/lib/env.mjs` loadNand,
+  `src/lab/resnand.mjs`). The player does this itself on first use; a checkout unpacked before the extract existed
+  makes it with one more `fetch-fw.mjs` run, which reads the `.BIN` from `fw/` (or `$OM_FW_DIR`, `$OM_BIN`, `--bin`)
+  or downloads it again.
 - For the debug API's `--disasm` only: `tools/mn10300-objdump` (or `$OM_OBJDUMP`; the build recipe is in `BLOBS.md`).
 - For `bin/webgate.mjs`: the `.BIN` (`$OM_BIN`, or `$OM_FW_DIR` holding it) and Chrome: `--chrome PATH`, else the
   first found of `/usr/bin/google-chrome-stable`, `/usr/bin/google-chrome`, `/usr/bin/chromium`,
@@ -135,10 +136,11 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   firmware makes itself would go out the same way (`docs/hle-gaps.md` 4.5).
 - On E143 the resource API's tables are the firmware's own (`src/lab/resnand.mjs`, `docs/hle-gaps.md` 4.5): the play
   bring-up runs USTART_L's resource loader natively (H-RESINIT), and S-RESNAND serves its NAND reads from the update's
-  blocks at their load addresses (the node hosts read the model's `.BIN` where it is asked, `checks/lib/env.mjs`
-  loadNand; the browser its extract), so the lens data lookup finds its lens's record. The camera's own sound
+  blocks at their load addresses (from the extract the hosts keep: node in `unpacked/<code>/`, `checks/lib/env.mjs`
+  loadNand; the browser in its cache), so the lens data lookup finds its lens's record. The camera's own sound
   resources at `0x4e420000` are factory data that no update carries: they read erased, unless a host gives an image
-  (`env.soundArea`; `src/fw/nand.mjs` soundArea() builds one in the TG-7's format from WAVE files).
+  (`env.soundArea`; `src/fw/nand.mjs` soundArea() builds one in the TG-7's format from WAVE files). Erased, USTART_L's
+  load of sound 0 takes its error path at the bring-up and logs `0x1f000003`, as a camera with an erased area would.
 - A card is in the SD slot. On E143 it is an 8 GiB SDHC card behind the firmware's SD command layer (S-SDCARD,
   `src/lab/sdcard.mjs`), and the firmware's own storage stack runs on it (`src/lab/storage.mjs`, `docs/hle-gaps.md`
   4.8.2): the file system's bring-up and the file tasks natively before the application starts (H-FILEINIT,

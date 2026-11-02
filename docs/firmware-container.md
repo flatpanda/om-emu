@@ -68,7 +68,12 @@ The encoding is the long-known Olympus `oly_fw_manip` scheme (community tool wit
   `0x0C` u32 body length; `0x10` u16 version, BCD (`0x1900` is v1.9); `0x12` u16 pad; `0x14` u16 flags; `0x16` 6 pad
   bytes; `0x1C` u32 checksum (0 in the head, minus the sum in the tail).
 - Flags: `0x0000` code, plain; `0x0100` code, scrambled; `0x0101` languages, strings and fonts; `0x0102` images;
-  `0x0106` large data; `0x0107` the SCPU's image (`docs/om1-scpu-spec.md`); `0x010e` miscellaneous.
+  `0x0103` the camera's sounds, in the TG-7's update only (E145, load `0x471a0000`: an index of 16-byte entries
+  `{address, size, 0, 0}` after the head, then RIFF WAVE files, PCM, 2 channels, 48 kHz, 16 bits, 512-aligned, X;
+  the OM-1 line's sound area at `0x4e420000` is in no update, `docs/hle-gaps.md` 4.5); `0x0106` large data; `0x0107`
+  the SCPU's image at `0x08000000` (`docs/om1-scpu-spec.md`); `0x010e` miscellaneous.
+- In the camera's NAND each block sits at its head's load address as head + descrambled body + tail, the form the
+  resource loader `0x501a8ca0` reads its indexes in (D, X on E143; `emu/src/fw/nand.mjs`).
 - Descrambling (flags != 0): per aligned 16 bytes `decoded[k] = encoded[PERM[k]] ^ 0xFF` with
   `PERM = [1,3,0,2, 6,4,7,5, 11,10,9,8, 13,14,12,15]`. An unaligned tail is kept as it is. There is no S-box and no
   key.

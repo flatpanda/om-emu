@@ -62,9 +62,10 @@ emu/play.sh --no-browser               # print the player's localhost URL instea
 ```
 
 `fetch-fw.mjs` asks the vendor's public updater API for the `.BIN` (about 240 MB for the OM-1), stores it under `fw/`,
-checks its digest, and unpacks the two blocks the lab reads into `unpacked/<code>/` with the JavaScript unpacker. The
-API serves only each body's latest release, so a release newer than the one pinned in `BLOBS.sha256` is refused. With
-the files in place, `sha256sum --ignore-missing -c BLOBS.sha256` checks them independently.
+checks its digest, and unpacks the two blocks the lab reads (and, for the OM-1, an extract of its NAND blocks) into
+`unpacked/<code>/` with the JavaScript unpacker. The API serves only each body's latest release, so a release newer
+than the one pinned in `BLOBS.sha256` is refused. With the files in place, `sha256sum --ignore-missing -c BLOBS.sha256`
+checks them independently.
 
 The player serves its page and API on `127.0.0.1` only. It can also run entirely in the browser, with the lab in a
 Web Worker and no server of its own, as on [the published site](https://flatpanda.github.io/om-emu/). To run that

@@ -246,8 +246,16 @@ the survey table.
 - **The GUI state table's length:** the lab names the first 12 parents (E143's); the firmware's lookup bounds it at 12
   on E143 (`0x5124b478`) and 18 on E145 (`0x50de87bf`, D), so E142's and E145's SS_MENU (`0x11`) states print unnamed.
   A rule reading the bound would name them (survey finding 17).
-- **E142's touch controller** (slave `0x48`) is not the one S-TPREG serves (E143's slave `0x70`, register 2), so touch
-  input does not reach its GUI.
+- **Touch on the E144 family:** done (2026-11-02, survey findings 75, 76): the controller at slave `0x48`, which every
+  body but the E143 family reads, is modelled from its driver's report parser (`src/lab/touchpanel.mjs`), the touch
+  init runs before the display open where the open arms the driver (H-TPINIT), and S-TOUCHMAP posts the build's index
+  of the touch message; a tap on the touch mode icon cycles it on E144, E148, E139, E134, E137, E142, E140, E125, E130
+  and E133 (`test/test_touch.mjs`), and a tap in the super control panel selects its cell. Open: the controller's own
+  event codes and status bit (I / ?, FIDELITY 7.11); the control area (the application's Set_Touch_Panel_Ctrl_Area is
+  not called in the lab); touch AF's tap, which reaches HFW and is dropped with S-CAFWD's forward, as on E143 with
+  S-LENS; touch on the EVF; the E118 family's touch, off until H-TPSTART's open and HFW callbacks are placed (finding
+  77; its controller is the same). The event map's shift on E137, E142, E140, E125, E130 and E133 (two entries fewer
+  before E143's 109) also moves MENU_EVENT and CONNECT_EVENT there (finding 76).
 - **E145's AF upload:** read (2026-10-29, survey finding 22): the TG-7's frame plane has modes 1 and 2 only, its
   mode 2 the place of E143's UP_LOCKON, and nothing writes the mode-3 frames DISP_FRAME reads, so S-AFOSD gives it
   no upload (rule framePlane, which also places UP_AF on the other clamp-form bodies and retires E130's override;
@@ -524,8 +532,9 @@ store in the lab (vsc spec §10).
   bodies' open-time wait of 150 ms took 300 s of lab time on the TFT, 380 to 500 s on the EVF. Every lab now counts
   lab microseconds from the reset, at least one count per read (busy waits still end in zero lab time); those starts
   take 0.6 to 3.2 s, and E143's golden sessions keep their screens, devices, outputs and stops at their lab times.
-  Open: the E144 family's wait of that form is the touch controller's INT by its form (I) and runs to its timeout
-  (finding 64), which S-TPINTWAIT's rule could read next; how long a busy wait's instructions take (FIDELITY 1.1).
+  The E144 family's wait of that form is the touch controller's INT, read by its form and answered by S-TPINTWAIT
+  since 2026-11-02 (finding 75: the starts 150 ms sooner on the TFT, 190 to 250 ms on the EVF). Open: how long a busy
+  wait's instructions take (FIDELITY 1.1).
 - Timers not yet traced as they first fire: Genifa timers 537 and 554 and task 16's bit-2 path `0x50053199` /
   `0x500532b2` (kernel spec §9.5).
 - A-VEC, A-IAGR, A-TMR-1..5, A-INTC-ORDER; the meaning of udf12/13/21 (A-UNIT); TRAP, NMI, level 0; K-IPI and
@@ -546,7 +555,8 @@ lab's stand-ins for its key mapping, request sequences and display-switch re-ent
   `0x0400` is.
 - The encoder: H-DIALSTEP calls the counter writer `0x5014bae6` per detent; the encoder position read `0x50059fa4` and
   which dial is main and which rotation is "+" are open.
-- Touch: with S-LENS, S-TOUCHMAP maps HFW statuses to GUI touch kinds by name and S-CAFWD drops the GUI's forward to
+- Touch: the E144 family's controller at slave `0x48` since 2026-11-02 (survey finding 76, FIDELITY 7.11). With S-LENS,
+  S-TOUCHMAP maps HFW statuses to GUI touch kinds by name and S-CAFWD drops the GUI's forward to
   the camera (STS_TOUCH_EV_RESPONCE, the HFW client; LONGPRESS never comes); with E143's native lens, the default since
   2026-10-29 (E146's and E147's touch is off), the camera application forwards the touches and takes the GUI's answers itself (hle-gaps.md 4.4.2); S-TPINT sets the touch flag from the lab task (a GPIO
   interrupt model, IRQ 132, `0x500525ee`, would replace it); H-TOUCHGAP's 20 ms between samples keeps the driver's

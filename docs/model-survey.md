@@ -1290,6 +1290,76 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    (`emu/src/lab/menudata.mjs`, read where `menu.list_menu`) and 15 in `emu/src/lab/menu.mjs`, the store init's SCPU
    request, waits and replies (used where `scpu.backup`), the NAND post and a dropped send's site; the sessions above
    run with them unmapped (X).
+75. **The E144 family's touch INT wait, read by its form** (2026-11-02, `src/fw/facts.mjs` touchIntWait, `src/lab/menu.mjs`
+   S-TPINTWAIT; the next stop of finding 64). The rule had found the wait from the "TP INT TIME OUT" trace, which only
+   E120 and E122 load after it; it now finds the wait by its own form, one of two openings that clear the word W when
+   called with d0 1, followed by the poll `mov (W),d1; cmp 1,d1; beq` (D): E120's `mov d1,d2; clr d1; mov d1,(4,sp);
+   cmp 1,d0; bne; mov d1,(W)` (E120, E122, E125 `0x5022d4d4`, E130 `0x50207caf`, E133 `0x501f8a85`, and E129 and E132,
+   whose drivers have no panel to open), and E144's `mov d1,a3; mov d0,d2; clr d0; mov d0,(4,sp); mov <pin>,d0; call
+   <enable>; cmp 1,d2; bne; clr d0; mov d0,(W)`, which enables the pin's interrupt first (E144 `0x5018a924`, W
+   `0x620c662c`, pin 120; E148, E137, E142, E140 pin 120, E139 and E134 pin 88). On E144 the pin's callback
+   (`0x5018b191`, attached to pin 120 by the driver's init `0x5018a7e7` at `0x5018a809`) stores 1 in W while the word
+   after it (`0x620c6630`) is 0 and otherwise disables the pin and sets bit 1 of the touch task's flag (D), as E120's
+   does for pin 30. One wait on each of those 16 bodies, none on the E143 family, E145 and E118 (inline, finding 54)
+   (X, a byte scan of each expanded image). The device open calls it with 150 ms (E144 `0x50181efb`, E125 `0x5022a568`,
+   E130 `0x5020176c`, E133 `0x501f24be`, E134 `0x5021139c`; the timeout logs the numbered error `0x37005206` on E144
+   through `0x50041d51`), the touch task's power-up commands with 40 or 100 ms (E144 `0x5018a0ca`, `0x5018a0fa`,
+   `0x5018a158`, D). S-TPINTWAIT now answers it on the ten E144-family bodies with a touch panel: the play bring-up's
+   lab time (X, a session per body and device), TFT before -> after: E144 and E148 525.10 -> 375.10 ms, E139 and E137
+   340.10 -> 190.10, E134 and E125 346.41 -> 196.41, E142 and E140 425.00 -> 275.00, E130 and E133 264.00 -> 114.00;
+   EVF, two answers (the open's 150 ms and its EVF wait of 40 ms): E144 and E148 748.24 -> 558.24, E139 429.78 ->
+   239.78, E134 469.46 -> 279.46, E137 546.55 -> 356.55, E142 and E140 666.09 -> 476.09, E125 531.07 -> 280.93 (its
+   EVF wait is 100 ms), E130 501.09 -> 311.09 (E133's EVF session stops before, on more than 300,000 stand-in calls,
+   as on master). E120 and E122 are unchanged (TFT 194.00 and 175.41, EVF 392.97 and 332.92 ms).
+76. **Touch on the E144 family** (2026-11-02, `src/lab/play.mjs` H-TPINIT, S-TPREG, S-TOUCHMAP, `src/lab/touchpanel.mjs`,
+   `test/test_touch.mjs`; X: a play session per body on the TFT, taps through the player's router as webgate's B6
+   sends them). Before, on the ten bodies whose touch the lab runs (E144, E148, E139, E134, E137, E142, E140, E125,
+   E130, E133), a tap reached nothing: the touch task took the flag's bit 1 and ran its INT handler (E144
+   `0x5018af22`), which returned at once, the driver's armed word `0x620c6630` being 0 (`0x5018af23..0x5018af2f`,
+   D; no I2C read, no HFW callback, X). Three stops, in the order they were met:
+   - *The touch init after the display open.* The open's command list powers the panel up, waits for its INT (finding
+     75) and then arms the driver for the INT's data (`0x5018a9a4`: W 0, `0x620c6630` 1, called at `0x50181f1f`, D);
+     the lab ran the boot's touch init (H-TPINIT, E144 `0x50189dc3`, called by the boot at `0x500251a8`, before the
+     display opens) in the play bring-up, after the start's open, and the init's driver set-up `0x5018a7e7` clears
+     both words (`0x5018a81b..0x5018a826`, D; X: armed at 525.1 ms, cleared at 525.1 ms by H-TPINIT). The lab now
+     calls the touch init before the start's open on a build whose driver waits for the INT (fact touch_int), as the
+     boot does. On E143, whose open runs no touch code, the same move changed 28 golden sessions' stops and replay
+     outcomes (X), so E143 keeps the lab's order.
+   - *The controller.* The E144 family's driver reads the controller at slave `0x48` with 16-bit register addresses
+     (d1 the high byte, a1 the low; E144's read `0x5018adf3` sends them as the transfer's address bytes,
+     `0x5018ae80..0x5018ae8f`; the same opening on E142 `0x5016cbe8`, E125 `0x50185997`, E120 `0x502d9bd2`, D), where
+     S-TPREG served E143's controller only (slave `0x70`, register 2) and read 0 for the rest. Every body but the E143
+     family reads slave `0x48`, the E143 family `0x70` (X, the immediates at each read call of each image). After the
+     INT the driver reads 10 bytes at `0x0000` (`0x5018b4d7`): byte 0's low nibble the number of touches, byte 1's low
+     nibble the event, byte 2 the points' touch ids, point 0's x and y in 12 bits from bytes 3..5, point 1's from 7..9
+     (`0x5018b503..0x5018b557`); with event 0 one byte at `0x1c0a`, whose bit 1 must be set (`0x5018b56f..0x5018b57f`).
+     Its control area is off (`0x620c6480` 0: nothing sets it in the lab's sessions, the application's
+     Set_Touch_Panel_Ctrl_Area, API `0xd001f`, not being called, X), so the driver passes the controller's event on:
+     0, 1 and 8 end a touch, 2 and 3 carry the point (`0x5018bca1..0x5018bcd5`); with the area on it derives the same
+     codes from the ids itself, 2 at a new id, 3 while it stays, at its end 1 within 150 ms of the press, 8 for a
+     second tap within 800 ms, else 0 (`0x5018b8d4..0x5018ba6b`, D). S-TPREG now answers each read from the controller
+     at its slave: `0x48` a down as event 2 with id 1 at point 0, a move 3, an up event 1 within 150 ms of lab time of
+     its down and else event 0 with `0x1c0a` bit 1 set (I: the driver's own codes; which codes the controller sends,
+     and what bit 1 means, are ?), x and y the TFT panel's pixels (the driver bounds an area by 720 x 480,
+     `0x5018a2b1`, and flips only for the swivelled monitor, `0x5018c2d9`, D). The register address's form is read by
+     a rule (touch_args read_addr: `['d1']` on the E143 family, `['d1', 'a1']` on the 15 others with a touch read).
+   - *The GUI's touch message's index.* S-TOUCHMAP posted sendEvent index 109, E143's touch message `0x9100`; the
+     event maps of E137, E142, E140, E125, E130 and E133 lack E143's 107 and 108 (messages `0xf839`, `0xf83a`), so
+     `0x9100` is their 107 and 109 is `0x9201` (X, each image's map): their HFW saw PRESS and CLICK and their screen did
+     not change (X). The session posts at the build's index of `0x9100`. The same shift moves E143's MENU_EVENT `0x87`
+     to `0x9628` (E143 `0x9624`) and CONNECT_EVENT `0x83` to `0x9622` (E143 `0x9601`) on those six (X), which the
+     menu and display-switch paths use.
+   After (X): a tap (down, up) on the shooting screen's touch mode icon gives HFW PRESS and CLICK at the pixel on all
+   ten bodies and cycles the icon (touch shutter, off, touch AF) as on E143 (frames); a press of 150 ms or more ends
+   in LIFTOFF. A tap in the super control panel selects the cell tapped (E144: Face Priority at 360,240 after OK). A
+   tap on the live view in touch AF mode reaches HFW (PRESS, CLICK) and changes nothing on screen, on E144 as on
+   E143 with S-LENS: S-CAFWD drops the GUI's forward to the camera. `test/test_touch.mjs` taps the icon on E143 and
+   the ten (bin/test.mjs).
+77. **The E118 family's touch** (2026-11-02, X). Their touch stays off (`src/fw/models.mjs` touch false): H-TPSTART
+   needs the panel's open and the HFW callbacks, which `src/fw/facts.mjs` touchOpen does not read on their builds and
+   the maps do not place. Their drivers read the same controller at slave `0x48` with the same register addresses as
+   the E144 family's (X: the read calls' immediates; E120's read `0x502d9bd2` opens as E144's, D), so S-TPREG's model
+   would serve them once the open is placed. E120's and E122's INT waits are unchanged (finding 54).
 78. **The browser player in Firefox** (2026-11-02, `bin/browsergate.mjs`). In the OrbStack VM (Arch Linux ARM,
    aarch64), Firefox 159.0 headless through geckodriver 0.37.1, on the published site (`bin/site.mjs`, 127 files,
    2.66 MiB) served under `/om-emu/`: the landing page's link, the E143 `.BIN` through the file input (unpacked in

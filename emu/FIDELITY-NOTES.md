@@ -384,13 +384,23 @@ A bitmap of format 1 (2026-10-29) is a stream of 4-bit tokens, low nibble first,
 
 **Confidence:** medium
 
-### 7.10 The touch controller's INT on the E118 family (S-TPINTWAIT)
+### 7.10 The touch controller's INT on the E118 and E144 families (S-TPINTWAIT)
 
 **Where:** `emu/src/lab/menu.mjs` (`route_rtos`), `emu/src/fw/facts.mjs` (`touchIntWait`, with the evidence)
 
-**Emulator:** E120's and E122's touch drivers wait for the touch panel controller's INT, GIO pin 30, in 2 ms sleeps until a word is 1, which the pin's callback stores while the driver waits; the device open's command list ends in such a wait of 150 ms. The lab models neither the controller nor a GIO interrupt on the family's board: at the wait's poll it stores 1 in the word, as the callback would, so each wait returns after its first sleep.
+**Emulator:** The touch drivers of E120, E122 and the E144 family wait for the touch panel controller's INT, a GIO pin (E120's 30, E144's 120), in 2 ms sleeps until a word is 1, which the pin's callback stores while the driver waits; the device open's command list ends in such a wait of 150 ms (on the EVF 40 or 100 ms more), and the touch task's power-up commands wait 40 or 100 ms. The lab models neither the controller's INT nor a GIO interrupt on those boards: at the wait's poll it stores 1 in the word, as the callback would, so each wait returns after its first sleep. A rule reads the wait by either of its two forms (`docs/model-survey.md` finding 75).
 
-**Expected / concern:** On the camera the INT comes when the controller is ready; how long that takes is not known, so the open's time is the lab's (about 0.2 s on the TFT, 0.3 to 0.4 s on the EVF). Without the stand-in every wait runs to its timeout: 150 ms of lab time since the us clock runs on lab time from the reset (E120's TFT open 0.34 s, its EVF open 0.29 s longer, X), 300 s before, while it counted CPU reads up to the play bring-up. The E144 family's open has a wait of the same form (E144 `0x5018a924`, 150 ms, I: the touch controller's INT by its form) that the stand-in's rule does not read: it runs to its timeout, 150 ms on the TFT and 190 to 345 ms in all on the EVF (`docs/model-survey.md` finding 64). The callback's other branch (the touch task's flag, a touch's data ready) is never taken: the lab raises no touch.
+**Expected / concern:** On the camera the INT comes when the controller is ready; how long that takes is not known, so the open's time is the lab's (about 0.2 s on the TFT, 0.3 to 0.4 s on the EVF on E120 and E122; the E144 family's starts reach the play bring-up 150 ms sooner on the TFT and 190 to 250 ms on the EVF than with the waits run to their timeouts, X). Without the stand-in every wait runs to its timeout: 150 ms of lab time since the us clock runs on lab time from the reset, 300 s before, while it counted CPU reads up to the play bring-up. The callback's other branch (the touch task's flag, a touch's data ready) is taken from the lab task instead (S-TPINT: the session's touch sets the flag's bit 1).
+
+**Confidence:** medium
+
+### 7.11 The E144 family's touch controller (S-TPREG at slave 0x48)
+
+**Where:** `emu/src/lab/touchpanel.mjs`, `emu/src/lab/play.mjs` (`_s_tpreg`, `touch`, H-TPINIT in `kernel_display`)
+
+**Emulator:** The E144 family's driver reads its controller at slave `0x48` with 16-bit register addresses: after the INT a 10-byte report at `0x0000` (the number of touches, the event, the points' touch ids, point 0's 12-bit x and y) and, for event 0, a status byte at `0x1c0a`. S-TPREG answers those from the session's touch: a down as event 2 with one touch at the pixel, a move as 3, an up as event 1 (a tap) within 150 ms of lab time of its down and as event 0 with the status byte's bit 1 set after that; every other register reads 0. The driver's touch init runs before the start's display open on those builds, as the boot runs it (`docs/model-survey.md` finding 76).
+
+**Expected / concern:** The layout of the report is the driver's parser's (D); the event codes are the codes the driver itself gives the same transitions when its control area is on (I), and which codes the controller sends, what the status bit means, and how the controller reports two touches are not known (?): the model gives one touch. The control area stays off in the lab (the application's Set_Touch_Panel_Ctrl_Area is not called), so the driver passes the controller's events on; on the camera, with an area set, the driver would filter the points by it. The controller's other registers (calibration, self-run, the power-up's writes) read 0.
 
 **Confidence:** medium
 

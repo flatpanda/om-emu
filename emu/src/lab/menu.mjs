@@ -345,14 +345,15 @@ export class MenuLab extends T.TextDisplayLab {
       else if (name === 'OlyTaSS') this.wrap(address, (stub) => scoped(name, stub, () => this.in_display_run() || this.lab_task_call()), name + '(scoped)');
       else this.observe(address, (lab, r) => lab._native_call(name, r), name + '(native)');
     }
-    // S-TPINTWAIT (the E118 family's touch driver, src/fw/facts.mjs touchIntWait): the touch panel controller's INT, GIO
-    // pin 30, which the lab does not model (no controller, no GIO interrupt on the family's board). The driver waits for
-    // it in 2 ms sleeps until a word is 1, which the pin's callback stores while the driver waits, with a timeout on the
-    // us clock; the device open's command list ends in such a wait (150 ms, "TP INT TIME OUT" on the timeout). Without
-    // the INT every wait runs to its timeout: 150 ms of lab time since the us clock runs on lab time from the reset
-    // (A-USLAB; E120's TFT open 0.34 s instead of 0.19 s, X), 300 s while it counted CPU reads before the play bring-up
-    // (H-USCOUNT). At the wait's poll the lab stores 1 in the word as the callback would: the INT comes within the wait's
-    // first sleep (I: how long the controller takes is ?)
+    // S-TPINTWAIT (the touch driver of the E118 and E144 families, src/fw/facts.mjs touchIntWait): the touch panel
+    // controller's INT, a GIO pin (E120's 30, E144's 120), which the lab does not model (no GIO interrupt on those
+    // boards). The driver waits for it in 2 ms sleeps until a word is 1, which the pin's callback stores while the
+    // driver waits, with a timeout on the us clock; the device open's command list ends in such a wait (150 ms; the
+    // EVF's open waits 40 ms more), and the touch task's power-up commands wait 40 or 100 ms. Without the INT every wait
+    // runs to its timeout: 150 ms of lab time since the us clock runs on lab time from the reset (A-USLAB; E120's TFT
+    // open 0.34 s instead of 0.19 s, the E144 family's start 150 ms longer on the TFT and 190 ms on the EVF, X), 300 s
+    // while it counted CPU reads before the play bring-up (H-USCOUNT). At the wait's poll the lab stores 1 in the word as
+    // the callback would: the INT comes within the wait's first sleep (I: how long the controller takes is ?)
     const tpInt = fact('touch_int', null) ?? null;                // (fact() gives a read null as undefined)
     this.tp_ints = 0;
     if (tpInt !== null) this.observe(tpInt.poll, (lab) => {

@@ -1775,38 +1775,49 @@ export function touchOpen(img) {
 }
 
 // The touch panel controller's interrupt wait (fact 'touch_int', src/lab/menu.mjs S-TPINTWAIT): the touch driver
-// waits for the controller's INT, GIO pin 30, with a function of its own: `mov d1,d2; clr d1; mov d1,(4,sp); cmp 1,d0;
-// bne; mov d1,(W)` (d0 1 clears the word first), then 2 ms sleeps until `mov (W),d1; cmp 1,d1; beq` finds W 1 or d1
-// ms have passed on the us clock, and returns 1 on the timeout (E120 0x502d9b0c, W 0x61879784, the poll 0x502d9b4c;
-// E122 0x5030c426, W 0x6189f508, D). The pin's callback, which the driver's set-up attaches to pin 30 (E120 0x502d99a2:
-// the GIO class-0 set-up and attach 0x500647b6 / 0x500647ed, the callback 0x502da12c), stores 1 in W while the
-// driver waits for the INT, and otherwise sets bit 1 of the touch task's flag (D). Its one caller logging the
-// timeout, "TP INT TIME OUT\n", is the end of the device open's command list (`call wait; exthu d0; cmp 0,d0; beq;
-// mov <name>,a0`, a 150 ms wait: E120 0x502d0296, E122 0x50302930, D). The name is held once by E118, E120, E122,
-// E134, E137, E125, E133 and E130, by none of the other 10 (X, a string count over each expanded image); E118 loads
-// it after a wait of another form, inline in its touch driver's command list (0x502e3fe3..0x502e400c, D), the five
-// others after no such call (X), and the rule reads none on them. Returns {wait,
-// poll, word} (the functions' offsets in disassembly notation, W at run time), or undefined where the name is not held
-// or not loaded after such a call; throws for a name held twice or a callee of another form.
-const TP_INT_TRACE = 'TP INT TIME OUT\n', TP_INT_SPAN = 0x60;
-const TP_INT_OPENING = [0x86, 0x04, 0x46, 0x04, 0xa0, 0x01, 0xc9, 0x08, 0xfc, 0x85];     // ... mov d1,(W)
+// waits for the controller's INT, a GIO pin, with a function of its own that clears a word W when called with d0 1,
+// then sleeps 2 ms at a time until `mov (W),d1; cmp 1,d1; beq` finds W 1 or d1 ms have passed on the us clock, and
+// returns 1 on the timeout. Two forms of its opening (D):
+// - `mov d1,d2; clr d1; mov d1,(4,sp); cmp 1,d0; bne; mov d1,(W)`: E120 0x502d9b0c (W 0x61879784, the poll
+//   0x502d9b4c), E122 0x5030c426 (W 0x6189f508), E125 0x5022d4d4, E130 0x50207caf, E133 0x501f8a85; the pin's
+//   callback, which the driver's set-up attaches to pin 30 (E120 0x502d99a2: the GIO class-0 set-up and attach
+//   0x500647b6 / 0x500647ed, the callback 0x502da12c), stores 1 in W while the driver waits for the INT, and otherwise
+//   sets bit 1 of the touch task's flag;
+// - `mov d1,a3; mov d0,d2; clr d0; mov d0,(4,sp); mov <pin>,d0; call <enable>; cmp 1,d2; bne; clr d0; mov d0,(W)`,
+//   which enables the pin's interrupt first: E144 0x5018a924 (pin 120, W 0x620c662c, the poll 0x5018a972), E148, E137,
+//   E142 and E140 pin 120, E139 and E134 pin 88; the callback (E144 0x5018b191, attached to pin 120 by the driver's
+//   init 0x5018a7e7 at 0x5018a809) stores 1 in W while the word after it (0x620c6630) is 0, the driver waiting, and
+//   otherwise disables the pin and sets bit 1 of the touch task's flag.
+// The device open's command list ends in such a wait, 150 ms (E120 0x502d0296, E122 0x50302930, which log "TP INT
+// TIME OUT\n" on the timeout; E144 0x50181efb, E125 0x5022a568, E130 0x5020176c, E133 0x501f24be, E134 0x5021139c,
+// which log a numbered error, E144 0x37005206 through 0x50041d51), and the touch task's power-up commands wait 40 or
+// 100 ms (E144 0x5018a0ca, 0x5018a0fa, 0x5018a158, D). One function of either form with its poll within TP_INT_SPAN
+// bytes on each of the 14 bodies named and on E129 and E132 (the first form; the TG-5s' driver has no panel to open,
+// src/fw/facts.mjs touchDriver), none on the E143 family, E145 and E118, whose wait is inline in its touch driver's
+// command list (0x502e3fe3..0x502e400c, D) (X, a byte scan of each expanded image). Returns {wait, poll, word} (the
+// functions' offsets in disassembly notation, W at run time), or undefined where neither form is held; throws for
+// two waits.
+const TP_INT_SPAN = 0x60;
+const TP_INT_OPENINGS = [
+  [0x86, 0x04, 0x46, 0x04, 0xa0, 0x01, 0xc9, 0x08, 0xfc, 0x85],                         // ... mov d1,(W)
+  [0xf1, 0xe7, 0x82, 0x00, 0x42, 0x04, 0x80, null, 0xdd, null, null, null, null, null, null, 0xaa, 0x01, 0xc9, 0x09, 0x00, 0xfc, 0x81],
+];
 export function touchIntWait(img) {
-  const { base } = imageBase(img), at = findString(img, TP_INT_TRACE, { nul: true });
-  if (!at.length) return undefined;
-  if (at.length > 1) throw new Error(`touchIntWait: "TP INT TIME OUT" held ${at.length} times, want one`);
-  // mov <name>,a0 right after `call wait (d32); exthu d0; cmp 0,d0; beq`
-  const sites = loadsOf(img, base + at[0]).filter((o) => img[o + 1] === 0xdc && img[o - 12] === 0xdd
-    && bytesAt(img, o - 5, [0x1c, 0xa0, 0x00, 0xc8]));
-  if (sites.length !== 1) return undefined;
-  const w = callAt(img, sites[0] - 12).to, word = u32(img, w + TP_INT_OPENING.length);
-  let poll = -1;
-  if (bytesAt(img, w, TP_INT_OPENING)) {
-    for (let p = w; p < w + TP_INT_SPAN; p += insnLength(img[p], img[p + 1])) {
-      if (img[p] === 0xfc && img[p + 1] === 0xa5 && u32(img, p + 2) === word && bytesAt(img, p + 6, [0xa5, 0x01, 0xc8])) { poll = p; break; }
+  const found = [];
+  for (const opening of TP_INT_OPENINGS) {
+    for (let w = img.indexOf(opening[0]); w >= 0 && w + opening.length + 4 <= img.length; w = img.indexOf(opening[0], w + 1)) {
+      if (!bytesAt(img, w, opening)) continue;
+      const word = u32(img, w + opening.length);
+      for (let p = w; p < w + TP_INT_SPAN; p += callAt(img, p)?.len ?? insnLength(img[p], img[p + 1])) {
+        if (img[p] === 0xfc && img[p + 1] === 0xa5 && u32(img, p + 2) === word && bytesAt(img, p + 6, [0xa5, 0x01, 0xc8])) {
+          found.push({ wait: 0x50000000 + w, poll: 0x50000000 + p, word });
+          break;
+        }
+      }
     }
   }
-  if (poll < 0) throw new Error(`touchIntWait: the timeout's wait ${h8(0x50000000 + w)} is not 'mov d1,d2; clr d1; mov d1,(4,sp); cmp 1,d0; bne; mov d1,(W)' with a poll 'mov (W),d1; cmp 1,d1; beq' within 0x${TP_INT_SPAN.toString(16)} bytes`);
-  return { wait: 0x50000000 + w, poll: 0x50000000 + poll, word };
+  if (found.length > 1) throw new Error(`touchIntWait: ${found.length} touch INT waits (${found.map((f) => h8(f.wait)).join(', ')}), want one`);
+  return found[0];
 }
 
 // The camera's clock read (fact 'clock.real_time', src/lab/camapp.mjs S-CARD: the date of a picture taken):
@@ -2074,8 +2085,9 @@ export function iicWaits(img) {
 // as E143's on E146 and E147, at 24 and 40 on E144, E139, E137 and E142, at 152 and 36 on E134, E125, E129, E130,
 // E132 and E133 (X, a walk at each port's places). A part is missing where the function at the place loads no stack
 // argument and (a read) keeps no a1 at its entry (E140's write place 0x5016c56e, not checked as its driver's);
-// throws where loads disagree or no ret follows within TOUCH_ARGS_SPAN bytes.
-export const TOUCH_ARGS_E143 = { write_len: { sp: 20 }, read_len: { reg: 'a1' } };
+// throws where loads disagree or no ret follows within TOUCH_ARGS_SPAN bytes. The read's register address too
+// (read_addr, touchAddr below).
+export const TOUCH_ARGS_E143 = { write_len: { sp: 20 }, read_len: { reg: 'a1' }, read_addr: ['d1'] };
 const TOUCH_ARGS_SPAN = 0x400, TOUCH_KEEP = 8;
 function touchLength(img, fn, read) {
   const e = fn - 0x50000000;
@@ -2097,9 +2109,21 @@ function touchLength(img, fn, read) {
   if (args.length) return { sp: args[0] };
   return read && keep ? { reg: 'a1' } : undefined;
 }
+// The read's register address (read_addr, src/lab/play.mjs S-TPREG): the registers that hold its bytes, the high
+// byte first. E143's read takes one byte in d1 (its length in a1); the E144 driver's (and E125's, E120's) opens with
+// `mov a1,d0; movbu d0,(N,sp); movbu d1,(N+1,sp)` and sends the two as the address [d1, a1] (E144 0x5018adf5..0x5018adfa,
+// the transfer's bytes at 0x5018ae80..0x5018ae8f; E142 0x5016cbea, E125 0x50185999, E120 0x502d9bd4, D): ['d1', 'a1'].
+const TOUCH_ADDR16 = [0xf1, 0xd4, 0xf8, 0x92];
+function touchAddr(img, read, len) {
+  for (let p = read - 0x50000000, k = 0; k < TOUCH_KEEP && !isRet(img, p); k++, p += insnLength(img[p], img[p + 1])) {
+    if (bytesAt(img, p, TOUCH_ADDR16) && bytesAt(img, p + 5, [0xf8, 0x96, img[p + 4] + 1])) return ['d1', 'a1'];
+  }
+  return len?.reg === 'a1' ? ['d1'] : undefined;
+}
 function touchArgs(img, write, read) {
   const w = write === null ? undefined : touchLength(img, write, false), r = read === null ? undefined : touchLength(img, read, true);
-  return { ...(w !== undefined && { write_len: w }), ...(r !== undefined && { read_len: r }) };
+  const a = read === null ? undefined : touchAddr(img, read, r);
+  return { ...(w !== undefined && { write_len: w }), ...(r !== undefined && { read_len: r }), ...(a !== undefined && { read_addr: a }) };
 }
 
 // The face plane's colour setter, display_vscdrv_extosd_cpdata_set(channel d0, index d1, word a0) (fact
@@ -3388,7 +3412,7 @@ function evfCode(img, propId) {
 // placement; null: not placed). Returns {app: {module9_readers}}, {state_log: {regs}}, {dispq: {sends, loop, start, replies}}, {play:
 // {wrappers}}, {text: {lang_setting}}, {ae: {init, regions, table, rows (the row form's only)}}, {frame_period: {tft,
 // evf}}, {rtos: {init_task, ta_wu, tsnd_sites}}, {store: {db_save, app_saves}}, {hw_timer: {ptr} or {table}}, {crt:
-// {clock_read}}, {touch_args: {write_len, read_len}}, {dial: {select, select_end, table_ptr, table0}}, {ui_in: {task,
+// {clock_read}}, {touch_args: {write_len, read_len, read_addr}}, {dial: {select, select_end, table_ptr, table0}}, {ui_in: {task,
 // forward}}, {touch_start: {init, id_word}}, {frame_mode: {set}}, {frame_plane: {mode, uploads}}, {prop: {device, evf_code}} and
 // {lens_driver: {module_init, cache_init, task_vars, tasks, exec_queue, flags, cache_area}} (no state_log part where
 // the GUI state log is not placed or has not one call; no app, text or

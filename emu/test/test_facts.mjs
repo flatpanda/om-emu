@@ -522,8 +522,11 @@ const APP_SAVES_COUNT = {
 // The touch I2C functions' length arguments (touch_args; src/fw/facts.mjs touchArgs) at the port's places: E143's as the
 // lab read them before the rule (src/lab/display.mjs: the write's u16 at sp+20, the read's a1; D, 0x501e4e10 and
 // 0x501e4f2e), E144's and E142's driver's (D: E142's write `movhu (292,sp),d2` after `add -268,sp`, its read
-// `movhu (40,sp),d0` at 0x5016cc87; E144's the same at 0x5018aab3 and 0x5018ae92) and E134's (X, a walk of each)
-const ta = (w, r) => ({ write_len: { sp: w }, read_len: r === 'a1' ? { reg: 'a1' } : { sp: r } });
+// `movhu (40,sp),d0` at 0x5016cc87; E144's the same at 0x5018aab3 and 0x5018ae92) and E134's (X, a walk of each);
+// the read's register address, E143's d1 (S-TPREG's register), the E144 driver's d1 and a1 (D: E144's read opens
+// `mov a1,d0; movbu d0,(12,sp); movbu d1,(13,sp)` at 0x5018adf5 and sends the two at 0x5018ae80..0x5018ae8c; E142's
+// at 0x5016cbea, E134's at its read)
+const ta = (w, r) => ({ write_len: { sp: w }, read_len: r === 'a1' ? { reg: 'a1' } : { sp: r }, read_addr: r === 'a1' ? ['d1'] : ['d1', 'a1'] });
 const TOUCH_ARGS_FOUND = { E143: TOUCH_ARGS_E143, E147: ta(20, 'a1'), E144: ta(24, 40), E142: ta(24, 40), E134: ta(152, 36) };
 // The PC state's USB-disconnect power-off post (power_off.usb_disconnect; src/fw/facts.mjs usbPowerOff) as read at
 // the calls (D: E143's after its trace load 0x5106174a; E144's and E139's S-NOPOWEROFF call_skips as src/fw/models.mjs
@@ -578,7 +581,9 @@ const RECVIEW_FOUND = { E143: { word: 0x6035E9C8, standby: 1 }, E142: { word: 0x
   E120: { word: 0x615E07A0, standby: 1 }, E118: { word: 0x615DEC74, standby: 1 }, E122: { word: 0x61600A74, standby: 1 } };
 // The touch controller's INT wait (touch_int; src/fw/facts.mjs touchIntWait): E120's and E122's (D: the waits
 // 0x502d9b0c and 0x5030c426, called before the "TP INT TIME OUT" trace at 0x502d0296 and 0x50302930, their polls of
-// the word the pin-30 callback 0x502da12c / its E122 counterpart sets); none on E118 (its wait is inline, D) and E143
+// the word the pin-30 callback 0x502da12c / its E122 counterpart sets), E144's of the other form (D: the wait
+// 0x5018a924 the open calls at 0x50181efb, its poll of the word the pin-120 callback 0x5018b191 sets) and E125's of
+// the first (D: the wait 0x5022d4d4 the open calls at 0x5022a568); none on E118 (its wait is inline, D) and E143
 // The camera's clock getter (clock.real_time; src/fw/facts.mjs realTimeGetter): the E118 family's
 // api_sctime_GET_REAL_TIME (D: E122 0x502ee369, its trace's load at 0x502ee36c, called at 0x506d4619, 0x5071bfb5 and
 // 0x50740e13; E118's and E120's the same opening); none on E143 and E144 (no such name)
@@ -591,7 +596,8 @@ const CLOCK_FOUND = { E122: 0x502EE369, E118: 0x502CB0DB, E120: 0x502BE4D7, E143
 const STILL_FOUND = { E143: { focal: { at: 148, size: 4 }, iso: { at: 100, size: 4 } }, E122: { focal: { at: 136, size: 4 }, iso: { at: 90, size: 2 } },
   E144: { focal: { at: 144, size: 4 }, iso: { at: 98, size: 2 } }, E134: null };
 const TOUCH_INT_FOUND = { E120: { wait: 0x502D9B0C, poll: 0x502D9B4C, word: 0x61879784 },
-  E122: { wait: 0x5030C426, poll: 0x5030C466, word: 0x6189F508 }, E118: null, E143: null };
+  E122: { wait: 0x5030C426, poll: 0x5030C466, word: 0x6189F508 }, E144: { wait: 0x5018A924, poll: 0x5018A972, word: 0x620C662C },
+  E125: { wait: 0x5022D4D4, poll: 0x5022D514, word: 0x62241158 }, E118: null, E143: null };
 // The property store's module init and its object words (prop_store; src/fw/facts.mjs propStore): E143's (D: the
 // settings init chain 0x503dae30 calls 0x503ee2d6 at 0x503dae75; its pointer stores 0x503ee375..0x503ee39b) and E122's
 // (D: 0x502cf141, its pointer stores from 0x502cf1d3); the rule finds one on each of the 18 unpacked bodies (X)

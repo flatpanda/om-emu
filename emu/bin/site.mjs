@@ -86,6 +86,39 @@ export function buildSite(dir, root = EMU) {
   return { files: files.length, bytes };
 }
 
+// A plain static server of a built site under prefix (/name/), as GitHub Pages serves a project site: index.html for a
+// directory, a 301 to add a directory's slash (the prefix's too), its content types by extension, no other route and
+// no other header. host: where it listens (127.0.0.1). Resolves to {server, origin, base, served: [[method, path,
+// code]]}, every request answered in order (the browser gates check it).
+export const PAGES_TYPES = { '.html': 'text/html; charset=utf-8', '.mjs': 'application/javascript; charset=utf-8', '.js': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
+export async function serveSite(dir, prefix, host = '127.0.0.1') {
+  const http = await import('node:http');
+  const served = [];
+  const server = http.createServer((q, s) => {
+    const url = new URL(q.url, 'http://x');
+    const answer = (code, headers = {}) => { served.push([q.method, url.pathname, code]); s.writeHead(code, headers); };
+    if (q.method !== 'GET' && q.method !== 'HEAD') { answer(405); return s.end(); }
+    let p;
+    try { p = decodeURIComponent(url.pathname); } catch { answer(400); return s.end(); }
+    if (p === prefix.slice(0, -1)) { answer(301, { Location: prefix }); return s.end(); }
+    if (!p.startsWith(prefix)) { answer(404); return s.end(); }
+    let file = path.normalize(path.join(dir, p.slice(prefix.length)));
+    if (file !== dir && !file.startsWith(dir + path.sep)) { answer(404); return s.end(); }
+    if (fs.existsSync(file) && fs.statSync(file).isDirectory()) {
+      if (!p.endsWith('/')) { answer(301, { Location: p + '/' }); return s.end(); }
+      file = path.join(file, 'index.html');
+    }
+    if (!fs.existsSync(file) || !fs.statSync(file).isFile()) { answer(404); return s.end(); }
+    answer(200, { 'Content-Type': PAGES_TYPES[path.extname(file)] ?? 'application/octet-stream' });
+    if (q.method === 'HEAD') return s.end();
+    fs.createReadStream(file).pipe(s);
+  });
+  await new Promise((res) => server.listen(0, host, res));
+  const origin = `http://${host}:${server.address().port}`;
+  return { server, origin, base: origin + prefix, served };
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const a = process.argv.slice(2);
   try {

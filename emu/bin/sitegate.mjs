@@ -16,10 +16,9 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import http from 'node:http';
 import { spawn } from 'node:child_process';
 import { MODEL, MODEL_INFO, LAB_MODEL, ON_LAB_MODEL } from '../src/fw/model.mjs';
-import { buildSite } from './site.mjs';
+import { buildSite, serveSite } from './site.mjs';
 
 const EMU = path.resolve(new URL('..', import.meta.url).pathname);
 const argv = process.argv.slice(2);
@@ -47,32 +46,8 @@ fs.mkdirSync(PROF);
 const built = buildSite(SITE);
 log(`site: ${built.files} files, ${(built.bytes / 2 ** 20).toFixed(2)} MiB (bin/site.mjs), served under ${PREFIX}`);
 
-// ---- the static server: the tree under PREFIX, as GitHub Pages serves a project site (index.html for a directory, a
-// 301 to add a directory's slash, its content types by extension), no other route and no other header
-const PAGES_TYPES = { '.html': 'text/html; charset=utf-8', '.mjs': 'application/javascript; charset=utf-8', '.js': 'application/javascript; charset=utf-8',
-  '.json': 'application/json; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };
-const served = [];
-const server = http.createServer((q, s) => {
-  const url = new URL(q.url, 'http://x');
-  const answer = (code, headers = {}) => { served.push([q.method, url.pathname, code]); s.writeHead(code, headers); };
-  if (q.method !== 'GET' && q.method !== 'HEAD') { answer(405); return s.end(); }
-  let p;
-  try { p = decodeURIComponent(url.pathname); } catch { answer(400); return s.end(); }
-  if (p === PREFIX.slice(0, -1)) { answer(301, { Location: PREFIX }); return s.end(); }
-  if (!p.startsWith(PREFIX)) { answer(404); return s.end(); }
-  let file = path.normalize(path.join(SITE, p.slice(PREFIX.length)));
-  if (file !== SITE && !file.startsWith(SITE + path.sep)) { answer(404); return s.end(); }
-  if (fs.existsSync(file) && fs.statSync(file).isDirectory()) {
-    if (!p.endsWith('/')) { answer(301, { Location: p + '/' }); return s.end(); }
-    file = path.join(file, 'index.html');
-  }
-  if (!fs.existsSync(file) || !fs.statSync(file).isFile()) { answer(404); return s.end(); }
-  answer(200, { 'Content-Type': PAGES_TYPES[path.extname(file)] ?? 'application/octet-stream' });
-  if (q.method === 'HEAD') return s.end();
-  fs.createReadStream(file).pipe(s);
-});
-await new Promise((res) => server.listen(0, '127.0.0.1', res));
-const ORIGIN = `http://127.0.0.1:${server.address().port}`, BASE = ORIGIN + PREFIX;
+// ---- the static server: the tree under PREFIX, as GitHub Pages serves a project site (bin/site.mjs serveSite)
+const { server, served, base: BASE } = await serveSite(SITE, PREFIX);
 
 // ---- Chrome, as webgate starts it (own process group, fresh profile, killed and removed at the end)
 const chrome = spawn(CHROME, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${PROF}`, '--no-first-run', '--no-default-browser-check',

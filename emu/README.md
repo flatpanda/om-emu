@@ -18,8 +18,11 @@ is in [ARCHITECTURE.md](ARCHITECTURE.md) and the known departures from the hardw
 - For `bin/webgate.mjs`: the `.BIN` (`$OM_BIN`, or `$OM_FW_DIR` holding it) and Chrome: `--chrome PATH`, else the
   first found of `/usr/bin/google-chrome-stable`, `/usr/bin/google-chrome`, `/usr/bin/chromium`,
   `/usr/bin/chromium-browser` and the macOS Chrome and Chromium apps in `/Applications` (tested with Chrome
-  155.0.8059.39 on Linux and 155.0.8059.85 on macOS). The browser player itself needs a browser with module Workers and
-  OPFS.
+  155.0.8059.39 on Linux and 155.0.8059.85 on macOS). The browser player itself needs a browser with module Workers; with
+  OPFS it also keeps the firmware and the settings (without it, it runs from the `.BIN` at each start).
+- For `bin/browsergate.mjs`: the `.BIN`s as for webgate, and on Linux Firefox with geckodriver and WebKitGTK's
+  MiniBrowser with `WebKitWebDriver` and Xvfb (tested 2026-11-02 in an Arch Linux ARM VM: Firefox 159.0, geckodriver
+  0.37.1, WebKitGTK 2.54.2; on Arch, `pacman -S firefox geckodriver webkitgtk-6.0 xorg-server-xvfb`).
 
 ## Quick start
 
@@ -490,6 +493,24 @@ checks the firmware panel, chooses the `.BIN` through the file input and waits f
 A second page started by dropping the `.BIN` must reach it too. Every request must be a body-less GET under the
 prefix, every answer a 200, and no page or Worker may throw. Screenshots go to `emu/out/web/site/`.
 
+**Other browsers.** `OM_FW_DIR=fw node emu/bin/browsergate.mjs` runs the same site in headless Firefox and in WebKit
+(WebKitGTK's MiniBrowser, the engine Safari is built on), driven over W3C WebDriver (`host/webdriver.mjs`, node's
+`fetch`, no npm packages): the landing page and its link, the `.BIN` by the file input to the shooting screen, the
+canvas read back equal to the RGBA the Worker sent, webgate's keys and touch (M, Down, M, a press on the monitor,
+Enter) each with its GUI state, a picture taken (S1, S2) and read in the Card panel (thumbnail and view), LV to the
+EVF and back (its 1600 x 1200 canvas read back as the TFT's), the pace at
+`--idle wall`, a second page from the OPFS cache, and E144 by `?model=E144` with its own `.BIN`. Firefox 159 runs all of
+it with no change to the page. WebKitGTK ships the Storage API off, so it has no `navigator.storage` and no OPFS: the page then
+runs from the `.BIN` alone (`web/opfs.mjs` `unsupported()`), says at the start that the firmware is not cached and why,
+offers no cache, and disables "Keep the settings"; a browser whose OPFS is there but refuses runs the same way with
+the error named. `--browser webkit-storage` switches WebKitGTK's Storage API, OPFS and access handles
+on, as Safari ships them: in WebKitGTK 2.54 its `getDirectory` rejects in an automation session (UnknownError) and its
+`createSyncAccessHandle` is not supported outside one, so Safari's own cache path is untested
+(`docs/model-survey.md` findings 78-80). Safari itself on macOS is driven by `safaridriver`, which its user must enable
+once (`safaridriver --enable`, an administrator's password, and Safari's Develop menu > Allow Remote Automation, with
+the Develop menu shown from Settings > Advanced); the gate has no Safari entry. Screenshots go to
+`emu/out/web/<browser>/`.
+
 ## Layout
 
 - `src/`: the machine and the harness, with no node APIs, so that it runs in a Web Worker. `core/` the CPU, the
@@ -582,6 +603,7 @@ firmware the run warns and skips that rule. `--explain N` prints what each firmw
 | `node emu/bin/playperf.mjs` | the play workload on the Player; exit 1 unless its digest is `364806f182da750f` | the firmware |
 | `node emu/bin/snapgate.mjs kernel-5c osd shoot-tft` | snapshot detours leave the sessions and the end state unchanged; detours run three times from one snapshot trace identically, a short one and one of at least 10,000 instructions per session (99,205, 200,002 and 103,598 on these three, 2026-10-29) | the firmware |
 | `OM_FW_DIR=fw node emu/bin/sitegate.mjs` | the published site (`bin/site.mjs`) from a plain static server under `/om-emu/` in headless Chrome: the landing page and its link, the firmware panel, the `.BIN` by the file input and by a drop to the shooting screen, only GETs under the prefix, all answered; under a minute | the `.BIN`, Chrome |
+| `OM_FW_DIR=fw node emu/bin/browsergate.mjs [--browser firefox\|webkit\|webkit-storage]` | the published site under `/om-emu/` in headless Firefox and in WebKitGTK over WebDriver (all three by default): the landing page, the `.BIN` by the file input to the shooting screen, the canvas against the Worker's RGBA, keys and a touch, a picture in the Card panel, the EVF's canvas, the OPFS cache on a second page (or, where the browser keeps none, the page saying why), E144 by `?model=`, only GETs under the prefix; about 2 min | the E143 and E144 `.BIN`s; geckodriver and Firefox, WebKitWebDriver, MiniBrowser and Xvfb (Linux) |
 | `OM_FW_DIR=fw node emu/bin/webgate.mjs --rounds 4` | headless Chrome: the Worker against node and `bin/run.mjs`, the page (keys, touch, canvas, session log; the Card panel's read, Take out and Put in with a 64 GiB card picked by the Card start option, and the HDMI control without the port; the EVF layout's class and canvas size after LV to the EVF and back), no uploads; about 5 min | the `.BIN`, Chrome |
 | `node emu/bin/modelcheck.mjs` | the ported models marked `checked` in `src/fw/models.mjs` (E146, E147, E148, E144, E139, E134, E137, E142, E140, E125, E130, E133, E145, E129, E132, E122, E118, E120), or those named: start (E145 and E129: then MENU at the date and time setting, E132: the clock set there by UP and OK on each field, `START_PROMPT`), S1, S2, PLAY, INFO, PLAY on the TFT, and start, S1, S2 on the EVF of a body with one; GUI states by name; after S1 the count probe: the screen must change with the remaining-shots query's answer (S-CARD's count, or on a body whose card is native the firmware's, replaced for one window by the probe's own answer of the query) and only there, on a body whose application asks for the count only when its shooting screen is redrawn (E118, E120, E122: `PROBE_REDRAW`) with the screen redrawn by INFO through its views before each window; on a body whose card is native the card check: mounted, the shots counted from it, each picture's file found again by `refs/volume.mjs` (FAT or exFAT) with its size (all pass; a body expected to fail it goes in PROBE_XFAIL with its reason, strictly: a pass of an expected failure fails the run); `--card-size GiB` puts a blank card of that size in the slot (with an SDXC card E144 is expected to stop, SDXC_XFAIL, as strictly) | the models' firmware |
 | `node emu/test/test_scpum4.mjs [--session]` | also in both suites above: the bridge that puts the SCPU's own firmware behind the link, its clock (A-SCPUM4-1), the frame log rebuilt from the wire against S-SCPUDEV's own, the byte mover through SPI2 and DMA1 (pure); with `--session` a play session's start with S-SCPUDEV and with the SCPU's firmware (`OM_EMU_SCPU=native`), whose frame log, transfers and pin levels must equal S-SCPUDEV's (`OM_EMU_MODEL=E146` for E146) | the E143 (or E146) firmware blocks and SCPU block for `--session` |
@@ -592,7 +614,8 @@ What the tests compare with is emu's own data, and it is regression data, not a 
 checks' notes files and pinned results under `checks/fixtures/` come from emu's own runs, and the 5,311 ISA vectors
 (`test/fixtures/isa_vectors.json`) are recorded vectors, fixed data that no tool in this tree regenerates. The replayed
 scenarios' inputs (`scenarios/calls/`) are the other recorded data, replayed as inputs only. A checkout with the fetched
-firmware runs every command above but `webgate`, which also needs Chrome.
+firmware runs every command above but `webgate` and `sitegate`, which also need Chrome, and `browsergate`, which needs
+Firefox and WebKitGTK with their drivers.
 
 An intended behaviour change updates a fixture only with a recorded reason and its evidence level (firmware code,
 manual, camera). `bin/golden.mjs record` asks for both (`--reason`, `--evidence`) and writes them into `golden.json`'s

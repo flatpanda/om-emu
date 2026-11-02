@@ -24,8 +24,8 @@
 //               its caller word against CALLER_FOUND and A(), the kernel's interrupt handler tables against HANDLERS_FOUND, the frame period words against PERIOD_FOUND and A(), the function direct start against DIRECT_FOUND and
 //               A(), the event broker init against BROKER_FOUND and A(), the error log against ERRLOG_FOUND and A(),
 //               the touch panel's open against TP_OPEN_FOUND and A(), the play component's wrappers against
-//               WRAPPERS_FOUND and A(), the clock getter against CLOCK_FOUND, the still information's layout against
-//               STILL_FOUND, the USB-disconnect power-off against POWER_OFF_FOUND, the power manager's
+//               WRAPPERS_FOUND and A(), the clock getter against CLOCK_FOUND, the GUI state table's bound against STATES_FOUND, the still information's
+//               layout against STILL_FOUND, the USB-disconnect power-off against POWER_OFF_FOUND, the power manager's
 //               start and the power-off sequence against POWER_SEQ_FOUND, the serial controller's driver against
 //               SIO_FOUND, the GUI canvas, OSD banks
 //               and kind-3 area against GUI_FOUND, the rec view component's state word against RECVIEW_FOUND, CPU 0's
@@ -588,13 +588,22 @@ const RECVIEW_FOUND = { E143: { word: 0x6035E9C8, standby: 1 }, E142: { word: 0x
 // api_sctime_GET_REAL_TIME (D: E122 0x502ee369, its trace's load at 0x502ee36c, called at 0x506d4619, 0x5071bfb5 and
 // 0x50740e13; E118's and E120's the same opening); none on E143 and E144 (no such name)
 const CLOCK_FOUND = { E122: 0x502EE369, E118: 0x502CB0DB, E120: 0x502BE4D7, E143: null, E144: null };
+// The GUI state table's bound (gui_states.parents; src/fw/facts.mjs stateTableBound) at the port's place of E143's
+// table: E143's 12 (D: `cmp 12,d3; lcs` at 0x5124b478 in the name lookup that loads the table at 0x5124b467) and
+// E145's 18 (D: 0x50de87bf, after the load at 0x50de87ae)
+const STATES_FOUND = { E143: 12, E145: 18 };
 // The still information's layout (play.still; src/fw/facts.mjs stillFields) at the port's place of E143's converter
 // 0x50acc981: E143's (D: `mov (148,a3),d0` to the GUI's +56 at 0x50accaf3, `mov (100,a3),d0` to +88 at 0x50accaa4,
 // the u32 +100 S-PLAYCOMP's pattern found), E122's (D: 0x506a9e36 and 0x506a9deb, `movhu (90,a3),d0`), E144's at the
-// call after its getStillInfo wrapper's (0x5084c88b, its expanded image; X: the rule) and E134's, a form the
-// rule does not read (D: its converter 0x5082c25e reads the information through d3)
-const STILL_FOUND = { E143: { focal: { at: 148, size: 4 }, iso: { at: 100, size: 4 } }, E122: { focal: { at: 136, size: 4 }, iso: { at: 90, size: 2 } },
-  E144: { focal: { at: 144, size: 4 }, iso: { at: 98, size: 2 } }, E134: null };
+// call after its getStillInfo wrapper's (0x5084c88b, its expanded image; X: the rule), and by the record form E134's
+// (D: its converter 0x5082c25e, the information in d3, `mov (144,a0),d0` to the GUI's +56 at 0x5082c42e, `movhu
+// (98,a0),d0` to +88 at 0x5082c3b9) and E132's (D: 0x5068b037, `mov (136,a0),d0` at 0x5068b1fe, `movhu (90,a0),d0`
+// at 0x5068b197)
+const STILL_FOUND = { E143: { convert: 0x50ACC981, focal: { at: 148, size: 4 }, iso: { at: 100, size: 4 } },
+  E122: { convert: 0x506A9CC9, focal: { at: 136, size: 4 }, iso: { at: 90, size: 2 } },
+  E144: { convert: 0x5084C88B, focal: { at: 144, size: 4 }, iso: { at: 98, size: 2 } },
+  E134: { convert: 0x5082C25E, focal: { at: 144, size: 4 }, iso: { at: 98, size: 2 } },
+  E132: { convert: 0x5068B037, focal: { at: 136, size: 4 }, iso: { at: 90, size: 2 } } };
 const TOUCH_INT_FOUND = { E120: { wait: 0x502D9B0C, poll: 0x502D9B4C, word: 0x61879784 },
   E122: { wait: 0x5030C426, poll: 0x5030C466, word: 0x6189F508 }, E144: { wait: 0x5018A924, poll: 0x5018A972, word: 0x620C662C },
   E125: { wait: 0x5022D4D4, poll: 0x5022D514, word: 0x62241158 }, E118: null, E143: null };
@@ -868,8 +877,10 @@ export function factsTests() {
       const off = WRAPPERS_FOUND.E143.map((v) => PORTS[code][v]).filter((t) => t !== null && !pw.includes(t));
       ok(!off.length, `${code}: A() of E143's play component wrappers ${hx(off)}, not among the rule's`);
     }
-    // the camera's clock getter, and the still information's layout at the port's place of E143's converter
+    // the camera's clock getter, the GUI state table's bound, and the still information's layout at the port's place
+    // of E143's converter
     if (Object.hasOwn(CLOCK_FOUND, code)) ok(got.clock?.real_time === CLOCK_FOUND[code], `${code}: clock.real_time ${hx(got.clock ?? got)}, found ${hx(CLOCK_FOUND[code] ?? 'none')}`);
+    if (Object.hasOwn(STATES_FOUND, code) && (code === 'E143' || PORTS[code])) ok(placed?.gui_states?.parents === STATES_FOUND[code], `${code}: gui_states ${hx(placed?.gui_states ?? placed)}, found ${STATES_FOUND[code]}`);
     if (Object.hasOwn(STILL_FOUND, code) && (code === 'E143' || PORTS[code])) ok(same(placed?.play?.still, STILL_FOUND[code]), `${code}: play.still ${hx(placed?.play?.still ?? placed)}, found ${hx(STILL_FOUND[code])}`);
     if (Object.hasOwn(TAKE_FOUND, code)) ok(got.menu?.take === TAKE_FOUND[code], `${code}: menu.take ${hx(got.menu ?? got)}, found ${hx(TAKE_FOUND[code] ?? 'none')}`);
     if (Object.hasOwn(CALLER_FOUND, code)) ok(got.menu?.caller === CALLER_FOUND[code], `${code}: menu.caller ${hx(got.menu ?? got)}, found ${hx(CALLER_FOUND[code])}`);

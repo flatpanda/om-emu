@@ -420,6 +420,25 @@ export function stateLog(img, log) {
   throw new Error(`stateLog: no store of the new state within 0x${STATE_LOG_SPAN.toString(16)} bytes before the call ${h8(0x50000000 + call)}`);
 }
 
+// The GUI state table's length (fact 'gui_states.parents', src/lab/menu.mjs state_names): the table of parents (12
+// bytes a row: u16 parent, name, the children's table) at the port's place of E143's STATE_TABLE_E143. The firmware's
+// name lookup loads the table (E143 0x5124b459: `mov 0x61596fb8,a1` at 0x5124b467) and ends its search at the bound,
+// `cmp N,d3; lcs; cmp N,d3; bcc` (af N d4 af N; E143 12 at 0x5124b478, E145 18 at 0x50de87bf, D). The rule reads N
+// after each load of the table's address, walking STATES_SPAN bytes of instructions. Returns N, or undefined where no
+// load is followed by the bound; throws where two loads give two bounds.
+export const STATE_TABLE_E143 = 0x61596FB8, STATE_PARENTS_E143 = 12;
+const STATES_SPAN = 0x30;
+export function stateTableBound(img, table) {
+  const found = new Set();
+  for (const l of loadsOf(img, table)) {
+    for (let p = l; p < l + STATES_SPAN; p += insnLength(img[p], img[p + 1])) {
+      if (img[p] === 0xaf && img[p + 2] === 0xd4 && img[p + 3] === 0xaf && img[p + 4] === img[p + 1]) { found.add(img[p + 1]); break; }
+    }
+  }
+  if (found.size > 1) throw new Error(`stateTableBound: the loads of the state table ${h8(table)} end at ${[...found].join(' and ')}, want one bound`);
+  return found.size ? [...found][0] : undefined;
+}
+
 // Whether the SCPU keeps the camera's backup words and clock (fact 'scpu.backup'): the image holds the trace names of
 // those requests, "ScpuBkupW" (with "ScpuBkupR", "SctimeWrite"; E143's poster 0x5005cd17 sends them, D). E143, E146,
 // E147, E139 and E134 hold all three; E144 and the other 12 E144- and E118-family bodies none (X, a string count over
@@ -3019,22 +3038,26 @@ export function componentWrappers(img, getter) {
 // moved: E143's focal length is its u32 +148, E122's +136, E143's ISO (the GUI's +88) its u32 +100, E122's u16 +90
 // (D, the two converters side by side; X: the GUI drew E122's ISO 200 and 2.5mm for 25 at those, the focal length in
 // tenths of a mm). The converter copies such a field by `mov (d,Am),d0` or `movhu (d,Am),d0` (d8 or d16; Am a3, or a0
-// reloaded from the stack, E129 0x5068af64), then `mov G,a0; add d3,a0`, G the GUI record's offset; the rule walks the
-// converter from its entry to its first return and reads the copies to the GUI's STILL_GUI offsets. The converter is
-// the one the port places (stillConverter), else the first call after the one call of the getStillInfo wrapper (E143
-// 0x50acf1fa, S-PLAYCOMP's; E144's converter 0x5084c88b, which the port leaves unplaced, D). E143, E146 and E147 {focal
-// 148/4, iso 100/4}; the E118 family, E137, E142, E140, E145, E133, E130, E129 {136/4, 90/2}; E144, E139, E125
-// {144/4, 98/2} (X, the rule at each port's converter). E134's converter keeps the information in d3 and the record
-// elsewhere (0x5082c39f: `mov 56,a0; add d3,a0; mov (a0),d0` reads the f-number, D), E132's another form too: forms
-// the rule does not read, null (X). Returns {focal: {at, size},
-// iso: {at, size}}, or null where the walk finds no such copy; throws where a field is copied twice or not at all
-// while the other is, or the walk finds no return within STILL_WALK instructions.
+// reloaded from the stack, E129 0x5068af64), then `mov G,a0; add d3,a0`, G the GUI record's offset. E134's and E132's
+// converters keep the GUI record on the stack instead and form each field's address in d1: the load and `mov
+// (12,sp),d1` in either order, then `add G,d1` (E134 0x5082c3b9..0x5082c3be with the information in d3, `movhu
+// (98,a0),d0` to the GUI's +88; E132 0x5068b193..0x5068b19a with it at (16,sp), `movhu (90,a0),d0`; D); the rule takes
+// both forms, the second from one stack slot. It walks the converter from its entry to its first return and reads the
+// copies to the GUI's STILL_GUI offsets. The converter is the one the port places (stillConverter), else the first
+// call after the one call of the getStillInfo wrapper (E143 0x50acf1fa, S-PLAYCOMP's; E144's converter 0x5084c88b,
+// which the port leaves unplaced, D). E143, E146 and E147 {focal 148/4, iso 100/4}; the E118 family, E137, E142, E140,
+// E145, E133, E130, E129 {136/4, 90/2}; E144, E139, E125 {144/4, 98/2} (X, the rule at each port's converter); E134
+// {144/4, 98/2} and E132 {136/4, 90/2} by the second form (X; before 2026-11-02 null, the form not read). Returns
+// {focal: {at, size}, iso: {at, size}} (the fact adds the converter, convert), or null where the walk finds no such
+// copy; throws where a field is copied twice or not at all while the other is, the second form reads the record from
+// two slots, or the walk finds no return within STILL_WALK instructions.
 export const STILL_CONVERT_E143 = 0x50ACC981, STILL_WRAPPER_E143 = 0x50ACF1FA;
-export const STILL_E143 = { focal: { at: 148, size: 4 }, iso: { at: 100, size: 4 } };
-const STILL_GUI = { focal: 56, iso: 88 }, STILL_WALK = 2000, STILL_AFTER = 12;
+export const STILL_E143 = { convert: STILL_CONVERT_E143, focal: { at: 148, size: 4 }, iso: { at: 100, size: 4 } };
+const STILL_GUI = { focal: 56, iso: 88 }, GUI_OFFSETS = new Set(Object.values(STILL_GUI)), STILL_WALK = 2000, STILL_AFTER = 12;
 export function stillFields(img, convert) {
-  let p = convert - 0x50000000;
-  const copies = new Map();
+  let p = convert - 0x50000000, last = [];
+  const copies = new Map(), slots = new Set();
+  const copy = (g, load) => copies.set(g, [...(copies.get(g) ?? []), { at: load.at, size: load.size }]);
   for (let k = 0; k < STILL_WALK; k++) {
     if (isRet(img, p)) {
       if (!copies.size) return null;
@@ -3050,10 +3073,18 @@ export function stillFields(img, convert) {
     // mov (d8,Am),d0 f8 0m d8 / (d16) fa 0m d16; movhu f8 6m / fa 6m
     const load = (op === 0xf8 || op === 0xfa) && ((o2 & 0xfc) === 0x00 || (o2 & 0xfc) === 0x60)
       ? { at: op === 0xf8 ? img[p + 2] : img[p + 2] | img[p + 3] << 8, size: (o2 & 0xfc) === 0x00 ? 4 : 2, len: op === 0xf8 ? 3 : 4 } : null;
-    if (load && img[p + load.len] === 0x90 && img[p + load.len + 2] === 0xf1 && img[p + load.len + 3] === 0x6c) {
-      const g = img[p + load.len + 1];
-      copies.set(g, [...(copies.get(g) ?? []), { at: load.at, size: load.size }]);
+    if (load && img[p + load.len] === 0x90 && img[p + load.len + 2] === 0xf1 && img[p + load.len + 3] === 0x6c) copy(img[p + load.len + 1], load);
+    // the record form: `add G,d1` (29 G, G one of STILL_GUI's) right after the load and `mov (S,sp),d1` (59 S), in
+    // either order
+    if (op === 0x29 && GUI_OFFSETS.has(o2) && last.length === 2) {
+      const ld = last.find((x) => x.load)?.load, slot = last.find((x) => x.slot !== null)?.slot;
+      if (ld && slot !== undefined) {
+        slots.add(slot);
+        if (slots.size > 1) throw new Error(`stillFields: the converter ${h8(convert)} reads the GUI record from the stack at ${[...slots].join(' and ')}, want one slot`);
+        copy(o2, ld);
+      }
     }
+    last = [last.at(-1), { load, slot: op === 0x59 ? o2 : null }].filter(Boolean);
     p += c ? c.len : insnLength(op, o2);
   }
   throw new Error(`stillFields: no return within ${STILL_WALK} instructions of the converter ${h8(convert)}`);
@@ -3409,13 +3440,15 @@ function evfCode(img, propId) {
 
 // What the rules that read code relative to an E143 function read from one body (src/fw/ports.mjs FACTS[code], with
 // readFacts'; bin/port.mjs): img its run-time image, at(address) the build's address of an E143 one (the port's
-// placement; null: not placed). Returns {app: {module9_readers}}, {state_log: {regs}}, {dispq: {sends, loop, start, replies}}, {play:
-// {wrappers}}, {text: {lang_setting}}, {ae: {init, regions, table, rows (the row form's only)}}, {frame_period: {tft,
+// placement; null: not placed). Returns {app: {module9_readers}}, {state_log: {regs}}, {gui_states: {parents}}, {dispq: {sends, loop,
+// start, replies}}, {play: {wrappers, still}}, {text: {lang_setting}}, {ae: {init, regions, table, rows (the row form's only)}}, {frame_period: {tft,
 // evf}}, {rtos: {init_task, ta_wu, tsnd_sites}}, {store: {db_save, app_saves}}, {hw_timer: {ptr} or {table}}, {crt:
 // {clock_read}}, {touch_args: {write_len, read_len, read_addr}}, {dial: {select, select_end, table_ptr, table0}}, {ui_in: {task,
 // forward}}, {touch_start: {init, id_word}}, {frame_mode: {set}}, {frame_plane: {mode, uploads}}, {prop: {device, evf_code}} and
 // {lens_driver: {module_init, cache_init, task_vars, tasks, exec_queue, flags, cache_area}} (no state_log part where
-// the GUI state log is not placed or has not one call; no app, text or
+// the GUI state log is not placed or has not one call; no gui_states part where the state table is not placed or
+// stateTableBound reads no bound; no still where the getStillInfo converter is not found, still null where
+// stillFields reads no copy; no app, text or
 // frame_period part where MODULE_STATE_GET, the language loader or both vtotal functions are not placed, no play
 // wrappers where the component getter is not, no ae part where AE_INTERP is not and aeRows finds no run; no sends where OlyQeWr is not, no loop or
 // start where CPU 0's kcb or OlyQeRd is not, no replies without the loop and OlyQeWr, no dispq part without either;
@@ -3440,13 +3473,15 @@ export function readPlacedFacts({ img, at }) {
   if (getter !== null) facts.app = { module9_readers: moduleReaders(img, getter) };
   const stateRegs = stateLogFn !== null ? stateLog(img, stateLogFn) : undefined;
   if (stateRegs !== undefined) facts.state_log = { regs: stateRegs };
+  const stateTable = at(STATE_TABLE_E143), parents = stateTable !== null ? stateTableBound(img, stateTable) : undefined;
+  if (parents !== undefined) facts.gui_states = { parents };
   const loop = kcb !== null && qerd !== null ? displayLoop(img, kcb, qerd) : null;
   const dispq = { ...(qewr !== null && { sends: displaySends(img, qewr) }), ...(loop !== null && { loop, start: displayStart(img, loop, qerd) }),
     ...(loop !== null && qewr !== null && { replies: displayReplies(img, loop, qewr) }) };
   if (Object.keys(dispq).length) facts.dispq = dispq;
   // (no wrappers where the getter is not placed: then bin/port.mjs places none of E143's, placedRulePlaces)
-  const convert = stillConverter(img, at);
-  facts.play = { wrappers: component !== null ? componentWrappers(img, component) : [], ...(convert !== null && { still: stillFields(img, convert) }) };
+  const convert = stillConverter(img, at), still = convert !== null ? stillFields(img, convert) : null;
+  facts.play = { wrappers: component !== null ? componentWrappers(img, component) : [], ...(convert !== null && { still: still && { convert, ...still } }) };
   if (loader !== null) facts.text = { lang_setting: langSetting(img, loader) };
   const rows = aeRows(img);
   if (interp !== null && rows) throw new Error(`readPlacedFacts: the AE interpolation is placed at ${h8(interp)} and aeRows finds a row form at ${h8(rows.init)}`);

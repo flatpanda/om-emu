@@ -17,10 +17,11 @@
 // artifacts/nd128/OM1_v1.9_ND128.main-code.bin, built in memory from artifacts/nd128/manifest.json's patches (the file
 // itself is not read). --patch FILE (repeatable; not with --image) runs the stock main code block with FILE's patches
 // instead (src/fw/patch.mjs: a patch whose old bytes are not the stock block's, or two that overlap, is refused, exit
-// 1); the run's JSON then has "patch" (the overlay's summary), and --serve's load without an image loads it, its
-// response's image 'patched: FILE...'. --trace PATH runs the machine in the one-instruction mode (every instruction a
-// one-instruction TB) and writes QEMU -d exec's 'MN10300 pc=' lines (its 'Trace 0:' lines carry host pointers and are
-// not written). As for the checks, OM_MACHINE gives the machine options (checks/lib/env.mjs). Also:
+// 1; so is a patch to the resource block, which this tool does not load); the run's JSON then has "patch" (the
+// overlay's summary), and --serve's load without an image loads it, its response's image 'patched: FILE...'. --trace
+// PATH runs the machine in the one-instruction mode (every instruction a one-instruction TB) and writes QEMU -d exec's
+// 'MN10300 pc=' lines (its 'Trace 0:' lines carry host pointers and are not written). As for the checks, OM_MACHINE
+// gives the machine options (checks/lib/env.mjs). Also:
 //   --serve                     the JSON-lines mode (no --entry needed)
 //   --watch ADDR:LEN[:KIND]     a stopping watchpoint (KIND r, w or rw; default w), per virtual address; a stop on it
 //                               adds "watch" to the output
@@ -75,12 +76,13 @@ function loadImage(p) {
   try { return p === PATCHED ? readPatched() : readBytes(p); } catch (e) { throw new RuntimeError(`${PROG}: cannot read the image ${p} (${e.code ?? e.message})`); }
 }
 // --patch FILE...: the stock main code block with the files' patches (checks/lib/env.mjs patchedFirmware), or null; a
-// refusal exits 1 with its reason, before any machine runs
+// refusal exits 1 with its reason, before any machine runs. The machine here loads no resource block (env has no
+// resBlock), so a patch to it is refused rather than reported as applied
 function patchOverlay(args) {
   if (!args.patch.length) return null;
   if (args.image !== undefined) args.error('--patch applies to the stock main code block: not with --image');
   try {
-    const fw = patchedFirmware(readPatchFiles(args.patch));
+    const fw = patchedFirmware(readPatchFiles(args.patch), { resource: false });
     return { label: `patched: ${args.patch.join(', ')}`, raw: fw.raw, summary: fw.summary };
   } catch (e) {
     if (e instanceof PatchRefused) throw new SystemExit(`${PROG}: --patch refused: ${e.message}`);

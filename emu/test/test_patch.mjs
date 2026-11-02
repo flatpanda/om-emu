@@ -4,21 +4,25 @@
 //                 malformed patch refused, the block references (indices, names), and on synthetic blocks: old bytes
 //                 that differ refused, overlaps refused (in one file and across two, adjacent patches taken), a range
 //                 outside the loaded part refused, and the applied overlay: the bytes, the stock blocks untouched, the
-//                 counts and both digests
+//                 counts and both digests; a --replay of a session.json that records a patch refused without an
+//                 overlay (src/lab/player.mjs replayPatchRefusal), taken with one, and a session.jsonl not checked
 //   patchSession  (E143's blocks) a patch file the test writes: 16 bytes of the main block's 0xFF tail padding
 //                 (0x1ffff00, never run: the code ends at 0x1a70c3b) changed and 8 bytes of the resource block's index
-//                 written as they are; bin/debug.mjs reads the new bytes at their run-time and flash addresses;
-//                 bin/play.mjs prints the patched line, its status and GET /api/session carry the summary (the main
+//                 written as they are; bin/debug.mjs, which loads no resource block, refuses that file and reads the
+//                 new bytes of the main block's patch alone at their run-time and flash addresses; bin/play.mjs prints the patched line, its status and GET /api/session carry the summary (the main
 //                 block's sha256 the test computes, the resource block's the stock prefix's), the live debug route reads
 //                 the new bytes after the bring-up, the session runs, a model switch is refused, and session.json has
 //                 the summary but no patch among its args; bin/nav.mjs prints the line and its session.json the summary;
-//                 a file whose old bytes differ and an overlap are refused by all three tools (exit 1) before any lab
+//                 a file whose old bytes differ, an overlap and a file that cannot be read are refused by all three
+//                 tools (exit 1) before any lab; play.mjs --replay of the patched session.json without --patch is
+//                 refused before the server starts
 //   node emu/test/test_patch.mjs [--session]
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { PatchRefused, readPatchText, applyPatches, patchLayout, resolveBlock, patchLine } from '../src/fw/patch.mjs';
 import { createHash } from '../src/util/sha256.mjs';
+import { replayPatchRefusal } from '../src/lab/player.mjs';
 
 const EMU = path.resolve(new URL('..', import.meta.url).pathname);
 const REPO = path.dirname(EMU);
@@ -101,6 +105,18 @@ export function patchUnits() {
   const only = apply([['a.json', [p(0, 0, [0], [1])]]]);
   ok(only.blocks.resource === resource && only.summary.blocks.length === 1, 'an unpatched block is the caller\'s own');
   ok(/^3 patches \(3 bytes changed\) from a.json, b.json; main block sha256 [0-9a-f]{16} \(stock [0-9a-f]{16}\), resource block sha256 /.test(patchLine(s)) && /^1 patch \(/.test(patchLine(only.summary)), `patchLine: ${patchLine(s)}`);
+
+  // a --replay of a patched session: its session.json's patch without an overlay refused, with one taken
+  const logged = JSON.stringify({ args: {}, inputs: [], patch: only.summary });
+  const why = replayPatchRefusal('out/x/session.json', logged, null);
+  ok(why !== null && why.startsWith('--replay out/x/session.json: the session ran on patched firmware (1 patch (1 bytes changed) from a.json; main block sha256 ') && /refused without --patch/.test(why),
+    `a patched session.json without --patch: ${why}`);
+  ok(replayPatchRefusal('session.json', logged, only.summary) === null, 'a patched session.json with an overlay');
+  ok(replayPatchRefusal('session.json', JSON.stringify({ args: {}, inputs: [] }), null) === null, 'a stock session.json');
+  ok(replayPatchRefusal('session.json', JSON.stringify({ inputs: [], patch: {} }), null) === '--replay session.json: the session ran on patched firmware (a patch overlay): refused without --patch (give the same --patch FILE again)',
+    'a patch field patchLine cannot read is still refused');
+  ok(replayPatchRefusal('session.jsonl', logged, null) === null && replayPatchRefusal('session.json', '{', null) === null,
+    'a session.jsonl and a malformed file are not this check\'s');
   return { checks, bad };
 }
 
@@ -134,13 +150,21 @@ export async function patchSession() {
       s.blocks.length === 2 && s.blocks[0].block === 'main' && s.blocks[0].sha256 === wantSha && s.blocks[0].stock_sha256 === MODEL_INFO.rom_sha256 &&
       s.blocks[1].block === 'resource' && s.blocks[1].sha256 === stockRes && s.blocks[1].stock_sha256 === stockRes;
 
-    // bin/debug.mjs: the bytes in the machine at both addresses, the summary in its JSON
-    const d = node([path.join(EMU, 'bin/debug.mjs'), '--entry', '0x502d0336', '--stop', '0x502d0336', '--patch', file, '--read', `${run}:16`, '--read', `${flash}:16`]);
+    // bin/debug.mjs: it loads no resource block, so the file's resource patch is refused; the main block's patch alone:
+    // the bytes in the machine at both addresses, the summary in its JSON
+    const mainOnly = path.join(tmp, 'main.json');
+    fs.writeFileSync(mainOnly, JSON.stringify([{ block: 0, offset: TAIL, old: b64(tail), new: b64(NEW.subarray(0, 16)), label: 'tail padding' }]));
+    const dr = node([path.join(EMU, 'bin/debug.mjs'), '--entry', '0x502d0336', '--stop', '0x502d0336', '--patch', file]);
+    ok(dr.status === 1 && /^debug.mjs: --patch refused: .*tiny.json patch 1 \(index head as it is\): the resource block is not loaded here/.test(dr.stderr) && !dr.stdout,
+      `debug.mjs refuses a resource-block patch: rc ${dr.status} ${dr.stderr.slice(0, 300)}`);
+    const d = node([path.join(EMU, 'bin/debug.mjs'), '--entry', '0x502d0336', '--stop', '0x502d0336', '--patch', mainOnly, '--read', `${run}:16`, '--read', `${flash}:16`]);
     let dj = null;
     try { dj = JSON.parse(d.stdout); } catch { /* reported below */ }
     const hx = (a) => '0x' + a.toString(16).padStart(8, '0');
-    ok(d.status === 0 && dj && dj.memory[hx(run)] === hexNew && dj.memory[hx(flash)] === hexNew && summaryOk(dj.patch) && /debug.mjs: patched: 2 patches \(16 bytes changed\)/.test(d.stderr),
-      `debug.mjs --patch: rc ${d.status} ${JSON.stringify(dj?.memory)} ${d.stderr.slice(0, 300)}`);
+    const ds = dj?.patch;
+    ok(d.status === 0 && dj && dj.memory[hx(run)] === hexNew && dj.memory[hx(flash)] === hexNew && /debug.mjs: patched: 1 patch \(16 bytes changed\)/.test(d.stderr) &&
+      ds && ds.applied === 1 && ds.bytes === 16 && ds.blocks.length === 1 && ds.blocks[0].block === 'main' && ds.blocks[0].sha256 === wantSha,
+      `debug.mjs --patch: rc ${d.status} ${JSON.stringify(dj?.memory)} ${JSON.stringify(ds)} ${d.stderr.slice(0, 300)}`);
 
     // bin/play.mjs: the line, the status, the session options, the bytes after the bring-up, session.json
     const pl = await startPlay('patch', ['--idle', 'off', '--patch', file]);
@@ -162,6 +186,11 @@ export async function patchSession() {
     let doc = null;
     try { doc = JSON.parse(fs.readFileSync(path.join(pl.out, 'session.json'), 'utf8')); } catch { /* reported below */ }
     ok(doc && summaryOk(doc.patch) && !('patch' in doc.args), `session.json: patch ${JSON.stringify(doc?.patch)?.slice(0, 200)}, args ${Object.keys(doc?.args ?? {})}`);
+    // its --replay without --patch: refused before the server starts, never run on the stock blocks
+    const sj = path.join(pl.out, 'session.json');
+    const rp = node([path.join(EMU, 'bin/play.mjs'), '--no-browser', '--out', path.join(tmp, 'replayed'), '--replay', sj], { timeout: 60000 });
+    ok(rp.status === 1 && rp.stderr.startsWith(`play.mjs: --replay ${sj}: the session ran on patched firmware (2 patches (16 bytes changed) from ${file}; main block sha256 ${wantSha.slice(0, 16)}`) &&
+      !/play: http/.test(rp.stdout) && !fs.existsSync(path.join(tmp, 'replayed')), `play.mjs --replay of the patched session without --patch: rc ${rp.status} ${rp.stderr.slice(0, 300)} ${rp.stdout.slice(0, 200)}`);
 
     // bin/nav.mjs: the line first, session.json's patch
     const navOut = path.join(tmp, 'nav');
@@ -174,9 +203,12 @@ export async function patchSession() {
     const wrong = path.join(tmp, 'wrong.json'), twice = path.join(tmp, 'twice.json');
     fs.writeFileSync(wrong, JSON.stringify([{ block: 0, offset: TAIL, old: b64(NEW.subarray(0, 4)), new: b64(tail.subarray(0, 4)) }]));
     fs.writeFileSync(twice, JSON.stringify([{ block: 'main', offset: TAIL + 8, old: b64(tail.subarray(0, 8)), new: b64(tail.subarray(0, 8)) }]));
-    for (const [what, files, re] of [['old bytes', [wrong], /old bytes differ from the stock main block at 0x01ffff00/], ['an overlap', [file, twice], /overlap in the main block/]]) {
+    const gone = path.join(tmp, 'gone.json');           // never written
+    for (const [what, files, re] of [['old bytes', [wrong], /old bytes differ from the stock main block at 0x01ffff00/], ['an overlap', [file, twice], /overlap in the main block/],
+      ['a file that cannot be read', [gone], /gone.json: cannot read it \(ENOENT\)/]]) {
       const fl = files.flatMap((f) => ['--patch', f]);
-      const runs = [['debug.mjs', ['--entry', '0x502d0336', ...fl], /^debug.mjs: --patch refused: /],
+      const dfl = fl.map((x) => x === file ? mainOnly : x);     // debug.mjs refuses the file's resource patch first
+      const runs = [['debug.mjs', ['--entry', '0x502d0336', ...dfl], /^debug.mjs: --patch refused: /],
         ['play.mjs', ['--no-browser', '--idle', 'off', '--out', path.join(tmp, 'refused'), ...fl], /^play.mjs: --patch refused: /],
         ['nav.mjs', ['--png', 'none', '--out', path.join(tmp, 'refused-nav'), ...fl, 'DOWN'], /^error: --patch refused: /]];
       for (const [tool, args, head] of runs) {

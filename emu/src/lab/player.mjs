@@ -45,6 +45,7 @@ import { LiveDebug } from '../debug/live.mjs';
 import { memoryCard } from './sdcard.mjs';
 import { STORAGE } from './storage.mjs';
 import { AudioRing } from './audio.mjs';
+import { patchLine } from '../fw/patch.mjs';
 
 export const PNG_CACHE = 8, SLICE_NS = 50000000, GATE_SLICE_NS = 10000000, GATE_LIMIT_NS = 2000000000, BEHIND_NS = 250000000;
 export const DIAL_CAP = 8, TOUCH_MIN_NS = 20000000, TOUCH_GAP_CAP_NS = 2000000000, TOUCH_TAP_CAP_NS = 320000000;
@@ -230,6 +231,20 @@ export function replayEntries(file, text) {
     if (t !== null && !Number.isSafeInteger(t)) throw new ValueError(`--replay ${file}: entry ${i + 1}: lab_ns ${brief(t)} is not an integer`);
   });
   return entries;
+}
+// A --replay document's patch overlay against this run's (env.patch, src/fw/patch.mjs): the reason to refuse the
+// replay, or null. A session.json that records a patch (its patch field: the session ran on patched firmware) is
+// refused without one, so its inputs never replay silently on the stock blocks; a session.jsonl records no patch and
+// is not checked, and a malformed file is replayEntries' to report.
+export function replayPatchRefusal(file, text, patch) {
+  const name = String(file).split('/').at(-1);
+  if (patch || !name.endsWith('.json') || name === '.json') return null;
+  let doc;
+  try { doc = JSON.parse(text); } catch { return null; }
+  if (get(doc, 'patch') === null) return null;
+  let what;
+  try { what = patchLine(doc.patch); } catch { what = 'a patch overlay'; }
+  return `--replay ${file}: the session ran on patched firmware (${what}): refused without --patch (give the same --patch FILE again)`;
 }
 
 export class Player {
@@ -639,9 +654,12 @@ export class Player {
     this.finish(inp, null, null, { card: { slot, ...(op === 'list' ? view.list(read) : view.read(read, path)) } });
   }
   run() {
-    // the --replay file's entries (env.readReplay: the host's file read); a read error or a malformed file is raised
-    // out of run(), before the session starts
-    const replay = this.a.replay ? replayEntries(this.a.replay, this.env.readReplay(this.a.replay)) : null;
+    // the --replay file's entries (env.readReplay: the host's file read); a read error, a malformed file or a patched
+    // session's log without the overlay (replayPatchRefusal) is raised out of run(), before the session starts
+    const text = this.a.replay ? this.env.readReplay(this.a.replay) : null;
+    const why = text !== null ? replayPatchRefusal(this.a.replay, text, this.env.patch ?? null) : null;
+    if (why !== null) throw new ValueError(why);
+    const replay = text !== null ? replayEntries(this.a.replay, text) : null;
     this.replaying = replay !== null;
     try { this.open_session(); } catch (e) {
       if (!(e instanceof LabError)) throw e;

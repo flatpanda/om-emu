@@ -8,7 +8,8 @@
 //                                                            GiB (a new card's capacity, in memory for the Worker's
 //                                                            life; above 32 an SDXC card), and patch: {name, text} (a
 //                                                            patch file, src/fw/patch.mjs, applied to the stock blocks
-//                                                            after their check and the cache; a refusal fails the boot)
+//                                                            after their check and the cache; a refusal fails the boot,
+//                                                            as {name, error} does: the page could not read the file)
 //                   {type: 'clear-nvram'}                    forget S-NVRAM's kept document (progress nvram-cleared)
 //                   {type: 'req', id, method, path, body, t_page}   an API request (src/lab/playapi.mjs); t_page: the
 //                                                            page's send time in seconds (timeOrigin + now), the t_wall
@@ -40,7 +41,7 @@ import { labFirmware } from '../src/fw/labfw.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
 import { MODEL_INFO } from '../src/fw/model.mjs';
 import { createHash } from '../src/util/sha256.mjs';
-import { readPatchText, applyPatches, patchLayout } from '../src/fw/patch.mjs';
+import { PatchRefused, readPatchText, applyPatches, patchLayout } from '../src/fw/patch.mjs';
 import { Player } from '../src/lab/player.mjs';
 import { Tables } from '../src/lab/play.mjs';
 import { PlayApi } from '../src/lab/playapi.mjs';
@@ -117,7 +118,9 @@ async function boot(msg) {
     // a patch overlay (the page's Patch start option): on the verified stock blocks, after the cache took them
     let patch = null;
     if (msg.args?.patch) {
-      const r = applyPatches({ main: fw.rom, resource: fw.res }, readPatchText(msg.args.patch.text, msg.args.patch.name), { layout: patchLayout(MODEL_INFO), createHash });
+      const p = msg.args.patch;      // a file the page could not read is refused, as checks/lib/env.mjs readPatchFiles does
+      if (typeof p.text !== 'string') throw new PatchRefused(`${p.name}: cannot read it (${p.error ?? 'no text'})`);
+      const r = applyPatches({ main: fw.rom, resource: fw.res }, readPatchText(p.text, p.name), { layout: patchLayout(MODEL_INFO), createHash });
       fw.rom = r.blocks.main; fw.res = r.blocks.resource; patch = r.summary;
     }
     // The cache holds the verified original block; the player and its tables need the runtime image.

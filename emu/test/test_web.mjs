@@ -16,11 +16,11 @@
 //   at once forever), and web/worker.mjs hosted in a node worker thread (test/workershim.mjs), which has no OPFS (the
 //   cache answer names why, forgetting the cache and the settings errs nowhere, the boot runs uncached): a file that is
 //   no .BIN and a container that is not E143 refused with the boot offered again, and with $OM_BIN / $OM_FW_DIR a patch
-//   file whose old bytes are not the stock block's refused (the boot offered again), the E143 .BIN booted, an unported
-//   token refused, the card the firmware formatted read through GET /api/card and the session's options through GET
-//   /api/session, S2's two S-SHUTTERSND clicks posted as 'audio' messages 1/125 s apart, a ?sync=1 request answered
-//   when the session quits; with $OM_FW_DIR every other model whose .BIN is there booted in its own Worker to running
-//   with a frame;
+//   file whose old bytes are not the stock block's and one the page could not read refused (the boot offered again),
+//   the E143 .BIN booted, an unported token refused, the card the firmware formatted read through GET /api/card and
+//   the session's options through GET /api/session, S2's two S-SHUTTERSND clicks posted as 'audio' messages 1/125 s
+//   apart, a ?sync=1 request answered when the session quits; with $OM_FW_DIR every other model whose .BIN is there
+//   booted in its own Worker to running with a frame;
 // - the Card panel and the session options without firmware (cardTests): base64, the card's reader
 //   (web/cardfiles.mjs) on a FAT16 volume built here, the router's /api/session and card routes on a headless Player,
 //   the node server's PNG of a picture, web/page.mjs's binary answers, the browser's S-NVRAM host (web/nvram.mjs).
@@ -692,6 +692,12 @@ export async function workerTests() {
       w.postMessage({ type: 'boot', binPath: bin, args: { idle: 'off', patch: { name: 'wrong.json', text: wrong } } });   // as the page boots: the firmware progress below is the same
       const pf = await until((m, i) => i >= p0 && m.type === 'boot-failed', 60000);
       if (!pf || !/wrong.json patch 0: old bytes differ from the stock main block at 0x01ffff00/.test(pf.message)) bad.push(`worker boot with a wrong patch: ${pf ? pf.message : 'no boot-failed'}`);
+      // a patch file the page could not read ({name, error}) fails the boot too: never the stock firmware in its place
+      checks++;
+      const q0 = seen.length;
+      w.postMessage({ type: 'boot', binPath: bin, args: { idle: 'off', patch: { name: 'gone.json', error: 'NotReadableError' } } });
+      const qf = await until((m, i) => i >= q0 && m.type === 'boot-failed', 60000);
+      if (!qf || qf.message !== 'gone.json: cannot read it (NotReadableError)' || seen.slice(q0).some((m) => m.type === 'status')) bad.push(`worker boot with an unread patch: ${qf ? qf.message : 'no boot-failed'}`);
       checks++;
       // with the cache asked for (the page's boot): without OPFS the blocks are not cached, the reason is in the
       // firmware progress, and the session runs from the .BIN

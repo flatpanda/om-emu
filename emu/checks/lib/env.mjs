@@ -45,9 +45,11 @@ export function readPatchFiles(files) {
 // MODELS digest, then the patches applied to copies (src/fw/patch.mjs applyPatches, which refuses a patch whose old
 // bytes are not the stock block's, or that overlaps another). {raw (the patched main code block as unpacked), rom (its
 // run-time image, src/fw/expand.mjs), resBlock, summary}. Nothing is cached: loadImage and loadBlock stay the stock
-// blocks'.
-export function patchedFirmware(patches) {
-  const r = applyPatches({ main: checkImage(readBytes(ORIGINAL)), resource: loadBlock() }, patches, { layout: patchLayout(MODEL_INFO), createHash });
+// blocks'. resource: false for a tool that loads the main code block alone (bin/debug.mjs): the resource block is not
+// read and a patch to it is refused ('the resource block is not loaded here'), not counted as applied.
+export function patchedFirmware(patches, { resource = true } = {}) {
+  const blocks = { main: checkImage(readBytes(ORIGINAL)), ...(resource ? { resource: loadBlock() } : {}) };
+  const r = applyPatches(blocks, patches, { layout: patchLayout(MODEL_INFO), createHash });
   return { raw: r.blocks.main, rom: expandImage(r.blocks.main), resBlock: r.blocks.resource, summary: r.summary };
 }
 export const BLOCK = path.join(REPO, resPath(MODEL_INFO));

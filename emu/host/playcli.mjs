@@ -17,6 +17,7 @@ import { RuntimeError } from '../src/lab/errors.mjs';
 import { MODEL } from '../src/fw/model.mjs';
 import { MODELS } from '../src/fw/models.mjs';
 import { Tables } from '../src/lab/play.mjs';
+import { replayPatchRefusal } from '../src/lab/player.mjs';
 import { PlayApi } from '../src/lab/playapi.mjs';
 import { newFlags } from './portqueue.mjs';
 import { PlayerProxy, wallClock } from './proxy.mjs';
@@ -104,6 +105,18 @@ export async function main(argv) {
     } catch (e) {
       if (!(e instanceof PatchRefused)) throw e;
       report(`${PROG}: --patch refused: ${e.message}`);
+      return 1;
+    }
+  }
+  // --replay of a session that ran on patched firmware (its session.json's patch) without --patch: refused here too,
+  // before the server starts (src/lab/player.mjs replayPatchRefusal, which the Player applies again); a file that
+  // cannot be read is the Player's to report
+  if (a.replay && !patches) {
+    let text = null;
+    try { text = fs.readFileSync(a.replay, 'utf8'); } catch { /* the Player's read raises it */ }
+    const why = text === null ? null : replayPatchRefusal(a.replay, text, null);
+    if (why !== null) {
+      report(`${PROG}: ${why}`);
       return 1;
     }
   }

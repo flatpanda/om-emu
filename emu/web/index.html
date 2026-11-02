@@ -989,13 +989,14 @@ for (const [id, k, on] of START_OPTS) {
     history.replaceState(null, '', '?' + Q.toString());
   };
 }
-// the patch file (src/fw/patch.mjs): its text for the boot (ARGS.patch {name, text}); not in the query, a file is
-// chosen again after a reload. patchRead: the read in flight, which the start waits for
+// the patch file (src/fw/patch.mjs): its text for the boot (ARGS.patch {name, text}, or {name, error} when the read
+// failed: the Worker then refuses the boot rather than start the stock firmware); not in the query, a file is chosen
+// again after a reload. patchRead: the read in flight, which the start waits for
 let patchRead = null;
 $('opt-patch').onchange = (e) => {
   const f = e.target.files[0];
   if (!f) { delete ARGS.patch; patchRead = null; return; }
-  patchRead = f.text().then((text) => { ARGS.patch = { name: f.name, text }; }, (err) => { delete ARGS.patch; $('optnote').textContent = `the patch file could not be read: ${err.message}`; });
+  patchRead = f.text().then((text) => { ARGS.patch = { name: f.name, text }; }, (err) => { ARGS.patch = { name: f.name, error: String(err?.message ?? err) }; $('optnote').textContent = `the patch file could not be read: ${err.message}`; });
 };
 // the card's size: the query's card_size (a size the menu does not offer is added to it; the Worker refuses one the
 // card does not take), changed here until the start

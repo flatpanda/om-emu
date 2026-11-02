@@ -234,6 +234,7 @@ OM_EMU_CARD=emu/out/card/E143.omsd sh emu/play.sh   # keep the card between sess
 OM_EMU_CARD_SIZE=64 sh emu/play.sh               # a blank 64 GiB SDXC card in place of the 8 GiB SDHC one, formatted
                                                  # exFAT by the firmware (docs/hle-gaps.md 4.8.6)
 node emu/bin/nav.mjs --time --png each 'DOWN OK MENU'     # a scripted menu session: a line and a PNG per step
+node emu/bin/play.mjs --patch FILE                # the player on the stock blocks with FILE's patches ("Patch overlays")
 node emu/bin/run.mjs all --trace emu/out/js      # the replayed scenarios, traced (37 labs, about 3 min)
 node emu/bin/run.mjs stage2 --slice 1000000      # the same in budgeted continues of 1 M instructions
 node emu/bin/golden.mjs check [--jobs N]         # emu against its own recorded outputs (golden.json), about 20 min
@@ -359,7 +360,8 @@ module, and `test/test_fwmap.mjs` fails until both are empty. Only E143 is suppo
 
 `bin/debug.mjs` is the command-line debugger (`--entry`, `--stop`, `--reg`, `--write`, `--read`, `--step`, `--stack`,
 `--trace`, `--insn-limit`; `--image` defaults to the ND128 candidate's main code, built in memory from the E143 main
-block and the patches in `artifacts/nd128/manifest.json`). It also has
+block and the patches in `artifacts/nd128/manifest.json` as a patch overlay, below; `--patch FILE` runs the stock main
+block with a patch file's patches instead). It also has
 `--watch ADDR:LEN[:r|w|rw]`, `--exec-trace PATH` with `--trace-mode native|one-insn`, `--mmio-trace PATH`,
 `--irq-trace PATH`, `--disasm ADDR:LEN` (through `tools/mn10300-objdump` or `$OM_OBJDUMP`) and `--max-ms N`.
 `node emu/bin/debug.mjs --serve` reads one JSON request per line and answers one per line, for scripts, for
@@ -454,6 +456,41 @@ leave the harness in a state it did not expect; that is the user's to judge.
 
 The open items are in `docs/ROADMAP.md` "Debug API follow-ups".
 
+## Patch overlays
+
+`--patch FILE` on `bin/play.mjs`, `bin/nav.mjs` and `bin/debug.mjs` runs the firmware with a patch file's byte patches,
+applied in memory to the stock blocks after their `MODELS` digests are checked; nothing is written to disk and the
+blocks in `unpacked/` stay as they are. The option repeats: the patches of every file given are checked together.
+The browser player's start option Patch takes one file the same way, in the Worker (the file is read in the browser and
+neither uploaded nor cached). `bin/modelcheck.mjs` takes none: it runs many bodies, and a patch file is for one build.
+
+```sh
+node emu/bin/play.mjs --patch mine.json                         # the player on the patched firmware
+node emu/bin/nav.mjs --patch a.json --patch b.json 'MENU DOWN'   # two files, checked together
+node emu/bin/debug.mjs --entry 0x502d0336 --stop 0x502d0336 --patch mine.json --read 0x62020f20:16
+```
+
+A patch file is JSON: a list of patches, or an object whose `patches` is one. A patch is `{block, offset, old, new,
+label?}`, `old` and `new` base64 of one length, as the templates of azqeurio/om-c-firmware give them, or the ND128
+manifest's `{decoded_body_offset, before, after}` (hex, the main code block). `block` is the index in the `.BIN`'s
+container (0 the main code block, 1 the resource block where it follows the main block, as on every body of
+`src/fw/models.mjs`) or a name: `main`, `resource`, or a block file's name holding its `blk<offset>`. `offset` (an
+integer or `"0x..."`) is into the block's body as unpacked, before `src/fw/expand.mjs`, so on E143 the run-time address
+is the offset plus `0x60021020` and the disassembly notation's the offset plus `0x50000000`. The lab loads two blocks,
+so a patch may target the whole main code block and the part of the resource block the lab reads (its prefix,
+`src/fw/resprefix.mjs`: 9.6 MiB on E143); another block is refused.
+
+The overlay is refused, with the reason and exit 1 before any lab starts, unless every patch is well formed, every
+patch's `old` bytes are the stock block's at its offset, no two patches overlap (across files too) and each lies inside
+what the lab loads (`src/fw/patch.mjs`). A patched run says so everywhere it reports: a `play: patched firmware: ...`
+line on stdout (nav's `patched: ...`; debug.mjs's `debug.mjs: patched: ...` on stderr) with the count, the bytes changed
+and each patched block's sha256 next to the stock one; the player's status and `GET /api/session` carry the summary as
+`patch` and the page shows it as a red line under the status bar; session.json has it as `patch` (it is not among the
+session's `args`, so a `--replay` of a patched session needs `--patch` again); debug.mjs's JSON has `patch`, and
+`--serve`'s `load` without an image loads the patched block (its response's `image` is `patched: FILE...`). A play
+server with `--patch` refuses a model switch, and debug.mjs takes `--patch` neither with `--image` nor with `--attach`.
+The patch files are the user's: none is committed here, and the tests write their own (`test/test_patch.mjs`).
+
 ## The browser player
 
 `web/index.html` is the player's page (`web/play.html`) running the lab in a module Worker (`web/worker.mjs`). Serve
@@ -496,7 +533,7 @@ the name of the file the model needs.
 
 **The published site.** `node emu/bin/site.mjs DIR` writes the static site. It holds `emu/index.html` (the landing
 page, which links to the player and says that the firmware stays in the visitor's browser) and exactly the files the
-player loads, found by following every relative reference from the landing page (`--list` prints them: 130 files,
+player loads, found by following every relative reference from the landing page (`--list` prints them: 131 files,
 2.7 MiB on 2026-11-02, all under `web/`, `src/`, `scenarios/` and `refs/`). It holds no firmware, nothing of `emu/out/`, no test or
 node-only module and not `web/gate.html`. A reference that is absolute (it would leave the site's sub-path), bare,
 outside `emu/`, into `out/` or of another file type stops the build. The site needs no server code and no custom
@@ -613,8 +650,8 @@ firmware the run warns and skips that rule. `--explain N` prints what each firmw
 
 | Command | What it covers | Needs |
 |---|---|---|
-| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the debug API's argument checks, halt, trace filters and live-route units and its trace rules and edge cases (halfword device accesses, code on the lab stub, the bus window, code-fetch faults, a watch hit in an interrupt entry), the browser driver's pure parts, the scene model, the lab's audio output (its events, queue and rings, `/api/audio` on the router and the browser page) and S-SHUTTERSND's clicks, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units, the SCPU clock, port words, the link's pins and the sub-CPU's model (S-SCPUDEV), the HDMI port's device and sink, the accelerometer stand-in's sample, the SD card model (SDHC and SDXC), PER_SIO's served IIC transfers' segments and the TG-5's charger (S-SIOIIC, S-CHARGER), the FAT reader, the exFAT reader on a volume the test builds and the JPEG pair, the players' Card panel and session options (the card reader of `web/cardfiles.mjs` on a FAT16 volume and an exFAT volume the tests build, the card routes and `/api/session` on a headless Player, the node server's PNG of a picture, `web/nvram.mjs`), S-SUBJECT's subject boxes and transform, the publication audit's rules on a throwaway repository, the Cortex-M4 core's hand-written vectors and the differential vectors QEMU recorded for it, on both its tiers, and the two tiers in lockstep after every instruction with the decode cache's self-modifying-code cases and two mutants the lockstep must catch (`test/test_m4.mjs`, `test/fixtures/m4_vectors.json`), the SCPU's STM32L4 peripheral models one by one (`test/test_stm32l4.mjs`), and their flash programming, I2C slave and timer slave modes and the machine's low-power modes and flash programming on a synthetic image | node and git; runs on any checkout in a few seconds |
-| `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts (the Worker's card and session routes too), the node host (the Card panel's routes over HTTP: a picture's file and PNG, the card out and back), the command-line tools, the scene, one open and one close click per S2 in play spaced by the shutter time (S-SHUTTERSND, `test/test_audio.mjs`), the camera application (and S-HEAP's live blocks bounded over an idle with either lens), the power manager and the power-off on E143, E146 and E147, an HDMI plug in play on E143, E146 and E147, check_level on E146, the card and the file system in play on E143 (a blank card formatted and mounted by the firmware, read back independently; the counts from the card; a picture's file written and found again; Card Formatting from the menu, read back; the card taken out and put back; the same on E146, and but for the menu and the card input on E147, E144, E142 and E134, each in a process of its own; blank 64 and 128 GiB SDXC cards on E143 formatted and mounted by the firmware, read back by `refs/volume.mjs`, S2's file found, Card Formatting from the menu and the card out and in on the 64 GiB card, what the firmware chose, the lab times and the counts printed as notes), subject frames DISP_FRAME draws on the scene's rider while subject detection is on (S-SUBJECT), the Cortex-M4 core on the SCPU image from reset to its first unmodelled access (on both tiers and in lockstep, and the console prompt and `help` at the same cycle on both), the SCPU image on the STM32L4 machine to its console prompt, console commands, its standby and the wake-up (and its path to the standby at 3.03 s without a Stop, Shutdown or flash operation), the firmware map and the regression net's controls | the E143 firmware blocks (the SCPU block too; E146's and E147's for the HDMI plug and the card, E146's for check_level, E144's, E142's and E134's for the card) and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
+| `node emu/bin/test-pure.mjs` (`npm run test:pure`) | the ISA vectors on both engines, the core's two tiers in lockstep and its length tables, the pure sha256 and JSON parser, the debug API's argument checks, halt, trace filters and live-route units and its trace rules and edge cases (halfword device accesses, code on the lab stub, the bus window, code-fetch faults, a watch hit in an interrupt entry), the browser driver's pure parts, the scene model, the lab's audio output (its events, queue and rings, `/api/audio` on the router and the browser page) and S-SHUTTERSND's clicks, the purity rule, the firmware rules (each unpacked main block checked against its `MODELS` entry when present), the firmware map's units, the SCPU clock, port words, the link's pins and the sub-CPU's model (S-SCPUDEV), the HDMI port's device and sink, the accelerometer stand-in's sample, the SD card model (SDHC and SDXC), PER_SIO's served IIC transfers' segments and the TG-5's charger (S-SIOIIC, S-CHARGER), the FAT reader, the exFAT reader on a volume the test builds and the JPEG pair, the players' Card panel and session options (the card reader of `web/cardfiles.mjs` on a FAT16 volume and an exFAT volume the tests build, the card routes and `/api/session` on a headless Player, the node server's PNG of a picture, `web/nvram.mjs`), S-SUBJECT's subject boxes and transform, the publication audit's rules on a throwaway repository, the patch overlays' rules on synthetic blocks (`test/test_patch.mjs`), the Cortex-M4 core's hand-written vectors and the differential vectors QEMU recorded for it, on both its tiers, and the two tiers in lockstep after every instruction with the decode cache's self-modifying-code cases and two mutants the lockstep must catch (`test/test_m4.mjs`, `test/fixtures/m4_vectors.json`), the SCPU's STM32L4 peripheral models one by one (`test/test_stm32l4.mjs`), and their flash programming, I2C slave and timer slave modes and the machine's low-power modes and flash programming on a synthetic image | node and git; runs on any checkout in a few seconds |
+| `node emu/bin/test.mjs` (`npm test`) | all of the above, plus the decode-cache regressions, the VSC register, class and blend tables, the kick model's TB-layout refusals, the replayer's argument binding, the check runner and the checks' controls, the debug API's units, the browser player's parts and hosts (the Worker's card and session routes too), the node host (the Card panel's routes over HTTP: a picture's file and PNG, the card out and back), the command-line tools, the scene, one open and one close click per S2 in play spaced by the shutter time (S-SHUTTERSND, `test/test_audio.mjs`), the camera application (and S-HEAP's live blocks bounded over an idle with either lens), the power manager and the power-off on E143, E146 and E147, `--patch` on E143 through `debug.mjs`, `play.mjs` and `nav.mjs` with a patch file the test writes (and the Worker's refusal of one whose old bytes differ), an HDMI plug in play on E143, E146 and E147, check_level on E146, the card and the file system in play on E143 (a blank card formatted and mounted by the firmware, read back independently; the counts from the card; a picture's file written and found again; Card Formatting from the menu, read back; the card taken out and put back; the same on E146, and but for the menu and the card input on E147, E144, E142 and E134, each in a process of its own; blank 64 and 128 GiB SDXC cards on E143 formatted and mounted by the firmware, read back by `refs/volume.mjs`, S2's file found, Card Formatting from the menu and the card out and in on the 64 GiB card, what the firmware chose, the lab times and the counts printed as notes), subject frames DISP_FRAME draws on the scene's rider while subject detection is on (S-SUBJECT), the Cortex-M4 core on the SCPU image from reset to its first unmodelled access (on both tiers and in lockstep, and the console prompt and `help` at the same cycle on both), the SCPU image on the STM32L4 machine to its console prompt, console commands, its standby and the wake-up (and its path to the standby at 3.03 s without a Stop, Shutdown or flash operation), the firmware map and the regression net's controls | the E143 firmware blocks (the SCPU block too; E146's and E147's for the HDMI plug and the card, E146's for check_level, E144's, E142's and E134's for the card) and `golden.json`; with `OM_FW_DIR=fw` also the unpacker against `unpacked/E143` and the Worker in a node worker thread (without it those count as failures) |
 | `node emu/bin/golden.mjs check` | every scenario, every lab of the traced check runs and every check run's output against `golden.json`: what the panels show, what the devices see and what the checks conclude must not change | the firmware |
 | `node emu/bin/checks.mjs [CHECK \| RUN ...]` | every run of `checks/runs.json`, judged on its exit status | the firmware |
 | `node emu/bin/checktrace.mjs RUN [--slice N]` | the labs one check run creates, traced (golden records them) | as checks.mjs |

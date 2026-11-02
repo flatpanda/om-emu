@@ -149,7 +149,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **PC connection over PTP (TPC)** (4.10) | 0 | ? (the bulk of the USB data path) | a USB or Wi-Fi transport, storage | about 52.6k / about 52k (21.4k of it filed under factory code) | ? | tethering, the PTP firmware-update path |
 | **PictBridge / DPS / DPOF, XML parser** (4.10) | 0 | ? | USB | about 89k in parts: 13.4k HLS, 25.7k Cmp_PictBridge, 10.3k HFW print, 2.8k DPS transport, 9.4k DPS XML, 2.8k DPOF, 24.5k expat-like XML parser | ? | direct printing |
 | **Wireless** (4.11) | 0: CPU 1 not emulated, no ISC model; the menus paint boot defaults | the ISC node-4 port boundary (a JS "A53 service"), at the ISC services behind the gate `0x50aa4c98` or as node 4's FIFO and doorbell (4.11.1) | CPU 1 native (blocking), the USTART chain, ISC init CREQs on all cores, card, imaging, SCPU (BLE wake) | 137,490 / 130,344: about 72k MN10300 application on CPU 1, about 25k CPU 0 HLS, FlashAir | 6-9 weeks after CPU 1 exists | live Wi-Fi / BT state, connection setup, a virtual smartphone over the firmware's own OI.Share API |
-| **GPU and C3D** (4.12) | 0 | ? (which user feature drives it is ?) | CPU 1 | about 85k / about 84k | ? | ? |
+| **GPU and C3D** (4.12) | 0 | the colour-profile wheel screen: it configures the 32 bpp ARGB (`R8G8B8a8`) VSC IMG2 layer that the OpenVG renderer fills (E147, X; see 4.12) | CPU 1, a K3000 model, the EGL/OpenVG library | about 85k / about 84k | ? | the OM-3 colour wheel and its value polygon |
 | **Strobe and hot shoe** (4.12) | partly native: 562 instructions run (X); no device | ? (not surveyed) | ? | 33,625 / 31,493 (24 driver modules plus 17 HLS) | ? (shutter-sized) | flash control in normal shooting |
 | **Image effects (ART)** | 0 | ? (not surveyed) | ? | 9,539 / 9,237 | ? | ? |
 
@@ -2281,7 +2281,20 @@ and E147; off by default. Addresses are E143's (disassembly notation) unless a b
   GPU driver core (gap@0x51767cd6), plus a 15.6k GPU tail of gap@0x51740e22. Tasks: C3D_EXE_BRIDGE and C3D on CPU 0,
   C3D_EXE and C3D_UPDATE on CPU 1. Devices `0x9bc80000` (30 references) and `0x9bd00000` (10) are referenced only from
   C3D; the GPU driver has no MMIO constant, so its base is computed or in a table (I). Callers: DISPLAY `0x501c2c74` and
-  `api_play.c`. Which user feature drives it is ?.
+  `api_play.c`.
+- **The feature that drives C3D (E147, X/D, 2026-11-02):** the colour-profile editor's wheel — the 12-sector colour
+  wheel and the value polygon that plots the twelve hue/saturation values. That screen configures the only 32 bpp ARGB
+  layer of the display: VSC channel 2 (TFT) IMG2, `PLANC` 0x1100 (0x100 = the plane fully applied, plus bit 12, which
+  the format setter sets for the per-pixel-alpha formats), `IMG2FMT` 3, `IMG2DMASADR` `0x0ab0b2e0`
+  (buffer `0xab0b2e00`), 900x600, stride 3712, `AREA1` `0x00620384` / `AREA2` `0x00080258`; the image carries the renderer
+  that can fill it, EGL/DMP's OpenVG (`K3000`, `EGL_DMP_platform_dmpnative`, `vgCreatePathDataDMP`,
+  `vgDrawPathDataDMP`, `vgDrawPathDataArraysDMP`, `VG_DMP_path_native_format_direct_load` at 0x617e...), the GUI's
+  `fwOpe::drawC3dAsync` / `CGuiDrawCtrl::drawC3dAsync` / `CBS_DRAW_C3D_ASYNC`, C3D's `C3D_CMD_START/UPDATE/END` and
+  `c3d_exe_bridge_disp_init`, and FIRMUP's `TYPE_C3D` (the camera also updates the GPU's firmware). The drawing itself is
+  not traced: in the lab the whole stack is dormant (0x61300000..0x61b00000 executes 45 instructions from boot to that
+  screen, none of them a draw) and the layer stays all-zero, so this feature is X, and the OM-3 wheel is the concrete
+  target that would justify a K3000 model. The format is the documented one: the IMG format setter `0x501e1e95`
+  names format 3 `R8G8B8a8` (`docs/om1-vsc-spec.md`), and the model draws IMG planes only at format 0.
 - **Strobe (X, D):** 562 instructions run natively: the charge request `0x501af586`, `stb_external.c` `0x501ba32f` /
   `0x501ba47b`, the light exec `0x501c243b`, the register driver `0x501b3883`. Tasks STB_CHARGE 0x23 `0x501af7eb`,
   STB_EXTERNAL 0x65, STB_SEQ 0x66, STB_HANDLER_PROC 0x8b; `cam_strobe.c`, `stb_ext_microphone.c` (an accessory

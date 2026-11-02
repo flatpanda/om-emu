@@ -3,14 +3,16 @@
 // table in src/fw/ports.mjs (bin/port.mjs) and run, in a child on emu/ with OM_EMU_MODEL, a play session on the TFT
 // and one on the EVF (a body with one: MODELS panels.evf) through the path every model must take: start, S1, S2 (a
 // picture on the card), PLAY (single-frame playback), INFO, PLAY (back to shooting), then the menu (MENU_PATH: MENU,
-// DOWN, MENU; on the EVF after S2, MENU_EVF_XFAIL's bodies expected to fail). Each step's GUI state (by its name
-// in the model's own state table: the numbers differ, E143's playback is 0x508, the E144 family's 0x608) and card
-// count is checked, and after S1 the screen's remaining-shots count (the count probe below); exit 1 on any failure. A
-// body whose start waits at a prompt S1 does not answer (START_PROMPT: E145's date and time setting) takes the
-// prompt's key after the start. The menu's steps are judged by what they change, since the menu's GUI states are named
-// on few builds (the E144 family's SS_MENU lies past the state table's first 12 parents, src/lab/menu.mjs state_names):
-// MENU must leave the shooting screen's state for another and change the frame (the menu drawn), DOWN keep that state
-// and change the frame (the cursor or the tab moved), the second MENU bring back the shooting screen's state.
+// DOWN, MENU; on the EVF after its last step, MENU_EVF_XFAIL's bodies expected to fail). Each step's GUI state (by its
+// name in the model's own state table: the numbers differ, E143's playback is 0x508, the E144 family's 0x608) and card
+// count is checked, after S2 a composite of more than one value (the shooting screen back after the rec view: the
+// GUIs of the E118 family, E142, E140, E130, E133, E145, E129 and E132 draw none until the through image's start,
+// src/lab/camapp.mjs S-RELSEQ), and after S1 the screen's remaining-shots count (the count probe below); exit 1 on
+// any failure. The EVF stops after S2 but on EVF_PLAY's bodies. A body whose start waits at a prompt S1 does not
+// answer (START_PROMPT: E145's date and time setting) takes the prompt's key after the start. The menu's steps are
+// judged by what they change: MENU must leave the shooting screen's state for another and change the frame (the menu
+// drawn), DOWN keep that state and change the frame (the cursor or the tab moved), the second MENU bring back the
+// shooting screen's state.
 // The count probe, after S1: three windows of WINDOW frames WINDOW_NS apart, at S-CARD's count, at PROBE_SHOTS and at
 // the count again, each after PROBE_NS of idle. A pixel is the count's where it holds one value through the first
 // window and another through the second (a pixel that changes within a window, as E146's blinking ISO item, X, is
@@ -79,8 +81,13 @@ const PROBE_XFAIL = {};
 // (0x50c96925), on the GUI's camera events: the start, the shooting information's 3 s timer, the return from
 // playback, INFO, a shot; not on an S1 that changes nothing on the screen nor at idle (X: E118, E120, E122,
 // docs/model-survey.md finding 61). INFO cycles the four views of the shooting screen back to the first on both
-// panels (X), where PLAY and back, which also redraws, stalls on E120's and E122's EVF
+// panels (X); PLAY and back redraws too, and stalled on E120's and E122's EVF before finding 70
 const REDRAW_MAX = 8, PROBE_REDRAW = { E118: 'info', E120: 'info', E122: 'info' };
+// the bodies whose EVF runs the whole path, playback included. The E118 family's kind-3 compositor draws the EVF's
+// playback (the plane's level 0xb2 drawn as full, docs/om1-vsc-spec.md section 12; X: PLAY, INFO and PLAY on the
+// three); E120's and E122's ran into their display task's 40 ms poll until the VSC raised its line compare
+// (docs/model-survey.md finding 70)
+const EVF_PLAY = new Set(['E118', 'E120', 'E122']);
 // the bodies known to stop with an SDXC card (--card-size above 32 GiB), on the TFT and the EVF: model -> [what their
 // child's output must hold, the reason]. Strictly, as PROBE_XFAIL: a body that runs the path, or stops elsewhere, fails
 // the run. E144: its firmware formats the card exFAT, then at the camera application's start its movie parameters
@@ -121,7 +128,17 @@ const env = { rom: loadImage(), resBlock: loadBlock(), createHash, ...(SECTORS =
 const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, device: DEVICE }, { ...env, wallClock: () => performance.now() / 1000 });
 pl.open_session();
 const s = pl.session, lab = s.lab, out = [];
-const rec = (k) => { let frame = null, digest = null; try { const [w, h, raw] = s.frame('boundary', true); frame = w + 'x' + h; digest = createHash('sha256').update(raw).digest('hex').slice(0, 16); } catch (e) { frame = 'error: ' + e.message.split('\\n')[0].slice(0, 120); } out.push([k, lab.state(), lab.state_names.get(lab.state()) ?? '?', s.camapp.status().card_images, frame, digest]); };
+// a step's record: [key, GUI state, its name, card images, the frame's size (or its error), its digest, its distinct
+// values]
+const rec = (k) => {
+  let frame = null, digest = null, values = 0;
+  try {
+    const [w, h, raw] = s.frame('boundary', true);
+    frame = w + 'x' + h; digest = createHash('sha256').update(raw).digest('hex').slice(0, 16);
+    values = new Set(new Uint32Array(raw.buffer.slice(raw.byteOffset, raw.byteOffset + 4 * w * h))).size;
+  } catch (e) { frame = 'error: ' + e.message.split('\\n')[0].slice(0, 120); }
+  out.push([k, lab.state(), lab.state_names.get(lab.state()) ?? '?', s.camapp.status().card_images, frame, digest, values]);
+};
 s.idle_slice(lab.lab_time() + 1500e6); rec('start');
 // the count probe's window: WINDOW frames (the composite's words) WINDOW_NS apart, each pixel's first value and whether
 // it held it through the window
@@ -205,12 +222,12 @@ for (const m of models) {
     const p = spawnSync(process.execPath, ['--max-old-space-size=10240', path.join(REPO, 'emu/bin/port.mjs'), m], { encoding: 'utf8' });
     if (p.status !== 0) { console.log(`${m}: port failed: ${p.stderr.slice(-400)}`); bad++; continue; }
   }
-  // the EVF runs the path up to S2: playback on the EVF navigates, but its composite uses a PLANC (0xb2) and the
-  // highlight block the VSC model has not observed (open, on E143 too)
+  // the EVF runs the path up to S2, but on EVF_PLAY's bodies: playback on the EVF navigates, but its composite uses a
+  // PLANC (0xb2) and the highlight block the VSC model has not observed (open, on E143 too)
   for (const device of MODELS[m].panels?.evf === null ? ['tft'] : ['tft', 'evf']) {
   const prompt = START_PROMPT[m], answer = prompt ? (prompt.keys ?? [prompt.key]).map((k, i, ks) => [k, i === ks.length - 1 ? prompt.after : null, 0]) : [];
   const full = [PATH[0], ...answer, ...PATH.slice(1)];
-  const path_ = [...(device === 'evf' ? full.slice(0, full.indexOf(PATH[2]) + 1) : full), ...MENU_PATH], menuAt = path_.length - MENU_PATH.length;
+  const path_ = [...(device === 'evf' && !EVF_PLAY.has(m) ? full.slice(0, full.indexOf(PATH[2]) + 1) : full), ...MENU_PATH], menuAt = path_.length - MENU_PATH.length;
   const r = spawnSync(process.execPath, ['--max-old-space-size=6144', '--input-type=module', '-e', CHILD, path.join(REPO, 'emu'), device, JSON.stringify(path_.slice(1).map((p) => p[0])), PROBE_REDRAW[m] ?? ''], { encoding: 'utf8', env: { ...process.env, OM_EMU_MODEL: m }, maxBuffer: 1 << 26 });
   const xs = SDXC ? SDXC_XFAIL[m] : null;
   if (xs) {
@@ -224,11 +241,12 @@ for (const m of models) {
   try { ({ steps, probe, card } = JSON.parse(line)); } catch { console.log(`${m} (${MODELS[m].name}) ${device}: FAILED ${(r.stderr || r.stdout).split('\n').filter(Boolean).slice(-3).join(' | ').slice(0, 600)}`); bad++; continue; }
   const problems = [], notes = [];
   if (prompt && steps[0][1] !== prompt.state) problems.push(`start: GUI state 0x${steps[0][1].toString(16)}, want the prompt 0x${prompt.state.toString(16)} (START_PROMPT: ${prompt.why})`);
-  steps.forEach(([k, state, name, images, frame], i) => {
+  steps.forEach(([k, state, name, images, frame, , values], i) => {
     const [, wantState, wantImages] = path_[i];
     if (wantState !== null && name !== wantState) problems.push(`${k}: GUI state 0x${state.toString(16)} ${name}, want ${wantState}`);
     if (images !== wantImages) problems.push(`${k}: ${images} images, want ${wantImages}`);
     if (k !== 'start' && i < menuAt && !/^\d+x\d+$/.test(frame)) problems.push(`${k}: frame ${frame}`);
+    else if (k === 's2' && values < 2) problems.push(`s2: the frame holds ${values} value(s) after the rec view, want the shooting screen back`);
   });
   // the menu (MENU_PATH): each step against the state and frame before it, held against MENU_EVF_XFAIL on the EVF; a
   // step not run because an earlier one stopped the session is that one's problem

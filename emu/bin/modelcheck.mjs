@@ -2,14 +2,16 @@
 // The ported models' smoke test: for each model whose firmware is unpacked (src/fw/models.mjs), update its address
 // table in src/fw/ports.mjs (bin/port.mjs) and run, in a child on emu/ with OM_EMU_MODEL, a play session on the TFT
 // and one on the EVF (a body with one: MODELS panels.evf) through the path every model must take: start, S1, S2 (a
-// picture on the card), PLAY (single-frame playback), INFO, PLAY (back to shooting), then the menu (MENU_PATH: MENU,
-// DOWN, MENU; on the EVF after its last step, MENU_EVF_XFAIL's bodies expected to fail). Each step's GUI state (by its
-// name in the model's own state table: the numbers differ, E143's playback is 0x508, the E144 family's 0x608) and card
-// count is checked, after S2 a composite of more than one value (the shooting screen back after the rec view: the
-// GUIs of the E118 family, E142, E140, E130, E133, E145, E129 and E132 draw none until the through image's start,
-// src/lab/camapp.mjs S-RELSEQ), and after S1 the screen's remaining-shots count (the count probe below); exit 1 on
-// any failure. The EVF stops after S2 but on EVF_PLAY's bodies. A body whose start waits at a prompt S1 does not
-// answer (START_PROMPT: E145's date and time setting) takes the prompt's key after the start. The menu's steps are
+// picture on the card), PLAY (single-frame playback), INFO, PLAY (back to shooting), then on E148 the Super Control
+// Panel (OK, OK to its Picture Mode direct screen, MENU, MENU back to shooting: the panel's post to CPU 2 must find its
+// ring), then the menu (MENU_PATH: MENU, DOWN, MENU; on the EVF after its last step, MENU_EVF_XFAIL's bodies expected to
+// fail). Each step's GUI state (by its name in the model's own state table: the numbers differ, E143's playback is
+// 0x508, the E144 family's 0x608) and card count is checked, after S2 a composite of more than one value (the shooting
+// screen back after the rec view: the GUIs of the E118 family, E142, E140, E130, E133, E145, E129 and E132 draw none
+// until the through image's start, src/lab/camapp.mjs S-RELSEQ), and after S1 the screen's remaining-shots count (the
+// count probe below); exit 1 on any failure. The EVF stops after S2 but on EVF_PLAY's bodies. A body whose start
+// waits at a prompt S1 does not answer (START_PROMPT: E145's date and time setting) takes the prompt's key after the
+// start. The menu's steps are
 // judged by what they change: MENU must leave the shooting screen's state for another and change the frame (the menu
 // drawn), DOWN keep that state and change the frame (the cursor or the tab moved), the second MENU bring back the
 // shooting screen's state.
@@ -55,6 +57,15 @@ const PATH = [['start', null, 0], ['s1', null, 0], ['s2', null, 1], ['play', 'SS
   ['info', 'SS_PLAY_SINGLE/ID_ST_DISP_DETAIL', 1], ['play', null, 1]];
 // the menu after the path: [key, null (no state name), card images, what the step must do (see the head)]
 const MENU_PATH = [['menu', null, 1, 'open'], ['down', null, 1, 'move'], ['menu', null, 1, 'close']];
+// The bodies whose Super Control Panel the TFT path opens and closes once, after the last PLAY has returned to the
+// shooting screen and before the menu: model -> the state names its keys must reach, in order (SCP_KEYS). The panel
+// posts 0x60acb193 to CPU 2 through the descriptor table whose target row is 16 bytes per CPU (E148's 3: 48,
+// src/lab/play.mjs ipi_desc); its first item is Picture Mode on E148, so the second OK reaches the direct screen. MENU
+// from the panel opens the menu, and MENU there returns to shooting.
+const SCP_KEYS = ['ok', 'ok', 'menu', 'menu'];
+const SCP = {
+  E148: ['SS_MENU_LV/ID_ST_MENU_DTL_SCP', 'SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART', 'SS_MENU/ID_ST_MENU', 'SS_COMMON/ID_ST_CA_REQ_DISP'],
+};
 // the bodies whose menu is known not to run on the EVF: model -> [what the step's error must hold, the reason], held
 // strictly as PROBE_XFAIL. E146 and E147: the menu's composite has the EVF's dimmed plane, PLANC 0xb2, which E143's
 // compositor refuses (as for playback above). E122 and E120 were in it until the kind-3 VSC's line compare
@@ -224,7 +235,8 @@ for (const m of models) {
   for (const device of MODELS[m].panels?.evf === null ? ['tft'] : ['tft', 'evf']) {
   const prompt = START_PROMPT[m], answer = prompt ? (prompt.keys ?? [prompt.key]).map((k, i, ks) => [k, i === ks.length - 1 ? prompt.after : null, 0]) : [];
   const full = [PATH[0], ...answer, ...PATH.slice(1)];
-  const path_ = [...(device === 'evf' && !EVF_PLAY.has(m) ? full.slice(0, full.indexOf(PATH[2]) + 1) : full), ...MENU_PATH], menuAt = path_.length - MENU_PATH.length;
+  const scp = device === 'tft' && SCP[m] ? SCP[m].map((state, i) => [SCP_KEYS[i], state, 1]) : [];
+  const path_ = [...(device === 'evf' && !EVF_PLAY.has(m) ? full.slice(0, full.indexOf(PATH[2]) + 1) : full), ...scp, ...MENU_PATH], menuAt = path_.length - MENU_PATH.length;
   const r = spawnSync(process.execPath, ['--max-old-space-size=6144', '--input-type=module', '-e', CHILD, path.join(REPO, 'emu'), device, JSON.stringify(path_.slice(1).map((p) => p[0])), PROBE_REDRAW[m] ?? ''], { encoding: 'utf8', env: { ...process.env, OM_EMU_MODEL: m }, maxBuffer: 1 << 26 });
   const xs = SDXC ? SDXC_XFAIL[m] : null;
   if (xs) {

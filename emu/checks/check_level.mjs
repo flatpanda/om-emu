@@ -18,7 +18,7 @@
 // --mutants runs L2..L4 under the stand-in's mutants (acc-still: no sample is delivered; tilt-ignored: the tilt is not
 // applied) and passes when each is caught.
 //   node emu/checks/check_level.mjs [--only L1,L2,...] [--mutants]
-import { loadImage, loadBlock, createHash, runMain } from './lib/env.mjs';
+import { loadImage, loadBlock, loadNand, createHash, runMain } from './lib/env.mjs';
 import { parseArgs } from './lib/args.mjs';
 import { pred } from './lib/pred.mjs';
 import { Player } from '../src/lab/player.mjs';
@@ -44,7 +44,7 @@ class Group {
   eq(label, got, want) { this.cases += 1; if (!pred(deepEqual(got, want), 2)) this.problems.push(`${label}: got ${show(got)}, want ${show(want)}`); }
   true(label, ok, detail = '') { this.cases += 1; if (!pred(ok, 2)) this.problems.push(`${label}${detail ? ': ' + detail : ''}`); }
 }
-const env = () => ({ rom: loadImage(), resBlock: loadBlock(), createHash, wallClock: () => performance.now() / 1000 });
+const env = () => ({ rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 });
 function withPlayer(mutant, fn) {
   const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, ...(mutant ? { x_mutant: mutant } : {}) }, env());
   pl.open_session();

@@ -12,7 +12,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
-import { loadImage, loadBlock } from './run.mjs';
+import { loadImage, loadBlock, loadNand } from './run.mjs';
 import { Player } from '../src/lab/player.mjs';
 import { PLAYER_PARSER, WORKLOAD_DIGEST, workloadText } from '../scenarios/session_replay.mjs';
 import { show } from '../src/util/show.mjs';
@@ -88,7 +88,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
   const load = os.loadavg()[0];
   const t0 = performance.now();
-  const env = { rom: loadImage(), resBlock: loadBlock(), createHash, ...(slice !== undefined ? { slice } : {}), ...coverageEnv() };
+  const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, ...(slice !== undefined ? { slice } : {}), ...coverageEnv() };
   const res = playWorkload(env);
   const { hashed, ...shown } = res;
   if (dump) fs.writeFileSync(dump, hashed);

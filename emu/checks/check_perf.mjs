@@ -34,7 +34,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { FIXTURES, ISA_VECTORS, ORIGINAL, labEnv, envMachine, formatMachine, loadImage, loadBlock, createHash, runMain, readBytes } from './lib/env.mjs';
+import { FIXTURES, ISA_VECTORS, ORIGINAL, labEnv, envMachine, formatMachine, loadImage, loadBlock, loadNand, createHash, runMain, readBytes } from './lib/env.mjs';
 import { parseArgs } from './lib/args.mjs';
 import { pred, fault } from './lib/pred.mjs';
 import { newRandom } from './lib/rngtape.mjs';
@@ -791,7 +791,7 @@ const P10B_SCRIPT = [['shoot 1 s lab', 'idle', 1000], ['MENU open', 'key', 'menu
 function playRun(stale = false) {
   const stats = new Stats(createHash);
   let lab = null;
-  const env = labEnv({ resBlock: loadBlock(), ...(process.env.OM_SLICE ? { slice: Number(process.env.OM_SLICE) } : {}),
+  const env = labEnv({ resBlock: loadBlock(), nand: loadNand(), ...(process.env.OM_SLICE ? { slice: Number(process.env.OM_SLICE) } : {}),
     beginSession: () => ({ stats, attach(hle) { lab = hle; }, close(hle, closeSim) { closeSim(); } }) });
   const seen = new Set();
   let pngs = 0, last = null;

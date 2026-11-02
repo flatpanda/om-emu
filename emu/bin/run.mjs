@@ -30,7 +30,7 @@ import zlib from 'node:zlib';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import os from 'node:os';
-import { checkImage, checkBlock } from '../checks/lib/env.mjs';
+import { checkImage, checkBlock, loadNand } from '../checks/lib/env.mjs';
 import { coverageEnv } from '../checks/lib/coverage.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
 import { MODEL_INFO } from '../src/fw/model.mjs';
@@ -62,14 +62,16 @@ const CALLS = new Map();       // calls file path -> parsed document, parsed onc
 const BLOCK = path.join(REPO, resPath(MODEL_INFO));
 export function loadImage() { return expandImage(checkImage(new Uint8Array(fs.readFileSync(IMAGE)), IMAGE)); }   // the run-time image (src/fw/expand.mjs)
 export function loadBlock() { return checkBlock(new Uint8Array(fs.readFileSync(BLOCK)), BLOCK); }
+export { loadNand };              // the NAND the play bring-up's resource tables are read from (src/lab/resnand.mjs)
 const sha256 = (b) => createHash('sha256').update(b).digest('hex');
 
 // Run scenario names; returns { sessions: [Session], rc, stdout }. calls: the directory of the inputs (default
 // emu/scenarios/calls): the replayed scenarios read <calls>/<scenario>.calls.json (scenarios/session_replay.mjs), osd
 // <calls>/osd.calls.json or, without one, the generated inputs (osdInputs). onSession(session) is called as each
 // session begins (a caller that must see a session's partial trace after a throw collects them there). resBlock: the
-// resource block (loaded on first use when not given).
-export async function runScenarios(names, { rom, resBlock, trace = false, onSession = null, onAction = null, clock, replayStats, slice, calls = CALLS_DIR } = {}) {
+// resource block (loaded on first use when not given); nand: the NAND view (env.nand, src/lab/resnand.mjs; loadNand()'s
+// when not given).
+export async function runScenarios(names, { rom, resBlock, nand, trace = false, onSession = null, onAction = null, clock, replayStats, slice, calls = CALLS_DIR } = {}) {
   const sessions = [];
   const stdout = [];
   let pending = null, current = null;
@@ -105,6 +107,7 @@ export async function runScenarios(names, { rom, resBlock, trace = false, onSess
   if (replayed.length) {
     const S1 = await import('../scenarios/session_replay.mjs');
     env.resBlock = resBlock ?? loadBlock();
+    env.nand = nand ?? loadNand();
     for (const n of replayed) {
       const file = path.join(calls, `${n}.calls.json`);
       if (!CALLS.has(file)) CALLS.set(file, JSON.parse(fs.readFileSync(file, 'utf8')));

@@ -20,11 +20,11 @@ export async function nvramSessions() {
   fs.rmSync(out, { recursive: true, force: true });
   fs.mkdirSync(out, { recursive: true });
   const file = path.join(out, 'nvram.json');
-  const { loadImage, loadBlock, createHash } = await import('../checks/lib/env.mjs');
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { fileNvram } = await import('../host/nvram.mjs');
-  const base = { rom: loadImage(), resBlock: loadBlock(), createHash, deflate: (b, l) => new Uint8Array(zlib.deflateSync(b, { level: l })), wallClock: () => performance.now() / 1000 };
+  const base = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, deflate: (b, l) => new Uint8Array(zlib.deflateSync(b, { level: l })), wallClock: () => performance.now() / 1000 };
   // the session idles idle_ms after its start (the comparison with a session without S-NVRAM takes the start's frame:
   // with the native lens, E143's default, the application leaves the date prompt for the shooting screen when the lens
   // module's state event comes, about 120 ms later, docs/hle-gaps.md 4.4.2)

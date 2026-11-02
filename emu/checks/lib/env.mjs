@@ -7,12 +7,13 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { UsageError } from './args.mjs';
 import { stackOf } from './errors.mjs';
-import { WrongFirmware } from '../../src/fw/labfw.mjs';
-import { MODEL_INFO } from '../../src/fw/model.mjs';
-import { romPath, resPath, scpuPath } from '../../src/fw/models.mjs';
+import { WrongFirmware, checkNand } from '../../src/fw/labfw.mjs';
+import { MODEL, MODEL_INFO } from '../../src/fw/model.mjs';
+import { romPath, resPath, scpuPath, nandPath } from '../../src/fw/models.mjs';
 import { resPrefix } from '../../src/fw/resprefix.mjs';
 import { coverageOption } from './coverage.mjs';
 import { PatchRefused, readPatchText, applyPatches, patchLayout } from '../../src/fw/patch.mjs';
+import { extractSource, decodeExtract } from '../../src/fw/nand.mjs';
 
 export const REPO = path.resolve(new URL('../../../', import.meta.url).pathname);
 // the checks' own fixtures: their pinned notes, the VSC register header and class tables, check_perf's P7 address list
@@ -71,6 +72,21 @@ export function checkBlock(b, file = BLOCK) {
 let image = null, block = null;
 export function loadImage() { return image ??= expandImage(checkImage(readBytes(ORIGINAL))); }   // the run-time image (src/fw/expand.mjs)
 export function loadBlock() { return block ??= checkBlock(readBytes(BLOCK)); }
+// The NAND the play bring-up loads the resource tables from (env.nand; src/lab/resnand.mjs H-RESINIT, S-RESNAND), on a
+// body whose MODELS entry gives res_nand (else null): the model's NAND extract in unpacked/<code> (src/fw/models.mjs
+// nandPath), which provisioning makes from the .BIN (host/firmware.mjs; the browser's, src/fw/labfw.mjs labNand: the
+// blocks' heads and tails, their indexes and the records of at most 64 KiB), checked against MODELS
+// res_nand.extract_sha256; a missing or different file throws. A read outside the extract stops the session.
+let nand;
+export const NAND = nandPath(MODEL_INFO) && path.join(REPO, nandPath(MODEL_INFO));
+export function loadNand() {
+  if (nand !== undefined) return nand;
+  if (!NAND) return (nand = null);
+  if (!fs.existsSync(NAND)) throw new Error(`${NAND}: no NAND extract, which the play bring-up reads the resource tables from (src/lab/resnand.mjs): node emu/bin/fetch-fw.mjs --model ${MODEL} makes it from the .BIN (downloading the .BIN when it is not in fw/)`);
+  const b = readBytes(NAND);
+  try { checkNand(sha256(b)); } catch (e) { throw new Error(`${NAND}: ${e.message}`); }
+  return (nand = extractSource(decodeExtract(b)));
+}
 // The sub-CPU's own image for OM_EMU_SCPU=native (src/lab/scpum4.mjs; src/fw/models.mjs scpu_lle): the body's SCPU
 // block from unpacked/<code>, refused when it is not the one scpu_lle pins; null on a body without one (its lab keeps
 // S-SCPUDEV). bin/fetch-fw.mjs makes only the main and resource blocks; a full unpack makes this one (BLOBS.md).

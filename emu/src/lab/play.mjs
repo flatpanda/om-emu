@@ -14,6 +14,7 @@ import { sinkEdid } from './edid.mjs';
 import { Accelerometer } from './acc.mjs';
 import { Storage, STORAGE } from './storage.mjs';
 import { NativeLens } from './lens.mjs';
+import { ResNand } from './resnand.mjs';
 import { IoExpanders, PowerOff, POWER_OFF, startPowerManager } from './power.mjs';
 import { SioBus } from './sio.mjs';
 import { TOUCH_CONTROLLERS } from './touchpanel.mjs';
@@ -923,6 +924,7 @@ export class PlaySession extends N.NavSession {
     this.audio = typeof env.onAudio === 'function' ? new AudioOut() : null;
     this.acc = null;               // the accelerometer (acc.mjs) on a body that gives it (models.mjs acc)
     this.storage = null;           // the card and the file system (storage.mjs) on a body that runs them (models.mjs card_fs)
+    this.resnand = null;           // H-RESINIT, S-RESNAND (resnand.mjs) on a body that gives res_nand, with the host's NAND
     this.ioexp = null;             // S-IOEXP and the power manager (power.mjs) on a body that gives power_native (IO
                                    // expanders: on a body whose power-off has them)
     this.power_manager = null;
@@ -1046,8 +1048,11 @@ export class PlaySession extends N.NavSession {
     if (this.storage_runs()) this.storage_bring_up();
     if (MODEL_INFO.sio_devices) this.sio_bring_up();
     if (fact('power.task', null) != null) this.power_task_bring_up();     // (null or undefined: no power task)
+    if (this.resnand_runs()) this.resnand_bring_up();      // USTART_L's loader, before its lens data cache load
+    const resnandSkipped = MODEL_INFO.res_nand && !this.resnand ? 'H-RESINIT not run: the host gives no env.nand, the resource tables stay 0' : null;
     if (this.lens) this.lens.bring_up();
     this.end('play-bring-up', 'bring-up', [], [], { idle_codes: this.idle_codes.map(h8), ...(this.storage && { storage: { ...this.storage.status(), log: this.storage.take_log() } }),
+      ...(this.resnand && { resnand: { ...this.resnand.status(), log: this.resnand.take_log() } }), ...(resnandSkipped && { resnand: { skipped: resnandSkipped } }),
       ...(this.lens && { lens: { ...this.lens.status(), log: this.lens.take_log() } }) });
     // S-CAMAPP: the application starts, creates the GUI (H-GUIBYAPP) and takes it to its screen, on the EVF for an EVF
     // start (S-OUTDISP: its own 131 with lOutput 7); start 'menu' then presses MENU
@@ -1195,6 +1200,16 @@ export class PlaySession extends N.NavSession {
     const why = this.acc.probe_problem();
     if (why) throw new PlayError(`H-ACCINIT: ${why}`);
     this.acc.prime();
+  }
+  // H-RESINIT and S-RESNAND (resnand.mjs): the resource tables loaded natively from the NAND the host gives (env.nand:
+  // the update's blocks at their load addresses; env.soundArea: an image of the sound area, which is erased without
+  // one), on a body whose MODELS entry gives res_nand (E143). A host without env.nand keeps the tables at 0, as the lab
+  // did before (the lens data lookup then reads nothing, src/lab/lens.mjs), and the bring-up's record says so
+  // (resnand.skipped)
+  resnand_runs() { return !!MODEL_INFO.res_nand && !!this.env.nand; }
+  resnand_bring_up() {
+    this.resnand = new ResNand(this, MODEL_INFO.res_nand, this.env.nand, this.env.soundArea ?? null);
+    this.resnand.bring_up();
   }
   // H-FILEINIT, H-FILECLBK, S-SDHOST, S-SDCARD, S-FSNAND, S-ALBM and the card's insertion (storage.mjs): the file
   // system's bring-up natively in the boot's place and the card mounted by the firmware's own path, before the

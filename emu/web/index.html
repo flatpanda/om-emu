@@ -1025,7 +1025,7 @@ PP.onEvent = (m) => {
   else if (m.type === 'error' && m.message === bootError) return;
   else if (m.type === 'error') { fwStatus('error: ' + m.message); $('ovl').textContent = 'error: ' + m.message; $('screen').classList.add('show-ovl'); }
   else if (m.type === 'progress' && m.stage === 'unpack') fwStatus(`unpacking ${m.name} (${MiB(m.size)}) in this browser…`);
-  else if (m.type === 'progress' && m.stage === 'firmware') fwStatus(`firmware ${m.from === 'cache' ? 'from the cache in this browser' : m.manifest ? 'unpacked and cached in this browser' : `unpacked in this browser, not cached (${m.cache_error ?? 'no cache asked for'})`}: main code ${MiB(m.rom)}, resources ${MiB(m.res)} (${JSON.stringify(m.T)} ms)`);
+  else if (m.type === 'progress' && m.stage === 'firmware') fwStatus(`firmware ${m.from === 'cache' ? 'from the cache in this browser' : m.manifest ? 'unpacked and cached in this browser' : `unpacked in this browser, not cached (${m.cache_error ?? 'no cache asked for'})`}: main code ${MiB(m.rom)}, resources ${MiB(m.res)}${m.nand ? `, NAND extract ${MiB(m.nand)}` : ''} (${JSON.stringify(m.T)} ms)`);
   else if (m.type === 'progress' && m.stage === 'cache') {
     $('fwcache').disabled = !m.manifest || started; if (m.manifest) $('fwhelp').open = false;
     if (m.manifest && bootError === null) fwStatus(`cached firmware: ${m.manifest.bin.name} (${MiB(m.manifest.bin.size)}); choose or drop a .BIN to replace it`);

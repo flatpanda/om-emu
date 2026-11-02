@@ -23,11 +23,11 @@ export async function fnKeySessions() {
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
   const out = path.join(J, 'out/test-fnkeys');
   fs.rmSync(out, { recursive: true, force: true });
-  const { loadImage, loadBlock, createHash } = await import('../checks/lib/env.mjs');
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { fileNvram } = await import('../host/nvram.mjs');
-  const env = { rom: loadImage(), resBlock: loadBlock(), createHash, deflate: (b, l) => new Uint8Array(zlib.deflateSync(b, { level: l })),
+  const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, deflate: (b, l) => new Uint8Array(zlib.deflateSync(b, { level: l })),
     wallClock: () => performance.now() / 1000, nvram: fileNvram(path.join(out, 'nvram.json')) };
   const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, env);
   pl.open_session();

@@ -1,10 +1,10 @@
-// A MODELS body's firmware files on disk: its .BIN's pin in BLOBS.sha256 and whether its two unpacked blocks are there
-// (src/fw/models.mjs romPath, resPath). It reads src/fw/models.mjs only, never src/fw/model.mjs, so it answers for any
-// model, not only the run's: --model list (host/modelarg.mjs), the play server's switch (host/playcli.mjs) and the
-// run's own provisioning (host/firmware.mjs).
+// A MODELS body's firmware files on disk: its .BIN's pin in BLOBS.sha256 and whether its unpacked files are there (the
+// two blocks, src/fw/models.mjs romPath, resPath, and on a body that gives res_nand its NAND extract, nandPath). It
+// reads src/fw/models.mjs only, never src/fw/model.mjs, so it answers for any model, not only the run's: --model list
+// (host/modelarg.mjs), the play server's switch (host/playcli.mjs) and the run's own provisioning (host/firmware.mjs).
 import fs from 'node:fs';
 import path from 'node:path';
-import { romPath, resPath } from '../src/fw/models.mjs';
+import { romPath, resPath, nandPath } from '../src/fw/models.mjs';
 
 export const REPO = path.resolve(new URL('../../', import.meta.url).pathname);
 
@@ -17,5 +17,6 @@ export function binPin(m) {
   return null;
 }
 
-// Both unpacked blocks of a MODELS entry are on disk (their digests are not read here)
-export const blocksPresent = (m) => [romPath, resPath].every((p) => fs.existsSync(path.join(REPO, p(m))));
+// The unpacked files of a MODELS entry are on disk: both blocks and the NAND extract where it has one (their digests
+// are not read here)
+export const blocksPresent = (m) => [romPath, resPath, nandPath].every((p) => p(m) === null || fs.existsSync(path.join(REPO, p(m))));

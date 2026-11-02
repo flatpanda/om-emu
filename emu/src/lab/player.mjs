@@ -410,6 +410,7 @@ export class Player {
     if (this.session?.hdmi_port || this.session?.lab?.scpu_link) used.push('H-GIOSLOTS');   // the GIO slots, for the HDMI pin or the link's pin 102
     if (this.session?.hdmi_port) used.push('S-HDMISINK', 'A-HDMI-1');                       // --hdmi on: the HDMI port, its sink
     if (this.session?.storage) used.push('H-FILEINIT', 'H-FILECLBK', 'S-SDHOST', 'S-SDCARD', 'S-FSNAND', ...(this.session.storage.f.album_init !== null ? ['S-ALBM'] : []), 'S-RECFILE');   // the file system native on a card (storage.mjs; S-ALBM where the body has an album manager)
+    if (this.session?.resnand) used.push('H-RESINIT', 'S-RESNAND');                       // the resource tables from the host's NAND (resnand.mjs)
     if (this.session?.storage?.powered) used.push('S-SDPOWER');                           // a card supply request answered
     if (this.session?.storage?.switches) used.push('S-SDSWITCH');                         // a card line request answered
     if (this.session?.camapp?.movie_rate_answered) used.push('S-MOVRATE');                 // the record time with frame rate 0

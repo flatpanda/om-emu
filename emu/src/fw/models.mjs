@@ -93,6 +93,12 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // `lens_native`: the lens on the mount runs natively, the default (src/lab/lens.mjs with S-LENSMCU; OM_EMU_LENS=stand-in
 // takes S-LENS; docs/hle-gaps.md 4.4.2), on a body whose card's file system runs too; the driver's addresses are read
 // by src/fw/facts.mjs lensDriver (fact lens_driver). A body without it has S-LENS (src/lab/camapp.mjs)
+// `res_nand`: the resource tables are loaded natively from the NAND at the play bring-up where the host gives the
+// NAND (env.nand; src/lab/resnand.mjs H-RESINIT, S-RESNAND): loader, USTART_L's resource loader; size and read,
+// res_size and res_read; slot, where USTART_L loads sound 0; erase, the NAND access's erase operation; sound {load,
+// guard, end}, the sound area's address, the flash access guard's window for its writes, and the most of it a host's
+// image may cover; extract_sha256, the digest of the NAND extract the hosts keep (src/fw/labfw.mjs labNand; on node
+// unpacked/<code>/<bin>.nand.bin, nandPath). A body without it (or a host without env.nand) keeps the tables at 0
 // `power_native`: the power manager starts at the play bring-up and the power lever's off runs the firmware's own
 // power-off to its last write (src/lab/power.mjs H-PWRSTART, S-IOEXP, S-SHUTDOWN, H-POWER; docs/hle-gaps.md 4.7.4), at
 // the addresses src/fw/facts.mjs powerOff reads (fact 'power.off'); given for a body whose power-off is known to run so
@@ -147,6 +153,19 @@ export const MODELS = {
     // driver's entry points, LENS_EXEC's queue, the lens-0 flags and the lens caches' NAND are read by src/fw/facts.mjs
     // lensDriver (E143's LENS_DRIVER_E143 there, with their evidence)
     lens_native: true,
+    // The resource tables natively (src/lab/resnand.mjs H-RESINIT, S-RESNAND; docs/hle-gaps.md 4.5): USTART_L's loader
+    // 0x501a8ca0 (its call 0x500241d8), res_size 0x501a976d and res_read 0x501a921f (USTART_L's sound 0 at
+    // 0x5002433b / 0x50024353, into the slot 0xa4000000), the NAND erase operation 0x10300 (the type-2 write path's,
+    // 0x501a9a76); the sound area: load, the loader's first read (0x501a8cc0); guard, the flash access guard's window
+    // for it (0x50000735: writes and erases in 0x4e420000..0x4e460000) (D); end: the guard's next window, the RAM log
+    // at 0x4e820000 (D), taken as the most a host's image may cover (I: the area's real extent is not known);
+    // extract_sha256: the digest of the NAND extract the hosts keep (src/fw/labfw.mjs labNand, src/fw/nand.mjs
+    // nandExtract over this .BIN: 556 spans, 3,462,854 bytes, X)
+    res_nand: {
+      loader: 0x501A8CA0, size: 0x501A976D, read: 0x501A921F, slot: 0xA4000000, erase: 0x10300,
+      sound: { load: 0x4E420000, guard: [0x4E420000, 0x4E460000], end: 0x4E820000 },
+      extract_sha256: '7fd5aabf24eccbae6aa7df9ae969e1beea46b821612ce23a04b08032cd4cb5e8',
+    },
     // 0x5000314c / 0x50003156 run the heap's get 0x5000319c / release 0x50003466 with pool 2, whose block size is 16512
     // (the table 0x60029908) and whose memory is 0x62424700.. (0x50003211), S-HEAP's (D)
     heap_pool: { get: 0x5000314C, put: 0x50003156, bytes: 16512 },
@@ -962,5 +981,7 @@ export const MODELS = {
 export const codeOf = (m) => 'E' + m.bin.slice(6, 9);
 export const romPath = (m) => `unpacked/${codeOf(m)}/${m.bin}.blk00000000.OE.0100.bin`;
 export const resPath = (m) => `unpacked/${codeOf(m)}/${m.bin}.${m.res_block}`;
+// the NAND extract of a body that gives res_nand (src/fw/labfw.mjs labNand, made at provisioning), else null
+export const nandPath = (m) => (m.res_nand ? `unpacked/${codeOf(m)}/${m.bin}.nand.bin` : null);
 // the SCPU block of a body that gives scpu_lle, else null
 export const scpuPath = (m) => (m.scpu_lle ? `unpacked/${codeOf(m)}/${m.bin}.${m.scpu_lle.block}` : null);

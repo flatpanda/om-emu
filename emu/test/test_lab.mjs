@@ -9,7 +9,7 @@ import * as P from '../src/lab/play.mjs';
 import { canonJson } from '../src/util/tracejson.mjs';
 import { replay, CALLS1_FORMAT } from '../scenarios/session_replay.mjs';
 import * as SR from '../scenarios/session_replay.mjs';
-import { labEnv, loadBlock } from '../checks/lib/env.mjs';
+import { labEnv, loadBlock, loadNand } from '../checks/lib/env.mjs';
 import { bind, MISSING } from '../scenarios/bind.mjs';
 import * as PL from '../src/lab/player.mjs';
 
@@ -98,7 +98,7 @@ function replayBinding(image, eq) {
 export function trimTests() {
   const bad = [];
   let checks = 0;
-  const s = new P.PlaySession(labEnv({ resBlock: loadBlock() }), { opts: { start: 'shooting', touch: 'off', us_clock: 'lab', bgdraw: true },
+  const s = new P.PlaySession(labEnv({ resBlock: loadBlock(), nand: loadNand() }), { opts: { start: 'shooting', touch: 'off', us_clock: 'lab', bgdraw: true },
     lang: 'en', device: 'tft', start: [7, 1, 1], out: null, tag: 'play', png: 'none' });
   s.enter();
   try {

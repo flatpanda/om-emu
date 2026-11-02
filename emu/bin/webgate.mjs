@@ -13,7 +13,8 @@
 // --rounds N: timing rounds of Chrome against node, alternating (default 1).
 // What runs:
 // - node (B2): web/runner.mjs with the pure sha256 (src/util/sha256.mjs) on the blocks unpacked from the .BIN by
-//   src/fw/olyfw.mjs (the resource block cut to its prefix): stage0, shoot-tft, shoot-tft in 1 M slices, play-perf
+//   src/fw/olyfw.mjs (the resource block cut to its prefix; the NAND extract the Worker keeps, src/fw/labfw.mjs
+//   labNand, as the play sessions' env.nand): stage0, shoot-tft, shoot-tft in 1 M slices, play-perf
 //   from its inputs and the play workload without them (its digest must be d48795464396ceb1); traces to
 //   out/web/node/, compared by bin/run.mjs's comparator with the same scenarios run by bin/run.mjs in this process (the
 //   lab path the node tools take: node's crypto, the image and resource block files).
@@ -42,7 +43,8 @@ import path from 'node:path';
 import http from 'node:http';
 import { spawn, execFile } from 'node:child_process';
 import { createHash } from '../src/util/sha256.mjs';
-import { labFirmware } from '../src/fw/labfw.mjs';
+import { labFirmware, labNand } from '../src/fw/labfw.mjs';
+import { extractSource, decodeExtract } from '../src/fw/nand.mjs';
 import { MODEL, MODEL_INFO, LAB_MODEL, ON_LAB_MODEL } from '../src/fw/model.mjs';
 import { runScenario, playWorkload } from '../web/runner.mjs';
 import { rgbaOf } from '../web/frame.mjs';
@@ -117,8 +119,11 @@ const writeTraces = (dir, out) => { fs.mkdirSync(dir, { recursive: true }); for 
 // ---- the blocks, unpacked in node as the Worker unpacks them
 const r = fileReader(BIN);
 const fw = await labFirmware(r.read, r.size, createHash);
+// the NAND extract the Worker keeps (src/fw/labfw.mjs labNand): the play sessions' resource tables read from it, as
+// in the Worker
+const extract = await labNand(r.read, fw.blocks, createHash, fw.res_load);
 r.close();
-const rom = fw.rom, prefix = fw.res;
+const rom = fw.rom, prefix = fw.res, nand = extract ? { nand: extractSource(decodeExtract(extract.bytes)) } : {};
 log(`firmware ${BIN}: rom ${rom.length} bytes, resource prefix ${prefix.length} of ${fw.res_full}, both ${MODEL}'s; load ${load()}`);
 
 // ---- node (B2, and B5's other side)
@@ -129,7 +134,7 @@ const JOBS = [
   { key: 'workload', name: 'play-perf-workload' },
 ].filter((j) => !QUICK || j.key === 'shoot-tft');
 const nodeRun = (j) => {
-  const t0 = performance.now(), env = { rom, resBlock: prefix, createHash, ...(j.slice ? { slice: j.slice } : {}) };
+  const t0 = performance.now(), env = { rom, resBlock: prefix, ...nand, createHash, ...(j.slice ? { slice: j.slice } : {}) };
   const out = j.name === 'play-perf-workload' ? playWorkload(env) : runScenario(j.name, env, j.callsName ? calls(j.callsName) : null);
   return { out, ms: Math.round(performance.now() - t0), load: load() };
 };
@@ -137,7 +142,7 @@ const nodeRes = {};
 if (!PAGE_ONLY) {
   const dir = path.join(OUT, 'node');
   fs.rmSync(dir, { recursive: true, force: true });
-  if (!QUICK) for (const n of STAGE0) writeTraces(dir, runScenario(n, { rom, resBlock: prefix, createHash }, n === 'osd' ? calls('osd') : null));
+  if (!QUICK) for (const n of STAGE0) writeTraces(dir, runScenario(n, { rom, resBlock: prefix, ...nand, createHash }, n === 'osd' ? calls('osd') : null));
   for (const j of JOBS) {
     nodeRes[j.key] = nodeRun(j);
     if (j.name !== 'play-perf-workload' && !j.slice) writeTraces(dir, nodeRes[j.key].out);
@@ -354,7 +359,7 @@ function nodeSession(sent) {
   // node's run of the inputs the page sent, one at a time, as the Worker took them (idle off), and every frame's RGBA
   const a = { ...PLAYER_PARSER, no_browser: true, out: '<out>', no_wait_on_error: false, idle: 'off' };
   const rgbaSha = new Map();
-  const pl = new Player(a, { rom, resBlock: prefix, createHash, wallClock: () => performance.now() / 1000,
+  const pl = new Player(a, { rom, resBlock: prefix, ...nand, createHash, wallClock: () => performance.now() / 1000,
     onFrame: (w, h, raw, meta) => { rgbaSha.set(meta.sha16, createHash('sha256').update(rgbaOf(w, h, raw)).digest('hex').slice(0, 16)); } });
   const api = new PlayApi(pl, { tables: Tables.of(rom), frameRgba: rgbaOf });
   try { pl.open_session(); } catch (e) { if (!(e instanceof LabError)) throw e; pl.set_phase('error', pl.describe(e)); }

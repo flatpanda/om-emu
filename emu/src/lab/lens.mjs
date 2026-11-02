@@ -17,7 +17,8 @@
 //               LENS_COMMAND, LENS_ASKDATA) started, as the boot's task start would
 //   S-LENSNAND  the lens data caches' NAND (0x416e0000, 7 areas of 256 KiB, the area table 0x602a4a24 the flash area
 //               driver 0x501a921f reads for area 6) behind the NAND access the card's S-FSNAND serves
-//               (src/lab/storage.mjs): erased on a camera that never saved it, the firmware's writes kept for the
+//               (src/lab/storage.mjs; S-RESNAND, src/lab/resnand.mjs, layered between them where H-RESINIT runs):
+//               erased on a camera that never saved it, the firmware's writes kept for the
 //               session; the cache load then finds no lens cached (0x50125e24 checks the block's sum, X)
 //   H-LENSON    TAKE_FUNC's lens request at the camera's start (0x502cd9c7..0x502cd9f2: to LENS_EXEC, word 2 the
 //               command 1, word 3 a 12-byte buffer), posted by the lab with no reply queue (word 0 is 0: LENS_MAIN
@@ -32,7 +33,7 @@
 // the driver's lens-0 data-valid and attach flags are set and the chain has reached the state poll, and checks it.
 import { fact } from '../fw/model.mjs';
 import { LENS_DRIVER_E143, DPC_E143, STORAGE_E143 } from '../fw/facts.mjs';
-import { FirmwareError, where } from './hle.mjs';
+import { FirmwareError, where, runtime } from './hle.mjs';
 import { OLYQEWR } from './display.mjs';
 import * as K from './kernel.mjs';
 import * as N from './nav.mjs';
@@ -79,7 +80,8 @@ export class NativeLens {
     this.ssc.mount(true);
     if (!s.storage) throw new NativeLensError('S-LENSNAND: the lens data cache needs the NAND access the card\'s file system serves (src/lab/storage.mjs S-FSNAND)');
     const access = s.storage.f.nand.access;
-    lab.wrap(access, (prev) => (h, r) => this._nand(h, r, prev), 'S-FSNAND, S-LENSNAND');
+    // (named after the layers below: S-FSNAND, and S-RESNAND where H-RESINIT runs)
+    lab.wrap(access, (prev) => (h, r) => this._nand(h, r, prev), `${lab.hooks.get(runtime(access))?.[1] ?? 'S-FSNAND'}, S-LENSNAND`);
     lab.step('H-DPCINIT the deferred-call init 0x50050279 (pre-kernel)', () => lab.call(this.dpc_init, null, null, null, 200000));
     lab.step('H-LENSINIT the lens module init 0x502a5d10 (boot call 0x50024ab6)', () => lab.call(f.module_init, null, null, null, 2000000));
     lab.step('H-LENSINIT the lens data cache load 0x502a6371 (USTART_L)', () => lab.call(f.cache_init, null, null, null, 2000000));
@@ -135,9 +137,11 @@ export class NativeLens {
   _nand(h, r, prev) {
     const [base, size] = this.f.cache_area, flash = r.a1 >>> 0, n = r.d0 >>> 0, op = r.d1 >>> 0;
     const lab = this.s.lab;
-    // a read of no bytes reads nothing: the lens tables' flash area (area 2, 0x501a9322) has no extent in the lab,
-    // whose flash area init does not run (its table 0xa32db32c is 0), so the lens data lookup 0x502ae5d9 reads 0
-    // bytes at 0 and logs the lens as not found (X)
+    // a read of no bytes reads nothing: without H-RESINIT (a host without env.nand, a body without MODELS res_nand:
+    // E146, E147) the resource loader 0x501a8ca0 does not run and its tables stay 0, so the lens data lookup
+    // 0x502ae5d9, whose types 0x8002..0x8005 res_read serves at 0x501a9633 (the sub-tables (0xa32db1f4 + 4k)), reads 0
+    // bytes at 0 and logs the lens as not found (X); with H-RESINIT it reads the lens's record from the large-data
+    // block (src/lab/resnand.mjs, X: 13824 bytes at 0x4709de00 for S-LENSMCU's lens)
     if (n === 0 && op === this.nand_read) { this.log.push(['nand', `read 0 bytes at ${h8(flash)} from ${where(r.mdr)}`]); return h.finish(r, { d0: 0 }); }
     if (flash < base || flash + n > base + size) return prev(h, r);
     if (op !== this.nand_read) throw new NativeLensError(`S-LENSNAND: NAND access 0x${op.toString(16)} of ${n} bytes at flash ${h8(flash)} from ${where(r.mdr)}: only reads are modelled`);

@@ -135,11 +135,11 @@ export async function audioSession() {
   const bad = [];
   let checks = 0;
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
-  const { loadImage, loadBlock, createHash } = await import('../checks/lib/env.mjs');
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const SC = await import('../src/lab/scene.mjs');
-  const base = { rom: loadImage(), resBlock: loadBlock(), createHash, wallClock: () => performance.now() / 1000 };
+  const base = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
   const args = { ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true };
   const events = [];
   const pl = new Player(args, { ...base, onAudio: (e) => events.push(...e) });

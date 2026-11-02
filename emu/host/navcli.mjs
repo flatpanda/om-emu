@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { MODEL } from '../src/fw/model.mjs';
-import { REPO, loadImage, loadBlock, createHash, exitFor, readPatchFiles, patchedFirmware } from '../checks/lib/env.mjs';
+import { REPO, loadImage, loadBlock, loadNand, createHash, exitFor, readPatchFiles, patchedFirmware } from '../checks/lib/env.mjs';
 import { PatchRefused, patchLine } from '../src/fw/patch.mjs';
 import { parseArgs, intValue } from '../checks/lib/args.mjs';
 import { write_outputs, jsonText } from '../checks/lib/png.mjs';
@@ -107,7 +107,7 @@ function run(a) {
   // OM_CHILD_TRACE (golden traces of child labs, checks/lib/childtrace.mjs): every lab of this process traced, written at exit
   const trace = installChildTrace({ argv: process.argv.slice(2), install: false });
   if (trace) process.on('exit', (code) => trace.finish(code));
-  const env = { rom: fw?.rom ?? loadImage(), resBlock: fw?.resBlock ?? loadBlock(), createHash, ...(trace?.fields ?? {}),
+  const env = { rom: fw?.rom ?? loadImage(), resBlock: fw?.resBlock ?? loadBlock(), nand: loadNand(), createHash, ...(trace?.fields ?? {}),
     writeOutputs: (lab, name, device, comp, dump, dir) => write_outputs(lab, name, device, comp, dump, dir) };
   const nav = new N.NavSession(env, { lang: a.lang, device: a.device, u1: a.u1, start, seed, open_menu: false, out, tag: a.tag,
     store_first: a.store_first, evf_layout: a.evf_layout, a15: a.a15, time: a.time });

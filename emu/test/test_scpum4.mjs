@@ -162,7 +162,7 @@ export async function scpuM4Session() {
   const bad = [], skipped = [];
   let checks = 0;
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
-  const { loadImage, loadBlock, createHash, loadScpuImage } = await import('../checks/lib/env.mjs');
+  const { loadImage, loadBlock, loadNand, createHash, loadScpuImage } = await import('../checks/lib/env.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { MODEL, MODEL_INFO } = await import('../src/fw/model.mjs');
@@ -173,7 +173,7 @@ export async function scpuM4Session() {
     if (/no SCPU block/.test(e.message)) skipped.push(`${MODEL}: ${e.message}`); else ok(false, `${MODEL}: ${e.message}`);
     return { checks, bad, skipped };
   }
-  const base = { rom: loadImage(), resBlock: loadBlock(), createHash, wallClock: () => performance.now() / 1000 };
+  const base = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
   // S-SCPUDEV, whatever OM_EMU_SCPU says
   const p0 = new Player({ ...PLAYER_PARSER, ...PLAY_ARGS }, { ...base, scpu: 'off' });
   p0.open_session();

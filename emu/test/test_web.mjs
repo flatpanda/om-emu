@@ -165,7 +165,8 @@ export async function pageInputsTests() {
   const bad = [];
   const rom = new Uint8Array(fs.readFileSync(E + '00000000.OE.0100.bin')), resBlock = new Uint8Array(fs.readFileSync(E + '02000000.OE.0101.bin'));
   const a = { ...PLAYER_PARSER, no_browser: true, out: '<out>', no_wait_on_error: false, idle: 'off' };
-  const pl = new Player(a, { rom, resBlock, createHash: nodeHash, wallClock: () => performance.now() / 1000 });
+  const { loadNand } = await import('../checks/lib/env.mjs');
+  const pl = new Player(a, { rom, resBlock, nand: loadNand(), createHash: nodeHash, wallClock: () => performance.now() / 1000 });
   const api = new PlayApi(pl, { tables: Tables.of(rom), frameRgba: rgbaOf });
   try { pl.open_session(); } catch (e) { if (!(e instanceof LabError)) throw e; pl.set_phase('error', pl.describe(e)); }
   try {
@@ -200,7 +201,8 @@ export async function hostApiTests() {
   // A15 on: the camera application's start sets up the live view (CTRL3 0x41), which composites only with A15
   const a = { ...PLAYER_PARSER, no_browser: true, debug_api: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: false };
   let api = null;
-  const pl = new Player(a, { rom, resBlock, createHash: nodeHash, wallClock: () => performance.now() / 1000,
+  const { loadNand } = await import('../checks/lib/env.mjs');
+  const pl = new Player(a, { rom, resBlock, nand: loadNand(), createHash: nodeHash, wallClock: () => performance.now() / 1000,
     onStatus: () => api?.notify(), onFrame: (w, h, raw, meta) => { api.onFrame(w, h, raw, meta); api.notify(); } });
   api = new PlayApi(pl, { tables: Tables.of(rom), frameRgba: rgbaOf, timeScale: 0.001 });
   try { pl.open_session(); } catch (e) { if (!(e instanceof LabError)) throw e; pl.set_phase('error', pl.describe(e)); }

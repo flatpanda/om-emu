@@ -25,8 +25,10 @@
 // rebuilt from the wire, the byte mover), the lab's audio output and the synthesized shutter sound (test_audio.mjs
 // audioUnits: the events' checks, the queue and rings, publish_audio, the /api/audio route on the router and the
 // browser page, the clicks, S-SHUTTERSND's events), the published site's files and the
-// browser player's download command (test_site.mjs), and the patch overlays' rules on synthetic blocks and the
-// --replay check of a patched session (test_patch.mjs patchUnits).
+// browser player's download command (test_site.mjs), the patch overlays' rules on synthetic blocks and the --replay
+// check of a patched session (test_patch.mjs patchUnits), and the NAND the resource tables are read from
+// (test_resnand.mjs resnandUnits: the container's blocks at their load addresses, the browser's extract, the sound area's
+// builder, S-RESNAND's layer).
 // bin/test.mjs runs all of these too, with everything else.
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
@@ -55,6 +57,7 @@ import { scpuM4Units } from '../test/test_scpum4.mjs';
 import { siteTests } from '../test/test_site.mjs';
 import { audioUnits } from '../test/test_audio.mjs';
 import { patchUnits } from '../test/test_patch.mjs';
+import { resnandUnits } from '../test/test_resnand.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -84,6 +87,7 @@ report('the published site\'s files and the player\'s download command (bin/site
 report('scene stand-in (S-SCENE)', sceneUnits());
 report('audio output and the shutter sound (src/lab/audio.mjs, S-SHUTTERSND)', await audioUnits());
 report('patch overlays: file shapes, block references, old bytes, overlaps, ranges, digests, a patched replay (src/fw/patch.mjs)', patchUnits());
+report('the resource tables\' NAND: blocks at their load addresses, the extract, the sound area builder, S-RESNAND (src/fw/nand.mjs)', await resnandUnits());
 report('command-line parser', argsTests());
 report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnits());
 report('SCPU clock, ports, link pins and the sub-CPU (S-SCPUDEV)', scpuUnits());

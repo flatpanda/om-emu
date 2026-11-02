@@ -688,14 +688,16 @@ export function factsTests() {
   }
   // A chained port carries its reference's overrides and the knobs it lists in `carry`, nothing else: each other field
   // the reference's MODELS entry gives is the body's to decide, given in its own entry with its evidence or read by a
-  // rule (src/fw/ports.mjs FACTS), so a body does not run with a stand-in of its reference's left out unnoticed (E118 and
-  // E120 through E122 stopped at fact() on g4set, docs/model-survey.md finding 37). Not to decide: the firmware's
+  // rule (src/fw/ports.mjs FACTS), so a body does not run with a stand-in of its reference's left out unnoticed (E118
+  // and E120 through E122 stopped at fact() on g4set, docs/model-survey.md finding 37). Not to decide: the firmware's
   // identity and the port's own fields, the knobs not listed in `carry` and the stand-ins that are a body's own by
-  // nature (src/fw/knobs.mjs: return_stubs, call_skips, vsync_alias_flags), and ui_out, the lamps' module, which the lab
-  // runs where the card's file system is native and needs it (E134; E125, ported through it, keeps S-CARD's card)
+  // nature (src/fw/knobs.mjs: return_stubs, call_skips, vsync_alias_flags), ui_out, the lamps' module, which the lab
+  // runs where the card's file system is native and needs it (E134; E125, ported through it, keeps S-CARD's card), and
+  // res_nand, the resource loader's NAND areas, which lie elsewhere in each body's NAND (E146's and E147's sound index
+  // at 0x4e3e0000, X: a scan of their loaders) and are given where they were checked (E143)
   const OWN = new Set(['name', 'bin', 'version', 'res_block', 'rom_len', 'rom_sha256', 'image_base', 'res_len', 'res_sha256',
     'panels', 'card_fs', 'board', 'port_via', 'overrides', 'carry', 'checked', 'return_stubs', 'call_skips',
-    'vsync_alias_flags', 'ui_out', ...Object.keys(KNOBS)]);
+    'vsync_alias_flags', 'ui_out', 'res_nand', ...Object.keys(KNOBS)]);
   for (const [code, m] of Object.entries(MODELS)) {
     if (!m.port_via) continue;
     const open = Object.keys(MODELS[m.port_via]).filter((k) => !OWN.has(k) && !Object.hasOwn(m, k) && !Object.hasOwn(FACTS[code] ?? {}, k));

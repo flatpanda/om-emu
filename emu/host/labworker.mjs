@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { workerData, parentPort } from 'node:worker_threads';
-import { loadImage, loadBlock, createHash, scpuEnv, patchedFirmware } from '../checks/lib/env.mjs';
+import { loadImage, loadBlock, loadNand, createHash, scpuEnv, patchedFirmware } from '../checks/lib/env.mjs';
 import { Player } from '../src/lab/player.mjs';
 import { PortQueue, F_KILL } from './portqueue.mjs';
 import { stackOf } from '../checks/lib/errors.mjs';
@@ -40,7 +40,7 @@ const cardSize = process.env.OM_EMU_CARD_SIZE ? { sectors: cardSectors(process.e
 // overlay's summary goes into the status and session.json (env.patch, src/lab/player.mjs)
 const fw = patches ? patchedFirmware(patches) : null;
 const env = {
-  rom: fw?.rom ?? loadImage(), resBlock: fw?.resBlock ?? loadBlock(), createHash, ...(trace?.fields ?? {}),
+  rom: fw?.rom ?? loadImage(), resBlock: fw?.resBlock ?? loadBlock(), nand: loadNand(), createHash, ...(trace?.fields ?? {}),
   ...(fw ? { patch: fw.summary } : {}),
   deflate: (b, level) => new Uint8Array(zlib.deflateSync(b, { level })),
   wallClock, queue, flags,

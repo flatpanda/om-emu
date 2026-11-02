@@ -124,7 +124,7 @@ const J = process.argv[1], DEVICE = process.argv[2], PROBE_NS = ${PROBE_NS}, PRO
   REDRAW_MAX = ${REDRAW_MAX};
 const { createHash } = await import('node:crypto');
 const zlib = await import('node:zlib');
-const { loadImage, loadBlock } = await import(J + '/bin/run.mjs');
+const { loadImage, loadBlock, loadNand } = await import(J + '/bin/run.mjs');
 const { Player } = await import(J + '/src/lab/player.mjs');
 const { PLAYER_PARSER } = await import(J + '/scenarios/session_replay.mjs');
 const { A } = await import(J + '/src/fw/model.mjs');
@@ -132,7 +132,7 @@ const { runtime } = await import(J + '/src/lab/hle.mjs');
 const { openVolume } = await import(J + '/refs/volume.mjs');
 const { memoryCard } = await import(J + '/src/lab/sdcard.mjs');
 const SHOTS_QUERY = ${SHOTS_QUERY}, card = {};
-const env = { rom: loadImage(), resBlock: loadBlock(), createHash, ...(SECTORS === null ? {} : { card: memoryCard({ sectors: SECTORS }) }), deflate: (b, l) => new Uint8Array(zlib.deflateSync(b, { level: l })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)) };
+const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, ...(SECTORS === null ? {} : { card: memoryCard({ sectors: SECTORS }) }), deflate: (b, l) => new Uint8Array(zlib.deflateSync(b, { level: l })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)) };
 const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, device: DEVICE }, { ...env, wallClock: () => performance.now() / 1000 });
 pl.open_session();
 const s = pl.session, lab = s.lab, out = [];

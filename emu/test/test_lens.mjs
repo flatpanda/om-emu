@@ -132,7 +132,7 @@ export async function lensSession() {
   const bad = [];
   let checks = 0;
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
-  const { loadImage, loadBlock, createHash } = await import('../checks/lib/env.mjs');
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { HANDLER_TABLE } = await import('../src/lab/irq.mjs');
@@ -140,7 +140,7 @@ export async function lensSession() {
   const { A, MODEL } = await import('../src/fw/model.mjs');
   const focal = FOCAL[MODEL];
   if (!focal) return { checks: 1, bad: [`${MODEL}: no native lens here (the bodies with one: ${Object.keys(FOCAL)})`] };
-  const env = { rom: loadImage(), resBlock: loadBlock(), createHash, wallClock: () => performance.now() / 1000, lens: 'native' };
+  const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000, lens: 'native' };
   const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, env);
   pl.open_session();
   const s = pl.session, lab = s.lab, L = s.lens, used = pl.stand_ins_in_use();
@@ -162,8 +162,11 @@ export async function lensSession() {
   const fl = focal.map((a) => lab.sim.u32(a));
   ok(JSON.stringify(fl) === JSON.stringify([24, 80, 2 * LENS_1240.zoom[step]]), `the 35 mm focal lengths the driver derives: ${fl}`);
   // the bring-up's three 0x100000ff logs (0x5089d53e, 0x5089d853) are the session's without the native lens too (X:
-  // master 93016b8's play session logs the same three)
-  const unexpected = (from) => lab.kernel.errors.slice(from).filter(([c]) => !EXPECTED_ERRLOG.has(c) && !(from === 0 && c === 0x100000ff)).map(([c, , , w]) => `0x${c.toString(16)} at ${w}`);
+  // master 93016b8's play session logs the same three); H-RESINIT's sound 0 load on the erased sound area logs
+  // 0x1f000003 (src/lab/resnand.mjs)
+  const { SOUND_ERASED_LOG } = await import('../src/lab/resnand.mjs');
+  const bringUp = (c) => c === 0x100000ff || (s.resnand && !s.resnand.image && c === SOUND_ERASED_LOG);
+  const unexpected = (from) => lab.kernel.errors.slice(from).filter(([c]) => !EXPECTED_ERRLOG.has(c) && !(from === 0 && bringUp(c))).map(([c, , , w]) => `0x${c.toString(16)} at ${w}`);
   ok(unexpected(0).length === 0, `no error log: ${unexpected(0)}`);
   const e0 = lab.kernel.errors.length;
   // the zoom ring: the lens reports the step in its state, the driver derives the focal length from it

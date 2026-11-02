@@ -14,7 +14,8 @@ export const TRACE_ENV = { emu: true, runner: 'emu/web/runner.mjs' };
 const SOURCES = { kernel: 'emu/scenarios/kernel.mjs main()', osd: 'emu/scenarios/osd_replay.mjs', replay: 'emu/scenarios/session_replay.mjs' };
 
 // One scenario: {sessions: [{name, rc, stats, trace (the dump's JSON text, as run.mjs --trace writes it)}], wall_ms}.
-// env: {rom, resBlock, createHash, slice?, onSlice?}; calls: the scenario's calls document (null for a kernel session).
+// env: {rom, resBlock, nand?, createHash, slice?, onSlice?}; calls: the scenario's calls document (null for a kernel
+// session).
 export function runScenario(name, env, calls = null) {
   const sessions = [], stdout = [];
   let pending = name, current = null;
@@ -41,6 +42,7 @@ export function runScenario(name, env, calls = null) {
   else {
     if (!calls) throw new Error(`runner: ${name} needs its calls document`);
     lenv.resBlock = env.resBlock;
+    if (env.nand) lenv.nand = env.nand;
     lenv.sessionName(calls.format === S1.CALLS2_FORMAT ? [name, ...[2, 3, 4, 5, 6, 7, 8, 9].map((k) => `${name}#${k}`)] : name);
     rc = S1.replay(lenv, calls);
     source = SOURCES.replay;
@@ -59,7 +61,7 @@ export const PLAY_SCRIPT = [['shoot 3 s lab', 'idle', 3000], ['MENU open', 'key'
 export function playWorkload(env, script = PLAY_SCRIPT) {
   const wall = () => performance.now() / 1000;
   const a = { ...S1.PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'auto', out: '<out>', no_wait_on_error: true };
-  const pl = new Player(a, { rom: env.rom, resBlock: env.resBlock, createHash: env.createHash, ...(env.slice ? { slice: env.slice } : {}), wallClock: wall });
+  const pl = new Player(a, { rom: env.rom, resBlock: env.resBlock, ...(env.nand ? { nand: env.nand } : {}), createHash: env.createHash, ...(env.slice ? { slice: env.slice } : {}), wallClock: wall });
   const res = { phases: [], frames: [] };
   const t0 = performance.now();
   pl.open_session();

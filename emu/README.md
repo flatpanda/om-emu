@@ -13,7 +13,10 @@ is in [ARCHITECTURE.md](ARCHITECTURE.md) and the known departures from the hardw
 - The model's firmware, which is never stored in this repository: `node emu/bin/fetch-fw.mjs [--model CODE]` downloads
   the `.BIN` from the vendor's updater API, checks it against `BLOBS.sha256`, unpacks the main code block and the
   resource block into `unpacked/<code>/` and checks both against `src/fw/models.mjs` (for the OM-1, about 240 MB
-  downloaded, 90 MB kept). The player does this itself on first use.
+  downloaded, 90 MB kept). The player does this itself on first use. The node hosts' play sessions on E143 also read
+  the `.BIN` itself, where `fetch-fw.mjs` keeps it in `fw/` (or `$OM_FW_DIR`, `$OM_BIN`), for the NAND blocks the
+  resource tables are loaded from (`checks/lib/env.mjs` loadNand, `src/lab/resnand.mjs`); without it they stop with
+  that reason.
 - For the debug API's `--disasm` only: `tools/mn10300-objdump` (or `$OM_OBJDUMP`; the build recipe is in `BLOBS.md`).
 - For `bin/webgate.mjs`: the `.BIN` (`$OM_BIN`, or `$OM_FW_DIR` holding it) and Chrome: `--chrome PATH`, else the
   first found of `/usr/bin/google-chrome-stable`, `/usr/bin/google-chrome`, `/usr/bin/chromium`,
@@ -130,6 +133,12 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   plays sound (and polls for it) once a key press or a click on it has started its audio context; its Sound button
   mutes it. A `--replay`'s sound is dropped, and the gates, golden, the checks and `nav.mjs` emit none. PCM the
   firmware makes itself would go out the same way (`docs/hle-gaps.md` 4.5).
+- On E143 the resource API's tables are the firmware's own (`src/lab/resnand.mjs`, `docs/hle-gaps.md` 4.5): the play
+  bring-up runs USTART_L's resource loader natively (H-RESINIT), and S-RESNAND serves its NAND reads from the update's
+  blocks at their load addresses (the node hosts read the model's `.BIN` where it is asked, `checks/lib/env.mjs`
+  loadNand; the browser its extract), so the lens data lookup finds its lens's record. The camera's own sound
+  resources at `0x4e420000` are factory data that no update carries: they read erased, unless a host gives an image
+  (`env.soundArea`; `src/fw/nand.mjs` soundArea() builds one in the TG-7's format from WAVE files).
 - A card is in the SD slot. On E143 it is an 8 GiB SDHC card behind the firmware's SD command layer (S-SDCARD,
   `src/lab/sdcard.mjs`), and the firmware's own storage stack runs on it (`src/lab/storage.mjs`, `docs/hle-gaps.md`
   4.8.2): the file system's bring-up and the file tasks natively before the application starts (H-FILEINIT,
@@ -503,8 +512,11 @@ The patch files are the user's: none is committed here, and the tests write thei
 camera's firmware file or drop it anywhere on the page (the page names it: E143's is
 `OLY_E_143_1900_0000_0000.BIN`). The Worker reads it block by block (`src/fw/olyfw.mjs`: the container walk,
 descramble and checksum), keeps the main code block and the part of the resource block the lab can read
-(`src/fw/resprefix.mjs`, 9.6 of 58 MiB), and caches both in the browser's Origin Private File System, so a later visit
-starts with "Start from the cached firmware". Nothing is uploaded.
+(`src/fw/resprefix.mjs`, 9.6 of 58 MiB) and, on E143, an extract of the NAND blocks the play bring-up loads the
+resource tables from (`src/fw/labfw.mjs` labNand: the heads, the indexes and the records of at most 64 KiB, 3.3 MiB,
+checked against its digest in `src/fw/models.mjs` res_nand), and caches all three in the browser's Origin Private File
+System, so a later visit starts with "Start from the cached firmware" (a cache made before the extract existed is not
+used: the `.BIN` is asked for again). Nothing is uploaded.
 
 The query string takes the player's options (`?idle=off`, `device=evf`, `a15=on`, `touch=driver`, `start=menu`,
 `tab=7,5,1`, `debug_api=1`, `hdmi=on`, ...); the default is `--idle wall`. The start options above the camera set four of

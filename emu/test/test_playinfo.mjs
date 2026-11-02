@@ -27,7 +27,7 @@ export async function playInfoSession() {
   const bad = [];
   let checks = 0;
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
-  const { loadImage, loadBlock } = await import('../bin/run.mjs');
+  const { loadImage, loadBlock, loadNand } = await import('../bin/run.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { A, MODEL, fact } = await import('../src/fw/model.mjs');
@@ -35,7 +35,7 @@ export async function playInfoSession() {
   const { LENS_MOUNT } = await import('../src/lab/camapp.mjs');
   const { openVolume } = await import('../refs/volume.mjs');
   const { decodeJpeg } = await import('../refs/jpeg.mjs');
-  const env = { rom: loadImage(), resBlock: loadBlock(), createHash, wallClock: () => performance.now() / 1000,
+  const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000,
     deflate: (b, l) => new Uint8Array(zlib.deflateSync(b, { level: l })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)) };
   const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, device: 'tft' }, env);
   pl.open_session();

@@ -326,7 +326,7 @@ export async function storageSession() {
   let checks = 0;
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
   const P = await import('../src/lab/play.mjs');
-  const { labEnv, loadBlock } = await import('../checks/lib/env.mjs');
+  const { labEnv, loadBlock, loadNand } = await import('../checks/lib/env.mjs');
   const { A, MODEL, ON_LAB_MODEL } = await import('../src/fw/model.mjs');
   const { STORAGE } = await import('../src/lab/storage.mjs');
   const { BOARD } = await import('../src/fw/board.mjs');
@@ -342,7 +342,7 @@ export async function storageSession() {
   const names = STORAGE.names, DIR = `DCIM/100${names.folder}`, FILE1 = `${DIR}/${names.file}0001.${names.ext}`;
   let saved = null;
   const session = (card) => {
-    const env = { ...labEnv({ resBlock }), card };
+    const env = { ...labEnv({ resBlock, nand: loadNand() }), card };
     const s = new P.PlaySession(env, { opts: { start: 'shooting', touch: 'off', us_clock: 'lab' }, lang: 'en', device: 'tft', start: [7, 1, 1], out: null, tag: 'play', png: 'none' });
     s.enter();
     return s;
@@ -395,7 +395,7 @@ export async function storageSession() {
     const { Player } = await import('../src/lab/player.mjs');
     const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
     const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true },
-      { rom: loadImage(), resBlock, createHash, wallClock: () => performance.now() / 1000 });
+      { rom: loadImage(), resBlock, nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 });
     const st = () => pl.session.steps.find((x) => x.storage)?.storage;
     try {
       pl.open_session();
@@ -418,7 +418,7 @@ export async function storageSession() {
     const { runtime } = await import('../src/lab/hle.mjs');
     const card = new SdCard();
     const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, debug_api: true },
-      { rom: loadImage(), resBlock, createHash, wallClock: () => performance.now() / 1000, card: { open: () => card, save() {} } });
+      { rom: loadImage(), resBlock, nand: loadNand(), createHash, wallClock: () => performance.now() / 1000, card: { open: () => card, save() {} } });
     try {
       pl.open_session();
       for (const inp of [...(LIVE_VIEW ? [{ type: 'scene', change: { liveview: true } }] : []), { type: 'token', token: 'WAIT:100' }, { type: 'key', id: 's1', action: 'down' },
@@ -489,7 +489,7 @@ export async function storageSession() {
 // label, an empty root, the free count of the volume as the insertion's format left it; FAT32's FSInfo with it, an
 // exFAT volume consistent with its backup boot region), the counts reset, the application leaves Busy for the menu
 async function hlsFormat(card, tag, ok, bad, notes) {
-  const { loadImage, loadBlock, createHash } = await import('../checks/lib/env.mjs');
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { runtime } = await import('../src/lab/hle.mjs');
@@ -498,7 +498,7 @@ async function hlsFormat(card, tag, ok, bad, notes) {
   const names = STORAGE.names, FILE1 = `DCIM/100${names.folder}/${names.file}0001.${names.ext}`;
   const read = (lba, n) => card.read(lba, n);
   const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true },
-    { rom: loadImage(), resBlock: loadBlock(), createHash, wallClock: () => performance.now() / 1000, card: { open: () => card, save() {} } });
+    { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000, card: { open: () => card, save() {} } });
   const press = (s, k) => { s.key(k, 'down'); s.camapp.pump(); s.idle_slice(s.lab.lab_time() + 100e6); s.key(k, 'up'); s.camapp.pump(); s.idle_slice(s.lab.lab_time() + 400e6); };
   const frame = (s) => { const [w, h, words] = s.frame('boundary'); return { w, h, words }; };
   const rows = (f, y0, y1) => { const a = f.words.slice(y0 * f.w, y1 * f.w), b = []; for (const x of a) b.push(x); return b.join(','); };
@@ -544,13 +544,13 @@ async function hlsFormat(card, tag, ok, bad, notes) {
 // firmware unmounts and the screen loses the card's counts; back in, the firmware initialises and mounts the card again
 // (without a format: the volume it had, read back the same) and the counts come back
 async function hlsOutIn(card, tag, ok, bad, notes) {
-  const { loadImage, loadBlock, createHash } = await import('../checks/lib/env.mjs');
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { A } = await import('../src/fw/model.mjs');
   const { SHOTS } = cardQueries(A), read = (lba, n) => card.read(lba, n);
   const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true },
-    { rom: loadImage(), resBlock: loadBlock(), createHash, wallClock: () => performance.now() / 1000, card: { open: () => card, save() {} } });
+    { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000, card: { open: () => card, save() {} } });
   const box = (s) => { const [w, , words] = s.frame('boundary'), out = []; for (let y = 0; y < 45; y++) for (let x = 230; x < 460; x++) out.push(words[y * w + x]); return out.join(','); };
   try {
     pl.open_session();
@@ -605,7 +605,7 @@ export async function storageSdxc(sizes = [64, 128], hlsSizes = [64]) {
   const bad = [], notes = [];
   let checks = 0;
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
-  const { loadImage, loadBlock, createHash } = await import('../checks/lib/env.mjs');
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { A, MODEL } = await import('../src/fw/model.mjs');
@@ -618,7 +618,7 @@ export async function storageSdxc(sizes = [64, 128], hlsSizes = [64]) {
     const card = new SdCard({ sectors: cardSectors(gib) }), tag = `${MODEL} ${gib} GiB ${card.kind}`;
     const read = (lba, n) => card.read(lba, n);
     const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, debug_api: true },
-      { rom, resBlock, createHash, wallClock: () => performance.now() / 1000, card: { open: () => card, save() {} } });
+      { rom, resBlock, nand: loadNand(), createHash, wallClock: () => performance.now() / 1000, card: { open: () => card, save() {} } });
     try {
       pl.open_session();
       const st = pl.session.steps.find((x) => x.storage)?.storage;

@@ -18,7 +18,8 @@
 // file system on E143, E146, E147, E144, E142 and E134 and SDXC cards on E143 (test_storage.mjs), INFO's still information
 // in playback on the 19 bodies (test_playinfo.mjs), a tap on the touch mode icon on E143 and ten bodies of the E144
 // family (test_touch.mjs), subject detection's frames on E143
-// (test_subject.mjs), the lens on the mount natively on E143, E146 and E147 (test_lens.mjs), the SCPU's Cortex-M4 core
+// (test_subject.mjs), the lens on the mount natively on E143, E146 and E147 (test_lens.mjs), the resource tables loaded
+// natively from the NAND on E143 (test_resnand.mjs), the SCPU's Cortex-M4 core
 // (test_m4.mjs: hand-written vectors, QEMU's recorded vectors, the SCPU image from reset to its first unmodelled
 // access), the SCPU's STM32L4 machine (test_stm32l4.mjs: the peripheral models, the SCPU image to its console prompt,
 // console commands, its standby and the wake-up), the SCPU's own firmware behind the link against S-SCPUDEV on E143
@@ -314,6 +315,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`the native lens: units ${lu.checks - lu.bad.length}/${lu.checks}; in play (E143) ${ls.checks - ls.bad.length}/${ls.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
   [...lu.bad, ...ls.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += lu.bad.length + ls.bad.length + others.filter(([, rc]) => rc !== 0).length;
+}
+// the resource tables from the NAND (H-RESINIT, S-RESNAND): the NAND view, the extract and the sound area's builder, then
+// the tables and the resource API's answers in play on E143 (the .BIN, the browser's extract, a lab-made sound area)
+{
+  const { resnandUnits, resnandSession } = await import('../test/test_resnand.mjs');
+  const ru = await resnandUnits(), rs = await resnandSession();
+  console.log(`the resource tables' NAND: units ${ru.checks - ru.bad.length}/${ru.checks}; in play ${rs.checks - rs.bad.length}/${rs.checks}`);
+  [...ru.bad, ...rs.bad].forEach((x) => console.log('  ', x));
+  bad += ru.bad.length + rs.bad.length;
 }
 // PER_SIO's served IIC transfers and the TG-5's charger, without firmware (the TG-5s' sessions are bin/modelcheck.mjs's)
 {

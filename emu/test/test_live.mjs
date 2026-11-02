@@ -153,7 +153,7 @@ export async function liveUnits() {
 export async function liveSession() {
   const t = tester('live session');
   const { ok } = t;
-  const { loadImage, loadBlock } = await import('../checks/lib/env.mjs');
+  const { loadImage, loadBlock, loadNand } = await import('../checks/lib/env.mjs');
   const { Player, ArrayQueue } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   // a queue that blocks as the node host's does: get() asks the script for the next input (nothing: null)
@@ -162,7 +162,7 @@ export async function liveSession() {
     get(_t) { if (!this.length && this.feed) this.feed(this); return this.get_nowait(); }
   }
   const results = new Map();
-  const base = { rom: loadImage(), resBlock: loadBlock(), createHash, wallClock: () => performance.now() / 1000, onResult: (seq, r) => results.set(seq, r) };
+  const base = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000, onResult: (seq, r) => results.set(seq, r) };
   const args = { ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, debug_api: true };
   let seq = 0;
   const inp = (x) => ({ seq: ++seq, t_wall: 0, ...x });

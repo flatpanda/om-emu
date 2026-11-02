@@ -37,7 +37,8 @@
 // Inputs that arrive during a tick wait in the event loop, as they wait in the node host's queue; every outbound event
 // is posted from inside the tick, and a busy Worker's postMessage is delivered at once, so the page sees status and
 // frames while a long input runs (the page answers the status, frame and audio long polls from what was pushed).
-import { labFirmware } from '../src/fw/labfw.mjs';
+import { labFirmware, labNand } from '../src/fw/labfw.mjs';
+import { extractSource, decodeExtract } from '../src/fw/nand.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
 import { MODEL_INFO } from '../src/fw/model.mjs';
 import { createHash } from '../src/util/sha256.mjs';
@@ -59,10 +60,12 @@ const wallClock = () => (performance.timeOrigin + performance.now()) / 1000;
 const post = (m, transfer = []) => postMessage(m, transfer);
 let player = null, api = null, driver = null, frameOut = null, framePending = false, booting = false;
 
-// The two blocks: from the File (walk, descramble, verify every checksum, check the main code block is the model's,
-// cut the resource block to its prefix, check it, cache both) or from the OPFS cache (verified against its manifest,
-// which must name the model's digests). T: timings in ms. A browser that cannot keep the cache (web/opfs.mjs: no OPFS,
-// or one that refuses) runs from the File alone: manifest null and cache_error its reason, which the page shows.
+// The two blocks and the NAND extract: from the File (walk, descramble, verify every checksum, check the main code
+// block is the model's, cut the resource block to its prefix, check it; the extract of the NAND blocks the play
+// bring-up's resource tables are read from, src/fw/labfw.mjs labNand, checked against the model's digest; cache all
+// three) or from the OPFS cache (verified against its manifest, which must name the model's digests). T: timings in ms.
+// A browser that cannot keep the cache (web/opfs.mjs: no OPFS, or one that refuses) runs from the File alone: manifest
+// null and cache_error its reason, which the page shows.
 async function firmware(file, { cache = true } = {}) {
   const T = {};
   let t = performance.now();
@@ -72,20 +75,22 @@ async function firmware(file, { cache = true } = {}) {
     post({ type: 'progress', stage: 'unpack', name: file.name, size: file.size });
     const fw = await labFirmware(read, file.size, createHash, { onBlock: (flags, ms) => post({ type: 'progress', stage: 'block', flags, ms: Math.round(ms) }) });
     lap('unpack');
+    const nand = await labNand(read, fw.blocks, createHash, fw.res_load);
+    lap('nand');
     let manifest = null, cacheError = null;
     if (cache) {
       try {
         manifest = await OPFS.store(fw.rom, fw.res, { bin: { name: file.name, size: file.size, lastModified: file.lastModified }, res_full: fw.res_full }, createHash,
-          { rom: fw.rom_sha256, res: fw.res_sha256 });
+          { rom: fw.rom_sha256, res: fw.res_sha256, nand: nand?.sha256 }, nand?.bytes ?? null);
       } catch (e) { cacheError = `${e?.name && e.name !== 'Error' ? e.name + ': ' : ''}${e?.message ?? e}`; }
       lap('opfs_write');
     }
-    return { rom: fw.rom, res: fw.res, from: 'file', manifest, cacheError, T };
+    return { rom: fw.rom, res: fw.res, nand: nand?.bytes ?? null, from: 'file', manifest, cacheError, T };
   }
   const c = await OPFS.load(createHash);
   lap('opfs_read');
   if (!c) throw new Error(`no firmware: choose the camera's .BIN file (${MODEL_INFO.bin}); it is read here and never uploaded`);
-  return { rom: c.rom, res: c.res, from: 'cache', manifest: c.manifest, T };
+  return { rom: c.rom, res: c.res, nand: c.nand, from: 'cache', manifest: c.manifest, T };
 }
 
 // The page's query string as play.mjs's command line (the options that move the lab; --no-browser, no --out).
@@ -114,7 +119,7 @@ async function boot(msg) {
   let a;
   try {
     const fw = await firmware(msg.file ?? null, { cache: msg.cache !== false });
-    post({ type: 'progress', stage: 'firmware', from: fw.from, rom: fw.rom.length, res: fw.res.length, manifest: fw.manifest, cache_error: fw.cacheError ?? null, T: fw.T });
+    post({ type: 'progress', stage: 'firmware', from: fw.from, rom: fw.rom.length, res: fw.res.length, nand: fw.nand?.length ?? 0, manifest: fw.manifest, cache_error: fw.cacheError ?? null, T: fw.T });
     // a patch overlay (the page's Patch start option): on the verified stock blocks, after the cache took them
     let patch = null;
     if (msg.args?.patch) {
@@ -141,6 +146,9 @@ async function boot(msg) {
       (e) => post({ type: 'progress', stage: 'nvram-error', message: String(e?.message ?? e) }), `this browser (OPFS ${OPFS.NVRAM_DIR})`) : null;
     const env = {
       rom: fw.rom, resBlock: fw.res, createHash, wallClock, asyncHost: true, refuseUnported: true,
+      // the NAND the bring-up's resource tables are read from (src/lab/resnand.mjs): the extract, a read beyond it
+      // refused
+      ...(fw.nand ? { nand: extractSource(decodeExtract(fw.nand)) } : {}),
       cardView: CARD_VIEW,                // the Card panel's reads of the card's files (web/cardfiles.mjs)
       lens, ...(nvram ? { nvram } : {}),
       ...(card ? { card } : {}),
@@ -201,7 +209,7 @@ async function gate(msg) {
   const fw = await firmware(msg.file ?? null, { cache: msg.cache !== false });
   const job = msg.job, t0 = performance.now();
   let slices = 0;
-  const env = { rom: expandImage(fw.rom), resBlock: fw.res, createHash, ...(job.slice ? { slice: job.slice, onSlice: () => { slices++; } } : {}) };
+  const env = { rom: expandImage(fw.rom), resBlock: fw.res, ...(fw.nand ? { nand: extractSource(decodeExtract(fw.nand)) } : {}), createHash, ...(job.slice ? { slice: job.slice, onSlice: () => { slices++; } } : {}) };
   let out;
   if (job.name === 'play-perf-workload') out = playWorkload(env);
   else if (job.name === 'lz4') {                  // the LZ4 decode of the two resource blobs (resources.blobs), timed

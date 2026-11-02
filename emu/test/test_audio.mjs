@@ -2,11 +2,11 @@
 //   audioUnits    without firmware: an event's checks; a session's queue (AudioOut: take, the full queue's drop);
 //                 the rings (AudioRing: numbering, a copy's numbers, what after N gives and drops); the samples as
 //                 little-endian bytes and GET /api/audio's document; the Player's publish_audio (one batch per call,
-//                 numbered across sessions, nothing without a host that plays sound); the router's /api/audio (after=-1
-//                 at once, a long poll answered by the next event, a bad after refused); the browser page's answer of
-//                 the same route from what the Worker posted; the clicks (deterministic, their lengths at two rates,
-//                 within full scale, loud at the start and silent at the end, open and close different) and the
-//                 stand-in's two events
+//                 numbered across sessions, nothing without a host that plays sound, a replay's dropped); the
+//                 router's /api/audio (after=-1 at once, a long poll answered by the next event, a bad after refused);
+//                 the browser page's answer of the same route from what the Worker posted; the clicks (deterministic,
+//                 their lengths at two rates, within full scale, loud at the start and silent at the end, open and
+//                 close different) and the stand-in's two events
 //   audioSession  E143 in a headless Player whose host plays sound: S1 then S2 emits exactly one open and one close
 //                 click, spaced by the shutter time in use (1/125 s without S-SCENE, S-SCENE's with its live view on),
 //                 the status lists S-SHUTTERSND; a Player without the host's onAudio has no sound and does not list it
@@ -71,8 +71,15 @@ export async function audioUnits() {
   pl.session = { audio: new AudioOut() };
   pl.session.audio.emit(ev());
   pl.publish_audio();
+  pl.replaying = true;                 // a --replay's sound: taken and dropped
+  pl.session.audio.emit(ev());
+  pl.publish_audio();
+  pl.replaying = false;
+  const replay_left = pl.session.audio.pending.length;
+  pl.publish_audio();
   pl.session = null;
   ok(JSON.stringify(got) === '[[1,2],[3]]' && pl.audio.seq === 3, `publish_audio: one batch per call with events, numbered across sessions: ${JSON.stringify(got)}`);
+  ok(replay_left === 0, `publish_audio while replaying drops the queued sound: ${replay_left} left, ${JSON.stringify(got)}`);
   // the router's /api/audio
   const { PlayApi } = await import('../src/lab/playapi.mjs');
   const fake = { a: {}, audio: new AudioRing(), stop: false };

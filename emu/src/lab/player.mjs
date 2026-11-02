@@ -426,9 +426,11 @@ export class Player {
   }
   // The session's sound since the last call (src/lab/audio.mjs), numbered and handed to the host in one batch: after
   // every tick and as a session closes. Nothing to do (no host that plays sound, or nothing emitted) costs one test.
+  // A --replay's sound is dropped (taken and not published): the replay runs outside tick() and faster than wall time,
+  // so its clicks would reach the page as one overlapping burst.
   publish_audio() {
     const ev = this.session?.audio?.take();
-    if (!ev) return;
+    if (!ev || this.replaying) return;
     this.env.onAudio(this.audio.add(ev));
   }
   // Engine commands and display steps so far (taken before lab work; trim() runs only after the comparison).
@@ -647,7 +649,7 @@ export class Player {
     if (replay !== null && this.session !== null) {
       this.replaying = true;
       this.set_phase('replaying');
-      try { this.run_replay(replay); } finally { this.replaying = false; }
+      try { this.run_replay(replay); } finally { this.publish_audio(); this.replaying = false; }   // the replay's sound dropped
       if (this.session !== null) this.set_phase('running');
     }
     while (!this.stopping()) {

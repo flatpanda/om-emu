@@ -127,8 +127,8 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   16-bit samples, source) only where its host plays sound (`env.onAudio`: the node server's lab thread and the
   browser player's Worker), the Player hands them over after each tick, and both pages play them with WebAudio
   through `GET /api/audio?after=N` (a long poll; the browser's page answers it from the Worker's messages). A page
-  plays sound once a key press or a click on it has started its audio context; its Sound button mutes it. The gates,
-  golden, the checks and `nav.mjs` emit none. PCM the firmware makes itself would go out the same way
+  plays sound (and polls for it) once a key press or a click on it has started its audio context; its Sound button
+  mutes it. A `--replay`'s sound is dropped, and the gates, golden, the checks and `nav.mjs` emit none. PCM the firmware makes itself would go out the same way
   (`docs/hle-gaps.md` 4.5).
 - A card is in the SD slot. On E143 it is an 8 GiB SDHC card behind the firmware's SD command layer (S-SDCARD,
   `src/lab/sdcard.mjs`), and the firmware's own storage stack runs on it (`src/lab/storage.mjs`, `docs/hle-gaps.md`

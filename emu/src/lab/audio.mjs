@@ -30,7 +30,8 @@
 //   browser player                web/worker.mjs posts the batch to the page; web/page.mjs answers the same
 //                                 GET /api/audio?after=N from it.
 //   page (web/play.html,          plays each event at its lab time relative to the run's first (a lead of 0.15 s);
-//   web/index.html)               the AudioContext starts at the first key or pointer press, Sound toggles it.
+//   web/index.html)               the AudioContext starts at the first key or pointer press, Sound toggles it; the
+//                                 page polls only while its context plays, from the newest event then (after=-1).
 // GET /api/audio?after=N answers audioDoc(): {seq (the newest), dropped (events after N no longer kept), events: [{seq,
 // t_lab_ns, rate, channels, frames, source, pcm}]}, pcm the samples as base64 of little-endian 16-bit words (the
 // browser's page.mjs gives the same document with the samples as Int16Arrays in the answer's audio field instead);

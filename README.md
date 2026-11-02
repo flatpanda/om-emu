@@ -26,7 +26,7 @@ and the Super Control Panel, S1 / S2 and REC with a synthetic scene on the live 
 the TFT and the EVF. Scripted menu sessions (`emu/bin/nav.mjs`) and a debug API (`emu/bin/debug.mjs`: registers,
 memory, breakpoints, traces) drive the same machine without the page.
 
-Other bodies, through ports (as of 2026-11-01):
+Other bodies, through ports (as of 2026-11-02):
 
 | Body | Code | Status |
 |---|---|---|

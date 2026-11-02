@@ -50,7 +50,10 @@ not reconciled.
    2026-10-29, its card native too (`docs/model-survey.md` finding 22), and so did E148 on 2026-11-01, its card native
    and its menus the ListMenu build E147's is (finding 65). Since 2026-11-02 MENU opens and navigates the camera's own
    menu on every body of the E144 and E118 families in a play session, and modelcheck takes it (findings 66 to 68;
-   Next stops below). The E144 family's orange movie time `0:00:00` is the firmware's answer for the
+   Next stops below); the same day the shooting screen came back after S2 on the E118 family and seven more bodies
+   and E120's and E122's EVF ran playback (findings 69, 70), REC_FILE's DCF steps ran natively on five bodies
+   (findings 71 to 73), a tap reached the GUI on ten bodies of the E144 family (findings 74, 75) and INFO's still
+   information came from the picture's record on all 19 (findings 80, 81). The E144 family's orange movie time `0:00:00` is the firmware's answer for the
    blank store's movie mode, which those bodies cannot record (2026-10-27, hle-gaps.md 4.8.5).
 2. **The open stops of the remaining bodies** (Multi-model "Next stops"): the E118 family past its board port (E122,
    E118 and E120 pass modelcheck on the TFT and the EVF since 2026-10-30, their cards native and their frames

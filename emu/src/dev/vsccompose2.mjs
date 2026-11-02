@@ -20,6 +20,14 @@
 //   pixel index    the low 7 bits of the 8-bit pixel (I: the GUI fills with 255 and 127, entry 127 is transparent in
 //                  all three palettes, X)
 //   mix            OSD4 must hold 0x111111 (the value every open writes, X)
+//   OSD stacking   OSD1 (+0x1a4), which the OSD-plane open writes (E144 2, E139 3; a setter replaces its low nibble
+//                  with a byte of the device's record, D), says which OSD plane is on top: 3, OSD1 at the bottom and
+//                  OSD3 on top; 2, the reverse. A build's commit takes OSD1's address from the display record's osd
+//                  word 2 where its open writes 3 (E139) and from word 0 where it writes 2 (E144, D), so either way GUI
+//                  layer 0 is at the bottom and layer 2 on top (I: with OSD3 on top, E144's menu background on layer 0
+//                  hid its list on layer 1, X). 3 on every body of the family, 2 on E144 and E148 (X); another value is
+//                  refused (ORDER). Kind 3 takes 3 only: its planes' palettes are fixed to their layers (below), and
+//                  its opens write 3 (D). The addresses are in docs/om1-vsc-spec.md section 12
 // Kind 3 keeps every word above at its kind-2 offset (read from E122's code, docs/om1-vsc-spec.md section 12 has the
 // sites; X: the TFT's and the EVF's opens leave E144's values there, e.g. AREA22 0x1e02d0 / 0x300400, BG1 0x80800b,
 // the EVF's scaler 0x11, 0x9fc, 0, 0x9fc): the video area from the device's getters, BG1, DMA7 and the OSD planes'
@@ -55,18 +63,19 @@ import { E, NOTE, D, CH, OUTPUT_SIZE, STORE_BASE, chanDbg } from './vsc.mjs';
 import { blendLut, osdCol } from './vsccompose.mjs';
 
 const R = { DMA7: 0x030, DMA12: 0x044, DMA18: 0x05C, AREA10: 0x0C8, AREA22: 0x0F8, AREA23: 0x0FC, AREA24: 0x100,
-  BG1: 0x190, OSD7: 0x2E0, RSZ: [0x104, 0x118, 0x130, 0x148, 0x160, 0x178] };
+  BG1: 0x190, OSD1: 0x1A4, OSD7: 0x2E0, RSZ: [0x104, 0x118, 0x130, 0x148, 0x160, 0x178] };
 const HDR = { CHANNEL: 0, WIDTH: 1, HEIGHT: 2, FRAME: 3, ERRORS: 4, PAL_UNWRITTEN: 5, SKIPPED: 6, DRAWN: 7, OX: 8, OY: 9,
   MIX_FLAGS: 10, T_LO: 11, T_HI: 12, STATUS: 13, ASSUMED: 14, VIEW: 15 };
 const PLANES = 6, P_OSD1 = 3;
 // What differs by kind (see the head): mix, the words every open writes, [offset, value]; rszZero, the scaler words
 // after the control that must be zero; palette(q), OSD plane q's palette: sel, the word holding its bank bit (null:
 // one bank), bit, banks [shown while the bit is clear, while it is set] (byte offsets in the channel), entries, mask
-// (the pixel bits that index it; null: a pixel of entries or more is not drawn)
+// (the pixel bits that index it; null: a pixel of entries or more is not drawn); stack, OSD1's values and the OSD
+// planes each puts from the bottom up
 const KINDS = {
-  2: { mix: [[0x1B0, 0x111111]], rszZero: [8, 16, 20],
+  2: { mix: [[0x1B0, 0x111111]], rszZero: [8, 16, 20], stack: new Map([[3, [3, 4, 5]], [2, [5, 4, 3]]]),
     palette: (q) => ({ sel: 0x364 + 8 * q, bit: 0x10, banks: [0x800 + 0x800 * q, 0xA00 + 0x800 * q], entries: 128, mask: 0x7F }) },
-  3: { mix: [[0x1B0, 0x111], [0x1B4, 0x11]], rszZero: [8],
+  3: { mix: [[0x1B0, 0x111], [0x1B4, 0x11]], rszZero: [8], stack: new Map([[3, [3, 4, 5]]]),
     palette: (q) => (q === 2 ? { sel: 0x1B8, bit: 0x10, banks: [0x800, 0xA00], entries: 128, mask: 0x7F }
       : { sel: null, bit: 0, banks: [q === 1 ? 0x680 : 0x600], entries: 32, mask: null }) },
 };
@@ -101,6 +110,12 @@ export function compose2(v, c) {
     let seen = 0;
     for (let i = 0; i < PLANES; i++) { order.push(v.dbg[chanDbg(c, CH.ORDER) + i]); seen |= order[i] < PLANES ? 1 << order[i] : 0x80; }
     if (seen !== 0x3F) { cerror(E.ORDER, 0, 0, 0, 0, 0); status = E.ORDER; break run; }
+    // the OSD planes in the stacking OSD1 gives (the lab's order with each OSD plane replaced by the one at its level)
+    const osd1 = need(R.OSD1);
+    if (osd1 === null) { status = E.UNWRITTEN; break run; }
+    const stack = K.stack.get(osd1);
+    if (!stack) { cerror(E.ORDER, R.OSD1, osd1, 0, 0, 0); status = E.ORDER; break run; }
+    for (let i = 0; i < PLANES; i++) if (order[i] >= P_OSD1) order[i] = stack[order[i] - P_OSD1];
     const view = v.dbg[chanDbg(c, CH.VIEW)] & 0x3F;
     hdr[HDR.VIEW] = view;
     if (view !== 0x3F) v.noteRecord(NOTE.VIEW, c, 0, view);

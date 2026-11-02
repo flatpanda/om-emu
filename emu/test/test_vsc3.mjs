@@ -8,7 +8,8 @@
 //   OSD2's 32 entries at +0x680 (layer 1's) and OSD1's at +0x600 (layer 0's), a pixel of 32 or more not drawn
 //     (PAL_FIELD)
 //   the GUI's three layers as E122's clock warning leaves them (X): OSD1 filled with 31, OSD2 with 5, OSD3 with 255 and
-//     a figure, drawn in the order OSD1, OSD2, OSD3 (the top)
+//     a figure, drawn in the order OSD1, OSD2, OSD3 (the top), which the stacking word 0x1a4 = 3 gives; 2 (kind 2's
+//     reverse order) refused (ORDER), an unwritten one too (UNWRITTEN)
 //   the EVF's scaler (0x11, 0x9fc, 0, 0x9fc): the canvas's corners at the area's, a scaler word +8 refused
 //   the format words 0x1b0 / 0x111 and 0x1b4 / 0x11 (MIX_UNOBSERVED otherwise), a level 0 not drawn (PLANC_ZERO), the
 //     EVF's level 0xb2 drawn, nothing composed before the first frame (NOT_LATCHED), a plane whose level word is
@@ -81,9 +82,10 @@ async function child() {
   };
   // the TFT's open (X, E122): area {30, 8} 720 x 480, BG1, the format words; the planes' areas, strides and levels
   // (E118's open writes no level word, D)
-  const tft = (t, levels = true) => {
+  // (and the OSD stacking word 0x1a4, 3 at every open, D; osd1 null leaves it unwritten)
+  const tft = (t, levels = true, osd1 = 3) => {
     t.reg(0x0F8, 0x1E02D0); t.reg(0x0FC, 0x80008); t.reg(0x100, 0x1E0); t.reg(0x190, BG); t.reg(0x030, 0);
-    t.reg(0x1B0, 0x111); t.reg(0x1B4, 0x11);
+    t.reg(0x1B0, 0x111); t.reg(0x1B4, 0x11); if (osd1 !== null) t.reg(0x1A4, osd1);
     for (let q = 0; q < 3; q++) {
       t.reg(0x0C8 + 12 * q, 0x1E02D0); t.reg(0x0CC + 12 * q, 0x80008); t.reg(0x0D0 + 12 * q, 0x1E0);
       t.reg(0x05C + 4 * q, ROW / 64); if (levels) t.reg(0x2E0 + 4 * q, 0x100); t.reg(0x148 + 0x18 * q, 0);
@@ -168,10 +170,10 @@ async function child() {
     const t = fresh();
     tft(t);
     const L0 = CANVAS, L1 = CANVAS + ROW * 480, L2 = CANVAS + 2 * ROW * 480, ORANGE = ycc(31, 137, 50, 211), DIM = ycc(16, 0, 128, 128);
-    const fill = (at, v, rects = []) => {
+    const fill = (at, v, rects = [], m = t.m) => {
       const b = new Uint8Array(ROW * 480).fill(v);
       for (const [x0, y0, rw, rh, idx] of rects) for (let y = y0; y < y0 + rh; y++) b.fill(idx, y * ROW + x0, y * ROW + x0 + rw);
-      t.m.dbgWrite(at, b);
+      m.dbgWrite(at, b);
     };
     fill(L0, 31); fill(L1, 5); fill(L2, 0xFF, [[300, 200, 40, 40, 13]]);
     t.reg(0x030, 7); t.reg(0x044, L0); t.reg(0x048, L1); t.reg(0x04C, L2); t.reg(0x1B8, 0x10);
@@ -180,12 +182,22 @@ async function child() {
     ok(r.status === 0 && r.drawn === 0x38 && !r.errors.length, `three layers: status ${r.status} drawn ${hex(r.drawn)} errors ${JSON.stringify(r.errors)}`);
     ok(dim !== BG && (dim & 0xFF) < (BG & 0xFF) && r.px(719, 479) === dim, `layer 1 dims the background: ${hex(dim)}`);
     ok(r.px(300, 200) === (ORANGE & 0xFFFFFF) && r.px(339, 239) === (ORANGE & 0xFFFFFF) && r.px(340, 240) === dim, `layer 2 on top: ${hex(r.px(300, 200))} ${hex(r.px(340, 240))}`);
+    // the OSD stacking word 0x1a4: kind 3 takes 3 only (kind 2's 2, the planes reversed, is refused), and an unwritten
+    // one leaves the stacking unknown
+    for (const [value, want] of [[2, V.E.ORDER], [null, V.E.UNWRITTEN]]) {
+      const u = fresh();
+      tft(u, true, value);
+      fill(L0, 31, [], u.m); fill(L1, 5, [], u.m); fill(L2, 0xFF, [[300, 200, 40, 40, 13]], u.m);
+      u.reg(0x030, 7); u.reg(0x044, L0); u.reg(0x048, L1); u.reg(0x04C, L2); u.reg(0x1B8, 0x10);
+      const q = u.compose();
+      ok(q.status === want && !q.drawn, `0x1a4 ${value}: status ${q.status} drawn ${hex(q.drawn)}, want ${want}`);
+    }
   }
   // the EVF: area {48, 38} 1024 x 768, the 640 x 480 canvas through the scaler; level 0xb2 drawn, 0 not
   {
     const t = fresh();
     t.reg(0x0F8, 0x300400); t.reg(0x0FC, 0x260026); t.reg(0x100, 0x300); t.reg(0x190, BG);
-    t.reg(0x1B0, 0x111); t.reg(0x1B4, 0x11); t.reg(0x1B8, 0x10);
+    t.reg(0x1B0, 0x111); t.reg(0x1B4, 0x11); t.reg(0x1B8, 0x10); t.reg(0x1A4, 3);
     t.reg(0x0E0, 0x300400); t.reg(0x0E4, 0x260026); t.reg(0x0E8, 0x300); t.reg(0x064, ROW / 64); t.reg(0x2E8, 0xB2);
     t.reg(0x178, 0x11); t.reg(0x17C, 0x9FC); t.reg(0x180, 0); t.reg(0x184, 0x9FC);
     t.reg(0x030, 1); t.reg(0x04C, CANVAS); t.reg(0x22C, 0x339);

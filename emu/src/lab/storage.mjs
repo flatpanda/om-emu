@@ -38,14 +38,19 @@
 //   S-ALBM      the album manager's per-drive init (where the rule finds one) returns at once: ALBM_MAIN, which it
 //               would start, allocates its first request's id with udf07 (docs/om1-udf-spec.md row 14, kept faulting),
 //               and the movie module it asks does not run
-//   S-RECFILE   the picture's file at a release's END_SHOOTING_PICTURE (src/lab/camapp.mjs S-CARD), in place of
-//               REC_FILE, which does not run: the file module's own file requests (mkdir, fopen 'wb', fwrite in
-//               chunks, fclose; the FlashAir configuration writer's calls) put a JPEG the lab encodes
-//               (src/lab/jpeg.mjs: S-SCENE's frame at the capture, each 8 x 8 block its mean, or a black frame) at
-//               the DCF name the numbering mount gave (folder 100: C:\DCIM\100OMSYS or 100OLYMP, file P1010001.JPG
-//               and on; the DCF module's initial names, storage.names, D; the camera's names carry its clock's month
-//               and day, I). The DCF database is not told of the file (REC_FILE's DCF steps are not read): the
-//               firmware's image count stays 0 until the next mount, and the next file number is the lab's
+//   S-RECFILE   the picture's file at a release's END_SHOOTING_PICTURE (src/lab/camapp.mjs S-CARD), the JPEG the
+//               capture pipeline would hand REC_FILE, which does not run: a JPEG the lab encodes (src/lab/jpeg.mjs:
+//               S-SCENE's frame at the capture, each 8 x 8 block its mean, or a black frame). On a build whose
+//               recorder the rule reads (fact 'recorder', src/fw/facts.mjs: E143, E146, E147, E144 and E148) the file
+//               is recorded as REC_FILE's modules record one (record()): their requests, sent to the file module,
+//               which runs each natively: the camera's clock read for the time stamp, the fnode of the next DCF
+//               number (its name from the stamp's month and day, the folder made where it is new), the cluster
+//               reservation, the chain write of the bytes, the directory entry and the fnode's registration in the
+//               DCF database, whose counts and next number then follow the picture in the same session. Elsewhere
+//               the file module's own file requests (mkdir, fopen 'wb', fwrite in chunks, fclose; the FlashAir
+//               configuration writer's calls) put the JPEG at the DCF name the numbering mount gave (folder 100:
+//               C:\DCIM\100OMSYS or 100OLYMP, file P1010001.JPG and on; the DCF module's initial names,
+//               storage.names, D), and the DCF database learns of the file at the next mount
 //   S-CARD      (the insertion) the media control's requests on a card insertion, sent to the file module's queue as
 //               the HLS media layer would send them (it does not run in the lab; which requests it sends, and in which
 //               order, is I): the FAT mount; on a card with no file system the format (the request Card Formatting
@@ -61,21 +66,23 @@ import { STUB } from './display.mjs';
 import { SdCard, SECTOR } from './sdcard.mjs';
 import { MODEL, MODEL_INFO, fact } from '../fw/model.mjs';
 import { BOARD } from '../fw/board.mjs';
-import { STORAGE_E143, STORAGE_LIB, CARD_DETECT_E143 } from '../fw/facts.mjs';
+import { STORAGE_E143, STORAGE_LIB, CARD_DETECT_E143, RECORDER_E143 } from '../fw/facts.mjs';
 
 export class StorageError extends FirmwareError {}
 
 // The facts of this body's file system, or null where its MODELS entry does not run it (card_fs, each body's with its
 // reason): the seams src/fw/facts.mjs fileSystem reads (fact 'storage'), the storage library's own numbers
 // (STORAGE_LIB there, with their evidence), the card driver's detect table (fact 'card.detect'), its board's SD host
-// pages (src/fw/board.mjs sd), and the HLS side (src/lab/media.mjs) where the entry gives it
+// pages (src/fw/board.mjs sd), the HLS side (src/lab/media.mjs) where the entry gives it, and REC's recorder (fact
+// 'recorder', null where the rule reads none)
 export function storageFacts() {
   const cf = MODEL_INFO.card_fs;
   if (!cf?.native) return null;
   const f = fact('storage', STORAGE_E143);
   if (!f) throw new StorageError(`${MODEL}: src/fw/models.mjs card_fs is native but src/fw/facts.mjs fileSystem found no file system`);
   const { drive, ...lib } = STORAGE_LIB;
-  return { ...f, ...lib, names: { ...f.names, drive }, detect: fact('card.detect', CARD_DETECT_E143).table, host: BOARD.sd, hls: cf.hls ?? null };
+  return { ...f, ...lib, names: { ...f.names, drive }, detect: fact('card.detect', CARD_DETECT_E143).table, host: BOARD.sd, hls: cf.hls ?? null,
+    recorder: fact('recorder', RECORDER_E143) ?? null };
 }
 export const STORAGE = storageFacts();
 
@@ -85,11 +92,39 @@ const ALLOW = 0x100, NALLOW = 32, PRESET = 0x400, NPRESET = 128;   // the lab st
 const WAI = 4, REQUEST_SLICE_MS = 5, REQUEST_LIMIT_MS = 10000, FOREVER = -1 >>> 0;
 const DRIVE = 0, DRIVE_MOUNTED = 0x1000;
 const DCF_CARD_IN = 1, DCF_LISTS = 3;
+// the DCF process's command 5, a picture's fnode by its index (from 1) in the drive's list: {u16 5, u16 drive, u32 the
+// index, the fnode back at +8, u16 1 at +12}, as the fnode getter 0x50874bc9 sends it from another task (D)
+const DCF_FNODE = 5, DCF_FNODE_AT = 8, DCF_FNODE_FLAG = 1;
 const ERASED = 0xff, WRITE_CHUNK = 32768;
 const SWITCH_BYTE = 16;           // S-SDSWITCH: the request's switch byte (src/fw/facts.mjs fileSystem card_switch, D)
 // the word of the lab's FILECLBK messages, its low half a count; a reply of REQUEUE puts the message back on the queue
 // (`cmp 0xfff0,d0` at the reply's caller, docs/hle-gaps.md 4.8.8, D)
 const REQUEST_TAG = 0x4C41 << 16, REQUEUE = 0xFFF0;
+// S-RECFILE's REC requests (record(); STORAGE_LIB rec, src/fw/facts.mjs; D from E143's recorder 0x519f9dd7 and the
+// builders it calls, unless tagged). The DCF block (64 bytes, 0x519f9df5; kept from the open to the registration):
+// +2 drive, +4 the folder's 8.3 name with 'xxx' for its number (0x5054a903), +16 and +20 the file's time stamp
+// (0x5054a922, 0x5054a92a), +32 flags (0 for a JPEG, 0x5054a93c), the fnode back at +24 (0x50879108). The fnode:
+// +8 its folder's dnode, +12 its name's eight letters (0x5087a253: the file letter, the stamp's month in hex, its
+// day, the number), +20 its extension (0x5054a9b8), +38 its number, +44 the first cluster and +48 the size
+// (0x5054aeaa, 0x5054aeb0), +86 flags, +88 its DCF kind (0x5054aea4); the dnode: +8 its 8.3 name, +22 its number,
+// +28 its directory's cluster, +32..+47 its entry's place (0x50872238). The reservation's block: +4 3, +6 drive,
+// +16 the size, +36 the mode, the first cluster back at +0 (0x5088885c..0x50888880). The chain write's (116 bytes):
+// +6 drive, +8 the cluster, +12 the sector in it, +16 the sectors, +20 the buffer, +28 the mode, +32 the cluster, +36
+// the bytes (0x5054aa8d..0x5054aad5). The entry's (100 bytes): +4 4, +6 drive, +8 the folder's cluster, +16 the name
+// (eight letters and the extension's word), +20 the mode, +24 the size, +32 and +36 the stamp, +40 the first cluster,
+// +46 the attribute (0x20, an archive), +84.. the dnode's entry place (0x5054adda..0x5054ae30)
+const REC = {
+  block: 64, chain: 116, entry: 100, folder: 'xxx', drive: 2, folder_name: 4, stamp: [16, 20], flags: 32, fnode: 24,
+  f: { dnode: 8, name: 12, ext: 20, number: 38, cluster: 44, size: 48, flags: 86, kind: 88 },
+  d: { name: 8, number: 22, cluster: 28, place: 32 },
+  // the reservation's modes: 2 first, then 0 where it finds no cluster (0x5087e21a, from 0x5054a9e3); the entry's
+  // flag of a JPEG recorded in mode 2 (fnode +86 bit 2, 0x5054ad8a)
+  reserve_op: 3, modes: [2, 0], flag_mode2: 4, entry_op: 4, archive: 0x20,
+};
+const SECTORS = (bytes) => Math.ceil(bytes / SECTOR);   // 0x50880d1c's 512-byte form (the port state's +168 0, X)
+// the FAT time stamp of a clock record {u16 year, month, day, hour, minute, second} (0x5012ba46)
+const fatStamp = ([y, mo, d, h, mi, s]) => ((y - 1980) << 25 | mo << 21 | d << 16 | h << 11 | mi << 5 | s >> 1) >>> 0;
+const CLOCK_RECORD = 10, CLOCK_STATUS = 8;
 
 export class Storage {
   // session: the PlaySession; f: STORAGE. The card: the host's (env.card: {open() -> SdCard, save(card)},
@@ -219,24 +254,27 @@ export class Storage {
   _fat(code, label, who) {
     const blk = this.lab.alloc(new Uint8Array(128), 4);
     this.lab.sim.write(blk + 4, pack('<HH', 0, DRIVE));
-    const lab = this.lab, at = this.f.fat_error;
+    const at = this.f.fat_error;
     let b, ms, err;
     if (at !== null) {
       [b, ms] = this.request(code, blk, 128, label, who);
       err = b[at] | b[at + 1] << 8;
-    } else {
-      // FILECLBK's reply (a0 the message, d0 its status), observed while the request is out: its word is the tag
-      const reply = this.f.fileclbk.reply, tag = (REQUEST_TAG | (this.tag = (this.tag + 1) & 0xFFFF)) >>> 0;
-      this.reply = null;
-      lab.observe(reply, (l, r) => {
-        if (l.sim.u32((r.a0 >>> 0) + 4) === tag && (r.d0 & 0xFFFF) !== REQUEUE) this.reply = r.d0 & 0xFFFF;
-      }, 'obs-fileclbk-reply');
-      try { [, ms] = this.request(code, blk, 128, label, who, tag); } finally { lab.hooks.delete(runtime(reply)); }
-      err = this.reply;
-    }
-    if (err === null) throw new StorageError(`${who}: ${label}: FILECLBK made no reply`);
+    } else ({ status: err, ms } = this.ask(code, blk, 128, label, who));
     this.log.push([label, `error 0x${err.toString(16)} after ${ms} ms`]);
     return err;
+  }
+  // A request and the status FILECLBK replies with (a0 the message, d0 its status), observed while the request is
+  // out: its word is the tag. Returns {status, bytes (the block's), ms}
+  ask(code, blk, size, label, who) {
+    const lab = this.lab, reply = this.f.fileclbk.reply, tag = (REQUEST_TAG | (this.tag = (this.tag + 1) & 0xFFFF)) >>> 0;
+    let bytes, ms;
+    this.reply = null;
+    lab.observe(reply, (l, r) => {
+      if (l.sim.u32((r.a0 >>> 0) + 4) === tag && (r.d0 & 0xFFFF) !== REQUEUE) this.reply = r.d0 & 0xFFFF;
+    }, 'obs-fileclbk-reply');
+    try { [bytes, ms] = this.request(code, blk, size, label, who, tag); } finally { lab.hooks.delete(runtime(reply)); }
+    if (this.reply === null) throw new StorageError(`${who}: ${label}: FILECLBK made no reply`);
+    return { status: this.reply, bytes, ms };
   }
   // The insertion's requests (S-CARD); at runtime (who S-MEDIA) the card is S-SDCARD's again before them
   insert(who = 'S-CARD') {
@@ -262,6 +300,18 @@ export class Storage {
     const lab = this.lab, prm = lab.alloc(pack('<HHIII', cmd, DRIVE, 0, 0, 0), 4);
     const [, ms] = this.request(this.f.codes.dcf, prm, 16, label, who);
     this.log.push([label, `detect state ${lab.sim.read(this.f.detect + 2 * DRIVE, 2)[0]} after ${ms} ms`]);
+  }
+  // A picture of the DCF database by its index (from 1): {folder, number} from its fnode and its folder's dnode, or null
+  // where the DCF process answers none
+  fnode(index, who = 'S-CARD') {
+    const lab = this.lab, sim = lab.sim, prm = lab.alloc(new Uint8Array(16), 4);
+    sim.write(prm, pack('<HHI', DCF_FNODE, DRIVE, index));
+    sim.write(prm + 12, pack('<H', DCF_FNODE_FLAG));
+    const { status } = this.ask(this.f.codes.dcf, prm, 16, 'dcf fnode', who);
+    const fn = status === 0 ? sim.u32(prm + DCF_FNODE_AT) >>> 0 : 0, dn = fn ? sim.u32(fn + REC.f.dnode) >>> 0 : 0;
+    if (!dn) return null;
+    const u16 = (a) => { const b = sim.read(a, 2); return b[0] | b[1] << 8; };
+    return { folder: u16(dn + REC.d.number), number: u16(fn + REC.f.number) };
   }
   // The DCF numbering mount: the next folder and file (S-RECFILE's names)
   renumber(who) {
@@ -295,8 +345,86 @@ export class Storage {
     for (let i = 0; i < text.length; i++) b[i] = text.charCodeAt(i);
     return this.lab.alloc(b, 4);
   }
-  // S-RECFILE: the picture's bytes to its DCF file; returns {path, size, folder, number}
-  write_picture(bytes) {
+  // S-RECFILE: the picture's bytes to a file of the DCF; returns {path, size, folder, number} (record() also the
+  // cluster, the stamp and the clock record)
+  write_picture(bytes) { return this.f.recorder ? this.record(bytes) : this.fileif_picture(bytes); }
+  // S-RECFILE where the rule reads the build's recorder: the file as REC_FILE's modules record one (the recorder
+  // E143 0x519f9dd7), each of its requests to the file module (REC; STORAGE_LIB rec) with REC's block, which FILECLBK
+  // runs natively; the recorder's lock (0x5054a850) is not taken, nothing else records in the lab. The camera's
+  // clock read (fact recorder.time) gives the time stamp; the fnode of the next DCF number (open: dcfnum op 1, which
+  // makes the folder where it is new and names the file by the stamp's month and day), its extension; the
+  // reservation of the file's first cluster (mode 2, then 0 where it finds none); the chain write of the bytes from
+  // it (dosfat op 4; the bytes padded with 0 to whole sectors, the size the bytes'); the directory entry in the
+  // fnode's folder; the fnode's kind, first cluster and size, and its registration (dcfnum op 2: the DCF database's
+  // counts, its next number). A status not 0 stops the session (the recorder would cancel the fnode, 0x519f9ea7: its
+  // error path is not modelled)
+  record(bytes) {
+    const lab = this.lab, sim = lab.sim, f = this.f, c = f.rec.codes, who = 'S-RECFILE';
+    const ok = (code, blk, size, label) => {
+      const { status } = this.ask(code, blk, size, label, who);
+      if (status !== 0) throw new StorageError(`${who}: ${label}: FILECLBK's status 0x${status.toString(16)}`);
+    };
+    const cstr = (text, n) => { const b = new Uint8Array(n); for (let i = 0; i < text.length; i++) b[i] = text.charCodeAt(i); return b; };
+    const text = (a, n) => String.fromCharCode(...sim.read(a, n)).replace(/[\0 ]+$/, '');
+    // the time stamp: the camera's clock read into the time record
+    const rec = lab.alloc(new Uint8Array(CLOCK_RECORD), 4);
+    lab.call(f.recorder.time, { a0: rec }, null, null, 2000000);
+    const t = sim.read(rec, CLOCK_RECORD), date = [t[0] | t[1] << 8, t[2], t[3], t[4], t[5], t[6]], stamp = fatStamp(date);
+    // the fnode
+    const blk = lab.alloc(new Uint8Array(REC.block), 4);
+    sim.write(blk + REC.drive, pack('<H', DRIVE));
+    sim.write(blk + REC.folder_name, cstr(`${REC.folder}${f.names.folder}`.padEnd(11), 12));
+    for (const at of REC.stamp) sim.write(blk + at, pack('<I', stamp));
+    ok(c.open, blk, REC.block, 'dcf open');
+    const fn = sim.u32(blk + REC.fnode) >>> 0, dn = fn ? sim.u32(fn + REC.f.dnode) >>> 0 : 0;
+    if (!fn || !dn) throw new StorageError(`${who}: dcf open: fnode ${h8(fn)}, its folder ${h8(dn)}`);
+    sim.write(fn + REC.f.ext, cstr(f.names.ext, 4));
+    // the first cluster
+    const res = lab.alloc(new Uint8Array(48), 4);
+    let cluster = 0, mode;
+    for (mode of REC.modes) {
+      sim.write(res, new Uint8Array(48));
+      sim.write(res + 4, pack('<HH', REC.reserve_op, DRIVE));
+      sim.write(res + 16, pack('<I', bytes.length));
+      sim.write(res + 36, pack('<I', mode));
+      ok(c.reserve, res, 48, 'reserve');
+      if ((cluster = sim.u32(res) >>> 0) !== 0) break;
+    }
+    if (!cluster) throw new StorageError(`${who}: reserve: no free cluster`);
+    // the bytes
+    const sectors = SECTORS(bytes.length), data = new Uint8Array(sectors * SECTOR);
+    data.set(bytes);
+    const chain = lab.alloc(new Uint8Array(REC.chain), 4);
+    sim.write(chain + 6, pack('<HIIII', DRIVE, cluster, 0, sectors, lab.alloc(data, 64)));
+    sim.write(chain + 28, pack('<III', mode, cluster, bytes.length));
+    ok(c.write, chain, REC.chain, 'chain write');
+    // the directory entry
+    const name = lab.alloc(new Uint8Array(12), 4);
+    sim.write(name, sim.read(fn + REC.f.name, 8));
+    sim.write(name + 8, sim.read(fn + REC.f.ext, 4));
+    const entry = lab.alloc(new Uint8Array(REC.entry), 4), place = sim.read(dn + REC.d.place, 16);
+    const pl = (o) => place[o] | place[o + 1] << 8 | place[o + 2] << 16 | place[o + 3] << 24;
+    sim.write(entry + 4, pack('<HHIII', REC.entry_op, DRIVE, sim.u32(dn + REC.d.cluster), 0, name));
+    sim.write(entry + 20, pack('<IIIIII', mode, bytes.length, 0, stamp, stamp, cluster));
+    sim.write(entry + 46, Uint8Array.of(REC.archive));
+    // the dnode's entry place (0x50872238): its +12, +0 | 0x4000, +2 | 0x8000, +4, +8
+    sim.write(entry + 84, pack('<IHHII', pl(12), (place[0] | place[1] << 8 | 0x4000), (place[2] | place[3] << 8 | 0x8000), pl(4), pl(8)));
+    if (mode === REC.modes[0]) { const fl = sim.read(fn + REC.f.flags, 2); sim.write(fn + REC.f.flags, pack('<H', (fl[0] | fl[1] << 8) | REC.flag_mode2)); }
+    ok(c.entry, entry, REC.entry, 'directory entry');
+    // the registration
+    sim.write(fn + REC.f.kind, Uint8Array.of(f.rec.kind));
+    sim.write(fn + REC.f.cluster, pack('<II', cluster, bytes.length));
+    ok(c.register, blk, REC.block, 'dcf register');
+    const folder = sim.read(dn + REC.d.number, 2), num = sim.read(fn + REC.f.number, 2);
+    const file = { path: `${f.names.drive}:\\DCIM\\${text(dn + REC.d.name, 11)}\\${text(fn + REC.f.name, 8)}.${f.names.ext}`, size: bytes.length,
+      folder: folder[0] | folder[1] << 8, number: num[0] | num[1] << 8, cluster, stamp, clock: { date, status: t[CLOCK_STATUS] | t[CLOCK_STATUS + 1] << 8 } };
+    this.next_file = file.number + 1;
+    this.files.push(file);
+    this.log.push(['recfile', `${file.path}: ${file.size} bytes from cluster ${cluster} (mode ${mode}), stamped ${date.join('-')}`]);
+    return file;
+  }
+  // S-RECFILE elsewhere: the picture's bytes to its DCF file through fileif; returns {path, size, folder, number}
+  fileif_picture(bytes) {
     const { fileif: c, names: n } = this.f, lab = this.lab;
     if (this.next_file === null || this.next_file > 9999) throw new StorageError(`S-RECFILE: no DCF file number (${this.next_file})`);
     const dcim = `${n.drive}:\\DCIM`, dir = `${dcim}\\${this.dcf.folder}${n.folder}`;

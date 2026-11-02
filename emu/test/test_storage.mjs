@@ -442,6 +442,16 @@ export async function storageSession() {
         }
         ok(worst <= 1, `the decoded luma is the capture frame's block means (worst difference ${worst})`);
       }
+      // where REC's recorder records it (S-RECFILE's DCF steps): the DCF database counts it in the same session, and
+      // its fnode of index 1 is the file's
+      if (STORAGE.recorder) {
+        const lab = s2.lab, key = runtime(A(0x503FEEA4));
+        ok(!lab.hooks.has(key), 'with the DCF database the media API\'s image count runs natively (no S-CARD hook)');
+        const n = lab.call(A(0x503FEEA4), { d0: 0, d1: 1 }, null, null, 2000000).d0, f1 = s2.storage.fnode(1, 'test');
+        ok(n === 1 && s2.camapp.card_images() === 1, `the firmware's own image count right after S2: ${n}, S-CARD's ${s2.camapp.card_images()}`);
+        ok(f1 && f1.folder === img.file.folder && f1.number === img.file.number && s2.storage.fnode(2, 'test') === null, `the database's picture 1: ${JSON.stringify(f1)}, the file's ${img.file.folder}-${img.file.number}`);
+        ok(e && e.cluster === img.file.cluster, `the directory entry's first cluster ${e?.cluster}, the reservation's ${img.file.cluster}`);
+      }
       pl.close_session();
       pl.open_session();
       const st = pl.session.steps.find((x) => x.storage)?.storage, lab = pl.session.lab;
@@ -449,7 +459,7 @@ export async function storageSession() {
       const key = runtime(A(0x503FEEA4)), hook = lab.hooks.get(key);   // S-CARD's image count (camapp.mjs IMAGE_COUNT) aside
       lab.hooks.delete(key);
       const n = lab.call(A(0x503FEEA4), { d0: 0, d1: 1 }, null, null, 2000000).d0;
-      lab.hooks.set(key, hook);
+      if (hook) lab.hooks.set(key, hook);
       ok(n === 1, `the firmware's own image count (type 1) in the next session: ${n}`);
     } catch (e) { bad.push(`S2 picture: ${e.message.slice(0, 400)}`); }
     try { pl.close_session(); } catch { /* closed */ }
@@ -521,7 +531,7 @@ async function hlsFormat(card, tag, ok, bad, notes) {
     const key = runtime(A(0x503FEEA4)), hook = lab.hooks.get(key);   // S-CARD's image count (camapp.mjs IMAGE_COUNT) aside
     lab.hooks.delete(key);
     const n = lab.call(A(0x503FEEA4), { d0: 0, d1: 1 }, null, null, 2000000).d0;
-    lab.hooks.set(key, hook);
+    if (hook) lab.hooks.set(key, hook);
     ok(n === 0 && s.camapp.images.length === 0 && s.storage.next_file === 1, `${tag}: the counts reset: the firmware's image count ${n}, S-CARD's ${s.camapp.images.length}, next file ${s.storage.next_file}`);
     const after = frame(s);
     ok(rows(after, 0, 130) === rows(menu, 0, 130) && rows(after, 200, 600) !== rows(busy, 200, 600), `${tag}: the application left Busy for the menu (its tab bar and title as before the format)`);

@@ -2573,10 +2573,19 @@ export const STORAGE_E143 = {
 // 0x5101efe0); 12 mkdir(path) (0x508a7c61; X: it made C:\DCIM). drive: the letter of drive 0 (0x508a8149, X). The SD
 // command the command layer takes: +8 the completion (by `calls`, a0 the command, d0 the status), +24 the command
 // code, +28 the argument, +32..+44 the response, +48 the buffer, +52 the block count, +56 the block size, +74 the
-// status (0x508b1a41, 0x508b1a7d, 0x508b23d1 build it; 0x508b3fcf completes)
+// status (0x508b1a41, 0x508b1a7d, 0x508b23d1 build it; 0x508b3fcf completes). rec: the requests REC_FILE's
+// recording modules send the file module to record a file (the recorder, fact 'recorder'), by FILECLBK's dispatch
+// (0x5088fd8a; X, traced): open 0x32, dcfnum op 1 (0x5088ff61 -> 0x50878ec8), the fnode of the next DCF number in
+// the current folder or a new one; reserve 0xf1, dosfat's free-cluster reservation (0x508886d6 -> 0x50881ba5); write
+// 0x54, dosfat op 4, the chain write; entry 0x66, the directory entry (dosfile 0x50888c9f); register 0x33, dcfnum op
+// 2 (0x5087979a), the fnode into the DCF database; cancel 0x36, dcfnum op 6, an fnode given up on an error
+// (0x519f9ea7). kind: the DCF kind of a JPEG file, which the database counts it under (rec's table 0x606e03ac by the
+// file's type, 1 for its JPEG; 0x50879bc7 counts the fnode's +88; the media API's image count of type 1 reads it,
+// 0x502d17e3)
 export const STORAGE_LIB = {
   codes: { mount: 0x51, format: 0x55, dcf: 0xF0, number: 0x31 }, unformatted: 0xE08, card_out: 2, card_info: 0x12,
   fileif: { open: 0x10001, close: 0x10002, write: 0x10003, mkdir: 0x1000C }, drive: 'C',
+  rec: { codes: { open: 0x32, reserve: 0xF1, write: 0x54, entry: 0x66, register: 0x33, cancel: 0x36 }, kind: 1 },
 };
 const FAT_ERROR = 48, FAT_ERROR_SPAN = 10;
 const FCB_HEAD = 0x14, FCB_REPLY = 0x80, FS_INIT = 0x100, ALBM_SPAN = 0x60, STATUS_HEAD = 8, FS_WALK = 64, STATUS_SPAN = 0x100, NAND_SPAN = 0x40;
@@ -2774,6 +2783,68 @@ export function fileSystem(img) {
     status: 0x50000000 + status[0], cflush: 0x50000000 + flush + FLUSH_RETURN, card_power, card_switch,
     names: { folder: fname.slice(3).trimEnd(), file: name.slice(0, 4), ext: name.slice(8) },
   };
+}
+
+// REC's whole-file recorder (fact 'recorder', src/lab/storage.mjs S-RECFILE): the function that records a file from a
+// buffer as REC_FILE's modules record one (E143 0x519f9dd7, D). It takes its requests' blocks, `mov 64,d0; call ALLOC;
+// mov a0,(..,sp); mov 100,d0; call ALLOC; mov a0,(..,sp); mov 116,d0; call ALLOC` (the DCF numbering block, the
+// directory entry's and the chain write's), then calls in turn the recorder's lock (E143 0x5054a850), the camera's
+// clock read into its time record (0x5012b7cd: the sub-CPU's RTC through 0x5005a59e; X, the record {u16 year, month,
+// day, hour, minute, second, pad, u16 status at +8} of the lab's clock, 2022-01-01 00:00:00 status 10501 while it is
+// not set), the new file's fnode (0x5054a894: FILECLBK's code 0x32), the cluster reservation (0x5054a9e3), the chain
+// write (0x5054aa51: 0x54), the directory entry (0x5054acea: 0x66), the fnode's registration (0x5054ae50: 0x33), on an
+// error the fnode's cancel (0x5054af1d: 0x36) instead, and the unlock (0x5054a860). The open's, the entry's and the
+// registration's builders each send their code by `mov CODE,d1; call` (85 CODE, then the call, on E144 and E148
+// after an `exth d0`, 18) once within REC_BUILD bytes (E143 0x5054a947, 0x5054ae40, 0x5054aebc; E144's registration
+// 0x50400745). One such recorder on E143, E146, E147, E144 and E148, none on the other 13
+// images (X, a byte scan), whose recording modules build the same requests in their own functions (not read).
+// Returns {time: the clock read's entry}, the one the lab calls for a picture's time stamp, or null where no recorder
+// is found; throws for two, or for one whose builders do not send STORAGE_LIB's codes.
+export const RECORDER_E143 = { time: 0x5012B7CD };
+// The DCF database's picture counts (fact 'dcf.counts', src/lab/camapp.mjs S-CARD): a table of 52 bytes a slot, +0
+// the total and +4 + 4 * type the count of each type 1..8 (+40 type 255, +44 type 9, +48 type 33), which the
+// database's count update adds to (E143 0x50874b48, from the registration 0x50879bc7) and the media API's image count
+// (0x503feea4) reads through its getter, `mov d1,d2; extbu d2; cmp 255,d2; bne; exthu d0; udfu01 52,d0; add
+// T,d0; mov d0,a0; mov (40,a0),d0` (E143 0x502d1799, T 0xa33aa5b4, D). One such getter on each of the 18 expanded
+// images (X, a byte scan). Returns T; throws for none or two.
+export const DCF_COUNTS_E143 = 0xA33AA5B4;
+const DCF_COUNT_GET = [0x86, 0x16, 0xfa, 0xca, 0xff, 0x00, 0xc9, null, 0x1c, 0xf9, 0x14, 0x34, 0xfc, 0xc0, null, null, null, null, 0xf1, 0xe0,
+  0xf8, 0x00, 0x28];
+export function dcfCounts(img) {
+  const at = oneAt(img, DCF_COUNT_GET, 'dcfCounts', 'count getters');
+  if (at === null) throw new Error('dcfCounts: no DCF count getter');
+  return u32(img, at + 14);
+}
+const REC_ALLOC = [[0x80, 0x40, 0xdd], [0x80, 0x64, 0xdd], [0x80, 0x74, 0xdd]], REC_ALLOC_GAP = 16, REC_CALLS = 10, REC_SPAN = 0x100;
+const REC_BUILD = 0x1c0;
+export function recorder(img) {
+  const rule = 'recorder', D = (o) => h8(0x50000000 + o), found = [];
+  for (let o = img.indexOf(0x80); o >= 0; o = img.indexOf(0x80, o + 1)) {
+    if (!bytesAt(img, o, REC_ALLOC[0])) continue;
+    let p = o;
+    for (const pat of REC_ALLOC.slice(1)) {
+      let q = -1;
+      for (let k = p + 3; k < p + REC_ALLOC_GAP && q < 0; k++) if (bytesAt(img, k, pat)) q = k;
+      p = q;
+      if (p < 0) break;
+    }
+    if (p < 0) continue;
+    // the calls from the last allocation on, by whole instructions
+    const calls = [];
+    for (let q = p + 2; q < p + REC_SPAN && calls.length < REC_CALLS; q += insnLength(img[q], img[q + 1])) { const c = callAt(img, q); if (c) calls.push(c.to); }
+    found.push({ at: o, calls });
+  }
+  if (found.length > 1) throw new Error(`${rule}: ${found.length} recorders (${found.map((f) => D(f.at)).join(', ')}), want one`);
+  if (!found.length) return null;
+  const { at, calls } = found[0];
+  if (calls.length < REC_CALLS) throw new Error(`${rule}: the recorder at ${D(at)} makes ${calls.length} calls after its blocks, want ${REC_CALLS}`);
+  const [, , time, open, , , entry, register] = calls, c = STORAGE_LIB.rec.codes;
+  for (const [fn, code, what] of [[open, c.open, 'open'], [entry, c.entry, 'entry'], [register, c.register, 'registration']]) {
+    let sends = 0;
+    for (let o = fn; o < fn + REC_BUILD; o++) if (img[o] === 0x85 && img[o + 1] === code && (callAt(img, o + 2) || (img[o + 2] === 0x18 && callAt(img, o + 3)))) sends += 1;
+    if (sends !== 1) throw new Error(`${rule}: the recorder's ${what} ${D(fn)} sends code 0x${code.toString(16)} ${sends} times within 0x${REC_BUILD.toString(16)} bytes, want once`);
+  }
+  return { time: 0x50000000 + time };
 }
 
 // The event broker's init (fact 'broker.init', and through bin/port.mjs the place of E143's BROKER_E143 0x502a48b6,
@@ -3570,6 +3641,8 @@ export function readFacts({ img, family, resLoad }) {
   if (sio !== undefined) facts.sio = sio;
   const storage = fileSystem(img);
   if (storage !== undefined) facts.storage = storage;
+  facts.recorder = recorder(img);
+  facts.dcf = { counts: dcfCounts(img) };
   const usbOff = usbPowerOff(img);
   if (usbOff !== undefined) facts.power_off = { usb_disconnect: usbOff };
   facts.gui = guiCanvas(img);

@@ -124,8 +124,11 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   H-FILECLBK; the SD host's registers S-SDHOST, its NAND area S-FSNAND, the album manager S-ALBM), the card's
   insertion as the file module's requests (S-CARD): the firmware formats a blank card itself (FAT32, `OM SYSTEM`) and
   mounts it, and counts the remaining shots and the movie time from it. Each picture taken is also written to the card
-  as `C:\DCIM\100OMSYS\P1010001.JPG` and on, through the file module's own file requests (S-RECFILE: a JPEG of
-  S-SCENE's frame at the capture, each 8 x 8 block its mean). Card Formatting from the menu formats it: the menu's
+  as `C:\DCIM\100OMSYS\P1010001.JPG` and on (S-RECFILE: a JPEG of S-SCENE's frame at the capture, each 8 x 8 block
+  its mean), recorded as REC_FILE's recorder records a file: its requests to the file module, each run natively,
+  so the firmware's DCF database counts the picture at once and playback shows the database's pictures
+  (`docs/hle-gaps.md` 4.8.9; on E146, E147, E144 and E148 too, the other bodies with a native card through the file
+  module's own file requests). Card Formatting from the menu formats it: the menu's
   Yes reaches the file module through api_media's own format call (S-MDACTRL, `src/lab/media.mjs`, `docs/hle-gaps.md`
   4.8.3, in place of the HLS function component), its progress bar runs and the application returns to the menu. The
   input `{"type": "card", "action": "remove"}` takes the card out of the slot while the camera runs and `"insert"`
@@ -604,7 +607,7 @@ firmware the run warns and skips that rule. `--explain N` prints what each firmw
 | `node emu/bin/checks.mjs [CHECK \| RUN ...]` | every run of `checks/runs.json`, judged on its exit status | the firmware |
 | `node emu/bin/checktrace.mjs RUN [--slice N]` | the labs one check run creates, traced (golden records them) | as checks.mjs |
 | `node emu/bin/bench.mjs SCENARIO --passes 5` | MIPS and cost per stop; exit 1 if a pass does not repeat pass 0 | the firmware |
-| `node emu/bin/playperf.mjs` | the play workload on the Player; exit 1 unless its digest is `364806f182da750f` | the firmware |
+| `node emu/bin/playperf.mjs` | the play workload on the Player; exit 1 unless its digest is `d48795464396ceb1` | the firmware |
 | `node emu/bin/snapgate.mjs kernel-5c osd shoot-tft` | snapshot detours leave the sessions and the end state unchanged; detours run three times from one snapshot trace identically, a short one and one of at least 10,000 instructions per session (99,205, 200,002 and 103,598 on these three, 2026-10-29) | the firmware |
 | `OM_FW_DIR=fw node emu/bin/sitegate.mjs` | the published site (`bin/site.mjs`) from a plain static server under `/om-emu/` in headless Chrome: the landing page and its link, the firmware panel, the `.BIN` by the file input and by a drop to the shooting screen, only GETs under the prefix, all answered; under a minute | the `.BIN`, Chrome |
 | `OM_FW_DIR=fw node emu/bin/browsergate.mjs [--browser firefox\|webkit\|webkit-storage]` | the published site under `/om-emu/` in headless Firefox and in WebKitGTK over WebDriver (all three by default): the landing page, the `.BIN` by the file input to the shooting screen, the canvas against the Worker's RGBA, keys and a touch, a picture in the Card panel, the EVF's canvas, the OPFS cache on a second page (or, where the browser keeps none, the page saying why), E144 by `?model=`, only GETs under the prefix; about 2 min | the E143 and E144 `.BIN`s; geckodriver and Firefox, WebKitWebDriver, MiniBrowser and Xvfb (Linux) |

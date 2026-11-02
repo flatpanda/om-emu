@@ -41,7 +41,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
-  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
+  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
   PROP_STORE_E143, CTORS_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
@@ -650,7 +650,7 @@ const E143_FACTS = {
   touch_panel: { driver: true }, lens: { mount: true }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
   broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] }, movie_rate: null },
-  boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, mm_init: null, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143, touch_int: null,
+  boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, mm_init: null, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, recorder: RECORDER_E143, dcf: { counts: DCF_COUNTS_E143 }, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143, touch_int: null,
   cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143, prop_store: PROP_STORE_FOUND.E143, ctors: CTORS_E143,
 };
 

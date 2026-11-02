@@ -16,6 +16,7 @@ import { Storage, STORAGE } from './storage.mjs';
 import { NativeLens } from './lens.mjs';
 import { IoExpanders, PowerOff, POWER_OFF, startPowerManager } from './power.mjs';
 import { SioBus } from './sio.mjs';
+import { TOUCH_CONTROLLERS } from './touchpanel.mjs';
 import { imageView } from '../fw/image.mjs';
 import { IIC_WAITS_E143, TOUCH_TASK_QUEUE_E143, DPC_E143, MODE_DIAL_E143 } from '../fw/facts.mjs';
 import * as D from './display.mjs';
@@ -107,6 +108,8 @@ export const DISPQ_SEND_RETURN = A(0x503EBA07), DISPQ_REPLY_RETURNS = [A(0x501C4
 // S-DISPQ's sends: E143's, the display manager's request (its lab list); a ported model's, every asynchronous DISPLAY
 // request of its build too (fact dispq.sends, src/fw/facts.mjs displaySends: E137's cmd 19 after about 5 s of idle)
 export const DISPQ_SEND_RETURNS = [DISPQ_SEND_RETURN, ...fact('dispq.sends', [])];
+// H-TPINIT's step (the boot's call of the touch init, E143's from 0x50024ca6)
+const H_TPINIT = 'H-TPINIT touch init 0x501e3dca (boot call from 0x50024ca6) from the lab task';
 export const TOUCH_INIT = A(0x501E3DCA), TOUCH_TASK = A(0x501E3EAC), TOUCH_TASK_ID = A(0x60042DCC), TP_OPEN = A(0x501E40DA), TP_MASK = A(0x501E41D1);
 // S-TPSEND's touch task queue: its flag and queue words and the queue's bit in the flag (src/fw/facts.mjs
 // touchQueue, which also places TP_FLAG), none on a build without a touch task
@@ -114,7 +117,6 @@ export const TOUCH_QUEUE = isUnmapped(TOUCH_TASK) ? null : fact('touch_task', TO
 export const HFW_CALLBACK = A(0x50B76E60), TP_MASK_ALL = 0x11F1, TP_MASK_WORD = A(0x62A3EBC0), TP_FLAG = A(0x6004306C), OLYEVST = A(0x5002BD01);
 export const HFW_STATUS = [[A(0x50B76FE3), [16, 225]], [A(0x50B7706B), [128, 226]], [A(0x50B770F3), [1, 227]], [A(0x50B7717C), [32, 228]],
   [A(0x50B77205), [256, 229]], [A(0x50B77297), [64, 230]], [A(0x50B77320), [4096, 300]]];
-export const TP_SLAVE = 0x70, TP_REG = 0x02;
 export const GPIO_TP = [[48, 0x9B880E00], [49, 0x9B880E40], [108, 0x9B883E80]], GPIO_TP_PAGE = 0x9B880000;
 export const GESTURES = new Map([[1, 'LIFTOFF'], [16, 'PRESS'], [32, 'CLICK'], [64, 'DCLICK'], [128, 'LONGPRESS'], [256, 'SLIDE'], [4096, 'FLICK']]);
 export const BGDRAW = A(0x50B3DCCA), BGDRAW_CALLERS = [A(0x510C9A07), A(0x510C9CF5)];
@@ -142,7 +144,11 @@ export const SCP_STATES = [0x0401, 0x0403, 0x0404], CONTROL_SETTINGS_ID = 330;
 // S-TOUCHMAP: HFW status -> GUI touch kind, by name (I)
 export const TOUCHMAP = new Map([[225, [1, 'TOUCH']], [226, [2, 'LONG TOUCH']], [227, [3, 'RELEASE']], [228, [4, 'TAP']],
   [230, [5, 'DOUBLE TAP']], [229, [6, 'SLIDE']], [300, [7, 'FLICK -> 7 (unnamed)']]]);
-export const TOUCH_INDEX = 109;
+// S-TOUCHMAP's post: sendEvent's index of the GUI's touch message 0x9100, E143's 109 (D: its event map EV_MAP). The
+// map's indices are per build: E137's, E142's, E140's, E125's, E130's and E133's lack E143's 107 and 108 (messages
+// 0xf839, 0xf83a), so 0x9100 is their 107 and their 109 is 0x9201, which their GUI took without drawing anything
+// (X). The session posts at the first index whose message is 0x9100 in the build's map (PlaySession.touch_index)
+export const TOUCH_MESSAGE = 0x9100;
 // M10B display switches: the GUI-busy note, H-EYESTATE / H-STOREFIRST addresses
 export const GUI_BUSY_NOTE = 'e.g. Level Adjust -> Adjust: 0x5004ad13 sleeps for about 1 s while it takes 12 sensor samples';
 export const EYE_SET = A(0x50050EFD), EYE_STATE = { evf: 2, tft: 1 }, EYE_WORD = A(0xA32C1F44), EYE_CALLBACK = A(0xA32C1F48), EYE_TIMER = A(0xA32C1F4C);
@@ -467,11 +473,30 @@ export class PlayLab extends N.NavLab {
   // H-GUIBYAPP: in a play session the camera application creates the GUI at its start, as on the camera; the lab's
   // bring-up does not (two GUIs, the lab's idle one holding a root of output 0 and one of OSD layer 1's two buffers).
   preinit(opts) { super.preinit(opts); this.gui_by_app = true; }
+  // H-TPINIT: the boot calls the touch init before the display opens (E143 from 0x50024ca6, E144 from 0x500251a8, D);
+  // the lab calls it in the play bring-up, after the start's open, except on a build whose touch driver waits for its
+  // controller's INT (fact touch_int, src/fw/facts.mjs touchIntWait: the E144 family), where it runs before the open
+  // (touch_init_early, a session with touch). There the order matters: the open's command list powers the panel up,
+  // waits for the INT and arms the driver for the INT's data (E144 0x50181efb, the wait 0x5018a924, then 0x5018a9a4
+  // sets 0x620c6630), which the init's driver set-up clears (0x5018a7e7, 0x5018a81b..0x5018a826, D): called after the
+  // open it left the driver dropping every report (the touch task's 0x5018af2b, X). On E143 the open runs no touch
+  // code and the order changes nothing the touch path reads; moved there too, it changed 28 golden sessions' stops and
+  // replay outcomes (X), so E143 keeps the lab's order. The touch task's start and the panel's open (H-TPSTART) stay
+  // in the play bring-up
+  kernel_display(device = 'tft', ctors = true, before_open = null) {
+    super.kernel_display(device, ctors, () => {
+      if (before_open) before_open();
+      if (this.touch_init_early) this.step(H_TPINIT, () => this.call(TOUCH_INIT, null, null, null, 20000));
+    });
+  }
   play_init(opts) {
     this.opts = opts;
     this.uiin_codes = []; this.uiin_decoded = []; this.gestures = []; this.tp_status = []; this.cafwd = [];
     this.bgdraw = new Tally();
     this.tp_image = new Uint8Array(11);
+    this.tp_touch = { action: 'up', x: 0, y: 0 };      // the touch S-TPREG's controller answers from (PlaySession.touch)
+    this.tp_flip = true;
+    this.tp_slave = null;                              // the slave of the controller the driver last read
     this.tp_reads = [];
     this.status_gesture = new Map();
     this.observe(UI_IN_POST, (lab, r) => lab.uiin_decoded.push([lab.step_tag, r.d0]), 'obs-uiin-post');
@@ -681,13 +706,16 @@ export class PlayLab extends N.NavLab {
     if (this.sim.packet('G' + packRegs(saved)) !== 'OK') throw new AssertionError('');
     hle.finish(saved, { d0: 0 });
   }
-  // S-TPREG
+  // S-TPREG: the touch driver's I2C read answered by the controller at the slave it reads (src/lab/touchpanel.mjs:
+  // E143's at 0x70, E144's lineage's at 0x48) from the session's touch; a register the model does not hold, or another
+  // slave, reads 0
   _s_tpreg(hle, r) {
-    const n = D.tpLength(this, r, 'read'), slave = r.d0 & 0xFF, reg = r.d1 & 0xFF;
-    const data = slave === TP_SLAVE && reg === TP_REG && n <= 11 ? this.tp_image.slice(0, n) : new Uint8Array(n);
+    const n = D.tpLength(this, r, 'read'), slave = r.d0 & 0xFF, addr = D.tpAddr(r), c = TOUCH_CONTROLLERS.get(slave);
+    const data = c?.read(addr, n, this.tp_touch, MODEL_INFO.panels.tft[1], this.tp_flip) ?? new Uint8Array(n);
+    if (c) this.tp_slave = slave;
     this.sim.write(r.a0, data);
-    this.tp_reads.push([slave, reg, n, bytesHex(data), h8(disasm(r.mdr))]);
-    this.i2c.push(['R', slave, reg, n]);
+    this.tp_reads.push([slave, addr, n, bytesHex(data), h8(disasm(r.mdr))]);
+    this.i2c.push(['R', slave, addr, n]);
     hle.finish(r, { d0: 0 });
   }
   _hfw(lab, r) {
@@ -967,6 +995,8 @@ export class PlaySession extends N.NavSession {
     const us = this.opts.us_clock ?? 'lab';
     if (!['lab', 'reads'].includes(us)) throw new ValueError(`us_clock ${show(us)}: lab or reads`);
     if (us === 'reads') lab.sim.write(IRQ.TIMER_DEBUG + IRQ.T_USMODE, pack('<I', 0));
+    // H-TPINIT before the start's display open (PlayLab.kernel_display) where the driver waits for the INT
+    lab.touch_init_early = this.touch_on && (fact('touch_int', null) ?? null) !== null;
   }
   enter() {
     super.enter();
@@ -1207,6 +1237,9 @@ export class PlaySession extends N.NavSession {
   }
   touch_bring_up() {
     const lab = this.lab;
+    this.touch_index = null;                          // S-TOUCHMAP's index: the first whose message is the touch message
+    for (let i = 1; i <= 334 && this.touch_index === null; i++) if (lab.message_for(i) === TOUCH_MESSAGE) this.touch_index = i;
+    if (this.touch_index === null) throw new PlayError(`S-TOUCHMAP: no sendEvent index for the touch message 0x${TOUCH_MESSAGE.toString(16)} in the event map`);
     const allow = [...D.STUB_PAGES.map((p) => [p, 0x1000]), [GPIO_TP_PAGE, 0x1000]];
     const a = new Uint8Array(12 * allow.length);
     allow.forEach(([p, n], i) => a.set(pack('<III', p, n, 1), 12 * i));
@@ -1220,7 +1253,7 @@ export class PlaySession extends N.NavSession {
     for (const [addr, [, st]] of HFW_STATUS) lab.observe(addr, lab._hfw_status(st), `obs-hfw-${st}`);
     if (this.app_touch) lab.observe(CA_CALL, (l, r) => lab._obs_cafwd(l, r), 'obs-cafwd');
     else if ((this.opts.touch ?? 'gui') === 'gui' && this.opts.mutant !== 'no-cafwd') lab.hook(CA_CALL, (h, r) => lab._s_cafwd(h, r), 'S-CAFWD');
-    lab.step('H-TPINIT touch init 0x501e3dca (boot call from 0x50024ca6) from the lab task', () => lab.call(TOUCH_INIT, null, null, null, 20000));
+    if (!lab.touch_init_early) lab.step(H_TPINIT, () => lab.call(TOUCH_INIT, null, null, null, 20000));
     const tid = unpack('<h', lab.sim.read(TOUCH_TASK_ID, 2))[0];
     lab.lt.allow.add(TOUCH_TASK);
     lab.touch_native = true;                          // the touch task takes its queue's messages itself (S-TPSEND)
@@ -1480,7 +1513,7 @@ export class PlaySession extends N.NavSession {
   post_touch(kind, x, y) {
     const lab = this.lab;
     lab.harvest();
-    const msg = lab.alloc(pack('<8I', TOUCH_INDEX, 0, kind, x, y, 0, 0, 0), 4);
+    const msg = lab.alloc(pack('<8I', this.touch_index, 0, kind, x, y, 0, 0, 0), 4);
     lab.posting = true;
     try { lab.calls(MM.SEND_EVENT, { a0: 0, a1: msg }, undefined, undefined, this.post_hooks()); } finally { lab.posting = false; }
     this.settle(`touch kind ${kind}`);
@@ -1713,23 +1746,26 @@ export class PlaySession extends N.NavSession {
     return this.end(`${cause} -> SWITCH:${want}`, 'display', indices, [], { device: want, switch: rec, state_from: h4(state0) });
   }
   // ---- touch
-  // down / move / up at display (x, y) of the TFT (0..899, 0..599).
+  // down / move / up at pixel (x, y) of the TFT panel (MODEL_INFO.panels: E143's 0..899, 0..599)
   touch(action, x, y) {
     if (!this.touch_on) throw new PlayError('touch is off (--touch off)');
     if (!['down', 'move', 'up'].includes(action)) throw new ValueError(`touch: action ${show(action)} (down, move, up)`);
     this.begin(`${String(this.steps.length).padStart(2, '0')}-touch ${action} ${x},${y}`);
     const lab = this.lab;
     const state0 = lab.state();
-    x = clampInt(x, 899);
-    y = clampInt(y, 599);
-    const ry = this.opts.mutant !== 'no-flip' ? 599 - y : y;      // no-flip: raw y served unflipped
-    const ev = { down: 0, move: 2, up: 1 }[action];
-    const count = action === 'up' ? 0 : 1;
-    lab.tp_image = new Uint8Array([count, (ev << 6) | (x >> 8), x & 0xFF, (0 << 4) | (ry >> 8), ry & 0xFF, 0, 0, 0xC0 | 0x0F, 0xFF, 0xFF, 0xFF]);
+    const [w, h] = MODEL_INFO.panels.tft;
+    x = clampInt(x, w - 1);
+    y = clampInt(y, h - 1);
+    const now = lab.lab_time();
+    if (action === 'down') lab.tp_down_ns = now;
+    lab.tp_touch = { action, x, y, held_ns: now - (lab.tp_down_ns ?? now) };
+    lab.tp_flip = this.opts.mutant !== 'no-flip';                    // no-flip: E143's raw y served unflipped
     const g0 = lab.gestures.length, s0 = lab.tp_status.length, r0 = lab.tp_reads.length;
     const flag = unpack('<h', lab.sim.read(TP_FLAG, 2))[0];
     lab.call(OLYEVST, { d0: flag, d1: 1 }, null, null, 5000);
     this.settle(`touch ${action}`);
+    // the report of the controller the driver read (none read: none)
+    lab.tp_image = lab.tp_slave === null ? new Uint8Array(0) : TOUCH_CONTROLLERS.get(lab.tp_slave).report(lab.tp_touch, h, lab.tp_flip);
     const extra = this.touch_extra(g0, s0, r0);            // posts the GUI touches (S-TOUCHMAP)
     const rec = this.end(`touch ${action} ${x},${y}`, 'touch', [], [], extra);
     this.status_reported = lab.tp_status.length;
@@ -1768,7 +1804,7 @@ export class PlaySession extends N.NavSession {
     const posted = this.touch_to_gui();
     this.gesture_reported = lab.gestures.length;
     this.status_reported = lab.tp_status.length;
-    return this.end('touch gesture', 'touch-gui', posted.map(() => TOUCH_INDEX), [], { gestures: lab.gestures.slice(g0),
+    return this.end('touch gesture', 'touch-gui', posted.map(() => this.touch_index), [], { gestures: lab.gestures.slice(g0),
       tp_status: lab.tp_status.slice(s0).map(([, st]) => st), touch_posted: posted, cafwd: lab.cafwd.filter((c) => c.step === lab.step_tag) });
   }
   screen() {

@@ -73,6 +73,11 @@ export function tpLength(lab, r, which) {
   const at = fact(`touch_args.${which}_len`, TOUCH_ARGS_E143[`${which}_len`]);
   return at.reg ? r[at.reg] & 0xFFFF : u16(lab.sim.read(r.sp + at.sp, 2), 0);
 }
+// a touch I2C read's register address: the low bytes of the registers that hold it, the high first (fact
+// 'touch_args.read_addr': E143's d1, the E144 driver's d1 and a1)
+export function tpAddr(r) {
+  return fact('touch_args.read_addr', TOUCH_ARGS_E143.read_addr).reduce((a, k) => a << 8 | (r[k] & 0xFF), 0);
+}
 export const DISPLAY_TASK_INIT = A(0x501C2F13), DISP_SYNC_INIT = A(0x507F2FE0);
 // its call frame is its one call site's (hle frame(): E143 [0, 4]; E144's boot calls it `call 0x50021444,[],16` at
 // 0x50024ef2, D; E139's with [d2], 20, X)

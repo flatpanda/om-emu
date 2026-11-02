@@ -1474,6 +1474,8 @@ bytes on; E143's places in brackets):
   firmware's own divide by 0), the HLS side on E146, and E134's card native once its lamps' module UI_OUT runs (X).
   Round 7 (2026-10-30, 4.8.8): the E118 family's forms of five seams read by the rule, and E122's card native;
   then E118's and E120's, with E118's card line through its sub-CPU and its movie record time stood in (4.8.8).
+  Round 8 (2026-11-02, 4.8.9): REC_FILE's own DCF steps for S2's picture on the five bodies whose recorder the rule
+  reads, so the DCF database counts it in the same session, and S-CARD's image list retired there.
 
 #### 4.8.1 The sdmem request contract (D unless tagged)
 
@@ -1579,7 +1581,7 @@ found on the way:
   directory entry, its size and bytes, a baseline JPEG decoded by `emu/refs/jpeg.mjs` and macOS ImageIO (X); the next
   session's DCF numbering mount reports file 2 next and the firmware's own image count (type 1) counts it (X). REC_FILE
   would build its file through the DCF fnode API (`rec_media.c` `0x5054aa70` sends dosfat op 4, code `0x54`, over a
-  REC file context with `pDcfFnode`): not read.
+  REC file context with `pDcfFnode`): read and run in round 8 (4.8.9).
 - **Card Formatting from the menu** (X, round 1): Setup, Card Formatting, card 1, Format Card, Yes showed "Busy"; the
   application's media control sends TRA 1511 (`0x50ac940d`, OlyHfwOpeMdaCtrl), which S-TRAACK answers. Round 2 (4.8.3)
   found the component that takes it and stands it in.
@@ -1671,7 +1673,7 @@ to the card switch), and are stood in at their seams with the firmware's own eve
   and answers 0 images.
 - **REC_FILE (goal 3, not attempted):** its media writer `0x5054aa70` sends dosfat op 4 (`0x54`, the chain write) over a
   DCF fnode; it runs in the recording modules, which the capture pipeline drives and which do not run, so S-RECFILE
-  stays.
+  stays. (Round 8, 4.8.9: REC's steps read and sent by S-RECFILE, each run natively.)
 - **Open:** the second slot (S-CARD sets both slots' mount state to 8 at the start, so the format sets slot 2's flag
   15262 too; slot 2's switch `0x1518` is not stood in); the HLS components' own runs (the function component and the
   media manager in camapp 2); the media control's other commands (2, 3, 5, 6: erase all, copy, unlock, ...); the SD
@@ -2003,6 +2005,68 @@ findings 31, 41). The family runs the other bodies' storage library; the rule no
   `1620x1080` (the lab's frame), `125` and `25mm` (X).
 - **Not done:** the HLS side (S-MDACTRL, S-MEDIA) is E143's and E146's only; the picture's Exif (the lab's JPEG has
   none) and the play module's own load of it.
+
+#### 4.8.9 REC_FILE's DCF steps, round 8 (2026-11-02; D unless tagged, addresses E143's)
+
+S-RECFILE wrote the picture through fileif (4.8.2), which the DCF database did not see until the next mount: the
+firmware's image count stayed 0 after S2, and S-CARD kept its own image list and count for playback. REC_FILE's own
+steps are now read and run, the lab handing over only what the capture pipeline would: the JPEG's bytes.
+
+- **The recorder (D):** `0x519f9dd7` records a whole file from a buffer as the recording modules do (a REC context of
+  92 bytes on its stack, the type at +78 / +80, the size at +52 and +64, the buffer at +68, the drive at +76); it takes
+  three blocks (64, 100 and 116 bytes) and calls in turn the recorder's lock `0x5054a850`, the camera's clock read
+  into a time record `0x5012b7cd` (the sub-CPU's RTC, `0x5005a59e`), then the steps below, each a FILECLBK request
+  sent synchronously (`0x5002e39d`), and the unlock `0x5054a860`; on an error after the open, the fnode's cancel
+  (`0x5054af1d`, code `0x36`, dcfnum op 6). rec_file.c's record functions call the same steps (`0x5053f591`,
+  `0x505408b5`, `0x50540950`, `0x5053f875`, ...). By FILECLBK's dispatch (`0x5088fd8a`; X, traced):
+
+| Step | REC's builder | Code | FILECLBK runs | The block |
+|---|---|---|---|---|
+| open | `0x5054a894` | `0x32` | dcfnum op 1 `0x50878ec8` | +2 drive, +4 the folder's 8.3 name with `xxx` for its number, +16 / +20 the FAT time stamp (`0x5012ba46` packs the time record); back: the fnode at +24 |
+| reserve | `0x5054a9e3` -> `0x5087e21a` -> `0x5088883b` | `0xf1` | dosfat `0x508886d6` -> `0x50881ba5` | +4 3, +6 drive, +16 the size, +36 the mode (2, then 0 where none is found); back: the first cluster at +0 |
+| write | `0x5054aa51` -> `0x5054aa70` | `0x54` | dosfat op 4 (`0x508812f2`), the chain write | +6 drive, +8 the cluster, +12 the sector in it, +16 the sectors, +20 the buffer, +28 the mode, +32 the cluster, +36 the bytes; back: +60 the last cluster, +64 its last sector |
+| entry | `0x5054acea` | `0x66` | dosfile `0x50888c9f` | +4 4, +6 drive, +8 the folder's cluster (the dnode's +28), +16 the name (eight letters, the extension's word), +20 the mode, +24 the size, +32 / +36 the stamp, +40 the first cluster, +46 the attribute 0x20, +84.. the dnode's entry place (`0x50872238`) |
+| register | `0x5054ae50` | `0x33` | dcfnum op 2 `0x5087979a` | the open's block; the fnode's +88 its DCF kind (rec's table `0x606e03ac` by type: 1 for a JPEG), +44 the first cluster, +48 the size |
+
+- **The open (dcfnum op 1):** it takes the next DCF number (the per-drive state `0xa33af310` + 56 x drive: +4 the next
+  folder, +6 the next file), finds the folder's dnode by its number (`0x508720de`) and makes the folder where it is
+  new (`0x508793b9`, the directory on the card included: X, `C:\DCIM` and `C:\DCIM\100OMSYS` on a blank card), takes
+  a pending fnode (`0x50879ebf`) and names it `0x5087a253`: the file letter of the state's +10 (`P`), the stamp's
+  month in hex, its day in two digits and the number in four (X: `PB020001` for a stamp of 2026-11-02; `P1010001`
+  for the lab's unset clock, 2022-01-01 00:00:00 with status 10501, as E143's sub-CPU answers it); the extension is
+  REC's to set (fnode +20, `0x5054a9b8`, the table `0x606e0384` by type: `JPG` for a JPEG).
+- **The registration (dcfnum op 2):** a database fnode from the pool (`0x50874a36`) takes the pending one's 96 bytes
+  (`0x50879f39`); the counts add 1 under its kind (`0x50874b48`: the table `0xa33aa5b4`, 52 bytes a slot, +0 the total
+  and +4 + 4 x type, which the media API's image count reads through `0x502d1799`); the folder's dnode keeps the
+  file's cluster, size, kind and flags in one of three records (+60, +76, +92, by its count at +26; `0x50879af5`);
+  the next file follows; folder x 10000 + file goes to `0x5089c2d8` with 4 and the drive (what that does is not
+  read).
+- **The lab's part (S-RECFILE, `src/lab/storage.mjs` record()):** where the rule reads the build's recorder (fact
+  `recorder`, `src/fw/facts.mjs`: E143, E146, E147, E144 and E148; none on the other 13 images, whose recording
+  modules build the same requests in functions not read) the lab calls the clock read natively and sends the five
+  requests with REC's blocks; FILECLBK runs each. The recorder's lock is not taken (nothing else records in the lab)
+  and its error path (the cancel) is not modelled: a status not 0 stops the session. The chain write's sectors are
+  `0x50880d1c`'s 512-byte form (a port's state byte +168, `0x508b0bd9`, is 0 in the lab: X). Elsewhere S-RECFILE
+  writes through fileif as before.
+- **What it does (X, E143):** two S2s give `C:\DCIM\100OMSYS\P1010001.JPG` and `P1010002.JPG` (clusters 5 and 6 on a
+  blank 8 GiB card), the firmware's image count 1 then 2 and its next file 2 then 3 in the same session, its fnodes 1
+  and 2 the two files (the DCF process's command 5, `{5, drive, index}`, which the fnode getter `0x50874bc9` sends);
+  read back by `refs/volume.mjs`: the entries' dates the stamp, the bytes the JPEG's, FSInfo's free count less the
+  folders' and the files' clusters. A 200,000-byte buffer goes to a chain of 7 clusters; on a 64 GiB exFAT card the
+  file is contiguous (NoFatChain) and the volume passes the reader's consistency check.
+- **fileif and a pending fnode (X):** an fopen of the name the open's pending fnode holds (`PB020001.JPG`, between
+  the open and the registration) made a directory entry with a scrambled short name (`87 61 8c 60 b8 4f ae 62 68 c1
+  1f`), and fileif's entries carry the file layer's own date (2022-01-01, `0x5421`), not the stamp: the steps are
+  REC's together or fileif's alone (why fileif scrambles the name is not read).
+- **S-CARD's image list retired where the database serves (`src/lab/camapp.mjs`):** with the recorder, the
+  application's image count runs natively (no S-CARD hook on `0x503feea4`), the lab's count reads the database's table
+  (fact `dcf.counts`, the getter's table, found on all 18 images), and playback's pictures are the database's at the
+  play start: each index's folder and number from its fnode. The lab keeps only its record of each capture (the
+  release, S-SCENE's scene, the clock and the lens), matched by folder and number; a picture from an earlier session
+  has none (its view and still information are then those of no capture).
+- **Open:** the recorder's own run in REC_FILE's task (the context the capture pipeline fills); the older 13 bodies'
+  recording modules (their builders of the same codes, not read; S-RECFILE writes through fileif there); RAW and
+  RAW + JPEG files (types 0 / 3 / 9, the fnode's second file at +60..+72); the second slot.
 
 ### 4.9 HDMI and DisplayPort
 

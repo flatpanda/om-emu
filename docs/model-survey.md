@@ -1504,6 +1504,31 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    finding 17). No E143 output
    changes (its bound is the lab's 12); on the 15 a state of those parents prints its name where it printed `?`.
 
+72. **REC's whole-file recorder on five bodies** (2026-11-02, `src/fw/facts.mjs` recorder, `docs/hle-gaps.md` 4.8.9).
+   E143's `0x519f9dd7` records a file from a buffer through REC_FILE's own steps: three blocks of 64, 100 and 116
+   bytes, then the lock, the camera's clock read (`0x5012b7cd`), the DCF open (FILECLBK code `0x32`), the cluster
+   reservation (`0xf1`), the chain write (`0x54`), the directory entry (`0x66`), the registration (`0x33`), the cancel
+   on an error (`0x36`) and the unlock (D). The rule finds it by the three allocations and reads the calls after them:
+   one on E143, E146, E147, E144 and E148, none on the other 13 images (X, a byte scan); its clock reads are E146
+   `0x5012bafe`, E147 `0x50135923`, E144 `0x500f024e`, E148 `0x500f0271`, and the open's, the entry's and the
+   registration's builders each send their code once (E144's and E148's after an `exth d0`, E144 `0x50400745`; X).
+   E143's rec_file functions call the same builders (`0x5053f591`, `0x505408b5`, `0x50540950`, `0x5053f875`); the
+   older 13 bodies' recording modules are not read, and S-RECFILE writes through fileif there.
+
+73. **The DCF database's counts** (2026-11-02, `src/fw/facts.mjs` dcfCounts). The media API's image count
+   (`0x503feea4`) reads a table of 52 bytes a slot through `0x502d1799` (+4 + 4 x type for types 1..8, +40 type 255,
+   +44 type 9, +48 type 33), to which the registration's count update adds (`0x50874b48`); the getter is the same
+   instructions on each of the 18 images, once (X, a byte scan): E143 `0xa33aa5b4`, E146 `0xa33dd268`, E147
+   `0xa33c4f1c`, E144 `0xa26fcbe8`, E148 `0xa274bd98`, E122 `0xa1c874f0`. The lab reads the count there where the
+   database holds the pictures, so a status read calls no firmware.
+
+74. **The DCF names by the clock, and fileif beside a pending fnode** (2026-11-02, X on E143). The DCF open names the
+   file `P`, the time stamp's month in hex, its day and the number (`0x5087a253`): `PB020001.JPG` for a stamp of
+   2026-11-02. E143's clock read answers 2022-01-01 00:00:00 with status 10501 in the lab (its sub-CPU's clock not
+   set), so S2's files keep the names `P1010001.JPG` and on. A fopen through fileif of the name an open fnode holds
+   wrote a directory entry with a scrambled short name, and fileif's entries carry the file layer's date (2022-01-01)
+   rather than the stamp: REC's directory entry (`0x66`) is what gives the file its name and date.
+
 
 ## Per-body status
 

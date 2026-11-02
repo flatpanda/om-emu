@@ -1136,25 +1136,30 @@ would set; the REC mark (item 35) and the lens record's layout (item 37).
    and after each input on the shooting screen; S-SCENE's auto exposure is the plan. Open: which task sends
    `0x50596187` on the camera (the LV AE task fed from the 18 x 18 grids is the likely one, not traced); what fixes
    the ISO-auto range (base 200, ceiling 1600 in the lab); whether `0xc12a` and `0xc0ca` are the other metering modes'.
-61. **The shutter's sound (X, D, S-SHUTTERSND; 2026-11-02).** The stock firmware plays no sound at a release: in an E143
-   session, S1 then S2, the sound engine's singleton getter (`0x50b56569`, object `0x62afee0c`) is called only at S2,
-   twice, from IOlyApiShooting (`0x51059373`, `0x51059919`, through `0x5108c19f`), which then call the object's
-   vtable +68, a query; its play method (fwmap's entry `0x50b569a4`) is never called; the audio driver's blocks
+61. **The shutter's sound (I, D, S-SHUTTERSND; 2026-11-02).** The stock firmware plays no sound at a release (I). The
+   evidence is the third-party patch tool azqeurio/om-c-firmware (no licence; read, not run), whose OM-1 1.9 base images
+   are byte-identical to the lab's: to get an "electronic shutter sound" it has to add both the sound and the call. It
+   adds a call before the capture's begin `0x50b8467c` to the sound engine's play method (its target `0x50b569a9`) with
+   the object, a sound id, 100 and zeros; a hook in the resource lookup `0x501a976d` that gives its own WAV for type 2
+   (the sound table); and menu items of its own, an "electronic shutter sound" (off / 1 / 2 / 3) and a shutter sound
+   volume (0 to 5), leaving the stock AF beep's setting and sound as they are, so the stock body has no shutter-sound
+   setting. The native output it relies on is 48 kHz stereo PCM16, copied block by block (at most 768 bytes) through
+   `0x5000290a` (all I, from that tool's notes and its `SHUTTER_SOUND_KO.md`). So the camera's shutter sound is the
+   mechanism's (the shutter block, `docs/hle-gaps.md` section 7), and the electronic shutter is silent (I). The lab's
+   trace does not settle this, because its release is a stand-in: in an E143 session, S1 then S2, S-RELSEQ stands in for
+   the release and the capture's begin `0x50b8467c`, om-c's call site, does not run (fwmap: neither it nor its four
+   CapBuf callers is entered). There, the sound engine's singleton getter (`0x50b56569`, object `0x62afee0c`) is called
+   only at S2, twice, from IOlyApiShooting (`0x51059373`, `0x51059919`, through `0x5108c19f`), which then call the
+   object's vtable +68, a query; its play method (fwmap's entry `0x50b569a4`) is never called; the audio driver's blocks
    `0x9bb00000..0x9bb003c0` and `0x9b700000..0x9b70011c` (`docs/hle-gaps.md` 4.5) are never accessed; the sound table
    pointers `(0xa32db180)`, `(0xa32db19c)`, `(0xa32db32c)` and `(0xa32db1bc)` are 0, and their loader `0x501a8ca0`
    (which stores `(0xa32db17c)` / `(0xa32db180)` and reads a 1024-byte index from flash `0x4e420000` through
-   `0x501a986a`) never runs (X). No RIFF / WAVE data is in the six blocks or in the resource block's decoded image
-   records 0 and 37, only three 4-second WAV header templates in the main block (run-time `0x60dc7cdc`, `0x60dc7d68`,
-   `0x60dc7e54`; D); where `0x4e420000` lies in the `.BIN` is ? (on `blk0e360000` at offset `0xc0000` it is JPEG data).
-   The third-party patch tool azqeurio/om-c-firmware (no licence; read, not run), whose OM-1 1.9 base images are
-   byte-identical to the lab's, adds an "electronic shutter sound" through the same engine: a call before the capture's
-   begin `0x50b8467c` to the play method (its target `0x50b569a9`) with the object, a sound id, 100 and zeros; a hook in
-   the resource lookup `0x501a976d` that gives its own WAV for type 2 (the sound table), and a menu item of its own. The
-   native output it relies on is 48 kHz stereo PCM16, copied block by block (at most 768 bytes) through `0x5000290a`
-   (I, from that tool's notes). So the camera's shutter sound is the mechanism's (the shutter block, `docs/hle-gaps.md`
-   section 7), and the electronic shutter is silent. S-SHUTTERSND synthesizes the mechanical one at S-RELSEQ's
-   START_EXPOSE and END_EXPOSE (`emu/src/lab/shuttersnd.mjs`, `emu/FIDELITY-NOTES.md` 7.12): with the host's sound on,
-   S2 emits one open and one close click 8,000,000 ns apart without S-SCENE, 10,929,529 ns with its live view at EV 9
-   (X, `emu/test/test_audio.mjs`). Open: which drive values (store 3265) select the electronic shutter, and so when the
-   lab should stay silent; om-c's notes read a drive word at `0x62a4af8a` (4 with `0x62a4b1bc` = 1 for SH1, not checked
+   `0x501a986a`) never runs (X, of the lab's stood-in release only). No RIFF / WAVE data is in the six blocks or in the
+   resource block's decoded image records 0 and 37, only three 4-second WAV header templates in the main block (run-time
+   `0x60dc7cdc`, `0x60dc7d68`, `0x60dc7e54`; D); where `0x4e420000` lies in the `.BIN` is ? (on `blk0e360000` at offset
+   `0xc0000` it is JPEG data). S-SHUTTERSND synthesizes the mechanical shutter's sound at S-RELSEQ's START_EXPOSE and
+   END_EXPOSE (`emu/src/lab/shuttersnd.mjs`, `emu/FIDELITY-NOTES.md` 7.12): with the host's sound on, S2 emits one open
+   and one close click 8,000,000 ns apart without S-SCENE, 10,929,529 ns with its live view at EV 9 (X,
+   `emu/test/test_audio.mjs`). Open: which drive values (store 3265) select the electronic shutter, and so when the lab
+   should stay silent; om-c's notes read a drive word at `0x62a4af8a` (4 with `0x62a4b1bc` = 1 for SH1, not checked
    here).

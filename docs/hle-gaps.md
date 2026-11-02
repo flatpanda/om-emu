@@ -131,7 +131,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | Block | Today | HLE seam | Depends on | Code | Effort (I) | User-visible gain |
 |---|---|---|---|---|---|---|
 | **TAKE module and HLS shooting sequence** (4.1) | S: S-RELSEQ posts the CBS callbacks in an inferred order; S-TRAACK answers TRA 991 and the release TRAs with 0; S-MODACK acks TAKE_FUNC; S-TAKEFRAME; S-EXPOSE writes TAKE_EXPOSE's results | TAKE native, its neighbours answered at their own seams (lens, BC, sensor, shutter). Interim: TAKE as a black box at queues `0x5e` / `0x5a`, its results delivered as the capabilities' observer events (4.1.3) | the shooting component's native answers to TRA 990 / 991 (4.1.2); lens, BC_EXEC and the camera driver's requests 148 / 6 (TAKE_FUNC_CP's ready sequence, 4.1.1); CPU 2 for the movie and through commands; the sensor control plane; the shutter; task starts | 307,393 / 301,082: C TAKE about 100k, HLS sequence 196k | ?: no survey sized it; "TAKE reached, 1-2 weeks" (capture survey) leaves out the lens, BC and sensor answers it needs | the camera's own release sequence and timing in place of S-RELSEQ's guessed order; AE lock, drive modes, bracketing |
-| **Shutter mechanism** (section 7) | 0: block `0x9b900000` (271 registers, IRQs 11 / 12 / 13) never touched; S-RELSEQ's START / END_EXPOSE stand in | not proposed by the survey. A register file with W1C status `+0x008..+0x010` and per-bit callbacks on IRQ 11 has the camera driver's shape, so the sensor's seam D (control plane plus event producer) fits (I) | sensor SSG timing (the EFS curtains are the sensor's reset / readout scan, I), TAKE, time model, the MEC_ADJUST layout | 20,942 / 20,942 (gap@0x50108fe0 19.6k plus cam_mec_ctrl); none run | ? | shutter sound timing, black-out, EFCS / ES modes from the firmware |
+| **Shutter mechanism** (section 7) | 0: block `0x9b900000` (271 registers, IRQs 11 / 12 / 13) never touched; S-RELSEQ's START / END_EXPOSE stand in | not proposed by the survey. A register file with W1C status `+0x008..+0x010` and per-bit callbacks on IRQ 11 has the camera driver's shape, so the sensor's seam D (control plane plus event producer) fits (I) | sensor SSG timing (the EFS curtains are the sensor's reset / readout scan, I), TAKE, time model, the MEC_ADJUST layout | 20,942 / 20,942 (gap@0x50108fe0 19.6k plus cam_mec_ctrl); none run | ? | shutter sound timing (S-SHUTTERSND stands in, 7.5), black-out, EFCS / ES modes from the firmware |
 | **Sensor / ISP front end, live view** (4.2) | S: S-SCENE paints bank `0x0A` and calls TH with H-REQ; S-EXPOSE per input, no LV AE; 33 camera IRQs unwired | A: MVR_IMG's TH request builders (CPU 2); B: AE / AWB statistics at the callback table `0x629a7c64`; D (target): control plane plus HLE pixel and statistics producers | CPU 2, TAKE (the through commands 25 / 27 / 28 that TRA 991 reaches, 4.1.2), IRQs anywhere and time (VD-paced), shutter, DISP_SYNC | 327,531 / 320,730, plus about 25k of MVR's live-view part | 10-16 weeks (seam D open-ended) | the camera's live-view geometry per device, frame cadence, continuous metering, AWB, AE lock, LV modes, magnify |
 | **EXP exposure module** (inside the sensor block, 4.2) | S: only the plan `take_expose_calculate` `0x50597e82` runs, under S-EXPOSE and H-AEINIT | native, fed by seam B's statistics | seam B, the TAKE_EXPOSE and EXP_MOVIE tasks | about 107k (EXP 96k plus TAKE_EXPOSE 13.6k), one MMIO reference: device-free | part of seam B (3-5 weeks) | continuous metering, AE / AF BV, flicker detection, face and spot AE |
 | **Still capture, image processing, recording** (4.3) | S: S-RELSEQ, S-RECVIEW, S-CARD, S-TAKEFRAME; X: S2 posts no module request | C1 DRAM capture, C2 the imgpro_mdl API, C3 CIC, C4 storage (shared with 4.8), C5 the CPU 2 halves | TAKE, the sensor (C1), CPU 2, storage, the A53 for Handheld High Res (I) | 429,869 / 421,668, of which the imgpro library about 275k behind about 10 imgpro_mdl entries | 6-9 weeks | S2 writes a real JPEG / ORF with the firmware's EXIF and DCF name; the rec view shows the firmware's view image |
@@ -775,8 +775,10 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   WebAudio by both players), which S-SHUTTERSND feeds today (`docs/om1-shutter-spec.md` section 7 item 61). PCM the
   firmware makes would go out the same way: `session.audio.emit()` with a copy of each block where the native output
   is copied (48 kHz stereo PCM16 through `0x5000290a`, at most 768 bytes a call, per om-c's notes, I), consecutive
-  blocks timed back to back. That needs the sound engine to play first: at a release it is not asked to (X), its
-  table loader `0x501a8ca0` does not run in the lab, and which of the lab's inputs would ask it for a sound is ?.
+  blocks timed back to back. That needs the sound engine to play first: at the lab's release it is not asked to (X,
+  of the lab only: S-RELSEQ stands in for the release and the capture's begin `0x50b8467c` does not run; on the camera
+  the stock release plays nothing either, I, `docs/om1-shutter-spec.md` section 7 item 61), its table loader
+  `0x501a8ca0` does not run in the lab, and which of the lab's inputs would ask it for a sound is ?.
 
 ### 4.6 CPUs 1-3, inter-core services and the A53
 
@@ -2519,6 +2521,10 @@ its register shape. Open:
    fields `0x020..0x028`; the older block's sub-blocks.
 4. Whether E143's DC-motor block replaces or extends the older motor drive.
 5. The MEC_ADJUST record layout and whether it holds curtain timing.
+
+The shutter's sound is the mechanism's, not the firmware's (I): until the block runs, S-SHUTTERSND synthesizes an open
+and a close click at S-RELSEQ's START_EXPOSE and END_EXPOSE (`docs/om1-shutter-spec.md` section 7 item 61,
+`emu/FIDELITY-NOTES.md` 7.12); their timing within the exposure is the lab's choice.
 
 ## 8. Hardware evidence and what it unblocks
 

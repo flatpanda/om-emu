@@ -1,7 +1,8 @@
 // S-SHUTTERSND: the sound of the mechanical shutter at a release, synthesized. On the camera that sound is the
 // mechanism's own (the curtains, the magnets, the charge motor; docs/hle-gaps.md section 7), not the firmware's: the
-// stock firmware plays nothing at a release (X: no call of the sound engine's play method and no access to the audio
-// blocks at S2, docs/om1-shutter-spec.md section 7 item 61), and the electronic shutter is silent. The lab has no
+// stock firmware plays nothing at a release and the electronic shutter is silent (I: the patch tool om-c has to add
+// both the play call and the sound for one, docs/om1-shutter-spec.md section 7 item 61; the lab's own S2 runs
+// S-RELSEQ's stand-in, not the capture path om-c patches, so its trace does not show it). The lab has no
 // mechanism, so this stand-in makes the two sounds a listener hears: an open click as the exposure starts (S-RELSEQ's
 // START_EXPOSE) and a close click with the charge as it ends (END_EXPOSE, the shutter time in use later: S-SCENE's,
 // else 1/125 s). Which shutter the camera's drive setting selects is not decoded (?), so the stand-in takes the

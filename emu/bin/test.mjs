@@ -14,8 +14,8 @@
 // (test_scpu.mjs), the publication audit (test_pubaudit.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the card and the
 // file system on E143, E146, E147, E144, E142 and E134 and SDXC cards on E143 (test_storage.mjs), INFO's still information
-// in playback on E143 and the E118 family (test_playinfo.mjs), a tap on the touch mode icon on E143 and ten bodies of
-// the E144 family (test_touch.mjs), subject detection's frames on E143
+// in playback on the 19 bodies (test_playinfo.mjs), a tap on the touch mode icon on E143 and ten bodies of the E144
+// family (test_touch.mjs), subject detection's frames on E143
 // (test_subject.mjs), the lens on the mount natively on E143, E146 and E147 (test_lens.mjs), the SCPU's Cortex-M4 core
 // (test_m4.mjs: hand-written vectors, QEMU's recorded vectors, the SCPU image from reset to its first unmodelled
 // access), the SCPU's STM32L4 machine (test_stm32l4.mjs: the peripheral models, the SCPU image to its console prompt,
@@ -209,18 +209,24 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...su.bad, ...ss.bad, ...sx.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += su.bad.length + ss.bad.length + sx.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
-// INFO's still information in playback: E143 here (S-PLAYCOMP's answer, as before), and the E118 family each in a
-// process of its own, at once (S-PLAYSEQ's answer to the play module's request 3 from the picture's own record)
+// INFO's still information in playback, from the picture's own record: E143 here (S-PLAYCOMP's answer in the
+// component's struct), and E146, E147, the E118 family (S-PLAYSEQ's answer to the play module's request 3) and the
+// E144 family (S-PLAYCOMP's) each in a process of its own, PLAYINFO_JOBS at once
 {
   const { playInfoSession } = await import('../test/test_playinfo.mjs');
   const { spawn } = await import('node:child_process');
+  const PLAYINFO_BODIES = ['E146', 'E147', 'E122', 'E118', 'E120', 'E144', 'E139', 'E134', 'E137', 'E142', 'E140', 'E125', 'E130', 'E133', 'E145', 'E129', 'E132', 'E148'];
+  const PLAYINFO_JOBS = 8;
   const pi = await playInfoSession();
-  const others = await Promise.all(['E122', 'E118', 'E120'].map((m) => new Promise((done) => {
+  const one = (m) => new Promise((done) => {
     const c = spawn(process.execPath, [new URL('../test/test_playinfo.mjs', import.meta.url).pathname], { env: { ...process.env, OM_EMU_MODEL: m } });
     let out = '';
     c.stdout.on('data', (d) => { out += d; }); c.stderr.on('data', (d) => { out += d; });
     c.on('close', (rc) => done([m, rc, out.trim().split('\n')]));
-  })));
+  });
+  const others = [], queue = [...PLAYINFO_BODIES];
+  await Promise.all(Array.from({ length: PLAYINFO_JOBS }, async () => { while (queue.length) { const m = queue.shift(); others.push(await one(m)); } }));
+  others.sort((x, y) => PLAYINFO_BODIES.indexOf(x[0]) - PLAYINFO_BODIES.indexOf(y[0]));
   console.log(`INFO's still information: E143 ${pi.checks - pi.bad.length}/${pi.checks}; ${others.map(([m, rc, lines]) => `${m} ${rc === 0 ? lines[0].split(': ').pop() : 'FAILED'}`).join(', ')}`);
   [...pi.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += pi.bad.length + others.filter(([, rc]) => rc !== 0).length;

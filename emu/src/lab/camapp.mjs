@@ -239,13 +239,13 @@ const PLAY_COMPONENT = {
 // calls), else by its address. A name the port left unplaced is a wrapper the build lacks, so no wrapper is left to
 // read the null pointer.
 // getStillInfo's struct (offsets from the fields OlyHfwOpePlyCom's dump at 0x50acd02d prints, found by filling it with a
-// pattern): the date at 8 (u16 year, then month, day, hour, minute and second bytes, D: the converter 0x50acc981; left 0
-// by S-PLAYCOMP), the picture size u16 x 2 at 16, rationals (u32 numerator, denominator) for the exposure time at 48,
-// the f-number at 56 and the bias at 72 (I: EXIF's); the focal length (in tenths of a mm, X) and the ISO where the
-// build's converter reads them (fact play.still, src/fw/facts.mjs stillFields: E143's u32 +148 and u32 +100, the
-// E118 family's u32 +136 and u16 +90).
+// pattern): the date at 8 (u16 year, then month, day, hour, minute and second bytes, D: the converter 0x50acc981), the
+// picture size u16 x 2 at 16, rationals (u32 numerator, denominator) for the exposure time at 48, the f-number at 56
+// and the bias at 72 (I: EXIF's); the focal length (in tenths of a mm, X) and the ISO where the build's converter
+// reads them (fact play.still, src/fw/facts.mjs stillFields: E143's u32 +148 and u32 +100, the E118 family's u32
+// +136 and u16 +90). The component's struct (S-PLAYCOMP) and the play module's answer (S-PLAYSEQ) go to the same
+// converter (D), so both are written alike (still_record).
 const STILL = { date: 8, size: 16, exp_time: 48, f_number: 56, exp_bias: 72 };
-const PICTURE_SIZE = [5184, 3888];   // the OM-1's 4:3 large size, which the screen's 4:3 LF stands for
 // S-PLAYSEQ's synchronous getStillInfo and getHistogram (PlyCom's request ids, from its name table: 0
 // startPlayService, 1 endPlayService, 2 getImageType, 3 getStillInfo, ..., 5 getNumber; E143's getStillInfo sends 3
 // with its mode word at 3, its getHistogram 7, the E118 family's always, D: docs/model-survey.md finding 57).
@@ -254,9 +254,17 @@ const PICTURE_SIZE = [5184, 3888];   // the OM-1's 4:3 large size, which the scr
 // family's the same, finding 57)
 const SYNC_STILL_INFO = 3, SYNC_HISTOGRAM = 7;
 const HISTOGRAM = { flags: [4, 1032, 2060, 3088], bins: [8, 1036, 2064, 3092], bin_bytes: 1024 };
-// S-CARD: the camera's clock record (src/fw/facts.mjs realTimeGetter: u16 year, month, day, hour, minute, second, a
-// pad byte, u16 status at +8)
-const CLOCK_RECORD = 10, CLOCK_STATUS = 8;
+// S-CARD: the camera's clock read (CLOCK_READ: E143's 0x5005a59e, behind the wrapper 0x5012b7cd its 61 callers call)
+// fills a0's record {u16 year, month, day, hour, minute, second, hundredths, u16 status at +8} (D): where the SCPU
+// window's clock signature (0x5004e384, bits 7..2 of word 0) is 42, the window's clock words (seconds since 1970 and
+// the subsecond count) converted by 0x5012bf86 and checked by 0x5012b9ab, else, or where that is no date, the build's
+// default with the status 10501 (0x5012b91f: E143's 2022-01-01 00:00:00, D). The port's place is the read on every
+// body: on the E118 family the RTC driver's get that api_sctime_GET_REAL_TIME calls (E122 0x50068dbc, behind
+// 0x502ee369 -> 0x5016892e, D); X: each of the 19 answers its build's default with the status 10501 in a hermetic
+// session, whose window clock counts from 1970 (01-01 of E118 and E120 2015, E122 and E125 2016, E129, E130 and E132
+// 2017, E133 2018, E134 and E137 2019, E139 and E140 2020, E142 2021, E143 and E144 2022, E145 2023, E146 2024, E147
+// and E148 2025)
+const CLOCK_READ = A(0x5005A59E), CLOCK_RECORD = 10, CLOCK_STATUS = 8;
 // S-LENS applies on a build with a lens mount, whose driver keeps the mounted lens's record (fact lens.mount,
 // src/fw/facts.mjs lensMount); a body with a built-in lens (E145, E129, E132) has no such record to mount one through
 export const LENS_MOUNT = fact('lens.mount', true);
@@ -322,7 +330,7 @@ export const CAMAPP_STAND_INS = {
   "S-TRAACK": "the HLS transaction layer's synchronous exec (0x50af7cb9 / 0x50af7cbe) returns 0: no local handler is ever registered (on the camera either), so every transaction goes to the active state's components, where the shooting component CmpSht_ShootingComponent_NEW answers TRA 990 and 991; it runs only with the HLS components, and the remote channel answers 0xf0000001 (startShootingService fails on TRA 990 without it, X). With the file system native and its HLS side (card_fs.hls: E143, E146) the media control's start (TRA 1511; E146's 1509) also goes to S-MDACTRL (media.mjs)",
   "S-CARD": "a card in the SD slot. With the file system native (a body that runs it, src/fw/models.mjs card_fs; storage.mjs) the card is S-SDCARD's, which the firmware formats and mounts itself at the insertion, and S-CARD keeps only the HLS media mount state (0x60360bfc, 0x60360c08) at 8, as the HLS media layer would set it on the file layer's mount, and the pictures taken (S-RELSEQ's END_SHOOTING_PICTURE) as images of folder 100, numbered from 1, for playback, the media API's image count (0x503feea4) answering their number for type 1 (the firmware's own count of type 1 counts a P*.JPG file in DCIM, X): each one's file is written by S-RECFILE in place of the release's recording modules, which do not run, and the DCF database learns of it at the next mount. The firmware answers the remaining shots and the movie time from the card. While the card is out of the slot (media.mjs S-MEDIA) no picture is kept and the image count is 0; a format from the menu (S-MDACTRL) clears the pictures. On the other bodies the card has no file system: the card driver's detect state of the first slot is 2, inserted (src/fw/facts.mjs cardDetect), set before the application starts; the remaining-shots module query 0x50419164 answers 999 less the images; the movie time query 0x5042da58 answers a time left of 1:00:00 less the time recorded so far, and the current recording's time; a DCF remain count that tests only the drive status's error bits (MODEL_INFO.dcf_mount_test) is given the mount test E143's count makes, so it returns as not mounted. An image is its number, its exposure and S-SCENE's scene at the capture",
   "S-PLAYSEQ": "the play module's notifications: each asynchronous HLS play request (OlyHfwOpePlyComAsyncRsb::execute 0x50ad26fb) is finished after the step by its notify function (0x50ad2bc2) with the request's id and kind 2, as the module would: startPlayService (0) makes PlyCom's callback post CBS_END and the GUI leave ID_ST_PREPARE, startSingleFrame (8) and moveCurrent (9) make the single-frame callback post CBS_FINISH_DRAW and the GUI show the image. While a request's transaction runs (S-TRAACK) the module's answer is written: canMoveCurrent (sync 344) can move whenever there are two images or more (they wrap around), moveCurrent's result is 1 and the image shown moves (direction 3 left, 4 right). Where PlyCom asks the play module rather than a component (the E118 family always), getNumber (sync 5) is answered with the image's index, file number and folder, getStillInfo (sync 3) with the picture's own record: the date the camera's clock gave at the capture (the family's default while its clock is not set: 2016-01-01 00:00 on E122, 2015-01-01 on E118 and E120), its file's JPEG size, the release's exposure and the lens's focal length at the capture; getHistogram (sync 7) is answered empty (the lab decodes no picture). That every request finishes at once, with result 0 and no other data, is an inference from the callbacks (I)",
-  "S-PLAYCOMP": "the play component's answers (Cmp_PlayComponentBase, which only the HLS components create; OlyHfwOpePlyCom's wrappers 0x50acf156..0x50acf356 are answered in its place) for the image S-PLAYSEQ shows, the newest: getNumber its index, file number and folder 100, getStillInfo its exposure time, f-number, bias and ISO (from S-SCENE at the capture; 1/125 s alone without it) and the picture size 5184 x 3888, the type 0, not protected, no recording; a move's completion clears the single-move state (0x60362a7c), as the component's start_single_move_current does. The other wrappers answer 0, each logged (I)",
+  "S-PLAYCOMP": "the play component's answers (Cmp_PlayComponentBase, which only the HLS components create; OlyHfwOpePlyCom's wrappers 0x50acf156..0x50acf356 are answered in its place) for the image S-PLAYSEQ shows, the newest: getNumber its index, file number and folder 100, getStillInfo the picture's own record as S-PLAYSEQ's answer holds it (the date the camera's clock gave at the capture, its JPEG's size, its exposure time, f-number, bias and ISO from S-SCENE at the capture, 1/125 s alone without it, and the lens's focal length at the capture), the type 0, not protected, no recording; a move's completion clears the single-move state (0x60362a7c), as the component's start_single_move_current does. The other wrappers answer 0, each logged (I)",
   "S-PLAYVIEW": "(with S-SCENE's live view) while the GUI shows a card image, from startSingleFrame's finish to endPlayService (sync request 1), the live-view plane holds the frame S-SCENE renders again from the scene kept with the image (black for an image taken without it): the camera would decode the file onto its image plane, which the lab does not have (I: same plane, same scaling as S-RECVIEW)",
   "S-DISPFRAME": "CPU 3's task DISP_FRAME on the lab CPU: its start (the frame colour table 0x51016eb1, the data pointers of the three settings objects its draws read), the TFT and EVF channels' eight face-plane colours converted from that table as the channel setup does (0x501db1b4), the TFT frame-state byte 0xa32ddaf6 at 0 (the value of a display setup with the configuration word 0xFACE, I), and one turn of its loop, natively, for each post to its flag (ring [3][0], function 0x5002587a); its 1 ms sleeps while it waits for the frame plane's buffer swap (0x5100d398..) run on the display clock (A10), so the VSC latches the new address at a frame boundary. It draws the AF frames, the focus indicator and S-SUBJECT's subject frames into its 8-bit plane (VSC IMG3, format 2); the composite shows the plane under the A19 opt-in",
   "S-RECVIEW": "(with S-SCENE's live view) from START_RECVIEW to END_RECVIEW the live-view plane holds the frame S-SCENE rendered at the capture (S2 down, the exposure in use) instead of the live scene; the camera would show the developed image through its playback path, which the lab does not run (I)",
@@ -465,14 +473,12 @@ export class CamApp {
     if (this.s.lens) return this.s.lens.mcu.focal();
     return this.slens() ? LENS_ZOOM[this.zoom] : null;
   }
-  // S-CARD: the camera's clock now (a capture's) as its own getter reads it (fact clock.real_time, src/fw/facts.mjs
-  // realTimeGetter): {date: [year, month, day, hour, minute, second], status}, or null on a build whose getter is not
-  // read (the E143 and E144 families')
+  // S-CARD: the camera's clock now (a capture's) as its own read gives it (CLOCK_READ, run natively): {date: [year,
+  // month, day, hour, minute, second], status}, or null on a build where the read is not placed
   clock() {
-    const fn = fact('clock.real_time', null) ?? null;
-    if (fn === null) return null;
+    if (isUnmapped(CLOCK_READ)) return null;
     const lab = this.s.lab, rec = lab.alloc(new Uint8Array(CLOCK_RECORD), 4);
-    lab.call(fn, { a0: rec }, null, null, 2000000);
+    lab.call(CLOCK_READ, { a0: rec }, null, null, 2000000);
     const b = lab.sim.read(rec, CLOCK_RECORD);
     return { date: [b[0] | b[1] << 8, b[2], b[3], b[4], b[5], b[6]], status: b[CLOCK_STATUS] | b[CLOCK_STATUS + 1] << 8 };
   }
@@ -795,7 +801,7 @@ export class CamApp {
   // OlyHfwOpePlyCom::getNumber sends where it asks no play component (E143 with its mode word at 3, the E118 family
   // always, D; the addresses in docs/model-survey.md finding 52): +4 the image's index, +8 its file number, +10 its
   // folder (u16), as both read them back (D); the index counts from 1 as the component's getNumber does (I).
-  // getStillInfo (sync 3), which PlyCom sends where it asks no component as getNumber: still_answer. getHistogram (sync
+  // getStillInfo (sync 3), which PlyCom sends where it asks no component as getNumber: still_record. getHistogram (sync
   // 7): an empty histogram, its flag bytes and bins 0 (HISTOGRAM): the module would count the decoded picture's
   // levels, which the lab does not decode (I); unanswered, the GUI drew whatever the last answer left in the block as
   // bars (X: the E118 family's INFO after getNumber's index at +4).
@@ -809,7 +815,7 @@ export class CamApp {
     } else if (p.sync === SYNC_STILL_INFO) {
       const res = lab.sim.u32(SYNC_RESPONSE) >>> 0, img = this.play_cur === null ? null : this.images[this.play_cur];
       if (!res) throw new FirmwareError('S-PLAYSEQ: getStillInfo before the response block exists');
-      this.still_answer(res, img);
+      this.still_record(res, img, 'play');
     } else if (p.sync === SYNC_HISTOGRAM) {
       const res = lab.sim.u32(SYNC_RESPONSE) >>> 0;
       if (!res) throw new FirmwareError('S-PLAYSEQ: getHistogram before the response block exists');
@@ -840,50 +846,42 @@ export class CamApp {
     if (name === 'getNumber') {                    // a1 index, d0 file number, d1 folder (0x50acf1a8 -> 0x50c4680f)
       put(r.a1, '<I', img ? this.play_cur + 1 : 0); put(r.d0, '<I', img ? img.number : 0); put(r.d1, '<I', img ? img.folder : 0);
     } else if (name === 'getStillInfo' && img) {   // a1 the struct (the component's vt+240)
-      const info = r.a1 >>> 0;
-      put(info + STILL.size, '<HH', ...PICTURE_SIZE);
-      this.still_exposure(info, img, false);
+      this.still_record(r.a1 >>> 0, img, 'playcomp');
     } else if (!['get_img_type', 'isRecording', 'isProtect', 'getStillInfo'].includes(name)) {
       this.log.push(['playcomp', `${name} from ${where(r.mdr)}: not modelled, 0`]);
     }
     h.finish(r, { d0: 0 });
   }
-  // S-PLAYCOMP / S-PLAYSEQ: an image's exposure in the still information at info: its exposure time (S-SCENE's at the
-  // capture; the release's, DEFAULT_SHUTTER_S, without it) and, with S-SCENE's capture, its f-number, bias and ISO (the
-  // ISO where the build's converter reads it, fact play.still: none where the rule reads no layout, E134's and E132's;
-  // before 2026-10-31 E143's u32 +100 on every body, a field the E144 family's converters read as another, X: finding
-  // 58); clear: those three 0 without the capture, and all four without an image (img null)
-  still_exposure(info, img, clear) {
-    const lab = this.s.lab, cap = img ? this.views.get(img.release)?.capture ?? null : null;
+  // S-PLAYCOMP / S-PLAYSEQ: the still information of the image shown (img; null: none, all 0) at info, in the
+  // converter's layout (STILL, fact play.still), from the picture's own record (S-CARD's, kept at its capture): the
+  // date the camera's clock gave (S-CARD's clock(): the firmware's own read, each build's default while the clock is
+  // not set, X), the size of its file's JPEG (S-RECFILE's, the frame the lab encodes), its exposure time (S-SCENE's at
+  // the capture; the release's, DEFAULT_SHUTTER_S, without it), with S-SCENE's capture its f-number, bias and ISO, and
+  // the lens's focal length at the capture in tenths of a mm (S-CARD's lens_focal: S-LENS's zoom step or the native
+  // lens's). A field the image does not have is 0: the date where the read is not placed, the size of a picture with
+  // no file (no file system), the focal length with no lens (a built-in lens's is not read), the f-number, bias and
+  // ISO without S-SCENE's capture; the focal length and ISO are left out where the rule reads no layout (fact
+  // play.still null, logged). Written alike in the component's struct (S-PLAYCOMP: E143's, E146's, E147's and the
+  // E144 family's PlyCom; before 2026-11-02 the size 5184 x 3888 and the exposure alone, no date or focal length, X)
+  // and in the play module's response block (S-PLAYSEQ: the E118 family's), which every synchronous answer shares
+  // (getNumber's +4..+11, canMoveCurrent's +8..+19): each field whole. kind: the log's key. (The ISO was E143's u32
+  // +100 on every body before 2026-10-31, a field the E144 family's converters read as another, X: finding 58.)
+  still_record(info, img, kind) {
+    const lab = this.s.lab, layout = fact('play.still', STILL_E143) ?? null;
     const put = (at, fmt, ...v) => lab.sim.write(at >>> 0, pack(fmt, ...v));
-    const t = cap ? cap.shutter_s : DEFAULT_SHUTTER_S;
+    const cap = img ? this.views.get(img.release)?.capture ?? null : null, t = cap ? cap.shutter_s : DEFAULT_SHUTTER_S;
+    const date = img?.clock?.date ?? [0, 0, 0, 0, 0, 0], size = img?.size ?? [0, 0];
+    put(info + STILL.date, '<HBBBBBB', ...date, 0);
+    put(info + STILL.size, '<HH', ...size);
     put(info + STILL.exp_time, '<II', ...(!img ? [0, 0] : t >= 1 ? [Math.round(t * 10), 10] : [1, Math.round(1 / t)]));
-    if (!cap && !clear) return;
-    const layout = fact('play.still', STILL_E143) ?? null;
     put(info + STILL.f_number, '<II', ...(cap ? [Math.round(cap.aperture * 10), 10] : [0, 0]));
     put(info + STILL.exp_bias, '<iI', ...(cap ? [Math.round(cap.ev_offset * 10), 10] : [0, 0]));
-    if (layout === null) this.log.push(['play', 'still information: the build\'s converter is of a form the rule does not read (fact play.still null): no ISO']);
-    else put(info + layout.iso.at, layout.iso.size === 2 ? '<H' : '<I', cap ? cap.iso : 0);
-  }
-  // S-PLAYSEQ: getStillInfo's answer for the image shown (img; null: none, all 0) in the response block at res, in the
-  // converter's layout (STILL, fact play.still), from the picture's own record: the date the camera's clock gave at
-  // the capture (S-CARD's clock(): the firmware's own read, the E118 family's default while its clock is not set,
-  // E122's 2016-01-01 00:00:00, E118's and E120's 2015-01-01, X), the size of its file's JPEG (S-RECFILE's, the frame the lab encodes), its exposure
-  // (still_exposure) and the lens's focal length at the capture in tenths of a mm (S-CARD's lens_focal: S-LENS's zoom
-  // step or the native lens's). A field the image does not have stays 0: the date of a build whose clock getter is not
-  // read, the size of a picture with no file (no file system), the focal length with no lens. The block is the one
-  // every synchronous answer shares (getNumber's +4..+11, canMoveCurrent's +8..+19): the date and size are written
-  // whole
-  still_answer(res, img) {
-    const lab = this.s.lab, layout = fact('play.still', STILL_E143) ?? null;
-    if (layout === null) throw new FirmwareError('S-PLAYSEQ: getStillInfo on a build whose converter the rule does not read (fact play.still null)');
-    const focal = layout.focal;
-    const date = img?.clock?.date ?? [0, 0, 0, 0, 0, 0], size = img?.size ?? [0, 0];
-    lab.sim.write(res + STILL.date, pack('<HBBBBBB', ...date, 0));
-    lab.sim.write(res + STILL.size, pack('<HH', ...size));
-    lab.sim.write(res + focal.at, pack(focal.size === 2 ? '<H' : '<I', img?.focal_mm ? Math.round(img.focal_mm * 10) : 0));
-    this.still_exposure(res, img, true);
-    this.log.push(['play', `getStillInfo: ${img ? `image ${this.play_cur + 1}, ${date.join('-')} (clock status ${img.clock?.status ?? '-'}), ${size.join('x')}, ${img.focal_mm ?? '-'} mm` : 'no image'}`]);
+    if (layout === null) this.log.push([kind, 'still information: the build\'s converter is of a form the rule does not read (fact play.still null): no focal length or ISO']);
+    else {
+      put(info + layout.focal.at, layout.focal.size === 2 ? '<H' : '<I', img?.focal_mm ? Math.round(img.focal_mm * 10) : 0);
+      put(info + layout.iso.at, layout.iso.size === 2 ? '<H' : '<I', cap ? cap.iso : 0);
+    }
+    this.log.push([kind, `getStillInfo: ${img ? `image ${this.play_cur + 1}, ${date.join('-')} (clock status ${img.clock?.status ?? '-'}), ${size.join('x')}, ${img.focal_mm ?? '-'} mm` : 'no image'}`]);
   }
   // S-RELSEQ
   // S-CPU3: ring [3][0]'s entries (function, argument) taken off and the bank-3 doorbell acknowledged

@@ -1839,30 +1839,6 @@ export function touchIntWait(img) {
   return found[0];
 }
 
-// The camera's clock read (fact 'clock.real_time', src/lab/camapp.mjs S-CARD: the date of a picture taken):
-// api_sctime_GET_REAL_TIME, whose trace loads its name (E122 0x502ee369 -> 0x5016892e -> the RTC driver's get
-// 0x50068dbc, D), fills a0's record {u16 year, month, day, hour, minute, second, pad, u16 status} (the status at +8,
-// `movhu d0,(8,a3)` 0x50068e14; a caller in the application, 0x5071bfb5, takes +0 as a u16 and +2..+6 as bytes in
-// that order and fails for a status not 0, 0x5071bfbc..0x5071bfe9, D; the hour, minute and second's order is I). In the lab the E118 family's
-// clock is not set: it answers its default with the status 10501, E122 2016-01-01 00:00:00, E118 and E120 2015-01-01
-// (X, at the start, S2 and INFO), the status E143's sub-CPU answers with its own default (src/lab/scpudev.mjs
-// RTC_INVALID). The name is held by the E118
-// family's three of the 18 expanded images, each loaded by one entry with callers (X); the E143 and E144 families read
-// their clock through the sub-CPU (scpu.backup) or otherwise (not read). Returns the entry, or null where the name is
-// not held; throws for two entries.
-const REAL_TIME_NAME = 'api_sctime_GET_REAL_TIME';
-export function realTimeGetter(img) {
-  const { base } = imageBase(img), entries = new Set();
-  // an entry with callers from which the code runs to the load with no return on the way (apiEntries also gives the
-  // function before it, E122 0x502ee34c, which returns 6 bytes before the load)
-  const straight = (e, p) => { for (let q = e; q < p; q += insnLength(img[q], img[q + 1])) if (isRet(img, q)) return false; return true; };
-  for (const o of findString(img, REAL_TIME_NAME, { nul: true, after: true })) {
-    for (const p of loadsOf(img, base + o)) for (const e of apiEntries(img, base + o, NAME_HEAD)) if (e < p && p - e <= NAME_HEAD && straight(e, p) && callsTo(img, e).length) entries.add(e);
-  }
-  if (entries.size > 1) throw new Error(`realTimeGetter: ${entries.size} entries load "${REAL_TIME_NAME}": ${[...entries].map((e) => h8(0x50000000 + e)).join(', ')}, want one`);
-  return entries.size ? 0x50000000 + [...entries][0] : null;
-}
-
 // Whether the build holds a touch-panel driver (fact 'touch_panel.driver'; src/lab/display.mjs HAS_TOUCH, which hooks
 // the touch I2C functions only on such a build, and src/lab/play.mjs, which runs one without as --touch off): the
 // driver's debug callback logs "--- tp_drv_dbg_callback ---", which its code loads (`mov imm32,Rn` of the string's
@@ -3601,7 +3577,6 @@ export function readFacts({ img, family, resLoad }) {
   const recview = recViewStandby(img);
   facts.recview = recview ?? null;
   facts.touch_int = touchIntWait(img) ?? null;
-  facts.clock = { real_time: realTimeGetter(img) };
   const cbs = cbsIds(img);
   if (cbs !== undefined) facts.cbs = cbs;
   facts.mode_dial = modeDial(img);

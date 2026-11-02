@@ -24,7 +24,7 @@
 //               its caller word against CALLER_FOUND and A(), the kernel's interrupt handler tables against HANDLERS_FOUND, the frame period words against PERIOD_FOUND and A(), the function direct start against DIRECT_FOUND and
 //               A(), the event broker init against BROKER_FOUND and A(), the error log against ERRLOG_FOUND and A(),
 //               the touch panel's open against TP_OPEN_FOUND and A(), the play component's wrappers against
-//               WRAPPERS_FOUND and A(), the clock getter against CLOCK_FOUND, the GUI state table's bound against STATES_FOUND, the still information's
+//               WRAPPERS_FOUND and A(), the GUI state table's bound against STATES_FOUND, the still information's
 //               layout against STILL_FOUND, the USB-disconnect power-off against POWER_OFF_FOUND, the power manager's
 //               start and the power-off sequence against POWER_SEQ_FOUND, the serial controller's driver against
 //               SIO_FOUND, the GUI canvas, OSD banks
@@ -584,10 +584,6 @@ const RECVIEW_FOUND = { E143: { word: 0x6035E9C8, standby: 1 }, E142: { word: 0x
 // the word the pin-30 callback 0x502da12c / its E122 counterpart sets), E144's of the other form (D: the wait
 // 0x5018a924 the open calls at 0x50181efb, its poll of the word the pin-120 callback 0x5018b191 sets) and E125's of
 // the first (D: the wait 0x5022d4d4 the open calls at 0x5022a568); none on E118 (its wait is inline, D) and E143
-// The camera's clock getter (clock.real_time; src/fw/facts.mjs realTimeGetter): the E118 family's
-// api_sctime_GET_REAL_TIME (D: E122 0x502ee369, its trace's load at 0x502ee36c, called at 0x506d4619, 0x5071bfb5 and
-// 0x50740e13; E118's and E120's the same opening); none on E143 and E144 (no such name)
-const CLOCK_FOUND = { E122: 0x502EE369, E118: 0x502CB0DB, E120: 0x502BE4D7, E143: null, E144: null };
 // The GUI state table's bound (gui_states.parents; src/fw/facts.mjs stateTableBound) at the port's place of E143's
 // table: E143's 12 (D: `cmp 12,d3; lcs` at 0x5124b478 in the name lookup that loads the table at 0x5124b467) and
 // E145's 18 (D: 0x50de87bf, after the load at 0x50de87ae)
@@ -655,7 +651,7 @@ const E143_FACTS = {
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
   broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] }, movie_rate: null },
   boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, mm_init: null, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143, touch_int: null,
-  clock: { real_time: null }, cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143, prop_store: PROP_STORE_FOUND.E143, ctors: CTORS_E143,
+  cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143, prop_store: PROP_STORE_FOUND.E143, ctors: CTORS_E143,
 };
 
 export function factsTests() {
@@ -877,9 +873,7 @@ export function factsTests() {
       const off = WRAPPERS_FOUND.E143.map((v) => PORTS[code][v]).filter((t) => t !== null && !pw.includes(t));
       ok(!off.length, `${code}: A() of E143's play component wrappers ${hx(off)}, not among the rule's`);
     }
-    // the camera's clock getter, the GUI state table's bound, and the still information's layout at the port's place
-    // of E143's converter
-    if (Object.hasOwn(CLOCK_FOUND, code)) ok(got.clock?.real_time === CLOCK_FOUND[code], `${code}: clock.real_time ${hx(got.clock ?? got)}, found ${hx(CLOCK_FOUND[code] ?? 'none')}`);
+    // the GUI state table's bound, and the still information's layout at the port's place of E143's converter
     if (Object.hasOwn(STATES_FOUND, code) && (code === 'E143' || PORTS[code])) ok(placed?.gui_states?.parents === STATES_FOUND[code], `${code}: gui_states ${hx(placed?.gui_states ?? placed)}, found ${STATES_FOUND[code]}`);
     if (Object.hasOwn(STILL_FOUND, code) && (code === 'E143' || PORTS[code])) ok(same(placed?.play?.still, STILL_FOUND[code]), `${code}: play.still ${hx(placed?.play?.still ?? placed)}, found ${hx(STILL_FOUND[code])}`);
     if (Object.hasOwn(TAKE_FOUND, code)) ok(got.menu?.take === TAKE_FOUND[code], `${code}: menu.take ${hx(got.menu ?? got)}, found ${hx(TAKE_FOUND[code] ?? 'none')}`);

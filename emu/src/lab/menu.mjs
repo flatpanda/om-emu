@@ -22,7 +22,7 @@ import { show } from '../util/show.mjs';
 import { pack, unpack, unpackFrom, bytesHex } from '../util/bytes.mjs';
 import { hex, hexDigits as fx } from '../util/hex.mjs';
 import { Tally } from '../util/tally.mjs';
-import { BOOT_E143, PROP_STORE_E143, CTORS_E143 } from '../fw/facts.mjs';
+import { BOOT_E143, PROP_STORE_E143, CTORS_E143, STATE_PARENTS_E143 } from '../fw/facts.mjs';
 // an om1.scpu command line on stderr (src/dev/scpu.mjs): its value, pc and count
 const SCPU_COMMAND = /^om-emu: scpu command 0x([0-9a-f]+) pc 0x([0-9a-f]+) #([0-9]+)(?: |$)/;
 
@@ -30,6 +30,9 @@ export const GUI_CREATOR = A(0x5108BC37), GUI_TASK = A(0x5115BA0C), GENIFA_TIMER
 export const EYEFI_TASK = A(0x50ABA579), CHANGE_TASK = D.CHANGE_LOOP;
 export const SEND_EVENT = A(0x5115B286), MENU_EVENT = 0x87, EV_MAP = A(0x614B5A14), SET_EVENT = A(0x510BA2C2), DISPATCH = A(0x510C2A2E);
 export const STATE_LOG = A(0x5124BA59), GUICALLER = A(0x60368B88), STATE_TABLE = A(0x61596FB8);
+// the state table's parents, as many as the firmware's name lookup searches (src/fw/facts.mjs stateTableBound: E143's
+// 12, D; read when the names are first built)
+const stateParents = () => fact('gui_states.parents', STATE_PARENTS_E143);
 // the registers STATE_LOG takes the old and the new GUI state in: E143's caller passes them as its third and fourth
 // arguments, a0 and a1 (D); a build whose log takes one argument fewer passes them in d1 and a0 (src/fw/facts.mjs
 // stateLog, fact 'state_log.regs')
@@ -145,13 +148,14 @@ export function persist_ids(img) {
   return out;
 }
 const NAMES = new WeakMap();
-// GUI state number (parent << 8 | child) -> 'PARENT/CHILD', from the firmware's name tables.
+// GUI state number (parent << 8 | child) -> 'PARENT/CHILD', from the firmware's name tables: the state table's first
+// stateParents() rows (before 2026-11-02 E143's 12 on every body, which left E142's and E145's SS_MENU unnamed).
 export function state_names(image) {
   let out = NAMES.get(image);
   if (out) return out;
   const cstr = (a) => { const o = a - RT; return latin1(image.subarray(o, image.indexOf(0, o))); };
   out = new Map();
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0, n = stateParents(); i < n; i++) {
     const a = STATE_TABLE + 12 * i;
     const parent = u16i(image, a), name = u32i(image, a + 4), sub = u32i(image, a + 8);
     for (let j = 0; u16i(image, sub + 8 * j) !== 0xFFFF; j++) {

@@ -509,7 +509,16 @@ notation) was found to share and not share with kind 2 (2026-10-30, `docs/model-
   the same release commits (2026-10-30).
 - **Formats:** `0x1b0` = `0x111` and `0x1b4` = `0x11` at every open (`0x503097fb..0x50309845`), E143's OSDFMT1 and
   OSDFMT2 values, where kind 2 keeps its mix word `0x111111` at `0x1b0`; `0x1a4` = 3, `0x1a8` = `0x1100710` (but for
-  code 4), `0x1ac` = `0x10f` are written too; their meanings are ? and the compositor does not read them.
+  code 4), `0x1ac` = `0x10f` are written too; the meanings of `0x1a8` and `0x1ac` are ? and the compositor does not
+  read them.
+- **OSD stacking (`0x1a4`, kind 2's OSD1; 2026-11-02, `docs/model-survey.md` finding 66):** the OSD-plane open writes
+  3 on every ported body of kinds 2 and 3 but E144 and E148, which write 2 (E144 `0x50022fbf`, E139 `0x500230f2`; a
+  setter, E144 `0x501872ac`, replaces its low nibble with a byte of the device's record, D). The commit's choice of
+  word follows it: E139's takes OSD1's address from the display record's osd word 2 (`0x501889f9`), E144's from word
+  0 (`0x50187e33`, D), so with 3 OSD1 shows GUI layer 0 and with 2 OSD3 does (X: the registers at the shooting
+  screen of all 16 bodies). The compositor reads the word as the planes' stacking, 3 OSD1 at the bottom and 2 OSD3 at
+  the bottom, so that GUI layer 0 is at the bottom on both (I: with OSD3 on top E144's menu background, on layer 0,
+  hid its rows, X); another value is refused, and kind 3, whose palettes are fixed to their planes, takes 3 only.
 - **Level:** OSD7..OSD9 (`0x2e0..0x2e8`) = `2 floor(p 128 / 100)` for p percent (`0x502f9408..0x502f9427`): E143's
   PLANC form, `0x100` at 100 %; the built-in EVF's 70 % gives `0xb2`, E144's EVF has `0xcc` (X). The compositor draws
   any level but 0 as full on both kinds; E143's refuses a PLANC other than `0x100` (section 3), and what a lower level

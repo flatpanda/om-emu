@@ -1234,7 +1234,62 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    not come up: nav's bring-up reads an address the map cannot place (0x62b3e364, a text module's data, `src/lab/text.mjs`
    check_init) and 18 of the lab's menu addresses are unmapped, the bar the E144 family's own menu trials stop at (X:
    `bin/nav.mjs --model E144` stops at its GUI buffer tables), so E148 is at the family's: the shooting path and
-   playback, not the menu. Pinned in `BLOBS.sha256` with its five unpacked blocks.
+   playback, not the menu. Pinned in `BLOBS.sha256` with its five unpacked blocks. (Since 2026-11-02 its menu runs
+   in a play session, findings 66 to 68.)
+66. **The E144 family's menus in a play session, and the OSD planes' stacking** (2026-11-02; X: a play session per
+   body on the TFT, MENU, RIGHT, DOWN, OK, MENU, MENU from the shooting screen, with frames). Before (the lab of
+   2026-11-01): E139's and E134's MENU opened the camera's Shooting Menu 1 with its rows, its sub-screens and MENU back
+   and out; E144's opened it with the rows hidden (the title, the footer and the current tab's icon only, the rest
+   black), though RIGHT, DOWN and OK worked behind it (OK opened Picture Mode, drawn whole); E148's (the ListMenu,
+   `0x0b02`) opened with its rows dim and the highlighted row empty; E137, E142, E140, E125, E130, E133 and the E118
+   family stopped at MENU's press (finding 67); E145, E129 and E132 were not tried past their date prompts. E144's
+   GUI drew the rows: its draw log at MENU is E139's, call for call (X). The difference is where the planes go. The
+   kind-2 commit takes each OSD plane's address from a word of the display record: E139's OSD1 from word 2
+   (`0x501889f9`), E144's from word 0 (`0x50187e33`), so E144's OSD1 shows GUI layer 2 and its OSD3 layer 0 (D; X: the
+   registers at the shooting screen), and the lab drew OSD3 on top, where E144's menu background (layer 0, an opaque
+   fill over rows 50..431) covered the rows (layer 1). The OSD-plane open writes the word at `+0x1a4` (OSD1 in E144's
+   name table) 2 on E144 (`0x50022fbf`) and 3 on E139 (`0x500230f2`), a setter (`0x501872ac`) replacing its low nibble
+   from the device's record (D); on the 16 bodies of kinds 2 and 3 it is 3 with layer 0 in OSD1 but on E144 and E148,
+   which write 2 and put layer 0 in OSD3 (X). The compositor now stacks the OSD planes by it: 3, OSD1 at the bottom;
+   2, OSD3 at the bottom (I: on both GUI layer 0 is then at the bottom, which the menus need; the chip's definition
+   of the word is not read); another value is refused, and kind 3 takes 3 only (`emu/src/dev/vsccompose2.mjs`,
+   `docs/om1-vsc-spec.md` section 12). E144's and E148's menus show their rows, and their shooting screens and
+   modelcheck's path are unchanged (X).
+67. **The menu open's event sets are coalesced, not a storm** (2026-11-02). On E137, E142, E140, E125, E130, E133,
+   E122, E118 and E120 MENU stopped with "event storm: more than 810 GESetEvent calls" at the press (GUI state
+   `0x1101`). Without the guard the press settles and the menu opens (X, E142: 1128 sets, 145 messages taken): the
+   open calls one function about 980 times (E142 `0x50ce1a2e`, from `0x50ce3f4c`), each setting `0x1002` (the set
+   returns to `0x50ce1c4f`, E143's `0x510a25a9`), which the GUI takes 3 times; E144's open makes 120 such sets. GESetEvent does not queue an event
+   that is already pending (E143 `0x510ba2c2`: `0x1002` and `0x1100` by their pending bytes, the others by a scan of
+   the pending list, D). The lab's guard (`emu/src/lab/nav.mjs` NavLab) now counts only the sets that queue, an event
+   being pending from its set to its take (I: the dispatch takes it off the list); the step records still count every
+   set. check_nav's storm (N3's MENU deferred into itself, taken before each set) still stops the session (X).
+68. **E137's and E125's buffer sync, and MENU in modelcheck** (2026-11-02). On E137 the menu then drew over the
+   shooting screen's last frame (X: its bottom bar under the menu's rows, no footer): its GUI syncs a layer's two
+   buffers with copies of 800 x 1200 from record 2k to record 2k + 2 (its banks hold four 896 x 600 records; its
+   screen descriptor says 800 x 1200, finding 7's `guiCanvas`), and the OSD engine's guard of one record refused each
+   (GUARD, six at MENU on E137 and on E125, X). A GUI session's guards now run from each record to the end of its bank
+   (`emu/src/lab/osd.mjs` GUI_GUARDS): a draw may cross into the next record of its kind, not out of its bank. With
+   findings 66 to 68 the menu runs on every ported body of the E144 and E118 families on the TFT (X, frames): MENU
+   opens Shooting Menu 1 (`0x1102` on the Menu_Viewer builds; `0x0b02` on E148's ListMenu, there at Setup's
+   Card/Folder/File), RIGHT enters the page, DOWN moves the tab or the cursor, OK opens a setting (E144 Picture Mode's
+   list, E145 Focus BKT's choices, E148 Lens Info Settings), MENU goes back and then out to `0x0108`; E145 and E129
+   after their date prompt's MENU, E132 after its clock set. On the EVF it runs the same on the kind-2 and kind-3
+   bodies but E122 and E120, whose press at MENU runs to the hook-stop limit with the lab clock at about 3000 s,
+   sleeping in OlyTaSS (X; why is ?, their TFTs and E118's EVF open the menu); on E146 and E147 the menu's EVF
+   composite has the dimmed plane at PLANC `0xb2`, which E143's compositor refuses, as in their EVF playback.
+   `bin/modelcheck.mjs` now takes MENU, DOWN and MENU after the path (on the EVF after S2), judged by what each
+   changes: MENU leaves the shooting screen's state with the frame changed, DOWN keeps the menu's state with the frame
+   changed, MENU brings the shooting state back (the menus' states are unnamed on most builds: the E144 family's
+   SS_MENU parent lies past the 12 parents the lab names, finding 17); the four EVF failures above are expected
+   strictly (MENU_EVF_XFAIL). Open: `bin/nav.mjs --model E144` still stops at its own GUI bring-up's checks, which are
+   E143's shape (`emu/src/lab/text.mjs` check_init: the GUI buffer tables hold E143's record pairs where E144's banks
+   hold four records a kind, the icon table and its word 1 point elsewhere than the resource blob's words, and four
+   tasks start, `0x500216a0`, `0x50d36d1c`, `0x50e15cb6` and `0x508396e7`, where the check names three); a play session, where the application creates the GUI (H-GUIBYAPP), does not run
+   them. E144's port leaves 25 of the lab's menu-module addresses unmapped: 10 of E143's ListMenu decode tables
+   (`emu/src/lab/menudata.mjs`, read where `menu.list_menu`) and 15 in `emu/src/lab/menu.mjs`, the store init's SCPU
+   request, waits and replies (used where `scpu.backup`), the NAND post and a dropped send's site; the sessions above
+   run with them unmapped (X).
 78. **The browser player in Firefox** (2026-11-02, `bin/browsergate.mjs`). In the OrbStack VM (Arch Linux ARM,
    aarch64), Firefox 159.0 headless through geckodriver 0.37.1, on the published site (`bin/site.mjs`, 127 files,
    2.66 MiB) served under `/om-emu/`: the landing page's link, the E143 `.BIN` through the file input (unpacked in
@@ -1280,9 +1335,11 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    Automation. Those are host settings this round did not change, so Safari's OPFS and sync access handles stay
    untested; the same WebDriver commands would apply, and the gate has no Safari entry.
 
+
 ## Per-body status
 
-The state as of 2026-10-23, and of E148 since 2026-11-01 (finding 65). Each body's `MODELS` entry (`src/fw/models.mjs`)
+The state as of 2026-10-23, of E148 since 2026-11-01 (finding 65), and of the menus since 2026-11-02 (findings 66 to
+68: MENU runs in a play session on every body of the E144 and E118 families, and modelcheck takes it). Each body's `MODELS` entry (`src/fw/models.mjs`)
 carries the numbers its `port_via` choice rests on and the evidence of every hand value. On that date
 `bin/modelcheck.mjs --no-port` passes E146, E147, E144,
 E139, E134, E137, E140, E125 and E130 on the TFT and the EVF and E142 (no EVF) on the TFT (their `MODELS` entries are
@@ -1316,15 +1373,17 @@ reaches shooting without stepping over anything, and S-NOPOWEROFF (the call at `
 byte without it, and every running body's tft child was unchanged, X). `bin/modelcheck.mjs` passes on the TFT (S2's
 card image, playback `0x608` SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE, INFO `0x60b`, back to `0x108`) and on the EVF, whose
 start powers the TFT down, the EVF up and runs the DISPLAY_CHANGE task natively, and whose frame is the 1024 x 768
-EVF shooting screen (finding 10, X). Open: IMG planes (live view, playback) are not modelled on the kind-2 VSC yet;
+EVF shooting screen (finding 10, X). Since 2026-11-02 its menu shows its rows: its OSD planes are stacked the other
+way round from E139's (finding 66). Open: IMG planes (live view, playback) are not modelled on the kind-2 VSC yet;
 which register selects a kind-2 channel's timing bank is ?.
 
 **E148 (OM-5 II).** Ported through E144 (the map pairs 9.5M instructions with E144's build against 2.47M with E143's;
 finding 65) and boots natively to its shooting screen; `bin/modelcheck.mjs` passes on the TFT and the EVF with the count
 probe and its card native, an 8 GiB SDHC card the firmware formats and counts 826 shots from (X). Its GUI is the ListMenu
 generation: the tab and page memories are 1909 and 1910, E147's ids, read at the settings object's vtable slot 8 where
-E143, E146 and E147 read slot 12 (`src/fw/facts.mjs` menuMemory; finding 65). Open: the menu's bring-up reads unplaced
-data (0x62b3e364) and 18 of the lab's menu addresses are unmapped, as on the family; 19 of E144's carried overrides fail
+E143, E146 and E147 read slot 12 (`src/fw/facts.mjs` menuMemory; finding 65). Its menu runs in a play session since
+2026-11-02, as the family's (findings 66 to 68). Open: nav's own GUI bring-up reads unplaced data (0x62b3e364), as
+the family's stops at its checks (finding 68); 19 of E144's carried overrides fail
 and 49 addresses stay unmapped (`port.json`; finding 65).
 
 **E139 (E-M1 III).** Ported through E144 and boots natively to its shooting screen as E144 does; the TFT session stays

@@ -36,6 +36,9 @@ Other bodies, through ports (as of 2026-11-01):
 | E-M5 II, E-M10 II | E118, E120 | start, S1, S2, playback on the TFT and the EVF with the card's file system native (`emu/bin/modelcheck.mjs` passes; the firmware formats and mounts the card, counts 2116 shots from it and writes S2's picture to it); the frames show the shooting screen the GUI draws, in its own palette; the count follows the card's query on screen once INFO redraws it, as on the PEN-F (2026-10-31) |
 | 14 older bodies (E-PL5, E-M1, E-M10, TG-4, E-PL8 and others) | E100-E126 | surveyed, not tried |
 
+On every ported body MENU opens the camera's own menu in the player, and its pages navigate (2026-11-02,
+`emu/bin/modelcheck.mjs` checks it on each).
+
 [docs/model-survey.md](docs/model-survey.md) has the evidence per body; [docs/ROADMAP.md](docs/ROADMAP.md) has the
 plan.
 

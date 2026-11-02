@@ -23,6 +23,9 @@
 //                   {type: 'status', doc}                    every published status (status_doc)
 //                   {type: 'frame', seq, device, lab_ns, sha16, w, h, rgba, rgba_sha16}   the newest frame, its RGBA
 //                                                            buffer transferred; one in flight until acknowledged
+//                   {type: 'audio', events}                  the sound the Player published after a tick
+//                                                            (src/lab/audio.mjs: seq, t_lab_ns, rate, channels,
+//                                                            frames, source, samples), the samples copied
 //                   {type: 'log', entries}                   the session-log entries as the Player flushes them
 //                   {type: 'res', id, status, headers, body}  the answer to a req
 //                   {type: 'boot-failed', message}           the boot ended before the Player started (the wrong
@@ -30,7 +33,7 @@
 //                   {type: 'stopped'}                        the loop ended (the session closed, the log written)
 // Inputs that arrive during a tick wait in the event loop, as they wait in the node host's queue; every outbound event
 // is posted from inside the tick, and a busy Worker's postMessage is delivered at once, so the page sees status and
-// frames while a long input runs (the page answers the status and frame long polls from what was pushed).
+// frames while a long input runs (the page answers the status, frame and audio long polls from what was pushed).
 import { labFirmware } from '../src/fw/labfw.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
 import { MODEL_INFO } from '../src/fw/model.mjs';
@@ -136,6 +139,9 @@ async function boot(msg) {
         sendFrame();
         api.notify();
       },
+      // the session's sound (src/lab/audio.mjs): with it the lab emits sound for this page (S-SHUTTERSND); posted
+      // without a transfer, since the stand-in's clicks are shared arrays
+      onAudio: (events) => { post({ type: 'audio', events }); api?.notify(); },
       logSink: (name, text) => { if (name === 'session.jsonl') post({ type: 'log', entries: text.split('\n').filter(Boolean).map((l) => JSON.parse(l)) }); },
     };
     player = new Player(a, env);

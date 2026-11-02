@@ -223,6 +223,7 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
   <button class="tb" id="restart">Restart</button>
   <button class="tb" id="pause">Pause time</button>
   <button class="tb" id="quit">Quit</button>
+  <button class="tb" id="sound" title="The lab's sound (S-SHUTTERSND: the mechanical shutter's, synthesized), played once a key or a click on this page has started it">Sound on</button>
   <div class="legend"><span><i style="border-color:var(--wired)"></i>wired</span><span><i style="border-color:var(--decoded)"></i>decoded only</span>
     <span><i style="border-color:var(--none);border-style:dashed"></i>not wired</span></div>
 </div>
@@ -499,6 +500,59 @@ async function statusLoop() {
       const r = await api('/api/status?after=' + statusSeq);
       const s = await r.json(); statusSeq = s.seq || statusSeq; STATUS = s; showStatus(s);
     } catch (e) { await gone(); }
+  }
+}
+// ---- sound (GET /api/audio long poll; src/lab/audio.mjs) -----------------------------------------------------------
+// The lab's sound (S-SHUTTERSND's clicks at a release; PCM the firmware makes, once the lab runs its sound) played with
+// WebAudio, each event at its lab time from the first event of a run, SND_LEAD ahead of the context's clock. A page may
+// start sound only after a gesture: the context starts at the first key or pointer press on the page; Sound mutes it.
+const SND = { ctx: null, muted: false, seq: -1, lab0: null, t0: 0, ends: new Map() }, SND_LEAD = 0.15;
+function sndResume() {
+  if (SND.muted) return;
+  if (!SND.ctx) {
+    const C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return;
+    try { SND.ctx = new C(); } catch (e) { return; }
+  }
+  if (SND.ctx.state === 'suspended') SND.ctx.resume().catch(() => {});
+}
+addEventListener('pointerdown', sndResume, true);
+addEventListener('keydown', sndResume, true);
+$('sound').onclick = () => {
+  SND.muted = !SND.muted;
+  $('sound').textContent = SND.muted ? 'Sound off' : 'Sound on';
+  if (SND.muted) SND.ctx?.suspend().catch(() => {}); else sndResume();
+};
+// one event: its 16-bit samples (interleaved by channel) at its lab time; a run starts again where an event would be
+// late or more than 2 s ahead, and a block that starts where its source's previous one ended in lab time (a stream)
+// plays right after that one
+function sndPlay(e, pcm) {
+  const c = SND.ctx;
+  if (!c || SND.muted || c.state !== 'running') return;
+  const buf = c.createBuffer(e.channels, e.frames, e.rate);
+  for (let ch = 0; ch < e.channels; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < e.frames; i++) d[i] = pcm[i * e.channels + ch] / 32768; }
+  const now = c.currentTime;
+  let at = SND.lab0 === null ? -1 : SND.t0 + (e.t_lab_ns - SND.lab0) / 1e9;
+  if (at < now + 0.01 || at > now + 2) { SND.lab0 = e.t_lab_ns; SND.t0 = at = now + SND_LEAD; }
+  const prev = SND.ends.get(e.source), lab_end = e.t_lab_ns + Math.round(e.frames / e.rate * 1e9);
+  if (prev && Math.abs(e.t_lab_ns - prev[0]) < 1e6 && prev[1] > now) at = prev[1];
+  SND.ends.set(e.source, [lab_end, at + e.frames / e.rate]);
+  const s = c.createBufferSource();
+  s.buffer = buf; s.connect(c.destination); s.start(at);
+}
+// the samples: base64 of little-endian 16-bit words
+function pcm16(b64) {
+  const s = atob(b64), out = new Int16Array(s.length >> 1);
+  for (let i = 0; i < out.length; i++) out[i] = (s.charCodeAt(2 * i) | s.charCodeAt(2 * i + 1) << 8) << 16 >> 16;
+  return out;
+}
+async function sound() {
+  while (!stopped) {
+    try {
+      const d = await (await api('/api/audio?after=' + SND.seq)).json();
+      for (const e of d.events) sndPlay(e, pcm16(e.pcm));
+      SND.seq = d.seq;
+    } catch (e) { await new Promise((r) => setTimeout(r, 1000)); }
   }
 }
 let failures = 0;
@@ -892,7 +946,7 @@ $('model').onchange = async (e) => {
     }
     wireButtons(); fill(CONTROLS, screens); loadSession();
   } catch (e) { $('ovl').textContent = 'cannot reach the play server (wrong token?)'; $('screen').classList.add('show-ovl'); return; }
-  statusLoop(); frames();
+  statusLoop(); frames(); sound();
   if (new URLSearchParams(location.search).get('selftest') === '1') selftest();
 })();
 

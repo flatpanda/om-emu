@@ -1,25 +1,27 @@
 // The page side of the browser player: starts web/worker.mjs, hands it the firmware File (from the file input; the
 // bytes stay in this browser) and answers the page's API calls the way the play server (bin/play.mjs) does, over
 // postMessage. api(path, body) replaces play.html's fetch-based api(): it returns a Response-like object ({ok, status,
-// headers: {get}, json(), text(), bytes(), blob()}, plus `frame` = {w, h, rgba} for a 200 /api/frame). The status and frame long polls
-// (GET /api/status?after=N, /api/frame?after=N, 25 s) and GET /api/log are answered here from what the Worker pushed
-// (every published status, the newest frame, the session-log entries), so they never wait for a busy Worker, as
-// the node host's HTTP front never waits for the Player; every other request goes to the Worker's router
+// headers: {get}, json(), text(), bytes(), blob()}, plus `frame` = {w, h, rgba} for a 200 /api/frame and `audio` =
+// the events with their samples for /api/audio). The status, frame and audio long polls (GET /api/status?after=N,
+// /api/frame?after=N, /api/audio?after=N, 25 s) and GET /api/log are answered here from what the Worker pushed
+// (every published status, the newest frame, the newest AUDIO_KEEP sound events, the session-log entries), so they
+// never wait for a busy Worker, as the node host's HTTP front never waits for the Player; every other request goes to the Worker's router
 // (src/lab/playapi.mjs) with the page's send time (t_page), which becomes the input's t_wall. Once the Worker's loop
 // has stopped, a poll answers what is still new (the 'stopped' status, a last frame) and then rejects, as play.html's
 // fetch fails once the server is gone, so the page's poll loops end through their error path instead of resolving at
 // once forever.
 import { createHash } from '../src/util/sha256.mjs';
+import { AudioRing } from '../src/lab/audio.mjs';
 
 const dec = new TextDecoder();
 const now = () => (performance.timeOrigin + performance.now()) / 1000;
 
 // bytes() and blob(): the body as it came (a card file's bytes, a card picture's RGBA), as fetch's Response gives them
-function response(status, headers, body, frame = null) {
+function response(status, headers, body, frame = null, audio = null) {
   const h = new Map(headers.map(([k, v]) => [k.toLowerCase(), v]));
   const text = () => (body instanceof Uint8Array ? dec.decode(body) : String(body ?? ''));
   const bytes = () => (body instanceof Uint8Array ? body : new TextEncoder().encode(String(body ?? '')));
-  return { ok: status >= 200 && status < 300, status, headers: { get: (k) => h.get(k.toLowerCase()) ?? null }, frame,
+  return { ok: status >= 200 && status < 300, status, headers: { get: (k) => h.get(k.toLowerCase()) ?? null }, frame, audio,
     text: async () => text(), json: async () => JSON.parse(text()), bytes: async () => bytes(),
     blob: async () => new Blob([bytes()], { type: h.get('content-type') ?? '' }) };
 }
@@ -32,6 +34,7 @@ export class PagePlayer {
     this.status = null;          // the newest status document
     this.frame = null;           // {seq, device, lab_ns, sha16, w, h, rgba, rgba_sha16}
     this.log = [];               // the session log as the Player keeps it in memory
+    this.audio = new AudioRing(); // the sound's newest events as the Worker posted them (src/lab/audio.mjs)
     this.waiters = [];           // [pred, resolve, timer]
     this.pending = new Map();    // req id -> resolve
     this.nextId = 1;
@@ -61,6 +64,7 @@ export class PagePlayer {
       this.wakeAll();
       return;
     }
+    if (m.type === 'audio') { this.audio.insert(m.events); this.wakeAll(); return; }
     if (m.type === 'log') {
       for (const e of m.entries) {                // Player.log_input: past 20,000 entries the first 1,000 go
         this.log.push(e);
@@ -106,6 +110,17 @@ export class PagePlayer {
       if (this.stopped && (!f || f.seq <= after)) throw new Error(`${p}: the session has stopped`);
       if (!f || f.seq <= after) return response(204, [['X-Frame-Seq', String(f ? f.seq : 0)]], '');
       return response(200, [['X-Frame-Seq', String(f.seq)], ['X-Device', f.device], ['X-Lab-Ns', String(f.lab_ns)], ['X-Frame-Sha', f.sha16]], '', { w: f.w, h: f.h, rgba: f.rgba });
+    }
+    if (body === undefined && p === '/api/audio') {
+      // src/lab/playapi.mjs's document without the base64 (the page plays the samples as they came)
+      const after = Number(args.get('after') || 0);
+      if (!Number.isInteger(after) || after < -1) return jsonRes(400, { error: 'after' });
+      if (after === -1) return response(200, [['Content-Type', 'application/json']], new TextEncoder().encode(JSON.stringify({ seq: this.audio.seq, dropped: 0, events: [] })), null, []);
+      await this.waitFor(() => this.audio.seq !== after || this.stopped, 25000);
+      const r = this.audio.after(after);
+      if (this.stopped && !r.events.length) throw new Error(`${p}: the session has stopped`);
+      const doc = { seq: r.seq, dropped: r.dropped, events: r.events.map(({ samples, ...e }) => e) };
+      return response(200, [['Content-Type', 'application/json']], new TextEncoder().encode(JSON.stringify(doc)), null, r.events);
     }
     if (body === undefined && p === '/api/log') return jsonRes(200, { inputs: this.log });
     if (!this.worker) throw new Error(`${path}: no Worker`);

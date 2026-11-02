@@ -86,6 +86,9 @@
 //              query (0x50ab57e9, 100 with no sequence controller) answers the phases the shooting component's sequence
 //              would enter (MOVIE_PHASE), so getMovieState is 1 and the GUI lays out its REC mark and recording time.
 //              Which notification each module sends, and when, is not known: the order follows the callbacks' names
+//   S-SHUTTERSND (a host that plays sound: PlaySession.audio, src/lab/audio.mjs) the mechanical shutter's sound,
+//              which on the camera is the mechanism's, synthesized (src/lab/shuttersnd.mjs): an open click at each
+//              release's START_EXPOSE and a close click at its END_EXPOSE's due time, the shutter time in use later
 import { FirmwareError, where, runtime, disasm, SP } from './hle.mjs';
 import { AssertionError } from './errors.mjs';
 import { packRegs } from './sim.mjs';
@@ -95,6 +98,7 @@ import * as SC from './scene.mjs';
 import { jpegOfFrame } from './jpeg.mjs';
 import { HlsMedia } from './media.mjs';
 import { SubjectFrames } from './subject.mjs';
+import { ShutterSound } from './shuttersnd.mjs';
 import { A, MODEL, ON_LAB_MODEL, MODEL_INFO, IMAGE_BASE, knob, fact, isUnmapped } from '../fw/model.mjs';
 import { DISPLAY_SYNC_E143, RECVIEW_E143, CBS_E143, LENS_ZOOM_TABLE_E143, CARD_DETECT_E143, STILL_E143, DCF_COUNTS_E143 } from '../fw/facts.mjs';
 //   S-CARD     a card in the SD slot. On a body whose file system runs natively (storage.mjs; MODELS card_fs)
@@ -406,6 +410,8 @@ export class CamApp {
     this.boot_finished = false; // S-BOOTDONE: the category left its state 3
     this.started = false;
     this.shooting = false;     // S-RELSEQ: the shooting service runs
+    // S-SHUTTERSND (shuttersnd.mjs): the mechanical shutter's sound at each release, where the host plays sound
+    this.shutter_sound = session.audio ? new ShutterSound(session.audio) : null;
   }
   // S-CAMAPP: run inside the session's step 'camapp start'.
   start() {
@@ -1046,6 +1052,7 @@ export class CamApp {
       this.post('START_SHOOTING_PICTURE');
       this.post('START_EXPOSE');
       const t = live ? SC.exposureOf(sc).shutter_s : DEFAULT_SHUTTER_S;
+      this.shutter_sound?.open(this.s.lab.lab_time());                             // S-SHUTTERSND: the exposure starts
       this.at(t * 1e9, 'END_EXPOSE');
       this.at(t * 1e9, 'END_SHOOTING_PICTURE');
       this.at(t * 1e9, 'START_RECVIEW');
@@ -1084,6 +1091,7 @@ export class CamApp {
     while (this.timed.length && this.timed[0][0] <= now) {
       const due = this.timed[0][0], batch = [];
       while (this.timed.length && this.timed[0][0] === due) batch.push(this.timed.shift());
+      if (this.shutter_sound && batch.some(([, name]) => name === 'END_EXPOSE')) this.shutter_sound.close(due);   // S-SHUTTERSND: it ends
       this.post_all(batch.map(([, name, param]) => [name, param]));
       for (const [, name, param] of batch) if (name === 'UPDATE_SHOOTING_TIME' && this.recording !== null) this.at(1e9, name, param + 1);
     }

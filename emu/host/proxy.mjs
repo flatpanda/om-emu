@@ -1,6 +1,7 @@
 // The node host's main-thread view of the Player: what the HTTP handlers read and call on
 // the Player, for src/lab/playapi.mjs's router: a, status_seq and status_doc, frame_seq and frame (with the composite
-// for /api/frame), log (the in-memory session log), stop, submit, enqueue, wait_result (ResultBox: the 500 results
+// for /api/frame), audio (the sound the Player published, src/lab/audio.mjs AudioRing, for /api/audio), log (the
+// in-memory session log), stop, submit, enqueue, wait_result (ResultBox: the 500 results
 // popped on read), wall. The worker posts each document as JSON text, parsed here. Inputs get their seq and t_wall
 // here on arrival, as Player.submit does, and go to the worker as JSON text. The stop
 // the router and the waiters see is the loop's, in the order of the worker's messages, from the result of the input
@@ -8,6 +9,7 @@
 import { ResultBox, jsonType } from '../src/lab/player.mjs';
 import { ValueError } from '../src/lab/errors.mjs';
 import { F_STOP, postInput } from './portqueue.mjs';
+import { AudioRing } from '../src/lab/audio.mjs';
 
 const isDict = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 export const wallClock = () => Number(process.hrtime.bigint()) / 1e9;      // monotonic seconds
@@ -23,6 +25,7 @@ export class PlayerProxy {
     this.frame_seq = 0;
     this.frame = null;               // [null, device, lab_ns, sha16]
     this.log = [];                   // the session log's entries (each with its idx)
+    this.audio = new AudioRing();    // the Player's published sound, numbered there
     this.input_seq = 0;
     this.box = new ResultBox(() => this.stop);
     this.results = this.box.results;
@@ -72,6 +75,10 @@ export class PlayerProxy {
       case 'result':
         if (this.stopPending) this.stopSeen = true;      // the quit control's result: its stop takes effect with it
         this.box.put(m.seq, JSON.parse(m.text));         // wakes the ?sync=1 waiters
+        api?.notify();
+        break;
+      case 'audio':                                      // the Player's publish_audio: events with their seq
+        this.audio.insert(m.events);
         api?.notify();
         break;
       case 'log':

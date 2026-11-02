@@ -42,6 +42,7 @@ import { setKey } from '../util/tracejson.mjs';
 import { LiveDebug } from '../debug/live.mjs';
 import { memoryCard } from './sdcard.mjs';
 import { STORAGE } from './storage.mjs';
+import { AudioRing } from './audio.mjs';
 
 export const PNG_CACHE = 8, SLICE_NS = 50000000, GATE_SLICE_NS = 10000000, GATE_LIMIT_NS = 2000000000, BEHIND_NS = 250000000;
 export const DIAL_CAP = 8, TOUCH_MIN_NS = 20000000, TOUCH_GAP_CAP_NS = 2000000000, TOUCH_TAP_CAP_NS = 320000000;
@@ -275,6 +276,7 @@ export class Player {
     this.a15_frames_closed = 0;
     this.replaying = false;
     this.live = null;                // the live debug route (debug_input), made at the first debug input
+    this.audio = new AudioRing();    // the sessions' sound as published (publish_audio), for GET /api/audio
     if (env.flags) {                 // the node host: stop and signalled live in shared memory (host/labworker.mjs)
       const f = env.flags;
       Object.defineProperty(this, 'stop', { get: () => Atomics.load(f, 1) !== 0, set: (v) => { Atomics.store(f, 1, v ? 1 : 0); }, enumerable: true });
@@ -307,6 +309,7 @@ export class Player {
   close_session() {
     if (this.live !== null) this.live.closed();
     if (this.session !== null) {
+      this.publish_audio();
       this.a15_frames_closed += this.session.a15_frames;
       try { this.session.close(); } finally { this.session = null; }
     }
@@ -376,6 +379,7 @@ export class Player {
     if (this.session?.lab?.iic_answered) used.push('S-IICWAIT');                            // a body whose firmware waits on the IIC bus
     if (this.session?.camapp?.dispsync_released) used.push('S-DISPSYNC');                   // a body whose GUI synced its display updates
     if (this.session?.camapp?.subject?.used) used.push('S-SUBJECT');                         // subject detection's frames drawn (subject.mjs)
+    if (this.session?.camapp?.shutter_sound?.opened) used.push('S-SHUTTERSND');              // a release's shutter sound emitted (shuttersnd.mjs)
     if (this.session?.lab?.panel_answered) used.push('S-PANELDONE');                        // a panel driver's serial completion wait answered
     if (this.session?.lab?.tp_sends?.length) used.push('S-TPSEND');                         // a send to the touch task the lab runs it for
     if (this.session?.lab?.tp_ints) used.push('S-TPINTWAIT');                              // a wait for the touch controller's INT answered
@@ -419,6 +423,13 @@ export class Player {
     if (this.env.onFrame) this.env.onFrame(w, h, pixels, { seq: this.frame_seq, device: s.device, lab_ns: this.frame[2], sha16: sha });
     this.box.notifyAll();
     return sha;
+  }
+  // The session's sound since the last call (src/lab/audio.mjs), numbered and handed to the host in one batch: after
+  // every tick and as a session closes. Nothing to do (no host that plays sound, or nothing emitted) costs one test.
+  publish_audio() {
+    const ev = this.session?.audio?.take();
+    if (!ev) return;
+    this.env.onAudio(this.audio.add(ev));
   }
   // Engine commands and display steps so far (taken before lab work; trim() runs only after the comparison).
   marks() {
@@ -663,6 +674,10 @@ export class Player {
     while (this.held.length) this.finish(this.held.shift(), null, this.error.message);
   }
   tick() {
+    this._tick();
+    this.publish_audio();
+  }
+  _tick() {
     if (this.live !== null) {                       // the live debug route: a cont's maxMs, a halted session
       this.live.poll();
       if (this.live.halted) { this.live.tick_halted(); return; }

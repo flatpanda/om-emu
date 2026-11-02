@@ -1,9 +1,9 @@
 // The node host's lab thread: the play loop, Player.run, synchronous in a
 // worker_threads Worker, its input queue a PortQueue (blocking q.get), stop and signalled in shared memory. Everything
 // the Player publishes is serialized here as JSON text and posted to the
-// main thread on one port in the Player's order: status, frame (the composite's bytes, transferred), result, log, logfix,
-// logtrim, stop, then done or crash. The session log files are written here (session.jsonl appended per flush,
-// session.json at the end). Node-only (host/).
+// main thread on one port in the Player's order: status, frame (the composite's bytes, transferred), audio (the
+// sound's events, their samples copied), result, log, logfix, logtrim, stop, then done or crash. The session log files
+// are written here (session.jsonl appended per flush, session.json at the end). Node-only (host/).
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -46,6 +46,7 @@ const env = {
   debugHost,                         // the live debug route's trace files and disassembler (src/debug/live.mjs)
   onStatus: (doc) => post({ type: 'status', seq: doc.seq, text: JSON.stringify(doc) }),
   onFrame: (w, h, raw, meta) => { const b = raw.slice(); post({ type: 'frame', ...meta, w, h, raw: b }, [b.buffer]); },
+  onAudio: (events) => post({ type: 'audio', events }),     // structured clone: the samples are copied
   onResult: (seq, res) => post({ type: 'result', seq, text: JSON.stringify(res) }),
   onStop: () => post({ type: 'stop' }),
   onLogEntry: (e) => post({ type: 'log', idx: e.idx, text: JSON.stringify(e) }),

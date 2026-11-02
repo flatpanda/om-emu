@@ -24,7 +24,8 @@ translates it to the running model's build (`src/fw/ports.mjs`, written by `bin/
 `Player` / `PlaySession` (`src/lab/player.mjs`, `src/lab/play.mjs`) turn inputs into lab operations. One router
 (`PlayApi`, `src/lab/playapi.mjs`) serves a node host (an HTTP main thread plus a `worker_threads` lab running
 `Player.run`, `host/`) and a browser host (a page plus a module Worker running an async driver, `web/`). A JSON-lines
-debug protocol (`src/debug/`) serves `bin/debug.mjs`.
+debug protocol (`src/debug/`) serves `bin/debug.mjs`. A session emits sound for its host's page only where the host
+plays it (`src/lab/audio.mjs`: PCM events the Player hands over after each tick, `GET /api/audio` on both hosts).
 
 Verification has three parts: emu's own regression reference (`bin/golden.mjs`, `golden.json`: every scenario reduced
 to screen, devices, stops and harness layers), the checks judged on their own exit status (`bin/checks.mjs`,

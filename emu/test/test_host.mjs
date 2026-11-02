@@ -10,7 +10,8 @@
 // body, a ?sync=1 timeout that is not a number refused, the request's error on stderr for a failed pagetest write, a
 // busy --port's message); an --out with '..' in the stopped line (fix2); the Card panel's routes (GET /api/session,
 // /api/card, /api/card/file, /api/card/image: the card the firmware formatted, a picture's file and its PNG, the card
-// out of the slot and back, none of the reads logged).
+// out of the slot and back, none of the reads logged); the lab's sound (GET /api/audio: S2's two S-SHUTTERSND
+// clicks to a long poll, 1/125 s apart).
 //   node emu/test/test_host.mjs
 import fs from 'node:fs';
 import path from 'node:path';
@@ -361,6 +362,33 @@ async function cardRoutes(bad) {
     return notes.join('; ');
   } finally { await pl.close(); }
 }
+// The lab's sound over HTTP (src/lab/audio.mjs, GET /api/audio): S2's two S-SHUTTERSND clicks reach a long poll
+// that waited from before the release, 1/125 s apart, their samples as base64 of the frames; the page has its Sound
+// button
+async function audioRoute(bad) {
+  const pl = await startPlay('audio', ['--idle', 'off']);
+  try {
+    const d0 = await pl.json('GET', '/api/audio?after=-1');
+    if (d0.seq !== 0 || d0.events.length !== 0) bad.push(`GET /api/audio?after=-1 at the start: ${JSON.stringify(d0)}`);
+    const bad400 = await pl.req('GET', '/api/audio?after=x');
+    if (bad400.status !== 400) bad.push(`GET /api/audio?after=x: ${bad400.status}`);
+    const poll = pl.json('GET', '/api/audio?after=0');
+    for (const inp of [{ type: 'token', token: 'WAIT:100' }, { type: 'key', id: 's1', action: 'down' }, { type: 'key', id: 's2', action: 'down' }, { type: 'token', token: 'WAIT:700' },
+      { type: 'key', id: 's2', action: 'up' }, { type: 'key', id: 's1', action: 'up' }]) await pl.input(inp);
+    const first = await poll, all = await pl.json('GET', '/api/audio?after=0');
+    const ev = all.events ?? [];
+    const sizes = ev.map((e) => Buffer.from(e.pcm, 'base64').length === 2 * e.frames * e.channels);
+    if (!(first.events?.length >= 1) || first.events[0].seq !== 1) bad.push(`the long poll from before S2: ${JSON.stringify(first).slice(0, 200)}`);
+    if (ev.length !== 2 || !ev.every((e) => e.source === 'S-SHUTTERSND' && e.rate === 48000 && e.channels === 1) || !sizes.every(Boolean) || ev[1].t_lab_ns - ev[0].t_lab_ns !== 8000000) {
+      bad.push(`GET /api/audio after S2: ${JSON.stringify(ev.map(({ pcm, ...e }) => e))}, pcm sizes ${sizes}`);
+    }
+    const st = await pl.status();
+    if (!st.stand_ins.includes('S-SHUTTERSND')) bad.push(`the status does not list S-SHUTTERSND: ${st.stand_ins}`);
+    const page = await pl.req('GET', `/?t=${pl.token}`);
+    if (!String(page.body).includes('id="sound"')) bad.push('the page has no Sound button');
+    return `audio: ${ev.length} events, ${ev.map((e) => e.frames).join(' + ')} frames, ${ev.length === 2 ? ev[1].t_lab_ns - ev[0].t_lab_ns : '-'} ns apart`;
+  } finally { await pl.close(); }
+}
 // fix2: an --out with '..': the session goes to <out>/y and the stopped line names that session.json
 async function dotdot(bad) {
   const out = `${TMP}/dotdot/x/../y`;
@@ -389,7 +417,7 @@ async function busyPort(bad) {
 
 export async function hostTests({ only = null } = {}) {
   const bad = [], notes = [];
-  const cases = { order: orderWait, pl8b, busy: busyStatus, stops, stopped: stoppedSeq, labkill: labKill, front: httpFront, port: busyPort, dotdot, card: cardRoutes };
+  const cases = { order: orderWait, pl8b, busy: busyStatus, stops, stopped: stoppedSeq, labkill: labKill, front: httpFront, port: busyPort, dotdot, card: cardRoutes, audio: audioRoute };
   let checks = 0;
   try {
     for (const [name, f] of Object.entries(cases)) {

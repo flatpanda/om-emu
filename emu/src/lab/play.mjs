@@ -39,6 +39,7 @@ import { displayed_windows } from './windows.mjs';
 import { SettingsIds } from './settings_ids.mjs';
 import * as SC from './scene.mjs';
 import { CamApp, CA_MODULE9_READERS } from './camapp.mjs';
+import { AudioOut } from './audio.mjs';
 
 // base64.b64encode(bytes).decode()
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -918,6 +919,8 @@ export class PlaySession extends N.NavSession {
     this.capture_frame = null; this.recview_hold = false;   // S-RECVIEW: the last capture's frame, held during the rec view
     this.playview_hold = false;    // S-PLAYVIEW: a card image's frame shown
     this.camapp = null;            // S-CAMAPP (camapp.mjs), from the bring-up on
+    // the session's sound for the host (audio.mjs): only where the host plays it (env.onAudio, the players' pages)
+    this.audio = typeof env.onAudio === 'function' ? new AudioOut() : null;
     this.acc = null;               // the accelerometer (acc.mjs) on a body that gives it (models.mjs acc)
     this.storage = null;           // the card and the file system (storage.mjs) on a body that runs them (models.mjs card_fs)
     this.ioexp = null;             // S-IOEXP and the power manager (power.mjs) on a body that gives power_native (IO

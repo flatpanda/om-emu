@@ -414,6 +414,16 @@ A bitmap of format 1 (2026-10-29) is a stream of 4-bit tokens, low nibble first,
 
 **Confidence:** medium
 
+### 7.12 The shutter's sound: synthesized at the release stand-in (S-SHUTTERSND)
+
+**Where:** `emu/src/lab/shuttersnd.mjs`, `emu/src/lab/camapp.mjs` (`key`, `tick`), `emu/src/lab/audio.mjs`, `emu/src/lab/player.mjs` (`publish_audio`), `emu/web/play.html` and `emu/web/index.html` (`sndPlay`)
+
+**Emulator:** Where the host plays sound (the players' pages), each release S-RELSEQ makes emits two synthesized clicks on the lab's audio output: an open click at the lab time of START_EXPOSE and a close click, with a short charge-motor whir and a latch, at END_EXPOSE's due time, the shutter time in use later (S-SCENE's, else 1/125 s). The clicks are 48 kHz mono, 30 and 95 ms long, made from seeded noise through decaying resonators. Every release sounds, whatever the drive setting; a movie makes none. The page plays each event at its lab time from the first event of a run, 0.15 s ahead of its audio clock, and starts a new run when an event would be late or more than 2 s ahead.
+
+**Expected / concern:** On the camera the sound is the mechanism's own: the curtains, the magnets and the charge motor of the shutter block at `0x9b900000`, which the lab does not run (`docs/hle-gaps.md` section 7). The stock firmware plays nothing at a release (X: at S2 the sound engine's play method is not called and the audio blocks `0x9bb00000` and `0x9b700000` are not touched, `docs/om1-shutter-spec.md` section 7 item 61), and the electronic shutter is silent. Which drive settings select the electronic shutter (EFS / EFS, `docs/hle-gaps.md` 7.3) is not decoded (?): the Super Control Panel's Drive cell writes store 3265, whose values the lab does not map to a shutter, so a release in a silent or electronic drive mode sounds here and would not on the camera. The clicks' sound, their timing within the exposure (the first curtain's travel, the charge after the second curtain) and their level are the lab's choice, not measured from a camera (I). The page's schedule follows lab time only while the lab runs at about wall time (`--idle wall`); with lab time running faster or held, clicks start new runs and their spacing is lost.
+
+**Confidence:** high
+
 ## 8. What the tests establish
 
 ### 8.1 Above the ISA, the tests are emu's own regression data

@@ -6,7 +6,7 @@
 // a request body is UTF-8 JSON (a leading byte order mark skipped), and a body that is not answers 400 {error: 'json'}.
 // Numbers are JSON's: 10.0 and 10 are the same number, and an integer past 2^53 arrives rounded to a double.
 // The player is the Player itself (the browser's Worker) or a host's proxy of it with the same fields (the node host's
-// host/proxy.mjs: status_doc, log, frame, frame_seq, stop, submit, enqueue, wait_result, wall).
+// host/proxy.mjs: status_doc, log, frame, frame_seq, audio, stop, submit, enqueue, wait_result, wall).
 // Per-host behaviour:
 // - /api/frame answers the composite as raw RGBA (opts.frameRgba(w, h, raw) -> Uint8Array; Content-Type
 //   application/octet-stream, plus X-Frame-Width and X-Frame-Height) for the browser, which draws it into a canvas;
@@ -44,7 +44,13 @@
 //   X-Image-Size the picture's own width x height; 422 for a file the decoder refuses. P is percent-decoded; max is
 //   the drawn picture's larger side, 0 (default) for its own size. 409 for the Player's refusal (no reader, no card on
 //   this body), 404 {error, slot} for a file the volume does not give.
-// The host calls notify() after every published status and frame and when the Player stops,
+// - GET /api/audio?after=N: the sound the Player published after its event N (src/lab/audio.mjs audioDoc: {seq,
+//   dropped, events}, each event's samples as base64 of little-endian 16-bit words), a long poll as /api/status is:
+//   it answers once an event after N is there (or at once when N is not the newest seq, a page of an earlier
+//   server), else after 25 s with no events; after=-1 answers at once with the newest seq and no events (where a page
+//   starts, so that it plays only what comes after it). The player gives an AudioRing as audio (the Player's, or the
+//   node host's proxy's copy); the browser's page answers this route itself (web/page.mjs).
+// The host calls notify() after every published status, frame and sound and when the Player stops,
 // and onFrame(w, h, raw, meta) from the Player's env.onFrame, which keeps the newest composite for /api/frame.
 // Worker-safe.
 import { controlsDoc, screensDoc } from './playui.mjs';
@@ -54,6 +60,7 @@ import { base64Bytes } from '../util/bytes.mjs';
 import { MODEL } from '../fw/model.mjs';
 import { MODELS } from '../fw/models.mjs';
 import { modelDoc } from '../fw/modeldoc.mjs';
+import { audioDoc } from './audio.mjs';
 
 const enc = new TextEncoder();
 const utf8 = new TextDecoder('utf-8', { fatal: true });      // a leading byte order mark is skipped
@@ -180,6 +187,12 @@ export class PlayApi {
       const after = intArg(args, 'after');
       if (after === null) return this.send(400, { error: 'after' });
       return this.waitFor(() => (pl.frame_seq > after && pl.frame) || pl.stop, 25).then(() => this.frameResponse(after));
+    }
+    if (path === '/api/audio') {
+      const after = intArg(args, 'after'), ring = pl.audio;
+      if (after === null || after < -1) return this.send(400, { error: 'after' });
+      if (after === -1) return this.send(200, { seq: ring.seq, dropped: 0, events: [] });
+      return this.waitFor(() => ring.seq !== after || pl.stop, 25).then(() => this.send(200, audioDoc(ring, after)));
     }
     if (path === '/api/log') return this.send(200, { inputs: [...pl.log] });
     if (path === '/api/model') return this.send(200, modelDoc(MODEL));

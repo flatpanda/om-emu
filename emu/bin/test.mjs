@@ -10,7 +10,8 @@
 // the browser player's pure parts, its node host, webgate B6's page inputs on a node Player and its Worker in a node
 // worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
-// (test_camapp.mjs, with the mode dial's positions), the SCPU's clock, ports, link pins and sub-CPU model
+// (test_camapp.mjs, with the mode dial's positions), the lab's audio output and the synthesized shutter sound at a
+// release (test_audio.mjs), the SCPU's clock, ports, link pins and sub-CPU model
 // (test_scpu.mjs), the publication audit (test_pubaudit.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the card and the
 // file system on E143, E146, E147, E144, E142 and E134 and SDXC cards on E143 (test_storage.mjs), INFO's still information
@@ -134,6 +135,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`scene stand-in: model ${su.checks - su.bad.length}/${su.checks}; live view in play ${ss.checks - ss.bad.length}/${ss.checks}`);
   [...su.bad, ...ss.bad].forEach((x) => console.log('  ', x));
   bad += su.bad.length + ss.bad.length;
+}
+// the lab's audio output and S-SHUTTERSND: the channel and the clicks, then one open and one close click per S2 in play
+{
+  const { audioUnits, audioSession } = await import('../test/test_audio.mjs');
+  const au = await audioUnits(), as = await audioSession();
+  console.log(`audio output and the shutter sound: units ${au.checks - au.bad.length}/${au.checks}; S-SHUTTERSND in play ${as.checks - as.bad.length}/${as.checks}`);
+  [...au.bad, ...as.bad].forEach((x) => console.log('  ', x));
+  bad += au.bad.length + as.bad.length;
 }
 // the camera application running natively (S-CAMAPP and its stand-ins): S1, S2 and the rec view in a play session
 {

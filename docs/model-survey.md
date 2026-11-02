@@ -1059,7 +1059,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    `25mm`, `1620x1080`, `100-0001`; E118 and E120 the same with `2015.01.01` (the size the lab's frame, 1620 x 1080;
    25 mm S-EXPOSE's zoom step for the default scene); E118's EVF the same (X). E122's and E120's EVF PLAY stops at
    the key's UI_IN group 5 with more than 300,000 stand-in calls (memset, OlyTaSS), with these answers and without
-   them (X), not read. `test/test_playinfo.mjs` reads the GUI's record at the
+   them (X), not read (finding 70 reads it). `test/test_playinfo.mjs` reads the GUI's record at the
    converter's return on E122, E118 and E120 against the card's JPEG (decoded by `refs/jpeg.mjs`), the clock and the
    lens (9 checks each), and on E143 that S-PLAYCOMP's answer is unchanged (5184 x 3888, no date, no focal length;
    the picture's record since finding 81).
@@ -1148,9 +1148,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    first on both panels of the three: the frame after four presses is the one before the first, pixel for pixel, after
    one, two or three 12833 to 47207 pixels differ (X). PLAY and back also redraws with the count on the TFTs and E118's EVF,
    but on E120's and E122's EVF PLAY stops at the step's bound in a task that polls a word every 40 ms (E122
-   `0x502f936b..0x502f938f`, the word `0xa1c5a80c`, D; not read further). `bin/modelcheck.mjs` now takes PROBE_REDRAW:
-   for these three, INFO pressed until the screen is back (four presses, X), then four presses before each of the
-   probe's windows (26 queries each time, X). The count follows the query to 777 and back on the three on both panels:
+   `0x502f936b..0x502f938f`, the word `0xa1c5a80c`, D; read in finding 70: the VSC's line compare).
+   `bin/modelcheck.mjs` now takes PROBE_REDRAW: for these three, INFO pressed until the screen is back (four presses,
+   X), then four presses before each of the probe's windows (26 queries each time, X). The count follows the query to 777 and back on the three on both panels:
    the TFT's box at 643,443-710,469 (E118, E120) and 645,444-710,469 (E122), the EVF's at 902,710-1010,753 and
    905,712-1010,753 (X, `bin/modelcheck.mjs`); the three are out of PROBE_XFAIL, which is empty, and the other 14
    bodies' probes run as before.
@@ -1159,9 +1159,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    four times after `0x03000001`. The screen then shows no OSD for at least 9 s and after an S1, until INFO, which
    brings back the shooting screen with the count before the shot (2116 on E118; whether the card's count after one of
    the lab's pictures is the same is not read, ?). On the camera the shooting screen comes back after the rec view; what
-   ends it there, and whether the lab withholds that event, is ?. Not exercised: a setting change (E122's MENU, and OK a
-   second time in the super control panel `0x0407`, stop in an event storm, X; the panel's open asked the count twice)
-   and the card's insertion.
+   ends it there, and whether the lab withholds that event, is ? (read in finding 69: the through image's start). Not
+   exercised: a setting change (E122's MENU, and OK a second time in the super control panel `0x0407`, stop in an
+   event storm, X; the panel's open asked the count twice) and the card's insertion.
 
 63. **The us clock counted CPU reads until the play bring-up, on every body** (2026-10-31, `docs/om1-intc-timer-spec.md`
    section 3.1). Each board's us clock is one free-running counter of the one timer model (`src/dev/timer.mjs`):
@@ -1292,6 +1292,53 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    (`emu/src/lab/menudata.mjs`, read where `menu.list_menu`) and 15 in `emu/src/lab/menu.mjs`, the store init's SCPU
    request, waits and replies (used where `scpu.backup`), the NAND post and a dropped send's site; the sessions above
    run with them unmapped (X).
+69. **The screen after a shot comes back with the through image's start** (2026-11-02, `src/lab/camapp.mjs` S-RELSEQ;
+   answers finding 62; X: the application's and the GUI's own traces, read on E122, and the composite after S2 on the
+   bodies' TFTs). The application's trace function (E122 `0x50b971e5`, `mov <name>,a1; call` as finding 53's) shows S2
+   run to its end: END_SHOOTING_PICTURE takes it back to its shooting ready state ("startMoveToShootingReady",
+   "moveStateToShootingReady"), and its request for the shooting information (`0x09000022`) reaches the GUI before
+   START_RECVIEW, which S-RELSEQ posts in the same batch. The GUI's own trace (its printf-form function `0x50cef73c`,
+   the format at the caller's (4,sp)) then logs `guiEventFilter::DRAW_RECVIEW_SYNC` for EVT_REC_DISP_RECVIEW (`0xf005`):
+   its rec view flag `0x6161bf88` is set (the setter `0x50cf4739`), the rec view's viewer chosen and the three layers
+   cleared (X: the buffers' histograms). END_RECVIEW reaches the GUI as the application's relay `0x03000014`, and the
+   GUI logs nothing (the relays are the CBK names' indices in the image's order from `0x50da52d2`: `0x0300000c`
+   START_SHOOTING_PICTURE, `0x03000010` START_RECVIEW, `0x03000014` END_RECVIEW, `0x03000057` TIMER_RECINFO_3S, X:
+   each relay with its callback). Neither the rec view component's state word at 4 (finding 53: the View entry's
+   state) from START_RECVIEW to END_RECVIEW nor CBS_RECVIEW_TIMEOUT (295) or CBS_REQUEST_DISPLAY_RECVIEW (294) posted
+   before END_RECVIEW changed that (X, tried): the application's END_RECVIEW handler sends the GUI no request either
+   way. CBS_START_THROUGH_IMAGE_PROCESS (258, relayed as `0x0300000b`) does: the GUI's filter takes
+   EVT_REQ_REC_DISP_INFO (`0xf001`), ends the rec view flag ("[GUI End]", the clear `0x50cf475f`), creates the shooting
+   information and draws it (X). The HLS shooting reactive posts 258 for the notification 1366 (E143: its handler
+   `0x50af4a63` in the table `0x60dfec00`, key 943; the notification's builder `0x50af2daf`, which CapThr_ThroughImage
+   calls at `0x50bd2488` and CmpSqp_SequencePartsBase at `0x50c87ef1` and `0x50cacf6b`, the files their allocations
+   name, D): the through image's restart (I, by the names; when the camera's comes after the rec view is ?). The lab
+   never posted it. S-RELSEQ now posts it with END_RECVIEW (fact `cbs` gains the name: 258 on all 19 builds, X, the
+   rule). The TFT 0.7 s after the rec view, before -> after (values in the frame, X): E118 1 -> 18, E120 1 -> 19, E122
+   1 -> 16, E142 1 -> 20, E140 1 -> 20, E130 1 -> 21, E133 1 -> 20, E145 1 -> 17, E129 1 -> 16, E132 1 -> 15; E143,
+   E144, E139, E134, E137, E125 and E148, whose GUIs come back at END_RECVIEW already, keep their frames pixel for
+   pixel (E143's application asks the count twice more). The family's EVFs show the shooting screen
+   again too (10, 11 and 8 values on E118, E120 and E122, X). The count item asks the query at that redraw
+   (twice, X), and the firmware's count after the picture is the one before it (E118 and E120 2116, E122 1470, X: the
+   query called after S2): how it rounds the card's free space is not read. `bin/modelcheck.mjs` now requires a frame
+   of more than one value after S2 on every body and panel.
+70. **E120's and E122's EVF playback waits for the VSC's line compare** (2026-11-02, `src/dev/vsc.mjs`,
+   `src/fw/board.mjs` vsc.line_irq, `docs/om1-vsc-spec.md` section 12; reads finding 61's 40 ms poll and finding 57's
+   stand-in calls). PLAY on E122's EVF ran 3000 s of lab time in the display task (static row 0x51, `0x502f90f5`)
+   until UI_IN group 5's bound, with 225,070 memset and 74,998 OlyTaSS calls (X): on its flag's bit 4 the task asks the
+   EVF panel for a change (`0x502f9313..0x502f9369`) and polls, 40 ms at a time, the word `0xa1c5a80c`, re-arming the
+   driver's line compare for its device each round (`0x503078b9(6)`; `0x502f936b..0x502f939a`, D). Only the EVF
+   panel's command scheduler `0x502f946a` sets the word (its stores `0x502f9690`, `0x502f9822`, `0x502f99fe`, after
+   GPIO pin 139 and the serial send, D), and both VSC ISRs call it on INTST1 bits 4 and 5 (`0x50305c23`,
+   `0x50307238`); the arm `0x50307960` writes the line into `+0x260` and enables the mask word `0xa1c5ca4c`, which
+   holds 16 or 0 only (X, a byte scan). The kind-3 model raised bit 0 at the frame alone: the ISR ran every frame
+   (59,999 times in the stall) and the scheduler never (X). The board now gives the line compare (`line_irq` {+0x260,
+   bit 4}, irq_mask 0x11), and the model raises the bit as the scan reaches the line, once a frame, while INTEN1 holds
+   it (I: that the compare counts MONI3's lines). E122's EVF then runs PLAY `0x0608`, INFO `0x060b` and PLAY back to
+   `0x0108` (X: the scheduler 40 ms after each arm), and so does E120's, whose ISR test (`0x502d337a`) and arm store
+   (`0x502d4e72`) are E122's form; E118 holds stores to `+0x260` in its opens and no test of that form (X, a byte
+   scan), and its EVF played back before. The scheduler now also runs at S1 and S2 (armed there before, never raised);
+   the family's modelcheck results are unchanged, and `bin/modelcheck.mjs` runs the three's EVF through the whole
+   path (EVF_PLAY). `test/test_vsc3.mjs` checks the compare on E122's and E118's boards.
 75. **The E144 family's touch INT wait, read by its form** (2026-11-02, `src/fw/facts.mjs` touchIntWait, `src/lab/menu.mjs`
    S-TPINTWAIT; the next stop of finding 64). The rule had found the wait from the "TP INT TIME OUT" trace, which only
    E120 and E122 load after it; it now finds the wait by its own form, one of two openings that clear the word W when

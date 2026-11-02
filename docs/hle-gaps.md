@@ -319,7 +319,11 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   1322, 1323 START_FOCUS, 1324 START_SHOOTING_PICTURE, 1325 UPDATE_SHOOTING_TIME, 1326, 1327, 1328, 1329 and most
   others; Cmp_StillShootingComponentBase 1316, 1389, 1392, 1507; CmpShc_ShootingSequenceBase 1301, 1312; CapTak_Take
   1291, 1313, 1314, 1358; CmpSts_RecordController 1286, 1413, 1428. S-RELSEQ therefore stands in for the sequence
-  parts' notifications, and what makes the parts send them is the inbound events above (I).
+  parts' notifications, and what makes the parts send them is the inbound events above (I). 1366, which the
+  reactive turns into CBS_START_THROUGH_IMAGE_PROCESS (its handler `0x50af4a63`), is built by CapThr_ThroughImage
+  (`0x50bd2488`) and the sequence parts (`0x50c87ef1`, `0x50cacf6b`; the builder `0x50af2daf`, D); since 2026-11-02
+  S-RELSEQ posts it with END_RECVIEW, on which alone ten bodies' GUIs leave the rec view's display
+  (`docs/model-survey.md` finding 69).
 - **What runs (X, a camapp 2 play session with S1, S2 and two REC presses, observers on the dispatchers and
   Com_EvSenderManager, coverage):** S1 and S2 reach Com_EvSenderManager (`0x02000100`, `0x02000101`, their releases
   `0x0201xxxx`) but no event reaches the sequence's state-4 handler; each REC press (`0x0200120a`) reaches it as event

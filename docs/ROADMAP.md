@@ -331,9 +331,12 @@ the survey table.
   (finding 53), and with their display syncs read (findings 48, 49) and their cards native (findings 50, 51) both
   pass modelcheck on the TFT and the EVF (finding 56). The three ask for the remaining-shots count when the
   shooting screen is redrawn (the start, the shooting information's 3 s timer, PLAY back, INFO, a shot) and pass the
-  count probe with INFO's redraw (finding 61). Open on the family: after S2 the screen shows no OSD until INFO (what
-  ends the rec view's screen, finding 62, ?); E120's and E122's EVF PLAY, which stops in a 40 ms poll (finding 61);
-  the picture's Exif and the play module's load of it, which INFO's still information stands in for (finding 57); the
+  count probe with INFO's redraw (finding 61). Since 2026-11-02 the shooting screen comes back after S2's rec view
+  (finding 69: S-RELSEQ posts the through image's start after END_RECVIEW, on which alone the family's GUIs, and
+  those of E142, E140, E130, E133, E145, E129 and E132, leave the rec view's display) and E120's and E122's EVF run
+  PLAY, INFO and PLAY (finding 70: the kind-3 VSC raises its line compare, on which the EVF panel's command
+  scheduler runs; modelcheck runs the family's EVF through playback). Open on the family: the picture's Exif and
+  the play module's load of it, which INFO's still information stands in for (finding 57); the
   MN103's DIVU by 0 in E118's record time, which divides by a frame rate that is 0 before a movie take on the camera
   too (S-MOVRATE, finding 59: a hardware capture would settle it, as for E144's); S-MODACK's module queue ids, five of which the port's words read as another
   queue's (PWR_EXEC `0x86` by name; no request to them seen on the three's paths, findings 43, 55), to be read from

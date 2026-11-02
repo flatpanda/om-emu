@@ -991,7 +991,12 @@ S-TAKEOVER); nothing in the lab's behaviour changes. What it shows on E143 v1.9:
    then the live scene runs on (I: the camera's rec view shows the developed image, scaled to the screen, on the same
    plane). With the moving preset the rec view stays on the captured frame while the scene moves, and the live view
    after it shows the scene moved on; the AF frame and focus mark of item 50 stay on during the rec view (whether the AF
-   module clears them at the release is ?).
+   module clears them at the release is ?). Since 2026-11-02 S-RELSEQ posts START_THROUGH_IMAGE_PROCESS (258) with
+   END_RECVIEW: the reactive's handler for notification 1366 (`0x50af4a63`), built by CapThr_ThroughImage and the
+   sequence parts (`0x50af2daf`'s callers `0x50bd2488`, `0x50c87ef1`, `0x50cacf6b`, D), the through image's restart.
+   E143's GUI brings its information back at END_RECVIEW without it (X: its frames unchanged); the GUIs of the E118
+   family, E142, E140, E130, E133, E145, E129 and E132 leave the rec view's display only on it
+   (`docs/model-survey.md` finding 69).
 52. **OK, MENU and PLAY with the application running (X, D).** Three refusals the lab raised, none a firmware fault.
    OK: the application's Super Control Panel request makes the GUI post to CPU 2 while bank 3 still lists a doorbell
    S-CPU3 had already served (DISP_FRAME's flag), and S-CPU2 accepted only a post with no other bank set since its last

@@ -260,6 +260,16 @@ A bitmap of format 1 (2026-10-29) is a stream of 4-bit tokens, low nibble first,
 
 **Confidence:** medium
 
+### 5.6 Kind-3 VSC (the E118 family): the line compare raised as the scan reaches the line
+
+**Where:** `emu/src/dev/vsc.mjs` (`nextLine`, `clockFire`), `emu/src/fw/board.mjs` (the family's `vsc.line_irq`, with the evidence)
+
+**Emulator:** While INTEN1 holds bit 4, the channel raises INTST1 bit 4 (and its IRQ) at the lab time its scan reaches the line in +0x260's low half (masked to the line count's 11 bits), once a frame; a line the scan has passed when the bit is enabled waits for the next frame, and a line past the frame's end never comes. The EVF panel's command scheduler runs on it (E120, E122), which their display task waits for before an EVF mode change such as playback's (`docs/model-survey.md` finding 70).
+
+**Expected / concern:** That the compare counts MONI3's lines from the frame's start, and fires once as the scan crosses the line, is inferred from the driver's arm and ISR, not from the chip. Bit 5, which the ISRs test with bit 4, has no source the code read enables, so it is never raised. The scheduler then times the panel's command on hardware timer 3 from MONI3 and the latched vertical total, which the lab's line clock answers; whether the panel's command lands in the line the camera's does is not checked.
+
+**Confidence:** medium
+
 ### 5.3 OSD engine opcodes 0x41 and 0x60 not executed
 
 **Where:** `emu/src/dev/engine.mjs:218-231`, `emu/src/dev/engine.mjs:340-349`

@@ -11,7 +11,7 @@ import * as F from './osdfmt.mjs';
 import * as R from './resources.mjs';
 import * as T from './text.mjs';
 import { FirmwareError, disasm, runtime, where } from './hle.mjs';
-import { EXEC_SLOTS, EXPECTED_RECORDS, KIND3_RECORD, KIND3_AREA, NRECORDS, REGISTRY, STRIDE, HEIGHT, EngineError } from './osd.mjs';
+import { EXEC_SLOTS, GUI_GUARDS, KIND3_RECORD, NRECORDS, REGISTRY, STRIDE, EngineError } from './osd.mjs';
 import { RTOS } from './rtos.mjs';
 import { ScpuDev, ScpuMemory } from './scpudev.mjs';
 import { ScpuLink, PER_SCPU_TASK } from './scpulink.mjs';
@@ -250,8 +250,7 @@ export class MenuLab extends T.TextDisplayLab {
     this.hook(T.SETTINGS_READ, (h, r) => this._s_set(h, r), this.store === 'empty' ? 'S-STORE' : 'obs-setting');
     this.hook(T.RES_GET, (h, r) => this._s_res(h, r), 'S-RES');
     this.hook(T.GPIFONT_LOG, (h, r) => this._s_log(h, r), 'S-LOG');
-    const guards = [...EXPECTED_RECORDS.map(([b]) => [b, HEIGHT]), KIND3_AREA];
-    guards.forEach(([base, height], slot) => this.engine.set_guard(slot, base, STRIDE, height));
+    GUI_GUARDS.forEach(([base, height], slot) => this.engine.set_guard(slot, base, STRIDE, height));
     this.engine.set_key_mode(this.key_mode_wanted);
     for (const [callsEntry, callEntry] of RPC_ENTRIES) {
       this.hook(callEntry, (h, r) => this._s_rpc(h, r), 'S-RPC');

@@ -7,7 +7,7 @@ import { A, IMAGE_BASE, fact } from '../fw/model.mjs';
 import * as R from './resources.mjs';
 import * as D from './display.mjs';
 import { FirmwareError, runtime, where } from './hle.mjs';
-import { EXPECTED_RECORDS, KIND3_RECORD, KIND3_AREA, STRIDE, HEIGHT, REGISTRY, OsdLab, OSD_DEFAULTS, EngineError, format_error } from './osd.mjs';
+import { EXPECTED_RECORDS, GUI_GUARDS, KIND3_RECORD, KIND3_AREA, STRIDE, HEIGHT, REGISTRY, OsdLab, OSD_DEFAULTS, EngineError, format_error } from './osd.mjs';
 import { ValueError } from './errors.mjs';
 import { decode_command } from './osdfmt.mjs';
 import { SP } from './sim.mjs';
@@ -139,7 +139,7 @@ export const GuiMixin = (Base) => class extends Base {
     this.load_language(0);
     this.init_loaded = [...this.loaded];
     marks.push(['getLanguageLoadResource(0) 0x51257bfb', this.kernel.events.length]);
-    [...EXPECTED_RECORDS.map(([b]) => [b, HEIGHT]), KIND3_AREA].forEach(([base, height], slot) => this.engine.set_guard(slot, base, STRIDE, height));
+    GUI_GUARDS.forEach(([base, height], slot) => this.engine.set_guard(slot, base, STRIDE, height));
     r = this.call(GENIFA_INIT, null, null, null, 20000);
     if (!(r.d0 & 0xFFFF)) throw new FirmwareError('Genifa init 0x510b93da returned 0');
     marks.push(['Genifa init 0x510b93da', this.kernel.events.length]);

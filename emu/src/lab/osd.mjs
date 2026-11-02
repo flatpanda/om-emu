@@ -136,6 +136,12 @@ export const STRIDE = GUI.stride, HEIGHT = GUI.height;
 const bankRecords = (banks) => banks.flatMap(([base, size, count], kind) => Array.from({ length: count }, (_, e) => [(base + e * size) >>> 0, kind]));
 export const EXPECTED_RECORDS = bankRecords(GUI.banks);
 export const KIND3_AREA = GUI.kind3;
+// The OSD engine's guards for a GUI session, [base, height] per record and the kind-3 area: a record's guard runs to
+// the end of its bank, so a draw may run from one record into the next of its kind but not out of its bank. The GUI of
+// E137 and E125, whose banks hold four 896 x 600 records, syncs its two buffers of a layer with copies of 800 x 1200
+// from record 2k to record 2k + 2 (its screen descriptor's 800 x 1200, src/fw/facts.mjs guiCanvas; X: kinds 0..2 at
+// MENU), which a guard of one record refused (GUARD), leaving the menu over the shooting screen's last frame (X)
+export const GUI_GUARDS = [...GUI.banks.flatMap(([base, size, count]) => Array.from({ length: count }, (_, e) => [(base + e * size) >>> 0, (count - e) * HEIGHT])), KIND3_AREA];
 export const NRECORDS = EXPECTED_RECORDS.length;
 export const KN_LAB_PRI = 60, KN_TASKS = [A(0x50023A0C), A(0x501C6D8C)];
 

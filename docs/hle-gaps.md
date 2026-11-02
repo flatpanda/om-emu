@@ -1448,6 +1448,12 @@ bytes on; E143's places in brackets):
   bit `0x1000` comes from the device state's bit 16, `0x508a83e7`; the lab's state is `0x8600`). A, the SD host
   registers with a card model, is the faithful later step (3-6 weeks, optional). Formatting (`sdmem_format.c`, dosfat)
   runs natively under B.
+- **INFO's still information (2026-11-02, `docs/model-survey.md` findings 81 and 82):** S-PLAYCOMP (E143, E146, E147,
+  the E144 family) and S-PLAYSEQ (the E118 family) write the same record of the picture shown, in the build's
+  converter's layout: the camera's clock at the capture (E143's read `0x5005a59e` at its place, run natively; each
+  build's default with the status 10501 while the window clock counts from 1970), the JPEG's size, the release's
+  exposure and the lens's focal length. S-PLAYCOMP had written 5184 x 3888 and the exposure alone. Not native: the
+  components' and the play module's Exif read, which the lab's JPEG (no Exif) would not feed.
 - **Playback:** with S-PLAYSEQ, S-PLAYCOMP and S-PLAYVIEW kept, real files need a JPEG decoder at the codec seam (4.3's
   C2 `decode_jpeg`, `play_img.c`): 2-4 weeks on top of storage. A native path needs the HLS play components (310k),
   segment 9's PLAY_* / MOVP / MOVE, the AV back end for movies and the CIC engine for RAW: a block of its own.
@@ -1985,7 +1991,9 @@ findings 31, 41). The family runs the other bodies' storage library; the rule no
   play component answers it from api_play_Get_StillInfo_ExifData (`0x502e16b2`), which reads the Exif tags of the
   image the play module loaded into its play buffer (`play_exif_search_tag`); neither runs in the lab, and S2's
   picture is S-RECFILE's JPEG without Exif. S-PLAYSEQ now answers request 3 from the picture's own record: the
-  camera's clock at the capture (its getter, fact `clock.real_time`), the JPEG's size, the release's exposure and
+  camera's clock at the capture (its read, since 2026-11-02 E143's `0x5005a59e` at its place, the RTC driver's get
+  `0x50068dbc` that api_sctime_GET_REAL_TIME calls; before, the API by its name, fact `clock.real_time`, retired),
+  the JPEG's size, the release's exposure and
   S-LENS's focal length, in the layout the build's converter reads (fact `play.still`); and the histogram request 7
   empty. INFO on E122 shows `2016.01.01 00:00` (its unset clock's default; E118's and E120's `2015.01.01`),
   `1620x1080` (the lab's frame), `125` and `25mm` (X).

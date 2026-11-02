@@ -243,9 +243,17 @@ the survey table.
   `0x502ae8f3`, the place of E143's `0x503f1bcd`, module `0x5000e`), which asks the DCF remain movie time (`0x505fd798`)
   and returns 0 (X): S-CARD's card has no file system. Answering it is the seam; its unit is not read (forcing 3600
   shows `0:00:06` on E142's TFT, X).
-- **The GUI state table's length:** the lab names the first 12 parents (E143's); the firmware's lookup bounds it at 12
-  on E143 (`0x5124b478`) and 18 on E145 (`0x50de87bf`, D), so E142's and E145's SS_MENU (`0x11`) states print unnamed.
-  A rule reading the bound would name them (survey finding 17).
+- **The GUI state table's length:** done (2026-11-02, survey finding 83): the lab names as many parents as each build's
+  name lookup searches (rule stateTableBound, fact `gui_states.parents`): 12 on E143, E146, E147 and E148, 18 on the
+  other 15, whose SS_MENU (`0x11`) and five more parents printed unnamed before.
+- **INFO's still information on E143 and the E144 family:** done (2026-11-02, survey findings 81 and 82):
+  S-PLAYCOMP writes the picture's own record as S-PLAYSEQ does (the camera's clock at the capture, now read natively
+  on every body by E143's `0x5005a59e` at its place, the JPEG's size, the exposure, the lens's focal length at the
+  build's offsets, E134's and E132's included), where it wrote 5184 x 3888 and left the date and focal length to
+  the struct (E143 `0mm`, E144 `0000.00.00 55:00:00`; now `25mm`, `1620x1080`, `2022.01.01 00:00:00`, X).
+  `test_playinfo` covers the 19 bodies. Open: the picture's Exif and the play module's load of it (the native path),
+  the built-in lenses' focal length (E145, E129, E132 show 0 mm), and E143's INFO composite, refused for its
+  highlight and shadow registers (`0x48c..0x4cc`, `0x5d0..0x5dc`, never-written class).
 - **Touch on the E144 family:** done (2026-11-02, survey findings 75, 76): the controller at slave `0x48`, which every
   body but the E143 family reads, is modelled from its driver's report parser (`src/lab/touchpanel.mjs`), the touch
   init runs before the display open where the open arms the driver (H-TPINIT), and S-TOUCHMAP posts the build's index

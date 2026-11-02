@@ -238,7 +238,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    (D), so the TG-7 opens its initial settings at power-on with the clock unset, where E143 warns (I). The lab names
    only the state table's first 12 parents (E143's count, `menu.mjs` state_names); the firmware's lookup bounds it at
    12 on E143 (`cmp 12,d3` at `0x5124b478`) and at 18 on E145 (`0x50de87bf`), whose 18 include SS_MENU (D), so the
-   SS_MENU states of E145 and E142 print unnamed. After MENU, S1 stops at S-AFOSD as before (finding 14).
+   SS_MENU states of E145 and E142 print unnamed (named since finding 83). After MENU, S1 stops at S-AFOSD as before
+   (finding 14).
 18. **The card is in the slot's detect state** (2026-10-23). E143's shooting-screen count updater (`0x511ff915`, one
    of the GUI's per-refresh items, run 9 times in a session, X) returns before it asks for the slot's count
    (getRemainCountInMediaSlot, API slot 752) where `0x5120054d` gives 0 (X): that gate takes the media control's
@@ -1060,7 +1061,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    the key's UI_IN group 5 with more than 300,000 stand-in calls (memset, OlyTaSS), with these answers and without
    them (X), not read. `test/test_playinfo.mjs` reads the GUI's record at the
    converter's return on E122, E118 and E120 against the card's JPEG (decoded by `refs/jpeg.mjs`), the clock and the
-   lens (9 checks each), and on E143 that S-PLAYCOMP's answer is unchanged (5184 x 3888, no date, no focal length).
+   lens (9 checks each), and on E143 that S-PLAYCOMP's answer is unchanged (5184 x 3888, no date, no focal length;
+   the picture's record since finding 81).
 58. **The playback histogram and S-PLAYCOMP's ISO** (2026-10-31). INFO's histogram drew a bar on the family (X, before
    finding 57): getHistogram sends request 7 (E122 `0x506aaaa0`, E143's always) and copies the response's flag byte
    at +4 and the bins from +8 (and three more pairs at +1032/+1036, +2060/+2064, +3088/+3092; E143
@@ -1404,6 +1406,56 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    password), and in Safari, Settings > Advanced > show the features for web developers, then Develop > Allow Remote
    Automation. Those are host settings this round did not change, so Safari's OPFS and sync access handles stay
    untested; the same WebDriver commands would apply, and the gate has no Safari entry.
+81. **INFO's still information on E143 and the E144 family, and the camera's clock read on every body** (2026-11-02,
+   `src/lab/camapp.mjs` still_record and clock(), `test/test_playinfo.mjs`). On E143, E146, E147 and the E144 family
+   PlyCom's getStillInfo asks the play component, whose wrapper (E143 `0x50acf1fa`) S-PLAYCOMP answers in the
+   component's struct, which goes to the same converter as the E118 family's answer to request 3 (finding 57, D). It
+   wrote the size 5184 x 3888 and the exposure alone, leaving the date and focal length to whatever the struct held:
+   INFO showed (X, the composite, before) on E143 `0mm`, `5184x3888` and no date line; on E144 `0mm`, `5184x3888` and
+   `0000.00.00 55:00:00`; on E142 the GUI's record held the date 51120-191-97 (X, the converter's return). S-PLAYCOMP
+   now writes the picture's own record as S-PLAYSEQ does, one function for both (the date, the JPEG's size, the
+   exposure, f-number, bias and ISO, the focal length at the build's offsets, fact `play.still`). The date is the
+   camera's clock read, E143's `0x5005a59e` (behind the wrapper `0x5012b7cd` its 61 callers call, D): where the SCPU
+   window's clock signature (`0x5004e384`, bits 7..2 of word 0) is 42 it converts the window's seconds since 1970 and
+   subsecond count (`0x5012bf86`) and checks the date (`0x5012b9ab`), else, or for no date, it answers the build's
+   default with the status 10501 (`0x5012b91f`, E143 2022-01-01 00:00:00, D). The port places it on all 19 bodies; on
+   E122 its place is the RTC driver's get `0x50068dbc` that api_sctime_GET_REAL_TIME (`0x502ee369`) calls through
+   `0x5016892e` (D, finding 57), so the name rule realTimeGetter and its fact `clock.real_time`, which read the E118
+   family's API alone, are retired. Called natively at a capture (X, a hermetic session, whose window clock counts
+   from 1970 and whose signature the boot's store init leaves at 42), every body answers its build's default with the
+   status 10501 and no side effect: 01-01 of E118 and E120 2015, E122 and E125 2016, E129, E130 and E132 2017, E133
+   2018, E134 and E137 2019, E139 and E140 2020, E142 2021, E143 and E144 2022, E145 2023, E146 2024, E147 and E148
+   2025, the E118 family's as their API gave. INFO then shows (X, the composite after S2 on the TFT): E143 `25mm`,
+   `1620x1080`, `2022/01/01 00:00:00`, `1/125`, `100-0001`; E144 `25mm`, `1620x1080`, `2022.01.01 00:00:00`; E134
+   the same with `2019.01.01`; E145 `2023.01.01` and 0 mm (the TG-7's built-in lens, whose focal length the lab does
+   not read); E146 12 mm (its native lens). E143's INFO composite is FEATURE_UNOBSERVED as before (its highlight
+   and shadow registers `0x48c..0x4cc` and `0x5d0..0x5dc`, never-written class); the frames were taken with their
+   mirror flags cleared in the model's debug window (a probe's view, not the lab's). `test/test_playinfo.mjs` reads
+   the GUI's record at the converter's return on all 19 bodies (`bin/test.mjs`: E143 in process, 18 children, 8 at a
+   time): the card's JPEG size, the clock's date, the lens's focal length (0 with a built-in lens), 1/125 s and one
+   of the two stand-ins answering (8 checks; 9 with the histogram on the E118 family), each passing (X). E132's start
+   waits at its date setting, which the test answers as modelcheck does (finding 24). golden's keys session takes the
+   clock read as one more native call at its S2 (one stop; screen, devices and output identical), recorded tooling-only.
+82. **E134's and E132's still converters** (2026-11-02, `src/fw/facts.mjs` stillFields). The rule read neither form
+   (finding 57: null, so S-PLAYCOMP wrote no ISO there and S-PLAYSEQ refused). Both keep the GUI's record on the
+   stack and form a field's address in d1, the load to d0 and `mov (12,sp),d1` in either order, then `add G,d1` (E134
+   `0x5082c3b9..0x5082c3be` with the information in d3, `movhu (98,a0),d0` to the GUI's +88, `mov (144,a0),d0` to +56
+   at `0x5082c42e`; E132 `0x5068b193..0x5068b19a` with it at (16,sp), `movhu (90,a0),d0`, `mov (136,a0),d0` at
+   `0x5068b1fe`; D). The rule takes this second form from one stack slot and only for the GUI's +56 and +88 (taken for
+   every G, it matched E146's converter elsewhere at two slots, X). E134 {focal 144/4, iso 98/2}, E132 {136/4, 90/2};
+   the other 17 unchanged (X, the rule at each port's converter). The fact now carries the converter too (`convert`),
+   which the test observes on every body (E144's, E139's and E125's are unplaced by the map: the call after the
+   wrapper's one call, finding 57).
+83. **The GUI state table's bound by a rule** (2026-11-02, `src/fw/facts.mjs` stateTableBound, fact
+   `gui_states.parents`, `src/lab/menu.mjs` state_names). The lab named the state table's first 12 parents on every
+   body (finding 17). The firmware's name lookup loads the table and ends its search at `cmp N,d3; lcs; cmp N,d3;
+   bcc` (E143 `0x5124b459`, the load at `0x5124b467`, 12 at `0x5124b478`; E145 18 at `0x50de87bf`; D); the rule
+   reads N after each load of the table's address at the port's place. 12 on E143, E146, E147 and E148, 18 on the
+   other 15 (X). The six parents the 15 add are the same on each: `0xe` SS_DPS (26 states), `0xf` SS_BTSEND (35),
+   `0x10` SS_BTRECEIVE (19), `0x11` SS_MENU (2), `0x12` SS_EDIT (8), `0x13` SS_SHORT_MOVIE (7), 97 names (X). E145's
+   start state `0x1103` stays unnamed: its SS_MENU lists `0x01` ID_ST_MENU_ENTRY and `0x02` ID_ST_MENU only (X;
+   finding 17). No E143 output
+   changes (its bound is the lab's 12); on the 15 a state of those parents prints its name where it printed `?`.
 
 
 ## Per-body status

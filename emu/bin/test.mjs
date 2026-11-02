@@ -11,7 +11,7 @@
 // worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
 // (test_camapp.mjs, with the mode dial's positions), the lab's audio output and the synthesized shutter sound at a
-// release (test_audio.mjs), the SCPU's clock, ports, link pins and sub-CPU model
+// release, and the AF beep's request to UI_OUT (test_audio.mjs), the SCPU's clock, ports, link pins and sub-CPU model
 // (test_scpu.mjs), the publication audit (test_pubaudit.mjs), patch overlays (test_patch.mjs: the rules, --patch on
 // E143 through debug.mjs, play.mjs and nav.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the card and the
@@ -138,13 +138,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...su.bad, ...ss.bad].forEach((x) => console.log('  ', x));
   bad += su.bad.length + ss.bad.length;
 }
-// the lab's audio output and S-SHUTTERSND: the channel and the clicks, then one open and one close click per S2 in play
+// the lab's audio output and S-SHUTTERSND: the channel and the clicks, then one open and one close click per S2 in
+// play; the AF beep's request: S1 in focus reaches UI_OUT's sound request (H-UIOUTSTART, S-AFLOCK), not with the
+// beep Off
 {
-  const { audioUnits, audioSession } = await import('../test/test_audio.mjs');
-  const au = await audioUnits(), as = await audioSession();
-  console.log(`audio output and the shutter sound: units ${au.checks - au.bad.length}/${au.checks}; S-SHUTTERSND in play ${as.checks - as.bad.length}/${as.checks}`);
-  [...au.bad, ...as.bad].forEach((x) => console.log('  ', x));
-  bad += au.bad.length + as.bad.length;
+  const { audioUnits, audioSession, afBeepSession } = await import('../test/test_audio.mjs');
+  const au = await audioUnits(), as = await audioSession(), ab = await afBeepSession();
+  console.log(`audio output and the shutter sound: units ${au.checks - au.bad.length}/${au.checks}; S-SHUTTERSND in play ${as.checks - as.bad.length}/${as.checks}; the AF beep's request to UI_OUT ${ab.checks - ab.bad.length}/${ab.checks}`);
+  [...au.bad, ...as.bad, ...ab.bad].forEach((x) => console.log('  ', x));
+  bad += au.bad.length + as.bad.length + ab.bad.length;
 }
 // the camera application running natively (S-CAMAPP and its stand-ins): S1, S2 and the rec view in a play session
 {

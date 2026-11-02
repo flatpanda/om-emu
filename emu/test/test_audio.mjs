@@ -1,4 +1,5 @@
-// The lab's audio output (src/lab/audio.mjs) and S-SHUTTERSND (src/lab/shuttersnd.mjs):
+// The lab's audio output (src/lab/audio.mjs), S-SHUTTERSND (src/lab/shuttersnd.mjs) and the AF beep's request
+// (S-AFLOCK, src/lab/camapp.mjs; H-UIOUTSTART, src/lab/play.mjs):
 //   audioUnits    without firmware: an event's checks; a session's queue (AudioOut: take, the full queue's drop);
 //                 the rings (AudioRing: numbering, a copy's numbers, what after N gives and drops); the samples as
 //                 little-endian bytes and GET /api/audio's document; the Player's publish_audio (one batch per call,
@@ -10,6 +11,12 @@
 //   audioSession  E143 in a headless Player whose host plays sound: S1 then S2 emits exactly one open and one close
 //                 click, spaced by the shutter time in use (1/125 s without S-SCENE, S-SCENE's with its live view on),
 //                 the status lists S-SHUTTERSND; a Player without the host's onAudio has no sound and does not list it
+//   afBeepSession E143 with the native lens: UI_OUT runs (H-UIOUTSTART, task 38 waiting, UI_OUT_EXEC not
+//                 S-MODACK's); with the beep Off (SET:1037=0, which sets 18 too) S1 in focus makes no sound request;
+//                 On, S1 in focus enters UI_OUT's sound request 0x5014f7e0 once (play, sound 0, volume 60), S-AFLOCK's
+//                 take status set while S1 is held and cleared at S1 up; UI_OUT waits again after the request's type-2
+//                 lookup on the empty sound table; a second S1 before a release makes none (the GUI's afSound flag),
+//                 and after a release S1 reaches UI_OUT again
 //   node emu/test/test_audio.mjs [--session]
 import { audioEvent, AudioOut, AudioRing, AudioError, audioDoc, pcmBytes, AUDIO_PENDING } from '../src/lab/audio.mjs';
 import { shutterClick, ShutterSound, SHUTTER_RATE, CLICK_S, STAND_IN } from '../src/lab/shuttersnd.mjs';
@@ -179,6 +186,69 @@ export async function audioSession() {
   return { checks, bad };
 }
 
+// The AF beep's request (E143): H-UIOUTSTART's UI_OUT and S-AFLOCK, the native lens. UI_OUT's sound request
+// 0x5014f7e0 gets a0 = the message's body: +0 u8 op (0 play), +3 u8 kind, +4 u16 the sound id, +20, +24 and +28 the
+// volume (api_sound 0x5041ee45's message +24..+36, D). The sound table is not loaded (0xa32db180 is 0), so the
+// request's type-2 lookup fails; UI_OUT must survive it.
+export async function afBeepSession() {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { loadImage, loadBlock, createHash } = await import('../checks/lib/env.mjs');
+  const { Player } = await import('../src/lab/player.mjs');
+  const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+  const { A } = await import('../src/fw/model.mjs');
+  const base = { rom: loadImage(), resBlock: loadBlock(), createHash, wallClock: () => performance.now() / 1000 };
+  const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, debug_api: true }, base);
+  pl.open_session();
+  const run = (inp) => { pl.submit(inp); pl.tick(); };
+  run({ type: 'token', token: 'WAIT:1500' });
+  const s = pl.session, lab = s.lab, tid = s.ui_out_tid;
+  ok(pl.phase === 'running' && s.lens !== null, `a running session with the native lens (${pl.phase}, lens ${s.lens !== null})`);
+  ok(tid === 38 && lab.nk.state(tid) === 4, `H-UIOUTSTART: UI_OUT's task 38 waits after the bring-up (task ${tid}, state ${tid && lab.nk.state(tid)})`);
+  ok(!s.camapp.module_queues.has(0x71) && pl.stand_ins_in_use().includes('H-UIOUTSTART'), 'UI_OUT_EXEC (0x71) is not S-MODACK\'s while UI_OUT runs; H-UIOUTSTART listed');
+  ok(lab.sim.u32(0xA32DB180) === 0, `the sound table is not loaded: (0xa32db180) = ${lab.sim.u32(0xA32DB180)}`);
+  const sounds = [], settings = [];
+  lab.observe(A(0x5014F7E0), (l, r) => {
+    const m = r.a0 >>> 0, b = lab.sim.read(m, 32), dv = new DataView(b.buffer, b.byteOffset, 32);
+    sounds.push({ op: b[0], id: dv.getUint16(4, true), vol: [20, 24, 28].map((o) => dv.getUint32(o, true)) });
+  }, 'test UI_OUT sound');
+  lab.observe(A(0x51052488), (l, r) => settings.push(r.d0 >>> 0), 'test playAfSound setting 18');   // after its 0x5104e12d(18)
+  const press = (shot = false) => {
+    sounds.length = 0; settings.length = 0;
+    run({ type: 'key', id: 's1', action: 'down' });
+    if (shot) { run({ type: 'key', id: 's2', action: 'down' }); run({ type: 'token', token: 'WAIT:800' }); run({ type: 'key', id: 's2', action: 'up' }); }
+    run({ type: 'token', token: 'WAIT:300' });
+    const word0 = lab.sim.u32(0x62AF6D00), isFocus = lab.sim.u32(0x62AF6E28);
+    run({ type: 'key', id: 's1', action: 'up' });
+    run({ type: 'token', token: 'WAIT:300' });
+    return { sounds: sounds.slice(), settings: settings.slice(), word0, isFocus, after: [lab.sim.u32(0x62AF6D00), lab.sim.u32(0x62AF6E28)], task: lab.nk.state(tid) };
+  };
+  // Off: Setup's beep item (menu mode 1037) writes settings id 18 too, the id playAfSound reads (X)
+  run({ type: 'token', token: 'SET:1037=0' });
+  ok(lab.get(1037) === 0 && lab.get(18) === 0, `SET:1037=0 leaves 18 at ${lab.get(18)}`);
+  const off = press();
+  ok(off.sounds.length === 0 && off.settings.join() === '0', `beep Off: playAfSound reads 18 = 0 and UI_OUT gets no sound request: ${JSON.stringify(off)}`);
+  ok(off.word0 === 6 && off.isFocus === 1 && off.after.join() === '0,0', `S-AFLOCK: S1 holds READY | READY_FINISH and isFocus 1, S1 up clears them: ${JSON.stringify(off)}`);
+  run({ type: 'token', token: 'SET:1037=60' });
+  ok(lab.get(18) === 60, `SET:1037=60 leaves 18 at ${lab.get(18)}`);
+  // the GUI plays the beep once per AF lock until it re-arms it (its afSound flag 0x62b2e0c4): a release's END_EXPOSE
+  // does (X); a plain S1 release does not, in the lab
+  press(true);
+  const on = press();
+  ok(on.sounds.length === 1 && on.sounds[0].op === 0 && on.sounds[0].id === 0 && on.sounds[0].vol.join() === '60,60,60',
+    `beep On: one sound request to UI_OUT, op 0 (play), sound 0, volume 60: ${JSON.stringify(on.sounds)}`);
+  ok(on.task === 4 && pl.phase === 'running', `UI_OUT waits again after the failed sound lookup (state ${on.task}, ${pl.phase} ${pl.error?.message ?? ''})`);
+  const again = press();
+  ok(again.sounds.length === 0 && again.settings.length === 0, `a second S1 before a release: the GUI's afSound flag is still set, no request: ${JSON.stringify(again)}`);
+  press(true);
+  const after = press();
+  ok(after.sounds.length === 1 && after.sounds[0].id === 0 && after.task === 4, `after a release the next S1 reaches UI_OUT again: ${JSON.stringify(after)}`);
+  ok(pl.stand_ins_in_use().includes('S-AFLOCK') && pl.phase === 'running', `S-AFLOCK listed, the session runs on (${pl.phase})`);
+  pl.close_session();
+  return { checks, bad };
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const u = await audioUnits();
   console.log(`audio output and S-SHUTTERSND units: ${u.checks - u.bad.length}/${u.checks}`);
@@ -189,6 +259,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log(`S-SHUTTERSND in play (E143): ${s.checks - s.bad.length}/${s.checks}`);
     s.bad.forEach((x) => console.log('  ', x));
     n += s.bad.length;
+    const b = await afBeepSession();
+    console.log(`the AF beep's request to UI_OUT (E143): ${b.checks - b.bad.length}/${b.checks}`);
+    b.bad.forEach((x) => console.log('  ', x));
+    n += b.bad.length;
   }
   process.exit(n ? 1 : 0);
 }

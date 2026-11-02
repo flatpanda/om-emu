@@ -87,9 +87,9 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // the menu, the card out and in; E143 and E146). Every body gives it, one that does not run it with its reason (why);
 // such a body keeps S-CARD's card without a file system (src/lab/camapp.mjs)
 //
-// `ui_out`: UI_OUT, the module of the camera's lamps, where the lab runs it (src/lab/play.mjs H-UIOUTSTART: E134,
-// whose file layer asks it for the card's access lamp): init, its init's entry, and task, its static task's entry. A
-// body without it does not run UI_OUT
+// `ui_out`: UI_OUT, the module of the camera's lamps (and on E143 its operation sounds), where the lab runs it
+// (src/lab/play.mjs H-UIOUTSTART: E134, whose file layer asks it for the card's access lamp; E143, whose AF beep is a
+// request to it): init, its init's entry, and task, its static task's entry. A body without it does not run UI_OUT
 // `lens_native`: the lens on the mount runs natively, the default (src/lab/lens.mjs with S-LENSMCU; OM_EMU_LENS=stand-in
 // takes S-LENS; docs/hle-gaps.md 4.4.2), on a body whose card's file system runs too; the driver's addresses are read
 // by src/fw/facts.mjs lensDriver (fact lens_driver). A body without it has S-LENS (src/lab/camapp.mjs)
@@ -172,6 +172,16 @@ export const MODELS = {
     // the power manager started and the power-off run natively (src/lab/power.mjs; docs/hle-gaps.md 4.7.4), at the
     // addresses src/fw/facts.mjs powerOff reads (POWER_OFF_E143 there, with their evidence)
     power_native: true,
+    // UI_OUT, the module of the camera's lamps and its operation sounds (src/lab/play.mjs H-UIOUTSTART; D unless
+    // tagged): the boot calls its init 0x5014f4e9 after its checkpoint "2_9" (0x501e8f24..0x501e8f31), then starts the
+    // task whose id is the halfword 0x60042d72 (38; entry 0x5014f56c) and names it "UI_OUT" (0x501e8f38..0x501e8f46).
+    // The init clears the sound player's state (0x5014f77d) and links its two queues to the task's flag 0x57 (the
+    // halfword 0x6004301e): UI_OUT (the halfword 0x600432a4, 0x70) on bit 2, UI_OUT_EXEC (0x600432a6, 0x71) on bit 4
+    // (0x5014f4f3..0x5014f566). The task drains the first without replies and answers each request of the second
+    // with {u16 status, word 1, word 3} to the queue in its word 0 (0x5014f6aa..0x5014f736), S-MODACK's layout; a
+    // message of kind 2 is a sound request (0x5014f7e0). The sound API 0x5041ee45 the AF beep reaches sends to the
+    // first (docs/hle-gaps.md 4.5)
+    ui_out: { init: 0x5014F4E9, task: 0x5014F56C },
     // The card's file system runs natively (src/lab/storage.mjs; docs/hle-gaps.md 4.8.2): its seams are read by
     // src/fw/facts.mjs fileSystem (fact storage; E143's values STORAGE_E143 there, with their evidence), the SD host's
     // pages are the board's (src/fw/board.mjs sd). errlog: the logs its card's queries make in the lab. The movie

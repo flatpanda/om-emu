@@ -391,7 +391,8 @@ export class Player {
     if (fact('mm_init', null)) used.push('H-MMINIT');                                       // the boot chain's stage-3 module init (osd.mjs)
     if (MODEL_INFO.frame_period_us) used.push('A-PERIOD');                                  // a frame period the build keeps nowhere
     if (this.session?.sio) used.push('H-SIOMAP', 'S-SIOIIC', 'A-SIOIIC-1', ...this.session.sio.labels);   // PER_SIO's devices (sio.mjs)
-    if (this.session?.ui_out_tid) used.push('H-UIOUTSTART');                                // UI_OUT started (E134)
+    if (this.session?.ui_out_tid) used.push('H-UIOUTSTART');                                // UI_OUT started (E134, E143)
+    if (this.session?.camapp?.aflock_fed) used.push('S-AFLOCK');                             // an AF lock fed (E143)
     if (this.session?.boot_key !== undefined) used.push('S-BOOTKEY');                       // UI_IN's boot key: the power switch
     if (this.session?.lab?.boot_staged) used.push('S-BOOTSTAGE');                          // the boot's first stage readied
     if (this.session?.lab?.iic_answered) used.push('S-IICWAIT');                            // a body whose firmware waits on the IIC bus

@@ -72,7 +72,7 @@ not reconciled.
 4. **Debug API follow-ups** (Debug API follow-ups below): the route to a running play session (F31), the attached
    watch log's lab time, halt and trace filters are in (2026-10-23), and the gate gaps 1-3 and 6 are closed, the
    two code-fetch bugs they found fixed (2026-10-29); left are item 4's limits of the browser Worker's route and item
-   7, the browser player on other browsers.
+   7's Safari itself, its sync access handles untested (Firefox and WebKitGTK run the player, 2026-11-02).
 5. **Emulator architecture** phases 2-5: finish phase 2's typed seams (machine port, options object, composed lab
    features), then ground the CPU and interrupts in the manual, then the time model. Phases 3 and 4 are also step 3 of
    the HLE plan: every device seam below the camera application waits on them.
@@ -394,7 +394,15 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
 6. **`web/index.html`'s EVF layout class:** done (2026-10-29). `bin/webgate.mjs` B6b presses LV (V) on the page and
    back: the screen has the class `evf` with the first frame drawn from the EVF (1600 x 1200) and loses it with the
    first frame from the TFT (900 x 600).
-7. The browser player was measured in Chrome on one machine; other browsers and platforms are untested.
+7. **Other browsers:** Firefox and WebKit done (2026-11-02, `bin/browsergate.mjs`, `docs/model-survey.md` findings
+   78-80). Over WebDriver in a Linux VM, Firefox 159 runs the published player as Chrome does (the `.BIN` to the
+   shooting screen, keys, a touch, a picture in the Card panel, the OPFS cache, E144 by `?model=`) with no change to
+   the page. WebKitGTK 2.54 ships the Storage API off, and master's page could not start there (`navigator.storage` is
+   undefined); the Worker now runs from the `.BIN` alone where OPFS is missing or refuses, and the page says why, so
+   WebKitGTK runs the same path uncached. Left: Safari itself (its OPFS and sync access handles, which WebKitGTK cannot
+   stand in for: switched on, its `getDirectory` rejects in an automation session and `createSyncAccessHandle` is not
+   supported outside one), which needs `safaridriver` enabled by the user on a Mac; mobile browsers; the drop of a
+   `.BIN` and the start options (debug API, card size, HDMI, kept settings) outside Chrome.
 
 ## Emulator architecture
 

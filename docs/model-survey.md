@@ -1235,7 +1235,50 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    check_init) and 18 of the lab's menu addresses are unmapped, the bar the E144 family's own menu trials stop at (X:
    `bin/nav.mjs --model E144` stops at its GUI buffer tables), so E148 is at the family's: the shooting path and
    playback, not the menu. Pinned in `BLOBS.sha256` with its five unpacked blocks.
-
+78. **The browser player in Firefox** (2026-11-02, `bin/browsergate.mjs`). In the OrbStack VM (Arch Linux ARM,
+   aarch64), Firefox 159.0 headless through geckodriver 0.37.1, on the published site (`bin/site.mjs`, 127 files,
+   2.66 MiB) served under `/om-emu/`: the landing page's link, the E143 `.BIN` through the file input (unpacked in
+   0.37-0.49 s, written to OPFS in 0.09-0.13 s), the shooting screen (0x0108) at 2.84 lab s, the canvas read back
+   equal to the RGBA the Worker sent (frame 1, sha16 `42a5747dde3ac6d8`, the digest WebKit's canvas and node's
+   conversion in `bin/webgate.mjs` give too), M, Down, M, the
+   press on the monitor at (35, 465) and Enter each to its GUI state (0x0b02, row 0 -> 1, 0x0108, the touch answered,
+   0x0403), S1 and S2 to one picture that the Card panel reads (FAT32 "OM SYSTEM" on the 8 GiB SDHC card, a 96 x 64
+   thumbnail, the 1620 x 1080 view), LV to the EVF and back with both canvases equal to the Worker's (1600 x 1200 and
+   900 x 600), a second page started from the OPFS cache (read in 0.17-0.24 s) and E144 by `?model=E144` to its
+   shooting screen at 3.0-3.2 lab s, every request a GET under the prefix answered 200 (X, five runs). The page needed
+   no change: module Workers, `File.slice`, the transferred RGBA buffers, `ImageData` on a 2D canvas,
+   `performance.timeOrigin`, top-level `await` and OPFS's sync access handles in the Worker all behave as in Chrome.
+   Neither browser has `SharedArrayBuffer` on the site (no COOP/COEP, `crossOriginIsolated` false; X), which the player
+   does not use (its `Atomics` are the node host's shared flags only). The pace at `--idle wall` over 10 s of the wall
+   clock: 0.93-0.99 x real time, 0.79 with the host's test suite running beside it (X; reported, not judged).
+79. **The browser player in WebKit** (2026-11-02, `web/opfs.mjs`). WebKitGTK 2.54.2's MiniBrowser through
+   WebKitWebDriver on Xvfb, the engine Safari is built on. Master's page could not start there: "could not start:
+   undefined is not an object (evaluating 'navigator.storage.getDirectory')" (X), because WebKitGTK ships the Storage
+   API off (MiniBrowser `--features=help` lists StorageAPI, FileSystem and AccessHandle as off; `navigator.storage` is
+   undefined in the page and the Worker, X), and the Worker's cache write ran before the Player. `web/opfs.mjs` now
+   checks for OPFS and its sync access handles (`unsupported()`), and the Worker runs from the `.BIN` alone when the
+   cache cannot be written: the page says the firmware is not cached and why, offers no cache on the next visit and
+   disables "Keep the settings". With that, WebKit runs everything finding 78 lists but the cache, with the same
+   canvas digests, at 0.99 x real time (X). With the Storage API, OPFS and the access handles switched on (the
+   gate's `webkit-storage`, as Safari ships them) the page and the Worker have `getDirectory`, but in an automation
+   session it rejects with "UnknownError: The operation failed for an unknown transient reason" (X), so the same
+   uncached path runs and names that error (master's page stopped there with the same message, X); outside
+   automation, in a MiniBrowser with a profile directory, `getDirectory` and `getFileHandle` work and
+   `createSyncAccessHandle` throws "NotSupportedError: Backend does not support this operation" (X). So WebKitGTK
+   cannot stand in for Safari's cache path; Safari itself is not run (finding 80).
+80. **Driving the browsers, and what is left** (2026-11-02, `host/webdriver.mjs`). Classic W3C WebDriver over HTTP
+   with node's `fetch` serves both drivers; WebDriver BiDi and Playwright were not needed. What the gate had to learn
+   (X): MiniBrowser takes the automation session only when started with `--automation` (without it the new-session
+   request never answers), opens at 1024 x 768 whatever the X screen's size (the gate sets the window rect), and
+   WebKitWebDriver sends a pointer target outside the viewport to its edge (an event on `<html>`) where geckodriver
+   refuses it with "move target out of bounds" as the spec says, so the gate scrolls the canvas into view first; the
+   WebDriver key U+E007 is the keypad's Enter (code `NumpadEnter`, which the page does not map), U+E006 the main one.
+   Not covered outside Chrome: the drop of a `.BIN` (classic WebDriver has no file drop; `bin/sitegate.mjs` drops in
+   Chrome), the start options (debug API, card size, HDMI, kept settings), mobile browsers and Safari. Safari on macOS
+   is driven by its own `safaridriver`, which its user must enable once: `safaridriver --enable` (an administrator's
+   password), and in Safari, Settings > Advanced > show the features for web developers, then Develop > Allow Remote
+   Automation. Those are host settings this round did not change, so Safari's OPFS and sync access handles stay
+   untested; the same WebDriver commands would apply, and the gate has no Safari entry.
 
 ## Per-body status
 

@@ -57,14 +57,11 @@ const PATH = [['start', null, 0], ['s1', null, 0], ['s2', null, 1], ['play', 'SS
 const MENU_PATH = [['menu', null, 1, 'open'], ['down', null, 1, 'move'], ['menu', null, 1, 'close']];
 // the bodies whose menu is known not to run on the EVF: model -> [what the step's error must hold, the reason], held
 // strictly as PROBE_XFAIL. E146 and E147: the menu's composite has the EVF's dimmed plane, PLANC 0xb2, which E143's
-// compositor refuses (as for playback above). E122 and E120: at MENU on the EVF the press runs to the hook-stop limit
-// with the lab clock at about 3000 s, sleeping in OlyTaSS (X, 2026-11-02; why: ?), where their TFTs and E118's EVF open
-// the menu
+// compositor refuses (as for playback above). E122 and E120 were in it until the kind-3 VSC's line compare
+// (docs/model-survey.md finding 70): before, their press at MENU on the EVF ran to the hook-stop limit
 const PLANC_B2 = [/^error: composite NONE: \["PLANC_UNOBSERVED .* value 0x000000b2/, 'the menu\'s EVF composite has a plane at PLANC 0xb2, which E143\'s compositor refuses'];
 const MENU_EVF_XFAIL = {
   E146: PLANC_B2, E147: PLANC_B2,
-  E122: [/^error: .*more than 300000 stub calls/, 'MENU on the EVF runs to the hook-stop limit with the lab clock at 3000 s (not read)'],
-  E120: [/^error: .*more than 300000 stub calls/, 'MENU on the EVF runs to the hook-stop limit with the lab clock at 3000 s (not read)'],
 };
 const PROBE_NS = 1200e6, PROBE_SHOTS = 777, WINDOW = 6, WINDOW_NS = 300e6;
 // the remaining-shots query (E143's, src/lab/camapp.mjs SHOTS_QUERY; the child places it through A())

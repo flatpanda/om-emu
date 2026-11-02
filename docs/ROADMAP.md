@@ -197,12 +197,11 @@ the survey table.
 
 - **The menus of the other bodies:** done in a play session (2026-11-02, model-survey findings 66 to 68): MENU opens
   the camera's own menu on every body of the E144 and E118 families, RIGHT, DOWN and OK navigate it and MENU goes
-  back and out, on the TFT and, but for E122 and E120, the EVF; `bin/modelcheck.mjs` takes MENU, DOWN, MENU on each.
+  back and out, on the TFT and the EVF; `bin/modelcheck.mjs` takes MENU, DOWN, MENU on each.
   Three lab causes, each read: the kind-2 OSD planes' stacking, which E144 and E148 set the other way round (the word
   at `+0x1a4`), the event storm guard counting GESetEvent's coalesced sets, and the OSD engine's guards refusing E137's
-  and E125's buffer sync across two records. Left: E122's and E120's MENU on the EVF (the press runs to the hook-stop
-  limit with the lab clock at 3000 s, in OlyTaSS sleeps; not read), E146's and E147's EVF menu composite (PLANC 0xb2,
-  as their EVF playback), and `bin/nav.mjs` on these bodies: its own GUI bring-up's checks are E143's shape (finding
+  and E125's buffer sync across two records; E122's and E120's MENU on the EVF runs since the kind-3 VSC's line
+  compare (finding 70). Left: E146's and E147's EVF menu composite (PLANC 0xb2, as their EVF playback), and `bin/nav.mjs` on these bodies: its own GUI bring-up's checks are E143's shape (finding
   68: the GUI buffer tables' record pairs, the icon table, the tasks started), then its menu open expects E143's
   `0x0b02` and its keys are E143's event indices.
 - **The card on the other bodies:** done for nine (2026-10-25, hle-gaps.md 4.8.4) and E145 (2026-10-29): a rule reads the file system's

@@ -1279,7 +1279,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    after their date prompt's MENU, E132 after its clock set. On the EVF it runs the same on the kind-2 and kind-3
    bodies but E122 and E120, whose press at MENU runs to the hook-stop limit with the lab clock at about 3000 s,
    sleeping in OlyTaSS (X; why is ?, their TFTs and E118's EVF open the menu); on E146 and E147 the menu's EVF
-   composite has the dimmed plane at PLANC `0xb2`, which E143's compositor refuses, as in their EVF playback.
+   composite has the dimmed plane at PLANC `0xb2`, which E143's compositor refuses, as in their EVF playback. (With
+   the kind-3 VSC's line compare, finding 70, E122's and E120's EVF run MENU, DOWN and MENU too; modelcheck no longer
+   expects them to fail, X.)
    `bin/modelcheck.mjs` now takes MENU, DOWN and MENU after the path (on the EVF after S2), judged by what each
    changes: MENU leaves the shooting screen's state with the frame changed, DOWN keeps the menu's state with the frame
    changed, MENU brings the shooting state back (the menus' states are unnamed on most builds: the E144 family's

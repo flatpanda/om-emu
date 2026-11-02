@@ -439,7 +439,12 @@ instructions (5.54%, about 6.1% of normal-use code; `node emu/bin/fwmap.mjs`, hl
    WebKitGTK runs the same path uncached. Left: Safari itself (its OPFS and sync access handles, which WebKitGTK cannot
    stand in for: switched on, its `getDirectory` rejects in an automation session and `createSyncAccessHandle` is not
    supported outside one), which needs `safaridriver` enabled by the user on a Mac; mobile browsers; the drop of a
-   `.BIN` and the start options (debug API, card size, HDMI, kept settings) outside Chrome.
+   `.BIN` and the start options (debug API, card size, HDMI, kept settings) outside Chrome. Found by the gate's runs (X, in
+   node too, and on the lab of 2026-11-01): LV in the about 0.2 lab s after S2's rec view, where E143's GUI has shown
+   panel 0 and not yet the shooting screen's panel 10, stops the session ("SWITCH:evf: the re-entry landed on GUI
+   state 0x0108 panel 10, not the screen the switch left (0x0108 panel 0)", `src/lab/play.mjs` live_switch); the
+   Card panel's read can hold the lab there, so the gate takes LV 1.5 lab s past the picture. What panel 0 is, and
+   which screen the switch should hold the re-entry to there, is not read.
 
 ## Emulator architecture
 

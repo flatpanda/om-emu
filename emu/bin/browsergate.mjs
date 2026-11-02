@@ -160,7 +160,7 @@ async function runBrowser(name) {
     await S.key('f');
     if (!await S.until(`window.__playPage.status.gui === '0x0108' && window.__playPage.status.phase === 'running'`, 30000)) fail(`key F (S1): not back to 0x0108: ${JSON.stringify(await state()).slice(0, 600)}`);
     await S.key(' ', 300);
-    const shot1 = await S.until(`(() => { const s = window.__playPage.status; return s.phase === 'running' && s.gui === '0x0108' && s.camapp && s.camapp.card_images >= 1 ? { images: s.camapp.card_images } : null; })()`, 60000);
+    const shot1 = await S.until(`(() => { const s = window.__playPage.status; return s.phase === 'running' && s.gui === '0x0108' && s.camapp && s.camapp.card_images >= 1 ? { images: s.camapp.card_images, lab_ns: s.lab_ns } : null; })()`, 60000);
     if (!shot1) fail(`key Space (S2): no picture on the card: ${JSON.stringify(await state()).slice(0, 600)}`);
     else {
       await S.click(await S.find('#cardpanel > summary'));
@@ -177,7 +177,11 @@ async function runBrowser(name) {
     }
 
     // ---- LV (V) to the EVF and back: the screen's layout class and the canvas follow the frames' device, the EVF's
-    // 1600 x 1200 canvas read back equal to the Worker's RGBA
+    // 1600 x 1200 canvas read back equal to the Worker's RGBA. First 1.5 lab s past S2's picture: the lab's switch
+    // stops the session when LV comes in the about 0.2 lab s after the rec view where E143's GUI has shown panel 0 and
+    // not yet the shooting screen's panel 10 (docs/ROADMAP.md, Debug API follow-ups item 7), and the Card panel's
+    // read can leave the lab there
+    if (shot1 && !await S.until(`window.__playPage.status.lab_ns > ${shot1.lab_ns + 1.5e9}`, 60000)) fail(`the lab 1.5 s past S2: ${JSON.stringify(await state()).slice(0, 600)}`);
     for (const dev of ['evf', 'tft']) {
       await S.key('v');
       const got = await S.until(`(() => { const p = window.__playPage, d = p.drawn; return d && d.device === ${JSON.stringify(dev)} && document.getElementById('screen').classList.contains('evf') === ${dev === 'evf'} ? { w: d.w, h: d.h } : null; })()`, 30000);

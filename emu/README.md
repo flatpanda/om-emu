@@ -534,18 +534,19 @@ System, so a later visit starts with "Start from the cached firmware" (a cache m
 used: the `.BIN` is asked for again). Nothing is uploaded.
 
 The query string takes the player's options (`?idle=off`, `device=evf`, `a15=on`, `touch=driver`, `start=menu`,
-`tab=7,5,1`, `debug_api=1`, `hdmi=on`, `audio=on`, ...); the default is `--idle wall`. The start options above the camera set four of
-them before the start and keep them in the query: the HDMI port (`hdmi=on`), the lens natively (`lens=native`, the
-Worker's `env.lens`), the settings kept in this browser (`nvram=1`: S-NVRAM's document, as `OM_EMU_NVRAM`'s file
-holds it, in OPFS under `nvram-<model>`, apart from the firmware; "Forget the kept settings" removes it; `web/nvram.mjs`)
-and the card's size (`card_size=GiB`, as `OM_EMU_CARD_SIZE`: the Card menu's 64 or 128 GiB SDXC card, in memory for the
-Worker's life; a size the card does not take fails the start with its reason). The page runs one model, E143 unless `?model=CODE`
-names another of `src/fw/models.mjs` (the page's model menu reloads it with that parameter): the Worker compares the
-main code block and the resource prefix with that model's sha256 (`src/fw/labfw.mjs`) before it caches anything (one
-OPFS directory per model), so any other `.BIN` (a newer release, or another body's) is refused with a message that
-names the file the model needs, and the file input is offered again. With `debug_api=1`, the `WINDOWS` token is
-refused before it runs anything (its layers carry zlib's level-6 deflate, which the Worker does not have); `STORE` and
-the other tokens run as in `bin/play.mjs`. Quit ends the session; the page then stops polling and says so.
+`tab=7,5,1`, `debug_api=1`, `hdmi=on`, `audio=on`, ...); the default is `--idle wall`. The start options above the
+camera set four of them before the start and keep them in the query: the HDMI port (`hdmi=on`), the lens natively
+(`lens=native`, the Worker's `env.lens`), the settings kept in this browser (`nvram=1`: S-NVRAM's document, as
+`OM_EMU_NVRAM`'s file holds it, in OPFS under `nvram-<model>`, apart from the firmware; "Forget the kept settings"
+removes it; `web/nvram.mjs`) and the card's size (`card_size=GiB`, as `OM_EMU_CARD_SIZE`: the Card menu's 64 or 128 GiB
+SDXC card, in memory for the Worker's life; a size the card does not take fails the start with its reason). The page
+runs one model, E143 unless `?model=CODE` names another of `src/fw/models.mjs` (the page's model menu reloads it with
+that parameter): the Worker compares the main code block and the resource prefix with that model's sha256
+(`src/fw/labfw.mjs`) before it caches anything (one OPFS directory per model), so any other `.BIN` (a newer release, or
+another body's) is refused with a message that names the file the model needs, and the file input is offered again. With
+`debug_api=1`, the `WINDOWS` token is refused before it runs anything (its layers carry zlib's level-6 deflate, which
+the Worker does not have); `STORE` and the other tokens run as in `bin/play.mjs`. Quit ends the session; the page then
+stops polling and says so.
 
 The Worker runs the Player as the server's lab thread does (`web/driver.mjs`: tick, then wait for a message, the pacing
 target or 20 ms) and answers the page's API calls with `src/lab/playapi.mjs`. The page swaps play.html's `fetch` for

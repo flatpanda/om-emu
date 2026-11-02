@@ -434,6 +434,16 @@ A bitmap of format 1 (2026-10-29) is a stream of 4-bit tokens, low nibble first,
 
 **Confidence:** medium
 
+### 7.14 The AF beep's request: the AF lock fed at the release stand-in (S-AFLOCK, H-UIOUTSTART)
+
+**Where:** `emu/src/lab/camapp.mjs` (`TAKE_STATUS_SET`, `af_lock`, `key`, `install`), `emu/src/lab/play.mjs` (`ui_out_bring_up`), `emu/src/fw/models.mjs` (E143 `ui_out`), `emu/test/test_audio.mjs` (`afBeepSession`)
+
+**Emulator:** On E143 UI_OUT, the module of the lamps and the operation sounds, runs from the play bring-up as on E134 (its init, then its task, which waits on its queues), and its second queue UI_OUT_EXEC, which its task answers itself, leaves S-MODACK's queues. S-AFLOCK writes the AF lock's state at S-RELSEQ's focus callbacks: at S1 down the still sequence's READY bit (2) in the shared take status's word 0, at END_FOCUS(OK) its READY_FINISH bit (4) and the take information's isFocus, both bits through the status's own setter; while the lock holds, the AF module's state getter answers indicator 1. S1 up clears the two bits and isFocus. The application's changedFocus then plays the AF beep natively: playAfSound reads settings id 18, which the Setup item (menu mode 1037) writes with its own value, the sound control's playTarget passes its "ready" test, and api_sound's request reaches UI_OUT's sound request with sound 0 and volume 60. There the type-2 lookup finds no sound table (its loader does not run in the lab) and returns an empty descriptor, the audio commands are answered by S-MODACK, and UI_OUT waits again: nothing sounds.
+
+**Expected / concern:** On the camera the sequence parts and the take capability write the take status, and the AF module its own state. Which of the sequence's state bits is which state is inferred from the order of the state entries in the image (I): READY and READY_FINISH for 2 and 4, so the lab's word 0 holds 2 from S1 on and 6 from the lock on, without STANDBY's bit 1, which the sequence's STANDBY entry would set and the lab never had. That READY_FINISH is the AF lock's state, and that the AF module's getter and its OSD upload share the in-focus code 1, are I. The take capability's other writes at the lock (word 3's bit 4, the indicator copy at +272) and the AF module's other fields are not written. The GUI plays the beep once per AF lock until its own afSound flag is cleared: a release's END_EXPOSE clears it (D, X), a plain S1 release does not in the lab, and what clears it on the camera between two half presses is not known (?), so a second half press without a release is silent here, and whether it is on the camera is ?. A NG focus result leaves only READY's bit.
+
+**Confidence:** medium
+
 ## 8. What the tests establish
 
 ### 8.1 Above the ISA, the tests are emu's own regression data

@@ -745,17 +745,19 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   OM-1 1.9 tables address this image, each checked here):** the sound API's singleton `0x50b56569` returns the object
   `0x62afee0c` (vtable `0x60e3881c`): slot 0 play `0x50b569a4` (call entry `0x50b569a9`; d0 the sound id, d1 the
   volume, 0 plays nothing, a1, two stack words) leads to OlyHfwOpeSndCtl::playTarget `0x50b758b4` and api_sound.c
-  `0x5041ee45`, +4 stops, +68 asks isThroughSound. The sound data is UI_OUT's (task `0x26`, `0x5014f56c`; how
-  playTarget's request reaches it is ?): its play request `0x5014f7e0` starts the audio driver once (`0x50aa9715`)
+  `0x5041ee45`, +4 stops, +68 asks isThroughSound. The sound data is UI_OUT's (task `0x26`, `0x5014f56c`; api_sound
+  sends playTarget's request as a 44-byte message of kind 2 to UI_OUT's queue `0x70`, the halfword `0x600432a4`, with
+  no timeout, `0x5041f01d..0x5041f036` -> `0x503ebe46` -> OlyQeWr `0x5002c151`, so a full queue blocks the sender):
+  its play request `0x5014f7e0` starts the audio driver once (`0x50aa9715`)
   and copies the sound out of resource type 2 (size from res_size `0x501a976d(2, id)`, table `(0xa32db180)`, copy
   `0x501a921f`). The table loader `0x501a8ca0`, called only by USTART_L, reads each type's index from a flash head:
   types 0 / 1 `0x41ec0000` (blk02000000), 3 `0x4e1e0000` (blk0e360000), `0x8000` `0x458c0000` (blk05a00000) and 2
   `0x4e420000`, where no block of the `.BIN` loads (the images block ends at `0x4e3e0000`): the update file does not
   carry the sounds (I), which fits finding no RIFF data in it. The driver's converter table `0x6035e50c` has a plain
   memcpy entry `0x50aa7439` (`0x5000290a`), the copy om-c scales. In the lab (X, a probe of S1 then S2, before
-  H-RESINIT): the singleton runs only at S2, twice from IOlyApiShooting (`0x51059373`, `0x51059919`, via
+  H-RESINIT, H-UIOUTSTART and S-AFLOCK): the singleton runs only at S2, twice from IOlyApiShooting (`0x51059373`, `0x51059919`, via
   `0x5108c19f`), which then asks +68; play, UI_OUT and the loader never run, both MMIO blocks above are never accessed
-  and the four resource tables read 0 (since H-RESINIT, below, the loader runs and the tables are set). om-c's
+  and the four resource tables read 0 (since H-RESINIT, below, the loader runs and the tables are set; the bullet after it has the AF beep's request). om-c's
   electronic shutter sound calls play from hooks on CapBuf_TakeBuff's calls of `0x50b8467c` (a buffer list append)
   and `0x50b87d56`, which S-RELSEQ's stand-in never reaches.
 - **The resource tables (since 2026-11-02; H-RESINIT, S-RESNAND: `emu/src/lab/resnand.mjs`, `emu/src/fw/nand.mjs`; D
@@ -792,6 +794,24 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   its 16 NAND reads, the step records, X). Open: the OM-1's own sound area (its entries, which ids are which sounds,
   their format, its extent; a NAND read from a camera would settle it); E146 and E147 (their sound index at
   `0x4e3e0000`, X) are not given `res_nand` yet.
+- **The AF beep's request (since 2026-11-02, E143; X unless tagged):** UI_OUT runs (H-UIOUTSTART, MODELS `ui_out`:
+  its init `0x5014f4e9`, then task 38, which waits on its flag), and S-AFLOCK feeds what the shooting sequence, the take
+  capability and the AF module would hold at the AF lock (the comment at `TAKE_STATUS_SET` in `emu/src/lab/camapp.mjs`
+  has the addresses): S1 sets the still sequence's READY bit 2 in the take status's word 0, END_FOCUS(OK) its
+  READY_FINISH bit 4 (which bit is which state is I, by the order of the sequence parts' state entries) and isFocus
+  `0x62af6e28`, and the AF module's state getter `0x509b06f6` answers indicator 1. The GUI's changedFocus `0x5105260c` then plays natively:
+  playAfSound `0x51052444` reads settings id 18 (the Setup item "8", menu mode 1037, writes 18 with its own value
+  through the settings DB's write: X, by the menu and by SET:1037), the facade's play `(0, 60)`, playTarget, api_sound,
+  and UI_OUT's `0x5014f7e0` gets op 0 (play), sound 0, volume 60. There `0x50aa9715` and `0x50aa9969` return, the
+  audio commands 0x22, 0x41 and 0x45 to AUD_EXEC's queue 8 are S-MODACK's synchronous answers, res_size(2, 0) reads
+  the word at address 4 (the table pointer is 0) as 0, and res_read takes its "same entry as last" path (`(0xa32db184)`
+  = 0 = the entry's address, the destination `0xa4000000`, `0x501a9333..0x501a9347`) and returns the descriptor
+  `0xa32db188` = {0, 0} without a NAND read; UI_OUT waits again. The GUI plays once per lock until its afSound flag
+  `0x62b2e0c4` is cleared: a release's END_EXPOSE does (its handler `0x51065dd7` calls initAfSound `0x510523ff`, D),
+  a plain S1 release does not in the lab, and what clears it after one on the camera is ?. No other input of the lab
+  (menu navigation and dials, OK and the Super Control Panel, the arrows, a release, playback) reaches the facade's
+  play or api_sound; the menu cursor's Cursor_2CNL_Actuator `0x5116418e`, the facade's other GUI caller, was not
+  entered.
 - **The AV back end (D):** AVFW / AVPI plug-ins: the firmware's own MP4 / MOV muxer and demuxer, H.264 / HEVC encode
   and decode drivers, rate control, audio codecs, a TS multiplexer (12.4k, use ?), the StlCA_IF still codec (format ?).
 - **Seams:** S3 + S4 + S5 + S6 + S7 recommended, S1 (today's callbacks) kept until S2 (the HLS observers'

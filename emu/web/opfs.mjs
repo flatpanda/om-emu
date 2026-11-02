@@ -6,6 +6,12 @@
 // so is a manifest whose digests are not the model's (src/fw/labfw.mjs: a cache written before that check existed).
 // One directory per model (src/fw/model.mjs MODEL), so each body's firmware stays cached beside the others. The
 // camera's kept settings (S-NVRAM, opt-in) live beside it in a directory of their own (loadNvram, storeNvram).
+// A browser without OPFS (no navigator.storage.getDirectory: WebKitGTK as it ships, node's worker threads) keeps
+// nothing: unsupported() names why, info() and loadNvram() find nothing, clear() and clearNvram() have nothing to
+// remove, and store() and storeNvram() throw that reason, as they throw any failure of a browser whose OPFS is there but
+// refuses (WebKitGTK 2.54 with its Storage API switched on: getDirectory rejects with UnknownError in an automation
+// session, createSyncAccessHandle with NotSupportedError outside one; docs/model-survey.md finding 79). The Worker then
+// runs from the .BIN alone.
 import { checkFirmware } from '../src/fw/labfw.mjs';
 import { MODEL } from '../src/fw/model.mjs';
 
@@ -17,22 +23,34 @@ export const VERSION = 1;
 // the rename neither asks for the .BIN again nor strands its blocks in OPFS; one with another body's is left to it.
 const LEGACY = [`om1-firmware-${MODEL}`, 'om1-firmware'];
 
+// Why this browser has no OPFS to keep the cache in, or null when it has one (whether it works shows at its first use).
+export function unsupported() {
+  if (typeof navigator === 'undefined' || typeof navigator.storage?.getDirectory !== 'function') return 'this browser has no Origin Private File System (navigator.storage.getDirectory)';
+  if (typeof FileSystemFileHandle === 'undefined' || typeof FileSystemFileHandle.prototype.createSyncAccessHandle !== 'function') return 'this browser\'s Origin Private File System has no sync access handles (createSyncAccessHandle)';
+  return null;
+}
+async function root() {
+  const why = unsupported();
+  if (why) throw new Error(why);
+  return navigator.storage.getDirectory();
+}
+
 async function dir(create) {
-  const root = await navigator.storage.getDirectory();
-  try { return await root.getDirectoryHandle(DIR); } catch (e) { if (e?.name !== 'NotFoundError') throw e; }
+  const top = await root();
+  try { return await top.getDirectoryHandle(DIR); } catch (e) { if (e?.name !== 'NotFoundError') throw e; }
   for (const name of LEGACY) {
     let old;
     try {
-      old = await root.getDirectoryHandle(name);
+      old = await top.getDirectoryHandle(name);
       const m = JSON.parse(new TextDecoder().decode(await get(old, FILES.manifest)));
       checkFirmware(m.rom?.sha256, m.res?.sha256);
     } catch { continue; }                            // none there, or not this model's
-    const d = await root.getDirectoryHandle(DIR, { create: true });
+    const d = await top.getDirectoryHandle(DIR, { create: true });
     for (const f of [FILES.rom, FILES.res, FILES.manifest]) await put(d, f, await get(old, f));       // the manifest last
-    await root.removeEntry(name, { recursive: true });
+    await top.removeEntry(name, { recursive: true });
     return d;
   }
-  return root.getDirectoryHandle(DIR, { create });
+  return top.getDirectoryHandle(DIR, { create });
 }
 async function put(d, name, bytes) {
   const fh = await d.getFileHandle(name, { create: true });
@@ -84,8 +102,9 @@ export async function load(createHash) {
   return { rom, res, manifest: m };
 }
 export async function clear() {
-  const root = await navigator.storage.getDirectory();
-  try { await root.removeEntry(DIR, { recursive: true }); } catch { /* nothing cached */ }
+  if (unsupported()) return;                         // nothing kept
+  const r = await root();
+  try { await r.removeEntry(DIR, { recursive: true }); } catch { /* nothing cached */ }
 }
 
 // S-NVRAM's document for the browser player (web/nvram.mjs: the camera's settings stores, the SCPU's backed-up words
@@ -94,9 +113,10 @@ export async function clear() {
 export const NVRAM_DIR = `nvram-${MODEL}`, NVRAM_FILE = 'nvram.json';
 // The document, or null when none is kept; a file that is not JSON is an error that says how to drop it.
 export async function loadNvram() {
-  const root = await navigator.storage.getDirectory();
+  if (unsupported()) return null;                    // nothing kept (storeNvram says why)
+  const r = await root();
   let bytes;
-  try { bytes = await get(await root.getDirectoryHandle(NVRAM_DIR), NVRAM_FILE); } catch (e) {
+  try { bytes = await get(await r.getDirectoryHandle(NVRAM_DIR), NVRAM_FILE); } catch (e) {
     if (e?.name === 'NotFoundError') return null;
     throw e;
   }
@@ -105,10 +125,11 @@ export async function loadNvram() {
   }
 }
 export async function storeNvram(text) {
-  const root = await navigator.storage.getDirectory();
-  await put(await root.getDirectoryHandle(NVRAM_DIR, { create: true }), NVRAM_FILE, new TextEncoder().encode(text));
+  const r = await root();
+  await put(await r.getDirectoryHandle(NVRAM_DIR, { create: true }), NVRAM_FILE, new TextEncoder().encode(text));
 }
 export async function clearNvram() {
-  const root = await navigator.storage.getDirectory();
-  try { await root.removeEntry(NVRAM_DIR, { recursive: true }); } catch { /* none kept */ }
+  if (unsupported()) return;                         // none kept
+  const r = await root();
+  try { await r.removeEntry(NVRAM_DIR, { recursive: true }); } catch { /* none kept */ }
 }

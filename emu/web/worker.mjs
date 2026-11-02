@@ -16,7 +16,10 @@
 //                                                            bin/play.mjs (/api/quit is a queued control instead: 3d)
 //                   {type: 'gate', job, file?}               bin/webgate.mjs only: run web/runner.mjs (no Player)
 //   worker -> page  {type: 'progress', stage, ...}, {type: 'error', message, stack}  (stage nvram-error: a kept
-//                                                            settings write failed, the session runs on)
+//                                                            settings write failed, or this browser keeps none, the
+//                                                            session runs on; stage cache: manifest, and opfs, why
+//                                                            this browser has no OPFS or null; stage firmware:
+//                                                            cache_error, why the blocks were not cached, or null)
 //                   {type: 'status', doc}                    every published status (status_doc)
 //                   {type: 'frame', seq, device, lab_ns, sha16, w, h, rgba, rgba_sha16}   the newest frame, its RGBA
 //                                                            buffer transferred; one in flight until acknowledged
@@ -51,7 +54,8 @@ let player = null, api = null, driver = null, frameOut = null, framePending = fa
 
 // The two blocks: from the File (walk, descramble, verify every checksum, check the main code block is the model's,
 // cut the resource block to its prefix, check it, cache both) or from the OPFS cache (verified against its manifest,
-// which must name the model's digests). T: timings in ms.
+// which must name the model's digests). T: timings in ms. A browser that cannot keep the cache (web/opfs.mjs: no OPFS,
+// or one that refuses) runs from the File alone: manifest null and cache_error its reason, which the page shows.
 async function firmware(file, { cache = true } = {}) {
   const T = {};
   let t = performance.now();
@@ -61,13 +65,15 @@ async function firmware(file, { cache = true } = {}) {
     post({ type: 'progress', stage: 'unpack', name: file.name, size: file.size });
     const fw = await labFirmware(read, file.size, createHash, { onBlock: (flags, ms) => post({ type: 'progress', stage: 'block', flags, ms: Math.round(ms) }) });
     lap('unpack');
-    let manifest = null;
+    let manifest = null, cacheError = null;
     if (cache) {
-      manifest = await OPFS.store(fw.rom, fw.res, { bin: { name: file.name, size: file.size, lastModified: file.lastModified }, res_full: fw.res_full }, createHash,
-        { rom: fw.rom_sha256, res: fw.res_sha256 });
+      try {
+        manifest = await OPFS.store(fw.rom, fw.res, { bin: { name: file.name, size: file.size, lastModified: file.lastModified }, res_full: fw.res_full }, createHash,
+          { rom: fw.rom_sha256, res: fw.res_sha256 });
+      } catch (e) { cacheError = `${e?.name && e.name !== 'Error' ? e.name + ': ' : ''}${e?.message ?? e}`; }
       lap('opfs_write');
     }
-    return { rom: fw.rom, res: fw.res, from: 'file', manifest, T };
+    return { rom: fw.rom, res: fw.res, from: 'file', manifest, cacheError, T };
   }
   const c = await OPFS.load(createHash);
   lap('opfs_read');
@@ -101,7 +107,7 @@ async function boot(msg) {
   let a;
   try {
     const fw = await firmware(msg.file ?? null, { cache: msg.cache !== false });
-    post({ type: 'progress', stage: 'firmware', from: fw.from, rom: fw.rom.length, res: fw.res.length, manifest: fw.manifest, T: fw.T });
+    post({ type: 'progress', stage: 'firmware', from: fw.from, rom: fw.rom.length, res: fw.res.length, manifest: fw.manifest, cache_error: fw.cacheError ?? null, T: fw.T });
     // The cache holds the verified original block; the player and its tables need the runtime image.
     fw.rom = expandImage(fw.rom);
     a = playerArgs(msg.args);
@@ -113,7 +119,10 @@ async function boot(msg) {
     const cardSize = msg.args?.card_size ? cardGiB(msg.args.card_size) : null;
     const card = cardSize !== null ? memoryCard({ sectors: cardSectors(cardSize) }) : null;
     card?.open();
-    const nvram = msg.args?.nvram ? browserNvram(await OPFS.loadNvram(), OPFS.storeNvram,
+    // (a browser without OPFS keeps no settings: the session runs without S-NVRAM and the page says why)
+    const noKeep = msg.args?.nvram ? OPFS.unsupported() : null;
+    if (noKeep) post({ type: 'progress', stage: 'nvram-error', message: `the settings are not kept: ${noKeep}` });
+    const nvram = msg.args?.nvram && !noKeep ? browserNvram(await OPFS.loadNvram(), OPFS.storeNvram,
       (e) => post({ type: 'progress', stage: 'nvram-error', message: String(e?.message ?? e) }), `this browser (OPFS ${OPFS.NVRAM_DIR})`) : null;
     const env = {
       rom: fw.rom, resBlock: fw.res, createHash, wallClock, asyncHost: true, refuseUnported: true,
@@ -193,7 +202,7 @@ onmessage = (e) => {
     else if (msg.type === 'frame-ack') { if (msg.seq !== undefined) framePending = false; sendFrame(); }
     else if (msg.type === 'gate') gate(msg).catch(fail);
     else if (msg.type === 'clear-cache') OPFS.clear().then(() => post({ type: 'progress', stage: 'cache-cleared' }), fail);
-    else if (msg.type === 'cache-info') OPFS.info().then((m) => post({ type: 'progress', stage: 'cache', manifest: m }), fail);
+    else if (msg.type === 'cache-info') OPFS.info().then((m) => post({ type: 'progress', stage: 'cache', manifest: m, opfs: OPFS.unsupported() }), fail);
     else if (msg.type === 'clear-nvram') OPFS.clearNvram().then(() => post({ type: 'progress', stage: 'nvram-cleared' }), fail);
     else if (msg.type === 'quit') { if (player) { player.set_stop(); driver.kick(); } }
     else fail(new Error(`worker: message type ${msg.type}`));

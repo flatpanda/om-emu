@@ -936,6 +936,7 @@ $('nvclear').onclick = () => PP.worker && PP.worker.postMessage({ type: 'clear-n
 const fwStatus = (t) => { $('fwstatus').textContent = t; };
 const MiB = (n) => (n / 2 ** 20).toFixed(1) + ' MiB';
 let bootError = null;                // the message of a boot that failed (the file input is offered again)
+let noOpfs = null;                   // why this browser keeps nothing (no OPFS), from the Worker's cache answer
 PP.onEvent = (m) => {
   if (m.type === 'boot-failed') {
     started = false; bootError = m.message;
@@ -947,13 +948,23 @@ PP.onEvent = (m) => {
   else if (m.type === 'error' && m.message === bootError) return;
   else if (m.type === 'error') { fwStatus('error: ' + m.message); $('ovl').textContent = 'error: ' + m.message; $('screen').classList.add('show-ovl'); }
   else if (m.type === 'progress' && m.stage === 'unpack') fwStatus(`unpacking ${m.name} (${MiB(m.size)}) in this browser…`);
-  else if (m.type === 'progress' && m.stage === 'firmware') fwStatus(`firmware ${m.from === 'cache' ? 'from the cache in this browser' : 'unpacked and cached in this browser'}: main code ${MiB(m.rom)}, resources ${MiB(m.res)} (${JSON.stringify(m.T)} ms)`);
-  else if (m.type === 'progress' && m.stage === 'cache') { $('fwcache').disabled = !m.manifest || started; if (m.manifest) $('fwhelp').open = false; if (m.manifest && bootError === null) fwStatus(`cached firmware: ${m.manifest.bin.name} (${MiB(m.manifest.bin.size)}); choose or drop a .BIN to replace it`); }
+  else if (m.type === 'progress' && m.stage === 'firmware') fwStatus(`firmware ${m.from === 'cache' ? 'from the cache in this browser' : m.manifest ? 'unpacked and cached in this browser' : `unpacked in this browser, not cached (${m.cache_error ?? 'no cache asked for'})`}: main code ${MiB(m.rom)}, resources ${MiB(m.res)} (${JSON.stringify(m.T)} ms)`);
+  else if (m.type === 'progress' && m.stage === 'cache') {
+    $('fwcache').disabled = !m.manifest || started; if (m.manifest) $('fwhelp').open = false;
+    if (m.manifest && bootError === null) fwStatus(`cached firmware: ${m.manifest.bin.name} (${MiB(m.manifest.bin.size)}); choose or drop a .BIN to replace it`);
+    // a browser without OPFS (web/opfs.mjs unsupported): the player runs from the .BIN alone, nothing is kept
+    noOpfs = m.opfs ?? null;
+    if (noOpfs) {
+      $('fwclear').disabled = $('nvclear').disabled = $('opt-nvram').disabled = true;
+      $('optnote').textContent = `This browser keeps no settings: ${noOpfs}.`;
+      if (bootError === null && !started) fwStatus(`Choose or drop the camera's firmware file (${MODEL.bin}) at each visit: ${noOpfs}, so it is not cached. It is read here; nothing is uploaded.`);
+    }
+  }
   else if (m.type === 'progress' && m.stage === 'cache-cleared') { $('fwcache').disabled = true; fwStatus('the cached firmware is gone from this browser'); }
   else if (m.type === 'progress' && m.stage === 'nvram-cleared') $('optnote').textContent = 'the kept settings are gone from this browser (a running session with them keeps its own until it saves again)';
   else if (m.type === 'progress' && m.stage === 'nvram-error') $('optnote').textContent = 'S-NVRAM: a save was not kept in this browser: ' + m.message;
 };
-const startOpts = (on) => { for (const id of [...START_OPTS.map(([i]) => i), 'opt-card']) $(id).disabled = !on; };
+const startOpts = (on) => { for (const id of [...START_OPTS.map(([i]) => i), 'opt-card']) $(id).disabled = !on || (id === 'opt-nvram' && !!noOpfs); };
 // The model: src/fw/model.mjs reads ?model= here as the Worker does (web/page.mjs gives it this page's query), and throws
 // for a code MODELS does not have; then no Worker starts and the picker offers the models. A pick reloads the page with
 // ?model=CODE and its other options kept: that model's firmware comes from its own cache in this browser (web/opfs.mjs)

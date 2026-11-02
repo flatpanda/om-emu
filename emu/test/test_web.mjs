@@ -13,7 +13,8 @@
 //   input, a kick ending a wait, 20 ms otherwise, an order deadline);
 // - the hosts' failure paths: the router's request bodies (readBody), a refused unported token with the session running
 //   on, ?sync=1 timeouts past setTimeout's limit and ones it refuses, web/page.mjs's polls once the session has stopped (they must reject, not resolve
-//   at once forever), and web/worker.mjs hosted in a node worker thread (test/workershim.mjs): a file that is no .BIN
+//   at once forever), and web/worker.mjs hosted in a node worker thread (test/workershim.mjs), which has no OPFS (the
+//   cache answer names why, forgetting the cache and the settings errs nowhere, the boot runs uncached): a file that is no .BIN
 //   and a container that is not E143 refused with the boot offered again, and with $OM_BIN / $OM_FW_DIR the E143
 //   .BIN booted, an unported token refused, the card the firmware formatted read through GET /api/card and the
 //   session's options through GET /api/session, a ?sync=1 request answered when the session quits; with $OM_FW_DIR
@@ -668,13 +669,27 @@ export async function workerTests() {
     w.postMessage({ type: 'req', id: 1, method: 'GET', path: '/api/controls', t_page: 0 });
     const r503 = await until((m, i) => i >= n0 && m.type === 'res' && m.id === 1, 5000);
     if (!r503 || r503.status !== 503) bad.push(`worker: a request before any session: ${r503 ? r503.status : 'no answer'}`);
+    // a host without OPFS (a node worker thread has no navigator.storage, as WebKitGTK as it ships): the cache answer
+    // names why, and forgetting the cache or the settings finds nothing to remove, with no error (web/opfs.mjs)
+    checks++;
+    const k0 = seen.length;
+    for (const type of ['cache-info', 'clear-cache', 'clear-nvram']) w.postMessage({ type });
+    const ci = await until((m, i) => i >= k0 && m.type === 'progress' && m.stage === 'cache', 5000);
+    const cleared = await until((m, i) => i >= k0 && m.type === 'progress' && m.stage === 'nvram-cleared', 5000);
+    const after = seen.slice(k0), stages = after.filter((m) => m.type === 'progress').map((m) => m.stage);
+    if (!ci || ci.manifest !== null || !/no Origin Private File System/.test(ci.opfs ?? '') || !cleared || !stages.includes('cache-cleared') || after.some((m) => m.type === 'error'))
+      bad.push(`worker without OPFS: ${JSON.stringify(seen.slice(k0)).slice(0, 400)}`);
     const { bin } = fwPaths();
     if (!bin || !fs.existsSync(bin)) skipped.push(`worker with E143: ${bin ?? 'set OM_BIN or OM_FW_DIR'} not found`);
     else {
       checks++;
-      w.postMessage({ type: 'boot', binPath: bin, cache: false, args: { idle: 'off', debug_api: true } });
+      // with the cache asked for (the page's boot): without OPFS the blocks are not cached, the reason is in the
+      // firmware progress, and the session runs from the .BIN
+      w.postMessage({ type: 'boot', binPath: bin, args: { idle: 'off', debug_api: true } });
       const up = await until((m) => m.type === 'status' && m.doc.phase === 'running', 120000);
+      const fwp = seen.find((m) => m.type === 'progress' && m.stage === 'firmware');
       if (!up) bad.push(`worker: the E143 .BIN did not reach running: ${JSON.stringify(seen.filter((m) => m.type !== 'status').slice(-3)).slice(0, 400)}`);
+      else if (!fwp || fwp.from !== 'file' || fwp.manifest !== null || !/no Origin Private File System/.test(fwp.cache_error ?? '')) bad.push(`worker: the E143 boot without OPFS: ${JSON.stringify(fwp)?.slice(0, 300)}`);
       else {
         const req = async (id, method, p, body) => {
           const k = seen.length;

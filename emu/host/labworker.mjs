@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { workerData, parentPort } from 'node:worker_threads';
-import { loadImage, loadBlock, createHash, scpuEnv } from '../checks/lib/env.mjs';
+import { loadImage, loadBlock, createHash, scpuEnv, patchedFirmware } from '../checks/lib/env.mjs';
 import { Player } from '../src/lab/player.mjs';
 import { PortQueue, F_KILL } from './portqueue.mjs';
 import { stackOf } from '../checks/lib/errors.mjs';
@@ -19,7 +19,7 @@ import { memoryCard, cardSectors } from '../src/lab/sdcard.mjs';
 import { debugHost } from './debughost.mjs';
 import { CARD_VIEW } from '../web/cardfiles.mjs';
 
-const { args: a, flags, port, out, argv } = workerData;
+const { args: a, flags, port, out, argv, patches } = workerData;
 const post = (m, transfer) => parentPort.postMessage(m, transfer);
 export const wallClock = () => Number(process.hrtime.bigint()) / 1e9;    // monotonic seconds, one clock on every thread
 // an input as the main thread posted it: its JSON text plus seq and t_wall
@@ -36,8 +36,12 @@ function sink(name, text) {
 // thread, written when the loop ends (argv: the server's own command line, from the main thread)
 const trace = tracedPlay(argv) ? installChildTrace({ argv, install: false }) : null;
 const cardSize = process.env.OM_EMU_CARD_SIZE ? { sectors: cardSectors(process.env.OM_EMU_CARD_SIZE) } : {};
+// --patch: the main thread's patches (host/playcli.mjs, verified there), applied to this thread's stock blocks; the
+// overlay's summary goes into the status and session.json (env.patch, src/lab/player.mjs)
+const fw = patches ? patchedFirmware(patches) : null;
 const env = {
-  rom: loadImage(), resBlock: loadBlock(), createHash, ...(trace?.fields ?? {}),
+  rom: fw?.rom ?? loadImage(), resBlock: fw?.resBlock ?? loadBlock(), createHash, ...(trace?.fields ?? {}),
+  ...(fw ? { patch: fw.summary } : {}),
   deflate: (b, level) => new Uint8Array(zlib.deflateSync(b, { level })),
   wallClock, queue, flags,
   readReplay: (p) => fs.readFileSync(p, 'utf8'),

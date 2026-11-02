@@ -12,7 +12,8 @@
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
 // (test_camapp.mjs, with the mode dial's positions), the lab's audio output and the synthesized shutter sound at a
 // release (test_audio.mjs), the SCPU's clock, ports, link pins and sub-CPU model
-// (test_scpu.mjs), the publication audit (test_pubaudit.mjs), the HDMI port and a plug in play on E143,
+// (test_scpu.mjs), the publication audit (test_pubaudit.mjs), patch overlays (test_patch.mjs: the rules, --patch on
+// E143 through debug.mjs, play.mjs and nav.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the card and the
 // file system on E143, E146, E147, E144, E142 and E134 and SDXC cards on E143 (test_storage.mjs), INFO's still information
 // in playback on the 19 bodies (test_playinfo.mjs), a tap on the touch mode icon on E143 and ten bodies of the E144
@@ -166,6 +167,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`SCPU clock, ports, link pins and the sub-CPU (S-SCPUDEV): ${sc.checks - sc.bad.length}/${sc.checks}; the link in play (E143) ${ss.checks - ss.bad.length}/${ss.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
   [...sc.bad, ...ss.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += sc.bad.length + ss.bad.length + others.filter(([, rc]) => rc !== 0).length;
+}
+// patch overlays (src/fw/patch.mjs): the rules on synthetic blocks, then --patch on E143 through bin/debug.mjs,
+// bin/play.mjs and bin/nav.mjs with a tiny patch file the test writes
+{
+  const { patchUnits, patchSession } = await import('../test/test_patch.mjs');
+  const pu = patchUnits(), ps = await patchSession();
+  console.log(`patch overlays: units ${pu.checks - pu.bad.length}/${pu.checks}; on E143 ${ps.checks - ps.bad.length}/${ps.checks}`);
+  [...pu.bad, ...ps.bad].forEach((x) => console.log('  ', x));
+  bad += pu.bad.length + ps.bad.length;
 }
 // the publication audit (bin/pubaudit.mjs) on a throwaway repository with made-up firmware
 {

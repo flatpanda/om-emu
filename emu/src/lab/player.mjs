@@ -22,7 +22,9 @@
 // written through the stop and signalled fields), onResult(seq, res) (finish: the host keeps the results), onStop()
 // (set_stop), and onLogEntry(entry) / onLogUpdate(entry) / onLogTrim(n) (the in-memory session log: an entry appended,
 // its frame field set after the lab time that followed it, the oldest n dropped), and debugHost ({openSink, disasm,
-// resolvePath}: the live debug route's trace files and disassembler, host/debughost.mjs).
+// resolvePath}: the live debug route's trace files and disassembler, host/debughost.mjs). Either host may add patch:
+// the summary of the patch overlay rom and resBlock were made with (src/fw/patch.mjs applyPatches), which the status
+// and session.json then carry as their patch field (absent without one), so a patched run is never taken for stock.
 // Debug inputs ({type: 'debug', op, ...}, --debug-api only) go to the live debug route (src/debug/live.mjs), made at the
 // first one: they run between ticks, outside the session log and the B7 gate, and answer with the result's debug field;
 // a halted session ticks only debug inputs and controls (the others wait held, in their order).
@@ -334,7 +336,8 @@ export class Player {
       us_clock: a.us_clock, touch: a.touch, mutant: a.x_mutant, frame_error: this.frame_error, input_error: this.input_error,
       idle_taken, log_tail: this.log.slice(-12), ...(this.camapp_components ? { camapp_components: true } : {}),   // absent when off: the recorded documents
       ...(s?.hdmi_port && s.lab ? { hdmi: s.hdmi_status() } : {}),                                        // --hdmi on only, likewise
-      ...(this.live !== null ? { debug: this.live.status() } : {}) };                                    // after a debug input only
+      ...(this.live !== null ? { debug: this.live.status() } : {}),                                     // after a debug input only
+      ...(this.env.patch ? { patch: this.env.patch } : {}) };                                            // a patch overlay only
     if (s !== null && s.lab !== null) {
       try { Object.assign(doc, s.status()); } catch (e) {
         if (!(e instanceof LabError)) throw e;          // a JS failure is never a status_error
@@ -1045,7 +1048,8 @@ export class Player {
     const s = this.session;
     const frames = this.a15_frames_closed + (s !== null ? s.a15_frames : 0);
     const args = { ...this.a };
-    const doc = { args, stand_ins: this.stand_ins_in_use(), assumptions_in_use: frames ? { A15: { frames, mode: this.a.a15 ?? 'auto' } } : {}, inputs: this.log };
+    const doc = { args, stand_ins: this.stand_ins_in_use(), assumptions_in_use: frames ? { A15: { frames, mode: this.a.a15 ?? 'auto' } } : {}, inputs: this.log,
+      ...(this.env.patch ? { patch: this.env.patch } : {}) };      // the patch overlay the firmware ran with (src/fw/patch.mjs)
     if (this.env.logSink) this.env.logSink('session.json', JSON.stringify(doc));
   }
   // --replay: the logged inputs at their lab times (idle off between them); internal entries post the touch gestures at

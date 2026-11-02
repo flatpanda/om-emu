@@ -14,12 +14,13 @@
 // - the hosts' failure paths: the router's request bodies (readBody), a refused unported token with the session running
 //   on, ?sync=1 timeouts past setTimeout's limit and ones it refuses, web/page.mjs's polls once the session has stopped (they must reject, not resolve
 //   at once forever), and web/worker.mjs hosted in a node worker thread (test/workershim.mjs), which has no OPFS (the
-//   cache answer names why, forgetting the cache and the settings errs nowhere, the boot runs uncached): a file that is no .BIN
-//   and a container that is not E143 refused with the boot offered again, and with $OM_BIN / $OM_FW_DIR the E143
-//   .BIN booted, an unported token refused, the card the firmware formatted read through GET /api/card and the
-//   session's options through GET /api/session, S2's two S-SHUTTERSND clicks posted as 'audio' messages 1/125 s apart,
-//   a ?sync=1 request answered when the session quits; with $OM_FW_DIR
-//   every other model whose .BIN is there booted in its own Worker to running with a frame;
+//   cache answer names why, forgetting the cache and the settings errs nowhere, the boot runs uncached): a file that is
+//   no .BIN and a container that is not E143 refused with the boot offered again, and with $OM_BIN / $OM_FW_DIR a patch
+//   file whose old bytes are not the stock block's refused (the boot offered again), the E143 .BIN booted, an unported
+//   token refused, the card the firmware formatted read through GET /api/card and the session's options through GET
+//   /api/session, S2's two S-SHUTTERSND clicks posted as 'audio' messages 1/125 s apart, a ?sync=1 request answered
+//   when the session quits; with $OM_FW_DIR every other model whose .BIN is there booted in its own Worker to running
+//   with a frame;
 // - the Card panel and the session options without firmware (cardTests): base64, the card's reader
 //   (web/cardfiles.mjs) on a FAT16 volume built here, the router's /api/session and card routes on a headless Player,
 //   the node server's PNG of a picture, web/page.mjs's binary answers, the browser's S-NVRAM host (web/nvram.mjs).
@@ -683,6 +684,14 @@ export async function workerTests() {
     const { bin } = fwPaths();
     if (!bin || !fs.existsSync(bin)) skipped.push(`worker with E143: ${bin ?? 'set OM_BIN or OM_FW_DIR'} not found`);
     else {
+      // the page's Patch start option (args.patch, src/fw/patch.mjs): a patch whose old bytes are not the stock main
+      // block's fails the boot with the reason, after the blocks were checked; boot may then be sent again
+      checks++;
+      const p0 = seen.length;
+      const wrong = JSON.stringify([{ block: 0, offset: 0x1ffff00, old: 'AAAAAA==', new: '/////w==' }]);
+      w.postMessage({ type: 'boot', binPath: bin, args: { idle: 'off', patch: { name: 'wrong.json', text: wrong } } });   // as the page boots: the firmware progress below is the same
+      const pf = await until((m, i) => i >= p0 && m.type === 'boot-failed', 60000);
+      if (!pf || !/wrong.json patch 0: old bytes differ from the stock main block at 0x01ffff00/.test(pf.message)) bad.push(`worker boot with a wrong patch: ${pf ? pf.message : 'no boot-failed'}`);
       checks++;
       // with the cache asked for (the page's boot): without OPFS the blocks are not cached, the reason is in the
       // firmware progress, and the session runs from the .BIN

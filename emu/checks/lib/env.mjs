@@ -12,6 +12,7 @@ import { MODEL_INFO } from '../../src/fw/model.mjs';
 import { romPath, resPath, scpuPath } from '../../src/fw/models.mjs';
 import { resPrefix } from '../../src/fw/resprefix.mjs';
 import { coverageOption } from './coverage.mjs';
+import { PatchRefused, readPatchText, applyPatches, patchLayout } from '../../src/fw/patch.mjs';
 
 export const REPO = path.resolve(new URL('../../../', import.meta.url).pathname);
 // the checks' own fixtures: their pinned notes, the VSC register header and class tables, check_perf's P7 address list
@@ -22,13 +23,32 @@ export const ISA_VECTORS = path.join(REPO, 'emu/test/fixtures/isa_vectors.json')
 // ORIGINAL / PATCHED / BLOCK: absolute paths under REPO.
 export const ORIGINAL = path.join(REPO, romPath(MODEL_INFO));
 export const PATCHED = path.join(REPO, 'artifacts/nd128/OM1_v1.9_ND128.main-code.bin');
-// The ND128 candidate's main code: the original main code block with the patches artifacts/nd128/manifest.json lists
-// (tools/om1_nd128.py writes the same bytes to PATCHED; nothing here reads that file). The caller checks its sha256.
+export const ND128_MANIFEST = path.join(REPO, 'artifacts/nd128/manifest.json');
+// The ND128 candidate's main code: the original main code block with the patches artifacts/nd128/manifest.json lists,
+// applied as a patch overlay (src/fw/patch.mjs: each patch's before bytes must be the original's), the block as
+// unpacked (tools/om1_nd128.py writes the same bytes to PATCHED; nothing here reads that file). The caller checks its
+// sha256.
 export function readPatched() {
-  const m = JSON.parse(fs.readFileSync(path.join(REPO, 'artifacts/nd128/manifest.json'), 'utf8'));
-  const b = readBytes(ORIGINAL);
-  for (const p of m.patches) b.set(Buffer.from(p.after, 'hex'), parseInt(p.decoded_body_offset, 16));
-  return b;
+  const patches = readPatchText(fs.readFileSync(ND128_MANIFEST, 'utf8'), path.relative(REPO, ND128_MANIFEST));
+  return applyPatches({ main: readBytes(ORIGINAL) }, patches, { layout: patchLayout(MODEL_INFO), createHash }).blocks.main;
+}
+// --patch FILE (bin/play.mjs, bin/nav.mjs, bin/debug.mjs): the patches of the files, in order (src/fw/patch.mjs
+// readPatchText; a file that cannot be read is refused as its patches are, PatchRefused).
+export function readPatchFiles(files) {
+  return files.flatMap((f) => {
+    let text;
+    try { text = fs.readFileSync(f, 'utf8'); } catch (e) { throw new PatchRefused(`${f}: cannot read it (${e.code ?? e.message})`); }
+    return readPatchText(text, f);
+  });
+}
+// The run's firmware with a patch overlay: the stock main code block and resource block, each checked against its
+// MODELS digest, then the patches applied to copies (src/fw/patch.mjs applyPatches, which refuses a patch whose old
+// bytes are not the stock block's, or that overlaps another). {raw (the patched main code block as unpacked), rom (its
+// run-time image, src/fw/expand.mjs), resBlock, summary}. Nothing is cached: loadImage and loadBlock stay the stock
+// blocks'.
+export function patchedFirmware(patches) {
+  const r = applyPatches({ main: checkImage(readBytes(ORIGINAL)), resource: loadBlock() }, patches, { layout: patchLayout(MODEL_INFO), createHash });
+  return { raw: r.blocks.main, rom: expandImage(r.blocks.main), resBlock: r.blocks.resource, summary: r.summary };
 }
 export const BLOCK = path.join(REPO, resPath(MODEL_INFO));
 export { createHash };

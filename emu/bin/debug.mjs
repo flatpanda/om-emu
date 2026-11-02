@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // The debug API's command line: runs firmware code on the JS machine from an entry point, plus a JSON-lines mode for
 // agents.
-//   node emu/bin/debug.mjs --entry ADDR [--image IMAGE] [--stop ADDR]... [--reg NAME=VALUE]... [--write ADDR=HEX]...
-//                            [--read ADDR:SIZE]... [--step] [--stack [WORDS]] [--trace PATH] [--insn-limit N]
+//   node emu/bin/debug.mjs --entry ADDR [--image IMAGE | --patch FILE...] [--stop ADDR]... [--reg NAME=VALUE]...
+//                            [--write ADDR=HEX]... [--read ADDR:SIZE]... [--step] [--stack [WORDS]] [--trace PATH]
+//                            [--insn-limit N]
 //   node emu/bin/debug.mjs --serve        one JSON request per line on stdin, one response per line on stdout
 //                                           (src/debug/protocol.mjs lists the ops)
 //   node emu/bin/debug.mjs --attach URL   the same lines to a running play session (bin/play.mjs --debug-api; URL:
@@ -14,9 +15,12 @@
 // nonzero fault it prints the whole device and trap stderr after it and exits 1, and a debugger read error is an
 // uncaught 'RuntimeError: GDB m...: E14' (its stack, exit 1). --image defaults to
 // artifacts/nd128/OM1_v1.9_ND128.main-code.bin, built in memory from artifacts/nd128/manifest.json's patches (the file
-// itself is not read). --trace PATH runs the machine in the one-instruction mode (every instruction a one-instruction
-// TB) and writes QEMU -d exec's 'MN10300 pc=' lines (its 'Trace 0:' lines carry host pointers and are not written).
-// As for the checks, OM_MACHINE gives the machine options (checks/lib/env.mjs). Also:
+// itself is not read). --patch FILE (repeatable; not with --image) runs the stock main code block with FILE's patches
+// instead (src/fw/patch.mjs: a patch whose old bytes are not the stock block's, or two that overlap, is refused, exit
+// 1); the run's JSON then has "patch" (the overlay's summary), and --serve's load without an image loads it, its
+// response's image 'patched: FILE...'. --trace PATH runs the machine in the one-instruction mode (every instruction a
+// one-instruction TB) and writes QEMU -d exec's 'MN10300 pc=' lines (its 'Trace 0:' lines carry host pointers and are
+// not written). As for the checks, OM_MACHINE gives the machine options (checks/lib/env.mjs). Also:
 //   --serve                     the JSON-lines mode (no --entry needed)
 //   --watch ADDR:LEN[:KIND]     a stopping watchpoint (KIND r, w or rw; default w), per virtual address; a stop on it
 //                               adds "watch" to the output
@@ -29,7 +33,8 @@
 import http from 'node:http';
 import path from 'node:path';
 import readline from 'node:readline';
-import { PATCHED, createHash, envMachine, runMain, readBytes, readPatched } from '../checks/lib/env.mjs';
+import { PATCHED, createHash, envMachine, runMain, readBytes, readPatched, readPatchFiles, patchedFirmware, SystemExit } from '../checks/lib/env.mjs';
+import { PatchRefused, patchLine } from '../src/fw/patch.mjs';
 import { parseArgs, intValue } from '../checks/lib/args.mjs';
 import { Simulator, SP } from '../src/lab/sim.mjs';
 import { RuntimeError } from '../src/lab/errors.mjs';
@@ -43,7 +48,8 @@ export { openSink, disasm };
 
 const PROG = 'debug.mjs';
 const ACTIONS = [
-  { opt: '--image', type: 'path', default: PATCHED },
+  { opt: '--image', type: 'path', metavar: 'IMAGE' },
+  { opt: '--patch', type: 'path', repeat: true, metavar: 'FILE' },
   { opt: '--entry', type: 'int', required: true, metavar: 'ADDR' },
   { opt: '--attach', type: 'str', metavar: 'URL' },
   { opt: '--stop', type: 'int', repeat: true, metavar: 'ADDR' },
@@ -63,8 +69,23 @@ const ACTIONS = [
   { opt: '--disasm', type: 'str', repeat: true, metavar: 'ADDR:LEN' },
   { opt: '--max-ms', type: 'int', metavar: 'N' },
 ];
+let overlay = null;          // --patch: {label, raw, summary}
 function loadImage(p) {
+  if (overlay && p === overlay.label) return overlay.raw;
   try { return p === PATCHED ? readPatched() : readBytes(p); } catch (e) { throw new RuntimeError(`${PROG}: cannot read the image ${p} (${e.code ?? e.message})`); }
+}
+// --patch FILE...: the stock main code block with the files' patches (checks/lib/env.mjs patchedFirmware), or null; a
+// refusal exits 1 with its reason, before any machine runs
+function patchOverlay(args) {
+  if (!args.patch.length) return null;
+  if (args.image !== undefined) args.error('--patch applies to the stock main code block: not with --image');
+  try {
+    const fw = patchedFirmware(readPatchFiles(args.patch));
+    return { label: `patched: ${args.patch.join(', ')}`, raw: fw.raw, summary: fw.summary };
+  } catch (e) {
+    if (e instanceof PatchRefused) throw new SystemExit(`${PROG}: --patch refused: ${e.message}`);
+    throw e;
+  }
 }
 // The item options' fields: NAME=VALUE, ADDR=HEX, ADDR:SIZE, ADDR:LEN[:KIND], ADDR:LEN, a usage error when malformed.
 function items(args) {
@@ -103,16 +124,19 @@ function main(argv) {
   const actions = serve ? ACTIONS.map((a) => a.opt === '--entry' ? { ...a, required: false } : a) : ACTIONS;
   const args = parseArgs(PROG, argv, actions);
   if (args.attach !== undefined) {
+    if (args.patch.length) args.error('--patch with --attach: the play session runs its own firmware (bin/play.mjs --patch FILE)');
     let url;
     try { url = new URL(args.attach); } catch { args.error(`--attach ${args.attach}: not a URL`); }
     if (url.protocol !== 'http:' || !url.searchParams.get('t')) args.error(`--attach ${args.attach}: the play server's http://127.0.0.1:PORT/?t=TOKEN`);
     startAttach(url);
     return 0;
   }
+  overlay = patchOverlay(args);
+  if (overlay) process.stderr.write(`${PROG}: patched: ${patchLine(overlay.summary)}\n`);
   if (serve) { startServe(); return 0; }
   const { regs, writes, reads, watches, disasms } = items(args);       // all checked before the machine starts
   const oneInsn = args.trace !== undefined || args.trace_mode === 'one-insn' && args.exec_trace !== undefined;
-  const env = { rom: loadImage(args.image), createHash, machine: { ...envMachine(), ...(oneInsn ? { oneInsn } : {}) } };
+  const env = { rom: loadImage(overlay?.label ?? args.image ?? PATCHED), createHash, machine: { ...envMachine(), ...(oneInsn ? { oneInsn } : {}) } };
   const sim = new Simulator(env, args.insn_limit ?? null);
   const dbg = Debugger.attach(sim, { disasm });
   const sinks = [];
@@ -138,7 +162,7 @@ function main(argv) {
       paused = o.stop === 'paused';
       result = sim.registers();
     } else result = sim.run(args.stop, args.step);
-    const output = { registers: regsHex(result) };
+    const output = { registers: regsHex(result), ...(overlay ? { patch: overlay.summary } : {}) };
     if (reads.length) {
       output.memory = {};
       for (const [address, size] of reads) output.memory[`0x${address.toString(16).padStart(8, '0')}`] = Buffer.from(size > 0 ? sim.read(address, size) : []).toString('hex');
@@ -164,7 +188,7 @@ function main(argv) {
 }
 
 function startServe() {
-  const proto = new Protocol({ env: { createHash, machine: envMachine() }, defaultImage: PATCHED, loadImage, openSink, disasm, resolvePath: (p) => path.resolve(p) });
+  const proto = new Protocol({ env: { createHash, machine: envMachine() }, defaultImage: overlay?.label ?? PATCHED, loadImage, openSink, disasm, resolvePath: (p) => path.resolve(p) });
   const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity, terminal: false });
   rl.on('line', (line) => {
     if (proto.done || !line.trim()) return;

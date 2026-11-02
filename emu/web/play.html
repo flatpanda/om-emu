@@ -83,6 +83,9 @@ h1 .refused { color: var(--err); }
 .status > span.last { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .a15line { margin: -4px 0 8px; padding: 0 10px; min-height: 1.4em; font: 12px ui-monospace, monospace; color: var(--decoded);
            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.patchline { margin: -4px 0 8px; padding: 2px 10px; font: 12px ui-monospace, monospace; color: var(--err); background: #402426;
+             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.patchline:empty { display: none; }
 .phase { padding: 1px 8px; border-radius: 999px; background: #2b3b2f; color: var(--wired); }
 .phase.busy, .phase.waiting-gui, .phase.starting { background: #3b3424; color: var(--decoded); }
 .phase.error, .phase.stopped, .phase.off { background: #402426; color: var(--err); }
@@ -218,6 +221,7 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
   <span class="last"><b>last</b> <span id="s-last">–</span></span>
 </div>
 <div id="s-a15" class="a15line"></div>
+<div id="s-patch" class="patchline"></div>
 <div id="errbox"></div>
 <div class="toolbar">
   <button class="tb" id="restart">Restart</button>
@@ -579,6 +583,8 @@ function showStatus(s) {
   $('s-dev').textContent = s.device || '–';
   $('s-layout').textContent = s.layout ? `byte ${s.layout.layout}, connect ${s.layout.connect}` : '–';
   $('s-a15').textContent = $('s-a15').title = s.a15 && s.a15.text ? s.a15.text + (s.a15_frames ? ` (${s.a15_frames} frames)` : '') : '';
+  // a patch overlay (--patch, src/fw/patch.mjs): the firmware is not the stock release, so the line stays on screen
+  $('s-patch').textContent = $('s-patch').title = s.patch ? patchText(s.patch) : '';
   $('s-lab').textContent = s.lab_ns != null ? (s.lab_ns / 1e9).toFixed(2) + ' s' : '–';
   $('s-pace').textContent = s.pace != null ? s.pace + (s.idle === 'off' ? ' (paused)' : '') : (s.idle === 'off' ? 'paused' : '–');
   $('s-lat').textContent = s.last && s.last.latency_ms != null ? s.last.latency_ms + ' ms' : '–';
@@ -615,6 +621,11 @@ function showStatus(s) {
   showScene(s.scene);
   showSubject(s);
   showPorts(s);
+}
+// the status's patch: the overlay's summary (src/fw/patch.mjs patchLine's wording)
+function patchText(p) {
+  const blocks = p.blocks.map((b) => `${b.block} block sha256 ${b.sha256.slice(0, 16)} (stock ${b.stock_sha256.slice(0, 16)})`).join(', ');
+  return `patched firmware, not stock: ${p.applied} patch${p.applied === 1 ? '' : 'es'} (${p.bytes} bytes changed) from ${p.files.join(', ')}; ${blocks}`;
 }
 function note(t) { $('s-last').textContent = t; logEvent('! ' + t); }
 // ---- S-SCENE controls ------------------------------------------------------------------------------------------------

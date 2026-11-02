@@ -24,8 +24,9 @@
 // the bridge that puts the SCPU's own firmware behind the link (test_scpum4.mjs scpuM4Units: its clock, the frame log
 // rebuilt from the wire, the byte mover), the lab's audio output and the synthesized shutter sound (test_audio.mjs
 // audioUnits: the events' checks, the queue and rings, publish_audio, the /api/audio route on the router and the
-// browser page, the clicks, S-SHUTTERSND's events), and the published site's files and the
-// browser player's download command (test_site.mjs).
+// browser page, the clicks, S-SHUTTERSND's events), the published site's files and the
+// browser player's download command (test_site.mjs), and the patch overlays' rules on synthetic blocks
+// (test_patch.mjs patchUnits).
 // bin/test.mjs runs all of these too, with everything else.
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
@@ -53,6 +54,7 @@ import { stm32Units } from '../test/test_stm32l4.mjs';
 import { scpuM4Units } from '../test/test_scpum4.mjs';
 import { siteTests } from '../test/test_site.mjs';
 import { audioUnits } from '../test/test_audio.mjs';
+import { patchUnits } from '../test/test_patch.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -81,6 +83,7 @@ report('Card panel and session options (web/cardfiles.mjs, the card routes, web/
 report('the published site\'s files and the player\'s download command (bin/site.mjs, src/fw/updater.mjs)', siteTests());
 report('scene stand-in (S-SCENE)', sceneUnits());
 report('audio output and the shutter sound (src/lab/audio.mjs, S-SHUTTERSND)', await audioUnits());
+report('patch overlays: file shapes, block references, old bytes, overlaps, ranges, digests (src/fw/patch.mjs)', patchUnits());
 report('command-line parser', argsTests());
 report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnits());
 report('SCPU clock, ports, link pins and the sub-CPU (S-SCPUDEV)', scpuUnits());

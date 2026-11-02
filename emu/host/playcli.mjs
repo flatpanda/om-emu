@@ -10,7 +10,8 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { Worker, MessageChannel } from 'node:worker_threads';
-import { REPO, loadImage, exitFor } from '../checks/lib/env.mjs';
+import { REPO, loadImage, exitFor, readPatchFiles, patchedFirmware } from '../checks/lib/env.mjs';
+import { PatchRefused, patchLine } from '../src/fw/patch.mjs';
 import { parseArgs } from '../checks/lib/args.mjs';
 import { RuntimeError } from '../src/lab/errors.mjs';
 import { MODEL } from '../src/fw/model.mjs';
@@ -53,11 +54,17 @@ export const ACTIONS = [
   { opt: '--x-mutant', type: 'str', default: null },
   { opt: '--x-trim-keep', type: 'int', default: null },
 ];
-// The parsed options: every option's key in ACTIONS' order, then no_wait_on_error.
+// --patch FILE (repeatable): a patch overlay on the stock blocks (src/fw/patch.mjs), the lab's env rather than the
+// Player's options (as OM_EMU_LENS and the others are), so it is not among session.json's args; the overlay's summary
+// is its "patch" instead, and the status's.
+const PATCH = { opt: '--patch', type: 'path', repeat: true, metavar: 'FILE' };
+// The parsed options: every option's key in ACTIONS' order, then no_wait_on_error; the --patch files, if any, as the
+// non-enumerable patch.
 export function parsePlayArgs(argv) {
-  const r = parseArgs(PROG, argv, ACTIONS);
+  const r = parseArgs(PROG, argv, [...ACTIONS, PATCH]);
   if ((r.x_mutant || r.x_trim_keep) && !r.debug_api) r.error('--x-mutant and --x-trim-keep need --debug-api');
   const a = {};
+  Object.defineProperty(a, 'patch', { value: r.patch });
   for (const x of ACTIONS) {
     const k = x.opt.slice(2).replaceAll('-', '_');
     a[k] = r[k];
@@ -87,6 +94,19 @@ export async function main(argv) {
   try { a = parsePlayArgs(argv); } catch (e) { return exitFor(PROG, e); }
   const fw = await provision(PROG);     // the model's firmware on first use; nothing printed when it is there
   if (fw) return fw;
+  // --patch: read, parsed and verified against the stock blocks here, before the server starts; the lab worker applies
+  // the same patches (checked again) to its own blocks
+  let patches = null, overlay = null;
+  if (a.patch.length) {
+    try {
+      patches = readPatchFiles(a.patch);
+      overlay = patchedFirmware(patches);
+    } catch (e) {
+      if (!(e instanceof PatchRefused)) throw e;
+      report(`${PROG}: --patch refused: ${e.message}`);
+      return 1;
+    }
+  }
   quietStdio();
   if (a.evf_layout) say('play: --evf-layout is a no-op since M10B (an EVF start and every switch draw the EVF layout)');
   const out = a.out ?? path.join(OUT, strftime(new Date()));
@@ -98,7 +118,8 @@ export async function main(argv) {
   const proxy = new PlayerProxy(a, flags, port1, { wall: wallClock });
   const holder = { port: 0 };
   const check = { token, get port() { return holder.port; }, noHost: a.x_mutant === 'no-host-check' };
-  const rom = loadImage();
+  if (overlay) say(`play: patched firmware: ${patchLine(overlay.summary)}`);
+  const rom = overlay?.rom ?? loadImage();
   let switchTo = null, trying = null;
   // POST /api/model: a reason to refuse, or null (the switch is taken: playapi queues the quit). A switch never
   // downloads or unpacks (the page has no view of the terminal's progress), and starts a new session in the chosen
@@ -106,6 +127,7 @@ export async function main(argv) {
   // model's) refuse it. A model the lab does not load on is refused before this session stops (labLoads).
   const onSwitch = async (code) => {
     if (switchTo || trying) return `already switching to ${switchTo ?? trying}`;
+    if (patches) return `a session with --patch cannot switch (its patches are for ${MODEL}'s blocks): start ${PROG} --model ${code}`;
     if (a.out !== null || a.replay !== null) return `a session with ${a.out !== null ? '--out' : '--replay'} cannot switch: start ${PROG} --model ${code}`;
     if (!blocksPresent(MODELS[code])) return `no firmware for ${code} (${MODELS[code].name}): run node emu/bin/fetch-fw.mjs --model ${code}`;
     trying = code;
@@ -118,7 +140,9 @@ export async function main(argv) {
   // the options the lab worker's environment gives it (labworker.mjs, src/lab/play.mjs lens_option), for the page's
   // session line (GET /api/session): fixed for the process, set in the environment before the start
   const session = { host: 'node', lens: process.env.OM_EMU_LENS || 'native', nvram: process.env.OM_EMU_NVRAM || null,
-    card: process.env.OM_EMU_CARD || null, card_size: process.env.OM_EMU_CARD_SIZE ? cardGiB(process.env.OM_EMU_CARD_SIZE) : null };
+    card: process.env.OM_EMU_CARD || null, card_size: process.env.OM_EMU_CARD_SIZE ? cardGiB(process.env.OM_EMU_CARD_SIZE) : null,
+    ...(overlay ? { patch: overlay.summary } : {}) };
+  overlay = null;                      // the worker makes its own blocks (patches)
   const api = new PlayApi(proxy, { tables: Tables.of(rom), framePng: pngCache(), check, page: new Uint8Array(fs.readFileSync(PAGE)),
     session, cardImage: jpegRgba, imagePng: pngRgba,     // the Card panel's pictures, decoded here on the main thread
     onPagetest: (body) => {            // <out>/pagetest.json: a write that fails is the request's error (host/server.mjs)
@@ -165,7 +189,7 @@ export async function main(argv) {
   }
   // a 16 MB stack (node's default is 4 MB): headroom for a request body that nests deeply, should a message of the lab
   // show part of it
-  worker = new Worker(new URL('./labworker.mjs', import.meta.url), { workerData: { args: a, flags, port: port2, out, argv }, transferList: [port2],
+  worker = new Worker(new URL('./labworker.mjs', import.meta.url), { workerData: { args: a, flags, port: port2, out, argv, patches }, transferList: [port2],
     resourceLimits: { stackSizeMb: 16 } });
   worker.on('message', (m) => proxy.onMessage(m));
   const ended = await new Promise((resolve) => {

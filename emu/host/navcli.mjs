@@ -1,11 +1,14 @@
 // The nav tool on node: its command line (--start and --blank exclude each other, --evf-layout needs --device evf), one
 // stdout line per token, a PNG per step (--png each|end|none; the .ycc removed), session.json (JSON with a one-space
 // indent), 'error: ...' on stderr and rc 1 for a FirmwareError or ValueError. Wall seconds print with two decimals
-// per step and one for the whole run. Node-only (host/).
+// per step and one for the whole run. --patch FILE (repeatable) runs the stock blocks with FILE's patches
+// (src/fw/patch.mjs; a refusal is 'error: --patch refused: ...', rc 1, before the lab starts): a 'patched: ...' line
+// first, and session.json's patch the overlay's summary. Node-only (host/).
 import fs from 'node:fs';
 import path from 'node:path';
 import { MODEL } from '../src/fw/model.mjs';
-import { REPO, loadImage, loadBlock, createHash, exitFor } from '../checks/lib/env.mjs';
+import { REPO, loadImage, loadBlock, createHash, exitFor, readPatchFiles, patchedFirmware } from '../checks/lib/env.mjs';
+import { PatchRefused, patchLine } from '../src/fw/patch.mjs';
 import { parseArgs, intValue } from '../checks/lib/args.mjs';
 import { write_outputs, jsonText } from '../checks/lib/png.mjs';
 import { isValueError } from '../checks/lib/errors.mjs';
@@ -47,6 +50,7 @@ export const ACTIONS = [
   { opt: '--time', type: 'flag', default: false },
   { opt: '--out', type: 'path', default: null },
   { opt: '--tag', type: 'str', default: 'nav' },
+  { opt: '--patch', type: 'path', repeat: true, metavar: 'FILE' },
 ];
 const say = (line) => process.stdout.write(line + '\n');
 // --seed FILE: a JSON object of setting id: value, both integers (an id as its decimal key), seeded in ascending id
@@ -82,11 +86,20 @@ function run(a) {
   const start = a.blank ? null : (a.start ?? '7,1,1').split(',').map(decimalInt);
   if (start !== null && (start.length !== 3 || start.includes(null))) a.error('--start: three integers T,P,C');
   const seed = a.seed ? readSeed(a.seed) : new Map();    // in the file's order
+  let fw = null;
+  if (a.patch.length) {
+    try { fw = patchedFirmware(readPatchFiles(a.patch)); } catch (e) {
+      if (!(e instanceof PatchRefused)) throw e;
+      process.stderr.write(`error: --patch refused: ${e.message}\n`);
+      return 1;
+    }
+    say(`patched: ${patchLine(fw.summary)}`);
+  }
   const out = a.out ?? path.join(OUT, a.tag);
   fs.mkdirSync(out, { recursive: true });
   const doc = { script: a.script, lang: a.lang, device: a.device, u1: a.u1, start, seed, clock: a.clock,
     nav_pri: N.NAV_PRI, budgets: { post: N.POST_HOOKS, step: N.STEP_HOOKS, storm: N.STORM, wait_storm_per_ms: N.WAIT_STORM_PER_MS, wait_hooks_per_ms: N.WAIT_HOOKS_PER_MS },
-    steps: [] };
+    steps: [], ...(fw ? { patch: fw.summary } : {}) };
   const t0 = performance.now();
   let rc = 0;
   if (a.evf_layout && a.device !== 'evf') a.error('--evf-layout needs --device evf');
@@ -94,7 +107,7 @@ function run(a) {
   // OM_CHILD_TRACE (golden traces of child labs, checks/lib/childtrace.mjs): every lab of this process traced, written at exit
   const trace = installChildTrace({ argv: process.argv.slice(2), install: false });
   if (trace) process.on('exit', (code) => trace.finish(code));
-  const env = { rom: loadImage(), resBlock: loadBlock(), createHash, ...(trace?.fields ?? {}),
+  const env = { rom: fw?.rom ?? loadImage(), resBlock: fw?.resBlock ?? loadBlock(), createHash, ...(trace?.fields ?? {}),
     writeOutputs: (lab, name, device, comp, dump, dir) => write_outputs(lab, name, device, comp, dump, dir) };
   const nav = new N.NavSession(env, { lang: a.lang, device: a.device, u1: a.u1, start, seed, open_menu: false, out, tag: a.tag,
     store_first: a.store_first, evf_layout: a.evf_layout, a15: a.a15, time: a.time });

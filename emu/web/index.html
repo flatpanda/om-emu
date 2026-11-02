@@ -86,6 +86,9 @@ h1 select { font: 13px system-ui, sans-serif; background: var(--panel); color: v
 .status > span.last { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .a15line { margin: -4px 0 8px; padding: 0 10px; min-height: 1.4em; font: 12px ui-monospace, monospace; color: var(--decoded);
            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.patchline { margin: -4px 0 8px; padding: 2px 10px; font: 12px ui-monospace, monospace; color: var(--err); background: #402426;
+             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.patchline:empty { display: none; }
 .phase { padding: 1px 8px; border-radius: 999px; background: #2b3b2f; color: var(--wired); }
 .phase.busy, .phase.waiting-gui, .phase.starting { background: #3b3424; color: var(--decoded); }
 .phase.error, .phase.stopped, .phase.off { background: #402426; color: var(--err); }
@@ -178,6 +181,7 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
   <button class="tb" id="nvclear">Forget the kept settings</button>
   <label class="tb" title="S-SDCARD's capacity (card_size, in GiB): the card the session starts with, in memory while this player runs. Above 32 GiB an SDXC card, which E143's firmware formats exFAT (docs/hle-gaps.md 4.8.6); the Card panel reads it with refs/exfat.mjs">Card <select id="opt-card" aria-label="card size">
     <option value="">8 GiB SDHC</option><option value="64">64 GiB SDXC</option><option value="128">128 GiB SDXC</option></select></label>
+  <label class="tb" title="--patch FILE: a JSON patch file (emu/README.md &quot;Patch overlays&quot;) applied in this browser to the stock blocks after they are checked: every patch's old bytes must be the stock block's and no two may overlap, else the start is refused. The status then shows a patched line with the patched block's sha256. The file is read here, never uploaded or cached">Patch <input type="file" id="opt-patch" accept=".json,application/json" aria-label="patch file"></label>
   <span class="note" id="optnote">Fixed for the session once it starts.</span>
 </div>
 
@@ -261,6 +265,7 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
   <span class="last"><b>last</b> <span id="s-last">–</span></span>
 </div>
 <div id="s-a15" class="a15line"></div>
+<div id="s-patch" class="patchline"></div>
 <div id="errbox"></div>
 <div class="toolbar">
   <button class="tb" id="restart">Restart</button>
@@ -632,6 +637,8 @@ function showStatus(s) {
   $('s-dev').textContent = s.device || '–';
   $('s-layout').textContent = s.layout ? `byte ${s.layout.layout}, connect ${s.layout.connect}` : '–';
   $('s-a15').textContent = $('s-a15').title = s.a15 && s.a15.text ? s.a15.text + (s.a15_frames ? ` (${s.a15_frames} frames)` : '') : '';
+  // a patch overlay (--patch, src/fw/patch.mjs): the firmware is not the stock release, so the line stays on screen
+  $('s-patch').textContent = $('s-patch').title = s.patch ? patchText(s.patch) : '';
   $('s-lab').textContent = s.lab_ns != null ? (s.lab_ns / 1e9).toFixed(2) + ' s' : '–';
   $('s-pace').textContent = s.pace != null ? s.pace + (s.idle === 'off' ? ' (paused)' : '') : (s.idle === 'off' ? 'paused' : '–');
   $('s-lat').textContent = s.last && s.last.latency_ms != null ? s.last.latency_ms + ' ms' : '–';
@@ -668,6 +675,11 @@ function showStatus(s) {
   showScene(s.scene);
   showSubject(s);
   showPorts(s);
+}
+// the status's patch: the overlay's summary (src/fw/patch.mjs patchLine's wording)
+function patchText(p) {
+  const blocks = p.blocks.map((b) => `${b.block} block sha256 ${b.sha256.slice(0, 16)} (stock ${b.stock_sha256.slice(0, 16)})`).join(', ');
+  return `patched firmware, not stock: ${p.applied} patch${p.applied === 1 ? '' : 'es'} (${p.bytes} bytes changed) from ${p.files.join(', ')}; ${blocks}`;
 }
 function note(t) { $('s-last').textContent = t; logEvent('! ' + t); }
 // ---- S-SCENE controls ------------------------------------------------------------------------------------------------
@@ -977,6 +989,14 @@ for (const [id, k, on] of START_OPTS) {
     history.replaceState(null, '', '?' + Q.toString());
   };
 }
+// the patch file (src/fw/patch.mjs): its text for the boot (ARGS.patch {name, text}); not in the query, a file is
+// chosen again after a reload. patchRead: the read in flight, which the start waits for
+let patchRead = null;
+$('opt-patch').onchange = (e) => {
+  const f = e.target.files[0];
+  if (!f) { delete ARGS.patch; patchRead = null; return; }
+  patchRead = f.text().then((text) => { ARGS.patch = { name: f.name, text }; }, (err) => { delete ARGS.patch; $('optnote').textContent = `the patch file could not be read: ${err.message}`; });
+};
 // the card's size: the query's card_size (a size the menu does not offer is added to it; the Worker refuses one the
 // card does not take), changed here until the start
 {
@@ -1020,7 +1040,7 @@ PP.onEvent = (m) => {
   else if (m.type === 'progress' && m.stage === 'nvram-cleared') $('optnote').textContent = 'the kept settings are gone from this browser (a running session with them keeps its own until it saves again)';
   else if (m.type === 'progress' && m.stage === 'nvram-error') $('optnote').textContent = 'S-NVRAM: a save was not kept in this browser: ' + m.message;
 };
-const startOpts = (on) => { for (const id of [...START_OPTS.map(([i]) => i), 'opt-card']) $(id).disabled = !on || (id === 'opt-nvram' && !!noOpfs); };
+const startOpts = (on) => { for (const id of [...START_OPTS.map(([i]) => i), 'opt-card', 'opt-patch']) $(id).disabled = !on || (id === 'opt-nvram' && !!noOpfs); };
 // The model: src/fw/model.mjs reads ?model= here as the Worker does (web/page.mjs gives it this page's query), and throws
 // for a code MODELS does not have; then no Worker starts and the picker offers the models. A pick reloads the page with
 // ?model=CODE and its other options kept: that model's firmware comes from its own cache in this browser (web/opfs.mjs)
@@ -1031,7 +1051,9 @@ $('model').innerHTML = (MODEL.error ? '<option value="" disabled>choose a model<
 $('model').value = MODEL.model ?? '';
 $('model').onchange = (e) => { Q.set('model', e.target.value); location.search = Q.toString(); };
 let started = false;
-const go = (file) => { if (started) return; started = true; bootError = null; $('fwfile').disabled = true; $('fwcache').disabled = true; $('fwhelp').open = false; startOpts(false); PP.boot(file, ARGS); init(); };
+const go = (file) => { if (started) return; started = true; bootError = null; $('fwfile').disabled = true; $('fwcache').disabled = true; $('fwhelp').open = false; startOpts(false);
+  const boot = () => { PP.boot(file, ARGS); init(); };
+  if (patchRead) patchRead.then(boot); else boot(); };
 $('screen').classList.add('show-ovl');
 if (MODEL.error) {
   $('fwfile').disabled = $('fwclear').disabled = true;

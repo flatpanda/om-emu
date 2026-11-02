@@ -535,3 +535,14 @@ notation) was found to share and not share with kind 2 (2026-10-30, `docs/model-
   13 VF-3, the others HDMI modes. Code 2 times the channel at 262 lines of 858 (`0x50302567`), writes the encoder
   block `0x99100000` (`0x502fe38a`) and sends AUD_EXEC function 36 (`0x502f6ba0`); code 6 takes BI_EVF's 825 lines
   (`0x502fa8eb`). The lab opens code 6 for the EVF (`emu/src/fw/facts.mjs` evfCode).
+- **Line compare (2026-11-02, `docs/model-survey.md` finding 70):** the driver's arm, the tail of `0x503078b9` from
+  `0x50307960`, writes a line into `+0x260`'s low half (computed from the device's value, `0x502fa8bd` for code 6,
+  and a half of the device getters' `0x50309d05`, the whole of it when `0xa1c5ca50` is 1; which getter's field is ?),
+  clears INTST1 by the mask word `0xa1c5ca4c` and sets it in INTEN1; the
+  word is 16 (`0x50309a04`) or 0 (the opens' clears), never another value (X, a byte scan). Both ISRs test INTST1 bits
+  4 and 5 (`0x50305c23`, `0x50307238`), clear them in INTST1 and INTEN1 and call the EVF panel's command scheduler
+  `0x502f946a`, which times the panel's next command from MONI3 and the latched vertical total on hardware timer 3 and
+  sets the word `0xa1c5a80c` the display task polls every 40 ms (`0x502f936b..0x502f938f`, D). E120 has the ISR's
+  test (`0x502d337a`) and the arm's store (`0x502d4e72`); E118 the opens' stores only (X). The lab raises bit 4 as
+  the scan reaches the line, once a frame, while INTEN1 holds it (`emu/src/fw/board.mjs` `line_irq`; the line count
+  being MONI3's is I); what raises bit 5 is ?.

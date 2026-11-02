@@ -25,9 +25,11 @@ import { compose2 } from './vsccompose2.mjs';
 // names, src/dev/vscregs.mjs) and without the EVF bank, two channels of 0x2000, the latched copies of a few registers
 // at +vsc.latch (+0x1c00) instead of +0x400, plain storage vsc.store (palettes and tables) below them, the vertical
 // total and MONI3's line count in vsc.line_bits bits. Its COMPOSE is kind 2's with the family's palette groups and
-// formats (vsccompose2.mjs).
+// formats (vsccompose2.mjs). A board's vsc.line_irq {reg, bit} (kind 3) is the line compare: while INTEN1 holds the
+// bit, the scan reaching the line in reg's low half raises it in INTST1, once a frame (src/fw/board.mjs).
 const V = BOARD.vsc, GEN2 = V.kind === 2, K3 = V.kind === 3, LATER = GEN2 || K3;
 const LINE_MASK = K3 ? (1 << V.line_bits) - 1 : GEN2 ? 0x3FFF : 0x7FFF;
+const LINE_IRQ = V.line_irq ?? null;
 export const VSC_BASE = V.base, VSC_SIZE = V.size, CHANNELS = V.channels, CHAN_STRIDE = V.stride;
 export const REG_WORDS = V.reg_end / 4, PAL_BASE = 0x4400, PAL_WORDS = 0x1800 / 4, LUT_BASE = 0x5C00, LUT_WORDS = 0xC00 / 4;
 export const OUT_SRAM = 0x4000, OSRAM_WORDS = 0x1000 / 4;
@@ -76,7 +78,7 @@ export class Vsc {
     for (let c = 0; c < CHANNELS; c++) {
       this.ch.push({ w: new Uint32Array(REG_WORDS), m: new Uint32Array(REG_WORDS), pal: new Uint32Array(PAL_WORDS),
         lut: new Uint32Array(LUT_WORDS), running: false, latched: false, field: 0, curLen: 0, frames: 0, frameStart: 0,
-        bank: 0 });
+        bank: 0, lineFrame: -1 });
     }
     this.ow = new Uint32Array(REG_WORDS); this.osram = new Uint32Array(OSRAM_WORDS);
     this.chanValid = null; this.outValid = null; this.chanRegs = null; this.image = image;
@@ -187,6 +189,15 @@ export class Vsc {
     }
   }
   nextBoundary(c) { const ch = this.ch[c]; return ch.frameStart + ch.curLen * this.lineNs(c); }
+  // the line compare's next event on channel c (LINE_IRQ): the time the scan reaches the compare line in this frame,
+  // while the bit is enabled, the line is within the frame and still ahead, and it has not been raised in this frame;
+  // else CLOCK_NONE (a line already passed waits for the next frame, which the boundary starts)
+  nextLine(c) {
+    const ch = this.ch[c];
+    if (!LINE_IRQ || !ch.running || !(ch.w[R.INTEN1 / 4] & LINE_IRQ.bit) || ch.lineFrame === ch.frames) return CLOCK_NONE;
+    const line = ch.w[LINE_IRQ.reg / 4] & LINE_MASK, at = ch.frameStart + line * this.lineNs(c);
+    return line < ch.curLen && at >= this.clock.t ? at : CLOCK_NONE;
+  }
   boundary(c, at) {
     this.tables();
     const ch = this.ch[c], wf = this.wFlags(c), mf = this.mFlags(c);
@@ -206,12 +217,16 @@ export class Vsc {
     let at = CLOCK_NONE;
     for (let c = 0; c < CHANNELS; c++) {
       if (this.ch[c].running && this.lineNs(c) && this.nextBoundary(c) < at) at = this.nextBoundary(c);
+      if (this.ch[c].running && this.lineNs(c)) at = Math.min(at, this.nextLine(c));
     }
     return at;
   }
   clockFire(at) {
     for (let c = 0; c < CHANNELS; c++) {
-      if (this.ch[c].running && this.lineNs(c) && this.nextBoundary(c) === at) this.boundary(c, at);
+      const ch = this.ch[c];
+      if (!ch.running || !this.lineNs(c)) continue;
+      if (this.nextLine(c) === at) { ch.w[R.INTST1 / 4] |= LINE_IRQ.bit; ch.lineFrame = ch.frames; }
+      if (this.nextBoundary(c) === at) this.boundary(c, at);
     }
   }
 

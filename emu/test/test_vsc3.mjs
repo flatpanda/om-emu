@@ -15,7 +15,9 @@
 //     EVF's level 0xb2 drawn, nothing composed before the first frame (NOT_LATCHED), a plane whose level word is
 //     unwritten skipped (UNWRITTEN)
 // and on E118's board (BOARD.vsc.levels false: its code names no level word, src/fw/facts.mjs vscLevels) a plane drawn
-// at the full level with no level word written, its ASSUMED bit set and noted.
+// at the full level with no level word written, its ASSUMED bit set and noted. On both boards the line compare
+// (BOARD.vsc.line_irq): INTST1 bit 4 and the channel's IRQ as the scan reaches the line in +0x260, once a frame, none
+// while INTEN1 does not hold the bit or for a line past the frame's end.
 // The model is fixed when src/ is imported, so the cases run in a child per board: OM_EMU_MODEL=E122, then E118.
 //   node emu/test/test_vsc3.mjs          (a child: OM_EMU_MODEL=E122 node emu/test/test_vsc3.mjs --child)
 import { spawnSync } from 'node:child_process';
@@ -104,6 +106,29 @@ async function child() {
     t.reg(0x030, 1); t.reg(0x04C, CANVAS); t.reg(0x1B8, 0x10); t.reg(0xA00 + 4 * 127, CLEAR); t.reg(0xA00 + 4, RED);
     return t.compose();
   };
+  // the line compare (BOARD.vsc.line_irq): INTST1 bit 4 as the scan reaches the line in +0x260 while INTEN1 holds the
+  // bit, once a frame, with the channel's IRQ; none while disabled or for a line past the frame's end
+  {
+    const t = fresh(), { reg, v } = t, at = (ns) => { v.dset(V.D.ARG0, ns); v.dset(V.D.ARG1, 0); v.doorbell(0, 1, 4, false); };
+    const st = () => v.ch[0].w[0x014 / 4] & 0x10, irq = () => v.dget(V.chanDbg(0, V.CH.IRQ));
+    tft(t);
+    reg(0x260, 100); reg(0x014, 0x10); reg(0x00C, 0x10);
+    at(99 * 1000);
+    ok(!st() && !irq(), `line 100: raised at line 99 (INTST1 ${hex(v.ch[0].w[0x014 / 4])})`);
+    at(2 * 1000);
+    ok(st() && irq() === 1, `line 100: not raised at line 101 (INTST1 ${hex(v.ch[0].w[0x014 / 4])}, IRQ ${irq()})`);
+    reg(0x014, 0x10);
+    at(300 * 1000);
+    ok(!st(), 'line 100: raised twice in one frame');
+    at(200 * 1000);
+    ok(st(), 'line 100: not raised in the next frame');
+    reg(0x014, 0x10); reg(0x00C, 0);
+    at(495 * 1000);
+    ok(!st() && !irq(), 'line 100: raised while disabled');
+    reg(0x260, 600); reg(0x00C, 0x10);
+    at(2 * 495 * 1000);
+    ok(!st(), 'line 600: raised past the frame of 495 lines');
+  }
   if (!BOARD.vsc.levels) {
     const r = unleveled();
     ok(r.status === 0 && r.drawn === 1 << 5 && r.assumed === 1 << 5 && !r.errors.length, `no level words: status ${r.status} drawn ${hex(r.drawn)} assumed ${hex(r.assumed)} errors ${JSON.stringify(r.errors)}`);

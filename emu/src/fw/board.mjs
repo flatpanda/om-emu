@@ -293,16 +293,23 @@ export const FAMILIES = {
     // 0x1c3c / 0x3c, 0x1c40, 0x1e2c / 0x22c, D; that they are the latched values is I, by E144's *_VL); palettes and
     // tables from +0x600 (the palette writer 0x50307aea's banks 0x600, 0x680, 0x800 / 0xa00 by bit 16 of 0x1b8, and
     // 0x700; the byte table 0x1600, 0x50308b50), plain storage up to the latched copies (I). The frame raises INTST1
-    // bit 0, on which both ISRs set their channel's vsync flag (0x50305b9e, 0x503071b3); the others they test (bits 4,
-    // 5) are not modelled. levels: whether the build's code names the OSD level words OSD7..OSD9 (+0x2e0..+0x2e8; read
-    // per body by src/fw/facts.mjs vscLevels: E122 and E120 do, E118 does not, X)
+    // bit 0, on which both ISRs set their channel's vsync flag (0x50305b9e, 0x503071b3). line_irq, the line compare
+    // (E122's addresses): the driver's arm 0x50307960 (the tail of 0x503078b9) writes a line into +0x260's low half,
+    // clears INTST1 by the mask word 0xa1c5ca4c and enables it in INTEN1; the mask is 16 (0x50309a04) or 0 (the opens'
+    // clears 0x5030762b, 0x5030776d), no other store (X, a byte scan). The ISRs test bits 4 and 5 (`and 48`, 0x50305c23;
+    // `btst 48`, 0x50307238), clear them in INTST1 and INTEN1 and call the EVF panel's command scheduler 0x502f946a,
+    // which the display task's poll waits on (0x502f936b..0x502f938f: its word 0xa1c5a80c is set there, D). That the
+    // bit is raised as the scan reaches the line, once a frame, is I (the line count MONI3 counts); bit 5's source is
+    // ?, no store of the mask enables it. levels: whether the build's code names the OSD level words OSD7..OSD9
+    // (+0x2e0..+0x2e8; read per body by src/fw/facts.mjs vscLevels: E122 and E120 do, E118 does not, X)
     vsc: {
       kind: 3, base: 0x9C000000, size: 0x4000, channels: 2, stride: 0x2000, reg_end: 0x314,
       registers: words([0x000, 0x020], [0x030, 0x088], [0x0A4, 0x118], [0x130, 0x130], [0x148, 0x154], [0x160, 0x16C],
         [0x178, 0x184], [0x190, 0x1C8], [0x1FC, 0x27C], [0x288, 0x2B0], [0x2BC, 0x2BC], [0x2C4, 0x2C8], [0x2E0, 0x2E8],
         [0x304, 0x310]),
       regs: { INTEN1: 0x00C, INTST1: 0x014, SYNC2: 0x22C, MONI3: 0x2BC },
-      latch: 0x1C00, latched: [0x038, 0x03C, 0x040, 0x22C], store: [0x600, 0x1C00], line_bits: 11, irq_mask: 0x0001,
+      latch: 0x1C00, latched: [0x038, 0x03C, 0x040, 0x22C], store: [0x600, 0x1C00], line_bits: 11, irq_mask: 0x0011,
+      line_irq: { reg: 0x260, bit: 0x10 },
       levels: UNKNOWN,
     },
     // the OSD engine at E144's base with E144's form: registers 0x00..0x50 only (the census, 0x50a5a5a7..0x50a5b166),

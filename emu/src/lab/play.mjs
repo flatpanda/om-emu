@@ -41,6 +41,7 @@ import { SettingsIds } from './settings_ids.mjs';
 import * as SC from './scene.mjs';
 import { CamApp, CA_MODULE9_READERS } from './camapp.mjs';
 import { AudioOut } from './audio.mjs';
+import { AudioHw } from './audiohw.mjs';
 
 // base64.b64encode(bytes).decode()
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -878,6 +879,15 @@ export class PlaySession extends N.NavSession {
       env = { ...env, machine: { ...(env.machine ?? {}), hdmi: true } };
       k.hdmi = true;
     }
+    // the audio hardware (--audio on, a body with src/fw/models.mjs audio; src/lab/audiohw.mjs): the machine gets the
+    // audio port and the SCA page (src/dev/audio.mjs), the bring-up the sound IC on PER_SIO (S-WM8946), S-AUDCPU2 and
+    // H-AUDSTART
+    const audio = opts.audio ?? 'off';
+    if (!['off', 'on'].includes(audio)) throw new ValueError(`audio ${show(audio)}: off or on`);
+    if (audio === 'on') {
+      if (!MODEL_INFO.audio) throw new ValueError(`--audio on: ${MODEL} has no audio hardware in the lab (src/fw/models.mjs audio)`);
+      env = { ...env, machine: { ...(env.machine ?? {}), audio: true } };
+    }
     // defaults for the keys kw does not give (a key given as null keeps it)
     const setdefault = (key, v) => { if (!Object.hasOwn(k, key)) k[key] = v; };
     setdefault('time', true);
@@ -894,6 +904,8 @@ export class PlaySession extends N.NavSession {
     this.scpu_port = scpuPort();
     this.hdmi_port = hdmi === 'on';
     this.hdmi_plugged = false;
+    this.audio_on = audio === 'on';
+    this.audio_hw = null;          // the audio hardware (audiohw.mjs), from the bring-up on with --audio on
     if (opts.mutant === 'monitor-inverted') set_bit(this.images[MONITOR_OPEN[0]], MONITOR_OPEN[1], MONITOR_OPEN[2], 0);   // the monitor reads closed: touches rejected
     this.pressed = new Set();
     this.shutter_held = new Set();
@@ -967,6 +979,7 @@ export class PlaySession extends N.NavSession {
   }
   end(token, kind, indices, hooks, extra = null) {
     if (this.camapp !== null && this.camapp.started) this.camapp.tick();   // S-MODACK replies, a due END_RECVIEW
+    this.audio_hw?.drain();                                                 // the audio port's PCM to the host
     const rec = super.end(token, kind, indices, hooks, extra);
     if (this.camapp !== null) rec.camapp = this.camapp.take_log();
     rec.n = this.step_no;
@@ -1051,9 +1064,11 @@ export class PlaySession extends N.NavSession {
     if (this.resnand_runs()) this.resnand_bring_up();      // USTART_L's loader, before its lens data cache load
     const resnandSkipped = MODEL_INFO.res_nand && !this.resnand ? 'H-RESINIT not run: the host gives no env.nand, the resource tables stay 0' : null;
     if (this.lens) this.lens.bring_up();
+    if (this.audio_on) { this.audio_hw = new AudioHw(this); this.audio_hw.bring_up(); }
     this.end('play-bring-up', 'bring-up', [], [], { idle_codes: this.idle_codes.map(h8), ...(this.storage && { storage: { ...this.storage.status(), log: this.storage.take_log() } }),
       ...(this.resnand && { resnand: { ...this.resnand.status(), log: this.resnand.take_log() } }), ...(resnandSkipped && { resnand: { skipped: resnandSkipped } }),
-      ...(this.lens && { lens: { ...this.lens.status(), log: this.lens.take_log() } }) });
+      ...(this.lens && { lens: { ...this.lens.status(), log: this.lens.take_log() } }),
+      ...(this.audio_hw && { audio: { ...this.audio_hw.status(), log: this.audio_hw.take_log() } }) });
     // S-CAMAPP: the application starts, creates the GUI (H-GUIBYAPP) and takes it to its screen, on the EVF for an EVF
     // start (S-OUTDISP: its own 131 with lOutput 7); start 'menu' then presses MENU
     this.begin(`${String(this.steps.length).padStart(2, '0')}-S-CAMAPP start`);
@@ -1460,6 +1475,7 @@ export class PlaySession extends N.NavSession {
       throw e;
     }
     if (this.camapp !== null && this.camapp.started) this.camapp.tick();
+    this.audio_hw?.drain();
     this.check_sends(`an idle slice to ${target} ns`);
     this.check_xcpu(`an idle slice to ${target} ns`);
     return out;

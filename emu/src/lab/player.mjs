@@ -303,7 +303,7 @@ export class Player {
   // ---- session lifecycle
   opts() {
     const a = this.a;
-    return { start: a.start, touch: a.touch, us_clock: a.us_clock, bgdraw: !a.no_bgdraw, mutant: a.x_mutant, a15: a.a15 ?? 'auto', hdmi: a.hdmi ?? 'off',
+    return { start: a.start, touch: a.touch, us_clock: a.us_clock, bgdraw: !a.no_bgdraw, mutant: a.x_mutant, a15: a.a15 ?? 'auto', hdmi: a.hdmi ?? 'off', audio: a.audio ?? 'off',
       ...(this.camapp_components ? { camapp_components: true } : {}) };
   }
   open_session() {
@@ -351,6 +351,7 @@ export class Player {
       us_clock: a.us_clock, touch: a.touch, mutant: a.x_mutant, frame_error: this.frame_error, input_error: this.input_error,
       idle_taken, log_tail: this.log.slice(-12), ...(this.camapp_components ? { camapp_components: true } : {}),   // absent when off: the recorded documents
       ...(s?.hdmi_port && s.lab ? { hdmi: s.hdmi_status() } : {}),                                        // --hdmi on only, likewise
+      ...(s?.audio_hw ? { audio: s.audio_hw.status() } : {}),                                           // --audio on only, likewise
       ...(this.live !== null ? { debug: this.live.status() } : {}),                                     // after a debug input only
       ...(this.env.patch ? { patch: this.env.patch } : {}) };                                            // a patch overlay only
     if (s !== null && s.lab !== null) {
@@ -410,6 +411,7 @@ export class Player {
     if (this.session?.power_manager) used.push('H-PWRSTART', ...(this.session.ioexp ? ['S-IOEXP'] : []), 'S-SHUTDOWN', 'S-PWRLOG', 'H-SCPUPOLL');
     if (this.session?.hdmi_port || this.session?.lab?.scpu_link) used.push('H-GIOSLOTS');   // the GIO slots, for the HDMI pin or the link's pin 102
     if (this.session?.hdmi_port) used.push('S-HDMISINK', 'A-HDMI-1');                       // --hdmi on: the HDMI port, its sink
+    if (this.session?.audio_hw) used.push('H-AUDSTART', 'S-AUDCPU2', 'S-WM8946', 'A-AUDIO-1', 'H-AUDTIME');   // --audio on: the audio hardware (audiohw.mjs)
     if (this.session?.storage) used.push('H-FILEINIT', 'H-FILECLBK', 'S-SDHOST', 'S-SDCARD', 'S-FSNAND', ...(this.session.storage.f.album_init !== null ? ['S-ALBM'] : []), 'S-RECFILE');   // the file system native on a card (storage.mjs; S-ALBM where the body has an album manager)
     if (this.session?.resnand) used.push('H-RESINIT', 'S-RESNAND');                       // the resource tables from the host's NAND (resnand.mjs)
     if (this.session?.storage?.powered) used.push('S-SDPOWER');                           // a card supply request answered

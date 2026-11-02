@@ -24,9 +24,10 @@
 // the bridge that puts the SCPU's own firmware behind the link (test_scpum4.mjs scpuM4Units: its clock, the frame log
 // rebuilt from the wire, the byte mover), the lab's audio output and the synthesized shutter sound (test_audio.mjs
 // audioUnits: the events' checks, the queue and rings, publish_audio, the /api/audio route on the router and the
-// browser page, the clicks, S-SHUTTERSND's events), the published site's files and the
-// browser player's download command (test_site.mjs), the patch overlays' rules on synthetic blocks and the --replay
-// check of a patched session (test_patch.mjs patchUnits), and the NAND the resource tables are read from
+// browser page, the clicks, S-SHUTTERSND's events), the audio hardware's units (test_audiohw.mjs audioHwUnits: the
+// audio port's registers, slots and interrupt, the sound IC's register file, the sink), the published site's files
+// and the browser player's download command (test_site.mjs), the patch overlays' rules on synthetic blocks and the
+// --replay check of a patched session (test_patch.mjs patchUnits), and the NAND the resource tables are read from
 // (test_resnand.mjs resnandUnits: the container's blocks at their load addresses, the browser's extract, the sound area's
 // builder, S-RESNAND's layer).
 // bin/test.mjs runs all of these too, with everything else.
@@ -56,6 +57,7 @@ import { stm32Units } from '../test/test_stm32l4.mjs';
 import { scpuM4Units } from '../test/test_scpum4.mjs';
 import { siteTests } from '../test/test_site.mjs';
 import { audioUnits } from '../test/test_audio.mjs';
+import { audioHwUnits } from '../test/test_audiohw.mjs';
 import { patchUnits } from '../test/test_patch.mjs';
 import { resnandUnits } from '../test/test_resnand.mjs';
 
@@ -86,6 +88,7 @@ report('Card panel and session options (web/cardfiles.mjs, the card routes, web/
 report('the published site\'s files and the player\'s download command (bin/site.mjs, src/fw/updater.mjs)', siteTests());
 report('scene stand-in (S-SCENE)', sceneUnits());
 report('audio output and the shutter sound (src/lab/audio.mjs, S-SHUTTERSND)', await audioUnits());
+report('audio port, sound IC and sink (src/dev/audio.mjs, S-WM8946, src/lab/audiohw.mjs)', audioHwUnits());
 report('patch overlays: file shapes, block references, old bytes, overlaps, ranges, digests, a patched replay (src/fw/patch.mjs)', patchUnits());
 report('the resource tables\' NAND: blocks at their load addresses, the extract, the sound area builder, S-RESNAND (src/fw/nand.mjs)', await resnandUnits());
 report('command-line parser', argsTests());

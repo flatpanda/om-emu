@@ -87,6 +87,10 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // the menu, the card out and in; E143 and E146). Every body gives it, one that does not run it with its reason (why);
 // such a body keeps S-CARD's card without a file system (src/lab/camapp.mjs)
 //
+// `audio`: the audio hardware a session with --audio on runs (src/lab/audiohw.mjs, src/dev/audio.mjs; E143): AUD_MAIN's
+// entry and id word, the id words of the CPU 0 tasks it starts and of its CPU 2 tasks [word, name] (the first, its
+// wake-up, posts the reply), OlyTaStCpu and the wake-up's reply. A body without it refuses --audio on
+//
 // `ui_out`: UI_OUT, the module of the camera's lamps (and on E143 its operation sounds), where the lab runs it
 // (src/lab/play.mjs H-UIOUTSTART: E134, whose file layer asks it for the card's access lamp; E143, whose AF beep is a
 // request to it): init, its init's entry, and task, its static task's entry. A body without it does not run UI_OUT
@@ -134,6 +138,15 @@ export const MODELS = {
     // the GIO init 0x50002a20 ends with 0x50002b5d (0x50002a2d), which marks the 325 slots at 0xa32c1f74 free (255);
     // the EDID state byte 0x62a3c8ec, read by 0x501d30f6 (D)
     hdmi: { gio_slots: 0x50002B5D, state: [0x62A3C8EC, 1] },
+    // the audio hardware (--audio on; src/lab/audiohw.mjs H-AUDSTART, S-AUDCPU2): AUD_MAIN's entry 0x50a62a05 and its
+    // id word 0x60042dca (USTART2's OlyTaSt at 0x501e950b); the id words of the CPU 0 tasks it starts, AUD_COPY_DATA
+    // 0x60042dc8 (0x50a62a72) and AUD_WATCH_DOG 0x60042d34 (0x50a62aa0), and of its CPU 2 tasks, AUD_WAKEUP
+    // 0x60043614 (0x50a62a14) and AUD_LEVEL_MONITOR 0x60043602 (0x50a62a90); OlyTaStCpu 0x5002d325, which OlyTaSt
+    // calls for another core's id (0x5002c552); AUD_WAKEUP's reply 0x50a62d75 (the run-time 0x60a83d95 it posts at
+    // 0x50a62d6b); the image stage AUD_MAIN waits for, 6 (0x50024de8(6) at 0x50a62a48); the id word of its queue
+    // AUD_EXEC, 0x600431d4 (its receive at 0x50a62aca; UI_OUT's sends at 0x5014f900), D
+    audio: { main: 0x50A62A05, main_id: 0x60042DCA, starts: [0x60042DC8, 0x60042D34], cpu2: [[0x60043614, 'AUD_WAKEUP'], [0x60043602, 'AUD_LEVEL_MONITOR']],
+      task_start_cpu: 0x5002D325, reply: 0x50A62D75, stage: 6, exec_queue: 0x600431D4 },
     // the module init 0x50048cad calls the device part 0x500493ac at 0x50048cb4, stores 0x6034d9d4 and the run-time
     // 0x6006a221 (= 0x50049201) at 0x50048cbf / 0x50048ccb, starts ACC_MAIN through OlyTaSt (0x50048ce2); the probe
     // 0x50048fd1 opens (6, 107), reads register 0x0f, wants 0x6a and writes 0x10 = 0x10, 0x0d = 1, and 0x50048ead then

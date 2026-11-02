@@ -45,6 +45,7 @@ export const ACTIONS = [
   { opt: '--touch', type: 'str', choices: ['gui', 'driver', 'off'], default: 'gui' },
   { opt: '--us-clock', type: 'str', choices: ['lab', 'reads'], default: 'lab' },
   { opt: '--hdmi', type: 'str', choices: ['off', 'on'], default: 'off' },
+  { opt: '--audio', type: 'str', choices: ['off', 'on'], default: 'off' },
   { opt: '--no-bgdraw', type: 'flag', default: false },
   { opt: '--compose', type: 'str', choices: ['boundary', 'next'], default: 'boundary' },
   { opt: '--port', type: 'int', default: 0 },

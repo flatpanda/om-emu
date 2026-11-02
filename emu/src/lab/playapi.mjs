@@ -203,7 +203,7 @@ export class PlayApi {
   }
   sessionDoc() {
     const a = this.player.a;
-    return { host: null, lens: 'native', nvram: null, card: null, card_size: null, ...(this.opts.session ?? {}), hdmi: a.hdmi ?? 'off', debug_api: !!a.debug_api,
+    return { host: null, lens: 'native', nvram: null, card: null, card_size: null, ...(this.opts.session ?? {}), hdmi: a.hdmi ?? 'off', audio: a.audio ?? 'off', debug_api: !!a.debug_api,
       card_image: !!this.opts.cardImage };
   }
   // GET /api/card, /api/card/file and /api/card/image (the header says what each answers)

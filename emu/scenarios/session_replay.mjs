@@ -163,7 +163,7 @@ export const PLAYER_PARSER = { lang: 'en', device: 'tft', evf_layout: false, a15
   debug_api: false, x_mutant: null, x_trim_keep: null };
 export const PLAYER_EXTRA_KEYS = ['no_wait_on_error'];
 // keys a later option added: a recording made before it lacks them, and the Player takes the option's default
-export const PLAYER_ADDED_KEYS = ['hdmi'];
+export const PLAYER_ADDED_KEYS = ['hdmi', 'audio'];
 export const OUT_PLACEHOLDER = '<out>', REPLAY_PLACEHOLDER = '<replay>';
 export const WALL_PATHS = {
   step: [['seconds']],

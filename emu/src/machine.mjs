@@ -17,6 +17,7 @@ import { Engine } from './dev/engine.mjs';
 import { Stub } from './dev/stub.mjs';
 import { Scpu } from './dev/scpu.mjs';
 import { Hdmi } from './dev/hdmi.mjs';
+import { AudioPort } from './dev/audio.mjs';
 import { LinkPins } from './dev/linkpins.mjs';
 import { LensSsc } from './dev/lensssc.mjs';
 import { DpcTriggers } from './dev/dpc.mjs';
@@ -53,9 +54,10 @@ export function onMachine(fn) {
 // collector, bin/fwmap.mjs cover: its mark(pc) is called with the pc of every instruction the CPU runs, at least once
 // each, and HLE calls its stub(pc, name) for every stand-in that fires; null, the default: none, and nothing changes),
 // hdmi (the HDMI port's transmitter, its hot-plug pin and the sink, src/dev/hdmi.mjs; false, the default: none, and
-// their addresses stay the lab stub's).
+// their addresses stay the lab stub's), audio (the audio serial port and the SCA page, src/dev/audio.mjs; false, the
+// default: none, and their addresses stay the lab stub's).
 export const WATCH_LOG_MAX = 200000;
-export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 1000000, clock = () => performance.now(), mutant = 0, oneInsn = false, keepStderr = false, coverage = null, hdmi = false } = {}) {
+export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 1000000, clock = () => performance.now(), mutant = 0, oneInsn = false, keepStderr = false, coverage = null, hdmi = false, audio = false } = {}) {
   if (dramBytes > mem.DRAM_MAX || dramBytes < 64 << 20) throw new Error(`om-emu: DRAM must be 64..${mem.DRAM_MAX >> 20} MiB`);
   const myGen = ++generation;
   const tCreate = clock();
@@ -136,6 +138,8 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   const engine = new Engine(m, bus, intc);
   const vsc = new Vsc(m, lclock, intc, bus, rom);
   const timer = new Timer(m, lclock, intc);
+  // after the timer, so that the lab clock's sources keep their order (the RUN_TO_EVENT result's bits)
+  const audioPort = audio ? new AudioPort(m, lclock, intc, bus, BOARD.audio) : null;
   const stub = new Stub(m);
   // every set_irq(true) kicks the CPU (S.kick: the next TB start looks, interp.mjs)
   intc.connect((requested) => { S.irqReq = requested; if (requested) S.kick = true; else S.irqWait = false; });
@@ -188,7 +192,7 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   // cpu.mjs limitFault), which the stop then reports.
   const limitStop = () => { const f = limitFault(); trap(f); return f.code === 7 ? { kind: 'limit', code: 7 } : { kind: 'fault', code: f.code }; };
   Object.assign(m, {
-    devices: { intc, timer, engine, vsc, bus, stub, scpu, clock: lclock, ...(hdmiPort ? { hdmi: hdmiPort } : {}), ...(linkPins ? { linkpins: linkPins } : {}),
+    devices: { intc, timer, engine, vsc, bus, stub, scpu, clock: lclock, ...(hdmiPort ? { hdmi: hdmiPort } : {}), ...(audioPort ? { audio: audioPort } : {}), ...(linkPins ? { linkpins: linkPins } : {}),
       ...(lensSsc ? { lens: lensSsc } : {}), ...(dpc ? { dpc } : {}) },
     getRegs() { live(); return getRegs(); },
     // 'p' / 'P' (registers 0..15 as cpu.mjs getRegs / setRegs, and the lab registers 16..19: HI, unit C,

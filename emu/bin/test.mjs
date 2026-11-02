@@ -11,7 +11,8 @@
 // worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
 // (test_camapp.mjs, with the mode dial's positions), the lab's audio output and the synthesized shutter sound at a
-// release, and the AF beep's request to UI_OUT (test_audio.mjs), the SCPU's clock, ports, link pins and sub-CPU model
+// release, and the AF beep's request to UI_OUT (test_audio.mjs), the audio hardware with --audio on and AUD_EXEC's
+// play path on E143 (test_audiohw.mjs), the SCPU's clock, ports, link pins and sub-CPU model
 // (test_scpu.mjs), the publication audit (test_pubaudit.mjs), patch overlays (test_patch.mjs: the rules, --patch on
 // E143 through debug.mjs, play.mjs and nav.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the card and the
@@ -147,6 +148,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`audio output and the shutter sound: units ${au.checks - au.bad.length}/${au.checks}; S-SHUTTERSND in play ${as.checks - as.bad.length}/${as.checks}; the AF beep's request to UI_OUT ${ab.checks - ab.bad.length}/${ab.checks}`);
   [...au.bad, ...as.bad, ...ab.bad].forEach((x) => console.log('  ', x));
   bad += au.bad.length + as.bad.length + ab.bad.length;
+}
+// the audio hardware (--audio on): the port, the sound IC and the sink, then AUD_EXEC's play path natively on E143
+{
+  const { audioHwUnits, audioHwSession } = await import('../test/test_audiohw.mjs');
+  const hu = audioHwUnits(), hs = await audioHwSession();
+  console.log(`audio hardware: units ${hu.checks - hu.bad.length}/${hu.checks}; the play path in play ${hs.checks - hs.bad.length}/${hs.checks}`);
+  [...hu.bad, ...hs.bad].forEach((x) => console.log('  ', x));
+  bad += hu.bad.length + hs.bad.length;
 }
 // the camera application running natively (S-CAMAPP and its stand-ins): S1, S2 and the rec view in a play session
 {

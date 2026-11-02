@@ -1,15 +1,15 @@
 // The board of the model this copy of the lab runs (src/fw/model.mjs): where the on-chip SRAM and the hardware
 // semaphores sit, the interrupt controller's banks, IRQ count and register offsets, the timer block's channels and
-// register layout, the SCPU interface's register offsets, the HDMI port's registers, the flash-library window, the
-// interrupt vectors' page, the MMIO pages the lab's stub allows and the SD host's (sd). The machine (src/machine.mjs), the devices (src/dev/) and the lab's views of
-// them read BOARD.
+// register layout, the SCPU interface's register offsets, the HDMI port's and the audio port's registers, the
+// flash-library window, the interrupt vectors' page, the MMIO pages the lab's stub allows and the SD host's (sd). The
+// machine (src/machine.mjs), the devices (src/dev/) and the lab's views of them read BOARD.
 //
 // A model's board is its family's (FAMILIES, named by its MODELS entry's board.family), then the facts bin/port.mjs
 // reads from its firmware (src/fw/ports.mjs FACTS[code].board, by the rules of src/fw/facts.mjs), then the
 // differences its MODELS entry gives by hand, each with its evidence; the sub-objects (isc, intc, timer, vsc, engine,
-// scpu, hdmi) merge one level deep, so a model can give a single field such as intc.irqs. A fact both read from the
-// firmware and given by hand is refused. A family fact no body has been read for is UNKNOWN: reading it throws, so a
-// device that needs it fails where it first does instead of running on another board's value.
+// scpu, hdmi, audio) merge one level deep, so a model can give a single field such as intc.irqs. A fact both read from
+// the firmware and given by hand is refused. A family fact no body has been read for is UNKNOWN: reading it throws, so
+// a device that needs it fails where it first does instead of running on another board's value.
 import { MODELS } from './models.mjs';
 import { FACTS } from './ports.mjs';
 import { MODEL } from './model.mjs';
@@ -88,6 +88,11 @@ export const FAMILIES = {
     // 0x60026788, record 0x600268f4 + 32 x 124): its group's status and enable words, the pin's type-0 bit and the
     // group's IRQ 109 (D; E146 and E147: the same words, bit and IRQ in their tables, D)
     hdmi: { tx: 0x99C07000, lanes: 0x99C08000, irq: 239, hpd: { level: 0x9B881540, level_bit: 0x10, status: 0x9B883038, enable: 0x9B883178, bit: 0x40, irq: 109 } },
+    // the audio serial port and the SCA (src/dev/audio.mjs, built only with the machine's audio option;
+    // docs/hle-gaps.md 4.5): the port's registers (the audio driver's TX path 0x50aa8ce9..0x50aa9715) and IRQ 43 (0x50aa9515 attaches
+    // 0x50aa90e2 at level 3), the SCA's page (0x50aaee3c, 0x50aaef36) and IRQ 45 (0x50aab67e attaches 0x50aab51d at
+    // level 5). E143's (D); E146's and E147's audio drivers are not read
+    audio: { port: 0x9B700000, irq: 43, sca: 0x9BB00000, sca_irq: 45 },
     // the lens mount (src/dev/lensssc.mjs; docs/hle-gaps.md 4.4.1, 4.4.2): the lens serial controller's registers
     // (every operand of LENS_SSC 0x502c0ea5..0x502c2193) and its IRQ 14 (the open 0x502c0e4e attaches 0x502c12c0 at
     // level 3); the units the lens path writes a few words of: the FCS unit, whose two words the open clears
@@ -211,7 +216,7 @@ export const FAMILIES = {
     scpu_link: UNKNOWN,
     // the HDMI port and the lens mount: not read on this family; the deferred-call triggers per body, read by
     // src/fw/facts.mjs (deferredCalls: the six words 0x9b800030..0x9b800044 and IRQs 29..34 on every body of the family)
-    hdmi: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN,
+    hdmi: UNKNOWN, audio: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN,
     // per body, read by src/fw/facts.mjs (coreByte; resetHead's library and preload rows; vectorPage: 0x6003xxxx on
     // E144, 0x6041xxxx on the 0x60400020 bodies, X; dramSize: 256 MiB on E144, 512 MiB on the 0x60400020 bodies, X)
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,
@@ -323,7 +328,7 @@ export const FAMILIES = {
     scpu: { command: 0xa4, clock: [0x98, 0x9c], ticks: false, storage: [[0x00, 0x94]], events: null },
     // the deferred-call triggers per body, read by src/fw/facts.mjs (deferredCalls: four words 0x9b8000f4..0x9b800100
     // and IRQs 30..33 on all three, in the stub page 0x9b800000 before 2026-10-30)
-    scpu_link: UNKNOWN, hdmi: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN,
+    scpu_link: UNKNOWN, hdmi: UNKNOWN, audio: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN,
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,
     // E143's scratch DRAM holds E122's icons record (the loader's destination 0xa1fa6c00, 0x730a00 bytes decoded: X,
     // src/fw/facts.mjs resLoader and resources.mjs record): the lab's scratch is E144's lab region, which E118, E120

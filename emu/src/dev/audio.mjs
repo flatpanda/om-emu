@@ -9,7 +9,9 @@
 //           set at the port's stop (0x50aa9631), bit 4 the port's enable (0x50aa9578 sets, 0x50aa9631 clears), bit 5 TX
 //           run (the TX start 0x50aa95be sets it; the ISR clears it once TX is disabled), bit 6 RX run (0x50aa95d7)
 //   +0x0c   RX control (bit 2 RX enable, 0x50aa95b0); +0x10..+0x1c the RX slots; +0x20 the RX status and arm word
-//           (0x300 arms both RX slots at the RX open 0x50aa9472, 0x100 / 0x200 one, 0x50aa9699)
+//           (0x300 arms both RX slots at the RX open 0x50aa9472, 0x100 / 0x200 one, 0x50aa9699); its bit 24 is common
+//           to TX and RX: the port enable 0x50aa9578 writes +0x20 = 0x01000000 when +0x00 bit 0 and +0x20 bit 24 read
+//           clear (what it does is ?), kept as storage, read back and written back by the ISR
 //   +0x30   TX control: bit 2 TX enable (0x50aa95a2 sets, 0x50aa95f0 clears), bits 3..6 format bits of the TX
 //           configuration (0x50aa9379)
 //   +0x34 / +0x38  slot A / B address >> 4; +0x3c / +0x40 slot A / B length in bytes (the open 0x50aa9379, the re-arm
@@ -28,24 +30,25 @@
 // A width other than 4, an unaligned access and a debugger write are UNKNOWN (a bus error, printed for a CPU access);
 // so is any use of RX (+0x00 bit 6, an RX configuration or slot write, an RX arm), which stops the session.
 //
-// TX (A-AUDIO-1, I): a start (+0x00 bit 5 rising) with TX enabled plays slot A, then slot B, and so on, each armed
-// slot in turn: the port fetches the slot's bytes from memory as it starts it and plays them for len / (rate x frame
-// bytes) seconds of lab time (768 bytes at 48 kHz, 16-bit stereo: 4 ms); at the slot's end its done bit and bit 5
-// are set (one interrupt per slot), and the other slot, if armed, starts at once. A slot ending with the other not
-// armed is an underrun: the port stops playing (counted; no status bit is set, which bit the hardware sets is ?).
-// Clearing TX run lets the slot playing play to its end, with no interrupt there, and starts no other (I: the
-// firmware's end clears it at the interrupt that starts the sound's last period, X, so a stop at once would cut that
-// period; and the ISR's done bits would write through its cleared TX object, 0x50aa9206). TX
-// enable rising sets bit 4 (I: the start's wait for it comes between the TX open and the TX start). The format is the
-// TX configuration's. The driver copies one of four templates by its format record (0x50aab154: 0x60dbf2b4,
-// 0x60dbf2d4, 0x60dbf2f4, 0x60dbf314; the 24-bit ones set +0x04 bit 23 and +0x30 bit 4, D; what the record's other
-// field selects is ?). The one modelled is the template the play path writes for a 48 kHz 16-bit stereo WAV
-// (0x60dbf2b4: +0x04 bits 20..24 = 0x01, +0x30 bits 3..6 = 0x8; X, test/test_audio.mjs), at 48 kHz, the rate the
-// play path pairs with 16 bits (0x50aac51b..48: a 48000 Hz 16-bit stereo WAV, else 96000 Hz 24-bit; the port's clock
-// words come from the system clock record, 0x50031c73 + 0x10b0, not from the format, D), with 16-bit little-endian
-// samples, left then right (I). Another configuration at a start is UNKNOWN. A slot's
-// bytes go to the lab as a block {t_ns (its start), rate, channels, bytes} that take() hands over (the lab's sink:
-// src/lab/audiohw.mjs); at most BLOCKS_KEPT wait (the oldest go first, counted).
+// TX (A-AUDIO-1, I): a start (+0x00 bit 5 rising) with TX enabled plays slot A, then slot B, and so on, each armed slot
+// in turn: the port fetches the slot's bytes from memory as it starts it and plays them for len / (rate x frame bytes)
+// seconds of lab time (768 bytes at 48 kHz, 16-bit stereo: 4 ms); at the slot's end its done bit and bit 5 are set (one
+// interrupt per slot), and the other slot, if armed, starts at once. A slot ending with the other not armed is an
+// underrun: the port stops playing (counted; no status bit is set, which bit the hardware sets is ?). Clearing TX run
+// lets the slot playing play to its end, with no interrupt there, and starts no other (I: the firmware's end clears it
+// at the interrupt that starts the sound's last period, X, so a stop at once would cut that period; and the ISR's done
+// bits would write through its cleared TX object, 0x50aa9206). A start while that slot still plays cuts it there: the
+// frames it played go to the lab and the new start's slot A plays at once (counted as cut; ?: what the hardware does
+// then is not read, the model only keeps the two sounds from overlapping). TX enable rising sets bit 4 (I: the start's
+// wait for it comes between the TX open and the TX start). The format is the TX configuration's. The driver copies one
+// of four templates by its format record (0x50aab154: 0x60dbf2b4, 0x60dbf2d4, 0x60dbf2f4, 0x60dbf314; the 24-bit ones
+// set +0x04 bit 23 and +0x30 bit 4, D; what the record's other field selects is ?). The one modelled is the template
+// the play path writes for a 48 kHz 16-bit stereo WAV (0x60dbf2b4: +0x04 bits 20..24 = 0x01, +0x30 bits 3..6 = 0x8; X,
+// test/test_audiohw.mjs), at 48 kHz, the rate the play path pairs with 16 bits (0x50aac51b..48: a 48000 Hz 16-bit
+// stereo WAV, else 96000 Hz 24-bit; the port's clock words come from the system clock record, 0x50031c73 + 0x10b0, not
+// from the format, D), with 16-bit little-endian samples, left then right (I). Another configuration at a start is
+// UNKNOWN. A slot's bytes go to the lab as a block {t_ns (its start), rate, channels, bytes} that take() hands over
+// (the lab's sink: src/lab/audiohw.mjs); at most BLOCKS_KEPT wait (the oldest go first, counted).
 //
 // The SCA (0x9bb00000) is the driver's memory-to-memory sample converter and mixer (aud_seq_sca_open / exec strings;
 // its IRQ 45 handler 0x50aab51d). Its page is storage for the init's writes (+0x08 = 0x3e0, +0x3b0 = 1, +0x3b4 = 1,
@@ -62,7 +65,7 @@ export const C_ENABLE = 0x10, C_TX_RUN = 0x20, C_RX_RUN = 0x40, TX_ENABLE = 0x04
 export const S_DONE = [0x01, 0x02], S_READY = 0x10, S_SLOT = 0x20, ARM = [0x400, 0x800], S_BITS = 0x3f;
 // the RX words a TX path never writes (the RX configuration 0x50aa9472 and its slots); +0x20 takes the ISR's write-back
 const RX_WORDS = new Set([RX_CTRL, 0x10, 0x14, 0x18, 0x1c]);
-const RX_ARM = 0x300, RX_FIFO_CLEAR = 0x01000000;      // +0x20: the RX arms, and the bit the port enable writes without bit 0
+const RX_ARM = 0x300, RX_B24 = 0x01000000;      // +0x20: the RX arms, and the bit the port enable writes without +0x00 bit 0
 // the TX formats modelled: the configuration's bits (+0x04 bits 20..24, +0x30 bits 3..6) as the driver's template
 // writes them
 export const TX_FORMATS = [{ name: 's16 stereo 48 kHz', fmt04: 0x01, fmt30: 0x8, rate: 48000, channels: 2, bytes: 2 }];
@@ -75,12 +78,13 @@ export class AudioPort {
     this.cfg = { ...cfg };
     this.reg = new Uint32Array(PORT_SIZE / 4);
     this.txStatus = 0;
+    this.rxWord = 0;                 // +0x20 bit 24, the port enable's (storage)
     this.armed = [null, null];       // per slot: {addr, len} latched at its arm
     this.playing = null;             // the slot playing: {slot, t0, end, bytes}
     this.next = 0;                   // the slot the port plays next
     this.format = null;
     this.blocks = [];                // played slots not taken yet
-    this.stats = { starts: 0, slots: 0, bytes: 0, underruns: 0, overruns: 0, dropped: 0, irqs: 0, readies: 0, stops: 0 };
+    this.stats = { starts: 0, slots: 0, bytes: 0, underruns: 0, overruns: 0, dropped: 0, irqs: 0, readies: 0, stops: 0, cut: 0 };
     this.sca = new Uint32Array(SCA_SIZE / 4);
     addRegion({ base: cfg.port, size: PORT_SIZE, kind: K_MMIO, name: 'om1.audio-port',
       dev: { read: (a, w, dbg) => this.read(a - cfg.port, w, dbg), write: (a, v, w, dbg) => this.write(a - cfg.port, v, w, dbg) } });
@@ -101,7 +105,7 @@ export class AudioPort {
   read(off, size, dbg) {
     if (size !== 4 || (off & 3)) return this.portUnknown('read', off, size, 0, dbg);
     if (off === TX_STATUS) return this.txStatus;
-    if (off === RX_STATUS) return 0;                       // no RX: no RX status
+    if (off === RX_STATUS) return this.rxWord;             // no RX: no RX status, only bit 24's storage
     return this.reg[off >> 2];
   }
   write(off, value, size, dbg) {
@@ -109,8 +113,9 @@ export class AudioPort {
     value >>>= 0;
     if (RX_WORDS.has(off)) return this.portUnknown('write', off, size, value, dbg, ' (RX is not modelled)');
     if (off === RX_STATUS) {
-      if (value & (RX_ARM | RX_FIFO_CLEAR)) return this.portUnknown('write', off, size, value, dbg, ' (RX is not modelled)');
-      return;                                              // the ISR's write-back of an RX status of 0
+      if (value & ~RX_B24) return this.portUnknown('write', off, size, value, dbg, ' (RX is not modelled)');
+      this.rxWord = value;                                 // the port enable's bit 24, or the ISR's write-back of it
+      return;
     }
     if (off === TX_STATUS) {
       if (value & ~(S_BITS | ARM[0] | ARM[1])) return this.portUnknown('write', off, size, value, dbg);
@@ -150,10 +155,24 @@ export class AudioPort {
       this.m.stderr(`om-emu: om1.audio-port UNKNOWN TX start with configuration +0x04 ${hex8(this.reg[TX_FMT_A >> 2])} +0x30 ${hex8(this.reg[TX_CTRL >> 2])}: not a format the model has pc ${hex8(ctx.pc())}`);
       throw BUS;
     }
+    if (this.playing) this.cut(this.clock.t);
     this.format = { ...f };
     this.stats.starts += 1;
     this.next = 0;
     this.play(this.clock.t);
+  }
+  // a start while a stopped sound's last slot still plays: that slot ends at t, the frames played by then kept
+  cut(t) {
+    const p = this.playing, frame = this.format.channels * this.format.bytes;
+    const frames = Math.min(p.bytes.length / frame, Math.floor((t - p.t0) * this.format.rate / 1e9));
+    this.stats.cut += 1;
+    this.playing = null;
+    if (frames > 0) this.keep({ ...p, bytes: p.bytes.subarray(0, frames * frame) });
+  }
+  keep(p) {
+    this.stats.slots += 1; this.stats.bytes += p.bytes.length;
+    if (this.blocks.length >= BLOCKS_KEPT) { this.blocks.shift(); this.stats.dropped += 1; }
+    this.blocks.push({ t_ns: p.t0, rate: this.format.rate, channels: this.format.channels, bytes: p.bytes });
   }
   // TX run cleared: the slot playing plays to its end, without an interrupt, and no other starts
   stop() {
@@ -178,9 +197,7 @@ export class AudioPort {
   // the clock: the playing slot ends at `at`
   slotEnd(at) {
     const p = this.playing;
-    this.stats.slots += 1; this.stats.bytes += p.bytes.length;
-    if (this.blocks.length >= BLOCKS_KEPT) { this.blocks.shift(); this.stats.dropped += 1; }
-    this.blocks.push({ t_ns: p.t0, rate: this.format.rate, channels: this.format.channels, bytes: p.bytes });
+    this.keep(p);
     if (p.last) { this.playing = null; return; }
     if (this.txStatus & S_SLOT) this.stats.overruns += 1;     // the last slot's interrupt not taken yet
     this.txStatus = (this.txStatus | S_DONE[p.slot] | S_SLOT) >>> 0;

@@ -89,9 +89,9 @@ export const FAMILIES = {
     // group's IRQ 109 (D; E146 and E147: the same words, bit and IRQ in their tables, D)
     hdmi: { tx: 0x99C07000, lanes: 0x99C08000, irq: 239, hpd: { level: 0x9B881540, level_bit: 0x10, status: 0x9B883038, enable: 0x9B883178, bit: 0x40, irq: 109 } },
     // the audio serial port and the SCA (src/dev/audio.mjs, built only with the machine's audio option;
-    // docs/hle-gaps.md 4.5): the port's registers (the audio driver's TX path 0x50aa8ce9..0x50aa9715) and IRQ 43 (0x50aa9515 attaches
-    // 0x50aa90e2 at level 3), the SCA's page (0x50aaee3c, 0x50aaef36) and IRQ 45 (0x50aab67e attaches 0x50aab51d at
-    // level 5). E143's (D); E146's and E147's audio drivers are not read
+    // docs/hle-gaps.md 4.5): the port's registers (the audio driver's TX path 0x50aa8ce9..0x50aa9715) and IRQ 43
+    // (0x50aa9515 attaches 0x50aa90e2 at level 3), the SCA's page (0x50aaee3c, 0x50aaef36) and IRQ 45 (0x50aab67e
+    // attaches 0x50aab51d at level 5). E143's (D); E146's and E147's audio drivers are not read
     audio: { port: 0x9B700000, irq: 43, sca: 0x9BB00000, sca_irq: 45 },
     // the lens mount (src/dev/lensssc.mjs; docs/hle-gaps.md 4.4.1, 4.4.2): the lens serial controller's registers
     // (every operand of LENS_SSC 0x502c0ea5..0x502c2193) and its IRQ 14 (the open 0x502c0e4e attaches 0x502c12c0 at

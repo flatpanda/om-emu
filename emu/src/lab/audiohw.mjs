@@ -6,16 +6,17 @@
 //
 // H-AUDSTART: AUD_MAIN (task 0x52, entry 0x50a62a05), which the boot's USTART2 starts with OlyTaSt at 0x501e950b and
 // the lab, ending the init task, does not, is started natively at the play bring-up (act_tsk of its static task). Its
-// entry runs its own init (0x50a628ac, 0x50a62ddc), starts AUD_WAKEUP (0x2017) on CPU 2 and waits for flag 0xf9,
-// waits for the image's stage 6 (0x50024de8(6): 2 ms sleeps until bit 5 of the stages' ready word (0xa32df1f4) is set,
-// which the boot's per-segment step 0x50024eda sets once CPU 2's overlay loader has read the segment), then the
-// driver's init (0x50aabe14: the SCA's 0x50aaee3c, the port's 0x50aa8ce9, which attaches IRQ 43; 0x50aab67e attaches
-// IRQ 45), starts AUD_COPY_DATA (0x51), AUD_LEVEL_MONITOR (0x200e, CPU 2) and AUD_WATCH_DOG (0x07) and waits
-// on its queue AUD_EXEC (0x08) (D: 0x50a62a05..0x50a62aca). The lab allows the two CPU 0 tasks' starts (their id words
+// entry runs its own init (0x50a628ac, 0x50a62ddc), starts AUD_WAKEUP (0x2017) on CPU 2 and waits for flag 0xf9, waits
+// for the image's stage 6 (0x50024de8(6): 2 ms sleeps until bit 5 of the stages' ready word (0xa32df1f4) is set, which
+// the boot's per-segment step 0x50024eda sets once CPU 2's overlay loader has read the segment), then the driver's init
+// (0x50aabe14: the SCA's 0x50aaee3c, the port's 0x50aa8ce9, which attaches IRQ 43; 0x50aab67e attaches IRQ 45), starts
+// AUD_COPY_DATA (0x51), AUD_LEVEL_MONITOR (0x200e, CPU 2) and AUD_WATCH_DOG (0x07) and waits on its queue AUD_EXEC
+// (0x08) (D: 0x50a62a05..0x50a62aca). The lab allows the two CPU 0 tasks' starts (their id words
 // MODEL_INFO.audio.starts) and checks after the start that AUD_MAIN and AUD_COPY_DATA wait. USTART2 calls 0x501553fa
 // just before (0x501e94fd): that is the still-image and power modules' step (0x50167b3a, 0x50858656), not the audio
 // module's, and the lab does not run it (D). The lab's image holds every stage's code (as for S-BOOTSTAGE's stage 1,
-// src/lab/menu.mjs), so H-AUDSTART sets stage 6's bit before AUD_MAIN's start; the later stages stay unset.
+// src/lab/menu.mjs), so H-AUDSTART sets stage 6's bit before AUD_MAIN's start, for the whole session (any other code
+// that reads stage 6 sees it set too); the later stages stay unset.
 //
 // S-AUDCPU2: CPU 2 is not in the lab. AUD_MAIN's starts of its CPU 2 tasks go through OlyTaSt to OlyTaStCpu
 // 0x5002d325 (cpu_conn kind 9, docs/om1-cores-spec.md); the stand-in answers that call, from AUD_MAIN's task and for

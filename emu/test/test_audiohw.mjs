@@ -5,25 +5,34 @@
 //                   one slot of 768 bytes every 4 ms of lab time (48 kHz, 16-bit stereo), each end setting its done
 //                   bit and bit 5; a re-arm keeps the stream going and a slot ending with the other not armed is an
 //                   underrun; an end whose last interrupt was not taken counts an overrun; TX run cleared lets the
-//                   slot playing play out with no interrupt; the played slots come out of take() in order with their
-//                   start times; refused: RX use (+0x00 bit 6, the RX words, an RX arm), a start without the port and
-//                   TX enabled or with another format, an arm of a slot outside memory, another +0x44 bit, a halfword,
-//                   a debugger write, an SCA start; the SCA page's storage; the sound IC's register file (a write
-//                   kept, a read answering it, a read of an unwritten register and another frame refused) and its
-//                   volume registers; the sink: consecutive slots merged into one event of source 'native', a gap
-//                   starting another, nothing emitted (but counted) without an audio output
+//                   slot playing play out with no interrupt; a start while that slot plays cuts it, its frames played
+//                   so far handed over; the played slots come out of take() in order with their start times; +0x20
+//                   bit 24 (the port enable's) kept as storage; refused: RX use (+0x00 bit 6, the RX words, an RX
+//                   arm), a start without the port and TX enabled or with another format, an arm of a slot outside
+//                   memory, another +0x44 bit, a halfword, a debugger write, an SCA start; the SCA page's storage;
+//                   the sound IC's register file (a write kept, a read answering it, a read of an unwritten register
+//                   and another frame refused) and its volume registers; the sink: consecutive slots merged into one
+//                   event of source 'native', a gap starting another, nothing emitted (but counted) without an audio
+//                   output; H-AUDTIME around a stand-in lab: an idle port leaves the lab's time jumps alone, a vsync
+//                   and a sleep jump while it plays deliver one IRQ 43 per slot end with no underrun, and without it
+//                   the same jump underruns
 //   audioHwSession  (E143 firmware) a play session with --audio on: H-AUDSTART (AUD_MAIN and AUD_COPY_DATA waiting,
 //                   both CPU 2 starts answered by S-AUDCPU2, IRQ 43 and 45 attached), the status lists H-AUDSTART,
-//                   S-AUDCPU2, S-WM8946 and A-AUDIO-1; then AUD_EXEC posted directly as UI_OUT's sound handler would
-//                   (no UI_OUT, no sound table): a player opened (0x50aa9715), cmd 0x22 (volume), cmd 0x41 (usr_wave,
-//                   the descriptor 0xa32db094 pointing at a synthesized 48 kHz 16-bit stereo WAV the test writes into
-//                   memory, its data chunk off 128-byte alignment) and cmd 0x45 (play start): aud_seq_play, the play
-//                   start, AUD_COPY_DATA's cmd 1 and 0x80000002 posts, the TX open, flag 0xed's callback and the TX
-//                   start in that order; the prefill and every copy through the memcpy converter 0x50aa7439, the
-//                   gain stage at 0 dB; IRQ 43 every 4 ms of lab time with one cmd 3 per period; the codec's register
-//                   writes; the WAV's samples out of session.audio in order, unchanged, as back-to-back events; the
-//                   port stopped by the firmware at the sound's end with no underrun; and a session without --audio has
-//                   no port and does not list them
+//                   S-AUDCPU2, S-WM8946, A-AUDIO-1 and H-AUDTIME; then AUD_EXEC posted directly as UI_OUT's sound
+//                   handler would (no UI_OUT, no sound table): a player opened (0x50aa9715), cmd 0x22 (volume), cmd
+//                   0x41 (usr_wave, the descriptor 0xa32db094 pointing at a synthesized 48 kHz 16-bit stereo WAV the
+//                   test writes into memory, its data chunk off 128-byte alignment) and cmd 0x45 (play start):
+//                   aud_seq_play, the play start, AUD_COPY_DATA's cmd 1 and 0x80000002 posts, the TX open, flag
+//                   0xed's callback and the TX start in that order; the prefill and every copy through the memcpy
+//                   converter 0x50aa7439, the gain stage at 0 dB; IRQ 43 every 4 ms of lab time with one cmd 3 per
+//                   period; the codec's register writes; the WAV's samples out of session.audio in order, unchanged,
+//                   as back-to-back events; the port stopped by the firmware at the sound's end with no underrun;
+//                   H-AUDTIME's steps taken; the slot left at its end indexes (no post_end); then twice more, each
+//                   after UI_OUT's release of the last (cmd 0x49 and the player's close, as its end handler
+//                   0x5014fb87 sends them): each play's samples once, 25 slots, 24 cmd 3, one stop and the port idle,
+//                   both play slots free after the last release; without a release (the firmware's own) two plays
+//                   hold both slots and a third gets none and plays the ring on with no cmd 3 and no stop; and a
+//                   session without --audio has no port and does not list them
 //   node emu/test/test_audiohw.mjs [--session]
 import { createMachine } from '../src/machine.mjs';
 import { BUS } from '../src/core/mem.mjs';
@@ -88,6 +97,25 @@ function portTests(ok) {
   clock.advance(t4 + 3 * PERIOD_NS, false);
   const t5 = p.take();
   ok(t5.length === 1 && t5[0].t_ns === t4 && rd(TX_STATUS) === 0 && p.playing === null && p.armed[1] !== null, `TX run cleared: the slot playing plays out with no interrupt and slot B does not start (${t5.length} block(s), status 0x${rd(TX_STATUS).toString(16)})`);
+  // a start while a stopped sound's last slot plays cuts that slot there
+  p.take();
+  const a2 = fill(A0, 9);
+  wr(TX_STATUS, 0x3f); wr(TX_ADDR[0], A0 >>> 4); wr(TX_ADDR[1], B0 >>> 4); wr(TX_STATUS, ARM[0] | ARM[1]);
+  const t6 = clock.t;
+  wr(CTRL, 0x31); wr(CTRL, 0x11);
+  clock.advance(t6 + PERIOD_NS / 4, false);
+  wr(TX_ADDR[0], A1 >>> 4); wr(TX_STATUS, ARM[0]);
+  const cut0 = p.stats.cut;
+  wr(CTRL, 0x31);
+  const t7 = p.take();
+  ok(p.stats.cut === cut0 + 1 && t7.length === 1 && t7[0].t_ns === t6 && t7[0].bytes.length === SLOT / 4 && same(t7[0].bytes, a2.subarray(0, SLOT / 4)) && p.playing?.slot === 0 && p.playing.t0 === t6 + PERIOD_NS / 4,
+    `a start while the last slot plays: that slot's frames played so far go out (${t7.map((b) => b.bytes.length)} bytes) and the new slot A starts at once`);
+  wr(CTRL, 0x11); clock.advance(clock.t + PERIOD_NS, false); p.take(); wr(TX_STATUS, 0x3f);
+  // +0x20 bit 24: the port enable's write when +0x00 bit 0 and +0x20 bit 24 read clear (0x50aa9578)
+  wr(0x20, 0x01000000);
+  ok(rd(0x20) === 0x01000000 && !line(), 'the port enable\'s +0x20 = 0x01000000 is kept as storage, read back, and raises nothing');
+  wr(0x20, rd(0x20));
+  ok(rd(0x20) === 0x01000000, 'the ISR\'s write-back of it keeps it');
   // refusals
   for (const [what, fn] of [['+0x00 bit 6 (RX run)', () => wr(CTRL, 0x51)], ['the RX control word', () => wr(0x0c, 4)], ['an RX slot', () => wr(0x10, 1)],
     ['an RX arm', () => wr(0x20, 0x300)], ['another +0x44 bit', () => wr(TX_STATUS, 0x1000)], ['a halfword read', () => rd(TX_CTRL, 2)], ['an unaligned write', () => wr(0x31, 0)],
@@ -131,18 +159,72 @@ function sinkTests(ok) {
   ok(quiet.unplayed === 192 && quiet.events === 0, 'without an audio output nothing is emitted, the frames are counted');
 }
 
+// H-AUDTIME on a machine's port with a lab stand-in around it: the ISR the firmware attaches stands as one that clears
+// the status and re-arms the finished slot
+function timeTests(ok) {
+  const RING = 0xA4100000, PERIODS = 8;
+  const setup = () => {
+    const m = createMachine({ rom: new Uint8Array(0x100), insnLimit: 0, audio: true });
+    const { audio: p, clock } = m.devices, wr = (o, v) => p.write(o, v, 4, false);
+    let idx = 2;
+    const isr = { runs: 0 };
+    const handler = () => {
+      const st = p.read(TX_STATUS, 4, false);
+      wr(TX_STATUS, st & 0x3f);
+      if (!(st & S_SLOT)) return;
+      const slot = st & S_DONE[0] ? 0 : 1;
+      wr(TX_ADDR[slot], (RING + (idx++ % PERIODS) * SLOT) >>> 4); wr(TX_LEN[slot], SLOT); wr(TX_STATUS, ARM[slot]);
+      isr.runs += 1;
+    };
+    const kernel = { add_source: (irq, level) => { kernel.level = level; }, deliver: () => { if (kernel.level?.() ?? p.pending()) handler(); } };
+    const ch = { running: true, line_ns: 16700, length: 1000, frame_start: 0 };
+    const lab = { sim: { m }, kernel, time_log: [], vsync_frames: new Map(), lab_time: () => clock.t, run_to_event: (limit) => clock.advance(limit, true),
+      advance: (ns) => { clock.advance(clock.t + ns, false); kernel.deliver(); }, run_to_frame: () => clock.advance(ch.frame_start + ch.length * ch.line_ns, false),
+      vsc: { channel: () => ch, time: () => clock.t } };
+    wr(TX_IE, 0x38); wr(TX_FMT_A, FMT04); wr(TX_CTRL, FMT30);
+    wr(TX_ADDR[0], RING >>> 4); wr(TX_ADDR[1], (RING + SLOT) >>> 4); wr(TX_LEN[0], SLOT); wr(TX_LEN[1], SLOT); wr(TX_STATUS, ARM[0] | ARM[1]);
+    wr(CTRL, 0x11); wr(TX_CTRL, FMT30 | 4); wr(TX_STATUS, S_READY);
+    return { m, p, clock, lab, ch, isr, start: () => { wr(CTRL, 0x31); ch.frame_start = clock.t; } };
+  };
+  {
+    const { p, lab, isr } = setup(), hw = new AudioHw({ lab, audio: null });
+    hw.time_steps();
+    lab.advance(1000000, 'idle');
+    ok(hw.steps === 0 && isr.runs === 0, 'H-AUDTIME: with the port idle a time jump is the lab\'s own');
+  }
+  {
+    const { p, lab, isr, start } = setup(), hw = new AudioHw({ lab, audio: null });
+    hw.time_steps();
+    start();
+    lab.run_to_frame(0, 'vsync');
+    ok(isr.runs === 4 && p.stats.underruns === 0 && p.playing !== null && hw.steps === 1 && lab.vsync_frames.get(0) === 1,
+      `H-AUDTIME: a 16.7 ms vsync jump while the port plays delivers one IRQ 43 per slot end: ${isr.runs} runs, ${JSON.stringify(p.stats)}`);
+    lab.advance(20000000, 'sleep');
+    ok(isr.runs === 9 && p.stats.underruns === 0 && hw.steps === 2, `H-AUDTIME: a 20 ms sleep's jump too: ${isr.runs} runs, underruns ${p.stats.underruns}`);
+  }
+  {
+    const { p, lab, isr, start } = setup();
+    start();
+    lab.run_to_frame(0, 'vsync');
+    ok(isr.runs === 0 && p.stats.underruns === 1, `without H-AUDTIME the same jump passes two slot ends with no interrupt and the port underruns: ${JSON.stringify(p.stats)}`);
+  }
+}
+
 export function audioHwUnits() {
   const bad = [];
   let checks = 0;
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
-  for (const t of [portTests, chipTests, sinkTests]) {
+  for (const t of [portTests, chipTests, sinkTests, timeTests]) {
     try { t(ok); } catch (e) { bad.push(`${t.name} threw: ${e.stack}`); }
   }
   return { checks, bad };
 }
 
 // ---- the firmware test
-const OPEN = 0x50AA9715, SYNC_SEND = 0x5002E39D, EXEC_QUEUE = 0x600431D4, DESC = 0xA32DB094, DESC_POST = 0xA32DB0F4, OPEN_REC = 0xA32DB164;
+const OPEN = 0x50AA9715, CLOSE = 0x50AA9795, SYNC_SEND = 0x5002E39D, EXEC_QUEUE = 0x600431D4, DESC = 0xA32DB094, DESC_POST = 0xA32DB0F4, OPEN_REC = 0xA32DB164;
+// aud_seq_play's play slots (0x50aac434: two of 172 bytes, +0 in use) and their count (0x50aac591 adds one, cmd 0x49's
+// 0x50aac823 takes one off), D
+const SLOTS = 0x62AF27E0, SLOT_SIZE = 172, SLOTS_USED = 0x62AF27D4;
 const WAV_AT = 0xA4000040;                 // UI_OUT's sound buffer 0xa4000000 (D), the data chunk at +0x6c: not 128-aligned
 const SEQ = { 0x50AAC292: 'aud_seq_play', 0x50AAC5A2: 'play start', 0x50AA8D9B: 'TX open', 0x50AAD28A: 'flag 0xed', 0x50AA8E9A: 'TX start' };
 const DTQ_POST = 0x50A644AE, COPY_MEMCPY = 0x50AA7439, GAIN = 0x50AA8A63, ISR = 0x50AA90E2, PERIOD_CB = 0x50AAD2A0, COPY_CMD3 = 0x50AA79E6;
@@ -181,7 +263,7 @@ export async function audioHwSession() {
   const attached = lab.kernel.events.filter((e) => e[0] === 'irq_attach').map((e) => e[1]);
   ok(attached.includes(`irq=${BOARD.audio.irq} level=3`) && attached.includes(`irq=${BOARD.audio.sca_irq} level=5`), `AUD_MAIN's driver init attaches IRQ 43 at level 3 and IRQ 45 at level 5: ${JSON.stringify(attached.slice(-6))}`);
   const used = pl.stand_ins_in_use();
-  ok(['H-AUDSTART', 'S-AUDCPU2', 'S-WM8946', 'A-AUDIO-1'].every((x) => used.includes(x)), 'the status lists H-AUDSTART, S-AUDCPU2, S-WM8946 and A-AUDIO-1');
+  ok(['H-AUDSTART', 'S-AUDCPU2', 'S-WM8946', 'A-AUDIO-1', 'H-AUDTIME'].every((x) => used.includes(x)), 'the status lists H-AUDSTART, S-AUDCPU2, S-WM8946, A-AUDIO-1 and H-AUDTIME');
   // the path, observed
   const seq = [], posts = [], isr = [], periods = [];
   let copies = 0, gains = new Set(), cmd3 = 0;
@@ -209,7 +291,7 @@ export async function audioHwSession() {
     try { return fn(); } finally { lab.lt.on_idle = prev; }
   };
   s.begin('99-audiohw AUD_EXEC');
-  const player = timed(() => lab.call(OPEN, { a0: OPEN_REC, d0: 300 }, null, null, 200000)).d0 >>> 0;
+  let player = timed(() => lab.call(OPEN, { a0: OPEN_REC, d0: 300 }, null, null, 200000)).d0 >>> 0;
   const q = sim.read(EXEC_QUEUE, 2), qid = q[0] | q[1] << 8;
   const vols = lab.alloc(new Uint8Array(new Int32Array([100, 100, 100, 0]).buffer), 16);
   const send = (cmd, fill) => {
@@ -242,6 +324,51 @@ export async function audioHwSession() {
   const backToBack = native.every((e, i) => !i || e.t_lab_ns === native[i - 1].t_lab_ns + Math.round(native[i - 1].frames * 1e9 / 48000));
   ok(got.length === pcm.length && got.every((v, i) => v === pcm[i]), `the WAV's samples come out of session.audio in order and unchanged: ${got.length} of ${pcm.length}`);
   ok(native.length >= 1 && backToBack && native.every((e) => e.rate === 48000 && e.channels === 2), `as back-to-back 48 kHz stereo events: ${JSON.stringify(native.map((e) => [e.t_lab_ns, e.frames]))}`);
+  ok(hw.status().time_steps > 0, `H-AUDTIME took the lab's time jumps event by event while the port played: ${hw.status().time_steps}`);
+  // the same sound twice more, each after the release UI_OUT sends when a sound's post_end (the descriptor's +68, its
+  // 0x5014fc6e) has called it: its end handler 0x5014fb87, cmd 0x49 (command_play_end) and the player's close
+  // 0x50aa9795. The post_end does not come here: the period callback's end (0x50aad3c4) would run at the IRQ 43 of
+  // the sound's last period, after the stop (D), so the slot stays at its end indexes (-2, the last period)
+  const slotsUsed = () => sim.read(SLOTS_USED, 1)[0], slotFree = () => [0, 1].map((i) => sim.read(SLOTS + i * SLOT_SIZE, 1)[0] === 0);
+  const post = (md) => { md.setUint32(4, player, true); md.setUint32(12, DESC, true); md.setUint32(40, DESC_POST, true); };
+  const release = (tag) => {
+    s.begin(`99-audiohw release ${tag}`);
+    const r = [send(0x49, post), timed(() => lab.call(CLOSE, { a0: OPEN_REC }, null, null, 200000)).d0 | 0];
+    s.settle('audiohw release'); s.end('audiohw release', 'debug', [], []);
+    return r;
+  };
+  const collect = (from) => {
+    const ev = events.slice(from).filter((e) => e.source === NATIVE_SOURCE), out = new Int16Array(ev.reduce((n, e) => n + e.samples.length, 0));
+    let at = 0;
+    for (const e of ev) { out.set(e.samples, at); at += e.samples.length; }
+    return out;
+  };
+  const playOnce = (tag, reopen) => {
+    const e0 = events.length, st0 = { ...port.stats }, c0 = cmd3;
+    s.begin(`99-audiohw play ${tag}`);
+    if (reopen) player = timed(() => lab.call(OPEN, { a0: OPEN_REC, d0: 300 }, null, null, 200000)).d0 >>> 0;
+    const r = [send(0x22, (md) => md.setUint32(48, vols, true)), send(0x41, post), send(0x45, post)];
+    s.settle('audiohw play'); s.end('audiohw play', 'debug', [], []);
+    for (const ms of [60, 60, 100]) { s.idle_slice(lab.lab_time() + ms * 1e6); pl.publish_audio(); }
+    const ps = port.status();
+    return { r, got: collect(e0), slots: ps.slots - st0.slots, stops: ps.stops - st0.stops, under: ps.underruns + ps.overruns - st0.underruns - st0.overruns, cmd3: cmd3 - c0, idle: !ps.running && ps.playing === null };
+  };
+  const ends = sim.read(SLOTS + 132, 2);
+  ok(ends[0] === 0xfe && ends[1] === (FRAMES / 192 - 1) % 8, `after the stop the slot holds its end indexes, its post_end not reached: ${Buffer.from(ends).toString('hex')}`);
+  for (const k of [2, 3]) {
+    const rel = release(k - 1), p = playOnce(k, true);
+    ok(rel.every((x) => x >= 0) && p.r.every((x) => x === 0), `play ${k}: the release answered ${JSON.stringify(rel)}, the player reopened and the three sends answered ${JSON.stringify(p.r)}`);
+    ok(p.got.length === pcm.length && p.got.every((v, i) => v === pcm[i]), `play ${k}: the WAV's samples once, unchanged: ${p.got.length} of ${pcm.length}`);
+    ok(p.slots === FRAMES / 192 && p.cmd3 === FRAMES / 192 - 1 && p.stops === 1 && p.under === 0 && p.idle, `play ${k}: ${p.slots} slots, ${p.cmd3} cmd 3, one stop, no underrun, the port idle after: ${JSON.stringify(port.status())}`);
+  }
+  const rel = release(3);
+  ok(rel.every((x) => x >= 0) && slotsUsed() === 0 && slotFree().every(Boolean), `the last release frees both play slots: count ${slotsUsed()}, free ${JSON.stringify(slotFree())}`);
+  // without the release (the firmware's own, X): each cmd 0x41 takes a slot, and the third finds both held;
+  // aud_seq_play then returns 0 with no slot (0x50aac463), the play start runs the port anyway and nothing ends it
+  const leak = [playOnce('leak 1', true), playOnce('leak 2', false)];
+  ok(leak.every((p) => p.stops === 1 && p.got.length === pcm.length) && slotsUsed() === 2 && slotFree().every((f) => !f), `without a release two plays hold both slots: count ${slotsUsed()}`);
+  const third = playOnce('leak 3', false);
+  ok(third.cmd3 === 0 && third.stops === 0 && !third.idle && third.got.length > pcm.length, `the third finds no slot: no cmd 3, no stop, the port plays the ring on (${third.got.length / 2} frames)`);
   ok(pl.phase === 'running', `the session runs on: ${pl.phase} ${pl.error?.message ?? ''}`);
   pl.close_session();
   // without --audio

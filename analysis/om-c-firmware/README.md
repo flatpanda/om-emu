@@ -344,8 +344,10 @@ survey.
 
 ## 8. Open questions
 
-- Where the operation sounds live: flash `0x4e420000` is outside the updater, in a window the flash guard leaves
-  writable (4); what the play method's id `0x10501` lookup and vtable +68 query return; why IOlyApiShooting asks at S2.
+- What the OM-1's own operation sounds are: the type-2 resource area at NAND `0x4e420000` is outside the updater, in a
+  window the flash guard leaves writable (4), and the lab plays a lab-made area in its place (2026-11-02,
+  `docs/hle-gaps.md` 4.5); what the play method's id `0x10501` lookup returns; what the vtable +68 query (isThroughSound,
+  the fwmap labels) answers at S2 and why IOlyApiShooting asks it there.
 - Whether stock E143 uses settings 1021 and 827 at all.
 - A real ring lens's ID bytes, its flags byte and its answer to `81 10`; what record +119168 and +9444 bits mean;
   whether OM lenses ignore p2 bit 0 (om-c's 2-bytes-short path suggests so); the ring value's unit.

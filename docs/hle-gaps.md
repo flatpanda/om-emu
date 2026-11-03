@@ -138,7 +138,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **AF and lens** (4.4) | S: S-LENS (record values I) on the other bodies and selectable on E143, where the lens runs natively down to its serial controller by default (S-LENSMCU, 4.4.2); S-RELSEQ's END_FOCUS, S-AFOSD's fixed frame; X: no request reaches FCS, BC or TAKE_EXEC | lens: the serial device `0x9b980000` (IRQ 14) and the edge unit `0x9b883e40` (IRQ 60); AF: the module seam TAKE_FOCUS `0x5d` / FCS_EXEC `0x1b` | TakeReady (TAKE), task starts and the lens inits, sensor VD for LENS_SYNC, CPU 1 (FCS_IP, flag 0x92) and CPU 3 (MDET) for native FCS, IRQs anywhere, time | 510,058 / 504,680 with IS: FCS 372k (about 100k CPU-1-only), lens about 84k | lens 2-3 weeks; AF 2-3 weeks once TakeReady runs; native FCS months | the lens identified by the firmware, zoom and MF, the firmware's AF decision and frames |
 | **Body IS (BC)** (4.4) | 0: no BC, no gyro, no IS state | the module seam BC_EXEC `0x09`; BC native only with a capture of the IS link | TAKE (TAKE_FUNC sends to BC_EXEC), the IS controller's serial channel (?) | 34-42k / about 34k (inside AF / lens / IS) | about 1 week at BC_EXEC | IS mode and indicator, IS EXIF |
 | **Subject detection** (4.12) | 0 | surveyed 2026-10-25 (`docs/om1-subject-spec.md`): S1 DISP_FRAME's inputs (MDET's frame table and UP_FACE), S2 MDET's results to FCS, S3 the DML engine `0x9c180000` (IRQ 285) | CPU 3, the DML, PDT / TRC and face engines, the `0x800f` model load, take_mov's YC frames, native FCS for S2 | 84,500 / 81,771 keyed; about 127k with the SDET and FACE units | S1 about 1 week; S3 4-6 weeks after CPU 3; a reproduced network months | subject and face frames, C-AF tracking |
-| **Movie and audio** (4.5) | S: S-RELSEQ's movie callbacks, S-CARD's movie time, S-CPU2's zero level snapshot, S-MODACK for AUD_EXEC; N with `--audio on` (E143): AUD_MAIN and AUD_EXEC, the audio port's TX, IRQ 43 / 45, S-WM8946 (4.5) | S3 TAKE_FUNC commands 30 / 31 / 68 / 69, S4 the mvr IF (CPU 2), S5 AUD_LEVEL_MONITOR, S6 a host AVM writing a MOV through the firmware's DFS calls, S7 AUD_EXEC | TAKE (commands 30 / 31 / 68 / 69 wait on CPU 2's MOV_COMMAND, SDET_EXEC and WB_MOV, 4.1.1), CPU 2 (MVR, audio level), sensor, storage, EXP_MOVIE / FCS_MOVIE | 134,137 / 124,319 | 10-15 weeks (stages A-C) | a playable .MOV on the card, the firmware's recording sequence, audio meters, beeps |
+| **Movie and audio** (4.5) | S: S-RELSEQ's movie callbacks, S-CARD's movie time, S-CPU2's zero level snapshot, S-MODACK for AUD_EXEC with `--audio off`; N with the audio hardware (`--audio auto`, the default on E143): AUD_MAIN and AUD_EXEC, the audio port's TX, IRQ 43 / 45, S-WM8946, UI_OUT and the AF beep's request from the GUI (S-AFLOCK), its sound from S-SOUNDRES's lab-made area (4.5) | S3 TAKE_FUNC commands 30 / 31 / 68 / 69, S4 the mvr IF (CPU 2), S5 AUD_LEVEL_MONITOR, S6 a host AVM writing a MOV through the firmware's DFS calls, S7 AUD_EXEC | TAKE (commands 30 / 31 / 68 / 69 wait on CPU 2's MOV_COMMAND, SDET_EXEC and WB_MOV, 4.1.1), CPU 2 (MVR, audio level), sensor, storage, EXP_MOVIE / FCS_MOVIE | 134,137 / 124,319 | 10-15 weeks (stages A-C) | a playable .MOV on the card, the firmware's recording sequence, audio meters; the AF beep plays since 2026-11-02 (the lab's sound, not the camera's) |
 | **AV codec back end** (4.5) | 0 | none for HLE: seam S6 bypasses it | CPU 1; the codec engines; IRQs 303-306 | 416,471 / 411,438 (overlay segment 8, CPU 1) | ?: native needs register-level codec models, no documentation | native movie encode and playback below the HLS (I) |
 | **CPUs 1-3 and inter-core** (4.6) | S: K-OTHERCPU, K-BOOTSYNC, K-IPI, no start barrier; S-CPU2 (one post), S-CPU3, S-DISPFRAME on CPU 0; any other doorbell is an error | run CPUs 1-3 natively on one bus; per-core `0x8000` page, INTC bank n to core n, `+0x808/+0x80c` IRQ 324, `+0x810/+0x814` IRQ 325, `+0x800/+0x804` ISC IRQ 323, ticks 139..141. A53: "off" or ISC node 4 | a machine refactor (per-core CPU state), a per-core kernel lab, flash reads for CPU 2's loader and CPU 3's boot jobs, ROADMAP phases 3-4 | 5,422 keyed; 441,542 reachable only from CPU 1-3 tasks (a lower bound) | 5-7 weeks for the cores | the histogram, a native DISP_FRAME, cross-core owners (AUD_MAIN, AVM) can start; three stand-ins and four kernel stand-ins retire |
 | **SCPU, power, clock, on-board sensors, persistence** (4.7) | N: PER_SCPU, its start and its transactions, over the link to S-SCPUDEV, the sub-CPU's transport-level model (since 2026-10-23: `0x85`, `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1; S-SIO2, H-SCPUSTART); S: the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / opt-in S-NVRAM; N: the ACC module init, ACC_MAIN, PER_SLOPE, the level gauge and Level Adjust with the accelerometer at its sample cache (since 2026-10-23, 4.7.3; H-ACCINIT, S-ACCREG, S-ACCSAMPLE, H-SLOPEINIT) | the accelerometer at the PER_SIO transfer and its data-ready pin (ACC_SENS_MAIN native); PER_ROTATE; S-NVRAM's NAND seam as the default | lab time; the UI_IN, SCPU and PER_SIO inits, the GIO init for the data-ready pin; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, rotation, eye sensor (Level Adjust and the level gauge in, 4.7.3) |
@@ -735,44 +735,141 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   AUD_WATCH_DOG, REC_SOUND, PLAY_SOUND, AVM_*_0. CPU 1: AVM_CPUSW, AVM_FILE, AVMDL_THREAD00..20, the AVPI VDE / VEN
   BACD tasks 0x1041..0x1050, MASTER_0, CORE_0..3, CABAC_0..3. CPU 2: MVR_MAIN 0x2002, MVR_MOVIE, MVR_IMG*, MVR_CALC,
   MVR_ENC, MVR_WIFI, MVR_RECVIEW, MVR_EXEC, EXP_MOVIE2/3, WB_MOV, SDET, AUD_LEVEL_MONITOR, AUD_WAKEUP, MOVP_AUDIO_SUB.
-- **MMIO and IRQs (D unless tagged; 2026-11-02):** the audio driver gap@0x50aa6fe0 drives two devices and the sound
-  IC. `0x9b700000..0x9b70011c` is the audio serial (I2S-like) port: double-buffered DMA from memory to the sound IC,
-  TX and RX, IRQ 43 at level 3 (attached by `0x50aa9515`: `0x50053f76(43, 3, 0x60aca102 = 0x50aa90e2)`, with the
-  interrupt enables +0x2c = 0xf and +0x50 = 0x38). `0x9bb00000..0x9bb003c0` is the SCA, a memory-to-memory sample
-  converter and mixer (aud_seq_sca_open / exec), IRQ 45 at level 5 (handler `0x50aab51d`, attached at `0x50aab67e`);
-  the driver uses it for a source and destination both 128-byte aligned (the converter table `0x6035e59c`) and to mix
-  two players (`0x50aa7b73`), and it carries no PCM to the sound IC. Both IRQs go through the attach wrapper
-  `0x50053f76` (X: both attached natively in a session with `--audio on`); the earlier note here that no audio IRQ
-  attach was found was wrong. The sound IC is a Wolfson WM8946 (the string "dev_ctrl_wm8946_sub_adj_calc_adcvol") on
+- **MMIO and IRQs (D unless tagged; 2026-11-02):** the audio driver gap@0x50aa6fe0 drives two devices and the sound IC.
+  `0x9b700000..0x9b70011c` is the audio serial (I2S-like) port: double-buffered DMA from memory to the sound IC, TX and
+  RX, IRQ 43 at level 3 (attached by `0x50aa9515`: `0x50053f76(43, 3, 0x60aca102 = 0x50aa90e2)`, with the interrupt
+  enables +0x2c = 0xf and +0x50 = 0x38). `0x9bb00000..0x9bb003c0` is the SCA, a memory-to-memory sample converter and
+  mixer (aud_seq_sca_open / exec), IRQ 45 at level 5 (handler `0x50aab51d`, attached at `0x50aab67e`); the driver uses
+  it for a source and destination both 128-byte aligned (the converter table `0x6035e59c`) and to mix two players
+  (`0x50aa7b73`), and it carries no PCM to the sound IC. Both IRQs go through the attach wrapper `0x50053f76` (X: both
+  attached natively in a session with the audio hardware, `--audio auto` on E143); the earlier note here that no audio
+  IRQ attach was found was wrong. The sound IC is a Wolfson WM8946 (the string "dev_ctrl_wm8946_sub_adj_calc_adcvol") on
   PER_SIO channel 14: exec_data `0x50a632c5` sends 4-byte frames {address, data} at 4 MHz, a read 2 bytes out and 2 in
-  (bit 7 of the first set), chip select GPIO 139 / 140, with register parameter lists by name (power-on, 48k / 96k,
-  mic, limiter, wind cut, headphone and speaker volume; executor `0x50a63ecc`, a shadow at `0xa33dcd6c`); the output
-  volume is the codec's (output_vol_list `0x60dc5298`: registers 0x0a, 0x0b, 0x28, 0x29, 0x47). Pin `0x9b882f40` (0x4440
-  or 0x33333 at the play start). The codec engines are three identical banks `0x99400000`, `0x99410000`, `0x99420000`
-  (137 references each) and `0x99500000`, with IRQs 303-306 (level 5, CPU 1 only, handlers in segment 8).
-  `0x9a000000` is not a device (section 9 item 5).
-- **Operation sounds (D unless tagged; 2026-11-02, the leads from azqeurio/om-c-firmware's "db firmware" 0.3.2, whose
-  OM-1 1.9 tables address this image, each checked here):** the sound API's singleton `0x50b56569` returns the object
-  `0x62afee0c` (vtable `0x60e3881c`): slot 0 play `0x50b569a4` (call entry `0x50b569a9`; d0 the sound id, d1 the
-  volume, 0 plays nothing, a1, two stack words) leads to OlyHfwOpeSndCtl::playTarget `0x50b758b4` and api_sound.c
-  `0x5041ee45`, +4 stops, +68 asks isThroughSound. The sound data is UI_OUT's (task `0x26`, `0x5014f56c`; api_sound
-  sends playTarget's request as a 44-byte message of kind 2 to UI_OUT's queue `0x70`, the halfword `0x600432a4`, with
-  no timeout, `0x5041f01d..0x5041f036` -> `0x503ebe46` -> OlyQeWr `0x5002c151`, so a full queue blocks the sender):
-  its play request `0x5014f7e0` starts the audio driver once (`0x50aa9715`)
-  and copies the sound out of resource type 2 (size from res_size `0x501a976d(2, id)`, table `(0xa32db180)`, copy
-  `0x501a921f`). The table loader `0x501a8ca0`, called only by USTART_L, reads each type's index from a flash head:
-  types 0 / 1 `0x41ec0000` (blk02000000), 3 `0x4e1e0000` (blk0e360000), `0x8000` `0x458c0000` (blk05a00000) and 2
-  `0x4e420000`, where no block of the `.BIN` loads (the images block ends at `0x4e3e0000`): the update file does not
-  carry the sounds (I), which fits finding no RIFF data in it. The driver's converter table `0x6035e50c` (a source or
-  destination not 128-byte aligned) has a plain copy entry `0x50aa7439`, which calls the flash library's memcpy at
-  `0x50aa7445`, the call om-c redirects for its sounds (I, its notes). That memcpy is run-time `0x5000290a` (the lab's
-  notation `0x3ffe18ea`, `emu/src/fw/place.mjs`): the general copy of thousands of call sites, not an audio converter
-  (om-c's notes name it as if it were). In the lab (X, a probe of S1 then S2, before
-  H-RESINIT, H-UIOUTSTART and S-AFLOCK): the singleton runs only at S2, twice from IOlyApiShooting (`0x51059373`, `0x51059919`, via
-  `0x5108c19f`), which then asks +68; play, UI_OUT and the loader never run, both MMIO blocks above are never accessed
-  and the four resource tables read 0 (since H-RESINIT, below, the loader runs and the tables are set; the bullet after it has the AF beep's request). om-c's
-  electronic shutter sound calls play from hooks on CapBuf_TakeBuff's calls of `0x50b8467c` (a buffer list append)
-  and `0x50b87d56`, which S-RELSEQ's stand-in never reaches.
+  (bit 7 of the first set), chip select GPIO 139 / 140, with register parameter lists by name (power-on, 48k / 96k, mic,
+  limiter, wind cut, headphone and speaker volume; executor `0x50a63ecc`, a shadow at `0xa33dcd6c`); the output volume
+  is the codec's (output_vol_list `0x60dc5298`: registers 0x0a, 0x0b, 0x28, 0x29, 0x47). Pin `0x9b882f40` (0x4440 or
+  0x33333 at the play start). The codec engines are three identical banks `0x99400000`, `0x99410000`, `0x99420000` (137
+  references each) and `0x99500000`, with IRQs 303-306 (level 5, CPU 1 only, handlers in segment 8). `0x9a000000` is not
+  a device (section 9 item 5).
+- **Operation sounds: the AF beep from S1 to the page (E143, 2026-11-02; D unless tagged).** The leads came from
+  azqeurio/om-c-firmware's "db firmware" 0.3.2, whose OM-1 1.9 tables address this image, each checked here. In the
+  lab the whole chain below runs natively but for the stand-ins named at each step; X for each step is
+  `emu/test/test_audio.mjs` afBeepSession (two half presses, the beep Off, S2) unless another test is named.
+  1. *The request.* The GUI's SubAppMDLFocus::changedFocus `0x5105260c` (dispatched on CBS_END_FOCUS's GUI event
+     `0x03000030`: the GUI's event rows {event, 1, 1, handler} at `0x512c955c` and on) plays through playAfSound
+     `0x51052444` when getCondition (OlyHfwOpeShoot `0x50ad8b37`) answers isFocus 1, indicator 1 and no rec view
+     (`0x5105268b..0x51052707`). playAfSound plays while the GUI's afSound flag `0x62b2e0c4` is 0 and settings id 18 is
+     not (`0x5104e12d(18)`; the Setup item "8", menu mode 1037, writes 18 with its own value through the settings DB's
+     write, X by the menu and by SET:1037), calls the sound singleton's play (`0x50b56569` -> object `0x62afee0c`,
+     vtable `0x60e3881c`, slot 0 `0x50b569a4`, call entry `0x50b569a9`: d0 the sound id, d1 the volume, 0 plays nothing,
+     a1, two stack words) with sound 0 and the setting's 60, and sets afSound. The facade calls
+     OlyHfwOpeSndCtl::playTarget `0x50b758b4`, which refuses sound 0 ("NOT READY", `0x50b75962`) unless the shared take
+     status's word 0 has one of the bits 2, 4, 8 or `0x1000000` (and word 1 not `0x10000004`, `0x50b75939..48`), then
+     api_sound.c `0x5041ee45`, which sends a 44-byte message of kind 2 to UI_OUT's queue `0x70` (the halfword
+     `0x600432a4`) with no timeout (`0x5041f01d..0x5041f036` -> `0x503ebe46` -> OlyQeWr `0x5002c151`, so a full queue
+     blocks the sender). In the lab S-AFLOCK writes what the shooting sequence, the take capability and the AF module
+     would hold at the AF lock (the comment at `TAKE_STATUS_SET` in `emu/src/lab/camapp.mjs`): S1 sets the still
+     sequence's READY bit 2 in the take status's word 0, END_FOCUS(OK) its READY_FINISH bit 4 (the sequence parts' READY
+     and READY_FINISH entries call the setters of 2 and 4, `0x50cd926e`, `0x50cd92e4`) and isFocus `0x62af6e28`, and the
+     AF module's state getter `0x509b06f6` answers indicator 1 (that its code 1 is S-AFOSD's in-focus code is I). *The
+     re-arm:* the shooting reactive posts CBS_AF_LOCK (155) with 1 or 0 by its event's field (`0x50af4b73..0x50af4ba6`),
+     which the application's callback switch (`0x5108226d`, case `0x510824af`) turns into GUI event `0x0300002c` (1) or
+     `0x0300002d` (0); `0x0300002d`'s rows name clearAfSound `0x5105241b` and `0x5105254f`, which calls it, and
+     clearAfSound clears afSound when `0x51069d6d` answers 0 (`0x5105241e..0x51052429`; X: it does at S1 up). S-AFLOCK
+     posts CBS_AF_LOCK(1) after END_FOCUS(OK) and CBS_AF_LOCK(0) at S1 up: so each half press in focus beeps once (X:
+     without the 0 the second half press was silent); that the camera's sequence posts it at the lock and its release is
+     I (the reactive's event is not traced to the AF module). A release's END_EXPOSE also clears the flag (its handler
+     `0x51065dd7` calls initAfSound `0x510523ff`). Without S-AFLOCK, and with the beep Off, nothing is requested (X). No
+     other input of the lab (menu navigation and dials, OK and the Super Control Panel, the arrows, a release, playback)
+     reaches the facade's play or api_sound (X, the round's first probe); the menu cursor's Cursor_2CNL_Actuator
+     `0x5116418e`, the facade's other GUI caller, was not entered. Before S-AFLOCK (X, a probe of S1 then S2) the
+     singleton ran only at S2, twice from IOlyApiShooting (`0x51059373`, `0x51059919`, via `0x5108c19f`), which then
+     asks +68 (isThroughSound); +4 stops. om-c's electronic shutter sound calls play from hooks on CapBuf_TakeBuff's
+     calls of `0x50b8467c` (a buffer list append) and `0x50b87d56`, which S-RELSEQ's stand-in never reaches.
+  2. *UI_OUT* (task 38, entry `0x5014f56c`; H-UIOUTSTART, MODELS `ui_out`: its init `0x5014f4e9`, which the boot
+     calls after checkpoint "2_9" at `0x501e8f31`, then act_tsk; UI_OUT_EXEC `0x71` leaves S-MODACK's queues) takes the
+     message on flag `0x57` pattern 0x2 and gives kind 2 to `0x5014f7e0`, which for op 0 (play): reads setting `0x5051`
+     (`0x5014f880`; 0 in the lab, X) and, at 0, first releases a sound still held (`0x5014fbeb`: with the busy byte
+     `(0xa32db0fc)` set, command_play_stop 0x46, command_play_end 0x49 and the player's close `0x50aa9795`); opens a
+     player once (`0x50aa9715(0xa32db164, 300)`, busy 1); sends AUD_EXEC (queue 8, the halfword `0x600431d4`,
+     synchronously through `0x5002e39d`) cmd 0x22 (volume); calls `0x50aa9969(kind)`; sizes the sound with res_size
+     `0x501a976d(2, id)` and copies it with res_read `0x501a921f(2, id, 0xa4000000, size + 1024)` (to `0xb5a0b780`
+     above 512 KiB), the descriptor's {pointer, size} to `0xa32db098` / `0xa32db09c` (om-c's hook replaces this lookup,
+     `0x5014f927` / `0x5014f98a`); then cmd 0x41 with the usr_wave descriptor `0xa32db094` {+0 wav_mode, +4 io_adr, +8
+     io_length, +12 play_count, +20 max_duration, +24 time_scale, +28 Channel, +30 BitsPerSample, +44 post_next_bank,
+     +48 post_next_adr, +68 post_end, +72 cb_HRS, +76 cb_AIR: the names of aud_seq_play's log} and cmd 0x45. The
+     descriptor's post_end (`0x5014fc6e`, set by the init at `0x5014f78d`) posts UI_OUT's flag and sets busy 2; on it
+     UI_OUT's end handler `0x5014fb87` sends 0x49 and closes the player (busy 0). X: once per half press, the busy
+     byte 0 after each.
+  3. *The sound data* (resource type 2, RES_MODE_SOUND; H-RESINIT, S-RESNAND, S-SOUNDRES; the next bullet has the
+     tables): the index at NAND `0x4e420000` is factory data that no update carries (D: no block of the `.BIN` loads
+     there; the TG-7's update is the only one of the 33 that ships such an area, block flags 0x0103, X). With the
+     audio hardware and no host image the lab serves S-SOUNDRES's lab-made area there (`emu/src/lab/soundres.mjs`): the
+     TG-7's format, one entry, id 0, the AF confirmation, two 52 ms bursts of 2.7 kHz 24 ms apart at a quarter of full
+     scale, 48 kHz 16-bit stereo, synthesized by the lab and named so in its INFO chunk. The TG-7's AF sound carries
+     the INFO key IKEY "PRM_AUD_AFOK_VOL" (X), and the lab's beep the same key, because the driver plays a sound by its
+     key (item 4). Ids 1..5, the background music the aud_debug command `0x51a1006f` reads, are left out (the index
+     zero-padded after entry 0, as the TG-7's is, X); no lab input asks for them. What a listener hears at S1 is
+     therefore the lab's beep, not the camera's: the OM-1's own sounds are not in the update.
+  4. *The driver* (`--audio auto` or `on`, E143; `emu/src/lab/audiohw.mjs`, `emu/src/dev/audio.mjs`,
+     `emu/src/lab/wm8946.mjs`). AUD_MAIN (task 0x52, entry `0x50a62a05`) runs as USTART2 starts it (`0x501e950b`;
+     H-AUDSTART: act_tsk, its stage-6 wait answered by the stage bit), S-AUDCPU2 answers its CPU 2 starts of AUD_WAKEUP
+     0x2017 and AUD_LEVEL_MONITOR 0x200e and posts AUD_WAKEUP's reply (`0x50035afd(0, 0x60a83d95, 0)`, flag 0xf9), and
+     its driver init attaches IRQ 43 and 45 and starts AUD_COPY_DATA 0x51 and AUD_WATCH_DOG 0x07 itself; S-WM8946 serves
+     the sound IC on PER_SIO channel 14 as a register file. AUD_EXEC's dispatch (tables `0x60dbebf0` / `0x60dbeaf0`)
+     sends 0x41 / 0x45 / 0x46 / 0x49 to `0x50aac1e1`: aud_seq_play `0x50aac292` takes one of two play slots
+     (`0x62af27e0`, 172 bytes each, their count `0x62af27d4`), parses the WAV (`0x50aac8ef`) and asks
+     aud_ikey_to_wavetype_is_short_sound `0x50aaa824` for its IKEY: the driver's table `0x60dbf174` holds 18 {name,
+     flag} pairs, PRM_AUD_SHUT1..3, CSHUT1..3, EFFECT1..3, EVENT1, ERASE1, SELF, AFOK, BGM, WARNING, START1, MOVRECS and
+     ADJVOICE (each `PRM_AUD_<name>_VOL`), with flag 0 for CSHUT1..3, EVENT1, ERASE1, AFOK and MOVRECS; a sound whose
+     key has flag 0 plays directly (`0x62af27d6` = 1, `0x50aacb0b..0x50aacb14`), any other (or none, flag 1) through the
+     copy task. *The copy task's play* (X, `emu/test/test_audiohw.mjs`, a WAV without a key posted directly):
+     command_play_start `0x50aac5a2` posts AUD_COPY_DATA cmd 1 and 0x80000002, the prefill of 8 periods of 768 bytes
+     into the ring `0xa403b800`, each through the memcpy converter `0x50aa7439` (a source or destination off 128-byte
+     alignment; the converter table `0x6035e50c`) and then the gain stage `0x50aa8a63` (0 dB at volume 100), the sound
+     IC's list, the TX open `0x50aa8d9b` (the template `0x60dbf2b4` copied by `0x50aab154`), IRQ 43 with status bit 4
+     and the TX-ready callback `0x50aad28a` (flag 0xed), the TX start, then IRQ 43 every 4 ms of lab time, each
+     re-arming the finished slot (`0x50aa8ef3`) and posting AUD_COPY_DATA cmd 3, until the period callback `0x50aad2a0`
+     disables TX at the sound's last period; the samples come out unchanged. `0x50aa7439` calls the flash library's
+     memcpy at `0x50aa7445`, the call om-c redirects for its sounds (I, its notes): that memcpy, run-time `0x5000290a`
+     (the lab's notation `0x3ffe18ea`, `emu/src/fw/place.mjs`), is the general copy of thousands of call sites, not an
+     audio converter (om-c's notes name it as if it were). *The direct play* (the AF sound's): the ring set-up gives the
+     TX object no ring (+32 = 0) and the port's slot A the WAV's data in place, slot B address 0 and length 0
+     (`0x50aad250..0x50aad263`; the template `0x60dbf2d4`, chosen by the format record's +0 = 2 at `0x50aab1ba`, which
+     writes +0x30 bits 3..6 = 0 where the copy task's writes 0x8, X), with no copy task, so no software gain stage. The
+     one IRQ 43 at slot A's end runs the period callback once, which for 0x62af27d6 = 1 takes the end path at once
+     (`0x50aad2f2..0x50aad408`: the post_end through `0x50aad55d` and the end flag `0x600431a6` bit 1 << player), and
+     command_play_end (0x49) then waits for the TX done callback `0x50aad44b`'s bit 31 of that flag
+     (`0x50aac833..0x50aac863`, no timeout), which only the ISR's stop calls: at a slot's interrupt with TX enable
+     (+0x30 bit 2) clear (`0x50aa923c..0x50aa9265`). Nothing in the driver clears TX enable on this path, so the lab's
+     port ends TX itself at the empty slot B, clearing the enable (A-AUDIO-1: I, from that wait; X: every half press's
+     post_end, command_play_end and close then run, and the port is idle). The port's slot address registers hold the
+     address >> 4 (the TX open `0x50aa9379` and the re-arm `0x50aa9652`), so a direct play's samples must start 16-byte
+     aligned: the lab's beep's start at +144 (with them at +140 the port played 12 bytes of the header first, X). X: the
+     beep's 6144 frames start 68 ms of lab time after S1 down (the GUI's changedFocus 50 ms, then UI_OUT, the play start
+     and the TX open), one IRQ 43, no gain stage.
+  5. *To the page.* The port's played slots go to the session's audio output (`emu/src/lab/audio.mjs`) as PCM events
+     of source `native`, consecutive slots back to back at the lab time each started, and the pages play them with
+     WebAudio through `GET /api/audio` (X: `emu/test/test_host.mjs` audio, the beep beside S-SHUTTERSND's clicks). The
+     samples are the WAV's as the port fetched them: the codec's volume registers (output_vol_list `0x60dc5298`) are
+     kept, not applied, so the page plays the beep at the lab's own level, not at the camera's volume (I: the volume
+     is the codec's on this path).
+  6. *Other sounds and the copy task's release.* A sound played through the copy task alone gets no post_end: the end
+     flag and post_end come only from the period callback's end at the IRQ 43 of the sound's last period
+     (`0x50aad3c4`), while its stop one period earlier (`0x50aad35d` -> `0x50aad6bc`, which clears TX enable) makes the
+     ISR drop its TX object in that same interrupt (`0x50aa924a..0x50aa9250`), after which a bit-5 interrupt's re-arm
+     returns at once (`0x50aa8efa`); a command_play_stop of such a sound then waits on that flag for good (`0x50aac7c7`;
+     X: AUD_MAIN still waits after 3 s of lab time, `emu/test/test_audiohw.mjs`, which releases with 0x49 and the close
+     itself). Which of the code's own alternatives avoids that on the camera is ?: another player keeping `0x62af27d5`
+     above 0, the direct play's `0x62af27d6` = 1 (which does for the AF sound, item 4), the SCA mix, or setting
+     `0x5051`. Without the release each cmd 0x41 takes a play slot and the third finds none (`0x50aac463`), and the
+     port plays the stale ring on (X): the firmware's own behaviour for a caller that never releases. Not modelled:
+     RX, the SCA (a 128-byte aligned source or two players stop the session), the 96 kHz / 24-bit template,
+     AUD_WAKEUP's power-on list. No lab input asks for a sound through the copy task. Whether the OM-1 beeps on the
+     self-timer, and who would ask, is ? (no self-timer play site found).
+  7. *Open:* the OM-1's own sound area (its entries, which ids are which sounds, their keys and format, its extent; a
+     NAND read from a camera would settle it); what `0x1000000` in the take status's word 0 is; when the camera's AF
+     module raises the reactive's AF lock event; the port's real stop behaviour at an empty slot (I above).
 - **The resource tables (since 2026-11-02; H-RESINIT, S-RESNAND: `emu/src/lab/resnand.mjs`, `emu/src/fw/nand.mjs`; D
   unless tagged):** the loader `0x501a8ca0` reads, each through `0x501a986a` (the source rounded down to 512, the
   destination up to 16; for mode 1 the generic NAND access `0x500022c2` with its read operation `0x10200`), the sound
@@ -787,44 +884,33 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   twelve sub-blocks begin with OE heads at their own addresses). The play bring-up runs the loader natively in
   USTART_L's place (its call `0x500241d8`), before H-LENSINIT's cache load (`0x5002420e`), where the host gives the NAND
   (`env.nand`: an extract of 3.4 MB, the heads, the indexes and the records of at most 64 KiB, pinned in MODELS
-  `res_nand`, which provisioning writes to `unpacked/<code>/` for the node hosts and the browser keeps in its cache).
-  X (E143, `emu/test/test_resnand.mjs`): 16 reads; res_size(0, 0) = `0xe2800`, (3, 0) = `0x2800`, (`0x8000`, 0) =
+  `res_nand`, which provisioning writes to `unpacked/<code>/` for the node hosts and the browser keeps in its cache). X
+  (E143, `emu/test/test_resnand.mjs`): 16 reads; res_size(0, 0) = `0xe2800`, (3, 0) = `0x2800`, (`0x8000`, 0) =
   `0x167fc00`; res_version `0x01000000`. The sound area is not in the update (factory data, I): S-RESNAND reads it
   erased unless the host gives an image (`env.soundArea`; the builder `soundArea()` makes one in the TG-7's format,
   `docs/firmware-container.md`), and keeps the firmware's writes and erases inside the flash access guard's window for
   it (`0x50000735`: `0x4e420000..0x4e460000`; the type-2 write `0x501a98c8` erases up to entry 1 with `0x10300` and
-  writes with `0x10100` at `0x501a9a1e..0x501a9ab4`, X: run natively and read back). It serves the area over that
-  window, or the host's image where it is longer (up to the RAM log at `0x4e820000`; the area's extent is I). Erased,
-  res_size(2, 0) = `0xffffffff` and res_version(2) = `0xffff0000` (X), and USTART_L's own load of sound 0
-  (`0x5002433b` / `0x50024353`: res_read(2, 0, `0xa4000000`, res_size + 1024)), which the lab runs too, wraps its size
-  to 1023: res_read sets its last entry (`0x501a934e`), takes its error path (`0x501a93d5`), logs `0x1f000003` and
-  leaves the descriptor `{0, 0}` at `0xa32db188`, which a later load into `0xa4000000` answers without a read
-  (`0x501a9333..47`) (D; X); with an image it leaves `{0xa4000000, size + 1024}` (X). What changes in the lab: the lens
-  data lookup reads its lens's record (type `0x8002`, 13824 bytes at `0x4709de00`) where it read 0 bytes at 0 (X), the
-  erased area's one `0x1f000003` at the bring-up, and nothing else a camera would show: golden's play sessions keep
-  their screens, their interrupts (each IRQ and its pc) and lab times, and differ otherwise only in what the loader's
-  run adds to the harness's books (its instructions in the interrupt rows' instruction counts, two more harness steps,
-  its 16 NAND reads, the step records, X). Open: the OM-1's own sound area (its entries, which ids are which sounds,
-  their format, its extent; a NAND read from a camera would settle it); E146 and E147 (their sound index at
-  `0x4e3e0000`, X) are not given `res_nand` yet.
-- **The AF beep's request (since 2026-11-02, E143; X unless tagged):** UI_OUT runs (H-UIOUTSTART, MODELS `ui_out`:
-  its init `0x5014f4e9`, then task 38, which waits on its flag), and S-AFLOCK feeds what the shooting sequence, the take
-  capability and the AF module would hold at the AF lock (the comment at `TAKE_STATUS_SET` in `emu/src/lab/camapp.mjs`
-  has the addresses): S1 sets the still sequence's READY bit 2 in the take status's word 0, END_FOCUS(OK) its
-  READY_FINISH bit 4 (which bit is which state is I, by the order of the sequence parts' state entries) and isFocus
-  `0x62af6e28`, and the AF module's state getter `0x509b06f6` answers indicator 1. The GUI's changedFocus `0x5105260c` then plays natively:
-  playAfSound `0x51052444` reads settings id 18 (the Setup item "8", menu mode 1037, writes 18 with its own value
-  through the settings DB's write: X, by the menu and by SET:1037), the facade's play `(0, 60)`, playTarget, api_sound,
-  and UI_OUT's `0x5014f7e0` gets op 0 (play), sound 0, volume 60. There `0x50aa9715` and `0x50aa9969` return, the
-  audio commands 0x22, 0x41 and 0x45 to AUD_EXEC's queue 8 are S-MODACK's synchronous answers, res_size(2, 0) reads
-  the word at address 4 (the table pointer is 0) as 0, and res_read takes its "same entry as last" path (`(0xa32db184)`
-  = 0 = the entry's address, the destination `0xa4000000`, `0x501a9333..0x501a9347`) and returns the descriptor
-  `0xa32db188` = {0, 0} without a NAND read; UI_OUT waits again. The GUI plays once per lock until its afSound flag
-  `0x62b2e0c4` is cleared: a release's END_EXPOSE does (its handler `0x51065dd7` calls initAfSound `0x510523ff`, D),
-  a plain S1 release does not in the lab, and what clears it after one on the camera is ?. No other input of the lab
-  (menu navigation and dials, OK and the Super Control Panel, the arrows, a release, playback) reaches the facade's
-  play or api_sound; the menu cursor's Cursor_2CNL_Actuator `0x5116418e`, the facade's other GUI caller, was not
-  entered.
+  writes with `0x10100` at `0x501a9a1e..0x501a9ab4`, X: run natively and read back). It serves any read up to the RAM
+  log at `0x4e820000` from the area, erased past the window and the image (res_read of type 2 reads an entry's size +
+  1024 bytes, `0x501a937d` / `0x501a9394`, past the last entry; X: a 2 s sound 1 read past the image's end, where the
+  first version passed such a read down and stopped the session; the area's extent is I), and with the audio hardware
+  and no host image the image is S-SOUNDRES's (the bullet above, item 3). Erased, res_size(2, 0) = `0xffffffff` and
+  res_version(2) = `0xffff0000` (X), and USTART_L's own load of sound 0 (`0x5002433b` / `0x50024353`: res_read(2, 0,
+  `0xa4000000`, res_size + 1024)), which the lab runs right after the loader (H-RESINIT's order: USTART_L runs it after
+  the lens data cache load, res_read(11, 0) and a wait until the byte `(0xa32df1c0)` is not 0, `0x50024323..0x50024336`,
+  whose meaning is ?; the two touch different state), wraps its size to 1023: res_read sets its last entry
+  (`0x501a934e`), takes its error path (`0x501a93d5`), logs `0x1f000003` and leaves the descriptor `{0, 0}` at
+  `0xa32db188`, which a later load into `0xa4000000` answers without a read (`0x501a9333..47`) (D; X); with an image it
+  leaves `{0xa4000000, size + 1024}` (X). A sound 0 larger than `0x3d000` bytes would run into the GUI's icons record at
+  `0xa403d000` (X: a 2 s tone as sound 0 stopped the application's start). What changes in the lab: the lens data lookup
+  reads its lens's record (type `0x8002`, 13824 bytes at `0x4709de00`) where it read 0 bytes at 0 (X), the erased area's
+  one `0x1f000003` at the bring-up (gone where S-SOUNDRES's area is served), and nothing else a camera would show: X,
+  the 26 play scenarios' traces before and after H-RESINIT, H-UIOUTSTART and S-AFLOCK compared item by item (2026-11-02,
+  the integration): the same screens and the same interrupt rows in the same order, each with its IRQs, levels and pcs,
+  only the rows' instruction counts moved; the device summaries differ in two more VSC doorbell commands (the harness's
+  steps) and, after S1 with S-AFLOCK, 6 to 10 fewer OSD engine commands (which drawing is not traced). Open: the OM-1's
+  own sound area (its entries, which ids are which sounds, their format, its extent; a NAND read from a camera would
+  settle it); E146 and E147 (their sound index at `0x4e3e0000`, X) are not given `res_nand` yet.
 - **The AV back end (D):** AVFW / AVPI plug-ins: the firmware's own MP4 / MOV muxer and demuxer, H.264 / HEVC encode
   and decode drivers, rate control, audio codecs, a TS multiplexer (12.4k, use ?), the StlCA_IF still codec (format ?).
 - **Seams:** S3 + S4 + S5 + S6 + S7 recommended, S1 (today's callbacks) kept until S2 (the HLS observers'
@@ -838,54 +924,6 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   and WB_MOV queues and on the mvr IF helpers; whether they wake TAKE_MOV is ?. Next, the registration through which
   CapMov_MovieRecorderSLR gets its Notify* observers (the CmpMov_Notify* observer classes of 4.1.3); then check in a
   camapp 2 session whether anything below CA_MAIN calls `0x503f1a00` / `0x503f1af9` on REC.
-- **The host's audio output (since 2026-11-02):** the lab has a channel for sound to its hosts' pages
-  (`emu/src/lab/audio.mjs`: PCM events of a lab time, a rate, one or two channels and 16-bit samples, played with
-  WebAudio by both players), which S-SHUTTERSND feeds (`docs/om1-shutter-spec.md` section 7 item 61) and, with
-  `--audio on`, the audio port's model (below): what the port plays goes out as events of source `native`, consecutive
-  slots back to back. The sound engine is not asked to play at the lab's release (X, of the lab only: S-RELSEQ stands
-  in for the release and the capture's begin `0x50b8467c` does not run; on the camera the stock release plays nothing
-  either, I, `docs/om1-shutter-spec.md` section 7 item 61), its table loader `0x501a8ca0` does not run in the lab, and
-  which of the lab's inputs would ask it for a sound is ?.
-- **The play path natively (`--audio on`, E143, off by default; 2026-11-02; `emu/src/dev/audio.mjs`,
-  `emu/src/lab/audiohw.mjs`, `emu/src/lab/wm8946.mjs`):** below UI_OUT the driver runs natively against a TX model of
-  the audio port. H-AUDSTART starts AUD_MAIN as USTART2 does (act_tsk 0x52; its stage-6 wait answered by the stage
-  bit), S-AUDCPU2 answers its CPU 2 starts and posts AUD_WAKEUP's reply (flag 0xf9), and AUD_MAIN's driver init
-  attaches IRQ 43 and 45 and starts AUD_COPY_DATA and AUD_WATCH_DOG itself. S-WM8946 serves channel 14 at PER_SIO's
-  channel API (a register file). AUD_EXEC posted as UI_OUT's sound handler `0x5014f7e0` posts it (a player from
-  `0x50aa9715`, cmd 0x22, cmd 0x41 with the usr_wave descriptor `0xa32db094` {+0 wav_mode, +4 io_adr, +8 io_length,
-  +12 play_count, +20 max_duration, +24 time_scale, +28 Channel, +30 BitsPerSample, +44 post_next_bank, +48
-  post_next_adr, +68 post_end, +72 cb_HRS, +76 cb_AIR, the names of aud_seq_play's log, D}, cmd 0x45) plays a 48 kHz
-  16-bit stereo WAV natively (X, `emu/test/test_audiohw.mjs`): aud_seq_play `0x50aac292` and the play start
-  `0x50aac5a2`, AUD_COPY_DATA's cmd 1 and 0x80000002 (the prefill of 8 periods of 768 bytes into the ring
-  `0xa403b800`, each through the memcpy converter `0x50aa7439` for a source off 128-byte alignment, then the gain stage
-  `0x50aa8a63`, 0 dB at volume 100), the sound IC's list, the TX open `0x50aa8d9b` (the template `0x60dbf2b4` copied
-  by `0x50aab154`), IRQ 43 with status bit 4 and the TX-ready callback `0x50aad28a` (flag 0xed), the TX start, then
-  IRQ 43 every 4 ms of lab time, each re-arming the finished slot (`0x50aa8ef3`) and posting AUD_COPY_DATA cmd 3,
-  until the firmware disables TX and the port stops after the sound's last period with no underrun; the WAV's samples
-  come out unchanged and in order. While the port plays, the lab's time jumps (the vsync wait's and the sleeps'
-  stand-ins) go event by event and run IRQ 43's handler at each slot's end (H-AUDTIME; one jump past several slot
-  ends left the port to underrun, X). Not modelled: RX, the SCA (a 128-byte aligned source or two players stop the
-  session), the 96 kHz / 24-bit template, the codec's volume on the PCM (the lab passes the port's samples as they
-  are), AUD_WAKEUP's power-on list. With UI_OUT running (H-UIOUTSTART's E143 port) and a sound table (type 2) the
-  firmware's own play request would reach this path; neither is in this change.
-- **Repeated sounds and their release (2026-11-02):** UI_OUT ends a sound with command_play_end (cmd 0x49) and the
-  player's close `0x50aa9795`: from its end handler `0x5014fb87` once the descriptor's post_end (+68, `0x5014fc6e`,
-  set by UI_OUT's init at `0x5014f78d`) has run, or from `0x5014fbeb` (command_play_stop 0x46, then 0x49 and the close)
-  at its next op 0 while a sound is still held, when setting 0x5051 reads 0 (it does in the lab, X) (D). Played with
-  0x49 and the close after each stop, the WAV plays three times in one session, each play's samples once, with one
-  stop each (X, `emu/test/test_audiohw.mjs`). Without the release each cmd 0x41 takes one of aud_seq_play's two play
-  slots (`0x62af27e0`, 172 bytes each, their count `0x62af27d4`; D), and the third finds none: aud_seq_play returns 0
-  with no slot (`0x50aac463`, D), the play start runs the port anyway, the period callback `0x50aad2a0` finds no slot
-  to copy for and nothing disables TX, so the port plays the stale ring for as long as the session runs (X). That is
-  what a review saw on a third play of the first test's sequence, which sent no 0x49: the firmware's own behaviour
-  for a caller that never releases, not the port model's or H-AUDTIME's. Open (?): the post_end and the end flag
-  `0x600431a6` bit (1 << player) are set only by the period callback's end at the IRQ 43 of the sound's last period
-  (`0x50aad3c4`), while its stop one period earlier (`0x50aad35d` to `0x50aad6bc`, which clears TX enable) makes the
-  ISR drop its TX object in that same interrupt (`0x50aa924a`; D). A sound playing alone therefore gets no post_end
-  until another sound's first IRQ 43 (X), and a command_play_stop of a sound that has ended waits on that flag with
-  no timeout (`0x50aac7c7`, D; X: AUD_MAIN still waits after 3 s of lab time). UI_OUT's next op 0 would send one
-  (`0x5014fbeb`) and block there. What keeps the camera from that (another player keeping the port running, an
-  interrupt the port model lacks, or the setting) is ?; the integration of UI_OUT with `--audio on` has to answer it.
 
 ### 4.6 CPUs 1-3, inter-core services and the A53
 

@@ -32,8 +32,8 @@
 // and deliver IRQ 43 at each slot's end. The debug API's advance and run-to-frame ring the VSC's doorbell directly
 // (src/debug/debugger.mjs) and are not stepped: one of them past several slot ends while the port plays underruns it.
 // run_to_frame's boundary is computed from the published VSC window (frame_start + length x line_ns), a second copy of
-// src/dev/vsc.mjs nextBoundary's arithmetic; a channel that becomes runnable only at the native command's chanSync takes
-// the one-jump path.
+// src/dev/vsc.mjs nextBoundary's arithmetic; a channel that becomes runnable only at the native command's chanSync
+// takes the one-jump path.
 //
 // The sink: after each step and idle slice the session hands the port's played slots (src/dev/audio.mjs take()) to its
 // audio output as events of source 'native', consecutive slots merged into one event (at most AUDIO_MAX_S each), at the

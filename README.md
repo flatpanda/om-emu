@@ -28,10 +28,11 @@ Setup menu's first page, drawn by the firmware's own GUI on the emulated TFT.*
 On the OM-1 (E143), in the interactive player in your browser: the power-on start to the shooting screen, the menus
 and the Super Control Panel, S1 / S2 and REC with a synthetic scene on the live view, playback of the pictures taken,
 the TFT and the EVF, and the AF beep at a half press, played by the firmware's own sound driver (the sound itself is a
-lab-made one: the camera's own sounds are not in any update). Scripted menu sessions (`emu/bin/nav.mjs`) and a debug API (`emu/bin/debug.mjs`: registers,
-memory, breakpoints, traces) drive the same machine without the page. The player and both tools can run the firmware
-with a patch overlay (`--patch FILE`: byte patches checked against the stock blocks and applied in memory, never
-written; the player's status then shows a patched line), as [emu/README.md](emu/README.md) "Patch overlays" describes.
+lab-made one: the camera's own sounds are not in any update). Scripted menu sessions (`emu/bin/nav.mjs`) and a debug API
+(`emu/bin/debug.mjs`: registers, memory, breakpoints, traces) drive the same machine without the page. The player and
+both tools can run the firmware with a patch overlay (`--patch FILE`: byte patches checked against the stock blocks and
+applied in memory, never written; the player's status then shows a patched line), as [emu/README.md](emu/README.md)
+"Patch overlays" describes.
 
 Other bodies, through ports (as of 2026-11-02):
 

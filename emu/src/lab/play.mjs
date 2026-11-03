@@ -1224,9 +1224,9 @@ export class PlaySession extends N.NavSession {
   // H-RESINIT and S-RESNAND (resnand.mjs): the resource tables loaded natively from the NAND the host gives (env.nand:
   // the update's blocks at their load addresses; env.soundArea: an image of the sound area), on a body whose MODELS
   // entry gives res_nand (E143). Without env.soundArea the sound area is the lab-made one where the audio hardware runs
-  // (--audio auto or on: S-SOUNDRES, soundres.mjs, so the operation sounds have data to play), else erased. A host without
-  // env.nand keeps the tables at 0, as the lab did before (the lens data lookup then reads nothing, src/lab/lens.mjs),
-  // and the bring-up's record says so (resnand.skipped)
+  // (--audio auto or on: S-SOUNDRES, soundres.mjs, so the operation sounds have data to play), else erased. A host
+  // without env.nand keeps the tables at 0, as the lab did before (the lens data lookup then reads nothing,
+  // src/lab/lens.mjs), and the bring-up's record says so (resnand.skipped)
   resnand_runs() { return !!MODEL_INFO.res_nand && !!this.env.nand; }
   resnand_bring_up() {
     this.sound_area = this.env.soundArea ? 'host' : this.audio_on ? SOUNDRES : null;

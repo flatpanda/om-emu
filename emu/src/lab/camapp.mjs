@@ -334,10 +334,10 @@ const INDICATOR_FOCUS = 1, INDICATOR_NO_FOCUS = 9;
 // S-AFLOCK, the AF beep's inputs (D unless tagged; the comment the stand-in's description refers to). The GUI's
 // SubAppMDLFocus::changedFocus 0x5105260c (event 0x03000030, after END_FOCUS) plays it through playAfSound 0x51052444
 // only when the application's getCondition (OlyHfwOpeShoot 0x50ad8b37) answers isFocus 1 and indicator 1 and no rec
-// view (0x5105268b..0x51052707), and the sound control's playTarget 0x50b758b4 refuses sound 0 ("NOT READY", 0x50b75962) unless the shared take status's
-// word 0 has one of the bits 2, 4, 8 or 0x1000000 (0x50b758fa..0x50b7592f). In the lab nothing writes them: the
-// sequence parts and the take capability run only with the HLS components, the AF module's init does not run (X:
-// isFocus 0, indicator 0, word 0 0 at S1).
+// view (0x5105268b..0x51052707), and the sound control's playTarget 0x50b758b4 refuses sound 0 ("NOT READY",
+// 0x50b75962) unless the shared take status's word 0 has one of the bits 2, 4, 8 or 0x1000000 (0x50b758fa..0x50b7592f).
+// In the lab nothing writes them: the sequence parts and the take capability run only with the HLS components, the AF
+// module's init does not run (X: isFocus 0, indicator 0, word 0 0 at S1).
 // - The take status TraShareTakeStatus: its words 0x62af6d00 + 4 i (getter 0x50ab5716(i)) are set by 0x50ab61ee(bits
 //   | i << 28) and cleared by 0x50ab52ad(bits | i << 28), both under the status lock (0x50ab2948(5)). Word 0 holds
 //   the still sequence's states: CmpSqp_SequencePartsBase's state entries OR their state's bit, after STANDBY's
@@ -351,12 +351,12 @@ const INDICATOR_FOCUS = 1, INDICATOR_NO_FOCUS = 9;
 //   STANDBY entry calls 0x50c89da1 (0x50cd922b). playTarget's four bits are then READY, READY_FINISH, READY_TRIG2 and
 //   0x1000000 (0x50c89b96, one of the entries between READY_TRIG2's and STANDBY's; which state is ?: by the order
 //   SECOND_WAIT or SELFTIMER_WAIT, but the subclass's SECOND_WAIT entry 0x50cda9b0 sets 0x200 itself, 0x50cda9eb).
-//   playTarget's test also reads word 1: with a word-0 bit set, 0x10000004 set in word 1 still gives NOT READY
-//   (0x50b75939..0x50b75948); the lab's word 1 stays 0. READY_FINISH is the state of the AF lock (I: READY is
+//   playTarget's test also reads word 1: with a word-0 bit set, either bit 0x4 or bit 0x10000000 of word 1 still gives
+//   NOT READY (0x50b75939..0x50b75948); the lab's word 1 stays 0. READY_FINISH is the state of the AF lock (I: READY is
 //   entered on S1, "guardTrig1KeyIn_STANDBY_To_READY", and the AE/AF completion leaves it). S1 down sets READY's bit
 //   and END_FOCUS(OK) READY_FINISH's through the setter; S1 up clears the two through the clear (on the camera the
-//   sequence's return to STANDBY clears the words and sets STANDBY's 1, which the lab's words, never STANDBY's, do
-//   not get)
+//   sequence's return to STANDBY clears the words and sets STANDBY's 1, which the lab's words, never STANDBY's, do not
+//   get)
 // - isFocus: CapTre_TakeReady::notifyAFOK 0x50bc9551 (CapTak_Take) stores 1 at +280 of the take information
 //   (0x50bc95f4), the word 0x62af6e28 that getCondition copies (0x50ab5576, 0x50ab55c0); written 1 at END_FOCUS(OK),
 //   0 at S1 up (the take information's reset 0x50ab5243 writes 0 there, 0x50ab5280; when the sequence resets it is ?)
@@ -684,7 +684,7 @@ export class CamApp {
     const word0 = lab.call(TAKE_STATUS_GET, { d0: 0 }, null, null, 200000).d0;
     this.log.push(['aflock', `${stage}: take status word 0 ${h8(word0)}, isFocus ${lab.sim.u32(TAKE_IS_FOCUS)}, the AF indicator ${this.af_stage === 'focus' ? AF_INDICATOR_FOCUS : 'native'}`]);
   }
-  // S-AFLOCK: CBS_AF_LOCK(locked) through S-RELSEQ's post (the shooting reactive's own post, as its "haL" case posts it)
+  // S-AFLOCK: CBS_AF_LOCK(locked) through S-RELSEQ's post (the shooting reactive's own, as its "haL" case posts it)
   af_lock_post(locked) {
     const lab = this.s.lab;
     this.log.push(['cbs', `AF_LOCK(${locked})`]);

@@ -1,14 +1,15 @@
-// The sound IC at the far end of PER_SIO's channel 14 (S-WM8946; with the audio hardware, --audio auto or on, E143; docs/hle-gaps.md 4.5). The
-// firmware names the chip a Wolfson WM8946 (the string "dev_ctrl_wm8946_sub_adj_calc_adcvol", D). Its register access
-// exec_data 0x50a632c5 opens the channel with a callback (0x5005f0f7(14, 0x50a63385, the frame word); 1 back means
-// busy, and it retries), and the callback 0x50a63385 configures it (0x5005f4ae: 4 MHz, configuration 0xa33dac60) and
-// sends one frame from the buffer 0xa33dcd60 (0x5005f587, descriptor 0xa33dac70): a write is four bytes {address high,
-// address low, data high, data low} (directions 1, 4 bytes, the end callback 0x50a634eb); a read sends the two address
-// bytes with bit 7 of the first set and receives two data bytes into 0xa33dcd64 (directions 3, 2 + 2 bytes, the
-// receive's callback 0x50a63521, which keeps them at 0xa33dcd68; no transmit callback). Chip select is GPIO 139 / 140
-// (0x50a62d89, 0x50a62dc8, native). exec_data waits for flag (0x60042f76) bit 24, which the end callbacks set, with a
-// timeout of 3000, then closes the channel (0x5005f25f) (D). The register lists the driver runs (executor 0x50a63ecc)
-// keep a shadow of what they write at 0xa33dcd6c (D), so reads are rare (I).
+// The sound IC at the far end of PER_SIO's channel 14 (S-WM8946; with the audio hardware, --audio auto or on, E143;
+// docs/hle-gaps.md 4.5). The firmware names the chip a Wolfson WM8946 (the string
+// "dev_ctrl_wm8946_sub_adj_calc_adcvol", D). Its register access exec_data 0x50a632c5 opens the channel with a callback
+// (0x5005f0f7(14, 0x50a63385, the frame word); 1 back means busy, and it retries), and the callback 0x50a63385
+// configures it (0x5005f4ae: 4 MHz, configuration 0xa33dac60) and sends one frame from the buffer 0xa33dcd60
+// (0x5005f587, descriptor 0xa33dac70): a write is four bytes {address high, address low, data high, data low}
+// (directions 1, 4 bytes, the end callback 0x50a634eb); a read sends the two address bytes with bit 7 of the first set
+// and receives two data bytes into 0xa33dcd64 (directions 3, 2 + 2 bytes, the receive's callback 0x50a63521, which
+// keeps them at 0xa33dcd68; no transmit callback). Chip select is GPIO 139 / 140 (0x50a62d89, 0x50a62dc8, native).
+// exec_data waits for flag (0x60042f76) bit 24, which the end callbacks set, with a timeout of 3000, then closes the
+// channel (0x5005f25f) (D). The register lists the driver runs (executor 0x50a63ecc) keep a shadow of what they write
+// at 0xa33dcd6c (D), so reads are rare (I).
 //
 // The seam is PER_SIO's channel API, as S-SIO2's for PER_SCPU's channel (src/lab/scpulink.mjs), on top of whose hooks
 // this one sits: open, configure, transfer and close of channel 14 are served, the other channels' calls go on to

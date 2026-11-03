@@ -87,9 +87,10 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // the menu, the card out and in; E143 and E146). Every body gives it, one that does not run it with its reason (why);
 // such a body keeps S-CARD's card without a file system (src/lab/camapp.mjs)
 //
-// `audio`: the audio hardware a session runs with --audio auto (the default) or on (src/lab/audiohw.mjs, src/dev/audio.mjs; E143): AUD_MAIN's
-// entry and id word, the id words of the CPU 0 tasks it starts and of its CPU 2 tasks [word, name] (the first, its
-// wake-up, posts the reply), OlyTaStCpu and the wake-up's reply. A body without it runs --audio auto as off and refuses --audio on
+// `audio`: the audio hardware a session runs with --audio auto (the default) or on (src/lab/audiohw.mjs,
+// src/dev/audio.mjs; E143): AUD_MAIN's entry and id word, the id words of the CPU 0 tasks it starts and of its CPU 2
+// tasks [word, name] (the first, its wake-up, posts the reply), OlyTaStCpu and the wake-up's reply. A body without it
+// runs --audio auto as off and refuses --audio on
 //
 // `ui_out`: UI_OUT, the module of the camera's lamps (and on E143 its operation sounds), where the lab runs it
 // (src/lab/play.mjs H-UIOUTSTART: E134, whose file layer asks it for the card's access lamp; E143, whose AF beep is a

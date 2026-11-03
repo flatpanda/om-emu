@@ -263,8 +263,9 @@ which is why om-c's feature exists (I). In the lab, with S1 then S2 (X, probe se
   data `blk05a00000` and images `blk0e360000`, tile `0x41ec0000..0x4e3e0000`; the main code block loads at
   `0x50000000`, the misc block at 0 and the SCPU image at `0x08000000`; D from the `.BIN` headers), and no RIFF/WAVE
   data is in any of the six E143 blocks beyond three 4-second header templates at `0x60dc7cdc`, `0x60dc7d68`,
-  `0x60dc7e54` (X). So where the camera keeps its operation sounds is unknown (?); om-c never uses them and embeds its
-  own.
+  `0x60dc7e54` (X). So the camera keeps its operation sounds in that type-2 area at `0x4e420000`, the one the loader
+  indexes (D), as factory data no update carries (I); what it holds and how far it extends are unknown (?). om-c never
+  uses them and embeds its own.
 - **Volume.** The audio driver copies 48 kHz stereo PCM16 sound data to its output buffer through the converter
   table's plain entry `0x50aa7439` (d0 the source, d1 the destination, a0 the length), a wrapper whose call at
   `0x50aa7445` goes to E143's memcpy (run-time `0x5000290a`, notation `0x3ffe18ea`, `emu/src/fw/place.mjs`; D). om-c
@@ -346,8 +347,8 @@ survey.
 
 - What the OM-1's own operation sounds are: the type-2 resource area at NAND `0x4e420000` is outside the updater, in a
   window the flash guard leaves writable (4), and the lab plays a lab-made area in its place (2026-11-02,
-  `docs/hle-gaps.md` 4.5); what the play method's id `0x10501` lookup returns; what the vtable +68 query (isThroughSound,
-  the fwmap labels) answers at S2 and why IOlyApiShooting asks it there.
+  `docs/hle-gaps.md` 4.5); what the play method's id `0x10501` lookup returns; what the vtable +68 query
+  (isThroughSound, the fwmap labels) answers at S2 and why IOlyApiShooting asks it there.
 - Whether stock E143 uses settings 1021 and 827 at all.
 - A real ring lens's ID bytes, its flags byte and its answer to `81 10`; what record +119168 and +9444 bits mean;
   whether OM lenses ignore p2 bit 0 (om-c's 2-bytes-short path suggests so); the ring value's unit.

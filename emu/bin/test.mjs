@@ -327,8 +327,9 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...lu.bad, ...ls.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += lu.bad.length + ls.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
-// the resource tables from the NAND (H-RESINIT, S-RESNAND): the NAND view, the extract and the sound area's builder, then
-// the tables and the resource API's answers in play on E143 (the .BIN, the browser's extract, a lab-made sound area)
+// the resource tables from the NAND (H-RESINIT, S-RESNAND): the NAND view, the extract and the sound area's builder,
+// then the tables and the resource API's answers in play on E143 (the .BIN, the browser's extract, a lab-made sound
+// area)
 {
   const { resnandUnits, resnandSession } = await import('../test/test_resnand.mjs');
   const ru = await resnandUnits(), rs = await resnandSession();

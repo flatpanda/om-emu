@@ -38,27 +38,28 @@
 // with length 0 is empty: when its turn comes TX ends there, the port clearing +0x30 bit 2 (TX enable) itself, so the
 // interrupt of the slot before it finds TX disabled and the ISR stops (counted apart; I). The driver's direct play
 // (0x62af27d6 = 1) arms slot B with address 0 and length 0 beside the whole sound in slot A (0x50aad250, the TX open's
-// 0xc00, D), and nothing of the driver clears TX enable on that path before command_play_end waits for the TX done
-// callback 0x50aad44b, which only the ISR's stop calls (0x50aac83a..0x50aac850, 0x50aa923c..0x50aa9265, D): so the
-// port ends that TX itself (I, from that wait; X: with it the AF beep's release completes). Clearing TX run
-// lets the slot playing play to its end, with no interrupt there, and starts no other (I: the firmware's end clears it
-// at the interrupt that starts the sound's last period, X, so a stop at once would cut that period; and the ISR's done
-// bits would write through its cleared TX object, 0x50aa9206). A start while that slot still plays cuts it there: the
-// frames it played go to the lab and the new start's slot A plays at once (counted as cut; ?: what the hardware does
-// then is not read, the model only keeps the two sounds from overlapping). TX enable rising sets bit 4 (I: the start's
-// wait for it comes between the TX open and the TX start). The format is the TX configuration's. The driver copies one
-// of four templates by its format record (0x50aab154: 0x60dbf2b4, 0x60dbf2d4, 0x60dbf2f4, 0x60dbf314; the 24-bit ones
-// set +0x04 bit 23 and +0x30 bit 4, D; the record's +0 = 2 picks 0x60dbf2d4 or 0x60dbf314, 0x50aab1ba / 0x50aab18d, D,
-// and the direct play, 0x62af27d6 = 1, writes that, X). Modelled: the copy task's template for a 48 kHz 16-bit stereo
-// WAV (0x60dbf2b4: +0x04 bits 20..24 = 0x01, +0x30 bits 3..6 = 0x8; X, test/test_audiohw.mjs) and the direct play's
-// (0x60dbf2d4, the AF sound's, keyed PRM_AUD_AFOK_VOL: +0x04 bits 20..24 = 0x01, +0x30 bits 3..6 = 0, X; the two
-// templates differ in their words 1 and 7, D, what that changes in the port is ?), its samples taken as the same
-// 16-bit stereo (I: +0x04's bits are the same), at 48 kHz, the rate the play path pairs with 16 bits (0x50aac51b..48:
-// a 48000 Hz 16-bit stereo WAV, else 96000 Hz 24-bit; the port's clock words come from the system clock record,
-// 0x50031c73 + 0x10b0, not
-// from the format, D), with 16-bit little-endian samples, left then right (I). Another configuration at a start is
-// UNKNOWN. A slot's bytes go to the lab as a block {t_ns (its start), rate, channels, bytes} that take() hands over
-// (the lab's sink: src/lab/audiohw.mjs); at most BLOCKS_KEPT wait (the oldest go first, counted).
+// 0xc00, D); the driver's one TX disable, the period callback's stop, is not reached on that path (the play slot's
+// byte +133 stays -1, docs/hle-gaps.md 4.5, D), and command_play_end then waits for the TX done callback 0x50aad44b,
+// which only the ISR's stop calls (0x50aac83a..0x50aac850, 0x50aa923c..0x50aa9265, D): so the port ends that TX
+// itself (I, from that wait; X: with it the AF beep's release completes; that the real port raises an interrupt for the
+// empty slot instead is not excluded, ?). Clearing TX run lets the slot playing play to its end, with no interrupt
+// there, and starts no other (I: the firmware's end clears it at the interrupt that starts the sound's last period, X,
+// so a stop at once would cut that period; and the ISR's done bits would write through its cleared TX object,
+// 0x50aa9206). A start while that slot still plays cuts it there: the frames it played go to the lab and the new
+// start's slot A plays at once (counted as cut; ?: what the hardware does then is not read, the model only keeps the
+// two sounds from overlapping). TX enable rising sets bit 4 (I: the start's wait for it comes between the TX open and
+// the TX start). The format is the TX configuration's. The driver copies one of four templates by its format record
+// (0x50aab154: 0x60dbf2b4, 0x60dbf2d4, 0x60dbf2f4, 0x60dbf314; the 24-bit ones set +0x04 bit 23 and +0x30 bit 4, D; the
+// record's +0 = 2 picks 0x60dbf2d4 or 0x60dbf314, 0x50aab1ba / 0x50aab18d, D, and the direct play, 0x62af27d6 = 1,
+// writes that, X). Modelled: the copy task's template for a 48 kHz 16-bit stereo WAV (0x60dbf2b4: +0x04 bits 20..24 =
+// 0x01, +0x30 bits 3..6 = 0x8; X, test/test_audiohw.mjs) and the direct play's (0x60dbf2d4, the AF sound's, keyed
+// PRM_AUD_AFOK_VOL: +0x04 bits 20..24 = 0x01, +0x30 bits 3..6 = 0, X; the two templates differ in their words 1 and 7,
+// D, what that changes in the port is ?), its samples taken as the same 16-bit stereo (I: +0x04's bits are the same),
+// at 48 kHz, the rate the play path pairs with 16 bits (0x50aac51b..48: a 48000 Hz 16-bit stereo WAV, else 96000 Hz
+// 24-bit; the port's clock words come from the system clock record, 0x50031c73 + 0x10b0, not from the format, D), with
+// 16-bit little-endian samples, left then right (I). Another configuration at a start is UNKNOWN. A slot's bytes go to
+// the lab as a block {t_ns (its start), rate, channels, bytes} that take() hands over (the lab's sink:
+// src/lab/audiohw.mjs); at most BLOCKS_KEPT wait (the oldest go first, counted).
 //
 // The SCA (0x9bb00000) is the driver's memory-to-memory sample converter and mixer (aud_seq_sca_open / exec strings;
 // its IRQ 45 handler 0x50aab51d). Its page is storage for the init's writes (+0x08 = 0x3e0, +0x3b0 = 1, +0x3b4 = 1,

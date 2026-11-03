@@ -1,19 +1,20 @@
 // S-SOUNDRES: a lab-made sound area for the camera's operation sounds (docs/hle-gaps.md 4.5 "The operation sounds").
-// The firmware plays its operation sounds from its type-2 resources (RES_MODE_SOUND), the area at NAND 0x4e420000
-// that USTART_L's loader indexes (src/lab/resnand.mjs H-RESINIT). That area is factory data: no update carries it (D,
-// no block of the .BIN loads there), and the lab has no copy of a camera's. So where the audio hardware runs
-// (--audio on, src/lab/audiohw.mjs) and the host gives no image of its own (env.soundArea), S-RESNAND serves this
-// one instead of the erased area: the TG-7's format (src/fw/nand.mjs soundArea: an OE head, 16-byte entries, 512-aligned
-// RIFF WAVE files; the TG-7's update is the only one that ships such an area, X), holding one sound:
+// The firmware plays its operation sounds from its type-2 resources (RES_MODE_SOUND), the area at NAND 0x4e420000 that
+// USTART_L's loader indexes (src/lab/resnand.mjs H-RESINIT). That area is factory data: no update carries it (D, no
+// block of the .BIN loads there), and the lab has no copy of a camera's. So where the audio hardware runs (--audio on,
+// src/lab/audiohw.mjs) and the host gives no image of its own (env.soundArea), S-RESNAND serves this one instead of the
+// erased area: the TG-7's format (src/fw/nand.mjs soundArea: an OE head, 16-byte entries, 512-aligned RIFF WAVE files;
+// the TG-7's update is the only one that ships such an area, X), holding one sound:
 //   id 0, the AF confirmation (playAfSound 0x51052444 asks for sound 0, D): LAB-MADE, two short tone bursts synthesized
 //          here, 48 kHz, 16-bit, stereo (the format the TG-7's sounds have and the play path pairs with its 48 kHz
 //          ring, D: 0x50aac51b..48). It is not the camera's sound, which nobody here has heard from a capture: its
 //          pitch, length and level are the lab's choice, made to be short and plain.
 // USTART_L loads sound 0 into 0xa4000000 at the boot (H-RESINIT), 0x3d000 bytes below the GUI's icons record at
 // 0xa403d000 (src/lab/resources.mjs): a sound 0 longer than that would run into it (X: a 2 s tone did, and the
-// application's start stopped), so the beep is kept short. The background music the aud_debug command reads as ids
-// 1..5 is left out: the index holds entry 0 and zeros after
-// it, as the TG-7's index is padded (X). No lab input asks for another id (X: docs/hle-gaps.md 4.5).
+// application's start stopped), and the copy task's ring fills the last 0x1800 of those bytes (8 periods of 768 from
+// +0x3b800, docs/hle-gaps.md 4.5), which a sound played through the copy task would overwrite (I), so the beep is kept
+// short. The background music the aud_debug command reads as ids 1..5 is left out: the index holds entry 0 and zeros
+// after it, as the TG-7's index is padded (X). No lab input asks for another id (X: docs/hle-gaps.md 4.5).
 // The WAV carries the AF sound's key in its INFO chunk (BEEP_KEY), as the TG-7's AF sound does, and the driver then
 // plays it directly from its buffer (infoWav's comment); its samples start 16-byte but not 128-byte aligned, so that a
 // play through the copy task would take the memcpy converter 0x50aa7439, not the SCA, which the lab does not model

@@ -28,8 +28,8 @@
 // audio port's registers, slots and interrupt, the sound IC's register file, the sink), the published site's files
 // and the browser player's download command (test_site.mjs), the patch overlays' rules on synthetic blocks and the
 // --replay check of a patched session (test_patch.mjs patchUnits), and the NAND the resource tables are read from
-// (test_resnand.mjs resnandUnits: the container's blocks at their load addresses, the browser's extract, the sound area's
-// builder, S-RESNAND's layer).
+// (test_resnand.mjs resnandUnits: the container's blocks at their load addresses, the browser's extract, the sound
+// area's builder, S-RESNAND's layer).
 // bin/test.mjs runs all of these too, with everything else.
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';

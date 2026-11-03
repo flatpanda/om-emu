@@ -764,28 +764,29 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
      vtable `0x60e3881c`, slot 0 `0x50b569a4`, call entry `0x50b569a9`: d0 the sound id, d1 the volume, 0 plays nothing,
      a1, two stack words) with sound 0 and the setting's 60, and sets afSound. The facade calls
      OlyHfwOpeSndCtl::playTarget `0x50b758b4`, which refuses sound 0 ("NOT READY", `0x50b75962`) unless the shared take
-     status's word 0 has one of the bits 2, 4, 8 or `0x1000000` (and word 1 not `0x10000004`, `0x50b75939..48`), then
-     api_sound.c `0x5041ee45`, which sends a 44-byte message of kind 2 to UI_OUT's queue `0x70` (the halfword
-     `0x600432a4`) with no timeout (`0x5041f01d..0x5041f036` -> `0x503ebe46` -> OlyQeWr `0x5002c151`, so a full queue
-     blocks the sender). In the lab S-AFLOCK writes what the shooting sequence, the take capability and the AF module
-     would hold at the AF lock (the comment at `TAKE_STATUS_SET` in `emu/src/lab/camapp.mjs`): S1 sets the still
-     sequence's READY bit 2 in the take status's word 0, END_FOCUS(OK) its READY_FINISH bit 4 (the sequence parts' READY
-     and READY_FINISH entries call the setters of 2 and 4, `0x50cd926e`, `0x50cd92e4`) and isFocus `0x62af6e28`, and the
-     AF module's state getter `0x509b06f6` answers indicator 1 (that its code 1 is S-AFOSD's in-focus code is I). *The
-     re-arm:* the shooting reactive posts CBS_AF_LOCK (155) with 1 or 0 by its event's field (`0x50af4b73..0x50af4ba6`),
-     which the application's callback switch (`0x5108226d`, case `0x510824af`) turns into GUI event `0x0300002c` (1) or
-     `0x0300002d` (0); `0x0300002d`'s rows name clearAfSound `0x5105241b` and `0x5105254f`, which calls it, and
-     clearAfSound clears afSound when `0x51069d6d` answers 0 (`0x5105241e..0x51052429`; X: it does at S1 up). S-AFLOCK
-     posts CBS_AF_LOCK(1) after END_FOCUS(OK) and CBS_AF_LOCK(0) at S1 up: so each half press in focus beeps once (X:
-     without the 0 the second half press was silent); that the camera's sequence posts it at the lock and its release is
-     I (the reactive's event is not traced to the AF module). A release's END_EXPOSE also clears the flag (its handler
-     `0x51065dd7` calls initAfSound `0x510523ff`). Without S-AFLOCK, and with the beep Off, nothing is requested (X). No
-     other input of the lab (menu navigation and dials, OK and the Super Control Panel, the arrows, a release, playback)
-     reaches the facade's play or api_sound (X, the round's first probe); the menu cursor's Cursor_2CNL_Actuator
-     `0x5116418e`, the facade's other GUI caller, was not entered. Before S-AFLOCK (X, a probe of S1 then S2) the
-     singleton ran only at S2, twice from IOlyApiShooting (`0x51059373`, `0x51059919`, via `0x5108c19f`), which then
-     asks +68 (isThroughSound); +4 stops. om-c's electronic shutter sound calls play from hooks on CapBuf_TakeBuff's
-     calls of `0x50b8467c` (a buffer list append) and `0x50b87d56`, which S-RELSEQ's stand-in never reaches.
+     status's word 0 has one of the bits 2, 4, 8 or `0x1000000` (and word 1 has neither bit 0x4 nor bit `0x10000000`,
+     `0x50b75939..48`), then api_sound.c `0x5041ee45`, which sends a 44-byte message of kind 2 to UI_OUT's queue `0x70`
+     (the halfword `0x600432a4`) with no timeout (`0x5041f01d..0x5041f036` -> `0x503ebe46` -> OlyQeWr `0x5002c151`, so a
+     full queue blocks the sender). In the lab S-AFLOCK writes what the shooting sequence, the take capability and the
+     AF module would hold at the AF lock (the comment at `TAKE_STATUS_SET` in `emu/src/lab/camapp.mjs`): S1 sets the
+     still sequence's READY bit 2 in the take status's word 0, END_FOCUS(OK) its READY_FINISH bit 4 (the sequence parts'
+     READY and READY_FINISH entries call the setters of 2 and 4, `0x50cd926e`, `0x50cd92e4`) and isFocus `0x62af6e28`,
+     and the AF module's state getter `0x509b06f6` answers indicator 1 (that its code 1 is S-AFOSD's in-focus code is
+     I). *The re-arm:* the shooting reactive posts CBS_AF_LOCK (155) with 1 or 0 by its event's field
+     (`0x50af4b73..0x50af4ba6`), which the application's callback switch (`0x5108226d`, case `0x510824af`) turns into
+     GUI event `0x0300002c` (1) or `0x0300002d` (0); `0x0300002d`'s rows name clearAfSound `0x5105241b` and
+     `0x5105254f`, which calls it, and clearAfSound clears afSound when `0x51069d6d` answers 0
+     (`0x5105241e..0x51052429`; X: it does at S1 up). S-AFLOCK posts CBS_AF_LOCK(1) after END_FOCUS(OK) and
+     CBS_AF_LOCK(0) at S1 up: so each half press in focus beeps once (X: without the 0 the second half press was
+     silent); that the camera's sequence posts it at the lock and its release is I (the reactive's event is not traced
+     to the AF module). A release's END_EXPOSE also clears the flag (its handler `0x51065dd7` calls initAfSound
+     `0x510523ff`). Without S-AFLOCK, and with the beep Off, nothing is requested (X). No other input of the lab (menu
+     navigation and dials, OK and the Super Control Panel, the arrows, a release, playback) reaches the facade's play or
+     api_sound (X, the round's first probe); the menu cursor's Cursor_2CNL_Actuator `0x5116418e`, the facade's other GUI
+     caller, was not entered. Before S-AFLOCK (X, a probe of S1 then S2) the singleton ran only at S2, twice from
+     IOlyApiShooting (`0x51059373`, `0x51059919`, via `0x5108c19f`), which then asks +68 (isThroughSound); +4 stops.
+     om-c's electronic shutter sound calls play from hooks on CapBuf_TakeBuff's calls of `0x50b8467c` (a buffer list
+     append) and `0x50b87d56`, which S-RELSEQ's stand-in never reaches.
   2. *UI_OUT* (task 38, entry `0x5014f56c`; H-UIOUTSTART, MODELS `ui_out`: its init `0x5014f4e9`, which the boot
      calls after checkpoint "2_9" at `0x501e8f31`, then act_tsk; UI_OUT_EXEC `0x71` leaves S-MODACK's queues) takes the
      message on flag `0x57` pattern 0x2 and gives kind 2 to `0x5014f7e0`, which for op 0 (play): reads setting `0x5051`
@@ -841,13 +842,20 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
      (`0x50aad2f2..0x50aad408`: the post_end through `0x50aad55d` and the end flag `0x600431a6` bit 1 << player), and
      command_play_end (0x49) then waits for the TX done callback `0x50aad44b`'s bit 31 of that flag
      (`0x50aac833..0x50aac863`, no timeout), which only the ISR's stop calls: at a slot's interrupt with TX enable
-     (+0x30 bit 2) clear (`0x50aa923c..0x50aa9265`). Nothing in the driver clears TX enable on this path, so the lab's
-     port ends TX itself at the empty slot B, clearing the enable (A-AUDIO-1: I, from that wait; X: every half press's
-     post_end, command_play_end and close then run, and the port is idle). The port's slot address registers hold the
-     address >> 4 (the TX open `0x50aa9379` and the re-arm `0x50aa9652`), so a direct play's samples must start 16-byte
-     aligned: the lab's beep's start at +144 (with them at +140 the port played 12 bytes of the header first, X). X: the
-     beep's 6144 frames start 68 ms of lab time after S1 down (the GUI's changedFocus 50 ms, then UI_OUT, the play start
-     and the TX open), one IRQ 43, no gain stage.
+     (+0x30 bit 2) clear (`0x50aa923c..0x50aa9265`). The driver's one TX disable, the period callback's stop
+     (`0x50aad35d` -> `0x50aad6bc`: port command 4 through `0x50aa8d32`, the only call of `0x50aad6bc` in the driver's
+     code), is not reached on this path: the callback takes it only for a play slot whose byte +133 is not negative
+     (`blt` at `0x50aad31c`), and aud_seq_play sets that byte to -1 (`0x50aac47c`, its only store in the driver's code
+     `0x50aa7000..0x50ab0000`). command_play_end skips the wait only while another play slot is counted
+     (`0x50aac81d..0x50aac830`) or for a slot opened and never started (`0x50aac833..0x50aac838`: its state byte +12 is
+     1, set at `0x50aac59b`; 2 at `0x50aac74e`, 3 at `0x50aac7e1`). So the lab's port ends TX itself at the
+     empty slot B, clearing the enable (A-AUDIO-1: I, from that wait and that gate; X: every half press's post_end,
+     command_play_end and close then run, and the port is idle). The other reading, that the real port raises an
+     interrupt for the empty slot and stops on what the driver does then, is not excluded (?). The port's slot address
+     registers hold the address >> 4 (the TX open `0x50aa9379` and the re-arm `0x50aa9652`), so a direct play's samples
+     must start 16-byte aligned: the lab's beep's start at +144 (with them at +140 the port played 12 bytes of the
+     header first, X). X: the beep's 6144 frames start 68 ms of lab time after S1 down (the GUI's changedFocus 50 ms,
+     then UI_OUT, the play start and the TX open), one IRQ 43, no gain stage.
   5. *To the page.* The port's played slots go to the session's audio output (`emu/src/lab/audio.mjs`) as PCM events
      of source `native`, consecutive slots back to back at the lab time each started, and the pages play them with
      WebAudio through `GET /api/audio` (X: `emu/test/test_host.mjs` audio, the beep beside S-SHUTTERSND's clicks). The
@@ -893,21 +901,24 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   writes with `0x10100` at `0x501a9a1e..0x501a9ab4`, X: run natively and read back). It serves any read up to the RAM
   log at `0x4e820000` from the area, erased past the window and the image (res_read of type 2 reads an entry's size +
   1024 bytes, `0x501a937d` / `0x501a9394`, past the last entry; X: a 2 s sound 1 read past the image's end, where the
-  first version passed such a read down and stopped the session; the area's extent is I), and with the audio hardware
-  and no host image the image is S-SOUNDRES's (the bullet above, item 3). Erased, res_size(2, 0) = `0xffffffff` and
-  res_version(2) = `0xffff0000` (X), and USTART_L's own load of sound 0 (`0x5002433b` / `0x50024353`: res_read(2, 0,
-  `0xa4000000`, res_size + 1024)), which the lab runs right after the loader (H-RESINIT's order: USTART_L runs it after
-  the lens data cache load, res_read(11, 0) and a wait until the byte `(0xa32df1c0)` is not 0, `0x50024323..0x50024336`,
-  whose meaning is ?; the two touch different state), wraps its size to 1023: res_read sets its last entry
-  (`0x501a934e`), takes its error path (`0x501a93d5`), logs `0x1f000003` and leaves the descriptor `{0, 0}` at
-  `0xa32db188`, which a later load into `0xa4000000` answers without a read (`0x501a9333..47`) (D; X); with an image it
-  leaves `{0xa4000000, size + 1024}` (X). A sound 0 larger than `0x3d000` bytes would run into the GUI's icons record at
-  `0xa403d000` (X: a 2 s tone as sound 0 stopped the application's start). What changes in the lab: the lens data lookup
-  reads its lens's record (type `0x8002`, 13824 bytes at `0x4709de00`) where it read 0 bytes at 0 (X), the erased area's
-  one `0x1f000003` at the bring-up (gone where S-SOUNDRES's area is served), and nothing else a camera would show: X,
-  the 26 play scenarios' traces before and after H-RESINIT, H-UIOUTSTART and S-AFLOCK compared item by item (2026-11-02,
-  the integration): the same screens and the same interrupt rows in the same order, each with its IRQs, levels and pcs,
-  only the rows' instruction counts moved; the device summaries differ in two more VSC doorbell commands (the harness's
+  first version passed such a read down and stopped the session; the area's extent is I; an access across the area's
+  start or that address is refused with its own message), and with the audio hardware and no host image the image is
+  S-SOUNDRES's (the bullet above, item 3). Erased, res_size(2, 0) = `0xffffffff` and res_version(2) = `0xffff0000` (X),
+  and USTART_L's own load of sound 0 (`0x5002433b` / `0x50024353`: res_read(2, 0, `0xa4000000`, res_size + 1024)), which
+  the lab runs right after the loader (H-RESINIT's order: USTART_L runs it after the lens data cache load, res_read(11,
+  0) and a wait until the byte `(0xa32df1c0)` is not 0, `0x50024323..0x50024336`, whose meaning is ?; the two touch
+  different state), wraps its size to 1023: res_read sets its last entry (`0x501a934e`), takes its error path
+  (`0x501a93d5`), logs `0x1f000003` and leaves the descriptor `{0, 0}` at `0xa32db188`, which a later load into
+  `0xa4000000` answers without a read (`0x501a9333..47`) (D; X); with an image it leaves `{0xa4000000, size + 1024}`
+  (X). A sound 0 whose load (its size + 1024 bytes) is larger than `0x3d000` bytes would run into the GUI's icons record
+  at `0xa403d000` (X: a 2 s tone as sound 0 stopped the application's start), and one larger than `0x3b800` into the
+  copy task's ring at `0xa403b800` (the bullet above, item 4), which ends at the icons record and which a sound played
+  through the copy task overwrites (I: no lab input plays one). What changes in the lab: the lens data lookup reads its
+  lens's record (type `0x8002`, 13824 bytes at `0x4709de00`) where it read 0 bytes at 0 (X), the erased area's one
+  `0x1f000003` at the bring-up (gone where S-SOUNDRES's area is served), and nothing else a camera would show: X, the 26
+  play scenarios' traces before and after H-RESINIT, H-UIOUTSTART and S-AFLOCK compared item by item (2026-11-02, the
+  integration): the same screens and the same interrupt rows in the same order, each with its IRQs, levels and pcs, only
+  the rows' instruction counts moved; the device summaries differ in two more VSC doorbell commands (the harness's
   steps) and, after S1 with S-AFLOCK, 6 to 10 fewer OSD engine commands (which drawing is not traced). Open: the OM-1's
   own sound area (its entries, which ids are which sounds, their format, its extent; a NAND read from a camera would
   settle it); E146 and E147 (their sound index at `0x4e3e0000`, X) are not given `res_nand` yet.

@@ -761,7 +761,7 @@ export async function workerTests() {
         let id = 20;
         for (const inp of [{ type: 'key', id: 's1', action: 'down' }, { type: 'key', id: 's2', action: 'down' }, { type: 'token', token: 'WAIT:700' },
           { type: 'key', id: 's2', action: 'up' }, { type: 'key', id: 's1', action: 'up' }]) await req(id++, 'POST', '/api/input?sync=1', inp);
-        // S-SHUTTERSND's two clicks, and the half press's AF beep the firmware plays (E143's audio hardware, source native)
+        // S-SHUTTERSND's two clicks and the half press's AF beep the firmware plays (E143's audio hardware: native)
         const all = seen.slice(a0).filter((x) => x.type === 'audio').flatMap((x) => x.events), sound = all.filter((e) => e.source === 'S-SHUTTERSND');
         const beep = all.filter((e) => e.source === 'native').reduce((n, e) => n + e.frames, 0);
         if (sound.length !== 2 || !sound.every((e) => e.samples instanceof Int16Array && e.samples.length === e.frames) ||

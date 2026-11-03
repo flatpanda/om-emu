@@ -19,8 +19,8 @@
 //   file whose old bytes are not the stock block's and one the page could not read refused (the boot offered again),
 //   the E143 .BIN booted, an unported token refused, the card the firmware formatted read through GET /api/card and
 //   the session's options through GET /api/session, S2's two S-SHUTTERSND clicks posted as 'audio' messages 1/125 s
-//   apart, a ?sync=1 request answered when the session quits; with $OM_FW_DIR every other model whose .BIN is there
-//   booted in its own Worker to running with a frame;
+//   apart beside the half press's AF beep (6144 frames of source native), a ?sync=1 request answered when the session
+//   quits; with $OM_FW_DIR every other model whose .BIN is there booted in its own Worker to running with a frame;
 // - the Card panel and the session options without firmware (cardTests): base64, the card's reader
 //   (web/cardfiles.mjs) on a FAT16 volume built here, the router's /api/session and card routes on a headless Player,
 //   the node server's PNG of a picture, web/page.mjs's binary answers, the browser's S-NVRAM host (web/nvram.mjs).
@@ -755,16 +755,18 @@ export async function workerTests() {
           bad.push(`worker: GET /api/card ${JSON.stringify(cardDoc)?.slice(0, 300)}, GET /api/session ${JSON.stringify(sess)?.slice(0, 200)}`);
         }
         // the lab's sound (src/lab/audio.mjs): S2's two S-SHUTTERSND clicks posted to the page as 'audio' messages,
-        // 1/125 s apart, with their samples
+        // 1/125 s apart, with their samples;
         checks++;
         const a0 = seen.length;
         let id = 20;
         for (const inp of [{ type: 'key', id: 's1', action: 'down' }, { type: 'key', id: 's2', action: 'down' }, { type: 'token', token: 'WAIT:700' },
           { type: 'key', id: 's2', action: 'up' }, { type: 'key', id: 's1', action: 'up' }]) await req(id++, 'POST', '/api/input?sync=1', inp);
-        const sound = seen.slice(a0).filter((x) => x.type === 'audio').flatMap((x) => x.events);
-        if (sound.length !== 2 || !sound.every((e) => e.source === 'S-SHUTTERSND' && e.samples instanceof Int16Array && e.samples.length === e.frames) ||
-          sound[1].t_lab_ns - sound[0].t_lab_ns !== 8000000 || sound[1].seq !== sound[0].seq + 1) {
-          bad.push(`worker: the sound after S2: ${JSON.stringify(sound.map(({ samples, ...e }) => e))}`);
+        // S-SHUTTERSND's two clicks, and the half press's AF beep the firmware plays (E143's audio hardware, source native)
+        const all = seen.slice(a0).filter((x) => x.type === 'audio').flatMap((x) => x.events), sound = all.filter((e) => e.source === 'S-SHUTTERSND');
+        const beep = all.filter((e) => e.source === 'native').reduce((n, e) => n + e.frames, 0);
+        if (sound.length !== 2 || !sound.every((e) => e.samples instanceof Int16Array && e.samples.length === e.frames) ||
+          sound[1].t_lab_ns - sound[0].t_lab_ns !== 8000000 || sound[1].seq !== sound[0].seq + 1 || beep !== 6144) {
+          bad.push(`worker: the sound after S2: ${JSON.stringify(all.map(({ samples, ...e }) => e))}`);
         }
         // a ?sync=1 request in flight when the session quits is answered (result null or the record), then 'stopped'
         checks++;

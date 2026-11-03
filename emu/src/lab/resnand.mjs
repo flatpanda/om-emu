@@ -23,10 +23,12 @@
 //              sound area at 0x4e420000 (res_nand.sound): erased (0xff) unless the host gives an image (env.soundArea:
 //              the camera's own area is factory data, not in the update; a lab-made one in the TG-7's format,
 //              src/fw/nand.mjs soundArea), the firmware's writes and erases inside the flash access guard's window
-//              for it ([0x4e420000, 0x4e460000), 0x50000735, D) kept for the session. The area is served over that
-//              window, or over the host's image where it is longer (up to the RAM log at 0x4e820000, the guard's next
-//              window, D; that the area ends there is I). Any other access goes on to the layers below (S-FSNAND
-//              stops the session at an access outside its area)
+//              for it ([0x4e420000, 0x4e460000), 0x50000735, D) kept for the session. A read anywhere up to the RAM
+//              log at 0x4e820000 (the guard's next window, D; that the area ends there is I) is served from the area,
+//              erased past the window and the host's image: res_read of type 2 reads an entry's size + 1024 bytes
+//              (0x501a937d, 0x501a9394, D), past the last entry's end. With --audio on and no env.soundArea the host's
+//              image is the lab-made one (S-SOUNDRES, src/lab/soundres.mjs). Any other access goes on to the layers
+//              below (S-FSNAND stops the session at an access outside its area)
 // The loader's reads (X, E143): 16, all served from the container but the sound index; the tables then answer
 // res_size(0, 0) = 0xe2800, res_size(3, 0) = 0x2800, res_size(0x8000, 0) = 0x167fc00, res_version = 0x01000000 (the
 // heads' version 0x0100), and with the area erased res_size(2, 0) = 0xffffffff (test/test_resnand.mjs).
@@ -61,9 +63,10 @@ export class ResNand {
     if (image !== null && !(image instanceof Uint8Array)) throw new ResNandError('S-RESNAND: env.soundArea is not a Uint8Array');
     if (image && image.length > end - load) throw new ResNandError(`S-RESNAND: a sound area of ${image.length} bytes, more than the ${end - load} up to the RAM log (${h8(end)})`);
     this.image = image;
-    // the part of the area served: the guard window, or the host's image where it is longer (past it, an access goes on
-    // to the layers below: the area's real extent is not known)
-    this.sound_end = Math.max(guard[1], load + (image?.length ?? 0));
+    // the part of the NAND served as the sound area: up to the RAM log (that the area ends there is I), erased past the
+    // guard window and the host's image. res_read of type 2 reads its entry's size + 1024 bytes (0x501a937d,
+    // 0x501a9394, D), so the last entry's read runs past the image's end
+    this.sound_end = end;
     // the guard window's bytes as the firmware may rewrite them (erased, or the host's image)
     this.window = new Uint8Array(guard[1] - guard[0]).fill(0xFF);
     if (image) this.window.set(image.subarray(guard[0] - load, guard[1] - load));

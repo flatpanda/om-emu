@@ -303,7 +303,7 @@ export class Player {
   // ---- session lifecycle
   opts() {
     const a = this.a;
-    return { start: a.start, touch: a.touch, us_clock: a.us_clock, bgdraw: !a.no_bgdraw, mutant: a.x_mutant, a15: a.a15 ?? 'auto', hdmi: a.hdmi ?? 'off', audio: a.audio ?? 'off',
+    return { start: a.start, touch: a.touch, us_clock: a.us_clock, bgdraw: !a.no_bgdraw, mutant: a.x_mutant, a15: a.a15 ?? 'auto', hdmi: a.hdmi ?? 'off', audio: a.audio ?? 'auto',
       ...(this.camapp_components ? { camapp_components: true } : {}) };
   }
   open_session() {
@@ -411,9 +411,10 @@ export class Player {
     if (this.session?.power_manager) used.push('H-PWRSTART', ...(this.session.ioexp ? ['S-IOEXP'] : []), 'S-SHUTDOWN', 'S-PWRLOG', 'H-SCPUPOLL');
     if (this.session?.hdmi_port || this.session?.lab?.scpu_link) used.push('H-GIOSLOTS');   // the GIO slots, for the HDMI pin or the link's pin 102
     if (this.session?.hdmi_port) used.push('S-HDMISINK', 'A-HDMI-1');                       // --hdmi on: the HDMI port, its sink
-    if (this.session?.audio_hw) used.push('H-AUDSTART', 'S-AUDCPU2', 'S-WM8946', 'A-AUDIO-1', 'H-AUDTIME');   // --audio on: the audio hardware (audiohw.mjs)
+    if (this.session?.audio_hw) used.push('H-AUDSTART', 'S-AUDCPU2', 'S-WM8946', 'A-AUDIO-1', 'H-AUDTIME');   // --audio on (auto on E143): the audio hardware (audiohw.mjs)
     if (this.session?.storage) used.push('H-FILEINIT', 'H-FILECLBK', 'S-SDHOST', 'S-SDCARD', 'S-FSNAND', ...(this.session.storage.f.album_init !== null ? ['S-ALBM'] : []), 'S-RECFILE');   // the file system native on a card (storage.mjs; S-ALBM where the body has an album manager)
     if (this.session?.resnand) used.push('H-RESINIT', 'S-RESNAND');                       // the resource tables from the host's NAND (resnand.mjs)
+    if (this.session?.resnand && this.session.sound_area === 'S-SOUNDRES') used.push('S-SOUNDRES');   // the lab-made sound area (soundres.mjs)
     if (this.session?.storage?.powered) used.push('S-SDPOWER');                           // a card supply request answered
     if (this.session?.storage?.switches) used.push('S-SDSWITCH');                         // a card line request answered
     if (this.session?.camapp?.movie_rate_answered) used.push('S-MOVRATE');                 // the record time with frame rate 0

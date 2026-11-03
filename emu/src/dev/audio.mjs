@@ -34,7 +34,13 @@
 // in turn: the port fetches the slot's bytes from memory as it starts it and plays them for len / (rate x frame bytes)
 // seconds of lab time (768 bytes at 48 kHz, 16-bit stereo: 4 ms); at the slot's end its done bit and bit 5 are set (one
 // interrupt per slot), and the other slot, if armed, starts at once. A slot ending with the other not armed is an
-// underrun: the port stops playing (counted; no status bit is set, which bit the hardware sets is ?). Clearing TX run
+// underrun: the port stops playing (counted; no status bit is set, which bit the hardware sets is ?). A slot armed
+// with length 0 is empty: when its turn comes TX ends there, the port clearing +0x30 bit 2 (TX enable) itself, so the
+// interrupt of the slot before it finds TX disabled and the ISR stops (counted apart; I). The driver's direct play
+// (0x62af27d6 = 1) arms slot B with address 0 and length 0 beside the whole sound in slot A (0x50aad250, the TX open's
+// 0xc00, D), and nothing of the driver clears TX enable on that path before command_play_end waits for the TX done
+// callback 0x50aad44b, which only the ISR's stop calls (0x50aac83a..0x50aac850, 0x50aa923c..0x50aa9265, D): so the
+// port ends that TX itself (I, from that wait; X: with it the AF beep's release completes). Clearing TX run
 // lets the slot playing play to its end, with no interrupt there, and starts no other (I: the firmware's end clears it
 // at the interrupt that starts the sound's last period, X, so a stop at once would cut that period; and the ISR's done
 // bits would write through its cleared TX object, 0x50aa9206). A start while that slot still plays cuts it there: the
@@ -42,10 +48,14 @@
 // then is not read, the model only keeps the two sounds from overlapping). TX enable rising sets bit 4 (I: the start's
 // wait for it comes between the TX open and the TX start). The format is the TX configuration's. The driver copies one
 // of four templates by its format record (0x50aab154: 0x60dbf2b4, 0x60dbf2d4, 0x60dbf2f4, 0x60dbf314; the 24-bit ones
-// set +0x04 bit 23 and +0x30 bit 4, D; what the record's other field selects is ?). The one modelled is the template
-// the play path writes for a 48 kHz 16-bit stereo WAV (0x60dbf2b4: +0x04 bits 20..24 = 0x01, +0x30 bits 3..6 = 0x8; X,
-// test/test_audiohw.mjs), at 48 kHz, the rate the play path pairs with 16 bits (0x50aac51b..48: a 48000 Hz 16-bit
-// stereo WAV, else 96000 Hz 24-bit; the port's clock words come from the system clock record, 0x50031c73 + 0x10b0, not
+// set +0x04 bit 23 and +0x30 bit 4, D; the record's +0 = 2 picks 0x60dbf2d4 or 0x60dbf314, 0x50aab1ba / 0x50aab18d, D,
+// and the direct play, 0x62af27d6 = 1, writes that, X). Modelled: the copy task's template for a 48 kHz 16-bit stereo
+// WAV (0x60dbf2b4: +0x04 bits 20..24 = 0x01, +0x30 bits 3..6 = 0x8; X, test/test_audiohw.mjs) and the direct play's
+// (0x60dbf2d4, the AF sound's, keyed PRM_AUD_AFOK_VOL: +0x04 bits 20..24 = 0x01, +0x30 bits 3..6 = 0, X; the two
+// templates differ in their words 1 and 7, D, what that changes in the port is ?), its samples taken as the same
+// 16-bit stereo (I: +0x04's bits are the same), at 48 kHz, the rate the play path pairs with 16 bits (0x50aac51b..48:
+// a 48000 Hz 16-bit stereo WAV, else 96000 Hz 24-bit; the port's clock words come from the system clock record,
+// 0x50031c73 + 0x10b0, not
 // from the format, D), with 16-bit little-endian samples, left then right (I). Another configuration at a start is
 // UNKNOWN. A slot's bytes go to the lab as a block {t_ns (its start), rate, channels, bytes} that take() hands over
 // (the lab's sink: src/lab/audiohw.mjs); at most BLOCKS_KEPT wait (the oldest go first, counted).
@@ -68,7 +78,8 @@ const RX_WORDS = new Set([RX_CTRL, 0x10, 0x14, 0x18, 0x1c]);
 const RX_ARM = 0x300, RX_B24 = 0x01000000;      // +0x20: the RX arms, and the bit the port enable writes without +0x00 bit 0
 // the TX formats modelled: the configuration's bits (+0x04 bits 20..24, +0x30 bits 3..6) as the driver's template
 // writes them
-export const TX_FORMATS = [{ name: 's16 stereo 48 kHz', fmt04: 0x01, fmt30: 0x8, rate: 48000, channels: 2, bytes: 2 }];
+export const TX_FORMATS = [{ name: 's16 stereo 48 kHz', fmt04: 0x01, fmt30: 0x8, rate: 48000, channels: 2, bytes: 2 },
+  { name: 's16 stereo 48 kHz (direct)', fmt04: 0x01, fmt30: 0x0, rate: 48000, channels: 2, bytes: 2 }];
 export const BLOCKS_KEPT = 4096;
 export const SCA_START = 0xa0, SCA_STATUS = 0x04;
 
@@ -84,7 +95,7 @@ export class AudioPort {
     this.next = 0;                   // the slot the port plays next
     this.format = null;
     this.blocks = [];                // played slots not taken yet
-    this.stats = { starts: 0, slots: 0, bytes: 0, underruns: 0, overruns: 0, dropped: 0, irqs: 0, readies: 0, stops: 0, cut: 0 };
+    this.stats = { starts: 0, slots: 0, bytes: 0, underruns: 0, overruns: 0, dropped: 0, irqs: 0, readies: 0, stops: 0, cut: 0, empty: 0 };
     this.sca = new Uint32Array(SCA_SIZE / 4);
     addRegion({ base: cfg.port, size: PORT_SIZE, kind: K_MMIO, name: 'om1.audio-port',
       dev: { read: (a, w, dbg) => this.read(a - cfg.port, w, dbg), write: (a, v, w, dbg) => this.write(a - cfg.port, v, w, dbg) } });
@@ -123,7 +134,8 @@ export class AudioPort {
       for (const s of [0, 1]) {
         if (!(value & ARM[s])) continue;
         const addr = this.reg[TX_ADDR[s] >> 2] << 4 >>> 0, len = this.reg[TX_LEN[s] >> 2];
-        if (!len || !this.bus.span(addr, len)) return this.portUnknown('write', off, size, value, dbg, ` (slot ${'AB'[s]} at ${hex8(addr)}, ${len} bytes: not in memory)`);
+        if (len === 0) { this.armed[s] = { addr, len: 0 }; continue; }      // an empty slot (the direct play's B)
+        if (!this.bus.span(addr, len)) return this.portUnknown('write', off, size, value, dbg, ` (slot ${'AB'[s]} at ${hex8(addr)}, ${len} bytes: not in memory)`);
         this.armed[s] = { addr, len };
       }
       this.update();
@@ -183,6 +195,11 @@ export class AudioPort {
   play(t) {
     const s = this.next, a = this.armed[s];
     if (!a) { this.stats.underruns += 1; this.playing = null; return; }
+    if (a.len === 0) {                // an empty slot: TX ends here, its enable cleared (A-AUDIO-1, I)
+      this.armed[s] = null; this.stats.empty += 1; this.playing = null;
+      this.reg[TX_CTRL >> 2] = (this.reg[TX_CTRL >> 2] & ~TX_ENABLE) >>> 0;
+      return;
+    }
     const frame = this.format.channels * this.format.bytes;
     if (a.len % frame) {
       this.m.stderr(`om-emu: om1.audio-port UNKNOWN slot ${'AB'[s]} of ${a.len} bytes: not whole ${frame}-byte frames pc ${hex8(ctx.pc())}`);

@@ -1,8 +1,9 @@
-// The audio hardware in a play session (--audio on, E143; docs/hle-gaps.md 4.5, where the firmware addresses cited here
-// are listed): the machine's audio serial port and SCA page (src/dev/audio.mjs), the sound IC on PER_SIO's channel 14
-// (S-WM8946, src/lab/wm8946.mjs), the CPU 2 side of AUD_MAIN's start (S-AUDCPU2), AUD_MAIN's start
-// (H-AUDSTART) and the sink that hands the port's PCM to the session's audio output (src/lab/audio.mjs). Off by
-// default: without --audio the machine has no port, and nothing here runs.
+// The audio hardware in a play session (--audio auto, the default, or on; E143; docs/hle-gaps.md 4.5, where the
+// firmware addresses cited here are listed): the machine's audio serial port and SCA page (src/dev/audio.mjs), the
+// sound IC on PER_SIO's channel 14 (S-WM8946, src/lab/wm8946.mjs), the CPU 2 side of AUD_MAIN's start (S-AUDCPU2),
+// AUD_MAIN's start (H-AUDSTART) and the sink that hands the port's PCM to the session's audio output
+// (src/lab/audio.mjs). With --audio off, and on a body without MODELS audio, the machine has no port and nothing here
+// runs.
 //
 // H-AUDSTART: AUD_MAIN (task 0x52, entry 0x50a62a05), which the boot's USTART2 starts with OlyTaSt at 0x501e950b and
 // the lab, ending the init task, does not, is started natively at the play bring-up (act_tsk of its static task). Its
@@ -28,7 +29,11 @@
 // 2's). Any other OlyTaStCpu call runs natively; a second start of the same id is an error.
 //
 // H-AUDTIME (time_steps below): while the port plays, the lab's one-jump time moves go from clock event to clock event
-// and deliver IRQ 43 at each slot's end.
+// and deliver IRQ 43 at each slot's end. The debug API's advance and run-to-frame ring the VSC's doorbell directly
+// (src/debug/debugger.mjs) and are not stepped: one of them past several slot ends while the port plays underruns it.
+// run_to_frame's boundary is computed from the published VSC window (frame_start + length x line_ns), a second copy of
+// src/dev/vsc.mjs nextBoundary's arithmetic; a channel that becomes runnable only at the native command's chanSync takes
+// the one-jump path.
 //
 // The sink: after each step and idle slice the session hands the port's played slots (src/dev/audio.mjs take()) to its
 // audio output as events of source 'native', consecutive slots merged into one event (at most AUDIO_MAX_S each), at the

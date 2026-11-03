@@ -42,6 +42,7 @@ import * as SC from './scene.mjs';
 import { CamApp, CA_MODULE9_READERS } from './camapp.mjs';
 import { AudioOut } from './audio.mjs';
 import { AudioHw } from './audiohw.mjs';
+import { labSoundArea, STAND_IN as SOUNDRES } from './soundres.mjs';
 
 // base64.b64encode(bytes).decode()
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -881,13 +882,13 @@ export class PlaySession extends N.NavSession {
     }
     // the audio hardware (--audio on, a body with src/fw/models.mjs audio; src/lab/audiohw.mjs): the machine gets the
     // audio port and the SCA page (src/dev/audio.mjs), the bring-up the sound IC on PER_SIO (S-WM8946), S-AUDCPU2 and
-    // H-AUDSTART
-    const audio = opts.audio ?? 'off';
-    if (!['off', 'on'].includes(audio)) throw new ValueError(`audio ${show(audio)}: off or on`);
-    if (audio === 'on') {
-      if (!MODEL_INFO.audio) throw new ValueError(`--audio on: ${MODEL} has no audio hardware in the lab (src/fw/models.mjs audio)`);
-      env = { ...env, machine: { ...(env.machine ?? {}), audio: true } };
-    }
+    // H-AUDSTART, and the sound area S-SOUNDRES's lab-made sounds where the host gives none. auto, the default, is on
+    // for a body that has it (E143) and off for the others
+    const audio = opts.audio ?? 'auto';
+    if (!['off', 'on', 'auto'].includes(audio)) throw new ValueError(`audio ${show(audio)}: off, on or auto`);
+    if (audio === 'on' && !MODEL_INFO.audio) throw new ValueError(`--audio on: ${MODEL} has no audio hardware in the lab (src/fw/models.mjs audio)`);
+    const audioOn = audio === 'on' || (audio === 'auto' && !!MODEL_INFO.audio);
+    if (audioOn) env = { ...env, machine: { ...(env.machine ?? {}), audio: true } };
     // defaults for the keys kw does not give (a key given as null keeps it)
     const setdefault = (key, v) => { if (!Object.hasOwn(k, key)) k[key] = v; };
     setdefault('time', true);
@@ -904,8 +905,9 @@ export class PlaySession extends N.NavSession {
     this.scpu_port = scpuPort();
     this.hdmi_port = hdmi === 'on';
     this.hdmi_plugged = false;
-    this.audio_on = audio === 'on';
-    this.audio_hw = null;          // the audio hardware (audiohw.mjs), from the bring-up on with --audio on
+    this.audio_on = audioOn;
+    this.audio_hw = null;          // the audio hardware (audiohw.mjs), from the bring-up on with --audio auto or on
+    this.sound_area = null;        // the sound area S-RESNAND serves: 'host' (env.soundArea), S-SOUNDRES's or null (erased)
     if (opts.mutant === 'monitor-inverted') set_bit(this.images[MONITOR_OPEN[0]], MONITOR_OPEN[1], MONITOR_OPEN[2], 0);   // the monitor reads closed: touches rejected
     this.pressed = new Set();
     this.shutter_held = new Set();
@@ -1220,13 +1222,16 @@ export class PlaySession extends N.NavSession {
     this.acc.prime();
   }
   // H-RESINIT and S-RESNAND (resnand.mjs): the resource tables loaded natively from the NAND the host gives (env.nand:
-  // the update's blocks at their load addresses; env.soundArea: an image of the sound area, which is erased without
-  // one), on a body whose MODELS entry gives res_nand (E143). A host without env.nand keeps the tables at 0, as the lab
-  // did before (the lens data lookup then reads nothing, src/lab/lens.mjs), and the bring-up's record says so
-  // (resnand.skipped)
+  // the update's blocks at their load addresses; env.soundArea: an image of the sound area), on a body whose MODELS
+  // entry gives res_nand (E143). Without env.soundArea the sound area is the lab-made one where the audio hardware runs
+  // (--audio auto or on: S-SOUNDRES, soundres.mjs, so the operation sounds have data to play), else erased. A host without
+  // env.nand keeps the tables at 0, as the lab did before (the lens data lookup then reads nothing, src/lab/lens.mjs),
+  // and the bring-up's record says so (resnand.skipped)
   resnand_runs() { return !!MODEL_INFO.res_nand && !!this.env.nand; }
   resnand_bring_up() {
-    this.resnand = new ResNand(this, MODEL_INFO.res_nand, this.env.nand, this.env.soundArea ?? null);
+    this.sound_area = this.env.soundArea ? 'host' : this.audio_on ? SOUNDRES : null;
+    const image = this.env.soundArea ?? (this.audio_on ? labSoundArea({ load: MODEL_INFO.res_nand.sound.load }).image : null);
+    this.resnand = new ResNand(this, MODEL_INFO.res_nand, this.env.nand, image);
     this.resnand.bring_up();
   }
   // H-FILEINIT, H-FILECLBK, S-SDHOST, S-SDCARD, S-FSNAND, S-ALBM and the card's insertion (storage.mjs): the file

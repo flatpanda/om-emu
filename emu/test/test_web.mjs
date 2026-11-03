@@ -557,7 +557,7 @@ export async function cardTests() {
     return { status: res.status, type: h.get('content-type'), h, body: res.body, doc: () => JSON.parse(new TextDecoder().decode(res.body)) };
   };
   const s = await get(api, '/api/session');
-  ok(JSON.stringify(s.doc()) === JSON.stringify({ host: 'test', lens: 'stand-in', nvram: null, card: null, card_size: null, hdmi: 'off', audio: 'off', debug_api: false, card_image: true }), `GET /api/session: ${JSON.stringify(s.doc())}`);
+  ok(JSON.stringify(s.doc()) === JSON.stringify({ host: 'test', lens: 'stand-in', nvram: null, card: null, card_size: null, hdmi: 'off', audio: 'auto', debug_api: false, card_image: true }), `GET /api/session: ${JSON.stringify(s.doc())}`);
   const c = await get(api, '/api/card'), cd = c.doc();
   ok(c.status === 200 && JSON.stringify(cd.slot) === JSON.stringify({ present: true, mounted: false, session: false, file: 'kept.omsd', kind: 'SDHC', sectors: 16777216 }) && cd.files?.length === 4 && cd.volume?.type === 'FAT16',
     `GET /api/card: ${c.status} ${JSON.stringify(cd).slice(0, 300)}`);

@@ -977,7 +977,7 @@ $('quit').onclick = () => { api('/api/quit', {}).catch(() => {}); };
 // ---- firmware and start (the browser player) ------------------------------------------------------------------------
 const Q = new URLSearchParams(location.search);
 const ARGS = {};
-for (const k of ['lang', 'device', 'a15', 'start', 'tab', 'idle', 'touch', 'us_clock', 'compose', 'hdmi', 'lens', 'card_size']) if (Q.has(k)) ARGS[k] = Q.get(k);
+for (const k of ['lang', 'device', 'a15', 'start', 'tab', 'idle', 'touch', 'us_clock', 'compose', 'hdmi', 'audio', 'lens', 'card_size']) if (Q.has(k)) ARGS[k] = Q.get(k);
 for (const k of ['no_bgdraw', 'debug_api', 'nvram']) if (Q.get(k) === '1') ARGS[k] = true;
 // the start options (HDMI port, the stand-in lens, kept settings): the query's, changed here until the start (the
 // query follows, so a reload keeps them)

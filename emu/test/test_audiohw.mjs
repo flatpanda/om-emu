@@ -9,7 +9,9 @@
 //                   so far handed over; the played slots come out of take() in order with their start times; +0x20
 //                   bit 24 (the port enable's) kept as storage; refused: RX use (+0x00 bit 6, the RX words, an RX
 //                   arm), a start without the port and TX enabled or with another format, an arm of a slot outside
-//                   memory, another +0x44 bit, a halfword, a debugger write, an SCA start; the SCA page's storage;
+//                   memory, another +0x44 bit, a halfword, a debugger write, an SCA start; the direct play's template
+//                   with the whole sound in slot A and slot B armed empty: one interrupt at A's end with TX enable
+//                   cleared by the port, then none; the SCA page's storage;
 //                   the sound IC's register file (a write kept, a read answering it, a read of an unwritten register
 //                   and another frame refused) and its volume registers; the sink: consecutive slots merged into one
 //                   event of source 'native', a gap starting another, nothing emitted (but counted) without an audio
@@ -32,7 +34,7 @@
 //                   0x5014fb87 sends them): each play's samples once, 25 slots, 24 cmd 3, one stop and the port idle,
 //                   both play slots free after the last release; without a release (the firmware's own) two plays
 //                   hold both slots and a third gets none and plays the ring on with no cmd 3 and no stop; and a
-//                   session without --audio has no port and does not list them
+//                   session with --audio off has no port and does not list them
 //   node emu/test/test_audiohw.mjs [--session]
 import { createMachine } from '../src/machine.mjs';
 import { BUS } from '../src/core/mem.mjs';
@@ -124,10 +126,29 @@ function portTests(ok) {
   wr(0x20, 0);
   ok(rd(0x20) === 0, 'the ISR\'s write-back of an RX status of 0 is taken');
   wr(TX_ADDR[0], A0 >>> 4); wr(TX_STATUS, ARM[0]);
-  wr(TX_CTRL, 0x04);
+  wr(TX_CTRL, 0x1c);
   ok(throwsAs(() => wr(CTRL, 0x31), BUS), 'a start with another TX configuration is a bus error');
   wr(TX_CTRL, FMT30); wr(CTRL, 0x11);
   ok(throwsAs(() => wr(CTRL, 0x31), BUS), 'a start with TX not enabled is a bus error');
+  // the direct play: its template (+0x30 bits 3..6 = 0), the whole sound in slot A, slot B armed empty (address 0,
+  // length 0): one interrupt at A's end with TX enable already cleared by the port, then nothing
+  wr(CTRL, 0x11); p.take(); wr(TX_STATUS, 0x3f);
+  const BIG = 4 * SLOT, big = new Uint8Array(BIG).map((_, i) => (i * 13) & 255);
+  m.dbgWrite(A0, big);
+  wr(TX_ADDR[0], A0 >>> 4); wr(TX_LEN[0], BIG); wr(TX_ADDR[1], 0); wr(TX_LEN[1], 0); wr(TX_STATUS, ARM[0] | ARM[1]);
+  ok(p.armed[1]?.len === 0, 'an arm of slot B with length 0 is taken as an empty slot');
+  wr(TX_CTRL, 0); wr(TX_CTRL, 0x04); wr(TX_STATUS, S_READY);
+  const td = clock.t, e0 = p.stats.empty;
+  wr(CTRL, 0x31);
+  ok(p.format?.name === 's16 stereo 48 kHz (direct)' && p.playing?.slot === 0, `the direct play's template starts slot A: ${p.format?.name}`);
+  clock.advance(td + 4 * PERIOD_NS, true);
+  const dst = rd(TX_STATUS), db = p.take();
+  ok(dst === (S_DONE[0] | S_SLOT) && line() && (rd(TX_CTRL) & 4) === 0 && p.playing === null && p.stats.empty === e0 + 1 && db.length === 1 && same(db[0].bytes, big),
+    `at slot A's end: its done bit and bit 5, IRQ 43, TX enable cleared by the port, nothing playing, its bytes out (status 0x${dst.toString(16)}, +0x30 0x${rd(TX_CTRL).toString(16)})`);
+  wr(TX_STATUS, dst); const irqs = p.stats.irqs;
+  clock.advance(td + 8 * PERIOD_NS, true);
+  ok(!line() && p.stats.irqs === irqs && p.take().length === 0, 'after the empty slot no further interrupt and no sound');
+  wr(CTRL, 0x11);
   p.scaWrite(0x08, 0x3e0, 4, false); p.scaWrite(0x3b0, 1, 4, false);
   ok(p.scaRead(0x08, 4, false) === 0x3e0 && p.scaRead(0x3b0, 4, false) === 1 && !intc.line[BOARD.audio.sca_irq], 'the SCA page keeps its init\'s writes; its IRQ stays low');
 }
@@ -371,11 +392,11 @@ export async function audioHwSession() {
   ok(third.cmd3 === 0 && third.stops === 0 && !third.idle && third.got.length > pcm.length, `the third finds no slot: no cmd 3, no stop, the port plays the ring on (${third.got.length / 2} frames)`);
   ok(pl.phase === 'running', `the session runs on: ${pl.phase} ${pl.error?.message ?? ''}`);
   pl.close_session();
-  // without --audio
-  const plain = new Player(args, base);
+  // --audio off
+  const plain = new Player({ ...args, audio: 'off' }, base);
   plain.open_session();
   ok(plain.session.audio_hw === null && plain.session.lab.sim.m.devices.audio === undefined && !plain.stand_ins_in_use().includes('H-AUDSTART'),
-    'without --audio: no audio port, no H-AUDSTART');
+    '--audio off: no audio port, no H-AUDSTART');
   plain.close_session();
   return { checks, bad };
 }

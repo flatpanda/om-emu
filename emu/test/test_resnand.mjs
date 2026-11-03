@@ -9,8 +9,9 @@
 //                   firmware's index rules (the OE head at 0x4e420000 with the area's length and flags 0x0103, entry 0
 //                   at +1024, 512-aligned entries padded with zeros, the container's checksum, each WAVE's format) and
 //                   its refusals, and S-RESNAND's layer on a stub session (the sound area erased, the host's image,
-//                   writes and erases kept inside the guard window and refused in the image past it, accesses past
-//                   the window or the image passed down, a container read served, anything else passed down)
+//                   writes and erases kept inside the guard window and refused past it, reads past the window or the
+//                   image served erased up to the RAM log and passed down from there, a container read served,
+//                   anything else passed down)
 //   resnandSession  (firmware: E143) play sessions with env.nand (the provisioned extract): H-RESINIT's table pointers
 //                   and the resource API's answers natively (res_size(0, 0) = 0xe2800, res_size(3, 0) = 0x2800,
 //                   res_size(0x8000, 0) = 0x167fc00, res_version 0x01000000; the erased sound area's res_size(2, 0) =
@@ -20,7 +21,8 @@
 //                   session; with a lab-made sound area (env.soundArea) res_size(2, i), USTART_L's sound 0 load at
 //                   0xa4000000, res_read(2, 1)'s descriptor {0xa4000000, size + 1024} with the WAVE at the pointer,
 //                   and the firmware's own type-2 write (0x501a98c8: an erase and two writes inside the guard window)
-//                   read back by res_read
+//                   read back by res_read; an area larger than the guard window (a 2 s sound 1) read by res_read past
+//                   the image's end, erased there
 //   node emu/test/test_resnand.mjs [--session]
 import { walk, sum32, PERM } from '../src/fw/olyfw.mjs';
 import * as N from '../src/fw/nand.mjs';
@@ -161,8 +163,11 @@ function resnandLayer(ok) {
   ok(throwsAs(() => acc(r, 0x10400, S, 4), ResNandError), 'S-RESNAND: another operation in the area refused');
   let n1 = log.length;
   acc(r, R, info.sound.guard[1] - 4, 8);
-  acc(r, W, info.sound.guard[1], 4);
-  ok(JSON.stringify(log.slice(n1)) === JSON.stringify([['prev'], ['prev']]), `S-RESNAND: without an image, accesses past the guard window (or across its end) passed down: ${JSON.stringify(log.slice(n1))}`);
+  ok(sim.read(0xA0000000, 8).every((b) => b === 0xff) && log.at(-1)[0] === 'finish', 'S-RESNAND: without an image, a read across the guard window\'s end reads erased');
+  ok(throwsAs(() => acc(r, W, info.sound.guard[1], 4), ResNandError, /writes and erases inside/), 'S-RESNAND: a write past the guard window refused');
+  acc(r, R, info.sound.end - 4, 8);
+  acc(r, R, info.sound.end, 4);
+  ok(JSON.stringify(log.slice(n1 + 1)) === JSON.stringify([['prev'], ['prev']]), `S-RESNAND: a read across the RAM log's address, or at it, passed down: ${JSON.stringify(log.slice(n1))}`);
   const img = N.soundArea([{ id: 0, wav: tone(1000, 2000) }]);
   r = mk(img);
   acc(r, R, S, 64);
@@ -172,8 +177,9 @@ function resnandLayer(ok) {
     `S-RESNAND: the host's image served (${img.length} bytes, past the guard window too)`);
   ok(throwsAs(() => acc(r, W, info.sound.guard[1], 4), ResNandError, /writes and erases inside/), 'S-RESNAND: a write into the image past the guard window refused');
   n1 = log.length;
-  acc(r, R, S + tail, 64);
-  ok(JSON.stringify(log.slice(n1)) === JSON.stringify([['prev']]), 'S-RESNAND: a read across the image\'s end passed down');
+  acc(r, R, S + tail, 1056);
+  ok(log.at(-1)[0] === 'finish' && same(sim.read(0xA0000000, 32), img.subarray(tail)) && sim.read(0xA0000000 + 32, 1024).every((b) => b === 0xff),
+    'S-RESNAND: a read across the image\'s end (the last entry\'s size + 1024 bytes, as res_read of type 2 reads) served, erased past it');
   ok(throwsAs(() => mk(new Uint8Array(info.sound.end - S + 1)), ResNandError, /RAM log/), 'S-RESNAND: an image past the RAM log refused');
   const n0 = log.length;
   acc(r, R, 0x41000010, 16);
@@ -193,8 +199,10 @@ export async function resnandSession() {
   const { TABLES, SUB_TABLES, SOUND_DESCRIPTOR, SOUND_LAST } = await import('../src/lab/resnand.mjs');
   if (!MODEL_INFO.res_nand) return { checks: 1, bad: ['the session tests run on E143 (MODELS res_nand)'] };
   const info = MODEL_INFO.res_nand;
+  // --audio off: the sound area erased or the test's image (S-SOUNDRES's lab-made one, with the audio hardware, is
+  // test_audio.mjs afBeepSession's)
   const open = (extra) => {
-    const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true },
+    const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, audio: 'off' },
       { rom: loadImage(), resBlock: loadBlock(), createHash, wallClock: () => performance.now() / 1000, ...extra });
     pl.open_session();
     return pl;
@@ -277,6 +285,20 @@ export async function resnandSession() {
     `res_write(2, 0): ${rn.writes - k0[0]} writes, ${rn.erases - k0[1]} erases, last entry ${h8(lab.sim.u32(SOUND_LAST))}, logs ${lab.kernel.errors.slice(e1).map(([c]) => h8(c))}`);
   const d2 = B.read(2, 0, p.sounds[0].size + 1024);
   ok(d2[0] === info.slot && same(lab.sim.read(info.slot, w0b.length), w0b) && B.size(2, 0) === p.sounds[0].size, `res_read(2, 0) after the write: descriptor {${d2.map(h8)}}, the new WAVE file at the pointer, the index kept`);
+  pl.close_session();
+  // an area larger than the guard window (a short sound 0 and a 2 s sound 1): res_read(2, 1) reads the entry's size +
+  // 1024 bytes, past the image's end, which S-RESNAND serves erased; read into UI_OUT's buffer for sounds above 512 KiB
+  // (0xb5a0b780, 0x5014f7e0, D): at 0xa4000000 a sound of more than 0x3d000 bytes would run into the GUI's icons record
+  // at 0xa403d000 (X: a 2 s tone as sound 0 stopped the application's start)
+  const wl = tone(1000, 2000), big = N.soundArea([{ id: 0, wav: w0 }, { id: 1, wav: wl }]), pb = N.parseSoundArea(big), BIG_AT = 0xB5A0B780;
+  pl = open({ nand: loadNand(), soundArea: big });
+  lab = pl.session.lab;
+  const n1 = pb.sounds[1].size + 1024, st1 = new Uint8Array(4);
+  new DataView(st1.buffer).setUint32(0, n1, true);
+  lab.call(info.read, { d0: 2, d1: 1, a0: BIG_AT, a1: 0 }, st1, null, 20000000);
+  const db = [lab.sim.u32(SOUND_DESCRIPTOR), lab.sim.u32(SOUND_DESCRIPTOR + 4)];
+  ok(pl.phase === 'running' && big.length > info.sound.guard[1] - info.sound.guard[0] && db[0] === BIG_AT && db[1] === n1 && same(lab.sim.read(BIG_AT, wl.length), wl) &&
+    (() => { const past = big.length - (pb.sounds[1].address - info.sound.load); return past < n1 && lab.sim.read(BIG_AT + past, n1 - past).every((b) => b === 0xff); })(), `an area of ${big.length} bytes, past the guard window: res_read(2, 1) of ${n1} bytes runs past the image's end, served erased: {${db.map(h8)}}`);
   pl.close_session();
   return { checks, bad };
 }

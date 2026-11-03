@@ -1,5 +1,6 @@
-// The lab's audio output (src/lab/audio.mjs), S-SHUTTERSND (src/lab/shuttersnd.mjs) and the AF beep's request
-// (S-AFLOCK, src/lab/camapp.mjs; H-UIOUTSTART, src/lab/play.mjs):
+// The lab's audio output (src/lab/audio.mjs), S-SHUTTERSND (src/lab/shuttersnd.mjs) and the AF beep (S-AFLOCK,
+// src/lab/camapp.mjs; H-UIOUTSTART, src/lab/play.mjs; S-SOUNDRES, src/lab/soundres.mjs; the audio hardware,
+// src/lab/audiohw.mjs):
 //   audioUnits    without firmware: an event's checks; a session's queue (AudioOut: take, the full queue's drop);
 //                 the rings (AudioRing: numbering, a copy's numbers, what after N gives and drops); the samples as
 //                 little-endian bytes and GET /api/audio's document; the Player's publish_audio (one batch per call,
@@ -11,12 +12,15 @@
 //   audioSession  E143 in a headless Player whose host plays sound: S1 then S2 emits exactly one open and one close
 //                 click, spaced by the shutter time in use (1/125 s without S-SCENE, S-SCENE's with its live view on),
 //                 the status lists S-SHUTTERSND; a Player without the host's onAudio has no sound and does not list it
-//   afBeepSession E143 with the native lens: UI_OUT runs (H-UIOUTSTART, task 38 waiting, UI_OUT_EXEC not
-//                 S-MODACK's); with the beep Off (SET:1037=0, which sets 18 too) S1 in focus makes no sound request;
-//                 On, S1 in focus enters UI_OUT's sound request 0x5014f7e0 once (play, sound 0, volume 60), S-AFLOCK's
-//                 take status set while S1 is held and cleared at S1 up; UI_OUT waits again after the request's type-2
-//                 lookup on the empty sound table; a second S1 before a release makes none (the GUI's afSound flag),
-//                 and after a release S1 reaches UI_OUT again
+//   afBeepSession E143 with the defaults (--audio auto: on; the native lens), the AF beep end to end: the status
+//                 lists the chain's stand-ins and S-RESNAND serves S-SOUNDRES's lab-made area; each of two half presses
+//                 in focus makes one sound request to UI_OUT (play, sound 0, volume 60) and PCM events of source
+//                 'native' on the host's audio output, back to back, whose samples are the lab-made beep's sample for
+//                 sample (the direct play: no gain stage), starting within 250 ms of lab time after S1 down, then
+//                 UI_OUT's release (post_end, command_play_end, the player's close) once and the port idle; S-AFLOCK's
+//                 take status while S1 is held; without S-AFLOCK, and with the beep Off (SET:1037=0, which sets 18),
+//                 no request and no sound; S2 still gives S-SHUTTERSND's two clicks beside the half press's beep;
+//                 --audio off keeps the sound area erased and has no audio hardware
 //   node emu/test/test_audio.mjs [--session]
 import { audioEvent, AudioOut, AudioRing, AudioError, audioDoc, pcmBytes, AUDIO_PENDING } from '../src/lab/audio.mjs';
 import { shutterClick, ShutterSound, SHUTTER_RATE, CLICK_S, STAND_IN } from '../src/lab/shuttersnd.mjs';
@@ -186,66 +190,100 @@ export async function audioSession() {
   return { checks, bad };
 }
 
-// The AF beep's request (E143): H-UIOUTSTART's UI_OUT and S-AFLOCK, the native lens. UI_OUT's sound request
-// 0x5014f7e0 gets a0 = the message's body: +0 u8 op (0 play), +3 u8 kind, +4 u16 the sound id, +20, +24 and +28 the
-// volume (api_sound 0x5041ee45's message +24..+36, D). The sound table is not loaded (0xa32db180 is 0), so the
-// request's type-2 lookup fails; UI_OUT must survive it.
+// The AF beep end to end (E143, the defaults: --audio auto, the native lens): S1 in focus -> S-AFLOCK -> changedFocus
+// -> playAfSound -> playTarget -> api_sound -> UI_OUT's sound request 0x5014f7e0 (a0 = the message's body: +0 u8 op,
+// +3 u8 kind, +4 u16 the sound id, +20, +24 and +28 the volume, D) -> the type-2 table (S-RESNAND serving S-SOUNDRES's
+// lab-made area) -> AUD_EXEC -> AUD_MAIN's direct play -> the audio port -> session.audio. The lab-made beep is played
+// as it is: the direct play (the AF sound's key, 0x62af27d6 = 1) has no copy task and so no software gain stage
+// (0x50aa8a63, entered only from AUD_COPY_DATA's copies), and the codec's volume registers are kept, not applied
+// (S-WM8946): the samples on /api/audio equal soundres.mjs afBeepPcm()
+const UI_OUT_SOUND = 0x5014F7E0, POST_END = 0x5014FC6E, PLAY_END = 0x50AAC800, PLAYER_CLOSE = 0x50AA9795, GAIN = 0x50AA8A63, UI_OUT_BUSY = 0xA32DB0FC;
 export async function afBeepSession() {
   const bad = [];
   let checks = 0;
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
-  const { loadImage, loadBlock, createHash } = await import('../checks/lib/env.mjs');
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { A } = await import('../src/fw/model.mjs');
-  const base = { rom: loadImage(), resBlock: loadBlock(), createHash, wallClock: () => performance.now() / 1000 };
-  const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, debug_api: true }, base);
+  const { afBeepPcm, BEEP_FRAMES, BEEP_RATE } = await import('../src/lab/soundres.mjs');
+  const base = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
+  const args = { ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, debug_api: true };
+  const events = [];
+  const pl = new Player(args, { ...base, onAudio: (e) => events.push(...e) });
   pl.open_session();
-  const run = (inp) => { pl.submit(inp); pl.tick(); };
-  run({ type: 'token', token: 'WAIT:1500' });
-  const s = pl.session, lab = s.lab, tid = s.ui_out_tid;
-  ok(pl.phase === 'running' && s.lens !== null, `a running session with the native lens (${pl.phase}, lens ${s.lens !== null})`);
-  ok(tid === 38 && lab.nk.state(tid) === 4, `H-UIOUTSTART: UI_OUT's task 38 waits after the bring-up (task ${tid}, state ${tid && lab.nk.state(tid)})`);
-  ok(!s.camapp.module_queues.has(0x71) && pl.stand_ins_in_use().includes('H-UIOUTSTART'), 'UI_OUT_EXEC (0x71) is not S-MODACK\'s while UI_OUT runs; H-UIOUTSTART listed');
-  ok(lab.sim.u32(0xA32DB180) === 0, `the sound table is not loaded: (0xa32db180) = ${lab.sim.u32(0xA32DB180)}`);
-  const sounds = [], settings = [];
-  lab.observe(A(0x5014F7E0), (l, r) => {
-    const m = r.a0 >>> 0, b = lab.sim.read(m, 32), dv = new DataView(b.buffer, b.byteOffset, 32);
-    sounds.push({ op: b[0], id: dv.getUint16(4, true), vol: [20, 24, 28].map((o) => dv.getUint32(o, true)) });
+  const s = pl.session, lab = s?.lab;
+  ok(pl.phase === 'running' && s.audio_hw && s.lens !== null && s.ui_out_tid === 38, `the defaults on E143: audio hardware, the native lens, UI_OUT (${pl.phase} ${pl.error?.message ?? ''})`);
+  if (!s?.audio_hw) { pl.close_session(); return { checks, bad }; }
+  const key = (id, action) => { pl.submit({ type: 'key', id, action }); pl.tick(); pl.publish_audio(); };
+  const idle = (ms) => { for (let t = 0; t < ms; t += 50) { s.idle_slice(lab.lab_time() + 50e6); pl.publish_audio(); } };
+  idle(1500);
+  const used = pl.stand_ins_in_use();
+  ok(['H-UIOUTSTART', 'H-RESINIT', 'S-RESNAND', 'S-SOUNDRES', 'H-AUDSTART', 'S-AUDCPU2', 'S-WM8946', 'A-AUDIO-1', 'H-AUDTIME'].every((x) => used.includes(x)),
+    `the status lists the chain's stand-ins: ${used.filter((x) => /UIOUT|RES|AUD|WM8946|SOUND/.test(x))}`);
+  const rn = s.resnand.status();
+  ok(rn.sound.startsWith("the host's image") && rn.sound0[0] === '0xa4000000', `S-RESNAND serves the lab-made area, USTART_L's sound 0 loaded: ${JSON.stringify([rn.sound, rn.sound0])}`);
+  const seen = { sound: [], post_end: 0, play_end: 0, close: 0, gain: 0 };
+  lab.observe(A(UI_OUT_SOUND), (l, r) => {
+    const b = lab.sim.read(r.a0 >>> 0, 32), dv = new DataView(b.buffer, b.byteOffset, 32);
+    seen.sound.push({ op: b[0], id: dv.getUint16(4, true), vol: [20, 24, 28].map((o) => dv.getUint32(o, true)) });
   }, 'test UI_OUT sound');
-  lab.observe(A(0x51052488), (l, r) => settings.push(r.d0 >>> 0), 'test playAfSound setting 18');   // after its 0x5104e12d(18)
-  const press = (shot = false) => {
-    sounds.length = 0; settings.length = 0;
-    run({ type: 'key', id: 's1', action: 'down' });
-    if (shot) { run({ type: 'key', id: 's2', action: 'down' }); run({ type: 'token', token: 'WAIT:800' }); run({ type: 'key', id: 's2', action: 'up' }); }
-    run({ type: 'token', token: 'WAIT:300' });
-    const word0 = lab.sim.u32(0x62AF6D00), isFocus = lab.sim.u32(0x62AF6E28);
-    run({ type: 'key', id: 's1', action: 'up' });
-    run({ type: 'token', token: 'WAIT:300' });
-    return { sounds: sounds.slice(), settings: settings.slice(), word0, isFocus, after: [lab.sim.u32(0x62AF6D00), lab.sim.u32(0x62AF6E28)], task: lab.nk.state(tid) };
+  lab.observe(A(POST_END), () => { seen.post_end += 1; }, 'test post_end');
+  lab.observe(A(PLAY_END), () => { seen.play_end += 1; }, 'test play_end');
+  lab.observe(A(PLAYER_CLOSE), () => { seen.close += 1; }, 'test close');
+  lab.observe(A(GAIN), () => { seen.gain += 1; }, 'test gain');
+  const want = afBeepPcm();
+  // one half press: S1 down, 600 ms, S1 up, 600 ms; what it made
+  const press = () => {
+    for (const k of Object.keys(seen)) seen[k] = Array.isArray(seen[k]) ? [] : 0;
+    const e0 = events.length, t0 = lab.lab_time();
+    key('s1', 'down'); idle(600);
+    const held = [lab.sim.u32(0x62AF6D00), lab.sim.u32(0x62AF6E28)];
+    key('s1', 'up'); idle(600);
+    const native = events.slice(e0).filter((e) => e.source === 'native');
+    const pcm = new Int16Array(native.reduce((n, e) => n + e.samples.length, 0));
+    let o = 0;
+    for (const e of native) { pcm.set(e.samples, o); o += e.samples.length; }
+    const backToBack = native.every((e, i) => !i || e.t_lab_ns === native[i - 1].t_lab_ns + Math.round(native[i - 1].frames * 1e9 / BEEP_RATE));
+    return { t0, held, native: native.map((e) => [e.t_lab_ns, e.frames, e.rate, e.channels]), pcm, backToBack, ...JSON.parse(JSON.stringify(seen)),
+      busy: lab.sim.read(UI_OUT_BUSY, 1)[0], port: lab.sim.m.devices.audio.status() };
   };
-  // Off: Setup's beep item (menu mode 1037) writes settings id 18 too, the id playAfSound reads (X)
-  run({ type: 'token', token: 'SET:1037=0' });
+  const same = (x) => x.pcm.length === want.length && x.pcm.every((v, i) => v === want[i]);
+  for (const n of [1, 2]) {
+    const p = press();
+    const t = p.native[0]?.[0] ?? -1;
+    ok(p.sound.length === 1 && p.sound[0].op === 0 && p.sound[0].id === 0 && p.sound[0].vol.join() === '60,60,60', `half press ${n}: one sound request to UI_OUT, play, sound 0, volume 60: ${JSON.stringify(p.sound)}`);
+    ok(same(p) && p.native.every((e) => e[2] === 48000 && e[3] === 2) && p.backToBack, `half press ${n}: /api/audio's events carry the lab-made beep, ${BEEP_FRAMES} frames, sample for sample: ${p.pcm.length / 2} frames in ${JSON.stringify(p.native)}`);
+    ok(t > p.t0 && t < p.t0 + 250e6, `half press ${n}: the beep starts ${((t - p.t0) / 1e6).toFixed(1)} ms of lab time after S1 down (want 0 to 250)`);
+    ok(p.gain === 0 && p.post_end === 1 && p.play_end === 1 && p.close === 1 && p.busy === 0 && !p.port.running && p.port.playing === null,
+      `half press ${n}: the direct play (no gain stage), UI_OUT's release (post_end, command_play_end, the player's close) once, the port idle: ${JSON.stringify({ gain: p.gain, post_end: p.post_end, play_end: p.play_end, close: p.close, busy: p.busy, port: p.port })}`);
+    ok(p.held.join() === '6,1', `half press ${n}: S-AFLOCK's take status while S1 is held (READY | READY_FINISH, isFocus 1): ${p.held}`);
+  }
+  // the negative control: without S-AFLOCK's AF lock the application's getCondition sees no focus, and nothing plays
+  s.camapp.aflock = false;
+  const nolock = press();
+  ok(nolock.sound.length === 0 && nolock.native.length === 0, `without S-AFLOCK: no sound request and no sound: ${JSON.stringify([nolock.sound, nolock.native])}`);
+  s.camapp.aflock = true;
+  // Off: Setup's beep item (menu mode 1037) writes settings id 18, the id playAfSound reads (X)
+  pl.submit({ type: 'token', token: 'SET:1037=0' }); pl.tick();
   ok(lab.get(1037) === 0 && lab.get(18) === 0, `SET:1037=0 leaves 18 at ${lab.get(18)}`);
   const off = press();
-  ok(off.sounds.length === 0 && off.settings.join() === '0', `beep Off: playAfSound reads 18 = 0 and UI_OUT gets no sound request: ${JSON.stringify(off)}`);
-  ok(off.word0 === 6 && off.isFocus === 1 && off.after.join() === '0,0', `S-AFLOCK: S1 holds READY | READY_FINISH and isFocus 1, S1 up clears them: ${JSON.stringify(off)}`);
-  run({ type: 'token', token: 'SET:1037=60' });
-  ok(lab.get(18) === 60, `SET:1037=60 leaves 18 at ${lab.get(18)}`);
-  // the GUI plays the beep once per AF lock until it re-arms it (its afSound flag 0x62b2e0c4): a release's END_EXPOSE
-  // does (X); a plain S1 release does not, in the lab
-  press(true);
-  const on = press();
-  ok(on.sounds.length === 1 && on.sounds[0].op === 0 && on.sounds[0].id === 0 && on.sounds[0].vol.join() === '60,60,60',
-    `beep On: one sound request to UI_OUT, op 0 (play), sound 0, volume 60: ${JSON.stringify(on.sounds)}`);
-  ok(on.task === 4 && pl.phase === 'running', `UI_OUT waits again after the failed sound lookup (state ${on.task}, ${pl.phase} ${pl.error?.message ?? ''})`);
-  const again = press();
-  ok(again.sounds.length === 0 && again.settings.length === 0, `a second S1 before a release: the GUI's afSound flag is still set, no request: ${JSON.stringify(again)}`);
-  press(true);
-  const after = press();
-  ok(after.sounds.length === 1 && after.sounds[0].id === 0 && after.task === 4, `after a release the next S1 reaches UI_OUT again: ${JSON.stringify(after)}`);
-  ok(pl.stand_ins_in_use().includes('S-AFLOCK') && pl.phase === 'running', `S-AFLOCK listed, the session runs on (${pl.phase})`);
+  ok(off.sound.length === 0 && off.native.length === 0, `beep Off: no sound request and no sound: ${JSON.stringify([off.sound, off.native])}`);
+  pl.submit({ type: 'token', token: 'SET:1037=60' }); pl.tick();
+  // S2: S-SHUTTERSND's two clicks, and the AF beep of the half press before it
+  const e0 = events.length;
+  key('s1', 'down'); key('s2', 'down'); idle(800); key('s2', 'up'); key('s1', 'up'); idle(400);
+  const shot = events.slice(e0);
+  const clicks = shot.filter((e) => e.source === STAND_IN).map((e) => e.frames), beep = shot.filter((e) => e.source === 'native').reduce((n, e) => n + e.frames, 0);
+  ok(clicks.length === 2 && clicks[0] === shutterClick('open').length && clicks[1] === shutterClick('close').length && beep === BEEP_FRAMES,
+    `S2: S-SHUTTERSND's open and close clicks (${JSON.stringify(clicks)}), and the half press's beep (${beep} frames)`);
+  ok(pl.stand_ins_in_use().includes('S-AFLOCK') && pl.phase === 'running', `S-AFLOCK listed, the session runs on (${pl.phase} ${pl.error?.message ?? ''})`);
   pl.close_session();
+  // --audio off: the sound area stays erased and the request plays nothing (no port)
+  const plain = new Player({ ...args, audio: 'off' }, base);
+  plain.open_session();
+  ok(plain.session.audio_hw === null && plain.session.resnand?.status().sound === 'erased' && !plain.stand_ins_in_use().includes('S-SOUNDRES'), `--audio off: no audio hardware, the sound area erased (${plain.session.resnand?.status().sound})`);
+  plain.close_session();
   return { checks, bad };
 }
 
@@ -260,7 +298,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     s.bad.forEach((x) => console.log('  ', x));
     n += s.bad.length;
     const b = await afBeepSession();
-    console.log(`the AF beep's request to UI_OUT (E143): ${b.checks - b.bad.length}/${b.checks}`);
+    console.log(`the AF beep end to end (E143): ${b.checks - b.bad.length}/${b.checks}`);
     b.bad.forEach((x) => console.log('  ', x));
     n += b.bad.length;
   }

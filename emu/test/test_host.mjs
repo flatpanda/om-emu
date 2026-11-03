@@ -363,8 +363,9 @@ async function cardRoutes(bad) {
   } finally { await pl.close(); }
 }
 // The lab's sound over HTTP (src/lab/audio.mjs, GET /api/audio): S2's two S-SHUTTERSND clicks reach a long poll
-// that waited from before the release, 1/125 s apart, their samples as base64 of the frames; the page has its Sound
-// button
+// that waited from before the release, 1/125 s apart, their samples as base64 of the frames, and the half press's AF
+// beep the firmware played (--audio auto: source 'native', 48 kHz stereo, S-SOUNDRES's 6144 frames); the page has its
+// Sound button
 async function audioRoute(bad) {
   const pl = await startPlay('audio', ['--idle', 'off']);
   try {
@@ -376,17 +377,18 @@ async function audioRoute(bad) {
     for (const inp of [{ type: 'token', token: 'WAIT:100' }, { type: 'key', id: 's1', action: 'down' }, { type: 'key', id: 's2', action: 'down' }, { type: 'token', token: 'WAIT:700' },
       { type: 'key', id: 's2', action: 'up' }, { type: 'key', id: 's1', action: 'up' }]) await pl.input(inp);
     const first = await poll, all = await pl.json('GET', '/api/audio?after=0');
-    const ev = all.events ?? [];
-    const sizes = ev.map((e) => Buffer.from(e.pcm, 'base64').length === 2 * e.frames * e.channels);
+    const evs = all.events ?? [], ev = evs.filter((e) => e.source === 'S-SHUTTERSND'), beep = evs.filter((e) => e.source === 'native');
+    const sizes = evs.map((e) => Buffer.from(e.pcm, 'base64').length === 2 * e.frames * e.channels);
     if (!(first.events?.length >= 1) || first.events[0].seq !== 1) bad.push(`the long poll from before S2: ${JSON.stringify(first).slice(0, 200)}`);
-    if (ev.length !== 2 || !ev.every((e) => e.source === 'S-SHUTTERSND' && e.rate === 48000 && e.channels === 1) || !sizes.every(Boolean) || ev[1].t_lab_ns - ev[0].t_lab_ns !== 8000000) {
+    if (ev.length !== 2 || !ev.every((e) => e.rate === 48000 && e.channels === 1) || !sizes.every(Boolean) || ev[1].t_lab_ns - ev[0].t_lab_ns !== 8000000) {
       bad.push(`GET /api/audio after S2: ${JSON.stringify(ev.map(({ pcm, ...e }) => e))}, pcm sizes ${sizes}`);
     }
+    if (beep.reduce((n, e) => n + e.frames, 0) !== 6144 || !beep.every((e) => e.rate === 48000 && e.channels === 2)) bad.push(`GET /api/audio: the AF beep's events: ${JSON.stringify(beep.map(({ pcm, ...e }) => e))}`);
     const st = await pl.status();
     if (!st.stand_ins.includes('S-SHUTTERSND')) bad.push(`the status does not list S-SHUTTERSND: ${st.stand_ins}`);
     const page = await pl.req('GET', `/?t=${pl.token}`);
     if (!String(page.body).includes('id="sound"')) bad.push('the page has no Sound button');
-    return `audio: ${ev.length} events, ${ev.map((e) => e.frames).join(' + ')} frames, ${ev.length === 2 ? ev[1].t_lab_ns - ev[0].t_lab_ns : '-'} ns apart`;
+    return `audio: ${ev.length} click events, ${ev.map((e) => e.frames).join(' + ')} frames, ${ev.length === 2 ? ev[1].t_lab_ns - ev[0].t_lab_ns : '-'} ns apart; the AF beep ${beep.reduce((n, e) => n + e.frames, 0)} frames`;
   } finally { await pl.close(); }
 }
 // fix2: an --out with '..': the session goes to <out>/y and the stopped line names that session.json

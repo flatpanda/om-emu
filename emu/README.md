@@ -17,7 +17,8 @@ is in [ARCHITECTURE.md](ARCHITECTURE.md) and the known departures from the hardw
   resource tables from (`<bin>.nand.bin`, 3.4 MB, checked against its MODELS digest; `checks/lib/env.mjs` loadNand,
   `src/lab/resnand.mjs`). The player does this itself on first use; a checkout unpacked before the extract existed
   makes it with one more `fetch-fw.mjs` run, which reads the `.BIN` from `fw/` (or `$OM_FW_DIR`, `$OM_BIN`, `--bin`)
-  or downloads it again.
+  or downloads it again. Until then the tools that check the unpacked blocks without fetching (`nav.mjs`, which reads
+  no NAND itself, among them) refuse E143 as lacking its blocks.
 - For the debug API's `--disasm` only: `tools/mn10300-objdump` (or `$OM_OBJDUMP`; the build recipe is in `BLOBS.md`).
 - For `bin/webgate.mjs`: the `.BIN` (`$OM_BIN`, or `$OM_FW_DIR` holding it) and Chrome: `--chrome PATH`, else the
   first found of `/usr/bin/google-chrome-stable`, `/usr/bin/google-chrome`, `/usr/bin/chromium`,

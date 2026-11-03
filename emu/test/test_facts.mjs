@@ -692,7 +692,8 @@ export function factsTests() {
   // and E120 through E122 stopped at fact() on g4set, docs/model-survey.md finding 37). Not to decide: the firmware's
   // identity and the port's own fields, the knobs not listed in `carry` and the stand-ins that are a body's own by
   // nature (src/fw/knobs.mjs: return_stubs, call_skips, vsync_alias_flags), ui_out, the lamps' module, which the lab
-  // runs where the card's file system is native and needs it (E134; E125, ported through it, keeps S-CARD's card), and
+  // runs where the card's file system is native and needs it (E134; E125, ported through it, keeps S-CARD's card) and
+  // where the AF beep asks it for its sound (E143), and
   // res_nand, the resource loader's NAND areas, which lie elsewhere in each body's NAND (E146's and E147's sound index
   // at 0x4e3e0000, X: a scan of their loaders) and are given where they were checked (E143)
   const OWN = new Set(['name', 'bin', 'version', 'res_block', 'rom_len', 'rom_sha256', 'image_base', 'res_len', 'res_sha256',

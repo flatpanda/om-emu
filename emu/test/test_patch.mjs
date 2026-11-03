@@ -9,8 +9,9 @@
 //   patchSession  (E143's blocks) a patch file the test writes: 16 bytes of the main block's 0xFF tail padding
 //                 (0x1ffff00, never run: the code ends at 0x1a70c3b) changed and 8 bytes of the resource block's index
 //                 written as they are; bin/debug.mjs, which loads no resource block, refuses that file and reads the
-//                 new bytes of the main block's patch alone at their run-time and flash addresses; bin/play.mjs prints the patched line, its status and GET /api/session carry the summary (the main
-//                 block's sha256 the test computes, the resource block's the stock prefix's), the live debug route reads
+//                 new bytes of the main block's patch alone at their run-time and flash addresses; bin/play.mjs prints
+//                 the patched line, its status and GET /api/session carry the summary (the main block's sha256 the test
+//                 computes, the resource block's the stock prefix's), the live debug route reads
 //                 the new bytes after the bring-up, the session runs, a model switch is refused, and session.json has
 //                 the summary but no patch among its args; bin/nav.mjs prints the line and its session.json the summary;
 //                 a file whose old bytes differ, an overlap and a file that cannot be read are refused by all three

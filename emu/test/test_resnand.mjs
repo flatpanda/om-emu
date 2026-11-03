@@ -10,8 +10,8 @@
 //                   at +1024, 512-aligned entries padded with zeros, the container's checksum, each WAVE's format) and
 //                   its refusals, and S-RESNAND's layer on a stub session (the sound area erased, the host's image,
 //                   writes and erases kept inside the guard window and refused past it, reads past the window or the
-//                   image served erased up to the RAM log and passed down from there, a container read served,
-//                   anything else passed down)
+//                   image served erased up to the RAM log and passed down from there, an access across the area's
+//                   bounds refused, a container read served, anything else passed down)
 //   resnandSession  (firmware: E143) play sessions with env.nand (the provisioned extract): H-RESINIT's table pointers
 //                   and the resource API's answers natively (res_size(0, 0) = 0xe2800, res_size(3, 0) = 0x2800,
 //                   res_size(0x8000, 0) = 0x167fc00, res_version 0x01000000; the erased sound area's res_size(2, 0) =
@@ -165,9 +165,11 @@ function resnandLayer(ok) {
   acc(r, R, info.sound.guard[1] - 4, 8);
   ok(sim.read(0xA0000000, 8).every((b) => b === 0xff) && log.at(-1)[0] === 'finish', 'S-RESNAND: without an image, a read across the guard window\'s end reads erased');
   ok(throwsAs(() => acc(r, W, info.sound.guard[1], 4), ResNandError, /writes and erases inside/), 'S-RESNAND: a write past the guard window refused');
-  acc(r, R, info.sound.end - 4, 8);
   acc(r, R, info.sound.end, 4);
-  ok(JSON.stringify(log.slice(n1 + 1)) === JSON.stringify([['prev'], ['prev']]), `S-RESNAND: a read across the RAM log's address, or at it, passed down: ${JSON.stringify(log.slice(n1))}`);
+  ok(JSON.stringify(log.slice(n1 + 1)) === JSON.stringify([['prev']]), `S-RESNAND: a read at the RAM log's address passed down: ${JSON.stringify(log.slice(n1))}`);
+  n1 = log.length;
+  ok(throwsAs(() => acc(r, R, info.sound.end - 4, 8), ResNandError, /crosses/) && throwsAs(() => acc(r, R, S - 4, 8), ResNandError, /crosses/) &&
+    throwsAs(() => acc(r, W, S - 512, 1024), ResNandError, /crosses/) && log.length === n1, 'S-RESNAND: an access across the area\'s start or the RAM log\'s address refused, not passed down');
   const img = N.soundArea([{ id: 0, wav: tone(1000, 2000) }]);
   r = mk(img);
   acc(r, R, S, 64);

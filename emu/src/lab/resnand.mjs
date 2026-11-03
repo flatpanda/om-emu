@@ -129,6 +129,9 @@ export class ResNand {
       this.log.push(['sound', `${op === this.f.read ? 'read' : op === this.f.write ? 'write' : 'erase'} ${n} bytes at ${h8(at)} from ${where(r.mdr)}`]);
       return h.finish(r, { d0: 0 });
     }
+    // an access across the area's start or its end at the RAM log is neither the area's nor the layers' below (S-FSNAND
+    // would stop the session with a message that does not name it); the firmware's own are 512-aligned and inside (X)
+    if (n > 0 && at < this.sound_end && at + n > load) throw new ResNandError(`S-RESNAND: NAND access 0x${op.toString(16)} of ${n} bytes at ${h8(at)} from ${where(r.mdr)} crosses the sound area's bounds ${h8(load)}..${h8(this.sound_end)}`);
     if (op === this.f.read && n > 0) {
       let b;
       try { b = this.nand.read(at, n); } catch (e) {

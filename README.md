@@ -14,6 +14,10 @@ application from a harness task of its own. The image sensor and the camera modu
 and movie recording are not modelled; stand-ins produce what the screens show. No firmware is included in this
 repository: you download it from the vendor yourself (see "Quick start").
 
+**Try it in your browser: [flatpanda.github.io/om-emu](https://flatpanda.github.io/om-emu/).** The player runs there
+in a Web Worker, from static files. You give it the camera's `.BIN` (the page shows a one-line command that downloads
+it from OM System's servers); the browser reads it locally and nothing is uploaded.
+
 ![The OM-3 firmware's Setup menu, page 1, on the emulated TFT](docs/img/om3-setup-menu.png)
 
 *The OM-3 (E147, firmware v1.1) in the player (`node emu/bin/play.mjs --model E147`) after one press of MENU: the
@@ -63,7 +67,8 @@ API serves only each body's latest release, so a release newer than the one pinn
 the files in place, `sha256sum --ignore-missing -c BLOBS.sha256` checks them independently.
 
 The player serves its page and API on `127.0.0.1` only. It can also run entirely in the browser, with the lab in a
-Web Worker and no server of its own: serve `emu/` from any static server on localhost (for example
+Web Worker and no server of its own, as on [the published site](https://flatpanda.github.io/om-emu/). To run that
+locally, serve `emu/` from any static server on localhost (for example
 `python3 -m http.server -d emu 8000 --bind 127.0.0.1`), open `http://127.0.0.1:8000/web/index.html` and choose the
 camera's `.BIN`. The page reads the file locally and keeps the unpacked blocks in the browser's private storage;
 nothing is uploaded. [emu/README.md](emu/README.md) covers the player's options, the debug API, the scripted sessions

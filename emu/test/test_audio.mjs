@@ -20,7 +20,9 @@
 //                 UI_OUT's release (post_end, command_play_end, the player's close) once and the port idle; S-AFLOCK's
 //                 take status while S1 is held; without S-AFLOCK, and with the beep Off (SET:1037=0, which sets 18),
 //                 no request and no sound; S2 still gives S-SHUTTERSND's two clicks beside the half press's beep;
-//                 --audio off keeps the sound area erased and has no audio hardware
+//                 --audio off keeps the sound area erased and has no audio hardware; there, and on a host without
+//                 env.nand (H-RESINIT skipped, the audio hardware on), two half presses make one UI_OUT request each,
+//                 no native sound, and the session runs on
 //   node emu/test/test_audio.mjs [--session]
 import { audioEvent, AudioOut, AudioRing, AudioError, audioDoc, pcmBytes, AUDIO_PENDING } from '../src/lab/audio.mjs';
 import { shutterClick, ShutterSound, SHUTTER_RATE, CLICK_S, STAND_IN } from '../src/lab/shuttersnd.mjs';
@@ -279,11 +281,40 @@ export async function afBeepSession() {
     `S2: S-SHUTTERSND's open and close clicks (${JSON.stringify(clicks)}), and the half press's beep (${beep} frames)`);
   ok(pl.stand_ins_in_use().includes('S-AFLOCK') && pl.phase === 'running', `S-AFLOCK listed, the session runs on (${pl.phase} ${pl.error?.message ?? ''})`);
   pl.close_session();
-  // --audio off: the sound area stays erased and the request plays nothing (no port)
-  const plain = new Player({ ...args, audio: 'off' }, base);
-  plain.open_session();
-  ok(plain.session.audio_hw === null && plain.session.resnand?.status().sound === 'erased' && !plain.stand_ins_in_use().includes('S-SOUNDRES'), `--audio off: no audio hardware, the sound area erased (${plain.session.resnand?.status().sound})`);
-  plain.close_session();
+  // The two other E143 sessions S-AFLOCK runs in, each with two half presses: UI_OUT gets one request a press, no
+  // native sound is played and the session runs on. --audio off: no port, the sound area erased, AUD_EXEC answered by
+  // S-MODACK; a host without env.nand: H-RESINIT skipped (the type-2 table at 0), the audio hardware on
+  const quiet = (what, pl2, ev) => {
+    pl2.open_session();
+    const s2 = pl2.session, l2 = s2?.lab;
+    if (pl2.phase !== 'running') { ok(false, `${what}: the session starts (${pl2.phase} ${pl2.error?.message ?? ''})`); pl2.close_session(); return null; }
+    const reqs = [];
+    l2.observe(A(UI_OUT_SOUND), (l, r) => { reqs.push(l2.sim.read(r.a0 >>> 0, 8)[4]); }, 'test UI_OUT sound');
+    const k2 = (id, action) => { pl2.submit({ type: 'key', id, action }); pl2.tick(); pl2.publish_audio(); };
+    const i2 = (ms) => { for (let t = 0; t < ms; t += 50) { s2.idle_slice(l2.lab_time() + 50e6); pl2.publish_audio(); } };
+    i2(1500);
+    const per = [];
+    for (let n = 0; n < 2; n++) { const r0 = reqs.length; k2('s1', 'down'); i2(600); k2('s1', 'up'); i2(600); per.push(reqs.length - r0); }
+    const out = { s: s2, per, phase: pl2.phase, error: pl2.error?.message ?? '', busy: l2.sim.read(UI_OUT_BUSY, 1)[0], native: ev.filter((e) => e.source === 'native').length };
+    ok(out.per.join() === '1,1' && out.phase === 'running' && out.native === 0,
+      `${what}: two half presses, one UI_OUT request each, no native sound, the session runs on: ${JSON.stringify({ per: out.per, phase: out.phase, error: out.error, native: out.native, busy: out.busy })}`);
+    return out;
+  };
+  const events2 = [];
+  const plain = new Player({ ...args, audio: 'off' }, { ...base, onAudio: (e) => events2.push(...e) });
+  const q1 = quiet('--audio off', plain, events2);
+  if (q1) {
+    ok(q1.s.audio_hw === null && q1.s.resnand?.status().sound === 'erased' && !plain.stand_ins_in_use().includes('S-SOUNDRES'),
+      `--audio off: no audio hardware, the sound area erased (${q1.s.resnand?.status().sound})`);
+    plain.close_session();
+  }
+  const events3 = [];
+  const bare = new Player(args, { ...base, nand: undefined, onAudio: (e) => events3.push(...e) });
+  const q2 = quiet('without env.nand', bare, events3);
+  if (q2) {
+    ok(q2.s.audio_hw && q2.s.resnand === null, `without env.nand: the audio hardware on, H-RESINIT skipped (${q2.s.resnand})`);
+    bare.close_session();
+  }
   return { checks, bad };
 }
 

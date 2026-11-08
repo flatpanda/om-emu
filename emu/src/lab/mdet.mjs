@@ -1,6 +1,6 @@
 // CPU 3's MDET_DL, the subject network's control code, run natively on the lab CPU with S-DML for the engine
-// (docs/om1-subject-spec.md 5.3, step C's first part; src/fw/models.mjs mdet has the firmware's side with its
-// evidence, src/dev/dml.mjs the engine's model).
+// (docs/om1-subject-spec.md 5.3 and 5.4, step C's first two parts; src/fw/models.mjs mdet has the firmware's side
+// with its evidence, src/dev/dml.mjs the engine's model).
 //
 // On the camera, TAKE (CPU 0) starts subject detection with mdet_dl_start(kind), changes the kind with
 // mdet_dl_change_mode and take_mov offers each live-view YC frame with mdet_dl_offer_yc_data; each call posts a
@@ -13,15 +13,14 @@
 //   S-TAKEMDET  TAKE's and take_mov's requests, which do not run in the lab (TAKE_MOV is dormant): while the camera's
 //               subject-detection setting names a kind (1..5) and S-SCENE's live view shows the live scene (S-SUBJECT's
 //               conditions), mdet_dl_start(kind) once, mdet_dl_change_mode(kind) at a change of kind, and one
-//               mdet_dl_offer_yc_data per 1/15 s of lab time (S-SCENE's frame step) with the record {frame number, buffer id, 640, 480, still
-//               (movie flag 0), no digital zoom (100 %), DISP_FRAME's aspect code}, its other fields 0; at OFF,
-//               mdet_dl_end. Each runs natively on the lab task. The
-//               buffer id names a 640 x 480 YC buffer (Y plane, then C plane: 614,400 bytes) the stand-in takes from
-//               S-HEAP once; the YC buffer manager's calls for that id (lock, address, release) are answered for it
-//               (the id's bank is one the manager refuses natively, so it names no buffer of the firmware's), others
-//               run natively. The buffer is not written: nothing reads its pixels (S-DML does not run the network).
-//               That TAKE offers every frame step and the frame's size are I (take_mov's YC frame is not read, spec
-//               4.2)
+//               mdet_dl_offer_yc_data per 1/15 s of lab time (S-SCENE's frame step) with the record {frame number,
+//               buffer id, 640, 480, still (movie flag 0), no digital zoom (100 %), DISP_FRAME's aspect code}, its
+//               other fields 0; at OFF, mdet_dl_end. Each runs natively on the lab task. The buffer id names a 640 x
+//               480 YC buffer (Y plane, then C plane: 614,400 bytes) the stand-in takes from S-HEAP once; the YC buffer
+//               manager's calls for that id (lock, address, release) are answered for it (the id's bank is one the
+//               manager refuses natively, so it names no buffer of the firmware's), others run natively. The buffer is
+//               not written: nothing reads its pixels (S-DML does not run the network). That TAKE offers every frame
+//               step and the frame's size are I (take_mov's YC frame is not read, spec 4.2)
 //   S-MDETDL    CPU 3's MDET_DL tasks on the lab CPU. The poster's return path (its interrupt mask restored) serves
 //               ring [3][0] at once, through S-CPU3 (camapp.mjs drain_cpu3), as CPU 3's IRQ 324 would take the post:
 //               MDET's function runs natively in interrupt context with the request slot, then each MDET_DL task whose
@@ -47,15 +46,16 @@
 //               class 0 (group g = 0 of classes 3g, 3g + 1, 3g + 2: the scene's subjects carry no sub-kind, and no
 //               string names the groups, I) with the score 0x0e00 (223 after MDET's scaling, above the stabilisation's
 //               thresholds), its centre and its size made even (spec 5.2.1). MDET's own stabilisation then reports a
-//               box from its seventh run on (6 hits to register) and for up to 8 runs after it goes (D, spec 5.2)
+//               box from its seventh run on (6 hits to register; X, spec 5.4) and for up to 8 runs after it goes while
+//               the kind stays (D, spec 5.2)
 //   S-LEARNDATA the learning data's copy: learning_data_load's read of the kind's item of group 0x800f to its
 //               destination (mdet.learning: 9,383,936 bytes) is answered with the record {address, size} the reader
 //               returns, and nothing is copied: the large-data block is not in the lab, the destination's 0x9xxxxxxx
 //               window is not mapped (spec 5 U6), and S-DML does not read the weights. Other groups' reads run
 //               natively
 // What follows the engine's records runs natively: get_dml_result, judge_dml_result, the stabilisation, the
-// combination, set_subject_detect_result (mdet.result) and LAF. S-SUBJECT keeps writing MDET's frame table for
-// DISP_FRAME (LAF's step to it is not read, spec 5.2.1 (a)).
+// combination, set_subject_detect_result (mdet.result) and LAF, which fills the frame table's inputs with MDET's
+// subject (X, spec 5.4). S-SUBJECT keeps writing MDET's frame table and the frame mode's subject bit for DISP_FRAME.
 import { FirmwareError, disasm, where, ISR_SP, ISR_CALLER, HEAP_END } from './hle.mjs';
 import * as K from './kernel.mjs';
 import { RTOS } from './rtos.mjs';

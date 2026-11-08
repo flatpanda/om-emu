@@ -1056,16 +1056,19 @@ export class CamApp {
   // DISP_FRAME's turn, a harness call of its own, would reuse that call's stack: its bits wait for the next drain
   drain_cpu3(nested = false) {
     const lab = this.s.lab, intc = lab.nk.intc;
-    if (intc === null) return;
+    if (intc === null || (!intc.ipi_pending(CPU3) && !this.df_bits)) return;   // nothing posted, nothing left
     const [wp, rp, ring, bit] = lab.ipi_desc(CPU3, 0);
     const mdetFn = this.mdet ? runtime(this.mdet.f.post.fn) : null;
     let bits = this.df_bits;
     this.df_bits = 0;
     while (intc.ipi_pending(CPU3)) {
+      // the entries posted so far taken off and the doorbell acknowledged, then each served (an MDET post's service
+      // may post more: the next round takes those)
+      const w = lab.sim.read(wp, 1)[0], entries = [];
+      for (let k = lab.sim.read(rp, 1)[0]; k !== w; k = (k + 1) % 32) entries.push([k, lab.sim.u32(ring + 8 * k), lab.sim.u32(ring + 8 * k + 4)]);
+      lab.sim.write(rp, Uint8Array.of(w));
       intc.ipi_request(CPU3, 0, bit);
-      for (let k = lab.sim.read(rp, 1)[0]; k !== lab.sim.read(wp, 1)[0]; k = lab.sim.read(rp, 1)[0]) {
-        const fn = lab.sim.u32(ring + 8 * k), arg = lab.sim.u32(ring + 8 * k + 4);
-        lab.sim.write(rp, Uint8Array.of((k + 1) % 32));
+      for (const [k, fn, arg] of entries) {
         if (fn === runtime(CPU3_REMOTE_CALL)) {
           this.log.push(['cpu3', `remote call argument ${h8(arg)}`]);
           bits |= arg & 0xFF;

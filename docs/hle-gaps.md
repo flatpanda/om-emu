@@ -2479,7 +2479,14 @@ and E147; off by default. Addresses are E143's (disassembly notation) unless a b
   tracking status (X); S-MDETDL runs MDET_E_SEND_CPU3 and MDET_CALC_MAIN_CPU3 when S-CPU3 serves one of LAF's event
   setters (X, through TAKE_MOV's mdet_laf_start in the test). The end-frame event that sets the main and part records
   comes only from LAF's chase cycle (take_mov's chase requests, EMS1 / EMS2, the PDT / TRC unit), which the lab does
-  not run.
+  not run. Spec 5.8 (2026-11-08): the cycle is read: take_mov asks once per live-view frame while its LAF mode is on,
+  after its own EMS1 run on CPU 0, and its first request carries LAF's parameters (TAKE's builder over TAKE_MOV's EMS1
+  state); on CPU 3 TRC's colour tracking is the cycle's one engine ("EMS2" names that step), PDT serves the AF
+  library's IP information. S-PDT (`emu/src/dev/pdt.mjs`) models the unit's register file at `0x9be00000` with IRQs
+  279 / 278 on CPU 3; H-MDETINIT runs the boot chain's MDET queue init and the PDT and TRC drivers' inits natively;
+  S-MDETDL runs MDET_PDT_CPU3 and MDET_TRC_CPU3 with the core register at 3 and CPU 3's deferred calls after their
+  turns, so LAF's start opens both drivers natively (X), and the firmware's drivers run on S-PDT (X). Not reached: LAF's
+  start with take_mov's parameters and the chase requests, which need TAKE_MOV's EMS1 state and run (D).
 - **GPU and C3D (D):** one stack seen from both ends: C3D (gap@0x5101aef5) makes 108 call edges into the DMP "K3000"
   GPU driver core (gap@0x51767cd6), plus a 15.6k GPU tail of gap@0x51740e22. Tasks: C3D_EXE_BRIDGE and C3D on CPU 0,
   C3D_EXE and C3D_UPDATE on CPU 1. Devices `0x9bc80000` (30 references) and `0x9bd00000` (10) are referenced only from

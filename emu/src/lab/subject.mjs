@@ -35,8 +35,8 @@
 // live view showing the live scene (not the menu's stopped through image, a rec view or a played image); the table is
 // written and posted when the boxes, the kind or the output change, at most every 1/15 s of lab time (S-SCENE's
 // frame step). The setting is read through the firmware's property read, as TAKE reads it (D). Where MDET_DL runs
-// natively (mdet.mjs S-MDETDL), MDET's code writes the table itself after each offer, from the engine's records (none
-// from S-DML), and posts UP_FACE: S-SUBJECT then writes its frames again in the same tick (rewrite).
+// natively (mdet.mjs S-MDETDL), MDET's code writes the table itself after each offer, from its own stabilised subjects,
+// and posts UP_FACE: S-SUBJECT then writes its frames again in the same tick (rewrite).
 import { FirmwareError } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { LV_SCALED } from './display.mjs';
@@ -164,8 +164,8 @@ export class SubjectFrames {
     this.key = null; this.step = null;
     this.last = null;
   }
-  // After an offer of S-TAKEMDET's (mdet.mjs): MDET's own code wrote the table from its results (none while S-DML
-  // writes no record) and posted UP_FACE, so the frames S-SUBJECT shows are written again at its next tick
+  // After an offer of S-TAKEMDET's (mdet.mjs): MDET's own code wrote the table from its results and posted UP_FACE, so
+  // the frames S-SUBJECT shows are written again at its next tick
   rewrite() { if (this.key !== null) { this.key = null; this.step = null; } }
   // The frame mode with or without the subject bit, through the frame plane's setter as S-TAKEFRAME sets it
   mode(on) {

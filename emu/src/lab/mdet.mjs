@@ -41,14 +41,21 @@
 //               makes one turn of DISP_FRAME for them and S-SUBJECT's post of the same tick, as S-CPU3 makes one turn
 //               for a step's posts (X: with a turn for MDET's empty table and then one for S-SUBJECT's frames in the
 //               same tick, the second drawing its frame, the composite showed none; why is not read, ?)
+//   S-DML       (src/dev/dml.mjs; here its output) the records each run of the engine writes: S-SCENE's subjects of the
+//               offer's kind at the offer's scene time, in MDET's 640 x 480 frame as S-SUBJECT places them (its
+//               frames(): S-SCENE's box on the panel taken back through DISP_FRAME's transform), each a body record of
+//               class 0 (group g = 0 of classes 3g, 3g + 1, 3g + 2: the scene's subjects carry no sub-kind, and no
+//               string names the groups, I) with the score 0x0e00 (223 after MDET's scaling, above the stabilisation's
+//               thresholds), its centre and its size made even (spec 5.2.1). MDET's own stabilisation then reports a
+//               box from its seventh run on (6 hits to register) and for up to 8 runs after it goes (D, spec 5.2)
 //   S-LEARNDATA the learning data's copy: learning_data_load's read of the kind's item of group 0x800f to its
 //               destination (mdet.learning: 9,383,936 bytes) is answered with the record {address, size} the reader
 //               returns, and nothing is copied: the large-data block is not in the lab, the destination's 0x9xxxxxxx
 //               window is not mapped (spec 5 U6), and S-DML does not read the weights. Other groups' reads run
 //               natively
 // What follows the engine's records runs natively: get_dml_result, judge_dml_result, the stabilisation, the
-// combination, set_subject_detect_result (mdet.result: 0 subjects while S-DML writes no record) and LAF. S-SUBJECT
-// keeps writing MDET's frame table for DISP_FRAME (LAF's step to it is not read, spec 5.2.1 (a)).
+// combination, set_subject_detect_result (mdet.result) and LAF. S-SUBJECT keeps writing MDET's frame table for
+// DISP_FRAME (LAF's step to it is not read, spec 5.2.1 (a)).
 import { FirmwareError, disasm, where, ISR_SP, ISR_CALLER, HEAP_END } from './hle.mjs';
 import * as K from './kernel.mjs';
 import { RTOS } from './rtos.mjs';
@@ -79,6 +86,9 @@ const STILL = 0, NO_ZOOM = 100;
 // S-TAKEMDET's pace: an offer per 1/15 s of lab time, S-SCENE's frame step (play.mjs SCENE_STEP_NS), still scene or
 // moving (I: take_mov offers each live-view frame; the lab's live view moves at that step)
 const OFFER_NS = 1e9 / 15;
+// S-DML's records: the body class of group 0 and the score (Q12; spec 5.2.1 asks 0x0d00..0x1000); the 10-bit centre's
+// bounds (the clamp at 639 / 479, spec 5.2)
+const BODY_CLASS = 0, SCORE = 0x0E00, MAX_X = 639, MAX_Y = 479;
 
 export class MdetDl {
   // session: the PlaySession; camapp: its CamApp (S-CPU3's drain, S-SUBJECT's setting and conditions); f: the model's
@@ -100,6 +110,7 @@ export class MdetDl {
     this.deferred = 0;         // the deferred call's IRQ taken in the engine waits
     this.loads = [];           // S-LEARNDATA: the items answered
     this.yc = null;            // S-TAKEMDET's YC buffer address
+    this.boxes = [];           // S-DML: the boxes of the last offer's records (MDET's frame)
   }
   get used() { return this.requests.length > 0; }
   lab() { return this.s.lab; }
@@ -275,12 +286,21 @@ export class MdetDl {
     dv.setUint16(R.zoom, NO_ZOOM, true);
     rec[R.aspect] = sub.call(sub.f.aspect_code).d0 & 0xFF;
     this.requests.push(['offer', this.offers]);
-    const e0 = lab.kernel.errors.length;
-    const rc = lab.call(this.f.api.offer, { a0: lab.alloc(rec, 4) }, null, null, LIMIT).d0 & 0xFFFF;
+    const records = this.records(), e0 = lab.kernel.errors.length;
+    this.dml.source = () => records;                                               // S-DML's output, this run
+    let rc;
+    try { rc = lab.call(this.f.api.offer, { a0: lab.alloc(rec, 4) }, null, null, LIMIT).d0 & 0xFFFF; } finally { this.dml.source = null; }
     this.errlog_check(e0, 'offer_yc_data');
     this.s.settle('S-TAKEMDET offer');
     if (rc !== 0) throw new MdetError(`S-TAKEMDET: mdet_dl_offer_yc_data(frame ${this.offers}) returned ${rc}`);
     sub.rewrite();                                                                  // S-SUBJECT's frames again
+  }
+  // S-DML's records for an offer: S-SCENE's subjects of the kind now, where S-SUBJECT places them in MDET's frame
+  records() {
+    const sub = this.camapp.subject, { t } = this.s.scene_step(), even = (v) => v & ~1;
+    this.boxes = sub.frames(this.kind, t).boxes;
+    return this.boxes.map(([x0, y0, x1, y1]) => ({ cls: BODY_CLASS, score: SCORE, h: even(y1 - y0), w: even(x1 - x0),
+      cy: Math.min((y0 + y1) >> 1, MAX_Y), cx: Math.min((x0 + x1) >> 1, MAX_X) }));
   }
   // A request (its CPU 3 side included) that made the firmware log an error stops the session: MDET logs each refusal
   // it makes (a bad state, kind, record or read), and none is expected of the path the lab runs (X)
@@ -303,6 +323,6 @@ export class MdetDl {
     const d = this.dml;
     return { kind: this.kind, requests: this.requests.length, offers: this.offers, serves: this.serves, turns: Object.fromEntries(this.turns),
       deferred: this.deferred, dml_runs: d ? d.runs : 0, irqs: this.irqs, callbacks: this.callbacks, loads: this.loads.length,
-      subjects: this.installed ? this.subjects().length : 0 };
+      records: this.boxes.length, subjects: this.installed ? this.subjects().length : 0 };
   }
 }

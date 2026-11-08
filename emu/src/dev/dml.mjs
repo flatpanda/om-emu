@@ -1,6 +1,7 @@
 // S-DML: the DML engine (board dml; docs/om1-subject-spec.md 2.1, 5.2 and 5.3), the unit CPU 3's MDET_DL code runs the
 // subject network on. A register file at the board's base with the behaviour the firmware's driver relies on; the
-// network itself is not modelled, and the engine writes no detection (all scores 0). The driver's addresses are in
+// network itself is not modelled: the records a run writes are the lab's (source, below), none without it. The
+// driver's addresses are in
 // src/fw/board.mjs dml's comment and the spec's section 2.1, with their evidence.
 //
 //   +0x000  control: the power-up writes 2, the power-down 3, the start 0 and the completion handler 2 (storage)
@@ -13,7 +14,10 @@
 //           high while the bit is set (A-DML-1)
 //   +0x1118 the output area's address >> 4, +0x111c the records per class: the run writes CLASSES classes of that many
 //           16-byte records from the address on (I: MDET reads 9 classes, its count of them is 9 for every kind, and
-//           a record of score 0 is an empty slot)
+//           a record of score 0 is an empty slot), zeroed at the start; then the records the lab's source gives for
+//           the run, if one is set: each {cls, score, h, w, cy, cx} as the u16 words +0 score (13 bits), +2 h, +4 w,
+//           +6 cy, +8 cx (10 bits each), +10..+15 zero, packed from slot 0 of its class (spec 5.2: MDET reads the
+//           first *count* entries of a class); a record that does not fit is the lab's error
 //   +0x1400..+0x142c the power words: 1 to +0x1408 / +0x1418 / +0x140c / +0x141c with 7 to +0x1420 / +0x1424 at the
 //           power-up, 1 to +0x1400 / +0x1410 / +0x1404 / +0x1414 with 7 to +0x1428 / +0x142c at the power-down (I: SRAM
 //           power and retention controls); a start while the last of them was a power-down write is UNKNOWN
@@ -49,7 +53,9 @@ export class Dml {
     this.powered = false;              // the last power word written was a power-up's
     this.due = Infinity;               // the run in progress completes at this lab ns
     this.runs = 0;                     // starts so far
-    this.images = [];                  // the newest runs: {n, t_ns, regs: [[offset, value]...], out: [address, bytes]}
+    // the newest runs: {n, t_ns, regs: [[offset, value]...], out: [address, bytes], records (how many written)}
+    this.images = [];
+    this.source = null;                // the lab's records for a run: () => [{cls, score, h, w, cy, cx}], or null
     this.dropped = 0;                  // images dropped from the front of images
     addRegion({ base: cfg.base, size: DML_SIZE, kind: K_MMIO, name: 'om1.dml',
       dev: { read: (a, w, dbg) => this.read(a - cfg.base, w, dbg), write: (a, v, w, dbg) => this.write(a - cfg.base, v, w, dbg) } });
@@ -87,9 +93,18 @@ export class Dml {
   start(off, size, value) {
     const out = (this.regs[OUT_ADDR >> 2] << 4) >>> 0, count = this.regs[OUT_COUNT >> 2], bytes = CLASSES * count * RECORD;
     if (!count || !this.bus.span(out, bytes)) return this.unknown('write', off, size, value, false, `the output area ${hex8(out)}, ${count} records per class, is not in the DRAM`);
-    this.bus.write(out, new Uint8Array(bytes));
+    const area = new Uint8Array(bytes), records = this.source ? this.source() : [];
+    const dv = new DataView(area.buffer), used = new Array(CLASSES).fill(0);
+    for (const r of records) {
+      const fits = Number.isInteger(r.cls) && r.cls >= 0 && r.cls < CLASSES && used[r.cls] < count &&
+        [r.h, r.w, r.cy, r.cx].every((v) => Number.isInteger(v) && v >= 0 && v <= 0x3ff) && Number.isInteger(r.score) && r.score > 0 && r.score <= 0x1fff;
+      if (!fits) throw new Error(`S-DML: the lab's record ${JSON.stringify(r)} does not fit the output (class ${used[r.cls] ?? '?'} of ${count} used)`);
+      const at = RECORD * (count * r.cls + used[r.cls]++);
+      for (const [k, v] of [[0, r.score], [2, r.h], [4, r.w], [6, r.cy], [8, r.cx]]) dv.setUint16(at + k, v, true);
+    }
+    this.bus.write(out, area);
     this.runs += 1;
-    this.images.push({ n: this.runs, t_ns: this.clock.t, regs: [...this.written].sort((a, b) => a[0] - b[0]), out: [out, bytes] });
+    this.images.push({ n: this.runs, t_ns: this.clock.t, regs: [...this.written].sort((a, b) => a[0] - b[0]), out: [out, bytes], records: records.length });
     if (this.images.length > IMAGES_KEPT) { this.images.shift(); this.dropped += 1; }
     this.written.clear();
     this.due = this.clock.t + RUN_NS;
@@ -103,6 +118,6 @@ export class Dml {
   // the newest run's image as {n, t_ns, regs: {offset: value}, out}, or null before the first start
   last() {
     const im = this.images.at(-1);
-    return im ? { n: im.n, t_ns: im.t_ns, regs: Object.fromEntries(im.regs), out: im.out } : null;
+    return im ? { n: im.n, t_ns: im.t_ns, regs: Object.fromEntries(im.regs), out: im.out, records: im.records } : null;
   }
 }

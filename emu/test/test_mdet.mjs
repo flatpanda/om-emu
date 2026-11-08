@@ -2,15 +2,20 @@
 // src/dev/dml.mjs S-DML; docs/om1-subject-spec.md 5.3):
 //   dmlUnits (pure)  the engine's register file on a bare machine: storage and read-back, a start refused while powered
 //                    down, the register image kept per start, the output area zeroed, the completion after RUN_NS of
-//                    lab time with status bit 14 and IRQ 285, the write-1-to-clear status, the refusals
-//   mdetSession      a headless Player on E143 with S-SCENE's rider: no request and no engine run while subject
-//                    detection is OFF; at each kind 1..5 the chain mdet_dl_start / change_mode -> learning_data_load ->
+//                    lab time with status bit 14 and IRQ 285, the write-1-to-clear status, the lab's records written
+//                    packed per class, the refusals
+//   mdetSession      a headless Player on E143 with S-SCENE's live view: no request and no engine run while subject
+//                    detection is OFF; with no subject in the scene, at each kind 1..5 the chain mdet_dl_start /
+//                    change_mode -> learning_data_load ->
 //                    offer_yc_data -> dml_start -> IRQ 285 -> dml_start_callback runs natively (offers, runs, IRQs and
 //                    callbacks counted alike, the kind's learning item answered), MDET reports 0 subjects; each run's
 //                    register image as the firmware's tables give it, read at test time (the output buffer MDET's own
 //                    global names, the records per class, the head's frame size and the kind's words, its bias and the
-//                    resize words of object 0x3be4 through the firmware's property read); the debug API's dml op; at
-//                    OFF, mdet_dl_end and no more runs; S-SUBJECT's frame on the rider at MOTOR_SPORTS meanwhile
+//                    resize words of object 0x3be4 through the firmware's property read); then with S-SCENE's rider at
+//                    MOTOR_SPORTS S-DML's record for it (class 0, slot 0, at S-SUBJECT's box) from each run, and
+//                    MDET's own subject record (sbj_kind 6, the body {cx, cy, w, h, rel, dtct}) from the run after the
+//                    hits its stabilisation needs (object 0x61a4 [915]), S-SUBJECT's frame on the rider meanwhile; the
+//                    debug API's dml op; at OFF, mdet_dl_end and no more runs
 //   node emu/test/test_mdet.mjs [--pure]
 import { createMachine } from '../src/machine.mjs';
 import { BUS } from '../src/core/mem.mjs';
@@ -59,6 +64,20 @@ export function dmlUnits() {
   wr(0x1118, 0x90000000 >>> 4);
   ok(throwsAs(() => wr(0x010, 1), BUS), 'an output area outside the DRAM is a bus error');
   wr(0x1118, out >>> 4);
+  // the lab's records: packed from slot 0 of each class, the u16 fields +0 score, +2 h, +4 w, +6 cy, +8 cx
+  dml.source = () => [{ cls: 0, score: 0xe00, h: 244, w: 232, cy: 325, cx: 320 }, { cls: 0, score: 0x1000, h: 2, w: 4, cy: 6, cx: 8 }, { cls: 3, score: 1, h: 10, w: 12, cy: 14, cx: 16 }];
+  wr(0x010, 1);
+  const u16s = (at, n) => { const b = new Uint8Array(2 * n); bus.read(at, b); return [...new Uint16Array(b.buffer)]; };
+  ok(JSON.stringify(u16s(out, 8)) === '[3584,244,232,325,320,0,0,0]' && JSON.stringify(u16s(out + 16, 5)) === '[4096,2,4,6,8]' &&
+    JSON.stringify(u16s(out + 16 * 32 * 3, 5)) === '[1,10,12,14,16]' && JSON.stringify(u16s(out + 32, 8)) === '[0,0,0,0,0,0,0,0]' && dml.last().records === 3,
+    'the lab\'s records written packed per class (class 0 slots 0 and 1, class 3 slot 0), the rest zero');
+  clock.advance(clock.t + RUN_NS, false);
+  wr(0x004, S_DONE);
+  dml.source = () => [{ cls: 9, score: 1, h: 0, w: 0, cy: 0, cx: 0 }];
+  ok(throwsAs(() => wr(0x010, 1), Error), 'a record of a class past the ninth is the lab\'s error');
+  dml.source = () => [{ cls: 0, score: 1, h: 0x400, w: 0, cy: 0, cx: 0 }];
+  ok(throwsAs(() => wr(0x010, 1), Error), 'a field past its 10 bits is the lab\'s error');
+  dml.source = null;
   ok(throwsAs(() => wr(0x010, 2), BUS) && throwsAs(() => rd(0x004, 2), BUS) && throwsAs(() => wr(0x401, 1), BUS) && throwsAs(() => dml.write(0x400, 1, 4, true), BUS),
     'a start of another value, a halfword, an unaligned word and a debugger write are bus errors');
   return t;
@@ -73,6 +92,9 @@ const PROP_DATA = 0x500417B0, PROP_READ = 0x500417DA, OBJ_DML = 0x3BE4;
 // + 20 aspect and 1938 + 12 aspect, spec 5.2); 0x62f404e0 is MDET's global dml_start stores the output buffer in
 const KIND_BLOCK = 408, KIND_STRIDE = 306, KIND_WORDS = 8, BIAS = 1974, BIAS_STRIDE = 60, BIAS_WORDS = 20, RESIZE = 1938;
 const HEAD_FRAME = 263, RECORDS = 2457, OUT_GLOBAL = 0x62F404E0;
+// MDET's parameters, object 0x61a4: [915] the hits a new track of a large or high-scoring box needs to register
+// (regist_judge_update 0x5081455a, spec 5.2)
+const OBJ_MDET = 0x61A4, HITS = 915;
 const R = { out: 0x1118, count: 0x111c, frame: 0x11c4, kind: (m) => 0x498 + 0x100 * m, bias: (j) => 0x11c8 + 4 * j, resize: (j) => (j < 4 ? 0x074 + 4 * j : 0x100 + 4 * (j - 4)) };
 
 export async function mdetSession() {
@@ -91,7 +113,7 @@ export async function mdetSession() {
     const s = pl.session, lab = s.lab, dml = lab.sim.m.devices.dml;
     const idle = (ms) => s.idle_slice(lab.lab_time() + ms * 1e6);
     const ask = (q) => { const i = { seq: ++seq, t_wall: 0, type: 'debug', ...q }; pl.apply(i); return results.get(i.seq)?.debug; };
-    s.scene_input({ liveview: true, preset: 'moving', layer: { index: 1, speed: 0 } });
+    s.scene_input({ liveview: true });                                           // the default scene: no subject
     idle(100);
     s.key('s1', 'down'); s.camapp.pump(); idle(100); s.key('s1', 'up'); s.camapp.pump();   // the date prompt goes
     idle(300);
@@ -110,7 +132,7 @@ export async function mdetSession() {
       ok(s.camapp.mdet.loads.at(-1) === kind - 1, `kind ${kind}: learning item ${kind - 1} answered (S-LEARNDATA): ${JSON.stringify(s.camapp.mdet.loads)}`);
       const recs = [];
       for (let i = 0; i < f.result.count; i++) recs.push(lab.sim.read(f.result.records + f.result.size * i, 2));
-      ok(recs.every((b) => b[0] === 0 && b[1] === 0) && st.subjects === 0, `kind ${kind}: MDET's subject records report 0 subjects (${st.subjects})`);
+      ok(recs.every((b) => b[0] === 0 && b[1] === 0) && st.subjects === 0 && st.records === 0, `kind ${kind}: no subject in the scene, no engine record, MDET's subject records report 0 subjects (${st.subjects})`);
       ok(lab.sim.read(MODEL_INFO.subject.active, 1)[0] === 1, `kind ${kind}: LAF's running byte set by its start`);
       prev = st;
       // the newest run's image against the firmware's tables
@@ -125,10 +147,6 @@ export async function mdetSession() {
       for (let j = 0; j < 12; j++) want(R.resize(j), obj(RESIZE + j), `resize ${j}`);
       ok(!bad.length && lab.sim.u32(OUT_GLOBAL) === 0xb64f5c80 && im[R.count] === 32 && im[R.frame] === ((480 << 16) | 640),
         `kind ${kind}: the register image as the firmware's tables give it (0x9c181118 = 0x${im[R.out]?.toString(16)}, 0x9c18111c = ${im[R.count]}, 0x9c1811c4 = 0x${im[R.frame]?.toString(16)}): ${bad.slice(0, 4).join('; ')}`);
-      if (kind === 1) {
-        const sub = s.camapp.status().subject;
-        ok(sub?.frames === 1 && sub.kind === 1 && pl.stand_ins_in_use().includes('S-SUBJECT'), `MOTOR_SPORTS: S-SUBJECT still shows the rider's frame: ${JSON.stringify(sub ?? null)}`);
-      }
     }
     // between kinds the images differ exactly where the kind's words and bias words do
     for (const kind of [2, 3, 4, 5]) {
@@ -139,6 +157,28 @@ export async function mdetSession() {
       exp.sort((x, y) => x - y);
       ok(got.length > 0 && JSON.stringify(got) === JSON.stringify(exp), `MOTOR_SPORTS against kind ${kind}: the registers that differ ${got.map((o) => o.toString(16))}, from the tables ${exp.map((o) => o.toString(16))}`);
     }
+    // the rider at MOTOR_SPORTS: S-DML's record for it from each run on, MDET's own subject record once its
+    // stabilisation registers the track (object 0x61a4 [915] hits, spec 5.2), with the box S-SUBJECT places
+    s.scene_input({ preset: 'moving', layer: { index: 1, speed: 0 } });
+    s.step('SET:1682=1');
+    const data61 = lab.call(PROP_DATA, { d0: OBJ_MDET }, null, null, 2000000).a0 >>> 0;
+    const hits = lab.call(PROP_READ, { d0: OBJ_MDET, a0: data61, d1: HITS }, null, null, 2000000).d0;
+    let seen = 0, first = null;
+    for (let i = 0; i < hits + 4 && first === null; i++) {
+      idle(70);
+      const st = s.camapp.status().mdet;
+      if (st.records) seen += 1;
+      if (st.subjects && first === null) first = seen;
+    }
+    const sub = s.camapp.status().subject, box = sub?.boxes?.[0], got = s.camapp.mdet.subjects();
+    const out = dml.last().out[0], rec = new Uint8Array(16); lab.sim.m.devices.bus.read(out, rec);
+    const score = rec[0] | rec[1] << 8, want = box ? [(box[0] + box[2]) >> 1, (box[1] + box[3]) >> 1, (box[2] - box[0]) & ~1, (box[3] - box[1]) & ~1, (score * 255) >> 12, 1] : null;
+    ok(sub?.frames === 1 && sub.kind === 1 && pl.stand_ins_in_use().includes('S-SUBJECT'), `MOTOR_SPORTS: S-SUBJECT shows the rider's frame: ${JSON.stringify(sub ?? null)}`);
+    ok(box && JSON.stringify([rec[8] | rec[9] << 8, rec[6] | rec[7] << 8, rec[4] | rec[5] << 8, rec[2] | rec[3] << 8]) === JSON.stringify(want.slice(0, 4)) && score === 0x0e00,
+      `S-DML's record in class 0, slot 0: cx, cy, w, h ${[rec[8] | rec[9] << 8, rec[6] | rec[7] << 8, rec[4] | rec[5] << 8, rec[2] | rec[3] << 8]}, score 0x${score.toString(16)}, for S-SUBJECT's box ${JSON.stringify(box)}`);
+    ok(first === hits + 1, `MDET reports the rider from the run after its ${hits} hits register the track: first at the ${first}th run with the record`);
+    ok(got.length === 1 && got[0].sbj_kind === 6 && JSON.stringify(got[0].body) === JSON.stringify(want),
+      `MDET's subject record at 0xa3376b5c: sbj_kind 6 (6 + 3 (kind - 1) + group 0) and the body {cx, cy, w, h, rel, dtct} ${JSON.stringify(want)}: ${JSON.stringify(got)}`);
     const used = pl.stand_ins_in_use();
     ok(['S-TAKEMDET', 'S-MDETDL', 'S-LEARNDATA', 'S-DML', 'A-DML-1'].every((x) => used.includes(x)), 'the player lists S-TAKEMDET, S-MDETDL, S-LEARNDATA, S-DML and A-DML-1');
     const r = ask({ op: 'dml' });

@@ -20,6 +20,14 @@
 > pairs every helmet with its own body (judge_comb's rule read), and LAF writes one list record per body, so DISP_FRAME
 > draws two frames. U9 is located: the main and part records need LAF's frame trace and the AF library's area, neither
 > of which the lab runs; it stays open.
+>
+> Update (2026-11-08): section 5.7. The trap after a change of tracking status was TAKE's status-change callback never
+> registered (a deferred call of address 0); S-TAKEMDET registers it as TAKE's start does. LAF's AF area comes from the
+> camera's AF target setting through the AF library's init, three steps of which now run natively (H-FCSAF): the area of
+> 5.6 was read through the AF library's null record pointer. A subject under the AF target becomes LAF's candidate and
+> gets a tracking status natively. MDET_CALC_MAIN_CPU3 and MDET_E_SEND_CPU3 run natively when the firmware posts to
+> them; the end-frame event that would set the main and part records comes only from LAF's chase cycle on the PDT / TRC
+> unit, so U9 stays open, narrowed to that.
 
 # OM-1 subject detection
 
@@ -284,7 +292,7 @@ the lens driver (`0x50817e11` from `0x5013f077`) and the init chain `0x501e94a5`
 | Seam | Where | Needs | Stand-in |
 |---|---|---|---|
 | S1 display | DISP_FRAME's inputs: MDET's frame table + UP_FACE, UP_LOCKON | what exists now (S-DISPFRAME runs DISP_FRAME on the lab CPU) | synthetic frames from the scene: S-SUBJECT (5.1); on E143 MDET's own table since 5.5, TAKE's subject bit S-TAKEFRAME's |
-| S2 MDET result | `mdet_laf_*` getters FCS calls; the subject record (4.3) | native FCS (AF module) | S-SUBJECT returns scene-derived records |
+| S2 MDET result | `mdet_laf_*` getters FCS calls; the subject record (4.3) | native FCS (AF module) | S-SUBJECT returns scene-derived records; the AF target record and LAF's FCS info record from three AF library init steps (H-FCSAF, 5.7) |
 | S3 DML device | `0x9c180000`, IRQ 285, the output buffer | CPU 3 natively; the `0x800f` read path; the output head layout | S-DML: on start, write heads that decode to the scene's boxes (its register file since 2026-11-07, 5.3; the scene's boxes as its records, 5.4; several subjects and their parts, 5.6) |
 | S4 the network | the engine's arithmetic | layer schedule, numerics | a reproduced DML (5, step D) |
 
@@ -294,7 +302,7 @@ the lens driver (`0x50817e11` from `0x5013f077`) and the init chain `0x501e94a5`
 |---|---|---|---|---|
 | A | S-SUBJECT at seam S1: S-SCENE's layers report screen boxes (the rider, the ball) with a kind; when the camera's subject-detection setting is on, write MDET's frame table and post UP_FACE (and UP_LOCKON for the tracked one) so DISP_FRAME draws subject frames natively, as S-AFOSD does for the AF frame | static: the frame table's record layout and how DISP_FRAME reads it (U1); the setting's property and its value per kind (U2) | about 1 week; done 2026-10-27 (5.1: UP_FACE only, UP_LOCKON is the AF module's) | adds S-SUBJECT; nothing retires |
 | B | S-SUBJECT moves to seam S2: the subject records answered to the AF module, which then chooses the AF point and uploads frames itself | native AF module (hle-gaps 4.4: TakeReady, CPU 1 and 3; months) | 2-3 weeks after that | S-AFOSD's frame part and step A's display writes |
-| C | MDET natively on CPU 3 with S-DML: a register-file model at `0x9c180000` (start `+0x010`, status `+0x004` bit 14 W1C, IRQ 285, the gates and clock 50), the `0x800f` load through the flash-read path, and on each start output heads synthesised so that MDET's own `get_dml_result` / `judge_dml_result` / stabilisation produce the scene's boxes | ROADMAP HLE step 4 (CPU 3); a flash read model or a resource reader at `0x501a921f`; the output head layout read from the post-processing code (U4); PDT / TRC and, on E143, the face engines as models or stand-ins | 4-6 weeks after CPU 3; part 1 (MDET_DL native at single call sites, S-DML with an empty output, the load stubbed), part 2 (S-DML's records from the scene) and part 3 (the frames from MDET's table) done 2026-11-07 (5.3, 5.4, 5.5); several subjects and parts the same day (5.6); the main and part records wait for LAF's frame trace and the AF library (U9) | S-SUBJECT retires (on E143 in part 3, 5.5); adds S-DML (and S-FACE on E143) |
+| C | MDET natively on CPU 3 with S-DML: a register-file model at `0x9c180000` (start `+0x010`, status `+0x004` bit 14 W1C, IRQ 285, the gates and clock 50), the `0x800f` load through the flash-read path, and on each start output heads synthesised so that MDET's own `get_dml_result` / `judge_dml_result` / stabilisation produce the scene's boxes | ROADMAP HLE step 4 (CPU 3); a flash read model or a resource reader at `0x501a921f`; the output head layout read from the post-processing code (U4); PDT / TRC and, on E143, the face engines as models or stand-ins | 4-6 weeks after CPU 3; part 1 (MDET_DL native at single call sites, S-DML with an empty output, the load stubbed), part 2 (S-DML's records from the scene) and part 3 (the frames from MDET's table) done 2026-11-07 (5.3, 5.4, 5.5); several subjects and parts the same day (5.6); the trap fixed, the AF area from the AF target and MDET_CALC_MAIN native on the firmware's posts 2026-11-08 (5.7); the main and part records wait for LAF's chase cycle on PDT / TRC (U9) | S-SUBJECT retires (on E143 in part 3, 5.5); adds S-DML (and S-FACE on E143) |
 | D | A reproduced DML: run the real network on the frame | the layer schedule from the register builders (U3); the engine's arithmetic (U5); a reference to check against | months; bit-exactness ? | S-DML's synthetic heads |
 
 Notes on D, against the e7-bird-network work: there the model resource carried its own command stream, and the
@@ -804,7 +812,8 @@ before the race, so both racers start as new tracks.
    `0xa337f05a..` (`0x50839aee..0x50839b03`, under the conditions at `0x50839abe..0x50839aec`) from the record the AF
    library's CPU 3 call `0x508c00a3` fills (`0x508399c8`). In the lab that call runs natively but nothing drives the AF
    library's state: the area is (0, 0)..(33, 36) and `0xa337f060` is 0 (X), so only a subject reaching the top left
-   corner could be a candidate; the rider and the racers never do.
+   corner could be a candidate; the rider and the racers never do. (Corrected in 5.7: that area was read through the AF
+   library's null record pointer; it now comes from the AF target, and the rider is a candidate.)
 4. With a candidate, LAF's setter takes the branch of 5.5 (`0x50839d79..0x50839da4`): with `0xa337f087` = 0 and the
    candidate byte 1 it calls mdet_laf_dl_set_tracking_status(1) (228, `0x506e6ac8`: unless `0xa337bbdc & 0xc0` is 0x40
    and `0xa337bbdc & 6` is 4, the force variant writes `0xa337f085`), with `0xa337f087` = 1 and no candidate it calls it
@@ -813,7 +822,7 @@ before the race, so both racers start as new tracks.
    posts a change (`0x508026a1` -> `0x50801a5b`). X, a scratch probe with a body record at (110, 110, 220, 220), which
    overlaps that area: at its seventh run the candidate was marked (`0xa337d948` = 1, `0xa337f058` = 1), the tracking
    status set (`0xa337f085` = 1, then `0xa337f087` = 1), and the session stopped inside the callback's post with a trap
-   at pc 0x16; why is not read. `0x50835002` was not entered.
+   at pc 0x16; why is not read (read in 5.7: TAKE's callback never registered). `0x50835002` was not entered.
 
 So the main and part records, and the kind 7 / kind 8 frames DISP_FRAME draws from them, need the AF library's area
 and mode (FCS: the AF module of step B, CPU 1 and CPU 3) and LAF's frame trace on MDET_CALC_MAIN_CPU3. Neither is one
@@ -861,6 +870,130 @@ EVF's byte by the lab would hide the first, and accepting 0x1100 would guess the
 swap with real part records; one score for every record; the tracking frame (UP_LOCKON, step B); the trap after a
 change of tracking status; the EVF after `lv` (above).
 
+### 5.7 MDET_CALC_MAIN, the trap and the AF area; U9 narrowed (2026-11-08)
+
+The trap of 5.6 is an unregistered callback, now registered as TAKE registers it; LAF's AF area comes from the camera's
+AF target setting through three steps of the AF library's init, which now run natively; MDET_CALC_MAIN_CPU3 and
+MDET_E_SEND_CPU3 run natively when the firmware posts to them. A subject under the AF target becomes LAF's main-subject
+candidate and gets a tracking status natively. The main and part records still do not come: their state is set at LAF's
+end-frame event, which only LAF's chase cycle on the PDT / TRC unit posts. Code: `emu/src/lab/mdet.mjs`,
+`emu/src/lab/camapp.mjs` (`drain_cpu3`), the facts in `emu/src/fw/models.mjs` `mdet`; tests `emu/test/test_mdet.mjs`,
+`emu/test/test_subject.mjs`. The trace ids are the logger table's (5.6).
+
+**The trap at pc 0x16 (D, X).** Symptom (5.6, X): with a subject overlapping the AF area, the offer that marked it set
+the tracking status, and the status callback's post was followed by a trap at pc 0x16 with address 1. Candidates: (a) a
+post to ring [3][0] that S-CPU3 does not serve (its error would name the function, not trap); (b) the callback record
+the post uses never filled; (c) a fault on TAKE's side. Checked (b) first: mdet_laf_dl_status_change_callback_cpun (22,
+`0x508026a1`) posts the record `0xa33458cc` through `0x50801a5b`, which calls `0x50035afd` (sys_callrequest) to the
+record's core byte +12 when that differs from `(0x8050)`, and otherwise `0x50801974`, a deferred call (`0x500503d4`, IRQ
+53's ring) of the record's +4 with its +8 (D). In the lab the record was 16 zero bytes, so the deferred call was of
+address 0 from `0x50801a15`, and IRQ 53's runner `0x5005062d` `calls (a2)` with a2 = 0 (`0x50050655`) ran from address 0
+to the trap at 0x16 (X). The record's words occur in the image only there and in mdet_laf_dl_set_status_change_callback
+(21, `0x506e68b4`), which writes {0, `0x60823720` (mdet_laf_dl_status_change_callback_exec, 24, `0x50802700`), 0,
+`(0x8050)`} and the callback at `0xa33458dc` (`0x506e691b..0x506e693e`; byte scan, D); its only caller is TAKE's start
+at `0x506d8109`, the function that reads the setting into TAKE's context +206 (`0x506d8017`), with TAKE's callback
+`0x506d98ed`, beside three other registrations (`0x506eac15`, `0x506eac34`, `0x506e64a4`) (D). TAKE does not run in the
+lab, so nothing registered it. Fix: S-TAKEMDET makes that registration natively at MDET's first request, before
+mdet_dl_start; the status callback then runs `_exec` and TAKE's callback, which posts TAKE's message 81 (handler
+`0x506d993e`) to TAKE's queue 0x5e through OlyQeWr and sets `0xa32df204`, its guard, until TAKE's handler clears it
+(`0x506d98f0..0x506d9966`, D; X: one message, the guard 1). TAKE's handler would rebuild TAKE's live-view request
+(`0x5039c864` -> `0x5039bb7e`); TAKE does not run, so the message stays in its queue (U10). Siblings (D): `0x50801a5b`
+posts three more records, each filled by its own registrar: `0xa3345618` (`0x50801dba..`), `0xa33457e4` (`0x50802503..`)
+and `0xa33458b0`, which mdet_laf_chase_object (25, `0x508027c8`, take_mov's request from `0x503a4c66` and `0x503a4cd7`)
+fills with take_mov's callback (`0x5080287a..0x50802895`). The last is posted at every end frame, unconditionally:
+mdet_laf_end_frame_calc_cpu_func calls mdet_laf_chase_object_cb_after_endframe (52, `0x50803df6`) at `0x50825bb0`. A
+scratch run that posted end frames without a chase request trapped the same way (X: the deferred call of address 0 from
+`0x50801a15`, stack through `0x50803e45`). It is not registered by the lab: no lab session runs an end frame (below).
+
+**MDET_CALC_MAIN_CPU3 and MDET_E_SEND_CPU3 (D).** MDET_CALC_MAIN_CPU3 (`0x50800b03`) reads 16-byte messages from its
+queue `(0x600436f8)` = 0x3005 (OlyQeRd, timeout -1, `0x508015c6`), takes the word +8 as the event, subtracts 0x10000000
+and finds its handler in the table `0x609d9b54` (slot `event & 31`, the slot's event compared): 0x30000008 the end frame
+(`0x50800c38` -> mdet_laf_end_frame_calc_cpu_func, 242, `0x50825b54`), 0x30000005 LAF's start request (`0x50800f4e` ->
+mdet_laf_start_request_exec, 64), 0x30000001 LAF's start with its parameters (`0x50800c0e` -> mdet_laf_mode_change's
+handler `0x5082e4f0`), 0x31000003 the chase cycle (`0x50800c59`), and the still, end, iauto and moving-object events.
+Its messages come from MDET_E_SEND_CPU3 (`0x50800fe2`), which waits on its flag `(0x600436d8)` = 0x3007 for any of
+0xfe77003e and sends one event per bit (mdet_laf_q_send, 40, `0x5080362d`, or mdet_iauto_q_send, 15): bit 29 the end
+frame (0x40000008), bit 4 the start request (0x40000005), bit 21 the chase cycle (0x41000003), and so on
+(`0x5080105e..0x50801336`). The bits are set by LAF's event setters (mdet_set_event_laf_*, trace ids 27..33, 39, 56, 59,
+60), which the CPU 0 and CPU 3 callers post to CPU 3 through `0x508017b4(3, setter, argument)`, always by
+sys_callrequest; `0x508017b4`'s own name table lists the eleven (`0x50801800..0x508018b9`).
+
+**Who posts the end frame (D; the cadence I).** mdet_laf_end_frame_notify (55, `0x50803f9c`) posts
+mdet_set_event_laf_end_frame (56); it is called only by mdet_laf_end_frame (95, `0x50825aae`) when `(0xa3379450) & 13`
+is 13 (`0x50825af6..0x50825b03`). That word collects one LAF cycle: bit 1 from mdet_laf_exec_ems1 (86, `0x50824aad`), 2
+from mdet_laf_exec_ems2 (87), 4 from mdet_laf_trc_tracking_color_callback (91, which calls mdet_laf_end_frame at
+`0x508256f0` after setting 9), 8 from mdet_laf_trc_judge_color_callback (94); end_frame_calc clears it (`0x50825c64`).
+The TRC callbacks are function pointers handed to the TRC driver (`0x508250b8`). A cycle starts with take_mov's
+mdet_laf_chase_object, which copies its 272-byte request to `0xa33458e0`, registers its callback (above), locks the YC
+buffer it names (`0x50802949`) and posts mdet_set_event_laf_chase_object_trc_e1 (33, `0x508029fd`). So the end frame is
+the end of the chase cycle take_mov asks for, through EMS1 / EMS2 (the ISP front end's motion engines) and TRC (the
+colour tracker of 2.2); that take_mov asks once per live-view frame is I. TAKE_MOV's start also calls mdet_laf_start
+(63, `0x5081ee9d` from `0x506da292`, when its record's +2 has one of the bits 2, 4, 8, 16, whose meaning is ?), which
+posts the start request; mdet_laf_start_request_exec then starts LAF's PDT / TRC side (X below).
+
+**How the lab runs them (X).** S-MDETDL now runs four tasks: a task is due when its flag has a bit it waits for or its
+queue a message; the queue 0x3005 is kept by the lab like the flags (OlyQeWr / OlyQeRd on its id: 16-byte messages in
+order, waits without limit only; an empty read ends the queue task's turn and is an error anywhere else); flag 0x3007
+joins 0x3003..0x3006. S-CPU3 serves the eleven setters (and `0x508251d2`, below) in interrupt context, as CPU 3's IRQ
+324 drainer would, and then the due tasks' turns. Evidence: TAKE_MOV's call mdet_laf_start, made by the test, gave one
+MDET_E_SEND turn and one MDET_CALC_MAIN turn for the start request, whose handler posted MDET_PDT_CPU3's dispatch
+(mdet_laf_pdt_dispatch, 395, `0x50841edd`), which S-CPU3 does not serve, and the session stopped there, naming it. A
+scratch run that posted mdet_laf_end_frame_notify after each offer ran end_frame_calc, mdet_laf_exec_trace (96) and
+mdet_laf_calc_offer_data (124) natively once each before the chase callback's empty record trapped (above). CPU 3's code
+runs with the core register `(0x8050)` at 0 (as for MDET_DL and DISP_FRAME since 5.3):
+mdet_laf_ems2_img_fmt_and_id_clear_wrapper (89) calls mdet_laf_ems2_img_info_clear_delayint (88, `0x508251d2`) directly
+when `(0x8050)` is 3 and posts it to CPU 3 otherwise (`0x50825324..0x5082538f`, D), so in the lab it comes through ring
+[3][0] and runs after the turn (I). No stand-in posts an end frame. One that called the notify per offer would make a
+state the camera does not reach (an end frame without the chase request whose callback end_frame_calc posts, D), and a
+native chase cycle needs take_mov's 272-byte request (not read), EMS1 / EMS2 and the PDT / TRC unit at `0x9be00000` with
+IRQs 278 / 279, which the lab does not model. So MDET_CALC_MAIN runs only when the firmware posts, and no lab session
+posts yet.
+
+**The AF area (D; X where marked).** The AF library's CPU 3 call `0x508c00a3` runs `0x5099d7d5`, sets +12 and +32 of its
+info record and copies the record's 17 halfwords to LAF's buffer (`0x508c011f..0x508c012c`); the record is
+`(0xa33d951c)` (`0x5099d714`). `0x5099d7d5` takes the AF target record `0xa33b015c` (`0x508c3ac8`): +0 the AF point, +4
+its height, +6 its width, in the AF library's grid of 39 x 27 points (1053: `0x508c3fca`); column = point % 39, row =
+point / 39 (`0x5099d7f6..0x5099d813`); the columns from c - w / 2 - 1 to c + w / 2 + 2 (clamped to 0..39) and the rows
+likewise from r and h (clamped to 0..27), through the tables `0x60a63a48` (x: 0, 16, 33, .. 624, 639) and `0x60a63ae8`
+(y: 0, 18, 36, .. 462, 479) into the record's +24 x0, +26 x1, +28 y0, +30 y1 (`0x5099d865..0x5099d8a5`), which LAF reads
+as the area `0xa337f072..78` (5.6). The AF target record is copied by `0x508c51fa` from `0xa33d8be0` (`0x50974f61`),
+which `0x5097500a` builds from the camera's settings through the property read when the flag `0xa33d8bea` is 1: +0
+object 0x88b2 (the point; target mode 2 forces 526, the grid's centre, column 19 row 13), +2 0x84d1 (the target mode),
++3 0x9a41, +4 / +6 0x1dd1 [0] / [1], +8 0x1df1 (0 in modes 0, 2 and in mode 3 with height 3), +9 0x1e01. Writers: the AF
+library's init `0x508bede6` (called by the boot chain at `0x501e9533`) sets the flag (`0x509748d7`), copies the target
+(`0x508c70c0` -> `0x508c33c0`) and points `0xa33d9518` / `0xa33d951c` at `0xa33d8c5c` and `0xa33d9520` at `0xa33d8c80`
+(`0x5099cbd9`); its settings step `0x508c388f` copies the target again when its mask has bit 1 (callers `0x508bf84c`,
+`0x508c1821`, `0x508c37f4`, `0x508d0169`, `0x5091e707`, not traced). Before this round the lab ran none of it:
+`(0xa33d951c)` was 0, so the FCS call wrote its record at addresses 0..0x22 and LAF copied the area from there (X).
+Correction to 5.6: the (0, 0)..(33, 36) area was that, the zero target's columns 0..2 and rows 0..2, not an undriven
+area of the AF library. The lab now runs those three init steps natively, in the init's order, at MDET's first request
+(H-FCSAF); they log no error (X), where the whole init logs errors 0x1c005002 in the lab (X) and stays out. The lab's
+settings are the firmware's defaults (X, through the property read): mode 3, point 526, 3 x 3; the record reads {526, 3,
+0, 3, 3, 0, 0} and LAF's area x 279..361, y 196..284 (X), centred on MDET's frame (320, 240). What a running camera has
+at live view is the user's AF target setting (I); S-AFOSD's frame at (400, 300) in DISP_FRAME's coordinates is the lab's
+(I) and is not derived from this record. A later change of the AF target is not followed: the settings step does not
+run.
+
+**What runs now (X, E143).** `test_mdet.mjs`: at the offer that first reports the still rider (box {204, 203, 436, 447},
+which overlaps the area) LAF marks it candidate 0, sets the tracking status (`0xa337f085` = 1) and its seen copy
+(`0xa337f087` = 1), TAKE's callback runs (guard 1), and that offer writes no table (0x50839d79..0x50839da4, 5.6 item 4);
+from the next offer the writer runs again, so it runs once per offer but that one, and the frame is the rider's list
+record as before. `0xa337f082` stays 0 and mdet_laf_dl_internal_start is not entered. In the race (5.6) the near racer,
+the one body in the area, is the candidate (LAF's slot 0, its centre), the far one is not, and both stay list frames.
+`test_subject.mjs`: the rider moving at 3 m/s enters and leaves the area; at each change the table holds the offer
+before for one offer (X: writes stop for one offer at the change, 5.6 item 4's branch with no candidate), and DISP_FRAME
+still draws grey list frames. A main frame (kind 7 colour 4 per 5.1) and a part frame are not drawn: their state is not
+reached, so their colours and what main against list means on screen are not verified here (5.1's D stands). U10 (when
+TAKE clears request 1) is not on this path: TAKE's handler of message 81 is (I), and it does not run.
+
+**Stand-ins (changed and new).** S-TAKEMDET: TAKE's registration of its status-change callback first. S-MDETDL: also
+MDET_E_SEND_CPU3 and MDET_CALC_MAIN_CPU3, with flag 0x3007 and queue 0x3005 kept by the lab. S-CPU3: LAF's event setters
+and the EMS2 clear. H-FCSAF (new): the three AF library init steps.
+
+**Open.** The main and part records (U9): an end frame needs take_mov's chase cycle (its request, EMS1 / EMS2, PDT /
+TRC). The other registrations TAKE's start makes (`0x506eac15`, `0x506eac34`, `0x506e64a4`) and what TAKE does with
+message 81. The AF library's settings step at a change of the AF target. The EVF after `lv` (5.6) was not worked on.
+
 ## 6. Corrections to other documents
 
 - `emu/fwmap/E143.labels.json`, gap@0x507f66d5: "DISP_SYNC device driver: 0x9c180000 ..." should read DISP_SYNC
@@ -895,12 +1028,16 @@ change of tracking status; the EVF after `lv` (above).
 - **U9** MDET's state `0xa337f082 = 1`, in which its writer fills the main record (drawn as kind 7, colour 4) and the
   part record (kind 8, under frame mode bit `0x10`). Located in 5.6 (D, X): mdet_laf_dl_internal_start sets it, for a
   target part of subject 0, from LAF's frame trace on MDET_CALC_MAIN_CPU3 (exec_trace, which also runs the main and
-  part writer) when subject 0 is a main-subject candidate; candidates are the subjects that overlap the AF library's
-  area, which the setter copies from the CPU 3 FCS call `0x508c00a3`. In the lab the trace does not run and the area is
-  the undriven (0, 0)..(33, 36), so the byte stays 0; a candidate made by hand set the tracking status and then stopped
-  the session with a trap at pc 0x16 in the status callback's post (not read). Open: what posts the end-frame event,
-  the AF library's area in a running camera, what the offer's `mag` byte is, the thresholds `0xa337ee8c` / `0xa337ee90`,
-  which of TAKE's conditions sets request 32, and that trap.
+  part writer) when subject 0 is a main-subject candidate; candidates are the subjects that overlap the AF area, which
+  the setter copies from the CPU 3 FCS call `0x508c00a3`. Narrowed in 5.7 (D, X): the trap was TAKE's status-change
+  callback never registered (fixed); the AF area is the AF target's cells in the AF library's grid, from the camera's
+  AF target setting (H-FCSAF), and a subject under it is the candidate with its tracking status set natively;
+  MDET_CALC_MAIN runs natively on the firmware's posts. The end-frame event comes only at the end of LAF's chase
+  cycle (take_mov's mdet_laf_chase_object, EMS1 / EMS2 and the PDT / TRC unit, whose completions mdet_laf_end_frame
+  collects), which the lab does not run, so the byte stays 0. Open: that cycle (take_mov's 272-byte request, the PDT /
+  TRC unit), what the offer's `mag` byte is, the thresholds `0xa337ee8c` / `0xa337ee90`, and which of TAKE's
+  conditions sets request 32.
 - **U10** When TAKE's live-view request clears the subject-frame bit (`0x506d8dea`'s conditions in a running camera),
-  and how `mdet_dl_start` is given the first kind. The lab's S-TAKEFRAME sets the bit while MDET runs on the live scene
-  (5.5, I).
+  and how `mdet_dl_start` is given the first kind. A lead (5.7, I): at a change of LAF's tracking status TAKE's
+  callback posts TAKE message 81, whose handler `0x506d993e` rebuilds TAKE's live-view request; TAKE does not run.
+  The lab's S-TAKEFRAME sets the bit while MDET runs on the live scene (5.5, I).

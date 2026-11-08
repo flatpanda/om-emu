@@ -2472,7 +2472,14 @@ and E147; off by default. Addresses are E143's (disassembly notation) unless a b
   parts (S-SCENE's race preset: two motorcycles with their helmets); MDET's combination pairs each helmet with its own
   body (judge_comb: overlap, then the nearest centre and size) and LAF writes a list record per body, so DISP_FRAME
   draws two frames (X). The main and part records (U9) are set by LAF's frame trace on MDET_CALC_MAIN_CPU3 for a
-  subject that overlaps the AF library's area: neither runs in the lab (D, X).
+  subject that overlaps the AF library's area: neither runs in the lab (D, X). Spec 5.7 (2026-11-08): S-TAKEMDET
+  registers TAKE's LAF status-change callback as TAKE's start does (without it the status callback made a deferred
+  call of address 0, the trap of 5.6); H-FCSAF runs three steps of the AF library's init natively, so LAF's AF area is
+  the camera's AF target (the centre 3 x 3 points by default) and a subject under it becomes LAF's candidate with its
+  tracking status (X); S-MDETDL runs MDET_E_SEND_CPU3 and MDET_CALC_MAIN_CPU3 when S-CPU3 serves one of LAF's event
+  setters (X, through TAKE_MOV's mdet_laf_start in the test). The end-frame event that sets the main and part records
+  comes only from LAF's chase cycle (take_mov's chase requests, EMS1 / EMS2, the PDT / TRC unit), which the lab does
+  not run.
 - **GPU and C3D (D):** one stack seen from both ends: C3D (gap@0x5101aef5) makes 108 call edges into the DMP "K3000"
   GPU driver core (gap@0x51767cd6), plus a 15.6k GPU tail of gap@0x51740e22. Tasks: C3D_EXE_BRIDGE and C3D on CPU 0,
   C3D_EXE and C3D_UPDATE on CPU 1. Devices `0x9bc80000` (30 references) and `0x9bd00000` (10) are referenced only from

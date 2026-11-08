@@ -221,7 +221,10 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   S-SCENE's subjects of the kind as its records, and MDET's own stabilisation reports them from the seventh offer, so
   the first frame comes with it (seven WAITs of a frame step in an `--idle off` session); the frames follow the subject
   as it moves and go when the setting is off (`docs/om1-subject-spec.md` 5.3 to 5.5). With several subjects each is a
-  frame; MDET's own combination pairs each helmet with its motorcycle (5.6). On a body without MDET_DL,
+  frame; MDET's own combination pairs each helmet with its motorcycle (5.6). The subject under the camera's AF target
+  (the centre by default; H-FCSAF runs the AF library's init steps that give LAF that area) becomes LAF's main-subject
+  candidate natively; the main and part frames are not drawn: LAF's chase cycle, which would set them, needs the PDT /
+  TRC unit (5.7). On a body without MDET_DL,
   S-SUBJECT (`src/lab/subject.mjs`) would write the table itself (none today; spec 5.1).
 - With the control op camapp at 2 a new session runs the HLS components too (off otherwise: the GUI then shows its
   shooting panel over a black image area): S-CAMAPP starts the OXF main thread (task 57 HIGHLEVEL_MAIN), S-BOOTDONE

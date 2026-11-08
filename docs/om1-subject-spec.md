@@ -8,8 +8,9 @@
 > DISP_FRAME draws the frames natively. Corrections in section 4.3.
 >
 > Update (2026-11-07): the first part of step C runs (section 5.3): CPU 3's MDET_DL code natively on the lab CPU from
-> TAKE's calls to dml_start_callback and MDET's subject records, with S-DML (`emu/src/dev/dml.mjs`) for the engine;
-> the engine writes no detection yet.
+> TAKE's calls to dml_start_callback and MDET's subject records, with S-DML (`emu/src/dev/dml.mjs`) for the engine. Its
+> second part (section 5.4): S-DML writes S-SCENE's subjects as the engine's records, and MDET's own stabilisation
+> reports them; LAF then fills the frame table's inputs natively.
 
 # OM-1 subject detection
 
@@ -275,8 +276,8 @@ the lens driver (`0x50817e11` from `0x5013f077`) and the init chain `0x501e94a5`
 |---|---|---|---|
 | S1 display | DISP_FRAME's inputs: MDET's frame table + UP_FACE, UP_LOCKON | what exists now (S-DISPFRAME runs DISP_FRAME on the lab CPU) | synthetic frames from the scene: S-SUBJECT (5.1) |
 | S2 MDET result | `mdet_laf_*` getters FCS calls; the subject record (4.3) | native FCS (AF module) | S-SUBJECT returns scene-derived records |
-| S3 DML device | `0x9c180000`, IRQ 285, the output buffer | CPU 3 natively; the `0x800f` read path; the output head layout | S-DML: on start, write heads that decode to the scene's boxes (its register file and an empty output since 2026-11-07, 5.3) |
-| S4 the network | the engine's arithmetic | layer schedule, numerics | a reproduced DML (5.4) |
+| S3 DML device | `0x9c180000`, IRQ 285, the output buffer | CPU 3 natively; the `0x800f` read path; the output head layout | S-DML: on start, write heads that decode to the scene's boxes (its register file since 2026-11-07, 5.3; the scene's boxes as its records, 5.4) |
+| S4 the network | the engine's arithmetic | layer schedule, numerics | a reproduced DML (5, step D) |
 
 ## 5. Feasibility and plan (I)
 
@@ -284,7 +285,7 @@ the lens driver (`0x50817e11` from `0x5013f077`) and the init chain `0x501e94a5`
 |---|---|---|---|---|
 | A | S-SUBJECT at seam S1: S-SCENE's layers report screen boxes (the rider, the ball) with a kind; when the camera's subject-detection setting is on, write MDET's frame table and post UP_FACE (and UP_LOCKON for the tracked one) so DISP_FRAME draws subject frames natively, as S-AFOSD does for the AF frame | static: the frame table's record layout and how DISP_FRAME reads it (U1); the setting's property and its value per kind (U2) | about 1 week; done 2026-10-27 (5.1: UP_FACE only, UP_LOCKON is the AF module's) | adds S-SUBJECT; nothing retires |
 | B | S-SUBJECT moves to seam S2: the subject records answered to the AF module, which then chooses the AF point and uploads frames itself | native AF module (hle-gaps 4.4: TakeReady, CPU 1 and 3; months) | 2-3 weeks after that | S-AFOSD's frame part and step A's display writes |
-| C | MDET natively on CPU 3 with S-DML: a register-file model at `0x9c180000` (start `+0x010`, status `+0x004` bit 14 W1C, IRQ 285, the gates and clock 50), the `0x800f` load through the flash-read path, and on each start output heads synthesised so that MDET's own `get_dml_result` / `judge_dml_result` / stabilisation produce the scene's boxes | ROADMAP HLE step 4 (CPU 3); a flash read model or a resource reader at `0x501a921f`; the output head layout read from the post-processing code (U4); PDT / TRC and, on E143, the face engines as models or stand-ins | 4-6 weeks after CPU 3; part 1 (MDET_DL native at single call sites, S-DML with an empty output, the load stubbed) done 2026-11-07 (5.3) | S-SUBJECT retires; adds S-DML (and S-FACE on E143) |
+| C | MDET natively on CPU 3 with S-DML: a register-file model at `0x9c180000` (start `+0x010`, status `+0x004` bit 14 W1C, IRQ 285, the gates and clock 50), the `0x800f` load through the flash-read path, and on each start output heads synthesised so that MDET's own `get_dml_result` / `judge_dml_result` / stabilisation produce the scene's boxes | ROADMAP HLE step 4 (CPU 3); a flash read model or a resource reader at `0x501a921f`; the output head layout read from the post-processing code (U4); PDT / TRC and, on E143, the face engines as models or stand-ins | 4-6 weeks after CPU 3; part 1 (MDET_DL native at single call sites, S-DML with an empty output, the load stubbed) and part 2 (S-DML's records from the scene) done 2026-11-07 (5.3, 5.4) | S-SUBJECT retires; adds S-DML (and S-FACE on E143) |
 | D | A reproduced DML: run the real network on the frame | the layer schedule from the register builders (U3); the engine's arithmetic (U5); a reference to check against | months; bit-exactness ? | S-DML's synthetic heads |
 
 Notes on D, against the e7-bird-network work: there the model resource carried its own command stream, and the
@@ -514,10 +515,10 @@ is the learning data's address and "work" the feature-map area; the names listed
 
 CPU 3's MDET_DL code runs natively on the lab CPU, from TAKE's calls through dml_start and IRQ 285 to MDET's subject
 records and LAF, with S-DML standing for the engine. It is HLE step 4's CPU 3 at single call sites, as DISP_FRAME runs
-(ARCHITECTURE.md C02): CPU 3's kernel does not run. The engine writes no detection, so MDET reports no subject;
-synthesising the scene's boxes into the output (5.2.1) is step C's next part. Code: `emu/src/lab/mdet.mjs`,
-`emu/src/dev/dml.mjs`, the firmware's side with its evidence in `emu/src/fw/models.mjs` `mdet` and the board's `dml`;
-test `emu/test/test_mdet.mjs`.
+(ARCHITECTURE.md C02): CPU 3's kernel does not run. In this part the engine wrote no detection, so MDET reported no
+subject; 5.4 adds the scene's boxes as its records (5.2.1). Code: `emu/src/lab/mdet.mjs`, `emu/src/dev/dml.mjs`, the
+firmware's side with its evidence in `emu/src/fw/models.mjs` `mdet` and the board's `dml`; test
+`emu/test/test_mdet.mjs`.
 
 **The request path (D).** Each of TAKE's calls goes through the poster `0x5080ad65`: it copies the request into MDET's
 slot `0xa3375b98` (its kind byte the slot's busy mark) and posts `0x5080b987` with the slot to CPU 3 (sys_callrequest at
@@ -571,10 +572,38 @@ input still ?). S-SUBJECT's frames are drawn as before (`test_subject.mjs`). Wit
 table and then one for S-SUBJECT's frames in the same tick, the second drawing its frame, the composite showed none (X);
 why is ?.
 
-**Open.** Step C's next part: S-DML writing records from S-SCENE's subjects (5.2.1). 5.2.1 (a), LAF's step to the frame
-table from `0xa337b1e4`, is now native but untested with a detection. Whether CPU 3 really works in zero lab time around
-the engine's run (I) and the engine's run time (A-DML-1, ?). The YC frame's content and size (4.2) and whether TAKE
-offers every frame. The weights stay outside the lab (U6).
+**Open.** S-DML's records from S-SCENE's subjects: done in 5.4, with LAF's step to the frame table (5.2.1 (a)). Whether
+CPU 3 really works in zero lab time around the engine's run (I) and the engine's run time (A-DML-1, ?). The YC frame's
+content and size (4.2) and whether TAKE offers every frame. The weights stay outside the lab (U6).
+
+### 5.4 Step C, part 2: the scene's boxes through MDET (2026-11-07)
+
+S-DML no longer writes an empty output: each run writes the records the lab gives through the device's source, after the
+area is zeroed, as the engine's records are laid out (5.2): u16 words +0 score, +2 h, +4 w, +6 cy, +8 cx, packed from
+slot 0 of the record's class; a record that does not fit is the lab's error. For each offer S-TAKEMDET gives S-SCENE's
+subjects of the offer's kind at the offer's scene time, placed in MDET's 640 x 480 frame as S-SUBJECT places them (its
+`frames()`: the subject's box on the panel taken back through DISP_FRAME's transform, 5.1), each as a body record of
+class 0 (group g = 0 of 5.2's classes 3g, 3g + 1, 3g + 2: S-SCENE's subjects carry no sub-kind, I) with the score
+`0x0e00` (223 after MDET's scaling) and its centre and even size (5.2.1 items 3 and 4). No part records are written.
+
+**Evidence (X, E143, `test_mdet.mjs`; the rider of the moving preset held still, MOTOR_SPORTS, the TFT at 4:3).**
+S-DML's record in class 0, slot 0 is {score `0x0e00`, h 244, w 232, cy 325, cx 320} for S-SUBJECT's box `{204, 203, 436,
+447}`. MDET reports nothing for six runs and from the seventh run with the record on writes the subject record at
+`0xa3376b5c`: sbj_kind 6 (6 + 3 (kind - 1) + g, 5.2) and the body {cx 320, cy 325, w 232, h 244, rel 223, dtct 1}; the
+seventh is the run after the hits object 0x61a4 [915] = 6 asks of a new track of a large box (5.2's reading of the
+order, now measured). At BIRD the record goes at once (the change of kind restarts MDET's state; when exactly is not
+read). No firmware error log comes with any of it. LAF takes the result natively and fills the frame table writer's
+inputs: subject 0's box `{x0 204, x1 436, y0 203, y1 447}` at `0xa33790b2` and its valid byte `0xa337d53c` = 1 (the
+test), and with S-SUBJECT's writes switched off by hand the writer gave the table count 1 and the list record (204, 203,
+436, 203, 204, 447, 436, 447), S-SUBJECT's own record byte for byte, with `0xa337f082` at 0 (a scratch probe). So 5.2.1
+(a) is answered for this case: LAF's step from MDET's subject record to the list record of 5.1 is the identity on the
+box (X; when LAF fills the main and part records instead, U9, stays open).
+
+S-SUBJECT keeps writing the table and the frame mode's subject bit (the bit is TAKE's request, which does not run, and
+S-SUBJECT's writes are not retired in this step); that DISP_FRAME would draw LAF's own table with the bit set is not
+tried. Open: the other groups and the part classes (judge_comb's pairing), several subjects in one class, the AIRPLANE
+class swap and the movie remap with real records, the subjects' scores (one value for all), and the power saver with
+records (its byte stayed 0).
 
 ## 6. Corrections to other documents
 
@@ -599,7 +628,8 @@ offers every frame. The weights stay outside the lab (U6).
   = `0xb64f5c80`; MDET decodes no tensor, reads no engine register, and runs class swap, area filters, 6-hit
   stabilisation and body / part combination to 8 subject records at `0xa3376b5c`. Open: what the head's own words mean
   (`0x9c181100`, `0x9c181110`, `0x9c181114`, the piecewise tables, the anchors' unit, the grid), which S-DML does not
-  need; judge_comb's pairing rules for parts; LAF's step from `0xa337b1e4` to the frame table (with U9).
+  need; judge_comb's pairing rules for parts; LAF's step from `0xa337b1e4` to the frame table (with U9): measured in
+  5.4 for one body, which LAF writes as the list record of its box (X).
 - **U5** The engine's numerics (operand widths, rounding, activations); not decidable statically.
 - **U6** What the `0x95xxxxxx` window is.
 - **U7** What PDT stands for and what it computes; which face IRQ is which engine; the face engines' clock name.

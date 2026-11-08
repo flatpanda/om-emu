@@ -697,11 +697,12 @@ the register builders decoded and the engine's numerics, which cannot be checked
 |---|---|---|
 | A | S-SUBJECT at DISP_FRAME's inputs: scene-derived subject frames in MDET's frame table, UP_FACE posted, when the subject-detection setting (settings id 1682) names a kind. Done 2026-10-27 (spec 5.1: U1 and U2 read, the frames drawn natively; UP_LOCKON is the AF module's request, so it moves to B) | about 1 week |
 | B | S-SUBJECT at MDET's results to the AF module, which then asks for the tracking frame (UP_LOCKON) itself | 2-3 weeks after native FCS |
-| C | MDET natively on CPU 3 with S-DML, a register-level engine model whose output heads decode to the scene's boxes. Part 1 done 2026-11-07 (spec 5.3): MDET_DL runs natively on the lab CPU at single call sites from TAKE's calls (S-TAKEMDET) through dml_start, IRQ 285 and dml_start_callback to MDET's subject records and LAF (S-MDETDL; the learning data's copy stubbed, S-LEARNDATA), S-DML a register file whose output is empty; next, S-DML's records from S-SCENE's subjects (spec 5.2.1) | 4-6 weeks after HLE step 4's CPU 3; part 2 about a week |
+| C | MDET natively on CPU 3 with S-DML, a register-level engine model whose output heads decode to the scene's boxes. Part 1 done 2026-11-07 (spec 5.3): MDET_DL runs natively on the lab CPU at single call sites from TAKE's calls (S-TAKEMDET) through dml_start, IRQ 285 and dml_start_callback to MDET's subject records and LAF (S-MDETDL; the learning data's copy stubbed, S-LEARNDATA), S-DML a register file whose output is empty. Part 2 done the same day (spec 5.4): S-DML writes S-SCENE's subjects as the engine's records, MDET's stabilisation reports them from the seventh run and LAF fills the frame table's inputs natively | 4-6 weeks after HLE step 4's CPU 3 for the rest |
 | D | a reproduced DML network | months; bit-exactness ? |
 
-Recommended: A is done; C's part 1 is done at single call sites, its part 2 (the scene's boxes through MDET's own
-stabilisation) next, the rest with HLE step 4; D only with hardware to check against. Small follow-ups of A: when MDET
+Recommended: A is done; C's parts 1 and 2 are done at single call sites (the scene's boxes through MDET's own
+stabilisation), the rest (S-SUBJECT's retirement once DISP_FRAME draws LAF's table, part records, the face engines,
+PDT / TRC) with HLE step 4; D only with hardware to check against. Small follow-ups of A: when MDET
 fills its main and part records (spec U9) and when TAKE clears the subject-frame bit (U10).
 
 ## Longer term: full-boot LLE

@@ -1,8 +1,8 @@
 // The board of the model this copy of the lab runs (src/fw/model.mjs): where the on-chip SRAM and the hardware
 // semaphores sit, the interrupt controller's banks, IRQ count and register offsets, the timer block's channels and
-// register layout, the SCPU interface's register offsets, the HDMI port's and the audio port's registers, the
-// flash-library window, the interrupt vectors' page, the MMIO pages the lab's stub allows and the SD host's (sd). The
-// machine (src/machine.mjs), the devices (src/dev/) and the lab's views of them read BOARD.
+// register layout, the SCPU interface's register offsets, the HDMI port's, the audio port's and the DML engine's
+// registers, the flash-library window, the interrupt vectors' page, the MMIO pages the lab's stub allows and the SD
+// host's (sd). The machine (src/machine.mjs), the devices (src/dev/) and the lab's views of them read BOARD.
 //
 // A model's board is its family's (FAMILIES, named by its MODELS entry's board.family), then the facts bin/port.mjs
 // reads from its firmware (src/fw/ports.mjs FACTS[code].board, by the rules of src/fw/facts.mjs), then the
@@ -93,6 +93,13 @@ export const FAMILIES = {
     // (0x50aa9515 attaches 0x50aa90e2 at level 3), the SCA's page (0x50aaee3c, 0x50aaef36) and IRQ 45 (0x50aab67e
     // attaches 0x50aab51d at level 5). E143's (D); E146's and E147's audio drivers are not read
     audio: { port: 0x9B700000, irq: 43, sca: 0x9BB00000, sca_irq: 45 },
+    // the DML engine CPU 3's subject network runs on (src/dev/dml.mjs, S-DML; docs/om1-subject-spec.md 2.1): its
+    // registers (every operand of the driver 0x507f68a8..0x507f906b: +0x000..+0x1aac) and IRQ 285, which the driver's
+    // init 0x507f68a8 attaches with the handler 0x507f6abd at level 5; the start's clock-record update 0x507f8f64
+    // reads back +0x1a08, +0x1a48, +0x1a88 and +0x1aac to set and clear bits in them. E143's (D); E146 and E147 sit on
+    // the same board, their drivers not read (X: their main blocks hold the DML's constants, spec 3.5); passive until
+    // a start
+    dml: { base: 0x9C180000, irq: 285 },
     // the lens mount (src/dev/lensssc.mjs; docs/hle-gaps.md 4.4.1, 4.4.2): the lens serial controller's registers
     // (every operand of LENS_SSC 0x502c0ea5..0x502c2193) and its IRQ 14 (the open 0x502c0e4e attaches 0x502c12c0 at
     // level 3); the units the lens path writes a few words of: the FCS unit, whose two words the open clears
@@ -216,7 +223,7 @@ export const FAMILIES = {
     scpu_link: UNKNOWN,
     // the HDMI port and the lens mount: not read on this family; the deferred-call triggers per body, read by
     // src/fw/facts.mjs (deferredCalls: the six words 0x9b800030..0x9b800044 and IRQs 29..34 on every body of the family)
-    hdmi: UNKNOWN, audio: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN,
+    hdmi: UNKNOWN, audio: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN, dml: UNKNOWN,
     // per body, read by src/fw/facts.mjs (coreByte; resetHead's library and preload rows; vectorPage: 0x6003xxxx on
     // E144, 0x6041xxxx on the 0x60400020 bodies, X; dramSize: 256 MiB on E144, 512 MiB on the 0x60400020 bodies, X)
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,
@@ -328,7 +335,7 @@ export const FAMILIES = {
     scpu: { command: 0xa4, clock: [0x98, 0x9c], ticks: false, storage: [[0x00, 0x94]], events: null },
     // the deferred-call triggers per body, read by src/fw/facts.mjs (deferredCalls: four words 0x9b8000f4..0x9b800100
     // and IRQs 30..33 on all three, in the stub page 0x9b800000 before 2026-10-30)
-    scpu_link: UNKNOWN, hdmi: UNKNOWN, audio: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN,
+    scpu_link: UNKNOWN, hdmi: UNKNOWN, audio: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN, dml: UNKNOWN,
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,
     // E143's scratch DRAM holds E122's icons record (the loader's destination 0xa1fa6c00, 0x730a00 bytes decoded: X,
     // src/fw/facts.mjs resLoader and resources.mjs record): the lab's scratch is E144's lab region, which E118, E120

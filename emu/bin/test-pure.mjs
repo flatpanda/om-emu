@@ -12,7 +12,8 @@
 // (test_scpu.mjs), the HDMI port's device and sink (test_hdmi.mjs), the kind-3 VSC's COMPOSE on E122's and E118's boards (a
 // child per board, test_vsc3.mjs), the accelerometer stand-in's sample
 // (test_acc.mjs), the SD card model (SDHC and SDXC) and the FAT and exFAT readers (test_storage.mjs), S-SUBJECT's
-// subject boxes and transform (test_subject.mjs), the lens serial controller, the deferred-call triggers and S-LENSMCU's replies (test_lens.mjs),
+// subject boxes and transform (test_subject.mjs), the DML engine's register file (test_mdet.mjs dmlUnits, S-DML),
+// the lens serial controller, the deferred-call triggers and S-LENSMCU's replies (test_lens.mjs),
 // PER_SIO's served IIC transfers and the TG-5's charger (test_sio.mjs),
 // the debug API's argument checks, halt,
 // trace filters and live-route units (test_live.mjs liveUnits: a machine on a blank image), its trace rules and edge
@@ -47,6 +48,7 @@ import { vsc3Units } from '../test/test_vsc3.mjs';
 import { accUnits } from '../test/test_acc.mjs';
 import { storageUnits } from '../test/test_storage.mjs';
 import { subjectUnits } from '../test/test_subject.mjs';
+import { dmlUnits } from '../test/test_mdet.mjs';
 import { lensUnits } from '../test/test_lens.mjs';
 import { sioUnits } from '../test/test_sio.mjs';
 import { liveUnits } from '../test/test_live.mjs';
@@ -99,6 +101,7 @@ report('kind-3 VSC COMPOSE on E122\'s and E118\'s boards (planes, palette groups
 report('accelerometer sample (S-ACCSAMPLE)', accUnits());
 report('SD card and FAT / exFAT readers (S-SDCARD, refs/fat.mjs, refs/exfat.mjs)', storageUnits());
 report('subject frames: the scene\'s subject boxes, DISP_FRAME\'s transform taken back (S-SUBJECT)', subjectUnits());
+report('the DML engine\'s register file: images, output area, completion, refusals (S-DML)', dmlUnits());
 report('the lens serial controller, deferred-call triggers and the lens (S-LENSMCU)', lensUnits());
 report('PER_SIO\'s served IIC transfers and the TG-5\'s charger (S-SIOIIC, S-CHARGER)', sioUnits());
 report('debug API: argument checks, halt, trace filters, live route', await liveUnits());

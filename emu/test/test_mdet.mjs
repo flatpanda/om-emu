@@ -21,12 +21,18 @@
 //                    held still): S-DML's bodies in class 0 and helmets in class 2, nothing reported for the hits the
 //                    stabilisation asks, then two subject records, each body combined with its own helmet as part 2,
 //                    and the two bodies as the table's list records (spec 5.6); at OFF, mdet_dl_end, no more runs, the
-//                    table empty and the bit gone
+//                    table empty and the bit gone; H-MDETINIT's IRQs 279 / 278 on CPU 3 and the unit closed; TAKE_MOV's
+//                    mdet_laf_start through MDET_E_SEND, MDET_CALC_MAIN and PDT's and TRC's tasks natively, both
+//                    drivers opened through CPU 3's deferred calls, LAF's state 1 (spec 5.8); the firmware's PDT / TRC
+//                    drivers on S-PDT (pdtDrivers) and the debug API's pdt op
 //   node emu/test/test_mdet.mjs [--pure]
 import { createMachine } from '../src/machine.mjs';
 import { BUS } from '../src/core/mem.mjs';
 import { BOARD } from '../src/fw/board.mjs';
 import { RUN_NS, S_DONE, CLASSES, RECORD } from '../src/dev/dml.mjs';
+import { ENGINES as PDT_ENGINES } from '../src/dev/pdt.mjs';
+import * as K from '../src/lab/kernel.mjs';
+import { runtime, disasm, ISR_SP, ISR_CALLER } from '../src/lab/hle.mjs';
 
 const throwsAs = (fn, cls) => { try { fn(); return false; } catch (e) { if (e === cls || e instanceof cls) return true; throw e; } };
 const tester = () => { const bad = []; let checks = 0; return { bad, get checks() { return checks; }, ok: (c, what) => { checks++; if (!c) bad.push(what); } }; };
@@ -118,9 +124,19 @@ const DF_MODE = 0xA3209010;
 const OBJ_AF_POINT = 0x88B2, OBJ_AF_SIZE = 0x1DD1, GRID_X = 0x60A63A48, GRID_Y = 0x60A63AE8, GRID_COLS = 39, GRID_ROWS = 27;
 // TAKE's status-change callback's guard byte, which it sets as it posts its message (0x506d991d)
 const TAKE_CB_POSTED = 0xA32DF204;
-// TAKE_MOV's call mdet_laf_start (0x5081ee9d from 0x506da292), which no stand-in makes; MDET_PDT_CPU3's dispatch
-// (mdet_laf_pdt_dispatch 0x50841edd), where LAF's start goes on to the PDT / TRC unit the lab does not have
-const LAF_START = 0x5081EE9D, PDT_DISPATCH = 0x60862EFD;
+// TAKE_MOV's call mdet_laf_start (0x5081ee9d from 0x506da292), which no stand-in makes (spec 5.8: its trigger,
+// take_mov's LAF bits, is not read); LAF's state 0xa33458c4 (1 after LAF's init, 2 after its start with take_mov's
+// parameters, 3 in a chase cycle; the chase handler 0x50800c59 wants 2 or 3)
+const LAF_START = 0x5081EE9D, LAF_STATE = 0xA33458C4;
+// The PDT / TRC drivers' entries (by `call`, spec 5.8): open, start(request {parameters, callback, argument}),
+// get_result(buffer), close; their IRQ handlers as CPU 3's handler table holds them after H-MDETINIT; the results'
+// first register and count
+const DRIVERS = {
+  trc: { open: 0x507FA9EE, start: 0x507FAB96, result: 0x507FB686, close: 0x507FAAC9, handler: 0x507FBD0E, first: 0x3338, words: 156 },
+  pdt: { open: 0x507F9183, start: 0x507F9317, result: 0x507F99E5, close: 0x507F9250, handler: 0x507F9B4D, first: 0x2200, words: 24 },
+};
+// a callback for the drivers' requests the test hooks (lab scratch after the harness's trampolines)
+const DRV_CALLBACK = 0xA2100500;
 const R = { out: 0x1118, count: 0x111c, frame: 0x11c4, kind: (m) => 0x498 + 0x100 * m, bias: (j) => 0x11c8 + 4 * j, resize: (j) => (j < 4 ? 0x074 + 4 * j : 0x100 + 4 * (j - 4)) };
 
 export async function mdetSession() {
@@ -297,20 +313,81 @@ export async function mdetSession() {
     ok(st.kind === null && dml.runs === runs && lab.sim.read(MODEL_INFO.subject.active, 1)[0] === 0 && s.camapp.mdet.requests.at(-1)?.[0] === 'end' && fr.frames === 0 && (lab.sim.read(DF_MODE, 1)[0] & 1) === 0,
       `OFF: mdet_dl_end, no engine run after it, LAF's running byte 0, no frame, the subject bit gone: ${JSON.stringify(st)}, runs ${runs} -> ${dml.runs}, ${JSON.stringify(fr)}`);
     ok(pl.phase === 'running', `the session runs on: ${pl.phase} ${pl.error?.message ?? ''}`);
-    // MDET_E_SEND_CPU3 and MDET_CALC_MAIN_CPU3 natively at a post of the firmware's own (spec 5.7): TAKE_MOV's call
-    // mdet_laf_start, made here by the test (no stand-in makes it), posts LAF's start request to CPU 3; S-CPU3 serves
-    // the setter, MDET_E_SEND forwards the event to MDET_CALC_MAIN's queue and MDET_CALC_MAIN's turn runs LAF's start,
-    // which posts on to MDET_PDT_CPU3, a function S-CPU3 does not serve: the session stops there, naming it
-    const m2 = s.camapp.mdet, turns0 = { ...Object.fromEntries(m2.turns) }, ev0 = m2.events.length;
+    // H-MDETINIT (spec 5.8): the PDT and TRC drivers' inits attached IRQs 279 and 278 on CPU 3 and left both engines
+    // closed (the unit's and each engine's reset words 1)
+    const pdt = lab.sim.m.devices.pdt, h3 = (irq) => lab.sim.u32(f.cpu3_handlers + 4 * irq);
+    ok(h3(279) === runtime(DRIVERS.pdt.handler) && h3(278) === runtime(DRIVERS.trc.handler) && [0x000, 0x004, 0x2000, 0x3000].every((o) => pdt.read(o, 4, true) === 1) &&
+      pdt.e.pdt.runs === 0 && pdt.e.trc.runs === 0 && pl.stand_ins_in_use().includes('H-MDETINIT'),
+      `H-MDETINIT: CPU 3's handlers of IRQs 279 / 278 ${h3(279).toString(16)} / ${h3(278).toString(16)}, the unit closed, no run`);
+    // MDET_E_SEND_CPU3, MDET_CALC_MAIN_CPU3, MDET_PDT_CPU3 and MDET_TRC_CPU3 natively at a post of the firmware's own
+    // (spec 5.7, 5.8): TAKE_MOV's call mdet_laf_start, made here by the test (no stand-in makes it), posts LAF's start
+    // request to CPU 3; S-CPU3 serves the setter, MDET_E_SEND forwards the event, MDET_CALC_MAIN's turn runs LAF's
+    // start, which posts PDT's and TRC's start requests to their dispatches; S-CPU3 serves those (the core register at
+    // 3, which their queues check) and each engine's task takes a turn: pdt_start and trc_start open their drivers
+    // through deferred calls on CPU 3, which run after the turn (two runs of CPU 3's IRQ 53), so the unit and both
+    // engines leave reset. No engine runs, no error is logged, and LAF's state stays 1: the chase cycle waits for LAF's
+    // start with take_mov's parameters (spec 5.8)
+    const m2 = s.camapp.mdet, turns0 = { ...Object.fromEntries(m2.turns) }, ev0 = m2.events.length, e0 = lab.kernel.errors.length, d30 = m2.deferred3;
     let stop = null;
     try { lab.call(LAF_START, null, null, null, 2000000); s.settle('mdet_laf_start'); s.camapp.drain_cpu3(); } catch (e) { stop = e.message; }
-    const turn = (n) => (m2.turns.get(n) ?? 0) - (turns0[n] ?? 0);
-    ok(turn('MDET_E_SEND_CPU3') === 1 && turn('MDET_CALC_MAIN_CPU3') === 1 && m2.events.length === ev0 + 1 &&
-      m2.events.at(-1)[0] === f.events.laf_start_request && stop?.includes(`0x${PDT_DISPATCH.toString(16)}`),
-      `mdet_laf_start: one turn of MDET_E_SEND_CPU3 and of MDET_CALC_MAIN_CPU3 for the start request, then the stop at MDET_PDT_CPU3's dispatch: ${JSON.stringify({ e_send: turn('MDET_E_SEND_CPU3'), calc_main: turn('MDET_CALC_MAIN_CPU3'), events: m2.events.slice(ev0) })} ${stop?.slice(0, 160)}`);
+    const turn = (n) => (m2.turns.get(n) ?? 0) - (turns0[n] ?? 0), evs = m2.events.slice(ev0).map(([fn]) => fn);
+    ok(stop === null && turn('MDET_E_SEND_CPU3') === 1 && turn('MDET_CALC_MAIN_CPU3') === 1 && turn('MDET_PDT_CPU3') === 1 && turn('MDET_TRC_CPU3') === 1 &&
+      JSON.stringify(evs) === JSON.stringify([f.events.laf_start_request, f.posts.pdt_dispatch, f.posts.trc_dispatch]) && lab.kernel.errors.length === e0 &&
+      pdt.e.pdt.runs === 0 && pdt.e.trc.runs === 0 && lab.sim.u32(LAF_STATE) === 1,
+      `mdet_laf_start: one turn each of MDET_E_SEND_CPU3, MDET_CALC_MAIN_CPU3, MDET_PDT_CPU3 and MDET_TRC_CPU3, the posts ${evs.map((x) => x.toString(16))}, no error log, LAF's state ${lab.sim.u32(LAF_STATE)}: ${JSON.stringify(Object.fromEntries(m2.turns))} ${stop?.slice(0, 200) ?? ''}`);
+    ok(m2.deferred3 - d30 === 2 && [0x000, 0x004, 0x2000, 0x3000].every((o) => pdt.read(o, 4, true) === 0),
+      `PDT's and TRC's opens through CPU 3's deferred calls (${m2.deferred3 - d30} runs of IRQ 53): the unit's and the engines' reset words 0`);
+    pdtDrivers(t, s, f);
+    ok(['H-MDETINIT', 'S-PDT', 'A-PDT-1'].every((x) => pl.stand_ins_in_use().includes(x)), 'the player lists H-MDETINIT, S-PDT and, after the drivers\' runs, A-PDT-1');
+    const q = ask({ op: 'pdt' });
+    ok(q?.ok && q.trc?.runs === pdt.e.trc.runs && q.pdt?.runs === pdt.e.pdt.runs && q.trc.last?.params?.['0x301c'] === '0x00000000' && q.trc.last.result === 2 && q.pdt.busy === false,
+      `the debug API's pdt op: ${JSON.stringify({ trc: q?.trc?.runs, pdt: q?.pdt?.runs, result: q?.trc?.last?.result })}`);
   } catch (e) { t.bad.push(`session: ${e.stack.slice(0, 900)}`); }
   try { pl.close_session(); } catch { /* closed */ }
   return t;
+}
+
+// The firmware's PDT and TRC drivers on S-PDT (spec 5.8), in a session after H-MDETINIT, called as their deferred
+// callbacks call them on CPU 3 (the core register at 3): open; start with a request {parameters (0x1000 zero bytes),
+// callback, argument}: the start's register sequence, a run with the lab's result words; after RUN_NS the engine's IRQ
+// through the handler CPU 3's table holds, in interrupt context: the status cleared, the callback called with the
+// argument, the IRQ low; get_result copies the result registers; close (the engine's +0x004 1). No error log. No camera
+// flow makes these calls in a session: the chase cycle that would is not reached (spec 5.8)
+export function pdtDrivers(t, s, f) {
+  const { ok } = t, lab = s.lab, pdt = lab.sim.m.devices.pdt, m = s.camapp.mdet, intc = lab.sim.m.devices.intc;
+  const calls = [];
+  lab.hook_rt(DRV_CALLBACK, (h, r) => { calls.push([r.a0 >>> 0, r.d0 >>> 0]); h.finish_calls(r, { d0: 0 }); }, 'test driver callback');
+  const cpu3 = (fn, regs = null) => { let out; m.as_core(true, () => { out = lab.call(fn, regs, null, null, 2000000); }); return out; };
+  for (const [name, D] of Object.entries(DRIVERS)) {
+    const E = PDT_ENGINES[name], irq = pdt.cfg.irqs[name], e0 = lab.kernel.errors.length, arg = name === 'trc' ? 0x7c : 0x7d;
+    const writes = [], wr0 = pdt.write.bind(pdt);
+    pdt.write = (o, v, w, d) => { writes.push([o, v >>> 0]); return wr0(o, v, w, d); };
+    calls.length = 0;
+    const prm = lab.alloc(new Uint8Array(0x1000), 4), req = lab.alloc(new Uint8Array(new Uint32Array([prm, DRV_CALLBACK, arg]).buffer), 4);
+    pdt.e[name].source = () => ({ [D.first]: 0x11223344, [D.first + 4 * (D.words - 1)]: 7 });
+    let rc;
+    try {
+      cpu3(D.open);
+      rc = cpu3(D.start, { a0: req }).d0;
+    } finally { pdt.write = wr0; pdt.e[name].source = null; }
+    const ctl = writes.filter(([o]) => o >= E.page && o - E.page <= 0x018).map(([o, v]) => [(o - E.page).toString(16), v]);
+    const startSeq = ctl.slice(-4);
+    ok(rc === 0 && pdt.busy(name) && JSON.stringify(startSeq) === JSON.stringify([['c', 1], ['4', 1], ['4', 0], ['18', 1]]) &&
+      writes.some(([o]) => o >= E.params[0][0] && o <= E.params[0][1]) && !pdt.pending(name) && intc.line[irq] === 0,
+      `${name}: the driver's open and start: the start's control writes ${JSON.stringify(startSeq)} around the parameters, the engine running, IRQ ${irq} low (${JSON.stringify(ctl)})`);
+    lab.advance(pdt.e[name].due - lab.lab_time(), `test ${name} run`);
+    const high = intc.line[irq] === 1 && pdt.pending(name);
+    m.as_core(true, () => K.in_interrupt(lab.lt, () => lab.calls(disasm(lab.sim.u32(f.cpu3_handlers + 4 * irq)), null, ISR_SP, ISR_CALLER, 2000000)));
+    ok(high && !pdt.pending(name) && intc.line[irq] === 0 && JSON.stringify(calls) === JSON.stringify([[arg, 0]]),
+      `${name}: after RUN_NS IRQ ${irq} high; its handler clears the status and calls the request's callback with its argument: ${JSON.stringify(calls)}`);
+    const buf = lab.alloc(new Uint8Array(4 * D.words), 4);
+    cpu3(D.result, { a0: buf });
+    const words = new Uint32Array(lab.sim.read(buf, 4 * D.words).slice().buffer);
+    cpu3(D.close);
+    ok(words[0] === 0x11223344 && words[D.words - 1] === 7 && words.slice(1, -1).every((w) => w === 0) && pdt.read(E.page + 4, 4, true) === 1 &&
+      lab.kernel.errors.length === e0,
+      `${name}: get_result copies the ${D.words} result registers (the lab's words, 0 elsewhere); the close's +0x004 1; no error log`);
+  }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

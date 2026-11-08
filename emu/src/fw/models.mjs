@@ -379,6 +379,20 @@ export const MODELS = {
     // width), 0x1df1, 0x1e01; 0x5099cbd9 points 0xa33d9518 / 0xa33d951c at 0xa33d8c5c and 0xa33d9520 at 0xa33d8c80
     // and resets them. 0x5099d7d5 then makes the AF area from the target: grid columns c - w / 2 - 1 .. c + w / 2 + 2,
     // rows r - h / 2 - 1 .. r + h / 2 + 2, through the tables 0x60a63a48 (x) and 0x60a63ae8 (y) into +24..+30
+    // LAF's PDT and TRC sides (docs/om1-subject-spec.md 5.8; D unless tagged). tasks 5 and 6: MDET_PDT_CPU3 (0x300a,
+    // entry 0x50842033) waits through mdet_ev_wait 0x50855345 on (0x600436dc) bit 1 and reads its queue
+    // (mdet_util_q_read 0x508559fb) by kind: 1 pdt_start 0x508422b4, 2 pdt_set_info 0x50842392, 3 pdt_end 0x50842993;
+    // MDET_TRC_CPU3 (0x300b, entry 0x50848822) on (0x600436e2) bit 0x100: 1 trc_start 0x50848a47, 2 tracking_color
+    // 0x50848b5b, 3 judge_color 0x508490f3, 4 trc_end 0x50849530; core3: their code runs with the core register at 3
+    // (their queues' check 0x50855ce5 refuses another core). posts: pdt_request 0x50841d6a and trc_request 0x5084854d
+    // copy a request to 0xa3380224 / 0xa338b114 and post their dispatch to CPU 3 (sys_callrequest), which queues it
+    // (mdet_util_q_write 0x508557c5) and sets the task's flag. init: the boot chain's steps after the DML driver's
+    // (0x501e9720..0x501e972e): mdet_util_q_init 0x50855239 (MDET's two queue records, 72 bytes from ROM 0x609ef4d8 to
+    // 0xa338b8a4), pdt_drv_if_init 0x507f9c18 (pdt_drv_init: IRQ 279 attached on CPU 3 through 0x50053fcd with handler
+    // 0x507f9b4d, then open and close) and trc_drv_if_init 0x507fbdd9 (IRQ 278, handler 0x507fbd0e); the step's MDET
+    // logger init 0x5080445f is left out. cpu3_deferred: CPU 3's deferred-call ring (the post 0x500503d4 picks it by
+    // the core register; its write and read indexes at +0x180 / +0x184, the runner 0x5005062d), cpu3_handlers: CPU 3's
+    // IRQ handler table (ATTACH 0x5002e84e stores core 3's handlers there; core 0's at 0xa32600c0)
     mdet: {
       api: { start: 0x5080A5E2, end: 0x5080A6DC, change_mode: 0x5080A79A, offer: 0x5080A912 },
       record: { size: 96, buff_id: 4, w: 6, h: 8, movie: 13, zoom: 32, aspect: 34 },
@@ -386,13 +400,18 @@ export const MODELS = {
       tasks: [{ name: 'MDET_DL_REQ', entry: 0x5080BAE8, flag: 0x600436D0, bit: 1 },
         { name: 'MDET_DL_LDL', entry: 0x5080C8A1, flag: 0x600436D2, bit: 2 },
         { name: 'MDET_E_SEND_CPU3', entry: 0x50800FE2, flag: 0x600436D8, bit: 0xFE77003E },
-        { name: 'MDET_CALC_MAIN_CPU3', entry: 0x50800B03, queue: 0x600436F8 }],
-      flags: [0x600436D0, 0x600436D2, 0x600436D4, 0x600436D6, 0x600436D8],
+        { name: 'MDET_CALC_MAIN_CPU3', entry: 0x50800B03, queue: 0x600436F8 },
+        { name: 'MDET_PDT_CPU3', entry: 0x50842033, flag: 0x600436DC, bit: 0x1, core3: true },
+        { name: 'MDET_TRC_CPU3', entry: 0x50848822, flag: 0x600436E2, bit: 0x100, core3: true }],
+      flags: [0x600436D0, 0x600436D2, 0x600436D4, 0x600436D6, 0x600436D8, 0x600436DC, 0x600436E2],
       queue_message: 16,
       events: { laf_init: 0x50802B6D, laf_start: 0x50802C2D, laf_start_request: 0x50802CED, laf_end: 0x50802DA5,
         laf_end_request: 0x50802E65, laf_end_frame: 0x50802F1D, laf_moving_object_detect: 0x50802FDD,
         laf_chase_object_trc_e1: 0x5080309D, laf_end_wait_clear: 0x508033F5, laf_start_still: 0x508034AD,
         laf_end_still: 0x5080356D, ems2_info_clear: 0x508251D2 },
+      posts: { pdt_dispatch: 0x50841EDD, trc_dispatch: 0x508486C6 },
+      init: [0x50855239, 0x507F9C18, 0x507FBDD9],
+      cpu3_deferred: 0xA32C125C, cpu3_handlers: 0xA3261170,
       laf: { observe: { end_frame_calc: 0x50825B54, exec_trace: 0x50825CEB, internal_start: 0x50835002,
         offer_data: 0x50829B5E },
         area: 0xA337F050, candidates: 0xA337D948, tracking: 0xA337F085, tracking_seen: 0xA337F087,

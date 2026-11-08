@@ -295,13 +295,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 }
 // CPU 3's MDET_DL natively with S-DML: the engine's register file without firmware, then a play session on E143 where
 // the chain from mdet_dl_start to dml_start_callback runs at each kind and the register images follow the firmware's
-// tables, the rider is reported and two racers are reported each combined with its helmet
+// tables, the rider is reported and two racers are reported each combined with its helmet; LAF's start runs PDT's and
+// TRC's tasks natively and the firmware's PDT / TRC drivers run on S-PDT (with the unit's register file, test_pdt.mjs)
 {
   const { dmlUnits, mdetSession } = await import('../test/test_mdet.mjs');
-  const du = dmlUnits(), ms = await mdetSession();
-  console.log(`MDET_DL with S-DML: engine units ${du.checks - du.bad.length}/${du.checks}; in play ${ms.checks - ms.bad.length}/${ms.checks}`);
-  [...du.bad, ...ms.bad].forEach((x) => console.log('  ', x));
-  bad += du.bad.length + ms.bad.length;
+  const { pdtUnits } = await import('../test/test_pdt.mjs');
+  const du = dmlUnits(), pu = pdtUnits(), ms = await mdetSession();
+  console.log(`MDET_DL with S-DML and S-PDT: engine units ${du.checks - du.bad.length}/${du.checks}; PDT / TRC units ${pu.checks - pu.bad.length}/${pu.checks}; in play ${ms.checks - ms.bad.length}/${ms.checks}`);
+  [...du.bad, ...pu.bad, ...ms.bad].forEach((x) => console.log('  ', x));
+  bad += du.bad.length + pu.bad.length + ms.bad.length;
 }
 // the camera's non-volatile state kept between sessions (S-NVRAM): no date prompt, a setting kept across sessions
 {

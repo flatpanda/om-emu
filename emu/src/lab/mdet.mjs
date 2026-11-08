@@ -31,11 +31,16 @@
 //               MDET_CALC_MAIN_CPU3 when S-CPU3 serves one of LAF's event setters (mdet.events): the setter runs in
 //               interrupt context and sets MDET_E_SEND's flag, whose turn forwards the event to MDET_CALC_MAIN's queue
 //               (kept by the lab like the flags: OlyQeWr / OlyQeRd on its id, 16-byte messages in order), whose turn
-//               runs the event's LAF handler; a read of the empty queue ends that turn. No lab session posts such an
-//               event yet: LAF's frame trace, whose end-frame event runs the main-subject trace (spec U9), needs
-//               take_mov's chase requests and the PDT / TRC unit (spec 5.7). CPU 3's code runs with the core register
-//               (0x8050) at 0, so the firmware's tests for core 3 post to ring [3][0] what CPU 3 would call directly
-//               (the EMS2 clear), which S-CPU3 serves after the turn (I).
+//               runs the event's LAF handler; a read of the empty queue ends that turn; and MDET_PDT_CPU3 and
+//               MDET_TRC_CPU3, LAF's PDT and TRC sides, when S-CPU3 serves their dispatch (mdet.posts), whose flag
+//               (0x300a's, 0x300b's) the lab keeps like the others. No lab session posts a LAF event of its own: LAF's
+//               chase cycle, whose end-frame event runs the main-subject trace (spec U9), needs take_mov's LAF
+//               parameters and chase requests (spec 5.8). MDET's code runs with the core register (0x8050) at 0, so
+//               the firmware's tests for core 3 post to ring [3][0] what CPU 3 would call directly (the EMS2 clear),
+//               which S-CPU3 serves after the turn (I). PDT's and TRC's run with it at 3 (as_core): their message
+//               queues refuse another core (mdet_util_q_cpu_check 0x50855ce5, X: error 8 with 0), and the deferred
+//               calls their drivers' interfaces post land on CPU 3's ring, which the lab then runs through CPU 3's IRQ
+//               53 handler; a post from CPU 3 through an IPI ring has no server and stops the session.
 //               The poster's return path (its interrupt mask restored) serves
 //               ring [3][0] at once, through S-CPU3 (camapp.mjs drain_cpu3), as CPU 3's IRQ 324 would take the post:
 //               MDET's function runs natively in interrupt context with the request slot, then each MDET_DL task whose
@@ -73,15 +78,19 @@
 //   H-FCSAF     at MDET's first request, three steps of the AF library's init natively (mdet.fcs): the AF target
 //               record from the camera's AF target settings and the info record CPU 3's FCS call fills for LAF, whose
 //               pointer was 0 (spec 5.7); LAF's AF area is then the AF target's cells in the AF grid
+//   H-MDETINIT  then the boot chain's MDET steps natively (mdet.init): MDET's message queues and the PDT and TRC
+//               drivers' inits, which attach IRQs 279 and 278 on CPU 3 and open and close the unit (S-PDT,
+//               src/dev/pdt.mjs; spec 5.8). No camera flow the lab runs starts either engine: their runs serve LAF's
+//               chase cycle (TRC) and the AF library's IP information (PDT), neither of which a session reaches
 // What follows the engine's records runs natively: get_dml_result, judge_dml_result, the stabilisation, the
 // combination, set_subject_detect_result (mdet.result) and LAF, which fills the frame table's inputs with MDET's
 // subjects (X, spec 5.4), writes the getter's aspect pair, marks a subject that overlaps the AF area its main-subject
 // candidate and sets its tracking status (X, spec 5.7), writes the frame table (mdet.table_writer: a list record per
 // body, X, spec 5.6; none at an offer that changes the tracking status) and posts UP_FACE after each offer; DISP_FRAME
 // draws that table (X, spec 5.5). The table's main and part records stay empty: the state that fills them is set by
-// LAF's main-subject trace at its end-frame event (spec U9, 5.7). S-SUBJECT does not run on such a body: its writes
-// are for one where MDET_DL does not run natively (subject.mjs).
-import { FirmwareError, disasm, runtime, where, ISR_SP, ISR_CALLER, HEAP_END } from './hle.mjs';
+// LAF's main-subject trace at its end-frame event (spec U9, 5.7), which only LAF's chase cycle posts (spec 5.8).
+// S-SUBJECT does not run on such a body: its writes are for one where MDET_DL does not run natively (subject.mjs).
+import { FirmwareError, disasm, runtime, where, ISR_SP, ISR_CALLER, HEAP_END, CORE_INDEX } from './hle.mjs';
 import * as K from './kernel.mjs';
 import { RTOS } from './rtos.mjs';
 import { HANDLER_TABLE } from './irq.mjs';
@@ -141,6 +150,7 @@ export class MdetDl {
     this.irqs = 0;             // IRQ 285 deliveries (the handler's entries)
     this.callbacks = 0;        // dml_start_callback's entries
     this.deferred = 0;         // the deferred call's IRQ taken in the engine waits
+    this.deferred3 = 0;        // CPU 3's deferred-call IRQ runs (as_core)
     this.loads = [];           // S-LEARNDATA: the items answered
     this.yc = null;            // S-TAKEMDET's YC buffer address
     this.boxes = [];           // S-DML: the bodies' boxes of the last offer's records (MDET's frame)
@@ -161,7 +171,8 @@ export class MdetDl {
     this.ids = new Set(f.flags.map((w) => this.u16(w)));
     for (const id of this.ids) if ((id & 0x3000) !== 0x3000) throw new MdetError(`S-MDETDL: flag id ${h8(id)} is not a CPU 3 object`);
     for (const id of this.ids) this.flags.set(id, 0);
-    this.tasks = f.tasks.map((t) => (t.queue ? { name: t.name, entry: t.entry, queue: this.u16(t.queue) } : { name: t.name, entry: t.entry, id: this.u16(t.flag), bit: t.bit }));
+    this.tasks = f.tasks.map((t) => (t.queue ? { name: t.name, entry: t.entry, queue: this.u16(t.queue) } : { name: t.name, entry: t.entry, id: this.u16(t.flag), bit: t.bit, core3: !!t.core3 }));
+    this.core3_fns = new Set(Object.values(f.posts));
     for (const t of this.tasks.filter((x) => x.queue !== undefined)) {
       if ((t.queue & 0x3000) !== 0x3000) throw new MdetError(`S-MDETDL: queue id ${h8(t.queue)} of ${t.name} is not a CPU 3 object`);
       this.queues.set(t.queue, []);
@@ -169,6 +180,8 @@ export class MdetDl {
     this.dml_done = [this.u16(f.dml_done[0]), f.dml_done[1]];
     this.dml = lab.sim.m.devices.dml;
     if (!this.dml) throw new MdetError('S-MDETDL: the machine has no DML engine (src/fw/board.mjs dml)');
+    this.pdt = lab.sim.m.devices.pdt;
+    if (!this.pdt) throw new MdetError('S-MDETDL: the machine has no PDT / TRC unit (src/fw/board.mjs pdt)');
     // S-MDETDL: the kernel's flag calls on CPU 3's flags
     const mine = (r) => this.ids.has(r.d0 & 0xFFFF);
     lab.wrap(OLY.set, (prev) => (h, r) => (mine(r) ? this.set_flag(h, r) : prev(h, r)));
@@ -203,6 +216,7 @@ export class MdetDl {
     lab.hook(f.yc.release, yc(() => 0), 'S-TAKEMDET release');
     this.installed = true;
     this.fcs_init();                                                                 // H-FCSAF
+    this.mdet_init();                                                                // H-MDETINIT
     this.take_init();                                                                // S-TAKEMDET
     this.log('mdet', `installed: CPU 3 flags ${[...this.ids].map(h8).join(', ')}, queue ${[...this.queues.keys()].map(h8).join(', ')}, the YC buffer ${h8(this.yc)}`);
   }
@@ -214,6 +228,17 @@ export class MdetDl {
     this.errlog_check(e0, 'H-FCSAF', 'H-FCSAF');
     this.s.settle('H-FCSAF');
     this.log('fcsaf', `AF library init steps ${this.f.fcs.init.map(h8).join(', ')}: the AF target record ${[...this.lab().sim.read(this.f.fcs.target, 8)].join(' ')}`);
+  }
+  // H-MDETINIT: the boot chain's MDET steps after the DML driver's (src/fw/models.mjs mdet.init), natively and in its
+  // order: MDET's message queues, then the PDT and the TRC drivers' inits (each attaches its IRQ on CPU 3 and opens and
+  // closes its engine, S-PDT); any error log they make stops the session
+  mdet_init() {
+    const lab = this.lab(), e0 = lab.kernel.errors.length;
+    for (const fn of this.f.init) lab.call(fn, null, null, null, LIMIT);
+    this.errlog_check(e0, 'H-MDETINIT', 'H-MDETINIT');
+    this.s.settle('H-MDETINIT');
+    const h3 = (irq) => h8(lab.sim.u32(this.f.cpu3_handlers + 4 * irq));
+    this.log('mdetinit', `${this.f.init.map(h8).join(', ')}: CPU 3's handlers of IRQs ${Object.values(this.pdt.cfg.irqs).map((q) => `${q} ${h3(q)}`).join(', ')}`);
   }
   // S-TAKEMDET: TAKE's registration of its LAF status-change callback, as TAKE's start does before it starts MDET
   // (src/fw/models.mjs mdet.status_cb), natively
@@ -309,7 +334,7 @@ export class MdetDl {
     if (this.turn) throw new MdetError(`S-MDETDL: a post of ${h8(fn)} served inside ${this.turn.name}'s turn`);
     this.serves += 1;
     if (fn !== this.f.post.fn) this.events.push([fn, arg]);
-    K.in_interrupt(lab.lt, () => lab.calls(fn, { a0: arg }, ISR_SP, ISR_CALLER, LIMIT));
+    this.as_core(this.core3_fns.has(fn), () => K.in_interrupt(lab.lt, () => lab.calls(fn, { a0: arg }, ISR_SP, ISR_CALLER, LIMIT)));
     for (let n = 0; ; n++) {
       const t = this.tasks.find((x) => this.runnable(x));
       if (!t) break;
@@ -322,14 +347,47 @@ export class MdetDl {
   // S-CPU3: the disassembly address of an MDET event setter posted to CPU 3 (models.mjs mdet.events), else null
   event_fn(fn) {
     const a = disasm(fn);
-    return this.installed && Object.values(this.f.events).includes(a) ? a : null;
+    return this.installed && (Object.values(this.f.events).includes(a) || Object.values(this.f.posts).includes(a)) ? a : null;
+  }
+  // fn with the core register (0x8050) at 3 when on, as CPU 3 reads it, and back at the lab's 0 after. The deferred
+  // calls CPU 3's code posted meanwhile (its own ring, mdet.cpu3_deferred: the PDT and TRC drivers' interfaces post
+  // their open, close and start callbacks so) then run as CPU 3's IRQ 53 would take them: the handler CPU 3's table
+  // holds (mdet.cpu3_handlers), in interrupt context with the core register at 3, until the ring is empty (I: on CPU 3
+  // they would preempt the task at once; here they follow the turn). A post through a ring [t][3] (CPU 3 to any CPU)
+  // has no server in the lab: one is the session's error. A TurnDone from fn ends the turn after these
+  as_core(on, fn) {
+    if (!on) return fn();
+    const lab = this.lab(), sim = lab.sim, ipi = this.cpu3_ipi();
+    let err = null;
+    sim.word(CORE_INDEX, 3);
+    try { fn(); } catch (e) { err = e; } finally { sim.word(CORE_INDEX, 0); }
+    if (err && !(err instanceof TurnDone)) throw err;
+    this.cpu3_deferred_run();
+    const after = this.cpu3_ipi(), moved = [0, 1, 2, 3].filter((t) => after[t] !== ipi[t]);
+    if (moved.length) throw new MdetError(`S-MDETDL: CPU 3's code posted through ${moved.map((t) => `ring [${t}][3]`).join(', ')}, which the lab does not serve`);
+    if (err) throw err;
+  }
+  // the write indexes of the rings [0..3][3]
+  cpu3_ipi() { const lab = this.lab(); return [0, 1, 2, 3].map((t) => lab.sim.read(lab.ipi_desc(t, 3)[0], 1)[0]); }
+  // CPU 3's deferred calls: its ring's write and read indexes (+0x180, +0x184; the runner 0x5005062d) differ while
+  // calls wait; IRQ 53's handler runs them
+  cpu3_deferred_run() {
+    const lab = this.lab(), sim = lab.sim, d = this.f.cpu3_deferred, irq = this.f.deferred;
+    for (let n = 0; sim.u32(d + 0x180) !== sim.u32(d + 0x184); n++) {
+      if (n >= 8) throw new MdetError(`S-MDETDL: CPU 3's deferred calls still waiting after ${n} runs of IRQ ${irq}`);
+      const handler = sim.u32(this.f.cpu3_handlers + 4 * irq);
+      if (!handler) throw new MdetError(`S-MDETDL: CPU 3's deferred calls wait and its IRQ ${irq} has no handler attached`);
+      sim.word(CORE_INDEX, 3);
+      try { K.in_interrupt(lab.lt, () => lab.calls(disasm(handler), null, ISR_SP, ISR_CALLER, LIMIT)); } finally { sim.word(CORE_INDEX, 0); }
+      this.deferred3 += 1;
+    }
   }
   run_turn(t) {
     const lab = this.lab();
     this.turn = t;
     this.turns.set(t.name, (this.turns.get(t.name) ?? 0) + 1);
     try {
-      lab.calls(t.entry, null, CPU3_STACK, CPU3_CALLER, LIMIT);
+      this.as_core(t.core3, () => lab.calls(t.entry, null, CPU3_STACK, CPU3_CALLER, LIMIT));
       throw new MdetError(`S-MDETDL: ${t.name}'s body returned`);
     } catch (e) {
       if (!(e instanceof TurnDone)) throw e;
@@ -459,7 +517,8 @@ export class MdetDl {
       deferred: this.deferred, dml_runs: d ? d.runs : 0, irqs: this.irqs, callbacks: this.callbacks, loads: this.loads.length,
       records: this.boxes.length, parts: this.parts.reduce((n, p) => n + Object.keys(p).length, 0),
       subjects: this.installed ? this.subjects().length : 0, laf: this.installed ? this.laf_status() : null,
-      events: this.events.length, laf_steps: { ...this.counts } };
+      events: this.events.length, laf_steps: { ...this.counts }, deferred3: this.deferred3,
+      pdt_runs: this.installed ? Object.fromEntries(Object.entries(this.pdt.e).map(([k, x]) => [k, x.runs])) : null };
   }
   // LAF's main-subject state (src/fw/models.mjs mdet.laf): the AF area {x0, y0, x1, y1} its candidate test uses, the
   // candidate byte of each of LAF's subjects, its tracking status and the copy the status callback keeps, and the state

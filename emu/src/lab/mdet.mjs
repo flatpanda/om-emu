@@ -1,6 +1,6 @@
 // CPU 3's MDET_DL, the subject network's control code, run natively on the lab CPU with S-DML for the engine
-// (docs/om1-subject-spec.md 5.3 and 5.4, step C's first two parts; src/fw/models.mjs mdet has the firmware's side
-// with its evidence, src/dev/dml.mjs the engine's model).
+// (docs/om1-subject-spec.md 5.3 to 5.5, step C's parts; src/fw/models.mjs mdet has the firmware's side with its
+// evidence, src/dev/dml.mjs the engine's model).
 //
 // On the camera, TAKE (CPU 0) starts subject detection with mdet_dl_start(kind), changes the kind with
 // mdet_dl_change_mode and take_mov offers each live-view YC frame with mdet_dl_offer_yc_data; each call posts a
@@ -11,15 +11,18 @@
 // code runs on it, natively, at the seams below.
 //
 //   S-TAKEMDET  TAKE's and take_mov's requests, which do not run in the lab (TAKE_MOV is dormant): while the camera's
-//               subject-detection setting names a kind (1..5) and S-SCENE's live view shows the live scene (S-SUBJECT's
-//               conditions), mdet_dl_start(kind) once, mdet_dl_change_mode(kind) at a change of kind, and one
-//               mdet_dl_offer_yc_data per 1/15 s of lab time (S-SCENE's frame step) with the record {frame number,
-//               buffer id, 640, 480, still (movie flag 0), no digital zoom (100 %), DISP_FRAME's aspect code}, its
-//               other fields 0; at OFF, mdet_dl_end. Each runs natively on the lab task. The buffer id names a 640 x
-//               480 YC buffer (Y plane, then C plane: 614,400 bytes) the stand-in takes from S-HEAP once; the YC buffer
-//               manager's calls for that id (lock, address, release) are answered for it (the id's bank is one the
-//               manager refuses natively, so it names no buffer of the firmware's), others run natively. The buffer is
-//               not written: nothing reads its pixels (S-DML does not run the network). That TAKE offers every frame
+//               subject-detection setting names a kind (1..5) and S-SCENE's live view shows the live scene (subject.mjs
+//               live(), the conditions S-SUBJECT had), mdet_dl_start(kind) once, mdet_dl_change_mode(kind) at a change
+//               of kind, and one mdet_dl_offer_yc_data per 1/15 s of lab time (S-SCENE's frame step) with the record
+//               {frame number, buffer id, 640, 480, still (movie flag 0), no digital zoom (100 %), DISP_FRAME's aspect
+//               code}, its other fields 0; at OFF, mdet_dl_end. Each runs natively on the lab task. LAF derives the
+//               frame getter's aspect pair from the offer's aspect code (src/fw/models.mjs mdet), so the frames
+//               DISP_FRAME draws follow the aspect TAKE offers (X). With MDET started and the live scene shown,
+//               S-TAKEFRAME's frame mode has the subject bit (camapp.mjs take_subject_frames). The buffer id names a
+//               640 x 480 YC buffer (Y plane, then C plane: 614,400 bytes) the stand-in takes from S-HEAP once; the YC
+//               buffer manager's calls for that id (lock, address, release) are answered for it (the id's bank is one
+//               the manager refuses natively, so it names no buffer of the firmware's), others run natively. The buffer
+//               is not written: nothing reads its pixels (S-DML does not run the network). That TAKE offers every frame
 //               step and the frame's size are I (take_mov's YC frame is not read, spec 4.2)
 //   S-MDETDL    CPU 3's MDET_DL tasks on the lab CPU. The poster's return path (its interrupt mask restored) serves
 //               ring [3][0] at once, through S-CPU3 (camapp.mjs drain_cpu3), as CPU 3's IRQ 324 would take the post:
@@ -36,13 +39,14 @@
 //               delivered (a lab-delivered source, as the VSC's: the handler the firmware attached runs in interrupt
 //               context), whose callback sets the flag. Requests then complete before the CPU 0 call returns: CPU 3
 //               works in zero lab time apart from the engine's run (I). DISP_FRAME's posts made meanwhile (UP_FACE from
-//               MDET's own code, after it writes the frame table) wait for S-CPU3's next drain outside the call, which
-//               makes one turn of DISP_FRAME for them and S-SUBJECT's post of the same tick, as S-CPU3 makes one turn
-//               for a step's posts (X: with a turn for MDET's empty table and then one for S-SUBJECT's frames in the
-//               same tick, the second drawing its frame, the composite showed none; why is not read, ?)
+//               MDET's own code, after it writes the frame table) wait for S-CPU3's next drain outside the call: a
+//               DISP_FRAME turn is a harness call of its own, which inside the poster's return path would reuse that
+//               call's stack (camapp.mjs drain_cpu3, nested). S-TAKEMDET drains them as each call returns, so an offer
+//               makes one DISP_FRAME turn at once (as CPU 3's DISP_FRAME task would take its flag, I); left to the next
+//               tick's drain, the frame drawn lagged the table by an offer (X)
 //   S-DML       (src/dev/dml.mjs; here its output) the records each run of the engine writes: S-SCENE's subjects of the
-//               offer's kind at the offer's scene time, in MDET's 640 x 480 frame as S-SUBJECT places them (its
-//               frames(): S-SCENE's box on the panel taken back through DISP_FRAME's transform), each a body record of
+//               offer's kind at the offer's scene time, in MDET's 640 x 480 frame (subject.mjs frames(), S-SUBJECT's
+//               placement: S-SCENE's box on the panel taken back through DISP_FRAME's transform), each a body record of
 //               class 0 (group g = 0 of classes 3g, 3g + 1, 3g + 2: the scene's subjects carry no sub-kind, and no
 //               string names the groups, I) with the score 0x0e00 (223 after MDET's scaling, above the stabilisation's
 //               thresholds), its centre and its size made even (spec 5.2.1). MDET's own stabilisation then reports a
@@ -55,7 +59,9 @@
 //               natively
 // What follows the engine's records runs natively: get_dml_result, judge_dml_result, the stabilisation, the
 // combination, set_subject_detect_result (mdet.result) and LAF, which fills the frame table's inputs with MDET's
-// subject (X, spec 5.4). S-SUBJECT keeps writing MDET's frame table and the frame mode's subject bit for DISP_FRAME.
+// subject (X, spec 5.4), writes the getter's aspect pair, writes the frame table (mdet.table_writer) and posts UP_FACE
+// after each offer; DISP_FRAME draws that table (X, spec 5.5). S-SUBJECT does not run on such a body: its writes are
+// for one where MDET_DL does not run natively (subject.mjs).
 import { FirmwareError, disasm, where, ISR_SP, ISR_CALLER, HEAP_END } from './hle.mjs';
 import * as K from './kernel.mjs';
 import { RTOS } from './rtos.mjs';
@@ -111,6 +117,8 @@ export class MdetDl {
     this.loads = [];           // S-LEARNDATA: the items answered
     this.yc = null;            // S-TAKEMDET's YC buffer address
     this.boxes = [];           // S-DML: the boxes of the last offer's records (MDET's frame)
+    this.offer_t = null;       // the scene time (s) of the last offer's records
+    this.table_writes = 0;     // runs of MDET's frame table writer (mdet.table_writer), observed
   }
   get used() { return this.requests.length > 0; }
   lab() { return this.s.lab; }
@@ -144,6 +152,7 @@ export class MdetDl {
     lab.kernel.add_source(this.dml.cfg.irq, () => this.dml.pending());
     lab.observe(f.dml.irq_handler, () => { this.irqs += 1; }, 'obs-dml-irq');
     lab.observe(f.dml.callback, () => { this.callbacks += 1; }, 'obs-dml-callback');
+    lab.observe(f.table_writer, () => { this.table_writes += 1; }, 'obs-mdet-table');
     // S-LEARNDATA
     lab.hook(f.learning.read, (h, r) => this.learning_read(h, r), 'S-LEARNDATA');
     // S-TAKEMDET: the YC buffer
@@ -246,21 +255,24 @@ export class MdetDl {
     h.finish(r, { a0: rec });
   }
   // ---- S-TAKEMDET
-  // After lab time passed (camapp.mjs tick), before S-SUBJECT
+  // After lab time passed (camapp.mjs tick): the requests, then S-TAKEFRAME's subject bit (on while MDET runs and the
+  // live scene is shown), then the offer, so that the offer's UP_FACE finds the bit
   tick() {
     const s = this.s, sub = this.camapp.subject;
     if (!this.camapp.started || !sub) return;
-    const live = sub.live(), kind = live ? sub.kind() : null;
-    if (kind !== null && Object.hasOwn(KINDS, kind)) {
+    const live = sub.live(), kind = live ? sub.kind() : null, run = kind !== null && Object.hasOwn(KINDS, kind);
+    if (run) {
       if (this.kind === null) this.request('start', kind);
       else if (kind !== this.kind) this.request('change_mode', kind);
       this.kind = kind;
-      const step = Math.floor(s.lab.lab_time() / OFFER_NS);
-      if (step !== this.step) { this.step = step; this.offer(); }
     } else if (kind === 0 && this.kind !== null) {
       this.request('end', 0);
       this.kind = null; this.step = null;
     }
+    this.camapp.take_subject_frames(live && this.kind !== null);                     // S-TAKEFRAME
+    if (!run) return;
+    const step = Math.floor(s.lab.lab_time() / OFFER_NS);
+    if (step !== this.step) { this.step = step; this.offer(); }
   }
   request(name, kind) {
     if (!this.installed) this.install();
@@ -273,6 +285,7 @@ export class MdetDl {
     this.s.settle(`S-TAKEMDET ${name}`);
     if (rc !== 0) throw new MdetError(`S-TAKEMDET: mdet_dl_${name}(${kind}) returned ${rc}`);
     this.log('takemdet', `${name}(${kind}${kind ? `, ${KINDS[kind]}` : ''})`);
+    this.camapp.drain_cpu3();                                                       // S-CPU3: DISP_FRAME's posts
   }
   offer() {
     const lab = this.lab(), R = this.f.record, sub = this.camapp.subject;
@@ -293,12 +306,13 @@ export class MdetDl {
     this.errlog_check(e0, 'offer_yc_data');
     this.s.settle('S-TAKEMDET offer');
     if (rc !== 0) throw new MdetError(`S-TAKEMDET: mdet_dl_offer_yc_data(frame ${this.offers}) returned ${rc}`);
-    sub.rewrite();                                                                  // S-SUBJECT's frames again
+    this.camapp.drain_cpu3();                                                       // S-CPU3: MDET's UP_FACE, one turn
   }
-  // S-DML's records for an offer: S-SCENE's subjects of the kind now, where S-SUBJECT places them in MDET's frame
+  // S-DML's records for an offer: S-SCENE's subjects of the kind now, placed in MDET's frame (subject.mjs frames())
   records() {
     const sub = this.camapp.subject, { t } = this.s.scene_step(), even = (v) => v & ~1;
     this.boxes = sub.frames(this.kind, t).boxes;
+    this.offer_t = t;
     return this.boxes.map(([x0, y0, x1, y1]) => ({ cls: BODY_CLASS, score: SCORE, h: even(y1 - y0), w: even(x1 - x0),
       cy: Math.min((y0 + y1) >> 1, MAX_Y), cx: Math.min((x0 + x1) >> 1, MAX_X) }));
   }
@@ -318,6 +332,18 @@ export class MdetDl {
       if (kind) out.push({ sbj_kind: kind, body: [dv.getUint16(2, true), dv.getUint16(4, true), dv.getUint16(6, true), dv.getUint16(8, true), b[10], b[11]] });
     }
     return out;
+  }
+  // The subject frames MDET's table holds as the getter would give them to DISP_FRAME (src/fw/models.mjs subject): the
+  // kind, the device, the aspect code of the getter's pair, the scene time of the last offer, the list records as
+  // [x0, y0, x1, y1] (the first and last corners), the main and part records' flags (0 in the lab's sessions, where the
+  // list is all of it, X; the state that fills them is spec U9) and the runs of MDET's writer
+  frames_status() {
+    const lab = this.lab(), F = this.camapp.subject.f, tb = F.table, rd = (a) => lab.sim.read(a, 1)[0];
+    const n = rd(F.active) === 1 ? rd(tb.count) : 0, boxes = [];
+    for (let i = 0; i < n; i++) { const w = [...new Uint16Array(lab.sim.read(tb.list + 16 * i, 16).slice().buffer)]; boxes.push([w[0], w[1], w[6], w[7]]); }
+    const pair = [rd(F.aspect[0]), rd(F.aspect[1])];
+    const aspect = Number(Object.keys(F.aspect_pairs).find((k) => F.aspect_pairs[k][0] === pair[0] && F.aspect_pairs[k][1] === pair[1]) ?? 0);
+    return { source: 'mdet', kind: this.kind, device: this.s.device, aspect, t: this.offer_t, frames: boxes.length, boxes, main: rd(tb.main[0]), part: rd(tb.part[0]), writes: this.table_writes };
   }
   status() {
     const d = this.dml;

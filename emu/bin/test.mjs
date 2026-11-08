@@ -281,14 +281,16 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...tt.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += tt.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
-// subject detection's frames (S-SUBJECT): the scene's subject boxes and DISP_FRAME's transform without firmware, then
-// a play session on E143 whose DISP_FRAME draws the frames on the scene's rider while the setting names motorsports
+// subject detection's frames: the scene's subject boxes and DISP_FRAME's transform without firmware, then a play
+// session on E143 whose DISP_FRAME draws the frames from MDET's own table on the scene's rider while the setting names
+// motorsports, one on the EVF, and S-SUBJECT's frames with the mdet facts taken away
 {
-  const { subjectUnits, subjectSession } = await import('../test/test_subject.mjs');
-  const su = subjectUnits(), ss = await subjectSession();
-  console.log(`subject frames (S-SUBJECT): boxes and transform ${su.checks - su.bad.length}/${su.checks}; in play ${ss.checks - ss.bad.length}/${ss.checks}`);
-  [...su.bad, ...ss.bad].forEach((x) => console.log('  ', x));
-  bad += su.bad.length + ss.bad.length;
+  const { subjectUnits, subjectSession, subjectEvfSession, subjectStandInSession } = await import('../test/test_subject.mjs');
+  const su = subjectUnits(), ss = await subjectSession(), se = await subjectEvfSession(), sa = await subjectStandInSession();
+  const n = (r) => `${r.checks - r.bad.length}/${r.checks}`;
+  console.log(`subject frames: boxes and transform ${n(su)}; in play ${n(ss)}; on the EVF ${n(se)}; S-SUBJECT without MDET_DL ${n(sa)}`);
+  [...su.bad, ...ss.bad, ...se.bad, ...sa.bad].forEach((x) => console.log('  ', x));
+  bad += su.bad.length + ss.bad.length + se.bad.length + sa.bad.length;
 }
 // CPU 3's MDET_DL natively with S-DML: the engine's register file without firmware, then a play session on E143 where
 // the chain from mdet_dl_start to dml_start_callback runs at each kind and the register images follow the firmware's

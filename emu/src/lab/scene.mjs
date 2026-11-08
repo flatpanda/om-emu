@@ -262,10 +262,11 @@ export function focusAt(scene, t_s = 0, aspect = 2 / 3) {
   return null;
 }
 
-// The subjects of the patterns, for S-SUBJECT (subject.mjs): the class a camera's subject detection would put the
-// pattern in and its extent on the layer's plane [X0, Y0, X1, Y1] (m, the pattern's own coordinates). The rider's
-// two-wheeler stands for a motorsport subject (the harness's choice: the scene is synthetic); its extent runs from the
-// wheels' outer edges and their bottom to the top of the head, without the ground strip. The ball is no class's.
+// The subjects of the patterns, for subject.mjs (S-DML's records, S-SUBJECT): the class a camera's subject detection
+// would put the pattern in and its extent on the layer's plane [X0, Y0, X1, Y1] (m, the pattern's own coordinates). The
+// rider's two-wheeler stands for a motorsport subject (the harness's choice: the scene is synthetic); its extent runs
+// from the wheels' outer edges and their bottom to the top of the head, without the ground strip. The ball is no
+// class's.
 export const SUBJECTS = {
   rider: { subject: 'motorsports', extent: [-0.9, -1.6, 0.9, 0.29] },
 };

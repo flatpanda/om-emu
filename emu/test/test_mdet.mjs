@@ -6,17 +6,19 @@
 //                    packed per class, the refusals
 //   mdetSession      a headless Player on E143 with S-SCENE's live view: no request and no engine run while subject
 //                    detection is OFF; with no subject in the scene, at each kind 1..5 the chain mdet_dl_start /
-//                    change_mode -> learning_data_load ->
-//                    offer_yc_data -> dml_start -> IRQ 285 -> dml_start_callback runs natively (offers, runs, IRQs and
-//                    callbacks counted alike, the kind's learning item answered), MDET reports 0 subjects; each run's
-//                    register image as the firmware's tables give it, read at test time (the output buffer MDET's own
-//                    global names, the records per class, the head's frame size and the kind's words, its bias and the
-//                    resize words of object 0x3be4 through the firmware's property read); then with S-SCENE's rider at
-//                    MOTOR_SPORTS S-DML's record for it (class 0, slot 0, at S-SUBJECT's box) from each run, and
-//                    MDET's own subject record (sbj_kind 6, the body {cx, cy, w, h, rel, dtct}) from the run after the
-//                    hits its stabilisation needs (object 0x61a4 [915]), and LAF's box for the frame table equal to
-//                    S-SUBJECT's, S-SUBJECT's frame on the rider meanwhile; the debug API's dml op; at OFF, mdet_dl_end
-//                    and no more runs
+//                    change_mode -> learning_data_load -> offer_yc_data -> dml_start -> IRQ 285 -> dml_start_callback
+//                    runs natively (offers, runs, IRQs and callbacks counted alike, the kind's learning item answered),
+//                    MDET reports 0 subjects and its frame table is empty; each run's register image as the firmware's
+//                    tables give it, read at test time (the output buffer MDET's own global names, the records per
+//                    class, the head's frame size and the kind's words, its bias and the resize words of object 0x3be4
+//                    through the firmware's property read); then with S-SCENE's rider at MOTOR_SPORTS S-DML's record
+//                    for it (class 0, slot 0, at the box subject.mjs places) from each run, and MDET's own subject
+//                    record (sbj_kind 6, the body {cx, cy, w, h, rel, dtct}) from the run after the hits its
+//                    stabilisation needs (object 0x61a4 [915]), LAF's box for the frame table equal to S-DML's, and
+//                    MDET's frame table written by MDET's own writer with that box as its list record, the getter's
+//                    aspect pair LAF derived from the offer's aspect code, S-TAKEFRAME's subject bit set and S-SUBJECT
+//                    not run; the debug API's dml op; at OFF, mdet_dl_end, no more runs, the table empty and the bit
+//                    gone
 //   node emu/test/test_mdet.mjs [--pure]
 import { createMachine } from '../src/machine.mjs';
 import { BUS } from '../src/core/mem.mjs';
@@ -98,6 +100,8 @@ const HEAD_FRAME = 263, RECORDS = 2457, OUT_GLOBAL = 0x62F404E0;
 const OBJ_MDET = 0x61A4, HITS = 915;
 // the frame table writer's box of subject 0 and its valid byte, which LAF fills (spec 5.1: 0xa33790b2 + 8 n, 0xa337d53c + n)
 const LAF_BOX = 0xA33790B2, LAF_VALID = 0xA337D53C;
+// DISP_FRAME's frame mode (0xa3209010; bit 1 the subject frames, TAKE's request 1)
+const DF_MODE = 0xA3209010;
 const R = { out: 0x1118, count: 0x111c, frame: 0x11c4, kind: (m) => 0x498 + 0x100 * m, bias: (j) => 0x11c8 + 4 * j, resize: (j) => (j < 4 ? 0x074 + 4 * j : 0x100 + 4 * (j - 4)) };
 
 export async function mdetSession() {
@@ -135,7 +139,9 @@ export async function mdetSession() {
       ok(s.camapp.mdet.loads.at(-1) === kind - 1, `kind ${kind}: learning item ${kind - 1} answered (S-LEARNDATA): ${JSON.stringify(s.camapp.mdet.loads)}`);
       const recs = [];
       for (let i = 0; i < f.result.count; i++) recs.push(lab.sim.read(f.result.records + f.result.size * i, 2));
-      ok(recs.every((b) => b[0] === 0 && b[1] === 0) && st.subjects === 0 && st.records === 0, `kind ${kind}: no subject in the scene, no engine record, MDET's subject records report 0 subjects (${st.subjects})`);
+      const fr = s.camapp.status().subject;
+      ok(recs.every((b) => b[0] === 0 && b[1] === 0) && st.subjects === 0 && st.records === 0 && fr?.source === 'mdet' && fr.frames === 0,
+        `kind ${kind}: no subject in the scene, no engine record, MDET's subject records report 0 subjects (${st.subjects}), its frame table none: ${JSON.stringify(fr ?? null)}`);
       ok(lab.sim.read(MODEL_INFO.subject.active, 1)[0] === 1, `kind ${kind}: LAF's running byte set by its start`);
       prev = st;
       // the newest run's image against the firmware's tables
@@ -161,9 +167,10 @@ export async function mdetSession() {
       ok(got.length > 0 && JSON.stringify(got) === JSON.stringify(exp), `MOTOR_SPORTS against kind ${kind}: the registers that differ ${got.map((o) => o.toString(16))}, from the tables ${exp.map((o) => o.toString(16))}`);
     }
     // the rider at MOTOR_SPORTS: S-DML's record for it from each run on, MDET's own subject record once its
-    // stabilisation registers the track (object 0x61a4 [915] hits, spec 5.2), with the box S-SUBJECT places
+    // stabilisation registers the track (object 0x61a4 [915] hits, spec 5.2), with the box subject.mjs places
     s.scene_input({ preset: 'moving', layer: { index: 1, speed: 0 } });
     s.step('SET:1682=1');
+    const prevOffers = s.camapp.status().mdet.offers, prevWrites = s.camapp.mdet.table_writes;
     const data61 = lab.call(PROP_DATA, { d0: OBJ_MDET }, null, null, 2000000).a0 >>> 0;
     const hits = lab.call(PROP_READ, { d0: OBJ_MDET, a0: data61, d1: HITS }, null, null, 2000000).d0;
     let seen = 0, first = null;
@@ -173,20 +180,31 @@ export async function mdetSession() {
       if (st.records) seen += 1;
       if (st.subjects && first === null) first = seen;
     }
-    const sub = s.camapp.status().subject, box = sub?.boxes?.[0], got = s.camapp.mdet.subjects();
+    const sub = s.camapp.status().subject, box = s.camapp.mdet.boxes[0], got = s.camapp.mdet.subjects();
     const out = dml.last().out[0], rec = new Uint8Array(16); lab.sim.m.devices.bus.read(out, rec);
     const score = rec[0] | rec[1] << 8, want = box ? [(box[0] + box[2]) >> 1, (box[1] + box[3]) >> 1, (box[2] - box[0]) & ~1, (box[3] - box[1]) & ~1, (score * 255) >> 12, 1] : null;
-    ok(sub?.frames === 1 && sub.kind === 1 && pl.stand_ins_in_use().includes('S-SUBJECT'), `MOTOR_SPORTS: S-SUBJECT shows the rider's frame: ${JSON.stringify(sub ?? null)}`);
+    ok(box && s.camapp.mdet.boxes.length === 1, `MOTOR_SPORTS: S-DML's box for the rider: ${JSON.stringify(s.camapp.mdet.boxes)}`);
     ok(box && JSON.stringify([rec[8] | rec[9] << 8, rec[6] | rec[7] << 8, rec[4] | rec[5] << 8, rec[2] | rec[3] << 8]) === JSON.stringify(want.slice(0, 4)) && score === 0x0e00,
-      `S-DML's record in class 0, slot 0: cx, cy, w, h ${[rec[8] | rec[9] << 8, rec[6] | rec[7] << 8, rec[4] | rec[5] << 8, rec[2] | rec[3] << 8]}, score 0x${score.toString(16)}, for S-SUBJECT's box ${JSON.stringify(box)}`);
+      `S-DML's record in class 0, slot 0: cx, cy, w, h ${[rec[8] | rec[9] << 8, rec[6] | rec[7] << 8, rec[4] | rec[5] << 8, rec[2] | rec[3] << 8]}, score 0x${score.toString(16)}, for the box ${JSON.stringify(box)}`);
     ok(first === hits + 1, `MDET reports the rider from the run after its ${hits} hits register the track: first at the ${first}th run with the record`);
     ok(got.length === 1 && got[0].sbj_kind === 6 && JSON.stringify(got[0].body) === JSON.stringify(want),
       `MDET's subject record at 0xa3376b5c: sbj_kind 6 (6 + 3 (kind - 1) + group 0) and the body {cx, cy, w, h, rel, dtct} ${JSON.stringify(want)}: ${JSON.stringify(got)}`);
     // LAF's step to the frame table (spec 5.2.1 (a)): its box for subject 0, {x0, x1, y0, y1} at LAF_BOX with the valid
-    // byte LAF_VALID (the frame table writer's inputs, spec 5.1; S-SUBJECT writes neither), is S-SUBJECT's box
+    // byte LAF_VALID (the frame table writer's inputs, spec 5.1), is S-DML's box
     const laf = [...new Uint16Array(lab.sim.read(LAF_BOX, 8).slice().buffer)], valid = lab.sim.read(LAF_VALID, 1)[0];
     ok(box && valid === 1 && JSON.stringify(laf) === JSON.stringify([box[0], box[2], box[1], box[3]]),
-      `LAF's box for the frame table from MDET's subject: ${JSON.stringify(laf)} (valid ${valid}), S-SUBJECT's ${JSON.stringify(box)}`);
+      `LAF's box for the frame table from MDET's subject: ${JSON.stringify(laf)} (valid ${valid}), S-DML's ${JSON.stringify(box)}`);
+    // the frame table itself (spec 5.5): the box as its one list record, the main and part flags 0, written by MDET's
+    // writer (mdet.table_writer, its runs observed) after each offer, the getter's aspect pair (4, 3) for the offers'
+    // aspect code 1, which LAF maps (S-SUBJECT, whose writes would be the only other source, made none: not listed, no
+    // post); S-TAKEFRAME's subject bit in the frame mode
+    const S = MODEL_INFO.subject, rd = (a) => lab.sim.read(a, 1)[0], st1 = s.camapp.status().mdet;
+    ok(sub?.source === 'mdet' && sub.frames === 1 && JSON.stringify(sub.boxes) === JSON.stringify([box]) && sub.main === 0 && sub.part === 0 && sub.aspect === 1 && sub.kind === 1,
+      `MDET's frame table holds the rider's box as its list record: ${JSON.stringify(sub ?? null)}`);
+    ok(sub && st1.offers > prevOffers && sub.writes - prevWrites === st1.offers - prevOffers && JSON.stringify([rd(S.aspect[0]), rd(S.aspect[1])]) === '[4,3]',
+      `MDET's writer ran once per offer (${sub?.writes - prevWrites} runs, ${st1.offers - prevOffers} offers since the rider), the aspect pair ${[rd(S.aspect[0]), rd(S.aspect[1])]}`);
+    ok(!pl.stand_ins_in_use().includes('S-SUBJECT') && s.camapp.subject.posts === 0 && (rd(DF_MODE) & 1) === 1,
+      `S-SUBJECT made no write (posts ${s.camapp.subject.posts}, listed ${pl.stand_ins_in_use().includes('S-SUBJECT')}); the frame mode ${rd(DF_MODE)} has the subject bit`);
     const used = pl.stand_ins_in_use();
     ok(['S-TAKEMDET', 'S-MDETDL', 'S-LEARNDATA', 'S-DML', 'A-DML-1'].every((x) => used.includes(x)), 'the player lists S-TAKEMDET, S-MDETDL, S-LEARNDATA, S-DML and A-DML-1');
     const r = ask({ op: 'dml' });
@@ -197,8 +215,9 @@ export async function mdetSession() {
     idle(200);
     const runs = dml.runs, st = s.camapp.status().mdet;
     idle(300);
-    ok(st.kind === null && dml.runs === runs && lab.sim.read(MODEL_INFO.subject.active, 1)[0] === 0 && s.camapp.mdet.requests.at(-1)?.[0] === 'end',
-      `OFF: mdet_dl_end, no engine run after it, LAF's running byte 0: ${JSON.stringify(st)}, runs ${runs} -> ${dml.runs}`);
+    const fr = s.camapp.status().subject;
+    ok(st.kind === null && dml.runs === runs && lab.sim.read(MODEL_INFO.subject.active, 1)[0] === 0 && s.camapp.mdet.requests.at(-1)?.[0] === 'end' && fr.frames === 0 && (lab.sim.read(DF_MODE, 1)[0] & 1) === 0,
+      `OFF: mdet_dl_end, no engine run after it, LAF's running byte 0, no frame, the subject bit gone: ${JSON.stringify(st)}, runs ${runs} -> ${dml.runs}, ${JSON.stringify(fr)}`);
     ok(pl.phase === 'running', `the session runs on: ${pl.phase} ${pl.error?.message ?? ''}`);
   } catch (e) { t.bad.push(`session: ${e.stack.slice(0, 900)}`); }
   try { pl.close_session(); } catch { /* closed */ }

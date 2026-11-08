@@ -277,9 +277,10 @@ export const MODELS = {
     // 0xa337f082 is 1 (0x5082acb3, 0x5082ad02..0x5082ae76; what that state is, ?); part {flag, record}, a box at
     // 0xa33790f2..f8 taken in the same state when 0xa337811b is 1 (0x5082ae7d..0x5082af1a); count and list, the
     // subjects' boxes (0xa33790b2 + 8 n, valid at 0xa337d53c + n; n from 0, or from 1 in that state, up to 8 records,
-    // 0x5082af23..0x5082af98). A record is four corners (x, y) as halfwords, top left,
-    // top right, bottom left, bottom right (the writer's order; FACE's 0x50523fe3 takes x0, y0, x1 and the third
-    // corner's y for the centre, width and height). active: the byte 0x50839ed0 returns, which the getter requires
+    // 0x5082af23..0x5082af98). The writer that runs in the lab is another, mdet.table_writer, which writes the main and
+    // part flags 0 and the list alone. A record is four corners (x, y) as halfwords, top left, top right, bottom left,
+    // bottom right (the writer's order; FACE's 0x50523fe3 takes x0, y0, x1 and the third corner's y for the centre,
+    // width and height). active: the byte 0x50839ed0 returns, which the getter requires
     // (else no frames) and the writer requires before it posts UP_FACE (0x5082af9a..0x5082afee). aspect: the pair of
     // bytes the getter maps to the frame's aspect code (0x5083a368..0x5083a3f8; all zero: no frames): code -> pair
     // below. up_face: the frame plane's UP_FACE (flag 1 to DISP_FRAME when the frame mode has bit 1, 0x50025747).
@@ -339,7 +340,17 @@ export const MODELS = {
     // word and 8 records of 32 bytes (0x50816d37: +0 sbj_kind, +2 the body {cx, cy, w, h, rel, dtct}, +12 part 1,
     // +22 part 2), which offer_yc_data hands to LAF (0x50839ede) at the end of each offer. LAF's start and end, which
     // START, CHANGE_MODE and END call (0x50839498 -> 0x508395ce, 0x50839533 -> 0x508397d2), write subject.active (1 at
-    // 0x50839766, 0 at 0x508398c8), and LAF's setter refuses an offer's result while it is 0 (0x50839f29..0x50839f5b)
+    // 0x50839766, 0 at 0x508398c8), and LAF's setter refuses an offer's result while it is 0 (0x50839f29..0x50839f5b).
+    // LAF's setter also writes the getter's aspect pair (subject.aspect) from its copy of the offer
+    // (0x5083998d..0x508399a0 copies 0xa337b4e4.. to 0xa337b5f4..): the byte 0xa337b702 (X: the offer record's aspect
+    // code) mapped 1 -> (4, 3), 2 -> (3, 2), 3 -> (16, 9), 4 -> (6, 6), 9 -> (3, 4), 10 -> (17, 9), anything else
+    // logged and (4, 3) (0x50839cb8..0x50839d34), then, unless the bytes 0xa337f087 and 0xa337d948 pick the other
+    // branch (0x50839d79..0x50839da4, which calls 0x506e6ac8 instead; not met in the lab), runs table_writer, a frame
+    // table writer of its own (0x5083a761, entered by call at 0x5083a766 from 0x50839db5: mdet_laf_calc_not_tr_dl
+    // 0x50837b05, then the main and part flags 0, the count 0 and a list record per valid box, 0xa33790b2 + 8 n while
+    // 0xa337d53c + n is 1, 0x5083a843..0x5083a90c), and posts UP_FACE (0x50839dba). The other writer,
+    // 0x5082ac64..0x5082af98 (spec 5.1), did not run in the lab's sessions (X: its count stores 0x5082af2a and
+    // 0x5082af55 never executed while the table held the rider)
     mdet: {
       api: { start: 0x5080A5E2, end: 0x5080A6DC, change_mode: 0x5080A79A, offer: 0x5080A912 },
       record: { size: 96, buff_id: 4, w: 6, h: 8, movie: 13, zoom: 32, aspect: 34 },
@@ -352,6 +363,7 @@ export const MODELS = {
       learning: { read: 0x501A921F, group: 0x800F, dest: 0x9511CA00, size: 0x8F3000 },
       yc: { lock: 0x50534D3F, address: 0x50534DD1, release: 0x50534BBD },
       result: { word: 0xA3376B58, records: 0xA3376B5C, count: 8, size: 32 },
+      table_writer: 0x5083A766,
     },
   },
   E146: {

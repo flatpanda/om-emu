@@ -1,13 +1,21 @@
-// S-SUBJECT, subject detection's frames from S-SCENE's subjects (src/lab/subject.mjs, src/lab/scene.mjs subjectsAt):
+// Subject detection's frames from S-SCENE's subjects (src/lab/subject.mjs, src/lab/scene.mjs subjectsAt; on E143 drawn
+// from MDET's own frame table, src/lab/mdet.mjs, docs/om1-subject-spec.md 5.5):
 //   subjectUnits (pure)  the rider's subject box against the pixels renderFrame draws for it, still and moving (its
 //                        wrap); the box taken back through a DISP_FRAME transform and forward again; a record's four
 //                        corners read back as FACE's converter reads them (0x50523fe3: centre and size)
 //   subjectSession       bin/play.mjs on E143 with --a15 on and the moving scene's rider held still: with the camera's
 //                        subject-detection setting (settings id 1682) at OFF no subject frame is drawn; at 1
-//                        (MOTOR_SPORTS) DISP_FRAME draws a frame in its colour 3 along the rider's box as the panel shows
-//                        it, and the status lists S-SUBJECT; at 4 (BIRD) the frame goes; the rider moving, each frame
-//                        drawn lies on the rider at the scene time S-SUBJECT used, and the frame moves with it; at 0 it
+//                        (MOTOR_SPORTS) none for the first offers (MDET's stabilisation registers the track at its
+//                        seventh run, the firmware's delay), then DISP_FRAME draws a frame in its colour 3 along the
+//                        rider's box as the panel shows it, from MDET's own frame table (the status's source, its
+//                        writer's runs counted, S-SUBJECT not listed); at 16:9 and 3:4 the frame follows the aspect
+//                        (LAF's pair from the offer's aspect code, the letterbox's clip); on the EVF it lands on the
+//                        rider too; at 4 (BIRD) the frame goes; the rider moving, each frame drawn lies on the rider at
+//                        the scene time of the offer whose result the table holds, and the frame moves with it; at 0 it
 //                        goes; --replay of the session log ends on the same frame
+//   subjectStandInSession  a headless Player on E143 with the mdet facts taken away (a body where MDET_DL does not run
+//                        natively): S-SUBJECT writes the frame table, the frame drawn on the still rider at once, the
+//                        status's source S-SUBJECT's, no MDET request; at OFF the frame goes
 //   node emu/test/test_subject.mjs [--pure]
 import fs from 'node:fs';
 import path from 'node:path';
@@ -71,6 +79,10 @@ export function subjectUnits() {
 // (outside the 4:3 image area the frame is clipped: an edge there is checked at the clip), as [left, top, right, bottom]
 function edgeCover(png, box, rgb, tol = 4, clip = [50, 0, 850, 600]) {
   const [w, h, rows] = png, is = (x, y) => x >= 0 && y >= 0 && x < w && y < h && rows[y][3 * x] === rgb[0] && rows[y][3 * x + 1] === rgb[1] && rows[y][3 * x + 2] === rgb[2];
+  return edgeCoverBy(is, box, tol, clip);
+}
+// The same over a predicate is(x, y): the pixel is the frame's
+function edgeCoverBy(is, box, tol = 4, clip = [50, 0, 850, 600]) {
   const b = [Math.max(box[0], clip[0]), Math.max(box[1], clip[1]), Math.min(box[2], clip[2]), Math.min(box[3], clip[3])].map(Math.round);
   const band = (fixed, along, vertical) => {
     let hit = 0, n = 0;
@@ -100,11 +112,13 @@ export async function subjectSession() {
   const GREY = [170, 170, 170];
   // the rider's box on the TFT at scene time t (the larger copy, while the moving layer wraps): S-SCENE's frame is
   // shown at LV_SCALED.tft
-  const [[sw, sh], [pw, ph], [ox, oy]] = LV_SCALED.tft;
   const panelBox = (speed, t) => {
+    const [[sw, sh], [pw, ph], [ox, oy]] = LV_SCALED.tft;
     const [s] = SC.subjectsAt(riderScene(speed), t, sh / sw).sort((a, b) => b.area - a.area);
     return s ? [ox + s.box[0] * pw, oy + s.box[1] * ph, ox + s.box[2] * pw, oy + s.box[3] * ph] : null;
   };
+  // S-SCENE's frame step (play.mjs SCENE_STEP_NS), S-TAKEMDET's offer pace, rounded up to whole milliseconds
+  const STEP_MS = 67;
   // drawn: most of each edge (the GUI's items cover some of it: the exposure scale over the bottom edge, X)
   const drawn = (cover) => cover.every((c) => c >= 0.7), absent = (cover) => cover.every((c) => c < 0.2);
   const fmt = (c) => c.map((v) => v.toFixed(2)).join(' ');
@@ -123,31 +137,61 @@ export async function subjectSession() {
         `setting OFF: no subject frame (${fmt(edgeCover(png(f), still, GREY))}), status ${JSON.stringify(s.camapp?.subject ?? null)}`);
       const set = await pl.input({ type: 'token', token: 'SET:1682=1' });
       ok(set.record?.set?.read_back === 1, `the setting reads back 1 (MOTOR_SPORTS): ${JSON.stringify(set.record?.set ?? set.error)}`);
-      await pl.input({ type: 'token', token: 'WAIT:200' });
+      // S-TAKEMDET offers a frame at most once per tick and per 1/15 s of lab time, and a WAIT is one tick: one WAIT of
+      // one frame step per offer. Three offers: MDET reports nothing before its seventh run (spec 5.4), so no frame yet
+      const offer = async (n) => { for (let i = 0; i < n; i++) await pl.input({ type: 'token', token: `WAIT:${STEP_MS}` }); };
+      await offer(3);
+      [f] = await pl.frame();
+      s = await pl.status();
+      ok(absent(edgeCover(png(f), still, GREY)) && s.camapp?.subject?.frames === 0 && s.camapp?.mdet?.offers >= 2,
+        `setting 1, the first offers: no frame before MDET registers the track (${fmt(edgeCover(png(f), still, GREY))}), ${JSON.stringify(s.camapp?.subject ?? null)}, offers ${s.camapp?.mdet?.offers}`);
+      await offer(5);
       [f] = await pl.frame();
       s = await pl.status();
       const sub = s.camapp?.subject;
-      ok(sub?.kind === 1 && sub?.frames === 1 && sub?.aspect === 1 && sub?.device === 'tft' && s.stand_ins.includes('S-SUBJECT'),
-        `setting 1: S-SUBJECT shows one frame of kind 1 at aspect code 1 (4:3) on the TFT: ${JSON.stringify(sub ?? null)}; S-SUBJECT listed ${s.stand_ins.includes('S-SUBJECT')}`);
+      ok(sub?.source === 'mdet' && sub?.kind === 1 && sub?.frames === 1 && sub?.aspect === 1 && sub?.device === 'tft' && sub?.writes > 0,
+        `setting 1: MDET's own frame table holds one frame of kind 1 at aspect code 1 (4:3) on the TFT, written by its writer: ${JSON.stringify(sub ?? null)}`);
+      ok(!s.stand_ins.includes('S-SUBJECT') && s.stand_ins.includes('S-TAKEMDET') && s.stand_ins.includes('S-TAKEFRAME'),
+        `setting 1: S-SUBJECT not listed (it wrote nothing), S-TAKEMDET and S-TAKEFRAME listed: ${s.stand_ins.filter((x) => /SUBJECT|MDET|TAKEFRAME/.test(x))}`);
       ok(drawn(edgeCover(png(f), still, GREY)), `setting 1: DISP_FRAME draws the frame on the rider's box ${JSON.stringify(still.map(Math.round))}: edges ${fmt(edgeCover(png(f), still, GREY))}`);
+      // the still aspects 16:9 and 3:4 (settings id 269: DISP_FRAME's aspect codes 3 and 9): LAF's pair follows the
+      // offers' code, and the frame the letterbox's clip (the TFT's rows: 16:9 clip y 47..553, 3:4 clip x 225..675)
+      for (const [value, clip] of [[3, [0, 47, 900, 553]], [9, [225, 0, 675, 600]]]) {
+        await pl.input({ type: 'token', token: `SET:269=${value}` });
+        await offer(2);
+        [f] = await pl.frame();
+        s = await pl.status();
+        const cover = edgeCover(png(f), still, GREY, 4, clip);
+        ok(s.camapp?.subject?.aspect === value && s.camapp.subject.frames === 1 && drawn(cover),
+          `aspect code ${value}: the frame on the rider within the clip ${JSON.stringify(clip)}: edges ${fmt(cover)}, ${JSON.stringify(s.camapp?.subject ?? null)}`);
+      }
+      await pl.input({ type: 'token', token: 'SET:269=1' });
+      await offer(1);
       await pl.input({ type: 'token', token: 'SET:1682=4' });
       await pl.input({ type: 'token', token: 'WAIT:200' });
       [f] = await pl.frame();
       s = await pl.status();
       ok(absent(edgeCover(png(f), still, GREY)) && s.camapp?.subject?.frames === 0, `setting 4 (BIRD): no frame on the rider (${fmt(edgeCover(png(f), still, GREY))}), ${JSON.stringify(s.camapp?.subject ?? null)}`);
-      // the rider moving: each frame on the rider where the scene had it, the frame moving with it
+      // the rider moving at 3 m/s (about 32 panel pixels per offer; it wraps across the panel every 2.25 s of scene time,
+      // and MDET registers each new track after six hits): one offer per WAIT until three frames are drawn while the
+      // rider is wholly inside the 4:3 image area, each on the rider at the scene time of the offer whose result the
+      // table holds or of the one before: the published frame shows DISP_FRAME's buffer latched at the display boundary
+      // it was composed at, and the published status can follow an offer made in the tick at that boundary, whose
+      // buffer awaits the next one (spec 5.5); the frame moving with it
       await pl.input({ type: 'token', token: 'SET:1682=1' });
       await pl.input({ type: 'scene', change: { layer: { index: 1, speed: 3 } } });
       const seen = [];
-      for (let i = 0; i < 3; i++) {
-        await pl.input({ type: 'token', token: 'WAIT:150' });
+      for (let i = 0; i < 60 && seen.length < 3; i++) {
+        await offer(1);
         [f] = await pl.frame();
         s = await pl.status();
-        const t = s.camapp?.subject?.t ?? null, box = t === null ? null : panelBox(3, t);
-        const cover = box ? edgeCover(png(f), box, GREY) : [0, 0, 0, 0];
-        // an edge outside the 4:3 image area is the clip's; an edge at the clip is checked there
-        ok(box !== null && drawn(cover), `moving ${i}: the frame lies on the rider at scene time ${t}, box ${JSON.stringify(box?.map(Math.round))}: edges ${fmt(cover)}`);
-        if (box) seen.push(`${Math.round(Math.max(box[0], 50))}..${Math.round(Math.min(box[2], 850))}`);
+        const t = s.camapp?.subject?.t ?? null;
+        if (!s.camapp?.subject?.frames || t === null) continue;
+        const cand = [t, t - 1 / 15].map((u) => [u, panelBox(3, u)]).filter(([, b]) => b && b[0] >= 50 && b[2] <= 850);
+        if (cand.length < 2) continue;
+        const covers = cand.map(([u, b]) => [u, b, edgeCover(png(f), b, GREY)]), hit = covers.find(([, , c]) => drawn(c));
+        ok(hit, `moving ${seen.length}: the frame lies on the rider at scene time ${t} or one offer before: ${covers.map(([u, b, c]) => `${u.toFixed(3)} box ${JSON.stringify(b.map(Math.round))} edges ${fmt(c)}`).join('; ')}`);
+        if (hit) seen.push(`${Math.round(hit[1][0])}..${Math.round(hit[1][2])}`);
       }
       ok(seen.length === 3 && new Set(seen).size === 3, `the frame moves with the rider: its sides at ${JSON.stringify(seen)}`);
       await pl.input({ type: 'token', token: 'SET:1682=0' });
@@ -169,9 +213,77 @@ export async function subjectSession() {
   return { checks, bad };
 }
 
+// A headless Player on E143 with the moving scene's rider held still on the live view, the date prompt gone; device:
+// the output it starts on; mdet: false takes the mdet facts away before the session opens (the CamApp reads them
+// once, at its construction) and puts them back after. fn({pl, s, idle, cover, ok}): cover() composes a frame and gives
+// the share of each edge of the still rider's box with DISP_FRAME's colour 3 as the composite's word (Cr 128, Cb 128,
+// Y 170) on that output (the EVF's plane drawn at twice its size, its 4:3 area the whole panel)
+async function inProcess(what, { device = 'tft', mdet = true }, fn) {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, msg) => { checks++; if (!cond) bad.push(msg); };
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
+  const { Player } = await import('../src/lab/player.mjs');
+  const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+  const { MODEL_INFO } = await import('../src/fw/model.mjs');
+  const { LV_SCALED } = await import('../src/lab/display.mjs');
+  const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, device },
+    { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 });
+  const facts = MODEL_INFO.mdet, GREY = (128 << 16) | (128 << 8) | 170;
+  try {
+    if (!mdet) delete MODEL_INFO.mdet;
+    try { pl.open_session(); } finally { MODEL_INFO.mdet = facts; }
+    const s = pl.session, lab = s.lab;
+    const idle = (ms) => s.idle_slice(lab.lab_time() + ms * 1e6);
+    const [[sw, sh], [pw, ph], [ox, oy]] = LV_SCALED[device];
+    const [r] = SC.subjectsAt(riderScene(0), 0, sh / sw);
+    const box = [ox + r.box[0] * pw, oy + r.box[1] * ph, ox + r.box[2] * pw, oy + r.box[3] * ph];
+    const clip = device === 'evf' ? [0, 0, 1600, 1200] : [50, 0, 850, 600];
+    const cover = () => { const [w, h, words] = s.frame('boundary', false); return edgeCoverBy((x, y) => x >= 0 && y >= 0 && x < w && y < h && words[y * w + x] === GREY, box, 4, clip); };
+    s.scene_input({ liveview: true, preset: 'moving', layer: { index: 1, speed: 0 } });
+    idle(100);
+    s.key('s1', 'down'); s.camapp.pump(); idle(100); s.key('s1', 'up'); s.camapp.pump();
+    idle(300);
+    await fn({ pl, s, idle, cover, ok });
+  } catch (e) { bad.push(`${what}: ${e.stack.slice(0, 900)}`); }
+  try { pl.close_session(); } catch { /* closed */ }
+  return { checks, bad };
+}
+
+// The EVF (a session started on it): MDET's frame on the rider, after its seven offers (one per idle slice of a frame
+// step)
+export async function subjectEvfSession() {
+  return inProcess('EVF session', { device: 'evf' }, ({ pl, s, idle, cover, ok }) => {
+    s.step('SET:1682=1');
+    for (let i = 0; i < 9; i++) idle(70);
+    const c = cover(), st = s.camapp.status().subject;
+    ok(s.device === 'evf' && st?.source === 'mdet' && st.device === 'evf' && st.frames === 1 && c.every((v) => v >= 0.7) && !pl.stand_ins_in_use().includes('S-SUBJECT'),
+      `the EVF: MDET's frame on the rider: edges ${c.map((v) => v.toFixed(2))}, ${JSON.stringify(st ?? null)}`);
+  });
+}
+
+// S-SUBJECT where MDET_DL does not run natively: no body is so today (E143 gives both the subject and the mdet facts),
+// so the session takes the mdet facts away
+export async function subjectStandInSession() {
+  return inProcess('stand-in session', { mdet: false }, ({ pl, s, idle, cover, ok }) => {
+    ok(s.camapp.mdet === null && s.camapp.subject !== null, 'the CamApp has S-SUBJECT and no MDET_DL');
+    s.step('SET:1682=1');
+    idle(100);
+    const c1 = cover(), st = s.camapp.status().subject;
+    ok(st?.source === 's-subject' && st.frames === 1 && st.kind === 1 && c1.every((c) => c >= 0.7) && pl.stand_ins_in_use().includes('S-SUBJECT') && !pl.stand_ins_in_use().includes('S-TAKEMDET'),
+      `MOTOR_SPORTS: S-SUBJECT's frame on the rider at once: edges ${c1.map((v) => v.toFixed(2))}, ${JSON.stringify(st ?? null)}`);
+    s.step('SET:1682=0');
+    idle(100);
+    const c0 = cover();
+    ok(s.camapp.status().subject?.frames === 0 && c0.every((c) => c < 0.2), `OFF: the frame goes: edges ${c0.map((v) => v.toFixed(2))}`);
+  });
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const rs = [['subject units', subjectUnits()]];
-  if (!process.argv.includes('--pure')) rs.push(['subject session', await subjectSession()]);
+  if (!process.argv.includes('--pure')) {
+    rs.push(['subject session', await subjectSession()], ['subject frames on the EVF', await subjectEvfSession()], ['S-SUBJECT without MDET_DL', await subjectStandInSession()]);
+  }
   for (const [n, r] of rs) { console.log(`${n}: ${r.checks - r.bad.length}/${r.checks}`); r.bad.forEach((x) => console.log('  ', x)); }
   process.exit(rs.some(([, r]) => r.bad.length) ? 1 : 0);
 }

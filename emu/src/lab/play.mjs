@@ -2073,7 +2073,7 @@ export class PlaySession extends N.NavSession {
     return SC.renderFrame(sc, src[0], src[1], t_s, sc.frame_no);
   }
   // The live view's step and its time (s): a moving scene is rendered once per 1/15 s of lab time, at the step's
-  // start (so S-SUBJECT's subjects, subject.mjs, are where the shown frame has them); a still one at step 0, now.
+  // start (so the subjects of subject.mjs are where the shown frame has them); a still one at step 0, now.
   scene_step() {
     const sc = this.scene, now = this.lab.lab_time();
     if (!sc.layers.some((l) => l.speed)) return { step: 0, t: now / 1e9 };

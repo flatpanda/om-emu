@@ -307,7 +307,9 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
   <p class="note">Subject detection: the scene's subjects are its patterns' (the moving scene's rider stands for a motorsport
   subject); the scene takes no subjects of its own at run time. The camera's own setting chooses the kind (id 1682, 1
   motorsports to 5 animals: its menu, or the debug API's token SET:1682=1), and while it names the kind of a subject the
-  live view shows, DISP_FRAME draws the frames natively from the boxes S-SUBJECT writes where CPU 3's MDET would.</p>
+  live view shows, DISP_FRAME draws the frames natively from MDET's own frame table: on the OM-1, CPU 3's MDET runs
+  natively on the scene's subjects as the engine's records and reports a subject from its seventh frame (elsewhere
+  S-SUBJECT writes the table where MDET would).</p>
   <div class="read" id="sc-subject"></div>
 </details>
 <details class="scene ports" id="cardpanel">
@@ -769,12 +771,13 @@ function showScene(sc) {
     (caps ? `\ncaptures (S2):\n${caps}` : '') +
     ((sc.clips || []).length ? '\nclips (REC):\n' + sc.clips.map((c) => `#${c.n} ${c.end_ns === null ? 'recording since ' + (c.start_ns / 1e9).toFixed(2) + ' s lab time' : c.seconds + ' s'}`).join('\n') : '');
 }
-// ---- subject detection's frames (S-SUBJECT), read from the status --------------------------------------------------
+// ---- subject detection's frames (MDET's table, or S-SUBJECT's), read from the status --------------------------------
 const SUBJECT_KINDS = { 1: 'motorsports', 2: 'airplanes', 3: 'trains', 4: 'birds', 5: 'animals' };    // src/lab/subject.mjs KINDS
 function showSubject(s) {
   const sub = s.camapp && s.camapp.subject;
-  $('sc-subject').textContent = !sub ? 'subject frames (S-SUBJECT): none drawn in this session'
-    : `subject frames (S-SUBJECT): ${sub.frames}${sub.frames ? ` on the ${sub.device}, setting 1682 = ${sub.kind} (${SUBJECT_KINDS[sub.kind] || '?'})` : ' now'}`;
+  const src = sub && sub.source === 'mdet' ? "MDET's table" : 'S-SUBJECT';
+  $('sc-subject').textContent = !sub ? 'subject frames: none in this session'
+    : `subject frames (${src}): ${sub.frames}${sub.frames ? ` on the ${sub.device}, setting 1682 = ${sub.kind} (${SUBJECT_KINDS[sub.kind] || '?'})` : ' now'}`;
 }
 // ---- the card, the HDMI port and the session's options (GET /api/session, /api/card, /api/card/file, /api/card/image) --
 // this page's host: the Worker (web/worker.mjs), its options fixed at the start (the start options above, the page's

@@ -1,24 +1,29 @@
 // S-SUBJECT: subject detection's frames on the display, from S-SCENE's subjects (docs/om1-subject-spec.md 5.1, step A
-// of its plan; src/fw/models.mjs subject has the firmware's side with its evidence).
+// of its plan; src/fw/models.mjs subject has the firmware's side with its evidence), on a body where MDET_DL does not
+// run natively; and the placement of S-SCENE's subjects in MDET's frame, which S-DML uses where it does.
 //
 // On the camera, CPU 3's MDET runs the subject network on the DML engine, writes the detected subjects' boxes into its
 // frame table and posts UP_FACE to the frame plane; DISP_FRAME (CPU 3 too) then reads the table through FACE's frame
 // getter and MDET's (0x5052202c -> 0x5083a299) and draws the frames. In the lab DISP_FRAME runs natively on the lab CPU
-// for each post to it (camapp.mjs S-DISPFRAME), and MDET, the DML engine and CPU 3 do not run. S-SUBJECT stands in for
-// MDET at that seam (the spec's S1): while the camera's own subject-detection setting names a kind and S-SCENE's live
-// view shows a subject of that kind, it writes MDET's frame table with the subjects' boxes as the network would have
-// found them, and posts UP_FACE through the frame plane's own API; the getters, the transforms and the drawing are the
-// firmware's. What it writes, field by field:
+// for each post to it (camapp.mjs S-DISPFRAME). Where MDET_DL runs natively too (E143: the body that gives both the
+// subject and the mdet facts, src/fw/models.mjs; mdet.mjs S-MDETDL), MDET's own code writes the table, the getter's
+// aspect pair and its active byte and posts UP_FACE (spec 5.5): there S-SUBJECT writes nothing and SubjectFrames serves
+// S-TAKEMDET's conditions (live(), kind()) and S-DML's boxes (frames()); S-TAKEFRAME adds the frame mode's subject bit
+// (camapp.mjs take_subject_frames). No body gives the subject facts without the mdet ones today, so the stand-in below
+// runs only where a test takes the mdet facts away (test_subject.mjs subjectStandInSession).
+// Where MDET does not run, S-SUBJECT stands in for MDET at that seam (the spec's S1): while the camera's own
+// subject-detection setting names a kind and S-SCENE's live view shows a subject of that kind, it writes MDET's frame
+// table with the subjects' boxes as the network would have found them, and posts UP_FACE through the frame plane's own
+// API; the getters, the transforms and the drawing are the firmware's. What it writes, field by field:
 //   - each visible subject of the setting's kind as a list record (four corners, top left, top right, bottom left,
 //     bottom right), up to the table's eight, larger subjects first; the main and part records' flags 0 (the writer
 //     fills those only in MDET's state 0xa337f082 = 1, which is not decoded, ?), so DISP_FRAME draws list frames
 //     (kind 1, colour 3, D: 0x5100dfef);
 //   - the aspect pair whose code (the getter's map, D) equals the one DISP_FRAME computes for the frame (0x5100d469, run
-//     natively), so draw_face takes the records (D: 0x5100d764..0x5100d778); MDET would derive it from the YC frame it
-//     was offered (I);
-//   - MDET's active byte (0x50839ed0's) at 1 while frames are shown, 0 after (the getter requires it, D), on a body
-//     where MDET_DL does not run natively: where it does (mdet.mjs S-MDETDL), LAF's own start and end write it at
-//     MDET's START and END, and LAF's setter refuses an offer's result while it is 0 (D: src/fw/models.mjs mdet);
+//     natively), so draw_face takes the records (D: 0x5100d764..0x5100d778); natively LAF maps the offer's aspect
+//     code to it (src/fw/models.mjs mdet);
+//   - MDET's active byte (0x50839ed0's) at 1 while frames are shown, 0 after (the getter requires it, D; natively LAF's
+//     start and end write it, src/fw/models.mjs mdet);
 //   - the frame mode with bit 1, the face / subject frames (D: 0x5039f583 maps TAKE's request 1 to it, DISP_FRAME draws
 //     faces on it, 0x5100dc03): S-TAKEFRAME's mode 4 lacks it; TAKE's own live-view request (0x506d8dea) sets it unless
 //     one of its conditions clears it (D), and when those hold in the lab is not read, so S-SUBJECT adds the bit while
@@ -34,9 +39,7 @@
 // When: after lab time passed (camapp.mjs tick), with the application started on its shooting screen and S-SCENE's
 // live view showing the live scene (not the menu's stopped through image, a rec view or a played image); the table is
 // written and posted when the boxes, the kind or the output change, at most every 1/15 s of lab time (S-SCENE's
-// frame step). The setting is read through the firmware's property read, as TAKE reads it (D). Where MDET_DL runs
-// natively (mdet.mjs S-MDETDL), MDET's code writes the table itself after each offer, from its own stabilised subjects,
-// and posts UP_FACE: S-SUBJECT then writes its frames again in the same tick (rewrite).
+// frame step). The setting is read through the firmware's property read, as TAKE reads it (D).
 import { FirmwareError } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { LV_SCALED } from './display.mjs';
@@ -90,9 +93,10 @@ export class SubjectFrames {
   call(fn, regs = null) { return this.s.lab.call(fn, regs, null, null, 2000000); }
   // The setting's kind, through the firmware's property read as TAKE reads it
   kind() { return this.call(this.f.prop_read, { d0: this.f.setting, a0: 0, d1: 0 }).d0 & 0xFF; }
-  // After lab time passed
+  // After lab time passed (S-SUBJECT: camapp.mjs calls it only where MDET_DL does not run natively)
   tick() {
     const s = this.s;
+    if (this.camapp.mdet) throw new SubjectError('S-SUBJECT: MDET_DL runs natively on this body, which writes the frame table itself');
     if (!this.camapp.started) return;
     if (!this.live()) { if (this.key !== null) this.clear('the live scene is not shown'); return; }
     const sc = s.scene, { step: n, t } = s.scene_step();
@@ -149,7 +153,7 @@ export class SubjectFrames {
     lab.sim.write(tb.count, Uint8Array.of(boxes.length));
     lab.sim.write(this.f.aspect[0], Uint8Array.of(pair[0]));
     lab.sim.write(this.f.aspect[1], Uint8Array.of(pair[1]));
-    if (!this.camapp.mdet) lab.sim.write(this.f.active, Uint8Array.of(1));   // natively LAF's start writes it
+    lab.sim.write(this.f.active, Uint8Array.of(1));
     this.mode(true);
     this.post(`kind ${kind} (${KINDS[kind]}), aspect ${aspect}: ${boxes.length} frame(s) ${JSON.stringify(boxes)}`);
     this.last = { kind, device: this.s.device, aspect, t, frames: boxes };
@@ -159,14 +163,11 @@ export class SubjectFrames {
     const lab = this.s.lab, tb = this.f.table;
     for (const a of [tb.main[0], tb.part[0], tb.count]) lab.sim.write(a, Uint8Array.of(0));
     this.post(`no frames: ${why}`);
-    if (!this.camapp.mdet) lab.sim.write(this.f.active, Uint8Array.of(0));   // natively LAF's end writes it
+    lab.sim.write(this.f.active, Uint8Array.of(0));
     this.mode(false);
     this.key = null; this.step = null;
     this.last = null;
   }
-  // After an offer of S-TAKEMDET's (mdet.mjs): MDET's own code wrote the table from its results and posted UP_FACE, so
-  // the frames S-SUBJECT shows are written again at its next tick
-  rewrite() { if (this.key !== null) { this.key = null; this.step = null; } }
   // The frame mode with or without the subject bit, through the frame plane's setter as S-TAKEFRAME sets it
   mode(on) {
     const want = this.frame_mode_base | (on ? FRAME_MODE_FACE : 0);
@@ -183,9 +184,9 @@ export class SubjectFrames {
     this.camapp.drain_cpu3();
   }
   // What is shown: the kind, the device, DISP_FRAME's aspect code, the scene time (s) of the boxes and the boxes in
-  // MDET's coordinates; frames 0 when none
+  // MDET's coordinates; frames 0 when none (mdet.mjs frames_status gives the same fields from MDET's own table)
   status() {
     const l = this.last;
-    return l === null ? { frames: 0 } : { kind: l.kind, device: l.device, aspect: l.aspect, t: l.t, frames: l.frames.length, boxes: l.frames };
+    return l === null ? { source: 's-subject', frames: 0 } : { source: 's-subject', kind: l.kind, device: l.device, aspect: l.aspect, t: l.t, frames: l.frames.length, boxes: l.frames };
   }
 }

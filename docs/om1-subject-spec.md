@@ -6,6 +6,10 @@
 > Update (2026-10-27): U1 and U2 are read (section 5.1: MDET's frame table, how DISP_FRAME reads it, the setting), and
 > step A runs: S-SUBJECT (`emu/src/lab/subject.mjs`) writes S-SCENE's subjects into MDET's table and posts UP_FACE, and
 > DISP_FRAME draws the frames natively. Corrections in section 4.3.
+>
+> Update (2026-11-07): the first part of step C runs (section 5.3): CPU 3's MDET_DL code natively on the lab CPU from
+> TAKE's calls to dml_start_callback and MDET's subject records, with S-DML (`emu/src/dev/dml.mjs`) for the engine;
+> the engine writes no detection yet.
 
 # OM-1 subject detection
 
@@ -80,6 +84,10 @@ with the AF library's unit `0x9bf00000` (`0x5095769d`), not with detection.
 - **Init (D).** `0x507f68a8` attaches IRQ 285 at level 5 with handler `0x507f6abd` through `0x50053f76` (attach on the
   calling core, `(0x8050)`), then powers the unit up and down. It is called through `0x507f906b` from the display init
   chain (`0x501e9719`) and from `dl_init_boot` (`0x5080b229`, trace id 598); which core finally owns IRQ 285 is ?.
+  Decided for the lab (2026-11-07, section 5.3): CPU 3. dl_init_boot runs lazily on CPU 3, at MDET_DL's first request
+  (its callers are the ring function `0x5080b987` and MDET_DL_REQ's entry, `0x5080ba0a`, `0x5080baf7`, D), after the
+  CPU 0 boot chain's call, and the attach is exclusive, the last caller's core taking the IRQ (cores spec section 4,
+  D); that no later attach on CPU 0 follows is I.
 - **Start (D, `0x507f69cb`).** Refuses when busy (`0xa33454f8`); keeps a completion callback and its argument (the
   request's `+36` / `+40` at `0xa33454f0` / `0xa33454f4`); opens gate bit 27 (`0x98800348`); then writes eight register
   groups from the eight pointers at the request's `+0..+28`, each by its own straight-line writer (`0x507f6b0e`:
@@ -267,7 +275,7 @@ the lens driver (`0x50817e11` from `0x5013f077`) and the init chain `0x501e94a5`
 |---|---|---|---|
 | S1 display | DISP_FRAME's inputs: MDET's frame table + UP_FACE, UP_LOCKON | what exists now (S-DISPFRAME runs DISP_FRAME on the lab CPU) | synthetic frames from the scene: S-SUBJECT (5.1) |
 | S2 MDET result | `mdet_laf_*` getters FCS calls; the subject record (4.3) | native FCS (AF module) | S-SUBJECT returns scene-derived records |
-| S3 DML device | `0x9c180000`, IRQ 285, the output buffer | CPU 3 natively; the `0x800f` read path; the output head layout | S-DML: on start, write heads that decode to the scene's boxes |
+| S3 DML device | `0x9c180000`, IRQ 285, the output buffer | CPU 3 natively; the `0x800f` read path; the output head layout | S-DML: on start, write heads that decode to the scene's boxes (its register file and an empty output since 2026-11-07, 5.3) |
 | S4 the network | the engine's arithmetic | layer schedule, numerics | a reproduced DML (5.4) |
 
 ## 5. Feasibility and plan (I)
@@ -276,7 +284,7 @@ the lens driver (`0x50817e11` from `0x5013f077`) and the init chain `0x501e94a5`
 |---|---|---|---|---|
 | A | S-SUBJECT at seam S1: S-SCENE's layers report screen boxes (the rider, the ball) with a kind; when the camera's subject-detection setting is on, write MDET's frame table and post UP_FACE (and UP_LOCKON for the tracked one) so DISP_FRAME draws subject frames natively, as S-AFOSD does for the AF frame | static: the frame table's record layout and how DISP_FRAME reads it (U1); the setting's property and its value per kind (U2) | about 1 week; done 2026-10-27 (5.1: UP_FACE only, UP_LOCKON is the AF module's) | adds S-SUBJECT; nothing retires |
 | B | S-SUBJECT moves to seam S2: the subject records answered to the AF module, which then chooses the AF point and uploads frames itself | native AF module (hle-gaps 4.4: TakeReady, CPU 1 and 3; months) | 2-3 weeks after that | S-AFOSD's frame part and step A's display writes |
-| C | MDET natively on CPU 3 with S-DML: a register-file model at `0x9c180000` (start `+0x010`, status `+0x004` bit 14 W1C, IRQ 285, the gates and clock 50), the `0x800f` load through the flash-read path, and on each start output heads synthesised so that MDET's own `get_dml_result` / `judge_dml_result` / stabilisation produce the scene's boxes | ROADMAP HLE step 4 (CPU 3); a flash read model or a resource reader at `0x501a921f`; the output head layout read from the post-processing code (U4); PDT / TRC and, on E143, the face engines as models or stand-ins | 4-6 weeks after CPU 3 | S-SUBJECT retires; adds S-DML (and S-FACE on E143) |
+| C | MDET natively on CPU 3 with S-DML: a register-file model at `0x9c180000` (start `+0x010`, status `+0x004` bit 14 W1C, IRQ 285, the gates and clock 50), the `0x800f` load through the flash-read path, and on each start output heads synthesised so that MDET's own `get_dml_result` / `judge_dml_result` / stabilisation produce the scene's boxes | ROADMAP HLE step 4 (CPU 3); a flash read model or a resource reader at `0x501a921f`; the output head layout read from the post-processing code (U4); PDT / TRC and, on E143, the face engines as models or stand-ins | 4-6 weeks after CPU 3; part 1 (MDET_DL native at single call sites, S-DML with an empty output, the load stubbed) done 2026-11-07 (5.3) | S-SUBJECT retires; adds S-DML (and S-FACE on E143) |
 | D | A reproduced DML: run the real network on the frame | the layer schedule from the register builders (U3); the engine's arithmetic (U5); a reference to check against | months; bit-exactness ? | S-DML's synthetic heads |
 
 Notes on D, against the e7-bird-network work: there the model resource carried its own command stream, and the
@@ -501,6 +509,72 @@ is the learning data's address and "work" the feature-map area; the names listed
    `0x9511ca00` and the work area at `0x94a12a00` lie in the `0x9xxxxxxx` window the lab does not map (U6); S-DML
    needs neither, but learning_data_load's copy must land or be stubbed. (e) take_mov's offered record (w 640, h 480 /
    360 / 340, buff_id, byte +25) and the YC buffer calls (`0x50534dd1`, `0x50534bbd`) must be served.
+
+### 5.3 Step C, part 1: MDET_DL native with S-DML (2026-11-07)
+
+CPU 3's MDET_DL code runs natively on the lab CPU, from TAKE's calls through dml_start and IRQ 285 to MDET's subject
+records and LAF, with S-DML standing for the engine. It is HLE step 4's CPU 3 at single call sites, as DISP_FRAME runs
+(ARCHITECTURE.md C02): CPU 3's kernel does not run. The engine writes no detection, so MDET reports no subject;
+synthesising the scene's boxes into the output (5.2.1) is step C's next part. Code: `emu/src/lab/mdet.mjs`,
+`emu/src/dev/dml.mjs`, the firmware's side with its evidence in `emu/src/fw/models.mjs` `mdet` and the board's `dml`;
+test `emu/test/test_mdet.mjs`.
+
+**The request path (D).** Each of TAKE's calls goes through the poster `0x5080ad65`: it copies the request into MDET's
+slot `0xa3375b98` (its kind byte the slot's busy mark) and posts `0x5080b987` with the slot to CPU 3 (sys_callrequest at
+`0x5080aed5`, ring [3][0]); a busy slot arms a 50 ms software timer that posts later (`0x5080ade0..0x5080adfa`,
+`0x5080af28`, `0x5080b017`). mdet_dl_start then waits for the CPU 0 flag `(0x60043184)` = 0x10a bit 8 without timeout
+(`0x5080a658..0x5080a66a`), which START sets. On CPU 3 `0x5080b987` runs dl_init_boot (`0x5080b1c6`, once by the magic
+`0x20202022` at `0xa3376c68`: the DML driver's init with the IRQ 285 attach, the request image, dl_prm_init), queues the
+slot (`0x50817244`), sets MDET_DL_REQ's flag `(0x600436d0)` bit 1 and clears the mark. MDET_DL_REQ (entry `0x5080bae8`)
+waits for that flag and takes the queue by kind: 1 START `0x5080bc34` (dl_init_start, LAF's start `0x50839498`, the CPU
+0 flag, then MDET_DL_LDL's flag `(0x600436d2)` bit 2), 2 END `0x5080bd49`, 3 CHANGE_MODE `0x5080be27` (LAF's end and
+start, MDET_DL_LDL's flag), 5 OFFER_YC_DATA `0x5080c033`. MDET_DL_LDL (`0x5080c8a1`) loads the kind's item when it is
+not the one loaded (`0xa3375c74` against `0xa3375c75`). The four flag words at `0x600436d0..d6` hold 0x3003..0x3006, CPU
+3 objects. The kernel's object calls compare an id's core bits (12..13) with the calling task's id, not with the core
+register `(0x8050)` (`0x5002cfb0`), and the object calls index the object's own core's kcb (`0x50014ec7`).
+
+**The offer (D).** The record take_mov packs (`0x503a4e2d`) carries, in the copy MDET keeps 12 bytes on, +16 the YC
+buffer's id, +18 / +20 the frame's width and height, +25 the movie flag, +44 a percentage calc_disp_area_lv hands to
+`0x50813294`, which returns at once for 100 and divides by it otherwise (a digital zoom, I; the buffer descriptor's
+halfword +14, the print's `digi_tel` or `mag`), +46 the aspect code. dml_start reaches the driver's start through the
+deferred call of IRQ 53 (`0x507f9099` -> `0x500503d4`; the run `0x507f90c1` -> `0x507f69cb`); the driver's start also
+reads back `+0x1a08`, `+0x1a48`, `+0x1a88` and `+0x1aac` when the system clock's record changes (`0x507f8f64`). LAF's
+start and end (`0x508395ce`, `0x508397d2`) write the byte `0xa337f084` (1 at `0x50839766`, 0 at `0x508398c8`), the byte
+S-SUBJECT wrote before, and LAF's setter refuses an offer's result while it is 0 (`0x50839f29..0x50839f5b`).
+
+**What the lab does (stand-ins; the player lists them).**
+
+| Label | What |
+|---|---|
+| S-TAKEMDET | TAKE's and take_mov's requests (TAKE_MOV does not run): with S-SCENE's live view and the setting at a kind, mdet_dl_start once, mdet_dl_change_mode at a change of kind, mdet_dl_end at OFF, and one offer per S-SCENE frame step with {frame number, a buffer id, 640, 480, still, 100 %, DISP_FRAME's aspect code}; the buffer id names a 640 x 480 YC buffer from S-HEAP, whose lock, address and release are answered (a bank the manager refuses natively); its pixels are not written |
+| S-MDETDL | the poster's return path serves ring [3][0] at once through S-CPU3 (which now dispatches by function and still fails on any other): `0x5080b987` in interrupt context, then a turn of each MDET_DL task whose flag is set, from its entry on a harness stack until it waits for its flag with the flag clear; CPU 3's flags 0x3003..0x3006 kept by the lab at OlyEvSt, iOlyEvSt, OlyEvWt and OlyEvCl; the offer's wait for the engine takes IRQ 53, runs the lab clock to S-DML's completion and delivers IRQ 285 (lab-delivered, its firmware-attached handler in interrupt context); a request that makes the firmware log an error stops the session |
+| S-LEARNDATA | learning_data_load's read of group 0x800f to `0x9511ca00` answered with the reader's record {address, 9,383,936} and nothing copied |
+| S-DML | the engine's registers as storage, the power words, a start that keeps the register image written since the last one (the debug API's `dml` op), zeroes 9 x (`0x9c18111c`) x 16 bytes at (`0x9c181118`) << 4, and completes after 10 ms of lab time (A-DML-1) with `+0x004` bit 14 (W1C) and IRQ 285 |
+
+MDET's DISP_FRAME posts (UP_FACE after LAF writes the frame table) wait for S-CPU3's next drain, which makes one
+DISP_FRAME turn with S-SUBJECT's post of the same tick; S-SUBJECT writes its frames again after each offer, because LAF
+writes the table natively (X: count 0, from no records) and posts UP_FACE.
+
+**Evidence (X, E143, `test_mdet.mjs`).** At each kind 1..5 the chain runs: start or change_mode, the kind's item to
+MDET_DL_LDL, and per offer one engine run, one IRQ 285 and one dml_start_callback; the 8 subject records at `0xa3376b5c`
+stay empty; no firmware error log during any request (the same distinct error logs as a session with the setting OFF).
+The register image of every run matches the firmware's tables read at run time through the property read: `0x9c181118` =
+MDET's global `(0x62f404e0)` >> 4 = `0x0b64f5c8`, `0x9c18111c` = object 0x3be4 [2457] = 32, `0x9c1811c4` = the kind
+block's word 263 = `(480 << 16) | 640`; the kind block's words 17 m (m < 8) at `0x9c180498 + 0x100 m`, the 20 bias words
+at `0x9c1811c8..0x9c181214` and the 12 resize words of a 640 x 480 frame at `0x9c180074..` and `0x9c180100..`; between
+two kinds the images differ exactly where those table words do (BIRD's bias block and the kind words). 969 registers are
+written before the first start (the power words with them), 938 before each later one; the YC planes' addresses go to
+`0x9c180024` / `0x9c180030` as the buffer's >> 4. At OFF, END runs, LAF's byte returns to 0 and no engine run follows.
+The FCS calls on CPU 3 (`0x508c0139`) run natively and give the flag 0, the record's, so the post-processing runs (5.2.1
+(b)); the power saver's byte `(0xa337f08b)` stayed 0 over 25 offers at five kinds with no detection (5.2.1 (c), its
+input still ?). S-SUBJECT's frames are drawn as before (`test_subject.mjs`). With a DISP_FRAME turn for LAF's empty
+table and then one for S-SUBJECT's frames in the same tick, the second drawing its frame, the composite showed none (X);
+why is ?.
+
+**Open.** Step C's next part: S-DML writing records from S-SCENE's subjects (5.2.1). 5.2.1 (a), LAF's step to the frame
+table from `0xa337b1e4`, is now native but untested with a detection. Whether CPU 3 really works in zero lab time around
+the engine's run (I) and the engine's run time (A-DML-1, ?). The YC frame's content and size (4.2) and whether TAKE
+offers every frame. The weights stay outside the lab (U6).
 
 ## 6. Corrections to other documents
 

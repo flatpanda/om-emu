@@ -101,12 +101,10 @@ with the AF library's unit `0x9bf00000` (`0x5095769d`), not with detection.
   `dml_start` (614), which calls `learning_data_select` `0x5080cbe9` (615), `dml_set_control_reg` `0x5080ccbe` (616),
   `dml_set_sp_reg` `0x5080dd8b` (617), `dml_set_sp_reg_norm` `0x5080e182` (618) and `dml_set_common_reg` `0x5080e2cc`
   (619: one function of 5,413 instructions, 3,737 of them `mov`s and 660 calls, the fwmap's "subject-detection network
-  evaluation" guess; it fills register images, I), stores a DRAM work address `0xb64e7c80` and two more words in the
-  request at `0x62f404da..0x62f404e4`, and starts the engine through `0x507f9099` -> `0x500503d4` -> `0x507f69cb`
-  (`0x5080cb91`). Names without a function placed yet: `dml_open`, `dml_close`, `dml_start_callback`,
-  `dml_set_control_reg_work`, `dml_set_control_reg_study`, `get_dml_result`, `get_dml_data_set`, `judge_dml_result`,
-  `get_index_yc_aspect`, `change_parts_data`. Whether one start runs the whole network or one part of it, and what
-  "study" configures, are ?.
+  evaluation" guess; it fills register images, I), stores the output buffer's address `0xb64f5c80` in MDET's
+  global `0x62f404e0` (beside `0x62f404da` and `0x62f404e4`; section 5.2), and starts the engine through `0x507f9099`
+  -> `0x500503d4` -> `0x507f69cb` (`0x5080cb91`). The rest of the names (`dml_open` .. `change_parts_data`) are placed
+  in section 5.2. Whether one start runs the whole network or one part of it, and what "study" configures, are ?.
 
 ### 2.2 PDT and TRC (`0x9be00000`)
 
@@ -288,8 +286,8 @@ rounding, accumulation and activations are unknown. Without an OM-1 to capture D
 could at best give plausible boxes, never a checked equivalence. The weights stay in the user's firmware file: an
 emulator would read them at run time like the rest of the image, and none enter the repository.
 
-Risks: the DML window `0x95xxxxxx` and the work buffer `0xb64e7c80` may need memory the lab does not map (U6);
-which core owns IRQ 285 (2.1); each kind change reloads 9.4 MB, which matters for the time model only.
+Risks: the DML window `0x95xxxxxx` and the feature-map area `0x94a12a00` (section 5.2) may need memory the lab does
+not map (U6); which core owns IRQ 285 (2.1); each kind change reloads 9.4 MB, which matters for the time model only.
 
 ### 5.1 Step A: the frame table, the setting and S-SUBJECT (2026-10-27)
 
@@ -381,6 +379,129 @@ covers part of the bottom edge), absent at OFF and BIRD, moving with the rider, 
 frame. Without the mode bit, or with an aspect pair of another code, the same session draws nothing (X, the controls
 run by hand).
 
+### 5.2 U4: the output heads (2026-11-07)
+
+Read statically in the host's objdump (`tools/mn10300dis.sh`) with scratch scripts that walk the register-image builders
+and join them with the driver's writers; nothing was executed. E146 v1.3 was read beside it as a second witness.
+
+**In brief.** The engine finishes the head itself: the anchor decode, the activations and a candidate list per class.
+MDET reads back boxes, not tensors: 9 classes x 32 records x 16 bytes at `0xb64f5c80`, each `{score, h, w, cy, cx}` in
+MDET's 640 x 480 frame with the score in Q12. A slot whose score is 0 is empty; there is no count or status register.
+No sigmoid, exponential or anchor arithmetic runs in software (D for what MDET does, I for what the engine does inside).
+
+**Functions (D, trace ids 600-630 against the name table at `0x509c08c0`).** dl_init_start `0x5080b8af` (600: it
+clears the class lists), dml_open `0x5080c561`, dml_close `0x5080c62c`, dml_start_callback `0x50812052` (620),
+dml_set_control_reg_work / _study `0x5080dc1d` / `0x5080dcd4`, get_dml_result `0x50812124`, get_dml_data_set
+`0x50812435`, get_index_yc_aspect `0x5081255c`, change_parts_data `0x50812698`, judge_dml_result `0x508127db`,
+delete_result / _ip_area / _detect_area `0x508128c3` / `0x50812990` / `0x50812b1d`.
+
+**The buffer (D).** The engine's address registers hold byte address >> 4: the input Y and C planes go to
+`0x9c180024` / `0x9c180030` as `yc >> 4` and `(yc + 640 x 480) >> 4`, with strides `0x9c180028` / `0x9c180034` = 40
+(`0x5080cd6d..0x5080cd9a`). dml_set_control_reg stores the constant `0x0b64f5c8` to slot 1 +688 (`0x5080cdb3`), which
+the slot-1 writer puts in **`0x9c181118`** (`0x507f7699`); dml_start stores `0xb64f5c80` to MDET's global `0x62f404e0`
+(`0x5080cb66`), which get_dml_result reads. `0x9c18111c` = 32 (object 0x3be4 [2457]) matches MDET's per-class count
+`(0x62f2395e)` = 32 (object 0x61a4 [1181], dl_prm_init `0x5080b3c2`); `0x62f404da` = 9 classes (`0x5080cb89`, for
+every kind); `0x62f404e4` = 512 bytes per class is only logged. The buffer lies in the DRAM the lab maps
+(`0xa0000000..0xb8000000`, `emu/src/fw/place.mjs`). E146: the same layout at `0xb64af780` (`0x50819c68`), 9 classes
+for all six kinds.
+
+| Record +k (u16, little-endian) | Mask | MDET's use (get_dml_data_set `0x508124de..0x5081250d`, get_dml_result) |
+|---|---|---|
+| +0 | `0x1fff` | score s; entry score = `s * 255 >> 12` (`0x508122b2`): 4096 -> 255; 0 = empty slot |
+| +2 | `0x3ff` | h, made even (odd -> minus 1) |
+| +4 | `0x3ff` | w, made even |
+| +6 | `0x3ff` | cy; in movie mode remapped (below) |
+| +8 | `0x3ff` | cx |
+| +10..+15 | - | not read |
+
+Record j of class c is at `base + 16 (32 c + j)` (D, the running index `0x50812296..0x508123cf`). get_dml_result writes
+slot j's entry at slot j of class list c (`0x62f241ac + 1028 c + 4 + 32 j`) but counts only the non-zero ones, and the
+area filters walk the first *count* slots (`0x50812a1c..0x50812ab4`), so the records must be packed from slot 0 (D;
+that the engine packs them is I). cx / cy are the centre: they are tested against the x / y bounds of every area and
+paired with w / h as centre +- size / 2 in calc_intersect `0x5081661b` and in the clamp at 639 / 479 (`0x50814972`) (D).
+
+**The engine's head (X, the walked register images; I for meaning).** The thirteen `+0x400 + 0x100 n` blocks are stage
+descriptors; nine are used, each with an input and an output in a work area at `0x94a12a00` (`_work`: obj +
+`0x094a12a0`, `0x5080dc81`), weights at item +0, +0x2400, +0x4800, +0xd800, +0x31800, +0xc1800, +0x1e1800, +0x421800,
++0x8a1800 and per-stage parameters at item +0x8f1800..+0x8f2680 (`_study`: obj + `0x09511ca0`, the learning data at
+`0x9511ca00`), the output of one being the input of the next (a lead for U3). The head stage takes stage 8's output
+(`0x9c181104` = `0x94e7b600`, strides `0x9c181108` / `0x9c18110c`), writes the records (`0x9c181118`, `0x9c18111c`), and
+is configured by dml_set_sp_reg and the kind block: `0x9c1811c4` = `(480 << 16) | 640`, the 20 per-kind "bias" words at
+`0x9c1811c8..0x9c181214` (dml_set_sp_reg `0x5080df6c..0x5080e12d`: ten widths then ten heights in Q16, I; items 0, 1,
+2 and 4 share one block, BIRD has its own; the heights are scaled by 360 / 480 and 340 / 480 for aspects 1 and 2), and
+three breakpoint / slope tables at `0x9c181120..0x9c1812bc` whose slopes rise and fall symmetrically (0xae, 0x1334,
+0x617c, 0x1334, 0xae), the shape of a piecewise-linear sigmoid (I). `0x9c181100` = 0x14, `0x9c181110` = 0xa and
+`0x9c181114` = 0x08ca000f are ?.
+
+**Aspects (D).** get_index_yc_aspect wants a 640-wide YC and gives 0, 1, 2 for heights 480, 360, 340, else 3
+(`0x508125ad..0x5081262c`); dml_set_sp_reg returns early on 3. The resize words (`0x9c180074..`, `0x9c180100..`) give
+640 x 480, 640 x 360, 640 x 340 with a vertical factor 0x1000, 0xc00, 0xb55 (I: the input stretched into a 480-row
+frame). The record layout is the same for every aspect. In movie mode (the offered record's byte +25, which
+calc_disp_area_lv `0x508131c5` reads as the movie flag, I) get_dml_result remaps `cy' = (cy - 240) * 360 / 480 + 240`
+for aspect 1 and `* 340 / 480` otherwise (`0x508122d5..0x50812308`), and leaves h alone: the engine's cy is in the
+480-row frame, its h already letterboxed (I, with the scaled anchor heights). Movie shapes are 16:9 and 17:9 (I).
+
+**Completion (D).** dl_init_boot copies the request `0xa3375c78` from ROM `0x609e9bf8` (`0x5080b2e0`): seven image
+pointers, slot 7 empty, +36 = `0x60833072`, the run-time address of dml_start_callback. The IRQ handler `0x507f6abd`
+calls it with 0; it sets event flag `(0x600436d6)` bit 4 (`0x508120c5`), on which offer_yc_data waits with timeout -1
+right after dml_start (`0x5080c20d..0x5080c224`; -1 read as "forever", I). One start, one wait, then the buffer:
+MDET reads no engine register after IRQ 285, and the driver reads only `+0x004`.
+
+**From records to subjects (D; the parameters are object 0x61a4's ROM image, identical for the five kinds, X).**
+
+1. Post-processing runs only when the FCS flag `(0xa3376b54)` equals the record's byte +25 (`0x5080c304`). Order:
+   get_dml_result, change_parts_data, judge_dml_result, stabilization, combination, calc_offer_data (`0x5080c33a..`).
+2. change_parts_data: kind 2 only, swaps the entries and counts of classes 7 and 8 (`0x508126e5..0x50812788`).
+3. judge_dml_result: a per-kind class mask (`0x62f2395f + 20 item`, all 0), then the IP area and the detect area from
+   FCS (`0x508c0139` -> `0x5099d8ab`, `0x5099dbf2`: x 0..639, y 0..479, or y 36..443 when object 0x85b1 reads 5). No
+   score threshold.
+4. stabilization: per class up to 50 tracks; a detection matches a track when its centre is within w / 2 + 100 and
+   h / 2 + 100 of it, the area ratio is 30..300 %, the mean area at least 100 px^2 (classes 0, 3, 6) or 10, the mean
+   score at least 50 (`0x50813d79..0x50813eb2`). A new track needs 6 hits to register ([915]; 10 when the score is
+   <= 100 and the area <= 37,200 px^2; `0x5081455a`), so a box first seen in one pass reports in the seventh (I from the
+   order). A registered track survives 8 missed passes ([905]; 4 or 6 for small or weak boxes), an unregistered 4.
+   The eight best registered tracks per class with the centre in the display area (calc_disp_area_lv `0x5081303c`:
+   e.g. 4:3 {0, 0, 640, 480}, 16:9 still or movie {0, 60, 640, 420}, 17:9 {0, 70, 640, 410}) go on (`0x50814b5b`).
+5. combination: classes 3g, 3g+1, 3g+2 are the body and two parts of group g = 0, 1, 2 (`0x50815041..0x508151bd`);
+   a body alone makes an entry; parts pair with bodies through judge_comb / judge_parts_comb (not read in detail).
+6. calc_offer_data: bodies, then lone part 2, then lone part 1, by score, at most 24; set_subject_detect_result
+   `0x50816d37` writes 8 records of 32 bytes at `0xa3376b5c` (after a word at `0xa3376b58`): +0 sbj_kind, +2 body
+   `{cx, cy, w, h, rel (score byte), dtct (1)}`, +12 part 1, +22 part 2. sbj_kind = `6 + 3 (kind - 1) + g`
+   (get_subject_kind's table `0x609e9ce0`); no string names the fifteen sub-kinds. offer_yc_data then hands
+   `0xa3376b58` to `mdet_laf_dl_set_subject_detect_result` `0x50839ede`, which copies 272 bytes to `0xa337b1e4` and runs
+   LAF (`0x50839934`); LAF's step to the frame table of 5.1 is not read.
+
+Corrections to 2.1: the word dml_start stores is `0xb64f5c80` (not `0xb64e7c80`, which occurs nowhere in the block),
+the output buffer rather than a work area, and `0x62f404da..0x62f404e4` are MDET's globals, not the request; "study"
+is the learning data's address and "work" the feature-map area; the names listed as unplaced are placed above.
+
+#### 5.2.1 What S-DML must write
+
+1. **When.** On `+0x010 = 1` (after the driver's writes): fill the buffer, then set `+0x004` bit 14 and raise IRQ 285.
+   Without the interrupt MDET waits forever (its timeout argument is -1; I).
+2. **Where.** `(0x9c181118) << 4` (E143 `0xb64f5c80`), `(0x9c18111c)` = 32 records per class, 16 bytes each, 512
+   bytes per class, classes 0..8: 4,608 bytes. Zero all of it on every start.
+3. **Layout per aspect.** The same for all aspects. Per class, records packed from slot 0; u16 little-endian: +0 score
+   (13 bits; use 0x0d00..0x1000, i.e. 207..255 after scaling: above 100 the 6-hit rule applies, and at most 4096
+   the byte `rel` does not wrap), +2 h, +4 w, +6 cy, +8 cx (10 bits each), +10..+15 zero.
+4. **One box of kind K (1..5), sub-kind group g (0..2), at the 640 x 480 rectangle {x0, y0, x1, y1}.** Class 3g, slot
+   0: cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, w = x1 - x0 and h = y1 - y0, both even. Still mode (record byte +25 = 0):
+   as is. Movie (byte +25 = 1, YC 640 x 360 or 640 x 340): cy = (cy' - 240) * 480 / 360 + 240 (or 480 / 340), h as is.
+   The centre must lie in the display area of the aspect code (`0x50813159`) and in x 0..639, y 0..479. Parts, if
+   wanted: classes 3g + 1 and 3g + 2, and for AIRPLANE the network's 7 and 8 are MDET's 8 and 7.
+5. **How long.** The same box (centre within w / 2 + 100 px, area within 30..300 %) on at least seven consecutive
+   starts; MDET then reports at `0xa3376b5c` a record with sbj_kind `6 + 3 (K - 1) + g` and body {cx, cy, w, h, rel =
+   the scaled score, dtct = 1}. It keeps reporting for up to 8 starts after the box stops.
+6. **Still open, and what blocks a drawn frame.** (a) LAF from `0xa337b1e4` to the frame table
+   (`mdet_laf_calc_not_tr_dl` `0x50837b05`, gate `0xa337f082`, U9): until it is read, S-DML can be checked at
+   `0xa3376b5c`, not on the panel.
+   (b) The FCS calls MDET makes on CPU 3 (`0x508c0139`, and `0x508c1de0` -> `0x509b1bc5` / `0x509b08b9` for the movie
+   flag) must run or be answered, and the flag must equal the record's byte +25. (c) The power saver (`(0xa337f08b)`,
+   `0x5085507a`) skips the engine after five passes of its idle condition; what feeds it is ?. (d) The weight load to
+   `0x9511ca00` and the work area at `0x94a12a00` lie in the `0x9xxxxxxx` window the lab does not map (U6); S-DML
+   needs neither, but learning_data_load's copy must land or be stubbed. (e) take_mov's offered record (w 640, h 480 /
+   360 / 340, buff_id, byte +25) and the YC buffer calls (`0x50534dd1`, `0x50534bbd`) must be served.
+
 ## 6. Corrections to other documents
 
 - `emu/fwmap/E143.labels.json`, gap@0x507f66d5: "DISP_SYNC device driver: 0x9c180000 ..." should read DISP_SYNC
@@ -400,7 +521,11 @@ run by hand).
 - **U2** Read (section 5.1): settings id 1682, object `0x1e71`, TAKE's context +206, take_mov, `mdet_dl_change_mode`.
 - **U3** The layer schedule: what the eight register groups and the thirteen `+0x400` blocks hold, and the tables
   `dml_set_*` read.
-- **U4** The output heads: their buffer, shapes and encoding, from `get_dml_result` / `get_dml_data_set`.
+- **U4** Read (section 5.2): the engine writes 9 x 32 records of `{score Q12, h, w, cy, cx}` at `(0x9c181118) << 4`
+  = `0xb64f5c80`; MDET decodes no tensor, reads no engine register, and runs class swap, area filters, 6-hit
+  stabilisation and body / part combination to 8 subject records at `0xa3376b5c`. Open: what the head's own words mean
+  (`0x9c181100`, `0x9c181110`, `0x9c181114`, the piecewise tables, the anchors' unit, the grid), which S-DML does not
+  need; judge_comb's pairing rules for parts; LAF's step from `0xa337b1e4` to the frame table (with U9).
 - **U5** The engine's numerics (operand widths, rounding, activations); not decidable statically.
 - **U6** What the `0x95xxxxxx` window is.
 - **U7** What PDT stands for and what it computes; which face IRQ is which engine; the face engines' clock name.

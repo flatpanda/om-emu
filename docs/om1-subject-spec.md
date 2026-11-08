@@ -14,6 +14,12 @@
 > frame table MDET's own code writes, with the aspect pair LAF derives from the offer and MDET's UP_FACE; S-SUBJECT no
 > longer writes on E143, and the frame mode's subject bit (S-TAKEFRAME) is the one stand-in left at the display seam.
 > The double DISP_FRAME turn of 5.3 is explained there.
+>
+> Update (2026-11-07, later): several subjects and parts run through MDET natively (section 5.6): S-SCENE's race preset
+> has two motorcycles, each with its helmet as a part; S-DML writes each body and each helmet; MDET's own combination
+> pairs every helmet with its own body (judge_comb's rule read), and LAF writes one list record per body, so DISP_FRAME
+> draws two frames. U9 is located: the main and part records need LAF's frame trace and the AF library's area, neither
+> of which the lab runs; it stays open.
 
 # OM-1 subject detection
 
@@ -279,7 +285,7 @@ the lens driver (`0x50817e11` from `0x5013f077`) and the init chain `0x501e94a5`
 |---|---|---|---|
 | S1 display | DISP_FRAME's inputs: MDET's frame table + UP_FACE, UP_LOCKON | what exists now (S-DISPFRAME runs DISP_FRAME on the lab CPU) | synthetic frames from the scene: S-SUBJECT (5.1); on E143 MDET's own table since 5.5, TAKE's subject bit S-TAKEFRAME's |
 | S2 MDET result | `mdet_laf_*` getters FCS calls; the subject record (4.3) | native FCS (AF module) | S-SUBJECT returns scene-derived records |
-| S3 DML device | `0x9c180000`, IRQ 285, the output buffer | CPU 3 natively; the `0x800f` read path; the output head layout | S-DML: on start, write heads that decode to the scene's boxes (its register file since 2026-11-07, 5.3; the scene's boxes as its records, 5.4) |
+| S3 DML device | `0x9c180000`, IRQ 285, the output buffer | CPU 3 natively; the `0x800f` read path; the output head layout | S-DML: on start, write heads that decode to the scene's boxes (its register file since 2026-11-07, 5.3; the scene's boxes as its records, 5.4; several subjects and their parts, 5.6) |
 | S4 the network | the engine's arithmetic | layer schedule, numerics | a reproduced DML (5, step D) |
 
 ## 5. Feasibility and plan (I)
@@ -288,7 +294,7 @@ the lens driver (`0x50817e11` from `0x5013f077`) and the init chain `0x501e94a5`
 |---|---|---|---|---|
 | A | S-SUBJECT at seam S1: S-SCENE's layers report screen boxes (the rider, the ball) with a kind; when the camera's subject-detection setting is on, write MDET's frame table and post UP_FACE (and UP_LOCKON for the tracked one) so DISP_FRAME draws subject frames natively, as S-AFOSD does for the AF frame | static: the frame table's record layout and how DISP_FRAME reads it (U1); the setting's property and its value per kind (U2) | about 1 week; done 2026-10-27 (5.1: UP_FACE only, UP_LOCKON is the AF module's) | adds S-SUBJECT; nothing retires |
 | B | S-SUBJECT moves to seam S2: the subject records answered to the AF module, which then chooses the AF point and uploads frames itself | native AF module (hle-gaps 4.4: TakeReady, CPU 1 and 3; months) | 2-3 weeks after that | S-AFOSD's frame part and step A's display writes |
-| C | MDET natively on CPU 3 with S-DML: a register-file model at `0x9c180000` (start `+0x010`, status `+0x004` bit 14 W1C, IRQ 285, the gates and clock 50), the `0x800f` load through the flash-read path, and on each start output heads synthesised so that MDET's own `get_dml_result` / `judge_dml_result` / stabilisation produce the scene's boxes | ROADMAP HLE step 4 (CPU 3); a flash read model or a resource reader at `0x501a921f`; the output head layout read from the post-processing code (U4); PDT / TRC and, on E143, the face engines as models or stand-ins | 4-6 weeks after CPU 3; part 1 (MDET_DL native at single call sites, S-DML with an empty output, the load stubbed), part 2 (S-DML's records from the scene) and part 3 (the frames from MDET's table) done 2026-11-07 (5.3, 5.4, 5.5) | S-SUBJECT retires (on E143 in part 3, 5.5); adds S-DML (and S-FACE on E143) |
+| C | MDET natively on CPU 3 with S-DML: a register-file model at `0x9c180000` (start `+0x010`, status `+0x004` bit 14 W1C, IRQ 285, the gates and clock 50), the `0x800f` load through the flash-read path, and on each start output heads synthesised so that MDET's own `get_dml_result` / `judge_dml_result` / stabilisation produce the scene's boxes | ROADMAP HLE step 4 (CPU 3); a flash read model or a resource reader at `0x501a921f`; the output head layout read from the post-processing code (U4); PDT / TRC and, on E143, the face engines as models or stand-ins | 4-6 weeks after CPU 3; part 1 (MDET_DL native at single call sites, S-DML with an empty output, the load stubbed), part 2 (S-DML's records from the scene) and part 3 (the frames from MDET's table) done 2026-11-07 (5.3, 5.4, 5.5); several subjects and parts the same day (5.6); the main and part records wait for LAF's frame trace and the AF library (U9) | S-SUBJECT retires (on E143 in part 3, 5.5); adds S-DML (and S-FACE on E143) |
 | D | A reproduced DML: run the real network on the frame | the layer schedule from the register builders (U3); the engine's arithmetic (U5); a reference to check against | months; bit-exactness ? | S-DML's synthetic heads |
 
 Notes on D, against the e7-bird-network work: there the model resource carried its own command stream, and the
@@ -504,7 +510,8 @@ is the learning data's address and "work" the feature-map area; the names listed
    wanted: classes 3g + 1 and 3g + 2, and for AIRPLANE the network's 7 and 8 are MDET's 8 and 7.
 5. **How long.** The same box (centre within w / 2 + 100 px, area within 30..300 %) on at least seven consecutive
    starts; MDET then reports at `0xa3376b5c` a record with sbj_kind `6 + 3 (K - 1) + g` and body {cx, cy, w, h, rel =
-   the scaled score, dtct = 1}. It keeps reporting for up to 8 starts after the box stops.
+   the scaled score, dtct = 1}. It keeps reporting for up to 8 starts after the box stops. (Corrected in 5.6: the track
+   survives that long, but a subject is reported only in a pass that detects it, X.)
 6. **Still open, and what blocks a drawn frame.** (a) LAF from `0xa337b1e4` to the frame table
    (`mdet_laf_calc_not_tr_dl` `0x50837b05`, gate `0xa337f082`, U9): until it is read, S-DML can be checked at
    `0xa3376b5c`, not on the panel.
@@ -630,7 +637,7 @@ after each offer. S-TAKEMDET's record already carries what LAF needs: DISP_FRAME
 hand it (I). Nothing in the lab writes the pair now.
 
 **The writer and UP_FACE (D, X).** After the pair, unless the bytes `0xa337f087` and `0xa337d948` take the branch that
-calls `0x506e6ac8` instead (`0x50839d79..0x50839da4`, TAKE_MOV's area, I; not met in the lab), LAF's setter calls
+calls `0x506e6ac8` instead (`0x50839d79..0x50839da4`; mdet_laf_dl_set_tracking_status, read in 5.6), LAF's setter calls
 `0x5083a761` (entered at `0x5083a766` by its call at `0x50839db5`) and posts UP_FACE (`0x50839dba`). `0x5083a761` runs
 `mdet_laf_calc_not_tr_dl` (`0x50837b05`), writes the main and part flags 0 and the count 0 (`0x5083a843..0x5083a850`)
 and then, for each box n whose byte `0xa337d53c + n` is 1, a list record of the box at `0xa33790b2 + 8 n`
@@ -692,10 +699,167 @@ runs S-SUBJECT's writes today. It stays for a body that would give the first wit
 session of `test_subject.mjs` runs it with the mdet facts removed before the session opens.
 
 **Open.** After a display switch (`lv`) from the TFT the EVF composite has no IMG3 plane at all, so no subject frame is
-shown there; a session started on the EVF shows it (X, the same before and after this step; not investigated). Part
+shown there; a session started on the EVF shows it (X, the same before and after this step; located in 5.6). Part
 records and several subjects per class need S-SCENE subjects with parts or a second subject (it has one, the rider): not
 done. The state `0xa337f082` = 1 and its main and part records (U9), the branch to `0x506e6ac8`, and when TAKE clears
 request 1 (U10) are not read.
+
+### 5.6 Several subjects and parts through MDET; U9 located (2026-11-07)
+
+S-SCENE gains a scene with two subjects of one kind, each with a part; S-DML writes every body and every part as the
+engine's records; MDET's own combination pairs them and LAF and DISP_FRAME draw one frame per body, all natively. U9 is
+read as far as the lab can follow it. Code: `emu/src/lab/scene.mjs` (the race preset), `emu/src/lab/subject.mjs`
+(`frames()` places the parts too), `emu/src/lab/mdet.mjs` (S-DML's records); tests `emu/test/test_mdet.mjs`,
+`emu/test/test_subject.mjs`.
+
+**S-SCENE (the harness's, not firmware evidence).** A layer may carry an offset `x_m` (m on its plane at lab time 0);
+the preset `race` has the sky and two layers of the new pattern `racer`, a motorcycle with its rider side on: `far` at
+14 m, 2.4 m to the left, 3 m/s, and `near` at 8 m, 1.2 m to the right, 4 m/s. `SUBJECTS.racer` is a motorsport subject
+(tyres to helmet top) with one part, `helmet`; `subjectsAt` reports each subject's parts, clipped like its box. The
+other presets render, focus and report as before (no offset, the rider has no part), and the defaults are unchanged.
+
+**Which part is which (D, I, ?).** No string names a group or a part: the code says parts1 / parts2, `parts[0]` /
+`parts[1]`, `dl_target_part`, `dl_cp_part2_to_body_flg` (D). What the code orders (D): combination pairs part 1 into
+part 2 as well as into the body (the (2, 1) call below); calc_offer_data offers bodies, then a lone part 2, then a lone
+part 1 (5.2); and LAF tries subject 0's parts as a target in the order of object 0x79a2's words 159..161, which read
+1, 2, 0 (X, through the property read; mdet_laf_init_param `0x508215df..0x5082162a` copies them to `0xa337ed18..1a`,
+and mdet_laf_dl_internal_start walks them, below). So part 2 is the larger part that holds part 1, part 1 the most
+specific (I: a head around an eye). S-DML writes the racer's helmet as part 2, class 3g + 2 (I), in group 0 (the
+scene's subjects carry no sub-kind). Which object each part is per kind (helmet, eye, cockpit) is ?. For AIRPLANE
+S-DML writes MDET's classes 7 and 8 the other way round, as the network does (change_parts_data, 5.2); no AIRPLANE
+subject has a part yet.
+
+**The pairing rule (D, read in the VM's objdump; the trace ids are the logger table's at `0x509bec34 + 36 id`).**
+combination (`0x50814eb7`, trace id 648) runs, for each group g of classes 3g..3g + 2 (`0x50815050..0x50815100`):
+regist_comb_list (649, `0x50815211`), judge_comb (body, part 1), judge_comb (body, part 2), judge_parts_comb (654,
+`0x50815d20`) for part 2, judge_comb (part 2, part 1), judge_parts_comb for part 1. judge_comb (650, `0x508153b1`) takes
+each stabilised entry of the first class (18 bytes: +2 cx, +4 cy, +6 w, +8 h) as the box cx +- w / p0, cy +- h / p0,
+widened by p1 % of w and h on each side and clamped to 639 / 479 (`0x50815592..0x5081565b`); for each entry of the
+second class not yet taken (its +14 is 0), the part's box cx +- w / 2 must intersect that box
+(`0x50815716..0x50815739`); of those, the one with the smallest calc_correlation (652, `0x50815a0f`) wins, the earlier
+on a tie:
+
+    corr = a * (|dcx| * 100 / 640) / 100 + b * (|dcy| * 100 / 480) / 100
+         + c * ((|dw| * 100 / 640) * (|dh| * 100 / 480) * 100 / 10000) / 100
+
+(for the body with part 1 and for part 2 with part 1, a part whose halfword +12, an id (I), matches the one this entry
+was paired with before is taken at once: `0x50815797..0x508157e4`). judge_cor_min_thr (651, `0x508158a5`) pairs it when
+corr is below the threshold, copying the part into the body's entry (`0x5081594b..0x508159bb`). The parameters per kind
+are at `0x62f240de + 40 item` (`0x508154a1..0x50815507`: +0 p0, +1 p1, +2 a, +4 b, +6 c, +8 the threshold, +10..+19 the
+same for part 2 with part 1, +20..+39 a byte per class). X, read at run time, the same for all five kinds: p0 2, p1 0,
+a = b = c = 100, threshold 10000, the class bytes 0; so the rule that a body of a class whose byte is 1 does not pair
+when more than one part overlaps it (`0x50815804..0x50815822`) never applies, and since corr cannot reach 300 a part
+pairs with the body whose box it overlaps, the nearest in centre and size when several do (I from the arithmetic).
+S-DML places each part at its own box; nothing is placed for the rule.
+
+**MDET with several subjects and parts (X).** Scratch probes with records written by hand (not committed): two bodies
+in class 0 gave two subject records of sbj_kind 6 and two list records; a body with part 1 and part 2 inside it one
+record with both parts; a part 2 at (600, 50), outside the body, two records, the body alone and a lone part 2 (body
+empty); classes 3..5 sbj_kind 7. With the race held still (`test_mdet.mjs`): S-DML's class 0 holds the two bodies, class
+2 the two helmets, class 1 nothing; MDET reports nothing for [915] = 6 runs, then two records, far {142, 298, 150, 120,
+223, 1} with part 2 {159, 249, 22, 22, 223, 1}, near {475, 341, 264, 210, 223, 1} with {503, 255, 38, 38, 223, 1}, part
+1 empty, each helmet with its own body. LAF keeps its subjects as [3][8] arrays, body, part 1, part 2 by 8 subjects:
+the valid bytes at `0xa337d53c`, cx, cy, w, h as halfwords at `0xa337d554`, `0xa337d584`, `0xa337d5b4`, `0xa337d5e4`
+(the bodies in row 0, the helmets in row 2), and its list writer `0x5083a761` writes row 0 alone: two list records,
+the bodies'. A lone part gets no LAF entry and no frame. DISP_FRAME draws the two list frames, each on its racer
+(`test_subject.mjs`); main and part flags stay 0.
+
+**Tracks across a change of scene (X).** MDET's stabilisation keeps a registered track through passes without a
+detection and through mdet_dl_end and start; a detection inside its gate takes it over at once. Switched straight from
+the rider to the race, the far racer (centre 178 px from the rider's, area 32 % of it) became the rider's track and was
+reported at once; through OFF and ON the near racer was reported at once with the rider's size (232 x 244), not its own;
+once a pass gave a box that matched no racer (x 528, the far racer's y and size).
+A subject is reported only in a pass that detects it (the rider was gone at the first pass without it), which corrects
+5.2.1 item 5: the track survives [905] = 8 passes unreported. The test shows a scene without subjects for 10 passes
+before the race, so both racers start as new tracks.
+
+**U9: what sets `0xa337f082` (D; X where marked).**
+
+1. Its one store of 1 is in mdet_laf_dl_internal_start (187, `0x50834ffd`): with `0xa337ed1c` not 1 it walks the
+   target parts `0xa337ed18..1a` and takes the first part p of subject 0 that is valid (`0xa337d53c + 8 p`) with a
+   reliability (`0xa337d614 + 8 p`) above its halfword threshold (`0xa337ed1e + 2 k`), part 0 always, another only when
+   `0xa337f083` is 2 and `0xa3378122` is 1; it stores p at `0xa337f080`, copies 4 bytes from `0xa337ed24 + 4 (k + 1)` to
+   `0xa337ed04`, and then sets `0xa337f081` and `0xa337f082` to 1 and calls mdet_laf_dl_set_tracking_status_force(1)
+   (229, `0x506e6bc6`) (`0x508350b7..0x50835161`). Object 0x79a2's thresholds (words 164..166) read 65535, 65535, 0
+   (X), so with them the target is the body; mdet_laf_init_param, which copies them, has not run in the lab, where
+   `0xa337ed18..` stay 0 (X).
+2. It is called only from mdet_laf_exec_trace (96, `0x50825e4f`) and mdet_laf_start_set_prm (71, `0x50820197`), each
+   when `0xa337d948`, subject 0's candidate byte, is 1. exec_trace runs in mdet_laf_end_frame_calc_cpu_func (242), an
+   event handler of MDET_CALC_MAIN_CPU3 (its dispatch, `0x50800c38`). The main and part writer of 5.1 is part of
+   mdet_laf_calc_offer_data (124, `0x50829b59`), called from exec_trace (`0x50825ed4`), start_set_prm (`0x50820844`)
+   and `0x50823425`. None of these runs in the lab (X: a probe's count on `0x50835002` stayed 0; 5.5: the writer's count
+   stores never executed). MDET_CALC_MAIN_CPU3 does not run, and what posts its end-frame event is not read (LAF's frame
+   trace with EMS1 and EMS2 and take_mov's LAF callbacks, I from the names of trace ids 905-939).
+3. The candidate bytes `0xa337d948 + n` are written by mdet_laf_dl_main_subject_select_candidate (185, `0x50834992`)
+   (mdet_laf_dl_subject_update, 186, swaps the nearest candidate into slot 0), which mdet_laf_dl_main_subject_detect
+   (184, `0x5083465f`) calls; LAF's setter calls that on every offer (`0x50839d74`), so it runs in the lab (X).
+   select_candidate clears the bytes and stops when the result's byte +262 (`0xa337b6fa`) is not 0 and `0xa337f060` is
+   not 1; that byte is the offer record's +12, which MDET's print names `mag` (`0x5081745b..0x50817476`) and take_mov
+   packs from the YC buffer descriptor's byte +18 (`0x503a4ea5`); what sets it is not read. Otherwise a subject (LAF's
+   row 0) is a candidate when its box overlaps the area `0xa337f050..56` (x0, y0, x1, y1) and, with `0xa337f060` = 1 and
+   no main subject (or the caller's flag), lies within `0xa337ee94` / `0xa337ee96` of the caller's point; it is marked
+   when its cx and cy are at least `0xa337ee8c` and `0xa337ee90` (100 and 100 in the lab, X; their meaning is ?)
+   (`0x50834a90..0x50834d0d`). The area is `0xa337f06a..70` or `0xa337f072..78` by `0xa337f060`, `0xa337f068`, the
+   candidate byte and `0xa337a271` (`0x508346b2..0x5083473e`), all from the 17 halfwords LAF's setter copies to
+   `0xa337f05a..` (`0x50839aee..0x50839b03`, under the conditions at `0x50839abe..0x50839aec`) from the record the AF
+   library's CPU 3 call `0x508c00a3` fills (`0x508399c8`). In the lab that call runs natively but nothing drives the AF
+   library's state: the area is (0, 0)..(33, 36) and `0xa337f060` is 0 (X), so only a subject reaching the top left
+   corner could be a candidate; the rider and the racers never do.
+4. With a candidate, LAF's setter takes the branch of 5.5 (`0x50839d79..0x50839da4`): with `0xa337f087` = 0 and the
+   candidate byte 1 it calls mdet_laf_dl_set_tracking_status(1) (228, `0x506e6ac8`: unless `0xa337bbdc & 0xc0` is 0x40
+   and `0xa337bbdc & 6` is 4, the force variant writes `0xa337f085`), with `0xa337f087` = 1 and no candidate it calls it
+   with 0, and in either case it writes no table and posts no UP_FACE that offer. mdet_laf_dl_status_change_callback
+   (217, `0x508393dd`), after each offer, copies the tracking status (`0x506e6a2c`: `0xa337f085`) to `0xa337f087` and
+   posts a change (`0x508026a1` -> `0x50801a5b`). X, a scratch probe with a body record at (110, 110, 220, 220), which
+   overlaps that area: at its seventh run the candidate was marked (`0xa337d948` = 1, `0xa337f058` = 1), the tracking
+   status set (`0xa337f085` = 1, then `0xa337f087` = 1), and the session stopped inside the callback's post with a trap
+   at pc 0x16; why is not read. `0x50835002` was not entered.
+
+So the main and part records, and the kind 7 / kind 8 frames DISP_FRAME draws from them, need the AF library's area
+and mode (FCS: the AF module of step B, CPU 1 and CPU 3) and LAF's frame trace on MDET_CALC_MAIN_CPU3. Neither is one
+input a minimal stand-in could give as the camera would (I), so U9 stays open with its inputs named. Nothing in the lab
+writes `0xa337f082` or the candidate bytes.
+
+**What the lab does (changed stand-ins).** S-DML writes every subject of the kind S-SCENE shows (up to the table's 8)
+as a body record in class 0 and each part it names at the part's own box in its class of the group (the helmet in class
+2), all with the score 0x0e00; S-TAKEMDET is unchanged. S-SCENE has the race preset.
+
+**Evidence (X, E143).** `test_mdet.mjs`: after 10 passes without a subject, the race held still: S-DML's class 0
+holds the two bodies and class 2 the two helmets ({cx, cy, w, h, score} from the placed boxes); after [915] = 6 runs no
+subject and no frame; after the seventh two subject records of sbj_kind 6, each body with its own helmet as part 2 and
+part 1 empty; MDET's table holds the two bodies as list records, main and part flags 0; OFF empties it and takes the
+subject bit away. `test_subject.mjs`: the racers' boxes and helmets against the pixels S-SCENE renders; in play, no
+frame after six offers, two frames after the eighth, each on its racer's panel box (at least 70 % of each edge), and
+none at OFF.
+
+**The EVF after `lv` (5.5's open bug), located, not fixed (X; D where marked).** Symptom: in a session started on the
+TFT, after `lv` to the EVF MDET's table keeps its frame (status `frames` 1, device `evf`, its writer running each
+offer), but the EVF composite has no IMG3 plane at all; a session started on the EVF shows it. The EVF channel's IMG3
+registers after the switch are its generic set-up (format 0, PLANC 0x100, DMALD 0x2b8, DMABN 0xc8, no address, DMAEN
+0x27 without bit 3), where an EVF start has the face plane (format 2, PLANC 0x1000, DMALD 0x40, DMABN 0x38, DISP_FRAME's
+buffer, DMAEN 0x2f). Candidates were (a) DISP_FRAME keeping the TFT as its output, (b) the A19 opt-in not set on the EVF
+channel, (c) the face plane's set-up not running for the EVF. (b) is out: both channels carry the A19 bit. (a) is out:
+DISP_FRAME's own loop sees the new display state (`0x5100dfbc`: 1 -> 2), closes the TFT (`0x5100d19e`, its FD control
+with mask 1 and command 4) and reopens for the EVF (`0x5100d1db`). (c) holds: DISP_FRAME's draw for state 2 stops at
+`0x5100da41` because `0x501c441d` -> `0x501dccfc` returns the EVF's frame-state byte (`0xa32ddaf4 + channel`), which is
+1, so it never sends the FD control (`0x501c42be`, command 2) whose handler configures the output's face plane
+(`0x501dcb1a`) (D for the branches, X for the values). The byte is 1 from the channel's init (`0x501d92bc`, which the
+switch's OPEN runs again) and becomes 0 only through the display set-up `0x501da840`, whose 0xFACE entry calls
+`0x501dcd0c(output, 0)` (`0x501daab9`); that set-up runs in DISPLAY cmd 18 for the shown output
+(`0x501c3324..0x501c339c`), and cmd 18 is the display manager's asynchronous request (S-DISPQ) of a shooting-screen
+transition (posted from `0x503e8b31` -> `0x503eb960`). At session start cmd 18 came three times for the TFT; the lab's
+switch made only cmd 17 for the EVF, never cmd 18. A menu opened and closed after the switch posts it: the EVF's byte
+goes to 0 and the EVF's IMG3 gets the face plane natively, but with PLANC 0x1100 (the 0x100 bit written at
+`0x501dfb8e`), which the VSC model's A19 does not define, so the composite stops with PLANC_UNOBSERVED. So the missing
+frame is the lab's: its live switch (DISPLAY OPEN, H-RESEND, H-EYESTATE, H-CONNECT 131 and the application's re-entry)
+produces no shooting-screen transition that posts cmd 18, which the camera's switch presumably does (I: not read); and a
+face plane set up after a switch carries a PLANC value the model does not know (?). Neither is fixed: which of the GUI's
+or the display manager's steps posts cmd 18 at a real switch, and what PLANC 0x1100 does, are not read; a write of the
+EVF's byte by the lab would hide the first, and accepting 0x1100 would guess the second.
+
+**Open.** U9 (above); which object each part is per kind; subjects of other groups and kinds with parts; the AIRPLANE
+swap with real part records; one score for every record; the tracking frame (UP_LOCKON, step B); the trap after a
+change of tracking status; the EVF after `lv` (above).
 
 ## 6. Corrections to other documents
 
@@ -720,16 +884,23 @@ request 1 (U10) are not read.
   = `0xb64f5c80`; MDET decodes no tensor, reads no engine register, and runs class swap, area filters, 6-hit
   stabilisation and body / part combination to 8 subject records at `0xa3376b5c`. Open: what the head's own words mean
   (`0x9c181100`, `0x9c181110`, `0x9c181114`, the piecewise tables, the anchors' unit, the grid), which S-DML does not
-  need; judge_comb's pairing rules for parts; LAF's step from `0xa337b1e4` to the frame table (with U9): measured in
-  5.4 for one body, which LAF writes as the list record of its box (X), through the writer `0x5083a761` (5.5).
+  need. LAF's step from `0xa337b1e4` to the frame table (with U9): measured in 5.4 for one body, which LAF writes as
+  the list record of its box (X), through the writer `0x5083a761` (5.5), and in 5.6 for two bodies with parts (a list
+  record per body; the parts in LAF's rows 1 and 2, not drawn). judge_comb's pairing rule is read (5.6: a part pairs
+  with the body whose box it overlaps, the nearest in centre and size); which object each part is per kind is ?.
 - **U5** The engine's numerics (operand widths, rounding, activations); not decidable statically.
 - **U6** What the `0x95xxxxxx` window is.
 - **U7** What PDT stands for and what it computes; which face IRQ is which engine; the face engines' clock name.
 - **U8** E134's detection lineage (blocks `0x010f` and `0x0111`) and E139's.
 - **U9** MDET's state `0xa337f082 = 1`, in which its writer fills the main record (drawn as kind 7, colour 4) and the
-  part record (kind 8, under frame mode bit `0x10`): when MDET enters it (a selected or tracked subject, I) and which
-  of TAKE's conditions sets request 32. In the lab's sessions the byte stayed 0, and the writer that runs is another,
-  `0x5083a761`, which writes the list alone; `0x5082ac64..0x5082af98` never ran (X, 5.5).
+  part record (kind 8, under frame mode bit `0x10`). Located in 5.6 (D, X): mdet_laf_dl_internal_start sets it, for a
+  target part of subject 0, from LAF's frame trace on MDET_CALC_MAIN_CPU3 (exec_trace, which also runs the main and
+  part writer) when subject 0 is a main-subject candidate; candidates are the subjects that overlap the AF library's
+  area, which the setter copies from the CPU 3 FCS call `0x508c00a3`. In the lab the trace does not run and the area is
+  the undriven (0, 0)..(33, 36), so the byte stays 0; a candidate made by hand set the tracking status and then stopped
+  the session with a trap at pc 0x16 in the status callback's post (not read). Open: what posts the end-frame event,
+  the AF library's area in a running camera, what the offer's `mag` byte is, the thresholds `0xa337ee8c` / `0xa337ee90`,
+  which of TAKE's conditions sets request 32, and that trap.
 - **U10** When TAKE's live-view request clears the subject-frame bit (`0x506d8dea`'s conditions in a running camera),
   and how `mdet_dl_start` is given the first kind. The lab's S-TAKEFRAME sets the bit while MDET runs on the live scene
   (5.5, I).

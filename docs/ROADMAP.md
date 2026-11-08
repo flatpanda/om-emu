@@ -697,14 +697,17 @@ the register builders decoded and the engine's numerics, which cannot be checked
 |---|---|---|
 | A | S-SUBJECT at DISP_FRAME's inputs: scene-derived subject frames in MDET's frame table, UP_FACE posted, when the subject-detection setting (settings id 1682) names a kind. Done 2026-10-27 (spec 5.1: U1 and U2 read, the frames drawn natively; UP_LOCKON is the AF module's request, so it moves to B) | about 1 week |
 | B | S-SUBJECT at MDET's results to the AF module, which then asks for the tracking frame (UP_LOCKON) itself | 2-3 weeks after native FCS |
-| C | MDET natively on CPU 3 with S-DML, a register-level engine model whose output heads decode to the scene's boxes. Part 1 done 2026-11-07 (spec 5.3): MDET_DL runs natively on the lab CPU at single call sites from TAKE's calls (S-TAKEMDET) through dml_start, IRQ 285 and dml_start_callback to MDET's subject records and LAF (S-MDETDL; the learning data's copy stubbed, S-LEARNDATA), S-DML a register file whose output is empty. Part 2 done the same day (spec 5.4): S-DML writes S-SCENE's subjects as the engine's records, MDET's stabilisation reports them from the seventh run and LAF fills the frame table's inputs natively. Part 3 done the same day (spec 5.5): DISP_FRAME draws MDET's own frame table (LAF's aspect pair from the offer, MDET's UP_FACE), S-SUBJECT writes nothing on E143 and the frame mode's subject bit is S-TAKEFRAME's | 4-6 weeks after HLE step 4's CPU 3 for the rest |
+| C | MDET natively on CPU 3 with S-DML, a register-level engine model whose output heads decode to the scene's boxes. Part 1 done 2026-11-07 (spec 5.3): MDET_DL runs natively on the lab CPU at single call sites from TAKE's calls (S-TAKEMDET) through dml_start, IRQ 285 and dml_start_callback to MDET's subject records and LAF (S-MDETDL; the learning data's copy stubbed, S-LEARNDATA), S-DML a register file whose output is empty. Part 2 done the same day (spec 5.4): S-DML writes S-SCENE's subjects as the engine's records, MDET's stabilisation reports them from the seventh run and LAF fills the frame table's inputs natively. Part 3 done the same day (spec 5.5): DISP_FRAME draws MDET's own frame table (LAF's aspect pair from the offer, MDET's UP_FACE), S-SUBJECT writes nothing on E143 and the frame mode's subject bit is S-TAKEFRAME's. Several subjects and parts the same day (spec 5.6): S-SCENE's race preset (two motorcycles, each with its helmet), S-DML writes every body and part, MDET's own combination pairs each helmet with its body and DISP_FRAME draws a frame per body; the main and part records (U9) need LAF's frame trace and the AF library, located but not run | 4-6 weeks after HLE step 4's CPU 3 for the rest |
 | D | a reproduced DML network | months; bit-exactness ? |
 
-Recommended: A is done; C's parts 1 to 3 are done at single call sites (the scene's boxes through MDET's own
-stabilisation to the frames DISP_FRAME draws from MDET's table; S-SUBJECT retired on E143), the rest (part records and
-several subjects, the face engines, PDT / TRC) with HLE step 4; D only with hardware to check against. Small follow-ups:
-when MDET fills its main and part records (spec U9), when TAKE clears the subject-frame bit (U10), and the EVF composite
-without the frame plane after a display switch (spec 5.5).
+Recommended: A is done; C's parts 1 to 3 and several subjects with parts are done at single call sites (the scene's
+boxes through MDET's own stabilisation and combination to the frames DISP_FRAME draws from MDET's table; S-SUBJECT
+retired on E143), the rest (the face engines, PDT / TRC, LAF's frame trace) with HLE step 4; D only with hardware to
+check against. Follow-ups: the main and part records (spec U9: LAF's frame trace on MDET_CALC_MAIN_CPU3 and the AF
+library's area, which B's native FCS would give), when TAKE clears the subject-frame bit (U10), and the EVF composite
+without the frame plane after a display switch (spec 5.6: the lab's switch posts no DISPLAY cmd 18 for the new output,
+so the EVF's frame-state byte stays 1 and DISP_FRAME never sets up its face plane; a face plane set up later reads
+PLANC 0x1100, which the VSC model does not define).
 
 ## Longer term: full-boot LLE
 

@@ -211,7 +211,8 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   clears the GUI's information for the capture and the rec view; during the rec view S-RECVIEW holds S-SCENE's frame
   of the capture on the live-view plane (the lab develops no image).
 - With the camera's subject detection on (settings id 1682: 1 motorsports .. 5 animals; the debug API's token
-  `SET:1682=1` sets it) and S-SCENE's live view showing a subject of that kind (the moving preset's rider stands for motorsports),
+  `SET:1682=1` sets it) and S-SCENE's live view showing a subject of that kind (the moving preset's rider and the race
+  preset's two motorcycles stand for motorsports, the motorcycles' helmets for their parts),
   DISP_FRAME draws subject frames on it natively from MDET's own frame table: CPU 3's MDET_DL code runs natively on the
   lab CPU (S-TAKEMDET, S-MDETDL, S-LEARNDATA; `src/lab/mdet.mjs`): TAKE's start and change of kind, a YC frame offer per
   tick and scene step, the DML engine's register images and IRQ 285 (S-DML, `src/dev/dml.mjs`; the debug API's `dml` op
@@ -219,7 +220,8 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   posts UP_FACE; S-TAKEFRAME adds the frame mode's subject bit while MDET runs. The engine runs no network: S-DML writes
   S-SCENE's subjects of the kind as its records, and MDET's own stabilisation reports them from the seventh offer, so
   the first frame comes with it (seven WAITs of a frame step in an `--idle off` session); the frames follow the subject
-  as it moves and go when the setting is off (`docs/om1-subject-spec.md` 5.3 to 5.5). On a body without MDET_DL,
+  as it moves and go when the setting is off (`docs/om1-subject-spec.md` 5.3 to 5.5). With several subjects each is a
+  frame; MDET's own combination pairs each helmet with its motorcycle (5.6). On a body without MDET_DL,
   S-SUBJECT (`src/lab/subject.mjs`) would write the table itself (none today; spec 5.1).
 - With the control op camapp at 2 a new session runs the HLS components too (off otherwise: the GUI then shows its
   shooting panel over a black image area): S-CAMAPP starts the OXF main thread (task 57 HIGHLEVEL_MAIN), S-BOOTDONE

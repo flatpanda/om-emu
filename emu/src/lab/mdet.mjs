@@ -13,7 +13,7 @@
 //   S-TAKEMDET  TAKE's and take_mov's requests, which do not run in the lab (TAKE_MOV is dormant): while the camera's
 //               subject-detection setting names a kind (1..5) and S-SCENE's live view shows the live scene (S-SUBJECT's
 //               conditions), mdet_dl_start(kind) once, mdet_dl_change_mode(kind) at a change of kind, and one
-//               mdet_dl_offer_yc_data per S-SCENE frame step with the record {frame number, buffer id, 640, 480, still
+//               mdet_dl_offer_yc_data per 1/15 s of lab time (S-SCENE's frame step) with the record {frame number, buffer id, 640, 480, still
 //               (movie flag 0), no digital zoom (100 %), DISP_FRAME's aspect code}, its other fields 0; at OFF,
 //               mdet_dl_end. Each runs natively on the lab task. The
 //               buffer id names a 640 x 480 YC buffer (Y plane, then C plane: 614,400 bytes) the stand-in takes from
@@ -76,6 +76,9 @@ const LIMIT = 2000000;
 // manager refuses banks of 119 and up)
 const YC_W = 640, YC_H = 480, YC_BYTES = 2 * YC_W * YC_H, YC_ALIGN = 128, YC_ID = 0x7701;
 const STILL = 0, NO_ZOOM = 100;
+// S-TAKEMDET's pace: an offer per 1/15 s of lab time, S-SCENE's frame step (play.mjs SCENE_STEP_NS), still scene or
+// moving (I: take_mov offers each live-view frame; the lab's live view moves at that step)
+const OFFER_NS = 1e9 / 15;
 
 export class MdetDl {
   // session: the PlaySession; camapp: its CamApp (S-CPU3's drain, S-SUBJECT's setting and conditions); f: the model's
@@ -84,7 +87,7 @@ export class MdetDl {
     this.s = session; this.camapp = camapp; this.f = f;
     this.installed = false;
     this.kind = null;          // S-TAKEMDET: the kind MDET was started with or changed to, null before a start / after END
-    this.step = null;          // the S-SCENE frame step last offered
+    this.step = null;          // the offer step (OFFER_NS) last offered
     this.requests = [];        // [api name, kind or frame] of every request made
     this.offers = 0;
     this.flags = new Map();    // S-MDETDL: CPU 3's flags by id -> pattern
@@ -241,7 +244,7 @@ export class MdetDl {
       if (this.kind === null) this.request('start', kind);
       else if (kind !== this.kind) this.request('change_mode', kind);
       this.kind = kind;
-      const { step } = s.scene_step();
+      const step = Math.floor(s.lab.lab_time() / OFFER_NS);
       if (step !== this.step) { this.step = step; this.offer(); }
     } else if (kind === 0 && this.kind !== null) {
       this.request('end', 0);

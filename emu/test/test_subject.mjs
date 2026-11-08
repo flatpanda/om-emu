@@ -201,23 +201,25 @@ export async function subjectSession() {
       // rider is wholly inside the 4:3 image area, each on the rider at the scene time of the offer whose result the
       // table holds or of the one before: the published frame shows DISP_FRAME's buffer latched at the display boundary
       // it was composed at, and the published status can follow an offer made in the tick at that boundary, whose
-      // buffer awaits the next one (spec 5.5); the frame moving with it
+      // buffer awaits the next one (spec 5.5), or of the one before that: an offer at which LAF's tracking status
+      // changes (the rider entering or leaving the AF area) writes no table, so the table can hold the result of the
+      // offer before it (spec 5.7); the frame moving with it, until it has stood at three places
       await pl.input({ type: 'token', token: 'SET:1682=1' });
       await pl.input({ type: 'scene', change: { layer: { index: 1, speed: 3 } } });
       const seen = [];
-      for (let i = 0; i < 60 && seen.length < 3; i++) {
+      for (let i = 0; i < 60 && new Set(seen).size < 3; i++) {
         await offer(1);
         [f] = await pl.frame();
         s = await pl.status();
         const t = s.camapp?.subject?.t ?? null;
         if (!s.camapp?.subject?.frames || t === null) continue;
-        const cand = [t, t - 1 / 15].map((u) => [u, panelBox(3, u)]).filter(([, b]) => b && b[0] >= 50 && b[2] <= 850);
+        const cand = [t, t - 1 / 15, t - 2 / 15].map((u) => [u, panelBox(3, u)]).filter(([, b]) => b && b[0] >= 50 && b[2] <= 850);
         if (cand.length < 2) continue;
         const covers = cand.map(([u, b]) => [u, b, edgeCover(png(f), b, GREY)]), hit = covers.find(([, , c]) => drawn(c));
-        ok(hit, `moving ${seen.length}: the frame lies on the rider at scene time ${t} or one offer before: ${covers.map(([u, b, c]) => `${u.toFixed(3)} box ${JSON.stringify(b.map(Math.round))} edges ${fmt(c)}`).join('; ')}`);
+        ok(hit, `moving ${seen.length}: the frame lies on the rider at scene time ${t} or one or two offers before: ${covers.map(([u, b, c]) => `${u.toFixed(3)} box ${JSON.stringify(b.map(Math.round))} edges ${fmt(c)}`).join('; ')}`);
         if (hit) seen.push(`${Math.round(hit[1][0])}..${Math.round(hit[1][2])}`);
       }
-      ok(seen.length === 3 && new Set(seen).size === 3, `the frame moves with the rider: its sides at ${JSON.stringify(seen)}`);
+      ok(new Set(seen).size === 3, `the frame moves with the rider: its sides at ${JSON.stringify(seen)}`);
       await pl.input({ type: 'token', token: 'SET:1682=0' });
       await pl.input({ type: 'token', token: 'WAIT:200' });
       s = await pl.status();

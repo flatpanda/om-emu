@@ -105,8 +105,22 @@ const OBJ_MDET = 0x61A4, HITS = 915;
 const LOST_PASSES = 905;
 // the frame table writer's box of subject 0 and its valid byte, which LAF fills (spec 5.1: 0xa33790b2 + 8 n, 0xa337d53c + n)
 const LAF_BOX = 0xA33790B2, LAF_VALID = 0xA337D53C;
+// LAF's subject 0 (row 0, slot 0): its centre x and y halfwords (spec 5.6: cx at 0xa337d554 + 2 n, cy at
+// 0xa337d584 + 2 n)
+const LAF_ROW0 = [0xA337D554, 0xA337D584];
 // DISP_FRAME's frame mode (0xa3209010; bit 1 the subject frames, TAKE's request 1)
 const DF_MODE = 0xA3209010;
+// The AF target (spec 5.7): object 0x88b2 [0] its point in the AF library's 39 x 27 grid (row * 39 + column), object
+// 0x1dd1 [0] / [1] its height and width in points (the record builder 0x5097500a; target mode 3, object 0x84d1), and
+// the grid's x and y tables 0x60a63a48 / 0x60a63ae8 (40 and 28 words), from which the AF library's 0x5099d7d5 makes
+// LAF's AF area: columns c - w / 2 - 1 .. c + w / 2 + 2 clamped to 0..39, rows r - h / 2 - 1 .. r + h / 2 + 2 clamped
+// to 0..27
+const OBJ_AF_POINT = 0x88B2, OBJ_AF_SIZE = 0x1DD1, GRID_X = 0x60A63A48, GRID_Y = 0x60A63AE8, GRID_COLS = 39, GRID_ROWS = 27;
+// TAKE's status-change callback's guard byte, which it sets as it posts its message (0x506d991d)
+const TAKE_CB_POSTED = 0xA32DF204;
+// TAKE_MOV's call mdet_laf_start (0x5081ee9d from 0x506da292), which no stand-in makes; MDET_PDT_CPU3's dispatch
+// (mdet_laf_pdt_dispatch 0x50841edd), where LAF's start goes on to the PDT / TRC unit the lab does not have
+const LAF_START = 0x5081EE9D, PDT_DISPATCH = 0x60862EFD;
 const R = { out: 0x1118, count: 0x111c, frame: 0x11c4, kind: (m) => 0x498 + 0x100 * m, bias: (j) => 0x11c8 + 4 * j, resize: (j) => (j < 4 ? 0x074 + 4 * j : 0x100 + 4 * (j - 4)) };
 
 export async function mdetSession() {
@@ -185,6 +199,22 @@ export async function mdetSession() {
       if (st.records) seen += 1;
       if (st.subjects && first === null) first = seen;
     }
+    // the AF area LAF tests candidates against (spec 5.7): the AF target's cells in the AF library's grid, H-FCSAF
+    const prop = (o, i) => lab.call(PROP_READ, { d0: o, a0: 0, d1: i }, null, null, 2000000).d0;
+    const point = prop(OBJ_AF_POINT, 0), [th, tw] = [prop(OBJ_AF_SIZE, 0), prop(OBJ_AF_SIZE, 1)], [col, row] = [point % GRID_COLS, Math.floor(point / GRID_COLS)];
+    const clamp = (v, hi) => Math.max(0, Math.min(v, hi));
+    const area = [lab.sim.u32(GRID_X + 4 * clamp(col - (tw >> 1) - 1, GRID_COLS)), lab.sim.u32(GRID_Y + 4 * clamp(row - (th >> 1) - 1, GRID_ROWS)),
+      lab.sim.u32(GRID_X + 4 * clamp(col + (tw >> 1) + 2, GRID_COLS)), lab.sim.u32(GRID_Y + 4 * clamp(row + (th >> 1) + 2, GRID_ROWS))];
+    const L0 = s.camapp.status().mdet.laf, writes0 = s.camapp.mdet.table_writes, frames0 = s.camapp.status().subject.frames;
+    ok(JSON.stringify(L0.area) === JSON.stringify(area) && JSON.stringify(area) === '[279,196,361,284]',
+      `LAF's AF area from the AF target (point ${point}, ${tw} x ${th}, grid column ${col} row ${row}): ${JSON.stringify(L0.area)}, from the grid ${JSON.stringify(area)}`);
+    // the rider overlaps it: at the offer that first reports it LAF marks it a candidate and sets its tracking status
+    // instead of writing the table (0x50839d79..0x50839da4); the status callback copies the status and runs TAKE's
+    // callback, which posts TAKE its message (S-TAKEMDET registered it); the writer's state stays 0 (U9)
+    ok(L0.candidates[0] === 1 && L0.candidates.slice(1).every((c) => c === 0) && L0.tracking === 1 && L0.tracking_seen === 1 && L0.main_state === 0 &&
+      lab.sim.read(TAKE_CB_POSTED, 1)[0] === 1 && frames0 === 0,
+      `the rider in the AF area: LAF's candidate, the tracking status set and seen, TAKE's callback run, no table that offer: ${JSON.stringify(L0)}, frames ${frames0}`);
+    idle(70);
     const sub = s.camapp.status().subject, box = s.camapp.mdet.boxes[0], got = s.camapp.mdet.subjects();
     const out = dml.last().out[0], rec = new Uint8Array(16); lab.sim.m.devices.bus.read(out, rec);
     const score = rec[0] | rec[1] << 8, want = box ? [(box[0] + box[2]) >> 1, (box[1] + box[3]) >> 1, (box[2] - box[0]) & ~1, (box[3] - box[1]) & ~1, (score * 255) >> 12, 1] : null;
@@ -206,8 +236,8 @@ export async function mdetSession() {
     const S = MODEL_INFO.subject, rd = (a) => lab.sim.read(a, 1)[0], st1 = s.camapp.status().mdet;
     ok(sub?.source === 'mdet' && sub.frames === 1 && JSON.stringify(sub.boxes) === JSON.stringify([box]) && sub.main === 0 && sub.part === 0 && sub.aspect === 1 && sub.kind === 1,
       `MDET's frame table holds the rider's box as its list record: ${JSON.stringify(sub ?? null)}`);
-    ok(sub && st1.offers > prevOffers && sub.writes - prevWrites === st1.offers - prevOffers && JSON.stringify([rd(S.aspect[0]), rd(S.aspect[1])]) === '[4,3]',
-      `MDET's writer ran once per offer (${sub?.writes - prevWrites} runs, ${st1.offers - prevOffers} offers since the rider), the aspect pair ${[rd(S.aspect[0]), rd(S.aspect[1])]}`);
+    ok(sub && st1.offers > prevOffers && sub.writes - prevWrites === st1.offers - prevOffers - 1 && sub.writes - writes0 === 1 && JSON.stringify([rd(S.aspect[0]), rd(S.aspect[1])]) === '[4,3]',
+      `MDET's writer ran once per offer but the one that set the tracking status (${sub?.writes - prevWrites} runs, ${st1.offers - prevOffers} offers since the rider), the aspect pair ${[rd(S.aspect[0]), rd(S.aspect[1])]}`);
     ok(!pl.stand_ins_in_use().includes('S-SUBJECT') && s.camapp.subject.posts === 0 && (rd(DF_MODE) & 1) === 1,
       `S-SUBJECT made no write (posts ${s.camapp.subject.posts}, listed ${pl.stand_ins_in_use().includes('S-SUBJECT')}); the frame mode ${rd(DF_MODE)} has the subject bit`);
     const used = pl.stand_ins_in_use();
@@ -230,8 +260,17 @@ export async function mdetSession() {
     for (let i = 0; i < hits; i++) idle(70);
     const early = s.camapp.mdet.subjects().length, earlyFrames = s.camapp.status().subject?.frames;
     idle(70);
+    // the offer that first reports the racers: the near racer overlaps the AF area and is LAF's candidate (slot 0,
+    // LAF's row 0 its box), the far one not; the tracking status is set and no table written (as with the rider)
+    const L1 = s.camapp.status().mdet.laf, row0 = LAF_ROW0.map((a) => lab.sim.read(a, 2)).map((b) => b[0] | b[1] << 8), frames1 = s.camapp.status().subject.frames;
+    idle(70);
     const m = s.camapp.mdet, rx = m.subjects(), out2 = dml.last().out[0];
     ok(early === 0 && earlyFrames === 0 && LOST === 8, `the race: no subject and no frame after ${hits} runs (the stabilisation's hits), ${early} / ${earlyFrames}; a lost track lasts ${LOST} passes`);
+    const near = m.boxes.reduce((a, b) => (b[2] - b[0] > a[2] - a[0] ? b : a)), cen0 = [(near[0] + near[2]) >> 1, (near[1] + near[3]) >> 1];
+    const overlaps = (b) => b[0] <= L1.area[2] && b[2] >= L1.area[0] && b[1] <= L1.area[3] && b[3] >= L1.area[1];
+    ok(L1.candidates[0] === 1 && L1.candidates.slice(1).every((c) => c === 0) && row0[0] === cen0[0] && row0[1] === cen0[1] && L1.tracking === 1 && frames1 === 0 &&
+      m.boxes.filter(overlaps).length === 1 && overlaps(near),
+      `the race: the near racer, the one body in the AF area ${JSON.stringify(L1.area)}, is LAF's candidate in slot 0 (row 0 at ${row0}, its centre ${cen0}), the far one none: ${JSON.stringify(L1)}, frames ${frames1}`);
     const slot = (cls, j) => { const b = new Uint8Array(16); lab.sim.m.devices.bus.read(out2 + 16 * (32 * cls + j), b); const w = [...new Uint16Array(b.buffer)]; return [w[4], w[3], w[2], w[1], w[0]]; };
     const cen = ([x0, y0, x1, y1]) => [(x0 + x1) >> 1, (y0 + y1) >> 1, (x1 - x0) & ~1, (y1 - y0) & ~1];
     const helmets = m.parts.map((p) => p.helmet);
@@ -258,6 +297,17 @@ export async function mdetSession() {
     ok(st.kind === null && dml.runs === runs && lab.sim.read(MODEL_INFO.subject.active, 1)[0] === 0 && s.camapp.mdet.requests.at(-1)?.[0] === 'end' && fr.frames === 0 && (lab.sim.read(DF_MODE, 1)[0] & 1) === 0,
       `OFF: mdet_dl_end, no engine run after it, LAF's running byte 0, no frame, the subject bit gone: ${JSON.stringify(st)}, runs ${runs} -> ${dml.runs}, ${JSON.stringify(fr)}`);
     ok(pl.phase === 'running', `the session runs on: ${pl.phase} ${pl.error?.message ?? ''}`);
+    // MDET_E_SEND_CPU3 and MDET_CALC_MAIN_CPU3 natively at a post of the firmware's own (spec 5.7): TAKE_MOV's call
+    // mdet_laf_start, made here by the test (no stand-in makes it), posts LAF's start request to CPU 3; S-CPU3 serves
+    // the setter, MDET_E_SEND forwards the event to MDET_CALC_MAIN's queue and MDET_CALC_MAIN's turn runs LAF's start,
+    // which posts on to MDET_PDT_CPU3, a function S-CPU3 does not serve: the session stops there, naming it
+    const m2 = s.camapp.mdet, turns0 = { ...Object.fromEntries(m2.turns) }, ev0 = m2.events.length;
+    let stop = null;
+    try { lab.call(LAF_START, null, null, null, 2000000); s.settle('mdet_laf_start'); s.camapp.drain_cpu3(); } catch (e) { stop = e.message; }
+    const turn = (n) => (m2.turns.get(n) ?? 0) - (turns0[n] ?? 0);
+    ok(turn('MDET_E_SEND_CPU3') === 1 && turn('MDET_CALC_MAIN_CPU3') === 1 && m2.events.length === ev0 + 1 &&
+      m2.events.at(-1)[0] === f.events.laf_start_request && stop?.includes(`0x${PDT_DISPATCH.toString(16)}`),
+      `mdet_laf_start: one turn of MDET_E_SEND_CPU3 and of MDET_CALC_MAIN_CPU3 for the start request, then the stop at MDET_PDT_CPU3's dispatch: ${JSON.stringify({ e_send: turn('MDET_E_SEND_CPU3'), calc_main: turn('MDET_CALC_MAIN_CPU3'), events: m2.events.slice(ev0) })} ${stop?.slice(0, 160)}`);
   } catch (e) { t.bad.push(`session: ${e.stack.slice(0, 900)}`); }
   try { pl.close_session(); } catch { /* closed */ }
   return t;

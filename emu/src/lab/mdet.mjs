@@ -1,5 +1,5 @@
 // CPU 3's MDET_DL, the subject network's control code, run natively on the lab CPU with S-DML for the engine
-// (docs/om1-subject-spec.md 5.3 to 5.5, step C's parts; src/fw/models.mjs mdet has the firmware's side with its
+// (docs/om1-subject-spec.md 5.3 to 5.7, step C's parts; src/fw/models.mjs mdet has the firmware's side with its
 // evidence, src/dev/dml.mjs the engine's model).
 //
 // On the camera, TAKE (CPU 0) starts subject detection with mdet_dl_start(kind), changes the kind with
@@ -10,7 +10,10 @@
 // stabilises them into up to 8 subjects and hands those to LAF. The lab has one CPU (ARCHITECTURE.md C02); here that
 // code runs on it, natively, at the seams below.
 //
-//   S-TAKEMDET  TAKE's and take_mov's requests, which do not run in the lab (TAKE_MOV is dormant): while the camera's
+//   S-TAKEMDET  TAKE's and take_mov's requests, which do not run in the lab (TAKE_MOV is dormant): at MDET's first
+//               request TAKE's registration of its LAF status-change callback (mdet.status_cb), as TAKE's start makes
+//               it before it starts MDET; without it the status callback posts through an empty record, a deferred
+//               call of address 0 (X: the trap at pc 0x16, spec 5.7); then, while the camera's
 //               subject-detection setting names a kind (1..5) and S-SCENE's live view shows the live scene (subject.mjs
 //               live(), the conditions S-SUBJECT had), mdet_dl_start(kind) once, mdet_dl_change_mode(kind) at a change
 //               of kind, and one mdet_dl_offer_yc_data per 1/15 s of lab time (S-SCENE's frame step) with the record
@@ -24,7 +27,16 @@
 //               the manager refuses natively, so it names no buffer of the firmware's), others run natively. The buffer
 //               is not written: nothing reads its pixels (S-DML does not run the network). That TAKE offers every frame
 //               step and the frame's size are I (take_mov's YC frame is not read, spec 4.2)
-//   S-MDETDL    CPU 3's MDET_DL tasks on the lab CPU. The poster's return path (its interrupt mask restored) serves
+//   S-MDETDL    CPU 3's MDET tasks on the lab CPU: MDET_DL_REQ and MDET_DL_LDL as below, and MDET_E_SEND_CPU3 and
+//               MDET_CALC_MAIN_CPU3 when S-CPU3 serves one of LAF's event setters (mdet.events): the setter runs in
+//               interrupt context and sets MDET_E_SEND's flag, whose turn forwards the event to MDET_CALC_MAIN's queue
+//               (kept by the lab like the flags: OlyQeWr / OlyQeRd on its id, 16-byte messages in order), whose turn
+//               runs the event's LAF handler; a read of the empty queue ends that turn. No lab session posts such an
+//               event yet: LAF's frame trace, whose end-frame event runs the main-subject trace (spec U9), needs
+//               take_mov's chase requests and the PDT / TRC unit (spec 5.7). CPU 3's code runs with the core register
+//               (0x8050) at 0, so the firmware's tests for core 3 post to ring [3][0] what CPU 3 would call directly
+//               (the EMS2 clear), which S-CPU3 serves after the turn (I).
+//               The poster's return path (its interrupt mask restored) serves
 //               ring [3][0] at once, through S-CPU3 (camapp.mjs drain_cpu3), as CPU 3's IRQ 324 would take the post:
 //               MDET's function runs natively in interrupt context with the request slot, then each MDET_DL task whose
 //               flag it set runs a turn: its body, natively, from its entry on a harness stack of its own, until it
@@ -58,13 +70,18 @@
 //               returns, and nothing is copied: the large-data block is not in the lab, the destination's 0x9xxxxxxx
 //               window is not mapped (spec 5 U6), and S-DML does not read the weights. Other groups' reads run
 //               natively
+//   H-FCSAF     at MDET's first request, three steps of the AF library's init natively (mdet.fcs): the AF target
+//               record from the camera's AF target settings and the info record CPU 3's FCS call fills for LAF, whose
+//               pointer was 0 (spec 5.7); LAF's AF area is then the AF target's cells in the AF grid
 // What follows the engine's records runs natively: get_dml_result, judge_dml_result, the stabilisation, the
 // combination, set_subject_detect_result (mdet.result) and LAF, which fills the frame table's inputs with MDET's
-// subjects (X, spec 5.4), writes the getter's aspect pair, writes the frame table (mdet.table_writer: a list record
-// per body, X, spec 5.6) and posts UP_FACE after each offer; DISP_FRAME draws that table (X, spec 5.5). The table's
-// main and part records stay empty: the state that fills them needs LAF's frame trace and the AF library's area (spec
-// U9). S-SUBJECT does not run on such a body: its writes are for one where MDET_DL does not run natively (subject.mjs).
-import { FirmwareError, disasm, where, ISR_SP, ISR_CALLER, HEAP_END } from './hle.mjs';
+// subjects (X, spec 5.4), writes the getter's aspect pair, marks a subject that overlaps the AF area its main-subject
+// candidate and sets its tracking status (X, spec 5.7), writes the frame table (mdet.table_writer: a list record per
+// body, X, spec 5.6; none at an offer that changes the tracking status) and posts UP_FACE after each offer; DISP_FRAME
+// draws that table (X, spec 5.5). The table's main and part records stay empty: the state that fills them is set by
+// LAF's main-subject trace at its end-frame event (spec U9, 5.7). S-SUBJECT does not run on such a body: its writes
+// are for one where MDET_DL does not run natively (subject.mjs).
+import { FirmwareError, disasm, runtime, where, ISR_SP, ISR_CALLER, HEAP_END } from './hle.mjs';
 import * as K from './kernel.mjs';
 import { RTOS } from './rtos.mjs';
 import { HANDLER_TABLE } from './irq.mjs';
@@ -78,7 +95,10 @@ class TurnDone extends Error {}
 
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 const rtosAt = (name) => [...RTOS].find(([, n]) => n === name)[0];
-const OLY = { set: rtosAt('OlyEvSt'), iset: rtosAt('iOlyEvSt'), wait: rtosAt('OlyEvWt'), clear: rtosAt('OlyEvCl') };
+const OLY = { set: rtosAt('OlyEvSt'), iset: rtosAt('iOlyEvSt'), wait: rtosAt('OlyEvWt'), clear: rtosAt('OlyEvCl'),
+  qrd: rtosAt('OlyQeRd'), qwr: rtosAt('OlyQeWr') };
+// OlyQeRd's / OlyQeWr's timeout that waits without limit, the only one the MDET tasks use (D: 0x50800b28, 0x5080367c)
+const TMO_FOREVER = -1;
 // uITRON's wait modes (OlyEvWt's a1): TWF_ANDW, TWF_ORW
 const TWF_ANDW = 0, TWF_ORW = 1;
 // S-MDETDL's task stack and trampoline: the lab's scratch below the display runs' third stack (each 0x30000 bytes), and
@@ -127,6 +147,9 @@ export class MdetDl {
     this.parts = [];           // S-DML: per body, its parts' boxes {name: box} in the last offer's records
     this.offer_t = null;       // the scene time (s) of the last offer's records
     this.table_writes = 0;     // runs of MDET's frame table writer (mdet.table_writer), observed
+    this.queues = new Map();   // S-MDETDL: CPU 3's message queues MDET_CALC_MAIN reads, by id -> [message bytes]
+    this.events = [];          // S-CPU3's MDET event posts served: [function, argument]
+    this.counts = {};          // observed entries of LAF's frame steps (mdet.laf.observe): name -> runs
   }
   get used() { return this.requests.length > 0; }
   lab() { return this.s.lab; }
@@ -138,7 +161,11 @@ export class MdetDl {
     this.ids = new Set(f.flags.map((w) => this.u16(w)));
     for (const id of this.ids) if ((id & 0x3000) !== 0x3000) throw new MdetError(`S-MDETDL: flag id ${h8(id)} is not a CPU 3 object`);
     for (const id of this.ids) this.flags.set(id, 0);
-    this.tasks = f.tasks.map((t) => ({ name: t.name, entry: t.entry, id: this.u16(t.flag), bit: t.bit }));
+    this.tasks = f.tasks.map((t) => (t.queue ? { name: t.name, entry: t.entry, queue: this.u16(t.queue) } : { name: t.name, entry: t.entry, id: this.u16(t.flag), bit: t.bit }));
+    for (const t of this.tasks.filter((x) => x.queue !== undefined)) {
+      if ((t.queue & 0x3000) !== 0x3000) throw new MdetError(`S-MDETDL: queue id ${h8(t.queue)} of ${t.name} is not a CPU 3 object`);
+      this.queues.set(t.queue, []);
+    }
     this.dml_done = [this.u16(f.dml_done[0]), f.dml_done[1]];
     this.dml = lab.sim.m.devices.dml;
     if (!this.dml) throw new MdetError('S-MDETDL: the machine has no DML engine (src/fw/board.mjs dml)');
@@ -148,6 +175,10 @@ export class MdetDl {
     lab.wrap(OLY.iset, (prev) => (h, r) => (mine(r) ? this.set_flag(h, r) : prev(h, r)));
     lab.wrap(OLY.clear, (prev) => (h, r) => (mine(r) ? this.clear_flag(h, r) : prev(h, r)));
     lab.wrap(OLY.wait, (prev) => (h, r) => (mine(r) ? this.wait_flag(h, r) : prev(h, r)));
+    // S-MDETDL: the kernel's queue calls on MDET_CALC_MAIN's queue
+    const myq = (r) => this.queues.has(r.d0 & 0xFFFF);
+    lab.wrap(OLY.qwr, (prev) => (h, r) => (myq(r) ? this.queue_write(h, r) : prev(h, r)));
+    lab.wrap(OLY.qrd, (prev) => (h, r) => (myq(r) ? this.queue_read(h, r) : prev(h, r)));
     // S-MDETDL: the poster's return path serves the ring (S-CPU3)
     lab.hook(f.post.done, (h, r) => {
       const saved = { ...r };
@@ -161,6 +192,7 @@ export class MdetDl {
     lab.observe(f.dml.irq_handler, () => { this.irqs += 1; }, 'obs-dml-irq');
     lab.observe(f.dml.callback, () => { this.callbacks += 1; }, 'obs-dml-callback');
     lab.observe(f.table_writer, () => { this.table_writes += 1; }, 'obs-mdet-table');
+    for (const [name, at] of Object.entries(f.laf.observe)) lab.observe(at, () => { this.counts[name] = (this.counts[name] ?? 0) + 1; }, `obs-mdet-${name}`);
     // S-LEARNDATA
     lab.hook(f.learning.read, (h, r) => this.learning_read(h, r), 'S-LEARNDATA');
     // S-TAKEMDET: the YC buffer
@@ -170,7 +202,27 @@ export class MdetDl {
     lab.hook(f.yc.address, yc(() => this.yc), 'S-TAKEMDET address');
     lab.hook(f.yc.release, yc(() => 0), 'S-TAKEMDET release');
     this.installed = true;
-    this.log('mdet', `installed: CPU 3 flags ${[...this.ids].map(h8).join(', ')}, the YC buffer ${h8(this.yc)}`);
+    this.fcs_init();                                                                 // H-FCSAF
+    this.take_init();                                                                // S-TAKEMDET
+    this.log('mdet', `installed: CPU 3 flags ${[...this.ids].map(h8).join(', ')}, queue ${[...this.queues.keys()].map(h8).join(', ')}, the YC buffer ${h8(this.yc)}`);
+  }
+  // H-FCSAF: the AF library's init steps that give LAF's FCS call its record (src/fw/models.mjs mdet.fcs), natively
+  // and in the init's order; any error log they make stops the session
+  fcs_init() {
+    const lab = this.lab(), e0 = lab.kernel.errors.length;
+    for (const fn of this.f.fcs.init) lab.call(fn, null, null, null, LIMIT);
+    this.errlog_check(e0, 'H-FCSAF', 'H-FCSAF');
+    this.s.settle('H-FCSAF');
+    this.log('fcsaf', `AF library init steps ${this.f.fcs.init.map(h8).join(', ')}: the AF target record ${[...this.lab().sim.read(this.f.fcs.target, 8)].join(' ')}`);
+  }
+  // S-TAKEMDET: TAKE's registration of its LAF status-change callback, as TAKE's start does before it starts MDET
+  // (src/fw/models.mjs mdet.status_cb), natively
+  take_init() {
+    const lab = this.lab(), cb = this.f.status_cb, e0 = lab.kernel.errors.length;
+    lab.call(cb.set, { a0: runtime(cb.take) }, null, null, LIMIT);
+    this.errlog_check(e0, 'set_status_change_callback', 'S-TAKEMDET');
+    this.s.settle('S-TAKEMDET callback');
+    this.log('takemdet', `status-change callback ${h8(cb.take)} registered`);
   }
   // A block from S-HEAP's memory, kept for the session (aligned up; S-HEAP's bump, as its malloc takes new blocks)
   heap_block(size, align) {
@@ -190,6 +242,30 @@ export class MdetDl {
     const id = r.d0 & 0xFFFF;
     this.flags.set(id, (this.flags.get(id) & r.d1) >>> 0);
     h.finish(r, { d0: 0 });
+  }
+  // ---- S-MDETDL: CPU 3's queue (OlyQeWr / OlyQeRd: d0 the id, d1 the timeout, a0 a descriptor {address, size}); a
+  // message is kept as its bytes, in order; a read on an empty queue ends the turn of the queue's own task and is an
+  // error anywhere else
+  queue_write(h, r) {
+    const lab = this.lab(), id = r.d0 & 0xFFFF, [at, size] = [lab.sim.u32(r.a0), lab.sim.u32(r.a0 + 4)];
+    if ((r.d1 | 0) !== TMO_FOREVER || size !== this.f.queue_message) {
+      throw new MdetError(`S-MDETDL: OlyQeWr on queue ${h8(id)} with timeout ${r.d1 | 0} and ${size} bytes from ${where(r.mdr)}: not modelled`);
+    }
+    this.queues.get(id).push(lab.sim.read(at, size).slice());
+    h.finish(r, { d0: 0 });
+  }
+  queue_read(h, r) {
+    const lab = this.lab(), id = r.d0 & 0xFFFF, q = this.queues.get(id), saved = { ...r };
+    const [at, size] = [lab.sim.u32(r.a0), lab.sim.u32(r.a0 + 4)];
+    if ((r.d1 | 0) !== TMO_FOREVER) throw new MdetError(`S-MDETDL: OlyQeRd on queue ${h8(id)} with timeout ${r.d1 | 0} from ${where(r.mdr)}: not modelled`);
+    if (!q.length) {
+      if (this.turn && this.turn.queue === id) throw new TurnDone();
+      throw new MdetError(`S-MDETDL: OlyQeRd on the empty queue ${h8(id)} from ${where(r.mdr)} would block${this.turn ? ` in ${this.turn.name}'s turn` : ''}`);
+    }
+    const m = q.shift();
+    if (m.length > size) throw new MdetError(`S-MDETDL: a ${m.length}-byte message on queue ${h8(id)} for a ${size}-byte buffer`);
+    lab.sim.write(at, m);
+    h.finish(saved, { d0: 0 });
   }
   satisfied(id, want, mode) {
     const p = this.flags.get(id);
@@ -227,16 +303,26 @@ export class MdetDl {
     if (this.dml.pending()) lab.kernel.deliver();
   }
   // ---- S-CPU3's MDET posts (camapp.mjs drain_cpu3): the function in interrupt context, then the tasks' turns
-  serve(arg) {
+  // fn: the posted function (disassembly address), MDET's request function or one of its event setters (event_fn)
+  serve(arg, fn = this.f.post.fn) {
     const lab = this.lab();
+    if (this.turn) throw new MdetError(`S-MDETDL: a post of ${h8(fn)} served inside ${this.turn.name}'s turn`);
     this.serves += 1;
-    K.in_interrupt(lab.lt, () => lab.calls(this.f.post.fn, { a0: arg }, ISR_SP, ISR_CALLER, LIMIT));
+    if (fn !== this.f.post.fn) this.events.push([fn, arg]);
+    K.in_interrupt(lab.lt, () => lab.calls(fn, { a0: arg }, ISR_SP, ISR_CALLER, LIMIT));
     for (let n = 0; ; n++) {
-      const t = this.tasks.find((x) => this.flags.get(x.id) & x.bit);
+      const t = this.tasks.find((x) => this.runnable(x));
       if (!t) break;
-      if (n >= 64) throw new MdetError(`S-MDETDL: ${n} turns after one post and ${t.name}'s flag still set`);
+      if (n >= 64) throw new MdetError(`S-MDETDL: ${n} turns after one post and ${t.name} still runnable`);
       this.run_turn(t);
     }
+  }
+  // a task's turn is due when its flag has a bit it waits for, or its queue a message
+  runnable(t) { return t.queue !== undefined ? this.queues.get(t.queue).length > 0 : (this.flags.get(t.id) & t.bit) !== 0; }
+  // S-CPU3: the disassembly address of an MDET event setter posted to CPU 3 (models.mjs mdet.events), else null
+  event_fn(fn) {
+    const a = disasm(fn);
+    return this.installed && Object.values(this.f.events).includes(a) ? a : null;
   }
   run_turn(t) {
     const lab = this.lab();
@@ -339,9 +425,9 @@ export class MdetDl {
   }
   // A request (its CPU 3 side included) that made the firmware log an error stops the session: MDET logs each refusal
   // it makes (a bad state, kind, record or read), and none is expected of the path the lab runs (X)
-  errlog_check(e0, what) {
+  errlog_check(e0, what, label = 'S-TAKEMDET') {
     const bad = this.lab().kernel.errors.slice(e0).filter(([code]) => !EXPECTED_ERRLOG.has(code));
-    if (bad.length) throw new MdetError(`S-TAKEMDET: mdet_dl_${what}: the firmware logged ${bad.map(([c, , , w]) => `${h8(c)} from ${w}`).join('; ')}`);
+    if (bad.length) throw new MdetError(`${label}: ${label === 'S-TAKEMDET' ? 'mdet_dl_' : ''}${what}: the firmware logged ${bad.map(([c, , , w]) => `${h8(c)} from ${w}`).join('; ')}`);
   }
   // MDET's subject records (set_subject_detect_result's, mdet.result): [{sbj_kind, body, parts: [part 1, part 2]}]
   // of the slots whose kind is not 0, each box [cx, cy, w, h, rel, dtct] (all 0: none)
@@ -372,6 +458,15 @@ export class MdetDl {
     return { kind: this.kind, requests: this.requests.length, offers: this.offers, serves: this.serves, turns: Object.fromEntries(this.turns),
       deferred: this.deferred, dml_runs: d ? d.runs : 0, irqs: this.irqs, callbacks: this.callbacks, loads: this.loads.length,
       records: this.boxes.length, parts: this.parts.reduce((n, p) => n + Object.keys(p).length, 0),
-      subjects: this.installed ? this.subjects().length : 0 };
+      subjects: this.installed ? this.subjects().length : 0, laf: this.installed ? this.laf_status() : null,
+      events: this.events.length, laf_steps: { ...this.counts } };
+  }
+  // LAF's main-subject state (src/fw/models.mjs mdet.laf): the AF area {x0, y0, x1, y1} its candidate test uses, the
+  // candidate byte of each of LAF's subjects, its tracking status and the copy the status callback keeps, and the state
+  // in which MDET's writer fills the main and part records (spec U9)
+  laf_status() {
+    const lab = this.lab(), L = this.f.laf, rd = (a) => lab.sim.read(a, 1)[0];
+    return { area: [...new Uint16Array(lab.sim.read(L.area, 8).slice().buffer)], candidates: [...lab.sim.read(L.candidates, 8)],
+      tracking: rd(L.tracking), tracking_seen: rd(L.tracking_seen), main_state: rd(L.main_state) };
   }
 }

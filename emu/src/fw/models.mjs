@@ -352,13 +352,53 @@ export const MODELS = {
     // 0xa337d53c + n is 1, 0x5083a843..0x5083a90c), and posts UP_FACE (0x50839dba). The other writer,
     // 0x5082ac64..0x5082af98 (spec 5.1), did not run in the lab's sessions (X: its count stores 0x5082af2a and
     // 0x5082af55 never executed while the table held the rider)
+    // MDET's event tasks and LAF's main subject (docs/om1-subject-spec.md 5.7; D unless tagged). tasks 3 and 4:
+    // MDET_E_SEND_CPU3 (0x3007's task, entry 0x50800fe2) waits on its flag (0x600436d8) = 0x3007 for 0xfe77003e (OR,
+    // no timeout) and turns each bit into an event it sends with mdet_laf_q_send 0x5080362d (or mdet_iauto_q_send) to
+    // MDET_CALC_MAIN_CPU3's queue (0x600436f8) = 0x3005, a 16-byte message {.., .., event, argument} (0x50801384:
+    // OlyQeWr, timeout -1); MDET_CALC_MAIN_CPU3 (entry 0x50800b03) reads it (OlyQeRd, timeout -1) and dispatches the
+    // event less 0x10000000 through its table 0x609d9b54 (event & 31 the slot): e.g. 0x30000008, the end frame, to
+    // mdet_laf_end_frame_calc_cpu_func 0x50825b54 (trace id 242), which runs mdet_laf_exec_trace 0x50825ceb (96),
+    // which with a candidate runs mdet_laf_dl_internal_start (0x50835002, sets 0xa337f082 = 1) and then
+    // mdet_laf_calc_offer_data 0x50829b5e (laf.observe). events: LAF's event setters, which mdet_set_event_* posts to
+    // CPU 3 through 0x508017b4(3, setter, argument) (always sys_callrequest) and which name the flag's bits: the eleven
+    // functions 0x508017b4's name table lists (0x50801800..0x508018b9), and mdet_laf_ems2_img_info_clear_delayint
+    // 0x508251d2, which its wrapper calls directly when (0x8050) is 3 and posts otherwise (0x50825324..0x5082538f).
+    // laf: the AF area {x0, y0, x1, y1} LAF's candidate test uses (copied from the record CPU 3's FCS call 0x508c00a3
+    // fills, spec 5.6 U9), the candidate bytes of LAF's eight subjects, the tracking status (written by
+    // mdet_laf_dl_set_tracking_status_force 0x506e6bc6), its copy the status callback keeps, and the main-record state.
+    // status_cb: TAKE's start registers TAKE's callback take through mdet_laf_dl_set_status_change_callback set
+    // (trace id 21; 0x506d8103..0x506d8109), which fills the record 0xa33458cc {0,
+    // mdet_laf_dl_status_change_callback_exec 0x50802700, 0, (0x8050)} and 0xa33458dc; the status callback posts that
+    // record (0x508026a1 -> 0x50801a5b: a deferred call of +4 on the record's core, else a post to it), and take
+    // (0x506d98ed) posts TAKE's message 81 to its queue 0x5e once until TAKE's handler clears 0xa32df204
+    // (0x506d98f0..0x506d9934). fcs: the AF library's init
+    // 0x508bede6 (from the boot chain at 0x501e9533) steps H-FCSAF runs: 0x509748d7 sets the rebuild flag 0xa33d8bea,
+    // 0x508c70c0 copies the AF target record target (0xa33b015c, through 0x508c33c0 -> 0x508c51fa), which 0x5097500a
+    // builds from the objects 0x88b2 (point, row * 39 + column; 526 the centre), 0x84d1 (mode), 0x9a41, 0x1dd1 (height,
+    // width), 0x1df1, 0x1e01; 0x5099cbd9 points 0xa33d9518 / 0xa33d951c at 0xa33d8c5c and 0xa33d9520 at 0xa33d8c80
+    // and resets them. 0x5099d7d5 then makes the AF area from the target: grid columns c - w / 2 - 1 .. c + w / 2 + 2,
+    // rows r - h / 2 - 1 .. r + h / 2 + 2, through the tables 0x60a63a48 (x) and 0x60a63ae8 (y) into +24..+30
     mdet: {
       api: { start: 0x5080A5E2, end: 0x5080A6DC, change_mode: 0x5080A79A, offer: 0x5080A912 },
       record: { size: 96, buff_id: 4, w: 6, h: 8, movie: 13, zoom: 32, aspect: 34 },
       post: { done: 0x5080AEE5, busy: 0x5080ADE0, fn: 0x5080B987, slot: 0xA3375B98 },
       tasks: [{ name: 'MDET_DL_REQ', entry: 0x5080BAE8, flag: 0x600436D0, bit: 1 },
-        { name: 'MDET_DL_LDL', entry: 0x5080C8A1, flag: 0x600436D2, bit: 2 }],
-      flags: [0x600436D0, 0x600436D2, 0x600436D4, 0x600436D6],
+        { name: 'MDET_DL_LDL', entry: 0x5080C8A1, flag: 0x600436D2, bit: 2 },
+        { name: 'MDET_E_SEND_CPU3', entry: 0x50800FE2, flag: 0x600436D8, bit: 0xFE77003E },
+        { name: 'MDET_CALC_MAIN_CPU3', entry: 0x50800B03, queue: 0x600436F8 }],
+      flags: [0x600436D0, 0x600436D2, 0x600436D4, 0x600436D6, 0x600436D8],
+      queue_message: 16,
+      events: { laf_init: 0x50802B6D, laf_start: 0x50802C2D, laf_start_request: 0x50802CED, laf_end: 0x50802DA5,
+        laf_end_request: 0x50802E65, laf_end_frame: 0x50802F1D, laf_moving_object_detect: 0x50802FDD,
+        laf_chase_object_trc_e1: 0x5080309D, laf_end_wait_clear: 0x508033F5, laf_start_still: 0x508034AD,
+        laf_end_still: 0x5080356D, ems2_info_clear: 0x508251D2 },
+      laf: { observe: { end_frame_calc: 0x50825B54, exec_trace: 0x50825CEB, internal_start: 0x50835002,
+        offer_data: 0x50829B5E },
+        area: 0xA337F050, candidates: 0xA337D948, tracking: 0xA337F085, tracking_seen: 0xA337F087,
+        main_state: 0xA337F082 },
+      status_cb: { set: 0x506E68B4, take: 0x506D98ED },
+      fcs: { init: [0x509748D7, 0x508C70C0, 0x5099CBD9], target: 0xA33B015C },
       dml_done: [0x600436D6, 4], deferred: 53,
       dml: { irq_handler: 0x507F6ABD, callback: 0x50812052 },
       learning: { read: 0x501A921F, group: 0x800F, dest: 0x9511CA00, size: 0x8F3000 },

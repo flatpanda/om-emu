@@ -33,6 +33,10 @@
 //   dml                     the DML engine's model (src/dev/dml.mjs, S-DML): {runs, busy, status, dropped, last: the
 //                           newest run's register image {n, t_ns, regs: {offset: value}, out: [address, bytes]} or
 //                           null}, offsets and values in hex; refused on a board without the engine
+//   pdt                     the PDT / TRC unit's model (src/dev/pdt.mjs, S-PDT): per engine (pdt, trc) {runs, busy,
+//                           status, dropped, last: the newest run's parameter image {n, t_ns, params: {offset: value},
+//                           result: the lab's result words written} or null}, offsets and values in hex; refused on a
+//                           board without the unit
 // and the protocol's reads and the ops that change memory or registers (regs, reg, setReg, setRegs, read, write,
 // stack, stderr, stats, disasm, watchLog, trace, lab {time}); load, quit, reset, cpuStore, snapshot, restore, drop,
 // abort and lab time moves are refused (protocol.mjs). A control input (restart, power, quit, ...) while stopped lets
@@ -48,7 +52,7 @@ import { Protocol, BadRequest, outcome, list, addr, count, watchList } from './p
 import { regsHex, hex8 } from './regs.mjs';
 import { TCB_SP } from '../lab/kernel.mjs';
 
-const RUN_CONTROL = new Set(['state', 'halt', 'cont', 'resume', 'step', 'break', 'watch', 'detach', 'tasks', 'standins', 'dml']);
+const RUN_CONTROL = new Set(['state', 'halt', 'cont', 'resume', 'step', 'break', 'watch', 'detach', 'tasks', 'standins', 'dml', 'pdt']);
 const isControl = (inp) => inp !== null && typeof inp === 'object' && inp.type === 'control';
 const absent = (v) => v === undefined || v === null;
 const hexWatch = (w) => ({ ...w, addr: hex8(w.addr), hit: hex8(w.hit), value: hex8(w.value), pc: hex8(w.pc) });
@@ -208,6 +212,16 @@ export class LiveDebug {
         const l = d.last(), hex = (v) => '0x' + (v >>> 0).toString(16);
         return { runs: d.runs, busy: d.busy(), status: hex8(d.status), dropped: d.dropped,
           last: l === null ? null : { n: l.n, t_ns: l.t_ns, regs: Object.fromEntries(Object.entries(l.regs).map(([o, v]) => [hex(+o), hex8(v)])), out: [hex8(l.out[0]), l.out[1]] } };
+      }
+      case 'pdt': {
+        const d = this.sim.m.devices.pdt;
+        if (!d) throw new BadRequest('pdt: the board has no PDT / TRC unit (src/fw/board.mjs pdt)');
+        const hex = (v) => '0x' + (v >>> 0).toString(16);
+        return Object.fromEntries(Object.entries(d.e).map(([name, x]) => {
+          const l = d.last(name);
+          return [name, { runs: x.runs, busy: d.busy(name), status: hex8(x.status), dropped: x.dropped,
+            last: l === null ? null : { n: l.n, t_ns: l.t_ns, params: Object.fromEntries(Object.entries(l.params).map(([o, v]) => [hex(+o), hex8(v)])), result: l.result } }];
+        }));
       }
       default: throw new BadRequest(`unknown op ${JSON.stringify(q.op)}`);
     }

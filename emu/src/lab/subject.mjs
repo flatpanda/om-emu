@@ -112,8 +112,9 @@ export class SubjectFrames {
     this.write(kind, frames);
     this.key = key;
   }
-  // The frames for the subjects of the kind at time t (s): their boxes in MDET's coordinates, the larger first, and
-  // the aspect code DISP_FRAME computes for the frame
+  // The frames for the subjects of the kind at time t (s): their boxes in MDET's coordinates, the larger first, the
+  // boxes of their parts placed the same way ({name: box} per subject, a part with nothing inside the clip left out;
+  // S-DML writes them, S-SUBJECT does not), and the aspect code DISP_FRAME computes for the frame
   frames(kind, t) {
     const s = this.s, [src, size, off] = LV_SCALED[s.device], scale = PLANE_SCALE[s.device];
     const aspect = this.call(this.f.aspect_code).d0 & 0xFF;
@@ -121,13 +122,15 @@ export class SubjectFrames {
     if (!pair) throw new SubjectError(`S-SUBJECT: DISP_FRAME's aspect code ${aspect} has no pair in MDET's getter (0x5083a368..0x5083a3f8)`);
     const tr = this.transform(aspect);
     const subjects = SC.subjectsAt(s.scene, t, src[1] / src[0]).filter((x) => x.subject === KINDS[kind]).sort((a, b) => b.area - a.area);
-    const boxes = [];
-    for (const { box: [u0, v0, u1, v1] } of subjects) {
-      const plane = [off[0] + u0 * size[0], off[1] + v0 * size[1], off[0] + u1 * size[0], off[1] + v1 * size[1]].map((v) => v / scale);
-      const m = toMdet(plane, tr);
-      if (m !== null && boxes.length < this.f.table.max) boxes.push(m);
+    const boxes = [], parts = [];
+    const place = ([u0, v0, u1, v1]) => toMdet([off[0] + u0 * size[0], off[1] + v0 * size[1], off[0] + u1 * size[0], off[1] + v1 * size[1]].map((v) => v / scale), tr);
+    for (const sub of subjects) {
+      const m = place(sub.box);
+      if (m === null || boxes.length >= this.f.table.max) continue;
+      boxes.push(m);
+      parts.push(Object.fromEntries(Object.entries(sub.parts ?? {}).map(([name, b]) => [name, place(b)]).filter(([, b]) => b !== null)));
     }
-    return { t, aspect, pair, boxes };
+    return { t, aspect, pair, boxes, parts };
   }
   // DISP_FRAME's transform for the output it draws on and the aspect code: the table's pointer by the firmware's index
   // function, its row by the row function (src/fw/models.mjs subject.transform)

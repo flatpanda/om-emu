@@ -17,8 +17,11 @@
 //                    stabilisation needs (object 0x61a4 [915]), LAF's box for the frame table equal to S-DML's, and
 //                    MDET's frame table written by MDET's own writer with that box as its list record, the getter's
 //                    aspect pair LAF derived from the offer's aspect code, S-TAKEFRAME's subject bit set and S-SUBJECT
-//                    not run; the debug API's dml op; at OFF, mdet_dl_end, no more runs, the table empty and the bit
-//                    gone
+//                    not run; the debug API's dml op; after passes with no subject, S-SCENE's race preset (two racers
+//                    held still): S-DML's bodies in class 0 and helmets in class 2, nothing reported for the hits the
+//                    stabilisation asks, then two subject records, each body combined with its own helmet as part 2,
+//                    and the two bodies as the table's list records (spec 5.6); at OFF, mdet_dl_end, no more runs, the
+//                    table empty and the bit gone
 //   node emu/test/test_mdet.mjs [--pure]
 import { createMachine } from '../src/machine.mjs';
 import { BUS } from '../src/core/mem.mjs';
@@ -98,6 +101,8 @@ const HEAD_FRAME = 263, RECORDS = 2457, OUT_GLOBAL = 0x62F404E0;
 // MDET's parameters, object 0x61a4: [915] the hits a new track of a large or high-scoring box needs to register
 // (regist_judge_update 0x5081455a, spec 5.2)
 const OBJ_MDET = 0x61A4, HITS = 915;
+// [905] the passes a registered track survives without a detection (lost_judge_update, spec 5.2)
+const LOST_PASSES = 905;
 // the frame table writer's box of subject 0 and its valid byte, which LAF fills (spec 5.1: 0xa33790b2 + 8 n, 0xa337d53c + n)
 const LAF_BOX = 0xA33790B2, LAF_VALID = 0xA337D53C;
 // DISP_FRAME's frame mode (0xa3209010; bit 1 the subject frames, TAKE's request 1)
@@ -210,6 +215,40 @@ export async function mdetSession() {
     const r = ask({ op: 'dml' });
     ok(r?.ok && r.runs === dml.runs && r.last?.regs?.['0x1118'] === '0x0b64f5c8' && r.last.out[0] === '0xb64f5c80' && r.last.out[1] === 4608,
       `the debug API's dml op: ${JSON.stringify({ runs: r?.runs, out: r?.last?.out, reg: r?.last?.regs?.['0x1118'] })}`);
+    // two racers with their helmets (S-SCENE's race preset, held still; spec 5.6). First a scene with no subject for
+    // more passes than a registered track survives unmatched (object 0x61a4 [905]), so that no track of the rider is
+    // left to take a racer over (MDET's stabilisation keeps a track across a change of scene, X). Then S-DML writes
+    // each body in class 0 and each helmet in class 2 (part 2 of group 0); MDET reports nothing for [915] runs and from
+    // the next one two subjects, each the combination of a body with its own helmet, and LAF writes both bodies as
+    // list records (main and part flags 0: spec U9)
+    const LOST = lab.call(PROP_READ, { d0: OBJ_MDET, a0: data61, d1: LOST_PASSES }, null, null, 2000000).d0;
+    s.scene_input({ preset: 'static' });
+    for (let i = 0; i < LOST + 2; i++) idle(70);
+    s.scene_input({ preset: 'race' });
+    s.scene_input({ layer: { index: 1, speed: 0 } });
+    s.scene_input({ layer: { index: 2, speed: 0 } });
+    for (let i = 0; i < hits; i++) idle(70);
+    const early = s.camapp.mdet.subjects().length, earlyFrames = s.camapp.status().subject?.frames;
+    idle(70);
+    const m = s.camapp.mdet, rx = m.subjects(), out2 = dml.last().out[0];
+    ok(early === 0 && earlyFrames === 0 && LOST === 8, `the race: no subject and no frame after ${hits} runs (the stabilisation's hits), ${early} / ${earlyFrames}; a lost track lasts ${LOST} passes`);
+    const slot = (cls, j) => { const b = new Uint8Array(16); lab.sim.m.devices.bus.read(out2 + 16 * (32 * cls + j), b); const w = [...new Uint16Array(b.buffer)]; return [w[4], w[3], w[2], w[1], w[0]]; };
+    const cen = ([x0, y0, x1, y1]) => [(x0 + x1) >> 1, (y0 + y1) >> 1, (x1 - x0) & ~1, (y1 - y0) & ~1];
+    const helmets = m.parts.map((p) => p.helmet);
+    ok(m.boxes.length === 2 && helmets.length === 2 && helmets.every(Boolean),
+      `the race: S-DML's two bodies and their helmets: ${JSON.stringify(m.boxes)} ${JSON.stringify(m.parts)}`);
+    const dmlRecs = [slot(0, 0), slot(0, 1), slot(2, 0), slot(2, 1), slot(0, 2), slot(1, 0), slot(2, 2)];
+    const wantRecs = [...m.boxes, ...helmets].map((b) => [...cen(b), 0x0e00]);
+    ok(m.boxes.length === 2 && JSON.stringify(dmlRecs.slice(0, 4)) === JSON.stringify(wantRecs) && dmlRecs.slice(4).every((r) => r.every((v) => v === 0)),
+      `S-DML's records: class 0 slots 0 and 1 the bodies, class 2 slots 0 and 1 the helmets, class 1 empty {cx, cy, w, h, score}: ${JSON.stringify(dmlRecs)}`);
+    const pairs = m.boxes.map((b, i) => [[...cen(b), 223, 1], [...cen(helmets[i] ?? [0, 0, 0, 0]), 223, 1]]);
+    const gotPairs = rx.map((x) => [x.body, x.parts[1]]), none = [0, 0, 0, 0, 0, 0];
+    ok(rx.length === 2 && rx.every((x) => x.sbj_kind === 6 && JSON.stringify(x.parts[0]) === JSON.stringify(none)) &&
+      pairs.every((p) => gotPairs.some((g) => JSON.stringify(g) === JSON.stringify(p))),
+      `MDET's subject records: two of sbj_kind 6, each body combined with its own helmet as part 2 (part 1 empty): ${JSON.stringify(rx)}, want ${JSON.stringify(pairs)}`);
+    const sub2 = s.camapp.status().subject, ev = (b) => [b[0], b[1], b[0] + ((b[2] - b[0]) & ~1), b[1] + ((b[3] - b[1]) & ~1)];
+    ok(sub2?.frames === 2 && sub2.main === 0 && sub2.part === 0 && m.boxes.every((b) => sub2.boxes.some((x) => JSON.stringify(x) === JSON.stringify(ev(b)))),
+      `MDET's frame table: the two bodies as its list records (sizes made even), main and part flags 0: ${JSON.stringify(sub2 ?? null)}`);
     // OFF: mdet_dl_end, LAF stopped, no more runs
     s.step('SET:1682=0');
     idle(200);

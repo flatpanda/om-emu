@@ -283,18 +283,19 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 }
 // subject detection's frames: the scene's subject boxes and DISP_FRAME's transform without firmware, then a play
 // session on E143 whose DISP_FRAME draws the frames from MDET's own table on the scene's rider while the setting names
-// motorsports, one on the EVF, and S-SUBJECT's frames with the mdet facts taken away
+// motorsports, one on the EVF, one with the race preset's two racers (two frames), and S-SUBJECT's frames with the
+// mdet facts taken away
 {
-  const { subjectUnits, subjectSession, subjectEvfSession, subjectStandInSession } = await import('../test/test_subject.mjs');
-  const su = subjectUnits(), ss = await subjectSession(), se = await subjectEvfSession(), sa = await subjectStandInSession();
+  const { subjectUnits, subjectSession, subjectEvfSession, subjectRaceSession, subjectStandInSession } = await import('../test/test_subject.mjs');
+  const su = subjectUnits(), ss = await subjectSession(), se = await subjectEvfSession(), sr = await subjectRaceSession(), sa = await subjectStandInSession();
   const n = (r) => `${r.checks - r.bad.length}/${r.checks}`;
-  console.log(`subject frames: boxes and transform ${n(su)}; in play ${n(ss)}; on the EVF ${n(se)}; S-SUBJECT without MDET_DL ${n(sa)}`);
-  [...su.bad, ...ss.bad, ...se.bad, ...sa.bad].forEach((x) => console.log('  ', x));
-  bad += su.bad.length + ss.bad.length + se.bad.length + sa.bad.length;
+  console.log(`subject frames: boxes and transform ${n(su)}; in play ${n(ss)}; on the EVF ${n(se)}; two racers ${n(sr)}; S-SUBJECT without MDET_DL ${n(sa)}`);
+  [...su.bad, ...ss.bad, ...se.bad, ...sr.bad, ...sa.bad].forEach((x) => console.log('  ', x));
+  bad += su.bad.length + ss.bad.length + se.bad.length + sr.bad.length + sa.bad.length;
 }
 // CPU 3's MDET_DL natively with S-DML: the engine's register file without firmware, then a play session on E143 where
 // the chain from mdet_dl_start to dml_start_callback runs at each kind and the register images follow the firmware's
-// tables
+// tables, the rider is reported and two racers are reported each combined with its helmet
 {
   const { dmlUnits, mdetSession } = await import('../test/test_mdet.mjs');
   const du = dmlUnits(), ms = await mdetSession();

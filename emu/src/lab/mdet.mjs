@@ -45,13 +45,14 @@
 //               makes one DISP_FRAME turn at once (as CPU 3's DISP_FRAME task would take its flag, I); left to the next
 //               tick's drain, the frame drawn lagged the table by an offer (X)
 //   S-DML       (src/dev/dml.mjs; here its output) the records each run of the engine writes: S-SCENE's subjects of the
-//               offer's kind at the offer's scene time, in MDET's 640 x 480 frame (subject.mjs frames(), S-SUBJECT's
-//               placement: S-SCENE's box on the panel taken back through DISP_FRAME's transform), each a body record of
-//               class 0 (group g = 0 of classes 3g, 3g + 1, 3g + 2: the scene's subjects carry no sub-kind, and no
-//               string names the groups, I) with the score 0x0e00 (223 after MDET's scaling, above the stabilisation's
-//               thresholds), its centre and its size made even (spec 5.2.1). MDET's own stabilisation then reports a
-//               box from its seventh run on (6 hits to register; X, spec 5.4) and for up to 8 runs after it goes while
-//               the kind stays (D, spec 5.2)
+//               offer's kind at the offer's scene time, every one of them, in MDET's 640 x 480 frame (subject.mjs
+//               frames(), S-SUBJECT's placement: S-SCENE's box on the panel taken back through DISP_FRAME's transform),
+//               each a body record of class 0 (group g = 0 of classes 3g, 3g + 1, 3g + 2: the scene's subjects carry no
+//               sub-kind, and no string names the groups, I), and each part S-SCENE names for it (the racer's helmet) a
+//               record at the part's own box in class 3g + 2 (PART below, I), all with the score 0x0e00 (223 after
+//               MDET's scaling, above the stabilisation's thresholds), centre and size made even (spec 5.2.1). MDET's
+//               own stabilisation then reports a box from its seventh run on (6 hits to register; X, spec 5.4), and its
+//               combination pairs each part with the body whose box it overlaps (spec 5.6, X)
 //   S-LEARNDATA the learning data's copy: learning_data_load's read of the kind's item of group 0x800f to its
 //               destination (mdet.learning: 9,383,936 bytes) is answered with the record {address, size} the reader
 //               returns, and nothing is copied: the large-data block is not in the lab, the destination's 0x9xxxxxxx
@@ -59,9 +60,10 @@
 //               natively
 // What follows the engine's records runs natively: get_dml_result, judge_dml_result, the stabilisation, the
 // combination, set_subject_detect_result (mdet.result) and LAF, which fills the frame table's inputs with MDET's
-// subject (X, spec 5.4), writes the getter's aspect pair, writes the frame table (mdet.table_writer) and posts UP_FACE
-// after each offer; DISP_FRAME draws that table (X, spec 5.5). S-SUBJECT does not run on such a body: its writes are
-// for one where MDET_DL does not run natively (subject.mjs).
+// subjects (X, spec 5.4), writes the getter's aspect pair, writes the frame table (mdet.table_writer: a list record
+// per body, X, spec 5.6) and posts UP_FACE after each offer; DISP_FRAME draws that table (X, spec 5.5). The table's
+// main and part records stay empty: the state that fills them needs LAF's frame trace and the AF library's area (spec
+// U9). S-SUBJECT does not run on such a body: its writes are for one where MDET_DL does not run natively (subject.mjs).
 import { FirmwareError, disasm, where, ISR_SP, ISR_CALLER, HEAP_END } from './hle.mjs';
 import * as K from './kernel.mjs';
 import { RTOS } from './rtos.mjs';
@@ -92,9 +94,14 @@ const STILL = 0, NO_ZOOM = 100;
 // S-TAKEMDET's pace: an offer per 1/15 s of lab time, S-SCENE's frame step (play.mjs SCENE_STEP_NS), still scene or
 // moving (I: take_mov offers each live-view frame; the lab's live view moves at that step)
 const OFFER_NS = 1e9 / 15;
-// S-DML's records: the body class of group 0 and the score (Q12; spec 5.2.1 asks 0x0d00..0x1000); the 10-bit centre's
-// bounds (the clamp at 639 / 479, spec 5.2)
-const BODY_CLASS = 0, SCORE = 0x0E00, MAX_X = 639, MAX_Y = 479;
+// S-DML's records: the group (0: the scene's subjects carry no sub-kind) and the score (Q12; spec 5.2.1 asks
+// 0x0d00..0x1000); the 10-bit centre's bounds (the clamp at 639 / 479, spec 5.2). PART: the class within the group,
+// 3g + PART, of each part S-SCENE names (scene.mjs SUBJECTS): the helmet is part 2, the larger of the two parts, into
+// which MDET pairs part 1 and which it offers alone before part 1 (I from judge_comb's order and calc_offer_data's,
+// spec 5.6; no string names a part). AIRPLANE: the kind whose network writes classes 7 and 8 the other way round
+// (change_parts_data swaps them, D: spec 5.2)
+const GROUP = 0, SCORE = 0x0E00, MAX_X = 639, MAX_Y = 479;
+const PART = { helmet: 2 }, AIRPLANE = 2;
 
 export class MdetDl {
   // session: the PlaySession; camapp: its CamApp (S-CPU3's drain, S-SUBJECT's setting and conditions); f: the model's
@@ -116,7 +123,8 @@ export class MdetDl {
     this.deferred = 0;         // the deferred call's IRQ taken in the engine waits
     this.loads = [];           // S-LEARNDATA: the items answered
     this.yc = null;            // S-TAKEMDET's YC buffer address
-    this.boxes = [];           // S-DML: the boxes of the last offer's records (MDET's frame)
+    this.boxes = [];           // S-DML: the bodies' boxes of the last offer's records (MDET's frame)
+    this.parts = [];           // S-DML: per body, its parts' boxes {name: box} in the last offer's records
     this.offer_t = null;       // the scene time (s) of the last offer's records
     this.table_writes = 0;     // runs of MDET's frame table writer (mdet.table_writer), observed
   }
@@ -308,13 +316,26 @@ export class MdetDl {
     if (rc !== 0) throw new MdetError(`S-TAKEMDET: mdet_dl_offer_yc_data(frame ${this.offers}) returned ${rc}`);
     this.camapp.drain_cpu3();                                                       // S-CPU3: MDET's UP_FACE, one turn
   }
-  // S-DML's records for an offer: S-SCENE's subjects of the kind now, placed in MDET's frame (subject.mjs frames())
+  // S-DML's records for an offer: S-SCENE's subjects of the kind now, placed in MDET's frame (subject.mjs frames()),
+  // each body in class 3g and each part it shows in class 3g + PART at its own box, in the network's class order (for
+  // AIRPLANE, MDET's classes 7 and 8 are the network's 8 and 7). MDET pairs a part with the body whose box it overlaps
+  // and whose centre and size are nearest (judge_comb, spec 5.6): the scene's own geometry, no placement for it
   records() {
     const sub = this.camapp.subject, { t } = this.s.scene_step(), even = (v) => v & ~1;
-    this.boxes = sub.frames(this.kind, t).boxes;
+    const fr = sub.frames(this.kind, t);
+    this.boxes = fr.boxes; this.parts = fr.parts;
     this.offer_t = t;
-    return this.boxes.map(([x0, y0, x1, y1]) => ({ cls: BODY_CLASS, score: SCORE, h: even(y1 - y0), w: even(x1 - x0),
-      cy: Math.min((y0 + y1) >> 1, MAX_Y), cx: Math.min((x0 + x1) >> 1, MAX_X) }));
+    const net = (cls) => (this.kind === AIRPLANE && (cls === 7 || cls === 8) ? 15 - cls : cls);
+    const rec = (cls, [x0, y0, x1, y1]) => ({ cls: net(cls), score: SCORE, h: even(y1 - y0), w: even(x1 - x0),
+      cy: Math.min((y0 + y1) >> 1, MAX_Y), cx: Math.min((x0 + x1) >> 1, MAX_X) });
+    const out = this.boxes.map((b) => rec(3 * GROUP, b));
+    this.parts.forEach((ps) => {
+      for (const [name, b] of Object.entries(ps)) {
+        if (!Object.hasOwn(PART, name)) throw new MdetError(`S-DML: S-SCENE's part ${JSON.stringify(name)} has no class`);
+        out.push(rec(3 * GROUP + PART[name], b));
+      }
+    });
+    return out;
   }
   // A request (its CPU 3 side included) that made the firmware log an error stops the session: MDET logs each refusal
   // it makes (a bad state, kind, record or read), and none is expected of the path the lab runs (X)
@@ -322,14 +343,15 @@ export class MdetDl {
     const bad = this.lab().kernel.errors.slice(e0).filter(([code]) => !EXPECTED_ERRLOG.has(code));
     if (bad.length) throw new MdetError(`S-TAKEMDET: mdet_dl_${what}: the firmware logged ${bad.map(([c, , , w]) => `${h8(c)} from ${w}`).join('; ')}`);
   }
-  // MDET's subject records (set_subject_detect_result's, mdet.result): [{sbj_kind, body: [cx, cy, w, h, rel, dtct]}]
-  // of the slots whose kind is not 0
+  // MDET's subject records (set_subject_detect_result's, mdet.result): [{sbj_kind, body, parts: [part 1, part 2]}]
+  // of the slots whose kind is not 0, each box [cx, cy, w, h, rel, dtct] (all 0: none)
   subjects() {
     const lab = this.lab(), R = this.f.result, out = [];
     for (let i = 0; i < R.count; i++) {
       const b = lab.sim.read(R.records + R.size * i, R.size), dv = new DataView(b.buffer, b.byteOffset, b.length);
+      const box = (o) => [dv.getUint16(o, true), dv.getUint16(o + 2, true), dv.getUint16(o + 4, true), dv.getUint16(o + 6, true), b[o + 8], b[o + 9]];
       const kind = dv.getUint16(0, true);
-      if (kind) out.push({ sbj_kind: kind, body: [dv.getUint16(2, true), dv.getUint16(4, true), dv.getUint16(6, true), dv.getUint16(8, true), b[10], b[11]] });
+      if (kind) out.push({ sbj_kind: kind, body: box(R.body), parts: R.parts.map(box) });
     }
     return out;
   }
@@ -349,6 +371,7 @@ export class MdetDl {
     const d = this.dml;
     return { kind: this.kind, requests: this.requests.length, offers: this.offers, serves: this.serves, turns: Object.fromEntries(this.turns),
       deferred: this.deferred, dml_runs: d ? d.runs : 0, irqs: this.irqs, callbacks: this.callbacks, loads: this.loads.length,
-      records: this.boxes.length, subjects: this.installed ? this.subjects().length : 0 };
+      records: this.boxes.length, parts: this.parts.reduce((n, p) => n + Object.keys(p).length, 0),
+      subjects: this.installed ? this.subjects().length : 0 };
   }
 }

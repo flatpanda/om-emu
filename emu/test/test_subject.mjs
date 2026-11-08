@@ -1,8 +1,9 @@
 // Subject detection's frames from S-SCENE's subjects (src/lab/subject.mjs, src/lab/scene.mjs subjectsAt; on E143 drawn
 // from MDET's own frame table, src/lab/mdet.mjs, docs/om1-subject-spec.md 5.5):
 //   subjectUnits (pure)  the rider's subject box against the pixels renderFrame draws for it, still and moving (its
-//                        wrap); the box taken back through a DISP_FRAME transform and forward again; a record's four
-//                        corners read back as FACE's converter reads them (0x50523fe3: centre and size)
+//                        wrap); the race preset's racers and their helmets against theirs, two subjects apart; the box
+//                        taken back through a DISP_FRAME transform and forward again; a record's four corners read back
+//                        as FACE's converter reads them (0x50523fe3: centre and size)
 //   subjectSession       bin/play.mjs on E143 with --a15 on and the moving scene's rider held still: with the camera's
 //                        subject-detection setting (settings id 1682) at OFF no subject frame is drawn; at 1
 //                        (MOTOR_SPORTS) none for the first offers (MDET's stabilisation registers the track at its
@@ -13,6 +14,8 @@
 //                        rider too; at 4 (BIRD) the frame goes; the rider moving, each frame drawn lies on the rider at
 //                        the scene time of the offer whose result the table holds, and the frame moves with it; at 0 it
 //                        goes; --replay of the session log ends on the same frame
+//   subjectRaceSession   a headless Player on E143 with the race preset's two racers held still: no frame after six
+//                        offers, then two frames, each on its racer, MDET's subjects with their helmets; at OFF none
 //   subjectStandInSession  a headless Player on E143 with the mdet facts taken away (a body where MDET_DL does not run
 //                        natively): S-SUBJECT writes the frame table, the frame drawn on the still rider at once, the
 //                        status's source S-SUBJECT's, no MDET request; at OFF the frame goes
@@ -29,17 +32,26 @@ const riderScene = (speed = 0) => {
   s.layers = s.layers.filter((l) => l.pattern === 'rider');
   return s;
 };
+// the race preset's two racers held still (name: that layer alone)
+const raceScene = (name = null) => {
+  let s = SC.applySceneChange(SC.defaultScene(), { preset: 'race' });
+  s = SC.applySceneChange(s, { layer: { index: 1, speed: 0 } });
+  s = SC.applySceneChange(s, { layer: { index: 2, speed: 0 } });
+  if (name) s.layers = s.layers.filter((l) => l.name === name);
+  return s;
+};
 
 // The bounding box [x0, y0, x1, y1] (pixels, x1 / y1 exclusive) of the rider renderFrame draws: its pixels brighter
-// than the empty layer's black, above the ground strip (the rows whose first pixel is bright)
-function drawnBox(frame) {
+// than the empty layer's black (than min: a brighter part of it), above the ground strip (the rows whose first pixel
+// is bright)
+function drawnBox(frame, min = 50) {
   const [w, h, rows] = frame, Y = (x, y) => rows[y][2 * x];
-  let x0 = w, x1 = -1, y0 = h, ground = h;
+  let x0 = w, x1 = -1, y0 = h, y1 = -1, ground = h;
   for (let y = 0; y < h; y++) {
     if (Y(0, y) > 50) { ground = Math.min(ground, y); continue; }
-    for (let x = 0; x < w; x++) if (Y(x, y) > 50) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); }
+    for (let x = 0; x < w; x++) if (Y(x, y) > min) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = y; }
   }
-  return [x0, y0, x1 + 1, ground];
+  return [x0, y0, x1 + 1, min === 50 ? ground : y1 + 1];
 }
 
 export function subjectUnits() {
@@ -58,6 +70,18 @@ export function subjectUnits() {
     ok(px !== null && near(px, drawn, 1.5), `speed ${speed}, t ${t}: the subject box ${JSON.stringify(px?.map((v) => +v.toFixed(1)))} is the rider renderFrame draws ${JSON.stringify(drawn)}`);
   }
   ok(SC.subjectsAt(SC.defaultScene()).length === 0, 'the static preset has no subject');
+  // the race preset: each racer alone, its subject box and its helmet's (the brightest pixels: white, Y above 225)
+  // against what renderFrame draws; both racers in one scene are two subjects with a helmet each, apart
+  for (const name of ['far', 'near']) {
+    const sc = raceScene(name), [sub] = SC.subjectsAt(sc, 0, H / W), f = SC.renderFrame(sc, W, H, 0, 1, 1);
+    const px = (b) => b.map((v, i) => v * (i % 2 ? H : W));
+    ok(sub?.subject === 'motorsports' && sub.layer === name && near(px(sub.box), drawnBox(f), 1.5) && sub.parts.helmet && near(px(sub.parts.helmet), drawnBox(f, 225), 1.5),
+      `race, ${name}: the subject box ${JSON.stringify(sub && px(sub.box).map(Math.round))} and its helmet ${JSON.stringify(sub?.parts?.helmet && px(sub.parts.helmet).map(Math.round))} are the racer and helmet drawn ${JSON.stringify(drawnBox(f))} ${JSON.stringify(drawnBox(f, 225))}`);
+  }
+  const both = SC.subjectsAt(raceScene(), 0, H / W);
+  ok(both.length === 2 && both.every((x) => x.parts.helmet) && (both[0].box[2] <= both[1].box[0] || both[1].box[2] <= both[0].box[0]),
+    `race: two motorsport subjects side by side, each with its helmet: ${JSON.stringify(both.map((x) => x.box.map((v) => +v.toFixed(3))))}`);
+  ok(JSON.stringify(SC.subjectsAt(riderScene(0), 0, H / W)[0].parts) === '{}', 'the rider has no part');
   // DISP_FRAME's TFT transform for 4:3 (the table 0x60365754's first output, row 0: 900 x 600, x 10/8 + 50, y 10/8,
   // clip 50..850 x 0..600, D) as its 24 bytes
   const bytes = new Uint8Array(new Int16Array([900, 600, 10, 8, 10, 8, 50, 0, 50, 0, 850, 600]).buffer);
@@ -213,12 +237,13 @@ export async function subjectSession() {
   return { checks, bad };
 }
 
-// A headless Player on E143 with the moving scene's rider held still on the live view, the date prompt gone; device:
-// the output it starts on; mdet: false takes the mdet facts away before the session opens (the CamApp reads them
-// once, at its construction) and puts them back after. fn({pl, s, idle, cover, ok}): cover() composes a frame and gives
-// the share of each edge of the still rider's box with DISP_FRAME's colour 3 as the composite's word (Cr 128, Cb 128,
-// Y 170) on that output (the EVF's plane drawn at twice its size, its 4:3 area the whole panel)
-async function inProcess(what, { device = 'tft', mdet = true }, fn) {
+// A headless Player on E143 with the moving scene's rider held still on the live view (race: the race preset's two
+// racers instead, both held still), the date prompt gone; device: the output it starts on; mdet: false takes the mdet
+// facts away before the session opens (the CamApp reads them once, at its construction) and puts them back after.
+// fn({pl, s, idle, cover, boxes, ok}): boxes, the subjects' boxes on that output's panel, the larger first; cover(i)
+// composes a frame and gives the share of each edge of box i (default 0) with DISP_FRAME's colour 3 as the composite's
+// word (Cr 128, Cb 128, Y 170) on that output (the EVF's plane drawn at twice its size, its 4:3 area the whole panel)
+async function inProcess(what, { device = 'tft', mdet = true, race = false }, fn) {
   const bad = [];
   let checks = 0;
   const ok = (cond, msg) => { checks++; if (!cond) bad.push(msg); };
@@ -236,18 +261,45 @@ async function inProcess(what, { device = 'tft', mdet = true }, fn) {
     const s = pl.session, lab = s.lab;
     const idle = (ms) => s.idle_slice(lab.lab_time() + ms * 1e6);
     const [[sw, sh], [pw, ph], [ox, oy]] = LV_SCALED[device];
-    const [r] = SC.subjectsAt(riderScene(0), 0, sh / sw);
-    const box = [ox + r.box[0] * pw, oy + r.box[1] * ph, ox + r.box[2] * pw, oy + r.box[3] * ph];
+    const boxes = SC.subjectsAt(race ? raceScene() : riderScene(0), 0, sh / sw).sort((a, b) => b.area - a.area)
+      .map((r) => [ox + r.box[0] * pw, oy + r.box[1] * ph, ox + r.box[2] * pw, oy + r.box[3] * ph]);
     const clip = device === 'evf' ? [0, 0, 1600, 1200] : [50, 0, 850, 600];
-    const cover = () => { const [w, h, words] = s.frame('boundary', false); return edgeCoverBy((x, y) => x >= 0 && y >= 0 && x < w && y < h && words[y * w + x] === GREY, box, 4, clip); };
-    s.scene_input({ liveview: true, preset: 'moving', layer: { index: 1, speed: 0 } });
+    const cover = (i = 0) => { const [w, h, words] = s.frame('boundary', false); return edgeCoverBy((x, y) => x >= 0 && y >= 0 && x < w && y < h && words[y * w + x] === GREY, boxes[i], 4, clip); };
+    if (race) {
+      s.scene_input({ liveview: true, preset: 'race' });
+      s.scene_input({ layer: { index: 1, speed: 0 } });
+      s.scene_input({ layer: { index: 2, speed: 0 } });
+    } else s.scene_input({ liveview: true, preset: 'moving', layer: { index: 1, speed: 0 } });
     idle(100);
     s.key('s1', 'down'); s.camapp.pump(); idle(100); s.key('s1', 'up'); s.camapp.pump();
     idle(300);
-    await fn({ pl, s, idle, cover, ok });
+    await fn({ pl, s, idle, cover, boxes, ok });
   } catch (e) { bad.push(`${what}: ${e.stack.slice(0, 900)}`); }
   try { pl.close_session(); } catch { /* closed */ }
   return { checks, bad };
+}
+
+// Two racers (S-SCENE's race preset, held still): no frame after six offers (MDET's stabilisation registers a new
+// track at its seventh run), two frames, each on its racer, after the eighth (the seventh's frame drawn into
+// DISP_FRAME's other buffer, spec 5.5), from MDET's table of two list records (each racer's helmet combined
+// with its body, test_mdet.mjs; the list frames are the bodies'); OFF: both go
+export async function subjectRaceSession() {
+  return inProcess('race session', { race: true }, ({ pl, s, idle, cover, boxes, ok }) => {
+    const m = s.camapp.mdet, upTo = (n) => { for (let i = 0; i < 20 && m.offers < n; i++) idle(70); return m.offers; };
+    s.step('SET:1682=1');
+    const n6 = upTo(6), c0 = [cover(0), cover(1)], st0 = s.camapp.status().subject;
+    ok(boxes.length === 2 && n6 === 6 && st0?.frames === 0 && c0.every((c) => c.every((v) => v < 0.2)),
+      `the race, ${n6} offers: no frame yet: edges ${c0.map((c) => c.map((v) => v.toFixed(2)))}, ${JSON.stringify(st0 ?? null)}`);
+    upTo(8);
+    const c1 = [cover(0), cover(1)], st1 = s.camapp.status().subject, subs = s.camapp.mdet.subjects();
+    ok(st1?.source === 'mdet' && st1.frames === 2 && subs.length === 2 && subs.every((x) => x.parts[1][5] === 1) && c1.every((c) => c.every((v) => v >= 0.7)),
+      `the race: two frames, each on its racer ${JSON.stringify(boxes.map((b) => b.map(Math.round)))}: edges ${c1.map((c) => c.map((v) => v.toFixed(2)))}, ${JSON.stringify(st1 ?? null)}, ${subs.length} subjects with parts`);
+    s.step('SET:1682=0');
+    idle(100);
+    const c2 = [cover(0), cover(1)];
+    ok(s.camapp.status().subject?.frames === 0 && c2.every((c) => c.every((v) => v < 0.2)) && !pl.stand_ins_in_use().includes('S-SUBJECT'),
+      `OFF: both frames go: edges ${c2.map((c) => c.map((v) => v.toFixed(2)))}`);
+  });
 }
 
 // The EVF (a session started on it): MDET's frame on the rider, after its seven offers (one per idle slice of a frame
@@ -282,7 +334,8 @@ export async function subjectStandInSession() {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const rs = [['subject units', subjectUnits()]];
   if (!process.argv.includes('--pure')) {
-    rs.push(['subject session', await subjectSession()], ['subject frames on the EVF', await subjectEvfSession()], ['S-SUBJECT without MDET_DL', await subjectStandInSession()]);
+    rs.push(['subject session', await subjectSession()], ['subject frames on the EVF', await subjectEvfSession()], ['two racers\' frames', await subjectRaceSession()],
+      ['S-SUBJECT without MDET_DL', await subjectStandInSession()]);
   }
   for (const [n, r] of rs) { console.log(`${n}: ${r.checks - r.bad.length}/${r.checks}`); r.bad.forEach((x) => console.log('  ', x)); }
   process.exit(rs.some(([, r]) => r.bad.length) ? 1 : 0);

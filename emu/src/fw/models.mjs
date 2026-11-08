@@ -274,8 +274,9 @@ export const MODELS = {
     // 2 AIRPLANE, 3 TRAIN, 4 BIRD, 5 ANIMAL; 0x50812dc9 maps 1..5 to the learning items). table: MDET's frame table, as
     // its writer 0x5082ac64..0x5082af98 fills it and its getter 0x5083a299 (trace id 227) copies it: main {flag, the
     // record}, subject 0's box (0xa33790b2..b8, or the centre and size at 0xa3379060..66), written only while the byte
-    // 0xa337f082 is 1 (0x5082acb3, 0x5082ad02..0x5082ae76; what that state is, ?); part {flag, record}, a box at
-    // 0xa33790f2..f8 taken in the same state when 0xa337811b is 1 (0x5082ae7d..0x5082af1a); count and list, the
+    // 0xa337f082 is 1 (0x5082acb3, 0x5082ad02..0x5082ae76; LAF's frame trace sets it, spec 5.6 U9); part {flag,
+    // record}, a box at 0xa33790f2..f8 taken in the same state when 0xa337811b is 1 (0x5082ae7d..0x5082af1a); count
+    // and list, the
     // subjects' boxes (0xa33790b2 + 8 n, valid at 0xa337d53c + n; n from 0, or from 1 in that state, up to 8 records,
     // 0x5082af23..0x5082af98). The writer that runs in the lab is another, mdet.table_writer, which writes the main and
     // part flags 0 and the list alone. A record is four corners (x, y) as halfwords, top left, top right, bottom left,
@@ -362,7 +363,7 @@ export const MODELS = {
       dml: { irq_handler: 0x507F6ABD, callback: 0x50812052 },
       learning: { read: 0x501A921F, group: 0x800F, dest: 0x9511CA00, size: 0x8F3000 },
       yc: { lock: 0x50534D3F, address: 0x50534DD1, release: 0x50534BBD },
-      result: { word: 0xA3376B58, records: 0xA3376B5C, count: 8, size: 32 },
+      result: { word: 0xA3376B58, records: 0xA3376B5C, count: 8, size: 32, body: 2, parts: [12, 22] },
       table_writer: 0x5083A766,
     },
   },

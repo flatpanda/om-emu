@@ -10,7 +10,10 @@
 > Update (2026-11-07): the first part of step C runs (section 5.3): CPU 3's MDET_DL code natively on the lab CPU from
 > TAKE's calls to dml_start_callback and MDET's subject records, with S-DML (`emu/src/dev/dml.mjs`) for the engine. Its
 > second part (section 5.4): S-DML writes S-SCENE's subjects as the engine's records, and MDET's own stabilisation
-> reports them; LAF then fills the frame table's inputs natively.
+> reports them; LAF then fills the frame table's inputs natively. Its third part (section 5.5): DISP_FRAME draws the
+> frame table MDET's own code writes, with the aspect pair LAF derives from the offer and MDET's UP_FACE; S-SUBJECT no
+> longer writes on E143, and the frame mode's subject bit (S-TAKEFRAME) is the one stand-in left at the display seam.
+> The double DISP_FRAME turn of 5.3 is explained there.
 
 # OM-1 subject detection
 
@@ -274,7 +277,7 @@ the lens driver (`0x50817e11` from `0x5013f077`) and the init chain `0x501e94a5`
 
 | Seam | Where | Needs | Stand-in |
 |---|---|---|---|
-| S1 display | DISP_FRAME's inputs: MDET's frame table + UP_FACE, UP_LOCKON | what exists now (S-DISPFRAME runs DISP_FRAME on the lab CPU) | synthetic frames from the scene: S-SUBJECT (5.1) |
+| S1 display | DISP_FRAME's inputs: MDET's frame table + UP_FACE, UP_LOCKON | what exists now (S-DISPFRAME runs DISP_FRAME on the lab CPU) | synthetic frames from the scene: S-SUBJECT (5.1); on E143 MDET's own table since 5.5, TAKE's subject bit S-TAKEFRAME's |
 | S2 MDET result | `mdet_laf_*` getters FCS calls; the subject record (4.3) | native FCS (AF module) | S-SUBJECT returns scene-derived records |
 | S3 DML device | `0x9c180000`, IRQ 285, the output buffer | CPU 3 natively; the `0x800f` read path; the output head layout | S-DML: on start, write heads that decode to the scene's boxes (its register file since 2026-11-07, 5.3; the scene's boxes as its records, 5.4) |
 | S4 the network | the engine's arithmetic | layer schedule, numerics | a reproduced DML (5, step D) |
@@ -285,7 +288,7 @@ the lens driver (`0x50817e11` from `0x5013f077`) and the init chain `0x501e94a5`
 |---|---|---|---|---|
 | A | S-SUBJECT at seam S1: S-SCENE's layers report screen boxes (the rider, the ball) with a kind; when the camera's subject-detection setting is on, write MDET's frame table and post UP_FACE (and UP_LOCKON for the tracked one) so DISP_FRAME draws subject frames natively, as S-AFOSD does for the AF frame | static: the frame table's record layout and how DISP_FRAME reads it (U1); the setting's property and its value per kind (U2) | about 1 week; done 2026-10-27 (5.1: UP_FACE only, UP_LOCKON is the AF module's) | adds S-SUBJECT; nothing retires |
 | B | S-SUBJECT moves to seam S2: the subject records answered to the AF module, which then chooses the AF point and uploads frames itself | native AF module (hle-gaps 4.4: TakeReady, CPU 1 and 3; months) | 2-3 weeks after that | S-AFOSD's frame part and step A's display writes |
-| C | MDET natively on CPU 3 with S-DML: a register-file model at `0x9c180000` (start `+0x010`, status `+0x004` bit 14 W1C, IRQ 285, the gates and clock 50), the `0x800f` load through the flash-read path, and on each start output heads synthesised so that MDET's own `get_dml_result` / `judge_dml_result` / stabilisation produce the scene's boxes | ROADMAP HLE step 4 (CPU 3); a flash read model or a resource reader at `0x501a921f`; the output head layout read from the post-processing code (U4); PDT / TRC and, on E143, the face engines as models or stand-ins | 4-6 weeks after CPU 3; part 1 (MDET_DL native at single call sites, S-DML with an empty output, the load stubbed) and part 2 (S-DML's records from the scene) done 2026-11-07 (5.3, 5.4) | S-SUBJECT retires; adds S-DML (and S-FACE on E143) |
+| C | MDET natively on CPU 3 with S-DML: a register-file model at `0x9c180000` (start `+0x010`, status `+0x004` bit 14 W1C, IRQ 285, the gates and clock 50), the `0x800f` load through the flash-read path, and on each start output heads synthesised so that MDET's own `get_dml_result` / `judge_dml_result` / stabilisation produce the scene's boxes | ROADMAP HLE step 4 (CPU 3); a flash read model or a resource reader at `0x501a921f`; the output head layout read from the post-processing code (U4); PDT / TRC and, on E143, the face engines as models or stand-ins | 4-6 weeks after CPU 3; part 1 (MDET_DL native at single call sites, S-DML with an empty output, the load stubbed), part 2 (S-DML's records from the scene) and part 3 (the frames from MDET's table) done 2026-11-07 (5.3, 5.4, 5.5) | S-SUBJECT retires (on E143 in part 3, 5.5); adds S-DML (and S-FACE on E143) |
 | D | A reproduced DML: run the real network on the frame | the layer schedule from the register builders (U3); the engine's arithmetic (U5); a reference to check against | months; bit-exactness ? | S-DML's synthetic heads |
 
 Notes on D, against the e7-bird-network work: there the model resource carried its own command stream, and the
@@ -302,8 +305,9 @@ not map (U6); which core owns IRQ 285 (2.1); each kind change reloads 9.4 MB, wh
 
 Read statically in the VM's objdump, then checked by running the code in the lab (X where marked).
 
-**MDET's frame table (U1, D).** The writer (`0x5082ac64..0x5082af98`, which ends in UP_FACE) and the getter
-`0x5083a299` (trace id 227) agree on this layout:
+**MDET's frame table (U1, D).** The writer (`0x5082ac64..0x5082af98`, which ends in UP_FACE) and the getter `0x5083a299`
+(trace id 227) agree on this layout (the writer that runs in the lab is another, `0x5083a761`, with the same layout:
+5.5):
 
 | Address | Field |
 |---|---|
@@ -554,7 +558,8 @@ S-SUBJECT wrote before, and LAF's setter refuses an offer's result while it is 0
 
 MDET's DISP_FRAME posts (UP_FACE after LAF writes the frame table) wait for S-CPU3's next drain, which makes one
 DISP_FRAME turn with S-SUBJECT's post of the same tick; S-SUBJECT writes its frames again after each offer, because LAF
-writes the table natively (X: count 0, from no records) and posts UP_FACE.
+writes the table natively (X: count 0, from no records) and posts UP_FACE. (Superseded in 5.5: S-SUBJECT writes nothing
+on E143, and S-TAKEMDET drains as each call returns.)
 
 **Evidence (X, E143, `test_mdet.mjs`).** At each kind 1..5 the chain runs: start or change_mode, the kind's item to
 MDET_DL_LDL, and per offer one engine run, one IRQ 285 and one dml_start_callback; the 8 subject records at `0xa3376b5c`
@@ -570,7 +575,8 @@ The FCS calls on CPU 3 (`0x508c0139`) run natively and give the flag 0, the reco
 (b)); the power saver's byte `(0xa337f08b)` stayed 0 over 25 offers at five kinds with no detection (5.2.1 (c), its
 input still ?). S-SUBJECT's frames are drawn as before (`test_subject.mjs`). With a DISP_FRAME turn for LAF's empty
 table and then one for S-SUBJECT's frames in the same tick, the second drawing its frame, the composite showed none (X);
-why is ?.
+explained in 5.5: DISP_FRAME's double buffer, the composite taken in the one display frame between the two buffers'
+latches.
 
 **Open.** S-DML's records from S-SCENE's subjects: done in 5.4, with LAF's step to the frame table (5.2.1 (a)). Whether
 CPU 3 really works in zero lab time around the engine's run (I) and the engine's run time (A-DML-1, ?). The YC frame's
@@ -599,11 +605,97 @@ test), and with S-SUBJECT's writes switched off by hand the writer gave the tabl
 (a) is answered for this case: LAF's step from MDET's subject record to the list record of 5.1 is the identity on the
 box (X; when LAF fills the main and part records instead, U9, stays open).
 
-S-SUBJECT keeps writing the table and the frame mode's subject bit (the bit is TAKE's request, which does not run, and
-S-SUBJECT's writes are not retired in this step); that DISP_FRAME would draw LAF's own table with the bit set is not
-tried. Open: the other groups and the part classes (judge_comb's pairing), several subjects in one class, the AIRPLANE
-class swap and the movie remap with real records, the subjects' scores (one value for all), and the power saver with
-records (its byte stayed 0).
+In this step S-SUBJECT kept writing the table and the frame mode's subject bit; 5.5 retires its writes on E143, and
+DISP_FRAME draws LAF's own table with the bit set. Open: the other groups and the part classes (judge_comb's pairing),
+several subjects in one class, the AIRPLANE class swap and the movie remap with real records, the subjects' scores (one
+value for all), and the power saver with records (its byte stayed 0).
+
+### 5.5 Step C, part 3: the frames from MDET's own table (2026-11-07)
+
+On E143, where MDET_DL runs natively, S-SUBJECT writes nothing: the frame table, the getter's aspect pair, MDET's active
+byte and UP_FACE are MDET's own, and DISP_FRAME draws the table LAF writes. One stand-in is left at the display seam:
+the frame mode's subject bit, TAKE's request 1, now part of S-TAKEFRAME. Code: `emu/src/lab/mdet.mjs` (S-TAKEMDET, the
+status of MDET's table), `emu/src/lab/camapp.mjs` (`take_subject_frames`), `emu/src/lab/subject.mjs` (S-SUBJECT for a
+body without the mdet facts; its placement serves S-DML), the facts in `emu/src/fw/models.mjs` `mdet`; tests
+`emu/test/test_subject.mjs`, `emu/test/test_mdet.mjs`.
+
+**The aspect pair (D, X).** LAF's setter copies its offer state (`0xa337b4e4..` to `0xa337b5f4..`, 272 bytes,
+`0x5083998d..0x508399a0`) and maps the byte `0xa337b702` to the getter's pair (`0x50839cb8..0x50839d34`): 1 -> (4, 3), 2
+-> (3, 2), 3 -> (16, 9), 4 -> (6, 6), 9 -> (3, 4), 10 -> (17, 9), any other value logged and (4, 3): the inverse of the
+getter's map (5.1). It writes `0xa3378116` from `0xa337b6fc` (100 in the lab, the offer's zoom, I), `0xa3378118` from
+`0xa337b700` and `0xa337811b` = 1 beside it (`0x50839c32..0x50839c58`). X: offers with the aspect codes 1, 2, 3, 4 and 9
+(the still aspect, settings id 269) gave the same values at `0xa337b702` and the pairs (4, 3), (3, 2), (16, 9), (6, 6)
+and (3, 4); with S-SUBJECT's writes switched off, a debug-API watch put the pair's writes at `0x50839d2c` / `0x50839d34`
+after each offer. S-TAKEMDET's record already carries what LAF needs: DISP_FRAME's own aspect code at +34, as TAKE would
+hand it (I). Nothing in the lab writes the pair now.
+
+**The writer and UP_FACE (D, X).** After the pair, unless the bytes `0xa337f087` and `0xa337d948` take the branch that
+calls `0x506e6ac8` instead (`0x50839d79..0x50839da4`, TAKE_MOV's area, I; not met in the lab), LAF's setter calls
+`0x5083a761` (entered at `0x5083a766` by its call at `0x50839db5`) and posts UP_FACE (`0x50839dba`). `0x5083a761` runs
+`mdet_laf_calc_not_tr_dl` (`0x50837b05`), writes the main and part flags 0 and the count 0 (`0x5083a843..0x5083a850`)
+and then, for each box n whose byte `0xa337d53c + n` is 1, a list record of the box at `0xa33790b2 + 8 n`
+(`0x5083a858..0x5083a90c`), in 5.1's layout. X: it ran once per offer (the lab observes its entry; the status's
+`writes`), and so did UP_FACE; the count stores of 5.1's writer (`0x5082af2a`, `0x5082af55`) never executed, also while
+the table held the rider. So "the writer" of 5.4's probe was this one, and 5.1's `0x5082ac64..0x5082af98`, the one that
+fills the main and part records, belongs with the state `0xa337f082` = 1 (I; U9).
+
+**What is left (I).** The frame mode's subject bit: UP_FACE (`0x50025747`) acts only when the frame mode has it (D,
+4.3). S-TAKEFRAME's mode is 4 plus 1 while S-TAKEMDET has MDET started and the live scene is shown, 4 otherwise (TAKE's
+live-view request `0x506d8dea` sets the bit unless its conditions clear it, U10). S-TAKEMDET sets it after its start or
+change of kind and before its offer, so the offer's UP_FACE finds it. Taking it away (OFF, the menu, a rec view,
+playback) makes DISP_FRAME draw without the subject frames (X: none at OFF and in the menu).
+
+**A lab fix: S-CPU3's drain after each MDET call (X).** MDET posts UP_FACE during the offer, inside the poster's return
+path, where S-CPU3's nested drain only keeps DISP_FRAME's bits (a DISP_FRAME turn there would reuse the harness call's
+stack). S-SUBJECT's own post in the same tick used to drain them; without it they waited for the next tick, and the
+frame drawn lagged MDET's table by one offer (X: after a change to 16:9 the IMG3 plane held the previous offer's frame).
+S-TAKEMDET now drains as each call returns: one DISP_FRAME turn per offer, at once.
+
+**The double turn of 5.3, explained (X).** Symptom: in one tick a DISP_FRAME turn drew LAF's table (count 0) and a
+second one S-SUBJECT's frames (count 1), and the composite showed no frame. Cause: DISP_FRAME double buffers its plane.
+Its draw (`0x5100d99e`) alternates the buffer index `0x62f4fe56` (0, 1) between the records `0x62f46c6c + 12788 i`, and
+before it draws, `0x5100d34b` sleeps 1 ms at a time (`0x5100d3bc..`, on the display clock in the lab, A10) while the
+channel has an address written and not yet latched and the buffer to draw is the shown or the pending one. The first
+turn drew the empty table into one buffer and wrote its address; the second waited 5 to 12 ms of lab time for that
+address to latch at the next display boundary, then drew the frame into the other buffer, whose address latches only at
+the boundary after. A composite taken between those two boundaries shows the empty buffer. Measured with S-SUBJECT's
+post back in a turn of its own: at lab time 3623.5 ms the composite showed IMG3 at `0xb52a1f80` (the empty table's
+buffer, latched at the boundary 3622.17 ms) while the frame's buffer `0xb5175f80` waited for 3638.86 ms; 20 ms later the
+frame was shown. The shot fell there because the frame request's step to its boundary ran a tick whose offer took the
+engine's 10 ms (A-DML-1) past that boundary. So DISP_FRAME drew both tables as the firmware would; the empty display
+frame came from the lab's two writers of one table, S-SUBJECT and LAF, and lasted one display frame each time. With MDET
+the only writer it cannot occur, and the merged turn of 5.3 is no longer needed for it (S-CPU3 still defers the bits out
+of the nested drain).
+
+**The delay before the first frame (X; the firmware's).** MDET reports a new track from its seventh run (5.4), so the
+first six offers draw no frame and the seventh does. S-TAKEMDET offers at most one frame per tick and per 1/15 s of lab
+time: in a session whose lab time moves only with its inputs (`--idle off`), seven offers take seven WAITs of a frame
+step, and a long WAIT is one offer (the tests step with WAIT:67). Back at MOTOR_SPORTS after BIRD the rider was reported
+at the first offer: the track outlived the change of kind (X; how is not read). A rider that wraps across the panel
+jumps by more than MDET's association distance and is a new track, six hits again.
+
+**Evidence (X, E143).** `test_subject.mjs`: at OFF no frame; at MOTOR_SPORTS none after three offers, then after five
+more DISP_FRAME's colour 3 on at least 70% of each edge of the rider's panel box, the status's frames from MDET's table
+(source `mdet`, the writer's runs counted) and S-SUBJECT not listed; at 16:9 and 3:4 the frame on the rider within the
+letterbox's clip, the status's aspect code following; on the EVF (a session started there) the frame on the rider; at
+BIRD none; the rider moving at 3 m/s, three frames on the rider at the scene time of the newest offer or the one before
+(the published status can follow an offer made in the tick at the frame's boundary, whose buffer awaits the next one),
+each at another place; OFF again none; `--replay` ending on the same frame. With the mdet facts taken away, S-SUBJECT's
+frame is drawn on the still rider at once and goes at OFF. `test_mdet.mjs`: MDET's table holds S-DML's box as its one
+list record (main and part flags 0), its writer ran once per offer, the pair is (4, 3) for the offers' code 1, the frame
+mode has the subject bit and S-SUBJECT made no write; at OFF the table is empty and the bit gone. With the rider moving,
+MDET's box followed S-DML's placed box offer by offer within 1 px (the records' even size, the centre's clamp at 639;
+X).
+
+**S-SUBJECT elsewhere.** The subject facts and the mdet facts are both E143's only (`emu/src/fw/models.mjs`), so no body
+runs S-SUBJECT's writes today. It stays for a body that would give the first without the second, and the stand-in
+session of `test_subject.mjs` runs it with the mdet facts removed before the session opens.
+
+**Open.** After a display switch (`lv`) from the TFT the EVF composite has no IMG3 plane at all, so no subject frame is
+shown there; a session started on the EVF shows it (X, the same before and after this step; not investigated). Part
+records and several subjects per class need S-SCENE subjects with parts or a second subject (it has one, the rider): not
+done. The state `0xa337f082` = 1 and its main and part records (U9), the branch to `0x506e6ac8`, and when TAKE clears
+request 1 (U10) are not read.
 
 ## 6. Corrections to other documents
 
@@ -629,13 +721,15 @@ records (its byte stayed 0).
   stabilisation and body / part combination to 8 subject records at `0xa3376b5c`. Open: what the head's own words mean
   (`0x9c181100`, `0x9c181110`, `0x9c181114`, the piecewise tables, the anchors' unit, the grid), which S-DML does not
   need; judge_comb's pairing rules for parts; LAF's step from `0xa337b1e4` to the frame table (with U9): measured in
-  5.4 for one body, which LAF writes as the list record of its box (X).
+  5.4 for one body, which LAF writes as the list record of its box (X), through the writer `0x5083a761` (5.5).
 - **U5** The engine's numerics (operand widths, rounding, activations); not decidable statically.
 - **U6** What the `0x95xxxxxx` window is.
 - **U7** What PDT stands for and what it computes; which face IRQ is which engine; the face engines' clock name.
 - **U8** E134's detection lineage (blocks `0x010f` and `0x0111`) and E139's.
 - **U9** MDET's state `0xa337f082 = 1`, in which its writer fills the main record (drawn as kind 7, colour 4) and the
   part record (kind 8, under frame mode bit `0x10`): when MDET enters it (a selected or tracked subject, I) and which
-  of TAKE's conditions sets request 32.
+  of TAKE's conditions sets request 32. In the lab's sessions the byte stayed 0, and the writer that runs is another,
+  `0x5083a761`, which writes the list alone; `0x5082ac64..0x5082af98` never ran (X, 5.5).
 - **U10** When TAKE's live-view request clears the subject-frame bit (`0x506d8dea`'s conditions in a running camera),
-  and how `mdet_dl_start` is given the first kind.
+  and how `mdet_dl_start` is given the first kind. The lab's S-TAKEFRAME sets the bit while MDET runs on the live scene
+  (5.5, I).

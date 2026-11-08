@@ -14,8 +14,9 @@
 //                    resize words of object 0x3be4 through the firmware's property read); then with S-SCENE's rider at
 //                    MOTOR_SPORTS S-DML's record for it (class 0, slot 0, at S-SUBJECT's box) from each run, and
 //                    MDET's own subject record (sbj_kind 6, the body {cx, cy, w, h, rel, dtct}) from the run after the
-//                    hits its stabilisation needs (object 0x61a4 [915]), S-SUBJECT's frame on the rider meanwhile; the
-//                    debug API's dml op; at OFF, mdet_dl_end and no more runs
+//                    hits its stabilisation needs (object 0x61a4 [915]), and LAF's box for the frame table equal to
+//                    S-SUBJECT's, S-SUBJECT's frame on the rider meanwhile; the debug API's dml op; at OFF, mdet_dl_end
+//                    and no more runs
 //   node emu/test/test_mdet.mjs [--pure]
 import { createMachine } from '../src/machine.mjs';
 import { BUS } from '../src/core/mem.mjs';
@@ -95,6 +96,8 @@ const HEAD_FRAME = 263, RECORDS = 2457, OUT_GLOBAL = 0x62F404E0;
 // MDET's parameters, object 0x61a4: [915] the hits a new track of a large or high-scoring box needs to register
 // (regist_judge_update 0x5081455a, spec 5.2)
 const OBJ_MDET = 0x61A4, HITS = 915;
+// the frame table writer's box of subject 0 and its valid byte, which LAF fills (spec 5.1: 0xa33790b2 + 8 n, 0xa337d53c + n)
+const LAF_BOX = 0xA33790B2, LAF_VALID = 0xA337D53C;
 const R = { out: 0x1118, count: 0x111c, frame: 0x11c4, kind: (m) => 0x498 + 0x100 * m, bias: (j) => 0x11c8 + 4 * j, resize: (j) => (j < 4 ? 0x074 + 4 * j : 0x100 + 4 * (j - 4)) };
 
 export async function mdetSession() {
@@ -179,6 +182,11 @@ export async function mdetSession() {
     ok(first === hits + 1, `MDET reports the rider from the run after its ${hits} hits register the track: first at the ${first}th run with the record`);
     ok(got.length === 1 && got[0].sbj_kind === 6 && JSON.stringify(got[0].body) === JSON.stringify(want),
       `MDET's subject record at 0xa3376b5c: sbj_kind 6 (6 + 3 (kind - 1) + group 0) and the body {cx, cy, w, h, rel, dtct} ${JSON.stringify(want)}: ${JSON.stringify(got)}`);
+    // LAF's step to the frame table (spec 5.2.1 (a)): its box for subject 0, {x0, x1, y0, y1} at LAF_BOX with the valid
+    // byte LAF_VALID (the frame table writer's inputs, spec 5.1; S-SUBJECT writes neither), is S-SUBJECT's box
+    const laf = [...new Uint16Array(lab.sim.read(LAF_BOX, 8).slice().buffer)], valid = lab.sim.read(LAF_VALID, 1)[0];
+    ok(box && valid === 1 && JSON.stringify(laf) === JSON.stringify([box[0], box[2], box[1], box[3]]),
+      `LAF's box for the frame table from MDET's subject: ${JSON.stringify(laf)} (valid ${valid}), S-SUBJECT's ${JSON.stringify(box)}`);
     const used = pl.stand_ins_in_use();
     ok(['S-TAKEMDET', 'S-MDETDL', 'S-LEARNDATA', 'S-DML', 'A-DML-1'].every((x) => used.includes(x)), 'the player lists S-TAKEMDET, S-MDETDL, S-LEARNDATA, S-DML and A-DML-1');
     const r = ask({ op: 'dml' });

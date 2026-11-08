@@ -6,7 +6,8 @@
 // browser Worker as well as in node.
 //
 // The scene is a stack of layers, back to front, each at one distance from the camera, with a procedural pattern, an
-// opacity mask and a horizontal speed (m/s; lab time drives the motion, so a replay renders the same frames). The
+// opacity mask, a horizontal speed (m/s; lab time drives the motion, so a replay renders the same frames) and, where a
+// preset gives one, a horizontal offset x_m (m on the layer's plane at lab time 0; none: the pattern centred). The
 // lens is a thin lens of focal length f at f-number N focused at distance s; a layer at distance z is blurred by its
 // circle of confusion c = f^2 / (N (s - f)) * |z - s| / z on the sensor. The exposure is the exposure triangle:
 // a mid-grey surface of a scene at EV100 e reaches mid-grey on the sensor when N^2 / t = 2^e * ISO / 100; the
@@ -35,6 +36,13 @@ export const PRESETS = {
   // a test chart at one distance: the depth of field and the exposure without other layers
   chart: [
     { name: 'background', depth_m: 3, speed: 0, pattern: 'chart' },
+  ],
+  // two motorcycles with their riders, one farther away and to the left, both moving: several subjects of one kind,
+  // each with a part (the rider's helmet) for subject detection
+  race: [
+    { name: 'background', depth_m: 200, speed: 0, pattern: 'sky' },
+    { name: 'far', depth_m: 14, speed: 3, x_m: -2.4, pattern: 'racer' },
+    { name: 'near', depth_m: 8, speed: 4, x_m: 1.2, pattern: 'racer' },
   ],
 };
 
@@ -146,6 +154,16 @@ const PATTERNS = {
     if (Y < -1.6) return [[0.32, 0.3, 0.28], 1];
     return [[0, 0, 0], 0];
   },
+  // a motorcycle with its rider, side on: two tyres, the fairing, the rider's suit and helmet (its visor dark)
+  racer(X, Y) {
+    const tyre = (cx) => { const d = Math.hypot(X - cx, Y + 1.28); return d < 0.32 && d > 0.2; };
+    if (tyre(-0.7) || tyre(0.7)) return [[0.06, 0.06, 0.06], 1];
+    if (Math.hypot(X - 0.22, Y + 0.12) < 0.15) return [Y > -0.15 && Y < -0.06 && X > 0.24 ? [0.08, 0.08, 0.1] : [0.92, 0.92, 0.9], 1];
+    if ((X / 0.75) ** 2 + ((Y + 0.98) / 0.24) ** 2 < 1) return [[0.9, 0.55, 0.08], 1];
+    if (Math.abs(X + 0.05) < 0.2 && Y > -0.85 && Y < -0.26) return [[0.12, 0.15, 0.4], 1];
+    if (Y < -1.6) return [[0.32, 0.3, 0.28], 1];
+    return [[0, 0, 0], 0];
+  },
   ball(X, Y) {
     const d = Math.hypot(X, Y + 0.2);
     if (d > 0.11) return [[0, 0, 0], 0];
@@ -194,7 +212,7 @@ export function renderFrame(scene, width, height, t_s, frame, scale = 2) {
   const mmPerPx = SENSOR_MM[0] / w;
   for (const layer of scene.layers) {
     const pat = PATTERNS[layer.pattern];
-    const z = layer.depth_m, shift = layer.speed * t_s;
+    const z = layer.depth_m, shift = layer.x_m ? layer.speed * t_s + layer.x_m : layer.speed * t_s;
     // world metres per pixel at this layer's distance (pinhole projection)
     const mPerPx = mmPerPx * z / f;
     // wrap moving layers so they keep crossing the frame
@@ -253,7 +271,7 @@ export function focusAt(scene, t_s = 0, aspect = 2 / 3) {
   const [fx, fy] = scene.af_point;
   for (const layer of [...scene.layers].reverse()) {
     const width = SENSOR_MM[0] * layer.depth_m / scene.lens.focal_mm;      // the frame's width on this layer, m
-    let X = (fx - 0.5) * width - layer.speed * t_s;
+    let X = (fx - 0.5) * width - (layer.x_m ? layer.speed * t_s + layer.x_m : layer.speed * t_s);
     const span = width * 1.25;
     if (layer.speed) X = ((X % span) + span * 1.5) % span - span / 2;
     const Y = (0.5 - fy) * width * aspect;
@@ -263,16 +281,19 @@ export function focusAt(scene, t_s = 0, aspect = 2 / 3) {
 }
 
 // The subjects of the patterns, for subject.mjs (S-DML's records, S-SUBJECT): the class a camera's subject detection
-// would put the pattern in and its extent on the layer's plane [X0, Y0, X1, Y1] (m, the pattern's own coordinates). The
-// rider's two-wheeler stands for a motorsport subject (the harness's choice: the scene is synthetic); its extent runs
-// from the wheels' outer edges and their bottom to the top of the head, without the ground strip. The ball is no
-// class's.
+// would put the pattern in and its extent on the layer's plane [X0, Y0, X1, Y1] (m, the pattern's own coordinates),
+// and the extents of its parts, by name. The rider's two-wheeler stands for a motorsport subject (the harness's choice:
+// the scene is synthetic); its extent runs from the wheels' outer edges and their bottom to the top of the head,
+// without the ground strip; it has no part. The racer is a motorcycle with its rider, a motorsport subject too, from
+// the tyres' outer edges and bottom to the helmet's top, with the helmet as its part. The ball is no class's.
 export const SUBJECTS = {
   rider: { subject: 'motorsports', extent: [-0.9, -1.6, 0.9, 0.29] },
+  racer: { subject: 'motorsports', extent: [-1.02, -1.6, 1.02, 0.03], parts: { helmet: [0.07, -0.27, 0.37, 0.03] } },
 };
 // The subjects visible at lab time t_s: for each layer whose pattern is a subject, each copy of it (a moving layer
-// wraps around, so two copies can be in the frame at once) that overlaps the frame, as { layer, subject, box } with
-// box [u0, v0, u1, v1] in fractions of the frame (u to the right, v down), clipped to it, and area its clipped area.
+// wraps around, so two copies can be in the frame at once) that overlaps the frame, as { layer, subject, box, area,
+// parts } with box [u0, v0, u1, v1] in fractions of the frame (u to the right, v down), clipped to it, area its clipped
+// area, and parts {name: box} of the parts that overlap the frame, each clipped the same way (none: {}).
 // aspect: the rendered frame's height over its width. The projection is renderFrame's and focusAt's.
 export function subjectsAt(scene, t_s = 0, aspect = 2 / 3) {
   const out = [];
@@ -280,16 +301,24 @@ export function subjectsAt(scene, t_s = 0, aspect = 2 / 3) {
     const sub = SUBJECTS[layer.pattern];
     if (!sub) continue;
     const width = SENSOR_MM[0] * layer.depth_m / scene.lens.focal_mm, height = width * aspect;   // the frame on this layer, m
-    const [X0, Y0, X1, Y1] = sub.extent, shift = layer.speed * t_s, span = width * 1.25;
+    const shift = layer.x_m ? layer.speed * t_s + layer.x_m : layer.speed * t_s, span = width * 1.25;
     // the pattern at X shows at frame X + shift + k span for the k that wrap it into view (k = 0 for a still layer)
     const ks = layer.speed ? [-1, 0, 1].map((d) => Math.round(-shift / span) + d) : [0];
     for (const k of ks) {
       const off = shift + k * span;
-      const u0 = 0.5 + (X0 + off) / width, u1 = 0.5 + (X1 + off) / width;
-      const v0 = 0.5 - Y1 / height, v1 = 0.5 - Y0 / height;
-      const box = [clamp(u0, 0, 1), clamp(v0, 0, 1), clamp(u1, 0, 1), clamp(v1, 0, 1)];
-      const area = (box[2] - box[0]) * (box[3] - box[1]);
-      if (area > 0) out.push({ layer: layer.name, subject: sub.subject, box, area });
+      const place = ([X0, Y0, X1, Y1]) => {
+        const u0 = 0.5 + (X0 + off) / width, u1 = 0.5 + (X1 + off) / width;
+        const v0 = 0.5 - Y1 / height, v1 = 0.5 - Y0 / height;
+        return [clamp(u0, 0, 1), clamp(v0, 0, 1), clamp(u1, 0, 1), clamp(v1, 0, 1)];
+      };
+      const box = place(sub.extent), area = (box[2] - box[0]) * (box[3] - box[1]);
+      if (!(area > 0)) continue;
+      const parts = {};
+      for (const [name, extent] of Object.entries(sub.parts ?? {})) {
+        const p = place(extent);
+        if (p[2] > p[0] && p[3] > p[1]) parts[name] = p;
+      }
+      out.push({ layer: layer.name, subject: sub.subject, box, area, parts });
     }
   }
   return out;

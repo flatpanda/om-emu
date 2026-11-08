@@ -287,7 +287,7 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
   released; with LLPSW pressed, as the lab's idle image has it, the application refuses the key's function.</p>
   <div class="grid">
     <label><span>Live view</span><select id="sc-lv"><option value="0">off</option><option value="1">on</option></select><output></output></label>
-    <label><span>Scene</span><select id="sc-preset"><option value="static">static (park)</option><option value="moving">moving (rider, ball)</option><option value="chart">test chart</option></select><output></output></label>
+    <label><span>Scene</span><select id="sc-preset"><option value="static">static (park)</option><option value="moving">moving (rider, ball)</option><option value="chart">test chart</option><option value="race">race (two motorcycles)</option></select><output></output></label>
     <label><span>Brightness</span><input id="sc-ev" type="range" min="-2" max="18" step="0.5" value="12"><output></output></label>
     <h4>Lens</h4>
     <label><span>Focal length</span><input id="sc-focal" type="range" min="8" max="150" step="1" value="25"><output></output></label>
@@ -304,8 +304,9 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
     <div id="sc-layers" style="display:contents"></div>
   </div>
   <div class="read" id="sc-read"></div>
-  <p class="note">Subject detection: the scene's subjects are its patterns' (the moving scene's rider stands for a motorsport
-  subject); the scene takes no subjects of its own at run time. The camera's own setting chooses the kind (id 1682, 1
+  <p class="note">Subject detection: the scene's subjects are its patterns' (the moving scene's rider and the race
+  scene's two motorcycles stand for motorsport subjects, the motorcycles' helmets for their parts); the scene takes no
+  subjects of its own at run time. The camera's own setting chooses the kind (id 1682, 1
   motorsports to 5 animals: its menu, or the debug API's token SET:1682=1), and while it names the kind of a subject the
   live view shows, DISP_FRAME draws the frames natively from MDET's own frame table: on the OM-1, CPU 3's MDET runs
   natively on the scene's subjects as the engine's records and reports a subject from its seventh frame (elsewhere

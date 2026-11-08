@@ -399,6 +399,8 @@ export class Player {
     if (this.session?.lab?.iic_answered) used.push('S-IICWAIT');                            // a body whose firmware waits on the IIC bus
     if (this.session?.camapp?.dispsync_released) used.push('S-DISPSYNC');                   // a body whose GUI synced its display updates
     if (this.session?.camapp?.subject?.used) used.push('S-SUBJECT');                         // subject detection's frames drawn (subject.mjs)
+    const mdet = this.session?.camapp?.mdet;                                                 // CPU 3's MDET_DL natively with the DML's model (mdet.mjs)
+    if (mdet?.used) used.push('S-TAKEMDET', 'S-MDETDL', 'S-DML', 'A-DML-1', ...(mdet.loads.length ? ['S-LEARNDATA'] : []));
     if (this.session?.camapp?.shutter_sound?.opened) used.push('S-SHUTTERSND');              // a release's shutter sound emitted (shuttersnd.mjs)
     if (this.session?.lab?.panel_answered) used.push('S-PANELDONE');                        // a panel driver's serial completion wait answered
     if (this.session?.lab?.tp_sends?.length) used.push('S-TPSEND');                         // a send to the touch task the lab runs it for

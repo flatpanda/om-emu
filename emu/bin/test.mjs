@@ -19,7 +19,8 @@
 // file system on E143, E146, E147, E144, E142 and E134 and SDXC cards on E143 (test_storage.mjs), INFO's still information
 // in playback on the 19 bodies (test_playinfo.mjs), a tap on the touch mode icon on E143 and ten bodies of the E144
 // family (test_touch.mjs), subject detection's frames on E143
-// (test_subject.mjs), the lens on the mount natively on E143, E146 and E147 (test_lens.mjs), the resource tables loaded
+// (test_subject.mjs), CPU 3's MDET_DL natively with the DML engine's model on E143 (test_mdet.mjs),
+// the lens on the mount natively on E143, E146 and E147 (test_lens.mjs), the resource tables loaded
 // natively from the NAND on E143 (test_resnand.mjs), the SCPU's Cortex-M4 core
 // (test_m4.mjs: hand-written vectors, QEMU's recorded vectors, the SCPU image from reset to its first unmodelled
 // access), the SCPU's STM32L4 machine (test_stm32l4.mjs: the peripheral models, the SCPU image to its console prompt,
@@ -288,6 +289,16 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`subject frames (S-SUBJECT): boxes and transform ${su.checks - su.bad.length}/${su.checks}; in play ${ss.checks - ss.bad.length}/${ss.checks}`);
   [...su.bad, ...ss.bad].forEach((x) => console.log('  ', x));
   bad += su.bad.length + ss.bad.length;
+}
+// CPU 3's MDET_DL natively with S-DML: the engine's register file without firmware, then a play session on E143 where
+// the chain from mdet_dl_start to dml_start_callback runs at each kind and the register images follow the firmware's
+// tables
+{
+  const { dmlUnits, mdetSession } = await import('../test/test_mdet.mjs');
+  const du = dmlUnits(), ms = await mdetSession();
+  console.log(`MDET_DL with S-DML: engine units ${du.checks - du.bad.length}/${du.checks}; in play ${ms.checks - ms.bad.length}/${ms.checks}`);
+  [...du.bad, ...ms.bad].forEach((x) => console.log('  ', x));
+  bad += du.bad.length + ms.bad.length;
 }
 // the camera's non-volatile state kept between sessions (S-NVRAM): no date prompt, a setting kept across sessions
 {

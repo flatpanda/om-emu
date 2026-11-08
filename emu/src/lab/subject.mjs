@@ -16,7 +16,9 @@
 //   - the aspect pair whose code (the getter's map, D) equals the one DISP_FRAME computes for the frame (0x5100d469, run
 //     natively), so draw_face takes the records (D: 0x5100d764..0x5100d778); MDET would derive it from the YC frame it
 //     was offered (I);
-//   - MDET's active byte (0x50839ed0's) at 1 while frames are shown, 0 after (the getter requires it, D);
+//   - MDET's active byte (0x50839ed0's) at 1 while frames are shown, 0 after (the getter requires it, D), on a body
+//     where MDET_DL does not run natively: where it does (mdet.mjs S-MDETDL), LAF's own start and end write it at
+//     MDET's START and END, and LAF's setter refuses an offer's result while it is 0 (D: src/fw/models.mjs mdet);
 //   - the frame mode with bit 1, the face / subject frames (D: 0x5039f583 maps TAKE's request 1 to it, DISP_FRAME draws
 //     faces on it, 0x5100dc03): S-TAKEFRAME's mode 4 lacks it; TAKE's own live-view request (0x506d8dea) sets it unless
 //     one of its conditions clears it (D), and when those hold in the lab is not read, so S-SUBJECT adds the bit while
@@ -32,7 +34,9 @@
 // When: after lab time passed (camapp.mjs tick), with the application started on its shooting screen and S-SCENE's
 // live view showing the live scene (not the menu's stopped through image, a rec view or a played image); the table is
 // written and posted when the boxes, the kind or the output change, at most every 1/15 s of lab time (S-SCENE's
-// frame step). The setting is read through the firmware's property read, as TAKE reads it (D).
+// frame step). The setting is read through the firmware's property read, as TAKE reads it (D). Where MDET_DL runs
+// natively (mdet.mjs S-MDETDL), MDET's code writes the table itself after each offer, from the engine's records (none
+// from S-DML), and posts UP_FACE: S-SUBJECT then writes its frames again in the same tick (rewrite).
 import { FirmwareError } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { LV_SCALED } from './display.mjs';
@@ -145,7 +149,7 @@ export class SubjectFrames {
     lab.sim.write(tb.count, Uint8Array.of(boxes.length));
     lab.sim.write(this.f.aspect[0], Uint8Array.of(pair[0]));
     lab.sim.write(this.f.aspect[1], Uint8Array.of(pair[1]));
-    lab.sim.write(this.f.active, Uint8Array.of(1));
+    if (!this.camapp.mdet) lab.sim.write(this.f.active, Uint8Array.of(1));   // natively LAF's start writes it
     this.mode(true);
     this.post(`kind ${kind} (${KINDS[kind]}), aspect ${aspect}: ${boxes.length} frame(s) ${JSON.stringify(boxes)}`);
     this.last = { kind, device: this.s.device, aspect, t, frames: boxes };
@@ -155,11 +159,14 @@ export class SubjectFrames {
     const lab = this.s.lab, tb = this.f.table;
     for (const a of [tb.main[0], tb.part[0], tb.count]) lab.sim.write(a, Uint8Array.of(0));
     this.post(`no frames: ${why}`);
-    lab.sim.write(this.f.active, Uint8Array.of(0));
+    if (!this.camapp.mdet) lab.sim.write(this.f.active, Uint8Array.of(0));   // natively LAF's end writes it
     this.mode(false);
     this.key = null; this.step = null;
     this.last = null;
   }
+  // After an offer of S-TAKEMDET's (mdet.mjs): MDET's own code wrote the table from its results (none while S-DML
+  // writes no record) and posted UP_FACE, so the frames S-SUBJECT shows are written again at its next tick
+  rewrite() { if (this.key !== null) { this.key = null; this.step = null; } }
   // The frame mode with or without the subject bit, through the frame plane's setter as S-TAKEFRAME sets it
   mode(on) {
     const want = this.frame_mode_base | (on ? FRAME_MODE_FACE : 0);

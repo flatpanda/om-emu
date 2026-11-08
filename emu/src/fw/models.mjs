@@ -301,6 +301,58 @@ export const MODELS = {
       aspect_code: 0x5100D469, state: 0x5100DFBC,
       transform: { table: 0x60365754, index: 0x500258E8, object: [0x8971, 0x62F4FE68], device: 0x500258D4, row: 0x50025931 },
     },
+    // CPU 3's MDET_DL run on the lab CPU with the DML engine's model (src/lab/mdet.mjs S-MDETDL, S-TAKEMDET,
+    // S-LEARNDATA; src/dev/dml.mjs S-DML; docs/om1-subject-spec.md 2.1, 4.1, 5.2, 5.3). D unless tagged.
+    // api: the CPU 0 calls TAKE and take_mov make (trace ids 588, 589, 590, 592): mdet_dl_start(kind) and
+    // mdet_dl_change_mode(kind) accept 1..5 (0x5080a62f, 0x5080a7e6); start waits for the CPU 0 flag (0x60043184)
+    // bit 8 without timeout (0x5080a658..0x5080a66a), end for (0x60043186) bit 16; offer(record) posts the record
+    // whose +4 is the YC buffer's id (locked first through yc.lock, 0x5080a9cb), +6 / +8 the YC frame's width and
+    // height, +13 the movie flag, +32 the digital zoom in percent (calc_disp_area_lv 0x508130d0 hands it to
+    // 0x50813294, which returns at once for 100 and divides by it otherwise), +34 the aspect code (take_mov's packer
+    // 0x503a4e2d..0x503a4ee5: +32 is its buffer descriptor's halfword +14; the posted copy starts 12 bytes on, so
+    // these are the spec's +16, +18, +20, +25, +44, +46). post: the poster 0x5080ad65 they all call
+    // copies the request into MDET's slot (0xa3375b98, its kind byte the slot's busy mark) and posts fn with the slot
+    // to CPU 3 (sys_callrequest 0x50035afd(3, ...) at 0x5080aed5, ring [3][0]); done, its return path after it
+    // restores the interrupt mask (0x5080aede); busy, the branch it takes when the slot is still busy, which arms a
+    // 50 ms software timer to post later (0x5080ade0..0x5080adfa, 0x5080af28, 0x5080b017). fn (0x5080b987, run by
+    // CPU 3's IRQ 324 drainer) runs MDET's lazy init 0x5080b1c6 (dl_init_boot: the DML driver's init 0x507f906b,
+    // which attaches IRQ 285, the request image at 0xa3375c78, dl_prm_init; once, by the magic 0x20202022 at
+    // 0xa3376c68), queues the slot (0x50817244), sets REQ's flag bit 1 and clears the slot's mark.
+    // tasks: CPU 3's MDET_DL_REQ (0x3004; entry 0x5080bae8: its flag (0x600436d0) bit 1, then each queued request
+    // by kind: 1 START 0x5080bc34, 2 END 0x5080bd49, 3 CHANGE_MODE 0x5080be27, 4 NOTIFY_START_STILL, 5 OFFER_YC_DATA
+    // 0x5080c033, 6 NOTIFY_1ST_AFL) and MDET_DL_LDL (0x3005; entry 0x5080c8a1: its flag (0x600436d2) bit 2, then the
+    // learning data of the kind START or CHANGE_MODE stored at 0xa3375c74 when it is not the one loaded at
+    // 0xa3375c75, through learning_data_load 0x5080c9b4; it waits for (0x600436d4) bit 4 first while the DML runs).
+    // dml_done: the flag word (0x600436d6) and bit 4 that dml_start_callback 0x50812052 sets (0x508120c5), on which
+    // the offer's handler waits without timeout after dml_start (0x5080c20d..0x5080c224). The four flag words hold
+    // 0x3003..0x3006, CPU 3 objects (the id's bits 12..13, which the kernel's object calls compare with the calling
+    // task's, 0x5002cfb0). deferred: the deferred-call IRQ through whose ring dml_start reaches the driver's start
+    // (0x507f9099 -> 0x500503d4, IRQ 53's post, src/dev/dpc.mjs; the run 0x507f90c1 -> 0x507f69cb). dml: the IRQ 285
+    // handler the driver's init attaches (0x507f68a8) and the completion callback it calls (the request image's +36,
+    // 0x60833072 in the ROM copy at 0x609e9bf8), observed by the lab
+    // learning: learning_data_load's read of item kind - 1 of group 0x800f to 0x9511ca00 through the resource reader
+    // 0x501a921f(group d0, item d1, destination a0, a1 0, size 0 on the stack: the item's length), which returns in a0
+    // the record {address, size} learning_data_load checks for 0 (0x5080ca1c..0x5080ca62); size: each item's length
+    // (spec 3.2, X: the 0106 block's directory). yc: the YC buffer manager's lock (from the CPU 0 offer), address (d0,
+    // read twice by dml_set_control_reg for the Y and C planes, 0x5080cd6d, 0x5080cd81) and release (from the offer's
+    // handler, which wants 0) of a buffer id (0x50534d3f, 0x50534dd1, 0x50534bbd). result: set_subject_detect_result's
+    // word and 8 records of 32 bytes (0x50816d37: +0 sbj_kind, +2 the body {cx, cy, w, h, rel, dtct}, +12 part 1,
+    // +22 part 2), which offer_yc_data hands to LAF (0x50839ede) at the end of each offer. LAF's start and end, which
+    // START, CHANGE_MODE and END call (0x50839498 -> 0x508395ce, 0x50839533 -> 0x508397d2), write subject.active (1 at
+    // 0x50839766, 0 at 0x508398c8), and LAF's setter refuses an offer's result while it is 0 (0x50839f29..0x50839f5b)
+    mdet: {
+      api: { start: 0x5080A5E2, end: 0x5080A6DC, change_mode: 0x5080A79A, offer: 0x5080A912 },
+      record: { size: 96, buff_id: 4, w: 6, h: 8, movie: 13, zoom: 32, aspect: 34 },
+      post: { done: 0x5080AEE5, busy: 0x5080ADE0, fn: 0x5080B987, slot: 0xA3375B98 },
+      tasks: [{ name: 'MDET_DL_REQ', entry: 0x5080BAE8, flag: 0x600436D0, bit: 1 },
+        { name: 'MDET_DL_LDL', entry: 0x5080C8A1, flag: 0x600436D2, bit: 2 }],
+      flags: [0x600436D0, 0x600436D2, 0x600436D4, 0x600436D6],
+      dml_done: [0x600436D6, 4], deferred: 53,
+      dml: { irq_handler: 0x507F6ABD, callback: 0x50812052 },
+      learning: { read: 0x501A921F, group: 0x800F, dest: 0x9511CA00, size: 0x8F3000 },
+      yc: { lock: 0x50534D3F, address: 0x50534DD1, release: 0x50534BBD },
+      result: { word: 0xA3376B58, records: 0xA3376B5C, count: 8, size: 32 },
+    },
   },
   E146: {
     name: 'OM-1 II', bin: 'OLY_E_146_1300_0000_0000.BIN', version: '1.3', res_block: 'blk02000000.OE.0101.bin', checked: true,

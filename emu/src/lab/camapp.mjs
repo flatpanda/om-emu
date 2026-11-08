@@ -105,6 +105,7 @@ import * as SC from './scene.mjs';
 import { jpegOfFrame } from './jpeg.mjs';
 import { HlsMedia } from './media.mjs';
 import { SubjectFrames } from './subject.mjs';
+import { MdetDl } from './mdet.mjs';
 import { ShutterSound } from './shuttersnd.mjs';
 import { A, MODEL, ON_LAB_MODEL, MODEL_INFO, IMAGE_BASE, knob, fact, isUnmapped } from '../fw/model.mjs';
 import { DISPLAY_SYNC_E143, RECVIEW_E143, CBS_E143, LENS_ZOOM_TABLE_E143, CARD_DETECT_E143, STILL_E143, DCF_COUNTS_E143 } from '../fw/facts.mjs';
@@ -412,7 +413,11 @@ export const CAMAPP_STAND_INS = {
   "S-TAKEFRAME": "the frame display mode the TAKE module sets for the live view (0x5039f583 -> 0x500256d9): 4, the AF frames and the indicator (the mask TAKE requests in S-AF is I)",
   "S-AFOSD": "the AF module's OSD upload (upload_af_info 0x508c8554 -> 0x500257ce) at S-RELSEQ's END_FOCUS: in focus, indicator 1 and one frame at the AF target (centre 400, 300, 60 x 60 in DISP_FRAME's coordinates, I); not in focus, indicator 9 and no frame (I); at the S1 release, none. A build whose frame plane has no AF upload (E145, the TG-7: modes 1 and 2 only, src/fw/facts.mjs framePlane) is given none: no code of its image stores the plane's mode-3 frames (X, a byte scan), so the camera's AF draws none there either (I)",
   "S-AFLOCK": "(E143, while UI_OUT runs: H-UIOUTSTART) the AF lock as the shooting sequence, the take capability and the AF module would hold it, fed from S-RELSEQ's focus callbacks: S1 down sets the still sequence's READY bit (2) of the shared take status's word 0 and END_FOCUS(OK) its READY_FINISH bit (4), both through the status's own setter 0x50ab61ee (which bit is which state: D, the sequence parts' READY and READY_FINISH entries call the setters of 2 and 4), and the take information's isFocus (0x62af6e28) as CapTre_TakeReady::notifyAFOK stores it; while the lock holds the AF module's state getter 0x509b06f6 answers indicator 1, S-AFOSD's in-focus code (natively it answers 0: the module is not initialised in the lab); S1 up clears the two bits through the status's clear 0x50ab52ad and isFocus. The application's getCondition then sees the lock, and its changedFocus plays the AF beep natively through playAfSound, the sound control's playTarget and api_sound to UI_OUT's sound request (X: sound 0, volume 60, the settings id 18 the Setup item 1037 sets too; with the audio hardware it sounds, S-SOUNDRES's lab-made beep). The GUI plays it once per lock until its own afSound flag is cleared again: S-AFLOCK posts the AF lock's callback CBS_AF_LOCK (155) through S-RELSEQ's post, 1 after END_FOCUS(OK) and 0 at S1 up, and the application turns 0 into GUI event 0x0300002d, whose handlers clear the flag (D), so each half press in focus beeps once (X); that the camera's sequence posts it so is I (the shooting reactive's AF lock case posts CBS_AF_LOCK with 1 or 0, D; when the AF module raises it is not traced). Not installed under control camapp 2 (the HLS components run there)",
-  "S-SUBJECT": "(with S-SCENE's live view, while the camera's subject-detection setting names a kind) the subject detection CPU 3's MDET would run: S-SCENE's subjects of that kind (the rider stands for motorsports) written into MDET's frame table as list records (four corners each, through DISP_FRAME's own transform taken back, so they land on the subject as the panel shows it), the getter's aspect pair and active byte set, the frame mode's subject bit added (I) and UP_FACE posted (0x50025747); DISP_FRAME reads the table through FACE's and MDET's getters and draws the frames natively (subject.mjs; docs/om1-subject-spec.md 5.1)",
+  "S-SUBJECT": "(with S-SCENE's live view, while the camera's subject-detection setting names a kind) the subject detection CPU 3's MDET would run: S-SCENE's subjects of that kind (the rider stands for motorsports) written into MDET's frame table as list records (four corners each, through DISP_FRAME's own transform taken back, so they land on the subject as the panel shows it), the getter's aspect pair set (and its active byte where MDET_DL does not run natively; on E143 LAF's own start writes it, S-MDETDL), the frame mode's subject bit added (I) and UP_FACE posted (0x50025747), again after each of S-TAKEMDET's offers, after which MDET's own code has written the table; DISP_FRAME reads the table through FACE's and MDET's getters and draws the frames natively (subject.mjs; docs/om1-subject-spec.md 5.1, 5.3)",
+  "S-TAKEMDET": "(E143, with S-SCENE's live view, while the camera's subject-detection setting names a kind) the requests TAKE and take_mov would make to MDET, which do not run in the lab: mdet_dl_start(kind), mdet_dl_change_mode(kind) at a change of kind and mdet_dl_end at OFF, and one mdet_dl_offer_yc_data per S-SCENE frame step with the record {frame number, buffer id, 640 x 480, still, no digital zoom, DISP_FRAME's aspect code}, each natively from the lab task; the buffer id names a 640 x 480 YC buffer the stand-in takes from S-HEAP (not written: nothing reads its pixels), whose lock, address and release the YC buffer manager is answered for (mdet.mjs; docs/om1-subject-spec.md 5.3)",
+  "S-MDETDL": "CPU 3's MDET_DL tasks (MDET_DL_REQ, MDET_DL_LDL) natively on the lab CPU: the MDET poster's return path serves ring [3][0] at once (S-CPU3: MDET's function in interrupt context), then each task whose flag it set runs a turn of its body on a harness stack until it waits for its flag with the flag clear; CPU 3's flags 0x3003..0x3006 are kept by the lab (OlyEvSt, iOlyEvSt, OlyEvWt, OlyEvCl on their ids, uITRON's semantics); the offer's wait for the engine takes the deferred call's IRQ 53 (the driver's start), runs the lab clock to S-DML's completion and delivers IRQ 285, whose callback sets the flag; the post-processing, the subject records and LAF run natively (mdet.mjs)",
+  "S-LEARNDATA": "the learning data's copy: learning_data_load's read of the kind's item of group 0x800f (9,383,936 bytes) to its destination is answered with the reader's record {address, size} and nothing is copied (the large-data block is not in the lab, the destination is not mapped, S-DML reads no weights); other groups run natively (mdet.mjs)",
+  "S-DML": "the DML engine (src/dev/dml.mjs, board dml): its registers as storage, the power words, a start (+0x010 = 1) that keeps the register image written since the last one (the debug API's dml op), zeroes the 9 classes of 32 records at (+0x1118) << 4 and completes after 10 ms of lab time (A-DML-1) with status bit 14 (write 1 to clear) and IRQ 285; the network does not run, so MDET reads no detection",
   "S-LENS": "(unless the lens runs natively: the default on E143, E146 and E147, S-LENSMCU; OM_EMU_LENS=stand-in for S-LENS there) a lens on the mount, the M.Zuiko 12-40mm F2.8 PRO: lens 0's attach and data-valid flags (0xa32d4b9a, 0xa32d4b98) are 1 and its record (0xa32caa8c -> the driver's static 0xa3193780) is filled through the driver's current copies and its own commits 0x502ac838 / 0x502acb96, the zoom entries at +1164; the field layout is the record dump's (0x50118662, 0x50118ab7, 0x50118d20), the values I (12-40 mm, F2.8-F22 as APEX x 256 761 / 2283); the driver's derived apertures and focal lengths run natively; the lens-ready byte 0xa32d4b94 is 1 (0x50127ba2 answers 1, not 0x21, which DISP_FRAME requires, I); set before the application starts",
   "S-EXPOSE": "the brightness the exposure plan follows: the AE result objects 0xc12a / 0xc0ba / 0xc0ca (TAKE_EXPOSE's command handler 0x50596187 writes them; one per metering mode, I) set through the property setter 0x5004188b to the scene's BV = (EV100 - 5) x 256 (S-SCENE's scene, else its default EV 12), the zoom step nearest its focal length; take_expose_calculate 0x50597e82 runs natively, once the application has started and after each input on the shooting screen; its plan (0x62a919dc +6 Tv, +10 Sv, +14 Av) is the shutter, aperture and ISO the screen shows and, in S-SCENE's auto, the live view's and the captures' exposure. The camera meters the live view continuously (its LV AE task, not run)",
   "S-OUTDISP": "while the lab's display switch (SWITCH: H-CONNECT 131 with lOutput 7) has the EVF open, the application's getOutputDisplay (0x5104fd44) answers 6 (INTERNAL_EVF), the device H-CONNECT's lOutput 7 stands for; on the TFT it runs natively. Without it the application, told of the GUI's change, answers the TFT (its EVF branch needs a monitor position the lab's switch bits do not give, docs/om1-shutter-spec.md section 7 item 53) and sends 131 with lOutput 2, and the two alternate. The camera decides from the eye sensor, the monitor position and the settings (I)",
@@ -433,7 +438,7 @@ export const CAMAPP_STAND_INS = {
   "S-MOVRATE": "(a body whose movie record time divides by the movie info's frame rate without a test: E118, X) the MN103's DIVU by 0, whose quotient the manual leaves undefined (emu/FIDELITY-NOTES.md 3.2): the rate is the movie recorder's set-up's, which runs on CPU 2 at a movie take's start or a movie's playback, so it is 0 on the camera too until then (docs/model-survey.md finding 59). While it is 0 the divide is not executed, its quotient taken as 0, and the record time runs on natively and fills its block; the quotient goes only to the block's +20, which two of the query's seven callers read, neither met in the lab's start. What the camera's quotient is, ?",
   "S-LONGTIMER": "the system timer module's long timers (1000 ms and more, set through api_system.c 0x5041fd71 / 0x5041fd0d by the HLS timer service): when one is due in lab time the module's event 0x03010000 | number is published, as the module would",
   "S-BOOTDONE": "the HLS components' boot completion: the camera base (Cab_CameraBase) and the still-shooting category wait in their state 3 for event 415, which their capabilities would send once the modules report ready; S-BOOTDONE dispatches 415 to each waiting there, and 420 (the shooting mode) to the camera base waiting in its state 11, so the shoot mode, the category and Cmp_ShootingComponent are created and run on the OXF main thread (HIGHLEVEL_MAIN, started by S-CAMAPP). The component's sub-CPU status read (0x5012b8b7) returns 0",
-  "S-CPU3": "the posts to CPU 3 (remote calls of 0x5002587a through ring [3][0], each setting bits of DISP_FRAME's flag) are taken off the ring and acknowledged after each step, and S-DISPFRAME runs a turn of DISP_FRAME for their bits; the lab has no CPU 3",
+  "S-CPU3": "the posts to CPU 3 through ring [3][0] are taken off the ring in order and acknowledged, each by its function: DISP_FRAME's remote calls of 0x5002587a (each setting bits of DISP_FRAME's flag), after each step, S-DISPFRAME then running one turn of DISP_FRAME for their bits; on E143 MDET's post, at once at its poster's return, S-MDETDL running CPU 3's side (mdet.mjs); a post of any other function stops the session; the lab has no CPU 3",
   "S-RELSEQ": "the modules' notifications of a release as the callbacks the HLS shooting reactive posts for them (0x50af4451, CBC_SHOOTING_COMMON), while the application's shooting service runs (from startShootingService 0x50ae1124 to endShootingService 0x50ad7e8a; in playback S1 only takes the application back to shooting): S1 down -> START_FOCUS, END_FOCUS (OK, or NG when S-SCENE's live view has nothing focusable under its AF point); S2 down -> START_SHOOTING_PICTURE, START_EXPOSE, END_EXPOSE after the shutter time in use, END_SHOOTING_PICTURE, START_RECVIEW, END_RECVIEW 500 ms later, then START_THROUGH_IMAGE_PROCESS (the through image's restart, on which the GUIs of the E118 family, E142, E140, E130, E133, E145, E129 and E132 leave the rec view's display); the application's RECORDING_MOVIE function starts a recording (READY_MOVIE, START_SHOOTING_MOVIE, START_RECORDING_MOVIE, UPDATE_SHOOTING_TIME every second) or ends it (STOP_SHOOTING_MOVIE, END_RECORDING_MOVIE); meanwhile the shooting phase query 0x50ab57e9 answers the movie phases of the shooting component's sequence (113 ready, 114 ready finish, 115 recording, 117 end), so getMovieState is 1 and the GUI lays out its REC mark. The callbacks due at one lab time (END_EXPOSE and END_SHOOTING_PICTURE) are posted together before the application runs, as the modules' notifications would reach its queue while it works (E145's application defers an event until END_SHOOTING_PICTURE, X). The order follows the callbacks' names (I). No image is developed: S-RECVIEW shows the capture's frame",
   "S-SHUTTERSND": "(a host that plays sound: the players' pages) the mechanical shutter's sound at each release S-RELSEQ makes, synthesized (src/lab/shuttersnd.mjs: seeded noise through decaying resonators, no audio asset): an open click at START_EXPOSE and a close click with the charge motor at END_EXPOSE, the shutter time in use later (S-SCENE's, else 1/125 s), sent to the page over the lab's audio output (src/lab/audio.mjs, GET /api/audio) and played with WebAudio once a key or a click has started it. On the camera that sound is the mechanism's own, not the firmware's: the stock firmware plays nothing at a release and the electronic shutter is silent (I: the patch tool om-c, on the same base images, has to add both a call of the sound engine's play method before the capture's begin and the sound; in the lab's S2, where S-RELSEQ stands in for the release and that capture begin does not run, the play method is not called, X of the lab only); which drive settings select the electronic shutter is not decoded (?), so every release sounds as the mechanical shutter. Nothing about the clicks is measured from a camera (I)",
 };
@@ -471,6 +476,10 @@ export class CamApp {
     this.media = null;         // S-MDACTRL / S-MEDIA (media.mjs): with the file system native
     // S-SUBJECT (subject.mjs): subject detection's frames, on a body that gives its facts (models.mjs subject)
     this.subject = MODEL_INFO.subject ? new SubjectFrames(session, this, MODEL_INFO.subject, (mode) => this.frame_mode(mode), FRAME_MODE_AF) : null;
+    // S-TAKEMDET / S-MDETDL / S-LEARNDATA (mdet.mjs): CPU 3's MDET_DL natively with S-DML, on a body that gives its
+    // facts (models.mjs mdet) and S-SUBJECT's; df_bits: DISP_FRAME's bits a nested drain left (S-CPU3)
+    this.mdet = MODEL_INFO.mdet && this.subject ? new MdetDl(session, this, MODEL_INFO.mdet) : null;
+    this.df_bits = 0;
     this.shoot_mode = false;   // S-BOOTDONE: 420 sent
     this.boot_finished = false; // S-BOOTDONE: the category left its state 3
     this.started = false;
@@ -1040,22 +1049,36 @@ export class CamApp {
     this.log.push([kind, `getStillInfo: ${img ? `image ${this.play_cur + 1}, ${date.join('-')} (clock status ${img.clock?.status ?? '-'}), ${size.join('x')}, ${img.focal_mm ?? '-'} mm` : 'no image'}`]);
   }
   // S-RELSEQ
-  // S-CPU3: ring [3][0]'s entries (function, argument) taken off and the bank-3 doorbell acknowledged
-  drain_cpu3() {
+  // S-CPU3: ring [3][0]'s entries (function, argument) taken off in order and the bank-3 doorbell acknowledged, each
+  // by its function: DISP_FRAME's remote call (0x5002587a) adds its bits for one turn of DISP_FRAME after the drain
+  // (S-DISPFRAME), MDET's post (src/fw/models.mjs mdet.post.fn) runs CPU 3's side at once (S-MDETDL, mdet.mjs); any
+  // other function is an error. nested: the drain runs inside a harness call (the MDET poster's return path), where
+  // DISP_FRAME's turn, a harness call of its own, would reuse that call's stack: its bits wait for the next drain
+  drain_cpu3(nested = false) {
     const lab = this.s.lab, intc = lab.nk.intc;
-    if (intc === null || !intc.ipi_pending(CPU3)) return;
+    if (intc === null) return;
     const [wp, rp, ring, bit] = lab.ipi_desc(CPU3, 0);
-    const w = lab.sim.read(wp, 1)[0], rd = lab.sim.read(rp, 1)[0];
-    let bits = 0;
-    for (let k = rd; k !== w; k = (k + 1) % 32) {
-      const fn = lab.sim.u32(ring + 8 * k), arg = lab.sim.u32(ring + 8 * k + 4);
-      if (fn !== runtime(CPU3_REMOTE_CALL)) throw new FirmwareError(`S-CPU3: ring [3][0] entry ${k}: function ${h8(fn)}, not ${h8(runtime(CPU3_REMOTE_CALL))}`);
-      this.log.push(['cpu3', `remote call argument ${h8(arg)}`]);
-      bits |= arg & 0xFF;
+    const mdetFn = this.mdet ? runtime(this.mdet.f.post.fn) : null;
+    let bits = this.df_bits;
+    this.df_bits = 0;
+    while (intc.ipi_pending(CPU3)) {
+      intc.ipi_request(CPU3, 0, bit);
+      for (let k = lab.sim.read(rp, 1)[0]; k !== lab.sim.read(wp, 1)[0]; k = lab.sim.read(rp, 1)[0]) {
+        const fn = lab.sim.u32(ring + 8 * k), arg = lab.sim.u32(ring + 8 * k + 4);
+        lab.sim.write(rp, Uint8Array.of((k + 1) % 32));
+        if (fn === runtime(CPU3_REMOTE_CALL)) {
+          this.log.push(['cpu3', `remote call argument ${h8(arg)}`]);
+          bits |= arg & 0xFF;
+        } else if (fn === mdetFn) {
+          this.log.push(['cpu3', `MDET post ${h8(arg)}`]);
+          this.mdet.serve(arg);                                                     // S-MDETDL
+        } else {
+          throw new FirmwareError(`S-CPU3: ring [3][0] entry ${k}: function ${h8(fn)}, not DISP_FRAME's ${h8(runtime(CPU3_REMOTE_CALL))}${mdetFn === null ? '' : ` or MDET's ${h8(mdetFn)}`}`);
+        }
+      }
     }
-    lab.sim.write(rp, Uint8Array.of(w));
-    intc.ipi_request(CPU3, 0, bit);
-    if (bits) this.dispframe_turn(bits);                                           // S-DISPFRAME
+    if (bits && nested) this.df_bits = bits;
+    else if (bits) this.dispframe_turn(bits);                                      // S-DISPFRAME
   }
   // S-BOOTDONE: the reactives of BOOT_OBJECTS on the HLS heap (vtable word at their start)
   boot_objects() {
@@ -1208,6 +1231,7 @@ export class CamApp {
       this.post_all(batch.map(([, name, param]) => [name, param]));
       for (const [, name, param] of batch) if (name === 'UPDATE_SHOOTING_TIME' && this.recording !== null) this.at(1e9, name, param + 1);
     }
+    this.mdet?.tick();                                                              // S-TAKEMDET
     this.subject?.tick();                                                           // S-SUBJECT
   }
   take_log() { const out = this.log; this.log = []; return out; }
@@ -1217,6 +1241,7 @@ export class CamApp {
       card_used_s: +(this.card_used_ms / 1000).toFixed(1), card_images: this.card_images(),
       components: this.boot_finished,
       reactive: this.reactive === null ? null : h8(this.reactive),
-      ...(this.subject?.used ? { subject: this.subject.status() } : {}) };
+      ...(this.subject?.used ? { subject: this.subject.status() } : {}),
+      ...(this.mdet?.used ? { mdet: this.mdet.status() } : {}) };
   }
 }

@@ -542,6 +542,8 @@ export const MODELS = {
     // the power manager and the power-off natively, with E143's IO expanders (X: test_scpu's and test_scpum4's power
     // sessions; docs/hle-gaps.md 4.7.4)
     power_native: true,
+    // REC_FILE natively, at the addresses recFile reads (X: test_storage's S2 file, its Exif Model 'OM-1MarkII')
+    rec_native: true,
     // as E143's (D): the GIO init 0x50002a21 ends with 0x50002b5e (0x50002a2e), slots at 0xa32c1f74; the EDID state is
     // the word 0x62a67880 its getter 0x501d8647 reads. The hot-plug handler's work runs in the display init's HDMI task
     // 0x501dc568 (extra_tasks), not in task 16 as E143's
@@ -594,6 +596,8 @@ export const MODELS = {
     // 0x50045807; X: a scan finds the expanders' task names only in a name list no code loads), so S-IOEXP does not
     // run (X: test_scpu's power session; docs/hle-gaps.md 4.7.4)
     power_native: true,
+    // REC_FILE natively, at the addresses recFile reads (X: test_storage's S2 file, its Exif Model 'OM-3')
+    rec_native: true,
     // as E146's (D): the GIO init 0x50002a11 ends with 0x50002b50 (0x50002a1e), slots at 0xa32c1c44; the EDID state
     // word 0x62a655e4 (its getter at 0x501e078a); the hot-plug work runs in the HDMI task 0x501e3eca
     hdmi: { gio_slots: 0x50002B50, state: [0x62A655E4, 4] },

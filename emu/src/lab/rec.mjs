@@ -99,7 +99,7 @@ const SHOT = 1;              // HandleTarget: TAKE's shot id (I: the lab's one s
 const ASPECT = 1;            // ImgAspect (?: which aspect 1 names is not read)
 const JFIF_APP0 = 0xE0;
 // REC_FILE's file context and its DCF block (src/lab/storage.mjs REC for the fnode's and dnode's fields): the same on
-// E146 and E147 (X: rec_file_record stores the context's +78 and +52 as E143's does, and their files' fnodes and
+// E146 and E147 (D: rec_file_record stores the context's +78 and +52 as E143's does; X: their files' fnodes and
 // folders read back through them match the card)
 const CTX = { dcf: 8, fnode: 36, status: 84 }, DCF_STAMP = 16;
 const SLICE_MS = 5, LIMIT_MS = 20000, WAI = 4;

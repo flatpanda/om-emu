@@ -38,20 +38,20 @@
 //   S-ALBM      the album manager's per-drive init (where the rule finds one) returns at once: ALBM_MAIN, which it
 //               would start, allocates its first request's id with udf07 (docs/om1-udf-spec.md row 14, kept faulting),
 //               and the movie module it asks does not run
-//   S-RECFILE   (not on E143, where REC_FILE runs natively in its task from REC_IMAGE's packet, src/lab/rec.mjs) the
-//               picture's file at a release's END_SHOOTING_PICTURE (src/lab/camapp.mjs S-CARD), the JPEG the
-//               capture pipeline would hand REC_FILE, which does not run: a JPEG the lab encodes (src/lab/jpeg.mjs:
-//               S-SCENE's frame at the capture, each 8 x 8 block its mean, or a black frame). On a build whose
-//               recorder the rule reads (fact 'recorder', src/fw/facts.mjs: E146, E147, E144 and E148) the file
-//               is recorded as REC_FILE's modules record one (record()): their requests, sent to the file module,
-//               which runs each natively: the camera's clock read for the time stamp, the fnode of the next DCF
-//               number (its name from the stamp's month and day, the folder made where it is new), the cluster
-//               reservation, the chain write of the bytes, the directory entry and the fnode's registration in the
-//               DCF database, whose counts and next number then follow the picture in the same session. Elsewhere
-//               the file module's own file requests (mkdir, fopen 'wb', fwrite in chunks, fclose; the FlashAir
-//               configuration writer's calls) put the JPEG at the DCF name the numbering mount gave (folder 100:
-//               C:\DCIM\100OMSYS or 100OLYMP, file P1010001.JPG and on; the DCF module's initial names,
-//               storage.names, D), and the DCF database learns of the file at the next mount
+//   S-RECFILE   (not on E143, E146 and E147, where REC_FILE runs natively in its task from REC_IMAGE's packet,
+//               src/lab/rec.mjs) the picture's file at a release's END_SHOOTING_PICTURE (src/lab/camapp.mjs S-CARD),
+//               the JPEG the capture pipeline would hand REC_FILE, which does not run: a JPEG the lab encodes
+//               (src/lab/jpeg.mjs: S-SCENE's frame at the capture, each 8 x 8 block its mean, or a black frame). On a
+//               build whose recorder the rule reads (fact 'recorder', src/fw/facts.mjs: E144 and E148) the file is
+//               recorded as REC_FILE's modules record one (record()): their requests, sent to the file module, which
+//               runs each natively: the camera's clock read for the time stamp, the fnode of the next DCF number (its
+//               name from the stamp's month and day, the folder made where it is new), the cluster reservation, the
+//               chain write of the bytes, the directory entry and the fnode's registration in the DCF database, whose
+//               counts and next number then follow the picture in the same session. Elsewhere the file module's own
+//               file requests (mkdir, fopen 'wb', fwrite in chunks, fclose; the FlashAir configuration writer's calls)
+//               put the JPEG at the DCF name the numbering mount gave (folder 100: C:\DCIM\100OMSYS or 100OLYMP, file
+//               P1010001.JPG and on; the DCF module's initial names, storage.names, D), and the DCF database learns of
+//               the file at the next mount
 //   S-CARD      (the insertion) the media control's requests on a card insertion, sent to the file module's queue as
 //               the HLS media layer would send them (it does not run in the lab; which requests it sends, and in which
 //               order, is I): the FAT mount; on a card with no file system the format (the request Card Formatting

@@ -30,7 +30,7 @@
 //                  S2's 1030 too; over passes of S1 and S2 the OXF main thread's events (event 294, 0x60dcb42c) do not
 //                  stay; the menu's DISPLAY cmd 15 runs its histogram wait to the timeout (S-HISTWAIT) and the
 //                  session then stops at udf07 0x5050a089, which the lab does not implement (the known blocker,
-//                  docs/hle-gaps.md 4.1.4); with --hdmi on the plug's TRA 588 is the component's (no S-OUTDEV), the
+//                  docs/hle-gaps.md 4.1.5); with --hdmi on the plug's TRA 588 is the component's (no S-OUTDEV), the
 //                  HDMI device opens and channel 0 composes its window with no plane drawn
 //   modeDialSession  the mode dial in play (E143): it starts at P, the start's mode; each position's change sets its
 //                  mode (MODE_EXPOSE, the custom banks' MODE_RAW, B's MODE_DIAL_B_ONOFF) and keeps the other settings,
@@ -287,7 +287,7 @@ export async function heapWorkloadSession() {
   return { checks, bad };
 }
 
-// control camapp 3 (docs/hle-gaps.md 4.1.4; E143). The sessions take no frames: the composite of the TFT is
+// control camapp 3 (docs/hle-gaps.md 4.1.5; E143). The sessions take no frames: the composite of the TFT is
 // FEATURE_UNOBSERVED once the shooting component has started the VSC's histogram (HIST1, HISTAREA1..3)
 const START_TRAS = [415, 598, 614, 990, 958, 1515, 994, 955, 1001, 1061, 992, 1503, 1065, 1045, 938, 974];
 const NATIVE_RESULT = { 992: 0xF0000058 }, UDF07_SITE = '0x5050a089';

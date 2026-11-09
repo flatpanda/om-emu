@@ -189,7 +189,8 @@ and the first concrete step. Task ids are `cpu << 12 | index` (kernel spec §2.1
   13 and 18; with the components on (`control camapp 2`) also 29 (seven times) and 22 (three times). S-MODACK answers
   them all; S1 and S2 send nothing downwards. The start's transactions (415, 598, 614, 990, 958, 1515, 955, 1001, 1061,
   992, 1503, 1045, 938, 974; with the components also 937, 1036, 942, 1065) are all answered 0 by S-TRAACK at the exec,
-  so the shooting component that answers 990 and 991 (4.1.2) is never asked. TAKE publishes only the module events
+  so the shooting component that answers 990 and 991 (4.1.2) is never asked (with `control camapp 3` it is: 4.1.5).
+  TAKE publishes only the module events
   `0x04020215` and `0x040800f0`, so its results reach the HLS through the replies to its requests and the callbacks the
   capabilities register (I, shutter spec item 44; 4.1.3). The AF request lives in `CapTre_TakeReady` -> API
   `0x50417cd9`, which neither camapp mode reaches.
@@ -197,7 +198,9 @@ and the first concrete step. Task ids are `cpu << 12 | index` (kernel spec §2.1
   LENS_EXEC answered) and BC_EXEC answered; the sensor control plane far enough for TAKE's through start (TAKE_FUNC
   command 25, 4.1.1); the shutter at its control plane; the strobe can be planned beside the shutter.
 - **First step:** the static decodes are done (4.1.1-4.1.3). Next, make the HLS component bring-up (`control camapp
-  2`) the default of the coverage workload, so the HLS half of TAKE is measured before TAKE itself is attempted; then a
+  2`) the default of the coverage workload, so the HLS half of TAKE is measured before TAKE itself is attempted
+  (tried 2026-11-08, 4.1.5: with the transactions native the components answer them, and the menu then stops at the
+  CPU's udf07, so the default stays camapp 1); then a
   probe that runs TAKE_FUNC and TAKE_FUNC_CP natively with a recording stand-in on each queue they send to (4.1.1's
   table), which gives the order and contents of their requests for a start, a through switch and a movie. The probe
   runs since 2026-11-08 (4.1.4): the start's and a mode change's requests are recorded; the through switch and the
@@ -274,7 +277,8 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
 - **990 (startShootingService):** case `0x50d72a2d` answers first, through Com_ResponserManager / Com_ResponserUnit
   (`0x50d7edc6` -> `0x50d7f017`, `0x50d7f197`, which build an evTraResProcessStartSuccess, id 425, `0x50ab6f71`; the
   evTraRes names and ids are at `0x60dd40bc`), then sets the component up (`0x50c78b35`, the media query api_media
-  `0x503f0bd7`). Why the native run of shutter spec item 43 saw no answer is ?.
+  `0x503f0bd7`). Why the native run of shutter spec item 43 saw no answer is ?; in camapp 3 (4.1.5) 990 is answered 0
+  natively (X), with the firmware's own 415 and 420 booting the components before it.
 - **991 (the through image on / off):** the request's +32 is the switch (ctor `0x50ac1495`). Case `0x50d72eb5`
   answers the same way, then calls Cmp_ShootingComponentBase `0x50c7d457`, which for 1 starts the through capability
   CapThr_ThroughImage (`0x50bd0467(1, 1)`: its StartSync trigger `0x50bcfeb1`; `(1, 0)` would be Start `0x50bce2a3`)
@@ -439,6 +443,69 @@ unknown):**
    natively like H-TAKEINIT (a few hours each, if they stay device-free); the strobe's readers read (half a day, then
    unknown); the camera driver cam.c with its init (days at least: the sensor's control plane, 4.2); the dust filter
    (unknown: its timer channel and completion); BC (blocked on a capture of the IS link).
+
+#### 4.1.5 The components answer the transactions (`control camapp 3`, 2026-11-08; X unless tagged)
+
+- **What kept the components from answering was S-RPC, not the components (X, D).** With S-TRAACK out of the way the
+  exec's remote path sends through the receiver substance's vt[41] (`0x50af8487`, the singleton at `(0x60360f40)`):
+  started once (`0x50d9bf6c`, flag `0x100000`), it posts the request and waits for the answer in 1000-tick waits
+  (`0x50af8537..65`). The menu lab's S-RPC answers that entry 0 without sending, so the exec returned the receiver's
+  default `0xf0000001` (its +132, `0x50af832e`), in camapp 2 too: that is the "remote channel answers 0xf0000001" of
+  4.1.2 and shutter spec item 43. S-RPC's other entry, the remote-call method `0x50ac734c`, is the RSB requests' send;
+  the mode change's (OlyHfwOpeComRsbChangeMode, mode `0x10000`) goes through it and brings the camera base its 420.
+- **The boot needs no S-BOOTDONE (X, D).** The application's HighLevel init builds the event 415 (vtable
+  `0x60dca154`, `0x50ab2dda..e6`) and executes it as TRA 415 (`0x50ab2def`); it waits for the answer, so the OXF main
+  thread (task 57) has to run before HL_INIT (started before it, the exec returns 0; started after it, as camapp 2
+  does, the lab task waited with every task blocked). Camapp 3 (`control camapp 3`, `src/lab/camapp.mjs` TRAACK_KEPT)
+  starts task 57 between HL_CREATE and HL_INIT, lifts S-RPC from both entries and has S-TRAACK hand every transaction
+  to the exec: the camera base reaches its state 13 and the still category its state 11 from the firmware's own 415
+  and 420. Who starts task 57 on the camera is ? (I: before HL_INIT, by this wait).
+- **Which transactions now reach a component (X, `emu/test/test_camapp.mjs` traRoutingSession).** The start's, in
+  order: 415, 598, 614, 990 (startShootingService), 958, 1515, 994 (eight times), 955, 1001, 1061 (twice), 992,
+  1503 (twice), 1065, 1045, 938, 974, each answered 0 natively but 992 (`0xf0000058`, the components' own refusal; why
+  is ?); the idle's 944 (getHistogramData) and S2's 1030, answered 0. S1 and S2 send no other transaction: the release
+  still comes from S-RELSEQ's callbacks. On the way the components read module 9's state at `0x50c78bb4` (the
+  shooting component's set-up after 990: state 2 starts CapThr, `0x50c78bc1`, D) and `0x50d78808` / `0x50d78815` (at
+  the HDMI plug), and set it to 0 (`0x50ca4ae1`), after which the application reads it at `0x50abb044` too; these join
+  S-TAKEOVER's readers in camapp 3 (CMP_MODULE9_READERS).
+- **Classification for S-TRAACK (X).** (a) answered natively by a component in camapp 3: every transaction of the
+  start, the idle, S1 and S2 above, the HDMI plug's 994, 974, 937, 955, 1036, 1046, 1002, 987 and 588 (the output
+  switch, answered 0 by the component, which opens the HDMI device: SCDC write, VSC channel 0 at 1080p59.94; S-OUTDEV
+  not used), and the menu's 974, 937, 958, 1515, 994, 955, 1036, 991 and 694, each answered 0 (593 is still
+  unanswered at the stop below);
+  (b) none: no transaction alone needs what the lab lacks, the stop below comes after the menu's transactions and also
+  with 991, 694 and 593 left to S-TRAACK (X); (c) none found. Playback's transactions (1002, 987, 691, 599, 553, 556 and
+  the return's) are not reached in camapp 3. TRAACK_KEPT is therefore empty; S-TRAACK keeps answering everything in
+  camapp 1 and 2.
+- **What the native path needs that the lab lacks (X, D):**
+  - *The VSC histogram.* The shooting component's display set-up starts the VSC's histogram on the TFT channel
+    (`0x501e14a4`: INTEN1 bit 8, HIST1 = 1, after HISTAREA1 / 2 at `0x501e1396` / `0x501e13f6`, reached from
+    `0x501d6ea6`). A composite of the TFT is then FEATURE_UNOBSERVED (A13: HIST1, HISTAREA1..3, HIST2 written), so
+    traRoutingSession takes no frames. DISPLAY cmd 15 (`0x501d709f`), which the menu and the HDMI plug send while the
+    histogram runs (`(0x62a3eaf8)` = 1), clears the histogram's flag (id at `0x6004303a`) and waits for it 50 ms
+    (`0x501d70d1`); only the histogram's done callback `0x501d71e1` sets it (it also posts the result to the queue
+    whose id is at `0x600432d4`). Inside S-DISPQ's run the wait cannot block: the run's task blocked, the lab task's
+    settle returned inside the run and executed the caller's `0xff` (`0xa2100007`, fault 5), the menu's first stop.
+    S-HISTWAIT (camapp 3) runs the wait to its timeout (50 ms of lab clock, E_TMOUT, which the command does not read;
+    on the camera the histogram ends first, I). The unit itself (its interrupt, done timing and bins) is not modelled.
+  - *The CPU's udf07 (the stop).* Past S-HISTWAIT the menu runs into `udf07 d0,d1` at `0x5050a089` (fault 1), in task
+    57: the sequence (`0x50c591d4`, state 4) to CapThr_ThroughImage (`0x50bd61b2` -> `0x50bd5fe4`, the through image's
+    bank), api_tft `0x504225c5` and the imgpro library (`0x5048ef28` .. `0x5048e190` -> `0x5050a086`). The UDF spec
+    leaves udf07 unimplemented (`docs/om1-udf-spec.md` row 14, "some kind of bit search", its one site); it is not
+    guessed. That stops camapp 3 at the menu, so camapp 1 stays the default and the heap workload's menu and playback
+    passes are not measured in camapp 3.
+- **The "swap wait" of the HDMI round (X, corrected).** The 300,000 stub calls 4.9 reports at the HDMI open under
+  camapp 2 were counted under the hook name "S-DISPFRAME (swap wait)", which is the OlyTaSS wrapper every sleep goes
+  through (DISP_FRAME's swap sleeps are only some of them; the counts: the accelerometer task's 80 ms sleeps and the
+  rest, X). Reproduced in camapp 3 without S-HISTWAIT: TRA 937 at the plug waits in the receiver's 1000-tick loop
+  while the OXF main thread's DISPLAY cmd 15 waits on the histogram flag, so lab time ran on in one settle to the
+  limit. DISP_FRAME's own wait is bounded (`0x5100df69`: at most 84 sleeps, then errlog `0x17004003`, D).
+- **HDMI in camapp 3 (X, `--hdmi on`).** The plug's TRA 588 is the component's (answered 0); CapIod opens the HDMI
+  device and the lab runs channel 0 at the format table's timing (`DisplayLab.hdmi_line`, as for S-OUTDEV's open). The
+  channel composes its 1920 x 1080 window with no plane drawn (DMAEN 0, OSDCP2 unwritten; OSDFMT1 `0x111` written),
+  as with S-OUTDEV; no transaction follows the plug, and what the GUI waits for to draw its HDMI layout is ?.
+- **The heap (X).** Over passes of S1 and S2 in camapp 3 the OXF main thread's events (event 294, `0x60dcb42c`) do
+  not stay (traRoutingSession), as in camapp 2 (4.4.2); the menu and playback passes are not reached.
 
 ### 4.2 Sensor, ISP front end and live view (with EXP)
 
@@ -770,7 +837,8 @@ than E143, E146 and E147 (4.4.3).
     `0x50b78bfe`), from tasks 165 and 168. They go to reactives of the OXF main thread, task 57 (entry `0x50ab2293`),
     which is dormant in the default session (X: DMT). With the HLS components (control camapp 2) it runs and frees
     them: every one goes, freed by task 57 through the event's delete (return addresses `0x50d9a1d9`, `0x50d9a218`,
-    `0x50d9cb3b`, `0x50d9cc32`, X).
+    `0x50d9cb3b`, `0x50d9cc32`, X). In camapp 3 (4.1.5) they do not stay either over passes of S1 and S2 (X); its
+    menu stops at udf07, so a full pass is not measured there.
   - **Kept behind S-RPC, open (X: 5 a pass, with and without the components):** the 72-byte request object (vtable
     `0x60de54e8`) `0x50ac722a` builds (operator new at `0x50ac723d`, its constructor `0x50ac7291` sets its own-delete
     word +20 to 1) and hands to its method `0x50ac734c`, which S-RPC answers 0 at its entry. The method's no-channel
@@ -2768,7 +2836,9 @@ body is named.
   main thread dispatched 494 to it (`0x50ce714a`) and nothing followed (X); I: it is not in the state its own 588 would
   have left it in, since S-OUTDEV, not the component, took the 588. An experiment that handed the 588 request to
   CmpCst_Function natively in camapp 2 opened the HDMI device through the component (X), and the settle then ran out at
-  S-DISPFRAME's swap wait (300,000 stub calls); not followed. The player shows the TFT's channel, which the open closed.
+  S-DISPFRAME's swap wait (300,000 stub calls); not followed. Corrected 2026-11-08 (4.1.5): the counter was the
+  OlyTaSS wrapper's name, and the stall a transaction waiting while DISPLAY cmd 15 waited for the VSC histogram; in
+  camapp 3 the component takes 588 and opens the device, and channel 0 still has no plane. The player shows the TFT's channel, which the open closed.
 - **The unplug (D, X):** the hot-plug handler turned the pin's interrupt off at the plug (`0x501d6949`; X: enable 0
   after the open), so the cable's removal reaches the driver through the transmitter: 0x92's pairs (0x9a = 0x0f once the
   cable is in, X) call `0x501d648c` ("display_hdmi_seq_hpd_intr_proc") and `0x501d64b6` ("..._rxsence_intr_proc"),

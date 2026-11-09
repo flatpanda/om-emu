@@ -277,6 +277,13 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   shooting panel over a black image area): S-CAMAPP starts the OXF main thread (task 57 HIGHLEVEL_MAIN), S-BOOTDONE
   sends the camera base and the still-shooting category the events the modules' start would bring, so the shoot mode
   and Cmp_ShootingComponent are created natively, and S-CPU3 takes their remote calls to CPU 3 off the ring.
+  With the control op camapp at 3 (E143) the components run with their transaction path native as well: the OXF main
+  thread starts before the HighLevel init, S-TRAACK and S-RPC let every transaction reach the components, which
+  answer them (the application's own TRA 415 and the mode change's 420 boot them, so no S-BOOTDONE; the HDMI plug's
+  TRA 588 is theirs, so no S-OUTDEV), and S-HISTWAIT runs DISPLAY cmd 15's wait for the VSC histogram, which the lab
+  does not model, to its timeout. It is not the default: the TFT's composite is refused once the components start the
+  histogram, and the menu stops at the CPU's udf07 (`0x5050a089`), which the lab does not implement
+  (`docs/hle-gaps.md` 4.1.5).
 - The mode dial shows each position by the firmware's name for it: UI_IN's dial table gives the position's mode code
   and the build names the codes (fact `mode_dial`, `src/fw/facts.mjs` modeDial), so E143's positions 0..9 are S, M,
   B, C1..C4 (MY_MODE1..4), Movie, P and A (`docs/om1-input-spec.md` section 2). A session starts with the dial at P,

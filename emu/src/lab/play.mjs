@@ -905,6 +905,11 @@ export class PlaySession extends N.NavSession {
     const rotate = opts.rotate ?? 'off';
     if (!['off', 'on'].includes(rotate)) throw new ValueError(`rotate ${show(rotate)}: off or on`);
     if (rotate === 'on' && !MODEL_INFO.acc?.rotate) throw new ValueError(`--rotate on: ${MODEL} has no PER_ROTATE in the lab (src/fw/models.mjs acc.rotate)`);
+    // the TAKE probe (--take probe, E143 only; src/lab/take.mjs): TAKE_FUNC and TAKE_FUNC_CP natively with S-TAKEREQ;
+    // off by default
+    const take = opts.take ?? 'stand-in';
+    if (!['stand-in', 'probe'].includes(take)) throw new ValueError(`take ${show(take)}: stand-in or probe`);
+    if (take === 'probe' && !ON_LAB_MODEL) throw new ValueError(`--take probe: ${MODEL}'s TAKE addresses are not read (E143 only, src/lab/take.mjs)`);
     // defaults for the keys kw does not give (a key given as null keeps it)
     const setdefault = (key, v) => { if (!Object.hasOwn(k, key)) k[key] = v; };
     setdefault('time', true);

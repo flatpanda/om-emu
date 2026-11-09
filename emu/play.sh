@@ -3,7 +3,8 @@
 # Checks node (26 or newer), then runs bin/play.mjs with any options given: --model CODE picks the camera model
 # (default OM_EMU_MODEL, else E143; --model list shows them and their firmware), and the play options (for example
 # --device evf, --start menu, --idle off). The model's firmware is provisioned on first use (host/firmware.mjs: the
-# .BIN from fw/ or a download, verified, unpacked). Ctrl+C stops it; the session log goes to
+# .BIN from fw/ or a download, verified, unpacked). The camera's settings and clock are kept between sessions in
+# ~/.om-emu/nvram-<model>.json (--nvram off for a blank camera at each start). Ctrl+C stops it; the session log goes to
 # emu/out/play/<model>/<time>/.
 #   emu/play.sh [--model CODE|list] [play options]
 set -e

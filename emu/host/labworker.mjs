@@ -19,7 +19,7 @@ import { memoryCard, cardSectors } from '../src/lab/sdcard.mjs';
 import { debugHost } from './debughost.mjs';
 import { CARD_VIEW } from '../web/cardfiles.mjs';
 
-const { args: a, flags, port, out, argv, patches } = workerData;
+const { args: a, flags, port, out, argv, patches, nvram: nvramFile } = workerData;
 const post = (m, transfer) => parentPort.postMessage(m, transfer);
 export const wallClock = () => Number(process.hrtime.bigint()) / 1e9;    // monotonic seconds, one clock on every thread
 // an input as the main thread posted it: its JSON text plus seq and t_wall
@@ -56,8 +56,9 @@ const env = {
   onLogEntry: (e) => post({ type: 'log', idx: e.idx, text: JSON.stringify(e) }),
   onLogUpdate: (e) => post({ type: 'logfix', idx: e.idx, text: JSON.stringify(e) }),
   onLogTrim: (n) => post({ type: 'logtrim', n }),
-  // OM_EMU_NVRAM=FILE: the camera keeps its settings and clock between sessions in FILE (menu.mjs S-NVRAM)
-  ...(process.env.OM_EMU_NVRAM ? { nvram: fileNvram(process.env.OM_EMU_NVRAM) } : {}),
+  // the camera keeps its settings and clock between sessions in this file (menu.mjs S-NVRAM): the main thread's choice
+  // (host/nvram.mjs nvramChoice: by default the model's file, --nvram / OM_EMU_NVRAM), null for a blank camera
+  ...(nvramFile ? { nvram: fileNvram(nvramFile) } : {}),
   // OM_EMU_CARD=FILE: the card in the first slot is kept between sessions in FILE (storage.mjs, host/card.mjs);
   // OM_EMU_CARD_SIZE=GiB: a new card's capacity (8 by default; above 32 an SDXC card, sdcard.mjs), kept in memory
   // for the player's life without OM_EMU_CARD

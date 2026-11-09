@@ -30,9 +30,9 @@
 // browser page, the clicks, S-SHUTTERSND's events), the audio hardware's units (test_audiohw.mjs audioHwUnits: the
 // audio port's registers, slots and interrupt, the sound IC's register file, the sink), the published site's files
 // and the browser player's download command (test_site.mjs), the patch overlays' rules on synthetic blocks and the
-// --replay check of a patched session (test_patch.mjs patchUnits), and the NAND the resource tables are read from
+// --replay check of a patched session (test_patch.mjs patchUnits), the NAND the resource tables are read from
 // (test_resnand.mjs resnandUnits: the container's blocks at their load addresses, the browser's extract, the sound
-// area's builder, S-RESNAND's layer).
+// area's builder, S-RESNAND's layer), and S-NVRAM's choice, document, record and replay (test_nvram.mjs nvramUnits).
 // bin/test.mjs runs all of these too, with everything else.
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
@@ -66,6 +66,7 @@ import { audioUnits } from '../test/test_audio.mjs';
 import { audioHwUnits } from '../test/test_audiohw.mjs';
 import { patchUnits } from '../test/test_patch.mjs';
 import { resnandUnits } from '../test/test_resnand.mjs';
+import { nvramUnits } from '../test/test_nvram.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -97,6 +98,7 @@ report('audio output and the shutter sound (src/lab/audio.mjs, S-SHUTTERSND)', a
 report('audio port, sound IC and sink (src/dev/audio.mjs, S-WM8946, src/lab/audiohw.mjs)', audioHwUnits());
 report('patch overlays: file shapes, block references, old bytes, overlaps, ranges, digests, a patched replay (src/fw/patch.mjs)', patchUnits());
 report('the resource tables\' NAND: blocks at their load addresses, the extract, the sound area builder, S-RESNAND (src/fw/nand.mjs)', await resnandUnits());
+report('S-NVRAM: bin/play.mjs\'s choice, the document, the record and its replay (host/nvram.mjs, src/lab/nvramdoc.mjs)', await nvramUnits());
 report('command-line parser', argsTests());
 report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnits());
 report('SCPU clock, ports, link pins and the sub-CPU (S-SCPUDEV)', scpuUnits());

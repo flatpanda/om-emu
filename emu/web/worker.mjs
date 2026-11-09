@@ -4,7 +4,8 @@
 //   page -> worker  {type: 'boot', file?, args?}            the .BIN as a File (never uploaded), or the OPFS cache;
 //                                                            args: the page's options (playerArgs), and the env
 //                                                            options lens: 'stand-in' (S-LENS; the native lens is the
-//                                                            default), nvram: true (S-NVRAM in OPFS) and card_size:
+//                                                            default), nvram: true (S-NVRAM in OPFS; the page sends it
+//                                                            unless its query has nvram=0) and card_size:
 //                                                            GiB (a new card's capacity, in memory for the Worker's
 //                                                            life; above 32 an SDXC card), and patch: {name, text} (a
 //                                                            patch file, src/fw/patch.mjs, applied to the stock blocks
@@ -54,6 +55,7 @@ import { runScenario, playWorkload } from './runner.mjs';
 import { blobs } from '../src/lab/resources.mjs';
 import { CARD_VIEW, jpegRgba } from './cardfiles.mjs';
 import { browserNvram } from './nvram.mjs';
+import { nvramUnsupported } from '../src/lab/menu.mjs';
 import { memoryCard, cardSectors, cardGiB } from '../src/lab/sdcard.mjs';
 
 const wallClock = () => (performance.timeOrigin + performance.now()) / 1000;
@@ -131,7 +133,8 @@ async function boot(msg) {
     // The cache holds the verified original block; the player and its tables need the runtime image.
     fw.rom = expandImage(fw.rom);
     a = playerArgs(msg.args);
-    // the options the lab takes in its env (the page's lens=stand-in, nvram=1 and card_size=GiB): the lens stood in by
+    // the options the lab takes in its env (the page's lens=stand-in, kept settings unless nvram=0, and card_size=GiB):
+    // the lens stood in by
     // S-LENS in place of the native lens, the default (src/lab/play.mjs lens_option), the camera's state kept in this
     // browser (S-NVRAM, web/nvram.mjs), a card of that capacity in the slot (src/lab/sdcard.mjs; opened here, so that a
     // size the card does not take fails the boot with its reason)
@@ -139,8 +142,9 @@ async function boot(msg) {
     const cardSize = msg.args?.card_size ? cardGiB(msg.args.card_size) : null;
     const card = cardSize !== null ? memoryCard({ sectors: cardSectors(cardSize) }) : null;
     card?.open();
-    // (a browser without OPFS keeps no settings: the session runs without S-NVRAM and the page says why)
-    const noKeep = msg.args?.nvram ? OPFS.unsupported() : null;
+    // (a browser without OPFS, or a body whose S-NVRAM sites the lab does not place, keeps no settings: the session
+    // runs without S-NVRAM and the page says why)
+    const noKeep = msg.args?.nvram ? nvramUnsupported() ?? OPFS.unsupported() : null;
     if (noKeep) post({ type: 'progress', stage: 'nvram-error', message: `the settings are not kept: ${noKeep}` });
     const nvram = msg.args?.nvram && !noKeep ? browserNvram(await OPFS.loadNvram(), OPFS.storeNvram,
       (e) => post({ type: 'progress', stage: 'nvram-error', message: String(e?.message ?? e) }), `this browser (OPFS ${OPFS.NVRAM_DIR})`) : null;

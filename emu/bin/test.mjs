@@ -313,13 +313,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   au.bad.forEach((x) => console.log('  ', x));
   bad += au.bad.length;
 }
-// the camera's non-volatile state kept between sessions (S-NVRAM): no date prompt, a setting kept across sessions
+// the camera's non-volatile state kept between sessions (S-NVRAM): no date prompt, a setting kept across sessions;
+// bin/play.mjs keeping it by default per model, its opt-out, and --replay from the log's record
 {
-  const { nvramSessions } = await import('../test/test_nvram.mjs');
-  const nv = await nvramSessions();
-  console.log(`non-volatile state (S-NVRAM) across sessions: ${nv.checks - nv.bad.length}/${nv.checks}`);
-  nv.bad.forEach((x) => console.log('  ', x));
-  bad += nv.bad.length;
+  const { nvramUnits, nvramSessions, nvramHost } = await import('../test/test_nvram.mjs');
+  const nu = await nvramUnits(), nv = await nvramSessions(), nh = await nvramHost();
+  console.log(`non-volatile state (S-NVRAM): units ${nu.checks - nu.bad.length}/${nu.checks}; across sessions ${nv.checks - nv.bad.length}/${nv.checks}; bin/play.mjs's default, opt-out and replay ${nh.checks - nh.bad.length}/${nh.checks}`);
+  [...nu.bad, ...nv.bad, ...nh.bad].forEach((x) => console.log('  ', x));
+  bad += nu.bad.length + nv.bad.length + nh.bad.length;
 }
 // the body's Fn-type buttons reach the camera application's button mapping (ISO, +/-, Drive, AF/metering, AF-ON, |o|, front)
 {

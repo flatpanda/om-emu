@@ -141,8 +141,9 @@ const secondsOf = (b) => { const [y, mo, d, h, mi, s] = fields(b); return Date.U
 // non-date changes nothing. A get (0x8011709 -> 0x80114ec): with register 1 at 0, RTC_DEFAULT with status RTC_INVALID;
 // else the RTC's date with status 0, but a date before 2019 under register 1 = 1 clears register 1 and answers the
 // default (the RTC read's own error path, which needs the hardware, is not modelled). A blank sub-CPU's registers read
-// 0 (A-SCPU-2). The RTC advances with now(), whole seconds (lab time in a hermetic session, the host's local time under
-// S-NVRAM). saved: a host's kept state {clock_offset, clock_status, words} or null (S-NVRAM's file: words the registers
+// 0 (A-SCPU-2). The RTC advances with now(), whole seconds (lab time in a hermetic session; under S-NVRAM the host's
+// local time read at the session's start plus the lab time since, src/lab/menu.mjs store_init).
+// saved: a host's kept state {clock_offset, clock_status, words} or null (S-NVRAM's file: words the registers
 // by number; a file from before the registers were kept whole, without register 1, takes it from clock_status: 0 a
 // valid RTC, I); persist(state): called with the state after each change, or null.
 export class ScpuMemory {

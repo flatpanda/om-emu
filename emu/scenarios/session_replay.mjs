@@ -328,6 +328,9 @@ function replayStage2(env, doc) {
   env.beginSession = () => { const s = begin0(); created.push(s); return s; };
   let pl = null, replayFile = null, frames = [];
   const penv = { ...env, wallClock: wall, readReplay: (p) => {
+    // the Player's look for the log's S-NVRAM record beside it (src/lab/player.mjs replayNvramRecord): the recorded
+    // scenarios ran without S-NVRAM, so there is none, as a missing file answers
+    if (p === 'replay.nvram.json' && replayFile !== null) throw Object.assign(new Error(`ENOENT: ${p}`), { code: 'ENOENT' });
     if (p !== 'replay.jsonl' || replayFile === null) throw new Divergence(`Player read ${p}: not the inputs' replay log`);
     return replayFile.map((e) => JSON.stringify(e) + '\n').join('');
   }, onPlaySession: (player, s, lab) => { (player._recPlay ??= []).push([s, lab, null, null]); } };

@@ -91,7 +91,9 @@ export const SCPU_BACKUP = fact('scpu.backup', true);
 export const SCPU_REPLY_READERS = new Map([[A(0x5005A86C), [A(0xA32C6502), 4]], [A(0x5012C8E0), [A(0xA32D7290), 8]]]);
 export const STORE_PROP_SITES = [A(0x503D72C5), A(0x503D2551)];
 export const REGISTRY_PRINTS = ['FlD.', 'BlD.', 'ElD.', 'MlD.'];
-// S-NVRAM (opt-in, env.nvram: a host that keeps the camera's non-volatile state between sessions). The stores' flash
+// S-NVRAM (env.nvram: a host that keeps the camera's non-volatile state between sessions; the players' default, a
+// replay's from its log, src/lab/nvramdoc.mjs; nvramUnsupported below names the bodies it cannot run on). The stores'
+// flash
 // images: the registry bootstrap 0x50040aeb validates each store's mirror (format byte at +0, the u16 sum 0, 0x5003f7d4)
 // and copies it into the store (print 'xlR.') or builds the store from its template ('xlD.'); the boot loads the
 // mirrors from NAND before it (0x5000941f -> 0x5003e0a1), which the lab does not run. A save (0x5003f5dd) writes the
@@ -106,6 +108,17 @@ export const REPLACE_INFO = [[A(0xA32A9788), A(0xA3212700)], [A(0xA32A978C), A(0
 // the SCPU words the camera keeps across power-off: the clock signature 0x00 (bits 7..2 = 42 once a clock set was
 // verified, 0x5005a59e) and the B store 0x08..0x3c
 export const SCPU_BACKED = [0x00, ...Array.from({ length: 14 }, (_, i) => 0x08 + 4 * i)];
+// Why S-NVRAM cannot run on this model, or null: one of its code sites (the NAND write, the flash task's post, the
+// save's cache-flush return) or the stores' mirrors and the replace-info words has no place in the build
+// (src/fw/model.mjs A). X 2026-11-08: two sessions on a fresh file restore M and E on E143, E146 and E147; on the
+// other bodies the flash task's post 0x5003d95c is not placed. The hosts keep no state there and say why
+// (host/nvram.mjs, web/worker.mjs)
+export function nvramUnsupported() {
+  const sites = [['the NAND write', NAND_WRITE], ['the flash task\'s post', NAND_POST], ['the save\'s cache-flush return', STORE_SAVE_CFLUSH_RETURN],
+    ...Object.entries(STORE_MIRRORS).map(([k, [a]]) => [`store ${k}'s mirror`, a]), ...REPLACE_INFO.map(([a]) => ['the replace-info words', a])];
+  const missing = sites.filter(([, a]) => isUnmapped(a)).map(([what]) => what);
+  return missing.length ? `S-NVRAM's sites are not placed in ${MODEL_INFO.name}'s build (${[...new Set(missing)].join(', ')})` : null;
+}
 // the SCPU's date requests (Sctime, through 0x5005cd17): 0x01 sets it (0x5012c7d9), 0x81 gets it (0x5012c88d), in
 // 9 bytes {u16 year, month, day, hour, minute, second, u16 status} (D); the sub-CPU's RTC keeps it (src/lab/scpudev.mjs
 // ScpuMemory), in S-NVRAM's file when there is one
@@ -646,14 +659,17 @@ export class MenuLab extends T.TextDisplayLab {
     if (cover.length) throw new MenuError(`lab stub page ${show(cover)} covers the SCPU block ${h8(SCPU)}`);
     this.hook(K_CFLUSH, (h, r) => this._k_cflush(h, r), 'K-CFLUSH');
     this.hook(K_CRT_134D, (h, r) => this._k_crt_134d(h, r), 'K-CRT-134D');
-    const nvram = this.env.nvram ?? null, saved = nvram ? nvram.load() : null, loaded = nvram ? this.nvram_load(saved) : null;
+    // S-NVRAM: the kept state, then the host's local time, read once per session (the clock below advances from it
+    // with lab time, so a session is a function of these two and its inputs: src/lab/nvramdoc.mjs records both)
+    const nvram = this.env.nvram ?? null, saved = nvram ? nvram.load() : null, hostT0 = nvram ? nvram.now() : null, labT0 = this.lab_time();
+    const loaded = nvram ? this.nvram_load(saved) : null;
     if (nvram) {                                      // S-NVRAM: the stores' saves run natively down to the NAND write
       this.hook(NAND_WRITE, (h, r) => this._s_nand_write(h, r, false), 'S-NVRAM');
       this.hook(NAND_POST, (h, r) => this._s_nand_write(h, r, true), 'S-NVRAM (flash task)');
     } else this.hook(FLASH_SAVE, (h, r) => this._s_flash_save(h, r), 'S-FLASHSAVE');
-    // the sub-CPU's memory: S-NVRAM's, kept in its file and advancing with the host's local time, else a blank one whose
-    // date advances with lab time (a session stays hermetic)
-    this.scpu_memory = nvram ? new ScpuMemory(() => nvram.now(), { clock_offset: saved?.clock_offset ?? 0, clock_status: saved?.clock_status ?? 0, words: saved?.scpu_words ?? {} }, (st) => nvram.saveScpuMemory(st))
+    // the sub-CPU's memory: S-NVRAM's, kept in its file, its date the host's local time at the session's start
+    // advancing with lab time, else a blank one whose date advances with lab time (a session stays hermetic)
+    this.scpu_memory = nvram ? new ScpuMemory(() => hostT0 + Math.floor((this.lab_time() - labT0) / 1e9), { clock_offset: saved?.clock_offset ?? 0, clock_status: saved?.clock_status ?? 0, words: saved?.scpu_words ?? {} }, (st) => nvram.saveScpuMemory(st))
       : new ScpuMemory(() => Math.floor(this.lab_time() / 1e9));
     // H-SCPUSTART, S-SIO2, S-SCPUDEV: PER_SCPU started natively with the sub-CPU at the far end of its link
     // (src/lab/scpulink.mjs, src/lab/scpudev.mjs); the requests (the API's entry), the requesters' waits (OlyEvWt

@@ -730,7 +730,7 @@ function showSubject(s) {
 // this page's host: the play server (bin/play.mjs), its options fixed at its start; the card routes answer their
 // errors as JSON, so they are fetched whatever their status; a picture comes as a PNG (host/server.mjs pngRgba)
 const HDMI_HOW = 'start the play server with --hdmi on (E143, E146, E147)';
-const SESSION_HOW = 'These are fixed when the play server starts: --hdmi on, and OM_EMU_LENS=stand-in, OM_EMU_NVRAM=FILE and OM_EMU_CARD=FILE in its environment (emu/README.md "Run").';
+const SESSION_HOW = 'These are fixed when the play server starts: --hdmi on, --nvram off|FILE, and OM_EMU_LENS=stand-in, OM_EMU_NVRAM=off|FILE and OM_EMU_CARD=FILE in its environment (emu/README.md "Run"; the settings are kept in ~/.om-emu/nvram-<model>.json by default).';
 const cardApi = (p) => fetch(p, { headers: H });
 async function drawCardImage(r, canvas) {
   const bm = await createImageBitmap(await r.blob());

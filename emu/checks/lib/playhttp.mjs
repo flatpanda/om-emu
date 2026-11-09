@@ -48,16 +48,20 @@ const text = (b) => Buffer.from(b).toString('utf8');
 const SIGNUM = { SIGHUP: 1, SIGINT: 2, SIGKILL: 9, SIGUSR2: 12, SIGTERM: 15, SIGABRT: 6, SIGSEGV: 11 };
 function rcOf(code, signal) { return code !== null ? code : signal ? -(SIGNUM[signal] ?? 0) : null; }
 
-// play.mjs as a subprocess; inputs over HTTP. Play.open(tag, args, {wait, env}) starts one;
-// withPlay(tag, args, fn) runs fn with it and closes it in finally.
+// play.mjs as a subprocess; inputs over HTTP. Play.open(tag, args, {wait, env, nvramFromEnv}) starts one;
+// withPlay(tag, args, fn) runs fn with it and closes it in finally. The child keeps no state between sessions
+// (--nvram off: a blank camera, whatever the host's own kept state, host/nvram.mjs) unless args name --nvram or
+// --replay (whose log decides, src/lab/player.mjs), or nvramFromEnv leaves the choice to OM_EMU_NVRAM in its env (the
+// test of that override).
 export class Play {
   static async open(tag, args = [], opts = {}) {
     const pl = new this(tag, opts);
     await pl.init(args, opts);
     return pl;
   }
-  constructor(tag, { env = null } = {}) {
+  constructor(tag, { env = null, nvramFromEnv = false } = {}) {
     this.env = env;
+    this.nvramFromEnv = nvramFromEnv;
     this.tag = tag;
     this.out = path.join(OUT, tag);
     this.lines = [];
@@ -67,6 +71,7 @@ export class Play {
     fs.mkdirSync(this.out, { recursive: true });
     // the camera application's start sets up the live view (CTRL3 0x41), which composites only under A15's guard
     if (!args.includes('--a15')) args = ['--a15', 'auto', ...args];
+    if (!args.includes('--nvram') && !args.includes('--replay') && !this.nvramFromEnv) args = ['--nvram', 'off', ...args];
     const cmd = [process.execPath, PLAY, '--no-browser', '--debug-api', '--out', this.out, ...args];
     this.start(cmd);
     const url = await this.awaitUrl(60);

@@ -21,7 +21,8 @@
 // - Chrome (B5): the same jobs in web/worker.mjs (web/gate.html), first with the .BIN handed to the file input
 //   (DOM.setFileInputFiles) on a fresh profile (the unpack path; the first job fills the OPFS cache), then from the
 //   OPFS cache; every trace must be byte-identical to node's, and identical to bin/run.mjs's.
-// - Chrome (B6): web/index.html?idle=off with the .BIN through its file input: four keys (Input.dispatchKeyEvent), one
+// - Chrome (B6): web/index.html?idle=off&nvram=0 (a blank camera, as node's Player) with the .BIN through its file
+//   input: four keys (Input.dispatchKeyEvent), one
 //   touch (Input.dispatchMouseEvent), two quick PageUps and the mode dial's arrows and its P position clicked at their
 //   centres (the dial must show each position's name), as test/test_web.mjs PAGE_B6_INPUTS lists them (the page
 //   must send those inputs; the regular gate runs them on a node Player); after each key and the touch, the result is
@@ -374,7 +375,7 @@ function nodeSession(sent) {
 const PAGE_READY = '!!window.__playPage';         // web/index.html sets it last, after its listeners
 const unwall = (entries) => JSON.stringify(entries.map((e) => { const x = { ...e }; if (x.record) { x.record = { ...x.record }; delete x.record.seconds; } return x; }));
 if (!argv.includes('--skip-page') && !QUICK) {
-  const page = await openPage(`${ORIGIN}/web/index.html?idle=off`, PAGE_READY);
+  const page = await openPage(`${ORIGIN}/web/index.html?idle=off&nvram=0`, PAGE_READY);
   const t0 = performance.now();
   await page.setFile('#fwfile');
   const settled = `(() => { const p = window.__playPage, s = p.status, d = p.drawn; return !!(s && d && s.phase === 'running' && s.queue === 0 && d.seq === s.frame_seq); })()`;
@@ -486,7 +487,7 @@ if (!argv.includes('--skip-page') && !QUICK) {
   await page.close();
 
   // the paced page (idle wall) from the OPFS cache: the real-time ratio over 10 lab seconds
-  const paced = await openPage(`${ORIGIN}/web/index.html?cache=1`, PAGE_READY);
+  const paced = await openPage(`${ORIGIN}/web/index.html?cache=1&nvram=0`, PAGE_READY);
   const res = await sampled(async () => {
     const until2 = async (expr, ms) => { const end = performance.now() + ms; while (performance.now() < end) { const v = await paced.ev(expr); if (v) return v; await sleep(100); } return null; };
     const first = await until2(`(() => { const s = window.__playPage.status; return s && s.phase === 'running' && s.lab_ns != null ? { lab: s.lab_ns, t: performance.timeOrigin + performance.now() } : null; })()`, 120000);
@@ -506,7 +507,7 @@ if (!argv.includes('--skip-page') && !QUICK) {
   // before the start: the query follows it): the WINDOWS token (no zlib in the Worker) answered as a refused input with
   // the session running on, then STORE and INTC answered with their records; then Quit: the page must keep answering
   // (its poll loops end).
-  const life = await openPage(`${ORIGIN}/web/index.html?idle=off&debug_api=1`, PAGE_READY);
+  const life = await openPage(`${ORIGIN}/web/index.html?idle=off&debug_api=1&nvram=0`, PAGE_READY);
   const until3 = async (expr, ms = 120000) => { const end = performance.now() + ms; while (performance.now() < end) { const v = await life.ev(expr); if (v) return v; await sleep(100); } return null; };
   const offered = `(() => { const t = document.getElementById('fwstatus').textContent; return !document.getElementById('fwfile').disabled && t.startsWith('could not start') ? t : null; })()`;
   const junk = path.join(OUT, 'junk.BIN');

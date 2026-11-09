@@ -31,7 +31,8 @@
 //   Player refused before the route (no session) answers {ok: false, error: {type: 'Refused', message}}.
 // - GET /api/session: what the session was started with that the page cannot change: the host's opt-ins
 //   (opts.session: {host, lens (the lens option: 'native', the default, or 'stand-in'), nvram (where S-NVRAM keeps the
-//   camera's state, or null), card (where the card is kept between sessions, or null: in memory), card_size (a new
+//   camera's state: a file, the browser's OPFS or a --replay's log; or null), card (where the card is kept between
+//   sessions, or null: in memory), card_size (a new
 //   card's capacity in GiB, or null: the default 8 GiB SDHC card; above 32 an SDXC card, src/lab/sdcard.mjs), and
 //   with a patch overlay patch (its summary, src/fw/patch.mjs)}), the HDMI port's option, whether the debug API is on,
 //   and whether /api/card/image answers.

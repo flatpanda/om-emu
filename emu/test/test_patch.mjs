@@ -210,7 +210,7 @@ export async function patchSession() {
       const fl = files.flatMap((f) => ['--patch', f]);
       const dfl = fl.map((x) => x === file ? mainOnly : x);     // debug.mjs refuses the file's resource patch first
       const runs = [['debug.mjs', ['--entry', '0x502d0336', ...dfl], /^debug.mjs: --patch refused: /],
-        ['play.mjs', ['--no-browser', '--idle', 'off', '--out', path.join(tmp, 'refused'), ...fl], /^play.mjs: --patch refused: /],
+        ['play.mjs', ['--no-browser', '--nvram', 'off', '--idle', 'off', '--out', path.join(tmp, 'refused'), ...fl], /^play.mjs: --patch refused: /],
         ['nav.mjs', ['--png', 'none', '--out', path.join(tmp, 'refused-nav'), ...fl, 'DOWN'], /^error: --patch refused: /]];
       for (const [tool, args, head] of runs) {
         const x = node([path.join(EMU, 'bin', tool), ...args], { timeout: 60000 });

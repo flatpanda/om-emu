@@ -27,11 +27,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const PLAY = path.join(EMU, 'bin/play.mjs');
 const STOPPED = 'play: stopped; session log ';                 // the stopped line's start (host/playcli.mjs)
 
-// One play.mjs child: the URL from its first lines, a urllib-like client (a connection per request).
+// One play.mjs child: the URL from its first lines, a urllib-like client (a connection per request). A blank camera
+// at each start (--nvram off: the host's kept state, host/nvram.mjs, never enters a test) unless args name --nvram or
+// --replay (whose log decides).
 export async function startPlay(tag, args, { env = process.env } = {}) {
   const out = path.join(TMP, tag);
   fs.rmSync(out, { recursive: true, force: true });
-  const p = spawn(process.execPath, [PLAY, '--no-browser', '--debug-api', '--out', out, '--a15', 'off', ...args],
+  const p = spawn(process.execPath, [PLAY, '--no-browser', '--debug-api', '--out', out, '--a15', 'off', ...(args.includes('--nvram') || args.includes('--replay') ? [] : ['--nvram', 'off']), ...args],
     { cwd: REPO, stdio: ['ignore', 'pipe', 'pipe'], env });
   const lines = [], errs = [];
   let buf = '';
@@ -406,7 +408,7 @@ async function busyPort(bad) {
   await new Promise((r) => srv.listen(0, '127.0.0.1', r));
   const port = srv.address().port;
   try {
-    const p = spawn(process.execPath, [PLAY, '--no-browser', '--port', String(port), '--out', path.join(TMP, 'port')], { cwd: REPO, stdio: ['ignore', 'pipe', 'pipe'] });
+    const p = spawn(process.execPath, [PLAY, '--no-browser', '--nvram', 'off', '--port', String(port), '--out', path.join(TMP, 'port')], { cwd: REPO, stdio: ['ignore', 'pipe', 'pipe'] });
     const out = [], err = [];
     p.stdout.on('data', (d) => out.push(String(d)));
     p.stderr.on('data', (d) => err.push(String(d)));

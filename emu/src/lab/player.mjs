@@ -11,7 +11,9 @@
 // env: the lab env (rom, resBlock, createHash, beginSession, ...) plus wallClock() (monotonic seconds:
 // the wall-clock fields, which the recordings strip, the 0.3 s page-order deadline, and under --idle wall the pacing and
 // touch_gap's user gap when the page sends no t_client), logSink(name, text) (session.jsonl / session.json; optional),
-// readReplay(path) (the --replay file's text), and for a host that publishes (the browser player): onStatus(doc) after
+// readReplay(path) (the --replay file's text, and for a .jsonl the S-NVRAM record beside it: a missing one throws
+// an error whose code is 'ENOENT', replayNvramRecord), and for a host that publishes (the browser player):
+// onStatus(doc) after
 // every published status, onFrame(w, h, raw, meta) after every published frame (raw: the composite's little-endian
 // words, valid only during the call; meta {seq, device, lab_ns, sha16}), and asyncHost (true: an input that overtook its
 // page's order makes a blocking next_input return null instead of polling until the deadline, so the host's own wait
@@ -46,6 +48,7 @@ import { memoryCard } from './sdcard.mjs';
 import { STORAGE } from './storage.mjs';
 import { AudioRing } from './audio.mjs';
 import { patchLine } from '../fw/patch.mjs';
+import { recordNvram, replayNvram, nvramRecord } from './nvramdoc.mjs';
 
 export const PNG_CACHE = 8, SLICE_NS = 50000000, GATE_SLICE_NS = 10000000, GATE_LIMIT_NS = 2000000000, BEHIND_NS = 250000000;
 export const DIAL_CAP = 8, TOUCH_MIN_NS = 20000000, TOUCH_GAP_CAP_NS = 2000000000, TOUCH_TAP_CAP_NS = 320000000;
@@ -247,12 +250,33 @@ export function replayPatchRefusal(file, text, patch) {
   return `--replay ${file}: the session ran on patched firmware (${what}): refused without --patch (give the same --patch FILE again)`;
 }
 
+// A --replay file's record of the camera's kept state (S-NVRAM, src/lab/nvramdoc.mjs recordNvram): session.json's nvram
+// field; for a session.jsonl, the session.nvram.json beside it (the Player writes it at each session's start, so a log
+// whose session.json was never written replays too). null: the session ran without S-NVRAM, a blank camera at each
+// start. read(path): the host's file read (env.readReplay); a missing companion is null, any other failure raises.
+export function replayNvramRecord(file, text, read) {
+  const name = String(file).split('/').at(-1);
+  if (name.endsWith('.json') && name !== '.json') {
+    let doc;
+    try { doc = JSON.parse(text); } catch { return null; }          // replayEntries reports it
+    return isDict(doc) && doc.nvram !== undefined ? nvramRecord(doc.nvram, file) : null;
+  }
+  const side = String(file).replace(/(\.jsonl)?$/, '.nvram.json');
+  let t;
+  try { t = read(side); } catch (e) { if (e?.code === 'ENOENT') return null; throw e; }
+  let rec;
+  try { rec = JSON.parse(t); } catch (e) { throw new ValueError(`--replay ${file}: ${side}: ${e.message}`); }
+  return nvramRecord(rec, side);
+}
+
 export class Player {
   constructor(a, env) {
     this.a = a;
     // the card in the first slot (storage.mjs) stays in the slot across the player's sessions (a power cycle): the
     // host's (env.card, OM_EMU_CARD), else one in memory for the player's life
     this.env = STORAGE && !env.card ? { ...env, card: memoryCard() } : env;
+    this.nvram_record = null;        // S-NVRAM: what each session started from (session.json's nvram, nvram_use)
+    if (env.nvram) this.nvram_use(env.nvram);
     this.wall = env.wallClock ?? (() => performance.now() / 1000);
     this.q = env.queue ?? new ArrayQueue();
     this.stop = false;
@@ -299,6 +323,19 @@ export class Player {
       Object.defineProperty(this, 'stop', { get: () => Atomics.load(f, 1) !== 0, set: (v) => { Atomics.store(f, 1, v ? 1 : 0); }, enumerable: true });
       Object.defineProperty(this, 'signalled', { get: () => Atomics.load(f, 2) !== 0, set: (v) => { Atomics.store(f, 2, v ? 1 : 0); }, enumerable: true });
     }
+  }
+  // S-NVRAM through its recorder (src/lab/nvramdoc.mjs): the record goes into session.json and, at each session's
+  // start, into session.nvram.json beside session.jsonl; null: none (S-SETSAVE)
+  nvram_use(nv) {
+    if (nv === null) {
+      const { nvram: _, ...rest } = this.env;
+      this.env = rest;
+      this.nvram_record = null;
+      return;
+    }
+    const r = recordNvram(nv, (rec) => this.env.logSink?.('session.nvram.json', JSON.stringify(rec)));
+    this.env = { ...this.env, nvram: r.nvram };
+    this.nvram_record = r.record;
   }
   // ---- session lifecycle
   opts() {
@@ -353,7 +390,8 @@ export class Player {
       ...(s?.hdmi_port && s.lab ? { hdmi: s.hdmi_status() } : {}),                                        // --hdmi on only, likewise
       ...(s?.audio_hw ? { audio: s.audio_hw.status() } : {}),                                           // --audio on only, likewise
       ...(this.live !== null ? { debug: this.live.status() } : {}),                                     // after a debug input only
-      ...(this.env.patch ? { patch: this.env.patch } : {}) };                                            // a patch overlay only
+      ...(this.env.patch ? { patch: this.env.patch } : {}),                                              // a patch overlay only
+      ...(this.env.nvram && s?.lab?.store_log?.nvram ? { nvram: { loaded: [...s.lab.store_log.nvram.loaded], saves: s.lab.store_log.nvram.saves.length } } : {}) };   // S-NVRAM only: the stores restored, the saves
     if (s !== null && s.lab !== null) {
       try { Object.assign(doc, s.status()); } catch (e) {
         if (!(e instanceof LabError)) throw e;          // a JS failure is never a status_error
@@ -668,6 +706,12 @@ export class Player {
     const why = text !== null ? replayPatchRefusal(this.a.replay, text, this.env.patch ?? null) : null;
     if (why !== null) throw new ValueError(why);
     const replay = text !== null ? replayEntries(this.a.replay, text) : null;
+    // a replay's camera starts from what the log's sessions started from, held in memory (the host's own kept state,
+    // if it passed one, is neither read nor written), or blank when the log kept none
+    if (text !== null) {
+      const rec = replayNvramRecord(this.a.replay, text, (p) => this.env.readReplay(p));
+      this.nvram_use(rec ? replayNvram(rec, `the log ${this.a.replay}`) : null);
+    }
     this.replaying = replay !== null;
     try { this.open_session(); } catch (e) {
       if (!(e instanceof LabError)) throw e;
@@ -1075,7 +1119,8 @@ export class Player {
     const frames = this.a15_frames_closed + (s !== null ? s.a15_frames : 0);
     const args = { ...this.a };
     const doc = { args, stand_ins: this.stand_ins_in_use(), assumptions_in_use: frames ? { A15: { frames, mode: this.a.a15 ?? 'auto' } } : {}, inputs: this.log,
-      ...(this.env.patch ? { patch: this.env.patch } : {}) };      // the patch overlay the firmware ran with (src/fw/patch.mjs)
+      ...(this.env.patch ? { patch: this.env.patch } : {}),        // the patch overlay the firmware ran with (src/fw/patch.mjs)
+      ...(this.nvram_record ? { nvram: this.nvram_record } : {}) };  // S-NVRAM: what each session started from (--replay)
     if (this.env.logSink) this.env.logSink('session.json', JSON.stringify(doc));
   }
   // --replay: the logged inputs at their lab times (idle off between them); internal entries post the touch gestures at

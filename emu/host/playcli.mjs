@@ -14,10 +14,12 @@ import { REPO, loadImage, exitFor, readPatchFiles, patchedFirmware } from '../ch
 import { PatchRefused, patchLine } from '../src/fw/patch.mjs';
 import { parseArgs } from '../checks/lib/args.mjs';
 import { RuntimeError } from '../src/lab/errors.mjs';
-import { MODEL } from '../src/fw/model.mjs';
+import { MODEL, MODEL_INFO } from '../src/fw/model.mjs';
 import { MODELS } from '../src/fw/models.mjs';
 import { Tables } from '../src/lab/play.mjs';
-import { replayPatchRefusal } from '../src/lab/player.mjs';
+import { replayPatchRefusal, replayNvramRecord } from '../src/lab/player.mjs';
+import { nvramUnsupported } from '../src/lab/menu.mjs';
+import { nvramChoice, fileNvram } from './nvram.mjs';
 import { PlayApi } from '../src/lab/playapi.mjs';
 import { newFlags } from './portqueue.mjs';
 import { PlayerProxy, wallClock } from './proxy.mjs';
@@ -60,13 +62,18 @@ export const ACTIONS = [
 // Player's options (as OM_EMU_LENS and the others are), so it is not among session.json's args; the overlay's summary
 // is its "patch" instead, and the status's.
 const PATCH = { opt: '--patch', type: 'path', repeat: true, metavar: 'FILE' };
+// --nvram on|off|FILE: where the camera's non-volatile state is kept between sessions (S-NVRAM; host/nvram.mjs
+// nvramChoice: on, the default, is the model's own file, ~/.om-emu/nvram-<model>.json; off a blank camera at each
+// start), the lab's env too and not among session.json's args, whose nvram records what each session started from
+const NVRAM = { opt: '--nvram', type: 'str', metavar: 'on|off|FILE' };
 // The parsed options: every option's key in ACTIONS' order, then no_wait_on_error; the --patch files, if any, as the
-// non-enumerable patch.
+// non-enumerable patch, and --nvram's value (null when not given) as the non-enumerable nvram.
 export function parsePlayArgs(argv) {
-  const r = parseArgs(PROG, argv, [...ACTIONS, PATCH]);
+  const r = parseArgs(PROG, argv, [...ACTIONS, PATCH, NVRAM]);
   if ((r.x_mutant || r.x_trim_keep) && !r.debug_api) r.error('--x-mutant and --x-trim-keep need --debug-api');
   const a = {};
   Object.defineProperty(a, 'patch', { value: r.patch });
+  Object.defineProperty(a, 'nvram', { value: r.nvram ?? null });
   for (const x of ACTIONS) {
     const k = x.opt.slice(2).replaceAll('-', '_');
     a[k] = r[k];
@@ -112,14 +119,35 @@ export async function main(argv) {
   // --replay of a session that ran on patched firmware (its session.json's patch) without --patch: refused here too,
   // before the server starts (src/lab/player.mjs replayPatchRefusal, which the Player applies again); a file that
   // cannot be read is the Player's to report
+  let replayText = null;
+  if (a.replay) {
+    try { replayText = fs.readFileSync(a.replay, 'utf8'); } catch { /* the Player's read raises it */ }
+  }
   if (a.replay && !patches) {
-    let text = null;
-    try { text = fs.readFileSync(a.replay, 'utf8'); } catch { /* the Player's read raises it */ }
-    const why = text === null ? null : replayPatchRefusal(a.replay, text, null);
+    const why = replayText === null ? null : replayPatchRefusal(a.replay, replayText, null);
     if (why !== null) {
       report(`${PROG}: ${why}`);
       return 1;
     }
+  }
+  // the camera's non-volatile state (S-NVRAM): kept by default in the model's file, --nvram / OM_EMU_NVRAM to choose,
+  // checked here (a file of another model, or one that does not parse, is refused before the server starts); a
+  // --replay's is its log's (the Player's: replayNvramRecord, in memory), never a file's
+  const nv = nvramChoice({ arg: a.nvram, env: process.env.OM_EMU_NVRAM || null, model: MODEL, unsupported: nvramUnsupported(),
+    scpuNative: process.env.OM_EMU_SCPU === 'native' && !!MODEL_INFO.scpu_lle, replay: a.replay !== null });
+  if (nv.refuse) {
+    report(`${PROG}: ${nv.refuse}`);
+    return 1;
+  }
+  if (nv.file) {
+    try { fileNvram(nv.file).load(); } catch (e) {
+      report(`${PROG}: ${/^S-NVRAM /.test(e.message) ? e.message : `S-NVRAM ${nv.file}: ${e.message}`} (--nvram off for a blank camera)`);
+      return 1;
+    }
+  }
+  let replayNvram = null;          // the log's record, for the line and the session line (a malformed one is the Player's to report)
+  if (replayText !== null) {
+    try { replayNvram = replayNvramRecord(a.replay, replayText, (p) => fs.readFileSync(p, 'utf8')); } catch { /* the Player raises it */ }
   }
   quietStdio();
   if (a.evf_layout) say('play: --evf-layout is a no-op since M10B (an EVF start and every switch draw the EVF layout)');
@@ -143,6 +171,7 @@ export async function main(argv) {
     if (switchTo || trying) return `already switching to ${switchTo ?? trying}`;
     if (patches) return `a session with --patch cannot switch (its patches are for ${MODEL}'s blocks): start ${PROG} --model ${code}`;
     if (a.out !== null || a.replay !== null) return `a session with ${a.out !== null ? '--out' : '--replay'} cannot switch: start ${PROG} --model ${code}`;
+    if (nv.custom) return `a session whose state is kept in ${nv.file} (${nv.source}) cannot switch (the file is ${MODEL}'s): start ${PROG} --model ${code}`;
     if (!blocksPresent(MODELS[code])) return `no firmware for ${code} (${MODELS[code].name}): run node emu/bin/fetch-fw.mjs --model ${code}`;
     trying = code;
     const why = await labLoads(code);
@@ -153,7 +182,7 @@ export async function main(argv) {
   };
   // the options the lab worker's environment gives it (labworker.mjs, src/lab/play.mjs lens_option), for the page's
   // session line (GET /api/session): fixed for the process, set in the environment before the start
-  const session = { host: 'node', lens: process.env.OM_EMU_LENS || 'native', nvram: process.env.OM_EMU_NVRAM || null,
+  const session = { host: 'node', lens: process.env.OM_EMU_LENS || 'native', nvram: replayNvram ? `the log ${a.replay}` : nv.file,
     card: process.env.OM_EMU_CARD || null, card_size: process.env.OM_EMU_CARD_SIZE ? cardGiB(process.env.OM_EMU_CARD_SIZE) : null,
     ...(overlay ? { patch: overlay.summary } : {}) };
   overlay = null;                      // the worker makes its own blocks (patches)
@@ -173,6 +202,8 @@ export async function main(argv) {
   holder.port = srv.address().port;
   const url = `http://127.0.0.1:${holder.port}/?t=${token}`;
   say(`play: ${url}`);
+  say(a.replay === null ? nv.line : replayNvram ? `play: --replay: each session starts from the kept state its log records (S-NVRAM, in memory)${nv.envIgnored ? '; OM_EMU_NVRAM ignored' : ''}`
+    : `play: --replay: the log kept no state, a blank camera at each start (S-SETSAVE)${nv.envIgnored ? '; OM_EMU_NVRAM ignored' : ''}`);
   say('Ctrl+C to quit');
   let worker = null, second = false;
   const probe = installMemProbe();            // OM_HOST_MEM: the main isolate's memory (host/memprobe.mjs)
@@ -203,7 +234,7 @@ export async function main(argv) {
   }
   // a 16 MB stack (node's default is 4 MB): headroom for a request body that nests deeply, should a message of the lab
   // show part of it
-  worker = new Worker(new URL('./labworker.mjs', import.meta.url), { workerData: { args: a, flags, port: port2, out, argv, patches }, transferList: [port2],
+  worker = new Worker(new URL('./labworker.mjs', import.meta.url), { workerData: { args: a, flags, port: port2, out, argv, patches, nvram: nv.file }, transferList: [port2],
     resourceLimits: { stackSizeMb: 16 } });
   worker.on('message', (m) => proxy.onMessage(m));
   const ended = await new Promise((resolve) => {

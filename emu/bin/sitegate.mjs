@@ -155,7 +155,7 @@ await page.shot('player-help');
 await page.close();
 
 // ---- a second player page started by a drop (the OPFS cache from the first is not used: a dropped file is unpacked)
-const drop = await openPage(BASE + 'web/index.html?idle=off');
+const drop = await openPage(BASE + 'web/index.html?idle=off&nvram=0');
 if (!await drop.until(READY, 60000)) fail('the player page (idle off) did not get ready');
 else {
   const t0 = performance.now();

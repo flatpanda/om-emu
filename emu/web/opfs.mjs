@@ -7,7 +7,7 @@
 // damaged cache never boots a lab, and so is a manifest whose digests are not the model's (src/fw/labfw.mjs: a cache
 // written before that check existed).
 // One directory per model (src/fw/model.mjs MODEL), so each body's firmware stays cached beside the others. The
-// camera's kept settings (S-NVRAM, opt-in) live beside it in a directory of their own (loadNvram, storeNvram).
+// camera's kept settings (S-NVRAM, on by default) live beside it in a directory of their own (loadNvram, storeNvram).
 // A browser without OPFS (no navigator.storage.getDirectory: WebKitGTK as it ships, node's worker threads) keeps
 // nothing: unsupported() names why, info() and loadNvram() find nothing, clear() and clearNvram() have nothing to
 // remove, and store() and storeNvram() throw that reason, as they throw any failure of a browser whose OPFS is there but

@@ -105,8 +105,8 @@ fixed for a session: on node by `--hdmi on`, `--nvram` and `OM_EMU_LENS`, `OM_EM
 `OM_EMU_CARD_SIZE`
 in the server's environment, in the browser by the start options above the camera (`?hdmi=on`, `?lens=stand-in`, `?nvram=0`, and the
 Card menu's `?card_size=GiB`: 64 or 128 GiB, an SDXC card). HDMI: Plug in sends `{"type": "hdmi", "action": "plug"}` in a session with the port (the
-cable, the DDC reads and the driver's EDID state from the status), and is disabled with the reason without one; Unplug
-sends the unplug, which the lab refuses (A-HDMI-1), and the refusal shows in the status line. Card: Take out and Put in
+cable, the DDC reads, the driver's EDID state and, once the firmware opened it, the HDMI output's format and timing from
+the status), and is disabled with the reason without one; Unplug sends the unplug (A-HDMI-1). Card: Take out and Put in
 are the card inputs (S-MEDIA, the HLS media side of E143 and E146; another body refuses them with the reason), and the
 list is the card's files read with the independent FAT and exFAT readers (`refs/volume.mjs` picks `refs/fat.mjs` or
 `refs/exfat.mjs` by the boot sector; `web/cardfiles.mjs`) between the lab's steps, not through the firmware, in or out of the slot and
@@ -142,9 +142,12 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   "action": "plug"}` puts a lab sink on it (S-HDMISINK: a 1080p60 EDID with a CTA-861 block composed for the lab,
   `src/lab/edid.mjs`), and the firmware takes the pin's interrupt, starts the transmitter, reads and parses the EDID
   over the DDC and reports the connection to UI_IN natively; the lab only frees the GIO interrupt slots the pin's
-  registration needs, as the GIO init that does not run would (H-GIOSLOTS). The camera application then leaves the
-  date prompt but opens no HDMI output; an unplug is refused (A-HDMI-1), and so is the `fw_0501` switch, which the
-  firmware now drives (`docs/hle-gaps.md` 4.9).
+  registration needs, as the GIO init that does not run would (H-GIOSLOTS). The camera application then asks for the
+  HDMI output (TRA 588), and on E143 the lab does its component's part (S-OUTDEV): the IO-device capability opens the
+  HDMI device natively, the transmitter's open (its PHY, SCDC write and update) and VSC channel 0 at 1080p59.94 run
+  natively, and `DisplayLab.compose('hdmi')` composes channel 0 (its window; the GUI draws nothing there yet). The
+  unplug (A-HDMI-1) runs natively down to the disconnect report; nothing switches back. The `fw_0501` switch is
+  refused: the firmware drives it (`docs/hle-gaps.md` 4.9).
 - On E143 and E146 the accelerometer is stood in at its sample cache (`src/lab/acc.mjs`): the ACC module init and
   PER_SLOPE's init run natively at the bring-up (H-ACCINIT, H-SLOPEINIT), the sensor's register file answers the
   probe (S-ACCREG), and before each of ACC_MAIN's 80 ms copies the lab stores one sample where the sampler's

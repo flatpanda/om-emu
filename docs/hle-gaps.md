@@ -115,7 +115,7 @@ not run), **0** nothing. Code column: instructions keyed to the block / gap-rele
 | CPU, ISA, UDF | N (`check_isa`) | the CPU itself | - | acceptance anywhere (F03), strictness assumptions (ROADMAP phase 3) |
 | Kernel (uITRON) | N on CPU 0 (`check_kernel`) | lab task, H-IRQGATE, K-OTHERCPU, K-BOOTSYNC, K-IPI | 48,897 (20.97%) | CPUs 1-3, native dispatch from boot (4.6) |
 | Interrupts, timers, lab time | N at the idle point (M9) | intc `0x99200000`, 34-channel timer, lab clock | - | acceptance anywhere, time mode by default (ROADMAP phases 3, 4) |
-| OSD engine, VSC, display flow | N to the device models (M2, M3, M7, M8) | `0x9BC00000`, `0x9BB80000`; A15 opt-in | 99,890 (26.78%) | DISP_SYNC `0x9c180000` (S-DISPSYNC), the CMM image, HDMI channel 0 (4.9), A5 / A7 / A15 need hardware |
+| OSD engine, VSC, display flow | N to the device models (M2, M3, M7, M8) | `0x9BC00000`, `0x9BB80000`; A15 opt-in | 99,890 (26.78%) | DISP_SYNC `0x9c180000` (S-DISPSYNC), the CMM image, the GUI's planes on HDMI channel 0 (4.9; the channel itself runs and composes on E143), A5 / A7 / A15 need hardware |
 | Text and resources | N (M4) | S-RES, Genifa | 28,861 (9.09%) | U items (text spec) |
 | GUI and menu | N (M5, M6, M10B) | S-SEND, S-PROP | 621,898 (19.31%) | navigation rules observed, not decoded; the 53 screen classes of gap@0x510ef2bf (35k) are unnamed (?) |
 | Inputs | N from UI_IN up (M10); group 0 from IRQ 320 up (4.7.2) | S-KEYBITS (groups 1..3), H-EYESTATE, S-TPINT, S-TPREG, H-DIALSTEP | 43,895 (20.85%) | the raw-bit producers (4.7) |
@@ -144,7 +144,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **SCPU, power, clock, on-board sensors, persistence** (4.7) | N: PER_SCPU, its start and its transactions, over the link to S-SCPUDEV, the sub-CPU's transport-level model (since 2026-10-23: `0x85`, `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1; S-SIO2, H-SCPUSTART); S: the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / S-NVRAM (the players' default since 2026-11-08); N: the ACC module init, ACC_MAIN, PER_SLOPE, the level gauge and Level Adjust with the accelerometer at its sample cache (since 2026-10-23, 4.7.3; H-ACCINIT, S-ACCREG, S-ACCSAMPLE, H-SLOPEINIT); PER_ROTATE with `--rotate on` (since 2026-11-08, 4.7.3; H-ROTINIT) | the accelerometer at the PER_SIO transfer and its data-ready pin (ACC_SENS_MAIN native); PER_ROTATE by default; S-NVRAM's NAND seam as the default | lab time; the UI_IN, SCPU and PER_SIO inits, the GIO init for the data-ready pin; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, rotation by default, eye sensor (Level Adjust, the level gauge and, with `--rotate on`, the orientation and the gauge's portrait layout in, 4.7.3) |
 | **Card and file system** (4.8) | N on E143 since 2026-10-23 (4.8.2): the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, the format, dosfat, DCF and the shots / movie-time counts natively on an 8 GiB SDHC card at the SD command layer (S-SDCARD, S-SDHOST, S-FSNAND, S-ALBM, H-FILEINIT, H-FILECLBK); the picture's file at S2 through the file module (S-RECFILE); since 2026-10-24 (4.8.3) Card Formatting from the menu (S-MDACTRL) and the card's removal and insertion (S-MEDIA), the application's media control native; S: S-CARD's insertion requests, its HLS mount state and image list; the other bodies keep S-CARD's card with no file system | the SD host's registers and interrupts with a card model (seam A), the rule-found seam on the other bodies, REC_FILE natively | the HLS media layer (which sends the insertion), REC_MAIN / REC_FILE (the picture's file), TAKE_MOV's movie take (the movie module's set-up, whose frame rate the movie time query reads: 0 before a take on the camera too), IRQs anywhere for the SD host | 115,103 / 108,887 (17k of it self-test and debug) | 1-2 weeks left: REC_FILE's DCF steps, both slots, exFAT, the other bodies | a card that fills, real files in DCIM, both slots |
 | **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
-| **HDMI and DisplayPort** (4.9) | N with `--hdmi on` (since 2026-10-23, E143, E146, E147): a plug runs the hot-plug pin's IRQ 109, the HDMI init, two E-DDC reads with IRQ 239, the EDID's checks and parse and the connect report to UI_IN natively (H-GIOSLOTS, S-HDMISINK); off by default, and either way the DISPLAY OPEN of HDMI is not reached (X) | TX byte registers at `0x99c07000` (HPD / RxSense byte 8, DDC `0xa80..0xa83`, the buffer `0xc00`, IRQ 239) and the GIO pin 77 (`0x9b881540`, IRQ 109), both modelled; then the HDMI open and VSC channel 0 | the camera application's output switch (?), VSC channel 0 in the compositor, an unplug (A-HDMI-1) | about 11k (3.3k plus the TX / DP driver's 7.7k) | 2-3 weeks left (the open and channel 0) | the HDMI output a TV shows |
+| **HDMI and DisplayPort** (4.9) | N with `--hdmi on` (since 2026-10-23, E143, E146, E147): a plug runs the hot-plug pin's IRQ 109, the HDMI init, two E-DDC reads with IRQ 239, the EDID's checks and parse and the connect report to UI_IN natively (H-GIOSLOTS, S-HDMISINK); off by default. On E143 since 2026-11-08 the application's TRA 588 is taken by S-OUTDEV, and CapIod's open, the transmitter's open (PHY, SCDC, update) and VSC channel 0 at 1080p59.94 run natively; channel 0 composes its window, nothing drawn on it; the unplug runs down to the disconnect report (A-HDMI-1) (X) | TX byte registers at `0x99c07000` (HPD / RxSense byte 8, DDC `0xa80..0xa83`, the buffer `0xc00`, IRQ 239, the open's words), the PHY words at `0x99c08000` and the GIO pin 77 (`0x9b881540`, IRQ 109), all modelled; VSC channel 0 | the application's notification of the open (CmpCst_Function's 494, the TRA reply), the GUI's planes on channel 0, the return to the TFT at an unplug | about 11k (3.3k plus the TX / DP driver's 7.7k) | 1 week left (the notification and the GUI's HDMI layout) | the HDMI output a TV shows |
 | **USB** (4.10) | 0 on E143 | the event level first (EV_USB_CONNECTED 8, EV_USB_RXDETECT `0x040d00d2`, the select screen); later a DWC3-family device at `0x9a600000` (IRQ 223) | SCPU (PD, power source), ADC flag `0xbf`, the PC_* tasks, storage for MSC | 121,861 / 117,704 | 1-2 weeks events; 4-8 weeks data path | the USB select screen, charging state; later MSC, MTP, PTP |
 | **PC connection over PTP (TPC)** (4.10) | 0 | ? (the bulk of the USB data path) | a USB or Wi-Fi transport, storage | about 52.6k / about 52k (21.4k of it filed under factory code) | ? | tethering, the PTP firmware-update path |
 | **PictBridge / DPS / DPOF, XML parser** (4.10) | 0 | ? | USB | about 89k in parts: 13.4k HLS, 25.7k Cmp_PictBridge, 10.3k HFW print, 2.8k DPS transport, 9.4k DPS XML, 2.8k DPOF, 24.5k expat-like XML parser | ? | direct printing |
@@ -2339,7 +2339,11 @@ steps are now read and run, the lab handing over only what the capture pipeline 
 
 Status (2026-10-23): the plug of a cable runs natively down to the transmitter and the hot-plug pin, with the play
 option `--hdmi on` and its input `hdmi plug` (`src/dev/hdmi.mjs`, `src/lab/edid.mjs`; FIDELITY-NOTES 4.5) on E143, E146
-and E147; off by default. Addresses are E143's (disassembly notation) unless a body is named.
+and E147; off by default. Since 2026-11-08 on E143 the plug goes on to the HDMI output: the application's change of
+output device (TRA 588) is taken by S-OUTDEV, and the IO-device capability's open, the transmitter's open and VSC
+channel 0 at 1080p59.94 run natively; channel 0 composes its window, with nothing drawn on it yet. The input `hdmi
+unplug` runs natively down to the disconnect report (A-HDMI-1). Addresses are E143's (disassembly notation) unless a
+body is named.
 
 - **Driver (D):** inside the display code, `0x501d1381..0x501d6ad0` (about 7.7k): the HDMI init `0x501d15e8`, the IRQ
   239 (level 5) handler `0x501d508a`, the EDID read `0x501d3113`, the EDID step `0x501d34b8`, the state getter
@@ -2361,7 +2365,8 @@ and E147; off by default. Addresses are E143's (disassembly notation) unless a b
   the open's SCDC write `0x501d5186` (by way of `0x501d1b92`, `0x501d53d1`: slave `0xa8`, register `0x20`, the byte at
   `0xc00`, I: SCDC TMDS configuration; it polls 0x94 until one of its bits 5..7 is set, then writes 0xff to it), the
   data at `0xc00..`. The PHY / PLL words at `0x99c08004`, `0x99c08054`, `0x99c080fc` (the power step `0x501d174f`,
-  `0x501d166c`) are the lab stub's.
+  `0x501d166c`) were the lab stub's until 2026-11-08; they and the open's `0x99c08040..48` are the device model's
+  storage now (below).
 - **Hot plug through a GIO pin (D):** the display init registers pin 77's handler `0x501d6243` (`0x501d696c`: the GIO
   mode `0x500519ce(77, 5)` and handler `0x50051a29(77, {type 0, handler})`) and enables it (`0x501d6926`). The GIO
   driver maps a logical pin through `0x500029ad` (class 0 here) to the class's functions (tables at run time
@@ -2414,14 +2419,83 @@ and E147; off by default. Addresses are E143's (disassembly notation) unless a b
   word (E146 `0x62a67880`, E147 `0x62a655e4`).
 - **After the report (X):** the camera application takes EV_HDMI_CONNECTED natively (CCommon::doHdmiConnectChange,
   setOutputType, getHdmiState by their strings), its display manager sends DISPLAY cmd 18 (S-DISPQ), and the TFT leaves
-  the date prompt for the shooting screen; it sends no DISPLAY OPEN of the HDMI device. The same frame and cmd 18 follow
-  H-G4SET's toggle of `0x0501` in a session without the port, so the driver's EDID state does not change what the
-  application shows here. Why it opens nothing is ? (openDevice's caller is not traced, vsc spec section 8, H-RESEND).
-  The open past its poll (the PLL / PHY words, infoframes (I, `0x501d3dcd`), the SCDC write, the wait on `(0x6004308e)`,
-  the mode choice (?), VSC channel 0), CEC, audio (HDMI_AUD_RESP 0xa2) and DisplayPort are not reached.
-- **Next:** an unplug (A-HDMI-1: which of 0x92's bits the transmitter sets when detect and sense fall, and the GIO edge
-  type's other bit), a cable in at power-on (whether the pin's type 0 is an edge or a level, ?), the camera
-  application's output switch, then the HDMI open and VSC channel 0 in the compositor.
+  the date prompt for the shooting screen. The same frame and cmd 18 follow H-G4SET's toggle of `0x0501` in a session
+  without the port, so the driver's EDID state does not change what the application shows here.
+- **Why no OPEN followed (D, X, 2026-11-08):** doHdmiConnectChange `0x510c4672` asks the camera API (`0x50afccd5`) its
+  vt+56 (`0x50afcf14`, query 65803, `0x50abdbb5`: 1 while UI_IN's `0x0501` reads 1), which answers 0 once the report
+  set it to 0 (X), reads settings 288 and 304, and calls vt+20 (`0x50afcd3a`, query 65797) with device 8:
+  OlyHfwOpeCamCom's change of output device `0x50abcf49` builds TRA 588 (`0x50abf14d`: +32 the device, +36 the second,
+  +40 0) and executes it at `0x50abd146`; S-TRAACK answers the exec 0 (X: the camapp log's "tra 588 from
+  0x50abd14d"), so nothing opens. Then setOutputType `0x510c4946(1)` asks vt+28 (`0x50afce9d` -> `0x50abd8aa`, query
+  65798), which maps the current device (`0x50ab651a`, the output-device property 4513 read at S-PROP's site
+  `0x503eff61`) to type 1 and prints "not connected to HDMI" (X). The application waits for no setting, GUI state,
+  second event or CPU 1 / A53 answer: the open is the transaction's (D below), and the lab answered it. In the camera
+  the active state's component takes 588: CmpCst_Function (`0x50ce992d..0x50ce9a3f`) and CmpSqp_SequencePartsBase
+  (`0x50c8fd69`, in nine vtables) each build the IO-device capability's event 224 (`0x50bf2f4e`: +28, +32, +36 the
+  request's three words) and send it to CapIod_IODevice (their +636 / +696), beside steps of their own (the through
+  image's bank `0x50bd5ff2(512, device == 8)`, their reply). CapIod (the singleton `0x50be92ca`; X: constructed, in its
+  state 6, in both camapp modes) takes 224 in state 6 (`0x50bea64b` -> `0x50beace2` -> `0x50beab11` -> its change of
+  device `0x50be9c6c` -> `0x50be9855` for 8), writes property 4513 = 16 (`0x50bea474`, X) and calls DevDpc's openDevice
+  (vtable slot 31, `0x50d83338`, at `0x50be9c42`), which sends DISPLAY cmd 45 (`0x503e6aca`) with the code
+  `0x0d000004`. Neither component runs it in the lab: S-TRAACK answers every transaction at the exec, with the
+  components too, and in camapp 1 HIGHLEVEL_MAIN (task 57), whose OXF loop dispatches the reactives' events, does not
+  run (X: 224 sent natively through `0x50d7f925` was queued and CapIod stayed in state 6).
+- **S-OUTDEV (E143, `--hdmi on`; `src/lab/camapp.mjs`):** at TRA 588 the lab does the part both components share,
+  after the step: event 224 built by its own constructor and made CapIod's current event, then CapIod's dispatchEvent
+  natively (S-BOOTDONE's way); S-PROP's property 4513 then follows the value CapIod wrote (16). Only the HDMI output (8)
+  is taken; another device stops the session. The components' own steps are not done.
+- **The HDMI open (X: E143, format 13):** CapIod's openDevice reaches the DISPLAY OPEN of `0x0d000004` (S-DISPQ's run
+  of cmd 45), which programs VSC channel 0 from the HDMI format table `0x60355614` (80 bytes a format, getters
+  `0x501d5965..0x501d5b6b`, D; format 13: VIC 16, period 16683 us (59.94 Hz), progressive, 1920 x 1080 at (192, 41),
+  vtotal 1125, vsync 5, htotal 2200, hsync 44; format 12 is the 16666 us one), closes the TFT (the opened word
+  `0x0d000004`), and calls the HDMI open `0x501d5bae`: the EDID wait passes at once (state 0xf0), `0x501d2a44` writes
+  registers 7, 0x33, 0x20..0x23, the indexed table `0x501d54b4` (0x31 / 0x30 select 0..8, data 0x24..0x2c), 0x0c, 0x05
+  and 0x98 = 0x57; `0x501d67b4` posts AUD_EXEC function 36 with argument 4 (queue 8, reply queue `0x60043308`), and
+  AUD_EXEC, native, answers it ("Response from Audio", `0x501d68c6`); `0x501d1b92` sets the format's PLL words
+  `0x99c08040/44/48` (`0x501d5205`, by the format's code at +16) and makes the SCDC write (`0x501d53d1`: register 0x19
+  = 1 and data 3 only for codes 16..21 under further conditions, I: the 4K formats; else 0 and 0; format 13's code is
+  12); `0x501d1c39`, `0x501d1ca0`, `0x501d2261` and `0x501d2bab`
+  fill 0x40..0x75, 0xa8..0xb9, 0xc0..0xc5, 0x200..0x228, 0x264, 0x268 and 0xe00..0xec0 (I: video, AVI and audio
+  infoframes, by the packet update names below); the lines are both high on the first pass; `0x501d291c` requests the
+  update: UPDCTRL 0x11 = 0x97, then SUPDCTRL 0x12, PKTUPD 0x204 / 0x205 and VSIUPD 0x211 / 0x212 by its argument's
+  bytes (the names from its prints, D), and `0x501d5149` waits for `(0x6004308e)`, which IRQ 239 sets for 0x96 bit 7
+  (the status reader's 0x800): "Update Done". The open takes 0.71 s of lab time; DISPLAY then publishes `0x04020218`,
+  which openDevice waits for, openDevice re-sends the palettes for kind 8 (`0x503e52c7`, natively) and the component
+  observer Cmp_ObserverNotifyChangeDeviceSuccess `0x50c66ee5` posts event 494 to CmpCst_Function. No errlog (X,
+  test_hdmi.mjs). Two harness rules gave way: a display run now leaves to the kernel the reads of another task
+  (AUD_EXEC, which the post woke) and the run's own read of another queue (the reply; `src/lab/display.mjs`
+  task_message).
+- **The transmitter in the open (X; `src/dev/hdmi.mjs`):** the open adds 27 words to the model's storage and the PHY
+  words beside the lane word; every read it makes is read back to be modified (D: the callers). Command 128 is taken
+  only as that SCDC write: the lab sink has no SCDC (no HDMI Forum block), so the write is not acknowledged, 0x94 bits 7
+  and 6 at once (I). A write of UPDCTRL with bit 7 sets 0x96 bit 7 at once (I: the update done). With a failed EDID read
+  CapIod opens nothing (X: TRA 588 is taken, the opened word stays the TFT's).
+- **VSC channel 0 (X):** latched SYNC1 `0x1000001` (progressive), SYNC2 1125, SYNC3 5, SYNC6 `44 << 16 | 2200`,
+  VIDEOAREA1 `192 << 16 | 1920`, VIDEOAREA2 `41 << 16 | 1080`, HDMI1 / HDMI2 the same window, BG `0x80800b`, CTRL2
+  `0x1c0`, CTRL3 1, DMAEN 0. The lab runs the channel at the firmware table's period x 1000 / vtotal = 14829 ns a line
+  (`DisplayLab.hdmi_line`, the harness rule the panels follow), and `compose('hdmi')` composes it under A13 extended to
+  the HDMI open's state (vsc spec 10.10): the 1920 x 1080 window at (192, 41), its background, no plane (OSDCP2
+  unwritten).
+- **What the HDMI picture still lacks (X, I):** the GUI draws nothing on channel 0. It learns of the new output from the
+  components: CmpCst_Function takes 494 in the states its own 588 leads to (`0x50ce9cee`, `0x50cea2e7`, which builds a
+  reply `0x50abff6d` and sends it, `0x50d7efe4`; I: the transaction's completion to the application). In camapp 2 the
+  main thread dispatched 494 to it (`0x50ce714a`) and nothing followed (X); I: it is not in the state its own 588 would
+  have left it in, since S-OUTDEV, not the component, took the 588. An experiment that handed the 588 request to
+  CmpCst_Function natively in camapp 2 opened the HDMI device through the component (X), and the settle then ran out at
+  S-DISPFRAME's swap wait (300,000 stub calls); not followed. The player shows the TFT's channel, which the open closed.
+- **The unplug (D, X):** the hot-plug handler turned the pin's interrupt off at the plug (`0x501d6949`; X: enable 0
+  after the open), so the cable's removal reaches the driver through the transmitter: 0x92's pairs (0x9a = 0x0f once the
+  cable is in, X) call `0x501d648c` ("display_hdmi_seq_hpd_intr_proc") and `0x501d64b6` ("..._rxsence_intr_proc"),
+  which both defer the hot-plug handler (`0x501d64e0`, flag `0x62a3ca21`); it reads register 8, finds detect low and
+  runs the disconnect send `0x501d644b` ("disconnect send.": `0x501d699b` reads UI_IN's `0x0501` as 0, connected, and
+  `0x501d69c2(0)` reports `0x02020501` = 1; "skip send disconnect." otherwise), then `0x501d324e(0)`. Executed with
+  A-HDMI-1's 0x92 bits 0..3: IRQ 239 alone, both callbacks, the report, no errlog; CA_MAIN and the HLS event sender
+  take the event, the GUI's ConnectChangePlay does not run, no TRA 588 follows and the HDMI device stays open (why
+  the application does not switch back is ?). On E146 and E147 the same plug and unplug pass (X), without S-OUTDEV.
+- **Next:** the application's notification of the open (CmpCst_Function's 494 and the TRA reply, with the components
+  and the swap wait), the GUI's HDMI layout (setOutputType's HDMI_SIZE_HDMI_1920X1080) and its planes on channel 0; the
+  return to the TFT at an unplug; a cable in at power-on (whether the pin's type 0 is an edge or a level, ?); the
+  other bodies' S-OUTDEV; CEC and DisplayPort.
 - **The E118 family's outputs (D, E122):** its DISPLAY OPEN names the device by a code (1 TFT, 2 NTSC, 3 PAL, 4 HDMI,
   5 VF-2, 6 the built-in EVF, 13 VF-3, the rest HDMI modes; `docs/om1-vsc-spec.md` section 12). NTSC and PAL time the
   channel at 262 lines of 858, write the TV encoder block `0x99100000` (`0x502fe38a`) and send AUD_EXEC function 36 with

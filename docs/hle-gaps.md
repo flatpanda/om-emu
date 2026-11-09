@@ -2406,10 +2406,13 @@ and E147; off by default. Addresses are E143's (disassembly notation) unless a b
   `blk05a00000` body `0x2f10fe0` (v4.0, xz, 11,811,224 bytes) extracts with 7-Zip, and Apple's `objdump` disassembles
   both the aarch64 module and the 32-bit ARM daemons.
 - **Control block:** `+0 u16` a magic `0x1000 | (byte sum of the configuration & 0xff)`, which `isc_start` checks;
-  `+2 u8` the node count; `+4 u32` a shared-memory size (memblock_init); `+8` one `u16` offset per node to that node's
-  receive FIFO. `iscdrv` takes node 4 as its own (after its bank loop, `isc_start` stores 4 as the own node).
-- **FIFO (one per receiving node):** a 12-byte header `{u16 state, u16 size, u16 read, u16 write, 4 bytes ?}`, the data
-  from `+12`; state `0x1000` while the owner starts, `0x2000` when running (`isc_start` refuses a FIFO already in a
+  `+2 u8` the node count; `+4 u32` the size of the pool's allocator metadata (`0x1000`; the A53 maps that much for
+  `memblock_init` and accepts blocks from `+4 >> shift` on, `docs/a53-spec.md` §3); `+8` one `u16` offset per node to
+  that node's receive FIFO. `iscdrv` takes node 4 as its own (after its bank loop, `isc_start` stores 4 as the own
+  node).
+- **FIFO (one per receiving node):** a 12-byte header `{u16 state, u16 size, u16 read, u16 write, u32 pfn}` (the pfn:
+  the page frame of that node's view of the shared pool, which an `ISC_attach_mem` maps, `docs/a53-spec.md` §3), the
+  data from `+12`; state `0x1000` while the owner starts, `0x2000` when running (`isc_start` refuses a FIFO already in a
   `0x3000` state). A message is a 2-byte header `{u8 port, u8 length}` and at most 128 bytes (`isc_send` refuses longer
   ones and ports >= 48), written at the write index with wrap; free space is `read - 1 - write` modulo the size. Port
   `0xff` is skipped by the receiver (`isc_receive_interrupt`). A sender holds the hardware lock for the target: on the
@@ -2433,9 +2436,10 @@ and E147; off by default. Addresses are E143's (disassembly notation) unless a b
   backing region for both the MN (`0x63fe0000`) and A53 (`0x2_a3fe0000`) views, and the peer writes the `ISC_alloc_mem`
   memblock pool header so the A53's own `alloc`/`attach` succeed (the socket `/dev/mem` buffer alias and the CGI pool both
   depend on this); the 64-byte socket and 32-byte CGI record field layouts are decoded and paired with the MN CPU-1
-  marshallers in `docs/a53-spec.md` §9.1. The socket/CGI daemons launch only from the kind-1 wifi script and were not
-  brought up end to end in the headless oracle (`docs/a53-spec.md` §10 item 7). See `tools/a53-oracle/README.md` and
-  `docs/a53-spec.md` §4 phase (c).
+  marshallers in `docs/a53-spec.md` §9.1. Since 2026-11-08 a TCP server over ports 3/4 and the CGI relay's GET and
+  POST over 11/12/13/16 run end to end in the oracle too (X, §9.1, §10 item 7), and S-A53ISC (`emu/src/lab/a53isc.mjs`,
+  not wired) answers those records and sccore's as the A53 does, tested against the recorded exchanges. See
+  `tools/a53-oracle/README.md` and `docs/a53-spec.md` §4 phase (c).
 
 ### 4.12 Detection, GPU / C3D, strobe
 

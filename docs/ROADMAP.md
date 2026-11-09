@@ -85,11 +85,15 @@ not reconciled.
 6. **HLE of E143, steps 4-8**: CPUs 2, 3 and 1; task starts with the HLS bring-up; storage; TAKE native with its
    neighbours; then the blocks by user-visible gain.
 7. **The A53 and its A9 siblings** (`docs/a53-spec.md`, `tools/a53-oracle/`): in the QEMU oracle (a patched build with
-   the `om-isc` device for the ISC windows and the irqcon banks) the A53's own Linux brings ISC up live: `isc_start`
-   passes, the port-27 start completion arrives, and sccore (26 / 27) and hhhr (30 / 31) answer an MN-side peer. Next:
-   decode the isc_socket (3 / 4) and isc_cgi (11..16) records and exercise them live, then build the JS ISC node-4
-   service (4.11) against the oracle's replies; an in-JS AArch64 core stays optional. Answering CPU 1 natively waits
-   on the multi-core and ISC transport work.
+   the `om-isc` device for the ISC windows, the irqcon banks and the console UART) the A53's own Linux brings ISC up
+   live: `isc_start` passes, the port-27 start completion arrives, sccore (26 / 27) and hhhr (30 / 31) answer an
+   MN-side peer, and since 2026-11-08 isc_socket (3 / 4: a TCP server round trip) and isc_cgi (11 / 12 / 13 / 16: a
+   GET and a POST) run end to end against a client inside the guest (spec 9.1). S-A53ISC (`emu/src/lab/a53isc.mjs`,
+   not wired) answers those records as the A53 does, tested against the recorded exchanges. Next: the socket ops and
+   CGI cases not yet exercised (connect, sendto, select, sockopts, multi-chunk bodies), the other daemons' ports
+   (isc_olnet 19..21, isc_file 5 / 6 / 8, wifi_* 1 / 2 / 24 / 25, blebridge 28 / 29), and wiring S-A53ISC once a CPU 1
+   exists; an in-JS AArch64 core stays optional. Answering CPU 1 natively waits on the multi-core and ISC transport
+   work.
 8. **Hardware validation**, as soon as an OM-1 is available for photos or HDMI captures.
 
 ## Multi-model

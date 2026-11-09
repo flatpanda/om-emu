@@ -15,9 +15,12 @@
 //              lab time is due
 //   S-BOOTDONE (control camapp 2 only) the HLS components' boot completion: the camera base (Cab_CameraBase, vtable 0x60ef0b88) and the
 //              still-shooting category (CtgStl_StillImageShooting, 0x60ef81d0) wait in their state 3 for event 415,
-//              which their capabilities' start would send once the modules report ready; S-BOOTDONE dispatches 415 to
-//              each that waits there, and 420 (the shooting mode, as OlyHfwOpeComRsbChangeMode makes it for mode
-//              0x10000) to the camera base waiting in its state 11. The camera base then creates the shoot mode
+//              which the application's own HighLevel init sends as TRA 415 through the transaction exec (the event
+//              of vtable 0x60dca154 built at 0x50ab2dda, the exec at 0x50ab2def, X), and S-TRAACK answered it at the
+//              exec (with S-RPC in the receiver's place; control camapp 3 runs both natively); S-BOOTDONE
+//              dispatches 415 to each that waits there, and 420 (the shooting mode, as OlyHfwOpeComRsbChangeMode makes it for mode
+//              0x10000; its RSB request reaches the components through S-RPC's other entry, 0x50ac734c) to the camera
+//              base waiting in its state 11. The camera base then creates the shoot mode
 //              (ModSht_ShootMode), which creates the category, which creates Cmp_ShootingComponent. The sub-CPU status
 //              read 0x5012b8b7 the component's constructor makes (SCPU 0x98e000c0 / 0xd0, not in the lab's SCPU) returns 0.
 //              Off by default: with the components running the GUI shows its shooting panel over a black image area
@@ -106,6 +109,7 @@
 import { FirmwareError, where, runtime, disasm, SP } from './hle.mjs';
 import { OPENED_WORD, HDMI_MASK } from './display.mjs';
 import { AssertionError } from './errors.mjs';
+import { RPC_ENTRIES } from './menu.mjs';
 import { packRegs } from './sim.mjs';
 import { pack, unpack } from '../util/bytes.mjs';
 import { hex } from '../util/hex.mjs';
@@ -190,6 +194,10 @@ const CPU3 = 3, CPU3_REMOTE_CALL = A(0x5002587A);
 const LONG_TIMER_SET = [A(0x5041FD71), A(0x5041FD0D)], MODULE_EVENT_PUBLISH = A(0x50025095), LONG_TIMER_EVENT = 0x03010000;
 export const CA_MODULE9_READERS = [A(0x50ABE026), A(0x50AF63F3), A(0x50ABB039), A(0x50ABA912), A(0x50AE0FA3), A(0x50AE138C), A(0x50AE1559), A(0x50AE1566), A(0x50AE15A2)];
 export const CA_PROP_SITE = A(0x50B76DBE);
+// the module-9 reads the native transaction path reaches (control camapp 3, X): the shooting component's set-up after
+// TRA 990 (0x50c78b35: state 2 takes CapThr's start at 0x50c78bc1, D), the application's second read in 0x50abb032,
+// made once the components have set the state to 0 (0x50ca4ae1), and the two reads of 0x50d787f0 at the HDMI plug
+export const CMP_MODULE9_READERS = [A(0x50C78BB4), A(0x50ABB044), A(0x50D78808), A(0x50D78815)];
 // the target table at 0x606214a0 (docs/om1-shutter-spec.md 2.2) without DISPLAY (0x88), plus PC_PD_CMD_EXEC (0xcf)
 export const MODULE_QUEUES = new Set([0x76, 0x3F, 0x64, 0x5A, 0x47, 0x1F, 0x03, 0x09, 0x71, 0x2E, 0x01, 0x5E, 0x7D, 0x1B, 0x7C, 0x08, 0x31, 0xAE, 0x98, 0xCF]);
 // the same queues by their id words in the static queue-id table (0x600431c6, id n at +2(n - 1)), which a ported
@@ -215,6 +223,21 @@ const UI_OUT_EXEC_WORD = A(0x600432A6);
 // a0 points to, and the synced type is the record's
 const DISPSYNC_REQUEST = 3, DISPSYNC_OFF = 0, DISPSYNC_IMAGE = 1, DISPSYNC_RECORD = 8;
 const TRA_EXEC_CALLS = A(0x50AF7CB9), TRA_EXEC_CALL = A(0x50AF7CBE);
+// camapp 3, the transaction path native (docs/hle-gaps.md 4.1.4): S-TRAACK hands every transaction to the exec, whose
+// remote path sends through the receiver substance's vt[41] (0x50af8487) and, for the RSB requests (the mode change
+// that brings 420), the remote-call method 0x50ac734c: both entries S-RPC answered (menu.mjs RPC_ENTRIES), so the
+// components were never asked; they run natively there. TRAACK_KEPT: the transactions S-TRAACK still answers 0 at
+// the exec in that mode (none: the menu's stop is not one transaction, 4.1.4). TRA_NATIVE_LOG: tra_native's length
+const TRAACK_KEPT = new Set(), TRA_NATIVE_LOG = 400;
+// S-HISTWAIT (camapp 3; docs/hle-gaps.md 4.1.4): the shooting component's display set-up starts the VSC's histogram
+// (0x501e14a4: INTEN1 |= 0x100, HIST1 = 1, after HISTAREA1 / 2 at 0x501e1396 / 0x501e13f6; X, on the TFT channel), and
+// DISPLAY cmd 15 (0x501d709f), while the histogram runs (the word 0x62a3eaf8 is 1), clears the histogram's flag (its id
+// at 0x6004303a) and waits for it with a 50 ms timeout (0x501d70d1, OlyEvWt 0x5002bdd8; its result is not read). Only
+// the histogram's done callback 0x501d71e1 sets the flag (it also clears the word and posts the result to the queue
+// whose id is at 0x600432d4, D); the lab's VSC has no histogram unit, so nothing sets it, and in S-DISPQ's run the
+// wait cannot block. S-HISTWAIT runs the wait to its timeout: the lab clock moves 50 ms and the wait returns E_TMOUT
+// (on the camera the histogram ends first, I: within a frame)
+const HIST_WAIT_RETURN = A(0x501D70D8), HIST_WAIT_MS = 50, OLY_EV_WAIT = A(0x5002BDD8), E_TMOUT = -50;
 // S-TRAACK: the request's vtable slot the exec deletes a consumed request through (docs/hle-gaps.md 4.1.2, D)
 const REQUEST_DELETE_SLOT = 1;
 // S-OUTDEV (E143 with the HDMI port, docs/hle-gaps.md 4.9): the application's change of output device, TRA 588
@@ -420,11 +443,11 @@ const FUNC_DIRECT_RUN = A(0x51068E37), FUNC_RECORDING_MOVIE = 27;
 // The page's texts for the four stand-ins (playui.mjs STAND_INS is a recorded document and stays as it was).
 export const CAMAPP_STAND_INS = {
   "H-GUIBYAPP": "the lab's bring-up does not create the GUI (the creator 0x5108bc37): the application's start does, from CA_MAIN's code (0x510609ce), as on the camera; the lab takes the GUI's task and OSD records after it. Created twice, the lab's idle GUI kept a root of output 0 and one of the two buffers of OSD layer 1 (the registry 0x62b26528), so the shown root's double buffer had layer 1 on one side only: on the EVF the bottom bar and most of the information were missing in every other frame (docs/om1-shutter-spec.md section 7 item 59)",
-"S-CAMAPP": "the camera application runs natively in every session: the boot chain's HighLevel steps (0x50ab222a, 0x50ab22bc), the event broker init 0x502a48b6 and act_tsk(58) at bring-up; its task entries are allowed, its nine module-9 readers join S-TAKEOVER's, its output-device read (0x50b76dbe) joins S-PROP; the application maps keys and moves the GUI itself (docs/om1-shutter-spec.md section 7); control camapp 2 starts a session with the HLS components running too",
+"S-CAMAPP": "the camera application runs natively in every session: the boot chain's HighLevel steps (0x50ab222a, 0x50ab22bc), the event broker init 0x502a48b6 and act_tsk(58) at bring-up; its task entries are allowed, its nine module-9 readers join S-TAKEOVER's, its output-device read (0x50b76dbe) joins S-PROP; the application maps keys and moves the GUI itself (docs/om1-shutter-spec.md section 7); control camapp 2 starts a session with the HLS components running too; control camapp 3 runs them with the transaction path native, the OXF main thread started before HL_INIT",
   "S-MODACK": "the module tasks do not run: every request the application's API sender posts to a module queue (OlyQeWr returning to 0x503eba07; E143's target table's module queues, and those a body's src/fw/models.mjs modack_queues adds: E132's CATEGORY_MAIN and LOGGER_MAIN) is answered after the step with [status 0, token, word 3] to the reply queue in its word 0, the layout of DISPLAY's replies (0x501c48bf); every synchronous send (0x5002e39d) the lab otherwise refuses returns E_OK. Nothing a module would write back is written (I). The queues of the modules that run natively are left to them: the file module's FILECLBK with the card's file system, and with --audio on AUD_MAIN's AUD_EXEC (0x08; H-AUDSTART), synchronous sends included",
   "S-DISPSYNC": "the release of the GUI's synced display updates: while the application's sync word for a panel is set (CameraCommon::setDispSync, which E137's GUI asks for at the start), the GUI's update is a request of type 3, which leaves its buffers pending until an image sync; their one sender, the shooting sequence's stopRecView, does not run in an idle session, so E137's screen stayed blank (X). After each step the lab releases each device with such a request: both panels' sync words cleared through the application's setter, as stopRecView does, then the image sync of kind 1, whose event the display manager takes in the state the type-3 request leaves, and the pending buffers are committed (D). stopRecView's kind 2 is not taken there: under it E137's screen came only at its GUI's next update, a 250 ms redraw of a blinking item, and E125's GUI, which sends none, kept a one-colour frame (X). When the camera releases the sync at the start is not known (I: once its through image shows)",
   "S-RVSTANDBY": "the rec view component in standby: the shooting components' RecView does not run; its entryStandby would store state 1 in the application's state word (fact recview), which starts at 0, and getRecViewState takes 0 for a rec view, so E142's GUI showed the rec view's items at the start (EVT_REC_DISP_RECVIEW, 0xf005) instead of the shooting screen (X). The lab stores 1 before the application starts; that the camera's component is in standby then is I",
-  "S-TRAACK": "the HLS transaction layer's synchronous exec (0x50af7cb9 / 0x50af7cbe) returns 0: no local handler is ever registered (on the camera either), so every transaction goes to the active state's components, where the shooting component CmpSht_ShootingComponent_NEW answers TRA 990 and 991; it runs only with the HLS components, and the remote channel answers 0xf0000001 (startShootingService fails on TRA 990 without it, X). With the file system native and its HLS side (card_fs.hls: E143, E146) the media control's start (TRA 1511; E146's 1509) also goes to S-MDACTRL (media.mjs)",
+  "S-TRAACK": "the HLS transaction layer's synchronous exec (0x50af7cb9 / 0x50af7cbe) returns 0: no local handler is ever registered (on the camera either), so every transaction goes to the active state's components, where the shooting component CmpSht_ShootingComponent_NEW answers TRA 990 and 991; it runs only with the HLS components, and the remote channel answers 0xf0000001 (startShootingService fails on TRA 990 without it, X). With the file system native and its HLS side (card_fs.hls: E143, E146) the media control's start (TRA 1511; E146's 1509) also goes to S-MDACTRL (media.mjs). Under control camapp 3 it answers none (its list TRAACK_KEPT is empty): every transaction goes to the exec natively and, S-RPC lifted from the receiver's send and the remote-call method, to the components, which answer the start's 990 and the rest natively (X; docs/hle-gaps.md 4.1.4)",
   "S-CARD": "a card in the SD slot. With the file system native (a body that runs it, src/fw/models.mjs card_fs; storage.mjs) the card is S-SDCARD's, which the firmware formats and mounts itself at the insertion, and S-CARD keeps only the HLS media mount state (0x60360bfc, 0x60360c08) at 8, as the HLS media layer would set it on the file layer's mount, and its record of each picture taken (S-RELSEQ's END_SHOOTING_PICTURE: its release, S-SCENE's scene, the clock and the lens at the capture), whose file S-RECFILE writes (on E143, E146 and E147 REC_FILE natively, from S-RECIMAGE's packet: rec.mjs). Where REC's recorder records the file (S-RECFILE's DCF steps) the firmware's own DCF database counts it in the same session: the media API's image count (0x503feea4) and each picture's folder and number in playback are the database's (its fnode by index), S-CARD's image list retired; elsewhere the pictures are S-CARD's list, of folder 100 numbered from 1, the image count answering their number for type 1, and the database learns of each file at the next mount. The firmware answers the remaining shots and the movie time from the card. While the card is out of the slot (media.mjs S-MEDIA) the image count is 0; a format from the menu (S-MDACTRL) clears the records. On the other bodies the card has no file system: the card driver's detect state of the first slot is 2, inserted (src/fw/facts.mjs cardDetect), set before the application starts; the remaining-shots module query 0x50419164 answers 999 less the images; the movie time query 0x5042da58 answers a time left of 1:00:00 less the time recorded so far, and the current recording's time; a DCF remain count that tests only the drive status's error bits (MODEL_INFO.dcf_mount_test) is given the mount test E143's count makes, so it returns as not mounted. An image is its number, its exposure and S-SCENE's scene at the capture",
   "S-PLAYSEQ": "the play module's notifications: each asynchronous HLS play request (OlyHfwOpePlyComAsyncRsb::execute 0x50ad26fb) is finished after the step by its notify function (0x50ad2bc2) with the request's id and kind 2, as the module would: startPlayService (0) makes PlyCom's callback post CBS_END and the GUI leave ID_ST_PREPARE, startSingleFrame (8) and moveCurrent (9) make the single-frame callback post CBS_FINISH_DRAW and the GUI show the image. While a request's transaction runs (S-TRAACK) the module's answer is written: canMoveCurrent (sync 344) can move whenever there are two images or more (they wrap around), moveCurrent's result is 1 and the image shown moves (direction 3 left, 4 right). Where PlyCom asks the play module rather than a component (the E118 family always), getNumber (sync 5) is answered with the image's index, file number and folder, getStillInfo (sync 3) with the picture's own record: the date the camera's clock gave at the capture (the family's default while its clock is not set: 2016-01-01 00:00 on E122, 2015-01-01 on E118 and E120), its file's JPEG size, the release's exposure and the lens's focal length at the capture; getHistogram (sync 7) is answered empty (the lab decodes no picture). That every request finishes at once, with result 0 and no other data, is an inference from the callbacks (I)",
   "S-PLAYCOMP": "the play component's answers (Cmp_PlayComponentBase, which only the HLS components create; OlyHfwOpePlyCom's wrappers 0x50acf156..0x50acf356 are answered in its place) for the image S-PLAYSEQ shows, the newest: getNumber its index, file number and folder 100, getStillInfo the picture's own record as S-PLAYSEQ's answer holds it (the date the camera's clock gave at the capture, its JPEG's size, its exposure time, f-number, bias and ISO from S-SCENE at the capture, 1/125 s alone without it, and the lens's focal length at the capture), the type 0, not protected, no recording; a move's completion clears the single-move state (0x60362a7c), as the component's start_single_move_current does. The other wrappers answer 0, each logged (I)",
@@ -450,7 +473,7 @@ export const CAMAPP_STAND_INS = {
   "S-LENS": "(unless the lens runs natively: the default on E143, E146 and E147, S-LENSMCU; OM_EMU_LENS=stand-in for S-LENS there) a lens on the mount, the M.Zuiko 12-40mm F2.8 PRO: lens 0's attach and data-valid flags (0xa32d4b9a, 0xa32d4b98) are 1 and its record (0xa32caa8c -> the driver's static 0xa3193780) is filled through the driver's current copies and its own commits 0x502ac838 / 0x502acb96, the zoom entries at +1164; the field layout is the record dump's (0x50118662, 0x50118ab7, 0x50118d20), the values I (12-40 mm, F2.8-F22 as APEX x 256 761 / 2283); the driver's derived apertures and focal lengths run natively; the lens-ready byte 0xa32d4b94 is 1 (0x50127ba2 answers 1, not 0x21, which DISP_FRAME requires, I); set before the application starts",
   "S-EXPOSE": "the brightness the exposure plan follows: the AE result objects 0xc12a / 0xc0ba / 0xc0ca (TAKE_EXPOSE's command handler 0x50596187 writes them; one per metering mode, I) set through the property setter 0x5004188b to the scene's BV = (EV100 - 5) x 256 (S-SCENE's scene, else its default EV 12), the zoom step nearest its focal length; take_expose_calculate 0x50597e82 runs natively, once the application has started and after each input on the shooting screen; its plan (0x62a919dc +6 Tv, +10 Sv, +14 Av) is the shutter, aperture and ISO the screen shows and, in S-SCENE's auto, the live view's and the captures' exposure. The camera meters the live view continuously (its LV AE task, not run)",
   "S-OUTDISP": "while the lab's display switch (SWITCH: H-CONNECT 131 with lOutput 7) has the EVF open, the application's getOutputDisplay (0x5104fd44) answers 6 (INTERNAL_EVF), the device H-CONNECT's lOutput 7 stands for; on the TFT it runs natively. Without it the application, told of the GUI's change, answers the TFT (its EVF branch needs a monitor position the lab's switch bits do not give, docs/om1-shutter-spec.md section 7 item 53) and sends 131 with lOutput 2, and the two alternate. The camera decides from the eye sensor, the monitor position and the settings (I)",
-  "S-OUTDEV": "(E143 with --hdmi on) the application's change of output device, TRA 588, which S-TRAACK answers at the exec: the part its component would do (CmpCst_Function, CmpSqp_SequencePartsBase: the IO-device capability's event 224 with the request's device), done after the step, the event built by its own constructor and dispatched to CapIod_IODevice natively, as its OXF thread would; CapIod opens the device natively (the HDMI output 8 at the plug), and S-PROP's output-device property follows the value CapIod writes. The components' own steps around it (the through image's bank, their reply to the transaction, the change's notification 494) are not done",
+  "S-OUTDEV": "(E143 with --hdmi on) the application's change of output device, TRA 588, which S-TRAACK answers at the exec: the part its component would do (CmpCst_Function, CmpSqp_SequencePartsBase: the IO-device capability's event 224 with the request's device), done after the step, the event built by its own constructor and dispatched to CapIod_IODevice natively, as its OXF thread would; CapIod opens the device natively (the HDMI output 8 at the plug), and S-PROP's output-device property follows the value CapIod writes. The components' own steps around it (the through image's bank, their reply to the transaction, the change's notification 494) are not done. Not used under control camapp 3: there the component answers TRA 588 natively and the device opens through it (X)",
   "S-THROUGH": "(with S-SCENE's live view) the application's through-image control OlyHfwOpeShoot::ctrlAutoThrough (0x50abd373; ctrl 0 as the menu opens, 1 as it closes, D from its log) stops and restarts S-SCENE's frames: while stopped the live-view plane shows black (I: what the camera's plane shows while the through image is stopped)",
   "S-SETSAVE": "the settings store's save to flash (0x500421cd, called by the application as the menu closes, return 0x503f01a4) returns 0 without saving, the value of its path for a store that is not dirty: the flash controller (0x98d01800) is not in the lab and persistence is not modelled; a call from anywhere else is an error",
   "S-NVRAM": "(a host that keeps the camera's non-volatile state, env.nvram: bin/play.mjs by default, in ~/.om-emu/nvram-<model>.json, --nvram off / OM_EMU_NVRAM=off for a blank camera, OM_EMU_NVRAM=FILE elsewhere; the browser player by default, in OPFS, nvram=0 for a blank camera; on bodies whose build places its sites, E143, E146 and E147, X) the settings stores' saves run natively down to the NAND write 0x5003d9da (direct, or posted to the flash task through 0x5003d95c, whose callback runs after it), which writes the image to its mirror and to the host; the next session's registry bootstrap restores M and E from those images ('MlR.', 'ElR.'); the SCPU window's backed-up words (the clock signature 0x00, the B store 0x08..0x3c) and the sub-CPU's memory S-SCPUDEV keeps (its RTC: the host's local time, read once at the session's start, plus the offset the camera's own clock setting left, advancing with lab time in the session; and its backup registers) come back too, and the window clock starts at that date, so the start shows no date prompt (instead of S-SETSAVE). A session is then a function of that state, that one clock read and its inputs: session.json records both per session (src/lab/nvramdoc.mjs), and --replay starts from them in memory",
@@ -467,7 +490,8 @@ export const CAMAPP_STAND_INS = {
   "A-SCPUM4-3": "(OM_EMU_SCPU=native) MN pin 107 high holds the sub-CPU's NRST low, S-SCPUDEV's polarity: a pin reset of the STM32L4 that keeps its backup domain (the RTC, the backup registers) and its SRAM; the sub-CPU is powered on at the link's start with a blank backup domain (the camera's has run since its battery went in, ?)",
   "S-MOVRATE": "(a body whose movie record time divides by the movie info's frame rate without a test: E118, X) the MN103's DIVU by 0, whose quotient the manual leaves undefined (emu/FIDELITY-NOTES.md 3.2): the rate is the movie recorder's set-up's, which runs on CPU 2 at a movie take's start or a movie's playback, so it is 0 on the camera too until then (docs/model-survey.md finding 59). While it is 0 the divide is not executed, its quotient taken as 0, and the record time runs on natively and fills its block; the quotient goes only to the block's +20, which two of the query's seven callers read, neither met in the lab's start. What the camera's quotient is, ?",
   "S-LONGTIMER": "the system timer module's long timers (1000 ms and more, set through api_system.c 0x5041fd71 / 0x5041fd0d by the HLS timer service): when one is due in lab time the module's event 0x03010000 | number is published, as the module would",
-  "S-BOOTDONE": "the HLS components' boot completion: the camera base (Cab_CameraBase) and the still-shooting category wait in their state 3 for event 415, which their capabilities would send once the modules report ready; S-BOOTDONE dispatches 415 to each waiting there, and 420 (the shooting mode) to the camera base waiting in its state 11, so the shoot mode, the category and Cmp_ShootingComponent are created and run on the OXF main thread (HIGHLEVEL_MAIN, started by S-CAMAPP). The component's sub-CPU status read (0x5012b8b7) returns 0",
+  "S-BOOTDONE": "the HLS components' boot completion: the camera base (Cab_CameraBase) and the still-shooting category wait in their state 3 for event 415, which the application's HighLevel init sends as TRA 415 through the transaction exec (X), and S-TRAACK answers at the exec; S-BOOTDONE dispatches 415 to each waiting there, and 420 (the shooting mode) to the camera base waiting in its state 11, so the shoot mode, the category and Cmp_ShootingComponent are created and run on the OXF main thread (HIGHLEVEL_MAIN, started by S-CAMAPP). The component's sub-CPU status read (0x5012b8b7) returns 0. Not installed under control camapp 3, where the transaction path runs natively and the application's own TRA 415 and the mode change's 420 bring the camera base to its state 13 and the category to its state 11 (X)",
+  "S-HISTWAIT": "(control camapp 3) the VSC histogram's end: the shooting component starts the VSC's histogram on the TFT channel (0x501e14a4: INTEN1 bit 8, HIST1 = 1; X), and DISPLAY cmd 15 (0x501d709f) waits up to 50 ms for the flag only the histogram's done callback (0x501d71e1) sets; the lab's VSC has no histogram unit, so in S-DISPQ's run the wait runs to its timeout: the lab clock moves 50 ms and it returns E_TMOUT, which the command does not read (D). On the camera the histogram ends first (I)",
   "S-CPU3": "the posts to CPU 3 through ring [3][0] are taken off the ring in order and acknowledged, each by its function: DISP_FRAME's remote calls of 0x5002587a (each setting bits of DISP_FRAME's flag), after each step, S-DISPFRAME then running one turn of DISP_FRAME for their bits; on E143 MDET's post, at once at its poster's return, and LAF's event setters, the EMS2 clear and PDT's and TRC's dispatches (src/fw/models.mjs mdet.events, mdet.posts; the dispatches with the core register at 3), each run in interrupt context, S-MDETDL then running CPU 3's tasks (mdet.mjs); a CPU 0 wait for LAF's answer (mdet_laf_end's on the flag 0x600430c4's id) is preceded by this service, the waiting call's stack kept (nested); a post of any other function stops the session; the lab has no CPU 3",
   "S-RELSEQ": "the modules' notifications of a release as the callbacks the HLS shooting reactive posts for them (0x50af4451, CBC_SHOOTING_COMMON), while the application's shooting service runs (from startShootingService 0x50ae1124 to endShootingService 0x50ad7e8a; in playback S1 only takes the application back to shooting): S1 down -> START_FOCUS, END_FOCUS (OK, or NG when S-SCENE's live view has nothing focusable under its AF point); S2 down -> START_SHOOTING_PICTURE, START_EXPOSE, END_EXPOSE after the shutter time in use, END_SHOOTING_PICTURE, START_RECVIEW, END_RECVIEW 500 ms later, then START_THROUGH_IMAGE_PROCESS (the through image's restart, on which the GUIs of the E118 family, E142, E140, E130, E133, E145, E129 and E132 leave the rec view's display); the application's RECORDING_MOVIE function starts a recording (READY_MOVIE, START_SHOOTING_MOVIE, START_RECORDING_MOVIE, UPDATE_SHOOTING_TIME every second) or ends it (STOP_SHOOTING_MOVIE, END_RECORDING_MOVIE); meanwhile the shooting phase query 0x50ab57e9 answers the movie phases of the shooting component's sequence (113 ready, 114 ready finish, 115 recording, 117 end), so getMovieState is 1 and the GUI lays out its REC mark. The callbacks due at one lab time (END_EXPOSE and END_SHOOTING_PICTURE) are posted together before the application runs, as the modules' notifications would reach its queue while it works (E145's application defers an event until END_SHOOTING_PICTURE, X). The order follows the callbacks' names (I). No image is developed: S-RECVIEW shows the capture's frame",
   "S-SHUTTERSND": "(a host that plays sound: the players' pages) the mechanical shutter's sound at each release S-RELSEQ makes, synthesized (src/lab/shuttersnd.mjs: seeded noise through decaying resonators, no audio asset): an open click at START_EXPOSE and a close click with the charge motor at END_EXPOSE, the shutter time in use later (S-SCENE's, else 1/125 s), sent to the page over the lab's audio output (src/lab/audio.mjs, GET /api/audio) and played with WebAudio once a key or a click has started it. On the camera that sound is the mechanism's own, not the firmware's: the stock firmware plays nothing at a release and the electronic shutter is silent (I: the patch tool om-c, on the same base images, has to add both a call of the sound engine's play method before the capture's begin and the sound; in the lab's S2, where S-RELSEQ stands in for the release and that capture begin does not run, the play method is not called, X of the lab only); which drive settings select the electronic shutter is not decoded (?), so every release sounds as the mechanical shutter. Nothing about the clicks is measured from a camera (I)",
@@ -506,6 +530,12 @@ export class CamApp {
     this.af_stage = null;      // 'focus' (the AF lock holds); aflock_fed: the END_FOCUS(OK)s fed so far (the player
     this.aflock_fed = 0;       // lists the stand-in once one was)
     this.components = !!session.opts.camapp_components;   // S-BOOTDONE / S-CPU3: the HLS components run (control camapp 2)
+    // control camapp 3: the components with the transaction path native (TRAACK_KEPT); tra_native: [id, caller, the
+    // exec's result or null where its return was not observed] of each transaction handed to the exec
+    this.native_tra = this.components && !!session.opts.camapp_native_tra;
+    this.tra_native = [];
+    this.tra_returns = new Map();
+    this.hist_waits = 0;       // S-HISTWAIT: the histogram waits run to their timeout
     this.media = null;         // S-MDACTRL / S-MEDIA (media.mjs): with the file system native
     // subject.mjs: subject detection's frames, on a body that gives its facts (models.mjs subject): S-SUBJECT's writes
     // where MDET_DL does not run natively, else the setting, the live condition and the placement S-TAKEMDET and S-DML use
@@ -530,6 +560,7 @@ export class CamApp {
     // a ported model's: every module-9 read of its build (fact app.module9_readers, src/fw/facts.mjs); E143's: those
     // its application reaches (CA_MODULE9_READERS)
     for (const r of [...CA_MODULE9_READERS, ...fact('app.module9_readers', [])]) lab.takeover_allowed.add(r);
+    if (this.native_tra) for (const r of CMP_MODULE9_READERS) lab.takeover_allowed.add(r);
     lab.prop_sites.push(CA_PROP_SITE);
     this.install();
     for (const a of CARD_STATE) lab.sim.write(a, pack('<I', CARD_MOUNTED));       // S-CARD
@@ -545,17 +576,16 @@ export class CamApp {
     if (DF_FUNCTIONS.every((a) => !isUnmapped(a))) this.dispframe_start();
     if (this.slens()) this.lens_mount();                                            // S-LENS
     lab.call(HL_CREATE, null, null, null, 2000000);
+    // camapp 3: the OXF main thread runs before HL_INIT, whose TRA 415 waits in the receiver for its answer
+    // (TRAACK_KEPT's comment)
+    if (this.native_tra) this.highlevel_main();
     lab.call(HL_INIT, null, null, null, 2000000);
     s.settle('S-CAMAPP HighLevel');
     this.boot_done();                                                               // S-BOOTDONE: the camera base's 415
     lab.call(BROKER_INIT, null, null, null, 2000000);
     s.settle('S-CAMAPP broker');
-    if (this.components) {
-      const hl = [...lab.nk.tasks()].filter(([, [e]]) => e === HL_MAIN).map(([t]) => t);
-      if (hl.length !== 1) throw new FirmwareError(`S-CAMAPP: static tasks with entry ${h8(HL_MAIN)}: ${hl}`);
-      const [hrc] = lab.nk.svc('act_tsk', { d0: hl[0] });
-      if (hrc !== 0) throw new FirmwareError(`S-CAMAPP: act_tsk(${hl[0]}) = ${hrc}`);
-      s.settle('S-CAMAPP HIGHLEVEL_MAIN');
+    if (this.components && !this.native_tra) {
+      this.highlevel_main();
       this.boot_done();
     }
     this.take?.bring_up();                                                          // H-TAKEINIT (take.mjs)
@@ -569,6 +599,15 @@ export class CamApp {
     this.frame_mode(FRAME_MODE_AF);                                                 // S-TAKEFRAME
     this.started = true;
     this.expose();                                                                  // S-EXPOSE
+  }
+  // S-CAMAPP: act_tsk of the OXF main thread (task 57, HIGHLEVEL_MAIN), then a settle
+  highlevel_main() {
+    const s = this.s, lab = s.lab;
+    const hl = [...lab.nk.tasks()].filter(([, [e]]) => e === HL_MAIN).map(([t]) => t);
+    if (hl.length !== 1) throw new FirmwareError(`S-CAMAPP: static tasks with entry ${h8(HL_MAIN)}: ${hl}`);
+    const [hrc] = lab.nk.svc('act_tsk', { d0: hl[0] });
+    if (hrc !== 0) throw new FirmwareError(`S-CAMAPP: act_tsk(${hl[0]}) = ${hrc}`);
+    s.settle('S-CAMAPP HIGHLEVEL_MAIN');
   }
   // S-LENS applies on a body with a lens mount whose lens does not run natively (play.mjs lens, lens.mjs)
   slens() { return LENS_MOUNT && !this.s.lens; }
@@ -763,6 +802,20 @@ export class CamApp {
     this.s.lab.panel_done = true;                                                  // S-PANELDONE (menu.mjs)
     const lab = this.s.lab;
     lab.xcpu_served.add(CPU3);                                                     // S-CPU3: S-CPU2 leaves bank 3 to drain_cpu3
+    if (this.native_tra) lab.wrap(OLY_EV_WAIT, (prev) => (h, r) => {                // S-HISTWAIT
+      if (disasm(r.mdr) !== HIST_WAIT_RETURN || !lab.in_display_run()) { prev(h, r); return; }
+      this.hist_waits += 1;
+      this.log.push(['histwait', `DISPLAY cmd 15's histogram wait from ${where(r.mdr)}: ${HIST_WAIT_MS} ms, timed out`]);
+      const saved = { ...r };
+      lab.advance(HIST_WAIT_MS * 1e6, `S-HISTWAIT from ${where(r.mdr)}`);
+      if (lab.sim.packet('G' + packRegs(saved)) !== 'OK') throw new AssertionError('');
+      h.finish(saved, { d0: E_TMOUT });
+    }, 'S-HISTWAIT');
+    // camapp 3 (TRAACK_KEPT): the receiver substance's send and the remote-call method run natively, not S-RPC
+    if (this.native_tra) for (const entries of RPC_ENTRIES) for (const e of entries) {
+      if (lab.hooks.get(runtime(e))?.[1] !== 'S-RPC') throw new FirmwareError(`camapp 3: ${h8(e)} is not S-RPC's hook`);
+      lab.hooks.delete(runtime(e));
+    }
     if (ON_LAB_MODEL && uioutq !== null && !this.components) {                    // S-AFLOCK (TAKE_STATUS_SET's comment)
       this.aflock = true;
       lab.hook(AF_STATE_GET, (h, r) => {                                           // the AF module's state getter
@@ -794,13 +847,14 @@ export class CamApp {
       const req = r.a1 >>> 0, b = req ? lab.sim.read(req + 4, 2) : null;
       this.log.push(['tra', `${b ? b[0] | (b[1] << 8) : -1} from ${where(r.mdr)}`]);
       if (b && this.media && (b[0] | (b[1] << 8)) === this.media.f.ctrl.request) this.media.control(req);   // S-MDACTRL
-      if (b && this.outdev !== null && (b[0] | (b[1] << 8)) === TRA_OUTPUT_DEVICE) {                    // S-OUTDEV
+      if (b && this.outdev !== null && !this.native_tra && (b[0] | (b[1] << 8)) === TRA_OUTPUT_DEVICE) {   // S-OUTDEV
         const [device, second, third] = unpack('<3I', lab.sim.read(req + 32, 12));
         if (device !== OUTPUT_HDMI) throw new FirmwareError(`S-OUTDEV: TRA ${TRA_OUTPUT_DEVICE} from ${where(r.mdr)} asks for output device ${device}: only the HDMI output (${OUTPUT_HDMI}) is stood in`);
         this.outdev.push([device, second, third]);
       }
       if (this.play_exec !== null) this.play_answer(this.play_exec);                // S-PLAYSEQ
       this.play_exec = null;
+      if (this.native_tra && req && !TRAACK_KEPT.has(b[0] | (b[1] << 8))) { this.tra_through(b[0] | (b[1] << 8), r); return; }   // camapp 3
       if (!req) { if (calls) h.finish_calls(r, { d0: 0 }); else h.finish(r, { d0: 0 }); return; }
       // the request consumed: its vt[1] natively, then 0
       const del = disasm(lab.sim.u32(lab.sim.u32(req) + 4 * REQUEST_DELETE_SLOT));
@@ -965,11 +1019,32 @@ export class CamApp {
       this.play_finish(this.play_pending.shift());
     }
     while (this.outdev?.length) this.output_device(this.outdev.shift());           // S-OUTDEV
+    // camapp 3: the component's own TRA 588 opened the HDMI device (X); its channel then runs at the format table's
+    // timing (DisplayLab.hdmi_line), the harness rule S-OUTDEV's open follows too
+    if (this.native_tra && MODEL === 'E143' && !lab.line_ns.has('hdmi') && (lab.sim.u32(OPENED_WORD) & HDMI_MASK)) {
+      this.log.push(['outdev', `HDMI open (camapp 3): ${JSON.stringify(lab.hdmi_line(lab.sim.u32(OPENED_WORD) & HDMI_MASK))}`]);
+    }
     if (this.media && this.media.busy()) {                                         // S-MDACTRL / S-MEDIA (media.mjs)
       this.media.tick();
       for (const [k, d] of this.media.take_log()) this.log.push([`media ${k}`, d]);
       if (lab.dispq_deliver?.length || this.acks.length || this.play_pending.length || this.dispsync.size) this.pump();
     }
+  }
+  // camapp 3 (TRAACK_KEPT): the transaction handed to the exec natively; the exec's result recorded at its return
+  // address, where no other hook sits, first in first out per address (two tasks' sends from one site that return in
+  // the other order would swap their results; none seen)
+  tra_through(id, r) {
+    const lab = this.s.lab, ra = r.mdr >>> 0, rec = [id, where(r.mdr), null];
+    this.tra_native.push(rec);
+    if (this.tra_native.length > TRA_NATIVE_LOG) this.tra_native.shift();
+    let ret = this.tra_returns.get(ra);
+    if (ret === undefined && !lab.hooks.has(ra)) {
+      ret = [];
+      this.tra_returns.set(ra, ret);
+      lab.hook_rt(ra, (h, rr) => { const x = ret.shift(); if (x) x[2] = rr.d0 >>> 0; lab.passthrough(rr); }, 'camapp 3 (TRA result)');
+    }
+    if (ret) ret.push(rec);
+    lab.passthrough(r);
   }
   // S-OUTDEV: the component's event 224 built by its own constructor and made CapIod's current event, then its
   // dispatchEvent natively, as its OXF thread would (S-BOOTDONE's way); CapIod opens the device from there
@@ -1206,7 +1281,7 @@ export class CamApp {
   }
   boot_done() {
     const lab = this.s.lab;
-    if (!this.components || this.boot_finished) return;
+    if (!this.components || this.native_tra || this.boot_finished) return;      // camapp 3: the firmware's own 415 / 420
     for (let n = 0; n < 8; n++) {
       let did = false;
       for (const [[name, , disp], o] of this.boot_objects()) {
@@ -1343,7 +1418,8 @@ export class CamApp {
     return { started: this.started, recview_pending: this.timed.some(([, n]) => n === 'END_RECVIEW'), pending: this.timed.map(([, n]) => n),
       recording_s: this.recording === null ? null : +((this.s.lab.lab_time() - this.recording) / 1e9).toFixed(1),
       card_used_s: +(this.card_used_ms / 1000).toFixed(1), card_images: this.card_images(),
-      components: this.boot_finished,
+      components: this.native_tra ? this.boot_objects().some(([[name], o]) => name === 'CtgStl_StillImageShooting' && this.s.lab.sim.u32(o + RX_STATE) !== 3) : this.boot_finished,
+      ...(this.native_tra ? { native_tra: true } : {}),
       reactive: this.reactive === null ? null : h8(this.reactive),
       // the subject frames shown: from MDET's own table where MDET_DL runs (source 'mdet'), else S-SUBJECT's
       ...(this.mdet?.used ? { subject: this.mdet.frames_status(), mdet: this.mdet.status() } : this.subject?.used ? { subject: this.subject.status() } : {}) };

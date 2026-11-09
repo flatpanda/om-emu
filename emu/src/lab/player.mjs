@@ -283,6 +283,7 @@ export class Player {
     this.stop_seen = false;          // the stop as the ?sync=1 waiters see it (set_stop)
     this.session = null;
     this.camapp_components = false;  // S-BOOTDONE / S-CPU3 too (control camapp 2): the HLS components run
+    this.camapp_native_tra = false;  // control camapp 3: the components with the transaction path native (camapp.mjs TRAACK_KEPT)
     this.phase = 'starting';
     this.error = null;
     this.status_seq = 0;
@@ -343,7 +344,7 @@ export class Player {
     return { start: a.start, touch: a.touch, us_clock: a.us_clock, bgdraw: !a.no_bgdraw, mutant: a.x_mutant, a15: a.a15 ?? 'auto', hdmi: a.hdmi ?? 'off', audio: a.audio ?? 'auto',
       ...((a.rotate ?? 'off') !== 'off' ? { rotate: a.rotate } : {}),   // absent when off: the recorded documents
       ...((a.take ?? 'stand-in') !== 'stand-in' ? { take: a.take } : {}),   // the TAKE probe (take.mjs); absent by default
-      ...(this.camapp_components ? { camapp_components: true } : {}) };
+      ...(this.camapp_components ? { camapp_components: true } : {}), ...(this.camapp_native_tra ? { camapp_native_tra: true } : {}) };
   }
   open_session() {
     const a = this.a;
@@ -418,7 +419,7 @@ export class Player {
     if (a.x_mutant !== 'no-aeinit') used.push('H-AEINIT');
     if ((a.a15 ?? 'auto') !== 'off') used.push('A15');
     if (a.x_mutant !== 'no-dispq') used.push('S-DISPQ');                                     // :2519
-    used.push('H-GUIBYAPP', 'S-CAMAPP', 'S-MODACK', 'S-RVSTANDBY', 'S-TRAACK', 'S-RELSEQ', 'S-CARD', ...(this.session?.lens ? [] : ['S-LENS']), 'S-EXPOSE', 'S-LONGTIMER', 'S-DISPFRAME', 'S-TAKEFRAME', 'S-AFOSD', 'S-CPU3', 'S-RECVIEW', this.env.nvram ? 'S-NVRAM' : 'S-SETSAVE', 'H-STOREINIT', 'S-OUTDISP', 'S-THROUGH', 'S-PLAYSEQ', 'S-PLAYCOMP', 'S-PLAYVIEW', ...(this.camapp_components ? ['S-BOOTDONE'] : []));   // the camera application runs natively
+    used.push('H-GUIBYAPP', 'S-CAMAPP', 'S-MODACK', 'S-RVSTANDBY', ...(this.camapp_native_tra ? [] : ['S-TRAACK']), 'S-RELSEQ', 'S-CARD', ...(this.session?.lens ? [] : ['S-LENS']), 'S-EXPOSE', 'S-LONGTIMER', 'S-DISPFRAME', 'S-TAKEFRAME', 'S-AFOSD', 'S-CPU3', 'S-RECVIEW', this.env.nvram ? 'S-NVRAM' : 'S-SETSAVE', 'H-STOREINIT', 'S-OUTDISP', 'S-THROUGH', 'S-PLAYSEQ', 'S-PLAYCOMP', 'S-PLAYVIEW', ...(this.camapp_components && !this.camapp_native_tra ? ['S-BOOTDONE'] : []));   // the camera application runs natively
     if ((a.device ?? 'tft') === 'evf' && a.x_mutant !== 'evf-store-after-open') used.push('H-STOREFIRST');   // :2521
     if (!a.no_bgdraw) used.push('S-BGDRAW');
     if (this.idle === 'wall') used.push('H-IDLE');
@@ -457,6 +458,7 @@ export class Player {
     if (this.session?.hdmi_port || this.session?.lab?.scpu_link) used.push('H-GIOSLOTS');   // the GIO slots, for the HDMI pin or the link's pin 102
     if (this.session?.hdmi_port) used.push('S-HDMISINK', 'A-HDMI-1');                       // --hdmi on: the HDMI port, its sink
     if (this.session?.camapp?.outdev_done?.length) used.push('S-OUTDEV');                   // an output-device change taken (camapp.mjs)
+    if (this.session?.camapp?.hist_waits) used.push('S-HISTWAIT');                          // camapp 3: a histogram wait run to its timeout (camapp.mjs)
     if (this.session?.audio_hw) used.push('H-AUDSTART', 'S-AUDCPU2', 'S-WM8946', 'A-AUDIO-1', 'H-AUDTIME');   // --audio on (auto on E143): the audio hardware (audiohw.mjs)
     if (this.session?.storage) used.push('H-FILEINIT', 'H-FILECLBK', 'S-SDHOST', 'S-SDCARD', 'S-FSNAND', ...(this.session.storage.f.album_init !== null ? ['S-ALBM'] : []), ...(this.session.storage.rec ? ['H-EXIFINIT', 'H-RECINIT', 'H-RECFILE', 'S-EXIFPRM', 'S-RECIMAGE', 'S-JPEGENC'] : ['S-RECFILE']));   // the file system native on a card (storage.mjs; S-ALBM where the body has an album manager; REC_FILE natively on E143, rec.mjs)
     if (this.session?.resnand) used.push('H-RESINIT', 'S-RESNAND');                       // the resource tables from the host's NAND (resnand.mjs)
@@ -1068,12 +1070,13 @@ export class Player {
     let res = { kind: 'control', token: op, state: {} }, err = null;
     try {
       const value = has(inp, 'value') ? inp.value : 1;
-      if (op === 'camapp') {                         // a new session with (value 2) or without the HLS components
-        this.camapp_components = Number(value) === 2;
+      if (op === 'camapp') {                         // a new session with (2; 3: their transactions native) or without the components
+        this.camapp_components = Number(value) === 2 || Number(value) === 3;
+        this.camapp_native_tra = Number(value) === 3;
         this.close_session();
         this.error = null;
         this.open_session();
-        res.token = `camapp ${this.camapp_components ? 'components' : 'on'}`;
+        res.token = `camapp ${this.camapp_native_tra ? 'native transactions' : this.camapp_components ? 'components' : 'on'}`;
       } else if (op === 'restart' || (op === 'power' && value !== 0 && value !== false && value !== null)) {
         this.close_session();
         this.error = null;

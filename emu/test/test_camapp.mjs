@@ -23,6 +23,15 @@
 //                  components: after two passes they grow by the decoded kinds alone (the events the OXF main thread
 //                  frees with the components, S-RPC's requests), and with S-DISPQ's replies recorded only (the control)
 //                  the display manager's 192-byte buffers stay (docs/hle-gaps.md 4.4.2)
+//   traRoutingSession  control camapp 3 (E143): the HLS components with their transaction path native (S-TRAACK
+//                  and S-RPC out of it): the application's own TRA 415 and the mode change's 420 bring the camera base
+//                  to its state 13 and the still category to its state 11 (no S-BOOTDONE), the start's transactions
+//                  are each answered by the exec natively (992 with 0xf0000058, the others 0), the idle's 944 and
+//                  S2's 1030 too; over passes of S1 and S2 the OXF main thread's events (event 294, 0x60dcb42c) do not
+//                  stay; the menu's DISPLAY cmd 15 runs its histogram wait to the timeout (S-HISTWAIT) and the
+//                  session then stops at udf07 0x5050a089, which the lab does not implement (the known blocker,
+//                  docs/hle-gaps.md 4.1.4); with --hdmi on the plug's TRA 588 is the component's (no S-OUTDEV), the
+//                  HDMI device opens and channel 0 composes its window with no plane drawn
 //   modeDialSession  the mode dial in play (E143): it starts at P, the start's mode; each position's change sets its
 //                  mode (MODE_EXPOSE, the custom banks' MODE_RAW, B's MODE_DIAL_B_ONOFF) and keeps the other settings,
 //                  each position shows a screen of its own, and away from P OK opens the Super Control Panel and MENU
@@ -278,6 +287,76 @@ export async function heapWorkloadSession() {
   return { checks, bad };
 }
 
+// control camapp 3 (docs/hle-gaps.md 4.1.4; E143). The sessions take no frames: the composite of the TFT is
+// FEATURE_UNOBSERVED once the shooting component has started the VSC's histogram (HIST1, HISTAREA1..3)
+const START_TRAS = [415, 598, 614, 990, 958, 1515, 994, 955, 1001, 1061, 992, 1503, 1065, 1045, 938, 974];
+const NATIVE_RESULT = { 992: 0xF0000058 }, UDF07_SITE = '0x5050a089';
+export async function traRoutingSession() {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
+  const { Player } = await import('../src/lab/player.mjs');
+  const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+  const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
+  for (const hdmi of [false, true]) {
+    const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, ...(hdmi ? { hdmi: 'on' } : {}) }, env);
+    pl.camapp_components = true; pl.camapp_native_tra = true;
+    const tag = hdmi ? '--hdmi on' : 'camapp 3';
+    try {
+      pl.open_session();
+      const s = pl.session, lab = s.lab, ca = s.camapp;
+      const idle = (ms) => { const to = lab.lab_time() + ms * 1e6; while (lab.lab_time() < to) s.idle_slice(Math.min(to, lab.lab_time() + 50e6)); };
+      const taken = () => ca.tra_native.splice(0);
+      const used = pl.stand_ins_in_use(), st = ca.status();
+      const states = Object.fromEntries(ca.boot_objects().map(([[name], o]) => [name, lab.sim.u32(o + 256)]));
+      ok(st.components === true && st.native_tra === true && !used.includes('S-BOOTDONE') && !used.includes('S-TRAACK') && states.Cab_CameraBase === 13 && states.CtgStl_StillImageShooting === 11,
+        `${tag}: the camera base and the still category booted by the firmware's own 415 and 420: ${JSON.stringify(states)}, stand-ins ${used.filter((x) => /BOOTDONE|TRAACK/.test(x))}`);
+      const start = taken(), ids = [...new Set(start.map(([id]) => id))];
+      ok(JSON.stringify(ids) === JSON.stringify(START_TRAS), `${tag}: the start's transactions handed to the exec in order: ${ids}`);
+      const wrong = start.filter(([id, , res]) => res !== (NATIVE_RESULT[id] ?? 0));
+      ok(start.length && !wrong.length, `${tag}: each answered natively (992 0xf0000058, the others 0): ${JSON.stringify(wrong)}`);
+      idle(2000);
+      const quiet = taken();
+      ok(quiet.some(([id]) => id === 944) && quiet.every(([, , res]) => res === 0), `${tag}: the idle's getHistogramData (944) answered natively: ${JSON.stringify(quiet.slice(0, 4))}`);
+      if (hdmi) {
+        const rec = pl.run_input({ type: 'hdmi', action: 'plug' });
+        idle(500);
+        const plug = taken(), tra588 = plug.filter(([id]) => id === 588);
+        ok(tra588.length === 1 && tra588[0][2] === 0 && !ca.outdev_done.length && rec.hdmi?.scdc_writes === 1,
+          `${tag}: the plug's TRA 588 answered 0 by the component, no S-OUTDEV (${ca.outdev_done.length}), the open's SCDC write ${rec.hdmi?.scdc_writes}`);
+        const c = lab.compose('hdmi', true, true), hd = c.header;
+        ok(c.status === 'NONE' && hd.width === 1920 && hd.height === 1080 && hd.drawn === 0,
+          `${tag}: channel 0 composes its 1920 x 1080 window, no plane drawn (the GUI's HDMI layout is not drawn): ${c.status} ${JSON.stringify(hd)}`);
+        continue;
+      }
+      // passes of S1 and S2: the OXF main thread's events do not stay (docs/hle-gaps.md 4.4.2)
+      const oxf = () => [...lab.heap_sizes].filter(([a, size]) => size === 32 && [0x60EF3504, 0x60DCB42C].includes(lab.sim.u32(a) >>> 0)).length;
+      const pass = () => {
+        s.key('s1', 'down'); s.camapp.pump(); idle(600);
+        s.key('s2', 'down'); s.camapp.pump(); idle(700);
+        s.key('s2', 'up'); s.camapp.pump(); s.key('s1', 'up'); s.camapp.pump(); idle(2000);
+      };
+      pass();
+      const n0 = oxf();
+      pass(); pass();
+      const shots = taken();
+      ok(oxf() === n0 && shots.some(([id]) => id === 1030) && shots.every(([, , res]) => res === 0),
+        `${tag}: over two passes of S1 and S2 the OXF events kept ${n0} -> ${oxf()}, S2's 1030 answered natively (${JSON.stringify([...new Set(shots.map(([id]) => id))])})`);
+      ok(s.status().gui === '0x0108', `${tag}: the shooting screen after the passes: ${s.status().gui}`);
+      // the menu: S-HISTWAIT, then the known blocker
+      let err = null;
+      try { s.key('menu', 'down'); s.camapp.pump(); idle(100); } catch (e) { err = e; }
+      ok(ca.hist_waits >= 1 && used.length <= pl.stand_ins_in_use().length && pl.stand_ins_in_use().includes('S-HISTWAIT'),
+        `${tag}: the menu's DISPLAY cmd 15 ran its histogram wait to the timeout (S-HISTWAIT ${ca.hist_waits})`);
+      ok(err !== null && err.message.includes(`(disasm ${UDF07_SITE}) fault=1`),
+        `${tag}: the menu stops at udf07 ${UDF07_SITE} (docs/om1-udf-spec.md row 14): ${err ? err.message.slice(0, 160) : 'no error'}`);
+    } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 600)}`); }
+    pl.close_session();
+  }
+  return { checks, bad };
+}
+
 // The mode dial's positions as the application takes them (E143; docs/om1-input-spec.md section 2): the setting each
 // position's mode change sets on the blank store, by the position's name (X, 2026-10-30): MODE_EXPOSE (24) P 3, A 4,
 // S 5, M 6, Movie 76, and 3 (P) in the custom banks C1..C4, which also set MODE_RAW (22); B sets MODE_DIAL_B_ONOFF
@@ -342,7 +421,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const only = process.argv[2];
   const run = async (name, fn) => (!only || only === name ? fn() : { checks: 0, bad: [] });
   const r = await run('camapp', camappSession), h = await run('heap', heapSession), w = await run('workload', heapWorkloadSession), m = await run('dial', modeDialSession);
-  console.log(`camapp session: ${r.checks - r.bad.length}/${r.checks}; the heap over an idle: ${h.checks - h.bad.length}/${h.checks}; the heap over a workload: ${w.checks - w.bad.length}/${w.checks}; the mode dial: ${m.checks - m.bad.length}/${m.checks}`);
-  [...r.bad, ...h.bad, ...w.bad, ...m.bad].forEach((x) => console.log('  ', x));
-  process.exit(r.bad.length || h.bad.length || w.bad.length || m.bad.length ? 1 : 0);
+  const t = await run('tra', traRoutingSession);
+  console.log(`camapp session: ${r.checks - r.bad.length}/${r.checks}; the heap over an idle: ${h.checks - h.bad.length}/${h.checks}; the heap over a workload: ${w.checks - w.bad.length}/${w.checks}; the mode dial: ${m.checks - m.bad.length}/${m.checks}; camapp 3's transactions: ${t.checks - t.bad.length}/${t.checks}`);
+  [...r.bad, ...h.bad, ...w.bad, ...m.bad, ...t.bad].forEach((x) => console.log('  ', x));
+  process.exit(r.bad.length || h.bad.length || w.bad.length || m.bad.length || t.bad.length ? 1 : 0);
 }

@@ -381,7 +381,19 @@ export const MODELS = {
     // mdet_laf_dl_status_change_callback_exec 0x50802700, 0, (0x8050)} and 0xa33458dc; the status callback posts that
     // record (0x508026a1 -> 0x50801a5b: a deferred call of +4 on the record's core, else a post to it), and take
     // (0x506d98ed) posts TAKE's message 81 to its queue 0x5e once until TAKE's handler clears 0xa32df204
-    // (0x506d98f0..0x506d9934). fcs: the AF library's init
+    // (0x506d98f0..0x506d9934). take (docs/om1-subject-spec.md 5.9): that message {0, 0, 81, handler} (posted, the
+    // guard byte; queue, the word holding TAKE's queue id), whose handler 0x506d993e clears posted (0x506d9966) and
+    // rebuilds TAKE's live-view mode (0x5039c864 -> 0x5039bb7e -> 0x5039c2bc), handing take_mov the bits of mask 0x7f8
+    // through its mode setter mode_set (0x503a47ae: new = (old & ~mask) | (value & mask), then 0x503a43c9). Of those,
+    // the tracking sources' bits come from the answer of 0x506da448 (the AF library's tracking 1, 2, 3 through
+    // 0x506eab07, else FACE's 0x505221aa, else mdet_laf_dl_tracking_status 0x506e698e, i.e. 0xa337f085): sources[0]
+    // 0x506d9101(ctx) maps 1, 2, 4, 5 to 0x10, 0x100, 0x200, 0x400 (0 while ctx bit 0x40000) and sources[1] 0x506d913b
+    // maps 3 to 0x40; mask is theirs. 0x506d9c04 turns TAKE's 0x10 / 0x100 / 0x200 / 0x400 into take_mov's LAF mode
+    // bits 0x2 / 0x4 / 0x8 / 0x10 (laf_mode, 0x62a41180), whose rise makes TAKE_MOV's start 0x506da276 call
+    // mdet_laf_start and whose fall makes 0x503a42e5 call mdet_laf_end. lv_kind: the getter (0x62a3f228) the mode
+    // setter's other argument comes from at TAKE's live-view start (0x506d895a; I for the rebuild's). laf_wait: the CPU
+    // 0 flag word mdet_laf_end 0x50802347 clears, posts LAF's end request against and waits on for bit 4 (OR, 50 ms; a
+    // timeout logs 0x310b000a), which LAF's end on CPU 3 sets. fcs: the AF library's init
     // 0x508bede6 (from the boot chain at 0x501e9533) steps H-FCSAF runs: 0x509748d7 sets the rebuild flag 0xa33d8bea,
     // 0x508c70c0 copies the AF target record target (0xa33b015c, through 0x508c33c0 -> 0x508c51fa), which 0x5097500a
     // builds from the objects 0x88b2 (point, row * 39 + column; 526 the centre), 0x84d1 (mode), 0x9a41, 0x1dd1 (height,
@@ -412,7 +424,8 @@ export const MODELS = {
         { name: 'MDET_CALC_MAIN_CPU3', entry: 0x50800B03, queue: 0x600436F8 },
         { name: 'MDET_PDT_CPU3', entry: 0x50842033, flag: 0x600436DC, bit: 0x1, core3: true },
         { name: 'MDET_TRC_CPU3', entry: 0x50848822, flag: 0x600436E2, bit: 0x100, core3: true }],
-      flags: [0x600436D0, 0x600436D2, 0x600436D4, 0x600436D6, 0x600436D8, 0x600436DC, 0x600436E2],
+      flags: [0x600436D0, 0x600436D2, 0x600436D4, 0x600436D6, 0x600436D8, 0x600436DC, 0x600436E2, 0x600436E8],
+      nested_wait: 0x600436E8,
       queue_message: 16,
       events: { laf_init: 0x50802B6D, laf_start: 0x50802C2D, laf_start_request: 0x50802CED, laf_end: 0x50802DA5,
         laf_end_request: 0x50802E65, laf_end_frame: 0x50802F1D, laf_moving_object_detect: 0x50802FDD,
@@ -426,6 +439,9 @@ export const MODELS = {
         area: 0xA337F050, candidates: 0xA337D948, tracking: 0xA337F085, tracking_seen: 0xA337F087,
         main_state: 0xA337F082 },
       status_cb: { set: 0x506E68B4, take: 0x506D98ED },
+      take: { posted: 0xA32DF204, queue: 0x60043280, message: 81, handler: 0x506D993E, ctx: 0x62A3F148,
+        sources: [0x506D9101, 0x506D913B], mask: 0x750, lv_kind: 0x506D93D0, mode_set: 0x503A47AE, laf_mode: 0x62A41180,
+        laf_wait: 0x600430C4 },
       fcs: { init: [0x509748D7, 0x508C70C0, 0x5099CBD9], target: 0xA33B015C },
       dml_done: [0x600436D6, 4], deferred: 53,
       dml: { irq_handler: 0x507F6ABD, callback: 0x50812052 },

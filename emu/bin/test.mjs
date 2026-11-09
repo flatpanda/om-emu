@@ -300,15 +300,18 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 }
 // CPU 3's MDET_DL natively with S-DML: the engine's register file without firmware, then a play session on E143 where
 // the chain from mdet_dl_start to dml_start_callback runs at each kind and the register images follow the firmware's
-// tables, the rider is reported and two racers are reported each combined with its helmet; LAF's start runs PDT's and
-// TRC's tasks natively and the firmware's PDT / TRC drivers run on S-PDT (with the unit's register file, test_pdt.mjs)
+// tables, the rider is reported and two racers are reported each combined with its helmet; TAKE's message 81 takes
+// take_mov's LAF mode up and down, whose TAKE_MOV start and LAF end run PDT's and TRC's tasks natively; the firmware's
+// PDT / TRC drivers run on S-PDT and its EMS1 driver on S-EMS1 (with the units' register files, test_pdt.mjs and
+// test_ems1.mjs)
 {
   const { dmlUnits, mdetSession } = await import('../test/test_mdet.mjs');
   const { pdtUnits } = await import('../test/test_pdt.mjs');
-  const du = dmlUnits(), pu = pdtUnits(), ms = await mdetSession();
-  console.log(`MDET_DL with S-DML and S-PDT: engine units ${du.checks - du.bad.length}/${du.checks}; PDT / TRC units ${pu.checks - pu.bad.length}/${pu.checks}; in play ${ms.checks - ms.bad.length}/${ms.checks}`);
-  [...du.bad, ...pu.bad, ...ms.bad].forEach((x) => console.log('  ', x));
-  bad += du.bad.length + pu.bad.length + ms.bad.length;
+  const { ems1Units } = await import('../test/test_ems1.mjs');
+  const du = dmlUnits(), pu = pdtUnits(), eu = ems1Units(), ms = await mdetSession();
+  console.log(`MDET_DL with S-DML, S-PDT and S-EMS1: engine units ${du.checks - du.bad.length}/${du.checks}; PDT / TRC units ${pu.checks - pu.bad.length}/${pu.checks}; EMS1 units ${eu.checks - eu.bad.length}/${eu.checks}; in play ${ms.checks - ms.bad.length}/${ms.checks}`);
+  [...du.bad, ...pu.bad, ...eu.bad, ...ms.bad].forEach((x) => console.log('  ', x));
+  bad += du.bad.length + pu.bad.length + eu.bad.length + ms.bad.length;
 }
 // the A53's ISC node-4 service (S-A53ISC, not wired) against the exchanges recorded in the QEMU oracle
 {

@@ -26,7 +26,11 @@
 //               buffer manager's calls for that id (lock, address, release) are answered for it (the id's bank is one
 //               the manager refuses natively, so it names no buffer of the firmware's), others run natively. The buffer
 //               is not written: nothing reads its pixels (S-DML does not run the network). That TAKE offers every frame
-//               step and the frame's size are I (take_mov's YC frame is not read, spec 4.2)
+//               step and the frame's size are I (take_mov's YC frame is not read, spec 4.2). TAKE's message 81, which
+//               TAKE's callback posts at a change of LAF's tracking status, stays in TAKE's queue: take_serve, which
+//               hands it on as TAKE's handler would (take_mov's LAF mode, TAKE_MOV's start, LAF's end), runs only in a
+//               test (spec 5.9: LAF started without the chase requests TAKE_MOV's frame events would bring writes no
+//               frame table)
 //   S-MDETDL    CPU 3's MDET tasks on the lab CPU: MDET_DL_REQ and MDET_DL_LDL as below, and MDET_E_SEND_CPU3 and
 //               MDET_CALC_MAIN_CPU3 when S-CPU3 serves one of LAF's event setters (mdet.events): the setter runs in
 //               interrupt context and sets MDET_E_SEND's flag, whose turn forwards the event to MDET_CALC_MAIN's queue
@@ -40,7 +44,10 @@
 //               which S-CPU3 serves after the turn (I). PDT's and TRC's run with it at 3 (as_core): their message
 //               queues refuse another core (mdet_util_q_cpu_check 0x50855ce5, X: error 8 with 0), and the deferred
 //               calls their drivers' interfaces post land on CPU 3's ring, which the lab then runs through CPU 3's IRQ
-//               53 handler; a post from CPU 3 through an IPI ring has no server and stops the session.
+//               53 handler; a post from CPU 3 through an IPI ring has no server and stops the session. A turn's wait
+//               on the flag 0x300f (mdet_laf_stop_trc_pdt's, for PDT's and TRC's ends) serves CPU 3's ring at once,
+//               the dispatched tasks' turns nested on a stack of their own (nested_wait, one level); a CPU 0 wait for
+//               LAF's answer (mdet_laf_end's) is preceded by the same service (S-CPU3).
 //               The poster's return path (its interrupt mask restored) serves
 //               ring [3][0] at once, through S-CPU3 (camapp.mjs drain_cpu3), as CPU 3's IRQ 324 would take the post:
 //               MDET's function runs natively in interrupt context with the request slot, then each MDET_DL task whose
@@ -108,11 +115,17 @@ const OLY = { set: rtosAt('OlyEvSt'), iset: rtosAt('iOlyEvSt'), wait: rtosAt('Ol
   qrd: rtosAt('OlyQeRd'), qwr: rtosAt('OlyQeWr') };
 // OlyQeRd's / OlyQeWr's timeout that waits without limit, the only one the MDET tasks use (D: 0x50800b28, 0x5080367c)
 const TMO_FOREVER = -1;
+// uITRON's polling timeout and its answer on an empty queue (X: OlyQeRd on TAKE's queue, empty, returns -2)
+const TMO_POLL = 0, E_TMOUT = -2;
 // uITRON's wait modes (OlyEvWt's a1): TWF_ANDW, TWF_ORW
 const TWF_ANDW = 0, TWF_ORW = 1;
 // S-MDETDL's task stack and trampoline: the lab's scratch below the display runs' third stack (each 0x30000 bytes), and
 // the slot after their trampolines (display.mjs TASK_STACKS, TASK_CALLERS)
 const STACK_SIZE = 0x30000, CPU3_STACK = TASK_STACKS[2] - STACK_SIZE, CPU3_CALLER = TASK_CALLERS[2] + 0x40;
+// a nested turn's (a turn run while another waits for it, nested_wait below): the 48 KiB of lab scratch below that
+// stack, above the harness's records at 0xa2021000..0xa2023fff (sim.mjs LAND, OUT, STRUCT), and the trampoline slot
+// after the first turn's
+const NESTED_STACK = CPU3_STACK - STACK_SIZE, NESTED_CALLER = CPU3_CALLER + 0x10;
 // the stub calls a request, a turn or a serve may take
 const LIMIT = 2000000;
 // S-TAKEMDET's YC frame: 640 x 480, a Y plane then a C plane (dml_set_control_reg's +307200, spec 5.2), 128-byte
@@ -145,7 +158,9 @@ export class MdetDl {
     this.flags = new Map();    // S-MDETDL: CPU 3's flags by id -> pattern
     this.tasks = [];           // [{name, entry, id, bit}]
     this.turns = new Map();    // task name -> turns run
-    this.turn = null;          // the task whose turn runs
+    this.turn = null;          // the task whose turn runs (the innermost)
+    this.waiting = null;       // the task whose turn waits for a nested one (nested_wait), else null
+    this.nested = 0;           // nested turns run
     this.serves = 0;           // ring [3][0] posts served
     this.irqs = 0;             // IRQ 285 deliveries (the handler's entries)
     this.callbacks = 0;        // dml_start_callback's entries
@@ -160,6 +175,8 @@ export class MdetDl {
     this.queues = new Map();   // S-MDETDL: CPU 3's message queues MDET_CALC_MAIN reads, by id -> [message bytes]
     this.events = [];          // S-CPU3's MDET event posts served: [function, argument]
     this.counts = {};          // observed entries of LAF's frame steps (mdet.laf.observe): name -> runs
+    this.laf_waits = 0;        // S-CPU3: CPU 0 waits for LAF's answer preceded by a drain
+    this.take_msgs = [];       // TAKE's messages 81 served (take_serve): [tracking-source bits, take_mov's LAF mode]
   }
   get used() { return this.requests.length > 0; }
   lab() { return this.s.lab; }
@@ -178,6 +195,7 @@ export class MdetDl {
       this.queues.set(t.queue, []);
     }
     this.dml_done = [this.u16(f.dml_done[0]), f.dml_done[1]];
+    this.nested_flag = this.u16(f.nested_wait);
     this.dml = lab.sim.m.devices.dml;
     if (!this.dml) throw new MdetError('S-MDETDL: the machine has no DML engine (src/fw/board.mjs dml)');
     this.pdt = lab.sim.m.devices.pdt;
@@ -188,6 +206,17 @@ export class MdetDl {
     lab.wrap(OLY.iset, (prev) => (h, r) => (mine(r) ? this.set_flag(h, r) : prev(h, r)));
     lab.wrap(OLY.clear, (prev) => (h, r) => (mine(r) ? this.clear_flag(h, r) : prev(h, r)));
     lab.wrap(OLY.wait, (prev) => (h, r) => (mine(r) ? this.wait_flag(h, r) : prev(h, r)));
+    // S-CPU3: a CPU 0 wait for LAF's answer (mdet_laf_end's, take.laf_wait) is preceded by the service of CPU 3's ring,
+    // where its request waits (nested: the waiting call's stack stays; DISP_FRAME's posts wait for the next drain)
+    const lafWait = this.u16(f.take.laf_wait);
+    lab.wrap(OLY.wait, (prev) => (h, r) => {
+      if ((r.d0 & 0xFFFF) !== lafWait || this.turn) return prev(h, r);
+      const saved = { ...r };
+      this.camapp.drain_cpu3(true);
+      this.laf_waits += 1;
+      if (lab.sim.packet('G' + packRegs(saved)) !== 'OK') throw new MdetError('S-CPU3: registers not restored after the drain before LAF\'s answer');
+      return prev(h, saved);
+    });
     // S-MDETDL: the kernel's queue calls on MDET_CALC_MAIN's queue
     const myq = (r) => this.queues.has(r.d0 & 0xFFFF);
     lab.wrap(OLY.qwr, (prev) => (h, r) => (myq(r) ? this.queue_write(h, r) : prev(h, r)));
@@ -303,6 +332,7 @@ export class MdetDl {
     if (!this.satisfied(id, want, mode)) {
       if (this.turn && id === this.turn.id) throw new TurnDone();
       if (id === this.dml_done[0] && (want & this.dml_done[1])) this.engine_wait(saved);
+      else if (this.turn && id === this.nested_flag && !this.waiting) this.nested_wait();
       if (lab.sim.packet('G' + packRegs(saved)) !== 'OK') throw new MdetError('S-MDETDL: registers not restored after the engine wait');
       if (!this.satisfied(id, want, mode)) {
         throw new MdetError(`S-MDETDL: wait for CPU 3 flag ${h8(id)} pattern ${h8(want)} (mode ${mode}) from ${where(saved.mdr)} would block: the flag is ${h8(this.flags.get(id))}${this.turn ? ` in ${this.turn.name}'s turn` : ''}`);
@@ -310,6 +340,14 @@ export class MdetDl {
     }
     if (saved.a0) lab.sim.write(saved.a0, pack('<I', this.flags.get(id)));
     h.finish(saved, { d0: 0 });
+  }
+  // A turn's wait for other tasks' answers (mdet_laf_stop_trc_pdt's wait on the flag 0x300f for PDT's and TRC's ends,
+  // mdet.nested_wait): CPU 3's ring served at once (S-CPU3), the posted dispatches' tasks taking their turns nested, on
+  // a stack of their own, as CPU 3's scheduler would run them while the waiting task blocks (I: their order); the
+  // waiting task's turn then goes on with its registers restored (wait_flag). One level only
+  nested_wait() {
+    this.waiting = this.turn;
+    try { this.camapp.drain_cpu3(true); } finally { this.waiting = null; }
   }
   // The offer's wait for the engine: the driver's deferred start taken, then the lab clock to the run's completion,
   // whose IRQ the lab delivers
@@ -331,7 +369,7 @@ export class MdetDl {
   // fn: the posted function (disassembly address), MDET's request function or one of its event setters (event_fn)
   serve(arg, fn = this.f.post.fn) {
     const lab = this.lab();
-    if (this.turn) throw new MdetError(`S-MDETDL: a post of ${h8(fn)} served inside ${this.turn.name}'s turn`);
+    if (this.turn && this.turn !== this.waiting) throw new MdetError(`S-MDETDL: a post of ${h8(fn)} served inside ${this.turn.name}'s turn`);
     this.serves += 1;
     if (fn !== this.f.post.fn) this.events.push([fn, arg]);
     this.as_core(this.core3_fns.has(fn), () => K.in_interrupt(lab.lt, () => lab.calls(fn, { a0: arg }, ISR_SP, ISR_CALLER, LIMIT)));
@@ -343,7 +381,10 @@ export class MdetDl {
     }
   }
   // a task's turn is due when its flag has a bit it waits for, or its queue a message
-  runnable(t) { return t.queue !== undefined ? this.queues.get(t.queue).length > 0 : (this.flags.get(t.id) & t.bit) !== 0; }
+  runnable(t) {
+    if (t === this.waiting) return false;
+    return t.queue !== undefined ? this.queues.get(t.queue).length > 0 : (this.flags.get(t.id) & t.bit) !== 0;
+  }
   // S-CPU3: the disassembly address of an MDET event setter posted to CPU 3 (models.mjs mdet.events), else null
   event_fn(fn) {
     const a = disasm(fn);
@@ -357,10 +398,10 @@ export class MdetDl {
   // has no server in the lab: one is the session's error. A TurnDone from fn ends the turn after these
   as_core(on, fn) {
     if (!on) return fn();
-    const lab = this.lab(), sim = lab.sim, ipi = this.cpu3_ipi();
+    const lab = this.lab(), sim = lab.sim, ipi = this.cpu3_ipi(), was = sim.u32(CORE_INDEX);
     let err = null;
     sim.word(CORE_INDEX, 3);
-    try { fn(); } catch (e) { err = e; } finally { sim.word(CORE_INDEX, 0); }
+    try { fn(); } catch (e) { err = e; } finally { sim.word(CORE_INDEX, was); }
     if (err && !(err instanceof TurnDone)) throw err;
     this.cpu3_deferred_run();
     const after = this.cpu3_ipi(), moved = [0, 1, 2, 3].filter((t) => after[t] !== ipi[t]);
@@ -377,21 +418,23 @@ export class MdetDl {
       if (n >= 8) throw new MdetError(`S-MDETDL: CPU 3's deferred calls still waiting after ${n} runs of IRQ ${irq}`);
       const handler = sim.u32(this.f.cpu3_handlers + 4 * irq);
       if (!handler) throw new MdetError(`S-MDETDL: CPU 3's deferred calls wait and its IRQ ${irq} has no handler attached`);
+      const was = sim.u32(CORE_INDEX);
       sim.word(CORE_INDEX, 3);
-      try { K.in_interrupt(lab.lt, () => lab.calls(disasm(handler), null, ISR_SP, ISR_CALLER, LIMIT)); } finally { sim.word(CORE_INDEX, 0); }
+      try { K.in_interrupt(lab.lt, () => lab.calls(disasm(handler), null, ISR_SP, ISR_CALLER, LIMIT)); } finally { sim.word(CORE_INDEX, was); }
       this.deferred3 += 1;
     }
   }
   run_turn(t) {
-    const lab = this.lab();
+    const lab = this.lab(), outer = this.turn, nested = outer !== null;
     this.turn = t;
     this.turns.set(t.name, (this.turns.get(t.name) ?? 0) + 1);
+    if (nested) this.nested += 1;
     try {
-      this.as_core(t.core3, () => lab.calls(t.entry, null, CPU3_STACK, CPU3_CALLER, LIMIT));
+      this.as_core(t.core3, () => lab.calls(t.entry, null, nested ? NESTED_STACK : CPU3_STACK, nested ? NESTED_CALLER : CPU3_CALLER, LIMIT));
       throw new MdetError(`S-MDETDL: ${t.name}'s body returned`);
     } catch (e) {
       if (!(e instanceof TurnDone)) throw e;
-    } finally { this.turn = null; }
+    } finally { this.turn = outer; }
   }
   // ---- S-LEARNDATA
   learning_read(h, r) {
@@ -459,6 +502,50 @@ export class MdetDl {
     this.s.settle('S-TAKEMDET offer');
     if (rc !== 0) throw new MdetError(`S-TAKEMDET: mdet_dl_offer_yc_data(frame ${this.offers}) returned ${rc}`);
     this.camapp.drain_cpu3();                                                       // S-CPU3: MDET's UP_FACE, one turn
+  }
+  // TAKE's message 81, which TAKE's status-change callback posts to TAKE's queue when LAF's tracking status changes
+  // (its guard byte set until the handler clears it), taken from the queue as TAKE's task would take it (the queue's
+  // other messages, which no task of the lab reads, written back in their order) and served by its handler's step to
+  // take_mov (mdet.take): the guard cleared, TAKE's tracking-source bits from TAKE's own builders and take_mov's mode
+  // setter with them under their mask, natively. The rest of TAKE's live-view rebuild (0x5039bb7e) does not run. A rise
+  // of take_mov's LAF mode runs TAKE_MOV's start, whose mdet_laf_start LAF's tasks take on CPU 3 (S-CPU3); a fall runs
+  // mdet_laf_end, whose wait S-CPU3 serves (laf_wait). No session calls it (test_mdet.mjs does, spec 5.9): with the LAF
+  // mode on, take_mov asks a chase cycle of LAF every live-view frame after its EMS1 run, which the lab cannot make
+  // (TAKE_MOV's frame events come from the image pipeline's live-view sequencer, which does not run), and LAF started
+  // without them stops taking MDET's subjects (X): a state the camera does not stay in. So in a session the message
+  // stays in TAKE's queue, as it did
+  take_serve() {
+    const lab = this.lab(), T = this.f.take;
+    if (lab.sim.read(T.posted, 1)[0] !== 1) return;
+    const id = this.u16(T.queue), msgs = [];
+    for (let m; (m = this.take_queue(id, 'read')); ) msgs.push(m);
+    const is = (m) => { const dv = new DataView(m.buffer); return dv.getUint32(8, true) === T.message && dv.getUint32(12, true) === runtime(T.handler); };
+    const mine = msgs.filter(is);
+    for (const m of msgs.filter((x) => !is(x))) this.take_queue(id, 'write', m);
+    if (mine.length !== 1) throw new MdetError(`S-TAKEMDET: TAKE's guard ${h8(T.posted)} is set and its queue ${h8(id)} holds ${mine.length} messages ${T.message}`);
+    const e0 = lab.kernel.errors.length, call = (fn, regs = null) => lab.call(fn, regs, null, null, LIMIT).d0 >>> 0;
+    lab.sim.write(T.posted, new Uint8Array([0]));
+    const bits = (call(T.sources[0], { a0: T.ctx }) | call(T.sources[1])) & T.mask;
+    call(T.mode_set, { d0: bits, d1: T.mask, a0: call(T.lv_kind) & 0xFFFF });
+    this.errlog_check(e0, 'TAKE\'s message 81', 'S-TAKEMDET');
+    this.s.settle('S-TAKEMDET message 81');
+    const laf = this.u16(T.laf_mode);
+    this.take_msgs.push([bits, laf]);
+    this.log('takemdet', `TAKE's message ${T.message}: tracking-source bits ${h8(bits)}, take_mov's LAF mode ${h8(laf)}`);
+    this.camapp.drain_cpu3();                                                       // S-CPU3: LAF's start or end
+  }
+  // one message of TAKE's queue (OlyQeRd / OlyQeWr natively, without waiting): read gives its 16 bytes or null when the
+  // queue is empty; write puts one back
+  take_queue(id, op, m = null) {
+    const lab = this.lab(), size = this.f.queue_message, buf = lab.alloc(m ?? new Uint8Array(size), 4);
+    const rc = lab.call(op === 'read' ? OLY.qrd : OLY.qwr, { d0: id, d1: TMO_POLL, a0: lab.alloc(pack('<II', buf, size), 4) }, null, null, LIMIT).d0 | 0;
+    if (op === 'read') {
+      if (rc === E_TMOUT) return null;
+      if (rc !== 0) throw new MdetError(`S-TAKEMDET: OlyQeRd on TAKE's queue ${h8(id)} returned ${rc}`);
+      return lab.sim.read(buf, size).slice();
+    }
+    if (rc !== 0) throw new MdetError(`S-TAKEMDET: OlyQeWr of a message back to TAKE's queue ${h8(id)} returned ${rc}`);
+    return null;
   }
   // S-DML's records for an offer: S-SCENE's subjects of the kind now, placed in MDET's frame (subject.mjs frames()),
   // each body in class 3g and each part it shows in class 3g + PART at its own box, in the network's class order (for

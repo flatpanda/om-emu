@@ -21,16 +21,21 @@
 //                    held still): S-DML's bodies in class 0 and helmets in class 2, nothing reported for the hits the
 //                    stabilisation asks, then two subject records, each body combined with its own helmet as part 2,
 //                    and the two bodies as the table's list records (spec 5.6); at OFF, mdet_dl_end, no more runs, the
-//                    table empty and the bit gone; H-MDETINIT's IRQs 279 / 278 on CPU 3 and the unit closed; TAKE_MOV's
-//                    mdet_laf_start through MDET_E_SEND, MDET_CALC_MAIN and PDT's and TRC's tasks natively, both
-//                    drivers opened through CPU 3's deferred calls, LAF's state 1 (spec 5.8); the firmware's PDT / TRC
-//                    drivers on S-PDT (pdtDrivers) and the debug API's pdt op
+//                    table empty and the bit gone; before it TAKE's message 81 served as its handler would hand it on
+//                    (spec 5.9): take_mov's LAF mode 0x10, TAKE_MOV's mdet_laf_start through MDET_E_SEND,
+//                    MDET_CALC_MAIN and PDT's and TRC's tasks natively, both drivers opened through CPU 3's deferred
+//                    calls, LAF's state 1, then no more frame tables; at OFF the message again: the LAF mode 0, mdet_laf_end with
+//                    PDT's and TRC's ends in nested turns, LAF's state 0, the unit closed; H-MDETINIT's IRQs 279 / 278
+//                    on CPU 3; the firmware's PDT / TRC drivers on S-PDT (pdtDrivers), its EMS1 driver on S-EMS1
+//                    (ems1Driver) and the debug API's pdt and ems1 ops
 //   node emu/test/test_mdet.mjs [--pure]
 import { createMachine } from '../src/machine.mjs';
 import { BUS } from '../src/core/mem.mjs';
 import { BOARD } from '../src/fw/board.mjs';
 import { RUN_NS, S_DONE, CLASSES, RECORD } from '../src/dev/dml.mjs';
 import { ENGINES as PDT_ENGINES } from '../src/dev/pdt.mjs';
+import { chBit } from '../src/dev/ems1.mjs';
+import { HANDLER_TABLE } from '../src/lab/irq.mjs';
 import * as K from '../src/lab/kernel.mjs';
 import { runtime, disasm, ISR_SP, ISR_CALLER } from '../src/lab/hle.mjs';
 
@@ -124,10 +129,16 @@ const DF_MODE = 0xA3209010;
 const OBJ_AF_POINT = 0x88B2, OBJ_AF_SIZE = 0x1DD1, GRID_X = 0x60A63A48, GRID_Y = 0x60A63AE8, GRID_COLS = 39, GRID_ROWS = 27;
 // TAKE's status-change callback's guard byte, which it sets as it posts its message (0x506d991d)
 const TAKE_CB_POSTED = 0xA32DF204;
-// TAKE_MOV's call mdet_laf_start (0x5081ee9d from 0x506da292), which no stand-in makes (spec 5.8: its trigger,
-// take_mov's LAF bits, is not read); LAF's state 0xa33458c4 (1 after LAF's init, 2 after its start with take_mov's
-// parameters, 3 in a chase cycle; the chase handler 0x50800c59 wants 2 or 3)
-const LAF_START = 0x5081EE9D, LAF_STATE = 0xA33458C4;
+// LAF's state 0xa33458c4 (1 after LAF's init, 2 after its start with take_mov's parameters, 3 in a chase cycle; the
+// chase handler 0x50800c59 wants 2 or 3; 0 after LAF's end)
+const LAF_STATE = 0xA33458C4;
+// The EMS1 driver (spec 2.4, 5.9): the boot chain's init (IRQ 276 attached on the calling core with the handler, the
+// engine powered up and down), the queue's entry (a job: its validity check, then, with the queue empty, the power-up,
+// the parameters and the start) and its kick (the 1 s watchdog and the block trigger); the job's fields: +4 the
+// channel mask, the area records at +0x14c + 0x10c k (ae_2 at +4: bits 0..2 and 4..6 each 1..4, the check's), +0x688
+// the client's completion; the test's callback for it in the lab's scratch
+const EMS1 = { init: 0x501A6827, handler: 0x501A65F8, enqueue: 0x501A6864, kick: 0x501A6987, mask: 4, area: 0x14C, stride: 0x10C, ae2: 4,
+  done: 0x688, job: 0x700, callback: 0xA2100540 };
 // The PDT / TRC drivers' entries (by `call`, spec 5.8): open, start(request {parameters, callback, argument}),
 // get_result(buffer), close; their IRQ handlers as CPU 3's handler table holds them after H-MDETINIT; the results'
 // first register and count
@@ -304,9 +315,48 @@ export async function mdetSession() {
     const sub2 = s.camapp.status().subject, ev = (b) => [b[0], b[1], b[0] + ((b[2] - b[0]) & ~1), b[1] + ((b[3] - b[1]) & ~1)];
     ok(sub2?.frames === 2 && sub2.main === 0 && sub2.part === 0 && m.boxes.every((b) => sub2.boxes.some((x) => JSON.stringify(x) === JSON.stringify(ev(b)))),
       `MDET's frame table: the two bodies as its list records (sizes made even), main and part flags 0: ${JSON.stringify(sub2 ?? null)}`);
+    // take_mov's LAF mode from TAKE's message 81 (spec 5.9). TAKE's callback posted it when the rider became LAF's
+    // candidate and it waits in TAKE's queue, the guard set, as in every session (no session serves it). Served here as
+    // TAKE's handler would hand it on: TAKE's tracking sources give 0x400 (LAF's tracking status 1; the AF library and
+    // FACE answer 0), take_mov's LAF mode becomes 0x10, and its rise runs TAKE_MOV's start natively: mdet_laf_start,
+    // one turn each of MDET_E_SEND_CPU3, MDET_CALC_MAIN_CPU3, MDET_PDT_CPU3 and MDET_TRC_CPU3, PDT's and TRC's opens
+    // through CPU 3's deferred calls (two runs of its IRQ 53), LAF's state 1; no error log. Then, with no chase request
+    // to follow (TAKE_MOV's frame events are the image pipeline's), LAF writes no more frame tables and its row 0 stays
+    // (X: a state the camera does not stay in)
+    const m2 = s.camapp.mdet, f2 = f.take, u16 = (a) => { const b = lab.sim.read(a, 2); return b[0] | b[1] << 8; };
+    const turns0 = { ...Object.fromEntries(m2.turns) }, ev0 = m2.events.length, e0 = lab.kernel.errors.length, d30 = m2.deferred3;
+    const turn = (n, base = turns0) => (m2.turns.get(n) ?? 0) - (base[n] ?? 0);
+    const posted = lab.sim.read(f2.posted, 1)[0], laf0 = u16(f2.laf_mode), writes1 = m2.table_writes;
+    let stop = null;
+    try { m2.take_serve(); } catch (e) { stop = e.message; }
+    const evs = m2.events.slice(ev0).map(([fn]) => fn), pdt = lab.sim.m.devices.pdt;
+    ok(stop === null && posted === 1 && laf0 === 0 && JSON.stringify(m2.take_msgs) === '[[1024,16]]' && u16(f2.laf_mode) === 0x10 && lab.sim.read(f2.posted, 1)[0] === 0,
+      `TAKE's message 81: the tracking-source bits 0x400, take_mov's LAF mode 0x${u16(f2.laf_mode).toString(16)}, the guard cleared: ${JSON.stringify(m2.take_msgs)} ${stop?.slice(0, 200) ?? ''}`);
+    ok(['MDET_E_SEND_CPU3', 'MDET_CALC_MAIN_CPU3', 'MDET_PDT_CPU3', 'MDET_TRC_CPU3'].every((n) => turn(n) === 1) &&
+      JSON.stringify(evs) === JSON.stringify([f.events.laf_start_request, f.posts.pdt_dispatch, f.posts.trc_dispatch]) && lab.kernel.errors.length === e0 &&
+      pdt.e.pdt.runs === 0 && pdt.e.trc.runs === 0 && lab.sim.u32(LAF_STATE) === 1 && m2.deferred3 - d30 === 2 &&
+      [0x000, 0x004, 0x2000, 0x3000].every((o) => pdt.read(o, 4, true) === 0),
+      `TAKE_MOV's start: mdet_laf_start, one turn each of LAF's four tasks, the posts ${evs.map((x) => x.toString(16))}, PDT and TRC opened (${m2.deferred3 - d30} deferred runs), no engine run, no error log, LAF's state ${lab.sim.u32(LAF_STATE)}: ${JSON.stringify(Object.fromEntries(m2.turns))}`);
+    const row0of = () => LAF_ROW0.map((a) => u16(a)), row1 = row0of();
+    for (let i = 0; i < 3; i++) idle(70);
+    ok(m2.table_writes === writes1 && JSON.stringify(row0of()) === JSON.stringify(row1) && m2.subjects().length === 2,
+      `LAF started without chase requests: no frame table written (${m2.table_writes - writes1}), its row 0 kept ${row0of()}, MDET still reporting ${m2.subjects().length} subjects`);
     // OFF: mdet_dl_end, LAF stopped, no more runs
     s.step('SET:1682=0');
     idle(200);
+    // LAF's tracking status falls: TAKE's message 81 again, which takes take_mov's LAF mode down; its fall runs
+    // mdet_laf_end, whose wait S-CPU3 precedes with CPU 3's ring: LAF's end request and its end event, two turns of
+    // MDET_CALC_MAIN, the second waiting in mdet_laf_stop_trc_pdt for TRC's and PDT's ends (flag 0x300f) while their
+    // dispatches' turns run nested; LAF's state 0, the unit closed again, no error log
+    const turns1 = { ...Object.fromEntries(m2.turns) }, e1 = lab.kernel.errors.length, w0 = m2.laf_waits, n0 = m2.nested, ev1 = m2.events.length;
+    stop = null;
+    const posted2 = lab.sim.read(f2.posted, 1)[0];
+    try { m2.take_serve(); } catch (e) { stop = e.message; }
+    ok(stop === null && posted2 === 1 && JSON.stringify(m2.take_msgs.at(-1)) === '[0,0]' && u16(f2.laf_mode) === 0 && m2.laf_waits - w0 === 1 &&
+      m2.nested - n0 === 2 && turn('MDET_CALC_MAIN_CPU3', turns1) === 2 && turn('MDET_PDT_CPU3', turns1) === 1 && turn('MDET_TRC_CPU3', turns1) === 1 &&
+      JSON.stringify(m2.events.slice(ev1).map(([x]) => x)) === JSON.stringify([f.events.laf_end_request, f.events.laf_end, f.posts.trc_dispatch, f.posts.pdt_dispatch]) &&
+      lab.sim.u32(LAF_STATE) === 0 && lab.kernel.errors.length === e1 && [0x000, 0x004, 0x2000, 0x3000].every((o) => pdt.read(o, 4, true) === 1),
+      `OFF: message 81 again, take_mov's LAF mode 0, mdet_laf_end through one drain and ${m2.nested - n0} nested turns, LAF's state ${lab.sim.u32(LAF_STATE)}, the unit closed: ${JSON.stringify(Object.fromEntries(m2.turns))}, the posts ${m2.events.slice(ev1).map(([x]) => x.toString(16))} ${stop?.slice(0, 300) ?? ''}`);
     const runs = dml.runs, st = s.camapp.status().mdet;
     idle(300);
     const fr = s.camapp.status().subject;
@@ -315,29 +365,16 @@ export async function mdetSession() {
     ok(pl.phase === 'running', `the session runs on: ${pl.phase} ${pl.error?.message ?? ''}`);
     // H-MDETINIT (spec 5.8): the PDT and TRC drivers' inits attached IRQs 279 and 278 on CPU 3 and left both engines
     // closed (the unit's and each engine's reset words 1)
-    const pdt = lab.sim.m.devices.pdt, h3 = (irq) => lab.sim.u32(f.cpu3_handlers + 4 * irq);
+    const h3 = (irq) => lab.sim.u32(f.cpu3_handlers + 4 * irq);
     ok(h3(279) === runtime(DRIVERS.pdt.handler) && h3(278) === runtime(DRIVERS.trc.handler) && [0x000, 0x004, 0x2000, 0x3000].every((o) => pdt.read(o, 4, true) === 1) &&
       pdt.e.pdt.runs === 0 && pdt.e.trc.runs === 0 && pl.stand_ins_in_use().includes('H-MDETINIT'),
       `H-MDETINIT: CPU 3's handlers of IRQs 279 / 278 ${h3(279).toString(16)} / ${h3(278).toString(16)}, the unit closed, no run`);
-    // MDET_E_SEND_CPU3, MDET_CALC_MAIN_CPU3, MDET_PDT_CPU3 and MDET_TRC_CPU3 natively at a post of the firmware's own
-    // (spec 5.7, 5.8): TAKE_MOV's call mdet_laf_start, made here by the test (no stand-in makes it), posts LAF's start
-    // request to CPU 3; S-CPU3 serves the setter, MDET_E_SEND forwards the event, MDET_CALC_MAIN's turn runs LAF's
-    // start, which posts PDT's and TRC's start requests to their dispatches; S-CPU3 serves those (the core register at
-    // 3, which their queues check) and each engine's task takes a turn: pdt_start and trc_start open their drivers
-    // through deferred calls on CPU 3, which run after the turn (two runs of CPU 3's IRQ 53), so the unit and both
-    // engines leave reset. No engine runs, no error is logged, and LAF's state stays 1: the chase cycle waits for LAF's
-    // start with take_mov's parameters (spec 5.8)
-    const m2 = s.camapp.mdet, turns0 = { ...Object.fromEntries(m2.turns) }, ev0 = m2.events.length, e0 = lab.kernel.errors.length, d30 = m2.deferred3;
-    let stop = null;
-    try { lab.call(LAF_START, null, null, null, 2000000); s.settle('mdet_laf_start'); s.camapp.drain_cpu3(); } catch (e) { stop = e.message; }
-    const turn = (n) => (m2.turns.get(n) ?? 0) - (turns0[n] ?? 0), evs = m2.events.slice(ev0).map(([fn]) => fn);
-    ok(stop === null && turn('MDET_E_SEND_CPU3') === 1 && turn('MDET_CALC_MAIN_CPU3') === 1 && turn('MDET_PDT_CPU3') === 1 && turn('MDET_TRC_CPU3') === 1 &&
-      JSON.stringify(evs) === JSON.stringify([f.events.laf_start_request, f.posts.pdt_dispatch, f.posts.trc_dispatch]) && lab.kernel.errors.length === e0 &&
-      pdt.e.pdt.runs === 0 && pdt.e.trc.runs === 0 && lab.sim.u32(LAF_STATE) === 1,
-      `mdet_laf_start: one turn each of MDET_E_SEND_CPU3, MDET_CALC_MAIN_CPU3, MDET_PDT_CPU3 and MDET_TRC_CPU3, the posts ${evs.map((x) => x.toString(16))}, no error log, LAF's state ${lab.sim.u32(LAF_STATE)}: ${JSON.stringify(Object.fromEntries(m2.turns))} ${stop?.slice(0, 200) ?? ''}`);
-    ok(m2.deferred3 - d30 === 2 && [0x000, 0x004, 0x2000, 0x3000].every((o) => pdt.read(o, 4, true) === 0),
-      `PDT's and TRC's opens through CPU 3's deferred calls (${m2.deferred3 - d30} runs of IRQ 53): the unit's and the engines' reset words 0`);
     pdtDrivers(t, s, f);
+    ems1Driver(t, s);
+    const ems1 = lab.sim.m.devices.ems1, qe = ask({ op: 'ems1' });
+    ok(['S-EMS1', 'A-EMS1-1'].every((x) => pl.stand_ins_in_use().includes(x)) && qe?.runs === ems1.runs && qe.runs === 1 && qe.last?.channels === 2 &&
+      qe.last.start === '0x0a000220' && qe.busy === false,
+      `the player lists S-EMS1 and A-EMS1-1; the debug API's ems1 op: ${JSON.stringify({ runs: qe?.runs, start: qe?.last?.start, channels: qe?.last?.channels })}`);
     ok(['H-MDETINIT', 'S-PDT', 'A-PDT-1'].every((x) => pl.stand_ins_in_use().includes(x)), 'the player lists H-MDETINIT, S-PDT and, after the drivers\' runs, A-PDT-1');
     const q = ask({ op: 'pdt' });
     ok(q?.ok && q.trc?.runs === pdt.e.trc.runs && q.pdt?.runs === pdt.e.pdt.runs && q.trc.last?.params?.['0x301c'] === '0x00000000' && q.trc.last.result === 2 && q.pdt.busy === false,
@@ -388,6 +425,43 @@ export function pdtDrivers(t, s, f) {
       lab.kernel.errors.length === e0,
       `${name}: get_result copies the ${D.words} result registers (the lab's words, 0 elsewhere); the close's +0x004 1; no error log`);
   }
+}
+
+// The firmware's EMS1 driver on S-EMS1 (spec 5.9), in a session on CPU 0 (the core register 0, the driver's own): its
+// init attaches IRQ 276 with its handler in CPU 0's table and powers the engine up and down; a job of channel 1 (an
+// area record valid for the check, everything else 0) through the queue's entry: the power-up, the parameters, the
+// start word with channel 1's run bit, its ae_2 field, bit 25 and bit 27, and the kick's block trigger 0; after RUN_NS
+// the IRQ high with channel 1's status bit; the handler, in interrupt context: the status cleared, the stop, the
+// client's completion with the job and 0, the engine powered down (the queue empty). No error log. No camera flow makes
+// such a job in a session: take_mov's per-frame EMS1 run waits for TAKE_MOV's frame events (spec 5.9)
+export function ems1Driver(t, s) {
+  const { ok } = t, lab = s.lab, ems1 = lab.sim.m.devices.ems1, intc = lab.sim.m.devices.intc, irq = BOARD.ems1.irq;
+  const e0 = lab.kernel.errors.length, calls = [], writes = [], wr0 = ems1.write.bind(ems1);
+  lab.hook_rt(EMS1.callback, (h, r) => { calls.push([r.a0 >>> 0, r.d0 >>> 0]); h.finish_calls(r, { d0: 0 }); }, 'test ems1 callback');
+  ems1.write = (o, v, w, d) => { writes.push([o, v >>> 0]); return wr0(o, v, w, d); };
+  const job = new Uint8Array(EMS1.job), dv = new DataView(job.buffer);
+  dv.setUint32(EMS1.mask, 1 << 1, true);
+  dv.setUint32(EMS1.area + EMS1.stride + EMS1.ae2, 0x11, true);
+  dv.setUint32(EMS1.done, EMS1.callback, true);
+  let ja = null, stop = null;
+  try {
+    lab.call(EMS1.init, null, null, null, 2000000);
+    const initWrites = writes.splice(0).map(([o]) => o);
+    ok(lab.sim.u32(HANDLER_TABLE + 4 * irq) === runtime(EMS1.handler) && ems1.read(0, 4, true) === 3 && JSON.stringify(initWrites.filter((o) => o === 0)) === '[0,0]' && ems1.runs === 0,
+      `EMS1's init: IRQ ${irq}'s handler ${lab.sim.u32(HANDLER_TABLE + 4 * irq).toString(16)} in CPU 0's table, the engine powered up and down (${initWrites.length} writes), no run`);
+    ja = lab.alloc(job, 4);
+    lab.call(EMS1.enqueue, { a0: ja }, null, null, 2000000);
+    lab.call(EMS1.kick, { a0: ja, d0: 0 }, null, null, 2000000);
+  } catch (e) { stop = e.message; } finally { ems1.write = wr0; }
+  const word = chBit(1) | (1 << 5) | 0x2000000 | (1 << 27), ctl = writes.filter(([o]) => o <= 0x18).map(([o, v]) => [o.toString(16), v]);
+  ok(stop === null && ems1.runs === 1 && ems1.busy() && ems1.last().start === word && ems1.last().channels === 0b10 && JSON.stringify(ctl.at(-1)) === '["18",0]' &&
+    JSON.stringify(ctl.slice(0, 3)) === '[["0",2],["0",0],["8",0]]' && writes.length > 100 && intc.line[irq] === 0,
+    `a job of channel 1: the power-up, ${writes.length} writes, the start word 0x${(ems1.last()?.start ?? 0).toString(16)}, the kick's trigger 0, the engine running, IRQ ${irq} low: ${JSON.stringify(ctl)} ${stop?.slice(0, 200) ?? ''}`);
+  lab.advance(ems1.due - lab.lab_time(), 'test ems1 run');
+  const high = intc.line[irq] === 1 && ems1.status === chBit(1);
+  K.in_interrupt(lab.lt, () => lab.calls(disasm(lab.sim.u32(HANDLER_TABLE + 4 * irq)), null, ISR_SP, ISR_CALLER, 2000000));
+  ok(high && ems1.status === 0 && intc.line[irq] === 0 && JSON.stringify(calls) === JSON.stringify([[ja, 0]]) && ems1.read(0, 4, true) === 3 && lab.kernel.errors.length === e0,
+    `after RUN_NS IRQ ${irq} high with channel 1's bit; the handler clears it, calls the job's completion with the job and 0 (${JSON.stringify(calls)}) and powers the engine down (${ems1.read(0, 4, true)}); no error log`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

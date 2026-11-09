@@ -305,6 +305,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...du.bad, ...pu.bad, ...ms.bad].forEach((x) => console.log('  ', x));
   bad += du.bad.length + pu.bad.length + ms.bad.length;
 }
+// the A53's ISC node-4 service (S-A53ISC, not wired) against the exchanges recorded in the QEMU oracle
+{
+  const { a53iscUnits } = await import('../test/test_a53isc.mjs');
+  const au = a53iscUnits();
+  console.log(`the A53's ISC node-4 service (S-A53ISC): units ${au.checks - au.bad.length}/${au.checks}`);
+  au.bad.forEach((x) => console.log('  ', x));
+  bad += au.bad.length;
+}
 // the camera's non-volatile state kept between sessions (S-NVRAM): no date prompt, a setting kept across sessions
 {
   const { nvramSessions } = await import('../test/test_nvram.mjs');

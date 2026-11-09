@@ -1529,6 +1529,19 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    start state `0x1103` stays unnamed: its SS_MENU lists `0x01` ID_ST_MENU_ENTRY and `0x02` ID_ST_MENU only (X;
    finding 17). No E143 output
    changes (its bound is the lab's 12); on the 15 a state of those parents prints its name where it printed `?`.
+83. **REC_FILE's task on E146 and E147, and the E144 family's REC** (2026-11-08, `src/fw/facts.mjs` recFile, fact
+   `rec_file`, `docs/hle-gaps.md` 4.8.10). The rule reads every address and layout `src/lab/rec.mjs` uses by REC's
+   own trace table (each function by the trace call it holds), REC_FILE's receive with the file name `rec_file.c`,
+   the packet dump and the EXIF module's template copy, date set, tag table and crop-area pick (D): on E143 the values
+   given by hand before it, on E146 and E147 their own, on none of the other 15 (X). E146 and E147 differ from E143
+   in the packet (276 bytes, other offsets, the image's address and size in REC_IMAGE's 52-byte image record the
+   packet points at) and the EXIF parameter block (91704 and 91960 bytes; the time record at +37452, the crop areas
+   elsewhere), not in the steps (D). Both record S2's file natively with the firmware's header: Model `OM-1MarkII` on
+   E146 and `OM-3` on E147, Exif version `0231` and `0300`, the clock's dates, image count 1 and next number 2 in the
+   session (X, `test/test_storage.mjs`). E144 and E148 hold the trace table, the traced functions and the dump (with
+   E143's packet form), but their REC_FILE (E144 task 31) blocks in a receive wrapper with no flag, their EXIF init
+   has no cache flush and its template is 31700 bytes, and the date set has another form (D; E143's two picks are
+   not found, not read further): they keep S-RECFILE's DCF steps.
 
 
 
@@ -1554,7 +1567,8 @@ ms, counted in CPU reads, had made it 300 s on the TFT and 380 to 500 s on the E
 
 **E146 (OM-1 II), E147 (OM-3).** `bin/modelcheck.mjs` passes on the TFT and the EVF: start, S1, S2 (a picture on the
 card), PLAY, INFO, PLAY. Their TFT start keeps the composite's UNWRITTEN error. E147 shoots and plays back. Since
-2026-10-29 both run the lens natively by default, as E143 does (finding 25).
+2026-10-29 both run the lens natively by default, as E143 does (finding 25). Since 2026-11-08 REC_FILE's own task
+records S2's file on both, with the firmware's Exif header (finding 83).
 
 **E144 (OM-5).** Boots natively to its shooting screen (kernel, display open, settings store, camera application, GUI;
 the kind-2 VSC compositor draws the OSD planes), takes S1, and the player settles running with the shooting screen in

@@ -142,7 +142,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **AV codec back end** (4.5) | 0 | none for HLE: seam S6 bypasses it | CPU 1; the codec engines; IRQs 303-306 | 416,471 / 411,438 (overlay segment 8, CPU 1) | ?: native needs register-level codec models, no documentation | native movie encode and playback below the HLS (I) |
 | **CPUs 1-3 and inter-core** (4.6) | S: K-OTHERCPU, K-BOOTSYNC, K-IPI, no start barrier; S-CPU2 (one post), S-CPU3, S-DISPFRAME on CPU 0; any other doorbell is an error | run CPUs 1-3 natively on one bus; per-core `0x8000` page, INTC bank n to core n, `+0x808/+0x80c` IRQ 324, `+0x810/+0x814` IRQ 325, `+0x800/+0x804` ISC IRQ 323, ticks 139..141. A53: "off" or ISC node 4 | a machine refactor (per-core CPU state), a per-core kernel lab, flash reads for CPU 2's loader and CPU 3's boot jobs, ROADMAP phases 3-4 | 5,422 keyed; 441,542 reachable only from CPU 1-3 tasks (a lower bound) | 5-7 weeks for the cores | the histogram, a native DISP_FRAME, cross-core owners (AUD_MAIN, AVM) can start; three stand-ins and four kernel stand-ins retire |
 | **SCPU, power, clock, on-board sensors, persistence** (4.7) | N: PER_SCPU, its start and its transactions, over the link to S-SCPUDEV, the sub-CPU's transport-level model (since 2026-10-23: `0x85`, `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1; S-SIO2, H-SCPUSTART); S: the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / S-NVRAM (the players' default since 2026-11-08); N: the ACC module init, ACC_MAIN, PER_SLOPE, the level gauge and Level Adjust with the accelerometer at its sample cache (since 2026-10-23, 4.7.3; H-ACCINIT, S-ACCREG, S-ACCSAMPLE, H-SLOPEINIT); PER_ROTATE with `--rotate on` (since 2026-11-08, 4.7.3; H-ROTINIT) | the accelerometer at the PER_SIO transfer and its data-ready pin (ACC_SENS_MAIN native); PER_ROTATE by default; S-NVRAM's NAND seam as the default | lab time; the UI_IN, SCPU and PER_SIO inits, the GIO init for the data-ready pin; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, rotation by default, eye sensor (Level Adjust, the level gauge and, with `--rotate on`, the orientation and the gauge's portrait layout in, 4.7.3) |
-| **Card and file system** (4.8) | N on E143 since 2026-10-23 (4.8.2): the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, the format, dosfat, DCF and the shots / movie-time counts natively on an 8 GiB SDHC card at the SD command layer (S-SDCARD, S-SDHOST, S-FSNAND, S-ALBM, H-FILEINIT, H-FILECLBK); the picture's file at S2 through the file module (S-RECFILE; since 2026-11-08 REC_FILE's task natively from REC_IMAGE's packet with the firmware's own header, 4.8.10: H-RECFILE, S-RECIMAGE, S-EXIFPRM, S-JPEGENC); since 2026-10-24 (4.8.3) Card Formatting from the menu (S-MDACTRL) and the card's removal and insertion (S-MEDIA), the application's media control native; S: S-CARD's insertion requests, its HLS mount state and image list; the other bodies keep S-CARD's card with no file system | the SD host's registers and interrupts with a card model (seam A), the rule-found seam on the other bodies, REC_IMAGE and the image pipeline (the thumbnail, the shooting values in Exif) | the HLS media layer (which sends the insertion), REC_MAIN / REC_FILE (the picture's file), TAKE_MOV's movie take (the movie module's set-up, whose frame rate the movie time query reads: 0 before a take on the camera too), IRQs anywhere for the SD host | 115,103 / 108,887 (17k of it self-test and debug) | 1-2 weeks left: REC_FILE's DCF steps, both slots, exFAT, the other bodies | a card that fills, real files in DCIM, both slots |
+| **Card and file system** (4.8) | N on E143 since 2026-10-23 (4.8.2): the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, the format, dosfat, DCF and the shots / movie-time counts natively on an 8 GiB SDHC card at the SD command layer (S-SDCARD, S-SDHOST, S-FSNAND, S-ALBM, H-FILEINIT, H-FILECLBK); the picture's file at S2 through the file module (S-RECFILE; since 2026-11-08 REC_FILE's task natively from REC_IMAGE's packet with the firmware's own header on E143, E146 and E147, 4.8.10: H-RECFILE, S-RECIMAGE, S-EXIFPRM, S-JPEGENC); since 2026-10-24 (4.8.3) Card Formatting from the menu (S-MDACTRL) and the card's removal and insertion (S-MEDIA), the application's media control native; S: S-CARD's insertion requests, its HLS mount state and image list; the other bodies keep S-CARD's card with no file system | the SD host's registers and interrupts with a card model (seam A), the rule-found seam on the other bodies, REC_IMAGE and the image pipeline (the thumbnail, the shooting values in Exif) | the HLS media layer (which sends the insertion), REC_MAIN / REC_FILE (the picture's file), TAKE_MOV's movie take (the movie module's set-up, whose frame rate the movie time query reads: 0 before a take on the camera too), IRQs anywhere for the SD host | 115,103 / 108,887 (17k of it self-test and debug) | 1-2 weeks left: REC_FILE's DCF steps, both slots, exFAT, the other bodies | a card that fills, real files in DCIM, both slots |
 | **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
 | **HDMI and DisplayPort** (4.9) | N with `--hdmi on` (since 2026-10-23, E143, E146, E147): a plug runs the hot-plug pin's IRQ 109, the HDMI init, two E-DDC reads with IRQ 239, the EDID's checks and parse and the connect report to UI_IN natively (H-GIOSLOTS, S-HDMISINK); off by default. On E143 since 2026-11-08 the application's TRA 588 is taken by S-OUTDEV, and CapIod's open, the transmitter's open (PHY, SCDC, update) and VSC channel 0 at 1080p59.94 run natively; channel 0 composes its window, nothing drawn on it; the unplug runs down to the disconnect report (A-HDMI-1) (X) | TX byte registers at `0x99c07000` (HPD / RxSense byte 8, DDC `0xa80..0xa83`, the buffer `0xc00`, IRQ 239, the open's words), the PHY words at `0x99c08000` and the GIO pin 77 (`0x9b881540`, IRQ 109), all modelled; VSC channel 0 | the application's notification of the open (CmpCst_Function's 494, the TRA reply), the GUI's planes on channel 0, the return to the TFT at an unplug | about 11k (3.3k plus the TX / DP driver's 7.7k) | 1 week left (the notification and the GUI's HDMI layout) | the HDMI output a TV shows |
 | **USB** (4.10) | 0 on E143 | the event level first (EV_USB_CONNECTED 8, EV_USB_RXDETECT `0x040d00d2`, the select screen); later a DWC3-family device at `0x9a600000` (IRQ 223) | SCPU (PD, power source), ADC flag `0xbf`, the PC_* tasks, storage for MSC | 121,861 / 117,704 | 1-2 weeks events; 4-8 weeks data path | the USB select screen, charging state; later MSC, MTP, PTP |
@@ -1779,6 +1779,7 @@ bytes on; E143's places in brackets):
   reads, so the DCF database counts it in the same session, and S-CARD's image list retired there.
   Round 9 (2026-11-08, 4.8.10): REC_FILE's task natively on E143 from the packet REC_IMAGE posts it, the file's header
   (Exif with the maker notes, XMP) by REC_IMAGE's own header maker, S-RECFILE retired there; the second slot surveyed.
+  Then on E146 and E147 too, at the addresses and layouts a rule reads; the E144 family's REC surveyed (4.8.10).
 
 #### 4.8.1 The sdmem request contract (D unless tagged)
 
@@ -1889,7 +1890,8 @@ found on the way:
   application's media control sends TRA 1511 (`0x50ac940d`, OlyHfwOpeMdaCtrl), which S-TRAACK answers. Round 2 (4.8.3)
   found the component that takes it and stands it in.
 - **Open:** the other bodies (round 3, 4.8.4), the second slot, exFAT beyond E143's format and mount (4.8.6),
-  REC_FILE natively (on E143 since 2026-11-08, 4.8.10), the SD host at its registers with interrupts (seam A),
+  REC_FILE natively (on E143, E146 and E147 since 2026-11-08, 4.8.10), the SD host at its registers with
+  interrupts (seam A),
   playback of the files (a JPEG decoder at the codec seam); round 2's open points are in 4.8.3.
 
 #### 4.8.3 The card on E143, round 2: the menu's format, removal and insertion (2026-10-24; D unless tagged)
@@ -2444,9 +2446,9 @@ there (it stays on the other bodies).
   checkout finds no pending entry, `0xd01`), `0x1e01500d` twice (the resource releases refused).
 - **Open:** the thumbnail and the shooting values in Exif (TAKE's record and the EXIF set, step 7); the media check-in
   (the HLS side); RAW and RAW + JPEG (`FileType` 0, `ExifFileType`, the type table `0x60358df8`); `Free` and its
-  completion with a requester (api_rec); REC_IMAGE's and REC_MAIN's tasks themselves (the image pipeline); the other
-  bodies (E146, E147, E144 and E148 keep S-RECFILE's DCF steps; their REC_FILE, REC_IMAGE and EXIF module addresses
-  are not read).
+  completion with a requester (api_rec); REC_IMAGE's and REC_MAIN's tasks themselves (the image pipeline); the E144
+  family (E144 and E148 keep S-RECFILE's DCF steps; their REC is another version, below). E146 and E147 since the same
+  day (below).
 - **The second slot (survey, D):** the packet carries it (`Media2`, `ExifFileTypeDoubleSlot`, `BuffAddrDoubleSlot`,
   `SlotNo`) and REC_FILE records both slots in `rec_file_record_DoubleSlot` (`0x5053f97d`, the second file context
   `0x62a8c540`): the type `0..12` by `ExifFileType` and `ExifFileTypeDoubleSlot` (0 JPEG, 2 RAW, 5 RAW + JPEG;
@@ -2457,6 +2459,60 @@ there (it stays on the other bodies).
   double-slot mode (Card Slot Settings; the source of `RecordMediaMode`, `Media` and `Media2` in REC_MAIN's packet),
   and sd_mount's and the insertion's path for port 1. So the model keeps one slot: the lab's insertion mounts drive 0
   only, and the second slot is left out of the model.
+- **E146 and E147 (2026-11-08; D unless tagged).** REC_FILE runs natively on both (`src/fw/models.mjs` `rec_native`),
+  every address and layout `src/lab/rec.mjs` uses read from each image by a rule (`src/fw/facts.mjs` `recFile`, fact
+  `rec_file`; on E143 it reads the values given by hand before, `REC_FILE_E143`, and `test/test_facts.mjs` pins all
+  three):
+  - *How the rule finds them:* REC's trace table (`{name, id}` pairs opening `{"ERROR TRACE ID", 1}`, `{"rec_main",
+    2}`: E143 `0x506bdb88`, E146 `0x506a2ac0`, E147 `0x506c3840`; another module's table, E146 `0x50a00f3c`, opens with
+    the same string) gives each function by the trace call it holds, `or 0x31000000,d0; ...; mov (id - 1) << 16 |
+    line,d1` (rec_jpeg_exec, rec_jpeg_make_image, rec_file_record; "REC post_msg" with `0x10020000`); REC_FILE by its
+    receive with the file name `rec_file.c` (E146 `0x5051bfea`, E147 the same shape) and the static task that runs to
+    it; its queue's bind right before its entry; REC's module init as the bind's one caller; the packet's fields by
+    the packet dump's reads before each padded field name; the EXIF module by its template copy after its init, the
+    EXIF set's date formatting, its tag table and the crop areas' pick; the clock setting by the function that ends
+    right before the clock read.
+  - *What differs from E143:* the packet is 276 bytes, not 316 (REC_FILE's receive and REC_IMAGE's post), and its
+    fields lie elsewhere (their dump: `pExifParam` +20, `ObjResponse` +24, `HandleTarget` +100, `BuffAddr1` /
+    `BuffSize1` +132 / +136, `HeaderSize` +172, `Status` +184, `Mode` +186, `Media` +190, `Media2` +192,
+    `RecordDevice` +194, `ImgAspect` +269, `Free` +271, `FileType` +273). `pPacketAddr`, `pDcfFnode`, `Addr`, `Size`,
+    `SlotNo` and a few more are not in the packet: `ImgProID[0]` +0, `IFinishID` +4, `Addr` +8, `Size` +12, `SizePrim`
+    +16, `RecordTarget` +34, `RawJpeg` +46, `CbExecute` +48 and `SlotNo` are fields of REC_IMAGE's image record, 52
+    bytes, which the packet's +180 points at and the dump prints after the packet's own (E146 `0x5051ec6e`). REC_IMAGE
+    keeps the record on its task's stack and inits it before rec_jpeg_exec (E146 `0x5052b008`, called at `0x5051ee45`:
+    cleared, `CbExecute` 1, the packet's +180 set to it; E147 `0x5053a22f`); rec_jpeg_exec (E146 `0x5052785e`, E147
+    `0x50536a6c`) stores the buffer at the record's `Addr` and reads the encoded size from its `Size` after the header
+    maker (E146 `0x5052791f`, `0x5052797f`), then sets `BuffAddr1` / `BuffSize1` from them on the lab's path (the
+    record's `RawJpeg` 0, `RecordTarget` not 2: `0x50527adc`). HeaderSize is 41984 on both. The EXIF parameter block is
+    91704 bytes on E146 and 91960 on E147 (E143 92252): the offsets the tag tables give (Make +1480, Model +1504,
+    DateTime +1364, DateTimeOriginal +4089, CreateDate +4109, DigitalZoomRatio +4228; 95 entries, as E143's) are
+    E143's, the ones past them are not: the capture's time record +37452 on both (E143 +37800; the EXIF set's date
+    formatting E146 `0x504280e7`, E147 `0x504363ed`), the crop areas +40312 / +40320 on E146 and +40576 / +40584 on
+    E147 (E143 +40858 / +40866). The header clear's fill takes a fourth argument (`mov 0,a1`; E146 `0x5048142b` from
+    `0x5052abb8`), which S-JPEGENC ignores. REC_FILE is task 27 at priority 54 on both, as on E143 (E146 `0x5051bfa3`,
+    E147 `0x5052b093`); its file contexts (E146 `0x62abb0cc` / `0x62abb128`, E147 `0x62ab7d08` / `0x62ab7d64`) keep
+    E143's layout (D: rec_file_record stores their +78 and +52 as E143's does; X: the file's fnode and folder read
+    through them match the card); E146's rec_file_record also sets a state by the result of its first check
+    (`0x5051dcc1` with 80, 85 or 90 at `0x5051cde8..0x5051cdfd`, ?: not read).
+  - *What runs (X, `test/test_storage.mjs` on each body, OM_EMU_MODEL):* with the clock set through the firmware's
+    clock setting (E146 `0x5012bad8`, E147 `0x501358fd`) S2 gives `C:\DCIM\100OMSYS\PB080001.JPG`, 73,410 bytes
+    with the live view (41984 of header, then the lab's stream), whose Exif (refs/exif.mjs and exiftool) has Make `OM
+    Digital Solutions`, Model `OM-1MarkII` on E146 and `OM-3` on E147 (the strings in each image: E146 body
+    `0x8c300`, E147 `0x74a84`; the maker notes' CameraType2 the same), the three dates `2026:11:08 12:34:56`, Exif
+    version `0231` on E146 and `0300` on E147, the maker notes `OM SYSTEM` and an IFD1 thumbnail of length 0, and
+    the same tags on both (exiftool); the firmware's image count 1 and next number 2 in the same session, and the
+    next session's DCF mount finds it. Around S2 the firmware logs E143's REC warnings (`0x0d090002`, `0x1e01500e`,
+    `0x1e001001`, `0x1e01500d` twice) and the codes E143 logs there too (`0x08010005`, `0x39000903`). modelcheck's
+    S2 and playback path passes on both.
+- **The E144 family (survey, D).** E144 (OM-5) and E148 (OM-5 II) hold REC's trace table (E144 `0x50556e4c`, 191
+  pairs; E148 `0x5055e2b8`) and the traced functions (rec_jpeg_exec's trace E144 `0x503ff3f3`), the packet dump with
+  E143's form (`Addr` +180 and `Size` +184 in the packet, `FileType` +298) and the EXIF module's date set with the
+  time record at +28508 (E144 `0x5030dc6a`). The rest is another version, which the rule does not read: REC_FILE
+  (E144 task 31, `0x503f5dc0`, priority 54) blocks in REC's receive wrapper `0x503f1206` (300 bytes; no event flag,
+  no bind, and the receive does not pass `rec_file.c`), the EXIF template init `0x5030b384` has no cache flush and
+  its template is 31700 bytes, the date set loads the time record with a 16-bit add in another order, and E143's
+  crop-area pick and file-context pick are not found (not read further). E144 and E148 keep S-RECFILE's DCF steps; a
+  port needs those forms read.
 
 ### 4.9 HDMI and DisplayPort
 

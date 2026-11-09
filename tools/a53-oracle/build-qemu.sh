@@ -21,8 +21,12 @@ mkdir -p "$SRC"; cd "$SRC"
 echo "$SHA256  $TARBALL" | sha256sum -c -
 [ -d "qemu-$VER" ] || tar xf "$TARBALL"
 cd "qemu-$VER"
-# apply the device + board patch (idempotent-ish: skip if already applied)
-if ! grep -q create_om_isc hw/arm/virt.c; then
+# apply the device + board patch (skip if this version is already applied; a tree
+# with an older version, without the console RX chardev, must be re-extracted)
+if ! grep -q OM_ISC_UARTDEV hw/arm/virt.c; then
+  if grep -q create_om_isc hw/arm/virt.c; then
+    echo "an older om-isc patch is applied in $SRC/qemu-$VER: remove that tree and rerun" >&2; exit 1
+  fi
   patch -p1 < "$HERE/om-isc-qemu.patch"
 fi
 cp "$HERE/om-isc.c" hw/misc/om-isc.c

@@ -74,6 +74,13 @@ static const hwaddr bank_base[4] = {
 #define BANK_SIZE 0x1000
 #define OFF_NOTIFY 0x800             /* doorbell to node 0..3               */
 #define OFF_A53    0x880             /* doorbell to node 4 / pending word   */
+/* The A53's irqcon entry (kernel 0xffffff800826fe48) reads the pending word at
+ * +0x880 and acknowledges by writing the bits it saw (low 16) to +0x884, a
+ * write-1-to-clear register (D, the store at 0xffffff800826fef8), then calls the
+ * handler of each set bit. Writing the word back to +0x880 is not what it does:
+ * without this ack the level line never dropped and CPU 0 sat in the handler
+ * (X: an RCU stall with CPU 0's PC at 0xffffff800826fef8). */
+#define OFF_ACK    0x884
 #define DOORBELL_VAL 0x4000
 
 typedef struct OmIscState OmIscState;
@@ -83,29 +90,101 @@ struct OmIscState {
     SysBusDevice parent_obj;
     HostMemoryBackend *memdev;
     CharFrontend chr;
+    CharFrontend uchr;              /* optional ttyS0 RX source */
+    uint32_t ureg[WUART / 4];
+    uint8_t rxq[4096];
+    uint32_t rxr, rxn;
     MemoryRegion lock, scc, cb, mem_mn, mem_a, uart;
     MemoryRegion bank[4];
     BankCtx bctx[4];
-    qemu_irq irq[4];
+    qemu_irq irq[6];                /* 0..3 irqcon banks, 4 uart tx, 5 uart rx */
     uint32_t pending[4];
 };
 
-/* mn_sio_uart console: the transmitter is always ready, so the guest writes the
- * byte without spinning. console_putchar (0xffffff8008293c00) gates the TX store
- * on status(+0x44) bit15 clear AND reg(+0x1c) != 0 (the loader normally seeds
- * +0x1c=1); so +0x44 reads 0 and +0x1c reads 1. TX byte at +0x18 -> stderr. */
-#define UART_RDY 0x1c
+/* mn_sio_uart ttyS0 model (D, kernel mn_sio_uart driver 0xffffff80082934b0..
+ * 0xffffff80082947bc, read from the Image at VA - 0xffffff8008080000):
+ *   +0x08 RX data byte, +0x0c RX FIFO count (the IRQ handler 0x294448 reads
+ *   +0x08 while +0x0c != 0), +0x50 line status (bits 0x4c = errors),
+ *   +0x18 TX data, +0x1c TX FIFO free count (tx_chars 0x294138 writes at most
+ *   that many bytes; the drain wait 0x293850 compares it with the port's
+ *   fifosize, DT fifo-size 0x80), +0x44 bit15 = transmitter busy,
+ *   +0x28 bit7 = TX interrupt enable (tx_chars sets it while its circular
+ *   buffer still holds bytes and clears it when empty).
+ * Model: the transmitter is always empty (+0x1c reads 0x80, +0x44 reads 0), so
+ * the TX interrupt line is level (reg 0x28 & 0x80); RX bytes come from an
+ * optional chardev and keep the RX line high while the FIFO is non-empty. The
+ * driver requests both lines with one handler (startup 0x293e00). Before this,
+ * +0x1c read 1 and no TX interrupt existed, so every tty write (userspace
+ * stdout on the console) stalled after its first bytes (X: the console stopped
+ * mid-line), which also blocked any daemon or script writing to the console.
+ * Other offsets are plain storage (read-modify-write registers). */
+#define UART_RXD  0x08
+#define UART_RXN  0x0c
+#define UART_TXF  0x1c
+#define UART_IEN  0x28
+#define UART_LSR  0x50
+#define UART_FIFO 0x80
+#define RXQ 4096
+static void uart_update(OmIscState *s)
+{
+    qemu_set_irq(s->irq[4], (s->ureg[UART_IEN / 4] & 0x80) != 0);
+    qemu_set_irq(s->irq[5], s->rxn != 0);
+}
+
 static uint64_t uart_read(void *opaque, hwaddr off, unsigned size)
 {
-    return off == UART_RDY ? 1 : 0;
+    OmIscState *s = opaque;
+    switch (off) {
+    case UART_TXF: return UART_FIFO;
+    case UART_ST:  return 0;
+    case UART_LSR: return 0;
+    case UART_RXN: return s->rxn;
+    case UART_RXD: {
+        uint8_t b = 0;
+        if (s->rxn) {
+            b = s->rxq[s->rxr];
+            s->rxr = (s->rxr + 1) % RXQ;
+            s->rxn--;
+            uart_update(s);
+            qemu_chr_fe_accept_input(&s->uchr);
+        }
+        return b;
+    }
+    default:
+        return off < WUART ? s->ureg[off / 4] : 0;
+    }
 }
 
 static void uart_write(void *opaque, hwaddr off, uint64_t val, unsigned size)
 {
+    OmIscState *s = opaque;
     if (off == UART_TX) {
         fputc((int)(val & 0xff), stderr);
         fflush(stderr);
+        return;
     }
+    if (off < WUART) {
+        s->ureg[off / 4] = (uint32_t)val;
+    }
+    if (off == UART_IEN) {
+        uart_update(s);
+    }
+}
+
+static int uart_can_rx(void *opaque)
+{
+    OmIscState *s = opaque;
+    return RXQ - s->rxn;
+}
+
+static void uart_rx(void *opaque, const uint8_t *buf, int size)
+{
+    OmIscState *s = opaque;
+    for (int i = 0; i < size && s->rxn < RXQ; i++) {
+        s->rxq[(s->rxr + s->rxn) % RXQ] = buf[i];
+        s->rxn++;
+    }
+    uart_update(s);
 }
 
 static const MemoryRegionOps uart_ops = {
@@ -123,6 +202,9 @@ static uint64_t bank_read(void *opaque, hwaddr off, unsigned size)
     if (off == OFF_NOTIFY) {
         return DOORBELL_VAL;          /* posting read-back after notify      */
     }
+    if (off == OFF_ACK) {
+        return 0;                     /* posting read-back after the ack     */
+    }
     qemu_log_mask(LOG_UNIMP, "om-isc: bank%d read off 0x%x\n", c->n,
                   (unsigned)off);
     return 0;
@@ -136,7 +218,7 @@ static void bank_write(void *opaque, hwaddr off, uint64_t val, unsigned size)
         qemu_chr_fe_write_all(&c->s->chr, &b, 1);
         return;
     }
-    if (off == OFF_A53) {             /* irqarm acks by writing pending back */
+    if (off == OFF_ACK) {             /* write-1-to-clear ack (see OFF_ACK)   */
         c->s->pending[c->n] &= ~(uint32_t)val;
         if (c->s->pending[c->n] == 0) {
             qemu_set_irq(c->s->irq[c->n], 0);   /* level low once drained */
@@ -210,7 +292,11 @@ static void om_isc_realize(DeviceState *dev, Error **errp)
                                             &s->bank[n], 10);
         sysbus_init_irq(sbd, &s->irq[n]);
     }
+    sysbus_init_irq(sbd, &s->irq[4]);
+    sysbus_init_irq(sbd, &s->irq[5]);
     qemu_chr_fe_set_handlers(&s->chr, om_isc_can_rx, om_isc_rx, NULL, NULL,
+                             s, NULL, true);
+    qemu_chr_fe_set_handlers(&s->uchr, uart_can_rx, uart_rx, NULL, NULL,
                              s, NULL, true);
 }
 
@@ -218,6 +304,7 @@ static const Property om_isc_props[] = {
     DEFINE_PROP_LINK("memdev", OmIscState, memdev,
                      TYPE_MEMORY_BACKEND, HostMemoryBackend *),
     DEFINE_PROP_CHR("chardev", OmIscState, chr),
+    DEFINE_PROP_CHR("uart", OmIscState, uchr),
 };
 
 static void om_isc_class_init(ObjectClass *oc, const void *data)

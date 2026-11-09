@@ -4,8 +4,8 @@ GNU General Public License, version 2 or (at your option) any later version.
 
 SPDX-License-Identifier: GPL-2.0-or-later
 
---- a/hw/arm/virt.c	2026-09-29 06:33:20.000000000 -0700
-+++ b/hw/arm/virt.c	2026-10-23 11:58:43.514759016 -0700
+--- a/hw/arm/virt.c
++++ b/hw/arm/virt.c
 @@ -91,6 +91,8 @@
  #include "hw/virtio/virtio-md-pci.h"
  #include "hw/virtio/virtio-iommu.h"
@@ -24,7 +24,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
  
  #define PLATFORM_BUS_NUM_IRQS 64
  
-@@ -2877,6 +2879,45 @@
+@@ -2877,6 +2879,56 @@
      }
  }
  
@@ -32,7 +32,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
 + * om-isc (oracle only): back the OM-1 Cortex-A53 ISC hardware windows and wire
 + * the ISC receive doorbell to the GIC, so the camera's real A53 Linux can bring
 + * ISC up on virt. Enabled by the env var OM_ISC_MEMDEV (a memory-backend id);
-+ * OM_ISC_CHARDEV names the doorbell chardev. See tools/a53-oracle/.
++ * OM_ISC_CHARDEV names the doorbell chardev, OM_ISC_UARTDEV an optional chardev
++ * feeding the A53 console's RX. See tools/a53-oracle/.
 + * The irqcon banks sit at GIC SPIs 0x1c0/0x1c2/0x1c4/0x1c6 (the A53's irqcon
 + * driver requires irq-0x1c0 <= 7); NUM_IRQS is widened above to fit them.
 + */
@@ -40,6 +41,7 @@ SPDX-License-Identifier: GPL-2.0-or-later
 +{
 +    const char *memid = getenv("OM_ISC_MEMDEV");
 +    const char *chrid = getenv("OM_ISC_CHARDEV");
++    const char *uartid = getenv("OM_ISC_UARTDEV");
 +    Object *be;
 +    DeviceState *dev;
 +    int n;
@@ -60,17 +62,26 @@ SPDX-License-Identifier: GPL-2.0-or-later
 +            qdev_prop_set_chr(dev, "chardev", c);
 +        }
 +    }
++    if (uartid) {
++        Chardev *c = qemu_chr_find(uartid);
++        if (c) {
++            qdev_prop_set_chr(dev, "uart", c);
++        }
++    }
 +    sysbus_realize_and_unref(SYS_BUS_DEVICE(dev), &error_fatal);
 +    for (n = 0; n < 4; n++) {
 +        sysbus_connect_irq(SYS_BUS_DEVICE(dev), n,
 +                           qdev_get_gpio_in(vms->gic, 0x1c0 + 2 * n));
 +    }
++    /* ttyS0 (mn_sio_uart 0x9a500600): DT SPIs 0x15e "tx", 0x15d "rx" */
++    sysbus_connect_irq(SYS_BUS_DEVICE(dev), 4, qdev_get_gpio_in(vms->gic, 0x15e));
++    sysbus_connect_irq(SYS_BUS_DEVICE(dev), 5, qdev_get_gpio_in(vms->gic, 0x15d));
 +}
 +
  static void machvirt_init(MachineState *machine)
  {
      VirtMachineState *vms = VIRT_MACHINE(machine);
-@@ -3239,6 +3280,8 @@
+@@ -3239,6 +3291,8 @@
  
      create_platform_bus(vms);
  
@@ -79,8 +90,8 @@ SPDX-License-Identifier: GPL-2.0-or-later
      if (machine->nvdimms_state->is_enabled) {
          const struct AcpiGenericAddress arm_virt_nvdimm_acpi_dsmio = {
              .space_id = AML_AS_SYSTEM_MEMORY,
---- a/hw/misc/meson.build	2026-09-29 06:33:20.000000000 -0700
-+++ b/hw/misc/meson.build	2026-10-23 10:16:18.727531791 -0700
+--- a/hw/misc/meson.build
++++ b/hw/misc/meson.build
 @@ -168,3 +168,4 @@
  
  # HPPA devices

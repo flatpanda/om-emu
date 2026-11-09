@@ -364,7 +364,7 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   | PFP (I) | `0x9b480000` | 39 |
   | camera clocks / control | `0x9b500000` (gates `0x9b5008xx`) | 40 |
   | two DMA blocks (?) | `0x9b580000`, `0x9b600000` | 41, 42 |
-  | EMS1 engine (I; role ?) | `0x9bd80000` | 276 (level 5) |
+  | EMS1 engine (motion and statistics, five areas; om1-subject-spec 2.4) | `0x9bd80000` | 276 (level 5) |
   | cam.c, unknown | RAM only | 26, 25 |
   | DISP_SYNC (display side) | `0x9c180000`, 18 code references | ? |
 
@@ -2576,7 +2576,14 @@ and E147; off by default. Addresses are E143's (disassembly notation) unless a b
   279 / 278 on CPU 3; H-MDETINIT runs the boot chain's MDET queue init and the PDT and TRC drivers' inits natively;
   S-MDETDL runs MDET_PDT_CPU3 and MDET_TRC_CPU3 with the core register at 3 and CPU 3's deferred calls after their
   turns, so LAF's start opens both drivers natively (X), and the firmware's drivers run on S-PDT (X). Not reached: LAF's
-  start with take_mov's parameters and the chase requests, which need TAKE_MOV's EMS1 state and run (D).
+  start with take_mov's parameters and the chase requests, which need TAKE_MOV's EMS1 state and run (D). Spec 5.9
+  (2026-11-08): take_mov's LAF mode bits are TAKE's tracking sources (the AF library's tracking, FACE's, LAF's own
+  tracking status), handed over at TAKE's live-view start and after TAKE's message 81 (D); served in a test, that
+  message starts and ends LAF's PDT / TRC side natively (X; a session leaves it in TAKE's queue, since LAF started
+  without chase requests writes no frame table, X). EMS1 (`0x9bd80000`, IRQ 276, CPU 0) is the front end's five-area
+  motion and statistics engine: S-EMS1 (`emu/src/dev/ems1.mjs`) models its register file and the firmware's driver
+  runs on it (X). The cycle stops at TAKE_MOV's frame events, which the image pipeline's live-view sequencer
+  delivers through the callback TAKE_MOV's live-view start `0x506d9d6a` registers (D; spec U12).
 - **The frame plane after a display switch (2026-11-08, `docs/om1-vsc-spec.md` section 9 items 11 and 12).** The face
   layer's one requester, OlyHfwOpeBGrCtl's AF display setter `0x50ae7b04`, posts DISPLAY cmd 18 only when api_disp's
   stored layer for the logical display changes (D); the GUI re-sends its cached mode on 131, and the lab's switch leaves

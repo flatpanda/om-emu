@@ -36,6 +36,14 @@
 > (H-MDETINIT); LAF's start runs PDT's and TRC's tasks natively and opens both drivers; the firmware's drivers run on
 > the model. The cycle itself is not reached: LAF's parameters and the chase requests are built from TAKE_MOV's EMS1
 > state, which the lab does not have, so the end frame, `0xa337f082` and the main and part frames stay out (U9).
+>
+> Update (2026-11-08, later still): section 5.9. U11 is read: take_mov's LAF mode bits are TAKE's tracking sources (the
+> AF library's tracking, FACE's, and MDET's own LAF tracking status, bit 0x10), handed over at TAKE's live-view start
+> and in the handler of TAKE's message 81, which LAF's status-change callback posts. Served as that handler would hand
+> it on (in a test; a session leaves it in TAKE's queue), it starts LAF's PDT / TRC side through TAKE_MOV's start and
+> ends it at the fall, natively. EMS1 at `0x9bd80000` is the front end's five-area motion and statistics engine; its
+> driver is read (2.4) and runs on a register model (S-EMS1). The chase cycle stops before EMS1: take_mov's per-frame
+> run comes from TAKE_MOV's frame events, which the image pipeline's live-view sequencer delivers (U12).
 
 # OM-1 subject detection
 
@@ -58,7 +66,8 @@ of the debug name tables at `0x509b8988..0x509bec00` (section 2.1).
    with one write. Two more engines serve detection and tracking: the **PDT / TRC** unit at `0x9be00000` (clock 49
    `CLKSYS_F_DET`; IRQs 279 and 278 on CPU 3) and, on E143 only, two **face engines** at `0x99600000` and
    `0x99a00000` (IRQs 286 / 287 on CPU 3). The motion engine **EMS1** at `0x9bd80000` (clock 47 `CLKDETA`, IRQ 276)
-   belongs to the ISP front end and feeds the tracker. CPU 3 runs the control, post-processing and tracking code
+   belongs to the ISP front end and feeds the tracker (2.4: five areas of motion and statistics, driven by take_mov and
+   four other clients on CPU 0). CPU 3 runs the control, post-processing and tracking code
    (MDET, LAF, FACE: about 120k instructions); none of it is a CPU neural network.
 2. **Models (D, X).** The learning data is resource group `0x800f` of the large-data block (`blk05a00000`): region 11
    at body offset `0x3dfffe0`, five items of 9,383,936 bytes, one per subject kind (motorsport, aircraft, train,
@@ -86,7 +95,7 @@ of the debug name tables at `0x509b8988..0x509bec00` (section 2.1).
 | LAF tracking: PDT and TRC | CPU 3 | MDET_PDT_CPU3 `0x300a` `0x50842033`, MDET_TRC_CPU3 `0x300b` `0x50848822` (D) | `0x9be00000` | 279 (PDT), 278 (TRC) | 49 `CLKSYS_F_DET`, sub 5 |
 | Face (E143) | CPU 3; FACE_BEAUTY on CPU 1 | FACE_FD `0x3008` `0x505174e7`, FACE_MAIN `0x3009` `0x50510b2d`, FACE_BEAUTY `0x100a` `0x50512a46` (D) | `0x99600000`, `0x99a00000` | 286, 287 | `0x50061b49(12, 1)` (`0x50524fc5`; the id-0 path, its name ?) |
 | Frame vectors | CPU 0 | MDET_CALC_FLAME_VECTOR `0x45` `0x507fc402` (D) | none; fed by the imgpro core (`0x5049d873`, `0x5049fdf3` -> `0x507fc3c4`) | - | - |
-| EMS1 motion engine (ISP front end) | CPU 0 driver | (the sensor block's driver `0x501a5bd1..0x501a8dec`) | `0x9bd80000` | 276 | 47 `CLKDETA`, sub 0 |
+| EMS1 motion and statistics engine (front end, 2.4) | CPU 0 driver | (its driver `0x501a5bb2..0x501a8dec`: queue, IRQ handler `0x501a65f8`) | `0x9bd80000` | 276 | 47 `CLKDETA`, sub 0 |
 | Frame plane | CPU 3 | DISP_FRAME `0x300d` `0x5100d05a` (shutter spec §7 items 49-50) | VSC IMG3 | - | - |
 | Not detection | CPU 2; CPU 3 | SDET `0x2010` (scene detection for the movie path, `0x5050cc2a..0x50510b2d`, no MMIO); FCS_IMG_4THCPU_MAIN `0x300c` (the AF library's CPU 3 part) | - | - | - |
 
@@ -194,6 +203,28 @@ with the AF library's unit `0x9bf00000` (`0x5095769d`), not with detection.
   `0x99600040`, `0x99a00040`: 0, against 1 on E143); there is no `0x800b`-shaped region in their `0106` blocks; their
   strings name `mdet_dl_detect_face`, `mdet_dl_face_get_data`, `mdet_dl_face_get_pt_data` and a request
   `FACE_STILL_START`. So on the Mark II and the OM-3 faces and eyes come from the DML network (I).
+
+### 2.4 EMS1 (`0x9bd80000`)
+
+The camera front end's five-area motion and statistics engine (5.9; the name from the driver's strings, D). Its driver
+`0x501a5bb2..0x501a8dec` runs on CPU 0 (clock 47 `CLKDETA` at the power-up, IRQ 276 at level 5 with the handler
+`0x501a65f8`, the boot chain's init `0x501a6827`). Registers (D, the driver's operands and the per-channel table
+`0x602a3820`; the meanings I unless the driver's use settles them):
+
+| Offset | Use |
+|---|---|
+| `+0x000` | state: 2 at the power-up `0x501a5bd1` and after a run (the handler), 3 at the power-down `0x501a5c47`, 0 written by the start before its parameters |
+| `+0x004` | status, written back by the handler (write 1 to clear, I): bit 5k + 4 channel k done (the handler's 0x01084210), bits 26..30 the channels' errors (`+0x010` 1 then), bit 25 the pause (the handler stops without a callback); bits 5k..5k+3 the blocks (I, the names EMS1_DRV_INTk_BL1..4) |
+| `+0x008` | the start word (`0x501a5cbd`): per run channel k bit 5k + 4, the field `(ae_2 >> 4) & 7` at bits 5k..5k+2, bit 26 + k; bit 25 always; 0 at the handler's stop |
+| `+0x014`, `+0x01c` | control1 and control3 (the job's `+8`, `+12`); `+0x014`'s bits 0..9 read back by the channel path (`0x501a66ec`) |
+| `+0x018` | the block trigger (`0x501a5de9`: four bits per channel from the kick's argument, its five-bit fields) |
+| `+0x020` | a per-channel bit word, set and cleared around MDET's frame-vector read (`0x501a8ba5`, `0x501a8bec`) |
+| `+0x0d4..+0x2a8` | the common parameters (`0x501a5ec9`, the job's `+16..+0x128`: cb1_5 .. cb1_89, dma1_16, dma1_17) |
+| `+0x040 + 0x400 k` .. `+0x308 + 0x400 k` | area channel k < 5: 65 registers (66 from channel 1), the job's `+0x14c + 0x10c k` record: ae_1..5, pos_1..20, cb_1, cb_4, cb_15, cb_44, cb1_65 or cb_65 / cb_66, cb_90, dma_1..5, 8, 9, 11..15 (dma_1..4, 8, 9 as `address >> 6 << 2`), cor_1..11, st_1..11 |
+| `+0x30c..+0x328` | power words: `+0x310`, `+0x318`, `+0x31c`, `+0x324` 1 at the power-up, `+0x30c`, `+0x314`, `+0x320`, `+0x328` at the power-down |
+| `+0x1808..+0x181c`, `+0x1848..+0x185c`, `+0x186c` | two tables of six words from the system clock's record (`0x501a6535`), loaded with bit 16 of the first word set and cleared, `+0x186c` 1 around the load (the shape of PDT / TRC's LLF tables, 2.2) |
+| `+0x4000`, `+0x5000`; `+0x6000`, `+0x6400` | two table pairs from the job (counts at `+0x134` and `+0x140`, each with two pointers; up to 0x3a8 words each, the second pair's apart by 0x400 bytes; each word written, read back and rewritten until equal, up to 1000 times) |
+| `+0x7000 + 0x1000 k` | channel k's result RAM: words of a 10-bit and two 8-bit fields (`0x501a8c42`, read by MDET's frame-vector task) |
 
 ## 3. Where the models live
 
@@ -327,7 +358,8 @@ the lens driver (`0x50817e11` from `0x5013f077`) and the init chain `0x501e94a5`
 | S3 DML device | `0x9c180000`, IRQ 285, the output buffer | CPU 3 natively; the `0x800f` read path; the output head layout | S-DML: on start, write heads that decode to the scene's boxes (its register file since 2026-11-07, 5.3; the scene's boxes as its records, 5.4; several subjects and their parts, 5.6) |
 | S4 the network | the engine's arithmetic | layer schedule, numerics | a reproduced DML (5, step D) |
 | S5 PDT / TRC device | `0x9be00000`, IRQs 279 / 278 on CPU 3, the result registers | CPU 3's PDT and TRC tasks; the TRC passes' result layouts | S-PDT: the register file, starts that complete after A-PDT-1, results from the lab's words (none yet) (5.8) |
-| S6 take_mov's LAF requests | mdet_laf_start, mdet_laf_mode_change's 296-byte parameters, mdet_laf_chase_object's 272-byte request per frame | TAKE_MOV's EMS1 state and per-frame EMS1 run (unit `0x9bd80000`, CPU 0), take_mov's LAF mode (U11) | none: not made in a session (5.8) |
+| S6 take_mov's LAF requests | mdet_laf_start, mdet_laf_mode_change's 296-byte parameters, mdet_laf_chase_object's 272-byte request per frame | TAKE's message 81 (served in a test, 5.9: take_mov's LAF mode, TAKE_MOV's start and LAF's end natively); TAKE_MOV's frame events from the live-view sequencer (U12) for the per-frame EMS1 run and the requests | none: not made in a session (5.8, 5.9) |
+| S7 EMS1 device | `0x9bd80000`, IRQ 276 on CPU 0, the result RAMs, the DMA outputs | CPU 0's EMS1 driver (runs natively); the outputs' layout and the engine's computation | S-EMS1: the register file, starts that complete after A-EMS1-1, results 0, no outputs (5.9) |
 
 ## 5. Feasibility and plan (I)
 
@@ -335,7 +367,7 @@ the lens driver (`0x50817e11` from `0x5013f077`) and the init chain `0x501e94a5`
 |---|---|---|---|---|
 | A | S-SUBJECT at seam S1: S-SCENE's layers report screen boxes (the rider, the ball) with a kind; when the camera's subject-detection setting is on, write MDET's frame table and post UP_FACE (and UP_LOCKON for the tracked one) so DISP_FRAME draws subject frames natively, as S-AFOSD does for the AF frame | static: the frame table's record layout and how DISP_FRAME reads it (U1); the setting's property and its value per kind (U2) | about 1 week; done 2026-10-27 (5.1: UP_FACE only, UP_LOCKON is the AF module's) | adds S-SUBJECT; nothing retires |
 | B | S-SUBJECT moves to seam S2: the subject records answered to the AF module, which then chooses the AF point and uploads frames itself | native AF module (hle-gaps 4.4: TakeReady, CPU 1 and 3; months) | 2-3 weeks after that | S-AFOSD's frame part and step A's display writes |
-| C | MDET natively on CPU 3 with S-DML: a register-file model at `0x9c180000` (start `+0x010`, status `+0x004` bit 14 W1C, IRQ 285, the gates and clock 50), the `0x800f` load through the flash-read path, and on each start output heads synthesised so that MDET's own `get_dml_result` / `judge_dml_result` / stabilisation produce the scene's boxes | ROADMAP HLE step 4 (CPU 3); a flash read model or a resource reader at `0x501a921f`; the output head layout read from the post-processing code (U4); PDT / TRC and, on E143, the face engines as models or stand-ins | 4-6 weeks after CPU 3; part 1 (MDET_DL native at single call sites, S-DML with an empty output, the load stubbed), part 2 (S-DML's records from the scene) and part 3 (the frames from MDET's table) done 2026-11-07 (5.3, 5.4, 5.5); several subjects and parts the same day (5.6); the trap fixed, the AF area from the AF target and MDET_CALC_MAIN native on the firmware's posts 2026-11-08 (5.7); the chase cycle read, S-PDT, H-MDETINIT and LAF's start on PDT / TRC native the same day (5.8); the main and part records wait for take_mov's LAF requests and TAKE_MOV's EMS1 state (U9, U11) | S-SUBJECT retires (on E143 in part 3, 5.5); adds S-DML, S-PDT (and S-FACE on E143) |
+| C | MDET natively on CPU 3 with S-DML: a register-file model at `0x9c180000` (start `+0x010`, status `+0x004` bit 14 W1C, IRQ 285, the gates and clock 50), the `0x800f` load through the flash-read path, and on each start output heads synthesised so that MDET's own `get_dml_result` / `judge_dml_result` / stabilisation produce the scene's boxes | ROADMAP HLE step 4 (CPU 3); a flash read model or a resource reader at `0x501a921f`; the output head layout read from the post-processing code (U4); PDT / TRC and, on E143, the face engines as models or stand-ins | 4-6 weeks after CPU 3; part 1 (MDET_DL native at single call sites, S-DML with an empty output, the load stubbed), part 2 (S-DML's records from the scene) and part 3 (the frames from MDET's table) done 2026-11-07 (5.3, 5.4, 5.5); several subjects and parts the same day (5.6); the trap fixed, the AF area from the AF target and MDET_CALC_MAIN native on the firmware's posts 2026-11-08 (5.7); the chase cycle read, S-PDT, H-MDETINIT and LAF's start on PDT / TRC native the same day (5.8); U11 read, S-EMS1, take_mov's LAF mode and LAF's start and end from TAKE's message 81 natively in a test (5.9); the main and part records wait for TAKE_MOV's frame events (U9, U12) | S-SUBJECT retires (on E143 in part 3, 5.5); adds S-DML, S-PDT, S-EMS1 (and S-FACE on E143) |
 | D | A reproduced DML: run the real network on the frame | the layer schedule from the register builders (U3); the engine's arithmetic (U5); a reference to check against | months; bit-exactness ? | S-DML's synthetic heads |
 
 Notes on D, against the e7-bird-network work: there the model resource carried its own command stream, and the
@@ -1178,6 +1210,183 @@ them (D, not X). U10 is not on this path. TAKE's message 81 (5.7) does not matte
 **Open.** U9 and U11 as above; the status bit S-PDT sets; what PDT's results are (the face / body judgement's input);
 the TRC passes' parameter blocks and results; whether CPU 3's deferred calls run after the turn or inside it (I).
 
+### 5.9 U11, EMS1 and take_mov's LAF mode from TAKE's message 81; the cycle stops at TAKE_MOV's frames (2026-11-08)
+
+U11 is read: take_mov's LAF mode bits are TAKE's tracking sources, the AF library's tracking, FACE's and MDET's own
+(LAF's tracking status), and TAKE hands them over at its live-view start and in the handler of the message its LAF
+status-change callback posts. In the lab's sessions that message is posted natively (5.7), and its handler's step to
+take_mov runs natively from it: take_mov's LAF mode becomes 0x10, TAKE_MOV's start runs mdet_laf_start, and at the fall
+mdet_laf_end runs to LAF's state 0. EMS1, take_mov's per-frame engine, is the camera front end's five-area motion and
+statistics engine at `0x9bd80000`; its driver is read and runs on a register model (S-EMS1). The chase cycle still does
+not run: take_mov's EMS1 run and chase request come from TAKE_MOV's frame events, which the image pipeline's live-view
+sequencer delivers, and that does not run in the lab. Code: `emu/src/dev/ems1.mjs`, `emu/src/lab/mdet.mjs`, the facts in
+`emu/src/fw/models.mjs` `mdet.take` and the board's `ems1`; tests `emu/test/test_ems1.mjs`, `emu/test/test_mdet.mjs`.
+
+**TAKE's live-view mode (U11; D).** TAKE's live-view step `0x506d83f9` (entered with 32 from TAKE's start `0x506d7f55`
+at `0x506d835e`, the function that reads object `0x1e71` into TAKE's context +206 and registers LAF's callback, 5.7;
+with 128 from TAKE's message handler `0x5039b8a4`, slot `0x602f4994` of TAKE's handler table) builds a mode word:
+`(52,sp)` from `0x506d909b(ctx, request)` and `(50,sp)` from `0x506d8fef` (the bit 4). `0x506d909b` ORs `0x506d90d8` (8
+when object `0x4501` reads 1, TAKE's context +6 is not 1 and the request's +1 is not 1), `0x506d9101` (the tracking
+sources, below), `0x506d914d` (0x20 when `0x506d8d0a` answers, object `0x9121` among its tests), `0x5039f157` (0x80 when
+`0x506d8c9f` answers, not read) and `0x506d913b` (0x40). TAKE's context is `0x62a3f148` (`0x5039c864`). `0x506d9c04`
+turns the word into take_mov's three halfwords `0x62a4117e` / `0x62a41180` / `0x62a41182`: TAKE's 0x10, 0x100, 0x200,
+0x400 become take_mov's LAF bits 0x2, 0x4, 0x8, 0x10 (the halfword `0x62a41180` of 5.8), 0x40 its 0x20, 0x8 its 0x1,
+0x20 its 0x100, 0x4000 its 0x40, 0x1 its 0x80 (cleared when the second argument is 1 or 3), and 0x80 the bit 0x1 of
+`0x62a41182`, the bit that starts MDET_DL (`0x506da34c`: mdet_dl_start with the kind `0x62a411a3`).
+
+The tracking sources are one answer, `0x506da448` (D):
+
+| take_mov's bit (`0x62a41180`) | TAKE's bit | `0x506da448` | Its source |
+|---|---|---|---|
+| 0x2 | 0x10 | 1 | the AF library's answer `0x506eab07` = 1 (0 while the byte `0xa33d955c` is 0, else `0x509b096c`, not read) |
+| 0x4 | 0x100 | 2 | the same answer 2 |
+| 0x8 | 0x200 | 4 | that answer 0 and FACE's `0x505221aa` = 1 (after `0x50512f29(2, 40)`, the byte `0xa32f1928[(0xa32f192a) ^ 1]`) |
+| 0x10 | 0x400 | 5 | both 0 and `mdet_laf_dl_tracking_status` (218, `0x506e698e`) = 1: LAF's tracking status `0xa337f085` |
+| (0x20, not LAF) | 0x40 | 3 | the AF library's answer 3 |
+
+`0x506d9101` maps the answers 1, 2, 4, 5 and gives 0 while TAKE's context word has bit 0x40000 (what it is: not read);
+`0x506d913b` maps 3. So subject detection's own tracking sets the bit 0x10, the AF library's tracking (I: C-AF with
+tracking; `0x509b096c` is not read) 0x2 or 0x4 and FACE's 0x8, in that order of precedence. Whether TAKE's 32 or its 128
+entry is the still or the movie live view is not read; the 128 entry starts take_mov through `0x503a3ff5` with the word
+less 0x710 (`0x506d879d`), i.e. without a LAF source bit.
+
+**Who hands them to take_mov (D).** take_mov's mode API `0x503a43c9(mode, d1)` (it stores TAKE's word at `0x62a41184`,
+builds the new halfwords, stores `0x62a4117e`, then runs its stop `0x503a4465` and start `0x503a4667` handlers on the
+bits turned off and on) is called at TAKE's live-view start (`0x506d896a`, the entry 32, the whole word), at
+`0x5039af4c` (with 0) and by take_mov's setter `0x503a47ae(value, mask, d1)`, which keeps the bits outside the mask
+(`(0x62a41184) & ~mask | value & mask`). The setter's callers: `0x5039c31b` (mask 0x7f8, the value `0x506d909b`'s),
+`0x5039c5a7`, `0x5039c771`, `0x5039c85a` (mask 7), `0x5039db71`, `0x5039db9f`, `0x5039dbb4` (mask 1), `0x5039e219` (mask
+16). `0x5039c31b` lies in `0x5039c2bc`, which TAKE's rebuild `0x5039bb7e` calls (`0x5039c165`); TAKE's message 81
+handler `0x506d993e` clears the guard `0xa32df204` (`0x506d9966`) and calls `0x5039c864`, which calls `0x5039bb7e` with
+TAKE's context (`0x5039c894`). So a change of LAF's tracking status reaches take_mov's LAF mode through TAKE's callback
+(5.7), its message 81 and the rebuild (D for the chain; the rebuild's conditions before `0x5039c165` are not read).
+
+**The handlers (D).** The start handler `0x503a4667` takes the bits newly on; when LAF bits were on already it drops the
+new ones (a change of the tracking source is no restart). It calls TAKE_MOV's start `0x506da276` with them: a LAF bit
+runs mdet_laf_start (63, `0x5081ee9d`) and sets `0x62a4128a` 1 and `0x62a41280` 0 (the first chase request then builds
+LAF's parameters, 5.8); 0x1 of `0x62a41180` mdet_iauto_start (`0x50801b59`); its 0x80 `0x50817e72` and `0x506dd08c`; its
+0x20 `0x50851ab3`; the bit 0x1 of `0x62a41182` mdet_dl_start. It then stores the halfwords `0x62a41180` / `0x62a41182`.
+The stop handler `0x503a4465` takes the bits newly off: for the LAF bits, unless LAF bits stay on, two deferred calls
+(`0x503a4f4e`, `0x503a4f65`) and a wait on take_mov's flag (`0x503a508a(6)`); then always `0x503a42e5`, which for LAF
+bits calls mdet_laf_end (18, `0x50802347`) with `0x62a41288`, and `0x503a4392`, which for the bit 0x1 of `0x62a41182`
+calls mdet_dl_end. mdet_laf_end clears bit 4 of the CPU 0 flag `(0x600430c4)`, posts LAF's end request and waits for
+that bit (OR, 50 ms; a timeout logs `0x310b000a`). On CPU 3 MDET_CALC_MAIN takes LAF's end request and end events;
+mdet_laf_stop_trc_pdt (233, `0x5083a98d`) posts TRC's and PDT's end requests and waits on the flag `(0x600436e8)` =
+0x300f for 0x808 (AND), which pdt_end (402, `0x508429a9`) sets with 0x8 and trc_end (692, `0x50849546`) with 0x800.
+
+**Natively in the lab (X, E143, `test_mdet.mjs`).** With the still rider under the AF target (5.7), TAKE's callback
+posts its message 81 `{0, 0, 81, 0x606fa95e}` to TAKE's queue 0x5e, the guard set. Served as the handler would hand it
+on (the lab's harness takes it from the queue, writes the queue's other messages back in their order and runs, natively,
+`0x506d9101(0x62a3f148) | 0x506d913b()` and the setter with their mask 0x750): the AF library's answer 0 (`0xa33d955c`
+is 0), FACE's 0, LAF's tracking status 1, so the bits 0x400 and take_mov's LAF mode 0x10; TAKE_MOV's start runs
+mdet_laf_start, one turn each of MDET_E_SEND_CPU3, MDET_CALC_MAIN_CPU3, MDET_PDT_CPU3 and MDET_TRC_CPU3, PDT and TRC
+opened, LAF's state 1, no error log (the same as the by-hand call of 5.8). At OFF the status falls, TAKE's callback
+posts again (the guard clear now), and served so it gives 0 and take_mov's LAF mode 0: mdet_laf_end; LAF's end request
+and end event (two MDET_CALC_MAIN turns), the second waiting for TRC's and PDT's ends while their turns run, LAF's state
+0, both drivers closed, no error log. Two lab mechanisms carry it (S-CPU3, S-MDETDL): a CPU 0 wait for LAF's answer
+(mdet_laf_end's on `0x600430c4`'s id) is preceded by S-CPU3's service of ring [3][0], the waiting call's stack kept; a
+CPU 3 turn's wait on the flag 0x300f (kept by the lab with the others) runs the dispatched tasks' turns nested, on a
+second harness stack (48 KiB of lab scratch at `0xa2024000..0xa2030000`), one level, in the ring's order (I).
+
+**LAF started without chase requests (X).** After that start the offers go on (MDET still reports its subjects) but LAF
+writes no frame table (`0x5083a766` not entered) and its row 0 keeps its centre, so in the race the far racer's list
+frame is not written either. Why LAF stops there is not read. On the camera the LAF mode makes take_mov ask a chase
+cycle on every live-view frame (5.8), so LAF does not stay in this state. The lab therefore does not serve the message
+in a session: there it stays in TAKE's queue, as before, and the frames of 5.4 to 5.7 are unchanged (golden sessions
+byte-identical; `test_subject.mjs` unchanged). The test serves it.
+
+**TAKE_MOV's frame events (D; the stop).** take_mov's per-frame EMS1 run starts in TAKE_MOV's frame step `0x506de41f`
+(the LAF test of 5.8 at `0x506de4b9`, the EMS1 record at TAKE_MOV's context `+0x310`; `+0x328` holds take_mov's offer
+record, `0x503a4eef`), a deferred call (`0x606ff433` -> `0x506de413`) that `0x506de349` posts. `0x506de349` is called by
+`0x506da82f` from `0x506da817`, a callback TAKE_MOV's live-view start `0x506d9d6a` puts in the record it builds
+(`0x606fb837` at `0x506da1fd`; the other branch `0x506da82a`, `0x606fb84a` at `0x506da030`); `0x506d9d6a` is take_mov's
+live-view start's (`0x503a3ff5` -> `0x506d9d6a(mode, 2)`, and `0x503a404e..0x503a406a` with 4, 8, 16). The record's
+consumer is the image pipeline's live-view sequencer (I: not read). TAKE_MOV's frame step reads that frame's information
+(`0x506de349`: `+48` and `+52` records, `+0x140`, `+0x208` within them), which is where the EMS1 record's readout mode,
+buffer halfwords and area words come from. None of it runs in the lab: TAKE_MOV is dormant and the live view is
+S-SCENE's. So the furthest native point stays LAF started on PDT and TRC with LAF's state 1, now from TAKE's own message
+(above).
+
+**EMS1 (D unless tagged).** The unit at `0x9bd80000` is EMS1: the driver `0x501a5bb2..0x501a8dec` (the sensor block's of
+section 2's table) prints its job as "[ EMS1_DRV_PRM ]", "[ EMS1_DRV_PRM_COMMON ]" and "[ EMS1_DRV_PRM_AREA ]"
+(`0x501a7392..`, strings `0x602a3e72..0x602a4972`: per area ae_1..5, pos_1..20, cb_*, dma_1..15, cor_1..11, st_1..11),
+its queue as "[ems1 if queue info]"; MDET's names list its interrupts EMS1_DRV_INT1..5 with _BL1..4, _ERR and
+EMS1_DRV_INT_PAUSE (`0x509c6c52..0x509c6e5b`). Section 2.4 has the registers. The boot chain's init `0x501a6827` (from
+`0x501e8f60`) attaches IRQ 276 at level 5 with the handler `0x501a65f8` on the calling core (`0x501a5bb2`: `0x50053f76`)
+and powers the engine up and down. The driver keeps a queue of up to seven jobs (`0x501a6bca`, the ring `0x62a28be4`):
+the entry `0x501a6864(job)` checks the job (`0x501a70c7`: the tables at most 0x3a8 words each with both pointers, each
+run channel's ae_2 fields 1..4; a refusal logs `0x42000011`), wraps its completion (the job's `+0x688`) in the driver's
+own (`0x501a6a2c`) and, starts it when the queue was empty (`0x501a68be`: power-up `0x501a5bd1`, configure `0x501a6d5a`,
+start `0x501a5cbd`); called from another core it posts that start to CPU 0 (`0x50035afd`). The kick `0x501a6987(job,
+blocks)` arms a 1000 (ms, I) watchdog (`0x501a8848`) and writes the block trigger (`0x501a5de9`). The handler
+(`0x501a65f8`) writes the status back, acknowledges an error bit (`+0x010` 1), stops at the pause bit, calls the channel
+callback (the job's `+0x68c`) per channel bit and, when all the job's channels (`+4 & 31`) are done, stops the engine
+(`+0x008` 0, `+0x000` 2) and calls the completion, which powers down at an empty queue (X). Clients (the entry's
+callers): take_mov (`0x503a6b5c`, `0x503a7276`), TAKE_MOV (`0x506e074e`, `0x506e0aa2`, `0x506e0e24`), the code after
+trc_drv_if (`0x507fcb40`, `0x507fd8a8`), `0x5081c499` and `0x5085217e` (beside mdet_mvaf_notice_frame_data, 554); the
+strings "flc_ems1top", "fnr_ems1top", "laf_ems1top", "laf_sub_ems1top", "iauto_ems1top" (`0x605c1827..`) name five users
+(which is which: I). MDET's frame-vector task reads channel 0's result RAM (`0x507fc569` -> `0x501a8c42`: per word bits
+16..25, 0..7, 8..15) between setting and clearing channel 0's bit of `+0x020` (`0x501a8ba5`, `0x501a8bec`).
+
+**What EMS1 computes (I from the names, D for the fields).** Per area channel (five, a run takes any of them): AE sums
+(ae_*), positions (pos_*), DMA addresses (dma_1..4, 8, 9, written as `address >> 4` with the low two bits clear, the
+others not addresses: dma_5, dma_11..15), correlation (cor_*) and statistics (st_*) parameters; the image buffers the
+firmware allocates for it are named IMGBUFF_ALOC_EMS_Y, _EMS_AE, _EMS_STAT, _EMS_CORR (`0x61a637f8..`), and
+"his_ems1_data e1a1: x y / trust" (`0x609e87b7`) is LAF's print of an area's motion. So EMS1 is a block-matching motion
+and statistics engine on the front end's image (`cam rapinput` lists EMS1 among the blocks fed from the sensor's
+sources, hle-gaps 4.2), writing its Y, AE, statistics and correlation outputs by DMA; its input is not memory.
+take_mov's job is `0x62a4532c`: the channel mask `(areas & 7) << 1` (channels 1 to 3, LAF's three EMS1 areas), the
+completion `0x503a6c51`; the pre-callback (5.8) copies LAF's three 60-byte areas (mdet_laf_get_ems1_area, 132) to
+`0x62a411cc` and `0x503a74e9` writes their words into the channels' area records (pos_1.. from the areas' words,
+`0x503a7501..0x503a7620`).
+
+**take_mov's EMS state and the readout-mode table (D).** `0x62a411c0` is take_mov's copy of LAF's EMS1 areas at `+12`
+(three of 60 bytes, written by the pre-callback each frame, `0x503a4a23..0x503a4a40`) behind 12 bytes whose halfwords
+the request's clamp reads (`0x503a7644`; their writer not read); the address occurs only at `0x503a4a2c`, `0x503a4a42`,
+`0x503a4ad1` and `0x503a4bef` (X), so no start initialises it by name (I): it is LAF's output of the previous frame.
+`0x607115f4` is not a table of geometry but a compiled switch's hash table (`0x506e26c5..0x506e2718`): the key is the
+EMS frame record's `+4` word with bits 25..27 cleared, in `0x80000002..0x81000002` (I: a sensor readout mode id), the
+slot `(key - 0x80000001) & 63`, each of the 64 slots `{key, case address}` probed linearly up to `0x607117f4`, and each
+case writes the geometry (e.g. `0x506e271a`: 36, 32, `0x6c8 x 0x516`, `0x6c0 x 0x510`, and `0x19f`, 233 to its second
+record). Correction to 5.8 ("a table by the frame record's readout-mode word").
+
+**S-EMS1 (the device; D for the behaviour the driver relies on, X its tests).** `emu/src/dev/ems1.mjs`, the board's
+`ems1` (the E143 family, UNKNOWN elsewhere), at `0x9bd80000` with the registers of 2.4 as storage and every other
+address a bus error: the state word (3 until the power-up), the status (write 1 to clear, IRQ 276 high while a bit is
+set), a start (`+0x008` with a channel's run bit 5k + 4, while the state word is 0) keeping the parameters written since
+the last start as the run's image (the debug API's `ems1` op), the result RAMs set from the lab's words (none: 0) and
+the completion after 1 ms of lab time (A-EMS1-1) with each run channel's bit; a nonzero block trigger is refused (what a
+block is: not read); the four tables read back what was written (the driver's verify loop; the second pair at most 256
+words each, the gap between them, where the job check allows 0x3a8). Nothing is written to memory. The firmware's driver
+on it (`test_mdet.mjs` ems1Driver, on CPU 0): the init attaches 276 in CPU 0's handler table and powers the engine up
+and down; a job of channel 1 (its area record valid, the rest 0) through the entry and the kick: the power-up, 167
+writes, the start word `0x0a000220` (channel 1's run bit 9, its ae_2 field 1 at bits 5..7, bits 25 and 27), the block
+trigger 0; after 1 ms IRQ 276 with bit 9; the handler clears it, stops the engine, calls the job's completion with the
+job and 0 and powers the engine down; no error log; the player lists S-EMS1 and A-EMS1-1. Golden sessions are
+byte-identical (X): none makes an EMS1 job.
+
+**TRC's passes (4 of the goal).** Not reached: no chase cycle runs, so no TRC pass is started and no result format was
+decoded (5.8's open item stands).
+
+**Stand-ins (new and changed).** S-EMS1 and A-EMS1-1 (new); S-CPU3: the drain before a CPU 0 wait for LAF's answer;
+S-MDETDL: the flag 0x300f and one level of nested turns; S-TAKEMDET: its text names message 81 and why a session does
+not serve it.
+
+**Where it stops, and what is missing (D for the addresses).** LAF is started on PDT and TRC with LAF's state 1 from
+TAKE's own message, in a test; a session stays before it. Missing, in order: (1) TAKE_MOV's live-view start `0x506d9d6a`
+and the image pipeline's live-view sequencer that calls its frame callback `0x506da817` with each frame's information
+(`0x506de349`'s `+48` / `+52` records), from which TAKE_MOV's frame step `0x506de41f` takes the EMS1 record `+0x310`
+(readout mode `+4`, buffer halfwords `+48..+58`, area marks `+108`, `+112..+114`); (2) EMS1's outputs (Y, AE,
+statistics, correlation by DMA, and the status take_mov's completion `0x503a6c51` turns into the callback's status, not
+read), which S-EMS1 does not compute; (3) then LAF's parameters (`0x503a4a88`, TAKE's `0x506e268b` with the switch
+above) and the chase requests of 5.8; (4) TRC's per-pass parameter and result formats. The end frame, `0xa337f082` and
+the main and part frames therefore stay out, and their kind 7 / colour 4 and kind 8 on the panel stay as 5.1 read them
+(D, not X). U10 is not on this path.
+
+**Open.** U9 as narrowed; U12 (new): the live-view sequencer's frame callbacks and TAKE_MOV's frame information; what
+`0x509b096c` (the AF library's tracking answer) and `0x506d8c9f` (TAKE's MDET_DL bit) read; why LAF stops writing tables
+once started; EMS1's block trigger, its pause and its run time; the result RAMs' extent.
+
 ## 6. Corrections to other documents
 
 - `emu/fwmap/E143.labels.json`, gap@0x507f66d5: "DISP_SYNC device driver: 0x9c180000 ..." should read DISP_SYNC
@@ -1225,12 +1434,20 @@ the TRC passes' parameter blocks and results; whether CPU 3's deferred calls run
   S-PDT, the native PDT / TRC init and LAF's start on both. It stops at take_mov: LAF's start with take_mov's
   parameters (LAF's state 2, which a chase request needs) and the requests are built from TAKE_MOV's EMS1 state (U11).
   Open: those, the TRC passes' results, what the offer's `mag` byte is, the thresholds `0xa337ee8c` / `0xa337ee90`,
-  and which of TAKE's conditions sets request 32.
+  and which of TAKE's conditions sets request 32. 5.9: take_mov's LAF mode and LAF's start and end now run natively
+  from TAKE's message 81 (in a test); the cycle stops at TAKE_MOV's frame events (U12).
 - **U10** When TAKE's live-view request clears the subject-frame bit (`0x506d8dea`'s conditions in a running camera),
   and how `mdet_dl_start` is given the first kind. A lead (5.7, I): at a change of LAF's tracking status TAKE's
   callback posts TAKE message 81, whose handler `0x506d993e` rebuilds TAKE's live-view request; TAKE does not run.
   The lab's S-TAKEFRAME sets the bit while MDET runs on the live scene (5.5, I). Not on the chase cycle's path (5.8).
-- **U11** take_mov's LAF mode (`0x62a41180` bits `0x2..0x10`, from TAKE's call of `0x503a43c9` at `0x506d896a`): which
-  settings set it (subject detection, the AF mode); and TAKE_MOV's EMS1 state (`0x62a411c0`, its frame record, the
-  per-frame EMS1 run `0x503a67c9` -> `0x503a687b` on the unit `0x9bd80000`, its status) that take_mov's LAF parameters
-  and chase requests carry (5.8).
+- **U11** Read (section 5.9): take_mov's LAF mode bits 0x2 / 0x4 / 0x8 / 0x10 are TAKE's tracking sources, one answer
+  of `0x506da448`: the AF library's tracking answer 1 / 2, FACE's answer, and LAF's own tracking status (the bit 0x10,
+  subject detection's), handed to take_mov at TAKE's live-view start (`0x506d896a`) and through take_mov's setter
+  `0x503a47ae` in TAKE's rebuild after its message 81 (`0x5039c31b`); natively in the lab from that message (X). The
+  EMS1 engine is decoded (2.4, S-EMS1), `0x62a411c0` is LAF's previous areas, `0x607115f4` a switch table. Left open:
+  what `0x509b096c` and `0x506d8c9f` read, and which of TAKE's two live-view entries is the still one.
+- **U12** TAKE_MOV's frame events: TAKE_MOV's live-view start `0x506d9d6a` gives a callback (`0x506da817`, or
+  `0x506da82a`) in a record whose consumer, the image pipeline's live-view sequencer (I), calls it with each frame's
+  information (`0x506de349`: `+48` / `+52` records), from which TAKE_MOV's frame step takes the EMS1 record and
+  take_mov's offer record (5.9). Not run in the lab; reading the sequencer and that information is the next step of
+  the chase cycle (with EMS1's outputs).

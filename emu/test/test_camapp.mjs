@@ -19,6 +19,10 @@
 //                  from HEAP_FROM_S to HEAP_TO_S of lab time no block allocated stays allocated, and S-TRAACK has
 //                  deleted its requests (the histogram's events, about 5 a second); before S-TRAACK deleted them the
 //                  live blocks grew by about 5 a second (docs/hle-gaps.md 4.4.2)
+//   heapWorkloadSession  S-HEAP's live blocks over passes of S1, S2, the menu and playback, without and with the HLS
+//                  components: after two passes they grow by the decoded kinds alone (the events the OXF main thread
+//                  frees with the components, S-RPC's requests), and with S-DISPQ's replies recorded only (the control)
+//                  the display manager's 192-byte buffers stay (docs/hle-gaps.md 4.4.2)
 //   modeDialSession  the mode dial in play (E143): it starts at P, the start's mode; each position's change sets its
 //                  mode (MODE_EXPOSE, the custom banks' MODE_RAW, B's MODE_DIAL_B_ONOFF) and keeps the other settings,
 //                  each position shows a screen of its own, and away from P OK opens the Super Control Panel and MENU
@@ -204,6 +208,76 @@ export async function heapSession() {
   return { checks, bad };
 }
 
+// A workload's passes (E143; docs/hle-gaps.md 4.4.2): S1 and S2 (a shot and its rec view), the menu opened and
+// closed, playback shown and left, then 2 s of idle. After two passes (the one-off allocations, and the event task's
+// parked replies, which it ages out after 10 later replies, 0x50abc2e7..f4, X: 10 from the second pass on) the live
+// blocks grow by the decoded kinds alone, by size and vtable word, the same number every pass:
+//   event 294 (28 bytes, vtable 0x60ef3504, built at 0x50d7e10b) and the 32-byte event of vtable 0x60dcb42c, sent to
+//     reactives whose OXF main thread (task 57, entry 0x50ab2293) is dormant without the HLS components: with them
+//     (camapp 2) it frees them and they are gone
+//   the 72-byte request object (vtable 0x60de54e8, 0x50ac722a) S-RPC answers at its method's entry 0x50ac734c,
+//     whose freeing after a reply no code of its class shows (D)
+// (S-HEAP rounds to 16 bytes) and nothing else: before S-DISPQ's replies went to the application's queue, its display manager's 192-byte
+// request buffers (0x503eb91b) stayed as well, 6 a pass (the control below)
+const HEAP_KINDS = [['event 294', 32, 0x60EF3504], ['event 0x60dcb42c', 32, 0x60DCB42C], ['S-RPC request', 80, 0x60DE54E8]];
+const HEAP_PASS_KEPT = { default: { 'event 294': 21, 'event 0x60dcb42c': 1, 'S-RPC request': 5 }, components: { 'S-RPC request': 5 } };
+const DISPQ_BUFFER = 0x503EB922, DISPQ_BUFFERS_A_PASS = 6;
+export async function heapWorkloadSession() {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
+  const { Player } = await import('../src/lab/player.mjs');
+  const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+  const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
+  for (const mode of ['default', 'components']) {
+    const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, env);
+    pl.camapp_components = mode === 'components';
+    try {
+      pl.open_session();
+      const s = pl.session, lab = s.lab;
+      const idle = (ms) => { const to = lab.lab_time() + ms * 1e6; while (lab.lab_time() < to) { s.idle_slice(Math.min(to, lab.lab_time() + 50e6)); s.frame(); } };
+      const key = (k) => { s.key(k, 'down'); s.camapp.pump(); idle(100); s.key(k, 'up'); s.camapp.pump(); idle(800); };
+      // the live blocks by kind: a decoded kind by size and vtable word, any other by size and malloc caller
+      const buckets = () => {
+        const out = new Map();
+        for (const [a, size] of lab.heap_sizes) {
+          const vt = lab.sim.u32(a) >>> 0, k = HEAP_KINDS.find(([, n, v]) => n === size && v === vt);
+          const name = k ? k[0] : `${size} bytes from 0x${lab.heap_owner.get(a)[0].toString(16)}`;
+          out.set(name, (out.get(name) ?? 0) + 1);
+        }
+        return out;
+      };
+      const pass = () => {
+        const b0 = buckets();
+        s.key('s1', 'down'); s.camapp.pump(); idle(600);
+        s.key('s2', 'down'); s.camapp.pump(); idle(700);
+        s.key('s2', 'up'); s.camapp.pump(); s.key('s1', 'up'); s.camapp.pump(); idle(500);
+        key('menu'); key('menu'); key('play'); key('play');
+        idle(2000);
+        const b1 = buckets(), grew = {};
+        for (const k of new Set([...b0.keys(), ...b1.keys()])) { const d = (b1.get(k) ?? 0) - (b0.get(k) ?? 0); if (d) grew[k] = d; }
+        return { grew, gui: s.status().gui };
+      };
+      idle(10000);
+      pass(); pass();                  // the one-offs, and the event task's parked replies up to their 10
+      for (let i = 2; i <= 3; i++) {
+        const p = pass(), want = HEAP_PASS_KEPT[mode], canon = (o) => JSON.stringify(Object.entries(o).sort());
+        ok(p.gui === '0x0108' && canon(p.grew) === canon(want),
+          `${mode}, pass ${i}: the live blocks grew by ${JSON.stringify(p.grew)}, want ${JSON.stringify(want)}; GUI ${p.gui}`);
+      }
+      // control: S-DISPQ's replies recorded only, as before: the display manager's request buffers stay
+      if (mode === 'default') {
+        lab.dispq_deliver = null;
+        const p = pass(), n = p.grew[`192 bytes from 0x${DISPQ_BUFFER.toString(16)}`];
+        ok(n === DISPQ_BUFFERS_A_PASS, `control: with S-DISPQ's replies not delivered a pass keeps ${n} (${JSON.stringify(p.grew)}) of the display manager's 192-byte buffers, want ${DISPQ_BUFFERS_A_PASS}`);
+      }
+    } catch (e) { bad.push(`${mode}: ${e.message.slice(0, 600)}`); }
+    pl.close_session();
+  }
+  return { checks, bad };
+}
+
 // The mode dial's positions as the application takes them (E143; docs/om1-input-spec.md section 2): the setting each
 // position's mode change sets on the blank store, by the position's name (X, 2026-10-30): MODE_EXPOSE (24) P 3, A 4,
 // S 5, M 6, Movie 76, and 3 (P) in the custom banks C1..C4, which also set MODE_RAW (22); B sets MODE_DIAL_B_ONOFF
@@ -265,8 +339,10 @@ export async function modeDialSession() {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const r = await camappSession(), h = await heapSession(), m = await modeDialSession();
-  console.log(`camapp session: ${r.checks - r.bad.length}/${r.checks}; the heap over an idle: ${h.checks - h.bad.length}/${h.checks}; the mode dial: ${m.checks - m.bad.length}/${m.checks}`);
-  [...r.bad, ...h.bad, ...m.bad].forEach((x) => console.log('  ', x));
-  process.exit(r.bad.length || h.bad.length || m.bad.length ? 1 : 0);
+  const only = process.argv[2];
+  const run = async (name, fn) => (!only || only === name ? fn() : { checks: 0, bad: [] });
+  const r = await run('camapp', camappSession), h = await run('heap', heapSession), w = await run('workload', heapWorkloadSession), m = await run('dial', modeDialSession);
+  console.log(`camapp session: ${r.checks - r.bad.length}/${r.checks}; the heap over an idle: ${h.checks - h.bad.length}/${h.checks}; the heap over a workload: ${w.checks - w.bad.length}/${w.checks}; the mode dial: ${m.checks - m.bad.length}/${m.checks}`);
+  [...r.bad, ...h.bad, ...w.bad, ...m.bad].forEach((x) => console.log('  ', x));
+  process.exit(r.bad.length || h.bad.length || w.bad.length || m.bad.length ? 1 : 0);
 }

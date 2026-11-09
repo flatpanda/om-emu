@@ -5,7 +5,7 @@
 // (8-bit index, nearest sampling, palette bank by OSDCP2, linear blend in tra / 31) and the IMG planes (format 0: YC
 // 4:2:2 Y0 Cb Y1 Cr, two-tap linear, opaque; ycComp, imgRow, drawImg), and with the A19 opt-in the face/AF frame
 // plane: IMG format 2, an 8-bit index into the eight YCbCr words at +0xD00..+0xD1C, index 0 transparent (drawFace).
-import { MODEL_INFO } from '../fw/model.mjs';
+import { MODEL, MODEL_INFO } from '../fw/model.mjs';
 import { BOARD } from '../fw/board.mjs';
 import { E, NOTE, D, CH, FACE_FIRST, FACE_LAST, PAL_BASE, OUTPUT_SIZE, chanDbg, udiv } from './vsc.mjs';
 
@@ -33,6 +33,10 @@ const FEATURES = [[0x004, 0x1C0, 0x1C0], [0x008, 1, 1], [0x03C, 0x4000, 0x4000],
   [0x580, 0x2E, 0x2E], [0x584, 0x2E, 0x2E], [0x588, 0x2E, 0x2E], [0x58C, 0x2E, 0x2E], [0x590, 0x30, 0x30], [0x594, 0x32, 0x32],
   [0x598, 0x2E, 0x2E], [0x5A0, 0x100, 0x100], [0x5A8, 0x100, 0x100], [0x5AC, 0x100, 0x100], [0x5B0, 0x100, 0x100],
   [0x5B4, 0x100, 0x100]];
+// A13 on E143's HDMI channel 0: the A13 registers whose HDMI-open value differs from the TFT's (X: SRAM3 0x2000 where
+// both panels have 0x4000, VIDEOAREA3 0x29 as the EVF's), the others as the TFT's (docs/om1-vsc-spec.md A13)
+const FEATURES_HDMI = new Map([[0x044, 0x2000], [0x428, 0x29]]);
+const HDMI_A13 = MODEL === 'E143';
 // The class of channel register offset off in these tables: [class, [EVF value, TFT value] or null] with class
 // MODEL, STORED, FEATURES or UNWRITTEN (test_dev's vsc-classes compares it with check_display's parse of
 // checks/fixtures/om1-vsc-tables.c)
@@ -307,13 +311,17 @@ export function compose(v, c) {
       }
     }
     if (k.mw(R.MIXODR1 / 4)) { hdr[HDR.MIX_FLAGS] |= 1 << 3; k.cerror(E.MIX_UNOBSERVED, R.MIXODR1, k.m[R.MIXODR1 / 4], 1, 0, 0); }
-    if (c !== 1 && c !== 2) { k.cerror(E.FEATURE_UNOBSERVED, 0, c, 0, 0, 0); status = E.FEATURE_UNOBSERVED; break run; }
+    // A13 on channel 0 (E143's HDMI): the state the v1.9 HDMI open leaves the A13 registers in, the TFT's but for
+    // SRAM3 and VIDEOAREA3 (FEATURES_HDMI; X, the open of format 13); another body's channel 0 is not composed and
+    // stays FEATURE_UNOBSERVED
+    const hdmi = c === 0 && HDMI_A13;
+    if (c !== 1 && c !== 2 && !hdmi) { k.cerror(E.FEATURE_UNOBSERVED, 0, c, 0, 0, 0); status = E.FEATURE_UNOBSERVED; break run; }
     let f = 0;
     for (const off of v.chanRegs) {                  // ascending offsets
       let want = UNW;
       const w = off / 4;
       while (f < FEATURES.length && FEATURES[f][0] < off) f++;
-      if (f < FEATURES.length && FEATURES[f][0] === off) want = c === 1 ? FEATURES[f][1] : FEATURES[f][2];
+      if (f < FEATURES.length && FEATURES[f][0] === off) want = c === 1 ? FEATURES[f][1] : hdmi && FEATURES_HDMI.has(off) ? FEATURES_HDMI.get(off) : FEATURES[f][2];
       // a ported model's observed feature values for its own panels (MODEL_INFO.vsc_features: {off: [EVF, TFT]})
       const mf = MODEL_INFO.vsc_features?.[off];
       if (mf && mf[c === 1 ? 0 : 1] !== undefined) want = mf[c === 1 ? 0 : 1];

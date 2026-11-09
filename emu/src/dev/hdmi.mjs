@@ -21,12 +21,26 @@
 //             128 bytes), 0xa83 the command. Command 130 (the EDID read's) is an E-DDC read: the sink's EDID bytes
 //             from 256 x segment + offset go into the DDC buffer and 0x94 bits 7 and 5 are set at once (I: done and
 //             success; D: the IRQ 239 handler sets the DDC wait's flag with pattern 1 for them, and the EDID read then
-//             takes the buffer as the block). Any other command (128, an SCDC write the HDMI open sends, not reached)
-//             or a read past the sink's EDID is UNKNOWN
+//             takes the buffer as the block). Command 128 is a DDC write (D: the HDMI open's SCDC write 0x501d5186
+//             puts slave 0xa8 in 0xa80, offset 0x20 in 0xa81, 0 in 0xa82 and the byte in 0xc00, then waits for any of
+//             0x94's bits 5..7); the model takes only that one, the SCDC's TMDS configuration: the lab sink has no SCDC
+//             (its EDID has no HDMI Forum block, an HDMI 1.4 sink), so the write is not acknowledged and 0x94 bits 7
+//             and 6 are set at once (I: done and failure, the bits the IRQ 239 handler turns into the DDC wait's
+//             pattern 2, "DDC RETRY"; D: the open goes on either way). Any other command or DDC write, or a read past
+//             the sink's EDID, is UNKNOWN
+//   0x11      UPDCTRL (the driver's name, D: "UPDCTRL factor:" 0x501d291c): a write with bit 7 set requests an update
+//             of the factors in its low bits, and the update is done at once: 0x96 bit 7 is set (D: the open's wait
+//             0x501d5149 takes the flag that only 0x96 bit 7 sets, the status reader 0x501d1985, and the open prints
+//             "Update Done" after it; no other register of the update is read back; I: done, and done at once)
 //   0xc00..0xc7f  the DDC buffer, storage; the EDID checks read it by bytes and words
-//   the other registers of the words the driver's path uses (WORDS): storage, reset 0 (I)
+//   the other registers of the words the driver's path uses (WORDS): storage, reset 0 (I). The HDMI open writes
+//             most of them once per open and reads few, each read back to be modified (D: the reads' callers)
 // Any other word, width or alignment, a write to a read-only register and a lane word of another form are UNKNOWN
 // (bus error, printed for a CPU access).
+//
+// The PHY / PLL words beside the lane word (board hdmi.lanes + PHY_WORDS; D: the power step 0x501d174f, the clock
+// steps 0x500640db / 0x500640ec, the format's PLL settings 0x501d5205): storage, reset 0 (I); the lab stub's before
+// the open was reached, which kept the same bytes. Any other word of the lane page is UNKNOWN.
 //
 // The hot-plug pin (D: the GIO driver's pin read, its group handler and the HPD pin's record in the GIO table; the same
 // words, bit and IRQ on E143, E146 and E147): the pin's level is bit hpd.level_bit of its level word (read-only; its
@@ -34,27 +48,46 @@
 // interrupt is set up with type 0, whose bit that is, and the firmware's plug handler acts on a high level); a write
 // clears the bits it names (I: the group handler writes back the bit it handled). The enable word is storage. IRQ
 // hpd.irq is high while status & enable is not 0. A falling pin sets nothing (A-HDMI-1: the edge type's other bit is
-// not read; the firmware has the pin's interrupt off once the cable is in, and an unplug is not modelled).
+// not read; D: the hot-plug handler turns the pin's interrupt off once the cable is in, 0x501d6949, so an unplug is
+// seen through the transmitter, below).
+//
+// The unplug (A-HDMI-1, I): the sink's lines (0x08 bits 3, 4) and the pin fall, and the transmitter sets 0x92 bits
+// 0..3, the hot-plug detect pair (0..1) and the receiver sense pair (2..3). Which bit of a pair a falling line sets is
+// not read, nor whether a rising one sets any (the plug sets none, as before: its path needs none, X). D: the
+// driver enables all four in 0x9a once the cable is in, the status reader takes and clears each pair whole
+// (0x501d1985), and both pairs' callbacks (0x501d648c "hpd_intr_proc", 0x501d64b6 "rxsence_intr_proc") defer the
+// same hot-plug handler, which reads the lines from 0x08; so the bit chosen within a pair does not change the path.
 //
 // The lab's window (K_ROMD, written by the debugger): the magic 'HDMI', the cable state, the count of E-DDC reads
-// answered, the length of the sink's EDID and the EDID itself at EDID (up to EDID_MAX bytes). The doorbell takes
+// answered, the length of the sink's EDID, the count of SCDC writes not acknowledged and the EDID itself at EDID (up
+// to EDID_MAX bytes). The doorbell takes
 // (PLUG << 24) from a CPU store: the cable goes in, the sink's lines and the pin go high (the sink's EDID must be in
-// the window by then); any other store, a second plug, or a read, is a bus error.
+// the window by then); (UNPLUG << 24) takes it out (above); any other store, a second plug, an unplug without a
+// cable, or a read, is a bus error.
 import { BUS, K_MMIO, K_ROMD, addRegion, allocWindow, buf, ctx } from '../core/mem.mjs';
 import { BOARD } from '../fw/board.mjs';
 
 const hex8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
-export const W_MAGIC = 0x00, W_CABLE = 0x04, W_DDC_READS = 0x08, W_EDID_LEN = 0x0c, EDID = 0x100, EDID_MAX = 0x400;
+export const W_MAGIC = 0x00, W_CABLE = 0x04, W_DDC_READS = 0x08, W_EDID_LEN = 0x0c, W_SCDC_WRITES = 0x10, EDID = 0x100, EDID_MAX = 0x400;
 export const WINDOW_SIZE = 0x1000, MAGIC = [...'HDMI'].reduce((v, c, i) => v | c.charCodeAt(0) << (8 * i), 0) >>> 0;
 // the doorbell's commands (bits 31..24)
-export const PLUG = 1;
+export const PLUG = 1, UNPLUG = 2;
+// 0x92's bits a change of the sink's lines sets (A-HDMI-1): the hot-plug detect pair 0..1 and the receiver sense
+// pair 2..3
+const LINES_CHANGED = 0x0f;
 // the transmitter's registers (byte offsets) with a behaviour of their own
 const SINK = 0x08, SUMMARY = 0x90, STATUS = [0x92, 0x94, 0x96], MASK = [0x9a, 0x9c, 0x9e], IRQ_MASK = 0x98;
 const DDC_SEGMENT = 0xa80, DDC_OFFSET = 0xa81, DDC_COUNT = 0xa82, DDC_COMMAND = 0xa83, DDC_BUFFER = 0xc00, DDC_BUFFER_END = 0xc80;
 const DDC_READ = 130, DDC_DONE_OK = 0xa0, HPD = 0x08, RX_SENSE = 0x10;
+const DDC_WRITE = 128, DDC_DONE_NACK = 0xc0, SCDC_SLAVE = 0xa8, SCDC_TMDS_CONFIG = 0x20, UPDCTRL = 0x11, UPDATE_REQUEST = 0x80;
+const UPDATE_DONE = 0x80;
 // the words of the driver's path (X: every word the HDMI init, the hot-plug handler, the EDID read and the IRQ 239
-// handler touch on E143, E146 and E147), the DDC buffer's apart
-const WORDS = new Set([0x04, 0x08, 0x0c, 0x20, 0x30, 0x90, 0x94, 0x98, 0x9c, 0xa80, 0xa9c]);
+// handler touch on E143, E146 and E147, and the HDMI open on E143), the DDC buffer's apart
+const WORDS = new Set([0x04, 0x08, 0x0c, 0x10, 0x18, 0x20, 0x24, 0x28, 0x2c, 0x30, 0x40, 0x4c, 0x5c, 0x70, 0x74, 0x90,
+  0x94, 0x98, 0x9c, 0xa8, 0xac, 0xb0, 0xb4, 0xb8, 0xc0, 0xc4, 0x200, 0x204, 0x210, 0x224, 0x228, 0x264, 0x268, 0xa80,
+  0xa9c, 0xe00, 0xe04, 0xec0]);
+// the lane page's other words (offsets from the lane word; X: the HDMI init's and the open's)
+const PHY_WORDS = new Set([0x04, 0x40, 0x44, 0x48, 0x54, 0xfc]), LANE_PAGE = 0x100;
 const READ_ONLY = new Set([SINK, SUMMARY]);
 const HPD_WORDS = ['level', 'status', 'enable'];
 
@@ -76,8 +109,10 @@ export class Hdmi {
     this.win[W_MAGIC >> 2] = MAGIC;
     addRegion({ base: tx, size: 0x1000, kind: K_MMIO, name: 'om1.hdmi',
       dev: { read: (a, w, dbg) => this.read(a - tx, w, dbg), write: (a, v, w, dbg) => this.write(a - tx, v, w, dbg) } });
-    addRegion({ base: lanes, size: 4, kind: K_MMIO, name: 'om1.hdmi-lanes',
-      dev: { read: (a, w, dbg) => this.laneRead(w, dbg), write: (a, v, w, dbg) => this.laneWrite(v, w, dbg) } });
+    this.phy = new Map([...PHY_WORDS].map((o) => [o, 0]));
+    addRegion({ base: lanes, size: LANE_PAGE, kind: K_MMIO, name: 'om1.hdmi-lanes',
+      dev: { read: (a, w, dbg) => (a === lanes ? this.laneRead(w, dbg) : this.phyRead(a - lanes, w, dbg)),
+        write: (a, v, w, dbg) => (a === lanes ? this.laneWrite(v, w, dbg) : this.phyWrite(a - lanes, v, w, dbg)) } });
     for (const word of HPD_WORDS) {
       addRegion({ base: hpd[word], size: 4, kind: K_MMIO, name: `om1.hdmi-hpd-${word}`,
         dev: { read: (a, w, dbg) => this.hpdRead(word, w, dbg), write: (a, v, w, dbg) => this.hpdWrite(word, v, w, dbg) } });
@@ -126,12 +161,25 @@ export class Hdmi {
     for (let i = 0; i < 4; i++) {
       if (keep & (1 << i)) continue;
       const r = off + i, b = (value >>> (8 * i)) & 0xff;
-      if (r === DDC_COMMAND && b !== DDC_READ) return this.txUnknown('write', off, size, value, dbg);
+      if (r === DDC_COMMAND && b !== DDC_READ && b !== DDC_WRITE) return this.txUnknown('write', off, size, value, dbg);
       if (STATUS.includes(r)) this.reg[r] &= ~b;
       else this.reg[r] = b;
-      if (r === DDC_COMMAND) this.ddcRead();
+      if (r === DDC_COMMAND && b === DDC_READ) this.ddcRead();
+      else if (r === DDC_COMMAND) this.ddcWrite();
+      else if (r === UPDCTRL && (b & UPDATE_REQUEST)) this.reg[STATUS[2]] |= UPDATE_DONE;
     }
     this.update();
+  }
+  // the DDC write the command starts: only the SCDC's TMDS configuration, which the lab sink, having no SCDC, does not
+  // acknowledge (done and failure at once)
+  ddcWrite() {
+    const r = this.reg;
+    if (!this.plugged || r[DDC_SEGMENT] !== SCDC_SLAVE || r[DDC_OFFSET] !== SCDC_TMDS_CONFIG || r[DDC_COUNT] !== 0) {
+      this.m.stderr(`om-emu: om1.hdmi UNKNOWN DDC write to slave 0x${r[DDC_SEGMENT].toString(16)} offset 0x${r[DDC_OFFSET].toString(16)} of ${r[DDC_COUNT] + 1} bytes (cable ${this.plugged ? 'in' : 'out'}) pc ${hex8(ctx.pc())}`);
+      throw BUS;
+    }
+    r[STATUS[1]] |= DDC_DONE_NACK;
+    this.win[W_SCDC_WRITES >> 2] += 1;
   }
   // the E-DDC read the command starts: the sink's bytes into the buffer, done and success at once
   ddcRead() {
@@ -156,15 +204,31 @@ export class Hdmi {
     else this.enable = value >>> 0;
     this.update();
   }
+  phyRead(off, size, dbg) {
+    if (size !== 4 || !this.phy.has(off)) return this.unknown('om1.hdmi-lanes', 'read', this.cfg.lanes + off, size, 0, dbg);
+    return this.phy.get(off);
+  }
+  phyWrite(off, value, size, dbg) {
+    if (dbg || size !== 4 || !this.phy.has(off)) return this.unknown('om1.hdmi-lanes', 'write', this.cfg.lanes + off, size, value, dbg);
+    this.phy.set(off, value >>> 0);
+  }
   laneRead(size, dbg) { return size === 4 ? this.lanes : this.unknown('om1.hdmi-lanes', 'read', this.cfg.lanes, size, 0, dbg); }
   laneWrite(value, size, dbg) {
     if (dbg || size !== 4 || (value & ~0xF0000) !== 1) return this.unknown('om1.hdmi-lanes', 'write', this.cfg.lanes, size, value, dbg);
     this.lanes = value >>> 0;
   }
   doorbell(a, value, size, dbg) {
-    const len = this.win[W_EDID_LEN >> 2];
-    if (dbg || size !== 4 || value >>> 0 !== (PLUG << 24) >>> 0 || this.plugged || len === 0 || len > EDID_MAX) {
+    const len = this.win[W_EDID_LEN >> 2], cmd = value >>> 24;
+    if (dbg || size !== 4 || (value & 0xFFFFFF) || !(cmd === PLUG ? !this.plugged && len !== 0 && len <= EDID_MAX : cmd === UNPLUG && this.plugged)) {
       return this.unknown('om1.lab-hdmi-doorbell', 'write', a, size, value, dbg);
+    }
+    if (cmd === UNPLUG) {             // the cable out: the sink's lines and the pin fall, the transmitter flags the change
+      this.plugged = false;
+      this.win[W_CABLE >> 2] = 0;
+      this.pin = 0;
+      this.reg[STATUS[0]] |= LINES_CHANGED;
+      this.update();
+      return;
     }
     this.plugged = true;
     this.win[W_CABLE >> 2] = 1;

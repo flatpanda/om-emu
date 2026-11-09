@@ -53,6 +53,8 @@ export const DEVICE = {
   evf: { mask: 2, code: fact('prop.evf_code', 2), channel: LATER ? 0 : 1, prop: 8, vtotal_fn: A(0x50023BAB), period: A(0xA32DB428) },
 };
 export const PERIODS_US = [16683, 20000, 10000, 8341];
+// E143's HDMI channel and its format table's period and vertical-total getters (docs/hle-gaps.md 4.9; D)
+export const HDMI_CHANNEL = 0, HDMI_MASK = 0xFF000004, HDMI_PERIOD_FN = A(0x501D5996), HDMI_VTOTAL_FN = A(0x501D5A67);
 export const VSC_IRQ = VSC_CHANNEL.map((_, c) => BOARD.intc.irq_vsc0 + 2 * c);
 // the vsync event flag id word of each channel (E143 ch0 HDMI, ch1 EVF, ch2 TFT; kind 2 ch0 TFT and EVF, ch1 HDMI)
 const VSYNC_E143 = [A(0x6004305E), A(0x600430DE), A(0x60043178)];
@@ -650,8 +652,13 @@ export class DisplayLab extends OsdLab {
   task_message(loop, queueAddress, msg, label, limit = 300000, wait = null) {
     const queue = this._queue(queueAddress);
     let n = 0;
-    const level = this.depth;
+    const level = this.depth, runner = this.lt?.tid != null ? this.lt.current() : null;   // the task the run is on
     const qerd = (hle, r) => {
+      // with the kernel native (a lab task), two reads are not the run's and go where they went before it: another
+      // task's (a native task the run woke and that preempted the run's task) and the run's own read of another
+      // queue (a reply the body waits for). The HDMI open does both: it posts AUD_EXEC, which runs and reads its
+      // queue again, and then reads AUD_EXEC's reply (docs/hle-gaps.md 4.9)
+      if (runner !== null && (this.lt.current() !== runner || (r.d0 & 0xFFFF) !== queue)) { if (saved) saved[0](hle, r); else this.passthrough(r); return; }
       if ((r.d0 & 0xFFFF) !== queue) throw new FirmwareError(`OlyQeRd on queue ${r.d0 & 0xFFFF} from ${where(r.mdr)}`);
       n += 1;
       if (n > 1) throw new TaskDone();
@@ -909,6 +916,20 @@ export class DisplayLab extends OsdLab {
       if (GEN2 && dev === 'evf') this.vsc.set_line_ns_evf(d.channel, line);
       else if (!K3) this.vsc.set_line_ns(d.channel, line);
     }
+  }
+  // The HDMI channel's line time (E143, docs/hle-gaps.md 4.9): once the firmware has opened the HDMI device (mask, the
+  // opened word's HDMI part), its frame period and vertical total are fields of the firmware's own format table (the
+  // format in the mask's bits 24..31; getters HDMI_PERIOD_FN and HDMI_VTOTAL_FN, D), as the panels' period word and
+  // vtotal getter give theirs; the channel then runs at period x 1000 / vtotal ns a line (the harness rule above)
+  hdmi_line(mask) {
+    if (MODEL !== 'E143') throw new FirmwareError(`hdmi_line: the HDMI channel's timing is read for E143 only, not ${MODEL}`);
+    if (!(mask & HDMI_MASK)) throw new FirmwareError(`hdmi_line: mask 0x${(mask >>> 0).toString(16)} names no HDMI device`);
+    const period = this.call(HDMI_PERIOD_FN, { d0: mask }).d0 >>> 0, vtotal = this.call(HDMI_VTOTAL_FN, { d0: mask }).d0 >>> 0;
+    if (!period || !vtotal) throw new FirmwareError(`hdmi_line: format ${mask >>> 24}: period ${period} us, vtotal ${vtotal}: no line time (no default)`);
+    const line = Math.floor(period * 1000 / vtotal);
+    this.line_ns.set('hdmi', { period_us: period, vtotal, line_ns: line, format: mask >>> 24 });
+    this.vsc.set_line_ns(HDMI_CHANNEL, line);
+    return this.line_ns.get('hdmi');
   }
   open(device) {
     if (K3) this.vsc.set_line_ns(lookup(DEVICE, device).channel, this.line_ns.get(device).line_ns);
@@ -1245,7 +1266,8 @@ export class DisplayLab extends OsdLab {
     return result;
   }
   _compose(device, next_frame, raw) {
-    const c = lookup(DEVICE, device).channel;
+    if (device === 'hdmi' && !this.line_ns?.has('hdmi')) throw new ValueError('compose hdmi: the HDMI channel is not running (the firmware has not opened the HDMI device)');
+    const c = device === 'hdmi' ? HDMI_CHANNEL : lookup(DEVICE, device).channel;
     if (next_frame) {
       this.step(`next frame on ${device} (harness: composite = frame after the next boundary)`, () => {
         this.run_to_frame(c, `compose ${device}`);

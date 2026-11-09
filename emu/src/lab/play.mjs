@@ -9,7 +9,7 @@ import { A, MODEL, ON_LAB_MODEL, MODEL_INFO, IMAGE_BASE, refuseUnmapped, isUnmap
 import { BOARD } from '../fw/board.mjs';
 import { SCPU_DOORBELL, HDMI_WINDOW, HDMI_DOORBELL } from '../machine.mjs';
 import { SET_INPUTS } from '../dev/scpu.mjs';
-import { PLUG, EDID, W_EDID_LEN, W_CABLE, W_DDC_READS } from '../dev/hdmi.mjs';
+import { PLUG, UNPLUG, EDID, W_EDID_LEN, W_CABLE, W_DDC_READS, W_SCDC_WRITES } from '../dev/hdmi.mjs';
 import { sinkEdid } from './edid.mjs';
 import { Accelerometer } from './acc.mjs';
 import { Storage, STORAGE } from './storage.mjs';
@@ -1618,12 +1618,21 @@ export class PlaySession extends N.NavSession {
     this.end('power off', 'power', [], [[0, lab.log.length - n0]], { power_off: off });
     return off;
   }
-  // The HDMI cable (see HDMI_PLUG_MS): plug only. An unplug is refused (A-HDMI-1: what the transmitter and the pin
-  // show when the cable comes out is not read), and so is a second plug.
+  // The HDMI cable (see HDMI_PLUG_MS): plug, and unplug once it is in (the transmitter's side A-HDMI-1, the device
+  // model's header). A second plug and an unplug without the cable are refused.
   hdmi_input(action) {
     if (!this.hdmi_port) throw new ValueError('hdmi: the session has no HDMI port (--hdmi on)');
-    if (action === 'unplug') throw new ValueError('hdmi unplug: not modelled (A-HDMI-1: what the transmitter and the hot-plug pin show when the cable comes out is not read)');
-    if (action !== 'plug') throw new ValueError(`hdmi: action ${show(action)} (plug)`);
+    if (action !== 'plug' && action !== 'unplug') throw new ValueError(`hdmi: action ${show(action)} (plug, unplug)`);
+    if (action === 'unplug') {
+      if (!this.hdmi_plugged) throw new ValueError('hdmi unplug: the cable is out already');
+      const lab = this.lab, tag = 'hdmi unplug';
+      this.begin(`${String(this.steps.length).padStart(2, '0')}-${tag}`);
+      const c0 = lab.uiin_codes.length;
+      lab.cpu_store(HDMI_DOORBELL, (UNPLUG << 24) >>> 0);
+      this.hdmi_plugged = false;
+      return this.wait_until(lab.lab_time() + HDMI_PLUG_MS * 1000000, tag, true,
+        { kind: 'hdmi', extra: () => ({ hdmi: this.hdmi_status(), uiin_codes: lab.uiin_codes.slice(c0).map(([, x]) => h8(x)) }) });
+    }
     if (this.hdmi_plugged) throw new ValueError('hdmi plug: the cable is in already');
     const lab = this.lab, tag = 'hdmi plug', edid = sinkEdid();
     this.begin(`${String(this.steps.length).padStart(2, '0')}-${tag}`);
@@ -1667,13 +1676,16 @@ export class PlaySession extends N.NavSession {
     return this.wait_until(lab.lab_time() + CARD_MS * 1000000, tag, true,
       { kind: 'card', extra: () => ({ card: st.status(), slot: st.slot(), media: media.status(), uiin_codes: codes.map(h8) }) });
   }
-  // the port as the lab sees it: the cable, the E-DDC reads the sink answered and the driver's EDID state
+  // the port as the lab sees it: the cable, the E-DDC reads the sink answered, the driver's EDID state, the SCDC
+  // writes the sink did not acknowledge and, once the firmware opened the HDMI device, the channel's timing
+  // (DisplayLab.hdmi_line)
   hdmi_status() {
     if (!this.hdmi_port) return null;
     const lab = this.lab, [address, bytes] = MODEL_INFO.hdmi.state, b = lab.sim.read(address, bytes);
     let state = 0;
     for (let i = bytes - 1; i >= 0; i--) state = state * 256 + b[i];
-    return { cable: lab.sim.u32(HDMI_WINDOW + W_CABLE) ? 'in' : 'out', ddc_reads: lab.sim.u32(HDMI_WINDOW + W_DDC_READS), edid_state: `0x${state.toString(16)}` };
+    return { cable: lab.sim.u32(HDMI_WINDOW + W_CABLE) ? 'in' : 'out', ddc_reads: lab.sim.u32(HDMI_WINDOW + W_DDC_READS), edid_state: `0x${state.toString(16)}`,
+      scdc_writes: lab.sim.u32(HDMI_WINDOW + W_SCDC_WRITES), ...(lab.line_ns.has('hdmi') ? { open: lab.line_ns.get('hdmi') } : {}) };
   }
   bit_of(cid) {
     const c = BY_ID.get(cid);

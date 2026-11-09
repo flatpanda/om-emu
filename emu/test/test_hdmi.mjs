@@ -7,23 +7,32 @@
 //                7 and 5 at once, and IRQ 239 follows 0x90 & 0x98, the summary's bit 4 0x94 & 0x9c; the buffer reads by
 //                bytes and words; refused: a plug without an EDID, a second plug, another doorbell store or a read of
 //                it, another DDC command, a read past the EDID, a write to 0x08 or 0x90, an unknown word, a halfword,
-//                another lane word, a write to the pin's level word
+//                another lane word, a write to the pin's level word; the open's registers: command 128 to the SCDC's
+//                TMDS configuration not acknowledged (0x94 bits 7, 6) and counted, another DDC write refused, UPDCTRL
+//                bit 7 sets 0x96 bit 7, the PHY words beside the lane word are storage and the page's other words
+//                refused; the unplug drops the lines and the pin and sets 0x92 bits 0..3, an unplug without the cable
+//                is refused
 //   hdmiSession  (firmware; the model of OM_EMU_MODEL, E143 by default) a play session with --hdmi on lists H-GIOSLOTS,
 //                S-HDMISINK and A-HDMI-1, has the pin's IRQ 109 attached at level 5 by the display init and IRQ 239
 //                not yet; hdmi plug: the CPU takes IRQ 109 and then IRQ 239 for each of the two E-DDC reads, IRQ 239 is
 //                attached at level 5 (the HDMI init ran), the driver's EDID state reads 0xf0, UI_IN forwards the
 //                connect report 0x02020501 and the camera application sends DISPLAY cmd 18; on E143 the parse's fields
 //                as decoded (manufacturer, product, serial, date, version, the name, the extension count, the CTA-861
-//                header bits and the VIC list); a second plug, an unplug and fw_0501 are refused; a negative control
-//                with the base block's checksum off by one: six reads of block 0, the errlog 0x37009108 and 0x37008206,
-//                EDID state 0xff, and the connect report still sent
+//                header bits and the VIC list); on E143 the output switch (S-OUTDEV): TRA 588 for the HDMI output,
+//                DISPLAY cmd 45, the HDMI device alone open in format 13 with its timing, IRQ 239 a third time for the
+//                open's update, one SCDC write, S-PROP's property 16, VSC channel 0 latched for 1080p and its
+//                composite (the window, no plane drawn); a second plug and fw_0501 are refused; the unplug: IRQ 239
+//                alone, the disconnect report, no errlog, no output change (E143: HDMI stays open), a second unplug
+//                refused; a negative control with the base block's checksum off by one: six reads of block 0, the
+//                errlog 0x37009108 and 0x37008206, EDID state 0xff, the connect report still sent and (E143) CapIod
+//                opening nothing
 //   node emu/test/test_hdmi.mjs [--session]      (OM_EMU_MODEL=E146 node emu/test/test_hdmi.mjs --session: another body)
 import { createMachine, HDMI_WINDOW, HDMI_DOORBELL } from '../src/machine.mjs';
 import { BUS } from '../src/core/mem.mjs';
 import { BOARD } from '../src/fw/board.mjs';
-import { PLUG, EDID, W_EDID_LEN, W_DDC_READS } from '../src/dev/hdmi.mjs';
+import { PLUG, UNPLUG, EDID, W_EDID_LEN, W_DDC_READS, W_SCDC_WRITES } from '../src/dev/hdmi.mjs';
 import { sinkEdid, SINK_NAME, SINK_VICS } from '../src/lab/edid.mjs';
-import { EXPECTED_ERRLOG } from '../src/lab/display.mjs';
+import { EXPECTED_ERRLOG, OPENED_WORD } from '../src/lab/display.mjs';
 
 const throwsAs = (fn, cls) => { try { fn(); return false; } catch (e) { if (e === cls || e instanceof cls) return true; throw e; } };
 const le32 = (v) => new Uint8Array([v & 255, (v >>> 8) & 255, (v >>> 16) & 255, (v >>> 24) & 255]);
@@ -55,7 +64,7 @@ function deviceTests(ok) {
   hdmi.hpdWrite('status', hpd.bit, 4, false);
   ok(intc.line[hpd.irq] === 0 && hdmi.hpdRead('status', 4, false) === 0 && hdmi.hpdRead('level', 4, false) === hpd.level_bit, 'a write clears the status bit it names, the IRQ drops, the level stays');
   ok(throwsAs(() => hdmi.hpdWrite('level', 0, 4, false), BUS) && throwsAs(() => hdmi.hpdRead('status', 2, false), BUS), 'a write to the level word and a halfword read are bus errors');
-  ok(throwsAs(() => bell((PLUG << 24) >>> 0), BUS) && throwsAs(() => hdmi.doorbell(HDMI_DOORBELL, 2 << 24, 4, false), BUS), 'a second plug and another doorbell store are bus errors');
+  ok(throwsAs(() => bell((PLUG << 24) >>> 0), BUS) && throwsAs(() => hdmi.doorbell(HDMI_DOORBELL, 3 << 24, 4, false), BUS), 'a second plug and another doorbell store are bus errors');
   set(0x99, 0x57);
   ok(hdmi.reg[0x98] === 0 && hdmi.reg[0x99] === 0x57, 'the lane word keeps the lanes it names: only 0x99 is written');
   set(0x9c, 0xe0); set(0xa80, 0); set(0xa81, 128); set(0xa82, 127);
@@ -75,6 +84,26 @@ function deviceTests(ok) {
   ok(throwsAs(() => rd(0x100), BUS) && throwsAs(() => rd(0x08, 2), BUS) && throwsAs(() => rd(0x09, 1), BUS), 'an unknown word, a halfword and a byte outside the buffer are bus errors');
   ok(throwsAs(() => hdmi.laneWrite(2, 4, false), BUS) && throwsAs(() => hdmi.laneWrite((1 << 20) | 1, 4, false), BUS), 'another lane word is a bus error');
   ok(throwsAs(() => hdmi.doorbell(HDMI_DOORBELL, 0, 4, true), BUS), 'a debugger store to the doorbell is a bus error');
+  // the HDMI open's registers: the SCDC write, UPDCTRL's update, the PHY words beside the lane word
+  set(0x94, 0xff); set(0xc00, 0); set(0xa80, 0xa8); set(0xa81, 0x20); set(0xa82, 0);
+  set(0xa83, 128);
+  ok(hdmi.reg[0x94] === 0xc0 && m.dbgRead(HDMI_WINDOW + W_SCDC_WRITES, 4)[0] === 1, `command 128 to the SCDC's TMDS configuration is not acknowledged: 0x94 bits 7 and 6 (0x${hdmi.reg[0x94].toString(16)}), counted`);
+  set(0xa81, 0x21);
+  ok(throwsAs(() => set(0xa83, 128), BUS), 'another DDC write is a bus error');
+  set(0x9e, 0x80);
+  set(0x11, 0x17);
+  ok(hdmi.reg[0x96] === 0, 'UPDCTRL without bit 7 requests nothing');
+  set(0x11, 0x97);
+  ok(hdmi.reg[0x96] === 0x80 && (rd(0x90) & 0x40), 'UPDCTRL with bit 7: the update is done at once, 0x96 bit 7 and the summary\'s bit 6');
+  const lanes = BOARD.hdmi.lanes, phy = (o) => m.devices.hdmi.phyRead(o, 4, false);
+  m.devices.hdmi.phyWrite(0x40, 0x405, 4, false);
+  ok(phy(0x40) === 0x405 && phy(0x04) === 0, `the PHY words beside the lane word are storage (0x${lanes.toString(16)} + 0x40)`);
+  ok(throwsAs(() => m.devices.hdmi.phyRead(0x08, 4, false), BUS) && throwsAs(() => m.devices.hdmi.phyWrite(0x40, 1, 2, false), BUS), 'another word of the lane page, and a halfword, are bus errors');
+  // the unplug: the sink's lines and the pin fall, 0x92 bits 0..3 (A-HDMI-1)
+  set(0x9a, 0x0f);
+  bell((UNPLUG << 24) >>> 0);
+  ok(rd(0x08) === 0 && hdmi.hpdRead('level', 4, false) === 0 && hdmi.reg[0x92] === 0x0f && (rd(0x90) & 0x04), `the unplug drops the sink's lines and the pin and sets 0x92 bits 0..3 (0x${hdmi.reg[0x92].toString(16)})`);
+  ok(throwsAs(() => bell((UNPLUG << 24) >>> 0), BUS), 'an unplug without the cable is a bus error');
 }
 
 export function hdmiUnits() {
@@ -117,7 +146,9 @@ export async function hdmiSession() {
   const rec = pl.run_input({ type: 'hdmi', action: 'plug' });
   const taken = intc.sync().slice(taken0).map((x) => x[0] ?? x).filter((n) => n === irq || n === hpd.irq);
   ok(rec.kind === 'hdmi' && rec.hdmi?.edid_state === '0xf0' && rec.hdmi?.ddc_reads === 2 && rec.hdmi?.cable === 'in', `${MODEL}: the plug ends with the EDID read and parsed: ${JSON.stringify(rec.hdmi)}`);
-  ok(JSON.stringify(taken) === JSON.stringify([hpd.irq, irq, irq]), `${MODEL}: the CPU takes IRQ ${hpd.irq}, then IRQ ${irq} for each E-DDC read: ${JSON.stringify(taken)}`);
+  // E143 (S-OUTDEV): IRQ 239 a third time for the HDMI open's update (UPDCTRL, "Update Done")
+  const opens = MODEL === 'E143';
+  ok(JSON.stringify(taken) === JSON.stringify([hpd.irq, irq, irq, ...(opens ? [irq] : [])]), `${MODEL}: the CPU takes IRQ ${hpd.irq}, then IRQ ${irq} for each E-DDC read${opens ? ' and for the open\'s update' : ''}: ${JSON.stringify(taken)}`);
   ok(attached(irq)[0] === 1 << 5 && attached(irq)[1] !== 0, `${MODEL}: the HDMI init attached IRQ ${irq} at level 5: ${attached(irq)}`);
   ok(JSON.stringify(rec.uiin_codes) === '["0x02020501"]', `${MODEL}: UI_IN forwards the connect report: ${JSON.stringify(rec.uiin_codes)}`);
   ok((rec.dispq ?? []).some((d) => d.cmd === 18), `${MODEL}: the camera application sends DISPLAY cmd 18: ${JSON.stringify(rec.dispq ?? [])}`);
@@ -135,10 +166,44 @@ export async function hdmiSession() {
     ok(JSON.stringify(rd(P.cea, 8)) === JSON.stringify([2, 3, 20, 0, 1, 1, 1, 1]), `E143: the CTA-861 tag, revision, timing offset, underscan, basic audio, YCbCr 4:4:4 and 4:2:2, native timings: ${rd(P.cea, 8)}`);
     ok(JSON.stringify(rd(P.vics, 6)) === JSON.stringify([SINK_VICS.length, 0x80 | SINK_VICS[0], ...SINK_VICS.slice(1)]), `E143: the VIC count and list: ${rd(P.vics, 6)}`);
   }
-  for (const [inp, want] of [[{ type: 'hdmi', action: 'plug' }, /in already/], [{ type: 'hdmi', action: 'unplug' }, /not modelled \(A-HDMI-1/], [{ type: 'switch', id: 'fw_0501', value: 1 }, /firmware's own/]]) {
+  if (opens) {
+    // the output switch (S-OUTDEV): TRA 588 for the HDMI output, CapIod's open natively (DISPLAY cmd 45), the HDMI
+    // device alone open in format 13 (VIC 16, 1080p at 59.94 Hz), the SCDC write, S-PROP following CapIod's 16
+    const outdev = (rec.camapp ?? []).filter(([k]) => k === 'outdev').map(([, x]) => x);
+    ok(outdev.some((x) => /^TRA 588: event 224 \{8, 0, 0\}/.test(x)) && outdev.some((x) => /property 4513 = 16/.test(x)), `E143: S-OUTDEV took TRA 588 for the HDMI output: ${JSON.stringify(outdev)}`);
+    ok((rec.dispq ?? []).some((d) => d.cmd === 45) && lab.sim.u32(OPENED_WORD) === 0x0d000004, `E143: DISPLAY cmd 45 opened the HDMI device alone: ${JSON.stringify(rec.dispq)}, opened 0x${lab.sim.u32(OPENED_WORD).toString(16)}`);
+    // (S-OUTDEV runs at the step's end, after the step's record took the port's status)
+    const st = s.hdmi_status();
+    ok(JSON.stringify(st.open) === JSON.stringify({ period_us: 16683, vtotal: 1125, line_ns: 14829, format: 13 }) && st.scdc_writes === 1, `E143: the open's format and timing, one SCDC write: ${JSON.stringify(st)}`);
+    ok(lab.props.get(lab.prop_device) === 16, `E143: S-PROP's output-device property follows CapIod's write: ${lab.props.get(lab.prop_device)}`);
+    ok(pl.stand_ins_in_use().includes('S-OUTDEV'), 'E143: the stand-ins list S-OUTDEV');
+    s.idle_slice(lab.lab_time() + 100e6);
+    const b = lab.vsc.bank(0, true), x = (n) => b.get(n) >>> 0;
+    ok(x('SYNC1') === 0x1000001 && x('SYNC2') === 1125 && x('SYNC3') === 5 && x('SYNC6') === ((44 << 16) | 2200) && x('VIDEOAREA1') === ((192 << 16) | 1920) && x('VIDEOAREA2') === ((41 << 16) | 1080) && x('DMAEN') === 0,
+      `E143: VSC channel 0 latched for 1080p: ${JSON.stringify(Object.fromEntries(['SYNC1', 'SYNC2', 'SYNC3', 'SYNC6', 'VIDEOAREA1', 'VIDEOAREA2', 'DMAEN'].map((n) => [n, '0x' + x(n).toString(16)])))}`);
+    const c = lab.compose('hdmi', true, true), hd = c.header;
+    ok(c.status === 'NONE' && hd.width === 1920 && hd.height === 1080 && hd.ox === 192 && hd.oy === 41 && hd.drawn === 0 && c.errors.length === 1 && c.errors[0].name === 'UNWRITTEN' && c.errors[0].offset === 0x4e0,
+      `E143: channel 0 composes its 1920 x 1080 window at (192, 41), no plane drawn (OSDCP2 unwritten): ${c.status} ${JSON.stringify(hd)} ${JSON.stringify(c.errors)}`);
+  }
+  for (const [inp, want] of [[{ type: 'hdmi', action: 'plug' }, /in already/], [{ type: 'switch', id: 'fw_0501', value: 1 }, /firmware's own/]]) {
     let e = null;
     try { pl.run_input(inp); } catch (x) { e = x; }
     ok(e?.name === 'ValueError' && want.test(e.message), `${MODEL}: ${JSON.stringify(inp)} is refused: ${e?.message ?? 'accepted'}`);
+  }
+  // the unplug (A-HDMI-1): IRQ 239 (the pin's interrupt is off since the plug), both pairs' callbacks, the hot-plug
+  // handler finds detect low and sends the disconnect report; the HDMI device stays open (D/X: nothing switches back)
+  const t1 = intc.sync().length, e1 = lab.kernel.errors.length;
+  const un = pl.run_input({ type: 'hdmi', action: 'unplug' });
+  const taken1 = intc.sync().slice(t1).map((x) => x[0] ?? x).filter((n) => n === irq || n === hpd.irq);
+  ok(un.kind === 'hdmi' && un.hdmi?.cable === 'out' && JSON.stringify(un.uiin_codes) === '["0x02020501"]', `${MODEL}: the unplug ends with the disconnect report: ${JSON.stringify(un.hdmi)} ${JSON.stringify(un.uiin_codes)}`);
+  ok(JSON.stringify(taken1) === JSON.stringify([irq]), `${MODEL}: the unplug's interrupt is IRQ ${irq} alone: ${JSON.stringify(taken1)}`);
+  const own1 = lab.kernel.errors.slice(e1).filter(([c]) => !EXPECTED_ERRLOG.has(c)).map(([c]) => '0x' + c.toString(16));
+  ok(own1.length === 0 && !(un.camapp ?? []).some(([k]) => k === 'outdev'), `${MODEL}: no errlog and no output change after the unplug: ${JSON.stringify(own1)}`);
+  if (opens) ok(lab.sim.u32(OPENED_WORD) === 0x0d000004, `E143: the HDMI device stays open: 0x${lab.sim.u32(OPENED_WORD).toString(16)}`);
+  {
+    let e = null;
+    try { pl.run_input({ type: 'hdmi', action: 'unplug' }); } catch (x) { e = x; }
+    ok(e?.name === 'ValueError' && /out already/.test(e.message), `${MODEL}: a second unplug is refused: ${e?.message ?? 'accepted'}`);
   }
   pl.close_session();
   // the negative control: the base block's checksum off by one, the plug made the input's way by hand
@@ -152,6 +217,8 @@ export async function hdmiSession() {
   ok(s.hdmi_status().ddc_reads === 6 && s.hdmi_status().edid_state === '0xff', `${MODEL}: a bad checksum: six reads of block 0, EDID state 0xff: ${JSON.stringify(s.hdmi_status())}`);
   ok(JSON.stringify(errs) === JSON.stringify(['0x37009108', '0x37008206']), `${MODEL}: the errlog of the read and of the hot-plug handler: ${JSON.stringify(errs)}`);
   ok(lab.uiin_codes.slice(c0).some(([, c]) => c === 0x02020501), `${MODEL}: the connect report is still sent: ${JSON.stringify(lab.uiin_codes.slice(c0))}`);
+  // E143: the application still asks for the HDMI output (S-OUTDEV), and CapIod opens nothing (X)
+  if (MODEL === 'E143') ok(s.camapp.outdev_done.length === 1 && lab.sim.u32(OPENED_WORD) === 1, `E143: after a failed EDID read CapIod opens nothing: ${JSON.stringify(s.camapp.outdev_done)}, opened 0x${lab.sim.u32(OPENED_WORD).toString(16)}`);
   pl.close_session();
   return { checks, bad };
 }

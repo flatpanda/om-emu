@@ -97,6 +97,7 @@
 //              whose 0 re-arms the GUI's beep (CBS_AF_LOCK's comment). The application's own changedFocus then plays
 //              the AF beep natively down to UI_OUT's sound request and, with the audio hardware, to the audio port
 import { FirmwareError, where, runtime, disasm, SP } from './hle.mjs';
+import { OPENED_WORD, HDMI_MASK } from './display.mjs';
 import { AssertionError } from './errors.mjs';
 import { packRegs } from './sim.mjs';
 import { pack, unpack } from '../util/bytes.mjs';
@@ -207,6 +208,16 @@ const DISPSYNC_REQUEST = 3, DISPSYNC_OFF = 0, DISPSYNC_IMAGE = 1, DISPSYNC_RECOR
 const TRA_EXEC_CALLS = A(0x50AF7CB9), TRA_EXEC_CALL = A(0x50AF7CBE);
 // S-TRAACK: the request's vtable slot the exec deletes a consumed request through (docs/hle-gaps.md 4.1.2, D)
 const REQUEST_DELETE_SLOT = 1;
+// S-OUTDEV (E143 with the HDMI port, docs/hle-gaps.md 4.9): the application's change of output device, TRA 588
+// (OlyHfwOpeCamCom 0x50abcf49 builds it at 0x50abf14d: +32 the device, +36 the second device, +40 0); the active
+// state's component takes it (CmpCst_Function 0x50ce992d..0x50ce9a0a, CmpSqp_SequencePartsBase 0x50c8fd69) and sends
+// the IO-device capability event 224 (constructor 0x50bf2f4e: +28, +32, +36 the request's three words), which
+// CapIod_IODevice (the singleton 0x50be92ca) takes in its state 6 (0x50beace2 -> 0x50beab11) and opens the device;
+// its dispatchEvent is the reactive's vtable slot 33 (0x50bea64b)
+const TRA_OUTPUT_DEVICE = 588, OUTPUT_HDMI = 8, IOD_INSTANCE = A(0x50BE92CA), IOD_EVENT_NEW = A(0x50BF2F4E);
+const IOD_EVENT_BYTES = 40, IOD_STATE_READY = 6, RX_DISPATCH_SLOT = 33;
+// the property setter CapIod writes the output-device property through (0x50ab4f75 -> 0x503c4b2f, d0 id, d1 value)
+const OUTDEV_PROP_SET = A(0x503C4B2F);
 const SHOOT_POST = A(0x50AF4451), SHOOT_REACTIVE_VT = A(0x60DFF400);
 const HEAP = A(0x62424700), HEAP_END = A(0x6268D380);
 // the callbacks' ids, by name in the build's CBS name table (src/fw/facts.mjs cbsIds): a build may number one
@@ -426,6 +437,7 @@ export const CAMAPP_STAND_INS = {
   "S-LENS": "(unless the lens runs natively: the default on E143, E146 and E147, S-LENSMCU; OM_EMU_LENS=stand-in for S-LENS there) a lens on the mount, the M.Zuiko 12-40mm F2.8 PRO: lens 0's attach and data-valid flags (0xa32d4b9a, 0xa32d4b98) are 1 and its record (0xa32caa8c -> the driver's static 0xa3193780) is filled through the driver's current copies and its own commits 0x502ac838 / 0x502acb96, the zoom entries at +1164; the field layout is the record dump's (0x50118662, 0x50118ab7, 0x50118d20), the values I (12-40 mm, F2.8-F22 as APEX x 256 761 / 2283); the driver's derived apertures and focal lengths run natively; the lens-ready byte 0xa32d4b94 is 1 (0x50127ba2 answers 1, not 0x21, which DISP_FRAME requires, I); set before the application starts",
   "S-EXPOSE": "the brightness the exposure plan follows: the AE result objects 0xc12a / 0xc0ba / 0xc0ca (TAKE_EXPOSE's command handler 0x50596187 writes them; one per metering mode, I) set through the property setter 0x5004188b to the scene's BV = (EV100 - 5) x 256 (S-SCENE's scene, else its default EV 12), the zoom step nearest its focal length; take_expose_calculate 0x50597e82 runs natively, once the application has started and after each input on the shooting screen; its plan (0x62a919dc +6 Tv, +10 Sv, +14 Av) is the shutter, aperture and ISO the screen shows and, in S-SCENE's auto, the live view's and the captures' exposure. The camera meters the live view continuously (its LV AE task, not run)",
   "S-OUTDISP": "while the lab's display switch (SWITCH: H-CONNECT 131 with lOutput 7) has the EVF open, the application's getOutputDisplay (0x5104fd44) answers 6 (INTERNAL_EVF), the device H-CONNECT's lOutput 7 stands for; on the TFT it runs natively. Without it the application, told of the GUI's change, answers the TFT (its EVF branch needs a monitor position the lab's switch bits do not give, docs/om1-shutter-spec.md section 7 item 53) and sends 131 with lOutput 2, and the two alternate. The camera decides from the eye sensor, the monitor position and the settings (I)",
+  "S-OUTDEV": "(E143 with --hdmi on) the application's change of output device, TRA 588, which S-TRAACK answers at the exec: the part its component would do (CmpCst_Function, CmpSqp_SequencePartsBase: the IO-device capability's event 224 with the request's device), done after the step, the event built by its own constructor and dispatched to CapIod_IODevice natively, as its OXF thread would; CapIod opens the device natively (the HDMI output 8 at the plug), and S-PROP's output-device property follows the value CapIod writes. The components' own steps around it (the through image's bank, their reply to the transaction, the change's notification 494) are not done",
   "S-THROUGH": "(with S-SCENE's live view) the application's through-image control OlyHfwOpeShoot::ctrlAutoThrough (0x50abd373; ctrl 0 as the menu opens, 1 as it closes, D from its log) stops and restarts S-SCENE's frames: while stopped the live-view plane shows black (I: what the camera's plane shows while the through image is stopped)",
   "S-SETSAVE": "the settings store's save to flash (0x500421cd, called by the application as the menu closes, return 0x503f01a4) returns 0 without saving, the value of its path for a store that is not dirty: the flash controller (0x98d01800) is not in the lab and persistence is not modelled; a call from anywhere else is an error",
   "S-NVRAM": "(a host that keeps the camera's non-volatile state, env.nvram: bin/play.mjs by default, in ~/.om-emu/nvram-<model>.json, --nvram off / OM_EMU_NVRAM=off for a blank camera, OM_EMU_NVRAM=FILE elsewhere; the browser player by default, in OPFS, nvram=0 for a blank camera; on bodies whose build places its sites, E143, E146 and E147, X) the settings stores' saves run natively down to the NAND write 0x5003d9da (direct, or posted to the flash task through 0x5003d95c, whose callback runs after it), which writes the image to its mirror and to the host; the next session's registry bootstrap restores M and E from those images ('MlR.', 'ElR.'); the SCPU window's backed-up words (the clock signature 0x00, the B store 0x08..0x3c) and the sub-CPU's memory S-SCPUDEV keeps (its RTC: the host's local time, read once at the session's start, plus the offset the camera's own clock setting left, advancing with lab time in the session; and its backup registers) come back too, and the window clock starts at that date, so the start shows no date prompt (instead of S-SETSAVE). A session is then a function of that state, that one clock read and its inputs: session.json records both per session (src/lab/nvramdoc.mjs), and --replay starts from them in memory",
@@ -474,6 +486,9 @@ export class CamApp {
     this.play_cur = null;      // S-PLAYCOMP: the index of the image shown (in play_list)
     this.play_exec = null;     // S-PLAYSEQ: the play request whose transaction runs next
     this.tra_deleted = 0;      // S-TRAACK: the requests deleted after their exec
+    this.outdev = this.s.hdmi_port && MODEL === 'E143' ? [] : null;   // S-OUTDEV: TRA 588 requests to take after the step
+    this.outdev_done = [];     // S-OUTDEV: [device, second, CapIod's state after the event]
+    this.outdev_prop = undefined;   // S-OUTDEV: the output-device property CapIod writes in the event (null: none yet)
     this.aflock = false;       // S-AFLOCK: installed (E143 with UI_OUT running); af_stage: null, 'ready' (S1 down) or
     this.af_stage = null;      // 'focus' (the AF lock holds); aflock_fed: the END_FOCUS(OK)s fed so far (the player
     this.aflock_fed = 0;       // lists the stand-in once one was)
@@ -763,6 +778,11 @@ export class CamApp {
       const req = r.a1 >>> 0, b = req ? lab.sim.read(req + 4, 2) : null;
       this.log.push(['tra', `${b ? b[0] | (b[1] << 8) : -1} from ${where(r.mdr)}`]);
       if (b && this.media && (b[0] | (b[1] << 8)) === this.media.f.ctrl.request) this.media.control(req);   // S-MDACTRL
+      if (b && this.outdev !== null && (b[0] | (b[1] << 8)) === TRA_OUTPUT_DEVICE) {                    // S-OUTDEV
+        const [device, second, third] = unpack('<3I', lab.sim.read(req + 32, 12));
+        if (device !== OUTPUT_HDMI) throw new FirmwareError(`S-OUTDEV: TRA ${TRA_OUTPUT_DEVICE} from ${where(r.mdr)} asks for output device ${device}: only the HDMI output (${OUTPUT_HDMI}) is stood in`);
+        this.outdev.push([device, second, third]);
+      }
       if (this.play_exec !== null) this.play_answer(this.play_exec);                // S-PLAYSEQ
       this.play_exec = null;
       if (!req) { if (calls) h.finish_calls(r, { d0: 0 }); else h.finish(r, { d0: 0 }); return; }
@@ -785,6 +805,9 @@ export class CamApp {
     const fd = fact('func_direct.id', { sp: 28 });
     lab.observe(FUNC_DIRECT_RUN, (l, r) => this.funcs.push(fd.reg ? r[fd.reg] >>> 0 : lab.sim.u32((r.sp >>> 0) + fd.sp)), 'S-RELSEQ function direct');
     lab.hook(TRA_EXEC_CALL, (h, r) => tra(h, r, false), 'S-TRAACK');
+    if (this.outdev !== null) lab.observe(OUTDEV_PROP_SET, (l, r) => {               // S-OUTDEV: CapIod's property write
+      if ((r.d0 & 0xFFFF) === lab.prop_device && this.outdev_prop !== undefined) this.outdev_prop = r.d1 >>> 0;
+    }, 'S-OUTDEV (output-device property)');
     if (this.components) lab.hook(SCPU_STATUS, (h, r) => h.finish(r, { d0: 0 }), 'S-BOOTDONE (sub-CPU status)');
     for (const a of LONG_TIMER_SET) lab.observe(a, (l, r) => {
       const n = r.d0 & 0xFF, ms = r.d1 >>> 0;
@@ -908,11 +931,37 @@ export class CamApp {
       if (++m > 50) throw new FirmwareError(`S-PLAYSEQ: more than 50 play requests in one step (${this.play_pending.length} pending)`);
       this.play_finish(this.play_pending.shift());
     }
+    while (this.outdev?.length) this.output_device(this.outdev.shift());           // S-OUTDEV
     if (this.media && this.media.busy()) {                                         // S-MDACTRL / S-MEDIA (media.mjs)
       this.media.tick();
       for (const [k, d] of this.media.take_log()) this.log.push([`media ${k}`, d]);
       if (this.acks.length || this.play_pending.length || this.dispsync.size) this.pump();
     }
+  }
+  // S-OUTDEV: the component's event 224 built by its own constructor and made CapIod's current event, then its
+  // dispatchEvent natively, as its OXF thread would (S-BOOTDONE's way); CapIod opens the device from there
+  output_device([device, second, third]) {
+    const lab = this.s.lab, iod = lab.call(IOD_INSTANCE, {}).a0 >>> 0, st = lab.sim.u32(iod + RX_STATE);
+    if (st !== IOD_STATE_READY) throw new FirmwareError(`S-OUTDEV: CapIod ${h8(iod)} in state ${st}, not ${IOD_STATE_READY} (where it takes event 224)`);
+    const ev = lab.alloc(new Uint8Array(IOD_EVENT_BYTES), 4);
+    lab.call(IOD_EVENT_NEW, { a0: ev, d0: device, d1: second, a1: third }, null, null, 20000);
+    const dispatch = lab.sim.u32(lab.sim.u32(iod) + 4 * RX_DISPATCH_SLOT), old = lab.sim.u32(iod + RX_EVENT);
+    lab.sim.write(iod + RX_EVENT, pack('<I', ev));
+    this.log.push(['outdev', `TRA ${TRA_OUTPUT_DEVICE}: event 224 {${device}, ${second}, ${third}} to CapIod ${h8(iod)}`]);
+    this.outdev_prop = null;
+    try { lab.calls(disasm(dispatch), { a0: iod }, undefined, undefined, 500000000); } finally { lab.sim.write(iod + RX_EVENT, pack('<I', old)); }
+    this.outdev_done.push([device, second, lab.sim.u32(iod + RX_STATE)]);
+    // S-PROP follows the output-device property CapIod wrote (X: 16 for HDMI, 0x50bea474), so that the application's
+    // reads of it at S-PROP's sites see the device the firmware opened, not the lab's last open
+    if (this.outdev_prop !== null) {
+      lab.props.set(lab.prop_device, this.outdev_prop);
+      this.log.push(['outdev', `S-PROP: property ${lab.prop_device} = ${this.outdev_prop}, as CapIod wrote it`]);
+    }
+    this.outdev_prop = undefined;
+    // the HDMI channel runs once the device is open (DisplayLab.hdmi_line: the firmware's format table's timing)
+    const opened = lab.sim.u32(OPENED_WORD);
+    if (opened & HDMI_MASK) this.log.push(['outdev', `HDMI open: mask ${h8(opened)}, ${JSON.stringify(lab.hdmi_line(opened & HDMI_MASK))}`]);
+    this.s.settle('S-OUTDEV');
   }
   // S-CARD: whether the firmware's own DCF database holds the pictures: where REC's recorder records them (storage.mjs
   // record(): the build's recorder read, fact 'recorder'), its registration counts each in the same session, and the

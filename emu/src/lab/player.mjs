@@ -455,6 +455,7 @@ export class Player {
     if (this.session?.power_manager) used.push('H-PWRSTART', ...(this.session.ioexp ? ['S-IOEXP'] : []), 'S-SHUTDOWN', 'S-PWRLOG', 'H-SCPUPOLL');
     if (this.session?.hdmi_port || this.session?.lab?.scpu_link) used.push('H-GIOSLOTS');   // the GIO slots, for the HDMI pin or the link's pin 102
     if (this.session?.hdmi_port) used.push('S-HDMISINK', 'A-HDMI-1');                       // --hdmi on: the HDMI port, its sink
+    if (this.session?.camapp?.outdev_done?.length) used.push('S-OUTDEV');                   // an output-device change taken (camapp.mjs)
     if (this.session?.audio_hw) used.push('H-AUDSTART', 'S-AUDCPU2', 'S-WM8946', 'A-AUDIO-1', 'H-AUDTIME');   // --audio on (auto on E143): the audio hardware (audiohw.mjs)
     if (this.session?.storage) used.push('H-FILEINIT', 'H-FILECLBK', 'S-SDHOST', 'S-SDCARD', 'S-FSNAND', ...(this.session.storage.f.album_init !== null ? ['S-ALBM'] : []), 'S-RECFILE');   // the file system native on a card (storage.mjs; S-ALBM where the body has an album manager)
     if (this.session?.resnand) used.push('H-RESINIT', 'S-RESNAND');                       // the resource tables from the host's NAND (resnand.mjs)

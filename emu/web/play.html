@@ -737,7 +737,7 @@ async function drawCardImage(r, canvas) {
   canvas.width = bm.width; canvas.height = bm.height;
   canvas.getContext('2d').drawImage(bm, 0, 0);
 }
-const UNPLUG_WHY = 'the lab refuses an unplug (A-HDMI-1: what the transmitter and the hot-plug pin show when the cable comes out is not read)';
+const UNPLUG_WHY = 'the cable comes out: the transmitter flags the change (A-HDMI-1) and the firmware reports the disconnect to UI_IN natively; on E143 the HDMI output stays open (nothing in the lab switches back)';
 const CARD_THUMBS = 24;             // thumbnails drawn per read of the card, the newest files first
 let SESSION = null, CARD = null, cardImages = null, cardReading = null, cardAgain = false;
 // a card's capacity from its sectors (the slot's), as 'N GiB' (sectors of 512 bytes)
@@ -768,11 +768,11 @@ function showPorts(s) {
   let text;
   if (SESSION.hdmi !== 'on') text = `no HDMI port in this session: ${HDMI_HOW}`;
   else if (!port) text = LIVE.has(s.phase) ? `no HDMI port on ${MODEL && MODEL.model ? MODEL.model : 'this body'} in the lab (src/fw/models.mjs hdmi)` : `no session (${s.phase})`;
-  else text = `cable ${port.cable} · DDC reads ${port.ddc_reads} · the driver's EDID state ${port.edid_state}` + (port.cable === 'in' ? ` · Unplug: ${UNPLUG_WHY}` : '');
+  else text = `cable ${port.cable} · DDC reads ${port.ddc_reads} · the driver's EDID state ${port.edid_state}` + (port.open ? ` · the HDMI output open (format ${port.open.format}, ${port.open.vtotal} lines of ${port.open.line_ns} ns; S-OUTDEV)` : '') + (port.cable === 'in' ? ` · Unplug: ${UNPLUG_WHY}` : '');
   plug.disabled = !port || port.cable === 'in' || !LIVE.has(s.phase);
   un.disabled = !port || port.cable !== 'in' || !LIVE.has(s.phase);
   plug.title = port ? 'S-HDMISINK: a 1080p60 sink with the lab\'s EDID on the port; the firmware takes the hot-plug interrupt and reads the EDID over the DDC itself' : text;
-  un.title = port ? UNPLUG_WHY + '; the button sends the input, and the lab\'s refusal shows in the status line' : text;
+  un.title = port ? UNPLUG_WHY : text;
   $('hdmi-state').textContent = text;
   // the tilt's range: with PER_ROTATE (rotate on) any attitude, else within 45 degrees (A-ACC-2)
   const rot = SESSION.rotate === 'on';
@@ -859,7 +859,7 @@ async function cardInput(action) {
   await cardRefresh();
 }
 $('hdmi-plug').onclick = () => send({ type: 'hdmi', action: 'plug' });
-$('hdmi-unplug').onclick = () => send({ type: 'hdmi', action: 'unplug' });       // refused by the lab (A-HDMI-1), not here
+$('hdmi-unplug').onclick = () => send({ type: 'hdmi', action: 'unplug' });       // the transmitter's side A-HDMI-1
 $('card-remove').onclick = () => cardInput('remove');
 $('card-insert').onclick = () => cardInput('insert');
 $('card-read').onclick = () => cardRefresh();

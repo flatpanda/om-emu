@@ -47,7 +47,8 @@ leaves a fact the import needs unread, src/fw/board.mjs) is refused at start wit
 page's model menu switches a running server to another body (`POST /api/model`): the session stops as Quit stops it,
 the server restarts on that model at the same URL, and the page reloads. It refuses, with the reason under the menu and
 the session running on, a body whose firmware is not unpacked yet (run `fetch-fw.mjs --model CODE` first), a body the
-lab does not load on, and a session started with `--out` or `--replay`.
+lab does not load on, a session started with `--out` or `--replay`, and one whose state is kept in a named file
+(`--nvram FILE`, `OM_EMU_NVRAM=FILE`: that file is the old model's).
 
 On first use the player provisions the model's firmware (`host/firmware.mjs`): it takes the `.BIN` from `fw/` or
 `fw/old/` (or `$OM_FW_DIR`, or `$OM_BIN` when that file is the model's `.BIN`), else downloads it (the API serves only
@@ -55,6 +56,37 @@ each body's latest release), and verifies and unpacks it as `fetch-fw.mjs` does 
 blocks are the model's). `npm run play` in `emu/` does the same as `play.sh`. Ctrl+C stops it; the session log is in
 `emu/out/play/<model>/<time>/session.json`. A browser-only variant, with the lab in a Worker and no server, is under
 "The browser player".
+
+**The camera's kept state (S-NVRAM).** The player keeps the camera's non-volatile state between sessions, as the
+camera does across a power-off: the settings stores M and E as the firmware saves them (the menu's close, the
+power-off), the SCPU window's backed-up words and the sub-CPU's memory (its RTC and backup registers). A camera whose
+clock was set starts on its shooting screen with the last session's settings, not at the date prompt. `bin/play.mjs`
+keeps one JSON file per model, `~/.om-emu/nvram-<model>.json` (`nvram-E143.json`, `nvram-E146.json`, ...), and its
+startup line names the file in use. `--nvram off` (or `OM_EMU_NVRAM=off`) runs a blank camera at each start and leaves
+the file alone; `--nvram FILE` (or `OM_EMU_NVRAM=FILE`) keeps the state in FILE instead; `--nvram` wins over
+`OM_EMU_NVRAM`. Delete the file to start from a blank camera again. A file names its model and another model's is
+refused at start (exit 1), and so is a file that does not parse. The state is kept where the build places S-NVRAM's
+sites, E143, E146 and E147 (X: two sessions on a fresh file restore M and E on each); on the other bodies the player
+runs blank and its line says why (the flash task's post `0x5003d95c` has no place in their builds), and `--nvram on`
+or a file is refused there. `OM_EMU_SCPU=native` runs blank by default as well (the sub-CPU's own backup domain is not
+kept), and refuses a kept state asked for. The browser player keeps the same document in OPFS by default (`nvram=0`
+for a blank camera; "Forget the kept settings" removes it; "The browser player").
+
+The camera's clock in a session with the kept state is the host's local time, read once as the session starts, plus
+the offset the camera's own clock setting left, and then advances with lab time (src/lab/menu.mjs store_init), so a
+session is a function of its starting state, that one clock read and its inputs. `session.json` records both for
+every session of the run (its `nvram`: `{start, sessions: [{clock, doc?}]}`, the state when the run began and each
+session's clock, with a session's document only where the file was not what this run's own saves left, another
+writer or a deletion between sessions; `src/lab/nvramdoc.mjs`), and writes the same record to `session.nvram.json`
+beside `session.jsonl` as each session starts. `--replay` of such a log starts every session from the recorded state
+and clock, held in memory: it repeats the session frame for frame, and never reads or writes the kept file; a
+`session.jsonl` takes the record from the `session.nvram.json` beside it. A log without the record (a session without
+the kept state, or a log from before it was recorded) replays as a blank camera, whatever the kept file holds, and
+`--nvram` with `--replay` is refused. The tools and tests run blank: `checks/lib/playhttp.mjs` and
+`test/test_host.mjs` start `bin/play.mjs` with `--nvram off` unless a test names `--nvram` (or replays a log),
+`bin/nav.mjs`, `bin/debug.mjs`, golden and modelcheck give the lab no kept state, webgate's pages and sitegate's
+dropped page ask for `nvram=0`, and the pages sitegate and browsergate open through the landing page's link run the
+default in the fresh browser profile each run makes.
 
 **The live view.** The page's "Scene and image sensor" panel turns on S-SCENE, a stand-in for the image sensor
 (`src/lab/scene.mjs`, `docs/om1-shutter-spec.md`). It renders a synthetic scene (static, moving or a test chart; three
@@ -69,8 +101,9 @@ lab. Its inputs are session-log inputs, so `--replay` repeats them.
 reaches the run-time inputs below from the page. The session line says what the session was started with
 (`GET /api/session`): the HDMI port, the lens (natively with S-LENSMCU, the default on E143, E146 and E147, or
 S-LENS), the settings (S-NVRAM or S-SETSAVE) and where the card is kept, with the size asked for a new one. These are
-fixed for a session: on node by `--hdmi on` and `OM_EMU_LENS`, `OM_EMU_NVRAM`, `OM_EMU_CARD` and `OM_EMU_CARD_SIZE`
-in the server's environment, in the browser by the start options above the camera (`?hdmi=on`, `?lens=stand-in`, `?nvram=1`, and the
+fixed for a session: on node by `--hdmi on`, `--nvram` and `OM_EMU_LENS`, `OM_EMU_NVRAM`, `OM_EMU_CARD` and
+`OM_EMU_CARD_SIZE`
+in the server's environment, in the browser by the start options above the camera (`?hdmi=on`, `?lens=stand-in`, `?nvram=0`, and the
 Card menu's `?card_size=GiB`: 64 or 128 GiB, an SDXC card). HDMI: Plug in sends `{"type": "hdmi", "action": "plug"}` in a session with the port (the
 cable, the DDC reads and the driver's EDID state from the status), and is disabled with the reason without one; Unplug
 sends the unplug, which the lab refuses (A-HDMI-1), and the refusal shows in the status line. Card: Take out and Put in
@@ -266,8 +299,10 @@ OM_EMU_LENS=stand-in sh emu/play.sh              # S-LENS in place of the native
 OM_EMU_SCPU=native sh emu/play.sh                # E143's and E146's sub-CPU as its own firmware on the STM32L4 machine
                                                  # in place of S-SCPUDEV (needs the
                                                  # SCPU block in unpacked/, BLOBS.md)
-OM_EMU_NVRAM=~/.om-emu.json sh emu/play.sh       # keep the settings and the clock between sessions (S-NVRAM): no date
-                                                 # prompt at power-on, menu changes back in the next session
+sh emu/play.sh --nvram off                       # a blank camera at each start (S-SETSAVE): the settings and the
+                                                 # clock kept in ~/.om-emu/nvram-<model>.json are left alone
+OM_EMU_NVRAM=/tmp/cam.json sh emu/play.sh        # keep the settings and the clock in another file (S-NVRAM; the
+                                                 # default is ~/.om-emu/nvram-<model>.json)
 OM_EMU_CARD=emu/out/card/E143.omsd sh emu/play.sh   # keep the card between sessions (E143): formatted once, the
                                                  # pictures' files stay on it (src/lab/sdcard.mjs cardImage)
 OM_EMU_CARD_SIZE=64 sh emu/play.sh               # a blank 64 GiB SDXC card in place of the 8 GiB SDHC one, formatted
@@ -554,9 +589,11 @@ used: the `.BIN` is asked for again). Nothing is uploaded.
 The query string takes the player's options (`?idle=off`, `device=evf`, `a15=on`, `touch=driver`, `start=menu`,
 `tab=7,5,1`, `debug_api=1`, `hdmi=on`, `audio=off`, ...); the default is `--idle wall`. The start options above the
 camera set four of them before the start and keep them in the query: the HDMI port (`hdmi=on`), the lens natively
-(`lens=native`, the Worker's `env.lens`), the settings kept in this browser (`nvram=1`: S-NVRAM's document, as
-`OM_EMU_NVRAM`'s file holds it, in OPFS under `nvram-<model>`, apart from the firmware; "Forget the kept settings"
-removes it; `web/nvram.mjs`) and the card's size (`card_size=GiB`, as `OM_EMU_CARD_SIZE`: the Card menu's 64 or 128 GiB
+(`lens=native`, the Worker's `env.lens`), the settings kept in this browser (on by default, as `bin/play.mjs` keeps
+them; `nvram=0` when "Keep the settings" is unchecked, for a blank camera: S-NVRAM's document, as the node player's
+file holds it, in OPFS under `nvram-<model>`, apart from the firmware; "Forget the kept settings" removes it; a body
+whose build lacks S-NVRAM's sites runs blank and the page says why; `web/nvram.mjs`) and the card's size
+(`card_size=GiB`, as `OM_EMU_CARD_SIZE`: the Card menu's 64 or 128 GiB
 SDXC card, in memory for the Worker's life; a size the card does not take fails the start with its reason). The page
 runs one model, E143 unless `?model=CODE` names another of `src/fw/models.mjs` (the page's model menu reloads it with
 that parameter): the Worker compares the main code block and the resource prefix with that model's sha256

@@ -512,6 +512,7 @@ export class PlayLab extends N.NavLab {
     this.uiin_direct = new Tally();
     this.observe(UI_IN_POST_EXT, (lab, r) => this._uiin_post_ext(lab, r), 'obs-uiin-post-ext');
     this.heap_sizes = new Map();
+    this.heap_owner = new Map();                       // block -> [malloc's caller (disassembly), task id]
     this.heap_free = new Map();
     this.heap_stats = new Tally();
     this.hook(HLE.MALLOC, (h, r) => this._s_malloc(h, r), 'S-HEAP malloc');
@@ -583,7 +584,11 @@ export class PlayLab extends N.NavLab {
     }
     if (q === APP_QUEUE && this.dispq_returns.includes(ra) && this.depth > 0) {
       const [p, n] = unpack('<II', this.sim.read(r.a0, 8));
-      this.dispq_replies.push({ step: this.step_tag, queue: q, msg: bytesHex(this.sim.read(p, n)), caller: h8(ra) });
+      const msg = Uint8Array.from(this.sim.read(p, n));
+      this.dispq_replies.push({ step: this.step_tag, queue: q, msg: bytesHex(msg), caller: h8(ra) });
+      // where the camera application runs its event task reads queue 6, and the reply goes there after the step
+      // (camapp.mjs, S-DISPQ's replies)
+      if (this.dispq_deliver) this.dispq_deliver.push({ q, msg });
       hle.finish(r, { d0: 0 });
       return;
     }
@@ -630,6 +635,8 @@ export class PlayLab extends N.NavLab {
       this.heap_stats.add('new');
     }
     this.heap_sizes.set(a, size);
+    // who allocated it: malloc's caller and the running task's id (the kernel's current TCB, its id at +16)
+    this.heap_owner.set(a, [disasm(r.mdr), this.nk ? unpack('<H', this.sim.read(this.sim.u32(this.nk.kcb(96)) + K.TCB_ID, 2))[0] : null]);
     hle.finish(regs, { a0: a });
   }
   _s_free(hle, r) {
@@ -637,6 +644,7 @@ export class PlayLab extends N.NavLab {
     const size = this.heap_sizes.get(a);
     if (size !== undefined) {
       this.heap_sizes.delete(a);
+      this.heap_owner.delete(a);
       if (!this.heap_free.has(size)) this.heap_free.set(size, []);
       this.heap_free.get(size).push(a);
       this.heap_stats.add('freed');

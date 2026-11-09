@@ -29,6 +29,13 @@
 //              is answered after the step with [status 0, token = word 1, word 3] to the reply queue in its word 0
 //              (the layout of DISPLAY's replies, 0x501c48bf); every synchronous send (0x5002e39d) the lab's own stand-in
 //              refuses returns E_OK. Nothing a module would write back is written
+//   S-DISPQ's replies (with the application): the replies the DISPLAY loop sends to queue 6 while S-DISPQ runs it
+//              (play.mjs, 0x501c490c / 0x501c496d), which S-DISPQ records, go to queue 6 after the step, each followed
+//              by a settle: the application's event task (entry 0x50abbf0c) reads that queue (0x503ebf63), and a reply
+//              (id 0xf0000000 | slot << 16) frees its request slot's buffer (0x503ea264 -> 0x503ebae0 -> free at
+//              0x503ebb3f, the 192 bytes 0x503eb91b allocated). Recorded only, every request's buffer stayed allocated
+//              (X: 6 blocks a pass of S1, S2, the menu and playback; docs/hle-gaps.md 4.4.2). That the camera's reply
+//              comes before the requester's next step is I (DISPLAY outranks the GUI)
 //   S-DISPSYNC the release of the GUI's synced display updates: while the application's sync word for a panel is
 //              set (CameraCommon::setDispSync, which E137's GUI asks for at the start), the GUI's update sends the
 //              display manager a request of type 3, which leaves its buffers pending until an image sync names the
@@ -756,6 +763,7 @@ export class CamApp {
         h.finish(r);
       }, 'S-AFLOCK');
     }
+    lab.dispq_deliver = [];                                                        // S-DISPQ's replies (pump)
     lab.wrap(OLYQEWR, (prev) => (h, r) => {                                         // on top of S-DISPQ's hook
       const q = r.d0 & 0xFFFF;
       if (disasm(r.mdr) === API_SEND_RETURN && this.module_queues.has(q)) {
@@ -898,10 +906,20 @@ export class CamApp {
       if (this.movie_phase === null) lab.passthrough(r); else h.finish(r, { d0: this.movie_phase });
     }, 'S-RELSEQ (shooting phase)');
   }
-  // S-MODACK: the replies, each followed by a settle (a reply can bring the next request); S-DISPSYNC's releases.
+  // S-MODACK: the replies, each followed by a settle (a reply can bring the next request); S-DISPSYNC's releases;
+  // S-DISPQ's replies to the application's queue.
   pump() {
-    const s = this.s, lab = s.lab;
-    for (let n = 0, m = 0, k = 0; this.acks.length || this.play_pending.length || this.dispsync.size;) {
+    const s = this.s, lab = s.lab, dq = lab.dispq_deliver ?? [];
+    for (let n = 0, m = 0, k = 0, d = 0; dq.length || this.acks.length || this.play_pending.length || this.dispsync.size;) {
+      if (dq.length) {
+        if (++d > 200) throw new FirmwareError(`S-DISPQ: more than 200 DISPLAY replies in one step (${dq.length} pending)`);
+        const { q, msg } = dq.shift();
+        this.log.push(['dispq', `DISPLAY reply [${[...msg].map((b) => b.toString(16).padStart(2, '0')).join('')}] -> queue ${q}`]);
+        const desc = lab.alloc(pack('<II', lab.alloc(msg, 4), msg.length), 4);
+        lab.call(OLYQEWR, { d0: q, d1: 0xFFFFFFFF, a0: desc }, null, null, 2000000);
+        s.settle('S-DISPQ reply');
+        continue;
+      }
       if (this.dispsync.size) {
         if (++k > 20) throw new FirmwareError(`S-DISPSYNC: more than 20 releases in one step (devices ${[...this.dispsync].join(', ')})`);
         const [code] = this.dispsync;
@@ -935,7 +953,7 @@ export class CamApp {
     if (this.media && this.media.busy()) {                                         // S-MDACTRL / S-MEDIA (media.mjs)
       this.media.tick();
       for (const [k, d] of this.media.take_log()) this.log.push([`media ${k}`, d]);
-      if (this.acks.length || this.play_pending.length || this.dispsync.size) this.pump();
+      if (lab.dispq_deliver?.length || this.acks.length || this.play_pending.length || this.dispsync.size) this.pump();
     }
   }
   // S-OUTDEV: the component's event 224 built by its own constructor and made CapIod's current event, then its

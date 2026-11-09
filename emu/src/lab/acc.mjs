@@ -203,7 +203,7 @@ export class Accelerometer {
     return { horizon: dv.getInt16(2, true), horizon_ok: dv.getUint16(4, true), vertical: dv.getInt16(6, true), vertical_ok: dv.getUint16(8, true), body: b[10] };
   }
   // PER_ROTATE's results (--rotate on): pose, the orientation 0..5 its readers take (D: 0 level, 1 the body's x up,
-  // 2 upside down, 3 x down, 4 and 5 the lens up or down, by the remap's axes); index, the reported orientation 0..4
+  // 2 upside down, 3 x down, 4 and 5 z up or down, by the remap's axes, I: z the lens axis); index, the reported 0..4
   // (0 none yet); exif, the getter's code natively (the table at index: 11 none, 1, 6, 3, 8: EXIF's orientation codes,
   // the getter's debug names ROTATE_0, ROTATE_90, ROTATE_180, ROTATE_270, ROTATE_DISABLE for 11, D)
   rotation() {

@@ -1444,37 +1444,36 @@ subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a91
   errlog `0x46000202` are not reached (I). So E147 would need its WHO_AM_I and rate write in S-ACCREG and a 30 ms
   cadence in S-ACCSAMPLE (A-ACC-2's one sample per cycle); not built.
 - **PER_ROTATE** (task 59, entry `0x5005a17e`, read 2026-11-08; its name "PER_ROTATE_TSK" and its debug command
-  `0x5005a462`: init, start, end, get). The init `0x5005a08c` (the boot's call at `0x501e9c2b`, right after
-  PER_SLOPE's init at `0x501e9c17`) stores data object `0x1f82[0]` (`0x500417da(8066)`) at `(0xa32c64f0)`, the
-  state `(0x62965124)` = 0, the reported index `(0xa32c64f4)` = 0, three table indices `(0x62965128)` = 10,
-  `(0x6296512c)` = 50, `(0x62965130)` = 60, the magnitude tolerance `(0x62965134)` = 400 and the orientation
-  `(0xa32c64f8)` = 0, then calls the start `0x5005a0f7` (state 0 -> 1; state 2 -> 1 and its flag `(0x60042fda)` set,
-  with iset in interrupt context) and starts and names the task. The end `0x5005a14a` sets the state to 2. The task,
-  while the state is not 1, waits for its flag; else per pass: the corrected sample `0x50049795`, the remap
-  `0x5005ff7d`, each axis to mg truncated (`0x500497df`, `0x5002a912`); the magnitude
-  sqrt(x^2 + y^2 + z^2) (pow with 2.0 `0x500275f5`, sqrt `0x50027943`) must lie in 1000 +- 400 mg, else the pass
-  changes nothing; h = sqrt(x^2 + y^2) and e = sqrt(1000^2 - h^2) (0 when h >= 1000), the lens axis's share of 1 g.
-  The tables: T1 `0x6011a080`, 90 words 100, 102, ... 11459 (I: 100 tan(45 + i/2 degrees)), T2 `0x6011a1e8`, 91
-  words 0, 17, ... 1000 (I: 1000 sin(i degrees)). If e > T2[50] = 766: e > T2[60] = 866 sets orientation 4 (z > 0)
-  or 5, else nothing changes. Else, |y| > |x|: 100|y| > T1[10] |x| (T1[10] = 119, I: tan 50 degrees) sets 0 (y > 0)
-  or 2, else nothing; |x| > |y|: 100|x| > 119 |y| sets 1 (x > 0) or 3; equal, nothing. So portrait comes past 50
-  degrees of roll and goes below 40, and the lens up or down comes past 60 degrees of pitch and goes below 50 (I, from
-  the tables; X, below). The reported index: orientations 0..3 -> 1..4; 4 and 5 keep an index of 2 or 4 and else
-  report 1 (so upside down, 3, does not survive the lens pointing down). A changed index is stored and event
-  `0x4020310` published (`0x50025088(0x4020310, 0)`); then a 100 delay (`0x5002c6e5(100)`). The getter `0x5005a155`
-  returns 1 when `(0xa32c64f0)` is 1, else the halfword of the table `0x6034e164` {11, 1, 6, 3, 8} at the index: the
-  debug command's ROTATE_DISABLE, ROTATE_0, ROTATE_90, ROTATE_180, ROTATE_270 (I: EXIF's orientation codes); the
-  orientation itself is `0x5005a175()`. Its API: get `0x5041d376` (request `0x80001`), start `0x5041d3da`
+  `0x5005a462`: init, start, end, get). The init `0x5005a08c` (the boot's call at `0x501e9c2b`, right after PER_SLOPE's
+  init at `0x501e9c17`) stores data object `0x1f82[0]` (`0x500417da(8066)`) at `(0xa32c64f0)`, the state `(0x62965124)`
+  = 0, the reported index `(0xa32c64f4)` = 0, three table indices `(0x62965128)` = 10, `(0x6296512c)` = 50,
+  `(0x62965130)` = 60, the magnitude tolerance `(0x62965134)` = 400 and the orientation `(0xa32c64f8)` = 0, then calls
+  the start `0x5005a0f7` (state 0 -> 1; state 2 -> 1 and its flag `(0x60042fda)` set, with iset in interrupt context)
+  and starts and names the task. The end `0x5005a14a` sets the state to 2. The task, while the state is not 1, waits for
+  its flag; else per pass: the corrected sample `0x50049795`, the remap `0x5005ff7d`, each axis to mg truncated
+  (`0x500497df`, `0x5002a912`); the magnitude sqrt(x^2 + y^2 + z^2) (pow with 2.0 `0x500275f5`, sqrt `0x50027943`) must
+  lie in 1000 +- 400 mg, else the pass changes nothing; h = sqrt(x^2 + y^2) and e = sqrt(1000^2 - h^2) (0 when h >=
+  1000), z's share of 1 g (I: z the lens axis). The tables: T1 `0x6011a080`, 90 words 100, 102, ... 11459 (I: 100 tan(45
+  + i/2 degrees)), T2 `0x6011a1e8`, 91 words 0, 17, ... 1000 (I: 1000 sin(i degrees)). If e > T2[50] = 766: e > T2[60] =
+  866 sets orientation 4 (z > 0) or 5, else nothing changes. Else, |y| > |x|: 100|y| > T1[10] |x| (T1[10] = 119, I: tan
+  50 degrees) sets 0 (y > 0) or 2, else nothing; |x| > |y|: 100|x| > 119 |y| sets 1 (x > 0) or 3; equal, nothing. So
+  portrait comes past 50 degrees of roll and goes below 40, and the lens up or down comes past 60 degrees of pitch and
+  goes below 50 (I, from the tables; X, below). The reported index: orientations 0..3 -> 1..4; 4 and 5 keep an index of
+  2 or 4 and else report 1 (so upside down, 3, does not survive the lens pointing down). A changed index is stored and
+  event `0x4020310` published (`0x50025088(0x4020310, 0)`); then a 100 delay (`0x5002c6e5(100)`). The getter
+  `0x5005a155` returns 1 when `(0xa32c64f0)` is 1, else the halfword of the table `0x6034e164` {11, 1, 6, 3, 8} at the
+  index: the debug command's ROTATE_DISABLE, ROTATE_0, ROTATE_90, ROTATE_180, ROTATE_270 (I: EXIF's orientation codes);
+  the orientation itself is `0x5005a175()`. Its API: get `0x5041d376` (request `0x80001`), start `0x5041d3da`
   (`0x80003`) and end `0x5041d40e` (`0x80004`), the last two called only from the HLS's wrap `0x50abb6d8` /
   `0x50abb6e1`. The get API's callers: the HFW's `getCameraOrientation` (below), Level Adjust's calibration and reset,
   the play components (CmpPls_PlaySingleComponent, CmpPli_PlayIndexComponent, Cmp_PlayComponentBase,
   CapImg_ImagePlayer), the Wi-Fi remote take, Bluetooth and `0x501e7a22`. The getter's direct callers: takepic's
   `0x503bcd51` stores its code at `+0x950c` of its shooting record next to the gauge's record at `+0x181a`
   (`0x503bd0ee..0x503bd112`; I: the picture's orientation for its tags), four sites in the movie and face libraries
-  (`0x5050d1f2..0x5051dd8c`), `0x5006000d` and `0x517fe243`. The orientation's readers: the correction's pose,
-  PER_SLOPE (a change re-inits it), Level Adjust's `0x5005fa9e`, `0x5004a003`, `0x50989813`, `0x5100db44`. E146's
-  init `0x5005bb0e` and task `0x5005bc00` compare with E143's instruction for instruction but for absolute addresses,
-  with the same tables, words and getter table (`0x6034e2b8`); its publish is `0x50025153`.
+  (`0x5050d1f2..0x5051dd8c`), `0x5006000d` and `0x517fe243`. The orientation's readers: the correction's pose, PER_SLOPE
+  (a change re-inits it), Level Adjust's `0x5005fa9e`, `0x5004a003`, `0x50989813`, `0x5100db44`. E146's init
+  `0x5005bb0e` and task `0x5005bc00` compare with E143's instruction for instruction but for absolute addresses, with
+  the same tables, words and getter table (`0x6034e2b8`); its publish is `0x50025153`.
 - **Built (2026-11-08, `--rotate on`, `emu/src/lab/acc.mjs`, E143 and E146).** H-ROTINIT runs PER_ROTATE's init
   natively after PER_SLOPE's at the bring-up, which starts the task (59); off by default, because the task's passes
   change every E143 session's interrupt and stop records (X: golden's keys, shoot-tft and play-perf differ with it on).

@@ -15,7 +15,8 @@
 //                   directory and file, a two-name-entry file whose chain skips a cluster, its valid data length),
 //                   each checksum and the name hash refused when wrong, a looping chain, a cluster the bitmap does
 //                   not allocate and one it leaks reported; refs/volume.mjs picking the reader; the picture
-//                   file's JPEG through the independent decoder (refs/jpeg.mjs): its size, sampling and block means
+//                   file's JPEG through the independent decoder (refs/jpeg.mjs): its size, sampling and block means;
+//                   the independent Exif reader (refs/exif.mjs) on an APP1 this test builds, and its refusals
 //   storageSession  (firmware) play sessions on the body of OM_EMU_MODEL (E143 by default; its card_fs native): the
 //                   file system's bring-up and the card's insertion (H-FILEINIT, S-SDCARD, S-CARD) leave the drive
 //                   mounted by the firmware's own path, on a blank card the firmware formatted itself; the card read
@@ -23,9 +24,12 @@
 //                   on E143 'OM SYSTEM'), FSInfo's free count against the FAT's; the firmware's
 //                   remaining shots and movie time from the card (the queries S-CARD answered before), smaller on a 4 GiB
 //                   card; a saved card (env.card) mounts in the next session without a format, and a player keeps
-//                   its card across a power cycle; S2 with the live view writes the picture's file (S-RECFILE): its
-//                   directory entry, size and bytes read back independently, the JPEG decoded (refs/jpeg.mjs) to the
-//                   capture's block means, and the next session's DCF numbering mount and image count find it; where the body runs the HLS media side (card_fs.hls: E143, E146) Card
+//                   its card across a power cycle; S2 with the live view writes the picture's file (S-RECFILE; on
+//                   E143 REC_FILE natively, the clock set first): its directory entry, size and bytes read back
+//                   independently (on E143 the firmware's header, its Make, Model, dates, Exif version, maker notes
+//                   and thumbnail slot read by refs/exif.mjs, then the lab's stream), the JPEG decoded
+//                   (refs/jpeg.mjs) to the capture's block means, and the next session's DCF numbering mount and
+//                   image count find it; where the body runs the HLS media side (card_fs.hls: E143, E146) Card
 //                   Formatting from the menu (S-MDACTRL): the card read back is freshly formatted, the counts reset and
 //                   the application returns to the menu; the card out and back in (S-MEDIA): the drive unmounted and the
 //                   screen without the counts, then mounted again by the firmware with the counts back
@@ -44,6 +48,7 @@ import { ExfatVolume } from '../refs/exfat.mjs';
 import { openVolume } from '../refs/volume.mjs';
 import { jpegOfFrame } from '../src/lab/jpeg.mjs';
 import { decodeJpeg } from '../refs/jpeg.mjs';
+import { readExif, jpegSegments } from '../refs/exif.mjs';
 import { MODELS } from '../src/fw/models.mjs';
 
 const throwsLike = (fn, re) => { try { fn(); return false; } catch (e) { return re.test(e.message); } };
@@ -316,6 +321,30 @@ export function storageUnits() {
   ok(Math.abs(dj.components[2].samples[2 * 19 + 3] - Math.round(cm / 64)) <= 1, `a Cr block decodes to its mean: ${dj.components[2].samples[2 * 19 + 3]} for ${cm / 64}`);
   const prog = Uint8Array.from(jp); prog[jp.indexOf(0xc0, 2)] = 0xc2;
   ok(throwsLike(() => decodeJpeg(prog), /not baseline/), 'a progressive JPEG is refused');
+  // the independent Exif reader (refs/exif.mjs) on an APP1 this test builds (big-endian, TIFF 6.0 and CP-3451's
+  // layout): IFD0 with Make (ASCII), Orientation (SHORT) and the Exif IFD's pointer, which holds DateTimeOriginal and
+  // FNumber (RATIONAL); a bad TIFF magic and an offset out of the segment are refused
+  {
+    const be16 = (v) => [v >> 8 & 255, v & 255], be32 = (v) => [v >>> 24, v >> 16 & 255, v >> 8 & 255, v & 255];
+    const ent = (tag, type, n, v) => [...be16(tag), ...be16(type), ...be32(n), ...v];
+    const make = [...'Lab Make\0'].map((c) => c.charCodeAt(0)), dto = [...'2026:11:08 12:34:56\0'].map((c) => c.charCodeAt(0));
+    // TIFF header 8, IFD0 at 8 (3 entries: 2 + 36 + 4 = 42) -> Make's bytes at 50, the Exif IFD at 60 (2 entries: 30)
+    // -> DateTimeOriginal at 90, FNumber at 110
+    const tiff = [0x4d, 0x4d, ...be16(42), ...be32(8), ...be16(3), ...ent(0x10f, 2, make.length, be32(50)), ...ent(0x112, 3, 1, [...be16(6), 0, 0]),
+      ...ent(0x8769, 4, 1, be32(60)), ...be32(0), ...make, 0, ...be16(2), ...ent(0x9003, 2, dto.length, be32(90)), ...ent(0x829d, 5, 1, be32(110)),
+      ...be32(0), ...dto, ...be32(28), ...be32(10)];
+    const app1 = (t) => [0xff, 0xe1, ...be16(t.length + 8), 0x45, 0x78, 0x69, 0x66, 0, 0, ...t];
+    const file = (t) => Uint8Array.from([0xff, 0xd8, ...app1(t), 0xff, 0xda, 0, 2]);
+    const x = readExif(file(tiff));
+    ok(x?.order === 'MM' && x.ifd0.get(0x10f) === 'Lab Make' && x.ifd0.get(0x112) === 6 && x.exif?.get(0x9003) === '2026:11:08 12:34:56'
+      && JSON.stringify(x.exif.get(0x829d)) === '[28,10]' && x.ifd1 === null, `refs/exif.mjs reads the built APP1: ${x && JSON.stringify([x.order, x.ifd0.get(0x10f), x.ifd0.get(0x112), x.exif?.get(0x9003), x.exif?.get(0x829d)])}`);
+    ok(jpegSegments(file(tiff)).map((g) => g.marker).join() === [0xd8, 0xe1, 0xda].join(), 'the segments: SOI, APP1, SOS');
+    const bad42 = [...tiff]; bad42[3] = 43;
+    ok(throwsLike(() => readExif(file(bad42)), /magic/), 'a TIFF header without 42 is refused');
+    const far = [...tiff]; far.splice(18, 4, ...be32(500));
+    ok(throwsLike(() => readExif(file(far)), /out of the segment/), 'a tag\'s value out of the segment is refused');
+    ok(readExif(Uint8Array.from([0xff, 0xd8, 0xff, 0xda, 0, 2])) === null, 'a JPEG without an Exif APP1 reads as none');
+  }
   return { checks, bad };
 }
 
@@ -407,30 +436,58 @@ export async function storageSession() {
     } catch (e) { bad.push(`player: ${e.message.slice(0, 400)}`); }
     try { pl.close_session(); } catch { /* closed */ }
   }
-  // S2 with S-SCENE's live view: the picture's file through the file module's own requests (S-RECFILE), read back
-  // independently; the next session's DCF numbering mount and image count find it
+  // S2 with S-SCENE's live view: the picture's file through the file module's own requests (S-RECFILE; on E143
+  // REC_FILE natively from REC_IMAGE's packet, src/lab/rec.mjs, with the clock set first through the firmware's clock
+  // setting 0x5012b7a7, so the header the firmware builds carries its date), read back independently; the next
+  // session's DCF numbering mount and image count find it
   {
     const { loadImage, createHash } = await import('../checks/lib/env.mjs');
     const { Player } = await import('../src/lab/player.mjs');
     const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
     const { jpegOfFrame } = await import('../src/lab/jpeg.mjs');
     const { decodeJpeg } = await import('../refs/jpeg.mjs');
+    const { readExif, jpegSegments } = await import('../refs/exif.mjs');
     const { runtime } = await import('../src/lab/hle.mjs');
+    const { HEADER, encoderStream, REC_E143 } = await import('../src/lab/rec.mjs');
+    const { pack } = await import('../src/util/bytes.mjs');
     const card = new SdCard();
     const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, debug_api: true },
       { rom: loadImage(), resBlock, nand: loadNand(), createHash, wallClock: () => performance.now() / 1000, card: { open: () => card, save() {} } });
     try {
       pl.open_session();
+      const rec = pl.session.storage.rec, DATE = [2026, 11, 8, 12, 34, 56];
+      // the DCF name: the file letter, the month in hex and the day of the capture's stamp (docs/hle-gaps.md 4.8.9)
+      const file1 = rec ? `${DIR}/P${DATE[1].toString(16).toUpperCase()}${String(DATE[2]).padStart(2, '0')}0001.${names.ext}` : FILE1;
+      if (rec) {
+        ok(pl.stand_ins_in_use().includes('H-RECFILE') && !pl.stand_ins_in_use().includes('S-RECFILE'), 'E143: REC_FILE natively, S-RECFILE not in use');
+        const lab = pl.session.lab, at = lab.alloc(new Uint8Array(10), 4);
+        lab.sim.write(at, pack('<HBBBBBBH', ...DATE, 0, 0));
+        lab.call(0x5012B7A7, { a0: at }, null, null, 2000000);
+        pl.session.settle('the clock setting');
+      }
       for (const inp of [...(LIVE_VIEW ? [{ type: 'scene', change: { liveview: true } }] : []), { type: 'token', token: 'WAIT:100' }, { type: 'key', id: 's1', action: 'down' },
         { type: 'key', id: 's2', action: 'down' }, { type: 'token', token: 'WAIT:700' }, { type: 'key', id: 's2', action: 'up' }, { type: 'key', id: 's1', action: 'up' }]) pl.run_input(inp);
       const s2 = pl.session, img = s2.camapp.images[0];
-      ok(img?.file?.path === `${names.drive}:\\${FILE1.replaceAll('/', '\\')}`, `S2 wrote the picture's file: ${JSON.stringify(img?.file)}`);
-      const want = img ? jpegOfFrame(s2.picture_frame(s2.camapp.views.get(img.release) ?? null)) : null;
+      if (rec) ok(rec.started && rec.waiting(), `REC_FILE (task ${REC_E143.task.id}) started at the picture and waiting on its flag again`);
+      ok(img?.file?.path === `${names.drive}:\\${file1.replaceAll('/', '\\')}`, `S2 wrote the picture's file: ${JSON.stringify(img?.file)}`);
+      const jfif = img ? jpegOfFrame(s2.picture_frame(s2.camapp.views.get(img.release) ?? null)) : null;
+      // natively the file is the firmware's header and the encoder's stream after it (src/lab/rec.mjs S-JPEGENC)
+      const stream = jfif && rec ? encoderStream(jfif) : null, want = jfif && (rec ? { length: HEADER + stream.length } : jfif);
       const vol = new FatVolume((lba, n) => card.read(lba, n), mbrPartition(card.read(0, 1)).start);
-      const e = vol.find(FILE1);
-      ok(e && !e.dir && want && e.size === want.length, `the directory entry ${FILE1}: ${JSON.stringify(e && { size: e.size, cluster: e.cluster })}, the JPEG ${want?.length} bytes`);
+      const e = vol.find(file1);
+      ok(e && !e.dir && want && e.size === want.length, `the directory entry ${file1}: ${JSON.stringify(e && { size: e.size, cluster: e.cluster })}, the file ${want?.length} bytes`);
       const data = e ? vol.data(e) : null;
-      ok(data && want && data.every((b, i) => b === want[i]), 'the file\'s bytes are the JPEG the lab handed the file module');
+      if (rec) {
+        // the header maker runs after the encode, and its XMP segment's last 2 bytes overwrite the stream's SOI
+        ok(data && stream && data.subarray(HEADER + 2).every((b, i) => b === stream[i + 2]), 'the bytes after the header are the lab\'s JPEG stream (but its SOI)');
+        const segs = data ? jpegSegments(data) : [], x = data ? readExif(data) : null, t = (m, k) => m?.get(k)?.trim?.();
+        ok(segs[1]?.marker === 0xE1 && segs[2]?.marker === 0xE1 && segs[3]?.at === HEADER + 2, `SOI, APP1 Exif, APP1 XMP, then the stream's tables: ${segs.slice(0, 4).map((g) => `${g.marker.toString(16)}@${g.at}`).join(' ')}`);
+        const dt = `${DATE[0]}:${DATE.slice(1, 3).map((v) => String(v).padStart(2, '0')).join(':')} ${DATE.slice(3).map((v) => String(v).padStart(2, '0')).join(':')}`;
+        ok(t(x?.ifd0, 0x10F) === 'OM Digital Solutions' && t(x?.ifd0, 0x110) === 'OM-1', `the firmware's Make and Model (refs/exif.mjs): '${t(x?.ifd0, 0x10F)}' '${t(x?.ifd0, 0x110)}'`);
+        ok(x?.ifd0.get(0x132) === dt && x?.exif?.get(0x9003) === dt && x?.exif?.get(0x9004) === dt, `the firmware's dates are the clock's ${dt}: ${x?.ifd0.get(0x132)}, ${x?.exif?.get(0x9003)}, ${x?.exif?.get(0x9004)}`);
+        ok(x?.exif && String.fromCharCode(...x.exif.get(0x9000)) === '0231' && x.makernote?.header === 'OM SYSTEM' && x.ifd1?.has(0x201) && x.ifd1.get(0x202) === 0,
+          `ExifVersion 0231, the maker notes 'OM SYSTEM' (${x?.makernote?.length} bytes), IFD1's thumbnail slot of length 0: ${x?.ifd1?.get(0x202)}`);
+      } else ok(data && want && data.every((b, i) => b === want[i]), 'the file\'s bytes are the JPEG the lab handed the file module');
       const d = data ? decodeJpeg(data) : null, [w, h, rows] = want ? s2.picture_frame(s2.camapp.views.get(img.release)) : [0, 0, []];
       ok(d && d.width === w && d.height === h && d.components.length === 3, `the file decodes (refs/jpeg.mjs): ${d?.width} x ${d?.height}, frame ${w} x ${h}`);
       if (d) {
@@ -639,8 +696,12 @@ export async function storageSdxc(sizes = [64, 128], hlsSizes = [64]) {
         { type: 'key', id: 's2', action: 'down' }, { type: 'token', token: 'WAIT:700' }, { type: 'key', id: 's2', action: 'up' }, { type: 'key', id: 's1', action: 'up' }]) pl.run_input(inp);
       const s = pl.session, lab = s.lab, img = s.camapp.images[0];
       const want = img ? jpegOfFrame(s.picture_frame(s.camapp.views.get(img.release) ?? null)) : null;
+      // natively on E143 (src/lab/rec.mjs): the firmware's header, then the stream but its SOI, which the header's XMP
+      // segment ends over
+      const { HEADER, encoderStream } = await import('../src/lab/rec.mjs');
+      const es = want && s.storage.rec ? encoderStream(want) : null, skip = es ? HEADER + 2 : 0, body = es ? es.subarray(2) : want;
       const vol2 = openVolume(read), e = vol2.find(FILE1);
-      ok(e && !e.dir && want && e.size === want.length && vol2.data(e).every((b, i) => b === want[i]), `${tag}: S2's file ${FILE1} read back with the JPEG's bytes: ${JSON.stringify(e && { size: e.size, cluster: e.cluster })}, the JPEG ${want?.length} bytes`);
+      ok(e && !e.dir && want && e.size === skip + body.length && vol2.data(e).subarray(skip).every((b, i) => b === body[i]), `${tag}: S2's file ${FILE1} read back with the JPEG's bytes: ${JSON.stringify(e && { size: e.size, cluster: e.cluster })}, the JPEG ${want?.length} bytes`);
       if (vol2.type === 'exFAT') {
         const problems = vol2.check();
         ok(problems.length === 0, `${tag}: the volume is consistent after the file: ${problems.slice(0, 5).join('; ')}`);

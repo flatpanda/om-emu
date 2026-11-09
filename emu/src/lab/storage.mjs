@@ -38,10 +38,11 @@
 //   S-ALBM      the album manager's per-drive init (where the rule finds one) returns at once: ALBM_MAIN, which it
 //               would start, allocates its first request's id with udf07 (docs/om1-udf-spec.md row 14, kept faulting),
 //               and the movie module it asks does not run
-//   S-RECFILE   the picture's file at a release's END_SHOOTING_PICTURE (src/lab/camapp.mjs S-CARD), the JPEG the
+//   S-RECFILE   (not on E143, where REC_FILE runs natively in its task from REC_IMAGE's packet, src/lab/rec.mjs) the
+//               picture's file at a release's END_SHOOTING_PICTURE (src/lab/camapp.mjs S-CARD), the JPEG the
 //               capture pipeline would hand REC_FILE, which does not run: a JPEG the lab encodes (src/lab/jpeg.mjs:
 //               S-SCENE's frame at the capture, each 8 x 8 block its mean, or a black frame). On a build whose
-//               recorder the rule reads (fact 'recorder', src/fw/facts.mjs: E143, E146, E147, E144 and E148) the file
+//               recorder the rule reads (fact 'recorder', src/fw/facts.mjs: E146, E147, E144 and E148) the file
 //               is recorded as REC_FILE's modules record one (record()): their requests, sent to the file module,
 //               which runs each natively: the camera's clock read for the time stamp, the fnode of the next DCF
 //               number (its name from the stamp's month and day, the folder made where it is new), the cluster
@@ -64,7 +65,8 @@ import { RTOS } from './rtos.mjs';
 import { K_CFLUSH } from './menu.mjs';
 import { STUB } from './display.mjs';
 import { SdCard, SECTOR } from './sdcard.mjs';
-import { MODEL, MODEL_INFO, fact } from '../fw/model.mjs';
+import { MODEL, MODEL_INFO, ON_LAB_MODEL, fact } from '../fw/model.mjs';
+import { RecFile } from './rec.mjs';
 import { BOARD } from '../fw/board.mjs';
 import { STORAGE_E143, STORAGE_LIB, CARD_DETECT_E143, RECORDER_E143 } from '../fw/facts.mjs';
 
@@ -151,6 +153,8 @@ export class Storage {
     this.drive_status = null;
     this.tag = 0;                  // the lab's dosfat requests read by the reply: the last one's tag and its status
     this.reply = null;
+    // REC_FILE natively (src/lab/rec.mjs; E143), in S-RECFILE's place
+    this.rec = ON_LAB_MODEL ? new RecFile(this) : null;
   }
   // H-FILEINIT, H-FILECLBK, S-SDHOST, S-SDCARD, S-FSNAND, S-ALBM, then the insertion (S-CARD); in the play bring-up,
   // before the application starts
@@ -347,7 +351,16 @@ export class Storage {
   }
   // S-RECFILE: the picture's bytes to a file of the DCF; returns {path, size, folder, number} (record() also the
   // cluster, the stamp and the clock record)
-  write_picture(bytes) { return this.f.recorder ? this.record(bytes) : this.fileif_picture(bytes); }
+  write_picture(bytes) { return this.rec ? this.rec_picture(bytes) : this.f.recorder ? this.record(bytes) : this.fileif_picture(bytes); }
+  // REC_FILE natively (src/lab/rec.mjs): its file, with the header REC_IMAGE's header maker builds
+  rec_picture(bytes) {
+    const file = this.rec.record(bytes);
+    this.next_file = file.number + 1;
+    this.files.push(file);
+    this.log.push(['rec', `${file.path}: ${file.size} bytes (header ${file.header}) from cluster ${file.cluster}, dated '${file.date}'`]);
+    return file;
+  }
+  rec_layout() { return REC; }       // the fnode's and the dnode's fields (src/lab/rec.mjs)
   // S-RECFILE where the rule reads the build's recorder: the file as REC_FILE's modules record one (the recorder
   // E143 0x519f9dd7), each of its requests to the file module (REC; STORAGE_LIB rec) with REC's block, which FILECLBK
   // runs natively; the recorder's lock (0x5054a850) is not taken, nothing else records in the lab. The camera's

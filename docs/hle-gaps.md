@@ -1494,6 +1494,20 @@ subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a91
   with their events and the getter's body, refusals without `--rotate on` (50 degrees) and with it (181); R2 the
   gauge's portrait layouts by pixels. Negative control `--mutants --only R1,R2`: no-rotinit (the range without
   H-ROTINIT) fails both.
+- **Toward the PER_SIO seam (tried 2026-11-08, not built; X unless tagged).** With the device part run natively in
+  place of H-ACCINIT's step-over, `0x500519ce(129, 5)` attaches IRQ 127 (the GIO slot whose status and enable words
+  are `0x9b883080` / `0x9b8831c0`, the ones the probe's enable writes), `0x50051a29(129)` registers the pin callback
+  `0x500490a9` and `0x5004c903` makes the register API's objects; the session then runs on as before. With S-ACCREG
+  also off and S-SIOIIC's channel map set on E143 (H-SIOMAP, the setter `0x5005f0b2`: channel 6 is controller index
+  5), the probe's open runs natively into PER_SIO's channel open `0x5005f0f7(6, 1)` and the IIC configuration
+  `0x5005373f`, whose lower configuration takes index 5's register words from the table `0x6011b614` (136 bytes an
+  index, D) and stores 0 at `0x98500028` (`0x5005d7cf`), a page E143's lab stub denies, which stops the session. So
+  the seam needs, in order: a model (or storage) of that controller block's configuration registers, the sensor as
+  an S-SIOIIC device at address 0x6b (WHO_AM_I, the two set-up writes, the 14-byte read from register 0x20; I: with
+  ST's auto-increment), the data-ready pin 129 as a GIO input on IRQ 127 (I: its level word at `0x9b882240`, pin
+  word = `0x9b880000` + 64 x (pin + 8) by the link's pin 102 and the HDMI pin 77) raised at the sensor's rate on lab
+  time and dropped by the read (I: ST's latched data-ready), and ACC_SENS_MAIN (task 132) allowed; the H-SIOMAP
+  change of every E143 channel's index (the link's channel 2 among them) is untested.
 - **Not modelled:** PER_ACC_PWRMGR_MAIN, the gyroscope words, the data-ready pin and ACC_SENS_MAIN, factory
   calibration data (store F) and the temperature compensation (calibration type 255 on the templates); the
   picture's orientation tag (TAKE and REC_FILE do not run); PER_ROTATE's start and end from the HLS (`0x50abb6d8`,

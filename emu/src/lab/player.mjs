@@ -441,6 +441,8 @@ export class Player {
     const mdet = this.session?.camapp?.mdet;                                                 // CPU 3's MDET_DL natively with the DML's model (mdet.mjs)
     if (mdet?.used) used.push('S-TAKEMDET', 'S-MDETDL', 'S-DML', 'A-DML-1', ...(mdet.loads.length ? ['S-LEARNDATA'] : []), ...(mdet.installed ? ['H-FCSAF', 'H-MDETINIT', 'S-PDT'] : []),
       ...(mdet.installed && Object.values(mdet.pdt.e).some((x) => x.runs) ? ['A-PDT-1'] : []));
+    const ems1 = this.session?.lab?.sim?.m?.devices?.ems1;                                  // the EMS1 engine (ems1.mjs)
+    if (ems1?.touched) used.push('S-EMS1', ...(ems1.runs ? ['A-EMS1-1'] : []));
     if (this.session?.camapp?.shutter_sound?.opened) used.push('S-SHUTTERSND');              // a release's shutter sound emitted (shuttersnd.mjs)
     if (this.session?.lab?.panel_answered) used.push('S-PANELDONE');                        // a panel driver's serial completion wait answered
     if (this.session?.lab?.tp_sends?.length) used.push('S-TPSEND');                         // a send to the touch task the lab runs it for

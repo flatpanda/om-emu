@@ -22,6 +22,7 @@ import { LinkPins } from './dev/linkpins.mjs';
 import { LensSsc } from './dev/lensssc.mjs';
 import { Dml } from './dev/dml.mjs';
 import { Pdt } from './dev/pdt.mjs';
+import { Ems1 } from './dev/ems1.mjs';
 import { DpcTriggers } from './dev/dpc.mjs';
 
 export { Unported, TbUndecidable };
@@ -147,6 +148,8 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   const dml = boardKnows('dml') ? new Dml(m, lclock, intc, bus, BOARD.dml) : null;
   // the PDT / TRC unit, on a board that gives it (src/dev/pdt.mjs; passive until the firmware writes it), after the DML
   const pdt = boardKnows('pdt') ? new Pdt(m, lclock, intc, BOARD.pdt) : null;
+  // the EMS1 engine, on a board that gives it (src/dev/ems1.mjs; passive until the firmware writes it), after the PDT
+  const ems1 = boardKnows('ems1') ? new Ems1(m, lclock, intc, BOARD.ems1) : null;
   const stub = new Stub(m);
   // every set_irq(true) kicks the CPU (S.kick: the next TB start looks, interp.mjs)
   intc.connect((requested) => { S.irqReq = requested; if (requested) S.kick = true; else S.irqWait = false; });
@@ -200,7 +203,7 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   const limitStop = () => { const f = limitFault(); trap(f); return f.code === 7 ? { kind: 'limit', code: 7 } : { kind: 'fault', code: f.code }; };
   Object.assign(m, {
     devices: { intc, timer, engine, vsc, bus, stub, scpu, clock: lclock, ...(hdmiPort ? { hdmi: hdmiPort } : {}), ...(audioPort ? { audio: audioPort } : {}), ...(linkPins ? { linkpins: linkPins } : {}),
-      ...(lensSsc ? { lens: lensSsc } : {}), ...(dpc ? { dpc } : {}), ...(dml ? { dml } : {}), ...(pdt ? { pdt } : {}) },
+      ...(lensSsc ? { lens: lensSsc } : {}), ...(dpc ? { dpc } : {}), ...(dml ? { dml } : {}), ...(pdt ? { pdt } : {}), ...(ems1 ? { ems1 } : {}) },
     getRegs() { live(); return getRegs(); },
     // 'p' / 'P' (registers 0..15 as cpu.mjs getRegs / setRegs, and the lab registers 16..19: HI, unit C,
     // unit D, unit V); null for a register the stub does not have.

@@ -15,6 +15,7 @@
 // subject boxes and transform (test_subject.mjs), the DML engine's register file (test_mdet.mjs dmlUnits, S-DML),
 // the PDT / TRC unit's register file (test_pdt.mjs pdtUnits, S-PDT),
 // the A53's ISC node-4 service against the oracle's recorded exchanges (test_a53isc.mjs a53iscUnits, S-A53ISC),
+// the EMS1 engine's register file (test_ems1.mjs ems1Units, S-EMS1),
 // the lens serial controller, the deferred-call triggers and S-LENSMCU's replies (test_lens.mjs),
 // PER_SIO's served IIC transfers and the TG-5's charger (test_sio.mjs),
 // the debug API's argument checks, halt,
@@ -53,6 +54,7 @@ import { subjectUnits } from '../test/test_subject.mjs';
 import { dmlUnits } from '../test/test_mdet.mjs';
 import { pdtUnits } from '../test/test_pdt.mjs';
 import { a53iscUnits } from '../test/test_a53isc.mjs';
+import { ems1Units } from '../test/test_ems1.mjs';
 import { lensUnits } from '../test/test_lens.mjs';
 import { sioUnits } from '../test/test_sio.mjs';
 import { liveUnits } from '../test/test_live.mjs';
@@ -110,6 +112,7 @@ report('subject frames: the scene\'s subject boxes, DISP_FRAME\'s transform take
 report('the DML engine\'s register file: images, output area, completion, refusals (S-DML)', dmlUnits());
 report('the PDT / TRC unit\'s register file: resets, images, results, completions, refusals (S-PDT)', pdtUnits());
 report('the A53\'s ISC node-4 service against the oracle\'s recorded sccore, socket and CGI exchanges (S-A53ISC)', a53iscUnits());
+report('the EMS1 engine\'s register file: tables, images, results, completions, refusals (S-EMS1)', ems1Units());
 report('the lens serial controller, deferred-call triggers and the lens (S-LENSMCU)', lensUnits());
 report('PER_SIO\'s served IIC transfers and the TG-5\'s charger (S-SIOIIC, S-CHARGER)', sioUnits());
 report('debug API: argument checks, halt, trace filters, live route', await liveUnits());

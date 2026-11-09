@@ -199,7 +199,9 @@ and the first concrete step. Task ids are `cpu << 12 | index` (kernel spec §2.1
 - **First step:** the static decodes are done (4.1.1-4.1.3). Next, make the HLS component bring-up (`control camapp
   2`) the default of the coverage workload, so the HLS half of TAKE is measured before TAKE itself is attempted; then a
   probe that runs TAKE_FUNC and TAKE_FUNC_CP natively with a recording stand-in on each queue they send to (4.1.1's
-  table), which gives the order and contents of their requests for a start, a through switch and a movie.
+  table), which gives the order and contents of their requests for a start, a through switch and a movie. The probe
+  runs since 2026-11-08 (4.1.4): the start's and a mode change's requests are recorded; the through switch and the
+  movie do not reach TAKE_FUNC in the lab, and neither do S1 and S2.
 
 #### 4.1.1 TAKE_FUNC's command interface (D unless tagged)
 
@@ -332,6 +334,111 @@ TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
   gap@0x50af1ebd 22 of 438, CapTak_Take 20 of 145 (not TakeReady `0x50bc79e6` nor takePicture `0x50bc876a`), the
   shooting component's dispatcher `0x50d725f0` (event 502 three times, not 990 or 991); TAKE_FUNC's loop none. The
   release callbacks still come from S-RELSEQ; where Com_EvSenderManager sends S1 and S2 is ?.
+
+#### 4.1.4 TAKE_FUNC natively: the probe, round 1 (2026-11-08; D unless tagged, addresses E143's)
+
+TAKE_FUNC and TAKE_FUNC_CP run natively with `--take probe` (`emu/src/lab/take.mjs`; off by default, golden
+unchanged), under camapp 1 and camapp 2, in place of S-MODACK's answers to TAKE_FUNC's queue. Every request they make
+of a module or driver the lab does not run goes to a recording stand-in that records it and answers only where TAKE
+waits; posts to TAKE's own queues, to LENS_EXEC (the native lens) and TAKE's replies to its requesters go natively and
+are recorded too; anything else throws. `emu/test/test_take.mjs` pins the records below (X).
+
+- **The bring-up (H-TAKEINIT):** USTART2's stage word `0xa32d6d58` set to 1 as USTART2 sets it after its stage 2_1
+  (`0x5012abef` from `0x501e8eac`); TAKE_FUNC_CP's start polls it with 1 ms sleeps (`0x502cda22..0x502cda3f`; without
+  it the start never ended, X). Then TAKE_FUNC's module init `0x502ccff8` (USTART's call at `0x50024c2d`) and act_tsk of
+  tasks 105 and 106, as USTART starts them right after the init (`0x50024c3b`, `0x50024c54`).
+- **The stand-ins:** S-TAKEREQ for the queues (synchronous: status 0; a reply queue of TAKE_FUNC_CP_POST:
+  `{0, token, 0}` there after the step, which the start sequence clears from its pending bits,
+  `0x502cdad7..0x502cdae3`), S-TAKECAM for the camera driver's request switch `0x502a4a46` (cam.c; its own init does
+  not run: request 148's handler `0x502a4b74` found its pool `0x6299726c` empty and logged `0x0a103000`, X), S-TAKEUSF
+  for the dust filter's gate-on `0x50064a69` ("USF GATE CONTROL", which drives the timer block `0x9b880000`). The texts
+  are CAMAPP_STAND_INS'.
+
+**The application's start (X, camapp 1; camapp 2 adds the last two rows).** The GUI reaches the shooting screen
+(`0x0108`) as with S-MODACK.
+
+| # | TAKE takes | TAKE asks, in order | Waits for | The stand-in's answer |
+|---|---|---|---|---|
+| 1 | TAKE_FUNC command 0 (async, reply queue 6, token `0xf0010000`) | TAKE_FUNC_CP command 0 (`0x502cd39b`, the message forwarded) | nothing | (native) |
+| 2 | TAKE_FUNC_CP command 0 | camera driver request 148, argument 1 (`0x502cd948`) | flag TAKE_CAM_EVENT bit 1 under semaphore 0x19 (`0x502cd49f`) | S-TAKECAM: 0, then the completion `0x502cd4d0(0, request)` |
+| | | BC_EXEC command 0, token 2, parameter `{byte, callback 0x502cdc0b}` (`0x502cd9a8`) | tokens 2 and `0x80` on TAKE_FUNC_CP_POST | S-TAKEREQ: `{0, 2, 0}` to 0x61, then `0x502cdc0b`, which posts token `0x80` (I: that BC calls it) |
+| | | LENS_EXEC command 1, token 1 (`0x502cd9f2`) | token 1 on 0x61 | (native: LENS_MAIN replies) |
+| | | camera driver request 6 (`0x502cda61`) | TAKE_CAM_EVENT bit 1 | S-TAKECAM, as for 148 |
+| | | STB_EXTERNAL command 1, token 4, after a 10 ms sleep (`0x502cda87`; `0x502cdc33` from `0x502cda92`) | token 4 on 0x61 | S-TAKEREQ: `{0, 4, 0}` |
+| | | the dust filter's gate on, record `{0x502cdc97, 0}` (`0x502cdb34`, once BC's and the lens's tokens are in, `0x502cdb07..0x502cdb34`) | flag TAKE_FUNC_CP bit 1 (`0x506d99ed`, the count `0x62a3f3c0` from `0x502cdc5d`) | S-TAKEUSF: `0x502cdc97(0, record)`, whose deferred call counts down to the flag |
+| | | STB_EXTERNAL command 4, token 8 (`0x502cdc33` from `0x502cdb67`) | token 8 on 0x61 | S-TAKEREQ: `{0, 8, 0}` |
+| | | the reply to the application: status 0 to queue 6, token `0xf0010000` (return `0x502cd75d`) | | (native) |
+| 3 | TAKE_FUNC command 13 (sync, the application's reply queue `0x102`) | TAKE_EXPOSE command 0, synchronously (`0x506d9854`, return `0x506d7f32`) | its u16 status on 0xa7 | S-TAKEREQ: status 0 |
+| 4 | TAKE_FUNC command 18 (sync) | TAKE_FOCUS command 0, no reply queue (`0x506ea965` from `0x506eab52`) | nothing | none |
+| 5 | (camapp 2) TAKE_FUNC command 29 (sync, parameter `0x62a6b6d4`) | nothing | | |
+| 6 | (camapp 2) TAKE_FUNC command 22 (sync) | TAKE_FOCUS command 2, synchronously (return `0x5039abbb`) | status on 0xa7 | S-TAKEREQ: status 0 |
+
+Each synchronous command ends with TAKE_FUNC's reply to the requester's queue (status 0). Of the requests 4.1.1's table
+lists for 13 and 18, the start made only these (X): 13 no TAKE_EXPOSE `0x200`, 18 no TAKE_FOCUS command 2 (its command
+0 is `0x506eab1f`'s; command 2 came from 22's handler). TAKE_POWER_MANAGER_EXEC is not
+asked: the start's branch `0x502cd84c..0x502cd881` skips its two messages (X; which of its three conditions, the byte
+`0x62a3f2bc` or the settings 61633 and 7729, is not traced). LENS_EXEC's command 1 comes after H-LENSON's (4.4.2) and
+LENS_MAIN takes it natively (X). With the probe the warning `0x39000903` (`0x504494ed`, a frame-rate code conversion),
+logged about 12 times a second on the idle shooting screen under S-MODACK, is not logged (X; why is not traced).
+
+**The other scenarios (X, both camapp modes):**
+- **A mode change** (the dial P -> A, and A -> P, and to Movie): TAKE_FUNC command 22 three times, each TAKE_FOCUS
+  command 2 synchronously (`0x5039abbb`), S-TAKEREQ's status 0; under camapp 2 the change to Movie also command 29
+  three times, which asks nothing.
+- **S1, S2, the rec view, MENU in and out, a live view, REC in Movie:** nothing reaches TAKE_FUNC, nor TAKE_EXEC
+  (0x5a) under S-MODACK; what S1 and S2 send stays at S-TRAACK (TRA 944, 974 and 1045 at S1, 944 at S2, 963 and 1030
+  at the releases), and MENU's open and close send TRA 991 among others. So TAKE_FUNC native does not by itself make
+  S1 / S2 reach the modules.
+- **The through start (command 25) is not reached:** its one sender is api_tft `0x504214fc` (callers `0x50b681f1`,
+  `0x50b74758` and CapThr::start `0x50bcc18a`), and the shooting component that would start CapThr never gets TRA 991
+  while S-TRAACK answers it at the exec (4.1.2). Of its requests only TAKE_FUNC_CP's part is read: CP command 25
+  (`0x502cd6d8` -> `0x506d99ce`) makes the camera driver's request 5 when the byte `0x62a3f39a` is 1, which command 0
+  sets at its end (`0x502cdbd8`, X: set in the probe); S-TAKECAM knows request 5 (D, not executed).
+- **S-TAKEFRAME's request and S-TAKEMDET's are not on any path the lab reaches:** the frame-mode function
+  `0x5039f583` (S-TAKEFRAME's; it calls the plane's setter `0x500256d9` at `0x5039f622`) is called from TAKE_FUNC's
+  commands 26, 27, 59, 74, 75, 80 and 90 (`0x5039ad7d` .. `0x5039d48f`) and from `0x506d8a2d`; the live-view request
+  `0x506d8dea` (S-TAKEMDET's subject bit, docs/om1-subject-spec.md 5.1) from commands 26, 59 and 90 and from
+  `0x506d8a1e`. Those two calls lie in `0x506d83f9` (I: no return between its entry and them), which the through start
+  calls (4.1.1) and command 75 too (`0x5039b9b3`). None of these commands arrives in any scenario above (X); the
+  senders of 26, 59, 74, 75, 80 and 90 are not read (?).
+- **The EXIF set still divides by zero:** called on a template copy after the probe's start (as round 9 tried, 4.8.10),
+  it stops at `0x50398ca5` under both camapp modes (X), so the state it divides by is the take's (takepic's), not the
+  start's. No end-to-end improvement (TAKE's frame mode in place of S-TAKEFRAME, its EXIF set in place of S-EXIFPRM)
+  is possible from this probe without inventing a request.
+
+**Each neighbour's reply (classification: (a) a native module the lab can start; (b) a modelled device or CPU 2; (c)
+unknown):**
+
+| Neighbour | Asked by | What TAKE needs back | Class |
+|---|---|---|---|
+| LENS_EXEC (LENS_MAIN) | CP 0 | `{status, token 1}` on 0x61 | (a), native since 2026-10-28 and answering in the probe (X) |
+| TAKE_EXPOSE (task 0x67, `0x5059145d`) | 13 | the status of command 0 | (a) by inference: TAKE's own CPU 0 task over EXP, which has one MMIO reference (3.2); not started yet (I) |
+| TAKE_POWER_MANAGER_EXEC (task 0x83) | CP 0 when its branch runs | `{status, token 512 / 1024}` on 0x61 | (a) by inference, TAKE's own task; not asked in the runs |
+| TAKE_FOCUS (task 0x68, `0x509a0ebe`) | 18, 22 | the status of command 2 | (c): over FCS (FCS_EXEC, FCS_IP on CPU 1); what commands 0 and 2 ask of FCS is not read |
+| STB_EXTERNAL (the strobe module) | CP 0 | `{status, token 4}`, `{status, token 8}` on 0x61 | (c): the strobe's readers (`0x501aa18f..`, `0x501b2735..`, `0x501b74a1..`) are not read; whether they answer with no flash on the shoe without a device is ? |
+| the camera driver cam.c (requests 148, 6; 5 for 25) | CP 0, CP 25 | the completion callback with status 0 | (b): the image sensor's control plane: cam.c's init (its pool, the sequence engine `0x5015107e` / `0x501528a6`) and what it drives (not read, ?) |
+| BC_EXEC (BC) | CP 0 | `{status, token 2}` on 0x61 and the callback's token `0x80` | (b): the body IS controller's link (4.4: BC native only with a capture of that link) |
+| the dust filter (USF) | CP 0 | the record's callback with status 0 | (b): its drive on the timer block `0x9b880000` and its completion, not modelled |
+| MOV_COMMAND, SDET_EXEC, WB_MOV | movie and through commands (4.1.1) | not asked in the runs | (b): CPU 2 (S-CPU2) |
+
+**The plan for TAKE native, by what it unblocks** (estimates in Claude wall-clock, I):
+1. **S-RELSEQ's retirement.** Not TAKE_FUNC's neighbours: S1 / S2 reach no module with TAKE_FUNC native (X), so the
+   release needs the shooting component to get its TRAs (S-TRAACK narrowed: TRA 990 / 991 and the release TRAs to
+   CmpSht_ShootingComponent_NEW, in progress elsewhere), the sequence parts to send their take requests, and then
+   TAKE_EXEC (0x5a: TAKE_MAIN 0x6b, TAKE_MAIN_CP 0x72) native under the same probe machinery. The probe's extension to
+   TAKE_MAIN: about half a day once the requests arrive; its neighbours are unknown until it runs (?).
+2. **EXIF shooting parameters (S-EXIFPRM)** follow from 1: takepic's record (`0x503bba70`, the EXIF set from
+   `0x503bd48e`) is the take's, and the start does not fill the state the EXIF set divides by (X). A few hours after 1
+   if takepic's own neighbours answer like the start's; otherwise unknown.
+3. **The orientation tag** (PER_ROTATE's getter at takepic `0x503bcd51` writing record `+0x950c`) comes with 2: the
+   getter is native with `--rotate on`; nothing extra once takepic runs (I).
+4. **S-TAKEFRAME / S-TAKEMDET:** the through start (command 25, which needs TRA 991 at the component first) or one of
+   the commands 26, 59, 74, 75, 80, 90 (above). Read their senders first (2-4 h); running them is then the probe's
+   work plus the camera driver's request 5 (S-TAKECAM) and what else they ask (?).
+5. **The neighbours themselves**, in the order the start needs them: TAKE_EXPOSE and TAKE_POWER_MANAGER started
+   natively like H-TAKEINIT (a few hours each, if they stay device-free); the strobe's readers read (half a day, then
+   unknown); the camera driver cam.c with its init (days at least: the sensor's control plane, 4.2); the dust filter
+   (unknown: its timer channel and completion); BC (blocked on a capture of the IS link).
 
 ### 4.2 Sensor, ISP front end and live view (with EXP)
 

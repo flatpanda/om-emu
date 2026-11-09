@@ -176,6 +176,7 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
 <div class="toolbar" id="optbar">
   <span class="lbl">Start options</span>
   <label class="tb" title="--hdmi on: the HDMI port modelled (E143, E146, E147); the Card, HDMI and session options panel then plugs a sink in (S-HDMISINK); an unplug is refused (A-HDMI-1)"><input type="checkbox" id="opt-hdmi"> HDMI port</label>
+  <label class="tb" title="rotate=on: PER_ROTATE natively (E143, E146; H-ROTINIT): the camera's orientation from the accelerometer, and the tilt input all the way round (the GUI lays the level gauge out for portrait)"><input type="checkbox" id="opt-rotate"> Orientation</label>
   <label class="tb" title="lens=stand-in: S-LENS, the lens record written by the lab, in place of the native lens (the default on E143, E146 and E147: the lens tasks and drivers against S-LENSMCU as the 12-40mm F2.8 PRO, docs/hle-gaps.md 4.4.2, 4.4.3); the other bodies always have S-LENS"><input type="checkbox" id="opt-lens"> Stand-in lens</label>
   <label class="tb" title="S-NVRAM (on by default; nvram=0 in the query when off): the camera's settings and clock kept in this browser (OPFS) between sessions, one document per model, in place of S-SETSAVE: a camera whose clock was set starts without the date prompt; off, every start is a blank camera"><input type="checkbox" id="opt-nvram"> Keep the settings</label>
   <button class="tb" id="nvclear">Forget the kept settings</button>
@@ -326,7 +327,7 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
   <div class="row"><span class="lbl">Tilt</span>
     <label class="note">roll <input type="range" id="tilt-roll" min="-45" max="45" step="1" value="0"> <output id="tilt-roll-v">0°</output></label>
     <label class="note">pitch <input type="range" id="tilt-pitch" min="-45" max="45" step="1" value="0"> <output id="tilt-pitch-v">0°</output></label>
-    <span class="note">the tilt input: the accelerometer's sample (S-ACCSAMPLE; E143, E146), which the level gauge follows; which way each sign turns the camera is not known (A-ACC-3)</span></div>
+    <span class="note">the tilt input: the accelerometer's sample (S-ACCSAMPLE; E143, E146), which the level gauge follows; which way each sign turns the camera is not known (A-ACC-3). Within 45 degrees, or all the way round with PER_ROTATE (rotate on, H-ROTINIT), which turns the gauge for portrait</span></div>
   <p class="note">Take out and Put in are the card inputs (S-MEDIA: the card switch changes as a body's does, UI_IN decodes it
   and the firmware unmounts and mounts the card; E143). The list is the card's sectors read between the lab's steps with
   the independent FAT and exFAT readers (refs/fat.mjs, refs/exfat.mjs: refs/volume.mjs picks one by the card's boot
@@ -784,7 +785,7 @@ function showSubject(s) {
 // this page's host: the Worker (web/worker.mjs), its options fixed at the start (the start options above, the page's
 // query); the card routes answer through web/page.mjs, and a picture comes as raw RGBA, drawn as a frame is
 const HDMI_HOW = 'reload the page with the HDMI port start option (?hdmi=on; E143, E146, E147)';
-const SESSION_HOW = 'These are fixed when the session starts: the start options above the camera (the page\'s query: hdmi=on, lens=stand-in, nvram=0, card_size=GiB).';
+const SESSION_HOW = 'These are fixed when the session starts: the start options above the camera (the page\'s query: hdmi=on, rotate=on, lens=stand-in, nvram=0, card_size=GiB).';
 const cardApi = (p) => PP.api(p);
 async function drawCardImage(r, canvas) {
   const w = +r.headers.get('X-Image-Width'), h = +r.headers.get('X-Image-Height'), rgba = await r.bytes();
@@ -812,7 +813,7 @@ function sessionText(d, s) {
   const nv = !d.nvram ? 'the settings not kept (S-SETSAVE: every start is a blank camera at the date prompt)'
     : `the settings and the clock kept in ${d.nvram} (S-NVRAM${used.has('S-NVRAM') ? '' : ', not in use yet'}: a camera whose clock was set starts without the date prompt)`;
   const card = (d.card ? `the card kept in ${d.card}` : 'the card kept in memory while this player runs') + (d.card_size != null ? ` (a new card of ${d.card_size} GiB)` : '');
-  return `Session: ${d.hdmi === 'on' ? 'the HDMI port' : 'no HDMI port'} · ${lens} · ${nv} · ${card}. ${SESSION_HOW}`;
+  return `Session: ${d.hdmi === 'on' ? 'the HDMI port' : 'no HDMI port'} · ${d.rotate === 'on' ? 'PER_ROTATE' : 'no PER_ROTATE'} · ${lens} · ${nv} · ${card}. ${SESSION_HOW}`;
 }
 function showPorts(s) {
   if (!SESSION) return;
@@ -828,6 +829,10 @@ function showPorts(s) {
   plug.title = port ? 'S-HDMISINK: a 1080p60 sink with the lab\'s EDID on the port; the firmware takes the hot-plug interrupt and reads the EDID over the DDC itself' : text;
   un.title = port ? UNPLUG_WHY + '; the button sends the input, and the lab\'s refusal shows in the status line' : text;
   $('hdmi-state').textContent = text;
+  // the tilt's range: with PER_ROTATE (rotate on) any attitude, else within 45 degrees (A-ACC-2)
+  const rot = SESSION.rotate === 'on';
+  $('tilt-roll').min = rot ? -180 : -45; $('tilt-roll').max = rot ? 180 : 45;
+  $('tilt-pitch').min = rot ? -90 : -45; $('tilt-pitch').max = rot ? 90 : 45;
   showCardButtons(s);
   // a new picture on the card (S-RECFILE): read it again while the panel is open
   const n = s.camapp ? s.camapp.card_images : null;
@@ -981,13 +986,13 @@ $('quit').onclick = () => { api('/api/quit', {}).catch(() => {}); };
 // ---- firmware and start (the browser player) ------------------------------------------------------------------------
 const Q = new URLSearchParams(location.search);
 const ARGS = {};
-for (const k of ['lang', 'device', 'a15', 'start', 'tab', 'idle', 'touch', 'us_clock', 'compose', 'hdmi', 'audio', 'lens', 'card_size']) if (Q.has(k)) ARGS[k] = Q.get(k);
+for (const k of ['lang', 'device', 'a15', 'start', 'tab', 'idle', 'touch', 'us_clock', 'compose', 'hdmi', 'audio', 'rotate', 'lens', 'card_size']) if (Q.has(k)) ARGS[k] = Q.get(k);
 for (const k of ['no_bgdraw', 'debug_api']) if (Q.get(k) === '1') ARGS[k] = true;
 // the kept settings (S-NVRAM) are on unless the query says nvram=0, as bin/play.mjs keeps them unless --nvram off
 if (Q.get('nvram') !== '0') ARGS.nvram = true;
 // the start options (HDMI port, the stand-in lens, kept settings): the query's, changed here until the start (the
 // query follows, so a reload keeps them); kept settings: checked by default, nvram=0 in the query when unchecked
-const START_OPTS = [['opt-hdmi', 'hdmi', 'on'], ['opt-lens', 'lens', 'stand-in'], ['opt-nvram', 'nvram', '1']];
+const START_OPTS = [['opt-hdmi', 'hdmi', 'on'], ['opt-rotate', 'rotate', 'on'], ['opt-lens', 'lens', 'stand-in'], ['opt-nvram', 'nvram', '1']];
 for (const [id, k, on] of START_OPTS) {
   const dflt = k === 'nvram';
   $(id).checked = dflt ? Q.get(k) !== '0' : Q.get(k) === on;

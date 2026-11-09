@@ -67,7 +67,11 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // correction ACC_MAIN calls each cycle; words [accelerometer x/y/z, temperature], the halfwords the sample read's
 // completion packs, and counter, the sample counter it increments; refs, the six pose references the init computes
 // (pose 0 is the level camera); axes, the axis order and polarity the remap reads; slope {init, main, get}, PER_SLOPE's
-// init, its task entry (task 78) and the gauge's getter. A body without it keeps the accelerometer and PER_SLOPE off
+// init, its task entry (task 78) and the gauge's getter; rotate {init, main, get, pose, index, publish, event},
+// PER_ROTATE for --rotate on (H-ROTINIT): its init (the boot calls it after PER_SLOPE's), its task entry (task 59), the
+// orientation getter (the EXIF code of the reported index), the orientation word its readers take (0..5) and the
+// reported index (0..4), the event publish it calls on a change and that event. A body without it keeps the
+// accelerometer and PER_SLOPE off
 // (the gauge reads the BSS)
 //
 // `sio_devices`: the devices on PER_SIO's channels the lab has, [{channel, device}] (src/lab/sio.mjs S-SIOIIC and
@@ -154,7 +158,11 @@ export const MODELS = {
     // sets 0x62963fb8 to 1; the completion 0x5004910a packs
     // 0x62963fd6..da and 0x62963fde and increments 0x6034d9d4; 0x50048d14 writes the references at 0x6034d9b0; the remap
     // 0x5005ff7d reads 0x6034e170; PER_SLOPE's init 0x5005fb31 starts task 78 (0x5005fb9c); the gauge's getter
-    // 0x5005f982; ACC_MAIN's cycle calls the copy through 0x62963f5c and then the correction 0x500493dc (D)
+    // 0x5005f982; ACC_MAIN's cycle calls the copy through 0x62963f5c and then the correction 0x500493dc; the boot
+    // calls PER_ROTATE's init 0x5005a08c at 0x501e9c2b, after PER_SLOPE's at 0x501e9c17; it starts task 59 (entry
+    // 0x5005a17e, the task table's run-time word at 0x50018724) and sets its state 0x62965124 to 1; the task keeps the
+    // orientation in 0xa32c64f8 and the reported index in 0xa32c64f4, which the getter 0x5005a155 maps through the
+    // halfwords 0x6034e164 {11, 1, 6, 3, 8}, and on a change calls the publish 0x50025088 with event 0x4020310 (D)
     acc: {
       init: 0x50048CAD, device: 0x50048CB4, ptrs: [0x62963F58, 0x62963F5C], main: 0x50048EC2, probed: 0x62963FB8,
       reg: { open: 0x5004C971, read: 0x5004CB57, write: 0x5004CB6D, close: 0x5004CB4C },
@@ -162,6 +170,7 @@ export const MODELS = {
       copy: 0x50049201, correct: 0x500493DC, words: [0x62963FD6, 0x62963FDE], counter: 0x6034D9D4,
       refs: 0x6034D9B0, axes: 0x6034E170,
       slope: { init: 0x5005FB31, main: 0x5005FB9C, get: 0x5005F982 },
+      rotate: { init: 0x5005A08C, main: 0x5005A17E, get: 0x5005A155, pose: 0xA32C64F8, index: 0xA32C64F4, publish: 0x50025088, event: 0x04020310 },
     },
     // the lens on the mount natively, the default (src/lab/lens.mjs, src/lab/lensmcu.mjs; docs/hle-gaps.md 4.4.2): the
     // driver's entry points, LENS_EXEC's queue, the lens-0 flags and the lens caches' NAND are read by src/fw/facts.mjs
@@ -463,7 +472,10 @@ export const MODELS = {
     // register API and PER_SLOPE compare instruction for instruction with E143's but for addresses; the gauge's getter
     // calls the adjust state machine with a 72-byte frame, which has a seventh operation): the init 0x5004999e calls the
     // device part at 0x500499a5 and stores 0x6034d9d4 and the run-time 0x6006af12 (= 0x50049ef2) at 0x6298d750 /
-    // 0x6298d754; the completion 0x50049dfb packs 0x6298d7ce..d2 and 0x6298d7d6; the remap 0x50061a33 reads 0x6034e2c4
+    // 0x6298d754; the completion 0x50049dfb packs 0x6298d7ce..d2 and 0x6298d7d6; the remap 0x50061a33 reads 0x6034e2c4;
+    // PER_ROTATE's init 0x5005bb0e and task 0x5005bc00 compare with E143's instruction for instruction but for absolute
+    // addresses, with the same two hysteresis tables, the same words 0xa32c64f0..f8 and the getter's halfwords at
+    // 0x6034e2b8; its publish is 0x50025153 (D)
     acc: {
       init: 0x5004999E, device: 0x500499A5, ptrs: [0x6298D750, 0x6298D754], main: 0x50049BB3, probed: 0x6298D7B0,
       reg: { open: 0x5004E3F3, read: 0x5004E5D9, write: 0x5004E5EF, close: 0x5004E5CE },
@@ -471,6 +483,7 @@ export const MODELS = {
       copy: 0x50049EF2, correct: 0x5004A0CD, words: [0x6298D7CE, 0x6298D7D6], counter: 0x6034D9D4,
       refs: 0x6034D9B0, axes: 0x6034E2C4,
       slope: { init: 0x500615E7, main: 0x50061652, get: 0x50061436 },
+      rotate: { init: 0x5005BB0E, main: 0x5005BC00, get: 0x5005BBD7, pose: 0xA32C64F8, index: 0xA32C64F4, publish: 0x50025153, event: 0x04020310 },
     },
     // as E143's (D): pool 2's get 0x5000314d and release 0x50003157, block 16512 (the table 0x60029910), memory 0x62424700
     heap_pool: { get: 0x5000314D, put: 0x50003157, bytes: 16512 },

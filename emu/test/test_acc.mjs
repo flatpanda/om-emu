@@ -2,9 +2,11 @@
 //   accUnits  the body's reading of a tilt (level: 1 g up; roll and pitch: the x and z components the gauge's getter
 //             reads back as -asin), the axis table's inverse (E143's {1, -2, 3}: sensor y = -body y) round-tripped
 //             through the firmware's remap, a non-permutation and a sample past 16 bits refused, and A-ACC-2's range
-//             (45 degrees either way, the body's y axis dominant) with its reasons
+//             (45 degrees either way, the body's y axis dominant) with its reasons; with PER_ROTATE (--rotate on) the
+//             whole range, roll within 180 and pitch within 90 degrees, and the readings PER_ROTATE turns on (portrait:
+//             1 g along the body's x axis; the lens down: along z)
 //   node emu/test/test_acc.mjs
-import { bodyReading, sensorOf, bodyOf, tiltRefusal, AccError, TILT_MAX_DEG } from '../src/lab/acc.mjs';
+import { bodyReading, sensorOf, bodyOf, tiltRefusal, AccError, TILT_MAX_DEG, ROLL_MAX_DEG, PITCH_MAX_DEG } from '../src/lab/acc.mjs';
 
 const throwsAs = (fn, cls) => { try { fn(); return false; } catch (e) { if (e instanceof cls) return true; throw e; } };
 const near = (a, b, eps = 1e-9) => a.length === b.length && a.every((x, i) => Math.abs(x - b[i]) <= eps);
@@ -31,6 +33,9 @@ export function accUnits() {
   ok(/A-ACC-2/.test(tiltRefusal(46, 0) ?? '') && /A-ACC-2/.test(tiltRefusal(0, -50) ?? ''), 'beyond 45 degrees is refused under A-ACC-2');
   ok(/dominant/.test(tiltRefusal(45, 45) ?? ''), '(45, 45): the body\'s y axis is not dominant, refused');
   ok(/numbers/.test(tiltRefusal(Number.NaN, 0) ?? ''), 'NaN is refused');
+  ok(tiltRefusal(90, 0, true) === null && tiltRefusal(-ROLL_MAX_DEG, PITCH_MAX_DEG, true) === null && tiltRefusal(45, 45, true) === null, 'with PER_ROTATE: 90, (-180, 90) and (45, 45) are taken');
+  ok(/within 180/.test(tiltRefusal(181, 0, true) ?? '') && /within 90/.test(tiltRefusal(0, -91, true) ?? ''), 'with PER_ROTATE: beyond 180 of roll or 90 of pitch is refused');
+  ok(near(bodyReading(90, 0, 1), [-1, Math.cos(Math.PI / 2), -0], 1e-12) && near(bodyReading(0, -90, 1), [-0, Math.cos(Math.PI / 2), 1], 1e-12), 'roll 90: 1 g along -x; pitch -90: along +z');
   return { checks, bad };
 }
 

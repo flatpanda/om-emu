@@ -282,7 +282,7 @@ canvas.thumb { width: 96px; height: auto; background: #000; border-radius: 3px; 
   <div class="row"><span class="lbl">Tilt</span>
     <label class="note">roll <input type="range" id="tilt-roll" min="-45" max="45" step="1" value="0"> <output id="tilt-roll-v">0°</output></label>
     <label class="note">pitch <input type="range" id="tilt-pitch" min="-45" max="45" step="1" value="0"> <output id="tilt-pitch-v">0°</output></label>
-    <span class="note">the tilt input: the accelerometer's sample (S-ACCSAMPLE; E143, E146), which the level gauge follows; which way each sign turns the camera is not known (A-ACC-3)</span></div>
+    <span class="note">the tilt input: the accelerometer's sample (S-ACCSAMPLE; E143, E146), which the level gauge follows; which way each sign turns the camera is not known (A-ACC-3). Within 45 degrees, or all the way round with PER_ROTATE (rotate on, H-ROTINIT), which turns the gauge for portrait</span></div>
   <p class="note">Take out and Put in are the card inputs (S-MEDIA: the card switch changes as a body's does, UI_IN decodes it
   and the firmware unmounts and mounts the card; E143). The list is the card's sectors read between the lab's steps with
   the independent FAT and exFAT readers (refs/fat.mjs, refs/exfat.mjs: refs/volume.mjs picks one by the card's boot
@@ -730,7 +730,7 @@ function showSubject(s) {
 // this page's host: the play server (bin/play.mjs), its options fixed at its start; the card routes answer their
 // errors as JSON, so they are fetched whatever their status; a picture comes as a PNG (host/server.mjs pngRgba)
 const HDMI_HOW = 'start the play server with --hdmi on (E143, E146, E147)';
-const SESSION_HOW = 'These are fixed when the play server starts: --hdmi on, --nvram off|FILE, and OM_EMU_LENS=stand-in, OM_EMU_NVRAM=off|FILE and OM_EMU_CARD=FILE in its environment (emu/README.md "Run"; the settings are kept in ~/.om-emu/nvram-<model>.json by default).';
+const SESSION_HOW = 'These are fixed when the play server starts: --hdmi on, --rotate on, --nvram off|FILE, and OM_EMU_LENS=stand-in, OM_EMU_NVRAM=off|FILE and OM_EMU_CARD=FILE in its environment (emu/README.md "Run"; the settings are kept in ~/.om-emu/nvram-<model>.json by default).';
 const cardApi = (p) => fetch(p, { headers: H });
 async function drawCardImage(r, canvas) {
   const bm = await createImageBitmap(await r.blob());
@@ -758,7 +758,7 @@ function sessionText(d, s) {
   const nv = !d.nvram ? 'the settings not kept (S-SETSAVE: every start is a blank camera at the date prompt)'
     : `the settings and the clock kept in ${d.nvram} (S-NVRAM${used.has('S-NVRAM') ? '' : ', not in use yet'}: a camera whose clock was set starts without the date prompt)`;
   const card = (d.card ? `the card kept in ${d.card}` : 'the card kept in memory while this player runs') + (d.card_size != null ? ` (a new card of ${d.card_size} GiB)` : '');
-  return `Session: ${d.hdmi === 'on' ? 'the HDMI port' : 'no HDMI port'} · ${lens} · ${nv} · ${card}. ${SESSION_HOW}`;
+  return `Session: ${d.hdmi === 'on' ? 'the HDMI port' : 'no HDMI port'} · ${d.rotate === 'on' ? 'PER_ROTATE' : 'no PER_ROTATE'} · ${lens} · ${nv} · ${card}. ${SESSION_HOW}`;
 }
 function showPorts(s) {
   if (!SESSION) return;
@@ -774,6 +774,10 @@ function showPorts(s) {
   plug.title = port ? 'S-HDMISINK: a 1080p60 sink with the lab\'s EDID on the port; the firmware takes the hot-plug interrupt and reads the EDID over the DDC itself' : text;
   un.title = port ? UNPLUG_WHY + '; the button sends the input, and the lab\'s refusal shows in the status line' : text;
   $('hdmi-state').textContent = text;
+  // the tilt's range: with PER_ROTATE (rotate on) any attitude, else within 45 degrees (A-ACC-2)
+  const rot = SESSION.rotate === 'on';
+  $('tilt-roll').min = rot ? -180 : -45; $('tilt-roll').max = rot ? 180 : 45;
+  $('tilt-pitch').min = rot ? -90 : -45; $('tilt-pitch').max = rot ? 90 : 45;
   showCardButtons(s);
   // a new picture on the card (S-RECFILE): read it again while the panel is open
   const n = s.camapp ? s.camapp.card_images : null;

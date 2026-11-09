@@ -10,6 +10,11 @@
 // (S-ACCSAMPLE: before each of ACC_MAIN's cache copies, one new sample as the read's completion stores it, the packed
 // halfwords and the counter + 1). The lab runs neither the data-ready pin (a GIO interrupt) nor PER_SIO's transfer
 // layer, which ACC_SENS_MAIN would need; the probe's and the completion's effects are D, the cadence is A-ACC-2.
+// With --rotate on (a body whose fact gives rotate) PER_ROTATE runs natively too (H-ROTINIT: its init in the boot's
+// place, which starts task 59): every 100 ms the corrected sample, the remap, mg, the magnitude gate, the orientation
+// with its hysteresis and, on a change, event 0x4020310, which the GUI answers by reading the orientation through the
+// getter (docs/hle-gaps.md 4.7.3); the tilt input then turns the camera all the way round. Off, the default, it does
+// not run, the orientation stays 0 and the tilt keeps the body's y axis dominant (A-ACC-2).
 //
 // The sample: a camera at rest reads gravity's reaction, 1 g along the body's up axis. The level camera's sample is the
 // firmware's own pose-0 reference (the init computes the six pose references, +-16384 on one axis each, from the axis
@@ -26,10 +31,11 @@ import { ValueError } from './errors.mjs';
 
 export class AccError extends FirmwareError {}
 
-// A-ACC-2: the tilts the lab takes keep the body's y axis the dominant one, the orientation PER_ROTATE (not run) would
-// keep at 0 (it compares the axes' magnitudes, D); a larger tilt would turn the camera's orientation, which is not
-// modelled
-export const TILT_MAX_DEG = 45;
+// A-ACC-2: without PER_ROTATE the tilts the lab takes keep the body's y axis the dominant one, the orientation
+// PER_ROTATE (not run) would keep at 0 (it compares the axes' magnitudes, D); a larger tilt would turn the camera's
+// orientation, which is then not modelled. With PER_ROTATE (--rotate on) any attitude: roll all the way round the lens
+// axis, pitch up to the lens pointing straight up or down
+export const TILT_MAX_DEG = 45, ROLL_MAX_DEG = 180, PITCH_MAX_DEG = 90;
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 const s16 = (v) => (v << 16) >> 16;
 
@@ -52,10 +58,13 @@ export function sensorOf(body, axes) {
   return out;
 }
 export function bodyOf(sensor, axes) { return axes.map((a) => Math.sign(a) * sensor[Math.abs(a) - 1]); }
-// A-ACC-2's range check: [roll, pitch] or a reason
-export function tiltRefusal(roll, pitch) {
+// A-ACC-2's range check (rotate: PER_ROTATE runs, the whole range): null, or a reason
+export function tiltRefusal(roll, pitch, rotate = false) {
   if (!Number.isFinite(roll) || !Number.isFinite(pitch)) return `roll ${roll}, pitch ${pitch}: numbers of degrees`;
-  if (Math.abs(roll) > TILT_MAX_DEG || Math.abs(pitch) > TILT_MAX_DEG) return `roll ${roll}, pitch ${pitch}: at most ${TILT_MAX_DEG} degrees either way (A-ACC-2: PER_ROTATE, which would turn the camera's orientation, does not run)`;
+  if (rotate) {
+    return Math.abs(roll) > ROLL_MAX_DEG || Math.abs(pitch) > PITCH_MAX_DEG ? `roll ${roll}, pitch ${pitch}: roll within ${ROLL_MAX_DEG} and pitch within ${PITCH_MAX_DEG} degrees either way` : null;
+  }
+  if (Math.abs(roll) > TILT_MAX_DEG || Math.abs(pitch) > TILT_MAX_DEG) return `roll ${roll}, pitch ${pitch}: at most ${TILT_MAX_DEG} degrees either way (A-ACC-2: PER_ROTATE, which would turn the camera's orientation, does not run without --rotate on)`;
   const [x, y, z] = bodyReading(roll, pitch, 1);
   if (y < Math.abs(x) || y < Math.abs(z)) return `roll ${roll}, pitch ${pitch}: the body's y axis would not be the dominant one (A-ACC-2)`;
   return null;
@@ -63,9 +72,11 @@ export function tiltRefusal(roll, pitch) {
 
 export class Accelerometer {
   // lab: the PlayLab; f: the model's fact acc; mutant: the session's mutant (acc-still: no sample is delivered, the
-  // counter stays; tilt-ignored: the tilt is not applied)
-  constructor(lab, f, mutant = null) {
-    this.lab = lab; this.f = f; this.mutant = mutant;
+  // counter stays; tilt-ignored: the tilt is not applied; no-rotinit: --rotate on's range without H-ROTINIT, so
+  // PER_ROTATE does not run); rotate: --rotate on (PER_ROTATE natively, f.rotate)
+  constructor(lab, f, mutant = null, rotate = false) {
+    if (rotate && !f.rotate) throw new AccError('--rotate on: the model\'s fact acc gives no PER_ROTATE (rotate)');
+    this.lab = lab; this.f = f; this.mutant = mutant; this.rotate = rotate;
     this.regs = new Map([[f.who_am_i[0], f.who_am_i[1]]]);     // the register file: WHO_AM_I and what the probe writes
     this.reg_log = [];                                         // [op, register, value or count] of every access
     this.tilt = [0, 0];
@@ -102,6 +113,13 @@ export class Accelerometer {
     this.sample = this._compute();
     lab.call(f.slope.init, null, null, null, 20000);
     this.slope_tid = this._ready(f.slope.main, 'H-SLOPEINIT', 'PER_SLOPE');
+    // H-ROTINIT: PER_ROTATE's init, which the boot calls right after PER_SLOPE's (D): its limits, the orientation 0
+    // and the reported index 0, its state set active (it starts itself), task 59 started and named
+    if (this.rotate && this.mutant !== 'no-rotinit') {
+      lab.lt.allow.add(f.rotate.main);
+      lab.call(f.rotate.init, null, null, null, 20000);
+      this.rotate_tid = this._ready(f.rotate.main, 'H-ROTINIT', 'PER_ROTATE');
+    }
   }
   // the static task with this entry, which its init has just made ready (it runs once the lab task waits)
   _ready(entry, who, name) {
@@ -136,7 +154,7 @@ export class Accelerometer {
     return sensorOf(bodyReading(roll, pitch, this.g), this.axes);
   }
   set(roll, pitch) {
-    const why = tiltRefusal(roll, pitch);
+    const why = tiltRefusal(roll, pitch, this.rotate);
     if (why) throw new ValueError(`tilt ${why}`);
     this.tilt = [roll, pitch];
     this.sample = this._compute();
@@ -184,7 +202,17 @@ export class Accelerometer {
     const b = lab.sim.read(a, 12), dv = new DataView(b.buffer, b.byteOffset, 12);
     return { horizon: dv.getInt16(2, true), horizon_ok: dv.getUint16(4, true), vertical: dv.getInt16(6, true), vertical_ok: dv.getUint16(8, true), body: b[10] };
   }
+  // PER_ROTATE's results (--rotate on): pose, the orientation 0..5 its readers take (D: 0 level, 1 the body's x up,
+  // 2 upside down, 3 x down, 4 and 5 the lens up or down, by the remap's axes); index, the reported orientation 0..4
+  // (0 none yet); exif, the getter's code natively (the table at index: 11 none, 1, 6, 3, 8: EXIF's orientation codes,
+  // the getter's debug names ROTATE_0, ROTATE_90, ROTATE_180, ROTATE_270, ROTATE_DISABLE for 11, D)
+  rotation() {
+    const lab = this.lab, r = this.f.rotate;
+    const exif = lab.call(r.get, null, null, null, 200).d0 & 0xFFFF;
+    return { pose: lab.sim.u32(r.pose) & 0xFFFF, index: lab.sim.u32(r.index), exif };
+  }
   status() {
-    return { tilt: this.tilt.slice(), sample: this.sample.slice(), samples: this.samples, counter: this.lab.sim.u32(this.f.counter), registers: Object.fromEntries([...this.regs].map(([k, v]) => [`0x${k.toString(16)}`, v])) };
+    return { tilt: this.tilt.slice(), sample: this.sample.slice(), samples: this.samples, counter: this.lab.sim.u32(this.f.counter), registers: Object.fromEntries([...this.regs].map(([k, v]) => [`0x${k.toString(16)}`, v])),
+      ...(this.rotate ? { rotation: this.rotation() } : {}) };
   }
 }

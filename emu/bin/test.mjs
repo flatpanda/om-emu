@@ -15,7 +15,8 @@
 // (test_audiohw.mjs), the SCPU's clock, ports, link pins and sub-CPU model
 // (test_scpu.mjs), the publication audit (test_pubaudit.mjs), patch overlays (test_patch.mjs: the rules, --patch on
 // E143 through debug.mjs, play.mjs and nav.mjs), the HDMI port and a plug in play on E143,
-// E146 and E147 (test_hdmi.mjs), the accelerometer's sample and check_level on E146 (test_acc.mjs), the card and the
+// E146 and E147 (test_hdmi.mjs), the accelerometer's sample, check_level on E146 and its PER_ROTATE groups (--rotate
+// on) on E143 and E146 (test_acc.mjs), the card and the
 // file system on E143, E146, E147, E144, E142 and E134 and SDXC cards on E143 (test_storage.mjs), INFO's still information
 // in playback on the 19 bodies (test_playinfo.mjs), a tap on the touch mode icon on E143 and ten bodies of the E144
 // family (test_touch.mjs), subject detection's frames on E143
@@ -212,16 +213,20 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...hu.bad, ...hs.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += hu.bad.length + hs.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
-// the accelerometer: its sample without firmware, then checks/check_level.mjs on E146 in a process of its own (E143's
-// runs are checks/runs.json's; the model is fixed when the lab is imported)
+// the accelerometer: its sample without firmware, then checks/check_level.mjs on E146 and its PER_ROTATE groups R1 and
+// R2 (--rotate on, with their mutant on E143) on E143 and E146, each in a process of its own (E143's default runs are
+// checks/runs.json's; the model is fixed when the lab is imported)
 {
   const { accUnits } = await import('../test/test_acc.mjs');
   const { spawnSync } = await import('node:child_process');
   const au = accUnits();
-  const r = spawnSync(process.execPath, [new URL('../checks/check_level.mjs', import.meta.url).pathname], { env: { ...process.env, OM_EMU_MODEL: 'E146' }, encoding: 'utf8' });
-  console.log(`accelerometer: sample units ${au.checks - au.bad.length}/${au.checks}; check_level on E146 ${r.status === 0 ? 'ok' : 'FAILED'}`);
-  [...au.bad, ...(r.status === 0 ? [] : (r.stdout + r.stderr).trim().split('\n').map((l) => `E146: ${l.trim()}`))].forEach((x) => console.log('  ', x));
-  bad += au.bad.length + (r.status === 0 ? 0 : 1);
+  const runs = [['E146', []], ['E143', ['--only', 'R1,R2']], ['E143', ['--only', 'R1,R2', '--mutants']], ['E146', ['--only', 'R1,R2']]].map(([m, args]) => {
+    const r = spawnSync(process.execPath, [new URL('../checks/check_level.mjs', import.meta.url).pathname, ...args], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [`${m}${args.length ? ' ' + args.join(' ') : ''}`, r];
+  });
+  console.log(`accelerometer: sample units ${au.checks - au.bad.length}/${au.checks}; check_level ${runs.map(([n, r]) => `${n} ${r.status === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  [...au.bad, ...runs.flatMap(([n, r]) => (r.status === 0 ? [] : (r.stdout + r.stderr).trim().split('\n').map((l) => `${n}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += au.bad.length + runs.filter(([, r]) => r.status !== 0).length;
 }
 // the card and the file system (storage.mjs): the card model and the FAT and exFAT readers without firmware, then play
 // sessions whose card the firmware formats and mounts itself: E143 here (an 8 GiB SDHC card, then blank 64 and 128 GiB

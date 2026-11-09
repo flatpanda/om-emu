@@ -98,6 +98,10 @@ export const HDMI_PLUG_MS = 100, HDMI_SWITCH = 0x0501;
 // a tilt input's wait (src/lab/acc.mjs): ACC_MAIN's next 80 ms cycle and PER_SLOPE's 20 ms (X: the gauge's getter
 // reads the new tilt at the end of it; the GUI's redraw of the gauge follows up to about 50 ms later)
 export const TILT_MS = 250;
+// with --rotate on: also PER_ROTATE's next 100 ms pass after that sample and PER_SLOPE's following samples (X: over 13
+// turns the orientation changed 40 to 160 ms after the input and the gauge's body followed 50 to 230 ms after it; a
+// 250 ms wait once read the old body)
+export const ROTATE_TILT_MS = 500;
 // a card input's wait (src/lab/media.mjs S-MEDIA, src/lab/storage.mjs): the card's change runs in the step (the
 // insertion's requests take about 0.8 s of lab time, logsec's 740 ms wait after the card switch's change included,
 // X), then CARD_MS more for the application's redraw
@@ -889,6 +893,10 @@ export class PlaySession extends N.NavSession {
     if (audio === 'on' && !MODEL_INFO.audio) throw new ValueError(`--audio on: ${MODEL} has no audio hardware in the lab (src/fw/models.mjs audio)`);
     const audioOn = audio === 'on' || (audio === 'auto' && !!MODEL_INFO.audio);
     if (audioOn) env = { ...env, machine: { ...(env.machine ?? {}), audio: true } };
+    // PER_ROTATE natively (--rotate on, a body whose fact acc gives rotate; src/lab/acc.mjs H-ROTINIT); off by default
+    const rotate = opts.rotate ?? 'off';
+    if (!['off', 'on'].includes(rotate)) throw new ValueError(`rotate ${show(rotate)}: off or on`);
+    if (rotate === 'on' && !MODEL_INFO.acc?.rotate) throw new ValueError(`--rotate on: ${MODEL} has no PER_ROTATE in the lab (src/fw/models.mjs acc.rotate)`);
     // defaults for the keys kw does not give (a key given as null keeps it)
     const setdefault = (key, v) => { if (!Object.hasOwn(k, key)) k[key] = v; };
     setdefault('time', true);
@@ -1212,9 +1220,10 @@ export class PlaySession extends N.NavSession {
   }
   // H-ACCINIT, S-ACCREG, S-ACCSAMPLE and H-SLOPEINIT (acc.mjs): the ACC module init and PER_SLOPE's init natively in
   // the boot's place, before the application starts, since its GUI starts PER_SLOPE for the gauge (startLevel at the
-  // application's start, X); the settle runs ACC_MAIN's probe, whose accesses are then checked
+  // application's start, X); with --rotate on also PER_ROTATE's (H-ROTINIT); the settle runs ACC_MAIN's probe, whose
+  // accesses are then checked
   acc_bring_up() {
-    this.acc = new Accelerometer(this.lab, MODEL_INFO.acc, this.opts.mutant);
+    this.acc = new Accelerometer(this.lab, MODEL_INFO.acc, this.opts.mutant, (this.opts.rotate ?? 'off') === 'on');
     this.acc.bring_up();
     this.settle('H-ACCINIT');
     const why = this.acc.probe_problem();
@@ -1627,13 +1636,14 @@ export class PlaySession extends N.NavSession {
       { kind: 'hdmi', extra: () => ({ hdmi: this.hdmi_status(), uiin_codes: lab.uiin_codes.slice(c0).map(([, x]) => h8(x)) }) });
   }
   // The camera's tilt (acc.mjs): roll and pitch in degrees, level (0, 0) at the start. ACC_MAIN takes the new sample at
-  // its next cycle; the step waits TILT_MS of lab time and records the sample and what the gauge's getter reads then
+  // its next cycle; the step waits TILT_MS of lab time (ROTATE_TILT_MS with --rotate on) and records the sample, the
+  // orientation with --rotate on and what the gauge's getter reads then
   tilt_input(roll, pitch) {
     if (this.acc === null) throw new ValueError(`tilt: ${MODEL} has no accelerometer in the lab (src/fw/models.mjs acc)`);
     this.acc.set(roll, pitch);
     const lab = this.lab, tag = `tilt ${roll} ${pitch}`;
     this.begin(`${String(this.steps.length).padStart(2, '0')}-${tag}`);
-    return this.wait_until(lab.lab_time() + TILT_MS * 1000000, tag, true, { kind: 'tilt', extra: () => ({ acc: this.acc.status(), gauge: this.acc.gauge() }) });
+    return this.wait_until(lab.lab_time() + (this.acc.rotate ? ROTATE_TILT_MS : TILT_MS) * 1000000, tag, true, { kind: 'tilt', extra: () => ({ acc: this.acc.status(), gauge: this.acc.gauge() }) });
   }
   // The card in the first slot (a body with the file system native and its HLS side, src/fw/models.mjs card_fs.hls):
   // 'remove' takes it out (S-SDCARD's card answers no command), 'insert' puts the same card back. The slot's card

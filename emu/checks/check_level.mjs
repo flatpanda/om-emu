@@ -15,8 +15,21 @@
 //   L4  Level Adjust's Adjust runs to completion: Setup page 6 row 3, Adjust, OK; within 2 s of lab time the GUI is at
 //       its message receive again, back on the shooting screen, and the store's user pose 0 holds the sample of the
 //       tilt it was adjusted at (x, y, z) and 250 (25.0 degC)
+// With --rotate on (PER_ROTATE natively, H-ROTINIT; run by --only, not by default):
+//   R1  PER_ROTATE's orientation with its own hysteresis: the session starts reporting index 1 (EXIF code 1); turned
+//       about the lens axis the orientation goes portrait past 50 degrees and comes back below 40 (48 and 42 hold the
+//       last one), either way round (EXIF 8 and 6), upside down at 180 (EXIF 3); pitched, the lens down past 60
+//       degrees and back below 50 (orientation 5, the reported index kept from portrait but not from upside down);
+//       one event 0x4020310 for each change of the reported index and none otherwise; the gauge's getter reads the
+//       orientation as its body and, in portrait, the roll from upright as its horizon. Without --rotate a tilt of 50
+//       degrees is refused and the orientation is not reported; with it, 181 is
+//   R2  the GUI follows: on the shooting screen with INFO's gauge, rolled 90 degrees the gauge is drawn for portrait
+//       (its arc at the left, its bar at the bottom: none of the landscape bar's green), rolled -90 the other way (the
+//       bar at the top, none of the landscape arc's green), upside down as level, rolled 95 the arc not green; level
+//       again as before
 // --mutants runs L2..L4 under the stand-in's mutants (acc-still: no sample is delivered; tilt-ignored: the tilt is not
-// applied) and passes when each is caught.
+// applied), with --only R1,R2 those groups under no-rotinit (--rotate on's range with PER_ROTATE not started), and
+// passes when each is caught.
 //   node emu/checks/check_level.mjs [--only L1,L2,...] [--mutants]
 import { loadImage, loadBlock, loadNand, createHash, runMain } from './lib/env.mjs';
 import { parseArgs } from './lib/args.mjs';
@@ -38,6 +51,18 @@ const STORE_READ = A(0x500417DA), USER_POSE = [0x4EBA, 0x4ECA, 0x4EDA, 0x4EEA];
 // the gauge on the TFT's shooting screen (900 x 600, INFO's first page, X): the horizon's arc and the vertical's bar
 const ARC = [370, 395, 530, 452], BAR = [583, 228, 622, 370];
 const TILTS = [[5, 0], [-3, 0], [0, 6], [2, -9], [-4.5, 7.5]];
+// R2's boxes (X, E143's TFT): the gauge for portrait with its arc at the left and its bar at the bottom (EXIF 8), and
+// the other way round's bar at the top (EXIF 6)
+const ARC_LEFT = [262, 226, 310, 372], BAR_TOP = [380, 168, 520, 200];
+// R1's steps, from level: [roll, pitch, the orientation word 0..5, the getter's EXIF code] (D, docs/hle-gaps.md 4.7.3)
+const ROTATIONS = [
+  [48, 0, 0, 1], [52, 0, 3, 8], [42, 0, 3, 8], [38, 0, 0, 1],          // portrait past 50 degrees, landscape below 40
+  [-48, 0, 0, 1], [-52, 0, 1, 6], [-42, 0, 1, 6], [-38, 0, 0, 1],      // the other way round
+  [180, 0, 2, 3], [180, 65, 5, 1],                                       // upside down; the lens down does not keep 3
+  [0, 0, 0, 1], [0, 55, 0, 1], [0, 65, 5, 1], [0, 55, 5, 1], [0, 45, 0, 1],   // the lens down past 60, back below 50
+  [90, 0, 3, 8], [90, 65, 5, 8], [90, 0, 3, 8], [0, 0, 0, 1],            // portrait kept with the lens down
+];
+const EXIF_INDEX = { 1: 1, 6: 2, 3: 3, 8: 4 };     // the getter's table {11, 1, 6, 3, 8} by the reported index (D)
 
 class Group {
   constructor(name) { this.name = name; this.problems = []; this.cases = 0; }
@@ -45,8 +70,8 @@ class Group {
   true(label, ok, detail = '') { this.cases += 1; if (!pred(ok, 2)) this.problems.push(`${label}${detail ? ': ' + detail : ''}`); }
 }
 const env = () => ({ rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 });
-function withPlayer(mutant, fn) {
-  const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, ...(mutant ? { x_mutant: mutant } : {}) }, env());
+function withPlayer(mutant, fn, extra = {}) {
+  const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, ...(mutant ? { x_mutant: mutant } : {}), ...extra }, env());
   pl.open_session();
   try { ready(pl.session); return fn(pl, pl.session, pl.session.lab); } finally { pl.close_session(); }
 }
@@ -67,9 +92,9 @@ function cache(lab, which) {
 }
 // the green pixels of the arc and of the bar in the frame the player would publish now (the composite at the next
 // frame boundary, src/lab/play.mjs frame)
-function frame_pixels(s) {
+function frame_pixels(s, boxes = [ARC, BAR]) {
   const [w, , words] = s.frame('boundary'), rgb = words_to_rgb(words);
-  return [ARC, BAR].map(([x0, y0, x1, y1]) => {
+  return boxes.map(([x0, y0, x1, y1]) => {
     let n = 0;
     for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
       const o = 3 * (y * w + x);
@@ -80,7 +105,7 @@ function frame_pixels(s) {
 }
 // the same after 200 ms more of lab time: the GUI redraws the arc and the bar some frames apart after PER_SLOPE's new
 // result (X: up to about 50 ms after the tilt input's 250 ms)
-function gauge_pixels(s) { s.wait(200); return frame_pixels(s); }
+function gauge_pixels(s, boxes) { s.wait(200); return frame_pixels(s, boxes); }
 
 function l1() {
   const g = new Group('L1 probe');
@@ -162,8 +187,66 @@ function l4(mutant = null) {
   return g;
 }
 
-const GROUPS = { L1: l1, L2: l2, L3: l3, L4: l4 };
-const MUTANTS = [['acc-still', ['L2', 'L4']], ['tilt-ignored', ['L3', 'L4']]];
+function r1(mutant = null) {
+  const g = new Group('R1 rotation');
+  let refused = null;
+  withPlayer(null, (pl, s) => {
+    g.true('without --rotate: the orientation is not reported and H-ROTINIT not listed', s.acc.status().rotation === undefined && !pl.stand_ins_in_use().includes('H-ROTINIT'));
+    try { tilt(pl, 50, 0); } catch (e) { refused = e.message; }
+    g.true('without --rotate: a tilt of 50 degrees is refused (A-ACC-2)', refused !== null && /A-ACC-2/.test(refused), show(refused));
+  });
+  withPlayer(mutant, (pl, s, lab) => {
+    const r = MODEL_INFO.acc.rotate, events = [];
+    lab.observe(r.publish, (l, regs) => { if ((regs.d0 >>> 0) === r.event) events.push(l.sim.u32(r.index)); }, 'obs-rotate-event');
+    g.true('H-ROTINIT is listed', pl.stand_ins_in_use().includes('H-ROTINIT'));
+    g.eq('the start: level, index 1, EXIF 1', s.acc.status().rotation, { pose: 0, index: 1, exif: 1 });
+    let index = 1;
+    for (const [roll, pitch, pose, exif] of ROTATIONS) {
+      events.length = 0;
+      const rec = tilt(pl, roll, pitch), want = EXIF_INDEX[exif];
+      g.eq(`roll ${roll}, pitch ${pitch}: the orientation`, rec.acc.rotation, { pose, index: want, exif });
+      g.eq(`roll ${roll}, pitch ${pitch}: the events`, events, want === index ? [] : [want]);
+      g.eq(`roll ${roll}, pitch ${pitch}: the gauge's body`, rec.gauge.body, pose);
+      index = want;
+    }
+    for (const [roll, horizon] of [[95, 50], [-95, -50]]) {
+      const gv = tilt(pl, roll, 0).gauge;
+      g.true(`roll ${roll}: the getter reads the horizon ${horizon} (within 2) in portrait`, Math.abs(gv.horizon - horizon) <= 2 && gv.horizon_ok === 1, show(gv));
+    }
+    refused = null;
+    try { tilt(pl, 181, 0); } catch (e) { refused = e.message; }
+    g.true('a roll of 181 degrees is refused', refused !== null && /within 180/.test(refused), show(refused));
+  }, { rotate: 'on' });
+  return g;
+}
+function r2(mutant = null) {
+  const g = new Group('R2 GUI');
+  withPlayer(mutant, (pl, s) => {
+    const boxes = [ARC, BAR, ARC_LEFT, BAR_TOP];
+    key(pl, 'info');
+    s.wait(300);
+    const level = gauge_pixels(s, boxes);
+    g.true('level: the landscape arc and bar green, no portrait layout', level[0] > 200 && level[1] > 200 && level[2] === 0 && level[3] === 0, show(level));
+    tilt(pl, 90, 0);
+    const p8 = gauge_pixels(s, boxes);
+    g.true('roll 90: the arc at the left green, none of the landscape bar\'s', p8[2] > 200 && p8[1] === 0, show(p8));
+    tilt(pl, -90, 0);
+    const p6 = gauge_pixels(s, boxes);
+    g.true('roll -90: the bar at the top green, none of the landscape arc\'s', p6[3] > 200 && p6[0] === 0 && p6[2] === 0, show(p6));
+    tilt(pl, 180, 0);
+    g.eq('roll 180: the gauge as level', gauge_pixels(s, boxes), level);
+    tilt(pl, 95, 0);
+    const p95 = gauge_pixels(s, boxes);
+    g.true('roll 95: the left arc not green', p95[2] === 0 && p95[1] === 0, show(p95));
+    tilt(pl, 0, 0);
+    g.eq('level again: as before', gauge_pixels(s, boxes), level);
+  }, { rotate: 'on' });
+  return g;
+}
+
+const GROUPS = { L1: l1, L2: l2, L3: l3, L4: l4, R1: r1, R2: r2 };
+const DEFAULT = ['L1', 'L2', 'L3', 'L4'];                 // R1 and R2 (--rotate on) by --only
+const MUTANTS = [['acc-still', ['L2', 'L4']], ['tilt-ignored', ['L3', 'L4']], ['no-rotinit', ['R1', 'R2']]];
 function runGroup(name, mutant = null) {
   try { return GROUPS[name](mutant); } catch (e) {
     const g = new Group(name);
@@ -176,9 +259,13 @@ function main(argv) {
   const a = parseArgs('check_level.mjs', argv, [{ opt: '--mutants', type: 'flag' }, { opt: '--only', type: 'str' }]);
   const t0 = performance.now(), secs = () => Math.round((performance.now() - t0) / 1000);
   if (!MODEL_INFO.acc || !READERS[MODEL]) a.error(`${MODEL}: no accelerometer in the lab (src/fw/models.mjs acc) or no readers here`);
+  const names = a.only ? a.only.split(',') : DEFAULT;
+  const unknown = names.filter((n) => !Object.hasOwn(GROUPS, n));
+  // the default groups only, as before R1 and R2 (the header lists those)
+  if (unknown.length) a.error(`--only: unknown group(s) ${unknown.join(', ')} (${DEFAULT.join(', ')})`);
   if (a.mutants) {
     const missed = [];
-    for (const [m, groups] of MUTANTS) for (const name of groups) {
+    for (const [m, groups] of MUTANTS) for (const name of groups.filter((n) => (a.only ? names : DEFAULT).includes(n))) {
       const g = runGroup(name, m), caught = g.problems.length > 0;
       console.log(`[${caught ? 'ok' : 'FAIL'}] mutant ${m} -> ${name}: ${g.problems.length} problem(s)${g.problems.length ? ': ' + g.problems[0].slice(0, 120) : ''}`);
       if (!caught) missed.push(`${m}/${name}`);
@@ -186,9 +273,6 @@ function main(argv) {
     console.log(`${!missed.length ? 'all mutants detected' : `MISSED ${show(missed)}`} (${secs()} s)`);
     return missed.length ? 1 : 0;
   }
-  const names = a.only ? a.only.split(',') : Object.keys(GROUPS);
-  const unknown = names.filter((n) => !Object.hasOwn(GROUPS, n));
-  if (unknown.length) a.error(`--only: unknown group(s) ${unknown.join(', ')} (${Object.keys(GROUPS).join(', ')})`);
   let bad = 0;
   for (const name of names) {
     const g = runGroup(name);

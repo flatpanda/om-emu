@@ -341,6 +341,7 @@ export class Player {
   opts() {
     const a = this.a;
     return { start: a.start, touch: a.touch, us_clock: a.us_clock, bgdraw: !a.no_bgdraw, mutant: a.x_mutant, a15: a.a15 ?? 'auto', hdmi: a.hdmi ?? 'off', audio: a.audio ?? 'auto',
+      ...((a.rotate ?? 'off') !== 'off' ? { rotate: a.rotate } : {}),   // absent when off: the recorded documents
       ...(this.camapp_components ? { camapp_components: true } : {}) };
   }
   open_session() {
@@ -464,6 +465,7 @@ export class Player {
     if (this.session?.storage?.removals || this.session?.storage?.insertions) used.push('S-MEDIA');   // a card taken out or put back (media.mjs)
     if (this.session?.lens) used.push('H-DPCINIT', 'H-LENSINIT', 'S-LENSNAND', 'H-LENSON', 'S-LENSMCU', 'A-LENSSSC-1', 'A-LENSMCU-1', 'A-LENSMCU-2', 'A-LENSMCU-3', 'A-DPC-1');   // the lens on the mount natively (lens.mjs)
     if (this.session?.acc) used.push('H-ACCINIT', 'S-ACCREG', 'S-ACCSAMPLE', 'H-SLOPEINIT', 'A-ACC-1', 'A-ACC-2', 'A-ACC-3');   // a body whose accelerometer is stood in at its sample cache
+    if (this.session?.acc?.rotate_tid != null) used.push('H-ROTINIT');                       // --rotate on: PER_ROTATE natively (acc.mjs)
     // the model's own stand-ins (src/fw/models.mjs return_stubs and call_skips, src/lab/play.mjs), each by its name
     for (const [, , name] of MODEL_INFO.return_stubs ?? []) used.push(name);
     for (const [, name] of MODEL_INFO.call_skips ?? []) used.push(name);

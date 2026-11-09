@@ -534,6 +534,8 @@ store in the lab (vsc spec §10).
 | Item | Where it stands | Blocker | Owner |
 |---|---|---|---|
 | PLANC `0xca` after TFT -> EVF | cause settled: the lab's empty store reads property 587 as 0; on the firmware's store PLANC stays `0x100` | what `0xca` does to the pixels needs A7 (hardware) | vsc spec §9.3 |
+| Frame plane after a switch | located (D, X): the face-layer request `0x503e89ba` is posted only when its stored layer changes, and the lab's switch (131, the re-entry at panel 10) does not change it, so the EVF's frame-state byte stays 1; PLANC `0x1100` (bit 12, level 128) drawn under A19; MENU in and out sets the plane up natively | what posts the face request on the camera after a switch: the application's own switch, BGrCtl's drawing or the through image's display requests (I) | vsc spec §9.11, §9.12 |
+| EVF menu dim (PLANC `0xb2`) | decoded (D, X): OlyHfwOpeBGrCtl's DISPLAY cmd 30 mode 2 sets OSD1-3 to level 89 (70 %) on E143, E146 and E147; refused by the compositor | what a level between 1 and 127 does to the pixels needs A7 (hardware) | vsc spec §9.12 |
 | Palette re-upload after a switch | the request `0x503e52c7` runs natively (H-RESEND) | the caller of openDevice `0x50d83338` (the eye sensor), `0x50ab4756`, `0x503e4bf5` | vsc spec §9.2 |
 | Display update after a switch | H-UPDATE calls the GUI's re-display wrapper `0x510bd84b`; the OSD right-edge pad `0x501db6d5` copies column 799 into column 800 when its width word is 800 (X) | the camera's GUI message after a switch and the code that updates the display | menu spec §13-§14 |
 | Palette indices >= 128 (U16) | no v1.9 path uploads them | what bit 7 shows: a photo | text spec U16 |
@@ -711,9 +713,10 @@ check against. Follow-ups: the main and part records (spec U9, narrowed in 5.7 a
 stops at take_mov: its LAF mode (U11), TAKE_MOV's EMS1 state and per-frame EMS1 run on the unit 0x9bd80000, and the TRC
 passes' results S-PDT would have to write), when TAKE clears the subject-frame
 bit (U10; TAKE's message at a change of tracking status is a lead), and the EVF composite
-without the frame plane after a display switch (spec 5.6: the lab's switch posts no DISPLAY cmd 18 for the new output,
-so the EVF's frame-state byte stays 1 and DISP_FRAME never sets up its face plane; a face plane set up later reads
-PLANC 0x1100, which the VSC model does not define).
+without the frame plane after a display switch (spec 5.6; vsc spec section 9 items 11 and 12: the face request is
+posted only when api_disp's stored layer changes, which the lab's switch never makes it do; PLANC 0x1100 is decoded and
+drawn under A19, so a later GUI transition such as MENU in and out shows the frame; what posts it on the camera after a
+switch is not read).
 
 ## Longer term: full-boot LLE
 

@@ -2491,6 +2491,15 @@ and E147; off by default. Addresses are E143's (disassembly notation) unless a b
   S-MDETDL runs MDET_PDT_CPU3 and MDET_TRC_CPU3 with the core register at 3 and CPU 3's deferred calls after their
   turns, so LAF's start opens both drivers natively (X), and the firmware's drivers run on S-PDT (X). Not reached: LAF's
   start with take_mov's parameters and the chase requests, which need TAKE_MOV's EMS1 state and run (D).
+- **The frame plane after a display switch (2026-11-08, `docs/om1-vsc-spec.md` section 9 items 11 and 12).** The face
+  layer's one requester, OlyHfwOpeBGrCtl's AF display setter `0x50ae7b04`, posts DISPLAY cmd 18 only when api_disp's
+  stored layer for the logical display changes (D); the GUI re-sends its cached mode on 131, and the lab's switch leaves
+  the GUI at panel 10 throughout, so nothing is posted and the new output's frame-state byte, which every OPEN sets to 1,
+  stays 1 (X). The face plane a later GUI transition sets up (MENU in and out) reads PLANC `0x1100`, the format setter's
+  per-pixel alpha bit with the level the switch's cmd 28 left at 128 (D, X); A19 draws it as `0x1000`. What posts the
+  face request on the camera after a switch is not read (the application's own switch, BGrCtl's drawing or the through
+  image's display requests, I). The EVF menu's PLANC `0xb2` is BGrCtl's DISPLAY cmd 30 mode 2, OSD1-3 at level 89 (D,
+  X); its blend needs hardware (A7).
 - **GPU and C3D (D):** one stack seen from both ends: C3D (gap@0x5101aef5) makes 108 call edges into the DMP "K3000"
   GPU driver core (gap@0x51767cd6), plus a 15.6k GPU tail of gap@0x51740e22. Tasks: C3D_EXE_BRIDGE and C3D on CPU 0,
   C3D_EXE and C3D_UPDATE on CPU 1. Devices `0x9bc80000` (30 references) and `0x9bd00000` (10) are referenced only from

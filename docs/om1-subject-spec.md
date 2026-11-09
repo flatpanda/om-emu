@@ -898,6 +898,8 @@ produces no shooting-screen transition that posts cmd 18, which the camera's swi
 face plane set up after a switch carries a PLANC value the model does not know (?). Neither is fixed: which of the GUI's
 or the display manager's steps posts cmd 18 at a real switch, and what PLANC 0x1100 does, are not read; a write of the
 EVF's byte by the lab would hide the first, and accepting 0x1100 would guess the second.
+Followed up in `docs/om1-vsc-spec.md` section 9 items 11 and 12 (2026-11-08): the face request's gate is read, PLANC
+0x1100 is decoded and drawn under A19, and after MENU in and out the EVF shows the frame; the switch still posts none.
 
 **Open.** U9 (above); which object each part is per kind; subjects of other groups and kinds with parts; the AIRPLANE
 swap with real part records; one score for every record; the tracking frame (UP_LOCKON, step B); the trap after a

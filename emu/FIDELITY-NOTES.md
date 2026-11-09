@@ -242,7 +242,10 @@ A second is met on E118 (2026-10-31): its movie record time divides by the movie
 
 **Where:** `emu/src/dev/vsccompose.mjs:30-33`, `emu/src/dev/vsccompose.mjs:116-149`, `emu/src/dev/vsccompose.mjs:239-299`, `emu/src/dev/vsccompose.mjs:173-228`
 
-**Emulator:** COMPOSE accepts only channels 1 and 2 (`:271`). It requires progressive mode (`:244`). Each FEATURES register must equal one fixed observed value per channel, and any other written value gives FEATURE_UNOBSERVED (`:273-291`). The mix registers are checked against fixed values (`:262-270`). PLANC must be 0 or 0x100, and the IMG format must be 0 (YC 4:2:2). OSDFMT1/OSDFMT2 must be 0x111/0x11. SPOS is supported only in a restricted form, and resize only for the RSZ1 bits 0x11 with no extra resize registers. PEAK/BC must have the observed values. Both IMG planes (`drawImg`, two-tap linear) and OSD planes (8-bit index, nearest sampling, blending through the palette) are implemented.
+**Emulator:** COMPOSE accepts only channels 1 and 2 (`:271`). It requires progressive mode (`:244`). Each FEATURES register must equal one fixed observed value per channel, and any other written value gives FEATURE_UNOBSERVED (`:273-291`). The mix registers are checked against fixed values (`:262-270`). PLANC must be 0 or 0x100, and the IMG format must be 0 (YC 4:2:2). With the A19 opt-in IMG3 may instead be format 2 at PLANC 0x1000 or 0x1100, the face/AF frame plane (bit 12 the
+format setter's per-pixel alpha bit, the level at 0 or at the full 128; `docs/om1-vsc-spec.md` section 9 item 12). A
+level between 1 and 127, such as the EVF menu's 0xb2 (DISPLAY cmd 30), is refused: how the chip blends it is not
+known. OSDFMT1/OSDFMT2 must be 0x111/0x11. SPOS is supported only in a restricted form, and resize only for the RSZ1 bits 0x11 with no extra resize registers. PEAK/BC must have the observed values. Both IMG planes (`drawImg`, two-tap linear) and OSD planes (8-bit index, nearest sampling, blending through the palette) are implemented.
 
 **Expected / concern:** In practice this is a check that the firmware set up the configuration seen so far. It is not a general compositor. Any other mode the firmware uses (other formats, scaling, peaking, channel 0) produces an error and no image.
 

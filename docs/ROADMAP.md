@@ -73,8 +73,11 @@ not reconciled.
    each body (hle-gaps.md 4.7.4: the power manager PWR_MAIN started natively, the lever's off run from the HFW's
    shutDown to the SCPU window's last write, with the sub-CPU's 0x85 {1} through S-SCPUDEV or its own firmware,
    H-POWER ending the session there; the IO expanders stood in, S-IOEXP, on E143 and E146; E147 has none). S-TRAACK
-   deletes the requests it answers as the exec would (2026-10-29, hle-gaps.md 4.4.2): the idle heap no longer grows;
-   a workload of S1, S2, the menu and playback still keeps about 40 blocks a pass, who frees them is open. The SCPU survey (2026-10-23, `docs/om1-scpu-spec.md`) put the transport-level model before any LLE of the
+   deletes the requests it answers as the exec would (2026-10-29, hle-gaps.md 4.4.2): the idle heap no longer grows.
+   A workload of S1, S2, the menu and playback (2026-11-08, hle-gaps.md 4.4.2): S-DISPQ's replies now reach the
+   application's queue, which frees the display manager's buffers (6 a pass); the firmware's own kept blocks are
+   bounded; 22 events a pass wait for the OXF main thread, which runs only with the HLS components, and 5 S-RPC
+   requests a pass stay, who frees them after a reply is open (test_camapp heapWorkloadSession). The SCPU survey (2026-10-23, `docs/om1-scpu-spec.md`) put the transport-level model before any LLE of the
    sub-CPU; it is built (SCPU track below).
 4. **Debug API follow-ups** (Debug API follow-ups below): the route to a running play session (F31), the attached
    watch log's lab time, halt and trace filters are in (2026-10-23), and the gate gaps 1-3 and 6 are closed, the

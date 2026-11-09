@@ -633,15 +633,49 @@ than E143, E146 and E147 (4.4.3).
   check fails with the deletion taken out: 73 blocks); S-LENS's session keeps five blocks it allocates in its first 10
   s (68, 192, 968, 2536 and 6416 bytes, the same at 30 s). Other stand-ins that take an object: S-MEDIA hands its events
   to the reception's own synchronous slot, as the firmware's senders do (CapMed's 711 at `0x50bb8a23..30` deletes
-  nothing after it), so they stay the firmware's. Open (X, a workload of S1, S2, the menu and playback, each block
-  still allocated at the end traced to its allocation and to the hooks it was passed to in a register): each pass
-  keeps about 40 blocks: 26 of 28 bytes (event 294, vtable `0x60ef3504`, built at `0x50d7e10b` and passed to a target's
-  vt[1], `0x50d7e130..37`; no stand-in sees them; I: a send to a reactive whose OXF thread does not run without the
-  HLS components), 7 of 72 bytes (the request object `0x50ac722a` builds and sends through its method `0x50ac734c`,
-  which S-RPC answers 0 at its entry; natively the method deletes its object through `0x50ac72e3` on its failure
-  paths, `0x50ac7393` and `0x50ac743c`, and keeps it after its reply wait, where who frees it is ?), 6 of 192 bytes
-  (`0x505fe9ae`, passed to no stand-in), one of 32 and two one-offs; which of them the camera frees, and where, is
-  ?.
+  nothing after it), so they stay the firmware's.
+- **A workload's blocks (2026-11-08):** a pass is S1 and S2 (a shot and its rec view), the menu opened and closed,
+  playback shown and left and 2 s of idle (`emu/test/test_camapp.mjs` heapWorkloadSession). S-HEAP records each
+  block's malloc caller and the task that allocated it (`heap_owner`, `src/lab/play.mjs`); an operator new
+  (`0x50d9ba46`, `0x50d9ba1e`) leaves its own caller at sp + 8 (X). Before the fix below each pass left 34 of its
+  allocations live and the live count grew by 33 (X, the default session); by kind, over passes 1 to 6:
+  - **Kept by the lab, fixed: 6 of 192 bytes a pass**, the display manager's request buffers: a request slot
+    (`0x62a605f0` + 56 x slot, 255 of them) gets a 192-byte buffer from malloc at `0x503eb91b` (2112 bytes at
+    `0x503eb906` for the other kind), which the reply handler frees (`0x503ebae0`, free at `0x503ebb3f`, D) when the
+    reply, id `0xf0000000 | slot << 16`, reaches the application's event task (task 164, entry `0x50abbf0c`) through
+    queue 6 (its read at `0x503ebf63`; `0x503ea264` takes the replies, D). The DISPLAY loop sends that reply from
+    S-DISPQ's run (`0x501c490c`, `0x501c496d`), and S-DISPQ recorded it and returned E_OK, on the assumption that no
+    task reads queue 6; with the camera application running, task 164 reads it (X: 64 reads by the second pass). Now
+    S-DISPQ's replies go to their queue after the step, each with a settle, from S-CAMAPP's pump (`src/lab/camapp.mjs`),
+    as S-MODACK's do: no 192-byte block stays (X; the test's control, the replies recorded only, keeps 6 a pass).
+    Delivered at S-DISPQ's own call instead, the reply readied task 164 inside the DISPLAY run, whose OlyQeRd stand-in
+    then refused its read (X). That the camera's reply comes before the requester's next step is I.
+  - **Kept by the firmware, bounded (X: flat over 6 passes):** the event task's parked replies, 16 bytes each
+    (`0x50abc23c`, built at `0x50abc24b`: {id, parameter, the reply counter}), for a reply no listener takes; it frees
+    one when 10 later replies have come (`0x50abc2e7..f4`, then `0x50abc33f`) and the oldest when the list is full
+    (`0x50abc2a2`, D). X: 10 of them from the second pass on (ids `0xf007..0xf012`), two replaced a pass. Also three
+    32-byte records from `0x50ab8bb5` (words 3, 11, 29; one replaced a pass, freed by tasks 16 and 165), one 16-byte
+    object of vtable `0x615a3c28` (`0x5125bfeb`) and one 80-byte block through `0x50d9ba25`, each replaced a pass, and
+    the first pass's one-offs (two of 7648 bytes, 6416, 2544, 1648, 976, 256 twice, 224 twice and smaller ones).
+  - **Kept because a module does not run (X: 22 a pass, unbounded):** 21 events 294 (28 bytes, vtable `0x60ef3504`,
+    built at `0x50d7e10b` in `0x50d7e0f4` and passed to the vt[1] of the object at its +20, `0x50d7e132..37`) and one
+    32-byte event of vtable `0x60dcb42c` (operator new at `0x50ae1278`, its constructor `0x50ab79c2`, posted through
+    `0x50b78bfe`), from tasks 165 and 168. They go to reactives of the OXF main thread, task 57 (entry `0x50ab2293`),
+    which is dormant in the default session (X: DMT). With the HLS components (control camapp 2) it runs and frees
+    them: every one goes, freed by task 57 through the event's delete (return addresses `0x50d9a1d9`, `0x50d9a218`,
+    `0x50d9cb3b`, `0x50d9cc32`, X).
+  - **Kept behind S-RPC, open (X: 5 a pass, with and without the components):** the 72-byte request object (vtable
+    `0x60de54e8`) `0x50ac722a` builds (operator new at `0x50ac723d`, its constructor `0x50ac7291` sets its own-delete
+    word +20 to 1) and hands to its method `0x50ac734c`, which S-RPC answers 0 at its entry. The method's no-channel
+    path (`0x50ac7381..98`) returns 0 too and deletes it through `0x50ac72e3` (operator delete when +20 is set); a
+    send's failure completes it through `0x50ac7eba`, which sets +20 again, and deletes it (`0x50ac743c`). On the
+    synchronous path the method clears +20 before it posts (`0x50ac73dd`) and keeps the object after its wait; the
+    reply's handler (vt[2] `0x50ac744e`, reply 425) signals the waiter and sets +24, not +20. So no code of this class
+    frees the object after a reply (D); whether the receiver does, by a route not read, is ?. S-RPC leaves it: freeing
+    it would be the no-channel path's choice, which the lab cannot show the camera takes.
+  - **Not a heap block, open:** the seventh pass ends in the lab's blocked-send guard, with or without the fix: at
+    PLAY up task 165's request to queue 6 (`0x503eba00`) waits on a full queue while task 164's last receive was on
+    queue 6 (X); why the queue fills is ?. The test runs five passes.
 - **Open:** S-LENSMCU's assumed values (A-LENSMCU-1..3) and the lens's real replies (its flags, function words,
   tables, version, the ID's first bytes and the check byte's value) are ?. E146 and E147: 4.4.3. The E144 family and
   E118 have no `lens` board fact and no `lens_driver` fact: they keep S-LENS.

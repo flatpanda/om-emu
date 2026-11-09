@@ -22,10 +22,23 @@ port 31 to node 0; and the A53's own `ISC_alloc_mem` now succeeds against the
 peer's shared-memory pool (`dbgterm_server` takes the first free block). With the
 `mn_sio_uart` console captured, the A53 boot log is visible through
 `isc_start`/`sccore start!!`/`dbgterm server start!!`. See `docs/a53-spec.md`
-9 / 9.1 / 10. The socket/CGI daemons launch only from the kind-1 wifi script and
-were not brought up end to end in the headless oracle (spec 10 item 7).
+9 / 9.1 / 10. Since 2026-11-08 the kind-1 wifi script starts `isc_socket`,
+`lighttpd` + `isc_cgi` and the other wireless daemons, and both run end to end:
+the peer drives a TCP server through `isc_socket` (socket .. accept, recv, send,
+close; ports 3/4) and answers `isc_cgi`'s GET and POST (ports 11/12/13/16) for
+an HTTP client inside the guest (the console shell's `wget`).
 
-Two fixes over the first bring-up: (1) the MN view `0x63fe0000` and the A53 view
+Fixes over the first bring-up, the 2026-11-08 ones (3)..(6) found by getting the
+socket and CGI daemons up: (3) the console UART has TX and RX interrupts (GIC SPIs
+`0x15e` / `0x15d`) and reads a free TX FIFO; before, every userspace write to the
+console stalled its writer, the wifi script included, so its daemons never
+started; (4) the irqcon receive ack is the write-1-to-clear `+0x884`, not a write
+back to `+0x880`; before, the level line stayed high and CPU 0 never left the ISC
+handler (an RCU stall); (5) the control block's `+4` is the pool's metadata size
+(`0x1000`), not its size; before, every `ISC_attach_mem` failed `-1` (the
+`dbgterm_server` error flood); (6) each FIFO header's `+8` is the page frame of
+that node's view of the pool, which an attach maps; before, it mapped page 0.
+The first two: (1) the MN view `0x63fe0000` and the A53 view
 `0x2_a3fe0000` of the shared memory are now **one** backing region, so a buffer
 written on one side is the bytes the other reads -- needed for the socket
 `/dev/mem` buffer alias and the CGI pool buffers; (2) the peer writes a valid
@@ -47,8 +60,9 @@ path/offset as below.
 | `dmesg.mjs` | read the Linux 4.14 printk ring out of a RAM dump |
 | `dis-daemons.sh` | disassemble `iscdrv.ko` + the ISC daemons and print each port's ISC calls |
 | `iscports.mjs` | helper: list `ISC_*` calls with their node/port immediates |
-| `iscpeer.mjs` | **the MN half of ISC outside QEMU**: control block + FIFOs + doorbell + the `alloc_mem` pool + socket/CGI records, with a `selftest` and a `live` mode (incl. a `scenario=socket` driver) |
-| `om-isc.c` | the QEMU sysbus device: backs the ISC windows (one backing for both pool views) + irqcon banks, bridges doorbells, captures the `mn_sio_uart` console |
+| `iscpeer.mjs` | **the MN half of ISC outside QEMU**: control block + FIFOs + doorbell + the `alloc_mem` pool + socket/CGI records, with a `selftest` and a `live` mode (`scenario=socket`: a TCP server; `scenario=cgi`: the CGI server; `rec=PATH`: a JSON log of every message) |
+| `uartsh.mjs` | types timed commands into the A53's console shell (`SHCMDS=` for `run-isc.sh`) |
+| `om-isc.c` | the QEMU sysbus device: backs the ISC windows (one backing for both pool views) + irqcon banks, bridges doorbells, models the `mn_sio_uart` console (TX to stderr, RX from a chardev, both interrupts) |
 | `om-isc-qemu.patch` | the board hook (`hw/arm/virt.c`) + `hw/misc/meson.build` line for the device |
 | `build-qemu.sh` | fetch + patch + build the aarch64 QEMU with the device (into `$HOME/qemu-om`) |
 | `run-isc.sh` | boot the A53 live and run the MN peer; capture the ISC traffic |
@@ -70,6 +84,8 @@ python3 -I tools/olyfw.py <E143.BIN> --dump    # the blk05a00000 0106 bundle
 # walk the nested OE table, carve BL31 / nep1.dtb / Image / rootfs.sqfs:
 #   BL31  block-file-offset 0x29807e0   DTB 0x2986fe0
 #   Image 0x2989fe0                     squashfs 0x2f10fe0
+# lengths from the parts' own headers: the DTB's totalsize (big-endian u32 at +4),
+# the squashfs's bytes_used (u64 at +40); Image runs up to the squashfs.
 # unsquashfs the rootfs; dtc -I dtb -O dts nep1.dtb > nep1.dts
 ```
 
@@ -94,12 +110,31 @@ IMG=$IMG bash run-isc.sh 55 \
     26000:4:30:000000...<48 hex 00>     # an hhhr job (count 0)
 #   -> [peer] RX node 0 port 31 [...112 bytes...]   hhhr's reply to CPU 0
 
-# drive a live socket sequence over ports 3/4 (socket -> bind -> listen ->
-# close). isc_socket is started by the wifi script, so send kind-1 first:
-IMG=$IMG bash run-isc.sh 70 \
-    12000:4:26:0100000000000000 \       # kind-1: start /etc/init.d/wifi
-    scenario=socket afterMs=40000 port=8099
-#   (accept + a real client need an in-guest TCP peer; see docs/a53-spec.md 10)
+# the A53's console shell: SHCMDS names a file of "afterMs command" lines that
+# uartsh.mjs types into the console (output on $OUT/qemu.out). The wifi daemons
+# start from the kind-1 script, so send kind-1 first.
+#
+# a TCP server through isc_socket (ports 3/4): socket, bind :8099, listen, accept,
+# recv (a byte at a time: isc_socket's recv waits for the whole length), send,
+# close, getsockerr, setsockerr. The shell's wget is the client; the scenario
+# starts when the console shows SOCK_42_UP (printed once isc_socket runs).
+cat > sh.txt <<'X'
+10000 while ! pidof isc_socket >/dev/null; do sleep 1; done; sleep 2; echo SOCK_$((40+2))_UP; sleep 6; for i in 1 2 3 4 5; do wget -T 10 -O - http://127.0.0.1:8099/hello && break; sleep 2; done
+X
+SHCMDS=$PWD/sh.txt IMG=$IMG bash run-isc.sh 75 7000:4:26:0100000000000000 \
+    scenario=socket waitFile=/tmp/a53isc/qemu.out waitFor=SOCK_42_UP port=8099 rec=/tmp/rec-socket.json
+#   -> [peer] accept -> 6, peer 2:52298 127.0.0.1 len 16
+#   -> [peer] recv -> 82 bytes: "GET /hello HTTP/1.1\r\n..."      and wget prints the MN's body
+
+# the CGI relay (ports 11/12/13/16): the peer answers isc_cgi as CPU 1's server
+cat > sh.txt <<'X'
+10000 while ! pidof isc_cgi >/dev/null; do sleep 1; done; sleep 3; wget -T 8 -O - "http://127.0.0.1/get_commandlist.cgi?a=1"; wget -T 8 -O - --post-data "k=v&x=yz" http://127.0.0.1/set_utctimediff.cgi
+X
+SHCMDS=$PWD/sh.txt IMG=$IMG bash run-isc.sh 50 7000:4:26:0100000000000000 scenario=cgi rec=/tmp/rec-cgi.json
+#   -> [peer] CGI request: {"kind":1,...,"method":1,"uri":"/get_commandlist.cgi?a=1",...,"remote":"127.0.0.1"}
+#   -> wget prints "MN peer answered /get_commandlist.cgi?a=1"
+# (run-isc.sh leaves the vCPUs' registers in $OUT/regs.txt; RAMDUMP=1 also saves
+# the guest's RAM as $OUT/ram.bin)
 
 # the MN-side transport also self-checks with no QEMU at all:
 node iscpeer.mjs selftest     # cb magic + FIFO + the alloc_mem pool round-trip
@@ -121,17 +156,27 @@ numbers cross-check the MN side in `docs/hle-gaps.md` 4.11.1.
 - **`mn_sio_uart` console** `0x9a500600` (D, `mn_sio_uart_serial_out`
   `0xffffff80082934e8`, `console_putchar` `0xffffff8008293c00`): TX byte at
   `membase+0x18`; `console_putchar` writes it only when status `+0x44` bit 15 is
-  clear **and** `+0x1c` is non-zero (the TX-ready flag the loader seeds). The real
-  block is `ntcj,mn-sio-1-uart`. `om-isc` now models it (read `+0x1c` -> 1, else
-  0; TX `+0x18` -> QEMU stderr) so the A53 boot/daemon log is captured live -- a
-  dev aid, not required for ISC itself.
+  clear **and** `+0x1c` is non-zero. The real block is `ntcj,mn-sio-1-uart`. The
+  tty side (D, kernel `0xffffff8008293e00..0xffffff80082947bc`): `+0x1c` is the TX
+  FIFO's free count (`tx_chars` `..4138` writes at most that many bytes, the drain
+  wait `..3850` compares it with the DT's `fifo-size` `0x80`), `+0x28` bit 7 the TX
+  interrupt enable, `+0x0c` the RX count and `+0x08` the RX byte (the one handler
+  `..4448` on both lines), `+0x50` the line status. `om-isc` models it: `+0x1c`
+  reads `0x80`, `+0x44` and `+0x50` read 0, TX `+0x18` goes to QEMU's stderr, the
+  TX line (SPI `0x15e`) is high while `+0x28` bit 7 is set, RX bytes come from the
+  `OM_ISC_UARTDEV` chardev with the RX line (SPI `0x15d`) high while any wait, and
+  other offsets are storage. Before, `+0x1c` read 1 and no TX interrupt existed:
+  every userspace write to the console stopped after its first bytes and blocked
+  its writer (the wifi script with it). A dev aid, not ISC itself.
 - **`irqcon`** four MN INTC banks `0x99200000 / 0x99300000 / 0x99b00000 /
   0x99b80000` (D, `nep1.dts` `irqcon@99200000`, and the same four in iscdrv's
   `.rodata+0x110`). GIC parents SPI `0x1c0/0x1c2/0x1c4/0x1c6`. A53-side use
   (D, `irqam32_notify` `0xffffff800826fd98`, `irqam32_entry`
   `0xffffff800826fe28`): a *notify* writes `(1<<bit)` at `bank+0x800+(k-1)*8`;
-  the *entry* reads the pending word at `bank+0x880+k*4`, acks by writing it
-  back, then demuxes to the handlers registered by `irqarm_entry_handler`. The
+  the *entry* (`0xffffff800826fe48`) reads the pending word at
+  `bank+0x880+j*8`, acks by writing the bits it saw to `bank+0x884+j*8`
+  (write-1-to-clear, the store at `0xffffff800826fef8`), then demuxes to the
+  handlers registered by `irqarm_entry_handler`. The
   ISC receive handler is registered on virtual IRQ **14** (D, `isc_system_init`
   `iscdrv.ko+0xa80`: `irqarm_entry_handler(14, isc_receive_interrupt)`).
 - **ISC doorbells** (D, `isc_send` `iscdrv.ko+0x1c48`, tail `0x1ea4..0x1f40`):
@@ -159,7 +204,11 @@ numbers cross-check the MN side in `docs/hle-gaps.md` 4.11.1.
   `+0x3250`, and the MN builder `0x50aa63c5`): `+0` u16 shift, `+2` u16 nblocks,
   `+4` u16 head, `+8` a run-length doubly-linked free list (`link[i]={lo,hi}`,
   sentinel `link[0]`; a run of length L at block i records L at `link[i+1].lo` /
-  `link[i+L-1].lo`, or sets bitmap2 bit i when L==1), then two bitmaps. Layout, the
+  `link[i+L-1].lo`, or sets bitmap2 bit i when L==1), then three bitmaps
+  (allocated, single-block runs, attached). The control block's `+4` is the size
+  of this metadata (`0x1000`: the allocator maps that much and accepts blocks from
+  `+4 >> shift` on), and each FIFO header's `+8` the page frame of that node's
+  view of the pool (`isc_mem_paddr` `+0x2830` adds it for an attach). Layout, the
   FIFO format, and the pool are implemented in `iscpeer.mjs`; also `docs/a53-spec.md`
   9.1 and `docs/hle-gaps.md` 4.11.1.
 - **`mn-mmc`** SDIO `0x9ac02000` (CYW43455): model as "no card / no SDIO
@@ -192,7 +241,7 @@ every piece:
   waitqueue with no timeout, so MN->A53 needs a real interrupt. `om-isc` models
   the four `irqcon` banks as MMIO; a byte from the peer on the chardev sets
   `bank0 +0x880` bit 14 (`0x4000`) and raises the bank's GIC SPI (level, lowered
-  on the guest's ack). The board hook wires the banks to GIC SPIs
+  once the guest's write-1-to-clear ack at `+0x884` clears it). The board hook wires the banks to GIC SPIs
   `0x1c0/0x1c2/0x1c4/0x1c6`, which the A53's `irqcon` driver *requires*
   (`irqcon_postcore_init` hardcodes `irq-0x1c0 <= 7`, D at kernel
   `0xffffff8008583268`); virt's GIC is widened to `NUM_IRQS 512` in the patch so
@@ -218,10 +267,13 @@ The `om-isc` device logs any offset it does not model via `LOG_UNIMP` and reads 
   pool-header fix every A53 `alloc`/`attach` returned an error.
 - Console captured: the A53 boots through `Starting OLYMPUS APP...` / `sccore
   start!!` / `dbgterm server start!!`.
-- **Not yet live:** `isc_socket`/`isc_cgi` end to end. They launch only from the
-  port-26 kind-1 wifi script; kind-1 is received and `sccore` runs
-  `system(".../wifi start &")`, but the wifi daemons do not surface and a port-3
-  `socket()` (consumed by the A53's iscdrv) draws no port-4 reply. The record
-  formats and the pool/alias they need are decoded and in place (`docs/a53-spec.md`
-  9.1); this is a harness gap (no in-guest TCP/HTTP client; wifi-script daemons not
-  surfacing). See `docs/a53-spec.md` 10 item 7.
+- The wifi script's daemons run (`ps` on the console shell; `lighttpd` on :80).
+- `isc_socket` end to end: socket -> fd, bind/listen -> 0, accept -> a new fd and
+  the client's address, recv/send through MN pool buffers (the `/dev/mem` alias),
+  close -> 0, getsockerr -> 0; the guest's `wget` gets the MN's reply.
+- `isc_cgi` end to end: a GET and a POST through `lighttpd` reach the peer as
+  info blocks in an A53-allocated pool buffer, and the peer's reply chunk comes
+  back out of `wget`. `dbgterm_server`'s attach errors are gone (fix 5).
+- **Not yet live:** `connect`, `sendto`, `recvfrom`, `shutdown`, `select`,
+  `get`/`setsockopt`; a CGI body over one chunk; a multi-chunk reply. See
+  `docs/a53-spec.md` 9.1 and 10.

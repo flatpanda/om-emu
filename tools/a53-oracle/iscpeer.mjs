@@ -35,7 +35,14 @@ export const CFG = {
 };
 
 // Control block (D, isc_start 0x2228): u16 magic @0, u8 node_count @2,
-// u32 memblock_size @4, then one u16 FIFO offset per node @8. The magic is
+// u32 @4 the pool's metadata size, then one u16 FIFO offset per node @8. The
+// +4 word is memblock_init's third argument (isc_start 0x2638), stored >> shift
+// as the first block memblock_check accepts (0x3420: block >= it), so it is the
+// size of the header blocks, not of the pool: with the pool size there (0x20000)
+// every ISC_attach_mem failed -1 (X: dbgterm_server and isc_cgi). The MN builder
+// 0x50aa63c5 returns exactly that size (header rounded up to blocks, D) and its
+// caller 0x50aa6457 hands it on to the control-block writer 0x50aa5aac (that
+// the writer stores it at +4 is I). The magic is
 // 0x1000 | (sum of the config bytes & 0xff) (I: field set is my reading of the
 // byte-sum chain at 0x23b8..0x2554; the data-plane below does not depend on it).
 export function controlMagic(cfg = CFG) {
@@ -51,7 +58,11 @@ export function controlMagic(cfg = CFG) {
 
 // FIFO header (one per receiving node) (D, isc_start 0x25cc / isc_send 0x1c48 /
 // isc_receive 0x14c8): u16 state @0, u16 size @2, u16 read @4, u16 write @6,
-// 4 bytes reserved @8; data from @12. state 0x1000 = owner starting,
+// u32 @8 the page frame of that node's view of the shared pool; data from @12.
+// The +8 word is what isc_mem_paddr (0x2830) adds, << 12, to block << shift to
+// find a pool buffer's physical address for ISC_attach_mem's mapping (D); left 0,
+// every A53 attach mapped physical page 0 + block, outside the pool, so the CGI
+// info block and its reply went nowhere (X). state 0x1000 = owner starting,
 // 0x2000 = running, 0x3000 = refused-if-already (D). A message is {u8 port,
 // u8 len}+payload, len <= 128, port < 48; free = (read - 1 - write) mod size.
 const FIFO_HDR = 12, MSG_MAX = 128, STATE_RUN = 0x2000, STATE_START = 0x1000;
@@ -273,14 +284,15 @@ export class MnPeer {
     const cb = Number(this.cfg.cbAddr);
     this.m.setU16(cb + 0, controlMagic(this.cfg));
     this.m.setU8(cb + 2, this.cfg.nodeCount);
-    this.m.setU32(cb + 4, this.cfg.memSize);
     for (let n = 0; n < this.cfg.nodeCount; n++) {
       this.m.setU16(cb + 8 + 2 * n, FIFO_OFF[n]);     // offset relative to cb
       const f = new Fifo(this.m, cb + FIFO_OFF[n], FIFO_CAP[n]);
       this.rxFifo[n] = f;
       f.init(n === 4 ? 0 : STATE_RUN);
+      this.m.setU32(cb + FIFO_OFF[n] + 8, Number(this.cfg.memAddr[n] >> 12n));
     }
-    this.pool.init(this.cfg.memSize);
+    const meta = this.pool.init(this.cfg.memSize);
+    this.m.setU32(cb + 4, meta << this.pool.shift);
   }
   // Send to a node: write into that node's RX FIFO, then ring its doorbell.
   send(dstNode, port, payload, doorbell) {
@@ -309,13 +321,17 @@ export class MnPeer {
   bufRead(h, off, len) { const b = Buffer.alloc(len); for (let i = 0; i < len; i++) b[i] = this.m.getU8(h.addr + off + i); return b; }
 }
 
-// Socket op records (D, isc_socket.dis iscbsdapi.c). A fixed 64-byte record:
-//   +0 u32 op (1..16); +4..+0xb echoed by the A53; then per-op fields. The A53
-// receives on port 3 and replies the same 64-byte record on port 4 to node 1.
+// Socket op records (D, isc_socket: receive loop 0x10e48, dispatch 0x11068, one
+// handler per op 0x111a8..0x12a6c). A fixed 64-byte record: +0 u32 op (1..16);
+// +4..+0xb the MN's request id, echoed; the byte +0xc is the A53's own slot-busy
+// flag (it copies the request into one of 12 slots and sets +0xc = 1, 0x10f64, so
+// every reply carries 1 there; X); then per-op fields, the result written in place.
+// Each request runs on its own thread, so replies may come out of order; with all
+// 12 slots busy a request is dropped without a reply (0x10f1c).
 export const SOCK_OPS = {
   socket: 1, bind: 2, connect: 3, listen: 4, accept: 5, send: 6, sendto: 7,
   recv: 8, recvfrom: 9, shutdown: 10, close: 11, select: 12, getsockopt: 13,
-  setsockopt: 14,
+  setsockopt: 14, errno: 15, nop: 16,
 };
 // Build a 64-byte socket request. `fields` is a map of byteOffset -> value;
 // numbers are written as u32 LE, Buffers copied verbatim.
@@ -335,7 +351,11 @@ export const sockReq = {
   bind: (fd, sa, len, tag) => sockRecord(SOCK_OPS.bind, { 0x10: fd, 0x14: sa, 0x24: len }, tag),
   listen: (fd, backlog, tag) => sockRecord(SOCK_OPS.listen, { 0x10: fd, 0x14: backlog }, tag),
   accept: (fd, addrLen, tag) => sockRecord(SOCK_OPS.accept, { 0x10: fd, 0x24: addrLen }, tag),
+  recv: (fd, mnBuf, len, flags, tag) => sockRecord(SOCK_OPS.recv, { 0x10: fd, 0x14: mnBuf, 0x18: len, 0x1c: flags }, tag),
+  send: (fd, mnBuf, len, flags, tag) => sockRecord(SOCK_OPS.send, { 0x10: fd, 0x14: mnBuf, 0x18: len, 0x1c: flags }, tag),
   close: (fd, tag) => sockRecord(SOCK_OPS.close, { 0x10: fd }, tag),
+  errno: (tag) => sockRecord(SOCK_OPS.errno, {}, tag),
+  nop: (tag) => sockRecord(SOCK_OPS.nop, {}, tag),
 };
 // A sockaddr_in {u16 family=2, u16 port(be), u32 addr(be), 8 zero} for +0x14.
 export function sockaddrIn(port, ip = '0.0.0.0') {
@@ -347,12 +367,41 @@ export function sockaddrIn(port, ip = '0.0.0.0') {
   return sa;
 }
 
+// The CGI relay (D, both ends; docs/a53-spec.md 9.1). The A53's isc_cgi is the
+// client: per HTTP request it ISC_alloc_mem's a 16 KiB pool buffer (0x10e30), then
+//   A53 -> p12  32 B {handle[24], +0x18 result 0}     inquire (0x10ea8)
+//   MN  -> p16  32 B, +0x18 = 0 accepted               (MN 0x517dc3a3)
+//   A53 writes the 0x3444-byte info block into the buffer, then
+//   A53 -> p11  16 B = the handle's first 16 bytes     (0x114c8)
+//   MN  -> p13  32 B, +4 = 0 accepted                  (MN 0x517dc626)
+// and for the reply, in chunks until their lengths reach the total (0x11598):
+//   MN  -> p12  32 B {handle[24], +0x18 0}             (MN 0x517dc330)
+//   A53 -> p16  32 B, +0x18 = 0 ok / 1 error            (0x10ff4)
+//   (the MN has written the chunk into the A53's buffer: +4 total, +8 chunk
+//    length, +0xc slot, +0x10 data, at most 12416 bytes in all; MN 0x517dc636)
+//   MN  -> p11  16 B {handle[16]}                      (MN 0x517dc718)
+//   A53 -> p13  32 B {+0 0, +4 result: 0 ok}           (0x11844)
+// The handle is the A53 library's 24-byte ISC_alloc_mem record: +0 u16 block,
+// +4 u32 size, +0x10 the user address after attach (libisyscomm ISC_alloc_mem
+// 0xa60 / ISC_attach_mem 0xbd4; iscdrv isc_alloc_mem 0x2868); the other bytes
+// are not set by alloc (X: stack bytes on the wire).
+export const CGI = { INFO: 0x3444, REPLY: 0x3080, DATA: 0x10, BUF: 0x4000 };
+export function cgiInfo(buf) {             // parse the A53's info block
+  const u32 = (o) => buf.readUInt32LE(o), str = (o, n) => buf.subarray(o, o + n).toString('latin1').replace(/\0.*$/s, '');
+  const uriLen = u32(0x10);
+  return {
+    kind: u32(0), contentLength: u32(4), chunk: u32(8), method: u32(0xc),
+    uri: buf.subarray(0x14, 0x14 + uriLen).toString('latin1'),
+    body: buf.subarray(0x414, 0x414 + u32(8)), remote: str(0x3414, 16), log: str(0x3424, 32),
+  };
+}
+
 const hx = (b) => [...b].map((x) => x.toString(16).padStart(2, '0')).join(' ');
 
 // Live mode: drive a running QEMU om-isc device over the shared file + doorbell
 // socket. Inits the control block + pool, then on every A53->MN doorbell drains
-// node 1 and prints each message; optionally runs scripted sends or a stateful
-// scenario (which reacts to the A53's replies, e.g. feeds socket()'s fd to bind).
+// nodes 0..3 and prints each message; optionally runs scripted sends or a stateful
+// scenario. With rec=PATH every message is also written to a JSON log.
 async function live(memPath, sockPath, opts = {}) {
   const net = await import('node:net');
   const mem = new FileMem(memPath);
@@ -360,54 +409,134 @@ async function live(memPath, sockPath, opts = {}) {
   peer.initControlBlock();
   console.log(`[peer] control block published, magic 0x${controlMagic().toString(16)}; pool nblocks ${peer.pool.nblocks}`);
 
+  const t0 = Date.now(), log = [];
   const sock = net.connect(sockPath);
   const ring = () => sock.write(Buffer.from([0]));
-  const tx = (port, buf) => { const r = peer.send(4, port, buf, ring); console.log(`[peer] TX -> node 4 port ${port} [${hx(buf)}] ret ${r}`); return r; };
-  let onReply = null;                       // scenario hook: (port, data) => void
+  const tx = (port, buf, why = '') => {
+    const r = peer.send(4, port, buf, ring);
+    log.push({ t: Date.now() - t0, dir: 'mn>a53', port, hex: buf.toString('hex') });
+    console.log(`[peer] TX -> node 4 port ${port} [${hx(buf)}] ret ${r}${why ? '  ' + why : ''}`);
+    return r;
+  };
+  const waiters = [];                       // {port, res}
+  const inbox = [];
   const annotate = (port, d) => {
     if (port === 27 && d[0] === 1) return '  <<< port-27 start-complete';
-    if (port === 4) return `  socket reply: op ${d.readUInt32LE(0)} result @+0x1c=${d.readInt32LE(0x1c)} @+0x28=${d.readInt32LE(0x28)}`;
-    if ([11, 12, 13, 16].includes(port)) return `  CGI reply @+4=${d.readInt32LE(4)}`;
+    if (port === 4) return `  socket reply: op ${d.readUInt32LE(0)} +0xc=${d[0xc]}`;
     return '';
   };
   const drain = (why) => {
-    for (let n = 0; n < 5; n++) {
-      if (n === 4) continue;             // node 4 is the A53's inbox
+    for (let n = 0; n < 4; n++) {
       let m; while ((m = peer.rxFifo[n].pop())) {
+        log.push({ t: Date.now() - t0, dir: 'a53>mn', node: n, port: m.port, hex: m.data.toString('hex') });
         console.log(`[peer] RX node ${n} port ${m.port} [${hx(m.data)}] (${why})${annotate(m.port, m.data)}`);
-        if (onReply) onReply(m.port, m.data);
+        const w = waiters.findIndex((x) => x.port === m.port);
+        if (w >= 0) waiters.splice(w, 1)[0].res(m.data); else inbox.push(m);
       }
     }
   };
-  sock.on('data', (d) => { for (const b of d) console.log(`[peer] doorbell <- A53 (node ${b})`); drain('doorbell'); });
+  const next = (port, ms = 30000) => {
+    const i = inbox.findIndex((m) => m.port === port);
+    if (i >= 0) return Promise.resolve(inbox.splice(i, 1)[0].data);
+    return new Promise((res, rej) => {
+      const w = { port, res: (d) => { clearTimeout(w.t); res(d); } };
+      w.t = setTimeout(() => { waiters.splice(waiters.indexOf(w), 1); rej(new Error(`no port-${port} message in ${ms} ms`)); }, ms);
+      waiters.push(w);
+    });
+  };
+  sock.on('data', () => drain('doorbell'));
   sock.on('connect', () => console.log('[peer] doorbell socket connected'));
   sock.on('error', (e) => console.log('[peer] socket error', e.message));
   const poll = setInterval(() => drain('poll'), 200);  // fallback if a doorbell raced
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   // Scripted MN->A53 sends: opts.send = [{afterMs, node, port, bytes}]
-  for (const s of opts.send || []) {
-    setTimeout(() => {
-      const r = peer.send(s.node ?? 4, s.port, Buffer.from(s.bytes), ring);
-      console.log(`[peer] TX -> node ${s.node ?? 4} port ${s.port} [${s.bytes.map((b) => b.toString(16).padStart(2, '0')).join(' ')}] ret ${r}`);
-    }, s.afterMs);
-  }
+  for (const s of opts.send || []) setTimeout(() => tx(s.port, Buffer.from(s.bytes)), s.afterMs);
 
-  // Stateful socket scenario: socket -> bind(0.0.0.0:PORT) -> listen -> close,
-  // over ports 3/4. Each step waits for the A53's port-4 reply and uses the fd.
-  if (opts.scenario === 'socket') {
-    const PORT = opts.port || 8099; let fd = -1, step = 0;
-    onReply = (port, d) => {
-      if (port !== 4) return;
-      if (step === 0) { fd = d.readInt32LE(0x1c); console.log(`[peer] socket() -> fd ${fd}`); tx(3, sockReq.bind(fd, sockaddrIn(PORT), 16, 2)); step = 1; }
-      else if (step === 1) { console.log(`[peer] bind result ${d.readInt32LE(0x28)}`); tx(3, sockReq.listen(fd, 1, 3)); step = 2; }
-      else if (step === 2) { console.log(`[peer] listen result ${d.readInt32LE(0x18)}`); tx(3, sockReq.close(fd, 4)); step = 3; }
-      else if (step === 3) { console.log(`[peer] close result ${d.readInt32LE(0x14)}`); }
+  // Socket scenario: the MN as a TCP server through the A53 (ports 3/4): socket,
+  // bind 0.0.0.0:PORT, listen, accept (a client inside the guest connects, e.g.
+  // the console's wget), recv into an MN pool buffer, send a reply from another,
+  // close both, then the errno (15) and nop (16) ops.
+  // Start when the guest console (QEMU's captured stderr, opts.waitFile) shows
+  // opts.waitFor -- e.g. a line the console shell prints once isc_socket runs --
+  // or else after opts.afterMs.
+  const ready = async () => {
+    if (!opts.waitFile) return sleep(opts.afterMs || 16000);
+    while (!(fs.existsSync(opts.waitFile) && fs.readFileSync(opts.waitFile, 'latin1').includes(opts.waitFor))) await sleep(250);
+    console.log(`[peer] guest says ${opts.waitFor}`);
+  };
+  const sockScenario = async () => {
+    await ready();
+    const PORT = opts.port || 8099; let tag = 0x100;
+    const call = async (rec, what) => {
+      tx(3, rec, what);
+      const d = await next(4, opts.acceptMs || 30000);
+      return d;
     };
-    setTimeout(() => tx(3, sockReq.socket(2, 1, 0, 1)), opts.afterMs || 16000);  // AF_INET, SOCK_STREAM
-  }
+    const rin = peer.allocMem(4096), rout = peer.allocMem(4096);
+    console.log(`[peer] MN buffers: recv @0x${rin.addr.toString(16)} send @0x${rout.addr.toString(16)}`);
+    const fd = (await call(sockReq.socket(2, 1, 0, tag++), 'socket(AF_INET, SOCK_STREAM, 0)')).readInt32LE(0x1c);
+    console.log(`[peer] socket -> ${fd}`);
+    console.log(`[peer] bind -> ${(await call(sockReq.bind(fd, sockaddrIn(PORT), 16, tag++), `bind :${PORT}`)).readInt32LE(0x28)}`);
+    console.log(`[peer] listen -> ${(await call(sockReq.listen(fd, 1, tag++), 'listen')).readInt32LE(0x18)}`);
+    const acc = await call(sockReq.accept(fd, 16, tag++), 'accept');
+    const cfd = acc.readInt32LE(0x28);
+    console.log(`[peer] accept -> ${cfd}, peer ${acc.readUInt16LE(0x14)}:${acc.readUInt16BE(0x16)} ${[...acc.subarray(0x18, 0x1c)].join('.')} len ${acc.readInt32LE(0x24)}`);
+    // isc_socket's recv loops until the whole length has arrived (or EOF / an
+    // error; 0x11c2c), so an HTTP request of unknown size is read a byte at a time.
+    let got = 0;
+    for (;;) {
+      const n = (await call(sockReq.recv(cfd, rin.addr + got, 1, 0, tag++), got ? '' : 'recv 1 byte (repeated)')).readInt32LE(0x20);
+      if (n <= 0) break;
+      got += n;
+      if (peer.bufRead(rin, 0, got).toString('latin1').endsWith('\r\n\r\n')) break;
+    }
+    console.log(`[peer] recv -> ${got} bytes: ${JSON.stringify(peer.bufRead(rin, 0, got).toString('latin1'))}`);
+    const body = Buffer.from('HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\nhello from the MN peer\n');
+    peer.bufWrite(rout, 0, body);
+    console.log(`[peer] send -> ${(await call(sockReq.send(cfd, rout.addr, body.length, 0, tag++), 'send')).readInt32LE(0x20)}`);
+    console.log(`[peer] close(client) -> ${(await call(sockReq.close(cfd, tag++), 'close')).readInt32LE(0x14)}`);
+    console.log(`[peer] close(listener) -> ${(await call(sockReq.close(fd, tag++), 'close')).readInt32LE(0x14)}`);
+    console.log(`[peer] errno -> ${(await call(sockReq.errno(tag++), 'errno')).readInt32LE(0x10)}`);
+    await call(sockReq.nop(tag++), 'nop');
+    console.log('[peer] socket scenario done');
+  };
+
+  // CGI scenario: the MN as the OI.Share CGI server for the A53's isc_cgi (ports
+  // 11/12/13/16). Answers one request per inquiry with a small text body.
+  const cgiScenario = async () => {
+    for (;;) {
+      const inq = await next(12, opts.runMs);
+      const block = inq.readUInt16LE(0), size = inq.readUInt32LE(4);
+      const h = peer.attachMem(block, size);
+      const ack = Buffer.from(inq); ack.writeUInt32LE(0, 0x18);
+      if (opts.cgiDelayMs) await sleep(opts.cgiDelayMs);
+      tx(16, ack, `inquire accepted (block ${block}, size 0x${size.toString(16)})`);
+      const note = await next(11);
+      const info = cgiInfo(peer.bufRead(h, 0, CGI.INFO));
+      console.log(`[peer] CGI request: ${JSON.stringify({ ...info, body: info.body.toString('latin1') })} (p11 [${hx(note)}])`);
+      const res = Buffer.alloc(32); tx(13, res, 'request accepted');
+      const data = Buffer.from(`Content-Type: text/plain\r\n\r\nMN peer answered ${info.uri}\n`);
+      const R = Buffer.alloc(CGI.DATA + data.length);
+      R.writeUInt32LE(data.length, 4); R.writeUInt32LE(data.length, 8); R.writeUInt32LE(0, 0xc);
+      data.copy(R, CGI.DATA);
+      peer.bufWrite(h, 0, R);
+      const hd = Buffer.alloc(32); inq.copy(hd, 0, 0, 24);
+      tx(12, hd, 'reply chunk ready');
+      const a = await next(16);
+      console.log(`[peer] A53 reply-ack +0x18=${a.readUInt32LE(0x18)}`);
+      tx(11, inq.subarray(0, 16), 'reply notice');
+      const ans = await next(13);
+      console.log(`[peer] A53 answer +0=${ans.readUInt32LE(0)} +4=${ans.readUInt32LE(4)}`);
+    }
+  };
+
+  const sc = opts.scenario === 'socket' ? sockScenario : opts.scenario === 'cgi' ? cgiScenario : null;
+  if (sc) sc().catch((e) => console.log(`[peer] scenario stopped: ${e.message}`));
 
   await new Promise((res) => setTimeout(res, opts.runMs ?? 8000));
   clearInterval(poll); sock.destroy();
+  if (opts.rec) fs.writeFileSync(opts.rec, JSON.stringify(log, null, 1));
   console.log('[peer] done');
 }
 
@@ -477,16 +606,23 @@ else if (cmd === 'magic') console.log('0x' + controlMagic().toString(16));
 else if (cmd === 'live') {
   // live <memPath> <sockPath> [runMs] [send-spec | scenario=NAME | port=N | afterMs=N ...]
   // send-spec: afterMs:node:port:hexbytes  e.g. 1500:4:26:0300000010000000
-  // scenario=socket drives socket/bind/listen/close over ports 3/4 live.
+  // scenario=socket drives a TCP server over ports 3/4 live (socket .. accept,
+  // recv, send, close); scenario=cgi answers isc_cgi's requests (11/12/13/16);
+  // rec=PATH writes every message to a JSON log; waitFile=PATH waitFor=TEXT
+  // starts the scenario when the guest console log shows TEXT.
   const [memPath, sockPath, runMsS, ...rest] = process.argv.slice(3);
   const opts = { runMs: runMsS ? +runMsS : 8000, send: [] };
   for (const s of rest) {
     if (s.startsWith('scenario=')) opts.scenario = s.slice(9);
     else if (s.startsWith('port=')) opts.port = +s.slice(5);
     else if (s.startsWith('afterMs=')) opts.afterMs = +s.slice(8);
+    else if (s.startsWith('rec=')) opts.rec = s.slice(4);
+    else if (s.startsWith('waitFile=')) opts.waitFile = s.slice(9);
+    else if (s.startsWith('waitFor=')) opts.waitFor = s.slice(8);
+    else if (s.startsWith('cgiDelayMs=')) opts.cgiDelayMs = +s.slice(11);
     else { const [afterMs, node, port, hex] = s.split(':'); opts.send.push({ afterMs: +afterMs, node: +node, port: +port, bytes: hex.match(/../g).map((h) => parseInt(h, 16)) }); }
   }
   live(memPath, sockPath, opts);
 } else {
-  console.log('usage: node iscpeer.mjs selftest | magic | live <mem> <sock> [runMs] [afterMs:node:port:hex | scenario=socket port=N afterMs=N ...]');
+  console.log('usage: node iscpeer.mjs selftest | magic | live <mem> <sock> [runMs] [afterMs:node:port:hex | scenario=socket|cgi port=N afterMs=N rec=PATH ...]');
 }

@@ -151,7 +151,10 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   completion would (S-ACCSAMPLE): a level camera by default, tilted by the input `{"type": "tilt", "roll": 5,
   "pitch": 0}` (degrees, within 45; A-ACC-1..3). ACC_MAIN, PER_SLOPE, the shooting screen's level gauge and Setup's
   Level Adjust run natively; with the lab's blank factory data Adjust writes the user table but leaves the gauge as it
-  was (`docs/hle-gaps.md` 4.7.3).
+  was (`docs/hle-gaps.md` 4.7.3). With `--rotate on` (the browser's start option Orientation, `?rotate=on`; off by
+  default) PER_ROTATE runs natively too (H-ROTINIT): the tilt then takes any attitude (roll within 180, pitch within
+  90 degrees), its step waits 500 ms and records the orientation, and the camera turned past 50 degrees of roll has
+  the GUI lay the level gauge out for portrait.
 - module requests are answered (S-MODACK), the HLS transaction layer's exec succeeds and deletes its request as the
   exec would (S-TRAACK; `docs/hle-gaps.md` 4.4.2, the heap's growth), and the modules'
   notifications of a release (focus, exposure, rec view) are posted as the callbacks the HLS would make of them
@@ -294,6 +297,7 @@ node emu/bin/play.mjs --no-browser --idle off    # its server alone (HTTP API; -
                                                  # the live debug route, below)
 node emu/bin/play.mjs --hdmi on                  # with the HDMI port; the input {"type": "hdmi", "action": "plug"}
 node emu/bin/play.mjs --audio off                # without the audio hardware (on by default on E143: --audio auto)
+node emu/bin/play.mjs --rotate on                # PER_ROTATE natively (E143, E146): the tilt input all the way round
 OM_EMU_LENS=stand-in sh emu/play.sh              # S-LENS in place of the native lens (S-LENSMCU, the default on
                                                  # E143, E146 and E147)
 OM_EMU_SCPU=native sh emu/play.sh                # E143's and E146's sub-CPU as its own firmware on the STM32L4 machine

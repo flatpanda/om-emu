@@ -141,7 +141,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **Movie and audio** (4.5) | S: S-RELSEQ's movie callbacks, S-CARD's movie time, S-CPU2's zero level snapshot, S-MODACK for AUD_EXEC with `--audio off`; N with the audio hardware (`--audio auto`, the default on E143): AUD_MAIN and AUD_EXEC, the audio port's TX, IRQ 43 / 45, S-WM8946, UI_OUT and the AF beep's request from the GUI (S-AFLOCK), its sound from S-SOUNDRES's lab-made area (4.5) | S3 TAKE_FUNC commands 30 / 31 / 68 / 69, S4 the mvr IF (CPU 2), S5 AUD_LEVEL_MONITOR, S6 a host AVM writing a MOV through the firmware's DFS calls, S7 AUD_EXEC | TAKE (commands 30 / 31 / 68 / 69 wait on CPU 2's MOV_COMMAND, SDET_EXEC and WB_MOV, 4.1.1), CPU 2 (MVR, audio level), sensor, storage, EXP_MOVIE / FCS_MOVIE | 134,137 / 124,319 | 10-15 weeks (stages A-C) | a playable .MOV on the card, the firmware's recording sequence, audio meters; the AF beep plays since 2026-11-02 (the lab's sound, not the camera's) |
 | **AV codec back end** (4.5) | 0 | none for HLE: seam S6 bypasses it | CPU 1; the codec engines; IRQs 303-306 | 416,471 / 411,438 (overlay segment 8, CPU 1) | ?: native needs register-level codec models, no documentation | native movie encode and playback below the HLS (I) |
 | **CPUs 1-3 and inter-core** (4.6) | S: K-OTHERCPU, K-BOOTSYNC, K-IPI, no start barrier; S-CPU2 (one post), S-CPU3, S-DISPFRAME on CPU 0; any other doorbell is an error | run CPUs 1-3 natively on one bus; per-core `0x8000` page, INTC bank n to core n, `+0x808/+0x80c` IRQ 324, `+0x810/+0x814` IRQ 325, `+0x800/+0x804` ISC IRQ 323, ticks 139..141. A53: "off" or ISC node 4 | a machine refactor (per-core CPU state), a per-core kernel lab, flash reads for CPU 2's loader and CPU 3's boot jobs, ROADMAP phases 3-4 | 5,422 keyed; 441,542 reachable only from CPU 1-3 tasks (a lower bound) | 5-7 weeks for the cores | the histogram, a native DISP_FRAME, cross-core owners (AUD_MAIN, AVM) can start; three stand-ins and four kernel stand-ins retire |
-| **SCPU, power, clock, on-board sensors, persistence** (4.7) | N: PER_SCPU, its start and its transactions, over the link to S-SCPUDEV, the sub-CPU's transport-level model (since 2026-10-23: `0x85`, `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1; S-SIO2, H-SCPUSTART); S: the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / S-NVRAM (the players' default since 2026-11-08); N: the ACC module init, ACC_MAIN, PER_SLOPE, the level gauge and Level Adjust with the accelerometer at its sample cache (since 2026-10-23, 4.7.3; H-ACCINIT, S-ACCREG, S-ACCSAMPLE, H-SLOPEINIT) | the accelerometer at the PER_SIO transfer and its data-ready pin (ACC_SENS_MAIN native); PER_ROTATE; S-NVRAM's NAND seam as the default | lab time; the UI_IN, SCPU and PER_SIO inits, the GIO init for the data-ready pin; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, rotation, eye sensor (Level Adjust and the level gauge in, 4.7.3) |
+| **SCPU, power, clock, on-board sensors, persistence** (4.7) | N: PER_SCPU, its start and its transactions, over the link to S-SCPUDEV, the sub-CPU's transport-level model (since 2026-10-23: `0x85`, `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1; S-SIO2, H-SCPUSTART); S: the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / S-NVRAM (the players' default since 2026-11-08); N: the ACC module init, ACC_MAIN, PER_SLOPE, the level gauge and Level Adjust with the accelerometer at its sample cache (since 2026-10-23, 4.7.3; H-ACCINIT, S-ACCREG, S-ACCSAMPLE, H-SLOPEINIT); PER_ROTATE with `--rotate on` (since 2026-11-08, 4.7.3; H-ROTINIT) | the accelerometer at the PER_SIO transfer and its data-ready pin (ACC_SENS_MAIN native); PER_ROTATE by default; S-NVRAM's NAND seam as the default | lab time; the UI_IN, SCPU and PER_SIO inits, the GIO init for the data-ready pin; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, rotation by default, eye sensor (Level Adjust, the level gauge and, with `--rotate on`, the orientation and the gauge's portrait layout in, 4.7.3) |
 | **Card and file system** (4.8) | N on E143 since 2026-10-23 (4.8.2): the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, the format, dosfat, DCF and the shots / movie-time counts natively on an 8 GiB SDHC card at the SD command layer (S-SDCARD, S-SDHOST, S-FSNAND, S-ALBM, H-FILEINIT, H-FILECLBK); the picture's file at S2 through the file module (S-RECFILE); since 2026-10-24 (4.8.3) Card Formatting from the menu (S-MDACTRL) and the card's removal and insertion (S-MEDIA), the application's media control native; S: S-CARD's insertion requests, its HLS mount state and image list; the other bodies keep S-CARD's card with no file system | the SD host's registers and interrupts with a card model (seam A), the rule-found seam on the other bodies, REC_FILE natively | the HLS media layer (which sends the insertion), REC_MAIN / REC_FILE (the picture's file), TAKE_MOV's movie take (the movie module's set-up, whose frame rate the movie time query reads: 0 before a take on the camera too), IRQs anywhere for the SD host | 115,103 / 108,887 (17k of it self-test and debug) | 1-2 weeks left: REC_FILE's DCF steps, both slots, exFAT, the other bodies | a card that fills, real files in DCIM, both slots |
 | **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
 | **HDMI and DisplayPort** (4.9) | N with `--hdmi on` (since 2026-10-23, E143, E146, E147): a plug runs the hot-plug pin's IRQ 109, the HDMI init, two E-DDC reads with IRQ 239, the EDID's checks and parse and the connect report to UI_IN natively (H-GIOSLOTS, S-HDMISINK); off by default, and either way the DISPLAY OPEN of HDMI is not reached (X) | TX byte registers at `0x99c07000` (HPD / RxSense byte 8, DDC `0xa80..0xa83`, the buffer `0xc00`, IRQ 239) and the GIO pin 77 (`0x9b881540`, IRQ 109), both modelled; then the HDMI open and VSC channel 0 | the camera application's output switch (?), VSC channel 0 in the compositor, an unplug (A-HDMI-1) | about 11k (3.3k plus the TX / DP driver's 7.7k) | 2-3 weeks left (the open and channel 0) | the HDMI output a TV shows |
@@ -1060,7 +1060,8 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   port registers with IRQ 320 and UI_IN's registration: group-0 keys and the power lever natively, 3-5 days (done
   2026-10-23 for the keys and the lever's code, 4.7.2; the power-off sequence waits for the power manager). 3, the
   accelerometer at the PER_SIO seam or the sample cache: Level Adjust, level gauge, rotation, 1-1.5 weeks (done
-  2026-10-23 at the sample cache for Level Adjust and the gauge, 4.7.3; rotation open). 4, the eye
+  2026-10-23 at the sample cache for Level Adjust and the gauge, 4.7.3; PER_ROTATE natively with `--rotate on` since
+  2026-11-08, 4.7.3; the PER_SIO seam open). 4, the eye
   sensor (I2C plus GPIO interrupt) driving the native chain to `0x50050efd`: 1 week. 5, the power manager: 2+ weeks,
   gated by hardware numbers (started 2026-10-29, 4.7.4: PWR_MAIN natively with the IO expanders stood in, and the
   power-off natively from shutDown; open: the expanders' chips, the battery and its messages). 6, a NAND register
@@ -1310,7 +1311,7 @@ The flag and semaphore names are the object-name table's (D); the commands' mean
   addresses and E147's errlog line number, D; E147 keeps the count at `0xa32bff60`); the E144 family's event and port words sit in its compacted map's storage and are not modelled, so
   its bodies push group 0 with S-KEYBITS as before.
 
-#### 4.7.3 The accelerometer's consumers: the level gauge and Level Adjust (D unless tagged)
+#### 4.7.3 The accelerometer's consumers: the level gauge, Level Adjust and PER_ROTATE (D unless tagged)
 
 Read 2026-10-23 for step 3 from the module's own debug strings (`per_acc.c`), the gauge's API and HFW operation
 (`OlyApiLevelCtrl`, `OlyHfwOpeLevel.cpp`) and the code between them; the double-precision helpers were identified by
@@ -1408,7 +1409,8 @@ subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a91
   the body reading 16384 (-sin roll cos pitch, cos roll cos pitch, -sin pitch), mapped back through the axis table;
   temperature raw 0, 25.0 degC (A-ACC-1). Roll is what the getter reads back as the horizon, pitch three times its
   vertical; which way is positive physically has no camera evidence (A-ACC-3). Tilts stay within 45 degrees with y
-  dominant (A-ACC-2): PER_ROTATE does not run, so the orientation `(0xa32c64f8)` stays 0. S-HEAP also serves pool 2's
+  dominant (A-ACC-2): without `--rotate on` PER_ROTATE does not run, so the orientation `(0xa32c64f8)` stays 0
+  (with it, below). S-HEAP also serves pool 2's
   block get and release (`heap_pool`): natively the get handed out the pool's first block `0x62424700`, which S-HEAP
   had already given out, and Level Adjust's statistics overwrote it (X: the session stopped in task 164 at
   `0x50ab2930`). A tilt step waits 250 ms (TILT_MS) and records the sample and the getter's reading (run natively).
@@ -1422,11 +1424,80 @@ subtracts, `0x5002aea3` negates, `0x50027943` is sqrt, `0x5002a8b7` / `0x5002a91
   register API and PER_SLOPE compare instruction for instruction with E143's but for addresses, D; E146's getter calls
   the adjust machine with a larger frame, and that machine has a seventh op). E147's ACC code differs (D: its probe
   wants WHO_AM_I 0x70 and its ACC_MAIN copies every 30 ms only while an enable halfword is 1), so it keeps the
-  accelerometer off; the E144 and E118 families are not read.
-- **Not modelled:** PER_ROTATE (`0x5005a17e`: the camera's orientation from the corrected sample, the hysteresis
-  tables `0x6011a080` / `0x6011a1e8`, event `0x4020310`), PER_ACC_PWRMGR_MAIN, the gyroscope words, the data-ready pin
-  and ACC_SENS_MAIN, factory calibration data (store F) and the temperature compensation (calibration type 255 on the
-  templates).
+  accelerometer off; the E144 and E118 families are not read. E147's survey (read 2026-11-08, D unless tagged; its
+  addresses, E143's in brackets): the init `0x50049416` [`0x50048cad`] runs the same parts in the same order (the
+  device part `0x50049b44` with the data-ready pin 129, the two pointers `0x6298d750` / `0x6298d754`, the store
+  tables, the references with the axis order 1, -2, 3); the sampler ACC_SENS_MAIN `0x50049700`, its pin callback
+  `0x50049849`, the 14-byte read from register 0x20 on channel 6 (`0x5004e26e`), the completion `0x500498aa` (bytes
+  0..1 the temperature `0x6298d7d6`, 8..13 the accelerometer `0x6298d7ce..d2`), the correction `0x50049b74`, the
+  conversion `0x50049f77` (0.061 mg per LSB), the remap `0x5005cb7c`, PER_SLOPE's init and task (`0x5005c730`,
+  `0x5005c79b`) and PER_ROTATE's init, getter and task (`0x50056cf8`, `0x50056dc1`, `0x50056dea`) compare with E143's
+  instruction for instruction but for absolute addresses; the gauge's getter `0x5005c57f` calls the adjust machine
+  with E146's larger frame. What differs: the probe `0x50049771` wants WHO_AM_I 0x70 (I: ST's LSM6DSV family; E143's
+  0x6a is the LSM6DSL's) and writes register 0x10 = 3 [0x10] (I: an output rate of 15 Hz on the LSM6DSV's map) and
+  0x0d = 1 as E143; its success sets the halfword `0x6298d7b0` = 1, which is also ACC_MAIN's enable. ACC_MAIN
+  `0x50049640` [`0x50048ec2`] probes once, then copies and corrects every 30 ms (`0x5002c6e5(30)`) [every 80 ms
+  through OlyTaSS(80)] while `0x6298d7b0` is 1, else waits 50 ms; `0x50049616` / `0x50049621` set and clear it
+  ("per_acc_start() ucAcc_state", "per_acc_stop()"), called from the debug commands `0x5004ac54` / `0x5004ac72` and
+  from `0x5004ac90..0x5004aed4` ("Stop Acc Main Task"). Its copy `0x500499a1` (into `0x6298d758..5c` / `0x6298d764`)
+  returns 0 also at its fifth miss, where E143's returns 0x8001, so ACC_MAIN's own count of failed copies and its
+  errlog `0x46000202` are not reached (I). So E147 would need its WHO_AM_I and rate write in S-ACCREG and a 30 ms
+  cadence in S-ACCSAMPLE (A-ACC-2's one sample per cycle); not built.
+- **PER_ROTATE** (task 59, entry `0x5005a17e`, read 2026-11-08; its name "PER_ROTATE_TSK" and its debug command
+  `0x5005a462`: init, start, end, get). The init `0x5005a08c` (the boot's call at `0x501e9c2b`, right after
+  PER_SLOPE's init at `0x501e9c17`) stores data object `0x1f82[0]` (`0x500417da(8066)`) at `(0xa32c64f0)`, the
+  state `(0x62965124)` = 0, the reported index `(0xa32c64f4)` = 0, three table indices `(0x62965128)` = 10,
+  `(0x6296512c)` = 50, `(0x62965130)` = 60, the magnitude tolerance `(0x62965134)` = 400 and the orientation
+  `(0xa32c64f8)` = 0, then calls the start `0x5005a0f7` (state 0 -> 1; state 2 -> 1 and its flag `(0x60042fda)` set,
+  with iset in interrupt context) and starts and names the task. The end `0x5005a14a` sets the state to 2. The task,
+  while the state is not 1, waits for its flag; else per pass: the corrected sample `0x50049795`, the remap
+  `0x5005ff7d`, each axis to mg truncated (`0x500497df`, `0x5002a912`); the magnitude
+  sqrt(x^2 + y^2 + z^2) (pow with 2.0 `0x500275f5`, sqrt `0x50027943`) must lie in 1000 +- 400 mg, else the pass
+  changes nothing; h = sqrt(x^2 + y^2) and e = sqrt(1000^2 - h^2) (0 when h >= 1000), the lens axis's share of 1 g.
+  The tables: T1 `0x6011a080`, 90 words 100, 102, ... 11459 (I: 100 tan(45 + i/2 degrees)), T2 `0x6011a1e8`, 91
+  words 0, 17, ... 1000 (I: 1000 sin(i degrees)). If e > T2[50] = 766: e > T2[60] = 866 sets orientation 4 (z > 0)
+  or 5, else nothing changes. Else, |y| > |x|: 100|y| > T1[10] |x| (T1[10] = 119, I: tan 50 degrees) sets 0 (y > 0)
+  or 2, else nothing; |x| > |y|: 100|x| > 119 |y| sets 1 (x > 0) or 3; equal, nothing. So portrait comes past 50
+  degrees of roll and goes below 40, and the lens up or down comes past 60 degrees of pitch and goes below 50 (I, from
+  the tables; X, below). The reported index: orientations 0..3 -> 1..4; 4 and 5 keep an index of 2 or 4 and else
+  report 1 (so upside down, 3, does not survive the lens pointing down). A changed index is stored and event
+  `0x4020310` published (`0x50025088(0x4020310, 0)`); then a 100 delay (`0x5002c6e5(100)`). The getter `0x5005a155`
+  returns 1 when `(0xa32c64f0)` is 1, else the halfword of the table `0x6034e164` {11, 1, 6, 3, 8} at the index: the
+  debug command's ROTATE_DISABLE, ROTATE_0, ROTATE_90, ROTATE_180, ROTATE_270 (I: EXIF's orientation codes); the
+  orientation itself is `0x5005a175()`. Its API: get `0x5041d376` (request `0x80001`), start `0x5041d3da`
+  (`0x80003`) and end `0x5041d40e` (`0x80004`), the last two called only from the HLS's wrap `0x50abb6d8` /
+  `0x50abb6e1`. The get API's callers: the HFW's `getCameraOrientation` (below), Level Adjust's calibration and reset,
+  the play components (CmpPls_PlaySingleComponent, CmpPli_PlayIndexComponent, Cmp_PlayComponentBase,
+  CapImg_ImagePlayer), the Wi-Fi remote take, Bluetooth and `0x501e7a22`. The getter's direct callers: takepic's
+  `0x503bcd51` stores its code at `+0x950c` of its shooting record next to the gauge's record at `+0x181a`
+  (`0x503bd0ee..0x503bd112`; I: the picture's orientation for its tags), four sites in the movie and face libraries
+  (`0x5050d1f2..0x5051dd8c`), `0x5006000d` and `0x517fe243`. The orientation's readers: the correction's pose,
+  PER_SLOPE (a change re-inits it), Level Adjust's `0x5005fa9e`, `0x5004a003`, `0x50989813`, `0x5100db44`. E146's
+  init `0x5005bb0e` and task `0x5005bc00` compare with E143's instruction for instruction but for absolute addresses,
+  with the same tables, words and getter table (`0x6034e2b8`); its publish is `0x50025153`.
+- **Built (2026-11-08, `--rotate on`, `emu/src/lab/acc.mjs`, E143 and E146).** H-ROTINIT runs PER_ROTATE's init
+  natively after PER_SLOPE's at the bring-up, which starts the task (59); off by default, because the task's passes
+  change every E143 session's interrupt and stop records (X: golden's keys, shoot-tft and play-perf differ with it on).
+  The data object `0x1f82` reads 0 on the lab's store (X). The tilt input then takes any attitude (roll within 180,
+  pitch within 90 degrees: S-ACCSAMPLE's reading turned all the way round) and its step waits 500 ms (X: over 13 turns
+  the orientation changed 40 to 160 ms after the input and the gauge's body 50 to 230 ms after it). What runs (X):
+  the session starts with index 1 (EXIF 1, the bring-up's first pass); roll 48 and 42 hold the last orientation, 52
+  turns it to 3 (EXIF 8) and -52 to 1 (EXIF 6), 38 back to 0, 180 to 2 (EXIF 3); pitch 55 holds, 65 turns it to 5,
+  keeping index 4 from portrait and dropping 3 to 1; one event per index change. The application reacts natively: on
+  each event the GUI calls the get API twice through the HFW's `getCameraOrientation` (`0x50ac518a`: 6 -> 1, 8 -> 3,
+  else 0; from the GUI's `0x5104a755` through `0x50abeda7`), and the shooting screen's level gauge (INFO) is laid out
+  for portrait: EXIF 8 its arc at the left and its bar at the bottom, EXIF 6 its arc at the right and its bar at the
+  top, EXIF 3 as level (pixels); PER_SLOPE's getter then reads the roll from upright as its horizon (roll 95: 4.9
+  degrees). The rest of the shooting screen does not turn. The picture's orientation is not reached: at a release in
+  portrait no caller of the getter but the GUI's ran (TAKE answered by S-MODACK), and S-RECFILE's JPEG has no EXIF.
+- **Checked** (`emu/checks/check_level.mjs --only R1,R2`, E143 and E146 in `bin/test.mjs`): R1 the transitions above
+  with their events and the getter's body, refusals without `--rotate on` (50 degrees) and with it (181); R2 the
+  gauge's portrait layouts by pixels. Negative control `--mutants --only R1,R2`: no-rotinit (the range without
+  H-ROTINIT) fails both.
+- **Not modelled:** PER_ACC_PWRMGR_MAIN, the gyroscope words, the data-ready pin and ACC_SENS_MAIN, factory
+  calibration data (store F) and the temperature compensation (calibration type 255 on the templates); the
+  picture's orientation tag (TAKE and REC_FILE do not run); PER_ROTATE's start and end from the HLS (`0x50abb6d8`,
+  not reached).
 
 #### 4.7.4 The power manager and the power-off, natively (E143, E146, E147, 2026-10-29; D unless tagged)
 

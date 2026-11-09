@@ -113,6 +113,11 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // the addresses src/fw/facts.mjs powerOff reads (fact 'power.off'); given for a body whose power-off is known to run so
 // (X). A body without it closes the session at the lever's off at once
 //
+// `rec_native`: REC_FILE's own task records S2's picture from the packet REC_IMAGE posts it, with the file's header
+// built by REC_IMAGE's header maker natively (src/lab/rec.mjs H-EXIFINIT, H-RECINIT, H-RECFILE, S-EXIFPRM, S-RECIMAGE,
+// S-JPEGENC; docs/hle-gaps.md 4.8.10), at the addresses and layouts src/fw/facts.mjs recFile reads (fact 'rec_file');
+// given for a body whose S2 is known to record so (X). A body without it keeps S-RECFILE (src/lab/storage.mjs)
+//
 // `scpu_lle`: the sub-CPU's own firmware, which the lab can run on the STM32L4 machine in S-SCPUDEV's place (opt-in,
 // src/lab/scpum4.mjs; docs/om1-scpu-spec.md section 8 step 6), given only for a body whose image that machine is
 // known to boot: block, the SCPU block's file name in unpacked/<code> beside the main block's (scpuPath; a full unpack
@@ -195,6 +200,8 @@ export const MODELS = {
     // the power manager started and the power-off run natively (src/lab/power.mjs; docs/hle-gaps.md 4.7.4), at the
     // addresses src/fw/facts.mjs powerOff reads (POWER_OFF_E143 there, with their evidence)
     power_native: true,
+    // REC_FILE natively (src/lab/rec.mjs), at the addresses src/fw/facts.mjs recFile reads (REC_FILE_E143 there)
+    rec_native: true,
     // UI_OUT, the module of the camera's lamps and its operation sounds (src/lab/play.mjs H-UIOUTSTART; D unless
     // tagged): the boot calls its init 0x5014f4e9 after its checkpoint "2_9" (0x501e8f24..0x501e8f31), then starts the
     // task whose id is the halfword 0x60042d72 (38; entry 0x5014f56c) and names it "UI_OUT" (0x501e8f38..0x501e8f46).

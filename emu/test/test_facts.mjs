@@ -42,7 +42,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
   TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
-  PROP_STORE_E143, CTORS_E143 } from '../src/fw/facts.mjs';
+  PROP_STORE_E143, CTORS_E143, REC_FILE_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -292,6 +292,41 @@ const LENS_DRIVER_FOUND = {
     exec_queue: 0x6004325E, flags: { valid: 0xA32D4B98, attach: 0xA32D4B9A, ready: 0xA32D4B94 }, cache_area: [0x416E0000, 0x1C0000] },
   E147: { module_init: 0x502CE868, cache_init: 0x502CEEC9, task_vars: 0x502CE957, tasks: [0x502CE98F, 0x5011F82D, 0x502D0CEB],
     exec_queue: 0x600431D0, flags: { valid: 0xA32D3D30, attach: 0xA32D3D32, ready: 0xA32D3D2C }, cache_area: [0x416E0000, 0x1C0000] },
+};
+// REC_FILE's task natively (rec_file; src/fw/facts.mjs recFile) at the port's place of CPU 0's kcb: E143's as
+// src/lab/rec.mjs gave them by hand before the rule (REC_FILE_E143, D), E146's as read by hand before the rule (D,
+// 2026-11-08: the EXIF init 0x50425815 and its copy 0x50425851 of 22926 words, the date set 0x504280e7 with the time
+// at +37452, REC_FILE task 27 at 0x5051bfa3 with its bind 0x5051bf88 and receive of 276 bytes 0x5051bfea, the post
+// 0x50516e45, the dump 0x5051e751 with the image record's fields after its packet's, rec_jpeg_exec 0x5052785e storing
+// the buffer at the record's +8, the record's init 0x5052b008, the header clear 0x5052ab6b's fill 0x5048142b, the
+// contexts' pick 0x5051cdb5, the crop areas 0x5051fce5), E147's as the rule reads them (X: its session records S2's
+// file natively; D: the copy 0x50433b21 of 22990 words, the record's init 0x5053a22f, the crop areas 0x5052eddb, the
+// bind before REC_FILE's entry 0x5052b093), none on the other 15 bodies (X: the E144 family's REC_FILE receives
+// without the file name, the older bodies have no such receive)
+const REC_FILE_FOUND = {
+  E143: REC_FILE_E143,
+  E146: {
+    exif: { init: 0x50425815, cflush: 0x5042584E, template: 0x62A9B198, copy: 0x50425851, size: 91704, time: 37452,
+      date: { format: 0x5012C051, code: 0x4200, copy: 0x50003844, original: 4089, created: 4109, modified: 1364 },
+      tags: { make: 1480, model: 1504, zoom: 4228 }, crop: [40312, 40320] },
+    init: 0x50516B8A, task: { id: 27, entry: 0x5051BFA3, flag: 0x600431B0, queue: 0x6004328C, handled: 0x5051C00C },
+    packet: { size: 276, post: 0x50516E45, fields: { pExifParam: 20, HandleTarget: 100, BuffAddr1: 132, BuffSize1: 136, HeaderSize: 172,
+      Status: 184, Mode: 186, Media: 190, Media2: 192, RecordDevice: 194, ImgAspect: 269, Free: 271, FileType: 273 } },
+    jpeg: { exec: 0x5052785E, make_image: 0x50527C29, header: 41984, fill: 0x5048142B, fill_return: 0x5052ABBF,
+      image: { record: { init: 0x5052B008, bytes: 52, at: 180 }, addr: 8, size: 12 } },
+    contexts: [0x62ABB0CC, 0x62ABB128], clock_set: 0x5012BAD8,
+  },
+  E147: {
+    exif: { init: 0x50433AE5, cflush: 0x50433B1E, template: 0x62A97CD4, copy: 0x50433B21, size: 91960, time: 37452,
+      date: { format: 0x50135E76, code: 0x4200, copy: 0x5000382D, original: 4089, created: 4109, modified: 1364 },
+      tags: { make: 1480, model: 1504, zoom: 4228 }, crop: [40576, 40584] },
+    init: 0x50525C72, task: { id: 27, entry: 0x5052B093, flag: 0x60043122, queue: 0x600431FE, handled: 0x5052B0FC },
+    packet: { size: 276, post: 0x50525F2D, fields: { pExifParam: 20, HandleTarget: 100, BuffAddr1: 132, BuffSize1: 136, HeaderSize: 172,
+      Status: 184, Mode: 186, Media: 190, Media2: 192, RecordDevice: 194, ImgAspect: 269, Free: 271, FileType: 273 } },
+    jpeg: { exec: 0x50536A6C, make_image: 0x50536E37, header: 41984, fill: 0x5048FD21, fill_return: 0x50539DE0,
+      image: { record: { init: 0x5053A22F, bytes: 52, at: 180 }, addr: 8, size: 12 } },
+    contexts: [0x62AB7D08, 0x62AB7D64], clock_set: 0x501358FD,
+  },
 };
 // The IIC bus driver's completion wait (iic.waits; src/fw/facts.mjs iicWaits), as read (D: E143's at 0x5004cbf6,
 // waiting on (0x60043086), which its callback 0x5004cb95 sets; E145's at 0x50044d60, the compass WHOAMI read's at
@@ -792,6 +827,7 @@ export function factsTests() {
     // the lens driver, and the port's places of E143's lens flags and LENS_EXEC's queue word (the map's, which S-LENS and
     // the camera application's module queues use) at the rule's
     if (code === 'E143' || PORTS[code]) ok(same(placed?.lens_driver, LENS_DRIVER_FOUND[code]), `${code}: lens_driver ${hx(placed?.lens_driver ?? placed)}, found ${hx(LENS_DRIVER_FOUND[code] ?? 'none')}`);
+    if (code === 'E143' || PORTS[code]) ok(same(placed?.rec_file, REC_FILE_FOUND[code]), `${code}: rec_file ${hx(placed?.rec_file ?? placed)}, found ${hx(REC_FILE_FOUND[code] ?? 'none')}`);
     const ld = placed?.lens_driver;
     if (ld && PORTS[code]) {
       const a = (v) => (PORTS[code][v] === undefined ? v : PORTS[code][v]), e = LENS_DRIVER_E143;

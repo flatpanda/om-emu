@@ -65,8 +65,8 @@ import { RTOS } from './rtos.mjs';
 import { K_CFLUSH } from './menu.mjs';
 import { STUB } from './display.mjs';
 import { SdCard, SECTOR } from './sdcard.mjs';
-import { MODEL, MODEL_INFO, ON_LAB_MODEL, fact } from '../fw/model.mjs';
-import { RecFile } from './rec.mjs';
+import { MODEL, MODEL_INFO, fact } from '../fw/model.mjs';
+import { RecFile, REC_NATIVE } from './rec.mjs';
 import { BOARD } from '../fw/board.mjs';
 import { STORAGE_E143, STORAGE_LIB, CARD_DETECT_E143, RECORDER_E143 } from '../fw/facts.mjs';
 
@@ -153,8 +153,8 @@ export class Storage {
     this.drive_status = null;
     this.tag = 0;                  // the lab's dosfat requests read by the reply: the last one's tag and its status
     this.reply = null;
-    // REC_FILE natively (src/lab/rec.mjs; E143), in S-RECFILE's place
-    this.rec = ON_LAB_MODEL ? new RecFile(this) : null;
+    // REC_FILE natively where the body gives rec_native (src/lab/rec.mjs; MODELS), in S-RECFILE's place
+    this.rec = REC_NATIVE ? new RecFile(this) : null;
   }
   // H-FILEINIT, H-FILECLBK, S-SDHOST, S-SDCARD, S-FSNAND, S-ALBM, then the insertion (S-CARD); in the play bring-up,
   // before the application starts

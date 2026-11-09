@@ -14,6 +14,9 @@
 //                        rider too; at 4 (BIRD) the frame goes; the rider moving, each frame drawn lies on the rider at
 //                        the scene time of the offer whose result the table holds, and the frame moves with it; at 0 it
 //                        goes; --replay of the session log ends on the same frame
+//   subjectEvfSwitchSession  a headless Player on E143 started on the TFT, LV to the EVF: MDET's table follows, the
+//                        EVF has no frame plane (the open gap, spec 5.6); MENU in and out sets it up natively (PLANC
+//                        0x1100) and A19 draws the frame on the rider
 //   subjectRaceSession   a headless Player on E143 with the race preset's two racers held still: no frame after six
 //                        offers, then two frames, each on its racer, MDET's subjects with their helmets; at OFF none
 //   subjectStandInSession  a headless Player on E143 with the mdet facts taken away (a body where MDET_DL does not run
@@ -262,11 +265,17 @@ async function inProcess(what, { device = 'tft', mdet = true, race = false }, fn
     try { pl.open_session(); } finally { MODEL_INFO.mdet = facts; }
     const s = pl.session, lab = s.lab;
     const idle = (ms) => s.idle_slice(lab.lab_time() + ms * 1e6);
-    const [[sw, sh], [pw, ph], [ox, oy]] = LV_SCALED[device];
-    const boxes = SC.subjectsAt(race ? raceScene() : riderScene(0), 0, sh / sw).sort((a, b) => b.area - a.area)
-      .map((r) => [ox + r.box[0] * pw, oy + r.box[1] * ph, ox + r.box[2] * pw, oy + r.box[3] * ph]);
-    const clip = device === 'evf' ? [0, 0, 1600, 1200] : [50, 0, 850, 600];
-    const cover = (i = 0) => { const [w, h, words] = s.frame('boundary', false); return edgeCoverBy((x, y) => x >= 0 && y >= 0 && x < w && y < h && words[y * w + x] === GREY, boxes[i], 4, clip); };
+    // the subjects' boxes on output dev's panel, the larger first; cover(i, dev) on the output shown, dev
+    const boxesOn = (dev) => {
+      const [[sw, sh], [pw, ph], [ox, oy]] = LV_SCALED[dev];
+      return SC.subjectsAt(race ? raceScene() : riderScene(0), 0, sh / sw).sort((a, b) => b.area - a.area)
+        .map((r) => [ox + r.box[0] * pw, oy + r.box[1] * ph, ox + r.box[2] * pw, oy + r.box[3] * ph]);
+    };
+    const boxes = boxesOn(device);
+    const cover = (i = 0, dev = device) => {
+      const [w, h, words] = s.frame('boundary', false), clip = dev === 'evf' ? [0, 0, 1600, 1200] : [50, 0, 850, 600];
+      return edgeCoverBy((x, y) => x >= 0 && y >= 0 && x < w && y < h && words[y * w + x] === GREY, boxesOn(dev)[i], 4, clip);
+    };
     if (race) {
       s.scene_input({ liveview: true, preset: 'race' });
       s.scene_input({ layer: { index: 1, speed: 0 } });
@@ -316,6 +325,33 @@ export async function subjectEvfSession() {
   });
 }
 
+// A session started on the TFT and switched to the EVF with LV (spec 5.6, docs/om1-vsc-spec.md 9.11, 9.12): MDET's
+// frame on the TFT first; after the switch the frame table follows the EVF but the EVF's IMG3 keeps its generic set-up
+// (FMT 0, no frame plane: the switch posts no DISPLAY cmd 18, the open gap); MENU in and out, a shooting-screen
+// transition whose face-layer request clears the EVF's frame-state byte, sets the frame plane up natively (FMT 2, PLANC
+// 0x1100: the per-pixel alpha bit with the level the switch's cmd 28 left at 128), and A19 draws the frame on the rider
+export async function subjectEvfSwitchSession() {
+  return inProcess('TFT -> EVF switch', {}, ({ s, idle, cover, ok }) => {
+    const lab = s.lab, img3 = () => { const b = lab.vsc.bank(1, true); return [b.get('IMG3FMT'), b.get('IMG3PLANC')]; };
+    const EVF_STATE = 0xa32ddaf4 + 1, fmt = (c) => c.map((v) => v.toFixed(2)).join(' ');
+    s.step('SET:1682=1');
+    for (let i = 0; i < 9; i++) idle(70);
+    const c0 = cover(0, 'tft');
+    ok(s.device === 'tft' && s.camapp.status().subject?.frames === 1 && c0.every((v) => v >= 0.7), `the TFT: MDET's frame on the rider: edges ${fmt(c0)}`);
+    s.display_input('lv'); s.camapp.pump();
+    for (let i = 0; i < 6; i++) idle(70);
+    const st1 = s.camapp.status().subject, c1 = cover(0, 'evf'), [f1, p1] = img3();
+    ok(s.device === 'evf' && st1?.device === 'evf' && st1.frames === 1 && f1 === 0 && lab.sim.read(EVF_STATE, 1)[0] === 1 && c1.every((v) => v < 0.2),
+      `after LV (open, spec 5.6): MDET's table on the EVF but no frame plane (IMG3 FMT ${f1} PLANC 0x${p1?.toString(16)}, the EVF's frame-state byte ${lab.sim.read(EVF_STATE, 1)[0]}): edges ${fmt(c1)}, ${JSON.stringify(st1 ?? null)}`);
+    const press = (k) => { s.key(k, 'down'); s.camapp.pump(); idle(150); s.key(k, 'up'); s.camapp.pump(); idle(300); };
+    press('menu'); press('menu');
+    for (let i = 0; i < 6; i++) idle(70);
+    const c2 = cover(0, 'evf'), [f2, p2] = img3();
+    ok(f2 === 2 && p2 === 0x1100 && lab.sim.read(EVF_STATE, 1)[0] === 0 && c2.every((v) => v >= 0.7),
+      `MENU in and out on the EVF: the frame plane natively (IMG3 FMT ${f2} PLANC 0x${p2?.toString(16)}), MDET's frame on the rider: edges ${fmt(c2)}`);
+  });
+}
+
 // S-SUBJECT where MDET_DL does not run natively: no body is so today (E143 gives both the subject and the mdet facts),
 // so the session takes the mdet facts away
 export async function subjectStandInSession() {
@@ -336,7 +372,8 @@ export async function subjectStandInSession() {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const rs = [['subject units', subjectUnits()]];
   if (!process.argv.includes('--pure')) {
-    rs.push(['subject session', await subjectSession()], ['subject frames on the EVF', await subjectEvfSession()], ['two racers\' frames', await subjectRaceSession()],
+    rs.push(['subject session', await subjectSession()], ['subject frames on the EVF', await subjectEvfSession()],
+      ['the frame after a switch to the EVF', await subjectEvfSwitchSession()], ['two racers\' frames', await subjectRaceSession()],
       ['S-SUBJECT without MDET_DL', await subjectStandInSession()]);
   }
   for (const [n, r] of rs) { console.log(`${n}: ${r.checks - r.bad.length}/${r.checks}`); r.bad.forEach((x) => console.log('  ', x)); }

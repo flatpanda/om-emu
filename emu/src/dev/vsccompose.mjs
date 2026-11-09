@@ -48,7 +48,9 @@ function regClassOf(off) {
 }
 const P_IMG1 = 0, P_IMG2 = 1, P_IMG3 = 2, P_OSD1 = 3, PLANES = 6;
 const HILIGHT1 = 0x5D0, UNAPPLIED = BOARD.vsc.unapplied;
-const A15_BIT = 1, A19_BIT = 4, A20_BIT = 8, FACE_PLANC = 0x1000, FACE_FMT = 2, FACE_COLOURS = 8;
+// A19's PLANC values: bit 12, the per-pixel alpha flag the format setter 0x501e1e95 sets for format 2, with the level
+// field [8:1] at 0 (an EVF or TFT start: planc[2] never set) or at 128, A7's full level (after a cmd 28 or a re-open)
+const A15_BIT = 1, A19_BIT = 4, A20_BIT = 8, FACE_PLANCS = [0x1000, 0x1100], FACE_FMT = 2, FACE_COLOURS = 8;
 const PLANE_NOT_DRAWN = 0x1000;
 
 // blend(): per component ((a * tra + b * (31 - tra) + 15) / 31), unsigned. A table of every (tra, a, b), built once.
@@ -120,7 +122,7 @@ class Compose {
     pl.x0 = xs - this.ox; pl.y0 = ys - this.oy;
     if (planc === 0) { this.v.noteRecord(NOTE.PLANC_ZERO, this.c, plancOff, p); return PLANE_NOT_DRAWN; }
     pl.fmt = 0;
-    if (p === P_IMG3 && this.face && planc === FACE_PLANC) {          // A19 (opt-in): the face/AF frame plane
+    if (p === P_IMG3 && this.face && FACE_PLANCS.includes(planc)) {   // A19 (opt-in): the face/AF frame plane
       const fmt = this.need(R.IMG_FMT + 4 * q);
       if (fmt === null) return E.UNWRITTEN;
       if (fmt !== FACE_FMT) { this.cerror(E.FMT_UNMODELLED, R.IMG_FMT + 4 * q, fmt, p, 0, 0); return E.FMT_UNMODELLED; }

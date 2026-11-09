@@ -67,10 +67,12 @@ const SCP = {
   E148: ['SS_MENU_LV/ID_ST_MENU_DTL_SCP', 'SS_MENU_LV/ID_ST_DIRECT_PICTUREMODE_ART', 'SS_MENU/ID_ST_MENU', 'SS_COMMON/ID_ST_CA_REQ_DISP'],
 };
 // the bodies whose menu is known not to run on the EVF: model -> [what the step's error must hold, the reason], held
-// strictly as PROBE_XFAIL. E146 and E147: the menu's composite has the EVF's dimmed plane, PLANC 0xb2, which E143's
-// compositor refuses (as for playback above). E122 and E120 were in it until the kind-3 VSC's line compare
+// strictly as PROBE_XFAIL. E146 and E147: the menu's composite has the EVF's dimmed planes, PLANC 0xb2, which E143's
+// compositor refuses (as for playback above): OSD1-3 at level 89 from OlyHfwOpeBGrCtl's DISPLAY cmd 30 mode 2, the
+// firmware's own dim (E143 does the same after an EVF start), whose blend is not known (docs/om1-vsc-spec.md section 9
+// item 12). E122 and E120 were in it until the kind-3 VSC's line compare
 // (docs/model-survey.md finding 70): before, their press at MENU on the EVF ran to the hook-stop limit
-const PLANC_B2 = [/^error: composite NONE: \["PLANC_UNOBSERVED .* value 0x000000b2/, 'the menu\'s EVF composite has a plane at PLANC 0xb2, which E143\'s compositor refuses'];
+const PLANC_B2 = [/^error: composite NONE: \["PLANC_UNOBSERVED .* value 0x000000b2/, 'the menu\'s EVF composite has OSD1-3 at PLANC 0xb2 (level 89, DISPLAY cmd 30\'s dim), whose blend E143\'s compositor does not model'];
 const MENU_EVF_XFAIL = {
   E146: PLANC_B2, E147: PLANC_B2,
 };

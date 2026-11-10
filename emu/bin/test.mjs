@@ -190,7 +190,8 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   bad += tk.bad.length;
 }
 // the release route to TAKE_EXEC (test_take_release.mjs, --take probe round 2: H-TAKEMAIN, S-THRTAKEOVER): under
-// camapp 3 S1's take request reaches TAKE_MAIN natively, which waits for TAKE_FOCUS's callbacks
+// camapp 3 without the probe the sequence parts refuse S1 at their guard, under camapp 1 with it S1 reaches nothing
+// (camapp 3 with the probe: focusSession, below)
 {
   const { releaseSession } = await import('../test/test_take_release.mjs');
   const rs = await releaseSession();

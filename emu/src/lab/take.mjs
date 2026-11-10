@@ -162,7 +162,8 @@ Object.assign(TAKE_REQ_QUEUES, { 0x3002: 'FACE_FD' });
 // TAKE_FOCUS's 0x300 with token 1, whose handler in RdyFcsRdy1 (0x503c2e8d) clears pending bit 0x01, asks TAKE_FUNC
 // 80 and returns the reply's status, reading nothing else of it. Another request with TAKE_POST as its reply queue
 // throws: TAKE_EXPOSE's 0x400 with token 11 (sent by 0x503c2c3a), whose handler 0x503c2ce6 frees the reply's word 2,
-// would not be answered right by {0, token, 0}
+// would not be answered right by {0, token, 0}. Since round 3 (H-TAKEFOCUS, with every probe) TAKE_FOCUS's queue is
+// native, so send takes its 0x300 natively and this entry is not reached (docs/hle-gaps.md 4.1.8)
 const MAIN_REPLIES = [{ queue: 0x5D, command: 0x300, token: 1 }];
 
 export class TakeProbe {
@@ -566,8 +567,9 @@ export class TakeProbe {
     if ((lab.nk.state(t) & 0xF) !== 4) throw new TakeError(`H-TAKEFOCUS: task ${t} is not waiting after its start (state ${lab.nk.state(t)})`);
     this.log.push(['init', `TAKE_FOCUS task ${t} waiting`]);
   }
-  // the kernel's synchronous send (0x5002e39d; TAKE_FOCUS's request API 0x506eab1f sends through it at 0x506ea9cc once
-  // the ready byte is 1) from a probe task to TAKE_FOCUS's queue: natively, recorded once (its own post, below, is not)
+  // the kernel's synchronous send (0x5002e39d; TAKE_FOCUS's request API 0x506eab1f sends through it at 0x506ea9cc, with
+  // the ready byte 1 every command but 0x601) from a probe task to TAKE_FOCUS's queue: natively, recorded once (its own
+  // post, below, is not)
   focus_sync(h, r, task, path) {
     this.record({ task, queue: FOCUS_E143.queue, name: FOCUS_E143.name, command: r.d1 >>> 0, parameter: r.a0 >>> 0, token: null, sync: true, from: this.sender(r.mdr), via: path, answer: 'native' });
     this.focus_ksync = true;
@@ -620,8 +622,8 @@ const STB_ANSWER_MS = 1000, STB_STEP_MS = 10;
 //               commands run natively and it replies itself ({u16 status 0, token, parameter} to word 0, 0x506ea985,
 //               after every command, 0x509a13dc..0x509a13e7). With the ready byte 1 TAKE_FOCUS's request API
 //               (0x506eab1f) sends every command but 0x601 synchronously through the kernel (0x506ea9cc; 0x601 it runs
-//               in the caller's task, 0x506eabd7), where with the byte 0 it posted commands 0 and 0x700 with no reply
-//               queue and logged any other (0x506eab3a..0x506eab75)
+//               in the caller's task, 0x506eabd7), where with the byte 0 it posts commands 0 and 0x700 with no reply
+//               queue and logs any other before it sends it synchronously all the same (0x506eab3a..0x506eab75)
 // Natively too, recorded: TAKE's event post 0x502ce5e6 to API_EVENT (the application's queue 6) and TAKE_MAIN's reply
 // to the take request's requester (0x50399c4f). S-TAKECAM takes the camera driver's request 144 as it takes 148
 export const FOCUS_E143 = {

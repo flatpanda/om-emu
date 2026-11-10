@@ -11,7 +11,8 @@
 // the browser player's pure parts, its node host, webgate B6's page inputs on a node Player and its Worker in a node
 // worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
-// (test_camapp.mjs, with S-HEAP over an idle and a workload, the mode dial's positions and camapp 3), the TAKE
+// (test_camapp.mjs, with S-HEAP over an idle and a workload, the mode dial's positions and camapp 3 with its
+// frames), the TAKE
 // probe's record of what TAKE_FUNC takes and asks on E143 (test_take.mjs), CPU 2 natively on the machine's second
 // core (test_cpu2.mjs), the lab's audio output and the
 // synthesized shutter sound at a
@@ -167,12 +168,12 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 }
 // the camera application running natively (S-CAMAPP and its stand-ins): S1, S2 and the rec view in a play session
 {
-  const { camappSession, heapSession, heapWorkloadSession, modeDialSession, traRoutingSession } = await import('../test/test_camapp.mjs');
+  const { camappSession, heapSession, heapWorkloadSession, modeDialSession, traRoutingSession, camapp3FramesSession } = await import('../test/test_camapp.mjs');
   const ca = await camappSession(), hp = await heapSession(), hw = await heapWorkloadSession(), md = await modeDialSession();
-  const tr = await traRoutingSession();
-  console.log(`camera application (S-CAMAPP) in play: ${ca.checks - ca.bad.length}/${ca.checks}; S-HEAP over an idle: ${hp.checks - hp.bad.length}/${hp.checks}; S-HEAP over a workload: ${hw.checks - hw.bad.length}/${hw.checks}; the mode dial's positions: ${md.checks - md.bad.length}/${md.checks}; camapp 3's native transactions: ${tr.checks - tr.bad.length}/${tr.checks}`);
-  [...ca.bad, ...hp.bad, ...hw.bad, ...md.bad, ...tr.bad].forEach((x) => console.log('  ', x));
-  bad += ca.bad.length + hp.bad.length + hw.bad.length + md.bad.length + tr.bad.length;
+  const tr = await traRoutingSession(), fr = await camapp3FramesSession();
+  console.log(`camera application (S-CAMAPP) in play: ${ca.checks - ca.bad.length}/${ca.checks}; S-HEAP over an idle: ${hp.checks - hp.bad.length}/${hp.checks}; S-HEAP over a workload: ${hw.checks - hw.bad.length}/${hw.checks}; the mode dial's positions: ${md.checks - md.bad.length}/${md.checks}; camapp 3's native transactions: ${tr.checks - tr.bad.length}/${tr.checks}; camapp 3's frames: ${fr.checks - fr.bad.length}/${fr.checks}`);
+  [...ca.bad, ...hp.bad, ...hw.bad, ...md.bad, ...tr.bad, ...fr.bad].forEach((x) => console.log('  ', x));
+  bad += ca.bad.length + hp.bad.length + hw.bad.length + md.bad.length + tr.bad.length + fr.bad.length;
 }
 // the imgpro unit's model (S-IMGPRO) on a bare machine; the firmware's driver on it runs in camapp 3 above
 {

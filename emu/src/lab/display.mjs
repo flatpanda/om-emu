@@ -1194,6 +1194,11 @@ export class DisplayLab extends OsdLab {
     return address;
   }
   // Everything the model's IMG1 fetch depends on (the VSC model's plane setup), recorded at the attach.
+  // IMG plane p (1 IMG2, 2 IMG3) of channel c latched with RSZ1 written and its bits 0 and 4 clear (no resize)
+  unscaled(c, p) {
+    const off = this.vsc.offsets.get(`IMG${p + 1}RSZ1`), flags = this.vsc.flags(c, 'm');
+    return !!flags[off >> 2] && (this.sim.u32(VSC_CHANNEL[c] + 0x2000 + off) & 0x11) === 0;
+  }
   img_steps(c, mirror = false) {
     const flags = this.vsc.flags(c, mirror ? 'm' : 'w'), base = VSC_CHANNEL[c] + (mirror ? 0x2000 : 0);
     return IMG_STEP_REGS.map((n) => { const off = this.vsc.offsets.get(n); return flags[off >> 2] ? this.sim.u32(base + off) : null; });
@@ -1263,6 +1268,11 @@ export class DisplayLab extends OsdLab {
       const name = PLANES[p];
       if (!((header.drawn >>> p) & 1)) continue;
       if (p === 2 && (header.assumed & A19_BIT)) continue;             // A19: the face/AF frame plane reads its own buffer
+      // IMG2 or IMG3 latched with RSZ1 bits 0 and 4 clear: one source pixel per output pixel, so no second tap and no
+      // edge question for A6 (no attach records these planes: under camapp 3 DISPLAY cmd 5 shows the through image's
+      // bank as IMG2 behind the menu, docs/hle-gaps.md 4.2.4). IMG1 keeps its attach rule (its 1:1 on channel 2 rests
+      // on A12)
+      if (p > 0 && this.unscaled(c, p)) continue;
       let fit = name === 'IMG1' ? (this.img_attach.get(c) ?? null) : null;
       const source = fit && (fit.path === 'TH' ? this._th_source(fit) : fit.src);
       const regs = name === 'IMG1' ? this.img_steps(c, true) : null;

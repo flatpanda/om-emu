@@ -44,6 +44,10 @@
 //                  is the component's (no S-OUTDEV), the HDMI device opens and channel 0 composes its window with no
 //                  plane drawn, and the plug's cmd 15 waits as the menu's does; in both, the native lens's LENS_EXEC
 //                  and LENS_COMMAND, whose tasks wait on them, are left out of S-MODACK (which takes what it answers)
+//   camapp3FramesSession  control camapp 3's frames (E143): the TFT composes with the histogram's registers under
+//                  A-VSCHIST-3 at the shooting screen, the menu (the through image's bank as IMG2, the background's
+//                  colour) and its close, PLAY and its return; with --cpu2 native the histogram's bin 5 column is the
+//                  one change (docs/hle-gaps.md 4.2.4)
 //   modeDialSession  the mode dial in play (E143): it starts at P, the start's mode; each position's change sets its
 //                  mode (MODE_EXPOSE, the custom banks' MODE_RAW, B's MODE_DIAL_B_ONOFF) and keeps the other settings,
 //                  each position shows a screen of its own, and away from P OK opens the Super Control Panel and MENU
@@ -299,8 +303,8 @@ export async function heapWorkloadSession() {
   return { checks, bad };
 }
 
-// control camapp 3 (docs/hle-gaps.md 4.1.5; E143). The sessions take no frames: the composite of the TFT is
-// FEATURE_UNOBSERVED once the shooting component has started the VSC's histogram (HIST1, HISTAREA1..3)
+// control camapp 3 (docs/hle-gaps.md 4.1.5; E143). The sessions take no frames (camapp3FramesSession takes them: the
+// histogram's registers HIST1, HISTAREA1..3, HIST2 and HIST3 compose under A-VSCHIST-3, docs/hle-gaps.md 4.2.4)
 const START_TRAS = [415, 598, 614, 990, 958, 1515, 994, 955, 1001, 1061, 992, 1503, 1065, 1045, 938, 974];
 const NATIVE_RESULT = { 992: 0xF0000058 };
 // the imgpro unit's run as the menu opens (docs/hle-gaps.md 4.3.1; X): kind 14's rectangle fill (op 3, mode 5) of the
@@ -487,6 +491,68 @@ export async function traRoutingSession() {
   return { checks, bad };
 }
 
+// control camapp 3's frames (docs/hle-gaps.md 4.2.4; E143): with the histogram's registers in a composite under
+// A-VSCHIST-3 (src/dev/vsccompose.mjs histForm) the TFT composes at the shooting screen, in the menu and its close,
+// in playback and its return; the menu shows the through image's bank as IMG2 (DISPLAY cmd 5, unscaled, the imgpro
+// fill's rectangle), which the harness's IMG edge guard lets pass (src/lab/display.mjs unscaled), and whose pixels are
+// the background's (the fill's Y 11, Cb and Cr 128: the composite without IMG2 is the same, X); with --cpu2 native
+// OSD_DRAW_CPU2's histogram adds bin 5's column (the firmware's 64 in bin 5 for an IMG1 that is off, A-VSCHIST-2)
+// and nothing else: two columns of the histogram box (FRAMES_HIST_COLUMN)
+const FRAMES_LV_BANK = 0x98D4D800, FRAMES_LV_STRIDE = 11136, FRAMES_IMG2 = 1;
+const FRAMES_HIST_COLUMN = { pixels: 126, box: [14, 110, 15, 172] };
+export async function camapp3FramesSession() {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
+  const { Player } = await import('../src/lab/player.mjs');
+  const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+  const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
+  const shooting = {};
+  for (const cpu2 of [false, true]) {
+    const tag = `camapp 3${cpu2 ? ' --cpu2 native' : ''}`;
+    const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, ...(cpu2 ? { cpu2: 'native' } : {}) }, env);
+    pl.camapp_components = true; pl.camapp_native_tra = true;
+    try {
+      pl.open_session();
+      const s = pl.session, lab = s.lab;
+      const idle = (ms) => { const to = lab.lab_time() + ms * 1e6; while (lab.lab_time() < to) s.idle_slice(Math.min(to, lab.lab_time() + 50e6)); };
+      const key = (k) => { s.key(k, 'down'); s.camapp.pump(); idle(100); s.key(k, 'up'); s.camapp.pump(); idle(800); return s.status().gui; };
+      // a frame of the shown state, or the composite's refusal
+      const frame = () => { try { return s.frame()[2]; } catch (e) { return e.message.slice(0, 300); } };
+      idle(2000);
+      const f0 = frame(), used = pl.stand_ins_in_use();
+      ok(Array.isArray(f0) && used.includes('A-VSCHIST-3') && lab.vsc.hist_assumed() > 0,
+        `${tag}: the shooting screen composes with the histogram's registers (A-VSCHIST-3 in ${used.filter((x) => /HIST/.test(x))}, composites ${lab.vsc.hist_assumed()}): ${Array.isArray(f0) ? 'a frame' : f0}`);
+      shooting[cpu2] = f0;
+      if (cpu2) break;
+      const menu = key('menu'), f1 = frame(), img2 = s.last_planes?.planes?.IMG2;
+      ok(menu === GUI_MENU && Array.isArray(f1) && img2?.result === 'drawn' && img2.base === FRAMES_LV_BANK && img2.stride === FRAMES_LV_STRIDE
+        && img2.w === 900 && img2.h === 600, `${tag}: the menu (${menu}) composes, IMG2 the through image's bank: ${JSON.stringify(img2 ?? null)} ${Array.isArray(f1) ? '' : f1}`);
+      // IMG2's pixels are the background's: the same composite with the lab's view mask leaving IMG2 out
+      lab.vsc.set_view(2, 0x3F & ~(1 << FRAMES_IMG2));
+      const nv = lab.compose('tft', false, false);
+      lab.vsc.set_view(2, 0x3F);
+      ok(Array.isArray(f1) && nv.status === 'NONE' && nv.words.length === f1.length && nv.words.every((x, i) => x === f1[i]),
+        `${tag}: the menu without IMG2 is the same picture (the fill's value is the background's)`);
+      const closed = key('menu'), f2 = frame(), play = key('play'), f3 = frame(), back = key('play'), f4 = frame();
+      ok(closed === GUI_SHOOTING && play === GUI_NO_PICTURE && back === GUI_SHOOTING && [f2, f3, f4].every(Array.isArray),
+        `${tag}: the menu's close (${closed}), PLAY (${play}) and its return (${back}) compose: ${[f2, f3, f4].filter((f) => !Array.isArray(f))}`);
+    } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 600)}`); }
+    pl.close_session();
+  }
+  // CPU 2's histogram: bin 5's column in the box, nothing else changed
+  const [a, b] = [shooting[false], shooting[true]];
+  if (Array.isArray(a) && Array.isArray(b)) {
+    const diff = [];
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) diff.push([i % 900, Math.floor(i / 900)]);
+    const box = diff.reduce((r, [x, y]) => [Math.min(r[0], x), Math.min(r[1], y), Math.max(r[2], x), Math.max(r[3], y)], [1e9, 1e9, -1, -1]);
+    ok(diff.length === FRAMES_HIST_COLUMN.pixels && JSON.stringify(box) === JSON.stringify(FRAMES_HIST_COLUMN.box),
+      `--cpu2 native: OSD_DRAW_CPU2's histogram changes ${diff.length} pixels in ${JSON.stringify(box)}, want ${FRAMES_HIST_COLUMN.pixels} in ${JSON.stringify(FRAMES_HIST_COLUMN.box)}`);
+  } else ok(false, 'the two shooting frames for the histogram comparison');
+  return { checks, bad };
+}
+
 // The mode dial's positions as the application takes them (E143; docs/om1-input-spec.md section 2): the setting each
 // position's mode change sets on the blank store, by the position's name (X, 2026-10-30): MODE_EXPOSE (24) P 3, A 4,
 // S 5, M 6, Movie 76, and 3 (P) in the custom banks C1..C4, which also set MODE_RAW (22); B sets MODE_DIAL_B_ONOFF
@@ -552,7 +618,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const run = async (name, fn) => (!only || only === name ? fn() : { checks: 0, bad: [] });
   const r = await run('camapp', camappSession), h = await run('heap', heapSession), w = await run('workload', heapWorkloadSession), m = await run('dial', modeDialSession);
   const t = await run('tra', traRoutingSession);
-  console.log(`camapp session: ${r.checks - r.bad.length}/${r.checks}; the heap over an idle: ${h.checks - h.bad.length}/${h.checks}; the heap over a workload: ${w.checks - w.bad.length}/${w.checks}; the mode dial: ${m.checks - m.bad.length}/${m.checks}; camapp 3's transactions: ${t.checks - t.bad.length}/${t.checks}`);
-  [...r.bad, ...h.bad, ...w.bad, ...m.bad, ...t.bad].forEach((x) => console.log('  ', x));
-  process.exit(r.bad.length || h.bad.length || w.bad.length || m.bad.length || t.bad.length ? 1 : 0);
+  const f = await run('frames', camapp3FramesSession);
+  console.log(`camapp session: ${r.checks - r.bad.length}/${r.checks}; the heap over an idle: ${h.checks - h.bad.length}/${h.checks}; the heap over a workload: ${w.checks - w.bad.length}/${w.checks}; the mode dial: ${m.checks - m.bad.length}/${m.checks}; camapp 3's transactions: ${t.checks - t.bad.length}/${t.checks}; camapp 3's frames: ${f.checks - f.bad.length}/${f.checks}`);
+  [...r.bad, ...h.bad, ...w.bad, ...m.bad, ...t.bad, ...f.bad].forEach((x) => console.log('  ', x));
+  process.exit(r.bad.length || h.bad.length || w.bad.length || m.bad.length || t.bad.length || f.bad.length ? 1 : 0);
 }

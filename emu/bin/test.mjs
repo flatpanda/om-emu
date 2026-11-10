@@ -22,7 +22,8 @@
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample, check_level on E146 and its PER_ROTATE groups (--rotate
 // on) on E143 and E146 (test_acc.mjs), the card and the
 // file system on E143, E146, E147, E144, E142 and E134 and SDXC cards on E143 (test_storage.mjs), INFO's still information
-// in playback on the 19 bodies (test_playinfo.mjs), a tap on the touch mode icon on E143 and ten bodies of the E144
+// in playback with two pictures, RIGHT and LEFT between them and INFO's three views on the 19 bodies
+// (test_playinfo.mjs), a tap on the touch mode icon on E143 and ten bodies of the E144
 // family (test_touch.mjs), subject detection's frames on E143
 // (test_subject.mjs), CPU 3's MDET_DL natively with the DML engine's model on E143 (test_mdet.mjs),
 // the lens on the mount natively on E143, E146 and E147 (test_lens.mjs), the resource tables loaded
@@ -302,7 +303,8 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...su.bad, ...ss.bad, ...sx.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += su.bad.length + ss.bad.length + sx.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
-// INFO's still information in playback, from the picture's own record: E143 here (S-PLAYCOMP's answer in the
+// Playback with two pictures (RIGHT, LEFT, INFO's three views) and INFO's still information, from the picture's own
+// record: E143 here (S-PLAYCOMP's answer in the
 // component's struct), and E146, E147, the E118 family (S-PLAYSEQ's answer to the play module's request 3) and the
 // E144 family (S-PLAYCOMP's) each in a process of its own, PLAYINFO_JOBS at once
 {

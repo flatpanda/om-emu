@@ -1,7 +1,12 @@
 // INFO's still information in playback (src/lab/camapp.mjs still_record: S-PLAYSEQ's getStillInfo and getHistogram,
-// S-PLAYCOMP's getStillInfo, S-CARD's capture record; docs/model-survey.md findings 57 and 80):
-//   playInfoSession  (firmware) a play session on the body of OM_EMU_MODEL (E143 by default): start, S1, S2 (one
-//                    picture), PLAY and INFO, each step's GUI state checked, and the GUI's still information record as
+// S-PLAYCOMP's getStillInfo, S-CARD's capture record; docs/model-survey.md findings 57, 80 and 94):
+//   playInfoSession  (firmware) a play session on the body of OM_EMU_MODEL (E143 by default): start, S1, S2 twice (two
+//                    pictures on the card), PLAY (the newest shown), RIGHT (the other picture: the image S-PLAYSEQ
+//                    shows moves and the GUI's frame changes), LEFT (back: the frame PLAY drew), INFO three times
+//                    (the detail view, the view without information, the simple view again) and PLAY back to the
+//                    shooting screen, each step's GUI state checked (frames are compared before INFO only: E143's
+//                    composite after INFO is refused for its highlight and shadow registers, finding 80), and at
+//                    the detail view the GUI's still information record as
 //                    the firmware's own converter (fact play.still's convert: src/fw/facts.mjs stillFields) fills it,
 //                    read at the converter's last return. Where PlyCom asks the play module (the E118 family:
 //                    S-PLAYSEQ's answer to the synchronous request 3) or the play component (E143's, E146's, E147's and
@@ -49,24 +54,37 @@ export async function playInfoSession() {
     lab.hook_rt(ret, (h, rr) => { lab.hooks.delete(ret); calls.push(rd(rec, GUI.focal + 4)); lab.passthrough(rr); }, 'test still converter return');
   }, 'test still converter');
   const press = (k) => { s.key(k, 'down'); s.camapp.pump(); s.idle_slice(lab.lab_time() + 150e6); s.key(k, 'up'); s.camapp.pump(); s.idle_slice(lab.lab_time() + 1200e6); };
+  const name = () => lab.state_names.get(lab.state()), digest = () => createHash('sha256').update(s.frame('boundary', true)[2]).digest('hex');
   s.idle_slice(lab.lab_time() + 1500e6);
-  for (const k of [...(START_KEYS[MODEL] ?? []), 's1', 's2', 'play']) press(k);
-  ok(lab.state_names.get(lab.state()) === 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE', `${MODEL}: PLAY ${lab.state_names.get(lab.state())}`);
+  for (const k of [...(START_KEYS[MODEL] ?? []), 's1', 's2', 's1', 's2']) press(k);
+  const shooting = lab.state(), cam = s.camapp;
+  ok(cam.images.length === 2 && cam.card_images() === 2 && s.storage?.files.length === 2, `${MODEL}: two pictures on the card (${cam.images.length} taken, ${cam.card_images()} counted, ${s.storage?.files.length} files)`);
+  // PLAY shows the newest, RIGHT the other one (the images wrap around), LEFT the newest again: the image S-PLAYSEQ
+  // shows (play_cur, which S-PLAYSEQ's getNumber and S-PLAYCOMP's answer from) and the GUI's frame, whose file number
+  // follows it (X: 100-0002, then 100-0001)
+  press('play');
+  ok(name() === 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE' && cam.play_cur === 1, `${MODEL}: PLAY ${name()}, image ${cam.play_cur + 1} of 2 shown`);
+  const f0 = digest();
+  press('right');
+  const f1 = digest();
+  ok(name() === 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE' && cam.play_cur === 0 && f1 !== f0, `${MODEL}: RIGHT ${name()}, image ${cam.play_cur + 1} shown, the frame ${f1 === f0 ? 'unchanged' : 'changed'}`);
+  press('left');
+  ok(name() === 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE' && cam.play_cur === 1 && digest() === f0, `${MODEL}: LEFT ${name()}, image ${cam.play_cur + 1} shown, the frame ${digest() === f0 ? "PLAY's" : 'another'}`);
   const before = calls.length;
   press('info');
-  ok(lab.state_names.get(lab.state()) === 'SS_PLAY_SINGLE/ID_ST_DISP_DETAIL', `${MODEL}: INFO ${lab.state_names.get(lab.state())}`);
+  ok(name() === 'SS_PLAY_SINGLE/ID_ST_DISP_DETAIL', `${MODEL}: INFO ${name()}`);
   ok(calls.length > before, `${MODEL}: INFO converts the still information (${calls.length - before} calls)`);
-  const img = s.camapp.images[0], log = [...s.steps.flatMap((x) => x.camapp ?? []), ...s.camapp.log];
+  const img = cam.images[cam.play_cur], file = s.storage?.files[cam.play_cur], log = [...s.steps.flatMap((x) => x.camapp ?? []), ...cam.log];
   const answers = (kind) => log.filter(([k, d]) => k === kind && /^getStillInfo/.test(d)).length;
-  if (!calls.length || !img) return { checks, bad: [...bad, `${MODEL}: no conversion or no picture (${calls.length}, ${s.camapp.images.length})`] };
+  if (!calls.length || !img || !file) return { checks, bad: [...bad, `${MODEL}: no conversion or no picture (${calls.length}, ${cam.images.length}, ${s.storage?.files.length})`] };
   const b = calls[calls.length - 1], byte = (o) => b[o], u16 = (o) => b[o] | b[o + 1] << 8, u32 = (o) => (u16(o) | u16(o + 2) << 16) >>> 0;
   const got = { date: [u16(GUI.year), byte(GUI.month), byte(GUI.day)], size: [u16(GUI.width), u16(GUI.height)], exp: [u32(GUI.exp), u32(GUI.exp + 4)], focal: u32(GUI.focal) };
   // who answered: the play module (S-PLAYSEQ) or the component (S-PLAYCOMP), one of them
   const seq = answers('play'), comp = answers('playcomp');
   ok((seq > 0) !== (comp > 0), `${MODEL}: getStillInfo answered by one of S-PLAYSEQ (${seq}) and S-PLAYCOMP (${comp})`);
   // the picture's file read back independently: its JPEG's size
-  const st = s.storage, vol = openVolume((lba, n) => st.card.read(lba, n)), f = st.files[0];
-  const e = vol.find(f.path.slice(3).replaceAll('\\', '/')), jpeg = decodeJpeg(vol.data(e));
+  const st = s.storage, vol = openVolume((lba, n) => st.card.read(lba, n));
+  const e = vol.find(file.path.slice(3).replaceAll('\\', '/')), jpeg = decodeJpeg(vol.data(e));
   ok(got.size.join('x') === `${jpeg.width}x${jpeg.height}`, `${MODEL}: the record's size ${got.size.join('x')}, the card's JPEG ${jpeg.width}x${jpeg.height}`);
   // the camera's clock now (it is not set in the lab: each build's default, which does not advance), as at the capture
   const clock = s.camapp.clock();
@@ -80,6 +98,13 @@ export async function playInfoSession() {
     const res = lab.sim.u32(A(0x60360C88)) >>> 0, hist = lab.sim.read(res + 4, 12);
     ok(hist.every((x) => x === 0), `${MODEL}: the histogram's flag and first bins 0: ${[...hist].join(' ')}`);
   }
+  // INFO's other views: the picture without information, then the simple view; PLAY back to the shooting screen
+  press('info');
+  ok(name() === 'SS_PLAY_SINGLE/ID_ST_DISP_OFF', `${MODEL}: INFO again ${name()}`);
+  press('info');
+  ok(name() === 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE', `${MODEL}: INFO a third time ${name()}`);
+  press('play');
+  ok(lab.state() === shooting, `${MODEL}: PLAY back to 0x${lab.state().toString(16)} ${name()}, the shooting screen's 0x${shooting.toString(16)}`);
   return { checks, bad };
 }
 

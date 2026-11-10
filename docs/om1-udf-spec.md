@@ -276,7 +276,9 @@ extension unit of an MN1030-core microcontroller); D = read from the firmware; X
   scale for q (I: consistent with M1, not a proof). Whether a lab session reaches `0x50477a9b` was not checked (?).
 - **Not modelled: the one-instruction PSW delay (M1).** A flag reader other than Bcc / Lcc right after udf07 would see
   the PSW from before it; the lab writes C at once. The only site's next instruction is `bcc` (D), which M1 lets read
-  the new C, so no reachable code can tell.
+  the new C, so no reachable code can tell. The base ISA's manual says the same of every flag update, and
+  `docs/mn10300-isa-spec.md` 2.4 does not model it there either (D there: the firmware's ADDC right after ADD
+  relies on the new carry).
 - **Tests (X).** The 16 udf07 vectors of `emu/test/fixtures/isa_vectors.json` changed from must-fault to these values
   and 11 hand-picked ones were added (start at bit 31, Dn & 31 = 0 with upper bits set, start at bit 0, none found,
   Dm == Dn), their outputs from a separate bit loop: 5,322 / 5,322 on both engines. `emu/test/test_core.mjs`

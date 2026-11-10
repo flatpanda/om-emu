@@ -19,11 +19,17 @@
 //                       white balance ends, the handler has given the camera driver its request 7 with EXP's frame
 //                       callbacks (record 0x62a98a0c from 0x5056a6e4: 0x5056fd44, 0x5056fd61, 0x5056fff0, 0x50570024),
 //                       none of which runs (cam.c's own init does not run in the lab, docs/hle-gaps.md 4.1.4), and
-//                       EXP_MOVIE waits on its flag 21 for bit 0x1000 (0x5056ba07 -> 0x50585dc2). Mode 1: the white
-//                       balance takes its gains from the table (kind 5 of 0x5039821c) and stops at the divide
-//                       0x50398ca5 (fault 6) in 0x50398a55, whose operands are both 0: the two gains 0x5056f1bb hands
-//                       0x5039821c through its locals (sp+16) and (sp+18), which it never writes (D). In neither does
-//                       the request's callback or the AE result writer 0x50596187 run, so S-EXPOSE stays
+//                       EXP_MOVIE waits on its flag 21 for bit 0x1000 (0x5056ba07 -> 0x50585dc2). On this path its
+//                       answer to EXP_MOVIE_POST comes after that wait (0x5058cbe7; 0x5058c84a answers 2, 0x5058c963
+//                       0), so TAKE_EXPOSE stays in its receive (0x505539af); the callback's status inputs
+//                       (0x62abd550) and (0x62abd558) are 0, which would give it status 2 (0x5058cd54). Mode 1: the
+//                       white balance takes its gains from the table (kind 5 of 0x5039821c) and stops at the divide
+//                       0x50398ca5 (fault 6) in 0x50398a55, whose operands are both 0: 0x50398a55 scales the table's
+//                       values by the words its request's +32 and +36 point to, 0x5056f1bb's locals (sp+16) and
+//                       (sp+18), which it never writes (D); the words +24 and +28 point to come from the table. The
+//                       through mode lands in 0x62abd7a0, whose mask 1 makes the callback skip the writer
+//                       (0x505975ba). In neither does the request's callback or the AE result writer 0x50596187 run,
+//                       so S-EXPOSE stays
 //   aeReadersSession    S-EXPOSE's readers in a default session (below)
 //   node emu/test/test_expcb.mjs
 import { fileURLToPath } from 'node:url';
@@ -37,6 +43,11 @@ const E = {
   launcher: 0x505964E7, exp_entry: 0x505536BE, handler: 0x5058BD51, eval: 0x5058C97C, offload: 0x50556AF4,
   wb: 0x5056AFE2, divide: 0x50398CA5, writer: 0x50596187, callback_call: 0x5058CDB7,
   cam_switch: 0x502A4A46, frame_record: 0x62A98A0C, frame_callbacks: [0x5056FD44, 0x5056FD61, 0x5056FFF0, 0x50570024],
+  // EXP_MOVIE_POST: the answer 0x5057240c, the caller's receive in 0x50553942 (the call, its return)
+  post_answer: 0x5057240C, caller_wait: 0x505539AF, caller_back: 0x505539B6,
+  // the status the callback gets is 0 only when (0x62abd550) = 2 and (0x62abd558) = 1 (0x5058cd54..0x5058cd6d);
+  // the callback skips the writer while mask 1 of the through mode (0x62abd7a0) is set (0x505975ba)
+  status_word: 0x62ABD550, status_byte: 0x62ABD558, through_mode: 0x62ABD7A0, scale: 0x50398A55,
 };
 
 async function session(mode) {
@@ -70,6 +81,11 @@ async function session(mode) {
     mark(E.cam_switch, 'camera driver request', (l, r) => ({ id: u16(r.a0 >>> 0, 1)[0], record: h8(r.a0), from: h8(disasm(r.mdr)) }));
     for (const f of E.frame_callbacks) mark(f, 'frame callback');
     mark(E.evwt, 'OlyEvWt', (l, r) => ({ flag: r.d0 & 0xFFFF, bits: h8(r.d1), from: h8(disasm(r.mdr)) }));
+    mark(E.post_answer, 'EXP_MOVIE_POST answer', (l, r) => ({ from: h8(disasm(r.mdr)) }));
+    mark(E.caller_wait, 'caller waits on EXP_MOVIE_POST');
+    mark(E.caller_back, 'caller has the answer');
+    // the words 0x50398a55 reads through its request's pointers +24, +28, +32, +36
+    mark(E.scale, 'scale', (l, r) => ({ words: [24, 28, 32, 36].map((k) => u16(l.sim.u32((r.a0 >>> 0) + k) >>> 0, 1)[0]) }));
     // the bring-up USTART2's stage would have made
     out.wb0 = u16(E.wb_table, E.wb_table_size / 2);
     out.imgprecon = lab.call(E.imgprecon_init, null, null, null, 20000000).d0 >>> 0;
@@ -99,6 +115,9 @@ async function session(mode) {
     try { s.settle('expcb TAKE_EXPOSE 0xa00'); } catch (e) { out.stop = e.message; }
     out.state = lab.nk.state(tid);
     out.back = s.cpu2.posts.filter((p) => p.fn === h8(0x50573383));
+    out.status_word = lab.sim.u32(E.status_word) >>> 0;
+    [out.status_byte] = lab.sim.read(E.status_byte, 1);
+    [out.through_mode] = lab.sim.read(E.through_mode, 1);
   } catch (e) { out.error = e.message.slice(0, 800); }
   finally { for (const [, entry] of E.cpu2_tasks) CPU2_TASKS.delete(entry); }
   pl.close_session();
@@ -132,10 +151,15 @@ export async function expCallbackSession() {
       ok(r.stop === undefined && !names.includes('divide') && req.length === 1 && req[0].id === 7 && !names.includes('frame callback')
         && wait?.flag === 21 && wait?.bits === h8(0x1000) && (r.state & 0xF) === 4,
         `mode 0: the camera driver gets request 7 with EXP's frame callbacks (${JSON.stringify(req)}), none runs, and EXP_MOVIE waits on flag 21 bit 0x1000 (${JSON.stringify(wait)}, state ${r.state}, stop ${r.stop})`);
+      ok(!names.includes('EXP_MOVIE_POST answer') && names.includes('caller waits on EXP_MOVIE_POST') && !names.includes('caller has the answer')
+        && r.status_word === 0 && r.status_byte === 0 && r.through_mode === 0,
+        `mode 0: EXP_MOVIE has not answered EXP_MOVIE_POST, TAKE_EXPOSE stays in its receive, and the status inputs are 0 / 0 (${JSON.stringify(m.filter((x) => /EXP_MOVIE_POST|answer/.test(x.name)))}, ${r.status_word} / ${r.status_byte}, through mode ${r.through_mode})`);
     } else {
-      const div = first('divide');
+      const div = first('divide'), sc = first('scale');
       ok(/disasm 0x50398ca5\) fault=6/.test(r.stop ?? '') && div?.d0 === 0 && div?.d1 === 0,
         `mode 1: the white balance stops at the divide 0x50398ca5 with 0 / 0 (${JSON.stringify(div)}, ${String(r.stop).slice(0, 160)})`);
+      ok(sc?.words[0] !== 0 && sc?.words[1] !== 0 && sc?.words[2] === 0 && sc?.words[3] === 0 && (r.through_mode & 1) === 1,
+        `mode 1: the scaling reads the table's two values and 0x5056f1bb's two unwritten gains (0), and the through mode's mask 1 is set, so the callback would skip the writer (${JSON.stringify(sc)}, through mode ${r.through_mode})`);
     }
   }
   return { checks, bad };
@@ -145,10 +169,11 @@ export async function expCallbackSession() {
 // 0xc12a / 0xc0ba / 0xc0ca through the getter 0x500417da, every set through 0x5004188b, the application's get by
 // index 0x503ee3c8 for their indices 4011..4013 (the list 0x606239e4 + 2 (index - 4000)) and every run of the plan
 // take_expose_calculate 0x50597e82, over a pass of S-EXPOSE again, an idle, a live view, S1, S2, the menu, a mode
-// change P -> A and playback. The objects are read only by the plan's reader 0x50598688 (0x505986cb, 0x505986f9,
-// 0x50598728) and by the index get's 0x503ef27c; the plan runs from S-EXPOSE's call and natively through the API
-// 0x20009 (0x50597dc0's call at 0x50597dfa) at the mode change, where the index get runs too (from 0x503eec3e); only
-// S-EXPOSE sets them, and the AE result writer 0x50596187 never runs
+// change P -> A and playback. The objects are read only by the plan's reader 0x50598688 (its gets at 0x505986c4,
+// 0x505986f2, 0x50598721) and by the index get (its get at 0x503ef275); the plan runs from S-EXPOSE's call and
+// natively through the API 0x20009 (0x50597dc0's call at 0x50597df5) at the mode change, where the index get runs too
+// (called at 0x503eec39); only S-EXPOSE sets them, and the AE result writer 0x50596187 never runs. The records name
+// each call by its return address (mdr), as below
 const READERS = new Set([0x505986CB, 0x505986F9, 0x50598728, 0x503EF27C].map(h8));
 export async function aeReadersSession() {
   const bad = [];

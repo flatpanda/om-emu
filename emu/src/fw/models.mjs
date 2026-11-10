@@ -116,6 +116,8 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // `rec_native`: REC_FILE's own task records S2's picture from the packet REC_IMAGE posts it, with the file's header
 // built by REC_IMAGE's header maker natively (src/lab/rec.mjs H-EXIFINIT, H-RECINIT, H-RECFILE, S-EXIFPRM, S-RECIMAGE,
 // S-JPEGENC; docs/hle-gaps.md 4.8.10), at the addresses and layouts src/fw/facts.mjs recFile reads (fact 'rec_file');
+// on E143 REC_IMAGE's own task posts the packet (H-RECSHARED, H-RECIMGPRO, H-RECIMAGE and S-RECREQ in S-RECIMAGE's
+// place, S-JPEGENC left with the encode alone; docs/hle-gaps.md 4.3.3);
 // given for a body whose S2 is known to record so (X). A body without it keeps S-RECFILE (src/lab/storage.mjs)
 //
 // `scpu_lle`: the sub-CPU's own firmware, which the lab can run on the STM32L4 machine in S-SCPUDEV's place (opt-in,

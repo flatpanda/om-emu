@@ -69,7 +69,9 @@ export async function playInfoSession() {
   const f1 = digest();
   ok(name() === 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE' && cam.play_cur === 0 && f1 !== f0, `${MODEL}: RIGHT ${name()}, image ${cam.play_cur + 1} shown, the frame ${f1 === f0 ? 'unchanged' : 'changed'}`);
   press('left');
-  ok(name() === 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE' && cam.play_cur === 1 && digest() === f0, `${MODEL}: LEFT ${name()}, image ${cam.play_cur + 1} shown, the frame ${digest() === f0 ? "PLAY's" : 'another'}`);
+  // (one composite: a frame at the boundary runs the lab to the next boundary first, play.mjs frame)
+  const f2 = digest();
+  ok(name() === 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE' && cam.play_cur === 1 && f2 === f0, `${MODEL}: LEFT ${name()}, image ${cam.play_cur + 1} shown, the frame ${f2 === f0 ? "PLAY's" : 'another'}`);
   const before = calls.length;
   press('info');
   ok(name() === 'SS_PLAY_SINGLE/ID_ST_DISP_DETAIL', `${MODEL}: INFO ${name()}`);

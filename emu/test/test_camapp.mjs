@@ -533,13 +533,13 @@ export async function camapp3FramesSession() {
       lab.vsc.set_view(2, 0x3F & ~(1 << FRAMES_IMG2));
       const nv = lab.compose('tft', false, false);
       lab.vsc.set_view(2, 0x3F);
-      ok(Array.isArray(f1) && nv.status === 'NONE' && nv.words.length === f1.length && nv.words.every((x, i) => x === f1[i]),
-        `${tag}: the menu without IMG2 is the same picture (the fill's value is the background's)`);
+      ok(Array.isArray(f1) && nv.status === 'NONE' && !((nv.header.drawn >>> FRAMES_IMG2) & 1) && nv.words.length === f1.length
+        && nv.words.every((x, i) => x === f1[i]), `${tag}: the menu without IMG2 is the same picture (the fill's value is the background's; drawn 0x${nv.header.drawn.toString(16)})`);
       const closed = key('menu'), f2 = frame(), play = key('play'), f3 = frame(), back = key('play'), f4 = frame();
       ok(closed === GUI_SHOOTING && play === GUI_NO_PICTURE && back === GUI_SHOOTING && [f2, f3, f4].every(Array.isArray),
         `${tag}: the menu's close (${closed}), PLAY (${play}) and its return (${back}) compose: ${[f2, f3, f4].filter((f) => !Array.isArray(f))}`);
     } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 600)}`); }
-    pl.close_session();
+    finally { pl.close_session(); }                                   // the --cpu2 pass's break too
   }
   // CPU 2's histogram: bin 5's column in the box, nothing else changed
   const [a, b] = [shooting[false], shooting[true]];

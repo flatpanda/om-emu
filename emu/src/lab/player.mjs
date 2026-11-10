@@ -465,7 +465,7 @@ export class Player {
     if (this.session?.camapp?.hist_ends) used.push('S-HISTEND');                            // camapp 3 (camapp.mjs)
     const vsc = this.session?.lab?.sim?.m?.devices?.vsc;                                     // the VSC's histogram (vsc.mjs)
     if (vsc?.histRuns()) used.push('A-VSCHIST-1', ...(vsc.histZeroReads() ? ['A-VSCHIST-2'] : []));
-    if (vsc?.histAssumed()) used.push('A-VSCHIST-3');                                     // a composite with its registers (camapp 3)
+    if (vsc?.histAssumed()) used.push('A-VSCHIST-3');                                     // camapp 3 (vsccompose.mjs)
     if (this.session?.camapp?.imgpro_inited) used.push('H-IMGPROINIT', 'S-STAGE9');          // camapp 3 (camapp.mjs)
     const imgpro = this.session?.lab?.sim?.m?.devices?.imgpro;                              // the imgpro unit (imgpro.mjs)
     if (imgpro?.touched) used.push('S-IMGPRO', ...(imgpro.runs ? ['A-IMGPRO-1'] : []));

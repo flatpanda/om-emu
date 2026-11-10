@@ -874,13 +874,14 @@ frame-mode function `0x5039f583`, so S-TAKEFRAME's request is still not reached 
   in `docs/om1-imgpro-spec.md`.
 - **The unit (D; the spec's sections 1-4).** Kinds 13, 14, 16 and 17 (handler `0x5046daa2`) and 6 (`0x5046dc32`) drive
   it, each start (`0x5050a6dd`, `0x5050a73c`, `0x5050a797`, `0x5050a7f2`, `0x5050a85d`) from one call site. A start
-  powers the unit up (`+0x004`, I) and writes the kind's parameters, the go `0x5050a8ba` enables IRQ 300 on the
-  calling core and writes `+0x028`, `+0x020`, `+0x00c`, `+0x018`; the handler `0x5048bfe3` acknowledges `+0x020` and
-  calls the request's callback (phase 12); the issue's wait (`0x50493617`, up to 1000 ms) then runs the end
-  `0x5050a8e1` (X), which powers it down (`+0x000`, I). Kind 14 is the fill: mode 4 a linear range (`+0x084`, `+0x390`,
-  `+0x384`), mode 5 a rectangle of an image (`+0x084` the first row, `+0x0b8` the pitch, `+0x390` the column, `+0x394`
-  the width and rows), the value `+0x398`. Kinds 13 (copies), 16 (mode 8, a result in `+0x3b0`), 17 (a scaler, I) and 6
-  are read only as far as their registers.
+  powers the unit up (`+0x004`, I) and writes the kind's parameters, the go `0x5050a8ba` enables IRQ 300 on the calling
+  core and writes `+0x028`, `+0x020`, `+0x00c`, `+0x018`; the handler `0x5048bfe3` acknowledges `+0x020` and calls the
+  request's callback (phase 12); the issue's wait (`0x50493617`, up to 1000 ms) then runs the end `0x5050a8e1` (X),
+  which powers it down (`+0x000`, I). Kind 14 is the fill: mode 4 a linear range (`+0x084`, `+0x390`, `+0x384`), mode 5
+  a rectangle of an image (`+0x084` the first row, `+0x0b8` the pitch, `+0x390` the column, `+0x394` the width and
+  rows), the value `+0x398`. Kinds 13 (copies), 16 (mode 8, a result in `+0x3b0`), 17 (a scaler, I) and 6 are read only
+  as far as their registers: kind 17 writes no `+0x380`, and kind 6's set-up `0x5050b328` also copies parameter blocks
+  into `+0x10c..+0x368` and `+0x380..+0x3ac` through a base register (the spec's section 3).
 - **The menu's request (X, D).** api_tft's `0x504223a4` fills the through image's bank with RGB 11, 11, 11 through
   `0x5048ef28` (BT.601 to Y 11, Cb and Cr 128) and `0x5048ef01` -> `0x50490c67` (format 3074: the word Y | Cb << 8 |
   Y << 16 | Cr << 24, `0x50490c89..a4`): kind 14, mode 5, the bank at bus `0x98d4d800` (a live-view range), 600 rows
@@ -893,34 +894,39 @@ frame-mode function `0x5039f583`, so S-TAKEFRAME's request is still not reached 
   ready word is set (`0x50024de8(9)`), which the boot's per-segment step `0x50024eda` sets and the lab did not; module
   9 has no static constructors (`0x501e6102`). The menu stayed at ID_ST_MENU_ENTRY and later keys were not taken.
 - **The model (X, `emu/src/dev/imgpro.mjs`; the spec's section 5).** S-IMGPRO: the register file with the driver's
-  behaviour, IRQ 300 high while the end bit and the enable are set, and of the runs only kind 14's fills computed,
-  from the words its set-up writes; the value as a little-endian word at 4-byte aligned addresses (I; a range off a
-  4-byte boundary is refused unless the value's bytes are equal), on the bus's memory. Every other operation, kind
-  16's result and a start without its words are refused (a bus error). A-IMGPRO-1: a run ends 1 ms of lab time after
-  its start. Under camapp 3 only, at the application's start: H-IMGPROINIT runs the init's IRQ attach `0x5048c3a0`, the
-  id bitmap's clear `0x5048ba3a` and the unit's own init `0x5050a6b2` natively (not the rest of `0x50481211`, which
-  inits the unit at `0x9c200000` and others, nor `0x5048d57f`), and S-STAGE9 sets stage 9's bit (as S-BOOTSTAGE and
-  H-AUDSTART set stages 1 and 6). Default sessions never write the unit (X: golden unchanged).
-- **Result (X, `emu/test/test_camapp.mjs` traRoutingSession 19 of 19; `emu/test/test_imgpro.mjs` 28 of 28).** After
+  behaviour, IRQ 300 high while the end bit and the enable are set, and of the runs only kind 14's fills computed, from
+  the words its set-up writes and only for that program (its mode's words and no other parameter word since the last
+  start); how the unit reads them is I, the value as a little-endian word at 4-byte aligned addresses (I; a range off a
+  4-byte boundary is refused unless the value's bytes are equal), on the bus's memory. Every other operation (kind 6's
+  op 3 and kind 17 among them), kind 16's result and a start without its words are refused (a bus error). A-IMGPRO-1: a
+  run ends 1 ms of lab time after its start. Under camapp 3 only, at the application's start: H-IMGPROINIT runs the
+  init's IRQ attach `0x5048c3a0`, the id bitmap's clear `0x5048ba3a` and the unit's own init `0x5050a6b2` natively (not
+  the rest of `0x50481211`, which inits the unit at `0x9c200000` and others, nor `0x5048d57f`), and S-STAGE9 sets stage
+  9's bit (as S-BOOTSTAGE and H-AUDSTART set stages 1 and 6). Default sessions never write the unit (X: golden
+  unchanged).
+- **Result (X, `emu/test/test_camapp.mjs` traRoutingSession 19 of 19; `emu/test/test_imgpro.mjs` 31 of 31).** After
   three passes of S1 and S2: MENU's cmd 15 wait as in 4.2.1, the fill's run (the bank's first and last words `0b 80 0b
   80`), its end taken natively, the unit powered down again; the menu opens (ID_ST_MENU) and closes; PLAY shows
   playback's ID_ST_NO_PICTURE with two more fills of the same bank and PLAY returns; their transactions are the
   components' (4.1.5). Without shots the menu and playback passes repeat (X, twice).
 - **Next stops (X).** (1) After the menu and playback passes a pass of S1 and S2 records its picture (the fourth), and
-  then no key is taken: MENU's EV_PRESS_MENU_KEY reaches UI_IN, the step sets no GUI event and sends no transaction;
-  the same after 5 s of idle, for OK and PLAY. A shot before any menu pass leaves the menu working; the one difference
-  in the stand-ins' logs of the two shots is a request on queue 90 at S1 that S-MODACK acknowledges (`{6, 0xf00c0000,
-  0, ...}` to queue 6); what the application waits for is ?. (2) With pictures on the card PLAY shows
-  ID_ST_NO_PICTURE, not the newest picture (camapp 1's S-PLAYSEQ / S-PLAYCOMP show it); why the play path decides so is
-  ?. (3) In that playback, right fills the other bank (bus `0x9a43e000`, same size and value), and left stops the
-  session: the OXF main thread's display manager send (`0x503eba00`, return `0x503eba07`) waits on queue 6, full
-  (tsnd_dtq with no timeout).
+  then no key is taken: MENU's EV_PRESS_MENU_KEY reaches UI_IN, the step sets no GUI event and sends no transaction; the
+  same after 5 s of idle, for OK and PLAY. A shot before any menu pass leaves the menu working; the one difference in
+  the stand-ins' logs of the two shots is a request on queue 90 at S1 that S-MODACK acknowledges (`{6, 0xf00c0000, 0,
+  ...}` to queue 6); what the application waits for is ?. (2) With pictures on the card PLAY shows ID_ST_NO_PICTURE, not
+  the newest picture (camapp 1's S-PLAYSEQ / S-PLAYCOMP show it); why the play path decides so is ?. (3) In that
+  playback, right fills the other bank (bus `0x9a43e000`, same size and value), and the session stops before any other
+  key, within 50 ms of idle after that fill (X, 2026-11-10, each key held 100 ms with 800 ms of idle after it;
+  corrected: not at a later left): the OXF main thread's display manager send (`0x503eba00`, timeout -1, D) waits on
+  queue 6, full (tsnd_dtq with no timeout; X: task 57's stack holds the returns `0x503eba07` and `0x5002c1f8`).
 - **REC and the album manager.** S-JPEGENC keeps REC's header fill (`0x5048ee61` from `0x5054c9d3`, kind 14 mode 4,
   41984 bytes of 0 at `0xab0bd800`): with the hook lifted under camapp 3 the fill ran natively, but rec_jpeg_exec runs
   in S-RECIMAGE's lab call, outside REC_IMAGE's task, and the request's wait blocked the lab task (X: "all tasks
-  blocked"); it needs REC_IMAGE's own task. S-ALBM is unchanged and not tried: the DCF numbering mount
-  that would start ALBM_MAIN runs at the storage bring-up, before camapp 3's H-IMGPROINIT, and the movie module it
-  asks next does not run (S-ALBM's text). Both texts now say so.
+  blocked", rerun 2026-11-10 at the first shot): a plain lab call does not move lab time when every task waits
+  (`emu/src/lab/kernel.mjs`, no on_idle), so the unit's end, 1 ms of lab time on, never comes. It needs the call run
+  where lab time moves (REC_IMAGE's own task, I, or a call whose idle runs the clock). S-ALBM is unchanged and not
+  tried: the DCF numbering mount that would start ALBM_MAIN runs at the storage bring-up, before camapp 3's
+  H-IMGPROINIT, and the movie module it asks next does not run (S-ALBM's text). Both texts now say so.
 - **What still keeps camapp 1 the default.** The TFT's composite is refused once the components start the VSC
   histogram (A13, 4.2.1), so a camapp 3 session publishes no frames (I: every frame check and golden play scenario
   would fail on that alone); the keys lost after a menu pass and a shot (1 above); playback with pictures (2, 3

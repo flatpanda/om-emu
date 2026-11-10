@@ -20,12 +20,13 @@ lab), I (inference), ? (unknown). The round that read it: `docs/hle-gaps.md` 4.3
   and returns 0 (`0x9e01` when a phase refuses, `0x9e02` without an id). Kind 6's handler starts it with `0x5050a6dd`
   and the same go (`0x5046dc62`, `0x5046dc89`).
 - **The issue and its wait (D, X).** A request is issued through `0x50493824` (59 call sites in the library); its
-  wait `0x50493617` waits up to 1000 ms (`0x5049362a`: `0x5048e410(1000)`) and then runs the kind's end through
-  `0x5046d7cb`. X: with no end raised the end ran 999.3 ms of lab time after the go; with the end raised it ran at once.
+  wait `0x50493617` waits up to 1000 ms (`0x5049362a`: `0x5048e410(1000)`; the request's halfword +36 replaces the
+  timeout when it is not 0, `0x50493635..3f`) and then runs the kind's end through `0x5046d7cb`. X: with no end
+  raised the end ran 999.3 ms of lab time after the go; with the end raised it ran at once.
 - **The init (D).** The library's init `0x5046d7ab`, which USTART2's boot stage calls (`0x501e91d8`), runs the IRQ
   attach `0x5048c3a0`, the id bitmap's clear `0x5048ba3a`, the units' init `0x50481211` (which calls this unit's own
   init `0x5050a6b2` at `0x50481322`, among the inits of the unit at `0x9c200000` and others) and `0x5048d57f`.
-- **The interrupt (D).** `0x5048c3a0` attaches the library's 15 IRQs (282, 283, 288..292, 296..302), each on CPUs 0..3
+- **The interrupt (D).** `0x5048c3a0` attaches the library's 14 IRQs (282, 283, 288..292, 296..302), each on CPUs 0..3
   through `0x50053fcd` and then disabled there through `0x5005401d`; IRQ 300 with the handler `0x5048bfe3` at level 4
   (`0x5048c728..0x5048c799`). The go enables IRQ 300 on the calling core (`0x50053ff6(300)`); the end disables it
   (`0x50054004(300)`, `0x5050a92e`). The attach is exclusive and the enable writes back the attach's shadow level
@@ -52,23 +53,28 @@ lab), I (inference), ? (unknown). The round that read it: `docs/hle-gaps.md` 4.3
 | `+0x020` | go (1), handler (the status and enable) | handler | status: bit 0 a run's end (I: write 1 to clear, from the handler's write-back) |
 | `+0x028` | go (1), handler (0), end (1) | handler | interrupt enable, bit 0 |
 | `+0x030`, `+0x040`, `+0x044`, `+0x048`, `+0x04c`, `+0x070`, `+0x074` | init, starts, end (1) | - | I: set and clear pairs (`+0x040` / `+0x044`, `+0x048` / `+0x04c`, `+0x074` / `+0x070`) of clock or power controls |
-| `+0x080..+0x094` | set-ups | - | addresses >> 4: `+0x080` source, `+0x084` destination, `+0x088`, `+0x08c` a second plane's (kind 17), `+0x090`, `+0x094` (kind 6) |
+| `+0x080..+0x094` | set-ups | - | addresses >> 4: `+0x080` source (kinds 13, 16, 17), `+0x084` destination (kinds 13, 14) or kind 17's source's second plane, `+0x088` kind 17's destination, `+0x08c` its second plane, `+0x090`, `+0x094` (kind 6) |
 | `+0x0b4..+0x0c8` | set-ups | - | pitches >> 4, by the same planes |
 | `+0x0fc` | kind 6 | - | ? |
 | `+0x108` | set-ups (kind 6: 0..3; 13, 14, 16, 17: 3) | handler | the operation |
-| `+0x380` | set-ups | handler | the mode: 0 kind 13's linear copy, 1..3 its other copies, 4 and 5 kind 14's fills, 8 kind 16 |
+| `+0x10c..+0x1c0` | kind 6, every op but 3 (its parameter block's +80..) | - | ? |
+| `+0x1c4..+0x2cc`, `+0x2d0..+0x308`, `+0x30c..+0x368` | kind 6, ops 0, 1, 2 (the block's +264.., +532.., +592..) | - | ? |
+| `+0x380` | set-ups (kind 17 none) | handler | the mode (I): 0 kind 13's linear copy, 1..3 its other copies, 4 and 5 kind 14's fills, 8 kind 16; kind 6's op 3 copies its block's +692.. into the whole of `+0x380..+0x3ac` |
 | `+0x384` | set-ups | - | a count in bytes (linear copy and fill, kind 16) |
 | `+0x388`, `+0x38c` | kind 13 (modes 2, 3) | - | ? |
 | `+0x390` | set-ups | - | the low 7 bits of the address(es) (linear modes), or the column in bytes (rectangle modes) |
 | `+0x394` | set-ups | - | width in bytes \| rows << 16 |
 | `+0x398` | kind 14 | - | the fill's 32-bit value |
 | `+0x39c` | kind 14, mode 5 | - | 0 |
-| `+0x3a0..+0x3a8` | kind 17 | - | the scale factors (source size << 12 / destination size, per axis) and phase offsets |
+| `+0x3a0..+0x3a8` | kind 17 | - | `+0x3a0` the scale factors (the source's halfword +16 << 12 over the destination's width, low half, and over its height, high half), `+0x3a4`, `+0x3a8` the source's +24 and +26 less half its +16 and +18 |
 | `+0x3ac` | kind 16 | - | kind 16's parameter (the request's +32) |
 | `+0x3b0` | - | handler | kind 16's result |
 
-Every operand of the driver (`0x5050a6b2..0x5050b547`) and the handler lies in `+0x000..+0x3b0` (the firmware map's
-MMIO list, D); no base-register access to the unit was found in them.
+Every absolute operand of the driver (`0x5050a6b2..0x5050b547`) and the handler lies in `+0x000..+0x3b0` (the firmware
+map's MMIO list, D). Three places reach the unit through a base register (D): the end's `+0x000` and kind 17's start's
+`+0x004` (each written and read back, `0x5050a922`, `0x5050a875`) and kind 6's set-up `0x5050b328`, which gets the base
+in a0 (`0x5050a71f`) and copies its parameter block into the rows above (`0x5050b3cd`, `0x5050b439`, `0x5050b4be`,
+`0x5050b520`, `0x5050b53b`); all of them inside `+0x000..+0x3b0` too.
 
 ## 4. The set-ups
 
@@ -93,25 +99,32 @@ MMIO list, D); no base-register access to the unit was found in them.
 - **Kind 16 (`0x5050b1b8`, D, not modelled).** `+0x108` = 3, `+0x080` = (+20) >> 4, `+0x380` = 8, `+0x384` = +28,
   `+0x390` = (+20) & 127, `+0x3ac` = +32; the start sets unit 7's record +40 to the request's +24, where the handler
   stores `+0x3b0`. What mode 8 computes is ?.
-- **Kind 17 (`0x5050b1f5`, D, not modelled).** Two images: the source's and destination's addresses, pitches, sizes, the
-  scale factors in 12-bit fixed point and the source's phase; for the source format 3079 also the second planes
-  (`+0x084`, `+0x08c`, their pitches `+0x0b8`, `+0x0c0`). A scaler (I, from the factors); its filter is ?.
-- **Kind 6 (`0x5050b328`, D, not modelled).** `+0x108` = 0..3 with up to three planes' addresses and pitches and two
-  register blocks of 776 and 940 bytes (not read further).
+- **Kind 17 (`0x5050b1f5`, D, not modelled).** Two images: the source's and destination's addresses, pitches, the
+  destination's size, the scale factors in 12-bit fixed point (both from the source's halfword +16, `0x5050b24a..71`)
+  and the source's phase; for the source format 3079 also the second planes (`+0x084`, `+0x08c`, their pitches
+  `+0x0b8`, `+0x0c0`). It writes no `+0x380`, so the mode is the last request's. A scaler (I, from the factors);
+  its filter is ?.
+- **Kind 6 (`0x5050b328`, D, not modelled).** From a parameter block (the start's +8): `+0x108` = its +76 (0..3), up to
+  six planes' addresses and pitches (`+0x080..+0x094`, `+0x0b4..+0x0c8`, raw words) and `+0x0fc` (op 1), and per op a
+  block copied word by word through the base register: op 0 `+0x1c4..+0x2cc`, op 1 `+0x2d0..+0x308`, op 2
+  `+0x30c..+0x368`, op 3 `+0x380..+0x3ac` (the whole of op 3's words, the mode among them), and for every op but 3
+  `+0x10c..+0x1c0`. What the words mean is ?.
 
 ## 5. The lab's model (S-IMGPRO, A-IMGPRO-1)
 
-The register file above, with the behaviour the driver relies on: storage for the words the driver writes, a bus error
-for any other address, a width other than 4, an unaligned access and a debugger write; the status write 1 to clear;
-IRQ 300 high while status bit 0 and the enable are set; a run started by `+0x00c` then `+0x018` written 1 while the
-unit is powered up (`+0x004` written after `+0x000`). Of the runs only op 3's modes 4 and 5 are computed, from the words
-written since the last start (each word kind 14's set-up writes for the mode must have been written): the destination
+The register file above, with the behaviour the driver relies on: storage for the words the driver names as absolute
+operands, a bus error for any other address (kind 6's blocks among them), a width other than 4, an unaligned access and
+a debugger write; the status write 1 to clear; IRQ 300 high while status bit 0 and the enable are set; a run started by
+`+0x00c` then `+0x018` written 1 while the unit is powered up (`+0x004` written after `+0x000`). Of the runs only op 3's
+modes 4 and 5 are computed, and only for kind 14's own program: each word its set-up writes for the mode written since
+the last start and no other parameter word (so kind 6's op 3 and kind 17 are refused; a refused start ends the program).
+How the unit reads those words is I, from the set-up's arithmetic and the callers' use of the fill: the destination
 range as section 4 gives it, on the bus's memory (`emu/src/dev/bus.mjs`: the DRAM at `0xa0000000` and the live-view
-banks), the value as a little-endian 32-bit word at 4-byte aligned addresses (I; the firmware composes it per pixel
-pair). A range off a 4-byte boundary is refused unless the value's four bytes are equal (where the word's phase starts
-is not read), and so are every other op or mode, `+0x39c` other than 0, inconsistent `+0x084` / `+0x390` of a linear
-fill, rows longer than their pitch, a start while one runs and a read of `+0x3b0`. A-IMGPRO-1: the bytes are written
-and the end raised 1 ms of lab time after the start (the unit's real time is ?; the wait allows 1000 ms).
+banks), the value as a little-endian 32-bit word at 4-byte aligned addresses (the firmware composes it per pixel pair).
+A range off a 4-byte boundary is refused unless the value's four bytes are equal (where the word's phase starts is not
+read), and so are every other op or mode, `+0x39c` other than 0, inconsistent `+0x084` / `+0x390` of a linear fill, rows
+longer than their pitch, a start while one runs and a read of `+0x3b0`. A-IMGPRO-1: the bytes are written and the end
+raised 1 ms of lab time after the start (the unit's real time is ?; the wait allows 1000 ms).
 
 ## 6. Open
 

@@ -109,7 +109,7 @@ report('command-line parser', argsTests());
 report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnits());
 report('SCPU clock, ports, link pins and the sub-CPU (S-SCPUDEV)', scpuUnits());
 report('HDMI port: transmitter, hot-plug pin, sink (S-HDMISINK)', hdmiUnits());
-report('kind-3 VSC COMPOSE on E122\'s and E118\'s boards (planes, palette groups, scaler, levels, refusals, the line compare)', vsc3Units());
+report('kind-3 VSC COMPOSE on E122\'s and E118\'s boards (planes, palette groups, order codes, scaler, levels, refusals, the line compare)', vsc3Units());
 report('accelerometer sample (S-ACCSAMPLE)', accUnits());
 report('SD card and FAT / exFAT readers (S-SDCARD, refs/fat.mjs, refs/exfat.mjs)', storageUnits());
 report('subject frames: the scene\'s subject boxes, DISP_FRAME\'s transform taken back (S-SUBJECT)', subjectUnits());

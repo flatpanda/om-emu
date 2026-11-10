@@ -20,14 +20,16 @@
 //   pixel index    the low 7 bits of the 8-bit pixel (I: the GUI fills with 255 and 127, entry 127 is transparent in
 //                  all three palettes, X)
 //   mix            OSD4 must hold 0x111111 (the value every open writes, X)
-//   OSD stacking   OSD1 (+0x1a4), which the OSD-plane open writes (E144 2, E139 3; a setter replaces its low nibble
-//                  with a byte of the device's record, D), says which OSD plane is on top: 3, OSD1 at the bottom and
-//                  OSD3 on top; 2, the reverse. A build's commit takes OSD1's address from the display record's osd
-//                  word 2 where its open writes 3 (E139) and from word 0 where it writes 2 (E144, D), so either way GUI
-//                  layer 0 is at the bottom and layer 2 on top (I: with OSD3 on top, E144's menu background on layer 0
-//                  hid its list on layer 1, X). 3 on every body of the family, 2 on E144 and E148 (X); another value is
-//                  refused (ORDER). Kind 3 takes 3 only: its planes' palettes are fixed to their layers (below), and
-//                  its opens write 3 (D). The addresses are in docs/om1-vsc-spec.md section 12
+//   OSD order      OSD1 (+0x1a4) holds the OSD planes' order code, 0..5 (ORDER_CODES below; both kinds). The
+//                  OSD-plane open writes it (E144 2, E139 3, D), and the layer-custom path replaces its low bits with
+//                  the custom record's osd_mixorder (E144's setter the low nibble, for a value of 5 or less; kind 3's
+//                  below), the code the GUI's GPISetOsdOrder takes from its table of six orders (D; the addresses are
+//                  in docs/model-survey.md finding 96). A build's commit takes OSD1's address from the display
+//                  record's osd word 2 where its open writes 3 (E139) and from word 0 where it writes 2 (E144, D), so
+//                  both give the GUI layers from the top 0, 2, 1: layer 1 at the bottom, under layer 2 (I,
+//                  ORDER_CODES; X: the menus' background is layer 1, an opaque fill under layer 2's rows, on E139 and
+//                  E144). 3 on every body of the family, 2 on E144 and E148 (X); another value is refused (ORDER). The
+//                  addresses are in docs/om1-vsc-spec.md section 12
 // Kind 3 keeps every word above at its kind-2 offset (read from E122's code, docs/om1-vsc-spec.md section 12 has the
 // sites; X: the TFT's and the EVF's opens leave E144's values there, e.g. AREA22 0x1e02d0 / 0x300400, BG1 0x80800b,
 // the EVF's scaler 0x11, 0x9fc, 0, 0x9fc): the video area from the device's getters, BG1, DMA7 and the OSD planes'
@@ -46,15 +48,23 @@
 //                  with palette id 2, OSD2 layer 1 with id 1 and OSD3 layer 2 with id 0 (X: E122's clock warning, layer
 //                  2's indices 13..33 and its fill 255 in OSD3, layer 0's fill 31 in OSD1, layer 1's 5 in OSD2)
 //   pixel index    OSD3's the low 7 bits (I, as kind 2: layer 2's fill 255 takes entry 127, transparent, X); OSD1's
-//                  and OSD2's below 32, a larger one is not drawn and is counted (PAL_FIELD: no code read says what
-//                  the chip does with it, ?)
+//                  and OSD2's below 32, a larger one is not drawn and is counted (PAL_FIELD: the firmware uploads 32
+//                  entries for layers 0 and 1 and its palette setter refuses an index of 32 or more there, the bounds
+//                  {32, 32, 256}, D, docs/model-survey.md finding 97; what the chip does with such a pixel is ?)
+//   OSD order      as kind 2's, the code in the low 3 bits (the setter `and -8`, called by the layer-custom path when
+//                  the custom record's osd_mixorder at +40 is not 255, on all three bodies, D: finding 96). The GUI's
+//                  default is 3 (152 of its 154 screens ask GPISetOsdOrder's mode 1, D), as
+//                  the opens write: from the top OSD1 (layer 0), OSD3 (layer 2), OSD2 (layer 1) (X: E122's clock
+//                  warning dims the screen with layer 1's fill 5 under layer 2's clock and Y/M/D)
 //   formats        0x1b0 = 0x111 and 0x1b4 = 0x11, the values every open writes (D); E143's OSDFMT1 and OSDFMT2 hold
 //                  the same, kind 2's mix word 0x1b0 another (I): checked as kind 2's mix
-//   level          OSD7..OSD9 as kind 2's enable words; the display sets them to 2 floor(p 128 / 100) for a level of p
-//                  percent (D; 0x100 at 100 %, E143's PLANC form), the EVF's 0xb2 (70 %, X). A build whose code names
-//                  no level word (BOARD.vsc.levels false, src/fw/facts.mjs vscLevels: E118's open writes none, D) has
-//                  its planes drawn at the full level with the plane's ASSUMED bit (what the chip's unwritten level
-//                  word holds is ?; I: E118's clock warning then shows as E122's does)
+//   level          OSD7..OSD9 as kind 2's enable words; the opens write 0x100 and the EVF panel's command scheduler
+//                  sets them to 2 floor(p 128 / 100) for a level of p percent from its command records (D, finding 98;
+//                  0x100 at 100 %, E143's PLANC form): on E122's EVF 0xb2 (70 %, the open's list passes 70, D), then
+//                  0xcc (80 %) at the shooting screen and 0x100 at PLAY (X). A build whose code
+//                  names no level word (BOARD.vsc.levels false, src/fw/facts.mjs vscLevels: E118's open writes none,
+//                  D) has its planes drawn at the full level with the plane's ASSUMED bit (what the chip's unwritten
+//                  level word holds is ?; I: E118's clock warning then shows as E122's does)
 // On both kinds a level other than 0 is drawn as full (E144's EVF writes 0xcc, X; what the chip does with a level
 // below 0x100 is ?, as E143's PLANC, docs/om1-vsc-spec.md section 3, which E143's compositor refuses).
 // IMG planes are not modelled yet: an enabled one is skipped with FMT_UNMODELLED.
@@ -67,15 +77,24 @@ const R = { DMA7: 0x030, DMA12: 0x044, DMA18: 0x05C, AREA10: 0x0C8, AREA22: 0x0F
 const HDR = { CHANNEL: 0, WIDTH: 1, HEIGHT: 2, FRAME: 3, ERRORS: 4, PAL_UNWRITTEN: 5, SKIPPED: 6, DRAWN: 7, OX: 8, OY: 9,
   MIX_FLAGS: 10, T_LO: 11, T_HI: 12, STATUS: 13, ASSUMED: 14, VIEW: 15 };
 const PLANES = 6, P_OSD1 = 3;
+// The OSD order codes: code k's three OSD planes (0 OSD1, 1 OSD2, 2 OSD3) from the top. The table is the GUI's
+// (GPISetOsdOrder's six {code, plane, plane, plane} records, the same 24 bytes in E143, E144, E122, E118, E120 and
+// E130, D: docs/model-survey.md finding 96), the code the layer-custom path writes into OSD1. Reading a record as the
+// planes in their order is I: E144's open writes 2 with GUI layer 2 in OSD1 where E139's and the E118 family's write 3
+// with layer 0 there, and only that reading gives the same GUI layers' order for both (from one end 0, 2, 1). That its
+// first plane is the top one is I, from what the GUI puts on the layers: layer 1 holds the menus' opaque background on
+// E139 and E144 and the clock warning's dimming on E122, each under a figure on layer 2 (X: the planes' contents)
+export const ORDER_CODES = [[2, 1, 0], [1, 2, 0], [2, 0, 1], [0, 2, 1], [1, 0, 2], [0, 1, 2]];
+const ORDER_STACK = new Map(ORDER_CODES.map((top, k) => [k, top.map((q) => P_OSD1 + q).reverse()]));
 // What differs by kind (see the head): mix, the words every open writes, [offset, value]; rszZero, the scaler words
 // after the control that must be zero; palette(q), OSD plane q's palette: sel, the word holding its bank bit (null:
 // one bank), bit, banks [shown while the bit is clear, while it is set] (byte offsets in the channel), entries, mask
 // (the pixel bits that index it; null: a pixel of entries or more is not drawn); stack, OSD1's values and the OSD
-// planes each puts from the bottom up
+// planes each puts from the bottom up (the order codes on both kinds)
 const KINDS = {
-  2: { mix: [[0x1B0, 0x111111]], rszZero: [8, 16, 20], stack: new Map([[3, [3, 4, 5]], [2, [5, 4, 3]]]),
+  2: { mix: [[0x1B0, 0x111111]], rszZero: [8, 16, 20], stack: ORDER_STACK,
     palette: (q) => ({ sel: 0x364 + 8 * q, bit: 0x10, banks: [0x800 + 0x800 * q, 0xA00 + 0x800 * q], entries: 128, mask: 0x7F }) },
-  3: { mix: [[0x1B0, 0x111], [0x1B4, 0x11]], rszZero: [8], stack: new Map([[3, [3, 4, 5]]]),
+  3: { mix: [[0x1B0, 0x111], [0x1B4, 0x11]], rszZero: [8], stack: ORDER_STACK,
     palette: (q) => (q === 2 ? { sel: 0x1B8, bit: 0x10, banks: [0x800, 0xA00], entries: 128, mask: 0x7F }
       : { sel: null, bit: 0, banks: [q === 1 ? 0x680 : 0x600], entries: 32, mask: null }) },
 };
@@ -110,7 +129,8 @@ export function compose2(v, c) {
     let seen = 0;
     for (let i = 0; i < PLANES; i++) { order.push(v.dbg[chanDbg(c, CH.ORDER) + i]); seen |= order[i] < PLANES ? 1 << order[i] : 0x80; }
     if (seen !== 0x3F) { cerror(E.ORDER, 0, 0, 0, 0, 0); status = E.ORDER; break run; }
-    // the OSD planes in the stacking OSD1 gives (the lab's order with each OSD plane replaced by the one at its level)
+    // the OSD planes in the order code OSD1 holds (the lab's order with each OSD plane replaced by the one at its
+    // level); a word other than a code 0..5 is refused
     const osd1 = need(R.OSD1);
     if (osd1 === null) { status = E.UNWRITTEN; break run; }
     const stack = K.stack.get(osd1);

@@ -8,8 +8,9 @@
 //   OSD2's 32 entries at +0x680 (layer 1's) and OSD1's at +0x600 (layer 0's), a pixel of 32 or more not drawn
 //     (PAL_FIELD)
 //   the GUI's three layers as E122's clock warning leaves them (X): OSD1 filled with 31, OSD2 with 5, OSD3 with 255 and
-//     a figure, drawn in the order OSD1, OSD2, OSD3 (the top), which the stacking word 0x1a4 = 3 gives; 2 (kind 2's
-//     reverse order) refused (ORDER), an unwritten one too (UNWRITTEN)
+//     a figure, the figure over the dimming in the order code 3 the opens write in 0x1a4; a word that is no code 0..5
+//     refused (ORDER), an unwritten one too (UNWRITTEN)
+//   each of the six order codes: which plane shows where all three, and where OSD2 and OSD3, hold an opaque pixel
 //   the EVF's scaler (0x11, 0x9fc, 0, 0x9fc): the canvas's corners at the area's, a scaler word +8 refused
 //   the format words 0x1b0 / 0x111 and 0x1b4 / 0x11 (MIX_UNOBSERVED otherwise), a level 0 not drawn (PLANC_ZERO), the
 //     EVF's level 0xb2 drawn, nothing composed before the first frame (NOT_LATCHED), a plane whose level word is
@@ -207,9 +208,9 @@ async function child() {
     ok(r.status === 0 && r.drawn === 0x38 && !r.errors.length, `three layers: status ${r.status} drawn ${hex(r.drawn)} errors ${JSON.stringify(r.errors)}`);
     ok(dim !== BG && (dim & 0xFF) < (BG & 0xFF) && r.px(719, 479) === dim, `layer 1 dims the background: ${hex(dim)}`);
     ok(r.px(300, 200) === (ORANGE & 0xFFFFFF) && r.px(339, 239) === (ORANGE & 0xFFFFFF) && r.px(340, 240) === dim, `layer 2 on top: ${hex(r.px(300, 200))} ${hex(r.px(340, 240))}`);
-    // the OSD stacking word 0x1a4: kind 3 takes 3 only (kind 2's 2, the planes reversed, is refused), and an unwritten
-    // one leaves the stacking unknown
-    for (const [value, want] of [[2, V.E.ORDER], [null, V.E.UNWRITTEN]]) {
+    // the order word 0x1a4: a value that is not a code 0..5 (6, or code 3 with bit 4 set) is refused, and an unwritten
+    // one leaves the order unknown
+    for (const [value, want] of [[6, V.E.ORDER], [0x13, V.E.ORDER], [null, V.E.UNWRITTEN]]) {
       const u = fresh();
       tft(u, true, value);
       fill(L0, 31, [], u.m); fill(L1, 5, [], u.m); fill(L2, 0xFF, [[300, 200, 40, 40, 13]], u.m);
@@ -217,6 +218,34 @@ async function child() {
       const q = u.compose();
       ok(q.status === want && !q.drawn, `0x1a4 ${value}: status ${q.status} drawn ${hex(q.drawn)}, want ${want}`);
     }
+  }
+  // the order codes (the GUI's table, src/dev/vsccompose2.mjs ORDER_CODES: code k's planes from the top): an opaque
+  // square in each plane at (100, 100), and at (200, 100) one in OSD2 and OSD3 only; the top plane's colour shows at the
+  // first, the higher of OSD2 and OSD3 at the second. Code 3, the opens' and the GUI's default: OSD1 (GUI layer 0) on
+  // top, then OSD3 (layer 2), OSD2 (layer 1) at the bottom
+  {
+    const { ORDER_CODES } = await import('../src/dev/vsccompose2.mjs');
+    const L0 = CANVAS, L1 = CANVAS + ROW * 480, L2 = CANVAS + 2 * ROW * 480, BLUE = ycc(31, 29, 255, 107);
+    const colour = [GREEN & 0xFFFFFF, RED & 0xFFFFFF, BLUE & 0xFFFFFF];
+    ok(ORDER_CODES.length === 6 && new Set(ORDER_CODES.map((t) => t.join())).size === 6, `ORDER_CODES: ${JSON.stringify(ORDER_CODES)}`);
+    for (let k = 0; k < 6; k++) {
+      const u = fresh();
+      tft(u, true, k);
+      const sq = (at, idx, both) => {
+        const b = new Uint8Array(ROW * 480).fill(at === L2 ? 0xFF : 31);
+        for (const x0 of both ? [100, 200] : [100]) for (let y = 100; y < 110; y++) b.fill(idx, y * ROW + x0, y * ROW + x0 + 10);
+        u.m.dbgWrite(at, b);
+      };
+      sq(L0, 1, false); sq(L1, 2, true); sq(L2, 3, true);
+      u.reg(0x030, 7); u.reg(0x044, L0); u.reg(0x048, L1); u.reg(0x04C, L2); u.reg(0x1B8, 0x10);
+      u.reg(0x600 + 4 * 31, CLEAR); u.reg(0x600 + 4, GREEN); u.reg(0x680 + 4 * 31, CLEAR); u.reg(0x680 + 8, RED);
+      u.reg(0xA00 + 4 * 127, CLEAR); u.reg(0xA00 + 12, BLUE);
+      const r = u.compose(), top = ORDER_CODES[k], second = top.find((q) => q !== 0);
+      ok(r.status === 0 && r.drawn === 0x38 && !r.errors.length, `code ${k}: status ${r.status} drawn ${hex(r.drawn)} errors ${JSON.stringify(r.errors)}`);
+      ok(r.px(105, 105) === colour[top[0]] && r.px(205, 105) === colour[second] && r.px(0, 0) === BG,
+        `code ${k} (top ${top}): ${hex(r.px(105, 105))} at the three, ${hex(r.px(205, 105))} at OSD2 and OSD3, want ${hex(colour[top[0]])}, ${hex(colour[second])}`);
+    }
+    ok(JSON.stringify(ORDER_CODES[3]) === '[0,2,1]', `code 3: ${JSON.stringify(ORDER_CODES[3])}, the opens' order from the top OSD1, OSD3, OSD2`);
   }
   // the EVF: area {48, 38} 1024 x 768, the 640 x 480 canvas through the scaler; level 0xb2 drawn, 0 not
   {

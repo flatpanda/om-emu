@@ -35,11 +35,14 @@
 //                  library's request id comes from udf07 0x5050a089 (docs/om1-udf-spec.md row 14), the imgpro unit
 //                  0x9c600000 (S-IMGPRO, H-IMGPROINIT) fills the through image's bank (kind 14's rectangle fill, its
 //                  end taken natively through IRQ 300) and the image player's stage 9 is readied (S-STAGE9): the menu
-//                  opens and closes, PLAY shows playback's No Picture with the card's pictures and returns; then a pass
-//                  of S1 and S2 records its picture and MENU is not taken (no GUI event: the furthest point,
-//                  docs/hle-gaps.md 4.3.1); with --hdmi on the plug's TRA 588 is the component's (no
-//                  S-OUTDEV), the HDMI device opens and channel 0 composes its window with no plane drawn, and the
-//                  plug's cmd 15 waits as the menu's does
+//                  opens and closes, the through image running again after it; PLAY shows playback's No Picture with
+//                  the card's pictures (the play module's header getter finds the picture not loaded), right (which
+//                  fills the other bank) and left are taken, PLAY returns; then a pass of S1 and S2 records its
+//                  picture and MENU is not taken (no GUI event, the sequence waiting in phase 102 for a take-ready
+//                  nothing finishes: the furthest point, docs/hle-gaps.md 4.3.2); control: S-MODACK's requests left
+//                  in PLAY_EXEC's queue, right's blocks the OXF main thread there; with --hdmi on the plug's TRA 588
+//                  is the component's (no S-OUTDEV), the HDMI device opens and channel 0 composes its window with no
+//                  plane drawn, and the plug's cmd 15 waits as the menu's does
 //   modeDialSession  the mode dial in play (E143): it starts at P, the start's mode; each position's change sets its
 //                  mode (MODE_EXPOSE, the custom banks' MODE_RAW, B's MODE_DIAL_B_ONOFF) and keeps the other settings,
 //                  each position shows a screen of its own, and away from P OK opens the Super Control Panel and MENU
@@ -304,6 +307,22 @@ const NATIVE_RESULT = { 992: 0xF0000058 };
 // (Y 0x0b, Cb and Cr 0x80); the GUI states the menu, playback and their returns reach
 const MENU_FILL = { op: 3, mode: 5, dst: 0x98D4D800, bytes: 1800, rows: 600, pitch: 11136, value: 0x800B800B };
 const GUI_MENU = '0x0b02', GUI_SHOOTING = '0x0108', GUI_NO_PICTURE = '0x0505';
+// the next stops (docs/hle-gaps.md 4.3.2; D unless tagged):
+//   CapThr's state word (getter 0x50bcccc9), whose top byte 1 the sequence parts' S1 guard 0x50bcdef7 asks for (X: 2
+//   before the menu, the static 0x02010202; 1 after it closes)
+//   playback: Play_Get_Picture_Header_Info's getter in the play module (0x518b629e) has its code in d2 at
+//   0x518b62dc: 6152 where the picture's record (0x518bfc7e) is not marked loaded (+12 not 1); the play capability
+//   then sets its state word 0x62b0dc8c to 4 (0x50bb20dd), from which playOneFrameStart answers 0xf0000001
+//   (0x50c5007b); right fills the other bank (X)
+//   the sequence parts' phase (0x60364a1c, getter 0x50cc60fa): 102 after an S1 whose take-ready nothing finishes;
+//   isCtrlReleaseEnable (0x50ab5c04) logs "UNRESPONSIVE(Seq=%d)" at 0x50ab5c26, the phase at (8,sp), and refuses
+//   the key for any phase but 100 and 101
+//   the control: PLAY_EXEC's queue (0x3f), which holds two messages (X: 40 bytes, 20 a message)
+const THR_STATE = 0x60362B38, THR_RUNNING = 1, THR_NOT_RUNNING = 2;
+const HEADER_INFO_CODE = 0x518B62DC, HEADER_NOT_LOADED = 6152, PLAY_CAP_STATE = 0x62B0DC8C, PLAY_CAP_FAILED = 4;
+const RIGHT_BANK = 0x9A43E000, SEQ_PHASE = 0x60364A1C, PHASE_TAKE_READY = 102, RELEASE_UNRESPONSIVE = 0x50AB5C26;
+const PLAY_EXEC = 0x3F, API_SEND_RETURN = 0x503EBA07, OLYQEWR = 0x5002C151, OXF_MAIN_TASK = 57;
+const hx = (v) => (v === undefined || v === null ? String(v) : '0x' + (v >>> 0).toString(16));
 // the histogram (docs/hle-gaps.md 4.2.1): at least HIST_RUNS_MIN runs in the start and 2 s of idle (X: a run every 50
 // ms), HIST_BIN_WORDS bin words a read (128 bins, 0x501d6aa6..cb's clamp, D); cmd 15's wait returns within two frames
 // and the key's own step (the TFT's 16.68 ms frame, X)
@@ -388,19 +407,69 @@ export async function traRoutingSession() {
       ok(menu === GUI_MENU && unit.runs - runs0 === 1 && want && filled && !unit.powered && unit.status === 0
         && ['H-IMGPROINIT', 'S-STAGE9', 'S-IMGPRO', 'A-IMGPRO-1'].every((x) => now.includes(x)),
         `${tag}: the menu opens (${menu}) after the imgpro unit's fill of the through image's bank (runs ${unit.runs - runs0}, ${JSON.stringify(fill)}, its first and last words ${[...edge, ...tail]}; powered ${unit.powered}, status ${unit.status}; ${now.filter((x) => /IMGPRO|STAGE9/.test(x))})`);
-      // the menu closes; playback shows No Picture although the card holds the passes' pictures, and returns
-      const [closed] = key('menu'), [play] = key('play'), [back] = key('play');
-      ok(closed === GUI_SHOOTING && play === GUI_NO_PICTURE && back === GUI_SHOOTING && ca.card_images() === 3,
-        `${tag}: MENU closes the menu (${closed}), PLAY shows ${play} with ${ca.card_images()} pictures on the card, PLAY returns (${back}); imgpro runs ${unit.runs - runs0}`);
+      // the menu closes, and the components have restarted the through image (CapThr's state word's top byte 1, where
+      // the passes before had it 2, the static value S-TAKEOVER leaves: docs/hle-gaps.md 4.1.7)
+      const thr = () => lab.sim.u32(THR_STATE) >>> 24, thr0 = thr();
+      const [closed] = key('menu'), thr1 = thr();
+      ok(closed === GUI_SHOOTING && thr0 === THR_NOT_RUNNING && thr1 === THR_RUNNING,
+        `${tag}: MENU closes the menu (${closed}); CapThr's state word's top byte ${thr0} before the menu, ${thr1} after`);
+      // playback shows No Picture although the card holds the passes' pictures: the play module does not run, S-MODACK
+      // answers its Play_Picture request, and Play_Get_Picture_Header_Info's getter finds the picture not loaded, so the
+      // play capability's state goes to 4 (docs/hle-gaps.md 4.3.2)
+      const codes = [];
+      lab.observe(HEADER_INFO_CODE, (l, r) => codes.push(r.d2 & 0xFFFF), 'test: the header info getter\'s code');
+      const [play] = key('play'), cap = lab.sim.read(PLAY_CAP_STATE, 2), capState = cap[0] | cap[1] << 8;
+      ok(play === GUI_NO_PICTURE && ca.card_images() === 3 && codes.includes(HEADER_NOT_LOADED) && capState === PLAY_CAP_FAILED,
+        `${tag}: PLAY shows ${play} with ${ca.card_images()} pictures on the card: the header info getter's codes ${codes}, the play capability's state ${capState}`);
+      // right and left are taken in playback (right fills the other bank) and PLAY returns: S-MODACK takes the play
+      // requests off PLAY_EXEC's queue, which holds two (until 2026-11-10 right's blocked the OXF main thread there)
+      const runs1 = unit.runs, [right] = key('right'), fillR = unit.last(), [left] = key('left'), [back] = key('play');
+      ok(right === GUI_NO_PICTURE && unit.runs - runs1 === 1 && fillR?.dst === RIGHT_BANK && left === GUI_NO_PICTURE && back === GUI_SHOOTING,
+        `${tag}: right (${right}) fills ${hx(fillR?.dst)} (runs ${unit.runs - runs1}), left (${left}), PLAY returns (${back})`);
       // the furthest point: a pass of S1 and S2 after them records its picture, and MENU is then not taken (its key
-      // code reaches UI_IN, the GUI gets no event)
+      // code reaches UI_IN, the GUI gets no event): with the through image running, S1 passes the sequence parts' guard
+      // and the sequence waits in phase 102 for TAKE's take-ready, which no module answers; isCtrlReleaseEnable then
+      // refuses every key (docs/hle-gaps.md 4.3.2)
       pass();
+      const phase = lab.sim.u32(SEQ_PHASE), unresponsive = [];
+      lab.observe(RELEASE_UNRESPONSIVE, (l, r) => unresponsive.push(l.sim.u32((r.sp >>> 0) + 8)), 'test: isCtrlReleaseEnable\'s refusal');
       const [after, rec] = key('menu');
-      ok(ca.card_images() === 4 && after === GUI_SHOOTING && rec.events.length === 0 && rec.uiin?.[0]?.ev === 'EV_PRESS_MENU_KEY',
-        `${tag}: after a further pass (${ca.card_images()} pictures) MENU's ${rec.uiin?.[0]?.ev} sets no GUI event (${rec.events.length}), the GUI stays ${after}`);
+      ok(ca.card_images() === 4 && after === GUI_SHOOTING && rec.events.length === 0 && rec.uiin?.[0]?.ev === 'EV_PRESS_MENU_KEY'
+        && phase === PHASE_TAKE_READY && unresponsive.length >= 1 && unresponsive.every((p) => p === PHASE_TAKE_READY),
+        `${tag}: after a further pass (${ca.card_images()} pictures, the sequence in phase ${phase}) MENU's ${rec.uiin?.[0]?.ev} sets no GUI event (${rec.events.length}), isCtrlReleaseEnable unresponsive it in phases ${unresponsive}, the GUI stays ${after}`);
     } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 600)}`); }
     pl.close_session();
   }
+  // control: PLAY_EXEC's requests answered as S-MODACK answered them before 2026-11-10, their messages left in the
+  // kernel's queue: right's request finds it full and the OXF main thread waits for good, which the blocked-send guard
+  // reports as a send to PLAY_EXEC by that task (it named queue 6 before, the queue of a later send through the site)
+  const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, env);
+  pl.camapp_components = true; pl.camapp_native_tra = true;
+  try {
+    pl.open_session();
+    const s = pl.session, lab = s.lab, ca = s.camapp, { disasm } = await import('../src/lab/hle.mjs');
+    const idle = (ms) => { const to = lab.lab_time() + ms * 1e6; while (lab.lab_time() < to) s.idle_slice(Math.min(to, lab.lab_time() + 50e6)); };
+    const key = (k) => { s.key(k, 'down'); s.camapp.pump(); idle(100); s.key(k, 'up'); s.camapp.pump(); idle(800); };
+    ca.module_queues.delete(PLAY_EXEC);
+    lab.wrap(OLYQEWR, (prev) => (h, r) => {
+      if (disasm(r.mdr) === API_SEND_RETURN && (r.d0 & 0xFFFF) === PLAY_EXEC) {
+        const p = lab.sim.u32(r.a0 >>> 0);
+        ca.acks.push({ q: PLAY_EXEC, w: [0, 1, 2, 3].map((k) => lab.sim.u32(p + 4 * k)) });
+      }
+      return prev(h, r);
+    }, 'test: S-MODACK as before for PLAY_EXEC');
+    let stop = null;
+    try {
+      for (let i = 0; i < 2; i++) {                                                  // two pictures, so right moves
+        s.key('s1', 'down'); s.camapp.pump(); idle(600); s.key('s2', 'down'); s.camapp.pump(); idle(700);
+        s.key('s2', 'up'); s.camapp.pump(); s.key('s1', 'up'); s.camapp.pump(); idle(2000);
+      }
+      for (const k of ['menu', 'menu', 'play', 'right']) key(k);
+    } catch (e) { stop = e.message; }
+    const want = new RegExp(`waits on a full queue: queue ${PLAY_EXEC} from \\S+ \\(disasm 0x5002c1f8\\) in task ${OXF_MAIN_TASK} `);
+    ok(stop !== null && want.test(stop), `control: with PLAY_EXEC's messages left in its queue right's request blocks the OXF main thread there: ${stop?.slice(0, 240)}`);
+  } catch (e) { bad.push(`control: ${e.message.slice(0, 600)}`); }
+  pl.close_session();
   return { checks, bad };
 }
 

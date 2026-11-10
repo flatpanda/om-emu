@@ -498,14 +498,13 @@ unknown):**
     `0x5048ba86`; id `0x801f`, D).
   - *The next stop: the imgpro unit `0x9c600000` (X, D).* The request is kind 14 at its +16, built at `0x50490c89` when
     the image's halfword at +8 is 3074 (D): the kind `0x5048ee61` builds for REC's header (the image engine's fill that
-    S-JPEGENC does for REC).
-    Its issue `0x50493824` reaches the kind's driver through `0x5046d814` (the table at `0x6065a834`, whose entry 14
-    is the handler `0x5046daa2`, D) and `0x5046db04`:
-    `0x5050a797` writes 1 to `0x9c600004` at `0x5050a7a9`, which the lab refuses (no model of the unit; lab-stub
-    denied, fault 2; the stack's return addresses, X). PLAY after a pass of S1 and S2 stops at the same write, after
-    its transactions 974, 937, 994, 1036, 1046, 1002, 987, 691, 599, 553 and 556 were each answered 0 by the
-    components (X), so playback's transactions are now reached in camapp 3. Camapp 3 still stops at the menu and at
-    playback, so camapp 1 stays the default and the heap workload's menu and playback passes are not measured in it.
+    S-JPEGENC does for REC). Its issue `0x50493824` reaches the kind's driver through `0x5046d814` (the table at
+    `0x6065a834`, whose entry 14 is the handler `0x5046daa2`, D) and `0x5046db04`: `0x5050a797` writes 1 to `0x9c600004`
+    at `0x5050a7a9`, which the lab refuses (no model of the unit; lab-stub denied, fault 2; the stack's return
+    addresses, X). PLAY after a pass of S1 and S2 stops at the same write, after its transactions 974, 937, 994, 1036,
+    1046, 1002, 987, 691, 599, 553 and 556 were each answered 0 by the components (X), so playback's transactions are
+    now reached in camapp 3. Camapp 3 still stops at the menu and at playback, so camapp 1 stays the default and the
+    heap workload's menu and playback passes are not measured in it.
 - **The "swap wait" of the HDMI round (X, corrected).** The 300,000 stub calls 4.9 reports at the HDMI open under
   camapp 2 were counted under the hook name "S-DISPFRAME (swap wait)", which is the OlyTaSS wrapper every sleep goes
   through (DISP_FRAME's swap sleeps are only some of them; the counts: the accelerometer task's 80 ms sleeps and the

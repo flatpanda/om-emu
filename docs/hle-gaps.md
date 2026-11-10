@@ -1750,6 +1750,106 @@ unchanged and a camapp session runs the same instructions in the same wall time 
   (5) Snapshots, the live debugger and traces with a second core are refused or untested: 1-2 h. (6) CPU 0's boot ring
   and kernel start natively (K-BOOTSYNC, K-STARTBITS) need CPU 0's reset path in the lab.
 
+#### 4.6.2 CPU 2 natively, round 2: queues and CPU 0's link (2026-11-09; D unless tagged, addresses E143's)
+
+Still behind `--cpu2 native` (E143, off by default; `emu/src/lab/cpu2.mjs`, `emu/src/core/cores.mjs`,
+`emu/test/test_cpu2.mjs` cpu2Session and cpu2Histogram): CPU 0's CPUCONN_CPU0 and CPUCALL_CPU0 now run, USTART_L2 is
+stood in for, the four CPU 2 tasks CPU 0's boot stages start that a lab session can reach are started, and under
+`control camapp 3` OSD_DRAW_CPU2 draws the GUI's histogram natively (X). golden is unchanged and a default session
+runs the same instructions (the cost bullet). Round 1's open item 1 is corrected below; its items 3 and 4 are done.
+
+- **CPU 0's side of the link (H-CPUCONN0).** CPU 0's init task starts CPUCONN_CPU0 (`0x99`) and CPUCALL_CPU0 (`0x9a`)
+  with act_tsk (`0x5002cd0c..0x5002cd2d`, right after its tick init and the tick magic `0x5003b542(3)` at
+  `0x5002ccdc`); the lab ends that task, so neither ran in round 1. Both now start with act_tsk before CPU 2's boot and
+  wait (X): CPUCONN_CPU0 on its flag (`0x5002cf11`), CPUCALL_CPU0 in `0x50016096` (`0x5003638e`), its receive of the
+  CREQ dispatcher's messages (cores spec 5.1). For each call from CPU 2 CPUCONN_CPU0 creates a proxy task (entry
+  `0x5002cf6e`), which the lab's task-start guard allows; OSD_DRAW_CPU2's replies are served that way (X, below).
+- **USTART_L2 (H-CPU2LOADER; round 1's open item 1 corrected).** With FLASH_CS1 granted natively (the control
+  `cpu2-loader`, X), USTART_L2's copy of segment 1 makes no CREQ: the flash driver's read of chip 1 (`0x500022c2` ->
+  `0x5000237a` -> `0x50002219` -> `0x500019b3` -> `0x50001c23`) programs a DMA at `0x98d00200..0x98d00324` (IRQ 238
+  attached on the calling core, `0x50001cd7`) and its first write, `0x50001c4c`, is a bus error: CPU 2 parks and the
+  session stops (X). The block also holds the start addresses `0x98d00140..148` (cores spec 3.1). Past the copies, the
+  CREQ's `0x50024eda(n)` runs the segment's static constructor table through `calls` (`0x501e6112..0x501e6121`:
+  segment 2's 15 pointers at `0x60714e78`, 6's 48 at `0x60ef9ad0`, 7's 64 at `0x615c71d4`, 8's 6 at `0x617d0310` on
+  CPU 1; 1, 4 and 9 have empty ones, 3, 5 and 10 no hook), which the lab's bring-up has run (CTORS); run again they
+  would construct live objects a second time (I). Of USTART_L2's byte flags `0xa32df1ad..0xa32df1b6` and `0xa32df1b9`
+  only `1ad`, `1b6` and `1b9` are read, by boot code the lab does not run (`0x5002418a`, `0x50024488`, `0x500243d1`,
+  `0x501e9e17`, `0x501e996c`; a byte scan); its last call `0x504262b5` reads resource 0x8007 item 17 to
+  `0xa51a8680` and clears bit 17 of `0x97f0027c` (the DSP service's word). So USTART_L2 now returns from its entry at
+  once, to the kernel's task exit (`0x5001182d` -> `0x500107e8`), with no cross-core call (X); CPU 2 reaches its first
+  halt in 35,135 instructions (35,788 in round 1, with USTART_L2's twai_sem).
+- **The CPU 2 tasks CPU 0's boot stages start (H-CPU2TASKS, X).** The stages (`0x501e8f09..0x501ea7a9`) start them
+  through OlyTaSt after a module init; the lab now does the same at the play bring-up, in the stages' order: the init
+  natively on CPU 0, then OlyTaSt from the lab task, which waits while the start goes to CPU 2 (cpu_conn kind 9,
+  CPUCONN2's proxy, act_tsk there). Each task waits at once, with no device access in its own context and no
+  cross-core call. The stages' other steps between are not run (D), among them MVR_MAIN's site's wait for the byte
+  `0xa32df1be` (set by USTART_L `0x50024259` and USTART_L3 `0x500244b5`) and `0x501e6a7f(2)`.
+
+  | Task (entry) | Start site; the init before it | Waits (X; the wait's site D) |
+  |---|---|---|
+  | WB_MOV `0x200f` (`0x5046aab2`) | `0x501e9157`; `0x5046aa2b` (call at `0x501e9150`): context words, `0x500417da(16234)`, `0x5046c794` | OlyQeRd on its queue `0x2006` (`0x5046aadb`) |
+  | MVR_MAIN `0x2002` (`0x5045fcdd`) | `0x501e9233`; `0x5045fed3` (`0x501e91ee`): `0x5044ec78` with MOV_COMMAND `0x2001`, MVR's flag `0x2003` and 4, then with queue `0x2002`, the flag and 8 (I: the queues bound to the flag's bits) | OlyEvWt on flag `0x2003`, pattern `0x383fd` (`0x5045fd27..0x5045fd45` -> `0x5044ec9c`), after 18,006 instructions of start-up |
+  | SDET `0x2010` (`0x5050cc2a`) | `0x501e96f1`; `0x50510afd` (`0x501e96a0`) | OlyEvWt on flag `0x2005`, pattern 3 (`0x5050cd1d` -> `0x50510aad`) |
+  | OSD_DRAW_CPU2 `0x2015` (`0x51015f1d`) | `0x501ea04c`; none | OlyQeRd on its queue `0x2013` (`0x51015f4f`) |
+
+- **TAKE's requests to MOV_COMMAND, SDET_EXEC and WB_MOV are not made in the lab's sessions (X).** No cpu_conn on
+  `0x2001`, `0x2005` or `0x2006` and no post to CPU 2 but the Super Control Panel's over the start, idle, S1, S2, the
+  releases, REC, MENU and PLAY, in camapp 1, and in camapp 3 with `--take probe`: TAKE_FUNC's commands 28, 30, 31, 68
+  and 69 (4.1.1) are not reached (as in 4.1.4 and 4.1.7). So those three records end at the tasks' waits; what each
+  does with a request, and its first device access after one, are ?. 4.1.1's "no lab runs a CPU 2 reader" no longer
+  holds with `--cpu2 native`: the readers wait on their queues. The only request CPU 0 makes of a CPU 2 queue in the
+  lab's sessions is the GUI's histogram.
+- **The histogram on OSD_DRAW_CPU2 (X unless tagged).** OSDControl::drawHistogram (`0x50ae9f5f`, API 0x11117) calls
+  `0x510149a2` at idle, S1 and S2 (shutter spec item 42; 12 times in 2 s of camapp 3's idle). That copies the request
+  under OSD_SDRAM_WRITE (36 bytes to `0xa33eb558`, its plane descriptor to `0xa33eb57c`, the two series of n words to
+  `0xa33eb58c` and `0xa33eb78c`) and sends {reply queue, word, command 1, `0xa33eb558`} synchronously (`0x5002e39d`: a
+  reply queue created on CPU 0, OlyQeWr to `0x2013`, OlyQeRd on the reply queue; D).
+  - *Camapp 1 and 2: S-MODACK still answers it E_OK.* The series' words there are `0xdeadbeef`, the fill the task
+    creation `0x5002cbe7..0x5002cbf8` writes into a new task's stack (D), and a watch on them from the lab's start
+    sees no other write: S-TRAACK's answer to getHistogramData fills nothing, so a native draw would draw columns of
+    that height.
+  - *Camapp 3: natively.* The series come from the firmware's own path (the VSC histogram's cmd 16, its ring, TRA 944;
+    0, and 64 in bin 5, while IMG1 is off, 4.2.1). The OlyQeWr to the CPU 2 queue is a cpu_conn tsnd_mbf (kind 1);
+    OSD_DRAW_CPU2 takes command 1 (`0x51015f63`), checks the request (`0x51015e30`: pointers set, the descriptor's bit
+    31, n <= 128 and <= w, x + w <= 1664, y + h <= 1200; D), draws, and replies {0, word, parameter} to the reply queue
+    (`0x510160b8`), a cpu_conn kind 1 on CPU 0's queue (`0x104` in the run) that CPUCONN_CPU0's proxy serves; the
+    GUI's wait returns. Every send is taken and answered with status 0 (12 of 12 in 2 s), each request {command 1,
+    x 4, y 110, 256 x 63, n 128, scale 64}, its plane `0xb7493000` and `0xb767a800` in turn.
+  - *Command 1 (D, `0x51015fe9..0x51016087`).* For each column k < w, bin b = k * n / w; the series at +16 is drawn in
+    the colour at +34 from the rectangle's bottom row up, bin * h / scale (+20) rows at a stride of 1664 bytes, then
+    the series at +12, in the colour +31, +32 or +33 chosen by b against +26 and +28, from there on up to its own
+    height (the row count is not reset between them, so it shows only where it is taller). This answers the cores
+    spec's open question 3.
+  - *Result.* In both buffers bin 5's columns x 14 and 15, rows 110..172, turn from index 52 to 54, and the pixels
+    beside them stay; a camapp 3 session without CPU 2 leaves 52 there. The TFT channel's OSD plane 1 address register
+    reads `0xb767a80` at that time (the buffer's address >> 4, I). No device access in OSD_DRAW_CPU2's context. The
+    TFT's composite stays FEATURE_UNOBSERVED under camapp 3 (4.1.5, A13), so no frame shows the column yet.
+- **H-CPU2POLL narrowed (X).** It now sleeps at the loop's head only while the halt word `0x97f00100` is 0. With the
+  word set (BOOT_CPU2's `0x50038666`), which is every lab session (no CPU 0 writer of 0x40002 is known), the loop
+  halts natively every pass at `0x50038b09`, and each tick runs the rest of the pass and halts again.
+  `test_cpu2.mjs` writes 0x40002 (core 2 then sleeps at the head under the stand-in) and 0x40001 (back to the halt).
+- **What stays, and why (D, I).** H-CPU2RELEASE: the release flag comes from CPU 0's reset head (`0x50000282..
+  0x50000329`: the flag 0, the three start addresses to `0x98d00140..148`, four bit-sets per core in `0x98800340..
+  0x98800434`, for CPU 2 `0x98800344` bit 0, `0x98800350` bit 21, `0x98800370` bit 6, `0x98800430` bit 0, then the
+  flag 1), which the lab does not run, and which bit-set releases the core is ?; the tick magic is the init task's
+  `0x5003b542(3)`, and the lab ends that task. K-BOOTSYNC2: CPU 2's ring partners are CPUs 3 and 1 (wait on 3, kick
+  1, wait on 1, kick 3; CPU 0's only partner is CPU 1), both absent. K-STARTBITS: CPU 0 sets its bit in its own
+  barrier at its kernel start, which the lab never runs (it owns CPU 0's first dispatch), at the session's creation,
+  before CPU 2 boots at the play bring-up; CPUs 1 and 3 are absent. None of the three is retired.
+- **Cost (X; means of 3, alternated, load average about 3).** A default camapp session (open, 2 s, S1, S2, 0.8 s)
+  runs 187,314,635 instructions to the same lab time on master and the branch, in 6,675 and 6,680 ms. A session of
+  open, 2 s, OK to the Super Control Panel and 2 s: 6,626 ms without the flag, 7,075 ms with it (+6.8%; round 1's code
+  6,917 ms); CPU 0 runs 32,465 more instructions (round 1: 3,259), CPU 2 8,605,799 (round 1: 8,010,523; I: the
+  difference is mostly the native halt's pass per tick). Camapp 3, 2 s of idle: 5,299 ms against 5,588 ms (+5.5%),
+  CPU 0 +149,523 instructions, CPU 2 5,438,481, 12 histograms drawn.
+- **Open, in order (I; Claude wall-clock).** (1) A frame of the histogram: the TFT composite under camapp 3 (what
+  HIST1..3 do to the mixer, 4.2.1, A13): unknown. (2) TAKE's queues: TAKE_FUNC's commands 28, 30, 31, 68, 69 reached
+  first (the through start's TRA 991 path, the movie API; 4.1.4), then each task's request record: 2-4 h each. (3)
+  AUD_WAKEUP on CPU 2 (round 1's item 2): 2-4 h. (4) Snapshots and the live debugger with two cores (round 1's item 5;
+  the session's MMIO record now holds the machine's trace hook while CPU 2 runs): 1-2 h. (5) The release, the boot
+  ring and the start bits need CPU 0's reset path and CPUs 1 and 3 (above). (6) The flash DMA `0x98d00200` would be
+  needed only for a cold boot's loader, which the lab does not run (I).
+
 ### 4.7 SCPU, power, clock, on-board sensors and persistence
 
 - **Tasks (CPU 0, D):** PER_SCPU 0x7a `0x5005b424` (the request server: reads the data queue PER_SCPU_RECEIVE id 2

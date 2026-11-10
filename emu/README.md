@@ -321,6 +321,8 @@ node emu/bin/play.mjs --take probe               # TAKE_FUNC and TAKE_FUNC_CP na
                                                  # take request reaches TAKE_MAIN natively
 node emu/bin/play.mjs --cpu2 native              # CPU 2 on the machine's second core from its entry (E143, off by
                                                  # default; S-CPU2 lifted; docs/hle-gaps.md 4.6.1)
+                                                 # with CPU 0's CPUCONN and OSD_DRAW_CPU2, which draws the
+                                                 # histogram under control camapp 3 (4.6.2)
 OM_EMU_LENS=stand-in sh emu/play.sh              # S-LENS in place of the native lens (S-LENSMCU, the default on
                                                  # E143, E146 and E147)
 OM_EMU_SCPU=native sh emu/play.sh                # E143's and E146's sub-CPU as its own firmware on the STM32L4 machine

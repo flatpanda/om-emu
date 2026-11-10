@@ -1781,7 +1781,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    layer 0 at the bottom and took 3 and 2 only (kind 3: 3); the two orders differ only where layer 0 has content, so
    no frame looked at changed (X: each composite drawn both ways in one session and compared pixel for pixel, all
    equal: E122's TFT at the start, S1, S2, PLAY, INFO, PLAY, MENU, DOWN and MENU and its EVF through PLAY, INFO and
-   PLAY, E118's and E120's TFT on the same path, E139's and E144's menus). What would settle the direction directly: a
+   PLAY, E118's and E120's TFT on the same path, E139's and E144's menus; in review, the kind-2 order of E125, E130,
+   E134, E137, E142, E145 and E148 too, their TFT at the start, MENU, DOWN and MENU). What would settle the direction
+   directly: a
    screen of the camera with layer 0 drawn over layer 2, taken from its panel. `test/test_vsc3.mjs` drives every code
    on E122's board against the GUI's records (53 checks with the rest).
 97. **OSD1's and OSD2's pixels of 32 or more** (2026-11-10, `docs/om1-vsc-spec.md` section 12). The firmware gives the

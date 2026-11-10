@@ -526,9 +526,9 @@ unknown):**
 #### 4.1.6 TAKE's neighbours natively, round 2 (2026-11-09; D unless tagged, addresses E143's)
 
 With `--take probe` TAKE_EXPOSE and TAKE_POWER_MANAGER now run natively too (H-TAKENBINIT, `emu/src/lab/take.mjs`), so
-their queues no longer go to S-TAKEREQ; the strobe stayed there (natively since 4.12.1). `emu/test/test_take.mjs` pins
-the records and the neighbours' state below under camapp 1 and camapp 2 (X, 19 of 19 checks; golden unchanged, the probe
-is off by default).
+their queues no longer go to S-TAKEREQ; the strobe's did until 4.12.1. `emu/test/test_take.mjs` pins the records and the
+neighbours' state below under camapp 1 and camapp 2 (X, 19 of 19 checks; golden unchanged, the probe is off by
+default).
 
 - **The bring-up (H-TAKENBINIT).** USTART2's stage `0x501e8e84` runs TAKE_EXPOSE's module init `0x50591220` (its call
   at `0x501e90bd`: its context from `0x62abd790` set, three 64-byte buffers from `0x50002fdc`) and EXP's init
@@ -595,8 +595,8 @@ is off by default).
   (`0x501c1831` -> `0x5005899c`, `docs/om1-kernel-spec.md` 8; its handler `0x501ba277` sets bit 8) and waits for bit 8
   without limit. Nothing on the path asks whether a flash is on the shoe (`0x501b1e7e`, called first, is not read in
   detail; corrected in 4.12.1: the wait is for the wake byte's own transmission, and the shoe is asked after it, by
-  state 1's ID exchange, whose reply's first byte is awaited 20 ms; `0x501b1e7e` sets GIO pin 160). Run natively in an
-  experiment (X, camapp 1, not committed: the task started with act_tsk after H-TAKENBINIT,
+  state 1's ID exchange, whose reply's first byte is awaited 20 ms; `0x501b1e7e` configures GIO pin 160). Run natively
+  in an experiment (X, camapp 1, not committed: the task started with act_tsk after H-TAKENBINIT,
   queue 0x57 taken out of S-TAKEREQ): channel 11 opens (0) and the transfer starts with no error, but it never ends
   (PER_SIO's controller and its interrupt are not modelled on E143, `emu/src/lab/sio.mjs`); the wait runs out 13,001 ms
   of lab clock later with the two logs, the timer fires 64.9 ms after that, a second transfer start (the ID exchange;
@@ -3766,8 +3766,8 @@ default). This corrects 4.1.6's strobe bullet where it says nothing on the path 
   (`0x501b76ba`). A first byte would lead on to the rest of the reply and the 13000 wait for the transfer
   (`0x501b8501`), then `0x501b9292` ("ext strobe detected ID", not read). In state 1 the task's receive times out after
   250 ms (`0x501b7575`, `0x501b9261`) and each timeout runs the detection again (`0x501b773e` -> `0x501b7794`): the
-  camera polls the shoe for a flash (D; X: every 265 to 586 ms in the lab, whose timer interrupts are taken at idle
-  points).
+  camera polls the shoe for a flash (D; X: every 265 to 586 ms in the lab; I: the spread is the lab's timer delivery,
+  which it takes at its idle points).
 - **What an empty shoe presents (D, I, ?).** Until a reply, the camera is the only talker on channel 11: the wake's
   byte and the ID request go out on the controller's own bit timing (mode 0: the divider `0x5005efe9` divides the clock
   by 32 times the rate, against 4 times in mode 1, the clocked serial of PER_SCPU's channel, and 16 times in mode 2, the
@@ -3776,19 +3776,19 @@ default). This corrects 4.1.6's strobe bullet where it says nothing on the path 
   no flash (D). No shoe detect pin is on the path: `0x501b1e7e` -> `0x501b1ea6` asks the built-in strobe test
   `0x501b387f` (`clr d0; retf`: 0 on E143, which has no built-in flash) and then configures GIO pin 160 (`0x5005197a`
   with the record `0x501c17f2` builds; what the pin drives is ?).
-- **PER_SIO channel 11 on E143 (D).** The channel map `0x6011be1c` (the map setter `0x5005f0b2` takes it for every
-  board id, the table `0x6011be0c`) gives channel 11 the controller index 6, whose registers (the driver's
-  register-address table `0x6011b614`, 136 bytes an index) are `0x98580000..0x98580028`, `+0x40..0x58` and
-  `+0x80..0xa0`; the A53 kernel's `mn_sio_uart`, which drives index 1's block `0x98300000` as ttyS1, takes +0x18 as its
-  TX byte and +0x44 bit 15 as not ready too (`docs/a53-spec.md` 5). The board configuration `0x6011be3c` (three bytes an
-  index) gives index 6 {1, 1, 0}: the driver's init `0x5005d5c7` -> `0x5005d66f` attaches its IRQs 205 and 206
-  (`0x5005e8db(6)` through the stubs `0x5005e744`, `0x5005e7d2`) and 207 (`0x5005e877`: the table `0x6011bdd8` by the
-  index's direction byte) at level 5, from the tables `0x6011bc18`, `0x6011bc9c`, `0x6011bd20`, with byte 1 as the
-  attach's CPU (`0x50053fcd`'s fourth argument, `docs/om1-intc-timer-spec.md`): index 6's interrupts go to CPU 1 (how
-  its completions then reach CPU 0's strobe flag and timers is not read, ?). Mode 0's transfer start `0x5005dc2c` (the
-  table `0x6011bdb0`, from the driver's start `0x5005dc03`) resets the transmit side (`0x5005e43e`: +0x28, +0x50),
+- **PER_SIO channel 11 on E143 (D).** The channel map `0x6011be1c` (the map setter `0x5005f0b2` takes it for every board
+  id, the table `0x6011be0c`) gives channel 11 the controller index 6, whose registers (the driver's register-address
+  table `0x6011b614`, 136 bytes an index) are `0x98580000..0x98580028`, `+0x40..0x58` and `+0x80..0xa0`; the A53
+  kernel's `mn_sio_uart`, which drives index 1's block `0x98300000` as ttyS1, takes +0x18 as its TX byte and +0x44 bit
+  15 as not ready too (`docs/a53-spec.md` 5). The board configuration `0x6011be3c` (three bytes an index) gives index 6
+  {1, 0, 1} (bytes `0x6011be4e..0x6011be50`): the driver's init `0x5005d5c7` -> `0x5005d66f` attaches its IRQs 205 and
+  206 (`0x5005e8db(6)` through the stubs `0x5005e744`, `0x5005e7d2`) and 207 (`0x5005e877`: the table `0x6011bdd8` by
+  the index's direction byte) at level 5, from the tables `0x6011bc18`, `0x6011bc9c`, `0x6011bd20`, with byte 1 as the
+  attach's CPU (`0x50053fcd`'s fourth argument, `docs/om1-intc-timer-spec.md`): index 6's interrupts go to CPU 0, the
+  CPU STB_EXTERNAL and its timers run on (the lab ends the transfer there too). Mode 0's transfer start `0x5005dc2c`
+  (the table `0x6011bdb0`, from the driver's start `0x5005dc03`) resets the transmit side (`0x5005e43e`: +0x28, +0x50),
   writes bytes to +0x18 while +0x1c reads nonzero (`0x5005de3f`) and enables the transmit interrupt (`0x5005e221`,
-  `0x5005e40a`); the handler `0x5005e8db` clears the error bits 0x4c of +0x50 (logged where the index's byte 2 is 1, 0
+  `0x5005e40a`); the handler `0x5005e8db` clears the error bits 0x4c of +0x50 (logged where the index's byte 2 is 1, as
   for index 6), takes the receive status (+0x14 bit 16) to mode 0's receive handler `0x5005ed8a` and the transmit status
   (+0x28 bit 16) to mode 0's transmit handler `0x5005e9ab`, which refills the FIFO and, the count done, calls the
   index's transmit completion (`0xa32c9658`, `0x5005ea80..0x5005ea99`). Mode 0's receive start `0x5005df40` splits off
@@ -3798,16 +3798,18 @@ default). This corrects 4.1.6's strobe bullet where it says nothing on the path 
   STB's protocol is its exchanges, kinds 0..9 of `0x501b82ab` (0 the wake, 2 the ID exchange; `0x501b85c2`,
   `0x501b860c`, `0x501b86a3`, `0x501b8756`, `0x501b8d5f` not read).
 - **The model (X).** H-SIOMAP: the channel map set by its own setter under the probe (the word `0xa32c9e48` was 0 and
-  low memory's bytes 0, X, so in 4.1.6's run channel 11 used index 0's `0x98200000`, I); index 6's page is
-  allowed in the lab stub, which keeps what is written (the close's poll reads +0x44 as 0, the transmitter idle, I).
-  S-HOTSHOE serves mode 0's transfer and receive starts for index 6: a transfer's bytes go nowhere and it ends at the
-  MN's next idle point (A-HOTSHOE-1) in interrupt context through the index's transmit completion; a receive is kept,
-  never answered (A-HOTSHOE-2), and dropped at the index's close. H-STBINIT starts STB_HANDLER_PROC (task 139,
-  `0x501bb24a`, tid word `0x60042e3c`) and STB_EXTERNAL (task 101) as USTART2's stage `0x501e8e84` does (`0x501e8fbd`,
-  `0x501e8ff3`; STB_CHARGE, started at `0x501e8fd8` between them, stays dormant). STB_HANDLER_PROC is needed: the wake's
-  end is a function the 1 ms timer queues to it (`0x501bb29c`: ten slots at `0x62a29b4c`, flag `(0x6004317c)` bit 1;
-  without it the wake waited, X). While a request STB_EXTERNAL took has no reply, the step runs lab time in 10 ms
-  slices, at most 1 s, as its requester's wait lets the camera's time run.
+  low memory's bytes 0, X, so in 4.1.6's run channel 11 used index 0's `0x98200000`, I), which gives every channel its
+  own index for the rest of the session, not only channel 11 (X: the probe's sessions in `test_take.mjs` and
+  `test_take_release.mjs` run on with it); index 6's page is allowed in the lab stub, which keeps what is written (the
+  close's poll reads +0x44 as 0, the transmitter idle, I). S-HOTSHOE serves mode 0's transfer and receive starts for
+  index 6: a transfer's bytes go nowhere and it ends at the MN's next idle point (A-HOTSHOE-1) in interrupt context
+  through the index's transmit completion; a receive is kept, never answered (A-HOTSHOE-2), and dropped at the index's
+  close. H-STBINIT starts STB_HANDLER_PROC (task 139, `0x501bb24a`, tid word `0x60042e3c`) and STB_EXTERNAL (task 101)
+  as USTART2's stage `0x501e8e84` does (`0x501e8fbd`, `0x501e8ff3`; STB_CHARGE, started at `0x501e8fd8` between them,
+  stays dormant). STB_HANDLER_PROC is needed: the wake's end is a function the 1 ms timer queues to it (`0x501bb29c`:
+  ten slots at `0x62a29b4c`, flag `(0x6004317c)` bit 1; without it the wake waited, X). While a request STB_EXTERNAL
+  took has no reply, the step runs lab time in 10 ms slices, at most 1 s, as its requester's wait lets the camera's time
+  run.
 - **The run (X, camapp 1 and 2).** STB_EXTERNAL takes command 1 at 2782.000 ms of lab time; the wake's byte 00 ends at
   once, the 1 ms timer's callback gives status 0 at 2783.001, the 64 ms timer ends at 2847.423, the 6 ms wait at
   2853.424, the ID exchange 55 82 goes out with a receive of 9 that nothing answers, the window ends at 2867.424, the
@@ -3816,16 +3818,17 @@ default). This corrects 4.1.6's strobe bullet where it says nothing on the path 
   0. Row 2 of 4.1.4's start table now reads: STB_EXTERNAL 1 (native), the dust filter, STB_EXTERNAL's reply,
   STB_EXTERNAL 4 (native), its reply, TAKE_FUNC_CP's reply; the GUI reaches the shooting screen within the start. Over
   the test's scenarios (a live view, S1, S2, MENU, a mode change) the task keeps polling (28 exchanges under camapp 2),
-  its state stays 1, it sends nothing but its two replies (OlyQeWr to 0x61; STB_HANDLER_PROC sends nothing; camapp 1),
-  and no strobe error log comes (0x23000112, 0x23000222: none). The warning `0x39000903` that 4.1.4 reports absent with
-  the probe is logged with and without the native strobe in these runs (X; not this round's).
-- **The built-in and RC strobe on TAKE's requests (D, X).** TAKE's start asks the strobe only through STB_EXTERNAL's
+  its state stays 1, it sends nothing but its two replies (OlyQeWr to 0x61; STB_HANDLER_PROC sends nothing; camapp 1 and
+  2), and no strobe error log comes (0x23000112, 0x23000222: none). The warning `0x39000903` that 4.1.4 reports absent
+  with the probe is logged with and without the native strobe in these runs (X; not this round's).
+- **The built-in and RC strobe on TAKE's requests (D, X, I).** TAKE's start asks the strobe only through STB_EXTERNAL's
   commands 1 and 4 (X). The built-in strobe test on their path is the constant 0 (above). The RC strobe's code
   (`stb_control_flash_rc_iocontrol` `0x501b1719`, STB_SEQ's `0x501be6a3`, the light-value helpers `0x501abe98` and
-  `0x501abf94`) is not in STB_EXTERNAL's static call closure (538 functions, the firmware map), so TAKE's requests do
-  not need it.
+  `0x501abf94`) is not in STB_EXTERNAL's static call closure (538 functions, the firmware map's direct calls; 22 of them
+  make indirect calls it does not follow), none of it runs in the test's sessions (X, camapp 1 and 2), so TAKE's
+  requests do not need it (I).
 - **Open.** A flash on the shoe: its replies to the ID exchange and the other kinds (not read; S-HOTSHOE has no device,
-  so the firmware would read no flash); channel 11's controller at its registers with IRQs 205..207 on CPU 1 (the bits
+  so the firmware would read no flash); channel 11's controller at its registers with IRQs 205..207 on CPU 0 (the bits
   above are the driver's accesses, their meaning partly I); GIO pins 160 and 24; STB_CHARGE and STB_SEQ.
 
 ## 5. Cross-cutting prerequisites

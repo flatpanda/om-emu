@@ -10,8 +10,9 @@
 //                (command 25) is never taken: the shooting component that would start the through image does not
 //                get TRA 991 while S-TRAACK answers it (docs/hle-gaps.md 4.1.2). Round 2 (H-TAKENBINIT,
 //                docs/hle-gaps.md 4.1.6): TAKE_EXPOSE and TAKE_POWER_MANAGER run natively too; command 13's request
-//                to TAKE_EXPOSE is answered by TAKE_EXPOSE itself (its command 0 sets its on byte), TAKE_POWER_MANAGER
-//                is asked nothing (TAKE's start-up flag stays 0) and TAKE_EXPOSE's AE result writer never runs
+//                to TAKE_EXPOSE is answered by TAKE_EXPOSE itself (its command 0 sets its on byte and is the last
+//                command it takes), TAKE_POWER_MANAGER is asked nothing (TAKE's start-up flag stays 0) and
+//                TAKE_EXPOSE's AE result writer never runs
 //   node emu/test/test_take.mjs
 import { fileURLToPath } from 'node:url';
 
@@ -38,14 +39,17 @@ const C22 = ['TAKE_FUNC <= 22', 'TAKE_FUNC -> TAKE_FOCUS 2 sync (answered)', 'TA
 export const MODE_CHANGE = [...C22, ...C22, ...C22];
 
 // round 2 (docs/hle-gaps.md 4.1.6): the neighbours' state after a session's scenarios. TAKE_EXPOSE's on byte
-// 0x62abd78a (its task's start clears it, 0x5059149e; command 0 sets it, 0x50592215), TAKE's start-up flag 0x62a3f2bc
-// (every send to TAKE_POWER_MANAGER_EXEC is behind it, 0x502cd84c, 0x5039c6a3, 0x503a0d53, 0x503a0e22)
-const EXPOSE_ON = 0x62ABD78A, START_UP_FLAG = 0x62A3F2BC, PM_QUEUES = [0xD7, 0xD8];
+// 0x62abd78a (its task's start clears it, 0x5059149e; command 0 sets it, 0x50592215) and its command word 0x62abd788
+// (255 from its task's start, 0x50591497; each message's command, 0x505914f5: 0 when command 0 is the last it took),
+// TAKE's start-up flag 0x62a3f2bc (every send from TAKE_FUNC and TAKE_FUNC_CP to TAKE_POWER_MANAGER_EXEC is behind it,
+// 0x502cd84c, 0x5039c6a3, 0x503a0d53, 0x503a0e22)
+const EXPOSE_ON = 0x62ABD78A, EXPOSE_COMMAND = 0x62ABD788, START_UP_FLAG = 0x62A3F2BC, PM_QUEUES = [0xD7, 0xD8];
 export function neighbourChecks(lab, take, mode, ok) {
   const byte = (a) => lab.sim.read(a, 1)[0];
   const waiting = Object.entries(take.nb_tids ?? {}).map(([k, t]) => [k, lab.nk.state(t) & 0xF]);
   ok(waiting.length === 2 && waiting.every(([, st]) => st === 4), `camapp ${mode}: TAKE_EXPOSE and TAKE_POWER_MANAGER waiting (${JSON.stringify(waiting)})`);
-  ok(byte(EXPOSE_ON) === 1, `camapp ${mode}: TAKE_EXPOSE's on byte after command 0 is ${byte(EXPOSE_ON)}, want 1`);
+  const command = lab.sim.read(EXPOSE_COMMAND, 2), last = command[0] | command[1] << 8;
+  ok(byte(EXPOSE_ON) === 1 && last === 0, `camapp ${mode}: TAKE_EXPOSE's on byte after command 0 is ${byte(EXPOSE_ON)}, want 1; the last command it took ${last}, want 0`);
   const pm = take.requests.filter((r) => r.task === 'TAKE_POWER_MANAGER' || PM_QUEUES.includes(r.queue));
   ok(pm.length === 0 && byte(START_UP_FLAG) === 0, `camapp ${mode}: TAKE_POWER_MANAGER asked nothing (${pm.length} records, start-up flag ${byte(START_UP_FLAG)})`);
   ok(take.ae_writes === 0, `camapp ${mode}: TAKE_EXPOSE's AE result writer ran ${take.ae_writes} times, want 0 (S-EXPOSE)`);

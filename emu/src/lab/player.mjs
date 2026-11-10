@@ -46,6 +46,7 @@ import { setKey } from '../util/tracejson.mjs';
 import { LiveDebug } from '../debug/live.mjs';
 import { memoryCard } from './sdcard.mjs';
 import { STORAGE } from './storage.mjs';
+import { recStandIns } from './rec.mjs';
 import { AudioRing } from './audio.mjs';
 import { patchLine } from '../fw/patch.mjs';
 import { recordNvram, replayNvram, nvramRecord } from './nvramdoc.mjs';
@@ -468,7 +469,7 @@ export class Player {
     const imgpro = this.session?.lab?.sim?.m?.devices?.imgpro;                              // the imgpro unit (imgpro.mjs)
     if (imgpro?.touched) used.push('S-IMGPRO', ...(imgpro.runs ? ['A-IMGPRO-1'] : []));
     if (this.session?.audio_hw) used.push('H-AUDSTART', 'S-AUDCPU2', 'S-WM8946', 'A-AUDIO-1', 'H-AUDTIME');   // --audio on (auto on E143): the audio hardware (audiohw.mjs)
-    if (this.session?.storage) used.push('H-FILEINIT', 'H-FILECLBK', 'S-SDHOST', 'S-SDCARD', 'S-FSNAND', ...(this.session.storage.f.album_init !== null ? ['S-ALBM'] : []), ...(this.session.storage.rec ? ['H-EXIFINIT', 'H-RECINIT', 'H-RECFILE', 'S-EXIFPRM', 'S-RECIMAGE', 'S-JPEGENC'] : ['S-RECFILE']));   // the file system native on a card (storage.mjs; S-ALBM where the body has an album manager; REC_FILE natively on E143, rec.mjs)
+    if (this.session?.storage) used.push('H-FILEINIT', 'H-FILECLBK', 'S-SDHOST', 'S-SDCARD', 'S-FSNAND', ...(this.session.storage.f.album_init !== null ? ['S-ALBM'] : []), ...(this.session.storage.rec ? recStandIns(this.session.storage.rec) : ['S-RECFILE']));   // the file system native on a card (storage.mjs; S-ALBM where the body has an album manager; REC_FILE natively on E143, E146 and E147, REC_IMAGE on E143, rec.mjs)
     if (this.session?.resnand) used.push('H-RESINIT', 'S-RESNAND');                       // the resource tables from the host's NAND (resnand.mjs)
     if (this.session?.resnand && this.session.sound_area === 'S-SOUNDRES') used.push('S-SOUNDRES');   // the lab-made sound area (soundres.mjs)
     if (this.session?.storage?.powered) used.push('S-SDPOWER');                           // a card supply request answered

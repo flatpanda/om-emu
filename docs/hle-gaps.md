@@ -1105,8 +1105,8 @@ served natively, so S-EXPOSE stays (its text now gives the routine's role and th
   as the stage runs it, the four steps above (device-free, X): an H- step of a few hours once (1) is there. (3) The
   frame events: cam.c's init and request 7's callbacks on the sensor's frame timing (4.2 seam D), or a stand-in at
   those callbacks paced by the lab clock: days. They also free TAKE_EXPOSE, which waits for EXP_MOVIE's answer until
-  then. (4.2.3: the first init runs, H-CAMINIT; the callbacks are fired from the driver's front end, whose interrupt is
-  not read, so no stand-in calls them.)
+  then. (4.2.3: the first init runs, H-CAMINIT; the callback the wait needs, event `0x300`'s, is fired from the
+  driver's front end, whose interrupt is not read, so no stand-in calls it.)
   (4) The metering data: EXP's slots from the ISP's AE statistics (seam B, 3-5 weeks). (5) The status: the
   frame step `0x5058e47b` must set `(0x62abd558)` and `0x5058c955(1280)` must answer nonzero (neither read), or the
   callback gets status 2 and skips the writer. The divide by zero blocks only through mode 1, whose callback does not
@@ -1236,13 +1236,18 @@ and camDriverSession (X, 7 of 7) pin what follows.
 
 - **Two inits.** USTART calls cam.c's first init `0x502a49ec` at `0x50024aa2` (before the lens init at `0x50024ab6` and
   TAKE_FUNC's at `0x50024c2d`) and its second `0x50155357` at `0x50024d80` (it then starts USTART2's stage task,
-  `0x50024d9b`). The first: `0x501504c0` (the error log's state `0x62988868`), `0x501529dc` (four free lists through
+  `0x50024d9b`: task 40, entry `0x501e8e84`, X). The first: `0x501504c0` (the error log's state `0x62988868`), `0x501529dc` (four free lists through
   `0x50152f14`, of 200, 100, 13 and 4 entries; the first is the request pool, head `0x6299726c`, its base words
   `0x629a71dc..e8` set here), `0x5015368b`, `0x50154a12` (`0x501536b4(1)` and the timer code `0x50064323` with 8 and 9),
   `0x50150f69`, `0x50154704`, `0x50152f4c` and, when that returns 0, `0x50152495` (`0x50150f8e(6, 1)` to `0x62997268`,
   the instance the sequence items of `0x501524c0` go to). X: it returns 0, logs nothing, creates no kernel object and
-  touches only the interrupt controller (IRQs 146 and 147, which already carry the timer block's handlers); the pool's
-  head goes from 0 to a slot. The second makes ten calls, each only while the last returned 0: `0x50152401`,
+  touches only the interrupt controller (IRQs 146 and 147, which already carry the timer block's handlers); it builds
+  the request pool: its base word `0x629a71dc` goes from 0 to its block and the free list's head from 0 to 2 (the init
+  takes two entries). Correction to 4.1.4 (D, X): before the init that pool was not empty (an empty list's head is
+  `0xffff`, whose path logs `0x0a163000`, `0x50152af8`) but not built: with the base word 0 the allocator `0x50152a63`
+  hands out base + 128 x head, address 0, which request 148's handler takes as a failed allocation (`0x502a4c04`,
+  `0x0a103000`). The second makes ten calls, the first seven unconditionally (only the seventh's result is kept) and
+  each of the last three only while the call before returned 0 (`0x50155380..0x501553a3`): `0x50152401`,
   `0x50150b66`, `0x501550bc`, `0x50151d07` (the named-queue registry `0x6298b240` cleared), `0x5015f38f`, `0x501a3559`,
   `0x5019c70f`, `0x5019868e` (cam_seq_movie.c's init: its queues SQMV, MQEX, INFN and SMFM registered through
   `0x50151d1b`), `0x5019813d` and the front end's init `0x5016efcd`, then `0x501536b4(13)` (kept at `0x629a7af0`,
@@ -1270,7 +1275,8 @@ and camDriverSession (X, 7 of 7) pin what follows.
   when the slot's mask and d1 share a bit (`0x50155ed3`: the cases through `0x6022562c`; `0x50155f03`, `0x50155f63`,
   `0x50155f82` for `0x200`, `0x300`, `0x400`); `0x50155de8`, `0x50155e12` and `0x50155e3c` call the completion. X with
   H-CAMINIT alone: requests 8 and 7 are accepted (no `0x0a103000`), and the movie sequence's queue lookups fail:
-  `0x0a283000` three times (the queue count `0x50151ffc` once, line 1032; the post `0x50151e45` twice, line 487). With
+  `0x0a283000` three times (the queue count `0x50151ffc` once, line 1032, in request 8's dispatch, kind 3,
+  `0x501556fb` -> `0x501987cd`; the post `0x50151e45` twice, line 487, in request 7's, kind 1). With
   the second init's first nine calls run as well (an experiment, not pinned), the posts succeed and nothing else happens
   in 300 ms.
 - **Who fires the events (D to the front end; ?).** Event `0x200`: the movie sequence, `0x501999f4` at `0x50199a3d` (the
@@ -1299,7 +1305,8 @@ and camDriverSession (X, 7 of 7) pin what follows.
   queues 0x17 / 0x18 then go natively. The stage runs IMG_PRECON's init before TAKE_MAIN's and EXP's before
   TAKE_EXPOSE's start (I: no difference, TAKE_EXPOSE waits on its queue). EXP's init includes H-AEINIT's table init
   `0x50560b29`, which so runs twice; what the second run changes is not read (?), and the tests pass with it (X).
-  EXP_MOVIE2 / 3 join `cpu2.mjs` CPU2_TASKS when the step runs.
+  EXP_MOVIE2 / 3 join `cpu2.mjs` CPU2_TASKS for the step's two starts only (the map is the process's, and a later
+  session in the same process must not inherit them).
 - **S1 (X, focusSession: camapp 3, `--take probe --cpu2 native`).** As in 4.1.8 to RdyFcsRdy3's TAKE_EXPOSE `0x500`;
   then TAKE_EXPOSE's `0x509` (kind 1289) reaches EXP_MOVIE natively, which gives cam.c requests 8 and 7 and waits on
   flag 21 for bit `0x1000` (`0x5056ba25`), the bit `0x5056fff0` (event `0x300`) sets. It does not answer EXP_MOVIE_POST,
@@ -1311,10 +1318,12 @@ and camDriverSession (X, 7 of 7) pin what follows.
   4.2.2. Since S1: `0x25001703`, `0x0f803003` (4.1.8), `0x0f833000` once (`0x5090afde` in `0x5090af48`, from the AF
   library's `0x508c10c1`; why is ?), cam.c's `0x0a283000` three times, besides the frame-rate warning `0x39000903`
   (4.1.4); to the lens only its state poll `c1 80`.
-- **S2 (X).** Event 824 in phase 103, as in 4.1.8's experiment; then the lab stops: while the GUI's synchronous DISPLAY
-  command 17 (from `0x507f66d1`) runs, the application posts DISPLAY command 18 (reply queue 6, token `0xf0080000`)
-  through its API sender (`0x503eba07`), which S-DISPQ does not stand in for inside a DISPLAY run (depth 1). TAKE takes
-  nothing. The stop is the lab's; what command 18 does there is not read.
+- **S2 (X).** Event 824 in phase 103, as in 4.1.8's experiment; then the lab stops. The application's synchronous
+  DISPLAY command 15 (sent from `0x503ec117`) runs, the GUI's command 17 (from `0x507f66d1`) runs nested in it and
+  returns, and then, while command 15's run is still in progress, task 168 (entry `0x5115ba0c`) posts DISPLAY command
+  18 (reply queue 6, token `0xf0080000`) through the application's API sender (`0x503eba07`), which S-DISPQ does not
+  stand in for inside a DISPLAY run (depth 1). TAKE takes nothing. The stop is the lab's; what command 18 does there
+  is not read.
 - **Next (I; Claude wall-clock).** (1) The consumer of the records +2464 / +2532 read to its interrupt (half a day to a
   day); if it is a unit whose status the lab can raise from its frame clock, an S- stand-in at that interrupt, with the
   front end's init (its devices) as the cost (4.2 seam D). (2) Then EXP_MOVIE's answer, TAKE_EXPOSE's token 15 and

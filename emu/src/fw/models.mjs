@@ -1025,7 +1025,8 @@ export const MODELS = {
     // Allocation"'s progress screen (factor 22 -> request 267 -> GUI 0x10c, "Busy") and updateCategoryInfo
     // (0x50710d83) posts its request to CATEGORY_MAIN (D; E145 has the same check as a stub that returns 0,
     // 0x50743489, D). Without the answer the screen stayed (X). LOGGER_MAIN: its request is posted at the start;
-    // without the answer the session stops after the clock is set, the application's queue 6 full (X; why is ?)
+    // without the answer the session stopped after the clock was set, the application's queue 6 full (X; why is ?);
+    // it no longer stops without it (X, 2026-11-10: three of its queue's four messages held; docs/hle-gaps.md 4.3.2)
     modack_queues: [[0xE6, 'CATEGORY_MAIN'], [0xDF, 'LOGGER_MAIN']],
   },
   E118: {

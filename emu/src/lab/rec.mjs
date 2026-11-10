@@ -55,7 +55,8 @@
 //               of the header area (called from 0x5054c9d3), a kind 14 request to the imgpro unit 0x9c600000: 0 into
 //               the aligned middle, as its caller fills the head and tail itself (0x5054c982). The unit's model
 //               (S-IMGPRO, docs/hle-gaps.md 4.3.1) computes the fill, but the request waits for the unit's end, which
-//               rec_jpeg_exec run here, outside REC_IMAGE's task, cannot (X under camapp 3: all tasks blocked)
+//               rec_jpeg_exec run here, outside REC_IMAGE's task, cannot reach: a lab call does not move lab time
+//               while every task waits (X under camapp 3: all tasks blocked)
 //
 // REC_FILE then runs natively in its task: rec_file_destination_record (0x50540345) by RecordDevice bit 0 to
 // rec_make_file (0x5053f294) and rec_file_record (0x5053fec0): the DCF open of the next number (0x5054a894), the

@@ -42,7 +42,8 @@
 //                  nothing finishes: the furthest point, docs/hle-gaps.md 4.3.2); control: S-MODACK's requests left
 //                  in PLAY_EXEC's queue, right's blocks the OXF main thread there; with --hdmi on the plug's TRA 588
 //                  is the component's (no S-OUTDEV), the HDMI device opens and channel 0 composes its window with no
-//                  plane drawn, and the plug's cmd 15 waits as the menu's does
+//                  plane drawn, and the plug's cmd 15 waits as the menu's does; in both, the native lens's LENS_EXEC
+//                  and LENS_COMMAND, whose tasks wait on them, are left out of S-MODACK (which takes what it answers)
 //   modeDialSession  the mode dial in play (E143): it starts at P, the start's mode; each position's change sets its
 //                  mode (MODE_EXPOSE, the custom banks' MODE_RAW, B's MODE_DIAL_B_ONOFF) and keeps the other settings,
 //                  each position shows a screen of its own, and away from P OK opens the Super Control Panel and MENU
@@ -311,8 +312,8 @@ const GUI_MENU = '0x0b02', GUI_SHOOTING = '0x0108', GUI_NO_PICTURE = '0x0505';
 //   CapThr's state word (getter 0x50bcccc9), whose top byte 1 the sequence parts' S1 guard 0x50bcdef7 asks for (X: 2
 //   before the menu, the static 0x02010202; 1 after it closes)
 //   playback: Play_Get_Picture_Header_Info's getter in the play module (0x518b629e) has its code in d2 at
-//   0x518b62dc: 6152 where the picture's record (0x518bfc7e) is not marked loaded (+12 not 1); the play capability
-//   then sets its state word 0x62b0dc8c to 4 (0x50bb20dd), from which playOneFrameStart answers 0xf0000001
+//   0x518b62dc: 6152 where the picture's record (0x518bfc7e returns it) is not marked loaded (+12 not 1); the play
+//   capability then sets its state word 0x62b0dc8c to 4 (0x50bb20dd), from which playOneFrameStart answers 0xf0000001
 //   (0x50c5007b); right fills the other bank (X)
 //   the sequence parts' phase (0x60364a1c, getter 0x50cc60fa): 102 after an S1 whose take-ready nothing finishes;
 //   isCtrlReleaseEnable (0x50ab5c04) logs "UNRESPONSIVE(Seq=%d)" at 0x50ab5c26, the phase at (8,sp), and refuses
@@ -323,6 +324,14 @@ const HEADER_INFO_CODE = 0x518B62DC, HEADER_NOT_LOADED = 6152, PLAY_CAP_STATE = 
 const RIGHT_BANK = 0x9A43E000, SEQ_PHASE = 0x60364A1C, PHASE_TAKE_READY = 102, RELEASE_UNRESPONSIVE = 0x50AB5C26;
 const PLAY_EXEC = 0x3F, API_SEND_RETURN = 0x503EBA07, OLYQEWR = 0x5002C151, OXF_MAIN_TASK = 57;
 const hx = (v) => (v === undefined || v === null ? String(v) : '0x' + (v >>> 0).toString(16));
+// LENS_EXEC and LENS_COMMAND, and the native lens's tasks that wait on them (LENS_MAIN 92, LENS_COMMAND 91); a data
+// queue's first waiting receiver: its control block from the kernel's table at kcb +232, the receive-wait list at +12,
+// a waiting TCB's id at +16 (ref_dtq 0x50013ca7, D)
+const LENS_QUEUES = [0x2E, 0x31], LENS_TASKS = [92, 91];
+const recvWaiter = (lab, q) => {
+  const cb = lab.sim.u32(lab.nk.kcb(232) + 4 * (q - 1)), first = lab.sim.u32(cb + 12), id = lab.sim.read(first + 16, 2);
+  return first === cb + 12 ? 0 : id[0] | id[1] << 8;
+};
 // the histogram (docs/hle-gaps.md 4.2.1): at least HIST_RUNS_MIN runs in the start and 2 s of idle (X: a run every 50
 // ms), HIST_BIN_WORDS bin words a read (128 bins, 0x501d6aa6..cb's clamp, D); cmd 15's wait returns within two frames
 // and the key's own step (the TFT's 16.68 ms frame, X)
@@ -344,6 +353,11 @@ export async function traRoutingSession() {
       const s = pl.session, lab = s.lab, ca = s.camapp;
       const idle = (ms) => { const to = lab.lab_time() + ms * 1e6; while (lab.lab_time() < to) s.idle_slice(Math.min(to, lab.lab_time() + 50e6)); };
       const taken = () => ca.tra_native.splice(0);
+      // S-MODACK takes the message of each request it answers, so the queues a task the lab runs reads leave it: the
+      // native lens's LENS_EXEC and LENS_COMMAND, whose tasks wait in their receive-wait lists
+      const lensWait = LENS_QUEUES.map((q) => recvWaiter(lab, q));
+      ok(s.lens && LENS_QUEUES.every((q) => !ca.module_queues.has(q)) && lensWait.join() === LENS_TASKS.join(),
+        `${tag}: the native lens's queues ${LENS_QUEUES.map(hx)} left out of S-MODACK (${LENS_QUEUES.map((q) => ca.module_queues.has(q))}), their receivers ${lensWait}`);
       const used = pl.stand_ins_in_use(), st = ca.status();
       const states = Object.fromEntries(ca.boot_objects().map(([[name], o]) => [name, lab.sim.u32(o + 256)]));
       ok(st.components === true && st.native_tra === true && !used.includes('S-BOOTDONE') && !used.includes('S-TRAACK') && states.Cab_CameraBase === 13 && states.CtgStl_StillImageShooting === 11,
@@ -414,8 +428,8 @@ export async function traRoutingSession() {
       ok(closed === GUI_SHOOTING && thr0 === THR_NOT_RUNNING && thr1 === THR_RUNNING,
         `${tag}: MENU closes the menu (${closed}); CapThr's state word's top byte ${thr0} before the menu, ${thr1} after`);
       // playback shows No Picture although the card holds the passes' pictures: the play module does not run, S-MODACK
-      // answers its Play_Picture request, and Play_Get_Picture_Header_Info's getter finds the picture not loaded, so the
-      // play capability's state goes to 4 (docs/hle-gaps.md 4.3.2)
+      // answers its Play_Picture request, and Play_Get_Picture_Header_Info's getter finds the picture not loaded, so
+      // the play capability's state goes to 4 (docs/hle-gaps.md 4.3.2)
       const codes = [];
       lab.observe(HEADER_INFO_CODE, (l, r) => codes.push(r.d2 & 0xFFFF), 'test: the header info getter\'s code');
       const [play] = key('play'), cap = lab.sim.read(PLAY_CAP_STATE, 2), capState = cap[0] | cap[1] << 8;
@@ -436,7 +450,7 @@ export async function traRoutingSession() {
       const [after, rec] = key('menu');
       ok(ca.card_images() === 4 && after === GUI_SHOOTING && rec.events.length === 0 && rec.uiin?.[0]?.ev === 'EV_PRESS_MENU_KEY'
         && phase === PHASE_TAKE_READY && unresponsive.length >= 1 && unresponsive.every((p) => p === PHASE_TAKE_READY),
-        `${tag}: after a further pass (${ca.card_images()} pictures, the sequence in phase ${phase}) MENU's ${rec.uiin?.[0]?.ev} sets no GUI event (${rec.events.length}), isCtrlReleaseEnable unresponsive it in phases ${unresponsive}, the GUI stays ${after}`);
+        `${tag}: after a further pass (${ca.card_images()} pictures, the sequence in phase ${phase}) MENU's ${rec.uiin?.[0]?.ev} sets no GUI event (${rec.events.length}), isCtrlReleaseEnable refusing it in phases ${unresponsive}, the GUI stays ${after}`);
     } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 600)}`); }
     pl.close_session();
   }

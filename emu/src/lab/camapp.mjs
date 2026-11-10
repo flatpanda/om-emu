@@ -198,24 +198,35 @@ export const CA_PROP_SITE = A(0x50B76DBE);
 // TRA 990 (0x50c78b35: state 2 takes CapThr's start at 0x50c78bc1, D), the application's second read in 0x50abb032,
 // made once the components have set the state to 0 (0x50ca4ae1), and the two reads of 0x50d787f0 at the HDMI plug
 export const CMP_MODULE9_READERS = [A(0x50C78BB4), A(0x50ABB044), A(0x50D78808), A(0x50D78815)];
-// the target table at 0x606214a0 (docs/om1-shutter-spec.md 2.2) without DISPLAY (0x88), plus PC_PD_CMD_EXEC (0xcf)
-export const MODULE_QUEUES = new Set([0x76, 0x3F, 0x64, 0x5A, 0x47, 0x1F, 0x03, 0x09, 0x71, 0x2E, 0x01, 0x5E, 0x7D, 0x1B, 0x7C, 0x08, 0x31, 0xAE, 0x98, 0xCF]);
-// the same queues by their id words in the static queue-id table (0x600431c6, id n at +2(n - 1)), which a ported
-// model's copy names in its own table (its ids differ: E147 numbers DISPLAY 0x89); module_queues() reads them
+// the target table at 0x606214a0 (docs/om1-shutter-spec.md 2.2) without DISPLAY (0x88), plus PC_PD_CMD_EXEC (0xcf):
+// E143's module queues by name, each the target table's entry at its target (src/fw/facts.mjs API_TARGETS_E143), which
+// a ported body's fact 'api.queues' gives from its own table (src/fw/facts.mjs apiTargets: its ids differ, E122's
+// XTC_APP_EXEC is 0x80; null where its table has no such target, E120's C3D). Until 2026-11-10 the lab read the
+// queues' id words in the static queue-id table through the port, which on the E118 family read another queue's id
+// for five of them and on ten other bodies for one to five (docs/model-survey.md findings 43 and 99)
+const API_QUEUES_E143 = { XTC_APP_EXEC: 0x76, PLAY_EXEC: 0x3F, TFT_EXEC: 0x64, TAKE_EXEC: 0x5A, REC_EXEC_MAIN: 0x47,
+  FILECLBK_UEXEC: 0x1F, ADJ_SLF_EXEC: 0x03, BC_EXEC: 0x09, UI_OUT_EXEC: 0x71, LENS_EXEC: 0x2E, ADJ_EXEC: 0x01,
+  TAKE_FUNC: 0x5E, ZOOM_EXEC: 0x7D, FCS_EXEC: 0x1B, PWR_EXEC: 0x7C, AUD_EXEC: 0x08, LENS_COMMAND: 0x31,
+  MOVE_MAIN: 0xAE, C3D: 0x98 };
+export const MODULE_QUEUES = new Set([...Object.values(API_QUEUES_E143), 0xCF]);
+// the same queues by their id words in the static queue-id table (0x600431c6, id n at +2(n - 1)), in MODULE_QUEUES'
+// order: on E143 they hold the table's ids (module_queues checks it); on another body only the last, PC_PD_CMD_EXEC's,
+// which no target names, is read where the port places it: the queue its name names on E146, E147, E144, E148, E139
+// and E134; on E137 and E125, which hold no such name, REC_EXEC_PROGRESS (0xd6) and FMEMEXEC (0xdc); unplaced on the
+// ten others, none of which holds the name (X, the object-name tables)
 export const MODULE_QUEUE_WORDS = [A(0x600432B0), A(0x60043242), A(0x6004328C), A(0x60043278), A(0x60043252), A(0x60043202), A(0x600431CA), A(0x600431D6), A(0x600432A6), A(0x60043220), A(0x600431C6), A(0x60043280), A(0x600432BE), A(0x600431FA), A(0x600432BC), A(0x600431D4), A(0x60043226), A(0x60043320), A(0x600432F4), A(0x60043362)];
+const apiQueues = () => fact('api.queues', API_QUEUES_E143);
 // A body's API target table can name module queues E143's has no counterpart of (src/fw/models.mjs modack_queues:
 // [queue id, its name in the object-name table]; E132's CATEGORY_MAIN and LOGGER_MAIN): S-MODACK answers them too
 export function module_queues(image) {
-  const ids = MODULE_QUEUE_WORDS.map((a) => image[a - IMAGE_BASE] | image[a - IMAGE_BASE + 1] << 8);
-  if (ON_LAB_MODEL && ids.join() !== [...MODULE_QUEUES].join()) throw new Error('module_queues: E143 table is not MODULE_QUEUES');
+  const word = (a) => image[a - IMAGE_BASE] | image[a - IMAGE_BASE + 1] << 8;
+  const pc = MODULE_QUEUE_WORDS.at(-1), ids = [...Object.values(apiQueues()).filter((q) => q !== null), ...(isUnmapped(pc) ? [] : [word(pc)])];
+  if (ON_LAB_MODEL && (ids.join() !== [...MODULE_QUEUES].join() || MODULE_QUEUE_WORDS.map(word).join() !== ids.join())) throw new Error('module_queues: E143 table is not MODULE_QUEUES');
   const more = (MODEL_INFO.modack_queues ?? []).map(([q]) => q);
   if (more.some((q) => ids.includes(q))) throw new Error(`module_queues: ${MODEL}'s modack_queues ${more.join(', ')} repeat a queue of E143's table (${ids.join(', ')})`);
   return new Set([...ids, ...more]);
 }
 const OLYQEWR = A(0x5002C151), API_SEND_RETURN = A(0x503EBA07);
-// UI_OUT_EXEC's id word in the queue-id table (MODULE_QUEUE_WORDS; E143 0x71), which leaves S-MODACK's queues while
-// UI_OUT runs (H-UIOUTSTART)
-const UI_OUT_EXEC_WORD = A(0x600432A6);
 // S-DISPSYNC: the request type that waits for an image sync; the release's sync-word store (its value; the panels'
 // d1 values, as stopRecView passes them, and the image sync's kind, the one the type-3 request's pending state takes,
 // are the fact's, displaySync's comment) and image-event flag (a0, as stopRecView passes it). On E120's record form
@@ -473,7 +484,7 @@ const FUNC_DIRECT_RUN = A(0x51068E37), FUNC_RECORDING_MOVIE = 27;
 export const CAMAPP_STAND_INS = {
   "H-GUIBYAPP": "the lab's bring-up does not create the GUI (the creator 0x5108bc37): the application's start does, from CA_MAIN's code (0x510609ce), as on the camera; the lab takes the GUI's task and OSD records after it. Created twice, the lab's idle GUI kept a root of output 0 and one of the two buffers of OSD layer 1 (the registry 0x62b26528), so the shown root's double buffer had layer 1 on one side only: on the EVF the bottom bar and most of the information were missing in every other frame (docs/om1-shutter-spec.md section 7 item 59)",
 "S-CAMAPP": "the camera application runs natively in every session: the boot chain's HighLevel steps (0x50ab222a, 0x50ab22bc), the event broker init 0x502a48b6 and act_tsk(58) at bring-up; its task entries are allowed, its nine module-9 readers join S-TAKEOVER's, its output-device read (0x50b76dbe) joins S-PROP; the application maps keys and moves the GUI itself (docs/om1-shutter-spec.md section 7); control camapp 2 starts a session with the HLS components running too; control camapp 3 runs them with the transaction path native, the OXF main thread started before HL_INIT",
-  "S-MODACK": "the module tasks do not run: every request the application's API sender posts to a module queue (OlyQeWr returning to 0x503eba07; E143's target table's module queues, and those a body's src/fw/models.mjs modack_queues adds: E132's CATEGORY_MAIN and LOGGER_MAIN) is answered after the step with [status 0, token, word 3] to the reply queue in its word 0, the layout of DISPLAY's replies (0x501c48bf); every synchronous send (0x5002e39d) the lab otherwise refuses returns E_OK. Nothing a module would write back is written (I). The queues of the modules that run natively are left to them: the file module's FILECLBK with the card's file system, and with --audio on AUD_MAIN's AUD_EXEC (0x08; H-AUDSTART), synchronous sends included",
+  "S-MODACK": "the module tasks do not run: every request the application's API sender posts to a module queue (OlyQeWr returning to 0x503eba07; E143's target table's module queues, on another body its own table's entries at the same targets, src/fw/facts.mjs apiTargets, and those a body's src/fw/models.mjs modack_queues adds: E132's CATEGORY_MAIN and LOGGER_MAIN) is answered after the step with [status 0, token, word 3] to the reply queue in its word 0, the layout of DISPLAY's replies (0x501c48bf); every synchronous send (0x5002e39d) the lab otherwise refuses returns E_OK. Nothing a module would write back is written (I). The queues of the modules that run natively are left to them: the file module's FILECLBK with the card's file system, and with --audio on AUD_MAIN's AUD_EXEC (0x08; H-AUDSTART), synchronous sends included",
   "S-DISPSYNC": "the release of the GUI's synced display updates: while the application's sync word for a panel is set (CameraCommon::setDispSync, which E137's GUI asks for at the start), the GUI's update is a request of type 3, which leaves its buffers pending until an image sync; their one sender, the shooting sequence's stopRecView, does not run in an idle session, so E137's screen stayed blank (X). After each step the lab releases each device with such a request: both panels' sync words cleared through the application's setter, as stopRecView does, then the image sync of kind 1, whose event the display manager takes in the state the type-3 request leaves, and the pending buffers are committed (D). stopRecView's kind 2 is not taken there: under it E137's screen came only at its GUI's next update, a 250 ms redraw of a blinking item, and E125's GUI, which sends none, kept a one-colour frame (X). When the camera releases the sync at the start is not known (I: once its through image shows)",
   "S-RVSTANDBY": "the rec view component in standby: the shooting components' RecView does not run; its entryStandby would store state 1 in the application's state word (fact recview), which starts at 0, and getRecViewState takes 0 for a rec view, so E142's GUI showed the rec view's items at the start (EVT_REC_DISP_RECVIEW, 0xf005) instead of the shooting screen (X). The lab stores 1 before the application starts; that the camera's component is in standby then is I",
   "S-TRAACK": "the HLS transaction layer's synchronous exec (0x50af7cb9 / 0x50af7cbe) returns 0: no local handler is ever registered (on the camera either), so every transaction goes to the active state's components, where the shooting component CmpSht_ShootingComponent_NEW answers TRA 990 and 991; it runs only with the HLS components, and the remote channel answers 0xf0000001 (startShootingService fails on TRA 990 without it, X). With the file system native and its HLS side (card_fs.hls: E143, E146) the media control's start (TRA 1511; E146's 1509) also goes to S-MDACTRL (media.mjs). Under control camapp 3 it answers none (its list TRAACK_KEPT is empty): every transaction goes to the exec natively and, S-RPC lifted from the receiver's send and the remote-call method, to the components, which answer the start's 990 and the rest natively (X; docs/hle-gaps.md 4.1.5)",
@@ -848,7 +859,7 @@ export class CamApp {
     if (fileq !== null) this.module_queues.delete(fileq);
     // with UI_OUT run (H-UIOUTSTART, play.mjs) its task answers the requests to its second queue, UI_OUT_EXEC, itself
     // (src/fw/models.mjs ui_out: E143 0x5014f6aa..0x5014f736, E134's init links its counterpart the same way)
-    const uioutq = this.s.ui_out_tid ? this.s.lab.image[UI_OUT_EXEC_WORD - IMAGE_BASE] | this.s.lab.image[UI_OUT_EXEC_WORD - IMAGE_BASE + 1] << 8 : null;
+    const uioutq = this.s.ui_out_tid ? apiQueues().UI_OUT_EXEC : null;
     if (uioutq !== null) this.module_queues.delete(uioutq);
     // with --audio on AUD_MAIN takes its queue AUD_EXEC natively, synchronous sends included (src/lab/audiohw.mjs
     // H-AUDSTART)

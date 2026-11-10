@@ -163,6 +163,16 @@ const DISPQ_FOUND = { E144: [0x50172492], E139: [0x5017388D] };
 // port placed before the rule (task 58: its entry after a `ret [],4`, the trace call first, the receive at 0x501eb289,
 // D)
 const LOOP_FOUND = { E143: 0x501C3035, E144: 0x50170FFF, E145: 0x501EB256 };
+// The API target table's module queues (src/fw/facts.mjs apiTargets, fact api): the table, its count and the five
+// queues the port's queue-id words read as another queue's on the E118 family, each as its name in the object-name
+// table ({char name[24], u16 id} records) gives it (X: E143 and the family; docs/model-survey.md finding 99); E120 has
+// no C3D target (42 targets)
+const API_FOUND = {
+  E143: { table: 0x606214A0, count: 44, queues: { XTC_APP_EXEC: 0x76, TFT_EXEC: 0x64, LENS_COMMAND: 0x31, FCS_EXEC: 0x1B, PWR_EXEC: 0x7C, C3D: 0x98 } },
+  E122: { table: 0x603F957C, count: 43, queues: { XTC_APP_EXEC: 0x80, TFT_EXEC: 0x6E, LENS_COMMAND: 0x34, FCS_EXEC: 0x1E, PWR_EXEC: 0x86, C3D: 0xA2 } },
+  E118: { table: 0x603C5558, count: 43, queues: { XTC_APP_EXEC: 0x80, TFT_EXEC: 0x6E, LENS_COMMAND: 0x34, FCS_EXEC: 0x1E, PWR_EXEC: 0x86, C3D: 0xA2 } },
+  E120: { table: 0x603A985C, count: 42, queues: { XTC_APP_EXEC: 0x80, TFT_EXEC: 0x6E, LENS_COMMAND: 0x34, FCS_EXEC: 0x1E, PWR_EXEC: 0x86, C3D: null } },
+};
 // The DISPLAY task's start-up calls (dispq.start; src/fw/facts.mjs displayStart): E143's as the lab gives it
 // (src/lab/display.mjs S-DISPSTART, the call of 0x500239c9, D), E125's (its trace, then the TFT open 0x50229c1a, D) and
 // E137's (its trace, then 0x50020d81, D)
@@ -813,6 +823,8 @@ export function factsTests() {
     const m9 = placed?.app?.module9_readers;
     if (MODULE9_FOUND[code]) ok(same(m9, MODULE9_FOUND[code]), `${code}: app.module9_readers ${hx(m9 ?? placed)}, found ${hx(MODULE9_FOUND[code])}`);
     if (code === 'E143') ok(Array.isArray(m9) && E143_MODULE9_LISTED.every((x) => m9.includes(x)), `E143: app.module9_readers ${hx(m9 ?? placed)} lacks one of its lab lists' ${hx(E143_MODULE9_LISTED)}`);
+    const apiFound = API_FOUND[code], api = placed?.api;
+    if (apiFound && (code === 'E143' || PORTS[code])) ok(api?.table === apiFound.table && api.count === apiFound.count && Object.entries(apiFound.queues).every(([k, v]) => api.queues[k] === v), `${code}: api ${hx(api ?? placed)}, found ${hx(apiFound)}`);
     const dq = placed?.dispq?.sends;
     if (DISPQ_FOUND[code]) ok(Array.isArray(dq) && DISPQ_FOUND[code].every((x) => dq.includes(x)), `${code}: dispq.sends ${hx(dq ?? placed)} lacks one of ${hx(DISPQ_FOUND[code])}`);
     // the DISPLAY task loop, and the port's place of E143's at the rule's (bin/port.mjs, how 'queue-receive')

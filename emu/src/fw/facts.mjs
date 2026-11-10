@@ -3835,6 +3835,40 @@ function evfCode(img, propId) {
   return codes.size ? [...codes][0] : undefined;
 }
 
+// The module queues of the API target table (fact 'api', src/lab/camapp.mjs module_queues, S-MODACK). The
+// application's API sender takes a target id and posts to the queue id its target table holds at that index
+// (docs/om1-shutter-spec.md 2.2): the last `add imm32,An` before its OlyQeWr call is the table, `mov (An),Dm` its
+// entry, and before it a `mov imm32,a0; mov (Dn,a0),d0` loads the target's word of the table that follows it, so
+// its count is their distance / 4 (E143 0x503eb9b2 0x606214a0 and 0x503eb984 0x60621550, 44; E122 0x502cd985
+// 0x603f957c and 0x502cd942 0x603f9628, 43; D). The rule walks the sender's instructions whole from at most
+// API_SENDER_SPAN bytes before the call returning to `ret` (API_SEND_RETURN_E143's place) and gives {table, count,
+// queues}: queues has each module queue of E143's table S-MODACK answers by its name, the body's entry at E143's
+// target (API_TARGETS_E143), or null where that target is past the body's table (E120's C3D, target 42 of 42). Each
+// entry is the queue its name in the object-name table names (X, the 19 images: the five of the E118 family the
+// port's queue-id words read as another queue's, XTC_APP_EXEC, TFT_EXEC, LENS_COMMAND, FCS_EXEC and PWR_EXEC, and
+// those of E146, E147, E134, E137, E125, E145, E133, E130, E129 and E132). Throws where the walk finds no such pair.
+export const API_SEND_RETURN_E143 = 0x503EBA07;
+export const API_TARGETS_E143 = { XTC_APP_EXEC: 0, PLAY_EXEC: 3, TFT_EXEC: 4, TAKE_EXEC: 6, REC_EXEC_MAIN: 12,
+  FILECLBK_UEXEC: 14, ADJ_SLF_EXEC: 33, BC_EXEC: 34, UI_OUT_EXEC: 39, LENS_EXEC: 18, ADJ_EXEC: 24, TAKE_FUNC: 25,
+  ZOOM_EXEC: 26, FCS_EXEC: 27, PWR_EXEC: 28, AUD_EXEC: 37, LENS_COMMAND: 40, MOVE_MAIN: 41, C3D: 42 };
+const API_SENDER_SPAN = 0x100, API_TABLE_MAX = 64;
+export function apiTargets(img, ret) {
+  const { base } = imageBase(img), end = ret - 0x50000000;
+  let s = end - API_SENDER_SPAN;
+  while (s < end && !wholeTo(img, s, end)) s++;
+  let table = null, next = null;
+  const nexts = [];
+  for (let p = s; p < end; p += insnLength(img[p], img[p + 1])) {
+    if (img[p] === 0xfc && (img[p + 1] & 0xfc) === 0xd0) table = u32(img, p + 2);
+    if (img[p] === 0xfc && img[p + 1] === 0xdc && img[p + 6] === 0xf3) nexts.push(u32(img, p + 2));
+  }
+  if (table !== null) next = nexts.find((v) => v > table && v <= table + 4 * API_TABLE_MAX && !((v - table) % 4)) ?? null;
+  if (table === null || next === null) throw new Error(`apiTargets: no target table and following table (${table === null ? 'none' : h8(table)}, ${nexts.map(h8).join(', ') || 'none'}) before the API sender's return ${h8(ret)}`);
+  const count = (next - table) / 4, queues = {};
+  for (const [name, t] of Object.entries(API_TARGETS_E143)) queues[name] = t < count ? u32(img, table + 4 * t - base) : null;
+  return { table, count, queues };
+}
+
 // What the rules that read code relative to an E143 function read from one body (src/fw/ports.mjs FACTS[code], with
 // readFacts'; bin/port.mjs): img its run-time image, at(address) the build's address of an E143 one (the port's
 // placement; null: not placed). Returns {app: {module9_readers}}, {state_log: {regs}}, {gui_states: {parents}}, {dispq: {sends, loop,
@@ -3844,7 +3878,8 @@ function evfCode(img, propId) {
 // forward}}, {touch_start: {init, id_word}}, {touch_mask: {word}},
 // {touch_regs}, {frame_mode: {set}}, {frame_plane: {mode, uploads}}, {prop: {device, evf_code}} and
 // {lens_driver: {module_init, cache_init, task_vars, tasks, exec_queue, flags, cache_area}} and {rec_file: {exif, init,
-// task, packet, jpeg, contexts, clock_set}} (no state_log part where
+// task, packet, jpeg, contexts, clock_set}} and {api: {table, count, queues}} (no api part where the API sender's
+// return is not placed; no state_log part where
 // the GUI state log is not placed or has not one call; no gui_states part where the state table is not placed or
 // stateTableBound reads no bound; no still where the getStillInfo converter is not found, still null where
 // stillFields reads no copy; no app, text or
@@ -3931,6 +3966,8 @@ export function readPlacedFacts({ img, at }) {
   if (lens !== undefined) facts.lens_driver = lens;
   const rec = kcb !== null ? recFile(img, kcb) : undefined;
   if (rec !== undefined) facts.rec_file = rec;
+  const apiReturn = at(API_SEND_RETURN_E143);
+  if (apiReturn !== null) facts.api = apiTargets(img, apiReturn);
   return facts;
 }
 

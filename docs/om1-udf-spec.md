@@ -1,4 +1,6 @@
 > Status (2026-10): rows marked IMPLEMENT are implemented in `emu/src/core/cpu.mjs` (`step()`; the float unit in `udfFloat`, `udfFloatToInt` and `udfCompare`); every other UDF form faults with code 1. One addition to this spec: the UDF integer and float operations keep the PSW value but mark V/C/N/Z undefined (udf06 excepted; udf13 defines V and udf20 leaves PSW alone, section 2a), so a flag consumer that reads them faults with code 6. The analysis scripts are not published; `emu/checks/check_isa.mjs` replays the regression vectors and firmware functions of section 5. M9 (2026-10): rows 6, 15 and 16 are IMPLEMENT under the labels A-HI and A-UNIT (section 2a): udf15 reads HI at any site, and udf12/13/20/21 are a closed round trip of unit state, which the kernel's interrupt context save/restore and its self-test run natively. Independent tests: `emu/checks/check_irq.mjs` I5, the check_isa vectors.
+> 2026-11-09: row 14 (udf07) is IMPLEMENT, as BSCH from the Panasonic MN103001 manual, which its three firmware
+> callers agree with (section 2, row 14); it defines C and marks V, N and Z undefined.
 
 # OM-1 UDF semantics: final spec
 
@@ -52,7 +54,7 @@ bytes, including forms that fault, so that code invalidation (ISA spec 10.2) cov
 | 11 | udf06 Dm,Dn (F6 6x) | 7 (compare stubs 0x5002b16f-0x5002b31e) | **IMPLEMENT** | Float compare of Dm against Dn: PSW = (PSW & ~0xF) \| (Dm == Dn ? Z : 0) \| (Dm < Dn ? N : 0); V = 0, C = 0. Dn and MDR unchanged. Fault on NaN, ±Inf or subnormal operands. ±0 compare equal. |
 | 12 | udf14 imm8 64 (F9 E0+n, 0x40 exactly) | 4 | **IMPLEMENT** | Dn = f32((int32)Dn), round-to-nearest-even. PSW and MDR unchanged. |
 | 13 | udf14 imm16 128 (FB E0+n, 0x80 0x00 exactly) | 4 | **IMPLEMENT** | Dn = (int32)trunc(float Dn), toward zero. ±0 and subnormal give 0. A finite x ≥ 2^31 gives 0x7fffffff. Fault on NaN, ±Inf, or finite x < -2^31. PSW and MDR unchanged. |
-| 14 | udf07 Dm,Dn (F6 7x) | 1 (0x5050a089) | DO-NOT-IMPLEMENT | Some kind of bit search with C as the found/not-found flag. Direction and Dn semantics unknown. |
+| 14 | udf07 Dm,Dn (F6 7x) | 1 (0x5050a089) | **IMPLEMENT** (2026-11-09) | BSCH: the highest 1 of Dm at or below bit (Dn & 31) - 1, from bit 31 when Dn & 31 is 0 (the upper 27 bits of Dn ignored). Found: Dn = its bit number, C = 0. None: Dn = 0, C = 1. V, N, Z marked undefined (values kept). Dm, MDR and HI unchanged. |
 | 15 | udf12, udf13 (F6 Cx, F6 Dx, m == n) | 1 each (context save 0x5000f25c, 0x5000f264; self-test 0x50012691) | **IMPLEMENT** (M9, A-UNIT) | udf12 Dn,Dn: Dn = unit C, flags undefined. udf13 Dn,Dn: Dn = unit D, V = unit bit (defined), C/N/Z undefined. m != n faults. |
 | 16 | udf20 (F5 0x, m == n), udf21 (F5 1x) | restore 0x5000f282 / 0x5000f27e; self-test | **IMPLEMENT** (M9, A-UNIT, A-HI) | udf20 Dn,Dn: HI = Dn. udf21 Dm,Dn: reads V as a flag consumer (fault 6 inside the PSW window or when V is undefined), then unit C = Dm, unit D = Dn, unit bit = V. Neither writes a register. udf20 leaves PSW alone (the GDB 15.2 sim's `putx`, the AM30 name of F500, only sets MDRQ); udf21's flag effect is unknown (no AM30 form of F5 1x in the sim or binutils), so its flags keep their values and are marked undefined. |
 | 17 | Everything else | 0 | DO-NOT-IMPLEMENT | udf08-11; udf12/13/15/20 with m != n; udf14 in register form or with any other immediate or width; udf00/udf01 in any other tt; udfu00; udfu02-15; every other F5 form; tt=10/11. |
@@ -92,7 +94,7 @@ Before M9 "HI_READY" (a CPU-state boolean, not architectural) restricted row 6; 
 - **PSW unchanged.** The manual says the flags are "user defined"; the GDB simulator sets
   Z and N and clears C and V. That flag behaviour is not adopted, for two reasons:
   - This unit is not the AM30 unit. udf04 and udf05 are float operations here, where the
-    AM30 set has sat16 and sat24, and udf07's flag polarity contradicts AM30/AM33 bsch.
+    AM30 set has sat16 and sat24, and udf07's flag polarity contradicts the GDB sim's AM30/AM33 bsch (row 14).
   - It cannot be observed. A path walk from all 12,198 reached udf00/udf01/udfu01 sites
     always reaches a full flag setter, or a call/ret, before any flag reader.
 
@@ -230,15 +232,56 @@ re-check overrules that on execution evidence.
   full flag setter (`add d1,d1`) or a retf whose callers do not read flags. Only the
   udf06 stubs return flags.
 
-### Rows 14-17: keep faulting
+### Row 14: udf07 = BSCH (2026-11-09)
 
-- **udf07.**
-  - The docs map it to AM30/AM33 bsch. But the only site, 0x5050a086
-    (`not d0; clr d1; udf07 d0,d1; bcc +; not d1; + mov d1,d0; extbu d0; rets`), would
-    return 255-idx when found and 0 when not found under AM33 semantics (C=1 = found).
-  - Its callers do "if r < 32 set bit r", so AM33 polarity makes the allocator
-    nonsensical. The plausible reading is C=0 = found with Dn = index.
-  - Bit order (LSB- or MSB-first) cannot be fixed without ground truth.
+Tags: M1 = the Panasonic MN103001G/F01K User Manual, chapter 3 "Extension Instruction Specifications" (the
+extension unit of an MN1030-core microcontroller); D = read from the firmware; X = executed in the lab; I = inference.
+
+- **The manual (M1, printed p. 3-27).** "BSCH Dm, Dn", assembler mnemonic `udf07 Dm, Dn`: a bit search in the 32 bits
+  of Dm from bit number Dn - 1 "in the direction that the bit number becomes smaller"; when the lower 5 bits of Dn are
+  0 it starts at bit 31; the upper 27 bits of Dn are ignored. The number of the first 1 found is written to Dn and
+  C = 0 ("search was successful"); with no 1 down to bit 0, C = 1 and Dn = 0. V, N and Z are undefined. The PSW update
+  is delayed by one instruction, but Bcc and Lcc read the new flags at once. The immediate forms are "not assured".
+- **That manual's unit and this one (M1, D).** Its pages for the other forms the firmware uses have the same encodings
+  and data paths this spec established without it: MULQ / MULQI = `udf00` Dm,Dn / imm (low word to Dn, high word to
+  MDRQ, the immediate sign-extended; p. 3-11, 3-12), GETX = `udf15 Dn,Dn` (p. 3-7), PUTX = `udf20 Dm,Dm` (p. 3-5),
+  PUTCX = `udf21 Dm,Dn` (MCRH = Dm, MCRL = Dn, MCVF = V; p. 3-6), GETCHX / GETCLX = `udf12` / `udf13 Dn,Dn` (MCRH /
+  MCRL, V = MCVF; p. 3-8, 3-9), so A-UNIT's C, D and V are MCRH, MCRL and MCVF. Its flag effects go further in places
+  (MULQ sets N and Z, GETX and GETCHX / GETCLX define flags); rows 1, 6, 15 and 16 are not changed here. Its udf04 is
+  SAT16 (p. 3-21), not a float operation, so the OM-1's unit is a derivative of that block, not the same one.
+- **The firmware agrees on what it can observe (D).** The only udf07 is the imgpro library's helper `not d0; clr d1;
+  udf07 d0,d1; bcc +; not d1; + mov d1,d0; extbu d0; rets` (E143 `0x5050a086`): the same 13 bytes once in each of the
+  25 bodies that have that library (E109 and every unpacked body from E113 to E148; E146 `0x504fdaac`, E147
+  `0x5050cac0`), each with exactly three direct callers. The older E100, E101, E106 .. E108 and E110 .. E112 have
+  neither the helper nor its callers' allocate and free sequences; no software form of the routine was found there. A
+  scan of every body's main block for F6 7x on an instruction boundary followed within four instructions by a C reader
+  finds the helper and, besides it, only bytes in data; E143's static map holds the one site. The helper returns r =
+  the number of a 0 bit of its argument, or 255 when there is none (on C = 1 `not d1` turns Dn = 0 into 255 after
+  `extbu`). That is what its callers need: `0x5048ba86` allocates ids over eight words at `0xa32edfcc` (r < 32: set
+  bit r, id = word << 8 | r | 0x8000; `0x5048babb` frees bit id & 31 of word (id >> 8) & 127) and `0x5048e190` a
+  per-CPU flag mask (r < 32: mask 1 << r, else `dly_tsk(1)` and again). With the AM33 sim's polarity (C = 1 on a find,
+  Dn = its number; C = 0, Dn = 0 on none) r would be 255 - i on a find, which the callers take for a full word, and 0
+  on a full word, whose bit 0 they would hand out again. This is M1's polarity; the GDB 15.2 sim contradicts it: its
+  AM30 `bsch` (F67x, `mn10300.igen`) sets C when Dm << (Dn & 31) is not 0 and writes no register, its AM33 `bsch` sets
+  C on a find. The third caller `0x50477a9b` takes r - 2, at most 11, of a quotient into a 4-bit field of an imgpro
+  register image (`0x50477aa2..c5`).
+- **The search order is M1's alone.** The allocators work with any 0 bit, and nothing in the firmware fixes the order;
+  the AM33 sim's `bsch` (from bit (Dn & 31) - 1 down, bit 31 for 0) and GCC 14.3's AM33 `clzsi2`
+  (`gcc/config/mn10300/mn10300.md`: Dn = 0 so that the search starts "at bit 31"; BSCH "returns the bit number of the
+  highest set bit") have the same order. With it the helper hands out bit 31 first (X: camapp 3's menu runs udf07
+  twice with Dm = `0xffffffff`, Dn = 0, result 31, C = 0).
+- **Not modelled: the one-instruction PSW delay (M1).** A flag reader other than Bcc / Lcc right after udf07 would see
+  the PSW from before it; the lab writes C at once. The only site's next instruction is `bcc` (D), which M1 lets read
+  the new C, so no reachable code can tell.
+- **Tests (X).** The 16 udf07 vectors of `emu/test/fixtures/isa_vectors.json` changed from must-fault to these values
+  and 11 hand-picked ones were added (start at bit 31, Dn & 31 = 0 with upper bits set, start at bit 0, none found,
+  Dm == Dn), their outputs from a separate bit loop: 5,322 / 5,322 on both engines. `emu/test/test_core.mjs`
+  bschUnits runs the helper's sequence on 2,009 words per engine against "the highest 0 bit, 255 when full" and the
+  allocators' condition (bit r of the word is 0), and checks that `bcc` after udf07 runs and `bvc` faults 6:
+  4,024 / 4,024; a lowest-bit-first and an inverted-C variant of the CPU each fail it.
+
+### Rows 15-17: keep faulting
+
 - **udf12, udf13, udf21.** Names only (AM33 getchx/getclx; udf21 is the re-check's inference). There is a PSW interaction: the save reads PSW right after udf13, and the restore ORs back only V. Implemented in M9 as a round trip (section 2a); their hardware meaning stays unknown.
 - **udf20.** See row 16 and section 2a.
 
@@ -302,7 +345,8 @@ unit as specified, against expected values computed independently of the firmwar
 | 72 libm vectors: sqrtf, sinf, cosf, tanf, atanf, logf, expf, powf, atan2f | section 2, rows 7-13 | udf02-06, udf14 |
 
 No check in this repository runs the UTF-16 parsers 0x510c265b / 0x510c26af or the
-date-string fragment 0x5180f24b of section 2.
+date-string fragment 0x5180f24b of section 2. udf07 (row 14) has no firmware function with an independent answer; its
+vectors and the helper's unit are listed in section 2, row 14.
 
 The libm vectors (the `firmware` list of `emu/test/fixtures/isa_vectors.json`) give the
 input registers and the result **bit pattern** produced under this spec (RNE, exact

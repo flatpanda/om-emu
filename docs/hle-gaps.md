@@ -488,12 +488,21 @@ unknown):**
     settle returned inside the run and executed the caller's `0xff` (`0xa2100007`, fault 5), the menu's first stop.
     S-HISTWAIT (camapp 3) runs the wait to its timeout (50 ms of lab clock, E_TMOUT, which the command does not read;
     on the camera the histogram ends first, I). The unit itself (its interrupt, done timing and bins) is not modelled.
-  - *The CPU's udf07 (the stop).* Past S-HISTWAIT the menu runs into `udf07 d0,d1` at `0x5050a089` (fault 1), in task
-    57: the sequence (`0x50c591d4`, state 4) to CapThr_ThroughImage (`0x50bd61b2` -> `0x50bd5fe4`, the through image's
-    bank), api_tft `0x504225c5` and the imgpro library (`0x5048ef28` .. `0x5048e190` -> `0x5050a086`). The UDF spec
-    leaves udf07 unimplemented (`docs/om1-udf-spec.md` row 14, "some kind of bit search", its one site); it is not
-    guessed. That stops camapp 3 at the menu, so camapp 1 stays the default and the heap workload's menu and playback
-    passes are not measured in camapp 3.
+  - *The CPU's udf07 (implemented 2026-11-09; the stop until then).* Past S-HISTWAIT the menu ran into `udf07 d0,d1` at
+    `0x5050a089` (fault 1), in task 57: the sequence (`0x50c591d4`, state 4) to CapThr_ThroughImage (`0x50bd61b2` ->
+    `0x50bd5fe4`, the through image's bank), api_tft `0x504225c5` and the imgpro library (`0x5048ef28` .. `0x5048e190`
+    -> `0x5050a086`). udf07 is now BSCH as the Panasonic MN103001 manual gives it, which the helper's three callers
+    agree with (`docs/om1-udf-spec.md` row 14; the search order is the manual's alone). The helper gives the request's
+    flag mask bit 31 (X: udf07 runs twice, Dm `0xffffffff`, Dn 0, result 31).
+  - *The next stop: the imgpro unit `0x9c600000` (X, D).* The request is kind 14 at its +16, built at `0x50490c89` when
+    the image's halfword at +8 is 3074 (D): the kind `0x5048ee61` builds for REC's header (the image engine's fill that
+    S-JPEGENC does for REC).
+    Its issue `0x50493824` reaches the kind's driver through `0x5046d814` (the table at `0x6065a834`) and `0x5046db04`:
+    `0x5050a797` writes 1 to `0x9c600004` at `0x5050a7a9`, which the lab refuses (no model of the unit; lab-stub
+    denied, fault 2; the stack's return addresses, X). PLAY after a pass of S1 and S2 stops at the same write, after
+    its transactions 974, 937, 994, 1036, 1046, 1002, 987, 691, 599, 553 and 556 were each answered 0 by the
+    components (X), so playback's transactions are now reached in camapp 3. Camapp 3 still stops at the menu and at
+    playback, so camapp 1 stays the default and the heap workload's menu and playback passes are not measured in it.
 - **The "swap wait" of the HDMI round (X, corrected).** The 300,000 stub calls 4.9 reports at the HDMI open under
   camapp 2 were counted under the hook name "S-DISPFRAME (swap wait)", which is the OlyTaSS wrapper every sleep goes
   through (DISP_FRAME's swap sleeps are only some of them; the counts: the accelerometer task's 80 ms sleeps and the

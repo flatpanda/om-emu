@@ -34,13 +34,14 @@ const CP0 = ['TAKE_FUNC <= 0', 'TAKE_FUNC -> TAKE_FUNC_CP 0 (native)', 'TAKE_FUN
   'TAKE_FUNC_CP -> LENS_EXEC 1 (native)', 'TAKE_FUNC_CP -> camera driver request 6 (answered)',
   'TAKE_FUNC_CP -> STB_EXTERNAL 1 (native)', 'TAKE_FUNC_CP -> dust filter gate on (answered)', 'STB_EXTERNAL -> reply',
   'TAKE_FUNC_CP -> STB_EXTERNAL 4 (native)', 'STB_EXTERNAL -> reply', 'TAKE_FUNC_CP -> reply'];
+// (round 3, H-TAKEFOCUS: TAKE_FOCUS native, its commands 0 and 2 taken and replied by TAKE_FOCUS itself; with its ready
+// byte set, command 18's request is synchronous, docs/hle-gaps.md 4.1.8)
 export const START = [...CP0, 'TAKE_FUNC <= 13', 'TAKE_FUNC -> TAKE_EXPOSE 0 sync (native)', 'TAKE_EXPOSE -> reply', 'TAKE_FUNC -> reply',
-  'TAKE_FUNC <= 18', 'TAKE_FUNC -> TAKE_FOCUS 0 (unanswered)', 'TAKE_FUNC -> reply'];
-export const START_COMPONENTS = [...START, 'TAKE_FUNC <= 29', 'TAKE_FUNC -> reply', 'TAKE_FUNC <= 22',
-  'TAKE_FUNC -> TAKE_FOCUS 2 sync (answered)', 'TAKE_FUNC -> reply'];
+  'TAKE_FUNC <= 18', 'TAKE_FUNC -> TAKE_FOCUS 0 sync (native)', 'TAKE_FOCUS <= 0', 'TAKE_FOCUS -> reply', 'TAKE_FUNC -> reply'];
+const C22 = ['TAKE_FUNC <= 22', 'TAKE_FUNC -> TAKE_FOCUS 2 sync (native)', 'TAKE_FOCUS <= 2', 'TAKE_FOCUS -> reply', 'TAKE_FUNC -> reply'];
+export const START_COMPONENTS = [...START, 'TAKE_FUNC <= 29', 'TAKE_FUNC -> reply', ...C22];
 const PROBE_STAND_INS = ['H-TAKEINIT', 'S-TAKEREQ', 'S-TAKECAM', 'S-TAKEUSF', 'H-TAKENBINIT', 'H-STBINIT', 'S-HOTSHOE', 'H-SIOMAP',
-  'A-HOTSHOE-1', 'A-HOTSHOE-2'];
-const C22 = ['TAKE_FUNC <= 22', 'TAKE_FUNC -> TAKE_FOCUS 2 sync (answered)', 'TAKE_FUNC -> reply'];
+  'A-HOTSHOE-1', 'A-HOTSHOE-2', 'H-TAKEFOCUS'];
 export const MODE_CHANGE = [...C22, ...C22, ...C22];
 
 // round 2 (docs/hle-gaps.md 4.1.6): the neighbours' state after a session's scenarios. TAKE_EXPOSE's on byte

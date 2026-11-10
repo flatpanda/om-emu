@@ -198,6 +198,16 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   rs.bad.forEach((x) => console.log('  ', x));
   bad += rs.bad.length;
 }
+// the release route, round 2 (test_take_release.mjs focusSession, --take probe round 3: H-TAKEFOCUS): under camapp 3
+// TAKE_FOCUS runs natively, S1's take request goes through RdyFcsRdy1..3 and stops at TAKE_EXPOSE's request to
+// EXP_MOVIE
+{
+  const { focusSession } = await import('../test/test_take_release.mjs');
+  const fs = await focusSession();
+  console.log(`the release route, round 2: TAKE_FOCUS (H-TAKEFOCUS) in play: ${fs.checks - fs.bad.length}/${fs.checks}`);
+  fs.bad.forEach((x) => console.log('  ', x));
+  bad += fs.bad.length;
+}
 // CPU 2 natively (--cpu2 native): its boot to the idle loop, its first device accesses, CPU 0's CPUCONN and the tasks
 // CPU 0's boot stages start on it, and the Super Control Panel's posts answered by its AUD_LEVEL_MONITOR as S-CPU2
 // answered them; under control camapp 3 the GUI's histogram drawn by its OSD_DRAW_CPU2; off by default

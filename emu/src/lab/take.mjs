@@ -89,7 +89,7 @@ export const TAKE_E143 = {
   xcpu_send: 0x5002E56E,      // the kernel's synchronous send to another core's queue (queue ids 0x1000..0x3fff)
   bc_callback: 0x502CDC0B,    // TAKE_FUNC_CP's BC completion callback (BC_EXEC's parameter +4)
   // the helpers whose call of send (by its return address) names the request's real sender one level up
-  helpers: { 0x502CE5D8: 0x502CE5B7, 0x502CE612: 0x502CE5E6, 0x502CE63B: 0x502CE619, 0x506EA982: 0x506EA965 },
+  helpers: { 0x502CE5D9: 0x502CE5B7, 0x502CE613: 0x502CE5E6, 0x502CE63B: 0x502CE619, 0x506EA982: 0x506EA965 },
   names: 0x51A220B2,          // the object-name table, {char name[24], u16 id} by id from 1 (ids 1..218)
   queue_words: 0x600431C6,    // the static queue-id table, id n at +2(n - 1)
 };
@@ -192,7 +192,7 @@ export class TakeProbe {
     const cur = this.lab.lt.current();
     if (cur === this.lab.nk.tcb(this.tids.func)) return 'TAKE_FUNC';
     if (cur === this.lab.nk.tcb(this.tids.cp)) return 'TAKE_FUNC_CP';
-    return this.neighbour_task(cur) ?? this.main_task();               // round 2: the neighbours, TAKE_MAIN
+    return this.neighbour_task(cur) ?? this.main_task() ?? this.focus_task(cur);   // rounds 2, 3
   }
   // before the application starts (CamApp.install): TAKE_FUNC's queue leaves S-MODACK, the stand-ins' hooks
   install() {
@@ -226,6 +226,7 @@ export class TakeProbe {
     this.neighbours_install();                                          // round 2 (below)
     this.install_main();
     this.stb_install();                                                 // the strobe (below)
+    this.focus_install();                                               // round 3 (below)
   }
   // H-TAKEINIT
   bring_up() {
@@ -247,6 +248,7 @@ export class TakeProbe {
     this.neighbours_bring_up();                                         // round 2 (below)
     this.bring_up_main();
     this.stb_bring_up();                                                // the strobe (below)
+    this.focus_bring_up();                                              // round 3 (below)
   }
   // the request's sender: the caller of the send helper it went through (TAKE's 0x502ce57b and its wrappers, the
   // focus path's 0x506ea965), else the OlyQeWr call's own return
@@ -275,7 +277,8 @@ export class TakeProbe {
     const q = r.d0 & 0xFFFF, m = lab.sim.u32(r.a0 >>> 0) >>> 0, n = lab.sim.u32((r.a0 >>> 0) + 4) >>> 0;
     const via = disasm(r.mdr) === TAKE_E143.send_return ? this.send_via : disasm(r.mdr), from = this.sender(r.mdr);
     const w = [0, 1, 2, 3].map((k) => (4 * k < n ? lab.sim.u32(m + 4 * k) >>> 0 : 0));
-    if (this.native.has(q) || via === T_REPLY) {                                 // natively, recorded
+    if (this.focus_tid && this.focus_post(h, r, prev, task, q, via, w, from)) return;   // round 3
+    if (this.native.has(q) || via === T_REPLY || FOCUS_REPLIES.has(via)) {       // natively, recorded (round 3 too)
       const reply = via === T_REPLY || NB.replies.has(via);              // (round 2: TAKE_EXPOSE's own reply too)
       this.record({ task, queue: q, name: this.name(q), command: reply ? null : w[2], parameter: w[3], token: w[1], status: reply ? w[0] & 0xFFFF : null, sync: via === NB.imd_send_return, from, via, answer: reply ? 'native: TAKE\'s reply to the requester' : 'native' });
       return prev(h, r);
@@ -301,6 +304,7 @@ export class TakeProbe {
     if (!task) throw new TakeError(`TAKE's synchronous request ${path} from ${where(r.mdr)} outside TAKE's tasks`);
     const q = r.d0 & 0xFFFF;
     if (path === 'TAKE_FUNC_IMDFUNC' && this.nb_queues.has(q)) return this.neighbour_sync(h, r);   // round 2
+    if (this.focus_tid && q === FOCUS_E143.queue) return this.focus_sync(h, r, task, path);       // round 3
     if (this.native.has(q)) throw new TakeError(`${task}'s synchronous request to its own or a native queue ${q} from ${where(r.mdr)}: not read`);
     if (!TAKE_REQ_QUEUES[q]) throw new TakeError(`${task} asks ${this.name(q)} (queue 0x${q.toString(16)}) command ${r.d1 >>> 0} synchronously from ${h8(this.sender(r.mdr))} (${path}): not a queue the probe knows`);
     this.record({ task, queue: q, name: this.name(q), command: r.d1 >>> 0, parameter: r.a0 >>> 0, token: null, sync: true, from: this.sender(r.mdr), via: path, answer: 'status 0' });
@@ -528,6 +532,60 @@ export class TakeProbe {
     for (const [k, n] of Object.entries(this.stb_tids)) if ((lab.nk.state(n) & 0xF) !== 4) throw new TakeError(`H-STBINIT: ${STB_E143.tasks[k].name} (task ${n}) is not waiting after its start (state ${lab.nk.state(n)})`);
     this.log.push(['init', Object.entries(this.stb_tids).map(([k, n]) => `${STB_E143.tasks[k].name} task ${n}`).join(', ') + ' waiting']);
   }
+
+  // ---- round 3 (docs/hle-gaps.md 4.1.8): TAKE_FOCUS natively (H-TAKEFOCUS; the paragraph after the class) ----
+  focus_task(cur) {
+    if (!this.focus_tid) return null;
+    return cur === this.lab.nk.tcb(this.focus_tid) ? FOCUS_E143.name : null;
+  }
+  // (from install) TAKE_FOCUS's queue leaves S-TAKEREQ: TAKE_FUNC's posts and TAKE's synchronous requests to it go
+  // natively; what TAKE_FOCUS takes joins the record
+  focus_install() {
+    const lab = this.lab, F = FOCUS_E143;
+    this.focus_tid = null;
+    this.focus_ksync = false;          // the kernel's synchronous send to TAKE_FOCUS recorded, its post not yet seen
+    this.native.add(F.queue); this.nb_queues.add(F.queue);
+    lab.observe(F.received, (l, r) => {
+      const m = (r.sp >>> 0) + 4, w = [0, 1, 2, 3].map((k) => l.sim.u32(m + 4 * k) >>> 0);
+      this.requests.push({ dir: 'in', task: F.name, command: w[2], reply: w[0], token: w[1], parameter: w[3] });
+      this.log.push(['command', `${F.name} takes command 0x${w[2].toString(16)} (reply queue ${w[0]}, token ${h8(w[1])}, parameter ${h8(w[3])})`]);
+    }, 'H-TAKEFOCUS (command)');
+  }
+  // H-TAKEFOCUS (from bring_up, after H-TAKEMAIN): the two inits natively, then act_tsk; TAKE_FOCUS waits on its queue
+  focus_bring_up() {
+    const lab = this.lab, F = FOCUS_E143;
+    for (const at of F.inits) lab.call(at, null, null, null, LIMIT);
+    if (lab.sim.read(F.ready, 1)[0] !== 1) throw new TakeError(`H-TAKEFOCUS: TAKE_FOCUS's ready byte ${h8(F.ready)} is ${lab.sim.read(F.ready, 1)[0]} after its inits, not 1`);
+    const b = lab.sim.read(F.tid, 2), t = b[0] | b[1] << 8, e = lab.nk.entry(t);
+    if (e !== F.entry || lab.nk.state(t) !== 0x10) throw new TakeError(`H-TAKEFOCUS: task ${t} has entry ${h8(e)} state ${lab.nk.state(t)}, not a dormant ${h8(F.entry)}`);
+    lab.lt.allow.add(e);
+    const [rc] = lab.nk.svc('act_tsk', { d0: t });
+    if (rc !== 0) throw new TakeError(`H-TAKEFOCUS: act_tsk(${t}) = ${rc}`);
+    this.focus_tid = t;
+    this.s.settle('H-TAKEFOCUS');
+    if ((lab.nk.state(t) & 0xF) !== 4) throw new TakeError(`H-TAKEFOCUS: task ${t} is not waiting after its start (state ${lab.nk.state(t)})`);
+    this.log.push(['init', `TAKE_FOCUS task ${t} waiting`]);
+  }
+  // the kernel's synchronous send (0x5002e39d; TAKE_FOCUS's request API 0x506eab1f sends through it at 0x506ea9cc once
+  // the ready byte is 1) from a probe task to TAKE_FOCUS's queue: natively, recorded once (its own post, below, is not)
+  focus_sync(h, r, task, path) {
+    this.record({ task, queue: FOCUS_E143.queue, name: FOCUS_E143.name, command: r.d1 >>> 0, parameter: r.a0 >>> 0, token: null, sync: true, from: this.sender(r.mdr), via: path, answer: 'native' });
+    this.focus_ksync = true;
+    return this.lab.passthrough(r);
+  }
+  // (from send) a post round 3 lets through: the kernel's own post of focus_sync's message, and TAKE's event to the
+  // application; true when handled
+  focus_post(h, r, prev, task, q, via, w, from) {
+    if (this.focus_ksync && q === FOCUS_E143.queue && via === FOCUS_E143.ksync_post) {
+      this.focus_ksync = false;
+      prev(h, r);
+      return true;
+    }
+    if (via !== TAKE_EVENT.via || q !== TAKE_EVENT.queue) return false;
+    this.record({ task, queue: q, name: this.name(q), command: null, event: w[1], parameter: w[2], token: null, status: null, sync: false, from, via, answer: `native: TAKE's event 0x${w[1].toString(16).padStart(8, '0')} to the application` });
+    prev(h, r);
+    return true;
+  }
 }
 
 // The strobe (docs/hle-gaps.md 4.12.1). USTART2's stage 0x501e8e84 starts STB_HANDLER_PROC (task 139, tid word
@@ -550,3 +608,39 @@ export const STB_E143 = {
   received: 0x501B759B, message: 44,
 };
 const STB_ANSWER_MS = 1000, STB_STEP_MS = 10;
+// Round 3, TAKE_FOCUS natively (docs/hle-gaps.md 4.1.8; `--take probe`, E143):
+//   H-TAKEFOCUS after H-TAKEMAIN: TAKE_FOCUS's two inits natively in the boot's order, its interface's (0x506ea9d7,
+//               USTART2's stage 0x501e8e84 at 0x501e9088: its context pointer 0xa33d9560 -> 0xa33d9564, the ready byte
+//               0xa33d955c cleared, the UI_IN edge callback 0x506eac7a registered for 0x101 through 0x5014c420) and its
+//               module's (0x509a0e37, the boot stage 0x501e94a5 at 0x501e9541: its context, the ready byte set to 1,
+//               0x509a0eb5), then TAKE_FOCUS (task 104, 0x68) started with
+//               act_tsk as that stage starts it (0x501e964f); it waits on its queue 0x5d (0x506ea9a8, timeout -1).
+//               The AF library's own init (0x508bede6, the same stage at 0x501e9533) is not run (H-FCSAF runs three
+//               of its steps for MDET; docs/om1-subject-spec.md 5.7). TAKE_FOCUS's queue leaves S-TAKEREQ: its
+//               commands run natively and it replies itself ({u16 status 0, token, parameter} to word 0, 0x506ea985,
+//               after every command, 0x509a13dc..0x509a13e7). With the ready byte 1 TAKE_FOCUS's request API
+//               (0x506eab1f) sends every command but 0x601 synchronously through the kernel (0x506ea9cc; 0x601 it runs
+//               in the caller's task, 0x506eabd7), where with the byte 0 it posted commands 0 and 0x700 with no reply
+//               queue and logged any other (0x506eab3a..0x506eab75)
+// Natively too, recorded: TAKE's event post 0x502ce5e6 to API_EVENT (the application's queue 6) and TAKE_MAIN's reply
+// to the take request's requester (0x50399c4f). S-TAKECAM takes the camera driver's request 144 as it takes 148
+export const FOCUS_E143 = {
+  name: 'TAKE_FOCUS', tid: 0x60042DF6, entry: 0x509A0EBE, queue: 0x5D,
+  received: 0x509A0EF5,       // its receive's (0x506ea9a8 at 0x509a0eee) return: the 16-byte message at sp + 4
+  reply: 0x506EA9A5,          // its reply's (0x506ea985) OlyQeWr return
+  inits: [0x506EA9D7, 0x509A0E37],
+  ready: 0xA33D955C,          // the ready byte (0x506ea9d7 clears it, 0x509a0e37 sets it, 0x509a0eb5)
+  ksync_post: 0x5002E411,     // the kernel's synchronous send's own OlyQeWr return (its post of the message)
+};
+// the replies that go natively to whatever queue the request named: TAKE_FOCUS's, and TAKE_MAIN's to the take
+// request's requester (0x50399c4f: {u16 status, token, parameter} through TAKE's send helper, whose call returns to
+// 0x50399ca6; RdyFcsRdy1's token 5 sends it, 0x503c2c47)
+const FOCUS_REPLIES = new Set([FOCUS_E143.reply, 0x50399CA6]);
+for (const at of FOCUS_REPLIES) NB.replies.add(at);
+// TAKE's event post 0x502ce5e6 (d0 the queue, d1 the event, a0 the parameter: {u16 0, event, parameter} through TAKE's
+// send helper, whose call returns to 0x502ce613) to API_EVENT (queue 6, the application's)
+const TAKE_EVENT = { via: 0x502CE613, queue: 0x06 };
+// S-TAKECAM's request 144: RdyFcsRdy1's 0x503c2d08 makes it (0x503c2e21) once tokens 0 and 11 are in; the driver posts
+// its handler 0x5015582d as a deferred call (IRQ 55's ring, 0x502a4b08), which queues a sequence item 144 (24 bytes
+// from the driver's pool, its completion 0x50155a00) through 0x501524c0; what the item drives is not read
+CAM_REQUESTS[144] = 'TAKE_MAIN RdyFcsRdy1, 0x503c2e21';

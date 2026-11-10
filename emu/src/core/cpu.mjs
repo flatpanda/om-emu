@@ -143,6 +143,12 @@ function udfCompare(dn, dm, pc) {
   FBI[0] = dm; FBI[1] = dn;
   pswFlags((FB[0] === FB[1] ? Z : 0) | (FB[0] < FB[1] ? N : 0), 15, 0);
 }
+// udf07 Dm,Dn (BSCH, docs/om1-udf-spec.md row 14): the number of the highest 1 of Dm at or below bit (Dn & 31) - 1,
+// from bit 31 when Dn & 31 is 0 (the upper 27 bits of Dn are ignored); -1 when there is none.
+export function udfBitSearch(dm, dn) {
+  const k = dn & 31, x = k === 0 ? dm : dm & ((1 << k) - 1);
+  return x === 0 ? -1 : 31 - Math.clz32(x);
+}
 
 // The exec trace hook (src/debug/): XT(pc, op) once per instruction that reaches step(), after its code fetch, before it
 // executes: where the -d exec line is written (after the insn-limit check and the opcode and prefix fetch).
@@ -382,13 +388,17 @@ export function step(refetch = false) {
         case 1: R[D0 + n] = Math.imul(R[D0 + n], R[D0 + m]); break;
         case 2: case 3: case 4: case 5: R[D0 + n] = udfFloat(nn, R[D0 + n], R[D0 + m], pc); break;
         case 6: udfCompare(R[D0 + n], R[D0 + m], pc); break;
+        case 7: {   // found: Dn = the bit's number, C = 0; none: Dn = 0, C = 1; V, N, Z undefined (values kept)
+          const i = udfBitSearch(R[D0 + m], R[D0 + n]);
+          R[D0 + n] = i < 0 ? 0 : i; pswFlags(i < 0 ? C : 0, C, Z | N | V); break;
+        }
         case 12: if (m !== n) throw new Fault(1, pc); R[D0 + n] = R[UC]; break;
         case 13: if (m !== n) throw new Fault(1, pc); R[D0 + n] = R[UD]; break;
         case 15: if (m !== n) throw new Fault(1, pc); R[D0 + n] = R[HI]; break;
         default: throw new Fault(1, pc);
       }
       if (nn === 13 && S.mutant !== MUT_UDF13_V) pswFlags(R[UV] ? V : 0, V, Z | N | C);
-      else if (nn !== 6) pswFlags(0, 0, 15);
+      else if (nn !== 6 && nn !== 7) pswFlags(0, 0, 15);
     } else if (op === 0xf9 || op === 0xfb || op === 0xfd) {
       const w = op === 0xf9 ? 1 : op === 0xfb ? 2 : 4;
       const nn = p >> 4, tt = (p >> 2) & 3, n = p & 3;

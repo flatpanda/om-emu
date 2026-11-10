@@ -3,8 +3,8 @@
 // control-flow kind and target, and the 32-bit / 16-bit operands that can name an address.
 //
 // Validity follows docs/mn10300-isa-spec.md section 3 (forms the spec marks FAULT are invalid), not emu's step():
-// step() faults (opcode) on 1,112 (op, prefix) pairs the spec defines, the forms emu does not implement (most F5 forms,
-// F6 from 0x70, the F9 / FB / FD UDF forms but 00-03 and 14-17), and code that uses them is still code (13
+// step() faults (opcode) on 1,096 (op, prefix) pairs the spec defines, the forms emu does not implement (most F5 forms,
+// F6 from 0x80, the F9 / FB / FD UDF forms but 00-03 and 14-17), and code that uses them is still code (12
 // instructions of the E143 map). break (FF), trap (F0 FE) and rtm (F0 FF) count as invalid for discovery: the firmware
 // does not reach them. test/test_fwmap.mjs checks the length against emu's step() and the
 // control-flow kinds against the interpreter's transfer forms (src/core/interp.mjs transfers()).

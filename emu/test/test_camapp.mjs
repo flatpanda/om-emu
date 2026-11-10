@@ -28,9 +28,11 @@
 //                  to its state 13 and the still category to its state 11 (no S-BOOTDONE), the start's transactions
 //                  are each answered by the exec natively (992 with 0xf0000058, the others 0), the idle's 944 and
 //                  S2's 1030 too; over passes of S1 and S2 the OXF main thread's events (event 294, 0x60dcb42c) do not
-//                  stay; the menu's DISPLAY cmd 15 runs its histogram wait to the timeout (S-HISTWAIT) and the
-//                  session then stops at udf07 0x5050a089, which the lab does not implement (the known blocker,
-//                  docs/hle-gaps.md 4.1.5); with --hdmi on the plug's TRA 588 is the component's (no S-OUTDEV), the
+//                  stay; the menu's DISPLAY cmd 15 runs its histogram wait to the timeout (S-HISTWAIT), the imgpro
+//                  library's request id comes from udf07 0x5050a089 (docs/om1-udf-spec.md row 14) and the session
+//                  then stops at the image engine's start 0x5050a7a9, a write to the unit 0x9c600000 the lab does not
+//                  model (fault 2, docs/hle-gaps.md 4.1.5);
+//                  with --hdmi on the plug's TRA 588 is the component's (no S-OUTDEV), the
 //                  HDMI device opens and channel 0 composes its window with no plane drawn
 //   modeDialSession  the mode dial in play (E143): it starts at P, the start's mode; each position's change sets its
 //                  mode (MODE_EXPOSE, the custom banks' MODE_RAW, B's MODE_DIAL_B_ONOFF) and keeps the other settings,
@@ -290,7 +292,7 @@ export async function heapWorkloadSession() {
 // control camapp 3 (docs/hle-gaps.md 4.1.5; E143). The sessions take no frames: the composite of the TFT is
 // FEATURE_UNOBSERVED once the shooting component has started the VSC's histogram (HIST1, HISTAREA1..3)
 const START_TRAS = [415, 598, 614, 990, 958, 1515, 994, 955, 1001, 1061, 992, 1503, 1065, 1045, 938, 974];
-const NATIVE_RESULT = { 992: 0xF0000058 }, UDF07_SITE = '0x5050a089';
+const NATIVE_RESULT = { 992: 0xF0000058 }, ENGINE_STOP = '0x5050a7a9', ENGINE_REG = '0x9c600004';
 export async function traRoutingSession() {
   const bad = [];
   let checks = 0;
@@ -344,13 +346,14 @@ export async function traRoutingSession() {
       ok(oxf() === n0 && shots.some(([id]) => id === 1030) && shots.every(([, , res]) => res === 0),
         `${tag}: over two passes of S1 and S2 the OXF events kept ${n0} -> ${oxf()}, S2's 1030 answered natively (${JSON.stringify([...new Set(shots.map(([id]) => id))])})`);
       ok(s.status().gui === '0x0108', `${tag}: the shooting screen after the passes: ${s.status().gui}`);
-      // the menu: S-HISTWAIT, then the known blocker
+      // the menu: S-HISTWAIT, then udf07 and the next stop, the image engine's unit
       let err = null;
       try { s.key('menu', 'down'); s.camapp.pump(); idle(100); } catch (e) { err = e; }
       ok(ca.hist_waits >= 1 && used.length <= pl.stand_ins_in_use().length && pl.stand_ins_in_use().includes('S-HISTWAIT'),
         `${tag}: the menu's DISPLAY cmd 15 ran its histogram wait to the timeout (S-HISTWAIT ${ca.hist_waits})`);
-      ok(err !== null && err.message.includes(`(disasm ${UDF07_SITE}) fault=1`),
-        `${tag}: the menu stops at udf07 ${UDF07_SITE} (docs/om1-udf-spec.md row 14): ${err ? err.message.slice(0, 160) : 'no error'}`);
+      const msg = err?.message ?? '';
+      ok(msg.includes(`(disasm ${ENGINE_STOP}) fault=2`) && msg.includes(`DENIED write ${ENGINE_REG}`),
+        `${tag}: past udf07 the menu stops at the image engine's start ${ENGINE_STOP} (${ENGINE_REG}): ${err ? err.message.slice(0, 160) : 'no error'}`);
     } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 600)}`); }
     pl.close_session();
   }

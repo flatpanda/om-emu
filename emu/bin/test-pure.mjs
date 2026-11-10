@@ -83,7 +83,7 @@ for (const engine of ['port', 'cached']) {
   bad += r.total - r.pass;
 }
 const co = coreTests();
-console.log(`core: lockstep step() vs run(1) ${co.lockstep.cases - co.lockstep.bad.length}/${co.lockstep.cases} (${co.lockstep.faults} faulting), mutant 7 caught: ${co.mutant.bad.length ? 'yes' : 'NO'}; lengths over ${co.lengths.pairs} (op, p) pairs`);
+console.log(`core: lockstep step() vs run(1) ${co.lockstep.cases - co.lockstep.bad.length}/${co.lockstep.cases} (${co.lockstep.faults} faulting), mutant 7 caught: ${co.mutant.bad.length ? 'yes' : 'NO'}; lengths over ${co.lengths.pairs} (op, p) pairs; udf07 ${co.bsch.checks - co.bsch.bad.length}/${co.bsch.checks}`);
 co.bad.forEach((x) => console.log('  ', x));
 bad += co.bad.length;
 const ca = cache();

@@ -1431,8 +1431,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    E143 with S-LENS: S-CAFWD drops the GUI's forward to the camera. `test/test_touch.mjs` taps the icon on E143 and
    the ten (bin/test.mjs).
 76. **The E118 family's touch** (2026-11-02, X). Their touch stays off (`src/fw/models.mjs` touch false): H-TPSTART
-   needs the panel's open and the HFW callbacks, which `src/fw/facts.mjs` touchOpen does not read on their builds and
-   the maps do not place. Their drivers read the same controller at slave `0x48` with the same register addresses as
+   needs the panel's open, which `src/fw/facts.mjs` touchOpen does not read on their builds and the maps do not place
+   (corrected 2026-11-10: the HFW callbacks were placed, finding 84; touch runs since findings 84 to 89). Their drivers
+   read the same controller at slave `0x48` with the same register addresses as
    the E144 family's (X: the read calls' immediates; E120's read `0x502d9bd2` opens as E144's, D), so S-TPREG's model
    would serve them once the open is placed. E120's and E122's INT waits are unchanged (finding 54).
 77. **The browser player in Firefox** (2026-11-02, `bin/browsergate.mjs`). In the OrbStack VM (Arch Linux ARM,
@@ -1654,6 +1655,88 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    where `0x502fa2d2`'s word (`0xa1c5a814`) is 4, poll the panel scheduler's word every 40 ms (finding 70). E118's image
    holds no such poll (`mov 40,d0; call; mov (W),d0; cmp 1,d0; beq`): two each on E122 (`0x502f92cd`, `0x502f936b`) and
    E120 (`0x502c6c55`, `0x502c6cf3`), none on E118 (X, a byte scan). Nothing to close.
+84. **The touch panel's open by its form, and the gesture mask's word** (2026-11-10, `src/fw/facts.mjs` touchOpen,
+   touchMask). The family's touch stayed off for its open alone: HFW's callback and its status sites were placed (X: the
+   PORTS of master `8a826db`; D on E122, whose HFW touch init `0x5073a8a7` loads the callback `0x5073a9b7` and passes it
+   through the API wrapper `0x502f4a80`, API `0xd001c`, to the open, and whose callback's status dispatch is E143's
+   instruction for instruction), which corrects finding 76's "and the HFW callbacks". The family holds neither open
+   trace name; its open is E144's form, which has none either: `movbu (F),d1; clr d0; cmp d0,d1; bne; cmp 0,a0; beq; mov
+   a0,(C)`, three stores and `mov 1,d1; movbu d1,(F)` 0x29 bytes in (E122 `0x5030bb4c`, F `0x6189f36c`; E120
+   `0x502d9242`; E118 `0x502e3efc`; E144 `0x5018a04b`, D). touchOpen reads it where neither name is held: one called
+   function of the form on E148, E144, E139, E142 and E140, where the maps had placed E143's open at it, and on the
+   three (X, a byte scan of the 19 expanded images; none on the traced bodies, E145 and the TG-5s). The gesture mask's
+   word, which H-TPSTART's set and the session's status read (TP_MASK_WORD), is the word the mask set stores (`mov
+   (Am),d0; mov d0,(W)`: E143 `0x501e41f1`, E122 `0x5030bd11`, D), the word after the open's byte on all 16 bodies with
+   a touch panel (X). The maps had placed E143's elsewhere on E130 (`0x6264b0d6`, W `0x6264b22c`), E133 (`0x626136de`, W
+   `0x62613834`), E122 (`0x6189f2e2`, W `0x6189f370`), E118 and E120 (X), so on E130 and E133 the status's mask and the
+   display switch's mask check read another word (I: no test reads them there). touchMask reads W at the port's place of
+   the mask set on a build with a touch-panel driver (the TG-5s' and E145's maps place the set at other code, I:
+   `0x50b5bdcc` on E145).
+85. **The family's touch power-up, and E118's command list** (2026-11-10, D unless tagged). E122's opens post the touch
+   task's cmd 4 (finding 40), its power-up `0x5030bbb4`, which writes the controller's registers through the touch I2C
+   write and returns (E122's and E120's sessions write 18 registers `0x1cxx`, the same but one value, X: the lab's I2C
+   log); the open's own list then waits for the INT (finding 54). E118's cmd 4 (`0x502e3f5f`) runs a command list of 19
+   6-byte entries copied from `0x603f1ca4` through a table of 14 ops (`0x603f1ea8`): an INT wait of 50 ms (op 5); a
+   check of the controller's version (op 2: two bytes at `0x1c14` through `0x502e4b94`; `0xc400` goes on, any other
+   value jumps to entry 10); `0x1c00` = 0, `0x1c03` = 10 and 117 bytes at `0x1400` (ops 12, 10 and 8 with 0; the bytes
+   from the record the lookup `0x50055b7c` gives for id 36049, not read further, all 0 in the lab, X); op 9's register
+   list (finding 87); `0x1c00` = 2 (op 11); and the list's end `0x502e477d`, which arms the driver for the INT's data
+   (its INT word 0, the word after it 1). From entry 10: a download of the controller's firmware (op 7: 0x30, 0x10 and
+   then 24496 bytes through the write's `0xff` paths, X: the lab's log; then an INT wait of up to 16 x 10 ms, "TP
+   BOOTLOAD ERROR" on its timeout), the version again, `0x1c03` = 10, a calibration (op 8 with 1: `0x1c00` = 3, an INT
+   wait of up to 31 x 50 ms, "TP CALIB ERROR"), op 9 and op 11. The version read logs "[TP] Touch IC F/W Version A not
+   available!!" for a value outside `0x3000`, `0x9e00`, `0xc400` and `0xd700` (`0x502e4bb8..0x502e4bdc`), and the report
+   parser `0x502e4f80` takes the coordinates for every event from `0xd700` on (`0x502e4ff7`); its report is E144's 10
+   bytes at `0x0000`. Of the 16 bodies with a touch panel only E118 holds "TP BOOTLOAD ERROR" and "TP CALIB ERROR" (X, a
+   string scan): its panel arrangement is E120's and E122's controller at slave `0x48` (I: op 9's values `0c`, `12`,
+   `06`, `73`, `17`, `19` are among E120's and E122's power-up writes, X) under a driver that downloads the controller's
+   firmware when its version differs (I).
+86. **E118's INT waits and the controller's version** (2026-11-10, `src/fw/facts.mjs` touchIntWait,
+   `src/lab/touchpanel.mjs`). E118's three INT waits are inline in its list's ops 5, 7 and 8: sleeps of 2, 10 or 50 ms
+   until the getter `0x502e4764`, `mov (0x6187b7e4),d0; retf`, returns 1, called from those three loops alone
+   (`0x502e3ffd`, `0x502e4028`, `0x502e40b0`, X); the list's end clears that word and sets the one after it, and the INT
+   handler `0x502e4b21` reads a report only with that one set (D), as on E120, whose pin callback stores 1 in the word
+   while the one after it is 0 (finding 54; E118's callback not read, I). touchIntWait reads it as a third form: a call
+   of such a getter followed by `cmp 1,d0` within 0x60 bytes before a load of "TP INT TIME OUT\n" (E118: the wait
+   `0x502e3ffd`, the poll `0x502e4764`); S-TPINTWAIT answers it at the getter's call as at the other forms' polls, and
+   the rule reads the 18 other bodies as before (X). S-TPREG's controller at `0x48` answers `0x1c14` with `0xc400` (I: a
+   controller that runs the firmware this build carries, so the list writes its registers without the download; which
+   version an E-M5 II's controller reports at power-up is ?). Before, with the touch task running the list: "TP INT TIME
+   OUT", the version read 0 and "not available", the download, "TP BOOTLOAD ERROR", the version 0 again, then op 9 (X,
+   the firmware's prints and the lab's I2C log).
+87. **E118's register list over the touch transport (S-TPREGLIST)** (2026-11-10, `src/fw/facts.mjs` touchRegList,
+   `src/lab/display.mjs`). Op 9 (`0x502e4eee`) writes ten registers, `0x1c<b0>` = b1 from the 2-byte entries of the
+   table `0x615de290`, not through the touch I2C write, which the lab stands in for, but through the write's transport
+   inline: its semaphore `0x60040e40`, the transport's open `0x502e4d50` (serial channel 4 through `0x5006f673`,
+   then a flag wait), the descriptor `0x6187b7c4` with `0x50068418`, `0x50068506` and `0x5006851a`, and the
+   completion flag `0x60040fe2` per write (D). The family's serial channels in that mode, their opens and completions
+   are not modelled (finding 44 presets the transmitters' idle state only), and the touch task waited there for good
+   (X: its state WAI after the list's op 9, no arm). touchRegList finds such a list as the function besides the touch
+   read and write that calls the transport's open after the write's semaphore load, with its table, count, slave and
+   register byte (E118 only: on E120 and E122 the open's callers are the read and the write, X); S-TPREGLIST stands in
+   for it as for the write, the ten entries recorded as writes to slave `0x48`, the transport not run, 0 returned. In
+   the lab's sessions the table holds `1b 0c`, `23 00`, `3f 12`, `1f 06`, `1e 00`, `24 73`, `29 17`, `38 04`, `3d 01`
+   and `0b 19` (X).
+88. **Touch on the E118 family** (2026-11-10, X: a play session per body on the TFT, `test/test_touch.mjs`). With
+   findings 84 to 87 the three run the touch path as the E144 family does: H-TPINIT before the start's display open
+   (fact touch_int on all three; on E118 the order also matters because the open posts cmd 4 to the queue the init
+   joins to the touch task's flag: with the init after the open the list never ran, no I2C, and a tap read nothing,
+   X), the open and the mask by H-TPSTART, S-TPREG's controller at `0x48` (the report reads return to E122
+   `0x5030cd66`, E120 `0x502da45e`, E118 `0x502e4fce`). A tap on the touch mode icon at 40, 333 gives HFW PRESS and
+   CLICK at the pixel and cycles the icon on all three (frames); OK opens the super control panel (`0x0403`) and a tap
+   at 360, 240 selects its AF Mode cell (frames). The touch message `0x9100` is sendEvent index 107 on the three, E137's
+   shift (S-TOUCHMAP's lookup). `test/test_touch.mjs` taps the icon on the three and the panel on them and E144 (9
+   checks each, all pass); `bin/modelcheck.mjs` passes the three on the TFT and the EVF with touch on.
+89. **The application's own touch start, and the control area** (2026-11-10, X: observers on the opens, closes and
+   mask sets of E122, E118 and E144 in a TFT session). At the camera application's start E122 closes the panel and
+   opens it again with HFW's callback through its touch API (the close returning to `0x502f4b5d`, the open to
+   `0x502f4ad9`, in the API `0xd001c` wrapper HFW's touch init calls, D), 615.4 ms of lab time, and sets the gesture
+   mask for each screen (six sets in the start, one at a later redraw); E118 does the same (the close at 629.4 ms,
+   the open at 651.6 ms) and E144 at 2830.1 ms. H-TPSTART's open and mask at the bring-up are thus superseded on those
+   bodies (not looked at on the others; E143's `camapp 1` runs no such start). The close clears the driver's control
+   area (E122 `0x5030bccb` -> `0x5030bda9` with five words 0, D, X), and no TFT session sets one, so the driver passes
+   the controller's events as on E144 (finding 75); on E122's EVF the application's Set_Touch_Panel_Ctrl_Area runs
+   (finding 40), and touch on the EVF is not tried.
 
 
 
@@ -1950,6 +2033,8 @@ E118 and E120 compose their shooting screens on both panels and pass modelcheck 
 probes expected failures, and are in its checked set with E122 (finding 56).
 Since finding 61 (2026-10-31) the three pass the count probe on both panels, their screens redrawn by INFO before each
 window (PROBE_REDRAW): their application asks for the count only when the shooting screen is redrawn.
+Since findings 84 to 89 (2026-11-10) touch runs on the three's TFT: a tap on the touch mode icon and in the super
+control panel reaches the GUI (`test/test_touch.mjs`).
 
 ## The chained port
 

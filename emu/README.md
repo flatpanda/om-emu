@@ -244,8 +244,9 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   byte and a 12-40mm F2.8 PRO record, so the screen shows S-AF and the AF target; the application then counts no
   lens attached for its touch path, which S-TOUCHMAP and S-CAFWD stand in for. A touch reaches the driver through
   S-TPREG, which answers the controller the driver reads: E143's at slave `0x70`, and since 2026-11-02 the E144
-  family's at `0x48` (`src/lab/touchpanel.mjs`; `docs/model-survey.md` finding 75), where a tap on the touch mode icon
-  or in the super control panel reaches the GUI as on E143.
+  family's at `0x48` (`src/lab/touchpanel.mjs`; `docs/model-survey.md` finding 75), since 2026-11-10 the E118
+  family's too (findings 84 to 89), where a tap on the touch mode icon or in the super control panel reaches the GUI
+  as on E143.
 - A half press in focus shows the green AF frame and focus mark. They are CPU 3's (its task DISP_FRAME draws them into
   the TFT's face-frame plane), so S-DISPFRAME runs DISP_FRAME on the lab CPU for each post to it, S-TAKEFRAME sets the
   frame display mode the TAKE module would, S-AFOSD uploads the indicator and the AF frame the AF module would, and

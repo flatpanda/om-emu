@@ -180,6 +180,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   tk.bad.forEach((x) => console.log('  ', x));
   bad += tk.bad.length;
 }
+// the release route to TAKE_EXEC (test_take_release.mjs, --take probe round 2: H-TAKEMAIN, S-THRTAKEOVER): under
+// camapp 3 S1's take request reaches TAKE_MAIN natively, which waits for TAKE_FOCUS's callbacks
+{
+  const { releaseSession } = await import('../test/test_take_release.mjs');
+  const rs = await releaseSession();
+  console.log(`the release route to TAKE_EXEC (H-TAKEMAIN, S-THRTAKEOVER) in play: ${rs.checks - rs.bad.length}/${rs.checks}`);
+  rs.bad.forEach((x) => console.log('  ', x));
+  bad += rs.bad.length;
+}
 // the SCPU interface's clock and ports, the link's pins and the sub-CPU's model (S-SCPUDEV) without firmware, then the
 // link at a play session's start: E143 here, E146, E147, E139 and E134
 // each in a process of its own (the model is fixed when the lab is imported)

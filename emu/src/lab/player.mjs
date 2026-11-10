@@ -476,6 +476,8 @@ export class Player {
     if (this.session?.acc?.rotate_tid != null) used.push('H-ROTINIT');                       // --rotate on: PER_ROTATE natively (acc.mjs)
     if (this.session?.camapp?.take) used.push('H-TAKEINIT', 'S-TAKEREQ', 'S-TAKECAM', 'S-TAKEUSF');   // --take probe: TAKE_FUNC natively (take.mjs)
     if (this.session?.camapp?.take?.nb_tids) used.push('H-TAKENBINIT');   // --take probe, round 2 (take.mjs)
+    if (this.session?.camapp?.take?.main_tids) used.push('H-TAKEMAIN');                      // --take probe: TAKE_MAIN natively (take.mjs)
+    if (this.session?.camapp?.take?.thr_takeover_set) used.push('S-THRTAKEOVER');            // --take probe under camapp 3 (take.mjs)
     // the model's own stand-ins (src/fw/models.mjs return_stubs and call_skips, src/lab/play.mjs), each by its name
     for (const [, , name] of MODEL_INFO.return_stubs ?? []) used.push(name);
     for (const [, name] of MODEL_INFO.call_skips ?? []) used.push(name);

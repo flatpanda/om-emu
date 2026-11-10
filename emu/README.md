@@ -316,6 +316,8 @@ node emu/bin/play.mjs --audio off                # without the audio hardware (o
 node emu/bin/play.mjs --rotate on                # PER_ROTATE natively (E143, E146): the tilt input all the way round
 node emu/bin/play.mjs --take probe               # TAKE_FUNC and TAKE_FUNC_CP natively with recording stand-ins (E143,
                                                  # off by default; docs/hle-gaps.md 4.1.4)
+                                                 # and TAKE_MAIN / TAKE_MAIN_CP (4.1.7): with control camapp 3 S1's
+                                                 # take request reaches TAKE_MAIN natively
 OM_EMU_LENS=stand-in sh emu/play.sh              # S-LENS in place of the native lens (S-LENSMCU, the default on
                                                  # E143, E146 and E147)
 OM_EMU_SCPU=native sh emu/play.sh                # E143's and E146's sub-CPU as its own firmware on the STM32L4 machine

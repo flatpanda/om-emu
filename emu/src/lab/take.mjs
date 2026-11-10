@@ -45,6 +45,25 @@
 //               (0x50064d40..0x50064d5b; 0xffff there is its error)
 // The probe keeps H-LENSON (lens.mjs): the lens's bring-up comes before the application starts TAKE, whose start then
 // sends LENS_EXEC its own camera-on, which LENS_MAIN takes natively.
+//
+// Round 2, the release route to TAKE_EXEC (docs/hle-gaps.md 4.1.7): TAKE_MAIN and TAKE_MAIN_CP run natively too, and
+// under control camapp 3 (the components with their transactions native) the shooting sequence's own take requests
+// reach TAKE_MAIN:
+//   H-TAKEMAIN  after H-TAKEINIT: TAKE_MAIN's module init (0x50399619, the boot stage 0x501e8e84's call at 0x501e8f7b,
+//               after USTART2's stage word at 0x501e8eac: TAKE_EXEC 0x5a and TAKE_POST 0x63 bound to its flag
+//               (0x60042ffe) bits 2 and 4, its context 0x62a3f018.. set) natively, then TAKE_MAIN (task 107) and
+//               TAKE_MAIN_CP (task 114) started with act_tsk as the boot stage 0x501e94a5 starts them (0x501e9bbf,
+//               0x501e9bcd; the tids from the words 0x60042dfc / 0x60042e0a; TAKE_PROXY, which it starts next at
+//               0x501e9bdb, stays dormant). TAKE_EXEC leaves S-MODACK, so the take requests go to TAKE_MAIN natively;
+//               what TAKE_MAIN and TAKE_MAIN_CP take joins the record, their requests go through S-TAKEREQ as
+//               TAKE_FUNC's do, and TAKE's synchronous request 0x502ce86d from TAKE_MAIN to a queue whose task runs
+//               natively (TAKE_FUNC; TAKE_MAIN's helper 0x5039a01c, reply queue TAKE_IMDFUNC 0xa8) runs natively
+//   S-THRTAKEOVER (control camapp 3) the through image capability's state word (0x60362b38, CapThr_ThroughImage's
+//               "entryState": a byte scan finds only its getter 0x50bcccc9 and its setter 0x50bcecb8 naming it) set to
+//               0x01010202 through that setter, as the boot take-over (API 70405, 0x50adffda) sets it together with
+//               module 9's state 2 (0x50ae0044..0x50ae0055), the state S-TAKEOVER writes alone. The sequence parts
+//               take a half press only while the state's top byte is 1 (the S1 guard 0x50c8d4a4 -> 0x50bcdef7); with
+//               the word's static 0x02010202 (which the take-over's kind 0 writes, 0x50ae000f) every S1 was refused (X)
 import { FirmwareError, where, disasm } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { OLYQEWR } from './display.mjs';
@@ -114,6 +133,26 @@ const USF = { gate_on: 0x50064A69 };
 // (5: TAKE_FUNC_CP's command 25, 0x506d99db, when its command 0 set 0x62a3f39a, 0x502cdbd8; not reached in the lab)
 const CAM_REQUESTS = { 148: 'TAKE_FUNC_CP command 0, 0x502cd948', 6: 'TAKE_FUNC_CP command 0, 0x502cda61', 5: 'TAKE_FUNC_CP command 25, 0x506d99db' };
 const LIMIT = 2000000;
+// Round 2 (H-TAKEMAIN, S-THRTAKEOVER; the header's round-2 paragraph). TAKE_MAIN's loop (0x503996c3) waits on its flag
+// and takes, by the bits, its internal mailbox (bit 1, 0x502ce7c8), TAKE_EXEC (bit 2, 16 bytes) and TAKE_POST (bit 4,
+// 12 bytes), each through its state's command table (0x605bfbc8, 20 bytes a state; its state the u16 0x62a3f018)
+export const TAKE_MAIN_E143 = {
+  init: 0x50399619,
+  main: { tid: 0x60042DFC, entry: 0x503996C3 },
+  cp: { tid: 0x60042E0A, entry: 0x5039A09E, received: 0x5039A0BC },   // TAKE_MAIN_CP's receive's return, a2 the message
+  exec_received: 0x5039985F,  // TAKE_MAIN's TAKE_EXEC receive's return: (32,sp) points to the 16-byte message
+  post_received: 0x50399997,  // its TAKE_POST receive's return: (28,sp) points to the 12-byte message
+  handler: 0x503998D0,        // its call of a TAKE_EXEC command's handler (a1) in its state's table
+  state: 0x62A3F018,
+  imd_send_return: 0x502CE8A8, // TAKE's synchronous request 0x502ce86d's call of TAKE's send helper 0x502ce57b
+};
+const TAKE_EXEC = 0x5A, TAKE_POST = 0x63;
+const TAKE_MAIN_QUEUES = { 0x5A: 'TAKE_EXEC', 0x63: 'TAKE_POST', 0xA8: 'TAKE_IMDFUNC', 0xB8: 'TAKE_MAIN_CP' };
+// S-THRTAKEOVER: CapThr's state word, its setter and the value the boot take-over's kinds 1 and 2 write
+export const THR_TAKEOVER = { set: 0x50BCECB8, word: 0x60362B38, value: 0x01010202 };
+// S-TAKEREQ's queues for TAKE_MAIN's requests: CPU 3's FACE_FD (queue 2 of CPU 3's run in the object-name table,
+// pointer at 0x6034d0d4 + 0x20 * 5 + 4 * 3)
+Object.assign(TAKE_REQ_QUEUES, { 0x3002: 'FACE_FD' });
 
 export class TakeProbe {
   // session: the PlaySession; camapp: its CamApp (S-MODACK's queues, its pump)
@@ -142,7 +181,7 @@ export class TakeProbe {
     const cur = this.lab.lt.current();
     if (cur === this.lab.nk.tcb(this.tids.func)) return 'TAKE_FUNC';
     if (cur === this.lab.nk.tcb(this.tids.cp)) return 'TAKE_FUNC_CP';
-    return this.neighbour_task(cur);                                    // round 2: TAKE_EXPOSE, TAKE_POWER_MANAGER
+    return this.neighbour_task(cur) ?? this.main_task();               // round 2: the neighbours, TAKE_MAIN
   }
   // before the application starts (CamApp.install): TAKE_FUNC's queue leaves S-MODACK, the stand-ins' hooks
   install() {
@@ -174,6 +213,7 @@ export class TakeProbe {
     lab.hook(USF.gate_on, (h, r) => this.usf_gate(h, r), 'S-TAKEUSF');
     lab.wrap(OLYQEWR, (prev) => (h, r) => (this.tids && this.task() ? this.send(h, r, prev) : prev(h, r)), null);
     this.neighbours_install();                                          // round 2 (below)
+    this.install_main();
   }
   // H-TAKEINIT
   bring_up() {
@@ -193,6 +233,7 @@ export class TakeProbe {
     for (const t of Object.values(this.tids)) if ((lab.nk.state(t) & 0xF) !== 4) throw new TakeError(`H-TAKEINIT: task ${t} is not waiting after its start (state ${lab.nk.state(t)})`);
     this.log.push(['init', `TAKE_FUNC task ${this.tids.func}, TAKE_FUNC_CP task ${this.tids.cp} waiting`]);
     this.neighbours_bring_up();                                         // round 2 (below)
+    this.bring_up_main();
   }
   // the request's sender: the caller of the send helper it went through (TAKE's 0x502ce57b and its wrappers, the
   // focus path's 0x506ea965), else the OlyQeWr call's own return
@@ -200,7 +241,10 @@ export class TakeProbe {
     const T = TAKE_E143;
     let at = disasm(ra);
     if (at === T.send_return) at = this.send_via;
-    if (at === NB.imd_send_return) at = this.imd_caller;                // round 2: imd's own post to a native neighbour
+    if (at === NB.imd_send_return) {
+      if (this.main_task() && this.imd_from) return this.imd_from;      // round 2: TAKE_MAIN's imd (install_main)
+      at = this.imd_caller;                                             // round 2: imd's own post to a native neighbour
+    }
     if (at === T.request_imd) return this.callers.get(T.request);
     if (T.helpers[at]) return this.callers.get(T.helpers[at]);
     return at;
@@ -232,6 +276,8 @@ export class TakeProbe {
       // (BC's callback by calls: its own frame is add -16,sp ... ret [],16, D; how BC calls it is not read)
       if (then !== null) this.pending.push({ what: `BC's completion ${h8(disasm(then))}`, run: () => this.lab.calls(disasm(then), null, undefined, undefined, LIMIT) });
       answer = `reply {0, token 0x${w[1].toString(16)}, 0} to TAKE_FUNC_CP_POST${then === null ? '' : `, then BC's callback ${h8(disasm(then))}`}`;
+    } else if (w[0] === TAKE_POST) {
+      answer = this.main_reply(q, w);                                            // (round 2)
     } else if (w[0] !== 0) throw new TakeError(`${task} sends to ${this.name(q)} [${w.map(h8).join(' ')}] with reply queue ${w[0]} from ${h8(from)} (via ${h8(via)}): no reading of what waits there`);
     this.record({ task, queue: q, name: this.name(q), command: w[2], parameter: w[3], token: w[1], sync: false, from, via, answer });
     h.finish(r, { d0: 0 });
@@ -327,5 +373,87 @@ export class TakeProbe {
   neighbour_sync(h, r) {
     this.imd_caller = disasm(r.mdr);
     this.lab.passthrough(r);
+  }
+  // Round 2 (H-TAKEMAIN, S-THRTAKEOVER): TAKE_MAIN's and TAKE_MAIN_CP's tasks once started (main_tids), else null
+  main_task() {
+    if (!this.main_tids) return null;
+    const cur = this.lab.lt.current();
+    if (cur === this.lab.nk.tcb(this.main_tids.main)) return 'TAKE_MAIN';
+    if (cur === this.lab.nk.tcb(this.main_tids.cp)) return 'TAKE_MAIN_CP';
+    return null;
+  }
+  // (from install) TAKE_EXEC leaves S-MODACK; TAKE_MAIN's queues are native; the record of what TAKE_MAIN and
+  // TAKE_MAIN_CP take ({dir 'in', task, queue, command, reply, token, parameter, state} for a request; a TAKE_POST
+  // message has status and no command; handler, TAKE_MAIN's handler of a TAKE_EXEC command); S-THRTAKEOVER
+  install_main() {
+    const lab = this.lab, M = TAKE_MAIN_E143, ca = this.camapp;
+    this.main_tids = null;
+    this.thr_takeover_set = false;
+    ca.module_queues.delete(TAKE_EXEC);
+    for (const q of Object.keys(TAKE_MAIN_QUEUES)) this.native.add(Number(q));
+    const words = (l, m, n) => [0, 1, 2, 3].slice(0, n).map((k) => l.sim.u32(m + 4 * k) >>> 0);
+    const take = (rq) => {
+      rq.state = lab.sim.read(M.state, 2).reduce((a, b, k) => a | b << 8 * k, 0);
+      this.requests.push({ dir: 'in', ...rq });
+      this.log.push(['command', `${rq.task} takes ${rq.queue} ${rq.command === null ? `status ${rq.status}` : `command ${rq.command}`} (reply queue ${rq.reply}, token ${h8(rq.token)}, parameter ${h8(rq.parameter)}) in state ${rq.state}`]);
+    };
+    lab.observe(M.exec_received, (l, r) => {
+      const w = words(l, l.sim.u32((r.sp >>> 0) + 32) >>> 0, 4);
+      take({ task: 'TAKE_MAIN', queue: 'TAKE_EXEC', command: w[2], reply: w[0], token: w[1], parameter: w[3] });
+    }, 'H-TAKEMAIN (TAKE_EXEC)');
+    lab.observe(M.post_received, (l, r) => {
+      const w = words(l, l.sim.u32((r.sp >>> 0) + 28) >>> 0, 3);
+      take({ task: 'TAKE_MAIN', queue: 'TAKE_POST', command: null, status: w[0] & 0xFFFF, reply: null, token: w[1], parameter: w[2] });
+    }, 'H-TAKEMAIN (TAKE_POST)');
+    lab.observe(M.cp.received, (l, r) => {
+      const w = words(l, r.a2 >>> 0, 4);
+      take({ task: 'TAKE_MAIN_CP', queue: 'TAKE_MAIN_CP', command: w[2], reply: w[0], token: w[1], parameter: w[3] });
+    }, 'H-TAKEMAIN (TAKE_MAIN_CP)');
+    lab.observe(M.handler, (l, r) => {
+      const rq = this.requests.findLast((x) => x.dir === 'in' && x.task === 'TAKE_MAIN' && x.queue === 'TAKE_EXEC');
+      if (rq) rq.handler = disasm(r.a1);
+    }, 'H-TAKEMAIN (handler)');
+    // TAKE's synchronous request from TAKE_MAIN to a queue whose task runs natively: natively (its post and the reply
+    // are recorded by send); imd_from names its caller for the record
+    lab.wrap(TAKE_E143.imd, (prev) => (h, r) => {
+      if (!this.main_task() || !this.native.has(r.d0 & 0xFFFF)) return prev(h, r);
+      this.imd_from = disasm(r.mdr);
+      return lab.passthrough(r);
+    }, null);
+    if (ca.native_tra) this.thr_takeover();
+  }
+  // S-THRTAKEOVER (control camapp 3; the header's round-2 paragraph): before the application starts
+  thr_takeover() {
+    const lab = this.lab, T = THR_TAKEOVER, was = lab.sim.u32(T.word) >>> 0;
+    lab.call(T.set, { d0: T.value }, null, null, LIMIT);
+    if ((lab.sim.u32(T.word) >>> 0) !== T.value) throw new TakeError(`S-THRTAKEOVER: CapThr's state ${h8(lab.sim.u32(T.word))} after its setter, not ${h8(T.value)}`);
+    this.thr_takeover_set = true;
+    this.log.push(['init', `S-THRTAKEOVER: CapThr's state ${h8(was)} -> ${h8(T.value)}`]);
+  }
+  // S-TAKEREQ's answer to a request whose word 0 names TAKE_POST (0x63), where TAKE_MAIN takes 12-byte replies: after
+  // the step {u16 status 0, token = word 1, 0} there. TAKE_MAIN's TAKE_POST branch (0x50399971..0x50399a86) looks the
+  // token up in its state's reply table (row +16: [u16 token, handler], 0xffff ends it) and calls the handler with the
+  // message, then its state step 0x50399acf; what each handler reads of the status is its own
+  main_reply(q, w) {
+    this.pending.push({ what: `{0, 0x${w[1].toString(16)}, 0} -> TAKE_POST (${this.name(q)}'s reply)`, run: () => this.reply(TAKE_POST, [0, w[1], 0]) });
+    return `reply {0, token 0x${w[1].toString(16)}, 0} to TAKE_POST`;
+  }
+  // H-TAKEMAIN (from bring_up, after H-TAKEINIT)
+  bring_up_main() {
+    const lab = this.lab, M = TAKE_MAIN_E143;
+    lab.call(M.init, null, null, null, LIMIT);
+    const tid = (a) => { const b = lab.sim.read(a, 2); return b[0] | b[1] << 8; };
+    const tids = { main: tid(M.main.tid), cp: tid(M.cp.tid) };
+    for (const [k, t] of Object.entries(tids)) {
+      const e = lab.nk.entry(t);
+      if (e !== M[k].entry || lab.nk.state(t) !== 0x10) throw new TakeError(`H-TAKEMAIN: task ${t} has entry ${h8(e)} state ${lab.nk.state(t)}, not a dormant ${h8(M[k].entry)}`);
+      lab.lt.allow.add(e);
+      const [rc] = lab.nk.svc('act_tsk', { d0: t });
+      if (rc !== 0) throw new TakeError(`H-TAKEMAIN: act_tsk(${t}) = ${rc}`);
+    }
+    this.main_tids = tids;
+    this.s.settle('H-TAKEMAIN');
+    for (const t of Object.values(tids)) if ((lab.nk.state(t) & 0xF) !== 4) throw new TakeError(`H-TAKEMAIN: task ${t} is not waiting after its start (state ${lab.nk.state(t)})`);
+    this.log.push(['init', `TAKE_MAIN task ${tids.main}, TAKE_MAIN_CP task ${tids.cp} waiting`]);
   }
 }

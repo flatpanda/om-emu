@@ -386,6 +386,16 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   ex.bad.forEach((x) => console.log('  ', x));
   bad += ex.bad.length;
 }
+// S-EXPOSE's readers in a default session, and the EXP callback that would write the AE results run natively as far
+// as it goes (test_expcb.mjs, --take probe with --cpu2 native: EXP_MOVIE's AE request stops before the callback)
+{
+  const { aeReadersSession, expCallbackSession } = await import('../test/test_expcb.mjs');
+  const ar = await aeReadersSession();
+  const ec = await expCallbackSession();
+  console.log(`S-EXPOSE's readers in play: ${ar.checks - ar.bad.length}/${ar.checks}; the EXP callback, round 1: ${ec.checks - ec.bad.length}/${ec.checks}`);
+  [...ar.bad, ...ec.bad].forEach((x) => console.log('  ', x));
+  bad += ar.bad.length + ec.bad.length;
+}
 // the lens on the mount natively: the serial controller, the deferred-call triggers, S-LENSMCU, the driver's start:
 // E143 here, E146 and E147 each in a process of its own (the model is fixed when the lab is imported)
 {

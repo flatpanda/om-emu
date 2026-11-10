@@ -1191,16 +1191,17 @@ served natively, so S-EXPOSE stays (its text now gives the routine's role and th
   80`), its end taken natively, the unit powered down again; the menu opens (ID_ST_MENU) and closes; PLAY shows
   playback's ID_ST_NO_PICTURE with two more fills of the same bank and PLAY returns; their transactions are the
   components' (4.1.5). Without shots the menu and playback passes repeat (X, twice).
-- **Next stops (X).** (1) After the menu and playback passes a pass of S1 and S2 records its picture (the fourth), and
-  then no key is taken: MENU's EV_PRESS_MENU_KEY reaches UI_IN, the step sets no GUI event and sends no transaction; the
-  same after 5 s of idle, for OK and PLAY. A shot before any menu pass leaves the menu working; the one difference in
-  the stand-ins' logs of the two shots is a request on queue 90 at S1 that S-MODACK acknowledges (`{6, 0xf00c0000, 0,
-  ...}` to queue 6); what the application waits for is ?. (2) With pictures on the card PLAY shows ID_ST_NO_PICTURE, not
-  the newest picture (camapp 1's S-PLAYSEQ / S-PLAYCOMP show it); why the play path decides so is ?. (3) In that
-  playback, right fills the other bank (bus `0x9a43e000`, same size and value), and the session stops before any other
-  key, within 50 ms of idle after that fill (X, 2026-11-10, each key held 100 ms with 800 ms of idle after it;
-  corrected: not at a later left): the OXF main thread's display manager send (`0x503eba00`, timeout -1, D) waits on
-  queue 6, full (tsnd_dtq with no timeout; X: task 57's stack holds the returns `0x503eba07` and `0x5002c1f8`).
+- **Next stops (X; their causes in 4.3.2, 2026-11-10).** (1) After the menu and playback passes a pass of S1 and S2
+  records its picture (the fourth), and then no key is taken: MENU's EV_PRESS_MENU_KEY reaches UI_IN, the step sets no
+  GUI event and sends no transaction; the same after 5 s of idle, for OK and PLAY. Cause (4.3.2): the menu's close
+  restarts the through image, so S1 now passes the sequence parts' guard, the sequence waits in phase 102 for a
+  take-ready TAKE would finish, and isCtrlReleaseEnable refuses every key; the queue-90 request is that S1's take
+  request. (2) With pictures on the card PLAY shows ID_ST_NO_PICTURE, not the newest picture (camapp 1's S-PLAYSEQ /
+  S-PLAYCOMP show it). Cause (4.3.2): the play module does not run, so its header getter finds the picture not loaded.
+  (3) In that playback, right fills the other bank (bus `0x9a43e000`, same size and value), and the session stopped
+  within 50 ms of idle after that fill. Corrected (4.3.2): the blocked send was the play API's request to PLAY_EXEC,
+  full with S-MODACK's answered requests, not a send to queue 6 (the guard named the wrong queue); fixed, right and left
+  are taken and PLAY returns.
 - **REC and the album manager.** S-JPEGENC keeps REC's header fill (`0x5048ee61` from `0x5054c9d3`, kind 14 mode 4,
   41984 bytes of 0 at `0xab0bd800`): with the hook lifted under camapp 3 the fill ran natively, but rec_jpeg_exec runs
   in S-RECIMAGE's lab call, outside REC_IMAGE's task, and the request's wait blocked the lab task (X: "all tasks
@@ -1217,6 +1218,95 @@ served natively, so S-EXPOSE stays (its text now gives the routine's role and th
   H-IMGPROINIT and S-STAGE9 at the start, S-TRAACK gone; S-BOOTDONE and S-OUTDEV are not camapp 1's).
 - **Open.** The unit's time per run (A-IMGPRO-1) and the value's phase off a 4-byte boundary; kinds 13, 16, 17 and 6;
   the meaning of the power, stop and control words (I); the three next stops above.
+
+#### 4.3.2 camapp 3 after the imgpro unit: the next stops (`control camapp 3`, 2026-11-10; D unless tagged)
+
+4.3.1's three next stops, each followed to its cause (addresses E143's). The furthest point is now a pass of S1 and
+S2 after the menu and playback, with playback's right and left taken on the way (`emu/test/test_camapp.mjs`
+traRoutingSession, below).
+
+- **Right in playback (stop 3): a lab defect, fixed (X, D).** The OXF main thread (task 57) waited in tsnd_dtq on
+  PLAY_EXEC (0x3f), not on queue 6: the play API's request from `0x50404383` (API target 21, which the target table
+  `0x606214a0` maps to 63, X) through the API sender's OlyQeWr (`0x503eba00`, timeout -1). PLAY_EXEC's kernel queue
+  holds 40 bytes, 20 a message (X): the menu's PLAY_EXEC command 5 and PLAY's command 0 filled it, right's request was
+  the third. Queue 6 was empty with the event task (164) waiting to receive (X: the data queue's control block from
+  the kernel's table at kcb +232, its send and receive wait lists at +4 and +12, as ref_dtq `0x50013ca7` reads them).
+  The queue's reader is the play module's task, which the lab does not run; S-MODACK answered each request after the
+  step but passed the message on to the native OlyQeWr, so every message it answered stayed in a queue no task reads.
+  The guard named queue 6 because it kept one record per call site: UI_IN's key posts to queue 6 through the same
+  site (OlyQeWr's tsnd_dtq, return `0x5002c1f8`) overwrote the blocked call's queue (X).
+  - Fixed: S-MODACK takes the message as the module's task would (OlyQeWr returns E_OK and the message is not put in
+    the kernel's queue), as S-DISPQ does for the DISPLAY queue (`docs/om1-input-spec.md` section 7); the guard keeps
+    its record per calling task and site and names the task (`emu/src/lab/play.mjs`). With the old S-MODACK restored
+    for PLAY_EXEC alone (traRoutingSession's control) right's request blocks again and the guard reports "queue 63 ...
+    in task 57" (X).
+  - The same defect elsewhere (X unless tagged). 4.4.2's open item, a late workload pass ending in "task 165's
+    request to queue 6": with S-MODACK's old way restored for every queue, the default session's workload passes (S1,
+    S2, the menu, playback, 2 s; heapWorkloadSession's) stop at the ninth pass's PLAY up, task 165's send to TAKE_FUNC
+    (0x5e) waiting, which the guard now names; with the fix nine passes run (2026-11-10). E132's LOGGER_MAIN (4.7.5):
+    its queue (0xdf) holds four messages (80 bytes), CATEGORY_MAIN's (0xe6) one, and with LOGGER_MAIN left out of
+    S-MODACK the start, the clock set and modelcheck's keys (S1, S2, PLAY, INFO, PLAY) now run on (three messages
+    held), so the old stop does not reproduce; that it was LOGGER_MAIN's full queue under a guard naming queue 6 is I.
+  - Not covered: a post to a module queue other than the API sender's stays in the kernel's queue. CapTak_Take's
+    control `0x40` posts TAKE_EXEC command 5 straight through OlyQeWr (`0x503ebe46`, 4.1.7) at an S2 in phase 102;
+    TAKE_EXEC holds 25 messages (500 bytes; X: one held after the shot below).
+- **No Picture (stop 2): the play module does not run (X, D).** At PLAY the GUI goes ID_ST_PREPARE, ID_ST_DRAWING and
+  ID_ST_DISP_SIMPLE, then ID_ST_NO_PICTURE on event `0x9627` (X). The chain:
+  - PLAY sends PLAY_EXEC command 0 from the OXF main thread, which S-MODACK answers with status 0 (X); the capability
+    then logs "[chls]Play_Picture with ph =%d is successful" for the picture handle `0x101` (X: the status 0 at
+    `0x50bb1f4c`; that this status is the request's answer is I).
+  - The play capability's get_picture_header_info (`0x50bb1f58`) calls Play_Get_Picture_Header_Info (`0x5040ce8f`,
+    which runs the play module's getter `0x518b629e` in the caller's task): the handle's record (`0x518b5181`) is
+    there, but the picture's record from `0x518bfc7e` has its u16 +12 at 0 where 1 passes, so the getter's code is
+    6152 (6155 without a record; X: 6152) and the API returns 1 (X).
+  - The capability then sets its state word `0x62b0dc8c` to 4 (`0x50bb20ce..dd`, after its log "get_picture_header_info
+    failed"; X: 4), which the single component's playOneFrameStart reads (`0x50bc0153`): neither 0 nor 1, so it
+    answers 0xf0000001 (`0x50c5007b`, X). Its response, event 581 (evTraPlyResponse, built at `0x50ad3c4b` with the
+    code 0xf0000001 and kind 2, X), reaches the async RSB in its state 6 (`0x50ad2f8d`, "PlyComAsyncRsb aft ack rcv
+    evTraPlyResponse"), whose notify (`0x50ad2bc2`) runs the single-frame callback (`0x50b7118d`); task 162 hands the
+    GUI the callback (27, 39) with the result 0xf0000001 (X: the first single-frame request's result 0 had shown
+    ID_ST_DISP_SIMPLE), and the GUI's handler (`0x510d6803`, case `0x510d6c89`) sets event `0x9627` (its parameter 10
+    or 64 by `0x51287def(1135)`).
+  - So the answer that leads there is S-MODACK's to Play_Picture: on the camera the play module's tasks (PLAY_MAIN on
+    PLAY_EXEC, PLAY_LOAD 0x18, PLAY_IMAGE 0x17, PLAY_DECODE 0x76, 4.8) would load the picture and mark its record (I;
+    the writer of +12 is not read). Not S-TRAACK (it answers no transaction under camapp 3, 4.1.5) and not the album
+    manager: playOneFrameStart's Get_Album_Num (`0x503dd27f`) runs only after a result 0 (`0x50c500a5`).
+  - The fills: PLAY's two of the through image's bank and right's of `0x9a43e000` go through `0x50b90189` (from
+    `0x50b927fb` and `0x50b9280c` at PLAY, `0x50b936d7` at right), called from the single component (`0x50c1b9b9`,
+    `0x50c4ecc8`) in the OXF main thread (X: the stacks at api_tft's `0x504223a4`); what they clear is I (the image
+    plane before the picture).
+  - Left documented: the neighbour is the play module (segment 9's PLAY_* with the JPEG decode at 4.3's seam C2; 4.8
+    "Playback"). A stand-in that marked the record loaded would answer for the module's load and decode and move the
+    stop to the requests that follow (I); none is added.
+- **No key after a shot (stop 1): TAKE does not finish the take-ready (X, D).** Before the menu CapThr's state word
+  `0x60362b38` reads `0x02010202` (S-TAKEOVER's static value, 4.1.7), so S1 (826) is refused in phase 101 by the
+  sequence parts' guard `0x50bcdef7` and goes no further, as in 4.1.7. The menu's close restarts the through image
+  natively and the word becomes `0x01010202` (`0x02010202` again in playback, `0x01010202` at its return; X). S1 then
+  passes the guard: the sequence moves to phase 102 (setter `0x50cc6121` from `0x50c87f1a`, the phase word
+  `0x60364a1c`; X), CapTak_Take's take API (`0x50417cd9`) sends control `0x20`, TAKE_EXEC command 0 through the API
+  sender, the queue-90 request of 4.3.1, which S-MODACK answers (TAKE_MAIN's own answer is the same status 0, 4.1.8),
+  and S2 (824 in phase 102) control `0x40`, command 5 straight to TAKE_EXEC (X). Nothing finishes the take-ready:
+  event 794 (CmpSts_ObserverNotifyTakeReadyFinish), which the sequence takes in phase 102, follows TAKE's
+  notifications (4.1.8's experiment), and TAKE does not run; the releases (828, 827) are taken in phase 102 and leave
+  the sequence there, with no take API call (X). The key path then refuses: the application's key handler (task 165)
+  asks isCtrlReleaseEnable (`0x50ab5c04`), which answers 1 for the phases 100 and 101 and otherwise logs
+  "isCtrlReleaseEnable UNRESPONSIVE(Seq=%d)" (`0x50ab5c26`) and answers 0, so MENU, OK and PLAY send no GUI event (X:
+  for MENU after the shot it reads the phase three times, at `0x50ab5c09`, `0x50ab5c12` and `0x50ab5c23`, and logs
+  Seq 102).
+  - A shot before any menu pass leaves the keys working because its S1 never reaches the take (4.1.7's guard); the
+    menu is not needed as such, only a running through image (I: playback's return sets the word too, X).
+  - Left documented: the neighbour is TAKE (TAKE_MAIN's take-ready and the notifications its events become, 4.1.7,
+    4.1.8; with `--take probe` it stops at EXP_MOVIE). A stand-in posting TAKE's notifications would invent the
+    take-ready's progress, as 4.1.7 declined; S1 in camapp 3 with the through image running needs what S-RELSEQ's
+    retirement needs (4.1.8's list).
+- **Result (X, `emu/test/test_camapp.mjs` traRoutingSession 22 of 22).** After three passes of S1 and S2 and the menu
+  (CapThr's top byte 2 before it, 1 after): PLAY shows ID_ST_NO_PICTURE with three pictures on the card, the header
+  getter's code 6152, the capability's state 4; right (one fill, of `0x9a43e000`) and left are taken and PLAY returns;
+  a pass records the fourth picture with the sequence in phase 102, and MENU's EV_PRESS_MENU_KEY sets no GUI event,
+  isCtrlReleaseEnable refusing it in phase 102. The control (S-MODACK's old way for PLAY_EXEC) blocks at right and the
+  guard names queue 63 and task 57.
+- **Open.** TAKE's take-ready and capture under camapp 3 (stop 1, with 4.1.8's list); the play module (stop 2); posts
+  to module queues outside the API sender (TAKE_EXEC's command 5); E132's old LOGGER_MAIN stop (not reproduced).
 
 ### 4.4 AF, lens and body IS
 
@@ -1470,9 +1560,11 @@ than E143, E146 and E147 (4.4.3).
     reply's handler (vt[2] `0x50ac744e`, reply 425) signals the waiter and sets +24, not +20. So no code of this class
     frees the object after a reply (D); whether the receiver does, by a route not read, is ?. S-RPC leaves it: freeing
     it would be the no-channel path's choice, which the lab cannot show the camera takes.
-  - **Not a heap block, open:** the seventh pass ends in the lab's blocked-send guard, with or without the fix: at
-    PLAY up task 165's request to queue 6 (`0x503eba00`) waits on a full queue while task 164's last receive was on
-    queue 6 (X); why the queue fills is ?. The test runs five passes.
+  - **Not a heap block, answered 2026-11-10 (4.3.2):** the seventh pass ends in the lab's blocked-send guard, with or
+    without the fix: at PLAY up task 165's request to queue 6 (`0x503eba00`) waits on a full queue while task 164's last
+    receive was on queue 6 (X). Corrected (X, 4.3.2): the send waited on TAKE_FUNC's queue (0x5e), full with the
+    requests S-MODACK had answered but left in it; the guard named the queue of a later send through the same site.
+    S-MODACK now takes the message, and nine passes run. The test runs five passes.
 - **Open:** S-LENSMCU's assumed values (A-LENSMCU-1..3) and the lens's real replies (its flags, function words,
   tables, version, the ID's first bytes and the check byte's value) are ?. E146 and E147: 4.4.3. The E144 family and
   E118 have no `lens` board fact and no `lens_driver` fact: they keep S-LENS.
@@ -2733,7 +2825,8 @@ bytes on; E143's places in brackets):
   the other bodies' unset channel map, E143's included, whose channels still share an index (no body but the TG-5s
   runs H-SIOMAP: their PER_SIO users are S-SIO2, S-IICWAIT and the panels' lab-stub pages); E144's charger over IIC
   channel 6 (S-INTCHA's return stub) as a second S-SIOIIC device; the charger's chip and its reset values; why
-  LOGGER_MAIN's unanswered request fills the application's queue 6 once the clock is set (X, ?).
+  LOGGER_MAIN's unanswered request fills the application's queue 6 once the clock is set (X, ?; 2026-11-10, 4.3.2: the
+  guard then named the queue of the last send through the blocked call's site, I, and the stop no longer reproduces, X).
 - **The E118 family's channels (2026-10-30, `docs/model-survey.md` finding 44).** Their blocks
   (`0x98200000`..`0x98600000`, five enabled) are lab-stub pages with one preset each: the transmit level word `+0x1c`
   reads the channel's FIFO depth (16, 64 for channel 4), an idle transmitter, so the driver's polled send, which waits

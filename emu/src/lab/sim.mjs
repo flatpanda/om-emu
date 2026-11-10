@@ -42,8 +42,8 @@ export class Simulator {
   // insnLimit: None keeps 1,000,000, 0 disables. keepStderr: every stderr line is kept (stderrLines()).
   constructor(env, insnLimit = null, keepStderr = false) {
     this.env = env;
-    const { mutant = 0, oneInsn = false, coverage = null, hdmi = false, audio = false } = env.machine ?? {};
-    this.m = createMachine({ rom: env.rom, insnLimit: insnLimit === null ? 1000000 : insnLimit, ...(env.clock ? { clock: env.clock } : {}), mutant, oneInsn, keepStderr, coverage, hdmi, audio });
+    const { mutant = 0, oneInsn = false, coverage = null, hdmi = false, audio = false, cores = null } = env.machine ?? {};
+    this.m = createMachine({ rom: env.rom, insnLimit: insnLimit === null ? 1000000 : insnLimit, ...(env.clock ? { clock: env.clock } : {}), mutant, oneInsn, keepStderr, coverage, hdmi, audio, cores });
     this.breakpoints = new Set();
     this.known_insns = 0; this.ran = false;
     this.fast = false;

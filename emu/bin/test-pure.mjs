@@ -19,7 +19,8 @@
 // the lens serial controller, the deferred-call triggers and S-LENSMCU's replies (test_lens.mjs),
 // PER_SIO's served IIC transfers and the TG-5's charger (test_sio.mjs),
 // the debug API's argument checks, halt,
-// trace filters and live-route units (test_live.mjs liveUnits: a machine on a blank image), its trace rules and edge
+// trace filters and live-route units (test_live.mjs liveUnits: a machine on a blank image), the machine's second core
+// on a blank image (test_cpu2.mjs coresUnits), its trace rules and edge
 // cases (test_debug.mjs traceRuleUnits: halfword device accesses, code on the lab stub, the bus window, code-fetch
 // faults, a watch hit in an interrupt entry) and the publication
 // audit's rules on a throwaway repository (test_pubaudit.mjs), and the SCPU's Cortex-M4 core: its decoder, executor and
@@ -58,6 +59,7 @@ import { ems1Units } from '../test/test_ems1.mjs';
 import { lensUnits } from '../test/test_lens.mjs';
 import { sioUnits } from '../test/test_sio.mjs';
 import { liveUnits } from '../test/test_live.mjs';
+import { coresUnits } from '../test/test_cpu2.mjs';
 import { traceRuleUnits } from '../test/test_debug.mjs';
 import { pubauditTests } from '../test/test_pubaudit.mjs';
 import { m4Units, m4Vectors } from '../test/test_m4.mjs';
@@ -116,6 +118,7 @@ report('the EMS1 engine\'s register file: tables, images, results, completions, 
 report('the lens serial controller, deferred-call triggers and the lens (S-LENSMCU)', lensUnits());
 report('PER_SIO\'s served IIC transfers and the TG-5\'s charger (S-SIOIIC, S-CHARGER)', sioUnits());
 report('debug API: argument checks, halt, trace filters, live route', await liveUnits());
+report('the machine\'s second core: core numbers, local RAM, interleave, bank 2\'s request (src/core/cores.mjs)', await coresUnits());
 report('debug API: trace rules and edge cases (halfword device accesses, stub code, bus window, fetch faults, interrupt entry)', traceRuleUnits());
 report('publication audit (throwaway repository, made-up firmware)', await pubauditTests());
 report('Cortex-M4 core: decoder, executor, exceptions (hand-written)', m4Units());

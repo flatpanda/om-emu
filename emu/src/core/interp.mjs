@@ -72,6 +72,28 @@ export function setWatch(pc, builtins) {
   if (WATCH !== -1) BPH[WATCH & 0xffff] = 1;
 }
 const isBP = (pc) => BPH[pc & 0xffff] !== 0 && BP.has(pc);
+// ---- per-core state (src/core/cores.mjs, createMachine's cores option): the breakpoints, the watched gate pc, the
+// builtin pcs and the TB-start and look records belong to the core that runs; a core switch takes them and puts the
+// other core's back. The decode slots of the page each core maps to its own RAM (LOCAL_PAGE, CPU 2's local RAM at
+// 0x50000000) hold one core's bytes and are dropped at every switch (a slot is found by pc alone). -1: no such page,
+// the default, and decode() records nothing.
+let LOCAL_PAGE = -1;
+const localSlots = [];
+export function setLocalPage(p) { LOCAL_PAGE = p; localSlots.length = 0; }
+export function coreInterp() {
+  return { bp: [...BP], watch: WATCH, builtin: BUILTIN, tbPc: TB_PC, tbAt: TB_AT, tbStart: TB_START, lookedPc: LOOKED_PC, lookedN: LOOKED_N };
+}
+export function setCoreInterp(s) {
+  for (const b of BP) BPH[b & 0xffff] = 0;
+  if (WATCH !== -1) BPH[WATCH & 0xffff] = 0;
+  BP.clear();
+  for (const pc of s.bp) { BP.add(pc | 0); BPH[pc & 0xffff] = 1; }
+  WATCH = s.watch; BUILTIN = s.builtin;
+  if (WATCH !== -1) BPH[WATCH & 0xffff] = 1;
+  TB_PC = s.tbPc; TB_AT = s.tbAt; TB_START = s.tbStart; LOOKED_PC = s.lookedPc; LOOKED_N = s.lookedN;
+  for (const i of localSlots) if ((ctag[i] >>> 16) === LOCAL_PAGE) dropSlot(i);
+  localSlots.length = 0;
+}
 // The TB-layout refusals. The look after these depends on where a TB begins, which emu does not model:
 // (a) in the near-limit zone (the last 64 instructions, one instruction per TB only from the first TB start inside
 //     it) an instruction raised the request, the next pc is a breakpoint and the request is admitted;
@@ -182,6 +204,7 @@ export function resetInterp() {
   CODECH = new Uint8Array((TOTAL >>> CHUNK) + 1);
   cslots.clear(); ctag.fill(-1); ckind.fill(K.FB); cch0.fill(-1); cch1.fill(-1); BP.clear(); BPH.fill(0);
   WATCH = -1; BUILTIN = new Set(); MUT = 0; ONE = false; TB_PC = 0; TB_AT = 0; SEGS = new Set([0x17]); FORCE_FB = false;
+  LOCAL_PAGE = -1; localSlots.length = 0;
   setSmcHook(invalidateChunk);
 }
 // The bus window remap (bus.mjs onRemap, a valid CPU store to 0x98100058): the decode-cache slots of window pcs hold
@@ -356,6 +379,7 @@ function decode(pc, i) {
   if (FORCE_FB && k !== K.FBM) k = K.FB;
   if (cch0[i] >= 0) dropSlot(i);                   // re-tag: leave the old instruction's chunk lists
   ctag[i] = pc; ckind[i] = k; cx[i] = x; cy[i] = y; cimm[i] = imm; clen[i] = len;
+  if (LOCAL_PAGE >= 0 && (pc >>> 16) === LOCAL_PAGE) localSlots.push(i);   // a core's own page (setLocalPage)
   markCode(pc, len);
   for (let j = 0; j < len; j++) {
     const o = codePhys(pc + j);

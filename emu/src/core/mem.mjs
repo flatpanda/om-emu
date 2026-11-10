@@ -158,6 +158,13 @@ export function remapPages(base, size, regions) {
   for (const r of regions) addRegion(r);
   maskWatchedPages();                                   // the remap's pages too: a watched page stays on the slow path
 }
+// The page-table state of one 64 KiB page (src/core/cores.mjs: a page each core maps to its own RAM), taken and put
+// back at a core switch; a watched page keeps its fast entries off.
+export function pageState(p) { return { list: PAGES[p], rp: RP[p], wp: WP[p], wpl: WPL[p] }; }
+export function setPageState(p, s) {
+  PAGES[p] = s.list; RP[p] = s.rp; WP[p] = s.wp; WPL[p] = s.wpl;
+  if (WPG[p] !== 0) { RP[p] = -1; WP[p] = -1; }
+}
 export function findRegion(a) {
   a >>>= 0;
   const list = PAGES[a >>> 16];
@@ -203,7 +210,8 @@ function slowLd(a, w) {
   return v;
 }
 function slowSt(a, v, w) {
-  if ((a >>> 0) >= 0x50000000 && (a >>> 0) < 0x52000000) throw new Fault(2, a);   // the flash view
+  // the flash view; a page of it a core's own RAM covers (src/core/cores.mjs: CPU 2's local RAM) stores as RAM
+  if ((a >>> 0) >= 0x50000000 && (a >>> 0) < 0x52000000 && findRegion(a)?.kind !== K_RAM) throw new Fault(2, a);
   const r = findRegion(a);
   try {
     if (r === null) {

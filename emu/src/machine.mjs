@@ -24,6 +24,7 @@ import { Dml } from './dev/dml.mjs';
 import { Pdt } from './dev/pdt.mjs';
 import { Ems1 } from './dev/ems1.mjs';
 import { DpcTriggers } from './dev/dpc.mjs';
+import { Cores } from './core/cores.mjs';
 
 export { Unported, TbUndecidable };
 export class HostStopped extends Error {       // a run or write call after a host error stopped the machine mid-instruction
@@ -58,9 +59,10 @@ export function onMachine(fn) {
 // each, and HLE calls its stub(pc, name) for every stand-in that fires; null, the default: none, and nothing changes),
 // hdmi (the HDMI port's transmitter, its hot-plug pin and the sink, src/dev/hdmi.mjs; false, the default: none, and
 // their addresses stay the lab stub's), audio (the audio serial port and the SCA page, src/dev/audio.mjs; false, the
-// default: none, and their addresses stay the lab stub's).
+// default: none, and their addresses stay the lab stub's), cores (a second MN103 core on the bus, src/core/cores.mjs:
+// {second: its core number, quantum: the interleave's instructions}; null, the default: CPU 0 alone, nothing changes).
 export const WATCH_LOG_MAX = 200000;
-export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 1000000, clock = () => performance.now(), mutant = 0, oneInsn = false, keepStderr = false, coverage = null, hdmi = false, audio = false } = {}) {
+export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 1000000, clock = () => performance.now(), mutant = 0, oneInsn = false, keepStderr = false, coverage = null, hdmi = false, audio = false, cores: coresOpt = null } = {}) {
   if (dramBytes > mem.DRAM_MAX || dramBytes < 64 << 20) throw new Error(`om-emu: DRAM must be 64..${mem.DRAM_MAX >> 20} MiB`);
   const myGen = ++generation;
   const tCreate = clock();
@@ -153,6 +155,8 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   const stub = new Stub(m);
   // every set_irq(true) kicks the CPU (S.kick: the next TB start looks, interp.mjs)
   intc.connect((requested) => { S.irqReq = requested; if (requested) S.kick = true; else S.irqWait = false; });
+  // the second core (src/core/cores.mjs), which takes over the controller's request callbacks
+  const cores = coresOpt === null ? null : new Cores(m, intc, coresOpt);
   S.intc = {
     level: () => intc.irqLevel(R[PC]), accepted: (level, pc, insns) => intc.irqAccepted(level, pc, insns),
     // the kick refusals: would a look at pc take (or wait for) the request, with the gate (or ignoring it)
@@ -202,6 +206,7 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   // cpu.mjs limitFault), which the stop then reports.
   const limitStop = () => { const f = limitFault(); trap(f); return f.code === 7 ? { kind: 'limit', code: 7 } : { kind: 'fault', code: f.code }; };
   Object.assign(m, {
+    cores,
     devices: { intc, timer, engine, vsc, bus, stub, scpu, clock: lclock, ...(hdmiPort ? { hdmi: hdmiPort } : {}), ...(audioPort ? { audio: audioPort } : {}), ...(linkPins ? { linkpins: linkPins } : {}),
       ...(lensSsc ? { lens: lensSsc } : {}), ...(dpc ? { dpc } : {}), ...(dml ? { dml } : {}), ...(pdt ? { pdt } : {}), ...(ems1 ? { ems1 } : {}) },
     getRegs() { live(); return getRegs(); },
@@ -282,7 +287,7 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
           if (mem.WHIT !== null) { result = 'watch'; lastStop = { kind: 'watch', code: 0 }; break; }
           const resumed = !visit;                 // resume(): the paused continue goes on, no visit between
           visit = false;
-          const r = run(budget, resumed);
+          const r = cores === null ? run(budget, resumed) : cores.run0(budget, resumed);
           if (r === RUN_VISIT) { if (mem.WHIT !== null) continue; visit = true; continue; }
           if (r === RUN_LIMIT) {
             if (S.limit && S.insns >= S.limit) lastStop = limitStop();
@@ -385,6 +390,7 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
     // happened after the snapshot (the whole machine state comes back).
     snapshot() {
       live(); notPaused('snapshot');
+      if (cores !== null) throw new Error('snapshot: not with a second core (src/core/cores.mjs keeps per-core state the snapshot does not hold)');
       if (failed !== null) throw new HostStopped('snapshot', failed);
       const cpuS = {};
       for (const k of Object.keys(S)) if (k !== 'intc') cpuS[k] = S[k];

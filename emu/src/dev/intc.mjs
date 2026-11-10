@@ -11,6 +11,10 @@ const B = BOARD.intc;
 export const IRQS = B.irqs, LEVELS = 7, BANKS = B.banks.length;
 export const DEBUG_BASE = 0x89A00000, DEBUG_SIZE = 0x10000, DOORBELL_BASE = 0x89A20000;
 export const IRQ_OSD_ENGINE = B.irq_osd_engine, IRQ_IPI = B.irq_ipi;
+// the kick's IRQ (A-KICK, a second core only): the one after IRQ_IPI; E143's 325, whose level register is a bank's
+// +0x514 (the CPU entries write 0x40 there, the kernel's INTC inits 0, D) and whose handler 0x50003faf writes 1 to its
+// +0x814
+const IRQ_KICK = B.irq_ipi + 1;
 export const IRQ_VSC = (c) => B.irq_vsc0 + 2 * c, IRQ_TIMER = timerIrq;
 const BANK_BASE = B.banks;
 const PRESENTED = B.presented, IPI_SET = B.ipi_set, IPI_CLEAR = B.ipi_clear, KICK = B.kick, CTL = B.ctl, OFF = B.off ?? null;   // off: the E143 board's only
@@ -41,6 +45,14 @@ export class Intc {
     this.line = new Uint8Array(IRQS); this.test = new Uint8Array(IRQS); this.driven = new Uint8Array(IRQS);
     this.presentedMask = 0;
     this.setIrq = null;                      // the machine's set_irq callback
+    // A second core (src/core/cores.mjs, createMachine's cores option; null, the default: bank 0 alone presents): its
+    // bank b2 presents to it as bank 0 to CPU 0, with IRQ 324's line its own pending bits and IRQ 325's line its own
+    // kick (A-KICK: +0x810 = 1 raises it, +0x814 = 1 clears it); cur names the core the CPU model runs (0 or b2),
+    // whose bank the CPU side's calls read; the second core takes its interrupts at any instruction (H-CPU2GATE).
+    // Its presentations and acceptances are counted and kept here, not in the lab window's rings.
+    this.b2 = null; this.cur = 0; this.mask2 = 0; this.setIrq2 = null; this.kick = new Uint8Array(BANKS);
+    this.log2 = { presented: 0, accepted: 0, first: [] };
+    this.kicks = [];                         // with a second core: every +0x810 write of 1 {bank, pc, insns}
     const off = allocWindow(DEBUG_SIZE);
     this.dbg = U8.subarray(off, off + DEBUG_SIZE);
     this.d32 = new Uint32Array(buf, off, DEBUG_SIZE / 4);
@@ -77,6 +89,24 @@ export class Intc {
     for (let irq = 0; irq < IRQS; irq++) if (lv[irq] === want && (this.line[irq] !== 0 || this.test[irq] !== 0)) return irq;
     return -1;
   }
+  // The second core's bank (src/core/cores.mjs): IRQ 324 high while its pending bits are, IRQ 325 while its kick is.
+  presented2(level) {
+    const b = this.b2, want = 1 << level, lv = this.level[b];
+    for (let irq = 0; irq < IRQS; irq++) {
+      if (lv[irq] !== want) continue;
+      if (irq === IRQ_IPI ? this.pending[b] !== 0 : irq === IRQ_KICK ? this.kick[b] !== 0 : (this.line[irq] !== 0 || this.test[irq] !== 0)) return irq;
+    }
+    return -1;
+  }
+  recompute2() {
+    let mask = 0;
+    for (let l = 0; l < LEVELS; l++) if (this.presented2(l) >= 0) mask |= 1 << l;
+    this.mask2 = mask;
+    if (this.setIrq2) this.setIrq2(mask !== 0);
+  }
+  enableSecond(b, setIrq2) { this.b2 = b; this.setIrq2 = setIrq2; this.driven[IRQ_KICK] = 1; this.recompute2(); }
+  // A-KICK: bank 0's kick drives IRQ 325's line as bank 0's pending bits drive IRQ 324's; the second core's, its bank
+  kickUpdate(b) { if (b === 0) this.setLine(IRQ_KICK, this.kick[0] !== 0); else if (b === this.b2) this.recompute2(); }
   recompute() {
     let mask = 0;
     for (let l = 0; l < LEVELS; l++) {
@@ -92,6 +122,7 @@ export class Intc {
     this.dset(D.REQUEST, mask !== 0 ? 1 : 0);
     // every set_irq(true) is a CPU kick: the machine's callback sets S.kick.
     if (this.setIrq) this.setIrq(mask !== 0);
+    if (this.b2 !== null) this.recompute2();
   }
   setLine(irq, level) {
     const v = level ? 1 : 0;
@@ -105,6 +136,7 @@ export class Intc {
   ipiUpdate(b) {
     this.dset(D.PENDING + 4 * b, this.pending[b]);
     if (b === 0) this.setLine(IRQ_IPI, this.pending[0] !== 0);
+    else if (b === this.b2) this.recompute2();
   }
   ipiSet(b, value) {
     if (this.pending[b] & value) this.dset(D.IPI_REPEATS, this.dget(D.IPI_REPEATS) + 1);
@@ -122,6 +154,7 @@ export class Intc {
   }
   // ---- CPU side (cpu.mjs execInterrupt): the level to present now, gate applied, or -1
   irqLevel(pc) {
+    if (this.cur !== 0) { const m2 = this.mask2; return m2 ? 31 - Math.clz32(m2 & -m2) : -1; }   // H-CPU2GATE
     const mode = this.dget(D.GATE_MODE), mask = this.presentedMask;
     if (!mask || mode === GATE_OFF || (mode === GATE_PC && (pc >>> 0) !== this.dget(D.GATE_PC))) return -1;
     if (mode !== GATE_PC && mode !== GATE_ANY) return -1;
@@ -130,13 +163,14 @@ export class Intc {
   }
   // The level irqLevel would name with the gate open (the kick refusals), and the gate.
   levelAny() {
-    const mask = this.presentedMask;
+    const mask = this.cur !== 0 ? this.mask2 : this.presentedMask;
     if (!mask) return -1;
     return this.m.mutant === MUT_HIGHEST_LEVEL ? 31 - Math.clz32(mask) : 31 - Math.clz32(mask & -mask);
   }
-  gateMode() { return this.dget(D.GATE_MODE); }
+  gateMode() { return this.cur !== 0 ? GATE_ANY : this.dget(D.GATE_MODE); }
   gatePc() { return this.dget(D.GATE_PC) | 0; }
   irqAccepted(level, pc, insns) {
+    if (this.cur !== 0) { this.log2.accepted += 1; return; }
     if (IT !== null) IT(1, level, pc >>> 0, insns);
     const total = this.dget(D.ACCEPTED_TOTAL), slot = D.ACCEPTED_RING + (total % D.RING_SLOTS) * 16;
     this.dset(slot, level); this.dset(slot + 4, pc); this.dset(slot + 8, insns % 4294967296);
@@ -148,9 +182,13 @@ export class Intc {
     if (size === 4 && !(off & 3)) {
       if (off < 4 * IRQS) return this.level[b][off >> 2];
       if (off >= PRESENTED && off < PRESENTED + 4 * LEVELS) {
-        const level = (off - PRESENTED) >> 2, irq = b === 0 ? this.presented(level) : -1;
+        const level = (off - PRESENTED) >> 2, irq = b === 0 ? this.presented(level) : b === this.b2 ? this.presented2(level) : -1;
         const data = irq < 0 ? 0 : (irq + 1) * 4;
-        if (irq >= 0 && !dbg) {
+        if (irq >= 0 && !dbg && b !== 0) {                     // the second core's: counted, the first 64 kept
+          const l2 = this.log2;
+          l2.presented += 1;
+          if (l2.first.length < 64) l2.first.push([irq, level, ctx.pc() >>> 0, ctx.insns()]);
+        } else if (irq >= 0 && !dbg) {
           const total = this.dget(D.PRESENTED_TOTAL), slot = D.PRESENTED_RING + (total % D.RING_SLOTS) * 16;
           this.dset(slot, irq); this.dset(slot + 4, level); this.dset(slot + 8, ctx.pc());
           this.dset(slot + 12, ctx.insns() % 4294967296); this.dset(D.PRESENTED_TOTAL, total + 1);
@@ -181,7 +219,12 @@ export class Intc {
       }
       if (off === CTL) { this.r884[b] = value; return; }
       if (off === OFF) { this.off[b] = value; return; }
-      if (off === KICK) { this.r810[b] = value; this.dset(D.IPI_WRITES, this.dget(D.IPI_WRITES) + 1); return; }
+      if (off === KICK) {
+        this.r810[b] = value; this.dset(D.IPI_WRITES, this.dget(D.IPI_WRITES) + 1);
+        if (this.b2 !== null && value === 1) { this.kick[b] = 1; this.kicks.push([b, ctx.pc() >>> 0, ctx.insns()]); this.kickUpdate(b); }
+        return;
+      }
+      if (off === KICK + 4 && this.b2 !== null && value === 1) { this.kick[b] = 0; this.kickUpdate(b); return; }
       if (off === IPI_SET) { this.ipiSet(b, value); return; }
       if (off === IPI_CLEAR) { this.ipiClear(b, value); return; }
     }

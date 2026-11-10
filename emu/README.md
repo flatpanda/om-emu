@@ -282,9 +282,11 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   answer them (the application's own TRA 415 and the mode change's 420 boot them, so no S-BOOTDONE; the HDMI plug's
   TRA 588 is theirs, so no S-OUTDEV), and the VSC's histogram unit, which they start, ends each run natively
   (A-VSCHIST-1 and A-VSCHIST-2; S-HISTEND runs the lab clock to the end in DISPLAY cmd 15's wait, `docs/hle-gaps.md`
-  4.2.1). It is not the default: the TFT's composite is refused once the components start the histogram, and the menu
-  stops past udf07 at the imgpro unit `0x9c600000` (`0x5050a7a9`), which the lab does not model (`docs/hle-gaps.md`
-  4.1.5).
+  4.2.1). The menu and playback (No Picture) run past udf07 and the imgpro unit `0x9c600000`: its model computes only
+  the fills (S-IMGPRO, A-IMGPRO-1; `src/dev/imgpro.mjs`), H-IMGPROINIT attaches its IRQ and S-STAGE9 sets the image
+  stage the play buffer waits for (`docs/hle-gaps.md` 4.3.1). It is not the default: the TFT's composite is refused
+  once the components start the histogram, keys are no longer taken after a menu pass and a shot, and playback shows
+  No Picture with pictures on the card (the next stops, 4.3.1).
 - The mode dial shows each position by the firmware's name for it: UI_IN's dial table gives the position's mode code
   and the build names the codes (fact `mode_dial`, `src/fw/facts.mjs` modeDial), so E143's positions 0..9 are S, M,
   B, C1..C4 (MY_MODE1..4), Movie, P and A (`docs/om1-input-spec.md` section 2). A session starts with the dial at P,
@@ -319,11 +321,14 @@ node emu/bin/play.mjs --take probe               # TAKE_FUNC and TAKE_FUNC_CP na
                                                  # off by default; docs/hle-gaps.md 4.1.4)
                                                  # and TAKE_MAIN / TAKE_MAIN_CP (4.1.7): with control camapp 3 S1's
                                                  # take request reaches TAKE_MAIN natively; STB_EXTERNAL answers
-                                                 # over the empty hot shoe (S-HOTSHOE, 4.12.1)
+                                                 # over the empty hot shoe (S-HOTSHOE, 4.12.1); TAKE_FOCUS runs
+                                                 # natively (H-TAKEFOCUS) and S1 stops at EXP_MOVIE (4.1.8)
 node emu/bin/play.mjs --cpu2 native              # CPU 2 on the machine's second core from its entry (E143, off by
                                                  # default; S-CPU2 lifted; docs/hle-gaps.md 4.6.1)
-                                                 # with CPU 0's CPUCONN and OSD_DRAW_CPU2, which draws the
-                                                 # histogram under control camapp 3 (4.6.2)
+                                                 # with CPU 0's CPUCONN (H-CPUCONN0), USTART_L2 stood in
+                                                 # (H-CPU2LOADER) and CPU 2's queue tasks (H-CPU2TASKS), among them
+                                                 # OSD_DRAW_CPU2, which draws the histogram under control camapp 3
+                                                 # (4.6.2)
 OM_EMU_LENS=stand-in sh emu/play.sh              # S-LENS in place of the native lens (S-LENSMCU, the default on
                                                  # E143, E146 and E147)
 OM_EMU_SCPU=native sh emu/play.sh                # E143's and E146's sub-CPU as its own firmware on the STM32L4 machine

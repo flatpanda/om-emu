@@ -21,14 +21,18 @@ from the module map (section 2.2). Every effort figure is a rough estimate of fo
   of their tasks runs in a lab (X: a full S1 + S2 and a REC post no module request; the kernel lab's task-start guard
   refuses their entries, `emu/src/lab/kernel.mjs`), and their MMIO is lab-stub space that faults on first touch. The
   exception is the lens on E143, E146 and E147, by default since 2026-10-29: its tasks, driver and serial driver run
-  natively against a device model (4.4.2, 4.4.3).
+  natively against a device model (4.4.2, 4.4.3). Behind options that are off by default more runs (X): with
+  `--take probe` TAKE_FUNC, TAKE_MAIN and the neighbours TAKE_EXPOSE, TAKE_POWER_MANAGER, TAKE_FOCUS and the strobe
+  over an empty hot shoe (4.1.4, 4.1.6-4.1.8, 4.12.1); with `--cpu2 native` CPU 2 and its queue tasks (4.6.1, 4.6.2);
+  with `control camapp 3` the HLS transactions, the VSC histogram and the imgpro unit `0x9c600000` (4.1.5, 4.2.1,
+  4.3.1).
 - **In code:** the lab executes 287,101 of the main block's 5,186,071 instructions (5.54%), about 6.1% of the code a
   camera runs in normal use (section 2.2). The largest unrun blocks are playback (613k instructions), AF / lens / IS
   (505k), still capture (421k), the AV codec back end (411k), the sensor / ISP / live view (321k) and the TAKE module
   with the HLS shooting sequence (301k).
 - **Three gaps block almost everything:** no native TAKE module, so no firmware code below the HLS ever asks for focus,
-  exposure, capture or a movie; only CPU 0 runs; interrupts are accepted only at the idle point and there is no
-  machine-owned time model. Closing them is the precondition for every device seam below.
+  exposure, capture or a movie; only CPU 0 runs by default; interrupts are accepted only at the idle point and there
+  is no machine-owned time model. Closing them is the precondition for every device seam below.
 - **The plan** (section 6): static decodes and cheap CPU 0 wins first; then interrupts anywhere and time; CPUs 2, 3 and
   1; task-start infrastructure with the HLS bring-up; storage; TAKE native with its neighbours; then the blocks by
   user-visible gain. The recommended seams are module-level where the code is device-heavy: they cut off the three
@@ -133,7 +137,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **TAKE module and HLS shooting sequence** (4.1) | S: S-RELSEQ posts the CBS callbacks in an inferred order; S-TRAACK answers TRA 991 and the release TRAs with 0; S-MODACK acks TAKE_FUNC; S-TAKEFRAME; S-EXPOSE writes TAKE_EXPOSE's results | TAKE native, its neighbours answered at their own seams (lens, BC, sensor, shutter). Interim: TAKE as a black box at queues `0x5e` / `0x5a`, its results delivered as the capabilities' observer events (4.1.3) | the shooting component's native answers to TRA 990 / 991 (4.1.2); lens, BC_EXEC and the camera driver's requests 148 / 6 (TAKE_FUNC_CP's ready sequence, 4.1.1); CPU 2 for the movie and through commands; the sensor control plane; the shutter; task starts | 307,393 / 301,082: C TAKE about 100k, HLS sequence 196k | ?: no survey sized it; "TAKE reached, 1-2 weeks" (capture survey) leaves out the lens, BC and sensor answers it needs | the camera's own release sequence and timing in place of S-RELSEQ's guessed order; AE lock, drive modes, bracketing |
 | **Shutter mechanism** (section 7) | 0: block `0x9b900000` (271 registers, IRQs 11 / 12 / 13) never touched; S-RELSEQ's START / END_EXPOSE stand in | not proposed by the survey. A register file with W1C status `+0x008..+0x010` and per-bit callbacks on IRQ 11 has the camera driver's shape, so the sensor's seam D (control plane plus event producer) fits (I) | sensor SSG timing (the EFS curtains are the sensor's reset / readout scan, I), TAKE, time model, the MEC_ADJUST layout | 20,942 / 20,942 (gap@0x50108fe0 19.6k plus cam_mec_ctrl); none run | ? | shutter sound timing (S-SHUTTERSND stands in, 7.5), black-out, EFCS / ES modes from the firmware |
 | **Sensor / ISP front end, live view** (4.2) | S: S-SCENE paints bank `0x0A` and calls TH with H-REQ; S-EXPOSE per input, no LV AE; 33 camera IRQs unwired | A: MVR_IMG's TH request builders (CPU 2); B: AE / AWB statistics at the callback table `0x629a7c64`; D (target): control plane plus HLE pixel and statistics producers | CPU 2, TAKE (the through commands 25 / 27 / 28 that TRA 991 reaches, 4.1.2), IRQs anywhere and time (VD-paced), shutter, DISP_SYNC | 327,531 / 320,730, plus about 25k of MVR's live-view part | 10-16 weeks (seam D open-ended) | the camera's live-view geometry per device, frame cadence, continuous metering, AWB, AE lock, LV modes, magnify |
-| **EXP exposure module** (inside the sensor block, 4.2) | S: only the plan `take_expose_calculate` `0x50597e82` runs, under S-EXPOSE and H-AEINIT | native, fed by seam B's statistics | seam B, the TAKE_EXPOSE and EXP_MOVIE tasks | about 107k (EXP 96k plus TAKE_EXPOSE 13.6k), one MMIO reference: device-free | part of seam B (3-5 weeks) | continuous metering, AE / AF BV, flicker detection, face and spot AE |
+| **EXP exposure module** (inside the sensor block, 4.2) | S: only the plan `take_expose_calculate` `0x50597e82` runs, under S-EXPOSE and H-AEINIT, and natively at a mode change (4.2.2) | native, fed by seam B's statistics | seam B, the TAKE_EXPOSE and EXP_MOVIE tasks | about 107k (EXP 96k plus TAKE_EXPOSE 13.6k), one MMIO reference: device-free | part of seam B (3-5 weeks) | continuous metering, AE / AF BV, flicker detection, face and spot AE |
 | **Still capture, image processing, recording** (4.3) | S: S-RELSEQ, S-RECVIEW, S-CARD, S-TAKEFRAME; X: S2 posts no module request | C1 DRAM capture, C2 the imgpro_mdl API, C3 CIC, C4 storage (shared with 4.8), C5 the CPU 2 halves | TAKE, the sensor (C1), CPU 2, storage, the A53 for Handheld High Res (I) | 429,869 / 421,668, of which the imgpro library about 275k behind about 10 imgpro_mdl entries | 6-9 weeks | S2 writes a real JPEG / ORF with the firmware's EXIF and DCF name; the rec view shows the firmware's view image |
 | **AF and lens** (4.4) | S: S-LENS (record values I) on the other bodies and selectable on E143, where the lens runs natively down to its serial controller by default (S-LENSMCU, 4.4.2); S-RELSEQ's END_FOCUS, S-AFOSD's fixed frame; X: no request reaches FCS, BC or TAKE_EXEC | lens: the serial device `0x9b980000` (IRQ 14) and the edge unit `0x9b883e40` (IRQ 60); AF: the module seam TAKE_FOCUS `0x5d` / FCS_EXEC `0x1b` | TakeReady (TAKE), task starts and the lens inits, sensor VD for LENS_SYNC, CPU 1 (FCS_IP, flag 0x92) and CPU 3 (MDET) for native FCS, IRQs anywhere, time | 510,058 / 504,680 with IS: FCS 372k (about 100k CPU-1-only), lens about 84k | lens 2-3 weeks; AF 2-3 weeks once TakeReady runs; native FCS months | the lens identified by the firmware, zoom and MF, the firmware's AF decision and frames |
 | **Body IS (BC)** (4.4) | 0: no BC, no gyro, no IS state | the module seam BC_EXEC `0x09`; BC native only with a capture of the IS link | TAKE (TAKE_FUNC sends to BC_EXEC), the IS controller's serial channel (?) | 34-42k / about 34k (inside AF / lens / IS) | about 1 week at BC_EXEC | IS mode and indicator, IS EXIF |
@@ -199,13 +203,16 @@ and the first concrete step. Task ids are `cpu << 12 | index` (kernel spec §2.1
   command 25, 4.1.1); the shutter at its control plane; the strobe can be planned beside the shutter.
 - **First step:** the static decodes are done (4.1.1-4.1.3). Next, make the HLS component bring-up (`control camapp
   2`) the default of the coverage workload, so the HLS half of TAKE is measured before TAKE itself is attempted
-  (tried 2026-11-08, 4.1.5: with the transactions native the components answer them, and the menu then stops at the
-  imgpro unit `0x9c600000` past udf07, so the default stays camapp 1); then a
+  (tried 2026-11-08, 4.1.5: with the transactions native the components answer them; since 2026-11-09 the menu and
+  playback pass udf07 and the imgpro unit `0x9c600000`, and the next stops and what keeps the default at camapp 1 are
+  in 4.3.1); then a
   probe that runs TAKE_FUNC and TAKE_FUNC_CP natively with a recording stand-in on each queue they send to (4.1.1's
   table), which gives the order and contents of their requests for a start, a through switch and a movie. The probe
   runs since 2026-11-08 (4.1.4): the start's and a mode change's requests are recorded; the through switch and the
   movie do not reach TAKE_FUNC in the lab, and neither do S1 and S2.
-  Under camapp 3 with the probe S1's take request reaches TAKE_MAIN natively since 2026-11-09 (X, 4.1.7).
+  Under camapp 3 with the probe S1's take request reaches TAKE_MAIN natively since 2026-11-09 (X, 4.1.7); with
+  TAKE_FOCUS native too (H-TAKEFOCUS) it goes on to RdyFcsRdy3 and stops at TAKE_EXPOSE's request to EXP_MOVIE (X,
+  4.1.8). The strobe answers the start natively over an empty hot shoe (H-STBINIT, S-HOTSHOE, H-SIOMAP; X, 4.12.1).
 
 #### 4.1.1 TAKE_FUNC's command interface (D unless tagged)
 
@@ -245,9 +252,10 @@ and the first concrete step. Task ids are `cpu << 12 | index` (kernel spec §2.1
 
 The rows give each handler's requests in code order; several are conditional. The CPU 2 queue ids come from
 `0x60043670..0x6004367e` (MOV_COMMAND 0x2001, SDET_EXEC 0x2005, WB_MOV 0x2006, from CPU 2's object-name table). No lab
-runs a CPU 2 reader, so a native TAKE_FUNC would wait for ever at the first of these sends (I). The meaning of the
-TAKE_EXPOSE / TAKE_FOCUS command words (`0xa0n`, `0xc0n`, `0x200`) and of the mvr IF helpers' kinds is ?; whether
-TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
+runs a CPU 2 reader without `--cpu2 native`, so a native TAKE_FUNC would wait for ever at the first of these sends (I);
+with it the readers run and wait on their queues, and no lab session reaches these sends (X, 4.6.2). The meaning of the
+TAKE_EXPOSE command words (`0xc0n`, `0x200`) and of the mvr IF helpers' kinds is ? (TAKE_FOCUS's `0xa0n` are its
+MOVIE_* commands, 4.1.8); whether TAKE_MOV (flag 0x95) is woken from commands 30 / 31 is ?.
 
 #### 4.1.2 The TRA layer: TRA 485, who handles 991 and what answers 990 (D unless tagged)
 
@@ -369,14 +377,14 @@ are recorded too; anything else throws. `emu/test/test_take.mjs` pins the record
 | | | BC_EXEC command 0, token 2, parameter `{byte, callback 0x502cdc0b}` (`0x502cd9a8`) | tokens 2 and `0x80` on TAKE_FUNC_CP_POST | S-TAKEREQ: `{0, 2, 0}` to 0x61, then `0x502cdc0b`, which posts token `0x80` (I: that BC calls it) |
 | | | LENS_EXEC command 1, token 1 (`0x502cd9f2`) | token 1 on 0x61 | (native: LENS_MAIN replies) |
 | | | camera driver request 6 (`0x502cda61`) | TAKE_CAM_EVENT bit 1 | S-TAKECAM, as for 148 |
-| | | STB_EXTERNAL command 1, token 4, after a 10 ms sleep (`0x502cda87`; `0x502cdc33` from `0x502cda92`) | token 4 on 0x61 | S-TAKEREQ: `{0, 4, 0}` |
+| | | STB_EXTERNAL command 1, token 4, after a 10 ms sleep (`0x502cda87`; `0x502cdc33` from `0x502cda92`) | token 4 on 0x61 | S-TAKEREQ: `{0, 4, 0}` (STB_EXTERNAL's own since 4.12.1) |
 | | | the dust filter's gate on, record `{0x502cdc97, 0}` (`0x502cdb34`, once BC's and the lens's tokens are in, `0x502cdb07..0x502cdb34`) | flag TAKE_FUNC_CP bit 1 (`0x506d99ed`, the count `0x62a3f3c0` from `0x502cdc5d`) | S-TAKEUSF: `0x502cdc97(0, record)`, whose deferred call counts down to the flag |
-| | | STB_EXTERNAL command 4, token 8 (`0x502cdc33` from `0x502cdb67`) | token 8 on 0x61 | S-TAKEREQ: `{0, 8, 0}` |
+| | | STB_EXTERNAL command 4, token 8 (`0x502cdc33` from `0x502cdb67`) | token 8 on 0x61 | S-TAKEREQ: `{0, 8, 0}` (STB_EXTERNAL's own since 4.12.1) |
 | | | the reply to the application: status 0 to queue 6, token `0xf0010000` (return `0x502cd75d`) | | (native) |
-| 3 | TAKE_FUNC command 13 (sync, the application's reply queue `0x102`) | TAKE_EXPOSE command 0, synchronously (`0x506d9854`, return `0x506d7f32`) | its u16 status on 0xa7 | S-TAKEREQ: status 0 |
-| 4 | TAKE_FUNC command 18 (sync) | TAKE_FOCUS command 0, no reply queue (`0x506ea965` from `0x506eab52`) | nothing | none |
+| 3 | TAKE_FUNC command 13 (sync, the application's reply queue `0x102`) | TAKE_EXPOSE command 0, synchronously (`0x506d9854`, return `0x506d7f32`) | its u16 status on 0xa7 | S-TAKEREQ: status 0 (TAKE_EXPOSE's own since 4.1.6) |
+| 4 | TAKE_FUNC command 18 (sync) | TAKE_FOCUS command 0, no reply queue (`0x506ea965` from `0x506eab52`; synchronous once TAKE_FOCUS's inits run, 4.1.8) | nothing | none (since 4.1.8 TAKE_FOCUS's reply) |
 | 5 | (camapp 2) TAKE_FUNC command 29 (sync, parameter `0x62a6b6d4`) | nothing | | |
-| 6 | (camapp 2) TAKE_FUNC command 22 (sync) | TAKE_FOCUS command 2, synchronously (return `0x5039abbb`) | status on 0xa7 | S-TAKEREQ: status 0 |
+| 6 | (camapp 2) TAKE_FUNC command 22 (sync) | TAKE_FOCUS command 2, synchronously (return `0x5039abbb`) | status on 0xa7 | S-TAKEREQ: status 0 (TAKE_FOCUS's own since 4.1.8) |
 
 Each synchronous command ends with TAKE_FUNC's reply to the requester's queue (status 0). Of the requests 4.1.1's table
 lists for 13 and 18, the start made only these (X): 13 no TAKE_EXPOSE `0x200`, 18 no TAKE_FOCUS command 2 (its command
@@ -384,12 +392,14 @@ lists for 13 and 18, the start made only these (X): 13 no TAKE_EXPOSE `0x200`, 1
 asked: the start's branch `0x502cd84c..0x502cd881` skips its two messages (X; which of its three conditions, the byte
 `0x62a3f2bc` or the settings 61633 and 7729, is not traced). LENS_EXEC's command 1 comes after H-LENSON's (4.4.2) and
 LENS_MAIN takes it natively (X). With the probe the warning `0x39000903` (`0x504494ed`, a frame-rate code conversion),
-logged about 12 times a second on the idle shooting screen under S-MODACK, is not logged (X; why is not traced).
+logged about 12 times a second on the idle shooting screen under S-MODACK, was not logged in this round's runs (X); the
+probe as it stands since 2026-11-09 logs it (X: 4.12.1's and 4.1.8's runs, with and without their tasks native; which
+change brought it back is not read).
 
 **The other scenarios (X, both camapp modes):**
 - **A mode change** (the dial P -> A, and A -> P, and to Movie): TAKE_FUNC command 22 three times, each TAKE_FOCUS
-  command 2 synchronously (`0x5039abbb`), S-TAKEREQ's status 0; under camapp 2 the change to Movie also command 29
-  three times, which asks nothing.
+  command 2 synchronously (`0x5039abbb`), S-TAKEREQ's status 0 (TAKE_FOCUS's own since 4.1.8); under camapp 2 the
+  change to Movie also command 29 three times, which asks nothing.
 - **S1, S2, the rec view, MENU in and out, a live view, REC in Movie:** nothing reaches TAKE_FUNC, nor TAKE_EXEC
   (0x5a) under S-MODACK; what S1 and S2 send stays at S-TRAACK (TRA 944, 974 and 1045 at S1, 944 at S2, 963 and 1030
   at the releases), and MENU's open and close send TRA 991 among others. So TAKE_FUNC native does not by itself make
@@ -419,8 +429,8 @@ unknown):**
 | LENS_EXEC (LENS_MAIN) | CP 0 | `{status, token 1}` on 0x61 | (a), native since 2026-10-28 and answering in the probe (X) |
 | TAKE_EXPOSE (task 0x67, `0x5059145d`) | 13 | the status of command 0 | (a), native since 2026-11-09 (H-TAKENBINIT): its command 0 asks nothing and it replies itself (X, 4.1.6) |
 | TAKE_POWER_MANAGER_EXEC (task 0x83) | CP 0 when its branch runs | `{status, token 512 / 1024}` on 0x61 | (a), native since 2026-11-09 and not asked: every sender in TAKE_FUNC and TAKE_FUNC_CP waits for TAKE's start-up flag, which the lab never sets (X, D, 4.1.6); its own request goes to CPU 1 (b) |
-| TAKE_FOCUS (task 0x68, `0x509a0ebe`) | 18, 22 | the status of command 2 | (c): over FCS (FCS_EXEC, FCS_IP on CPU 1); what commands 0 and 2 ask of FCS is not read |
-| STB_EXTERNAL (the strobe module) | CP 0 | `{status, token 4}`, `{status, token 8}` on 0x61 | (b): task 0x65 (`0x501b7465`) answers command 1 once a transfer on PER_SIO channel 11 ends or its 13 s wait for it runs out, then a 64 ms timer, flash or no flash (D, X); run natively in the lab it answers only through that timeout, 13.1 s after the request, as PER_SIO's controller is not modelled (X, 4.1.6); stays at S-TAKEREQ |
+| TAKE_FOCUS (task 0x68, `0x509a0ebe`) | 18, 22 | the status of command 2 | (a), native since 2026-11-09 (H-TAKEFOCUS): it answers commands 0 and 2 itself, status 0 (X, 4.1.8); its AF over FCS (FCS_EXEC, FCS_IP on CPU 1) stays (c) |
+| STB_EXTERNAL (the strobe module) | CP 0 | `{status, token 4}`, `{status, token 8}` on 0x61 | (b): task 0x65 (`0x501b7465`) answers command 1 once a transfer on PER_SIO channel 11 ends or its 13 s wait for it runs out, then a 64 ms timer, flash or no flash (D, X); run natively in the lab it answers only through that timeout, 13.1 s after the request, as PER_SIO's controller is not modelled (X, 4.1.6); native since 2026-11-09 over channel 11 with nothing on the shoe (H-STBINIT, S-HOTSHOE), 85.4 ms after the request (X, 4.12.1) |
 | the camera driver cam.c (requests 148, 6; 5 for 25) | CP 0, CP 25 | the completion callback with status 0 | (b): the image sensor's control plane: cam.c's init (its pool, the sequence engine `0x5015107e` / `0x501528a6`) and what it drives (not read, ?) |
 | BC_EXEC (BC) | CP 0 | `{status, token 2}` on 0x61 and the callback's token `0x80` | (b): the body IS controller's link (4.4: BC native only with a capture of that link) |
 | the dust filter (USF) | CP 0 | the record's callback with status 0 | (b): its drive on the timer block `0x9b880000` and its completion, not modelled |
@@ -433,7 +443,7 @@ unknown):**
    TAKE_EXEC (0x5a: TAKE_MAIN 0x6b, TAKE_MAIN_CP 0x72) native under the same probe machinery. The probe's extension to
    TAKE_MAIN: about half a day once the requests arrive; its neighbours are unknown until it runs (?).
    Round 1 of this ran on 2026-11-09 (X, 4.1.7): S1's take request reaches TAKE_MAIN under camapp 3 and stops at
-   TAKE_FOCUS's AF.
+   TAKE_FOCUS's AF; round 2 (X, 4.1.8) runs TAKE_FOCUS and stops at TAKE_EXPOSE's request to EXP_MOVIE.
 2. **EXIF shooting parameters (S-EXIFPRM)** follow from 1: takepic's record (`0x503bba70`, the EXIF set from
    `0x503bd48e`) is the take's, and the start does not fill the state the EXIF set divides by (X). A few hours after 1
    if takepic's own neighbours answer like the start's; otherwise unknown.
@@ -560,8 +570,9 @@ default).
   their conditions not read), and so do `0x50591973` (from TAKE_MAIN's `0x503ad611`), `0x50591c6b` (from
   `0x508eeb32`) and `0x50591d1a` (from `0x509af437`). Command 0 does not, and only command 0 arrives in the lab's
   scenarios (X); the probe observes the writer and it never runs (X). On the camera the callbacks come from EXP's
-  computation over the sensor's statistics (I). 4.2 and S-EXPOSE's text call `0x50596187` TAKE_EXPOSE's command
-  handler; it is the writer called back through EXP (D).
+  computation over the sensor's statistics (I; read in 4.2.2: EXP_MOVIE's handler calls them after its evaluation and
+  a frame wait, not an interrupt). 4.2 and S-EXPOSE's text called `0x50596187` TAKE_EXPOSE's command
+  handler; it is the writer called back through EXP (D; corrected there, 4.2.2).
 - **TAKE_POWER_MANAGER is asked nothing (X, D).** Every send to TAKE_POWER_MANAGER_EXEC from TAKE_FUNC and
   TAKE_FUNC_CP waits for TAKE's start-up flag, the byte `0x62a3f2bc` (start_up_flag, 4.1.2) = 1: the start's branch
   (`0x502cd84c`: `0x502cd3fa` returns the byte; X: 0 in both camapp modes, so it is the first of 4.1.4's three
@@ -668,8 +679,8 @@ every session, the probe's included.
   stays dormant (nothing asked it, X). TAKE_EXEC leaves S-MODACK. Both tasks wait at once (X); under camapp 1 and 2
   nothing reaches them and round 1's records are unchanged (X, `test_take.mjs`). The record has what TAKE_MAIN takes
   from its mailbox, TAKE_EXEC and TAKE_POST and what TAKE_MAIN_CP takes. S-TAKEREQ answers a request whose reply
-  queue is TAKE_POST only where TAKE_MAIN's handler for its token was read (TAKE_FOCUS's `0x300` with token 1, below);
-  any other throws.
+  queue is TAKE_POST only where TAKE_MAIN's handler for its token was read (TAKE_FOCUS's `0x300` with token 1, below;
+  not reached since TAKE_FOCUS runs natively and replies itself, 4.1.8); any other throws.
 - **TAKE_MAIN's loop (D).** `0x503996c3` waits on its flag with the pattern `0x62a3f024` and serves bit 1 (its
   mailbox, `0x502ce7c8`, posted through `0x502ce7b7` / `0x502ce703`), bit 2 (TAKE_EXEC, 16 bytes, keyed by the
   command) and bit 4 (TAKE_POST, 12 bytes `{u16 status, token, word}`, keyed by the token; the mailbox uses the same
@@ -689,7 +700,7 @@ every session, the probe's included.
 |---|---|---|---|---|
 | 1 | TAKE_EXEC command 0 (reply queue 6, token `0xf0050000`) in Idle (handler `0x503a1172`) | CPU 3's FACE_FD (queue `0x3002`) command 15, synchronously (from `0x50524a63`) | its status | S-TAKEREQ: 0 |
 | | | TAKE_FUNC command 80 (handler `0x5039cf71`) synchronously (`0x5039a01c` from RdyFcsRdy1's entry `0x503c2961` at `0x503c2a32`) | TAKE_FUNC's reply on 0xa8 | native: status 0 |
-| | | TAKE_FOCUS command `0x300`, reply queue TAKE_POST, token 1, parameter the record `0x62a4cea8` (`0x503c2ba1`) | token 1 on TAKE_POST | S-TAKEREQ: `{0, 1, 0}` there |
+| | | TAKE_FOCUS command `0x300`, reply queue TAKE_POST, token 1, parameter the record `0x62a4cea8` (`0x503c2ba1`) | token 1 on TAKE_POST | S-TAKEREQ: `{0, 1, 0}` there (since 4.1.8 TAKE_FOCUS's own reply) |
 | 2 | TAKE_POST token 1 in RdyFcsRdy1 (handler `0x503c2e8d`, which clears pending bit 1) | TAKE_FUNC command 80 synchronously (`0x503c2eb7`) | its reply | native: status 0 |
 
 Then TAKE_MAIN waits in RdyFcsRdy1 with the pending bits `0x5e` and the wait pattern `0x5` (mailbox and TAKE_POST:
@@ -713,8 +724,9 @@ frame-mode function `0x5039f583`, so S-TAKEFRAME's request is still not reached 
   and, on conditions not read, the camera driver's request 144 (`0x503c2e21`). So after token 1 RdyFcsRdy2 needs
   token 2, and `0x503c2d08` tokens 0 and 5 (then 11); what waits for bit `0x02` (token 3) is not read (?).
   TAKE_FOCUS's command `0x300` is its case `0x509a107f` -> `0x509a54e1` (command table `0x60a64f00`); which of the
-  callbacks it calls, and when, is not read (?). The probe answers none of them, since that would invent the AF's
-  progress: the take-ready stops there (X).
+  callbacks it calls, and when, is not read (?; answered in 4.1.8: run natively at S1 it calls all four at once). The
+  probe answers none of them, since that would invent the AF's progress: the take-ready stops there (X; it goes on
+  with TAKE_FOCUS native, 4.1.8).
 - **S2 (X).** CapTak_Take's control `0x40` posts TAKE_EXEC command 5. TAKE_MAIN does not take it (TAKE_EXEC holds one
   message by TAKE's own count `0x502ce6ae`); RdyFcsRdy1's command table would take 5 (`0x503c2f5e`), as RdyTrig2Wait's
   would (`0x503c35e9`). No reply goes to the application for S1's request (X). S-RELSEQ's callbacks run beside the
@@ -726,17 +738,21 @@ frame-mode function `0x5039f583`, so S-TAKEFRAME's request is still not reached 
 **What S-RELSEQ's retirement still needs (I unless tagged):**
 1. The through image's take-over made whole in the default sessions: S-THRTAKEOVER beside S-TAKEOVER (with the rest
    of the kinds 1 and 2 path, `0x50ae005c..0x50ae007b`, ?), or the boot take-over `0x50adffda` itself. Both are every
-   play session's, so golden would change; the default camapp mode is still 1, blocked by the imgpro unit `0x9c600000`
-   (4.1.5; udf07 and the VSC histogram are in since 2026-11-09, 4.2.1).
+   play session's, so golden would change; the default camapp mode is still 1 (udf07, the VSC histogram and the imgpro
+   unit `0x9c600000` are in since 2026-11-09; what still keeps it is in 4.3.1).
 2. TAKE_FOCUS's AF for command `0x300`: the record's callbacks (tokens 0, 2, 3, 5) with FCS and CPU 1 behind them
    (4.1.4, class (c)), and TAKE_EXPOSE's command `0x400` (token 11), whose reply's word 2 its handler frees (D), so
    S-TAKEREQ may not answer it with `{0, 11, 0}`. Bit `0x08` follows from tokens 0 and 11 (`0x503c2d08`, D).
-3. CPU 3's FACE_FD command 15, answered 0 by S-TAKEREQ: what it asks of face detection (?).
+   Answered in 4.1.8: TAKE_FOCUS calls the four callbacks itself, and TAKE_EXPOSE answers `0x400` with its buffer.
+3. CPU 3's FACE_FD command 15, answered 0 by S-TAKEREQ: what it asks of face detection (?). Answered in 4.1.8: it
+   hands FACE_FD the mode and carries no detection result, its status 0 is the native one (D); what the mode changes on
+   CPU 3 is ?.
 4. TAKE_MAIN past RdyFcsRdy1: `0x503c2d08`'s BC_EXEC command 53 and camera driver request 144 (D), RdyFcsRdy2 and 3
    (reply tokens 3, 12..14 and 4, 15, D), RdyTrig2Wait (which takes S2's command 5), then the still states (StlRdy1
    .. StlEnd2) for the capture, each new neighbour recorded the same way. Then TAKE_MAIN's reply to the application,
    and the notifications that CapTak_Take's observers turn into sequence events (4.1.3), from which the sequence parts
-   would post the callbacks S-RELSEQ posts now. None of these is reached (X).
+   would post the callbacks S-RELSEQ posts now. None of these was reached (X); since 4.1.8 S1 goes through
+   RdyFcsRdy2 to RdyFcsRdy3's request to EXP_MOVIE, and TAKE_MAIN replies to the application (X).
 
 #### 4.1.8 The release route, round 2: TAKE_FOCUS (2026-11-09; D unless tagged, addresses E143's)
 
@@ -867,10 +883,11 @@ request throws; TAKE_MAIN is then in RdyFcsRdy3 with the pending bits `0x300` (X
 4. RdyFcsTake's reply tokens 5 and 8, the still states (StlRdy1 .. StlEnd2) and the capture (TAKE_FUNC, the shutter,
    cam.c's still capture, 4.3), then the notifications CapTak_Take's observers turn into the sequence events that make
    the sequence parts post what S-RELSEQ posts now (4.1.3; 794 is the first of them, reached in the experiment).
-5. For the default sessions besides: S-THRTAKEOVER beside S-TAKEOVER (4.1.7 item 1), camapp 3 as the default (the
-   menu and playback stop at the imgpro unit `0x9c600000`, 4.1.5), and the probe's bring-ups (H-TAKEINIT, H-TAKEMAIN,
-   H-TAKENBINIT, H-TAKEFOCUS) as the default, each recording stand-in (S-TAKEREQ, S-TAKECAM, S-TAKEUSF) retired by
-   its neighbour running natively; all of these change golden.
+5. For the default sessions besides: S-THRTAKEOVER beside S-TAKEOVER (4.1.7 item 1), camapp 3 as the default (past
+   the imgpro unit since 2026-11-09; its next stops and what else keeps camapp 1 the default, 4.3.1), and the probe's
+   bring-ups (H-TAKEINIT, H-TAKEMAIN, H-TAKENBINIT, H-TAKEFOCUS, H-STBINIT with S-HOTSHOE) as the default, each
+   recording stand-in (S-TAKEREQ, S-TAKECAM, S-TAKEUSF) retired by its neighbour running natively; all of these change
+   golden.
 
 ### 4.2 Sensor, ISP front end and live view (with EXP)
 
@@ -879,7 +896,7 @@ request throws; TAKE_MAIN is then in RdyFcsRdy3 with the pending bits `0x300` (X
   display mode `0x500256d9` at `0x5039f622`); TAKE_EXPOSE (its AE result writer `0x50596187`, called back, 4.2.2, writes
   the AE result objects `0xc12a` / `0xc0ba` / `0xc0ca`); EXP_MOVIE 0x58 `0x50553697` (states THROUGH_START ..
   THROUGH_LV_END, CONT_LVAE, `[EXP] AF_BV_18x18`); ISEQ_MAIN 0x44, ISEQ_ASIC 0x81; USR_FAST_APP 0x55 `0x501e673b`;
-  PER_CCD_TEMP_MAIN 0x14. CPU 2: EXP_MOVIE2 0x2009 / EXP_MOVIE3 0x200a (the EXP module, I), MVR_IMG1 0x2005, MVR_IMG2
+  PER_CCD_TEMP_MAIN 0x14. CPU 2: EXP_MOVIE2 0x2009 / EXP_MOVIE3 0x200a (EXP's, D, 4.2.2), MVR_IMG1 0x2005, MVR_IMG2
   0x2007, MVR_IMG_POST 0x200b (`0x5045c590`), MVR_IMG_PRE / EXE / AFT, MVR_CALC, MVR_MAIN. CAM_MAIN 0x0b is a `retf`
   stub: the camera driver runs in its callers' tasks and in interrupt context (I).
 - **The live-view request is built on CPU 2 (D):** the TH API's callers `0x50451fc7..0x5045539f` are reached only from
@@ -959,8 +976,8 @@ request throws; TAKE_MAIN is then in RdyFcsRdy3 with the pending bits `0x300` (X
   end, no HIST_UNMODELLED; the idle's TRA 944, S1 and S2 as before (4.1.5), the OXF events not staying over two passes.
   The menu's cmd 15 wait returns E_OK at the run's end, at most two frames into the wait (1.9 ms after the key in a
   probe run; before: E_TMOUT after 50 ms), and so does the HDMI plug's (`--hdmi on`).
-  **S-HISTWAIT is retired**; S-HISTEND moves only the lab clock, as the vsync wait's RUN_TO_FRAME does. What runs next
-  (with udf07 in, 4.1.5): the menu stops at the imgpro unit's start `0x5050a7a9` (fault 2, 4.1.5). Default sessions
+  **S-HISTWAIT is retired**; S-HISTEND moves only the lab clock, as the vsync wait's RUN_TO_FRAME does. What ran next
+  (udf07 in) stopped at the imgpro unit's start `0x5050a7a9` (4.1.5); the menu opens since 4.3.1. Default sessions
   do not start the histogram (camapp 1 and 2 leave HIST1 unwritten over the start, S1, S2, the menu and playback, X).
 - **Open.** The TFT's composite stays FEATURE_UNOBSERVED once the histogram's registers are written (A13: whether
   they change the mixer output is ?); bins with an IMG plane on are refused, so a live view under camapp 3 would stop
@@ -1206,7 +1223,7 @@ served natively, so S-EXPOSE stays (its text now gives the routine's role and th
 - **Tasks (D):** CPU 0: LENS_MAIN 0x5c `0x502a5e37` (queue LENS_EXEC 0x2e, target 18), LENS_COMMAND 0x5b `0x50115a08`
   (queue 0x31, target 40), LENS_ASKDATA 0x5a `0x502a8193` (queue 0x2d), LENS_FLASH / LENS_FIRM_UP, ZOOM 0x6e (queue
   ZOOM_EXEC 0x7d, target 26), BC_MAIN 0x57 `0x5013e603` (queue BC_EXEC 0x09, target 34), BC_INDICATOR 0x91, TAKE_FOCUS
-  0x68 (queue 0x5d; dispatch through a 64-bucket hash table built at run time at `0x60a54f00`), FCS_IP 0x6f / FCS_IP_SUB
+  0x68 (queue 0x5d; dispatch through a static 64-slot hash table at `0x60a64f00`, 4.1.8), FCS_IP 0x6f / FCS_IP_SUB
   0x56 / FCS_IP_NOTIFICATION 0x92, FCS_MOVIE 0x59, MDET_CALC_FLAME_VECTOR 0x45. SERV_MAIN `0x509b229f` lies inside
   TAKE_FOCUS and sends SERV_S1 / S2 / F1 / F2 / WF / R1 / OLW messages (I: AF / TAKE). CPU 1: FCS_IP_2 0x100b,
   FCS_IP_2NDCPU_SUBTASK 0x100c, FCS_IMG_2NDCPU_MAIN 0x101e, FCS_IP_RANGING_SUB_TASK 0x1022. CPU 3: FCS_IMG_4THCPU_MAIN
@@ -1442,7 +1459,8 @@ than E143, E146 and E147 (4.4.3).
     which is dormant in the default session (X: DMT). With the HLS components (control camapp 2) it runs and frees
     them: every one goes, freed by task 57 through the event's delete (return addresses `0x50d9a1d9`, `0x50d9a218`,
     `0x50d9cb3b`, `0x50d9cc32`, X). In camapp 3 (4.1.5) they do not stay either over passes of S1 and S2 (X); its
-    menu stops at the imgpro unit `0x9c600000`, so a full pass is not measured there.
+    menu and playback run since the imgpro unit, but a pass of S1 and S2 after them leaves the next key untaken
+    (4.3.1), so a full pass is not measured there.
   - **Kept behind S-RPC, open (X: 5 a pass, with and without the components):** the 72-byte request object (vtable
     `0x60de54e8`) `0x50ac722a` builds (operator new at `0x50ac723d`, its constructor `0x50ac7291` sets its own-delete
     word +20 to 1) and hands to its method `0x50ac734c`, which S-RPC answers 0 at its entry. The method's no-channel
@@ -1769,8 +1787,8 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   CPU 3 reads AJ (flash `0x400a0000` -> `0xa34fd280`, 0x20000 bytes) and runs MLS `0x5003e0a1` and pis `0x50040aeb`.
   The settings mirrors' boot load (`0x5000941f` -> `0x5003e0a1`) lies inside BOOT_CPU3's body `0x50009347..0x50009482`
   (D), so a native multi-core boot must keep S-NVRAM's restore consistent with CPU 3's job.
-- **Shared IRQs:** the imgpro IRQs 282-283 and 288-302 are attached on all four cores (4.3); which core services them,
-  and 307-309, 53 / 54 and 323-326, depends on the enable calls `0x50054012` / `0x5002ea93`, not scanned.
+- **Shared IRQs:** the imgpro IRQs 282-283, 288-292 and 296-302 are attached on all four cores (4.3); which core
+  services them, and 307-309, 53 / 54 and 323-326, depends on the enable calls `0x50054012` / `0x5002ea93`, not scanned.
 - **The A53 (D):** block `blk05a00000` holds an aarch64 Linux 4.14.222 image with a network userland (section 4.11).
   SYS_CA53_PWR_MNG (CPU 1, `0x5003c8f4`) powers the A53 on request, with a request / response queue and a "load arm
   linux from sd" string; which requests trigger it is ?. Seams: "A53 off", the firmware's own path where the network
@@ -1878,8 +1896,9 @@ unchanged and a camapp session runs the same instructions in the same wall time 
   `--cpu2 native` the session takes 8,176 ms against 7,840 ms without (+4%, means of 3, alternated); CPU 0 runs 4,983
   more instructions (its IRQ 324 handlers) and CPU 2 about 8 million, nearly all its 1 ms ticks. Re-measured after the
   review fixes (X; means of 3, alternated, load average 5 to 7): `emu/bin/playperf.mjs` 9,347 ms on master and 9,341 ms
-  on the branch, with the same workload digest (`13fa8f7471592f8a`; the digest pinned in playperf is stale on master
-  too); test-pure 81.8 s and 81.9 s; a session of open, 2 s, OK to the Super Control Panel and 2 s takes 7,944 ms with
+  on the branch, with the same workload digest (`13fa8f7471592f8a`; the digest then pinned in playperf was stale on
+  master too, and is re-pinned to this one since: commit e69ad4d's delivery of S-DISPQ's replies to queue 6); test-pure
+  81.8 s and 81.9 s; a session of open, 2 s, OK to the Super Control Panel and 2 s takes 7,944 ms with
   `--cpu2 native` against 7,749 ms without (+2.5%), CPU 2 running 8,010,523 instructions.
 - **Open, in order (I; Claude wall-clock).** (1) CPU 0's CPUCONN_CPU0 and CPUCALL_CPU0 natively (`act_tsk(0x99)`,
   `act_tsk(0x9a)` as the init task does, with their proxies), so that USTART_L2 gets FLASH_CS1 and its CREQ runs
@@ -3426,7 +3445,8 @@ there (it stays on the other bodies).
   one shot; the rest 0 as REC_MAIN's clear leaves it), `rec_jpeg_exec` natively on it, REC_IMAGE's post natively, then
   lab time until REC_FILE's handler returns (`0x5053f20d`). S-JPEGENC, the image pipeline's work inside it: the encode
   writes the lab's JPEG (without its JFIF APP0) at `Addr` + 41984 and sets `Size` (I), and the image engine's fill (a
-  kind-14 request to the imgpro unit `0x9c600000`, not modelled) is done by the lab for REC's header clear only.
+  kind-14 request to the imgpro unit `0x9c600000`, modelled since 2026-11-09 but kept: its wait cannot end in the lab's
+  call, 4.3.1) is done by the lab for REC's header clear only.
 - **What it does (X, E143):** S2 gives `C:\DCIM\100OMSYS\P1010001.JPG` (41984 bytes of the firmware's header, then the
   lab's stream; 73,410 bytes with the live view); with the clock set first through the firmware's clock setting
   (`0x5012b7a7`, 2026-11-08 12:34:56) `PB080001.JPG`, whose Exif (read by `emu/refs/exif.mjs` and exiftool) has Make
@@ -4295,5 +4315,5 @@ The block-level unknowns are in section 4 and the shutter's in 7.5. Across block
    of the nine imgpro-family regions are DMA, resize or statistics engines.
 7. The TS multiplexer's use, StlCA's still format, the user feature behind the GPU, why the SsMenuMain wizard states
    (11.2k) are never reached, and the normal-use role of `mcon_mode_setting_backup.c`.
-8. Which core services each shared interrupt (282-283, 288-302, 307-309, 53 / 54, 323-326): the enable calls
+8. Which core services each shared interrupt (282-283, 288-292, 296-302, 307-309, 53 / 54, 323-326): the enable calls
    `0x50054012` / `0x5002ea93` decide it and are not scanned (static, no hardware needed).

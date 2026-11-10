@@ -786,7 +786,9 @@ S-TAKEOVER); nothing in the lab's behaviour changes. What it shows on E143 v1.9:
    run, at idle, S1 and S2, after each TRA 944 (getHistogramData); the log shows queue 8211 (`0x2013`), command 1,
    from `0x51014a64`. It never reaches cpu_conn, because S-MODACK answers every synchronous send whose receiver does
    not run with E_OK (D), so no inter-core traffic shows: the histogram is a CPU 2 consumer answered by that blanket
-   rule, not a listed site. While recording (camapp 1) the GUI's draw log has the three
+   rule, not a listed site. (Since 2026-11-09, with `--cpu2 native` under `control camapp 3`, the send goes through
+   cpu_conn and OSD_DRAW_CPU2 answers it natively; camapp 1 and 2 keep S-MODACK's answer: `docs/hle-gaps.md` 4.6.2.)
+   While recording (camapp 1) the GUI's draw log has the three
    layer clears (layer 1 index 255 with one column of 125, layer 2 index 31) and their copies to OSD2 / OSD3 only;
    GESetEvent sets 0x1002 about every 70 ms and the dispatch observer sees none taken, while the GUI task waits in
    SystemCommon::scOsWaitEvent (API 0x11026, `0x50b01ac7` from `0x50b81c7b`) and returns from it about 30 times a

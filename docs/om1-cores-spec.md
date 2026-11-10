@@ -251,7 +251,7 @@ What modelling each other core would take (I unless marked):
 
 ## 9. Open questions, ranked
 
-1. **Which core takes each shared IRQ.** Attach is exclusive (section 4), so the enable calls (`0x50054012`, `0x5002ea93`) for 288-302, 307-309, 53/54 and 323-326 decide delivery; not scanned.
+1. **Which core takes each shared IRQ.** Attach is exclusive (section 4), so the enable calls (`0x50054012`, `0x5002ea93`) for 288-292, 296-302, 307-309, 53/54 and 323-326 decide delivery; not scanned.
 2. **Which task executes the GUI creator `0x510609ce`.** Every candidate (CA_MAIN, HIGHLEVEL_MAIN) is a CPU 0 task, so "GUI on CPU 0" is I, not D.
 3. **What OSD_DRAW_CPU2 command 1 computes** (per-pixel arithmetic over a rectangle) and which GUI paths reach `0x50aea03a`; this decides whether a lab GUI session needs CPU 2. Answered 2026-11-09 (hle-gaps 4.6.2): it draws the histogram's two series as columns into the GUI's buffer (D, X), reached from OSDControl::drawHistogram `0x50ae9f5f` at idle, S1 and S2 (X); the debug shell's `cw_drawHistogram` (`0x50b3d0c0`) is the other caller of `0x50ae9f5f` (D).
 4. **The CPU 0 -> CPUs 1..3 command channels** (`0x97f0009c..`, `0x97f000c0..`): who writes them and when (standby, DRAM clock change), and what memory `0x97f00000` is.

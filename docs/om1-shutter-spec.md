@@ -1128,13 +1128,14 @@ would set; the REC mark (item 35) and the lens record's layout (item 37).
    focal lengths come out as the driver computes them (24 / 80 mm equivalents). The exposure plan,
    take_expose_calculate (`0x50597e82`), reads the scene's brightness from the AE result data objects `0xc12a`,
    `0xc0ba`, `0xc0ca` (its work struct, `0x50598688`; `0x505613ea` picks one by the metering mode, `0xc0ba` in the
-   default ESP), which TAKE_EXPOSE's command handler `0x50596187` writes; the BV pair `0x62abd8a8/aa` is only carried
+   default ESP), which TAKE_EXPOSE's AE result writer `0x50596187` writes; the BV pair `0x62abd8a8/aa` is only carried
    through. BV is APEX x 256 and the plan keeps Tv + Av - Sv = BV, Sv = log2(ISO / 3.125) x 256, so BV = (EV100 - 5)
    x 256. The plan lands at `0x62a919dc` (+6 Tv, +10 Sv, +14 Av) and in the display properties: with no BV set (0)
    it showed 1/60 F2.8 ISO 1600, shutter and aperture blinking (I: the ISO-auto ceiling's warning); for EV 12 it shows 1/250 F5.6 ISO 200. S-EXPOSE
    sets the three objects through the setter `0x5004188b` and runs the plan natively once the application has started
-   and after each input on the shooting screen; S-SCENE's auto exposure is the plan. Open: which task sends
-   `0x50596187` on the camera (the LV AE task fed from the 18 x 18 grids is the likely one, not traced); what fixes
+   and after each input on the shooting screen; S-SCENE's auto exposure is the plan. On the camera EXP calls
+   `0x50596187` back through TAKE_EXPOSE's callbacks (EXP_MOVIE for the through start's request, D; `docs/hle-gaps.md`
+   4.2.2). Open: what fixes
    the ISO-auto range (base 200, ceiling 1600 in the lab); whether `0xc12a` and `0xc0ca` are the other metering modes'.
 61. **The shutter's sound (I, X, D, S-SHUTTERSND; 2026-11-02).** The stock firmware plays no sound at a release (I). The
    evidence is the third-party patch tool azqeurio/om-c-firmware (no licence; read, not run), whose OM-1 1.9 base images

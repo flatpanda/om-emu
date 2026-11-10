@@ -735,7 +735,7 @@ frame-mode function `0x5039f583`, so S-TAKEFRAME's request is still not reached 
 
 - **Tasks (D):** CPU 0: TAKE_FUNC's through commands 25 / 27 / 28 and their context bytes `through_s_wait` ..
   `through_start` (`0x62a3f2b4..0x62a3f2b8`, 4.1.2; the through permit `0x501c40d0` called at `0x5039f578`, the frame
-  display mode `0x500256d9` at `0x5039f622`); TAKE_EXPOSE (command handler `0x50596187` writes
+  display mode `0x500256d9` at `0x5039f622`); TAKE_EXPOSE (its AE result writer `0x50596187`, called back, 4.2.2, writes
   the AE result objects `0xc12a` / `0xc0ba` / `0xc0ca`); EXP_MOVIE 0x58 `0x50553697` (states THROUGH_START ..
   THROUGH_LV_END, CONT_LVAE, `[EXP] AF_BV_18x18`); ISEQ_MAIN 0x44, ISEQ_ASIC 0x81; USR_FAST_APP 0x55 `0x501e673b`;
   PER_CCD_TEMP_MAIN 0x14. CPU 2: EXP_MOVIE2 0x2009 / EXP_MOVIE3 0x200a (the EXP module, I), MVR_IMG1 0x2005, MVR_IMG2
@@ -826,6 +826,109 @@ frame-mode function `0x5039f583`, so S-TAKEFRAME's request is still not reached 
   at its first end; the unit's real time per run (A-VSCHIST-1 sets only the lab's pace); the ring's reader (no literal
   of `0x62a3cab8` but the writer's, I: a computed address), what the application does with `0x04020301`, and what
   OSD_DRAW_CPU2 draws from the bins (4.6).
+
+#### 4.2.2 The EXP callback and the AE results (2026-11-09; D unless tagged, addresses E143's)
+
+S-EXPOSE sets the AE result objects `0xc12a` / `0xc0ba` / `0xc0ca` and runs the plan. This round reads the path from
+TAKE_EXPOSE's AE request to the routine that writes them, runs it natively as far as it goes in a test
+(`emu/test/test_expcb.mjs`, no lab option: golden unchanged) and maps S-EXPOSE's readers. None of the readers is
+served natively, so S-EXPOSE stays (its text now gives the routine's role and the readers).
+
+- **`0x50596187` is TAKE_EXPOSE's AE result writer, not a command handler.** It copies EXP's AE result record (a0)
+  into eleven property objects through the setter `0x5004188b`: +0 `0xc12a`, +2 `0xc0ba`, +4 `0xc0ca`, +6 `0xc2ea`, +8
+  `0xc2da`, +10 `0xc2ca`, +12 `0xc4ba`, +128 `0xc57a`, +196 `0xcdca`, +198 `0xcdda`, byte +208 `0xcdb1` (the data
+  pointers TAKE_EXPOSE's init caches, `0x50591220` -> `0x502d03c1`). S-EXPOSE's text, 4.2's task row and shutter spec
+  item 60 called it a command handler (4.1.6 found that wrong); they are corrected.
+- **Who registers the callback.** TAKE_EXPOSE's launcher `0x505964e7` builds a 216-byte request on its stack: +0 the
+  callback by kind (`0x5059757f` for 1280, 1281, 1289 and the default; `0x5059781d` for 1282, 1283, 1290, 1294;
+  `0x5059794c` for 1293; `0x5059790f` for 2314 when `0x5059a629` answers nonzero; `0x5059787e`, which writes nothing,
+  for 1792, 1793 and some modes of 1285, 1295 and 2592), +4 `0x505976da`, +8 `0x505977f6`, +24 the kind, +172
+  `0x505979a5` for 2816; `0x50596af0` fills the rest. EXP's entry `0x505536be` takes it by kind - 1279 (the hashed
+  table `0x606e0924`): 1280, 1289, 1792 and 2816, and thirteen more through `0x50553aa4` / `0x50553aed`, are posted by
+  `0x50553942` to EXP_MOVIE (queue `0x17`: `{EXP_MOVIE_POST 0x18, 0, kind, request}`), and the caller's task waits on
+  EXP_MOVIE_POST without limit. Kind 1281 runs `0x505539bc` in the caller's task instead: `0x5058bcd7` copies the
+  request to `0x62abd65c` and keeps its callback at `0x62abd544`, which `0x5058bf17` (kinds 1283 / 1284, the caller's
+  task), `0x5058c55e` and `0x5058e66f` (EXP_MOVIE) call later.
+- **What fires it: EXP_MOVIE's handler, not an interrupt.** EXP_MOVIE (task 88, `0x50553697` -> loop `0x50572105`,
+  started by USTART2's stage at `0x501e90f3`) copies the request to `0x62abca2c` (`0x50588266`) and dispatches by kind
+  (`0x606e8264`); 1280, 1289, 1792 and 5122 go to `0x5058bd51` -> `0x5058c97c`, which answers EXP_MOVIE_POST
+  (`0x5057240c` -> `0x50585ccc`, status 0, at `0x5058cd3f`) and then calls the request's +0 at `0x5058cdb7` with a
+  44-byte record: +0 a u16 status, +4 the AE result (EXP's frame slot with role 1, `0x5055e3f5(1)`: 8 slots of 560
+  bytes at `0x62a8dedc`), +8 a halfword, +20, +24, +32, +40. The callback `0x5059757f` writes when the status is not 2,
+  the through mode's mask 1 (`0x62abd7a0`) is clear and TAKE_EXPOSE is not paused (`0x62abd78a` mask `0x20`): under the
+  semaphore `(0x60042e98)` the writer, then the plan take_expose_calculate `0x50597e82`, then the module event
+  `0x04030020`; status 0 each time, another status at most once per 250 ms (`0x62abd78d`, a 250 ms timer to
+  `0x505963ee`); in TAKE_EXPOSE's state 7 it calls `0x505963ba(+4)` instead. It also sets the object `0xce0a` from +8
+  and calls `0x50598f22(+10)`.
+- **Who sends the request on the camera.** TAKE_EXPOSE's command `0xa00` (case `0x50595964`; once, while its byte
+  `0x62abd78b` is 0, else errlog `0x0e001f04`) copies the through start's 52-byte parameter (`0x50597a05`: the through
+  mode to `0x62abd7a0` and `0xa33447f8`, the other fields to `0x62abd7a1..a8`; with the mode's mask 1 also EXP's
+  live-view request `0x505538ee`) and launches kind 1280 in TAKE_EXPOSE's states 1, 17, 33 and 49 (command 0 sets 1).
+  Its one sender (D: the senders that name TAKE_EXPOSE's queue word) is the through start: TAKE_FUNC command 25
+  (`0x506d7f55`) calls `0x506d83f9` with d0 32 (`0x506d835e`), which asks TAKE_EXPOSE command 0 synchronously
+  (`0x506d84cc`) and later posts `0xa00` (`0x506d8645`: reply queue TAKE_FUNC_POST `0x62`, token 1, the parameter from
+  `0x506d8b0c` and command 25's own parameter); command 75 calls it with 128, which skips the send (`cmp 32` at
+  `0x506d85f8`). The lab never reaches the through start (4.1.4). The other AE launches come from TAKE_EXPOSE's other
+  commands and from `0x50591973` (TAKE_MAIN `0x503ad611`), `0x50591c6b` (`0x508eeb32`) and `0x50591d1a` (`0x509af437`);
+  none runs in the lab (X).
+- **What the handler reads.**
+  - *EXP's evaluation runs on CPU 2.* `0x5058c97c` -> `0x5058d352` -> `0x5058d531` -> `0x50587cc7` -> `0x50587d8b` ->
+    `0x505568c7(2, slot 4, ...)` builds a record at `0xa3343900` from EXP's frame slot with role 4 (`0x50555ef4`) and
+    21 words of EXP's state, and `0x50556af4` hands `{0x50556995, record}` to EXP_MOVIE3's ring `0xa3344700`, posts
+    `0x50573399(0x2002)` to CPU 2 (`0x50035afd`: CPU 2's flag `0x2002` bit `0x1000000`) and waits on EXP_MOVIE's flag
+    17 `(0x60042f92)` bit `0x2000000` without limit. EXP_MOVIE3 (`0x200a`, entry `0x505536b1` -> `0x505731f1`) pops it
+    and runs `0x50556995` -> `0x50556a09` -> `0x5058447e`, then posts `0x50573383(0x2000000)` to CPU 0 (`0x5057320c`),
+    which sets the bit. EXP_MOVIE2 (`0x2009`, `0x505536a4` -> `0x505731c8`, flag `0x2001`, ring `0xa334460c`) serves
+    EXP's other CPU 2 jobs (`0x5058391c`, `0x50589da2`). USTART2's stage starts both at `0x501e910e` / `0x501e912f`
+    (4.2's task row had them as I). With a first argument other than 2, `0x505568c7` runs the evaluation on CPU 0.
+  - *The metering data* is slot 4. What fills the slots is not traced; EXP's frame processing (`0x50586a86` ->
+    `0x505829d6`) hands frames at `0xa332d2c4 + 2624 n` to EXP_MOVIE2's job `0x5058391c` (I: the ISP's AE statistics,
+    4.2 seam B). In the lab the slots hold what EXP's init leaves.
+  - *The white balance* (`0x5058c97c` -> `0x5056afe2(3)` -> `0x5056b07d` -> `0x5056b19a` -> `0x5056f0bb` ->
+    `0x5056f101` -> `0x5056f1bb` -> `0x5039821c`, TAKE's arithmetic block) takes its gains from the table
+    `0xa31f1bd0` (14 rows of four u16, 112 bytes), which IMG_PRECON's init `0x502a49b3` (USTART2's stage,
+    `0x501e8ec0`) builds through `0x5039814c` -> `0x5039950e` from the preset objects `0xc5f2..` and `0xca92..`
+    (their products >> 8). X: all 0 in a default session, filled after the init.
+  - *The frame events.* `0x5058bd51` -> `0x5056a6e4` prepares the camera driver's request record `0x62a98a0c`
+    (`0x502a4a2e`) with EXP's frame callbacks `0x5056fd44`, `0x5056fd61`, `0x5056fff0` and `0x50570024`, and
+    `0x5058c97c` -> `0x5056a873` gives it to cam.c's switch `0x502a4a46` as request 7 (`0x5056aa0e`); `0x5056fff0` ->
+    `0x5057004e` sets per-frame bits (the mask `0xff000`) of EXP's flag 21 `(0x60042f9a)`, `0x5056fd61` its bit 4, and
+    `0x5058c97c` waits for its bits before the callback (`0x5056ba07` -> `0x50585dc2`, without limit). EXP_MOVIE's
+    loop also gives cam.c a request 8 for each message (`0x5056a527` -> `0x5056c06c`, X).
+- **Run natively (X, `test_expcb.mjs` expCallbackSession).** Camapp 1 with `--take probe` and `--cpu2 native`; the test
+  brings up what USTART2's stage runs (IMG_PRECON's init, EXP's init `0x50553649`, EXP_MOVIE, EXP_MOVIE2 and 3 through
+  the cross-core start `0x5002c546`; each init returns 0 and touches no device), makes EXP's queues native in the probe
+  and posts TAKE_EXPOSE `0xa00` with a parameter of zeros whose byte 0, the through mode, is 0 or 1 (the values the mode
+  table `0x5059f204` holds; I), one session each. In both, the request reaches EXP_MOVIE as kind 1280 with the callback
+  `0x5059757f`, CPU 2 runs the evaluation and posts its end back (task `0x200a`), and EXP_MOVIE goes on to the white
+  balance. Mode 0: the white balance ends, cam.c's switch answers requests 8 and 7 with 0 and logs `0x0a103000` and
+  `0x0a283000` (its own init does not run, 4.1.4), no frame callback runs and EXP_MOVIE waits on flag 21 for bit
+  `0x1000`. Mode 1: the white balance takes kind 5 of `0x5039821c` and stops at the divide `0x50398ca5` (fault 6) in
+  `0x50398a55` with both operands 0. They are the two gains `0x5056f1bb` hands `0x5039821c` through its locals (sp+16)
+  and (sp+18), which it never writes and does not read after the call (D): on the camera whatever EXP_MOVIE's stack held
+  there (I), and a divide by zero the CPU leaves undefined, where the lab stops (`emu/FIDELITY-NOTES.md` 3.2). It is the
+  same divide the EXIF set stops at (4.1.4); whether for the same reason is not read. In neither mode does the callback
+  or the writer run. Without `--cpu2 native` the post to CPU 2 is an unserviced doorbell; without IMG_PRECON's init mode
+  1 stops at the same divide (X).
+- **S-EXPOSE's readers (X, `test_expcb.mjs` aeReadersSession: a default camapp 1 session, S-EXPOSE again, an idle, a
+  live view, S1, S2, the menu twice, P -> A and playback).** (1) The plan's reader `0x50598688` (gets at `0x505986cb`
+  `0xc0ca`, `0x505986f9` `0xc0ba`, `0x50598728` `0xc12a`), from S-EXPOSE's own call and natively 5 times at the mode
+  change, through the application's API `0x20009` (api_rec `0x5040e8c7` -> TAKE's `0x5039f656` -> `0x50597dc0`, which
+  calls the plan under the semaphore `(0x60042e98)`). (2) The application's get by index `0x503ee3c8` for 4011, 4012 and
+  4013 (`0xc0ca`, `0xc12a`, `0xc0ba`: the id list `0x606239e4 + 2 (index - 4000)`, `0x503ee4f0`), once each at the mode
+  change, from `0x503eeba1` (callers `0x503c8127`, `0x503d37dc`, `0x503d455e`, `0x503d458a`, `0x519c8530`; which of
+  them, and what it does with the values, is not read). Nothing else reads them and only S-EXPOSE sets them. Not reached
+  (D): takepic's `0x503bcd51` reads `0xc0ba` (at `0x503bcecb`, the take's record); `0x502d03c1` caches the data
+  pointers. An immediate scan of the main block's code finds the three ids only in those four functions. Section 3.2's
+  EXP row ("only the plan ... runs, under S-EXPOSE and H-AEINIT") misses the plan's native runs at a mode change.
+- **What retiring S-EXPOSE needs, in order (I; Claude wall-clock).** (1) The trigger: the through start natively,
+  that is TRA 991 to the shooting component and CapThr (4.1.2, 4.1.7) and command 25's parameter. (2) EXP's bring-up
+  as the stage runs it, the four steps above (device-free, X): an H- step of a few hours once (1) is there. (3) The
+  frame events: cam.c's init and request 7's callbacks on the sensor's frame timing (4.2 seam D), or a stand-in at
+  those callbacks paced by the lab clock: days. (4) The metering data: EXP's slots from the ISP's AE statistics (seam
+  B, 3-5 weeks). (5) A hardware answer for the divide by zero (or evidence of what EXP_MOVIE's stack holds there),
+  without which mode 1 stops. Then the callback writes the objects and the plan's and the index get's reads see the
+  firmware's values.
 
 ### 4.3 Still capture, image processing and recording
 

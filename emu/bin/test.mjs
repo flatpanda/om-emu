@@ -172,6 +172,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...ca.bad, ...hp.bad, ...hw.bad, ...md.bad, ...tr.bad].forEach((x) => console.log('  ', x));
   bad += ca.bad.length + hp.bad.length + hw.bad.length + md.bad.length + tr.bad.length;
 }
+// the imgpro unit's model (S-IMGPRO) on a bare machine; the firmware's driver on it runs in camapp 3 above
+{
+  const { imgproUnits } = await import('../test/test_imgpro.mjs');
+  const iu = imgproUnits();
+  console.log(`the imgpro unit (S-IMGPRO), its units: ${iu.checks - iu.bad.length}/${iu.checks}`);
+  iu.bad.forEach((x) => console.log('  ', x));
+  bad += iu.bad.length;
+}
 // the TAKE probe (--take probe): TAKE_FUNC and TAKE_FUNC_CP natively, the record of a start, a live view, S1, S2, the
 // menu and a mode change under camapp 1 and 2; off by default
 {

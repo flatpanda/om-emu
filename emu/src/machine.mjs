@@ -23,6 +23,7 @@ import { LensSsc } from './dev/lensssc.mjs';
 import { Dml } from './dev/dml.mjs';
 import { Pdt } from './dev/pdt.mjs';
 import { Ems1 } from './dev/ems1.mjs';
+import { Imgpro } from './dev/imgpro.mjs';
 import { DpcTriggers } from './dev/dpc.mjs';
 import { Cores } from './core/cores.mjs';
 
@@ -152,6 +153,9 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   const pdt = boardKnows('pdt') ? new Pdt(m, lclock, intc, BOARD.pdt) : null;
   // the EMS1 engine, on a board that gives it (src/dev/ems1.mjs; passive until the firmware writes it), after the PDT
   const ems1 = boardKnows('ems1') ? new Ems1(m, lclock, intc, BOARD.ems1) : null;
+  // the imgpro unit at 0x9c600000, on a board that gives it (src/dev/imgpro.mjs; passive until the firmware writes it),
+  // after the EMS1 engine
+  const imgpro = boardKnows('imgpro') ? new Imgpro(m, lclock, intc, bus, BOARD.imgpro) : null;
   const stub = new Stub(m);
   // every set_irq(true) kicks the CPU (S.kick: the next TB start looks, interp.mjs)
   intc.connect((requested) => { S.irqReq = requested; if (requested) S.kick = true; else S.irqWait = false; });
@@ -208,7 +212,8 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   Object.assign(m, {
     cores,
     devices: { intc, timer, engine, vsc, bus, stub, scpu, clock: lclock, ...(hdmiPort ? { hdmi: hdmiPort } : {}), ...(audioPort ? { audio: audioPort } : {}), ...(linkPins ? { linkpins: linkPins } : {}),
-      ...(lensSsc ? { lens: lensSsc } : {}), ...(dpc ? { dpc } : {}), ...(dml ? { dml } : {}), ...(pdt ? { pdt } : {}), ...(ems1 ? { ems1 } : {}) },
+      ...(lensSsc ? { lens: lensSsc } : {}), ...(dpc ? { dpc } : {}), ...(dml ? { dml } : {}), ...(pdt ? { pdt } : {}), ...(ems1 ? { ems1 } : {}),
+      ...(imgpro ? { imgpro } : {}) },
     getRegs() { live(); return getRegs(); },
     // 'p' / 'P' (registers 0..15 as cpu.mjs getRegs / setRegs, and the lab registers 16..19: HI, unit C,
     // unit D, unit V); null for a register the stub does not have.

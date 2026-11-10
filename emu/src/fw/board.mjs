@@ -117,6 +117,12 @@ export const FAMILIES = {
     // calling core (the boot chain's init 0x501a6827, from 0x501e8f60). E143's (D); E146 and E147 sit on the same
     // board, their drivers not read; passive until a start
     ems1: { base: 0x9BD80000, irq: 276 },
+    // the imgpro unit at 0x9c600000, the image library's unit 7 (src/dev/imgpro.mjs, S-IMGPRO; docs/om1-imgpro-spec.md,
+    // docs/hle-gaps.md 4.3.1): its registers (every operand of its driver 0x5050a6b2..0x5050b547 and of the handler
+    // 0x5048bfe3: +0x000..+0x3b0) and IRQ 300, which the library's init attaches with that handler at level 4 on CPUs
+    // 0..3 (0x5048c728..0x5048c799) and each request's go enables on the calling core (0x5050a8bd). E143's (D); E146
+    // and E147 sit on the same board, their drivers not read; passive until a start
+    imgpro: { base: 0x9C600000, irq: 300 },
     // the lens mount (src/dev/lensssc.mjs; docs/hle-gaps.md 4.4.1, 4.4.2): the lens serial controller's registers
     // (every operand of LENS_SSC 0x502c0ea5..0x502c2193) and its IRQ 14 (the open 0x502c0e4e attaches 0x502c12c0 at
     // level 3); the units the lens path writes a few words of: the FCS unit, whose two words the open clears
@@ -241,6 +247,7 @@ export const FAMILIES = {
     // the HDMI port and the lens mount: not read on this family; the deferred-call triggers per body, read by
     // src/fw/facts.mjs (deferredCalls: the six words 0x9b800030..0x9b800044 and IRQs 29..34 on every body of the family)
     hdmi: UNKNOWN, audio: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN, dml: UNKNOWN, pdt: UNKNOWN, ems1: UNKNOWN,
+    imgpro: UNKNOWN,
     // per body, read by src/fw/facts.mjs (coreByte; resetHead's library and preload rows; vectorPage: 0x6003xxxx on
     // E144, 0x6041xxxx on the 0x60400020 bodies, X; dramSize: 256 MiB on E144, 512 MiB on the 0x60400020 bodies, X)
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,
@@ -353,6 +360,7 @@ export const FAMILIES = {
     // the deferred-call triggers per body, read by src/fw/facts.mjs (deferredCalls: four words 0x9b8000f4..0x9b800100
     // and IRQs 30..33 on all three, in the stub page 0x9b800000 before 2026-10-30)
     scpu_link: UNKNOWN, hdmi: UNKNOWN, audio: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN, dml: UNKNOWN, pdt: UNKNOWN, ems1: UNKNOWN,
+    imgpro: UNKNOWN,
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,
     // E143's scratch DRAM holds E122's icons record (the loader's destination 0xa1fa6c00, 0x730a00 bytes decoded: X,
     // src/fw/facts.mjs resLoader and resources.mjs record): the lab's scratch is E144's lab region, which E118, E120

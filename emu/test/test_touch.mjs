@@ -4,10 +4,11 @@
 //                 up) on the shooting screen's touch mode icon, which cycles the touch shutter's mode: the touch
 //                 driver must read the controller, HFW's callback must see the tap's press at the pixel tapped and its
 //                 end there (CLICK or LIFTOFF), and the frame after the tap must differ from the one before (the icon
-//                 of the next mode drawn); on a body whose driver arms itself at the display open (the E144 family)
-//                 the touch init has run before the open (H-TPINIT); on a body of SCP_CELL, OK opens the super control
-//                 panel and a tap in it must reach HFW at the pixel, change the frame (the cell tapped selected) and
-//                 keep the panel's state
+//                 of the next mode drawn) where it held for as long without a tap (the control); on a body whose
+//                 driver arms itself at the display open (the E144 family) the touch init has run before the open
+//                 (H-TPINIT); on a body of SCP_CELL, OK opens the super control panel and a tap in it must reach HFW at
+//                 the pixel, change the frame (the cell tapped selected), held without a tap, and keep the panel's
+//                 state
 //   node emu/test/test_touch.mjs   (with OM_EMU_MODEL=E144 etc.; exit 1 on a failure)
 import { createHash } from 'node:crypto';
 import zlib from 'node:zlib';
@@ -46,6 +47,9 @@ export async function touchSession() {
   s.idle_slice(lab.lab_time() + IDLE_MS * 1e6);
   const digest = () => { const [, , words] = s.frame('boundary'); return createHash('sha256').update(words_to_rgb(words)).digest('hex'); };
   const before = digest(), state0 = lab.state();
+  // the control: the frame holds without a tap for as long as the tap is given below
+  s.idle_slice(lab.lab_time() + 500e6);
+  ok(digest() === before, `${MODEL}: the shooting screen's frame holds for 500 ms without a tap`);
   const [x, y] = TOUCH_ICON[MODEL];
   const g0 = lab.gestures.length, r0 = lab.tp_reads.length;
   for (const action of ['down', 'up']) s.touch(action, x, y);
@@ -63,6 +67,8 @@ export async function touchSession() {
     s.key('ok', 'up'); s.camapp.pump(); s.idle_slice(lab.lab_time() + 1200e6);
     const scp = lab.state(), panel = digest(), g1 = lab.gestures.length;
     ok(SCP_STATES.includes(scp), `${MODEL}: OK opened the super control panel (0x${scp.toString(16)})`);
+    s.idle_slice(lab.lab_time() + 500e6);
+    ok(digest() === panel, `${MODEL}: the panel's frame holds for 500 ms without a tap`);
     for (const action of ['down', 'up']) s.touch(action, cx, cy);
     s.idle_slice(lab.lab_time() + 500e6);
     while (s.pending_touch()) s.touch_gui_step();

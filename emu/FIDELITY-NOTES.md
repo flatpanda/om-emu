@@ -40,7 +40,7 @@ Each note was checked against the cited code. Paths are relative to the reposito
 
 **Where:** `emu/src/dev/vsc.mjs:154-167`, `emu/src/dev/vsc.mjs:311-316`, `emu/src/lab/display.mjs:1078-1084`, `emu/src/lab/play.mjs:980-983`
 
-**Emulator:** A frame boundary only latches the mirror bank and sets INTST1 bit 0 (`boundary`). Pixels are produced only when the harness rings the COMPOSE doorbell, which is the only caller of `compose()`. The visible image is a snapshot of the latched registers and memory at a time the harness picks.
+**Emulator:** A frame boundary only latches the mirror bank and sets INTST1 bit 0 (`boundary`), and bit 8 where it ends a histogram run (`docs/om1-vsc-spec.md` section 13). Pixels are produced only when the harness rings the COMPOSE doorbell, which is the only caller of `compose()`. The visible image is a snapshot of the latched registers and memory at a time the harness picks.
 
 **Expected / concern:** Real hardware scans out continuously, fetching plane data by DMA while the frame is displayed. Tearing, mid-frame register or buffer updates, and anything else that depends on scan-out timing are not represented.
 

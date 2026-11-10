@@ -486,9 +486,9 @@ unknown):**
     (`0x501d70d1`); only the histogram's done callback `0x501d71e1` sets it (it also posts the result to the queue
     whose id is at `0x600432d4`). Inside S-DISPQ's run the wait cannot block: the run's task blocked, the lab task's
     settle returned inside the run and executed the caller's `0xff` (`0xa2100007`, fault 5), the menu's first stop.
-    S-HISTWAIT (camapp 3) runs the wait to its timeout (50 ms of lab clock, E_TMOUT, which the command does not read;
-    on the camera the histogram ends first, I). The unit itself (its interrupt, done timing and bins) is not modelled.
-  - *The CPU's udf07 (implemented 2026-11-09; the stop until then).* Past S-HISTWAIT the menu ran into `udf07 d0,d1` at
+    Until 2026-11-09 S-HISTWAIT ran the wait to its timeout (50 ms of lab clock, E_TMOUT); the unit is now modelled and
+    the wait returns E_OK at the run's end (4.2.1).
+  - *The CPU's udf07 (implemented 2026-11-09; the stop until then).* Past cmd 15's histogram wait (4.2.1) the menu ran into `udf07 d0,d1` at
     `0x5050a089` (fault 1), in task 57: the sequence (`0x50c591d4`, state 4) to CapThr_ThroughImage (`0x50bd61b2` ->
     `0x50bd5fe4`, the through image's bank), api_tft `0x504225c5` and the imgpro library (`0x5048ef28` .. `0x5048e190`
     -> `0x5050a086`). udf07 is now BSCH as the Panasonic MN103001 manual gives it, which the helper's three callers
@@ -567,6 +567,51 @@ unknown):**
 - **Unknowns:** which hardware writes the YC through image into the live-view banks; the statistics' memory layout
   (readable in principle from EXP's and MVR's consumer code); the sensor's serial protocol and replies; the per-mode
   register meaning of gap@0x5017eeda (1,285 call edges, D).
+
+#### 4.2.1 The VSC histogram unit (`control camapp 3`, 2026-11-09; D unless tagged, addresses E143's)
+
+- **Why.** Under `control camapp 3` the shooting component's DISPLAY cmd 13 and 14 start the VSC's histogram on the
+  TFT channel (`0x501e14a4`: INTEN1 bit 8, HIST1 = 1; X), and the menu's DISPLAY cmd 15 (`0x501d709f`) waits up to
+  50 ms for the flag (id at `0x6004303a`) only the run's done callback sets. The lab had no histogram unit, so
+  S-HISTWAIT ran that wait to its timeout (4.1.5). The registers, set-up formulas and paths are in
+  `docs/om1-vsc-spec.md` section 13.
+- **The firmware's path.** Start: the start path `0x501d6bec` sets the run word `0x62a3eaf8`, programs HISTAREA1-3,
+  HIST2 and HIST3 (`0x501e127f`), waits for them to latch (`0x501d6e17..a2`) and starts the run. End: the channel's
+  ISR takes INTST1 & INTEN1 bit 8 (`0x501dec7d..e4`), posts the done callback `0x501d71e1` to task 16 (`0x501d6a03` ->
+  `0x50053505`) and acks bit 8 (`0x501e14fc`). The callback clears the run word, posts DISPLAY cmd 16 to DISPLAY's own
+  queue while `0x62a3eabe` is set (OlyQeWr at `0x501d7227`) and sets the flag. Cmd 16 (`0x501d7377`) reads the bins
+  (`0x501d70e6` -> `0x501e150e`: n / 2 words at `+0x4000`, n = 128 here, X, each 16-bit bin clipped to the mirror
+  HIST3[31:16]), replaces them with 0 and 64 in bin 5 when the written DMAEN bit 5 (IMG1) is clear and HIST2[17:16] is
+  0, copies them into the ring `0x62a3cab8` (8 slots of 1024 bytes), posts `{0, 0x04020301, 0}` to queue 6 every
+  `0x62a3eb08`-th end and starts the next run on the request's other area. Cmd 15 clears `0x62a3eabe`, so the next end
+  posts nothing and no run follows, and waits for that end.
+- **Which bins the firmware uses.** HIST2[17:16] names the IMG plane the run counts: the set-up picks the plane whose
+  DMA address is the request's (`0x501e12f6..66`, D; that the unit counts that plane's pixels is I). The lab shows no
+  IMG plane under camapp 3 (DMAEN 7, X), and with IMG1 off and source 0 the firmware discards the bins it read
+  (`0x501d712d..54`). So no bin value the unit computes reaches a consumer in the lab, and none is computed: the model
+  answers those reads 0 (A-VSCHIST-2) and refuses every other (HIST_UNMODELLED). What the unit counts, how values map to
+  bins and what HIST3's scale does are ? (`docs/om1-vsc-spec.md` section 13).
+- **The model (X, `emu/src/dev/vsc.mjs`).** A write of HIST1 bit 0 arms a one-shot run; A-VSCHIST-1: it measures the
+  frame from the channel's next boundary and ends at the boundary after, setting INTST1 bit 8; the IRQ line carries
+  bit 8 (`board.vsc.irq_mask` `0x103`; the ISR's branch is D, the line I). A-VSCHIST-2 as above. S-DISPQ runs the done
+  callback's cmd 16 as it runs the display manager's requests (`dispq_accept`, `emu/src/lab/play.mjs`; under camapp 3
+  only). In a display run lab time stands still, so the menu's cmd 15 wait gets S-HISTEND: the lab clock runs a frame
+  at a time to the run's end (at most two), and the wait then runs natively: S-IRQFIRST takes the IRQ, the wait
+  blocks, task 16 runs the done callback, the flag is set and the wait returns E_OK.
+- **Result (X, `emu/test/test_camapp.mjs` traRoutingSession; `emu/test/test_dev.mjs` vscHistUnits for the device).**
+  A run every 50.05 ms (three TFT frames), 40 runs over the start and 2 s of idle, each end's cmd 16 through S-DISPQ
+  (39 or 40, the last end's may still be due) reading 64 bin words under A-VSCHIST-2, a queue-6 post every fourth
+  end, no HIST_UNMODELLED; the idle's TRA 944, S1 and S2 as before (4.1.5), the OXF events not staying over two passes.
+  The menu's cmd 15 wait returns E_OK at the run's end, at most two frames into the wait (1.9 ms after the key in a
+  probe run; before: E_TMOUT after 50 ms), and so does the HDMI plug's (`--hdmi on`).
+  **S-HISTWAIT is retired**; S-HISTEND moves only the lab clock, as the vsync wait's RUN_TO_FRAME does. What runs next
+  is unchanged: the menu stops at the CPU's udf07 `0x5050a089` (fault 1, 4.1.5). Default sessions do not start the
+  histogram (camapp 1 and 2 leave HIST1 unwritten over the start, S1, S2, the menu and playback, X).
+- **Open.** The TFT's composite stays FEATURE_UNOBSERVED once the histogram's registers are written (A13: whether
+  they change the mixer output is ?); bins with an IMG plane on are refused, so a live view under camapp 3 would stop
+  at its first end; the unit's real time per run (A-VSCHIST-1 sets only the lab's pace); the ring's reader (no literal
+  of `0x62a3cab8` but the writer's, I: a computed address), what the application does with `0x04020301`, and what
+  OSD_DRAW_CPU2 draws from the bins (4.6).
 
 ### 4.3 Still capture, image processing and recording
 

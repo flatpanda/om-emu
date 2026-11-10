@@ -359,7 +359,13 @@ the survey table.
   those of E142, E140, E130, E133, E145, E129 and E132, leave the rec view's display) and E120's and E122's EVF run
   PLAY, INFO and PLAY (finding 70: the kind-3 VSC raises its line compare, on which the EVF panel's command
   scheduler runs; modelcheck runs the family's EVF through playback). Open on the family: the picture's Exif and
-  the play module's load of it, which INFO's still information stands in for (finding 57); the
+  the play module's load of it, which INFO's still information stands in for (finding 57) as on every body (findings
+  90 to 92, 2026-11-10: S-PLAYSEQ and S-PLAYCOMP stand for the same component method, play API, header read and
+  parse, which run on no body), and the Exif in S2's file, which the family's REC, another version, does not write in
+  the lab (finding 93, as on E130 and the E144 family); PLAY from the playback wizard (OK), which faults on the family
+  and on E130 (finding 94: the GUI's current screen object 0; erase runs on no body). Since 2026-11-10 a second
+  picture, RIGHT, LEFT and INFO's three views run on the family as on the other bodies (finding 94,
+  `test/test_playinfo.mjs` on the 19), its EVFs too: E118's never waited for the line compare (finding 95); the
   MN103's DIVU by 0 in E118's record time, which divides by a frame rate that is 0 before a movie take on the camera
   too (S-MOVRATE, finding 59: a hardware capture would settle it, as for E144's); S-MODACK's module queue ids, five of which the port's words read as another
   queue's (PWR_EXEC `0x86` by name; no request to them seen on the three's paths, findings 43, 55), to be read from

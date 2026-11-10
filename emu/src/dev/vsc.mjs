@@ -66,8 +66,9 @@ const SERIAL_START = 0x3214, SERIAL_DONE = 0x8000;
 // Kind 1's histogram unit (docs/om1-vsc-spec.md section 13): a write of HIST1 with bit 0 set starts a run (the start
 // 0x501e14a4 writes HIST1 = 1 after INTEN1 |= 0x100, D). A-VSCHIST-1: the run measures the frame that begins at the
 // channel's next boundary and ends at the boundary after it, where INTST1 bit 8 is set (also while masked, as bit 0);
-// a run is one-shot. The source plane is the IMG plane HIST2[17:16] names (0 IMG1, 1 IMG2, 2 IMG3: the set-up
-// 0x501e127f picks the IMG plane whose DMA address is the request's, D), its DMAEN bit 5 - n. The bins are words at
+// a run is one-shot. The source plane is taken as the IMG plane HIST2[17:16] names, its DMAEN bit 5 - n (I: the set-up
+// 0x501e127f stores there the index, 0 IMG1 .. 2 IMG3, of the IMG plane whose DMA address is the request's, else 0;
+// the start path passes no address, so the field is 0, D: docs/om1-vsc-spec.md section 13). The bins are words at
 // +0x4000, two 16-bit bins each, read 0x501e150e (d1 / 2 words, d1 at most 128 by the clamp at 0x501d6aa6..cb, D).
 // A-VSCHIST-2: the bins of a run whose source plane was off are read as 0, only while the firmware discards them: the
 // written DMAEN bit 5 clear and the written HIST2[17:16] 0 at the read (0x501d712d..54 overwrite the bins read then,

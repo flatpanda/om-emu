@@ -91,7 +91,7 @@ export async function vscHistUnits() {
   // a start: armed, running from the next boundary, ended (INTST1 bit 8) at the one after, also while masked
   {
     const t = fresh();
-    t.reg(R.HIST2, 0x00100112);                          // the start's value (X): 128 bins, source IMG1, DMAEN 0
+    t.reg(R.HIST2, 0x00100112);                          // the start's value (X): 128 bins, source field 0, DMAEN 0
     ok(t.start() === 'ok' && t.hist().state === 1 && !(t.get(R.INTST1) & 0x100), `armed: ${JSON.stringify(t.hist())}`);
     t.frame();
     ok(t.hist().state === 2 && !(t.get(R.INTST1) & 0x100) && t.hist().runs === 0, `running after one boundary: ${JSON.stringify(t.hist())}`);

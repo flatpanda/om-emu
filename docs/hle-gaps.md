@@ -1453,6 +1453,94 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
   the firmware's own OlyTaStCpu and serve the Super Control Panel's post `0x50aa9d4e` natively, replacing S-CPU2. The
   check: the same panel frame and reply, no `xcpu_problems`.
 
+#### 4.6.1 CPU 2 natively, round 1 (2026-11-09; D unless tagged, addresses E143's)
+
+Behind `--cpu2 native` (E143, off by default; `emu/src/core/cores.mjs`, `emu/src/lab/cpu2.mjs`,
+`emu/test/test_cpu2.mjs`) the machine has a second MN103 core. It runs CPU 2 from its entry through its kernel to its
+idle loop at the play bring-up, then beside CPU 0 for the session, and its own AUD_LEVEL_MONITOR answers the Super
+Control Panel's posts, so S-CPU2 is lifted in those sessions (X). A default session creates no second core: golden is
+unchanged and a camapp session runs the same instructions in the same wall time within noise (X, the cost bullet).
+
+- **CPU 2's code and loader.** CPU 2 runs from the run-time image CPU 0's reset head lays out (cores spec 3.1 step 2);
+  no copy is made for it alone. Its entry is `0x50008f01`, whose run-time address CPU 0's reset head writes to
+  `0x98d00144` (cores spec 3.1 step 4). Its overlay segments 1..10 are its own boot job: USTART_L2 `0x50024572` copies
+  each one from the flash view (`0x50000020 + offset`) through the flash driver `0x500022c2` (`0x50024e6b`, which
+  then sets bit n-1 of `(0xa32df1f8)`), sets the segment's byte flag and posts CREQ `0x50036120(0, 0x50024eda, n)` to
+  CPU 0 (segment 8 to CPU 1, `0x5002480d`). The lab's image already holds every segment (I: the copies matter only to a
+  cold boot).
+- **Entry and reset state** (`0x50008f01..0x50008f78`): `and 0xf0ff,psw`; `(0x8070)` = 0x30, then 3; `(0x98100808)` =
+  16; sp `0x500027fc`, in its local RAM; `jmp` to its run-time copy; the UART mark "2" (`0x50000426`); its IVARs and
+  GxICR (`0x5000f068`); a spin while `(0xa3258360)` = 0; the 4 KiB window `0xa1a91000` -> `0x50002000`; the log mark
+  "oIs"; bank 2 `+0x514` = 0x40 (IRQ 325's level register, 4 * 325: level 6); `0x50009288` -> `0x50011867`: sp
+  `0x62ee947c + 0x200`, then the kernel body `0x50012826`. The first instruction clears the PSW's interrupt bits and
+  every other register is written before it is read, so the reset values do not matter (I; A-CPU2RESET).
+- **The machine (X).** Core switches swap the registers, the CPU's per-core fields, the interpreter's breakpoints and
+  TB records and two pages: each core's own page `0x0000..0xffff` (the `0x8000` system registers, with `(0x8050)` = 2
+  on CPU 2: A-COREPAGE, A-COREID) and CPU 2's local RAM at `0x50000000..0x5000ffff`, where CPU 0 keeps the flash view.
+  Bank 2 presents to CPU 2 (IRQ 324 from its own pending bits, IRQ 325 from its own kick: A-KICK; CPU 2 takes its
+  interrupts at any instruction: H-CPU2GATE). Inside CPU 0's runs CPU 2 takes a turn of up to 2,000 instructions after
+  every 2,000 of CPU 0's; at CPU 0's idle point it runs until it sleeps (A-INTERLEAVE). A stop at a halt pc (after a
+  store of 8 to `(0x8040)`, or the idle TCB's `bra` to itself) sleeps until bank 2 presents an interrupt CPU 2 admits.
+  An unknown device access, a kernel break or a task the lab does not list parks CPU 2, and the step that follows
+  stops the session.
+- **Stand-ins of the boot.** H-CPU2RELEASE: `(0xa3258360)` = 1 (CPU 0's reset head, `0x50000329`) and the tick magic
+  `(0x97f00088)` = 0x77777777 (CPU 0's init task right after its tick init, `0x5002ccdc`; H-BOOTTIME runs that tick
+  init, not the store: without it BOOT_CPU2 spun on `0x5003b654` for 5 million instructions, X). H-CPU2CACHE: the
+  store to `0x98100808` is skipped (the bus window's device knows only `+0x58`: a bus error, X). H-CPU2UART: the mark
+  "2" is skipped (no UART; `0x9870001c` is lab-stub space). K-BOOTSYNC2: CPU 2's part of the boot ring `0x50015a61`
+  returns at once. K-STARTBITS: the kernel-start barrier `0x50012367` runs natively after the stand-in ORs 0xb (CPUs 0,
+  1 and 3) into `(u16)0x97f00000`.
+- **The boot (X).** After H-IPIINIT, CPU 2 reaches its idle loop in 35,788 instructions: its kernel builds its 37
+  static tasks; the start `0x500119ab` dispatches BOOT_CPU2 `0x50008fbb`, which starts CPUCONN_CPU2, CPUCALL_CPU2,
+  CONTEST_CPU2 and USTART_L2, sets its done byte `0x97f00096`, finds segment 1's bit set (`0x50024de8(1)` would sleep
+  2 ticks at a time; S-BOOTSTAGE sets it) and calls `0x501ea881` -> `0x50038715` -> `0x500387eb`: the up magic
+  `0xa3193684` (`0x5003b542(5)`), `chg_pri(0, 70)` and the command loop (Idle below).
+- **First device accesses (X)**, in order: the us clock `0x98900284` (the log mark's time, `0x50002bfa`); bank 2
+  `+0x514` = 0x40 (`0x50008f72`); the ISC lock byte `0x97000000` (masks 2, then 1: the kernel's locks `0x50017bcb` /
+  `0x50017bd8`); bank 2 `+0x514` = 0 and `+0x884` = 1 (its INTC init `0x50008f7f`); bank 2 `+0x714`, IRQ 140 at level
+  5 (its tick: timer channel 3, which H-BOOTTIME started); the tick's ack `(0x98900400)` = 4 (`0x500311ed`). No
+  unknown device was reached (H-CPU2CACHE and H-CPU2UART aside).
+- **The first cross-core call it makes (X):** USTART_L2 (task `0x2013`) copying segment 1 calls cpu_conn kind 8
+  (twai_sem, through `0x5002d2e9`, return `0x5002d313`) on CPU 0's semaphore `0x81`, FLASH_CS1 in the name table, at lab
+  time 206,191,650 ns; the doorbell is bank 0 `+0x808` = 1 (`0x5002d6dc`), which CPU 0's IRQ 324 handler acks at its
+  idle point (`0x5002d851`). Only CPU 0's CPUCONN_CPU0 (`0x99`) serves the call, and the lab does not run it (its
+  starter is CPU 0's init task), so USTART_L2 waits for good: segments 2..10 are not copied and none of its CREQs is
+  made (X; I: the CPU 1 one for segment 8 would need CPU 1 as well).
+- **The first cross-core call it takes (X):** at H-AUDSTART, AUD_MAIN's OlyTaStCpu of AUD_LEVEL_MONITOR `0x200e` runs
+  natively (S-AUDCPU2 still answers AUD_WAKEUP `0x2017`): cpu_conn kind 9, bank 2 `+0x808` = 1 (`0x5002d6be`); CPU 2
+  takes IRQ 324 and acks it (`0x5002daab`), CPUCONN_CPU2 wakes and its proxy for CPU 0 (`0x5002cf2d`) starts
+  AUD_LEVEL_MONITOR `0x50aaa99e`; the result goes back on bank 0 `+0x808` = 2 (`0x5002d5d1`), CPU 0 acks it
+  (`0x5002d888`) and AUD_MAIN wakes. No kick (`+0x810`) was written in the session (X).
+- **Idle (D, X).** The command loop `0x5003883a..0x50038b32` reads only the CPU 1..3 command block
+  `0x97f0009c..0x97f00113` (ten arrays of one word per CPU 1..3, `0x97f0009c + 0xc * k + 4 * (core - 1)`; the cores
+  spec's `0x97f0019c` corrected); when the halt word `0x97f000fc[core - 1]` is set it stores 8 to `(0x8040)` every pass
+  (`0x50038b04`). BOOT_CPU2's own `0x50038666` sets that word to 1 at its start (`0x50038701`: the `mov 1,d1` of the
+  index computation is the value stored), so CPU 2 halts each pass, and sleeps at `0x50038b09` in the lab (X). Its tick
+  IRQ 140 wakes it about once per lab ms (X: 6,355 wakes over a 7 s session). Command 0x40001 sets the halt word and
+  0x40002 clears it; who writes the commands is ? (no CPU 0 store in a default session, X). H-CPU2POLL makes a pass
+  that leaves the block as the pass before found it sleep until a byte changes, for the loop without its halt.
+- **S-CPU2 natively (X for the posts and replies, D for the path between).** With CPU 2 running, the GUI's post
+  (`0x50aa9d4e`, every ~210 ms while the panel is shown) is left to it: IRQ 324 bit 8 on bank 2, the drain of ring
+  [2][0], `0x50aaa173`'s message 3 to AUD_LEVEL_MONITOR's queue, command 3 and its reply `0x50035afd(0, 0x60acbfb7, 0)`
+  (return `0x50aaad66`, from task `0x200e`, X), which CPU 0 takes at its idle point. `test_cpu2.mjs` checks every
+  post answered by that task, nothing left waiting, and the panel's frame and the 28 reply bytes at `0xa33da484` equal
+  to a default session's S-CPU2 ones; its control `cpu2-no-audmon` (the task stood in) leaves the GUI waiting, which the
+  step's check reports.
+- **Cost (X).** A default camapp session (open, 2 s, S1, S2, 0.8 s) runs the same 196,968,866 instructions to the same
+  lab time on master and the branch, in 8,110 and 8,027 ms (means of 3, alternated); `node emu/bin/test-pure.mjs` took
+  76.9 / 82.8 / 96.1 s on master and 83.4 / 88.6 / 82.0 s on the branch (load average 8 to 10: noise, no trend). With
+  `--cpu2 native` the session takes 8,176 ms against 7,840 ms without (+4%, means of 3, alternated); CPU 0 runs 4,983
+  more instructions (its IRQ 324 handlers) and CPU 2 about 8 million, nearly all its 1 ms ticks.
+- **Open, in order (I; Claude wall-clock).** (1) CPU 0's CPUCONN_CPU0 and CPUCALL_CPU0 natively (`act_tsk(0x99)`,
+  `act_tsk(0x9a)` as the init task does, with their proxies), so that USTART_L2 gets FLASH_CS1 and its CREQ runs
+  `0x50024eda(n)` on CPU 0 (K-CFLUSH and the per-segment hooks `0x501e60xx`, devices unknown): 3-6 h, with segment 8's
+  CREQ to the absent CPU 1 answered by a stand-in. (2) AUD_WAKEUP on CPU 2: its sound-IC list `0x50a62e27` reaches
+  PER_SIO, whose S-WM8946 seam is CPU 0's hooks: 2-4 h. (3) TAKE's CPU 2 queues: start MVR_MAIN `0x2002`, WB_MOV
+  `0x200f`, SDET `0x2010` through OlyTaStCpu as their starters would and record their first device accesses: 2-4 h,
+  then the movie engine per task. (4) OSD_DRAW_CPU2 `0x2015` with the GUI's message `0x510149a2` (the histogram): 2-4 h.
+  (5) Snapshots, the live debugger and traces with a second core are refused or untested: 1-2 h. (6) CPU 0's boot ring
+  and kernel start natively (K-BOOTSYNC, K-STARTBITS) need CPU 0's reset path in the lab.
+
 ### 4.7 SCPU, power, clock, on-board sensors and persistence
 
 - **Tasks (CPU 0, D):** PER_SCPU 0x7a `0x5005b424` (the request server: reads the data queue PER_SCPU_RECEIVE id 2

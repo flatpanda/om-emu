@@ -94,9 +94,9 @@ CPU 0 fills `0xa1a91000` from offset `0x1a6ffe0` (at `0x500001dc`); every core t
 | done byte | IRQ 325 attach (handler `0x50003faf` writes own `+0x814`); set `0x97f00094`; spin until `0x97f00094..97` are all 1 (`0x500006ec`) | set `0x97f00095` | set `0x97f00096` | set `0x97f00097` |
 | next | hardware and software timers (`0x500642dd`, `0x50058959`); USTART_L `0x2b` (`0x5002417a`); boot chain `0x50023eca` | wait for `(0x97f006fc)` = magic, written at `0x50024042` after CPU 0 starts the four SYS_WDT tasks | USTART_L2 `0x2013` = overlay loader (3.6) | AJ: flash read 0x20000 bytes `0x400a0000 -> 0xa34fd280`; MLS: mode-bank check `0x5003e0a1`; pis `0x50040aeb`; then `(0x97f00090)` = magic, which CPU 0's chain waits for at `0x500249d1`; USTART_L3 `0x300e` |
 | before the first overlay call | - | wait segment 1 (`0x50024de8(1)`), call `0x501ea85c` | same, `0x501ea881` | same, `0x501ea8a6` |
-| idle | OlyTaSE `0x5002c701`: chg_pri 70, then `(0x8040) = 8` loop `0x5002c756` | `0x50038715` -> `0x500387eb`: magic to `0xa3193680` (waited by CPU 0's USTART2 at `0x501e8ed6`), chg_pri 70, command loop on `0x97f0019c[0]` | same, `0xa3193684`, slot 1 | same, `0xa3193688`, slot 2 |
+| idle | OlyTaSE `0x5002c701`: chg_pri 70, then `(0x8040) = 8` loop `0x5002c756` | `0x50038715` -> `0x500387eb`: magic to `0xa3193680` (waited by CPU 0's USTART2 at `0x501e8ed6`), chg_pri 70, command loop on `0x97f0009c[0]`, halting every pass while `0x97f000fc[core-1]` is set, which the init task's `0x50038666` sets to 1 (`0x50038701`; X on CPU 2, hle-gaps 4.6.1) | same, `0xa3193684`, slot 1 | same, `0xa3193688`, slot 2 |
 
-The CPU 1..3 command loop serves 0x10001 (ter_tsk of the id at `0x97f001a8[core-1]`), 0x20001 (`0x50010501`), 0x20002 (`0x500105e9`) and several 0x3xxxx cases; who writes the command words is ?. Their tick ISRs call `0x500387b9`, which, when `0x97f001b4[core-1] = 1`, disables the own tick, writes 1 to bank `+0x900`, halts, and on wake writes 127 to `+0x900` and re-enables the tick (D); I: a CPU-0-commanded sleep of CPUs 1..3.
+The CPU 1..3 command loop serves 0x10001 (ter_tsk of the id at `0x97f000a8[core-1]`), 0x20001 (`0x50010501`), 0x20002 (`0x500105e9`) and several 0x3xxxx cases; who writes the command words is ? (no CPU 0 store in a default lab session, X). Their tick ISRs call `0x500387b9`, which, when `0x97f000cc[core-1] = 1` (set by command 0x20001; it acks with `0x97f000d8[core-1] = 1`), disables the own tick, writes 1 to bank `+0x900`, halts, and on wake writes 127 to `+0x900` and re-enables the tick (D); I: a CPU-0-commanded sleep of CPUs 1..3.
 
 ### 3.6 CPU 2 loads the overlays (D)
 
@@ -160,7 +160,7 @@ Rows send, columns receive. Constant-target sys_callrequest sites have a D targe
 
 | from \ to | CPU 0 | CPU 1 | CPU 2 | CPU 3 |
 |---|---|---|---|---|
-| CPU 0 | - | task starts (D); focus requests `0x5090fc6d`, `0x5090fd18`, `0x5090fd75`, `0x5090fddb`, `0x5090fe3e` (I: the requester `0x5090fc5c` then waits on CPU 0 flag 0x92); FCS-IP jobs `0x50932401`, `0x509325b8`, `0x5093267a`, `0x50932823` (sender I); AF debug copy `0x5099e808` | task starts (D); audio commands to AUD_LEVEL_MONITOR's dtq `0x50aa9d4e` (Super Control Panel `0x50aa9d43`, I: CPU 0), `0x50aadc63`, `0x50aae020`, `0x50aaea9e`; OSD draw message to `0x2013` via cpu_conn (`0x510149a2`, caller GUI wrapper `0x50aea03a`; I: CPU 0) | task starts (D); `0x97f0019c` command block and window commands (reader D, writer ?) |
+| CPU 0 | - | task starts (D); focus requests `0x5090fc6d`, `0x5090fd18`, `0x5090fd75`, `0x5090fddb`, `0x5090fe3e` (I: the requester `0x5090fc5c` then waits on CPU 0 flag 0x92); FCS-IP jobs `0x50932401`, `0x509325b8`, `0x5093267a`, `0x50932823` (sender I); AF debug copy `0x5099e808` | task starts (D); audio commands to AUD_LEVEL_MONITOR's dtq `0x50aa9d4e` (Super Control Panel `0x50aa9d43`, I: CPU 0), `0x50aadc63`, `0x50aae020`, `0x50aaea9e`; OSD draw message to `0x2013` via cpu_conn (`0x510149a2`, caller GUI wrapper `0x50aea03a`; I: CPU 0) | task starts (D); `0x97f0009c` command block and window commands (reader D, writer ?) |
 | CPU 1 | focus replies `0x5090fccc..0x5090fe62` (called from CPU 1 focus code `0x50966d8a`/`0x50966394`/`0x50966e08`, I); FCS-IP replies `0x5093246b`, `0x509325f7`, `0x509326be`, `0x5093294e` (D chain: the tail of the fns posted to CPU 1); boot done byte (D) | - | ? | ? |
 | CPU 2 | overlay notices, 9 of 10 (D); AUD_LEVEL_MONITOR reply `0x50aaad5f` sets CPU 0 flag 0xba LEVEL_MONITOR_UPDATE (D); AUD_WAKEUP `0x50a62d6b` sets flag 0xf9 (D); rec `0x50573215` -> CPU 0 object 0x11 (I: CPU 2 rec code); boot done byte and magic (D) | overlay notice for segment 8, `0x5002480d` (D) | - | ? |
 | CPU 3 | boot magic `(0x97f00090)` (D); no constant-target post found (?) | ? | ? | - |
@@ -207,7 +207,7 @@ Which cores contend for each one is ?. CPU 0 also guards the OSD message to CPU 
 | `0x97f00094..97` | per-core init-done bytes |
 | `0x97f00098` | written 1 by CPU 0 UART init |
 | `0x97f000c0..c8`, `0x97f000d8..e0` | window commands to CPUs 1..3 and their acks |
-| `0x97f0019c..0x97f001d0` | command block CPU 0 -> CPUs 1..3 (command, task id at `+0x0c`, sleep request at `+0x18`) |
+| `0x97f0009c..0x97f00113` | command block CPU 0 -> CPUs 1..3, ten arrays of three words `[core-1]` (D, the loop `0x5003883a..0x50038b32`): `0x9c` command (0x10001: ter_tsk of the id at `0xa8`, then `0xb4` = 1), `0xc0` (0x20001: `0xcc` = 1, the tick ISR's sleep request, acked at `0xd8`; 0x20002: `0xd8` = 0), `0xf0` (0x3xxxx cases; 0x40001 / 0x40002 set / clear the halt word `0xfc`), `0xe4`, `0x108` (written every pass) |
 | `0x97f0027c` | DSP service shared bits |
 | `(u16)0x97f00290` | VSC change word (`0x500251f3`) |
 
@@ -230,13 +230,14 @@ The lab runs one MN10300 core as CPU 0 (`(0x8050)` written 0). Per kernel spec 5
 | H-IPIINIT, A-IPI | `0x5002ce4d` runs natively; `+0x808` pending bits OR / read, `+0x80c` clears; bank 0 drives IRQ 324, banks 1..3 drive nothing and are logged | four handlers on four cores |
 | S-CPU2 | serves the GUI's one allow-listed post (`0x50aa9d4e`, return `0x50aa9d55`) as task `0x200e` command 3 and posts the reply to ring [0][2] | AUD_LEVEL_MONITOR on CPU 2 with live level data; its swap path `0x50aaad0e` |
 | K-CFLUSH | returns at once | the handshake in 6.3 |
+| `--cpu2 native` (2026-11-09, off by default) | a second MN103 core runs CPU 2 from its entry `0x50008f01` to its idle loop's halt `0x50038b09`, then beside CPU 0 (own registers, `0x0000` page and local RAM at `0x50000000`; bank 2 presents to it; turns of 2,000 instructions); stand-ins H-CPU2RELEASE, H-CPU2CACHE, H-CPU2UART, K-BOOTSYNC2, K-STARTBITS; S-CPU2 lifted, AUD_LEVEL_MONITOR native (hle-gaps 4.6.1) | CPUs 1 and 3, CPU 0's boot ring and kernel start, CPU 0's CPUCONN_CPU0 / CPUCALL_CPU0, the overlay loader past segment 1's flash lock |
 
 All overlay segments are present in the lab image, so CPU 2's loader role is not needed there (I).
 
 What modelling each other core would take (I unless marked):
 
 - **Common to any second core:** a second emulated CPU with its own `0x8000` page (`0x8050` core id, IVAR, GxICR `0x89xx`, `0x8070`), its own local RAM at `0x50000000` if that window is per core (3.4), its INTC bank driving that CPU's request line, `+0x810` raising its group-22 level-6 request, the ISC semaphore byte operations atomic across cores, and the `0x97f00000` block shared. With those, K-OTHERCPU, K-BOOTSYNC and the kernel-start barrier could run natively instead of being stood in for, and the boot could start at the CPU entries (3.2) with the other cores' init tasks.
-- **CPU 2:** the only core the lab's GUI path already reaches (D: S-CPU2's post; the OSD message `0x510149a2` -> `0x2013` is reached from the GUI wrapper `0x50aea03a`). Running it needs its kernel (37 tasks, most of which wait for movie or audio hardware), the audio level source behind AUD_LEVEL_MONITOR, and the overlay loader skipped or given a flash model. This is the natural next core: it would replace S-CPU2 and serve OSD_DRAW_CPU2 natively.
+- **CPU 2:** the only core the lab's GUI path already reaches (D: S-CPU2's post; the OSD message `0x510149a2` -> `0x2013` is reached from the GUI wrapper `0x50aea03a`). Running it needs its kernel (37 tasks, most of which wait for movie or audio hardware), the audio level source behind AUD_LEVEL_MONITOR, and the overlay loader skipped or given a flash model. This is the natural next core: it would replace S-CPU2 and serve OSD_DRAW_CPU2 natively. Round 1 (`--cpu2 native`, hle-gaps 4.6.1) runs its kernel and idle loop and retires S-CPU2 there (X); the loader stops at CPU 0's FLASH_CS1 semaphore and OSD_DRAW_CPU2 is not started.
 - **CPU 3:** detection needs image data and the engines behind IRQs 278/279/286/287; for the GUI the visible part would be DISP_FRAME (woken by flag 0x3001 from `0x5002588e`), whose output is ?.
 - **CPU 1:** Wi-Fi, BLE and PTP-IP end at the A53 over ISC, which is not modelled; the AV back end needs the codec hardware. Little GUI value.
 
@@ -253,7 +254,7 @@ What modelling each other core would take (I unless marked):
 1. **Which core takes each shared IRQ.** Attach is exclusive (section 4), so the enable calls (`0x50054012`, `0x5002ea93`) for 288-302, 307-309, 53/54 and 323-326 decide delivery; not scanned.
 2. **Which task executes the GUI creator `0x510609ce`.** Every candidate (CA_MAIN, HIGHLEVEL_MAIN) is a CPU 0 task, so "GUI on CPU 0" is I, not D.
 3. **What OSD_DRAW_CPU2 command 1 computes** (per-pixel arithmetic over a rectangle) and which GUI paths reach `0x50aea03a`; this decides whether a lab GUI session needs CPU 2.
-4. **The CPU 0 -> CPUs 1..3 command channels** (`0x97f0019c..`, `0x97f000c0..`): who writes them and when (standby, DRAM clock change), and what memory `0x97f00000` is.
+4. **The CPU 0 -> CPUs 1..3 command channels** (`0x97f0009c..`, `0x97f000c0..`): who writes them and when (standby, DRAM clock change), and what memory `0x97f00000` is.
 5. **Hardware meaning of the per-core registers:** `0x98d00140..148`, the `0x988003xx`/`0x988004xx` bits (shared with the CA53 start), bank `+0x810`/`+0x814`/IRQ 325, `+0x514`/`+0x884`/`+0x900`, and `0x98100000 + X`.
 6. **What places the image head** at run-time `0x60021020` before reset, and what the flash driver's `0x50000020 + offset` addresses refer to.
 7. **Object types 3..5** in the name table (`*_RECEIVE`, `MPF*`, `TAKE_UTIL_INTR_Q`, OSDDRAW_CPU2): OlyQeRd's cross-core path is kind 2 trcv_mbf, so type 5 is probably message buffers (I); the type-3 table has a duplicate index (`0x1004`), so the type numbering past 2 is unreliable. The audio dtq `0x2001` is a raw kernel dtq (`0x500150fc`, `0x50010e06`); its name is ?.

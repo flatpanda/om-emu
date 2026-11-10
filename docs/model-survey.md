@@ -1749,6 +1749,109 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    area (E122 `0x5030bccb` -> `0x5030bda9` with five words 0, D, X), and no TFT session sets one, so the driver passes
    the controller's events as on E144 (finding 75); on E122's EVF the application's Set_Touch_Panel_Ctrl_Area runs
    (finding 40), and touch on the EVF is not tried.
+96. **The OSD planes' order is the GUI's order code** (2026-11-10, `src/dev/vsccompose2.mjs` ORDER_CODES,
+   `docs/om1-vsc-spec.md` section 12; corrects findings 38 and 66's reading of `+0x1a4`). The word's low bits are the
+   OSD order code the display's layer-custom path writes from its record's osd_mixorder (D): on E122 the setter
+   `0x50308b76` (`and -8; or`, the low 3 bits), called at `0x5030459c` when the record's +40 is not 255, its API's
+   converter mapping 0..5 and 255 and asserting on another value ("osdMixOrder", `0x502ca802..0x502ca849`); E118
+   `0x502e0f3a` and E120 `0x502d6058` the same (called at `0x502dd1d2`, `0x502d1de8`); E144's `0x501872ac` replaces
+   the low nibble, called at `0x50183bc3` for a value of 5 or less. The code is the GUI's: GPISetOsdOrder (E122
+   `0x50bac52d`, its trace "[GUI gpi] GPISetOsdOrder [%d, %d, %d]"; E143 `0x510bd77e`) orders the three layers and its
+   mapper (E122 `0x506c1680`, E143 `0x50ae9870`) takes the code from six {code, plane, plane, plane} records, 0 {2, 1,
+   0}, 1 {1, 2, 0}, 2 {2, 0, 1}, 3 {0, 2, 1}, 4 {1, 0, 2}, 5 {0, 1, 2} (E122 `0x60978f77`, E143 `0x60df8352`; the same
+   24 bytes in E144, E118, E120 and E130, X), and its update puts the code in the display's custom record when its
+   flag is set (`0x506c0b7b..0x506c0bbe`, D). The screens choose it through a mode function (E122 `0x50bb5922`, E143
+   `0x510c9903`): mode 2 code 2, 3 code 0, 4 code 5, otherwise code 3 (D); of its 154 call sites on E122 152 pass 1,
+   one 4 (`0x50c19a67`) and one 2 (`0x50c37218`), and E118 and E120 have the same 151, 1, 1 of 153 (X: each site's
+   `mov n,d0`), so 3, the code the opens write, is the GUI's own default. Which end of a record is the top is not in
+   the code: reading a record as the planes in their order is I (E144 writes 2 with GUI layer 2 in OSD1, E139 and the
+   family 3 with layer 0 there, and only that reading gives both the GUI layers 0, 2, 1 from one end, the order the
+   GUI's shared table and drawing are made for), and the first plane being the top one is I from the layers' contents
+   (X: the three buffers in a play session): at the menu GUI layer 1 holds an opaque black fill and the rows' grey
+   bars (245,060 pixels of index 3 on E139 and E144) under the rows' text on layer 2, and at E122's clock warning
+   layer 1 is the 25 / 31 black dimming under the clock and Y/M/D on layer 2; layer 0 is transparent in every frame
+   looked at (E122's TFT and EVF at the start, S1, the menu, PLAY and INFO; E139's and E144's menus). So the
+   compositor draws code k's planes in its record's order from the top on both kinds (OSD1, OSD3, OSD2 for 3; OSD3,
+   OSD1, OSD2 for E144's 2), GUI layer 1 at the bottom, and refuses a word that is no code 0..5. Before, it drew GUI
+   layer 0 at the bottom and took 3 and 2 only (kind 3: 3); the two orders differ only where layer 0 has content, so
+   no frame looked at changed (X: each composite drawn both ways in one session and compared pixel for pixel, all
+   equal: E122's TFT at the start, S1, S2, PLAY, INFO, PLAY, MENU, DOWN and MENU and its EVF through PLAY, INFO and
+   PLAY, E118's and E120's TFT on the same path, E139's and E144's menus). What would settle the direction directly: a
+   screen of the camera with layer 0 drawn over layer 2, taken from its panel. `test/test_vsc3.mjs` drives every code
+   on E122's board (54 checks with the rest).
+97. **OSD1's and OSD2's pixels of 32 or more** (2026-11-10, `docs/om1-vsc-spec.md` section 12). The firmware gives the
+   two 32-entry planes no colour for such a pixel: the palette set uploads 32 entries for GUI layers 1 and 0
+   (`0x50304cb5..0x50304d73`, `0x50304d87..0x50304e47`; 128 of layer 2's 256) and the GUI's palette setters refuse an
+   index at or above the layer's bound, the halfwords {32, 32, 256} at `0x60d46130` (`0x50a5c9c4..0x50a5c9eb`, D). The
+   writer of `+0x700..+0x7ff`, the one store area not read for the planes, fills 8 entries from colours of its own
+   (`0x50307b33`; its callers' loops end at `cmp 8`, `0x50303a7d` and `0x50304458`, D), not a third group. Every OSD1
+   and OSD2 pixel in E122's sessions was below 32 (X: 31, 5 and 4 at the start, S1, the menu and PLAY, TFT and EVF).
+   The compositor keeps refusing a pixel of 32 or more (PAL_FIELD); what the chip does with one is ?, and only the
+   panel's picture with such a pixel written into the plane would settle it.
+98. **The OSD level words** (2026-11-10, `docs/om1-vsc-spec.md` section 12). E122's opens write `0x100` to OSD7..OSD9
+   (`0x503097b7..0x503097c6`); the one writer of a percentage, `0x502f93f9` (`2 floor(p 128 / 100)`), is called only
+   by the EVF panel's command scheduler `0x502f946a`, with a byte of the command record (`0x502f968b`, `0x502f986e`,
+   `0x502f99f9`), and from the open's command list with 70 (`0x502f9b11`); with the byte `0xa1c5a811` set it writes
+   channel 1's `+0x22c4` and `+0x22c8` instead (D). E120 has the writer (`0x502c6d81`, five callers) and channel 1's
+   two words (`0x502d7787`); E118 loads none of the five addresses (X, a byte scan), as finding 48 found for channel
+   0. On E122's EVF the words hold `0xb2` after the open (finding 35), `0xcc` (80 %) at the shooting screen and after
+   S1, and `0x100` at PLAY (X), so the scheduler lowers the OSD's level over the live view and restores it for
+   playback; that the level is the OSD's opacity is I (its percentage, and API names with "OSD_Trans"), and how the
+   chip blends with it is not in the code (the code computes the level and reads it back only at its own stores). The
+   compositor keeps drawing any level but 0 as full, and E118's unwritten words as full with the ASSUMED bit. What
+   would settle them: E122's or E120's EVF panel input taken over a known OSD colour and live view at `0xcc` and at
+   `0x100`; for E118, its words read back on the camera after its open (their reset value).
+99. **S-MODACK's module queues from each body's API target table** (2026-11-10, `src/fw/facts.mjs` apiTargets, fact
+   `api`, `src/lab/camapp.mjs` module_queues; answers finding 43's next step). The application's API sender posts a
+   request to the queue id its target table holds at the target's index (docs/om1-shutter-spec.md 2.2): the last `add
+   imm32,An` before its OlyQeWr call is the table and `mov (An),Dm` its entry, and a `mov imm32,a0; mov (Dn,a0),d0`
+   before it loads the target's word of the table after it (E143 `0x503eb9b2` and `0x503eb984`, E122 `0x502cd985` and
+   `0x502cd942`, D). A placed rule reads both from the sender's return (the port's place of E143's `0x503eba07`) and
+   gives the table, its count and E143's module queues by name at E143's targets: 44 targets on E143, 43 on E118, E122
+   and E125, 42 on E120 (no C3D target, 42), 44 on the 14 others (X). Each entry is the queue its name in the
+   object-name table names on all 19 (X). On the family the five queues finding 43 found are named so: XTC_APP_EXEC
+   `0x80`, TFT_EXEC `0x6e`, LENS_COMMAND `0x34`, FCS_EXEC `0x1e`, PWR_EXEC `0x86` (the port's words read `0x7a`,
+   `0x68`, `0x31`, none and `0x80` or none); the words were wrong on ten other bodies too (E146 and E147 three, E145
+   five, E134 and E125 four unplaced, E129 and E132 three, E137, E133 and E130 one, FCS_EXEC unplaced). S-MODACK now
+   answers the table's queues and PC_PD_CMD_EXEC, which no target names, by its word where the port places it: the
+   queue its name names on the seven bodies that hold the name (E143, E146, E147, E144, E148, E139, E134),
+   REC_EXEC_PROGRESS and FMEMEXEC on E137 and E125, which hold none (not changed), and on the ten others, which hold
+   none either and leave the word unplaced, no queue where the lab had read it as id 0 (X). E143's set is unchanged
+   (checked against its words at the start). On E122's TFT path through the menu the API sender posted once to a
+   module queue, 104 (TAKE_FUNC by the table and by the port's word alike), and to none of the five (X);
+   `bin/modelcheck.mjs` gives every body and panel the lines it gave before (X: 31 runs, each step's state, card
+   count, frame size and count box the same).
+100. **Who releases the family's display syncs** (2026-11-10, `src/lab/camapp.mjs` S-DISPSYNC's text; D on E122, the
+   same sites on E118 and E120, X). The application's CameraCommon::setDispSync (OlyHfwOpeCamCom.cpp, its call of the
+   setter at `0x5069cc6b`) sets a panel's sync word, while which the GUI's updates wait (finding 39). 25 of the 26
+   other calls of the setter `0x50695318` clear it, among them: DevDpc_DispCtrlBase's imageUpdate() and imageUpdate2()
+   (`0x50917657`, `0x50917729`, `0x50917794`, `0x509177b9`) after the device's image update (`0x50917364`), once
+   api_disp_Disp_Get_Wait_State (`0x502ca48a`) answers 0 for the device ("SyncUpdate!"); setThroughPermit()
+   (`0x50917e32`, `0x50917e88`, `0x50917f27`); the still shooting component's rcvShtDrawThrough() ("AsyncThroughPermit
+   ON", `0x507e3b7c`, which restores the word after its draw, `0x507e3bab`); the sequence parts' stopRecView beside
+   startPeaking (`0x5081199e`, `0x508119c2`, the image sync after each, finding 39); the multi-exposure effect's start
+   and stop and the level gauge's sequence, and the layer-custom paths (`0x5076a2af`, `0x5076a586`). So the camera
+   releases the start's sync at the display's first image update, the through image's (I: that is what
+   DevDpc_DispCtrlBase updates in shooting). The lab's hold is right in what it holds and commits (the GUI's pending
+   buffers, committed by an image sync of the kind the pending state takes, as the image update's request commits
+   them, finding 39) and differs in when: it releases at the end of the step in which the request came, where the
+   camera's release waits for its first through-image frame, a time the lab, which runs no through image, cannot place
+   (I). The panels: imageUpdate() clears the device it updates, S-DISPSYNC both, as stopRecView does.
+101. **The family's through permit, image update and palette request take no device mask** (2026-11-10,
+   `src/lab/display.mjs` DEVICE and deviceMask; answers finding 40's last sentence). E143's lab helpers pass E143's
+   device mask (TFT 1, EVF 2) to the through permit `0x501c40d0`, the IMG fit `0x501df31a` and the palette request
+   `0x503e52c7` (H-RESEND, whose DISPLAY cmd 4 carries it), all three unplaced on the family. The family's forms (D,
+   E122): api_disp_Set_Through_Permit (`0x502c8f96`) takes a record {u8 permit, u32 device} and stores the permit in
+   one byte, `0xa1c5a77d` (`0x502f6241`), for the device 2 alone, which api_info_Get_DisplayCurrent (`0x502d029b`)
+   answers from the output-device property 4014 without its bit 16, or 0 with it (`0x502d02da..0x502d02f0`; the main
+   display, TFT or EVF, and not HDMI, I); its callers pass 2 (`0x5076a236`, `0x507e3f33`); api_disp_Disp_Update_Image
+   (its traces "device_type", "img_handle[0..2]", "through_permit" from `0x603f8384`) and
+   api_disp_Disp_Update_Osd_Color_Pallet (`0x502ca1d6`, "aDeviceType", 0..2) take a device type, not a mask. E118 and
+   E120 hold api_disp_Set_Through_Permit and api_disp_Disp_Update_Image (X; E120 not the palette update's
+   "aDeviceType" trace, its display API taking records, finding 49). So the family has no value for E143's EVF mask 2:
+   DEVICE's masks are null on the kind-3 bodies and the three helpers (and play's TH live view) refuse there with that
+   reason, where they had reached an unplaced function; none of them runs on the family's paths (X: modelcheck's E118,
+   E120 and E122 runs unchanged).
 
 
 

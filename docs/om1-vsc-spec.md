@@ -561,30 +561,58 @@ notation) was found to share and not share with kind 2 (2026-10-30, `docs/model-
   (`docs/model-survey.md` finding 39; the lab's S-DISPSYNC sends the image sync of kind 0, which commits a pending OSD).
   E118's commit `0x502e2174` and E120's `0x502d72a7` are the same function; their GUIs reach it through a display sync
   module of another form (findings 48 and 49: E118's API with no id on its image sync, E120's taking records), which
-  the same release commits (2026-10-30).
+  the same release commits (2026-10-30). The camera's own release (2026-11-10, finding 100, D): the device's sync word
+  is cleared after an image update of the display control device (DevDpc_DispCtrlBase's imageUpdate(), E122
+  `0x50917657`, once api_disp_Disp_Get_Wait_State `0x502ca48a` answers 0), and by its setThroughPermit() and the still
+  shooting component's rcvShtDrawThrough(); the lab, which runs no image update, releases at the step's end.
 - **Formats:** `0x1b0` = `0x111` and `0x1b4` = `0x11` at every open (`0x503097fb..0x50309845`), E143's OSDFMT1 and
   OSDFMT2 values, where kind 2 keeps its mix word `0x111111` at `0x1b0`; `0x1a4` = 3, `0x1a8` = `0x1100710` (but for
   code 4), `0x1ac` = `0x10f` are written too; the meanings of `0x1a8` and `0x1ac` are ? and the compositor does not
   read them.
-- **OSD stacking (`0x1a4`, kind 2's OSD1; 2026-11-02, `docs/model-survey.md` finding 66):** the OSD-plane open writes
-  3 on every ported body of kinds 2 and 3 but E144 and E148, which write 2 (E144 `0x50022fbf`, E139 `0x500230f2`; a
-  setter, E144 `0x501872ac`, replaces its low nibble with a byte of the device's record, D). The commit's choice of
-  word follows it: E139's takes OSD1's address from the display record's osd word 2 (`0x501889f9`), E144's from word
-  0 (`0x50187e33`, D), so with 3 OSD1 shows GUI layer 0 and with 2 OSD3 does (X: the registers at the shooting
-  screen of all 16 bodies). The compositor reads the word as the planes' stacking, 3 OSD1 at the bottom and 2 OSD3 at
-  the bottom, so that GUI layer 0 is at the bottom on both (I: with OSD3 on top E144's menu background, on layer 0,
-  hid its rows, X); another value is refused, and kind 3, whose palettes are fixed to their planes, takes 3 only.
+- **OSD order (`0x1a4`, kind 2's OSD1; 2026-11-02, `docs/model-survey.md` finding 66; read as an order code
+  2026-11-10, finding 96):** the OSD-plane open writes 3 on every ported body of kinds 2 and 3 but E144 and E148, which
+  write 2 (E144 `0x50022fbf`, E139 `0x500230f2`, E122 `0x503097d7`, D). The commit's choice of word follows it: E139's
+  takes OSD1's address from the display record's osd word 2 (`0x501889f9`), E144's from word 0 (`0x50187e33`, D), so
+  with 3 OSD1 shows GUI layer 0 and with 2 OSD3 does (X: the registers at the shooting screen of all 16 bodies). The
+  word's low bits are the OSD order code the layer-custom path writes from its record's osd_mixorder: kind 3's setter
+  `0x50308b76` replaces the low 3 bits (`and -8`), called at `0x5030459c` when the record's +40 is not 255 (E118
+  `0x502e0f3a`, E120 `0x502d6058`), kind 2's `0x501872ac` the low nibble, called at `0x50183bc3` for a value of 5 or
+  less (D). The code is the GUI's: GPISetOsdOrder (E122 `0x50bac52d`, E143 `0x510bd77e`) builds an order of the three
+  layers and takes its code from a table of six {code, three planes} records (E122 `0x60978f77`, E143 `0x60df8352`, the
+  same 24 bytes in E144, E118, E120 and E130, D): 0 {2, 1, 0}, 1 {1, 2, 0}, 2 {2, 0, 1}, 3 {0, 2, 1}, 4 {1, 0, 2}, 5
+  {0, 1, 2}; its update puts the code in the custom record (`0x506c0b7b..0x506c0bbe`), and 152 of its 154 screens ask
+  its mode 1, code 3 (mode 4, code 5, and mode 2, code 2, once each; D on E122, the same counts on E118 and E120, X).
+  The compositor reads a record as the planes from the top (I): E144's code 2 with layer 2 in OSD1 and the others' code
+  3 with layer 0 there both give the layers 0, 2, 1 from one end, which no other reading of the records does, and the
+  GUI's layer 1 holds the menus' opaque background (E139, E144) and the clock warning's dimming (E122) under a figure
+  on layer 2 (X: the planes' contents), so layer 1 is at the bottom and layer 0 on top. With code 3 the composite from
+  the top is OSD1, OSD3, OSD2 on kind 3; a word that is not a code 0..5 is refused (ORDER). Until 2026-11-10 it drew
+  GUI layer 0 at the bottom (codes 3 and 2 only, kind 3 code 3 only), which differs only where layer 0 has content: it
+  had none in every frame looked at (X: E122 TFT and EVF, E139, E144). What would settle the direction directly: a
+  screen of the camera with layer 0 drawn over layer 2, captured from the panel.
 - **Level:** OSD7..OSD9 (`0x2e0..0x2e8`) = `2 floor(p 128 / 100)` for p percent (`0x502f9408..0x502f9427`): E143's
-  PLANC form, `0x100` at 100 %; the built-in EVF's 70 % gives `0xb2`, E144's EVF has `0xcc` (X). The compositor draws
-  any level but 0 as full on both kinds; E143's refuses a PLANC other than `0x100` (section 3), and what a lower level
-  does is ? on all three. E118's code names no level word (its open `0x502e1b48` stores none and no word of its image
-  holds the three addresses, X; E120's sets them as E122's, `0x502d6c9c`): the rule `vscLevels` reads this per body
+  PLANC form, `0x100` at 100 %; the built-in EVF's 70 % gives `0xb2`, E144's EVF has `0xcc` (X). The opens write `0x100`
+  (`0x503097b7..0x503097c6`); the one writer of a percentage, `0x502f93f9`, is called only by the EVF panel's command
+  scheduler `0x502f946a` with a byte of its command record (`0x502f968b`, `0x502f986e`, `0x502f99f9`; the open's list
+  70 at `0x502f9b11`), and with the byte `0xa1c5a811` set it writes channel 1's two words `+0x22c4` / `+0x22c8` instead
+  (D; finding 98). On E122's EVF the level is `0xb2` after the open, `0xcc` (80 %) at the shooting screen and `0x100`
+  at PLAY (X). The compositor draws any level but 0 as full on both kinds; E143's refuses a PLANC other than `0x100`
+  (section 3), and what a lower level does is ? on all three: the code computes it and reads it back only at its own
+  stores. What would settle it: E122's or E120's EVF panel input captured over a known OSD colour and live view at the
+  shooting screen (`0xcc`) and at PLAY (`0x100`). E118's code names no level word (its open `0x502e1b48` stores none
+  and no word of its image holds the three addresses, X;
+  E120's sets them as E122's, `0x502d6c9c`): the rule `vscLevels` reads this per body
   (`board.vsc.levels`), and on a body whose code names none the compositor draws each plane at the full level with the
   plane's bit in the header's ASSUMED word and a note (what the chip does with its unwritten level word is ?;
   finding 48, 2026-10-30).
 - **Pixel index:** OSD3's low 7 bits (I, as kind 2: layer 2's fill 255 takes entry 127, transparent, X); OSD1 and
   OSD2 index 32 entries, and a pixel of 32 or more is refused (PAL_FIELD, not drawn): no code read says what the chip
-  does with it (?).
+  does with it (?). The firmware gives those planes no such pixel's colour: the palette set uploads 32 entries for GUI
+  layers 1 and 0 (`0x50304cb5..0x50304d73`, `0x50304d87..0x50304e47`) and the GUI's palette setters refuse an index
+  at or above the layer's bound, {32, 32, 256} at `0x60d46130` (`0x50a5c9c4..0x50a5c9eb`, D); every OSD1 and OSD2
+  pixel in E122's sessions was below 32 (X: 31, 5 and 4 at the start, S1, the menu and PLAY on the TFT and the EVF;
+  finding 97). What would settle it: the panel's picture with an OSD1 or OSD2 pixel of 32 or more (a test pattern
+  written into the plane), since no drawing of the GUI was seen to write one.
 - **Device codes:** the DISPLAY OPEN's parameter is a byte of two device codes, the main VSC's in the low nibble and
   the sub VSC's in the high one (`0x502f6af7`), named by `0x502fbf76`: 1 TFT, 2 NTSC, 3 PAL, 4 HDMI, 5 VF-2, 6 BI_EVF,
   13 VF-3, the others HDMI modes. Code 2 times the channel at 262 lines of 858 (`0x50302567`), writes the encoder

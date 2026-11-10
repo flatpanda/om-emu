@@ -377,18 +377,21 @@ the survey table.
   on the family as on the other bodies, its EVFs too (finding 94; `test/test_playinfo.mjs` takes them on the 19 since
   2026-11-10): E118's never waited for the line compare (finding 95); the
   MN103's DIVU by 0 in E118's record time, which divides by a frame rate that is 0 before a movie take on the camera
-  too (S-MOVRATE, finding 59: a hardware capture would settle it, as for E144's); S-MODACK's module queue ids, five of which the port's words read as another
-  queue's (PWR_EXEC `0x86` by name; no request to them seen on the three's paths, findings 43, 55), to be read from
-  the API target table once a start sends to one; how long the touch controller takes to raise its INT, which
+  too (S-MOVRATE, finding 59: a hardware capture would settle it, as for E144's);
+  how long the touch controller takes to raise its INT, which
   S-TPINTWAIT gives at the wait's first poll (finding 54, ?; E118's inline waits since finding 86); without it the
   wait would now cost its 150 ms timeout, not 300 s, since the us clock runs on lab time from the reset (2026-10-31,
   findings 63, 64). Touch runs on the three since 2026-11-10 (findings 84 to 89, "Touch on the E118 family" above).
-  E122's EVF start opens device code 6, BI_EVF (finding 35). Open in the kind-3 compositor (findings 36, 38): what
-  OSD1's and OSD2's pixels of 32 or more do (refused, PAL_FIELD), the planes' order on the chip (OSD3, GUI layer 2,
-  drawn last, I), and what an OSD level below `0x100` does (the EVF's `0xb2` is drawn as full, as E144's `0xcc`).
-  When the camera releases the family's display syncs (I: with the through image, which the family does not run); what
-  the chip does with OSD level words the code does not write (E118's, drawn as full, finding 48, ?). The lab's other EVF masks (the through permit,
-  the IMG fit, H-RESEND's check) are still E143's 2 on the family, not met by its starts (finding 40).
+  E122's EVF start opens device code 6, BI_EVF (finding 35). Since 2026-11-10 (findings 96 to 101): the OSD planes
+  are drawn in the order code `+0x1a4` holds, the GUI's (code 3, from the top OSD1, OSD3, OSD2: GUI layer 1 at the
+  bottom; which end is the top is I from the layers' contents, finding 96); S-MODACK answers the module queues of each
+  body's API target table, read by a rule (finding 99); the camera releases a display sync at the display's next image
+  update (D, finding 100), which the lab's release at the step's end stands in for; the family's through permit, image
+  update and palette request take no device mask, so the lab's E143 masks are refused there (finding 101). Open in the
+  kind-3 compositor: what OSD1's and OSD2's pixels of 32 or more do (refused, PAL_FIELD; the firmware gives them no
+  colour, finding 97), what an OSD level below `0x100` does (the EVF's `0xb2` and `0xcc` are drawn as full, finding
+  98) and what the chip does with the level words E118's code does not write (drawn as full, finding 48, ?); each needs
+  the panel's picture (findings 97, 98 name what to take).
 - **S-PANELDONE's gate:** on the E144 family's board it answers every display run's wait on the panel flag, also on
   E139, E134, E125 and E130, whose waits ran natively before with the same results (X). Read which of those waits find
   the flag already set, and answer at once only the waits that would otherwise block, as the TG-5's completion wait

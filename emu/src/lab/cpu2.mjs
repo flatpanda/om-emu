@@ -20,11 +20,13 @@
 //                  for CPU 2 (0x5002cf6e) allowed: CPU 2's cpu_conn calls on CPU 0 objects are then served natively
 //   H-CPU2LOADER   USTART_L2 (0x2013, the overlay loader BOOT_CPU2 starts) returns from its entry at once: its copies
 //                  go through the flash DMA 0x98d00200 (0x50001c4c), which the lab does not model, and its CREQs run
-//                  the segments' constructor tables (0x50024eda -> 0x501e60xx) the lab's bring-up has run; what else
-//                  it writes only boot code the lab does not run reads (D); the control cpu2-loader runs it
-//   H-CPU2TASKS    the CPU 2 tasks of CPU2_STARTS started as CPU 0's boot stages start them (each module init the
-//                  stage calls just before, natively on CPU 0, then OlyTaSt from the lab task, natively to core 2);
-//                  the stages' other steps between are not run
+//                  the segments' constructor tables (0x50024eda -> 0x501e60xx), on CPU 0 those the lab's bring-up
+//                  runs (segment 8's, on CPU 1, the lab does not run); the only readers of its byte flags' addresses
+//                  are boot code the lab does not run (D), and whether code the lab runs depends on its other writes
+//                  is ?; the control cpu2-loader runs it
+//   H-CPU2TASKS    the CPU 2 tasks of CPU2_STARTS started as CPU 0's boot stages start them (the module init the
+//                  stage calls before each start, natively on CPU 0, then OlyTaSt from the lab task, natively to core
+//                  2); the stages' other steps between are not run (for SDET, two starts on CPUs 3 and 1 among them)
 // Core 2's task starts are guarded (CPU2_TASKS; any other entry parks it), its cross-core calls recorded (the post
 // 0x50035afd, CREQ 0x50036120, the cpu_conn sender 0x5002d679) and run natively, its device accesses recorded (the
 // boot's first, then the first of each context). OSD_DRAW_CPU2's queue: osd_route.
@@ -70,7 +72,8 @@ export const OLY_TA_ST = A(0x5002C546);
 // H-CPU2TASKS: the CPU 2 tasks CPU 0's boot stages start (0x501e8f09..0x501ea7a9, USTART2..5, cores spec 3.7), in the
 // stages' order, [task id word, its start site, entry, name, the site of the module init the stage calls before it]:
 // TAKE's CPU 2 readers WB_MOV (queue 0x2006; init 0x5046aa2b), MVR_MAIN (MOV_COMMAND 0x2001; init 0x5045fed3, which
-// binds MVR's queues to its flag 0x2003) and SDET (SDET_EXEC 0x2005; init 0x50510afd), and OSD_DRAW_CPU2 (no init)
+// binds MVR's queues to its flag 0x2003) and SDET (SDET_EXEC 0x2005; the init 0x50510afd, among SDET's functions,
+// which the stage calls before FACE_MAIN's and FACE_BEAUTY's starts on CPUs 3 and 1, D), and OSD_DRAW_CPU2 (no init)
 export const CPU2_STARTS = [
   [A(0x60043604), A(0x501E9157), A(0x5046AAB2), 'WB_MOV', A(0x501E9150)],
   [A(0x600435EA), A(0x501E9233), A(0x5045FCDD), 'MVR_MAIN', A(0x501E91EE)],

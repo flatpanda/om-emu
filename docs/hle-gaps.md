@@ -1332,31 +1332,35 @@ traRoutingSession, below).
   aspect and flags. The create (`0x50491699`) allocates its context (9312, 7512 and 160 bytes) and gives an id, kept
   at the packet's +36. rec_ImgPro_ImageParam (`0x50542528`) sets the request's images: REC's trace names include
   rec_ImgProCtrl_Src_Bayer, _Dst_Prim, _Dst_Thum, _Dst_View, rec_ImgPro_Bayer2Ycc and rec_ImgPro_Ycc2Jpeg.
-  `0x50542407` runs it (`0x50492758(id, 0xffff)`, then `0x504929e9(id)`) unless bit 3 of property 53009 is set, and
+  `0x50542407` runs it (`0x50492758(id, 0xffff)`, then `0x504929e9(id)`; with bit 3 of property 53009 set and Mode
+  neither 8193 nor 8198, `0x50492836` with a 16448-byte buffer in place of the first), and
   rec_ImgPro_Jpeg_Result (`0x50542ce1`) reads the result. Which of the library's kinds the pipeline issues, and which
   unit encodes, is ?. The kind table `0x6065a834` has 22 kinds. The starts read so far reach `0x9c600000` (13, 14,
   16, 17, 6), `0x9bf80000` (9), `0x9c580000` (8) and `0x9c080000` (19, 20); kinds 5, 7 and 18 reach their unit
   through a register (not read).
 - **Who drives REC_IMAGE.** REC_IMAGE (task 28, `0x50541c45`) receives 316-byte packets from REC_EXEC_IMAGE 70 (its
   id at `0x60043250`; receive `0x505398bf`). On CPU 2 the same entry takes queue `0x6004369a` (by `(0x8050)`,
-  `0x50541c4b`). Only two places read `0x60043250`: that receive and REC_PREPRO's post. REC_PREPRO (task 30,
-  `0x5054ed2a`) takes packets from queues `0x60043254` and `0x60043256`, which REC_MAIN posts to (`0x50539b61`,
-  `0x5053a388`). It runs rec_precon_exec (`0x5054ef23`), which sets ImgAspect from the record and does the WB
+  `0x50541c4b`). Three places read `0x60043250`: that receive, REC_PREPRO's post and the object-name list
+  (`0x519f9cb7`, which names the queue and posts nothing). REC_PREPRO (task 30, `0x5054ed2a`) takes packets from
+  queues `0x60043254` and `0x60043256`, which REC_MAIN posts to (`0x50539b61`, `0x5053a388`). It runs rec_precon_exec
+  (`0x5054ef23`), which sets ImgAspect (the record's +38122 or 1, `0x5054ef5e..0x5054ef84`) and does the WB
   precondition for Mode 8194. It then posts to REC_IMAGE (`0x5054edcf`), or to `0x6004325a` when Command (+52) is 19.
   On CPU 2, `0x5054ede2` moves packets from REC's ring to `0x6004369a`.
 - **What REC_IMAGE does with a packet.** rec_bracket_entry (`0x5053b1dc`) sets FileType 1. It takes the last frame's
-  index from the record's bracket fields: 0 when +38074 and +38076 are 0 and +38086 is 1, else their product less 1
-  (`0x5053b33f..0x5053b375`). Then, per frame:
+  index from the record's bracket fields (`0x5053b321..0x5053b382`): 0 when +38074 and +38076 are 0 and +38086 is 1
+  (unless `0x5053dce6` gives 5), else the product of +38078, +38080, +38086 and a multiplier less 1 (the multiplier 1
+  unless `0x5053dce6` gives 5, `0x5053b2d4..0x5053b319`). Then, per frame:
   - rec_bracket_update (`0x5053b39c`) sets ImgAspect from the record's +38122 (Mode 4097 with the packet's +220 0,
     `0x5053b45d..0x5053b469`) and gives Free its result;
   - rec_make_image_pre (`0x50541db7`);
   - rec_make_image (`0x50541e55`): its Mode table `0x606dff34` sends 4097 to rec_make_image_exec (`0x5054208e`), which
     calls rec_jpeg_exec (`0x5054215e`);
-  - rec_make_image_finish (`0x50541ec5`): its table `0x606dff80` sends 4097 to `0x50541f20`, then `0x505422f1`.
+  - rec_make_image_finish (`0x50541ec5`): its table `0x606dff80` sends 4097 to `0x50541f20`, then `0x505422f1`;
+  - pAlive's word cleared (`0x50541d5f`).
 
-  This repeats until rec_bracket_finish (`0x5053b761`) finds the frame index past the last. REC_IMAGE then clears
-  pAlive's word (`0x50541d5f`). TAKE fills the bracket and aspect fields from the settings store
-  (`0x503bbd26..0x503bbd98`: ids 35217, 38737, 38769, 38785, 40401; `0x503bc035..0x503bc044`: id 12417).
+  This repeats until rec_bracket_finish (`0x5053b761`) finds the frame index past the last. TAKE fills the bracket and
+  aspect fields from the settings store (`0x503bbd26..0x503bbd98`: ids 35217, 38737, 38769, 38785, 40401;
+  `0x503bc035..0x503bc044`: id 12417).
 - **The hand-over to REC_FILE (corrects 4.8.10's "Who posts it").** `0x505422f1` posts to REC_EXEC_FILE 69
   (`0x50542359`) only when `0x5054ca14` gives 0. For Mode 4097 it gives 1 when the record's +38006 (TAKE's setting
   39265, `0x503bbc66`) is 0 or `0x5054bf6c` is 0. `0x5054bf6c` is 0 for 4097 unless the record's +38764 is 22
@@ -1393,8 +1397,10 @@ traRoutingSession, below).
   bracket fields REC_IMAGE looped, the last index being 65535, each frame a new buffer. With pAlive 0 it would clear
   the word at address 0 (D).
 - **The picture's bytes (X).** The file keeps its size (73,410 bytes with the live view). 4 bytes differ from the
-  previous round's. ISO (0x8827) and StandardOutputSensitivity (0x8831) are 25, not 0 (exiftool), and two bytes of the
-  maker notes differ (file offsets 5286 and 5292; which tags is not read). rec_bracket_after_trig (`0x5053bfe2`, from
+  previous round's, each 0 before and 25 now. Two are ISO (0x8827) and StandardOutputSensitivity (0x8831) (exiftool).
+  The other two (file offsets 5286, a halfword, and 5292, a word) lie in the Exif segment's value area after ExifIFD's
+  values, before the maker notes (from 5560), where no IFD entry points (an IFD walk; exiftool shows neither). That
+  they hold the record's +4202 and +4208, 6 bytes apart as these are, is I. rec_bracket_after_trig (`0x5053bfe2`, from
   `0x5053be89`) writes the record's ISO (+4202, +4208) from the packet's Sv (+294) through `0x50590ca6` when the
   record's +7626 is 0. S-RECREQ leaves the Sv 0, as REC_MAIN's clear does, and that gives 25. Without the aspect
   setting the maker notes' AspectRatio was "Unknown (1 0)" and AspectFrame 0 0 55274 2911; with it they stay 4:3 and

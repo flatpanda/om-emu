@@ -1860,9 +1860,12 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    answers from the output-device property 4014 without its bit 16, or 0 with it (`0x502d02da..0x502d02f0`; the main
    display, TFT or EVF, and not HDMI, I); its callers pass 2 (`0x5076a236`, `0x507e3f33`); api_disp_Disp_Update_Image
    (its traces "device_type", "img_handle[0..2]", "through_permit" from `0x603f8384`) and
-   api_disp_Disp_Update_Osd_Color_Pallet (`0x502ca1d6`, "aDeviceType", 0..2) take a device type, not a mask. E118 and
-   E120 hold api_disp_Set_Through_Permit and api_disp_Disp_Update_Image (X; E120 not the palette update's
-   "aDeviceType" trace, its display API taking records, finding 49). So the family has no value for E143's EVF mask 2:
+   api_disp_Disp_Update_Osd_Color_Pallet (`0x502ca1d6`, "aDeviceType", 0..2) take a device type, not a mask. E118
+   holds the three names and traces (X); E120 holds api_disp_Set_Through_Permit, but neither
+   api_disp_Disp_Update_Image nor the palette update's "aDeviceType": its image update is api_disp_Disp_UpdateScreen,
+   whose traces name a record's device and its MAIN and SUB handles (`0x6039cdac..`, X, a string scan; corrected in
+   review; its display API takes records, finding 49; what its device field holds is not read, so the refusal below
+   stands there for want of a read value). So the family has no value for E143's EVF mask 2:
    DEVICE's masks are null on the kind-3 bodies and the three helpers (and play's TH live view) refuse there with that
    reason, where they had reached an unplaced function; none of them runs on the family's paths (X: modelcheck's E118,
    E120 and E122 runs unchanged).

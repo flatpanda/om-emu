@@ -387,7 +387,8 @@ the survey table.
   bottom; which end is the top is I from the layers' contents, finding 96); S-MODACK answers the module queues of each
   body's API target table, read by a rule (finding 99); the camera releases a display sync at the display's next image
   update (D, finding 100), which the lab's release at the step's end stands in for; the family's through permit, image
-  update and palette request take no device mask, so the lab's E143 masks are refused there (finding 101). Open in the
+  update and palette request take no device mask (E120's image update, another form, not read), so the lab's E143
+  masks are refused there (finding 101). Open in the
   kind-3 compositor: what OSD1's and OSD2's pixels of 32 or more do (refused, PAL_FIELD; the firmware gives them no
   colour, finding 97), what an OSD level below `0x100` does (the EVF's `0xb2` and `0xcc` are drawn as full, finding
   98) and what the chip does with the level words E118's code does not write (drawn as full, finding 48, ?); each needs

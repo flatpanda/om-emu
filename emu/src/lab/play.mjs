@@ -608,20 +608,27 @@ export class PlayLab extends N.NavLab {
     }
     this._qewr_prev[0](hle, r);
   }
-  // blocked sends
+  // blocked sends, by the calling task and the call site: a task makes one such call at a time, and tasks share the
+  // sites (OlyQeWr's). Keyed by the site alone, a later call from another task named its queue in the blocked call's
+  // record: the OXF main thread's send to PLAY_EXEC was reported as one to queue 6, the queue of UI_IN's key posts
+  // through the same site (X, docs/hle-gaps.md 4.3.2)
+  _tsnd_task() { return unpack('<H', this.sim.read(this.sim.u32(this.nk.kcb(96)) + K.TCB_ID, 2))[0]; }
   _tsnd_entry(lab, r) {
     if (r.a1 !== 0xFFFFFFFF) return;
-    const ra = r.mdr;
+    const ra = r.mdr, task = this._tsnd_task(), key = `${task}:${ra}`;
     if (!TSND_SITES.includes(disasm(ra) - 7)) throw new PlayError(`tsnd_dtq(queue ${r.d0 & 0xFFFF}, timeout -1) from ${where(ra)}: not a known call site`);
-    this.tsnd_pending.set(ra, (this.tsnd_pending.get(ra) ?? 0) + 1);
-    this.tsnd_info.set(ra, [r.d0 & 0xFFFF, this.step_tag]);
+    this.tsnd_pending.set(key, (this.tsnd_pending.get(key) ?? 0) + 1);
+    this.tsnd_info.set(key, [r.d0 & 0xFFFF, this.step_tag, ra, task]);
   }
   _tsnd_return(lab, r) {
-    if (this.tsnd_pending.get(r.pc)) this.tsnd_pending.set(r.pc, this.tsnd_pending.get(r.pc) - 1);
+    const key = `${this._tsnd_task()}:${r.pc}`;
+    if (this.tsnd_pending.get(key)) this.tsnd_pending.set(key, this.tsnd_pending.get(key) - 1);
   }
   blocked_sends() {
     const out = [];
-    for (const [ra, n] of this.tsnd_pending) if (n > 0) out.push([this.tsnd_info.get(ra)[0], where(ra), this.tsnd_info.get(ra)[1]]);
+    for (const [key, n] of this.tsnd_pending) {
+      if (n > 0) { const [q, step, ra, task] = this.tsnd_info.get(key); out.push([q, where(ra), step, task]); }
+    }
     return out;
   }
   _uiin_post_ext(lab, r) {
@@ -1060,7 +1067,7 @@ export class PlaySession extends N.NavSession {
     const blocked = lab.blocked_sends();
     if (blocked.length) {
       throw new PlayError(`after ${w}: tsnd_dtq with timeout -1 waits on a full queue: ` +
-        blocked.map(([q, ra, st]) => `queue ${q} from ${ra} (since step ${st})`).join('; ') + `; tasks ${show(lab.task_states())}`);
+        blocked.map(([q, ra, st, task]) => `queue ${q} from ${ra} in task ${task} (since step ${st})`).join('; ') + `; tasks ${show(lab.task_states())}`);
     }
   }
   // ---- bring-up

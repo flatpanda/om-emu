@@ -483,12 +483,12 @@ unknown):**
     `0x501d6ea6`). A composite of the TFT is then FEATURE_UNOBSERVED (A13: HIST1, HISTAREA1..3, HIST2 written), so
     traRoutingSession takes no frames. DISPLAY cmd 15 (`0x501d709f`), which the menu and the HDMI plug send while the
     histogram runs (`(0x62a3eaf8)` = 1), clears the histogram's flag (id at `0x6004303a`) and waits for it 50 ms
-    (`0x501d70d1`); only the histogram's done callback `0x501d71e1` sets it (it also posts the result to the queue
+    (`0x501d70d1`); only the histogram's done callback `0x501d71e1` sets it (it also posts DISPLAY cmd 16 to the queue
     whose id is at `0x600432d4`). Inside S-DISPQ's run the wait cannot block: the run's task blocked, the lab task's
     settle returned inside the run and executed the caller's `0xff` (`0xa2100007`, fault 5), the menu's first stop.
     Until 2026-11-09 S-HISTWAIT ran the wait to its timeout (50 ms of lab clock, E_TMOUT); the unit is now modelled and
     the wait returns E_OK at the run's end (4.2.1).
-  - *The CPU's udf07 (implemented 2026-11-09; the stop until then).* Past cmd 15's histogram wait (4.2.1) the menu ran into `udf07 d0,d1` at
+  - *The CPU's udf07 (implemented 2026-11-09; the stop until then).* Past cmd 15's wait the menu ran into `udf07 d0,d1` at
     `0x5050a089` (fault 1), in task 57: the sequence (`0x50c591d4`, state 4) to CapThr_ThroughImage (`0x50bd61b2` ->
     `0x50bd5fe4`, the through image's bank), api_tft `0x504225c5` and the imgpro library (`0x5048ef28` .. `0x5048e190`
     -> `0x5050a086`). udf07 is now BSCH as the Panasonic MN103001 manual gives it, which the helper's three callers
@@ -585,12 +585,13 @@ unknown):**
   0, copies them into the ring `0x62a3cab8` (8 slots of 1024 bytes), posts `{0, 0x04020301, 0}` to queue 6 every
   `0x62a3eb08`-th end and starts the next run on the request's other area. Cmd 15 clears `0x62a3eabe`, so the next end
   posts nothing and no run follows, and waits for that end.
-- **Which bins the firmware uses.** HIST2[17:16] names the IMG plane the run counts: the set-up picks the plane whose
-  DMA address is the request's (`0x501e12f6..66`, D; that the unit counts that plane's pixels is I). The lab shows no
-  IMG plane under camapp 3 (DMAEN 7, X), and with IMG1 off and source 0 the firmware discards the bins it read
-  (`0x501d712d..54`). So no bin value the unit computes reaches a consumer in the lab, and none is computed: the model
-  answers those reads 0 (A-VSCHIST-2) and refuses every other (HIST_UNMODELLED). What the unit counts, how values map to
-  bins and what HIST3's scale does are ? (`docs/om1-vsc-spec.md` section 13).
+- **Which bins the firmware uses.** The set-up stores in HIST2[17:16] the index of the IMG plane whose DMA address is
+  the one it is given, else 0 (`0x501e12e9..66`, D; that the unit counts that plane's pixels is I); the start path gives
+  it no address (0), so every run's field is 0 (`0x501d6d3f`, `0x501d6dee..f7`, D) and which plane, if any, the unit
+  then counts is ?. The lab shows no IMG plane under camapp 3 (DMAEN 7, X), and with IMG1 off and the field 0 the
+  firmware discards the bins it read (`0x501d712d..54`). So no bin value the unit computes reaches a consumer in the
+  lab, and none is computed: the model answers those reads 0 (A-VSCHIST-2) and refuses every other (HIST_UNMODELLED).
+  What the unit counts, how values map to bins and what HIST3's scale does are ? (`docs/om1-vsc-spec.md` section 13).
 - **The model (X, `emu/src/dev/vsc.mjs`).** A write of HIST1 bit 0 arms a one-shot run; A-VSCHIST-1: it measures the
   frame from the channel's next boundary and ends at the boundary after, setting INTST1 bit 8; the IRQ line carries
   bit 8 (`board.vsc.irq_mask` `0x103`; the ISR's branch is D, the line I). A-VSCHIST-2 as above. S-DISPQ runs the done

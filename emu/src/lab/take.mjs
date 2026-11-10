@@ -55,13 +55,16 @@
 //               TAKE_MAIN_CP (task 114) started with act_tsk as the boot stage 0x501e94a5 starts them (0x501e9bbf,
 //               0x501e9bcd; the tids from the words 0x60042dfc / 0x60042e0a; TAKE_PROXY, which it starts next at
 //               0x501e9bdb, stays dormant). TAKE_EXEC leaves S-MODACK, so the take requests go to TAKE_MAIN natively;
-//               what TAKE_MAIN and TAKE_MAIN_CP take joins the record, their requests go through S-TAKEREQ as
-//               TAKE_FUNC's do, and TAKE's synchronous request 0x502ce86d from TAKE_MAIN to a queue whose task runs
-//               natively (TAKE_FUNC; TAKE_MAIN's helper 0x5039a01c, reply queue TAKE_IMDFUNC 0xa8) runs natively
+//               what TAKE_MAIN and TAKE_MAIN_CP take joins the record (TAKE_MAIN's mailbox, TAKE_EXEC and TAKE_POST),
+//               their requests go through S-TAKEREQ as TAKE_FUNC's do (a reply on TAKE_POST only where TAKE_MAIN's
+//               handler for its token was read, MAIN_REPLIES; any other throws), and TAKE's synchronous request
+//               0x502ce86d from TAKE_MAIN to a queue whose task runs natively (TAKE_FUNC; TAKE_MAIN's helper
+//               0x5039a01c, reply queue TAKE_IMDFUNC 0xa8) runs natively
 //   S-THRTAKEOVER (control camapp 3) the through image capability's state word (0x60362b38, CapThr_ThroughImage's
 //               "entryState": a byte scan finds only its getter 0x50bcccc9 and its setter 0x50bcecb8 naming it) set to
 //               0x01010202 through that setter, as the boot take-over (API 70405, 0x50adffda) sets it together with
-//               module 9's state 2 (0x50ae0044..0x50ae0055), the state S-TAKEOVER writes alone. The sequence parts
+//               module 9's state 2 (0x50ae0044..0x50ae0055), the state S-TAKEOVER writes alone (the rest of that
+//               path, 0x50ae005c..0x50ae007b, runs in neither; what it does is not read). The sequence parts
 //               take a half press only while the state's top byte is 1 (the S1 guard 0x50c8d4a4 -> 0x50bcdef7); with
 //               the word's static 0x02010202 (which the take-over's kind 0 writes, 0x50ae000f) every S1 was refused (X)
 import { FirmwareError, where, disasm } from './hle.mjs';
@@ -142,6 +145,7 @@ export const TAKE_MAIN_E143 = {
   cp: { tid: 0x60042E0A, entry: 0x5039A09E, received: 0x5039A0BC },   // TAKE_MAIN_CP's receive's return, a2 the message
   exec_received: 0x5039985F,  // TAKE_MAIN's TAKE_EXEC receive's return: (32,sp) points to the 16-byte message
   post_received: 0x50399997,  // its TAKE_POST receive's return: (28,sp) points to the 12-byte message
+  mbx_received: 0x50399725,   // its mailbox receive's (0x502ce7c8) return: d0 0 for a message, (28,sp) as TAKE_POST's
   handler: 0x503998D0,        // its call of a TAKE_EXEC command's handler (a1) in its state's table
   state: 0x62A3F018,
   imd_send_return: 0x502CE8A8, // TAKE's synchronous request 0x502ce86d's call of TAKE's send helper 0x502ce57b
@@ -153,6 +157,12 @@ export const THR_TAKEOVER = { set: 0x50BCECB8, word: 0x60362B38, value: 0x010102
 // S-TAKEREQ's queues for TAKE_MAIN's requests: CPU 3's FACE_FD (queue 2 of CPU 3's run in the object-name table,
 // pointer at 0x6034d0d4 + 0x20 * 5 + 4 * 3)
 Object.assign(TAKE_REQ_QUEUES, { 0x3002: 'FACE_FD' });
+// S-TAKEREQ's replies on TAKE_POST, only where TAKE_MAIN's handler for the token was read (queue, command, token):
+// TAKE_FOCUS's 0x300 with token 1, whose handler in RdyFcsRdy1 (0x503c2e8d) clears pending bit 0x01, asks TAKE_FUNC
+// 80 and returns the reply's status, reading nothing else of it. Another request with TAKE_POST as its reply queue
+// throws: TAKE_EXPOSE's 0x400 with token 11 (sent by 0x503c2c3a), whose handler 0x503c2ce6 frees the reply's word 2,
+// would not be answered right by {0, token, 0}
+const MAIN_REPLIES = [{ queue: 0x5D, command: 0x300, token: 1 }];
 
 export class TakeProbe {
   // session: the PlaySession; camapp: its CamApp (S-MODACK's queues, its pump)
@@ -383,8 +393,8 @@ export class TakeProbe {
     return null;
   }
   // (from install) TAKE_EXEC leaves S-MODACK; TAKE_MAIN's queues are native; the record of what TAKE_MAIN and
-  // TAKE_MAIN_CP take ({dir 'in', task, queue, command, reply, token, parameter, state} for a request; a TAKE_POST
-  // message has status and no command; handler, TAKE_MAIN's handler of a TAKE_EXEC command); S-THRTAKEOVER
+  // TAKE_MAIN_CP take ({dir 'in', task, queue, command, reply, token, parameter, state} for a request; a TAKE_POST or
+  // mailbox message has status and no command; handler, TAKE_MAIN's handler of a TAKE_EXEC command); S-THRTAKEOVER
   install_main() {
     const lab = this.lab, M = TAKE_MAIN_E143, ca = this.camapp;
     this.main_tids = null;
@@ -405,6 +415,12 @@ export class TakeProbe {
       const w = words(l, l.sim.u32((r.sp >>> 0) + 28) >>> 0, 3);
       take({ task: 'TAKE_MAIN', queue: 'TAKE_POST', command: null, status: w[0] & 0xFFFF, reply: null, token: w[1], parameter: w[2] });
     }, 'H-TAKEMAIN (TAKE_POST)');
+    // its mailbox (flag bit 1: the posts through 0x502ce7b7, a callback's token), 12 bytes as TAKE_POST's
+    lab.observe(M.mbx_received, (l, r) => {
+      if ((r.d0 >>> 0) !== 0) return;
+      const w = words(l, l.sim.u32((r.sp >>> 0) + 28) >>> 0, 3);
+      take({ task: 'TAKE_MAIN', queue: 'mailbox', command: null, status: w[0] & 0xFFFF, reply: null, token: w[1], parameter: w[2] });
+    }, 'H-TAKEMAIN (mailbox)');
     lab.observe(M.cp.received, (l, r) => {
       const w = words(l, r.a2 >>> 0, 4);
       take({ task: 'TAKE_MAIN_CP', queue: 'TAKE_MAIN_CP', command: w[2], reply: w[0], token: w[1], parameter: w[3] });
@@ -433,8 +449,9 @@ export class TakeProbe {
   // S-TAKEREQ's answer to a request whose word 0 names TAKE_POST (0x63), where TAKE_MAIN takes 12-byte replies: after
   // the step {u16 status 0, token = word 1, 0} there. TAKE_MAIN's TAKE_POST branch (0x50399971..0x50399a86) looks the
   // token up in its state's reply table (row +16: [u16 token, handler], 0xffff ends it) and calls the handler with the
-  // message, then its state step 0x50399acf; what each handler reads of the status is its own
+  // message, then its state step 0x50399acf; what a handler reads is its own, so only MAIN_REPLIES are answered
   main_reply(q, w) {
+    if (!MAIN_REPLIES.some((x) => x.queue === q && x.command === w[2] && x.token === w[1])) throw new TakeError(`${this.task()} asks ${this.name(q)} command 0x${w[2].toString(16)} with reply token ${w[1]} on TAKE_POST: no reading of what TAKE_MAIN's handler for that token reads`);
     this.pending.push({ what: `{0, 0x${w[1].toString(16)}, 0} -> TAKE_POST (${this.name(q)}'s reply)`, run: () => this.reply(TAKE_POST, [0, w[1], 0]) });
     return `reply {0, token 0x${w[1].toString(16)}, 0} to TAKE_POST`;
   }

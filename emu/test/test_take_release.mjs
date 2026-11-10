@@ -4,11 +4,11 @@
 //                   CapThr's state word is its static 0x02010202, and CapTak_Take's take request is never made. Under
 //                   camapp 3 with --take probe (H-TAKEMAIN, S-THRTAKEOVER) the guard passes, CapTak_Take asks the take
 //                   API 0x50417cd9 with control 0x20 at S1 and 0x40 at S2, and TAKE_MAIN takes S1's request natively:
-//                   TAKE_EXEC command 0 in its state Idle, then FACE_FD 15 (S-TAKEREQ), TAKE_FUNC 80 (native), TAKE_FOCUS
-//                   0x300 with its callback record (S-TAKEREQ, reply token 1 to TAKE_POST), its reply, TAKE_FUNC 80
-//                   again; TAKE_MAIN then waits in RdyFcsRdy1 with the pending bits 0x5e for TAKE_FOCUS's callbacks,
-//                   and S2's TAKE_EXEC command 5 waits in its queue. Under camapp 1 with the probe TAKE_MAIN runs and S1
-//                   reaches nothing (no S-THRTAKEOVER)
+//                   TAKE_EXEC command 0 in its state Idle, then FACE_FD 15 (S-TAKEREQ), TAKE_FUNC 80 (native),
+//                   TAKE_FOCUS 0x300 with its callback record (S-TAKEREQ, reply token 1 to TAKE_POST), its reply,
+//                   TAKE_FUNC 80 again; nothing in its mailbox. TAKE_MAIN then waits in RdyFcsRdy1 with the pending
+//                   bits 0x5e for TAKE_FOCUS's callbacks, and S2's TAKE_EXEC command 5 waits in its queue. Under camapp
+//                   1 with the probe TAKE_MAIN runs and S1 reaches nothing (no S-THRTAKEOVER). S-RELSEQ in all three
 //   node emu/test/test_take_release.mjs
 import { fileURLToPath } from 'node:url';
 
@@ -68,8 +68,8 @@ export async function releaseSession() {
       let n = take ? take.requests.length : 0;
       const since = () => { const out = take ? take.requests.slice(n).map((r) => canon2(r, stateName)) : []; n = take ? take.requests.length : 0; return out; };
       const used = pl.stand_ins_in_use(), thr = lab.sim.u32(THR_STATE) >>> 0;
-      ok(s.status().gui === '0x0108' && PROBE2.every((x) => used.includes(x) === (probe && (x === 'H-TAKEMAIN' || mode === 3))) && thr === (probe && mode === 3 ? 0x01010202 : 0x02010202),
-        `${tag}: the start reaches the shooting screen (GUI ${s.status().gui}), round 2's stand-ins ${used.filter((x) => PROBE2.includes(x))}, CapThr's state ${h8(thr)}`);
+      ok(s.status().gui === '0x0108' && used.includes('S-RELSEQ') && PROBE2.every((x) => used.includes(x) === (probe && (x === 'H-TAKEMAIN' || mode === 3))) && thr === (probe && mode === 3 ? 0x01010202 : 0x02010202),
+        `${tag}: the start reaches the shooting screen (GUI ${s.status().gui}), S-RELSEQ ${used.includes('S-RELSEQ')}, round 2's stand-ins ${used.filter((x) => PROBE2.includes(x))}, CapThr's state ${h8(thr)}`);
       if (probe) {
         const st = Object.values(take.main_tids).map((t) => lab.nk.state(t) & 0xF);
         ok(st.every((x) => x === 4) && u16(MAIN_STATE) === 0 && !take.requests.some((r) => r.dir === 'in' && /^TAKE_MAIN/.test(r.task)),

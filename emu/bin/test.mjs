@@ -12,7 +12,8 @@
 // worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
 // (test_camapp.mjs, with S-HEAP over an idle and a workload, the mode dial's positions and camapp 3), the TAKE
-// probe's record of what TAKE_FUNC takes and asks on E143 (test_take.mjs), the lab's audio output and the
+// probe's record of what TAKE_FUNC takes and asks on E143 (test_take.mjs), CPU 2 natively on the machine's second
+// core (test_cpu2.mjs), the lab's audio output and the
 // synthesized shutter sound at a
 // release, and the AF beep end to end (test_audio.mjs), the audio hardware and AUD_EXEC's play path on E143
 // (test_audiohw.mjs), the SCPU's clock, ports, link pins and sub-CPU model
@@ -188,6 +189,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`the release route to TAKE_EXEC (H-TAKEMAIN, S-THRTAKEOVER) in play: ${rs.checks - rs.bad.length}/${rs.checks}`);
   rs.bad.forEach((x) => console.log('  ', x));
   bad += rs.bad.length;
+}
+// CPU 2 natively (--cpu2 native): its boot to the idle loop, its first device accesses and cross-core call, and the
+// Super Control Panel's posts answered by its AUD_LEVEL_MONITOR as S-CPU2 answered them; off by default
+{
+  const { cpu2Session } = await import('../test/test_cpu2.mjs');
+  const c2 = await cpu2Session();
+  console.log(`CPU 2 natively (--cpu2 native) in play: ${c2.checks - c2.bad.length}/${c2.checks}`);
+  c2.bad.forEach((x) => console.log('  ', x));
+  bad += c2.bad.length;
 }
 // the SCPU interface's clock and ports, the link's pins and the sub-CPU's model (S-SCPUDEV) without firmware, then the
 // link at a play session's start: E143 here, E146, E147, E139 and E134

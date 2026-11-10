@@ -42,6 +42,7 @@ import * as SC from './scene.mjs';
 import { CamApp, CA_MODULE9_READERS } from './camapp.mjs';
 import { AudioOut } from './audio.mjs';
 import { AudioHw } from './audiohw.mjs';
+import { Cpu2, CPU2_QUANTUM } from './cpu2.mjs';
 import { labSoundArea, STAND_IN as SOUNDRES } from './soundres.mjs';
 
 // base64.b64encode(bytes).decode()
@@ -826,6 +827,8 @@ export class PlayLab extends N.NavLab {
   _s_cpu2(lab, r) {
     const intc = this.nk.intc;
     this.xcpu_waiting += 1;
+    // --cpu2 native (cpu2.mjs): CPU 2 runs; the post is recorded and left to it (its IRQ 324 on bank 2)
+    if (this.xcpu_native) { this.xcpu_log.push({ step: this.step_tag, lab_ns: this.lab_time(), native: true, post_d0: r.d0 }); return; }
     const mut = this.opts.mutant;
     if (mut === 'no-xcpu') return;                  // the doorbell is left unserviced
     const core = this.sim.u32(0x8050);
@@ -917,6 +920,14 @@ export class PlaySession extends N.NavSession {
     const take = opts.take ?? 'stand-in';
     if (!['stand-in', 'probe'].includes(take)) throw new ValueError(`take ${show(take)}: stand-in or probe`);
     if (take === 'probe' && !ON_LAB_MODEL) throw new ValueError(`--take probe: ${MODEL}'s TAKE addresses are not read (E143 only, src/lab/take.mjs)`);
+    // CPU 2 natively (--cpu2 native, E143 only; src/lab/cpu2.mjs, src/core/cores.mjs): the machine gets a second core;
+    // off by default
+    const cpu2 = opts.cpu2 ?? 'stand-in';
+    if (!['stand-in', 'native'].includes(cpu2)) throw new ValueError(`cpu2 ${show(cpu2)}: stand-in or native`);
+    if (cpu2 === 'native') {
+      if (!ON_LAB_MODEL) throw new ValueError(`--cpu2 native: ${MODEL}'s CPU 2 addresses are not read (E143 only, src/lab/cpu2.mjs)`);
+      env = { ...env, machine: { ...(env.machine ?? {}), cores: { second: 2, quantum: CPU2_QUANTUM } } };
+    }
     // defaults for the keys kw does not give (a key given as null keeps it)
     const setdefault = (key, v) => { if (!Object.hasOwn(k, key)) k[key] = v; };
     setdefault('time', true);
@@ -962,6 +973,8 @@ export class PlaySession extends N.NavSession {
     this.capture_frame = null; this.recview_hold = false;   // S-RECVIEW: the last capture's frame, held during the rec view
     this.playview_hold = false;    // S-PLAYVIEW: a card image's frame shown
     this.camapp = null;            // S-CAMAPP (camapp.mjs), from the bring-up on
+    this.cpu2_native = (opts.cpu2 ?? 'stand-in') === 'native';
+    this.cpu2 = null;              // --cpu2 native (cpu2.mjs): CPU 2 on the machine's second core, from the bring-up on
     // the session's sound for the host (audio.mjs): only where the host plays it (env.onAudio, the players' pages)
     this.audio = typeof env.onAudio === 'function' ? new AudioOut() : null;
     this.acc = null;               // the accelerometer (acc.mjs) on a body that gives it (models.mjs acc)
@@ -1023,6 +1036,12 @@ export class PlaySession extends N.NavSession {
     }
     this.check_sends(`step ${token}`);
     this.check_xcpu(`step ${token}`);
+    if (this.cpu2 !== null) {
+      const p = this.cpu2.problem();
+      if (p) throw new PlayError(`after step ${token}: ${p}`);
+      const log = this.cpu2.take_log();
+      if (log.length) rec.cpu2 = log;
+    }
     return rec;
   }
   check_xcpu(w) {
@@ -1085,6 +1104,7 @@ export class PlaySession extends N.NavSession {
     if (this.touch_on) this.touch_bring_up();
     this.takeover_bring_up();
     this.ipi_bring_up();
+    if (this.cpu2_native) this.cpu2_bring_up();          // --cpu2 native: core 2 from its entry to its idle loop
     if (o.mutant !== 'no-aeinit') this.aeinit_bring_up();   // without it the interpolation's div fault comes back
     if (MODEL_INFO.acc) this.acc_bring_up();
     if (MODEL_INFO.ui_out) this.ui_out_bring_up();         // before the file layer (E134) and the application (E143)
@@ -1280,6 +1300,14 @@ export class PlaySession extends N.NavSession {
     lab.call(MM.MODULE_STATE_SET, { d0: MM.TAKEOVER_MODULE, d1: MM.TAKEOVER_STATE }, null, null, 200);
     lab.takeover_log = { before, connect: null, takeover: { module: MM.TAKEOVER_MODULE, state: MM.TAKEOVER_STATE,
       label: 'S-TAKEOVER 0x50ab6299(9, 2) at play bring-up: the value API 70405 writes on the boot take-over path (0x501e6adb); no live switch writes it' } };
+  }
+  // --cpu2 native (cpu2.mjs): H-CPU2RELEASE and core 2 from its entry to its idle loop, then beside CPU 0
+  cpu2_bring_up() {
+    const lab = this.lab;
+    this.cpu2 = new Cpu2(this);
+    this.cpu2.boot();
+    lab.xcpu_native = true;                          // S-CPU2 lifted: the GUI's post goes to core 2
+    lab.xcpu_served.add(2);
   }
   ipi_bring_up() {
     const lab = this.lab;

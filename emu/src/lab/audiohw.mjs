@@ -142,6 +142,14 @@ export class AudioHw {
     if (cur !== lab.nk.tcb(this.main_tid)) throw new AudioHwError(`S-AUDCPU2: the start of 0x${id.toString(16)} (${name}) from ${where(r.mdr)} outside AUD_MAIN's task`);
     if (this.cpu2.has(id)) throw new AudioHwError(`S-AUDCPU2: a second start of 0x${id.toString(16)} (${name})`);
     const rec = { name, lab_ns: lab.lab_time(), reply: null };
+    // --cpu2 native (cpu2.mjs): AUD_LEVEL_MONITOR's start goes natively to CPU 2 (cpu_conn kind 9, its CPUCONN);
+    // the mutant cpu2-no-audmon keeps it stood in (test_cpu2.mjs's control: the GUI's post then goes unanswered)
+    if (this.s.cpu2 && id === this.id(this.f.cpu2[1][0]) && this.s.opts.mutant !== 'cpu2-no-audmon') {
+      rec.native = true;
+      this.cpu2.set(id, rec);
+      this.log.push(['S-AUDCPU2', `${name} 0x${id.toString(16)}: started natively on CPU 2 (--cpu2 native)`]);
+      return lab.passthrough(r);
+    }
     if (id === this.id(this.f.cpu2[0][0])) rec.reply = this._post_reply();
     this.cpu2.set(id, rec);
     this.log.push(['S-AUDCPU2', `${name} 0x${id.toString(16)} started on CPU 2${rec.reply ? `; its reply ${rec.reply.func} on ring ${rec.reply.ring} [${rec.reply.index}]` : ''}`]);

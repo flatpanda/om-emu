@@ -49,6 +49,7 @@ import { STORAGE } from './storage.mjs';
 import { AudioRing } from './audio.mjs';
 import { patchLine } from '../fw/patch.mjs';
 import { recordNvram, replayNvram, nvramRecord } from './nvramdoc.mjs';
+import { CPU2_STAND_INS } from './cpu2.mjs';
 
 export const PNG_CACHE = 8, SLICE_NS = 50000000, GATE_SLICE_NS = 10000000, GATE_LIMIT_NS = 2000000000, BEHIND_NS = 250000000;
 export const DIAL_CAP = 8, TOUCH_MIN_NS = 20000000, TOUCH_GAP_CAP_NS = 2000000000, TOUCH_TAP_CAP_NS = 320000000;
@@ -344,6 +345,7 @@ export class Player {
     return { start: a.start, touch: a.touch, us_clock: a.us_clock, bgdraw: !a.no_bgdraw, mutant: a.x_mutant, a15: a.a15 ?? 'auto', hdmi: a.hdmi ?? 'off', audio: a.audio ?? 'auto',
       ...((a.rotate ?? 'off') !== 'off' ? { rotate: a.rotate } : {}),   // absent when off: the recorded documents
       ...((a.take ?? 'stand-in') !== 'stand-in' ? { take: a.take } : {}),   // the TAKE probe (take.mjs); absent by default
+      ...((a.cpu2 ?? 'stand-in') !== 'stand-in' ? { cpu2: a.cpu2 } : {}),   // CPU 2 natively (cpu2.mjs)
       ...(this.camapp_components ? { camapp_components: true } : {}), ...(this.camapp_native_tra ? { camapp_native_tra: true } : {}) };
   }
   open_session() {
@@ -415,7 +417,7 @@ export class Player {
   stand_ins_in_use() {
     const a = this.a;
     const used = ['H-UIINRING', 'H-UIIN', 'S-KEYBITS', 'H-G4SET', 'H-DIALSTEP', 'H-JSINJECT', 'SWITCH', 'H-POWER', 'S-HEAP',
-      'S-TAKEOVER', 'H-CONNECT', 'H-EYESTATE', 'H-IPIINIT', 'A-IPI', 'S-CPU2'];
+      'S-TAKEOVER', 'H-CONNECT', 'H-EYESTATE', 'H-IPIINIT', 'A-IPI', ...(this.session?.cpu2 ? CPU2_STAND_INS : ['S-CPU2'])];
     if (a.x_mutant !== 'no-aeinit') used.push('H-AEINIT');
     if ((a.a15 ?? 'auto') !== 'off') used.push('A15');
     if (a.x_mutant !== 'no-dispq') used.push('S-DISPQ');                                     // :2519

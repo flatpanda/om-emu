@@ -391,7 +391,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
      table has no counterpart of, so S-MODACK did not answer it and the screen stayed (X). E145 has the same check as
      a stub that returns 0 (D). `src/fw/models.mjs` modack_queues gives S-MODACK E132's CATEGORY_MAIN and
      LOGGER_MAIN (target 43, queue 0xdf; without its answer the session stops once the clock is set, the
-     application's queue 6 full, X, why is ?). The start then ends in the date and time setting with Set and no
+     application's queue 6 full, X, why is ?; that stop no longer reproduces, `docs/hle-gaps.md` 4.3.2, X: what
+     changed is ?, and that the guard then named queue 6 for LOGGER_MAIN's full queue is I).
+     The start then ends in the date and time setting with Set and no
      Cancel (X: frames): modelcheck's prompt answer is UP and OK on each of the five fields (2017.01.01 00:00), the
      fifth OK setting the clock, then the path: S1, S2, PLAY, INFO, PLAY, the count probe at 845,448-946,473, the card
      as E129's (9999 shots) (X: modelcheck).
@@ -1970,7 +1972,9 @@ device after the step (X: the shooting screen). The image sync it sends is of ki
 display manager takes an event only in the block states its transition table admits (kind 1 in states 1 and 3, kind 2
 in 2 and 4, kind 0 in 1 to 4; the table is the same on every body but E118 and E120, X), and the synced request leaves
 state 3 (D). Its cmd-19 DISPLAY sends from `0x5016000b` (every 200 ms from about 5 s of idle) are S-DISPQ's, read by a
-rule (`displaySends`). Open: when the camera releases the sync at the start (I: once its through image shows); the
+rule (`displaySends`). Open: when the camera releases the sync at the start (I: once its through image shows;
+finding 100 reads the release on the E118 family, at the display's first image update, I; E137's code is not
+checked); the
 touch write is still the direct map's wrong `0x50177137`; the operating-time count would write NAND natively once the
 SCPU counter advances; the movie function id (90 on E137 where E143's `FUNC_RECORDING_MOVIE` is 27) is unknown.
 `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23, X; its change task `0x5016187e`).

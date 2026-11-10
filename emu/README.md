@@ -205,9 +205,12 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   so the firmware's DCF database counts the picture at once and playback shows the database's pictures
   (`docs/hle-gaps.md` 4.8.9; on E146, E147, E144 and E148 too, the other bodies with a native card through the file
   module's own file requests). On E143, E146 and E147 REC_FILE's own task records it (`src/lab/rec.mjs`,
-  `docs/hle-gaps.md` 4.8.10): the packet REC_IMAGE posts it (S-RECIMAGE), with the file's header (Exif with the Make, Model, dates and
-  maker notes, XMP) built by REC_IMAGE's header maker natively from the shot's EXIF parameters (S-EXIFPRM) and the
-  lab's JPEG after it (S-JPEGENC). Card Formatting from the menu formats it: the menu's
+  `docs/hle-gaps.md` 4.8.10): the packet REC_IMAGE posts it, with the file's header (Exif with the Make, Model,
+  dates and maker notes, XMP) built by REC_IMAGE's header maker natively from the shot's EXIF parameters (S-EXIFPRM)
+  and the lab's JPEG after it (S-JPEGENC). On E143 REC_IMAGE's own task takes the packet (H-RECIMAGE, `docs/hle-gaps.md`
+  4.3.3), which S-RECREQ posts to it as REC_PREPRO would, the header clear's fill runs natively on the imgpro
+  unit and S-JPEGENC stands in for the encode only; on E146 and E147 S-RECIMAGE runs REC_IMAGE's part in a lab call
+  and S-JPEGENC does the fill too. Card Formatting from the menu formats it: the menu's
   Yes reaches the file module through api_media's own format call (S-MDACTRL, `src/lab/media.mjs`, `docs/hle-gaps.md`
   4.8.3, in place of the HLS function component), its progress bar runs and the application returns to the menu. The
   input `{"type": "card", "action": "remove"}` takes the card out of the slot while the camera runs and `"insert"`
@@ -287,8 +290,9 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   the fills (S-IMGPRO, A-IMGPRO-1; `src/dev/imgpro.mjs`), H-IMGPROINIT attaches its IRQ and S-STAGE9 sets the image
   stage the play buffer waits for (`docs/hle-gaps.md` 4.3.1). The TFT composes with the histogram's registers under
   the opt-in A-VSCHIST-3 (`docs/hle-gaps.md` 4.2.4). It is not the default: a live view stops at the histogram's
-  first end, keys are no longer taken after a menu pass and a shot, and playback shows No Picture with pictures on the
-  card (the next stops, 4.3.1).
+  first end, keys are no longer taken after a menu pass and a shot, playback shows No Picture with pictures on the
+  card (the next stops, 4.3.1; their causes, 4.3.2), and the first power-off of the golden power and power-replay
+  scenarios ends in S-SHUTDOWN's PowerError where camapp 1's turns off (4.2.4; cause not traced).
 - The mode dial shows each position by the firmware's name for it: UI_IN's dial table gives the position's mode code
   and the build names the codes (fact `mode_dial`, `src/fw/facts.mjs` modeDial), so E143's positions 0..9 are S, M,
   B, C1..C4 (MY_MODE1..4), Movie, P and A (`docs/om1-input-spec.md` section 2). A session starts with the dial at P,

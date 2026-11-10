@@ -200,7 +200,7 @@ and the first concrete step. Task ids are `cpu << 12 | index` (kernel spec §2.1
 - **First step:** the static decodes are done (4.1.1-4.1.3). Next, make the HLS component bring-up (`control camapp
   2`) the default of the coverage workload, so the HLS half of TAKE is measured before TAKE itself is attempted
   (tried 2026-11-08, 4.1.5: with the transactions native the components answer them, and the menu then stops at the
-  CPU's udf07, so the default stays camapp 1); then a
+  imgpro unit `0x9c600000` past udf07, so the default stays camapp 1); then a
   probe that runs TAKE_FUNC and TAKE_FUNC_CP natively with a recording stand-in on each queue they send to (4.1.1's
   table), which gives the order and contents of their requests for a start, a through switch and a movie. The probe
   runs since 2026-11-08 (4.1.4): the start's and a mode change's requests are recorded; the through switch and the
@@ -477,9 +477,10 @@ unknown):**
   not used), and the menu's 974, 937, 958, 1515, 994, 955, 1036, 991 and 694, each answered 0 (593 is still
   unanswered at the stop below);
   (b) none: no transaction alone needs what the lab lacks, the stop below comes after the menu's transactions and also
-  with 991, 694 and 593 left to S-TRAACK (X); (c) none found. Playback's transactions (1002, 987, 691, 599, 553, 556 and
-  the return's) are not reached in camapp 3. TRAACK_KEPT is therefore empty; S-TRAACK keeps answering everything in
-  camapp 1 and 2.
+  with 991, 694 and 593 left to S-TRAACK (X); (c) none found. Playback's transactions (974, 937, 994, 1036, 1046, 1002,
+  987, 691, 599, 553, 556) are answered 0 natively up to the imgpro stop below, the last 553 still unanswered there (X,
+  2026-11-09, with udf07 in); the return's are not reached. TRAACK_KEPT is therefore empty; S-TRAACK keeps answering
+  everything in camapp 1 and 2.
 - **What the native path needs that the lab lacks (X, D):**
   - *The VSC histogram.* The shooting component's display set-up starts the VSC's histogram on the TFT channel
     (`0x501e14a4`: INTEN1 bit 8, HIST1 = 1, after HISTAREA1 / 2 at `0x501e1396` / `0x501e13f6`, reached from
@@ -519,7 +520,7 @@ unknown):**
   channel composes its 1920 x 1080 window with no plane drawn (DMAEN 0, OSDCP2 unwritten; OSDFMT1 `0x111` written),
   as with S-OUTDEV; no transaction follows the plug, and what the GUI waits for to draw its HDMI layout is ?.
 - **The heap (X).** Over passes of S1 and S2 in camapp 3 the OXF main thread's events (event 294, `0x60dcb42c`) do
-  not stay (traRoutingSession), as in camapp 2 (4.4.2); the menu and playback passes are not reached.
+  not stay (traRoutingSession), as in camapp 2 (4.4.2); the menu and playback passes stop at the imgpro unit (above).
 
 #### 4.1.6 TAKE's neighbours natively, round 2 (2026-11-09; D unless tagged, addresses E143's)
 
@@ -717,8 +718,8 @@ frame-mode function `0x5039f583`, so S-TAKEFRAME's request is still not reached 
 **What S-RELSEQ's retirement still needs (I unless tagged):**
 1. The through image's take-over made whole in the default sessions: S-THRTAKEOVER beside S-TAKEOVER (with the rest
    of the kinds 1 and 2 path, `0x50ae005c..0x50ae007b`, ?), or the boot take-over `0x50adffda` itself. Both are every
-   play session's, so golden would change; the default camapp mode is still 1, blocked by udf07 and the VSC histogram
-   (4.1.5).
+   play session's, so golden would change; the default camapp mode is still 1, blocked by the imgpro unit `0x9c600000`
+   (4.1.5; udf07 and the VSC histogram are in since 2026-11-09, 4.2.1).
 2. TAKE_FOCUS's AF for command `0x300`: the record's callbacks (tokens 0, 2, 3, 5) with FCS and CPU 1 behind them
    (4.1.4, class (c)), and TAKE_EXPOSE's command `0x400` (token 11), whose reply's word 2 its handler frees (D), so
    S-TAKEREQ may not answer it with `{0, 11, 0}`. Bit `0x08` follows from tokens 0 and 11 (`0x503c2d08`, D).
@@ -817,8 +818,8 @@ frame-mode function `0x5039f583`, so S-TAKEFRAME's request is still not reached 
   The menu's cmd 15 wait returns E_OK at the run's end, at most two frames into the wait (1.9 ms after the key in a
   probe run; before: E_TMOUT after 50 ms), and so does the HDMI plug's (`--hdmi on`).
   **S-HISTWAIT is retired**; S-HISTEND moves only the lab clock, as the vsync wait's RUN_TO_FRAME does. What runs next
-  is unchanged: the menu stops at the CPU's udf07 `0x5050a089` (fault 1, 4.1.5). Default sessions do not start the
-  histogram (camapp 1 and 2 leave HIST1 unwritten over the start, S1, S2, the menu and playback, X).
+  (with udf07 in, 4.1.5): the menu stops at the imgpro unit's start `0x5050a7a9` (fault 2, 4.1.5). Default sessions
+  do not start the histogram (camapp 1 and 2 leave HIST1 unwritten over the start, S1, S2, the menu and playback, X).
 - **Open.** The TFT's composite stays FEATURE_UNOBSERVED once the histogram's registers are written (A13: whether
   they change the mixer output is ?); bins with an IMG plane on are refused, so a live view under camapp 3 would stop
   at its first end; the unit's real time per run (A-VSCHIST-1 sets only the lab's pace); the ring's reader (no literal
@@ -1106,7 +1107,7 @@ than E143, E146 and E147 (4.4.3).
     which is dormant in the default session (X: DMT). With the HLS components (control camapp 2) it runs and frees
     them: every one goes, freed by task 57 through the event's delete (return addresses `0x50d9a1d9`, `0x50d9a218`,
     `0x50d9cb3b`, `0x50d9cc32`, X). In camapp 3 (4.1.5) they do not stay either over passes of S1 and S2 (X); its
-    menu stops at udf07, so a full pass is not measured there.
+    menu stops at the imgpro unit `0x9c600000`, so a full pass is not measured there.
   - **Kept behind S-RPC, open (X: 5 a pass, with and without the components):** the 72-byte request object (vtable
     `0x60de54e8`) `0x50ac722a` builds (operator new at `0x50ac723d`, its constructor `0x50ac7291` sets its own-delete
     word +20 to 1) and hands to its method `0x50ac734c`, which S-RPC answers 0 at its entry. The method's no-channel
@@ -2977,8 +2978,8 @@ there (it stays on the other bodies).
   (`Mode` 4097, `Media` 0, `Media2` none, `RecordDevice` 1, `ImgAspect` 1, `FileType` 1, `HandleTarget` 1, I: the lab's
   one shot; the rest 0 as REC_MAIN's clear leaves it), `rec_jpeg_exec` natively on it, REC_IMAGE's post natively, then
   lab time until REC_FILE's handler returns (`0x5053f20d`). S-JPEGENC, the image pipeline's work inside it: the encode
-  writes the lab's JPEG (without its JFIF APP0) at `Addr` + 41984 and sets `Size` (I), and the image engine's fill (its
-  request id needs udf07, kept faulting) is done by the lab for REC's header clear only.
+  writes the lab's JPEG (without its JFIF APP0) at `Addr` + 41984 and sets `Size` (I), and the image engine's fill (a
+  kind-14 request to the imgpro unit `0x9c600000`, not modelled) is done by the lab for REC's header clear only.
 - **What it does (X, E143):** S2 gives `C:\DCIM\100OMSYS\P1010001.JPG` (41984 bytes of the firmware's header, then the
   lab's stream; 73,410 bytes with the live view); with the clock set first through the firmware's clock setting
   (`0x5012b7a7`, 2026-11-08 12:34:56) `PB080001.JPG`, whose Exif (read by `emu/refs/exif.mjs` and exiftool) has Make

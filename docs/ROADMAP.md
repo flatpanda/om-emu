@@ -17,7 +17,7 @@ Every milestone runs in emu and is covered by the check its row names; the `chec
 |---|---|---|---|
 | ND128 fragments | the ND128 candidate's parameter writer, exposure selector and frame-count code (the getter's return value injected) | `check_nd128` | `analysis/nd128/README.md` |
 | M1 HLE rectangles | `gpiDrawOsdRectangle` from a RAM trampoline; the main block copied at its run-time base `0x60021020` | `check_osd` | vsc spec §7 |
-| ISA + UDF | the full MN10300 base ISA (1,684,008 of 1,684,013 reachable instructions), the UDF multiply/HI and binary32 float unit | `check_isa`: 5,311 vectors, 125 firmware functions | ISA spec, UDF spec |
+| ISA + UDF | the full MN10300 base ISA (1,684,008 of 1,684,013 reachable instructions), the UDF multiply/HI and binary32 float unit | `check_isa`: 5,322 vectors, 125 firmware functions | ISA spec, UDF spec |
 | M2 OSD | memory-manager constructors, `osddraw_init`, `gpiDraw*` down to the OSD engine model at `0x9BC00000`, the IRQ 310 handler | `check_osd` | vsc spec §7 |
 | M3 VSC | display task init, DISPLAY OPEN, `GPISetPalette`, `gpiUpdateDisplay` programming the VSC model at `0x9BB80000`; TFT 900x600 and EVF 1600x1200 composites | `check_display` | vsc spec |
 | M4 text | language load `0x51257bfb`, Genifa init, `DrawTextById` down to `osddraw_exec_font`, 18 languages | `check_text` | text spec |
@@ -79,7 +79,7 @@ not reconciled.
    bounded; 22 events a pass wait for the OXF main thread, which runs only with the HLS components, and 5 S-RPC
    requests a pass stay, who frees them after a reply is open (test_camapp heapWorkloadSession). With the components'
    transactions native (`control camapp 3`, hle-gaps.md 4.1.5) the OXF events no longer stay over S1 and S2; the menu
-   then stops at the CPU's udf07, so camapp 1 stays the default. The SCPU survey (2026-10-23, `docs/om1-scpu-spec.md`) put the transport-level model before any LLE of the
+   then stops at the imgpro unit `0x9c600000` (udf07 is in since 2026-11-09), so camapp 1 stays the default. The SCPU survey (2026-10-23, `docs/om1-scpu-spec.md`) put the transport-level model before any LLE of the
    sub-CPU; it is built (SCPU track below).
 4. **Debug API follow-ups** (Debug API follow-ups below): the route to a running play session (F31), the attached
    watch log's lab time, halt and trace filters are in (2026-10-23), and the gate gaps 1-3 and 6 are closed, the
@@ -656,7 +656,7 @@ Each listed once; the owner document has the evidence.
 | Subsystem | Open items | Owner |
 |---|---|---|
 | CPU core and ISA | core variant unconfirmed (AM32-only `FE 80-82`, LIR byte order); DIV by zero or overflow results; reserved PSW bits; flags left undefined by a producer; the PSW write delay, whose scan cannot see indirect callers built at run time; misaligned values written to SP; TRAP, `F0 C0`, `F0 FF`, `break`, the `F7` page; interrupt acceptance: A-ACCEPT, A-ENTRY, A-RTI-WINDOW, A-VEC, A-IAGR, NMI and level 0 | ISA spec §2.4, §8, §11 |
-| UDF unit | `udf07`; `udf12` / `13` / `20` / `21` implemented as a round trip of unit state (A-UNIT), their meaning ?; whether `udf00` imm, `udf01`, `udfu01` write HI (A-HI: unobservable); the unit's flag behaviour | udf spec §1, §2, §2a |
+| UDF unit | `udf07`'s search order (BSCH per the manual, udf spec row 14); `udf12` / `13` / `20` / `21` implemented as a round trip of unit state (A-UNIT), their meaning ?; whether `udf00` imm, `udf01`, `udfu01` write HI (A-HI: unobservable); the unit's flag behaviour | udf spec §1, §2, §2a |
 | Interrupt controller | A-IPI: `+0x808` ORs and reads the inter-CPU pending bits, `+0x80c` clears (OR versus overwrite unobservable); CPUs 1..3 not modelled | intc/timer spec §2, §5 |
 | Memory map | 256 KiB of low RAM is a lab assumption; the OE header at `0x60021000` is zero in the lab; the bus space and the `0xb8000000` window are modelled as A16 / A17 (the physical backing of the live-view bank ranges ?, `0x9810004c` unmodelled); the camera's use of the lab region `0x62021000..0x62321000`; bank `0x5f` read as a bus address (I); which core runs the GUI (core id at `0x8050`, string `OSDDRAW_CPU2`); ROM past the image is zero-filled | cores spec §2, §3.4, §6; FIDELITY 4.1-4.3; vsc spec §9 |
 | Panel-side stand-ins | lab-stub reads of never-written addresses return 0 (`STUB_UNWRITTEN`: 25 TFT and 16 EVF entries in `check_display_notes.txt`), including `0x99800004`, which drives the OSD2 / OSD3 HDLY; the five stub presets are only the firmware poll loops' exit values | vsc spec A13, §9; FIDELITY 4.2, 7.4 |
@@ -770,7 +770,7 @@ The lab's only ground truth is the firmware's own code. Some items cannot be set
 Thai menu settles it, text spec U1), how strings with icon codes show (U6), what indices >= 128 show (U16), plane order
 and blend (A5, A7), the EVF menu in its EVF layout (a photo through the viewfinder next to `check_nav` N7's
 composite, B2), the IMG edge rule (A6), what CTRL3 bit 6 of the live-view setup does (A15), the EVF image after the
-post-mix stages (A14), which palette a buffer kind uses (vsc spec §7), `udf07`'s bit order (udf spec §2), and whether
+post-mix stages (A14), which palette a buffer kind uses (vsc spec §7), `udf07`'s order (udf spec row 14), and whether
 the updater accepts a modified image. Photos of the rear screen from an OM-1 on v1.9 need no flashing and would also be
 the external reference for the menu: the Setup pages where U1 hypotheses A and B differ (`check_menu_notes.txt`) would
 settle U1, given a camera reset to its defaults (the lab's store) or set to a seed. For the blocks below the camera

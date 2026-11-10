@@ -84,8 +84,8 @@ In order of authority:
 1. **The firmware's own code, executed natively.** Wherever emu runs firmware code instead of a stand-in, the firmware
    decides. Every stand-in removed moves the lab closer to it.
 2. **Silicon documentation.** The MN103 ISA manual (`BLOBS.md` says where to get it), the UDF spec
-   (`docs/om1-udf-spec.md`) and the 5,311 ISA vectors in `test/fixtures/isa_vectors.json` (3,392 from GDB 15.2's
-   `sim/mn10300`, 468 from that simulator corrected per the manual, 728 from the manual, 723 from the UDF spec). Where
+   (`docs/om1-udf-spec.md`) and the 5,322 ISA vectors in `test/fixtures/isa_vectors.json` (3,392 from GDB 15.2's
+   `sim/mn10300`, 468 from that simulator corrected per the manual, 712 from the manual, 750 from the UDF spec). Where
    emu's model chooses something the manual does not say (TB-layout interrupt looks, undefined-flag tracking, faults on
    undefined results), the manual wins and the choice is recorded as an assumption.
 3. **Camera observations.** Photos or HDMI captures of the rear screen and EVF, settings read back from a camera,

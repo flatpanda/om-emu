@@ -283,7 +283,8 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   TRA 588 is theirs, so no S-OUTDEV), and the VSC's histogram unit, which they start, ends each run natively
   (A-VSCHIST-1 and A-VSCHIST-2; S-HISTEND runs the lab clock to the end in DISPLAY cmd 15's wait, `docs/hle-gaps.md`
   4.2.1). It is not the default: the TFT's composite is refused once the components start the histogram, and the menu
-  stops at the CPU's udf07 (`0x5050a089`), which the lab does not implement (`docs/hle-gaps.md` 4.1.5).
+  stops past udf07 at the imgpro unit `0x9c600000` (`0x5050a7a9`), which the lab does not model (`docs/hle-gaps.md`
+  4.1.5).
 - The mode dial shows each position by the firmware's name for it: UI_IN's dial table gives the position's mode code
   and the build names the codes (fact `mode_dial`, `src/fw/facts.mjs` modeDial), so E143's positions 0..9 are S, M,
   B, C1..C4 (MY_MODE1..4), Movie, P and A (`docs/om1-input-spec.md` section 2). A session starts with the dial at P,
@@ -781,7 +782,7 @@ firmware the run warns and skips that rule. `--explain N` prints what each firmw
 
 What the tests compare with is emu's own data, and it is regression data, not a specification
 ([ARCHITECTURE.md](ARCHITECTURE.md), "Ground truth"): `golden.json` is recorded from emu by `bin/golden.mjs record`, the
-checks' notes files and pinned results under `checks/fixtures/` come from emu's own runs, and the 5,311 ISA vectors
+checks' notes files and pinned results under `checks/fixtures/` come from emu's own runs, and the 5,322 ISA vectors
 (`test/fixtures/isa_vectors.json`) are recorded vectors, fixed data that no tool in this tree regenerates. The replayed
 scenarios' inputs (`scenarios/calls/`) are the other recorded data, replayed as inputs only. A checkout with the fetched
 firmware runs every command above but `webgate` and `sitegate`, which also need Chrome, and `browsergate`, which needs

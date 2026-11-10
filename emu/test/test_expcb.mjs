@@ -1,12 +1,15 @@
 // The EXP callback that writes the AE results (docs/hle-gaps.md 4.2.2), E143, round 1: how far TAKE_EXPOSE's AE
-// request for the through start runs natively, and where it stops. Addresses are E143's (D unless tagged).
-//   expCallbackSession  two sessions with --take probe and --cpu2 native (camapp 1). Each brings up what USTART2's
-//                       stage 0x501e8e84 runs and the lab does not: IMG_PRECON's module init 0x502a49b3 (its call at
+// request for the through start runs natively, and where it stops; round 2 (4.2.3): with cam.c's init native. Addresses
+// are E143's (D unless tagged).
+//   expCallbackSession  two sessions with --take probe and --cpu2 native (camapp 1). Since round 2 the probe brings up
+//                       what USTART2's stage 0x501e8e84 runs for EXP and the lab did not (H-EXPINIT, src/lab/take.mjs;
+//                       the test made these steps by hand before): IMG_PRECON's module init 0x502a49b3 (its call at
 //                       0x501e8ec0; it builds the white-balance table 0xa31f1bd0 through 0x5039814c -> 0x5039950e),
 //                       EXP's init 0x50553649 (0x501e90c4), EXP_MOVIE (task 88, entry 0x50553697, started at
 //                       0x501e90f3) and, on CPU 2, EXP_MOVIE2 0x2009 and EXP_MOVIE3 0x200a through the cross-core start
 //                       0x5002c546 as the stage starts them (0x501e910e, 0x501e912f); EXP's queues EXP_MOVIE 0x17 and
-//                       EXP_MOVIE_POST 0x18 go natively. Then the test posts TAKE_EXPOSE's command 0xa00, the request
+//                       EXP_MOVIE_POST 0x18 go natively; and cam.c's first init (H-CAMINIT). Then the test posts
+//                       TAKE_EXPOSE's command 0xa00, the request
 //                       the through start makes (TAKE_FUNC command 25 -> 0x506d83f9 with d0 32, its send at
 //                       0x506d8645), which the lab does not reach. Its 52-byte parameter is filled by 0x506d8b0c from
 //                       command 25's parameter, which the lab does not have: the test gives zeros with byte 0, the
@@ -18,8 +21,11 @@
 //                       0x50573383(0x2000000) back; EXP_MOVIE goes on to the white balance (0x5056afe2). Mode 0: the
 //                       white balance ends, the handler has given the camera driver its request 7 with EXP's frame
 //                       callbacks (record 0x62a98a0c from 0x5056a6e4: 0x5056fd44, 0x5056fd61, 0x5056fff0, 0x50570024),
-//                       none of which runs (cam.c's own init does not run in the lab, docs/hle-gaps.md 4.1.4), and
-//                       EXP_MOVIE waits on its flag 21 for bit 0x1000 (0x5056ba07 -> 0x50585dc2). On this path its
+//                       none of which runs, and EXP_MOVIE waits on its flag 21 for bit 0x1000 (0x5056ba07 ->
+//                       0x50585dc2). With cam.c's init (round 2) the driver takes both requests without its pool error
+//                       0x0a103000; request 7 logs 0x0a283000 twice (its movie sequence's queues are registered by its
+//                       second init, which does not run) and nothing fires the callbacks (docs/hle-gaps.md 4.2.3). On
+//                       this path its
 //                       answer to EXP_MOVIE_POST comes after that wait (0x5058cbe7; 0x5058c84a answers 2, 0x5058c963
 //                       0), so TAKE_EXPOSE stays in its receive (0x505539af); the callback's status inputs
 //                       (0x62abd550) and (0x62abd558) are 0, which would give it status 2 (0x5058cd54). Mode 1: the
@@ -30,6 +36,7 @@
 //                       through mode lands in 0x62abd7a0, whose mask 1 makes the callback skip the writer
 //                       (0x505975ba). In neither does the request's callback or the AE result writer 0x50596187 run,
 //                       so S-EXPOSE stays
+//   camDriverSession    round 2 (docs/hle-gaps.md 4.2.3): cam.c natively (below)
 //   aeReadersSession    S-EXPOSE's readers in a default session (below)
 //   node emu/test/test_expcb.mjs
 import { fileURLToPath } from 'node:url';
@@ -54,13 +61,9 @@ async function session(mode) {
   const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
-  const { CPU2_TASKS } = await import('../src/lab/cpu2.mjs');
   const { pack } = await import('../src/util/bytes.mjs');
   const { disasm } = await import('../src/lab/hle.mjs');
   const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
-  // core 2 parks a task start whose entry it does not list (cpu2.mjs CPU2_TASKS): EXP's two CPU 2 servers, for these
-  // sessions only
-  for (const [, entry, name] of E.cpu2_tasks) CPU2_TASKS.set(entry, name);
   const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, take: 'probe', cpu2: 'native' }, env);
   const out = { mode };
   try {
@@ -78,34 +81,24 @@ async function session(mode) {
     mark(E.divide, 'divide', (l, r) => ({ d0: r.d0 >>> 0, d1: r.d1 >>> 0 }));
     mark(E.callback_call, 'callback');
     mark(E.writer, 'writer');
-    mark(E.cam_switch, 'camera driver request', (l, r) => ({ id: u16(r.a0 >>> 0, 1)[0], record: h8(r.a0), from: h8(disasm(r.mdr)) }));
+    // (the camera driver's switch carries S-TAKECAM's hook, which records the requests of other tasks: take.cam.native)
     for (const f of E.frame_callbacks) mark(f, 'frame callback');
-    mark(E.evwt, 'OlyEvWt', (l, r) => ({ flag: r.d0 & 0xFFFF, bits: h8(r.d1), from: h8(disasm(r.mdr)) }));
     mark(E.post_answer, 'EXP_MOVIE_POST answer', (l, r) => ({ from: h8(disasm(r.mdr)) }));
     mark(E.caller_wait, 'caller waits on EXP_MOVIE_POST');
     mark(E.caller_back, 'caller has the answer');
     // the words 0x50398a55 reads through its request's pointers +24, +28, +32, +36
     mark(E.scale, 'scale', (l, r) => ({ words: [24, 28, 32, 36].map((k) => u16(l.sim.u32((r.a0 >>> 0) + k) >>> 0, 1)[0]) }));
-    // the bring-up USTART2's stage would have made
-    out.wb0 = u16(E.wb_table, E.wb_table_size / 2);
-    out.imgprecon = lab.call(E.imgprecon_init, null, null, null, 20000000).d0 >>> 0;
-    s.settle('expcb IMG_PRECON init');
+    // the bring-up USTART2's stage makes, by the probe (H-EXPINIT) before the application started
+    out.used = pl.stand_ins_in_use().filter((x) => x === 'H-EXPINIT' || x === 'H-CAMINIT');
     out.wb1 = u16(E.wb_table, E.wb_table_size / 2);
-    out.exp_init = lab.call(E.exp_init, null, null, null, 20000000).d0 >>> 0;
-    s.settle('expcb EXP init');
     const tid = out.tid = lab.sim.read(E.exp_movie.tid, 2).reduce((a, b, k) => a | b << 8 * k, 0);
+    out.probe_tid = take.exp_tid;
     out.entry = lab.nk.entry(tid);
-    lab.lt.allow.add(out.entry);
-    [out.act] = lab.nk.svc('act_tsk', { d0: tid });
-    s.settle('expcb EXP_MOVIE');
     out.state0 = lab.nk.state(tid);
-    out.started = [];
-    for (const [t] of E.cpu2_tasks) {
-      out.started.push(lab.call(E.start_cpu, { d0: t }, null, null, 20000000).d0 >>> 0);
-      s.settle(`expcb start 0x${t.toString(16)}`);
-    }
-    out.cpu2_starts = s.cpu2.take_log().filter(([k]) => k === 'start').map(([, n]) => n);
-    for (const q of E.queues) take.native.add(q);
+    out.cpu2_starts = s.cpu2.started.map(([, n]) => n);
+    out.native = E.queues.every((q) => take.native.has(q));
+    // EXP_MOVIE's frame waits (take.mjs records them: the wait 0x50585dc2's flag and bits, its caller)
+    const c0 = { native: take.cam.native.length, errlogs: take.cam.errlogs.length, waits: take.cam.waits.length };
     marks.length = 0;
     // TAKE_EXPOSE's command 0xa00, the through start's request (no reply queue: nothing in the lab waits for it)
     const param = lab.alloc(new Uint8Array(52), 4);
@@ -118,8 +111,12 @@ async function session(mode) {
     out.status_word = lab.sim.u32(E.status_word) >>> 0;
     [out.status_byte] = lab.sim.read(E.status_byte, 1);
     [out.through_mode] = lab.sim.read(E.through_mode, 1);
+    out.cam_native = take.cam.native.slice(c0.native).map((x) => `${x.task} ${x.id}`);
+    out.cam_requests = take.cam.native.slice(c0.native).map((x) => ({ id: x.id, record: h8(x.record), from: h8(x.from) }));
+    out.cam_lines = take.cam.lines.slice(c0.errlogs).map(([c, l, f]) => `${h8(c)} line ${l} from ${h8(f)}`);
+    out.cam_errlogs = take.cam.errlogs.slice(c0.errlogs);
+    out.waits = take.cam.waits.slice(c0.waits).map((w) => ({ flag: w.flag, bits: h8(w.bits), from: h8(w.from) }));
   } catch (e) { out.error = e.message.slice(0, 800); }
-  finally { for (const [, entry] of E.cpu2_tasks) CPU2_TASKS.delete(entry); }
   pl.close_session();
   return out;
 }
@@ -132,11 +129,11 @@ export async function expCallbackSession() {
     const r = await session(mode), m = r.marks ?? [];
     if (r.error) { bad.push(`mode ${mode}: ${r.error}`); continue; }
     const first = (n) => m.find((x) => x.name === n), names = m.map((x) => x.name);
-    ok(r.imgprecon === 0 && r.wb0.every((v) => v === 0) && r.wb1.some((v) => v !== 0),
-      `mode ${mode}: IMG_PRECON's init returns ${r.imgprecon} and fills the white-balance table (${r.wb0.filter((v) => v).length} -> ${r.wb1.filter((v) => v).length} nonzero)`);
-    ok(r.exp_init === 0 && r.tid === 88 && r.entry === E.exp_movie.entry && r.act === 0 && (r.state0 & 0xF) === 4
-      && r.started.every((x) => x === 0) && E.cpu2_tasks.every(([, , n]) => r.cpu2_starts.includes(n)),
-      `mode ${mode}: EXP's init (${r.exp_init}), EXP_MOVIE (task ${r.tid}, ${h8(r.entry)}, state ${r.state0}) and EXP_MOVIE2 / 3 on CPU 2 (${r.started}, ${JSON.stringify(r.cpu2_starts)}) start and wait`);
+    ok(JSON.stringify(r.used) === JSON.stringify(['H-CAMINIT', 'H-EXPINIT']) && r.wb1.some((v) => v !== 0),
+      `mode ${mode}: the probe runs H-CAMINIT and H-EXPINIT (${r.used}), and IMG_PRECON's init has filled the white-balance table (${r.wb1.filter((v) => v).length} nonzero)`);
+    ok(r.tid === 88 && r.probe_tid === 88 && r.entry === E.exp_movie.entry && (r.state0 & 0xF) === 4 && r.native
+      && E.cpu2_tasks.every(([, , n]) => r.cpu2_starts.includes(n)),
+      `mode ${mode}: EXP_MOVIE (task ${r.tid}, ${h8(r.entry)}, state ${r.state0}) waits, EXP_MOVIE2 / 3 run on CPU 2 (${JSON.stringify(r.cpu2_starts)}), EXP's queues are native (${r.native})`);
     ok(r.posted === 0 && first('launcher')?.kind === 1280 && first('EXP entry')?.kind === 1280 && first('EXP entry')?.callback === h8(0x5059757F),
       `mode ${mode}: command 0xa00 builds the AE request of kind 1280 with the callback 0x5059757f (${JSON.stringify(m.slice(0, 2))})`);
     const off = first('offload to CPU 2');
@@ -146,11 +143,16 @@ export async function expCallbackSession() {
     ok(JSON.stringify(names.filter((n) => order.includes(n))) === JSON.stringify(order), `mode ${mode}: EXP_MOVIE goes on after CPU 2's answer (${JSON.stringify(names.filter((n) => order.includes(n)))})`);
     ok(!names.includes('callback') && !names.includes('writer'), `mode ${mode}: the request's callback and the AE result writer do not run`);
     if (mode === 0) {
-      const req = m.filter((x) => x.name === 'camera driver request' && x.record === h8(E.frame_record));
-      const wait = m.filter((x) => x.name === 'OlyEvWt' && x.from === h8(0x50585DD5)).at(-1);
+      const req = r.cam_requests.filter((x) => x.record === h8(E.frame_record));
+      const wait = r.waits.at(-1);
       ok(r.stop === undefined && !names.includes('divide') && req.length === 1 && req[0].id === 7 && !names.includes('frame callback')
-        && wait?.flag === 21 && wait?.bits === h8(0x1000) && (r.state & 0xF) === 4,
+        && wait?.flag === 21 && wait?.bits === h8(0x1000) && wait?.from === h8(0x5056BA2C) && (r.state & 0xF) === 4,
         `mode 0: the camera driver gets request 7 with EXP's frame callbacks (${JSON.stringify(req)}), none runs, and EXP_MOVIE waits on flag 21 bit 0x1000 (${JSON.stringify(wait)}, state ${r.state}, stop ${r.stop})`);
+      // round 2: cam.c's init native; request 7's two posts to the movie sequence's queues fail (0x0a283000 each, from
+      // 0x50151e45), request 8 logs nothing
+      ok(JSON.stringify(r.cam_native) === JSON.stringify(['EXP_MOVIE 8', 'EXP_MOVIE 7']) && r.cam_errlogs.length === 3 && r.cam_errlogs.every((c) => c === 0x0A283000),
+        `mode 0: cam.c takes EXP_MOVIE's requests natively (${JSON.stringify(r.cam_native)}) and logs ${JSON.stringify(r.cam_lines)} (want 0x0a283000 three times, no pool error 0x0a103000)`);
+      if (process.env.TF_PRINT) console.log(JSON.stringify(r.cam_lines));
       ok(!names.includes('EXP_MOVIE_POST answer') && names.includes('caller waits on EXP_MOVIE_POST') && !names.includes('caller has the answer')
         && r.status_word === 0 && r.status_byte === 0 && r.through_mode === 0,
         `mode 0: EXP_MOVIE has not answered EXP_MOVIE_POST, TAKE_EXPOSE stays in its receive, and the status inputs are 0 / 0 (${JSON.stringify(m.filter((x) => /EXP_MOVIE_POST|answer/.test(x.name)))}, ${r.status_word} / ${r.status_byte}, through mode ${r.through_mode})`);
@@ -162,6 +164,100 @@ export async function expCallbackSession() {
         `mode 1: the scaling reads the table's two values and 0x5056f1bb's two unwritten gains (0), and the through mode's mask 1 is set, so the callback would skip the writer (${JSON.stringify(sc)}, through mode ${r.through_mode})`);
     }
   }
+  return { checks, bad };
+}
+
+// Round 2 (docs/hle-gaps.md 4.2.3): cam.c natively, in a default session (camapp 1, no probe, so the switch has no
+// stand-in), every step from the test. (1) cam.c's first init 0x502a49ec (USTART's call at 0x50024aa2, H-CAMINIT's):
+// it returns 0, its only device accesses are the interrupt controller's for IRQs 146 and 147 (the attach through the
+// timer API 0x50064323 with 8 and 9, offsets 0x248 / 0x24c of each bank), and the request pool's free-list head
+// 0x6299726c goes from 0 to a slot. (2) Requests 148 and 144 made of the switch natively (192-byte records, +0 the
+// id, +3 the argument 1, +72 TAKE's completion 0x502cd4d0, which TAKE_FUNC_CP's and TAKE_MAIN's requests carry): each
+// is accepted (0) and posted as a deferred call (0x500504aa: 148 0x502a4b74, 144 0x5015582d), which queues an item of
+// the driver's sequence engine (0x501524c0), touching no device but the interrupt controller and the deferred-call
+// triggers, both modelled; neither is completed in 100 ms of idle and cam.c logs nothing; request 6
+// logs 0x0a273000 and is not deferred. (3) The second init 0x50155357 (USTART's call at 0x50024d80) step by step in its
+// order: its first nine calls (0x50152401 .. 0x5019813d: among them the movie sequence's queues SQMV, MQEX, INFN and
+// SMFM, 0x5019868e) return 0 and touch no device; request 6 is then deferred (0x50153844) and queues its item, and is
+// not completed either. The tenth call, the front end's init 0x5016efcd, writes 0x98800340 (which the lab stub keeps)
+// and then the camera clock gate 0x9b500800, which the lab does not model: the session stops there
+const CAM = {
+  init: 0x502A49EC, pool: 0x6299726C, sw: 0x502A4A46, completion: 0x502CD4D0, deferred: 0x500504AA, item: 0x501524C0,
+  errlog: 0x501504D0, handlers: { 148: 0x502A4B74, 6: 0x50153844, 144: 0x5015582D }, no6: 0x0A273000,
+  init2: [0x50152401, 0x50150B66, 0x501550BC, 0x50151D07, 0x5015F38F, 0x501A3559, 0x5019C70F, 0x5019868E, 0x5019813D],
+  front_end: 0x5016EFCD,
+};
+export async function camDriverSession() {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
+  const { Player } = await import('../src/lab/player.mjs');
+  const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+  const { disasm } = await import('../src/lab/hle.mjs');
+  const { pack } = await import('../src/util/bytes.mjs');
+  const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
+  const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, env);
+  let phase = 'start';
+  try {
+    pl.open_session();
+    const s = pl.session, lab = s.lab, m = lab.sim.m;
+    const u16 = (a) => { const b = lab.sim.read(a, 2); return b[0] | b[1] << 8; };
+    const idle = (ms) => { const to = lab.lab_time() + ms * 1e6; while (lab.lab_time() < to) s.idle_slice(Math.min(to, lab.lab_time() + 50e6)); };
+    const errlogs = [], deferred = [], items = [], completions = [];
+    lab.observe(CAM.errlog, (l, r) => errlogs.push(h8(r.d0)), 'camdrv errlog');
+    lab.observe(CAM.deferred, (l, r) => deferred.push(h8(disasm(r.a0))), 'camdrv deferred');
+    lab.observe(CAM.item, (l, r) => items.push(u16(r.a0 >>> 0)), 'camdrv item');
+    lab.observe(CAM.completion, (l, r) => completions.push(h8(r.a0)), 'camdrv completion');
+    // the device accesses (the lab's lock registers, which the kernel touches throughout, aside)
+    let mmio = [];
+    m.setMmioTrace((dir, a, v, w, name, cpu) => { if (cpu === 0 && name !== 'om1.isc-locks') mmio.push({ dir: dir ? 'W' : 'R', a: a >>> 0, name }); });
+    phase = 'init';
+    const head0 = u16(CAM.pool), rc = lab.call(CAM.init, null, null, null, 20000000).d0 & 0xFFFF, head1 = u16(CAM.pool);
+    s.settle('camdrv init');
+    const irqs = [...new Set(mmio.map((x) => (x.a & 0xFFF) / 4))];
+    ok(rc === 0 && !errlogs.length && head0 === 0 && head1 !== 0xFFFF && mmio.length > 0 && mmio.every((x) => x.name === 'om1.intc')
+      && JSON.stringify(irqs) === JSON.stringify([146, 147]),
+      `cam.c's init returns ${rc}, logs [${errlogs}], the pool head ${head0} -> ${head1}, its device accesses ${JSON.stringify([...new Set(mmio.map((x) => `${x.dir} ${h8(x.a)} ${x.name}`))])} (IRQs ${irqs})`);
+    // a request made natively, then 100 ms of idle: [the switch's d0, the deferred call, the items queued, completed,
+    // the errors logged, the devices the call touched]
+    const request = (id) => {
+      const rec = lab.alloc(new Uint8Array(192), 4);
+      lab.sim.write(rec, Uint8Array.of(id & 0xFF, id >> 8, 0, 1));
+      lab.sim.write(rec + 72, pack('<I', CAM.completion - 0x50000000 + 0x60021020));
+      const d0 = deferred.length, i0 = items.length, e0 = errlogs.length;
+      mmio = [];
+      const r = lab.call(CAM.sw, { a0: rec }, null, null, 20000000).d0 & 0xFFFF;
+      s.settle(`camdrv request ${id}`);
+      const dev = [...new Set(mmio.map((x) => x.name))];
+      idle(100);
+      return { r, deferred: deferred[d0], items: items.length - i0, done: completions.includes(h8(rec)), errors: errlogs.slice(e0), dev };
+    };
+    const shown = (q) => JSON.stringify(q);
+    phase = 'requests';
+    for (const id of [148, 144]) {
+      const q = request(id);
+      ok(q.r === 0 && q.deferred === h8(CAM.handlers[id]) && q.items > 0 && !q.done && !q.errors.length && q.dev.every((x) => x === 'om1.intc' || x === 'om1.dpc-triggers'),
+        `request ${id} with the first init: accepted, deferred to ${h8(CAM.handlers[id])}, an item queued, not completed in 100 ms, no error, no device but the controller and the deferred-call triggers (modelled): ${shown(q)}`);
+    }
+    const q6 = request(6);
+    ok(q6.r === 0 && q6.deferred === undefined && !q6.items && !q6.done && JSON.stringify(q6.errors) === JSON.stringify([h8(CAM.no6)]),
+      `request 6 with the first init alone logs ${h8(CAM.no6)} and is not deferred: ${shown(q6)}`);
+    phase = 'init2';
+    mmio = [];
+    const rcs = CAM.init2.map((f) => lab.call(f, null, null, null, 50000000).d0 & 0xFFFF);
+    ok(rcs.every((x) => x === 0) && !mmio.length, `the second init's first nine calls return ${rcs} and touch ${JSON.stringify(mmio.map((x) => h8(x.a)))}`);
+    const q6b = request(6);
+    ok(q6b.r === 0 && q6b.deferred === h8(CAM.handlers[6]) && q6b.items > 0 && !q6b.done && !q6b.errors.length,
+      `request 6 after them: deferred to ${h8(CAM.handlers[6])}, an item queued, not completed in 100 ms: ${shown(q6b)}`);
+    mmio = [];
+    let stop = null;
+    try { lab.call(CAM.front_end, null, null, null, 50000000); } catch (e) { stop = e.message; }
+    ok(stop !== null && /lab-stub DENIED write 0x9b500800/.test(stop) && JSON.stringify(mmio.map((x) => `${x.dir} ${h8(x.a)}`)) === JSON.stringify(['W 0x98800340', 'W 0x9b500800']),
+      `the front end's init stops at the camera clock gate: ${JSON.stringify(mmio.map((x) => `${x.dir} ${h8(x.a)} ${x.name}`))}, ${String(stop).slice(0, 200)}`);
+    m.setMmioTrace(null);
+  } catch (e) { bad.push(`camDriverSession (${phase}): ${e.message.slice(0, 600)}`); }
+  pl.close_session();
   return { checks, bad };
 }
 
@@ -224,10 +320,13 @@ export async function aeReadersSession() {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const r = await expCallbackSession();
-  console.log(`the EXP callback, round 1: ${r.checks - r.bad.length}/${r.checks}`);
+  console.log(`the EXP callback, rounds 1 and 2: ${r.checks - r.bad.length}/${r.checks}`);
   r.bad.forEach((x) => console.log('  ', x));
+  const c = await camDriverSession();
+  console.log(`cam.c natively: ${c.checks - c.bad.length}/${c.checks}`);
+  c.bad.forEach((x) => console.log('  ', x));
   const a = await aeReadersSession();
   console.log(`S-EXPOSE's readers: ${a.checks - a.bad.length}/${a.checks}`);
   a.bad.forEach((x) => console.log('  ', x));
-  process.exit(r.bad.length || a.bad.length ? 1 : 0);
+  process.exit(r.bad.length || c.bad.length || a.bad.length ? 1 : 0);
 }

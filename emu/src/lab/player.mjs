@@ -487,6 +487,8 @@ export class Player {
     if (this.session?.camapp?.take?.main_tids) used.push('H-TAKEMAIN');                      // --take probe: TAKE_MAIN natively (take.mjs)
     if (this.session?.camapp?.take?.focus_tid) used.push('H-TAKEFOCUS');                     // --take probe: TAKE_FOCUS natively (take.mjs)
     if (this.session?.camapp?.take?.thr_takeover_set) used.push('S-THRTAKEOVER');            // --take probe under camapp 3 (take.mjs)
+    if (this.session?.camapp?.take?.cam_inited) used.push('H-CAMINIT');                      // --take probe (take.mjs)
+    if (this.session?.camapp?.take?.exp_tid != null) used.push('H-EXPINIT');                 // and --cpu2 native
     const stb = this.session?.camapp?.take;                                                  // --take probe: the strobe natively (take.mjs, shoe.mjs)
     if (stb?.stb_tids) used.push('H-STBINIT', 'S-HOTSHOE', ...(stb.shoe.mapped ? ['H-SIOMAP'] : []), 'A-HOTSHOE-1', 'A-HOTSHOE-2');
     // the model's own stand-ins (src/fw/models.mjs return_stubs and call_skips, src/lab/play.mjs), each by its name

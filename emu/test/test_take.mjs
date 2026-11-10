@@ -41,7 +41,7 @@ export const START = [...CP0, 'TAKE_FUNC <= 13', 'TAKE_FUNC -> TAKE_EXPOSE 0 syn
 const C22 = ['TAKE_FUNC <= 22', 'TAKE_FUNC -> TAKE_FOCUS 2 sync (native)', 'TAKE_FOCUS <= 2', 'TAKE_FOCUS -> reply', 'TAKE_FUNC -> reply'];
 export const START_COMPONENTS = [...START, 'TAKE_FUNC <= 29', 'TAKE_FUNC -> reply', ...C22];
 const PROBE_STAND_INS = ['H-TAKEINIT', 'S-TAKEREQ', 'S-TAKECAM', 'S-TAKEUSF', 'H-TAKENBINIT', 'H-STBINIT', 'S-HOTSHOE', 'H-SIOMAP',
-  'A-HOTSHOE-1', 'A-HOTSHOE-2', 'H-TAKEFOCUS'];
+  'A-HOTSHOE-1', 'A-HOTSHOE-2', 'H-TAKEFOCUS', 'H-CAMINIT'];
 export const MODE_CHANGE = [...C22, ...C22, ...C22];
 
 // round 2 (docs/hle-gaps.md 4.1.6): the neighbours' state after a session's scenarios. TAKE_EXPOSE's on byte

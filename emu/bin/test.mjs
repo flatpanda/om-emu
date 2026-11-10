@@ -203,12 +203,12 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   bad += rs.bad.length;
 }
 // the release route, round 2 (test_take_release.mjs focusSession, --take probe round 3: H-TAKEFOCUS): under camapp 3
-// TAKE_FOCUS runs natively, S1's take request goes through RdyFcsRdy1..3 and stops at TAKE_EXPOSE's request to
-// EXP_MOVIE
+// TAKE_FOCUS runs natively, S1's take request goes through RdyFcsRdy1..3; with --cpu2 native (round 4: H-CAMINIT,
+// H-EXPINIT) TAKE_EXPOSE's request reaches EXP_MOVIE, which waits for the frame events, and S2 stops at S-DISPQ
 {
   const { focusSession } = await import('../test/test_take_release.mjs');
   const fs = await focusSession();
-  console.log(`the release route, round 2: TAKE_FOCUS (H-TAKEFOCUS) in play: ${fs.checks - fs.bad.length}/${fs.checks}`);
+  console.log(`the release route, rounds 2 and 4: TAKE_FOCUS and EXP (H-TAKEFOCUS, H-EXPINIT) in play: ${fs.checks - fs.bad.length}/${fs.checks}`);
   fs.bad.forEach((x) => console.log('  ', x));
   bad += fs.bad.length;
 }
@@ -407,14 +407,16 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   bad += ex.bad.length;
 }
 // S-EXPOSE's readers in a default session, and the EXP callback that would write the AE results run natively as far
-// as it goes (test_expcb.mjs, --take probe with --cpu2 native: EXP_MOVIE's AE request stops before the callback)
+// as it goes (test_expcb.mjs, --take probe with --cpu2 native: EXP_MOVIE's AE request stops before the callback);
+// cam.c's inits and requests natively, step by step (camDriverSession)
 {
-  const { aeReadersSession, expCallbackSession } = await import('../test/test_expcb.mjs');
+  const { aeReadersSession, expCallbackSession, camDriverSession } = await import('../test/test_expcb.mjs');
   const ar = await aeReadersSession();
   const ec = await expCallbackSession();
-  console.log(`S-EXPOSE's readers in play: ${ar.checks - ar.bad.length}/${ar.checks}; the EXP callback, round 1: ${ec.checks - ec.bad.length}/${ec.checks}`);
-  [...ar.bad, ...ec.bad].forEach((x) => console.log('  ', x));
-  bad += ar.bad.length + ec.bad.length;
+  const cd = await camDriverSession();
+  console.log(`S-EXPOSE's readers in play: ${ar.checks - ar.bad.length}/${ar.checks}; the EXP callback, rounds 1 and 2: ${ec.checks - ec.bad.length}/${ec.checks}; cam.c natively: ${cd.checks - cd.bad.length}/${cd.checks}`);
+  [...ar.bad, ...ec.bad, ...cd.bad].forEach((x) => console.log('  ', x));
+  bad += ar.bad.length + ec.bad.length + cd.bad.length;
 }
 // the lens on the mount natively: the serial controller, the deferred-call triggers, S-LENSMCU, the driver's start:
 // E143 here, E146 and E147 each in a process of its own (the model is fixed when the lab is imported)

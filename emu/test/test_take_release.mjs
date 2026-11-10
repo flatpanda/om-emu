@@ -1,4 +1,5 @@
-// The release route to TAKE_EXEC (src/lab/take.mjs rounds 2 and 3, --take probe; docs/hle-gaps.md 4.1.7, 4.1.8), E143:
+// The release route to TAKE_EXEC (src/lab/take.mjs rounds 2 to 4, --take probe; docs/hle-gaps.md 4.1.7, 4.1.8, 4.2.3),
+// E143:
 //   releaseSession  two play sessions. Under control camapp 3 without the probe the sequence parts take S1 (event
 //                   826, Trig1Release, in phase 101) but refuse it at their S1 guard (0x50c8d4a4 -> 0x50bcdef7):
 //                   CapThr's state word is its static 0x02010202, and CapTak_Take's take request is never made. Under
@@ -11,7 +12,13 @@
 //                   TAKE_MAIN answers the application, asks TAKE_EXPOSE 0x400, BC_EXEC 53 and the camera driver's 144
 //                   and goes through RdyFcsRdy2 (TAKE_EXPOSE 0x503, TAKE_FOCUS 0x403, the event 0x04080032 to the
 //                   application) to RdyFcsRdy3, whose TAKE_EXPOSE 0x500 makes TAKE_EXPOSE ask EXP_MOVIE 0x509 and wait
-//                   for it on EXP_MOVIE_POST: the probe has no reading of EXP_MOVIE, and the session stops there
+//                   for it on EXP_MOVIE_POST. Since round 4 the session runs with --cpu2 native, so H-EXPINIT brings
+//                   EXP up (and H-CAMINIT cam.c's init): EXP_MOVIE takes the request natively, gives the camera driver
+//                   its requests 8 and 7 and waits on its flag 21 for bit 0x1000, which EXP's frame callback for the
+//                   event 0x300 sets and nothing in the lab fires (docs/hle-gaps.md 4.2.3); meanwhile RdyFcsRdy3 asks
+//                   TAKE_FOCUS 0x400 (RELEASE_IDLE_START, replied token 4), and TAKE_MAIN waits for TAKE_EXPOSE's
+//                   token 15 (pending bits 0x200). S2 then stops in the lab: the application posts DISPLAY command 18
+//                   while the GUI's synchronous DISPLAY command 17 runs, which S-DISPQ does not stand in for
 //   node emu/test/test_take_release.mjs
 import { fileURLToPath } from 'node:url';
 
@@ -134,6 +141,15 @@ export const S1_FOCUS = ['TAKE_MAIN <= TAKE_EXEC 0 in Idle (handler 0x503a1172)'
   'TAKE_EXPOSE -> reply', 'TAKE_FUNC <= 80', 'TAKE_MAIN <= TAKE_POST token 14 in RdyFcsRdy2',
   // RdyFcsRdy3's entry: TAKE_EXPOSE 0x500, which stops at EXP_MOVIE
   'TAKE_MAIN -> TAKE_EXPOSE 1280 (native)'];
+// Round 4 (H-EXPINIT, --cpu2 native): TAKE_EXPOSE's request to EXP_MOVIE goes natively and is not answered; RdyFcsRdy3
+// asks TAKE_FOCUS's RELEASE_IDLE_START (0x400), which replies token 4
+export const S1_EXP = [...S1_FOCUS, 'TAKE_EXPOSE -> EXP_MOVIE 1289 (native)', 'TAKE_MAIN -> TAKE_FOCUS 1024 (native)',
+  'TAKE_FOCUS <= 1024', 'TAKE_FOCUS -> reply', 'TAKE_MAIN <= TAKE_POST token 4 in RdyFcsRdy3'];
+// EXP_MOVIE's wait for the frame events (flag 21 bit 0x1000, from 0x5056ba07's call at 0x5056ba25), cam.c's error
+// when its movie sequence's queues are missing (its second init does not run: 0x50150658 in 0x50151e45), and the
+// S-DISPQ refusal S2 stops at (the application's post of DISPLAY command 18 through its API sender, return 0x503eba07)
+const EXP_WAIT = { flag: 21, bits: 0x1000, from: 0x5056BA2C }, CAM_NOQUEUE = 0x0A283000, CAM_NOPOOL = 0x0A103000;
+const S2_STOP = /^UI_IN group 1: OlyQeWr to the DISPLAY queue from 0x[0-9a-f]{8} \(disasm 0x503eba07\) \(depth 1\)/;
 
 export async function focusSession() {
   const bad = [], notes = [];
@@ -144,7 +160,7 @@ export async function focusSession() {
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { disasm } = await import('../src/lab/hle.mjs');
   const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
-  const args = { ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, take: 'probe' };
+  const args = { ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, take: 'probe', cpu2: 'native' };
   const pl = new Player(args, env);
   pl.camapp_components = true; pl.camapp_native_tra = true;
   try {
@@ -169,7 +185,7 @@ export async function focusSession() {
     let n = 0;
     const since = () => { const out = take.requests.slice(n).map((r) => canon2(r, stateName)); n = take.requests.length; return out; };
     const used = pl.stand_ins_in_use(), start = since().filter((x) => /TAKE_FOCUS/.test(x)), mcu = s.lens?.mcu;
-    ok(s.status().gui === '0x0108' && ['H-TAKEFOCUS', 'H-TAKEMAIN', 'S-THRTAKEOVER', 'S-RELSEQ'].every((x) => used.includes(x)),
+    ok(s.status().gui === '0x0108' && ['H-TAKEFOCUS', 'H-TAKEMAIN', 'S-THRTAKEOVER', 'S-RELSEQ', 'H-CAMINIT', 'H-EXPINIT'].every((x) => used.includes(x)),
       `the start reaches the shooting screen (GUI ${s.status().gui}) with ${used.filter((x) => /TAKE|RELSEQ/.test(x))}`);
     ok((lab.nk.state(take.focus_tid) & 0xF) === 4 && byte(FOCUS_READY) === 1 && byte(FOCUS_CTX + 5) === 1 && byte(FOCUS_CTX + 12) === 1,
       `TAKE_FOCUS (task ${take.focus_tid}) waits (state ${lab.nk.state(take.focus_tid)}), its ready byte ${byte(FOCUS_READY)}, "focus" ${byte(FOCUS_CTX + 5)}, state ${byte(FOCUS_CTX + 12)} (want 1, 1, 1)`);
@@ -179,24 +195,45 @@ export async function focusSession() {
     idle(1000);
     since(); seen.length = 0;
     const e0 = lab.kernel.errors.length, f0 = mcu ? mcu.frames.length : null;
+    const c0 = { native: take.cam.native.length, waits: take.cam.waits.length, errlogs: take.cam.errlogs.length };
     let stop = null;
     try { s.key('s1', 'down'); s.camapp.pump(); idle(600); } catch (e) { stop = e; }
     const s1 = since(), errs = lab.kernel.errors.slice(e0).map(([c]) => c);
-    if (process.env.TF_PRINT) console.log(JSON.stringify({ s1, seen, calls, stop: stop?.message.slice(0, 300), errs: errs.map(h8) }, null, 1));
+    if (process.env.TF_PRINT) console.log(JSON.stringify({ s1, seen, calls, stop: stop?.message.slice(0, 300), errs: errs.map(h8), lens: mcu?.frames.slice(f0) }, null, 1));
     // (the guard twice: phase 101's case for 826, 0x50c5cc94, calls the controller's vt[1306], which calls vt[111],
     // the guard, then vt[110] and, that one 0, vt[111] itself at 0x50c5cce7)
-    ok(JSON.stringify(seen) === JSON.stringify(['event 826 in phase 101', 'S1 guard 1', 'S1 guard 1', 'take API 0x20 from 0x50bc7c8e']),
-      `S1 passes the S1 guard and CapTak_Take asks for the take: ${JSON.stringify(seen)}`);
-    // (and no lens frame from S1 to the stop, docs/hle-gaps.md 4.1.8)
+    // (round 4: S1's idle goes on past RdyFcsRdy3's entry, and the sequence takes event 794, TakeReadyFinish, in phase
+    // 102 while TAKE_MAIN still waits for TAKE_EXPOSE's token 15, docs/hle-gaps.md 4.2.3)
+    ok(JSON.stringify(seen) === JSON.stringify(['event 826 in phase 101', 'S1 guard 1', 'S1 guard 1', 'take API 0x20 from 0x50bc7c8e', 'event 794 in phase 102']),
+      `S1 passes the S1 guard, CapTak_Take asks for the take, the sequence takes 794: ${JSON.stringify(seen)}`);
+    // (and from S1 on no lens frame but the lens state poll c1 80 the driver sends about every 100 ms, docs/hle-gaps.md
+    // 4.1.8, 4.4.2)
+    const lens = mcu ? mcu.frames.slice(f0).map(([f]) => f) : null;
     ok(JSON.stringify(calls) === JSON.stringify(['token 5 from TAKE_FOCUS', 'token 0 from TAKE_FOCUS', 'token 2 from TAKE_FOCUS', 'token 3 from TAKE_FOCUS'])
-      && f0 !== null && mcu.frames.length === f0,
-      `RELEASE_READY_START calls RdyFcsRdy1's four callbacks itself, in order, with no lens frame: ${JSON.stringify(calls)}, lens frames ${f0} -> ${mcu?.frames.length}`);
-    ok(JSON.stringify(s1) === JSON.stringify(S1_FOCUS), `S1: the record ${JSON.stringify(s1)}, want ${JSON.stringify(S1_FOCUS)}`);
-    ok(stop !== null && /^TAKE_EXPOSE sends to EXP_MOVIE \(queue 0x17\) \[0x00000018 0x00000000 0x00000509 0x[0-9a-f]{8}\] from 0x5055399e/.test(stop.message),
-      `S1 stops at TAKE_EXPOSE's request to EXP_MOVIE: ${stop ? stop.message.slice(0, 300) : 'no stop'}`);
+      && lens !== null && lens.every((f) => f.startsWith('c1 80 ')),
+      `RELEASE_READY_START calls RdyFcsRdy1's four callbacks itself, in order, and no lens frame but the state poll follows: ${JSON.stringify(calls)}, lens frames ${JSON.stringify(lens)}`);
+    ok(JSON.stringify(s1) === JSON.stringify(S1_EXP) && stop === null, `S1: the record ${JSON.stringify(s1)}, want ${JSON.stringify(S1_EXP)} (stop ${stop ? stop.message.slice(0, 300) : 'none'})`);
+    // round 4: EXP_MOVIE takes TAKE_EXPOSE's request, asks cam.c 8 and 7 and waits for the frame events, unanswered
+    const native = take.cam.native.slice(c0.native).map((x) => `${x.task} ${x.id}`), waits = take.cam.waits.slice(c0.waits);
+    const w = waits.at(-1), camerr = take.cam.errlogs.slice(c0.errlogs);
+    ok(JSON.stringify(native) === JSON.stringify(['EXP_MOVIE 8', 'EXP_MOVIE 7']) && w?.flag === EXP_WAIT.flag && w?.bits === EXP_WAIT.bits
+      && w?.from === EXP_WAIT.from && (lab.nk.state(take.exp_tid) & 0xF) === 4,
+      `EXP_MOVIE gives the camera driver ${JSON.stringify(native)} and waits on flag ${w?.flag} for ${h8(w?.bits)} from ${h8(w?.from)} (state ${lab.nk.state(take.exp_tid)})`);
+    ok(!take.cam.frames.length && !take.cam.answers.length && take.ae_writes === 0,
+      `no frame callback (${JSON.stringify(take.cam.frames)}), no answer on EXP_MOVIE_POST (${take.cam.answers.map(h8)}), no AE result write (${take.ae_writes})`);
     const got = [stateName(u16(MAIN_STATE)), lab.sim.u32(MAIN_PENDING) >>> 0];
-    ok(JSON.stringify(got) === JSON.stringify(['RdyFcsRdy3', 0x300]) && errs.filter((c) => c === FOCUS_STOP).length === 1,
-      `at the stop TAKE_MAIN is in ${got[0]} with the pending bits ${h8(got[1])} (want RdyFcsRdy3, 0x300); the errors since S1 ${errs.map(h8)} (TAKE_FOCUS's ${h8(FOCUS_STOP)} once)`);
+    ok(JSON.stringify(got) === JSON.stringify(['RdyFcsRdy3', 0x200]) && errs.filter((c) => c === FOCUS_STOP).length === 1
+      && camerr.length === 3 && camerr.every((c) => c === CAM_NOQUEUE) && !errs.includes(CAM_NOPOOL),
+      `TAKE_MAIN is in ${got[0]} with the pending bits ${h8(got[1])} (want RdyFcsRdy3, 0x200); the errors since S1 ${errs.map(h8)} (TAKE_FOCUS's ${h8(FOCUS_STOP)} once; cam.c's ${camerr.map(h8)}: ${h8(CAM_NOQUEUE)} three times, not ${h8(CAM_NOPOOL)})`);
+    // S2: the first stop is the lab's (S-DISPQ)
+    let stop2 = null;
+    since(); seen.length = 0;
+    try { s.key('s2', 'down'); s.camapp.pump(); idle(700); } catch (e) { stop2 = e; }
+    const s2 = since();
+    if (process.env.TF_PRINT) console.log(JSON.stringify({ s2, seen, stop2: stop2?.message.slice(0, 300) }, null, 1));
+    ok(stop2 !== null && S2_STOP.test(stop2.message) && !s2.length && stateName(u16(MAIN_STATE)) === 'RdyFcsRdy3'
+      && JSON.stringify(seen) === JSON.stringify(['event 824 in phase 103']),
+      `S2 is event 824 in phase 103 (${JSON.stringify(seen)}) and stops at the application's DISPLAY post inside a DISPLAY run (${stop2 ? stop2.message.slice(0, 200) : 'no stop'}); TAKE takes nothing (${JSON.stringify(s2)}), TAKE_MAIN in ${stateName(u16(MAIN_STATE))}`);
   } catch (e) { bad.push(`camapp 3 --take probe: ${e.message.slice(0, 800)}`); }
   pl.close_session();
   return { checks, bad, notes };
@@ -207,7 +244,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   console.log(`the release route to TAKE_EXEC: ${r.checks - r.bad.length}/${r.checks}`);
   r.bad.forEach((x) => console.log('  ', x));
   const f = await focusSession();
-  console.log(`the release route, round 2: TAKE_FOCUS (H-TAKEFOCUS): ${f.checks - f.bad.length}/${f.checks}`);
+  console.log(`the release route, rounds 2 and 4: TAKE_FOCUS and EXP (H-TAKEFOCUS, H-EXPINIT): ${f.checks - f.bad.length}/${f.checks}`);
   f.bad.forEach((x) => console.log('  ', x));
   process.exit(r.bad.length || f.bad.length ? 1 : 0);
 }

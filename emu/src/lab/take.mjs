@@ -33,10 +33,13 @@
 //   S-TAKECAM   the camera driver's request switch (cam.c, 0x502a4a46) from TAKE's tasks: TAKE_FUNC_CP's start makes
 //               requests 148 and 6 (0x502cd411 -> 0x502cd41f: the 192-byte request on its stack, +0 the id, +3 the
 //               argument, +72 TAKE's completion 0x502cd4d0, then a wait on flag TAKE_CAM_EVENT bit 1 under semaphore
-//               0x19). The driver's own init does not run in the lab (its request pool 0x6299726c is empty: request
-//               148's handler 0x502a4b74 failed its allocation and logged 0x0a103000, X), so the stand-in records the
-//               request, returns 0 (accepted) and after the step calls the request's completion natively with d0 0
-//               and a0 the request, as the driver does (0x502a4b92..0x502a4b96, 0x502a4c31..0x502a4c3f)
+//               0x19). The driver's own init did not run in the lab (its request pool 0x6299726c was empty: request
+//               148's handler 0x502a4b74 failed its allocation and logged 0x0a103000, X); since round 4 its first
+//               init runs (H-CAMINIT, below), but natively request 148 (and 144) only queues an item of its sequence
+//               engine, which nothing completes in the lab, and request 6 logs 0x0a273000 (X; I: the front end would
+//               complete them, after the second init). So the stand-in records the request, returns 0 (accepted) and
+//               after the step calls the request's completion natively with d0 0 and a0 the request, as the driver
+//               does (0x502a4b92..0x502a4b96, 0x502a4c31..0x502a4c3f)
 //   S-TAKEUSF   the dust filter's gate-on API (0x50064a69, "USF GATE CONTROL") from TAKE's tasks: TAKE_FUNC_CP's start
 //               asks it (0x502cdb34) with its record {callback 0x502cdc97, 0} and waits on flag TAKE_FUNC_CP bit 1,
 //               which the callback's deferred count sets (0x502cdcae); the API drives the filter through the timer
@@ -71,6 +74,7 @@ import { FirmwareError, where, disasm } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { OLYQEWR } from './display.mjs';
 import { HotShoe } from './shoe.mjs';
+import { CPU2_TASKS } from './cpu2.mjs';
 
 export class TakeError extends FirmwareError {}
 
@@ -228,10 +232,12 @@ export class TakeProbe {
     this.install_main();
     this.stb_install();                                                 // the strobe (below)
     this.focus_install();                                               // round 3 (below)
+    this.cam_install();                                                 // round 4 (below)
   }
   // H-TAKEINIT
   bring_up() {
     const lab = this.lab, T = TAKE_E143, s = this.s;
+    this.cam_bring_up();                                // round 4: H-CAMINIT (USTART runs it before TAKE_FUNC's init)
     lab.sim.write(T.ustart2, pack('<I', 1));            // (USTART2's stage word, as its 0x5012abef sets it)
     lab.call(T.init, null, null, null, LIMIT);
     const tid = (a) => { const b = lab.sim.read(a, 2); return b[0] | b[1] << 8; };
@@ -247,6 +253,7 @@ export class TakeProbe {
     for (const t of Object.values(this.tids)) if ((lab.nk.state(t) & 0xF) !== 4) throw new TakeError(`H-TAKEINIT: task ${t} is not waiting after its start (state ${lab.nk.state(t)})`);
     this.log.push(['init', `TAKE_FUNC task ${this.tids.func}, TAKE_FUNC_CP task ${this.tids.cp} waiting`]);
     this.neighbours_bring_up();                                         // round 2 (below)
+    this.cam_exp_bring_up();                                            // round 4: H-EXPINIT (--cpu2 native)
     this.bring_up_main();
     this.stb_bring_up();                                                // the strobe (below)
     this.focus_bring_up();                                              // round 3 (below)
@@ -329,7 +336,7 @@ export class TakeProbe {
   // S-TAKECAM: the camera driver's request switch (0x502a4a46, a0 the 192-byte request) from TAKE's tasks
   cam_request(h, r) {
     const lab = this.lab, task = this.tids ? this.task() : null;
-    if (!task) return lab.passthrough(r);
+    if (!task) return this.cam_native(r);                               // (round 4: recorded, natively)
     const q = r.a0 >>> 0, b = lab.sim.read(q, 4), id = b[0] | b[1] << 8, cb = lab.sim.u32(q + CAM.callback) >>> 0;
     if (!CAM_REQUESTS[id]) throw new TakeError(`${task} makes the camera driver's request ${id} (bytes +2 ${b[2]}, +3 ${b[3]}) from ${where(r.mdr)}: not a request the probe knows`);
     let answer = 'none: no completion callback';
@@ -588,6 +595,91 @@ export class TakeProbe {
     prev(h, r);
     return true;
   }
+
+  // ---- round 4 (docs/hle-gaps.md 4.2.3): cam.c's init and EXP natively (H-CAMINIT, H-EXPINIT; CAM_E143 below) ----
+  // (from install) the record of what the camera driver does natively and of EXP's frame events: the switch's requests
+  // from tasks other than TAKE's (cam_native), cam.c's error log, EXP's four frame callbacks, EXP_MOVIE's frame wait
+  // and its answer on EXP_MOVIE_POST
+  cam_install() {
+    const lab = this.lab, C = CAM_E143;
+    this.cam_inited = false;
+    this.exp_tid = null;
+    this.cam = { native: [], errlogs: [], lines: [], frames: [], waits: [], answers: [] };
+    lab.observe(C.errlog, (l, r) => {
+      this.cam.errlogs.push(r.d0 >>> 0);
+      this.cam.lines.push([r.d0 >>> 0, r.d1 >>> 0, disasm(r.mdr)]);
+      this.log.push(['cam', `cam.c's error log ${h8(r.d0)} (line ${r.d1 >>> 0}) from ${h8(disasm(r.mdr))}`]);
+    }, 'H-CAMINIT (error log)');
+    for (const [at, what] of C.exp.callbacks) lab.observe(at, () => {
+      this.cam.frames.push(what);
+      this.log.push(['cam', `EXP's frame callback ${h8(at)} (${what})`]);
+    }, 'H-EXPINIT (frame callback)');
+    lab.observe(C.exp.frame_wait, (l, r) => {
+      const w = { flag: r.d0 & 0xFFFF, bits: r.d1 >>> 0, from: disasm(r.mdr) };
+      this.cam.waits.push(w);
+      this.log.push(['cam', `EXP_MOVIE waits on flag ${w.flag} for ${h8(w.bits)} (from ${h8(w.from)})`]);
+    }, 'H-EXPINIT (frame wait)');
+    lab.observe(C.exp.answer, (l, r) => {
+      this.cam.answers.push(disasm(r.mdr));
+      this.log.push(['cam', `EXP_MOVIE answers EXP_MOVIE_POST (from ${h8(disasm(r.mdr))})`]);
+    }, 'H-EXPINIT (answer)');
+  }
+  // (from cam_request) the switch called from a task that is not TAKE's: natively, recorded (EXP_MOVIE's requests 8
+  // and 7 once H-EXPINIT runs)
+  cam_native(r) {
+    const lab = this.lab, b = lab.sim.read(r.a0 >>> 0, 2), cur = lab.lt.current();
+    const task = this.exp_tid !== null && cur === lab.nk.tcb(this.exp_tid) ? 'EXP_MOVIE' : 'another task';
+    this.cam.native.push({ task, id: b[0] | b[1] << 8, record: r.a0 >>> 0, from: disasm(r.mdr) });
+    this.log.push(['cam', `${task} makes the camera driver's request ${b[0] | b[1] << 8} from ${h8(disasm(r.mdr))} (native)`]);
+    lab.passthrough(r);
+  }
+  // H-CAMINIT (from bring_up, before H-TAKEINIT): cam.c's first init natively, as USTART calls it (0x50024aa2, before
+  // the lens init at 0x50024ab6 and TAKE_FUNC's at 0x50024c2d). It touches no device but the interrupt controller
+  // (IRQs 146 and 147 attached through the timer API, X); checked: it returns 0, logs nothing and leaves the request
+  // pool's free list non-empty (its head 0x6299726c not 0xffff)
+  cam_bring_up() {
+    const lab = this.lab, C = CAM_E143, e0 = this.cam.errlogs.length;
+    const rc = lab.call(C.init, null, null, null, LIMIT).d0 & 0xFFFF;
+    const head = lab.sim.read(C.pool, 2), h = head[0] | head[1] << 8;
+    if (rc !== 0 || this.cam.errlogs.length !== e0 || h === 0xFFFF) throw new TakeError(`H-CAMINIT: cam.c's init ${h8(C.init)} returned ${rc}, logged [${this.cam.errlogs.slice(e0).map(h8)}], pool head 0x${h.toString(16)}`);
+    this.s.settle('H-CAMINIT');
+    this.cam_inited = true;
+    this.log.push(['init', `cam.c's init ${h8(C.init)}: the request pool's head ${h}`]);
+  }
+  // H-EXPINIT (from bring_up, after H-TAKENBINIT; with --cpu2 native only, as EXP's evaluation runs on CPU 2): what
+  // USTART2's stage runs for EXP, in its order: IMG_PRECON's module init (0x502a49b3, the stage's call at 0x501e8ec0),
+  // EXP's init (0x50553649, at 0x501e90c4), EXP_MOVIE (task 88) started with act_tsk (0x501e90f3) and EXP_MOVIE2 and
+  // EXP_MOVIE3 started on CPU 2 through OlyTaSt (0x501e910e, 0x501e912f). The stage runs IMG_PRECON's init before
+  // TAKE_MAIN's and EXP's init before TAKE_EXPOSE's act_tsk, which H-TAKENBINIT has made (I: TAKE_EXPOSE waits on its
+  // queue, which nothing posts to before the application starts). EXP's queues EXP_MOVIE (0x17) and EXP_MOVIE_POST
+  // (0x18) then go natively. Checked: each init returns 0, EXP_MOVIE waits, core 2 has started both tasks
+  cam_exp_bring_up() {
+    if (!this.s.cpu2) return;
+    const lab = this.lab, X = CAM_E143.exp, tid = (a) => { const b = lab.sim.read(a, 2); return b[0] | b[1] << 8; };
+    // core 2 parks a task start whose entry it does not list (cpu2.mjs CPU2_TASKS): EXP's two servers join the list
+    // (kept for the process; only this step starts them)
+    for (const [, entry, name] of X.cpu2) CPU2_TASKS.set(entry, name);
+    for (const at of X.inits) {
+      const rc = lab.call(at, null, null, null, LIMIT * 10).d0;
+      if (rc !== 0) throw new TakeError(`H-EXPINIT: the init ${h8(at)} returned ${rc}`);
+      this.s.settle(`H-EXPINIT ${h8(at)}`);
+    }
+    const t = tid(X.movie.tid), e = lab.nk.entry(t);
+    if (e !== X.movie.entry || lab.nk.state(t) !== 0x10) throw new TakeError(`H-EXPINIT: EXP_MOVIE task ${t} has entry ${h8(e)} state ${lab.nk.state(t)}, not a dormant ${h8(X.movie.entry)}`);
+    lab.lt.allow.add(e);
+    const [rc] = lab.nk.svc('act_tsk', { d0: t });
+    if (rc !== 0) throw new TakeError(`H-EXPINIT: act_tsk(${t}) = ${rc}`);
+    this.exp_tid = t;
+    this.s.settle('H-EXPINIT EXP_MOVIE');
+    for (const [id, entry, name] of X.cpu2) {
+      const r = lab.call(X.start_cpu, { d0: id }, null, null, LIMIT * 10).d0;
+      this.s.settle(`H-EXPINIT ${name}`);
+      if (r !== 0 || !this.s.cpu2.started.some(([at]) => at === h8(entry))) throw new TakeError(`H-EXPINIT: ${name} (0x${id.toString(16)}) not started on CPU 2 (OlyTaSt ${r}, core 2's starts ${JSON.stringify(this.s.cpu2.started)})`);
+    }
+    if ((lab.nk.state(t) & 0xF) !== 4) throw new TakeError(`H-EXPINIT: EXP_MOVIE (task ${t}) is not waiting after its start (state ${lab.nk.state(t)})`);
+    for (const q of X.queues) this.native.add(q);
+    this.log.push(['init', `EXP_MOVIE task ${t} waiting, ${X.cpu2.map(([, , n]) => n).join(' and ')} started on CPU 2`]);
+  }
 }
 
 // The strobe (docs/hle-gaps.md 4.12.1). USTART2's stage 0x501e8e84 starts STB_HANDLER_PROC (task 139, tid word
@@ -646,3 +738,37 @@ const TAKE_EVENT = { via: 0x502CE613, queue: 0x06 };
 // its handler 0x5015582d as a deferred call (IRQ 55's ring, 0x502a4b08), which queues a sequence item 144 (24 bytes
 // from the driver's pool, its completion 0x50155a00) through 0x501524c0; what the item drives is not read
 CAM_REQUESTS[144] = 'TAKE_MAIN RdyFcsRdy1, 0x503c2e21';
+// Round 4, cam.c and EXP natively (docs/hle-gaps.md 4.2.3; `--take probe`, E143):
+//   H-CAMINIT  before H-TAKEINIT: cam.c's first init (0x502a49ec, USTART's call at 0x50024aa2) natively: its error log
+//              state (0x501504c0), its four pools (0x501529dc: the request pool's free list at 0x6299726c, empty
+//              before, so request 148's handler logged 0x0a103000), the instances its sequence engine works on
+//              (0x5015368b, 0x50150f69, 0x50152f4c, 0x50152495; I from their users) and two timer channels (0x50154a12:
+//              the timer API 0x50064323 with 8 and 9, which attaches IRQs 146 and 147, X; 0x50154704). It touches no
+//              other device (X). cam.c's second init (0x50155357, USTART's call at 0x50024d80) is not run: its tenth
+//              step, the front end's init 0x5016efcd, writes the camera clock gate 0x9b500800, which the lab does not
+//              model (X). S-TAKECAM stays for TAKE's requests: natively, with the first init, requests 148 and 144 are
+//              accepted and queued as items of the sequence engine (0x501524c0), which nothing completes in the lab,
+//              and request 6 logs 0x0a273000 (X; it is queued too once the second init's first nine steps have run)
+//   H-EXPINIT  (with --cpu2 native) after H-TAKENBINIT: IMG_PRECON's and EXP's inits, EXP_MOVIE and its two CPU 2
+//              servers, as test_expcb.mjs brought them up by hand (cam_exp_bring_up; EXP's init includes H-AEINIT's
+//              table init 0x50560b29, which so runs a second time). EXP's requests to cam.c (8 and 7,
+//              from EXP_MOVIE) then go natively and are recorded; EXP's frame callbacks (request 7's completion +72 and
+//              the slots for the events 0x200, 0x300 and 0x400, +80, +84, +88) are observed. What fires them on the
+//              camera is the front end (not read to an interrupt), so EXP_MOVIE waits on its flag 21
+export const CAM_E143 = {
+  init: 0x502A49EC,
+  pool: 0x6299726C,           // the request pool's free-list head (u16; 0xffff: empty)
+  errlog: 0x501504D0,         // cam.c's error log (d0 the code, d1 the source line; X: the code reaches the kernel's)
+  exp: {
+    inits: [0x502A49B3, 0x50553649],                                  // IMG_PRECON's module init, EXP's init
+    movie: { tid: 0x60042DD6, entry: 0x50553697 },                    // EXP_MOVIE, task 88
+    cpu2: [[0x2009, 0x505536A4, 'EXP_MOVIE2'], [0x200A, 0x505536B1, 'EXP_MOVIE3']],
+    start_cpu: 0x5002C546,    // OlyTaSt: a task start sent to its core
+    queues: [0x17, 0x18],     // EXP_MOVIE, EXP_MOVIE_POST
+    frame_wait: 0x50585DC2,   // EXP's wait on a flag (d0 its id, d1 the bits), from 0x5056ba07 for flag 21
+    answer: 0x5057240C,       // EXP_MOVIE's answer on EXP_MOVIE_POST (0x50585ccc)
+    // request 7's record 0x62a98a0c (0x5056a6e4): its completion and the callbacks the notifier 0x50155e66 calls by
+    // event (slot +76 + 4 (n - 1) for event n << 8, its mask +128 + 4 (n - 1))
+    callbacks: [[0x5056FD44, 'request 7 completion'], [0x5056FD61, 'event 0x200'], [0x5056FFF0, 'event 0x300'], [0x50570024, 'event 0x400']],
+  },
+};

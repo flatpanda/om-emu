@@ -166,13 +166,18 @@ const LOOP_FOUND = { E143: 0x501C3035, E144: 0x50170FFF, E145: 0x501EB256 };
 // The API target table's module queues (src/fw/facts.mjs apiTargets, fact api): the table, its count and the five
 // queues the port's queue-id words read as another queue's on the E118 family, each as its name in the object-name
 // table ({char name[24], u16 id} records) gives it (X: E143 and the family; docs/model-survey.md finding 99); E120 has
-// no C3D target (42 targets)
+// no C3D target (42 targets). On E143 all 19 of src/lab/camapp.mjs MODULE_QUEUES' target-table queues, the values
+// the lab uses there in place of the rule's
 const API_FOUND = {
-  E143: { table: 0x606214A0, count: 44, queues: { XTC_APP_EXEC: 0x76, TFT_EXEC: 0x64, LENS_COMMAND: 0x31, FCS_EXEC: 0x1B, PWR_EXEC: 0x7C, C3D: 0x98 } },
+  E143: { table: 0x606214A0, count: 44, queues: { XTC_APP_EXEC: 0x76, PLAY_EXEC: 0x3F, TFT_EXEC: 0x64, TAKE_EXEC: 0x5A, REC_EXEC_MAIN: 0x47, FILECLBK_UEXEC: 0x1F, ADJ_SLF_EXEC: 0x03, BC_EXEC: 0x09, UI_OUT_EXEC: 0x71, LENS_EXEC: 0x2E, ADJ_EXEC: 0x01, TAKE_FUNC: 0x5E, ZOOM_EXEC: 0x7D, FCS_EXEC: 0x1B, PWR_EXEC: 0x7C, AUD_EXEC: 0x08, LENS_COMMAND: 0x31, MOVE_MAIN: 0xAE, C3D: 0x98 } },
   E122: { table: 0x603F957C, count: 43, queues: { XTC_APP_EXEC: 0x80, TFT_EXEC: 0x6E, LENS_COMMAND: 0x34, FCS_EXEC: 0x1E, PWR_EXEC: 0x86, C3D: 0xA2 } },
   E118: { table: 0x603C5558, count: 43, queues: { XTC_APP_EXEC: 0x80, TFT_EXEC: 0x6E, LENS_COMMAND: 0x34, FCS_EXEC: 0x1E, PWR_EXEC: 0x86, C3D: 0xA2 } },
   E120: { table: 0x603A985C, count: 42, queues: { XTC_APP_EXEC: 0x80, TFT_EXEC: 0x6E, LENS_COMMAND: 0x34, FCS_EXEC: 0x1E, PWR_EXEC: 0x86, C3D: null } },
 };
+// The GUI's OSD order table: GPISetOsdOrder's mapper's six {code, plane, plane, plane} records (E143 0x60df8352, E122
+// 0x60978f77; D), the order codes src/dev/vsccompose2.mjs ORDER_CODES draws (test/test_vsc3.mjs pins them to these
+// records). Every body's image holds the 24 bytes exactly once (X: the 19; docs/model-survey.md finding 96)
+const ORDER_TABLE = [[0, 2, 1, 0], [1, 1, 2, 0], [2, 2, 0, 1], [3, 0, 2, 1], [4, 1, 0, 2], [5, 0, 1, 2]];
 // The DISPLAY task's start-up calls (dispq.start; src/fw/facts.mjs displayStart): E143's as the lab gives it
 // (src/lab/display.mjs S-DISPSTART, the call of 0x500239c9, D), E125's (its trace, then the TFT open 0x50229c1a, D) and
 // E137's (its trace, then 0x50020d81, D)
@@ -825,6 +830,10 @@ export function factsTests() {
     if (code === 'E143') ok(Array.isArray(m9) && E143_MODULE9_LISTED.every((x) => m9.includes(x)), `E143: app.module9_readers ${hx(m9 ?? placed)} lacks one of its lab lists' ${hx(E143_MODULE9_LISTED)}`);
     const apiFound = API_FOUND[code], api = placed?.api;
     if (apiFound && (code === 'E143' || PORTS[code])) ok(api?.table === apiFound.table && api.count === apiFound.count && Object.entries(apiFound.queues).every(([k, v]) => api.queues[k] === v), `${code}: api ${hx(api ?? placed)}, found ${hx(apiFound)}`);
+    const orderPat = Buffer.from(ORDER_TABLE.flat()), view = Buffer.from(img.buffer, img.byteOffset, img.length);
+    let orderTables = 0;
+    for (let p = view.indexOf(orderPat); p >= 0; p = view.indexOf(orderPat, p + 1)) orderTables++;
+    ok(orderTables === 1, `${code}: the GUI's OSD order table found ${orderTables} times, want once`);
     const dq = placed?.dispq?.sends;
     if (DISPQ_FOUND[code]) ok(Array.isArray(dq) && DISPQ_FOUND[code].every((x) => dq.includes(x)), `${code}: dispq.sends ${hx(dq ?? placed)} lacks one of ${hx(DISPQ_FOUND[code])}`);
     // the DISPLAY task loop, and the port's place of E143's at the rule's (bin/port.mjs, how 'queue-receive')

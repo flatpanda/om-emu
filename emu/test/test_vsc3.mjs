@@ -220,14 +220,16 @@ async function child() {
     }
   }
   // the order codes (the GUI's table, src/dev/vsccompose2.mjs ORDER_CODES: code k's planes from the top): an opaque
-  // square in each plane at (100, 100), and at (200, 100) one in OSD2 and OSD3 only; the top plane's colour shows at the
-  // first, the higher of OSD2 and OSD3 at the second. Code 3, the opens' and the GUI's default: OSD1 (GUI layer 0) on
-  // top, then OSD3 (layer 2), OSD2 (layer 1) at the bottom
+  // square in each plane at (100, 100), and at (200, 100) one in OSD2 and OSD3 only; the top plane's colour shows at
+  // the first, the higher of OSD2 and OSD3 at the second. Code 3, the opens' and the GUI's default: OSD1 (GUI layer 0)
+  // on top, then OSD3 (layer 2), OSD2 (layer 1) at the bottom. ORDER_CODES is pinned to the GUI's six records as the
+  // firmware holds them (test/test_facts.mjs ORDER_TABLE, its 24 bytes in every body's image)
   {
     const { ORDER_CODES } = await import('../src/dev/vsccompose2.mjs');
     const L0 = CANVAS, L1 = CANVAS + ROW * 480, L2 = CANVAS + 2 * ROW * 480, BLUE = ycc(31, 29, 255, 107);
     const colour = [GREEN & 0xFFFFFF, RED & 0xFFFFFF, BLUE & 0xFFFFFF];
-    ok(ORDER_CODES.length === 6 && new Set(ORDER_CODES.map((t) => t.join())).size === 6, `ORDER_CODES: ${JSON.stringify(ORDER_CODES)}`);
+    const RECORDS = [[2, 1, 0], [1, 2, 0], [2, 0, 1], [0, 2, 1], [1, 0, 2], [0, 1, 2]];
+    ok(JSON.stringify(ORDER_CODES) === JSON.stringify(RECORDS), `ORDER_CODES: ${JSON.stringify(ORDER_CODES)}, the GUI's records ${JSON.stringify(RECORDS)}`);
     for (let k = 0; k < 6; k++) {
       const u = fresh();
       tft(u, true, k);
@@ -240,12 +242,11 @@ async function child() {
       u.reg(0x030, 7); u.reg(0x044, L0); u.reg(0x048, L1); u.reg(0x04C, L2); u.reg(0x1B8, 0x10);
       u.reg(0x600 + 4 * 31, CLEAR); u.reg(0x600 + 4, GREEN); u.reg(0x680 + 4 * 31, CLEAR); u.reg(0x680 + 8, RED);
       u.reg(0xA00 + 4 * 127, CLEAR); u.reg(0xA00 + 12, BLUE);
-      const r = u.compose(), top = ORDER_CODES[k], second = top.find((q) => q !== 0);
+      const r = u.compose(), top = RECORDS[k], second = top.find((q) => q !== 0);
       ok(r.status === 0 && r.drawn === 0x38 && !r.errors.length, `code ${k}: status ${r.status} drawn ${hex(r.drawn)} errors ${JSON.stringify(r.errors)}`);
       ok(r.px(105, 105) === colour[top[0]] && r.px(205, 105) === colour[second] && r.px(0, 0) === BG,
         `code ${k} (top ${top}): ${hex(r.px(105, 105))} at the three, ${hex(r.px(205, 105))} at OSD2 and OSD3, want ${hex(colour[top[0]])}, ${hex(colour[second])}`);
     }
-    ok(JSON.stringify(ORDER_CODES[3]) === '[0,2,1]', `code 3: ${JSON.stringify(ORDER_CODES[3])}, the opens' order from the top OSD1, OSD3, OSD2`);
   }
   // the EVF: area {48, 38} 1024 x 768, the 640 x 480 canvas through the scaler; level 0xb2 drawn, 0 not
   {

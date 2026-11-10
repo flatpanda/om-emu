@@ -2177,7 +2177,7 @@
    "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
    "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
    "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-   "output": "e76394726c273e942be274cb11e49e42d4ffd546bafdc92d6435285c6fe3d0ec",
+   "output": "788c5acf6f6526915d2151cd6a0c26ffeff6dcddccc14b54822539006f80d5a6",
    "items": {
     "screen": 0,
     "devices": 0,
@@ -2191,7 +2191,7 @@
    "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
    "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
    "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-   "output": "e76394726c273e942be274cb11e49e42d4ffd546bafdc92d6435285c6fe3d0ec",
+   "output": "788c5acf6f6526915d2151cd6a0c26ffeff6dcddccc14b54822539006f80d5a6",
    "items": {
     "screen": 0,
     "devices": 0,
@@ -2863,7 +2863,7 @@
    "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
    "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
    "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-   "output": "b4806f301d274c5faece47afbc2876c942296be6e2e68ffa3782dac7c0058617",
+   "output": "88e25701582d6af7da438ed1e591c9530ce4904dcb5f011f0b17af4486b024d8",
    "items": {
     "screen": 0,
     "devices": 0,
@@ -2947,7 +2947,7 @@
    "devices": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
    "stops": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
    "harness": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
-   "output": "f37dbd252a6345983ffd5ad5c805ef073a25d4d359c93b316b98632d289101ad",
+   "output": "62c1e2c977739f2e0da2322c18258f8ce5b431e3b83b0b9e9381a592e763491d",
    "items": {
     "screen": 0,
     "devices": 0,
@@ -4150,6 +4150,12 @@
    "sessions": 23,
    "reason": "merge of the S-DISPQ replies (heap-blocks) and REC_FILE natively on E143 (recfile-task): each branch re-recorded on its own base; on the merged tree the same 23 sessions REC_FILE changed differ from the heap recording (22 in output only, the stand-in list naming S-EXIFPRM / S-RECIMAGE / S-JPEGENC instead of S-RECFILE; keys in devices, stops, harness and output from its S2, REC_FILE taking lab time and the file gaining its header), every screen identical and every other session identical to the heap recording",
    "evidence": "firmware"
+  },
+  {
+   "commit": "c55594c",
+   "sessions": 4,
+   "reason": "udf07 implemented as BSCH (docs/om1-udf-spec.md row 14): the 16 udf07 ISA vectors no longer fault and 11 are appended, so the vector counts in check_isa and check_perf P1 change (5311 -> 5322 vectors, 223 -> 224 forms, 655 -> 639 must-fault, spec 728 -> 712, udf-spec 723 -> 750, continue mode 4996 -> 5007); with the old counts put back each stdout gives the committed digest, every other session identical",
+   "evidence": "manual"
   }
  ]
 }

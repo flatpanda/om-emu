@@ -1766,30 +1766,37 @@ runs the same instructions (the cost bullet). Round 1's open item 1 is corrected
   `0x5002cf6e`), which the lab's task-start guard allows; OSD_DRAW_CPU2's replies are served that way (X, below).
 - **USTART_L2 (H-CPU2LOADER; round 1's open item 1 corrected).** With FLASH_CS1 granted natively (the control
   `cpu2-loader`, X), USTART_L2's copy of segment 1 makes no CREQ: the flash driver's read of chip 1 (`0x500022c2` ->
-  `0x5000237a` -> `0x50002219` -> `0x500019b3` -> `0x50001c23`) programs a DMA at `0x98d00200..0x98d00324` (IRQ 238
-  attached on the calling core, `0x50001cd7`) and its first write, `0x50001c4c`, is a bus error: CPU 2 parks and the
-  session stops (X). The block also holds the start addresses `0x98d00140..148` (cores spec 3.1). Past the copies, the
-  CREQ's `0x50024eda(n)` runs the segment's static constructor table through `calls` (`0x501e6112..0x501e6121`:
-  segment 2's 15 pointers at `0x60714e78`, 6's 48 at `0x60ef9ad0`, 7's 64 at `0x615c71d4`, 8's 6 at `0x617d0310` on
-  CPU 1; 1, 4 and 9 have empty ones, 3, 5 and 10 no hook), which the lab's bring-up has run (CTORS); run again they
-  would construct live objects a second time (I). Of USTART_L2's byte flags `0xa32df1ad..0xa32df1b6` and `0xa32df1b9`
-  only `1ad`, `1b6` and `1b9` are read, by boot code the lab does not run (`0x5002418a`, `0x50024488`, `0x500243d1`,
-  `0x501e9e17`, `0x501e996c`; a byte scan); its last call `0x504262b5` reads resource 0x8007 item 17 to
-  `0xa51a8680` and clears bit 17 of `0x97f0027c` (the DSP service's word). So USTART_L2 now returns from its entry at
-  once, to the kernel's task exit (`0x5001182d` -> `0x500107e8`), with no cross-core call (X); CPU 2 reaches its first
-  halt in 35,135 instructions (35,788 in round 1, with USTART_L2's twai_sem).
+  `0x5000237a` -> `0x50002219` -> `0x500019b3` -> `0x50001c23`) programs a DMA in `0x98d00200..0x98d0048c` (eleven
+  stores, the last to `0x98d00324`; IRQ 238 attached on the calling core, `0x50001cd7`) and its first write,
+  `0x50001c4c`, is a bus error: CPU 2 parks and the session stops (X). The block also holds the start addresses
+  `0x98d00140..148` (cores spec 3.1). Past the copies, the CREQ's `0x50024eda(n)` runs the segment's static
+  constructor table through `calls` (`0x501e6112..0x501e6121`: segment 2's 15 pointers at `0x60714e78`, 6's 48 at
+  `0x60ef9ad0`, 7's 64 at `0x615c71d4`, 8's 6 at `0x617d0310` on CPU 1; 1, 4 and 9 have empty ones, 3, 5 and 10 no
+  hook). The lab's bring-up runs segments 2, 6 and 7's on CPU 0 (`src/lab/osd.mjs` mm_ctors, `src/lab/menu.mjs`
+  CTOR_TABLES), and run again they would construct live objects a second time (I); segment 8's would run on the absent
+  CPU 1, and the lab does not run it. Of USTART_L2's byte flags `0xa32df1ad..0xa32df1b6` and `0xa32df1b9` only `1ad`,
+  `1b6` and `1b9` have readers that name their addresses, all boot code the lab does not run (`0x5002418a`,
+  `0x50024488`, `0x500243d1`, `0x501e9e17`, `0x501e996c`; a scan for the addresses, which a base-relative read would
+  escape). Its last call `0x504262b5` reads resource 0x8007 item 17 to `0xa51a8680` and clears bit 17 of `0x97f0027c`
+  (the DSP service's word); `0xa51a8680` is named again only at `0x50426ea2`, which passes the address on. Neither
+  happens with the stand-in, and whether code the lab runs depends on them is ?. So USTART_L2 now returns from its
+  entry at once, to the kernel's task exit (`0x5001182d` -> `0x500107e8`), with no cross-core call (X); CPU 2 reaches
+  its first halt in 35,135 instructions (35,788 in round 1, with USTART_L2's twai_sem).
 - **The CPU 2 tasks CPU 0's boot stages start (H-CPU2TASKS, X).** The stages (`0x501e8f09..0x501ea7a9`) start them
   through OlyTaSt after a module init; the lab now does the same at the play bring-up, in the stages' order: the init
   natively on CPU 0, then OlyTaSt from the lab task, which waits while the start goes to CPU 2 (cpu_conn kind 9,
   CPUCONN2's proxy, act_tsk there). Each task waits at once, with no device access in its own context and no
   cross-core call. The stages' other steps between are not run (D), among them MVR_MAIN's site's wait for the byte
-  `0xa32df1be` (set by USTART_L `0x50024259` and USTART_L3 `0x500244b5`) and `0x501e6a7f(2)`.
+  `0xa32df1be` (set by USTART_L `0x50024259` and USTART_L3 `0x500244b5`) and `0x501e6a7f(2)`, and for SDET the starts
+  of FACE_MAIN `0x3009` on CPU 3 (`0x501e96a7`) and FACE_BEAUTY `0x100a` on CPU 1 (`0x501e96c9`) and `0x50512a3c`
+  (which clears the byte `0x62ef0fa4`), all between its init and its start: the init `0x50510afd` lies among SDET's
+  own functions (right after its wait `0x50510a9a..0x50510afc`), and which of the three tasks needs it is ?.
 
   | Task (entry) | Start site; the init before it | Waits (X; the wait's site D) |
   |---|---|---|
   | WB_MOV `0x200f` (`0x5046aab2`) | `0x501e9157`; `0x5046aa2b` (call at `0x501e9150`): context words, `0x500417da(16234)`, `0x5046c794` | OlyQeRd on its queue `0x2006` (`0x5046aadb`) |
   | MVR_MAIN `0x2002` (`0x5045fcdd`) | `0x501e9233`; `0x5045fed3` (`0x501e91ee`): `0x5044ec78` with MOV_COMMAND `0x2001`, MVR's flag `0x2003` and 4, then with queue `0x2002`, the flag and 8 (I: the queues bound to the flag's bits) | OlyEvWt on flag `0x2003`, pattern `0x383fd` (`0x5045fd27..0x5045fd45` -> `0x5044ec9c`), after 18,006 instructions of start-up |
-  | SDET `0x2010` (`0x5050cc2a`) | `0x501e96f1`; `0x50510afd` (`0x501e96a0`) | OlyEvWt on flag `0x2005`, pattern 3 (`0x5050cd1d` -> `0x50510aad`) |
+  | SDET `0x2010` (`0x5050cc2a`) | `0x501e96f1`; `0x50510afd` (`0x501e96a0`), before the starts of FACE_MAIN and FACE_BEAUTY (above) | OlyEvWt on flag `0x2005`, pattern 3 (`0x5050cd1d` -> `0x50510aad`) |
   | OSD_DRAW_CPU2 `0x2015` (`0x51015f1d`) | `0x501ea04c`; none | OlyQeRd on its queue `0x2013` (`0x51015f4f`) |
 
 - **TAKE's requests to MOV_COMMAND, SDET_EXEC and WB_MOV are not made in the lab's sessions (X).** No cpu_conn on
@@ -1810,8 +1817,10 @@ runs the same instructions (the cost bullet). Round 1's open item 1 is corrected
     that height.
   - *Camapp 3: natively.* The series come from the firmware's own path (the VSC histogram's cmd 16, its ring, TRA 944;
     0, and 64 in bin 5, while IMG1 is off, 4.2.1). The OlyQeWr to the CPU 2 queue is a cpu_conn tsnd_mbf (kind 1);
-    OSD_DRAW_CPU2 takes command 1 (`0x51015f63`), checks the request (`0x51015e30`: pointers set, the descriptor's bit
-    31, n <= 128 and <= w, x + w <= 1664, y + h <= 1200; D), draws, and replies {0, word, parameter} to the reply queue
+    OSD_DRAW_CPU2 takes command 1 (`0x51015f63`), checks the request (`0x51015e30`, which the GUI's `0x510149a2` also
+    runs before it sends: the request, its plane and both series set, bit 31 of the plane's first word, the buffer's
+    address, set, 0 < n <= 128, 0 < w, n <= w, x + w <= 1664, y + h <= 1200, scale > 0; D), draws, and replies {0, word,
+    parameter} to the reply queue
     (`0x510160b8`), a cpu_conn kind 1 on CPU 0's queue (`0x104` in the run) that CPUCONN_CPU0's proxy serves; the
     GUI's wait returns. Every send is taken and answered with status 0 (12 of 12 in 2 s), each request {command 1,
     x 4, y 110, 256 x 63, n 128, scale 64}, its plane `0xb7493000` and `0xb767a800` in turn.
@@ -1841,7 +1850,10 @@ runs the same instructions (the cost bullet). Round 1's open item 1 is corrected
   open, 2 s, OK to the Super Control Panel and 2 s: 6,626 ms without the flag, 7,075 ms with it (+6.8%; round 1's code
   6,917 ms); CPU 0 runs 32,465 more instructions (round 1: 3,259), CPU 2 8,605,799 (round 1: 8,010,523; I: the
   difference is mostly the native halt's pass per tick). Camapp 3, 2 s of idle: 5,299 ms against 5,588 ms (+5.5%),
-  CPU 0 +149,523 instructions, CPU 2 5,438,481, 12 histograms drawn.
+  CPU 0 +149,523 instructions, CPU 2 5,438,481, 12 histograms drawn. Re-run in review (X, at load average 5 to 10):
+  every instruction count above to the instruction; the wall times varied by up to 2.6 s between runs of one session,
+  so they neither confirm nor refute the percentages (the default session 7,951 ms on master, 8,263 ms on the branch,
+  means of 3, alternated).
 - **Open, in order (I; Claude wall-clock).** (1) A frame of the histogram: the TFT composite under camapp 3 (what
   HIST1..3 do to the mixer, 4.2.1, A13): unknown. (2) TAKE's queues: TAKE_FUNC's commands 28, 30, 31, 68, 69 reached
   first (the through start's TRA 991 path, the movie API; 4.1.4), then each task's request record: 2-4 h each. (3)

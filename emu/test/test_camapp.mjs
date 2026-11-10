@@ -28,12 +28,15 @@
 //                  to its state 13 and the still category to its state 11 (no S-BOOTDONE), the start's transactions
 //                  are each answered by the exec natively (992 with 0xf0000058, the others 0), the idle's 944 and
 //                  S2's 1030 too; over passes of S1 and S2 the OXF main thread's events (event 294, 0x60dcb42c) do not
-//                  stay; the menu's DISPLAY cmd 15 runs its histogram wait to the timeout (S-HISTWAIT), the imgpro
+//                  stay; the VSC histogram on the TFT channel runs about every 50 ms (A-VSCHIST-1), its end taken
+//                  natively (the ISR, task 16's done callback, DISPLAY cmd 16 through S-DISPQ, which reads the bins
+//                  under A-VSCHIST-2 and starts the next run); the menu's DISPLAY cmd 15 waits for a run's end, which
+//                  the lab clock reaches within two frames (S-HISTEND), and its wait returns E_OK; the imgpro
 //                  library's request id comes from udf07 0x5050a089 (docs/om1-udf-spec.md row 14) and the session
 //                  then stops at the image engine's start 0x5050a7a9, a write to the unit 0x9c600000 the lab does not
-//                  model (fault 2, docs/hle-gaps.md 4.1.5);
-//                  with --hdmi on the plug's TRA 588 is the component's (no S-OUTDEV), the
-//                  HDMI device opens and channel 0 composes its window with no plane drawn
+//                  model (fault 2, docs/hle-gaps.md 4.1.5); with --hdmi on the plug's TRA 588 is the component's (no
+//                  S-OUTDEV), the HDMI device opens and channel 0 composes its window with no plane drawn, and the
+//                  plug's cmd 15 waits as the menu's does
 //   modeDialSession  the mode dial in play (E143): it starts at P, the start's mode; each position's change sets its
 //                  mode (MODE_EXPOSE, the custom banks' MODE_RAW, B's MODE_DIAL_B_ONOFF) and keeps the other settings,
 //                  each position shows a screen of its own, and away from P OK opens the Super Control Panel and MENU
@@ -293,6 +296,10 @@ export async function heapWorkloadSession() {
 // FEATURE_UNOBSERVED once the shooting component has started the VSC's histogram (HIST1, HISTAREA1..3)
 const START_TRAS = [415, 598, 614, 990, 958, 1515, 994, 955, 1001, 1061, 992, 1503, 1065, 1045, 938, 974];
 const NATIVE_RESULT = { 992: 0xF0000058 }, ENGINE_STOP = '0x5050a7a9', ENGINE_REG = '0x9c600004';
+// the histogram (docs/hle-gaps.md 4.2.1): at least HIST_RUNS_MIN runs in the start and 2 s of idle (X: a run every 50
+// ms), HIST_BIN_WORDS bin words a read (128 bins, 0x501d6aa6..cb's clamp, D); cmd 15's wait returns within two frames
+// and the key's own step (the TFT's 16.68 ms frame, X)
+const HIST_RUNS_MIN = 30, HIST_BIN_WORDS = 64, HIST_WAIT_MAX_NS = 3 * 16683000;
 export async function traRoutingSession() {
   const bad = [];
   let checks = 0;
@@ -321,12 +328,22 @@ export async function traRoutingSession() {
       idle(2000);
       const quiet = taken();
       ok(quiet.some(([id]) => id === 944) && quiet.every(([, , res]) => res === 0), `${tag}: the idle's getHistogramData (944) answered natively: ${JSON.stringify(quiet.slice(0, 4))}`);
+      // the VSC histogram (docs/hle-gaps.md 4.2.1): runs on the TFT channel only, each ended natively and its DISPLAY
+      // cmd 16 run by S-DISPQ, whose bin reads are answered under A-VSCHIST-2 (HIST_BIN_WORDS words a read)
+      const hist = [0, 1, 2].map((c) => lab.vsc.hist(c).runs), reads = lab.vsc.hist_zero_reads();
+      const cmd16 = [...s.steps.flatMap((x) => x.dispq ?? []), ...lab.dispq].filter((x) => x.cmd === 16).length;
+      const refused = lab.vsc.errors()[1].filter((e) => e.name === 'HIST_UNMODELLED').length;
+      ok(hist[0] === 0 && hist[1] === 0 && hist[2] >= HIST_RUNS_MIN && [hist[2] - 1, hist[2]].includes(cmd16)
+        && reads === HIST_BIN_WORDS * cmd16 && !refused,
+        `${tag}: the histogram's runs per channel ${hist} (want the TFT's >= ${HIST_RUNS_MIN}), DISPLAY cmd 16 through S-DISPQ ${cmd16}, bin reads under A-VSCHIST-2 ${reads}, HIST_UNMODELLED ${refused}`);
       if (hdmi) {
         const rec = pl.run_input({ type: 'hdmi', action: 'plug' });
         idle(500);
         const plug = taken(), tra588 = plug.filter(([id]) => id === 588);
         ok(tra588.length === 1 && tra588[0][2] === 0 && !ca.outdev_done.length && rec.hdmi?.scdc_writes === 1,
           `${tag}: the plug's TRA 588 answered 0 by the component, no S-OUTDEV (${ca.outdev_done.length}), the open's SCDC write ${rec.hdmi?.scdc_writes}`);
+        ok(ca.hist_ends >= 1 && ca.hist_waited.length >= 1 && ca.hist_waited.every(([d0]) => d0 === 0),
+          `${tag}: the plug's DISPLAY cmd 15 waited for the histogram's end natively (S-HISTEND ${ca.hist_ends}; ${JSON.stringify(ca.hist_waited)})`);
         const c = lab.compose('hdmi', true, true), hd = c.header;
         ok(c.status === 'NONE' && hd.width === 1920 && hd.height === 1080 && hd.drawn === 0,
           `${tag}: channel 0 composes its 1920 x 1080 window, no plane drawn (the GUI's HDMI layout is not drawn): ${c.status} ${JSON.stringify(hd)}`);
@@ -346,11 +363,15 @@ export async function traRoutingSession() {
       ok(oxf() === n0 && shots.some(([id]) => id === 1030) && shots.every(([, , res]) => res === 0),
         `${tag}: over two passes of S1 and S2 the OXF events kept ${n0} -> ${oxf()}, S2's 1030 answered natively (${JSON.stringify([...new Set(shots.map(([id]) => id))])})`);
       ok(s.status().gui === '0x0108', `${tag}: the shooting screen after the passes: ${s.status().gui}`);
-      // the menu: S-HISTWAIT, then udf07 and the next stop, the image engine's unit
+      // the menu: DISPLAY cmd 15 waits for the run's end (S-HISTEND), E_OK within two frames, then udf07 and the next
+      // stop, the image engine's unit
       let err = null;
+      const t15 = lab.lab_time();
       try { s.key('menu', 'down'); s.camapp.pump(); idle(100); } catch (e) { err = e; }
-      ok(ca.hist_waits >= 1 && used.length <= pl.stand_ins_in_use().length && pl.stand_ins_in_use().includes('S-HISTWAIT'),
-        `${tag}: the menu's DISPLAY cmd 15 ran its histogram wait to the timeout (S-HISTWAIT ${ca.hist_waits})`);
+      const now = pl.stand_ins_in_use(), waited = ca.hist_waited;
+      ok(ca.hist_ends >= 1 && waited.length >= ca.hist_ends && waited.every(([d0, t]) => d0 === 0 && t > t15 && t - t15 <= HIST_WAIT_MAX_NS)
+        && ['S-HISTEND', 'A-VSCHIST-1', 'A-VSCHIST-2'].every((x) => now.includes(x)) && !now.includes('S-HISTWAIT'),
+        `${tag}: the menu's DISPLAY cmd 15 waited for the histogram's end natively (S-HISTEND ${ca.hist_ends}; [d0, lab ns] ${JSON.stringify(waited)} from ${t15}; ${now.filter((x) => /HIST/.test(x))})`);
       const msg = err?.message ?? '';
       ok(msg.includes(`(disasm ${ENGINE_STOP}) fault=2`) && msg.includes(`DENIED write ${ENGINE_REG}`),
         `${tag}: past udf07 the menu stops at the image engine's start ${ENGINE_STOP} (${ENGINE_REG}): ${err ? err.message.slice(0, 160) : 'no error'}`);

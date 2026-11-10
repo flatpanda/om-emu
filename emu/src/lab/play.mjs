@@ -552,6 +552,7 @@ export class PlayLab extends N.NavLab {
     for (const ra of [...this.dispq_returns, ...DISPQ_SEND_RETURNS]) {
       if (!is_call_to(image, ra - 7, OLYQEWR) && opts.mutant !== 'dispq-mid-call') throw new PlayError(`S-DISPQ: ${h8(ra)} does not follow a 7-byte call of OlyQeWr ${h8(OLYQEWR)}`);   // :892
     }
+    this.dispq_sends = [...DISPQ_SEND_RETURNS];      // dispq_accept adds to them
     if (opts.mutant !== 'no-dispq') {                // :894, without it the queue fills and the guard reports it
       this._qewr_prev = this.hooks.get(runtime(OLYQEWR));
       this.hook(OLYQEWR, (h, r) => this._s_dispq(h, r), 'S-DISPQ');
@@ -567,9 +568,15 @@ export class PlayLab extends N.NavLab {
     this.observe(TSND_DTQ, (lab, r) => this._tsnd_entry(lab, r), 'obs-tsnd');
   }
   // S-DISPQ
+  // one more asynchronous DISPLAY request S-DISPQ runs: the send that returns to ra (disassembly notation), a 7-byte
+  // call of OlyQeWr (camapp.mjs: the histogram's end, DISPLAY cmd 16, under control camapp 3)
+  dispq_accept(ra) {
+    if (!is_call_to(this.image, ra - 7, OLYQEWR)) throw new PlayError(`S-DISPQ: ${h8(ra)} does not follow a 7-byte call of OlyQeWr ${h8(OLYQEWR)}`);
+    if (!this.dispq_sends.includes(ra)) this.dispq_sends.push(ra);
+  }
   _s_dispq(hle, r) {
     const q = r.d0 & 0xFFFF, ra = disasm(r.mdr);
-    if (q === this.display_queue && DISPQ_SEND_RETURNS.includes(ra) && this.depth === 0) {
+    if (q === this.display_queue && this.dispq_sends.includes(ra) && this.depth === 0) {
       const [p, n] = unpack('<II', this.sim.read(r.a0, 8));
       const msg = this.sim.read(p, n);
       if (n !== 16) throw new PlayError(`S-DISPQ: a ${n}-byte DISPLAY message from ${where(r.mdr)}`);

@@ -107,7 +107,7 @@
 //              whose 0 re-arms the GUI's beep (CBS_AF_LOCK's comment). The application's own changedFocus then plays
 //              the AF beep natively down to UI_OUT's sound request and, with the audio hardware, to the audio port
 import { FirmwareError, where, runtime, disasm, SP } from './hle.mjs';
-import { OPENED_WORD, HDMI_MASK } from './display.mjs';
+import { OPENED_WORD, HDMI_MASK, VSC_CHANNEL } from './display.mjs';
 import { AssertionError } from './errors.mjs';
 import { RPC_ENTRIES } from './menu.mjs';
 import { packRegs } from './sim.mjs';
@@ -229,15 +229,25 @@ const TRA_EXEC_CALLS = A(0x50AF7CB9), TRA_EXEC_CALL = A(0x50AF7CBE);
 // components were never asked; they run natively there. TRAACK_KEPT: the transactions S-TRAACK still answers 0 at
 // the exec in that mode (none: the menu's stop is not one transaction, 4.1.5). TRA_NATIVE_LOG: tra_native's length
 const TRAACK_KEPT = new Set(), TRA_NATIVE_LOG = 400;
-// S-HISTWAIT (camapp 3; docs/hle-gaps.md 4.1.5): the shooting component's display set-up starts the VSC's histogram
-// (0x501e14a4: INTEN1 |= 0x100, HIST1 = 1, after HISTAREA1 / 2 at 0x501e1396 / 0x501e13f6; X, on the TFT channel), and
-// DISPLAY cmd 15 (0x501d709f), while the histogram runs (the word 0x62a3eaf8 is 1), clears the histogram's flag (its id
-// at 0x6004303a) and waits for it with a 50 ms timeout (0x501d70d1, OlyEvWt 0x5002bdd8; its result is not read). Only
-// the histogram's done callback 0x501d71e1 sets the flag (it also clears the word and posts the result to the queue
-// whose id is at 0x600432d4, D); the lab's VSC has no histogram unit, so nothing sets it, and in S-DISPQ's run the
-// wait cannot block. S-HISTWAIT runs the wait to its timeout: the lab clock moves 50 ms and the wait returns E_TMOUT
-// (on the camera the histogram ends first, I: within a frame)
-const HIST_WAIT_RETURN = A(0x501D70D8), HIST_WAIT_MS = 50, OLY_EV_WAIT = A(0x5002BDD8), E_TMOUT = -50;
+// The VSC histogram under camapp 3 (docs/hle-gaps.md 4.2.1, docs/om1-vsc-spec.md section 13): DISPLAY cmd 13 / 14
+// start the VSC's histogram on the TFT channel (0x501e14a4: INTEN1 |= 0x100, HIST1 = 1, X); the VSC model ends the run
+// (A-VSCHIST-1, src/dev/vsc.mjs) and the ISR's bit-8 branch (0x501dec7f..e4) posts the done callback 0x501d71e1 to
+// task 16 (0x50053505), which clears the run word 0x62a3eaf8, posts DISPLAY cmd 16 {0, 0, 16, &slot} from
+// HIST_DONE_SEND while the word 0x62a3eabe is set, and sets the flag whose id is at 0x6004303a (D). Cmd 16 reads the
+// bins (0x501d70e6) and starts the next run (0x501d6bec), a run every 50 ms of lab time (X). S-DISPQ runs that cmd 16
+// as it runs the display manager's requests (dispq_accept, play.mjs).
+// S-HISTEND: DISPLAY cmd 15 (0x501d709f) clears 0x62a3eabe and, while a run is on (0x62a3eaf8 = 1), clears the flag
+// and waits for it 50 ms (OlyEvWt at 0x501d70d1, returning to HIST_WAIT_RETURN; the flag's only waiter, D: its id word
+// is read at 0x501d70b2, 0x501d70c5 and by the done callback only). The menu sends it inside a display run, where lab
+// time stands still: the lab clock runs to the run's end, a frame at a time on the channel where the run is (at most
+// two frames, A-VSCHIST-1), and the wait then runs natively: S-IRQFIRST takes the VSC's IRQ, the wait blocks, task 16
+// runs the done callback, which sets the flag, and the wait returns E_OK (X). Where the run has already ended, its
+// interrupt still to be taken or its callback queued on task 16's ring (write index 0xa32c3e10, read index
+// 0xa32c3e12, docs/om1-kernel-spec.md 9.6), the wait runs natively at once; with neither the lab refuses it. Before
+// the unit was modelled S-HISTWAIT ran the wait to its 50 ms timeout (E_TMOUT)
+const HIST_WAIT_RETURN = A(0x501D70D8), OLY_EV_WAIT = A(0x5002BDD8), HIST_DONE_SEND = A(0x501D722E);
+const DEFER_WRITE = A(0xA32C3E10), DEFER_READ = A(0xA32C3E12), HIST_END_FRAMES = 2;
+const VSC_INTEN1 = 0x00C, VSC_INTST1 = 0x010, HIST_END_BIT = 0x100;
 // S-TRAACK: the request's vtable slot the exec deletes a consumed request through (docs/hle-gaps.md 4.1.2, D)
 const REQUEST_DELETE_SLOT = 1;
 // S-OUTDEV (E143 with the HDMI port, docs/hle-gaps.md 4.9): the application's change of output device, TRA 588
@@ -491,7 +501,9 @@ export const CAMAPP_STAND_INS = {
   "S-MOVRATE": "(a body whose movie record time divides by the movie info's frame rate without a test: E118, X) the MN103's DIVU by 0, whose quotient the manual leaves undefined (emu/FIDELITY-NOTES.md 3.2): the rate is the movie recorder's set-up's, which runs on CPU 2 at a movie take's start or a movie's playback, so it is 0 on the camera too until then (docs/model-survey.md finding 59). While it is 0 the divide is not executed, its quotient taken as 0, and the record time runs on natively and fills its block; the quotient goes only to the block's +20, which two of the query's seven callers read, neither met in the lab's start. What the camera's quotient is, ?",
   "S-LONGTIMER": "the system timer module's long timers (1000 ms and more, set through api_system.c 0x5041fd71 / 0x5041fd0d by the HLS timer service): when one is due in lab time the module's event 0x03010000 | number is published, as the module would",
   "S-BOOTDONE": "the HLS components' boot completion: the camera base (Cab_CameraBase) and the still-shooting category wait in their state 3 for event 415, which the application's HighLevel init sends as TRA 415 through the transaction exec (X), and S-TRAACK answers at the exec; S-BOOTDONE dispatches 415 to each waiting there, and 420 (the shooting mode) to the camera base waiting in its state 11, so the shoot mode, the category and Cmp_ShootingComponent are created and run on the OXF main thread (HIGHLEVEL_MAIN, started by S-CAMAPP). The component's sub-CPU status read (0x5012b8b7) returns 0. Not installed under control camapp 3, where the transaction path runs natively and the application's own TRA 415 and the mode change's 420 bring the camera base to its state 13 and the category to its state 11 (X)",
-  "S-HISTWAIT": "(control camapp 3) the VSC histogram's end: the shooting component starts the VSC's histogram on the TFT channel (0x501e14a4: INTEN1 bit 8, HIST1 = 1; X), and DISPLAY cmd 15 (0x501d709f) waits up to 50 ms for the flag only the histogram's done callback (0x501d71e1) sets; the lab's VSC has no histogram unit, so in S-DISPQ's run the wait runs to its timeout: the lab clock moves 50 ms and it returns E_TMOUT, which the command does not read (D). On the camera the histogram ends first (I)",
+  "S-HISTEND": "(control camapp 3) the VSC histogram's end in DISPLAY cmd 15's wait: the shooting component starts the VSC's histogram on the TFT channel (0x501e14a4: INTEN1 bit 8, HIST1 = 1; X), a run every 50 ms, each ended by the VSC model (A-VSCHIST-1), its interrupt taken natively and its done callback (0x501d71e1) run by task 16 (X). DISPLAY cmd 15 (0x501d709f), which the menu sends inside a display run, waits up to 50 ms for the flag only that callback sets (D); in a display run lab time stands still, so the lab clock runs a frame at a time to the run's end (at most two frames) and the wait then runs natively and returns E_OK (X). The camera's DISPLAY task waits the same time for the same end (I)",
+  "A-VSCHIST-1": "(control camapp 3) a run of the VSC's histogram unit, started by a write of HIST1 bit 0 (D: 0x501e14a4 writes HIST1 = 1 for every run), measures the frame that begins at the channel's next boundary and ends at the boundary after it, where INTST1 bit 8 is set and, with INTEN1 bit 8, raises the channel's IRQ; a run is one-shot. The firmware waits for the run's registers to latch before it starts one (0x501d6e17..a2, D), so a whole latched frame is the earliest the run can cover (I); the unit's real time per run is not known (?), and only the lab's pace depends on it (a run every 50 ms of lab time, X)",
+  "A-VSCHIST-2": "(control camapp 3) the bins of a run whose source plane (the IMG plane HIST2[17:16] names, D: the set-up 0x501e127f picks the plane whose DMA address is the request's) had its DMAEN bit clear in the latched bank read as 0, trusted only while the firmware discards them: the written DMAEN bit 5 (IMG1) clear and HIST2[17:16] 0 at the read, the test after which 0x501d70e6 overwrites the bins it read with 0 and puts 64 in bin 5 (0x501d712d..0x501d7154, D). What the unit counts with no source plane is ?; any other read of the bins is the model's error HIST_UNMODELLED (what the unit counts and how, HIST3's halves among it, is ?)",
   "S-CPU3": "the posts to CPU 3 through ring [3][0] are taken off the ring in order and acknowledged, each by its function: DISP_FRAME's remote calls of 0x5002587a (each setting bits of DISP_FRAME's flag), after each step, S-DISPFRAME then running one turn of DISP_FRAME for their bits; on E143 MDET's post, at once at its poster's return, and LAF's event setters, the EMS2 clear and PDT's and TRC's dispatches (src/fw/models.mjs mdet.events, mdet.posts; the dispatches with the core register at 3), each run in interrupt context, S-MDETDL then running CPU 3's tasks (mdet.mjs); a CPU 0 wait for LAF's answer (mdet_laf_end's on the flag 0x600430c4's id) is preceded by this service, the waiting call's stack kept (nested); a post of any other function stops the session; the lab has no CPU 3",
   "S-RELSEQ": "the modules' notifications of a release as the callbacks the HLS shooting reactive posts for them (0x50af4451, CBC_SHOOTING_COMMON), while the application's shooting service runs (from startShootingService 0x50ae1124 to endShootingService 0x50ad7e8a; in playback S1 only takes the application back to shooting): S1 down -> START_FOCUS, END_FOCUS (OK, or NG when S-SCENE's live view has nothing focusable under its AF point); S2 down -> START_SHOOTING_PICTURE, START_EXPOSE, END_EXPOSE after the shutter time in use, END_SHOOTING_PICTURE, START_RECVIEW, END_RECVIEW 500 ms later, then START_THROUGH_IMAGE_PROCESS (the through image's restart, on which the GUIs of the E118 family, E142, E140, E130, E133, E145, E129 and E132 leave the rec view's display); the application's RECORDING_MOVIE function starts a recording (READY_MOVIE, START_SHOOTING_MOVIE, START_RECORDING_MOVIE, UPDATE_SHOOTING_TIME every second) or ends it (STOP_SHOOTING_MOVIE, END_RECORDING_MOVIE); meanwhile the shooting phase query 0x50ab57e9 answers the movie phases of the shooting component's sequence (113 ready, 114 ready finish, 115 recording, 117 end), so getMovieState is 1 and the GUI lays out its REC mark. The callbacks due at one lab time (END_EXPOSE and END_SHOOTING_PICTURE) are posted together before the application runs, as the modules' notifications would reach its queue while it works (E145's application defers an event until END_SHOOTING_PICTURE, X). The order follows the callbacks' names (I). No image is developed: S-RECVIEW shows the capture's frame",
   "S-SHUTTERSND": "(a host that plays sound: the players' pages) the mechanical shutter's sound at each release S-RELSEQ makes, synthesized (src/lab/shuttersnd.mjs: seeded noise through decaying resonators, no audio asset): an open click at START_EXPOSE and a close click with the charge motor at END_EXPOSE, the shutter time in use later (S-SCENE's, else 1/125 s), sent to the page over the lab's audio output (src/lab/audio.mjs, GET /api/audio) and played with WebAudio once a key or a click has started it. On the camera that sound is the mechanism's own, not the firmware's: the stock firmware plays nothing at a release and the electronic shutter is silent (I: the patch tool om-c, on the same base images, has to add both a call of the sound engine's play method before the capture's begin and the sound; in the lab's S2, where S-RELSEQ stands in for the release and that capture begin does not run, the play method is not called, X of the lab only); which drive settings select the electronic shutter is not decoded (?), so every release sounds as the mechanical shutter. Nothing about the clicks is measured from a camera (I)",
@@ -535,7 +547,8 @@ export class CamApp {
     this.native_tra = this.components && !!session.opts.camapp_native_tra;
     this.tra_native = [];
     this.tra_returns = new Map();
-    this.hist_waits = 0;       // S-HISTWAIT: the histogram waits run to their timeout
+    this.hist_ends = 0;        // S-HISTEND: DISPLAY cmd 15's histogram waits the lab clock ran to the run's end
+    this.hist_waited = [];     // camapp 3: [d0, lab ns] where each of cmd 15's histogram waits returned
     this.media = null;         // S-MDACTRL / S-MEDIA (media.mjs): with the file system native
     // subject.mjs: subject detection's frames, on a body that gives its facts (models.mjs subject): S-SUBJECT's writes
     // where MDET_DL does not run natively, else the setting, the live condition and the placement S-TAKEMDET and S-DML use
@@ -802,15 +815,34 @@ export class CamApp {
     this.s.lab.panel_done = true;                                                  // S-PANELDONE (menu.mjs)
     const lab = this.s.lab;
     lab.xcpu_served.add(CPU3);                                                     // S-CPU3: S-CPU2 leaves bank 3 to drain_cpu3
-    if (this.native_tra) lab.wrap(OLY_EV_WAIT, (prev) => (h, r) => {                // S-HISTWAIT
+    if (this.native_tra) lab.dispq_accept(HIST_DONE_SEND);                         // the histogram's cmd 16
+    if (this.native_tra) lab.wrap(OLY_EV_WAIT, (prev) => (h, r) => {                // S-HISTEND
       if (disasm(r.mdr) !== HIST_WAIT_RETURN || !lab.in_display_run()) { prev(h, r); return; }
-      this.hist_waits += 1;
-      this.log.push(['histwait', `DISPLAY cmd 15's histogram wait from ${where(r.mdr)}: ${HIST_WAIT_MS} ms, timed out`]);
-      const saved = { ...r };
-      lab.advance(HIST_WAIT_MS * 1e6, `S-HISTWAIT from ${where(r.mdr)}`);
+      const from = `S-HISTEND from ${where(r.mdr)}`, busy = [0, 1, 2].filter((c) => lab.vsc.hist(c).state !== 0);
+      if (busy.length > 1) throw new FirmwareError(`${from}: the histogram runs on channels ${busy.join(', ')}`);
+      if (!busy.length) {
+        // the run has ended: its interrupt or its done callback is still to come, and the wait takes it natively
+        const vsc = (c, off) => lab.sim.u32(VSC_CHANNEL[c] + off);
+        const irq = [0, 1, 2].some((c) => vsc(c, VSC_INTST1) & vsc(c, VSC_INTEN1) & HIST_END_BIT);
+        const u16 = (at) => { const x = lab.sim.read(at, 2); return x[0] | x[1] << 8; };
+        const queued = u16(DEFER_WRITE) !== u16(DEFER_READ);
+        if (!irq && !queued) throw new FirmwareError(`${from}: no histogram run, no end interrupt and no deferred call to set the flag`);
+        this.log.push(['histend', `DISPLAY cmd 15's histogram wait from ${where(r.mdr)}: the run already ended (${irq ? 'its interrupt' : 'a deferred call'} pending)`]);
+        prev(h, r);
+        return;
+      }
+      const c = busy[0], n0 = lab.vsc.hist(c).runs, saved = { ...r };
+      for (let k = 0; lab.vsc.hist(c).runs === n0; k++) {
+        if (k >= HIST_END_FRAMES) throw new FirmwareError(`${from}: the run on channel ${c} did not end in ${k} frames`);
+        lab.run_to_frame(c, from);
+      }
+      this.hist_ends += 1;
+      this.log.push(['histend', `DISPLAY cmd 15's histogram wait from ${where(r.mdr)}: the run on channel ${c} ended at lab ${lab.lab_time()} ns`]);
       if (lab.sim.packet('G' + packRegs(saved)) !== 'OK') throw new AssertionError('');
-      h.finish(saved, { d0: E_TMOUT });
-    }, 'S-HISTWAIT');
+      prev(h, saved);
+    }, 'S-HISTEND');
+    // the wait's result where it returns (its d0, which cmd 15 does not read) and the lab time, for the record
+    if (this.native_tra) lab.observe(HIST_WAIT_RETURN, (l, r) => this.hist_waited.push([r.d0 | 0, l.lab_time()]), 'obs-hist-wait');
     // camapp 3 (TRAACK_KEPT): the receiver substance's send and the remote-call method run natively, not S-RPC
     if (this.native_tra) for (const entries of RPC_ENTRIES) for (const e of entries) {
       if (lab.hooks.get(runtime(e))?.[1] !== 'S-RPC') throw new FirmwareError(`camapp 3: ${h8(e)} is not S-RPC's hook`);

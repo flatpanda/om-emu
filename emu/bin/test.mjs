@@ -2,7 +2,8 @@
 // The test gate in one command: the recorded ISA vectors on both engines (the CPU's own step and the decoded-cache
 // interpreter), the core's two tiers in lockstep, the decode-cache regression (test_regress.mjs), the command-line
 // tools and the regression net's permanent controls (test_cli.mjs: mutants golden.mjs must report), infrastructure
-// (test_infra.mjs), the VSC register tables, class tables and blend table (test_dev.mjs), the kind-3 VSC's COMPOSE
+// (test_infra.mjs), the VSC register tables, class tables, blend table and histogram unit (test_dev.mjs), the kind-3
+// VSC's COMPOSE
 // on E122's board (test_vsc3.mjs), the kick model's TB-layout
 // refusals (test_irq.mjs), the replayer's argument binding and PlaySession.trim (test_lab.mjs), the check runner and
 // the checks' controls (test_checks.mjs) and their command-line parser (test_args.mjs), the debug API's units
@@ -41,7 +42,7 @@ import { purity } from '../test/test_pure.mjs';
 import { factsTests } from '../test/test_facts.mjs';
 import { cache } from '../test/test_regress.mjs';
 import { cli, cli2, cli3, cli4, cli5, cli6 } from '../test/test_cli.mjs';
-import { vscClasses, vscRegsHeader, blendTable } from '../test/test_dev.mjs';
+import { vscClasses, vscRegsHeader, blendTable, vscHistUnits } from '../test/test_dev.mjs';
 import { vsc3Units } from '../test/test_vsc3.mjs';
 import { kickRefusals, refusalControl } from '../test/test_irq.mjs';
 import { infra } from '../test/test_infra.mjs';
@@ -79,10 +80,10 @@ const ca = cache(), cl = cli(), c2 = cli2();
 console.log(`decode-cache checks: ${ca.checks - ca.bad.length}/${ca.checks}; command-line checks: ${cl.checks - cl.bad.length}/${cl.checks} (round 1), ${c2.checks - c2.bad.length}/${c2.checks} (round 2)`);
 [...ca.bad, ...cl.bad, ...c2.bad].forEach((x) => console.log('  ', x));
 bad += ca.bad.length + cl.bad.length + c2.bad.length;
-const inf = infra(), hd = vscRegsHeader(), bl = blendTable(), vc = vscClasses(), v3 = vsc3Units(), c3 = cli3();
-console.log(`infrastructure: ${inf.checks - inf.bad.length}/${inf.checks}; vsc register tables vs header: ${hd.bad.length ? 'DIFFERENT' : 'identical'}; blend table: ${bl.inputs - bl.bad.length}/${bl.inputs}; vsc-classes: ${vc.names} names, ${vc.bad.length} differences; kind-3 VSC compose: ${v3.checks - v3.bad.length}/${v3.checks}; Stage 1 tooling checks: ${c3.checks - c3.bad.length}/${c3.checks}`);
-[...inf.bad, ...hd.bad, ...bl.bad, ...vc.bad, ...v3.bad, ...c3.bad].forEach((x) => console.log('  ', x));
-bad += inf.bad.length + hd.bad.length + bl.bad.length + vc.bad.length + v3.bad.length + c3.bad.length;
+const inf = infra(), hd = vscRegsHeader(), bl = blendTable(), vc = vscClasses(), v3 = vsc3Units(), c3 = cli3(), vh = await vscHistUnits();
+console.log(`infrastructure: ${inf.checks - inf.bad.length}/${inf.checks}; vsc register tables vs header: ${hd.bad.length ? 'DIFFERENT' : 'identical'}; blend table: ${bl.inputs - bl.bad.length}/${bl.inputs}; vsc-classes: ${vc.names} names, ${vc.bad.length} differences; kind-3 VSC compose: ${v3.checks - v3.bad.length}/${v3.checks}; Stage 1 tooling checks: ${c3.checks - c3.bad.length}/${c3.checks}; vsc histogram unit: ${vh.checks - vh.bad.length}/${vh.checks}`);
+[...inf.bad, ...hd.bad, ...bl.bad, ...vc.bad, ...v3.bad, ...c3.bad, ...vh.bad].forEach((x) => console.log('  ', x));
+bad += inf.bad.length + hd.bad.length + bl.bad.length + vc.bad.length + v3.bad.length + c3.bad.length + vh.bad.length;
 const c4 = cli4(), c5 = cli5();
 console.log(`Stage 2 tooling checks (J1 included): ${c4.checks - c4.bad.length}/${c4.checks}; Player-boundary replay checks: ${c5.checks - c5.bad.length}/${c5.checks}`);
 [...c4.bad, ...c5.bad].forEach((x) => console.log('  ', x));

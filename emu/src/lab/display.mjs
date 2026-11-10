@@ -31,14 +31,14 @@ export const VSC_OUTBLOCK = LATER ? null : 0x9BB98000;
 export const OUTPUT = 0x89000000, DEBUG = 0x89800000, DOORBELL = 0x89810000, STUB = 0x89900000, DOORBELL_STUB = A(0xA2100400);
 export const CMD_ADVANCE = 1, CMD_RUN_TO_FRAME = 2, CMD_COMPOSE = 3, CMD_CLEAR = 4, CMD_RUN_TO_EVENT = 5;
 export const DBG_ERR_TOTAL = 0x08, DBG_NOTE_TOTAL = 0x0C, DBG_T = 0x10, DBG_LAST_RESULT = 0x1C, DBG_ARG0 = 0x20;
-export const DBG_EVENT_SOURCES = 0x30, DBG_CHAN = 0x40, DBG_HDR = 0x100, DBG_PLANE = 0x180, DBG_ERR_RING = 0x400, DBG_NOTE_RING = 0x1000;
+export const DBG_EVENT_SOURCES = 0x30, DBG_HIST_ZERO_READS = 0x34, DBG_CHAN = 0x40, DBG_HDR = 0x100, DBG_PLANE = 0x180, DBG_ERR_RING = 0x400, DBG_NOTE_RING = 0x1000;
 export const CH_ASSUME = 0x38, CH_VIEW = 0x39, DBG_FLAGS = 0x4000, DBG_FLAGS_SIZE = 0x1400, ERR_SLOTS = 64, NOTE_SLOTS = 512;
 export const ERRORS = ['NONE', 'REG_UNKNOWN', 'WIDTH', 'MIRROR_WRITE', 'MIRROR_LIVE', 'RO_WRITE', 'DEBUG_CPU_WRITE',
   'DOORBELL', 'NOT_LATCHED', 'FIELD_MODE', 'WINDOW', 'MIX_UNOBSERVED', 'PLANC_UNOBSERVED', 'FMT_UNMODELLED',
   'SPOS_UNMODELLED', 'DMA_FIELD', 'DMABN_SHORT', 'DMA_RANGE', 'RSZ_UNMODELLED', 'PEAK_BC', 'BG_FIELD', 'OSDCP2_FIELD',
-  'PAL_UNWRITTEN', 'PAL_FIELD', 'UNWRITTEN', 'NOT_RUNNING', 'ORDER', 'FEATURE_UNOBSERVED'];
+  'PAL_UNWRITTEN', 'PAL_FIELD', 'UNWRITTEN', 'NOT_RUNNING', 'ORDER', 'FEATURE_UNOBSERVED', 'HIST_UNMODELLED'];
 export const NOTES = ['NONE', 'RESET_READ', 'MIRROR_RESET_READ', 'SRAM_RESET_READ', 'OUT_READ', 'MONI3_IDLE',
-  'COMPOSE_RESET', 'ASSUMED', 'SPOS_A18', 'PLANC_ZERO', 'VIEW'];
+  'COMPOSE_RESET', 'ASSUMED', 'SPOS_A18', 'PLANC_ZERO', 'VIEW', 'HIST_NO_SOURCE'];
 export const PLANES = ['IMG1', 'IMG2', 'IMG3', 'OSD1', 'OSD2', 'OSD3'];
 export const HDR = ['channel', 'width', 'height', 'frame', 'errors', 'pal_unwritten', 'skipped', 'drawn', 'ox', 'oy',
   'mix_flags', 't_lo', 't_hi', 'status', 'assumed', 'view'];
@@ -337,6 +337,15 @@ export class VscDebug {
     return { running: w[0], frames: w[1], field: w[2], moni3: w[3], irq: w[4], line_ns: w[5],
       frame_start: w[6] + w[7] * 4294967296, length: w[8], latched: w[9], compose: w[10], order };
   }
+  // kind 1's histogram unit on channel c (src/dev/vsc.mjs): state 0 idle, 1 started (its run begins at the next
+  // boundary), 2 running; runs, the runs ended so far
+  hist(c) {
+    const at = DEBUG + DBG_CHAN + 0x40 * c;
+    return { state: this.sim.read(at + 0x3B, 1)[0], runs: this.sim.u32(at + 0x3C) };
+  }
+  hist_runs() { let n = 0; for (let c = 0; c < VSC_CHANNEL.length; c++) n += this.hist(c).runs; return n; }
+  // the bin reads answered under A-VSCHIST-2 (0, the source plane off and the firmware's discard test true)
+  hist_zero_reads() { return this.u32(DBG_HIST_ZERO_READS); }
   irq_line(c) { return this.u32(DBG_CHAN + 0x40 * c + 0x10); }
   set_line_ns(c, value) { this.sim.word(DEBUG + DBG_CHAN + 0x40 * c + 0x14, value); }
   // kind 2: the line time of the channel's EVF bank (SYNC8; set_line_ns gives the SYNC2 bank's); the channel runs from

@@ -41,10 +41,12 @@ export const FAMILIES = {
       kernel_ticks: [1, 2, 3, 4], soft_tick: 21, hw_channels: [16, 32], hw_entries: 32,
     },
     // the VSC display compositor (src/dev/vsc.mjs): kind 1 is E143's (3 channels of 0x8000, the mirror bank at
-    // +0x2000, palettes and LUT, the output block as channel 3); the name tables' entry counts [channel, output]
+    // +0x2000, palettes and LUT, the output block as channel 3); the name tables' entry counts [channel, output];
+    // irq_mask: the INTST1 bits that raise the channel's IRQ, the frame (0), bit 1 and the histogram's end (8: the ISR
+    // 0x501de8df handles INTST1 & INTEN1 bit 8, 0x501dec7f, D; that the line carries it is I)
     vsc: {
       kind: 1, base: 0x9BB80000, size: 0x20000, channels: 3, stride: 0x8000, reg_end: 0xE84, names: [503, 115],
-      regs: { INTEN1: 0x00C, INTST1: 0x010, SYNC2: 0x728, SYNC4: 0x730, MONI3: 0xE80 }, irq_mask: 3,
+      regs: { INTEN1: 0x00C, INTST1: 0x010, SYNC2: 0x728, SYNC4: 0x730, MONI3: 0xE80 }, irq_mask: 0x103,
       // the channel register blocks [first, last] the compositor (src/dev/vsccompose.mjs A21) composes without, noting
       // their values as assumed instead of checking them: none on E143, whose composite checks every feature register
       unapplied: [],

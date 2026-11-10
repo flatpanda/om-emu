@@ -1,7 +1,10 @@
 // The VSC device's tables, without firmware traces: the register tables read from the image equal the committed
 // header checks/fixtures/om1-vsc-regs.h, the JS register classes equal check_display's parse of the class
 // tables (checks/fixtures/om1-vsc-tables.c), and the blend table equals the blend() formula below on all
-// 32 x 256 x 256 inputs.
+// 32 x 256 x 256 inputs. vscHistUnits: kind 1's histogram unit on a machine with E143's image, driven through the
+// device's own register writes and doorbell (docs/om1-vsc-spec.md section 13): a start ends at the second boundary
+// (A-VSCHIST-1) with INTST1 bit 8 and, with INTEN1 bit 8, the channel's IRQ; its bins read 0 only under A-VSCHIST-2,
+// any other bin read and a start during a run are HIST_UNMODELLED and a bus error.
 //   node emu/test/test_dev.mjs
 import fs from 'node:fs';
 import path from 'node:path';
@@ -62,11 +65,78 @@ export function blendTable() {
   return { inputs: n, bad };
 }
 
+// kind 1's histogram unit (src/dev/vsc.mjs HIST1's comment) on channel 2 (the TFT's): registers by offset
+export async function vscHistUnits() {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { createMachine } = await import('../src/machine.mjs');
+  const { BUS } = await import('../src/core/mem.mjs');
+  const V = await import('../src/dev/vsc.mjs');
+  const C = 2, CH = C * V.CHAN_STRIDE;
+  const R = { INTEN1: 0x00C, INTST1: 0x010, HIST1: 0x04C, DMAEN: 0x060, HIST2: 0x748, SYNC2: 0x728, BINS: 0x4000 };
+  const fresh = () => {
+    const v = createMachine({ rom: new Uint8Array(fs.readFileSync(IMAGE)) }).devices.vsc;
+    v.dset(V.chanDbg(C, V.CH.LINE_NS), 1000);
+    const reg = (off, value) => v.write(CH + off, value, 4, false), get = (off) => v.read(CH + off, 4, true);
+    const frame = () => v.doorbell(0, 2 | C << 8, 4, false);
+    const hist = () => ({ state: v.dbg[V.chanDbg(C, V.CH.HIST)], runs: v.dget(V.chanDbg(C, V.CH.HIST_RUNS)), irq: v.dget(V.chanDbg(C, V.CH.IRQ)) });
+    const errs = () => { const n = v.dget(V.D.ERR_TOTAL), out = []; for (let k = 0; k < n; k++) out.push(v.dget(V.D.ERR_RING + 32 * k)); return out; };
+    // a bin read: its value, or 'BUS' with the error code recorded
+    const bin = (i) => { try { return v.read(CH + R.BINS + 4 * i, 4, false); } catch (e) { if (e === BUS) return 'BUS'; throw e; } };
+    const start = () => { try { reg(R.HIST1, 1); return 'ok'; } catch (e) { if (e === BUS) return 'BUS'; throw e; } };
+    reg(R.SYNC2, 100);                                   // the channel runs: 100 lines of 1000 ns
+    return { v, reg, get, frame, hist, errs, bin, start };
+  };
+  // a start: armed, running from the next boundary, ended (INTST1 bit 8) at the one after, also while masked
+  {
+    const t = fresh();
+    t.reg(R.HIST2, 0x00100112);                          // the start's value (X): 128 bins, source IMG1, DMAEN 0
+    ok(t.start() === 'ok' && t.hist().state === 1 && !(t.get(R.INTST1) & 0x100), `armed: ${JSON.stringify(t.hist())}`);
+    t.frame();
+    ok(t.hist().state === 2 && !(t.get(R.INTST1) & 0x100) && t.hist().runs === 0, `running after one boundary: ${JSON.stringify(t.hist())}`);
+    ok(t.bin(0) === 'BUS' && t.errs().includes(V.E.HIST_UNMODELLED), 'a bin read during a run is HIST_UNMODELLED');
+    ok(t.start() === 'BUS', 'a start during a run is HIST_UNMODELLED');
+    t.frame();
+    ok(t.hist().state === 0 && t.hist().runs === 1 && (t.get(R.INTST1) & 0x100) && !t.hist().irq,
+      `ended at the second boundary, INTST1 0x${t.get(R.INTST1).toString(16)}, no IRQ while INTEN1 bit 8 is clear: ${JSON.stringify(t.hist())}`);
+    t.frame();
+    ok(t.hist().runs === 1, 'one-shot: no second end without a start');
+    // A-VSCHIST-2: the source plane (IMG1) was off, the written DMAEN bit 5 clear and HIST2[17:16] 0: bins read 0
+    const words = Array.from({ length: 64 }, (_, i) => t.bin(i));
+    ok(words.every((x) => x === 0) && t.v.dget(V.D.HIST_ZERO_READS) === 64, `the 64 bin words under A-VSCHIST-2: ${[...new Set(words)]}`);
+    ok(t.bin(64) === 'BUS', 'a word past the 64 bin words is not the unit\'s');
+    t.reg(R.DMAEN, 0x20);                                // IMG1 on at the read: the firmware would keep them
+    ok(t.bin(0) === 'BUS', 'with the written DMAEN bit 5 set the bins are HIST_UNMODELLED');
+    t.reg(R.DMAEN, 0); t.reg(R.HIST2, 0x00110112);       // source IMG2 at the read
+    ok(t.bin(0) === 'BUS', 'with the written HIST2[17:16] not 0 the bins are HIST_UNMODELLED');
+  }
+  // INTEN1 bit 8: the end raises the channel's IRQ, a write-1 to INTST1 bit 8 lowers it
+  {
+    const t = fresh();
+    t.reg(R.HIST2, 0x00100112); t.reg(R.INTEN1, 0x101); t.start(); t.frame(); t.frame();
+    ok(t.hist().irq === 1, `the end with INTEN1 0x101 raises the IRQ: ${JSON.stringify(t.hist())}`);
+    t.reg(R.INTST1, 0x101);
+    ok(t.hist().irq === 0 && !(t.get(R.INTST1) & 0x100), 'INTST1 = 0x101 acknowledges it');
+  }
+  // the source plane on in the latched bank of the frame measured: the bins are HIST_UNMODELLED even if the read's
+  // condition holds
+  {
+    const t = fresh();
+    t.reg(R.HIST2, 0x00100112); t.reg(R.DMAEN, 0x20); t.start(); t.frame(); t.reg(R.DMAEN, 0); t.frame();
+    ok(t.hist().runs === 1 && t.bin(0) === 'BUS', 'a run over a frame with IMG1 on leaves bins the model does not know');
+  }
+  return { checks, bad };
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
+  const hu = await vscHistUnits();
+  console.log(`vsc histogram unit: ${hu.checks - hu.bad.length}/${hu.checks}`);
+  hu.bad.forEach((x) => console.log('  ', x));
   const h = vscRegsHeader(), b = blendTable(), vc = vscClasses();
   console.log(`vsc register tables vs om1-vsc-regs.h: ${h.tables.join(' + ')} entries, ${h.bad.length ? 'DIFFERENT' : 'identical'}`);
   console.log(`blend table: ${b.inputs - b.bad.length}/${b.inputs}`);
   console.log(`vsc-classes (the JS register classes vs om1-vsc.c): ${vc.names - vc.bad.length}/${vc.names}`);
   [...h.bad, ...b.bad, ...vc.bad.slice(0, 10)].forEach((x) => console.log('  ', x));
-  process.exit(h.bad.length + b.bad.length + vc.bad.length ? 1 : 0);
+  process.exit(h.bad.length + b.bad.length + vc.bad.length + hu.bad.length ? 1 : 0);
 }

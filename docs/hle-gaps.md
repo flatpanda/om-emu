@@ -205,7 +205,7 @@ and the first concrete step. Task ids are `cpu << 12 | index` (kernel spec §2.1
   table), which gives the order and contents of their requests for a start, a through switch and a movie. The probe
   runs since 2026-11-08 (4.1.4): the start's and a mode change's requests are recorded; the through switch and the
   movie do not reach TAKE_FUNC in the lab, and neither do S1 and S2.
-  Under camapp 3 with the probe S1's take request reaches TAKE_MAIN natively since 2026-11-09 (4.1.7).
+  Under camapp 3 with the probe S1's take request reaches TAKE_MAIN natively since 2026-11-09 (X, 4.1.7).
 
 #### 4.1.1 TAKE_FUNC's command interface (D unless tagged)
 
@@ -432,7 +432,7 @@ unknown):**
    CmpSht_ShootingComponent_NEW, in progress elsewhere), the sequence parts to send their take requests, and then
    TAKE_EXEC (0x5a: TAKE_MAIN 0x6b, TAKE_MAIN_CP 0x72) native under the same probe machinery. The probe's extension to
    TAKE_MAIN: about half a day once the requests arrive; its neighbours are unknown until it runs (?).
-   Round 1 of this ran on 2026-11-09 (4.1.7): S1's take request reaches TAKE_MAIN under camapp 3 and stops at
+   Round 1 of this ran on 2026-11-09 (X, 4.1.7): S1's take request reaches TAKE_MAIN under camapp 3 and stops at
    TAKE_FOCUS's AF.
 2. **EXIF shooting parameters (S-EXIFPRM)** follow from 1: takepic's record (`0x503bba70`, the EXIF set from
    `0x503bd48e`) is the take's, and the start does not fill the state the EXIF set divides by (X). A few hours after 1
@@ -629,10 +629,12 @@ every session, the probe's included.
   further: no CapTak_Take request and nothing to TAKE. The word reads `0x02010202`, its static value, and its setter
   `0x50bcecb8` (log "[CapThr](all)entryState[0x%08x]"; a byte scan finds only it and the getter naming the word) did
   not run over the start or the idle (X).
-- **Why: S-TAKEOVER writes half of the boot take-over (D).** The boot take-over (API 70405, `0x50adffda`, reached from
+- **Why: S-TAKEOVER writes part of the boot take-over (D).** The boot take-over (API 70405, `0x50adffda`, reached from
   `0x501e6adb` -> `0x50ab2309`) sets, for its kind 0, module 9's state 1 and CapThr's word `0x02010202`
   (`0x50ae0004..0x50ae0015`); for kinds 1 and 2, module 9's state 2 and `0x01010202` (`0x50ae0044..0x50ae0055`).
-  S-TAKEOVER writes module 9's state 2 alone. So after TRA 990 the shooting component's set-up sees state 2 and calls
+  S-TAKEOVER writes module 9's state 2 alone. The rest of the kinds 1 and 2 path (`0x50ae005c..0x50ae007b`:
+  `0x50414b05(1)`, `0x50ac6f6b`, `0x50abe5ce`, `0x50ac6f6b`, `0x50abe4ae(0)`) runs in neither S-TAKEOVER nor
+  S-THRTAKEOVER; what it does is not read (?). So after TRA 990 the shooting component's set-up sees state 2 and calls
   CapThr's updateThroughImage (`0x50bd0949(0, 1)` at `0x50c78bc1`, X) instead of starting the through image
   (`0x50bd0467`, 4.1.2), while the guard sees a through image that is not running. Which kind the camera's boot
   takes is S-TAKEOVER's assumption (I).
@@ -642,9 +644,11 @@ every session, the probe's included.
   (X). CapTak_Take's
   Take_Start_Shoot_Ready (log `0x60e667ec`) then calls the take API `0x50417cd9` (API id `0x200dc`): control `0x20`
   at S1 (from `0x50bc7c8e`), `0x40` at S2 (from `0x50bc7b89`) (X).
-- **The take API (D, X).** Control `0x20` is none of the API's own kinds (0, 2, 4, 64, 68) and takes the default
-  branch `0x50417f65`: a packet from `0x503eb86c` and an asynchronous request to API target 6, TAKE_EXEC
-  (`0x503eb960`), X: `{6, 0xf0050000, 0, packet}` (reply queue API_EVENT, command 0). Control `0x40`
+- **The take API (D, X).** Control `0x20` is none of the API's own kinds (0, 2, 4, 64, 68), so it takes the default
+  branch `0x50417f65`, and none of that branch's (16, 8, 128, 256, 512, 1024, 2048, which set the packet's word +8,
+  and for 256 the command 6), so the packet's word +8 is 0 (`0x5041800d`) as for any control the API does not list:
+  a packet from `0x503eb86c` and an asynchronous request to API target 6, TAKE_EXEC (`0x503eb960`), X:
+  `{6, 0xf0050000, 0, packet}` (reply queue API_EVENT, command 0). Control `0x40`
   (`0x50417efd`) posts `{0, 0, 5, 0}` to TAKE_EXEC straight through OlyQeWr (`0x503ebe46`), with no reply queue;
   S-MODACK, which takes only the API sender's posts (`0x503eba07`), would not have seen it.
 - **H-TAKEMAIN.** TAKE_MAIN's module init `0x50399619` is the boot stage `0x501e8e84`'s call at `0x501e8f7b`, after
@@ -653,7 +657,10 @@ every session, the probe's included.
   `0x501e94a5` starts TAKE_MAIN (`0x60042dfc`, 107), TAKE_MAIN_CP (`0x60042e0a`, 114) and TAKE_PROXY (`0x60042e16`,
   120) at `0x501e9bbf..0x501e9bdb`. The probe runs the init after H-TAKEINIT and starts the first two; TAKE_PROXY
   stays dormant (nothing asked it, X). TAKE_EXEC leaves S-MODACK. Both tasks wait at once (X); under camapp 1 and 2
-  nothing reaches them and round 1's records are unchanged (X, `test_take.mjs`).
+  nothing reaches them and round 1's records are unchanged (X, `test_take.mjs`). The record has what TAKE_MAIN takes
+  from its mailbox, TAKE_EXEC and TAKE_POST and what TAKE_MAIN_CP takes. S-TAKEREQ answers a request whose reply
+  queue is TAKE_POST only where TAKE_MAIN's handler for its token was read (TAKE_FOCUS's `0x300` with token 1, below);
+  any other throws.
 - **TAKE_MAIN's loop (D).** `0x503996c3` waits on its flag with the pattern `0x62a3f024` and serves bit 1 (its
   mailbox, `0x502ce7c8`, posted through `0x502ce7b7` / `0x502ce703`), bit 2 (TAKE_EXEC, 16 bytes, keyed by the
   command) and bit 4 (TAKE_POST, 12 bytes `{u16 status, token, word}`, keyed by the token; the mailbox uses the same
@@ -677,20 +684,28 @@ every session, the probe's included.
 | 2 | TAKE_POST token 1 in RdyFcsRdy1 (handler `0x503c2e8d`, which clears pending bit 1) | TAKE_FUNC command 80 synchronously (`0x503c2eb7`) | its reply | native: status 0 |
 
 Then TAKE_MAIN waits in RdyFcsRdy1 with the pending bits `0x5e` and the wait pattern `0x5` (mailbox and TAKE_POST:
-TAKE_EXEC is not read, `0x5039983f`) through S2 and the releases (X). RdyStart's entry (`0x503c2742`) logged errlog
-`0x25001703` once (at `0x503c2803`, where `0x506d96df(1)`, a test of TAKE_FUNC's context word `0x62a3f148`, decides);
-what it reports is not read (?). TAKE_FUNC's command 80 did not call the frame-mode function `0x5039f583`, so
-S-TAKEFRAME's request is still not reached (X).
+TAKE_EXEC is not read, `0x5039983f`) through S2 and the releases, and nothing reaches its mailbox (X). RdyStart's
+entry (`0x503c2742`) logged errlog `0x25001703` once (at `0x503c2803`, where `0x506d96df(1)`, a test of TAKE_FUNC's
+context word `0x62a3f148`, decides); what it reports is not read (?). TAKE_FUNC's command 80 did not call the
+frame-mode function `0x5039f583`, so S-TAKEFRAME's request is still not reached (X).
 
 - **What RdyFcsRdy1 waits for (D).** Its entry fills the record it gives TAKE_FOCUS with four callbacks, each posting a
   token to TAKE_MAIN's mailbox through `0x502ce7b7`: +0 `0x503c2bac` (token 0), +0x0c `0x503c2bdd` (token 2), +0x14
   `0x503c2bbb` (token 3), +0x18 `0x503c2bcd` (token 5). The state's reply table clears bit `0x04` for token 0
   (`0x503c2bef`), `0x01` for 1, `0x40` for 2 (`0x503c2eeb`) and `0x02` for 3 (`0x503c2f03`, then `0x503a47d5`).
   Token 5 (`0x503c2c3a`) sends TAKE_EXPOSE (the queue at `0x6004327a`, 0x5b) command `0x400` with reply token 11,
-  and token 11 (`0x503c2ce6`) clears `0x10`. What clears bit `0x08` is not found (?). TAKE_FOCUS's command `0x300` is
-  its case `0x509a107f` -> `0x509a54e1` (command table `0x60a64f00`); which of the callbacks it calls, and when, is
-  not read (?). The probe answers none of them, since that would invent the AF's progress: the take-ready stops
-  there (X).
+  and token 11 (`0x503c2ce6`) clears `0x10`. The entry also registers two functions through `0x5039a5ad`, each run
+  once by `0x5039a6e3` (at every state step, `0x50399acf`; 12 slots at `0x62a3f050`) when none of its masks shares a
+  bit with the pending words `0x62a3f03c..0x62a3f048`: `0x503c2fbf` once bits `0x01` and `0x40` are clear
+  (`0x503c2974`), which moves to RdyFcsRdy2 (`0x50399a89(3)`), and `0x503c2d08` once bits `0x04` and `0x10` are
+  (`0x503c2989`), which clears bit `0x08` itself (`0x503c2dc4`) after calling the function at +4 of what token 0's
+  message carried (`0x62a4cea4`, `0x503c2db3`), and then, unless the state's command 7 came (`0x62a4ce60`, set at
+  `0x503c2f2c`; then state 8, RdyFcsAbort), asks BC_EXEC (`0x600431d6`, 9) command 53 synchronously (`0x503c2df8`)
+  and, on conditions not read, the camera driver's request 144 (`0x503c2e21`). So after token 1 RdyFcsRdy2 needs
+  token 2, and `0x503c2d08` tokens 0 and 5 (then 11); what waits for bit `0x02` (token 3) is not read (?).
+  TAKE_FOCUS's command `0x300` is its case `0x509a107f` -> `0x509a54e1` (command table `0x60a64f00`); which of the
+  callbacks it calls, and when, is not read (?). The probe answers none of them, since that would invent the AF's
+  progress: the take-ready stops there (X).
 - **S2 (X).** CapTak_Take's control `0x40` posts TAKE_EXEC command 5. TAKE_MAIN does not take it (TAKE_EXEC holds one
   message by TAKE's own count `0x502ce6ae`); RdyFcsRdy1's command table would take 5 (`0x503c2f5e`), as RdyTrig2Wait's
   would (`0x503c35e9`). No reply goes to the application for S1's request (X). S-RELSEQ's callbacks run beside the
@@ -700,16 +715,19 @@ S-TAKEFRAME's request is still not reached (X).
   TAKE_POWER_MANAGER_EXEC command 0 synchronously twice (S-TAKEREQ); who sends that 29 is not read (?).
 
 **What S-RELSEQ's retirement still needs (I unless tagged):**
-1. The through image's take-over made whole in the default sessions: S-THRTAKEOVER beside S-TAKEOVER, or the boot
-   take-over `0x50adffda` itself. Both are every play session's, so golden would change; the default camapp mode is
-   still 1, blocked by udf07 and the VSC histogram (4.1.5).
+1. The through image's take-over made whole in the default sessions: S-THRTAKEOVER beside S-TAKEOVER (with the rest
+   of the kinds 1 and 2 path, `0x50ae005c..0x50ae007b`, ?), or the boot take-over `0x50adffda` itself. Both are every
+   play session's, so golden would change; the default camapp mode is still 1, blocked by udf07 and the VSC histogram
+   (4.1.5).
 2. TAKE_FOCUS's AF for command `0x300`: the record's callbacks (tokens 0, 2, 3, 5) with FCS and CPU 1 behind them
-   (4.1.4, class (c)), TAKE_EXPOSE's command `0x400` (token 11), and the source of bit `0x08` (?).
+   (4.1.4, class (c)), and TAKE_EXPOSE's command `0x400` (token 11), whose reply's word 2 its handler frees (D), so
+   S-TAKEREQ may not answer it with `{0, 11, 0}`. Bit `0x08` follows from tokens 0 and 11 (`0x503c2d08`, D).
 3. CPU 3's FACE_FD command 15, answered 0 by S-TAKEREQ: what it asks of face detection (?).
-4. TAKE_MAIN past RdyFcsRdy1: RdyFcsRdy2 and 3 (tokens 3, 12..15 and 4, 15), RdyTrig2Wait (which takes S2's command
-   5), then the still states (StlRdy1 .. StlEnd2) for the capture, each new neighbour recorded the same way. Then
-   TAKE_MAIN's reply to the application, and the notifications that CapTak_Take's observers turn into sequence events
-   (4.1.3), from which the sequence parts would post the callbacks S-RELSEQ posts now. None of these is reached (X).
+4. TAKE_MAIN past RdyFcsRdy1: `0x503c2d08`'s BC_EXEC command 53 and camera driver request 144 (D), RdyFcsRdy2 and 3
+   (reply tokens 3, 12..14 and 4, 15, D), RdyTrig2Wait (which takes S2's command 5), then the still states (StlRdy1
+   .. StlEnd2) for the capture, each new neighbour recorded the same way. Then TAKE_MAIN's reply to the application,
+   and the notifications that CapTak_Take's observers turn into sequence events (4.1.3), from which the sequence parts
+   would post the callbacks S-RELSEQ posts now. None of these is reached (X).
 
 ### 4.2 Sensor, ISP front end and live view (with EXP)
 

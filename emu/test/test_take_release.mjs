@@ -178,7 +178,7 @@ export async function focusSession() {
       `MODE_UPDATE's AF mode set reaches the lens once as a0 b0 [fe 00] (${mcu ? JSON.stringify(mcu.frames.filter(([f]) => /^a0 b/.test(f))) : 'no native lens'})`);
     idle(1000);
     since(); seen.length = 0;
-    const e0 = lab.kernel.errors.length;
+    const e0 = lab.kernel.errors.length, f0 = mcu ? mcu.frames.length : null;
     let stop = null;
     try { s.key('s1', 'down'); s.camapp.pump(); idle(600); } catch (e) { stop = e; }
     const s1 = since(), errs = lab.kernel.errors.slice(e0).map(([c]) => c);
@@ -187,8 +187,10 @@ export async function focusSession() {
     // the guard, then vt[110] and, that one 0, vt[111] itself at 0x50c5cce7)
     ok(JSON.stringify(seen) === JSON.stringify(['event 826 in phase 101', 'S1 guard 1', 'S1 guard 1', 'take API 0x20 from 0x50bc7c8e']),
       `S1 passes the S1 guard and CapTak_Take asks for the take: ${JSON.stringify(seen)}`);
-    ok(JSON.stringify(calls) === JSON.stringify(['token 5 from TAKE_FOCUS', 'token 0 from TAKE_FOCUS', 'token 2 from TAKE_FOCUS', 'token 3 from TAKE_FOCUS']),
-      `RELEASE_READY_START calls RdyFcsRdy1's four callbacks itself, in order: ${JSON.stringify(calls)}`);
+    // (and no lens frame from S1 to the stop, docs/hle-gaps.md 4.1.8)
+    ok(JSON.stringify(calls) === JSON.stringify(['token 5 from TAKE_FOCUS', 'token 0 from TAKE_FOCUS', 'token 2 from TAKE_FOCUS', 'token 3 from TAKE_FOCUS'])
+      && f0 !== null && mcu.frames.length === f0,
+      `RELEASE_READY_START calls RdyFcsRdy1's four callbacks itself, in order, with no lens frame: ${JSON.stringify(calls)}, lens frames ${f0} -> ${mcu?.frames.length}`);
     ok(JSON.stringify(s1) === JSON.stringify(S1_FOCUS), `S1: the record ${JSON.stringify(s1)}, want ${JSON.stringify(S1_FOCUS)}`);
     ok(stop !== null && /^TAKE_EXPOSE sends to EXP_MOVIE \(queue 0x17\) \[0x00000018 0x00000000 0x00000509 0x[0-9a-f]{8}\] from 0x5055399e/.test(stop.message),
       `S1 stops at TAKE_EXPOSE's request to EXP_MOVIE: ${stop ? stop.message.slice(0, 300) : 'no stop'}`);

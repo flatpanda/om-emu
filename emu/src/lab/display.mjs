@@ -48,7 +48,7 @@ export const PAL_BASE = 0x4400;
 // kind 3 as kind 2, src/fw/board.mjs FAMILIES.E118); code: the DISPLAY OPEN's parameter, the display's code of the
 // device (E143's mask: TFT 1, EVF 2; the EVF's per build, src/fw/facts.mjs evfCode: 2 on the E143 and E144 families,
 // 6 on the E118 family, whose 2 is the NTSC video output; their TFT is 1, D: docs/om1-vsc-spec.md section 12); mask:
-// the device's bit in E143's through permit (0x501c40d0), IMG fit (0x501df31a) and palette request (H-RESEND, its
+// the device's bit in E143's through permit (THROUGH_PERMIT), IMG fit (IMG_FIT) and palette request (H-RESEND, its
 // DISPLAY cmd 4), null on the kind-3 VSC's bodies, whose forms of the three take no device mask (deviceMask; D:
 // api_disp_Set_Through_Permit stores one byte for its device argument 2 alone, api_disp_Disp_Update_Osd_Color_Pallet
 // takes a device type 0..2; the addresses are in docs/model-survey.md finding 101)
@@ -59,7 +59,7 @@ export const DEVICE = {
 // the device's mask (DEVICE), refused where the body's forms take none
 export function deviceMask(device) {
   const mask = lookup(DEVICE, device).mask;
-  if (mask === null) throw new FirmwareError(`${device}: this body's through permit, IMG fit and palette request take no device mask (E143's 0x501c40d0, 0x501df31a and 0x503e52c7 have no counterpart of that form here; src/lab/display.mjs DEVICE)`);
+  if (mask === null) throw new FirmwareError(`${device}: this body's through permit, IMG fit and palette request take no device mask (E143's THROUGH_PERMIT, IMG_FIT and PALETTE_RESEND have no counterpart of that form here; src/lab/display.mjs DEVICE)`);
   return mask;
 }
 export const PERIODS_US = [16683, 20000, 10000, 8341];

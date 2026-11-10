@@ -4,7 +4,7 @@
 //                   CapThr's state word is its static 0x02010202, and CapTak_Take's take request is never made. Under
 //                   camapp 3 with --take probe (H-TAKEMAIN, S-THRTAKEOVER) the guard passes, CapTak_Take asks the take
 //                   API 0x50417cd9 with control 0x20 at S1 and 0x40 at S2, and TAKE_MAIN takes S1's request natively:
-//                   TAKE_EXEC command 0 in its state Idle, then FACE_FD 15 (S-TAKEREQ), TAKE_FUNC 80 (native),
+//                   TAKE_EXEC command 0 in its state Idle, then FACE_FD 15 (S-TAKEREQ), TAKE_FUNC 80 (native, sync),
 //                   TAKE_FOCUS 0x300 with its callback record (S-TAKEREQ, reply token 1 to TAKE_POST), its reply,
 //                   TAKE_FUNC 80 again; nothing in its mailbox. TAKE_MAIN then waits in RdyFcsRdy1 with the pending
 //                   bits 0x5e for TAKE_FOCUS's callbacks, and S2's TAKE_EXEC command 5 waits in its queue. Under camapp
@@ -35,8 +35,9 @@ export function canon2(r, stateName) {
   return `${r.task} -> ${what}${r.sync ? ' sync' : ''} (${kind})`;
 }
 export const S1_RECORD = ['TAKE_MAIN <= TAKE_EXEC 0 in Idle (handler 0x503a1172)', 'TAKE_MAIN -> FACE_FD 15 sync (answered)',
-  'TAKE_MAIN -> TAKE_FUNC 80 (native)', 'TAKE_FUNC <= 80', 'TAKE_FUNC -> reply', 'TAKE_MAIN -> TAKE_FOCUS 768 (answered)',
-  'TAKE_MAIN <= TAKE_POST token 1 in RdyFcsRdy1', 'TAKE_MAIN -> TAKE_FUNC 80 (native)', 'TAKE_FUNC <= 80', 'TAKE_FUNC -> reply'];
+  'TAKE_MAIN -> TAKE_FUNC 80 sync (native)', 'TAKE_FUNC <= 80', 'TAKE_FUNC -> reply', 'TAKE_MAIN -> TAKE_FOCUS 768 (answered)',
+  'TAKE_MAIN <= TAKE_POST token 1 in RdyFcsRdy1', 'TAKE_MAIN -> TAKE_FUNC 80 sync (native)', 'TAKE_FUNC <= 80',
+  'TAKE_FUNC -> reply'];
 
 export async function releaseSession() {
   const bad = [];

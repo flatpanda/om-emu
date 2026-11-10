@@ -1319,6 +1319,94 @@ traRoutingSession, below).
 - **Open.** TAKE's take-ready and capture under camapp 3 (stop 1, with 4.1.8's list); the play module (stop 2); posts
   to module queues outside the API sender (TAKE_EXEC's command 5); E132's old LOGGER_MAIN stop (not reproduced).
 
+#### 4.3.3 REC_IMAGE and the JPEG path (2026-11-10; D unless tagged, addresses E143's)
+
+- **Why.** S-JPEGENC stood in for the header clear's fill because rec_jpeg_exec ran in S-RECIMAGE's lab call, which
+  has no idle path: the imgpro unit's end never came (4.3.1, X). This round runs REC_IMAGE's own task instead, where
+  lab time moves while it waits. It supersedes the S-JPEGENC half of 4.3.1's "REC and the album manager" bullet.
+- **What S-JPEGENC stood in for.** Two calls inside rec_jpeg_exec (`0x505497e5`). (1) REC's header clear
+  (`0x5054c982`) fills the header area's aligned middle through the image engine (`0x5048ee61`): a kind 14 mode 4
+  request to the imgpro unit at `0x9c600000`, IRQ 300 (4.3.1). (2) rec_jpeg_make_image (`0x50549b42`) is no codec
+  call of its own but an imgpro_mdl pipeline. rec_ImgPro_CreateParam (`0x50542363`) builds a 48-byte request on the
+  stack: +0 the callback `0x505446b1`, +4 the packet, +8 and +12 from `0x50547cf7` and `0x50547e3b`, +32..+44 the
+  aspect and flags. The create (`0x50491699`) allocates its context (9312, 7512 and 160 bytes) and gives an id, kept
+  at the packet's +36. rec_ImgPro_ImageParam (`0x50542528`) sets the request's images: REC's trace names include
+  rec_ImgProCtrl_Src_Bayer, _Dst_Prim, _Dst_Thum, _Dst_View, rec_ImgPro_Bayer2Ycc and rec_ImgPro_Ycc2Jpeg.
+  `0x50542407` runs it (`0x50492758(id, 0xffff)`, then `0x504929e9(id)`) unless bit 3 of property 53009 is set, and
+  rec_ImgPro_Jpeg_Result (`0x50542ce1`) reads the result. Which of the library's kinds the pipeline issues, and which
+  unit encodes, is ?. The kind table `0x6065a834` has 22 kinds. The starts read so far reach `0x9c600000` (13, 14,
+  16, 17, 6), `0x9bf80000` (9), `0x9c580000` (8) and `0x9c080000` (19, 20); kinds 5, 7 and 18 reach their unit
+  through a register (not read).
+- **Who drives REC_IMAGE.** REC_IMAGE (task 28, `0x50541c45`) receives 316-byte packets from REC_EXEC_IMAGE 70 (its
+  id at `0x60043250`; receive `0x505398bf`). On CPU 2 the same entry takes queue `0x6004369a` (by `(0x8050)`,
+  `0x50541c4b`). Only two places read `0x60043250`: that receive and REC_PREPRO's post. REC_PREPRO (task 30,
+  `0x5054ed2a`) takes packets from queues `0x60043254` and `0x60043256`, which REC_MAIN posts to (`0x50539b61`,
+  `0x5053a388`). It runs rec_precon_exec (`0x5054ef23`), which sets ImgAspect from the record and does the WB
+  precondition for Mode 8194. It then posts to REC_IMAGE (`0x5054edcf`), or to `0x6004325a` when Command (+52) is 19.
+  On CPU 2, `0x5054ede2` moves packets from REC's ring to `0x6004369a`.
+- **What REC_IMAGE does with a packet.** rec_bracket_entry (`0x5053b1dc`) sets FileType 1. It takes the last frame's
+  index from the record's bracket fields: 0 when +38074 and +38076 are 0 and +38086 is 1, else their product less 1
+  (`0x5053b33f..0x5053b375`). Then, per frame:
+  - rec_bracket_update (`0x5053b39c`) sets ImgAspect from the record's +38122 (Mode 4097 with the packet's +220 0,
+    `0x5053b45d..0x5053b469`) and gives Free its result;
+  - rec_make_image_pre (`0x50541db7`);
+  - rec_make_image (`0x50541e55`): its Mode table `0x606dff34` sends 4097 to rec_make_image_exec (`0x5054208e`), which
+    calls rec_jpeg_exec (`0x5054215e`);
+  - rec_make_image_finish (`0x50541ec5`): its table `0x606dff80` sends 4097 to `0x50541f20`, then `0x505422f1`.
+
+  This repeats until rec_bracket_finish (`0x5053b761`) finds the frame index past the last. REC_IMAGE then clears
+  pAlive's word (`0x50541d5f`). TAKE fills the bracket and aspect fields from the settings store
+  (`0x503bbd26..0x503bbd98`: ids 35217, 38737, 38769, 38785, 40401; `0x503bc035..0x503bc044`: id 12417).
+- **The hand-over to REC_FILE (corrects 4.8.10's "Who posts it").** `0x505422f1` posts to REC_EXEC_FILE 69
+  (`0x50542359`) only when `0x5054ca14` gives 0. For Mode 4097 it gives 1 when the record's +38006 (TAKE's setting
+  39265, `0x503bbc66`) is 0 or `0x5054bf6c` is 0. `0x5054bf6c` is 0 for 4097 unless the record's +38764 is 22
+  (`0x5054c02c`). So a normal JPEG goes through REC's packet ring (`0x5054eaf0`: 120 slots of 316 bytes at
+  `0xa3323a38`, heads at `0xa33235fc`). REC_FILE's flag is then set with pattern 1 across the cores (`0x5054de46`):
+  entry 7 of the bind table `0xa332ce5c` is {core 0, REC_FILE's flag `0x60043182`, 1}, and the set goes through
+  cpu_conn `0x50035afd` to core 0. REC_FILE waits for the pattern 3 and takes the ring with `0x5054ebc8(1)`. The same
+  handler runs, returning to `0x5053f249` (4.8.10's "bit 2" and "bit 0" are the patterns 2 and 1). REC's shared init
+  `0x5054dbe8` fills the bind table. REC_MAIN_CPU2's task (`0x5053d5dc`) runs it at its start on CPU 2 (`0x5053d5e4`),
+  and so does CPU 2's ring task (`0x5054ede9`). With Free set, REC_FILE's handler ends with REC's reply to the
+  packet's ObjResponse (`0x5053984b` from `0x5053f3bb`).
+- **The lab (X, `emu/src/lab/rec.mjs`, E143 only).** At the first picture, besides H-EXIFINIT, H-RECINIT and
+  H-RECFILE:
+  - H-RECSHARED runs REC's shared init natively;
+  - H-RECIMGPRO runs the image library's IRQ attach, id bitmap clear and the unit's init, where camapp 3's
+    H-IMGPROINIT did not run them;
+  - H-RECIMAGE starts task 28 with act_tsk.
+
+  S-EXIFPRM also writes the six settings fields above, each read natively with TAKE's settings read `0x500417da`.
+  S-RECREQ posts the packet to queue 70 with REC's post `0x5053990f`, as REC_PREPRO does; its pAlive is a word of the
+  lab's set to 1, and its ImgAspect is left to REC_IMAGE. S-RECREQ also takes REC_FILE's reply, since no requester
+  owns ObjResponse in the lab. Lab time then runs in 5 ms slices until the reply comes and both tasks wait again.
+  S-JPEGENC keeps rec_jpeg_make_image only. S-RECIMAGE retires on E143; it stays on E146 and E147, where no rule reads
+  REC_IMAGE's addresses.
+- **What runs (X).** S2's packet is made in REC_IMAGE's task as one frame:
+  - the header clear's fill is one kind-14 mode-4 run of 41984 bytes of 0 at the file's buffer (`0xab0bd800`), its
+    end 1 ms later as IRQ 300 (A-IMGPRO-1);
+  - then the encode (S-JPEGENC), the header, the ring and REC_FILE's file steps, with 4.8.10's warnings and no other;
+  - REC_FILE replies Status 0 with Free 1; ImgAspect is 1 (setting 12417) and pAlive is cleared;
+  - the reply comes 1 ms of lab time after the post, at the fill's end; the lab's loop runs one 5 ms slice.
+
+  Two shots in one session reuse the same buffer and give two files. Camapp 3's run is unchanged
+  (`test_camapp.mjs` traRoutingSession 19 of 19). Without H-RECSHARED, REC_FILE never took the packet. Without the
+  bracket fields REC_IMAGE looped, the last index being 65535, each frame a new buffer. With pAlive 0 it would clear
+  the word at address 0 (D).
+- **The picture's bytes (X).** The file keeps its size (73,410 bytes with the live view). 4 bytes differ from the
+  previous round's. ISO (0x8827) and StandardOutputSensitivity (0x8831) are 25, not 0 (exiftool), and two bytes of the
+  maker notes differ (file offsets 5286 and 5292; which tags is not read). rec_bracket_after_trig (`0x5053bfe2`, from
+  `0x5053be89`) writes the record's ISO (+4202, +4208) from the packet's Sv (+294) through `0x50590ca6` when the
+  record's +7626 is 0. S-RECREQ leaves the Sv 0, as REC_MAIN's clear does, and that gives 25. Without the aspect
+  setting the maker notes' AspectRatio was "Unknown (1 0)" and AspectFrame 0 0 55274 2911; with it they stay 4:3 and
+  0 0 5183 3887.
+- **The encode natively (X).** With S-JPEGENC lifted, rec_ImgPro_CreateParam and the create run. rec_ImgPro_ImageParam
+  then divides by zero (`divu` at `0x505099e0` in `0x505099c0`, called from `0x50509ac9` with `0x6246cfc8`, whose
+  halfwords +4 and +6 are 0) before any request to a pixel unit. So S-JPEGENC still covers what the lab does not
+  compute: the development of a RAW the lab never captures (Bayer2Ycc), the JPEG encode, the thumbnail and the view.
+- **Open.** The pipeline's kinds and its JPEG unit (above); the geometry record behind the divide; REC_MAIN,
+  REC_PREPRO and api_rec (S-RECREQ: the Sv, ObjResponse, Number); TAKE's record (S-EXIFPRM); REC_IMAGE on E146 and
+  E147, which needs a rule; which core makes a normal still (4.3's ?) is unchanged: the lab runs CPU 0's.
+
 ### 4.4 AF, lens and body IS
 
 - **Tasks (D):** CPU 0: LENS_MAIN 0x5c `0x502a5e37` (queue LENS_EXEC 0x2e, target 18), LENS_COMMAND 0x5b `0x50115a08`
@@ -3548,9 +3636,10 @@ there (it stays on the other bodies).
   (`Mode` 4097, `Media` 0, `Media2` none, `RecordDevice` 1, `ImgAspect` 1, `FileType` 1, `HandleTarget` 1, I: the lab's
   one shot; the rest 0 as REC_MAIN's clear leaves it), `rec_jpeg_exec` natively on it, REC_IMAGE's post natively, then
   lab time until REC_FILE's handler returns (`0x5053f20d`). S-JPEGENC, the image pipeline's work inside it: the encode
-  writes the lab's JPEG (without its JFIF APP0) at `Addr` + 41984 and sets `Size` (I), and the image engine's fill (a
-  kind-14 request to the imgpro unit `0x9c600000`, modelled since 2026-11-09 but kept: its wait cannot end in the lab's
-  call, 4.3.1) is done by the lab for REC's header clear only.
+  (rec_jpeg_make_image, an imgpro_mdl pipeline) writes the lab's JPEG (without its JFIF APP0) at `Addr` + 41984 and
+  sets `Size` (I). Since 2026-11-10 (4.3.3) REC_IMAGE's own task runs this on E143 (S-RECREQ in S-RECIMAGE's place)
+  and the header clear's fill runs natively on the imgpro unit, so S-JPEGENC keeps the encode only there; on E146 and
+  E147 it still does the fill too (a kind-14 request whose wait cannot end in S-RECIMAGE's lab call, 4.3.1).
 - **What it does (X, E143):** S2 gives `C:\DCIM\100OMSYS\P1010001.JPG` (41984 bytes of the firmware's header, then the
   lab's stream; 73,410 bytes with the live view); with the clock set first through the firmware's clock setting
   (`0x5012b7a7`, 2026-11-08 12:34:56) `PB080001.JPG`, whose Exif (read by `emu/refs/exif.mjs` and exiftool) has Make

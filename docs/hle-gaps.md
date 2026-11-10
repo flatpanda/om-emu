@@ -526,9 +526,9 @@ unknown):**
 #### 4.1.6 TAKE's neighbours natively, round 2 (2026-11-09; D unless tagged, addresses E143's)
 
 With `--take probe` TAKE_EXPOSE and TAKE_POWER_MANAGER now run natively too (H-TAKENBINIT, `emu/src/lab/take.mjs`), so
-their queues no longer go to S-TAKEREQ; the strobe stays there. `emu/test/test_take.mjs` pins the records and the
-neighbours' state below under camapp 1 and camapp 2 (X, 19 of 19 checks; golden unchanged, the probe is off by
-default).
+their queues no longer go to S-TAKEREQ; the strobe stayed there (natively since 4.12.1). `emu/test/test_take.mjs` pins
+the records and the neighbours' state below under camapp 1 and camapp 2 (X, 19 of 19 checks; golden unchanged, the probe
+is off by default).
 
 - **The bring-up (H-TAKENBINIT).** USTART2's stage `0x501e8e84` runs TAKE_EXPOSE's module init `0x50591220` (its call
   at `0x501e90bd`: its context from `0x62abd790` set, three 64-byte buffers from `0x50002fdc`) and EXP's init
@@ -576,7 +576,8 @@ default).
   queue 0x1018 (`0x503a9525` through `0x502ce5b7`; CA53_POWER_MNG_REQ in CPU 1's object-name table, type 5 index 24,
   `docs/om1-cores-spec.md` 4). The start's first message (`{1, 0, 0}`, command 2, token 512) would take that path,
   that is ask CPU 1 to change the A53's power (I from the name); no lab runs CPU 1.
-- **STB_EXTERNAL answers with no device only through its timeouts, so it stays at S-TAKEREQ (D, X).** Its task, 101
+- **STB_EXTERNAL answers with no device only through its timeouts, so it stays at S-TAKEREQ (D, X; natively with the
+  hot shoe's channel since 4.12.1, which corrects this bullet where marked).** Its task, 101
   (`0x501b7465`, tid word `0x60042df0`, started by the same stage at `0x501e8ff3`), is queue 0x57's one reader: it
   receives at `0x501b7594` (no time limit while its state `0x62a29ad4` is 0) and replies `{u16 status, token,
   parameter}` to word 0 after each command (`0x501b76ba..0x501b76fb`), status always 0 for commands 1 and 4. Of the
@@ -584,29 +585,35 @@ default).
   are senders, synchronous sends to 0x57 through the kernel's `0x5002e39d` (`0x501aa198`, `0x501b273a`). Command 1
   (TAKE's token 4) is processed while `0x62a29ade` is not 1 and `0x62a29ad6` is 0 (`0x501b6de5`; after each command 1
   `0x501b6f9c` sets the first to 1, a command 0 clears it, `0x501b6f8c`; `0x501b7b55` clears the second at the task's
-  start): case 1 of `0x501b780e` writes a record at `0x62a296b4` whose first byte is 11 (`0x501b6be7`, its reader not
-  read), then `0x501b82ab(0)` -> `0x501b833e` opens PER_SIO channel 11 and starts a transfer (`0x501bb0b8` ->
-  `0x501b67fc` -> `0x501b6c54`: `0x5005f0f7(11, ...)`, up to five tries 10 ms apart while it is busy; the transfer
-  `0x501b6ab9` not read), waits up to 13000 on the strobe flag's bit 2 (`0x501ba1ac` -> `0x501c18b6`, the flag id at
+  start): case 1 of `0x501b780e` writes a record at `0x62a296b4` whose first byte is 11 (`0x501b6be7`: PER_SIO's
+  configuration of channel 11, which `0x5006480b` reads, 4.12.1), then `0x501b82ab(0)` -> `0x501b833e` opens PER_SIO
+  channel 11 and starts a transfer (`0x501bb0b8` -> `0x501b67fc` -> `0x501b6c54`: `0x5005f0f7(11, ...)`, up to five
+  tries 10 ms apart while it is busy; the transfer `0x501b6ab9` sends one byte 0x00, the wake, 4.12.1), waits up to
+  13000 on the strobe flag's bit 2 (`0x501ba1ac` -> `0x501c18b6`, the flag id at
   `0x60042fee`), which the transfer's completion callback `0x501ba0bc` sets, and on a timeout logs `0x23000112` and
   `0x23000222` and goes on (`0x501ba1c8..0x501ba207`); then it starts a timer of 64 through the firmware's timer service
   (`0x501c1831` -> `0x5005899c`, `docs/om1-kernel-spec.md` 8; its handler `0x501ba277` sets bit 8) and waits for bit 8
   without limit. Nothing on the path asks whether a flash is on the shoe (`0x501b1e7e`, called first, is not read in
-  detail). Run natively in an experiment (X, camapp 1, not committed: the task started with act_tsk after H-TAKENBINIT,
+  detail; corrected in 4.12.1: the wait is for the wake byte's own transmission, and the shoe is asked after it, by
+  state 1's ID exchange, whose reply's first byte is awaited 20 ms; `0x501b1e7e` sets GIO pin 160). Run natively in an
+  experiment (X, camapp 1, not committed: the task started with act_tsk after H-TAKENBINIT,
   queue 0x57 taken out of S-TAKEREQ): channel 11 opens (0) and the transfer starts with no error, but it never ends
   (PER_SIO's controller and its interrupt are not modelled on E143, `emu/src/lab/sio.mjs`); the wait runs out 13,001 ms
-  of lab clock later with the two logs, the timer fires 64.9 ms after that, a second transfer start finds the channel
-  busy five times and its failure path calls `0x501ba0bc` with status 1 (from `0x501b6959`), and the task replies to
+  of lab clock later with the two logs, the timer fires 64.9 ms after that, a second transfer start (the ID exchange;
+  the wake never closed the channel, 4.12.1) finds the channel busy five times and its failure path calls `0x501ba0bc`
+  with status 1 (from `0x501b6959`), and the task replies to
   0x61 13.1 s after TAKE's request, the GUI waiting at `0x0102` until then. So the strobe answers with no flash and no
   device model, but only through a path the lab's missing controller decides; run natively it would put a 13 s stall and
-  the strobe's error logs into TAKE's start, so it stays at S-TAKEREQ. Command 4 (token 8) is answered at once in the
+  the strobe's error logs into TAKE's start, so it stays at S-TAKEREQ (until 4.12.1: with the channel modelled it
+  answers 85.4 ms after the request, X). Command 4 (token 8) is answered at once in the
   state command 1 leaves (`0x62a29ad4` = 1, `0x501b7872`; only state 2 processes it, `0x501b6e6c`). Whether the camera's
-  controller ends the transfer with nothing on the shoe is ?.
+  controller ends the transfer with nothing on the shoe is ? (I: it does, 4.12.1: mode 0 sends on its own bit timing).
 - **Open.** TAKE_EXPOSE's other commands (`0x200` from 13 under its mode bits, 14's `0x201` and 1, the movie's
   `0xc00` / `0xc01`) and what they ask of EXP (`0x505536be` runs in TAKE_EXPOSE's task); TAKE_POWER_MANAGER needs the
-  sequence parts' start-up call (`0x50c9d590`, its trigger not read) and then CPU 1; the strobe needs PER_SIO's
-  controller on E143 (the end of channel 11's transfer). Of plan item 5 in 4.1.4, the first step is done; the strobe's
-  step ends here with a negative result; the camera driver, the dust filter and BC are unchanged.
+  sequence parts' start-up call (`0x50c9d590`, its trigger not read) and then CPU 1; the strobe needed PER_SIO's
+  controller on E143 (the end of channel 11's transfer), modelled since 4.12.1. Of plan item 5 in 4.1.4, the first step
+  is done; the strobe's step ended here with a negative result (done in 4.12.1); the camera driver, the dust filter and
+  BC are unchanged.
 
 #### 4.1.7 The release route to TAKE_EXEC, round 1 (2026-11-09; D unless tagged, addresses E143's)
 

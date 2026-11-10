@@ -99,8 +99,9 @@ const NB = {
   replies: new Set([0x5059171E]),   // TAKE_EXPOSE's reply OlyQeWr's return (0x50591717)
   // TAKE_EXPOSE's AE result writer (S-EXPOSE's objects 0xc12a / 0xc0ba / 0xc0ca and eight more through the property
   // setter 0x5004188b), called from five callbacks (0x5059757f, 0x5059781d, 0x5059790f, 0x5059794c, 0x505979a5)
-  // that the AE launchers (0x505964e7, 0x505943cb, 0x5059699d) put into their request to EXP's 0x505536be; not one of
-  // TAKE_EXPOSE's command cases. Observed, so that a run that reaches it shows (none does: S-EXPOSE stands in for it)
+  // that the AE launchers (0x505964e7, 0x505943cb, 0x5059699d) put into the requests they build for EXP's 0x505536be
+  // (the first and the last hand theirs to it; docs/hle-gaps.md 4.1.6); not one of TAKE_EXPOSE's command cases.
+  // Observed, so that a run that reaches it shows (none does: S-EXPOSE stands in for it)
   ae_writer: 0x50596187,
 };
 // S-TAKECAM: the camera driver's (cam.c) request switch and the request's completion callback (+72, called with d0

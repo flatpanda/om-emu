@@ -1060,7 +1060,9 @@ export const MODELS = {
     // it from that step); the same opening as E122's 0x502f90f5 in another order (D), which the map does not pair
     extra_tasks: [0x502D2FCD],
     g4set: G4SET_UNCHECKED,
-    touch: false,
+    // the touch panel runs (no touch: false) since 2026-11-10 (docs/model-survey.md findings 84 to 89): as E122's, and
+    // its own power-up list's INT waits (src/fw/facts.mjs touchIntWait, inline), register list (touchRegList,
+    // S-TPREGLIST) and controller version (src/lab/touchpanel.mjs 0x1c14)
     frame_plane: null,
     overrides: {
       '0x5014b7c7': { to: '0x5016558b', why: 'the dial init (DIAL_INIT): the dial module init, which sets up the dial slots from 0xa1c184a8 with the fixed id table 0x601b1e58 (D); E122\'s, which selects a table by board, does not carry (menu)' },
@@ -1117,9 +1119,10 @@ export const MODELS = {
     // the map places neither the frame display mode set (E143 0x500256d9) nor the AF upload (0x500257ce) (X); where its
     // AF frames are drawn is ?
     frame_plane: null,
-    // the touch panel is not modelled on it: the lab's touch start needs the panel's open and the HFW callbacks, which
-    // src/fw/facts.mjs touchOpen does not read in its build and the map does not place (X: port.json)
-    touch: false,
+    // the touch panel runs (no touch: false) since 2026-11-10 (docs/model-survey.md findings 84 to 89): its open
+    // read by its form (src/fw/facts.mjs touchOpen), the gesture mask's word at its set's store (touchMask), HFW's
+    // callback and statuses at the map's places; before, the open was unplaced and the map's mask word another word
+    // (X: port.json)
     extra_tasks: [
       0x502F90F5,   // a display task (static row 0x51, stack 0x800) that the display task init starts (OlyTaSt at
                     // 0x502f8f6a, after its mailbox 0x5004adef); it waits on the flag in 0x60041034 and drives the VSC
@@ -1154,7 +1157,7 @@ export const MODELS = {
     // offset 0x18f70) holds 0x602e7a9d (D), which the display task init starts (X: the kernel's start of it from that step)
     extra_tasks: [0x502C6A7D],
     g4set: G4SET_UNCHECKED,
-    touch: false,
+    // the touch panel runs (no touch: false) since 2026-11-10, as E122's (docs/model-survey.md findings 84 to 89)
     frame_plane: null,
     overrides: {
       '0x5014b7c7': { to: '0x5015d3a6', why: 'the dial init (DIAL_INIT): the dial module init, which sets up the dial slots from 0xa1c17b80 with the fixed id table 0x601a8810 (D); E122\'s, which selects a table by board, does not carry (menu)' },

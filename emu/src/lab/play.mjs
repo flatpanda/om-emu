@@ -484,11 +484,14 @@ export class PlayLab extends N.NavLab {
   preinit(opts) { super.preinit(opts); this.gui_by_app = true; }
   // H-TPINIT: the boot calls the touch init before the display opens (E143 from 0x50024ca6, E144 from 0x500251a8, D);
   // the lab calls it in the play bring-up, after the start's open, except on a build whose touch driver waits for its
-  // controller's INT (fact touch_int, src/fw/facts.mjs touchIntWait: the E144 family), where it runs before the open
-  // (touch_init_early, a session with touch). There the order matters: the open's command list powers the panel up,
-  // waits for the INT and arms the driver for the INT's data (E144 0x50181efb, the wait 0x5018a924, then 0x5018a9a4
-  // sets 0x620c6630), which the init's driver set-up clears (0x5018a7e7, 0x5018a81b..0x5018a826, D): called after the
-  // open it left the driver dropping every report (the touch task's 0x5018af2b, X). On E143 the open runs no touch
+  // controller's INT (fact touch_int, src/fw/facts.mjs touchIntWait: the E144 and E118 families), where it runs before
+  // the open (touch_init_early, a session with touch). There the order matters: the open's command list powers the
+  // panel up, waits for the INT and arms the driver for the INT's data (E144 0x50181efb, the wait 0x5018a924, then
+  // 0x5018a9a4 sets 0x620c6630), which the init's driver set-up clears (0x5018a7e7, 0x5018a81b..0x5018a826, D): called
+  // after the open it left the driver dropping every report (the touch task's 0x5018af2b, X). On the E118 family the
+  // open posts the touch task's power-up command (cmd 4, S-TPSEND below) to the queue the init joins to the task's
+  // flag: on E118, whose list waits for the INT inline, the init after the open left the message unseen and the driver
+  // unarmed (X, docs/model-survey.md finding 88). On E143 the open runs no touch
   // code and the order changes nothing the touch path reads; moved there too, it changed 28 golden sessions' stops and
   // replay outcomes (X), so E143 keeps the lab's order. The touch task's start and the panel's open (H-TPSTART) stay
   // in the play bring-up
@@ -711,8 +714,11 @@ export class PlayLab extends N.NavLab {
   // false) runs the touch task's loop for it on a lab stack in the same way, its own word 0 naming the reply queue;
   // OlyQeWr returns 0. Natively the touch task, which the boot chain starts before the display opens (E122
   // 0x50186200..0x5018620e, D), takes it. A display run's message is queued natively as before: E122's and E118's opens
-  // put cmd 4 there (E122 0x50302973..), and the queue's one slot holds it; run, E118's cmd 4 boots the touch IC, which
-  // the lab does not model ("TP BOOTLOAD ERROR", then every task blocked, X). On E122's EVF the application's
+  // put cmd 4 there (E122 0x50302973..), and the queue's one slot holds it; with the touch panel modelled (since
+  // 2026-11-10 on the family) the touch task takes it natively, E118's power-up list with S-TPINTWAIT, the
+  // controller's version (src/lab/touchpanel.mjs) and S-TPREGLIST (src/lab/display.mjs); run before through this
+  // stand-in, E118's list downloaded the controller's firmware, logged "TP BOOTLOAD ERROR" and left the touch task
+  // waiting for good (X, docs/model-survey.md findings 85 to 87). On E122's EVF the application's
   // Set_Touch_Panel_Ctrl_Area (API 0xd001f, 0x502f4c28 -> 0x5030bda9) then sends cmd 8, TP_SET_CTRL_AREA, which waited
   // for good on the full queue (X). It wraps OlyQeWr's routing (menu.mjs route_rtos), so it holds from the start on
   route_rtos() {

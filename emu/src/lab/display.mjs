@@ -68,6 +68,13 @@ export const TP_I2C_WRITE = A(0x501E4DFD), TP_I2C_READ = A(0x501E4F2A);
 // a build without a touch-panel driver (E145, src/fw/facts.mjs touchDriver) has no touch I2C functions to hook and
 // runs as --touch off (src/lab/play.mjs touch_on)
 export const HAS_TOUCH = fact('touch_panel.driver', true);
+// S-TPREGLIST: a register list the touch driver writes over its I2C transport outside the touch I2C write (fact
+// 'touch_regs', src/fw/facts.mjs touchRegList: E118's power-up command list's op 9, ten writes to registers 0x1cxx of
+// slave 0x48; none on E143 and the other bodies), stood in as the write is: each entry {low byte, value} of its table
+// recorded as a write to the slave (the register's high byte, then the entry's two bytes), the transport not run (its
+// channel's open and completions are not modelled on the E118 family's board, so the list's first completion wait
+// left the touch task waiting for good, X); returns 0
+export const TOUCH_REGS = fact('touch_regs', null) ?? null;
 // a touch I2C call's length (which 'write' or 'read'; fact 'touch_args', src/fw/facts.mjs touchArgs: E143's write
 // takes it at sp+20 and its read in a1, the E144 driver's at sp+24 and sp+40), looked up when the hook runs; the
 // data or buffer is a0 on both
@@ -456,7 +463,9 @@ export class DisplayLab extends OsdLab {
     if (HAS_TOUCH) {
       this.hook(TP_I2C_WRITE, (h, r) => this._i2c_write(h, r), 'tp_i2c_write');
       this.hook(TP_I2C_READ, (h, r) => this._i2c_read(h, r), 'tp_i2c_read');
+      if (TOUCH_REGS !== null) this.hook(TOUCH_REGS.fn, (h, r) => this._tp_reglist(h, r), 'S-TPREGLIST');
     }
+    this.tp_reglists = 0;
     this.hook(SYNC_SEND, (h, r) => this._sync_send(h, r), 'sync_send');
     this.hook(PROP_GET, (h, r) => this._prop(h, r), 'prop_get');
     this.hook(OLYTASS, (h, r) => this._sleep(h, r), 'OlyTaSS');
@@ -629,6 +638,12 @@ export class DisplayLab extends OsdLab {
     const n = tpLength(this, r, 'read');
     this.sim.write(r.a0, new Uint8Array(n));
     this.i2c.push(['R', r.d0 & 0xFF, r.d1 & 0xFF, n]);
+    hle.finish(r, { d0: 0 });
+  }
+  _tp_reglist(hle, r) {
+    const { table, count, slave, reg } = TOUCH_REGS, t = this.sim.read(table, 2 * count);
+    for (let i = 0; i < count; i++) this.i2c.push(['W', slave, reg, bytesHex(t.subarray(2 * i, 2 * i + 2))]);
+    this.tp_reglists += 1;
     hle.finish(r, { d0: 0 });
   }
   _queue(address) { return u16(this.sim.read(address, 2), 0); }

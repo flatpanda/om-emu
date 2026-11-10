@@ -23,8 +23,9 @@
 // on) on E143 and E146 (test_acc.mjs), the card and the
 // file system on E143, E146, E147, E144, E142 and E134 and SDXC cards on E143 (test_storage.mjs), INFO's still information
 // in playback with two pictures, RIGHT and LEFT between them and INFO's three views on the 19 bodies
-// (test_playinfo.mjs), a tap on the touch mode icon on E143 and ten bodies of the E144
-// family (test_touch.mjs), subject detection's frames on E143
+// (test_playinfo.mjs), a tap on the touch mode icon on E143, ten bodies of the E144
+// family and the E118 family, and in the super control panel on E144 and the E118 family (test_touch.mjs), subject
+// detection's frames on E143
 // (test_subject.mjs), CPU 3's MDET_DL natively with the DML engine's model on E143 (test_mdet.mjs),
 // the lens on the mount natively on E143, E146 and E147 (test_lens.mjs), the resource tables loaded
 // natively from the NAND on E143 (test_resnand.mjs), the SCPU's Cortex-M4 core
@@ -327,7 +328,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   bad += pi.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // touch in play: a tap on the shooting screen's touch mode icon reaching HFW and the frame, E143 here and the E144
-// family's bodies with a touch panel each in a process of its own, four at a time
+// and E118 families' bodies with a touch panel each in a process of its own, four at a time
 {
   const { touchSession, TOUCH_BODIES } = await import('../test/test_touch.mjs');
   const { spawn } = await import('node:child_process');

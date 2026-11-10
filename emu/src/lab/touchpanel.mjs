@@ -25,11 +25,19 @@
 //   double tap; which codes the controller gives, and what bit 1 means, are ?). HFW then sees a tap as PRESS and
 //   CLICK, a longer press as PRESS and LIFTOFF (X). x and y are the TFT panel's pixels, not flipped
 //   (D: the driver checks an area against 720 x 480 at 0x5018a2b1..0x5018a2cc and flips by 719 - x, 479 - y only
-//   for the swivelled monitor, 0x5018c2d9; X: HFW's PRESS at the pixel tapped). Every other register reads 0.
+//   for the swivelled monitor, 0x5018c2d9; X: HFW's PRESS at the pixel tapped). E118's driver alone also reads two
+//   bytes at 0x1c14, a version it keeps (b0 << 8 | b1) and checks in its touch task's power-up command list: 0xc400
+//   goes on to the register set-up, any other value to a download of the controller's firmware from the camera's
+//   image (24496 bytes through the touch I2C write), an INT wait and a calibration, and a value outside 0x3000,
+//   0x9e00, 0xc400 and 0xd700 also logs "[TP] Touch IC F/W Version A not available!!" (D, the addresses in
+//   docs/model-survey.md finding 86; its report parser reads coordinates for every event from 0xd700 on). The model
+//   answers 0xc400: a controller that runs the firmware this camera's build carries (I: which version an E-M5 II's
+//   controller reports at power-up is ?; with 0 read there the download ran, X). Every other register reads 0.
 // The controllers' names and their other registers are not in the images (?).
 const SLAVE_E143 = 0x70, SLAVE_48 = 0x48;
 const EVENT_E143 = { down: 0, move: 2, up: 1 }, EVENT_48 = { down: 2, move: 3, up: 0 }, EVENT_48_TAP = 1;
 const REPORT_48 = 0x0000, STATUS_48 = 0x1C0A, STATUS_RELEASE = 0x02, TAP_NS = 150e6;
+const VERSION_48 = 0x1C14, VERSION_48_VALUE = [0xC4, 0x00];
 
 // The controller's data at a register for a touch {action, x, y, held_ns: an up's lab time since its down} on a panel h
 // pixels high (flip: E143's y counted from the bottom; the player's mutant no-flip serves it unflipped), or null for a
@@ -55,6 +63,7 @@ export const TOUCH_CONTROLLERS = new Map([
     read(addr, n, t) {
       if (addr === REPORT_48 && n <= 10) return this.report(t).slice(0, n);
       if (addr === STATUS_48 && n === 1) return Uint8Array.of(t.action === 'up' && this.report(t)[1] === EVENT_48.up ? STATUS_RELEASE : 0);
+      if (addr === VERSION_48 && n === 2) return Uint8Array.from(VERSION_48_VALUE);
       return null;
     },
   }],

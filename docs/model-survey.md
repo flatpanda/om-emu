@@ -1572,11 +1572,12 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    `0x514ab553`; playbuff_get_img_info E143 `0x518bfc7e`, E130 `0x50bc5008`, E144 `0x514bee9c` (by the maps and the play
    module's trace strings, which these three hold where their API layer has no names). X on E130 and E144 as in finding
    90: 0 calls, the handle word 0, the API's answer 1. No body reads a picture's Exif in playback, then: S-PLAYCOMP and
-   S-PLAYSEQ answer from one record (camapp.mjs still_record), E143's although its file holds the firmware's Exif
-   (finding 83). The family differs only in PlyCom's route, its getStillInfo and getNumber being E143's mode-3 branch
-   alone (a synchronous request through the transaction where the others call a wrapper), and is at E130's and the E144
-   family's level: PLAY and INFO on E122's and E130's TFTs draw the same items, the clock's date, `125`, `25mm`,
-   `1620x1080`, `100-0002` and `2` (X: the composites; E130's date with seconds, its Wi-Fi icon).
+   S-PLAYSEQ answer from one record (camapp.mjs still_record), E143's, E146's and E147's although their files hold the
+   firmware's Exif (finding 83). The family differs only in PlyCom's route, its getStillInfo and getNumber being E143's
+   mode-3 branch alone (a synchronous request through the transaction where the others call a wrapper), and is at
+   E130's and the E144 family's level: PLAY and INFO on E122's and E130's TFTs draw the same items, the clock's date,
+   `125`, `25mm`, `1620x1080`, `100-0002` and `2` (X: the composites; E130's date with seconds and its Wi-Fi icon,
+   E122's an icon left of `25mm`).
 92. **The play module's load and the header parse** (2026-11-10, D; E122's addresses, the others after them). Where the
    camera loads a picture, play_load_load_exif_header (E122 `0x50ad901c`) reads the file's first bytes, its size at the
    DCF fnode's +48 but at most 66560, into the handle's header area (play_img_get_header_address `0x50ad8aea`) through
@@ -1584,10 +1585,13 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    play_img_analyze_exif_header (`0x50ad6bbd`, called from eight places of the play module, play_cube_set_jpeg
    `0x50aceae0` among them) runs the EXIF module's dispatcher (`0x5052a452`) on the handle's Exif context with the
    operations 1, 2 and 4 over that area; operation 1 is, for the context's kinds 0, 3 and 4, the JPEG parse
-   `0x5052a7d7`, which requires SOI (`ff d8`) and then a segment `ff e1` (APP1) whose data opens with `E` (the rest not
-   read). The decode is play_img_decode_jpeg (`0x50ad6cf6`). The dispatcher and the parse are the same instructions on
-   the six bodies read but for the context's field the dispatcher tests first (E143's `0x504289eb` and `0x50428d91`
-   beside its EXIF module's init `0x504298bd`; the field +138 on the family, +142 on E130 and E144, +150 on E143). E118
+   `0x5052a7d7`, which requires SOI (`ff d8`) and walks the marker segments by their lengths to an APP1 (`ff e1`) whose
+   data opens with `Exif\0` (`0x5052a82d..0x5052a853`; what follows the match not read): a byte other than `ff` where
+   a marker is due, or fewer than 4 bytes left, ends it with 29505 (`0x5052a875..0x5052a889`). The decode is
+   play_img_decode_jpeg (`0x50ad6cf6`). The dispatcher and the parse are the same instructions on the six bodies read
+   but for two of the context's fields: the one the dispatcher tests first (+138 on the family, +142 on E130 and E144,
+   +150 on E143) and the one the parse addresses at a match (+96 on the family, +100 on the other three; E143's
+   dispatcher `0x504289eb` and parse `0x50428d91` beside its EXIF module's init `0x504298bd`). E118
    / E120 / E143 / E130 / E144: the load `0x50b186d0` / `0x50e72704` / `0x518b51e6` / `0x50bba284` / `0x514b4944`, the
    analysis `0x50b16255` / `0x50e7028d` / `0x518b1f44` / `0x50bb7723` / `0x514b1c9b`, the file read `0x50b1493d` /
    `0x50e6e975` / `0x518b017f` / `0x50bb5fcd` / `0x514b04f7`, the dispatcher `0x50513585` / `0x504ec781` / `0x504289eb`
@@ -1600,10 +1604,12 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    would find no APP1 (I, finding 92's parse). The family's REC holds the trace table recFile reads (165 names on E122,
    169 on E118, 163 on E120) and the traced rec_jpeg_exec (E122 `0x50515ab1`, E118 `0x504fe72d`), rec_jpeg_make_image
    (E122 `0x50515c18`, E118 `0x504fe899`, E120 `0x504d7e89`), rec_jpeg_make_header (E122 `0x50515cbb`) and
-   rec_file_record (E122 `0x50510091`, E118 `0x504f66bf`); E118's make_header trace and E120's exec and make_header
-   traces are in two functions each, which the rule refuses (X). Its next part is not found: no load of `rec_file.c`
-   (E122 `0x6063cedc`) anywhere in the image (X, no 32-bit reference to it), so REC_FILE's receive is of another form,
-   as on E130 and E144 (X: the rule stops there on both); nor are the EXIF module's template copy after its init and its
+   rec_file_record (E122 `0x50510091`, E118 `0x504f66bf`; no trace of it on E120); E118's make_header trace is in two
+   places, one in a function whose entry the rule does not find, and E120's exec and make_header traces are in two
+   functions each, which the rule refuses (X). Its next part is not found: no load of `rec_file.c` (E122 `0x6063cedc`)
+   anywhere in the image (X, no 32-bit reference to it; none on E118 and E120 either), so REC_FILE's receive is of
+   another form, as on E130 (no load either) and E144 (18 loads, none in that receive's form, finding 83) (X: the rule
+   stops there on both); nor are the EXIF module's template copy after its init and its
    date set in E143's forms (X, on the family, E130 and E144). The EXIF tag table (the one with DateTime {`0x0132`, 2,
    20}) gives the family's own parameter block: body `0x620700` on E122 (`0x625104` E118, `0x5f80d8` E120), Make +1480,
    Model +1504 and DateTime +1364 as on E143, but DateTimeOriginal +2313, CreateDate +2333, ExposureTime +2356, FNumber
@@ -1625,14 +1631,20 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    The family's EVFs run the same path. `test/test_playinfo.mjs` now takes it on the 19 bodies (frames compared before
    INFO only, E143's composite being refused after it, finding 80): 15 checks pass on the family (with the histogram),
    14 on the others. modelcheck's path is unchanged, the other bodies' taking no second picture there. Erase is covered
-   on no body (no test; the media control's erase is not modelled). In a session (X): E130's Delete opens
-   SS_MENU_MAIN/ID_ST_WIZARD_MENU_ENTRY (`0x0302`), and UP and OK return to playback with the picture kept (S-PLAYSEQ
-   finishes request 21 with result 0); the family's Delete changes nothing (the player posts E143's UI_IN code for it;
-   the family's is not read) and its OK opens the same wizard (request 286) without a change to the frame, as E130's OK
-   opens it; E144's OK and Delete change nothing. PLAY from the wizard faults on E130 (a jump to `0x0000801f`) and on
-   the three (`0x00008010`): the GUI's `0x50cbd271` (E122) calls slot +32 of its current screen object (`0x6161c024`),
-   which is 0 there (X); that word's three writers store the result of the screen factory `0x50cf49e0` (D); which screen
-   PLAY asks for there and why none is made is not read (?).
+   on no body (no test; the media control's erase is not modelled): OlyHfwOpePlyCom::erase sends the asynchronous
+   request 301 (`mov 301,d0` E122 `0x506aa8a3`, E130 `0x50702e1c`, E143 `0x50acdc69`, before the request's execute,
+   E143's `0x50ad26fb`; D), which no session here sent, and S-PLAYSEQ would finish it as it finishes every request,
+   with the result 0 and no file removed (D, camapp.mjs play_finish; what the firmware then shows, ?): a gap to close
+   before erase is driven. In a session (X): E130's Delete opens SS_MENU_MAIN/ID_ST_WIZARD_MENU_ENTRY (`0x0302`,
+   request 286, a changed frame), UP and OK return to playback with the picture kept (S-PLAYSEQ finishes request 21,
+   then 8, with result 0; PLAY's frame), and PLAY from it returns to the shooting screen (`0x0108`, endPlayService);
+   the family's Delete changes nothing (the player posts E143's UI_IN code for it; the family's is not read) and its
+   OK opens the same wizard state (request 286) without a change to the frame, as E130's OK opens it; E144's OK and
+   Delete change nothing (its Delete asks S-PLAYCOMP's getSelectPicNumberSpecifyMedia twice, answered 0 unmodelled;
+   whether that answer is why nothing opens, ?). PLAY from the wizard OK opens faults on E130 (a jump to `0x0000801f`)
+   and on the three (`0x00008010`): the GUI's `0x50cbd271` (E122) calls slot +32 of its current screen object
+   (`0x6161c024`), which is 0 there (X); that word's three writers store the result of the screen factory `0x50cf49e0`
+   (D); which screen PLAY asks for there and why none is made is not read (?).
 95. **E118's EVF playback was never missing** (2026-11-10; corrects this round's premise that finding 70 left it out).
    Finding 70 says E118's EVF played back before the line compare, and modelcheck's EVF_PLAY holds E118; its EVF runs
    PLAY, INFO's three views, RIGHT, LEFT and PLAY back (X: finding 94's session). Why it never waited (D): E118's

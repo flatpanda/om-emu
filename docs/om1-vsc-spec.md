@@ -715,12 +715,13 @@ HIST3 `0x74C`, INTEN1 / INTST1 bit 8, and the bins at `+0x4000`.
   literal of it but the writer's, I: a computed address) and what the application does with `0x04020301`. The composite
   is unchanged: HIST1, HISTAREA1-3 and HIST2/3 stay in A13's never-written class (section 7), so a composite with any of
   them written is FEATURE_UNOBSERVED, unless A-VSCHIST-3 (below) accepts them.
-- **The composite (A-VSCHIST-3, 2026-11-10; `docs/hle-gaps.md` 4.2.4).** The six registers' only stores are the
-  driver's (D): the set-up `0x501e127f` (HIST2 `0x501e1378`, `|= 0x10` `0x501e1406`, `|= 0x100` `0x501e1438`;
-  HISTAREA1 `0x501e1396`, HISTAREA3 `0x501e13c6`, HISTAREA2 `0x501e13f6`; HIST3 `0x501e141b`, `0x501e144e`; HIST1
-  `&= ~0xf` `0x501e142b`, `0x501e145e`), `0x501e1488` (HIST2[31:24] from d1 at `0x501e14a0`: 0 from `0x501d6e01`,
-  `a3 - 1` from `0x501d6fd8`) and the start (HIST1 = 1, `0x501e14c8`); no call of the generic writer `0x501e2ce6`
-  passes their word indices (19, 285-287, 466, 467). Under camapp 3 the TFT's composite was refused for these six and
+- **The composite (A-VSCHIST-3, 2026-11-10; `docs/hle-gaps.md` 4.2.4).** The only stores that name the six registers'
+  addresses are the driver's (D): the set-up `0x501e127f` (HIST2 `0x501e1378`, `|= 0x10` `0x501e1406`, `|= 0x100`
+  `0x501e1438`; HISTAREA1 `0x501e1396`, HISTAREA3 `0x501e13c6`, HISTAREA2 `0x501e13f6`; HIST3 `0x501e141b`,
+  `0x501e144e`; HIST1 `&= ~0xf` `0x501e142b`, `0x501e145e`), `0x501e1488` (HIST2 `= (HIST2 & ~0x03000000) | d1 << 24`
+  at `0x501e14a0`: d1 0 from `0x501d6e01`, `(a3 - 1) & 0xffff` from `0x501d6fd8`) and the start (HIST1 = 1,
+  `0x501e14c8`); no call of the generic writer `0x501e2ce6` passes their word indices (19, 285-287, 466, 467); a store
+  through another computed address is not excluded (I). Under camapp 3 the TFT's composite was refused for these six and
   nothing else (X). The opt-in A-VSCHIST-3 (section 7's table; `emu/src/dev/vsccompose.mjs` histForm) accepts them in
   their writers' forms: the unit is read as a measurement whose result the CPU reads back and CPU 2 draws into GUI
   layer 1 (D, X), and its adding nothing to the mixer output is I. A photo of the panel during a run settles it.

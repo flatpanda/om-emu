@@ -1137,9 +1137,10 @@ camapp 3's frames and compares them with camapp 1's. The default stays camapp 1.
   through a computed address would escape both scans (I: none is known).
 - **Settled: the unit measures, and the camera's histogram is drawn by software (D, X).** Each field whose formula is
   read is a measurement parameter: the bin count's code, the area in output coordinates, the clip of a bin's value
-  (which `0x501e150e` applies again to the bins it reads), a scale of `(0x62a3eac8) << 16` over the area's pixel count,
-  the source plane by its DMA address (`docs/om1-vsc-spec.md` section 13); none names a colour, a level or an output
-  plane. HIST2 bit 20 (always set), HIST1[3:1] and `0x501e1488`'s field are not understood (?). Its result goes to
+  (which `0x501e150e` applies again to the bins it reads), a scale `(((0x62a3eac8) >> 3) << 16) / (w * h)` for an
+  area of w x h pixels, at most 8190 (the start path, `0x501d6d87..0x501d6db1`), the source plane by its DMA address
+  (`docs/om1-vsc-spec.md` section 13); none names a colour, a level or an output plane. HIST2 bit 20 (always set),
+  HIST1[3:1] and `0x501e1488`'s field are not understood (?). Its result goes to
   the CPU (the bins at `+0x4000`, read by cmd 16), and the histogram the shooting screen shows is drawn from those bins
   by CPU 2's OSD_DRAW_CPU2 into GUI layer 1's buffers (4.6.2, X), which the compositor already draws as OSD2. A53 /
   Linux: the A53 is the network and maths coprocessor and has no display driver (`docs/a53-spec.md`), so it says
@@ -1201,8 +1202,13 @@ camapp 3's frames and compares them with camapp 1's. The default stays camapp 1.
   module-9 read from `0x50c8a335`, not one of CMP_MODULE9_READERS; X, 2026-11-10).
   *Golden with camapp 3 as the player's default* (a local, uncommitted run of the 21 Player sessions; X): all 21 differ
   in every layer, as they must (the components run, so instruction counts, stand-in lists, traces and frames change).
-  Nine run to their end through the same GUI states (a15-open, b7-gate, evf-idle, power, power#2, power#3, scp-edge,
-  scp-replay, scp-timeout). The others take other GUI states or end early: an output switch to the EVF stops the
+  Seven run to their end through the same GUI states and outcomes (a15-open, evf-idle, power#2, power#3, scp-edge,
+  scp-replay, scp-timeout). Three keep the GUI states but end otherwise (X, a replay of each scenario's calls under
+  camapp 1 and 3 in review): b7-gate's second OK at the B7 gate ends camapp 1's session in UI_IN group 1's event-storm
+  NavError (more than 810 GESetEvent calls) while camapp 3 takes it and runs to the end; under camapp 3 power's and
+  power-replay's first power-off ends in S-SHUTDOWN's PowerError (the power-off had not reached its last write after
+  10 s of lab time) where camapp 1 is off (cause not traced). The others take other GUI states or end early: an
+  output switch to the EVF stops the
   session at the open (eye-burn's eye switch, switch-shoot's and tokens-3b's LV; switch-scp's LV, I): the
   firmware logs `0x37001418` from the histogram ISR (`0x501deccc`), the TFT channel's run ending with the TFT closed
   (`docs/om1-vsc-spec.md` section 13), and the harness's DISPLAY cmd 2 refuses a step with an error log (I: on the

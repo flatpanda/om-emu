@@ -416,10 +416,10 @@ unknown):**
 | Neighbour | Asked by | What TAKE needs back | Class |
 |---|---|---|---|
 | LENS_EXEC (LENS_MAIN) | CP 0 | `{status, token 1}` on 0x61 | (a), native since 2026-10-28 and answering in the probe (X) |
-| TAKE_EXPOSE (task 0x67, `0x5059145d`) | 13 | the status of command 0 | (a) by inference: TAKE's own CPU 0 task over EXP, which has one MMIO reference (3.2); not started yet (I) |
-| TAKE_POWER_MANAGER_EXEC (task 0x83) | CP 0 when its branch runs | `{status, token 512 / 1024}` on 0x61 | (a) by inference, TAKE's own task; not asked in the runs |
+| TAKE_EXPOSE (task 0x67, `0x5059145d`) | 13 | the status of command 0 | (a), native since 2026-11-09 (H-TAKENBINIT): its command 0 asks nothing and it replies itself (X, 4.1.6) |
+| TAKE_POWER_MANAGER_EXEC (task 0x83) | CP 0 when its branch runs | `{status, token 512 / 1024}` on 0x61 | (a), native since 2026-11-09 and not asked: every sender waits for TAKE's start-up flag, which the lab never sets (X, D, 4.1.6); its own request goes to CPU 1 (b) |
 | TAKE_FOCUS (task 0x68, `0x509a0ebe`) | 18, 22 | the status of command 2 | (c): over FCS (FCS_EXEC, FCS_IP on CPU 1); what commands 0 and 2 ask of FCS is not read |
-| STB_EXTERNAL (the strobe module) | CP 0 | `{status, token 4}`, `{status, token 8}` on 0x61 | (c): the strobe's readers (`0x501aa18f..`, `0x501b2735..`, `0x501b74a1..`) are not read; whether they answer with no flash on the shoe without a device is ? |
+| STB_EXTERNAL (the strobe module) | CP 0 | `{status, token 4}`, `{status, token 8}` on 0x61 | (b): task 0x65 (`0x501b7465`) answers command 1 only after a transfer on PER_SIO channel 11 and a kernel timer, flash or no flash (D, 4.1.6); stays at S-TAKEREQ |
 | the camera driver cam.c (requests 148, 6; 5 for 25) | CP 0, CP 25 | the completion callback with status 0 | (b): the image sensor's control plane: cam.c's init (its pool, the sequence engine `0x5015107e` / `0x501528a6`) and what it drives (not read, ?) |
 | BC_EXEC (BC) | CP 0 | `{status, token 2}` on 0x61 and the callback's token `0x80` | (b): the body IS controller's link (4.4: BC native only with a capture of that link) |
 | the dust filter (USF) | CP 0 | the record's callback with status 0 | (b): its drive on the timer block `0x9b880000` and its completion, not modelled |
@@ -517,6 +517,76 @@ unknown):**
   as with S-OUTDEV; no transaction follows the plug, and what the GUI waits for to draw its HDMI layout is ?.
 - **The heap (X).** Over passes of S1 and S2 in camapp 3 the OXF main thread's events (event 294, `0x60dcb42c`) do
   not stay (traRoutingSession), as in camapp 2 (4.4.2); the menu and playback passes are not reached.
+
+
+#### 4.1.6 TAKE's neighbours natively, round 2 (2026-11-09; D unless tagged, addresses E143's)
+
+With `--take probe` TAKE_EXPOSE and TAKE_POWER_MANAGER now run natively too (H-TAKENBINIT, `emu/src/lab/take.mjs`), so
+their queues no longer go to S-TAKEREQ; the strobe stays there. `emu/test/test_take.mjs` pins the records and the
+neighbours' state below under camapp 1 and camapp 2 (X, 19 of 19 checks; golden unchanged, the probe is off by
+default).
+
+- **The bring-up (H-TAKENBINIT).** USTART2's stage `0x501e8e84` runs TAKE_EXPOSE's module init `0x50591220` (its call
+  at `0x501e90bd`: its context from `0x62abd790` set, three 64-byte buffers from `0x50002fdc`) and EXP's init
+  `0x50553649` (not run; H-AEINIT runs one of its steps), then starts TAKE_EXPOSE, task 103 (tid word `0x60042df4`,
+  `0x501e90cb..0x501e90d8`), and later in the same stage TAKE_POWER_MANAGER, task 131 (`0x60042e2c`,
+  `0x501e9364..0x501e936b`). TAKE_POWER_MANAGER's init `0x502ce4d4` is the second call of TAKE_FUNC's init
+  (`0x502ccffd`), which H-TAKEINIT already runs: flag pattern `0x62a48760` = 3, its queues EXEC 0xd7 and POST 0xd8
+  bound to bits 1 and 2 of the flag whose id is at `0x60043140` (`0x5002c285`), two 24-byte slots at `0x62a48764`.
+  The lab runs TAKE_EXPOSE's init and act_tsk of both after H-TAKEINIT; both then wait (X): TAKE_EXPOSE on its queue
+  0x5b without a time limit (`0x505914eb`), TAKE_POWER_MANAGER on the flag (`0x503a926f`).
+- **TAKE_EXPOSE answers command 13's request itself (X).** TAKE_FUNC's synchronous request (`0x502ce86d`, reply queue
+  TAKE_FUNC_IMDFUNC) reaches it; its command 0 (`0x50592215`, from the hashed table at run-time `0x606f1434`, 64
+  slots `{command + 1, case}` for 33 commands 0..`0xd03`) sets its on byte `0x62abd78a` to 1 and `0x62abda5e` (a
+  second command 0 would log `0x0e001f04`), asks nothing of any other module and replies status 0 to 0xa7
+  (`0x50591717`). Row 3 of 4.1.4's start table therefore reads `TAKE_FUNC -> TAKE_EXPOSE 0 sync (native)`,
+  `TAKE_EXPOSE -> reply` in place of S-TAKEREQ's status 0; the rest of the start, the live view, S1, S2, MENU and the
+  mode change record as in 4.1.4 under both camapp modes (X). S-EXPOSE's plan for the default scene is the same with
+  and without the two tasks (X: BV 1792, Tv 2052, Av 1276, Sv 1536).
+- **The AE result objects are not written natively, so S-EXPOSE is unchanged (X, D).** `0x50596187` is not one of
+  TAKE_EXPOSE's command cases: it is the AE result writer (`0xc12a` from the result's +0, `0xc0ba` from +2, `0xc0ca`
+  from +4, and `0xc57a`, `0xc2ea`, `0xc2da`, `0xc2ca`, `0xc4ba`, `0xcdca`, `0xcdda`, `0xcdb1`, through `0x5004188b`),
+  called from five callbacks (`0x5059757f`, `0x5059781d`, `0x5059790f`, `0x5059794c`, `0x505979a5`) that the AE
+  launchers `0x505964e7`, `0x505943cb` and `0x5059699d` put into the request they hand EXP's `0x505536be`. Every
+  TAKE_EXPOSE command but 0, 1, `0x200`..`0x202` and `0x300` reaches a launcher (the firmware map's static callees;
+  their conditions not read), and so do `0x50591973` (from TAKE_MAIN's `0x503ad611`), `0x50591c6b` (from
+  `0x508eeb32`) and `0x50591d1a` (from `0x509af437`). Command 0 does not, and only command 0 arrives in the lab's
+  scenarios (X); the probe observes the writer and it never runs (X). On the camera the callbacks come from EXP's
+  computation over the sensor's statistics (I). 4.2 and S-EXPOSE's text call `0x50596187` TAKE_EXPOSE's command
+  handler; it is the writer called back through EXP (D).
+- **TAKE_POWER_MANAGER is asked nothing (X, D).** Every send to TAKE_POWER_MANAGER_EXEC from TAKE_FUNC and
+  TAKE_FUNC_CP waits for TAKE's start-up flag, the byte `0x62a3f2bc` (start_up_flag, 4.1.2) = 1: the start's branch
+  (`0x502cd84c`: `0x502cd3fa` returns the byte; X: 0 in both camapp modes, so it is the first of 4.1.4's three
+  conditions that skips the branch), command 29's `0x5039c6a3` -> `0x506d8c72`, and TAKE_FUNC_CP command 1's stop
+  sequence `0x503a0c18` (`0x503a0d53`, `0x503a0e22`). A fifth sender, `0x503a978c`, is reached only from `0x5039f735`
+  in a function whose pointer sits in two tables (`0x502a2908`, `0x502a3ea8`; I: TAKE's debug commands). The flag is
+  set to 1 only by `0x503a05fb`, which also sends TAKE_FUNC command 29 and is api_rec's `0x50416123`, called by
+  CmpSqp_SequencePartsBase `0x50c9d590`; neither camapp mode reaches it (X: the flag stays 0). What it would do (not
+  executed): its handler `0x503a949f` takes the slot the request's parameter byte 0 names, calls the parameter's
+  callback, and for byte 0 = 0 replies on its POST queue (`0x503a950d`), for 1 posts a 16-byte request to CPU 1's
+  queue 0x1018 (`0x503a9525` through `0x502ce5b7`; CA53_POWER_MNG_REQ in CPU 1's object-name table, type 5 index 24,
+  `docs/om1-cores-spec.md` 4). The start's first message (`{1, 0, 0}`, command 2, token 512) would take that path,
+  that is ask CPU 1 to change the A53's power (I from the name); no lab runs CPU 1.
+- **STB_EXTERNAL is not device-free and stays at S-TAKEREQ (D).** Its task, 101 (`0x501b7465`, tid word `0x60042df0`,
+  started by the same stage at `0x501e8ff3`), receives on 0x57 (`0x501b7594`; no time limit while its state
+  `0x62a29ad4` is 0) and replies `{u16 status, token, parameter}` to word 0 after each command
+  (`0x501b76ba..0x501b76fb`), status always 0 for commands 1 and 4. Command 1 (TAKE's token 4) is processed whenever
+  the strobe is not on yet (`0x501b6d66`: `0x62a29ade` not 1 and `0x62a29ad6` 0, as the task's start leaves them,
+  `0x501b7b55`): case 1 of `0x501b780e` -> `0x501b82ab(0)` -> `0x501b833e`, which opens PER_SIO channel 11 and starts
+  a transfer (`0x501bb0b8` -> `0x501b67fc` -> `0x501b6c54`: `0x5005f0f7(11, ...)`, again after 10 ms while busy;
+  the transfer `0x501b6ab9` not read), waits up to 13000 on the strobe flag's bit 2 (`0x501ba1ac` -> `0x501c18b6`, the
+  flag id at `0x60042fee`), which the transfer's completion callback `0x501ba0bc` sets, then starts a kernel timer of
+  64 (`0x501c1831`; its handler `0x501ba277` sets bit 8) and waits for bit 8 without limit. Nothing on the path read
+  asks whether a flash is on the shoe (`0x501b1e7e` and `0x501b6be7`, called first, are not read in detail). So the
+  reply TAKE waits for needs PER_SIO channel 11 (its controller and interrupt are not modelled on E143,
+  `emu/src/lab/sio.mjs`) and the kernel's timer, flash or no flash, and the strobe is not run natively. Command 4
+  (token 8) is answered at once in the state command 1 leaves (`0x62a29ad4` = 1, `0x501b7872`; only state 2
+  processes it). Whether the controller completes a transfer with nothing on the shoe is ?.
+- **Open.** TAKE_EXPOSE's other commands (`0x200` from 13 under its mode bits, 14's `0x201` and 1, the movie's
+  `0xc00` / `0xc01`) and what they ask of EXP (`0x505536be` runs in TAKE_EXPOSE's task); TAKE_POWER_MANAGER needs the
+  sequence parts' start-up call (`0x50c9d590`, its trigger not read) and then CPU 1; the strobe needs PER_SIO channel
+  11 and the time model (section 5). Of plan item 5 in 4.1.4, the first step is done; the strobe's step ends here with
+  a negative result; the camera driver, the dust filter and BC are unchanged.
 
 ### 4.2 Sensor, ISP front end and live view (with EXP)
 

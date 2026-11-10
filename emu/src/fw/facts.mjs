@@ -1814,13 +1814,6 @@ function touchOpenForm(img) {
   return found.length ? 0x50000000 + found[0] : undefined;
 }
 
-// The word the touch panel's gesture mask is kept in (fact 'touch_mask.word', and through bin/port.mjs the place of
-// E143's TP_MASK_WORD 0x62a3ebc0, src/lab/play.mjs, which reads the mask H-TPSTART sets), read at the port's place of
-// E143's mask set TP_MASK_E143 0x501e41d1: its `mov (Am),d0; mov d0,(W)`, the first `mov d0,(abs32)` before its return
-// (E143 0x501e41f1 `mov (a2),d0; mov d0,(0x62a3ebc0)`; E122 0x5030bd11 `mov (a0),d0; mov d0,(0x6189f370)`, D). On the
-// 16 bodies with a touch panel W is the word after the open's byte (E143 0x62a3ebbc, E122 0x6189f36c, X); the maps
-// placed E143's word elsewhere on E130 (0x6264b0d6, W 0x6264b22c), E133, E118, E120 and E122 (X). Returns W; throws
-// where no such store comes before a return within TP_MASK_SPAN bytes.
 // The touch driver's register list written over its I2C transport outside the touch I2C write (fact 'touch_regs',
 // src/lab/display.mjs S-TPREGLIST), read at the port's places of E143's touch I2C write and read (TOUCH_E143): the
 // write's transport opens with `movhu (S),d0`, a semaphore wait and a call of the transport's open H (E118's write
@@ -1832,8 +1825,10 @@ function touchOpenForm(img) {
 // 0x615de290) through the transport's own calls and completion waits (0x50068418, 0x50068506, 0x5006851a, the flag
 // 0x60040fe2, D), the register writes the driver's 0x502e471a makes one at a time through the write (D). H's other
 // callers are the read and the write on E118, E120 and E122 (X: their call sites), so the rule reads none on E120
-// and E122; the E144 family's write has no such opening. Returns {fn, table, count, slave, reg}, or undefined;
-// throws for two, or for a caller of H whose function does not have the list's form.
+// and E122; the E144 family's write has no such opening. fn is the semaphore load, which src/lab/display.mjs hooks as
+// the function: it must be a called function's opening (E118's 0x502e4eee, called at 0x502e4065, D). Returns {fn,
+// table, count, slave, reg}, or undefined; throws for two, or for a caller of H whose function does not have the
+// list's form or does not open with the load.
 const TP_REGS_SPAN = 0x80;
 function touchRegList(img, write, read) {
   const w = write - 0x50000000, inFn = (p, f) => p >= f - 0x50000000 && p < f - 0x50000000 + TOUCH_ARGS_SPAN;
@@ -1859,12 +1854,20 @@ function touchRegList(img, write, read) {
       p += callAt(img, p)?.len ?? insnLength(img[p], img[p + 1]);
     }
     if (f < 0 || [table, slave, reg, count].includes(null)) throw new Error(`touchRegList: ${h8(0x50000000 + at)} opens the touch transport ${h8(0x50000000 + calls[1])} outside the touch I2C read and write without the register list's form`);
+    if (!callsTo(img, f).length) throw new Error(`touchRegList: the register list's semaphore load ${h8(0x50000000 + f)} before ${h8(0x50000000 + at)} is no called function's opening`);
     found.push({ fn: 0x50000000 + f, table, count, slave, reg });
   }
   if (found.length > 1) throw new Error(`touchRegList: ${found.length} register lists (${found.map((x) => h8(x.fn)).join(', ')}), want one`);
   return found[0];
 }
 
+// The word the touch panel's gesture mask is kept in (fact 'touch_mask.word', and through bin/port.mjs the place of
+// E143's TP_MASK_WORD 0x62a3ebc0, src/lab/play.mjs, which reads the mask H-TPSTART sets), read at the port's place of
+// E143's mask set TP_MASK_E143 0x501e41d1: its `mov (Am),d0; mov d0,(W)`, the first `mov d0,(abs32)` before its return
+// (E143 0x501e41f1 `mov (a2),d0; mov d0,(0x62a3ebc0)`; E122 0x5030bd11 `mov (a0),d0; mov d0,(0x6189f370)`, D). On the
+// 16 bodies with a touch panel W is the word after the open's byte (E143 0x62a3ebbc, E122 0x6189f36c, X); the maps
+// placed E143's word elsewhere on E130 (0x6264b0d6, W 0x6264b22c), E133, E118, E120 and E122 (X). Returns W; throws
+// where no such store comes before a return within TP_MASK_SPAN bytes.
 export const TP_MASK_E143 = 0x501E41D1, TP_MASK_WORD_E143 = 0x62A3EBC0;
 const TP_MASK_SPAN = 0x40;
 function touchMask(img, fn) {
@@ -1899,8 +1902,8 @@ function touchMask(img, fn) {
 // from 0x603f1ca4, D): 2 ms sleeps until its INT word getter G, `mov (W),d0; retf`, returns 1 or the entry's ms have
 // passed on the us clock, the timeout loading "TP INT TIME OUT\n" (op 5, the call of G at 0x502e3ffd, the load at
 // 0x502e400c), and the same polls of G in its bootload and calibration entries (0x502e4028, 0x502e40b0; G 0x502e4764,
-// W 0x6187b7e4; G's only callers, X); its pin's callback stores 1 in W while the word after it is 0, as E120's. The
-// third form is that one: a call of such a getter followed by `cmp 1,d0` within TP_INT_SPAN bytes before a load of
+// W 0x6187b7e4; G's only callers, X); its pin's callback 0x502e4d0a, which the driver's set-up 0x502e4601 attaches
+// to pin 30 at 0x502e462e, stores 1 in W while the word after it (0x6187b7e8) is 0, as E144's (D). The third form is that one: a call of such a getter followed by `cmp 1,d0` within TP_INT_SPAN bytes before a load of
 // the trace (wait the call, poll G). Returns {wait, poll, word} (code in disassembly notation, W at run time), or
 // undefined where no form is held; throws for two waits.
 const TP_INT_SPAN = 0x60;

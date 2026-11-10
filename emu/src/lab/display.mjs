@@ -72,8 +72,8 @@ export const HAS_TOUCH = fact('touch_panel.driver', true);
 // 'touch_regs', src/fw/facts.mjs touchRegList: E118's power-up command list's op 9, ten writes to registers 0x1cxx of
 // slave 0x48; none on E143 and the other bodies), stood in as the write is: each entry {low byte, value} of its table
 // recorded as a write to the slave (the register's high byte, then the entry's two bytes), the transport not run (its
-// channel's open and completions are not modelled on the E118 family's board, so the list's first completion wait
-// left the touch task waiting for good, X); returns 0
+// channel's completions are not modelled on the E118 family's board: run, the transport's open returned and the list's
+// first completion wait left the touch task waiting for good, X); returns 0
 export const TOUCH_REGS = fact('touch_regs', null) ?? null;
 // a touch I2C call's length (which 'write' or 'read'; fact 'touch_args', src/fw/facts.mjs touchArgs: E143's write
 // takes it at sp+20 and its read in a1, the E144 driver's at sp+24 and sp+40), looked up when the hook runs; the

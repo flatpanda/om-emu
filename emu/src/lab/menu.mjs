@@ -370,7 +370,9 @@ export class MenuLab extends T.TextDisplayLab {
     // runs to its timeout: 150 ms of lab time since the us clock runs on lab time from the reset (A-USLAB; E120's TFT
     // open 0.34 s instead of 0.19 s, the E144 family's start 150 ms longer on the TFT and 190 ms on the EVF, X), 300 s
     // while it counted CPU reads before the play bring-up (H-USCOUNT). At the wait's poll the lab stores 1 in the word as
-    // the callback would: the INT comes within the wait's first sleep (I: how long the controller takes is ?)
+    // the callback would: the INT comes within the wait's first sleep (I: how long the controller takes is ?). E118's
+    // waits are inline in its touch task's power-up command list, each polling the word through one getter (2, 10 or
+    // 50 ms sleeps): there the poll is the getter (docs/model-survey.md finding 86)
     const tpInt = fact('touch_int', null) ?? null;                // (fact() gives a read null as undefined)
     this.tp_ints = 0;
     if (tpInt !== null) this.observe(tpInt.poll, (lab) => {

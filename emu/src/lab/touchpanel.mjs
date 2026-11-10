@@ -25,14 +25,19 @@
 //   double tap; which codes the controller gives, and what bit 1 means, are ?). HFW then sees a tap as PRESS and
 //   CLICK, a longer press as PRESS and LIFTOFF (X). x and y are the TFT panel's pixels, not flipped
 //   (D: the driver checks an area against 720 x 480 at 0x5018a2b1..0x5018a2cc and flips by 719 - x, 479 - y only
-//   for the swivelled monitor, 0x5018c2d9; X: HFW's PRESS at the pixel tapped). E118's driver alone also reads two
-//   bytes at 0x1c14, a version it keeps (b0 << 8 | b1) and checks in its touch task's power-up command list: 0xc400
-//   goes on to the register set-up, any other value to a download of the controller's firmware from the camera's
-//   image (24496 bytes through the touch I2C write), an INT wait and a calibration, and a value outside 0x3000,
-//   0x9e00, 0xc400 and 0xd700 also logs "[TP] Touch IC F/W Version A not available!!" (D, the addresses in
-//   docs/model-survey.md finding 86; its report parser reads coordinates for every event from 0xd700 on). The model
-//   answers 0xc400: a controller that runs the firmware this camera's build carries (I: which version an E-M5 II's
-//   controller reports at power-up is ?; with 0 read there the download ran, X). Every other register reads 0.
+//   for the swivelled monitor, 0x5018c2d9; X: HFW's PRESS at the pixel tapped). Every 0x48 driver also reads two
+//   bytes at 0x1c14, a version it keeps for its report parser, which reads coordinates for every event from 0xd700
+//   on: E120's, E122's and E144's in their display opens' command lists, kept as b1 << 8 | b0 (the E144 family's
+//   other bodies hold the same read, X: a byte scan); E118's in its touch task's power-up command list, kept as
+//   b0 << 8 | b1 and checked there: 0xc400 goes on to the register set-up, any other value to a download of the
+//   controller's firmware from the camera's image (24496 bytes through the touch I2C write), an INT wait and the
+//   version again (0xc400 then runs a calibration), and a value outside 0x3000, 0x9e00, 0xc400 and 0xd700 also logs
+//   "[TP] Touch IC F/W Version A not available!!" (D, the addresses in docs/model-survey.md findings 85 and 86).
+//   The model answers c4 00, 0xc400 to E118's driver: a controller that runs the firmware this camera's build carries
+//   (I: which version an E-M5 II's controller reports at power-up is ?; with 0 the download runs and the tap still
+//   reaches HFW, X). The others would read 0x00c4, below 0xd700 as 0 is (in the lab's TFT sessions E120's open
+//   reads it before S-TPREG is installed, through the lab's plain read, and E122's and E144's not at all, X). Every
+//   other register reads 0.
 // The controllers' names and their other registers are not in the images (?).
 const SLAVE_E143 = 0x70, SLAVE_48 = 0x48;
 const EVENT_E143 = { down: 0, move: 2, up: 1 }, EVENT_48 = { down: 2, move: 3, up: 0 }, EVENT_48_TAP = 1;

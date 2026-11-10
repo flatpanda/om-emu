@@ -15,7 +15,8 @@
 // the interrupt's return to that halt pc then goes on from it (the halt is the store before it, which the core has
 // made), and only a later arrival there halts again.
 // A core 2 at one of its poll pcs (a loop that only reads the words of a range and does nothing else until they change)
-// sleeps the same way, and also wakes when a byte of that range changes, going on from the poll pc (H-CPU2POLL).
+// sleeps the same way, and also wakes when a byte of that range changes, going on from the poll pc (H-CPU2POLL); a
+// poll's predicate on the range can keep it from sleeping (the loop then runs on to its own halt).
 // Lab time does not move in a turn (FIDELITY 1.1). The harness talks to core 0 only: every turn ends on core 0.
 // A second core's stop at one of its own breakpoints calls the lab's onStop(pc, api), which returns 'go' (the handler
 // moved the pc), 'step' (run the instruction at the stop, then go on), or 'park' (with api.park(why): the core runs no
@@ -92,13 +93,13 @@ export class Cores {
     this.stats.switches += 1;
   }
   // The second core out of reset at pc with psw (A-CPU2RESET: every other register 0), its stops and halt pcs.
-  // polls: [[pc, address, length]]
+  // polls: [[pc, address, length, when]]; when(bytes), if given, says whether an unchanged range may sleep there
   start(pc, psw, { stops = [], halts = [], polls = [] } = {}) {
     const c = this.ctx[this.second];
     if (c.started) throw new Error(`cores: core ${this.second} already started`);
     c.R.fill(0); c.R[PC] = pc | 0; c.R[PSW] = psw & 0xffff;
     c.halts = new Set(halts.map((x) => x >>> 0)); c.stops = stops.map((x) => x >>> 0);
-    c.polls = new Map(polls.map(([p, a, n]) => [p >>> 0, [a >>> 0, n]]));
+    c.polls = new Map(polls.map(([p, a, n, when]) => [p >>> 0, [a >>> 0, n, when ?? null]]));
     c.interp = { bp: [...c.stops, ...c.halts, ...c.polls.keys()], watch: -1, builtin: new Set(), tbPc: pc | 0, tbAt: 0, tbStart: 0, lookedPc: -1, lookedN: -1 };
     c.started = true;
   }
@@ -201,7 +202,7 @@ export class Cores {
         // the range as the last pass left it: one more pass would do the same, so the core sleeps; else it goes on
         const bytes = dbgRead(pl[0], pl[1]), last = c.pollSeen.get(pc);
         if (bytes === null) throw new Error(`cores: the poll range ${h8(pl[0])}+${pl[1]} is not readable`);
-        if (last !== undefined && last.every((v, i) => v === bytes[i])) {
+        if (last !== undefined && last.every((v, i) => v === bytes[i]) && (pl[2] === null || pl[2](bytes))) {
           c.poll = { addr: pl[0], bytes }; c.halted = true; this.stats.halts += 1;
           return { kind: 'halt', pc, poll: true };
         }

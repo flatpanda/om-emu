@@ -198,14 +198,19 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   rs.bad.forEach((x) => console.log('  ', x));
   bad += rs.bad.length;
 }
-// CPU 2 natively (--cpu2 native): its boot to the idle loop, its first device accesses and cross-core call, and the
-// Super Control Panel's posts answered by its AUD_LEVEL_MONITOR as S-CPU2 answered them; off by default
+// CPU 2 natively (--cpu2 native): its boot to the idle loop, its first device accesses, CPU 0's CPUCONN and the tasks
+// CPU 0's boot stages start on it, and the Super Control Panel's posts answered by its AUD_LEVEL_MONITOR as S-CPU2
+// answered them; under control camapp 3 the GUI's histogram drawn by its OSD_DRAW_CPU2; off by default
 {
-  const { cpu2Session } = await import('../test/test_cpu2.mjs');
+  const { cpu2Session, cpu2Histogram } = await import('../test/test_cpu2.mjs');
   const c2 = await cpu2Session();
   console.log(`CPU 2 natively (--cpu2 native) in play: ${c2.checks - c2.bad.length}/${c2.checks}`);
   c2.bad.forEach((x) => console.log('  ', x));
   bad += c2.bad.length;
+  const ch = await cpu2Histogram();
+  console.log(`CPU 2's queues (--cpu2 native), the histogram on OSD_DRAW_CPU2: ${ch.checks - ch.bad.length}/${ch.checks}`);
+  ch.bad.forEach((x) => console.log('  ', x));
+  bad += ch.bad.length;
 }
 // the SCPU interface's clock and ports, the link's pins and the sub-CPU's model (S-SCPUDEV) without firmware, then the
 // link at a play session's start: E143 here, E146, E147, E139 and E134

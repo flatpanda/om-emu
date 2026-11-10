@@ -20,6 +20,7 @@ or its harness chooses to behave, treat it as the model's assumption, not as har
 | [om1-intc-timer-spec.md](om1-intc-timer-spec.md) | the interrupt controller and the timer block, and the assumptions the lab makes about them |
 | [om1-kernel-spec.md](om1-kernel-spec.md) | the uITRON kernel as the lab runs it natively (K-native): control blocks, services, the lab task, interrupts |
 | [om1-vsc-spec.md](om1-vsc-spec.md) | the VSC display compositor: address map, timing, planes, mixing, the lab model, the live-view API, colour management |
+| [om1-imgpro-spec.md](om1-imgpro-spec.md) | the imgpro unit at `0x9c600000` (the image library's unit 7): its driver, register map, request kinds, the fills and the lab's model |
 | [om1-text-spec.md](om1-text-spec.md) | GUI text: resource records, string tables, language loading, fonts, DrawText |
 | [om1-menu-spec.md](om1-menu-spec.md) | menu pages: data, the GUI path, the reference, navigation, the EVF layout, screens beyond the menu |
 | [om1-settings-spec.md](om1-settings-spec.md) | the settings store and the SCPU interface |

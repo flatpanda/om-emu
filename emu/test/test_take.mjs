@@ -66,7 +66,7 @@ export function neighbourChecks(lab, take, mode, ok) {
 // 0x501b6941; the wake 64 ms, 0x501b83b9; the detection's window 20 ms, 0x501b8014)
 const STB_STATE = 0x62A29AD4, STB_TIMEOUT_LOGS = [0x23000112, 0x23000222], STB_MIN_MS = 1 + 64 + 20, STB_MAX_MS = 100;
 // the polls' spacing once the start's requests are done (from the third transfer on): the loop's 250 ms receive timeout
-// (0x501b7575, 0x501b9261) and the detection's 6 ms wait, delayed by the lab's timer interrupts at its idle points
+// (0x501b7575, 0x501b9261) and the detection's 6 ms wait, spread (I) by the lab's timer delivery at its idle points
 // (X: 265 to 586 ms over the scenarios below), so only a floor is pinned
 const STB_POLL_MIN_MS = 200;
 export function stbChecks(lab, take, mode, ok) {

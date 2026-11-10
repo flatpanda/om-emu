@@ -15,7 +15,8 @@
 // enables the transmit interrupt; the index's interrupt handler 0x5005e8db (IRQs 205 and 206 on the camera, both to
 // it, and 207 to a per-direction table, attached at level 5 by the driver's init 0x5005d5c7 -> 0x5005d66f from the
 // tables 0x6011bc18 / 0x6011bc9c / 0x6011bd20 when the index's byte 0 of the board configuration 0x6011be3c is 1,
-// with its byte 1 as the attach's CPU: 1 for index 6) takes the transmit status (+0x28 bit 16) to mode 0's transmit
+// with its byte 1 as the attach's CPU: 0 for index 6, whose bytes are {1, 0, 1}, so CPU 0, the strobe's and the lab's)
+// takes the transmit status (+0x28 bit 16) to mode 0's transmit
 // handler 0x5005e9ab, which refills the FIFO and, the count done, calls the index's transmit completion
 // (0x5005ea80..0x5005ea99, the table 0xa32c9658), and the receive status (+0x14 bit 16) to mode 0's receive handler
 // 0x5005ed8a, which reads the FIFO and at the count's end sets the flag a first-byte event registered (0x5005e311:

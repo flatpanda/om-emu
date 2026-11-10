@@ -561,7 +561,7 @@ notation) was found to share and not share with kind 2 (2026-10-30, `docs/model-
   (`docs/model-survey.md` finding 39; the lab's S-DISPSYNC sends the image sync of kind 0, which commits a pending OSD).
   E118's commit `0x502e2174` and E120's `0x502d72a7` are the same function; their GUIs reach it through a display sync
   module of another form (findings 48 and 49: E118's API with no id on its image sync, E120's taking records), which
-  the same release commits (2026-10-30). The camera's own release (2026-11-10, finding 100, D): the device's sync word
+  the same release commits (2026-10-30). The camera's own release (2026-11-10, finding 100, D): a panel's sync word
   is cleared after an image update of the display control device (DevDpc_DispCtrlBase's imageUpdate(), E122
   `0x50917657`, once api_disp_Disp_Get_Wait_State `0x502ca48a` answers 0), and by its setThroughPermit() and the still
   shooting component's rcvShtDrawThrough(); the lab, which runs no image update, releases at the step's end.
@@ -579,9 +579,10 @@ notation) was found to share and not share with kind 2 (2026-10-30, `docs/model-
   `0x502e0f3a`, E120 `0x502d6058`), kind 2's `0x501872ac` the low nibble, called at `0x50183bc3` for a value of 5 or
   less (D). The code is the GUI's: GPISetOsdOrder (E122 `0x50bac52d`, E143 `0x510bd77e`) builds an order of the three
   layers and takes its code from a table of six {code, three planes} records (E122 `0x60978f77`, E143 `0x60df8352`, the
-  same 24 bytes in E144, E118, E120 and E130, D): 0 {2, 1, 0}, 1 {1, 2, 0}, 2 {2, 0, 1}, 3 {0, 2, 1}, 4 {1, 0, 2}, 5
-  {0, 1, 2}; its update puts the code in the custom record (`0x506c0b7b..0x506c0bbe`), and 152 of its 154 screens ask
-  its mode 1, code 3 (mode 4, code 5, and mode 2, code 2, once each; D on E122, the same counts on E118 and E120, X).
+  same 24 bytes once in each of the 19 bodies' images, X): 0 {2, 1, 0}, 1 {1, 2, 0}, 2 {2, 0, 1}, 3 {0, 2, 1}, 4 {1,
+  0, 2}, 5 {0, 1, 2}; its update puts the code in the custom record (`0x506c0b7b..0x506c0bbe`), and 152 of the 154
+  calls of the screens' mode function ask its mode 1, code 3 (mode 4, code 5, and mode 2, code 2, once each; D on
+  E122, the same counts on E118 and E120, X).
   The compositor reads a record as the planes from the top (I): E144's code 2 with layer 2 in OSD1 and the others' code
   3 with layer 0 there both give the layers 0, 2, 1 from one end, which no other reading of the records does, and the
   GUI's layer 1 holds the menus' opaque background (E139, E144) and the clock warning's dimming (E122) under a figure
@@ -592,10 +593,12 @@ notation) was found to share and not share with kind 2 (2026-10-30, `docs/model-
   screen of the camera with layer 0 drawn over layer 2, captured from the panel.
 - **Level:** OSD7..OSD9 (`0x2e0..0x2e8`) = `2 floor(p 128 / 100)` for p percent (`0x502f9408..0x502f9427`): E143's
   PLANC form, `0x100` at 100 %; the built-in EVF's 70 % gives `0xb2`, E144's EVF has `0xcc` (X). The opens write `0x100`
-  (`0x503097b7..0x503097c6`); the one writer of a percentage, `0x502f93f9`, is called only by the EVF panel's command
-  scheduler `0x502f946a` with a byte of its command record (`0x502f968b`, `0x502f986e`, `0x502f99f9`; the open's list
-  70 at `0x502f9b11`), and with the byte `0xa1c5a811` set it writes channel 1's two words `+0x22c4` / `+0x22c8` instead
-  (D; finding 98). On E122's EVF the level is `0xb2` after the open, `0xcc` (80 %) at the shooting screen and `0x100`
+  (`0x503097b7..0x503097c6`); the one writer of a percentage, `0x502f93f9`, is called three times by the EVF panel's
+  command scheduler `0x502f946a` with a byte of its command record (`0x502f968b`, `0x502f986e`, `0x502f99f9`), once
+  with 70 (`0x502f9b11`) and once more (`0x502f9ba6`). Its second argument picks the words, 0 channel 0's OSD7..OSD9,
+  another `0x9c0022c4` / `0x9c0022c8` (channel 1's `+0x2c4` / `+0x2c8`, meaning ?); with the byte `0xa1c5a811` set it
+  writes no register, keeping the percentage only (D; finding 98). On E122's EVF the level is `0xb2` after the open,
+  `0xcc` (80 %) at the shooting screen and `0x100`
   at PLAY (X). The compositor draws any level but 0 as full on both kinds; E143's refuses a PLANC other than `0x100`
   (section 3), and what a lower level does is ? on all three: the code computes it and reads it back only at its own
   stores. What would settle it: E122's or E120's EVF panel input captured over a known OSD colour and live view at the

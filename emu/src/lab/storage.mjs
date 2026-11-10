@@ -36,8 +36,8 @@
 //               never saved it (the lab's NAND and flash are not modelled), and the firmware's writes are kept for the
 //               session
 //   S-ALBM      the album manager's per-drive init (where the rule finds one) returns at once: ALBM_MAIN, which it
-//               would start, allocates its first request's id with udf07 (docs/om1-udf-spec.md row 14, kept faulting),
-//               and the movie module it asks does not run
+//               would start, sends its first request to the image engine (0x5048ee61 on E143, whose unit 0x9c600000
+//               the lab does not model: docs/hle-gaps.md 4.1.5), and the movie module it asks does not run
 //   S-RECFILE   (not on E143, E146 and E147, where REC_FILE runs natively in its task from REC_IMAGE's packet,
 //               src/lab/rec.mjs) the picture's file at a release's END_SHOOTING_PICTURE (src/lab/camapp.mjs S-CARD),
 //               the JPEG the capture pipeline would hand REC_FILE, which does not run: a JPEG the lab encodes

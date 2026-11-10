@@ -70,6 +70,7 @@
 import { FirmwareError, where, disasm } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { OLYQEWR } from './display.mjs';
+import { HotShoe } from './shoe.mjs';
 
 export class TakeError extends FirmwareError {}
 
@@ -224,6 +225,7 @@ export class TakeProbe {
     lab.wrap(OLYQEWR, (prev) => (h, r) => (this.tids && this.task() ? this.send(h, r, prev) : prev(h, r)), null);
     this.neighbours_install();                                          // round 2 (below)
     this.install_main();
+    this.stb_install();                                                 // the strobe (below)
   }
   // H-TAKEINIT
   bring_up() {
@@ -244,6 +246,7 @@ export class TakeProbe {
     this.log.push(['init', `TAKE_FUNC task ${this.tids.func}, TAKE_FUNC_CP task ${this.tids.cp} waiting`]);
     this.neighbours_bring_up();                                         // round 2 (below)
     this.bring_up_main();
+    this.stb_bring_up();                                                // the strobe (below)
   }
   // the request's sender: the caller of the send helper it went through (TAKE's 0x502ce57b and its wrappers, the
   // focus path's 0x506ea965), else the OlyQeWr call's own return
@@ -473,4 +476,77 @@ export class TakeProbe {
     for (const t of Object.values(tids)) if ((lab.nk.state(t) & 0xF) !== 4) throw new TakeError(`H-TAKEMAIN: task ${t} is not waiting after its start (state ${lab.nk.state(t)})`);
     this.log.push(['init', `TAKE_MAIN task ${tids.main}, TAKE_MAIN_CP task ${tids.cp} waiting`]);
   }
+
+  // ---- the strobe natively (docs/hle-gaps.md 4.12.1; H-STBINIT, S-HOTSHOE; STB_E143 below the class) ----
+  // install(): STB_EXTERNAL's queue joins the native ones (S-TAKEREQ no longer takes it); its reply to a requester is
+  // recorded ({dir 'out', task 'STB_EXTERNAL', status, token}); the hot shoe's channel (shoe.mjs)
+  stb_install() {
+    const lab = this.lab, S = STB_E143;
+    this.stb_tids = null;
+    this.stb_taken = [];                   // the requests STB_EXTERNAL takes with a reply queue {t_ns, command, token}
+    this.native.add(S.queue);
+    this.shoe = new HotShoe(lab);
+    lab.observe(S.reply, (l, r) => {
+      const q = r.d0 & 0xFFFF, m = l.sim.u32(r.a0 >>> 0) >>> 0, w = [0, 1, 2].map((k) => l.sim.u32(m + 4 * k) >>> 0);
+      this.record({ task: 'STB_EXTERNAL', queue: q, name: this.name(q), command: null, parameter: w[2], token: w[1], status: w[0] & 0xFFFF, sync: false, from: S.reply, via: 'OlyQeWr', answer: 'native: STB_EXTERNAL\'s reply to the requester', t_ns: l.lab_time() });
+    }, 'H-STBINIT (reply)');
+    // a request STB_EXTERNAL takes with a reply queue (its receive's return, the message at (44,sp)): after the step
+    // lab time runs until it has replied (stb_wait), as the requester's own wait for the reply lets it run
+    lab.observe(S.received, (l, r) => {
+      if ((r.d0 | 0) !== 0) return;
+      const w = [0, 1, 2].map((k) => l.sim.u32((r.sp >>> 0) + S.message + 4 * k) >>> 0), from = this.requests.length;
+      if (w[0] === 0) return;
+      this.stb_taken.push({ t_ns: l.lab_time(), command: w[2], token: w[1] });
+      this.pending.push({ what: `STB_EXTERNAL's reply to command ${w[2]} (token ${w[1]})`, run: () => this.stb_wait(w[2], w[1], from) });
+    }, 'H-STBINIT (request)');
+  }
+  // the requester waits for STB_EXTERNAL's reply: lab time runs in STB_STEP_MS slices until it is recorded, at most
+  // STB_ANSWER_MS (a reply that takes longer stops the session: with nothing on the shoe the strobe's own timers make
+  // it 1 + 64 + 20 ms after the request, D, docs/hle-gaps.md 4.12.1)
+  stb_wait(command, token, from) {
+    const lab = this.lab, t0 = lab.lab_time();
+    const replied = () => this.requests.slice(from).some((r) => r.task === 'STB_EXTERNAL' && r.dir === 'out' && r.token === token);
+    while (!replied() && lab.lab_time() - t0 < STB_ANSWER_MS * 1e6) this.shoe.run(STB_STEP_MS);
+    if (!replied()) throw new TakeError(`H-STBINIT: STB_EXTERNAL has not replied to command ${command} (token ${token}) ${STB_ANSWER_MS} ms of lab time on (shoe ${JSON.stringify(this.shoe.status())})`);
+  }
+  // H-STBINIT, after H-TAKEMAIN: the hot shoe's channel brought up (H-SIOMAP, S-HOTSHOE), then STB_HANDLER_PROC and
+  // STB_EXTERNAL started with act_tsk as USTART2's stage starts them, in its order; each then waits (STB_HANDLER_PROC
+  // on its flag, STB_EXTERNAL on its queue)
+  stb_bring_up() {
+    const lab = this.lab, tid = (a) => { const b = lab.sim.read(a, 2); return b[0] | b[1] << 8; };
+    this.shoe.bring_up();
+    this.stb_tids = {};
+    for (const [k, t] of Object.entries(STB_E143.tasks)) {
+      const n = tid(t.tid), e = lab.nk.entry(n);
+      if (e !== t.entry || lab.nk.state(n) !== 0x10) throw new TakeError(`H-STBINIT: ${t.name} task ${n} has entry ${h8(e)} state ${lab.nk.state(n)}, not a dormant ${h8(t.entry)}`);
+      lab.lt.allow.add(e);
+      const [rc] = lab.nk.svc('act_tsk', { d0: n });
+      if (rc !== 0) throw new TakeError(`H-STBINIT: act_tsk(${n}) = ${rc}`);
+      this.stb_tids[k] = n;
+    }
+    this.s.settle('H-STBINIT');
+    for (const [k, n] of Object.entries(this.stb_tids)) if ((lab.nk.state(n) & 0xF) !== 4) throw new TakeError(`H-STBINIT: ${STB_E143.tasks[k].name} (task ${n}) is not waiting after its start (state ${lab.nk.state(n)})`);
+    this.log.push(['init', Object.entries(this.stb_tids).map(([k, n]) => `${STB_E143.tasks[k].name} task ${n}`).join(', ') + ' waiting']);
+  }
 }
+
+// The strobe (docs/hle-gaps.md 4.12.1). USTART2's stage 0x501e8e84 starts STB_HANDLER_PROC (task 139, tid word
+// 0x60042e3c, 0x501e8fbd), STB_CHARGE (task 35, 0x60042d6c, 0x501e8fd8) and STB_EXTERNAL (task 101, 0x60042df0,
+// 0x501e8ff3) through OlyTaSt 0x5002c546, with no strobe module init before them. STB_EXTERNAL (0x501b7465) is queue
+// 0x57's one reader and replies {u16 status, token, parameter} to the request's word 0 with OlyQeWr at 0x501b76fb
+// (d0 the queue, a0 the descriptor {message, 12}); STB_HANDLER_PROC (0x501bb24a) runs the functions the strobe's
+// timer handlers queue (0x501bb29c: ten slots at 0x62a29b4c, flag (0x6004317c) bit 1), among them the end of a
+// channel-11 transfer (0x501b69cd -> 0x501b69fc), so STB_EXTERNAL's waits need it. STB_CHARGE stays dormant: nothing
+// on TAKE's requests asks it (X)
+// (STB_EXTERNAL's loop receives 16 bytes {reply queue, token, command, parameter} into (44,sp) with OlyQeRd, its return
+// at 0x501b759b with d0 0 for a message, 0x501b7585..0x501b7594)
+export const STB_E143 = {
+  tasks: {
+    handler: { name: 'STB_HANDLER_PROC', tid: 0x60042E3C, entry: 0x501BB24A },
+    external: { name: 'STB_EXTERNAL', tid: 0x60042DF0, entry: 0x501B7465 },
+  },
+  queue: 0x57,
+  reply: 0x501B76FB,
+  received: 0x501B759B, message: 44,
+};
+const STB_ANSWER_MS = 1000, STB_STEP_MS = 10;

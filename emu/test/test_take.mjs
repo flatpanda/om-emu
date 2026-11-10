@@ -12,7 +12,11 @@
 //                docs/hle-gaps.md 4.1.6): TAKE_EXPOSE and TAKE_POWER_MANAGER run natively too; command 13's request
 //                to TAKE_EXPOSE is answered by TAKE_EXPOSE itself (its command 0 sets its on byte and is the last
 //                command it takes), TAKE_POWER_MANAGER is asked nothing (TAKE's start-up flag stays 0) and
-//                TAKE_EXPOSE's AE result writer never runs
+//                TAKE_EXPOSE's AE result writer never runs. The strobe (H-STBINIT, S-HOTSHOE, docs/hle-gaps.md 4.12.1):
+//                STB_EXTERNAL answers the start's commands 1 and 4 itself over the empty hot shoe, 85 to 100 ms after
+//                command 1 (its own timers make it 1 + 64 + 20 ms), status 0 for tokens 4 and 8; on PER_SIO channel 11
+//                its wake byte 00 and then ID exchanges 55 82 with a receive of 9 that nothing answers, each closed;
+//                it then polls the shoe every 250 ms or so in its state 1 (no flash), with no error log of its own
 //   node emu/test/test_take.mjs
 import { fileURLToPath } from 'node:url';
 
@@ -20,7 +24,7 @@ import { fileURLToPath } from 'node:url';
 // [sync] (<answer kind>)' for a request
 export function canon(r) {
   if (r.dir === 'in') return `${r.task} <= ${r.command}`;
-  const kind = r.answer.startsWith('native: TAKE') ? 'reply' : r.answer.startsWith('native') ? 'native' : r.answer.startsWith('none') ? 'unanswered' : 'answered';
+  const kind = /^native: \S+ reply to the requester/.test(r.answer) ? 'reply' : r.answer.startsWith('native') ? 'native' : r.answer.startsWith('none') ? 'unanswered' : 'answered';
   if (kind === 'reply') return `${r.task} -> reply`;
   const what = r.queue === null ? r.name.replace(/ \(.*$/, '') : `${r.name} ${r.command}`;
   return `${r.task} -> ${what}${r.sync ? ' sync' : ''} (${kind})`;
@@ -28,13 +32,14 @@ export function canon(r) {
 const CP0 = ['TAKE_FUNC <= 0', 'TAKE_FUNC -> TAKE_FUNC_CP 0 (native)', 'TAKE_FUNC_CP <= 0',
   'TAKE_FUNC_CP -> camera driver request 148 (answered)', 'TAKE_FUNC_CP -> BC_EXEC 0 (answered)',
   'TAKE_FUNC_CP -> LENS_EXEC 1 (native)', 'TAKE_FUNC_CP -> camera driver request 6 (answered)',
-  'TAKE_FUNC_CP -> STB_EXTERNAL 1 (answered)', 'TAKE_FUNC_CP -> dust filter gate on (answered)',
-  'TAKE_FUNC_CP -> STB_EXTERNAL 4 (answered)', 'TAKE_FUNC_CP -> reply'];
+  'TAKE_FUNC_CP -> STB_EXTERNAL 1 (native)', 'TAKE_FUNC_CP -> dust filter gate on (answered)', 'STB_EXTERNAL -> reply',
+  'TAKE_FUNC_CP -> STB_EXTERNAL 4 (native)', 'STB_EXTERNAL -> reply', 'TAKE_FUNC_CP -> reply'];
 export const START = [...CP0, 'TAKE_FUNC <= 13', 'TAKE_FUNC -> TAKE_EXPOSE 0 sync (native)', 'TAKE_EXPOSE -> reply', 'TAKE_FUNC -> reply',
   'TAKE_FUNC <= 18', 'TAKE_FUNC -> TAKE_FOCUS 0 (unanswered)', 'TAKE_FUNC -> reply'];
 export const START_COMPONENTS = [...START, 'TAKE_FUNC <= 29', 'TAKE_FUNC -> reply', 'TAKE_FUNC <= 22',
   'TAKE_FUNC -> TAKE_FOCUS 2 sync (answered)', 'TAKE_FUNC -> reply'];
-const PROBE_STAND_INS = ['H-TAKEINIT', 'S-TAKEREQ', 'S-TAKECAM', 'S-TAKEUSF', 'H-TAKENBINIT'];
+const PROBE_STAND_INS = ['H-TAKEINIT', 'S-TAKEREQ', 'S-TAKECAM', 'S-TAKEUSF', 'H-TAKENBINIT', 'H-STBINIT', 'S-HOTSHOE', 'H-SIOMAP',
+  'A-HOTSHOE-1', 'A-HOTSHOE-2'];
 const C22 = ['TAKE_FUNC <= 22', 'TAKE_FUNC -> TAKE_FOCUS 2 sync (answered)', 'TAKE_FUNC -> reply'];
 export const MODE_CHANGE = [...C22, ...C22, ...C22];
 
@@ -53,6 +58,31 @@ export function neighbourChecks(lab, take, mode, ok) {
   const pm = take.requests.filter((r) => r.task === 'TAKE_POWER_MANAGER' || PM_QUEUES.includes(r.queue));
   ok(pm.length === 0 && byte(START_UP_FLAG) === 0, `camapp ${mode}: TAKE_POWER_MANAGER asked nothing (${pm.length} records, start-up flag ${byte(START_UP_FLAG)})`);
   ok(take.ae_writes === 0, `camapp ${mode}: TAKE_EXPOSE's AE result writer ran ${take.ae_writes} times, want 0 (S-EXPOSE)`);
+}
+
+// the strobe (docs/hle-gaps.md 4.12.1): STB_EXTERNAL's state word 0x62a29ad4 (command 1 sets 1, 0x501b7872; the
+// detection's no-flash path keeps it, 0x501b80d4..0x501b8128), its wait's timeout logs 0x23000112 / 0x23000222
+// (0x501ba1db; the 13 s wake wait's), the strobe's own timers between command 1 and its reply (the wake's end 1 ms,
+// 0x501b6941; the wake 64 ms, 0x501b83b9; the detection's window 20 ms, 0x501b8014)
+const STB_STATE = 0x62A29AD4, STB_TIMEOUT_LOGS = [0x23000112, 0x23000222], STB_MIN_MS = 1 + 64 + 20, STB_MAX_MS = 100;
+// the polls' spacing once the start's requests are done (from the third transfer on): the loop's 250 ms receive timeout
+// (0x501b7575, 0x501b9261) and the detection's 6 ms wait, delayed by the lab's timer interrupts at its idle points
+// (X: 265 to 586 ms over the scenarios below), so only a floor is pinned
+const STB_POLL_MIN_MS = 200;
+export function stbChecks(lab, take, mode, ok) {
+  const waiting = Object.entries(take.stb_tids ?? {}).map(([k, t]) => [k, lab.nk.state(t) & 0xF]);
+  ok(waiting.length === 2 && waiting.every(([, st]) => st === 4), `camapp ${mode}: STB_HANDLER_PROC and STB_EXTERNAL waiting (${JSON.stringify(waiting)})`);
+  const replies = take.requests.filter((r) => r.task === 'STB_EXTERNAL'), taken = take.stb_taken;
+  const ms = taken.length && replies.length ? (replies[0].t_ns - taken[0].t_ns) / 1e6 : null;
+  ok(JSON.stringify(replies.map((r) => [r.queue, r.status, r.token])) === JSON.stringify([[0x61, 0, 4], [0x61, 0, 8]])
+    && JSON.stringify(taken.map((t) => [t.command, t.token])) === JSON.stringify([[1, 4], [4, 8]]) && ms >= STB_MIN_MS && ms <= STB_MAX_MS,
+  `camapp ${mode}: STB_EXTERNAL took ${JSON.stringify(taken.map((t) => [t.command, t.token]))} and replied ${JSON.stringify(replies.map((r) => [r.queue, r.status, r.token]))}, the first ${ms} ms after command 1 (want ${STB_MIN_MS}..${STB_MAX_MS})`);
+  const tr = take.shoe.transfers, gaps = tr.slice(3).map((t, i) => (t.t_ns - tr[i + 2].t_ns) / 1e6);
+  ok(tr.length >= 10 && tr[0].tx === '00' && tr[0].rx === null && tr.slice(1).every((t) => t.tx === '5582' && t.rx === 9)
+    && tr.slice(0, -1).every((t) => t.ended && t.closed) && gaps.every((g) => g >= STB_POLL_MIN_MS),
+  `camapp ${mode}: the shoe's transfers ${tr.length}, first ${JSON.stringify(tr.slice(0, 2))}, kinds ${JSON.stringify([...new Set(tr.map((t) => `${t.tx}/${t.rx}/${t.ended}/${t.closed}`))])}, the polls' gaps ${gaps.map((g) => g.toFixed(1))} ms, kept ${take.shoe.kept && take.shoe.kept.count}`);
+  const state = lab.sim.read(STB_STATE, 2), logs = lab.kernel.errors.filter((e) => STB_TIMEOUT_LOGS.includes(e[0] >>> 0));
+  ok((state[0] | state[1] << 8) === 1 && logs.length === 0, `camapp ${mode}: STB_EXTERNAL's state ${state[0] | state[1] << 8} (want 1, no flash), its timeout logs ${logs.length}`);
 }
 
 export async function takeSession() {
@@ -101,6 +131,7 @@ export async function takeSession() {
       ok(!take.requests.some((r) => r.dir === 'in' && r.command === 25) && s.status().gui === '0x0108' && take.pending.length === 0,
         `camapp ${mode}: no through start (command 25) taken, nothing left to answer (${take.pending.length}), GUI ${s.status().gui}`);
       neighbourChecks(lab, take, mode, ok);                                         // round 2
+      stbChecks(lab, take, mode, ok);                                               // the strobe
     } catch (e) { bad.push(`camapp ${mode}: ${e.message.slice(0, 800)}`); }
     pl.close_session();
   }

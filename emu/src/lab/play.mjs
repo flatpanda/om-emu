@@ -2215,7 +2215,7 @@ export class PlaySession extends N.NavSession {
     lab.through_permit(dev, 1);
     const address = lab.load_lv_frame(this.through_off ? this.black_frame() : this.scene_render(), SCENE_BANK, 1, D.LV_SCALED_CROP);
     const [src, dst, at] = D.LV_SCALED[dev];
-    const th = lab.live_view(dev, D.ThRequest.scaled(D.DEVICE[dev].mask, address, D.LV_SCALED_CROP, src, dst, at));
+    const th = lab.live_view(dev, D.ThRequest.scaled(D.deviceMask(dev), address, D.LV_SCALED_CROP, src, dst, at));
     if (th.img0 !== th.start) throw new PlayError(`S-SCENE: the TH API left img[0] = ${h8(th.img0)}, not the request's start ${h8(th.start)}`);
     this.lv = { device: dev, address, key: this.through_off ? 'through off' : null };
   }

@@ -47,11 +47,21 @@ export const PAL_BASE = 0x4400;
 // channel: the VSC channel of the device (E143 TFT 2, EVF 1, HDMI 0; kind 2: TFT and EVF on 0, HDMI 1, D 0x5002361c;
 // kind 3 as kind 2, src/fw/board.mjs FAMILIES.E118); code: the DISPLAY OPEN's parameter, the display's code of the
 // device (E143's mask: TFT 1, EVF 2; the EVF's per build, src/fw/facts.mjs evfCode: 2 on the E143 and E144 families,
-// 6 on the E118 family, whose 2 is the NTSC video output; their TFT is 1, D: docs/om1-vsc-spec.md section 12)
+// 6 on the E118 family, whose 2 is the NTSC video output; their TFT is 1, D: docs/om1-vsc-spec.md section 12); mask:
+// the device's bit in E143's through permit (0x501c40d0), IMG fit (0x501df31a) and palette request (H-RESEND, its
+// DISPLAY cmd 4), null on the kind-3 VSC's bodies, whose forms of the three take no device mask (deviceMask; D:
+// api_disp_Set_Through_Permit stores one byte for its device argument 2 alone, api_disp_Disp_Update_Osd_Color_Pallet
+// takes a device type 0..2; the addresses are in docs/model-survey.md finding 101)
 export const DEVICE = {
-  tft: { mask: 1, code: 1, channel: LATER ? 0 : 2, prop: 1, vtotal_fn: A(0x501D8ABA), period: A(0xA32DB47C) },
-  evf: { mask: 2, code: fact('prop.evf_code', 2), channel: LATER ? 0 : 1, prop: 8, vtotal_fn: A(0x50023BAB), period: A(0xA32DB428) },
+  tft: { mask: K3 ? null : 1, code: 1, channel: LATER ? 0 : 2, prop: 1, vtotal_fn: A(0x501D8ABA), period: A(0xA32DB47C) },
+  evf: { mask: K3 ? null : 2, code: fact('prop.evf_code', 2), channel: LATER ? 0 : 1, prop: 8, vtotal_fn: A(0x50023BAB), period: A(0xA32DB428) },
 };
+// the device's mask (DEVICE), refused where the body's forms take none
+export function deviceMask(device) {
+  const mask = lookup(DEVICE, device).mask;
+  if (mask === null) throw new FirmwareError(`${device}: this body's through permit, IMG fit and palette request take no device mask (E143's 0x501c40d0, 0x501df31a and 0x503e52c7 have no counterpart of that form here; src/lab/display.mjs DEVICE)`);
+  return mask;
+}
 export const PERIODS_US = [16683, 20000, 10000, 8341];
 // E143's HDMI channel and its format table's period and vertical-total getters (docs/hle-gaps.md 4.9; D)
 export const HDMI_CHANNEL = 0, HDMI_MASK = 0xFF000004, HDMI_PERIOD_FN = A(0x501D5996), HDMI_VTOTAL_FN = A(0x501D5A67);
@@ -1129,7 +1139,7 @@ export class DisplayLab extends OsdLab {
   }
   // Native 0x501c40d0(d0 = mask, d1 = on): the through permit the TH API checks (0x501c41a5).
   through_permit(device, on) {
-    const mask = lookup(DEVICE, device).mask;
+    const mask = deviceMask(device);
     this.step(`through permit 0x501c40d0(mask ${mask}, ${on})`, () => this.call(THROUGH_PERMIT, { d0: mask, d1: on }));
     const word = this.sim.u32(PERMIT_WORD);
     if (!!(word & mask) !== !!on) throw new FirmwareError(`through permit ${h8(PERMIT_WORD)} = 0x${word.toString(16)} after 0x501c40d0(${mask}, ${on})`);
@@ -1169,7 +1179,7 @@ export class DisplayLab extends OsdLab {
     const d = lookup(DEVICE, device);
     const slot = this.alloc(pack('<I', this.img.base), 4);
     const address = this.step(`IMG1 attach on ${device}: 0x501df31a, 0x501e1e95, 0x501e20c6`, () => {
-      this.call(IMG_FIT, { d0: d.mask, d1: 0, a0: slot }, pack('<HHBxxxHH', this.img.width, this.img.height, aspect, 0, 0));
+      this.call(IMG_FIT, { d0: deviceMask(device), d1: 0, a0: slot }, pack('<HHBxxxHH', this.img.width, this.img.height, aspect, 0, 0));
       const a = this.sim.u32(slot);
       this.call(IMG_FORMAT, { d0: d.channel, d1: 0, a0: 0 });
       this.call(IMG_ADDRESS, { d0: d.channel, d1: a, a0: 0, a1: 0 });
@@ -1217,7 +1227,7 @@ export class DisplayLab extends OsdLab {
   // H-RESEND: the display manager's own palette request after the switch, natively (the switch writes zeros into the
   // new channel's palettes, and GPISetPalette with unchanged colours sets no dirty byte).
   resend_palettes(device) {
-    const mask = lookup(DEVICE, device).mask, kind = lookup(RESEND_KIND, device);
+    const mask = deviceMask(device), kind = lookup(RESEND_KIND, device);
     const param = this.alloc(pack('<III', 1, 1, 1), 16);
     const async0 = this.sim.read(DISPIF_ASYNC, 1)[0];
     const n0 = this.display_sends.length, q0 = this.qewr_posts();

@@ -15,7 +15,7 @@
 // - node (B2): web/runner.mjs with the pure sha256 (src/util/sha256.mjs) on the blocks unpacked from the .BIN by
 //   src/fw/olyfw.mjs (the resource block cut to its prefix; the NAND extract the Worker keeps, src/fw/labfw.mjs
 //   labNand, as the play sessions' env.nand): stage0, shoot-tft, shoot-tft in 1 M slices, play-perf
-//   from its inputs and the play workload without them (its digest must be d48795464396ceb1); traces to
+//   from its inputs and the play workload without them (its digest must be 13fa8f7471592f8a); traces to
 //   out/web/node/, compared by bin/run.mjs's comparator with the same scenarios run by bin/run.mjs in this process (the
 //   lab path the node tools take: node's crypto, the image and resource block files).
 // - Chrome (B5): the same jobs in web/worker.mjs (web/gate.html), first with the .BIN handed to the file input

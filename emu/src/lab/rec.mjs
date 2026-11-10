@@ -42,7 +42,7 @@
 //               (below), also the record's fields REC_IMAGE reads that TAKE's fill takes from the settings store, each
 //               read natively with the settings read 0x500417da as TAKE's fill reads it (D): the bracket's +38074,
 //               +38076, +38078, +38080 (ids 35217, 38737, 38769, 38785, halfwords) and +38086 (id 40401, a byte), from
-//               0x503bbd26..0x503bbd98, which rec_bracket_entry (0x5053b1dc) multiplies into the last frame's index
+//               0x503bbd26..0x503bbd98, from which rec_bracket_entry (0x5053b1dc) takes the last frame's index
 //               (0x5053b33f..0x5053b375; with them 0 it is 65535 and REC_IMAGE loops, X), and the aspect +38122 (id
 //               12417, a byte, 0x503bc035..0x503bc044), which rec_bracket_update makes the packet's ImgAspect
 //               (0x5053b45d..0x5053b469)
@@ -64,8 +64,8 @@
 //               rec_make_image_exec (0x5054208e) and rec_jpeg_exec (0x505497e5: the buffer from REC's pool 3, the
 //               header clear, whose aligned middle the imgpro unit fills (0x5048ee61, kind 14 mode 4, S-IMGPRO), the
 //               encode (S-JPEGENC), rec_jpeg_make_header, BuffAddr1 / BuffSize1), rec_make_image_finish (0x50541ec5) to
-//               0x505422f1, which hands the packet to REC_FILE through REC's ring (above), then rec_bracket_finish
-//               (0x5053b761) and pAlive's word cleared (0x50541d5f)
+//               0x505422f1, which hands the packet to REC_FILE through REC's ring (above), and pAlive's word cleared
+//               (0x50541d5f), for each frame until rec_bracket_finish (0x5053b761) finds the last done
 //   S-RECREQ    the request REC_IMAGE takes, where TAKE, api_rec, REC_MAIN and REC_PREPRO do not run: the packet as
 //               REC_MAIN builds it (the fields below, every other 0 as its clear leaves it; ImgAspect left to
 //               REC_IMAGE) with pAlive (+0) a word of the lab's, set to 1, posted to REC_IMAGE's queue with REC's post
@@ -82,7 +82,9 @@
 //               parameters, SOI, APP1 Exif by the EXIF module's serializer 0x50429935 with its Olympus maker notes and
 //               IFD1's thumbnail slot, APP1 XMP; HeaderSize 41984) and sets BuffAddr1 / BuffSize1 to Addr / Size
 //               (0x50549a00); then REC_IMAGE's post 0x5053990f natively, and lab time runs until REC_FILE has handled
-//               the packet (its handler's return, 0x5053f20d). On E146 and E147 the image record first: REC_IMAGE's own
+//               the packet (its handler's return, 0x5053f20d). That post to REC_FILE's queue is not the route E143's
+//               REC_IMAGE takes for a normal JPEG, which goes through REC's ring (above, docs/hle-gaps.md 4.3.3); the
+//               route on E146 and E147 is not read. On E146 and E147 the image record first: REC_IMAGE's own
 //               init of it (D: it clears the record, sets its +48 and points the packet's +180 at it) on a record the
 //               lab allocates, where REC_IMAGE's task keeps it on its stack
 //   S-JPEGENC   the image pipeline's work inside rec_jpeg_exec, where the lab has no image pipeline: the JPEG encode
@@ -136,7 +138,7 @@ export const REC_NATIVE = MODEL_INFO.rec_native === true;
 // REC_IMAGE's task natively (H-RECSHARED, H-RECIMGPRO, H-RECIMAGE, S-RECREQ; docs/hle-gaps.md 4.3.3): E143's addresses
 // (D unless tagged), which no rule reads on E146 and E147, where S-RECIMAGE stays.
 //   task      REC_IMAGE: static task 28, its entry, the word that holds its queue's id (REC_EXEC_IMAGE 70; read by its
-//             receive 0x50541c4e and by REC_PREPRO's post 0x5054edda only)
+//             receive 0x50541c4e, by REC_PREPRO's post 0x5054edda and by the object-name list, which only names it)
 //   shared    REC's shared objects' init (REC_MAIN_CPU2's start, 0x5053d5e4) and its done byte, set 1 last (0x5054dd19)
 //   imgpro    the image library's IRQ attach, its id bitmap's clear and the imgpro unit's init (camapp.mjs
 //             H-IMGPROINIT's three), run by H-RECIMGPRO where the application's start did not run them

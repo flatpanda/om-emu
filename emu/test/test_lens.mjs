@@ -102,6 +102,9 @@ function mcuTests(ok) {
   ok(ch.length === 66 + 16 * n + 72 + 5 * n + 4 + 720 + 44 + 72 + 1, `id 64: the block's length ${ch.length}`);
   ok(f(0xc1, 0xfe).length === n + 1 && f(0x81, 0xe4).length === 2 * n + 1 && f(0xc2, 0xf3).length === 34 * n + 1, 'ids 71, 76, 7: per zoom step');
   ok(f(0x60, 0xf0, 0, 0, new Uint8Array(5), 9761, false) === null, 'type 3 command 101: no reply');
+  // (docs/hle-gaps.md 4.1.8: the type-1 request 0x502b7e8a, data count 0)
+  ok(f(0xa0, 0xb0, 0xfe, 0, undefined, 33, false) === null && f(0xa0, 0xb1, 0, 0, undefined, 33, false) === null
+    && throwsAs(() => f(0xa0, 0xb0, 0x01, 0, undefined, 33, false), LensError), 'type 1, the AF mode set: no reply; another sub-code is refused');
   ok(mcu.setFocal(25) && mcu.focal() === 25 && !mcu.setFocal(26), 'the zoom ring takes the nearest step, and a change only once');
   const st = f(0xc1, 0x80, 0, 6);
   ok(st.length === 31 && (st[0] | st[1] << 8 | st[2] << 16) === 0x8000 && st[4] === 4 && u16(st, 8) === LENS_1240.ap[0], `id 69: the status, the zoom step 4, the aperture: ${[...st.subarray(0, 12)]}`);

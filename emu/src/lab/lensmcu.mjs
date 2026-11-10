@@ -38,6 +38,10 @@
 //   c1 2f      id 89: 2 bytes (record +117808; 0x502b10a9)
 //   60 f0      type 3, command 101 with 5 data bytes: no reply
 //   c1 80      id 69 (and 75): the lens's state (0x502b263d, below), polled from then on
+// and, sent later (docs/hle-gaps.md 4.1.8):
+//   a0 b0      type 1 (0x502b7e8a; a0 b1 [00 00] for command id 0): the AF library's mode set (0x50974553 -> the lens
+//              job 0x502c2635 -> 0x502c29ca: id 1, sub-code 0xfe, a value byte) at TAKE_FOCUS's MODE_UPDATE; data
+//              count 0 and its completion 0x502b7efe reads only the status: no reply
 // n is the zoom steps' count of the characteristics block. A-LENSMCU-1 (A): the lens's flags (record +1096), its
 // function words and its tables beyond the characteristics S-LENS wrote are 0; so are its serial number and firmware
 // version. A-LENSMCU-2 (A): the protocol version is 0x130a, the newest the driver tests for (0x50122ad9), with no block
@@ -117,6 +121,7 @@ export class LensMcu {
     if (cls === 0xc1 && code === 0x2f) return () => new Out().zeros(2).done();            // id 89: 2 bytes
     if (cls === 0x60 && code === 0xf0 && f.tx.length === 5) return () => null;             // type 3, command 101
     if (cls === 0xc1 && code === 0x80) return this.state;                                  // id 69, 75
+    if (cls === 0xa0 && ((code === 0xb0 && p1 === 0xfe) || (code === 0xb1 && !p1 && !p2))) return () => null;   // type 1
     return null;
   }
   version() { return new Out().u16(this.lens.version).u16(this.lens.clock_khz).done(); }

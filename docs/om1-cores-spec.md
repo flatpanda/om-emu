@@ -207,7 +207,7 @@ Which cores contend for each one is ?. CPU 0 also guards the OSD message to CPU 
 | `0x97f00094..97` | per-core init-done bytes |
 | `0x97f00098` | written 1 by CPU 0 UART init |
 | `0x97f000c0..c8`, `0x97f000d8..e0` | window commands to CPUs 1..3 and their acks |
-| `0x97f0009c..0x97f00113` | command block CPU 0 -> CPUs 1..3, ten arrays of three words `[core-1]` (D, the loop `0x5003883a..0x50038b32`): `0x9c` command (0x10001: ter_tsk of the id at `0xa8`, then `0xb4` = 1), `0xc0` (0x20001: `0xcc` = 1, the tick ISR's sleep request, acked at `0xd8`; 0x20002: `0xd8` = 0), `0xf0` (0x3xxxx cases; 0x40001 / 0x40002 set / clear the halt word `0xfc`), `0xe4`, `0x108` (written every pass) |
+| `0x97f0009c..0x97f00113` | command block CPU 0 -> CPUs 1..3, ten arrays of three words `[core-1]` (D, the loop `0x5003883a..0x50038b32`): `0x9c` command (0x10001: ter_tsk of the id at `0xa8`, then `0xb4` = 1), `0xc0` (0x20001: `0xcc` = 1, the tick ISR's sleep request, acked at `0xd8`; 0x20002: `0xd8` = 1 at once; each clears `0xc0`), `0xe4` (0x3xxxx cases: 0x30010 calls `0x5002f9df`, 0x30001..0x3000f a jump table; reset to 0x30000, the init's value), `0xf0` (0x40001 / 0x40002 set / clear the halt word `0xfc`, then `0xf0` = 0), `0x108` (written every pass: 0 when it halts, else 1) |
 | `0x97f0027c` | DSP service shared bits |
 | `(u16)0x97f00290` | VSC change word (`0x500251f3`) |
 

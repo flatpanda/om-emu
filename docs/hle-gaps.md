@@ -1480,7 +1480,11 @@ unchanged and a camapp session runs the same instructions in the same wall time 
   Bank 2 presents to CPU 2 (IRQ 324 from its own pending bits, IRQ 325 from its own kick: A-KICK; CPU 2 takes its
   interrupts at any instruction: H-CPU2GATE). Inside CPU 0's runs CPU 2 takes a turn of up to 2,000 instructions after
   every 2,000 of CPU 0's; at CPU 0's idle point it runs until it sleeps (A-INTERLEAVE). A stop at a halt pc (after a
-  store of 8 to `(0x8040)`, or the idle TCB's `bra` to itself) sleeps until bank 2 presents an interrupt CPU 2 admits.
+  store of 8 to `(0x8040)`, or the idle TCB's `bra` to itself) sleeps until bank 2 presents an interrupt CPU 2 admits;
+  the interrupt's return to that pc goes on from it, and only a later arrival halts again. Review fixes (X): the
+  return used to halt again at once, so the loop past a halt never ran again (a command 0x40002 written to CPU 2's slot
+  of `0x97f000f0` stayed unserved over 20 ticks); and a write to a bank 2 level register did not recompute CPU 2's
+  request (a level written after the pending bit left it low). `test_cpu2.mjs` pins both.
   An unknown device access, a kernel break or a task the lab does not list parks CPU 2, and the step that follows
   stops the session.
 - **Stand-ins of the boot.** H-CPU2RELEASE: `(0xa3258360)` = 1 (CPU 0's reset head, `0x50000329`) and the tick magic
@@ -1515,10 +1519,16 @@ unchanged and a camapp session runs the same instructions in the same wall time 
   `0x97f0009c..0x97f00113` (ten arrays of one word per CPU 1..3, `0x97f0009c + 0xc * k + 4 * (core - 1)`; the cores
   spec's `0x97f0019c` corrected); when the halt word `0x97f000fc[core - 1]` is set it stores 8 to `(0x8040)` every pass
   (`0x50038b04`). BOOT_CPU2's own `0x50038666` sets that word to 1 at its start (`0x50038701`: the `mov 1,d1` of the
-  index computation is the value stored), so CPU 2 halts each pass, and sleeps at `0x50038b09` in the lab (X). Its tick
-  IRQ 140 wakes it about once per lab ms (X: 6,355 wakes over a 7 s session). Command 0x40001 sets the halt word and
-  0x40002 clears it; who writes the commands is ? (no CPU 0 store in a default session, X). H-CPU2POLL makes a pass
-  that leaves the block as the pass before found it sleep until a byte changes, for the loop without its halt.
+  index computation is the value stored), so CPU 2 halts each pass; its first halt is at `0x50038b09` (X). Its tick IRQ
+  140 wakes it about once per lab ms (X: 2,051 wakes in 2.15 s of lab time); the tick's return goes on through the loop,
+  whose next pass finds the block unchanged, so H-CPU2POLL keeps CPU 2 asleep at the loop's head `0x5003883a` from then
+  on (X). The commands, per word of the block: `0x9c` 0x10001 (ter_tsk of the id at `0xa8`, then `0x9c` = 0 and `0xb4` =
+  1); `0xc0` 0x20001 (`0xcc` = 1, the tick ISR `0x500387b9`'s sleep request, which it acks with `0xd8` = 1) and 0x20002
+  (`0xd8` = 1 at once), each clearing `0xc0`; `0xe4` the 0x3xxxx cases (0x30010 calls `0x5002f9df`, 0x30001..0x3000f a
+  jump table), reset to 0x30000, the value the init writes; `0xf0` 0x40001 / 0x40002, which set / clear the halt word
+  `0xfc` and clear `0xf0`; `0x108` written each pass, 0 when it halts, else 1. `test_cpu2.mjs` writes 0x40002, then
+  0x40001, into CPU 2's slot of `0xf0` and checks both served (X). Who writes the commands on the camera is ? (no CPU 0
+  store in a default session, X).
 - **S-CPU2 natively (X for the posts and replies, D for the path between).** With CPU 2 running, the GUI's post
   (`0x50aa9d4e`, every ~210 ms while the panel is shown) is left to it: IRQ 324 bit 8 on bank 2, the drain of ring
   [2][0], `0x50aaa173`'s message 3 to AUD_LEVEL_MONITOR's queue, command 3 and its reply `0x50035afd(0, 0x60acbfb7, 0)`
@@ -1530,7 +1540,11 @@ unchanged and a camapp session runs the same instructions in the same wall time 
   lab time on master and the branch, in 8,110 and 8,027 ms (means of 3, alternated); `node emu/bin/test-pure.mjs` took
   76.9 / 82.8 / 96.1 s on master and 83.4 / 88.6 / 82.0 s on the branch (load average 8 to 10: noise, no trend). With
   `--cpu2 native` the session takes 8,176 ms against 7,840 ms without (+4%, means of 3, alternated); CPU 0 runs 4,983
-  more instructions (its IRQ 324 handlers) and CPU 2 about 8 million, nearly all its 1 ms ticks.
+  more instructions (its IRQ 324 handlers) and CPU 2 about 8 million, nearly all its 1 ms ticks. Re-measured after the
+  review fixes (X; means of 3, alternated, load average 5 to 7): `emu/bin/playperf.mjs` 9,347 ms on master and 9,341 ms
+  on the branch, with the same workload digest (`13fa8f7471592f8a`; the digest pinned in playperf is stale on master
+  too); test-pure 81.8 s and 81.9 s; a session of open, 2 s, OK to the Super Control Panel and 2 s takes 7,944 ms with
+  `--cpu2 native` against 7,749 ms without (+2.5%), CPU 2 running 8,010,523 instructions.
 - **Open, in order (I; Claude wall-clock).** (1) CPU 0's CPUCONN_CPU0 and CPUCALL_CPU0 natively (`act_tsk(0x99)`,
   `act_tsk(0x9a)` as the init task does, with their proxies), so that USTART_L2 gets FLASH_CS1 and its CREQ runs
   `0x50024eda(n)` on CPU 0 (K-CFLUSH and the per-segment hooks `0x501e60xx`, devices unknown): 3-6 h, with segment 8's

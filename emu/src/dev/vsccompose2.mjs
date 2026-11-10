@@ -53,15 +53,16 @@
 //                  {32, 32, 256}, D, docs/model-survey.md finding 97; what the chip does with such a pixel is ?)
 //   OSD order      as kind 2's, the code in the low 3 bits (the setter `and -8`, called by the layer-custom path when
 //                  the custom record's osd_mixorder at +40 is not 255, on all three bodies, D: finding 96). The GUI's
-//                  default is 3 (152 of its 154 screens ask GPISetOsdOrder's mode 1, D), as
-//                  the opens write: from the top OSD1 (layer 0), OSD3 (layer 2), OSD2 (layer 1) (X: E122's clock
-//                  warning dims the screen with layer 1's fill 5 under layer 2's clock and Y/M/D)
+//                  default is 3 (152 of the 154 calls of its screens' mode function ask mode 1, D), as
+//                  the opens write: from the top OSD1 (layer 0), OSD3 (layer 2), OSD2 (layer 1) (I, finding 96; X:
+//                  E122's clock warning dims the screen with layer 1's fill 5 under layer 2's clock and Y/M/D)
 //   formats        0x1b0 = 0x111 and 0x1b4 = 0x11, the values every open writes (D); E143's OSDFMT1 and OSDFMT2 hold
 //                  the same, kind 2's mix word 0x1b0 another (I): checked as kind 2's mix
-//   level          OSD7..OSD9 as kind 2's enable words; the opens write 0x100 and the EVF panel's command scheduler
-//                  sets them to 2 floor(p 128 / 100) for a level of p percent from its command records (D, finding 98;
-//                  0x100 at 100 %, E143's PLANC form): on E122's EVF 0xb2 (70 %, the open's list passes 70, D), then
-//                  0xcc (80 %) at the shooting screen and 0x100 at PLAY (X). A build whose code
+//   level          OSD7..OSD9 as kind 2's enable words; the opens write 0x100 and the percentage writer sets them to
+//                  2 floor(p 128 / 100) for a level of p percent when its device argument is 0 (D, finding 98; 0x100
+//                  at 100 %, E143's PLANC form; its callers are the EVF panel's command scheduler, with bytes of its
+//                  command records, and two others, one of them passing 70): on E122's EVF 0xb2 (70 %) after the
+//                  open, then 0xcc (80 %) at the shooting screen and 0x100 at PLAY (X). A build whose code
 //                  names no level word (BOARD.vsc.levels false, src/fw/facts.mjs vscLevels: E118's open writes none,
 //                  D) has its planes drawn at the full level with the plane's ASSUMED bit (what the chip's unwritten
 //                  level word holds is ?; I: E118's clock warning then shows as E122's does)

@@ -32,9 +32,12 @@
 //                  natively (the ISR, task 16's done callback, DISPLAY cmd 16 through S-DISPQ, which reads the bins
 //                  under A-VSCHIST-2 and starts the next run); the menu's DISPLAY cmd 15 waits for a run's end, which
 //                  the lab clock reaches within two frames (S-HISTEND), and its wait returns E_OK; the imgpro
-//                  library's request id comes from udf07 0x5050a089 (docs/om1-udf-spec.md row 14) and the session
-//                  then stops at the image engine's start 0x5050a7a9, a write to the unit 0x9c600000 the lab does not
-//                  model (fault 2, docs/hle-gaps.md 4.1.5); with --hdmi on the plug's TRA 588 is the component's (no
+//                  library's request id comes from udf07 0x5050a089 (docs/om1-udf-spec.md row 14), the imgpro unit
+//                  0x9c600000 (S-IMGPRO, H-IMGPROINIT) fills the through image's bank (kind 14's rectangle fill, its
+//                  end taken natively through IRQ 300) and the image player's stage 9 is readied (S-STAGE9): the menu
+//                  opens and closes, PLAY shows playback's No Picture with the card's pictures and returns; then a pass
+//                  of S1 and S2 records its picture and MENU is not taken (no GUI event: the furthest point,
+//                  docs/hle-gaps.md 4.3.1); with --hdmi on the plug's TRA 588 is the component's (no
 //                  S-OUTDEV), the HDMI device opens and channel 0 composes its window with no plane drawn, and the
 //                  plug's cmd 15 waits as the menu's does
 //   modeDialSession  the mode dial in play (E143): it starts at P, the start's mode; each position's change sets its
@@ -295,7 +298,12 @@ export async function heapWorkloadSession() {
 // control camapp 3 (docs/hle-gaps.md 4.1.5; E143). The sessions take no frames: the composite of the TFT is
 // FEATURE_UNOBSERVED once the shooting component has started the VSC's histogram (HIST1, HISTAREA1..3)
 const START_TRAS = [415, 598, 614, 990, 958, 1515, 994, 955, 1001, 1061, 992, 1503, 1065, 1045, 938, 974];
-const NATIVE_RESULT = { 992: 0xF0000058 }, ENGINE_STOP = '0x5050a7a9', ENGINE_REG = '0x9c600004';
+const NATIVE_RESULT = { 992: 0xF0000058 };
+// the imgpro unit's run as the menu opens (docs/hle-gaps.md 4.3.1; X): kind 14's rectangle fill (op 3, mode 5) of the
+// through image's bank, 600 rows of 1800 bytes (900 pixels) at a pitch of 11136 bytes, with the YCbCr pair 0x800b800b
+// (Y 0x0b, Cb and Cr 0x80); the GUI states the menu, playback and their returns reach
+const MENU_FILL = { op: 3, mode: 5, dst: 0x98D4D800, bytes: 1800, rows: 600, pitch: 11136, value: 0x800B800B };
+const GUI_MENU = '0x0b02', GUI_SHOOTING = '0x0108', GUI_NO_PICTURE = '0x0505';
 // the histogram (docs/hle-gaps.md 4.2.1): at least HIST_RUNS_MIN runs in the start and 2 s of idle (X: a run every 50
 // ms), HIST_BIN_WORDS bin words a read (128 bins, 0x501d6aa6..cb's clamp, D); cmd 15's wait returns within two frames
 // and the key's own step (the TFT's 16.68 ms frame, X)
@@ -363,18 +371,33 @@ export async function traRoutingSession() {
       ok(oxf() === n0 && shots.some(([id]) => id === 1030) && shots.every(([, , res]) => res === 0),
         `${tag}: over two passes of S1 and S2 the OXF events kept ${n0} -> ${oxf()}, S2's 1030 answered natively (${JSON.stringify([...new Set(shots.map(([id]) => id))])})`);
       ok(s.status().gui === '0x0108', `${tag}: the shooting screen after the passes: ${s.status().gui}`);
-      // the menu: DISPLAY cmd 15 waits for the run's end (S-HISTEND), E_OK within two frames, then udf07 and the next
-      // stop, the image engine's unit
-      let err = null;
+      // the menu: DISPLAY cmd 15 waits for the run's end (S-HISTEND), E_OK within two frames; then udf07, the imgpro
+      // unit's fill and the image player's stage 9 (docs/hle-gaps.md 4.3.1): the menu opens
+      const unit = lab.sim.m.devices.imgpro, runs0 = unit.runs;
+      const key = (k) => { const rec = s.key(k, 'down'); s.camapp.pump(); idle(100); s.key(k, 'up'); s.camapp.pump(); idle(800); return [s.status().gui, rec]; };
       const t15 = lab.lab_time();
-      try { s.key('menu', 'down'); s.camapp.pump(); idle(100); } catch (e) { err = e; }
+      const [menu] = key('menu');
       const now = pl.stand_ins_in_use(), waited = ca.hist_waited;
       ok(ca.hist_ends >= 1 && waited.length >= ca.hist_ends && waited.every(([d0, t]) => d0 === 0 && t > t15 && t - t15 <= HIST_WAIT_MAX_NS)
         && ['S-HISTEND', 'A-VSCHIST-1', 'A-VSCHIST-2'].every((x) => now.includes(x)) && !now.includes('S-HISTWAIT'),
         `${tag}: the menu's DISPLAY cmd 15 waited for the histogram's end natively (S-HISTEND ${ca.hist_ends}; [d0, lab ns] ${JSON.stringify(waited)} from ${t15}; ${now.filter((x) => /HIST/.test(x))})`);
-      const msg = err?.message ?? '';
-      ok(msg.includes(`(disasm ${ENGINE_STOP}) fault=2`) && msg.includes(`DENIED write ${ENGINE_REG}`),
-        `${tag}: past udf07 the menu stops at the image engine's start ${ENGINE_STOP} (${ENGINE_REG}): ${err ? err.message.slice(0, 160) : 'no error'}`);
+      const fill = unit.last(), want = Object.entries(MENU_FILL).every(([k, v]) => fill?.[k] === v);
+      const bus = lab.sim.m.devices.bus, edge = new Uint8Array(4), tail = new Uint8Array(4);
+      if (fill) { bus.read(fill.dst, edge); bus.read(fill.dst + (fill.rows - 1) * fill.pitch + fill.bytes - 4, tail); }
+      const pair = [0x0b, 0x80, 0x0b, 0x80], filled = [...edge, ...tail].every((b, i) => b === pair[i % 4]);
+      ok(menu === GUI_MENU && unit.runs - runs0 === 1 && want && filled && !unit.powered && unit.status === 0
+        && ['H-IMGPROINIT', 'S-STAGE9', 'S-IMGPRO', 'A-IMGPRO-1'].every((x) => now.includes(x)),
+        `${tag}: the menu opens (${menu}) after the imgpro unit's fill of the through image's bank (runs ${unit.runs - runs0}, ${JSON.stringify(fill)}, its first and last words ${[...edge, ...tail]}; powered ${unit.powered}, status ${unit.status}; ${now.filter((x) => /IMGPRO|STAGE9/.test(x))})`);
+      // the menu closes; playback shows No Picture although the card holds the passes' pictures, and returns
+      const [closed] = key('menu'), [play] = key('play'), [back] = key('play');
+      ok(closed === GUI_SHOOTING && play === GUI_NO_PICTURE && back === GUI_SHOOTING && ca.card_images() === 3,
+        `${tag}: MENU closes the menu (${closed}), PLAY shows ${play} with ${ca.card_images()} pictures on the card, PLAY returns (${back}); imgpro runs ${unit.runs - runs0}`);
+      // the furthest point: a pass of S1 and S2 after them records its picture, and MENU is then not taken (its key
+      // code reaches UI_IN, the GUI gets no event)
+      pass();
+      const [after, rec] = key('menu');
+      ok(ca.card_images() === 4 && after === GUI_SHOOTING && rec.events.length === 0 && rec.uiin?.[0]?.ev === 'EV_PRESS_MENU_KEY',
+        `${tag}: after a further pass (${ca.card_images()} pictures) MENU's ${rec.uiin?.[0]?.ev} sets no GUI event (${rec.events.length}), the GUI stays ${after}`);
     } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 600)}`); }
     pl.close_session();
   }

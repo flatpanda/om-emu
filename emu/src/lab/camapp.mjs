@@ -109,7 +109,7 @@
 import { FirmwareError, where, runtime, disasm, SP } from './hle.mjs';
 import { OPENED_WORD, HDMI_MASK, VSC_CHANNEL } from './display.mjs';
 import { AssertionError } from './errors.mjs';
-import { RPC_ENTRIES } from './menu.mjs';
+import { RPC_ENTRIES, bootFacts } from './menu.mjs';
 import { packRegs } from './sim.mjs';
 import { pack, unpack } from '../util/bytes.mjs';
 import { hex } from '../util/hex.mjs';
@@ -252,6 +252,21 @@ const HIST_DONE_CALLBACK = A(0x501D71E1), HIST_END_FRAMES = 2;
 const DEFER_WRITE = A(0xA32C3E10), DEFER_READ = A(0xA32C3E12), DEFER_RING = A(0xA32C3E14);
 const DEFER_SLOTS = 32, DEFER_SLOT_BYTES = 12;
 const VSC_INTEN1 = 0x00C, VSC_INTST1 = 0x010, HIST_END_BIT = 0x100;
+// The imgpro unit at 0x9c600000 under camapp 3 (docs/hle-gaps.md 4.3.1, docs/om1-imgpro-spec.md; the model
+// src/dev/imgpro.mjs, S-IMGPRO). H-IMGPROINIT: the image library's init 0x5046d7ab, which USTART2's stage calls
+// (0x501e91d8) and the lab does not run, in part: its IRQ attach 0x5048c3a0 (the library's 15 IRQs, each attached on
+// CPUs 0..3 and disabled there; IRQ 300 with the unit's handler 0x5048bfe3 at level 4, which the go 0x5050a8ba enables
+// on the calling core), its id bitmap's clear 0x5048ba3a and, of the units' init 0x50481211, only its call of the
+// unit's own init 0x5050a6b2 (0x50481322); the rest of 0x50481211 (the units at 0x9c200000 and the others, which the
+// lab does not model) and 0x5048d57f do not run. Without the attach the go's enable writes level 0 and the end is never
+// taken: the request's wait runs out (1000 ms, 0x5049362a) and the kind's end runs anyway (X).
+// S-STAGE9: the menu's image player (CapImg_ImagePlayer 0x50bad41b -> api_play 0x504067b9 -> the play buffer's
+// 0x50a6c59b, command 0x300) waits for the image's stage 9 (0x50024de8(9), 2 ms sleeps until bit 8 of the stages' ready
+// word is set; X: the OXF main thread slept there for good), which the boot's per-segment step 0x50024eda sets after
+// the segment's read; module 9 has no static constructors (0x501e6102: count 0, D) and the lab's image holds every
+// stage's code (as for S-BOOTSTAGE's stage 1 and H-AUDSTART's stage 6), so the bit is set at the start
+const IMGPRO_IRQ_ATTACH = A(0x5048C3A0), IMGPRO_IDS_CLEAR = A(0x5048BA3A), IMGPRO_UNIT_INIT = A(0x5050A6B2);
+const STAGE_PLAY = 9;
 // S-TRAACK: the request's vtable slot the exec deletes a consumed request through (docs/hle-gaps.md 4.1.2, D)
 const REQUEST_DELETE_SLOT = 1;
 // S-OUTDEV (E143 with the HDMI port, docs/hle-gaps.md 4.9): the application's change of output device, TRA 588
@@ -509,6 +524,10 @@ export const CAMAPP_STAND_INS = {
   "S-HISTEND": "(control camapp 3) the VSC histogram's end in DISPLAY cmd 15's wait: the shooting component starts the VSC's histogram on the TFT channel (0x501e14a4: INTEN1 bit 8, HIST1 = 1; X), a run every 50 ms, each ended by the VSC model (A-VSCHIST-1), its interrupt taken natively and its done callback (0x501d71e1) run by task 16 (X). DISPLAY cmd 15 (0x501d709f), which the menu sends inside a display run, waits up to 50 ms for the flag only that callback sets (D); in a display run lab time stands still, so the lab clock runs a frame at a time to the run's end (at most two frames) and the wait then runs natively and returns E_OK (X). The camera's DISPLAY task waits the same time for the same end (I)",
   "A-VSCHIST-1": "(control camapp 3) a run of the VSC's histogram unit, started by a write of HIST1 bit 0 (D: 0x501e14a4 writes HIST1 = 1 for every run), measures the frame that begins at the channel's next boundary and ends at the boundary after it, where INTST1 bit 8 is set and, with INTEN1 bit 8, raises the channel's IRQ; a run is one-shot. The firmware waits for the run's registers to latch before it starts one (0x501d6e17..a2, D), so a whole latched frame is the earliest the run can cover (I); the unit's real time per run is not known (?), and only the lab's pace depends on it (a run every 50 ms of lab time, X)",
   "A-VSCHIST-2": "(control camapp 3) the bins of a run whose source plane (taken as the IMG plane HIST2[17:16] names, I: the set-up 0x501e127f stores there the index of the IMG plane whose DMA address is the request's, else 0, and the start path passes no address, so the field is 0, D) had its DMAEN bit clear in the latched bank read as 0, trusted only while the firmware discards them: the written DMAEN bit 5 (IMG1) clear and HIST2[17:16] 0 at the read (the firmware's test, 0x501e1462, also takes 3, which the set-up does not write, D; the model refuses it), the test after which 0x501d70e6 overwrites the bins it read with 0 and puts 64 in bin 5 (0x501d712d..0x501d7154, D). What the unit counts with no source plane is ?; any other read of the bins is the model's error HIST_UNMODELLED (what the unit counts and how, HIST3's halves among it, is ?)",
+  "H-IMGPROINIT": "(control camapp 3) the image library's init 0x5046d7ab, which USTART2's stage calls (0x501e91d8) and the lab does not run, in part, natively at the application's start: its IRQ attach 0x5048c3a0 (the library's 15 IRQs, each attached on CPUs 0..3 and disabled there, IRQ 300 with the imgpro unit's handler 0x5048bfe3 at level 4 among them), its request ids' bitmap clear 0x5048ba3a and, of the units' init 0x50481211, only the imgpro unit 0x9c600000's own init 0x5050a6b2 (S-IMGPRO). The rest of 0x50481211 (the units at 0x9c200000 and the others, which the lab does not model) and 0x5048d57f do not run. Without the attach a request's go (0x5050a8ba) enables IRQ 300 at level 0 and the unit's end is never taken: the request's wait runs out after 1000 ms and the kind's end runs anyway (X; docs/hle-gaps.md 4.3.1)",
+  "S-STAGE9": "(control camapp 3) the image's stage 9 readied: bit 8 of the stages' ready word (src/fw/facts.mjs bootState) set at the application's start, as the boot's per-segment step 0x50024eda would set it after the segment's read; the lab's image holds every stage's code (as for S-BOOTSTAGE and H-AUDSTART) and module 9 has no static constructors (0x501e6102, D). The menu's image player (CapImg_ImagePlayer 0x50bad41b -> api_play 0x504067b9 -> the play buffer's 0x50a6c59b, command 0x300) waits for it in 2 ms sleeps (0x50024de8(9)); without it the OXF main thread slept there for good and the menu stayed at ID_ST_MENU_ENTRY (X; docs/hle-gaps.md 4.3.1)",
+  "S-IMGPRO": "the imgpro unit at 0x9c600000, the image library's unit 7 (src/dev/imgpro.mjs, board imgpro; docs/om1-imgpro-spec.md): its registers as storage (the power, control and parameter words its driver 0x5050a6b2..0x5050b547 writes; any other address a bus error), the status write 1 to clear, IRQ 300 high while its end bit and the enable are set, a run started by +0x00c then +0x018 written 1 while powered up. Of the runs only kind 14's fills are computed (op 3: mode 4 the linear fill, mode 5 the rectangle fill, from the address, pitch, sizes and 32-bit value the set-up 0x5050b118 writes; the value as a little-endian word at 4-byte aligned addresses, I) and their bytes written to the bus's memory; every other operation (kind 13's copies, kind 16, kind 17's scaler, kind 6), a fill whose value's phase off a 4-byte boundary would matter and a read of kind 16's result are refused (a bus error). Only control camapp 3 reaches it: the menu's fill of the through image's bank (900 x 600 pixels, 0x800b800b, X; docs/hle-gaps.md 4.3.1)",
+  "A-IMGPRO-1": "(with S-IMGPRO) a run of the imgpro unit writes its bytes and raises its end 1 ms of lab time after its start (I: the unit's time is not known; the request's wait allows 1000 ms, 0x5049362a, so only the lab's pace depends on it)",
   "S-CPU3": "the posts to CPU 3 through ring [3][0] are taken off the ring in order and acknowledged, each by its function: DISP_FRAME's remote calls of 0x5002587a (each setting bits of DISP_FRAME's flag), after each step, S-DISPFRAME then running one turn of DISP_FRAME for their bits; on E143 MDET's post, at once at its poster's return, and LAF's event setters, the EMS2 clear and PDT's and TRC's dispatches (src/fw/models.mjs mdet.events, mdet.posts; the dispatches with the core register at 3), each run in interrupt context, S-MDETDL then running CPU 3's tasks (mdet.mjs); a CPU 0 wait for LAF's answer (mdet_laf_end's on the flag 0x600430c4's id) is preceded by this service, the waiting call's stack kept (nested); a post of any other function stops the session; the lab has no CPU 3",
   "S-RELSEQ": "the modules' notifications of a release as the callbacks the HLS shooting reactive posts for them (0x50af4451, CBC_SHOOTING_COMMON), while the application's shooting service runs (from startShootingService 0x50ae1124 to endShootingService 0x50ad7e8a; in playback S1 only takes the application back to shooting): S1 down -> START_FOCUS, END_FOCUS (OK, or NG when S-SCENE's live view has nothing focusable under its AF point); S2 down -> START_SHOOTING_PICTURE, START_EXPOSE, END_EXPOSE after the shutter time in use, END_SHOOTING_PICTURE, START_RECVIEW, END_RECVIEW 500 ms later, then START_THROUGH_IMAGE_PROCESS (the through image's restart, on which the GUIs of the E118 family, E142, E140, E130, E133, E145, E129 and E132 leave the rec view's display); the application's RECORDING_MOVIE function starts a recording (READY_MOVIE, START_SHOOTING_MOVIE, START_RECORDING_MOVIE, UPDATE_SHOOTING_TIME every second) or ends it (STOP_SHOOTING_MOVIE, END_RECORDING_MOVIE); meanwhile the shooting phase query 0x50ab57e9 answers the movie phases of the shooting component's sequence (113 ready, 114 ready finish, 115 recording, 117 end), so getMovieState is 1 and the GUI lays out its REC mark. The callbacks due at one lab time (END_EXPOSE and END_SHOOTING_PICTURE) are posted together before the application runs, as the modules' notifications would reach its queue while it works (E145's application defers an event until END_SHOOTING_PICTURE, X). The order follows the callbacks' names (I). No image is developed: S-RECVIEW shows the capture's frame",
   "S-SHUTTERSND": "(a host that plays sound: the players' pages) the mechanical shutter's sound at each release S-RELSEQ makes, synthesized (src/lab/shuttersnd.mjs: seeded noise through decaying resonators, no audio asset): an open click at START_EXPOSE and a close click with the charge motor at END_EXPOSE, the shutter time in use later (S-SCENE's, else 1/125 s), sent to the page over the lab's audio output (src/lab/audio.mjs, GET /api/audio) and played with WebAudio once a key or a click has started it. On the camera that sound is the mechanism's own, not the firmware's: the stock firmware plays nothing at a release and the electronic shutter is silent (I: the patch tool om-c, on the same base images, has to add both a call of the sound engine's play method before the capture's begin and the sound; in the lab's S2, where S-RELSEQ stands in for the release and that capture begin does not run, the play method is not called, X of the lab only); which drive settings select the electronic shutter is not decoded (?), so every release sounds as the mechanical shutter. Nothing about the clicks is measured from a camera (I)",
@@ -554,6 +573,7 @@ export class CamApp {
     this.tra_returns = new Map();
     this.hist_ends = 0;        // S-HISTEND: DISPLAY cmd 15's histogram waits the lab clock ran to the run's end
     this.hist_waited = [];     // camapp 3: [d0, lab ns] where each of cmd 15's histogram waits returned
+    this.imgpro_inited = false; // camapp 3: H-IMGPROINIT and S-STAGE9 done
     this.media = null;         // S-MDACTRL / S-MEDIA (media.mjs): with the file system native
     // subject.mjs: subject detection's frames, on a body that gives its facts (models.mjs subject): S-SUBJECT's writes
     // where MDET_DL does not run natively, else the setting, the live condition and the placement S-TAKEMDET and S-DML use
@@ -581,6 +601,7 @@ export class CamApp {
     if (this.native_tra) for (const r of CMP_MODULE9_READERS) lab.takeover_allowed.add(r);
     lab.prop_sites.push(CA_PROP_SITE);
     this.install();
+    if (this.native_tra) this.imgpro_init();                                       // H-IMGPROINIT, S-STAGE9
     for (const a of CARD_STATE) lab.sim.write(a, pack('<I', CARD_MOUNTED));       // S-CARD
     if (!s.storage) lab.sim.write(CARD_DETECT.table, pack('<H', CARD_INSERTED));    // natively: the DCF card-in (storage.mjs)
     if (this.slens()) {                                                             // S-LENS
@@ -617,6 +638,19 @@ export class CamApp {
     this.frame_mode(FRAME_MODE_AF);                                                 // S-TAKEFRAME
     this.started = true;
     this.expose();                                                                  // S-EXPOSE
+  }
+  // camapp 3: H-IMGPROINIT (the image library's init in part) and S-STAGE9 (the image's stage 9 readied); see
+  // IMGPRO_IRQ_ATTACH's comment
+  imgpro_init() {
+    const lab = this.s.lab, unit = lab.sim.m.devices.imgpro;
+    if (!unit) throw new FirmwareError('H-IMGPROINIT: the board has no imgpro unit (src/fw/board.mjs imgpro)');
+    for (const fn of [IMGPRO_IRQ_ATTACH, IMGPRO_IDS_CLEAR, IMGPRO_UNIT_INIT]) lab.call(fn, null, null, null, 200000);
+    if (unit.powered || unit.runs) throw new FirmwareError(`H-IMGPROINIT: the unit's init left it ${unit.powered ? 'powered' : 'with a run'}`);
+    const at = bootFacts().stage + ((STAGE_PLAY - 1) >> 3), bit = 1 << ((STAGE_PLAY - 1) & 7), b = lab.sim.read(at, 1)[0];
+    if (b & bit) throw new FirmwareError(`S-STAGE9: the stage word ${h8(bootFacts().stage)} has stage ${STAGE_PLAY}'s bit before the start`);
+    lab.sim.write(at, Uint8Array.of(b | bit));
+    this.imgpro_inited = true;
+    this.log.push(['imgpro', `the library's IRQs attached, the unit's init run; stage ${STAGE_PLAY} readied`]);
   }
   // S-CAMAPP: act_tsk of the OXF main thread (task 57, HIGHLEVEL_MAIN), then a settle
   highlevel_main() {

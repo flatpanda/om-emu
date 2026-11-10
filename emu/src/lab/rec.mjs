@@ -52,9 +52,10 @@
 //               BuffSize1 bytes from BuffAddr1); the header maker, which runs after the encode (0x505498ab, then
 //               0x505498c3), ends its XMP segment 2 bytes past HeaderSize and writes them (X: 0a 00), over the stream's
 //               SOI (I: the camera's encoder, too, writes a whole JPEG there); and the image engine's fill 0x5048ee61
-//               of the header area (called from 0x5054c9d3), a request whose driver writes the imgpro unit
-//               0x9c600000, which the lab does not model (docs/hle-gaps.md 4.1.5): 0 into the aligned middle, as its
-//               caller fills the head and tail itself (0x5054c982)
+//               of the header area (called from 0x5054c9d3), a kind 14 request to the imgpro unit 0x9c600000: 0 into
+//               the aligned middle, as its caller fills the head and tail itself (0x5054c982). The unit's model
+//               (S-IMGPRO, docs/hle-gaps.md 4.3.1) computes the fill, but the request waits for the unit's end, which
+//               rec_jpeg_exec run here, outside REC_IMAGE's task, cannot (X under camapp 3: all tasks blocked)
 //
 // REC_FILE then runs natively in its task: rec_file_destination_record (0x50540345) by RecordDevice bit 0 to
 // rec_make_file (0x5053f294) and rec_file_record (0x5053fec0): the DCF open of the next number (0x5054a894), the

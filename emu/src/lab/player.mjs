@@ -463,6 +463,9 @@ export class Player {
     if (this.session?.camapp?.hist_ends) used.push('S-HISTEND');                            // camapp 3 (camapp.mjs)
     const vsc = this.session?.lab?.sim?.m?.devices?.vsc;                                     // the VSC's histogram (vsc.mjs)
     if (vsc?.histRuns()) used.push('A-VSCHIST-1', ...(vsc.histZeroReads() ? ['A-VSCHIST-2'] : []));
+    if (this.session?.camapp?.imgpro_inited) used.push('H-IMGPROINIT', 'S-STAGE9');          // camapp 3 (camapp.mjs)
+    const imgpro = this.session?.lab?.sim?.m?.devices?.imgpro;                              // the imgpro unit (imgpro.mjs)
+    if (imgpro?.touched) used.push('S-IMGPRO', ...(imgpro.runs ? ['A-IMGPRO-1'] : []));
     if (this.session?.audio_hw) used.push('H-AUDSTART', 'S-AUDCPU2', 'S-WM8946', 'A-AUDIO-1', 'H-AUDTIME');   // --audio on (auto on E143): the audio hardware (audiohw.mjs)
     if (this.session?.storage) used.push('H-FILEINIT', 'H-FILECLBK', 'S-SDHOST', 'S-SDCARD', 'S-FSNAND', ...(this.session.storage.f.album_init !== null ? ['S-ALBM'] : []), ...(this.session.storage.rec ? ['H-EXIFINIT', 'H-RECINIT', 'H-RECFILE', 'S-EXIFPRM', 'S-RECIMAGE', 'S-JPEGENC'] : ['S-RECFILE']));   // the file system native on a card (storage.mjs; S-ALBM where the body has an album manager; REC_FILE natively on E143, rec.mjs)
     if (this.session?.resnand) used.push('H-RESINIT', 'S-RESNAND');                       // the resource tables from the host's NAND (resnand.mjs)

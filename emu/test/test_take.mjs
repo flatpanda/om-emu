@@ -8,7 +8,10 @@
 //                application), commands 13 and 18 (and with the components 29 and 22); then a live view, S1, S2, MENU
 //                in and out reach TAKE with nothing, a mode change P -> A is MODE_CHANGE, and the through start
 //                (command 25) is never taken: the shooting component that would start the through image does not
-//                get TRA 991 while S-TRAACK answers it (docs/hle-gaps.md 4.1.2)
+//                get TRA 991 while S-TRAACK answers it (docs/hle-gaps.md 4.1.2). Round 2 (H-TAKENBINIT,
+//                docs/hle-gaps.md 4.1.6): TAKE_EXPOSE and TAKE_POWER_MANAGER run natively too; command 13's request
+//                to TAKE_EXPOSE is answered by TAKE_EXPOSE itself (its command 0 sets its on byte), TAKE_POWER_MANAGER
+//                is asked nothing (TAKE's start-up flag stays 0) and TAKE_EXPOSE's AE result writer never runs
 //   node emu/test/test_take.mjs
 import { fileURLToPath } from 'node:url';
 
@@ -26,13 +29,27 @@ const CP0 = ['TAKE_FUNC <= 0', 'TAKE_FUNC -> TAKE_FUNC_CP 0 (native)', 'TAKE_FUN
   'TAKE_FUNC_CP -> LENS_EXEC 1 (native)', 'TAKE_FUNC_CP -> camera driver request 6 (answered)',
   'TAKE_FUNC_CP -> STB_EXTERNAL 1 (answered)', 'TAKE_FUNC_CP -> dust filter gate on (answered)',
   'TAKE_FUNC_CP -> STB_EXTERNAL 4 (answered)', 'TAKE_FUNC_CP -> reply'];
-export const START = [...CP0, 'TAKE_FUNC <= 13', 'TAKE_FUNC -> TAKE_EXPOSE 0 sync (answered)', 'TAKE_FUNC -> reply',
+export const START = [...CP0, 'TAKE_FUNC <= 13', 'TAKE_FUNC -> TAKE_EXPOSE 0 sync (native)', 'TAKE_EXPOSE -> reply', 'TAKE_FUNC -> reply',
   'TAKE_FUNC <= 18', 'TAKE_FUNC -> TAKE_FOCUS 0 (unanswered)', 'TAKE_FUNC -> reply'];
 export const START_COMPONENTS = [...START, 'TAKE_FUNC <= 29', 'TAKE_FUNC -> reply', 'TAKE_FUNC <= 22',
   'TAKE_FUNC -> TAKE_FOCUS 2 sync (answered)', 'TAKE_FUNC -> reply'];
-const PROBE_STAND_INS = ['H-TAKEINIT', 'S-TAKEREQ', 'S-TAKECAM', 'S-TAKEUSF'];
+const PROBE_STAND_INS = ['H-TAKEINIT', 'S-TAKEREQ', 'S-TAKECAM', 'S-TAKEUSF', 'H-TAKENBINIT'];
 const C22 = ['TAKE_FUNC <= 22', 'TAKE_FUNC -> TAKE_FOCUS 2 sync (answered)', 'TAKE_FUNC -> reply'];
 export const MODE_CHANGE = [...C22, ...C22, ...C22];
+
+// round 2 (docs/hle-gaps.md 4.1.6): the neighbours' state after a session's scenarios. TAKE_EXPOSE's on byte
+// 0x62abd78a (its task's start clears it, 0x5059149e; command 0 sets it, 0x50592215), TAKE's start-up flag 0x62a3f2bc
+// (every send to TAKE_POWER_MANAGER_EXEC is behind it, 0x502cd84c, 0x5039c6a3, 0x503a0d53, 0x503a0e22)
+const EXPOSE_ON = 0x62ABD78A, START_UP_FLAG = 0x62A3F2BC, PM_QUEUES = [0xD7, 0xD8];
+export function neighbourChecks(lab, take, mode, ok) {
+  const byte = (a) => lab.sim.read(a, 1)[0];
+  const waiting = Object.entries(take.nb_tids ?? {}).map(([k, t]) => [k, lab.nk.state(t) & 0xF]);
+  ok(waiting.length === 2 && waiting.every(([, st]) => st === 4), `camapp ${mode}: TAKE_EXPOSE and TAKE_POWER_MANAGER waiting (${JSON.stringify(waiting)})`);
+  ok(byte(EXPOSE_ON) === 1, `camapp ${mode}: TAKE_EXPOSE's on byte after command 0 is ${byte(EXPOSE_ON)}, want 1`);
+  const pm = take.requests.filter((r) => r.task === 'TAKE_POWER_MANAGER' || PM_QUEUES.includes(r.queue));
+  ok(pm.length === 0 && byte(START_UP_FLAG) === 0, `camapp ${mode}: TAKE_POWER_MANAGER asked nothing (${pm.length} records, start-up flag ${byte(START_UP_FLAG)})`);
+  ok(take.ae_writes === 0, `camapp ${mode}: TAKE_EXPOSE's AE result writer ran ${take.ae_writes} times, want 0 (S-EXPOSE)`);
+}
 
 export async function takeSession() {
   const bad = [];
@@ -79,6 +96,7 @@ export async function takeSession() {
       same(since(), MODE_CHANGE, 'the mode change P -> A');
       ok(!take.requests.some((r) => r.dir === 'in' && r.command === 25) && s.status().gui === '0x0108' && take.pending.length === 0,
         `camapp ${mode}: no through start (command 25) taken, nothing left to answer (${take.pending.length}), GUI ${s.status().gui}`);
+      neighbourChecks(lab, take, mode, ok);                                         // round 2
     } catch (e) { bad.push(`camapp ${mode}: ${e.message.slice(0, 800)}`); }
     pl.close_session();
   }

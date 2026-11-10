@@ -81,6 +81,28 @@ export const TAKE_REQ_QUEUES = {
   0x2001: 'MOV_COMMAND', 0x2005: 'SDET_EXEC', 0x2006: 'WB_MOV',
 };
 const BC_EXEC = 0x09;
+// Round 2 (docs/hle-gaps.md 4.1.6; H-TAKENBINIT): TAKE_EXPOSE and TAKE_POWER_MANAGER natively behind the same probe.
+// USTART2's stage 0x501e8e84 runs TAKE_EXPOSE's module init (0x50591220, its call at 0x501e90bd) and starts it with
+// act_tsk (tid word 0x60042df4, 0x501e90cb..0x501e90d8); it starts TAKE_POWER_MANAGER the same way (0x60042e2c,
+// 0x501e9364..0x501e936b), whose init (0x502ce4d4: the flag pattern 0x62a48760 = 3, its two queues bound to the flag
+// 0x60043140's bits 1 and 2, its two 24-byte slots 0x62a48764) is TAKE_FUNC's init's second call (0x502ccffd), which
+// H-TAKEINIT already runs. Their queues then go natively: TAKE_EXPOSE 0x5b (its loop 0x5059145d receives 16 bytes and
+// replies {u16 status, token, parameter} to word 0 at 0x50591717), TAKE_POWER_MANAGER_EXEC 0xd7 and _POST 0xd8 (its
+// loop 0x503a9241 replies through TAKE's reply function 0x502ce619). What the two tasks post or ask synchronously goes
+// through the same hooks as TAKE_FUNC's (task() names them): recorded, and a queue the probe does not know throws
+const NB = {
+  tasks: {
+    expose: { name: 'TAKE_EXPOSE', tid: 0x60042DF4, entry: 0x5059145D, init: 0x50591220, queues: [0x5B] },
+    power: { name: 'TAKE_POWER_MANAGER', tid: 0x60042E2C, entry: 0x503A9241, init: null, queues: [0xD7, 0xD8] },
+  },
+  imd_send_return: 0x502CE8A8,   // imd's (0x502ce86d) call of TAKE's send helper: the post a native neighbour takes
+  replies: new Set([0x5059171E]),   // TAKE_EXPOSE's reply OlyQeWr's return (0x50591717)
+  // TAKE_EXPOSE's AE result writer (S-EXPOSE's objects 0xc12a / 0xc0ba / 0xc0ca and eight more through the property
+  // setter 0x5004188b), called from five callbacks (0x5059757f, 0x5059781d, 0x5059790f, 0x5059794c, 0x505979a5)
+  // that the AE launchers (0x505964e7, 0x505943cb, 0x5059699d) put into their request to EXP's 0x505536be; not one of
+  // TAKE_EXPOSE's command cases. Observed, so that a run that reaches it shows (none does: S-EXPOSE stands in for it)
+  ae_writer: 0x50596187,
+};
 // S-TAKECAM: the camera driver's (cam.c) request switch and the request's completion callback (+72, called with d0
 // the status and a0 the request, 0x502a4b92..0x502a4b96, 0x502a4c31..0x502a4c3f); the requests TAKE makes, by id
 const CAM = { request: 0x502A4A46, callback: 72 };
@@ -119,7 +141,7 @@ export class TakeProbe {
     const cur = this.lab.lt.current();
     if (cur === this.lab.nk.tcb(this.tids.func)) return 'TAKE_FUNC';
     if (cur === this.lab.nk.tcb(this.tids.cp)) return 'TAKE_FUNC_CP';
-    return null;
+    return this.neighbour_task(cur);                                    // round 2: TAKE_EXPOSE, TAKE_POWER_MANAGER
   }
   // before the application starts (CamApp.install): TAKE_FUNC's queue leaves S-MODACK, the stand-ins' hooks
   install() {
@@ -150,6 +172,7 @@ export class TakeProbe {
     lab.hook(CAM.request, (h, r) => this.cam_request(h, r), 'S-TAKECAM');
     lab.hook(USF.gate_on, (h, r) => this.usf_gate(h, r), 'S-TAKEUSF');
     lab.wrap(OLYQEWR, (prev) => (h, r) => (this.tids && this.task() ? this.send(h, r, prev) : prev(h, r)), null);
+    this.neighbours_install();                                          // round 2 (below)
   }
   // H-TAKEINIT
   bring_up() {
@@ -168,6 +191,7 @@ export class TakeProbe {
     s.settle('H-TAKEINIT');
     for (const t of Object.values(this.tids)) if ((lab.nk.state(t) & 0xF) !== 4) throw new TakeError(`H-TAKEINIT: task ${t} is not waiting after its start (state ${lab.nk.state(t)})`);
     this.log.push(['init', `TAKE_FUNC task ${this.tids.func}, TAKE_FUNC_CP task ${this.tids.cp} waiting`]);
+    this.neighbours_bring_up();                                         // round 2 (below)
   }
   // the request's sender: the caller of the send helper it went through (TAKE's 0x502ce57b and its wrappers, the
   // focus path's 0x506ea965), else the OlyQeWr call's own return
@@ -175,6 +199,7 @@ export class TakeProbe {
     const T = TAKE_E143;
     let at = disasm(ra);
     if (at === T.send_return) at = this.send_via;
+    if (at === NB.imd_send_return) at = this.imd_caller;                // round 2: imd's own post to a native neighbour
     if (at === T.request_imd) return this.callers.get(T.request);
     if (T.helpers[at]) return this.callers.get(T.helpers[at]);
     return at;
@@ -193,8 +218,8 @@ export class TakeProbe {
     const via = disasm(r.mdr) === TAKE_E143.send_return ? this.send_via : disasm(r.mdr), from = this.sender(r.mdr);
     const w = [0, 1, 2, 3].map((k) => (4 * k < n ? lab.sim.u32(m + 4 * k) >>> 0 : 0));
     if (this.native.has(q) || via === T_REPLY) {                                 // natively, recorded
-      const reply = via === T_REPLY;
-      this.record({ task, queue: q, name: this.name(q), command: reply ? null : w[2], parameter: w[3], token: w[1], status: reply ? w[0] & 0xFFFF : null, sync: false, from, via, answer: reply ? 'native: TAKE\'s reply to the requester' : 'native' });
+      const reply = via === T_REPLY || NB.replies.has(via);              // (round 2: TAKE_EXPOSE's own reply too)
+      this.record({ task, queue: q, name: this.name(q), command: reply ? null : w[2], parameter: w[3], token: w[1], status: reply ? w[0] & 0xFFFF : null, sync: via === NB.imd_send_return, from, via, answer: reply ? 'native: TAKE\'s reply to the requester' : 'native' });
       return prev(h, r);
     }
     if (!TAKE_REQ_QUEUES[q]) throw new TakeError(`${task} sends to ${this.name(q)} (queue 0x${q.toString(16)}) [${w.map(h8).join(' ')}] from ${h8(from)} (via ${h8(via)}): not a queue the probe knows`);
@@ -215,6 +240,7 @@ export class TakeProbe {
     const task = this.tids ? this.task() : null;
     if (!task) throw new TakeError(`TAKE's synchronous request ${path} from ${where(r.mdr)} outside TAKE's tasks`);
     const q = r.d0 & 0xFFFF;
+    if (path === 'TAKE_FUNC_IMDFUNC' && this.nb_queues.has(q)) return this.neighbour_sync(h, r);   // round 2
     if (this.native.has(q)) throw new TakeError(`${task}'s synchronous request to its own or a native queue ${q} from ${where(r.mdr)}: not read`);
     if (!TAKE_REQ_QUEUES[q]) throw new TakeError(`${task} asks ${this.name(q)} (queue 0x${q.toString(16)}) command ${r.d1 >>> 0} synchronously from ${h8(this.sender(r.mdr))} (${path}): not a queue the probe knows`);
     this.record({ task, queue: q, name: this.name(q), command: r.d1 >>> 0, parameter: r.a0 >>> 0, token: null, sync: true, from: this.sender(r.mdr), via: path, answer: 'status 0' });
@@ -260,4 +286,45 @@ export class TakeProbe {
     h.finish(r, { d0: 0 });
   }
   take_log() { const l = this.log; this.log = []; return l; }
+
+  // ---- round 2 (docs/hle-gaps.md 4.1.6): TAKE's neighbours natively ----
+  // install(): the neighbours' queues join the native ones (S-TAKEREQ no longer takes them)
+  neighbours_install() {
+    this.nb_tids = null;
+    this.nb_queues = new Set();
+    this.imd_caller = null;                // the caller of imd (0x502ce86d) whose post a native neighbour takes
+    for (const t of Object.values(NB.tasks)) for (const q of t.queues) { this.native.add(q); this.nb_queues.add(q); }
+    this.ae_writes = 0;                    // the AE result writer's native runs (none in the lab's scenarios)
+    this.lab.observe(NB.ae_writer, (l, r) => { this.ae_writes += 1; this.log.push(['ae', `TAKE_EXPOSE's AE result writer from ${where(r.mdr)} in ${(this.tids && this.task()) || 'another task'}`]); }, 'H-TAKENBINIT (AE result writer)');
+  }
+  // H-TAKENBINIT, after H-TAKEINIT: TAKE_EXPOSE's module init natively, then both tasks started as USTART2's stage
+  // starts them; each then waits (TAKE_EXPOSE on its queue, TAKE_POWER_MANAGER on its flag)
+  neighbours_bring_up() {
+    const lab = this.lab;
+    for (const t of Object.values(NB.tasks)) if (t.init !== null) lab.call(t.init, null, null, null, LIMIT);
+    const tid = (a) => { const b = lab.sim.read(a, 2); return b[0] | b[1] << 8; };
+    this.nb_tids = {};
+    for (const [k, t] of Object.entries(NB.tasks)) {
+      const n = tid(t.tid), e = lab.nk.entry(n);
+      if (e !== t.entry || lab.nk.state(n) !== 0x10) throw new TakeError(`H-TAKENBINIT: ${t.name} task ${n} has entry ${h8(e)} state ${lab.nk.state(n)}, not a dormant ${h8(t.entry)}`);
+      lab.lt.allow.add(e);
+      const [rc] = lab.nk.svc('act_tsk', { d0: n });
+      if (rc !== 0) throw new TakeError(`H-TAKENBINIT: act_tsk(${n}) = ${rc}`);
+      this.nb_tids[k] = n;
+    }
+    this.s.settle('H-TAKENBINIT');
+    for (const [k, n] of Object.entries(this.nb_tids)) if ((lab.nk.state(n) & 0xF) !== 4) throw new TakeError(`H-TAKENBINIT: ${NB.tasks[k].name} (task ${n}) is not waiting after its start (state ${lab.nk.state(n)})`);
+    this.log.push(['init', Object.entries(this.nb_tids).map(([k, n]) => `${NB.tasks[k].name} task ${n}`).join(', ') + ' waiting']);
+  }
+  neighbour_task(cur) {
+    if (!this.nb_tids) return null;
+    for (const [k, n] of Object.entries(this.nb_tids)) if (cur === this.lab.nk.tcb(n)) return NB.tasks[k].name;
+    return null;
+  }
+  // TAKE_FUNC's synchronous request (imd) to a native neighbour: natively (its post is recorded by send, its reply
+  // comes on TAKE_FUNC_IMDFUNC from the neighbour's task)
+  neighbour_sync(h, r) {
+    this.imd_caller = disasm(r.mdr);
+    this.lab.passthrough(r);
+  }
 }

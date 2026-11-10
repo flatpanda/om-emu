@@ -246,6 +246,8 @@ A second is met on E118 (2026-10-31): its movie record time divides by the movie
 format setter's per-pixel alpha bit, the level at 0 or at the full 128; `docs/om1-vsc-spec.md` section 9 item 12). A
 level between 1 and 127, such as the EVF menu's 0xb2 (DISPLAY cmd 30), is refused: how the chip blends it is not
 known. OSDFMT1/OSDFMT2 must be 0x111/0x11. SPOS is supported only in a restricted form, and resize only for the RSZ1 bits 0x11 with no extra resize registers. PEAK/BC must have the observed values. Both IMG planes (`drawImg`, two-tap linear) and OSD planes (8-bit index, nearest sampling, blending through the palette) are implemented.
+With the A-VSCHIST-3 opt-in (camapp 3) the histogram unit's six registers, in the forms of their only writers, are
+accepted as leaving the picture unchanged, an assumption (`docs/hle-gaps.md` 4.2.4).
 
 **Expected / concern:** In practice this is a check that the firmware set up the configuration seen so far. It is not a general compositor. Any other mode the firmware uses (other formats, scaling, peaking, channel 0) produces an error and no image.
 

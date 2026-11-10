@@ -285,9 +285,10 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   (A-VSCHIST-1 and A-VSCHIST-2; S-HISTEND runs the lab clock to the end in DISPLAY cmd 15's wait, `docs/hle-gaps.md`
   4.2.1). The menu and playback (No Picture) run past udf07 and the imgpro unit `0x9c600000`: its model computes only
   the fills (S-IMGPRO, A-IMGPRO-1; `src/dev/imgpro.mjs`), H-IMGPROINIT attaches its IRQ and S-STAGE9 sets the image
-  stage the play buffer waits for (`docs/hle-gaps.md` 4.3.1). It is not the default: the TFT's composite is refused
-  once the components start the histogram, keys are no longer taken after a menu pass and a shot, and playback shows
-  No Picture with pictures on the card (the next stops, 4.3.1).
+  stage the play buffer waits for (`docs/hle-gaps.md` 4.3.1). The TFT composes with the histogram's registers under
+  the opt-in A-VSCHIST-3 (`docs/hle-gaps.md` 4.2.4). It is not the default: a live view stops at the histogram's
+  first end, keys are no longer taken after a menu pass and a shot, and playback shows No Picture with pictures on the
+  card (the next stops, 4.3.1).
 - The mode dial shows each position by the firmware's name for it: UI_IN's dial table gives the position's mode code
   and the build names the codes (fact `mode_dial`, `src/fw/facts.mjs` modeDial), so E143's positions 0..9 are S, M,
   B, C1..C4 (MY_MODE1..4), Movie, P and A (`docs/om1-input-spec.md` section 2). A session starts with the dial at P,

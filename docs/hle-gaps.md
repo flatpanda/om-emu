@@ -980,7 +980,8 @@ request throws; TAKE_MAIN is then in RdyFcsRdy3 with the pending bits `0x300` (X
   (udf07 in) stopped at the imgpro unit's start `0x5050a7a9` (4.1.5); the menu opens since 4.3.1. Default sessions
   do not start the histogram (camapp 1 and 2 leave HIST1 unwritten over the start, S1, S2, the menu and playback, X).
 - **Open.** The TFT's composite stays FEATURE_UNOBSERVED once the histogram's registers are written (A13: whether
-  they change the mixer output is ?); bins with an IMG plane on are refused, so a live view under camapp 3 would stop
+  they change the mixer output is ?; composed under the assumption A-VSCHIST-3 since 4.2.4);
+  bins with an IMG plane on are refused, so a live view under camapp 3 would stop
   at its first end; the unit's real time per run (A-VSCHIST-1 sets only the lab's pace); the ring's reader (no literal
   of `0x62a3cab8` but the writer's, I: a computed address), what the application does with `0x04020301`, and what
   OSD_DRAW_CPU2 draws from the bins (4.6).
@@ -1108,6 +1109,110 @@ served natively, so S-EXPOSE stays (its text now gives the routine's role and th
   callback gets status 2 and skips the writer. The divide by zero blocks only through mode 1, whose callback does not
   write (above); where mode 1's AE results come from, if anywhere, is ?. Then the callback writes the objects and the
   plan's and the index get's reads see the firmware's values.
+
+#### 4.2.4 The TFT composite under camapp 3 (2026-11-10; D unless tagged, addresses E143's)
+
+Under `control camapp 3` the TFT's composite was refused from the components' start on (4.1.5, 4.2.1, 4.3.1), so no
+camapp 3 session had a frame. This round finds what the compositor refused, settles enough of it to compose, takes
+camapp 3's frames and compares them with camapp 1's. The default stays camapp 1.
+
+- **What the compositor refused: the histogram unit's six registers, nothing else (X).** At the shooting screen (1 s
+  after the start) COMPOSE of channel 2 is FEATURE_UNOBSERVED with exactly six errors, A13's never-written class
+  (`docs/om1-vsc-spec.md` section 7): HIST1 `0x04c` = 1, HISTAREA1 `0x474` = `0x01f20064`, HISTAREA2 `0x478` =
+  `0x010f004b`, HISTAREA3 `0x47c` = `0x10f`, HIST2 `0x748` = `0x00100112`, HIST3 `0x74c` = `0x004008bc` (the spot
+  area's run). Over a start, 2 s of idle, S1, S2, the menu, its close, PLAY and its return the firmware writes them
+  only on channel 2, 89 set-ups, with the values HIST1 0 and 1, HIST2 `0x100002`, `0x100012`, `0x100112`, HIST3
+  `0x400000`, `0x400116`, `0x4008bc` and the two areas' HISTAREA1-3 (X). With them accepted the next refusal was the
+  harness's IMG edge guard at the menu (below).
+- **Their writers (D).** An immediate scan of the main block for the six addresses (`0x9bb8004c` .. `0x9bb8074c`, and
+  their mirror copies) finds them only in the unit's driver: the set-up `0x501e127f` (HIST2 at `0x501e1378`, then
+  `|= 0x10` at `0x501e1406` with a clip and `|= 0x100` at `0x501e1438` with a scale; HISTAREA1 `0x501e1396`, HISTAREA3
+  `0x501e13c6`, HISTAREA2 `0x501e13f6`; HIST3 `0x501e141b` and `0x501e144e`; HIST1 `&= ~0xf` at `0x501e142b` and
+  `0x501e145e`), `0x501e1488` (HIST2 `= (HIST2 & ~0x03000000) | d1 << 24` at `0x501e14a0`; its callers pass 0,
+  `0x501d6e01`, and `a3 - 1`, `0x501d6fd8`, whose value is not read), the start `0x501e14a4` (HIST1 = 1 at `0x501e14c8`)
+  and the readers `0x501e1462` (HIST2) and `0x501e150e` (the bins, the mirror's HIST3). None of the 63 calls of the
+  generic writer `0x501e2ce6` passes their word indices (19, 285-287, 466, 467; the indices passed are 1, 2, 4, 12-14,
+  224-227, 246, 316-319, 321-325, 327, 360, 362-365, 408, 426, 436-438, 441-444 and 456-463). The set-up's two callers
+  (`0x501d6df7`, `0x501d6fca`) and the start's (`0x501d6ea6`, `0x501d7083`) lie in the start path `0x501d6bec`. A store
+  through a computed address would escape both scans (I: none is known).
+- **Settled: the unit measures, and the camera's histogram is drawn by software (D, X).** Each field whose formula is
+  read is a measurement parameter: the bin count's code, the area in output coordinates, the clip of a bin's value
+  (which `0x501e150e` applies again to the bins it reads), a scale of `(0x62a3eac8) << 16` over the area's pixel count,
+  the source plane by its DMA address (`docs/om1-vsc-spec.md` section 13); none names a colour, a level or an output
+  plane. HIST2 bit 20 (always set), HIST1[3:1] and `0x501e1488`'s field are not understood (?). Its result goes to
+  the CPU (the bins at `+0x4000`, read by cmd 16), and the histogram the shooting screen shows is drawn from those bins
+  by CPU 2's OSD_DRAW_CPU2 into GUI layer 1's buffers (4.6.2, X), which the compositor already draws as OSD2. A53 /
+  Linux: the A53 is the network and maths coprocessor and has no display driver (`docs/a53-spec.md`), so it says
+  nothing about the VSC. **Assumed (A-VSCHIST-3, I):** the unit adds nothing to the mixer output. Its registers in the
+  forms of their writers leave the composite unchanged: HIST1 0 or 1; HIST2 bit 20 with the bin count's code, the clip
+  and scale bits and a source plane 0..2, with bit 12 (two-field) and bits 31..24 clear; HIST3 any; HISTAREA1 and
+  HISTAREA2 a non-empty area inside the window; HISTAREA3 HISTAREA2's y. Any other value stays FEATURE_UNOBSERVED.
+  It is an opt-in of the compositor (`emu/src/dev/vsccompose.mjs` histForm, CH_ASSUME bit 4) that camapp 3 sets on
+  every channel; each composite that uses it carries header ASSUMED bit 4 and an ASSUMED note per register, the debug
+  word `0x038` counts them, and the player lists A-VSCHIST-3. Default sessions never write the registers (4.2.1, X).
+  What would settle it: a photo of the TFT while a run is on next to the lab's composite of the same latched state;
+  no firmware path draws the unit's own output, so the code cannot.
+- **The menu's IMG2 plane (X, D).** Past the histogram the menu's frame stopped at the harness's IMG edge guard (A6,
+  `docs/om1-vsc-spec.md` section 8): reason 1, IMG2 drawn with no recorded attach. The menu shows the through image's
+  bank as IMG2: DISPLAY cmd 5 with an IMG2 handle (the format setter `0x501e1e95(2, 0, plane 1)` returning to
+  `0x501da3bd`; img[1] = `0x98d4d800` in the commits from `0x501da63d`, `0x501dabb2` and `0x501da7e5`), DMAEN `0x17`,
+  with the geometry the open left (900 x 600 at the window's origin, stride 11136, DMABN `0x78`, RSZ1 0). It is the
+  rectangle the imgpro unit's fill writes just before (4.3.1: Y 11, Cb and Cr 128), which is the background's colour
+  {11, 11, 11} (`docs/om1-vsc-spec.md` section 4): the composite without IMG2 (the lab's view mask) is the same word
+  for word (X). The plane stays on after the menu's close and goes at PLAY. Unscaled, it fetches one source pixel per
+  output pixel, so A6's question (a second tap past the source) does not arise: the guard now passes an IMG2 or IMG3
+  latched with RSZ1 bits 0 and 4 clear (`emu/src/lab/display.mjs` unscaled). IMG1 keeps its attach rule (its 1:1 on
+  channel 2 rests on A12, and check_liveview pins its reason 1 after DISPLAY cmd 5).
+- **Camapp 3's frames against camapp 1's (X; the same keys with 100 ms held and 800 ms after, no live view, the
+  native lens).** Every difference is in GUI layer 1 (OSD2's buffer bytes and the composite differ at the same pixels)
+  or in IMG2's plane, which draws the background's colour:
+  - *Shooting screen* (start + 2 s; also after the menu's close and after PLAY's return): 1,655 pixels in x 417..894,
+    y 72..334. Camapp 3 shows MF where camapp 1 shows S-AF, and no AF target brackets. Cause: setting 535
+    (MODE_AF_CHANGE) is 1 in camapp 3 and 0 in camapp 1; set to 1 in a camapp 1 session (`SET:535=1`) the shooting
+    screen is camapp 3's word for word. Camapp 3 sets it at 2.77 s of lab time through the setter `0x503c6511` from
+    `0x503c49fd` (return chain `0x50ab51f0`, `0x50adfc16`, `0x50b530c1`, `0x50e171e0`, `0x50db73f1`, `0x512ac5e4`),
+    and camapp 2 does the same at PLAY's return (from then on its shooting screen is camapp 3's). Which component
+    decides it, and why camapp 1 never does, is ?. S1 (600 ms, no live view) changes no frame in either.
+  - *MENU*: 4,602 pixels in x 38..871, y 283..327: the movie Card Slot Settings row is available in camapp 3 and
+    greyed in camapp 1 (camapp 2 greys it too). Not caused by the scalar settings that differ: 17 do after the start
+    (19, 51, 53, 112, 535, 678, 1245, 1247, 1256, 1259, 1261, 1627, 1628, 1649-1652; camapp 2 has 11 of the 17 values,
+    and 535, 1627 and 1628 after PLAY's return), and set to camapp 3's values in camapp 1 (19, 678 and 1256 one at a
+    time, and every settable one together) they leave its menu unchanged (1259 and 1261 are 85, which their descriptor
+    lists do not hold, and equal in camapp 2). What decides the row is ?. IMG2 is drawn under the menu and changes no
+    pixel (above).
+  - *PLAY* (No Picture, no shots taken): identical.
+  - *The histogram* (GUI layer 1's box at x 4..259, y 110..172 on the shooting screen): empty in camapp 1 with or
+    without `--cpu2 native` (S-MODACK answers OSD_DRAW_CPU2's send, 4.6.2) and in camapp 3 without it; in camapp 3
+    with `--cpu2 native` OSD_DRAW_CPU2 draws one column, bin 5 at x 14..15, rows 110..172 (126 pixels, GUI layer 1's
+    index 54): the 64 in bin 5 the firmware puts in place of the bins it discards while IMG1 is off (4.2.1). Nothing
+    else in the frame changes.
+  - *Live view* (S-SCENE's): camapp 1 composes it; camapp 3 stops at the histogram's first end with IMG1 on, the bins'
+    read at `0x501e153d` (fault 2, HIST_UNMODELLED: A-VSCHIST-2 gives no bins for a plane that is on; 2.9 s of lab
+    time). That is 4.2.1's open item, now observed.
+- **Tests (X).** `emu/test/test_dev.mjs` vscHistUnits (30 checks with the new vscHistCompose: the six registers at the
+  run's values leave a composite of the TFT's open state with one OSD plane word for word as it is without them under
+  the opt-in, are FEATURE_UNOBSERVED without it, and twelve values outside the forms stay refused one at a time);
+  `emu/test/test_camapp.mjs` camapp3FramesSession (6 checks: the frames above compose, the menu's IMG2 is the bank and
+  changes no pixel, `--cpu2 native` adds exactly bin 5's column).
+- **What still separates camapp 3 from the default (X unless tagged).** The live view stops at its first histogram
+  end (above); the keys lost after a menu pass and a shot, playback with pictures and REC's header fill (4.3.1's next
+  stops, and S-JPEGENC and S-ALBM there); the GUI differences above (MF and no AF target, the movie card slot row),
+  whose causes are open; S1's release (600 ms after S1) after a menu and a PLAY pass stops at S-TAKEOVER's scope (a
+  module-9 read from `0x50c8a335`, not one of CMP_MODULE9_READERS; X, 2026-11-10).
+  *Golden with camapp 3 as the player's default* (a local, uncommitted run of the 21 Player sessions; X): all 21 differ
+  in every layer, as they must (the components run, so instruction counts, stand-in lists, traces and frames change).
+  Nine run to their end through the same GUI states (a15-open, b7-gate, evf-idle, power, power#2, power#3, scp-edge,
+  scp-replay, scp-timeout). The others take other GUI states or end early: an output switch to the EVF stops the
+  session at the open (eye-burn's eye switch, switch-shoot's and tokens-3b's LV; switch-scp's LV, I): the
+  firmware logs `0x37001418` from the histogram ISR (`0x501deccc`), the TFT channel's run ending with the TFT closed
+  (`docs/om1-vsc-spec.md` section 13), and the harness's DISPLAY cmd 2 refuses a step with an error log (I: on the
+  camera the application's own switch would stop the histogram first; not read); playback's PLAY, pressed at the
+  start's end (2.86 s), stops at S-DISPQ (UI_IN group 3's OlyQeWr to the DISPLAY queue from `0x503eba07`, not the
+  asynchronous request it stands in for; after 2 s of idle PLAY works, X); keys ends at its 15th call (a switch input;
+  its message not reproduced), tokens' OPEN gives GUI `0x0b01` where camapp 1 gives `0x0b02`, and queue, inputs,
+  pace-wall and play-perf take other states (not traced). The check runs (check/, run/) were not run with the flip.
+- **Corrections.** 4.1.5's, 4.2.1's and 4.3.1's "the composite is refused" and 4.6.2's "no frame shows the column"
+  hold only without A-VSCHIST-3; 4.2.1's open item on the composite is answered here (as an assumption, not a fact).
 
 ### 4.3 Still capture, image processing and recording
 
@@ -2189,7 +2294,8 @@ runs the same instructions (the cost bullet). Round 1's open item 1 is corrected
   - *Result.* In both buffers bin 5's columns x 14 and 15, rows 110..172, turn from index 52 to 54, and the pixels
     beside them stay; a camapp 3 session without CPU 2 leaves 52 there. The TFT channel's OSD plane 1 address register
     reads `0xb767a80` at that time (the buffer's address >> 4, I). No device access in OSD_DRAW_CPU2's context. The
-    TFT's composite stays FEATURE_UNOBSERVED under camapp 3 (4.1.5, A13), so no frame shows the column yet.
+    TFT's composite stays FEATURE_UNOBSERVED under camapp 3 (4.1.5, A13), so no frame shows the column yet (it does
+    since 4.2.4, under A-VSCHIST-3).
 - **H-CPU2POLL narrowed (X).** It now sleeps at the loop's head only while the halt word `0x97f00100` is 0. With the
   word set (BOOT_CPU2's `0x50038666`), which is every lab session (no CPU 0 writer of 0x40002 is known), the loop
   halts natively every pass at `0x50038b09`, and each tick runs the rest of the pass and halts again.
@@ -2212,7 +2318,8 @@ runs the same instructions (the cost bullet). Round 1's open item 1 is corrected
   so they neither confirm nor refute the percentages (the default session 7,951 ms on master, 8,263 ms on the branch,
   means of 3, alternated).
 - **Open, in order (I; Claude wall-clock).** (1) A frame of the histogram: the TFT composite under camapp 3 (what
-  HIST1..3 do to the mixer, 4.2.1, A13): unknown. (2) TAKE's queues: TAKE_FUNC's commands 28, 30, 31, 68, 69 reached
+  HIST1..3 do to the mixer, 4.2.1, A13): unknown (taken in 4.2.4 under A-VSCHIST-3).
+  (2) TAKE's queues: TAKE_FUNC's commands 28, 30, 31, 68, 69 reached
   first (the through start's TRA 991 path, the movie API; 4.1.4), then each task's request record: 2-4 h each. (3)
   AUD_WAKEUP on CPU 2 (round 1's item 2): 2-4 h. (4) Snapshots and the live debugger with two cores (round 1's item 5;
   the session's MMIO record now holds the machine's trace hook while CPU 2 runs): 1-2 h. (5) The release, the boot

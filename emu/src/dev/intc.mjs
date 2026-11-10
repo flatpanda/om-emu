@@ -215,6 +215,7 @@ export class Intc {
         }
         this.level[b][off >> 2] = value;
         if (b === 0) { this.dset(D.LEVELS + off, value); this.recompute(); }
+        else if (b === this.b2) this.recompute2();     // the second core's bank: its request follows the new level
         return;
       }
       if (off === CTL) { this.r884[b] = value; return; }

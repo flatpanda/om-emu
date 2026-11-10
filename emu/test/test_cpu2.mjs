@@ -6,11 +6,16 @@
 //                its first cross-core call (USTART_L2's cpu_conn twai_sem on CPU 0's FLASH_CS1) as recorded,
 //                AUD_LEVEL_MONITOR started on it through CPUCONN's proxy at AUD_MAIN's start, and the Super Control
 //                Panel's posts answered by it with the frame and the reply bytes of the default session's S-CPU2; the
-//                control cpu2-no-audmon (that task stood in) leaves the GUI waiting, which the step's check reports
+//                control cpu2-no-audmon (that task stood in) leaves the GUI waiting, which the step's check reports;
+//                after its first halt core 2 sleeps at the loop's head (H-CPU2POLL), and the loop serves the halt
+//                commands the test writes into CPU 2's slot of 0x97f000f0 (no CPU 0 writer is known): 0x40002 clears
+//                the halt word 0x97f00100 and the slot and sets 0x97f0010c, 0x40001 sets the halt word again (D
+//                0x50038a77..0x50038b27; the core goes on from its halt when the interrupt that woke it returns)
 //   coresUnits   (no firmware) the machine's second core on a blank image: each core reads its own core number at
 //                0x8050, core 2 stores into its local RAM at 0x50000000 while core 0's flash view refuses a store, the
-//                interleave gives core 2 a turn of the quantum per quantum of core 0, a doorbell on bank 2 raises core
-//                2's request and not core 0's, and the machine refuses a snapshot
+//                interleave gives core 2 a turn of the quantum per quantum of core 0, a doorbell on bank 2 and then
+//                its level raise core 2's request (the level write recomputes it) and not core 0's, and the machine
+//                refuses a snapshot
 //   node emu/test/test_cpu2.mjs
 import { fileURLToPath } from 'node:url';
 
@@ -24,8 +29,9 @@ export function coresUnits() {
   return import('../src/machine.mjs').then(({ createMachine }) => {
     const m = createMachine({ rom: new Uint8Array(0x1000), insnLimit: 0, cores: { second: 2, quantum: 1000 } });
     const P0 = 0xA3000000, P2 = 0xA3000100, OUT = 0xA3000800;
-    // core 0: its core number to OUT, IRQ 324's level 2 into bank 2 (+0x510) and bank 2's pending bit 8, then a loop
-    const p0 = [...MOV_ID, ...ST(OUT), ...IMM(4), ...ST(0x99B00510), ...IMM(8), ...ST(0x99B00808), 0x44, 0xCA, 0xFF];
+    // core 0: its core number to OUT, bank 2's pending bit 8, then IRQ 324's level 2 into bank 2 (+0x510): the level
+    // write must raise core 2's request by itself; then a loop
+    const p0 = [...MOV_ID, ...ST(OUT), ...IMM(8), ...ST(0x99B00808), ...IMM(4), ...ST(0x99B00510), 0x44, 0xCA, 0xFF];
     // core 2: its core number to OUT + 4 and into its local RAM 0x50002000, then a loop
     const p2 = [...MOV_ID, ...ST(OUT + 4), ...ST(0x50002000), 0x48, 0xCA, 0xFF];
     m.dbgWrite(P0, Uint8Array.from(p0)); m.dbgWrite(P2, Uint8Array.from(p2)); m.dbgWrite(OUT, new Uint8Array(8).fill(0xEE));
@@ -127,6 +133,17 @@ export async function cpu2Session() {
       const after = c2.status();
       ok(after.turns > st.turns && after.wakes > 0 && !after.parked && after.accepted === after.presented,
         `native: core 2 takes its interrupts and sleeps between them (${JSON.stringify({ turns: after.turns, wakes: after.wakes, presented: after.presented, accepted: after.accepted })})`);
+      ok(after.polling && after.pc === '0x5003883a', `native: core 2 sleeps at its idle loop's head after its first halt (${after.pc}, polling ${after.polling})`);
+      // the halt commands in CPU 2's slot [1] of 0x97f000f0: the halt word 0x97f000fc, the pass word 0x97f00108
+      const u32 = (a) => { const b = lab.sim.read(a, 4); return (b[0] | b[1] << 8 | b[2] << 16 | b[3] << 24) >>> 0; };
+      const words = () => [u32(0x97F000F4), u32(0x97F00100), u32(0x97F0010C)].map((x) => x.toString(16)).join(',');
+      const idle = (ms) => { const to = lab.lab_time() + ms * 1e6; while (lab.lab_time() < to) { s.idle_slice(Math.min(to, lab.lab_time() + 50e6)); s.frame(); } };
+      ok(words() === '0,1,0', `native: before the commands {slot, halt word, pass word} = ${words()}, want 0,1,0`);
+      lab.sim.word(0x97F000F4, 0x40002); idle(20);
+      const cleared = words(), st2 = c2.status();
+      ok(cleared === '0,0,1' && st2.polling && st2.pc === '0x5003883a', `native: 0x40002 served (${cleared}, want 0,0,1; ${st2.pc} polling ${st2.polling})`);
+      lab.sim.word(0x97F000F4, 0x40001); idle(20);
+      ok(words() === '0,1,0' && !c2.status().parked, `native: 0x40001 served (${words()}, want 0,1,0)`);
     } catch (e) { bad.push(`native: ${e.message.slice(0, 800)}`); }
     pl.close_session();
   }

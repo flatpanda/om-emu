@@ -11,7 +11,9 @@
 // instruction).
 // The interleave (A-INTERLEAVE): core 0 runs as the harness drives it; inside its continues, after every `quantum`
 // instructions of core 0 (counted across continues), the second core runs a turn of up to `quantum` instructions. A
-// core 2 that halts (a stop at one of its halt pcs) skips its turns until its bank presents an interrupt it admits.
+// core 2 that halts (a stop at one of its halt pcs) skips its turns until its bank presents an interrupt it admits;
+// the interrupt's return to that halt pc then goes on from it (the halt is the store before it, which the core has
+// made), and only a later arrival there halts again.
 // A core 2 at one of its poll pcs (a loop that only reads the words of a range and does nothing else until they change)
 // sleeps the same way, and also wakes when a byte of that range changes, going on from the poll pc (H-CPU2POLL).
 // Lab time does not move in a turn (FIDELITY 1.1). The harness talks to core 0 only: every turn ends on core 0.
@@ -35,6 +37,7 @@ class Ctx {
     this.cst = { n: new Float64Array(32), o: new Int32Array(32), k: 0 };
     this.started = false; this.halted = false; this.parked = null; this.resumable = false;
     this.halts = new Set(); this.stops = []; this.polls = new Map(); this.poll = null; this.pollSeen = new Map();
+    this.woken = new Set();          // halt pcs an interrupt woke the core at, which it has not gone on from yet
   }
 }
 
@@ -160,6 +163,7 @@ export class Cores {
       const irq = admits(this.intc.irqLevel(R[PC])), changed = !irq && this._polled(c);
       if (!irq && !changed) { this.stats.skipped += 1; return { kind: 'halted', pc: R[PC] >>> 0 }; }
       c.halted = false; c.poll = null; visit = irq; resumed = false; this.stats.wakes += 1;
+      if (irq && c.halts.has(R[PC] >>> 0)) c.woken.add(R[PC] >>> 0);   // the handler's return here goes on (_turn)
       if (changed) {                                         // go on from the poll pc: off its breakpoint by a step
         try { stepAny(); } catch (e) { if (!(e instanceof Fault)) throw e; return this._fault(c, e); }
         used += 1; visit = true;
@@ -183,7 +187,15 @@ export class Cores {
       if (r === RUN_FAULT) return this._fault(c, S.fault);
       // RUN_BP
       const pc = R[PC] >>> 0;
-      if (c.halts.has(pc)) { c.halted = true; this.stats.halts += 1; return { kind: 'halt', pc }; }
+      if (c.halts.has(pc)) {
+        // back at a halt pc an interrupt woke it at (the handler's return, or a dispatch back to the halted task): the
+        // halt is over, so the core goes on from it; any other arrival halts
+        if (c.woken.delete(pc)) {
+          try { stepAny(); } catch (e) { if (!(e instanceof Fault)) throw e; return this._fault(c, e); }
+          used += 1; visit = true; continue;
+        }
+        c.halted = true; this.stats.halts += 1; return { kind: 'halt', pc };
+      }
       const pl = c.polls.get(pc);
       if (pl !== undefined) {
         // the range as the last pass left it: one more pass would do the same, so the core sleeps; else it goes on

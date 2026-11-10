@@ -12,7 +12,8 @@
 //                  sets its own (0xb into (u16)0x97f00000): CPU 0's lab does not run its start, 1 and 3 are absent
 //   H-CPU2POLL     the idle command loop's head 0x5003883a (BOOT_CPU2 at priority 70 after 0x500387eb): a pass that
 //                  leaves the command block 0x97f0009c..0x97f00113 as the pass before found it sleeps until a byte of
-//                  it changes or an interrupt comes (the loop reads nothing else; cores.mjs polls)
+//                  it changes or an interrupt comes (the loop reads nothing else; cores.mjs polls); with the halt
+//                  word set a pass would halt again at once, so core 2 sleeps here after its first halt
 // Core 2's task starts are guarded (CPU2_TASKS; any other entry parks it), its cross-core calls recorded (the post
 // 0x50035afd, CREQ 0x50036120, the cpu_conn sender 0x5002d679) and run natively, its first device accesses recorded.
 // Lab time does not move on core 2; at CPU 0's idle point core 2 runs until it sleeps (the idle step), and inside
@@ -110,7 +111,8 @@ export class Cpu2 {
     return t;
   }
   // the halt pcs, each the instruction after a store of 8 to (0x8040): OlyTaSE's halt loop and the idle command loop's
-  // halt (when its halt word 0x97f000fc[1] is set, D 0x50038b04); and the idle TCB's spins (bra to itself)
+  // halt (when its halt word 0x97f000fc[1] is set, D 0x50038b04), from which the interrupt that wakes the core returns
+  // and goes on (cores.mjs); and the idle TCB's spins (bra to itself)
   static halts() { return [D(0x5002C75B), D(0x50038B09), D(0x500159F3), D(0x50015A0B)]; }
   // H-CPU2RELEASE, then core 2 from its entry until it sleeps (BOOT_TURNS turns of the quantum at most)
   boot() {

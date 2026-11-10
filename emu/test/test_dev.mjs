@@ -4,7 +4,8 @@
 // 32 x 256 x 256 inputs. vscHistUnits: kind 1's histogram unit on a machine with E143's image, driven through the
 // device's own register writes and doorbell (docs/om1-vsc-spec.md section 13): a start ends at the second boundary
 // (A-VSCHIST-1) with INTST1 bit 8 and, with INTEN1 bit 8, the channel's IRQ; its bins read 0 only under A-VSCHIST-2,
-// any other bin read and a start during a run are HIST_UNMODELLED and a bus error.
+// any other bin read and a start during a run are HIST_UNMODELLED and a bus error; its registers in a composite under
+// the A-VSCHIST-3 opt-in (vscHistCompose).
 //   node emu/test/test_dev.mjs
 import fs from 'node:fs';
 import path from 'node:path';
@@ -126,6 +127,82 @@ export async function vscHistUnits() {
     t.reg(R.HIST2, 0x00100112); t.reg(R.DMAEN, 0x20); t.start(); t.frame(); t.reg(R.DMAEN, 0); t.frame();
     ok(t.hist().runs === 1 && t.bin(0) === 'BUS', 'a run over a frame with IMG1 on leaves bins the model does not know');
   }
+  const h3 = await vscHistCompose(createMachine, V);
+  return { checks: checks + h3.checks, bad: [...bad, ...h3.bad] };
+}
+
+// A-VSCHIST-3 (src/dev/vsccompose.mjs histForm; docs/om1-vsc-spec.md section 13): channel 2 programmed as the TFT's
+// open leaves it (the window 900 x 600 at {98, 8}, the background, the A13 values, the mixing words) with one OSD1
+// plane of 16 x 8 palette pixels over the background; the histogram registers at the start path's values (X, camapp
+// 3: the spot area) leave the composite word for word as it is without them, with the opt-in (header ASSUMED bit 4,
+// an ASSUMED note per register, the debug word HIST_ASSUMED counting the composite) and are FEATURE_UNOBSERVED
+// without it; a value outside the writers' forms stays FEATURE_UNOBSERVED with the opt-in, one register at a time
+async function vscHistCompose(createMachine, V) {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(`A-VSCHIST-3: ${what}`); };
+  const C = 2, CH = C * V.CHAN_STRIDE, A_HIST = 16, PLANE = 0xA0100000;
+  const HIST = { HIST1: 0x04C, HISTAREA1: 0x474, HISTAREA2: 0x478, HISTAREA3: 0x47C, HIST2: 0x748, HIST3: 0x74C };
+  // the start path's values (X: the spot area of the camapp 3 runs, docs/om1-vsc-spec.md section 13)
+  const RUN = { HIST1: 1, HISTAREA1: 0x01F20064, HISTAREA2: 0x010F004B, HISTAREA3: 0x10F, HIST2: 0x00100112, HIST3: 0x004008BC };
+  // the TFT open's A13 values (vsccompose.mjs FEATURES, the TFT's column) and the registers the model reads
+  const OPEN = [[0x004, 0x1C0], [0x008, 1], [0x03C, 0x4000], [0x044, 0x4000], [0x428, 8], [0x580, 0x2E], [0x584, 0x2E],
+    [0x588, 0x2E], [0x58C, 0x2E], [0x590, 0x30], [0x594, 0x32], [0x598, 0x2E], [0x5A0, 0x100], [0x5A8, 0x100],
+    [0x5AC, 0x100], [0x5B0, 0x100], [0x5B4, 0x100], [0x720, 1 << 24], [0x728, 100], [0x420, 98 << 16 | 900],
+    [0x424, 8 << 16 | 600], [0x63C, 0x0080800B], [0x61C, 8], [0x638, 0x111111], [0x4C0, 0], [0x40C, 0x111], [0x410, 0x11],
+    [0x4E0, 0], [0x060, 0x04], [0x450, (98 + 8) << 16 | 16], [0x454, (8 + 4) << 16 | 8], [0x39C, PLANE >>> 4], [0x3B4, 8],
+    [0x3CC, 8], [0x62C, 0x100], [0x534, 0], [0x4D0, 0x10F]];
+  const fresh = () => {
+    const v = createMachine({ rom: new Uint8Array(fs.readFileSync(IMAGE)) }).devices.vsc;
+    v.dset(V.chanDbg(C, V.CH.LINE_NS), 1000);
+    const reg = (off, value) => v.write(CH + off, value, 4, false);
+    for (const [off, value] of OPEN) reg(off, value);
+    reg(0x4400 + 4 * 5, 0x1F2A3B4C);                     // OSD1's palette (OSDCP2 bit 0 clear: +0x4400), entry 5 opaque
+    v.bus.write(PLANE, new Uint8Array(128 * 8).fill(5));  // 8 rows of 16 pixels of index 5 at a stride of 128
+    const bell = (cmd) => { v.doorbell(0, cmd | C << 8, 4, false); return v.dget(V.D.LAST_RESULT); };
+    // the composite of the bank latched at the next boundary: status, errors' offsets, notes, header, pixels
+    const compose = () => {
+      bell(4); bell(2);
+      const status = bell(3), h = (i) => v.dget(V.D.HDR + 4 * i), errs = [], notes = [];
+      for (let k = 0; k < v.dget(V.D.ERR_TOTAL); k++) errs.push([v.dget(V.D.ERR_RING + 32 * k), v.dget(V.D.ERR_RING + 32 * k + 12)]);
+      for (let k = 0; k < v.dget(V.D.NOTE_TOTAL); k++) notes.push([v.dget(V.D.NOTE_RING + 16 * k), v.dget(V.D.NOTE_RING + 16 * k + 8) & 0xFFFF]);
+      const words = Array.from(v.out.subarray(0, h(1) * h(2)));
+      return { status, errs, notes, assumed: h(14), drawn: h(7), words, counted: v.dget(V.D.HIST_ASSUMED) };
+    };
+    return { v, reg, compose, assume: (on) => { v.dbg[V.chanDbg(C, V.CH.ASSUME)] = on ? A_HIST : 0; } };
+  };
+  const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
+  const t = fresh();
+  const base = t.compose();
+  ok(base.status === 0 && base.drawn === 8 && base.words[(4 + 2) * 900 + 8 + 3] === 0x2A3B4C && base.words[0] === 0x0080800B,
+    `the baseline composite: status ${base.status}, drawn ${base.drawn}, ${JSON.stringify(base.errs)}`);
+  for (const [n, x] of Object.entries(RUN)) t.reg(HIST[n], x);
+  const off = t.compose(), offs = off.errs.filter(([e]) => e === V.E.FEATURE_UNOBSERVED).map(([, o]) => o).sort((a, b) => a - b);
+  ok(off.status === V.E.FEATURE_UNOBSERVED && same(offs, Object.values(HIST).sort((a, b) => a - b)) && off.counted === 0,
+    `without the opt-in each of the six is FEATURE_UNOBSERVED: status ${off.status}, ${offs.map((o) => o.toString(16))}`);
+  t.assume(true);
+  const on = t.compose(), noted = on.notes.filter(([k]) => k === V.NOTE.ASSUMED).map(([, o]) => o).sort((a, b) => a - b);
+  ok(on.status === 0 && !on.errs.length && same(on.words, base.words) && on.assumed === A_HIST && on.counted === 1
+    && same(noted, Object.values(HIST).sort((a, b) => a - b)),
+  `with it the composite equals the baseline (status ${on.status}, errors ${JSON.stringify(on.errs)}, ASSUMED 0x${on.assumed.toString(16)}, notes ${noted.map((o) => o.toString(16))}, counted ${on.counted})`);
+  t.reg(HIST.HIST1, 0); t.reg(HIST.HIST3, 0xFFFFFFFF);  // the set-up's HIST1 & ~0xf; HIST3 any
+  ok(t.compose().status === 0, 'HIST1 0 and HIST3 0xffffffff are inside the forms');
+  // outside the forms, one register at a time (from the run's values)
+  const outside = [['HIST1', 2], ['HIST2', 0x00000112], ['HIST2', 0x00130112], ['HIST2', 0x01100112], ['HIST2', 0x00101112],
+    ['HIST2', 0x00100212], ['HISTAREA1', 0x03840064], ['HISTAREA1', 0x00500064], ['HISTAREA1', 0x01F20000],
+    ['HISTAREA2', 0x0250004B], ['HISTAREA2', 0x010F0000], ['HISTAREA3', 0x110]];
+  for (const [n, x] of outside) {
+    const u = fresh();
+    for (const [m, y] of Object.entries(RUN)) u.reg(HIST[m], m === n ? x : y);
+    if (n === 'HISTAREA2') u.reg(HIST.HISTAREA3, x >>> 16);   // HISTAREA3 follows its y, as the set-up writes it
+    u.assume(true);
+    const c = u.compose(), e = c.errs.filter(([k]) => k === V.E.FEATURE_UNOBSERVED).map(([, o]) => o);
+    ok(c.status === V.E.FEATURE_UNOBSERVED && same(e, [HIST[n]]), `${n} 0x${x.toString(16)} stays FEATURE_UNOBSERVED (${c.status}, ${e.map((o) => o.toString(16))})`);
+  }
+  // HISTAREA3 without HISTAREA2 written: not the set-up's form (it writes both)
+  const u = fresh();
+  u.reg(HIST.HISTAREA3, 0x10F); u.assume(true);
+  ok(u.compose().status === V.E.FEATURE_UNOBSERVED, 'HISTAREA3 alone stays FEATURE_UNOBSERVED');
   return { checks, bad };
 }
 

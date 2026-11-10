@@ -31,7 +31,7 @@ export const VSC_OUTBLOCK = LATER ? null : 0x9BB98000;
 export const OUTPUT = 0x89000000, DEBUG = 0x89800000, DOORBELL = 0x89810000, STUB = 0x89900000, DOORBELL_STUB = A(0xA2100400);
 export const CMD_ADVANCE = 1, CMD_RUN_TO_FRAME = 2, CMD_COMPOSE = 3, CMD_CLEAR = 4, CMD_RUN_TO_EVENT = 5;
 export const DBG_ERR_TOTAL = 0x08, DBG_NOTE_TOTAL = 0x0C, DBG_T = 0x10, DBG_LAST_RESULT = 0x1C, DBG_ARG0 = 0x20;
-export const DBG_EVENT_SOURCES = 0x30, DBG_HIST_ZERO_READS = 0x34, DBG_CHAN = 0x40, DBG_HDR = 0x100, DBG_PLANE = 0x180, DBG_ERR_RING = 0x400, DBG_NOTE_RING = 0x1000;
+export const DBG_EVENT_SOURCES = 0x30, DBG_HIST_ZERO_READS = 0x34, DBG_HIST_ASSUMED = 0x38, DBG_CHAN = 0x40, DBG_HDR = 0x100, DBG_PLANE = 0x180, DBG_ERR_RING = 0x400, DBG_NOTE_RING = 0x1000;
 export const CH_ASSUME = 0x38, CH_VIEW = 0x39, DBG_FLAGS = 0x4000, DBG_FLAGS_SIZE = 0x1400, ERR_SLOTS = 64, NOTE_SLOTS = 512;
 export const ERRORS = ['NONE', 'REG_UNKNOWN', 'WIDTH', 'MIRROR_WRITE', 'MIRROR_LIVE', 'RO_WRITE', 'DEBUG_CPU_WRITE',
   'DOORBELL', 'NOT_LATCHED', 'FIELD_MODE', 'WINDOW', 'MIX_UNOBSERVED', 'PLANC_UNOBSERVED', 'FMT_UNMODELLED',
@@ -160,10 +160,11 @@ export const LV_STRIDE = 2 * LV_FROM_AREA[0];
 export const TH_REQUEST_SIZE = 224;
 export const MM_UNALLOCATED = new Map([[0x08010004, 'MM handle -> address: bank element not allocated in the lab (observed, not decoded)'],
   [0x08010005, 'MM handle -> address: bank element not allocated in the lab (observed, not decoded)']]);
-export const A19_BIT = 4, A20_BIT = 8;
+export const A19_BIT = 4, A20_BIT = 8, A_VSCHIST3_BIT = 16;
 export const OPT_IN = { A15: 'CTRL3 = 0x41, as left by the live-view setup (0x501e04b7(ch, 0) ORs 0x40 into the v1.9 value 1 in progressive scan), does not change the composite of the latched bank',
   A19: 'IMG3 with format 2 and PLANC 0x1000 or 0x1100 (bit 12, the format setter\'s per-pixel alpha bit, with the level field at 0 or at A7\'s full 128; the face/AF frame plane CPU 3\'s DISP_FRAME draws, A(0x501dcb1a) setup) is rows of 8-bit indices, nearest-neighbour scaled by its resize steps (output pixel i of row j takes source column floor(i * sh / 4096) of source row floor(j * sv / uv): one per pixel on the TFT, each twice on the EVF, sh = sv = 2048); index 0 leaves the pixel below, 1..7 replace it with the YCbCr word at +0xD00 + 4 * index (Cr << 16 | Cb << 8 | Y, as the channel setup A(0x501db1b4) converts the frame colours of A(0x51016e3e)); +0xD00..+0xD1C then do not change the composite otherwise',
-  A20: 'HILIGHT1 (+0x5D0) written 0 shows what HILIGHT1 unwritten shows (A13): highlight and zebra off; its setters only read-modify-write bit 0 and bits 0x330 (D)' };
+  A20: 'HILIGHT1 (+0x5D0) written 0 shows what HILIGHT1 unwritten shows (A13): highlight and zebra off; its setters only read-modify-write bit 0 and bits 0x330 (D)',
+  'A-VSCHIST-3': 'the histogram unit\'s registers (HIST1, HISTAREA1-3, HIST2, HIST3) written in the forms of their only writers (the set-up A(0x501e127f), A(0x501e1488), the start A(0x501e14a4)) leave the mixer output unchanged: the unit is a measurement the CPU reads back (bins at +0x4000) and the histogram shown is drawn by CPU 2 into a GUI layer from them (D, X); that the unit adds nothing to the output is I' };
 // ASSUMPTIONS and STAND_INS_M8: the texts write_outputs records (checks/lib/png.mjs)
 export const ASSUMPTIONS = {
   "A1": "OSDCP2 bit 4n = 1 displays palette sel n at +0x400 (0x4800 + 0x800n), 0 the other bank",
@@ -363,6 +364,8 @@ export class VscDebug {
   hist_runs() { let n = 0; for (let c = 0; c < VSC_CHANNEL.length; c++) n += this.hist(c).runs; return n; }
   // the bin reads answered under A-VSCHIST-2 (0, the source plane off and the firmware's discard test true)
   hist_zero_reads() { return this.u32(DBG_HIST_ZERO_READS); }
+  // the composites that applied A-VSCHIST-3 (the opt-in, src/dev/vsccompose.mjs histForm)
+  hist_assumed() { return this.u32(DBG_HIST_ASSUMED); }
   irq_line(c) { return this.u32(DBG_CHAN + 0x40 * c + 0x10); }
   set_line_ns(c, value) { this.sim.word(DEBUG + DBG_CHAN + 0x40 * c + 0x14, value); }
   // kind 2: the line time of the channel's EVF bank (SYNC8; set_line_ns gives the SYNC2 bank's); the channel runs from
@@ -1244,9 +1247,9 @@ export class DisplayLab extends OsdLab {
     if (problems.length) throw new FirmwareError(`H-RESEND on ${device}: ` + problems.join('; '));
     return sends;
   }
-  // Opt-in assumptions in the VSC model's debug window: A15, A19 and A20.
+  // Opt-in assumptions in the VSC model's debug window: A15, A19, A20 and A-VSCHIST-3.
   assume(name, on, channels = [1, 2]) {
-    const bit = { A15: 1, A19: A19_BIT, A20: A20_BIT }[name];
+    const bit = { A15: 1, A19: A19_BIT, A20: A20_BIT, 'A-VSCHIST-3': A_VSCHIST3_BIT }[name];
     if (bit === undefined) throw new ValueError(`unknown opt-in assumption ${name}`);
     for (const c of channels) this.vsc.set_assume(c, (this.vsc.assumed(c) & ~bit) | (on ? bit : 0));
     if (on) this.assumptions_in_use.add(name);

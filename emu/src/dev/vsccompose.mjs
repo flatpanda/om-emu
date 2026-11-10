@@ -4,7 +4,8 @@
 // A12, A16 bus spans, A18 start position), the OSDFMT/OSDCP2 rules, the lab view mask and plane order, the OSD planes
 // (8-bit index, nearest sampling, palette bank by OSDCP2, linear blend in tra / 31) and the IMG planes (format 0: YC
 // 4:2:2 Y0 Cb Y1 Cr, two-tap linear, opaque; ycComp, imgRow, drawImg), and with the A19 opt-in the face/AF frame
-// plane: IMG format 2, an 8-bit index into the eight YCbCr words at +0xD00..+0xD1C, index 0 transparent (drawFace).
+// plane: IMG format 2, an 8-bit index into the eight YCbCr words at +0xD00..+0xD1C, index 0 transparent (drawFace);
+// with the A-VSCHIST-3 opt-in the histogram unit's registers in their writers' form (histForm).
 import { MODEL, MODEL_INFO } from '../fw/model.mjs';
 import { BOARD } from '../fw/board.mjs';
 import { E, NOTE, D, CH, FACE_FIRST, FACE_LAST, PAL_BASE, OUTPUT_SIZE, chanDbg, udiv } from './vsc.mjs';
@@ -56,6 +57,18 @@ const HILIGHT1 = 0x5D0, UNAPPLIED = BOARD.vsc.unapplied;
 // field [8:1] at 0 (an EVF or TFT start: planc[2] never set) or at 128, A7's full level (after a cmd 28 or a re-open)
 const A15_BIT = 1, A19_BIT = 4, A20_BIT = 8, FACE_PLANCS = [0x1000, 0x1100], FACE_FMT = 2, FACE_COLOURS = 8;
 const PLANE_NOT_DRAWN = 0x1000;
+// A-VSCHIST-3 (opt-in, CH_ASSUME bit 4; docs/om1-vsc-spec.md section 13): the histogram unit's six registers, written
+// in the forms of their only writers (the set-up 0x501e127f, 0x501e1488 and the start 0x501e14a4, D), leave the mixer
+// output unchanged. The unit is a measurement the CPU reads back (bins at +0x4000, 0x501e150e) and the histogram the
+// camera shows is drawn by CPU 2's OSD_DRAW_CPU2 into a GUI layer from those bins (D, X); that the unit adds nothing to
+// the output is I (a photo of the panel settles it)
+const A_VSCHIST3_BIT = 16;
+const HIST = { HIST1: 0x04C, HISTAREA1: 0x474, HISTAREA2: 0x478, HISTAREA3: 0x47C, HIST2: 0x748, HIST3: 0x74C };
+const HIST_OFFS = new Set(Object.values(HIST));
+// HIST2's fields the set-up writes in progressive scan: the bin count's code [1:0], the clip and scale enables (bits 4,
+// 8), the source plane [17:16] and bit 20, which it always sets (0x501e12cb); bit 12 (two-field scan) and the field
+// 0x501e1488 stores at [31:24] (0 in every lab run, X; its second caller's value is not read) are outside the form
+const HIST2_FIELDS = 0x30113, HIST2_ALWAYS = 0x100000;
 
 // blend(): per component ((a * tra + b * (31 - tra) + 15) / 31), unsigned. A table of every (tra, a, b), built once.
 let LUT = null;
@@ -105,6 +118,23 @@ class Compose {
   zeroReg(off) {               // must hold 0 in the modelled domain: never written counts as 0 and is noted
     if (!this.mw(off / 4)) { this.v.note(NOTE.COMPOSE_RESET, this.c, off, 0); return 0; }
     return this.m[off / 4];
+  }
+  // A-VSCHIST-3: the latched histogram register off in its writers' form (D, docs/om1-vsc-spec.md section 13): HIST1 0
+  // (the set-up's & ~0xf, 0x501e142b / 0x501e145e) or 1 (the start, 0x501e14c8); HIST2 HIST2_ALWAYS with the fields
+  // HIST2_FIELDS, the source plane 0..2 (0x501e130c..53 searches three); HIST3 any (the clip [31:16], 0x501e141b, and
+  // twice the scale [15:0], 0x501e144e); HISTAREA1 / HISTAREA2 a non-empty area inside the window (x << 16 | width,
+  // y << 16 | height from the window's start, 0x501e1396 / 0x501e13f6); HISTAREA3 HISTAREA2's y (0x501e13c6)
+  histForm(off) {
+    const x = this.m[off / 4];
+    switch (off) {
+      case HIST.HIST1: return x === 0 || x === 1;
+      case HIST.HIST2: return ((x & ~HIST2_FIELDS) >>> 0) === HIST2_ALWAYS && ((x >>> 16) & 3) !== 3;
+      case HIST.HIST3: return true;
+      case HIST.HISTAREA1: return (x & 0xFFFF) > 0 && x >>> 16 >= this.ox && (x >>> 16) + (x & 0xFFFF) <= this.ox + this.vw;
+      case HIST.HISTAREA2: return (x & 0xFFFF) > 0 && x >>> 16 >= this.oy && (x >>> 16) + (x & 0xFFFF) <= this.oy + this.vh;
+      case HIST.HISTAREA3: return !!this.mw(HIST.HISTAREA2 / 4) && x === this.m[HIST.HISTAREA2 / 4] >>> 16;
+      default: return false;
+    }
   }
   // Returns 0, PLANE_NOT_DRAWN or an error code; fills pl.
   planeGeometry(pl) {
@@ -334,6 +364,13 @@ export function compose(v, c) {
         v.noteRecord(NOTE.ASSUMED, c, off, 0);
         continue;
       }
+      // A-VSCHIST-3 (opt-in): a histogram register written in its writers' form (histForm); any other value stays
+      // FEATURE_UNOBSERVED
+      if (HIST_OFFS.has(off) && (v.dbg[chanDbg(c, CH.ASSUME)] & A_VSCHIST3_BIT) && k.mw(w) && k.histForm(off)) {
+        hdr[HDR.ASSUMED] |= A_VSCHIST3_BIT;
+        v.noteRecord(NOTE.ASSUMED, c, off, k.m[w]);
+        continue;
+      }
       // A21: a register block the board's compositor does not apply (BOARD.vsc.unapplied; E147's highlight and NV
       // blocks, src/fw/models.mjs VSC_UNAPPLIED): the composite shows the planes without it
       if (UNAPPLIED.some(([lo, hi]) => off >= lo && off <= hi)) {
@@ -350,6 +387,7 @@ export function compose(v, c) {
         status = E.FEATURE_UNOBSERVED;
       }
     }
+    if (hdr[HDR.ASSUMED] & A_VSCHIST3_BIT) v.dset(D.HIST_ASSUMED, v.dget(D.HIST_ASSUMED) + 1);
     k.face = !!(v.dbg[chanDbg(c, CH.ASSUME)] & A19_BIT);
     if (k.face) { hdr[HDR.ASSUMED] |= A19_BIT; v.noteRecord(NOTE.ASSUMED, c, FACE_FIRST, FACE_FMT); }
     else for (let off = FACE_FIRST; off <= FACE_LAST; off += 4) {

@@ -47,7 +47,7 @@ export const NOTE = { RESET_READ: 1, MIRROR_RESET_READ: 2, SRAM_RESET_READ: 3, O
   COMPOSE_RESET: 6, ASSUMED: 7, SPOS_A18: 8, PLANC_ZERO: 9, VIEW: 10, HIST_NO_SOURCE: 11 };
 export const D = { MAGIC: 0x000, VERSION: 0x004, ERR_TOTAL: 0x008, NOTE_TOTAL: 0x00C, T_LO: 0x010, T_HI: 0x014,
   LAST_CMD: 0x018, LAST_RESULT: 0x01C, ARG0: 0x020, ARG1: 0x024, COMMANDS: 0x028, CPU_ACCESSES: 0x02C,
-  EVENT_SOURCES: 0x030, HIST_ZERO_READS: 0x034, CHAN: 0x040, CHAN_SIZE: 0x40, HDR: 0x100, PLANE: 0x180,
+  EVENT_SOURCES: 0x030, HIST_ZERO_READS: 0x034, HIST_ASSUMED: 0x038, CHAN: 0x040, CHAN_SIZE: 0x40, HDR: 0x100, PLANE: 0x180,
   ERR_RING: 0x400, ERR_SLOTS: 64, NOTE_RING: 0x1000, NOTE_SLOTS: 512, FLAGS: 0x4000, FLAGS_SIZE: 0x1400, OUT_FLAGS: 0x8000 };
 export const CH = { RUNNING: 0x00, FRAMES: 0x04, FIELD: 0x08, MONI3: 0x0C, IRQ: 0x10, LINE_NS: 0x14, START_LO: 0x18,
   START_HI: 0x1C, LEN: 0x20, LATCHED: 0x24, COMPOSE: 0x28, LINE_NS_EVF: 0x2C, ORDER: 0x30, ASSUME: 0x38, VIEW: 0x39,
@@ -233,6 +233,8 @@ export class Vsc {
   // the histogram unit's runs ended on every channel, and its bin reads answered under A-VSCHIST-2 (the player's list)
   histRuns() { return this.ch.reduce((n, ch) => n + ch.histRuns, 0); }
   histZeroReads() { return this.dget(D.HIST_ZERO_READS); }
+  // the composites that applied A-VSCHIST-3 (vsccompose.mjs histForm)
+  histAssumed() { return this.dget(D.HIST_ASSUMED); }
   // the histogram unit at a boundary (A-VSCHIST-1, HIST1's comment): a run ends, its bins known only as A-VSCHIST-2
   // gives them; a started run begins, its source plane's DMAEN bit taken from the bank latched for its frame
   histBoundary(ch) {

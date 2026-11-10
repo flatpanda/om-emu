@@ -2,8 +2,9 @@
 // machine, with the register writes in the order the firmware's driver makes them: the unit's init (0x5050a6b2), kind
 // 14's start, set-up and go (0x5050a797, 0x5050b118, 0x5050a8ba), the handler's acknowledge (0x5048bfe3) and the end
 // (0x5050a8e1). Checks: the register file and the bus errors around it, a start refused while powered down, without
-// +0x00c, with a fill word not written since the last start, with another operation, mode or +0x39c, with a phase the
-// model does not read and off the bus's memory; the rectangle fill of the menu's request (X: 600 rows of 1800 bytes at
+// +0x00c, with a fill word not written since the last start, with other parameter words written since it (kind 6's op
+// 3) or without +0x380 (kind 17), with another operation, mode or +0x39c, with a phase the model does not read and off
+// the bus's memory, each for its own reason; the rectangle fill of the menu's request (X: 600 rows of 1800 bytes at
 // a pitch of 11136 into a live-view bank, 0x800b800b) and the linear fill both ways the fill 0x5048ee61 splits it,
 // their bytes written and the end raised RUN_NS of lab time after the start (A-IMGPRO-1), the IRQ while the end and the
 // enable are set, the status write 1 to clear. The firmware's own driver on the model runs in test_camapp.mjs
@@ -21,7 +22,8 @@ export function imgproUnits() {
   const t = tester(), { ok } = t;
   const m = createMachine({ rom: new Uint8Array(0x100), insnLimit: 0 });
   const { imgpro: u, intc, clock, bus } = m.devices, irq = BOARD.imgpro.irq;
-  m.stderr = () => {};
+  let said = '';
+  m.stderr = (s) => { said = s; };
   const rd = (o, w = 4) => u.read(o, w, false), wr = (o, v, w = 4) => u.write(o, v, w, false);
   const mem = (a, n) => { const b = new Uint8Array(n); bus.read(a, b); return [...b]; };
   ok(u !== undefined && u.cfg.base === 0x9C600000 && irq === 300 && !u.touched, 'the machine builds the unit on the E143 board with IRQ 300, untouched');
@@ -77,24 +79,31 @@ export function imgproUnits() {
   linear(H + 128, 64, 0x5a5a5a5a); go(); clock.advance(clock.t + RUN_NS, false); wr(0x020, 1);
   rect(H, 128, 96, 32, 1, 0x5a5a5a5a); go(); clock.advance(clock.t + RUN_NS, false); wr(0x020, 1);
   ok(mem(H + 95, 1)[0] === 0xee && mem(H + 96, 96).every((b) => b === 0x5a) && mem(H + 192, 1)[0] === 0xee, 'the aligned middle and the head\'s one-row rectangle meet');
-  // refusals at the start (a refused start keeps the words written since the last run)
+  // refusals at the start, each for its own reason (the model's message; a refused start ends the program)
+  const refused = (what, why, fn = go) => { said = ''; ok(throwsAs(fn, BUS) && said.includes(why), `${what}: ${said || 'no refusal'}`); };
   wr(0x108, 3); wr(0x380, 4); wr(0x084, D >>> 4); wr(0x390, 0); wr(0x398, 0);
-  ok(throwsAs(go, BUS), 'a linear fill whose +0x384 was not written since the last start is refused');
+  refused('a linear fill whose +0x384 was not written since the last start is refused', 'the fill\'s +0x384 not written');
   linear(D + 2, 8, 0x800b800b);
-  ok(throwsAs(go, BUS), 'a value whose bytes differ at an address off a 4-byte boundary is refused (its phase is not read)');
-  ok(throwsAs(() => wr(0x00c, 2), BUS) && throwsAs(() => wr(0x018, 0), BUS), 'the start pair takes 1 only');
+  refused('a value whose bytes differ at an address off a 4-byte boundary is refused (its phase is not read)', 'its phase off a 4-byte boundary');
+  refused('the start pair takes 1 only (+0x00c)', 'the start pair writes 1', () => wr(0x00c, 2));
+  refused('the start pair takes 1 only (+0x018)', 'the start pair writes 1', () => wr(0x018, 0));
   linear(D + 64, 8, 0); wr(0x084, (D + 0x20) >>> 4);
-  ok(throwsAs(go, BUS), 'a linear fill whose +0x084 and +0x390 name different addresses is refused');
+  refused('a linear fill whose +0x084 and +0x390 name different addresses is refused', 'name different addresses');
   linear(D, 8, 0); wr(0x380, 8);
-  ok(throwsAs(go, BUS), 'another mode (kind 16\'s 8) is refused');
+  refused('another mode (kind 16\'s 8) is refused', 'op 3 mode 8: only kind 14\'s fills');
   linear(D, 8, 0); wr(0x108, 0);
-  ok(throwsAs(go, BUS), 'another operation (+0x108 other than 3) is refused');
+  refused('another operation (+0x108 other than 3) is refused', 'op 0 mode 4: only kind 14\'s fills');
+  // kind 6's op 3 (0x5050b4cc..b528): the fill's words and +0x080 among others; kind 17 (0x5050b1f5): no +0x380
+  linear(D, 8, 0); wr(0x080, D >>> 4); wr(0x0b4, 8);
+  refused('a fill with other parameter words written since the last start (kind 6\'s op 3) is refused', '+0x80, +0xb4 written since the last start');
+  wr(0x108, 3); wr(0x080, D >>> 4); wr(0x088, (D + 256) >>> 4); wr(0x0b4, 8); wr(0x0bc, 8); wr(0x394, 1 << 16 | 8); wr(0x3a0, 0x10001000);
+  refused('a start without +0x380 written since the last start (kind 17 writes none) is refused', '+0x380');
   rect(D, 128, 0, 8, 1, 0); wr(0x39c, 1);
-  ok(throwsAs(go, BUS), 'a rectangle fill with +0x39c other than 0 is refused');
+  refused('a rectangle fill with +0x39c other than 0 is refused', 'only 0 is read');
   linear(0x90000000, 8, 0);
-  ok(throwsAs(go, BUS), 'a fill off the bus\'s memory is refused');
+  refused('a fill off the bus\'s memory is refused', 'are not on the bus\'s memory');
   rect(D, 64, 0, 128, 2, 0);
-  ok(throwsAs(go, BUS), 'rows longer than their pitch are refused');
+  refused('rows longer than their pitch are refused', 'rows of 128 bytes at a pitch of 64');
   ok(u.runs === 4 && !u.busy(), `none of the refused starts ran (${u.runs} runs)`);
   ok(throwsAs(() => wr(0x084, 1, 2), BUS) && throwsAs(() => rd(0x086), BUS) && throwsAs(() => u.write(0x084, 1, 4, true), BUS) && throwsAs(() => rd(0x084, 1), BUS)
     && throwsAs(() => wr(0x028, 2), BUS),

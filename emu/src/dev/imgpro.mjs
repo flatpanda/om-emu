@@ -4,7 +4,8 @@
 // 0x5046dc32). A register file at the board's base with the behaviour the firmware's driver relies on, and of the
 // unit's operations only the fills of kind 14 (op 3, modes 4 and 5), whose arithmetic the firmware's set-up gives;
 // every other operation is refused (a bus error at the start), so nothing the lab does not know is computed. Evidence D
-// unless tagged; addresses E143's.
+// unless tagged (the words the driver writes and reads are D; how the unit reads them is I, from the set-up's
+// arithmetic and the callers' use of the fill); addresses E143's.
 //
 //   +0x000  written 1 by the unit's init 0x5050a6b2 (last) and by the end 0x5050a8e1, which reads it back (0x5050a923):
 //           storage, and the model's power-down (I: the pair of +0x004)
@@ -23,9 +24,15 @@
 //           +0x048 and +0x074, the end +0x044, +0x04c and +0x070 (I: set and clear pairs of clock or power controls);
 //           storage
 //   parameters +0x080..+0x0c8, +0x0fc, +0x108, +0x380..+0x3ac: storage; a run reads those its mode names below
+//   kind 6's blocks: its set-up 0x5050b328 also copies its parameter block through a base register into +0x10c..+0x1c0
+//           and, by its +0x108, +0x1c4..+0x2cc (0), +0x2d0..+0x308 (1) or +0x30c..+0x368 (2): not in the model's map, a
+//           bus error at the write; its op 3 copies the whole +0x380..+0x3ac (0x5050b512..28)
 //   +0x3b0  kind 16's result (the handler copies it to the request's result word, 0x5048c06f): no run computes it, so a
 //           read is UNKNOWN
-// A run of op +0x108 = 3 (kind 14's set-up 0x5050b118 writes 3):
+// A run of op +0x108 = 3 (kind 14's set-up 0x5050b118 writes 3), computed only for kind 14's own program: +0x108,
+// +0x380 and each word its mode lists below written since the last start, and no other parameter word (kind 6's op 3,
+// which also writes +0x080..+0x08c, +0x0b4..+0x0c0 and every word of +0x380..+0x3ac, and kind 17, which writes no
+// +0x380, are refused):
 //   mode +0x380 = 4, the linear fill (the request without an image, 0x5050b18c..b3, as the fill 0x5048ee61 builds it):
 //           destination dst with +0x084 = dst >> 4 and +0x390 = dst & 127 (the model takes dst from both and refuses
 //           them when bits 4..6 disagree), +0x384 bytes, the value +0x398
@@ -52,7 +59,7 @@ export const OP = 0x108, MODE = 0x380, RESULT = 0x3b0;
 export const S_END = 1;
 // the words written 1 by the init, the starts and the end (their meaning I)
 const CONTROLS = new Set([0x030, 0x040, 0x044, 0x048, 0x04c, 0x070, 0x074]);
-// every parameter word an operand of the driver names (0x5050af26..0x5050b547, the handler 0x5048bfe3)
+// every parameter word an absolute operand of the driver names (0x5050af26..0x5050b547, the handler 0x5048bfe3)
 const PARAMS = new Set([...Array.from({ length: 19 }, (_, i) => 0x080 + 4 * i), 0x0fc, 0x108, ...Array.from({ length: 12 }, (_, i) => 0x380 + 4 * i)]);
 // a fill mode's words, each of which kind 14's set-up writes before every start of that mode (0x5050b118..b5)
 const FILL_WORDS = { 4: [0x084, 0x384, 0x390, 0x398], 5: [0x084, 0x0b8, 0x390, 0x394, 0x398, 0x39c] };
@@ -111,7 +118,8 @@ export class Imgpro {
       if (this.busy()) return this.unknown('write', off, size, value, dbg, 'a start while a run is in progress');
       if (!this.powered) return this.unknown('write', off, size, value, dbg, 'a start while powered down (+0x000 written last)');
       const why = this.start();
-      if (why) return this.unknown('write', off, size, value, dbg, why);
+      // a refused start (a bus error, which stops a session) ends the program too
+      if (why) { this.written.clear(); this.armed = false; return this.unknown('write', off, size, value, dbg, why); }
       this.regs[off >> 2] = value;
       return;
     }
@@ -127,6 +135,8 @@ export class Imgpro {
     if (op !== OP_FILL || (mode !== LINEAR && mode !== RECT)) return `op ${op} mode ${mode}: only kind 14's fills (op 3, modes 4 and 5) are modelled`;
     const need = [OP, MODE, ...FILL_WORDS[mode]].filter((o) => !this.written.has(o));
     if (need.length) return `the fill's ${need.map((o) => '+0x' + o.toString(16)).join(', ')} not written since the last start`;
+    const extra = [...this.written].filter((o) => o !== OP && o !== MODE && !FILL_WORDS[mode].includes(o));
+    if (extra.length) return `${extra.map((o) => '+0x' + o.toString(16)).join(', ')} written since the last start: kind 14's mode ${mode} writes only its own words`;
     const value = this.r(0x398), uniform = ((value & 0xff) * 0x01010101) >>> 0 === value;
     let run;
     if (mode === LINEAR) {

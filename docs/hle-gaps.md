@@ -738,6 +738,130 @@ frame-mode function `0x5039f583`, so S-TAKEFRAME's request is still not reached 
    and the notifications that CapTak_Take's observers turn into sequence events (4.1.3), from which the sequence parts
    would post the callbacks S-RELSEQ posts now. None of these is reached (X).
 
+#### 4.1.8 The release route, round 2: TAKE_FOCUS (2026-11-09; D unless tagged, addresses E143's)
+
+With `--take probe` TAKE_FOCUS runs natively too (H-TAKEFOCUS, `emu/src/lab/take.mjs` round 3; off by default, golden
+unchanged). Under `control camapp 3` S1's take request then goes natively through RdyFcsRdy1, RdyFcsRdy2 and
+RdyFcsRdy3's entry and stops at TAKE_EXPOSE's request to EXP_MOVIE (X). `emu/test/test_take_release.mjs` focusSession
+pins the records below (X, 9 of 9); `emu/test/test_take.mjs` pins the start and the mode change with TAKE_FOCUS native
+under camapp 1 and 2 (X, 19 of 19). S-RELSEQ stays in every session.
+
+- **TAKE_FOCUS's task (D).** Task 104 (0x68), entry `0x509a0ebe`, tid word `0x60042df6`: after `0x509b1475` (the
+  handles of the objects it reads) it receives 16 bytes on queue 0x5d (word `0x6004327e`; `0x506ea9a8`, timeout -1)
+  and looks the command (word 2) up in a static table at `0x60a64f00` (64 slots `{command + 1, case}`, 44 commands;
+  correction to 4.4: at `0x60a64f00` and in the image's data, not built at run time). Each case logs its name and
+  calls its handler with the context `0xa33d9564` and the parameter; then `0x509b1342`, and, when word 0 is not 0, the
+  reply `{u16 0, token, parameter}` (`0x506ea985` at `0x509a13e7`): the status is 0 after every command. The commands:
+  0 MODE_START, 1 MODE_END, 2 MODE_UPDATE, 0x100 LOCK_START, 0x101 LOCK_END, 0x102 LOCK_START_END, 0x103
+  LOCK_START_END_FAST, 0x104 LOCK_RESTART, 0x200 / 0x201 PANORAMA_START / END, 0x300 / 0x301 RELEASE_READY_START /
+  END, 0x400 / 0x401 / 0x403 RELEASE_IDLE_START / END / READY, 0x500 / 0x501 RELEASE_TAKE_START / END, 0x600 / 0x601
+  / 0x603 TAKE_CONTINUE_START / END / BRACKET, 0x700..0x702 LV_START / END / UPDATE, 0x800 / 0x801 MF_START / END,
+  0x802 MF_RING, 0x803 FIXED_FOCUS, 0x900 / 0x901 IAF_RESTART / PAUSE, 0x903 z_af_test, 0xa00..0xa03 MOVIE_START /
+  END / UPDATE / READY, 0xb00 / 0xb01 TAKE_ONCE_START / END, 0xc00 / 0xc01 MOVIE_MODE_UPDATE_PRE / UPDATE, 0xe01
+  RELEASE_END, 0xf03 (`0x509ad477`), 0x1003 INFINITE_FOCUS (a log only), 0x1102 FOCUS_RING_LOCK_UPDATE, 0x1202
+  FACE_SELECT. So 4.1.1's `0xa0n` are MOVIE_* and 4.1.7's `0x300` is RELEASE_READY_START.
+- **H-TAKEFOCUS (D).** Two inits, in the boot's order: TAKE_FOCUS's interface `0x506ea9d7` (USTART2's stage
+  `0x501e8e84` at `0x501e9088`, before TAKE_EXPOSE's: the context pointer `0xa33d9560` = `0xa33d9564`, the ready byte
+  `0xa33d955c` cleared, the UI_IN edge callback `0x506eac7a` registered for 0x101 through `0x5014c420`) and its module
+  `0x509a0e37` (the stage `0x501e94a5` at `0x501e9541`, after the AF library's init `0x508bede6` at
+  `0x501e9533`: the context's fields, the ready byte set to 1 at `0x509a0eb5`); the stage starts the task at
+  `0x501e964f`. The probe runs the two inits and act_tsk after H-TAKEMAIN; TAKE_FOCUS then waits on its queue (X).
+  The AF library's init does not run (the lab runs three of its steps for MDET only, H-FCSAF, `docs/om1-subject-spec.md`
+  5.7). TAKE_FOCUS's queue leaves S-TAKEREQ; TAKE's event post `0x502ce5e6` to the application's queue 6 and TAKE_MAIN's
+  reply to the take request's requester (`0x50399c4f`) go natively and are recorded (both new in this round's runs).
+- **Correction to 4.1.4 row 4 (D, X).** TAKE_FOCUS's request API `0x506eab1f` posts commands 0 and 0x700 with no
+  reply queue (and logs any other, `0x506eab3a..0x506eab75`) only while the ready byte is 0; with it 1 it runs 0x601
+  in the caller's task (`0x509aa840` at `0x506eabd7`) and sends every other command synchronously through the kernel
+  (`0x506ea9cc`). With TAKE_FOCUS's inits run, as the boot runs them before the application starts (I: the order of
+  the stages), command 18's MODE_START is therefore a synchronous request that TAKE_FOCUS answers itself (X), and so
+  is command 22's MODE_UPDATE.
+- **The start (X).** TAKE_FOCUS takes MODE_START once and MODE_UPDATE twice (camapp 3; camapp 1: MODE_START alone,
+  camapp 2: one MODE_UPDATE, which sends no lens frame), each replied with status 0. In camapp 3 a MODE_UPDATE sets the
+  lens's AF mode through the AF library once (`0x509a1a73` -> `0x50974212` -> `0x50974553(1, 0)`: a request {the
+  completion `0x50974677`, the address of a status word set to 1, u16 the kind 1, the byte `(0xa33d8ba1)`, a byte} to
+  the lens driver `0x502c2524`, then a wait on the flag whose id is at `0x60043082`), which the driver's deferred job
+  `0x502c2635` (posted through `0x502c6171`) turns into a type-1 request (`0x502c29ca`: id 1 for the kinds
+  1, 3 and 5, id 0 for 2, 6 and 7; sub-code 0xfe; the byte) and the builder `0x502b7e8a` into the frame `a0 b0 [fe
+  00]` (class `0xa0`, code `0xb0`, or `0xb1` with `[00 00]` for id 0, data count 0). Its completion `0x502b7efe` reads
+  only the status, so no reply is parsed; S-LENSMCU now completes the frame with no reply (before, it stopped the
+  session naming it, X). What the lens does with it is ?. TAKE_FOCUS's context then holds its "focus" field (+5) 1 and
+  its state (+12) 1 (X); the field is object 0xc021 read through `0x509b1bc5(14)` (case table `0x60a65300`), which
+  MODE_UPDATE's mode computation `0x509a14b0` logs as "focus" beside saf_mf (+6, object 0x8de1), movie, tracking,
+  ring and star_af. What 1 means is ? (the shooting screen shows S-AF, X).
+- **RELEASE_READY_START (`0x509a54e1`) at S1 (D, X).** It copies the record TAKE_MAIN gives it (`0x62a4cea8`) into its
+  context, then by the "focus" field: 0 has paths that call the AF library (`0x508c0a34(0x1100)` at `0x509a5698`) and
+  paths that answer at once, 2 its own; for 1 with the state 1 (`0x509a5965..0x509a5975`, log id 0x11601) it sets
+  the state 2 and calls the record's four callbacks at once, in its own task (X): +0x18 through `0x509ae086` (log
+  "exp_allw": token 5), +0 through `0x509ad79a` with status 0 ("free_notice": token 0), the result callback through
+  `0x509ad948` ("result:0": token 2) and the end callback through `0x509af010` ("end:0": token 3; "end:1" after
+  OlyTaSS(40) when its byte +27 is 3), then returns and TAKE_FOCUS replies token 1 on TAKE_POST. No FCS request and
+  no lens frame is made (X). So in the lab's state TAKE_FOCUS does no AF at S1 and reports its result 0 at once; that
+  0 means "in focus" is I, and whether the camera's S-AF scan comes at this command or later (LOCK_START, 0x100) is ?.
+  On the way `0x509afafc` (from `0x509a5609`) logs errlog `0x0f803003` (`0x509aef05`: the context's u16 +20 is 0;
+  its writer is not read, ?).
+- **FACE_FD's command 15 (D, X).** RdyFcsRdy1's entry asks it through the face API `0x50522464` (`0x503c29f0`, when
+  `0x503a0641()` differs from the mode) with a 1-byte request, the mode (1 at S1, X), synchronously to CPU 3's
+  queue 0x3002 (`0x50524a20`). CPU 3's FACE_FD task (`0x505174e7`) takes its queue's messages in its loop (the count
+  `0x50524f1b`, each 16-byte message `0x50524a98`), dispatches through the table `0x606d6d3c` (commands 0..16) and
+  replies `{u16 status, token, word 3}` (`0x50524add`); case 15 (`0x50517a85` -> `0x5051f0ef`) runs its commands 13
+  (`0x50518119`) and 14 (`0x5051a642`) with the byte when it is 1 or 2 (else errlog `0x2f00080e`), and the status is 0
+  for every valid command (`0x50517a9f`). TAKE_MAIN reads only the status (`0x50524a63..0x50524a7b`: not 0 gives
+  `0x8708`). So S-TAKEREQ's status 0 is the native status (D) and "no face" does not arise: command 15 carries no
+  detection result. What the face detector's mode 1 changes on CPU 3 is not done in the lab (no CPU 3 FACE task, I)
+  and not read (?).
+
+**S1's take request (X; `test_take_release.mjs` S1_FOCUS).** The guard and the take API as in 4.1.7 (control `0x20`).
+
+| State | TAKE_MAIN takes | It asks | The answer |
+|---|---|---|---|
+| Idle | TAKE_EXEC 0 (reply queue 6, token `0xf0050000`, handler `0x503a1172`) | FACE_FD 15 sync; TAKE_FUNC 80 sync; TAKE_FOCUS 0x300 (reply TAKE_POST, token 1) | S-TAKEREQ 0; native; native: TAKE_FOCUS calls tokens 5, 0, 2, 3 and replies token 1 |
+| RdyFcsRdy1 | mailbox token 5 (`0x503c2c3a`) | its reply to the application (status 0, `0x50399c4f`); TAKE_EXPOSE 0x400 (token 11, a 52-byte buffer) | native; TAKE_EXPOSE replies token 11 with the buffer, which `0x503c2ce6` frees |
+| RdyFcsRdy1 | mailbox token 0, TAKE_POST token 11 | `0x503c2d08`: BC_EXEC 53 sync, the camera driver's request 144, TAKE_FUNC 80 sync | S-TAKEREQ 0; S-TAKECAM (completion 0); native |
+| RdyFcsRdy1 | mailbox tokens 2 and 3, TAKE_POST token 1 | (to RdyFcsRdy2, `0x503c2fbf`) | |
+| RdyFcsRdy2 | (entry `0x503c2fcf`) | TAKE_FUNC 80 sync; TAKE_EXPOSE 0x503 (token 14); TAKE_FOCUS 0x403 RELEASE_IDLE_READY sync; TAKE_FUNC 80 sync | native, each |
+| RdyFcsRdy2 | mailbox token 13 (`0x503c3214`; TAKE_EXPOSE's 0x503 calls the callback from its task, `0x50593201`) | TAKE_FUNC 80, no reply queue (`0x503c42fd`); TAKE's event `0x04080032` to API_EVENT (`0x503c3269`) | native |
+| RdyFcsRdy2 | TAKE_POST token 14 (`0x503c32ce`) | (to RdyFcsRdy3) | |
+| RdyFcsRdy3 | (entry `0x503c335a`: object 0xc021 is 1, `0x503c3385..0x503c3398`) | pending bits `0x300`, TAKE_EXPOSE 0x500 (token 15), OlyTaSS(16) | TAKE_EXPOSE's 0x500 asks EXP_MOVIE (below) |
+
+TAKE_MAIN answers the application's take request at RdyFcsRdy1's token 5 (status 0), the first native answer to it.
+The stop: TAKE_EXPOSE's 0x500 builds an AE request in EXP's `0x50553942` (in TAKE_EXPOSE's task), which posts
+`{EXP_MOVIE_POST 0x18, 0, 0x509, request}` to EXP_MOVIE (0x17, the queue word `0x600431f2`) and receives 12 bytes on
+0x18 with no time limit. EXP_MOVIE (task 0x58) does not run and the probe has no reading of its answer, so the
+request throws; TAKE_MAIN is then in RdyFcsRdy3 with the pending bits `0x300` (X). The errlogs since S1 are
+`0x25001703` (4.1.7), `0x0f803003` (above) and `0x39000903` twice (X).
+
+- **Past the stop, an experiment (X, not committed; EXP_MOVIE's 0x509 answered `{0, 0, 0}` on EXP_MOVIE_POST, an
+  invented answer).** TAKE_EXPOSE replies token 15, RdyFcsRdy3 asks TAKE_FOCUS 0x400 RELEASE_IDLE_START (token 4,
+  replied natively) and TAKE_MAIN reaches RdyTrig2Wait with the pending bits 0 and the wait pattern 7; the sequence
+  takes event 794 (CmpSts_ObserverNotifyTakeReadyFinish, 4.1.3) in phase 102. S2 is then event 824 in phase 103, and
+  CapTak_Take's takePicture (`0x50bc876a`, at `0x50bc8acc`) sends api_rec `0x5040ee43` (API `0x20013`): TAKE_EXEC
+  command 11 (reply queue 6, token `0xf0070000`), which RdyTrig2Wait takes (`0x503c40b2`; 4.1.7's command 5 is, I,
+  the S2 of a take-ready not yet finished): TAKE_FUNC 80, FACE_FD 15, TAKE_FOCUS 0x500 RELEASE_TAKE_START (token 8), state
+  RdyFcsTake; its mailbox token 5 asks TAKE_EXPOSE 0x600 synchronously, in whose run EXP logs `0x0e0000ff`
+  (`0x50576bac`), `0x0e001606` and `0x0e0000ff` and the CPU jumps to `0x000020fb` (fault 3) in TAKE_EXPOSE's task.
+  Why is ? (I: EXP's init `0x50553649` does not run, 4.1.6). Without the experiment S2 is not reached.
+- **Also corrected.** Round 1's record attributed a post through TAKE's helpers `0x502ce5b7` and `0x502ce5e6` to the
+  helper itself: the probe's keys for their calls of the send helper were one byte short of the return addresses
+  (`0x502ce5d8`, `0x502ce612` for `0x502ce5d9`, `0x502ce613`); fixed, the canonical records are unchanged (X). 4.1.7's
+  open items 2 and 3 are answered above: TAKE_FOCUS calls the four callbacks itself, and TAKE_EXPOSE (native since
+  4.1.6) answers 0x400 itself with its buffer.
+
+**What S-RELSEQ's retirement still needs (I unless tagged):**
+1. EXP for TAKE_EXPOSE's take-ready and take requests: EXP_MOVIE's answer to 0x509 (RdyFcsRdy3's 0x500, X) and
+   TAKE_EXPOSE's 0x600 at S2 (the crash above, X with an invented answer); 4.2 seam B, S-EXPOSE's round.
+2. The AF: what object 0xc021 = 1 means and whether the camera's S-AF scans at RELEASE_READY_START or later (?);
+   TAKE_FOCUS's context +20 (errlog `0x0f803003`); the AF library's init `0x508bede6` (logs `0x1c005002` in the lab,
+   `docs/om1-subject-spec.md` 5.7); behind them FCS on CPU 1 and the AF data path (4.4).
+3. The neighbours still stood in on this route: BC_EXEC 53 (the IS link, 4.4), the camera driver's request 144
+   (`0x5015582d`, a sequence item, S-TAKECAM; cam.c's init, 4.2), FACE_FD 15 (status native, its mode change not).
+4. RdyFcsTake's reply tokens 5 and 8, the still states (StlRdy1 .. StlEnd2) and the capture (TAKE_FUNC, the shutter,
+   cam.c's still capture, 4.3), then the notifications CapTak_Take's observers turn into the sequence events that make
+   the sequence parts post what S-RELSEQ posts now (4.1.3; 794 is the first of them, reached in the experiment).
+5. For the default sessions besides: S-THRTAKEOVER beside S-TAKEOVER (4.1.7 item 1), camapp 3 as the default (the
+   menu and playback stop at the imgpro unit `0x9c600000`, 4.1.5), and the probe's bring-ups (H-TAKEINIT, H-TAKEMAIN,
+   H-TAKENBINIT, H-TAKEFOCUS) as the default, each recording stand-in (S-TAKEREQ, S-TAKECAM, S-TAKEUSF) retired by
+   its neighbour running natively; all of these change golden.
+
 ### 4.2 Sensor, ISP front end and live view (with EXP)
 
 - **Tasks (D):** CPU 0: TAKE_FUNC's through commands 25 / 27 / 28 and their context bytes `through_s_wait` ..

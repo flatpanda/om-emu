@@ -23,9 +23,9 @@
 //                       callbacks (record 0x62a98a0c from 0x5056a6e4: 0x5056fd44, 0x5056fd61, 0x5056fff0, 0x50570024),
 //                       none of which runs, and EXP_MOVIE waits on its flag 21 for bit 0x1000 (0x5056ba07 ->
 //                       0x50585dc2). With cam.c's init (round 2) the driver takes both requests without its pool error
-//                       0x0a103000; request 7 logs 0x0a283000 twice (its movie sequence's queues are registered by its
-//                       second init, which does not run) and nothing fires the callbacks (docs/hle-gaps.md 4.2.3). On
-//                       this path its
+//                       0x0a103000; 0x0a283000 is logged three times, once by request 8's queue count and twice by
+//                       request 7's posts (the movie sequence's queues are registered by the second init, which does
+//                       not run), and nothing fires the callbacks (docs/hle-gaps.md 4.2.3). On this path its
 //                       answer to EXP_MOVIE_POST comes after that wait (0x5058cbe7; 0x5058c84a answers 2, 0x5058c963
 //                       0), so TAKE_EXPOSE stays in its receive (0x505539af); the callback's status inputs
 //                       (0x62abd550) and (0x62abd558) are 0, which would give it status 2 (0x5058cd54). Mode 1: the
@@ -148,9 +148,11 @@ export async function expCallbackSession() {
       ok(r.stop === undefined && !names.includes('divide') && req.length === 1 && req[0].id === 7 && !names.includes('frame callback')
         && wait?.flag === 21 && wait?.bits === h8(0x1000) && wait?.from === h8(0x5056BA2C) && (r.state & 0xF) === 4,
         `mode 0: the camera driver gets request 7 with EXP's frame callbacks (${JSON.stringify(req)}), none runs, and EXP_MOVIE waits on flag 21 bit 0x1000 (${JSON.stringify(wait)}, state ${r.state}, stop ${r.stop})`);
-      // round 2: cam.c's init native; request 7's two posts to the movie sequence's queues fail (0x0a283000 each, from
-      // 0x50151e45), request 8 logs nothing
-      ok(JSON.stringify(r.cam_native) === JSON.stringify(['EXP_MOVIE 8', 'EXP_MOVIE 7']) && r.cam_errlogs.length === 3 && r.cam_errlogs.every((c) => c === 0x0A283000),
+      // round 2: cam.c's init native; the movie sequence's queues are missing (0x0a283000 each time): request 8's queue
+      // count (0x50151ffc, line 1032, returning to 0x5015201c), then request 7's two posts (0x50151e45, line 487,
+      // returning to 0x50151e9e)
+      ok(JSON.stringify(r.cam_native) === JSON.stringify(['EXP_MOVIE 8', 'EXP_MOVIE 7']) && r.cam_errlogs.length === 3 && r.cam_errlogs.every((c) => c === 0x0A283000)
+        && JSON.stringify(r.cam_lines) === JSON.stringify(['0x0a283000 line 1032 from 0x5015201c', '0x0a283000 line 487 from 0x50151e9e', '0x0a283000 line 487 from 0x50151e9e']),
         `mode 0: cam.c takes EXP_MOVIE's requests natively (${JSON.stringify(r.cam_native)}) and logs ${JSON.stringify(r.cam_lines)} (want 0x0a283000 three times, no pool error 0x0a103000)`);
       if (process.env.TF_PRINT) console.log(JSON.stringify(r.cam_lines));
       ok(!names.includes('EXP_MOVIE_POST answer') && names.includes('caller waits on EXP_MOVIE_POST') && !names.includes('caller has the answer')
@@ -170,20 +172,23 @@ export async function expCallbackSession() {
 // Round 2 (docs/hle-gaps.md 4.2.3): cam.c natively, in a default session (camapp 1, no probe, so the switch has no
 // stand-in), every step from the test. (1) cam.c's first init 0x502a49ec (USTART's call at 0x50024aa2, H-CAMINIT's):
 // it returns 0, its only device accesses are the interrupt controller's for IRQs 146 and 147 (the attach through the
-// timer API 0x50064323 with 8 and 9, offsets 0x248 / 0x24c of each bank), and the request pool's free-list head
-// 0x6299726c goes from 0 to a slot. (2) Requests 148 and 144 made of the switch natively (192-byte records, +0 the
-// id, +3 the argument 1, +72 TAKE's completion 0x502cd4d0, which TAKE_FUNC_CP's and TAKE_MAIN's requests carry): each
-// is accepted (0) and posted as a deferred call (0x500504aa: 148 0x502a4b74, 144 0x5015582d), which queues an item of
-// the driver's sequence engine (0x501524c0), touching no device but the interrupt controller and the deferred-call
-// triggers, both modelled; neither is completed in 100 ms of idle and cam.c logs nothing; request 6
-// logs 0x0a273000 and is not deferred. (3) The second init 0x50155357 (USTART's call at 0x50024d80) step by step in its
-// order: its first nine calls (0x50152401 .. 0x5019813d: among them the movie sequence's queues SQMV, MQEX, INFN and
-// SMFM, 0x5019868e) return 0 and touch no device; request 6 is then deferred (0x50153844) and queues its item, and is
-// not completed either. The tenth call, the front end's init 0x5016efcd, writes 0x98800340 (which the lab stub keeps)
-// and then the camera clock gate 0x9b500800, which the lab does not model: the session stops there
+// timer API 0x50064323 with 8 and 9, offsets 0x248 / 0x24c of each bank), and it builds the request pool: its base word
+// 0x629a71dc goes from 0 to the pool's block (with it 0 the allocator hands out base + 128 x head, address 0, which
+// request 148's handler takes as a failed allocation), and the free list's head 0x6299726c, 0 before as well, moves
+// (to 2: the init takes two entries; 0xffff would be empty). (2) Requests 148 and 144 made of the switch natively
+// (192-byte records, +0 the id, +3 the argument 1, +72 TAKE's completion 0x502cd4d0, which TAKE_FUNC_CP's and
+// TAKE_MAIN's requests carry): each is accepted (0) and posted as a deferred call (0x500504aa: 148 0x502a4b74, 144
+// 0x5015582d), which queues an item of the driver's sequence engine (0x501524c0), touching no device but the interrupt
+// controller and the deferred-call triggers, both modelled; neither is completed in 100 ms of idle and cam.c logs
+// nothing; request 6 logs 0x0a273000 and is not deferred. (3) The second init 0x50155357 (USTART's call at
+// 0x50024d80) step by step in its order: its first nine calls (0x50152401 .. 0x5019813d: among them the movie
+// sequence's queues SQMV, MQEX, INFN and SMFM, 0x5019868e) return 0 and touch no device; request 6 is then deferred
+// (0x50153844) and queues its item, and is not completed either. The tenth call, the front end's init 0x5016efcd,
+// writes 0x98800340 (which the lab stub keeps) and then the camera clock gate 0x9b500800, which the lab does not model:
+// the session stops there
 const CAM = {
-  init: 0x502A49EC, pool: 0x6299726C, sw: 0x502A4A46, completion: 0x502CD4D0, deferred: 0x500504AA, item: 0x501524C0,
-  errlog: 0x501504D0, handlers: { 148: 0x502A4B74, 6: 0x50153844, 144: 0x5015582D }, no6: 0x0A273000,
+  init: 0x502A49EC, pool: 0x6299726C, pool_base: 0x629A71DC, sw: 0x502A4A46, completion: 0x502CD4D0,
+  deferred: 0x500504AA, item: 0x501524C0, errlog: 0x501504D0, handlers: { 148: 0x502A4B74, 6: 0x50153844, 144: 0x5015582D }, no6: 0x0A273000,
   init2: [0x50152401, 0x50150B66, 0x501550BC, 0x50151D07, 0x5015F38F, 0x501A3559, 0x5019C70F, 0x5019868E, 0x5019813D],
   front_end: 0x5016EFCD,
 };
@@ -213,12 +218,13 @@ export async function camDriverSession() {
     let mmio = [];
     m.setMmioTrace((dir, a, v, w, name, cpu) => { if (cpu === 0 && name !== 'om1.isc-locks') mmio.push({ dir: dir ? 'W' : 'R', a: a >>> 0, name }); });
     phase = 'init';
-    const head0 = u16(CAM.pool), rc = lab.call(CAM.init, null, null, null, 20000000).d0 & 0xFFFF, head1 = u16(CAM.pool);
+    const head0 = u16(CAM.pool), base0 = lab.sim.u32(CAM.pool_base) >>> 0;
+    const rc = lab.call(CAM.init, null, null, null, 20000000).d0 & 0xFFFF, head1 = u16(CAM.pool), base1 = lab.sim.u32(CAM.pool_base) >>> 0;
     s.settle('camdrv init');
     const irqs = [...new Set(mmio.map((x) => (x.a & 0xFFF) / 4))];
-    ok(rc === 0 && !errlogs.length && head0 === 0 && head1 !== 0xFFFF && mmio.length > 0 && mmio.every((x) => x.name === 'om1.intc')
+    ok(rc === 0 && !errlogs.length && base0 === 0 && base1 !== 0 && head0 === 0 && head1 !== head0 && head1 !== 0xFFFF && mmio.length > 0 && mmio.every((x) => x.name === 'om1.intc')
       && JSON.stringify(irqs) === JSON.stringify([146, 147]),
-      `cam.c's init returns ${rc}, logs [${errlogs}], the pool head ${head0} -> ${head1}, its device accesses ${JSON.stringify([...new Set(mmio.map((x) => `${x.dir} ${h8(x.a)} ${x.name}`))])} (IRQs ${irqs})`);
+      `cam.c's init returns ${rc}, logs [${errlogs}], the pool's base ${h8(base0)} -> ${h8(base1)} and head ${head0} -> ${head1}, its device accesses ${JSON.stringify([...new Set(mmio.map((x) => `${x.dir} ${h8(x.a)} ${x.name}`))])} (IRQs ${irqs})`);
     // a request made natively, then 100 ms of idle: [the switch's d0, the deferred call, the items queued, completed,
     // the errors logged, the devices the call touched]
     const request = (id) => {

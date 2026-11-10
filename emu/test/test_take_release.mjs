@@ -17,8 +17,9 @@
 //                   its requests 8 and 7 and waits on its flag 21 for bit 0x1000, which EXP's frame callback for the
 //                   event 0x300 sets and nothing in the lab fires (docs/hle-gaps.md 4.2.3); meanwhile RdyFcsRdy3 asks
 //                   TAKE_FOCUS 0x400 (RELEASE_IDLE_START, replied token 4), and TAKE_MAIN waits for TAKE_EXPOSE's
-//                   token 15 (pending bits 0x200). S2 then stops in the lab: the application posts DISPLAY command 18
-//                   while the GUI's synchronous DISPLAY command 17 runs, which S-DISPQ does not stand in for
+//                   token 15 (pending bits 0x200). S2 then stops in the lab: inside the run of the application's
+//                   synchronous DISPLAY command 15 (after the GUI's command 17, nested in it, has returned) the
+//                   application posts DISPLAY command 18, which S-DISPQ does not stand in for
 //   node emu/test/test_take_release.mjs
 import { fileURLToPath } from 'node:url';
 
@@ -146,10 +147,13 @@ export const S1_FOCUS = ['TAKE_MAIN <= TAKE_EXEC 0 in Idle (handler 0x503a1172)'
 export const S1_EXP = [...S1_FOCUS, 'TAKE_EXPOSE -> EXP_MOVIE 1289 (native)', 'TAKE_MAIN -> TAKE_FOCUS 1024 (native)',
   'TAKE_FOCUS <= 1024', 'TAKE_FOCUS -> reply', 'TAKE_MAIN <= TAKE_POST token 4 in RdyFcsRdy3'];
 // EXP_MOVIE's wait for the frame events (flag 21 bit 0x1000, from 0x5056ba07's call at 0x5056ba25), cam.c's error
-// when its movie sequence's queues are missing (its second init does not run: 0x50150658 in 0x50151e45), and the
-// S-DISPQ refusal S2 stops at (the application's post of DISPLAY command 18 through its API sender, return 0x503eba07)
+// when its movie sequence's queues are missing (its second init does not run; request 8's queue count 0x50151ffc once,
+// request 7's posts 0x50151e45 twice), and the S-DISPQ refusal S2 stops at (the application's post of DISPLAY command
+// 18 through its API sender, return 0x503eba07) inside the run of the synchronous DISPLAY sends before it: the
+// application's command 15 (return 0x503ec117) and, nested in it, the GUI's command 17 (return 0x507f66d1)
 const EXP_WAIT = { flag: 21, bits: 0x1000, from: 0x5056BA2C }, CAM_NOQUEUE = 0x0A283000, CAM_NOPOOL = 0x0A103000;
 const S2_STOP = /^UI_IN group 1: OlyQeWr to the DISPLAY queue from 0x[0-9a-f]{8} \(disasm 0x503eba07\) \(depth 1\)/;
+const S2_SENDS = [[15, 0x503EC117], [17, 0x507F66D1]];
 
 export async function focusSession() {
   const bad = [], notes = [];
@@ -228,12 +232,13 @@ export async function focusSession() {
     // S2: the first stop is the lab's (S-DISPQ)
     let stop2 = null;
     since(); seen.length = 0;
+    const ds0 = lab.display_sends.length;
     try { s.key('s2', 'down'); s.camapp.pump(); idle(700); } catch (e) { stop2 = e; }
-    const s2 = since();
-    if (process.env.TF_PRINT) console.log(JSON.stringify({ s2, seen, stop2: stop2?.message.slice(0, 300) }, null, 1));
+    const s2 = since(), sends = lab.display_sends.slice(ds0).map(([c, , f]) => [c, f]);
+    if (process.env.TF_PRINT) console.log(JSON.stringify({ s2, seen, sends, stop2: stop2?.message.slice(0, 300) }, null, 1));
     ok(stop2 !== null && S2_STOP.test(stop2.message) && !s2.length && stateName(u16(MAIN_STATE)) === 'RdyFcsRdy3'
-      && JSON.stringify(seen) === JSON.stringify(['event 824 in phase 103']),
-      `S2 is event 824 in phase 103 (${JSON.stringify(seen)}) and stops at the application's DISPLAY post inside a DISPLAY run (${stop2 ? stop2.message.slice(0, 200) : 'no stop'}); TAKE takes nothing (${JSON.stringify(s2)}), TAKE_MAIN in ${stateName(u16(MAIN_STATE))}`);
+      && JSON.stringify(seen) === JSON.stringify(['event 824 in phase 103']) && JSON.stringify(sends) === JSON.stringify(S2_SENDS),
+      `S2 is event 824 in phase 103 (${JSON.stringify(seen)}) and stops at the application's DISPLAY post inside the run of its synchronous DISPLAY command 15, after the GUI's command 17 nested in it (sends ${JSON.stringify(sends.map(([c, f]) => [c, h8(f)]))}; ${stop2 ? stop2.message.slice(0, 200) : 'no stop'}); TAKE takes nothing (${JSON.stringify(s2)}), TAKE_MAIN in ${stateName(u16(MAIN_STATE))}`);
   } catch (e) { bad.push(`camapp 3 --take probe: ${e.message.slice(0, 800)}`); }
   pl.close_session();
   return { checks, bad, notes };

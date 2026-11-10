@@ -1769,14 +1769,15 @@ export function touchI2c(img) {
 // "[TP]open" is held by the E143 family, "[TP]OPEN \n" by E125, E134, E137, E133, E130, E129 and E132, once each, and
 // neither by E144, E139, E142, E140, E145 and the E118 family (X, a string count over each expanded image); E129 and
 // E132 load theirs nowhere (X, a scan for its address); on E146, E147, E125, E134 and E137 the open found is where
-// their cross-build maps place E143's, and E133's and E130's maps place none (X). Returns the entry (disassembly
-// notation), or undefined where neither name is held or loaded; throws for a name held twice or loaded at other than
-// one such opening.
+// their cross-build maps place E143's, and E133's and E130's maps place none (X). On a build that holds neither name
+// the open is read by its form (touchOpenForm below). Returns the entry (disassembly notation), or undefined where a
+// name is held but not loaded or neither name nor the form is held; throws for a name held twice or loaded at other
+// than one such opening.
 const TP_OPEN_TRACES = ['[TP]open', '[TP]OPEN \n'];
 export const TP_OPEN_E143 = 0x501E40DA;
 export function touchOpen(img) {
   const { base } = imageBase(img), at = TP_OPEN_TRACES.flatMap((name) => findString(img, name, { nul: true }));
-  if (!at.length) return undefined;
+  if (!at.length) return touchOpenForm(img);
   const loads = at.length === 1 ? loadsOf(img, base + at[0]).filter((o) => img[o + 1] === 0xdc || img[o + 1] === 0xdd) : [];
   if (at.length === 1 && !loads.length) return undefined;
   // the called offset within TOUCH_WALK bytes before the load whose instructions run to it with no call or return
@@ -1791,6 +1792,87 @@ export function touchOpen(img) {
   const entries = loads.map(opening);
   if (at.length !== 1 || entries.length !== 1 || entries[0] === null) throw new Error(`touchOpen: the open's trace name held ${at.length} times, loaded ${loads.length} times, ${entries.filter((e) => e !== null).length} at a function's opening, want one each`);
   return 0x50000000 + entries[0];
+}
+// The open without a trace, by its form (E144 0x5018a04b, E122 0x5030bb4c, D): `movbu (F),d1; clr d0; cmp d0,d1;
+// bne; cmp 0,a0; beq; mov a0,(C)`, then three stores (a1 and two cleared words) and, TP_OPEN_SET bytes in, `movbu
+// d1,(F)` with d1 1: where the open byte F is clear and the callback a0 is not null it keeps the callback in C, a1 and
+// sets F, else it returns 2 (the traced opens' body after their trace, D). One called function of the form on E148,
+// E144, E139, E142 and E140, where the cross-build maps place E143's open at it (X), and on E118 (0x502e3efc, F
+// 0x6187b778), E120 (0x502d9242, F 0x618795f0) and E122 (F 0x6189f36c), which the maps leave unplaced; none on the
+// traced bodies, E145, E129 and E132 (X, a byte scan of each expanded image). On E122 the HFW's touch init passes its
+// callback through the API wrapper 0x502f4a80 (API 0xd001c, E143's 0x50425240 and 0x50425ec7 in one), which calls it
+// (0x502f4ad2, D). Returns the entry, or undefined for none; throws for two.
+const TP_OPEN_FORM = [0xfc, 0xa9, null, null, null, null, 0x00, 0xa1, 0xc9, 0x2b, 0xb0, 0x00, 0xc8, 0x25, 0xfc, 0x80];
+const TP_OPEN_SET = 0x29;
+function touchOpenForm(img) {
+  const found = [];
+  for (let o = img.indexOf(0xfc); o >= 0 && o + TP_OPEN_SET + 6 <= img.length; o = img.indexOf(0xfc, o + 1)) {
+    if (!bytesAt(img, o, TP_OPEN_FORM) || !bytesAt(img, o + TP_OPEN_SET, [0xfc, 0x86])) continue;
+    if (u32(img, o + TP_OPEN_SET + 2) === u32(img, o + 2) && callsTo(img, o).length) found.push(o);
+  }
+  if (found.length > 1) throw new Error(`touchOpenForm: ${found.length} touch opens of the form (${found.map((o) => h8(0x50000000 + o)).join(', ')}), want one`);
+  return found.length ? 0x50000000 + found[0] : undefined;
+}
+
+// The word the touch panel's gesture mask is kept in (fact 'touch_mask.word', and through bin/port.mjs the place of
+// E143's TP_MASK_WORD 0x62a3ebc0, src/lab/play.mjs, which reads the mask H-TPSTART sets), read at the port's place of
+// E143's mask set TP_MASK_E143 0x501e41d1: its `mov (Am),d0; mov d0,(W)`, the first `mov d0,(abs32)` before its return
+// (E143 0x501e41f1 `mov (a2),d0; mov d0,(0x62a3ebc0)`; E122 0x5030bd11 `mov (a0),d0; mov d0,(0x6189f370)`, D). On the
+// 16 bodies with a touch panel W is the word after the open's byte (E143 0x62a3ebbc, E122 0x6189f36c, X); the maps
+// placed E143's word elsewhere on E130 (0x6264b0d6, W 0x6264b22c), E133, E118, E120 and E122 (X). Returns W; throws
+// where no such store comes before a return within TP_MASK_SPAN bytes.
+// The touch driver's register list written over its I2C transport outside the touch I2C write (fact 'touch_regs',
+// src/lab/display.mjs S-TPREGLIST), read at the port's places of E143's touch I2C write and read (TOUCH_E143): the
+// write's transport opens with `movhu (S),d0`, a semaphore wait and a call of the transport's open H (E118's write
+// 0x502e488e: S 0x60040e40, H 0x502e4d50; E120 0x502d9ca6 and E122 0x5030c5a9 alike, D). A function besides the
+// read and the write that calls H after `movhu (S),d0` and one other call is such a list: E118's 0x502e4eee, the
+// power-up command list's op 9 (0x502e4065, which both of the list's paths run, D), sends {slave, reg, b0, b1} for
+// each of count 2-byte entries {b0, b1} of a table T (`mov d2,a0; add T,a0`, `mov <slave>,d0; movbu d0,(4,sp); mov
+// <reg>,d0; movbu d0,(5,sp)`, `cmp <count>,d3; blt`: slave 0x48, register 0x1c<b0> given b1, ten entries from
+// 0x615de290) through the transport's own calls and completion waits (0x50068418, 0x50068506, 0x5006851a, the flag
+// 0x60040fe2, D), the register writes the driver's 0x502e471a makes one at a time through the write (D). H's other
+// callers are the read and the write on E118, E120 and E122 (X: their call sites), so the rule reads none on E120
+// and E122; the E144 family's write has no such opening. Returns {fn, table, count, slave, reg}, or undefined;
+// throws for two, or for a caller of H whose function does not have the list's form.
+const TP_REGS_SPAN = 0x80;
+function touchRegList(img, write, read) {
+  const w = write - 0x50000000, inFn = (p, f) => p >= f - 0x50000000 && p < f - 0x50000000 + TOUCH_ARGS_SPAN;
+  let sem = null, calls = [];
+  for (let p = w; p < w + TOUCH_WALK * 2 && calls.length < 2 && !isRet(img, p);) {
+    const c = callAt(img, p);
+    if (c && sem !== null) calls.push(c.to);
+    else if (!c && sem === null && bytesAt(img, p, [0xfc, 0xac])) sem = u32(img, p + 2);
+    p += c?.len ?? insnLength(img[p], img[p + 1]);
+  }
+  if (sem === null || calls.length < 2) return undefined;
+  const found = [];
+  for (const at of callsTo(img, calls[1])) {
+    if (inFn(at, write) || inFn(at, read)) continue;
+    let f = -1;
+    for (let p = at - 1; p >= at - TOUCH_WALK && f < 0; p--) if (bytesAt(img, p, [0xfc, 0xac]) && u32(img, p + 2) === sem) f = p;
+    let table = null, slave = null, reg = null, count = null;
+    for (let p = at; f >= 0 && p < at + TP_REGS_SPAN && !isRet(img, p);) {
+      if (bytesAt(img, p, [0xfc, 0xd0])) table = u32(img, p + 2);
+      else if (img[p] === 0x80 && bytesAt(img, p + 2, [0xf8, 0x92, 0x04])) slave = img[p + 1];
+      else if (img[p] === 0x80 && bytesAt(img, p + 2, [0xf8, 0x92, 0x05])) reg = img[p + 1];
+      else if (img[p] === 0xaf && img[p + 2] === 0xc0) count = img[p + 1];
+      p += callAt(img, p)?.len ?? insnLength(img[p], img[p + 1]);
+    }
+    if (f < 0 || [table, slave, reg, count].includes(null)) throw new Error(`touchRegList: ${h8(0x50000000 + at)} opens the touch transport ${h8(0x50000000 + calls[1])} outside the touch I2C read and write without the register list's form`);
+    found.push({ fn: 0x50000000 + f, table, count, slave, reg });
+  }
+  if (found.length > 1) throw new Error(`touchRegList: ${found.length} register lists (${found.map((x) => h8(x.fn)).join(', ')}), want one`);
+  return found[0];
+}
+
+export const TP_MASK_E143 = 0x501E41D1, TP_MASK_WORD_E143 = 0x62A3EBC0;
+const TP_MASK_SPAN = 0x40;
+function touchMask(img, fn) {
+  for (let p = fn - 0x50000000, end = p + TP_MASK_SPAN; p < end && !isRet(img, p);) {
+    if (bytesAt(img, p, [0xfc, 0x81]) && (img[p - 1] & 0xfc) === 0x70) return u32(img, p + 2);
+    p += callAt(img, p)?.len ?? insnLength(img[p], img[p + 1]);
+  }
+  throw new Error(`touchMask: the mask set ${h8(fn)} stores no mov (Am),d0 to a word within ${TP_MASK_SPAN} bytes before a return`);
 }
 
 // The touch panel controller's interrupt wait (fact 'touch_int', src/lab/menu.mjs S-TPINTWAIT): the touch driver
@@ -1812,17 +1894,33 @@ export function touchOpen(img) {
 // which log a numbered error, E144 0x37005206 through 0x50041d51), and the touch task's power-up commands wait 40 or
 // 100 ms (E144 0x5018a0ca, 0x5018a0fa, 0x5018a158, D). One function of either form with its poll within TP_INT_SPAN
 // bytes on each of the 14 bodies named and on E129 and E132 (the first form; the TG-5s' driver has no panel to open,
-// src/fw/facts.mjs touchDriver), none on the E143 family, E145 and E118, whose wait is inline in its touch driver's
-// command list (0x502e3fe3..0x502e400c, D) (X, a byte scan of each expanded image). Returns {wait, poll, word} (the
-// functions' offsets in disassembly notation, W at run time), or undefined where neither form is held; throws for
-// two waits.
+// src/fw/facts.mjs touchDriver), none on the E143 family, E145 and E118 (X, a byte scan of each expanded image).
+// E118's waits are inline, in the loops of its touch task's power-up command list (cmd 4, 0x502e3f5f: 6-byte entries
+// from 0x603f1ca4, D): 2 ms sleeps until its INT word getter G, `mov (W),d0; retf`, returns 1 or the entry's ms have
+// passed on the us clock, the timeout loading "TP INT TIME OUT\n" (op 5, the call of G at 0x502e3ffd, the load at
+// 0x502e400c), and the same polls of G in its bootload and calibration entries (0x502e4028, 0x502e40b0; G 0x502e4764,
+// W 0x6187b7e4; G's only callers, X); its pin's callback stores 1 in W while the word after it is 0, as E120's. The
+// third form is that one: a call of such a getter followed by `cmp 1,d0` within TP_INT_SPAN bytes before a load of
+// the trace (wait the call, poll G). Returns {wait, poll, word} (code in disassembly notation, W at run time), or
+// undefined where no form is held; throws for two waits.
 const TP_INT_SPAN = 0x60;
 const TP_INT_OPENINGS = [
   [0x86, 0x04, 0x46, 0x04, 0xa0, 0x01, 0xc9, 0x08, 0xfc, 0x85],                         // ... mov d1,(W)
   [0xf1, 0xe7, 0x82, 0x00, 0x42, 0x04, 0x80, null, 0xdd, null, null, null, null, null, null, 0xaa, 0x01, 0xc9, 0x09, 0x00, 0xfc, 0x81],
 ];
+const TP_INT_TRACE = 'TP INT TIME OUT\n', TP_INT_GETTER = [0xfc, 0xa4, null, null, null, null, 0xde, 0x00, 0x00];
 export function touchIntWait(img) {
-  const found = [];
+  const found = [], { base } = imageBase(img);
+  for (const s of findString(img, TP_INT_TRACE, { nul: true })) {
+    for (const l of loadsOf(img, base + s)) {
+      for (let p = l - 1; p >= l - TP_INT_SPAN; p--) {
+        const c = callAt(img, p);
+        if (!c || p + c.len > l || !bytesAt(img, c.to, TP_INT_GETTER) || !bytesAt(img, p + c.len, [0xa0, 0x01])) continue;
+        found.push({ wait: 0x50000000 + p, poll: 0x50000000 + c.to, word: u32(img, c.to + 2) });
+        break;
+      }
+    }
+  }
   for (const opening of TP_INT_OPENINGS) {
     for (let w = img.indexOf(opening[0]); w >= 0 && w + opening.length + 4 <= img.length; w = img.indexOf(opening[0], w + 1)) {
       if (!bytesAt(img, w, opening)) continue;
@@ -3740,7 +3838,8 @@ function evfCode(img, propId) {
 // start, replies}}, {play: {wrappers, still}}, {text: {lang_setting}}, {ae: {init, regions, table, rows (the row form's only)}}, {frame_period: {tft,
 // evf}}, {rtos: {init_task, ta_wu, tsnd_sites}}, {store: {db_save, app_saves}}, {hw_timer: {ptr} or {table}}, {crt:
 // {clock_read}}, {touch_args: {write_len, read_len, read_addr}}, {dial: {select, select_end, table_ptr, table0}}, {ui_in: {task,
-// forward}}, {touch_start: {init, id_word}}, {frame_mode: {set}}, {frame_plane: {mode, uploads}}, {prop: {device, evf_code}} and
+// forward}}, {touch_start: {init, id_word}}, {touch_mask: {word}},
+// {touch_regs}, {frame_mode: {set}}, {frame_plane: {mode, uploads}}, {prop: {device, evf_code}} and
 // {lens_driver: {module_init, cache_init, task_vars, tasks, exec_queue, flags, cache_area}} and {rec_file: {exif, init,
 // task, packet, jpeg, contexts, clock_set}} (no state_log part where
 // the GUI state log is not placed or has not one call; no gui_states part where the state table is not placed or
@@ -3754,7 +3853,11 @@ function evfCode(img, propId) {
 // hw_timer part where the hardware-timer init is not, no crt part where the clock read's call is not; no touch_args
 // part where touchArgs reads neither length; no dial part where the dial table pointer is not or dialStore reads none,
 // as where readFacts' dialSelect reads the select; no touch_start part where CPU 0's kcb, the touch task or OlyTaSt is
-// not or touchStart finds no start; no ui_in task where CPU 0's kcb or UI_IN's flag word is not, no forward where
+// not or touchStart finds no start; no touch_mask part where the touch mask set is not placed or the build has no
+// touch-panel driver (touchDriver: the TG-5s' and E145's maps place it on other code); touch_regs null where the
+// touch I2C write or read is not placed, the build has no touch-panel driver or touchRegList reads none (every body
+// but E118); no ui_in task where CPU 0's
+// kcb or UI_IN's flag word is not, no forward where
 // UI_IN's post or sink word is not; no frame_mode part where the TAKE frame-mode request is not placed or is not a
 // clamp; no frame_plane part where neither it nor the port
 // places the frame display mode set, or the set is not the clamp form; no prop part where a property read site is not;
@@ -3804,6 +3907,9 @@ export function readPlacedFacts({ img, at }) {
   if (kcb !== null) facts.power = { task: powerTask(img, kcb), ...(flashSave !== null && { off: powerOff(img, flashSave) }) };
   const tpStart = kcb !== null && tpTask !== null && taSt !== null ? touchStart(img, kcb, tpTask, taSt) : undefined;
   if (tpStart !== undefined) facts.touch_start = tpStart;
+  const tpMask = touchDriver(img) ? at(TP_MASK_E143) : null;
+  if (tpMask !== null) facts.touch_mask = { word: touchMask(img, tpMask) };
+  facts.touch_regs = (tpWrite !== null && tpRead !== null && touchDriver(img) ? touchRegList(img, tpWrite, tpRead) : undefined) ?? null;
   const evWt = at(OLYEVWT_E143);
   if (tpTask !== null && evWt !== null && qerd !== null) facts.touch_task = touchQueue(img, tpTask, evWt, qerd);
   const modeSet = takeFrame !== null ? frameModeSet(img, takeFrame) : undefined;
@@ -3919,7 +4025,7 @@ export function readFacts({ img, family, resLoad }) {
 // error log by its test of the id's module (errlogEntry, 'module-test'); the interrupt handler tables at the attach's
 // stores (handlerTables, 'attach-stores'); the remaining-shots query at the callee whose
 // result the application's getAvailableShootCount stores (shotsQuery, 'shots-method'); the touch panel's open by its
-// trace (touchOpen, 'open-trace'); the display task init as the function that creates the DISPLAY queue
+// trace or its form (touchOpen, 'open-rule'); the display task init as the function that creates the DISPLAY queue
 // (displayTaskInit, 'queue-init'); the face plane's colour setter at the one that loads its trace (faceColourSet,
 // 'cpdata-trace').
 export function rulePlaces(facts) {
@@ -3934,7 +4040,7 @@ export function rulePlaces(facts) {
     [ERRLOG_E143, { to: facts.errlog.entry, how: 'module-test' }],
     ...(facts.kernel.handlers !== undefined ? [[HANDLER_TABLE_E143, { to: facts.kernel.handlers, how: 'attach-stores' }]] : []),
     [SHOTS_QUERY_E143, { to: facts.card.shots_query, how: 'shots-method' }],
-    ...(facts.touch_api ? [[TP_OPEN_E143, { to: facts.touch_api.open, how: 'open-trace' }]] : []),
+    ...(facts.touch_api ? [[TP_OPEN_E143, { to: facts.touch_api.open, how: 'open-rule' }]] : []),
     ...(facts.display.task_init !== undefined ? [[DISPLAY_TASK_INIT_E143, { to: facts.display.task_init, how: 'queue-init' }]] : []),
     ...(facts.display.face_colour !== undefined ? [[FACE_COLOUR_SET_E143, { to: facts.display.face_colour, how: 'cpdata-trace' }]] : []),
   ]);
@@ -3950,7 +4056,8 @@ export function rulePlaces(facts) {
 // opening (taWu, 'wup-opening'); the DISPLAY task loop at the static task that runs to the DISPLAY queue's receive
 // (displayLoop, 'queue-receive'); the UI_IN task at the static task that runs to its flag word's load (uiInTask,
 // 'flag-wait'); the touch init and the touch task's id word at the boot's start of the touch task (touchStart,
-// 'task-start'); the touch task's flag word at the word its loop waits on (touchQueue, 'touch-wait'); the DB init's
+// 'task-start'); the touch task's flag word at the word its loop waits on (touchQueue, 'touch-wait'); the touch
+// gesture mask's word at the mask set's store (touchMask, 'mask-store'); the DB init's
 // flash save return at the one call of the flash save in the DB init (dbSave, 'db-save'); the hardware-timer table
 // pointer at the word the hardware-timer init keeps it in, unplaced where the init indexes a fixed table (hwTimer,
 // 'timer-init'); the C-runtime clock read at the target of the call at the place of E143's
@@ -3970,6 +4077,7 @@ export function placedRulePlaces(facts, e143, place) {
     out.set(TOUCH_TASK_ID_E143, { to: facts.touch_start.id_word, how: 'task-start' });
   }
   if (facts.touch_task) out.set(TP_FLAG_E143, { to: facts.touch_task.flag, how: 'touch-wait' });
+  if (facts.touch_mask) out.set(TP_MASK_WORD_E143, { to: facts.touch_mask.word, how: 'mask-store' });
   if (facts.ae) out.set(AE_INIT_E143, { to: facts.ae.init, how: facts.ae.rows === undefined ? 'ae-wrapper' : 'ae-rows' });
   for (const [dev, to] of Object.entries(facts.frame_period ?? {})) out.set(FRAME_PERIOD_E143[dev].word, { to, how: 'period-getter' });
   if (facts.hw_timer) out.set(HW_TIMER_PTR_E143, { to: facts.hw_timer.ptr ?? null, how: 'timer-init' });

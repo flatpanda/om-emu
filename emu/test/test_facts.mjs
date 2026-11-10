@@ -13,7 +13,9 @@
 //               DISPLAY sends against DISPQ_FOUND, the DISPLAY task loop against LOOP_FOUND and A(), its start-up
 //               against START_FOUND, its replies against REPLIES_FOUND and A(), the UI_IN task against UI_IN_FOUND
 //               and A(), its forward sites against UI_IN_FWD_FOUND and A(), the touch task's start against
-//               TOUCH_START_FOUND and A(), the calls of tsnd_dtq against TSND_COUNT and A(), the display sync against
+//               TOUCH_START_FOUND and A(), the touch gesture mask's word against TOUCH_MASK_FOUND and A(), the touch
+//               register list against TOUCH_REGS_FOUND, the calls of tsnd_dtq against TSND_COUNT and A(), the display
+//               sync against
 //               SYNC_FOUND, its module-9 readers against MODULE9_FOUND and E143's lab lists, its language setting
 //               against LANG_FOUND, the menu memories against MEMORY_FOUND, the touch-panel driver against
 //               NO_TOUCH_DRIVER, the lens mount against NO_LENS_MOUNT, the lens driver against LENS_DRIVER_FOUND and
@@ -351,8 +353,11 @@ const FRAME_WAIT_FOUND = { E143: 0x60043088, E144: 0x600416AC, E139: 0x600414B6,
 const TIMER_SLEEP_FOUND = { E143: 0x501C2E94, E144: 0x50170F80, E139: 0x50172271, E134: 0x5020EA33 };
 // The touch panel's open (touch_api.open; src/fw/facts.mjs touchOpen) at its trace: E143's as src/lab/play.mjs gives it
 // (TP_OPEN; D: 0x501e40da loads "[TP]open" at 0x501e40de), E125's, E134's and E137's as their maps placed it before the
-// rule (D: 0x5018504a, 0x5017c073 and 0x5017677c load "[TP]OPEN \n" before their first call)
-const TP_OPEN_FOUND = { E143: 0x501E40DA, E125: 0x5018504A, E134: 0x5017C073, E137: 0x5017677C };
+// rule (D: 0x5018504a, 0x5017c073 and 0x5017677c load "[TP]OPEN \n" before their first call); by its form E144's as
+// its map placed it and E122's and E118's (D: 0x5018a04b, 0x5030bb4c and 0x502e3efc test the open byte, keep the
+// callback and set the byte; E122's HFW touch init reaches 0x5030bb4c through the API wrapper 0x502f4a80)
+const TP_OPEN_FOUND = { E143: 0x501E40DA, E125: 0x5018504A, E134: 0x5017C073, E137: 0x5017677C, E144: 0x5018A04B, E122: 0x5030BB4C,
+  E118: 0x502E3EFC };
 // The AE interpolation's init and form (ae; src/fw/facts.mjs aeInit): E143's as src/lab/play.mjs gives it by hand
 // (AE_INIT, AE_REGIONS; D: 0x50560b29's memsets, the div at 0x5056319c), E139's and E134's as read at their inits and
 // interpolations (D: 0x50411e84 and 0x50414400's div at 0x50414464; 0x50427066, three memsets then 0x50429171, and
@@ -618,7 +623,9 @@ const RECVIEW_FOUND = { E143: { word: 0x6035E9C8, standby: 1 }, E142: { word: 0x
 // 0x502d9b0c and 0x5030c426, called before the "TP INT TIME OUT" trace at 0x502d0296 and 0x50302930, their polls of
 // the word the pin-30 callback 0x502da12c / its E122 counterpart sets), E144's of the other form (D: the wait
 // 0x5018a924 the open calls at 0x50181efb, its poll of the word the pin-120 callback 0x5018b191 sets) and E125's of
-// the first (D: the wait 0x5022d4d4 the open calls at 0x5022a568); none on E118 (its wait is inline, D) and E143
+// the first (D: the wait 0x5022d4d4 the open calls at 0x5022a568); E118's inline one (D: its power-up list's loop
+// calls the INT word getter 0x502e4764 at 0x502e3ffd, then `cmp 1,d0`, and loads "TP INT TIME OUT" at 0x502e400c);
+// none on E143
 // The GUI state table's bound (gui_states.parents; src/fw/facts.mjs stateTableBound) at the port's place of E143's
 // table: E143's 12 (D: `cmp 12,d3; lcs` at 0x5124b478 in the name lookup that loads the table at 0x5124b467) and
 // E145's 18 (D: 0x50de87bf, after the load at 0x50de87ae)
@@ -637,7 +644,16 @@ const STILL_FOUND = { E143: { convert: 0x50ACC981, focal: { at: 148, size: 4 }, 
   E132: { convert: 0x5068B037, focal: { at: 136, size: 4 }, iso: { at: 90, size: 2 } } };
 const TOUCH_INT_FOUND = { E120: { wait: 0x502D9B0C, poll: 0x502D9B4C, word: 0x61879784 },
   E122: { wait: 0x5030C426, poll: 0x5030C466, word: 0x6189F508 }, E144: { wait: 0x5018A924, poll: 0x5018A972, word: 0x620C662C },
-  E125: { wait: 0x5022D4D4, poll: 0x5022D514, word: 0x62241158 }, E118: null, E143: null };
+  E125: { wait: 0x5022D4D4, poll: 0x5022D514, word: 0x62241158 }, E118: { wait: 0x502E3FFD, poll: 0x502E4764, word: 0x6187B7E4 },
+  E143: null };
+// The touch gesture mask's word (touch_mask.word; src/fw/facts.mjs touchMask) at the mask set's store: E143's as
+// src/lab/play.mjs gives it (TP_MASK_WORD; D: 0x501e41f2) and E122's (D: `mov d0,(0x6189f370)` at 0x5030bd12, the
+// word after the open's byte 0x6189f36c, where the map had placed E143's at 0x6189f2e2)
+const TOUCH_MASK_FOUND = { E143: 0x62A3EBC0, E122: 0x6189F370 };
+// The touch register list (touch_regs; src/fw/facts.mjs touchRegList): E118's power-up list's op 9 (D: 0x502e4eee,
+// the table 0x615de290, `cmp 10,d3; blt`, {0x48, 0x1c, b0, b1}); none on E120, E122 and E143 (X: the transport's
+// open has no other caller there)
+const TOUCH_REGS_FOUND = { E118: { fn: 0x502E4EEE, table: 0x615DE290, count: 10, slave: 0x48, reg: 0x1C }, E120: null, E122: null, E143: null };
 // The property store's module init and its object words (prop_store; src/fw/facts.mjs propStore): E143's (D: the
 // settings init chain 0x503dae30 calls 0x503ee2d6 at 0x503dae75; its pointer stores 0x503ee375..0x503ee39b) and E122's
 // (D: 0x502cf141, its pointer stores from 0x502cf1d3); the rule finds one on each of the 18 unpacked bodies (X)
@@ -821,6 +837,12 @@ export function factsTests() {
     const tq = placed?.touch_task;
     if (TOUCH_QUEUE_FOUND[code] && (code === 'E143' || PORTS[code])) ok(same(tq, TOUCH_QUEUE_FOUND[code]), `${code}: touch_task ${hx(tq ?? placed)}, found ${hx(TOUCH_QUEUE_FOUND[code])}`);
     if (tq !== undefined && PORTS[code]) ok((PORTS[code][TP_FLAG_E143] ?? TP_FLAG_E143) === tq.flag, `${code}: A() of the touch flag word ${hx(PORTS[code][TP_FLAG_E143])}, the rule's ${hx(tq)}`);
+    // the touch gesture mask's word, and the port's place of E143's at the rule's (how 'mask-store'); the touch
+    // register list
+    const tm = placed?.touch_mask;
+    if (TOUCH_MASK_FOUND[code] && (code === 'E143' || PORTS[code])) ok(tm?.word === TOUCH_MASK_FOUND[code], `${code}: touch_mask ${hx(tm ?? placed)}, found ${hx(TOUCH_MASK_FOUND[code])}`);
+    if (tm !== undefined && PORTS[code]) ok(PORTS[code][0x62A3EBC0] === tm.word, `${code}: A() of the touch mask word ${hx(PORTS[code][0x62A3EBC0])}, the rule's ${hx(tm)}`);
+    if (Object.hasOwn(TOUCH_REGS_FOUND, code) && (code === 'E143' || PORTS[code])) ok(same(placed?.touch_regs, TOUCH_REGS_FOUND[code]), `${code}: touch_regs ${hx(placed?.touch_regs ?? placed)}, found ${hx(TOUCH_REGS_FOUND[code] ?? 'none')}`);
     // the power-off's facts, where the rule reads them
     if (code in POWER_SEQ_FOUND && (code === 'E143' || PORTS[code])) ok(same(placed?.power?.off, POWER_SEQ_FOUND[code]), `${code}: power.off ${hx(placed?.power ?? placed)}, found ${hx(POWER_SEQ_FOUND[code])}`);
     if (LENS_TABLE_FOUND[code] && (code === 'E143' || PORTS[code])) ok(placed?.lens_record?.zoom_table === LENS_TABLE_FOUND[code], `${code}: lens_record ${hx(placed?.lens_record ?? placed)}, found ${LENS_TABLE_FOUND[code]}`);

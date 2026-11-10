@@ -263,13 +263,17 @@ extension unit of an MN1030-core microcontroller); D = read from the firmware; X
   Dn = its number; C = 0, Dn = 0 on none) r would be 255 - i on a find, which the callers take for a full word, and 0
   on a full word, whose bit 0 they would hand out again. This is M1's polarity; the GDB 15.2 sim contradicts it: its
   AM30 `bsch` (F67x, `mn10300.igen`) sets C when Dm << (Dn & 31) is not 0 and writes no register, its AM33 `bsch` sets
-  C on a find. The third caller `0x50477a9b` takes r - 2, at most 11, of a quotient into a 4-bit field of an imgpro
-  register image (`0x50477aa2..c5`).
+  C on a find. The third caller `0x50477a9b` passes the complement of a quotient q (`not d3`, `0x50477a98`), so its r
+  is a 1 of q, and writes r - 2 into a 4-bit field of an imgpro register image (`0x50477aa2..c5`): 11 when r - 2 is
+  not in 0 .. 11 and when q is not below a rounded size (`0x50477a93`).
 - **The search order is M1's alone.** The allocators work with any 0 bit, and nothing in the firmware fixes the order;
   the AM33 sim's `bsch` (from bit (Dn & 31) - 1 down, bit 31 for 0) and GCC 14.3's AM33 `clzsi2`
   (`gcc/config/mn10300/mn10300.md`: Dn = 0 so that the search starts "at bit 31"; BSCH "returns the bit number of the
   highest set bit") have the same order. With it the helper hands out bit 31 first (X: camapp 3's menu runs udf07
-  twice with Dm = `0xffffffff`, Dn = 0, result 31, C = 0).
+  twice with Dm = `0xffffffff`, Dn = 0, result 31, C = 0). The start for Dn & 31 other than 0 is M1's alone too: the
+  one site clears Dn first (D). The third caller is the one use where the order changes a value: with M1's order its
+  field is floor(log2 q) - 2, with the lowest 1 first it would be q's trailing zeros less 2. The first reads as a
+  scale for q (I: consistent with M1, not a proof). Whether a lab session reaches `0x50477a9b` was not checked (?).
 - **Not modelled: the one-instruction PSW delay (M1).** A flag reader other than Bcc / Lcc right after udf07 would see
   the PSW from before it; the lab writes C at once. The only site's next instruction is `bcc` (D), which M1 lets read
   the new C, so no reachable code can tell.

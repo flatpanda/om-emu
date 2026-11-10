@@ -28,7 +28,9 @@ const h8 = (v) => '0x' + fx(v >>> 0, 8);
 const D = (v) => runtime(A(v));                  // a code address in the disassembly notation, at run time
 
 export const CPU2_ENTRY = A(0x50008F01), RELEASE = A(0xA3258360);
-export const RETURN2 = A(0xA2100400);            // core 2's return trampoline (the lab's CALLER page, unused offset)
+// core 2's return trampoline: an offset of the lab's CALLER page no other harness code uses (0x400 is display.mjs's
+// DOORBELL_STUB, 0x480 irq.mjs's STORE_STUB)
+export const RETURN2 = A(0xA2100600);
 export const KCB2 = A(0x60043B34);
 const STARTBITS = A(0x97F00000), TICK_MAGIC = A(0x97F00088), MAGIC = 0x77777777;
 export const CMD_BLOCK = A(0x97F0009C), CMD_BLOCK_SIZE = 0x78, IDLE_LOOP = A(0x5003883A);

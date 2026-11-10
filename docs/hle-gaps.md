@@ -1232,7 +1232,8 @@ traRoutingSession, below).
   the third. Queue 6 was empty with the event task (164) waiting to receive (X: the data queue's control block from
   the kernel's table at kcb +232, its send and receive wait lists at +4 and +12, as ref_dtq `0x50013ca7` reads them).
   The queue's reader is the play module's task, which the lab does not run; S-MODACK answered each request after the
-  step but passed the message on to the native OlyQeWr, so every message it answered stayed in a queue no task reads.
+  step but passed the message on to the native OlyQeWr, so every message it answered stayed in a queue no task reads
+  (with one exception, the native lens's two queues, below).
   The guard named queue 6 because it kept one record per call site: UI_IN's key posts to queue 6 through the same
   site (OlyQeWr's tsnd_dtq, return `0x5002c1f8`) overwrote the blocked call's queue (X).
   - Fixed: S-MODACK takes the message as the module's task would (OlyQeWr returns E_OK and the message is not put in
@@ -1240,13 +1241,22 @@ traRoutingSession, below).
     its record per calling task and site and names the task (`emu/src/lab/play.mjs`). With the old S-MODACK restored
     for PLAY_EXEC alone (traRoutingSession's control) right's request blocks again and the guard reports "queue 63 ...
     in task 57" (X).
+  - The queues a task the lab runs reads leave S-MODACK, since it now takes what it answers: with the native lens
+    LENS_MAIN (92) and LENS_COMMAND (91) wait on LENS_EXEC (0x2e) and LENS_COMMAND (0x31), both in S-MODACK's set
+    until then (X: the tasks in the queues' receive-wait lists after the bring-up; no other of its queues has a
+    waiting receiver in E143's default session, X). Their asynchronous requests go to the tasks alone (before,
+    S-MODACK answered them too); a synchronous send to them still returns E_OK. The golden sessions post none (X:
+    golden unchanged by it).
   - The same defect elsewhere (X unless tagged). 4.4.2's open item, a late workload pass ending in "task 165's
     request to queue 6": with S-MODACK's old way restored for every queue, the default session's workload passes (S1,
-    S2, the menu, playback, 2 s; heapWorkloadSession's) stop at the ninth pass's PLAY up, task 165's send to TAKE_FUNC
-    (0x5e) waiting, which the guard now names; with the fix nine passes run (2026-11-10). E132's LOGGER_MAIN (4.7.5):
+    S2, the menu, playback, 2 s; heapWorkloadSession's) stop at a PLAY up, task 165's send to TAKE_FUNC (0x5e), which
+    holds eight messages, waiting (the guard now names it): at the eighth pass with master's code, the start's own
+    request held too (the guard naming queue 6), at the ninth with the old way restored after the start; with the
+    fix ten passes run, the queue empty (2026-11-10). E132's LOGGER_MAIN (4.7.5):
     its queue (0xdf) holds four messages (80 bytes), CATEGORY_MAIN's (0xe6) one, and with LOGGER_MAIN left out of
     S-MODACK the start, the clock set and modelcheck's keys (S1, S2, PLAY, INFO, PLAY) now run on (three messages
-    held), so the old stop does not reproduce; that it was LOGGER_MAIN's full queue under a guard naming queue 6 is I.
+    held), so the old stop does not reproduce, with master's code before this fix as well (X), so not by it; what
+    changed since is ?, and that it was LOGGER_MAIN's full queue under a guard naming queue 6 is I.
   - Not covered: a post to a module queue other than the API sender's stays in the kernel's queue. CapTak_Take's
     control `0x40` posts TAKE_EXEC command 5 straight through OlyQeWr (`0x503ebe46`, 4.1.7) at an S2 in phase 102;
     TAKE_EXEC holds 25 messages (500 bytes; X: one held after the shot below).
@@ -1256,9 +1266,9 @@ traRoutingSession, below).
     then logs "[chls]Play_Picture with ph =%d is successful" for the picture handle `0x101` (X: the status 0 at
     `0x50bb1f4c`; that this status is the request's answer is I).
   - The play capability's get_picture_header_info (`0x50bb1f58`) calls Play_Get_Picture_Header_Info (`0x5040ce8f`,
-    which runs the play module's getter `0x518b629e` in the caller's task): the handle's record (`0x518b5181`) is
-    there, but the picture's record from `0x518bfc7e` has its u16 +12 at 0 where 1 passes, so the getter's code is
-    6152 (6155 without a record; X: 6152) and the API returns 1 (X).
+    which runs the play module's getter `0x518b629e` in the caller's task): the handle's record (its lookup
+    `0x518b5181`) is there, but the picture's record (`0x518bfc7e`'s) has its u16 +12 at 0 where 1 passes, so the
+    getter's code is 6152 (6155 without a record; X: 6152) and the API returns 1 (X).
   - The capability then sets its state word `0x62b0dc8c` to 4 (`0x50bb20ce..dd`, after its log "get_picture_header_info
     failed"; X: 4), which the single component's playOneFrameStart reads (`0x50bc0153`): neither 0 nor 1, so it
     answers 0xf0000001 (`0x50c5007b`, X). Its response, event 581 (evTraPlyResponse, built at `0x50ad3c4b` with the
@@ -1299,12 +1309,13 @@ traRoutingSession, below).
     4.1.8; with `--take probe` it stops at EXP_MOVIE). A stand-in posting TAKE's notifications would invent the
     take-ready's progress, as 4.1.7 declined; S1 in camapp 3 with the through image running needs what S-RELSEQ's
     retirement needs (4.1.8's list).
-- **Result (X, `emu/test/test_camapp.mjs` traRoutingSession 22 of 22).** After three passes of S1 and S2 and the menu
+- **Result (X, `emu/test/test_camapp.mjs` traRoutingSession 24 of 24).** After three passes of S1 and S2 and the menu
   (CapThr's top byte 2 before it, 1 after): PLAY shows ID_ST_NO_PICTURE with three pictures on the card, the header
   getter's code 6152, the capability's state 4; right (one fill, of `0x9a43e000`) and left are taken and PLAY returns;
   a pass records the fourth picture with the sequence in phase 102, and MENU's EV_PRESS_MENU_KEY sets no GUI event,
   isCtrlReleaseEnable refusing it in phase 102. The control (S-MODACK's old way for PLAY_EXEC) blocks at right and the
-  guard names queue 63 and task 57.
+  guard names queue 63 and task 57. In both of its sessions the native lens's two queues are out of S-MODACK's set,
+  LENS_MAIN and LENS_COMMAND waiting on them.
 - **Open.** TAKE's take-ready and capture under camapp 3 (stop 1, with 4.1.8's list); the play module (stop 2); posts
   to module queues outside the API sender (TAKE_EXEC's command 5); E132's old LOGGER_MAIN stop (not reproduced).
 
@@ -1564,7 +1575,7 @@ than E143, E146 and E147 (4.4.3).
     without the fix: at PLAY up task 165's request to queue 6 (`0x503eba00`) waits on a full queue while task 164's last
     receive was on queue 6 (X). Corrected (X, 4.3.2): the send waited on TAKE_FUNC's queue (0x5e), full with the
     requests S-MODACK had answered but left in it; the guard named the queue of a later send through the same site.
-    S-MODACK now takes the message, and nine passes run. The test runs five passes.
+    S-MODACK now takes the message, and ten passes run. The test runs five passes.
 - **Open:** S-LENSMCU's assumed values (A-LENSMCU-1..3) and the lens's real replies (its flags, function words,
   tables, version, the ID's first bytes and the check byte's value) are ?. E146 and E147: 4.4.3. The E144 family and
   E118 have no `lens` board fact and no `lens_driver` fact: they keep S-LENS.

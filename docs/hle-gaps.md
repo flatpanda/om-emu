@@ -874,7 +874,8 @@ request throws; TAKE_MAIN is then in RdyFcsRdy3 with the pending bits `0x300` (X
 
 **What S-RELSEQ's retirement still needs (I unless tagged):**
 1. EXP for TAKE_EXPOSE's take-ready and take requests: EXP_MOVIE's answer to 0x509 (RdyFcsRdy3's 0x500, X) and
-   TAKE_EXPOSE's 0x600 at S2 (the crash above, X with an invented answer); 4.2 seam B, S-EXPOSE's round.
+   TAKE_EXPOSE's 0x600 at S2 (the crash above, X with an invented answer); 4.2 seam B, S-EXPOSE's round. Since
+   4.2.3 (H-EXPINIT) EXP_MOVIE takes 0x509 natively and waits for the frame events of the driver's front end (X).
 2. The AF: what object 0xc021 = 1 means and whether the camera's S-AF scans at RELEASE_READY_START or later (?);
    TAKE_FOCUS's context +20 (errlog `0x0f803003`); the AF library's init `0x508bede6` (logs `0x1c005002` in the lab,
    `docs/om1-subject-spec.md` 5.7); behind them FCS on CPU 1 and the AF data path (4.4).
@@ -1104,7 +1105,9 @@ served natively, so S-EXPOSE stays (its text now gives the routine's role and th
   as the stage runs it, the four steps above (device-free, X): an H- step of a few hours once (1) is there. (3) The
   frame events: cam.c's init and request 7's callbacks on the sensor's frame timing (4.2 seam D), or a stand-in at
   those callbacks paced by the lab clock: days. They also free TAKE_EXPOSE, which waits for EXP_MOVIE's answer until
-  then. (4) The metering data: EXP's slots from the ISP's AE statistics (seam B, 3-5 weeks). (5) The status: the
+  then. (4.2.3: the first init runs, H-CAMINIT; the callbacks are fired from the driver's front end, whose interrupt is
+  not read, so no stand-in calls them.)
+  (4) The metering data: EXP's slots from the ISP's AE statistics (seam B, 3-5 weeks). (5) The status: the
   frame step `0x5058e47b` must set `(0x62abd558)` and `0x5058c955(1280)` must answer nonzero (neither read), or the
   callback gets status 2 and skips the writer. The divide by zero blocks only through mode 1, whose callback does not
   write (above); where mode 1's AE results come from, if anywhere, is ?. Then the callback writes the objects and the
@@ -1219,6 +1222,103 @@ camapp 3's frames and compares them with camapp 1's. The default stays camapp 1.
   pace-wall and play-perf take other states (not traced). The check runs (check/, run/) were not run with the flip.
 - **Corrections.** 4.1.5's, 4.2.1's and 4.3.1's "the composite is refused" and 4.6.2's "no frame shows the column"
   hold only without A-VSCHIST-3; 4.2.1's open item on the composite is answered here (as an assumption, not a fact).
+
+#### 4.2.3 The camera driver and the frame events (2026-11-10; D unless tagged, addresses E143's)
+
+Two tracks stopped at the same place: S1's TAKE_EXPOSE `0x500` posts `0x509` to EXP_MOVIE and waits (4.1.8), and
+EXP_MOVIE calls the AE result writer's callback only after a wait on its flag 21, whose bits the camera driver's
+request-7 callbacks set (4.2.2). This round reads cam.c's inits, its request switch and request 7 down to what fires
+those callbacks, runs its first init natively (H-CAMINIT, every `--take probe` session) and EXP as USTART2's stage
+brings it up (H-EXPINIT, `--take probe` with `--cpu2 native`; `emu/src/lab/take.mjs` round 4, off by default, golden
+unchanged). The interrupt that fires the events is not identified, so no stand-in raises them: EXP_MOVIE waits (X).
+`emu/test/test_take_release.mjs` focusSession (X, 11 of 11), `emu/test/test_expcb.mjs` expCallbackSession (X, 17 of 17)
+and camDriverSession (X, 7 of 7) pin what follows.
+
+- **Two inits.** USTART calls cam.c's first init `0x502a49ec` at `0x50024aa2` (before the lens init at `0x50024ab6` and
+  TAKE_FUNC's at `0x50024c2d`) and its second `0x50155357` at `0x50024d80` (it then starts USTART2's stage task,
+  `0x50024d9b`). The first: `0x501504c0` (the error log's state `0x62988868`), `0x501529dc` (four free lists through
+  `0x50152f14`, of 200, 100, 13 and 4 entries; the first is the request pool, head `0x6299726c`, its base words
+  `0x629a71dc..e8` set here), `0x5015368b`, `0x50154a12` (`0x501536b4(1)` and the timer code `0x50064323` with 8 and 9),
+  `0x50150f69`, `0x50154704`, `0x50152f4c` and, when that returns 0, `0x50152495` (`0x50150f8e(6, 1)` to `0x62997268`,
+  the instance the sequence items of `0x501524c0` go to). X: it returns 0, logs nothing, creates no kernel object and
+  touches only the interrupt controller (IRQs 146 and 147, which already carry the timer block's handlers); the pool's
+  head goes from 0 to a slot. The second makes ten calls, each only while the last returned 0: `0x50152401`,
+  `0x50150b66`, `0x501550bc`, `0x50151d07` (the named-queue registry `0x6298b240` cleared), `0x5015f38f`, `0x501a3559`,
+  `0x5019c70f`, `0x5019868e` (cam_seq_movie.c's init: its queues SQMV, MQEX, INFN and SMFM registered through
+  `0x50151d1b`), `0x5019813d` and the front end's init `0x5016efcd`, then `0x501536b4(13)` (kept at `0x629a7af0`,
+  request 151's), `0x50167b16` and `0x50156519(0, 0)`. The front end's init attaches the units' interrupts (the SSG's
+  15-17 at `0x5019f621` and 18 at `0x5019d733`, SLVS 243-247 `0x5019e49e`, PRO 27-31 `0x501916ec`, AE / AWB 32-37
+  `0x501587b3`, AF 38, PFP 39, the clock block's 40, DMA 41 / 42, `0x9b180000`'s 24 and 4.2's "cam.c, unknown" 26 at
+  `0x50156666`, handler `0x50156528`) and builds the front end's callback table (below). X: the first nine calls return
+  0 and touch no device; the front end's first writes are `0x98800340` (kept by the lab stub) and the camera clock gate
+  `0x9b500800`, which the lab stub refuses. So the first init runs as H-CAMINIT and the second does not.
+- **The request switch** `0x502a4a46`: ids 5..152 through a hashed table at `0x602c651c` (32 slots {id - 4, case}; X:
+  read in the lab). 5 `0x5015553b`, 6 `0x5015552a`, 7 `0x5015541d`, 8 `0x501556fb`, 17 `0x5015572e`, 134 `0x5015573a`,
+  137 `0x5015575c`, 152 `0x5015574b` run in the caller's task; 13, 15, 16, 144, 145 and 148 are posted as deferred calls
+  (`0x500504aa`: `0x5015554c`, `0x501555df`, `0x5015566d`, `0x5015582d`, `0x501558b8`, `0x502a4b74`); 151 calls
+  `0x5015373a` with `(0x629a7af0)`; 130..132 return 0; any other id logs `0x0a103000` (`0x502a4b52`).
+- **Request 7.** Its record (EXP's `0x62a98a0c`, built by `0x5056a6e4`): +0 the id, +4..+20 five pointers into the
+  record, +72 the completion, and from +76 one slot per event: the callback for event `n << 8` at +76 + 4 (n - 1), its
+  mask at +128 + 4 (n - 1), n 1..13. EXP's: +72 `0x5056fd44`, +80 `0x5056fd61` (event `0x200`, mask 1), +84 `0x5056fff0`
+  (`0x300`, mask 3), +88 `0x50570024` (`0x400`, mask 2). So 4.2.2's four frame callbacks are request 7's completion and
+  three event slots. The handler `0x5015541d`, under the lock `0x50053ebe(2)`: with +68 set `0x50155cfb`; else with +64
+  set `0x50155c28(7, ...)`; else, when the word +16 of the block +12 points to has none of the bits `0x7f08` (EXP's
+  case, X), `0x501563c9` and `0x50155b2b(1, 0x50155de8)`, which takes a 136-byte item from the pool, copies the record's
+  +76..+179 into its +8..+111, sets +116 the notifier `0x50155e66`, +120 the callback and +124 the record, and hands it
+  to cam_seq_movie.c's dispatcher `0x501987cd` (kind 1, `0x50198993`: a 136-byte copy posted to INFN and a message to
+  SQMV through `0x50151e45`). The notifier (d1 a mask, a1 the event or'd with a kind 1..4) calls the slot of the event
+  when the slot's mask and d1 share a bit (`0x50155ed3`: the cases through `0x6022562c`; `0x50155f03`, `0x50155f63`,
+  `0x50155f82` for `0x200`, `0x300`, `0x400`); `0x50155de8`, `0x50155e12` and `0x50155e3c` call the completion. X with
+  H-CAMINIT alone: requests 8 and 7 are accepted (no `0x0a103000`), and the movie sequence's queue lookups fail:
+  `0x0a283000` three times (the queue count `0x50151ffc` once, line 1032; the post `0x50151e45` twice, line 487). With
+  the second init's first nine calls run as well (an experiment, not pinned), the posts succeed and nothing else happens
+  in 300 ms.
+- **Who fires the events (D to the front end; ?).** Event `0x200`: the movie sequence, `0x501999f4` at `0x50199a3d` (the
+  notifier of the INFN copy with `0x202`, when its +64, the record's `0x200` mask, has bit 1), reached from the
+  dispatcher's kind 10 (`0x50199383` -> `0x5019981d`). Events `0x300` and `0x400`: the front end. The movie sequence
+  gives it 144-byte kind-7 requests (`0x501984e7` from `0x501981ae`, request 7's other branch; `0x5019c498` from kind
+  10's `0x50199f42`) carrying the item's slots and masks at +24.. and a wrapper at +128 (`0x5019862f`, `0x5019c69c`)
+  that calls the item's notifier with the event or'd with kind 4 or 2. The front end's entry `0x5016f2ae` (`0x5016f2da`
+  -> `0x5016f5a6`) fills a context (I: one of the 15 of 32476 bytes from `0x629aa520`, by the same offsets): the record
+  +2464 for `0x300` (mask +48 from the request's +84, enabled +64 while bit 23 of the context's event mask is set) and
+  +2532 for `0x400` (+88, bit 24). Their +44 callbacks, `0x5017078f` (`0x300`) and `0x501707c0` (`0x400`), come from the
+  table the front end's init builds on its stack (entries 30 and 31) and `0x50172466` writes into each context. The
+  units' per-bit handlers call a record's +44 with its +48 mask (cam_bright.c's, the table `0x6022575c`, e.g.
+  `0x5015db6d`); which handler takes the records +2464 and +2532, and so which interrupt raises `0x300` and `0x400`, is
+  not read (?). The SSG's handlers (15-17 `0x501a2478`, `0x501a24c2`, `0x501a250c`; 18 `0x5019e218`) read their status
+  at `0x9b000004..0x9b000020` (18: `0x9b000604`) and run per-bit one-shot lists (`0x501a26d6`, `0x501a272d`, ...), whose
+  writers are not read. So the frame events come from the front end's interrupts (I), which the lab neither attaches nor
+  models, and no stand-in raises them.
+- **S-TAKECAM stays (X, camDriverSession).** Natively, with the first init, requests 148 and 144 are accepted, deferred
+  (`0x502a4b74`, `0x5015582d`) and each queues an item of the engine (`0x501524c0`), touching only the interrupt
+  controller and the deferred-call triggers; neither completes in 100 ms. Request 6 logs `0x0a273000` (the engine
+  instance code `0x501536b4..0x5015382c`) until the second init's first nine calls have run, and is then deferred
+  (`0x50153844`) and queued without completing. So S-TAKECAM keeps answering TAKE's requests; EXP_MOVIE's go natively.
+- **H-EXPINIT (X).** After H-TAKENBINIT, with `--cpu2 native`: IMG_PRECON's init `0x502a49b3`, EXP's init `0x50553649`,
+  EXP_MOVIE (task 88) by act_tsk and EXP_MOVIE2 / 3 on CPU 2 by OlyTaSt, as test_expcb.mjs did by hand (4.2.2); EXP's
+  queues 0x17 / 0x18 then go natively. The stage runs IMG_PRECON's init before TAKE_MAIN's and EXP's before
+  TAKE_EXPOSE's start (I: no difference, TAKE_EXPOSE waits on its queue). EXP's init includes H-AEINIT's table init
+  `0x50560b29`, which so runs twice; what the second run changes is not read (?), and the tests pass with it (X).
+  EXP_MOVIE2 / 3 join `cpu2.mjs` CPU2_TASKS when the step runs.
+- **S1 (X, focusSession: camapp 3, `--take probe --cpu2 native`).** As in 4.1.8 to RdyFcsRdy3's TAKE_EXPOSE `0x500`;
+  then TAKE_EXPOSE's `0x509` (kind 1289) reaches EXP_MOVIE natively, which gives cam.c requests 8 and 7 and waits on
+  flag 21 for bit `0x1000` (`0x5056ba25`), the bit `0x5056fff0` (event `0x300`) sets. It does not answer EXP_MOVIE_POST,
+  so TAKE_EXPOSE stays in its receive. RdyFcsRdy3 also asks TAKE_FOCUS `0x400` RELEASE_IDLE_START (token 4, replied
+  natively): TAKE_MAIN stays in RdyFcsRdy3 with the pending bits `0x200` (TAKE_EXPOSE's token 15). The sequence takes
+  event 794 (TakeReadyFinish) in phase 102 66.7 ms after S1, after TAKE's event `0x04080032` (RdyFcsRdy2) and
+  TAKE_EXPOSE's post and before TAKE_FOCUS's `0x400`: correction to 4.1.8's experiment, 794 does not need RdyTrig2Wait
+  (I: it follows `0x04080032`). No frame callback, answer or AE result write runs, so S-EXPOSE's readers are as in
+  4.2.2. Since S1: `0x25001703`, `0x0f803003` (4.1.8), `0x0f833000` once (`0x5090afde` in `0x5090af48`, from the AF
+  library's `0x508c10c1`; why is ?), cam.c's `0x0a283000` three times, besides the frame-rate warning `0x39000903`
+  (4.1.4); to the lens only its state poll `c1 80`.
+- **S2 (X).** Event 824 in phase 103, as in 4.1.8's experiment; then the lab stops: while the GUI's synchronous DISPLAY
+  command 17 (from `0x507f66d1`) runs, the application posts DISPLAY command 18 (reply queue 6, token `0xf0080000`)
+  through its API sender (`0x503eba07`), which S-DISPQ does not stand in for inside a DISPLAY run (depth 1). TAKE takes
+  nothing. The stop is the lab's; what command 18 does there is not read.
+- **Next (I; Claude wall-clock).** (1) The consumer of the records +2464 / +2532 read to its interrupt (half a day to a
+  day); if it is a unit whose status the lab can raise from its frame clock, an S- stand-in at that interrupt, with the
+  front end's init (its devices) as the cost (4.2 seam D). (2) Then EXP_MOVIE's answer, TAKE_EXPOSE's token 15 and
+  RdyTrig2Wait, and S2's TAKE_EXPOSE `0x600` (4.1.8). (3) S-DISPQ's nested post at S2 (a lab change, hours).
 
 ### 4.3 Still capture, image processing and recording
 

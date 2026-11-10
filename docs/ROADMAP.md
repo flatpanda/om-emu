@@ -292,9 +292,10 @@ the survey table.
   (a firmware download, a calibration and a register list over the touch transport, which E120 and E122 do not run);
   a tap on the touch mode icon cycles it and a tap in the super control panel selects its cell on E118, E120 and
   E122 (`test/test_touch.mjs`), the touch message at index 107 as on E137. Open: which version an E-M5 II's
-  controller reports (?: another runs the download, its INT and the calibration, not modelled); touch on the EVF; the
-  application's own touch start (the close, the open with HFW's callback and the masks per screen, X on the family
-  and E144) supersedes H-TPSTART's there, which could go on those bodies.
+  controller reports (?: with another the list runs the download through the write's stand-in and skips the
+  calibration, touch still working, X with 0; a controller whose version changes with the download is not modelled);
+  touch on the EVF; the application's own touch start (the close, the open with HFW's callback and the masks per
+  screen, X on the family and E144) supersedes H-TPSTART's there, which could go on those bodies.
 - **E145's AF upload:** read (2026-10-29, survey finding 22): the TG-7's frame plane has modes 1 and 2 only, its
   mode 2 the place of E143's UP_LOCKON, and nothing writes the mode-3 frames DISP_FRAME reads, so S-AFOSD gives it
   no upload (rule framePlane, which also places UP_AF on the other clamp-form bodies and retires E130's override;

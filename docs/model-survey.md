@@ -1683,40 +1683,51 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    list (finding 87); `0x1c00` = 2 (op 11); and the list's end `0x502e477d`, which arms the driver for the INT's data
    (its INT word 0, the word after it 1). From entry 10: a download of the controller's firmware (op 7: 0x30, 0x10 and
    then 24496 bytes through the write's `0xff` paths, X: the lab's log; then an INT wait of up to 16 x 10 ms, "TP
-   BOOTLOAD ERROR" on its timeout), the version again, `0x1c03` = 10, a calibration (op 8 with 1: `0x1c00` = 3, an INT
-   wait of up to 31 x 50 ms, "TP CALIB ERROR"), op 9 and op 11. The version read logs "[TP] Touch IC F/W Version A not
-   available!!" for a value outside `0x3000`, `0x9e00`, `0xc400` and `0xd700` (`0x502e4bb8..0x502e4bdc`), and the report
-   parser `0x502e4f80` takes the coordinates for every event from `0xd700` on (`0x502e4ff7`); its report is E144's 10
-   bytes at `0x0000`. Of the 16 bodies with a touch panel only E118 holds "TP BOOTLOAD ERROR" and "TP CALIB ERROR" (X, a
-   string scan): its panel arrangement is E120's and E122's controller at slave `0x48` (I: op 9's values `0c`, `12`,
-   `06`, `73`, `17`, `19` are among E120's and E122's power-up writes, X) under a driver that downloads the controller's
-   firmware when its version differs (I).
+   BOOTLOAD ERROR" on its timeout), the version again (op 2 with 16: `0xc400` goes on to `0x1c03` = 10 and a
+   calibration, op 8 with 1: `0x1c00` = 3, an INT wait of up to 31 x 50 ms, "TP CALIB ERROR"; any other value jumps to
+   entry 16), op 9 and op 11. The version read logs "[TP] Touch IC F/W Version A not available!!" for a value outside
+   `0x3000`, `0x9e00`, `0xc400` and `0xd700` (`0x502e4bb8..0x502e4bdc`), and the report parser `0x502e4f80` takes the
+   coordinates for every event from `0xd700` on (`0x502e4ff7`); its report is E144's 10 bytes at `0x0000`. The other
+   drivers at `0x48` read the version too, without the check: E120's, E122's and E144's display opens' command lists
+   call a getter that reads `0x1c14` while its kept value is 0 and keeps it as b1 << 8 | b0 where E118 keeps b0 << 8 |
+   b1 (E120 `0x502da010` from `0x502d0175`, E122 `0x5030c914` from `0x503027bc`, E144 `0x5018a8ee` from `0x50181c96`, D;
+   the read's immediates on every other body at `0x48`, X: a byte scan), and their report parsers compare it with
+   `0xd700` as E118's does (E120 `0x502dad03`, E122 `0x5030d871`, E144 `0x5018bc54`, D). Of the 16 bodies with a touch
+   panel only E118 holds "TP BOOTLOAD ERROR" and "TP CALIB ERROR" (X, a string scan): its panel arrangement is E120's
+   and E122's controller at slave `0x48` (I: op 9's values `0c`, `12`, `06`, `73`, `17`, `19` are among E120's and
+   E122's power-up writes, X; whether the version's two byte orders read one controller alike is ?) under a driver that
+   downloads the controller's firmware when its version differs (I).
 86. **E118's INT waits and the controller's version** (2026-11-10, `src/fw/facts.mjs` touchIntWait,
    `src/lab/touchpanel.mjs`). E118's three INT waits are inline in its list's ops 5, 7 and 8: sleeps of 2, 10 or 50 ms
    until the getter `0x502e4764`, `mov (0x6187b7e4),d0; retf`, returns 1, called from those three loops alone
    (`0x502e3ffd`, `0x502e4028`, `0x502e40b0`, X); the list's end clears that word and sets the one after it, and the INT
-   handler `0x502e4b21` reads a report only with that one set (D), as on E120, whose pin callback stores 1 in the word
-   while the one after it is 0 (finding 54; E118's callback not read, I). touchIntWait reads it as a third form: a call
-   of such a getter followed by `cmp 1,d0` within 0x60 bytes before a load of "TP INT TIME OUT\n" (E118: the wait
-   `0x502e3ffd`, the poll `0x502e4764`); S-TPINTWAIT answers it at the getter's call as at the other forms' polls, and
-   the rule reads the 18 other bodies as before (X). S-TPREG's controller at `0x48` answers `0x1c14` with `0xc400` (I: a
-   controller that runs the firmware this build carries, so the list writes its registers without the download; which
-   version an E-M5 II's controller reports at power-up is ?). Before, with the touch task running the list: "TP INT TIME
-   OUT", the version read 0 and "not available", the download, "TP BOOTLOAD ERROR", the version 0 again, then op 9 (X,
-   the firmware's prints and the lab's I2C log).
+   handler `0x502e4b21` reads a report only with that one set (D); its pin callback `0x502e4d0a`, which the driver's
+   set-up `0x502e4601` attaches to pin 30 (`0x502e462e`), stores 1 in the word while the one after it is 0, as E144's
+   (D). touchIntWait reads it as a third form: a call of such a getter followed by `cmp 1,d0` within 0x60 bytes before a
+   load of "TP INT TIME OUT\n" (E118: the wait `0x502e3ffd`, the poll `0x502e4764`); S-TPINTWAIT answers it at the
+   getter's call as at the other forms' polls, and the rule reads the 18 other bodies as before (X). S-TPREG's
+   controller at `0x48` answers `0x1c14` with `0xc400` (I: a controller that runs the firmware this build carries, so
+   the list writes its registers without the download; which version an E-M5 II's controller reports at power-up is ?).
+   Before, with the touch task running the list: "TP INT TIME OUT", the version read 0 and "not available", the
+   download, "TP BOOTLOAD ERROR", the version 0 again, then op 9 (X, the firmware's prints and the lab's I2C log). With
+   S-TPINTWAIT's third form and S-TPREGLIST in place, 0 at `0x1c14` runs the download (`30`, `10` and the 24496 bytes,
+   recorded by the write's stand-in), S-TPINTWAIT answers its wait, the version reads 0 again (a second "not
+   available"), entry 12 jumps past the calibration, op 9 and op 11 run, and a tap on the touch mode icon reaches HFW as
+   PRESS and CLICK (X): the answer picks the list's path, not whether touch runs.
 87. **E118's register list over the touch transport (S-TPREGLIST)** (2026-11-10, `src/fw/facts.mjs` touchRegList,
    `src/lab/display.mjs`). Op 9 (`0x502e4eee`) writes ten registers, `0x1c<b0>` = b1 from the 2-byte entries of the
    table `0x615de290`, not through the touch I2C write, which the lab stands in for, but through the write's transport
    inline: its semaphore `0x60040e40`, the transport's open `0x502e4d50` (serial channel 4 through `0x5006f673`,
    then a flag wait), the descriptor `0x6187b7c4` with `0x50068418`, `0x50068506` and `0x5006851a`, and the
-   completion flag `0x60040fe2` per write (D). The family's serial channels in that mode, their opens and completions
-   are not modelled (finding 44 presets the transmitters' idle state only), and the touch task waited there for good
-   (X: its state WAI after the list's op 9, no arm). touchRegList finds such a list as the function besides the touch
-   read and write that calls the transport's open after the write's semaphore load, with its table, count, slave and
-   register byte (E118 only: on E120 and E122 the open's callers are the read and the write, X); S-TPREGLIST stands in
-   for it as for the write, the ten entries recorded as writes to slave `0x48`, the transport not run, 0 returned. In
-   the lab's sessions the table holds `1b 0c`, `23 00`, `3f 12`, `1f 06`, `1e 00`, `24 73`, `29 17`, `38 04`, `3d 01`
-   and `0b 19` (X).
+   completion flag `0x60040fe2` per write (D). The family's serial channels' completions in that mode are not modelled
+   (finding 44 presets the transmitters' idle state only): run, the transport's open and its flag wait returned and the
+   first entry's completion wait (`0x502e49e3` on that flag) did not, the touch task waiting there for good, no `0x1c00`
+   = 2, no arm and a tap read nothing (X: observers on the list's steps). touchRegList finds such a list as the function
+   besides the touch read and write that calls the transport's open after the write's semaphore load, with its table,
+   count, slave and register byte (E118 only: on E120 and E122 the open's callers are the read and the write, X);
+   S-TPREGLIST stands in for it as for the write, the ten entries recorded as writes to slave `0x48`, the transport not
+   run, 0 returned. In the lab's sessions the table holds `1b 0c`, `23 00`, `3f 12`, `1f 06`, `1e 00`, `24 73`, `29 17`,
+   `38 04`, `3d 01` and `0b 19` (X).
 88. **Touch on the E118 family** (2026-11-10, X: a play session per body on the TFT, `test/test_touch.mjs`). With
    findings 84 to 87 the three run the touch path as the E144 family does: H-TPINIT before the start's display open
    (fact touch_int on all three; on E118 the order also matters because the open posts cmd 4 to the queue the init
@@ -1725,8 +1736,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    `0x5030cd66`, E120 `0x502da45e`, E118 `0x502e4fce`). A tap on the touch mode icon at 40, 333 gives HFW PRESS and
    CLICK at the pixel and cycles the icon on all three (frames); OK opens the super control panel (`0x0403`) and a tap
    at 360, 240 selects its AF Mode cell (frames). The touch message `0x9100` is sendEvent index 107 on the three, E137's
-   shift (S-TOUCHMAP's lookup). `test/test_touch.mjs` taps the icon on the three and the panel on them and E144 (9
-   checks each, all pass); `bin/modelcheck.mjs` passes the three on the TFT and the EVF with touch on.
+   shift (S-TOUCHMAP's lookup). `test/test_touch.mjs` taps the icon on the three and the panel on them and E144 (11
+   checks each, all pass, among them that each frame holds for 500 ms without a tap before the tap changes it);
+   `bin/modelcheck.mjs` passes the three on the TFT and the EVF with touch on.
 89. **The application's own touch start, and the control area** (2026-11-10, X: observers on the opens, closes and
    mask sets of E122, E118 and E144 in a TFT session). At the camera application's start E122 closes the panel and
    opens it again with HFW's callback through its touch API (the close returning to `0x502f4b5d`, the open to
@@ -2034,7 +2046,7 @@ probes expected failures, and are in its checked set with E122 (finding 56).
 Since finding 61 (2026-10-31) the three pass the count probe on both panels, their screens redrawn by INFO before each
 window (PROBE_REDRAW): their application asks for the count only when the shooting screen is redrawn.
 Since findings 84 to 89 (2026-11-10) touch runs on the three's TFT: a tap on the touch mode icon and in the super
-control panel reaches the GUI (`test/test_touch.mjs`).
+control panel reaches the GUI (X, `test/test_touch.mjs`).
 
 ## The chained port
 

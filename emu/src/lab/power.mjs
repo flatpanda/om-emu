@@ -69,7 +69,9 @@ const IOEXP_WRITE = POWER_OFF_LIB.ioexp_write;
 
 // the lab time the power-off may take, from the shutdown's call to its last write: the run in the lab takes about
 // 0.1 s (X); the firmware's own waits on the way end in 1 to 5 s (the IO expanders', PER_SCPU's), so a stuck path
-// shows as one of them or as this deadline
+// shows as one of them or as this deadline. Under control camapp 3 startShutDown's TRA 586 waits for the HLS's answer
+// up to 10 s itself (0x50af6829: the exec's timeout 10000, then 0xf0000043; D), so this deadline, counted from the
+// call, ends first when the components do not answer (docs/hle-gaps.md 4.3.6)
 export const POWER_OFF_MS = 10000;
 // the sub-CPU's steps per poll of pin 102 (H-SCPUPOLL), and the polls before the lab gives up on the pin
 const POLL_STEPS = 64, POLL_LIMIT = 1000;

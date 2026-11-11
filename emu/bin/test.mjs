@@ -196,6 +196,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   pn.bad.forEach((x) => console.log('  ', x));
   bad += pn.bad.length;
 }
+// control camapp 3's power-off and EVF switch (test_c3power.mjs, docs/hle-gaps.md 4.3.6): where each stops and why
+{
+  const { powerOffSession, evfSwitchSession } = await import('../test/test_c3power.mjs');
+  const po = await powerOffSession(), ev = await evfSwitchSession();
+  console.log(`camapp 3's power-off (TRA 586, the flash's stop): ${po.checks - po.bad.length}/${po.checks}; camapp 3's EVF switch (the histogram's stop): ${ev.checks - ev.bad.length}/${ev.checks}`);
+  [...po.bad, ...ev.bad].forEach((x) => console.log('  ', x));
+  bad += po.bad.length + ev.bad.length;
+}
 // the imgpro unit's model (S-IMGPRO) on a bare machine; the firmware's driver on it runs in camapp 3 above
 {
   const { imgproUnits } = await import('../test/test_imgpro.mjs');

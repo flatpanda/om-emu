@@ -101,7 +101,7 @@ The multi-selector's directions are injected at UI_IN's code entry (H-JSINJECT, 
 
 ## 5. Touch driver (task 83)
 
-**Bring-up.** H-TPINIT: the boot call of touch init `0x501e3dca` (from `0x50024ca6`, D) from the lab task, then `act_tsk` of the static task whose id is at `0x60042dcc` (83; entry `0x501e3eac`). H-TPSTART: TP_OPEN `0x501e40da(a0 = HFW callback, run-time 0x60b97e80, a1 = 0)` and the gesture mask `0x501e41d1(-> 0x11f1)`, every gesture bit the driver posts (touch investigation §3, X); the camera application's own start (HFW `startTouchPanel` `0x50b76d47`, `ctrlTouchPanelEvent` `0x50b76b93`) is not run.
+**Bring-up.** H-TPINIT: the boot call of touch init `0x501e3dca` (from `0x50024ca6`, D) from the lab task, then `act_tsk` of the static task whose id is at `0x60042dcc` (83; entry `0x501e3eac`). H-TPSTART: TP_OPEN `0x501e40da(a0 = HFW callback, run-time 0x60b97e80, a1 = 0)` and the gesture mask `0x501e41d1(-> 0x11f1)`, every gesture bit the driver posts (touch investigation §3, X); the camera application's own start runs after it in the play start (X, 2026-11-10, docs/model-survey.md finding 114): its touch module's end closes the panel and HFW `startTouchPanel` `0x50b76d47` opens it again with the same callback, at 2756.2 and 2771.3 ms of lab time, and the GUI sets the mask per screen (`ctrlTouchPanelEvent` `0x50b76b93` not looked at).
 
 **Pins (S-GPIO-TP).** The driver reads pins 48, 49 and 108 through `0x50002a35` (`(0x60025ff8[pin])` bit 4): `0x9b880e00`, `0x9b880e40`, `0x9b883e80` (D, table bytes). Level 1 is the only level at which it accepts a touch (`0x501e4858..79`, `0x501e4bbb..df`, D). The lab-stub page `0x9b880000` is opened in play only, with presets 0x10 at the three registers; what the pins are is ?.
 

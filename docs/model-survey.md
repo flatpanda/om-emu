@@ -2295,8 +2295,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    families; the player's stand-in list drops it there): without it each of the 13 bodies' starts opens the panel once
    with HFW's callback (E122 at 615.4 ms, E118 and E120 651.6, E144 2830.1, E134 416.4) and the TFT shooting screen's
    mask is the GUI's (0x11f1; E118's 0x1f1, set by its GUI at 6757.6 ms), and `test/test_touch.mjs` passes the TFT taps
-   on all 13 as before. E143, E146 and E147 keep it: golden records E143's sessions with it, and its removal there is
-   not tried.
+   on all 13 as before. With H-TPSTART put back at the bring-up's end (an experiment, not committed) the TFT sessions of
+   E118, E122 and E144 give the same masks, frames and gestures at the same lab times through two taps on the touch
+   mode icon. E143, E146 and E147 keep it: golden records E143's sessions with it, and its removal there is not tried.
 115. **The GUI's gesture mask on the EVF, and the AF Targeting Pad** (2026-11-10, D unless tagged; `test/test_touch.mjs`
    EVF_PAD). The GUI's gesture set for a screen (E122 `0x50d0e9bb`, nine callers; E144 `0x50f32327`) returns unless a
    setting reads 1 (E122's 426), sets every flag and, where HFW's output state is 5 (the EVF, I; X: the EVF sessions
@@ -2314,24 +2315,37 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    leaves the GUI's OFF mask of finding 115 (on E122 at the GUI's set at 6907.5 ms, after the application's 0x1f1), a
    tap at 360, 240 is read (two reports) and HFW sees no gesture. With the pad's id set to 1 before the GUI exists
    (S-PERSIST's seed through the firmware's property set, 0 -> 1), the mask is 0x1f1 and the tap reaches HFW as PRESS at
-   the pixel and CLICK (E120: LIFTOFF at 0, 0, why not read), and on E120 and the E144 family a tap at 40, 333, left of
-   the pad's area, reaches nothing. No tap changes the frame or the GUI's state (the pad's AF target moves with a slide,
-   I: "[GuiTouch] Evf_Touch_Pad_Slide" `0x50d012e2`; not tried). On E122 with the pad on a second tap within 800 ms is a
-   DCLICK, and the GUI's double tap ran twice for its one post (id 867 1 -> 0 -> 1, from the GUI's action loops
-   `0x50d01984` and `0x50d0e84e`; why twice is not read). Checks with the TFT's: 16 on E118, 26 on E120 and E144, 25 on
-   E122, 22 on E148, E139, E134, E137, E140, E125 and E130, all pass.
+   the pixel and CLICK, and on E120 and the E144 family a tap at 40, 333, left of the pad's area, reaches nothing.
+   E120's first tap inside the pad ends as LIFTOFF at 0, 0, at any pixel and after a 5 s wait as well, and each later
+   one as CLICK: its driver's area-on derivation (E120 `0x502da6bd`, the down `0x502da6eb`, the end `0x502da73e`)
+   takes the first tap's down but finds no end for its point at the up (observers), where a later tap's up is an end
+   with the press 2 us before; why the first is not seen is not read. No tap changes the frame or the GUI's state
+   (the pad's AF target moves with a slide, I: "[GuiTouch] Evf_Touch_Pad_Slide" `0x50d012e2`; not tried). On E122 with
+   the pad on a second tap within 800 ms is a DCLICK, and the GUI's double tap ran twice for its one post (id 867
+   1 -> 0 -> 1): two passes of the GUI's touch action, each taking action 0x13 to its dispatch `0x50d01984` and 1 back
+   from the handler, the other dispatch `0x50d0e84e` not running (observers); why two passes is not read. Checks with
+   the TFT's: 16 on E118, 27 on E120 and E144, 26 on E122, 23 on E148, E139, E134, E137, E140, E125 and E130, all pass.
 117. **E118's download and the controller's version** (2026-11-10, D unless tagged; answers finding 86's "?" in part).
    The download (op 7, `0x502e4bec`) clears the INT word, writes `30` and `10` to slave `0x48` and then 24496 bytes from
    the image itself (run-time `0x603f1f85`, beside the driver's "prm_calib_data", "read_calib_data" and
    "tp_drv_adjust_jd_a/b" traces). The version read (`0x502e4b94`) keeps b0 << 8 | b1 of `0x1c14` and logs "not
    available" outside 0x3000, 0x9e00, 0xc400 and 0xd700, and both of the list's checks take 0xc400 alone: before the
    download it skips the download (entry 1), after it it goes on to the calibration (entry 12), any other value taking
-   the list past the calibration (entry 16). So the build reads 0xc400 as a controller that runs the firmware it
-   carries, the value a controller answers after this download (I, from the list). No second constant names it: the blob
-   holds no 16- or 32-bit 0xc400 literal (its one `00 c4` pair lies in its code, X); it is a Cortex-M program by the
-   vector table at its offset 9 (initial SP 0x10007da0, reset 0x00005ec1; I), after `48`, a length 0x5fa8 and four more
-   bytes. S-TPREG's 0xc400 stays, tagged I; what a controller answers before any download is ?, which a read of the
-   register on a camera, or a read of the blob's handler of `0x1c14` (Thumb), would settle. The 117 bytes at `0x1400`
+   the list past the calibration (entry 16). The program the download sends sets that value itself (D, the blob read as
+   Thumb code, its addresses the program's with the blob's offset 9 at 0; unless tagged). The blob is a Cortex-M
+   program by the vector table at its offset 9 (initial SP 0x10007da0, reset 0x00005ec1), after `48`, a length 0x5fa8
+   and four more bytes. Its reset `0x5ec0` runs `0x33c8`, whose first call `0x2ee8` calls `0x38b4`, which gives the
+   register file's banks their RAM (`0x45c0`: bank, base, size; bank 7 0xa4 bytes) and sets bank 7's bytes, among them
+   `movs r2,#0xc4; strh r2,[r4,#0x14]` (`0x39d8`), c4 00 at offset 0x14, and 10 at offset 3. The slave's receive and
+   send handlers (`0x4696`, `0x46ca`) take the first two bytes as the register address, the high first, and write or
+   read the bytes after it through `0x45d8` and `0x45fe`, which take bank = address >> 10 and offset = address & 0x3ff
+   (that they run on the controller's I2C interrupts is I): bank 7 is `0x1c00..0x1ca3`, so the program answers c4 00 at
+   `0x1c14`, which E118's read keeps as 0xc400, and its `0x1c03` holds the 10 the list writes there. The host's writes
+   leave `0x1c14` alone (op 9's ten registers `0x1c0b` .. `0x1c3f`, X: the lab's I2C log; `0x1c00`, `0x1c03` and
+   `0x1400`, finding 85). So 0xc400 is the version of the controller firmware this build ships, the value both of the
+   list's checks take, and S-TPREG's c4 00 is a controller that runs it; the blob holds no 0xc400 literal (its one
+   `00 c4` pair lies in its code, X). What a controller without that program answers before any download is ?, which
+   only a read of the register on a camera settles. The 117 bytes at `0x1400`
    (op 8 with 0, on the no-download path alone) are the record of id 36049 (`0x50055b7c`, a table indexed by id >> 4):
    in the lab the record is found (E118 `0x61b121fc`) and its 117 bytes are 0 (X); what fills it on a camera is not read
    (the panel's adjustment data, I).

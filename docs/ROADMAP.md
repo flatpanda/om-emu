@@ -316,10 +316,11 @@ the survey table.
   117): touch with the EVF active as the code says (E118's application closes the panel; E120's and E122's EVF touch
   pad, x 290..719 and the whole panel, passes taps only with the AF Targeting Pad on, X); H-TPSTART left out on the
   family and the E144 family, whose application's start opens the panel itself (as E143's does, X; E143 keeps it);
-  the list's own checks take `0xc400` as the firmware it downloads (I, from the list). Open: which version a
-  controller answers before any download (?: a read on a camera, or of the downloaded Thumb program's handler, would
-  settle it; with 0 the download runs through the write's stand-in, touch still working, X; a controller whose
-  version changes with the download is not modelled); the 117 bytes at `0x1400` (a record that is 0 in the lab).
+  `0xc400` is the version the downloaded program sets at `0x1c14`, the one the list's checks take (D, read as Thumb
+  code). Open: which version a controller without that program answers before any download (?: a read on a camera
+  would settle it; with 0 the download runs through the write's stand-in, touch still working, X; a controller whose
+  version changes with the download is not modelled); the 117 bytes at `0x1400` (a record that is 0 in the lab);
+  E120's first tap on its EVF touch pad, which ends as LIFTOFF (X, why not read).
 - **E145's AF upload:** read (2026-10-29, survey finding 22): the TG-7's frame plane has modes 1 and 2 only, its
   mode 2 the place of E143's UP_LOCKON, and nothing writes the mode-3 frames DISP_FRAME reads, so S-AFOSD gives it
   no upload (rule framePlane, which also places UP_AF on the other clamp-form bodies and retires E130's override;

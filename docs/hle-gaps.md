@@ -998,6 +998,89 @@ adds S-MODPOST, which takes those the task would take (`emu/src/lab/camapp.mjs` 
   camapp 3 workloads stopped at the mode dial's 7 (S-IOEXP), at LV at the card's removal and at an HDMI plug after
   the passes (module 9 reads outside S-TAKEOVER's list), so those inputs are not covered there.
 
+#### 4.1.9 S-DISPQ's nested posts (2026-11-10; D unless tagged, addresses E143's)
+
+Two `control camapp 3` sessions stopped at the same lab refusal: S-DISPQ refused a post to the DISPLAY queue made
+while a DISPLAY run was open (depth 1): S2 under `--take probe --cpu2 native` (4.2.3) and PLAY pressed at the start's
+end (4.2.4). This round reads the DISPLAY task's queue discipline and makes S-DISPQ keep such a post for the run's end
+(`emu/src/lab/dispq.mjs`, `emu/src/lab/play.mjs`); another task's synchronous DISPLAY send in that time now runs
+natively and waits for its reply, as on the camera. `emu/test/test_dispq.mjs` dispqUnits (X, 6 of 6, firmware-free)
+and dispqSession (X, 12 of 12), and `emu/test/test_take_release.mjs` focusSession (X, 12 of 12) pin it.
+
+- **The symptom (X).** In both, the OXF main thread (task 57, priority 55) sends DISPLAY cmd 15 synchronously (from
+  `0x503ec117`); its run waits for the histogram's end (S-HISTEND, 4.2.1), the wait blocks natively, and task 168
+  (entry `0x5115ba0c`, priority 55) runs. Its synchronous DISPLAY send (S2: cmd 17 from `0x507f66d1`; PLAY: cmd 4
+  from `0x503ec117`, after a send to queue 8211) ran the DISPLAY loop at once, inside cmd 15's run, on task 168, and
+  returned; task 168 went on to the display manager's request (cmd 18 from `0x503eba07`, `{6, 0xf0080000, 18, param}`
+  at S2, token `0xf0050000` at PLAY), which S-DISPQ refused at depth 1: "UI_IN group 1 (group 3 at PLAY): OlyQeWr to
+  the DISPLAY queue from ... (disasm `0x503eba07`) (depth 1)".
+- **The DISPLAY task's loop (D).** Static id 54, priority 26, entry `0x501c3035`: the message buffer at sp + 44 (16
+  bytes) and its descriptor at sp + 60; OlyQeRd(the queue of `(0x600432d4)`, timeout -1) at `0x501c308b`;
+  `0x501c3922(0)`; the dispatch on word 2 (cmd 2..48 through the table `0x602abbfc`, any other logs `0x37003103` at
+  `0x501c3848`); the reply status (40,sp), 0 but for cmd 14 (2 when word 0 equals `(0x60043286)`) and cmd 16 (4 when
+  `(0x62a3540c)` is not 0); the reply `0x501c48bf(status, &message)` at `0x501c38a3`; `0x501c3922(1)`,
+  `0x501c7eae(16)` and `jmp 0x501c307c`, back to the receive. So the task takes one message at a time. The reply: status
+  0 with word 0 not 0 sends `{u16 status, word 1, word 3}` (12 bytes from the static `0xa32db3d8`) to the queue in word
+  0 (OlyQeWr at `0x501c490c`, timeout -1); word 0 = 0 sends nothing (statuses 2 and 4: `docs/om1-input-spec.md`
+  section 7). The kernel copies a message at the post: OlyQeWr's tsnd_dtq (`0x50016578`) copies it into a waiting
+  receiver's buffer (the byte copy `0x50015a0d` called at `0x50016667`) or, with no receiver waiting, keeps it in the
+  queue (`0x5001667d..`; I: that write not read to its end). So a post made while the task handles a message waits
+  in the queue and is taken at the next receive, in the order of the posts; the camera has no nesting.
+- **How a synchronous command replies (D).** The send `0x5002e39d` (a queue id without bit 15): two blocks of 16 and 12
+  bytes (`0x500030e0`), its own reply queue from acre_Queue1 (`0x5002c866`), the target kept at `0xa325ea7c`, the
+  message `{its reply queue, get_tid's id (0x5002e3e4), cmd, param}`, OlyQeWr(target, `{message, 16}`, -1) at
+  `0x5002e40c` (a 5-byte call, returning to `0x5002e411`), then OlyQeRd(its reply queue, -1) at `0x5002e422`, OlyQeDl
+  (`0x5002bfec`) and the reply's first halfword as its result (`0x5002e441`). With bit 15 it takes the semaphore of
+  `(0x60042d00)` and one of eight static reply queues (`0xa325ea3c`, a busy byte at +4), with the same post and wait at
+  `0x5002e4e7` / `0x5002e4ff`. So the sending task waits in its receive until the DISPLAY task has answered, and a
+  synchronous send from a second task during a command waits behind that command.
+- **Causes (X unless tagged).** (1) S-DISPQ refused a post in an open run, which the queue keeps: the stop's own
+  cause. (2) The lab's synchronous send (`DisplayLab._sync_send`) ran task 168's command at once inside task 57's
+  run, so task 168 went on past a send it waits in on the camera and made its post while cmd 15 was still open; on
+  the camera task 168 posts cmd 18 only after its own command's reply, which comes after cmd 15's (D, above). (3)
+  Ruled out: the post's site is the display manager's request S-DISPQ already runs (`0x503eba07`); only the depth
+  refused it. Why task 168 runs inside cmd 15 at all is the lab's (I): a run takes its sender's priority (55), not
+  the DISPLAY task's 26, so a ready task of the same priority runs between the run's block and its resumption;
+  whether task 168 runs during that wait on the camera depends on timing (?), and either way its command waits.
+- **The change (X).** A DISPLAY run is open from its start to its loop's next receive (`PlayLab.task_message` over
+  `DisplayQueue`, `emu/src/lab/dispq.mjs`). While one is open S-DISPQ keeps a post to the DISPLAY queue (the display
+  manager's request, or a synchronous send's own post, return `0x5002e411`), copied at the post; when the outermost
+  run ends it runs each kept message in order, on the task the run was on, whatever they post in turn kept behind the
+  ones before. Another task's synchronous DISPLAY send while a run is open runs natively (`PlayLab._sync_send`): its
+  queue created, its post kept, its receive blocking; the kept message's run sends the reply to the send's own queue
+  natively (`0x501c490c`), which readies the task. A reply to queue 6 goes through S-CAMAPP's pump after the step as
+  before (4.4.2). Unchanged: a send of a run's own task (a handler's) runs nested at once, a post inside a run of
+  another loop (CHANGE, touch) is refused, and the dispq-at-once mutant (the control) gives the old discipline back.
+  The kept message's word 1 is the DISPLAY task's id 54 (`0x36`), the camera's the sender's: in a display run get_tid
+  is the lab's stand-in (DISPLAY_TID); the reply echoes the word and the send reads only the status halfword (D).
+- **The siblings (D, X).** None of the three named stand-ins runs another task's loop inside a command. S-MODACK
+  takes the application's posts to module queues off at the post and answers them after the step through S-CAMAPP's
+  pump, each with a settle, in their order; its synchronous branch (`camapp.mjs` `_sync_send`, module queues)
+  returns 0 at once and runs no receiver. S-TRAACK answers at the exec in the caller's context (0, or the request's
+  own delete) or, under camapp 3, hands the transaction to the exec natively. S-RPC answers the two remote entries 0
+  at once without sending. The defect was the DISPLAY synchronous send stand-in's, fixed here for other tasks' sends;
+  a run's own nested sends and S-TPSEND (the touch task's loop inside a display run, `emu/FIDELITY-NOTES.md` 7.8)
+  still run a loop inside a run (no session reaches a handler's own nested DISPLAY send in these tests, X).
+- **How far the early PLAY goes (X, dispqSession).** Cmd 15 (task 57); task 168's cmd 4, kept from `0x5002e411` with
+  its reply queue `0x104`, runs on task 57 once cmd 15's run has ended, nothing between them, and its reply
+  `{0, word 1, word 3}` goes to `0x104`; task 168 goes on to its cmd 17 and the request cmd 18, both at depth 0, cmd
+  18's one reply reaching queue 6 through the pump. No DISPLAY run starts inside another. PLAY shows No Picture
+  (`0x0505`), the frame word for word that of PLAY after 2 s of idle, and PLAY again returns to `0x0108`. Control:
+  under dispq-at-once cmd 4 runs on task 168 inside cmd 15's run and the step stops as 4.2.4 recorded.
+- **How far S2 goes (X, focusSession).** Event 824 in phase 103; cmd 15 (task 57); task 168's cmd 17 kept (reply
+  queue `0x105`) and run after it; the display manager's two requests cmd 18 (tokens `0xf0080000` from task 57 and
+  `0xf0090000` from task 168) at depth 0, one reply each to queue 6; task 168's cmd 17 again. TAKE takes nothing and
+  TAKE_MAIN stays in RdyFcsRdy3 (EXP_MOVIE waits for the frame events, 4.2.3). The idle then stops at 5.03 s of lab
+  time at S-SCPUDEV: the MN's sub-CPU command `0x14 {00 01 00 03 00}` (a power manager short write, 4.7.1; the
+  sub-CPU's handler `0x8015345`, its message 11), not modelled. S2 does not bring it: with S1 alone held it comes at
+  5.08 s, 1.16 s after S1, with the old discipline too (dispq-at-once). Which of the power manager's builders sends
+  it, and why S1 held brings it, is ?.
+- **Golden (X).** `emu/bin/golden.mjs check`: identical, every one of its 240 sessions (the default is camapp 1, whose
+  sessions this change leaves as they were); no re-record.
+- **Corrections.** 4.2.3's S2 record ("the GUI's command 17 runs nested in it", the S-DISPQ stop) and 4.2.4's
+  "playback's PLAY, pressed at the start's end (2.86 s), stops at S-DISPQ" describe the lab before this round; the
+  nesting was the lab's (the camera's cmd 17 waits for cmd 15), and 4.2.3's next step (3) is done.
+
 ### 4.2 Sensor, ISP front end and live view (with EXP)
 
 - **Tasks (D):** CPU 0: TAKE_FUNC's through commands 25 / 27 / 28 and their context bytes `through_s_wait` ..

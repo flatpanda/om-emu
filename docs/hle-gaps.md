@@ -1086,6 +1086,91 @@ and dispqSession (X, 12 of 12), and `emu/test/test_take_release.mjs` focusSessio
   "playback's PLAY, pressed at the start's end (2.86 s), stops at S-DISPQ" describe the lab before this round; the
   nesting was the lab's (the camera's cmd 17 waits for cmd 15), and 4.2.3's next step (3) is done.
 
+#### 4.1.10 TAKE's take-ready on the second shot (2026-11-10; D unless tagged, addresses E143's)
+
+4.3.2's stop 1: after a shot under `control camapp 3` the sequence waits in phase 102 and no key is taken, while in
+4.2.3 the sequence takes event 794 (TakeReadyFinish) 66.7 ms after S1. This round reads who sends 794 and why a later
+shot gets none. The two sessions differ: 4.2.3's runs TAKE natively (`--take probe --cpu2 native`), 4.3.2's does not.
+`emu/test/test_take_ready.mjs` secondShotSession pins the probe's side (X, 15 of 15).
+
+- **Who sends 794 (D; X in the probe's session).** It is TAKE's module event mapped by the application, not a
+  capability's notification.
+  - TAKE_MAIN in RdyFcsRdy2, at its mailbox token 13, posts the module event `0x04080032` to API_EVENT (queue 6)
+    through `0x502ce5e6` (at `0x503c3269`, 4.1.8).
+  - The application's event task (task 164, entry `0x50abbf0c`, X) hands the event to Com_EvSenderManager
+    `0x50d76ac8`. A code without the top nibble `0xf` goes to `0x50d76cfa`. There `0x50ab5683` selects a table: when it
+    answers non-zero, the second one (run-time `0x60ef11d4`, 128 slots `{code - 0x01000101, case}`), which gives
+    `0x04080032` the case `0x50d77e6a`.
+  - The case builds event 794 (constructor `0x50c811ce`, called at `0x50d77eaf`) when the word `(0x60364d6c)` is
+    non-zero and the shooting phase query `0x50ab57e9` answers outside the movie phases 113..117. The sequence (task 57)
+    takes 794 in phase 102 and moves to phase 103 (X).
+  - The constructor's other caller, the observer `0x50c705a3` of CmpSts_ObserverNotifyTakeReadyFinish.cpp (4.1.3),
+    does not run (X). This settles 4.2.3's "it follows `0x04080032`" (I there). The same table holds the TAKE codes
+    `0x04080034..0x04080040`; their senders are not read (?).
+- **Without the probe (traRoutingSession; X).** No shot gets 794, and the menu's shot is the session's first take
+  request, not its second. The passes before the menu stop at the S1 guard (4.1.7). After the menu, S1's control
+  `0x20` and S2's `0x40` reach the take API, and TAKE_EXEC is S-MODACK's: TAKE_MAIN does not run without the probe.
+  S-MODACK answers status 0, TAKE_MAIN's own answer (4.1.8), and nothing posts `0x04080032`. S1's release is event
+  827 in phase 102 and makes no take API call, so the sequence stays in phase 102.
+- **With TAKE native (`--take probe --cpu2 native`; X unless tagged).** The first S1 goes as in 4.2.3: 794 at
+  66.7 ms. TAKE_MAIN then waits in RdyFcsRdy3 with the pending bits `0x200` (TAKE_EXPOSE's token 15) and the wait
+  pattern `0x5`, while EXP_MOVIE waits on flag 21 for the frame events.
+  - S1's release is event 827 in phase 103 (case `0x50c5e325`, D). CapTak_Take's TakeReady (`0x50bc79e6`) calls the
+    take API with control 0 (`0x50bc7a2a`), which posts TAKE_EXEC command 7 `{6, 0xf0070000, 7, packet}` through the
+    API sender.
+  - TakeReady builds 793 (StopTakeReadyDone) at once only when the API returns 0 (`0x50bc7a32..0x50bc7a4d`, D). The
+    API returns the request's token `0xf0070000`, so it goes to `0x50bc7aec` (with d3 0): a response object
+    (`0x50ab705f`, with that result) handed to the object at +2848 (its vt[1], D), and no 793. That TAKE's reply to
+    command 7 is what would bring 793 is I. The other builders of 793 (`0x50bca801`, `0x50bcb5bc`, `0x50cd42fc`, D) do
+    not run.
+  - The sequence moves to phase 111. Phase 111's dispatcher `0x50c611d5` (pointer to member at `0x603644e4`; table
+    run-time `0x60e9aeb0`, 46 ids in 282..1247, read in the lab) takes 793, 791, 789, 786 and 794. It does not take
+    824, 826, 827 or 828 (D).
+  - TAKE_MAIN does not take command 7, so TAKE_EXEC holds it (TAKE's count 1). TAKE_EXEC is read only while the wait
+    pattern has bit 2 (`0x5039983f`, D), and the pattern stays `0x5` while bits are pending. RdyFcsRdy3's command
+    table is empty, while Idle, RdyFcsRdy1 and RdyTrig2Wait list command 7 (the state table `0x605bfbc8`, read in
+    the lab; D).
+  - The second S1 is event 826 in phase 111 and its release 827 in phase 111. There is no take request, no 794, and
+    TAKE takes nothing; the state holds 1.8 s after the first release and through the second S1. MENU then reaches
+    UI_IN and sets no GUI event. No event reaches the sequence, and isCtrlReleaseEnable is not asked: 4.3.2's refusal
+    is phase 102's. Where the application drops the key is not read (?).
+- **Why (I, from the above).** 794 is not sent the second time because the first take-ready never ends. TAKE_MAIN
+  waits for TAKE_EXPOSE's token 15, TAKE_EXPOSE for EXP_MOVIE's answer to `0x509`, and EXP_MOVIE for the camera front
+  end's frame events (4.2.3). The stop waits behind them, so 793 never comes and the sequence never leaves phase 111,
+  where S1 is not an event it takes. No stand-in of the first shot's path answers only once, and the menu and
+  playback play no part here: the probe's first S1 passes the guard without them (S-THRTAKEOVER).
+- **An experiment (X, not committed; an invented answer).** TAKE_EXPOSE's wait on EXP_MOVIE_POST was answered
+  `{0, 0, 0}` once EXP_MOVIE had taken the `0x509`, as in 4.1.8's experiment; EXP_MOVIE itself still waited on flag 21.
+  The take-ready then reached RdyTrig2Wait (pending 0, pattern 7). At S1's release TAKE_MAIN took command 7 there
+  (`0x503c4047`) and went to RdyAbort, which asked TAKE_FOCUS `0x401` (RELEASE_IDLE_END), took mailbox token 5, and
+  asked TAKE_FUNC 80 and TAKE_EXPOSE `0x501` synchronously. The `0x501` did not return: TAKE_EXPOSE waited in a
+  receive, its stack holding returns into EXP's code (`0x50580690`, `0x502a9bb1`); for what is ?. TAKE_MAIN stayed in
+  RdyAbort with the pending bits `0x400`, and the sequence in phase 111. So the stop, too, needs EXP's answer.
+- **A lab stop on this route: S-SCPUDEV's `0x14` (X; D where tagged).** With S-SCPUDEV, the default, the probe's
+  session stops 1.16 s after S1, whether S1 is released or not; without S1 no `0x14` comes in 3 s.
+  - The power manager (task 10, entry `0x50043cdb`) sends the sub-CPU `0x14 {0, 1, 0, 3, 0}`. The builder is
+    `0x500435b0`, called at `0x5004452e` from its state-change notice `0x500444b3`, which sends the write when its
+    comparison of two state records (`0x500444cb..0x500444fc`) finds a difference (D; the field layout is not read in
+    full).
+  - S-SCPUDEV does not model `0x14`: its handler `0x8015345` posts the sub-CPU's power manager message 11, whose
+    meaning is ? (`docs/om1-scpu-spec.md` 3.3). Which state change comes 1.16 s after S1 is not read (?).
+  - With the sub-CPU's own firmware (env.scpu 'native'; A-SCPUM4-1, A-SCPUM4-2, S-SCPUBOARD) the write is the link's
+    only transfer from S1 on, and no message comes back in the next 3.3 s. So the session's second part runs that
+    way.
+  - S-SCPUDEV is left as it is: it is every body's model, and nothing shows what message 11 changes. focusSession
+    does not reach the write, since its S2 stops first.
+- **Tests (X).** secondShotSession's two sessions:
+  - with S-SCPUDEV: the first S1's record (focusSession's S1_EXP) and the 794 build in the event task, the release's
+    stop and phase 111, phase 111's table, the stop at `0x14` (the power manager's task, 1.1 to 1.2 s after S1);
+  - with the sub-CPU's firmware: the link's one transfer, the state 1.8 s after the release, the second S1 and its
+    release, and MENU.
+
+  `emu/test/test_camapp.mjs` traRoutingSession (25 of 25) adds a check: after the menu, the pass's take requests
+  (`0x20`, `0x40`) go to S-MODACK's TAKE_EXEC and no 794 is built.
+- **Open.** The neighbour is the camera front end's interrupt behind EXP_MOVIE's frame events (4.2.3). With it, the
+  next to read are TAKE_EXPOSE's token 15, RdyTrig2Wait taking command 7, RdyAbort's `0x501` and its tokens 5 and 7,
+  then 793 and phase 111's exit. Also open: S-SCPUDEV's `0x14`, and without the probe TAKE itself (4.1.8 item 5).
+
 ### 4.2 Sensor, ISP front end and live view (with EXP)
 
 - **Tasks (D):** CPU 0: TAKE_FUNC's through commands 25 / 27 / 28 and their context bytes `through_s_wait` ..
@@ -1720,8 +1805,10 @@ traRoutingSession, below).
   `0x60364a1c`; X), CapTak_Take's take API (`0x50417cd9`) sends control `0x20`, TAKE_EXEC command 0 through the API
   sender, the queue-90 request of 4.3.1, which S-MODACK answers (TAKE_MAIN's own answer is the same status 0, 4.1.8),
   and S2 (824 in phase 102) control `0x40`, command 5 straight to TAKE_EXEC (X). Nothing finishes the take-ready:
-  event 794 (CmpSts_ObserverNotifyTakeReadyFinish), which the sequence takes in phase 102, follows TAKE's
-  notifications (4.1.8's experiment), and TAKE does not run; the releases (828, 827) are taken in phase 102 and leave
+  event 794 (CmpSts_ObserverNotifyTakeReadyFinish), which the sequence takes in phase 102, comes from TAKE_MAIN's
+  module event `0x04080032` through Com_EvSenderManager (4.1.10), and TAKE does not run (TAKE_EXEC is S-MODACK's, X:
+  no 794 is built); the menu's shot is the session's first take request. The releases (828, 827) are taken in
+  phase 102 and leave
   the sequence there, with no take API call (X). The key path then refuses: the application's key handler (task 165)
   asks isCtrlReleaseEnable (`0x50ab5c04`), which answers 1 for the phases 100 and 101 and otherwise logs
   "isCtrlReleaseEnable UNRESPONSIVE(Seq=%d)" (`0x50ab5c26`) and answers 0, so MENU, OK and PLAY send no GUI event (X:
@@ -1730,7 +1817,9 @@ traRoutingSession, below).
   - A shot before any menu pass leaves the keys working because its S1 never reaches the take (4.1.7's guard); the
     menu is not needed as such, only a running through image (I: playback's return sets the word too, X).
   - Left documented: the neighbour is TAKE (TAKE_MAIN's take-ready and the notifications its events become, 4.1.7,
-    4.1.8; with `--take probe` it stops at EXP_MOVIE). A stand-in posting TAKE's notifications would invent the
+    4.1.8; with `--take probe` it stops at EXP_MOVIE, and a second shot is not taken either: S1's release leaves the
+    sequence in phase 111 behind a stop TAKE_MAIN does not read, 4.1.10). A stand-in posting TAKE's notifications
+    would invent the
     take-ready's progress, as 4.1.7 declined; S1 in camapp 3 with the through image running needs what S-RELSEQ's
     retirement needs (4.1.8's list).
 - **Result (X, `emu/test/test_camapp.mjs` traRoutingSession 24 of 24).** After three passes of S1 and S2 and the menu

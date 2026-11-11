@@ -11,8 +11,10 @@
 //                waits on its queue (X); the play module has no init of its own in the start functions (D: neither
 //                0x518f724a, which checks a log area at 0x63ae0000 and starts the task of the word 0x60042e34, nor
 //                0x50155412 is the play module's; neither runs in the lab). Run after CA_MAIN's start: on the camera
-//                USTART4 starts CA_MAIN (0x501e9e03) before it starts USTART5 (0x501e9e5c, D). PLAY_EXEC (0x3f)
-//                leaves S-MODACK: PLAY_MAIN takes the play API's requests and answers them to their reply queue
+//                USTART4 starts CA_MAIN (0x501e9e03) before it starts USTART5 (0x501e9e5c, D). The conditions the
+//                camera waits for first are not met in the lab then (X: the stages 8 and 10 not readied, USTART4's
+//                two bytes 0; what they mark is ?, docs/hle-gaps.md 4.8.11). PLAY_EXEC (0x3f) leaves S-MODACK:
+//                PLAY_MAIN takes the play API's requests and answers them to their reply queue
 //   S-PLAYDEC    the view's decode, the image library's request the play module makes and the lab cannot run: the
 //                library's issue 0x5048f331 and its wait 0x5048f6e4, called only by the play module, from
 //                play_img_make_view_division (0x518b44fc: 0x518b478b, 0x518b4799) and the decode before it

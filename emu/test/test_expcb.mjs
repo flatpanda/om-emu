@@ -273,7 +273,11 @@ export async function camDriverSession() {
 // S-CAMFE's whole program and attaches the front end's handlers in the interrupt table 0xa32600c0 (IRQ n at +4 n; the
 // handlers below, X), cam_bright.c's per-bit callback tables are in RAM (0x629a7c64: AE1's 15 from 0x5015db6a;
 // 0x629a7cdc: AWB1's 8, the per-area entry 0x5015e629 at +4) and the movie sequence's queues SQMV, MQEX, INFN and SMFM
-// are registered (their handles 0x62a252a4, 0x62a252a8, 0x62a24288, 0x62a252ac). (2) TAKE_EXPOSE's 0xa00 (mode 0, as
+// are registered (their handles 0x62a252a4, 0x62a252a8, 0x62a24288, 0x62a252ac). The 15 front-end contexts (32476 bytes
+// each from 0x629aa520) hold the records 2464 / 2532 of type 7 with +36 0x50170433 and +44 0x5017078f / 0x501707c0 and
+// no unit pointer (+4..+28, which only the fill sets), and the messages +8, +148, +288 and +428 of kinds 4..7 with +120
+// 0x501704ef, which the start loop's entries 0, 1, 53 and 54 hand to the movie sequence's dispatcher (its 0x50198e56,
+// not the frame step's kind 10). (2) TAKE_EXPOSE's 0xa00 (mode 0, as
 // expCallbackSession): EXP_MOVIE gives cam.c requests 8 and 7, which it takes without an error (before: 0x0a283000
 // three times); the movie sequence's kind 1 (0x50198993) keeps request 7's item (0x62a24248) with its state 1
 // (0x62a24244) and posts it, and nothing goes further: the sequence's frame step 0x5019981d (kind 10) never runs, so
@@ -285,6 +289,7 @@ const FE_IRQS = { 15: 0x501A2478, 16: 0x501A24C2, 17: 0x501A250C, 18: 0x5019E218
   36: 0x50157F8B, 37: 0x501581F5, 38: 0x501616F7, 39: 0x5018D3F1, 40: 0x50163408, 41: 0x5016763B, 42: 0x501667C9, 243: 0x5019F0D1,
   247: 0x5019F5DA };
 const SEQ = { queues: [0x62A252A4, 0x62A252A8, 0x62A24288, 0x62A252AC], state: 0x62A24244, item: 0x62A24248, step: 0x5019981D };
+const FE_CONTEXTS = { base: 0x629AA520, size: 32476, count: 15 };
 export async function camFrontEndSession() {
   const bad = [];
   let checks = 0;
@@ -310,6 +315,15 @@ export async function camFrontEndSession() {
     ok(disasm(u32(0x629A7C64)) === 0x5015DB6A && disasm(u32(0x629A7C8C)) === 0x5015DDF6 && disasm(u32(0x629A7CE0)) === 0x5015E629,
       `cam_bright.c's per-bit tables: AE1's [0] ${h8(disasm(u32(0x629A7C64)))}, [10] ${h8(disasm(u32(0x629A7C8C)))}, AWB1's [1] ${h8(disasm(u32(0x629A7CE0)))}`);
     ok(SEQ.queues.every((q) => u32(q) !== 0) && u16(SEQ.state) === 0 && u32(SEQ.item) === 0, `the movie sequence's queues are registered (${SEQ.queues.map((q) => h8(u32(q)))}), no item`);
+    const ctx = [];
+    for (let k = 0; k < FE_CONTEXTS.count; k++) {
+      const c = FE_CONTEXTS.base + FE_CONTEXTS.size * k;
+      for (const [o, cb] of [[2464, 0x5017078F], [2532, 0x501707C0]]) {
+        if (u16(c + o) !== 7 || disasm(u32(c + o + 36)) !== 0x50170433 || disasm(u32(c + o + 44)) !== cb || [4, 8, 12, 16, 20, 24, 28].some((p) => u32(c + o + p) !== 0)) ctx.push(`${k} record ${o}`);
+      }
+      [8, 148, 288, 428].forEach((o, i) => { if (u16(c + o) !== 4 + i || disasm(u32(c + o + 120)) !== 0x501704EF) ctx.push(`${k} message +${o}: kind ${u16(c + o)}`); });
+    }
+    ok(!ctx.length, `the front end's ${FE_CONTEXTS.count} contexts: records 2464 / 2532 of type 7 with their +36 / +44 and no unit pointer, messages of kinds 4..7 (wrong: ${ctx.slice(0, 6)})`);
     const seen = [];
     for (const [at, what] of [[0x5016F2AE, 'front end'], [0x50165B82, 'job'], [SEQ.step, 'frame step']]) lab.observe(at, () => seen.push(what), `camfe ${what}`);
     const c0 = { native: take.cam.native.length, errlogs: take.cam.errlogs.length, waits: take.cam.waits.length }, w0 = fe.writes, r0 = fe.reads;

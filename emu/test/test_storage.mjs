@@ -483,6 +483,7 @@ export async function storageSession() {
       pl.open_session();
       const rec = pl.session.storage.rec, DATE = [2026, 11, 8, 12, 34, 56], HEADER = rec?.header, body = EXIF_BODY[MODEL];
       const hdr = pl.session.storage.exif;      // the E118 family's header maker natively (src/lab/recheader.mjs)
+      ok(!!hdr === !!EXIF_FAMILY[MODEL], `${MODEL}: the header maker natively (exif_native) ${hdr ? 'on' : 'off'}, want ${EXIF_FAMILY[MODEL] ? 'on' : 'off'}`);
       // the DCF name: the file letter, the month in hex and the day of the capture's stamp (docs/hle-gaps.md 4.8.9)
       const file1 = rec ? `${DIR}/P${DATE[1].toString(16).toUpperCase()}${String(DATE[2]).padStart(2, '0')}0001.${names.ext}` : FILE1;
       if (rec) {
@@ -549,7 +550,8 @@ export async function storageSession() {
         const segs = data ? jpegSegments(data) : [], x = data ? readExif(data) : null, version = x?.exif ? String.fromCharCode(...x.exif.get(0x9000)) : null;
         const dt = `${DATE[0]}:${DATE.slice(1, 3).map((v) => String(v).padStart(2, '0')).join(':')} ${DATE.slice(3).map((v) => String(v).padStart(2, '0')).join(':')}`;
         ok(['H-EXIFINIT', 'S-EXIFPRM', 'S-RECHDR', 'S-RECFILE'].every((n) => used.includes(n)) && !used.includes('H-RECFILE'), `${MODEL}: the header maker natively, the file through S-RECFILE: ${used.filter((n) => /REC|EXIF/.test(n)).join(' ')}`);
-        ok(data && stream && data.subarray(H + 2).every((b, i) => b === stream[i + 2]), `after the ${H}-byte header the bytes are the lab's JPEG stream (but its SOI)`);
+        // the header maker leaves APP1's last 2 bytes, the stream's SOI (on E143 the XMP's end overwrites them, X)
+        ok(data && stream && data.subarray(H).every((b, i) => b === stream[i]), `after the ${H}-byte header the bytes are the lab's whole JPEG stream, its SOI as APP1's last 2 bytes`);
         ok(segs[1]?.marker === 0xE1 && segs[1].at === 2 && segs[1].length === H - 2 && segs[2]?.at === H + 2, `SOI, APP1 Exif of ${H - 2} bytes, then the stream's tables: ${segs.slice(0, 3).map((g) => `${g.marker.toString(16)}@${g.at}+${g.length}`).join(' ')}`);
         ok(fam && t(x?.ifd0, 0x10F) === fam.make && t(x?.ifd0, 0x110) === fam.model, `the firmware's Make and Model (refs/exif.mjs): '${t(x?.ifd0, 0x10F)}' '${t(x?.ifd0, 0x110)}', ${MODEL}'s '${fam?.make}' '${fam?.model}'`);
         ok(x?.ifd0.get(0x132) === dt && x?.exif?.get(0x9003) === dt && x?.exif?.get(0x9004) === dt, `the firmware's dates are the clock's ${dt}: ${x?.ifd0.get(0x132)}, ${x?.exif?.get(0x9003)}, ${x?.exif?.get(0x9004)}`);

@@ -22,7 +22,8 @@
 //               by none of the block's zeros (X, the three)
 //   S-RECHDR    rec_jpeg_exec around its header maker (jpeg.exec, REC_IMAGE's: REC's pools, REC_MAIN and the image
 //               pipeline do not run in the lab): the packet as rec_jpeg_exec hands it to rec_jpeg_make_header (Mode
-//               +68 4097, the still that rec_make_image sends to rec_make_image_exec and rec_jpeg_exec, D; pExifParam
+//               +68 4097, which rec_make_image sends to rec_make_image_exec and rec_jpeg_exec and for which the header
+//               maker's two mode checks answer 0, D: finding 102; that it is the still, as E143's 4097, I; pExifParam
 //               the block; Addr +200 the file's buffer; every other field 0, as no stage the lab runs sets it, I), the
 //               buffer the lab's (a fresh allocation, 0 but for the stream; whether REC's pool buffer is cleared before
 //               the header is written is not read, ?), with the encoder's stream after the header area (the lab's JPEG
@@ -31,7 +32,8 @@
 //               41984), SOI, APP1 Exif of 41982 bytes and the EXIF module's TIFF data in it (its serializer: IFD0, the
 //               Exif IFD with the Olympus maker notes, IFD1's thumbnail slot of length 0; X, refs/exif.mjs). The file
 //               is the buffer's HeaderSize bytes and the stream after them, the stream's SOI under APP1's last 2 bytes
-//               (41984..41985, as on E143, I: the camera's encoder, too, writes a whole JPEG there)
+//               (41984..41985, which E143's XMP overwrites; the family's header maker leaves them, so the whole stream
+//               follows the header, X; I: the camera's encoder, too, writes a whole JPEG there)
 import { FirmwareError } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { MODEL, MODEL_INFO, fact } from '../fw/model.mjs';
@@ -47,7 +49,8 @@ export const recHeaderFacts = () => {
   if (!f) throw new RecHeaderError(`${MODEL}: src/fw/models.mjs exif_native, but src/fw/facts.mjs recHeader reads no header maker`);
   return f;
 };
-const STILL = 4097;          // Mode: the still (rec_make_image -> rec_make_image_exec -> rec_jpeg_exec, D: finding 102)
+// Mode: rec_make_image -> rec_make_image_exec -> rec_jpeg_exec (D: finding 102); the still as E143's 4097 (I)
+const STILL = 4097;
 const SOI = [0xFF, 0xD8], APP1 = [0xFF, 0xE1], EXIF = [0x45, 0x78, 0x69, 0x66, 0, 0];
 const CALL_LIMIT = 20000000;
 

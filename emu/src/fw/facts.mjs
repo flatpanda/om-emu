@@ -3598,7 +3598,8 @@ export function recFileQueue(img, kcb) {
 }
 // The E118 family's REC header maker (fact 'rec_header', src/lab/recheader.mjs; docs/model-survey.md findings 102 to
 // 104): REC_IMAGE's header maker of an older REC version than E143's, whose packet has no dump (no "pExifParam " in
-// the image) and whose REC_FILE receives through rec.c's wrapper (no load of "rec_file.c", finding 93). D on E122
+// the image) and whose REC_FILE receives in another form than recFile's (no load of "rec_file.c", finding 93; rec.c
+// has a 216-byte receive, 0x5050bbec with eight callers, and which of them is REC_FILE's is not read, ?). D on E122
 // unless tagged:
 // - REC's functions by their traces, as recFile reads them (the table {"ERROR TRACE ID", 1}, {"rec_main", 2}, E122
 //   0x5061cde8, 165 names; a trace `or 0x31000000,d0; ...; mov (id - 1) << 16 | line,d1`): exec, the traced
@@ -3646,7 +3647,8 @@ export function recHeader(img) {
   // REC's trace table, and the functions that hold each name's trace of a kind
   const heads = findString(img, REC_TRACE_HEAD, { nul: true, after: true }).flatMap((o) => wordsOf(img, (base + o) >>> 0))
     .filter((p) => u32(img, p + 4) === 1 && text(u32(img, p + 8) - base) === REC_TRACE_NEXT && u32(img, p + 12) === 2);
-  if (heads.length !== 1) return undefined;
+  if (heads.length > 1) throw new Error(`${rule}: ${heads.length} trace tables (${heads.map(D).join(', ')}), want one`);
+  if (!heads.length) return undefined;
   const ids = new Map();
   for (let p = heads[0]; ; p += 8) {
     const a = u32(img, p) - base, id = u32(img, p + 4);

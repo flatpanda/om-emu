@@ -63,7 +63,8 @@
 //               makes, I) and the mount again; the DCF process's card-in and list commands; the DCF numbering mount,
 //               which leaves the drive mounted (the drive status's bit 0x1000). The same at a runtime insertion
 //               (src/lab/media.mjs S-MEDIA), and at a removal the DCF process's card out; after a format from the menu
-//               the DCF numbering mount again, for the next file number (src/lab/media.mjs S-MDACTRL)
+//               the DCF numbering mount again, for the next file number (src/lab/media.mjs S-MDACTRL; on the E118
+//               family S-MDAEND)
 import { FirmwareError, where, disasm, runtime } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { RTOS } from './rtos.mjs';

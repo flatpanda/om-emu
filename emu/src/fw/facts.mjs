@@ -3357,6 +3357,230 @@ export function recImage(img, kcb, rec) {
   };
 }
 
+// REC_FILE's task natively, the E144 family's REC version (fact 'rec_file' in recFile's shape, read where recFile
+// reads none; src/lab/rec.mjs; docs/hle-gaps.md 4.8.10, docs/model-survey.md findings 118 to 123). D on E144 unless
+// tagged; at the port's place of E143's CPU 0 kcb (KCB0_E143):
+// - REC's trace table and functions as recFile reads them, but the table's first name may follow other bytes than a
+//   NUL (E134 0x6055d190, E137, E125: the word before it; X)
+// - task {id, entry, flag: null, queue, handled}: REC_FILE waits on its queue alone, no event flag: the static task
+//   (taskRows) whose loop, to its first return, makes its calls in this order: the receive RECV of the queue Q, `movhu
+//   (Q),d0; mov a2,a0; exth d0; call RECV` before it; a trace; rec_file_start_process; for NoRecord the buffers'
+//   free; the record step, whose return is handled (d0 the status: rec_file_destination_record on E144, rec_make_file
+//   on E137); rec_file_finish_process (E144 task 31 0x503f5dc0: Q 0x60041864, its calls 0x503f5dd0, 0x503f5de1,
+//   0x503f5de7, 0x503f5df5, 0x503f5e00, 0x503f5e07). packet.size: RECV's `mov SIZE,d1; mov FILE,a1` before its
+//   kernel receive (0x503f1210: 300 bytes, "rec.c"), the same in the post's send (0x503f12ad)
+// - packet.post: "REC post_msg"'s function (0x503f1256), which REC_IMAGE's rec_make_image_finish calls with Q for a
+//   still (`movhu (Q),d0; mov a3,a0; exth d0; call POST`, 0x503f8da9; at least one load of Q outside the task leads
+//   to it); fields: recFile's packet dump read, every field in the packet (the image's address and size too: no
+//   image record)
+// - init: REC's module init, the function that ends `mov 8191,d0; ret` right before the function that holds the
+//   "rec_main" trace (kind 0x1000: E144 0x503f0fa9 before 0x503f1010; E143's 0x50539665 has the same place, D)
+// - jpeg: exec, make_image by their traces; header, rec_jpeg_make_header's `mov H,d0; mov d0,(HeaderSize,a0)`
+//   (0x503fff59: 41984); fill null: rec_jpeg_exec clears no header area through the image engine before the encode
+//   (its calls between the buffer's allocation 0x50401673 and the header maker: the encode and the work area's free
+//   0x50401965, D)
+// - contexts: rec_file_record's file contexts of 92 bytes (E143's layout: X, the file's fnode and folder read through
+//   them match the card): where it picks one by Media (REC_CTX_PICK, the double-slot bodies E139, E134, E125) the
+//   two, else the first `mov C,An` of a data address in it, the one it passes on (0x503f60ff: C 0x62127124, a slot
+//   of `udf00 92,d1; add C,d1` at 0x503f79ac, for Media 0 only; E142's `mov C,a2` its next call takes in a0): [C]
+// - exif: the template's copy, recFile's form, right after the template init's `ret` with no cache flush before it
+//   (0x5030b3b9, size 4 x 7925 = 31700; the init 0x5030b384, the template 0x620eb760 loaded first by 0x5030b38d;
+//   cflush null); the EXIF set's dates, `add DTO,a2; mov a2,a0; add TIME,d3; mov d3,a1; mov CODE,d0; call FORMAT`
+//   (16-bit adds; EXIF_DATES_Q's three forms), then DTO copied twice as recFile reads it (0x5030dc6a: time 28508,
+//   code 0x4200, original 4089,
+//   created 4109, modified 1364); tags, recFile's tag table (Make 1480, Model 1504, DigitalZoomRatio 4224); crop, the
+//   area rec_jpeg_make_header and rec_raw_make_header each divide by, `add A,a0; movhu (a0),d0; movhu (4,a0),d1; add
+//   OUT,a1; inc d0; udf00 W,d0` ({x, y, xden, yden}: 0x503ffa31 and 0x503ffa6e the JPEG's 31550, 0x50405d8c the
+//   RAW's 31558): [JPEG, RAW], the RAW's where rec_raw_make_header holds it
+// - clock_set: the camera's clock setting, the one function of the image that ends `mov 10499,d0; movhu d0,(8,a2);
+//   ret` (0x500f022e, the one recFile reads before the recorder's clock read); clock_read, the function right after
+//   it, which opens with a call (0x500f024e; the port's place of E143's 0x5012b7cd on all 19 images, X), the
+//   one S-EXIFPRM calls (src/lab/rec.mjs; recFile's facts leave it to the recorder's, fact 'recorder')
+// Returns undefined where the trace table, the start, finish and post traces or the task of this form is not found;
+// throws for a part of the task's form not found or found twice.
+const CLOCK_UNSET_RET = [0x2c, 0x03, 0x29, 0xf8, 0x72, 0x08, 0xdf];   // mov 10499,d0; movhu d0,(8,a2); ret
+const REC_QUEUE_RECV = [0xfc, 0xac, null, null, null, null, 0x98, 0x18], REC_QUEUE_CALLS = 6, REC_CTX_SLOT = 92;
+// rec_file_record's pick of Media's context, `mov C0,d0; mov d0,(..,sp); add Media,a0; movhu (a0),d0; cmp 1,d0; bne;
+// mov C1,d0` (E139 0x503f4a61)
+const REC_CTX_PICK = [0xfc, 0xcc, null, null, null, null, 0x42, null, 0xfa, 0xd0, null, null, 0xf0, 0x60, 0xa0, 0x01, 0xc9, null, 0xfc, 0xcc];
+// the EXIF set's date formatting, `add DTO,a2` then the time record into a1 and `mov CODE,d0` before the call, of three
+// forms: E144's `mov a2,a0; add TIME,d3; mov d3,a1` (0x5030dc6a), E137's `add TIME,a3; mov a2,a0; mov a3,a1`
+// (0x502fcdfe), E142's `add TIME,d0; mov d0,(12,sp); mov a2,a0; mov d0,a1` (0x502e26c3); code: CODE's offset
+const EXIF_DATES_Q = [
+  { pat: [0xfa, 0xd2, null, null, 0x98, 0xfa, 0xc3, null, null, 0xf1, 0xed, 0x2c, null, null], time: 7, code: 12 },
+  { pat: [0xfa, 0xd2, null, null, 0xfa, 0xd3, null, null, 0x98, 0x9d, 0x2c, null, null], time: 6, code: 11 },
+  { pat: [0xfa, 0xd2, null, null, 0xfa, 0xc0, null, null, 0x42, 0x0c, 0x98, 0xf1, 0xe1, 0x2c, null, null], time: 6, code: 14 },
+];
+const EXIF_CROP_Q = [0xfa, 0xd0, null, null, 0xf0, 0x60, 0xf8, 0x64, 0x04, 0xfa, 0xd1, null, null, 0x40, 0xfb, 0x00];
+export function recFileQueue(img, kcb) {
+  const rule = 'recFileQueue', { base } = imageBase(img), D = (o) => h8(0x50000000 + o), s16 = (o) => (img[o] | img[o + 1] << 8) << 16 >> 16;
+  const u16 = (o) => img[o] | img[o + 1] << 8, text = (o) => { let e = o; while (img[e]) e++; return String.fromCharCode(...img.subarray(o, e)); };
+  const step = (p) => p + (callAt(img, p)?.len ?? insnLength(img[p], img[p + 1]));
+  // the instructions of the function from `from` to its first return (calls stepped over)
+  const walk = (from, span = REC_DUMP_SPAN) => { const v = []; for (let p = from; p < from + span && !isRet(img, p); p = step(p)) v.push(p); return v; };
+  const heads = findString(img, REC_TRACE_HEAD, { nul: true }).flatMap((o) => wordsOf(img, (base + o) >>> 0))
+    .filter((p) => u32(img, p + 4) === 1 && text(u32(img, p + 8) - base) === REC_TRACE_NEXT && u32(img, p + 12) === 2);
+  if (heads.length > 1) throw new Error(`${rule}: ${heads.length} trace tables (${heads.map(D).join(', ')}), want one`);
+  if (!heads.length) return undefined;
+  const ids = new Map();
+  for (let p = heads[0]; ; p += 8) {
+    const a = u32(img, p) - base, id = u32(img, p + 4);
+    if (a < 0 || a >= img.length || id === 0 || id > 0xffff || !/^[ -~]+$/.test(text(a))) break;
+    ids.set(text(a), id);
+  }
+  // the trace calls by kind and code, as recFile finds them
+  const traces = new Map();
+  for (let o = img.indexOf(0xe4); o >= 0; o = img.indexOf(0xe4, o + 1)) {
+    const t = o - 1;
+    if (img[t] !== 0xfc || img[t + 2] || img[t + 3]) continue;
+    for (let q = t + 6; q < t + REC_TRACE_GAP; q++) {
+      if (img[q] !== 0xfc || img[q + 1] !== 0xcd) continue;
+      const key = `${u16(t + 4)}:${u16(q + 4)}`;
+      traces.set(key, [...(traces.get(key) ?? []), t]);
+      break;
+    }
+  }
+  const traceAt = (kind, code) => traces.get(`${kind}:${code}`) ?? [];
+  // the trace calls `or K,d0; ...; mov code << 16 | line,d1` of a name: the function that holds them, one or none
+  const traced = (name, kind) => {
+    const id = ids.get(name);
+    if (id === undefined) return undefined;
+    const fns = new Set(traceAt(kind, id - 1).map((t) => entryOf(img, t, REC_FN_SPAN)));
+    if (fns.size > 1 || fns.has(undefined)) throw new Error(`${rule}: the trace of "${name}" in ${fns.size} functions, want one`);
+    return fns.size ? [...fns][0] : undefined;
+  };
+  // the task: the static task whose loop calls the receive, a trace, the start, the free, the record, the finish
+  // (a trace in no function or in two is not this form's: E130's start and finish; nor is a table that names no post:
+  // E118's loop has the form, its "REC post_msg" holds no trace, the post's 0x1002 trace's code naming the name before
+  // it, X)
+  const one = (name, kind = REC_ENTRY_TRACE) => { try { return traced(name, kind); } catch { return undefined; } };
+  const start = one('rec_file_start_process'), finish = one('rec_file_finish_process'), post = one('REC post_msg', REC_POST_TRACE);
+  if (start === undefined || finish === undefined || post === undefined) return undefined;
+  const tasks = [];
+  for (const row of taskRows(img, kcb, rule)) {
+    const e = row.entry - 0x50000000;
+    if (e < 0 || e >= img.length) continue;
+    const calls = walk(e, REC_TASK_SPAN).filter((p) => callAt(img, p)).map((p) => ({ at: p, ...callAt(img, p) }));
+    const recv = calls[0], Q = recv && recv.at - e >= 8 && bytesAt(img, recv.at - 8, REC_QUEUE_RECV) ? u32(img, recv.at - 6) : null;
+    // the record step: the call right before the finish's, its status kept, `mov d0,d2; mov a2,a0; call FINISH`
+    const f = calls.findIndex((c) => c.to === finish), r = calls[f - 1];
+    if (Q !== null && f >= REC_QUEUE_CALLS - 1 && calls[2].to === start && r.at + r.len === calls[f].at - 2 && bytesAt(img, calls[f].at - 2, [0x82, 0x98])) tasks.push({ row, e, calls, Q, handled: calls[f].at - 2 });
+  }
+  if (tasks.length > 1) throw new Error(`${rule}: ${tasks.length} static tasks of REC_FILE's loop (${tasks.map((t) => D(t.e)).join(', ')}), want one`);
+  if (!tasks.length) return undefined;
+  const [{ row, e, calls, Q, handled }] = tasks, recv = calls[0].to;
+  // the size a send or receive passes the kernel with its file name: `mov SIZE,d1; mov FILE,a1`, one in the function
+  const sizeIn = (fn, what) => {
+    const at = walk(fn, REC_FN_SPAN).filter((p) => img[p] === 0x2d && img[p + 3] === 0xfc && img[p + 4] === 0xdd);
+    if (at.length !== 1) throw new Error(`${rule}: ${at.length} sizes with a file name in ${what} ${D(fn)}, want one`);
+    return s16(at[0] + 1);
+  };
+  const size = sizeIn(recv, "REC_FILE's receive");
+  // the post's size, and REC_IMAGE's call of it with Q outside the task
+  if (sizeIn(post, 'the post') !== size) throw new Error(`${rule}: the post ${D(post)} sends another size than REC_FILE's receive (${size})`);
+  const span = walk(e, REC_TASK_SPAN), end = span[span.length - 1];
+  const posts = halfLoads(img, Q).filter((p) => p < e || p > end).filter((p) => {
+    let q = p, c = null;
+    for (let k = 0; k < REC_CALL_WALK && !(c = callAt(img, q)); k++) q = step(q);
+    return c?.to === post;
+  });
+  if (!posts.length) throw new Error(`${rule}: no post of REC_FILE's queue ${h8(Q)} through ${D(post)} outside its task`);
+  // REC's module init: `mov 8191,d0; ret` right before the function of the "rec_main" trace
+  const mainTrace = traceAt(0x1000, (ids.get(REC_TRACE_NEXT) ?? 0) - 1);
+  let init;
+  for (const t of mainTrace) for (let p = t; p > t - REC_FN_SPAN && init === undefined; p--) if (bytesAt(img, p - 6, [0x2c, 0xff, 0x1f]) && isRet(img, p - 3) && runsTo(img, p, t)) init = entryOf(img, p - 6, REC_FN_SPAN);
+  if (mainTrace.length !== 1 || init === undefined) throw new Error(`${rule}: ${mainTrace.length} "rec_main" traces, no REC module init ending right before its function`);
+  // the packet's fields by its dump (recFile's read; here every field is the packet's)
+  const dumps = findString(img, REC_DUMP_FIELD, { after: true }).flatMap((o) => loadsOf(img, (base + o) >>> 0)).filter((p) => img[p + 1] === 0xdc);
+  const dump = dumps.length === 1 ? entryOf(img, dumps[0], REC_FN_SPAN) : undefined;
+  if (dump === undefined || img[dump] !== 0x93) throw new Error(`${rule}: ${dumps.length} loads of "${REC_DUMP_FIELD.trim()}", no packet dump`);
+  const named = new Map(), reg = { 1: null, 2: null, 3: { ptr: null, at: 0 } };
+  const read = (q) => {
+    let x, d = 0;
+    if (img[q] >= 0x70 && img[q] <= 0x73) x = img[q] & 3;
+    else if (img[q] === 0xf0 && img[q + 1] >= 0x40) x = img[q + 1];
+    else if (img[q] === 0xf8) { x = img[q + 1]; d = img[q + 2] << 24 >> 24; } else if (img[q] === 0xfa) { x = img[q + 1]; d = s16(q + 2); } else return null;
+    const r = reg[x & 3], w = REC_WIDTH[x >> 4];
+    return (x & 0x0c) || w === undefined || !r ? null : { ptr: r.ptr, at: r.at + d, width: w };
+  };
+  const skipped = (p) => img[p - 2] >= 0xc0 && img[p - 2] <= 0xca && p - 2 + (img[p - 1] << 24 >> 24) === p + 3;
+  for (let p = dump + 1, name = null, f = null, pend = null; p < dump + REC_DUMP_SPAN && !(isRet(img, p) && !skipped(p)); p = step(p)) {
+    const op = img[p], o2 = img[p + 1];
+    if (op === 0x9a) pend = o2;
+    else if (op === 0xf1 && o2 === 0x7e) reg[2] = reg[3] && { ptr: reg[3].ptr, at: reg[3].at + pend };
+    else if (op === 0xfa && o2 === 0xd3) reg[3] = reg[3] && { ptr: reg[3].ptr, at: reg[3].at + s16(p + 2) };
+    else if (op === 0xf0 && o2 === 0x07) reg[1] = null;
+    else if (op === 0xfc && o2 === 0xdc) name = text(u32(img, p + 2) - base).trim();
+    else if (callAt(img, p)) { if (name !== null && f) named.set(name, f); name = null; f = null; } else f = read(p) ?? f;
+  }
+  const fields = {};
+  for (const [name, width] of Object.entries({ ...REC_FIELDS, Addr: 4, Size: 4 })) {
+    const f = named.get(name);
+    if (f?.width !== width || f.ptr !== null || f.at + width > size) throw new Error(`${rule}: the packet dump ${D(dump)} gives ${name} ${JSON.stringify(f)}, want a ${width}-byte field of the ${size}-byte packet`);
+    fields[name] = f.at;
+  }
+  const { Addr: addr, Size: imageSize, ...packetFields } = fields;
+  // rec_jpeg_exec, the encode, the header maker's HeaderSize and crop area, the RAW header's
+  const exec = traced('rec_jpeg_exec', REC_ENTRY_TRACE), make = traced('rec_jpeg_make_image', REC_ENTRY_TRACE);
+  const header = traced('rec_jpeg_make_header', REC_ENTRY_TRACE), raw = traced('rec_raw_make_header', REC_ENTRY_TRACE);
+  if ([exec, make, header].includes(undefined) || !walk(exec).some((p) => callAt(img, p)?.to === make)) throw new Error(`${rule}: rec_jpeg_exec ${exec === undefined ? 'none' : D(exec)} does not call rec_jpeg_make_image (${make === undefined ? 'none' : D(make)}), or no header maker`);
+  const sets = walk(header).filter((p) => img[p] === 0xfc && img[p + 1] === 0xcc && bytesAt(img, p + 6, [0xfa, 0x10, ...le32(packetFields.HeaderSize).slice(0, 2)]));
+  if (sets.length !== 1) throw new Error(`${rule}: ${sets.length} stores of HeaderSize (+${packetFields.HeaderSize}) in rec_jpeg_make_header ${D(header)}, want one`);
+  const areas = (fn) => new Set(walk(fn).filter((p) => bytesAt(img, p, EXIF_CROP_Q)).map((p) => u16(p + 2)));
+  const jpegArea = areas(header), rawArea = raw === undefined ? new Set() : areas(raw);
+  if (jpegArea.size !== 1 || rawArea.size > 1) throw new Error(`${rule}: ${jpegArea.size} crop areas in rec_jpeg_make_header ${D(header)} and ${rawArea.size} in rec_raw_make_header, want one and at most one`);
+  // the file contexts: Media's pick of two (E139's form), or the one rec_file_record passes (E144's)
+  const record = traced('rec_file_record', REC_ENTRY_TRACE), recWalk = record === undefined ? [] : walk(record);
+  const picks = recWalk.filter((p) => bytesAt(img, p, REC_CTX_PICK) && u16(p + 10) === packetFields.Media && u32(img, p + 20) - u32(img, p + 2) === REC_CTX_SLOT);
+  // (E144's `mov C,a1; call`; E142's `mov C,a2`, which its next call takes in a0: the first `mov imm32,An` of a
+  // data address in the record; X: the file's fnode and folder read through it match the card)
+  const ctxAt = recWalk.filter((p) => img[p] === 0xfc && (img[p + 1] & 0xfc) === 0xdc && u32(img, p + 2) >= base);
+  let contexts = null;
+  if (picks.length === 1) contexts = [u32(img, picks[0] + 2), u32(img, picks[0] + 20)];
+  else if (!picks.length && ctxAt.length) contexts = [u32(img, ctxAt[0] + 2)];
+  if (contexts === null) throw new Error(`${rule}: rec_file_record ${record === undefined ? 'none' : D(record)} picks ${picks.length} pairs of file contexts by Media and loads no context`);
+  // the EXIF module: the template's copy right after its init's return, no cache flush before it
+  const copies = [];
+  for (let o = img.indexOf(0xdd); o >= 0; o = img.indexOf(0xdd, o + 1)) {
+    const c = o - 1, t = u32(img, c + 2);
+    if (!bytesAt(img, c, EXIF_COPY) || !bytesAt(img, c - 3, [0xdf, 0x00, 0x04]) || callAt(img, c - 10)?.len === 7) continue;
+    const inner = entryOf(img, c - 3, REC_FN_SPAN);
+    if (inner !== undefined && bytesAt(img, inner, [0xfc, 0xdc, ...le32(t)]) && bytesAt(img, inner - EXIF_INIT.length, EXIF_INIT)) copies.push({ c, t, init: inner - EXIF_INIT.length });
+  }
+  const dts = [];
+  for (let o = img.indexOf(0xfa); o >= 0; o = img.indexOf(0xfa, o + 1)) {
+    for (const f of EXIF_DATES_Q) if (bytesAt(img, o, f.pat) && callAt(img, o + f.pat.length)) dts.push({ o, f });
+  }
+  if (copies.length !== 1 || dts.length !== 1) throw new Error(`${rule}: ${copies.length} EXIF template copies after an init without a cache flush and ${dts.length} date sets of the 16-bit forms, want one each`);
+  const [{ c: copy, t: template, init: exifInit }] = copies, [{ o: dt, f: form }] = dts, fmt = callAt(img, dt + form.pat.length);
+  const c1 = dt + form.pat.length + fmt.len, c2 = c1 + EXIF_DATE_COPY.length + 6;
+  if (!bytesAt(img, c1, EXIF_DATE_COPY) || !bytesAt(img, c2, EXIF_DATE_COPY) || callAt(img, c1 + 7).to !== callAt(img, c2 + 7).to) throw new Error(`${rule}: the date set ${D(dt)} does not copy its date twice`);
+  const date = { format: 0x50000000 + fmt.to, code: u16(dt + form.code), copy: 0x50000000 + callAt(img, c1 + 7).to, original: u16(dt + 2), created: u16(c1 + 5), modified: u16(c2 + 5) };
+  const dtTag = [];
+  for (let o = img.indexOf(0x32); o >= 0; o = img.indexOf(0x32, o + 1)) if (bytesAt(img, o, [0x32, 0x01, 0x02, 0x00, 20, 0, 0, 0])) dtTag.push(o);
+  if (dtTag.length !== 1) throw new Error(`${rule}: ${dtTag.length} EXIF DateTime tag entries, want one`);
+  const tag = new Map(), entry = (o) => ({ tag: u16(o), type: u16(o + 2), at: u32(img, o + 8) });
+  let lo = dtTag[0];
+  while (EXIF_TAG_TYPES.has(u16(lo - 10)) && dtTag[0] - lo < REC_TAG_SPAN * 12) lo -= 12;
+  for (let o = lo; EXIF_TAG_TYPES.has(u16(o + 2)) && o - lo < REC_TAG_SPAN * 12; o += 12) { const t = entry(o); if (!tag.has(t.tag)) tag.set(t.tag, t.at); }
+  if (tag.get(0x0132) !== date.modified || tag.get(0x9003) !== date.original || tag.get(0x9004) !== date.created || ![0x010f, 0x0110, 0xa404].every((t) => tag.has(t))) throw new Error(`${rule}: the EXIF tag table ${D(lo)} does not hold the date set's dates`);
+  // the camera's clock setting, the one function that ends `mov 10499,d0; movhu d0,(8,a2); ret`, and its clock read,
+  // the function right after it, which opens with its call of the RTC's read
+  const unset = oneAt(img, CLOCK_UNSET_RET, rule, 'clock settings'), clockRead = unset === null ? -1 : unset + CLOCK_UNSET_RET.length + 2;
+  const set = unset !== null && callAt(img, clockRead) ? entryOf(img, unset, REC_FN_SPAN) : undefined;
+  if (set === undefined) throw new Error(`${rule}: no clock setting ending \`mov 10499,d0; movhu d0,(8,a2); ret\` before a clock read`);
+  return {
+    exif: {
+      init: 0x50000000 + exifInit, cflush: null, template, copy: 0x50000000 + copy, size: -s16(copy + 7) * 4,
+      time: u16(dt + form.time), date, tags: { make: tag.get(0x010f), model: tag.get(0x0110), zoom: tag.get(0xa404) }, crop: [...jpegArea, ...rawArea],
+    },
+    init: 0x50000000 + init,
+    task: { id: row.id, entry: row.entry, flag: null, queue: Q, handled: 0x50000000 + handled },
+    packet: { size, post: 0x50000000 + post, fields: packetFields },
+    jpeg: { exec: 0x50000000 + exec, make_image: 0x50000000 + make, header: u32(img, sets[0] + 2), fill: null, fill_return: null, image: { record: null, addr, size: imageSize } },
+    contexts, clock_set: 0x50000000 + set, clock_read: 0x50000000 + clockRead,
+  };
+}
 // The event broker's init (fact 'broker.init', and through bin/port.mjs the place of E143's BROKER_E143 0x502a48b6,
 // src/lab/camapp.mjs BROKER_INIT, which the lab calls as the boot chain's wrapper does): it opens with its queue's id
 // word, `movhu (W),d0; exth d0; call` (fc ac W 18, then call d16 or d32), and clears its slots in a loop that starts
@@ -4124,8 +4348,11 @@ export function readPlacedFacts({ img, at }) {
   const lensQueue = at(LENS_COMMAND_QUEUE_E143);
   const lens = kcb !== null && taSt !== null && qerd !== null && lensQueue !== null ? lensDriver(img, { kcb, taSt, qerd, commandQueue: lensQueue }) : undefined;
   if (lens !== undefined) facts.lens_driver = lens;
-  const rec = kcb !== null ? recFile(img, kcb) : undefined;
-  if (rec !== undefined) { facts.rec_file = rec; facts.rec_image = recImage(img, kcb, rec); }
+  const recF = kcb !== null ? recFile(img, kcb) : undefined, rec = recF ?? (kcb !== null ? recFileQueue(img, kcb) : undefined);
+  if (rec !== undefined) facts.rec_file = rec;
+  // REC_IMAGE's parts where REC is recFile's version (REC_FILE on its flag, which REC's shared init binds); the E144
+  // family's version (recFileQueue: REC_FILE on its queue alone) is not recImage's form
+  if (recF !== undefined) facts.rec_image = recImage(img, kcb, recF);
   const apiReturn = at(API_SEND_RETURN_E143);
   if (apiReturn !== null) facts.api = apiTargets(img, apiReturn);
   return facts;

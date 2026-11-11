@@ -320,7 +320,19 @@ const LENS_DRIVER_FOUND = {
 // contexts' pick 0x5051cdb5, the crop areas 0x5051fce5), E147's as the rule reads them (X: its session records S2's
 // file natively; D: the copy 0x50433b21 of 22990 words, the record's init 0x5053a22f, the crop areas 0x5052eddb, the
 // bind before REC_FILE's entry 0x5052b093), none on the other 15 bodies (X: the E144 family's REC_FILE receives
-// without the file name, the older bodies have no such receive)
+// without the file name, the older bodies have no such receive). The E144 family's (src/fw/facts.mjs recFileQueue,
+// 2026-11-10): E144's as read by hand (D: the EXIF init 0x5030b384 and its copy 0x5030b3b9 of 7925 words, the date set
+// 0x5030dc6a with the time at +28508, REC_FILE task 31 at 0x503f5dc0 waiting on its queue word 0x60041864, its record
+// step's return 0x503f5e05, the post 0x503f1256, the dump 0x503f8314, rec_jpeg_exec 0x503ff3e3 with no header fill,
+// HeaderSize's store 0x503fff59, the crop areas 0x503ffa31 and the RAW one 0x50405d8c, the context 0x503f60ff, the
+// clock setting 0x500f022e), E148, E139, E134, E137, E142, E140 and E125 as the rule reads them (X: their sessions
+// record S2's file natively with them), none on E130 (its REC_FILE's loop inlines the start and the finish, X)
+// the packet's fields (300 bytes; FileType at +298, on E134, E137 and E125 at +296), rec_jpeg_exec's parts and the
+// date set's offsets the eight share (D, the rule's reads)
+const QF = (FileType) => ({ pExifParam: 28, HandleTarget: 116, BuffAddr1: 136, BuffSize1: 140, HeaderSize: 176, Status: 192, Mode: 194,
+  Media: 198, Media2: 200, RecordDevice: 202, ImgAspect: 283, Free: 286, FileType });
+const QJ = (exec, make_image) => ({ exec, make_image, header: 41984, fill: null, fill_return: null, image: { record: null, addr: 180, size: 184 } });
+const QD = (format, copy, original) => ({ format, code: 0x4200, copy, original, created: original + 20, modified: 1364 });
 const REC_FILE_FOUND = {
   E143: REC_FILE_E143,
   E146: {
@@ -344,6 +356,62 @@ const REC_FILE_FOUND = {
     jpeg: { exec: 0x50536A6C, make_image: 0x50536E37, header: 41984, fill: 0x5048FD21, fill_return: 0x50539DE0,
       image: { record: { init: 0x5053A22F, bytes: 52, at: 180 }, addr: 8, size: 12 } },
     contexts: [0x62AB7D08, 0x62AB7D64], clock_set: 0x501358FD,
+  },
+  E144: {
+    exif: { init: 0x5030B384, cflush: null, template: 0x620EB760, copy: 0x5030B3B9, size: 31700, time: 28508,
+      date: QD(0x500F07A1, 0x50002FFB, 4089), tags: { make: 1480, model: 1504, zoom: 4224 }, crop: [31550, 31558] },
+    init: 0x503F0FA9, task: { id: 31, entry: 0x503F5DC0, flag: null, queue: 0x60041864, handled: 0x503F5E05 },
+    packet: { size: 300, post: 0x503F1256, fields: QF(298) }, jpeg: QJ(0x503FF3E3, 0x503FF598),
+    contexts: [0x62127124], clock_set: 0x500F022E, clock_read: 0x500F024E,
+  },
+  E148: {
+    exif: { init: 0x5030F7EC, cflush: null, template: 0x620EF32C, copy: 0x5030F821, size: 31708, time: 28516,
+      date: QD(0x500F07C4, 0x50002FFB, 4089), tags: { make: 1480, model: 1504, zoom: 4224 }, crop: [31558, 31566] },
+    init: 0x503F587A, task: { id: 31, entry: 0x503FA688, flag: null, queue: 0x6004187E, handled: 0x503FA6CD },
+    packet: { size: 300, post: 0x503F5B27, fields: QF(298) }, jpeg: QJ(0x50403CE6, 0x50403E9B),
+    contexts: [0x6212ACF0], clock_set: 0x500F0251, clock_read: 0x500F0271,
+  },
+  E139: {
+    exif: { init: 0x5030881F, cflush: null, template: 0x6212A480, copy: 0x50308851, size: 29068, time: 25868,
+      date: QD(0x500F1243, 0x50003022, 1785), tags: { make: 1480, model: 1504, zoom: 1920 }, crop: [28910, 28918] },
+    init: 0x503EE061, task: { id: 30, entry: 0x503F3C67, flag: null, queue: 0x6004165A, handled: 0x503F3CCD },
+    packet: { size: 300, post: 0x503EE30A, fields: QF(298) }, jpeg: QJ(0x503FDF6B, 0x503FE1E2),
+    contexts: [0x62165420, 0x6216547C], clock_set: 0x500F0D63, clock_read: 0x500F0D89,
+  },
+  E134: {
+    exif: { init: 0x50323E3F, cflush: null, template: 0x6234109C, copy: 0x50323E71, size: 29068, time: 25868,
+      date: QD(0x500EA85D, 0x500029A3, 1785), tags: { make: 1480, model: 1504, zoom: 1920 }, crop: [28910, 28918] },
+    init: 0x50404513, task: { id: 30, entry: 0x50409F07, flag: null, queue: 0x600418D8, handled: 0x50409F6D },
+    packet: { size: 300, post: 0x504047BC, fields: QF(296) }, jpeg: QJ(0x50413E50, 0x504140CD),
+    contexts: [0x6237BDB8, 0x6237BE14], clock_set: 0x500EA37D, clock_read: 0x500EA3A3,
+  },
+  E137: {
+    exif: { init: 0x502FA6A5, cflush: null, template: 0x62127E34, copy: 0x502FA6D7, size: 27928, time: 24728,
+      date: QD(0x500E21CD, 0x50002A6E, 1785), tags: { make: 1480, model: 1504, zoom: 1920 }, crop: [27778, 27786] },
+    init: 0x503D9F11, task: { id: 30, entry: 0x503DF284, flag: null, queue: 0x60040FAC, handled: 0x503DF2C9 },
+    packet: { size: 300, post: 0x503DA1B6, fields: QF(296) }, jpeg: QJ(0x503E7052, 0x503E71F6),
+    contexts: [0x621627D8], clock_set: 0x500E1D03, clock_read: 0x500E1D23,
+  },
+  E142: {
+    exif: { init: 0x502E0003, cflush: null, template: 0x6225882C, copy: 0x502E0035, size: 27332, time: 23832,
+      date: QD(0x500DB977, 0x50002F2B, 1785), tags: { make: 1480, model: 1504, zoom: 1920 }, crop: [27180] },
+    init: 0x503BF77C, task: { id: 30, entry: 0x503C4216, flag: null, queue: 0x60040D6E, handled: 0x503C425B },
+    packet: { size: 300, post: 0x503BFA21, fields: QF(298) }, jpeg: QJ(0x503CBAE9, 0x503CBC50),
+    contexts: [0x622930F4], clock_set: 0x500DB40E, clock_read: 0x500DB42E,
+  },
+  E140: {
+    exif: { init: 0x502EE43F, cflush: null, template: 0x622573D0, copy: 0x502EE471, size: 26956, time: 23824,
+      date: QD(0x500DB95E, 0x50002F2B, 1785), tags: { make: 1480, model: 1504, zoom: 1920 }, crop: [26804] },
+    init: 0x503CC6BE, task: { id: 30, entry: 0x503D1122, flag: null, queue: 0x60040D40, handled: 0x503D1167 },
+    packet: { size: 300, post: 0x503CC963, fields: QF(298) }, jpeg: QJ(0x503D894E, 0x503D8AB5),
+    contexts: [0x62291B20], clock_set: 0x500DB3E0, clock_read: 0x500DB400,
+  },
+  E125: {
+    exif: { init: 0x50316724, cflush: null, template: 0x6226330C, copy: 0x50316756, size: 27620, time: 23984,
+      date: QD(0x500E5411, 0x50002C11, 1785), tags: { make: 1480, model: 1504, zoom: 1900 }, crop: [27462, 27470] },
+    init: 0x503F34CD, task: { id: 31, entry: 0x503F9238, flag: null, queue: 0x6004107C, handled: 0x503F929E },
+    packet: { size: 300, post: 0x503F3776, fields: QF(296) }, jpeg: QJ(0x50402BF6, 0x50402E5A),
+    contexts: [0x622713A0, 0x622713FC], clock_set: 0x500E4F49, clock_read: 0x500E4F67,
   },
 };
 // REC_IMAGE's task natively (rec_image; src/fw/facts.mjs recImage), where recFile reads REC_FILE's parts: E143's as

@@ -1635,8 +1635,9 @@ traRoutingSession, below).
   The other two (file offsets 5286, a halfword, and 5292, a word) lie in the Exif segment's value area after ExifIFD's
   values, before the maker notes (from 5560), where no IFD entry points (an IFD walk; exiftool shows neither). That
   they hold the record's +4202 and +4208, 6 bytes apart as these are, is I. rec_bracket_after_trig (`0x5053bfe2`, from
-  `0x5053be89`) writes the record's ISO (+4202, +4208) from the packet's Sv (+294) through `0x50590ca6` when the
-  record's +7626 is 0. S-RECREQ leaves the Sv 0, as REC_MAIN's clear does, and that gives 25. Without the aspect
+  `0x5053be89`) writes the record's ISO (+4202, +4208) from an Sv through `0x50590ca6` when the record's +7626 is 0;
+  the Sv 0 gives 25 (corrected in 4.3.5: on the lab's path the Sv is the record's +38174, 0 as the template leaves it,
+  not the packet's +294, X). Without the aspect
   setting the maker notes' AspectRatio was "Unknown (1 0)" and AspectFrame 0 0 55274 2911; with it they stay 4:3 and
   0 0 5183 3887.
 - **The encode natively (X).** With S-JPEGENC lifted, rec_ImgPro_CreateParam and the create run. rec_ImgPro_ImageParam
@@ -1687,14 +1688,15 @@ traRoutingSession, below).
   - The packet (276 bytes) and the image record (4.8.10). REC_IMAGE's task keeps the record on its stack (E146 sp +
     364) and inits it itself after the receive (E146 `0x5051ee45`). S-JPEGENC finds `Addr` and `Size` through the
     packet's +180.
-  - Another stage. On E146 REC_PREPRO (task 30, `0x5052d324`) posts a normal still (Command not 19) to
-    Q_REC_EXEC_RAWNR (the word `0x600432a0`, named by the object-name list; `0x5052d3d4`), not to REC_IMAGE's queue as
-    E143's `0x5054edda` does. Its reader is task 32 (`0x5052fedd`; E147 `0x5053f112`); that it is REC_RAWNR is I, by
-    the queue's name and the string "REC_RAWNR" in the image, which E143's lacks (X). It copies the shot's record
-    +37564..+37570 into the packet's +254..+260, outside the dump's names. When `0x5052acc1` gives 1 it runs
-    `0x50518f3b` and `0x50520916` (not read). It then posts the packet to REC_IMAGE's queue (`0x5052ffd0`). That is
-    the only CPU 0 post: the word's loads are REC_IMAGE's receive, that post and the name list (E147 the same,
-    `0x5053f205`).
+  - Another stage. On E146 REC_PREPRO (task 30, `0x5052d324`) posts a normal still (Command not 19) to Q_REC_EXEC_RAWNR
+    (the word `0x600432a0`, named by the object-name list; `0x5052d3d4`), not to REC_IMAGE's queue as E143's
+    `0x5054edda` does. Its reader is task 32 (`0x5052fedd`; E147 `0x5053f112`), REC_RAWNR: the image's table of task
+    names and ids, {24-byte name, u16 id}, gives "REC_RAWNR" 32 after REC_FILE 27 and REC_IMAGE 28 (E146 body
+    `0x1a2b122`, E147 `0x1a35d02`; which code reads the table is not read). E143's image has neither the name nor the
+    queue's (X: a scan). It copies the shot's record +37564..+37570 into the packet's +254..+260, outside the dump's
+    names. When `0x5052acc1` gives 1 it runs `0x50518f3b` and `0x50520916` (not read). It then posts the packet to
+    REC_IMAGE's queue (`0x5052ffd0`). That is the only CPU 0 post: the word's loads are REC_IMAGE's receive, that post
+    and the name list (E147 the same, `0x5053f205`).
   - REC_IMAGE's loop is E143's with two additions. For Mode 4097 it calls `0x5052a1e8` (not read) and, when that gives
     0, `0x5052b021(packet, 30)`, which calls the packet's pFnSetPercent (+12) if set. After rec_bracket_update it
     clears RecordTarget in the image record (+34), where E143 clears the packet's (+286).
@@ -1703,9 +1705,16 @@ traRoutingSession, below).
     flag through the bind table (`0x5052c568`); otherwise it posts to REC_EXEC_FILE (`0x5051f5a5`).
   - The shared init's ring holds 216 slots of 276 bytes on E146 (93 on E147; E143 120 of 316). E146 clears a third
     area (432 bytes at `0xa332b954`) and two more bytes after the done byte.
-  - The ISO: rec_bracket_after_trig (E146 `0x505196b5`, from `0x50519557`) takes the Sv from the image record's
-    SvAdj (+38), when the shot's record +7632 is 0. On E143 it takes the packet's +294, when +7626 is 0. REC_IMAGE's
-    record init clears SvAdj, so the Sv is 0 as on E143.
+  - The ISO: rec_bracket_after_trig (E146 `0x505196b5`, from `0x50519557` when the shot's record +7632 is 0) takes
+    its Sv from its caller `0x50519356` (the packet in a1). With the record's bracket byte +37738 1 (setting 40401, as
+    in the lab) that is the record's +37826 (`0x505193c3`, `0x505194fc`), which the caller also writes to the image
+    record's SvAdj (+38, `0x505193d2`). Only with that byte not 1 is it SvAdj (`0x50519547`). E147's caller is the
+    same (`0x505284a3`, `0x505285dc`). E143's (`0x5053bca6`) has the same two paths: +38086, +38174 (`0x5053be39`)
+    and the packet's +294 in SvAdj's place (`0x5053be7a`), +7626 for +7632.
+  - Which path runs (X: an observe at each path's read and at rec_bracket_after_trig, one S2 per body): on E146 and
+    on E143 the first, with d0 0 from the record's +37826 (E143 +38174), which S-EXIFPRM's template copy leaves 0.
+    So the 25 comes from the parameter block, not from a packet's Sv. This corrects 4.3.3's and 4.8.10's "from the
+    packet's Sv (+294), which S-RECREQ leaves 0": the packet's +294 is written from +38174 on that path, not read.
 - **The lab (`emu/src/lab/rec.mjs`).** All three now run H-RECSHARED, H-RECIMGPRO, H-RECIMAGE and S-RECREQ.
   S-EXIFPRM writes TAKE's six fields at the rule's offsets, and S-JPEGENC does the encode only. S-RECIMAGE and its
   path are removed: no body uses them. On E146 and E147 S-RECREQ posts in REC_RAWNR's place, so REC_RAWNR's copy and
@@ -1725,27 +1734,29 @@ traRoutingSession, below).
   offsets 288 and 312 (ISO 0x8827 and StandardOutputSensitivity 0x8831, exiftool) and 5286 and 5292. These are E143's
   4 bytes of 4.3.3, and the second shot's are the same. exiftool's other tags are unchanged (AspectRatio 4:3,
   AspectFrame 0 0 5183 3887). E143's file is byte-identical.
-- **Tests (X).** `emu/test/test_facts.mjs` 1380 of 1380 (the rule on the three bodies, no rec_image on the other 15);
+- **Tests (X).** `emu/test/test_facts.mjs` 1381 of 1381 (the rule on the three bodies, no rec_image on the other 15,
+  and two forms it refuses on E143's image: the task's queue read made `mov`, the bind to entry 6);
   `emu/test/test_storage.mjs` with `--session`: E146 56 of 56, E147 38 of 38, E143 56 of 56, its REC_IMAGE checks now
-  on all three; with `--sdxc`: E146 30 of 30, E147 12 of 12.
-- **modelcheck (X).** Every ported body passes but the TFT paths of E146 and E147, which fail the S2 check ("the frame
-  holds 1 value(s) after the rec view"); their EVF paths pass. The cause is a timing artifact in the lab, not REC:
-  - The camera's timed events END_RECVIEW and START_THROUGH_IMAGE_PROCESS, due at 13239.0 ms on E146, are posted by
-    `emu/src/lab/camapp.mjs` tick only at the end of the check's 1200 ms idle slice (14097.8 ms).
+  on all three; with `--sdxc`: E146 30 of 30, E147 12 of 12. `emu/bin/modelcheck.mjs` with the idle below: the 31 paths
+  of the 18 ported bodies pass, each line as with one slice per idle but E146's and E147's TFT S2.
+- **modelcheck (X).** With REC_IMAGE native, E146's and E147's TFT paths first failed the S2 check ("the frame holds
+  1 value(s) after the rec view"); their EVF paths passed. The cause was the check's sampling against the lab's
+  timing, not REC:
+  - `emu/src/lab/camapp.mjs` tick posts the camera's timed events only at an idle slice's end (`emu/src/lab/play.mjs`
+    idle_slice, D). END_RECVIEW and START_THROUGH_IMAGE_PROCESS, due inside the check's 1200 ms idle after S2, came at
+    its end (14114.5 ms in a replica of the check's session on E146 and on E147).
   - The check composes at the TFT's next boundary, 1.2 ms later, before the GUI has redrawn the shooting screen: the
     OSD planes have the same banks, their contents blank, and the screen is drawn 50 ms later.
-  - Before this change S2 ended 16.8 ms earlier, so the boundary came 51 ms after the slice's end. That the 16.8 ms
-    are S-RECREQ's 34.1 ms slice running past the end of the 150 ms idle after S2 down is I. (E146's figures; E147
-    fails the same check.)
-  - With master's code, an idle of 17, 34 or 50 ms before S2 makes the same check fail on E146. With this change the
-    same session passes it when the 1200 ms are idled in 100 ms slices.
+  - Before this change S2 ended earlier and the boundary came 51 ms after the slice's end, after the redraw. With
+    master's code an idle of 17, 34 or 50 ms before S2 made the same check fail on E146.
 
-  The fix belongs to the timed events' delivery (`emu/src/lab/play.mjs` idle_slice, camapp.mjs tick) or to the
-  check's sampling, outside this topic: open.
+  The check now idles in slices that end at each timed event's due time (`emu/bin/modelcheck.mjs` idle), so each comes
+  when due. The Player's slices of at most 50 ms (`emu/src/lab/player.mjs` SLICE_NS) bring it within one slice. In the
+  replica END_RECVIEW then comes at 13255.7 ms and the frame composed at 14132.3 ms holds 20 values. Every ported body
+  passes so (Tests). The lab's own delivery is unchanged: open.
 - **Open.** REC_RAWNR (what `0x5052acc1` decides, the RAW NR step); REC_MAIN's and REC_PREPRO's own work, as on E143;
   which call starts REC_IMAGE (I); the GUI task's work in the slice; the E144 family, whose REC_FILE no rule reads;
-  the camera's timed events posted only at an idle slice's end, which fails modelcheck's TFT S2 check on E146 and
-  E147 (above).
+  the camera's timed events posted only at an idle slice's end, which modelcheck now idles around (above).
 
 ### 4.4 AF, lens and body IS
 
@@ -3979,7 +3990,8 @@ there (it stays on the other bodies).
   divides by, the crop areas +40858 / +40866 `{0, 0, 1, 1}` (I: the full frame) and DigitalZoomRatio +4228 1/1 (I); the
   EXIF set itself does not run (X: it divides by zero in TAKE's state at `0x50398ca5`), so exposure, aperture, ISO,
   focal length, the lens and the image size stay 0 (ISO 25 on E143 since 4.3.3: rec_bracket_after_trig computes it
-  from the packet's Sv, which S-RECREQ leaves 0, X). S-RECIMAGE, REC_IMAGE's part: the packet for a single-slot JPEG
+  from the record's Sv +38174, which the template leaves 0, X; 4.3.5 corrects 4.3.3's "the packet's Sv"). S-RECIMAGE,
+  REC_IMAGE's part: the packet for a single-slot JPEG
   (`Mode` 4097, `Media` 0, `Media2` none, `RecordDevice` 1, `ImgAspect` 1, `FileType` 1, `HandleTarget` 1, I: the lab's
   one shot; the rest 0 as REC_MAIN's clear leaves it), `rec_jpeg_exec` natively on it, REC_IMAGE's post natively, then
   lab time until REC_FILE's handler returns (`0x5053f20d`). S-JPEGENC, the image pipeline's work inside it: the encode

@@ -25,7 +25,7 @@ from the module map (section 2.2). Every effort figure is a rough estimate of fo
   `--take probe` TAKE_FUNC, TAKE_MAIN and the neighbours TAKE_EXPOSE, TAKE_POWER_MANAGER, TAKE_FOCUS and the strobe
   over an empty hot shoe (4.1.4, 4.1.6-4.1.8, 4.12.1); with `--cpu2 native` CPU 2 and its queue tasks (4.6.1, 4.6.2);
   with `control camapp 3` the HLS transactions, the VSC histogram and the imgpro unit `0x9c600000` (4.1.5, 4.2.1,
-  4.3.1).
+  4.3.1), with its play opt-in the play module (4.8.11); with the probe's `cam_fe` cam.c's second init (4.2.5).
 - **In code:** the lab executes 287,101 of the main block's 5,186,071 instructions (5.54%), about 6.1% of the code a
   camera runs in normal use (section 2.2). The largest unrun blocks are playback (613k instructions), AF / lens / IS
   (505k), still capture (421k), the AV codec back end (411k), the sensor / ISP / live view (321k) and the TAKE module
@@ -146,8 +146,8 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **AV codec back end** (4.5) | 0 | none for HLE: seam S6 bypasses it | CPU 1; the codec engines; IRQs 303-306 | 416,471 / 411,438 (overlay segment 8, CPU 1) | ?: native needs register-level codec models, no documentation | native movie encode and playback below the HLS (I) |
 | **CPUs 1-3 and inter-core** (4.6) | S: K-OTHERCPU, K-BOOTSYNC, K-IPI, no start barrier; S-CPU2 (one post), S-CPU3, S-DISPFRAME on CPU 0; any other doorbell is an error | run CPUs 1-3 natively on one bus; per-core `0x8000` page, INTC bank n to core n, `+0x808/+0x80c` IRQ 324, `+0x810/+0x814` IRQ 325, `+0x800/+0x804` ISC IRQ 323, ticks 139..141. A53: "off" or ISC node 4 | a machine refactor (per-core CPU state), a per-core kernel lab, flash reads for CPU 2's loader and CPU 3's boot jobs, ROADMAP phases 3-4 | 5,422 keyed; 441,542 reachable only from CPU 1-3 tasks (a lower bound) | 5-7 weeks for the cores | the histogram, a native DISP_FRAME, cross-core owners (AUD_MAIN, AVM) can start; three stand-ins and four kernel stand-ins retire |
 | **SCPU, power, clock, on-board sensors, persistence** (4.7) | N: PER_SCPU, its start and its transactions, over the link to S-SCPUDEV, the sub-CPU's transport-level model (since 2026-10-23: `0x85`, `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1; S-SIO2, H-SCPUSTART); S: the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / S-NVRAM (the players' default since 2026-11-08); N: the ACC module init, ACC_MAIN, PER_SLOPE, the level gauge and Level Adjust with the accelerometer at its sample cache (since 2026-10-23, 4.7.3; H-ACCINIT, S-ACCREG, S-ACCSAMPLE, H-SLOPEINIT); PER_ROTATE with `--rotate on` (since 2026-11-08, 4.7.3; H-ROTINIT) | the accelerometer at the PER_SIO transfer and its data-ready pin (ACC_SENS_MAIN native); PER_ROTATE by default; S-NVRAM's NAND seam as the default | lab time; the UI_IN, SCPU and PER_SIO inits, the GIO init for the data-ready pin; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, rotation by default, eye sensor (Level Adjust, the level gauge and, with `--rotate on`, the orientation and the gauge's portrait layout in, 4.7.3) |
-| **Card and file system** (4.8) | N on E143 since 2026-10-23 (4.8.2): the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, the format, dosfat, DCF and the shots / movie-time counts natively on an 8 GiB SDHC card at the SD command layer (S-SDCARD, S-SDHOST, S-FSNAND, S-ALBM, H-FILEINIT, H-FILECLBK); the picture's file at S2 through the file module (S-RECFILE; since 2026-11-08 REC_FILE's task natively from REC_IMAGE's packet with the firmware's own header on E143, E146 and E147, 4.8.10: H-RECFILE, S-RECIMAGE, S-EXIFPRM, S-JPEGENC; on E143 since 2026-11-10 REC_IMAGE's own task, 4.3.3: H-RECIMAGE, S-RECREQ in S-RECIMAGE's place, S-JPEGENC the encode only; on E146 and E147 too since the same day, 4.3.5); since 2026-10-24 (4.8.3) Card Formatting from the menu (S-MDACTRL) and the card's removal and insertion (S-MEDIA), the application's media control native; S: S-CARD's insertion requests, its HLS mount state and image list; the other bodies keep S-CARD's card with no file system | the SD host's registers and interrupts with a card model (seam A), the rule-found seam on the other bodies, REC_IMAGE and the image pipeline (the thumbnail, the shooting values in Exif) | the HLS media layer (which sends the insertion), REC_MAIN / REC_FILE (the picture's file), TAKE_MOV's movie take (the movie module's set-up, whose frame rate the movie time query reads: 0 before a take on the camera too), IRQs anywhere for the SD host | 115,103 / 108,887 (17k of it self-test and debug) | 1-2 weeks left: REC_FILE's DCF steps, both slots, exFAT, the other bodies | a card that fills, real files in DCIM, both slots |
-| **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
+| **Card and file system** (4.8) | N on E143 since 2026-10-23 (4.8.2): the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, the format, dosfat, DCF and the shots / movie-time counts natively on an 8 GiB SDHC card at the SD command layer (S-SDCARD, S-SDHOST, S-FSNAND, S-ALBM, H-FILEINIT, H-FILECLBK); the picture's file at S2 through the file module (S-RECFILE; since 2026-11-08 REC_FILE's task natively from REC_IMAGE's packet with the firmware's own header on E143, E146 and E147, 4.8.10: H-RECFILE, S-RECIMAGE, S-EXIFPRM, S-JPEGENC; on E143 since 2026-11-10 REC_IMAGE's own task, 4.3.3: H-RECIMAGE, S-RECREQ in S-RECIMAGE's place, S-JPEGENC the encode only; on E146 and E147 too since the same day, 4.3.5); since 2026-10-24 (4.8.3) Card Formatting from the menu (S-MDACTRL) and the card's removal and insertion (S-MEDIA), the application's media control native; S: S-CARD's insertion requests, its HLS mount state and image list; every other body now runs the same file system (4.8.4, 4.8.8; `emu/src/fw/models.mjs` card_fs), the HLS side on E146 (4.8.7) and on the E118 family (S-MDAEND, `docs/model-survey.md` findings 124 to 129) | the SD host's registers and interrupts with a card model (seam A), the rule-found seam on the other bodies, REC_IMAGE and the image pipeline (the thumbnail, the shooting values in Exif) | the HLS media layer (which sends the insertion), REC_MAIN / REC_FILE (the picture's file), TAKE_MOV's movie take (the movie module's set-up, whose frame rate the movie time query reads: 0 before a take on the camera too), IRQs anywhere for the SD host | 115,103 / 108,887 (17k of it self-test and debug) | 1-2 weeks left: REC_FILE's DCF steps, both slots, exFAT, the other bodies | a card that fills, real files in DCIM, both slots |
+| **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW; on E143 under `control camapp 3` behind an opt-in the play module's tasks natively, its decode stood in (H-PLAYSTART, S-PLAYDEC, A-JPEGDHT-1; since 2026-11-10, 4.8.11) | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
 | **HDMI and DisplayPort** (4.9) | N with `--hdmi on` (since 2026-10-23, E143, E146, E147): a plug runs the hot-plug pin's IRQ 109, the HDMI init, two E-DDC reads with IRQ 239, the EDID's checks and parse and the connect report to UI_IN natively (H-GIOSLOTS, S-HDMISINK); off by default. On E143 since 2026-11-08 the application's TRA 588 is taken by S-OUTDEV, and CapIod's open, the transmitter's open (PHY, SCDC, update) and VSC channel 0 at 1080p59.94 run natively; channel 0 composes its window, nothing drawn on it; the unplug runs down to the disconnect report (A-HDMI-1) (X) | TX byte registers at `0x99c07000` (HPD / RxSense byte 8, DDC `0xa80..0xa83`, the buffer `0xc00`, IRQ 239, the open's words), the PHY words at `0x99c08000` and the GIO pin 77 (`0x9b881540`, IRQ 109), all modelled; VSC channel 0 | the application's notification of the open (CmpCst_Function's 494, the TRA reply), the GUI's planes on channel 0, the return to the TFT at an unplug | about 11k (3.3k plus the TX / DP driver's 7.7k) | 1 week left (the notification and the GUI's HDMI layout) | the HDMI output a TV shows |
 | **USB** (4.10) | 0 on E143 | the event level first (EV_USB_CONNECTED 8, EV_USB_RXDETECT `0x040d00d2`, the select screen); later a DWC3-family device at `0x9a600000` (IRQ 223) | SCPU (PD, power source), ADC flag `0xbf`, the PC_* tasks, storage for MSC | 121,861 / 117,704 | 1-2 weeks events; 4-8 weeks data path | the USB select screen, charging state; later MSC, MTP, PTP |
 | **PC connection over PTP (TPC)** (4.10) | 0 | ? (the bulk of the USB data path) | a USB or Wi-Fi transport, storage | about 52.6k / about 52k (21.4k of it filed under factory code) | ? | tethering, the PTP firmware-update path |
@@ -197,7 +197,8 @@ and the first concrete step. Task ids are `cpu << 12 | index` (kernel spec §2.1
   TAKE publishes only the module events
   `0x04020215` and `0x040800f0`, so its results reach the HLS through the replies to its requests and the callbacks the
   capabilities register (I, shutter spec item 44; 4.1.3). The AF request lives in `CapTre_TakeReady` -> API
-  `0x50417cd9`, which neither camapp mode reaches.
+  `0x50417cd9`, which neither camapp mode reaches (camapp 1 and 2; camapp 3 reaches it after a menu pass, 4.3.2, and
+  with the probe, 4.1.7, 4.1.10).
 - **Seam:** TAKE native, its neighbours answered at their own seams. Inside the step: lens at its serial seam (or
   LENS_EXEC answered) and BC_EXEC answered; the sensor control plane far enough for TAKE's through start (TAKE_FUNC
   command 25, 4.1.1); the shutter at its control plane; the strobe can be planned beside the shutter.
@@ -430,7 +431,7 @@ unknown):**
 |---|---|---|---|
 | LENS_EXEC (LENS_MAIN) | CP 0 | `{status, token 1}` on 0x61 | (a), native since 2026-10-28 and answering in the probe (X) |
 | TAKE_EXPOSE (task 0x67, `0x5059145d`) | 13 | the status of command 0 | (a), native since 2026-11-09 (H-TAKENBINIT): its command 0 asks nothing and it replies itself (X, 4.1.6) |
-| TAKE_POWER_MANAGER_EXEC (task 0x83) | CP 0 when its branch runs | `{status, token 512 / 1024}` on 0x61 | (a), native since 2026-11-09 and not asked: every sender in TAKE_FUNC and TAKE_FUNC_CP waits for TAKE's start-up flag, which the lab never sets (X, D, 4.1.6); its own request goes to CPU 1 (b) |
+| TAKE_POWER_MANAGER_EXEC (task 0x83) | CP 0 when its branch runs | `{status, token 512 / 1024}` on 0x61 | (a), native since 2026-11-09 and not asked: every sender in TAKE_FUNC and TAKE_FUNC_CP waits for TAKE's start-up flag, which the lab never sets (X, D, 4.1.6); its own request goes to CPU 1 (b). Under camapp 3 the start's command 29 from `0x503a05fb` sets the flag and asks it command 0 twice, which it answers natively (X, 4.1.7 "Also seen", 4.1.11) |
 | TAKE_FOCUS (task 0x68, `0x509a0ebe`) | 18, 22 | the status of command 2 | (a), native since 2026-11-09 (H-TAKEFOCUS): it answers commands 0 and 2 itself, status 0 (X, 4.1.8); its AF over FCS (FCS_EXEC, FCS_IP on CPU 1) stays (c) |
 | STB_EXTERNAL (the strobe module) | CP 0 | `{status, token 4}`, `{status, token 8}` on 0x61 | (b): task 0x65 (`0x501b7465`) answers command 1 once a transfer on PER_SIO channel 11 ends or its 13 s wait for it runs out, then a 64 ms timer, flash or no flash (D, X); run natively in the lab it answers only through that timeout, 13.1 s after the request, as PER_SIO's controller is not modelled (X, 4.1.6); native since 2026-11-09 over channel 11 with nothing on the shoe (H-STBINIT, S-HOTSHOE), 85.4 ms after the request (X, 4.12.1) |
 | the camera driver cam.c (requests 148, 6; 5 for 25) | CP 0, CP 25 | the completion callback with status 0 | (b): the image sensor's control plane: cam.c's init (its pool, the sequence engine `0x5015107e` / `0x501528a6`) and what it drives (not read, ?) |
@@ -584,7 +585,8 @@ default).
   whose only static caller `0x50399cd3` is the function named "take" in two `{name, function}` tables (`0x502a2904`,
   `0x502a3ea4`; I: a debug shell's commands). The flag is
   set to 1 only by `0x503a05fb`, which also sends TAKE_FUNC command 29 and is api_rec's `0x50416123`, called by
-  CmpSqp_SequencePartsBase `0x50c9d590`; neither camapp mode reaches it (X: the flag stays 0). What it would do (not
+  CmpSqp_SequencePartsBase `0x50c9d590`; neither camapp mode reaches it (X: the flag stays 0; true of camapp 1 and 2,
+  camapp 3's start reaches it, 4.1.7 "Also seen", 4.1.11). What it would do (not
   executed): its handler `0x503a949f` takes the slot the request's parameter byte 0 names, calls the parameter's
   callback, and for byte 0 = 0 replies on its POST queue (`0x503a950d`), for 1 posts a 16-byte request to CPU 1's
   queue 0x1018 (`0x503a9525` through `0x502ce5b7`; CA53_POWER_MNG_REQ in CPU 1's object-name table, type 5 index 24,
@@ -1208,7 +1210,7 @@ adds S-MODPOST, which takes those the task would take (`emu/src/lab/camapp.mjs` 
   | camera clocks / control | `0x9b500000` (gates `0x9b5008xx`) | 40 |
   | two DMA blocks (?) | `0x9b580000`, `0x9b600000` | 41, 42 |
   | EMS1 engine (motion and statistics, five areas; om1-subject-spec 2.4) | `0x9bd80000` | 276 (level 5) |
-  | cam.c, unknown | RAM only | 26, 25 |
+  | cam.c, unknown | 26: `0x9b280000` through a RAM base word (4.2.5, correcting "RAM only"); 25 not read | 26, 25 |
   | DISP_SYNC (display side) | `0x9c180000`, 18 code references | ? |
 
 - **Seams:** A, MVR_IMG's TH request builders run on the lab CPU (the S-DISPFRAME pattern) in place of H-REQ: 1-2
@@ -1432,7 +1434,8 @@ and camDriverSession (X, 7 of 7) pin what follows.
   `0x501587b3`, AF 38, PFP 39, the clock block's 40, DMA 41 / 42, `0x9b180000`'s 24 and 4.2's "cam.c, unknown" 26 at
   `0x50156666`, handler `0x50156528`) and builds the front end's callback table (below). X: the first nine calls return
   0 and touch no device; the front end's first writes are `0x98800340` (kept by the lab stub) and the camera clock gate
-  `0x9b500800`, which the lab stub refuses. So the first init runs as H-CAMINIT and the second does not.
+  `0x9b500800`, which the lab stub refuses. So the first init runs as H-CAMINIT and the second does not (since 4.2.5
+  it runs as H-CAMINIT2 against S-CAMFE behind the probe's `cam_fe`).
 - **The request switch** `0x502a4a46`: ids 5..152 through a hashed table at `0x602c651c` (32 slots {id - 4, case}; X:
   read in the lab). 5 `0x5015553b`, 6 `0x5015552a`, 7 `0x5015541d`, 8 `0x501556fb`, 17 `0x5015572e`, 134 `0x5015573a`,
   137 `0x5015575c`, 152 `0x5015574b` run in the caller's task; 13, 15, 16, 144, 145 and 148 are posted as deferred calls
@@ -1459,7 +1462,9 @@ and camDriverSession (X, 7 of 7) pin what follows.
   notifier of the INFN copy with `0x202`, when its +64, the record's `0x200` mask, has bit 1), reached from the
   dispatcher's kind 10 (`0x50199383` -> `0x5019981d`). Events `0x300` and `0x400`: the front end. The movie sequence
   gives it 144-byte kind-7 requests (`0x501984e7` from `0x501981ae`, request 7's other branch; `0x5019c498` from kind
-  10's `0x50199f42`) carrying the item's slots and masks at +24.. and a wrapper at +128 (`0x5019862f`, `0x5019c69c`)
+  10's `0x50199f42`; corrected in 4.2.5: `0x501984e7` is cam_seq_dram_capture.c's, and `0x5019c498` and two more
+  builders are reached only from the frame step) carrying the item's slots and masks at +24.. and a wrapper at +128
+  (`0x5019862f`, `0x5019c69c`)
   that calls the item's notifier with the event or'd with kind 4 or 2. The front end's entry `0x5016f2ae` (`0x5016f2da`
   -> `0x5016f5a6`) fills a context (I: one of the 15 of 32476 bytes from `0x629aa520`, by the same offsets): the record
   +2464 for `0x300` (mask +48 from the request's +84, enabled +64 while bit 23 of the context's event mask is set) and
@@ -1467,7 +1472,9 @@ and camDriverSession (X, 7 of 7) pin what follows.
   table the front end's init builds on its stack (entries 30 and 31) and `0x50172466` writes into each context. The
   units' per-bit handlers call a record's +44 with its +48 mask (cam_bright.c's, the table `0x6022575c`, e.g.
   `0x5015db6d`); which handler takes the records +2464 and +2532, and so which interrupt raises `0x300` and `0x400`, is
-  not read (?). The SSG's handlers (15-17 `0x501a2478`, `0x501a24c2`, `0x501a250c`; 18 `0x5019e218`) read their status
+  not read (?). (4.2.5: the handlers pass their own bit and'ed with the mask; the records' units are AE1 and AE2, IRQs
+  32 and 33, and no handler found passes `0x300` to EXP, ?.) The SSG's handlers (15-17 `0x501a2478`, `0x501a24c2`,
+  `0x501a250c`; 18 `0x5019e218`) read their status
   at `0x9b000004..0x9b000020` (18: `0x9b000604`) and run per-bit one-shot lists (`0x501a26d6`, `0x501a272d`, ...), whose
   writers are not read. So the frame events come from the front end's interrupts (I), which the lab neither attaches nor
   models, and no stand-in raises them.
@@ -1490,7 +1497,8 @@ and camDriverSession (X, 7 of 7) pin what follows.
   natively): TAKE_MAIN stays in RdyFcsRdy3 with the pending bits `0x200` (TAKE_EXPOSE's token 15). The sequence takes
   event 794 (TakeReadyFinish) in phase 102 66.7 ms after S1, after TAKE's event `0x04080032` (RdyFcsRdy2) and
   TAKE_EXPOSE's post and before TAKE_FOCUS's `0x400`: correction to 4.1.8's experiment, 794 does not need RdyTrig2Wait
-  (I: it follows `0x04080032`). No frame callback, answer or AE result write runs, so S-EXPOSE's readers are as in
+  (I: it follows `0x04080032`; D and X in 4.1.10). No frame callback, answer or AE result write runs, so S-EXPOSE's
+  readers are as in
   4.2.2. Since S1: `0x25001703`, `0x0f803003` (4.1.8), `0x0f833000` once (`0x5090afde` in `0x5090af48`, from the AF
   library's `0x508c10c1`; why is ?), cam.c's `0x0a283000` three times, besides the frame-rate warning `0x39000903`
   (4.1.4); to the lens only its state poll `c1 80`.
@@ -1499,11 +1507,13 @@ and camDriverSession (X, 7 of 7) pin what follows.
   returns, and then, while command 15's run is still in progress, task 168 (entry `0x5115ba0c`) posts DISPLAY command
   18 (reply queue 6, token `0xf0080000`) through the application's API sender (`0x503eba07`), which S-DISPQ does not
   stand in for inside a DISPLAY run (depth 1). TAKE takes nothing. The stop is the lab's; what command 18 does there
-  is not read.
+  is not read. (The lab before 4.1.9, which found the nesting the lab's: S-DISPQ keeps such posts since, and S2's idle
+  stops at S-SCPUDEV's `0x14`.)
 - **Next (I; Claude wall-clock).** (1) The consumer of the records +2464 / +2532 read to its interrupt (half a day to a
   day); if it is a unit whose status the lab can raise from its frame clock, an S- stand-in at that interrupt, with the
   front end's init (its devices) as the cost (4.2 seam D). (2) Then EXP_MOVIE's answer, TAKE_EXPOSE's token 15 and
-  RdyTrig2Wait, and S2's TAKE_EXPOSE `0x600` (4.1.8). (3) S-DISPQ's nested post at S2 (a lab change, hours).
+  RdyTrig2Wait, and S2's TAKE_EXPOSE `0x600` (4.1.8). (3) S-DISPQ's nested post at S2 (a lab change, hours). (1) is
+  read in 4.2.5 (no interrupt found), (3) done in 4.1.9.
 
 #### 4.2.4 The TFT composite under camapp 3 (2026-11-10; D unless tagged, addresses E143's)
 
@@ -1594,7 +1604,8 @@ camapp 3's frames and compares them with camapp 1's. The default stays camapp 1.
   changes no pixel, `--cpu2 native` adds exactly bin 5's column).
 - **What still separates camapp 3 from the default (X unless tagged).** The live view stops at its first histogram
   end (above); the keys lost after a menu pass and a shot, playback with pictures and REC's header fill (4.3.1's next
-  stops, and S-JPEGENC and S-ALBM there; their causes in 4.3.2; the header fill runs natively in REC_IMAGE's task
+  stops, and S-JPEGENC and S-ALBM there; their causes in 4.3.2, followed in 4.1.10 and 4.8.11; the header fill runs
+  natively in REC_IMAGE's task
   since 4.3.3, under camapp 3 too, X); the GUI differences above (MF and no AF target, the movie card slot row),
   their causes in 4.3.7; S1's release (600 ms after S1) after a menu and a PLAY pass stops at S-TAKEOVER's scope (a
   module-9 read from `0x50c8a335`, not one of CMP_MODULE9_READERS; X, 2026-11-10).
@@ -1617,7 +1628,8 @@ camapp 3's frames and compares them with camapp 1's. The default stays camapp 1.
   application's histogram stop, TRA 937, comes after the lab's own OPEN; switch-scp's LV, from the Super Control
   Panel, stopped at the switch's module-9 post-condition, fixed there); playback's PLAY, pressed at the
   start's end (2.86 s), stops at S-DISPQ (UI_IN group 3's OlyQeWr to the DISPLAY queue from `0x503eba07`, not the
-  asynchronous request it stands in for; after 2 s of idle PLAY works, X); keys ends at its 15th call (a switch input;
+  asynchronous request it stands in for; after 2 s of idle PLAY works, X; the lab's nesting, 4.1.9, after which PLAY
+  there shows No Picture); keys ends at its 15th call (a switch input;
   its message not reproduced), tokens' OPEN gives GUI `0x0b01` where camapp 1 gives `0x0b02`, and queue, inputs,
   pace-wall and play-perf take other states (not traced). The check runs (check/, run/) were not run with the flip.
 - **Corrections.** 4.1.5's, 4.2.1's and 4.3.1's "the composite is refused" and 4.6.2's "no frame shows the column"
@@ -1928,7 +1940,8 @@ traRoutingSession, below).
     changed since is ?, and that it was LOGGER_MAIN's full queue under a guard naming queue 6 is I.
   - Not covered: a post to a module queue other than the API sender's stays in the kernel's queue. CapTak_Take's
     control `0x40` posts TAKE_EXEC command 5 straight through OlyQeWr (`0x503ebe46`, 4.1.7) at an S2 in phase 102;
-    TAKE_EXEC holds 25 messages (500 bytes; X: one held after the shot below).
+    TAKE_EXEC holds 25 messages (500 bytes; X: one held after the shot below). Covered since 4.1.11: S-MODPOST takes
+    it and the other direct posts the module's task would take (E143).
 - **No Picture (stop 2): the play module does not run (X, D).** At PLAY the GUI goes ID_ST_PREPARE, ID_ST_DRAWING and
   ID_ST_DISP_SIMPLE, then ID_ST_NO_PICTURE on event `0x9627` (X). The chain:
   - PLAY sends PLAY_EXEC command 0 from the OXF main thread, which S-MODACK answers with status 0 (X); the capability
@@ -1986,16 +1999,18 @@ traRoutingSession, below).
     would invent the
     take-ready's progress, as 4.1.7 declined; S1 in camapp 3 with the through image running needs what S-RELSEQ's
     retirement needs (4.1.8's list).
-- **Result (X, `emu/test/test_camapp.mjs` traRoutingSession 24 of 24).** After three passes of S1 and S2 and the menu
+- **Result (X, `emu/test/test_camapp.mjs` traRoutingSession 24 of 24; 25 of 25 with 4.1.10's check, X 2026-11-11).**
+  After three passes of S1 and S2 and the menu
   (CapThr's top byte 2 before it, 1 after): PLAY shows ID_ST_NO_PICTURE with three pictures on the card, the header
   getter's code 6152, the capability's state 4; right (one fill, of `0x9a43e000`) and left are taken and PLAY returns;
   a pass records the fourth picture with the sequence in phase 102, and MENU's EV_PRESS_MENU_KEY sets no GUI event,
   isCtrlReleaseEnable refusing it in phase 102. The control (S-MODACK's old way for PLAY_EXEC) blocks at right and the
   guard names queue 63 and task 57. In both of its sessions the native lens's two queues are out of S-MODACK's set,
   LENS_MAIN and LENS_COMMAND waiting on them.
-- **Open.** TAKE's take-ready and capture under camapp 3 (stop 1, with 4.1.8's list); the play module (stop 2: its
-  decode and INFO's histogram, 4.8.11); posts
-  to module queues outside the API sender (TAKE_EXEC's command 5); E132's old LOGGER_MAIN stop (not reproduced).
+- **Open.** TAKE's take-ready and capture under camapp 3 (stop 1, with 4.1.8's list; with TAKE native the second
+  shot, 4.1.10); the play module (stop 2: its decode and INFO's histogram, 4.8.11); posts
+  to module queues outside the API sender (TAKE_EXEC's command 5; S-MODPOST since 4.1.11); E132's old LOGGER_MAIN stop
+  (not reproduced).
 
 #### 4.3.3 REC_IMAGE and the JPEG path (2026-11-10; D unless tagged, addresses E143's)
 
@@ -2176,7 +2191,7 @@ traRoutingSession, below).
   unchanged (X: two shots, byte for byte the previous round's); the create gives the same handle at each shot (X:
   `0x6246b220`), the release having deleted it. E146 and E147 keep S-JPEGENC over all of rec_jpeg_make_image
   (S-RECIMAGE). `emu/test/test_storage.mjs` storageSession checks the steps (E143 58 of 58); traRoutingSession's four
-  pictures take them too (24 of 24).
+  pictures take them too (24 of 24; 25 of 25 after the round's merge, 4.1.10).
   - ImageParam's sources natively (D, X). Through `0x505489d4` ImageParam sets the request's four sources:
     rec_ImgProCtrl_Src_Bayer (`0x50549017`), _Src_Thumb (`0x505493be`), _Src_ThumbICam1 (`0x50549441`) and
     _Src_ThumbICam2 (`0x505494f5`; REC's trace ids 130..133). Each asks TAKE for the HandleTarget's (+116) buffer
@@ -4097,7 +4112,10 @@ bytes on; E143's places in brackets):
   converter's layout: the camera's clock at the capture (E143's read `0x5005a59e` at its place, run natively; each
   build's default with the status 10501 while the window clock counts from 1970), the JPEG's size, the release's
   exposure and the lens's focal length. S-PLAYCOMP had written 5184 x 3888 and the exposure alone. Not native: the
-  components' and the play module's Exif read, which the lab's JPEG (no Exif) would not feed.
+  components' and the play module's Exif read, which the lab's JPEG (no Exif) would not feed. (The files carry the
+  firmware's Exif on E143, E146 and E147 since 2026-11-08, 4.8.10, on eight E144-family bodies and the E118 family
+  since 2026-11-10, `docs/model-survey.md` findings 121 and 104; on E143 under camapp 3's play opt-in the play module
+  reads it, 4.8.11.)
 - **Playback:** with S-PLAYSEQ, S-PLAYCOMP and S-PLAYVIEW kept, real files need a JPEG decoder at the codec seam (4.3's
   C2 `decode_jpeg`, `play_img.c`): 2-4 weeks on top of storage. A native path needs the HLS play components (310k),
   segment 9's PLAY_* / MOVP / MOVE, the AV back end for movies and the CIC engine for RAW: a block of its own.
@@ -4281,7 +4299,8 @@ to the card switch), and are stood in at their seams with the firmware's own eve
   picture's file and DCIM gone, the free cluster count (FAT and FSInfo) the freshly formatted card's; the firmware's own
   image count 0 and its next file 1; the progress bar fills, and the application returns from Busy to the menu. The
   volume serial is 0 before and after (the firmware writes 0). After the format the menu draws the movie "Card Slot
-  Settings" row enabled where it was grey (?).
+  Settings" row enabled where it was grey (?; answered in 4.3.7, D: the format sets both slots' media flags 15261 and
+  15262, S-CARD giving the empty second slot a mount state too, a lab input, and both flags make the row available).
 - **The card switch (D):** the slots' card switches are UI_IN's codes `0x1506` and `0x1518` (port 1 byte 1 bits 0 and
   1; logsec waits 740 ms before a mount's sdmem command 2 when UI_IN's last code is the slot's, `0x508ac202`). The file
   layer registers a callback for both with UI_IN at its init (`0x50877e75`, `0x5014c420(code, 3, fn)`; the callback
@@ -4574,15 +4593,18 @@ the firmware's code for a card above 32 GiB is not read (?).
   lab time, the layout the insertion gave; out and in, the mount 962.6 ms after the insertion, 6,456 shots before
   and after. E147 was tried with its own addresses (the same comparison; its UI_IN level getter has 7 groups and
   other special codes) and not landed: Format Card's Yes did not reach S-MDACTRL, and the card input found a
-  control row without a UI_IN code (`play.mjs` card_input); neither is read. E144's HLS function component is
-  another build (no `CmpCst_Function.cpp`; getMediaCtrlCBC and getMediaProgress do not pair): not attempted.
+  control row without a UI_IN code (`play.mjs` card_input); neither is read (the second, I, is the card input's
+  lookup fixed in `docs/model-survey.md` finding 126; E147 not tried again). E144's HLS function component is
+  another build (no `CmpCst_Function.cpp`; getMediaCtrlCBC and getMediaProgress do not pair): not attempted. (Finding
+  127: the E144 family's application holds the E118 family's media control process, X; its Format is not tried.)
 - **E134's card (goal d; `docs/model-survey.md` finding 23):** the queue FILECLBK blocked on is UI_OUT's, the module of
   the camera's lamps, not UI_IN's: E134's file layer asks it for the card's access lamp around its accesses, and
   nothing ran UI_OUT. H-UIOUTSTART runs its init and starts its task at the play bring-up (MODELS `ui_out`); the
   card is native on E134 since (X: modelcheck with the 8 GiB card, 826 shots, and with a 64 GiB card, exFAT, 6,618
   shots; `test_storage.mjs --session`, 22 of 22, in `bin/test.mjs`). Its movie time is 0, as on the E144 family
   (4.8.5; X: mode 1 at 60, the logs `0x3a040001` and `0x39000105`).
-- **Open:** the HLS side on E147 (the two failures above) and on the E144 family (its own function component); a
+- **Open:** the HLS side on E147 (the two failures above) and on the E144 family (its own function component; the
+  media control process, finding 127); a
   real E144's movie mode at the factory; the hardware's DIVU by 0 (a capture would settle 3.2).
 
 #### 4.8.8 The E118 family's card, round 7 (2026-10-30; D unless tagged, addresses E122's)
@@ -4640,7 +4662,8 @@ findings 31, 41). The family runs the other bodies' storage library; the rule no
   converter read getNumber's leftovers from the shared response block (0x0, 0mm, `0001.00.00`). On the camera the HLS
   play component answers it from api_play_Get_StillInfo_ExifData (`0x502e16b2`), which reads the Exif tags of the
   image the play module loaded into its play buffer (`play_exif_search_tag`); neither runs in the lab, and S2's
-  picture is S-RECFILE's JPEG without Exif. S-PLAYSEQ now answers request 3 from the picture's own record: the
+  picture is S-RECFILE's JPEG without Exif (with the firmware's Exif since 2026-11-10, S-RECHDR, `docs/model-survey.md`
+  findings 102 to 104). S-PLAYSEQ now answers request 3 from the picture's own record: the
   camera's clock at the capture (its read, since 2026-11-02 E143's `0x5005a59e` at its place, the RTC driver's get
   `0x50068dbc` that api_sctime_GET_REAL_TIME calls; before, the API by its name, fact `clock.real_time`, retired),
   the JPEG's size, the release's exposure and
@@ -4648,7 +4671,9 @@ findings 31, 41). The family runs the other bodies' storage library; the rule no
   empty. INFO on E122 shows `2016.01.01 00:00` (its unset clock's default; E118's and E120's `2015.01.01`),
   `1620x1080` (the lab's frame), `125` and `25mm` (X).
 - **Not done:** the HLS side (S-MDACTRL, S-MEDIA) is E143's and E146's only; the picture's Exif (the lab's JPEG has
-  none) and the play module's own load of it.
+  none) and the play module's own load of it. (Since 2026-11-10 the family's HLS side runs, S-MDAEND and S-MEDIA,
+  findings 124 to 129, and its file carries the firmware's Exif, findings 102 to 104; the load still does not run,
+  finding 106.)
 
 #### 4.8.9 REC_FILE's DCF steps, round 8 (2026-11-02; D unless tagged, addresses E143's)
 
@@ -5001,7 +5026,8 @@ there (it stays on the other bodies).
   histogram (above); the queue bind table; PLAY_IMAGE's and PLAY_SOUND's parts (not followed); the album / index
   build behind the component's index and right / left (not read, ?: playOneFrameStart's Get_Album_Num `0x503dd27f`,
   called at `0x50c500c5`, was not entered at PLAY in a run with one picture, X). On the other bodies the
-  module stays stood in (finding 92's addresses), and the E118 family's files lack the firmware's Exif (finding 93).
+  module stays stood in (finding 92's addresses), and the E118 family's files lack the firmware's Exif (finding 93;
+  they carry it since findings 102 to 104, and its native load would read it, finding 106).
 
 ### 4.9 HDMI and DisplayPort
 

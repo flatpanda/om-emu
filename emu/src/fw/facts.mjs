@@ -3384,7 +3384,8 @@ export function recImage(img, kcb, rec) {
 //   Mode 4114 before rec_ImgPro_Ycc2Jpeg, X: a scan of the calls; not read by the rule)
 // - contexts: rec_file_record's file contexts of 92 bytes (E143's layout: X, the file's fnode and folder read through
 //   them match the card): where it picks one by Media (REC_CTX_PICK, the double-slot bodies E139, E134, E125) the
-//   two, else the first `mov C,An` of a data address in it, the one it passes on (0x503f60ff: C 0x62127124, a slot
+//   two, else the one `mov C,An` of a data address in it whose +52 and +78 it stores to by address (REC_CTX_STORES),
+//   the one it passes on (0x503f60ff: C 0x62127124, a slot
 //   of `udf00 92,d1; add C,d1` at 0x503f79ac, for Media 0 only; E142's `mov C,a2` its next call takes in a0): [C]
 // - exif: the template's copy, recFile's form, right after the template init's `ret` with no cache flush before it
 //   (0x5030b3b9, size 4 x 7925 = 31700; the init 0x5030b384, the template 0x620eb760 loaded first by 0x5030b38d;
@@ -3403,6 +3404,9 @@ export function recImage(img, kcb, rec) {
 // throws for a part of the task's form not found or found twice.
 const CLOCK_UNSET_RET = [0x2c, 0x03, 0x29, 0xf8, 0x72, 0x08, 0xdf];   // mov 10499,d0; movhu d0,(8,a2); ret
 const REC_QUEUE_RECV = [0xfc, 0xac, null, null, null, null, 0x98, 0x18], REC_QUEUE_CALLS = 6, REC_CTX_SLOT = 92;
+// two fields of a file context rec_file_record stores, on E143 too (docs/model-survey.md finding 120: the size and the
+// type)
+const REC_CTX_STORES = [52, 78];
 // rec_file_record's pick of Media's context, `mov C0,d0; mov d0,(..,sp); add Media,a0; movhu (a0),d0; cmp 1,d0; bne;
 // mov C1,d0` (E139 0x503f4a61)
 const REC_CTX_PICK = [0xfc, 0xcc, null, null, null, null, 0x42, null, 0xfa, 0xd0, null, null, 0xf0, 0x60, 0xa0, 0x01, 0xc9, null, 0xfc, 0xcc];
@@ -3539,13 +3543,17 @@ export function recFileQueue(img, kcb) {
   // the file contexts: Media's pick of two (E139's form), or the one rec_file_record passes (E144's)
   const record = traced('rec_file_record', REC_ENTRY_TRACE), recWalk = record === undefined ? [] : walk(record);
   const picks = recWalk.filter((p) => bytesAt(img, p, REC_CTX_PICK) && u16(p + 10) === packetFields.Media && u32(img, p + 20) - u32(img, p + 2) === REC_CTX_SLOT);
-  // (E144's `mov C,a1; call`; E142's `mov C,a2`, which its next call takes in a0: the first `mov imm32,An` of a
-  // data address in the record; X: the file's fnode and folder read through it match the card)
-  const ctxAt = recWalk.filter((p) => img[p] === 0xfc && (img[p + 1] & 0xfc) === 0xdc && u32(img, p + 2) >= base);
+  // (E144's `mov C,a1; call`; E142's `mov C,a2`, which its next call takes in a0: the one data address C the record
+  // loads with `mov imm32,An` whose +52 and +78 it also stores to by address, the fields E143's rec_file_record
+  // stores in a context (REC_CTX_STORES; E144 0x503f6083 and 0x503f6093, E142 0x503c491f and 0x503c4919, D); X: the
+  // file's fnode and folder read through it match the card)
+  const stored = (v) => recWalk.some((p) => img[p] === 0xfc && (img[p + 1] & 0xf0) === 0x80 && u32(img, p + 2) === v);
+  const ctxAt = [...new Set(recWalk.filter((p) => img[p] === 0xfc && (img[p + 1] & 0xfc) === 0xdc && u32(img, p + 2) >= base).map((p) => u32(img, p + 2)))]
+    .filter((c) => REC_CTX_STORES.every((o) => stored(c + o)));
   let contexts = null;
   if (picks.length === 1) contexts = [u32(img, picks[0] + 2), u32(img, picks[0] + 20)];
-  else if (!picks.length && ctxAt.length) contexts = [u32(img, ctxAt[0] + 2)];
-  if (contexts === null) throw new Error(`${rule}: rec_file_record ${record === undefined ? 'none' : D(record)} picks ${picks.length} pairs of file contexts by Media and loads no context`);
+  else if (!picks.length && ctxAt.length === 1) contexts = ctxAt;
+  if (contexts === null) throw new Error(`${rule}: rec_file_record ${record === undefined ? 'none' : D(record)} picks ${picks.length} pairs of file contexts by Media and loads ${ctxAt.length} contexts whose +${REC_CTX_STORES.join(' and +')} it stores, want one of either`);
   // the EXIF module: the template's copy right after its init's return, no cache flush before it
   const copies = [];
   for (let o = img.indexOf(0xdd); o >= 0; o = img.indexOf(0xdd, o + 1)) {

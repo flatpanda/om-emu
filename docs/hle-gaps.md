@@ -738,12 +738,14 @@ frame-mode function `0x5039f583`, so S-TAKEFRAME's request is still not reached 
   native` alike, gives TAKE_FUNC commands 0, 13 and 18, then 29 five times and 22 twice with reply queues, and one
   command 29 with no reply queue (parameter `0x62a3f2be`), which asks TAKE_POWER_MANAGER_EXEC command 0
   synchronously twice. TAKE_POWER_MANAGER (H-TAKENBINIT) takes both natively and replies itself on
-  TAKE_FUNC_IMDFUNC; this paragraph had S-TAKEREQ answer them (why the record differs now is not traced, ?). The
-  29's sender (D): `0x503a05fb`, which api_rec's `0x50416123` (API 0x200ca) calls, which CmpSqp_SequencePartsBase's
-  `0x50c9d590` calls at `0x50c9d778`, in the OXF main thread (task 57, X); it posts `{0, 0, 29, 0x62a3f2be}` through
-  TAKE's send `0x502ce57b` while TAKE's start-up flag `0x62a3f2bc` is 0, which it sets to 1 first. So camapp 3's
-  start reaches the flag's writer, which 4.1.6 found reached in neither camapp mode (true of camapp 1 and 2, X).
-  Without the probe S-MODPOST takes the post (4.1.11).
+  TAKE_FUNC_IMDFUNC, posting once to TAKE_POWER_MANAGER_POST between them (`0x503a9522`); this paragraph had
+  S-TAKEREQ answer them, from a run before H-TAKENBINIT (I, from the history: its commit 0b63215, written 18:34 on
+  2026-11-09, was rebased onto 6bfb93d, written 19:07, which starts TAKE_POWER_MANAGER natively with the probe and
+  takes its queues from S-TAKEREQ). The 29's sender (D): `0x503a05fb`, which api_rec's `0x50416123` (API 0x200ca)
+  calls, which CmpSqp_SequencePartsBase's `0x50c9d590` calls at `0x50c9d778`, in the OXF main thread (task 57, X); it
+  posts `{0, 0, 29, 0x62a3f2be}` through TAKE's send `0x502ce57b` while TAKE's start-up flag `0x62a3f2bc` is 0, which
+  it sets to 1 first. So camapp 3's start reaches the flag's writer, which 4.1.6 found reached in neither camapp mode
+  (true of camapp 1 and 2, X). Without the probe S-MODPOST takes the post (4.1.11).
 
 **What S-RELSEQ's retirement still needs (I unless tagged):**
 1. The through image's take-over made whole in the default sessions: S-THRTAKEOVER beside S-TAKEOVER (with the rest
@@ -962,16 +964,20 @@ adds S-MODPOST, which takes those the task would take (`emu/src/lab/camapp.mjs` 
   record, 4.1.8), which sends nothing where the message's word 0 is 0 (`0x502ce61a`), as TAKE's other reply helper
   `0x502ce5e6` sends nothing to queue 0 (`0x502ce5e9`). So each TAKE_EXEC and TAKE_FUNC message above is consumed
   with no reply (I for a TAKE_MAIN handler that would reply otherwise: not read handler by handler). ZOOM's task
-  (`0x5038f842`) receives ZOOM_EXEC with timeout -1 (`0x5038f862`); what it does then, and whether it replies, is not
-  read (?).
-- **S-MODPOST** (E143) takes the twelve TAKE_EXEC and TAKE_FUNC posts of the table, matched by the queue (the
-  body's apiQueues), OlyQeWr's return in the sender's wrapper (`0x503ebe71` in `0x503ebe46`, `0x502ce58c` in
-  `0x502ce57b`) and the whole message: OlyQeWr returns E_OK and the message is not put in the kernel's queue; nothing
-  the handler would do is done (I, as for S-MODACK's answers). `0x503a05fb`'s parameter `0x62a3f2be` is referenced
-  there alone, and it posts once: it sets TAKE's start-up flag `0x62a3f2bc` to 1 (and the halfword `0x62a3f2c0` to
-  63) first, and the byte's other absolute store is TAKE_FUNC's init's clear (`0x502cd039`). Any other post to one of
-  S-MODACK's queues goes to the kernel's queue as before and is recorded with its message, sender and task; the
-  blocked-send guard (`emu/src/lab/play.mjs` check_sends) then names them after the queue it reports full.
+  (task 0x6e, ZOOM in the object-name table; entry `0x5038f842`, its static task record at `0x50018cac`) loops
+  without exit: it receives ZOOM_EXEC with timeout -1 (`0x5038f862`), runs code for the message (`0x5038f869` ..
+  `0x5038f8fb`, not read in detail, ?), and then replies `{status 0, token, word 3}`, S-MODACK's layout, to word 0's
+  queue only where word 0 is not 0 (`0x5038f8fe`: word 0 = 0 jumps back to the receive; the send `0x5038f920`). So
+  each of API 0x20030's posts above is consumed with no reply (D).
+- **S-MODPOST** (E143) takes the table's TAKE_EXEC, TAKE_FUNC and ZOOM_EXEC posts but `0x503a091b`'s (eighteen;
+  Open), matched by the queue (the body's apiQueues), OlyQeWr's return in the sender's wrapper (`0x503ebe71` in
+  `0x503ebe46`, `0x502ce58c` in `0x502ce57b`) and the whole message: OlyQeWr returns E_OK and the message is not put
+  in the kernel's queue; nothing the handler would do is done (I, as for S-MODACK's answers). `0x503a05fb`'s
+  parameter `0x62a3f2be` is referenced there alone, and it posts once: it sets TAKE's start-up flag `0x62a3f2bc` to 1
+  (and the halfword `0x62a3f2c0` to 63) first, and the byte's other absolute store is TAKE_FUNC's init's clear
+  (`0x502cd039`). Any other post to one of S-MODACK's queues goes to the kernel's queue as before and is recorded with
+  its message, sender and task; the blocked-send guard (`emu/src/lab/play.mjs` check_sends) then names them after the
+  queue it reports full.
 - **Result (X).** A probe of OlyQeWr over workloads under the three camapp modes: camapp 1 (passes of S1, S2, the
   menu and playback with right and left; menu navigation; the Super Control Panel and ISO; both dials; a movie at the
   mode dial's 7 with REC; LV to the EVF and a pass there; the card out and in; an HDMI plug; 20 s of idle) and camapp 2
@@ -981,16 +987,16 @@ adds S-MODPOST, which takes those the task would take (`emu/src/lab/camapp.mjs` 
   with it no queue holds one. `test_modpost.mjs`: camapp 3's two posts taken and the player listing S-MODPOST; six
   further passes of S1, S2, the menu and playback, every S-MODACK queue empty after each; the control (the list
   emptied) leaves one message in each, named with its sender and task (57); camapp 1: six passes with no direct post
-  and every queue empty; each API sender of the table run from the lab task has its post taken; API 0x20030's ZOOM_EXEC
-  post stays, ZOOM_EXEC holds one message, the second send waits and the guard reports queue 125 with the two posts
-  and their sender `0x503ebe71` (7 of 7; units 15 of 15). Golden: unchanged (no default session posts directly; 240
+  and every queue empty; each API sender of the table run from the lab task, API 0x20030's six kinds among them, has
+  its post taken; ZOOM_EXEC's command 3, which no sender of the scan posts, posted through `0x503ebe46` from the lab
+  stays: ZOOM_EXEC holds one message, the second send waits and the guard reports queue 125 with the two posts and
+  their sender `0x503ebe71` (7 of 7; units 16 of 16). Golden: unchanged (no default session posts directly; 240
   sessions identical), modelcheck's 31 runs pass.
-- **Open.** ZOOM's handling of the API's asynchronous zoom requests (?; ZOOM_EXEC holds one, so a second one before
-  ZOOM's task runs would block its sender); `0x503a091b`'s TAKE_FUNC 81, whose word 1 is not set; the `0x5002e56e`
-  requests (ADJ_EXEC, BC_EXEC), which would wait on their reply queue; the other bodies, where S-MODPOST does not apply
-  and their direct posts stay, recorded. The probe's camapp 3 workloads stopped at the mode dial's 7 (S-IOEXP), at LV
-  at the card's removal and at an HDMI plug after the passes (module 9 reads outside S-TAKEOVER's list), so those
-  inputs are not covered there.
+- **Open.** What ZOOM's task does with a command (above, ?); `0x503a091b`'s TAKE_FUNC 81, whose word 1 is not set
+  (TAKE_FUNC would take it, D; not listed); the `0x5002e56e` requests (ADJ_EXEC, BC_EXEC), which would wait on their
+  reply queue; the other bodies, where S-MODPOST does not apply and their direct posts stay, recorded. The probe's
+  camapp 3 workloads stopped at the mode dial's 7 (S-IOEXP), at LV at the card's removal and at an HDMI plug after
+  the passes (module 9 reads outside S-TAKEOVER's list), so those inputs are not covered there.
 
 ### 4.2 Sensor, ISP front end and live view (with EXP)
 

@@ -45,7 +45,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
   TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
-  PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143 } from '../src/fw/facts.mjs';
+  PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143, recImage, KCB0_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -890,6 +890,17 @@ export function factsTests() {
     if (code === 'E143' || PORTS[code]) ok(same(placed?.lens_driver, LENS_DRIVER_FOUND[code]), `${code}: lens_driver ${hx(placed?.lens_driver ?? placed)}, found ${hx(LENS_DRIVER_FOUND[code] ?? 'none')}`);
     if (code === 'E143' || PORTS[code]) ok(same(placed?.rec_file, REC_FILE_FOUND[code]), `${code}: rec_file ${hx(placed?.rec_file ?? placed)}, found ${hx(REC_FILE_FOUND[code] ?? 'none')}`);
     if (code === 'E143' || PORTS[code]) ok(same(placed?.rec_image, REC_IMAGE_FOUND[code]), `${code}: rec_image ${hx(placed?.rec_image ?? placed)}, found ${hx(REC_IMAGE_FOUND[code] ?? 'none')}`);
+    // recImage refuses a form it does not know rather than reading it: E143's image with REC_IMAGE's queue read made
+    // `mov (Q),d2` (0x50541c4e: fc ae -> fc a2) and with the shared init's bind to entry 6 (0x5054dcca: mov 7,d0 -> 6)
+    if (code === 'E143' && placed?.rec_file) {
+      const refused = (at, v, re) => {
+        const m = run.slice();
+        m[at - 0x50000000] = v;
+        try { recImage(m, KCB0_E143, placed.rec_file); return 'read'; } catch (e) { return re.test(e.message) || e.message; }
+      };
+      const open = refused(0x50541c4f, 0xa2, /does not open with its queue's read/), bind = refused(0x5054dccb, 6, /0 binds of REC_FILE's flag/);
+      ok(open === true && bind === true, `recImage: the task's other open and the bind to another entry refused: ${open}, ${bind}`);
+    }
     const ld = placed?.lens_driver;
     if (ld && PORTS[code]) {
       const a = (v) => (PORTS[code][v] === undefined ? v : PORTS[code][v]), e = LENS_DRIVER_E143;

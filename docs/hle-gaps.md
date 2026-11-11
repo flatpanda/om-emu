@@ -1600,16 +1600,20 @@ camapp 3's frames and compares them with camapp 1's. The default stays camapp 1.
   *Golden with camapp 3 as the player's default* (a local, uncommitted run of the 21 Player sessions; X): all 21 differ
   in every layer, as they must (the components run, so instruction counts, stand-in lists, traces and frames change).
   Seven run to their end through the same GUI states and outcomes (a15-open, evf-idle, power#2, power#3, scp-edge,
-  scp-replay, scp-timeout). Three keep the GUI states but end otherwise (X, a replay of each scenario's calls under
+  scp-replay, scp-timeout); re-measured after 4.3.6 (X: the GUI state and panel at every call's mark of golden's
+  camapp 1 traces against a flipped run's) eight do, switch-scp joining them. Three keep the GUI states but end
+  otherwise (X, a replay of each scenario's calls under
   camapp 1 and 3 in review): b7-gate's second OK at the B7 gate ends camapp 1's session in UI_IN group 1's event-storm
   NavError (more than 810 GESetEvent calls) while camapp 3 takes it and runs to the end; under camapp 3 power's and
   power-replay's first power-off ends in S-SHUTDOWN's PowerError (the power-off had not reached its last write after
-  10 s of lab time) where camapp 1 is off (cause not traced). The others take other GUI states or end early: an
-  output switch to the EVF stops the
-  session at the open (eye-burn's eye switch, switch-shoot's and tokens-3b's LV; switch-scp's LV, I): the
+  10 s of lab time) where camapp 1 is off (cause in 4.3.6: TRA 586 is not answered, the flash capability still
+  running when the shooting component's teardown asks for its stop). The other ten take other GUI states or end
+  early: an output switch to the EVF from the shooting screen stops the
+  session at the open (eye-burn's eye switch, switch-shoot's and tokens-3b's LV, X): the
   firmware logs `0x37001418` from the histogram ISR (`0x501deccc`), the TFT channel's run ending with the TFT closed
-  (`docs/om1-vsc-spec.md` section 13), and the harness's DISPLAY cmd 2 refuses a step with an error log (I: on the
-  camera the application's own switch would stop the histogram first; not read); playback's PLAY, pressed at the
+  (`docs/om1-vsc-spec.md` section 13), and the harness's DISPLAY cmd 2 refuses a step with an error log (4.3.6: the
+  application's histogram stop, TRA 937, comes after the lab's own OPEN; switch-scp's LV, from the Super Control
+  Panel, stopped at the switch's module-9 post-condition, fixed there); playback's PLAY, pressed at the
   start's end (2.86 s), stops at S-DISPQ (UI_IN group 3's OlyQeWr to the DISPLAY queue from `0x503eba07`, not the
   asynchronous request it stands in for; after 2 s of idle PLAY works, X); keys ends at its 15th call (a switch input;
   its message not reproduced), tokens' OPEN gives GUI `0x0b01` where camapp 1 gives `0x0b02`, and queue, inputs,
@@ -2171,6 +2175,113 @@ traRoutingSession, below).
 - **Open.** REC_RAWNR (what `0x5052acc1` decides, the RAW NR step); REC_MAIN's and REC_PREPRO's own work, as on E143;
   which call starts REC_IMAGE (I); the GUI task's work in the slice; the E144 family, whose REC_FILE no rule reads;
   the camera's timed events posted only at an idle slice's end, which modelcheck now idles around (above).
+
+#### 4.3.6 camapp 3: the power-off error and the EVF switch (2026-11-10; D unless tagged, addresses E143's)
+
+Two of 4.2.4's reasons camapp 3 is not the default, each followed to its cause. Neither stop is a lab defect: both
+are where a lab stand-in (S-SHUTDOWN, the SWITCH of M10B) enters the firmware in a place the HLS components, which run
+under camapp 3, did not expect. One lab defect on the way is fixed (the switch's module-9 post-condition, below). No
+stand-in is added, the default is unchanged, and `emu/test/test_c3power.mjs` pins both (below). Run with the native
+lens, as golden's sessions.
+
+- **The power-off: the symptom (X, scenario `power`'s first lab).** The lever's off is decoded at 2.855 s of lab time;
+  S-SHUTDOWN calls shutDown at 2.938 s (camapp 1: 2.888 s). startShutDown sends TRA 588 (the output device 0,
+  `0x50af6789`), which the components answer 0 at 3.115 s, then TRA 586 (built at `0x50af6857` by `0x50abf10c`,
+  vtable `0x60dcf848`; executed from `0x50af6860`) after setting the exec's timeout to 10000 (`0x50af6829`). Nothing
+  answers 586: the lab task waits on the receiver's semaphore (156) in the remote path (`0x50af8515`), and at 12.938 s
+  S-SHUTDOWN reports "the power-off had not reached its last write after 10000 ms"; the settings' save (`0x50af6a0e`)
+  is never reached. The application's task 162 sends TRA 994 (`0x50b7d442`) at 3.211 s, which waits too (why it is
+  not served is not read). In camapp 1 S-TRAACK answers 588, 586 and then 1061 at the exec at once (all at 2.888 s,
+  X) and the sequence ends at 2.998 s.
+- **Where 586 goes (X: the reactives' events in task 57; D: the handlers).** The shooting component
+  (CmpSht_ShootingComponent_NEW, state 14; dispatcher `0x50d725f0`, case `0x50d732c7` -> `0x50c2f7ec`) passes a copy
+  to its +152, the still category (state 11, `0x50d97c69` -> `0x50d97a8a`, which does the same), then the shoot mode
+  (vtable `0x60ef7ea0`, state 13) to the camera base (state 13), whose common default (`0x50d74c59`) takes 586:
+  `0x50d74c17` sends the start's answer (`0x50d7edc6`; event 425 follows, X) and enters the teardown (`0x50d749f1`),
+  which sends event 422 down the tree. The shooting component goes from state 14 to 18 and 16, where it counts four
+  event 25s from the children on its +336 list (X), and on its own event 500 (`0x50c7617d`: the word +176 of every
+  child and of its +2008 and +2060 objects is 3) enters state 20 (`0x50d73976`). There it sends 422 to its +908, the
+  flash capability CapFls_Flash (vtable `0x60e7985c`, `0x50d719fe`), and to each element of its +320 list (none, X),
+  and waits for an event 25 (`0x50d73a64`, with no timer) that never comes. That is where 586 stops.
+- **Why the flash does not answer (D, X).** CapFls (dispatch `0x50be870c`) is in its state 4 (running, I), which its
+  state 3 takes on event 415 (`0x50be89a5..aa`; X: 4 at the shooting screen). In state 4 a 422 turns its flash state
+  off (`0x50be8385`) and moves it to state 3 (`0x50be8b01..0d`), nothing more. Its stop observers (its +228 list, one
+  entry: the shooting component's +468, vtable `0x60ef230c`, whose `0x50d7e085` posts event 25 to its owner) are told
+  only for a 422 taken in state 3 (`0x50be8975`) or a 413 in state 1 (`0x50be875f`). So the component's 422 finds the
+  flash running, stops it and gets no 25. At PLAY the flash is stopped before any teardown: the application's mode
+  change sends TRA 987 (`0x50ad7fb2`; the component's case `0x50d731a0` -> `0x50c787b3`, "received
+  evTraReqShtEndShootingService"), whose handler posts CapFls the 422 (`0x50c78945..53`), and CapFls goes to state 3
+  (X).
+- **The next stop (X, a diagnostic: the flash stopped first by its own 422, built by `0x50ab6ef9` and posted by
+  `0x50d7f97e` from the lab).** The teardown then runs on: the shooting component goes 20, 17, 19, 6, 5 and ends in
+  state 3, the category and the shoot mode end, and CmpSdw_ShutdownComponent (vtable `0x60eee834`, "Mode My
+  Shutdown"; created by the teardown in both runs, X) is started (event 415, then 285 in its state 8; state 5 at the
+  deadline). CapTak_Take (vtable `0x60e67330`) and the capability of vtable `0x60e6f0f0` (constructor `0x50bcb9a6`,
+  name not read) take a 422 in their state 4 with nothing after it, and 586 is still unanswered at the deadline. The
+  same pattern as the flash's is I (not read).
+- **What the lab does not run (X, D).** Under camapp 3 the lever's off alone (the switch step, then 3.5 s of idle)
+  sends no transaction and calls no shutDown, and neither does the shell's "sdk shutdown" ("request shutdown to GUI":
+  `0x50afc199` posts event `0x03000000` through `0x503ea6bc`; 5 s of idle). S-SHUTDOWN's call is the shell's "sdk
+  shutdown_api" ("force shutdown", the usage strings at `0x60e01d0f` and `0x60e01d56`). 4.7.4 names the
+  camera-common component as the caller of shutDown; the strings of its range (`0x50d034a8..0x50d05ef3`) are the
+  firmware update's ("start_usb_firmup", "Execute_FirmwareUpdate"), and whether it takes the lever is ? (its code is
+  not read). So the camera's route from the lever to shutDown, and whatever ends the shooting service or stops the
+  flash before 586, is the unmodelled neighbour; that the camera stops the flash (or sends 987) before 586 is I.
+- **The firmware's own timeout (X, a local run with S-SHUTDOWN's deadline at 30 s; not committed).** 586 times out
+  10 s after its send (13.114 s); startShutDown goes on (`0x50af6865`: 0xf0000043 -> `0x503c4a5d`) and sends TRA 1061,
+  and the call then reaches the lab's instruction limit (fault 7). The 10 s deadline equals 586's own timeout and
+  ends first, which power.mjs's comment now says; it is not changed, as a 10 s wait is not the camera's power-off (I).
+- **The EVF switch: the symptom (X, scenario `switch-shoot`'s first LV).** The lab's SWITCH runs DISPLAY cmd 2 OPEN of
+  the EVF at 3.088 s while the VSC histogram runs on the TFT (the run word `0x62a3eaf8` 1); the OPEN closes the TFT,
+  the run's end interrupt finds its channel's device closed and the ISR logs `0x37001418` (`0x501deccc`, vsc spec
+  section 13), and the step refuses the error log. Every EVF switch from the shooting screen under camapp 3 stops there
+  (eye-burn's eye switch, switch-shoot's and tokens-3b's LV, X; from the Super Control Panel see below).
+- **The histogram's stop and its caller (X: the menu and the HDMI plug under camapp 3; D: the code).** The stop is
+  DISPLAY cmd 15 (`0x501d709f`: clears `0x62a3eabe`, waits for the run's end), a synchronous send (`0x5002e39d`) from
+  api_histogram.c's stop (`0x503edd30..47`, its line 685), reached (the stack's returns) through `0x50ab6533`,
+  `0x50d8721d` and the histogram capability's `0x50bb69fe` / `0x50bb7356` (its name not read) from
+  CmpSqp_SequencePartsBase's "Through Histogram Stop" `0x50ca1f39` (through `0x50c9b14d`, the method at offset 1072 of
+  its vtables, nine words of the image hold it), which CmpShc_ShootingSequenceBase's case `0x50c59f2d` calls for TRA
+  937; 937 is the application's (the call returning to `0x51057525`, after its log "stopHistogram"), through the HLS
+  sender `0x50ae1b8e`. The writers named for this round (`0x501e127f`, `0x501e1488`, `0x501e14a4`) are only the start
+  path's (vsc spec section 13). At the HDMI plug the application (task 165) sends 937 at 3.857 s, the run stops there,
+  and the GUI's own output change (TRA 588 from `0x50abd14d`, task 168) follows at 3.906 s with CapIod's DISPLAY cmd 45:
+  the histogram stops before the device changes.
+- **Why that caller comes too late in the lab (X, D).** The LV button and the eye sensor are the lab's SWITCH: its own
+  OPEN, H-RESEND, H-EYESTATE, then H-CONNECT's 131 to the GUI (`docs/om1-menu-spec.md` live switches). In camapp 1 the
+  GUI's ConnectChangePlay then calls the camera API's output change (vt+20, `0x50afcd3a`, from `0x510c6c6b`) with device
+  16, which sends no TRA 588 (I: the device already current after the lab's OPEN, the test at `0x50abcfe9..`), and only
+  then does task 165 send TRA 1061 and TRA 937 (stopHistogram, from the application's display change, its stack's
+  returns through `0x5107d4e5` beside the log "receiveReqChangeDisplaySubAppStateShootingStill", I): after the OPEN. The
+  camera's own chain from EV_PRESS_EVFSW / EV_EYESENSOR_STATUS to the GUI's sender `0x5105053c` does not run (EVFSW
+  `0x1707/0x170b/0x170f` and the eye sensor `0x2301` are not in UI_IN's groups 0..4; `docs/om1-input-spec.md` section 8,
+  open). That the camera stops the histogram before it opens the EVF is I (the HDMI plug's order, X).
+- **Two diagnostics (X).** (1) The firmware's own output change to the EVF, vt+20 with device 16 called from the lab
+  task in lab time, sends TRA 588, and CapIod's DISPLAY cmd 45 with the code 2 opens the EVF (the opened word 1 -> 2);
+  with no 937 before it the histogram's run ends on the closed TFT and `0x37001418` is logged once. So the device
+  change does not stop the histogram itself; the application's 937 has to come first. (2) The SWITCH without its own
+  OPEN and H-RESEND: the GUI's vt+20 sends TRA 588, and the GUI and the application then alternate (index 131's event
+  storm, more than 810 GESetEvent calls): S-OUTDISP answers the EVF only while the lab's own OPEN holds it
+  (`emu/src/lab/camapp.mjs` S-OUTDISP). Running the switch the camera's way needs that chain modelled; ordering 937
+  before the lab's OPEN would invent its order, and is not done.
+- **A lab defect, fixed: the switch's module-9 post-condition (X, D).** From the Super Control Panel, whose open
+  stops the histogram (the run word 0 after OK, X), switch-scp's LV opened the EVF without an error log and then
+  stopped at the SWITCH's own post-condition "module 9 read from 0x50abcfd7, 0x50abcfe2". ChangeOutline (vt+20's
+  `0x50abcf49`) reads module 9's state at `0x50abcfd7` and, when it is not 2, again at `0x50abcfe2` (`cmp 3`); under
+  camapp 3 the components write the state themselves (0 from `0x50ca4ae1`, 4.1.5) and both reads return 0 (X), where
+  S-TAKEOVER's 2 ends camapp 1's at the first. The session's S-TAKEOVER guard lists both sites (`menu.mjs`
+  TAKEOVER_READERS) and, under camapp 3, the components' readers; the post-condition allowed only the first. It now
+  takes the session's guard under camapp 3 (`emu/src/lab/play.mjs` live_switch); camapp 1 and 2 keep the first site
+  alone. With it switch-scp's LV and eye switches run and the Super Control Panel stays (X).
+- **Tests (X).** `emu/test/test_c3power.mjs` powerOffSession (7 checks: the shooting component's flash and its
+  observer in CapFls's list, the deadline with 586 unanswered, the component in state 20 with the flash moved to 3;
+  the control with the flash stopped first ends the component in state 3 and starts CmpSdw_ShutdownComponent) and
+  evfSwitchSession (4 checks: camapp 3's LV stops at `0x37001418`; in camapp 1 the GUI's vt+20(16) comes before
+  task 165's 937; from the Super Control Panel under camapp 3 LV and the eye switch run, ChangeOutline reading 0 at
+  both sites; the native output change opens the EVF and logs `0x37001418` once).
+- **Open.** The camera's route from the lever to shutDown and from EVFSW / the eye sensor to the GUI's 131 (the CA
+  chains); 586's next stop after the flash (CapTak_Take, `0x60e6f0f0`'s capability, CmpSdw_ShutdownComponent);
+  why TRA 994 from task 162 waits.
 
 ### 4.4 AF, lens and body IS
 

@@ -1,7 +1,9 @@
-// REC_FILE natively on E143, E146 and E147 (src/fw/models.mjs rec_native; docs/hle-gaps.md 4.8.10): S2's picture
+// REC_FILE natively on E143, E146 and E147, and on the E144 family's E144, E148, E139, E134, E137, E142, E140 and
+// E125 (src/fw/models.mjs rec_native; docs/hle-gaps.md 4.8.10): S2's picture
 // file recorded by REC_FILE's own task from the packet REC_IMAGE posts it, with the file's header made by REC_IMAGE's
 // own header maker. Addresses and offsets are E143's (D unless tagged); each body's are the ones the rule reads (fact
-// 'rec_file', src/fw/facts.mjs recFile). The other bodies keep S-RECFILE (src/lab/storage.mjs).
+// 'rec_file', src/fw/facts.mjs recFile, on the E144 family recFileQueue). The other bodies keep S-RECFILE
+// (src/lab/storage.mjs).
 //
 // REC's packet (316 bytes): its fields by the firmware's own names, from the packet dump 0x50541561 (D). REC_MAIN
 // builds it (0x50539e89..0x50539f0e clear it), REC_IMAGE posts it to REC_FILE's queue REC_EXEC_FILE 69 (0x6004324e)
@@ -18,6 +20,11 @@
 // offsets (their dump's), and REC_IMAGE keeps the image's address and size not in it but in an image record of 52
 // bytes that the packet's +180 points at, which REC_IMAGE's task keeps on its stack and inits itself; REC_FILE is
 // task 27 and REC_IMAGE task 28 there too, and a normal JPEG takes the same ring (docs/hle-gaps.md 4.3.5).
+// The E144 family's REC version (D on E144, docs/model-survey.md findings 118 to 123): the packet is 300 bytes, every
+// field in it; REC_FILE (task 31 on E144) waits on its queue alone, with no event flag, and REC_IMAGE's
+// rec_make_image_finish posts a still's packet to that queue (S-RECIMAGE's post is that route there); the EXIF init
+// flushes no cache and rec_jpeg_exec clears no header area through the image engine (no K-CFLUSH answer, no fill stood
+// in); the clock read is the rule's. No rule reads REC_IMAGE's task there (fact 'rec_image' is recFile's version's).
 //
 //   H-EXIFINIT  the EXIF module's init (0x504298bd, the start function's call at 0x501e9a7c, not run by the lab)
 //               natively before the first picture: the EXIF parameter template (0x62a6c358, 92252 bytes; 0x5042aca2:
@@ -77,10 +84,20 @@
 //               (REC_IMAGE's rec_bracket_update sets it, X) REC_FILE replies {Status, Number, Packet} to the
 //               ObjResponse queue (0x5053984b from its handler, 0x5053f3bb), which no requester owns in the lab
 //               (ObjResponse 0): the reply is taken there and answered as sent. Lab time runs until the reply and until
-//               REC_IMAGE and REC_FILE wait on their inputs again. (S-RECIMAGE, REC_IMAGE's part in a lab call on E146
-//               and E147, retired 2026-11-10: REC_IMAGE runs natively on all three, its rec_jpeg_exec in its own task:
-//               the buffer from REC's pool 3 0x5054bb12, the header by rec_jpeg_make_header 0x50549bf1 with the EXIF
-//               module's serializer 0x50429935, BuffAddr1 / BuffSize1 set at 0x50549a00; docs/hle-gaps.md 4.3.5)
+//               REC_IMAGE and REC_FILE wait on their inputs again. (S-RECIMAGE on E146 and E147 retired 2026-11-10:
+//               REC_IMAGE runs natively there, its rec_jpeg_exec in its own task; docs/hle-gaps.md 4.3.5)
+//   S-RECIMAGE  (the E144 family) REC_IMAGE's part (its task does not run there: its addresses are not read by a rule):
+//               the packet as REC_IMAGE hands a single-slot JPEG to REC_FILE (the fields below), REC_IMAGE's
+//               rec_jpeg_exec run natively on it, which allocates the file's buffer from REC's pool 3 (0x5054bb12),
+//               clears the header area, has the image made (S-JPEGENC), builds the header with rec_jpeg_make_header
+//               (0x50549bf1: the EXIF parameters, SOI, APP1 Exif by the EXIF module's serializer 0x50429935 with its
+//               Olympus maker notes and IFD1's thumbnail slot, APP1 XMP; HeaderSize 41984) and sets BuffAddr1 /
+//               BuffSize1 to Addr / Size (0x50549a00); then REC_IMAGE's post 0x5053990f natively, and lab time runs
+//               until REC_FILE has handled the packet (its handler's return, 0x5053f20d). On the E144 family that post
+//               to REC_FILE's queue is the route rec_make_image_finish takes for a still (docs/model-survey.md finding
+//               119); on E143 a normal JPEG goes through REC's ring (above, docs/hle-gaps.md 4.3.3). Where the body
+//               keeps the image in an image record (E146 and E147, not the E144 family) the record first: REC_IMAGE's
+//               own init of it on a record the lab allocates
 //   S-JPEGENC   the image pipeline's work inside rec_jpeg_exec, where the lab has no image pipeline: the JPEG encode
 //               writes the lab's JPEG stream (src/lab/jpeg.mjs, without its JFIF APP0: SOI, DQT, SOF0, DHT, SOS, the
 //               data, EOI) at Addr + HeaderSize and sets Size (+192; on E146 and E147 the image record's +12) to
@@ -165,11 +182,15 @@ export const REC_ENCODE_E143 = { set_call: 0x50542C97, set: 0x50491C9F, run: 0x5
 // 0x9003 +4089, CreateDate 0x9004 +4109, DigitalZoomRatio 0xa404 +4228)
 // the packet's fields (the dump 0x50541561's names: fact rec_file packet) and what S-RECREQ gives them; every other
 // field 0, as REC_MAIN's clear leaves it (0x50539e89..0x50539f0e); ImgAspect REC_IMAGE sets from the record's aspect
+// (S-RECIMAGE's below)
 const STILL = 4097;          // Mode: REC_MAIN's still (0x5053a349); REC_IMAGE makes its image
 const NO_MEDIA = 0xFFFF;     // Media2: no second slot (0x5053dd14)
 const CARD = 1;              // RecordDevice bit 0: the card (0x50540392, 0x50540418)
 const JPEG = 1;              // FileType: the extension and DCF kind tables' index 1 (0x5053fee3; JPG, kind 1)
 const SHOT = 1;              // HandleTarget: TAKE's shot id (I: the lab's one shot; 0x5053a41e accepts 1..117)
+// ImgAspect, S-RECIMAGE's (the E144 family): 1, which E143's aspect setting 12417 holds in the lab's store and its
+// maker notes give as 4:3 (X, exiftool); where REC_IMAGE runs natively it sets it from the record's aspect (S-EXIFPRM)
+const ASPECT = 1;
 const JFIF_APP0 = 0xE0;
 // REC_FILE's file context and its DCF block (src/lab/storage.mjs REC for the fnode's and dnode's fields): the same on
 // E146 and E147 (D: rec_file_record stores the context's +78 and +52 as E143's does; X: their files' fnodes and
@@ -188,47 +209,60 @@ export class RecFile {
   constructor(storage) {
     this.st = storage; this.s = storage.s; this.lab = storage.lab;
     this.R = recFacts();
+    // the camera's clock read (S-EXIFPRM): the rule's where it reads one (recFileQueue, the E144 family's), else the
+    // recorder's, the same function (fact 'recorder': E143's 0x5012b7cd, D)
+    this.clock_read = this.R.clock_read ?? storage.f.recorder?.time;
+    if (this.clock_read === undefined) throw new RecError('S-EXIFPRM: neither the rule (rec_file.clock_read) nor the recorder (fact \'recorder\') gives the camera\'s clock read');
+    this.handled = null;           // the last packet's status at REC_FILE's handler return
     this.pictures = 0;
     this.started = false;
-    this.image = recImageFacts();  // REC_IMAGE natively (the rule's facts)
+    // REC_IMAGE natively (the rule's facts) where REC is recFile's version, REC_FILE on its flag (src/fw/facts.mjs
+    // readPlacedFacts reads 'rec_image' there); the E144 family's (recFileQueue: REC_FILE on its queue alone, no flag)
+    // keeps S-RECIMAGE
+    this.image = this.R.task.flag !== null ? recImageFacts() : null;
     this.imgpro_init = false;      // H-RECIMGPRO run (the application's start had not run the image library's init)
     this.images = [];              // each picture's REC_IMAGE run {task, encoded, reply, alive, fills, take}
   }
   get header() { return this.R.jpeg.header; }
   // whether H-RECIMGPRO runs (or ran) at the first picture: where camapp 3's H-IMGPROINIT did not run at the start
-  imgpro_by_rec() { return !this.s.camapp?.imgpro_inited; }
-  // H-EXIFINIT, H-RECINIT, H-RECSHARED, H-RECIMGPRO, H-RECFILE, H-RECIMAGE, at the first picture (I: in the lab nothing
-  // reads REC's or the EXIF module's state before it, as TAKE, REC_MAIN and REC_PREPRO do not run; at the bring-up
-  // they would shift every later session's instruction counts for no change the firmware sees)
+  imgpro_by_rec() { return !!this.image && !this.s.camapp?.imgpro_inited; }
+  // H-EXIFINIT, H-RECINIT, H-RECFILE (with REC_IMAGE natively also H-RECSHARED, H-RECIMGPRO, H-RECIMAGE), at the first
+  // picture (I: in the lab nothing reads REC's or the EXIF module's state before it, as TAKE, REC_MAIN and REC_PREPRO
+  // do not run; at the bring-up they would shift every later session's instruction counts for no change the firmware
+  // sees)
   bring_up() {
     this.started = true;
     const lab = this.lab, R = this.R, X = R.exif, I = this.image;
-    lab.wrap(K_CFLUSH, (prev) => (h, r) => disasm(r.mdr) === X.cflush ? h.finish(r) : prev(h, r), 'K-CFLUSH');
+    if (X.cflush !== null) lab.wrap(K_CFLUSH, (prev) => (h, r) => disasm(r.mdr) === X.cflush ? h.finish(r) : prev(h, r), 'K-CFLUSH');
     lab.call(X.init, null, null, null, 2000000);
     const make = this.text(X.template + X.tags.make, 24);
     if (!make) throw new RecError(`H-EXIFINIT: the EXIF template ${h8(X.template)} has no Make after the init`);
     lab.call(R.init, null, null, null, 2000000);
     this.s.settle('H-RECINIT');
-    lab.call(I.shared.init, null, null, null, 2000000);
-    if (lab.sim.read(I.shared.done, 1)[0] !== 1) throw new RecError(`H-RECSHARED: REC's shared init ${h8(I.shared.init)} left its done byte ${h8(I.shared.done)} unset`);
-    if (this.imgpro_by_rec()) {
-      const unit = lab.sim.m.devices.imgpro;
-      if (!unit) throw new RecError('H-RECIMGPRO: the board has no imgpro unit (src/fw/board.mjs imgpro)');
-      for (const fn of I.imgpro) lab.call(fn, null, null, null, 200000);
-      if (unit.powered || unit.runs) throw new RecError(`H-RECIMGPRO: the unit's init left it ${unit.powered ? 'powered' : 'with a run'}`);
-      this.imgpro_init = true;
+    if (I) {
+      lab.call(I.shared.init, null, null, null, 2000000);
+      if (lab.sim.read(I.shared.done, 1)[0] !== 1) throw new RecError(`H-RECSHARED: REC's shared init ${h8(I.shared.init)} left its done byte ${h8(I.shared.done)} unset`);
+      if (this.imgpro_by_rec()) {
+        const unit = lab.sim.m.devices.imgpro;
+        if (!unit) throw new RecError('H-RECIMGPRO: the board has no imgpro unit (src/fw/board.mjs imgpro)');
+        for (const fn of I.imgpro) lab.call(fn, null, null, null, 200000);
+        if (unit.powered || unit.runs) throw new RecError(`H-RECIMGPRO: the unit's init left it ${unit.powered ? 'powered' : 'with a run'}`);
+        this.imgpro_init = true;
+      }
     }
     lab.lt.allow.add(R.task.entry);
     const [rc] = lab.nk.svc('act_tsk', { d0: R.task.id });
     if (rc !== 0) throw new RecError(`H-RECFILE: act_tsk(${R.task.id}) = ${rc}`);
     this.s.settle('H-RECFILE');
-    if (!this.waiting()) throw new RecError(`H-RECFILE: REC_FILE (task ${R.task.id}) is not waiting on its flag after its start`);
-    lab.lt.allow.add(I.task.entry);
-    const [rc2] = lab.nk.svc('act_tsk', { d0: I.task.id });
-    if (rc2 !== 0) throw new RecError(`H-RECIMAGE: act_tsk(${I.task.id}) = ${rc2}`);
-    this.s.settle('H-RECIMAGE');
-    if (!this.waiting(I.task.id)) throw new RecError(`H-RECIMAGE: REC_IMAGE (task ${I.task.id}) is not waiting on its queue after its start`);
-    this.st.log.push(['rec', `EXIF template Make '${make}', REC_FILE (task ${R.task.id}) and REC_IMAGE (task ${I.task.id}) waiting`]);
+    if (!this.waiting()) throw new RecError(`H-RECFILE: REC_FILE (task ${R.task.id}) is not waiting on its input after its start`);
+    if (I) {
+      lab.lt.allow.add(I.task.entry);
+      const [rc2] = lab.nk.svc('act_tsk', { d0: I.task.id });
+      if (rc2 !== 0) throw new RecError(`H-RECIMAGE: act_tsk(${I.task.id}) = ${rc2}`);
+      this.s.settle('H-RECIMAGE');
+      if (!this.waiting(I.task.id)) throw new RecError(`H-RECIMAGE: REC_IMAGE (task ${I.task.id}) is not waiting on its queue after its start`);
+    }
+    this.st.log.push(['rec', `EXIF template Make '${make}', REC_FILE (task ${R.task.id})${I ? ` and REC_IMAGE (task ${I.task.id})` : ''} waiting`]);
   }
   text(a, n) { return String.fromCharCode(...this.lab.sim.read(a, n)).replace(/\0[\s\S]*$/, '').trimEnd(); }
   // a task waiting without a timeout (REC_FILE by default)
@@ -240,14 +274,15 @@ export class RecFile {
   exif_param() {
     const lab = this.lab, sim = lab.sim, X = this.R.exif, D = X.date, x = lab.alloc(new Uint8Array(X.size), 64);
     lab.call(X.copy, { a0: x }, null, null, 2000000);
-    lab.call(this.st.f.recorder.time, { a0: x + X.time }, null, null, 2000000);
+    lab.call(this.clock_read, { a0: x + X.time }, null, null, 2000000);
     lab.call(D.format, { a0: x + D.original, a1: x + X.time, d0: D.code }, null, null, 2000000);
     for (const to of [D.created, D.modified]) lab.call(D.copy, { a0: x + to, a1: x + D.original }, null, null, 2000000);
     for (const at of X.crop) sim.write(x + at, pack('<HHHH', 0, 0, 1, 1));
     sim.write(x + X.tags.zoom, pack('<II', 1, 1));
-    // the fields REC_IMAGE reads that TAKE's fill takes from the settings store, read as it reads them
+    // the fields REC_IMAGE reads that TAKE's fill takes from the settings store, read as it reads them (where REC_IMAGE
+    // runs natively)
     const take = {};
-    for (const [id, at, n] of this.image.take) {
+    for (const [id, at, n] of this.image?.take ?? []) {
       const v = lab.call(this.image.settings, { d0: id, d1: 0, a0: 0 }, null, null, 2000000).d0 & (n === 1 ? 0xFF : 0xFFFF);
       sim.write(x + at, n === 1 ? Uint8Array.of(v) : pack('<H', v));
       take[id] = v;
@@ -256,20 +291,20 @@ export class RecFile {
     return { x, clock: { date: [t[0] | t[1] << 8, t[2], t[3], t[4], t[5], t[6]], status: t[8] | t[9] << 8 }, date: this.text(x + D.original, 20), take };
   }
   // The picture's file from the lab's JPEG (a JFIF file, src/lab/jpeg.mjs): S-EXIFPRM, then S-RECREQ and REC_IMAGE
-  // natively with S-JPEGENC, then REC_FILE natively. Returns the file's record {path, size, folder, number, cluster,
-  // stamp, clock, header, date}
+  // natively with S-JPEGENC (the E144 family: S-RECIMAGE), then REC_FILE natively. Returns the file's record {path,
+  // size, folder, number, cluster, stamp, clock, header, date}
   record(jpeg) {
-    const lab = this.lab, sim = lab.sim, R = this.R, P = R.packet.fields, who = 'S-RECREQ';
+    const lab = this.lab, sim = lab.sim, R = this.R, P = R.packet.fields, who = this.image ? 'S-RECREQ' : 'S-RECIMAGE';
     if (!this.started) this.bring_up();
-    if (!this.waiting()) throw new RecError(`${who}: REC_FILE (task ${R.task.id}) is not waiting on its flag`);
-    if (!this.waiting(this.image.task.id)) throw new RecError(`${who}: REC_IMAGE (task ${this.image.task.id}) is not waiting on its queue`);
+    if (!this.waiting()) throw new RecError(`${who}: REC_FILE (task ${R.task.id}) is not waiting on its input`);
+    if (this.image && !this.waiting(this.image.task.id)) throw new RecError(`${who}: REC_IMAGE (task ${this.image.task.id}) is not waiting on its queue`);
     const stream = encoderStream(jpeg);
     const { x, clock, date, take } = this.exif_param();
     const pk = lab.alloc(new Uint8Array(R.packet.size), 4);
     const put = (field, fmt, v) => sim.write(pk + P[field], pack(fmt, v));
     put('pExifParam', '<I', x); put('HandleTarget', '<I', SHOT); put('Mode', '<H', STILL); put('Media', '<H', 0);
     put('Media2', '<H', NO_MEDIA); put('RecordDevice', '<H', CARD); put('FileType', '<B', JPEG);
-    const { header, size } = this.image_native(pk, stream, take);
+    const { header, size } = this.image ? this.image_native(pk, stream, take) : this.image_lab(pk, stream);
     // the file, from REC_FILE's context for Media (its fnode and folder, storage.mjs REC's layouts)
     const ctx = R.contexts[0], F = this.st.rec_layout(), fn = sim.u32(ctx + CTX.fnode) >>> 0, dn = fn ? sim.u32(fn + F.f.dnode) >>> 0 : 0;
     if (!fn || !dn) throw new RecError(`REC_FILE: its context ${h8(ctx)} holds fnode ${h8(fn)}, folder ${h8(dn)}`);
@@ -360,11 +395,62 @@ export class RecFile {
     }
     return { header: y.header, size: y.size };
   }
+  // The E144 family (no REC_IMAGE task natively): S-RECIMAGE (rec_jpeg_exec in the lab's call on the packet pk,
+  // S-JPEGENC's encode and the fill where the body has one), REC_IMAGE's post to REC_FILE's queue, then lab time until
+  // REC_FILE's handler returns. Returns {header, size} from the packet
+  image_lab(pk, stream) {
+    const lab = this.lab, sim = lab.sim, R = this.R, J = R.jpeg, I = J.image, P = R.packet.fields, who = 'S-RECIMAGE';
+    sim.write(pk + P.ImgAspect, Uint8Array.of(ASPECT));
+    // REC_IMAGE's image record where the body keeps the image's address and size there (E146 and E147, which run
+    // REC_IMAGE natively; none on the E144 family): REC_IMAGE's own init of it, which clears it and points the packet
+    // at it
+    if (I.record) lab.call(I.record.init, { a0: pk, a1: lab.alloc(new Uint8Array(I.record.bytes), 4) }, null, null, 2000000);
+    const image = () => (I.record ? sim.u32(pk + I.record.at) >>> 0 : pk);
+    // S-JPEGENC: the encode and the header area's fill, for this run of rec_jpeg_exec only
+    let encoded = 0;
+    lab.hook(J.make_image, (h, r) => {
+      const at = image(), addr = sim.u32(at + I.addr) >>> 0;   // (the header maker runs after the encode)
+      sim.write(addr + J.header, stream);
+      sim.write(at + I.size, pack('<I', J.header + stream.length));
+      encoded += 1;
+      h.finish(r, { d0: 0 });
+    }, 'S-JPEGENC');
+    if (J.fill !== null) lab.hook(J.fill, (h, r) => {
+      if (disasm(r.mdr) !== J.fill_return) throw new RecError(`S-JPEGENC: the image engine's fill ${h8(J.fill)} from ${where(r.mdr)}: only REC's header clear (return ${h8(J.fill_return)}) is stood in`);
+      sim.write(r.a0 >>> 0, new Uint8Array(r.d0 >>> 0).fill(r.d1 & 0xFF));
+      h.finish(r, { d0: 0 });
+    }, 'S-JPEGENC');
+    try { lab.call(J.exec, { a0: pk }, null, null, 2000000); } finally {
+      lab.hooks.delete(runtime(J.make_image)); if (J.fill !== null) lab.hooks.delete(runtime(J.fill));
+    }
+    const u32 = (f) => sim.u32(pk + P[f]) >>> 0, u16 = (f) => { const b = sim.read(pk + P[f], 2); return b[0] | b[1] << 8; };
+    const header = u32('HeaderSize'), addr = sim.u32(image() + I.addr) >>> 0, size = u32('BuffSize1');
+    if (encoded !== 1 || u16('Status') !== 0 || header !== J.header || u32('BuffAddr1') !== addr || size !== header + stream.length) {
+      throw new RecError(`${who}: rec_jpeg_exec left Status 0x${u16('Status').toString(16)}, HeaderSize ${header}, Addr ${h8(addr)}, BuffAddr1 ${h8(u32('BuffAddr1'))}, BuffSize1 ${size} (the stream ${stream.length} bytes, encoded ${encoded} times)`);
+    }
+    // REC_IMAGE's post, then REC_FILE's handling, observed at its handler's return
+    this.handled = null;
+    lab.observe(R.task.handled, (l, r) => { this.handled = r.d0 & 0xFFFF; }, 'obs-rec-file');
+    try {
+      const q = sim.read(R.task.queue, 2), r = lab.call(R.packet.post, { a0: pk, d0: q[0] | q[1] << 8 }, null, null, 2000000);
+      if (r.d0 !== 1) throw new RecError(`${who}: the post ${h8(R.packet.post)} to REC_FILE's queue returned ${r.d0 | 0}`);
+      const t0 = lab.lab_time();
+      for (;;) {
+        this.s.settle(`${who} REC_FILE`);
+        if (this.handled !== null && this.waiting()) break;
+        if (lab.lab_time() - t0 > LIMIT_MS * 1e6) throw new RecError(`${who}: REC_FILE has not handled the packet after ${LIMIT_MS} ms of lab time`);
+        lab.elapse(SLICE_MS, `${who} REC_FILE`);
+      }
+    } finally { lab.hooks.delete(runtime(R.task.handled)); }
+    if (this.handled !== 0) throw new RecError(`REC_FILE: the packet's status 0x${this.handled.toString(16)}`);
+    return { header, size };
+  }
 }
-// The stand-ins a RecFile uses (src/lab/player.mjs's list), with REC_IMAGE natively (H-RECIMGPRO where the
-// application's start did not run the image library's init)
+// The stand-ins a RecFile uses (src/lab/player.mjs's list): with REC_IMAGE natively (H-RECIMGPRO where the
+// application's start did not run the image library's init), the E144 family's with S-RECIMAGE
 export function recStandIns(rec) {
-  return ['H-EXIFINIT', 'H-RECINIT', 'H-RECSHARED', ...(rec.imgpro_by_rec() ? ['H-RECIMGPRO'] : []), 'H-RECFILE', 'H-RECIMAGE', 'S-EXIFPRM', 'S-RECREQ', 'S-JPEGENC'];
+  return rec.image ? ['H-EXIFINIT', 'H-RECINIT', 'H-RECSHARED', ...(rec.imgpro_by_rec() ? ['H-RECIMGPRO'] : []), 'H-RECFILE', 'H-RECIMAGE', 'S-EXIFPRM', 'S-RECREQ', 'S-JPEGENC']
+    : ['H-EXIFINIT', 'H-RECINIT', 'H-RECFILE', 'S-EXIFPRM', 'S-RECIMAGE', 'S-JPEGENC'];
 }
 // The lab's JPEG as the encoder's stream: without the JFIF APP0 that follows its SOI (the file's APPn segments are the
 // header's)

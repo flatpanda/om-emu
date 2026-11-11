@@ -25,7 +25,8 @@
 //                   remaining shots and movie time from the card (the queries S-CARD answered before), smaller on a 4 GiB
 //                   card; a saved card (env.card) mounts in the next session without a format, and a player keeps
 //                   its card across a power cycle; S2 with the live view writes the picture's file (S-RECFILE; on
-//                   E143, E146 and E147 REC_FILE natively, the clock set first): its directory entry, size and bytes
+//                   E143, E146, E147 and the E144 family but E130 REC_FILE natively, the clock set first): its
+//                   directory entry, size and bytes
 //                   read back independently (natively the firmware's header, its Make, the body's Model and Exif
 //                   version, dates, maker notes and thumbnail slot read by refs/exif.mjs, then the lab's stream;
 //                   REC_IMAGE's own task made it from S-RECREQ's packet: the encode in task 28 (on E143 S-JPEGENC from
@@ -64,8 +65,14 @@ const cardQueries = (A) => ({ SHOTS: A(0x50419164), MOVIE: A(0x5042DA58) });
 // What each body's firmware writes in the file's Exif where REC_FILE runs natively (src/lab/rec.mjs): IFD0's Model
 // and the Exif version (X, read by refs/exif.mjs and exiftool, 2026-11-08; the Model strings are in each image, D:
 // E143 'OM-1' at body 0x76da8, E146 'OM-1MarkII' at 0x8c300, E147 'OM-3' at 0x74a84), the maker notes' 'OM SYSTEM'
-// on all three
-const EXIF_BODY = { E143: { model: 'OM-1', version: '0231' }, E146: { model: 'OM-1MarkII', version: '0231' }, E147: { model: 'OM-3', version: '0300' } };
+// on all three; the E144 family's (X, 2026-11-10, refs/exif.mjs and exiftool): Make 'OM Digital Solutions', the maker
+// notes 'OM SYSTEM' and an XMP segment after the Exif on E144 and E148, Make 'OLYMPUS CORPORATION', 'OLYMPUS' and no
+// XMP on the six others
+const OM = { make: 'OM Digital Solutions', notes: 'OM SYSTEM', xmp: true }, OLY = { make: 'OLYMPUS CORPORATION', notes: 'OLYMPUS', xmp: false };
+const EXIF_BODY = { E143: { model: 'OM-1', version: '0231', ...OM }, E146: { model: 'OM-1MarkII', version: '0231', ...OM }, E147: { model: 'OM-3', version: '0300', ...OM },
+  E144: { model: 'OM-5', version: '0231', ...OM }, E148: { model: 'OM-5MarkII', version: '0300', ...OM }, E139: { model: 'E-M1MarkIII', version: '0231', ...OLY },
+  E134: { model: 'E-M1X', version: '0231', ...OLY }, E137: { model: 'E-M5MarkIII', version: '0231', ...OLY }, E142: { model: 'E-P7', version: '0231', ...OLY },
+  E140: { model: 'E-M10MarkIV', version: '0231', ...OLY }, E125: { model: 'E-M1MarkII', version: '0230', ...OLY } };
 
 // A FAT32 volume built here, for the reader: [read(lba, n), the files' bytes]. 70000 sectors at LBA 2048, 512-byte
 // clusters: 69416 clusters, past FAT16's 65524, so FAT32 by the specification's cluster count
@@ -478,7 +485,7 @@ export async function storageSession() {
       for (const inp of [...(LIVE_VIEW ? [{ type: 'scene', change: { liveview: true } }] : []), { type: 'token', token: 'WAIT:100' }, { type: 'key', id: 's1', action: 'down' },
         { type: 'key', id: 's2', action: 'down' }, { type: 'token', token: 'WAIT:700' }, { type: 'key', id: 's2', action: 'up' }, { type: 'key', id: 's1', action: 'up' }]) pl.run_input(inp);
       const s2 = pl.session, img = s2.camapp.images[0];
-      if (rec) ok(rec.started && rec.waiting(), `REC_FILE (task ${rec.R.task.id}) started at the picture and waiting on its flag again`);
+      if (rec) ok(rec.started && rec.waiting(), `REC_FILE (task ${rec.R.task.id}) started at the picture and waiting on its input again`);
       ok(img?.file?.path === `${names.drive}:\\${file1.replaceAll('/', '\\')}`, `S2 wrote the picture's file: ${JSON.stringify(img?.file)}`);
       const jfif = img ? jpegOfFrame(s2.picture_frame(s2.camapp.views.get(img.release) ?? null)) : null;
       // natively the file is the firmware's header and the encoder's stream after it (src/lab/rec.mjs S-JPEGENC)
@@ -491,15 +498,17 @@ export async function storageSession() {
         // the header maker runs after the encode, and its XMP segment's last 2 bytes overwrite the stream's SOI
         ok(data && stream && data.subarray(HEADER + 2).every((b, i) => b === stream[i + 2]), 'the bytes after the header are the lab\'s JPEG stream (but its SOI)');
         const segs = data ? jpegSegments(data) : [], x = data ? readExif(data) : null, t = (m, k) => m?.get(k)?.trim?.();
-        ok(segs[1]?.marker === 0xE1 && segs[2]?.marker === 0xE1 && segs[3]?.at === HEADER + 2, `SOI, APP1 Exif, APP1 XMP, then the stream's tables: ${segs.slice(0, 4).map((g) => `${g.marker.toString(16)}@${g.at}`).join(' ')}`);
+        const tables = body?.xmp ? 3 : 2;
+        ok(segs[1]?.marker === 0xE1 && (!body?.xmp || segs[2]?.marker === 0xE1) && segs[tables]?.at === HEADER + 2, `SOI, APP1 Exif, ${body?.xmp ? 'APP1 XMP, ' : ''}then the stream's tables: ${segs.slice(0, 4).map((g) => `${g.marker.toString(16)}@${g.at}`).join(' ')}`);
         const dt = `${DATE[0]}:${DATE.slice(1, 3).map((v) => String(v).padStart(2, '0')).join(':')} ${DATE.slice(3).map((v) => String(v).padStart(2, '0')).join(':')}`;
-        ok(body && t(x?.ifd0, 0x10F) === 'OM Digital Solutions' && t(x?.ifd0, 0x110) === body.model, `the firmware's Make and Model (refs/exif.mjs): '${t(x?.ifd0, 0x10F)}' '${t(x?.ifd0, 0x110)}', ${MODEL}'s '${body?.model}'`);
+        ok(body && t(x?.ifd0, 0x10F) === body.make && t(x?.ifd0, 0x110) === body.model, `the firmware's Make and Model (refs/exif.mjs): '${t(x?.ifd0, 0x10F)}' '${t(x?.ifd0, 0x110)}', ${MODEL}'s '${body?.make}' '${body?.model}'`);
         ok(x?.ifd0.get(0x132) === dt && x?.exif?.get(0x9003) === dt && x?.exif?.get(0x9004) === dt, `the firmware's dates are the clock's ${dt}: ${x?.ifd0.get(0x132)}, ${x?.exif?.get(0x9003)}, ${x?.exif?.get(0x9004)}`);
         const version = x?.exif ? String.fromCharCode(...x.exif.get(0x9000)) : null;
-        ok(version === body?.version && x.makernote?.header === 'OM SYSTEM' && x.ifd1?.has(0x201) && x.ifd1.get(0x202) === 0,
-          `ExifVersion ${version} (${MODEL}'s ${body?.version}), the maker notes 'OM SYSTEM' (${x?.makernote?.length} bytes), IFD1's thumbnail slot of length 0: ${x?.ifd1?.get(0x202)}`);
-        // REC_IMAGE's own task made the picture (src/lab/rec.mjs H-RECIMAGE, S-RECREQ; docs/hle-gaps.md 4.3.3, 4.3.5)
-        {
+        ok(version === body?.version && x.makernote?.header === body.notes && x.ifd1?.has(0x201) && x.ifd1.get(0x202) === 0,
+          `ExifVersion ${version} (${MODEL}'s ${body?.version}), the maker notes '${x?.makernote?.header}' (${MODEL}'s '${body?.notes}', ${x?.makernote?.length} bytes), IFD1's thumbnail slot of length 0: ${x?.ifd1?.get(0x202)}`);
+        // REC_IMAGE's own task made the picture where REC is recFile's version, E143, E146 and E147 (src/lab/rec.mjs
+        // H-RECIMAGE, S-RECREQ; docs/hle-gaps.md 4.3.3, 4.3.5); the E144 family's REC_IMAGE part is S-RECIMAGE's
+        if (rec.image) {
           const used = pl.stand_ins_in_use(), run = rec.images[0], y = run?.reply, fill = run?.fills;
           ok(['H-RECSHARED', 'H-RECIMGPRO', 'H-RECIMAGE', 'S-RECREQ', 'S-IMGPRO'].every((n) => used.includes(n)) && !used.includes('S-RECIMAGE'), `REC_IMAGE natively, S-RECIMAGE not in use: ${used.filter((n) => /REC|IMGPRO|JPEG/.test(n)).join(' ')}`);
           ok(rec.images.length === 1 && run.task === rec.image.task.id && run.encoded === 1 && rec.waiting(rec.image.task.id), `the encode ran once in REC_IMAGE's task (${rec.image.task.id}), which waits on its queue again: ${JSON.stringify(run && { task: run.task, encoded: run.encoded })}`);
@@ -529,9 +538,9 @@ export async function storageSession() {
         }
         ok(worst <= 1, `the decoded luma is the capture frame's block means (worst difference ${worst})`);
       }
-      // where REC's recorder records it (S-RECFILE's DCF steps): the DCF database counts it in the same session, and
-      // its fnode of index 1 is the file's
-      if (STORAGE.recorder) {
+      // where REC's recorder records it (S-RECFILE's DCF steps) or REC_FILE natively: the DCF database counts it in the
+      // same session, and its fnode of index 1 is the file's
+      if (STORAGE.recorder || rec) {
         const lab = s2.lab, key = runtime(A(0x503FEEA4));
         ok(!lab.hooks.has(key), 'with the DCF database the media API\'s image count runs natively (no S-CARD hook)');
         const n = lab.call(A(0x503FEEA4), { d0: 0, d1: 1 }, null, null, 2000000).d0, f1 = s2.storage.fnode(1, 'test');

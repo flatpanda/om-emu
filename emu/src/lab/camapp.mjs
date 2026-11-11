@@ -1179,10 +1179,11 @@ export class CamApp {
     this.s.settle('S-OUTDEV');
   }
   // S-CARD: whether the firmware's own DCF database holds the pictures: where REC's recorder records them (storage.mjs
-  // record(): the build's recorder read, fact 'recorder'), its registration counts each in the same session, and the
+  // record(): the build's recorder read, fact 'recorder') or REC_FILE records them natively (rec.mjs: the same
+  // registration request), the registration counts each in the same session, and the
   // media API's image count (IMAGE_COUNT) and each picture's folder and number are the database's (S-CARD's image
   // count and list retired there); this.images keeps the lab's record of each capture
-  dcf_db() { return !!this.s.storage?.f.recorder; }
+  dcf_db() { return !!this.s.storage?.f.recorder || !!this.s.storage?.rec; }
   // S-CARD: the pictures on the card (none while it is out of the slot or not mounted): with the DCF database its count
   // of type 1 in the first slot, read where the media API's getter reads it (fact dcf.counts: the table of 52 bytes a
   // slot, +4 + 4 * type), else S-CARD's list's

@@ -39,11 +39,13 @@
 //               would start, sends its first request to the image engine (0x5048ee61 on E143, a kind 14 fill on the
 //               imgpro unit 0x9c600000, whose model S-IMGPRO the IRQ attach of camapp 3's H-IMGPROINIT serves only
 //               after the mount: docs/hle-gaps.md 4.3.1), and the movie module it asks does not run
-//   S-RECFILE   (not on E143, E146 and E147, where REC_FILE runs natively in its task from REC_IMAGE's packet,
-//               src/lab/rec.mjs) the picture's file at a release's END_SHOOTING_PICTURE (src/lab/camapp.mjs S-CARD),
+//   S-RECFILE   (not on E143, E146, E147 and the E144 family but E130, where REC_FILE runs natively in its task from
+//               REC_IMAGE's packet, src/lab/rec.mjs) the picture's file at a release's END_SHOOTING_PICTURE
+//               (src/lab/camapp.mjs S-CARD),
 //               the JPEG the capture pipeline would hand REC_FILE, which does not run: a JPEG the lab encodes
 //               (src/lab/jpeg.mjs: S-SCENE's frame at the capture, each 8 x 8 block its mean, or a black frame). On a
-//               build whose recorder the rule reads (fact 'recorder', src/fw/facts.mjs: E144 and E148) the file is
+//               build whose recorder the rule reads (fact 'recorder', src/fw/facts.mjs; E144 and E148 until REC_FILE
+//               ran natively there, 2026-11-10: no body since) the file is
 //               recorded as REC_FILE's modules record one (record()): their requests, sent to the file module, which
 //               runs each natively: the camera's clock read for the time stamp, the fnode of the next DCF number (its
 //               name from the stamp's month and day, the folder made where it is new), the cluster reservation, the

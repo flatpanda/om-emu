@@ -22,7 +22,8 @@
 // E143 through debug.mjs, play.mjs and nav.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample, check_level on E146 and its PER_ROTATE groups (--rotate
 // on) on E143 and E146 (test_acc.mjs), the card and the
-// file system on E143, E146, E147, E144, E142 and E134 and SDXC cards on E143 (test_storage.mjs), INFO's still information
+// file system on E143, E146, E147, E144, E142, E134, E148, E137 and E125 and SDXC cards on E143 (test_storage.mjs),
+// INFO's still information
 // in playback with two pictures, RIGHT and LEFT between them and INFO's three views on the 19 bodies
 // (test_playinfo.mjs), a tap on the touch mode icon on E143, ten bodies of the E144
 // family and the E118 family, and in the super control panel on E144 and the E118 family (test_touch.mjs), subject
@@ -291,12 +292,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 // sessions whose card the firmware formats and mounts itself: E143 here (an 8 GiB SDHC card, then blank 64 and 128 GiB
 // SDXC cards, whose findings print as notes), and E146, E147, E144, E142 and E134 (the OM-1 family, the E144 family,
 // the E142 lineage and the E-M1X, whose card needs UI_OUT) each in a process of its own (the model is fixed when the
-// lab is imported); E146's with the HLS media side (Card Formatting from the menu, the card out and in)
+// lab is imported); E146's with the HLS media side (Card Formatting from the menu, the card out and in); E148, E137
+// and E125 for the E144 family's REC_FILE natively in the forms the others do not take (Exif 0300, the E137 date set,
+// two file contexts with Exif 0230; src/fw/facts.mjs recFileQueue)
 {
   const { storageUnits, storageSession, storageSdxc } = await import('../test/test_storage.mjs');
   const { spawnSync } = await import('node:child_process');
   const su = storageUnits(), ss = await storageSession(), sx = await storageSdxc();
-  const others = ['E146', 'E147', 'E144', 'E142', 'E134'].map((m) => {
+  const others = ['E146', 'E147', 'E144', 'E142', 'E134', 'E148', 'E137', 'E125'].map((m) => {
     const r = spawnSync(process.execPath, [new URL('../test/test_storage.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
     return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
   });

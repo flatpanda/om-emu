@@ -2304,9 +2304,10 @@ reads. No stand-in changed this round; the default stays camapp 1.
 - **The shooting screen's MF is MODE_AF_CHANGE (535) from the Fn lever.** The application's start (`0x51081333`, on task
   165 in the lab, X) calls initLeverSwitch (SubAppModuleLeverSwitch, `0x5105420f`; fwmap files it under
   IOlyApiShooting). It reads the lever through the HFW interface's slot 236, OlyHfwOpeCamCom's `0x50abdd4b`: with 15260
-  (the lever as power switch) at 0 it answers 1 unless UI_IN's state of `0x02021223` is 1, and the shell's own enum
-  (`0x50df201f`) names 0 API_LEVER_SW_1 and 1 API_LEVER_SW_2. It reads the mode dial (at dial state 5, 1290 takes 534's
-  place unless 534 is 7 with the lever at 1) and the lever's function 534 (factory default 4, list 0, 8, 4, 7) and
+  (I: the lever as power switch, docs/om1-input-spec.md) at 0 it answers 1 unless UI_IN's state of `0x02021223` is 1,
+  and the shell's own enum (`0x50df201f`) names 0 API_LEVER_SW_1 and 1 API_LEVER_SW_2. It reads the mode dial (at dial
+  state 5, 1290 takes 534's place unless 534 is 7 with the lever at API_LEVER_SW_2) and the lever's function 534
+  (factory default 4: the lab's store with no saved settings, X; list 0, 8, 4, 7, X: its descriptor) and
   switches on it (table `0x512ac924`): 0, 1, 2 and 8 set the focus mode change to 0; 3, 5 and 6 set it to 0 and give the
   Fn buttons' function by the lever; 7 sets it to 0 and calls `0x51054cd8` with the lever; 4 calls
   Shooting::setFocusModeChange with the lever's state (`0x5105443b..0x51054472`). The menu's names of these values are
@@ -2317,15 +2318,18 @@ reads. No stand-in changed this round; the default stays camapp 1.
   nothing. The query answers 100 with no sequence controller (`0x6035f024` 0), else the sequence parts' phase
   (`0x60364a1c` through `0x50c5880b`). The other writer of 535, `0x50b82c3c` (from `0x50adfb2a`, behind the same gate,
   and the sequence parts' `0x50cce85b`), does not run in the first 3.5 s of either session (X).
-- **The runs (X).** Both camapps run initLeverSwitch at 2.771 s of lab time with the lever at 1 (SW_2), dial state 9 and
-  534 = 4, and both call setFocusModeChange(1). Camapp 3: the sequence parts set phase 100 and then 101 (`0x50c89db3`,
-  the OXF main thread) at the same instant, before it, and 535 becomes 1, MF. Camapp 1: no sequence parts, phase 100,
-  refused, 535 stays 0, S-AF. The lens has no part: getLensMfMode answers 0 in both (the native lens reports no MF
-  clutch). With the lever moved to 1 (API_LEVER_SW_1) camapp 3 writes 535 = 0 and its shooting screen is camapp 1's word
-  for word; moved back, MF again (1,655 pixels). In camapp 1 the lever changes nothing (refused each time): its Fn
-  lever's focus function is dead.
+- **The runs (X).** Both camapps run initLeverSwitch at 2.771 s of lab time with the lever read as 1 (SW_2), dial state
+  9 and 534 = 4, and both call setFocusModeChange(1). Camapp 3: the sequence parts set phase 100 and then 101
+  (`0x50c89db3`, the OXF main thread) at the same instant, before it, and 535 becomes 1, MF. Camapp 1: no sequence
+  parts, phase 100, refused, 535 stays 0, S-AF. The lens is not on this path: getLensMfMode (`0x50b4e805`, setting
+  597) answers 0 in both, and the lens MF switch `0x02021519` reads UI_IN state 1 in both (X); what that state means
+  for the clutch, and what sets 597, is not read. With the lab's lever input moved to 1 (UI_IN state 1,
+  API_LEVER_SW_1) camapp 3 writes 535 = 0 and its shooting screen is camapp 1's word for word; moved back, MF again
+  (1,655 pixels). In camapp 1 the lever changes nothing: to SW_1 the application asks getFocusModeChange (slot 492,
+  `0x50b53124`), finds 0 and calls nothing (`0x51054abe..0x51054ac6`), and back to SW_2 its setFocusModeChange(1)
+  (from `0x510547ed`) is refused with `0xf0000058` (X): its Fn lever's focus function is dead.
 - **Decision.** With the lab's hardware state, the lever at API_LEVER_SW_2 (UI_IN's decode of the idle level, D) and a
-  factory store (534 = 4, D), the camera shows MF, camapp 3's picture (D for the logic). That the camera's sequence
+  factory store (534 = 4, X), the camera shows MF, camapp 3's picture (D for the logic). That the camera's sequence
   parts stand by before the start reaches initLeverSwitch is I: in camapp 3 both come at 2.771 s, and the start waits
   from 2.756 to 2.771 s in camapp 1 as well (last on the API flag `0x13e`, X), where no component runs, so the order is
   the scheduler's. Camapp 1's S-AF is the wrong one, from the missing sequence parts, not from a stand-in's value. Not
@@ -2343,15 +2347,17 @@ reads. No stand-in changed this round; the default stays camapp 1.
   `0x50b7aeae` -> `0x50b7e4b8`) runs 1131's restriction record (`0x50e2b790`: conditions 0, 1, 3 and 5, functions from
   `0x60e4ad9c`). Condition 0 (`0x50b7e680`) asks the store's restriction of 1131 (`0x50ab5092(1131, 2, 3200)` ->
   `0x503c4be9` -> `0x503d28ec`), whose rule (`0x605df54c`) has three cases on (15261, 15262): (0, 0), (1, 0) and (0, 1)
-  (D). The row is available only with both flags at 1 (X: camapp 1's (0, 0), and (1, 0) with 15261 set in a trial,
-  answer 256; camapp 3's (1, 1) answers 0; (0, 1) was not run). 15261 and 15262 have no descriptor, so 4.2.4's
-  comparison of the scalar settings did not see them.
+  (D). The row is available only with both flags at 1 (X: in camapp 1, set with the store's setter the slot update uses,
+  `0x50ab4f75`, (0, 0), (0, 1) and (1, 0) answer 256 and (1, 1) answers 0, as camapp 3's (1, 1) does; with both set,
+  camapp 1's menu is camapp 3's word for word). 15261 and 15262 have no descriptor, so 4.2.4's comparison of the scalar
+  settings did not see them.
 - **The flags (D).** CapMed_MediaManager's slot update `0x50bba897` sets 15261 + slot to 1 for a slot whose media status
   (api_media `0x503f0bd7`) has bit 2 or 3 set or whose device answers `0x50bb7b46` (first 4510 / 4521 to -1,
   `0x50bba8ff..0x50bba925`), and to 0 where bit 14 is clear; the function component sets them after a format (4.8.3). At
   its start (`0x50bb7bba`) the manager asks for the second slot's mount where the slot's device answers vt 140 with 0
   (I: not mounted): the request vt 20 with 3 (`0x50bb7e8c`), the kind's mount state 2 (`0x50bb7e7b`; X, that slot's
-  path). No test of the card's presence is on that path.
+  path). No test of the card's presence is on that path: the branches before it test the device's vt 140, api_media's
+  bit 0x100 and UI_IN's `0x0400` (`0x50bb7db8..0x50bb7e42`), not the card bit 0x80 (4.8.3: a card out clears it, X).
 - **The runs (X).** Camapp 1 runs no media manager: both flags 0, the row grey. Camapp 3's manager sets 15261 = 1 at
   2.756 s (the first slot's card) and 15262 = 1 at 3.06 s: its mount of the second slot runs the DCF card-in for drive 1
   (detect state 2 at `0x5087bd4e`) and the second slot's SD port, the command's u16 at +12 (port 1; the command layer
@@ -2371,17 +2377,18 @@ reads. No stand-in changed this round; the default stays camapp 1.
   well. What would settle it: an OM-1 with one card in slot 1 (is the movie Card Slot Settings row grey?), and, for the
   lab, the card detect of the second port as the SD driver reads it before the card's init (the path from the DCF
   card-in to sd_mount's init is not read; S-SDHOST keeps the host's registers as written and models no card detect).
-  This also answers 4.8.3's (?) (D): its format sets both flags (S-CARD gives both slots the mount state 8), so the row
-  is available after it.
+  This also answers 4.8.3's (?) (D): its format sets both flags (S-CARD gives both slots the mount state 8, the second
+  with no card in it: a lab input of the same kind), so the row is available after it.
 - **Corrections.** 4.2.4's return chain past `0x50b530c1` was not one: `0x50e171e0` is the log format `%1s(%d)` that
   `0x50b53072` logs with (run-time `0x60e38200`), `0x50db73f1` the string "Shooting::setFocusModeChange" and
   `0x512ac5e4` "changeFunctionButton", stack words a scan took for return addresses; the caller is initLeverSwitch
   (return `0x51054474`, X). 4.2.4 now says so.
-- **Tests (X).** `emu/test/test_camapp.mjs` camapp3FramesSession (10 checks, 6 before) adds a camapp 1 session and pins:
-  the shooting screen differs by 1,655 pixels in x 417..894, y 72..334, with 535 at 1 and 0; the menu by 4,602 pixels in
-  x 38..871, y 283..327, with the flags (1, 1) and (0, 0) and the second slot's media status 0x3780 and 0x600; with the
+- **Tests (X).** `emu/test/test_camapp.mjs` camapp3FramesSession (12 checks, 6 before) adds a camapp 1 session and pins:
+  the shooting screen differs by 1,655 pixels in x 417..894, y 72..334, with 535 at 1 and 0 and the shooting phase query
+  at 101 and 100; the menu by 4,602 pixels in x 38..871, y 283..327, with the flags (1, 1) and (0, 0) and the second
+  slot's media status 0x3780 and 0x600, and camapp 1 with both flags set shows camapp 3's menu word for word; with the
   Fn lever moved to 1 camapp 3 writes 535 = 0 and is camapp 1's frame word for word, and camapp 1's frame does not
-  change.
+  change; moved back, camapp 3 writes 535 = 1 and shows its MF frame again, and camapp 1 keeps 0 and its frame.
 
 ### 4.4 AF, lens and body IS
 

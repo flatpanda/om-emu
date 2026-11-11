@@ -70,13 +70,14 @@ import { RTOS } from './rtos.mjs';
 import { K_CFLUSH } from './menu.mjs';
 import { STUB } from './display.mjs';
 import { SdCard, SECTOR } from './sdcard.mjs';
-import { MODEL, MODEL_INFO, fact } from '../fw/model.mjs';
+import { A, MODEL, MODEL_INFO, fact } from '../fw/model.mjs';
 import { RecFile, REC_NATIVE } from './rec.mjs';
 import { RecHeader, EXIF_NATIVE } from './recheader.mjs';
 import { BOARD } from '../fw/board.mjs';
-import { STORAGE_E143, STORAGE_LIB, CARD_DETECT_E143, RECORDER_E143 } from '../fw/facts.mjs';
+import { STORAGE_E143, STORAGE_LIB, CARD_DETECT_E143, RECORDER_E143, MEDIA_LIB } from '../fw/facts.mjs';
 
 export class StorageError extends FirmwareError {}
+const MODULE_EVENT_POST = 0x50025095;      // E143's module event post (mediaFacts)
 
 // The facts of this body's file system, or null where its MODELS entry does not run it (card_fs, each body's with its
 // reason): the seams src/fw/facts.mjs fileSystem reads (fact 'storage'), the storage library's own numbers
@@ -89,8 +90,18 @@ export function storageFacts() {
   const f = fact('storage', STORAGE_E143);
   if (!f) throw new StorageError(`${MODEL}: src/fw/models.mjs card_fs is native but src/fw/facts.mjs fileSystem found no file system`);
   const { drive, ...lib } = STORAGE_LIB;
-  return { ...f, ...lib, names: { ...f.names, drive }, detect: fact('card.detect', CARD_DETECT_E143).table, host: BOARD.sd, hls: cf.hls ?? null,
+  return { ...f, ...lib, names: { ...f.names, drive }, detect: fact('card.detect', CARD_DETECT_E143).table, host: BOARD.sd, hls: cf.hls === 'rule' ? mediaFacts() : cf.hls ?? null,
     recorder: fact('recorder', RECORDER_E143) ?? null };
+}
+// The HLS side where the rule reads it (card_fs.hls 'rule': the E118 family): src/fw/facts.mjs mediaHls (fact 'media')
+// with the family's library numbers (MEDIA_LIB) and the module event post, the port's place of E143's 0x50025095 (the
+// post S-LONGTIMER publishes through on every body). No S-MDACTRL part: the application starts the media control
+// itself there (src/lab/media.mjs S-MDAEND)
+function mediaFacts() {
+  const m = fact('media', undefined);
+  if (!m) throw new StorageError(`${MODEL}: src/fw/models.mjs card_fs.hls is 'rule' but src/fw/facts.mjs mediaHls read no HLS media side`);
+  return { ...m, mount: { ...m.mount, ...MEDIA_LIB.mount }, switch_event: MEDIA_LIB.switch_event, publish: A(MODULE_EVENT_POST), ctrl: null,
+    cab: { ...m.cab, ...MEDIA_LIB.cab } };
 }
 export const STORAGE = storageFacts();
 

@@ -88,7 +88,8 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // `card_fs`: whether the card's file system runs natively (src/lab/storage.mjs; docs/hle-gaps.md 4.8.4): native, at
 // the seams src/fw/facts.mjs fileSystem reads (fact storage); errlog, the error logs its card's queries make in the lab
 // (src/lab/display.mjs EXPECTED_ERRLOG); hls, the HLS media side's addresses (src/lab/media.mjs: Card Formatting from
-// the menu, the card out and in; E143 and E146). Every body gives it, one that does not run it with its reason (why);
+// the menu, the card out and in; E143 and E146), or 'rule' where src/fw/facts.mjs mediaHls reads them (fact 'media':
+// the E118 family). Every body gives it, one that does not run it with its reason (why);
 // such a body keeps S-CARD's card without a file system (src/lab/camapp.mjs)
 //
 // `audio`: the audio hardware a session runs with --audio auto (the default) or on (src/lab/audiohw.mjs,
@@ -1078,8 +1079,9 @@ export const MODELS = {
     // the sub-CPU (src/lab/storage.mjs S-SDSWITCH) and its movie record time divides by the movie info's frame rate,
     // 0 before a movie take (src/lab/camapp.mjs S-MOVRATE, docs/model-survey.md finding 59); the blank 8 GiB card
     // formatted FAT32 'NO NAME' at 8192 with 32 KiB clusters, 2116 shots and 0:37:19 from it, S2's file read back (X:
-    // bin/modelcheck.mjs, the OSD records)
-    card_fs: { native: true },
+    // bin/modelcheck.mjs, the OSD records); its HLS media side read by the rule as E122's (hls 'rule', X:
+    // test/test_storage.mjs --hls)
+    card_fs: { native: true, hls: 'rule' },
     // S2's file with the header maker's Exif (X: test_storage's S2 file, its Exif Model 'E-M5MarkII')
     exif_native: true,
     board: { family: 'E118' },
@@ -1123,7 +1125,10 @@ export const MODELS = {
     // the card native since 2026-10-30 (docs/model-survey.md finding 41): src/fw/facts.mjs fileSystem reads the family's
     // forms; the blank 8 GiB card formatted FAT32 'NO NAME' at 8192 with 32 KiB clusters, 1470 shots and 0:37:19 from
     // it, S2's file read back (X: bin/modelcheck.mjs, the OSD records)
-    card_fs: { native: true },
+    // hls 'rule': the HLS media side (Format from Card Setup, the card out and in; src/lab/media.mjs S-MDAEND and
+    // S-MEDIA) at the addresses src/fw/facts.mjs mediaHls reads (fact 'media'), since 2026-11-10 (docs/model-survey.md
+    // findings 124 to 129; X: test/test_storage.mjs --hls)
+    card_fs: { native: true, hls: 'rule' },
     // S2's file with the header maker's Exif (X: test_storage's S2 file, its Exif Model 'PEN-F')
     exif_native: true,
     board: { family: 'E118' },
@@ -1180,8 +1185,9 @@ export const MODELS = {
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
     // the card native since 2026-10-30 (docs/model-survey.md finding 50): the play bring-up mounts it, the blank 8 GiB
-    // card formatted FAT32 and DCF folder 100, file 1 (X: a play session per device, and modelcheck's path, finding 56)
-    card_fs: { native: true },
+    // card formatted FAT32 and DCF folder 100, file 1 (X: a play session per device, and modelcheck's path, finding
+    // 56); its HLS media side read by the rule as E122's (hls 'rule', X: test/test_storage.mjs --hls)
+    card_fs: { native: true, hls: 'rule' },
     // S2's file with the header maker's Exif (X: test_storage's S2 file, its Exif Model 'E-M10MarkII')
     exif_native: true,
     board: { family: 'E118' },

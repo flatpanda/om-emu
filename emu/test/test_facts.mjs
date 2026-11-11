@@ -803,6 +803,23 @@ const DPC_FOUND = { E132: { init: 0x5004A115, board: { triggers: 0x9B800030, irq
 // The movie record time's division by the frame rate (card.movie_rate; src/fw/facts.mjs movieRate): E118's (D: the
 // function 0x50535bf4, its divu by the byte 0xa1c2fad8 at 0x50535c40); none on E143
 const MOVIE_RATE_FOUND = { E143: null, E122: null, E118: { div: 0x50535C40, rate: 0xA1C2FAD8 } };
+// The E118 family's HLS media side (media; src/fw/facts.mjs mediaHls): E122's as found without the rule (D: the creator
+// 0x506d0e75 by its file name, the vtable slot 2 0x506d119e as E143's 0x50af8c96, operator new 0x5092fa4e, the mount
+// notification 0x506a670d by its sends 0x5076f37d / 0x5076f429 / 0x5076f491 after new(40), the mount state getter and
+// setter 0x506a7488 / 0x506a7597 by the map's pairing with E143's 0x50aca51d / 0x50aca6b1, the switch 0x1506 at
+// 0x50562ce6 and the SD driver's ask 0x50582a1d; X: the media control's start 0x506a819b, the handler 0x506a7d08's
+// sends 0x506a8010 and 0x506a8175 of the post 0x5073c573, observed at Format's Yes); E118's and E120's the rule's, run
+// in their sessions (test_storage --hls); none where the image holds no OlyHfwOpeMdaCtrlProcessEvFw (E143, X) or a part
+// is not read (E144's reception, X)
+const MEDIA_FOUND = {
+  E143: undefined, E144: undefined,
+  E122: { reception: 0x506D0E75, sync_slot: 2, new: 0x5092FA4E, events: { mount: [0x506A670D, 40] }, mount: { get: 0x506A7488, set: 0x506A7597, kinds: [4, 1, 32] },
+    slots: [{ kind: 4, switch: 0x1506 }], switch_level: 0x50177E44, cab: { start: 0x506A819B, post: 0x5073C573, sites: [0x506A8017, 0x506A817C], other: [0x506A8108] } },
+  E118: { reception: 0x506DF0C7, sync_slot: 2, new: 0x5093FA56, events: { mount: [0x506B564A, 40] }, mount: { get: 0x506B63BF, set: 0x506B64CE, kinds: [4, 1, 32] },
+    slots: [{ kind: 4, switch: 0x1506 }], switch_level: 0x50167517, cab: { start: 0x506B70D2, post: 0x5074BF29, sites: [0x506B6F4E, 0x506B70B3], other: [0x506B703F] } },
+  E120: { reception: 0x5068B7D6, sync_slot: 2, new: 0x508E96C6, events: { mount: [0x50662217, 40] }, mount: { get: 0x50662FAE, set: 0x506630BD, kinds: [4, 1, 32] },
+    slots: [{ kind: 4, switch: 0x1506 }], switch_level: 0x5015E232, cab: { start: 0x50663CC1, post: 0x506F8413, sites: [0x50663B3D, 0x50663CA2], other: [0x50663C2E] } },
+};
 // The serial controller's driver (sioDriver; D: E132's IIC write 0x5004ba70 calls the transfer start 0x500506cb, its
 // write-read the receive start 0x500509be; the registration 0x50051145 its IIC configuration calls fills 0xa2b19ea8 and
 // 0xa2b19ec8, which the interrupt's ends dispatch through 0x50051814; the control 0x500505e1's mode 2 stores the restart
@@ -1078,6 +1095,9 @@ export function factsTests() {
     const dpcf = DPC_FOUND[code];
     if (dpcf) ok(got.dpc?.init === dpcf.init && same(got.board?.dpc, dpcf.board), `${code}: dpc ${hx(got.dpc ?? got)} board.dpc ${hx(got.board?.dpc)}, found ${hx(dpcf)}`);
     if (Object.hasOwn(MOVIE_RATE_FOUND, code)) ok(same(got.card?.movie_rate, MOVIE_RATE_FOUND[code]), `${code}: card.movie_rate ${hx(got.card?.movie_rate)}, found ${hx(MOVIE_RATE_FOUND[code])}`);
+    if (Object.hasOwn(MEDIA_FOUND, code)) ok(same(got.media, MEDIA_FOUND[code]), `${code}: media ${hx(got.media)}, found ${hx(MEDIA_FOUND[code] ?? 'none')}`);
+    // its UI_IN level getter is the port's place of E143's 0x5014c015 (bin/port.mjs, the map)
+    if (got.media && PORTS[code]) ok(PORTS[code][0x5014C015] === got.media.switch_level, `${code}: A() of UI_IN's level getter ${hx(PORTS[code][0x5014C015])}, the rule's ${hx(got.media.switch_level)}`);
     if (SIO_FOUND[code]) ok(same(got.sio, SIO_FOUND[code]), `${code}: sio ${hx(got.sio ?? got)}, found ${hx(SIO_FOUND[code])}`);
     if (Object.hasOwn(CHANGE_ENTRY_FOUND, code)) ok(got.display?.change_entry === CHANGE_ENTRY_FOUND[code], `${code}: display.change_entry ${hx(got.display?.change_entry)}, found ${hx(CHANGE_ENTRY_FOUND[code])}`);
     if (Object.hasOwn(POWER_OFF_FOUND, code)) ok(got.power_off?.usb_disconnect === POWER_OFF_FOUND[code], `${code}: power_off ${hx(got.power_off ?? got)}, found ${hx(POWER_OFF_FOUND[code] ?? 'none')}`);

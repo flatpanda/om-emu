@@ -953,7 +953,7 @@ export class CamApp {
     const tra = (h, r, calls) => {
       const req = r.a1 >>> 0, b = req ? lab.sim.read(req + 4, 2) : null;
       this.log.push(['tra', `${b ? b[0] | (b[1] << 8) : -1} from ${where(r.mdr)}`]);
-      if (b && this.media && (b[0] | (b[1] << 8)) === this.media.f.ctrl.request) this.media.control(req);   // S-MDACTRL
+      if (b && this.media?.f.ctrl && (b[0] | (b[1] << 8)) === this.media.f.ctrl.request) this.media.control(req);   // S-MDACTRL
       if (b && this.outdev !== null && !this.native_tra && (b[0] | (b[1] << 8)) === TRA_OUTPUT_DEVICE) {   // S-OUTDEV
         const [device, second, third] = unpack('<3I', lab.sim.read(req + 32, 12));
         if (device !== OUTPUT_HDMI) throw new FirmwareError(`S-OUTDEV: TRA ${TRA_OUTPUT_DEVICE} from ${where(r.mdr)} asks for output device ${device}: only the HDMI output (${OUTPUT_HDMI}) is stood in`);

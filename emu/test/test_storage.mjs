@@ -49,7 +49,10 @@
 //                   mounted again without a format, the counts back); what the firmware chose (exFAT on E143,
 //                   docs/hle-gaps.md 4.8.6: the layout, the cluster size), the lab times and the counts are reported
 //                   as notes
-//   node emu/test/test_storage.mjs [--session] [--sdxc]
+//   storageHls      (firmware, --hls) the HLS media side alone on the body of OM_EMU_MODEL (the E118 family's: Format
+//                   from Card Setup, then S2's picture on the formatted card; the card out, the camera's no-card
+//                   state, the card in, its count back, then S2's picture on it)
+//   node emu/test/test_storage.mjs [--session] [--sdxc] [--hls]
 import { SdCard, NO_RESPONSE, SECTOR, crc7, r2Words, cardImage, cardFromImage, cardSectors } from '../src/lab/sdcard.mjs';
 import { FatVolume, mbrPartition } from '../refs/fat.mjs';
 import { ExfatVolume } from '../refs/exfat.mjs';
@@ -608,7 +611,8 @@ export async function storageSession() {
   return { checks, bad };
 }
 
-// The HLS media side on a card (src/fw/models.mjs card_fs.hls: E143, E146), whichever file system the firmware gave it at
+// The HLS media side on a card (src/fw/models.mjs card_fs.hls: E143, E146; the E118 family's read by the rule,
+// src/fw/facts.mjs mediaHls), whichever file system the firmware gave it at
 // the insertion (refs/volume.mjs reads either). ok(cond, what) counts a check, bad collects a throw, notes what the
 // firmware did (the layout, the lab times).
 //
@@ -617,6 +621,8 @@ export async function storageSession() {
 // label, an empty root, the free count of the volume as the insertion's format left it; FAT32's FSInfo with it, an
 // exFAT volume consistent with its backup boot region), the counts reset, the application leaves Busy for the menu
 async function hlsFormat(card, tag, ok, bad, notes) {
+  const { STORAGE: F } = await import('../src/lab/storage.mjs');
+  if (F.hls.cab) return hlsFormatFamily(card, tag, ok, bad, notes);
   const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
@@ -672,6 +678,8 @@ async function hlsFormat(card, tag, ok, bad, notes) {
 // firmware unmounts and the screen loses the card's counts; back in, the firmware initialises and mounts the card again
 // (without a format: the volume it had, read back the same) and the counts come back
 async function hlsOutIn(card, tag, ok, bad, notes) {
+  const { STORAGE: F } = await import('../src/lab/storage.mjs');
+  if (F.hls.cab) return hlsOutInFamily(card, tag, ok, bad, notes);
   const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
@@ -710,6 +718,128 @@ async function hlsOutIn(card, tag, ok, bad, notes) {
     ok(pl.stand_ins_in_use().includes('S-MEDIA'), `${tag}: the player lists S-MEDIA`);
   } catch (e) { bad.push(`${tag}: card out and in: ${e.message.slice(0, 400)}`); }
   try { pl.close_session(); } catch { /* closed */ }
+}
+
+// The E118 family's HLS side (S-MDAEND and S-MEDIA, src/lab/media.mjs; docs/model-survey.md findings 124 to 129), in
+// a player on the body of OM_EMU_MODEL. The menu path to Format is the family's own, read from its frames (X, the same
+// on E118, E120 and E122): MENU opens Shooting Menu 1, whose first row is Card Setup; RIGHT enters the page and OK
+// opens Card Setup, which offers All Erase and Format while the card holds a picture (Format, DOWN) and the Format
+// confirm alone on an empty card; the confirm's cursor is on No, DOWN takes it to Yes. The path is checked by what the
+// application does at its end: the media control's start with the format's command, which S-MDAEND reads where the
+// application makes it (a wrong row would start no format or another command, and the session would stop)
+const familyPress = (s, k) => { s.key(k, 'down'); s.camapp.pump(); s.idle_slice(s.lab.lab_time() + 150e6); s.key(k, 'up'); s.camapp.pump(); s.idle_slice(s.lab.lab_time() + 600e6); };
+const familyPlayer = async (card) => {
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
+  const { Player } = await import('../src/lab/player.mjs');
+  const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+  return new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true },
+    { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000, card: { open: () => card, save() {} } });
+};
+// Format from the menu after a picture: the firmware formats the card from the application's own start; read back
+// independently, the volume the insertion's format gave (its type, its label), its root empty, the picture gone and the
+// free count a fresh volume's; the counts reset (the firmware's image count 0, its next file 1, the remaining shots the
+// fresh card's); the application leaves Busy for the shooting screen (X: where the family's returns); then S2's picture
+// lands on the card as the first file again
+async function hlsFormatFamily(card, tag, ok, bad, notes) {
+  const { runtime } = await import('../src/lab/hle.mjs');
+  const { A } = await import('../src/fw/model.mjs');
+  const { STORAGE } = await import('../src/lab/storage.mjs');
+  const { SHOTS } = cardQueries(A), names = STORAGE.names, FILE1 = `DCIM/100${names.folder}/${names.file}0001.${names.ext}`;
+  const read = (lba, n) => card.read(lba, n), pl = await familyPlayer(card);
+  try {
+    pl.open_session();
+    const s = pl.session, lab = s.lab, media = s.camapp.media;
+    s.idle_slice(lab.lab_time() + 1500e6);
+    const first = openVolume(read), fresh = first.freeClusters(), shots0 = lab.call(SHOTS, { d0: 0 }, null, null, 2000000).d0 | 0;
+    familyPress(s, 's2'); s.idle_slice(lab.lab_time() + 1000e6);
+    const vol0 = openVolume(read), shooting = lab.state();
+    ok(vol0.find(FILE1) && vol0.freeClusters() < fresh && s.camapp.images.length === 1, `${tag}: before the format: the picture's file on the card, ${vol0.freeClusters()} of ${fresh} clusters free`);
+    familyPress(s, 'menu');
+    ok(lab.state() !== shooting, `${tag}: MENU left the shooting screen (state 0x${lab.state().toString(16)})`);
+    for (const k of ['right', 'ok', 'down', 'ok', 'down', 'ok']) familyPress(s, k);
+    const t0 = lab.lab_time();
+    for (let i = 0; i < 100 && media.formats === 0; i++) s.idle_slice(lab.lab_time() + 50e6);
+    const took = lab.lab_time() - t0;
+    s.idle_slice(lab.lab_time() + 1000e6);
+    const log = media.log.concat(s.camapp.log.filter(([k]) => k.startsWith('media')).map(([k, d]) => [k.slice(6), d]));
+    ok(media.formats === 1 && media.ended === 1 && media.mda === null, `${tag}: Format, Yes: the application's media control started the format and S-MDAEND ran its end: ${JSON.stringify(media.status())}`);
+    const vol = openVolume(read);
+    notes.push(`${tag}: the menu's format done within ${(took / 1e6).toFixed(0)} ms of lab time after Yes (50 ms steps): ${layout(mbrPartition(read(0, 1)), vol)}`);
+    ok(vol.type === first.type && vol.label === first.label && vol.list().length === 0, `${tag}: read back: a ${vol.type} '${vol.label.trim()}' volume (the insertion's ${first.type} '${first.label.trim()}') with an empty root: ${JSON.stringify(vol.list().map((e) => e.name))}`);
+    ok(!vol.find(FILE1) && vol.freeClusters() === fresh, `${tag}: the picture is gone: ${vol.freeClusters()} clusters free, a fresh volume's ${fresh}`);
+    if (vol.type === 'exFAT') ok(vol.check().length === 0 && vol.backupMatches(), `${tag}: the formatted exFAT volume is consistent`);
+    else ok(vol.fsInfo()?.free === fresh, `${tag}: FSInfo's free count ${vol.fsInfo()?.free}, a fresh volume's ${fresh}`);
+    const key = runtime(A(0x503FEEA4)), hook = lab.hooks.get(key);   // S-CARD's image count (camapp.mjs IMAGE_COUNT) aside
+    lab.hooks.delete(key);
+    const n = lab.call(A(0x503FEEA4), { d0: 0, d1: 1 }, null, null, 2000000).d0;
+    if (hook) lab.hooks.set(key, hook);
+    const shots = lab.call(SHOTS, { d0: 0 }, null, null, 2000000).d0 | 0;
+    ok(n === 0 && s.camapp.images.length === 0 && s.storage.next_file === 1 && shots === shots0, `${tag}: the counts reset: the firmware's image count ${n}, S-CARD's ${s.camapp.images.length}, next file ${s.storage.next_file}, ${shots} shots (${shots0} on the fresh card)`);
+    ok(lab.state() === shooting, `${tag}: the application left Busy for the shooting screen: state 0x${lab.state().toString(16)}`);
+    ok(pl.stand_ins_in_use().includes('S-MDAEND') && !pl.stand_ins_in_use().includes('S-MDACTRL'), `${tag}: the player lists S-MDAEND, not S-MDACTRL`);
+    familyPress(s, 's2'); s.idle_slice(lab.lab_time() + 1000e6);
+    const vol2 = openVolume(read), e = vol2.find(FILE1);
+    ok(e && e.size > 0 && s.camapp.images.length === 1, `${tag}: S2 after the format: its picture on the card as ${FILE1} again (${e?.size} bytes)`);
+    notes.push(`${tag}: the media control: ${log.filter(([k]) => k === 'control' || k === 'end').map(([k, d]) => `${k} ${d}`).join('; ')}`);
+  } catch (e) { bad.push(`${tag}: menu format: ${e.message.slice(0, 400)}`); }
+  try { pl.close_session(); } catch { /* closed */ }
+}
+// The card out and in on the family (S-MEDIA), from the shooting screen (S1 leaves the start's clock warning): out, the
+// drive unmounted and the camera's no-card state (the screen changed; X, its frames: "No Card" and the card icon, 0 and
+// 00:00:00 in orange; the remaining-shots query itself still answers the count, X, so the screen's 0 is the
+// application's); in, the card initialised and mounted again without a format, the screen as before (the whole frame)
+// and the count the same; then S2's picture lands on the card
+async function hlsOutInFamily(card, tag, ok, bad, notes) {
+  const { A } = await import('../src/fw/model.mjs');
+  const { STORAGE } = await import('../src/lab/storage.mjs');
+  const { SHOTS } = cardQueries(A), names = STORAGE.names, FILE1 = `DCIM/100${names.folder}/${names.file}0001.${names.ext}`;
+  const read = (lba, n) => card.read(lba, n), pl = await familyPlayer(card);
+  const screen = (s) => { const [w, h, words] = s.frame('boundary'); return `${w}x${h}:${words.join(',')}`; };
+  try {
+    pl.open_session();
+    const s = pl.session, lab = s.lab, st = s.storage, media = s.camapp.media, slot = media.f.slots[0];
+    s.idle_slice(lab.lab_time() + 1500e6);
+    familyPress(s, 's1'); s.idle_slice(lab.lab_time() + 1000e6);
+    const before = screen(s), shots = lab.call(SHOTS, { d0: 0 }, null, null, 2000000).d0 | 0, cmds = st.commands;
+    const detect = lab.sim.read(st.f.detect, 2)[0], boot = openVolume(read).boot.slice();
+    const out = pl.run_input({ type: 'card', action: 'remove' });
+    s.idle_slice(lab.lab_time() + 500e6);
+    const code = `0x${(media.f.switch_event | slot.switch).toString(16).padStart(8, '0')}`;
+    ok(!st.card.present && !st.mounted && lab.sim.read(st.f.detect, 2)[0] === 1 && media.mount_state(slot.kind) === 0, `${tag}: out: the drive unmounted (detect state ${lab.sim.read(st.f.detect, 2)[0]}, HLS mount state ${media.mount_state(slot.kind)}, ${out?.card?.drive_status})`);
+    ok(out?.uiin_codes?.includes(code) && media.level() === 1, `${tag}: out: UI_IN decoded the card switch (${JSON.stringify(out?.uiin_codes)}, want ${code}), level ${media.level()}`);
+    ok(screen(s) !== before, `${tag}: out: the no-card state: the screen changed`);
+    let refused = false;
+    try { pl.run_input({ type: 'card', action: 'remove' }); } catch (e) { refused = /out of the slot already/.test(e.message); }
+    ok(refused, `${tag}: a second removal is refused`);
+    const logged = st.log.length, t0 = lab.lab_time();
+    const back = pl.run_input({ type: 'card', action: 'insert' });
+    s.idle_slice(lab.lab_time() + 1500e6);
+    ok(st.card.present && st.mounted && st.insertions === 1 && lab.sim.read(st.f.detect, 2)[0] === detect && media.mount_state(slot.kind) === media.f.mount.mounted, `${tag}: in: the firmware mounted the card again (${back?.card?.drive_status}, detect state ${lab.sim.read(st.f.detect, 2)[0]}, ${detect} at the start)`);
+    ok(st.commands - cmds > 20 && card.log.some(([i]) => i === 2), `${tag}: in: sd_mount initialised the card again (${st.commands - cmds} SD commands, CMD2 among them)`);
+    ok(openVolume(read).boot.every((b, i) => b === boot[i]), `${tag}: in: the card's volume as it was (its boot sector unchanged: no format)`);
+    const shots2 = lab.call(SHOTS, { d0: 0 }, null, null, 2000000).d0 | 0;
+    ok(shots2 === shots && screen(s) === before, `${tag}: in: the count back (${shots2} shots, ${shots} before) and the screen as before the removal`);
+    notes.push(`${tag}: the card put back at ${(t0 / 1e9).toFixed(3)} s of lab time: ${st.log.slice(logged).filter(([k]) => ['mount', 'format', 'drive'].includes(k)).map(([k, d]) => `${k} ${d}`).join('; ')}`);
+    familyPress(s, 's2'); s.idle_slice(lab.lab_time() + 1000e6);
+    const e = openVolume(read).find(FILE1);
+    ok(e && e.size > 0 && s.camapp.images.length === 1, `${tag}: S2 after the card came back: its picture on the card as ${FILE1} (${e?.size} bytes)`);
+    ok(pl.stand_ins_in_use().includes('S-MEDIA'), `${tag}: the player lists S-MEDIA`);
+  } catch (e) { bad.push(`${tag}: card out and in: ${e.message.slice(0, 400)}`); }
+  try { pl.close_session(); } catch { /* closed */ }
+}
+
+// The HLS media side alone (--hls): Card Formatting from the menu and the card out and in on a blank 8 GiB card each,
+// on the body of OM_EMU_MODEL whose card_fs runs it (bin/test.mjs runs it on the E118 family)
+export async function storageHls() {
+  const bad = [], notes = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { MODEL } = await import('../src/fw/model.mjs');
+  const { STORAGE } = await import('../src/lab/storage.mjs');
+  if (!STORAGE?.hls) return { checks: 1, bad: [`${MODEL}: src/fw/models.mjs card_fs runs no HLS media side`], notes };
+  await hlsFormat(new SdCard(), MODEL, ok, bad, notes);
+  await hlsOutIn(new SdCard(), MODEL, ok, bad, notes);
+  return { checks, bad, notes };
 }
 
 // A card's volume in one line: the MBR's partition and the file system's layout (for the notes)
@@ -809,6 +939,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log(`card and file system in play: ${s.checks - s.bad.length}/${s.checks}`);
     s.bad.forEach((x) => console.log('  ', x));
     n += s.bad.length;
+  }
+  if (process.argv.includes('--hls')) {
+    const x = await storageHls();
+    console.log(`the HLS media side in play: ${x.checks - x.bad.length}/${x.checks}`);
+    x.notes.forEach((t) => console.log('   note:', t));
+    x.bad.forEach((t) => console.log('  ', t));
+    n += x.bad.length;
   }
   if (process.argv.includes('--sdxc')) {
     const x = await storageSdxc();

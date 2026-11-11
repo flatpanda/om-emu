@@ -479,7 +479,8 @@ export class Player {
     if (this.session?.storage?.switches) used.push('S-SDSWITCH');                         // a card line request answered
     if (this.session?.camapp?.movie_rate_answered) used.push('S-MOVRATE');                 // the record time with frame rate 0
     const media = this.session?.camapp?.media;
-    if (media?.formats || media?.ctrl) used.push('S-MDACTRL');                               // a Card Formatting from the menu (media.mjs)
+    if (media?.f.ctrl && (media.formats || media.ctrl)) used.push('S-MDACTRL');            // a Card Formatting from the menu (media.mjs)
+    if (media?.ended) used.push('S-MDAEND');                                                 // the E118 family's media control end (media.mjs)
     if (this.session?.storage?.removals || this.session?.storage?.insertions) used.push('S-MEDIA');   // a card taken out or put back (media.mjs)
     if (this.session?.lens) used.push('H-DPCINIT', 'H-LENSINIT', 'S-LENSNAND', 'H-LENSON', 'S-LENSMCU', 'A-LENSSSC-1', 'A-LENSMCU-1', 'A-LENSMCU-2', 'A-LENSMCU-3', 'A-DPC-1');   // the lens on the mount natively (lens.mjs)
     if (this.session?.acc) used.push('H-ACCINIT', 'S-ACCREG', 'S-ACCSAMPLE', 'H-SLOPEINIT', 'A-ACC-1', 'A-ACC-2', 'A-ACC-3');   // a body whose accelerometer is stood in at its sample cache

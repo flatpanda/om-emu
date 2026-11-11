@@ -27,7 +27,24 @@
 //              mount state mounted and 711 {kind, 1, 2} (notifyRecMountEnd: EV_MEDIA_MOUNT_REC) and {kind, 1, 8}
 //              (mountProcEnd). Each notification's layout and sender is D; which ones the media manager sends at a
 //              change, and in which order, is I. The level's meaning is I (models.mjs slots)
-import { FirmwareError, disasm, runtime } from './hle.mjs';
+//   S-MDAEND   (the E118 family, whose facts the rule reads: src/fw/facts.mjs mediaHls, fact 'media'; no S-MDACTRL
+//              there) the camera base's part of the media control's end. The family's application runs the media
+//              control itself, in its event manager's process (OlyHfwOpeMdaCtrlProcessEvFw): Card Setup's Format
+//              calls api_media's format, the file module formats the card and replies, and the process's progress
+//              callbacks drive the bar, all natively (X). The start's command is read where the application makes it
+//              (f.cab.start: d0 the command, d1 the media); any command but the format stops the session (the
+//              others are not driven here). At its end the process sends the camera base
+//              (Cab_CameraBase, an HLS component on the OXF main thread, which does not run) a request event that
+//              carries a closure (+28: the closure, its +12 the argument, +16 the function, vt[0] its call), whose
+//              function posts the result callback (CBC 16, kind 72 for a format) and ends the media lock (D). The
+//              event goes to the camera base's queue natively and stays there, as every event to the camera base
+//              does in the lab; after the step S-MDAEND runs the DCF numbering mount (storage.mjs: the next file
+//              number, I as S-MDACTRL's) and then the closure through its own vt[0], natively. That the camera base
+//              calls the closure once its request is done is I (its handler passes the closure on with a request
+//              of its own, not read, ?); an event without a closure function (the format's first, 12986 on E122) is
+//              logged and left, the camera base's work for it not done (?). The process's sends on its other path
+//              (another command's end or an error, f.cab.other) stop the session
+import { FirmwareError, disasm, runtime, where } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { RTOS } from './rtos.mjs';
 
@@ -47,11 +64,15 @@ export class HlsMedia {
     this.formats = 0;               // formats finished
     this.switched = false;          // S-MEDIA: the slot's card switch changed, not yet handled
     this.notified = [];             // the notifications delivered, [id or 711 state, the reception's answer]
+    this.ends = [];                 // S-MDAEND: the media control's requests to the camera base, not yet handled
+    this.ended = 0;                 // S-MDAEND: their closures run
+    this.mda = null;                // S-MDAEND: the media control's start in progress {cmd, media}
   }
   install() {
     const lab = this.lab, f = this.f, slot = f.slots[SLOT];
+    if (f.cab) this._install_end();
     // the file module's reply to the API queue for the format's token (S-MDACTRL)
-    lab.wrap(OLYQEWR, (prev) => (h, r) => {
+    if (f.ctrl) lab.wrap(OLYQEWR, (prev) => (h, r) => {
       const c = this.ctrl;
       if (c !== null && c.reply === null && (r.d0 & 0xFFFF) === c.queue) {
         const p = lab.sim.u32(r.a0 >>> 0);
@@ -62,13 +83,49 @@ export class HlsMedia {
     // module events: the format's progress (S-MDACTRL), the slot's card switch (S-MEDIA)
     const pub = (r) => {
       const code = r.d0 >>> 0;
-      if (code === f.ctrl.progress_event && this.ctrl !== null) this.ctrl.progress += 1;
+      if (f.ctrl && code === f.ctrl.progress_event && this.ctrl !== null) this.ctrl.progress += 1;
       if (code === (f.switch_event | slot.switch) >>> 0) this.switched = true;
     };
     if (lab.hooks.has(runtime(f.publish))) lab.wrap(f.publish, (prev) => (h, r) => { pub(r); return prev(h, r); });
     else lab.hook(f.publish, (h, r) => { pub(r); lab.passthrough(r); }, 'S-MEDIA (events)');
   }
-  busy() { return this.ctrl !== null || this.switched; }
+  busy() { return this.ctrl !== null || this.switched || this.ends.length > 0; }
+  // S-MDAEND: the media control process's sends of its requests to the camera base (f.cab.post called from one of
+  // f.cab.sites), recorded with the closure each carries
+  _install_end() {
+    const lab = this.lab, c = this.f.cab, sites = new Set(c.sites.map(runtime)), other = new Set(c.other.map(runtime));
+    const seen = (r) => {
+      if (other.has(r.mdr >>> 0)) throw new MediaError(`S-MDAEND: the media control's request to the camera base from ${where(r.mdr)}, the path of another command or an error: not modelled`);
+      if (!sites.has(r.mdr >>> 0)) return;
+      const sim = lab.sim, ev = r.a0 >>> 0, clo = sim.u32(ev + c.closure) >>> 0;
+      this.ends.push({ ev, id: sim.read(ev + 4, 2)[0] | sim.read(ev + 5, 1)[0] << 8, clo, fn: clo ? sim.u32(clo + c.fn) >>> 0 : 0, from: where(r.mdr) });
+    };
+    if (lab.hooks.has(runtime(c.post))) lab.wrap(c.post, (prev) => (h, r) => { seen(r); return prev(h, r); });
+    else lab.hook(c.post, (h, r) => { seen(r); lab.passthrough(r); }, 'S-MDAEND');
+    const start = (r) => {
+      const cmd = r.d0 & 0xFF, media = r.d1 & 0xFFFF;
+      this.log.push(['control', `command ${cmd}, media ${media} (the application's own start)`]);
+      if (cmd !== c.format) throw new MediaError(`S-MDAEND: the media control's command ${cmd} (media ${media}): only the format's (${c.format}) end is stood in`);
+      if (this.mda !== null) throw new MediaError('S-MDAEND: a second media control start while the format runs');
+      this.mda = { cmd, media };
+    };
+    if (lab.hooks.has(runtime(c.start))) lab.wrap(c.start, (prev) => (h, r) => { start(r); return prev(h, r); });
+    else lab.hook(c.start, (h, r) => { start(r); lab.passthrough(r); }, 'S-MDAEND (start)');
+  }
+  _end(e) {
+    const lab = this.lab;
+    if (!e.fn) { this.log.push(['end', `request ${e.id} to the camera base from ${e.from}: no closure function, its handling not done`]); return; }
+    if (this.mda === null) throw new MediaError(`S-MDAEND: request ${e.id} to the camera base from ${e.from} with no media control start seen`);
+    this.storage.renumber('S-MDAEND');
+    const call = disasm(lab.sim.u32(lab.sim.u32(e.clo)));
+    this.log.push(['end', `request ${e.id} to the camera base from ${e.from}: its closure ${h8(e.clo)} (${h8(disasm(e.fn))}) run through ${h8(call)}`]);
+    this.mda = null;
+    lab.calls(call, { a0: e.clo }, undefined, undefined, LIMIT);
+    this.s.settle('S-MDAEND');
+    this.ended += 1;
+    this.formats += 1;
+    this.s.camapp?.card_formatted?.();
+  }
   // ---- the firmware's events, delivered as their senders deliver them
   _new(size) {
     const ev = this.lab.call(this.f.new, { d0: size, d1: 0, a0: 0 }, null, null, LIMIT).a0 >>> 0;
@@ -183,11 +240,12 @@ export class HlsMedia {
       if (c.reply !== null) this._finish();
       else if (this.lab.lab_time() - c.t0 > REPLY_LIMIT_MS * 1e6) throw new MediaError(`S-MDACTRL: no reply to the format (token ${h8(c.token)}) after ${REPLY_LIMIT_MS} ms of lab time`);
     }
+    while (this.ends.length) this._end(this.ends.shift());                   // S-MDAEND
     if (this.switched && this.ctrl === null) this._changed();
   }
   take_log() { return this.log.splice(0); }
   status() {
-    return { formatting: this.ctrl !== null, formats: this.formats, switch_pending: this.switched, notified: this.notified.length,
+    return { formatting: this.ctrl !== null || this.mda !== null, formats: this.formats, ...(this.f.cab && { ends: this.ended }), switch_pending: this.switched, notified: this.notified.length,
       mount_state: this.mount_state(this.f.slots[SLOT].kind) };
   }
 }

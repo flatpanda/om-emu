@@ -28,9 +28,10 @@
 //                   E143, E146 and E147 REC_FILE natively, the clock set first): its directory entry, size and bytes
 //                   read back independently (natively the firmware's header, its Make, the body's Model and Exif
 //                   version, dates, maker notes and thumbnail slot read by refs/exif.mjs, then the lab's stream;
-//                   REC_IMAGE's own task made it from S-RECREQ's packet: the encode in task 28, the header area
-//                   cleared by the imgpro unit's fill natively, REC_FILE's reply, pAlive cleared, the aspect from the
-//                   setting and the ISO from the record's Sv 0, on E143, E146 and E147), the JPEG decoded
+//                   REC_IMAGE's own task made it from S-RECREQ's packet: the encode in task 28 (on E143 S-JPEGENC from
+//                   ImageParam's parameter set on), the header area cleared by the imgpro unit's fill natively,
+//                   REC_FILE's reply, pAlive cleared, the aspect from the setting and the ISO from the record's Sv 0,
+//                   on E143, E146 and E147), the JPEG decoded
 //                   (refs/jpeg.mjs) to the capture's block means, and the next session's DCF numbering mount and
 //                   image count find it; where the body runs the HLS media side (card_fs.hls: E143, E146) Card
 //                   Formatting from the menu (S-MDACTRL): the card read back is freshly formatted, the counts reset and
@@ -501,10 +502,15 @@ export async function storageSession() {
           const used = pl.stand_ins_in_use(), run = rec.images[0], y = run?.reply, fill = run?.fills;
           ok(['H-RECSHARED', 'H-RECIMGPRO', 'H-RECIMAGE', 'S-RECREQ', 'S-IMGPRO'].every((n) => used.includes(n)) && !used.includes('S-RECIMAGE'), `REC_IMAGE natively, S-RECIMAGE not in use: ${used.filter((n) => /REC|IMGPRO|JPEG/.test(n)).join(' ')}`);
           ok(rec.images.length === 1 && run.task === rec.image.task.id && run.encoded === 1 && rec.waiting(rec.image.task.id), `the encode ran once in REC_IMAGE's task (${rec.image.task.id}), which waits on its queue again: ${JSON.stringify(run && { task: run.task, encoded: run.encoded })}`);
+          // S-JPEGENC from ImageParam's parameter set on (E143): CreateParam, the create (its id in the packet),
+          // ImageParam's body and the release natively (docs/hle-gaps.md 4.3.4); on E146 and E147 rec_jpeg_make_image as
+          // a whole, no steps
+          const steps = run?.steps;
+          ok(ON_LAB_MODEL ? steps && steps.set === 1 && steps.run === 1 && steps.result === 1 && steps.id !== 0 && steps.released === 1 : steps === null, `S-JPEGENC's steps: the parameter set skipped once, the run and Jpeg_Result stood in once, the create's id and the release native: ${JSON.stringify(steps)}`);
           ok(y && y.status === 0 && y.free === 1 && y.header === HEADER && y.size === HEADER + stream.length && run.alive === 0, `REC_FILE's reply (S-RECREQ): ${JSON.stringify(y)}, pAlive ${run?.alive}`);
           ok(fill?.length === 1 && fill[0].mode === 4 && fill[0].dst === y?.addr && fill[0].bytes === HEADER && fill[0].value === 0, `the header area cleared by the imgpro unit natively (one linear fill of 0 over the buffer's ${HEADER} bytes): ${JSON.stringify(fill)}`);
           ok(y?.aspect === run.take[12417] && run.take[40401] === 1, `ImgAspect from the record's aspect, TAKE's setting 12417 (${run?.take?.[12417]}): ${y?.aspect}; the bracket's 40401 ${run?.take?.[40401]}`);
-          ok(x?.exif?.get(0x8827) === 25 && x?.exif?.get(0x8831) === 25, `the ISO REC_IMAGE derives from the Sv 0 (rec_bracket_after_trig 0x5053bfe2: the shot's record's +38174, on E146 and E147 +37826), ISO and StandardOutputSensitivity: ${x?.exif?.get(0x8827)} ${x?.exif?.get(0x8831)}`);
+          ok(x?.exif?.get(0x8827) === 25 && x?.exif?.get(0x8831) === 25, `the ISO REC_IMAGE derives from the record's Sv 0 (rec_bracket_after_trig 0x5053bfe2: the shot's record's +38174, on E146 and E147 +37826; on E143 also the SvAdj rec_bracket_update_iso 0x5053bca6 sets), ISO and StandardOutputSensitivity: ${x?.exif?.get(0x8827)} ${x?.exif?.get(0x8831)}`);
         }
       } else ok(data && want && data.every((b, i) => b === want[i]), 'the file\'s bytes are the JPEG the lab handed the file module');
       const d = data ? decodeJpeg(data) : null, [w, h, rows] = want ? s2.picture_frame(s2.camapp.views.get(img.release)) : [0, 0, []];

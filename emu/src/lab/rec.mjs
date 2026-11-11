@@ -82,18 +82,25 @@
 //               the buffer from REC's pool 3 0x5054bb12, the header by rec_jpeg_make_header 0x50549bf1 with the EXIF
 //               module's serializer 0x50429935, BuffAddr1 / BuffSize1 set at 0x50549a00; docs/hle-gaps.md 4.3.5)
 //   S-JPEGENC   the image pipeline's work inside rec_jpeg_exec, where the lab has no image pipeline: the JPEG encode
-//               rec_jpeg_make_image (0x50549b42) writes the lab's JPEG stream (src/lab/jpeg.mjs, without its JFIF
-//               APP0: SOI, DQT, SOF0, DHT, SOS, the data, EOI) at Addr + HeaderSize and sets Size (+192; on E146 and
-//               E147 the image record's +12) to HeaderSize + the stream's length (I: the file's size, as REC_FILE
-//               writes BuffSize1 bytes from BuffAddr1); the header maker, which runs after the encode (0x505498ab, then
-//               0x505498c3), ends its XMP segment 2 bytes past HeaderSize and writes them (X: 0a 00), over the stream's
-//               SOI (I: the camera's encoder, too, writes a whole JPEG there). Natively rec_jpeg_make_image builds an
-//               imgpro_mdl request (rec_ImgPro_CreateParam 0x50542363), creates it (0x50491699), sets its images
-//               (rec_ImgPro_ImageParam 0x50542528), runs it (0x50542407: 0x50492758, 0x504929e9) and reads the result
-//               (rec_ImgPro_Jpeg_Result 0x50542ce1): run natively on E143 it divides by zero inside
-//               rec_ImgPro_ImageParam (0x505099e0, from 0x50509ac9: a geometry record's +4 and +6 are 0) before any
-//               request to a pixel unit (X; docs/hle-gaps.md 4.3.3). (Until 2026-11-10 on E146 and E147 also the
-//               header clear's fill, which runs natively on the imgpro unit now that REC_IMAGE's task does, 4.3.5)
+//               writes the lab's JPEG stream (src/lab/jpeg.mjs, without its JFIF APP0: SOI, DQT, SOF0, DHT, SOS, the
+//               data, EOI) at Addr + HeaderSize and sets Size (+192; on E146 and E147 the image record's +12) to
+//               HeaderSize + the stream's length (I: the file's size, as REC_FILE writes BuffSize1 bytes from
+//               BuffAddr1); the header maker, which runs after the encode (0x505498ab, then 0x505498c3), ends its XMP
+//               segment 2 bytes past HeaderSize and writes them (X: 0a 00), over the stream's SOI (I: the camera's
+//               encoder, too, writes a whole JPEG there). rec_jpeg_make_image (0x50549b42) runs in turn
+//               rec_ImgPro_CreateParam (0x50542363), the image library's create (0x50491699), rec_ImgPro_ImageParam
+//               (0x50542528), the run (0x50542407: 0x50492758, 0x504929e9), rec_ImgPro_Jpeg_Result (0x50542ce1) and the
+//               release (0x5054322e) (D). On E143 (REC_IMAGE natively) all run natively but three steps from the first
+//               the lab cannot run (docs/hle-gaps.md 4.3.4): ImageParam's call of the library's parameter set
+//               (0x50542c97 to 0x50491c9f) is skipped with the status 0, the run returns 0, and Jpeg_Result writes the
+//               stream and Size. The set divides the request's white balance R and B gains by the smaller of its two
+//               G gains (0x505099e0 from 0x50509ac9), which ImageParam copies from the shot record's +37810.. and
+//               REC_PREPRO's rec_precon_wb_exec fills on the camera: 0 here (X, D). Natively Jpeg_Result sets Size to
+//               HeaderSize + the library's primary size and then copies 51200 bytes from the record's +41052 after
+//               the primary with a kind 13 request to the imgpro unit, Size grown by as much (D); the lab makes
+//               neither. On E146 and E147 rec_jpeg_make_image as a whole. (Until 2026-11-10 on E146 and
+//               E147 also the header clear's fill, which runs natively on the imgpro unit now that REC_IMAGE's
+//               task does, 4.3.5)
 //
 // REC_FILE then runs natively in its task: rec_file_destination_record (0x50540345) by RecordDevice bit 0 to
 // rec_make_file (0x5053f294) and rec_file_record (0x5053fec0): the DCF open of the next number (0x5054a894), the
@@ -108,7 +115,7 @@
 import { FirmwareError, runtime, disasm, where } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { K_CFLUSH } from './menu.mjs';
-import { MODEL_INFO, fact } from '../fw/model.mjs';
+import { MODEL_INFO, ON_LAB_MODEL, fact } from '../fw/model.mjs';
 import { REC_FILE_E143, REC_IMAGE_E143 } from '../fw/facts.mjs';
 
 export class RecError extends FirmwareError {}
@@ -142,6 +149,12 @@ export const REC_NATIVE = MODEL_INFO.rec_native === true;
 //   take      TAKE's fill of the shot's record from the settings store: [setting id, record offset, bytes] as it reads
 //             each (0x503bbd26..0x503bbd98 the bracket, 0x503bc035..0x503bc044 the aspect)
 export const recImageFacts = () => fact('rec_image', REC_IMAGE_E143);
+// S-JPEGENC's points inside rec_jpeg_make_image on E143 (docs/hle-gaps.md 4.3.4; given here by hand, no rule reads
+// them: on E146 and E147 S-JPEGENC takes rec_jpeg_make_image as a whole): rec_ImgPro_ImageParam's call (a call d32, 7
+// bytes) of the image library's parameter set (set), which divides the request's white balance gains; the run;
+// rec_ImgPro_Jpeg_Result, which sets Size; and, run natively and observed, the release and the packet's ImgProID[0]
+// (the dump's +36), which the library's create gives
+export const REC_ENCODE_E143 = { set_call: 0x50542C97, set: 0x50491C9F, run: 0x50542407, result: 0x50542CE1, release: 0x5054322E, id: 36 };
 // the shot's EXIF parameter block (S-EXIFPRM): the fields the lab writes are the rule's (exif: E143's the EXIF module's
 // tag table at body 0x6058e0, {u16 tag, u16 type, u32 bytes, u32 offset}, gives DateTime 0x0132 +1364, DateTimeOriginal
 // 0x9003 +4089, CreateDate 0x9004 +4109, DigitalZoomRatio 0xa404 +4228)
@@ -276,19 +289,36 @@ export class RecFile {
     sim.write(alive, pack('<I', 1));
     sim.write(pk + I.alive, pack('<I', alive));
     const u32 = (p, f) => sim.u32(p + P[f]) >>> 0;
-    // S-JPEGENC: the encode, in REC_IMAGE's task, for this packet only (the header maker runs after it); the image's
-    // address and size are the packet's, or where the body keeps them in REC_IMAGE's image record (E146, E147), the
-    // record's the packet points at
-    const run = { task: null, encoded: 0, addr: null, reply: null }, M = J.image;
-    lab.hook(J.make_image, (h, r) => {
-      const at = r.a0 >>> 0, img = M.record ? sim.u32(at + M.record.at) >>> 0 : at, addr = sim.u32(img + M.addr) >>> 0;
-      if (u32(at, 'pExifParam') !== u32(pk, 'pExifParam')) throw new RecError(`S-JPEGENC: rec_jpeg_make_image on a packet ${h8(at)} that is not S-RECREQ's`);
+    // S-JPEGENC, in REC_IMAGE's task, for this packet only (the header maker runs after it): the lab's stream at the
+    // image's address and its Size, which are the packet's, or where the body keeps them in REC_IMAGE's image record
+    // (E146, E147), the record's the packet points at. On E143 inside rec_jpeg_make_image: ImageParam's call of the
+    // library's parameter set skipped with the status 0, the run returning 0 and Jpeg_Result writing the stream and
+    // Size, the rest of rec_jpeg_make_image natively; on E146 and E147 rec_jpeg_make_image as a whole
+    const E = ON_LAB_MODEL ? REC_ENCODE_E143 : null, M = J.image;
+    if (E) {
+      const c = sim.read(runtime(E.set_call), 7);
+      if (c[0] !== 0xDD || ((E.set_call + (c[1] | c[2] << 8 | c[3] << 16 | c[4] << 24)) >>> 0) !== E.set) throw new RecError(`S-JPEGENC: ${h8(E.set_call)} is not ImageParam's call of the parameter set ${h8(E.set)}`);
+    }
+    const run = { task: null, encoded: 0, set: 0, run: 0, id: 0, released: 0, addr: null, reply: null };
+    const ours = (at, what) => { if (u32(at, 'pExifParam') !== u32(pk, 'pExifParam')) throw new RecError(`S-JPEGENC: ${what} on a packet ${h8(at)} that is not S-RECREQ's`); };
+    const encode = (at) => {
+      const img = M.record ? sim.u32(at + M.record.at) >>> 0 : at, addr = sim.u32(img + M.addr) >>> 0;
       sim.write(addr + J.header, stream);
       sim.write(img + M.size, pack('<I', J.header + stream.length));
       run.encoded += 1; run.addr = addr;
       run.task = lab.lt.current() === lab.nk.tcb(I.task.id) ? I.task.id : null;
-      h.finish(r, { d0: 0 });
-    }, 'S-JPEGENC');
+    };
+    const hooked = [I.reply.fn];
+    if (E) {
+      lab.hook(E.set_call, (h, r) => { run.set += 1; h.skip_call({ ...r, d0: 0 }); }, 'S-JPEGENC');
+      lab.hook(E.run, (h, r) => { const at = r.a0 >>> 0; ours(at, 'the run'); run.run += 1; run.id = sim.u32(at + E.id) >>> 0; h.finish(r, { d0: 0 }); }, 'S-JPEGENC');
+      lab.observe(E.release, (l, r) => { ours(r.a0 >>> 0, 'the release'); run.released += 1; }, 'obs-rec-release');
+      lab.hook(E.result, (h, r) => { const at = r.a0 >>> 0; ours(at, 'rec_ImgPro_Jpeg_Result'); encode(at); h.finish(r); }, 'S-JPEGENC');
+      hooked.push(E.set_call, E.run, E.result, E.release);
+    } else {
+      lab.hook(J.make_image, (h, r) => { const at = r.a0 >>> 0; ours(at, 'rec_jpeg_make_image'); encode(at); h.finish(r, { d0: 0 }); }, 'S-JPEGENC');
+      hooked.push(J.make_image);
+    }
     // S-RECREQ: REC_FILE's reply at its handler's end, taken as the requester would take it
     lab.hook(I.reply.fn, (h, r) => {
       if (disasm(r.mdr) !== I.reply.from) throw new RecError(`S-RECREQ: REC's reply ${h8(I.reply.fn)} from ${where(r.mdr)}: only REC_FILE's (return ${h8(I.reply.from)}) is taken`);
@@ -306,12 +336,14 @@ export class RecFile {
         if (lab.lab_time() - t0 > LIMIT_MS * 1e6) throw new RecError(`${who}: no reply from REC_FILE after ${LIMIT_MS} ms of lab time (REC_IMAGE state 0x${lab.nk.state(I.task.id).toString(16)}, encoded ${run.encoded})`);
         lab.elapse(SLICE_MS, `${who} REC_IMAGE`);
       }
-    } finally { lab.hooks.delete(runtime(J.make_image)); lab.hooks.delete(runtime(I.reply.fn)); }
+    } finally { for (const a of hooked) lab.hooks.delete(runtime(a)); }
     const y = run.reply, fills = (imgpro?.log ?? []).filter((f) => f.n > runs0);
-    const record = { task: run.task, encoded: run.encoded, reply: y, alive: sim.u32(alive) >>> 0, fills: fills.map((f) => ({ mode: f.mode, dst: f.dst, bytes: f.bytes, rows: f.rows, value: f.value })), take };
+    // S-JPEGENC's steps on E143 (null on E146 and E147, where it takes rec_jpeg_make_image as a whole)
+    const steps = E ? { set: run.set, run: run.run, result: run.encoded, id: run.id, released: run.released } : null;
+    const record = { task: run.task, encoded: run.encoded, steps, reply: y, alive: sim.u32(alive) >>> 0, fills: fills.map((f) => ({ mode: f.mode, dst: f.dst, bytes: f.bytes, rows: f.rows, value: f.value })), take };
     this.images.push(record);
-    if (run.encoded !== 1 || run.task !== I.task.id || y.status !== 0 || y.header !== J.header || y.addr !== run.addr || y.size !== y.header + stream.length || record.alive !== 0) {
-      throw new RecError(`${who}: REC_IMAGE encoded ${run.encoded} times${run.task === I.task.id ? ' in its task' : ''}, REC_FILE replied status 0x${y.status.toString(16)}, HeaderSize ${y.header}, BuffAddr1 ${h8(y.addr)} (the encode's ${h8(run.addr)}), BuffSize1 ${y.size} (the stream ${stream.length} bytes), pAlive ${record.alive}`);
+    if (run.encoded !== 1 || (E && (run.set !== 1 || run.run !== 1 || !run.id || run.released !== 1)) || run.task !== I.task.id || y.status !== 0 || y.header !== J.header || y.addr !== run.addr || y.size !== y.header + stream.length || record.alive !== 0) {
+      throw new RecError(`${who}: REC_IMAGE encoded ${run.encoded} times${run.task === I.task.id ? ' in its task' : ''} (S-JPEGENC's steps ${JSON.stringify(steps)}), REC_FILE replied status 0x${y.status.toString(16)}, HeaderSize ${y.header}, BuffAddr1 ${h8(y.addr)} (the encode's ${h8(run.addr)}), BuffSize1 ${y.size} (the stream ${stream.length} bytes), pAlive ${record.alive}`);
     }
     return { header: y.header, size: y.size };
   }

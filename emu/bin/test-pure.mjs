@@ -19,6 +19,7 @@
 // the imgpro unit's register file and fills (test_imgpro.mjs imgproUnits, S-IMGPRO),
 // S-MODPOST's rule, the guard's report of it and the object-name table's rule (test_modpost.mjs modpostUnits),
 // S-DISPQ's queue discipline (test_dispq.mjs dispqUnits),
+// the camera front end's control plane as cam.c's second init programs it (test_camfe.mjs camFeUnits, S-CAMFE),
 // the lens serial controller, the deferred-call triggers and S-LENSMCU's replies (test_lens.mjs),
 // PER_SIO's served IIC transfers and the TG-5's charger (test_sio.mjs),
 // the debug API's argument checks, halt,
@@ -62,6 +63,7 @@ import { ems1Units } from '../test/test_ems1.mjs';
 import { imgproUnits } from '../test/test_imgpro.mjs';
 import { modpostUnits } from '../test/test_modpost.mjs';
 import { dispqUnits } from '../test/test_dispq.mjs';
+import { camFeUnits } from '../test/test_camfe.mjs';
 import { lensUnits } from '../test/test_lens.mjs';
 import { sioUnits } from '../test/test_sio.mjs';
 import { liveUnits } from '../test/test_live.mjs';
@@ -124,6 +126,7 @@ report('the EMS1 engine\'s register file: tables, images, results, completions, 
 report('the imgpro unit\'s register file: the fills, their bytes and ends, refusals (S-IMGPRO)', imgproUnits());
 report('S-MODPOST: the posts it takes, the guard\'s report, the object-name table (src/lab/camapp.mjs, src/fw/facts.mjs objectNameId)', await modpostUnits());
 report('S-DISPQ\'s queue: posts in an open DISPLAY run kept for the outermost run\'s end, in order (src/lab/dispq.mjs)', await dispqUnits());
+report('the camera front end\'s control plane: the second init\'s program, A-CAMFE-1 / 2, refusals (S-CAMFE)', camFeUnits());
 report('the lens serial controller, deferred-call triggers and the lens (S-LENSMCU)', lensUnits());
 report('PER_SIO\'s served IIC transfers and the TG-5\'s charger (S-SIOIIC, S-CHARGER)', sioUnits());
 report('debug API: argument checks, halt, trace filters, live route', await liveUnits());

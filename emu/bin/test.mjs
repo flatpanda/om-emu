@@ -235,6 +235,17 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...du.bad, ...ds.bad].forEach((x) => console.log('  ', x));
   bad += du.bad.length + ds.bad.length;
 }
+// TAKE's take-ready on the second shot (test_take_ready.mjs, camapp 3 with --take probe and --cpu2 native): the first
+// S1's 794 comes from TAKE_MAIN's event 0x04080032 through Com_EvSenderManager; S1's release stops the take-ready with
+// TAKE_EXEC command 7, which TAKE_MAIN does not read in RdyFcsRdy3, so the sequence waits in phase 111 and the second
+// S1 makes no take request; with S-SCPUDEV the power manager's 0x14 stops the session first
+{
+  const { secondShotSession } = await import('../test/test_take_ready.mjs');
+  const ss = await secondShotSession();
+  console.log(`TAKE's take-ready on the second shot (phase 111) in play: ${ss.checks - ss.bad.length}/${ss.checks}`);
+  ss.bad.forEach((x) => console.log('  ', x));
+  bad += ss.bad.length;
+}
 // CPU 2 natively (--cpu2 native): its boot to the idle loop, its first device accesses, CPU 0's CPUCONN and the tasks
 // CPU 0's boot stages start on it, and the Super Control Panel's posts answered by its AUD_LEVEL_MONITOR as S-CPU2
 // answered them; under control camapp 3 the GUI's histogram drawn by its OSD_DRAW_CPU2; off by default

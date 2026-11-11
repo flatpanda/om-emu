@@ -39,7 +39,8 @@
 //                  the card's pictures (the play module's header getter finds the picture not loaded), right (which
 //                  fills the other bank) and left are taken, PLAY returns; then a pass of S1 and S2 records its
 //                  picture and MENU is not taken (no GUI event, the sequence waiting in phase 102 for a take-ready
-//                  nothing finishes: the furthest point, docs/hle-gaps.md 4.3.2); control: S-MODACK's requests left
+//                  nothing finishes, as TAKE_EXEC is S-MODACK's and no 794 is built: the furthest point,
+//                  docs/hle-gaps.md 4.3.2, 4.1.10); control: S-MODACK's requests left
 //                  in PLAY_EXEC's queue, right's blocks the OXF main thread there; with --hdmi on the plug's TRA 588
 //                  is the component's (no S-OUTDEV), the HDMI device opens and channel 0 composes its window with no
 //                  plane drawn, and the plug's cmd 15 waits as the menu's does; in both, the native lens's LENS_EXEC
@@ -447,8 +448,15 @@ export async function traRoutingSession() {
       // the furthest point: a pass of S1 and S2 after them records its picture, and MENU is then not taken (its key
       // code reaches UI_IN, the GUI gets no event): with the through image running, S1 passes the sequence parts' guard
       // and the sequence waits in phase 102 for TAKE's take-ready, which no module answers; isCtrlReleaseEnable then
-      // refuses every key (docs/hle-gaps.md 4.3.2)
+      // refuses every key (docs/hle-gaps.md 4.3.2). Its first take request, not a second: TAKE does not run (TAKE_EXEC
+      // is S-MODACK's), so no TAKE_MAIN posts the event 0x04080032 from which Com_EvSenderManager builds 794 (the
+      // build at 0x50d77eaf; docs/hle-gaps.md 4.1.10)
+      const takeApi = [], built794 = [];
+      lab.observe(0x50417CD9, (l, r) => takeApi.push(r.d0 >>> 0), 'test: the take API');
+      lab.observe(0x50D77EAF, () => built794.push(lab.lab_time()), 'test: the 794 build');
       pass();
+      ok(ca.module_queues.has(0x5A) && JSON.stringify(takeApi) === '[32,64]' && !built794.length,
+        `${tag}: the pass's take requests (controls ${takeApi.map(hx)}) go to S-MODACK's TAKE_EXEC (${ca.module_queues.has(0x5A)}), no 794 built (${built794.length})`);
       const phase = lab.sim.u32(SEQ_PHASE), unresponsive = [];
       lab.observe(RELEASE_UNRESPONSIVE, (l, r) => unresponsive.push(l.sim.u32((r.sp >>> 0) + 8)), 'test: isCtrlReleaseEnable\'s refusal');
       const [after, rec] = key('menu');

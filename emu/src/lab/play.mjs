@@ -44,6 +44,7 @@ import { AudioOut } from './audio.mjs';
 import { AudioHw } from './audiohw.mjs';
 import { Cpu2, CPU2_QUANTUM } from './cpu2.mjs';
 import { labSoundArea, STAND_IN as SOUNDRES } from './soundres.mjs';
+import { DisplayQueue } from './dispq.mjs';
 
 // base64.b64encode(bytes).decode()
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -117,6 +118,11 @@ export const DISPQ_SEND_RETURN = A(0x503EBA07), DISPQ_REPLY_RETURNS = [A(0x501C4
 // S-DISPQ's sends: E143's, the display manager's request (its lab list); a ported model's, every asynchronous DISPLAY
 // request of its build too (fact dispq.sends, src/fw/facts.mjs displaySends: E137's cmd 19 after about 5 s of idle)
 export const DISPQ_SEND_RETURNS = [DISPQ_SEND_RETURN, ...fact('dispq.sends', [])];
+// S-DISPQ's queue (src/lab/dispq.mjs, docs/hle-gaps.md 4.1.9): the synchronous send's own post, OlyQeWr(target,
+// {msg, 16}, -1) at 0x5002e40c (a 5-byte call) with msg {its reply queue, get_tid's id, cmd, param}, after which it
+// waits for the reply on that queue (OlyQeRd(queue, -1) at 0x5002e422) and deletes it (0x5002bfec), D: the send's own
+// task waits while the DISPLAY task runs the command
+export const SYNC_SEND_POST_RETURN = A(0x5002E411);
 // H-TPINIT's step (the boot's call of the touch init, E143's from 0x50024ca6)
 const H_TPINIT = 'H-TPINIT touch init 0x501e3dca (boot call from 0x50024ca6) from the lab task';
 export const TOUCH_INIT = A(0x501E3DCA), TOUCH_TASK = A(0x501E3EAC), TOUCH_TASK_ID = A(0x60042DCC), TP_OPEN = A(0x501E40DA), TP_MASK = A(0x501E41D1);
@@ -472,6 +478,11 @@ export function is_call_to(image, site, target) {
   const o = site - 0x50000000;
   return image[o] === 0xDD && ((site + (image[o + 1] | image[o + 2] << 8 | image[o + 3] << 16 | image[o + 4] << 24)) >>> 0) === target;
 }
+// the 5-byte form, `call d16,[regs],imm8` (0xcd)
+export function is_call16_to(image, site, target) {
+  const o = site - 0x50000000;
+  return image[o] === 0xCD && ((site + ((image[o + 1] | image[o + 2] << 8) << 16 >> 16)) >>> 0) === target;
+}
 
 export class PlayError extends FirmwareError {}
 
@@ -557,6 +568,14 @@ export class PlayLab extends N.NavLab {
       if (!is_call_to(image, ra - 7, OLYQEWR) && opts.mutant !== 'dispq-mid-call') throw new PlayError(`S-DISPQ: ${h8(ra)} does not follow a 7-byte call of OlyQeWr ${h8(OLYQEWR)}`);   // :892
     }
     this.dispq_sends = [...DISPQ_SEND_RETURNS];      // dispq_accept adds to them
+    // S-DISPQ's queue (dispq.mjs; task_message, _s_dispq, _sync_send): a post to the DISPLAY queue while a DISPLAY run
+    // is open is kept for the run's end, and another task's synchronous send in that time runs natively, its post kept
+    // and its task waiting for the reply; dispq_open is the S-DISPQ run whose record takes the replies. The
+    // dispq-at-once mutant is the lab's discipline before it (another task's send run at once inside the open run, a
+    // post there refused)
+    if (!is_call16_to(image, SYNC_SEND_POST_RETURN - 5, OLYQEWR)) throw new PlayError(`S-DISPQ: ${h8(SYNC_SEND_POST_RETURN)} does not follow a 5-byte call of OlyQeWr ${h8(OLYQEWR)}`);
+    this.dq = ['no-dispq', 'dispq-at-once'].includes(opts.mutant) ? null : new DisplayQueue();
+    this.dispq_open = null;
     if (opts.mutant !== 'no-dispq') {                // :894, without it the queue fills and the guard reports it
       this._qewr_prev = this.hooks.get(runtime(OLYQEWR));
       this.hook(OLYQEWR, (h, r) => this._s_dispq(h, r), 'S-DISPQ');
@@ -578,25 +597,42 @@ export class PlayLab extends N.NavLab {
     if (!is_call_to(this.image, ra - 7, OLYQEWR)) throw new PlayError(`S-DISPQ: ${h8(ra)} does not follow a 7-byte call of OlyQeWr ${h8(OLYQEWR)}`);
     if (!this.dispq_sends.includes(ra)) this.dispq_sends.push(ra);
   }
+  // A DISPLAY run is open while the DISPLAY loop runs a message (dispq.mjs), on the task the run is on; at the end of
+  // the outermost one S-DISPQ runs the messages kept in it, in their order (_dispq_run)
+  task_message(loop, queueAddress, msg, label, ...rest) {
+    if (loop !== D.DISPLAY_LOOP || !this.dq) return super.task_message(loop, queueAddress, msg, label, ...rest);
+    const task = this.lt?.tid != null ? this.lt.current() : null;
+    return this.dq.run(task, () => super.task_message(loop, queueAddress, msg, label, ...rest), (m) => this._dispq_run(m));
+  }
+  // one S-DISPQ run: the request posted with no DISPLAY run open, or a message kept (m.kept: the post's step, task and
+  // return address)
+  _dispq_run(m) {
+    const rec = { step: this.step_tag, cmd: m.words[2], words: m.words.map((w) => '0x' + w.toString(16)), replies: [] };
+    if (m.kept) rec.kept = m.kept;
+    this.dispq.push(rec);
+    const outer = this.dispq_open;
+    this.dispq_open = rec;
+    try { this.task_message(D.DISPLAY_LOOP, D.DISPLAY_QUEUE, m.msg, `S-DISPQ DISPLAY cmd ${m.words[2]}`); } finally { this.dispq_open = outer; }
+  }
   _s_dispq(hle, r) {
     const q = r.d0 & 0xFFFF, ra = disasm(r.mdr);
-    if (q === this.display_queue && this.dispq_sends.includes(ra) && this.depth === 0) {
+    const open = this.dq?.open ?? false, request = this.dispq_sends.includes(ra), sync = ra === SYNC_SEND_POST_RETURN;
+    if (q === this.display_queue && ((request && (this.depth === 0 || open)) || (sync && open))) {
       const [p, n] = unpack('<II', this.sim.read(r.a0, 8));
-      const msg = this.sim.read(p, n);
       if (n !== 16) throw new PlayError(`S-DISPQ: a ${n}-byte DISPLAY message from ${where(r.mdr)}`);
-      const words = unpack('<4I', msg);
-      const rec = { step: this.step_tag, cmd: words[2], words: words.map((w) => '0x' + w.toString(16)), replies: [] };
-      this.dispq.push(rec);
-      const r0 = this.dispq_replies.length;
-      this.task_message(D.DISPLAY_LOOP, D.DISPLAY_QUEUE, msg, `S-DISPQ DISPLAY cmd ${words[2]}`);
-      rec.replies = this.dispq_replies.slice(r0);
+      const msg = Uint8Array.from(this.sim.read(p, n)), words = unpack('<4I', msg);
+      // posted while a DISPLAY run is open: kept for the run's end, as the DISPLAY task's queue keeps it (dispq.mjs)
+      if (open) this.dq.post({ msg, words, kept: { step: this.step_tag, task: this._tsnd_task(), from: h8(ra) } });
+      else this._dispq_run({ msg, words });
       hle.finish(r, { d0: 0 });
       return;
     }
     if (q === APP_QUEUE && this.dispq_returns.includes(ra) && this.depth > 0) {
       const [p, n] = unpack('<II', this.sim.read(r.a0, 8));
       const msg = Uint8Array.from(this.sim.read(p, n));
-      this.dispq_replies.push({ step: this.step_tag, queue: q, msg: bytesHex(msg), caller: h8(ra) });
+      const reply = { step: this.step_tag, queue: q, msg: bytesHex(msg), caller: h8(ra) };
+      this.dispq_replies.push(reply);
+      if (this.dispq_open) this.dispq_open.replies.push(reply);
       // where the camera application runs its event task reads queue 6, and the reply goes there after the step
       // (camapp.mjs, S-DISPQ's replies)
       if (this.dispq_deliver) this.dispq_deliver.push({ q, msg });
@@ -707,6 +743,18 @@ export class PlayLab extends N.NavLab {
   // 11). The camera application's synchronous requests to the touch task (E143's cmd 8 through its API sender) are
   // not display runs and stay S-MODACK's (camapp.mjs)
   _sync_send(hle, r) {
+    // S-DISPQ's queue: another task's synchronous DISPLAY send while a DISPLAY run is open (task 168's cmd 4 or 17 in
+    // the OXF main thread's cmd 15, docs/hle-gaps.md 4.1.9) runs natively, as on the camera: S-DISPQ keeps its post
+    // and its task waits for the reply, which the kept message's run sends to the send's queue. Run at once (the
+    // lab's synchronous send) it ran inside the other command's run and its task went on to post before that command
+    // ended (X). The run's own task's sends (a handler's) stay the lab's
+    const task = this.lt?.tid != null ? this.lt.current() : null;
+    if (this.dq?.open && (r.d0 & 0xFFFF) === this.display_queue && task !== null && !this.dq.runs_on(task)) {
+      this.kernel.events.push(['send', `queue ${r.d0 & 0xFFFF} cmd ${r.d1} (S-DISPQ, kept)`, `param 0x${r.a0.toString(16)}`, where(r.mdr)]);
+      this.display_sends.push([r.d1, r.a0 ? this.sim.read(r.a0, 16) : new Uint8Array(0), disasm(r.mdr)]);
+      this.passthrough(r);
+      return;
+    }
     if (TOUCH_QUEUE === null || !this.in_display_run() || (r.d0 & 0xFFFF) !== this._queue(TOUCH_QUEUE.queue)) return super._sync_send(hle, r);
     const saved = { ...r };
     this.kernel.events.push(['send', `queue ${r.d0 & 0xFFFF} cmd ${r.d1}`, `param 0x${r.a0.toString(16)}`, where(r.mdr)]);
@@ -1042,7 +1090,7 @@ export class PlaySession extends N.NavSession {
     this.step_no += 1;
     const lab = this.lab;
     if (lab.dispq && lab.dispq.length) {
-      rec.dispq = lab.dispq.map((d) => ({ cmd: d.cmd, words: d.words, replies: d.replies.length }));
+      rec.dispq = lab.dispq.map((d) => ({ cmd: d.cmd, words: d.words, replies: d.replies.length, ...(d.kept ? { kept: d.kept } : {}) }));
       this.dispq_total += lab.dispq.length;
       lab.dispq.length = 0;
       lab.dispq_replies.length = 0;

@@ -17,9 +17,11 @@
 //                   its requests 8 and 7 and waits on its flag 21 for bit 0x1000, which EXP's frame callback for the
 //                   event 0x300 sets and nothing in the lab fires (docs/hle-gaps.md 4.2.3); meanwhile RdyFcsRdy3 asks
 //                   TAKE_FOCUS 0x400 (RELEASE_IDLE_START, replied token 4), and TAKE_MAIN waits for TAKE_EXPOSE's
-//                   token 15 (pending bits 0x200). S2 then stops in the lab: inside the run of the application's
-//                   synchronous DISPLAY command 15 (after the GUI's command 17, nested in it, has returned) the
-//                   application posts DISPLAY command 18, which S-DISPQ does not stand in for
+//                   token 15 (pending bits 0x200). S2 (event 824) reaches no TAKE task; its DISPLAY commands go in
+//                   the DISPLAY task's order (docs/hle-gaps.md 4.1.9): the GUI's command 17, sent while the
+//                   application's synchronous command 15 waits, is kept and run after it, then the display manager's
+//                   two command 18 requests; the idle then stops at the sub-CPU's command 0x14, which S1 held brings
+//                   about a second after S1 with or without S2
 //   node emu/test/test_take_release.mjs
 import { fileURLToPath } from 'node:url';
 
@@ -148,12 +150,17 @@ export const S1_EXP = [...S1_FOCUS, 'TAKE_EXPOSE -> EXP_MOVIE 1289 (native)', 'T
   'TAKE_FOCUS <= 1024', 'TAKE_FOCUS -> reply', 'TAKE_MAIN <= TAKE_POST token 4 in RdyFcsRdy3'];
 // EXP_MOVIE's wait for the frame events (flag 21 bit 0x1000, from 0x5056ba07's call at 0x5056ba25), cam.c's error
 // when its movie sequence's queues are missing (its second init does not run; request 8's queue count 0x50151ffc once,
-// request 7's posts 0x50151e45 twice), and the S-DISPQ refusal S2 stops at (the application's post of DISPLAY command
-// 18 through its API sender, return 0x503eba07) inside the run of the synchronous DISPLAY sends before it: the
-// application's command 15 (return 0x503ec117) and, nested in it, the GUI's command 17 (return 0x507f66d1)
+// request 7's posts 0x50151e45 twice). S2's synchronous DISPLAY sends: the application's command 15 (return
+// 0x503ec117), the GUI's command 17 (return 0x507f66d1, task 168) while command 15 waits for the histogram's end, kept
+// by S-DISPQ from the send's own post (0x5002e411) and run when command 15's run ends, and the GUI's command 17 again;
+// the display manager's two command 18 requests (0x503eba07) after them, each with one reply to queue 6; until
+// 2026-11-10 (docs/hle-gaps.md 4.1.9) the GUI's 17 ran inside command 15's run and S2 stopped at the GUI's command 18
+// post there (depth 1). The idle's stop after S2: the power manager's sub-CPU command 0x14 (S-SCPUDEV), which S1 held
+// brings about 1.1 s after S1 without S2 too (X)
 const EXP_WAIT = { flag: 21, bits: 0x1000, from: 0x5056BA2C }, CAM_NOQUEUE = 0x0A283000, CAM_NOPOOL = 0x0A103000;
-const S2_STOP = /^UI_IN group 1: OlyQeWr to the DISPLAY queue from 0x[0-9a-f]{8} \(disasm 0x503eba07\) \(depth 1\)/;
-const S2_SENDS = [[15, 0x503EC117], [17, 0x507F66D1]];
+const S2_STOP = /^idle slice to \d+ ns: S-SCPUDEV: command 0x14 \(data 0001000300\): not modelled/;
+const S2_SENDS = [[15, 0x503EC117], [17, 0x507F66D1], [17, 0x507F66D1]];
+const S2_DISPQ = [[17, 168, '0x5002e411'], [18, null, null], [18, null, null]];
 
 export async function focusSession() {
   const bad = [], notes = [];
@@ -229,16 +236,21 @@ export async function focusSession() {
     ok(JSON.stringify(got) === JSON.stringify(['RdyFcsRdy3', 0x200]) && errs.filter((c) => c === FOCUS_STOP).length === 1
       && camerr.length === 3 && camerr.every((c) => c === CAM_NOQUEUE) && !errs.includes(CAM_NOPOOL),
       `TAKE_MAIN is in ${got[0]} with the pending bits ${h8(got[1])} (want RdyFcsRdy3, 0x200); the errors since S1 ${errs.map(h8)} (TAKE_FOCUS's ${h8(FOCUS_STOP)} once; cam.c's ${camerr.map(h8)}: ${h8(CAM_NOQUEUE)} three times, not ${h8(CAM_NOPOOL)})`);
-    // S2: the first stop is the lab's (S-DISPQ)
+    // S2: its DISPLAY commands in the DISPLAY task's order (S-DISPQ's queue), then the idle's stop
     let stop2 = null;
     since(); seen.length = 0;
-    const ds0 = lab.display_sends.length;
+    const ds0 = lab.display_sends.length, st0 = s.steps.length;
     try { s.key('s2', 'down'); s.camapp.pump(); idle(700); } catch (e) { stop2 = e; }
     const s2 = since(), sends = lab.display_sends.slice(ds0).map(([c, , f]) => [c, f]);
-    if (process.env.TF_PRINT) console.log(JSON.stringify({ s2, seen, sends, stop2: stop2?.message.slice(0, 300) }, null, 1));
-    ok(stop2 !== null && S2_STOP.test(stop2.message) && !s2.length && stateName(u16(MAIN_STATE)) === 'RdyFcsRdy3'
-      && JSON.stringify(seen) === JSON.stringify(['event 824 in phase 103']) && JSON.stringify(sends) === JSON.stringify(S2_SENDS),
-      `S2 is event 824 in phase 103 (${JSON.stringify(seen)}) and stops at the application's DISPLAY post inside the run of its synchronous DISPLAY command 15, after the GUI's command 17 nested in it (sends ${JSON.stringify(sends.map(([c, f]) => [c, h8(f)]))}; ${stop2 ? stop2.message.slice(0, 200) : 'no stop'}); TAKE takes nothing (${JSON.stringify(s2)}), TAKE_MAIN in ${stateName(u16(MAIN_STATE))}`);
+    // (without the histogram's end, cmd 16, which S-DISPQ runs about every 50 ms)
+    const dq = [...s.steps.slice(st0).flatMap((x) => x.dispq ?? []), ...lab.dispq].filter((d) => d.cmd !== 16).slice(0, 3);
+    const dqs = dq.map((d) => [d.cmd, d.kept?.task ?? null, d.kept?.from ?? null]);
+    if (process.env.TF_PRINT) console.log(JSON.stringify({ s2, seen, sends, dq, stop2: stop2?.message.slice(0, 300) }, null, 1));
+    ok(JSON.stringify(seen) === JSON.stringify(['event 824 in phase 103']) && JSON.stringify(sends) === JSON.stringify(S2_SENDS)
+      && JSON.stringify(dqs) === JSON.stringify(S2_DISPQ) && dq.slice(1).every((d) => d.replies === 1 && d.words[0] === '0x6'),
+      `S2 is event 824 in phase 103 (${JSON.stringify(seen)}); its synchronous DISPLAY sends ${JSON.stringify(sends.map(([c, f]) => [c, h8(f)]))}, S-DISPQ's runs ${JSON.stringify(dqs)} (want ${JSON.stringify(S2_DISPQ)}), the requests' replies ${JSON.stringify(dq.slice(1).map((d) => d.replies))}`);
+    ok(stop2 !== null && S2_STOP.test(stop2.message) && !s2.length && stateName(u16(MAIN_STATE)) === 'RdyFcsRdy3',
+      `S2's idle stops at the sub-CPU's command 0x14 (${stop2 ? stop2.message.slice(0, 200) : 'no stop'}); TAKE takes nothing (${JSON.stringify(s2)}), TAKE_MAIN in ${stateName(u16(MAIN_STATE))}`);
   } catch (e) { bad.push(`camapp 3 --take probe: ${e.message.slice(0, 800)}`); }
   pl.close_session();
   return { checks, bad, notes };

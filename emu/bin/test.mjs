@@ -216,13 +216,24 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 }
 // the release route, round 2 (test_take_release.mjs focusSession, --take probe round 3: H-TAKEFOCUS): under camapp 3
 // TAKE_FOCUS runs natively, S1's take request goes through RdyFcsRdy1..3; with --cpu2 native (round 4: H-CAMINIT,
-// H-EXPINIT) TAKE_EXPOSE's request reaches EXP_MOVIE, which waits for the frame events, and S2 stops at S-DISPQ
+// H-EXPINIT) TAKE_EXPOSE's request reaches EXP_MOVIE, which waits for the frame events; S2's DISPLAY commands go in the
+// DISPLAY task's order (S-DISPQ's queue) and its idle stops at the sub-CPU's command 0x14
 {
   const { focusSession } = await import('../test/test_take_release.mjs');
   const fs = await focusSession();
   console.log(`the release route, rounds 2 and 4: TAKE_FOCUS and EXP (H-TAKEFOCUS, H-EXPINIT) in play: ${fs.checks - fs.bad.length}/${fs.checks}`);
   fs.bad.forEach((x) => console.log('  ', x));
   bad += fs.bad.length;
+}
+// S-DISPQ's queue (test_dispq.mjs, docs/hle-gaps.md 4.1.9): the discipline's order without firmware, and under
+// control camapp 3 PLAY at the start's end: task 168's synchronous cmd 4, sent while cmd 15 waits, kept and run after
+// it, its reply to its own queue; PLAY shows No Picture; control: the dispq-at-once mutant stops at depth 1
+{
+  const { dispqUnits, dispqSession } = await import('../test/test_dispq.mjs');
+  const du = await dispqUnits(), ds = await dispqSession();
+  console.log(`S-DISPQ's queue: the discipline ${du.checks - du.bad.length}/${du.checks}; in play (camapp 3, PLAY at the start's end) ${ds.checks - ds.bad.length}/${ds.checks}`);
+  [...du.bad, ...ds.bad].forEach((x) => console.log('  ', x));
+  bad += du.bad.length + ds.bad.length;
 }
 // CPU 2 natively (--cpu2 native): its boot to the idle loop, its first device accesses, CPU 0's CPUCONN and the tasks
 // CPU 0's boot stages start on it, and the Super Control Panel's posts answered by its AUD_LEVEL_MONITOR as S-CPU2

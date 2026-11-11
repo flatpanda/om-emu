@@ -34,13 +34,13 @@
 //   version again (0xc400 then runs a calibration), and a value outside 0x3000, 0x9e00, 0xc400 and 0xd700 also logs
 //   "[TP] Touch IC F/W Version A not available!!" (D, the addresses in docs/model-survey.md findings 85 and 86).
 //   The model answers c4 00, 0xc400 to E118's driver: a controller that runs the firmware this camera's build carries
-//   (I: the list's two checks take 0xc400 alone, before its download and after it, and the downloaded program holds
-//   no version constant, docs/model-survey.md finding 117; what a controller answers before any download is ?; with
-//   0 the download runs and the tap still reaches HFW, X). The others would read 0x00c4, below 0xd700 as 0 is (in the
-//   lab's TFT sessions E120's open reads it before S-TPREG is installed, through the lab's plain read, and E122's and
-//   E144's not at all, X). Every
-//   other register reads 0.
-// The controllers' names and their other registers are not in the images (?).
+//   (D: the program the download sends sets c4 00 at its register 0x1c14, and the list's two checks take 0xc400
+//   alone, before its download and after it, docs/model-survey.md finding 117; what a controller without that program
+//   answers before any download is ?; with 0 the download runs and the tap still reaches HFW, X). The others would
+//   read 0x00c4, below 0xd700 as 0 is (in the lab's TFT sessions E120's open reads it before S-TPREG is installed,
+//   through the lab's plain read, and E122's and E144's not at all, X). Every other register reads 0.
+// The controllers' names are not in the images (?), nor their other registers but E118's, which the program its
+// driver downloads sets (finding 117) and the model does not follow beyond 0x1c14.
 const SLAVE_E143 = 0x70, SLAVE_48 = 0x48;
 const EVENT_E143 = { down: 0, move: 2, up: 1 }, EVENT_48 = { down: 2, move: 3, up: 0 }, EVENT_48_TAP = 1;
 const REPORT_48 = 0x0000, STATUS_48 = 0x1C0A, STATUS_RELEASE = 0x02, TAP_NS = 150e6;

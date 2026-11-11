@@ -2115,7 +2115,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    notification (of two constructors of its form after the media manager's allocations, the one sent the states 2, 4 and
    8; the other is id 5627, X), the mount state's getter and setter (of three getters of the form, the one whose words
    the setter writes, X) and the switch code with UI_IN's level getter. E122's values are the ones found by hand and run
-   above (X); E118's and E120's the rule's, run in their sessions (finding 128). The class is held by 15 of the 18
+   above (X); E118's and E120's the rule's, run in their sessions (finding 128). The class is held by 15 of the 19
    images, not by the E143 family and E148 (X): the E144 family's application holds the same media control process,
    which corrects the reading that it has a function component of its own (ROADMAP); the rule reads every part on E118,
    E120, E122 and E145 only, and gives no fact elsewhere (X: the E144 family's start and mount state, E142's and E140's
@@ -2123,19 +2123,21 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    the family's is not tried (?). `src/fw/models.mjs` card_fs.hls 'rule' takes the fact on E118, E120 and E122 with the
    family's library numbers (`src/fw/facts.mjs` MEDIA_LIB) and the module event post at the port's place of E143's
    `0x50025095`.
-128. **The family's HLS side in play** (2026-11-10, X: `test/test_storage.mjs --hls` per body, in `bin/test.mjs`; 20 of
-   20 checks on each of E122, E118 and E120, the same numbers on the three). On a blank 8 GiB card after S2's picture:
-   MENU, RIGHT, OK, DOWN (Format), OK, DOWN (Yes), OK; the application's start with command 1, media 0; 12986 logged
-   without a closure, 12965's closure run (E122 `0x506a7c9e`, E118 `0x506b6bd5`, E120 `0x506637c4`, each through its
-   closure class's vt[0]); the format within 839 ms of lab time after Yes. Read back independently (`refs/volume.mjs`):
-   FAT32 `NO NAME` at 8192 with 32 KiB clusters as the insertion's format gave it, the root empty, the picture gone,
-   260,351 of 260,352 clusters free in the FAT and FSInfo; the firmware's image count 0, its next file 1, the remaining
-   shots the fresh card's; the application back at the shooting screen; S2 then writes `P1010001.JPG` again. The card
-   out: the drive unmounted (detect state 1, the HLS mount state 0), UI_IN's `0x02021506` with the level 1, the screen
-   changed (the remaining-shots query itself still answers the count, so the screen's 0 is the application's, I); a
-   second removal refused. The card in: sd_mount initialises the card again (CMD2 among more than 20 commands), the FAT
-   mount after 275 ms, the drive status `0x3780`, the boot sector unchanged (no format), the count and the whole screen
-   as before the removal; S2 then writes its picture. E143's and E146's HLS sessions are unchanged (18 of 18 each, X).
+128. **The family's HLS side in play** (2026-11-10, X: `test/test_storage.mjs --hls` per body, in `bin/test.mjs`; 21 of
+   21 checks on each of E122, E118 and E120, the same numbers on the three). On a blank 8 GiB card after S2's picture:
+   MENU, RIGHT, OK, DOWN (Format), OK, DOWN (Yes), OK; the application's start with command 1, media 0; the card input
+   refused while the format runs (S-MDAEND's start to its end, as E143's during S-MDACTRL; it had pulled the card in
+   mid-format before, X); 12986 logged without a closure, 12965's closure run (E122 `0x506a7c9e`, E118 `0x506b6bd5`,
+   E120 `0x506637c4`, each through its closure class's vt[0]); the format within 839 ms of lab time after Yes. Read
+   back independently (`refs/volume.mjs`): FAT32 `NO NAME` at 8192 with 32 KiB clusters as the insertion's format gave
+   it, the root empty, the picture gone, 260,351 of 260,352 clusters free in the FAT and FSInfo; the firmware's image
+   count 0, its next file 1, the remaining shots the fresh card's; the application back at the shooting screen; S2 then
+   writes `P1010001.JPG` again. The card out: the drive unmounted (detect state 1, the HLS mount state 0), UI_IN's
+   `0x02021506` with the level 1, the screen changed (the remaining-shots query itself still answers the count, so the
+   screen's 0 is the application's, I); a second removal refused. The card in: sd_mount initialises the card again
+   (CMD2 among more than 20 commands), the FAT mount after 275 ms, the drive status `0x3780`, the boot sector unchanged
+   (no format), the count and the whole screen as before the removal; S2 then writes its picture. E143's and E146's HLS
+   sessions are unchanged (18 of 18 each, X).
 129. **Left open** (2026-11-10). The camera base's own work at the end (its request to its +236, and 12986's), and
    whether the camera issues the DCF numbering mount after a Format (S-MDAEND's, I); the media control's other commands
    (All Erase among them, not driven); the second slot (the family has one); an SDXC card on the family's HLS side (not

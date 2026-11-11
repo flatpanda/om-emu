@@ -231,7 +231,7 @@ the survey table.
   media control itself, so Card Setup's Format formats the card natively and only the camera base's part of its end
   is stood in (S-MDAEND); the card out shows the firmware's own No Card screen and the card in brings the count
   back (S-MEDIA), at the seams a rule reads (`src/fw/facts.mjs` mediaHls). Left: the HLS side on E147 (Format Card's
-  Yes does not reach S-MDACTRL, not read; the card input's lookup stopped at a control row without a UI_IN code,
+  Yes does not reach S-MDACTRL, not read; the card input found a control row without a UI_IN code, I the stop
   fixed 2026-11-10, finding 126, E147 not tried again) and on the E144 family (its application holds the E118
   family's media control process, finding 127; not tried); E133's, E129's and E132's cards are native since their
   starts run (2026-10-29).

@@ -2222,7 +2222,9 @@ lens, as golden's sessions.
   same pattern as the flash's is I (not read).
 - **What the lab does not run (X, D).** Under camapp 3 the lever's off alone (the switch step, then 3.5 s of idle)
   sends no transaction and calls no shutDown, and neither does the shell's "sdk shutdown" ("request shutdown to GUI":
-  `0x50afc199` posts event `0x03000000` through `0x503ea6bc`; 5 s of idle). S-SHUTDOWN's call is the shell's "sdk
+  `0x50afc199` posts event `0x03000000` through `0x503ea6bc`; 5 s of idle). Both runs left TRA 944 and 994 out; the
+  lever's run without that filter (3 s of idle) shows only the GUI task's TRA 944 (task 168, from `0x50ada63e`), which
+  it sends at intervals of up to 0.3 s before the lever too (X). S-SHUTDOWN's call is the shell's "sdk
   shutdown_api" ("force shutdown", the usage strings at `0x60e01d0f` and `0x60e01d56`). 4.7.4 names the
   camera-common component as the caller of shutDown; the strings of its range (`0x50d034a8..0x50d05ef3`) are the
   firmware update's ("start_usb_firmup", "Execute_FirmwareUpdate"), and whether it takes the lever is ? (its code is

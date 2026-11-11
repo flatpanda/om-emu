@@ -241,7 +241,9 @@ export class RecFile {
     lab.call(X.init, null, null, null, 2000000);
     const make = this.text(X.template + X.tags.make, 24);
     if (!make) throw new RecError(`H-EXIFINIT: the EXIF template ${h8(X.template)} has no Make after the init`);
-    lab.call(R.init, null, null, null, 2000000);
+    // REC's init returns 0, or 8191 after its error log where a part of it fails (D on E143 and E144; X: 0 on both)
+    const ri = lab.call(R.init, null, null, null, 2000000).d0 | 0;
+    if (ri !== 0) throw new RecError(`H-RECINIT: REC's init ${h8(R.init)} returned ${ri}`);
     this.s.settle('H-RECINIT');
     if (I) {
       lab.call(I.shared.init, null, null, null, 2000000);

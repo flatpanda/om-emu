@@ -249,7 +249,8 @@ the survey table.
   reads (REC_IMAGE's part there S-RECIMAGE's), each file's Exif with the body's Make and Model; E130's REC_FILE
   inlines its start and finish (open).
   Next: the older bodies' recording modules (E130, E145, E133, E129 and E132: their inlined REC_FILE and the
-  96-byte recorder's builders, finding 122; the E118 family's, not read); RAW and RAW + JPEG files; the HLS media manager itself (camapp 2 does
+  96-byte recorder's builders, finding 122; the E118 family's, not read);
+  RAW and RAW + JPEG files; the HLS media manager itself (camapp 2 does
   not create it) in place of S-CARD's and S-MEDIA's requests; the second slot (its switch `0x1518`, and S-CARD's start
   value of its mount state); the media control's other commands (erase all, copy, unlock); an SDXC card (done
   2026-10-29, hle-gaps.md 4.8.6: S-SDCARD's card SDXC above 32 GiB by `OM_EMU_CARD_SIZE`, an independent exFAT

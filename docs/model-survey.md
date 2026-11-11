@@ -1919,9 +1919,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    DCF block, +12 and +32 the chain write's and the entry's blocks (I: E142's fill sizes them 116 and 96), +40
    pExifParam, +44 the time record, +48 HeaderSize, +52 the size, +76 Media, +78 the type, +80 FileType; X: the fnode
    at +36 and the stamp in the DCF block read through it give the card's file) and records through it with the
-   whole-file recorder's own builders (the open `0x50400188`,
-   the reservation `0x50400368`, the chain write `0x504003f8`, the entry `0x50400556`, the registration `0x504006d5`,
-   finding 71). E139, E134 and E125 pick one of two by Media as E143 does (E139 `0x503f4a61`: `0x62165420`,
+   whole-file recorder's own builders (the open `0x50400188`, the reservation `0x50400368`, the chain write
+   `0x504003f8`, the entry `0x50400556`, the registration `0x504006d5`, finding 71). E139, E134 and E125 pick one of two by Media as E143 does (E139 `0x503f4a61`: `0x62165420`,
    `0x6216547c`); E142 and E140 load theirs into a2 for the context fill `0x503c4340` (E142's: `0x622930f4`, its entry
    block one of 96 bytes). The camera's clock setting is the one function of each of the 19 images that ends `mov
    10499,d0; movhu d0,(8,a2); ret` (E144 `0x500f022e`), and its clock read the function right after it (E144
@@ -1958,10 +1957,11 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    `0x6055d190`), and recFileQueue reads it there.
 123. **What is left of the family's REC** (2026-11-10; D unless tagged). E130, E145, E133, E129 and E132: REC_FILE's
    task inlines its start and finish processes (E130 `0x503d9350`, both traces in its loop, `0x503d9382` and
-   `0x503d942f`), and E130 loads no "pExifParam " dump (X); they keep S-RECFILE through fileif (no rec_native, which
-   test_facts leaves to each body, E142 giving it), their 96-byte recorder's builders not read (finding 122). On the eight: REC_IMAGE's own task (the post of
-   rec_make_image_finish read, finding 118), the thumbnail and the shooting values in Exif (S-EXIFPRM leaves the
-   template's), RAW files and the second slot, the shot's DCF checkout (`0x1e001001`, the HLS media check-in).
+   `0x503d942f`), and E130 holds no "pExifParam " dump string (X); they keep S-RECFILE through fileif (no rec_native,
+   which test_facts leaves to each body, E142 giving it), their 96-byte recorder's builders not read (finding 122). On
+   the eight: REC_IMAGE's own task (the post of rec_make_image_finish read, finding 118), the thumbnail and the
+   shooting values in Exif (S-EXIFPRM leaves the template's), RAW files and the second slot, the shot's DCF checkout
+   (`0x1e001001`, the HLS media check-in).
 
 
 

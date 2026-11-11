@@ -1802,6 +1802,10 @@ traRoutingSession, below).
   - Left documented: the neighbour is the play module (segment 9's PLAY_* with the JPEG decode at 4.3's seam C2; 4.8
     "Playback"). A stand-in that marked the record loaded would answer for the module's load and decode and move the
     stop to the requests that follow (I); none is added.
+  - Followed in 4.8.11 (2026-11-10, X): with the play module's tasks native (an opt-in under camapp 3) PLAY_LOAD's
+    load sets the record's +12 (`0x518b53b7`, the writer read there), and once the picture's stream carries the
+    firmware's own Huffman tables (A-JPEGDHT-1) the getter answers 0 and PLAY shows the picture's view, its decode
+    stood in at the image library (S-PLAYDEC). Without the opt-in this stop is unchanged.
 - **No key after a shot (stop 1): TAKE does not finish the take-ready (X, D).** Before the menu CapThr's state word
   `0x60362b38` reads `0x02010202` (S-TAKEOVER's static value, 4.1.7), so S1 (826) is refused in phase 101 by the
   sequence parts' guard `0x50bcdef7` and goes no further, as in 4.1.7. The menu's close restarts the through image
@@ -1834,7 +1838,8 @@ traRoutingSession, below).
   isCtrlReleaseEnable refusing it in phase 102. The control (S-MODACK's old way for PLAY_EXEC) blocks at right and the
   guard names queue 63 and task 57. In both of its sessions the native lens's two queues are out of S-MODACK's set,
   LENS_MAIN and LENS_COMMAND waiting on them.
-- **Open.** TAKE's take-ready and capture under camapp 3 (stop 1, with 4.1.8's list); the play module (stop 2); posts
+- **Open.** TAKE's take-ready and capture under camapp 3 (stop 1, with 4.1.8's list); the play module (stop 2: its
+  decode and INFO's histogram, 4.8.11); posts
   to module queues outside the API sender (TAKE_EXEC's command 5); E132's old LOGGER_MAIN stop (not reproduced).
 
 #### 4.3.3 REC_IMAGE and the JPEG path (2026-11-10; D unless tagged, addresses E143's)
@@ -4514,6 +4519,108 @@ there (it stays on the other bodies).
     builders read, its entry block without E144's word at +28; the rule `recorder` keeps the 100-byte form, so the DCF
     steps are not extended); REC_IMAGE's own task on the family; the thumbnail and shooting values; RAW; the second
     slot.
+
+#### 4.8.11 The play module's load under camapp 3 (2026-11-10; D unless tagged, addresses E143's)
+
+- **Why.** Under `control camapp 3` PLAY showed ID_ST_NO_PICTURE with pictures on the card: S-MODACK answered
+  PLAY_EXEC, the play module did not run, and its header getter (`0x518b629e`) found the picture not loaded (4.3.2,
+  stop 2). This round runs the module's tasks behind an opt-in under camapp 3 (the Player's `camapp_play_native`,
+  `emu/src/lab/playmod.mjs`). The default sessions and camapp 3 without it are unchanged (X: golden identical).
+- **The start.** USTART4 (`0x501e9d54`) starts CA_MAIN (`0x501e9e03`) and then USTART5 (task 39, `0x501e9e5c`).
+  USTART5 waits for the stages 8, 9 and 10 (`0x501e9ec0..0x501e9ef2`), calls `0x518f724a` (a log area at `0x63ae0000`
+  checked, the task of the word `0x60042e34` started: not the play module's) and `0x50155412`, and then starts six
+  tasks (`0x501e9f17..0x501e9fab`, the tids from the words `0x60042d58`, `0x60042d56`, `0x60042d54`, `0x60042d5a`,
+  `0x60042e12`, `0x60042e14`): PLAY_MAIN (25), PLAY_LOAD (24), PLAY_IMAGE (23), PLAY_SOUND (26), PLAY_DECODE (118) and
+  PLAY_LOADDRAW (119). The module has no other init in the start functions; each task inits itself (PLAY_MAIN's
+  play_init `0x518a5a3c`). Their queues: PLAY_EXEC 63 (PLAY_MAIN), 64 PLAY_IMAGE, 65 PLAY_LOAD, 67 PLAY_SOUND, 194
+  PLAY_DECODE, 195 PLAY_LOADDRAW (X: the words `0x60043242..0x6004324a`, `0x60043348`, `0x6004334a`). PLAY_MAIN
+  receives a 16-byte message (`0x518bb56d`, OlyQeRd) and passes Load, Image, Sound and Load Draw requests on to their
+  task's queue by the message (its logs "PLAY: receive Load request" ..). It replies 12 bytes to the queue in the
+  request's word 0 (`0x518a5b61..0x518a5ba6`: the status, the token, a word of the parameter block).
+- **The lab (X).** H-PLAYSTART starts the six with act_tsk after CA_MAIN's start; each then waits on its queue.
+  PLAY_EXEC leaves S-MODACK. S-PLAYSEQ, S-PLAYCOMP and S-PLAYVIEW are not installed: the module and the components
+  answer.
+- **What PLAY asks (X).** The play API's Play_Picture reaches PLAY_EXEC as {6, `0xf0080000`, 0, parameter}.
+  PLAY_MAIN passes it to PLAY_LOAD (65), a message comes back on PLAY_EXEC (word 2 10000; I: PLAY_LOAD's completion),
+  and PLAY_MAIN replies to queue 6. In PLAY_LOAD's task play_load_load_exif_header (`0x518b51e6`) runs. It reads
+  the file's first bytes into the handle's header area through play_file_read (`0x518b017f`, the file system
+  natively): the fnode's +48, at most 66560. Then play_img_analyze_exif_header (`0x518b1f44`) runs the EXIF
+  module's dispatcher `0x504289eb` with the operations 1, 2 and 4 (finding 92). When both return 0 the load sets the
+  picture record's u16 +12 to 1 (`0x518b53ab..0x518b53b7`): the writer 4.3.2 left unread. The header getter (in the
+  OXF main thread) then needs the
+  image's size.
+- **The getter's size and the JPEG parse.** `0x518b1ff4` runs the EXIF module's JPEG helper `0x50428ee6` with op 1,
+  the parse `0x50429055`. It runs over the IFD1 thumbnail (the record's +124 / +132), then over the header area (66560
+  bytes from SOI). The getter answers 6152 where neither gives a size (`0x518b638c..0x518b63a3`). It answers 6155
+  where the orientation tag is missing (play_exif_search_tag `0x518aad34` with {1, `0x112`}, `0x518b63ad..0x518b63d7`).
+  The parse walks the markers through a table (`0x60626504`: DQT `0x5042919e`, DHT `0x5042921a`, DRI `0x5042931b`,
+  SOF0 `0x5042933b`, SOS `0x50429500`; APPn passed over). Its checks:
+  - SOI first (12421); at least 590 bytes (12418, `0x50429082`);
+  - DQT: precision 0, table id 3 or less (12440);
+  - DHT: class 0 or 1 (12442), id 0 or 1 (12441), and a code count of 12 for a DC table, 162 for an AC table
+    (12428, `0x5042928a`, `0x504292c0`);
+  - SOF0: at most 4 components (12444), quantization ids 3 or less (12445);
+  - SOS: table selectors 1 or less (12431), Ss 0, Se 63 (12432), Ah / Al 0 (12433), and with three components a
+    check on two pairs of their selectors (12437; which pairs is not read).
+
+  The file's thumbnail has 0 bytes (12418, X). The lab's stream had AC tables of one code (EOB): the parse refused
+  the second DHT (12428). So the getter answered 6152 and playback showed No Picture (X).
+- **A-JPEGDHT-1.** The firmware's own header maker (`0x50428ee6` op 0) writes SOI and a DQT of three tables (`ff db
+  00 c5`). Then the DHT segment of 420 bytes from `0x60626338` (`0x50428f7f`): T.81 Annex K.3's four tables, DC 12
+  codes and AC 162. Then SOF0 (Y 2x1, Cb and Cr 1x1, quantization tables 0, 1, 2) and SOS, from the templates
+  `0x60626334..0x606264ff`. Under the opt-in the lab's stream carries that segment, read from the image, and codes
+  with it (`src/lab/jpeg.mjs` `dht`). The file grows from 73,410 to 76,937 bytes and decodes (refs/jpeg.mjs, X). That
+  the camera's encoder writes these tables is I: its output is not read.
+- **With it (X).** The parse gives the main image's 1620 x 1080 and the getter answers 0. The play capability's state
+  (`0x62b0dc8c`) stays 0, and the view is asked for. PLAY_LOADDRAW (119) runs the load again and a second file read;
+  the decode's source then holds the file from SOI. PLAY_DECODE (118) takes the request (its command 1, `0x518a8f3f`;
+  then `0x518aa055`) and runs play_img_make_view_division (`0x518b44fc`).
+- **The decode request (X unless tagged).** play_img_make_view_division builds a 120-byte request (`0x518b452e`). It
+  calls the image library's issue `0x5048f331`, then its wait `0x5048f6e4`. The issue's block: {the request, its
+  destination, 1, ..., the callback {`0x518b4b0b`, a record}, -1}. The request:
+  - +0 the file's address in the play buffer (the whole file, SOI first);
+  - +8 u16 the source format, 7171, or 7170 where the play record's +24 is 1 (`0x518b45b1..0x518b4606`; 7170 for the
+    lab's 4:2:2 picture, whose sampling `0x518b1ff4` reads from SOF0);
+  - +10 the width rounded up to 16 (1632); +12 / +14 and +16 / +18 the width and height (1620, 1080);
+  - +24 / +26 the play record's +14 / +16 (810, 540); +36 the source plane's bytes (the width to 64, times the height
+    to 8, times 2: 3,594,240);
+  - +64 the destination: its address (the through image's bank `0x98d4d800`, the one the menu's fill clears), +72 u16
+    the format 3074 (`0x518b4643`), +74 the pitch in pixels rounded up to 64 (5568), +76 / +78 the size (900 x 600;
+    INFO's detail view asks 474 x 316 at `0x9a43e000`), +80 / +82 the offsets 0.
+
+  Natively the issue makes it the library's kind 10: the dispatch `0x5046d814` reads 10 at its +16. The handler is
+  `0x5046d994`, the library's generic one (the kind table `0x6065a834`, D). Its units' set-up (`0x5048134d`) writes
+  the unit at `0x9c200000` first at +0x2d8 (`0x5048d4c0` in `0x5048d48a`). The lab refused that write and the session
+  stopped. The issue has two callers, both the play module's: `0x518b446f` in play_img_decode_jpeg_division and
+  `0x518b478b` in play_img_make_view_division (D). The callback takes the phases 21 and 22 (a resource of play_img.c,
+  `0x50536126` / `0x50536273`), 15, and 38 (six halfwords into a record's +10506..+10530); what they mean is ?. Which
+  of the library's units decode, their registers and their interrupt are not read (?).
+- **S-PLAYDEC (the stand-in at that seam).** The issue and the wait return 0 from those call sites, and the request is
+  recorded. No pixel is written: the view keeps the bank's content. The callback is not called.
+- **What runs (X, `emu/test/test_camapp.mjs` playNativeSession 11 of 11).** Two pictures are taken first.
+  - PLAY shows ID_ST_DISP_SIMPLE (`0x0508`): the getter answers 0, the capability's state is 0, one decode is recorded,
+    and the component's getNumber (OlyHfwOpePlyCom `0x50acf1a8`) gives index 2, file 2, folder 100.
+  - Right gives index 1 (file 1) and left 2 again, each with a decode; PLAY returns to the shooting screen.
+  - INFO reaches ID_ST_DISP_DETAIL (`0x050b`). The converter (`0x50acc981`) gets the file's own values: the date from
+    DateTimeOriginal (`0000:00:00 00:00:00` with the clock unset: all 0, where still_record gave the build's default
+    2022-01-01), 1620 x 1080 from SOF0, the exposure 0/100 and ISO 25 from the Exif (still_record: 1/125 and 0).
+  - Control: with the lab's own tables the parse refuses the second DHT (12428), the getter answers 6152, and PLAY
+    shows No Picture.
+- **The next stop (X).** At INFO's detail view DISPLAY cmd 16 (`0x501c3788` -> `0x501d7377` -> `0x501d7121`) reads
+  the VSC histogram's bins on channel 2 (`0x501e150e`, its load at `0x501e153d`). No run has ended since the last
+  began, so the model refuses the read (HIST_UNMODELLED; A-VSCHIST-2's scope, 4.2.1).
+- **Seen on the way: queue 6's bind record in low RAM (X, D).** Each send to queue 6 logs errlog `0x43002002` (OlyEvSt
+  -18, E_ID). OlyQeWr finds a queue's bound flag through a table pointer at `0xa3258350` + 4 x core
+  (`0x5002c246..0x5002c27b`). Only `0x5002bfb9` sets it, called from the boot at `0x50023f92`, which the lab does not
+  run. So the pointer is 0, and queue n's 12-byte record is low RAM 12 x (n - 1); the binds (`0x5002c285`, 38 calls
+  in a scan) write there too. At PLAY under camapp 3 the code at `0x509b00f6..0x509b0151` writes a record through a
+  null pointer (a watchpoint; I: the AF module's, beside its state getter `0x509b06f6`): 100 lands at `0x42`, queue
+  6's flag word. Each later send to queue 6 then sets flag `0x640000` after the message is queued, and fails. The same
+  happens without the opt-in, from S-MODACK's replies: 3 errlogs at PLAY, 8 after its return, 15 after a further
+  pass; none in camapp 1. Not fixed here: the table's init belongs to the boot every session runs.
+- **Open.** The decode's units (kind 10, `0x9c200000`) and the callback's phases; the thumbnail (IFD1 empty); INFO's
+  histogram (above); the queue bind table; PLAY_IMAGE's and PLAY_SOUND's parts (not followed). On the other bodies the
+  module stays stood in (finding 92's addresses), and the E118 family's files lack the firmware's Exif (finding 93).
 
 ### 4.9 HDMI and DisplayPort
 

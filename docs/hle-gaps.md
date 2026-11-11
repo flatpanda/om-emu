@@ -1101,9 +1101,11 @@ shot gets none. The two sessions differ: 4.2.3's runs TAKE natively (`--take pro
     `0x50d76ac8`. A code without the top nibble `0xf` goes to `0x50d76cfa`. There `0x50ab5683` selects a table: when it
     answers non-zero, the second one (run-time `0x60ef11d4`, 128 slots `{code - 0x01000101, case}`), which gives
     `0x04080032` the case `0x50d77e6a`.
+    The first table (run-time `0x60ef15d4`, 64 slots `{code - 0x020000ff, case}`) has no `0x04080032`. `0x50ab5683`
+    returns the word `(0x6035e9d4)`, 1 in the probe's session (X).
   - The case builds event 794 (constructor `0x50c811ce`, called at `0x50d77eaf`) when the word `(0x60364d6c)` is
-    non-zero and the shooting phase query `0x50ab57e9` answers outside the movie phases 113..117. The sequence (task 57)
-    takes 794 in phase 102 and moves to phase 103 (X).
+    non-zero and the shooting phase query `0x50ab57e9` answers a phase outside 113..117 (113..116 are the movie
+    phases, `docs/om1-shutter-spec.md` 7). The sequence (task 57) takes 794 in phase 102 and moves to phase 103 (X).
   - The constructor's other caller, the observer `0x50c705a3` of CmpSts_ObserverNotifyTakeReadyFinish.cpp (4.1.3),
     does not run (X). This settles 4.2.3's "it follows `0x04080032`" (I there). The same table holds the TAKE codes
     `0x04080034..0x04080040`; their senders are not read (?).
@@ -1118,18 +1120,21 @@ shot gets none. The two sessions differ: 4.2.3's runs TAKE natively (`--take pro
   - S1's release is event 827 in phase 103 (case `0x50c5e325`, D). CapTak_Take's TakeReady (`0x50bc79e6`) calls the
     take API with control 0 (`0x50bc7a2a`), which posts TAKE_EXEC command 7 `{6, 0xf0070000, 7, packet}` through the
     API sender.
-  - TakeReady builds 793 (StopTakeReadyDone) at once only when the API returns 0 (`0x50bc7a32..0x50bc7a4d`, D). The
-    API returns the request's token `0xf0070000`, so it goes to `0x50bc7aec` (with d3 0): a response object
-    (`0x50ab705f`, with that result) handed to the object at +2848 (its vt[1], D), and no 793. That TAKE's reply to
-    command 7 is what would bring 793 is I. The other builders of 793 (`0x50bca801`, `0x50bcb5bc`, `0x50cd42fc`, D) do
-    not run.
+  - TakeReady builds 793 (StopTakeReadyDone) at once when the API returns 0 (`0x50bc7a32..0x50bc7a4d`, D). On another
+    result its argument decides (d0, kept in d3; 0 here, X). With 1 it builds a response object (`0x50ab7316`) and then
+    793 too (`0x50bc7ad4`, D). With 0 it goes to `0x50bc7aec`: a response object (`0x50ab705f`, with that result)
+    handed to the object at +2848 (its vt[1], D), and no 793. The API returns the request's token `0xf0070000`, so this
+    stop takes the second path. That TAKE's reply to command 7 is what would bring 793 is I. The other builders of
+    793 (`0x50bca801`, `0x50bcb5bc`, `0x50cd42fc`, D) do not run.
   - The sequence moves to phase 111. Phase 111's dispatcher `0x50c611d5` (pointer to member at `0x603644e4`; table
     run-time `0x60e9aeb0`, 46 ids in 282..1247, read in the lab) takes 793, 791, 789, 786 and 794. It does not take
-    824, 826, 827 or 828 (D).
+    824, 826, 827 or 828 (D). An id outside its table goes to its default case `0x50c615e4`, which makes a virtual
+    call (vt +5220) on the object at +2784 and returns 0 (D; what the callee does is not read, ?). The second S1's 826
+    and 827 reach that case, as the histogram's 944 does (X).
   - TAKE_MAIN does not take command 7, so TAKE_EXEC holds it (TAKE's count 1). TAKE_EXEC is read only while the wait
-    pattern has bit 2 (`0x5039983f`, D), and the pattern stays `0x5` while bits are pending. RdyFcsRdy3's command
-    table is empty, while Idle, RdyFcsRdy1 and RdyTrig2Wait list command 7 (the state table `0x605bfbc8`, read in
-    the lab; D).
+    pattern has the bit `0x2` (`btst 2` at `0x5039983f`, D), and the pattern stays `0x5` while bits are pending.
+    RdyFcsRdy3's command table is empty, while Idle, RdyFcsRdy1 and RdyTrig2Wait list command 7 (the state table
+    `0x605bfbc8`, read in the lab; D).
   - The second S1 is event 826 in phase 111 and its release 827 in phase 111. There is no take request, no 794, and
     TAKE takes nothing; the state holds 1.8 s after the first release and through the second S1. MENU then reaches
     UI_IN and sets no GUI event. No event reaches the sequence, and isCtrlReleaseEnable is not asked: 4.3.2's refusal
@@ -1145,7 +1150,7 @@ shot gets none. The two sessions differ: 4.2.3's runs TAKE natively (`--take pro
   (`0x503c4047`) and went to RdyAbort, which asked TAKE_FOCUS `0x401` (RELEASE_IDLE_END), took mailbox token 5, and
   asked TAKE_FUNC 80 and TAKE_EXPOSE `0x501` synchronously. The `0x501` did not return: TAKE_EXPOSE waited in a
   receive, its stack holding returns into EXP's code (`0x50580690`, `0x502a9bb1`); for what is ?. TAKE_MAIN stayed in
-  RdyAbort with the pending bits `0x400`, and the sequence in phase 111. So the stop, too, needs EXP's answer.
+  RdyAbort with the pending bits `0x400`, and the sequence in phase 111. So the stop, too, needs EXP's answer (I).
 - **A lab stop on this route: S-SCPUDEV's `0x14` (X; D where tagged).** With S-SCPUDEV, the default, the probe's
   session stops 1.16 s after S1, whether S1 is released or not; without S1 no `0x14` comes in 3 s.
   - The power manager (task 10, entry `0x50043cdb`) sends the sub-CPU `0x14 {0, 1, 0, 3, 0}`. The builder is
@@ -1163,10 +1168,10 @@ shot gets none. The two sessions differ: 4.2.3's runs TAKE natively (`--take pro
   - with S-SCPUDEV: the first S1's record (focusSession's S1_EXP) and the 794 build in the event task, the release's
     stop and phase 111, phase 111's table, the stop at `0x14` (the power manager's task, 1.1 to 1.2 s after S1);
   - with the sub-CPU's firmware: the link's one transfer, the state 1.8 s after the release, the second S1 and its
-    release, and MENU.
+    release (each in phase 111's default case), and MENU.
 
-  `emu/test/test_camapp.mjs` traRoutingSession (25 of 25) adds a check: after the menu, the pass's take requests
-  (`0x20`, `0x40`) go to S-MODACK's TAKE_EXEC and no 794 is built.
+  `emu/test/test_camapp.mjs` traRoutingSession (25 of 25) adds a check: the session's only take requests are the
+  post-menu pass's (`0x20`, `0x40`), they go to S-MODACK's TAKE_EXEC, and no 794 is built.
 - **Open.** The neighbour is the camera front end's interrupt behind EXP_MOVIE's frame events (4.2.3). With it, the
   next to read are TAKE_EXPOSE's token 15, RdyTrig2Wait taking command 7, RdyAbort's `0x501` and its tokens 5 and 7,
   then 793 and phase 111's exit. Also open: S-SCPUDEV's `0x14`, and without the probe TAKE itself (4.1.8 item 5).

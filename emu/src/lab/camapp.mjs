@@ -135,6 +135,7 @@ import { SubjectFrames } from './subject.mjs';
 import { MdetDl } from './mdet.mjs';
 import { ShutterSound } from './shuttersnd.mjs';
 import { TakeProbe } from './take.mjs';
+import { PlayModule } from './playmod.mjs';
 import { A, MODEL, ON_LAB_MODEL, MODEL_INFO, IMAGE_BASE, knob, fact, isUnmapped } from '../fw/model.mjs';
 import { DISPLAY_SYNC_E143, RECVIEW_E143, CBS_E143, LENS_ZOOM_TABLE_E143, CARD_DETECT_E143, STILL_E143, DCF_COUNTS_E143, objectNameId, PC_PD_NAME } from '../fw/facts.mjs';
 //   S-CARD     a card in the SD slot. On a body whose file system runs natively (storage.mjs; MODELS card_fs)
@@ -698,6 +699,8 @@ export class CamApp {
     this.take_mode = null;     // S-TAKEFRAME: the frame mode last set
     this.df_bits = 0;
     this.take = null;          // the TAKE probe (take.mjs, --take probe): TAKE_FUNC and TAKE_FUNC_CP natively
+    // the play module natively (playmod.mjs: the Player's camapp_play_native, under control camapp 3 only)
+    this.play_native = this.native_tra && !!session.opts.camapp_play_native ? new PlayModule(session, this) : null;
     this.shoot_mode = false;   // S-BOOTDONE: 420 sent
     this.boot_finished = false; // S-BOOTDONE: the category left its state 3
     this.started = false;
@@ -747,6 +750,7 @@ export class CamApp {
     const [rc] = lab.nk.svc('act_tsk', { d0: tid[0] });
     if (rc !== 0) throw new FirmwareError(`S-CAMAPP: act_tsk(${tid[0]}) = ${rc}`);
     s.settle('S-CAMAPP CA_MAIN');
+    this.play_native?.start();                                                      // H-PLAYSTART (playmod.mjs)
     lab.gui_await();                                                                // H-GUIBYAPP
     this.pump();
     this.frame_mode(FRAME_MODE_AF);                                                 // S-TAKEFRAME
@@ -1003,6 +1007,8 @@ export class CamApp {
     // would take it from them: the two queues leave it; a synchronous send to them still returns E_OK below, the
     // lab's own stand-in refusing it
     if (this.s.lens) for (const q of [apiQueues().LENS_EXEC, apiQueues().LENS_COMMAND]) if (q !== null) this.module_queues.delete(q);
+    // with the play module native (playmod.mjs) PLAY_MAIN takes PLAY_EXEC's requests; S-PLAYDEC stands in for a decode
+    if (this.play_native) { this.module_queues.delete(apiQueues().PLAY_EXEC); this.play_native.install(); }
     if (this.s.storage?.f.hls) { this.media = new HlsMedia(this.s, this.s.storage); this.media.install(); }   // its HLS side (card_fs.hls)
     this.s.lab.panel_done = true;                                                  // S-PANELDONE (menu.mjs)
     const lab = this.s.lab;
@@ -1135,7 +1141,8 @@ export class CamApp {
       }
       lab.passthrough(r);
     }, 'S-CARD (mount test)');
-    lab.observe(RSB_EXECUTE, (l, r) => {
+    // S-PLAYSEQ and S-PLAYCOMP: not with the play module native, whose tasks and the components answer (playmod.mjs)
+    if (!this.play_native) lab.observe(RSB_EXECUTE, (l, r) => {
       const rsb = r.a0 >>> 0, req = l.sim.u32(rsb + RSB_REQUEST) >>> 0;
       if (!req) return;
       const p = { rsb, id: l.sim.u32(req) >>> 0, notify: l.sim.u32(req + 4) >>> 0, param: l.sim.read(req + 16, 2)[0] | (l.sim.read(req + 17, 1)[0] << 8) };
@@ -1145,7 +1152,7 @@ export class CamApp {
       this.play_pending.push(p);
       this.play_exec = p;
     }, 'S-PLAYSEQ');
-    lab.observe(SYNC_REQUEST, (l, r) => {
+    if (!this.play_native) lab.observe(SYNC_REQUEST, (l, r) => {
       const id = r.d0 >>> 0;
       if (SYNC_ERASE.has(id)) {
         throw new FirmwareError(`S-PLAYSEQ: synchronous play request ${id} (${SYNC_ERASE.get(id)}) from ${where(r.mdr)} erases from the card; the play module's erase is not modelled, and answering it would keep the file (docs/model-survey.md finding 110)`);
@@ -1156,7 +1163,7 @@ export class CamApp {
     const wrappers = fact('play.wrappers', Object.values(PLAY_COMPONENT).map((entry) => ({ entry }))).map((w) => w.entry);
     const named = new Map(Object.entries(PLAY_COMPONENT).filter(([, at]) => !isUnmapped(at)).map(([name, at]) => [at, name]));
     for (const [at, name] of named) if (!wrappers.includes(at)) throw new FirmwareError(`S-PLAYCOMP: ${name} placed at ${h8(at)}, not a wrapper of the component getter (fact play.wrappers)`);
-    for (const at of wrappers) lab.hook(at, (h, r) => this.play_component(named.get(at) ?? `wrapper ${h8(at)}`, h, r), 'S-PLAYCOMP');
+    if (!this.play_native) for (const at of wrappers) lab.hook(at, (h, r) => this.play_component(named.get(at) ?? `wrapper ${h8(at)}`, h, r), 'S-PLAYCOMP');
     if (!native) lab.hook(MOVIE_TIME_QUERY, (h, r) => {
       const ms = this.recording === null ? 0 : Math.floor((lab.lab_time() - this.recording) / 1e6);
       const left = Math.max(0, CARD_MOVIE_S * 1000 - this.card_used_ms - ms);
@@ -1587,7 +1594,7 @@ export class CamApp {
         this.images.push(img);
         if (s.storage) {                                                               // S-RECFILE (storage.mjs)
           const frame = s.picture_frame(this.views.get(img.release) ?? null);
-          img.file = s.storage.write_picture(jpegOfFrame(frame));
+          img.file = s.storage.write_picture(jpegOfFrame(frame, this.play_native ? { dht: this.play_native.dht } : {}));   // A-JPEGDHT-1
           img.folder = img.file.folder; img.number = img.file.number;                 // its DCF name's numbers
           img.size = [frame[0], frame[1]];                                              // the JPEG's own size
         }

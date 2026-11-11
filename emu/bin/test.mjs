@@ -187,6 +187,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...mu.bad, ...ms.bad].forEach((x) => console.log('  ', x));
   bad += mu.bad.length + ms.bad.length;
 }
+// control camapp 3 with the play module native (src/lab/playmod.mjs, docs/hle-gaps.md 4.8.11): the PLAY tasks load the
+// card's picture, its header and still information natively; the view's decode is S-PLAYDEC's
+{
+  const { playNativeSession } = await import('../test/test_camapp.mjs');
+  const pn = await playNativeSession();
+  console.log(`camapp 3 with the play module native: ${pn.checks - pn.bad.length}/${pn.checks}`);
+  pn.bad.forEach((x) => console.log('  ', x));
+  bad += pn.bad.length;
+}
 // the imgpro unit's model (S-IMGPRO) on a bare machine; the firmware's driver on it runs in camapp 3 above
 {
   const { imgproUnits } = await import('../test/test_imgpro.mjs');

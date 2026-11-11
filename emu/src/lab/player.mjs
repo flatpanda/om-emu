@@ -52,6 +52,7 @@ import { AudioRing } from './audio.mjs';
 import { patchLine } from '../fw/patch.mjs';
 import { recordNvram, replayNvram, nvramRecord } from './nvramdoc.mjs';
 import { CPU2_STAND_INS } from './cpu2.mjs';
+import { PLAY_NATIVE_STAND_INS } from './playmod.mjs';
 
 export const PNG_CACHE = 8, SLICE_NS = 50000000, GATE_SLICE_NS = 10000000, GATE_LIMIT_NS = 2000000000, BEHIND_NS = 250000000;
 export const DIAL_CAP = 8, TOUCH_MIN_NS = 20000000, TOUCH_GAP_CAP_NS = 2000000000, TOUCH_TAP_CAP_NS = 320000000;
@@ -287,6 +288,7 @@ export class Player {
     this.session = null;
     this.camapp_components = false;  // S-BOOTDONE / S-CPU3 too (control camapp 2): the HLS components run
     this.camapp_native_tra = false;  // control camapp 3: the components with the transaction path native (camapp.mjs TRAACK_KEPT)
+    this.camapp_play_native = false; // with camapp 3 only: the play module natively (playmod.mjs; set by its tests)
     this.phase = 'starting';
     this.error = null;
     this.status_seq = 0;
@@ -348,7 +350,8 @@ export class Player {
       ...((a.rotate ?? 'off') !== 'off' ? { rotate: a.rotate } : {}),   // absent when off: the recorded documents
       ...((a.take ?? 'stand-in') !== 'stand-in' ? { take: a.take } : {}),   // the TAKE probe (take.mjs); absent by default
       ...((a.cpu2 ?? 'stand-in') !== 'stand-in' ? { cpu2: a.cpu2 } : {}),   // CPU 2 natively (cpu2.mjs)
-      ...(this.camapp_components ? { camapp_components: true } : {}), ...(this.camapp_native_tra ? { camapp_native_tra: true } : {}) };
+      ...(this.camapp_components ? { camapp_components: true } : {}), ...(this.camapp_native_tra ? { camapp_native_tra: true } : {}),
+      ...(this.camapp_native_tra && this.camapp_play_native ? { camapp_play_native: true } : {}) };
   }
   open_session() {
     const a = this.a;
@@ -423,7 +426,7 @@ export class Player {
     if (a.x_mutant !== 'no-aeinit') used.push('H-AEINIT');
     if ((a.a15 ?? 'auto') !== 'off') used.push('A15');
     if (a.x_mutant !== 'no-dispq') used.push('S-DISPQ');                                     // :2519
-    used.push('H-GUIBYAPP', 'S-CAMAPP', 'S-MODACK', 'S-RVSTANDBY', ...(this.camapp_native_tra ? [] : ['S-TRAACK']), 'S-RELSEQ', 'S-CARD', ...(this.session?.lens ? [] : ['S-LENS']), 'S-EXPOSE', 'S-LONGTIMER', 'S-DISPFRAME', 'S-TAKEFRAME', 'S-AFOSD', 'S-CPU3', 'S-RECVIEW', this.env.nvram ? 'S-NVRAM' : 'S-SETSAVE', 'H-STOREINIT', 'S-OUTDISP', 'S-THROUGH', 'S-PLAYSEQ', 'S-PLAYCOMP', 'S-PLAYVIEW', ...(this.camapp_components && !this.camapp_native_tra ? ['S-BOOTDONE'] : []));   // the camera application runs natively
+    used.push('H-GUIBYAPP', 'S-CAMAPP', 'S-MODACK', 'S-RVSTANDBY', ...(this.camapp_native_tra ? [] : ['S-TRAACK']), 'S-RELSEQ', 'S-CARD', ...(this.session?.lens ? [] : ['S-LENS']), 'S-EXPOSE', 'S-LONGTIMER', 'S-DISPFRAME', 'S-TAKEFRAME', 'S-AFOSD', 'S-CPU3', 'S-RECVIEW', this.env.nvram ? 'S-NVRAM' : 'S-SETSAVE', 'H-STOREINIT', 'S-OUTDISP', 'S-THROUGH', ...(this.session?.camapp?.play_native ? PLAY_NATIVE_STAND_INS : ['S-PLAYSEQ', 'S-PLAYCOMP', 'S-PLAYVIEW']), ...(this.camapp_components && !this.camapp_native_tra ? ['S-BOOTDONE'] : []));   // the camera application runs natively
     if ((a.device ?? 'tft') === 'evf' && a.x_mutant !== 'evf-store-after-open') used.push('H-STOREFIRST');   // :2521
     if (!a.no_bgdraw) used.push('S-BGDRAW');
     if (this.idle === 'wall') used.push('H-IDLE');

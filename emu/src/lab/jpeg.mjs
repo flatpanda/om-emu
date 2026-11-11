@@ -2,7 +2,10 @@
 // then Cb for an even pixel, Y then Cr for an odd one), with each 8 x 8 block reduced to its mean: every block's DCT
 // coefficients but the DC one are 0. It is the lab's picture file content (src/lab/storage.mjs S-RECFILE), not the
 // camera's development: the image processing does not run in the lab. Pure JS.
-//   jpegOfFrame([w, h, rows]) -> Uint8Array
+//   jpegOfFrame([w, h, rows], { dht }) -> Uint8Array
+// dht (optional): a DHT segment (ff c4, its length, then the tables) holding the four tables the stream uses (DC and
+// AC, ids 0 and 1), written in place of the lab's own four and used for the coding (the firmware's own tables with the
+// play module native, src/lab/playmod.mjs A-JPEGDHT-1; docs/hle-gaps.md 4.8.11). Without it the output is as before.
 
 // T.81 Annex K.3's DC tables (code lengths 1..16 and the categories), and an AC table with its one symbol, EOB
 const DC_LUMA = [[0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0], [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]];
@@ -34,9 +37,27 @@ class Bits {
 
 const seg = (marker, body) => [0xff, marker, (body.length + 2) >> 8, (body.length + 2) & 255, ...body];
 const dht = (cls, id, [bits, vals]) => seg(0xc4, [cls << 4 | id, ...bits, ...vals]);
+// a DHT segment's tables: (class << 4 | id) -> [bits, vals]; throws on anything but one segment of whole tables
+export function dhtTables(segment) {
+  const b = segment, out = new Map();
+  if (b[0] !== 0xff || b[1] !== 0xc4 || (b[2] << 8 | b[3]) !== b.length - 2) {
+    throw new RangeError('dhtTables: not one DHT segment');
+  }
+  for (let k = 4; k < b.length;) {
+    const tc = b[k], bits = [...b.subarray(k + 1, k + 17)], n = bits.reduce((x, y) => x + y, 0);
+    if (k + 17 + n > b.length || out.has(tc)) throw new RangeError(`dhtTables: table 0x${tc.toString(16)} at ${k}`);
+    out.set(tc, [bits, [...b.subarray(k + 17, k + 17 + n)]]);
+    k += 17 + n;
+  }
+  return out;
+}
 
-export function jpegOfFrame([w, h, rows]) {
+export function jpegOfFrame([w, h, rows], { dht: given = null } = {}) {
   if (!(w > 0 && h > 0 && w < 65536 && h < 65536)) throw new RangeError(`jpegOfFrame: ${w} x ${h}`);
+  const own = given ? dhtTables(given) : null;
+  if (own && ![0x00, 0x01, 0x10, 0x11].every((tc) => own.has(tc))) {
+    throw new RangeError('jpegOfFrame: the DHT lacks a DC or AC table 0 or 1');
+  }
   const at = (x, y) => rows[Math.min(y, h - 1)].subarray(0, 2 * w);
   // the samples of a block's 8 x 8 area, edges replicated: Y at a pixel; Cb or Cr at a chroma column (half width)
   const mean = (x0, y0, pick) => {
@@ -46,7 +67,10 @@ export function jpegOfFrame([w, h, rows]) {
   };
   const Y = (x, y) => at(Math.min(x, w - 1), y)[2 * Math.min(x, w - 1)];
   const C = (cx, y, odd) => { const x = Math.min(2 * cx + odd, w - 1 - ((w - 1 - odd) & 1)); return at(x, y)[2 * x + 1]; };
-  const tables = [codes(DC_LUMA), codes(DC_CHROMA)], eob = codes(AC_EOB).get(0);
+  const tables = own ? [codes(own.get(0x00)), codes(own.get(0x01))] : [codes(DC_LUMA), codes(DC_CHROMA)];
+  const eobs = own ? [codes(own.get(0x10)).get(0), codes(own.get(0x11)).get(0)]
+    : [codes(AC_EOB).get(0), codes(AC_EOB).get(0)];
+  if (eobs.some((e) => !e)) throw new RangeError('jpegOfFrame: an AC table without EOB');
   const bits = new Bits(), pred = [0, 0, 0];
   const block = (comp, m) => {
     const dc = Math.round(m) - 128, diff = dc - pred[comp];
@@ -55,6 +79,7 @@ export function jpegOfFrame([w, h, rows]) {
     const [code, len] = tables[comp === 0 ? 0 : 1].get(cat);
     bits.put(code, len);
     if (cat) bits.put(diff < 0 ? diff + (1 << cat) - 1 : diff, cat);
+    const eob = eobs[comp === 0 ? 0 : 1];
     bits.put(eob[0], eob[1]);
   };
   for (let my = 0; my < Math.ceil(h / 8); my++) for (let mx = 0; mx < Math.ceil(w / 16); mx++) {
@@ -67,7 +92,7 @@ export function jpegOfFrame([w, h, rows]) {
     ...seg(0xe0, [0x4a, 0x46, 0x49, 0x46, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0]),
     ...seg(0xdb, [0, ...new Array(64).fill(Q)]),
     ...seg(0xc0, [8, h >> 8, h & 255, w >> 8, w & 255, 3, 1, 0x21, 0, 2, 0x11, 0, 3, 0x11, 0]),
-    ...dht(0, 0, DC_LUMA), ...dht(1, 0, AC_EOB), ...dht(0, 1, DC_CHROMA), ...dht(1, 1, AC_EOB),
+    ...(given ? given : [...dht(0, 0, DC_LUMA), ...dht(1, 0, AC_EOB), ...dht(0, 1, DC_CHROMA), ...dht(1, 1, AC_EOB)]),
     ...seg(0xda, [3, 1, 0x00, 2, 0x11, 3, 0x11, 0, 63, 0]),
     ...bits.flush(), 0xff, 0xd9];
   return Uint8Array.from(out);

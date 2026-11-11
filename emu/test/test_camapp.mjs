@@ -53,6 +53,18 @@
 //                  mode (MODE_EXPOSE, the custom banks' MODE_RAW, B's MODE_DIAL_B_ONOFF) and keeps the other settings,
 //                  each position shows a screen of its own, and away from P OK opens the Super Control Panel and MENU
 //                  the menu; with the mode store's object words cleared (no H-STOREINIT) a change zeroes the settings
+//   playNativeSession  control camapp 3 with the play module native (E143; the Player's camapp_play_native,
+//                  src/lab/playmod.mjs): H-PLAYSTART starts the six PLAY tasks, which wait on their queues; two
+//                  pictures carry the firmware's own Huffman tables (A-JPEGDHT-1) and decode (refs/jpeg.mjs); PLAY
+//                  loads the newest from the card natively (the header getter's code 0, the play capability's state
+//                  0), the view's decode is S-PLAYDEC's (its request recorded: the file, 7170, 1620 x 1080 to the
+//                  through image's bank, 3074, 900 x 600), and the GUI shows ID_ST_DISP_SIMPLE with the component's
+//                  getNumber 2 of file 2 in folder 100; right and left move between the two (1, then 2) and PLAY
+//                  returns; INFO's detail view takes its still information from the file's own Exif and SOF (the
+//                  date, size, exposure and ISO the file holds, not still_record's), then DISPLAY cmd 16 reads the
+//                  VSC histogram's bins of a run not ended: the furthest point (docs/hle-gaps.md 4.8.11); control:
+//                  with the lab's own one-symbol AC tables the play module's JPEG parse refuses the second DHT
+//                  (12428), the header getter answers 6152 and PLAY shows No Picture
 //   node emu/test/test_camapp.mjs
 import fs from 'node:fs';
 import path from 'node:path';
@@ -563,6 +575,115 @@ export async function camapp3FramesSession() {
   return { checks, bad };
 }
 
+// control camapp 3 with the play module native (docs/hle-gaps.md 4.8.11; E143; src/lab/playmod.mjs). D unless tagged:
+//   the six tasks H-PLAYSTART starts, [tid, name], in USTART5's order (X: the id words' values)
+//   the header getter's code at its end (d2 at 0x518b63da: 0; 6152 where neither the thumbnail's nor the main image's
+//   size is found, 0x518b638c..0x518b63a3), the play capability's state (PLAY_CAP_STATE), the size parse's results (d0
+//   at 0x518b2045, after the JPEG parse 0x50428ee6): the IFD1 thumbnail's first, 12418 (the file's is 0 bytes, 589 or
+//   less refused at 0x50429082), then the main image's, 0, or 12428 where a DHT's code count is not 12 / 162
+//   (0x5042928a, 0x504292c0)
+//   OlyHfwOpePlyCom's getNumber wrapper (a1 the index, d0 the file number, d1 the folder, as camapp.mjs PLAY_COMPONENT
+//   writes them) and the still information converter (src/fw/facts.mjs STILL_CONVERT_E143: a1 the GUI's record, read
+//   at its return; the record's fields as test_playinfo.mjs GUI names them, ISO at +88, fact play.still)
+//   the view's decode S-PLAYDEC records (X): the source format 7170 (the lab's 4:2:2 picture), 1620 x 1080, to the
+//   through image's bank in format 3074, 900 x 600 at a pitch of 5568 pixels
+//   INFO's stop (X): DISPLAY cmd 16's read of the VSC histogram's bins (0x501e150e, its load at 0x501e153d, from
+//   0x501d7121) refused by the model (HIST_UNMODELLED: no run ended since the last began)
+const PN_TASKS = [[25, 'PLAY_MAIN'], [24, 'PLAY_LOAD'], [23, 'PLAY_IMAGE'], [26, 'PLAY_SOUND'], [118, 'PLAY_DECODE'], [119, 'PLAY_LOADDRAW']];
+const GUI_DISP_SIMPLE = '0x0508', GUI_DISP_DETAIL = '0x050b', PN_PLAY_CAP_OK = 0;
+const PN_HEADER_CODE = 0x518B63DA, PN_SIZE_PARSE = 0x518B2045, PN_THUMB_NONE = 12418, PN_DHT_REFUSED = 12428, PN_GET_NUMBER = 0x50ACF1A8, PN_CONVERTER = 0x50ACC981;
+const PN_GUI = { year: 0, month: 2, day: 3, hour: 4, minute: 5, width: 8, height: 10, exp: 40, focal: 56, iso: 88 };
+const PN_VIEW = { format: 7170, width: 1620, height: 1080, dst: 0x98D4D800, dst_format: 3074, dst_width: 900, dst_height: 600, pitch: 5568 };
+const PN_FOLDER = 100, PN_STOP = /HIST_UNMODELLED pc 0x6020255d /;
+const EXIF_DATE_ORIGINAL = 0x9003, EXIF_EXPOSURE = 0x829A, EXIF_ISO = 0x8827, DHT = 0xC4;
+export async function playNativeSession() {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
+  const { Player } = await import('../src/lab/player.mjs');
+  const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+  const { openVolume } = await import('../refs/volume.mjs');
+  const { decodeJpeg } = await import('../refs/jpeg.mjs');
+  const { readExif, jpegSegments } = await import('../refs/exif.mjs');
+  const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
+  for (const control of [false, true]) {
+    const tag = control ? 'control (the lab\'s tables)' : 'play native';
+    const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, env);
+    pl.camapp_components = true; pl.camapp_native_tra = true; pl.camapp_play_native = true;
+    try {
+      pl.open_session();
+      const s = pl.session, lab = s.lab, ca = s.camapp, pm = ca.play_native;
+      const idle = (ms) => { const to = lab.lab_time() + ms * 1e6; while (lab.lab_time() < to) s.idle_slice(Math.min(to, lab.lab_time() + 50e6)); };
+      const key = (k) => { s.key(k, 'down'); s.camapp.pump(); idle(100); s.key(k, 'up'); s.camapp.pump(); idle(800); return s.status().gui; };
+      const u32 = (a) => lab.sim.u32(a) >>> 0, rd = (a, n) => lab.sim.read(a, n), le = (b, o, n) => (n === 1 ? b[o] : n === 2 ? b[o] | b[o + 1] << 8 : (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0);
+      // the control: S-CARD's pictures with the lab's own tables (A-JPEGDHT-1 not applied)
+      if (control) Object.defineProperty(pm, 'dht', { value: undefined });
+      const used = pl.stand_ins_in_use();
+      ok(pm && ['H-PLAYSTART', 'S-PLAYDEC', 'A-JPEGDHT-1'].every((x) => used.includes(x)) && !['S-PLAYSEQ', 'S-PLAYCOMP', 'S-PLAYVIEW'].some((x) => used.includes(x)),
+        `${tag}: the stand-ins ${used.filter((x) => /PLAY|JPEGDHT/.test(x))}`);
+      const waiting = pm.tids.map(([t]) => (lab.nk.state(t) & 0xF) === 4);
+      ok(JSON.stringify(pm.tids) === JSON.stringify(PN_TASKS) && waiting.every(Boolean) && !ca.module_queues.has(0x3F),
+        `${tag}: H-PLAYSTART's tasks ${JSON.stringify(pm.tids)} waiting ${waiting}, PLAY_EXEC in S-MODACK's set ${ca.module_queues.has(0x3F)}`);
+      // two pictures; the second's file from the card: its DHT segments' tables and its decode
+      for (let i = 0; i < 2; i++) {
+        s.key('s1', 'down'); s.camapp.pump(); idle(600); s.key('s2', 'down'); s.camapp.pump(); idle(700);
+        s.key('s2', 'up'); s.camapp.pump(); s.key('s1', 'up'); s.camapp.pump(); idle(2000);
+      }
+      const img = ca.images.at(-1), st = s.storage, vol = openVolume((lba, n) => st.card.read(lba, n));
+      const file = vol.data(vol.find(img.file.path.slice(3).replaceAll('\\', '/'))), exif = readExif(file);
+      const dhts = jpegSegments(file).filter((g) => g.marker === DHT), counts = [];
+      for (const g of dhts) for (let k = g.at + 4; k < g.at + 2 + g.length;) { const n = file.subarray(k + 1, k + 17).reduce((x, y) => x + y, 0); counts.push(n); k += 17 + n; }
+      const pic = decodeJpeg(file);
+      ok(ca.card_images() === 2 && pic.width === PN_VIEW.width && pic.height === PN_VIEW.height
+        && JSON.stringify(counts) === JSON.stringify(control ? [12, 1, 12, 1] : [12, 162, 12, 162]),
+        `${tag}: ${ca.card_images()} pictures; the second's DHT code counts ${counts} (${dhts.length} segments), decoded ${pic.width} x ${pic.height}`);
+      // PLAY: the newest loaded natively
+      const codes = [], parses = [], numbers = [], infos = [];
+      lab.observe(PN_HEADER_CODE, (l, r) => codes.push(r.d2 & 0xFFFF), 'test: the header info getter\'s code');
+      lab.observe(PN_SIZE_PARSE, (l, r) => parses.push(r.d0 & 0xFFFF), 'test: the size parse');
+      lab.observe(PN_GET_NUMBER, (l, r) => {
+        const p = [r.a1 >>> 0, r.d0 >>> 0, r.d1 >>> 0], ret = r.mdr >>> 0;
+        lab.hook_rt(ret, (h, rr) => { lab.hooks.delete(ret); numbers.push(p.map(u32)); lab.passthrough(rr); }, 'test: getNumber\'s return');
+      }, 'test: getNumber');
+      lab.observe(PN_CONVERTER, (l, r) => {
+        const rec = r.a1 >>> 0, ret = r.mdr >>> 0;
+        lab.hook_rt(ret, (h, rr) => { lab.hooks.delete(ret); infos.push(rd(rec, PN_GUI.iso + 4)); lab.passthrough(rr); }, 'test: the converter\'s return');
+      }, 'test: the converter');
+      const play = key('play'), cap = rd(PLAY_CAP_STATE, 2)[0];
+      if (control) {
+        ok(play === GUI_NO_PICTURE && JSON.stringify(parses.slice(0, 2)) === JSON.stringify([PN_THUMB_NONE, PN_DHT_REFUSED]) && codes.includes(HEADER_NOT_LOADED) && !pm.decodes.length,
+          `${tag}: PLAY shows ${play}: the size parse ${parses}, the header getter's codes ${codes}, decodes ${pm.decodes.length}`);
+        continue;
+      }
+      const dec = pm.decodes[0] ?? {}, view = Object.entries(PN_VIEW).every(([k, v]) => dec[k] === v);
+      ok(play === GUI_DISP_SIMPLE && codes.length && codes.every((c) => c === 0) && JSON.stringify(parses.slice(0, 2)) === JSON.stringify([PN_THUMB_NONE, 0]) && cap === PN_PLAY_CAP_OK
+        && pm.decodes.length === 1 && pm.waits === 1 && view && JSON.stringify(numbers.at(-1)) === JSON.stringify([2, img.number, PN_FOLDER]),
+        `${tag}: PLAY shows ${play}: the header getter's codes ${codes}, the size parse ${parses}, the capability's state ${cap}, S-PLAYDEC ${JSON.stringify(pm.decodes)} (${pm.waits} waits), getNumber ${JSON.stringify(numbers.at(-1))}`);
+      // right and left move between the two, each loaded and its view decoded; PLAY returns
+      numbers.length = 0;
+      const right = key('right'), n1 = numbers.at(-1), left = key('left'), n2 = numbers.at(-1), back = key('play');
+      ok(right === GUI_DISP_SIMPLE && left === GUI_DISP_SIMPLE && back === GUI_SHOOTING && n1?.[0] === 1 && n1?.[1] === ca.images[0].number && n2?.[0] === 2 && pm.decodes.length === 3,
+        `${tag}: right (${right}, getNumber ${JSON.stringify(n1)}), left (${left}, ${JSON.stringify(n2)}), PLAY returns (${back}); decodes ${pm.decodes.length}`);
+      // INFO: the detail view's still information from the file (its Exif's date, exposure and ISO, its SOF's size)
+      key('play');
+      infos.length = 0;
+      let stop = null, info = null;
+      try { info = key('info'); } catch (e) { stop = e.message; }
+      const g = infos.at(-1), date = (exif.exif?.get(EXIF_DATE_ORIGINAL) ?? '').split(/[: ]/).map(Number);
+      const gui = g ? [le(g, PN_GUI.year, 2), g[PN_GUI.month], g[PN_GUI.day], g[PN_GUI.hour], g[PN_GUI.minute]] : null;
+      const exp = g ? [le(g, PN_GUI.exp, 4), le(g, PN_GUI.exp + 4, 4)] : null, iso = g ? le(g, PN_GUI.iso, 4) : null;
+      ok(g && JSON.stringify(gui) === JSON.stringify(date.slice(0, 5)) && le(g, PN_GUI.width, 2) === pic.width && le(g, PN_GUI.height, 2) === pic.height
+        && JSON.stringify(exp) === JSON.stringify(exif.exif?.get(EXIF_EXPOSURE)) && iso === exif.exif?.get(EXIF_ISO),
+        `${tag}: INFO's still information ${JSON.stringify({ gui, exp, iso, size: g && [le(g, PN_GUI.width, 2), le(g, PN_GUI.height, 2)] })}, the file's ${JSON.stringify({ date, exp: exif.exif?.get(EXIF_EXPOSURE), iso: exif.exif?.get(EXIF_ISO), size: [pic.width, pic.height] })}`);
+      ok(info === null && PN_STOP.test(stop ?? '') && lab.state_names.get(lab.state())?.endsWith('ID_ST_DISP_DETAIL'),
+        `${tag}: INFO reaches ${lab.state_names.get(lab.state())} and stops at DISPLAY cmd 16's bins read (want HIST_UNMODELLED at 0x501e153d): ${info ?? stop?.slice(0, 300)}`);
+    } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 600)}`); }
+    finally { pl.close_session(); }                                   // the control's continue too
+  }
+  return { checks, bad };
+}
+
 // The mode dial's positions as the application takes them (E143; docs/om1-input-spec.md section 2): the setting each
 // position's mode change sets on the blank store, by the position's name (X, 2026-10-30): MODE_EXPOSE (24) P 3, A 4,
 // S 5, M 6, Movie 76, and 3 (P) in the custom banks C1..C4, which also set MODE_RAW (22); B sets MODE_DIAL_B_ONOFF
@@ -629,7 +750,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const r = await run('camapp', camappSession), h = await run('heap', heapSession), w = await run('workload', heapWorkloadSession), m = await run('dial', modeDialSession);
   const t = await run('tra', traRoutingSession);
   const f = await run('frames', camapp3FramesSession);
-  console.log(`camapp session: ${r.checks - r.bad.length}/${r.checks}; the heap over an idle: ${h.checks - h.bad.length}/${h.checks}; the heap over a workload: ${w.checks - w.bad.length}/${w.checks}; the mode dial: ${m.checks - m.bad.length}/${m.checks}; camapp 3's transactions: ${t.checks - t.bad.length}/${t.checks}; camapp 3's frames: ${f.checks - f.bad.length}/${f.checks}`);
-  [...r.bad, ...h.bad, ...w.bad, ...m.bad, ...t.bad, ...f.bad].forEach((x) => console.log('  ', x));
-  process.exit(r.bad.length || h.bad.length || w.bad.length || m.bad.length || t.bad.length || f.bad.length ? 1 : 0);
+  const pn = await run('playnative', playNativeSession);
+  console.log(`camapp session: ${r.checks - r.bad.length}/${r.checks}; the heap over an idle: ${h.checks - h.bad.length}/${h.checks}; the heap over a workload: ${w.checks - w.bad.length}/${w.checks}; the mode dial: ${m.checks - m.bad.length}/${m.checks}; camapp 3's transactions: ${t.checks - t.bad.length}/${t.checks}; camapp 3's frames: ${f.checks - f.bad.length}/${f.checks}; the play module native: ${pn.checks - pn.bad.length}/${pn.checks}`);
+  [...r.bad, ...h.bad, ...w.bad, ...m.bad, ...t.bad, ...f.bad, ...pn.bad].forEach((x) => console.log('  ', x));
+  process.exit(r.bad.length || h.bad.length || w.bad.length || m.bad.length || t.bad.length || f.bad.length || pn.bad.length ? 1 : 0);
 }

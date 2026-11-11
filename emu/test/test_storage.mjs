@@ -738,8 +738,8 @@ const familyPlayer = async (card) => {
 // Format from the menu after a picture: the firmware formats the card from the application's own start; read back
 // independently, the volume the insertion's format gave (its type, its label), its root empty, the picture gone and the
 // free count a fresh volume's; the counts reset (the firmware's image count 0, its next file 1, the remaining shots the
-// fresh card's); the application leaves Busy for the shooting screen (X: where the family's returns); then S2's picture
-// lands on the card as the first file again
+// fresh card's); the application leaves Busy for the shooting screen (X in the lab; where the camera returns is ?,
+// docs/model-survey.md finding 129); then S2's picture lands on the card as the first file again
 async function hlsFormatFamily(card, tag, ok, bad, notes) {
   const { runtime } = await import('../src/lab/hle.mjs');
   const { A } = await import('../src/fw/model.mjs');

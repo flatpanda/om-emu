@@ -1873,99 +1873,6 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    DEVICE's masks are null on the kind-3 bodies and the three helpers (and play's TH live view) refuse there with that
    reason, where they had reached an unplaced function; none of them runs on the family's paths (X: modelcheck's E118,
    E120 and E122 runs unchanged).
-118. **The E144 family's REC version: REC_FILE on its queue alone** (2026-11-10, `src/fw/facts.mjs` recFileQueue, fact
-   `rec_file`, `docs/hle-gaps.md` 4.8.10; D on E144 unless tagged; finding 83's stop). REC_FILE (task 31,
-   `0x503f5dc0`) receives REC's packet of 300 bytes from its queue (the word `0x60041864`, id 73) through REC's
-   receive wrapper (`0x503f1206`: the kernel's receive with "rec.c", no timeout), with no event flag and no bind. For
-   each packet its loop calls a trace, rec_file_start_process (`0x503f73c2`), where NoRecord (+282) is 1 the buffers'
-   free (`0x503f5f3f`), else rec_file_destination_record (`0x503f6bb9`: RecordDevice bit 0 to rec_make_file
-   `0x503f5e47`, rec_file_record `0x503f5fbb`), whose status it keeps (`mov d0,d2` at `0x503f5e05`, the lab's
-   handled), rec_file_finish_process (`0x503f74a1`) and with Free (+286) the reply (`0x503f1192`); a status of 8064 to
-   8191 ends the loop. The packet dump (`0x503f8314`) names every field in the packet, the image's address and size
-   too (no image record, unlike E146's): pExifParam +28, HandleTarget +116, BuffAddr1 / BuffSize1 +136 / +140,
-   HeaderSize +176, Addr / Size +180 / +184, Status +192, Mode +194, Media +198, Media2 +200, RecordDevice +202,
-   ImgAspect +283, Free +286, FileType +298 (+296 on E134, E137 and E125). REC_IMAGE's rec_make_image_finish
-   (`0x503f8c55`) posts a still's packet to REC_FILE's queue itself (`0x503f8da9`: Mode 4097 by its table
-   `0x605791a4`, Status not 40662 and the shot's record's +28600 not 5) with "REC post_msg" (`0x503f1256`, 300 bytes),
-   where E143's goes through REC's ring (`docs/hle-gaps.md` 4.3.3): S-RECIMAGE's post is the camera's route here. The
-   other seven run the same loop as task 30 or 31; E139, E134 and E125 (the double-slot bodies) first call
-   `0x503f2402` (E139's) with a 92-byte record of the task's stack (sp + 304) and, where its +88 is 1,
-   rec_make_file_DoubleSlot (`0x503f3e0c`) in the destination record's place (I: the second slot's record); E137, E142
-   and E140 call rec_make_file there directly. REC's module init is the function that ends `mov 8191,d0; ret` right
-   before REC_MAIN's task, which holds the "rec_main" trace (E144 `0x503f0fa9` before `0x503f1010`; E143's
-   `0x50539665` before `0x505396d1`), and binds one queue, to REC_MAIN's flag (E144 `0x60041868` to `0x60041726`, as
-   E143's binds `0x60043252` to `0x600430fe`); E143's bind of REC_FILE's queue (`0x5053f189`) has no counterpart.
-119. **The family's header maker and EXIF module** (2026-11-10; D on E144 unless tagged). rec_jpeg_exec
-   (`0x503ff3e3`) takes the file's buffer from REC's pool 3 (`0x50401673`) into Addr, runs rec_jpeg_make_image
-   (`0x503ff598`), frees a work area (`0x50401965`) and, with Status 0, runs rec_jpeg_make_header (`0x503ff64c`); no
-   header area is cleared through the image engine before the encode (E143's `0x5054c982` has no counterpart), so
-   S-JPEGENC stands in for the encode alone. The header maker sets HeaderSize 41984 (`0x503fff59`) and writes SOI,
-   APP1 `Exif` (its length 41982 less `0x5030c51b`'s, the serializer `0x5030b3d4`) and after it `0x5030c4d4`'s part;
-   it divides by the shot's crop area at +31550 ({x, y, xden, yden}, `0x503ffa31`, `0x503ffa6e`; rec_raw_make_header
-   by +31558, `0x50405d8c`), which S-EXIFPRM sets to {0, 0, 1, 1} as on E143 (X: with it 0 the header maker faulted
-   at `0x503ffa82`, the divide). The EXIF module's init (`0x5030b384`, its inner `0x5030b38d` loading the template
-   `0x620eb760`) flushes no cache; TAKE's copy (`0x5030b3b9`) copies 31700 bytes; the EXIF set's date formatting
-   (`0x5030dc6a`) takes the time record at +28508 with the format `0x4200` into DateTimeOriginal +4089, copied to
-   CreateDate +4109 and DateTime +1364, in a 16-bit form of E143's add; E137 and E125 add the time to a3, E142, E140
-   and E130 to d0 kept at (12,sp) (`0x502fcdfe`, `0x502e26c3`; X, a scan of the three forms: one hit per image). By
-   body (X, the rule): the template 31708 bytes on E148, 29068 on E139 and E134, 27928 on E137, 27620 on E125, 27332
-   on E142, 26956 on E140; the time record +28516, +25868, +25868, +24728, +23984, +23832, +23824; DateTimeOriginal
-   +4089 on E148, +1785 on the six others (CreateDate +1805); DigitalZoomRatio +4224 on E144 and E148, +1920, and
-   +1900 on E125; Make +1480 and Model +1504 on all; the crop areas E148 +31558 / +31566, E139 and E134 +28910 /
-   +28918, E137 +27778 / +27786, E125 +27462 / +27470, E142 +27180 and E140 +26804 (no RAW header's area: their
-   rec_raw_make_header holds no such divide).
-120. **The family's file contexts and the camera's clock, by form** (2026-11-10; D unless tagged). E144's
-   rec_file_record fills one file context of E143's 92-byte layout (`0x62127124`, `0x503f6041..0x503f60b6`: +8 the
-   DCF block, +12 and +32 the chain write's and the entry's blocks (I: E142's fill sizes them 116 and 96), +40
-   pExifParam, +44 the time record, +48 HeaderSize, +52 the size, +76 Media, +78 the type, +80 FileType; X: the fnode
-   at +36 and the stamp in the DCF block read through it give the card's file) and records through it with the
-   whole-file recorder's own builders (the open `0x50400188`, the reservation `0x50400368`, the chain write
-   `0x504003f8`, the entry `0x50400556`, the registration `0x504006d5`, finding 71). E139, E134 and E125 pick one of
-   two by Media as E143 does (E139 `0x503f4a61`: `0x62165420`, `0x6216547c`); E142 and E140 load theirs into a2 for
-   the context fill `0x503c4340` (E142's: `0x622930f4`, its entry block one of 96 bytes). Where there is one, the rule
-   takes the one data address rec_file_record loads into an address register whose +52 and +78 it also stores to by
-   address (E144 `0x503f6083` and `0x503f6093`, E142 `0x503c491f` and `0x503c4919`; the same on E148, E137 and E140,
-   X: a scan). The camera's clock setting is the one function of each of the 19 images that ends `mov
-   10499,d0; movhu d0,(8,a2); ret` (E144 `0x500f022e`), and its clock read the function right after it (E144
-   `0x500f024e`), the port's place of E143's `0x5012b7cd` on all 19 (X, a scan): the rule reads both there, where
-   recFile took the read from the recorder (fact `recorder`, read on E144 and E148 only). It is also the clock read
-   the 96-byte recorder calls on the eleven images that hold one (finding 122; X, a scan of its third call).
-121. **REC_FILE natively on eight E144-family bodies** (2026-11-10, X: `test/test_storage.mjs --session` per body,
-   32 checks each; refs/exif.mjs and exiftool). With the clock set through each body's clock setting (2026-11-08
-   12:34:56) S2 gives `C:\DCIM\100OMSYS\PB080001.JPG` on E144 and E148 and `C:\DCIM\100OLYMP\PB080001.JPG` on E139,
-   E134, E137, E142, E140 and E125: 62,857 bytes, 41,984 of the firmware's header, then the lab's stream after its
-   SOI, from cluster 5. Its Exif: on E144 and E148 Make `OM Digital Solutions`, Model `OM-5` and `OM-5MarkII`, Exif
-   version 0231 and 0300, the maker notes `OM SYSTEM` (19,636 and 19,644 bytes, CameraType2 the Model) and an XMP
-   segment after the Exif (`0a 00` past HeaderSize, as E143's); on the six others Make `OLYMPUS CORPORATION`, Model
-   `E-M1MarkIII`, `E-M1X`, `E-M5MarkIII`, `E-P7`, `E-M10MarkIV` and `E-M1MarkII`, Exif version 0231 (0230 on E125),
-   the maker notes `OLYMPUS` (CameraID `OLYMPUS DIGITAL CAMERA`, 16,996 to 19,164 bytes) and no XMP, the Exif segment
-   then reaching 2 bytes past HeaderSize; on all eight the three dates the clock's and IFD1's thumbnail of length 0,
-   read by exiftool without a warning. The firmware's image count is 1 and its fnode 1 the file in the same session
-   (S-CARD's count and list retired there, `src/lab/camapp.mjs` dcf_db), and the next session's numbering mount gives
-   file 2. Around S2 E144 and E139 log E143's REC warnings (`0x0d090002`, `0x1e01500e`, `0x1e001001`, `0x1e01500d`
-   twice). `test/test_playinfo.mjs` (two pictures, RIGHT, LEFT, INFO's three views) passes on all eight, 14 checks
-   each. The rule reads none on E130, E145, E133, E129 and E132 (finding 123) nor on the E118 family, whose loop has
-   the form but whose table names no "REC post_msg" function (the post's `0x1002` trace's code names the name before
-   it, X).
-122. **A correction to finding 71, and REC's trace table** (2026-11-10). Finding 71's recorder is one form of two: the
-   whole-file recorder with blocks of 64, 96 and 116 bytes (the second the directory entry's) is on E139, E134, E137,
-   E125, E142, E140, E130, E145, E133, E129 and E132 (X, a scan; E139 `0x515be1ab`, its clock read `0x500f0d89` and
-   builders `0x503fede6` ..), none on the E118 family, so "none on the other 13" holds for the 100-byte form only.
-   E139's builders are E144's instruction for instruction (D, but for data addresses and the folder name's `LYMP`)
-   except the entry's block, which lacks E144's word at +28: the stamps at +28 and +32, the first cluster +36, the
-   attribute +42, the folder's entry place +80 (`0x503ff344` against `0x50400556`, the place's copy `0x5062a1bc` against
-   `0x506682e2`); E134's, E137's and E125's are E139's but for their error traces' line numbers (X, a diff); those of
-   E142, E140, E130, E145, E133, E129 and E132 differ (not read). The rule `recorder` keeps the 100-byte form, so
-   S-RECFILE's DCF steps are not extended to them. REC's trace table is on all 19 images (X); recFile's read of it,
-   which wants a NUL before its head string, misses E134's, E137's and E125's, where a word precedes it (E134
-   `0x6055d190`), and recFileQueue reads it there.
-123. **What is left of the family's REC** (2026-11-10; D unless tagged). E130, E145, E133, E129 and E132: REC_FILE's
-   task inlines its start and finish processes (E130 `0x503d9350`, both traces in its loop, `0x503d9382` and
-   `0x503d942f`), and E130 holds no "pExifParam " dump string (X); they keep S-RECFILE through fileif (no rec_native,
-   which test_facts leaves to each body, E142 giving it), their 96-byte recorder's builders not read (finding 122). On
-   the eight: REC_IMAGE's own task (the post of rec_make_image_finish read, finding 118), the thumbnail and the
-   shooting values in Exif (S-EXIFPRM leaves the template's), RAW files and the second slot, the shot's DCF checkout
-   (`0x1e001001`, the HLS media check-in).
 102. **The E118 family's REC version and its header maker, by a rule** (2026-11-10, `src/fw/facts.mjs` recHeader, fact
    `rec_header`; D on E122 unless tagged; answers finding 93's stop). The family's REC is older than E143's: its packet
    has no dump (no "pExifParam " in the image), REC's post (the function of the trace "REC post_msg_main", id 4; E143's
@@ -2058,110 +1965,6 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    Exif holds the template's zeros (finding 104), so a native load would show other values until TAKE's EXIF set fills
    the block (I). Running the load needs the play module's handle, play buffer and image record (finding 92), which the
    PLAY tasks and the component's start make.
-124. **The E118 family's Format runs in its application** (2026-11-10, `src/fw/facts.mjs` mediaHls, `src/lab/media.mjs`;
-   D at E122's addresses unless tagged). The menu path on the family (X, frames on E122, E118 and E120): MENU opens
-   Shooting Menu 1, whose first row is Card Setup; RIGHT enters the page and OK opens it, which offers All Erase and
-   Format while the card holds a picture and the Format confirm alone (Yes, No, the cursor on No) on an empty card. Yes
-   runs OlyHfwOpeMdaCtrl's format sender (`0x506a6c5e`, of the opening and callback id 16 of E143's TRA 1511 sender
-   `0x50ac937f`), which starts the media control itself (`0x506a819b`, X: d0 the command, 1, d1 the media, 0) where
-   E143's sends the HLS function component a transaction: no transaction runs at Yes (X: S-TRAACK's log), so the
-   family's CmpCst_Function has no part in it. The start sees the media status's bit 7 (`0x502d0c73`), calls the
-   command's API through its dispatcher `0x506a836c` (commands 1 to 5; 1, api_media's format `0x502d0a63`, API
-   `0xe0005`, which posts FILECLBK `{6, token, 0x34, block}` as E143's `0x503f0820` does) and registers a process of 44
-   bytes (OlyHfwOpeMdaCtrlProcessEvFw, ctor `0x506a7c09`) with OlyHfwEventManager (`0x5069a761`). The process's handler
-   (`0x506a7d08`) takes the file module's progress `0x04020011` (the callback (16, 3, percent) through getMediaProgress
-   `0x502d0b04`) and the API's reply as an event whose code's upper half is the token's, d1 the status, in the
-   application's event manager natively. X on E122: the card formatted (4,198 SD writes), FILECLBK's reply status 0 for
-   token `0xf0040000`, the handler's event `0xf0040000`, the bar full. During the format FILECLBK slept 500 ms once
-   where logsec's mount path finds UI_IN's last code `0x1506` (`0x50562b6b` -> `0x5057b8b1(500)`; E143's 740 ms at
-   `0x508ac202`, hle-gaps 4.8.3).
-125. **The end goes to the camera base, whose thread does not run (S-MDAEND)** (2026-11-10, D unless tagged). On the
-   reply the handler sends the progress at 100, then two requests to the camera base through `0x5073c573`, which gens
-   them (OMReactive's gen `0x5092fe44`) to the inner reactive of StateTransitionFactory's singleton (`0x61602c58`):
-   12986 (+32 1; its closure has no function) and 12965 (+32 0, +36 1), whose closure (+28; ctor `0x506d164f`, 28 bytes:
-   +12 the argument, +16 the function; vt[0] `0x506d1691` calls the function with the argument when it is not 0) holds
-   `0x506a7c9e` and the result callback (16, 72, 0) (`0x5069825a`, X). `0x506a7c9e` posts the callback (`0x50697e5b`,
-   `0x50697f12`) and calls `0x5073c0e3(15, 0)`, whose (15, 1) the start made (I: a lock of the media control). The
-   reactive is the camera base (I: its vtable sits among Cab_CameraBase.cpp's strings, "standbyState",
-   "shootModeState"); a handler that tests for 12965 (`0x5083a076`, whose class is not read) passes the closure on
-   (`0x50910c21`) with a request of its own, a 40-byte event (`0x507713b0`) to its +236, not read (?). It runs on the
-   OXF main thread (HIGHLEVEL_MAIN, task 64, `0x50693849`), dormant in the default session (X: state 0x10), so neither
-   event was handled (X: the reactive's handleEvent `0x509116dc` never ran) and the application stayed at Busy with the
-   bar full over the formatted card, on all three (X). In a default session one other event goes there, 11827 at PLAY's
-   return (X), unhandled as well. S-MDAEND stands in for the camera base's part: at the handler's sends (the rule's
-   sites) it records the event and, after the step, runs the DCF numbering mount (the next file number, I as
-   S-MDACTRL's) and the closure through its own vt[0], natively; the events stay in the camera base's queue. X: the
-   application leaves Busy for the shooting screen, 1470 shots and `00:37:19` on E122's fresh card. That the camera base
-   calls the closure once its request is done is I; where the family returns after a Format on the camera is ? (E143
-   returns to the menu). Any command but the format, or the handler's other path (another command's end or an error,
-   `0x506a8101`), stops the session.
-126. **The card out and in on the family (S-MEDIA)** (2026-11-10, D unless tagged). The family's application has E143's
-   receiving side: OlyHfwReception (its singleton creator `0x506d0e75`, vtable slot 2 synchronous in E143's form), the
-   media manager's mount notification (E143's 711, the family's id 13596, ctor `0x506a670d`, 40 bytes, sent by
-   CapMed_MediaManager with the states 8, 4 and 2 at `0x5076f37d`, `0x5076f429` and `0x5076f491`), the HLS mount state's
-   getter and setter by media kind (4 the SD card, 1, and 32 where E143 has 8), the card switch `0x1506`, which the file
-   layer registers with UI_IN (`0x50562ce6`) and the SD driver asks UI_IN's level getter for (`0x50582a1d` ->
-   `0x50177e44`, the port's place of E143's `0x5014c015`); one slot. S-MEDIA runs unchanged at these. X on E122: out,
-   the firmware's own no-card state, "No Card" with the card icon struck through and the count 0 and `00:00:00` in
-   orange (E143 draws no such screen, hle-gaps 4.8.3), the drive status 1, and the SD driver's supply request {32, 255,
-   1} answered by S-SDPOWER; in, {32, 255, 1} and {32, 0, 1} (what 0 and 255 select is ?, hle-gaps 4.8.4), the mount
-   after 275 ms of lab time, 1470 and `00:37:19` back (the frames; finding 128 has the checks). The player's card input
-   had stopped before (a TypeError): its lookup of the switch's control row read the UI_IN code of each fwswitch row,
-   and a row a body's tables do not wire has none (`src/lab/play.mjs` card_input; fixed). That this is E147's "control
-   row without a UI_IN code" (hle-gaps 4.8.7) is I; E147 was not tried again.
-127. **The rule and its reach** (2026-11-10, `src/fw/facts.mjs` mediaHls, fact `media`; `test/test_facts.mjs`
-   MEDIA_FOUND). The rule starts at the process's handler and reads each part by its form (the comment at the rule has
-   them): the handler's sends and start, the reception's creator and synchronous slot, operator new, the mount
-   notification (of two constructors of its form after the media manager's allocations, the one sent the states 2, 4 and
-   8; the other is id 5627, X), the mount state's getter and setter (of three getters of the form, the one whose words
-   the setter writes, X) and the switch code with UI_IN's level getter. E122's values are the ones found by hand and run
-   above (X); E118's and E120's the rule's, run in their sessions (finding 128). The class is held by 15 of the 19
-   images, not by the E143 family and E148 (X): the E144 family's application holds the same media control process,
-   which corrects the reading that it has a function component of its own (ROADMAP); the rule reads every part on E118,
-   E120, E122 and E145 only, and gives no fact elsewhere (X: the E144 family's start and mount state, E142's and E140's
-   reception creator, the TG-5s' and E125's level getter are of other forms). Whether the E144 family's Format runs as
-   the family's is not tried (?). `src/fw/models.mjs` card_fs.hls 'rule' takes the fact on E118, E120 and E122 with the
-   family's library numbers (`src/fw/facts.mjs` MEDIA_LIB) and the module event post at the port's place of E143's
-   `0x50025095`.
-128. **The family's HLS side in play** (2026-11-10, X: `test/test_storage.mjs --hls` per body, in `bin/test.mjs`; 21 of
-   21 checks on each of E122, E118 and E120, the same numbers on the three). On a blank 8 GiB card after S2's picture:
-   MENU, RIGHT, OK, DOWN (Format), OK, DOWN (Yes), OK; the application's start with command 1, media 0; the card input
-   refused while the format runs (S-MDAEND's start to its end, as E143's during S-MDACTRL; it had pulled the card in
-   mid-format before, X); 12986 logged without a closure, 12965's closure run (E122 `0x506a7c9e`, E118 `0x506b6bd5`,
-   E120 `0x506637c4`, each through its closure class's vt[0]); the format within 839 ms of lab time after Yes. Read
-   back independently (`refs/volume.mjs`): FAT32 `NO NAME` at 8192 with 32 KiB clusters as the insertion's format gave
-   it, the root empty, the picture gone, 260,351 of 260,352 clusters free in the FAT and FSInfo; the firmware's image
-   count 0, its next file 1, the remaining shots the fresh card's; the application back at the shooting screen; S2 then
-   writes `P1010001.JPG` again. The card out: the drive unmounted (detect state 1, the HLS mount state 0), UI_IN's
-   `0x02021506` with the level 1, the screen changed (the remaining-shots query itself still answers the count, so the
-   screen's 0 is the application's, I); a second removal refused. The card in: sd_mount initialises the card again
-   (CMD2 among more than 20 commands), the FAT mount after 275 ms, the drive status `0x3780`, the boot sector unchanged
-   (no format), the count and the whole screen as before the removal; S2 then writes its picture. E143's and E146's HLS
-   sessions are unchanged (18 of 18 each, X).
-129. **Left open** (2026-11-10). The camera base's own work at the end (its request to its +236, and 12986's), and
-   whether the camera issues the DCF numbering mount after a Format (S-MDAEND's, I); the media control's other commands
-   (All Erase among them, not driven); the second slot (the family has one); an SDXC card on the family's HLS side (not
-   tried); the menu path to Format, read from the frames and checked by the start's command, not found by a rule in the
-   menu's tables (the family's Menu_Viewer tables are not decoded in the lab); where the family returns after a Format
-   on the camera (?).
-130. **S-MODACK's PC_PD_CMD_EXEC on E137 and E125** (2026-11-10, `src/fw/facts.mjs` objectNameId, fact `api.pc_pd`,
-   `src/lab/camapp.mjs` module_queues; corrects finding 99's rule). The target tables name no PC_PD_CMD_EXEC: E143's
-   (`0x606214a0`, 44 targets), E137's (`0x604de358`, 44) and E125's (`0x604f7d68`, 43) hold XTC_APP_EXEC, PLAY_EXEC,
-   TFT_EXEC, TAKE_EXEC, REC_EXEC_MAIN, FILECLBK_UEXEC, LENS_EXEC, ADJ_EXEC, TAKE_FUNC, ZOOM_EXEC, FCS_EXEC, PWR_EXEC,
-   DPST_APP, ADJ_SLF_EXEC, BC_EXEC, DISPLAY, AUD_EXEC, UI_OUT_EXEC, LENS_COMMAND, MOVE_MAIN, C3D and API_DUMMY at the
-   same targets (D: the words; the names X, from the object-name tables), so there is no entry to read: the queue is
-   a kernel object with a name, and the body's form is whether its object-name table, the `{char name[24], u16 id}`
-   records, holds that name. E137's (250 records from `0x6144108c`) and E125's (249 from `0x614385ac`) do not (X); the
-   port's place of E143's id word `0x60043362` there (E137 `0x60040eda`, E125 `0x6004119c`) is REC_EXEC_PROGRESS's
-   (0xd6) and FMEMEXEC's (0xdc) word. The rule now reads the queue by its name (objectNameId: the record whose name
-   field is the name, in a run of at least 100 records; refused where two hold it): 0xcf on E143, E146 and E147, 0xd6
-   on E144, E148 and E139, 0xdc on E134, each the queue the port's word read (X), and none on E137, E125 and the ten
-   others, where S-MODACK so no longer counts REC_EXEC_PROGRESS or FMEMEXEC as a module queue. No session changes by
-   it (I, from the paths): the API sender posts only to its table's queues, and the camera application's
-   synchronous-send stand-in returns E_OK to a queue without a running receiver whether S-MODACK names it or not; on
-   E143 the queue's 12 id-word reads are 9 synchronous sends, 2 posts and a receive at `0x5102b35f..0x5102ba1a`
-   (D; beside the C3D module's code, I; docs/hle-gaps.md 4.1.11). `bin/modelcheck.mjs` after the re-port: its 31 runs
-   pass (X).
 108. **PLAY in the playback wizard OK opens, and the image type** (2026-11-10, `src/lab/camapp.mjs` S-PLAYCOMP's
    get_img_type and S-PLAYSEQ's getImageType, IMAGE_TYPE_STILL; answers finding 94's last open question and extends it:
    E143 and nine more bodies stopped too). The symptom (X, a session per body: start, S1, S2, PLAY, OK, PLAY): OK opens
@@ -2350,6 +2153,203 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    (op 8 with 0, on the no-download path alone) are the record of id 36049 (`0x50055b7c`, a table indexed by id >> 4):
    in the lab the record is found (E118 `0x61b121fc`) and its 117 bytes are 0 (X); what fills it on a camera is not read
    (the panel's adjustment data, I).
+118. **The E144 family's REC version: REC_FILE on its queue alone** (2026-11-10, `src/fw/facts.mjs` recFileQueue, fact
+   `rec_file`, `docs/hle-gaps.md` 4.8.10; D on E144 unless tagged; finding 83's stop). REC_FILE (task 31,
+   `0x503f5dc0`) receives REC's packet of 300 bytes from its queue (the word `0x60041864`, id 73) through REC's
+   receive wrapper (`0x503f1206`: the kernel's receive with "rec.c", no timeout), with no event flag and no bind. For
+   each packet its loop calls a trace, rec_file_start_process (`0x503f73c2`), where NoRecord (+282) is 1 the buffers'
+   free (`0x503f5f3f`), else rec_file_destination_record (`0x503f6bb9`: RecordDevice bit 0 to rec_make_file
+   `0x503f5e47`, rec_file_record `0x503f5fbb`), whose status it keeps (`mov d0,d2` at `0x503f5e05`, the lab's
+   handled), rec_file_finish_process (`0x503f74a1`) and with Free (+286) the reply (`0x503f1192`); a status of 8064 to
+   8191 ends the loop. The packet dump (`0x503f8314`) names every field in the packet, the image's address and size
+   too (no image record, unlike E146's): pExifParam +28, HandleTarget +116, BuffAddr1 / BuffSize1 +136 / +140,
+   HeaderSize +176, Addr / Size +180 / +184, Status +192, Mode +194, Media +198, Media2 +200, RecordDevice +202,
+   ImgAspect +283, Free +286, FileType +298 (+296 on E134, E137 and E125). REC_IMAGE's rec_make_image_finish
+   (`0x503f8c55`) posts a still's packet to REC_FILE's queue itself (`0x503f8da9`: Mode 4097 by its table
+   `0x605791a4`, Status not 40662 and the shot's record's +28600 not 5) with "REC post_msg" (`0x503f1256`, 300 bytes),
+   where E143's goes through REC's ring (`docs/hle-gaps.md` 4.3.3): S-RECIMAGE's post is the camera's route here. The
+   other seven run the same loop as task 30 or 31; E139, E134 and E125 (the double-slot bodies) first call
+   `0x503f2402` (E139's) with a 92-byte record of the task's stack (sp + 304) and, where its +88 is 1,
+   rec_make_file_DoubleSlot (`0x503f3e0c`) in the destination record's place (I: the second slot's record); E137, E142
+   and E140 call rec_make_file there directly. REC's module init is the function that ends `mov 8191,d0; ret` right
+   before REC_MAIN's task, which holds the "rec_main" trace (E144 `0x503f0fa9` before `0x503f1010`; E143's
+   `0x50539665` before `0x505396d1`), and binds one queue, to REC_MAIN's flag (E144 `0x60041868` to `0x60041726`, as
+   E143's binds `0x60043252` to `0x600430fe`); E143's bind of REC_FILE's queue (`0x5053f189`) has no counterpart.
+119. **The family's header maker and EXIF module** (2026-11-10; D on E144 unless tagged). rec_jpeg_exec
+   (`0x503ff3e3`) takes the file's buffer from REC's pool 3 (`0x50401673`) into Addr, runs rec_jpeg_make_image
+   (`0x503ff598`), frees a work area (`0x50401965`) and, with Status 0, runs rec_jpeg_make_header (`0x503ff64c`); no
+   header area is cleared through the image engine before the encode (E143's `0x5054c982` has no counterpart), so
+   S-JPEGENC stands in for the encode alone. The header maker sets HeaderSize 41984 (`0x503fff59`) and writes SOI,
+   APP1 `Exif` (its length 41982 less `0x5030c51b`'s, the serializer `0x5030b3d4`) and after it `0x5030c4d4`'s part;
+   it divides by the shot's crop area at +31550 ({x, y, xden, yden}, `0x503ffa31`, `0x503ffa6e`; rec_raw_make_header
+   by +31558, `0x50405d8c`), which S-EXIFPRM sets to {0, 0, 1, 1} as on E143 (X: with it 0 the header maker faulted
+   at `0x503ffa82`, the divide). The EXIF module's init (`0x5030b384`, its inner `0x5030b38d` loading the template
+   `0x620eb760`) flushes no cache; TAKE's copy (`0x5030b3b9`) copies 31700 bytes; the EXIF set's date formatting
+   (`0x5030dc6a`) takes the time record at +28508 with the format `0x4200` into DateTimeOriginal +4089, copied to
+   CreateDate +4109 and DateTime +1364, in a 16-bit form of E143's add; E137 and E125 add the time to a3, E142, E140
+   and E130 to d0 kept at (12,sp) (`0x502fcdfe`, `0x502e26c3`; X, a scan of the three forms: one hit per image). By
+   body (X, the rule): the template 31708 bytes on E148, 29068 on E139 and E134, 27928 on E137, 27620 on E125, 27332
+   on E142, 26956 on E140; the time record +28516, +25868, +25868, +24728, +23984, +23832, +23824; DateTimeOriginal
+   +4089 on E148, +1785 on the six others (CreateDate +1805); DigitalZoomRatio +4224 on E144 and E148, +1920, and
+   +1900 on E125; Make +1480 and Model +1504 on all; the crop areas E148 +31558 / +31566, E139 and E134 +28910 /
+   +28918, E137 +27778 / +27786, E125 +27462 / +27470, E142 +27180 and E140 +26804 (no RAW header's area: their
+   rec_raw_make_header holds no such divide).
+120. **The family's file contexts and the camera's clock, by form** (2026-11-10; D unless tagged). E144's
+   rec_file_record fills one file context of E143's 92-byte layout (`0x62127124`, `0x503f6041..0x503f60b6`: +8 the
+   DCF block, +12 and +32 the chain write's and the entry's blocks (I: E142's fill sizes them 116 and 96), +40
+   pExifParam, +44 the time record, +48 HeaderSize, +52 the size, +76 Media, +78 the type, +80 FileType; X: the fnode
+   at +36 and the stamp in the DCF block read through it give the card's file) and records through it with the
+   whole-file recorder's own builders (the open `0x50400188`, the reservation `0x50400368`, the chain write
+   `0x504003f8`, the entry `0x50400556`, the registration `0x504006d5`, finding 71). E139, E134 and E125 pick one of
+   two by Media as E143 does (E139 `0x503f4a61`: `0x62165420`, `0x6216547c`); E142 and E140 load theirs into a2 for
+   the context fill `0x503c4340` (E142's: `0x622930f4`, its entry block one of 96 bytes). Where there is one, the rule
+   takes the one data address rec_file_record loads into an address register whose +52 and +78 it also stores to by
+   address (E144 `0x503f6083` and `0x503f6093`, E142 `0x503c491f` and `0x503c4919`; the same on E148, E137 and E140,
+   X: a scan). The camera's clock setting is the one function of each of the 19 images that ends `mov
+   10499,d0; movhu d0,(8,a2); ret` (E144 `0x500f022e`), and its clock read the function right after it (E144
+   `0x500f024e`), the port's place of E143's `0x5012b7cd` on all 19 (X, a scan): the rule reads both there, where
+   recFile took the read from the recorder (fact `recorder`, read on E144 and E148 only). It is also the clock read
+   the 96-byte recorder calls on the eleven images that hold one (finding 122; X, a scan of its third call).
+121. **REC_FILE natively on eight E144-family bodies** (2026-11-10, X: `test/test_storage.mjs --session` per body,
+   32 checks each; refs/exif.mjs and exiftool). With the clock set through each body's clock setting (2026-11-08
+   12:34:56) S2 gives `C:\DCIM\100OMSYS\PB080001.JPG` on E144 and E148 and `C:\DCIM\100OLYMP\PB080001.JPG` on E139,
+   E134, E137, E142, E140 and E125: 62,857 bytes, 41,984 of the firmware's header, then the lab's stream after its
+   SOI, from cluster 5. Its Exif: on E144 and E148 Make `OM Digital Solutions`, Model `OM-5` and `OM-5MarkII`, Exif
+   version 0231 and 0300, the maker notes `OM SYSTEM` (19,636 and 19,644 bytes, CameraType2 the Model) and an XMP
+   segment after the Exif (`0a 00` past HeaderSize, as E143's); on the six others Make `OLYMPUS CORPORATION`, Model
+   `E-M1MarkIII`, `E-M1X`, `E-M5MarkIII`, `E-P7`, `E-M10MarkIV` and `E-M1MarkII`, Exif version 0231 (0230 on E125),
+   the maker notes `OLYMPUS` (CameraID `OLYMPUS DIGITAL CAMERA`, 16,996 to 19,164 bytes) and no XMP, the Exif segment
+   then reaching 2 bytes past HeaderSize; on all eight the three dates the clock's and IFD1's thumbnail of length 0,
+   read by exiftool without a warning. The firmware's image count is 1 and its fnode 1 the file in the same session
+   (S-CARD's count and list retired there, `src/lab/camapp.mjs` dcf_db), and the next session's numbering mount gives
+   file 2. Around S2 E144 and E139 log E143's REC warnings (`0x0d090002`, `0x1e01500e`, `0x1e001001`, `0x1e01500d`
+   twice). `test/test_playinfo.mjs` (two pictures, RIGHT, LEFT, INFO's three views) passes on all eight, 14 checks
+   each. The rule reads none on E130, E145, E133, E129 and E132 (finding 123) nor on the E118 family, whose loop has
+   the form but whose table names no "REC post_msg" function (the post's `0x1002` trace's code names the name before
+   it, X).
+122. **A correction to finding 71, and REC's trace table** (2026-11-10). Finding 71's recorder is one form of two: the
+   whole-file recorder with blocks of 64, 96 and 116 bytes (the second the directory entry's) is on E139, E134, E137,
+   E125, E142, E140, E130, E145, E133, E129 and E132 (X, a scan; E139 `0x515be1ab`, its clock read `0x500f0d89` and
+   builders `0x503fede6` ..), none on the E118 family, so "none on the other 13" holds for the 100-byte form only.
+   E139's builders are E144's instruction for instruction (D, but for data addresses and the folder name's `LYMP`)
+   except the entry's block, which lacks E144's word at +28: the stamps at +28 and +32, the first cluster +36, the
+   attribute +42, the folder's entry place +80 (`0x503ff344` against `0x50400556`, the place's copy `0x5062a1bc` against
+   `0x506682e2`); E134's, E137's and E125's are E139's but for their error traces' line numbers (X, a diff); those of
+   E142, E140, E130, E145, E133, E129 and E132 differ (not read). The rule `recorder` keeps the 100-byte form, so
+   S-RECFILE's DCF steps are not extended to them. REC's trace table is on all 19 images (X); recFile's read of it,
+   which wants a NUL before its head string, misses E134's, E137's and E125's, where a word precedes it (E134
+   `0x6055d190`), and recFileQueue reads it there.
+123. **What is left of the family's REC** (2026-11-10; D unless tagged). E130, E145, E133, E129 and E132: REC_FILE's
+   task inlines its start and finish processes (E130 `0x503d9350`, both traces in its loop, `0x503d9382` and
+   `0x503d942f`), and E130 holds no "pExifParam " dump string (X); they keep S-RECFILE through fileif (no rec_native,
+   which test_facts leaves to each body, E142 giving it), their 96-byte recorder's builders not read (finding 122). On
+   the eight: REC_IMAGE's own task (the post of rec_make_image_finish read, finding 118), the thumbnail and the
+   shooting values in Exif (S-EXIFPRM leaves the template's), RAW files and the second slot, the shot's DCF checkout
+   (`0x1e001001`, the HLS media check-in).
+124. **The E118 family's Format runs in its application** (2026-11-10, `src/fw/facts.mjs` mediaHls, `src/lab/media.mjs`;
+   D at E122's addresses unless tagged). The menu path on the family (X, frames on E122, E118 and E120): MENU opens
+   Shooting Menu 1, whose first row is Card Setup; RIGHT enters the page and OK opens it, which offers All Erase and
+   Format while the card holds a picture and the Format confirm alone (Yes, No, the cursor on No) on an empty card. Yes
+   runs OlyHfwOpeMdaCtrl's format sender (`0x506a6c5e`, of the opening and callback id 16 of E143's TRA 1511 sender
+   `0x50ac937f`), which starts the media control itself (`0x506a819b`, X: d0 the command, 1, d1 the media, 0) where
+   E143's sends the HLS function component a transaction: no transaction runs at Yes (X: S-TRAACK's log), so the
+   family's CmpCst_Function has no part in it. The start sees the media status's bit 7 (`0x502d0c73`), calls the
+   command's API through its dispatcher `0x506a836c` (commands 1 to 5; 1, api_media's format `0x502d0a63`, API
+   `0xe0005`, which posts FILECLBK `{6, token, 0x34, block}` as E143's `0x503f0820` does) and registers a process of 44
+   bytes (OlyHfwOpeMdaCtrlProcessEvFw, ctor `0x506a7c09`) with OlyHfwEventManager (`0x5069a761`). The process's handler
+   (`0x506a7d08`) takes the file module's progress `0x04020011` (the callback (16, 3, percent) through getMediaProgress
+   `0x502d0b04`) and the API's reply as an event whose code's upper half is the token's, d1 the status, in the
+   application's event manager natively. X on E122: the card formatted (4,198 SD writes), FILECLBK's reply status 0 for
+   token `0xf0040000`, the handler's event `0xf0040000`, the bar full. During the format FILECLBK slept 500 ms once
+   where logsec's mount path finds UI_IN's last code `0x1506` (`0x50562b6b` -> `0x5057b8b1(500)`; E143's 740 ms at
+   `0x508ac202`, hle-gaps 4.8.3).
+125. **The end goes to the camera base, whose thread does not run (S-MDAEND)** (2026-11-10, D unless tagged). On the
+   reply the handler sends the progress at 100, then two requests to the camera base through `0x5073c573`, which gens
+   them (OMReactive's gen `0x5092fe44`) to the inner reactive of StateTransitionFactory's singleton (`0x61602c58`):
+   12986 (+32 1; its closure has no function) and 12965 (+32 0, +36 1), whose closure (+28; ctor `0x506d164f`, 28 bytes:
+   +12 the argument, +16 the function; vt[0] `0x506d1691` calls the function with the argument when it is not 0) holds
+   `0x506a7c9e` and the result callback (16, 72, 0) (`0x5069825a`, X). `0x506a7c9e` posts the callback (`0x50697e5b`,
+   `0x50697f12`) and calls `0x5073c0e3(15, 0)`, whose (15, 1) the start made (I: a lock of the media control). The
+   reactive is the camera base (I: its vtable sits among Cab_CameraBase.cpp's strings, "standbyState",
+   "shootModeState"); a handler that tests for 12965 (`0x5083a076`, whose class is not read) passes the closure on
+   (`0x50910c21`) with a request of its own, a 40-byte event (`0x507713b0`) to its +236, not read (?). It runs on the
+   OXF main thread (HIGHLEVEL_MAIN, task 64, `0x50693849`), dormant in the default session (X: state 0x10), so neither
+   event was handled (X: the reactive's handleEvent `0x509116dc` never ran) and the application stayed at Busy with the
+   bar full over the formatted card, on all three (X). In a default session one other event goes there, 11827 at PLAY's
+   return (X), unhandled as well. S-MDAEND stands in for the camera base's part: at the handler's sends (the rule's
+   sites) it records the event and, after the step, runs the DCF numbering mount (the next file number, I as
+   S-MDACTRL's) and the closure through its own vt[0], natively; the events stay in the camera base's queue. X: the
+   application leaves Busy for the shooting screen, 1470 shots and `00:37:19` on E122's fresh card. That the camera base
+   calls the closure once its request is done is I; where the family returns after a Format on the camera is ? (E143
+   returns to the menu). Any command but the format, or the handler's other path (another command's end or an error,
+   `0x506a8101`), stops the session.
+126. **The card out and in on the family (S-MEDIA)** (2026-11-10, D unless tagged). The family's application has E143's
+   receiving side: OlyHfwReception (its singleton creator `0x506d0e75`, vtable slot 2 synchronous in E143's form), the
+   media manager's mount notification (E143's 711, the family's id 13596, ctor `0x506a670d`, 40 bytes, sent by
+   CapMed_MediaManager with the states 8, 4 and 2 at `0x5076f37d`, `0x5076f429` and `0x5076f491`), the HLS mount state's
+   getter and setter by media kind (4 the SD card, 1, and 32 where E143 has 8), the card switch `0x1506`, which the file
+   layer registers with UI_IN (`0x50562ce6`) and the SD driver asks UI_IN's level getter for (`0x50582a1d` ->
+   `0x50177e44`, the port's place of E143's `0x5014c015`); one slot. S-MEDIA runs unchanged at these. X on E122: out,
+   the firmware's own no-card state, "No Card" with the card icon struck through and the count 0 and `00:00:00` in
+   orange (E143 draws no such screen, hle-gaps 4.8.3), the drive status 1, and the SD driver's supply request {32, 255,
+   1} answered by S-SDPOWER; in, {32, 255, 1} and {32, 0, 1} (what 0 and 255 select is ?, hle-gaps 4.8.4), the mount
+   after 275 ms of lab time, 1470 and `00:37:19` back (the frames; finding 128 has the checks). The player's card input
+   had stopped before (a TypeError): its lookup of the switch's control row read the UI_IN code of each fwswitch row,
+   and a row a body's tables do not wire has none (`src/lab/play.mjs` card_input; fixed). That this is E147's "control
+   row without a UI_IN code" (hle-gaps 4.8.7) is I; E147 was not tried again.
+127. **The rule and its reach** (2026-11-10, `src/fw/facts.mjs` mediaHls, fact `media`; `test/test_facts.mjs`
+   MEDIA_FOUND). The rule starts at the process's handler and reads each part by its form (the comment at the rule has
+   them): the handler's sends and start, the reception's creator and synchronous slot, operator new, the mount
+   notification (of two constructors of its form after the media manager's allocations, the one sent the states 2, 4 and
+   8; the other is id 5627, X), the mount state's getter and setter (of three getters of the form, the one whose words
+   the setter writes, X) and the switch code with UI_IN's level getter. E122's values are the ones found by hand and run
+   above (X); E118's and E120's the rule's, run in their sessions (finding 128). The class is held by 15 of the 19
+   images, not by the E143 family and E148 (X): the E144 family's application holds the same media control process,
+   which corrects the reading that it has a function component of its own (ROADMAP); the rule reads every part on E118,
+   E120, E122 and E145 only, and gives no fact elsewhere (X: the E144 family's start and mount state, E142's and E140's
+   reception creator, the TG-5s' and E125's level getter are of other forms). Whether the E144 family's Format runs as
+   the family's is not tried (?). `src/fw/models.mjs` card_fs.hls 'rule' takes the fact on E118, E120 and E122 with the
+   family's library numbers (`src/fw/facts.mjs` MEDIA_LIB) and the module event post at the port's place of E143's
+   `0x50025095`.
+128. **The family's HLS side in play** (2026-11-10, X: `test/test_storage.mjs --hls` per body, in `bin/test.mjs`; 21 of
+   21 checks on each of E122, E118 and E120, the same numbers on the three). On a blank 8 GiB card after S2's picture:
+   MENU, RIGHT, OK, DOWN (Format), OK, DOWN (Yes), OK; the application's start with command 1, media 0; the card input
+   refused while the format runs (S-MDAEND's start to its end, as E143's during S-MDACTRL; it had pulled the card in
+   mid-format before, X); 12986 logged without a closure, 12965's closure run (E122 `0x506a7c9e`, E118 `0x506b6bd5`,
+   E120 `0x506637c4`, each through its closure class's vt[0]); the format within 839 ms of lab time after Yes. Read
+   back independently (`refs/volume.mjs`): FAT32 `NO NAME` at 8192 with 32 KiB clusters as the insertion's format gave
+   it, the root empty, the picture gone, 260,351 of 260,352 clusters free in the FAT and FSInfo; the firmware's image
+   count 0, its next file 1, the remaining shots the fresh card's; the application back at the shooting screen; S2 then
+   writes `P1010001.JPG` again. The card out: the drive unmounted (detect state 1, the HLS mount state 0), UI_IN's
+   `0x02021506` with the level 1, the screen changed (the remaining-shots query itself still answers the count, so the
+   screen's 0 is the application's, I); a second removal refused. The card in: sd_mount initialises the card again
+   (CMD2 among more than 20 commands), the FAT mount after 275 ms, the drive status `0x3780`, the boot sector unchanged
+   (no format), the count and the whole screen as before the removal; S2 then writes its picture. E143's and E146's HLS
+   sessions are unchanged (18 of 18 each, X).
+129. **Left open** (2026-11-10). The camera base's own work at the end (its request to its +236, and 12986's), and
+   whether the camera issues the DCF numbering mount after a Format (S-MDAEND's, I); the media control's other commands
+   (All Erase among them, not driven); the second slot (the family has one); an SDXC card on the family's HLS side (not
+   tried); the menu path to Format, read from the frames and checked by the start's command, not found by a rule in the
+   menu's tables (the family's Menu_Viewer tables are not decoded in the lab); where the family returns after a Format
+   on the camera (?).
+130. **S-MODACK's PC_PD_CMD_EXEC on E137 and E125** (2026-11-10, `src/fw/facts.mjs` objectNameId, fact `api.pc_pd`,
+   `src/lab/camapp.mjs` module_queues; corrects finding 99's rule). The target tables name no PC_PD_CMD_EXEC: E143's
+   (`0x606214a0`, 44 targets), E137's (`0x604de358`, 44) and E125's (`0x604f7d68`, 43) hold XTC_APP_EXEC, PLAY_EXEC,
+   TFT_EXEC, TAKE_EXEC, REC_EXEC_MAIN, FILECLBK_UEXEC, LENS_EXEC, ADJ_EXEC, TAKE_FUNC, ZOOM_EXEC, FCS_EXEC, PWR_EXEC,
+   DPST_APP, ADJ_SLF_EXEC, BC_EXEC, DISPLAY, AUD_EXEC, UI_OUT_EXEC, LENS_COMMAND, MOVE_MAIN, C3D and API_DUMMY at the
+   same targets (D: the words; the names X, from the object-name tables), so there is no entry to read: the queue is
+   a kernel object with a name, and the body's form is whether its object-name table, the `{char name[24], u16 id}`
+   records, holds that name. E137's (250 records from `0x6144108c`) and E125's (249 from `0x614385ac`) do not (X); the
+   port's place of E143's id word `0x60043362` there (E137 `0x60040eda`, E125 `0x6004119c`) is REC_EXEC_PROGRESS's
+   (0xd6) and FMEMEXEC's (0xdc) word. The rule now reads the queue by its name (objectNameId: the record whose name
+   field is the name, in a run of at least 100 records; refused where two hold it): 0xcf on E143, E146 and E147, 0xd6
+   on E144, E148 and E139, 0xdc on E134, each the queue the port's word read (X), and none on E137, E125 and the ten
+   others, where S-MODACK so no longer counts REC_EXEC_PROGRESS or FMEMEXEC as a module queue. No session changes by
+   it (I, from the paths): the API sender posts only to its table's queues, and the camera application's
+   synchronous-send stand-in returns E_OK to a queue without a running receiver whether S-MODACK names it or not; on
+   E143 the queue's 12 id-word reads are 9 synchronous sends, 2 posts and a receive at `0x5102b35f..0x5102ba1a`
+   (D; beside the C3D module's code, I; docs/hle-gaps.md 4.1.11). `bin/modelcheck.mjs` after the re-port: its 31 runs
+   pass (X).
 
 
 

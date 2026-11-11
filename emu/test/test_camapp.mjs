@@ -48,7 +48,9 @@
 //   camapp3FramesSession  control camapp 3's frames (E143): the TFT composes with the histogram's registers under
 //                  A-VSCHIST-3 at the shooting screen, the menu (the through image's bank as IMG2, the background's
 //                  colour) and its close, PLAY and its return; with --cpu2 native the histogram's bin 5 column is the
-//                  one change (docs/hle-gaps.md 4.2.4)
+//                  one change (docs/hle-gaps.md 4.2.4); against camapp 1 the shooting screen's MF (MODE_AF_CHANGE from
+//                  the Fn lever, written only while the sequence parts stand by: the lever to 1 makes the two equal)
+//                  and the menu's movie Card Slot Settings row (both slots' media flags) differ (4.3.7)
 //   modeDialSession  the mode dial in play (E143): it starts at P, the start's mode; each position's change sets its
 //                  mode (MODE_EXPOSE, the custom banks' MODE_RAW, B's MODE_DIAL_B_ONOFF) and keeps the other settings,
 //                  each position shows a screen of its own, and away from P OK opens the Super Control Panel and MENU
@@ -520,8 +522,28 @@ export async function traRoutingSession() {
 // the background's (the fill's Y 11, Cb and Cr 128: the composite without IMG2 is the same, X); with --cpu2 native
 // OSD_DRAW_CPU2's histogram adds bin 5's column (the firmware's 64 in bin 5 for an IMG1 that is off, A-VSCHIST-2)
 // and nothing else: two columns of the histogram box (FRAMES_HIST_COLUMN)
+// The pinned differences against camapp 1 (docs/hle-gaps.md 4.3.7; X): the shooting screen's focus mode
+// (FRAMES_AF_MODE: MF and no AF target where camapp 1 shows S-AF) is MODE_AF_CHANGE (535), which the application's
+// start sets from the Fn lever (API_LEVER_SW_2 in the lab's idle image, the factory lever function 4) and which
+// OlyHfwOpeShoot writes only while the sequence parts stand by (phase 101): camapp 3 writes 1, camapp 1 (phase 100, no
+// sequence parts) refuses; with the lever to 1 (API_LEVER_SW_1) camapp 3 writes 0 and its screen is camapp 1's word for
+// word, and camapp 1's lever changes nothing. The menu's movie Card Slot Settings row (FRAMES_SLOT_ROW: enabled in
+// camapp 3) is greyed unless both slots' media flags (MEDIA_FLAGS, 15261 and 15262) are 1: camapp 3's media manager
+// sets both, the second after its mount of the second slot, whose port S-SDCARD's one card answers too (api_media's
+// status of that slot SLOT2_STATUS: the card bit 0x80 in camapp 3, not in camapp 1); camapp 1 runs no media manager
+// and has neither
 const FRAMES_LV_BANK = 0x98D4D800, FRAMES_LV_STRIDE = 11136, FRAMES_IMG2 = 1;
 const FRAMES_HIST_COLUMN = { pixels: 126, box: [14, 110, 15, 172] };
+const FRAMES_AF_MODE = { pixels: 1655, box: [417, 72, 894, 334] }, FRAMES_SLOT_ROW = { pixels: 4602, box: [38, 283, 871, 327] };
+const MODE_AF_CHANGE = 535, MEDIA_FLAGS = [15261, 15262], LEVER_MS = 1000;
+const MEDIA_STATUS = 0x503F0BD7, SLOT2_STATUS = { 3: 0x3780, 1: 0x600 };
+// the pixels two frames differ in, and their box
+const framesDiff = (a, b) => {
+  const diff = [];
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) diff.push([i % 900, Math.floor(i / 900)]);
+  const box = diff.reduce((r, [x, y]) => [Math.min(r[0], x), Math.min(r[1], y), Math.max(r[2], x), Math.max(r[3], y)], [1e9, 1e9, -1, -1]);
+  return { pixels: diff.length, box: diff.length ? box : null };
+};
 export async function camapp3FramesSession() {
   const bad = [];
   let checks = 0;
@@ -530,11 +552,12 @@ export async function camapp3FramesSession() {
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
-  const shooting = {};
-  for (const cpu2 of [false, true]) {
-    const tag = `camapp 3${cpu2 ? ' --cpu2 native' : ''}`;
+  const shooting = {}, pinned = {};
+  for (const [camapp, cpu2] of [[3, false], [1, false], [3, true]]) {          // the --cpu2 pass last: it breaks
+    const tag = `camapp ${camapp}${cpu2 ? ' --cpu2 native' : ''}`;
     const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, ...(cpu2 ? { cpu2: 'native' } : {}) }, env);
-    pl.camapp_components = true; pl.camapp_native_tra = true;
+    pl.camapp_components = camapp === 3; pl.camapp_native_tra = camapp === 3;
+    const pin = pinned[tag] = {};
     try {
       pl.open_session();
       const s = pl.session, lab = s.lab;
@@ -544,11 +567,22 @@ export async function camapp3FramesSession() {
       const frame = () => { try { return s.frame()[2]; } catch (e) { return e.message.slice(0, 300); } };
       idle(2000);
       const f0 = frame(), used = pl.stand_ins_in_use();
+      Object.assign(pin, { start: f0, af: lab.get(MODE_AF_CHANGE) });
+      if (camapp === 1) {
+        const menu = key('menu');
+        Object.assign(pin, { menu: frame(), gui: menu, flags: MEDIA_FLAGS.map((id) => lab.get(id)), slot2: lab.call(MEDIA_STATUS, { d0: 1 }, null, null, 2000000).d0 & 0xFFFF });
+        key('menu'); key('play'); key('play');
+        const before = frame();
+        s.switch_input('lever', 1); s.camapp.pump(); idle(LEVER_MS);
+        Object.assign(pin, { before, lever: frame(), af_lever: lab.get(MODE_AF_CHANGE) });
+        continue;
+      }
       ok(Array.isArray(f0) && used.includes('A-VSCHIST-3') && lab.vsc.hist_assumed() > 0,
         `${tag}: the shooting screen composes with the histogram's registers (A-VSCHIST-3 in ${used.filter((x) => /HIST/.test(x))}, composites ${lab.vsc.hist_assumed()}): ${Array.isArray(f0) ? 'a frame' : f0}`);
       shooting[cpu2] = f0;
       if (cpu2) break;
       const menu = key('menu'), f1 = frame(), img2 = s.last_planes?.planes?.IMG2;
+      Object.assign(pin, { menu: f1, gui: menu, flags: MEDIA_FLAGS.map((id) => lab.get(id)), slot2: lab.call(MEDIA_STATUS, { d0: 1 }, null, null, 2000000).d0 & 0xFFFF });
       ok(menu === GUI_MENU && Array.isArray(f1) && img2?.result === 'drawn' && img2.base === FRAMES_LV_BANK && img2.stride === FRAMES_LV_STRIDE
         && img2.w === 900 && img2.h === 600, `${tag}: the menu (${menu}) composes, IMG2 the through image's bank: ${JSON.stringify(img2 ?? null)} ${Array.isArray(f1) ? '' : f1}`);
       // IMG2's pixels are the background's: the same composite with the lab's view mask leaving IMG2 out
@@ -560,6 +594,8 @@ export async function camapp3FramesSession() {
       const closed = key('menu'), f2 = frame(), play = key('play'), f3 = frame(), back = key('play'), f4 = frame();
       ok(closed === GUI_SHOOTING && play === GUI_NO_PICTURE && back === GUI_SHOOTING && [f2, f3, f4].every(Array.isArray),
         `${tag}: the menu's close (${closed}), PLAY (${play}) and its return (${back}) compose: ${[f2, f3, f4].filter((f) => !Array.isArray(f))}`);
+      s.switch_input('lever', 1); s.camapp.pump(); idle(LEVER_MS);
+      Object.assign(pin, { before: f4, lever: frame(), af_lever: lab.get(MODE_AF_CHANGE) });
     } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 600)}`); }
     finally { pl.close_session(); }                                   // the --cpu2 pass's break too
   }
@@ -572,6 +608,22 @@ export async function camapp3FramesSession() {
     ok(diff.length === FRAMES_HIST_COLUMN.pixels && JSON.stringify(box) === JSON.stringify(FRAMES_HIST_COLUMN.box),
       `--cpu2 native: OSD_DRAW_CPU2's histogram changes ${diff.length} pixels in ${JSON.stringify(box)}, want ${FRAMES_HIST_COLUMN.pixels} in ${JSON.stringify(FRAMES_HIST_COLUMN.box)}`);
   } else ok(false, 'the two shooting frames for the histogram comparison');
+  // the pinned differences against camapp 1 (FRAMES_AF_MODE, FRAMES_SLOT_ROW; docs/hle-gaps.md 4.3.7)
+  const [c3, c1] = [pinned['camapp 3'], pinned['camapp 1']], same = (d, want) => d.pixels === want.pixels && JSON.stringify(d.box) === JSON.stringify(want.box);
+  const frames = ['start', 'menu', 'before', 'lever'].every((k) => Array.isArray(c3?.[k]) && Array.isArray(c1?.[k]));
+  ok(frames, `the frames of camapp 3 and camapp 1 for the comparison: ${JSON.stringify(['start', 'menu', 'before', 'lever'].map((k) => [Array.isArray(c3?.[k]), Array.isArray(c1?.[k])]))}`);
+  if (frames) {
+    const af = framesDiff(c1.start, c3.start);
+    ok(same(af, FRAMES_AF_MODE) && c3.af === 1 && c1.af === 0,
+      `the shooting screen: camapp 3 MF (535 = ${c3.af}) where camapp 1 shows S-AF (535 = ${c1.af}), ${af.pixels} pixels in ${JSON.stringify(af.box)}, want ${FRAMES_AF_MODE.pixels} in ${JSON.stringify(FRAMES_AF_MODE.box)}`);
+    const row = framesDiff(c1.menu, c3.menu);
+    ok(c3.gui === GUI_MENU && c1.gui === GUI_MENU && same(row, FRAMES_SLOT_ROW) && c3.flags.join() === '1,1' && c1.flags.join() === '0,0'
+      && c3.slot2 === SLOT2_STATUS[3] && c1.slot2 === SLOT2_STATUS[1],
+      `the menu: the movie Card Slot Settings row, ${row.pixels} pixels in ${JSON.stringify(row.box)} (want ${FRAMES_SLOT_ROW.pixels} in ${JSON.stringify(FRAMES_SLOT_ROW.box)}); the media flags ${MEDIA_FLAGS} camapp 3 ${c3.flags}, camapp 1 ${c1.flags}; the second slot's media status camapp 3 ${hx(c3.slot2)}, camapp 1 ${hx(c1.slot2)}`);
+    const lever = framesDiff(c1.lever, c3.lever), still = framesDiff(c1.before, c1.lever);
+    ok(c3.af_lever === 0 && c1.af_lever === 0 && lever.pixels === 0 && still.pixels === 0,
+      `the Fn lever to 1: camapp 3 writes 535 = ${c3.af_lever} and differs from camapp 1 in ${lever.pixels} pixels; camapp 1's 535 ${c1.af_lever}, its frame changed in ${still.pixels} pixels`);
+  }
   return { checks, bad };
 }
 

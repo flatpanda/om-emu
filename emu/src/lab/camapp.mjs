@@ -428,6 +428,29 @@ const STILL = { date: 8, size: 16, exp_time: 48, f_number: 56, exp_bias: 72 };
 // display three more pairs at +1032 / +1036, +2060 / +2064, +3088 / +3092 (E143 0x50acdeb0..0x50acdf8e, D; the E118
 // family's the same, finding 57)
 const SYNC_STILL_INFO = 3, SYNC_HISTOGRAM = 7;
+// The image type (docs/model-survey.md finding 108): the E118 family's PlyCom::getImageType sends sync request 2 and
+// reads the response's u16 +0 (E122 0x506aac05, its read 0x506aac2f, D); E143's component's get_img_type maps the
+// media API's file type of the picture through its table (0x50c465c5, table 0x50e73228: the file type 1 to the image
+// type 1, D), and the lab's pictures are the DCF database's file type 1 (IMAGE_TYPE, X). The GUI's wizard reads the
+// type for the kind of its OK menu (E143 0x510dbb29, table 0x51311894: 1 to the kind 8, or 13; the same table on E122,
+// E118, E120 and E130, D): with 0, which S-PLAYCOMP and S-PLAYSEQ answered before 2026-11-10, no kind was set, no
+// screen made, and PLAY from the wizard called a null screen (X).
+const SYNC_IMAGE_TYPE = 2, IMAGE_TYPE_STILL = 1;
+// The family's PlyCom requests that read the response's +0 (X: asked at PLAY and OK), each answered 0 as S-PLAYCOMP
+// answers its component's: 303 (u32; isProtect by the order of PlayCommon's name table, I), isRecording 304 (u32, its
+// trace at 0x6096dfe5), getSelectPicNumber 306 (u16, its trace at 0x6096df0c) and getShortMovieAlbumNo 501 (u16, its
+// trace at 0x6096df6d; E122's addresses, D). Unanswered, each read what the last answer left at +0: 0 while no answer
+// wrote it, the type 1 once getImageType's did (X: a protect key, a sound mark and an album mark drawn, OK's wizard not
+// opened; docs/model-survey.md finding 109)
+const SYNC_ZERO = new Map([[303, 'isProtect'], [304, 'isRecording'], [306, 'getSelectPicNumber'],
+  [501, 'getShortMovieAlbumNo']]);
+// The play requests that erase (docs/model-survey.md finding 110, D unless tagged): PlaySingleFrame::eraseCurrent 21
+// (E143 0x50b6fa6d; E122 0x50733116, E118 0x50742bc3, E120 0x506ef09d, E130 0x50793ad0, E144 0x508ef872, E146
+// 0x50b7c852), the request the single-frame callback finishes as CBS_ERASE_ALL, 23 (0x50b712d7; its sender not
+// found, ?), PlyCom::erase 301 (E143 0x50acdc69) and PlaySelect::eraseCurrent 510 (E143 0x50b6f254). The module
+// removes the file through the DCF edit's object delete, which the lab does not run: S-PLAYSEQ refuses them
+const ERASE_REQUESTS = new Map([[21, 'PlaySingleFrame::eraseCurrent'],
+  [23, 'the single frame\'s erase all (CBS_ERASE_ALL)'], [301, 'PlyCom::erase'], [510, 'PlaySelect::eraseCurrent']]);
 const HISTOGRAM = { flags: [4, 1032, 2060, 3088], bins: [8, 1036, 2064, 3092], bin_bytes: 1024 };
 // S-CARD: the camera's clock read (CLOCK_READ: E143's 0x5005a59e, behind the wrapper 0x5012b7cd its 61 callers call)
 // fills a0's record {u16 year, month, day, hour, minute, second, hundredths, u16 status at +8} (D): where the SCPU
@@ -556,8 +579,8 @@ export const CAMAPP_STAND_INS = {
   "S-RVSTANDBY": "the rec view component in standby: the shooting components' RecView does not run; its entryStandby would store state 1 in the application's state word (fact recview), which starts at 0, and getRecViewState takes 0 for a rec view, so E142's GUI showed the rec view's items at the start (EVT_REC_DISP_RECVIEW, 0xf005) instead of the shooting screen (X). The lab stores 1 before the application starts; that the camera's component is in standby then is I",
   "S-TRAACK": "the HLS transaction layer's synchronous exec (0x50af7cb9 / 0x50af7cbe) returns 0: no local handler is ever registered (on the camera either), so every transaction goes to the active state's components, where the shooting component CmpSht_ShootingComponent_NEW answers TRA 990 and 991; it runs only with the HLS components, and the remote channel answers 0xf0000001 (startShootingService fails on TRA 990 without it, X). With the file system native and its HLS side (card_fs.hls: E143, E146) the media control's start (TRA 1511; E146's 1509) also goes to S-MDACTRL (media.mjs). Under control camapp 3 it answers none (its list TRAACK_KEPT is empty): every transaction goes to the exec natively and, S-RPC lifted from the receiver's send and the remote-call method, to the components, which answer the start's 990 and the rest natively (X; docs/hle-gaps.md 4.1.5)",
   "S-CARD": "a card in the SD slot. With the file system native (a body that runs it, src/fw/models.mjs card_fs; storage.mjs) the card is S-SDCARD's, which the firmware formats and mounts itself at the insertion, and S-CARD keeps only the HLS media mount state (0x60360bfc, 0x60360c08) at 8, as the HLS media layer would set it on the file layer's mount, and its record of each picture taken (S-RELSEQ's END_SHOOTING_PICTURE: its release, S-SCENE's scene, the clock and the lens at the capture), whose file S-RECFILE writes (on E143, E146, E147 and the E144 family but E130 REC_FILE natively, from the packet of REC_IMAGE's own task on E143, E146 and E147 and from S-RECIMAGE's on the E144 family: rec.mjs). Where REC's recorder records the file (S-RECFILE's DCF steps) or REC_FILE does, the firmware's own DCF database counts it in the same session: the media API's image count (0x503feea4) and each picture's folder and number in playback are the database's (its fnode by index), S-CARD's image list retired; elsewhere the pictures are S-CARD's list, of folder 100 numbered from 1, the image count answering their number for type 1, and the database learns of each file at the next mount. The firmware answers the remaining shots and the movie time from the card. While the card is out of the slot (media.mjs S-MEDIA) the image count is 0; a format from the menu (S-MDACTRL) clears the records. On the other bodies the card has no file system: the card driver's detect state of the first slot is 2, inserted (src/fw/facts.mjs cardDetect), set before the application starts; the remaining-shots module query 0x50419164 answers 999 less the images; the movie time query 0x5042da58 answers a time left of 1:00:00 less the time recorded so far, and the current recording's time; a DCF remain count that tests only the drive status's error bits (MODEL_INFO.dcf_mount_test) is given the mount test E143's count makes, so it returns as not mounted. An image is its number, its exposure and S-SCENE's scene at the capture",
-  "S-PLAYSEQ": "the play module's notifications: each asynchronous HLS play request (OlyHfwOpePlyComAsyncRsb::execute 0x50ad26fb) is finished after the step by its notify function (0x50ad2bc2) with the request's id and kind 2, as the module would: startPlayService (0) makes PlyCom's callback post CBS_END and the GUI leave ID_ST_PREPARE, startSingleFrame (8) and moveCurrent (9) make the single-frame callback post CBS_FINISH_DRAW and the GUI show the image. While a request's transaction runs (S-TRAACK) the module's answer is written: canMoveCurrent (sync 344) can move whenever there are two images or more (they wrap around), moveCurrent's result is 1 and the image shown moves (direction 3 left, 4 right). Where PlyCom asks the play module rather than a component (the E118 family always), getNumber (sync 5) is answered with the image's index, file number and folder, getStillInfo (sync 3) with the picture's own record: the date the camera's clock gave at the capture (the family's default while its clock is not set: 2016-01-01 00:00 on E122, 2015-01-01 on E118 and E120), its file's JPEG size, the release's exposure and the lens's focal length at the capture; getHistogram (sync 7) is answered empty (the lab decodes no picture). That every request finishes at once, with result 0 and no other data, is an inference from the callbacks (I). An erase (PlyCom::erase, async 301) would be finished the same way with no file deleted: erase is not modelled and no session sends one (docs/model-survey.md finding 94)",
-  "S-PLAYCOMP": "the play component's answers (Cmp_PlayComponentBase, which only the HLS components create; OlyHfwOpePlyCom's wrappers 0x50acf156..0x50acf356 are answered in its place) for the image S-PLAYSEQ shows, the newest: getNumber its index, file number and folder 100, getStillInfo the picture's own record as S-PLAYSEQ's answer holds it (the date the camera's clock gave at the capture, its JPEG's size, its exposure time, f-number, bias and ISO from S-SCENE at the capture, 1/125 s alone without it, and the lens's focal length at the capture), the type 0, not protected, no recording; a move's completion clears the single-move state (0x60362a7c), as the component's start_single_move_current does. The other wrappers answer 0, each logged (I)",
+  "S-PLAYSEQ": "the play module's notifications: each asynchronous HLS play request (OlyHfwOpePlyComAsyncRsb::execute 0x50ad26fb) is finished after the step by its notify function (0x50ad2bc2) with the request's id and kind 2, as the module would: startPlayService (0) makes PlyCom's callback post CBS_END and the GUI leave ID_ST_PREPARE, startSingleFrame (8) and moveCurrent (9) make the single-frame callback post CBS_FINISH_DRAW and the GUI show the image. While a request's transaction runs (S-TRAACK) the module's answer is written: canMoveCurrent (sync 344) can move whenever there are two images or more (they wrap around), moveCurrent's result is 1 and the image shown moves (direction 3 left, 4 right). Where PlyCom asks the play module rather than a component (the E118 family always), getNumber (sync 5) is answered with the image's index, file number and folder, getStillInfo (sync 3) with the picture's own record: the date the camera's clock gave at the capture (the family's default while its clock is not set: 2016-01-01 00:00 on E122, 2015-01-01 on E118 and E120), its file's JPEG size, the release's exposure and the lens's focal length at the capture; getHistogram (sync 7) is answered empty (the lab decodes no picture), getImageType (sync 2) with a still's type, 1, the type E143's component gives the DCF file type of the lab's pictures (docs/model-survey.md finding 108), and isProtect (303), isRecording (304), getSelectPicNumber (306) and getShortMovieAlbumNo (501), which read the same response word, with 0 (finding 109); any other synchronous request is logged as not answered, its response left as the last answer left it. That every request finishes at once, with result 0 and no other data, is an inference from the callbacks (I). The requests that erase the picture shown (PlaySingleFrame::eraseCurrent 21, the single frame's erase all 23, PlyCom::erase 301, PlaySelect::eraseCurrent 510) are refused at their execute: the module's erase, the DCF edit's object delete, is not modelled, and finishing one would keep the file (finding 110)",
+  "S-PLAYCOMP": "the play component's answers (Cmp_PlayComponentBase, which only the HLS components create; OlyHfwOpePlyCom's wrappers 0x50acf156..0x50acf356 are answered in its place) for the image S-PLAYSEQ shows, the newest: getNumber its index, file number and folder 100, getStillInfo the picture's own record as S-PLAYSEQ's answer holds it (the date the camera's clock gave at the capture, its JPEG's size, its exposure time, f-number, bias and ISO from S-SCENE at the capture, 1/125 s alone without it, and the lens's focal length at the capture), get_img_type a still's type, 1 (as S-PLAYSEQ's getImageType, docs/model-survey.md finding 108; 0 before 2026-11-10), not protected, no recording; a move's completion clears the single-move state (0x60362a7c), as the component's start_single_move_current does. The other wrappers answer 0, each logged (I)",
   "S-PLAYVIEW": "(with S-SCENE's live view) while the GUI shows a card image, from startSingleFrame's finish to endPlayService (sync request 1), the live-view plane holds the frame S-SCENE renders again from the scene kept with the image (black for an image taken without it): the camera would decode the file onto its image plane, which the lab does not have (I: same plane, same scaling as S-RECVIEW)",
   "S-DISPFRAME": "CPU 3's task DISP_FRAME on the lab CPU: its start (the frame colour table 0x51016eb1, the data pointers of the three settings objects its draws read), the TFT and EVF channels' eight face-plane colours converted from that table as the channel setup does (0x501db1b4), the TFT frame-state byte 0xa32ddaf6 at 0 (the value of a display setup with the configuration word 0xFACE, I), and one turn of its loop, natively, for each post to its flag (ring [3][0], function 0x5002587a); its 1 ms sleeps while it waits for the frame plane's buffer swap (0x5100d398..) run on the display clock (A10), so the VSC latches the new address at a frame boundary. It draws the AF frames, the focus indicator and S-SUBJECT's subject frames into its 8-bit plane (VSC IMG3, format 2); the composite shows the plane under the A19 opt-in",
   "S-RECVIEW": "(with S-SCENE's live view) from START_RECVIEW to END_RECVIEW the live-view plane holds the frame S-SCENE rendered at the capture (S2 down, the exposure in use) instead of the live scene; the camera would show the developed image through its playback path, which the lab does not run (I)",
@@ -1110,6 +1133,9 @@ export class CamApp {
       const rsb = r.a0 >>> 0, req = l.sim.u32(rsb + RSB_REQUEST) >>> 0;
       if (!req) return;
       const p = { rsb, id: l.sim.u32(req) >>> 0, notify: l.sim.u32(req + 4) >>> 0, param: l.sim.read(req + 16, 2)[0] | (l.sim.read(req + 17, 1)[0] << 8) };
+      if (ERASE_REQUESTS.has(p.id)) {
+        throw new FirmwareError(`S-PLAYSEQ: play request ${p.id} (${ERASE_REQUESTS.get(p.id)}) from ${where(r.mdr)} erases the picture shown; the play module's erase (the DCF edit's object delete) is not modelled, and finishing it would keep the file (docs/model-survey.md finding 110)`);
+      }
       this.play_pending.push(p);
       this.play_exec = p;
     }, 'S-PLAYSEQ');
@@ -1364,6 +1390,16 @@ export class CamApp {
       if (!res) throw new FirmwareError('S-PLAYSEQ: getHistogram before the response block exists');
       for (const at of HISTOGRAM.flags) lab.sim.write(res + at, Uint8Array.of(0));
       for (const at of HISTOGRAM.bins) lab.sim.write(res + at, new Uint8Array(HISTOGRAM.bin_bytes));
+    } else if (p.sync === SYNC_IMAGE_TYPE) {
+      const res = lab.sim.u32(SYNC_RESPONSE) >>> 0, img = this.shown();
+      if (!res) throw new FirmwareError('S-PLAYSEQ: getImageType before the response block exists');
+      lab.sim.write(res, pack('<H', img ? IMAGE_TYPE_STILL : 0));
+      this.log.push(['play', `getImageType: ${img ? IMAGE_TYPE_STILL : 'no image, 0'}`]);
+    } else if (SYNC_ZERO.has(p.sync)) {
+      const res = lab.sim.u32(SYNC_RESPONSE) >>> 0;
+      if (!res) throw new FirmwareError(`S-PLAYSEQ: ${SYNC_ZERO.get(p.sync)} before the response block exists`);
+      lab.sim.write(res, pack('<I', 0));
+      this.log.push(['play', `${SYNC_ZERO.get(p.sync)} (sync ${p.sync}): 0`]);
     } else if (p.sync === SYNC_CAN_MOVE) {
       const res = lab.sim.u32(SYNC_RESPONSE) >>> 0;
       if (!res) throw new FirmwareError('S-PLAYSEQ: canMoveCurrent before the response block exists');
@@ -1374,6 +1410,8 @@ export class CamApp {
       const wait = lab.sim.u32(RSB_RESULT) >>> 0;
       if (wait) lab.sim.write((lab.sim.u32(wait + 8) >>> 0) + 4, pack('<I', MOVE_RESULT));
       this.log.push(['play', `moveCurrent ${p.param}: image ${this.play_cur + 1} of ${n}`]);
+    } else if (p.sync !== undefined && p.sync !== SYNC_PLAY_END) {                 // its response left as it is
+      this.log.push(['play', `sync request ${p.sync}: not answered`]);
     }
   }
   // S-CARD: S-SCENE's view of the capture (its scene, time and exposure) at the S2 down of a release
@@ -1390,7 +1428,11 @@ export class CamApp {
       put(r.a1, '<I', img ? this.play_cur + 1 : 0); put(r.d0, '<I', img ? img.number : 0); put(r.d1, '<I', img ? img.folder : 0);
     } else if (name === 'getStillInfo' && img) {   // a1 the struct (the component's vt+240)
       this.still_record(r.a1 >>> 0, img, 'playcomp');
-    } else if (!['get_img_type', 'isRecording', 'isProtect', 'getStillInfo'].includes(name)) {
+    } else if (name === 'get_img_type') {
+      this.log.push(['playcomp', `get_img_type: ${img ? IMAGE_TYPE_STILL : 'no image, 0'}`]);
+      h.finish(r, { d0: img ? IMAGE_TYPE_STILL : 0 });
+      return;
+    } else if (!['isRecording', 'isProtect', 'getStillInfo'].includes(name)) {
       this.log.push(['playcomp', `${name} from ${where(r.mdr)}: not modelled, 0`]);
     }
     h.finish(r, { d0: 0 });

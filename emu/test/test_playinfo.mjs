@@ -16,7 +16,14 @@
 //                    file's JPEG (S-RECFILE, read back from the card by refs/volume.mjs and decoded by refs/jpeg.mjs),
 //                    the focal length of the lens at the capture (S-LENS's zoom step or the native lens's, in tenths of
 //                    a mm; 0 on a body with a built-in lens, whose focal length the lab does not read) and the
-//                    release's exposure time (1/125 s without S-SCENE); and the histogram request answered empty
+//                    release's exposure time (1/125 s without S-SCENE); and the histogram request answered empty.
+//                    Between LEFT and INFO, OK opens the playback wizard (SS_MENU_MAIN/ID_ST_WIZARD_MENU_ENTRY, its
+//                    screen drawn: the frame changes) where the body's OK opens one (not on OK_OPENS_NOTHING's),
+//                    PLAY from it returns to the shooting screen (it called a null screen before the image type
+//                    was answered, docs/model-survey.md finding 108) and PLAY shows the newest picture again with
+//                    PLAY's frame. At the end, on ERASE_DIALOG's bodies, Delete opens the erase dialog, UP moves its
+//                    cursor and OK sends PlaySingleFrame::eraseCurrent (21), which S-PLAYSEQ refuses (finding 110):
+//                    the session stops with that refusal and both pictures stay on the card
 //   node emu/test/test_playinfo.mjs   (with OM_EMU_MODEL=E122 etc.; exit 1 on a failure)
 import { createHash } from 'node:crypto';
 import zlib from 'node:zlib';
@@ -28,6 +35,14 @@ const GUI = { year: 0, month: 2, day: 3, width: 8, height: 10, exp: 40, focal: 5
 // a start that waits at a prompt S1 does not leave: the keys that answer it (bin/modelcheck.mjs START_PROMPT: E132's
 // date and time setting has no Cancel, UP and OK five times set the clock; E145's and E129's S1 leaves theirs)
 const START_KEYS = { E132: ['up', 'ok', 'up', 'ok', 'up', 'ok', 'up', 'ok', 'up', 'ok'] };
+// the bodies whose OK in playback opens nothing (X, 2026-11-10: the state and the frame stay; why is not read, ?),
+// held strictly: a body that opens the wizard fails here until it is taken out
+const OK_OPENS_NOTHING = new Set(['E147', 'E144', 'E139', 'E134', 'E148']);
+// the bodies whose Delete in playback opens the erase dialog (X, 2026-11-10; E143's Delete opens it only where
+// canExecute(MODE_ERASE) or isProtect is 1, which the lab answers 0, finding 111; E145's, E129's and E132's UI_IN
+// tables hold no Delete key)
+const ERASE_DIALOG = new Set(['E142', 'E140', 'E130', 'E133']);
+const WIZARD = 'SS_MENU_MAIN/ID_ST_WIZARD_MENU_ENTRY', SINGLE = 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE';
 export async function playInfoSession() {
   const bad = [];
   let checks = 0;
@@ -72,6 +87,15 @@ export async function playInfoSession() {
   // (one composite: a frame at the boundary runs the lab to the next boundary first, play.mjs frame)
   const f2 = digest();
   ok(name() === 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE' && cam.play_cur === 1 && f2 === f0, `${MODEL}: LEFT ${name()}, image ${cam.play_cur + 1} shown, the frame ${f2 === f0 ? "PLAY's" : 'another'}`);
+  // OK's playback wizard, and PLAY from it (finding 108)
+  press('ok');
+  const fw = digest(), opens = !OK_OPENS_NOTHING.has(MODEL);
+  ok(opens ? name() === WIZARD && fw !== f2 : name() === SINGLE && fw === f2, `${MODEL}: OK ${name()}, the frame ${fw === f2 ? 'unchanged' : 'changed'} (${opens ? 'the wizard drawn' : 'nothing opens'} expected)`);
+  press('play');
+  ok(lab.state() === shooting, `${MODEL}: PLAY from OK's ${opens ? 'wizard' : 'playback'} to 0x${lab.state().toString(16)} ${name()}, the shooting screen's 0x${shooting.toString(16)}`);
+  press('play');
+  const f3 = digest();
+  ok(name() === SINGLE && cam.play_cur === 1 && f3 === f0, `${MODEL}: PLAY again ${name()}, image ${cam.play_cur + 1} shown, the frame ${f3 === f0 ? "PLAY's" : 'another'}`);
   const before = calls.length;
   press('info');
   ok(name() === 'SS_PLAY_SINGLE/ID_ST_DISP_DETAIL', `${MODEL}: INFO ${name()}`);
@@ -107,6 +131,18 @@ export async function playInfoSession() {
   ok(name() === 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE', `${MODEL}: INFO a third time ${name()}`);
   press('play');
   ok(lab.state() === shooting, `${MODEL}: PLAY back to 0x${lab.state().toString(16)} ${name()}, the shooting screen's 0x${shooting.toString(16)}`);
+  // the erase dialog and S-PLAYSEQ's refusal of the erase (finding 110): no silent success, both files kept
+  if (ERASE_DIALOG.has(MODEL)) {
+    press('play');
+    press('delete');
+    ok(name() === WIZARD, `${MODEL}: Delete ${name()} (the erase dialog)`);
+    press('up');
+    let refusal = null;
+    try { press('ok'); } catch (e) { refusal = e; }
+    ok(refusal !== null && /S-PLAYSEQ: play request 21 \(PlaySingleFrame::eraseCurrent\)/.test(refusal.message), `${MODEL}: OK in the erase dialog: ${refusal ? refusal.message.slice(0, 160) : 'no refusal'}`);
+    const vol2 = openVolume((lba, n) => st.card.read(lba, n)), kept = s.storage.files.filter((x) => vol2.find(x.path.slice(3).replaceAll('\\', '/')));
+    ok(kept.length === 2 && cam.card_images() === 2, `${MODEL}: after the refusal ${kept.length} of the 2 files on the card, ${cam.card_images()} counted`);
+  }
   return { checks, bad };
 }
 

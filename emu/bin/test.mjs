@@ -24,7 +24,7 @@
 // on) on E143 and E146 (test_acc.mjs), the card and the
 // file system on E143, E146, E147, E144, E142, E134, E148, E137, E125 and the E118 family (S2's file with its header
 // maker's Exif) and SDXC cards on E143 (test_storage.mjs), INFO's still information
-// in playback with two pictures, RIGHT and LEFT between them and INFO's three views on the 19 bodies
+// in playback with two pictures, RIGHT, LEFT, OK's wizard, INFO's three views and the erase's refusal on the 19 bodies
 // (test_playinfo.mjs), a tap on the touch mode icon on E143, ten bodies of the E144
 // family and the E118 family, and in the super control panel on E144 and the E118 family (test_touch.mjs), subject
 // detection's frames on E143
@@ -320,7 +320,8 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...su.bad, ...ss.bad, ...sx.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += su.bad.length + ss.bad.length + sx.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
-// Playback with two pictures (RIGHT, LEFT, INFO's three views) and INFO's still information, from the picture's own
+// Playback with two pictures (RIGHT, LEFT, OK's wizard and PLAY from it, INFO's three views, the erase dialog's request
+// refused where Delete opens it) and INFO's still information, from the picture's own
 // record: E143 here (S-PLAYCOMP's answer in the
 // component's struct), and E146, E147, the E118 family (S-PLAYSEQ's answer to the play module's request 3) and the
 // E144 family (S-PLAYCOMP's) each in a process of its own, PLAYINFO_JOBS at once

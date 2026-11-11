@@ -95,7 +95,11 @@
 //               (0x50542c97 to 0x50491c9f) is skipped with the status 0, the run returns 0, and Jpeg_Result writes the
 //               stream and Size. The set divides the request's white balance R and B gains by the smaller of its two
 //               G gains (0x505099e0 from 0x50509ac9), which ImageParam copies from the shot record's +37810.. and
-//               REC_PREPRO's rec_precon_wb_exec fills on the camera: 0 here (X, D). Natively Jpeg_Result sets Size to
+//               REC_PREPRO's rec_precon_wb_exec fills on the camera: 0 here (X, D). ImageParam's body natively asks
+//               TAKE's shot table for its four sources' buffers (rec_ImgProCtrl_Src_Bayer, _Thumb, _ThumbICam1,
+//               _ThumbICam2, by HandleTarget), which TAKE does not fill in the lab: each logs 0x25000402 and gives
+//               handle 0, for which MM's handle-to-address 0x50534dd1 logs 0x08010004 (X; the record's errlog, the
+//               logs from the post to the parameter set's call). Natively Jpeg_Result sets Size to
 //               HeaderSize + the library's primary size and then copies 51200 bytes from the record's +41052 after
 //               the primary with a kind 13 request to the imgpro unit, Size grown by as much (D); the lab makes
 //               neither. On E146 and E147 rec_jpeg_make_image as a whole. (Until 2026-11-10 on E146 and
@@ -153,8 +157,9 @@ export const recImageFacts = () => fact('rec_image', REC_IMAGE_E143);
 // them: on E146 and E147 S-JPEGENC takes rec_jpeg_make_image as a whole): rec_ImgPro_ImageParam's call (a call d32, 7
 // bytes) of the image library's parameter set (set), which divides the request's white balance gains; the run;
 // rec_ImgPro_Jpeg_Result, which sets Size; and, run natively and observed, the release and the packet's ImgProID[0]
-// (the dump's +36), which the library's create gives
-export const REC_ENCODE_E143 = { set_call: 0x50542C97, set: 0x50491C9F, run: 0x50542407, result: 0x50542CE1, release: 0x5054322E, id: 36 };
+// (the dump's +36), which the library's create gives; packet: ImageParam's frame slot of its a0, the packet
+// (0x50542528), at the set's call
+export const REC_ENCODE_E143 = { set_call: 0x50542C97, set: 0x50491C9F, run: 0x50542407, result: 0x50542CE1, release: 0x5054322E, id: 36, packet: 24 };
 // the shot's EXIF parameter block (S-EXIFPRM): the fields the lab writes are the rule's (exif: E143's the EXIF module's
 // tag table at body 0x6058e0, {u16 tag, u16 type, u32 bytes, u32 offset}, gives DateTime 0x0132 +1364, DateTimeOriginal
 // 0x9003 +4089, CreateDate 0x9004 +4109, DigitalZoomRatio 0xa404 +4228)
@@ -299,7 +304,7 @@ export class RecFile {
       const c = sim.read(runtime(E.set_call), 7);
       if (c[0] !== 0xDD || ((E.set_call + (c[1] | c[2] << 8 | c[3] << 16 | c[4] << 24)) >>> 0) !== E.set) throw new RecError(`S-JPEGENC: ${h8(E.set_call)} is not ImageParam's call of the parameter set ${h8(E.set)}`);
     }
-    const run = { task: null, encoded: 0, set: 0, run: 0, id: 0, released: 0, addr: null, reply: null };
+    const run = { task: null, encoded: 0, set: 0, run: 0, id: 0, released: 0, addr: null, reply: null, errlog: null };
     const ours = (at, what) => { if (u32(at, 'pExifParam') !== u32(pk, 'pExifParam')) throw new RecError(`S-JPEGENC: ${what} on a packet ${h8(at)} that is not S-RECREQ's`); };
     const encode = (at) => {
       const img = M.record ? sim.u32(at + M.record.at) >>> 0 : at, addr = sim.u32(img + M.addr) >>> 0;
@@ -310,7 +315,15 @@ export class RecFile {
     };
     const hooked = [I.reply.fn];
     if (E) {
-      lab.hook(E.set_call, (h, r) => { run.set += 1; h.skip_call({ ...r, d0: 0 }); }, 'S-JPEGENC');
+      // the firmware's error logs from the post to the parameter set's call (ImageParam's sources, docs/hle-gaps.md
+      // 4.3.4): [code, caller] each
+      const e0 = lab.kernel.errors.length;
+      lab.hook(E.set_call, (h, r) => {
+        ours(sim.u32(r.sp + E.packet) >>> 0, "ImageParam's call of the parameter set");
+        run.set += 1;
+        run.errlog = lab.kernel.errors.slice(e0).map(([c, , , w]) => [h8(c), /disasm (0x[0-9a-f]+)/.exec(w)?.[1] ?? w]);
+        h.skip_call({ ...r, d0: 0 });
+      }, 'S-JPEGENC');
       lab.hook(E.run, (h, r) => { const at = r.a0 >>> 0; ours(at, 'the run'); run.run += 1; run.id = sim.u32(at + E.id) >>> 0; h.finish(r, { d0: 0 }); }, 'S-JPEGENC');
       lab.observe(E.release, (l, r) => { ours(r.a0 >>> 0, 'the release'); run.released += 1; }, 'obs-rec-release');
       lab.hook(E.result, (h, r) => { const at = r.a0 >>> 0; ours(at, 'rec_ImgPro_Jpeg_Result'); encode(at); h.finish(r); }, 'S-JPEGENC');
@@ -340,7 +353,7 @@ export class RecFile {
     const y = run.reply, fills = (imgpro?.log ?? []).filter((f) => f.n > runs0);
     // S-JPEGENC's steps on E143 (null on E146 and E147, where it takes rec_jpeg_make_image as a whole)
     const steps = E ? { set: run.set, run: run.run, result: run.encoded, id: run.id, released: run.released } : null;
-    const record = { task: run.task, encoded: run.encoded, steps, reply: y, alive: sim.u32(alive) >>> 0, fills: fills.map((f) => ({ mode: f.mode, dst: f.dst, bytes: f.bytes, rows: f.rows, value: f.value })), take };
+    const record = { task: run.task, encoded: run.encoded, steps, errlog: run.errlog, reply: y, alive: sim.u32(alive) >>> 0, fills: fills.map((f) => ({ mode: f.mode, dst: f.dst, bytes: f.bytes, rows: f.rows, value: f.value })), take };
     this.images.push(record);
     if (run.encoded !== 1 || (E && (run.set !== 1 || run.run !== 1 || !run.id || run.released !== 1)) || run.task !== I.task.id || y.status !== 0 || y.header !== J.header || y.addr !== run.addr || y.size !== y.header + stream.length || record.alive !== 0) {
       throw new RecError(`${who}: REC_IMAGE encoded ${run.encoded} times${run.task === I.task.id ? ' in its task' : ''} (S-JPEGENC's steps ${JSON.stringify(steps)}), REC_FILE replied status 0x${y.status.toString(16)}, HeaderSize ${y.header}, BuffAddr1 ${h8(y.addr)} (the encode's ${h8(run.addr)}), BuffSize1 ${y.size} (the stream ${stream.length} bytes), pAlive ${record.alive}`);

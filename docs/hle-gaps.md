@@ -1567,16 +1567,17 @@ camapp 3's frames and compares them with camapp 1's. The default stays camapp 1.
     y 72..334. Camapp 3 shows MF where camapp 1 shows S-AF, and no AF target brackets. Cause: setting 535
     (MODE_AF_CHANGE) is 1 in camapp 3 and 0 in camapp 1; set to 1 in a camapp 1 session (`SET:535=1`) the shooting
     screen is camapp 3's word for word. Camapp 3 sets it at 2.77 s of lab time through the setter `0x503c6511` from
-    `0x503c49fd` (return chain `0x50ab51f0`, `0x50adfc16`, `0x50b530c1`, `0x50e171e0`, `0x50db73f1`, `0x512ac5e4`),
-    and camapp 2 does the same at PLAY's return (from then on its shooting screen is camapp 3's). Which component
-    decides it, and why camapp 1 never does, is ?. S1 (600 ms, no live view) changes no frame in either.
+    `0x503c49fd` (return chain `0x50ab51f0`, `0x50adfc16`, `0x50b530c1`, `0x51054474`: the application's
+    initLeverSwitch, from the Fn lever; the three words named here before were log strings, 4.3.7), and camapp 2 does
+    the same at PLAY's return (from then on its shooting screen is camapp 3's). Camapp 1 never does: OlyHfwOpeShoot
+    writes it only while the sequence parts stand by (4.3.7). S1 (600 ms, no live view) changes no frame in either.
   - *MENU*: 4,602 pixels in x 38..871, y 283..327: the movie Card Slot Settings row is available in camapp 3 and
     greyed in camapp 1 (camapp 2 greys it too). Not caused by the scalar settings that differ: 17 do after the start
     (19, 51, 53, 112, 535, 678, 1245, 1247, 1256, 1259, 1261, 1627, 1628, 1649-1652; camapp 2 has 11 of the 17 values,
     and 535, 1627 and 1628 after PLAY's return), and set to camapp 3's values in camapp 1 (19, 678 and 1256 one at a
     time, and every settable one together) they leave its menu unchanged (1259 and 1261 are 85, which their descriptor
-    lists do not hold, and equal in camapp 2). What decides the row is ?. IMG2 is drawn under the menu and changes no
-    pixel (above).
+    lists do not hold, and equal in camapp 2). What decides the row: both slots' media flags 15261 and 15262, which
+    have no descriptor (4.3.7). IMG2 is drawn under the menu and changes no pixel (above).
   - *PLAY* (No Picture, no shots taken): identical.
   - *The histogram* (GUI layer 1's box at x 4..259, y 110..172 on the shooting screen): empty in camapp 1 with or
     without `--cpu2 native` (S-MODACK answers OSD_DRAW_CPU2's send, 4.6.2) and in camapp 3 without it; in camapp 3
@@ -1595,7 +1596,7 @@ camapp 3's frames and compares them with camapp 1's. The default stays camapp 1.
   end (above); the keys lost after a menu pass and a shot, playback with pictures and REC's header fill (4.3.1's next
   stops, and S-JPEGENC and S-ALBM there; their causes in 4.3.2; the header fill runs natively in REC_IMAGE's task
   since 4.3.3, under camapp 3 too, X); the GUI differences above (MF and no AF target, the movie card slot row),
-  whose causes are open; S1's release (600 ms after S1) after a menu and a PLAY pass stops at S-TAKEOVER's scope (a
+  their causes in 4.3.7; S1's release (600 ms after S1) after a menu and a PLAY pass stops at S-TAKEOVER's scope (a
   module-9 read from `0x50c8a335`, not one of CMP_MODULE9_READERS; X, 2026-11-10).
   *Golden with camapp 3 as the player's default* (a local, uncommitted run of the 21 Player sessions; X): all 21 differ
   in every layer, as they must (the components run, so instruction counts, stand-in lists, traces and frames change).
@@ -2294,6 +2295,93 @@ lens, as golden's sessions.
 - **Open.** The camera's route from the lever to shutDown and from EVFSW / the eye sensor to the GUI's 131 (the CA
   chains); 586's next stop after the flash (CapTak_Take, `0x60e6f0f0`'s capability, CmpSdw_ShutdownComponent);
   why TRA 994 from task 162 waits.
+
+#### 4.3.7 camapp 3: the AF mode and the card-slot row (2026-11-10; D unless tagged, addresses E143's)
+
+4.2.4's two GUI differences between camapp 3 and camapp 1, each to the firmware's own decision and the lab input it
+reads. No stand-in changed this round; the default stays camapp 1.
+
+- **The shooting screen's MF is MODE_AF_CHANGE (535) from the Fn lever.** The application's start (`0x51081333`, on task
+  165 in the lab, X) calls initLeverSwitch (SubAppModuleLeverSwitch, `0x5105420f`; fwmap files it under
+  IOlyApiShooting). It reads the lever through the HFW interface's slot 236, OlyHfwOpeCamCom's `0x50abdd4b`: with 15260
+  (the lever as power switch) at 0 it answers 1 unless UI_IN's state of `0x02021223` is 1, and the shell's own enum
+  (`0x50df201f`) names 0 API_LEVER_SW_1 and 1 API_LEVER_SW_2. It reads the mode dial (at dial state 5, 1290 takes 534's
+  place unless 534 is 7 with the lever at 1) and the lever's function 534 (factory default 4, list 0, 8, 4, 7) and
+  switches on it (table `0x512ac924`): 0, 1, 2 and 8 set the focus mode change to 0; 3, 5 and 6 set it to 0 and give the
+  Fn buttons' function by the lever; 7 sets it to 0 and calls `0x51054cd8` with the lever; 4 calls
+  Shooting::setFocusModeChange with the lever's state (`0x5105443b..0x51054472`). The menu's names of these values are
+  not read.
+- **Who writes it (D).** Shooting::setFocusModeChange (`0x50b53072`, slot `0x50e174d8` of its table) calls
+  OlyHfwOpeShoot's `0x50adfbc3`, which writes 535 (0 or 1, `0x50ab51d5` -> `0x503c49f7` -> `0x503c6511`) only where
+  `0x50ab5f6f` answers 1: the shooting phase query `0x50ab57e9` at 101. Otherwise it returns `0xf0000058` and writes
+  nothing. The query answers 100 with no sequence controller (`0x6035f024` 0), else the sequence parts' phase
+  (`0x60364a1c` through `0x50c5880b`). The other writer of 535, `0x50b82c3c` (from `0x50adfb2a`, behind the same gate,
+  and the sequence parts' `0x50cce85b`), does not run in the first 3.5 s of either session (X).
+- **The runs (X).** Both camapps run initLeverSwitch at 2.771 s of lab time with the lever at 1 (SW_2), dial state 9 and
+  534 = 4, and both call setFocusModeChange(1). Camapp 3: the sequence parts set phase 100 and then 101 (`0x50c89db3`,
+  the OXF main thread) at the same instant, before it, and 535 becomes 1, MF. Camapp 1: no sequence parts, phase 100,
+  refused, 535 stays 0, S-AF. The lens has no part: getLensMfMode answers 0 in both (the native lens reports no MF
+  clutch). With the lever moved to 1 (API_LEVER_SW_1) camapp 3 writes 535 = 0 and its shooting screen is camapp 1's word
+  for word; moved back, MF again (1,655 pixels). In camapp 1 the lever changes nothing (refused each time): its Fn
+  lever's focus function is dead.
+- **Decision.** With the lab's hardware state, the lever at API_LEVER_SW_2 (UI_IN's decode of the idle level, D) and a
+  factory store (534 = 4, D), the camera shows MF, camapp 3's picture (D for the logic). That the camera's sequence
+  parts stand by before the start reaches initLeverSwitch is I: in camapp 3 both come at 2.771 s, and the start waits
+  from 2.756 to 2.771 s in camapp 1 as well (last on the API flag `0x13e`, X), where no component runs, so the order is
+  the scheduler's. Camapp 1's S-AF is the wrong one, from the missing sequence parts, not from a stand-in's value. Not
+  fixed: the fix is a stand-in for the sequence parts' standby at the gate `0x50ab5f6f` (its callers `0x50adfbda`,
+  `0x50adfb4c` and OlyHfwLowApiWrap's `0x50ac4792`). With the lever at SW_2 it puts every default session in MF while
+  S-RELSEQ and S-AFLOCK keep feeding S1 an AF lock (X, the gate answered for `0x50adfbda` alone in camapp 1: MF, and
+  S1's frame changes by the same 1,072 pixels as without it), which the camera does not make in MF (I). So the gate's
+  stand-in needs S-RELSEQ's focus callbacks to follow the focus mode first, and golden then changes in every session.
+  The lever's position is a free input of the lab (no firmware default); moving its idle level to SW_1 to keep S-AF
+  would be a choice, not evidence. What would settle the order: on a camera with the lever at position 2 and a factory
+  store, the shooting screen right after power-on.
+- **The movie Card Slot Settings row is both slots' media flags.** The menu's actuator (Cursor_Move_Menu_1st_Actuator
+  `0x51170a91`) stores a row's state, 0 or 1 (grey), from the item query `0x50b01314` (`0x50b012a0`'s slot 0) of the
+  row's item, 1131 (X: the one item whose answer differs, 1 in camapp 3, 0 in camapp 1). The query (`0x50b7ae3f` ->
+  `0x50b7aeae` -> `0x50b7e4b8`) runs 1131's restriction record (`0x50e2b790`: conditions 0, 1, 3 and 5, functions from
+  `0x60e4ad9c`). Condition 0 (`0x50b7e680`) asks the store's restriction of 1131 (`0x50ab5092(1131, 2, 3200)` ->
+  `0x503c4be9` -> `0x503d28ec`), whose rule (`0x605df54c`) has three cases on (15261, 15262): (0, 0), (1, 0) and (0, 1)
+  (D). The row is available only with both flags at 1 (X: camapp 1's (0, 0), and (1, 0) with 15261 set in a trial,
+  answer 256; camapp 3's (1, 1) answers 0; (0, 1) was not run). 15261 and 15262 have no descriptor, so 4.2.4's
+  comparison of the scalar settings did not see them.
+- **The flags (D).** CapMed_MediaManager's slot update `0x50bba897` sets 15261 + slot to 1 for a slot whose media status
+  (api_media `0x503f0bd7`) has bit 2 or 3 set or whose device answers `0x50bb7b46` (first 4510 / 4521 to -1,
+  `0x50bba8ff..0x50bba925`), and to 0 where bit 14 is clear; the function component sets them after a format (4.8.3). At
+  its start (`0x50bb7bba`) the manager asks for the second slot's mount where the slot's device answers vt 140 with 0
+  (I: not mounted): the request vt 20 with 3 (`0x50bb7e8c`), the kind's mount state 2 (`0x50bb7e7b`; X, that slot's
+  path). No test of the card's presence is on that path.
+- **The runs (X).** Camapp 1 runs no media manager: both flags 0, the row grey. Camapp 3's manager sets 15261 = 1 at
+  2.756 s (the first slot's card) and 15262 = 1 at 3.06 s: its mount of the second slot runs the DCF card-in for drive 1
+  (detect state 2 at `0x5087bd4e`) and the second slot's SD port, the command's u16 at +12 (port 1; the command layer
+  indexes its ports' busy words with it, `0x508ad044..0x508ad055`), gets 56 commands, each answered by S-SDCARD's one
+  card, which answers every command whatever its port (`emu/src/lab/storage.mjs`): the second slot mounts the first
+  slot's card (api_media's status 0x3780 with the card bit 0x80, where camapp 1 has 0x600). Not the cause, each changed
+  alone in camapp 3: the second slot's card switch `0x1518` at the no-card level, S-CARD's HLS mount state of kind 8
+  (`0x60360c08`) left 0, UI_IN's `0x0400` at state 1. Tried and not kept: port 1 answered as an empty slot (no
+  response). Drive 1 then reads 0x8608 (api 0x608: bit 3, the failed init), which the slot update also takes (15262 = 1,
+  the row still available), and camapp 3's `--hdmi on` plug stalls (more than 300,000 stub calls in S-DISPFRAME's swap
+  wait; traRoutingSession 20/21, 24/24 without it).
+- **Decision.** By the firmware's rule the row is grey with one card unless the media manager flags the empty slot.
+  Camapp 1's grey follows from no flags at all (it lacks the first slot's 15261 = 1 too, a latent difference the row
+  alone does not show, X: the trial above); camapp 3's available row follows from the lab's one card answering both
+  ports, a wrong lab input (D, X). Which the camera shows with one card is not settled by the code read: it turns on
+  what the empty second slot does at the manager's mount, and an empty answer gives the init error that flags it as
+  well. What would settle it: an OM-1 with one card in slot 1 (is the movie Card Slot Settings row grey?), and, for the
+  lab, the card detect of the second port as the SD driver reads it before the card's init (the path from the DCF
+  card-in to sd_mount's init is not read; S-SDHOST keeps the host's registers as written and models no card detect).
+  This also answers 4.8.3's (?) (D): its format sets both flags (S-CARD gives both slots the mount state 8), so the row
+  is available after it.
+- **Corrections.** 4.2.4's return chain past `0x50b530c1` was not one: `0x50e171e0` is the log format `%1s(%d)` that
+  `0x50b53072` logs with (run-time `0x60e38200`), `0x50db73f1` the string "Shooting::setFocusModeChange" and
+  `0x512ac5e4` "changeFunctionButton", stack words a scan took for return addresses; the caller is initLeverSwitch
+  (return `0x51054474`, X). 4.2.4 now says so.
+- **Tests (X).** `emu/test/test_camapp.mjs` camapp3FramesSession (10 checks, 6 before) adds a camapp 1 session and pins:
+  the shooting screen differs by 1,655 pixels in x 417..894, y 72..334, with 535 at 1 and 0; the menu by 4,602 pixels in
+  x 38..871, y 283..327, with the flags (1, 1) and (0, 0) and the second slot's media status 0x3780 and 0x600; with the
+  Fn lever moved to 1 camapp 3 writes 535 = 0 and is camapp 1's frame word for word, and camapp 1's frame does not
+  change.
 
 ### 4.4 AF, lens and body IS
 

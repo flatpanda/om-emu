@@ -107,7 +107,8 @@ in the server's environment, in the browser by the start options above the camer
 Card menu's `?card_size=GiB`: 64 or 128 GiB, an SDXC card). HDMI: Plug in sends `{"type": "hdmi", "action": "plug"}` in a session with the port (the
 cable, the DDC reads, the driver's EDID state and, once the firmware opened it, the HDMI output's format and timing from
 the status), and is disabled with the reason without one; Unplug sends the unplug (A-HDMI-1). Card: Take out and Put in
-are the card inputs (S-MEDIA, the HLS media side of E143 and E146; another body refuses them with the reason), and the
+are the card inputs (S-MEDIA, the HLS media side of E143, E146 and the E118 family; another body refuses them with the
+reason), and the
 list is the card's files read with the independent FAT and exFAT readers (`refs/volume.mjs` picks `refs/fat.mjs` or
 `refs/exfat.mjs` by the boot sector; `web/cardfiles.mjs`) between the lab's steps, not through the firmware, in or out of the slot and
 while the camera is off, with the card's kind and capacity (`GET /api/card`; a volume the readers do not read, a blank
@@ -158,7 +159,9 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   default) PER_ROTATE runs natively too (H-ROTINIT): the tilt then takes any attitude (roll within 180, pitch within
   90 degrees), its step waits 500 ms and records the orientation, and the camera turned past 50 degrees of roll has
   the GUI lay the level gauge out for portrait.
-- module requests are answered (S-MODACK), the HLS transaction layer's exec succeeds and deletes its request as the
+- module requests are answered (S-MODACK; on E143 the application's posts to those queues that bypass the API sender
+  are taken as the module's task would take them, S-MODPOST, `docs/hle-gaps.md` 4.1.11), the HLS transaction layer's
+  exec succeeds and deletes its request as the
   exec would (S-TRAACK; `docs/hle-gaps.md` 4.4.2, the heap's growth), and the modules'
   notifications of a release (focus, exposure, rec view) are posted as the callbacks the HLS would make of them
   (S-RELSEQ); no image is captured. The focus result and the exposure time come from S-SCENE when its live view is on.
@@ -212,7 +215,9 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   4.3.3; on E146 and E147 since 2026-11-10 at the addresses a rule reads, 4.3.5), which S-RECREQ posts to it as
   REC_PREPRO would (on E146 and E147 REC_RAWNR), the header clear's fill runs natively on the imgpro unit and
   S-JPEGENC stands in for the encode only; on the E144 family S-RECIMAGE runs REC_IMAGE's part in a lab call, where
-  rec_jpeg_exec asks no fill. Card Formatting from the menu formats it: the menu's
+  rec_jpeg_exec asks no fill. On the E118 family, whose REC is an older version, S-RECFILE's file carries the header
+  the family's own header maker builds natively from the packet S-RECHDR hands it (`src/lab/recheader.mjs`,
+  `docs/model-survey.md` findings 102 to 104). Card Formatting from the menu formats it: the menu's
   Yes reaches the file module through api_media's own format call (S-MDACTRL, `src/lab/media.mjs`, `docs/hle-gaps.md`
   4.8.3, in place of the HLS function component), its progress bar runs and the application returns to the menu. The
   input `{"type": "card", "action": "remove"}` takes the card out of the slot while the camera runs and `"insert"`
@@ -231,12 +236,16 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   camera too, is stood in as the MN103's DIVU by 0, S-MOVRATE, `docs/model-survey.md` findings 50, 51, 59): a blank card formatted and mounted, the counts from it, each picture's file written (the movie time left
   on E144, E139, E137 and E125 is an orange `0:00:00`: the blank settings store's movie mode, UHD 4K at 60p, is one
   they cannot record, `docs/hle-gaps.md` 4.8.5; E134's query answers 0 for the same reason); the menu's Card
-  Formatting and the card input run on E143 and E146 (`docs/hle-gaps.md` 4.8.7) and are refused on the others. With a
+  Formatting and the card input run on E143 and E146 (`docs/hle-gaps.md` 4.8.7) and on the E118 family, whose
+  application runs the media control itself: Card Setup's Format with the camera base's part of its end stood in
+  (S-MDAEND, `src/lab/media.mjs`) and the card out and in through S-MEDIA (`docs/model-survey.md` findings 124 to
+  129); they are refused on the others. With a
   64 GiB SDXC card (`modelcheck.mjs --card-size 64`) each of them formats it exFAT; all but E144 run on, and E144
   stops at the camera application's start on its own divide by zero (its movie parameters, with that movie mode and
   an exFAT card, divide by a size the rate table did not give; the hardware's result is undefined, so emu stops
-  there: `docs/hle-gaps.md` 4.8.7). On the other bodies the card has no file
-  system (S-CARD: the HLS mount state, every picture taken kept as an image of folder 100, a remaining-shots answer of
+  there: `docs/hle-gaps.md` 4.8.7). A body without the native file system (none of the 19 today, `src/fw/models.mjs`
+  card_fs) would keep a card with no file system (S-CARD: the HLS mount state, every picture taken kept as an image of
+  folder 100, a remaining-shots answer of
   999 less the images to the application's getAvailableShootCount, the first slot's card detect state at inserted and
   a movie time left of an hour less what has been recorded). The system timer module's
   long timers run out (S-LONGTIMER), and a lens is on the mount. On E143, E146 and E147 it is there natively (since
@@ -294,7 +303,12 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   the opt-in A-VSCHIST-3 (`docs/hle-gaps.md` 4.2.4). It is not the default: a live view stops at the histogram's
   first end, keys are no longer taken after a menu pass and a shot, playback shows No Picture with pictures on the
   card (the next stops, 4.3.1; their causes, 4.3.2), and the first power-off of the golden power and power-replay
-  scenarios ends in S-SHUTDOWN's PowerError where camapp 1's turns off (4.2.4; cause not traced).
+  scenarios ends in S-SHUTDOWN's PowerError where camapp 1's turns off (4.2.4; the cause in 4.3.6: TRA 586 is not
+  answered, the flash capability still running when the shooting component's teardown asks for its stop). With the
+  Player's `camapp_play_native` (off by default) the play module runs natively too (H-PLAYSTART, `src/lab/playmod.mjs`;
+  S-PLAYSEQ, S-PLAYCOMP and S-PLAYVIEW not installed): PLAY loads and parses the picture and shows its view, the
+  decode stood in at the image library (S-PLAYDEC: no pixel written), the lab's stream carrying the firmware's own
+  Huffman tables (A-JPEGDHT-1), and INFO's detail view stops at the histogram's bins (`docs/hle-gaps.md` 4.8.11).
 - The mode dial shows each position by the firmware's name for it: UI_IN's dial table gives the position's mode code
   and the build names the codes (fact `mode_dial`, `src/fw/facts.mjs` modeDial), so E143's positions 0..9 are S, M,
   B, C1..C4 (MY_MODE1..4), Movie, P and A (`docs/om1-input-spec.md` section 2). A session starts with the dial at P,
@@ -332,7 +346,9 @@ node emu/bin/play.mjs --take probe               # TAKE_FUNC and TAKE_FUNC_CP na
                                                  # over the empty hot shoe (S-HOTSHOE, 4.12.1); TAKE_FOCUS runs
                                                  # natively (H-TAKEFOCUS) and S1 stops at EXP_MOVIE (4.1.8);
                                                  # cam.c's first init (H-CAMINIT) and, with --cpu2 native, EXP
-                                                 # (H-EXPINIT): EXP_MOVIE waits for the frame events (4.2.3)
+                                                 # (H-EXPINIT): EXP_MOVIE waits for the frame events (4.2.3);
+                                                 # with the Player's cam_fe (no option) cam.c's second init
+                                                 # against S-CAMFE (H-CAMINIT2, A-CAMFE-1, A-CAMFE-2; 4.2.5)
 node emu/bin/play.mjs --cpu2 native              # CPU 2 on the machine's second core from its entry (E143, off by
                                                  # default; S-CPU2 lifted; docs/hle-gaps.md 4.6.1)
                                                  # with CPU 0's CPUCONN (H-CPUCONN0), USTART_L2 stood in

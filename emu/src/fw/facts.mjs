@@ -2995,7 +2995,8 @@ export function recorder(img) {
 //   `mov 10499,d0; movhu d0,(8,a2); ret` (0x5012b7a7; the storage test sets the clock with it, X)
 // E146 and E147 read every part (X: their sessions record S2's file natively with them; E146's values as read by hand
 // before the rule, D). The E144 family's REC is another version (docs/hle-gaps.md 4.8.10: its REC_FILE receives without
-// the file name, its EXIF init has no cache flush), where no part past the trace table reads. Returns the parts in
+// the file name, its EXIF init has no cache flush), where no part past the trace table reads (recFileQueue below
+// reads that version). Returns the parts in
 // E143's shape, or undefined where the trace table, the receive or a part is not found in its shape; throws for a
 // trace table, a receive, a traced function, a template copy or a date set found twice.
 export const REC_FILE_E143 = {
@@ -3377,8 +3378,10 @@ export function recImage(img, kcb, rec) {
 //   "rec_main" trace (kind 0x1000: E144 0x503f0fa9 before 0x503f1010; E143's 0x50539665 has the same place, D)
 // - jpeg: exec, make_image by their traces; header, rec_jpeg_make_header's `mov H,d0; mov d0,(HeaderSize,a0)`
 //   (0x503fff59: 41984); fill null: rec_jpeg_exec clears no header area through the image engine before the encode
-//   (its calls between the buffer's allocation 0x50401673 and the header maker: the encode and the work area's free
-//   0x50401965, D)
+//   (its calls between the buffer's allocation 0x50401673 and the header maker: by Mode rec_ImgPro_Ycc2Jpeg
+//   0x503f9e56, or the ePortrait test 0x50401033 and then rec_ePortrait_make_image 0x503f4b80 or the encode, then the
+//   work area's free 0x50401965, D; on the seven others the same by their traces, E142 and E140 with an EXIF call for
+//   Mode 4114 before rec_ImgPro_Ycc2Jpeg, X: a scan of the calls; not read by the rule)
 // - contexts: rec_file_record's file contexts of 92 bytes (E143's layout: X, the file's fnode and folder read through
 //   them match the card): where it picks one by Media (REC_CTX_PICK, the double-slot bodies E139, E134, E125) the
 //   two, else the first `mov C,An` of a data address in it, the one it passes on (0x503f60ff: C 0x62127124, a slot
@@ -3387,8 +3390,8 @@ export function recImage(img, kcb, rec) {
 //   (0x5030b3b9, size 4 x 7925 = 31700; the init 0x5030b384, the template 0x620eb760 loaded first by 0x5030b38d;
 //   cflush null); the EXIF set's dates, `add DTO,a2; mov a2,a0; add TIME,d3; mov d3,a1; mov CODE,d0; call FORMAT`
 //   (16-bit adds; EXIF_DATES_Q's three forms), then DTO copied twice as recFile reads it (0x5030dc6a: time 28508,
-//   code 0x4200, original 4089,
-//   created 4109, modified 1364); tags, recFile's tag table (Make 1480, Model 1504, DigitalZoomRatio 4224); crop, the
+//   code 0x4200, original 4089, created 4109, modified 1364); tags, recFile's tag table (Make 1480, Model 1504,
+//   DigitalZoomRatio 4224); crop, the
 //   area rec_jpeg_make_header and rec_raw_make_header each divide by, `add A,a0; movhu (a0),d0; movhu (4,a0),d1; add
 //   OUT,a1; inc d0; udf00 W,d0` ({x, y, xden, yden}: 0x503ffa31 and 0x503ffa6e the JPEG's 31550, 0x50405d8c the
 //   RAW's 31558): [JPEG, RAW], the RAW's where rec_raw_make_header holds it
@@ -3450,10 +3453,14 @@ export function recFileQueue(img, kcb) {
     return fns.size ? [...fns][0] : undefined;
   };
   // the task: the static task whose loop calls the receive, a trace, the start, the free, the record, the finish
-  // (a trace in no function or in two is not this form's: E130's start and finish; nor is a table that names no post:
-  // E118's loop has the form, its "REC post_msg" holds no trace, the post's 0x1002 trace's code naming the name before
-  // it, X)
-  const one = (name, kind = REC_ENTRY_TRACE) => { try { return traced(name, kind); } catch { return undefined; } };
+  // (a start or finish whose one trace lies in no function a walk back finds, inlined into a longer one, is not this
+  // form's: E130's, in its REC_FILE loop; nor is a table that names no post: E118's loop has the form, its "REC
+  // post_msg" holds no trace, the post's 0x1002 trace's code naming the name before it, X); any other set of its
+  // traces that is not in one function throws (traced)
+  const one = (name, kind = REC_ENTRY_TRACE) => {
+    const id = ids.get(name), at = id === undefined ? [] : traceAt(kind, id - 1);
+    return at.length === 1 && entryOf(img, at[0], REC_FN_SPAN) === undefined ? undefined : traced(name, kind);
+  };
   const start = one('rec_file_start_process'), finish = one('rec_file_finish_process'), post = one('REC post_msg', REC_POST_TRACE);
   if (start === undefined || finish === undefined || post === undefined) return undefined;
   const tasks = [];

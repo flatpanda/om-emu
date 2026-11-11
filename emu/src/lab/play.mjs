@@ -1067,7 +1067,7 @@ export class PlaySession extends N.NavSession {
     const blocked = lab.blocked_sends();
     if (blocked.length) {
       throw new PlayError(`after ${w}: tsnd_dtq with timeout -1 waits on a full queue: ` +
-        blocked.map(([q, ra, st, task]) => `queue ${q} from ${ra} in task ${task} (since step ${st})`).join('; ') + `; tasks ${show(lab.task_states())}`);
+        blocked.map(([q, ra, st, task]) => `queue ${q} from ${ra} in task ${task} (since step ${st})${lab.queue_note?.(q) ?? ''}`).join('; ') + `; tasks ${show(lab.task_states())}`);
     }
   }
   // ---- bring-up

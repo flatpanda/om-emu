@@ -17,6 +17,7 @@
 // the A53's ISC node-4 service against the oracle's recorded exchanges (test_a53isc.mjs a53iscUnits, S-A53ISC),
 // the EMS1 engine's register file (test_ems1.mjs ems1Units, S-EMS1),
 // the imgpro unit's register file and fills (test_imgpro.mjs imgproUnits, S-IMGPRO),
+// S-MODPOST's rule, the guard's report of it and the object-name table's rule (test_modpost.mjs modpostUnits),
 // the lens serial controller, the deferred-call triggers and S-LENSMCU's replies (test_lens.mjs),
 // PER_SIO's served IIC transfers and the TG-5's charger (test_sio.mjs),
 // the debug API's argument checks, halt,
@@ -58,6 +59,7 @@ import { pdtUnits } from '../test/test_pdt.mjs';
 import { a53iscUnits } from '../test/test_a53isc.mjs';
 import { ems1Units } from '../test/test_ems1.mjs';
 import { imgproUnits } from '../test/test_imgpro.mjs';
+import { modpostUnits } from '../test/test_modpost.mjs';
 import { lensUnits } from '../test/test_lens.mjs';
 import { sioUnits } from '../test/test_sio.mjs';
 import { liveUnits } from '../test/test_live.mjs';
@@ -118,6 +120,7 @@ report('the PDT / TRC unit\'s register file: resets, images, results, completion
 report('the A53\'s ISC node-4 service against the oracle\'s recorded sccore, socket and CGI exchanges (S-A53ISC)', a53iscUnits());
 report('the EMS1 engine\'s register file: tables, images, results, completions, refusals (S-EMS1)', ems1Units());
 report('the imgpro unit\'s register file: the fills, their bytes and ends, refusals (S-IMGPRO)', imgproUnits());
+report('S-MODPOST: the posts it takes, the guard\'s report, the object-name table (src/lab/camapp.mjs, src/fw/facts.mjs objectNameId)', await modpostUnits());
 report('the lens serial controller, deferred-call triggers and the lens (S-LENSMCU)', lensUnits());
 report('PER_SIO\'s served IIC transfers and the TG-5\'s charger (S-SIOIIC, S-CHARGER)', sioUnits());
 report('debug API: argument checks, halt, trace filters, live route', await liveUnits());

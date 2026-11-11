@@ -4573,6 +4573,40 @@ export function apiTargets(img, ret) {
   return { table, count, queues };
 }
 
+// The kernel objects' names: a run of {char name[24], u16 id} records (E143's 257 from 0x61a42f4c, those by id from 1
+// at 0x61a430d2, src/lab/take.mjs TAKE_E143.names; E137's 250 from 0x6144108c, E125's 249 from 0x614385ac; X, the
+// images). objectNameId(img, name) gives the id of the record whose name field is `name` padded with NULs, inside a
+// run of at least OBJECT_RUN_MIN records (each a printable name, then NULs to 24 bytes), or null where none holds the
+// name. Throws where two records do. S-MODACK's PC_PD_CMD_EXEC (fact 'api.pc_pd', src/lab/camapp.mjs module_queues)
+// is read so: no API target names that queue (D: E143's, E137's and E125's tables, docs/model-survey.md finding
+// 130), and the port's placement of E143's id word read REC_EXEC_PROGRESS on E137 and FMEMEXEC on E125, which hold no
+// such name (finding 99)
+const OBJECT_NAME = 24, OBJECT_RECORD = 26, OBJECT_RUN_MIN = 100;
+export const PC_PD_NAME = 'PC_PD_CMD_EXEC';
+export function objectNameId(img, name) {
+  const looks = (o) => {
+    if (o < 0 || o + OBJECT_RECORD > img.length) return false;
+    let n = 0;
+    while (n < OBJECT_NAME && img[o + n] >= 0x20 && img[o + n] < 0x7f) n++;
+    if (n < 2) return false;
+    for (let k = n; k < OBJECT_NAME; k++) if (img[o + k] !== 0) return false;
+    return true;
+  };
+  const want = [...name].map((c) => c.charCodeAt(0)), hits = [];
+  for (let o = 0; o + OBJECT_RECORD <= img.length; o++) {
+    if (img[o] !== want[0]) continue;
+    let k = 1;
+    while (k < want.length && img[o + k] === want[k]) k++;
+    if (k < want.length || img[o + k] !== 0 || !looks(o)) continue;
+    let run = 1;
+    for (let p = o - OBJECT_RECORD; looks(p) && run < OBJECT_RUN_MIN; p -= OBJECT_RECORD) run++;
+    for (let p = o + OBJECT_RECORD; looks(p) && run < OBJECT_RUN_MIN; p += OBJECT_RECORD) run++;
+    if (run >= OBJECT_RUN_MIN) hits.push(o);
+  }
+  if (hits.length > 1) throw new Error(`objectNameId: ${hits.length} records named ${name} (${hits.map(h8).join(', ')})`);
+  return hits.length ? img[hits[0] + OBJECT_NAME] | img[hits[0] + OBJECT_NAME + 1] << 8 : null;
+}
+
 // What the rules that read code relative to an E143 function read from one body (src/fw/ports.mjs FACTS[code], with
 // readFacts'; bin/port.mjs): img its run-time image, at(address) the build's address of an E143 one (the port's
 // placement; null: not placed). Returns {app: {module9_readers}}, {state_log: {regs}}, {gui_states: {parents}}, {dispq: {sends, loop,
@@ -4582,7 +4616,7 @@ export function apiTargets(img, ret) {
 // forward}}, {touch_start: {init, id_word}}, {touch_mask: {word}},
 // {touch_regs}, {frame_mode: {set}}, {frame_plane: {mode, uploads}}, {prop: {device, evf_code}} and
 // {lens_driver: {module_init, cache_init, task_vars, tasks, exec_queue, flags, cache_area}} and {rec_file: {exif, init,
-// task, packet, jpeg, contexts, clock_set}} and {api: {table, count, queues}} (no api part where the API sender's
+// task, packet, jpeg, contexts, clock_set}}, {api: {table, count, queues, pc_pd}} (no api part where the API sender's
 // return is not placed; no state_log part where
 // the GUI state log is not placed or has not one call; no gui_states part where the state table is not placed or
 // stateTableBound reads no bound; no still where the getStillInfo converter is not found, still null where
@@ -4674,7 +4708,7 @@ export function readPlacedFacts({ img, at }) {
   // family's version (recFileQueue: REC_FILE on its queue alone) is not recImage's form
   if (recF !== undefined) facts.rec_image = recImage(img, kcb, recF);
   const apiReturn = at(API_SEND_RETURN_E143);
-  if (apiReturn !== null) facts.api = apiTargets(img, apiReturn);
+  if (apiReturn !== null) facts.api = { ...apiTargets(img, apiReturn), pc_pd: objectNameId(img, PC_PD_NAME) };
   return facts;
 }
 

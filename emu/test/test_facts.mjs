@@ -175,6 +175,12 @@ const API_FOUND = {
   E118: { table: 0x603C5558, count: 43, queues: { XTC_APP_EXEC: 0x80, TFT_EXEC: 0x6E, LENS_COMMAND: 0x34, FCS_EXEC: 0x1E, PWR_EXEC: 0x86, C3D: 0xA2 } },
   E120: { table: 0x603A985C, count: 42, queues: { XTC_APP_EXEC: 0x80, TFT_EXEC: 0x6E, LENS_COMMAND: 0x34, FCS_EXEC: 0x1E, PWR_EXEC: 0x86, C3D: null } },
 };
+// S-MODACK's PC_PD_CMD_EXEC by its name in the object-name table (api.pc_pd, src/fw/facts.mjs objectNameId): the
+// queue on the seven bodies that hold the name, the same the port's place of E143's id word read; none on E137 and
+// E125, where that place read REC_EXEC_PROGRESS and FMEMEXEC, nor on the ten others (X; docs/model-survey.md 130)
+const PC_PD_FOUND = { E143: 0xCF, E146: 0xCF, E147: 0xCF, E144: 0xD6, E148: 0xD6, E139: 0xD6, E134: 0xDC, E137: null,
+  E125: null, E142: null, E140: null, E145: null, E133: null, E130: null, E129: null, E132: null, E118: null, E122: null,
+  E120: null };
 // The GUI's OSD order table: GPISetOsdOrder's mapper's six {code, plane, plane, plane} records (E143 0x60df8352, E122
 // 0x60978f77; D), the order codes src/dev/vsccompose2.mjs ORDER_CODES draws (test/test_vsc3.mjs pins them to these
 // records). Every body's image holds the 24 bytes exactly once (X: the 19; docs/model-survey.md finding 96)
@@ -968,6 +974,7 @@ export function factsTests() {
     if (code === 'E143') ok(Array.isArray(m9) && E143_MODULE9_LISTED.every((x) => m9.includes(x)), `E143: app.module9_readers ${hx(m9 ?? placed)} lacks one of its lab lists' ${hx(E143_MODULE9_LISTED)}`);
     const apiFound = API_FOUND[code], api = placed?.api;
     if (apiFound && (code === 'E143' || PORTS[code])) ok(api?.table === apiFound.table && api.count === apiFound.count && Object.entries(apiFound.queues).every(([k, v]) => api.queues[k] === v), `${code}: api ${hx(api ?? placed)}, found ${hx(apiFound)}`);
+    if (code in PC_PD_FOUND && (code === 'E143' || PORTS[code])) ok(api?.pc_pd === PC_PD_FOUND[code], `${code}: api.pc_pd ${hx(api?.pc_pd ?? placed)}, found ${hx(PC_PD_FOUND[code])}`);
     const orderPat = Buffer.from(ORDER_TABLE.flat()), view = Buffer.from(img.buffer, img.byteOffset, img.length);
     let orderTables = 0;
     for (let p = view.indexOf(orderPat); p >= 0; p = view.indexOf(orderPat, p + 1)) orderTables++;

@@ -12,7 +12,7 @@
 // worker thread (test_web.mjs), the node host
 // over HTTP (test_host.mjs), the image sensor stand-in (test_scene.mjs), the camera application running natively
 // (test_camapp.mjs, with S-HEAP over an idle and a workload, the mode dial's positions and camapp 3 with its
-// frames), the TAKE
+// frames), S-MODPOST (test_modpost.mjs), the TAKE
 // probe's record of what TAKE_FUNC takes and asks on E143 (test_take.mjs), CPU 2 natively on the machine's second
 // core (test_cpu2.mjs), the lab's audio output and the
 // synthesized shutter sound at a
@@ -175,6 +175,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`camera application (S-CAMAPP) in play: ${ca.checks - ca.bad.length}/${ca.checks}; S-HEAP over an idle: ${hp.checks - hp.bad.length}/${hp.checks}; S-HEAP over a workload: ${hw.checks - hw.bad.length}/${hw.checks}; the mode dial's positions: ${md.checks - md.bad.length}/${md.checks}; camapp 3's native transactions: ${tr.checks - tr.bad.length}/${tr.checks}; camapp 3's frames: ${fr.checks - fr.bad.length}/${fr.checks}`);
   [...ca.bad, ...hp.bad, ...hw.bad, ...md.bad, ...tr.bad, ...fr.bad].forEach((x) => console.log('  ', x));
   bad += ca.bad.length + hp.bad.length + hw.bad.length + md.bad.length + tr.bad.length + fr.bad.length;
+}
+// S-MODPOST (test_modpost.mjs): the direct posts to S-MODACK's queues the module's task would take, taken under
+// camapp 3, no module queue holding a message over a long workload, a post it does not take named by the guard
+{
+  const { modpostUnits, modpostSession } = await import('../test/test_modpost.mjs');
+  const mu = await modpostUnits(), ms = await modpostSession();
+  console.log(`S-MODPOST: units ${mu.checks - mu.bad.length}/${mu.checks}; in play ${ms.checks - ms.bad.length}/${ms.checks}`);
+  [...mu.bad, ...ms.bad].forEach((x) => console.log('  ', x));
+  bad += mu.bad.length + ms.bad.length;
 }
 // the imgpro unit's model (S-IMGPRO) on a bare machine; the firmware's driver on it runs in camapp 3 above
 {

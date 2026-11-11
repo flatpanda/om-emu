@@ -2311,7 +2311,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    that id at 1 and then toggles a second one (E122 867, E144 858). In the lab's store every pad id reads 0 (X,
    S-PERSIST's 'before' in finding 116), the setting's Off.
 116. **Taps with the EVF active** (2026-11-10, X: play sessions started on the EVF, `test/test_touch.mjs` evfSession).
-   E118: no report is read and HFW sees nothing (its panel closed, finding 113). The ten others, the pad off: the start
+   E118: no report is read and HFW sees nothing (its panel closed, finding 113; the same with H-TPSTART's open put
+   back at the bring-up, an experiment). The ten others, the pad off: the start
    leaves the GUI's OFF mask of finding 115 (on E122 at the GUI's set at 6907.5 ms, after the application's 0x1f1), a
    tap at 360, 240 is read (two reports) and HFW sees no gesture. With the pad's id set to 1 before the GUI exists
    (S-PERSIST's seed through the firmware's property set, 0 -> 1), the mask is 0x1f1 and the tap reaches HFW as PRESS at

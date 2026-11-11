@@ -2162,6 +2162,99 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    E143 the queue's 12 id-word reads are 9 synchronous sends, 2 posts and a receive at `0x5102b35f..0x5102ba1a`
    (D; beside the C3D module's code, I; docs/hle-gaps.md 4.1.11). `bin/modelcheck.mjs` after the re-port: its 31 runs
    pass (X).
+108. **PLAY in the playback wizard OK opens, and the image type** (2026-11-10, `src/lab/camapp.mjs` S-PLAYCOMP's
+   get_img_type and S-PLAYSEQ's getImageType, IMAGE_TYPE_STILL; answers finding 94's last open question and corrects it:
+   E143 stopped too). The symptom (X, a session per body: start, S1, S2, PLAY, OK, PLAY): OK opens
+   SS_MENU_MAIN/ID_ST_WIZARD_MENU_ENTRY with the frame unchanged, and PLAY there stops the GUI task (E122's task 149) at
+   a jump to a low address, through `calls (a1)` after `mov (W),a0; mov (a0),a1; mov (N,a1),a1` with the current screen
+   word W 0: E122 `0x00008010` at PLAY down (message 0x9010; the state's handler `0x50cbd271`, called by the state
+   dispatcher at `0x50baaab9`, its `calls` at `0x50cbd292`, W `0x6161c024`, N 32; fault 3, mdr `0x50cbd294`), E130
+   `0x0000801f` at PLAY down (`0x50d9f6bf`, `0x623b6c54`, 32), E143 `0x00000334` at PLAY up (0x9011; `0x5121f3b2`,
+   `0x60375ba8`, 36); E118 and E120 hold the same handler (`calls` at `0x50c9ad4f` and `0x50a1abf9`, W `0x615f7dd0` and
+   `0x615f65a4`, D). The target is the vtable slot read from address 0, so it differs by body: before the fix the same
+   stop on E146 (`0x0000034c`, fault 7), E137, E142, E140, E125 and E145 (`0x00008940`), E133, E129 and E132
+   (`0x0000801f`), 14 bodies with the family's three; OK opened nothing on E147, E144, E139, E134 and E148 (X). The
+   candidates: (a) S-PLAYSEQ's finish of OK's request 286 (PlaySelect's single mode with a sub-area, its trace "pSubArea
+   [TL:%d,%d].." at E143 `0x50b6e60a`, finished by its callback `0x50b6ea5c` as CBC_PLAY_SELECT / CBS_READY_SINGLE_MODE,
+   50 / 67, D; the names from the {value, name} tables at `0x50dad1e0` and `0x50daec00`, D) bringing too little: ruled
+   out, the post reaches the GUI, which moves from ID_ST_DRAWING to the wizard state and runs the state's entry handler
+   (E143 `0x5121745e`) to its end (X: a call trace of OK); (b) the lab's PLAY coming before a screen the camera would
+   have made by then: ruled out, the same trace shows the handler asking for no screen at all; (c) an answer the
+   wizard's kind needs, verified. The entry handler takes the wizard kind, the u16 +12 of the wizard context
+   (`0x60375bf8`; getter `0x51257b36`; the handler logs it as "[GUI App]:StWizardMenu_Entry - Disp_Play_Wizard (%d)"),
+   into a jump table of 14 screens (`cmp 13`), each through the screen change (E143 `0x512552ec`, E130 `0x50de51ab`,
+   E122 `0x50cf6ccd`; its three stores of the screen factory's result are finding 94's three writers); the kind was
+   65535 (X), the context's reset value (`0x51257aa4`), so no screen was asked for, the screen change never ran (X) and
+   W stayed 0. OK sets the kind in `0x510dbb29` from OlyApiPlayCommon's getImageType (its log at `0x6133146f`) through
+   the table `0x51311894` of {type, handler}: 0xf00, 0x200, 0x100 and 0x400 to the kind 6 or 12, 0x10 to 11 or 13, 1 to
+   8 or 13, 4 to 7 or 13, 5 to 9 or 13, 8 and 9 to 10 or 13, 0xff as 1; 0 sets none (D; the same table on E122
+   `0x60ddb940`, E118, E120 and E130, X). S-PLAYCOMP answered the component's get_img_type 0 and S-PLAYSEQ left the
+   family's synchronous request 2 unanswered (its response's u16 +0, read at E122 `0x506aac2f`, D), so the type was 0: a
+   lab defect, a stand-in's answer missing while that screen comes up. The value: E143's
+   Cmp_PlayComponentBase::get_img_type (`0x50c465c5`) maps the media API's file type of the picture (`0x5040184d`, from
+   the DCF fnode's kind at +88) through its table (`0x50e73228`): file type 1 to 1, 2 to 2, 3 to 4, 4 to 0xf00, 5 to 5,
+   8 to 9, 9 to 8, 10 to 0x400, 14 to 0x10, the rest to 0 (D; E130's the same instructions, `0x5086004c`, X); the lab's
+   pictures are the DCF database's file type 1 (X: S-CARD's image count is the count of type 1), so their type is 1. The
+   family's play module's own mapping is not read (?); its GUI's table being E143's, 1 is taken there too (I), and it
+   opens the same "JPEG" wizard (X). S-PLAYCOMP's get_img_type and S-PLAYSEQ's getImageType now answer 1 for a picture
+   shown, 0 for none. After it (X): on the 14 bodies OK draws the wizard (E143 "JPEG" with one item, Rating; the
+   family's "JPEG" with one item and Back / Set; why the other items, Erase among them, are not offered is not read, ?)
+   and PLAY returns to the shooting screen; E147, E144, E139, E134 and E148 still open nothing at OK (why, ?). E143's
+   and E146's playback frames are unchanged (their PLAY does not ask the type, X).
+109. **The family's requests that read the response's first word** (2026-11-10, `src/lab/camapp.mjs` SYNC_ZERO; D on
+   E122, the same request ids at E118 `0x506b9dd7`, `0x506b9df9`, `0x506b9c68`, `0x506b9cb1` and E120 `0x506669c6`,
+   `0x506669e8`, `0x50666857`, `0x506668a0`). The family's GUI asks PlyCom, at PLAY, request 303 (u32 +0; isProtect by
+   the order of PlayCommon's name table, erase 301, isReservePrint, isProtect, isRecording 304: I), isRecording 304 (u32
+   +0, its trace "OlyHfwOpePlyCom::isRecording result:%d isValue:%d" at `0x6096dfe5`) and getShortMovieAlbumNo 501 (u16
+   +0, `0x6096df6d`), and at OK getSelectPicNumber 306 (u16 +0, `0x6096df0c`) (X, before and after the type was
+   answered). S-PLAYSEQ answered none of them: each read the response's +0, which no answer had written before, 0, and
+   which getImageType's answer now leaves at 1, so each read 1 (X): PLAY drew a protect key, a sound mark and an album
+   mark with 1 (I: the three by their look), and OK's kind function took 306's 1 for a selection and opened nothing
+   (E122 `0x50bc3b99..0x50bc3bb3`: with a selection, and the settings 2059 and 2040 not 1, no wizard, D). They are
+   answered 0 now, as S-PLAYCOMP answers the component's (not protected, not recording, nothing selected, no album; I
+   for a picture the lab took), and PLAY's frame is the one it drew before the type was answered (X: E122's composite,
+   the same digest). Any other synchronous request S-PLAYSEQ does not answer is now logged as not answered (X: 285 at OK
+   on E143, E146, E130 and the family, 241 and 334 at UP in playback; their names not read, ?) and still reads what the
+   last answer left: open.
+110. **Erase: the requests, and S-PLAYSEQ's refusal** (2026-11-10, `src/lab/camapp.mjs` ERASE_REQUESTS; corrects finding
+   94, D unless tagged). PlaySingleFrame::eraseCurrent sends the asynchronous request 21 (E143 `0x50b6fa6d`, after its
+   trace "OlyHfwPlaySingleFrameOperation::eraseCurrent#"; E122 `0x50733116`, E118 `0x50742bc3`, E120 `0x506ef09d`, E130
+   `0x50793ad0`, E144 `0x508ef872`, E146 `0x50b7c852`); PlyCom::erase sends 301 (finding 94's sites, and E118
+   `0x506b978a`, E120 `0x50666379`, E144 `0x5084d6f4`, E146 `0x50ad8284`), PlaySelect::eraseCurrent 510 (E143
+   `0x50b6f254`). The single-frame callback (`0x50b7118d`) takes 21 at kind 3 (a progress, I) and at kind 2 calls
+   `0x50ad37d4` on its a1 and posts CBC_PLAY_SINGLE_FRAME / CBS_ERASE_CURRENT (27 / 32); 23 it posts as CBS_ERASE_ALL
+   (31; the sender of 23 not found, ?); PlaySelect's callback (`0x50b6ea5c`) finishes 510 as CBC_PLAY_SELECT /
+   CBS_ERASE_CURRENT (50 / 32). On the camera the component erases in its state machine
+   (Cmp_PlayComponentBase::state_erase_current, CmpPls_PlaySingleComponent::erase_current_start_enter,
+   app_play_idle_erase, which calls app_select_execute `0x50c33967` with `0x02000089`; by their traces), and the file
+   module's DCF edit names its object deletes DCFED_OBJ_DEL, DCFED_OBJ_DEL_OPT and DCFED_OBJ_DEL_PART (strings at
+   `0x509f345a..`); which request the component sends for it, with which block and to which queue, and how the
+   database's count follows, is not read (?). Finding 94's "no session here sent" one was wrong: E130's Delete opens the
+   erase dialog, UP moves its cursor and OK sends 21 from eraseCurrent (X: the execute called from `0x50793b05`), which
+   S-PLAYSEQ finished with result 0 and then request 8, the picture shown again and its file on the card: a silent
+   success. S-PLAYSEQ now refuses 21, 23, 301 and 510 at their execute with a FirmwareError naming the request and its
+   caller (X on E130, E142, E140 and E133: the session stops at OK with the refusal, both files on the card by
+   refs/volume.mjs). The native erase this round asked for (two pictures, one erased in playback, the count, the
+   remaining picture and the file gone from the card, the last erased to No Picture) is not done: it needs the DCF
+   edit's object delete read and sent as the component sends it, then the play module's notification, on each body by a
+   rule.
+111. **Who opens the erase dialog** (2026-11-10, X: Delete in playback with one picture on each of the 19 bodies; D on
+   E143). Delete opens SS_MENU_MAIN/ID_ST_WIZARD_MENU_ENTRY with the erase dialog (the screen change with screen 143,
+   E130's call from `0x50d9d53b`) on E142, E140, E130 and E133, and changes nothing on E143, E146, E147, E144, E139,
+   E134, E137, E125, E148 and the E118 family; E145's, E129's and E132's UI_IN tables hold no Delete key (0x0084), which
+   the player refuses as not wired. E143's Delete handler (`0x510d7773`) asks getSelectPicNumber twice (vt +144, through
+   S-PLAYCOMP's getSelectPicNumberSpecifyMedia, 0), then canExecute(MODE_ERASE), the property 3238 (its log at
+   `0x61330314`), and isProtect (vt +56, its log at `0x61330338`), and opens the dialog (`0x510d783e`) only where one of
+   the two is 1; the lab reads the property as 0 (X). Who sets 3238 on the camera is not read (?). The family's Delete
+   reaches its GUI (X: it asks 306 and 303 at the press), so finding 94's "the family's [code] is not read" does not
+   hold: the player sends the code the family's own UI_IN tables give the key (`src/lab/play.mjs` apply_uiin_layout, X);
+   what keeps the dialog shut there is not read (?).
+112. **Coverage of the wizard and of the erase's refusal** (2026-11-10, `test/test_playinfo.mjs`). Between LEFT and
+   INFO: OK (the wizard's state and a changed frame, or on OK_OPENS_NOTHING's five bodies the state and the frame kept,
+   held strictly), PLAY (the shooting screen) and PLAY again (the newest picture with PLAY's frame); at the end, on
+   ERASE_DIALOG's four bodies, Delete (the dialog's state), UP, OK (the refusal of request 21) and both files on the
+   card. X: 17 checks pass on twelve bodies, 18 on the family, 20 on E142, E140, E130 and E133, 338 in all; with the
+   camapp.mjs before these findings the new steps stop E122, E130 and E143 at PLAY in the wizard.
 
 
 

@@ -2058,6 +2058,90 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    Exif holds the template's zeros (finding 104), so a native load would show other values until TAKE's EXIF set fills
    the block (I). Running the load needs the play module's handle, play buffer and image record (finding 92), which the
    PLAY tasks and the component's start make.
+124. **The E118 family's Format runs in its application** (2026-11-10, `src/fw/facts.mjs` mediaHls, `src/lab/media.mjs`;
+   D at E122's addresses unless tagged). The menu path on the family (X, frames on E122, E118 and E120): MENU opens
+   Shooting Menu 1, whose first row is Card Setup; RIGHT enters the page and OK opens it, which offers All Erase and
+   Format while the card holds a picture and the Format confirm alone (Yes, No, the cursor on No) on an empty card. Yes
+   runs OlyHfwOpeMdaCtrl's format sender (`0x506a6c5e`, of the opening and callback id 16 of E143's TRA 1511 sender
+   `0x50ac937f`), which starts the media control itself (`0x506a819b`, X: d0 the command, 1, d1 the media, 0) where
+   E143's sends the HLS function component a transaction: no transaction runs at Yes (X: S-TRAACK's log), so the
+   family's CmpCst_Function has no part in it. The start sees the media status's bit 7 (`0x502d0c73`), calls the
+   command's API through its dispatcher `0x506a836c` (commands 1 to 5; 1, api_media's format `0x502d0a63`, API
+   `0xe0005`, which posts FILECLBK `{6, token, 0x34, block}` as E143's `0x503f0820` does) and registers a process of 44
+   bytes (OlyHfwOpeMdaCtrlProcessEvFw, ctor `0x506a7c09`) with OlyHfwEventManager (`0x5069a761`). The process's handler
+   (`0x506a7d08`) takes the file module's progress `0x04020011` (the callback (16, 3, percent) through getMediaProgress
+   `0x502d0b04`) and the API's reply as an event whose code's upper half is the token's, d1 the status, in the
+   application's event manager natively. X on E122: the card formatted (4,198 SD writes), FILECLBK's reply status 0 for
+   token `0xf0040000`, the handler's event `0xf0040000`, the bar full. During the format FILECLBK slept 500 ms once
+   where logsec's mount path finds UI_IN's last code `0x1506` (`0x50562b6b` -> `0x5057b8b1(500)`; E143's 740 ms at
+   `0x508ac202`, hle-gaps 4.8.3).
+125. **The end goes to the camera base, whose thread does not run (S-MDAEND)** (2026-11-10, D unless tagged). On the
+   reply the handler sends the progress at 100, then two requests to the camera base through `0x5073c573`, which gens
+   them (OMReactive's gen `0x5092fe44`) to the inner reactive of StateTransitionFactory's singleton (`0x61602c58`):
+   12986 (+32 1; its closure has no function) and 12965 (+32 0, +36 1), whose closure (+28; ctor `0x506d164f`, 28 bytes:
+   +12 the argument, +16 the function; vt[0] `0x506d1691` calls the function with the argument when it is not 0) holds
+   `0x506a7c9e` and the result callback (16, 72, 0) (`0x5069825a`, X). `0x506a7c9e` posts the callback (`0x50697e5b`,
+   `0x50697f12`) and calls `0x5073c0e3(15, 0)`, whose (15, 1) the start made (I: a lock of the media control). The
+   reactive is the camera base (I: its vtable sits among Cab_CameraBase.cpp's strings, "standbyState",
+   "shootModeState"); a handler that tests for 12965 (`0x5083a076`, whose class is not read) passes the closure on
+   (`0x50910c21`) with a request of its own, a 40-byte event (`0x507713b0`) to its +236, not read (?). It runs on the
+   OXF main thread (HIGHLEVEL_MAIN, task 64, `0x50693849`), dormant in the default session (X: state 0x10), so neither
+   event was handled (X: the reactive's handleEvent `0x509116dc` never ran) and the application stayed at Busy with the
+   bar full over the formatted card, on all three (X). In a default session one other event goes there, 11827 at PLAY's
+   return (X), unhandled as well. S-MDAEND stands in for the camera base's part: at the handler's sends (the rule's
+   sites) it records the event and, after the step, runs the DCF numbering mount (the next file number, I as
+   S-MDACTRL's) and the closure through its own vt[0], natively; the events stay in the camera base's queue. X: the
+   application leaves Busy for the shooting screen, 1470 shots and `00:37:19` on E122's fresh card. That the camera base
+   calls the closure once its request is done is I; where the family returns after a Format on the camera is ? (E143
+   returns to the menu). Any command but the format, or the handler's other path (another command's end or an error,
+   `0x506a8101`), stops the session.
+126. **The card out and in on the family (S-MEDIA)** (2026-11-10, D unless tagged). The family's application has E143's
+   receiving side: OlyHfwReception (its singleton creator `0x506d0e75`, vtable slot 2 synchronous in E143's form), the
+   media manager's mount notification (E143's 711, the family's id 13596, ctor `0x506a670d`, 40 bytes, sent by
+   CapMed_MediaManager with the states 8, 4 and 2 at `0x5076f37d`, `0x5076f429` and `0x5076f491`), the HLS mount state's
+   getter and setter by media kind (4 the SD card, 1, and 32 where E143 has 8), the card switch `0x1506`, which the file
+   layer registers with UI_IN (`0x50562ce6`) and the SD driver asks UI_IN's level getter for (`0x50582a1d` ->
+   `0x50177e44`, the port's place of E143's `0x5014c015`); one slot. S-MEDIA runs unchanged at these. X on E122: out,
+   the firmware's own no-card state, "No Card" with the card icon struck through and the count 0 and `00:00:00` in
+   orange (E143 draws no such screen, hle-gaps 4.8.3), the drive status 1, and the SD driver's supply request {32, 255,
+   1} answered by S-SDPOWER; in, {32, 255, 1} and {32, 0, 1} (what 0 and 255 select is ?, hle-gaps 4.8.4), the mount
+   after 275 ms of lab time, 1470 and `00:37:19` back (the frames; finding 128 has the checks). The player's card input
+   had stopped before (a TypeError): its lookup of the switch's control row read the UI_IN code of each fwswitch row,
+   and a row a body's tables do not wire has none (`src/lab/play.mjs` card_input; fixed). That this is E147's "control
+   row without a UI_IN code" (hle-gaps 4.8.7) is I; E147 was not tried again.
+127. **The rule and its reach** (2026-11-10, `src/fw/facts.mjs` mediaHls, fact `media`; `test/test_facts.mjs`
+   MEDIA_FOUND). The rule starts at the process's handler and reads each part by its form (the comment at the rule has
+   them): the handler's sends and start, the reception's creator and synchronous slot, operator new, the mount
+   notification (of two constructors of its form after the media manager's allocations, the one sent the states 2, 4 and
+   8; the other is id 5627, X), the mount state's getter and setter (of three getters of the form, the one whose words
+   the setter writes, X) and the switch code with UI_IN's level getter. E122's values are the ones found by hand and run
+   above (X); E118's and E120's the rule's, run in their sessions (finding 128). The class is held by 15 of the 18
+   images, not by the E143 family and E148 (X): the E144 family's application holds the same media control process,
+   which corrects the reading that it has a function component of its own (ROADMAP); the rule reads every part on E118,
+   E120, E122 and E145 only, and gives no fact elsewhere (X: the E144 family's start and mount state, E142's and E140's
+   reception creator, the TG-5s' and E125's level getter are of other forms). Whether the E144 family's Format runs as
+   the family's is not tried (?). `src/fw/models.mjs` card_fs.hls 'rule' takes the fact on E118, E120 and E122 with the
+   family's library numbers (`src/fw/facts.mjs` MEDIA_LIB) and the module event post at the port's place of E143's
+   `0x50025095`.
+128. **The family's HLS side in play** (2026-11-10, X: `test/test_storage.mjs --hls` per body, in `bin/test.mjs`; 20 of
+   20 checks on each of E122, E118 and E120, the same numbers on the three). On a blank 8 GiB card after S2's picture:
+   MENU, RIGHT, OK, DOWN (Format), OK, DOWN (Yes), OK; the application's start with command 1, media 0; 12986 logged
+   without a closure, 12965's closure run (E122 `0x506a7c9e`, E118 `0x506b6bd5`, E120 `0x506637c4`, each through its
+   closure class's vt[0]); the format within 839 ms of lab time after Yes. Read back independently (`refs/volume.mjs`):
+   FAT32 `NO NAME` at 8192 with 32 KiB clusters as the insertion's format gave it, the root empty, the picture gone,
+   260,351 of 260,352 clusters free in the FAT and FSInfo; the firmware's image count 0, its next file 1, the remaining
+   shots the fresh card's; the application back at the shooting screen; S2 then writes `P1010001.JPG` again. The card
+   out: the drive unmounted (detect state 1, the HLS mount state 0), UI_IN's `0x02021506` with the level 1, the screen
+   changed (the remaining-shots query itself still answers the count, so the screen's 0 is the application's, I); a
+   second removal refused. The card in: sd_mount initialises the card again (CMD2 among more than 20 commands), the FAT
+   mount after 275 ms, the drive status `0x3780`, the boot sector unchanged (no format), the count and the whole screen
+   as before the removal; S2 then writes its picture. E143's and E146's HLS sessions are unchanged (18 of 18 each, X).
+129. **Left open** (2026-11-10). The camera base's own work at the end (its request to its +236, and 12986's), and
+   whether the camera issues the DCF numbering mount after a Format (S-MDAEND's, I); the media control's other commands
+   (All Erase among them, not driven); the second slot (the family has one); an SDXC card on the family's HLS side (not
+   tried); the menu path to Format, read from the frames and checked by the start's command, not found by a rule in the
+   menu's tables (the family's Menu_Viewer tables are not decoded in the lab); where the family returns after a Format
+   on the camera (?).
 
 
 

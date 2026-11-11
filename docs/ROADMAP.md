@@ -226,9 +226,14 @@ the survey table.
   format a blank card, mount it, count from it and write S2's file (`src/fw/models.mjs` card_fs, S-SDPOWER for the
   E144 family's card supply). E134 since 2026-10-29 (hle-gaps.md 4.8.7, model-survey finding 23): its first fopen
   blocked on UI_OUT's queue, the lamps' module its file layer asks for the card's access lamp, which H-UIOUTSTART now
-  runs. The HLS side (Card Formatting from the menu, the card out and in) on E146 since 2026-10-29 (4.8.7). Left:
-  the HLS side on E147 (Format Card's Yes does not reach S-MDACTRL, the card input finds no UI_IN code; not read)
-  and on the E144 family (its own function component); E133's, E129's and E132's cards are native since their
+  runs. The HLS side (Card Formatting from the menu, the card out and in) on E146 since 2026-10-29 (4.8.7), and on
+  the E118 family (E118, E120, E122) since 2026-11-10 (model-survey findings 124 to 129): its application runs the
+  media control itself, so Card Setup's Format formats the card natively and only the camera base's part of its end
+  is stood in (S-MDAEND); the card out shows the firmware's own No Card screen and the card in brings the count
+  back (S-MEDIA), at the seams a rule reads (`src/fw/facts.mjs` mediaHls). Left: the HLS side on E147 (Format Card's
+  Yes does not reach S-MDACTRL, not read; the card input's lookup stopped at a control row without a UI_IN code,
+  fixed 2026-11-10, finding 126, E147 not tried again) and on the E144 family (its application holds the E118
+  family's media control process, finding 127; not tried); E133's, E129's and E132's cards are native since their
   starts run (2026-10-29).
 - **The card, next on E143:** Card Formatting from the menu and the card's removal and insertion while the camera
   runs are done (2026-10-24, hle-gaps.md 4.8.3: S-MDACTRL and S-MEDIA stand in for the HLS function component and

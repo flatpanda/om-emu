@@ -158,14 +158,14 @@
   },
   "keys": {
    "screen": "c37fae5555e100f0b056e18220c0f572e0c814f4353d63eb40e82128017b93dd",
-   "devices": "1bb975d69b47aa61fa66d46287502916d6dc7c02bf70a928c34761dc512a9891",
-   "stops": "e0cbd07e9b68da1213c225ce0770e28cc7b8b288909af0ec592f1c7fc76895c3",
-   "harness": "0e3cb6765af871c2fe1efae517099e8e2b671994fde3c4b5f972390d4821f0dc",
-   "output": "3716aac4ae6ffacf8b02199a38b8b7e80142bbc0b715cc4194213d20ccf4bdd7",
+   "devices": "c642402e2af45920148d1afd51275403ed9181b5eb9bde94242dd565dfbcaa06",
+   "stops": "e562750333271a9d83a6546701ad9bfdfc2a38167cb016c4bc79f3b117eeb8f6",
+   "harness": "35633eedf19cc19b94e5c87c169a898f8eba05738e0b4108e4da822ebdbabb0d",
+   "output": "90a77deb34df14d20e46b2150dba64a30cd61bb4d0fc51c471549f6bf6854b4a",
    "items": {
     "screen": 5,
     "devices": 4235,
-    "stops": 98716,
+    "stops": 98813,
     "harness": 8,
     "output": 3
    }
@@ -4167,6 +4167,12 @@
    "commit": "87d254f",
    "sessions": 23,
    "reason": "REC_IMAGE's task runs natively on E143 (src/lab/rec.mjs H-RECSHARED, H-RECIMGPRO, H-RECIMAGE, S-RECREQ; docs/hle-gaps.md 4.3.3): 22 sessions that take no picture differ in the output layer only, the player's stand-in list on E143 naming the four in S-RECIMAGE's place; keys, the one session with S2, makes its picture in REC_IMAGE's task, the header clear's fill running on the imgpro unit and ending 1 ms later, so the lab runs one more 5 ms slice (one compose 5 ms later with the same pixels; IRQ 300 x1, IRQ 324 x1, 5 kernel ticks and 3 OSD engine IRQs more) and ends at the same lab time",
+   "evidence": "firmware"
+  },
+  {
+   "commit": "117a9a7",
+   "sessions": 1,
+   "reason": "S-JPEGENC on E143 starts at rec_ImgPro_ImageParam's call of the image library's parameter set (src/lab/rec.mjs; docs/hle-gaps.md 4.3.4): in keys, the one session with S2, rec_ImgPro_CreateParam, the create, ImageParam's body and the release run natively in REC_IMAGE's task, 18,866 instructions more, so the irq rows' instruction counts after it (IRQ 324 x1, 138 x4, 158 x2), the stops (+97) and the harness digests shift and the 40 replayed outcomes after S2 differ in the player's status only (harness entries +8, heap new and freed +4 each, heap top +22,240: the create's four allocations, freed by the release); with instruction counts masked every devices item is identical, every screen identical, the session ends at the same lab time and the picture's bytes are unchanged",
    "evidence": "firmware"
   }
  ]

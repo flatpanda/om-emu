@@ -2163,8 +2163,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    (D; beside the C3D module's code, I; docs/hle-gaps.md 4.1.11). `bin/modelcheck.mjs` after the re-port: its 31 runs
    pass (X).
 108. **PLAY in the playback wizard OK opens, and the image type** (2026-11-10, `src/lab/camapp.mjs` S-PLAYCOMP's
-   get_img_type and S-PLAYSEQ's getImageType, IMAGE_TYPE_STILL; answers finding 94's last open question and corrects it:
-   E143 stopped too). The symptom (X, a session per body: start, S1, S2, PLAY, OK, PLAY): OK opens
+   get_img_type and S-PLAYSEQ's getImageType, IMAGE_TYPE_STILL; answers finding 94's last open question and extends it:
+   E143 and nine more bodies stopped too). The symptom (X, a session per body: start, S1, S2, PLAY, OK, PLAY): OK opens
    SS_MENU_MAIN/ID_ST_WIZARD_MENU_ENTRY with the frame unchanged, and PLAY there stops the GUI task (E122's task 149) at
    a jump to a low address, through `calls (a1)` after `mov (W),a0; mov (a0),a1; mov (N,a1),a1` with the current screen
    word W 0: E122 `0x00008010` at PLAY down (message 0x9010; the state's handler `0x50cbd271`, called by the state
@@ -2214,30 +2214,42 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    answered 0 now, as S-PLAYCOMP answers the component's (not protected, not recording, nothing selected, no album; I
    for a picture the lab took), and PLAY's frame is the one it drew before the type was answered (X: E122's composite,
    the same digest). Any other synchronous request S-PLAYSEQ does not answer is now logged as not answered (X: 285 at OK
-   on E143, E146, E130 and the family, 241 and 334 at UP in playback; their names not read, ?) and still reads what the
-   last answer left: open.
-110. **Erase: the requests, and S-PLAYSEQ's refusal** (2026-11-10, `src/lab/camapp.mjs` ERASE_REQUESTS; corrects finding
-   94, D unless tagged). PlaySingleFrame::eraseCurrent sends the asynchronous request 21 (E143 `0x50b6fa6d`, after its
-   trace "OlyHfwPlaySingleFrameOperation::eraseCurrent#"; E122 `0x50733116`, E118 `0x50742bc3`, E120 `0x506ef09d`, E130
+   on E143, E146, E130 and the family, 241 and 334 at UP in playback) and still reads what the last answer left: open.
+   285 is sent by OlyHfwOpePlySel::start (E143 `0x50b6e4ba`, after its trace) and 241 by OlyHfwOpePlySnd::setVolume
+   (`0x50b7168f`, after its error traces), D; 334's sender (a single-frame operation that logs a sub-area, I) is not
+   named (?).
+110. **Erase: the requests, and S-PLAYSEQ's refusal** (2026-11-10, `src/lab/camapp.mjs` ERASE_REQUESTS and SYNC_ERASE;
+   corrects S-PLAYSEQ's text and finding 94's reading of E130's request 21, D unless tagged).
+   PlaySingleFrame::eraseCurrent sends the asynchronous request 21 (E143 `0x50b6fa6d`, after its trace
+   "OlyHfwPlaySingleFrameOperation::eraseCurrent#"; E122 `0x50733116`, E118 `0x50742bc3`, E120 `0x506ef09d`, E130
    `0x50793ad0`, E144 `0x508ef872`, E146 `0x50b7c852`); PlyCom::erase sends 301 (finding 94's sites, and E118
    `0x506b978a`, E120 `0x50666379`, E144 `0x5084d6f4`, E146 `0x50ad8284`), PlaySelect::eraseCurrent 510 (E143
-   `0x50b6f254`). The single-frame callback (`0x50b7118d`) takes 21 at kind 3 (a progress, I) and at kind 2 calls
-   `0x50ad37d4` on its a1 and posts CBC_PLAY_SINGLE_FRAME / CBS_ERASE_CURRENT (27 / 32); 23 it posts as CBS_ERASE_ALL
+   `0x50b6f254`). Their siblings (2026-11-10 review): OlyHfwOpePlyLightBox::eraseCurrent sends 395 and ::erase 396 (E143
+   `0x50b6cc90`, `0x50b6cbfb`), OlyHfwOpePlyIxp::eraseAlbum 497 on E122, E118, E120, E142, E140, E130, E133, E137 and
+   E125 (E122 `0x5072e778`; on the other ten it returns 0xf0000001 without a request), and OlyHfwOpePlyRec::erase the
+   synchronous 265 (E143 `0x50b6e106`; PlayRecord::erase, the picture's sound record by the name, I); PlaySingleFrame's
+   eraseAll and eraseEvent traces are not referenced. Each of these ids is the same on the 19 bodies (by each
+   function's trace, D) and sent from that one site alone on E143 and E122 (D: every request id set there). The
+   single-frame callback (`0x50b7118d`) takes 21 at kind 3 (a progress, I) and at kind 2 calls `0x50ad37d4` on its a1
+   and posts CBC_PLAY_SINGLE_FRAME / CBS_ERASE_CURRENT (27 / 32); 23 it posts as CBS_ERASE_ALL
    (31; the sender of 23 not found, ?); PlaySelect's callback (`0x50b6ea5c`) finishes 510 as CBC_PLAY_SELECT /
    CBS_ERASE_CURRENT (50 / 32). On the camera the component erases in its state machine
    (Cmp_PlayComponentBase::state_erase_current, CmpPls_PlaySingleComponent::erase_current_start_enter,
    app_play_idle_erase, which calls app_select_execute `0x50c33967` with `0x02000089`; by their traces), and the file
    module's DCF edit names its object deletes DCFED_OBJ_DEL, DCFED_OBJ_DEL_OPT and DCFED_OBJ_DEL_PART (strings at
    `0x509f345a..`); which request the component sends for it, with which block and to which queue, and how the
-   database's count follows, is not read (?). Finding 94's "no session here sent" one was wrong: E130's Delete opens the
-   erase dialog, UP moves its cursor and OK sends 21 from eraseCurrent (X: the execute called from `0x50793b05`), which
-   S-PLAYSEQ finished with result 0 and then request 8, the picture shown again and its file on the card: a silent
-   success. S-PLAYSEQ now refuses 21, 23, 301 and 510 at their execute with a FirmwareError naming the request and its
-   caller (X on E130, E142, E140 and E133: the session stops at OK with the refusal, both files on the card by
-   refs/volume.mjs). The native erase this round asked for (two pictures, one erased in playback, the count, the
-   remaining picture and the file gone from the card, the last erased to No Picture) is not done: it needs the DCF
-   edit's object delete read and sent as the component sends it, then the play module's notification, on each body by a
-   rule.
+   database's count follows, is not read (?). The request 21 finding 94 saw E130's Delete, UP and OK send and S-PLAYSEQ
+   finish with result 0, then request 8 and the picture kept, was eraseCurrent's (X: the execute called from
+   `0x50793b05`): the silent success S-PLAYSEQ's text and finding 94 foresaw for 301 had already happened there.
+   S-PLAYSEQ now refuses 21, 23, 301, 510, 395, 396 and 497 at their execute and 265 at its request, with a
+   FirmwareError naming the request and its caller (X for 21 on E130, E142, E140 and E133: the session stops at OK with
+   the refusal, both files on the card by refs/volume.mjs; golden's, modelcheck's and test_playinfo's sessions send
+   none of the others, X). The play
+   requests that write a file (the edits' saves, OlyHfwOpeEdtRaw::save 284 and OlyHfwOpeEdtRsz::save 120 among them by
+   their traces, I) are still finished as every request is, with nothing written (camapp.mjs play_finish): not erase,
+   open. The native erase this round asked for (two pictures, one erased in playback, the count, the remaining picture
+   and the file gone from the card, the last erased to No Picture) is not done: it needs the DCF edit's object delete
+   read and sent as the component sends it, then the play module's notification, on each body by a rule.
 111. **Who opens the erase dialog** (2026-11-10, X: Delete in playback with one picture on each of the 19 bodies; D on
    E143). Delete opens SS_MENU_MAIN/ID_ST_WIZARD_MENU_ENTRY with the erase dialog (the screen change with screen 143,
    E130's call from `0x50d9d53b`) on E142, E140, E130 and E133, and changes nothing on E143, E146, E147, E144, E139,

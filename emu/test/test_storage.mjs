@@ -757,6 +757,11 @@ async function hlsFormatFamily(card, tag, ok, bad, notes) {
     familyPress(s, 'menu');
     ok(lab.state() !== shooting, `${tag}: MENU left the shooting screen (state 0x${lab.state().toString(16)})`);
     for (const k of ['right', 'ok', 'down', 'ok', 'down', 'ok']) familyPress(s, k);
+    // the format runs (S-MDAEND's start seen, its end not yet): the card input is refused, as E143's during S-MDACTRL
+    let held = false;
+    try { pl.run_input({ type: 'card', action: 'remove' }); } catch (e) { held = /media layer is busy/.test(e.message); }
+    ok(media.mda !== null && held && s.storage.card.present, `${tag}: while the format runs the card input is refused (start ${JSON.stringify(media.mda)})`);
+    notes.push(`${tag}: the media control's start (the application's own): ${JSON.stringify(media.mda)}`);   // camapp's pump takes the log meanwhile
     const t0 = lab.lab_time();
     for (let i = 0; i < 100 && media.formats === 0; i++) s.idle_slice(lab.lab_time() + 50e6);
     const took = lab.lab_time() - t0;

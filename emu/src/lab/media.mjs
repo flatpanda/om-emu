@@ -89,7 +89,9 @@ export class HlsMedia {
     if (lab.hooks.has(runtime(f.publish))) lab.wrap(f.publish, (prev) => (h, r) => { pub(r); return prev(h, r); });
     else lab.hook(f.publish, (h, r) => { pub(r); lab.passthrough(r); }, 'S-MEDIA (events)');
   }
-  busy() { return this.ctrl !== null || this.switched || this.ends.length > 0; }
+  // a format runs (S-MDACTRL's from TRA 1511 to its result, S-MDAEND's from the application's start to its end) or a
+  // card switch or an end is not yet handled: the card input refuses (play.mjs), camapp's pump ticks
+  busy() { return this.ctrl !== null || this.mda !== null || this.switched || this.ends.length > 0; }
   // S-MDAEND: the media control process's sends of its requests to the camera base (f.cab.post called from one of
   // f.cab.sites), recorded with the closure each carries
   _install_end() {

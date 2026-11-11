@@ -4,9 +4,10 @@
 // (host/modelarg.mjs), the play server's switch (host/playcli.mjs) and the run's own provisioning (host/firmware.mjs).
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { romPath, resPath, nandPath } from '../src/fw/models.mjs';
 
-export const REPO = path.resolve(new URL('../../', import.meta.url).pathname);
+export const REPO = fileURLToPath(new URL('../../', import.meta.url));
 
 // A MODELS entry's .BIN as BLOBS.sha256 pins it: {rel (fw/... or fw/old/...), sha256}, or null
 export function binPin(m) {

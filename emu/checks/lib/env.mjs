@@ -4,6 +4,7 @@
 import { expandImage } from '../../src/fw/expand.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { UsageError } from './args.mjs';
 import { stackOf } from './errors.mjs';
@@ -15,7 +16,7 @@ import { coverageOption } from './coverage.mjs';
 import { PatchRefused, readPatchText, applyPatches, patchLayout } from '../../src/fw/patch.mjs';
 import { extractSource, decodeExtract } from '../../src/fw/nand.mjs';
 
-export const REPO = path.resolve(new URL('../../../', import.meta.url).pathname);
+export const REPO = fileURLToPath(new URL('../../../', import.meta.url));
 // the checks' own fixtures: their pinned notes, the VSC register header and class tables, check_perf's P7 address list
 // and P10a cases
 export const FIXTURES = path.join(REPO, 'emu/checks/fixtures');

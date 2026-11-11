@@ -146,7 +146,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **AV codec back end** (4.5) | 0 | none for HLE: seam S6 bypasses it | CPU 1; the codec engines; IRQs 303-306 | 416,471 / 411,438 (overlay segment 8, CPU 1) | ?: native needs register-level codec models, no documentation | native movie encode and playback below the HLS (I) |
 | **CPUs 1-3 and inter-core** (4.6) | S: K-OTHERCPU, K-BOOTSYNC, K-IPI, no start barrier; S-CPU2 (one post), S-CPU3, S-DISPFRAME on CPU 0; any other doorbell is an error | run CPUs 1-3 natively on one bus; per-core `0x8000` page, INTC bank n to core n, `+0x808/+0x80c` IRQ 324, `+0x810/+0x814` IRQ 325, `+0x800/+0x804` ISC IRQ 323, ticks 139..141. A53: "off" or ISC node 4 | a machine refactor (per-core CPU state), a per-core kernel lab, flash reads for CPU 2's loader and CPU 3's boot jobs, ROADMAP phases 3-4 | 5,422 keyed; 441,542 reachable only from CPU 1-3 tasks (a lower bound) | 5-7 weeks for the cores | the histogram, a native DISP_FRAME, cross-core owners (AUD_MAIN, AVM) can start; three stand-ins and four kernel stand-ins retire |
 | **SCPU, power, clock, on-board sensors, persistence** (4.7) | N: PER_SCPU, its start and its transactions, over the link to S-SCPUDEV, the sub-CPU's transport-level model (since 2026-10-23: `0x85`, `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1; S-SIO2, H-SCPUSTART); S: the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / S-NVRAM (the players' default since 2026-11-08); N: the ACC module init, ACC_MAIN, PER_SLOPE, the level gauge and Level Adjust with the accelerometer at its sample cache (since 2026-10-23, 4.7.3; H-ACCINIT, S-ACCREG, S-ACCSAMPLE, H-SLOPEINIT); PER_ROTATE with `--rotate on` (since 2026-11-08, 4.7.3; H-ROTINIT) | the accelerometer at the PER_SIO transfer and its data-ready pin (ACC_SENS_MAIN native); PER_ROTATE by default; S-NVRAM's NAND seam as the default | lab time; the UI_IN, SCPU and PER_SIO inits, the GIO init for the data-ready pin; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, rotation by default, eye sensor (Level Adjust, the level gauge and, with `--rotate on`, the orientation and the gauge's portrait layout in, 4.7.3) |
-| **Card and file system** (4.8) | N on E143 since 2026-10-23 (4.8.2): the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, the format, dosfat, DCF and the shots / movie-time counts natively on an 8 GiB SDHC card at the SD command layer (S-SDCARD, S-SDHOST, S-FSNAND, S-ALBM, H-FILEINIT, H-FILECLBK); the picture's file at S2 through the file module (S-RECFILE; since 2026-11-08 REC_FILE's task natively from REC_IMAGE's packet with the firmware's own header on E143, E146 and E147, 4.8.10: H-RECFILE, S-RECIMAGE, S-EXIFPRM, S-JPEGENC; on E143 since 2026-11-10 REC_IMAGE's own task, 4.3.3: H-RECIMAGE, S-RECREQ in S-RECIMAGE's place, S-JPEGENC the encode only); since 2026-10-24 (4.8.3) Card Formatting from the menu (S-MDACTRL) and the card's removal and insertion (S-MEDIA), the application's media control native; S: S-CARD's insertion requests, its HLS mount state and image list; the other bodies keep S-CARD's card with no file system | the SD host's registers and interrupts with a card model (seam A), the rule-found seam on the other bodies, REC_IMAGE and the image pipeline (the thumbnail, the shooting values in Exif) | the HLS media layer (which sends the insertion), REC_MAIN / REC_FILE (the picture's file), TAKE_MOV's movie take (the movie module's set-up, whose frame rate the movie time query reads: 0 before a take on the camera too), IRQs anywhere for the SD host | 115,103 / 108,887 (17k of it self-test and debug) | 1-2 weeks left: REC_FILE's DCF steps, both slots, exFAT, the other bodies | a card that fills, real files in DCIM, both slots |
+| **Card and file system** (4.8) | N on E143 since 2026-10-23 (4.8.2): the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, the format, dosfat, DCF and the shots / movie-time counts natively on an 8 GiB SDHC card at the SD command layer (S-SDCARD, S-SDHOST, S-FSNAND, S-ALBM, H-FILEINIT, H-FILECLBK); the picture's file at S2 through the file module (S-RECFILE; since 2026-11-08 REC_FILE's task natively from REC_IMAGE's packet with the firmware's own header on E143, E146 and E147, 4.8.10: H-RECFILE, S-RECIMAGE, S-EXIFPRM, S-JPEGENC; on E143 since 2026-11-10 REC_IMAGE's own task, 4.3.3: H-RECIMAGE, S-RECREQ in S-RECIMAGE's place, S-JPEGENC the encode only; on E146 and E147 too since the same day, 4.3.5); since 2026-10-24 (4.8.3) Card Formatting from the menu (S-MDACTRL) and the card's removal and insertion (S-MEDIA), the application's media control native; S: S-CARD's insertion requests, its HLS mount state and image list; the other bodies keep S-CARD's card with no file system | the SD host's registers and interrupts with a card model (seam A), the rule-found seam on the other bodies, REC_IMAGE and the image pipeline (the thumbnail, the shooting values in Exif) | the HLS media layer (which sends the insertion), REC_MAIN / REC_FILE (the picture's file), TAKE_MOV's movie take (the movie module's set-up, whose frame rate the movie time query reads: 0 before a take on the camera too), IRQs anywhere for the SD host | 115,103 / 108,887 (17k of it self-test and debug) | 1-2 weeks left: REC_FILE's DCF steps, both slots, exFAT, the other bodies | a card that fills, real files in DCIM, both slots |
 | **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
 | **HDMI and DisplayPort** (4.9) | N with `--hdmi on` (since 2026-10-23, E143, E146, E147): a plug runs the hot-plug pin's IRQ 109, the HDMI init, two E-DDC reads with IRQ 239, the EDID's checks and parse and the connect report to UI_IN natively (H-GIOSLOTS, S-HDMISINK); off by default. On E143 since 2026-11-08 the application's TRA 588 is taken by S-OUTDEV, and CapIod's open, the transmitter's open (PHY, SCDC, update) and VSC channel 0 at 1080p59.94 run natively; channel 0 composes its window, nothing drawn on it; the unplug runs down to the disconnect report (A-HDMI-1) (X) | TX byte registers at `0x99c07000` (HPD / RxSense byte 8, DDC `0xa80..0xa83`, the buffer `0xc00`, IRQ 239, the open's words), the PHY words at `0x99c08000` and the GIO pin 77 (`0x9b881540`, IRQ 109), all modelled; VSC channel 0 | the application's notification of the open (CmpCst_Function's 494, the TRA reply), the GUI's planes on channel 0, the return to the TFT at an unplug | about 11k (3.3k plus the TX / DP driver's 7.7k) | 1 week left (the notification and the GUI's HDMI layout) | the HDMI output a TV shows |
 | **USB** (4.10) | 0 on E143 | the event level first (EV_USB_CONNECTED 8, EV_USB_RXDETECT `0x040d00d2`, the select screen); later a DWC3-family device at `0x9a600000` (IRQ 223) | SCPU (PD, power source), ADC flag `0xbf`, the PC_* tasks, storage for MSC | 121,861 / 117,704 | 1-2 weeks events; 4-8 weeks data path | the USB select screen, charging state; later MSC, MTP, PTP |
@@ -1618,7 +1618,7 @@ traRoutingSession, below).
   lab's set to 1, and its ImgAspect is left to REC_IMAGE. S-RECREQ also takes REC_FILE's reply, since no requester
   owns ObjResponse in the lab. Lab time then runs in 5 ms slices until the reply comes and both tasks wait again.
   S-JPEGENC keeps rec_jpeg_make_image only. S-RECIMAGE retires on E143; it stays on E146 and E147, where no rule reads
-  REC_IMAGE's addresses.
+  REC_IMAGE's addresses (since the same day a rule does and it retires there too, 4.3.5).
 - **What runs (X).** S2's packet is made in REC_IMAGE's task as one frame:
   - the header clear's fill is one kind-14 mode-4 run of 41984 bytes of 0 at the file's buffer (`0xab0bd800`), its
     end 1 ms later as IRQ 300 (A-IMGPRO-1);
@@ -1645,7 +1645,107 @@ traRoutingSession, below).
   compute: the development of a RAW the lab never captures (Bayer2Ycc), the JPEG encode, the thumbnail and the view.
 - **Open.** The pipeline's kinds and its JPEG unit (above); the geometry record behind the divide; REC_MAIN,
   REC_PREPRO and api_rec (S-RECREQ: the Sv, ObjResponse, Number); TAKE's record (S-EXIFPRM); REC_IMAGE on E146 and
-  E147, which needs a rule; which core makes a normal still (4.3's ?) is unchanged: the lab runs CPU 0's.
+  E147, which needs a rule (done the same day, 4.3.5); which core makes a normal still (4.3's ?) is unchanged: the lab
+  runs CPU 0's.
+
+#### 4.3.5 REC_IMAGE on E146 and E147 (2026-11-10; D unless tagged)
+
+- **Why.** 4.3.3 ran REC_IMAGE's task natively on E143 at addresses given by hand; E146 and E147 kept S-RECIMAGE
+  (rec_jpeg_exec in a lab call, S-JPEGENC also doing the header clear's fill), as no rule read REC_IMAGE's parts there.
+- **The rule (`emu/src/fw/facts.mjs` recImage, fact `rec_image`).** It runs where recFile reads REC_FILE's parts
+  (E143, E146, E147; the E144 family has neither) and throws where a part's form differs. It reads:
+  - the task: the static task that calls rec_bracket_entry (by its trace) within 0x200 bytes. It must open with `mov
+    (0x8050),d1; movhu (Q),Dn` (Q its CPU 0 queue word) and keep the packet at sp + 4. Its first call must be REC's
+    receive of the packet's size. Where the packet points at an image record, it must call the record's init before
+    rec_bracket_entry;
+  - pAlive's offset: the word cleared after rec_make_image_finish (by its trace);
+  - REC's shared init: the function that binds REC_FILE's flag to entry 7 of its bind table, and the one byte it
+    sets to 1 after that;
+  - the image library's IRQ attach and id bitmap clear and the imgpro unit's init. The unit's init is the one function
+    that writes `0x9c600004` and `0x9c600030`. Its one caller is the units' init, whose one caller is the library's
+    init: four calls, `clr d0; ret`;
+  - REC_FILE's reply: the call before the target of its handler's Free test, which must be "REC post_msg_main"'s
+    function (by its trace, kind 0x1101);
+  - TAKE's fill: the record offsets that rec_bracket_entry's bracket test and product and rec_bracket_update's
+    aspect read. For each, the one TAKE site `mov ID,d0; mov 0,a0; call S; mov (4,sp),a0; clr d1; movhu (or movbu)
+    d0,(offset,a0)`, with one settings read S for all.
+
+  On E143 it reads the values given by hand before (X: `emu/test/test_facts.mjs`). On E146 and E147 each value was
+  checked against the disassembly; pAlive is +0 on all three:
+
+| Part | E143 | E146 | E147 |
+|---|---|---|---|
+| REC_IMAGE, task 28 | `0x50541c45` | `0x5051ee03` | `0x5052def3` |
+| its queue word (REC_EXEC_IMAGE) | `0x60043250` | `0x6004328e` | `0x60043200` |
+| shared init, done byte | `0x5054dbe8`, `0xa332ce59` | `0x5052c2e8`, `0xa332b8f1` | `0x5053b50f`, `0xa3322075` |
+| IRQ attach, bitmap clear, unit init | `0x5048c3a0`, `0x5048ba3a`, `0x5050a6b2` | `0x5047e67f`, `0x5047dc11`, `0x504fe0d8` | `0x5048cf75`, `0x5048c507`, `0x5050d1aa` |
+| REC's reply, from | `0x5053984b`, `0x5053f3c0` | `0x50516d81`, `0x5051c212` | `0x50525e69`, `0x5052b302` |
+| settings read | `0x500417da` | `0x500423e1` | `0x50042360` |
+| bracket fields, aspect | +38074..+38086, +38122 | +37726..+37738, +37774 | as E146 |
+
+- **What differs on E146 and E147.**
+  - The packet (276 bytes) and the image record (4.8.10). REC_IMAGE's task keeps the record on its stack (E146 sp +
+    364) and inits it itself after the receive (E146 `0x5051ee45`). S-JPEGENC finds `Addr` and `Size` through the
+    packet's +180.
+  - Another stage. On E146 REC_PREPRO (task 30, `0x5052d324`) posts a normal still (Command not 19) to
+    Q_REC_EXEC_RAWNR (the word `0x600432a0`, named by the object-name list; `0x5052d3d4`), not to REC_IMAGE's queue as
+    E143's `0x5054edda` does. Its reader is task 32 (`0x5052fedd`; E147 `0x5053f112`); that it is REC_RAWNR is I, by
+    the queue's name and the string "REC_RAWNR" in the image, which E143's lacks (X). It copies the shot's record
+    +37564..+37570 into the packet's +254..+260, outside the dump's names. When `0x5052acc1` gives 1 it runs
+    `0x50518f3b` and `0x50520916` (not read). It then posts the packet to REC_IMAGE's queue (`0x5052ffd0`). That is
+    the only CPU 0 post: the word's loads are REC_IMAGE's receive, that post and the name list (E147 the same,
+    `0x5053f205`).
+  - REC_IMAGE's loop is E143's with two additions. For Mode 4097 it calls `0x5052a1e8` (not read) and, when that gives
+    0, `0x5052b021(packet, 30)`, which calls the packet's pFnSetPercent (+12) if set. After rec_bracket_update it
+    clears RecordTarget in the image record (+34), where E143 clears the packet's (+286).
+  - The hand-over to REC_FILE is E143's (corrects `emu/src/lab/rec.mjs`'s "the route on E146 and E147 is not
+    read"). `0x5051f53d` calls `0x5052abf9`. On 1 it puts the packet in REC's ring (`0x5052d051`) and sets REC_FILE's
+    flag through the bind table (`0x5052c568`); otherwise it posts to REC_EXEC_FILE (`0x5051f5a5`).
+  - The shared init's ring holds 216 slots of 276 bytes on E146 (93 on E147; E143 120 of 316). E146 clears a third
+    area (432 bytes at `0xa332b954`) and two more bytes after the done byte.
+  - The ISO: rec_bracket_after_trig (E146 `0x505196b5`, from `0x50519557`) takes the Sv from the image record's
+    SvAdj (+38), when the shot's record +7632 is 0. On E143 it takes the packet's +294, when +7626 is 0. REC_IMAGE's
+    record init clears SvAdj, so the Sv is 0 as on E143.
+- **The lab (`emu/src/lab/rec.mjs`).** All three now run H-RECSHARED, H-RECIMGPRO, H-RECIMAGE and S-RECREQ.
+  S-EXIFPRM writes TAKE's six fields at the rule's offsets, and S-JPEGENC does the encode only. S-RECIMAGE and its
+  path are removed: no body uses them. On E146 and E147 S-RECREQ posts in REC_RAWNR's place, so REC_RAWNR's copy and
+  its check do not run. The four halfwords stay 0, and neither REC_IMAGE nor REC_FILE reads them on this path (X: log
+  watchpoints on each task's own copy of +250..+261 see only OptView, +250).
+- **What runs (X, E146 and E147).** S2's picture is made in task 28, which encodes once. The header clear's fill is
+  one kind-14 mode-4 run of 41984 bytes of 0 at the buffer, ending 1 ms later; the driver's register writes are
+  E143's (an MMIO trace). REC_FILE replies Status 0 and Free 1, with HeaderSize 41984 and BuffSize1 73,410.
+  ImgAspect is 1 and pAlive is cleared. TAKE's settings read as on E143: 35217 0, 38737 0, 38769 1, 38785 1, 40401 1,
+  12417 1. Two shots give `PB080001.JPG` and `PB080002.JPG` (73,410 and 73,397 bytes) from the same buffer.
+  - Around S2 the firmware logs the REC warnings of 4.8.10 and no new code.
+  - The session ends 34.1 ms later in lab time, so the movie time query's 0x39000903 is logged twice more. S-RECREQ's
+    one 5 ms slice ends at the next idle, 34.1 ms on. On E146 the GUI task (171) is in a timed wait at the slice's start
+    and runs about 1.0M instructions in it. Why it is busy then is ?; E147 is not profiled. On E143 the slice ends
+    at 5 ms, as before.
+- **The picture's bytes (X).** Per body the file keeps its size and differs in 4 bytes, each 0 before and 25 now: file
+  offsets 288 and 312 (ISO 0x8827 and StandardOutputSensitivity 0x8831, exiftool) and 5286 and 5292. These are E143's
+  4 bytes of 4.3.3, and the second shot's are the same. exiftool's other tags are unchanged (AspectRatio 4:3,
+  AspectFrame 0 0 5183 3887). E143's file is byte-identical.
+- **Tests (X).** `emu/test/test_facts.mjs` 1380 of 1380 (the rule on the three bodies, no rec_image on the other 15);
+  `emu/test/test_storage.mjs` with `--session`: E146 56 of 56, E147 38 of 38, E143 56 of 56, its REC_IMAGE checks now
+  on all three; with `--sdxc`: E146 30 of 30, E147 12 of 12.
+- **modelcheck (X).** Every ported body passes but the TFT paths of E146 and E147, which fail the S2 check ("the frame
+  holds 1 value(s) after the rec view"); their EVF paths pass. The cause is a timing artifact in the lab, not REC:
+  - The camera's timed events END_RECVIEW and START_THROUGH_IMAGE_PROCESS, due at 13239.0 ms on E146, are posted by
+    `emu/src/lab/camapp.mjs` tick only at the end of the check's 1200 ms idle slice (14097.8 ms).
+  - The check composes at the TFT's next boundary, 1.2 ms later, before the GUI has redrawn the shooting screen: the
+    OSD planes have the same banks, their contents blank, and the screen is drawn 50 ms later.
+  - Before this change S2 ended 16.8 ms earlier, so the boundary came 51 ms after the slice's end. That the 16.8 ms
+    are S-RECREQ's 34.1 ms slice running past the end of the 150 ms idle after S2 down is I. (E146's figures; E147
+    fails the same check.)
+  - With master's code, an idle of 17, 34 or 50 ms before S2 makes the same check fail on E146. With this change the
+    same session passes it when the 1200 ms are idled in 100 ms slices.
+
+  The fix belongs to the timed events' delivery (`emu/src/lab/play.mjs` idle_slice, camapp.mjs tick) or to the
+  check's sampling, outside this topic: open.
+- **Open.** REC_RAWNR (what `0x5052acc1` decides, the RAW NR step); REC_MAIN's and REC_PREPRO's own work, as on E143;
+  which call starts REC_IMAGE (I); the GUI task's work in the slice; the E144 family, whose REC_FILE no rule reads;
+  the camera's timed events posted only at an idle slice's end, which fails modelcheck's TFT S2 check on E146 and
+  E147 (above).
 
 ### 4.4 AF, lens and body IS
 
@@ -3886,7 +3986,8 @@ there (it stays on the other bodies).
   (rec_jpeg_make_image, an imgpro_mdl pipeline) writes the lab's JPEG (without its JFIF APP0) at `Addr` + 41984 and
   sets `Size` (I). Since 2026-11-10 (4.3.3) REC_IMAGE's own task runs this on E143 (S-RECREQ in S-RECIMAGE's place)
   and the header clear's fill runs natively on the imgpro unit, so S-JPEGENC keeps the encode only there; on E146 and
-  E147 it still does the fill too (a kind-14 request whose wait cannot end in S-RECIMAGE's lab call, 4.3.1).
+  E147 it still does the fill too (a kind-14 request whose wait cannot end in S-RECIMAGE's lab call, 4.3.1). Since
+  the same day REC_IMAGE's task runs it on E146 and E147 too (4.3.5), S-RECIMAGE retired.
 - **What it does (X, E143):** S2 gives `C:\DCIM\100OMSYS\P1010001.JPG` (41984 bytes of the firmware's header, then the
   lab's stream; 73,410 bytes with the live view); with the clock set first through the firmware's clock setting
   (`0x5012b7a7`, 2026-11-08 12:34:56) `PB080001.JPG`, whose Exif (read by `emu/refs/exif.mjs` and exiftool) has Make

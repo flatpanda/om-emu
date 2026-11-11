@@ -207,10 +207,10 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   module's own file requests). On E143, E146 and E147 REC_FILE's own task records it (`src/lab/rec.mjs`,
   `docs/hle-gaps.md` 4.8.10): the packet REC_IMAGE posts it, with the file's header (Exif with the Make, Model,
   dates and maker notes, XMP) built by REC_IMAGE's header maker natively from the shot's EXIF parameters (S-EXIFPRM)
-  and the lab's JPEG after it (S-JPEGENC). On E143 REC_IMAGE's own task takes the packet (H-RECIMAGE, `docs/hle-gaps.md`
-  4.3.3), which S-RECREQ posts to it as REC_PREPRO would, the header clear's fill runs natively on the imgpro
-  unit and S-JPEGENC stands in for the encode only; on E146 and E147 S-RECIMAGE runs REC_IMAGE's part in a lab call
-  and S-JPEGENC does the fill too. Card Formatting from the menu formats it: the menu's
+  and the lab's JPEG after it (S-JPEGENC). REC_IMAGE's own task takes the packet (H-RECIMAGE, `docs/hle-gaps.md`
+  4.3.3; on E146 and E147 since 2026-11-10 at the addresses a rule reads, 4.3.5), which S-RECREQ posts to it as
+  REC_PREPRO would (on E146 and E147 REC_RAWNR), the header clear's fill runs natively on the imgpro unit and
+  S-JPEGENC stands in for the encode only. Card Formatting from the menu formats it: the menu's
   Yes reaches the file module through api_media's own format call (S-MDACTRL, `src/lab/media.mjs`, `docs/hle-gaps.md`
   4.8.3, in place of the HLS function component), its progress bar runs and the application returns to the menu. The
   input `{"type": "card", "action": "remove"}` takes the card out of the slot while the camera runs and `"insert"`

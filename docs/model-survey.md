@@ -1043,7 +1043,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    buffer's table at `0xa1c929dc`, `playbuff_get_img_info`; the current handle `0x6189a4f4`, set by
    api_play_Set_Current_ImageHandle `0x502dc680` and Set_Bank `0x502dcfaa` from the play module's code, D). Neither
    the components nor the play module's load runs in the lab, and S2's picture holds no Exif to read: it is
-   S-RECFILE's JPEG of the lab's frame (`src/lab/jpeg.mjs`, JFIF only). Not native, then: S-PLAYSEQ answers request
+   S-RECFILE's JPEG of the lab's frame (`src/lab/jpeg.mjs`, JFIF only; since finding 104 after the firmware's Exif
+   header, S-RECHDR). Not native, then: S-PLAYSEQ answers request
    3 from the picture's own record, kept at its END_SHOOTING_PICTURE: the date the camera's clock gives (its getter
    api_sctime_GET_REAL_TIME `0x502ee369` called natively, fact `clock.real_time`, read by the name its trace loads on
    the family alone: E118 `0x502cb0db`, E120 `0x502be4d7`, X), the size of the JPEG on the card, the release's
@@ -1597,7 +1598,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    load of "TP INT TIME OUT\n" (E118: the wait `0x502e3ffd`, the poll `0x502e4764`); S-TPINTWAIT answers it at the
    getter's call as at the other forms' polls, and the rule reads the 18 other bodies as before (X). S-TPREG's
    controller at `0x48` answers `0x1c14` with `0xc400` (I: a controller that runs the firmware this build carries, so
-   the list writes its registers without the download; which version an E-M5 II's controller reports at power-up is ?).
+   the list writes its registers without the download; which version an E-M5 II's controller reports at power-up is ?;
+   finding 117 reads `0xc400` as the version the downloaded program itself sets, D).
    Before, with the touch task running the list: "TP INT TIME OUT", the version read 0 and "not available", the
    download, "TP BOOTLOAD ERROR", the version 0 again, then op 9 (X, the firmware's prints and the lab's I2C log). With
    S-TPINTWAIT's third form and S-TPREGLIST in place, 0 at `0x1c14` runs the download (`30`, `10` and the 24496 bytes,
@@ -1668,7 +1670,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    `0x5095b8aa` -> `0x502ec0a0` (`0x620eaac4`); play_exif_search_tag E143 `0x518aad34`, E130 `0x50bb2f9f`, E144
    `0x514ab553`; playbuff_get_img_info E143 `0x518bfc7e`, E130 `0x50bc5008`, E144 `0x514bee9c` (by the maps and the play
    module's trace strings, which these three hold where their API layer has no names). X on E130 and E144 as in finding
-   90: 0 calls, the handle word 0, the API's answer 1. No body reads a picture's Exif in playback, then: S-PLAYCOMP and
+   90: 0 calls, the handle word 0, the API's answer 1. No body reads a picture's Exif in playback, then (but E143 under
+   `control camapp 3` with the play module's opt-in, since `docs/hle-gaps.md` 4.8.11, X): S-PLAYCOMP and
    S-PLAYSEQ answer from one record (camapp.mjs still_record), E143's, E146's and E147's although their files hold the
    firmware's Exif (finding 83). The family differs only in PlyCom's route, its getStillInfo and getNumber being E143's
    mode-3 branch alone (a synchronous request through the transaction where the others call a wrapper), and is at
@@ -1693,7 +1696,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    analysis `0x50b16255` / `0x50e7028d` / `0x518b1f44` / `0x50bb7723` / `0x514b1c9b`, the file read `0x50b1493d` /
    `0x50e6e975` / `0x518b017f` / `0x50bb5fcd` / `0x514b04f7`, the dispatcher `0x50513585` / `0x504ec781` / `0x504289eb`
    / `0x503027e3` / `0x5030a56e` and the parse `0x5051390a` / `0x504ecb06` / `0x50428d91` / `0x50302b6a` / `0x5030a8f5`
-   (each by the trace string it loads, or by the maps and its first bytes). None runs in the lab (finding 90); running
+   (each by the trace string it loads, or by the maps and its first bytes). None runs in the lab (finding 90; E143's
+   load, analysis, file read and dispatcher run under `control camapp 3` with the play module's opt-in since
+   `docs/hle-gaps.md` 4.8.11, X); running
    them needs the play module's handle, its play buffer and image record, which the PLAY tasks and the component's start
    make, and the picture's Exif in the file (finding 93).
 93. **The record's Exif writer on the family: S2's file has none** (2026-11-10, D unless tagged). S-RECFILE writes the
@@ -1718,7 +1723,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    `0x50515b67`). The stop: a native Exif in the family's file needs its header maker run as E143's (H-EXIFINIT,
    S-EXIFPRM, S-RECIMAGE, `docs/hle-gaps.md` 4.8.10) with its own packet, parameter block and EXIF init read, and the
    play side then needs finding 92's load run or stood in; neither is done, and the same holds for E130 and the E144
-   family.
+   family. (Superseded for the stop: findings 102 to 104 run the family's header maker, S-RECHDR, and finding 106
+   reads the play side; findings 118 to 121 give eight E144-family bodies the firmware's Exif.)
 94. **Two pictures, RIGHT and LEFT, INFO's three views on the family** (2026-11-10, X: a play session per body and
    device, `test/test_playinfo.mjs`). S1 and S2 twice put `P1010001.JPG` and `P1010002.JPG` on the card; PLAY shows the
    newest (`100-0002`, `2`), RIGHT the other (S-PLAYSEQ's moveCurrent 4: `100-0001`, `1`, a changed frame), LEFT the
@@ -1732,16 +1738,19 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    request 301 (`mov 301,d0` E122 `0x506aa8a3`, E130 `0x50702e1c`, E143 `0x50acdc69`, before the request's execute,
    E143's `0x50ad26fb`; D), which no session here sent, and S-PLAYSEQ would finish it as it finishes every request,
    with the result 0 and no file removed (D, camapp.mjs play_finish; what the firmware then shows, ?): a gap to close
-   before erase is driven. In a session (X): E130's Delete opens SS_MENU_MAIN/ID_ST_WIZARD_MENU_ENTRY (`0x0302`,
+   before erase is driven (closed by finding 110: S-PLAYSEQ now refuses the erase requests). In a session (X): E130's
+   Delete opens SS_MENU_MAIN/ID_ST_WIZARD_MENU_ENTRY (`0x0302`,
    request 286, a changed frame), UP and OK return to playback with the picture kept (S-PLAYSEQ finishes request 21,
    then 8, with result 0; PLAY's frame), and PLAY from it returns to the shooting screen (`0x0108`, endPlayService);
-   the family's Delete changes nothing (the player posts E143's UI_IN code for it; the family's is not read) and its
+   the family's Delete changes nothing (the player posts E143's UI_IN code for it; the family's is not read; finding
+   111: it sends the family's own code, the dialog still shut) and its
    OK opens the same wizard state (request 286) without a change to the frame, as E130's OK opens it; E144's OK and
    Delete change nothing (its Delete asks S-PLAYCOMP's getSelectPicNumberSpecifyMedia twice, answered 0 unmodelled;
    whether that answer is why nothing opens, ?). PLAY from the wizard OK opens faults on E130 (a jump to `0x0000801f`)
    and on the three (`0x00008010`): the GUI's `0x50cbd271` (E122) calls slot +32 of its current screen object
    (`0x6161c024`), which is 0 there (X); that word's three writers store the result of the screen factory `0x50cf49e0`
-   (D); which screen PLAY asks for there and why none is made is not read (?).
+   (D); which screen PLAY asks for there and why none is made is not read (?; answered in finding 108: the wizard's
+   kind stayed at its reset value, S-PLAYCOMP and S-PLAYSEQ giving no image type, so no screen was asked for).
 95. **E118's EVF playback was never missing** (2026-11-10; corrects this round's premise that finding 70 left it out).
    Finding 70 says E118's EVF played back before the line compare, and modelcheck's EVF_PLAY holds E118; its EVF runs
    PLAY, INFO's three views, RIGHT, LEFT and PLAY back (X: finding 94's session). Why it never waited (D): E118's
@@ -2650,6 +2659,11 @@ Since finding 61 (2026-10-31) the three pass the count probe on both panels, the
 window (PROBE_REDRAW): their application asks for the count only when the shooting screen is redrawn.
 Since findings 84 to 89 (2026-11-10) touch runs on the three's TFT: a tap on the touch mode icon and in the super
 control panel reaches the GUI (X, `test/test_touch.mjs`).
+Since findings 102 to 104 (2026-11-10) S2's file carries the firmware's Exif, the family's header maker run natively
+(S-RECHDR); since finding 108 PLAY from the playback wizard returns to the shooting screen; since findings 113 to 117
+taps with the EVF active run as the code says; since findings 124 to 129 Card Setup's Format runs natively but for the
+camera base's part of its end (S-MDAEND), and the card out and in run through S-MEDIA (X, `test/test_storage.mjs`,
+`test/test_playinfo.mjs`, `test/test_touch.mjs`).
 
 ## The chained port
 

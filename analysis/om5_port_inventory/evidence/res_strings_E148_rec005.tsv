@@ -1,0 +1,7216 @@
+10	AEL/AFL
+26	@A025@REC
+46	MF
+52	RAW@A01A@
+72	Preview
+88	@A013@
+102	 Home
+126	English
+196	2f
+202	AEL/AFL Memo
+228	AEL/AFL
+244	AEL Metering
+270	@A001@ Set Up
+298	 Set Home
+318	AF/MF
+330	AF Area
+346	AF Illuminator
+376	AF Mode
+392	All
+400	All Direction Shake I.S.
+450	All Reset
+470	All Set
+486	All @A001@
+508	Anti-Shock @A004@
+544	Aperture Priority
+580	Art LV Mode
+604	Cross Process
+632	Diorama
+648	Dramatic Tone
+676	Gentle Sepia
+702	Grainy Film
+726	Light Tone
+748	Pale&Light Color
+782	Pop Art
+798	Soft Focus
+820	Pin Hole
+838	Image Aspect
+864	Auto
+874	Backlit LCD
+898	@A003@ Warning Level
+940	Battery Empty
+968	@A001@
+982	Bracketing
+1004	Bulb Focusing
+1032	Bulb Timer
+1054	Button/Dial
+1078	@A003@Control Settings
+1124	@A006@ Utility
+1154	Card Error
+1176	Card Full
+1196	Card Full
+1216	Card Setup
+1238	Internal camera temperature
+1296	is too high. Please wait for
+1356	cooling before camera use.
+1410	The lens is locked.
+1452	Please extend the lens.
+1500	Color Space
+1524	Continuous AF
+1552	AF Tracking
+1576	Contrast
+1594	Picture Copy Size
+1630	Copyright Settings
+1668	@A003@Mode
+1690	Custom
+1704	Button Function
+1740	Dial Direction
+1770	Dial Function
+1798	@A010@Lock
+1820	Flash Auto
+1842	Fill In
+1858	Flash Off
+1878	Red-eye
+1894	Red-eye Slow
+1920	Spot Hilight
+1946	Spot Shadow
+1970	Disp/@A004@/PC
+2000	dpi Settings
+2026	Sequential
+2048	@A014@ Anti-Shock @A004@
+2098	Single
+2112	@A014@ Anti-Shock @A004@
+2162	e-Portrait
+2184	Edit
+2194	Edit Filename
+2222	B:Blue
+2236	G:Green
+2252	N:Neutral
+2272	Or:Orange
+2292	P:Purple
+2310	R:Red
+2322	S:Sepia
+2338	Ye:Yellow
+2358	EV Step
+2374	EVF Adjust
+2396	Exp/@A011@/ISO
+2426	Exposure
+2444	Exposure Shift
+2474	@A008@Face Priority
+2514	Face Priority Off
+2550	Face Priority On
+2584	File Name
+2604	Firmware
+2622	@A014@ Custom
+2650	@A006@ Slow Limit
+2686	@A006@ X-Sync.
+2716	Focal Length
+2742	Focus Ring
+2764	Gradation High Key
+2802	Gradation Low Key
+2838	Gradation Normal
+2872	Hi
+2878	Histogram Settings
+2916	i-Enhance
+2936	@A01A@/Color/WB
+2968	Image Stabilizer
+3002	@A00B@ Settings
+3034	@A00F@/Info Settings
+3076	@A006@ Info
+3100	Address Book
+3126	IS Off
+3140	ISO
+3148	ISO-Auto
+3166	ISO-Auto Set
+3192	Extension
+3212	Recommend
+3232	ISO Step
+3250	Vertical Shake I.S.
+3290	Level Adjust
+3316	Lo
+3322	Loop
+3332	Manual Shooting
+3364	@A010@+@A011@
+3392	@A00A@
+3406	Album Mem. Usage
+3440	Menu
+3450	@A00E@/@A000@ Menu Display
+3504	Metering
+3522	Ctr-Weighted
+3548	Spot
+3558	MF Assist
+3578	min
+3586	Mode Guide
+3608	@A012@
+3622	Monochrome
+3652	Movie
+3664	Movie @A017@
+3690	Movie+Still
+3714	Multiple Exposure
+3750	Muted
+3762	Live View Boost
+3794	No
+3800	No Card
+3816	No Connection
+3844	Noise Filter
+3870	Noise Reduct.
+3898	No Picture 
+3922	Off
+3930	Back@A018@
+3952	Back@A019@
+3974	Cancel@A018@
+4000	Capture WB@A012@
+4034	@A01B@@A01C@
+4060	Set@A019@
+4080	On
+4086	@A014@
+4100	@A015@
+4114	My OLYMPUS PENPAL
+4150	Album Mem. Setup
+4184	Picture Mode 
+4212	Picture Mode Settings
+4256	Picture Error
+4284	Pixel Count
+4308	Pixel Mapping
+4336	@A023@ Close Up Mode
+4378	Print
+4390	Priority Set
+4416	Program Auto
+4442	Reset Protect
+4470	@A01A@
+4484	@A024@ Set
+4506	Quick Erase
+4530	RAW+JPEG Erase
+4560	Record/Erase
+4586	Rec View
+4604	Red-Eye + Fill-In
+4640	Release
+4656	C-AF Release Priority
+4700	S-AF Release Priority
+4744	Reset
+4756	Reset Lens
+4778	Reset/Myset
+4802	@A01D@
+4816	Saturation
+4838	Beach & Snow
+4864	Candle
+4878	Children
+4896	Documents
+4916	Fireworks
+4936	High Key
+4954	Landscape
+4974	Low Key
+4990	Macro
+5002	@A03A@ Macro
+5028	Nature Macro
+5054	Portrait + Nightscape
+5098	Nightscape
+5120	Panorama
+5138	Portrait
+5156	DIS Mode
+5174	Sport
+5186	Sunset
+5200	@A03A@ Wide-Angle
+5236	sec
+5244	@A04E@ Anti-Shock @A004@
+5294	@A04F@ Anti-Shock @A004@
+5344	@A020@ 12 sec
+5372	@A020@ 2 sec
+5398	Picture Send Size
+5434	@A02C@
+5448	Shading Comp.
+5476	Shadow Adj
+5498	Sharpness
+5518	Shutter Priority
+5552	Horizontal Shake I.S.
+5596	Single AF
+5616	Single AF + MF
+5646	Sleep
+5658	@A02B@
+5672	Spiral
+5686	Standard
+5704	Start
+5716	Storage
+5732	High
+5742	OLYMPUS PENPAL Share
+5784	Electronic Viewfinder
+5828	OLYMPUS PENPAL Album
+5870	Time
+5880	USB Mode
+5898	Video Out
+5918	Volume
+5932	Please Wait
+5956	WB Auto
+5972	Cloudy
+5986	WB Flash
+6004	Fluorescent
+6028	Incandescent
+6054	WB
+6060	Shadow
+6074	Sunny
+6086	Low
+6094	Write Protect
+6130	Yes
+6138	Y/M/D
+6150	Eye-Fi
+6164	16:9
+6174	4:3
+6182	3:2
+6190	6:6
+6198	3:4
+6206	ESP
+6214	NTSC
+6224	PAL
+6232	RAW
+6240	MF
+6246	Adobe RGB
+6266	I.S. 1
+6280	I.S. 2
+6294	Slow
+6304	Slow2
+6316	1/4
+6324	1/16
+6334	1/64
+6344	2nd Curtain
+6368	Vivid
+6380	Natural
+6396	JPEG
+6406	RAW+JPEG
+6424	Portrait
+6458	CWB
+6466	mode1
+6478	mode2
+6490	S-AF
+6500	C-AF
+6510	P/A/S
+6522	Menu
+6532	1/2EV
+6544	1/3EV
+6556	1EV
+6564	Off
+6572	I.S. 3
+6586	sRGB
+6596	Auto@A010@
+6618	MTP
+6626	Hold
+6636	Body
+6646	Lens
+6656	Flash
+6668	Acc
+6676	LV-Info
+6692	Drive @A00E@/@A00F@
+6732	ART1
+6742	ART2
+6752	ART3
+6762	ART4
+6772	ART5
+6782	ART6
+6792	ART7
+6802	ART8
+6812	HDMI
+6822	iAUTO
+6834	P/A/S/M
+6850	ART9
+6860	ART10
+6872	Full
+6882	@A084@
+6896	Date
+6906	Myset1
+6920	Myset2
+6934	Myset3
+6948	Myset4
+6962	Backlit LCD
+6986	Live Guide
+7008	Digital Tele-converter
+7054	Exposure @A007@
+7086	It is enabled in the
+7130	P/A/S exposure modes. 
+7176	Effective in all 
+7214	exposure modes.
+7246	Please check the status of a lens.
+7316	Back Light On/Off.
+7354	Adjust exposure 
+7390	compensation
+7416	@A066@:
+7434	Start/Stop
+7458	Movie Recording
+7490	Depth of field 
+7524	preview.
+7542	Home position setting of 
+7596	AF Area mode
+7622	Change to the MF mode.
+7668	Change RAW+JPEG/JPEG
+7712	quality modes with dial.
+7762	@A00E@/@A00F@ direct setting.
+7822	ISO direct setting.
+7862	WB mode direct setting.
+7910	Hold @A02A@: to lock/unlock
+7968	direct @A010@ operation
+8018	while in the shooting mode.
+8074	@A01C@Function
+8104	@A048@Function
+8134	@A030@Function
+8164	@A00A@Function
+8194	SF
+8212	@A05C@5300K
+8236	@A05B@7500K
+8260	@A05D@3000K
+8284	@A059@5500K
+8308	@A058@6000K
+8332	Delete all pictures in the
+8388	memory card or format
+8434	the memory card.
+8468	Reset the settings, or register
+8534	the current camera setting
+8590	condition as Mysets.
+8632	To select the art filter or
+8690	finish according to the
+8740	shooting purpose.
+8776	To select a record mode
+8826	in which to take pictures
+8880	or movies.
+8902	Change the horizontal-to-
+8956	vertical ratio
+8988	when taking pictures.
+9032	Preliminary and basic
+9078	shooting options.
+9114	Choose sequential shooting or
+9176	self-timer shooting settings.
+9236	Change image stabilizer mode.
+9298	@A065@ and @A066@ are used for
+9362	panning with the camera.
+9412	The camera automatically
+9464	shoots at different setting
+9522	for each frame.
+9554	This overlays multiple frames
+9616	and saves it as a single image.
+9680	Adjusting flash intensity.
+9734	Use wireless flash shooting mode
+9802	with the wireless RC flash system.
+9872	Take a digitally enlarged picture.
+9942	Advanced shooting options.
+9996	Perform slideshow with
+10044	various BGM or effect.
+10090	The images will be displayed
+10150	in the correct direction
+10202	even if the camera is rotated.
+10264	Edits the image.
+10298	Save printing data with
+10348	the pictures stored on the card.
+10414	Cancel the protection
+10460	of all images.
+10490	Playback and retouch options.
+10550	Menu about auto focus
+10596	and manual focus settings.
+10650	Menu about button and
+10696	dial settings.
+10726	Menu about release settings.
+10784	Menu about display, sound,
+10840	and connection to PC or
+10890	printer settings.
+10926	Menu about exposure settings.
+10986	Menu about flash settings.
+11040	Menu about image color
+11088	or WB settings.
+11120	Menu about record or
+11164	erase settings.
+11196	Menu about movie settings.
+11250	Menu about other settings.
+11304	Choose the AF mode for
+11352	still picture mode
+11392	and movie mode.
+11424	If On is selected, auto focus
+11486	will work before pressing
+11540	shutter button.
+11572	Choose the AF target area.
+11626	Selects the operation of the
+11686	dials or arrow pad when
+11736	selecting AF target.
+11778	When set to On, this resets the
+11844	position of lens when the power
+11910	is turned off.
+11940	Select On to allow MF
+11986	while BULB shooting.
+12028	Customize rotational direction
+12092	of the focus ring to
+12136	adjust the focus.
+12172	Select On to automatically
+12228	magnify the image when the
+12284	focus ring is rotated in MF mode.
+12352	Choose the home position 
+12406	of the AF target area.
+12452	A LED makes autofocusing 
+12506	easier in low-light conditions.
+12570	Assign focus or AE lock
+12620	to the @A034@.
+12650	If On is selected, exposure will
+12718	remain locked after
+12760	the @A071@ is released.
+12808	4" Rolls
+12826	Choose the function assigned
+12886	to the dial.
+12912	Choose the direction in which
+12974	the dial is rotated.
+13016	Select On to disable @A010@
+13074	while in the shooting mode.
+13130	A4 Rolls
+13148	Adjust HDMI settings.
+13192	Address
+13208	When On, exposure 
+13248	compensation effects are 
+13302	not be visible in the monitor.
+13364	All
+13372	Choose the time which
+13418	indicators automatically
+13470	clear from the monitor.
+13518	The backlight LCD will dim
+13574	if no operation are performed
+13636	for the selected period.
+13686	The camera enters sleep mode
+13746	if no operations are performed
+13810	for the selected period.
+13860	You can turn off the beep
+13914	sound that is emitted
+13960	when the focus locks.
+14004	Adjust playback volume.
+14052	Select the type of device
+14106	to connect with USB.
+14148	Choose the size of the
+14196	increments used when
+14240	selecting exposure parameters.
+14302	Choose a metering mode.
+14350	Choose a metering mode by @A034@.
+14418	Set ISO sensitivity.
+14460	Choose the upper limit and
+14516	default value used for auto
+14574	ISO sensitivity.
+14608	Choose the shooting modes
+14662	in which auto ISO sensitivity
+14724	is available.
+14752	Set the maximum time
+14796	for BULB shooting.
+14834	Choose the delay between
+14886	the shutter button being
+14938	pressed and released.
+14982	Choose the fastest shutter
+15038	speed available
+15072	when a flash is fired.
+15118	Choose the slowest shutter
+15174	speed available
+15208	when a flash is fired.
+15254	This function reduces the noise
+15320	that is generated during
+15372	long exposure.
+15402	Choose the amount of noise
+15458	reduction performed
+15500	at high ISO sensitivities.
+15554	Choose the white balance mode.
+15616	To keep warm lighting colors
+15676	at auto white balance mode.
+15732	Select how colors are
+15778	reproduced on the
+15816	monitor or printer.
+15856	To change white balance mode
+15916	to auto or @A021@ automatically
+15982	when using flash.
+16018	Correct peripheral illumination
+16084	according to the type of lens.
+16146	Modifying JPEG record modes
+16204	from combinations of image
+16260	size and compression rate.
+16314	Choose the pixel count for
+16370	@A036@ and @A037@.
+16408	If On is selected, delete the
+16470	current image immediately.
+16524	Choose the action performed
+16582	when a picture at RAW+JPEG
+16638	is erased.
+16660	Auto uses the file numbers and
+16724	the folder numbers retained from
+16792	the old card.
+16820	Choose how image files
+16868	are named by editing the
+16920	position of the filename.
+16972	Choose the default selection
+17032	for confirmation dialogs.
+17084	Choose the print resolution.
+17142	Add the names of the
+17186	photographer and
+17222	copyright holder to new picture.
+17288	When Off, sound is
+17328	not recorded
+17356	during movie shooting.
+17402	To check and adjust the
+17452	image pickup device and
+17502	image processing functions.
+17558	Adjust optimal exposure
+17608	separately for each
+17650	metering modes.
+17682	Calibrate the level gauge.
+17736	Enable or disable
+17774	the connection
+17806	of the Eye-Fi card.
+17846	Detailed camera options.
+17896	Menu about OLYMPUS PENPAL
+17950	share settings.
+17982	Menu about the electronic
+18036	viewfinder settings.
+18078	Receive images or wait request
+18142	from other devices.
+18182	Copy all images and sound files
+18248	between @A00A@ and @A00B@.
+18302	Show the number of pictures
+18360	currently in the album and
+18416	that can be stored at.
+18462	Delete all pictures in the album
+18530	or format the album.
+18572	Adjusts brightness and
+18620	color temperature of
+18664	electronic viewfinder.
+18710	Accessories options.
+18752	Adjusts brightness and
+18800	color temperature
+18838	of LCD monitor.
+18870	Choose how long pictures are
+18930	displayed after shooting.
+18982	Select to display or hide
+19036	@A00E@ menu or @A000@ menu.
+19092	View product's
+19124	firmware version.
+19160	To set up the basic
+19202	camera functions.
+19238	Shooting Menu 2
+19270	Yes
+19278	No
+19284	@A00A@ Menu Display
+19324	@A000@ Menu Display
+19364	Test Picture
+19390	Flash Mode
+19412	@A06B@:Off
+19434	All Erase
+19454	@A023@: AEL/AFL
+19486	@A023@:
+19504	Start/Stop
+19528	Movie Recording
+19560	Depth of field 
+19594	preview.
+19612	One touch WB.
+19640	Home position setting of 
+19694	AF Area mode
+19720	Change to the MF mode.
+19766	Change RAW+JPEG/JPEG
+19810	quality modes with dial.
+19860	Test picture without 
+19906	saving.
+19922	Shooting with @A02B@
+19966	while pushing @A024@ button
+20022	Shooting with @A02C@
+20066	while pushing @A024@ button
+20122	Shooting with @A02D@
+20166	while pushing @A024@ button
+20222	Shooting with @A02E@
+20266	while pushing @A024@ button
+20322	@A023@: Press to change to Live Guide
+20400	mode, and press again to return.
+20466	@A023@: Change x1/x2.
+20510	@A025@:Off
+20532	Adjust exposure 
+20568	compensation
+20594	Sets Flash Mode.
+20628	Adjust exposure 
+20664	compensation
+20690	Hold @A012@: to lock/unlock
+20748	direct @A010@ operation
+20798	while in the shooting mode.
+20854	Image Overlay
+20882	2Images Merge
+20910	3Images Merge
+20938	@A009@
+20952	@A01B@ RC Mode
+20982	Custom Menu
+21006	A. AF/MF
+21024	B. Button/Dial
+21054	C. Release/@A01E@
+21090	D. Disp/@A004@/PC
+21126	E. Exp/@A011@/ISO
+21162	F. @A00A@ Custom
+21196	G. @A01A@/Color/WB
+21234	H. Record/Erase
+21266	I. Movie
+21284	J. Built-In EVF
+21316	Please input PIN code.
+21362	Full-time AF
+21388	Clear registered shooting
+21442	mode and settings.
+21480	Image Only
+21502	@A020@ Keep Warm Color
+21548	@A006@+WB
+21568	Touchscreen Settings
+21610	ART
+21618	SCN
+21626	3200
+21636	2400
+21646	2560
+21656	1920
+21666	1920
+21676	1440
+21686	1600
+21696	1200
+21706	1280
+21716	960
+21724	1024
+21734	768
+21742	640
+21750	480
+21758	320
+21766	240
+21774	Still Picture
+21802	Movie
+21814	S-AF+MF
+21830	C-AF+TR
+21846	RAW/JPEG
+21864	JPEG Edit
+21884	Red-eye Fix
+21908	@A01F@
+21922	Aspect
+21936	Black & White
+21964	Sepia
+21976	Saturation
+21998	@A01C@
+22012	@A01B@
+22026	RAW Data Edit
+22054	Rotate
+22068	@A019@
+22082	Sel. Image
+22104	@A01B@ Start
+22130	Erase
+22142	Erase
+22154	Erase Selected
+22184	Selected
+22202	Set current shooting
+22246	mode and settings.
+22284	Movie Play
+22306	Send A Picture
+22336	Reset
+22348	@A03A@Cross Process
+22388	@A033@Dramatic Tone
+22428	Gradation
+22448	Color Filter
+22474	Monochrome Color
+22508	Use Original Size.
+22546	When selecting the picture
+22602	mode, you can skip the items
+22662	that have not been set to On.
+22722	Menu about OLYMPUS PENPAL
+22776	album settings.
+22808	Movie @A017@ On
+22840	AVCHD 1920
+22862	1080 Normal
+22886	Motion JPEG 1280
+22920	720
+22928	Motion JPEG 640
+22960	480
+22968	@A015@i-Enhance
+23000	@A07A@Vivid
+23024	@A07C@Portrait
+23054	@A032@Pop Art
+23082	@A034@Soft Focus
+23116	@A035@Pale&Light Color
+23162	@A036@Light Tone
+23196	@A037@Grainy Film
+23232	@A038@Pin Hole
+23262	@A039@Diorama
+23290	Myset1
+23304	Myset2
+23318	Myset3
+23332	Myset4
+23346	Full
+23356	Basic
+23368	Set
+23376	No Data
+23392	@A07B@Natural
+23420	@A01F@Muted
+23444	Effect
+23458	High Key
+23476	Normal
+23490	Low Key
+23506	Monochrome
+23528	For monochrome 
+23562	image.
+23576	Useful for clear 
+23614	contrast between 
+23652	blue sky with clouds.
+23696	Useful in shooting 
+23738	telephoto shots 
+23774	at distances.
+23802	Dramatically providing 
+23852	the darkest sky tones 
+23900	and brightest clouds.
+23944	Improving skin tones, 
+23992	and bringing out 
+24030	facial expressions 
+24072	of portraits.
+24100	For sepia image 
+24136	effect.
+24152	For blue image effect.
+24198	For purple image 
+24236	effect.
+24252	For green image 
+24288	effect.
+24304	Change Color Saturation
+24352	Change Color Image
+24390	Change Brightness
+24426	Blur Background
+24458	Express Motions
+24490	Shooting Tips
+24518	Live Guide is not
+24556	available
+24578	when flash is on
+24612	Clear & Vivid
+24640	Flat & Muted
+24666	Warm
+24676	Cool
+24686	Bright
+24700	Dark
+24710	Brighten Bright Area
+24752	Darken Bright Area
+24790	Brighten Dark Area
+24828	Darken Dark Area
+24862	Blur
+24872	Sharp
+24884	Blurred Motion
+24914	Stop Motion
+24938	dpi
+24946	@A03B@Gentle Sepia
+24984	Dial P
+24998	Dial A
+25012	Dial S
+25026	Dial M
+25040	Dial Menu
+25060	Dial @A006@
+25084	Ps
+25090	@A007@
+25104	FNo.
+25114	Shutter
+25130	@A079@/Value
+25156	Prev/Next
+25176	@A08B@
+25190	Print Order Setting
+25230	@A018@
+25244	@A00A@
+25258	@A000@
+25272	Print Ordered
+25300	Reset
+25312	Keep
+25322	No
+25328	Set
+25336	Cancel
+25350	2f 0.3EV
+25368	2f 0.5EV
+25386	2f 0.7EV
+25404	2f 1.0EV
+25422	3f 0.3EV
+25440	3f 0.5EV
+25458	3f 0.7EV
+25476	3f 1.0EV
+25494	5f 0.3EV
+25512	5f 0.5EV
+25530	5f 0.7EV
+25548	5f 1.0EV
+25566	7f 0.3EV
+25584	7f 0.5EV
+25602	7f 0.7EV
+25620	2L Format
+25640	WB BKT
+25654	A-B
+25662	3f 2Step
+25680	3f 4Step
+25698	3f 6Step
+25716	G-M
+25724	Number of Frames
+25758	Auto Gain
+25778	Overlay
+25794	HDMI Out
+25812	HDMI Control
+25838	1080i
+25850	720p
+25860	480p/576p
+25880	Copyright Info.
+25912	Artist Name
+25936	Copyright Name
+25966	AE BKT
+25980	FL BKT
+25994	ISO BKT
+26010	ART BKT
+26030	@A01B@: Start Movie Rec
+26080	@A01A@: Take a Picture
+26126	@A063@: Start Movie Rec
+26176	@A02B@: Take a Picture
+26222	Select a Scene Mode
+26262	Select an Art Filter
+26304	@A06C@: Guide To Change
+26354	Settings Easily
+26386	Sets the aperture and
+26432	shutter speed automatically.
+26490	Set the aperture manually.
+26544	Set the shutter speed manually.
+26608	Set the aperture and
+26652	shutter speed manually.
+26700	@A015@: Start/stop movie recording.
+26772	Exit@A026@
+26794	MF AEL/AFL
+26816	mode3
+26828	mode4
+26840	Half Way
+26858	Fully
+26870	AEL/S-AF
+26888	Exposure
+26906	AEL
+26914	AEL/Exp
+26930	AEL/AF Start
+26956	AF Start
+26974	AEL/AFL/Exp
+26998	AFL/Exp
+27014	----
+27024	Shooting Menu 1
+27056	Playback Menu
+27084	Continuous viewing of an 
+27138	Art Filter effect. Some filters
+27204	show at a slower frame rate.
+27262	The Art Filter effect is
+27314	lightened on the LCD and the
+27374	viewing frame rate is faster.
+27434	@A042@: Zoom a picture.
+27482	@A042@: Display an enlargement
+27546	frame and push again to 
+27598	enlarge a picture in it.
+27648	Highlight
+27668	Shadow
+27682	Indicators automatically clear from
+27756	the display if no operations are
+27824	performed for 10 seconds.
+27876	Indicators always displayed
+27934	during shooting.
+27968	Not take a picture
+28008	when movie recording ends
+28062	by pressing shutter button.
+28118	Take a picture after stopping
+28180	movie recording by pressing
+28238	shutter button.
+28270	Adjust
+28284	Resets to default.
+28322	Disable Eye-Fi card connection.
+28386	Enable Eye-Fi card connection.
+28448	2f
+28454	Over Exp. Pic.
+28484	Under Exp. Pic.
+28516	Shooting two pictures
+28562	one normal and one with
+28612	over exposure level.
+28654	Shooting two pictures
+28700	one normal and one with
+28750	under exposure level.
+28794	S-AF AEL/AFL
+28820	C-AF AEL/AFL
+28846	Filter Type
+28870	Filter Type @A00B@
+28908	Filter Type @A00C@
+28946	Add Effects
+28970	Soft Focus Effect
+29006	Pin Hole Effect
+29038	White Edge Effect
+29074	Frame Effect
+29100	Star Light Effect
+29136	3D Photo
+29154	For taking a 
+29184	portrait-style shot.
+29226	Smooth skin tone 
+29264	to view on HDTV.
+29298	For shooting
+29326	landscapes.
+29352	Vivid reproduction
+29392	of blues and greens.
+29434	Captures 
+29456	fast-moving 
+29484	action without blurring.
+29534	For shooting illuminated
+29586	scenes in evening or
+29630	at night. Uses a slower shutter
+29696	speed than in normal shooting.
+29760	For the best result, stabilize
+29824	the camera.
+29848	@A014@POP UP
+29876	For shooting both 
+29916	main subject and illuminated 
+29978	background in evening 
+30026	or at night. Shutter
+30070	speed is slowed.
+30104	Shooting 
+30126	active children.
+30160	Enhances 
+30182	bright areas for 
+30220	impressive pictures.
+30262	Enhances 
+30284	dark areas for 
+30318	impressive pictures.
+30360	This function 
+30392	reduces the blur 
+30430	incurred by a moving 
+30476	subject or camera 
+30516	movement when taking 
+30562	pictures.
+30582	Best for close- 
+30618	up pictures of 
+30652	small objects
+30680	For shooting 
+30710	under candlelight. 
+30752	Warm colors are 
+30788	reproduced.
+30812	For shooting 
+30842	setting/rising 
+30876	sun. 
+30890	Vivid reproduction 
+30932	of reds and yellows.
+30974	For shooting 
+31004	documents, etc. 
+31040	Increases contrast 
+31082	between letters and 
+31126	background.
+31150	Lets you take 
+31182	pictures that can be 
+31228	combined to make a 
+31270	single panoramic 
+31308	picture.
+31326	AF@A039@MF
+31350	Suitable for 
+31380	shooting fireworks 
+31422	at night. 
+31446	Uses a slower shutter 
+31494	speed than in normal shooting.
+31556	For shooting snowy
+31596	capped mountains, 
+31636	landscapes,white
+31672	sand sea-scapes,etc.
+31714	For Shooting With Semi
+31762	Fisheye Converter
+31800	FCON-P01.
+31820	For Shooting With
+31858	Wide Converter
+31890	WCON-P01.
+31910	For Shooting With
+31948	Macro Converter
+31982	MCON-P01/02.
+32008	Takes pictures to display on 
+32070	a 3D TV or monitor.
+32110	Filter Type @A00D@
+32148	2L Rolls
+32166	All Index
+32186	Accept
+32200	All Print
+32220	Back
+32230	Displayed Grid
+32260	Borderless
+32282	@A002@ Both RAW&JPEG Are Erased
+32346	A picture was not received.
+32402	A picture was received.
+32450	A picture was not sent.
+32498	A picture was sent.
+32538	Busy
+32548	Calendar
+32566	Live Control
+32592	SCP
+32600	Art Menu
+32618	Scene Menu
+32640	Cancel
+32654	The Image Cannot Be Edited
+32708	Cannot Print
+32734	Card
+32744	Format
+32758	Format
+32772	Caution Image Cannot Be Selected
+32838	Clean the contact area of
+32892	the card with a dry cloth.
+32946	Caution Connecting To @A004@
+33004	@A00A@ Caution Erasing All
+33058	@A00A@ Caution Erasing All
+33112	@A00B@ Caution Erasing All
+33166	@A00B@ Caution Erasing All
+33220	@A002@ Caution Erasing All
+33274	@A002@ Caution Erasing All
+33328	Continue
+33346	Copy All 
+33366	Default
+33382	Delete
+33396	Reject
+33410	Found
+33422	@A005@
+33436	Dial1
+33448	Dial2
+33460	Connection Starting
+33500	Exit
+33510	Face Detect Error
+33546	File Name
+33566	Full
+33576	1Frame
+33590	@A007@
+33604	@A008@
+33618	Highlight&Shadow
+33652	Upper Limit
+33676	@A009@
+33690	Image Only
+33712	@A00F@
+33726	Adjusts the 0 level to 
+33776	the current position.
+33820	Pairing failed.
+33852	DIAL @A026@ : 
+33884	Fno. Shutter upper
+33922	Turn the dial @A027@ to
+33972	move to next item
+34010	in the menu
+34034	DIAL @A027@ : 
+34066	Fno. Shutter upper
+34104	Turn the dial @A026@ to
+34154	move to next item
+34192	in the menu
+34216	The connection starts.
+34262	Searching.
+34286	Please wait.
+34312	Waiting for request
+34352	Resize to 1920x1440.
+34394	Resize to 1280x960.
+34434	Waiting for response.
+34478	Point the camera at
+34520	a sheet of white 
+34558	paper.
+34572	Point the camera at
+34614	a sheet of white 
+34652	paper.
+34666	Input PIN Code
+34696	ISO Extension
+34724	Recommended ISO
+34756	Jammed
+34770	Letter
+34784	Level Gauge
+34808	L Format
+34826	Light Box
+34846	L Rolls
+34862	Use longer focal length
+34912	or get closer.
+34942	Take longer distance from
+34996	the subject to background.
+35050	Blur Background
+35082	Talk to a child and
+35124	take a picture
+35156	from his/her eye level.
+35204	Take many pictures by
+35250	continuous shooting mode,
+35304	and select good pictures later.
+35368	Tips For Child Photo
+35410	Get closer to a pet
+35452	and take a picture from
+35502	its eye level or lower.
+35550	Focus on pet's eyes.
+35594	Get attention by food or toys.
+35656	Take many pictures by
+35702	continuous shooting mode,
+35756	and select good pictures later.
+35820	Tips For Pet Photo
+35858	Take a picture from flower's
+35918	height or lower. Pay attention
+35982	to the background.
+36020	Select dark background
+36068	or use color papers.
+36112	Blur near and far side.
+36160	Focus on the closest pistil
+36218	or petal of the flower.
+36266	Shade of cloud or parasol
+36320	makes shadow of
+36354	flowers softer.
+36386	Tips For Flower Photo
+36430	Shooting from 3/4 angle gives
+36492	cuisine natural presence.
+36544	Good place to take food is by
+36606	a window. Combination with
+36662	diagonal back light is better.
+36724	Get closer to main subject.
+36782	Portrait format gives
+36828	depth of image.
+36860	Tips For Cuisine Photo
+36906	Occupying 2/3 of a picture by
+36968	main subject is good balance.
+37028	Divide the main subject and
+37086	background by a diagonal line
+37148	for a natural feel.
+37188	Put the main subject and 
+37242	others on the diagonal line 
+37302	for a natural feel.
+37342	Tips For Framing
+37376	By attaching MCON-P02,
+37424	you can take close up photos
+37484	of small items.
+37516	By attaching FCON-P01 to
+37568	14-42mm II R, you can take 120
+37632	degree fisheye effect pictures.
+37696	By attaching WCON-P01 to 
+37750	14-42mm II R, you can take a 
+37812	11mm wide-angle pictures.
+37864	By using the Macro Light,
+37918	MAL-1, you can control light
+37978	and shadow in Macro pictures.
+38038	Tips With Accessory
+38080	Format Album
+38106	Movie @A017@ Off
+38140	Movie Interval
+38170	Multi View
+38192	Multi Print
+38216	New Pairing
+38240	No Ink
+38254	No Paper
+38272	Off
+38280	Cancel@A020@
+38306	Confirming@A019@
+38340	More@A022@
+38362	Easy Print Start@A024@
+38408	Edit Name@A02D@
+38440	Exit@A018@
+38462	Exit@A025@
+38484	Print@A01F@
+38508	Shutter Button
+38538	Single Print@A020@
+38576	Yes@A019@
+38596	OK
+38602	On
+38608	Slide Interval
+38638	One Moment
+38660	One Touch WB
+38686	Option Set
+38708	Size 1: Large
+38736	Overall
+38752	Address List
+38778	Receive Pairing Request
+38826	Search
+38840	Search Timer
+38866	Select Destination
+38904	Album Mem. Full
+38936	Pics/Sheet
+38958	Send Picture
+38984	Postcard
+39002	@A005@X
+39018	Print Error
+39042	Print Info
+39064	Print Mode Select
+39100	Print Order
+39124	Printpaper
+39146	Service
+39162	Super FP Flash
+39192	Normal
+39206	Receive Picture
+39238	Receive Picture Request
+39286	Waiting For Request
+39326	Receiving
+39346	Pict. Remaining
+39378	Remove USB Cable
+39412	Reset
+39424	Size 2: Medium
+39454	Saved Pict.
+39478	@A027@ Monochrome
+39514	@A01E@
+39528	@A029@ Custom
+39556	Sending
+39572	Data Is Registered
+39610	Settings Changed
+39644	Short
+39656	Size
+39666	Slide
+39678	Standard
+39696	Device Detail
+39724	Name
+39734	Edit Name
+39754	Transferring
+39780	WB
+39786	Auto @A001@
+39810	@A039@5500K @A001@
+39848	@A027@ @A001@
+39876	@A028@ @A001@
+39904	@A03B@7500K @A001@
+39942	@A03C@5300K @A001@
+39980	@A03E@ @A001@
+40008	WB NG Retry
+40032	With
+40042	Without
+40058	Clean Card
+40080	Set@A019@
+40100	3D photo was not created.
+40152	3D Show
+40168	Picture Error
+40196	Resize to 640x480.
+40234	Size 1: Small
+40262	Size 2: Large
+40290	Size 3: Medium
+40320	Cancel@A01F@
+40346	Cancel@A02C@
+40372	Delete@A02D@
+40398	PC/Custom Print@A01F@
+40442	WB/@A01A@@A061@
+40474	Focal Length@A01A@
+40512	Kelvin@A01A@
+40538	Select@A041@
+40564	@A063@@A064@
+40590	@A023@+Shutter Button
+40634	@A05F@@A033@
+40660	@A02E@@A02F@
+40686	@A030@@A02F@
+40712	@A031@@A02F@
+40738	@A032@@A01A@
+40764	@A042@@A041@
+40790	@A023@@A02F@
+40816	@A03D@@A025@
+40842	WB Preview@A033@
+40876	Normal auto white balance.
+40930	Keep warm lighting colors
+40984	in auto white balance mode.
+41040	Effect
+41054	Fade
+41064	Falling Photos
+41094	Photo Line
+41116	Executing reset,
+41152	reset basic shooting functions.
+41216	Executing reset,
+41252	reset all the functions except date,
+41328	language and some settings.
+41384	Built-in Flash
+41414	Cannot take the movie
+41460	with AVCHD mode.
+41494	This lens is not supported.
+41550	@A002@ Caution Resetting All Settings
+41626	Accessory Port Menu
+41666	Setup Menu
+41688	A. OLYMPUS PENPAL Share
+41736	B. OLYMPUS PENPAL Album
+41784	C. Electronic Viewfinder
+41834	Set the camera date and time.
+41894	Choose the video standard used
+41958	in your country or region.
+42012	Choose the size of the
+42060	increments used when
+42104	selecting ISO sensitivity.
+42158	USB
+42166	100mm
+42178	150mm
+42190	11"
+42198	17"
+42206	4"
+42212	6"
+42218	8"
+42224	10"
+42232	A0
+42238	A1
+42244	A2
+42250	A3
+42256	A4
+42262	A5
+42268	A6
+42274	A7
+42280	A8
+42286	A9
+42292	B0
+42298	B1
+42304	B2
+42310	B3
+42316	B4
+42322	B5
+42328	B6
+42334	B7
+42340	B8
+42346	B9
+42352	4"
+42358	8"
+42366	Panorama
+42384	4"
+42390	10"
+42400	Panorama
+42418	4"
+42424	11"
+42434	Panorama
+42452	4"
+42458	12"
+42468	Panorama
+42486	10cm
+42496	30cm
+42508	Panorama
+42526	89mm
+42536	254mm
+42550	Panorama
+42568	A Mode
+42582	B Mode
+42596	C Mode
+42610	M Value
+42626	FP M Value
+42648	Channel
+42664	Level
+42676	TTL Value
+42696	Auto Value
+42718	FP TTL Value
+42744	Auto
+42754	@A01C@/FP
+42774	@A07D@ 4
+42792	@A07E@ 9
+42810	@A07F@ 25
+42830	@A07F@ 100
+42852	BGM
+42860	Cool
+42870	Joy
+42878	Sequential High
+42910	Melancholy
+42932	@A012@ Anti-Shock @A004@
+42982	TTL Auto
+43000	Sequential Low
+43030	@A013@ Anti-Shock @A004@
+43080	@A078@arge
+43102	Medium
+43116	@A074@mall
+43138	@A01C@Function
+43168	Wind Noise Reduction
+43210	Point the camera at
+43252	a sheet of white 
+43290	paper.
+43304	@A03D@+Shutter Button
+43348	Manual
+43362	FP TTL Auto
+43386	FP Manual
+43406	Level Lo
+43424	Level Mid
+43444	Level Hi
+43462	ch
+43468	Beat
+43478	Adobe
+43490	AVCHD 1920
+43512	1080 Fine
+43532	AVCHD 1280
+43554	720 Fine
+43572	AVCHD 1280
+43594	720 Normal
+43616	Magnify
+43632	@A01D@: AEL/AFL
+43664	Shooting with @A02B@
+43708	while pushing @A01E@ button
+43764	Shooting with @A02C@
+43808	while pushing @A01E@ button
+43864	For shooting 
+43894	both main 
+43918	subject and 
+43946	background. 
+43974	Vivid reproduction 
+44016	of blues and greens.
+44058	Best for 
+44080	close-up pictures.
+44118	@A03A@ Fisheye Effect
+44162	Portrait + Landscape
+44204	@A038@6000K @A001@
+44242	@A03A@4000K @A001@
+44280	@A03D@3000K @A001@
+44318	Shooting with @A02D@
+44362	while pushing @A01E@ button
+44418	Shooting with @A02E@
+44462	while pushing @A01E@ button
+44518	Disable touch screen.
+44562	Enable touch screen.
+44604	Change the language.
+44646	Choose the function assigned
+44706	to the selected button.
+44754	If On is selected, the shutter
+44818	can be released even when the
+44880	camera is not in focus in S-AF.
+44944	If On is selected, the shutter
+45008	can be released even when the
+45070	camera is not in focus in C-AF.
+45134	Choose the information
+45182	displayed when the
+45222	@A00F@ or @A01A@ is pressed.
+45280	Choose the controls displayed
+45342	when the @A04B@ is pressed
+45398	in each shooting mode.
+45444	Set the brightness range
+45496	of the highlights and shadows
+45558	to display warning.
+45598	Choose On to display help for
+45660	the selected mode when the
+45716	mode dial is rotated.
+45760	Choose how art filter effects
+45822	are displayed on the monitor.
+45882	Choose how the picture
+45930	will be enlarged by
+45972	pressing @A042@ button.
+46020	When On, exposure 
+46060	comp. value will be added 
+46116	to flash comp. value.
+46160	Set the same white balance
+46216	compensation in all modes.
+46270	Choose a movie record mode
+46326	while @A003@ mode.
+46364	When set to On, to record a
+46422	picture when movie
+46462	recording ends.
+46494	Choose the battery level at
+46552	which the @A003@ warning
+46604	is displayed.
+46632	Enable or disable
+46670	touch panel settings.
+46714	View address book or
+46758	add a new host
+46790	to address book.
+46824	View or edit information
+46876	for your OLYMPUS PENPAL.
+46926	Choose the image size
+46972	at transmitted.
+47004	Choose the image size
+47050	at copied.
+47072	@A05A@4000K
+47096	@A01E@:Off
+47118	Home position setting of 
+47172	AF Area mode
+47198	3D
+47204	Change to the MF mode.
+47250	@A01D@:
+47268	Start/Stop
+47292	Movie Recording
+47324	One touch WB.
+47352	Compression
+47376	Super Fine
+47398	Fine
+47408	Normal
+47422	Basic
+47434	Depth of field 
+47468	preview.
+47486	Change RAW+JPEG/JPEG
+47530	quality modes with dial.
+47580	Test picture without 
+47626	saving.
+47642	dummy
+47654	Save
+47664	@A01B@Volume Limiter
+47706	Automatically limits the mic input
+47778	volume if sound input volume 
+47840	exceeds the designated level.
+47900	IS Mode
+47916	@A01D@: Buttons @A02F@ and @A030@.
+47986	Set IS mode
+48010	@A066@: Press to change to Live Guide
+48088	mode, and press again to return.
+48154	@A066@: Change x1/x2.
+48198	Vintage
+48214	Partial Color
+48242	@A082@Vintage
+48270	@A083@Partial Color
+48310	Shade Effect: Left and Right
+48368	Shade Effect: Top and Bottom
+48426	Works in progress
+48462	Pressing @A025@ during
+48510	a Photo Story session
+48556	gives you the choice to
+48606	save a work in progress or
+48662	discard the current work.
+48714	Can not retrieve file to resume shooting
+48796	Finish later
+48822	Discard
+48838	Select On to assign human
+48892	faces or eyes priority when
+48950	determining auto focus.
+48998	@A023@: Buttons @A02A@ and @A02B@.
+49068	Point the camera at
+49110	a sheet of white 
+49148	paper.
+49162	Every Frame AF
+49192	Refocuses for every frame.
+49246	Focuses once
+49274	at self-timer start only.
+49326	@A00E@Image Stabilizer
+49372	Activates/deactivates
+49418	image stabilization
+49460	for continuous shooting.
+49510	Off
+49518	Image stabilization deactivated
+49584	to prioritize speed of 
+49634	continuous shooting.
+49676	AF Focus Adj.
+49704	AF Area Pointer
+49738	@A01E@ L fps
+49764	@A01E@: Start Movie Rec
+49814	@A030@: Take a Picture
+49860	@A075@Pale&Light Color
+49906	Focus on the face
+49944	or eyes detected.
+49982	A near side eye will be selected.
+50050	Focus on the face
+50088	or eyes detected.
+50126	A right side eye will be selected.
+50196	Focus on the face
+50234	or eyes detected.
+50272	A left side eye will be selected.
+50340	Face detection does not work.
+50400	Focus on the face detected.
+50456	On
+50462	Image stabilization activated
+50524	to prioritize stable image.
+50582	Continuous shooting speed may
+50644	be affected.
+50670	Reduces camera blur
+50712	caused by shutter release.
+50766	C-AF Lock
+50786	Check
+50798	Data List
+50818	Lens Data
+50838	Default Data
+50864	Select the AF target
+50908	and AF mode.
+50934	@A028@: Display an enlargement
+50998	frame and push again to 
+51050	enlarge a picture in it.
+51100	Home position setting of 
+51154	AF Area mode
+51180	Change to the MF mode.
+51226	One touch WB.
+51254	Depth of field 
+51288	preview.
+51306	Face & Eye Priority On
+51352	Face & R. Eye Priority On
+51404	Face & L. Eye Priority On
+51456	Change RAW+JPEG/JPEG
+51500	quality modes with dial.
+51550	Test picture without 
+51596	saving.
+51612	When shutter speed is @A096@
+51672	or less, the first shutter curtain 
+51746	is switched from mechanical 
+51806	to electronic to reduce blur 
+51868	caused by shutter impact.
+51920	Select Color@A01A@
+51958	Normal
+51972	@A016@
+51986	@A017@
+52000	@A02B@Function
+52030	@A029@ @A001@
+52058	@A02A@ @A001@
+52086	@A027@Lock
+52108	When set to On, the depth of
+52168	field preview is maintained even
+52236	after the button is released.
+52296	Panning
+52312	Detects the camera moving
+52366	and sets the best shutter speed
+52432	for blur background.
+52476	Shoots in sequential shooting.
+52538	@A04E@Function
+52568	@A054@Light Tone
+52602	@A06C@: AEL/AFL
+52634	@A06C@:
+52652	Start/Stop
+52676	Movie Recording
+52708	Depth of field 
+52742	preview.
+52760	One touch WB.
+52788	Home position setting of 
+52842	AF Area mode
+52868	Change to the MF mode.
+52914	Change RAW+JPEG/JPEG
+52958	quality modes with dial.
+53008	Test picture without 
+53054	saving.
+53070	Shooting with @A06C@
+53114	while pushing @A06B@ button
+53170	Shooting with @A06D@
+53214	while pushing @A06B@ button
+53270	Shooting with @A06E@
+53314	while pushing @A06B@ button
+53370	Shooting with @A06F@
+53414	while pushing @A06B@ button
+53470	@A077@Grainy Film
+53506	@A06C@: Press to change to Live Guide
+53584	mode, and press again to return.
+53650	@A06C@: Change x1/x2.
+53694	@A076@:Off
+53716	1/2
+53724	1/8
+53732	1/32
+53742	@A01C@: Start Movie Rec
+53792	@A01B@: Take a Picture
+53840	@A069@: Movie @A05E@
+53882	1/128
+53894	@A087@@A088@
+53920	Dial @A089@ : 
+53952	Fno. Shutter upper
+53990	Dial @A08A@ : 
+54022	Fno. Shutter upper
+54060	ART13
+54072	ART14
+54084	@A046@
+54098	Change mode to P/A/S/M.
+54146	Keystone Comp.
+54176	When On, keystone
+54214	compensation is possible. 
+54270	Indicators will appear on screen.
+54338	Press to start keystone
+54388	compensation. Quit by holding
+54450	button down.
+54476	Keystone compensation Off
+54528	Keystone compensation On
+54578	Quit @A018@
+54602	Camera chooses Stabilizer setting
+54672	by detecting camera movement.
+54732	Set compensation@A012@
+54778	@A03B@ Half Way Level
+54822	Select On to display level
+54878	gauge in built-in EVF.
+54926	Enabled when in @A058@.
+54974	Speed
+54986	@A066@ 4Pics
+55012	@A067@ 5Pics
+55038	@A04A@Function
+55068	EVF Auto Luminance
+55106	Basic Information
+55142	Color Creator
+55170	@A078@Pin Hole
+55200	Line up the image.
+55238	After taking the first picture,
+55304	pan the camera slowly to 
+55358	line up the image manually, then
+55426	press the shutter.
+55464	Delete Lens Data Set
+55506	Blur Effect: Left and Right
+55562	Blur Effect: Top and Bottom
+55618	Electronic Zoom
+55650	Natural@A037@
+55678	Vivid@A037@
+55702	@A07A@
+55716	@A0D0@
+55730	@A0D1@
+55744	@A0D2@
+55758	@A0D3@
+55772	@A0D4@
+55786	@A0D5@
+55800	@A0D6@
+55814	@A0D7@
+55828	@A0D8@
+55842	@A0D9@
+55856	@A0DA@
+55870	@A0DB@
+55884	@A0DC@
+55898	@A0DD@
+55912	@A0DE@
+55926	@A0DF@
+55940	@A0E0@
+55954	@A0E1@
+55968	@A0E2@
+55982	@A0E3@
+55996	@A0E4@
+56010	@A0E5@
+56024	@A0E6@
+56038	@A0E7@
+56052	@A0E8@
+56066	@A0E9@
+56080	@A0EA@
+56094	@A0EB@
+56108	@A0EC@
+56122	@A0ED@
+56136	@A0EE@
+56150	@A0EF@
+56164	@A0F0@
+56178	@A0F1@
+56192	@A0F2@
+56206	@A0CC@
+56220	@A0CD@
+56234	@A0CE@
+56248	@A0CF@
+56262	@A0D0@
+56276	@A0D1@
+56290	@A0D2@
+56304	@A0D3@
+56318	@A0D4@
+56332	@A0D5@
+56346	@A0D6@
+56360	@A0D7@
+56374	@A0D8@
+56388	@A0D9@
+56402	@A0DA@
+56416	@A0DB@
+56430	@A0DC@
+56444	@A0DD@
+56458	@A0DE@
+56472	@A0DF@
+56486	@A0E0@
+56500	@A0BF@
+56514	@A0E2@
+56528	@A0E3@
+56542	@A0E4@
+56556	@A0E5@
+56570	@A0E6@
+56584	@A0E7@
+56598	@A0E8@
+56612	@A0E9@
+56626	@A0EA@
+56640	@A0EB@
+56654	@A0EC@
+56668	@A0ED@
+56682	@A0EE@
+56696	@A0EF@
+56710	@A0F0@
+56724	@A0F1@
+56738	@A0F2@
+56752	@A0F3@
+56766	@A0F4@
+56780	@A0F5@
+56794	@A0F6@
+56808	@A0F7@
+56822	@A0F8@
+56836	@A0F9@
+56850	@A0FA@
+56864	@A0FB@
+56878	@A0FC@
+56892	@A0FD@
+56906	@A0FE@
+56920	@A0FF@
+56934	@A100@
+56948	@A101@
+56962	@A102@
+56976	@A103@
+56990	@A0E2@
+57004	@A105@
+57018	@A106@
+57032	@A107@
+57046	@A108@
+57060	@A109@
+57074	@A10A@
+57088	@A10B@
+57102	@A10C@
+57116	@A10D@
+57130	@A10E@
+57144	@A10F@
+57158	@A110@
+57172	@A111@
+57186	Release/@A01E@
+57216	Underwater
+57238	Zoom
+57248	@A01E@+Shutter Button
+57292	@A075@: Guide To Change
+57342	Settings Easily
+57374	Point the camera at
+57416	a sheet of white 
+57454	paper.
+57468	@A06B@: Start Movie Rec
+57518	@A02B@: Take a Picture
+57564	@A06B@+Shutter Button
+57608	@A023@: Display an enlargement
+57672	frame and push again to 
+57724	enlarge a picture in it.
+57774	@A01D@: Change x1/x2.
+57818	@A01D@: Press to change to Live Guide
+57896	mode, and press again to return.
+57962	Enlarge a picture
+58000	or @A024@ with dial.
+58042	Select a picture with dial.
+58100	@A06D@: Enlarge a picture
+58154	or @A024@.
+58176	Menu about release and
+58224	continuous shots settings.
+58278	Set the number of pictures shot
+58344	in one second when using
+58396	sequential shooting with @A052@.
+58462	Monitor will be dimmed
+58510	if no operations are performed
+58574	within the assigned time period.
+58640	@A01E@ H fps
+58666	Set the number of pictures shot
+58732	in one second when using
+58784	sequential shooting with @A056@.
+58850	@A072@: Display the playback menu.
+58922	Delete the current image
+58974	from the playback menu.
+59022	@A072@: Delete the current image
+59090	immediately.
+59118	@A025@: Display the playback menu.
+59188	@A025@: Delete the current image
+59256	immediately.
+59282	Assign delete an image
+59330	to the @A072@ or @A025@.
+59380	@A011@: Buttons @A02E@ and @A02F@.
+59450	Auto selects the ideal mode
+59508	Live Guide menu is accessible
+59568	Shows full menu for camera settings
+59640	Automatic settings applied to
+59702	the Scene mode you select
+59754	Apply creative effects
+59800	Back Light On/Off.
+59838	Adjust the brightness and
+59892	color temperature
+59930	of the LCD monitor.
+59970	fps
+59978	@A014@/@A080@/@A028@
+60020	@A081@/@A082@
+60048	@A04F@Function
+60078	By pressing the @A077@ button during
+60154	Live Guide movie recording,
+60212	you can adjust the Live Guide level
+60286	with focus ring rotation.
+60338	By pressing the @A077@ button during
+60414	movie recording,
+60450	you can change to the MF mode.
+60514	Press again to return to AF mode.
+60582	AF Stop
+60598	By holding down the @A06D@ button,
+60670	you can deactivate autofocus
+60730	operation and fix focus at the point
+60806	where the button was pressed.
+60866	To disable button function.
+60922	Touch Calibration.
+60960	External @A02A@
+60992	mm
+61002	External @A02E@ Rec. Level
+61056	Select the AF target
+61100	and AF mode.
+61126	3f
+61132	4f
+61138	Control
+61154	Set IS mode
+61178	@A01D@: Display an enlargement
+61242	frame and push again to 
+61294	enlarge a picture in it.
+61344	Number of pictures @A033@
+61396	Mode Dial Function
+61434	Set registered Mysets
+61480	to the mode dial.
+61516	Custom Self-timer Settings
+61570	@A00F@ Timer
+61596	Intrvl. Sh./Time Lapse
+61642	Takes specified number of
+61696	photos at specified interval
+61756	and creates time lapse movie.
+61816	Start Waiting Time
+61854	Sets waiting time to record
+61912	the first picture after the shutter
+61986	button is pressed.
+62024	Interval Length
+62056	Auto Power Off
+62086	4h
+62092	Busy
+62102	@A004@Function
+62132	AF Area Select
+62162	Frame Rate
+62184	@A004@ :Off
+62208	Dial @A00C@ : 
+62240	Fno. Shutter upper
+62278	Dial @A00D@ : 
+62310	Fno. Shutter upper
+62348	Off
+62356	After taking the first picture,
+62422	pan the camera slowly to 
+62476	line up the image manually, then
+62544	press the shutter.
+62582	Recording Volume
+62616	Wind Noise Reduction
+62658	High
+62668	Point the camera at
+62710	a sheet of white 
+62748	paper.
+62762	Point the camera at
+62804	a sheet of white 
+62842	paper.
+62856	Point the camera at
+62898	a sheet of white 
+62936	paper.
+62950	@A071@+Shutter Button
+62994	@A072@+Shutter Button
+63038	@A070@+Shutter Button
+63082	@A050@Function
+63112	@A051@Function
+63142	1h
+63148	K. @A004@ Utility
+63184	@A038@@A039@
+63210	Gallery
+63226	Each arrow pad button can
+63280	be assigned a direct
+63324	function when they are
+63372	pressed while shooting.
+63420	To disable button function.
+63476	Adjust exposure 
+63512	compensation
+63538	Adjust exposure 
+63574	compensation
+63600	Adjust exposure 
+63636	compensation
+63662	Adjust exposure 
+63698	compensation
+63724	Select the AF target
+63768	and AF mode.
+63794	Select the AF target
+63838	and AF mode.
+63864	Select the AF target
+63908	and AF mode.
+63934	Select the AF target
+63978	and AF mode.
+64004	Select the AF target
+64048	and AF mode.
+64074	Select the AF target
+64118	and AF mode.
+64144	@A06C@: Buttons @A02A@ and @A02B@.
+64214	@A066@: Buttons @A02A@ and @A02B@.
+64284	@A066@: AEL/AFL
+64316	@A06E@: AEL/AFL
+64348	@A06F@: AEL/AFL
+64380	@A06D@: AEL/AFL
+64412	@A06C@: Display an enlargement
+64476	frame and push again to 
+64528	enlarge a picture in it.
+64578	@A066@: Display an enlargement
+64642	frame and push again to 
+64694	enlarge a picture in it.
+64744	@A06E@: Display an enlargement
+64808	frame and push again to 
+64860	enlarge a picture in it.
+64910	@A06F@: Display an enlargement
+64974	frame and push again to 
+65026	enlarge a picture in it.
+65076	@A06D@: Display an enlargement
+65140	frame and push again to 
+65192	enlarge a picture in it.
+65242	Depth of field 
+65276	preview.
+65294	Depth of field 
+65328	preview.
+65346	Depth of field 
+65380	preview.
+65398	One touch WB.
+65426	One touch WB.
+65454	One touch WB.
+65482	Home position setting of 
+65536	AF Area mode
+65562	Home position setting of 
+65616	AF Area mode
+65642	Home position setting of 
+65696	AF Area mode
+65722	Change to the MF mode.
+65768	Change to the MF mode.
+65814	Change to the MF mode.
+65860	Change RAW+JPEG/JPEG
+65904	quality modes with dial.
+65954	Change RAW+JPEG/JPEG
+65998	quality modes with dial.
+66048	Change RAW+JPEG/JPEG
+66092	quality modes with dial.
+66142	Test picture without 
+66188	saving.
+66204	Test picture without 
+66250	saving.
+66266	Test picture without 
+66312	saving.
+66328	Shooting with @A06C@
+66372	while pushing @A071@ button
+66428	Shooting with @A06D@
+66472	while pushing @A071@ button
+66528	Shooting with @A06E@
+66572	while pushing @A071@ button
+66628	Shooting with @A06F@
+66672	while pushing @A071@ button
+66728	Shooting with @A06C@
+66772	while pushing @A072@ button
+66828	Shooting with @A06D@
+66872	while pushing @A072@ button
+66928	Shooting with @A06E@
+66972	while pushing @A072@ button
+67028	Shooting with @A06F@
+67072	while pushing @A072@ button
+67128	Shooting with @A02B@
+67172	while pushing @A072@ button
+67228	Shooting with @A02C@
+67272	while pushing @A072@ button
+67328	Shooting with @A02D@
+67372	while pushing @A072@ button
+67428	Shooting with @A02E@
+67472	while pushing @A072@ button
+67528	@A06E@: Press to change to Live Guide
+67606	mode, and press again to return.
+67672	@A06F@: Press to change to Live Guide
+67750	mode, and press again to return.
+67816	@A06D@: Press to change to Live Guide
+67894	mode, and press again to return.
+67960	@A06E@: Change x1/x2.
+68004	@A06F@: Change x1/x2.
+68048	@A06D@: Change x1/x2.
+68092	Eye-Fi
+68106	@A05B@Function
+68136	@A05C@Function
+68166	Please check the status of a lens.
+68236	Please extend the lens.
+68284	Key Line
+68302	@A067@Key Line
+68332	Please set to SCN mode @A05D@.
+68396	Manual Value
+68422	Manual Value @A01A@
+68466	Kelvin
+68480	Camera Flash
+68506	Bulb/Time Focusing
+68544	Select On to allow MF
+68590	while BULB/TIME shooting.
+68642	Bulb/Time Timer
+68674	Set the maximum time
+68718	for Bulb/Time mode.
+68758	Live Bulb
+68778	Images will be displayed
+68830	while shooting in Bulb mode.
+68888	Live Time
+68908	Images will be displayed
+68960	while shooting in Time mode.
+69018	Display Count
+69046	times
+69058	@A022@ + IS Off
+69090	When set to On, Image Stabilizer
+69158	does not work during
+69202	sequential shooting.
+69244	Half Way Rls With IS
+69286	When set to On, Image Stabilizer
+69354	will work while shutter button
+69418	is being pressed.
+69454	LV Close Up Mode
+69488	Choose a mode when
+69528	shutter button is being pressed
+69594	during enlarged live view.
+69648	When shutter button is pressed
+69712	halfway, the enlarged live view
+69778	ends and the enlargement
+69830	frame will be displayed.
+69880	When shutter button is pressed
+69944	halfway, auto focus will work
+70006	while in the enlarged live view.
+70072	Selects framing grid.
+70116	@A022@
+70130	The camera will turn off
+70182	automatically if not operated
+70244	for the selected period.
+70294	Live SCP
+70312	@A057@ Battery Priority
+70360	Select battery type that will be
+70428	used with the power battery
+70486	holder.
+70502	Body Battery
+70528	PBH Battery
+70552	After the battery in the body
+70614	is exhausted, the battery in the
+70682	power battery holder will be used.
+70752	When the battery in the power
+70814	battery holder is exhausted, the
+70882	battery in the body will be used.
+70950	Adjust the microphone level.
+71008	Reduces wind noise
+71048	when shooting movies.
+71092	Movie Effect
+71118	Enable or disable
+71156	movie effect in @A008@ mode.
+71214	Built-In EVF
+71240	Menu about the built-in
+71290	electronic viewfinder settings.
+71354	@A05F@ Displayed Grid
+71398	Selects framing 
+71434	grid for built-in EVF.
+71482	Enabled when in @A05F@.
+71530	Built-in EVF Style
+71568	Selects built-in EVF display style.
+71640	Style 1
+71656	Style 2
+71672	Style 3
+71688	@A03B@ Info Settings
+71730	Choose the information displayed
+71798	when the @A012@ is pressed.
+71856	Enable while @A023@.
+71898	EVF Auto Switch
+71930	Switch automatically from
+71984	monitor display to EVF display
+72048	when an eye is detected at EVF.
+72112	Disable the eye sensor.
+72162	@A059@: to switch between monitor
+72232	display and EVF display.
+72282	Enable the eye sensor.
+72330	@A024@: live view On/Off.
+72382	Select the frame rate
+72428	in the built-in EVF.
+72470	Multi Function
+72500	@A066@: Press to execute
+72552	the various functions,
+72600	and change function with dial.
+72662	@A023@: Press to execute
+72714	the various functions,
+72762	and change function with dial.
+72824	One Shot Echo
+72852	Multi Echo
+72874	Direct Function
+72906	Highlight&Shadow Control
+72958	By pressing the @A004@ button during
+73034	shooting, you can select
+73086	the AF target area.
+73126	MTP
+73134	ESP
+73142	NTSC
+73152	PAL
+73160	USB
+73168	RAW
+73176	@A064@arge
+73198	@A036@iddle
+73222	@A037@mall
+73244	Super Fine
+73266	Fine
+73276	Normal
+73290	Basic
+73302	SF
+73320	MF
+73326	fps
+73334	100mm
+73346	150mm
+73358	11"
+73366	17"
+73374	4"
+73380	6"
+73386	8"
+73392	10"
+73400	A0
+73406	A1
+73412	A2
+73418	A3
+73424	A4
+73430	A5
+73436	A6
+73442	A7
+73448	A8
+73454	A9
+73460	B0
+73466	B1
+73472	B2
+73478	B3
+73484	B4
+73490	B5
+73496	B6
+73502	B7
+73508	B8
+73514	B9
+73520	4"
+73526	8"
+73534	Panorama
+73552	4"
+73558	10"
+73568	Panorama
+73586	4"
+73592	11"
+73602	Panorama
+73620	4"
+73626	12"
+73636	Panorama
+73654	10cm
+73664	30cm
+73676	Panorama
+73694	89mm
+73704	254mm
+73718	Panorama
+73736	Adobe RGB
+73756	I.S. 1
+73770	I.S. 2
+73784	Slow
+73794	Slow2
+73806	2nd Curtain
+73830	Vivid
+73842	Natural
+73858	JPEG
+73868	RAW+JPEG
+73886	Portrait
+73920	CWB
+73928	3f 0.3EV
+73946	3f 0.5EV
+73964	3f 0.7EV
+73982	3f 1.0EV
+74000	5f 0.3EV
+74018	5f 0.5EV
+74036	5f 0.7EV
+74054	5f 1.0EV
+74072	mode1
+74084	mode2
+74096	mode3
+74108	mode4
+74120	A Mode
+74134	B Mode
+74148	C Mode
+74162	M Value
+74178	FP M Value
+74200	Channel
+74216	Level
+74228	TTL Value
+74248	Auto Value
+74270	FP TTL Value
+74296	Auto
+74306	@A006@/FP
+74326	S-AF
+74336	C-AF
+74346	S-AF+MF
+74362	C-AF+TR
+74378	AE BKT
+74392	WB BKT
+74406	FL BKT
+74420	ISO BKT
+74436	P/A/S
+74448	Menu
+74458	1/2EV
+74470	1/3EV
+74482	1EV
+74490	Off
+74498	I.S. 3
+74512	sRGB
+74522	@A0BF@/Value
+74548	AEL/S-AF
+74566	AEL
+74574	AEL/AF Start
+74600	AF Start
+74618	----
+74628	@A0B3@Vivid
+74652	@A0B4@Natural
+74680	@A0B5@Portrait
+74710	Ps
+74716	Auto@A038@
+74738	A-B
+74746	G-M
+74754	Hold
+74764	@A065@ 4
+74782	@A066@ 9
+74800	@A067@ 25
+74820	@A067@ 100
+74842	Body
+74852	Lens
+74862	Flash
+74874	Acc
+74882	LV-Info
+74898	RAW/JPEG
+74916	@A00E@/@A00F@
+74944	ART1
+74954	ART2
+74964	ART3
+74974	ART4
+74984	ART5
+74994	ART6
+75004	ART7
+75014	ART8
+75024	BGM
+75032	480p/576p
+75052	Cool
+75062	Joy
+75070	Melancholy
+75092	HDMI
+75102	TTL Auto
+75120	Manual
+75134	FP TTL Auto
+75158	FP Manual
+75178	Level Lo
+75196	Level Mid
+75216	Level Hi
+75234	ch
+75240	@A0D4@/@A0D5@
+75268	AEL/AFL
+75284	@A036@REC
+75304	iAUTO
+75316	P/A/S/M
+75332	ART9
+75342	ART10
+75354	Full
+75364	2f 0.3EV
+75382	2f 0.5EV
+75400	2f 0.7EV
+75418	2f 1.0EV
+75436	7f 0.3EV
+75454	7f 0.5EV
+75472	7f 0.7EV
+75490	2f
+75496	@A068@
+75510	@A05C@
+75524	@A069@ 5300K
+75550	@A06A@ 6000K
+75576	@A06B@ 7500K
+75602	@A06C@ 3000K
+75628	@A06D@ 4000K
+75654	Beat
+75664	ART
+75672	SCN
+75680	Adobe
+75692	@A021@ 5500K
+75718	ART BKT
+75734	Motion JPEG 1280
+75768	720
+75776	Motion JPEG 640
+75808	480
+75816	3D
+75822	1:1
+75830	ART11
+75842	MOV 1920
+75860	1080 Fine
+75880	MOV 1920
+75898	1080 Normal
+75922	MOV 1280
+75940	720 Fine
+75958	MOV 1280
+75976	720 Normal
+75998	Sets interval time to record
+76058	next picture.
+76086	hour
+76096	Time Lapse Movie
+76130	Record only still pictures.
+76186	Record time lapse movie
+76236	and still pictures.
+76276	J. @A008@ Utility
+76312	@A059@@A024@
+76338	Art Fade
+76356	Watercolor
+76378	@A06F@Watercolor
+76412	Connection to Smartphone
+76462	View an image on
+76498	the smartphone 
+76532	by FlashAir connection.
+76580	Card configured by another device. 
+76654	Can not change the setting.
+76710	Card cannot be formatted
+76760	Connection in progress
+76806	Do not interrupt
+76840	Break connection
+76874	Connection Settings
+76914	SSID Setting
+76940	Initial setting completed
+76992	One-Time Connection
+77032	Private Connection
+77070	Password Setting
+77104	Enter a one-time password
+77156	Password has been changed
+77208	Connection starting
+77248	Still-I.S.
+77270	Movie-I.S.
+77292	Movie-I.S. On
+77320	Change Image Stabilizer mode.
+77382	Still and the Movie.
+77424	Image Stabilizer functions in
+77486	all directions
+77518	by detecting camera movement.
+77578	Vertical Stabilization only.
+77638	Hold the camera horizontally and
+77706	shoot while panning horizontally.
+77774	Horizontal Stabilization only.
+77838	Hold the camera vertically and
+77902	shoot while panning horizontally.
+77970	Image Stabilizer is disabled.
+78030	Perform Image Stabilization
+78088	during Movie recording
+78134	Perform Image Stabilization
+78192	in all directions during Movie 
+78258	recording.
+78280	Perform slideshow of stills 
+78340	and/or movies with various 
+78398	BGM or effects.
+78430	HDR BKT
+78446	Change to the HDR BKT mode.
+78502	Change to the HDR BKT mode.
+78558	Change to the HDR BKT mode.
+78614	Flicker Reduction
+78650	Reducing flicker
+78686	by setting power frequency.
+78742	In areas with 50Hz power,
+78796	flickering is reduced.
+78842	In areas with 60Hz power,
+78896	flickering is reduced.
+78942	Automatically reduces flicker.
+79004	Flicker reduction Off.
+79050	Noise Filter Off
+79084	Noise Filter: Standard
+79130	Noise Filter: High
+79168	Noise Filter: Low
+79204	Current
+79220	Custom1
+79236	Custom2
+79252	Shadow Area Adjust
+79290	Brighten Area Adjust
+79332	Select frame rate of Live View.
+79396	Lens I.S. Priority
+79434	Select On to use
+79470	lens I.S.
+79490	Release Lag-Time
+79524	Set the time difference between
+79590	when the shutter button is
+79646	pressed and shutter is released.
+79712	Change to the @A077@ mode.
+79766	Switches @A07D@ on/off.
+79814	Switches @A07D@ on/off.
+79862	Change to the @A078@ mode.
+79916	Switches @A07E@ on/off.
+79964	Switches @A07E@ on/off.
+80012	Change to the @A079@ mode.
+80066	Switches @A07F@ on/off.
+80114	Switches @A07F@ on/off.
+80162	Change to the @A07A@ mode.
+80216	Switches @A080@ on/off.
+80264	Switches @A080@ on/off.
+80312	BGM Import
+80334	BGM is overwritten
+80372	No BGM
+80386	@A027@1s Anti-Shock @A004@
+80440	@A027@2s Anti-Shock @A004@
+80494	@A027@3s Anti-Shock @A004@
+80548	@A027@4s Anti-Shock @A004@
+80602	@A027@5s Anti-Shock @A004@
+80656	@A027@6s Anti-Shock @A004@
+80710	@A027@7s Anti-Shock @A004@
+80764	@A027@8s Anti-Shock @A004@
+80818	@A027@9s Anti-Shock @A004@
+80872	@A027@10s Anti-Shock @A004@
+80928	@A027@11s Anti-Shock @A004@
+80984	@A027@12s Anti-Shock @A004@
+81040	@A027@13s Anti-Shock @A004@
+81096	@A027@14s Anti-Shock @A004@
+81152	@A027@15s Anti-Shock @A004@
+81208	@A027@16s Anti-Shock @A004@
+81264	@A027@17s Anti-Shock @A004@
+81320	@A027@18s Anti-Shock @A004@
+81376	@A027@19s Anti-Shock @A004@
+81432	@A027@20s Anti-Shock @A004@
+81488	@A027@21s Anti-Shock @A004@
+81544	@A027@22s Anti-Shock @A004@
+81600	@A027@23s Anti-Shock @A004@
+81656	@A027@24s Anti-Shock @A004@
+81712	@A027@25s Anti-Shock @A004@
+81768	@A027@26s Anti-Shock @A004@
+81824	@A027@27s Anti-Shock @A004@
+81880	@A027@28s Anti-Shock @A004@
+81936	@A027@29s Anti-Shock @A004@
+81992	@A027@30s Anti-Shock @A004@
+82048	1f
+82054	5f
+82060	6f
+82066	7f
+82072	8f
+82078	9f
+82084	10f
+82092	11f
+82100	12f
+82108	13f
+82116	14f
+82124	15f
+82132	16f
+82140	17f
+82148	18f
+82156	19f
+82164	20f
+82172	21f
+82180	22f
+82188	23f
+82196	24f
+82204	25f
+82212	26f
+82220	27f
+82228	28f
+82236	29f
+82244	30f
+82252	31f
+82260	32f
+82268	33f
+82276	34f
+82284	35f
+82292	36f
+82300	37f
+82308	38f
+82316	39f
+82324	40f
+82332	41f
+82340	42f
+82348	43f
+82356	44f
+82364	45f
+82372	46f
+82380	47f
+82388	48f
+82396	49f
+82404	50f
+82412	51f
+82420	52f
+82428	53f
+82436	54f
+82444	55f
+82452	56f
+82460	57f
+82468	58f
+82476	59f
+82484	60f
+82492	61f
+82500	62f
+82508	63f
+82516	64f
+82524	65f
+82532	66f
+82540	67f
+82548	68f
+82556	69f
+82564	70f
+82572	71f
+82580	72f
+82588	73f
+82596	74f
+82604	75f
+82612	76f
+82620	77f
+82628	78f
+82636	79f
+82644	80f
+82652	81f
+82660	82f
+82668	83f
+82676	84f
+82684	85f
+82692	86f
+82700	87f
+82708	88f
+82716	89f
+82724	90f
+82732	91f
+82740	92f
+82748	93f
+82756	94f
+82764	95f
+82772	96f
+82780	97f
+82788	98f
+82796	99f
+82804	@A052@ 1 sec
+82830	@A052@ 3 sec
+82856	@A052@ 4 sec
+82882	@A052@ 5 sec
+82908	@A052@ 6 sec
+82934	@A052@ 7 sec
+82960	@A052@ 8 sec
+82986	@A052@ 9 sec
+83012	@A052@ 10 sec
+83040	@A052@ 11 sec
+83068	@A052@ 13 sec
+83096	@A052@ 14 sec
+83124	@A052@ 15 sec
+83152	@A052@ 16 sec
+83180	@A052@ 17 sec
+83208	@A052@ 18 sec
+83236	@A052@ 19 sec
+83264	@A052@ 20 sec
+83292	@A052@ 21 sec
+83320	@A052@ 22 sec
+83348	@A052@ 23 sec
+83376	@A052@ 24 sec
+83404	@A052@ 25 sec
+83432	@A052@ 26 sec
+83460	@A052@ 27 sec
+83488	@A052@ 28 sec
+83516	@A052@ 29 sec
+83544	@A052@ 30 sec
+83572	SSID
+83582	Password
+83600	URL
+83608	http://flashair/
+83642	S-I.S. Off
+83664	S-I.S. 1
+83682	S-I.S. 2
+83700	S-I.S. 3
+83718	M-I.S. Off
+83740	M-I.S. 1
+83758	M-I.S. 2
+83776	HDR BKT
+83792	HDR BKT Off
+83816	50Hz
+83826	60Hz
+83836	ISO LOW
+83852	LOW
+83860	3f 2.0EV
+83878	3f 3.0EV
+83896	5f 2.0EV
+83914	5f 3.0EV
+83932	7f 2.0EV
+83950	ART12
+83962	@A023@Level Disp
+83996	0001.jpg
+84026	Expand LV Dyn. Range
+84068	HDR
+84076	HDR Off
+84092	Print Order
+84116	Adjust exposure 
+84152	compensation
+84178	Preview Update@A03F@
+84224	@A068@: AEL/AFL
+84256	@A087@: AEL/AFL
+84288	@A028@: AEL/AFL
+84320	Turns EVF Auto Luminance off
+84380	for manual brightness adjustment.
+84448	Turns EVF Auto Luminance on.
+84508	Brightness will be adjusted
+84566	automatically.
+84596	Turns built-in @A068@ off.
+84650	Puts program shift control by dial
+84722	in the same direction as S.S.
+84784	when in S mode.
+84816	ISO
+84836	Puts program shift control by dial
+84908	is the same direction as aperture
+84978	when in A mode.
+85010	@A011@ :Press arrowpad keys to
+85074	change zoom position.
+85120	Operation is valid only
+85170	with electric zoom lens.
+85220	Auto I.S.
+85240	Button/Dial/Lever
+85276	Menu about button, dial, and
+85336	lever settings.
+85368	B. Button/Dial/Lever
+85410	FlashAir
+85428	Stop
+85438	Starting option
+85470	It is connected.
+85504	Manual Start
+85530	Auto Start
+85552	Effect
+85566	Type
+85576	Type@A00E@
+85598	Type@A00F@
+85620	Type@A010@
+85642	Type@A064@
+85664	Combines two or more template 
+85728	images into one image
+85772	Standard
+85790	Fun Frames
+85812	White
+85824	White/White Edge
+85858	Black
+85870	Black/Pin-Hole
+85900	Film
+85910	Instant
+85926	@A065@ 3Pics
+85952	@A066@ 3Pics
+85978	@A065@ 2Pics
+86004	@A066@ 2Pics
+86030	Connection to smartphone
+86082	using built-in @A068@.
+86128	Share Order
+86152	Share Order Selected
+86194	@A040@@A02F@
+86220	@A068@ Settings
+86252	Menu about built-in @A068@.
+86308	@A068@ Connect Settings
+86356	Private
+86372	One-Time
+86390	Select
+86404	For connection to
+86442	your smartphone.
+86476	For sharing with other
+86524	smartphones.
+86552	A unique password will be used.
+86616	Select @A068@ connection
+86668	each time.
+86690	Private Password
+86724	@A021@: change the password for
+86790	connection to your smartphone.
+86852	Reset share Order
+86888	Reset @A068@ Settings
+86932	@A005@ Caution Resetting All @A068@
+87006	Settings
+87024	Select @A068@ Connection
+87074	Preparing @A068@ Connection
+87130	For connection to your smartphone.
+87202	This configuration is necessary
+87268	only once.
+87292	@A068@ connection will start later.
+87364	Please install
+87396	'OLYMPUS Image Share'
+87442	to your smartphone.
+87484	Press @A01F@ after the application
+87556	is installed.
+87584	Connecting to your
+87624	smartphone.
+87650	Read QR code by
+87684	'OLYMPUS Image Share'.
+87730	Next@A019@
+87752	Stop@A030@
+87774	@A068@ Starting
+87806	@A068@ Stopping
+87838	For share with other smartphones.
+87908	Use current password?
+87952	Use current password
+87994	Use new password
+88028	Sharing with other
+88068	smartphones.
+88096	Read QR code by
+88130	'OLYMPUS Image Share'
+88176	or connect manually.
+88218	Sets the connection
+88260	of the FlashAir card.
+88304	Sets the starting for
+88350	connection manually.
+88392	Automatic connection is
+88442	established while the power is On.
+88512	FlashAir is running.
+88556	Can not use the built-in Wi-Fi.
+88620	EVF Auto Switch
+88652	Switch automatically from
+88706	monitor display to EVF display
+88770	when an eye is detected at EVF.
+88834	Disable the eye sensor.
+88884	@A075@: to switch between monitor
+88954	display and EVF display.
+89004	Enable the eye sensor.
+89050	Bulb/Time Monitor
+89086	Adjusts the monitor and EVF
+89144	brightness while
+89180	BULB/TIME is selected.
+89226	AE BKT
+89240	Change to the AE BKT mode.
+89294	ART BKT
+89310	Change to the ART BKT mode.
+89366	Movie @A041@
+89392	S-I.S. Off
+89414	S-I.S. Auto
+89438	Camera chooses Stabilizer setting
+89508	by detecting camera movement.
+89568	M-I.S. Off
+89590	M-I.S. On
+89610	Perform Image Stabilization
+89668	during Movie recording
+89714	@A088@ Lever Function
+89758	Choose the function assigned
+89818	to the @A088@ lever.
+89860	Change dial function by @A088@.
+89926	@A089@: Follow dial function settings.
+90006	@A08A@: Change ISO sensitivity by @A08B@
+90090	or change WB mode by @A076@.
+90148	Change dial function by @A088@.
+90214	@A089@: Follow dial function settings.
+90294	@A08A@: Change ISO sensitivity by @A076@
+90378	or change WB mode by @A08B@.
+90436	Change @A024@ button function by @A088@.
+90520	@A089@: Follow button function settings.
+90604	@A08A@: Start/Stop movie recording.
+90676	Change AF mode by @A088@.
+90730	Sets AF mode for each
+90776	@A089@ and @A08A@.
+90814	Stripe
+90828	SETUP@A025@
+90852	@A06B@Function
+90882	Change to the AE BKT mode.
+90936	Change to the AE BKT mode.
+90990	Change to the AE BKT mode.
+91044	Change to the ART BKT mode.
+91100	Change to the ART BKT mode.
+91156	Change to the ART BKT mode.
+91212	@A08C@: AEL/AFL
+91244	Select the AF target
+91288	and AF mode.
+91314	@A08C@: Change x1/x2.
+91358	Adjust exposure 
+91394	compensation
+91420	Change to the HDR BKT mode.
+91476	@A08C@: Display an enlargement
+91540	frame and push again to 
+91592	enlarge a picture in it.
+91642	@A08C@: Press to change to Live Guide
+91720	mode, and press again to return.
+91786	Shooting with @A02B@
+91830	while pushing @A08C@ button
+91886	Shooting with @A02C@
+91930	while pushing @A08C@ button
+91986	Shooting with @A02D@
+92030	while pushing @A08C@ button
+92086	Shooting with @A02E@
+92130	while pushing @A08C@ button
+92186	Home position setting of 
+92240	AF Area mode
+92266	Change to the MF mode.
+92312	@A08C@:
+92330	Start/Stop
+92354	Movie Recording
+92386	One touch WB.
+92414	Depth of field 
+92448	preview.
+92466	Change RAW+JPEG/JPEG
+92510	quality modes with dial.
+92560	Test picture without 
+92606	saving.
+92622	@A08C@: Buttons @A02F@ and @A030@.
+92692	AE BKT Off
+92714	Manual Start
+92740	Auto Start
+92762	Combines two or more template 
+92826	images into one image
+92872	Touch shooting
+92902	Choose a mode when the
+92950	focus ring is rotated in MF mode.
+93018	The image will not be automatically
+93092	magnified when the focus ring is
+93160	rotated in MF mode.
+93200	Select On to automatically
+93256	magnify the image when the
+93312	focus ring is rotated in MF mode.
+93380	Peaking
+93396	The subject outline will not appear
+93470	when the focus ring is rotated
+93534	in MF mode.
+93558	The subject outline will appear
+93624	when the focus ring is rotated
+93688	in MF mode. This function helps
+93754	you adjust the focus.
+93798	@A01D@: Press to show the subject
+93868	outline for adjusting the focus.
+93936	And press again to hide the outline.
+94010	@A023@: Press to show the subject
+94080	outline for adjusting the focus.
+94148	And press again to hide the outline.
+94222	@A08C@: Press to show the subject
+94292	outline for adjusting the focus.
+94360	And press again to hide the outline.
+94434	@A06D@: Press to show the subject
+94504	outline for adjusting the focus.
+94572	And press again to hide the outline.
+94646	Peaking Settings
+94680	Adjusts peaking display settings.
+94748	White
+94760	Black
+94772	In-focus areas will be highlighted
+94844	in white during focus peaking.
+94906	In-focus areas will be highlighted
+94978	in black during focus peaking.
+95040	@A029@ :Press arrowpad keys to
+95104	change zoom position.
+95150	Operation is valid only
+95200	with electric zoom lens.
+95250	Select the AF target
+95294	and AF mode.
+95320	Select the AF target
+95364	and AF mode.
+95390	@A068@: Change x1/x2.
+95434	@A087@: Change x1/x2.
+95478	@A028@: Change x1/x2.
+95522	@A068@: Press to execute
+95574	the various functions,
+95622	and change function with dial.
+95684	@A06E@: Press to execute
+95736	the various functions,
+95784	and change function with dial.
+95846	@A06F@: Press to execute
+95898	the various functions,
+95946	and change function with dial.
+96008	@A06C@: Press to execute
+96060	the various functions,
+96108	and change function with dial.
+96170	@A06D@: Press to execute
+96222	the various functions,
+96270	and change function with dial.
+96332	@A087@: Press to execute
+96384	the various functions,
+96432	and change function with dial.
+96494	@A028@: Press to execute
+96546	the various functions,
+96594	and change function with dial.
+96656	Adjust exposure
+96690	compensation
+96716	Adjust exposure
+96750	compensation
+96776	Adjust exposure
+96810	compensation
+96836	Adjust exposure
+96870	compensation
+96896	Press to activate
+96934	level display.
+96966	Press again to deactivate.
+97022	Effective in @A03B@.
+97064	Switches HDR on/off.
+97106	Switches HDR on/off.
+97148	Switches HDR on/off.
+97190	Switches HDR on/off.
+97232	Switches HDR on/off.
+97274	Switches HDR on/off.
+97316	Switches HDR on/off.
+97358	Switches HDR on/off.
+97400	Switches HDR on/off.
+97442	@A068@: Display an enlargement
+97506	frame and push again to
+97556	enlarge a picture in it.
+97606	@A087@: Display an enlargement
+97670	frame and push again to
+97720	enlarge a picture in it.
+97770	@A068@: Press to change to Live Guide
+97848	mode, and press again to return.
+97914	@A087@: Press to change to Live Guide
+97992	mode, and press again to return.
+98058	@A028@: Press to change to Live Guide
+98136	mode, and press again to return.
+98202	Switches @A07D@ on/off.
+98250	Switches @A07D@ on/off.
+98298	Switches @A07D@ on/off.
+98346	Switches @A07D@ on/off.
+98394	Switches @A07D@ on/off.
+98442	Switches @A07D@ on/off.
+98490	Switches @A07E@ on/off.
+98538	Switches @A07E@ on/off.
+98586	Switches @A07E@ on/off.
+98634	Switches @A07E@ on/off.
+98682	Switches @A07E@ on/off.
+98730	Switches @A07E@ on/off.
+98778	Switches @A07F@ on/off.
+98826	Switches @A07F@ on/off.
+98874	Switches @A07F@ on/off.
+98922	Switches @A07F@ on/off.
+98970	Switches @A07F@ on/off.
+99018	Switches @A07F@ on/off.
+99066	Switches @A080@ on/off.
+99114	Switches @A080@ on/off.
+99162	Switches @A080@ on/off.
+99210	Switches @A080@ on/off.
+99258	Switches @A080@ on/off.
+99306	Switches @A080@ on/off.
+99354	Live View dynamic range
+99404	is not expanded.
+99438	Live View dynamic range
+99488	is expanded when HDR
+99532	is in HDR1 or HDR2.
+99572	Takes 3 pictures with a
+99622	2.0EV exposure difference.
+99676	Takes 3 pictures with a
+99726	3.0EV exposure difference.
+99780	Takes 5 pictures with a
+99830	2.0EV exposure difference.
+99884	Takes 5 pictures with a
+99934	3.0EV exposure difference.
+99988	Takes 7 pictures with a
+100038	2.0EV exposure difference.
+100092	Takes 4 pictures at once
+100144	at different exposures and
+100200	composites automatically into
+100262	a high contrast image.
+100308	Takes 4 pictures at once
+100360	at different exposures and
+100416	composites automatically into
+100478	a super-high contrast image.
+100536	Turns HDR off.
+100566	Home position setting of
+100618	AF Area mode
+100644	Home position setting of
+100696	AF Area mode
+100722	Functions of @A05F@buttons are
+100786	not changed in .
+100820	In , functions of @A05F@buttons are
+100894	switched to
+100920	@A060@: BKT and @A061@: @A062@.
+100984	Disables  lever function.
+101036	@A078@ switches dial functions.
+101102	@A079@: customized function settings.
+101180	@A07A@: @A07B@ sets ISO, @A066@ sets WB.
+101262	@A078@ switches dial functions.
+101328	@A079@: customized function settings.
+101406	@A07A@: @A066@ sets ISO, @A07B@ sets WB.
+101488	@A078@ switches button functions.
+101558	@A079@: customized function settings.
+101636	@A07A@: @A021@ sets ISO, @A059@ sets WB.
+101718	@A078@ switches button functions.
+101788	@A079@: customized function settings.
+101866	@A07A@: @A059@ sets ISO, @A021@ sets WB.
+101948	@A078@ switches AF mode
+101998	between customized AF settings
+102062	@A079@ and @A07A@.
+102100	Change to the MF mode.
+102146	Change to the MF mode.
+102192	@A068@:
+102210	Start/Stop
+102234	Movie Recording
+102266	@A06E@:
+102284	Start/Stop
+102308	Movie Recording
+102340	@A06F@:
+102358	Start/Stop
+102382	Movie Recording
+102414	@A06D@:
+102432	Start/Stop
+102456	Movie Recording
+102488	@A087@:
+102506	Start/Stop
+102530	Movie Recording
+102562	@A028@:
+102580	Start/Stop
+102604	Movie Recording
+102636	One touch WB.
+102664	One touch WB.
+102692	One touch WB.
+102720	@A068@: Press to show the subject
+102790	outline for adjusting the focus.
+102858	And press again to hide the outline.
+102932	@A06E@: Press to show the subject
+103002	outline for adjusting the focus.
+103070	And press again to hide the outline.
+103144	@A06F@: Press to show the subject
+103214	outline for adjusting the focus.
+103282	And press again to hide the outline.
+103356	@A06C@: Press to show the subject
+103426	outline for adjusting the focus.
+103494	And press again to hide the outline.
+103568	@A066@: Press to show the subject
+103638	outline for adjusting the focus.
+103706	And press again to hide the outline.
+103780	@A087@: Press to show the subject
+103850	outline for adjusting the focus.
+103918	And press again to hide the outline.
+103992	@A028@: Press to show the subject
+104062	outline for adjusting the focus.
+104130	And press again to hide the outline.
+104204	Depth of field 
+104238	preview.
+104256	Depth of field 
+104290	preview.
+104308	Change RAW+JPEG/JPEG
+104352	quality modes with dial.
+104402	Change RAW+JPEG/JPEG
+104446	quality modes with dial.
+104496	Test picture without 
+104542	saving.
+104558	Test picture without 
+104604	saving.
+104620	Hold @A011@: to lock/unlock
+104678	touch panel operation
+104724	while in shooting mode.
+104772	Hold @A029@: to lock/unlock
+104830	touch panel operation
+104876	while in shooting mode.
+104924	@A068@: Buttons @A02A@ and @A02B@.
+104994	@A06E@: Buttons @A02A@ and @A02B@.
+105064	@A06F@: Buttons @A02A@ and @A02B@.
+105134	@A06D@: Buttons @A02A@ and @A02B@.
+105204	@A087@: Buttons @A02A@ and @A02B@.
+105274	@A028@: Buttons @A02A@ and @A02B@.
+105344	Built-In @A01B@
+105376	Built-In @A02E@ Rec. Level
+105430	@A080@+@A081@
+105458	@A078@ Lever Function
+105502	Line-In @A023@
+105532	Line-In @A02E@ Rec. Level
+105584	Create Lens Data Set
+105626	@A026@
+105640	@A08F@@A031@
+105666	@A05C@Function
+105696	@A042@Color Creator
+105736	@A043@e-Portrait
+105770	Adjusts each target point of
+105830	AF position of each lens.
+105882	Green target frame will not
+105940	display for Auto Focus when
+105998	set to Off.
+106022	Adjusts the target activity level
+106092	during C-AF.
+106118	Live View dynamic range
+106168	is expanded when set to On.
+106224	Sets for HDR.
+106252	When set to Off,
+106288	functions of @A081@ buttons are
+106354	not changed in @A080@.
+106400	Choose the function assigned
+106460	to the @A078@ lever.
+106502	Adjusts level of each
+106548	microphone.
+106572	Ps
+106578	Reduces blur when shooting
+106634	low light/ illuminated scenes.
+106696	Handheld Starlight
+106734	@A026@Lock
+106756	Switches @A07D@ on/off.
+106804	Switches @A07E@ on/off.
+106852	Switches @A07F@ on/off.
+106900	Switches @A080@ on/off.
+106948	Test picture without 
+106994	saving.
+107010	A-B : WB BKT Off
+107044	G-M : WB BKT Off
+107078	FL BKT Off
+107100	HDR1
+107110	HDR2
+107120	ISO BKT Off
+107144	mode5
+107156	ART BKT Off
+107180	ART BKT On
+107202	A-B : WB BKT
+107228	A-B : 3f 2Step
+107258	A-B : 3f 4Step
+107288	A-B : 3f 6Step
+107318	G-M : WB BKT
+107344	G-M : 3f 2Step
+107374	G-M : 3f 4Step
+107404	G-M : 3f 6Step
+107434	BKT
+107442	Change to the BKT mode.
+107490	Change to the BKT mode.
+107538	Change to the BKT mode.
+107586	Change to the BKT mode.
+107634	Change to the BKT mode.
+107682	Change to the BKT mode.
+107730	Change to the BKT mode.
+107778	Change to the BKT mode.
+107826	Change to the BKT mode.
+107874	@A03E@@A019@
+107900	When selecting the picture
+107956	mode, you can skip the items
+108016	that have not been set to @A025@.
+108084	Zoom In/Out
+108108	@A067@ 2Pics
+108134	Low
+108142	Layout
+108156	Press shutter button once 
+108212	to prepare for composite
+108264	shooting.
+108284	Ready for composite shooting
+108342	Composite Settings
+108380	Composite setting menu.
+108430	Combine images taken 
+108476	with interval shooting.
+108524	Composite Mode
+108554	Lighten
+108570	Darken
+108584	Compares the pixels of the two
+108648	images and employs the brighter
+108714	for the composite image.
+108764	Compares the pixels of the two
+108828	images and employs the darker
+108890	for the composite image.
+108940	Base Exposure Time
+108978	Exposure time per image.
+109030	Exposure time and aperture
+109086	will determine your base exposure.
+109156	Select On to allow manual
+109210	focusing while in Bulb/Time/
+109270	Live Composite mode.
+109312	Adjusts EVF and display
+109362	brightness for Bulb/Time/
+109416	Live Composite mode.
+109458	Movies cannot be taken
+109506	while @A074@ is connected.
+109560	Close@A019@
+109584	End @A068@@A025@
+109618	Dials are assigned to following
+109684	when button is pressed:
+109734	@A060@: ISO
+109760	@A053@: WB
+109782	Dials are assigned to following
+109848	when button is pressed:
+109898	@A060@: WB
+109922	@A053@: ISO
+109946	By holding down the button, 
+110006	autofocus will be deactivated 
+110070	and the focus will be fixed 
+110130	at the point the button 
+110182	is pressed.
+110206	Press button to 
+110242	activate AEL/AFL.
+110278	Start/stop movie recording.
+110334	Depth of field 
+110368	preview.
+110386	One touch WB.
+110414	Select the AF target
+110458	and AF mode.
+110484	Home position setting of
+110536	AF Area mode
+110562	Change to the MF mode.
+110608	Change RAW+JPEG/JPEG
+110652	quality modes with dial.
+110702	Test picture without 
+110748	saving.
+110764	Switches @A07B@ on/off.
+110812	Switches @A07C@ on/off.
+110860	Switches @A07D@ on/off.
+110908	Switches @A07E@ on/off.
+110956	Switches between @A061@/@A062@.
+111020	Adjust exposure
+111054	compensation.
+111082	Press to change to Live Guide
+111144	mode, and press again to return.
+111210	Switches between x1/x2.
+111258	Display an enlargement
+111306	frame and push again to 
+111358	enlarge a picture in it.
+111408	Switches HDR on/off.
+111450	Change to the BKT mode.
+111498	Press to execute
+111534	the various functions,
+111582	and change function with dial.
+111644	Press to show the subject
+111698	outline for adjusting the focus.
+111766	And press again to hide the outline.
+111840	@A021@: Start Movie Rec
+111890	@A020@: Take a Picture
+111938	@A059@: Movie @A076@
+111980	Custom Self-timer
+112016	@A093@ Anti-Shock @A004@
+112066	Settings@A012@
+112096	Select to display or hide
+112150	@A00A@ menu.
+112176	Multi Function Settings
+112224	Designate the functions 
+112276	to be included in multi 
+112328	function by applying @A025@.
+112386	Movie+Photo Mode
+112420	Set photo priority for 
+112470	Movie+Photo mode.
+112506	Movie is given priority.
+112558	@A067@photo can be taken
+112610	while movie is being shot.
+112666	Photo image quality
+112708	restricted. Active in @A070@.
+112768	Photo is given priority.
+112820	Movies are recorded 
+112864	before and after photo 
+112914	is taken.
+112934	Electronic Zoom Speed
+112978	Sets zoom speeds for photo
+113034	and movie modes when
+113078	using an electronic zoom lens.
+113140	Still-I.S. Off
+113170	Movie-I.S. Off
+113200	Preparing for composite shooting.
+113270	Please stand by.
+113304	Hold button: to lock/unlock
+113362	touch panel operation
+113408	while in shooting mode.
+113456	Press arrowpad keys to
+113504	change zoom position
+113548	when using electronic
+113594	zoom lens.
+113616	@A060@ISO/@A053@WB
+113654	@A060@WB/@A053@ISO
+113692	No
+113698	Yes
+113706	High Res Shot
+113734	Takes and combines eight
+113786	pictures to create a super high 
+113854	resolution image. Tripod required.
+113924	Enables High Res Shot.
+113972	Select post-shutter release
+114030	delay time.
+114054	@A006@Charge Time
+114090	Select time between shutter
+114148	release for flash recharge.
+114206	This setting is not necessary
+114268	when using an Olympus flash.
+114326	Sensor Shift + Digital
+114372	Sensor Shift Only
+114408	Image stabilization performed
+114470	both by sensor shift and 
+114524	digitally.
+114546	Image stabilization performed
+114608	only by sensor shift, and not
+114670	digitally.
+114692	Compression/Bit Rate
+114734	Frame Rate
+114756	Clip Recording Time
+114796	Slow or Fast Motion
+114836	Movie Specification Settings
+114894	Adjust image size, compression
+114958	method, and bit rate of movie.
+115020	Movie Resolution
+115054	Movie @A01A@
+115080	ALL-I compression provides best 
+115148	picture quality for advanced 
+115210	editing, but the file 
+115258	size will be very large.
+115308	Highest bit rate IPB 
+115354	compression provides best 
+115410	picture quality, but file size 
+115476	will be very large.
+115516	High bit rate IPB
+115554	compression provides better
+115612	picture quality but the 
+115664	file size will be fairly large.
+115728	Standard bit rate IPB
+115774	compression provides standard
+115836	picture quality and the file size
+115906	will not be so large.
+115950	The larger the number, the 
+116008	smoother the picture will be.
+116068	Turn Clips off for standard 
+116128	movie recording.
+116162	Turn Clips on to record
+116212	short movie clips to be
+116262	saved in My Clips.
+116300	Movie will be recorded for 
+116358	standard-speed playback.
+116408	Movie will be recorded for 
+116466	slow motion playback.
+116512	Sound will not be recorded.
+116568	Movie will be recorded for 
+116626	fast motion playback.
+116672	Sound will not be recorded.
+116728	Added to My Clips.
+116766	Saved as standard movie.
+116816	This My Clips folder is full.
+116876	Move a clip within a My Clips folder.
+116952	Move item into a My Clips folder.
+117020	Add to a new My Clips folder.
+117080	Remove from My Clips.
+117124	My Clips
+117142	Add to My Clips
+117174	Play My Clips
+117202	Export My Clips
+117234	See all My Clips
+117268	Delete My Clips
+117300	@A003@ All items in My Clips
+117360	will be deleted.
+117394	Rearrange Order
+117426	Preset Destination
+117464	Your next clip will follow
+117520	this item, unless it is a clip 
+117586	with movie specifications that 
+117652	differ from this My Clips.
+117706	Clip Effects
+117732	1. Pop Art
+117754	2. Light Tone
+117782	3. Pin Hole
+117806	4. Cross Process
+117840	5. Sepia
+117858	6. Old Film
+117882	Effects can not be seen in Preview.
+117954	Transition Effect
+117990	Fade
+118000	Recorded Clip Sound
+118040	Recorded Clip Volume
+118082	Preview
+118098	Begin Export
+118124	Total Clip Length
+118160	Please stand by.
+118194	Processing time will be equivalent
+118266	to twice the total movie length.
+118332	Complete
+118350	Canceled
+118368	PCM Recorder @A017@ Link
+118418	When On, optimizes the
+118466	camera's settings based on
+118522	the Olympus PCM Recorder Link.
+118584	Multiple Exposure
+118620	@A006@ RC Mode
+118650	@A01B@Plug-in Power
+118690	Select Off when connecting
+118746	a microphone that does not
+118802	require power.
+118832	Opt. Grip Dial Func.
+118874	Select function assigned to the 
+118942	optional grip dial.
+118982	Turn the dial @A07B@ to adjust
+119046	volume when headphones 
+119096	are connected.
+119126	The dial @A07B@ follows dial function
+119204	settings.
+119224	Selfie Assist
+119252	Adjust monitor settings
+119302	for when monitor is 
+119346	flipped-out for selfies.
+119396	Selfie Assist settings
+119444	will not activate even
+119492	when monitor is flipped-out.
+119550	Selfie Assist controls will be
+119614	displayed on the monitor and
+119674	the Live View will be displayed
+119740	as a mirror image.
+119778	@A003@Shutter Function
+119824	Assign function to shutter 
+119882	button when in @A003@ mode.
+119938	Take photo by pressing 
+119988	shutter button.
+120020	Start/Stop movie recording
+120076	by pressing shutter button.
+120132	Headphone Volume
+120166	Adjusts headphone volume.
+120220	Recording volume will not 
+120276	be effected.
+120302	@A008@ Info Settings
+120344	Choose the information
+120392	displayed in @A008@ mode.
+120444	Time Code
+120464	Silent @A026@Operation
+120510	Quick Sleep Mode
+120544	When not in Live View,
+120592	camera will enter sleep 
+120644	mode in a matter of seconds.
+120702	Menu Recall
+120726	Recalls latest menu selection.
+120788	Recall
+120802	Reset
+120814	Time Code Settings
+120852	Adjust time code settings.
+120906	Time Code Mode
+120936	Drop Frame
+120958	Non-DF
+120972	Adjusts for time difference vs.
+121038	actual recording time.
+121086	Used in advanced editing when
+121148	extreme accuracy of time is 
+121208	required.
+121228	Will not adjust for time difference
+121302	vs. actual recording time.
+121356	Count Up
+121374	Rec Run
+121390	Free Run
+121408	Counts the time code only
+121462	while movie is recording.
+121514	Counts the time code even
+121568	when movie is not recording,
+121628	including when the camera is
+121688	turned off.
+121712	Starting Time
+121740	Reset
+121752	Manual Input
+121778	Current Time
+121804	Set hour:minute:second:frame
+121864	to 00:00:00:00.
+121896	Set hour, minute, second and
+121956	frame manually.
+121988	Set hour, minute, second to the
+122054	current time and set frame to 00.
+122122	Peaking Color
+122150	Red
+122158	Yellow
+122172	In-focus areas will be highlighted
+122244	in red during focus peaking.
+122302	In-focus areas will be highlighted
+122374	in yellow during focus peaking.
+122438	Highlight Intensity
+122478	In-focus areas will be 
+122528	lightly highlighted.
+122570	In-focus areas will be highlighted.
+122642	In-focus areas will be 
+122692	heavily highlighted.
+122734	Image Brightness Adj.
+122778	Will not adjust Live View
+122832	image brightness.
+122868	Will adjust Live View image 
+122928	brightness to enhance highlight 
+122996	visibility. Brightness of Live View 
+123072	image and final image will differ.
+123142	Adjust settings for sequential
+123206	shooting, self-timer shooting,
+123270	and interval shooting.
+123316	@A047@ Silent @A048@
+123358	@A049@ Silent @A048@
+123400	@A04A@ Silent @A048@
+123442	@A04B@ Silent @A048@
+123484	@A04C@ Silent @A048@
+123526	@A04D@ Silent @A048@
+123568	@A047@ Anti-Shock @A04E@
+123618	@A04A@ Anti-Shock @A04E@
+123668	@A04B@ Anti-Shock @A04E@
+123718	@A04C@ Anti-Shock @A04E@
+123768	@A04D@ Anti-Shock @A04E@
+123818	Anti-Shock@A04E@/Silent@A048@
+123878	Adjust settings for silent 
+123936	shooting or anti-shock shooting.
+124002	Silent@A028@
+124028	Enables silent shooting.
+124080	Flash or @A004@ will not work.
+124144	Select the post-shutter
+124194	release delay time.
+124234	Anti-Shock@A029@
+124268	When shutter speed is @A079@ or
+124334	less, the first shutter curtain is
+124406	switched to electronic. 
+124458	Select the post-shutter
+124508	release delay time.
+124548	Noise Reduction@A048@
+124592	Noise reduction will not work
+124654	during silent shooting.
+124702	Noise reduction will work even 
+124768	during silent shooting. Shutter 
+124836	sound will be heard during the
+124900	noise reduction preparation 
+124960	process.
+124978	Manual Shooting
+125010	Bulb/Time
+125030	Live Composite
+125060	Others
+125074	Manual Shooting Live View Boost
+125138	Bulb/Time Live View Boost
+125190	Live Composite Live View Boost
+125252	Other Live View Boost
+125296	On1
+125304	On2
+125312	Live View brightness will
+125366	reflect exposure settings.
+125422	Brightness of image seen is
+125480	the same as that of the final
+125542	image.
+125556	Live View brightness will not
+125618	reflect exposure settings, and will
+125692	be adjusted for optimal viewing. 
+125762	Brightness of final image will differ.
+125840	Live View brightness will not
+125902	reflect exposure settings and will
+125974	be optimized by decreasing
+126030	frame rate in dark scenes.
+126086	Brightness of final image will differ.
+126164	Play Movie
+126186	Play from Beginning
+126226	Delete entire @A003@
+126268	@A005@ Deletes all automatically
+126336	separated files of single movie.
+126402	Display 3D Photos Only
+126448	@A078@ switches shooting modes.
+126514	Set to @A079@ to select shooting 
+126584	modes in the mode dial.
+126634	Set to @A07A@ to use @A008@.
+126692	@A024@ View Selection
+126736	Switches between Live View and
+126800	Super Control Panel.
+126844	When eye sensor is disabled,
+126904	switches between EVF and 
+126958	rear monitor.
+126986	Custom1
+127002	Custom2
+127018	@A071@Function
+127048	@A08D@Function
+127078	@A094@Function
+127108	@A04F@@A02F@
+127134	@A06E@@A041@
+127160	@A07A@ H fps
+127186	@A07A@ L fps
+127212	Set the number of pictures shot
+127278	in one second when using
+127330	sequential shooting with @A07B@.
+127396	Set the number of pictures shot
+127462	in one second when using
+127514	sequential shooting with @A07C@.
+127580	@A036@@A020@
+127606	@A06F@@A022@
+127632	FullHD
+127646	HD
+127652	@A013@/@A014@/@A0C7@
+127694	mode6
+127706	@A055@uper @A0B8@arge
+127750	60p
+127758	50p
+127766	30p
+127774	25p
+127782	24p
+127790	MOV 1920
+127808	1080 Fine
+127828	MOV 1920
+127846	1080 ALL-Intra
+127876	MOV 1920
+127894	1080 Super Fine
+127926	MOV 1920
+127944	1080 Fine
+127964	MOV 1920
+127982	1080 Normal
+128006	MOV 1280
+128024	720 ALL-Intra
+128052	MOV 1280
+128070	720 Super Fine
+128100	MOV 1280
+128118	720 Fine
+128136	MOV 1280
+128154	720 Normal
+128176	MOV 1920
+128194	1080
+128204	FHD
+128212	A-I
+128220	ALL-Intra
+128240	@A112@
+128254	1080p
+128266	MIC @A01B@
+128288	Noise reduction in progress.
+128348	Please stand by.
+128382	Set focus differential
+128428	Estimated End Time
+128466	Estimated Start Time
+128508	Set number of shots
+128548	Switches between EVF display 
+128610	modes. Effective only when 
+128668	viewing through the EVF.
+128718	Effects of setting adjustments 
+128784	can be confirmed in realtime 
+128846	prior to releasing the shutter.
+128910	Simulated view, as if seen
+128966	through on OVF of an SLR.
+129020	Effects of setting adjustments
+129084	can not be confirmed prior to 
+129148	releasing shutter.
+129186	Frame Rate
+129208	Narrow
+129222	S-OVF
+129234	Select the frame rate
+129280	in the built-in EVF.
+129322	Select EVF display mode.
+129372	Enable or disable rear
+129420	monitor AF Targeting
+129464	Pad for EVF.
+129490	Movie Settings
+129520	TL Movie Length
+129552	AF Targeting Pad
+129586	WB Levels are extreme. Continue?
+129652	Wide
+129662	Focus BKT Off
+129690	Focus BKT On
+129716	Focus BKT
+129736	HighSpeed 120fps
+129770	4K
+129776	Preferred shooting functions can be
+129850	saved for quick, easy access.
+129910	Initializes the settings.
+129962	Private Password
+129996	Certification
+130024	@A01C@: change the password for
+130090	connection to your smartphone.
+130152	@A002@ Deletes all automatically
+130220	separated files of single movie.
+130286	Inoperative
+130310	MF Clutch
+130330	Sets the MF clutch.
+130370	Operative
+130390	Pop Art@A02A@
+130418	Pop Art@A02B@
+130446	Pale&Light Color@A02A@
+130492	Pale&Light Color@A02B@
+130538	Grainy Film@A02A@
+130574	Grainy Film@A02B@
+130610	Pin Hole@A02A@
+130640	Pin Hole@A02B@
+130670	Pin Hole@A02C@
+130700	Diorama@A02A@
+130728	Diorama@A02B@
+130756	Cross Process@A02A@
+130796	Cross Process@A02B@
+130836	Dramatic Tone@A02A@
+130876	Dramatic Tone@A02B@
+130916	Key Line@A02A@
+130946	Key Line@A02B@
+130976	Watercolor@A02A@
+131010	Watercolor@A02B@
+131044	Vintage@A02A@
+131072	Vintage@A02B@
+131100	Vintage@A02C@
+131128	Partial Color@A02A@
+131168	Partial Color@A02B@
+131208	Partial Color@A02C@
+131248	@A073@Pop Art
+131276	@A053@Soft Focus
+131310	@A079@Diorama
+131338	@A07A@Cross Process
+131378	@A055@Gentle Sepia
+131416	@A07C@Dramatic Tone
+131456	@A07D@Key Line
+131486	@A07E@Watercolor
+131520	@A07F@Vintage
+131548	@A080@Partial Color
+131588	@A056@Pop Art@A050@
+131628	@A057@Pop Art@A051@
+131668	@A058@Pale&Light Color@A050@
+131726	@A059@Pale&Light Color@A051@
+131784	@A05A@Grainy Film@A050@
+131832	@A05B@Grainy Film@A051@
+131880	@A05C@Pin Hole@A050@
+131922	@A05D@Pin Hole@A051@
+131964	@A05E@Pin Hole@A052@
+132006	@A05F@Diorama@A050@
+132046	@A060@Diorama@A051@
+132086	@A061@Cross Process@A050@
+132138	@A062@Cross Process@A051@
+132190	@A063@Dramatic Tone@A050@
+132242	@A064@Dramatic Tone@A051@
+132294	@A065@Key Line@A050@
+132336	@A066@Key Line@A051@
+132378	@A067@Watercolor@A050@
+132424	@A068@Watercolor@A051@
+132470	@A069@Vintage@A050@
+132510	@A06A@Vintage@A051@
+132550	@A06B@Vintage@A052@
+132590	@A06C@Partial Color@A050@
+132642	@A06D@Partial Color@A051@
+132694	@A06E@Partial Color@A052@
+132746	@A06F@Soft Focus Effect
+132794	@A070@Pin Hole Effect
+132838	@A071@White Edge Effect
+132886	@A072@Frame Effect
+132924	@A073@Star Light Effect
+132972	@A074@Blur Effect: Top and Bottom
+133040	@A075@Blur Effect: Left and Right
+133108	@A076@Shade Effect: Left and Right
+133178	@A077@Shade Effect: Top and Bottom
+133248	@A0B1@ Silent @A074@
+133290	Displays certification.
+133338	Focal Length
+133364	Color Profile 1
+133396	Color Profile 2
+133428	Color Profile 3
+133460	@A0B2@Color Profile 1
+133504	@A0B3@Color Profile 2
+133548	@A0B4@Color Profile 3
+133592	All colors@A028@
+133626	Single color@A028@
+133664	Monochrome Profile 1
+133706	Monochrome Profile 2
+133748	Monochrome Profile 3
+133790	@A0B5@Monochrome Profile 1
+133844	@A0B6@Monochrome Profile 2
+133898	@A0B7@Monochrome Profile 3
+133952	None
+133962	Yellow
+133976	Orange
+133990	Red
+133998	Magenta
+134014	Blue
+134024	Cyan
+134034	Green
+134046	Yellow-Green
+134072	Film Grain Effect
+134108	Film Grain Effect Off
+134152	Film Grain Effect Low
+134196	Film Grain Effect Medium
+134246	Film Grain Effect High
+134292	Midtone Area Adjust
+134332	Hi. & Sh.@A01A@
+134364	Midtone@A01A@
+134392	Reset/Assign Custom Modes
+134444	Reset camera settings
+134490	or assign current settings
+134546	to Custom Modes.
+134580	Custom Mode C1
+134610	Custom Mode C2
+134640	Custom Mode C3
+134670	Custom Mode C4
+134700	Apply C1 settings? Current camera
+134770	settings will be overwritten.
+134830	Apply C2 settings? Current camera
+134900	settings will be overwritten.
+134960	Apply C3 settings? Current camera
+135030	settings will be overwritten.
+135090	Apply C4 settings? Current camera
+135160	settings will be overwritten.
+135220	Select shooting modes to
+135272	assign to mode dial positions
+135334	C3 and C4.
+135356	Mode Dial C3
+135382	Mode Dial C4
+135408	Lens Info Settings
+135446	Enter data-transmission-
+135498	incompatible lens info for Exif
+135564	and stabilization optimization.
+135628	Press the button to go to
+135682	lens information settings.
+135736	Create Lens Information
+135784	Edit Lens Information
+135828	Delete Lens Information
+135876	Lens Name
+135896	Aperture Value
+135926	Remove check@A026@
+135964	Use lens info@A026@
+136004	Overwrite
+136024	Save as new entry
+136060	@A012@ Dial Function
+136102	Choose the function to
+136150	assign to the exposure
+136198	compensation dial.
+136236	Silent@A048@Mode Settings
+136288	Allow
+136300	Not Allow
+136320	Enables silent shooting.
+136372	Select the post-shutter
+136422	release delay time.
+136462	Art Effect Off
+136492	Color Filter: None
+136530	Color Filter: Yellow
+136572	Color Filter: Orange
+136614	Color Filter: Red
+136650	Color Filter: Green
+136690	Normal Monochrome
+136726	Sepia Monochrome
+136760	Blue Monochrome
+136792	Purple Monochrome
+136828	Green Monochrome
+136862	Release/@A01E@/Image Stabilizer
+136926	C. Release/@A019@/Image Stabilizer
+136996	Menu for shutter release,
+137050	sequential shooting,
+137094	and image stabilizer.
+137138	Export failed
+137166	Movies cannot be taken
+137214	while in the remote shutter mode.
+137282	Select Picture Mode.
+137324	Spot Metering
+137352	For the @A025@selected items, 
+137416	metering will be executed
+137470	in the area of the AF target.
+137530	N:None
+137544	N:Normal
+137562	ART1@A050@
+137584	ART1@A051@
+137606	ART3@A050@
+137628	ART3@A051@
+137650	ART5@A050@
+137672	ART5@A051@
+137694	ART6@A050@
+137716	ART6@A051@
+137738	ART6@A052@
+137760	ART7@A050@
+137782	ART7@A051@
+137804	ART8@A050@
+137826	ART8@A051@
+137848	ART10@A050@
+137872	ART10@A051@
+137896	ART11@A050@
+137920	ART11@A051@
+137944	ART12@A050@
+137968	ART12@A051@
+137992	ART13@A050@
+138016	ART13@A051@
+138040	ART13@A052@
+138064	ART14@A050@
+138088	ART14@A051@
+138112	ART14@A052@
+138136	C3
+138142	C4
+138148	Color Profile 1
+138180	Color Profile 2
+138212	Color Profile 3
+138244	Mono Profile 1
+138274	Mono Profile 2
+138304	Mono Profile 3
+138334	Copy
+138344	Copy Select
+138368	New File
+138386	Overwrite
+138406	Underwater
+138428	@A076@Underwater
+138462	Focus stacking error.
+138508	Image composite failed.
+138556	@A003@Picture Mode
+138594	Rec. start/stop for USB-connected
+138664	PCM recorder remains independent
+138732	from camera rec. start/stop.
+138790	USB-connected PCM recorder
+138846	automatically starts/stops
+138902	recording simultaneously with
+138964	camera rec. start/stop.
+139012	Without slate tone.
+139052	USB-connected PCM recorder
+139108	will create a slate tone when
+139170	the @A04B@button is pressed and
+139236	held down during video recording.
+139304	Camera rec. volume and wind
+139362	noise reduction will be
+139412	inoperative and recording volume
+139480	will be automatically adjusted by
+139550	the Olympus PCM recorder.
+139602	Recording volume can be
+139652	adjusted by the camera
+139700	rec. volume.
+139726	@A003@Noise Filter
+139764	Select this @A004@ exclusive mode
+139834	for shooting video footage
+139890	to be edited post-shoot.
+139940	Select level of noise
+139986	reduction for video recording
+140048	at high ISO speeds.
+140088	Select level of noise
+140134	reduction for still photography
+140200	at high ISO speeds.
+140240	Synchronized @A03F@Rec.
+140288	Slate Tone
+140310	Camera Rec. Volume
+140348	@A077@Flat
+140370	@A02C@Card Full
+140402	@A02D@Card Full
+140434	@A02C@/@A02D@Card Full
+140480	@A02C@Card Full
+140512	@A02D@Card Full
+140544	@A02C@No Picture 
+140580	@A02D@No Picture 
+140616	@A02C@Picture Error
+140656	@A02D@Picture Error
+140696	@A078@Card Error
+140730	@A079@Card Error
+140764	@A078@/@A079@Card Error
+140812	@A02C@Error / @A02D@Protected
+140872	@A02C@Error / @A02D@Full
+140922	@A078@Write Protect
+140962	@A079@Write Protect
+141002	@A078@/@A079@Write Protect
+141056	@A02C@Protected / @A02D@Error
+141116	@A02C@Protected / @A02D@Full
+141174	@A02C@Full / @A02D@Error
+141224	@A02C@Full / @A02D@Protected
+141282	Switched to New Folder
+141328	Switched to@A02C@
+141364	Switched to@A02D@
+141400	@A0A3@Cannot Create Folder
+141454	@A0A4@Cannot Create Folder
+141508	Cannot Create Folder
+141550	@A02C@Cannot Select Folder
+141604	@A02D@Cannot Select Folder
+141658	@A02C@The Image Cannot Be Edited
+141724	@A02D@The Image Cannot Be Edited
+141790	@A02C@Caution Image Cannot Be Selected
+141868	@A02D@Caution Image Cannot Be Selected
+141946	@A02E@Picture Error
+141986	@A02F@Picture Error
+142026	@A0A3@No BGM
+142052	@A0A4@No BGM
+142078	@A0A3@Cannot Print
+142116	@A0A4@Cannot Print
+142154	Olympus batt. recommended
+142206	A1. AF/MF
+142226	A2. AF/MF
+142246	A3. AF/MF
+142266	C1. Release/@A013@/Image Stabilizer
+142338	C2. Release/@A013@/Image Stabilizer
+142410	D1. Disp/@A001@/PC
+142448	D2. Disp/@A001@/PC
+142486	D3. Disp/@A001@/PC
+142524	D4. Disp/@A001@/PC
+142562	E1. Exp/ISO/BULB/@A07C@
+142610	E2. Exp/ISO/BULB/@A07C@
+142658	E3. Exp/ISO/BULB/@A07C@
+142706	G1. @A02E@/WB/Color
+142746	G2. @A02E@/WB/Color
+142786	H1. Record/Erase
+142820	H2. Record/Erase
+142854	I. EVF
+142868	J1. @A003@ Utility
+142906	J2. @A003@ Utility
+142944	Video Menu
+142966	Menu for basic and
+143006	detailed video settings
+143054	C-AF Sensitivity
+143088	Adjust C-AF lock sensitivity
+143148	depending on the movement of
+143208	your subject.
+143236	High
+143246	Low
+143254	AF Limiter
+143276	Limits the AF range to your
+143334	specification.
+143366	Distance is approximate.
+143416	Release Priority
+143450	The shutter can be released
+143508	even when the subject is out 
+143570	of focus.
+143590	The shutter can not be released
+143656	when the subject is out of focus.
+143724	Distance settings
+143760	Setting 1
+143780	Setting 2
+143800	Setting 3
+143820	Sets display of the green
+143874	Auto Focus target frame.
+143924	Does not display frame.
+143972	Displays frame.
+144004	Displays frame while shutter
+144064	button is half-pressed.
+144112	Preset MF
+144132	Preset MF distance
+144170	Sets distance for preset MF.
+144230	Distance is approximate.
+144280	Changes to Preset MF mode.
+144334	Switches IS On/Off.
+144376	Press down and turn dial to
+144434	switch between IS modes.
+144484	Switches AF Limiter On/Off.
+144542	Press down and turn dial to
+144600	select distance.
+144634	Push to display @A041@ frame
+144694	for targeting.
+144726	Once target is set, push again to
+144796	activate @A041@ mode.
+144840	Push to switch to designated
+144900	default@A07D@. Push again to
+144960	return.
+144976	@A004@Fn Lever Settings
+145024	Assign a function to the Fn lever
+145094	for still photography.
+145140	@A02D@Fn Lever Function
+145188	Switch@A0A9@ Function
+145232	@A003@Fn Lever Function
+145280	Assign a function to the Fn lever
+145350	for shooting video.
+145390	Changes dial function.
+145436	Changes AF mode/@A0AA@/@A0AB@.
+145500	The target is selectable.
+145552	Assigns following shooting modes:
+145622	Position 1: follows Mode Dial setting.
+145702	Position 2: @A004@mode.
+145750	@A07E@Lock
+145772	Select On to disable @A07E@.
+145830	Fn Lever/Power Lever
+145872	Use Fn Lever as power switch.
+145932	Fn
+145938	Use Fn Lever for designated
+145996	functions. Use power switch
+146054	to control power.
+146090	Power 1
+146106	Assign power to Fn Lever
+146158	as follows:
+146184	Position 1: Power On
+146228	Position 2: Power Off
+146274	Power Lever is disabled.
+146324	Power 2
+146340	Assign power to Fn Lever
+146392	as follows:
+146418	Position 1: Power Off
+146464	Position 2: Power On
+146508	Power Lever is disabled.
+146558	CWB Kelvin
+146580	@A019@Settings
+146610	Detail settings when
+146654	@A019@ shooting.
+146688	@A049@Settings
+146718	@A04A@Settings
+146748	Max fps
+146764	Frame Count Limiter
+146804	Image stabilization priority
+146864	for continuous shooting.
+146914	Fps Priority
+146940	Shooting speed gets
+146982	priority over image stabilization.
+147052	IS Priority
+147076	Image stabilization gets
+147128	priority over shooting speed.
+147188	@A003@HDMI Output
+147224	Sets output settings
+147268	for HDMI-connected
+147308	video shooting.
+147340	Output Mode
+147364	Output mode settings to
+147414	devices connected by HDMI.
+147468	Monitor Mode
+147494	Outputs video and info display
+147558	to the device. This mode is 
+147618	recommended when to using the
+147680	device as a monitor.
+147722	Record Mode
+147746	Outputs video only, with no
+147804	info display. This mode is 
+147862	recommended when recording
+147918	video with the device.
+147964	@A01C@Control
+147992	Sets simultaneous method to
+148050	start/stop recording of connected
+148120	devices with @A01C@ operation.
+148182	Rec. start/stop for connected
+148244	devices remains independent
+148302	from camera rec. start/stop.
+148360	REC Bit
+148376	Connected recorder
+148416	automatically starts/stops
+148472	recording simultaneously with
+148534	camera rec. start/stop
+148582	by using REC bit.
+148618	Connected recorder
+148658	automatically starts/stops
+148714	recording simultaneously with
+148776	camera rec. start/stop
+148824	by sending Time Code.
+148868	Output Size
+148892	4K
+148898	Output Frame Rate
+148934	50p Priority
+148960	60p Priority
+148986	@A004@Specification Settings
+149044	Settings for video quality.
+149100	@A003@@A01A@
+149126	Records 4096 x 2160 (17:9)
+149182	size video.
+149206	Records 3840 x 2160 (16:9)
+149262	size video.
+149286	Records 1920 x 1080 (16:9)
+149342	size video.
+149366	Records 1280 x 720 (16:9)
+149420	size video.
+149444	@A013@/@A014@Settings
+149488	When selecting @A013@or@A014@, 
+149554	you can skip the items
+149602	that have not been selected@A03E@.
+149672	Sets guide grid displayed on
+149732	the monitor during Live View.
+149792	Display Color
+149820	Preset 1
+149838	Preset 2
+149856	@A02E@
+149870	Apply Settings to EVF
+149914	Does not apply rear monitor
+149972	grid settings to EVF.
+150016	Applys rear monitor grid 
+150070	settings to EVF.
+150104	EVF Grid Settings
+150140	Sets guide grid displayed in EVF.
+150208	LV Close Up Settings
+150250	Settings for display method
+150308	of LV Close Up.
+150340	@A045@ Settings
+150372	Settings for preview 
+150418	display method.
+150450	Live View Boost
+150482	During LV Close Up, brightness is
+150552	adjusted for easy confirmation.
+150616	During LV Close Up, brightness is
+150686	not adjusted and the display is the
+150760	same brightness as prior to LV
+150824	Close Up.
+150844	During preview, brightness is
+150906	adjusted for easy confirmation.
+150970	During preview, brightness is
+151032	not adjusted and the display is the
+151106	same brightness as prior to preview.
+151180	@A006@@A080@Info
+151214	Magnify Frame
+151242	Magnify Scroll
+151272	Select Frame
+151298	@A0AA@Settings
+151328	When selecting the AF target
+151388	mode, you can skip the items
+151448	that have not been selected@A058@.
+151518	@A07C@Custom Settings
+151562	Settings for operation method
+151624	for AF target selection screen.
+151688	Set 1
+151700	Set 2
+151712	@A0AA@
+151726	@A0AB@
+151740	@A008@
+151754	Registers the default 
+151802	AF mode/@A0AA@/@A0AB@.
+151848	Detailed settings for when
+151904	ISO sensitivity is set to AUTO.
+151968	Upper Limit / Default
+152012	Lowest S/S Setting
+152050	When shutter speed reaches the 
+152116	designated lowest figure, ISO
+152178	sensitivity will begin to rise.
+152244	Valid in P or A mode.
+152288	Card Slot Settings
+152326	Settings for saving
+152368	and playback by card.
+152412	@A030@Save Settings
+152452	Standard
+152470	Records to assigned card only.
+152532	Auto Switch
+152556	When designated card becomes full,
+152628	switches to other card to continue
+152700	shooting.
+152720	Dual Independent@A032@
+152766	Saves to both cards applying 
+152828	their respective settings. 
+152886	If one card becomes full, the
+152948	other cannot be saved to either.
+153014	Dual Independent@A033@
+153060	Saves to both cards applying 
+153122	their respective settings. 
+153180	Even if one card becomes full,
+153244	the other can still be saved to.
+153310	Dual Same@A032@
+153342	Saves to both cards applying same 
+153414	@A003@@A024@settings.
+153460	If one card becomes full, the
+153522	other cannot be saved to either.
+153588	Dual Same@A033@
+153620	Saves to both cards applying same 
+153692	@A003@@A024@settings.
+153738	Even if one card becomes full,
+153802	the other can still be saved to.
+153868	@A030@Save Slot
+153900	@A004@Save Slot
+153932	@A034@Slot
+153954	Assign Save Folder
+153992	Assign
+154006	Do not assign
+154034	Copy all images saved on
+154086	one card to the other.
+154132	Assign Folder to Copy to
+154182	Existing Folder
+154214	New Folder
+154236	Battery Settings
+154270	See battery info and settings.
+154332	Battery Priority
+154366	Battery Status
+154396	Degradation
+154420	Charge left
+154444	Serial No.
+154466	Shot Count
+154488	Battery Type
+154514	Press-and-hold Time
+154554	Set the button press-and-hold time
+154626	for each function that requires 
+154694	press-and-hold to activate.
+154750	End LV@A02F@
+154776	Press-and-hold designated button
+154844	ends Live View close up or ends
+154910	display of Live View close up frame.
+154984	End @A041@
+155006	Press-and-hold designated button
+155074	ends @A041@close up or ends display 
+155150	of @A041@close up frame.
+155200	End @A006@@A080@
+155234	Press-and-hold designated button
+155302	ends @A083@close up or ends display 
+155378	of @A083@close up frame.
+155428	Insert Slate Tone
+155464	Press-and-hold @A04B@ during video 
+155538	recording and the USB-connected 
+155606	PCM recorder inserts a slate tone.
+155676	Reset @A030@
+155702	Press-and-hold @A083@ button
+155762	returns @A07D@ to center of
+155820	AF target select screen.
+155870	Reset LV@A02F@ Frame
+155912	Press-and-hold @A083@ button
+155972	returns close up frame to
+156026	center of Live View screen.
+156082	Reset @A031@
+156108	Press-and-hold @A032@ button
+156168	returns @A031@ values to default
+156236	at the setting screen.
+156282	Reset @A011@
+156308	When @A007@ is assigned to a dial,
+156380	press-and-hold @A083@ button
+156440	returns exposure compensation
+156502	value to default at the shooting 
+156572	standby screen.
+156604	Reset @A033@
+156630	Press-and-hold @A083@ button 
+156692	returns Highlight & Shadow Control
+156764	settings to default at the setting
+156836	screen.
+156852	End @A034@
+156874	Press-and-hold @A034@ button
+156934	deactivates keystone
+156978	compensation.
+157006	Reset @A034@
+157032	Press-and-hold @A083@ button
+157092	returns keystone comp.
+157140	settings to default
+157182	at the setting screen.
+157228	Reset @A041@ Frame
+157266	Press-and-hold @A083@ button
+157326	returns video telecon close up
+157390	frame to the center position.
+157450	Reset @A009@@A0AC@ Frame
+157500	Press-and-hold @A01F@ button
+157560	returns closeup frame
+157606	to the center position
+157654	at Playback.
+157680	Reset @A010@
+157706	Press-and-hold @A083@ button
+157766	returns flash intensity settings
+157834	to default at the shooting standby
+157906	when @A009@ is assigned to the dial.
+157980	Switch @A026@ Lock
+158018	Press-and-hold button assigned
+158082	to @A044@Lock switches @A044@Lock
+158152	on/off.
+158168	Switch @A061@/@A062@
+158210	Press-and-hold button
+158256	assigned to @A061@/@A062@ deactivates
+158334	@A061@/@A062@ modes.
+158376	Call BKT Settings
+158412	Press-and-hold button assigned
+158476	to BKT pulls up the BKT settings
+158544	screen.
+158560	Call EVF Auto Switch
+158602	Press-and-hold button
+158648	assigned to @A03C@ pulls up
+158706	the @A03C@auto switch settings screen.
+158784	Pro Capture High
+158818	Pro Capture Low
+158850	Effect: High
+158876	Effect: Low
+158900	Effect: Standard
+158934	AF Limiter:Off
+158964	@A035@ to update distance
+159016	Reset / Custom Modes
+159058	Assign to Custom Mode
+159102	Recall from Custom Mode
+159150	Reset Scope
+159174	Movie Edit
+159196	In-Movie Image Capture
+159242	Movie Trimming
+159272	The selected scene will be deleted.
+159344	@A002@The selected scene will be deleted.
+159428	@A004@Audio Record Settings
+159484	@A004@Display Settings
+159530	Settings for information display
+159598	during movie recording.
+159646	@A003@Info Settings
+159686	Choose the information displayed
+159754	when the @A01A@ is pressed.
+159810	Grid
+159820	@A004@Control Settings
+159866	Choose the controls displayed
+159928	when the @A083@ is pressed
+159984	when in movie mode.
+160024	@A087@Display Pattern
+160068	Sets display method of
+160116	battery charge
+160148	during movie recording.
+160196	@A02C@@A003@@A01A@
+160234	@A02C@@A030@@A01A@
+160272	@A02D@@A003@@A01A@
+160310	@A02D@@A030@@A01A@
+160348	Select Card to Set Up
+160392	Firmware Update
+160424	@A002@ Once firmware is updated, you
+160500	will not be able to return to the 
+160572	current firmware.
+160608	@A056@Function
+160638	@A0B5@Function
+160668	@A0B6@Function
+160698	@A0B7@Function
+160728	AF Scanner
+160750	Settings for AF Scanner
+160800	at AF starts or
+160834	while in AF is executing.
+160886	Even if the subject appears unclear
+160960	or if contrast is low, the AF Scanner
+161038	will not be activated.
+161084	If the subject appears unclear
+161148	or if contrast is low, the AF Scanner
+161226	will run once only at AF starts.
+161292	If the subject appears unclear
+161356	or if contrast is low, the AF
+161418	Scanner will still be activated.
+161484	@A02D@AF Mode
+161512	Set the AF method
+161550	for still photography.
+161596	@A02D@Image Stabilizer
+161642	Sets the image stabilization mode
+161712	for still photography.
+161758	@A02D@Button Function
+161802	Select functions to assign
+161858	to each button for still 
+161912	photography.
+161938	@A02D@Dial Function
+161978	Select functions to assign
+162034	to each dial for still photography.
+162106	@A02D@Noise Filter
+162144	@A02D@Elec. Zoom Speed
+162190	Set zoom speeds
+162224	for still photography when
+162280	using an electronic zoom lens.
+162342	@A02D@@A01A@
+162368	Select image quality settings
+162430	for still shooting.
+162470	@A004@Button/Dial/Lever
+162518	Select functions to assign
+162574	to buttons and dials for 
+162628	shooting video.
+162660	@A003@Button Function
+162704	Select functions to assign
+162760	to each button for shooting 
+162820	video.
+162834	@A003@Elec. Zoom Speed
+162880	Set zoom speeds
+162914	for shooting video when
+162964	using an electronic zoom lens.
+163026	@A004@AF/IS Settings
+163068	Select image stabilizer mode
+163128	and focusing method
+163170	for shooting video.
+163210	@A003@AF Mode
+163238	Set the focusing method
+163288	for shooting video.
+163328	@A003@Image Stabilizer
+163374	Change the image stabilizer mode
+163442	for shooting video.
+163482	Connection to smartphone
+163534	using built-in @A0B8@.
+163580	@A0B8@ Settings
+163612	Menu about built-in @A0B8@.
+163668	@A0B8@ Connect Settings
+163716	Select @A0B8@ Connection
+163766	Select @A0B8@ connection
+163818	each time.
+163840	Reset @A0B8@ Settings
+163884	@A003@ Caution Resetting All @A0B8@
+163958	Settings
+163976	Preparing @A0B8@ Connection
+164032	For connection to your smartphone.
+164104	This configuration is necessary
+164170	only once.
+164194	@A0B8@ connection will start later.
+164266	@A0B8@ Starting
+164298	@A0B8@ Stopping
+164330	Turns built-in @A0B8@ off.
+164384	End @A0B8@@A01E@
+164418	When shutter speed is @A088@ or
+164484	less, the first shutter curtain is
+164556	switched to electronic. 
+164608	Select the post-shutter
+164658	release delay time.
+164698	4K
+164704	C4K
+164712	Color
+164724	Color/Vivid
+164748	MOV 3840
+164766	2160
+164776	MOV 4096
+164794	2160
+164804	MOV 1920
+164822	1080
+164832	MOV 1280
+164850	720
+164858	Pre-shutter Frames
+164896	Grid Settings
+164924	@A003@Dial Function
+164964	Select functions to assign
+165020	to each dial for shooting 
+165076	video.
+165090	@A07D@Set Home
+165120	@A030@Spot Metering
+165160	EVF Style
+165180	EVF Auto Switch
+165212	AF Area Select
+165242	@A030@Home
+165264	@A089@i-Enhance
+165296	Disable the eye sensor.
+165346	@A024@: to switch between monitor
+165416	display and EVF display.
+165466	Press to execute S-AF.
+165512	Functions of @A0A9@buttons are
+165576	not changed in @A0BB@.
+165622	In @A0BB@, functions of @A0A9@buttons are
+165708	switched to
+165734	@A0BC@: BKT and @A0BD@: @A0BE@.
+165798	Disables Fn lever function.
+165854	@A08A@Muted
+165878	@A07D@@A01C@
+165904	Selects EVF display style.
+165958	Switch automatically from
+166012	monitor display to EVF display
+166076	when an eye is detected at EVF.
+166140	Detailed settings for
+166186	@A04A@ shooting.
+166220	Select On to display level
+166276	gauge in EVF.
+166306	Enabled when in @A023@.
+166354	Detailed settings for
+166400	@A049@ shooting.
+166434	Select the frame rate
+166480	in the EVF.
+166504	Transmits REC Bit from camera
+166566	to connected recorder device.
+166626	Transmits Time Code from camera
+166692	to connected recorder device.
+166752	Select EVF display mode.
+166802	@A03E@Flat
+166824	@A08B@Underwater
+166858	Select the AF target point
+166914	and AF target mode.
+166954	17:9
+166964	@A0C5@Vivid
+166988	@A0C6@Natural
+167016	@A0C7@Portrait
+167046	Cannot Select Folder
+167088	Fn
+167094	50p Priority
+167120	60p Priority
+167146	G. @A024@/WB/Color
+167184	PCM Recorder
+167210	Fill In
+167226	Focus Stacking
+167256	Multiple shots are taken with the
+167326	focus point slightly moved further
+167398	back after every shot.
+167446	Images are not stacked.
+167494	Multiple shots are taken with the
+167564	focus point moved slightly forward
+167636	and backward from the initial point.
+167712	Images are then stacked.
+167762	Live View brightness will
+167816	reflect exposure settings.
+167872	Brightness of image seen is
+167930	the same as that of the final
+167992	image.
+168006	Live View brightness will not
+168068	reflect exposure settings, and will
+168142	be adjusted for optimal viewing. 
+168212	Brightness of final image will differ.
+168290	Live View brightness will not
+168352	reflect exposure settings and will
+168424	be optimized by decreasing
+168480	frame rate in dark scenes.
+168536	Brightness of final image will differ.
+168614	@A03F@: Start/stop movie recording.
+168686	@A08C@Soft Focus Effect
+168734	@A08D@Pin Hole Effect
+168778	@A08E@White Edge Effect
+168826	@A08F@Frame Effect
+168864	@A090@Star Light Effect
+168912	@A091@Blur Effect: Top and Bottom
+168980	@A092@Blur Effect: Left and Right
+169048	@A093@Shade Effect: Left and Right
+169118	@A094@Shade Effect: Top and Bottom
+169188	@A02C@Face Detect Error
+169236	@A02D@Face Detect Error
+169284	@A113@
+169298	Wide
+169308	Narrow
+169322	Bleach Bypass
+169350	Bleach Bypass@A02A@
+169390	Bleach Bypass@A02B@
+169430	@A004@Mode Settings
+169470	Equally Value
+169498	End Flicker Scan
+169532	Fisheye Compensation
+169574	Angle
+169586	Fisheye Compensation 1
+169632	Fisheye Compensation 2
+169678	Fisheye Compensation 3
+169724	@A03A@/@A03B@Correction
+169772	Fisheye Compensation
+169814	Press-and-hold button assigned
+169878	to Flicker Scan to deactivate
+169940	Flicker Scan.
+169968	Switches Fisheye Compensation
+170030	on/off.
+170046	Press to start Flicker Check.
+170108	Quit by holding button down.
+170168	Valid on S or M mode.
+170212	@A003@Flicker Scan
+170250	@A0CC@Bleach Bypass
+170290	@A096@Bleach Bypass@A050@
+170342	@A097@Bleach Bypass@A051@
+170394	@A038@@A02F@Default Setting
+170450	Adjust settings for @A004@ mode.
+170516	Corrects the distortion of a fisheye
+170592	lens to create a super wide-angle
+170662	image.
+170676	Identify flicker and adjust shutter
+170750	speed in smaller steps, when in
+170816	S or M mode.
+170842	Select default magnification value
+170914	for image playback magnification.
+170982	Identify flicker and adjust shutter
+171056	speed in smaller steps, when in
+171122	S or M mode.
+171148	Recently
+171166	@A02D@Flicker Scan
+171204	Flicker Scan
+171230	ART15@A050@
+171254	ART15@A051@
+171278	The camera will continue Tracking
+171348	after power is turned Off.
+171402	Select the frame rate
+171448	in the EVF.
+171472	Record GPS location
+171512	Logging function cannot
+171562	be used at this time.
+171606	Auto Time Adjust
+171640	Location data will not be
+171694	added to your photo.
+171736	Location data will be added
+171794	to your photo. Setting to On
+171854	activates the GPS.
+171892	Adjust date and time manually.
+171954	Camera adjusts date and time
+172014	automatically based on GPS
+172070	information. GPS will be used
+172132	only when adjustment is made.
+172192	Battery power conservation is
+172254	prioritized over GPS accuracy.
+172316	GPS accuracy is prioritized
+172374	over battery power conservation.
+172440	Battery power
+172468	GPS Priority
+172494	GPS accuracy
+172520	@A095@ @A01A@
+172548	Add GPS location data to your
+172610	photo. Setting to On activates
+172674	the GPS.
+172692	Sets GPS priority for log tracking.
+172764	Set the camera date and time
+172824	or time zone.
+172852	@A018@ Settings
+172884	@A018@
+172898	Time Zone
+172918	Instant Film
+172944	@A098@Instant Film
+172982	@A099@/Bluetooth Settings
+173034	Adjust @A099@ and Bluetooth
+173092	settings.
+173112	Availability
+173138	@A099@/Bluetooth is completely
+173202	deactivated and a connection
+173262	cannot be initiated.
+173304	@A099@/Bluetooth is made available
+173376	for a connection.
+173412	Connection Password
+173452	@A036@: Change connection passwords.
+173528	New passwords will be generated
+173594	automatically.
+173624	Reset Settings
+173654	@A002@ Reset all @A099@ and Bluetooth
+173732	settings?
+173752	Power-off Standby
+173788	@A099@/Bluetooth connection cannot
+173860	be initiated by a device when power
+173934	is off.
+173950	@A099@/Bluetooth connection can be
+174022	initiated by a device even when
+174088	power is off.
+174116	Select whether or not to activate
+174186	Power-off Standby each time
+174244	the power is turned off.
+174294	Activate @A099@/Bluetooth Power-off
+174368	Standby so images can be imported
+174438	while power is off?
+174478	Power-off Standby: Off
+174524	Power-off Standby: On
+174568	Confirm every time
+174606	Don't show this screen again
+174664	Confirm whether or not to activate
+174736	Power-off Standby every time power
+174808	is turned off? This setting can be 
+174882	changed from the menu anytime.
+174944	Transferring data...
+174986	Cancel
+175000	Continue
+175018	Cancel data transfer and
+175070	turn power on.
+175100	Cancel all existing image transfer
+175172	preselections.
+175202	@A09D@ Keep Warm Color@A01A@
+175260	Adjust settings for shooting
+175320	with an Olympus PCM Recorder
+175380	connected.
+175402	@A02C@No Card
+175430	@A02D@No Card
+175458	INFO_CONTINUE_TRANSFER_2
+175508	Remaining Files
+175540	Power off after transfer
+175590	Power off immediately
+175634	Power will turn off automatically
+175704	after all files are transferred.
+175770	Cancels transfer to PC
+175818	and turns power off.
+175860	Transferring...
+175892	INFO_WAIT_SP_TRANSFERRED
+175942	Please wait until transfer is complete.
+176024	Power will turn off automatically.
+176094	Shoots with BULB function
+176146	CAUTION_HIGH_RES_SHOT_CANCELED
+176208	High res shot error.
+176252	Image composite failed.
+176300	@A02D@ISO
+176320	@A02D@Recommended ISO
+176364	@A02D@ISO Extension
+176404	@A003@ISO
+176424	@A003@Recommended ISO
+176468	@A005@ISO Extension
+176508	@A02D@WB
+176526	@A003@WB
+176544	@A02D@Kelvin
+176570	@A003@Kelvin
+176596	@A003@Auto @A09E@
+176632	@A003@@A09F@5300K @A09E@
+176682	@A003@@A0A0@7500K @A09E@
+176732	@A003@@A0A1@6000K @A09E@
+176782	@A003@@A0A2@3000K @A09E@
+176832	@A003@@A0A3@4000K @A09E@
+176882	@A003@@A035@5500K @A09E@
+176932	@A003@@A01E@ @A09E@
+176972	@A003@@A01F@ @A09E@
+177012	@A003@@A020@ @A09E@
+177052	@A003@@A021@ @A09E@
+177092	@A004@Auto @A09E@
+177128	@A004@@A09F@5300K @A09E@
+177178	@A004@@A0A0@7500K @A09E@
+177228	@A004@@A0A1@6000K @A09E@
+177278	@A004@@A0A2@3000K @A09E@
+177328	@A004@@A0A3@4000K @A09E@
+177378	@A004@@A035@5500K @A09E@
+177428	@A004@@A01E@ @A09E@
+177468	@A004@@A01F@ @A09E@
+177508	@A004@@A020@ @A09E@
+177548	@A004@@A021@ @A09E@
+177588	MOVIE_PIC_MODE_LOG
+177626	@A003@CWB @A09E@
+177660	@A004@CWB @A09E@
+177694	Live view@A033@
+177726	Continuous AF + MF
+177764	AF Tracking + MF
+177798	Shooting Method@A01A@
+177842	Live ND Shooting : ND2(1EV)
+177898	Live ND Shooting : ND4(2EV)
+177954	Live ND Shooting : ND8(3EV)
+178010	Live ND Shooting : ND16(4EV)
+178068	Live ND Shooting : ND32(5EV)
+178126	@A003@Save Slot @A078@
+178172	@A003@Save Slot @A079@
+178218	@A004@Save Slot @A078@
+178264	@A004@Save Slot @A079@
+178310	Shooting Method
+178342	Shoots with the camera
+178390	stabilized by a tripod.
+178438	Shoots in handheld mode.
+178490	Processing time is required
+178548	after shooting.
+178582	Flash is not available.
+178630	Live ND Shooting
+178664	ND Number
+178684	LV Simulation
+178712	Slow shutter speed effect
+178766	cannot be seen in Live View.
+178824	Slow shutter speed effect
+178878	can be seen in Live View.
+178932	Differs from final image.
+178984	Live View is not displayed
+179040	as a mirror image
+179078	when monitor is flipped.
+179128	Live View is displayed
+179176	as a mirror image
+179214	when monitor is flipped.
+179264	Field Sensor Info
+179300	Informations during half way
+179358	Information remains
+179400	hidden even when the shutter
+179460	button is pressed halfway.
+179514	Exposure and lens focal length
+179578	information appears only when the
+179648	shutter button is pressed halfway.
+179718	Live View brightness will not
+179780	reflect exposure settings and will
+179852	be optimized by increasing gain
+179918	in dark scenes.
+179952	Brightness of final image will differ.
+180030	Live View brightness will not
+180092	reflect exposure settings and will
+180164	be optimized by increasing gain
+180230	in dark scenes.
+180264	Brightness of final image will differ.
+180342	On2 Setting
+180366	Quality Priority
+180400	Frame Rate Priority
+180440	For Live View, quality gets
+180498	priority over frame rate.
+180552	The frame rate will be reduced
+180616	in dark scenes.
+180648	For Live View, frame rate gets
+180712	priority over quality.
+180760	Colors may disappear
+180804	in dark scenes.
+180838	This will not affect the final image.
+180914	Anti-Flicker LV
+180946	Anti-Flicker Shooting
+180990	Effects of flicker such as uneven
+181060	exposures and colors will be
+181120	reduced. The shutter release time
+181190	lag may become longer.
+181238	Valid when using mechanical shutter.
+181312	Anti-Flicker shooting
+181358	will not function.
+181396	@A02D@ISO-Auto
+181426	@A03F@ISO-Auto
+181456	@A003@ISO-Auto Set
+181494	@A0A5@ISO-Auto Set
+181532	@A032@Low ISO Processing
+181582	INFO_S_NOISE_REDUCTION_MODE_1
+181642	INFO_S_NOISE_REDUCTION_MODE_2
+181702	Dial M/B
+181720	Switches AF mode/AF target mode/
+181788	AF target point according
+181842	to Fn lever position.
+181888	Target can be selected.
+181936	@A0AB@ Settings
+181968	@A0AC@Shutter button
+182010	@A0AC@Multi selector
+182052	@A0AC@Front dial
+182086	@A0AC@Rear dial
+182118	@A0AC@@A007@ button
+182158	@A0AC@@A0AD@ button
+182198	@A0AC@@A034@ button
+182238	@A0AE@Multi selector
+182280	@A0AE@Front dial
+182314	@A0AE@Rear dial
+182346	Fn Lever
+182364	@A0AF@ button
+182392	@A004@ button
+182420	@A082@ button
+182448	Touch screen
+182474	@A044@Center Button
+182514	AF Target Mode
+182544	AF Target Point
+182576	@A045@Direction Key
+182616	@A045@ :Off
+182640	INFO_JOY_CROSS_KEY_DIRECT_ON
+182698	Custom Mode C1
+182728	Custom Mode C2
+182758	Custom Mode C3
+182788	Custom Mode C4
+182818	Switches @A0A6@ on/off.
+182866	Switches @A0A7@ on/off.
+182914	Switches @A0A8@ on/off.
+182962	Switches @A0A9@ on/off.
+183010	FN_DIGITAL_ND
+183038	Switches Live ND Shooting
+183092	on/off.
+183108	@A02D@@A020@ Keep Warm Color
+183166	@A003@@A020@ Keep Warm Color
+183224	@A02D@WB
+183242	@A003@WB
+183260	@A02D@All @A03C@
+183294	@A003@All @A03C@
+183328	@A099@ MAC Address
+183366	Half Way AF
+183390	AF is activated even when the
+183452	shutter button is pressed halfway
+183522	in mode3/mode4 for S-AF or C-AF.
+183588	AF is not activated when the
+183648	shutter button is pressed halfway
+183718	in mode3/mode4 for S-AF or C-AF.
+183784	@A003@AEL/AFL
+183812	@A040@
+183826	@A03E@
+183840	@A003@Tracking Subject
+183886	Motorsports
+183910	Airplanes
+183930	Trains
+183944	Subject not specified.
+183990	Cars and motorcycles will be
+184050	detected and tracked.
+184094	Airplanes and helicopters will be
+184164	detected and tracked.
+184208	Trains will be detected and tracked.
+184282	@A02D@AF+MF
+184306	Disables the focus ring
+184356	in the auto focus mode.
+184404	Enables the focus ring
+184452	for manual focusing
+184494	in the auto focus mode.
+184542	@A003@C-AF Center Start
+184590	@A02D@C-AF Center Priority
+184644	@A003@@A0AF@Settings
+184686	@A02D@Orientation Linked @A030@
+184750	@A041@AF Target Point
+184794	@A042@AF Target Point
+184838	@A043@AF Target Point
+184882	@A041@AF Target Mode
+184924	@A042@AF Target Mode
+184966	@A043@AF Target Mode
+185008	@A0B0@Target Mode Settings
+185062	Size
+185072	Step
+185082	@A0B1@Size
+185104	@A0B2@Size
+185126	@A0B3@Size
+185148	@A0B4@Size
+185170	@A0B1@Step
+185192	@A0B2@Step
+185214	@A0B3@Step
+185236	@A0B4@Step
+185258	@A0B9@ @A099@ Connect
+185302	My Menu
+185318	No item registered.
+185360	By pressing the @A036@ button
+185422	during menu, you can register
+185484	the item to My Menu.
+185526	You can save frequently
+185576	used menu items.
+185612	Only saved items appear.
+185662	My Menu 1
+185682	My Menu 2
+185702	My Menu 3
+185722	My Menu 4
+185742	My Menu 5
+185762	Detailed settings for when
+185818	ISO sensitivity is set to AUTO
+185882	for shooting video.
+185922	Choose the white balance mode
+185984	for shooting video.
+186024	Set the same white balance
+186080	compensation in all modes
+186134	for shooting video.
+186174	To keep warm lighting colors
+186234	in auto white balance mode
+186290	for shooting video.
+186330	Playback Frame Rate
+186370	Movie will be recorded for 
+186428	x0.5 slow motion playback.
+186482	Movie will be recorded for 
+186540	x0.42 slow motion playback.
+186596	Movie will be recorded for 
+186654	x0.25 slow motion playback.
+186710	Movie will be recorded for 
+186768	x0.21 slow motion playback.
+186824	Movie will be recorded for 
+186882	x0.2 slow motion playback.
+186936	Auto ISO sensitivity is not available
+187014	when @A004@ mode is set to M.
+187074	Auto ISO sensitivity is available
+187144	when @A004@ mode is set to M.
+187204	@A003@C-AF Speed
+187238	Selects the focusing speed
+187294	for C-AF for shooting video.
+187352	@A003@C-AF Sensitivity
+187398	Adjust C-AF lock sensitivity
+187458	depending on the movement of
+187518	your subject for shooting video.
+187584	Fast
+187594	Slow
+187604	@A027@IS Level
+187634	Sets the IS level for shooting video.
+187712	Select Low for smoother
+187762	movement when panning.
+187808	@A03D@View Assist
+187844	When set to On, brightness
+187900	and colors are adjusted
+187950	for optimal viewing during @A03D@.
+188020	The image will appear in
+188072	the selected picture mode.
+188126	Image converted to BT.709
+188180	equivalent for display.
+188230	Differs from recorded image.
+188288	The PCM recorder will create
+188348	a slate tone when the @A083@button is
+188426	pressed and held down
+188472	during video recording.
+188520	Recording Rate
+188550	Selects the sound quality.
+188604	My Menu is full.
+188638	Added to My Menu.
+188674	Move to the new position.
+188726	Remove this item
+188760	Remove this @A0AE@ tab
+188806	The selected item will be removed
+188876	from My Menu.
+188904	All items in the selected @A0AE@ tab
+188980	will be removed from My Menu.
+189040	Rearrange Order
+189072	Select My Menu to add.
+189118	@A0B3@ Battery
+189148	@A0B4@ Battery
+189178	After the battery in @A0B3@ is exhausted,
+189264	the battery in @A0B4@ will be used.
+189336	After the battery in @A0B4@ is exhausted,
+189422	the battery in @A0B3@ will be used.
+189494	Calibrate Elevation
+189534	Please set current elevation.
+189594	Elevation/Temperature
+189638	TEMPERATURE_UNIT
+189672	ELEVATION_UNIT
+189702	Select slot to save
+189742	@A078@Saving log files
+189788	@A079@Saving log files
+189834	@A0BD@Saving log files
+189880	@A078@Card log capacity is full
+189944	@A079@Card log capacity is full
+190008	Press-and-hold @A083@ during video 
+190082	recording and the PCM recorder
+190146	inserts a slate tone.
+190190	Connection to smartphone
+190242	or access point using
+190288	the wireless functions.
+190336	Takes and combines multiple
+190394	pictures to create a super high 
+190462	resolution image.
+190498	Enables slow shutter
+190542	as if using the ND filter.
+190596	A4. AF/MF
+190616	B1. Button/Dial/Lever
+190660	B2. Button/Dial/Lever
+190704	J3. @A003@ Utility
+190742	@A02D@C-AF Sensitivity
+190788	Registers the default 
+190836	AF mode/AF target mode/
+190886	AF target point.
+190920	Adjust C-AF lock sensitivity
+190980	depending on the movement of
+191040	your subject for still photography.
+191112	The items where @A03E@ is selected
+191184	will appear when selecting AF
+191246	target mode for still photography.
+191316	Select On to allow manual
+191370	focusing in all AF modes
+191422	for still photography.
+191468	For @A03E@ selected in @A0AF@,
+191532	C-AF/C-AF+TR operates
+191578	in the center area of the area.
+191642	For @A025@ selected in @A03E@, the
+191714	center of the area takes priority
+191784	over other points when in C-AF.
+191848	Set the target area size
+191900	and the step cursor position
+191960	when moving.
+191986	In still photography, items where @A025@
+192070	is selected can be set separately
+192140	for horizontal or vertical positions.
+192216	Select the tracking subject
+192274	for still photography.
+192322	Valid in C-AF+TR.
+192358	Select function to assign
+192412	to @A044@ center button of
+192468	the multi selector for shooting.
+192534	Select function to assign
+192588	to @A045@ direction key of
+192644	the multi selector for shooting.
+192710	During @A0AB@, operations
+192764	that have been set to @A03E@
+192824	are disabled.
+192852	Choose the controls displayed
+192914	when the @A083@ is pressed
+192970	for still photography.
+193016	Reducing flicker
+193052	by setting power frequency.
+193108	Detailed settings for when
+193164	ISO sensitivity is set to AUTO
+193228	for still photography.
+193274	Choose the shooting modes
+193328	in which auto ISO sensitivity
+193390	is available for still photography.
+193462	Selects low ISO speed 
+193510	image processing method 
+193562	for still photography.
+193608	Choose the white balance mode
+193670	for still photography.
+193716	Set the same white balance
+193772	compensation in all modes
+193826	for still photography.
+193872	To keep warm lighting colors
+193932	in auto white balance mode
+193988	for still photography.
+194034	Adjust elevation and
+194078	temperature settings.
+194122	Field Sensor Logger
+194162	Acquires field sensor information
+194232	and saves to the card as log file.
+194302	Start Log
+194322	Stop Log
+194340	Save Log
+194358	Running
+194374	Stopped
+194390	@A002@Stopped
+194422	ft
+194428	Abu Dhabi
+194448	Adelaide
+194466	Alaska
+194480	Anchorage
+194500	Athens
+194514	Auckland
+194532	Azores
+194546	Bangkok
+194562	Beijing
+194578	Berlin
+194592	Buenos Aires
+194618	Cairo
+194630	Casablanca
+194652	Chennai
+194668	Chicago
+194684	Colombo
+194700	Delhi
+194712	Denver
+194726	Dhaka
+194738	Dubai
+194750	Fernando de Noronha
+194790	Fiji
+194800	Guam
+194810	Hawaii
+194824	Helsinki
+194842	Hong Kong
+194862	Honolulu
+194880	Houston
+194896	Islamabad
+194916	Jakarta
+194932	Johannesburg
+194958	Kabul
+194970	Karachi
+194986	Kathmandu
+195006	Kolkata
+195022	Kuala Lumpur
+195048	Kuwait
+195062	La Paz
+195076	Lima
+195086	London
+195100	Los Angeles
+195124	Madrid
+195138	Male
+195148	Manaus
+195162	Mexico City
+195186	Miami
+195198	Midway Islands
+195228	Moscow
+195242	Mumbai
+195256	Nairobi
+195272	New Caledonia
+195300	New York
+195318	Newfoundland
+195344	Paris
+195356	Phoenix
+195372	Rio de Janeiro
+195402	Riyadh
+195416	Rome
+195426	Samoa
+195438	Sao Paulo
+195458	Seattle
+195474	Seoul
+195486	Singapore
+195506	Solomon Islands
+195538	Sydney
+195552	Tahiti
+195566	Taipei
+195580	Tehran
+195594	Tokyo
+195606	Toronto
+195622	Vancouver
+195642	Wellington
+195664	Yangon
+195678	UTC
+195686	ART16
+195698	FHD HighSpeed 120fps
+195740	ND32(5EV)
+195760	ND16(4EV)
+195780	ND8(3EV)
+195798	ND4(2EV)
+195816	ND2(1EV)
+195834	LV OFF-Info
+195858	ISO L64
+195874	ISO L80
+195890	ISO L100
+195908	ISO L125
+195926	ISO L160
+195944	@A0D1@LOCK
+195966	@A0AE@@A010@
+195992	@A0AE@@A0AD@
+196018	@A0AE@@A007@
+196044	@A0AE@@A03F@
+196070	@A0AE@@A03C@
+196096	@A0AE@@A0CB@
+196122	@A0AE@@A034@
+196148	@A0AE@@A0CC@
+196174	@A0AE@@A0CD@
+196200	@A0AE@@A0CE@
+196226	@A0AE@@A0CF@
+196252	@A0AE@@A0D0@
+196278	@A0AC@@A0AD@
+196304	@A0AC@@A007@
+196330	@A0AC@@A034@
+196356	@A0AC@@A0CF@
+196382	@A0AC@@A0D0@
+196408	S-AF@A06E@
+196430	C-AF@A06E@
+196452	C-AF+TR@A06E@
+196480	USB PD
+196494	@A0C8@PC RAW
+196520	96kHz/24bit
+196544	48kHz/16bit
+196568	COMM_MODE_B
+196592	Connection Setup
+196626	Follow next steps to connect to a
+196696	device. This setup is required
+196760	only once. @A099@/Bluetooth will be
+196834	activated during the setup.
+196890	Please install the OI.Share app
+196956	to your device.
+196990	Press @A037@ once installation is
+197060	complete.
+197080	Scan the QR code, using
+197130	the OI.Share app.
+197166	Initiating...
+197194	Disconnecting...
+197228	Disconnect@A018@
+197262	Device Connection
+197298	Connect to a device.
+197340	Connection Details@A01A@
+197390	Device Connection
+197426	Access Point Connection
+197474	Searching for access point...
+197534	Connecting to the access point...
+197602	Connect by WPS
+197632	Connect from Access Point List
+197694	Connect manually
+197728	Detail Settings
+197760	Not available now
+197796	Some images have not
+197840	been transferred.
+197876	PBC Method
+197898	PIN Method
+197920	Connect by pressing WPS button
+197984	on the access point.
+198026	Connect by entering PIN code
+198086	on the access point.
+198128	Press WPS button
+198164	on the access point.
+198208	Connection starts
+198246	after you press @A038@.
+198294	Enter PIN code displayed above
+198358	on the access point.
+198402	Connection starts
+198440	after you press @A038@.
+198488	Initial configuration is required 
+198560	to connect to PC using @A099@.
+198624	Follow instructions in OLYMPUS
+198688	Capture. Initial configuration is
+198758	required for each computer.
+198814	RESULT_WPS_NG
+198842	Connection failed
+198878	Access point not found
+198924	@A099@ is running
+198960	Disconnect
+198982	Maintain
+199000	Password
+199018	Select PC to connect
+199060	Delete
+199074	Delete connection settings from
+199140	the camera for this access point.
+199208	IP_SETTING
+199230	IP Address
+199252	Subnet Mask
+199276	Default Gateway
+199308	IP Address Assign
+199344	Auto(DHCP)
+199366	Manual
+199380	Update Settings
+199412	Available when the access point
+199478	supports DHCP function.
+199528	IP address will be assigned
+199586	automatically.
+199616	Input IP address manually.
+199670	Authentication
+199700	None
+199710	Start Connection
+199744	Access point not found
+199790	Search again@A04C@
+199828	@A0BA@@A03F@/@A01B@@A01C@
+199880	@A0BA@@A03F@
+199906	Connect@A019@
+199934	Close@A018@
+199958	PC connection started
+200002	PC connection ended
+200042	Camera is connected to PC.
+200096	Connection to PC terminated.
+200154	@A002@ Disconnected from PC.
+200214	Please check the PC status.
+200270	@A002@ Disconnected from the network.
+200348	Please check @A099@ status and
+200412	connect to the access point again.
+200482	@A03C@ Flat
+200506	DNS
+200514	WPA2
+200524	Tripod
+200538	Handheld
+200556	Cancel transferring images to PC
+200624	and disconnect.
+200656	High
+200666	Low
+200674	By pressing @A045@ during shooting,
+200748	you can select the AF target area.
+200818	NOISE_REDUCTION_STANDARD
+200868	NOISE_REDUCTION_QUALITY
+200916	INFO_S_NOISE_REDUCTION_STANDARD
+200980	INFO_S_NOISE_REDUCTION_QUALITY
+201042	M/B
+201050	@A0E1@
+201064	@A104@
+201078	@A030@Select Screen Settings
+201136	S_NOISE_REDUCTION_LEVEL
+201184	m/ft
+201194	@A0D3@/@A0D4@
+201222	Charge
+201236	Drive Priority
+201266	Detail Priority
+201298	At low ISO speeds,
+201338	maximum recordable
+201378	sequential shooting frames
+201434	take priority in image processing
+201504	for still photography.
+201550	At low ISO speeds,
+201590	image details take priority
+201648	in image processing
+201690	for still photography.
+201736	@A07E@ OM-Log400
+201770	@A003@@A0A4@ @A09E@
+201810	@A004@@A0A4@ @A09E@
+201850	2h
+201856	5h
+201862	@A038@@A036@Function
+201904	Select function to assign
+201958	to @A036@ during playback.
+202012	@A044@ Settings
+202044	@A017@ Settings
+202076	@A0BB@AF AEL/AFL
+202110	Starry Sky AF is Running
+202160	Starry Sky AF
+202188	Starry Sky AF + MF
+202226	Starry Sky AF Setting
+202270	Choose a mode for
+202308	Starry Sky AF.
+202338	Accuracy
+202356	Speed
+202368	AF accuracy is prioritized
+202424	over AF speed.
+202456	Processing time is required
+202514	until AF is completed.
+202560	AF speed is prioritized
+202610	over AF accuracy.
+202646	Focus Ring Lock
+202678	Disables the focus ring
+202728	in manual focus mode.
+202774	Press again to return.
+202820	Live View Boost
+202852	Switches Live View Boost On/Off.
+202920	Press down and turn dial to
+202978	select the settings.
+203020	Live View Boost On1
+203068	Custom Mode Save Settings
+203120	Hold
+203130	Reset
+203142	While shooting in custom mode,
+203206	changed settings are automatically
+203278	saved.
+203292	While shooting in custom mode,
+203356	changed settings are not saved.
+203420	@A045@Face Selection
+203462	Press button to select a face
+203524	close to the selected AF target point.
+203604	Press down button and turn dial
+203670	to select manually.
+203710	@A04F@Face Priority
+203750	Switches @A008@Face Priority On/Off.
+203826	Press down and turn dial to
+203884	select the settings.
+203926	Face Priority AF
+203968	@A030@ Loop Settings
+204010	Settings for cursor
+204052	movement in the AF target
+204106	selection screen.
+204142	@A030@ Loop Selection
+204186	Loop 1
+204200	Loop 2
+204214	Stops after moving the AF target
+204282	to the edge.
+204308	Moves the AF target
+204350	to the opposite end
+204392	of the same row or column
+204446	after moving the AF target
+204502	past the edge.
+204532	Moves the AF target
+204574	to the opposite end
+204616	of the next row or column
+204670	after moving the AF target
+204726	past the edge.
+204756	Via @A046@
+204778	@A046@ will be selected
+204828	before moving the AF target
+204886	to the opposite end.
+204928	@A046@ will not be selected
+204986	before moving the AF target
+205044	to the opposite end.
+205086	RAW+JPEG @A047@
+205118	Preselects only JPEG
+205162	to transfer to a device
+205212	when set to RAW+JPEG.
+205256	Preselects only RAW
+205298	to transfer to a device
+205348	when set to RAW+JPEG.
+205392	Preselects both RAW+JPEG
+205444	to transfer to a device
+205494	when set to RAW+JPEG.
+205538	Focus Indicator
+205570	The focus indicator will not appear
+205644	when the focus ring is rotated
+205708	in MF mode.
+205732	The focus direction and position
+205800	will appear when the focus ring is
+205872	rotated in MF mode. This function
+205942	helps you to adjust the focus.
+206004	Live Composite Timer
+206046	Set the maximum time
+206090	for composite shooting.
+206138	3h
+206144	6h
+206150	Shooting Information
+206192	@A050@Lock
+206214	Select On to disable @A050@.
+206272	Press button to 
+206308	activate AEL.
+206336	Displays frame while shutter
+206396	button is half-pressed.
+206446	The frame will be always displayed
+206518	in movie shooting mode. (@A0BC@, C-AF)
+206596	By pressing the @A03F@ button
+206658	during menu, you can register
+206720	the item to My Menu.
+206762	@A06F@AF
+206780	@A06F@AF@A06E@
+206810	AEL/@A0BB@AF
+206836	@A0BB@AF Start/Stop
+206876	AF is prioritized for
+206922	detected faces.
+206954	AF is prioritized for the selected
+207026	target point even when
+207074	faces are detected.
+207114	Live View Boost Off
+207154	Live View Boost On2
+207194	Transfer Preselection:
+207242	Preselect images to transfer
+207302	to a device.
+207328	Multiple Image Selection:
+207382	Choose multiple images to
+207436	apply a certain action to,
+207492	such as protecting or deleting.
+207556	Enable the eye sensor
+207602	when the monitor is closed.
+207660	@A03C@: live view On/Off.
+207712	RAW Mode
+207730	Outputs video by RAW format
+207788	to a supported device.
+207836	Can not be recorded
+207878	to the card in camera.
+207924	Interval Shooting
+207960	Pro Capture
+207984	Keystone Compensation
+208028	Running
+208044	Bluetooth
+208064	Birds
+208076	On@A048@
+208094	On@A049@
+208112	Deactivates Bluetooth.
+208160	Bluetooth is always deactivated
+208226	while power is on.
+208264	Pairing failed.
+208296	Pairing is complete.
+208340	Bluetooth setting is changed to On@A048@.
+208424	Pairing in progress.
+208468	Please perform pairing operation
+208536	on the wireless shutter release.
+208602	Delete the paired device.
+208656	Pairing is required again
+208710	when using the wireless shutter.
+208776	Start Pairing
+208804	Delete Pairing
+208834	Executing reset,
+208870	reset all the functions except date,
+208946	language and some settings.
+209002	Each arrow pad button can
+209056	be assigned a direct
+209100	function when they are
+209148	pressed while shooting.
+209196	When shutter button is pressed
+209260	halfway, the enlarged live view
+209326	ends and the enlargement
+209378	frame will be displayed.
+209428	When shutter button is pressed
+209492	halfway, auto focus will work
+209554	while in the enlarged live view.
+209620	Sets waiting time to record
+209678	the first picture after the shutter
+209752	button is pressed.
+209790	Image Stabilizer functions in
+209852	all directions
+209884	by detecting camera movement.
+209944	Vertical Stabilization only.
+210004	Hold the camera horizontally and
+210072	shoot while panning horizontally.
+210140	Horizontal Stabilization only.
+210204	Hold the camera vertically and
+210268	shoot while panning horizontally.
+210336	Camera chooses Stabilizer setting
+210406	by detecting camera movement.
+210466	The subject outline will appear
+210532	when the focus ring is rotated
+210596	in MF mode. This function helps
+210662	you adjust the focus.
+210706	Puts program shift control by dial
+210778	in the same direction as S.S.
+210840	when in S mode.
+210872	Puts program shift control by dial
+210944	is the same direction as aperture
+211014	when in A mode.
+211046	Press to activate
+211084	level display.
+211116	Press again to deactivate.
+211172	Effective in @A023@.
+211214	Takes 4 pictures at once
+211266	at different exposures and
+211322	composites automatically into
+211384	a high contrast image.
+211430	Takes 4 pictures at once
+211482	at different exposures and
+211538	composites automatically into
+211600	a super-high contrast image.
+211658	Exposure time per image.
+211710	Exposure time and aperture
+211766	will determine your base exposure.
+211836	By holding down the button, 
+211896	autofocus will be deactivated 
+211960	and the focus will be fixed 
+212020	at the point the button is pressed.
+212092	Press to show the subject
+212146	outline for adjusting the focus.
+212214	And press again to hide the outline.
+212288	Hold button: to lock/unlock
+212346	touch panel operation
+212392	while in shooting mode.
+212440	Press arrowpad keys to
+212488	change zoom position
+212532	when using electronic
+212578	zoom lens.
+212600	Select time between shutter
+212658	release for flash recharge.
+212716	This setting is not necessary
+212778	when using the dedicated flash.
+212842	Image stabilization performed
+212904	both by sensor shift and 
+212958	digitally.
+212980	Image stabilization performed
+213042	only by sensor shift, and not
+213104	digitally.
+213126	Movie will be recorded for 
+213184	standard-speed playback.
+213234	Movie will be recorded for 
+213292	slow motion playback.
+213338	Sound will not be recorded.
+213394	Movie will be recorded for 
+213452	fast motion playback.
+213498	Sound will not be recorded.
+213554	Adjusts for time difference vs.
+213620	actual recording time.
+213668	Used in advanced editing when
+213730	extreme accuracy of time is required.
+213806	Will adjust Live View image 
+213866	brightness to enhance highlight 
+213934	visibility. Brightness of Live View 
+214010	image and final image will differ. 
+214082	Noise reduction will work even 
+214148	during silent shooting. Shutter 
+214216	sound will be heard during the
+214280	noise reduction preparation process.
+214354	Switches between Live View and
+214418	Super Control Panel.
+214462	When eye sensor is disabled, switches
+214540	between EVF and rear monitor.
+214600	Switches IS On/Off.
+214642	Press down and turn dial to
+214700	switch between IS modes.
+214750	Switches AF Limiter On/Off.
+214808	Press down and turn dial to
+214866	select distance.
+214900	Assigns following shooting modes:
+214970	Position 1: follows Mode Dial setting.
+215050	Position 2: @A003@mode.
+215098	Use Fn Lever for designated
+215156	functions. Use power switch
+215214	to control power.
+215250	Assign power to Fn Lever as follows:
+215326	Position 1: Power On
+215370	Position 2: Power Off
+215416	Power Lever is disabled.
+215466	Assign power to Fn Lever as follows:
+215542	Position 1: Power Off
+215588	Position 2: Power On
+215632	Power Lever is disabled.
+215682	Outputs video and info display
+215746	to the device. This mode is 
+215806	recommended when to using the
+215868	device as a monitor.
+215910	Outputs video only, with no
+215968	info display. This mode is 
+216026	recommended when recording
+216082	video with the device.
+216128	Outputs video by RAW format
+216186	to a supported device.
+216234	Can not be recorded
+216276	to the card in camera.
+216322	During LV Close Up, brightness is
+216392	adjusted for easy confirmation.
+216456	During LV Close Up, brightness is
+216526	not adjusted and the display is the
+216600	same brightness as prior to LV
+216664	Close Up.
+216684	During preview, brightness is
+216746	adjusted for easy confirmation.
+216810	During preview, brightness is
+216872	not adjusted and the display is the
+216946	same brightness as prior to preview.
+217020	When shutter speed reaches the 
+217086	designated lowest figure, ISO
+217148	sensitivity will begin to rise.
+217214	Valid in P or A mode.
+217258	Saves to both cards applying 
+217320	their respective settings. 
+217378	If one card becomes full, the
+217440	other cannot be saved to either.
+217506	Saves to both cards applying 
+217568	their respective settings. 
+217626	Even if one card becomes full,
+217690	the other can still be saved to.
+217756	Saves to both cards applying same 
+217828	@A030@@A01A@settings.
+217874	If one card becomes full, the
+217936	other cannot be saved to either.
+218002	Saves to both cards applying same 
+218074	@A030@@A01A@settings.
+218120	Even if one card becomes full,
+218184	the other can still be saved to.
+218250	Press-and-hold designated button
+218318	ends Live View close up or ends
+218384	display of Live View close up frame.
+218458	Press-and-hold @A032@ button
+218518	returns @A030@ to center of
+218576	AF target select screen.
+218626	Press-and-hold @A032@ button
+218686	returns close up frame to
+218740	center of Live View screen.
+218796	When @A011@ is assigned to a dial,
+218868	press-and-hold @A032@ button returns
+218944	exposure compensation value to
+219008	default at the shooting standby screen.
+219088	Press-and-hold @A032@ button 
+219150	returns Highlight & Shadow Control
+219222	settings to default at the setting
+219294	screen.
+219310	Press-and-hold @A032@ button
+219370	returns keystone comp.
+219418	settings to default
+219460	at the setting screen.
+219506	Press-and-hold @A032@ button
+219566	returns flash intensity settings
+219634	to default at the shooting standby
+219706	when @A010@ is assigned to the dial.
+219780	Press-and-hold button assigned
+219844	to @A026@Lock switches @A026@Lock
+219914	on/off.
+219930	Press-and-hold button
+219976	assigned to @A024@ pulls up
+220034	the @A024@auto switch settings screen.
+220112	Select whether or not to activate
+220182	Power-off Standby each time
+220240	the power is turned off.
+220290	Transfer Preselection:
+220338	Preselect images to transfer
+220398	to a device.
+220424	Multiple Image Selection:
+220478	Choose multiple images to
+220532	apply a certain action to,
+220588	such as protecting or deleting.
+220652	Press to start Flicker Check.
+220714	Quit by holding button down.
+220774	Valid on S or M mode.
+220818	Slow shutter speed effect
+220872	can be seen in Live View.
+220926	Differs from final image.
+220978	At low ISO speeds,
+221018	maximum recordable sequential
+221080	shooting frames take priority in image
+221160	processing for still photography.
+221228	At low ISO speeds,
+221268	image details take priority in image
+221344	processing for still photography.
+221412	Switches AF mode/AF target mode/
+221480	AF target point according
+221534	to Fn lever position.
+221580	Target can be selected.
+221628	Available when the access point
+221694	supports DHCP function.
+221744	IP address will be assigned
+221802	automatically.
+221832	AF accuracy is prioritized
+221888	over AF speed.
+221920	Processing time is required
+221978	until AF is completed.
+222024	Disables the focus ring
+222074	in manual focus mode.
+222120	Press again to return.
+222166	Switches Live View Boost On/Off.
+222234	Press down and turn dial to
+222292	select the settings.
+222334	While shooting in custom mode,
+222398	changed settings are automatically
+222470	saved.
+222484	Press button to select a face
+222546	close to the selected AF target point.
+222626	Press down button and turn dial
+222692	to select manually.
+222732	Switches Face & Eye Detection On/Off.
+222810	Press down and turn dial to
+222868	select the settings.
+222910	Moves the AF target to the opposite
+222984	end of the same row or column after
+223058	moving the AF target past the edge.
+223130	Moves the AF target to the opposite
+223204	end of the next row or column after
+223278	moving the AF target past the edge.
+223350	The focus direction and position
+223418	will appear when the focus ring is
+223490	rotated in MF mode. This function
+223560	helps you to adjust the focus.
+223622	Activates Bluetooth.
+223666	Bluetooth is always activated
+223728	for wireless shutter release
+223788	while power is on.
+223826	Activates Bluetooth.
+223870	Bluetooth is always activated for
+223940	smartphones
+223966	while power is on.
+224004	Connect from @A053@ List
+224054	Connect manually
+224088	Card Error
+224110	@A02C@Card Error
+224144	@A02D@Card Error
+224178	@A02C@/@A02D@Card Error
+224226	Write Protect
+224254	@A02C@Write Protect
+224294	@A02D@Write Protect
+224334	@A02C@/@A02D@Write Protect
+224388	Focus stacking error.
+224434	Image composite failed.
+224482	High res shot error.
+224526	Image composite failed.
+224574	Composite Settings
+224612	Save Settings
+224640	Recall
+224654	Assign
+224668	Live ND Shooting : ND2(1EV)
+224724	Live ND Shooting : ND4(2EV)
+224780	Live ND Shooting : ND8(3EV)
+224836	Live ND Shooting : ND16(4EV)
+224894	Live ND Shooting : ND32(5EV)
+224952	Live ND Shooting : ND64(6EV)
+225010	Live View Boost Off
+225050	Brighten Area Adjust
+225092	Shadow Area Adjust
+225130	Midtone Area Adjust
+225170	PC connection started
+225214	PC connection ended
+225254	Wireless Shutter Setting
+225304	Please check the status of a lens.
+225374	Please extend the lens.
+225422	Connection Setup
+225456	Starry Sky AF is Running
+225506	Starry Sky AF
+225534	Starry Sky AF + MF
+225572	Switched to New Folder
+225618	Preparing for composite shooting.
+225688	Please stand by.
+225722	Loop 1
+225736	Loop 2
+225750	Firmware Update
+225782	Use genuine battery.
+225824	Blur Effect: Left and Right
+225880	Blur Effect: Top and Bottom
+225936	Shade Effect: Left and Right
+225994	Shade Effect: Top and Bottom
+226052	Even if the subject appears unclear
+226126	or if contrast is low, the AF Scanner
+226204	will not be activated.
+226250	Playback Frame Rate
+226290	Monitor
+226306	Record
+226320	RAW
+226328	Metering during @A04A@
+226374	AF Focus Adjustment
+226414	Fine-tuning Value
+226450	No
+226456	@A02D@Face & Eye AF Button
+226510	Yes
+226518	AF Illuminator
+226548	@A04B@ in MF mode
+226584	@A02D@AF Target Mode Settings
+226644	Airplane Mode
+226672	All Battery Information
+226720	Erase All
+226740	Anti-Shock@A029@ Settings
+226792	ART BKT Setting
+226824	@A027@@A04A@Display Pattern
+226880	@A056@Battery Priority
+226926	@A04A@Battery Status
+226968	BULB/TIME/COMP Settings
+227016	Button Settings
+227048	Anti-Shock Custom Self-timer
+227106	Silent Custom Self-timer
+227156	Call ART BKT Setting
+227198	Call Focus BKT Setting
+227244	Call @A04C@ Setting
+227284	Call WB BKT Setting
+227324	Reset Shooting Settings
+227372	Initialize All Settings
+227420	Card Formatting
+227452	Format Card
+227476	Do you really want to delete images
+227550	with rating flags?
+227588	@A002@ Execute Card Formatting
+227650	@A002@ All recorded images and data
+227724	will be deleted.
+227758	@A002@ Videos which have a file
+227824	size of over 4 GB cannot be copied.
+227896	@A002@ Deletes all automatically
+227964	separated files of single movie.
+228030	@A002@ Reset all existing print orders
+228108	@A002@ Delete all images
+228160	excluding protected images
+228214	@A002@ Delete all images
+228266	excluding protected images or
+228328	images with rating flags
+228378	Removes all items of the selected page
+228458	from My Menu.
+228486	@A002@ Reset all existing protection
+228560	@A002@ Reset all existing ratings
+228628	Sets Rating for selected images.
+228696	Overwrites if already set.
+228750	Clears Rating of selected images.
+228818	@A002@ Resets all settings and
+228882	connection information in
+228936	Device Connection Settings
+228990	@A002@ Resets all 
+229030	Wi-Fi PC connection settings and
+229098	connection information.
+229146	@A002@ Included videos which have a file 
+229232	size of over 4 GB cannot be copied.
+229304	@A002@ Reset all existing image transfer
+229388	preselections
+229416	Center Marker
+229444	Color Space
+229468	Page Cursor Position
+229510	Custom Mode
+229534	Eye Detection Frame
+229574	Dial Settings
+229602	@A04D@ Loop in Menu Tab
+229652	High Res Shot Handheld
+229698	High Res Shot Off
+229734	High Res Shot Tripod
+229782	Monitor Position
+229816	Date and Time not set
+229860	@A04E@ Initial Setting not performed
+229934	Wi-Fi connection in progress
+229994	The wireless shutter is unpaired
+230060	The wireless shutter is paired
+230124	HDMI Output in RAW mode
+230172	USB @A05A@
+230194	Power is being supplied from USB
+230260	Saving to Card in progress
+230314	No Picture
+230336	No Card
+230352	@A02C@Protected
+230384	@A02D@Protected
+230416	@A02C@No Card
+230444	@A02D@No Card
+230472	@A02C@Error
+230496	@A02D@Error
+230520	Currently in use
+230554	Lens not supported
+230592	Unable to obtain lens data
+230646	AF disabled by Lens
+230686	Lens IS Switch
+230716	Lens Focus Limit Switch
+230764	Lens not extended/Lens Error
+230822	This item cannot be selected 
+230884	for the following reason.
+230936	Depends on the access point
+230992	There is an unentered item
+231046	Reached Maximum Count
+231090	No Folder
+231110	Reached Maximum Count
+231154	Character Count Insufficient
+231212	Camera Settings or Status
+231264	Behavior when switched
+231310	Maintain Screen
+231342	Shooting Screen
+231374	Reset Print Orders
+231412	Pro Capture SH1
+231444	Pro Capture SH2
+231476	Anti-Shock Sequential
+231520	High-speed Sequential SH1
+231572	High-speed Sequential SH2
+231624	Silent Sequential
+231660	Sequential Shooting Settings
+231718	Anti-Shock Single
+231754	Silent Single
+231782	Electronic Zoom Settings
+231832	Erase
+231844	Estimated Time
+231874	EVF Auto Luminance Off
+231920	EVF Auto Luminance On
+231964	@A023@@A02D@Info Settings
+232016	@A023@Style 1
+232044	@A023@Style 2
+232072	@A04F@Style 3
+232100	@A023@@A02D@Grid Settings
+232152	Exposure Level Meter
+232194	Exposure Comp.
+232224	Exposure Smoothing
+232262	Waiting Time
+232288	Eye Sensor Settings
+232328	When Monitor is Opened
+232374	Face & Eye Detection
+232416	Face & Eye Detection Off
+232466	Face Detection On
+232502	Face & Eye Detection On
+232550	Face & Right Eye Detection On
+232610	Face & Left Eye Detection On
+232668	Date (mdd)
+232690	@A050@ Date (mdd)
+232726	Directory Number
+232760	@A051@ Directory Number
+232808	Manual
+232822	Firmware Version
+232856	Manual
+232870	Flash Exposure Comp.
+232912	Flash Mode Settings
+232952	Synchro Settings
+232986	First Curtain
+233014	Second Curtain
+233044	LV Mode
+233060	@A01F@Lock
+233082	Distance for On1
+233116	Distance for On2
+233150	Distance for On3
+233184	Focus Stacking
+233214	Handheld Assist
+233246	@A052@ dial
+233270	@A023@@A053@ Level Gauge
+233320	HDMI Settings
+233348	@A054@@A01A@
+233374	Displays the green target frame
+233440	while AF Lock or
+233476	C-AF/C-AF+TR is running.
+233526	Enables
+233544	Wi-Fi/Bluetooth communication.
+233606	Disables
+233626	Wi-Fi/Bluetooth communication.
+233690	Forces termination
+233730	even if communication is in progress.
+233806	Hides anti-shock shooting mode
+233870	at @A00E@/@A00F@ select screen.
+233934	Shows the anti-shock shooting mode
+234006	on the @A00E@/@A00F@ selection screen. When 
+234098	shutter speed is under 1/320, camera
+234174	switches to the electronic shutter.
+234246	Sets the time to wait before 
+234308	starting shooting after the button
+234380	is pressed in the anti-shock mode.
+234450	Suitable for recording long videos.
+234524	Motion compensation is enabled.
+234588	Suitable for recording videos for 
+234660	post-production. Motion compensation
+234736	is disabled. File size tends to be large.
+234820	Captures images using
+234866	custom self-timer settings.
+234924	Reduces blur from shutter actuation.
+234998	Captures images silently
+235050	using the electronic shutter with
+235120	custom self-timer settings.
+235176	Press-and-hold button
+235222	assigned to ART BKT pulls up
+235282	its setting screen.
+235322	Press-and-hold button
+235368	assigned to Focus BKT pulls up
+235432	its setting screen.
+235472	Press-and-hold button
+235518	assigned to Focus Stacking pulls up
+235592	its setting screen.
+235632	Press-and-hold button
+235678	assigned to WB BKT pulls up
+235736	its setting screen.
+235776	Does not save the cursor position
+235846	for each page. When the page 
+235908	is changed, the cursor is positioned
+235984	at the top of the page.
+236032	Saves the cursor position
+236086	for each page. When the
+236136	page is changed, the cursor 
+236196	returns to the most recent position.
+236270	Hides the detection frame of
+236330	detailed parts like eyes or the cockpit
+236412	when a face or subject is detected.
+236484	Shows the detection frame of 
+236546	detailed parts like eyes or the cockpit
+236628	when a face or subject is detected.
+236700	Switches the pages 
+236742	across the menu tabs 
+236788	when @A04D@ is turned.
+236834	Switches the pages only 
+236886	within the same menu tab 
+236940	when @A04D@ is turned.
+236986	Maintains the displayed
+237036	playback or menu screen
+237086	when you look through the EVF.
+237148	Displays Live View
+237188	and immediately prepares for shooting
+237266	when you look through the EVF.
+237328	Capture starts @A055@ when @A053@ is half-
+237416	pressed. Records images when @A053@ 
+237492	is fully pressed, including those 
+237564	captured while @A053@ is half-pressed.
+237642	Capture starts @A055@ when @A052@ is half-
+237730	pressed. Records images when @A052@ 
+237806	is fully pressed, including those 
+237878	captured while @A052@ is half-pressed.
+237956	Capture starts @A056@ when @A052@ is half-
+238044	pressed. Records images when @A052@ 
+238120	is fully pressed, including those 
+238192	captured while @A052@ is half-pressed.
+238270	Captures sequential images.
+238328	Reduces blur from shutter actuation.
+238402	Captures high-speed sequential images
+238480	using the electronic shutter.
+238542	AF and metering are fixed
+238596	during shooting.
+238630	Captures high-speed sequential 
+238696	images using the electronic shutter
+238770	when the corresponding lens is 
+238836	attached. AF and metering are enabled.
+238914	Captures sequential images silently
+238988	by using the electronic shutter.
+239054	Captures sequential images.
+239110	Captures an image.
+239148	Captures an image.
+239188	Reduces blur from shutter actuation.
+239262	Captures an image silently
+239318	by using the electronic shutter.
+239384	Shooting exposure for each frame 
+239454	uses the metering result for that frame.
+239536	Standardizes the shooting exposure
+239608	for all frames. Smoothens 
+239664	the luminance changes 
+239712	in rendered timelapse videos.
+239772	Disables the eye sensor
+239822	when the monitor is flipped open.
+239890	Enables the eye sensor
+239938	when the monitor is flipped open.
+240008	Effects of flicker such as uneven
+240078	exposures and colors will be
+240138	reduced. The shutter release time
+240208	lag may become longer.
+240254	Press to switch
+240288	AE BKT On/Off.
+240320	Turn the dial while pressing the button
+240402	to change the setting.
+240448	By holding down the button, 
+240508	autofocus will be activated.
+240566	Press to switch
+240600	ART BKT On/Off.
+240634	Hold the button down to
+240684	configure detailed settings.
+240742	Switches C1 on/off.
+240782	Switches C2 on/off.
+240822	Switches C3 on/off.
+240862	Switches C4 on/off.
+240904	Press to switch
+240938	FL BKT On/Off.
+240970	Turn the dial while pressing the button
+241052	to change the setting.
+241098	Press to switch
+241132	Focus BKT On/Off.
+241170	Hold the button down to
+241220	configure detailed settings.
+241278	Press to switch
+241312	Focus Stacking On/Off.
+241360	Hold the button down to 
+241412	configure detailed settings.
+241470	Press to switch
+241504	High Res Shot On/Off.
+241550	Turn the dial while pressing the button
+241632	to change the setting.
+241678	Push to switch to designated
+241738	default @A030@.
+241770	Press to switch
+241804	ISO BKT On/Off.
+241838	Turn the dial while pressing the button
+241920	to change the setting.
+241966	Press to switch
+242000	to @A02C@ LV Mode.
+242038	Press to switch
+242072	@A03D@ View Assist On/Off.
+242128	This setting can also be 
+242182	switched during video recording.
+242248	Press to switch the Digital
+242306	Tele-Converter to 1.4x enlarged. Press
+242386	again to return. This setting can also
+242466	be enabled during video recording.
+242536	Press to switch
+242570	Subject Detection On/Off.
+242624	Turn the dial while pressing the button
+242706	to change the setting.
+242752	Press to switch
+242786	JPEG @A056@ RAW+JPEG.
+242832	Turn the dial while pressing the button
+242914	to change the image quality.
+242972	When WB Mode is @A01F@,
+243022	press to lock the white balance value.
+243102	Press again to unlock the value.
+243168	Press to switch
+243202	WB BKT On/Off.
+243234	Turn the dial while pressing the button
+243316	to change the setting.
+243362	Press to switch
+243396	Zebra Pattern Settings On/Off.
+243460	This setting can also be 
+243514	switched during video recording.
+243580	Disables REC Bit notification
+243642	to connected external recorder.
+243706	Enables REC Bit notification
+243766	to connected external recorder.
+243830	Disables the time code notification
+243904	to connected external recorder.
+243968	Enables the time code notification
+244040	to connected external recorder.
+244104	Info by half-pressing @A053@
+244162	Hides all information
+244208	when the shutter button is half-pressed.
+244290	Shows only the exposure information
+244364	when the shutter button is half-pressed.
+244446	Continues showing the recent 
+244508	information when the shutter button 
+244584	is half-pressed.
+244618	Disables High Res Shot.
+244666	Enables High Res Shot for
+244720	handheld shooting. Takes 
+244774	some time for image 
+244818	composition. Flash is disabled.
+244882	Enables High Res Shot for
+244936	stable shooting situations.
+244994	Use of a tripod is recommended.
+245058	Prioritizes keeping the no. of shooting
+245140	frames. Starts the next shooting after
+245220	the interval time elapses once the
+245292	recent frames have been recorded.
+245360	Prioritizes keeping the interval time.
+245440	Skips the next shooting when
+245500	the set interval cannot be kept.
+245566	It is enabled in the
+245610	P/A/S/M exposure modes. 
+245660	Automatically sets 
+245702	the shutter speed
+245740	at which the ISO sensitivity 
+245802	will begin to rise.
+245842	Metering is not performed
+245896	in sequential shooting.
+245944	Performs metering for each frame
+246012	in sequential shooting.
+246062	Metering is not performed during AEL.
+246138	Increase the value 
+246180	to make it easier 
+246220	to capture quick motions.
+246272	Uses a versatile codec.
+246322	Recorded videos have 8-bit depth.
+246392	Recommended for regular use.
+246450	Uses a high compression codec.
+246514	Recorded videos have 10-bit depth.
+246586	A high-performance PC is required to
+246662	playback and edit the video.
+246720	Post-production is necessary 
+246782	when using this picture mode.
+246844	Records videos 
+246878	with low saturation and contrast.
+246946	Records videos with a high 
+247004	dynamic range, reproducing images
+247074	as seen with the naked eye. Suitable 
+247152	playback equipment is required.
+247216	Post-production is necessary 
+247278	when using this picture mode.
+247340	Records videos
+247372	with a log-curved tone.
+247420	Records videos using the same
+247482	settings as in @A02D@ Picture Mode.
+247560	Detects airplanes and helicopters.
+247632	AF position is set to
+247678	selected AF target position.
+247736	Detects birds.
+247768	AF position is set to
+247814	selected AF target position.
+247872	Detects animals such as dogs and cats.
+247952	AF position is set to
+247998	selected AF target position.
+248056	Detects trains and locomotives.
+248122	AF position is set to
+248168	selected AF target position.
+248226	Detects cars and motorcycles.
+248288	AF position is set to
+248334	selected AF target position.
+248392	Basic
+248404	Information 1
+248432	Information 2
+248460	Information 3
+248490	Activate Wi-Fi/Bluetooth Power-off
+248562	Standby so images can be imported
+248632	while power is off?
+248672	Wi-Fi/Bluetooth connection cannot
+248742	be initiated by a device when power
+248816	is off.
+248832	Wi-Fi/Bluetooth connection can be
+248902	initiated by a device even when
+248968	power is off.
+248996	Switches to playback after shooting.
+249072	Operations, such as deleting images, 
+249150	can be carried out during playback.
+249222	Images are not displayed
+249274	after shooting.
+249306	Images are displayed
+249350	after shooting 
+249384	for a specified 
+249420	duration of time.
+249456	Keeps the @A04A@ setting
+249508	after still shooting.
+249552	Automatically resets the @A04A@ setting
+249634	after still shooting.
+249678	Press-and-hold @A031@ button
+249738	returns Monitor Adjust values or
+249806	EVF Adjust values to default
+249866	at each setting screen.
+249914	Press-and-hold @A032@ button
+249974	returns WB Compensation values
+250038	to default at the setting screen.
+250106	An image is captured automatically
+250178	12 seconds after @A053@ is fully pressed.
+250264	Reduces blur from shutter actuation.
+250338	An image is automatically captured
+250410	silently using the electronic shutter
+250488	12 seconds after @A053@ is fully pressed.
+250572	An image is captured automatically
+250644	2 seconds after @A053@ is fully pressed.
+250728	Reduces blur from shutter actuation.
+250802	An image is automatically captured
+250874	silently using the electronic shutter
+250952	2 seconds after @A053@ is fully pressed.
+251034	An image is captured automatically
+251106	12 seconds after @A053@ is fully pressed.
+251190	An image is captured automatically
+251262	2 seconds after @A053@ is fully pressed.
+251344	Captures images using
+251390	custom self-timer settings.
+251446	AEL is not performed
+251490	when @A053@ is half-pressed.
+251548	AEL is performed
+251584	when @A053@ is half-pressed.
+251644	Valid only in S-AF.
+251684	AEL is performed
+251720	when @A053@ is half-pressed.
+251780	Valid in all AF modes.
+251828	AE is fixed during sequential shooting.
+251908	Sets the time to wait before 
+251970	starting shooting after the button 
+252044	is pressed in the silent mode.
+252106	AF starts with @A04B@.
+252154	Stop by releasing the button.
+252214	AF starts with @A04B@.
+252262	Continues even if you release 
+252326	the button.
+252352	Stop by pressing the button again.
+252422	AF starts when @A053@ is half-pressed.
+252502	Stop by releasing the button.
+252562	The menu will be opened normally
+252630	when @A057@ is pressed in B mode.
+252698	The exclusive settings
+252746	will be opened directly
+252796	when @A057@ is pressed in B mode.
+252864	When the menu is opened,
+252916	it displays the same page as 
+252978	when it was last closed.
+253028	When the menu is opened,
+253080	it displays the top page of the @A066@ tab.
+253168	When the menu is opened,
+253220	it displays the top page of the @A058@ tab.
+253308	If the subject appears unclear
+253372	or if contrast is low, the AF Scanner
+253450	will run at AF starts.
+253496	Live View is displayed like an optical
+253576	viewfinder, reproducing images as seen
+253656	with the naked eye.
+253698	Shooting settings not applied.
+253760	Live View is displayed with 
+253820	shooting settings like exposure 
+253888	compensation and picture mode applied.
+253966	Sets the time to wait before 
+254028	starting shooting after the button
+254100	is pressed during High Res Shot.
+254166	Sets the priority to balance between
+254242	the target and the background.
+254306	AUTO is recommended 
+254350	for the ISO sensitivity setting.
+254416	Sets the priority to the target.
+254482	Point the camera at white paper
+254548	and shoot by pressing @A059@.
+254610	White Balance will be set.
+254664	Point the camera at white paper
+254730	and press @A012@.
+254768	White Balance will be set.
+254822	Interval Mode
+254850	Frames Priority
+254882	Time Priority
+254910	Display Counts of each ISO sensitivity
+254988	Save
+254998	Focal Length
+255024	Fn Lever Settings
+255064	@A003@Digital Tele-converter
+255122	@A03F@ISO-A Upper/Default
+255174	@A003@Card Slot Settings
+255224	Menu Cursor Settings
+255266	Wi-Fi is active
+255298	Metering during @A00E@
+255344	Monitor Adjust
+255374	@A003@Grid Settings
+255414	@A003@AF Target Mode
+255456	@A027@Video Codec
+255492	Same as @A02D@
+255522	Motion Compensation
+255562	Sensor Frame Rate
+255598	@A002@ Disconnected from the network.
+255676	Please check Wi-Fi status and
+255738	connect to the access point again.
+255808	Remove this page
+255842	Noise Reduction
+255874	Subject Detection
+255910	Dogs & Cats
+255934	Subject Detection Off
+255978	On@A05A@
+255996	On@A05B@
+256016	S-AF Only
+256036	AF
+256042	AF Target Settings & Operations
+256106	Basic Settings/Image Quality
+256164	Battery/Sleep
+256194	Card/Folder/File
+256228	Displays
+256246	Drive Mode
+256268	File
+256278	Exposure
+256296	Flash
+256308	Grid/Other Displays
+256348	Information
+256372	Image Stabilizer
+256406	ISO/Noise Reduction
+256446	Live View
+256466	Metering
+256484	MF
+256490	Monitor/Sound/Connection
+256540	Movie AF
+256558	Operations
+256580	Picture Mode/WB
+256612	Information Record
+256650	Reset/Clock/Language/Others
+256706	Shooting Assist
+256738	Sound Recording/Connection
+256794	Initial configuration is required
+256864	to connect to PC using Wi-Fi.
+256926	Follow instructions in OM Capture.
+256998	Initial configuration is required
+257068	for each computer.
+257106	Peaking Settings
+257140	@A05D@ Picture Mode
+257180	@A038@Dial Function
+257220	@A038@@A02F@Info Settings
+257272	@A038@Info Settings
+257312	Automatically shoots at a different
+257386	exposure for each frame.
+257436	Sets a metering mode during @A04A@.
+257508	Set the focus position when 
+257568	a face or eye is detected. 
+257626	Settings can be configured
+257682	separately for
+257714	the shutter button and @A04B@ button.
+257790	Use the @A04B@ button 
+257838	to set whether to use S-AF
+257894	when in MF.
+257918	Sets whether to show/hide 
+257974	the items of AF target mode.
+258034	Custom Target settings 
+258084	can also be configured.
+258132	Disables Wi-Fi/Bluetooth 
+258186	communication
+258216	when set to On.
+258248	Deletes all existing
+258292	images, videos and data,
+258344	excluding protected.
+258386	Sets anti-shock shooting settings.
+258456	Automatically shoots 
+258502	multiple images in different
+258562	Picture modes in one shot.
+258616	Sets the main battery to use.
+258676	Displays the remaining battery level
+258752	and status information.
+258800	Sets Bluetooth action.
+258846	Sets detailed settings for
+258902	Bulb/Time/Live Composite.
+258954	Sets the function assigned
+259010	to each button for shooting.
+259068	Executes Card Formatting.
+259122	All saved images and data
+259176	will be deleted.
+259210	When set to On, displays the @A05F@
+259284	marker at the center of 
+259336	the screen when shooting videos.
+259402	Assign current settings
+259452	to Custom Modes
+259486	or recall from Custom Modes.
+259544	The detection frame of detailed
+259610	parts like eyes or the cockpit
+259674	can be hidden
+259704	when a face or subject is detected.
+259776	Sets the function assigned
+259832	to each dial for shooting
+259886	and the menu.
+259914	Sets how the pages 
+259956	switch on the menu 
+259998	when @A04D@ is turned.
+260046	Sets what happens
+260084	when you look through the EVF.
+260146	Sets sequential shooting settings.
+260218	Displays the item which @A025@ is
+260288	available at @A00E@/@A00F@ select screen.
+260372	Sets the zoom speed
+260414	for still photography and
+260468	for shooting video.
+260508	Sets eye sensor action.
+260556	Sets whether to enable
+260604	the eye sensor
+260636	when the monitor is flipped open.
+260704	Automatically shoots at a different
+260778	flash luminance level
+260824	for each frame.
+260856	Sets detailed settings for
+260912	Flash Mode.
+260936	Reduces variation of
+260980	exposure and color
+261020	between recorded images
+261070	according to the power frequency.
+261138	Captures multiple images at once
+261206	at different focus positions.
+261268	These images are combined to
+261328	form one image with a
+261374	deep depth of field.
+261416	Displays the
+261444	image stabilizer effect level
+261506	when set to On.
+261540	Assists handheld shooting
+261594	during long-time exposure.
+261648	Sets whether the
+261684	index and calendar are displayed.
+261752	Sets the information displayed
+261816	when the shutter button 
+261868	is half-pressed.
+261902	Automatically shoots 
+261948	multiple images at different
+262008	exposure ISO sensitivities
+262064	in one shot.
+262090	Sets the function switched
+262146	using Fn Lever.
+262178	Captures a digitally
+262222	1.4x enlarged image.
+262264	Sets the upper limit and
+262316	default value used for
+262364	auto ISO sensitivity
+262408	for shooting video.
+262448	Sets the card which records videos.
+262520	Sets the initial cursor position and
+262596	saved cursor position.
+262642	Sets the timing for metering
+262702	in sequential shooting.
+262750	Sets the guide grid
+262792	for shooting video.
+262832	Sets the video codec for recording.
+262904	Sets the video quality by
+262958	combining the pixel size,
+263012	motion compensation and frame rate.
+263084	Captures two images
+263126	and automatically combines
+263182	them into one image.
+263224	Detects selected subjects.
+263280	AF position is set to
+263326	selected AF target position.
+263384	Sets the function to control dials
+263456	in playback.
+263482	Sets the information displayed
+263546	on the magnified screen of playback.
+263620	Sets the information displayed
+263684	when @A012@ is pressed
+263732	in playback.
+263758	Activates Power-off Standby
+263816	so images can be imported
+263870	even while the camera power is off.
+263944	Unnecessary ratings can be hidden
+264014	from the rating settings.
+264066	Sets which images to select
+264124	during image transfer 
+264172	preselection of RAW+JPEG images.
+264238	Pair or unpair to
+264276	the wireless shutter.
+264320	Sets the folder which records images.
+264396	Resets settings like 
+264442	protection or image 
+264486	transfer preselections.
+264536	This setting is applied to
+264592	all recorded frames.
+264634	Sets whether to reset
+264680	or keep the @A04A@ setting
+264736	after still shooting.
+264780	Resets basic shooting settings
+264844	or initializes all camera settings.
+264916	Resets all Device Connection Settings.
+264994	Resets all 
+265020	Wi-Fi PC connection settings.
+265080	Sets the shutter speed at which 
+265148	the ISO sensitivity will begin to rise
+265228	when ISO sensitivity is set to AUTO
+265302	for still photography.
+265350	Valid in P or A mode.
+265394	Sets the upper limit and
+265446	default value used for
+265494	auto ISO sensitivity
+265538	for still photography.
+265584	Save settings and
+265622	playback settings for each card
+265688	during still photography.
+265740	Sets the function assigned
+265796	to the multi selector for shooting.
+265868	Sets self-timer settings.
+265922	Displays the item which @A025@ is
+265992	available at @A00E@/@A00F@ select screen.
+266076	Sets the AEL setting
+266120	when @A053@ is half-pressed.
+266178	Set whether to use AF 
+266226	by half-pressing @A053@
+266276	in still shooting.
+266314	Sets the silent shooting settings.
+266384	Sets items related to connection
+266452	to devices.
+266476	Sets items related to
+266522	sound recording.
+266556	Confirms and changes the password
+266626	for connecting to devices.
+266680	Sets detailed settings
+266728	for Starry Sky AF.
+266766	Fine-tunes AF position.
+266814	Registers the default
+266860	AF target mode/AF target point.
+266924	Settings for AF Scanner
+266974	when AF starts
+267006	during still photography.
+267060	Sets the information displayed
+267124	when @A012@ is pressed
+267172	during still photography.
+267224	Sets Live View display mode
+267282	for still photography.
+267328	When set to On,
+267362	the shutter can be released even
+267430	when the subject is out of focus.
+267498	Sets the metering balance between
+267568	the target and the background.
+267632	Valid during TTL Metering
+267686	with an external flash.
+267734	Sets the action 
+267770	when USB is connected.
+267816	Sets whether to enable 
+267866	power supply from the PC 
+267920	to camera when connected.
+267972	Sets items related to the USB.
+268034	Automatically shoots 
+268080	multiple images 
+268116	at different tints in one shot.
+268180	Connects to devices or the PC
+268242	using built-in Wi-Fi.
+268286	Displays MAC address of
+268336	built-in Wi-Fi.
+268368	Sets items related to connecting
+268436	to the PC by Wi-Fi.
+268476	When set to On, 
+268512	displays a striped pattern
+268568	over high luminance areas 
+268624	when shooting videos.
+268668	Color of Preset 1
+268704	Color of Preset 2
+268740	Program Shift
+268768	Rating
+268782	Reset Ratings
+268810	Rating Settings
+268842	Rating Selected
+268874	Preview Update
+268904	Sound Recording Level Meter
+268960	Sound Recording Level
+269004	Image Review
+269030	Reduce Red-eye
+269060	Reset All Images
+269094	@A04A@ Auto Reset
+269130	Reset/Initialize Settings
+269182	Reset @A060@
+269208	Reset @A04E@ Settings
+269252	Reset @A03C@
+269278	Reset Wi-Fi PC Settings
+269326	@A02D@Digital Tele-converter
+269384	@A02D@ISO-A Lowest S/S
+269430	@A02D@ISO-A Upper/Default
+269482	@A030@Card Slot Settings
+269532	Multi Selector Settings
+269580	Self-timer Settings
+269620	Anti-Shock Self-timer 12 sec
+269678	Silent Self-timer 12 sec
+269728	Anti-Shock Self-timer 2 sec
+269784	Silent Self-timer 2 sec
+269832	Shooting Mode
+269860	AEL by half-pressing @A053@
+269916	@A02D@AF by half-pressing @A053@
+269982	Shutter Speed
+270010	Silent@A028@ Settings
+270054	@A04E@ Settings
+270086	Sound Recording Settings
+270136	Follow next steps to connect to a
+270206	device. This setup is required
+270270	only once. Wi-Fi/Bluetooth will be
+270342	activated during the setup.
+270398	@A04E@ Connection Password
+270452	AF Priority
+270476	AF Operation
+270502	Shortcut to B Mode Settings
+270558	Menu Start Position
+270598	Recently
+270616	@A02D@AF Focus Adjustment
+270668	@A02D@@A030@ Set Home
+270712	@A02D@AF Scanner
+270746	@A02D@AF Target Mode
+270788	@A02D@AF Limiter
+270822	@A02D@Grid Settings
+270864	@A02D@Info Settings
+270904	@A02C@LV Mode
+270934	@A02D@Picture Mode
+270972	@A02D@Picture Mode Settings
+271028	@A02D@@A01A@ Detailed Settings
+271092	Balanced Flash Metering
+271140	Power Supply from USB
+271184	USB Settings
+271210	@A020@ Keep Warm Color Off
+271264	@A020@ Keep Warm Color On
+271316	Cloudy 6000K
+271342	Custom WB
+271362	WB Flash 5500K
+271392	Fluorescent 4000K
+271428	Incandescent 3000K
+271466	Shadow 7500K
+271492	Sunny 5300K
+271516	Wi-Fi/Bluetooth
+271548	Wi-Fi Connection
+271582	Wi-Fi MAC Address
+271618	PC Connection
+271646	Wi-Fi PC Settings
+271682	Zebra Pattern Settings
+271728	@A062@ Level 1
+271758	@A063@ Level 2
+271788	Captures a digitally
+271832	2x enlarged image.
+271870	Sets the guide grid displayed on
+271938	the monitor for still photography.
+272008	Sets the guide grid displayed on
+272076	the EVF for still photography.
+272138	When set to On, ISO sensitivity
+272204	is set to AUTO.
+272238	Valid in M of @A003@.
+272282	@A053@Image Stabilizer
+272328	Save
+272340	Red Frame during @A05E@
+272388	When set to On, 
+272424	displays a red outer frame
+272480	on the screen during video recording.
+272558	This makes it easy to see whether
+272628	the camera is recording or not.
+272692	Limits the AF range to the
+272748	specified distance during
+272802	still photography.
+272842	Distance is approximate.
+272892	Automatically captures 
+272942	multiple images
+272976	at different focus positions.
+273036	Fixed AF and Metering
+273080	Computational Modes
+273120	Other Shooting Functions
+273170	On3
+273178	Decrease the value 
+273220	to record videos 
+273258	in slow motion.
+273290	Enables selection of 
+273336	a video-exclusive picture mode.
+273400	Sets the information displayed
+273464	when @A012@ is pressed
+273512	for shooting video.
+273552	None
+273562	Press to lock the auto exposure value.
+273642	Press again to unlock the value.
+273708	Exclusive for @A023@
+273750	Uses the same settings as the monitor.
+273828	Sets the grid line settings
+273886	exclusively for the EVF.
+273938	These settings differ 
+273986	from the monitor settings.
+274040	Exclusive for @A003@
+274082	Uses the same settings as
+274136	for still photography.
+274182	Sets the grid line settings
+274240	exclusively for shooting video.
+274306	These settings differ from 
+274364	the settings for still photography.
+274436	5184
+274446	3888
+274456	4096
+274466	2160(17:9)
+274488	3840
+274498	2160(16:9)
+274520	1920
+274530	1080(16:9)
+274552	59.94p
+274566	50.00p
+274580	29.97p
+274594	25.00p
+274608	24.00p
+274622	23.98p
+274636	240fps
+274650	200fps
+274664	120fps
+274678	100fps
+274692	All-Intra / 10bit
+274728	All-Intra / 8bit
+274762	LongGOP / 10bit
+274794	LongGOP / 8bit
+274824	C4K 4096
+274842	2160
+274852	4K 3840
+274868	2160
+274878	FHD 1920
+274896	1080
+274906	FHD HighSpeed 240fps
+274948	FHD HighSpeed 200fps
+274990	FHD HighSpeed 100fps
+275032	L-GOP
+275044	Slow/Fast
+275064	Slow
+275074	Mbps
+275084	H.264
+275096	H.265
+275108	AF-ON
+275120	C-AF/C-AF+TR
+275146	C1
+275152	C2
+275158	ISO
+275166	@A070@iddle@A071@
+275202	@A070@iddle@A072@
+275238	@A073@mall@A071@
+275272	@A073@mall@A072@
+275306	@A084@ HLG
+275328	@A03E@OM-Log400
+275360	My1
+275368	My2
+275376	My3
+275384	My4
+275392	My5
+275400	ND64(6EV)
+275420	P/A/S/M
+275436	AWB-L
+275448	@A074@ 5300K
+275474	@A075@ 7500K
+275500	@A076@ 6000K
+275526	@A077@ 3000K
+275552	@A078@ 4000K
+275578	@A079@ 5500K
+275604	Fn
+275610	ON/OFF
+275624	OFF/ON
+275638	S-OVF
+275650	@A02C@No Picture
+275684	@A02D@No Picture
+275718	Self-timer 12 sec
+275754	Self-timer 2 sec
+275788	Low ISO Processing
+275826	Selects low ISO speed 
+275874	image processing method 
+275926	for sequential shooting.
+275976	@A045@ Priority
+276008	When a face or eye is detected,
+276074	the AF position is set to
+276128	the detected face or eye.
+276180	@A030@ Priority
+276212	When a face or eye is detected,
+276278	the AF position is set to
+276332	the selected AF target.
+276380	@A02D@Night Vision
+276418	Select On to display Live View
+276482	which specialized for dark scene.
+276550	Night Vision
+276576	Switches Night Vision on/off.
+276636	@A07B@
+276650	@A07C@
+276664	@A07D@
+276678	@A07E@
+276692	@A07F@
+276706	@A080@
+276720	@A081@
+276734	@A082@
+276748	WPA2/WPA3
+276768	WPA3
+276778	Overlap
+276794	Webcam
+276808	Please rotate the mode dial to @A003@.
+276886	Exposure Comp. / @A033@
+276934	Exposure Level Meter / @A033@
+276994	Live ND Shooting : ND128(7EV)
+277054	Filter Type: Soft
+277090	Filter Type: Medium
+277130	Filter Type: Hard
+277166	Live GND : GND2(1EV)
+277208	Live GND : GND4(2EV)
+277250	Live GND : GND8(3EV)
+277292	Live GND : GND16(4EV)
+277336	Live GND : GND32(5EV)
+277380	Human
+277392	Detects the faces and eyes of people.
+277470	AF position is set to
+277516	selected AF target position.
+277574	@A053@RAW Recording Bit
+277622	RAW images are recorded at 12 bits.
+277694	RAW images are recorded at 14 bits.
+277768	This allows for richer color gradations
+277850	but the file size will be larger.
+277918	Live GND Shooting
+277954	As when using the graduated
+278012	ND filter, this function suppresses
+278086	blown-out whites and blacks
+278144	in scenes with large exposure
+278206	differences.
+278232	GND Number
+278254	Filter Type
+278278	Filter Auto Rotate
+278316	The filter will not rotate automatically
+278400	according to whether the camera is
+278472	in the horizontal or vertical position.
+278552	The filter will rotate automatically
+278628	according to whether the camera is
+278700	in the horizontal or vertical position.
+278780	@A02C@@A065@AF Button
+278824	Set the focus position when
+278882	a specified subject is detected. 
+278952	Settings can be configured
+279008	separately for
+279040	the shutter button and @A049@ button.
+279116	@A066@ Priority
+279148	When a specified subject is detected at
+279230	the selected AF target position, AF is
+279310	performed on the detected subject.
+279380	AF is always performed at
+279434	the selected AF target position.
+279500	@A065@C-AF Setting
+279538	Sets the C-AF behavior
+279586	when shooting with
+279626	subject detection enabled.
+279680	@A02C@@A065@C-AF Area
+279724	@A027@@A065@C-AF Area
+279768	Sets the area within which
+279824	C-AF tracking is performed
+279880	when a specified subject is detected
+279956	and focused on for still photography.
+280032	Sets the area within which
+280088	C-AF tracking is performed
+280144	when a specified subject is detected
+280220	and focused on for shooting video.
+280290	After focusing on the subject once,
+280364	keeps focusing on and tracking it
+280434	on the entire screen.
+280478	After focusing on the subject once,
+280552	keeps focusing on and tracking it
+280622	only within the selected AF target
+280694	frame.
+280708	Subject Detection AF
+280750	End @A067@
+280772	Reset @A067@
+280798	Press-and-hold @A067@ button
+280858	deactivates Live GND Shooting.
+280920	Press-and-hold @A031@ button
+280980	returns Live GND Shooting
+281034	settings to default
+281076	at the setting screen.
+281122	Menu operation by @A076@
+281172	You can operate the menu by
+281230	pressing the @A076@ button instead of
+281308	the @A065@ button. It has the same role
+281390	as the @A065@ button.
+281434	Subject Selection
+281470	Select and lock on a subject close to
+281548	the selected AF target position. Press
+281628	down the button and turn the dial to
+281704	select manually. Press again to unlock.
+281784	Switches Live GND Shooting on/off.
+281856	Quit by holding button down.
+281916	Turn the dial while pressing the button
+281998	to change the setting.
+282044	Accessing to Card in progress
+282104	Wi-Fi @A05A@
+282130	USB Webcam
+282152	@A087@ Control
+282182	ND128(7EV)
+282204	12bit
+282216	14bit
+282228	GND2(1EV)
+282248	GND4(2EV)
+282268	GND8(3EV)
+282288	GND16(4EV)
+282310	GND32(5EV)
+282332	Soft
+282342	Medium
+282356	Hard
+282366	USB @A087@ Control
+282404	Connect to a device.
+282446	Color Profile 4
+282478	Monochrome Profile 4
+282520	Please set @A02C@/@A027@/@A068@ to @A027@.
+282606	Please rotate the creative dial to @A069@.
+282692	Please rotate the mode dial
+282750	to other than B.
+282784	@A02C@/@A027@/@A068@
+282826	Creative Dial
+282854	Protected
+282874	Error
+282886	Cinematic1
+282908	Cinematic2
+282930	Color contrast between yellow in the
+283006	bright areas and blue in the dark areas
+283088	for cinema-like expression.
+283146	24p use is recommended.
+283194	Cyan tone and low contrast
+283250	for cinema-like soft expression.
+283318	24p use is recommended.
+283366	Records videos with low saturation
+283438	and contrast.
+283466	@A068@@A019@
+283492	Settings for video quality in @A068@.
+283568	Settings for video quality in @A027@.
+283644	Frame rate for a video that will be
+283718	recorded. (Included number of images
+283794	in 1 sec of a video.)
+283838	Capturing frame rate
+283882	when recording a video.
+283932	(Captured number of images in 1 sec.)
+284008	Detailed settings for when
+284064	ISO sensitivity is set to AUTO
+284128	for shooting video.
+284170	It is enabled in the M exposure mode.
+284246	When set to On,
+284280	auto ISO sensitivity is available
+284350	for shooting video in M mode.
+284410	When the menu is opened, it displays
+284486	the top page of the  or @A027@ tab
+284558	depending on the position of @A02C@/@A027@/@A068@.
+284660	@A027@C-AF when @A06B@
+284706	Sets the C-AF behavior when the
+284772	specified subject is not detected
+284842	for shooting video.
+284882	C-AF is not activated when the
+284946	specified subject is not detected
+285016	for shooting video.
+285056	C-AF is activated even when the
+285122	specified subject is not detected
+285192	for shooting video.
+285232	C-AF when @A06B@
+285266	Press to switch the "C-AF when
+285330	@A06B@" setting. This setting can also be
+285416	switched during video recording.
+285482	@A02C@/@A027@ Separate Settings
+285546	Select items that will be set
+285608	separately for still shooting and
+285678	video recording.
+285714	Items where @A024@ is not selected
+285786	will be the same setting for both.
+285856	Recording Lamp
+285886	When set to On, turns on a front LED
+285962	during video recording.
+286012	This makes it easy to see whether
+286082	the camera is recording or not.
+286146	@A05F@ Button Settings
+286192	When selecting the computational
+286260	modes, you can skip the items
+286322	that have not been set to @A025@.
+286390	Computational Modes
+286430	Press to activate Computational Modes.
+286510	Turn the dial while pressing the button
+286592	to change the mode.
+286632	Computational Modes Off
+286680	HDR HDR1
+286698	HDR HDR2
+286716	Press to switch
+286750	Multiple Exposure On/Off.
+286804	Hold the button down to
+286854	configure detailed settings.
+286912	Shading Effect
+286942	Reset @A06D@
+286968	Press-and-hold @A031@ button
+287028	returns the selected profile settings to
+287112	default at the profile selecting screen.
+287194	Reset @A06E@
+287220	Press-and-hold @A031@ button
+287280	returns Color Profile settings to
+287350	default at the setting screen.
+287412	Reset @A06F@
+287438	Press-and-hold @A031@ button
+287498	returns Monochrome Profile settings to
+287578	default at the setting screen.
+287640	Call @A060@ Setting
+287680	Press-and-hold button
+287726	assigned to Multiple Exposure pulls up
+287806	its setting screen.
+287846	@A02D@Custom Mode
+287882	Assign current still photography
+287950	settings to Custom Modes
+288002	or recall from Custom Modes.
+288060	@A027@Custom Mode
+288096	Assign current video
+288140	settings to Custom Modes
+288192	or recall from Custom Modes.
+288250	Custom Mode Name
+288284	Custom Mode C5
+288314	Switches C5 on/off.
+288354	Apply C5 settings? Current camera
+288424	settings will be overwritten.
+288484	C5
+288490	@A063@/@A003@
+288518	Do you want to delete
+288564	the custom mode name?
+288608	Delete
+288622	Keep
+288632	Flat
+288642	60fps
+288654	50fps
+288666	30fps
+288678	25fps
+288690	24fps
+288702	15fps
+288714	12fps
+288726	8fps
+288736	6fps
+288746	3fps
+288756	2fps
+288766	1fps
+288776	OM-Log400
+288796	HLG
+288804	For shooting snowy capped
+288858	mountains, landscapes,white
+288916	sand sea-scapes,etc.
+288958	For shooting under candlelight. 
+289026	Warm colors are reproduced.
+289082	For shooting documents, etc.
+289142	Increases contrast between
+289198	letters and background.
+289246	For shooting landscapes.
+289298	Vivid reproduction
+289338	of blues and greens.
+289380	For shooting setting/rising sun. 
+289450	Vivid reproduction
+289490	of reds and yellows.
+289532	Backlight HDR
+289560	Creates an image with optimal
+289622	brightness by combining a
+289676	series of images.
+289712	Indoors
+289728	Motion
+289742	People
+289756	Scenery
+289772	Capture fireworks at a 
+289822	slower shutter speed.
+289868	Tripod use is recommended.
+289922	For shooting both main subject
+289986	and background. Vivid reproduction
+290058	of blues and greens.
+290100	Images are taken consecutively,
+290166	recording only areas with change in
+290240	brightness, and composited. Perfect
+290314	for capturing light trails. Tripod use is
+290400	recommended.
+290426	Capture people against nightscapes.
+290500	Please attach the flash.
+290552	A slower shutter speed is used.
+290618	Tripod use is recommended.
+290672	Capture nightscapes.
+290716	A slower shutter speed is used.
+290782	Tripod use is recommended.
+290836	For taking a portrait-style shot.
+290904	Candlelight
+290928	Children
+290946	e-Portrait
+290968	Light Trails
+290994	Multi Focus Shot
+291028	Close-ups
+291048	For close-up photography.
+291100	For close-up nature photography.
+291168	Captures more vivid macro shots
+291234	compared to standard macro. 
+291292	Perfect for photography where
+291354	sound and light from the camera
+291420	are unfavorable. @A001@, Flash, and AF
+291500	Illuminator will be deactivated.
+291566	Takes multiple pictures at once
+291632	at different focus positions.
+291692	This function requires a compatible lens.
+291778	Please attach a compatible lens.
+291844	Apply C settings? Current camera
+291912	settings will be overwritten.
+291972	@A002@ Deletes all automatically
+292040	separated files of single movie.
+292106	Art Filter
+292128	Taking pictures to create
+292182	a panorama image by PC.
+292230	@A003@C-AF when @A061@
+292276	Sets the C-AF behavior
+292324	when the face is not detected
+292386	for shooting video.
+292426	C-AF is not activated
+292472	when the face is not detected
+292534	for shooting video.
+292574	C-AF is activated
+292612	even when the face is not detected
+292684	for shooting video.
+292724	C-AF when @A061@
+292758	Press to switch the "C-AF when
+292822	@A061@" setting. This setting can also be
+292908	switched during video recording.
+292974	Pro Capture H
+293002	Silent Sequential H
+293042	Capture starts @A062@ when @A053@ is half-
+293130	pressed. Records images when @A053@ 
+293206	is fully pressed, including those 
+293278	captured while @A053@ is half-pressed.
+293356	Captures sequential images
+293412	using the electronic shutter.
+293474	AF and metering are fixed
+293528	during shooting.
+293562	ART BKT Setting@A032@
+293606	Power Supply
+293632	The detection frame of eyes can be
+293704	hidden when a face is detected.
+293768	Hides the detection frame of eyes
+293838	when a face is detected.
+293888	Shows the detection frame of eyes
+293958	when a face is detected.
+294008	Setting screen opened by @A032@
+294072	Choose the setting screen displayed
+294146	when @A032@ is pressed.
+294194	Custom Mode C
+294222	Switches C on/off.
+294260	When the menu is opened, it displays
+294336	the top page of the @A063@ or @A003@ tab
+294420	depending on the position of
+294480	the mode dial.
+294510	Nightscapes
+294536	Light Trails
+294562	@A04E@ Connection Security
+294616	Sets security for connecting
+294676	to devices.
+294702	If the device cannot connect to
+294768	the camera when WPA2/WPA3
+294822	is selected, set to WPA2.
+294874	Capture a moment of
+294916	a moving subject.
+294954	Shoots in sequential shooting.
+295016	Smoothes skin tone
+295056	to view on a large TV.
+295102	The camera does not enter sleep mode.
+295180	A lot of power will be consumed.
+295246	The camera enters sleep mode
+295306	after the specified time.
+295362	This card cannot be used
+295414	in this shooting mode.
+295460	Sets whether to enable the camera
+295530	settings for recording sound
+295590	when the external microphone is
+295656	connected.
+295678	No external microphone
+295724	Write Once Card
+295756	No Connection
+295784	Ver.
+295794	OM-Cinema1
+295816	OM-Cinema2
+295838	Executing reset,
+295874	reset all the functions except date,
+295950	language and some settings.
+315718	OlympusLanguage_enutft

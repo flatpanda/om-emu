@@ -1,0 +1,6765 @@
+10	AEL/AFL
+26	@A025@REC
+46	MF
+52	RAW@A024@
+72	Forh.vis
+90	@A01D@
+104	 Hjem
+158	Norsk
+194	2f
+200	AEL/AFL Min
+224	AEL/AFL
+240	AEL-lesing
+262	@A001@ Oppsett
+292	 Still hjem
+316	AF/MF
+328	AF-omr
+342	de
+348	AF-lampe
+366	AF-modus
+384	Alle
+394	Rist i alle retninger I.S.
+448	Nullstill alle
+478	Still alle
+500	Alle @A001@
+524	Anti-Shock @A004@
+560	Prioritert blender
+598	pning
+610	Kunst LV-modus
+640	Kryssprosess
+666	Diorama
+682	Dramatisk uttrykk
+718	Fin sepia
+738	Kornet film
+762	Lys tone
+780	Bleke og lyse farger
+822	Popkunst
+840	Mykt fokus
+866	kkelhull
+884	Bildeforhold
+910	Auto
+920	Bakgr.Bel. LCD
+950	@A003@ advarselniv
+990	Tomt batteri
+1016	@A001@
+1030	Bracketing
+1052	B Fokusering
+1078	Bulb Timer
+1100	Knapp/hjul
+1122	@A003@Innstillinger
+1162	@A006@ Nytte
+1188	Kortfeil
+1206	Kort fullt
+1228	Kort fullt
+1250	Kortoppsett
+1274	Temperatur inne i kamera
+1326	er for h
+1344	y. Vennligst vent
+1386	 avkj
+1398	ling f
+1412	r bruk.
+1428	Objektivet er l
+1460	st. 
+1472	Vennligst sl
+1498	 ut objektivet.
+1530	Fargeomr
+1548	de
+1554	Kontinuerlig AF
+1586	AF-sporing
+1608	Kontrast
+1626	Bilde Kopi Str.
+1658	Copyright-innst.
+1692	@A004@Modus
+1716	Egendefinert
+1742	Knappefunksjoner
+1780	Ringretning
+1804	Ringfunksjon
+1830	@A010@L
+1850	Auto-blits
+1872	Fill-In
+1888	Blits av
+1914	ye
+1928	ye langsom
+1950	Spot uthevet
+1976	Spot skygge
+2000	Disp/@A004@/PC
+2030	dpi-innst.
+2052	Sekvensbilder
+2080	@A014@ Anti-Shock @A004@
+2130	Enkelt bilde
+2156	@A014@ Anti-Shock @A004@
+2206	e-Portrett
+2228	Rediger
+2244	Redig. filnavn
+2274	B:Bl
+2286	G:Gr
+2296	nn
+2302	N:N
+2310	ytral
+2322	Or:Oransje
+2344	P:Purpur
+2362	R:R
+2374	S:Sepia
+2390	Ye:Gul
+2404	EV-trinn
+2422	EVF-justering
+2450	Exp/@A011@/ISO
+2480	Eksponering
+2504	Eksponeringsbytte
+2540	@A008@Ansiktsprioritet
+2586	Ansiktsprioritet Av
+2626	Ansiktsprioritet P
+2666	Filnavn
+2682	Fastvare
+2700	@A014@ Egendefinert
+2740	@A00A@ Langsom begr
+2780	@A00A@ X-Sync.
+2810	Brennvidde
+2832	Fokusring
+2852	Stemning h
+2878	Stemning lav
+2904	Stemning normal
+2936	Hi
+2942	Histogram-innstillinger
+2990	i-Enhance
+3010	@A01A@/Farge/hvitb
+3048	B.stabilisator
+3078	@A00F@-innstillinger
+3120	@A00F@/Innstillinger
+3162	@A006@ Info
+3186	Adressebok
+3208	IS Av
+3220	ISO
+3228	ISO-Auto
+3246	ISO-Auto-innstilling
+3288	Utvidelse
+3308	Anbefalt
+3326	ISO-trinn
+3346	Vertikal rist I.S.
+3384	Niv
+3392	justering
+3412	Lo
+3418	Sl
+3424	yfe
+3432	Manuelt opptak
+3462	@A009@+@A007@
+3490	@A00E@
+3504	Minne Brukt
+3528	Meny
+3538	@A00E@/@A000@ Visning Av Meny
+3602	ling
+3612	Senterprior.
+3638	Spot
+3648	MF St
+3660	tte
+3668	min
+3676	Innstillingsguide
+3712	@A016@
+3726	Monoton
+3750	Film
+3760	Film @A017@
+3784	Film + Still
+3810	Multieksponering
+3844	Dempet
+3858	LV-
+3866	kning
+3878	Nei
+3886	Intet kort
+3908	Ingen tilkobling
+3942	St
+3948	yfilter
+3964	St
+3970	yreduksj.
+3990	Ingen bilder
+4016	Av
+4022	Tilbake@A018@
+4050	Tilbake@A019@
+4078	Avbryt @A018@
+4106	Hvitbalanse@A01A@
+4142	@A01B@@A01C@
+4168	Innstill@A019@
+4204	@A01E@
+4218	@A01F@
+4232	My OLYMPUS PENPAL
+4268	Album Oppsett
+4296	Bildemodus
+4318	Innstillinger bildemodus
+4368	Bildefeil
+4388	Pikseltall
+4410	Pikselkartlegging
+4446	@A023@ Makro
+4472	Utskrift
+4490	Pri.innst.
+4512	Program Auto
+4538	Nullstill l
+4566	@A024@
+4580	@A024@ Set
+4602	Slett raskt
+4626	Sl. RAW+JPEG
+4652	Opptak/slette
+4680	Opptak
+4702	ye + Fill-In
+4728	Utl
+4736	ser
+4744	Utl
+4752	s. pri. C
+4772	Utl
+4780	s. pri. S
+4800	Nullstill
+4820	Nullstill Obj.
+4850	Reset/Myset
+4874	@A026@
+4888	Metning
+4904	Strand / sn
+4930	Levende lys
+4954	Barn
+4964	Dokumenter
+4986	Fyrverkeri
+5016	Landskap
+5034	Lav
+5042	Makro
+5054	@A03A@ Makro
+5080	Natur-makro
+5104	Natt+Portrett
+5132	Nattfoto
+5150	Panorama
+5168	Portrett
+5186	DIS-modus
+5206	Sport
+5218	Solnedgang
+5240	@A03A@ Vidvinkel
+5274	sek
+5282	@A04E@ Anti-Shock @A004@
+5332	@A04F@ Anti-Shock @A004@
+5382	@A02A@ 12 s
+5406	@A02A@ 2 s
+5428	Bilde Send Str.
+5460	@A02C@
+5474	Skyggekomp.
+5498	Skyggejust
+5520	Skarphet
+5538	Prioritert lukker
+5574	Horisontal rist I.S.
+5616	Singel AF
+5636	Singel AF + MF
+5666	Dvalemodus
+5688	@A02B@
+5702	Spiral
+5716	Standard
+5734	Start
+5746	Lagring
+5766	yt
+5772	Del Med OLYMPUS PENPAL
+5818	Elektronisk S
+5846	ker
+5854	OLYMPUS PENPAL Album
+5896	Tid
+5904	USB-innst.
+5926	Video ut
+5944	Volum
+5956	Vennligst Vent
+5986	Hvitb Auto
+6008	Skyet
+6020	Hvitb Blits
+6044	Lysr
+6054	r.
+6060	Lampe
+6072	Hvitbalanse
+6096	Skygge
+6110	Sol
+6118	Svakt
+6130	Skrivebeskytt.
+6168	Ja
+6176	/M/D
+6186	Eye-Fi
+6200	16:9
+6210	4:3
+6218	3:2
+6226	6:6
+6234	3:4
+6242	ESP
+6250	NTSC
+6260	PAL
+6268	RAW
+6276	MF
+6282	Adobe RGB
+6302	I.S. 1
+6316	I.S. 2
+6330	Slow
+6340	Slow2
+6352	1/4
+6360	1/16
+6370	1/64
+6380	2nd Curtain
+6404	Vivid
+6416	Natural
+6432	JPEG
+6442	RAW+JPEG
+6460	Portrait
+6494	CWB
+6502	mode1
+6514	mode2
+6526	S-AF
+6536	C-AF
+6546	P/A/S
+6558	Menu
+6568	1/2EV
+6580	1/3EV
+6592	1EV
+6600	Off
+6608	I.S. 3
+6622	sRGB
+6632	Auto@A010@
+6654	MTP
+6662	Hold
+6672	Body
+6682	Lens
+6692	Flash
+6704	Acc
+6712	LV-Info
+6728	@A014@/@A028@
+6756	ART1
+6766	ART2
+6776	ART3
+6786	ART4
+6796	ART5
+6806	ART6
+6816	ART7
+6826	ART8
+6836	HDMI
+6846	iAUTO
+6858	P/A/S/M
+6874	ART9
+6884	ART10
+6896	Full
+6906	@A084@
+6920	Dato
+6930	Myset1
+6944	Myset2
+6958	Myset3
+6972	Myset4
+6986	Bakgr.Bel. LCD
+7016	Live Guide
+7038	Digital telekonverter
+7082	Eksponering @A007@
+7120	Fungerer i 
+7146	P/A/S eksp.innst.
+7182	Fungerer i 
+7208	alle eksp.innst.
+7242	Sjekk status p
+7272	 objektiv.
+7294	Baklys P
+7312	/Av.
+7322	Juster eksponerings-
+7366	kompensasjon
+7392	@A066@:
+7410	Start/Stop
+7434	Filmopptak
+7456	Viser dybdeskarphet
+7496	Hjemposisjonsinnst.
+7538	AF OMR
+7552	DE
+7558	Skift til MF 
+7588	innstilling
+7612	Skift RAW+JPEG/JPEG
+7654	kvalitetsinnst. Ved
+7698	 vri p
+7712	 hjul
+7724	@A013@/@A014@
+7754	direkteinnstilling.
+7794	ISO direkteinnstilling.
+7842	WB direkteinnstilling.
+7888	Hold @A02A@: l
+7918	se/l
+7928	se opp
+7944	direkte @A010@ operasjon
+7996	i opptaksmodus
+8026	@A01C@Funksjon
+8056	@A048@Funksjon
+8086	@A030@Funksjon
+8116	@A00A@Funksjon
+8146	SF
+8164	@A05C@5300K
+8188	@A05B@7500K
+8212	@A05D@3000K
+8236	@A059@5500K
+8260	@A058@6000K
+8284	Slett eller formater alt p
+8342	minnekortet.
+8368	Nullstill innstillingene eller
+8432	registrer de som Mysets
+8482	 velge art filter eller 
+8534	ferdig avhengig av kameravalget
+8600	 velge opptaksmodus
+8642	for 
+8652	 ta bilder eller film
+8696	Endre fra horisontalt til vertikalt
+8770	forhold n
+8790	r en tar bilder.
+8824	Innledende og grunn-
+8868	leggende kameravalg.
+8910	Velg sekvensfotografering eller 
+8978	selvutl
+8994	ser kamerainnstillinger
+9042	Endre bildestabilisatormodus.
+9104	@A065@ og @A066@ brukes for
+9162	panorering med kameraet
+9210	Kameraet tar automatisk bilder
+9274	ved forskjellige innstillinger
+9338	for hvert bilde
+9370	Dette dekker over mange bilder
+9434	og lagrer det som et enkelt bilde
+9502	Justerer blitsintensitet
+9552	Bruk tr
+9568	dl
+9574	s blits med
+9600	tr
+9606	dl
+9612	st RC-blitssystem.
+9650	Ta et digitalt forst
+9692	rret bilde.
+9716	Avansert kameravalg.
+9758	Lag en bildefremvisning med
+9816	diverse BGM eller effekt
+9866	Bildene vil bli vist i riktig retning
+9944	selv om kamera er rotert.
+9996	Redigerer bildet.
+10032	Lagre tekst med bilder lagret p
+10100	kortet.
+10116	Annuller beskyttelse
+10160	av alle bildene.
+10194	Avspilling- og
+10226	retusjeringsalternativer.
+10278	Autofokusmeny og manuell
+10330	fokus innstillinger
+10370	Meny for innstillinger til knapper
+10442	og funksjonshjul
+10476	Meny om utl
+10500	serinnstillingene
+10536	Meny for skjerm, lyd og kobling
+10602	til PC eller skriverinnstillinger
+10670	Meny for eksponeringsinnstillinger
+10740	Meny for blitsinnstillinger
+10796	Meny for bildefarger eller 
+10854	Hvitb-innstillinger
+10894	Meny for opptak- eller
+10942	sletteinnstillinger
+10982	Meny for filminnstillinger
+11036	Meny for andre innstillinger
+11094	Velg AF-modus for bilde- og
+11152	filmmodus
+11172	Hvis P
+11186	 er valgt s
+11210	 vil
+11222	autofokus virke f
+11264	utl
+11272	serknappen er trykket
+11316	Velg AF objektet
+11350	Velger funksjonen til hjulet eller
+11422	pilene n
+11440	r en s
+11454	ker p
+11466	 objektet
+11486	Hvis den er sl
+11516	tt til P
+11534	 s
+11544	nullstilles fokus til objektivet
+11612	til uendelig, hvis str
+11658	mmen er av.
+11682	Velg P
+11696	 for 
+11708	 tillate MF mens du
+11750	bruker BULB
+11774	Skreddersy roterende retning til
+11842	fokusringen for 
+11876	 justere fokus.
+11908	Velg P
+11922	 for 
+11934	 autotmatisk
+11962	forst
+11974	rre bildet n
+12000	r fokusringen
+12030	er rotert i MF modus
+12072	Velg hjem-posisjon i AF-omr
+12128	det
+12136	En LED gj
+12156	r autofokus lettere
+12198	i svake lysforhold.
+12238	Angi fokus eller AE-l
+12282	s til @A034@.
+12310	Hvis P
+12324	 er valgt s
+12348	 vil
+12360	eksponering forbli l
+12402	st etter
+12422	@A071@ er valgt
+12454	4"-ruller
+12474	Velg funksjonen tildelt hjulet
+12536	Velg retningen som hjulet
+12590	kan rotere
+12612	Velg P
+12626	 for 
+12638	 deaktivere @A010@ 
+12680	mens i opptaksmodus
+12720	A4-ruller
+12740	Juster HDMI-innstillinger.
+12794	Adresse
+12810	Hvis P
+12824	 er valgt, s
+12850	 vil ikke
+12872	effekteksponeringen vises
+12930	 skjermen.
+12952	Alle
+12962	Velg n
+12976	r indikatorene skal 
+13020	automatisk forsvinne fra 
+13074	skjermen
+13092	Baklyset LCD will dempes 
+13146	hvis ingenting er gjort i 
+13202	en gitt tidsperiode
+13242	Kameraet g
+13264	r i sovemodus
+13294	hvis ingenting er gjort i en
+13354	gitt tidsperiode.
+13390	Du kan sl
+13410	 av pipingen som
+13446	avgis n
+13462	r fokus l
+13482	ser seg.
+13500	Juster playback volum
+13544	Velg enhetstype som skal
+13596	kobles til med USB.
+13636	Hvor stor 
+13658	kningen skal v
+13688	re 
+13702	r du velger 
+13730	eksponeringsparameterne
+13778	Velg et m
+13798	lemodus.
+13816	Velg et m
+13836	lemodus med @A034@.
+13876	Innstill ISO-f
+13906	lsomhet
+13922	Velg 
+13934	vre grense og standard
+13982	verdi brukt til auto 
+14028	ISO-f
+14040	lsomhet
+14056	Velg bildemodus som har 
+14108	tilgjengelig ISO-modus
+14154	Sett maks tid for BULB-innstilling
+14224	Velg forsinkelse mellom n
+14276	r 
+14284	lukkerknappen er trykket
+14336	og sluppet
+14358	Velger den raskeste
+14400	lukkerhastighet tilgjengelig n
+14468	en blits utl
+14494	ses.
+14504	Velger den langsomste lukker-
+14566	hastighet n
+14590	r en blits utl
+14620	ses.
+14630	Denne funksjonen reduserer
+14686	st
+14692	y som genereres gjennom 
+14744	lang eksponering.
+14780	Velger hvor h
+14808	yt st
+14820	yniv
+14830	et
+14838	er ved h
+14856	y ISO-f
+14872	lsomhet
+14888	Velg hvitbalansemodus
+14932	For 
+14942	 beholde varme
+14974	lysfarger automatisk
+15018	i hvitbalansemodus
+15056	Velg hvordan farger
+15098	reproduseres p
+15128	 skjerm eller
+15158	skriver.
+15176	For 
+15186	 forandre hvitbalansemodus
+15242	til auto eller @A036@ automatisk
+15314	r en bruker blits.
+15352	Rette det periferiske lyset
+15410	ihht. type objektiv
+15450	Modifiser JPEG-opptaksmodus
+15508	fra kombinasjoner av bildestr
+15570	og komprimeringshastighet.
+15624	Velg pikselteller for @A037@ og @A038@
+15702	Hvis P
+15716	 er valgt, slettes
+15756	gjeldende bilde umiddelbart
+15812	Velger handling utf
+15852	rt n
+15868	et bilde i RAW+JPEG er slettet
+15930	Auto bruker filnumre og mappenr.
+15998	fra det gamle kortet.
+16042	Velg hvordan bildefiler er
+16098	navngitt ved 
+16126	 redigere
+16148	posisjonen til filnavnet.
+16200	Velg standardvalg
+16238	for varslinger.
+16270	Velg utskriftsoppl
+16308	sning.
+16322	Legg til fotografens navn og
+16382	copyright-eier til det nye
+16438	bildet.
+16458	r Av, tas ikke lyden
+16502	opp under opptak.
+16538	For 
+16548	 sjekke og justere
+16588	funksjonene for bildetakingen
+16650	og bildebehandlingen.
+16694	Juster optimal eksponering
+16750	separat for hver
+16790	lemetode.
+16810	Kalibrer niv
+16840	leren.
+16854	Aktivere eller deaktivere
+16908	tilkoblingen
+16936	av Eye-Fi-kort.
+16968	Detaljerte kameraalternativer.
+17030	Meny om OLYMPUS
+17064	PENPAL deleinnstillinger
+17114	Meny om elektronisk
+17160	kerinnstillinger
+17194	Motta bilder eller vent p
+17250	foresp
+17264	rsel fra andre enheter.
+17312	Kopier alle bilder og lydfiler
+17376	mellom @A00A@ og @A00B@.
+17426	Vis antall bilder gjeldende i
+17488	albumet og som er mulig 
+17538	 lagre
+17552	Slett alle bildene i albumet
+17612	eller formater albumet.
+17660	Juster lysstyrken og
+17704	fargetemperatur p
+17740	 den
+17752	digitale s
+17774	keren.
+17788	Tilbeh
+17802	rsalternativer.
+17834	Justerer lysstyrke og
+17880	fargetemperatur p
+17920	LCD-skjermen.
+17948	Velg hvor lenge bildene vises
+18010	etter de er tatt.
+18046	Velg hvorvidt @A00E@ meny eller @A000@
+18126	meny skal vises
+18158	Se produktets fastvareversjon.
+18220	Innstill. gr.legg. kamerafunksj.
+18286	Opptaksmeny 2
+18314	Ja
+18320	Nei
+18328	@A00A@ Visning av meny
+18374	@A000@ Visning Av Meny
+18420	Testbilde
+18440	Blitsmodus
+18462	@A06B@:Av
+18482	Slett alle
+18504	@A023@: AEL/AFL
+18536	@A023@:
+18554	Start/Stop
+18578	Filmopptak
+18600	Viser dybdeskarphet
+18640	Ett-trykk hvitbal.
+18678	Hjemposisjonsinnst.
+18720	AF OMR
+18734	DE
+18740	Skift til MF 
+18770	innstilling
+18794	Skift RAW+JPEG/JPEG
+18836	kvalitetsinnst. ved
+18880	 vri p
+18894	 hjul
+18906	Testbilde u. Lagring
+18948	Ta bilde med @A02B@
+18990	mens @A024@ holdes inne
+19038	Ta bilde med @A02C@
+19080	mens @A024@ holdes inne
+19128	Ta bilde med @A02D@
+19170	mens @A024@ holdes inne
+19218	Ta bilde med @A02E@
+19260	mens @A024@ holdes inne
+19308	@A023@: trykk for 
+19346	 bytte
+19362	til Live Guide modus,
+19408	og trykk igjen for 
+19448	 g
+19454	 tilbake.
+19474	@A023@: endre x1/x2.
+19516	@A025@:Av
+19536	Juster eksponerings-
+19580	kompensasjon
+19606	Innstiller blitsmodus.
+19652	Juster eksponerings-
+19696	kompensasjon
+19722	Hold @A012@: l
+19752	se/l
+19762	se opp
+19778	direkte @A010@ operasjon
+19830	i opptaksmodus
+19860	Bildeoverlapping
+19894	2 Bildefletting
+19926	3 Bildefletting
+19958	@A009@
+19972	@A01B@ RC Innst.
+20006	Tilpasset meny
+20036	A. AF/MF
+20054	B. Knapp/hjul
+20082	C. Utl
+20096	ser/@A01E@
+20118	D. Disp/@A004@/PC
+20154	E. Exp/@A011@/ISO
+20190	F. @A00A@ Egendefinert
+20236	G. @A01A@/Farge/hvitb
+20280	H. Opptak/slette
+20314	I. film
+20330	J. Innebygd EVF
+20362	Tast inn PIN kode.
+20400	Fulltids-AF
+20424	Fjern modus og
+20456	inntillinger.
+20484	Info Av
+20500	@A049@ Behold varm farge
+20550	@A00A@+Hvitb
+20576	Ber
+20584	ringsskjerm-innst.
+20622	ART
+20630	SCN
+20638	3200
+20648	2400
+20658	2560
+20668	1920
+20678	1920
+20688	1440
+20698	1600
+20708	1200
+20718	1280
+20728	960
+20736	1024
+20746	768
+20754	640
+20762	480
+20770	320
+20778	240
+20786	Stillbilde
+20808	Film
+20818	S-AF+MF
+20834	C-AF+TR
+20850	RAW/JPEG
+20868	JPEG-red.
+20896	ye red.
+20912	@A02B@
+20926	Aspekt
+20940	Svart-hvitt
+20964	Sepia
+20976	Metning
+20992	@A025@
+21006	@A017@
+21020	Red. RAW-data
+21048	Roter
+21060	@A023@
+21074	Velg bilde
+21096	@A017@ Start
+21122	Slett
+21134	Slett
+21146	Slett valgt
+21170	Valgte
+21184	Velg aktuelle modus 
+21228	og innstillinger.
+21264	Spill Film
+21286	Send Et Bilde
+21314	Nullstill
+21334	@A03A@Cross Process
+21374	@A033@Dramatisk Uttrykk
+21422	Stemning
+21440	Fargefilter
+21464	Monokrom farge
+21494	Bruk Org.Str.
+21522	Ved 
+21532	 velge bildemodus kan du 
+21586	hoppe over elementene som 
+21642	ikke er satt til P
+21682	Meny om OLYMPUS
+21716	PENPAL albuminnstillinger
+21768	Film @A017@ p
+21798	AVCHD 1920
+21820	1080 Normal
+21844	Motion JPEG 1280
+21878	720
+21886	Motion JPEG 640
+21918	480
+21926	@A015@i-Enhance
+21958	@A07A@Vivid
+21982	@A07C@Portrait
+22012	@A032@Popkunst
+22042	@A034@Softfokus
+22074	@A035@Bleke&Lyse Farger
+22122	@A036@Lys Tone
+22152	@A037@Kornet Film
+22188	@A038@N
+22204	kkelhull
+22222	@A039@Diorama
+22250	Myset1
+22264	Myset2
+22278	Myset3
+22292	Myset4
+22306	Full
+22316	Grunnlegg.
+22338	Bruk
+22348	Ingen data
+22370	@A07B@Natural
+22398	@A01F@Dempet
+22424	Effekt
+22446	Normal
+22460	Lav
+22468	Monoton
+22484	For monokrome bilder.
+22528	For tydelig kontrast mellom
+22586	bl
+22592	 himmel og skyene.
+22630	Nyttig til telefotografering
+22694	 avstand.
+22714	Gir dramatisk m
+22746	rk himmel
+22768	med lyse skyer.
+22800	Forsterker forskjell i 
+22850	hudtoner og fremhever 
+22898	ansiktsoverflaten i 
+22942	portrett v. s/h.
+22976	For sepia bildeeffekt.
+23022	For bl
+23036	 bildeeffekt.
+23064	For purpur 
+23090	bildeeffekt.
+23116	For gr
+23130	nn 
+23140	bildeeffekt.
+23166	Endre fargemetning
+23204	Endre fargetone
+23236	Gj
+23242	re lysere/m
+23266	rkere
+23278	Uskarp bakgrunn
+23310	Motiv i bevegelse
+23346	Fototips
+23364	Live Guide ikke 
+23400	tilgjengelig 
+23430	med blits aktivert
+23468	Klar og levende
+23500	Bleke og lyse
+23528	Varm
+23538	Kald
+23548	Lys
+23560	rk
+23566	Lys del lysere
+23596	Lys del m
+23616	rkere
+23632	rk del lysere
+23664	rk del m
+23682	rkere
+23694	Diffus
+23708	Skarp
+23720	Bevegelse
+23740	Frys bevegelse
+23770	dpi
+23778	@A03B@Fin Sepia
+23810	Nummerskive P
+23838	Nummerskive A
+23866	Nummerskive S
+23894	Nummerskive M
+23922	Nummerskive-meny
+23956	Nummerskive @A006@
+23994	Ps
+24000	@A007@
+24014	FNr.
+24024	Lukker
+24038	@A079@/Value
+24064	Forrige/neste
+24092	@A08B@
+24106	Utskriftsbestilling
+24146	@A022@
+24160	@A00E@
+24174	@A000@
+24188	Utskrift allerede bestilt
+24240	Nullstill
+24260	Behold
+24274	Nei
+24282	Bruk
+24292	Avbryt
+24306	2f 0.3EV
+24324	2f 0.5EV
+24342	2f 0.7EV
+24360	2f 1.0EV
+24378	3f 0.3EV
+24396	3f 0.5EV
+24414	3f 0.7EV
+24432	3f 1.0EV
+24450	5f 0.3EV
+24468	5f 0.5EV
+24486	5f 0.7EV
+24504	5f 1.0EV
+24522	7f 0.3EV
+24540	7f 0.5EV
+24558	7f 0.7EV
+24576	2L-format
+24596	WB BKT
+24610	A-B
+24618	3f 2Trinn
+24638	3f 4Trinn
+24658	3f 6Trinn
+24678	G-M
+24686	Bilde
+24698	Autoniv
+24716	Overlegg
+24734	HDMI Ut
+24750	HDMI-kontroll
+24778	1080i
+24790	720p
+24800	480p/576p
+24820	Copyright-info.
+24852	Artistnavn
+24874	Copyright-navn
+24904	AE BKT
+24918	FL BKT
+24932	ISO BKT
+24948	ART BKT
+24968	@A01B@: Start filmopptak
+25020	@A01A@: Ta bilde
+25054	@A063@: Start Filmopptak
+25106	@A02B@: Ta Bilde
+25140	Velg Scene
+25162	Velg Et Kunstfilter
+25202	@A06C@: Endre Innstillinger Enkelt
+25272	Still blender og 
+25310	lukker automatisk.
+25348	Still blender manuelt.
+25394	Still lukker manuelt.
+25438	Still blender og lukker
+25488	manuelt.
+25506	@A015@: Start/stopp filmopptak.
+25570	Avslutt@A019@
+25598	MF AEL/AFL
+25620	mode3
+25632	mode4
+25644	Halvveis
+25662	Komplett
+25680	AEL/S-AF
+25698	Eksponering
+25722	AEL
+25730	AEL/Eksp.
+25750	AEL/AF Start
+25776	AF Start
+25794	AEL/AFL/Eksp.
+25822	AFL/Eksp.
+25842	----
+25852	Opptaksmeny 1
+25880	Avspillingsmeny
+25912	Kontinuerlig visning av 
+25964	kunstfiltre. Noen filtre vises 
+26030	med lavere bildefrekvens.
+26082	Kunstfiltre vises lettere
+26140	 LCD og bildefrekvensen 
+26192	er dermed raskere.
+26230	@A042@: Zoom i bildet.
+26276	@A042@: Utvidet ramme. 
+26326	Trykk igjen for 
+26360	 forst
+26374	rre
+26384	bildet i den.
+26412	Uthev
+26424	Skygge
+26438	Indikator fjernes automatisk fra 
+26508	skjerm hvis ingenting er gjort 
+26574	innen 10 sekunder
+26610	Indikatorer alltid vist under opptak
+26684	Ikke ta stillbilde etter 
+26738	videoopptak ved 
+26772	 trykke 
+26792	ned utl
+26808	serknappen.
+26832	Ta stillbilde etter videoopptak
+26898	ved 
+26908	 trykke ned 
+26936	utl
+26944	serknappen.
+26968	Justere
+26984	Nullstilling til 
+27022	fabrikkinnstilling.
+27062	Deaktiver tilkoblingen
+27110	av Eye-Fi-kort.
+27142	Aktiver tilkoblingen
+27186	av Eye-Fi-kort.
+27218	2f
+27224	O.eksp. bilder
+27254	U.eksp. bilder
+27284	Tar to bilder,
+27316	et normalt og et 
+27354	overeksponert.
+27384	Tar to bilder,
+27416	et normalt og et 
+27454	undereksponert.
+27486	S-AF AEL/AFL
+27512	C-AF AEL/AFL
+27538	Filter type
+27562	Filter type @A00B@
+27600	Filter type @A00C@
+27638	Legg til effekter
+27674	Mykt fokus-effekt
+27714	kkelhull-effekt
+27746	Hvitkant-effekt
+27778	Rammeeffekt
+27802	Stjernelyseffekt
+27836	3D-foto
+27852	For portrettbilder.
+27892	Glatt tone for 
+27926	visning p
+27946	 HDTV.
+27960	For 
+27972	landskapsbilder. 
+28010	Bl
+28016	tt og gr
+28034	nt kommer 
+28058	klart frem.
+28082	For bilder av 
+28114	hurtige 
+28134	bevegelser.
+28158	For kunstbelyste
+28194	motiver om kvelden 
+28236	eller natten. 
+28268	Lengre lukkertid 
+28306	en vanlig. For beste 
+28352	resultater, stabiliser kameraet.
+28418	@A014@POP UP
+28446	For motiver med en 
+28488	opplyst bakgrunn p
+28526	 natt-eller 
+28554	kveldstid. Benytter 
+28598	enn lengre lukkertid 
+28644	enn vanlige bilder.
+28684	Innstilling for 
+28720	fotografering 
+28752	av aktive barn.
+28784	Gj
+28790	r bildet 
+28812	generelt mer 
+28842	lyst og luftig.
+28874	Forsterker 
+28904	rke omr
+28920	der 
+28932	i bildet og gj
+28962	r 
+28970	det mer dramatisk.
+29008	Denne funksjonen
+29044	reduserer 
+29068	uskarphet for
+29096	rsaket 
+29114	av bevegelse p
+29150	kamera eller motiv 
+29196	r bildet tas.
+29224	Best for 
+29250	rbilder av sm
+29284	objekter.
+29304	For bilder 
+29330	opplyst av 
+29356	levende lys. 
+29386	Varme farger kommer 
+29430	godt frem.
+29452	For bilder av 
+29484	soloppganger og 
+29520	solnedganger. 
+29556	dt og gult kommer 
+29596	sterkt frem.
+29622	For bilder av 
+29654	dokumenter. 
+29682	Ekstra kontrast 
+29718	mellom bokstavene og 
+29764	bakgrunnen.
+29788	Lar deg ta en 
+29820	serie av bilder 
+29856	som s
+29868	 kan kombineres 
+29904	til et panoramabilde.
+29948	AF@A039@MF
+29972	For bilder av 
+30004	fyrverkeri p
+30036	natt- eller kveldstid. 
+30086	Benytter en lengre lukkertid 
+30148	enn vanlige bilder.
+30188	For bilder med 
+30222	kraftig 
+30242	lysskinn; 
+30266	sn
+30272	landskap, hvite 
+30308	sandstrender.
+30336	For fotografering med semi
+30392	Fisheye Converter
+30430	FCON-P01.
+30450	For fotografering med
+30496	Wide Converter
+30528	WCON-P01.
+30548	For fotografering med
+30594	Macro Converter
+30628	MCON-P01/02.
+30654	Tar bilder som kan vises p
+30712	3D TV eller monitor.
+30754	Filter type @A00D@
+30792	2L-ruller
+30812	Alle indekser
+30840	Aksepter
+30858	Skriv ut alle
+30886	Tilbake
+30902	Rutenett
+30920	Uten ramme
+30942	@A002@ Sl. RAW+JPEG
+30982	Bildet ble ikke mottatt.
+31032	Et bilde ble mottatt.
+31076	Bildet ble ikke sendt.
+31122	Et bilde er sendt.
+31160	Vent
+31170	Kalender
+31188	Live kontroll
+31216	SCP
+31224	Kunst-meny
+31246	Scene-meny
+31268	Avbryt
+31282	Bildet kan ikke redigeres
+31334	Kan ikke skrive ut
+31372	Kort
+31382	Formater
+31400	Formater
+31418	Merk, bildet kan ikke velges
+31480	rk av kortets kontaktomr
+31530	de
+31538	med en t
+31556	rr klut.
+31574	Kobler til@A004@
+31608	@A00A@ Advarsel! Slett Alle
+31664	@A00A@ Advarsel! Slett Alle
+31720	@A00B@ Advarsel! Slett Alle
+31776	@A00B@ Advarsel! Slett Alle
+31832	@A002@ Advarsel! Slett alle
+31888	@A002@ Advarsel! Slett alle
+31944	Fortsett
+31962	Kopier Alle
+31986	Standard
+32004	Slett
+32016	Avvis
+32028	Funnet
+32042	@A005@
+32056	Nummerskive 1
+32084	Nummerskive 2
+32112	Tilkobling Starter
+32150	Avslutt
+32166	Ansiktsdetekt feil
+32204	Filnavn
+32220	Fullt
+32232	1Frame
+32246	@A00B@
+32260	@A00C@
+32274	Uthev og skygge
+32308	vre grense
+32330	@A00D@
+32344	Kun bilde
+32364	@A00F@
+32378	Justerer 0 niv
+32408	 til 
+32422	gjeldende posisjon.
+32462	Tilkobling feilet.
+32500	Still @A026@:
+32530	Bl.nr, lukker 
+32560	vre
+32568	Drei ringen @A027@
+32608	for 
+32618	 flytte til
+32644	neste element i menyen
+32690	Still @A027@:
+32720	Bl.nr, lukker 
+32750	vre
+32758	Drei ringen @A026@
+32798	for 
+32808	 flytte til
+32834	neste element i menyen
+32880	Tilkolingen starter.
+32922	Leter.
+32938	Vennligst vent.
+32970	Venter p
+32988	 foresp
+33004	rsel
+33014	Endre str. til 1920x1440.
+33066	Endre str. til 1280x960.
+33116	Avventer forsp
+33146	rsel.
+33158	Rett kameraet mot 
+33198	et hvitt stykke papir.
+33244	Rett kameraet mot 
+33284	et hvitt stykke papir.
+33330	Tast Inn PIN Kode
+33366	ISO-utvidelse
+33394	Anbefalt ISO
+33420	Blokkert
+33438	Brev
+33448	Niv
+33460	ler
+33468	L-format
+33486	Lysboks
+33502	L-ruller
+33520	Bruk lengre fokallengde eller
+33586	 n
+33592	rmere.
+33608	k avstanden mellom 
+33650	motiv og bakgrunn.
+33688	Diffus Bakgrunn
+33720	Hold kameraet i barnets 
+33774	yeh
+33782	yde.
+33792	Sett kameraet i serieopptak 
+33852	og velg ut de beste bildene 
+33912	senere.
+33928	Tips: bilder av barn
+33974	 n
+33980	rmere dyret og ta 
+34020	bilde fra 
+34042	yeniv
+34054	 eller lavere.
+34084	Fokus
+34096	r p
+34104	 dyrets 
+34122	yne.
+34134	Tiltrekk oppmerksomhet 
+34184	med mat eller leker.
+34226	Sett kameraet i serieopptak 
+34286	og velg ut de beste 
+34330	bildene senere.
+34362	Tips: bilder av dyr
+34402	Hold kameraet i blomstens 
+34462	yde eller lavere. Hold 
+34510	ye 
+34520	med bakgrunnen.
+34552	Velg m
+34566	rk eller farget 
+34602	bakgrunn. Gj
+34628	r forgrunn 
+34654	og bakgrunn uskarp.
+34694	Fokus
+34706	r p
+34714	 n
+34720	rmeste kronblad.
+34754	Skygge fra sky eller paraply
+34814	gir en dusere skyggeeffekt.
+34870	Tips: blomsterbilder
+34912	Ta bilde skr
+34938	tt ovenifra.
+34964	Bruk naturlig lys, 
+35006	f.eks fra vindu. Kombin
+35054	r 
+35062	gjerne med studioblits.
+35114	 n
+35120	rmere motivet.
+35152	St
+35158	ende format gir bilde
+35204	mer dybde.
+35226	Tips: bilder av mat
+35266	La hovedmotivet dekke 
+35314	2/3 av bildeflaten.
+35354	Del hovedmotiv og bakgrunn 
+35412	med en diagonal linje for 
+35468	naturlig gjengivelse.
+35512	Plass
+35524	r hovedmotivet 
+35562	 den diagonale linjen for 
+35618	naturlig gjengivelse.
+35662	Tips: komposisjon
+35698	Med MCON-P02
+35730	satt 14-42mm EZ, kan du ta 
+35792	rbilder av mindre objekter.
+35848	Med FCON-P01 og
+35882	14-42mm II R, kan du ta 
+35934	120 graders fisheye bilder.
+35990	Med WCON-P01 og 14-42mm II R,
+36052	kan du ta 11mm vidvinkel bilder.
+36118	Med MAL-1, kan du
+36156	justere lys og skygge i
+36206	makrobilder.
+36232	Tips: med tilbeh
+36272	Format Album
+36298	Film @A017@ av
+36328	Film intervall
+36358	Multi View
+36380	Flerutskrift
+36406	Ny Tilkobling
+36434	Ikke blekk
+36456	Ikke papir
+36478	Av
+36484	Avbryt @A020@
+36512	Bekrefter@A019@
+36544	Mer@A022@
+36564	Enkel utskrift Start@A024@
+36618	Endre Navn@A02D@
+36652	Avslutt@A018@
+36680	Avslutt@A025@
+36708	Utskrift@A01F@
+36738	Utl
+36746	ser
+36754	Enkeltutskrift@A020@
+36796	Ja@A019@
+36814	OK
+36826	Lysbildeintervall
+36862	Et 
+36870	yeblikk
+36886	Ett-trykk hvitbalanse
+36930	Innstillingsvalg
+36964	Str.1: Stor
+36988	Generelt
+37006	Adresseliste
+37032	Mottar Tilk.Foresp
+37070	rsel
+37080	Let
+37092	ke Timer
+37110	Velg M
+37124	lomr
+37134	de
+37140	Albumminne Er Fullt
+37180	Bilder/ark
+37202	Send Bilde
+37224	Postkort
+37242	@A005@X
+37258	Skriverfeil
+37282	Utskriftinfo
+37308	Velg Utskriftsmodus
+37348	Utskriftrekkef
+37378	lge
+37386	Utskriftspapir
+37416	Service
+37432	Super FP blits
+37462	Normal
+37476	Motta Bilde
+37500	Mottar Bildeforesp
+37538	rsel
+37548	Venter P
+37566	 Foresp
+37582	rsel
+37592	Mottar
+37606	Bilder Igjen
+37632	Fjern USB-kabel
+37664	Nullstill
+37684	Str.2: Medium
+37712	Lagrede Bilder
+37742	@A027@ Monoton
+37772	@A028@
+37786	@A029@ Egendefinert
+37826	Sender
+37840	Data er registrert
+37878	Innst. forandr.
+37910	Kort
+37920	St
+37926	rrelse
+37940	Gli
+37948	Standard
+37966	Detaljer
+37984	Navn
+37994	Endre Navn
+38016	Overf
+38028	rer
+38036	Hvitb
+38048	Auto @A001@
+38072	@A039@5500K @A001@
+38110	@A027@ @A001@
+38138	@A028@ @A001@
+38166	@A03B@7500K @A001@
+38204	@A03C@5300K @A001@
+38242	@A03E@ @A001@
+38270	WB-Feil Pr
+38292	v Igjen
+38308	Med
+38316	Uten
+38326	Rens kort
+38346	Innstill@A019@
+38376	3D foto ble ikke laget.
+38424	3D Show
+38440	Bildefeil
+38460	Endre str. til 640x480.
+38508	Str.1: Liten
+38534	Str.2: Stor
+38558	Str.3: Medium
+38586	Avbryt @A01F@
+38614	Avbryt @A02C@
+38642	Slett@A02D@
+38666	PC / Egendefinert utskrift@A01F@
+38732	WB/@A01A@@A061@
+38764	Brennvidde@A01A@
+38798	Kelvin@A01A@
+38824	Velg@A041@
+38846	@A063@@A064@
+38872	@A023@+Utl
+38894	ser
+38902	@A05F@@A033@
+38928	@A02E@@A02F@
+38954	@A030@@A02F@
+38980	@A031@@A02F@
+39006	@A032@@A01A@
+39032	@A042@@A041@
+39058	@A023@@A02F@
+39084	@A03D@@A025@
+39110	Hvitb forh
+39132	ndsvis@A033@
+39158	Normal auto hvitbalanse.
+39208	Beholde farger i auto hvitbalanse.
+39278	Effekt
+39292	Falme
+39304	Fallende bilder
+39336	Fotolinje
+39356	Utf
+39364	rer nullstilling, nullstiller
+39426	grunnleggende opptaksfunksjoner.
+39492	Utf
+39500	rer nullstilling, nullstiller
+39562	alle opptaksfunksjoner,
+39612	unntatt dato, spr
+39648	k og noen
+39670	andre innstillinger.
+39712	Innebygget blits.
+39748	Kan ikke ta film med AVCHD modus
+39814	Objektivet st
+39842	ttes ikke.
+39864	@A002@ OBS - nullstiller alle innstillinger
+39952	Tilbeh
+39966	rsportmeny
+39988	Innstillingsmeny
+40022	A. Del Med OLYMPUS PENPAL
+40074	B. OLYMPUS PENPAL Album
+40122	C. Elektronisk S
+40156	ker
+40164	Sett dato og tid for kamera.
+40222	Velg video-standard brukt i ditt 
+40292	land eller region
+40328	Velg hvor stor 
+40360	kningen 
+40380	skal v
+40394	re n
+40404	r du velger 
+40432	ISO-f
+40444	lsomhet
+40460	USB
+40468	100mm
+40480	150mm
+40492	11"
+40500	17"
+40508	4"
+40514	6"
+40520	8"
+40526	10"
+40534	A0
+40540	A1
+40546	A2
+40552	A3
+40558	A4
+40564	A5
+40570	A6
+40576	A7
+40582	A8
+40588	A9
+40594	B0
+40600	B1
+40606	B2
+40612	B3
+40618	B4
+40624	B5
+40630	B6
+40636	B7
+40642	B8
+40648	B9
+40654	4"
+40660	8"
+40668	Panorama
+40686	4"
+40692	10"
+40702	Panorama
+40720	4"
+40726	11"
+40736	Panorama
+40754	4"
+40760	12"
+40770	Panorama
+40788	10cm
+40798	30cm
+40810	Panorama
+40828	89mm
+40838	254mm
+40852	Panorama
+40870	A Mode
+40884	B Mode
+40898	C Mode
+40912	M Value
+40928	FP M Value
+40950	Channel
+40966	Level
+40978	TTL Value
+40998	Auto Value
+41020	FP TTL Value
+41046	Auto
+41056	@A01C@/FP
+41076	@A07D@ 4
+41094	@A07E@ 9
+41112	@A07F@ 25
+41132	@A07F@ 100
+41154	BGM
+41162	Cool
+41172	Joy
+41180	Sekvensbilder H
+41212	Melancholy
+41234	@A012@ Anti-Shock @A004@
+41284	TTL Auto
+41302	Sekvensbilder L
+41334	@A013@ Anti-Shock @A004@
+41384	@A078@arge
+41406	Medium
+41420	@A074@mall
+41442	@A01C@Funksjon
+41472	Vindst
+41486	yreduksjon
+41508	Rett kameraet mot 
+41548	et hvitt stykke papir.
+41594	@A03E@+Utl
+41616	ser
+41624	Manual
+41638	FP TTL Auto
+41662	FP Manual
+41682	Level Lo
+41700	Level Mid
+41720	Level Hi
+41738	ch
+41744	Beat
+41754	Adobe
+41766	AVCHD 1920
+41788	1080 Fine
+41808	AVCHD 1280
+41830	720 Fine
+41848	AVCHD 1280
+41870	720 Normal
+41892	Forst
+41904	rr
+41910	@A01D@: AEL/AFL
+41942	Ta bilde med @A02B@
+41984	mens @A01E@ holdes inne
+42032	Ta bilde med @A02C@
+42074	mens @A01E@ holdes inne
+42122	For bilder med 
+42156	landskap i 
+42182	bakgrunnen. 
+42210	Bl
+42216	tt og gr
+42234	nt kommer 
+42258	klart frem.
+42282	Best for 
+42308	rbilder.
+42326	@A03A@ Fiske
+42352	ye
+42358	Landskap+Portrett
+42394	@A038@6000K @A001@
+42432	@A03A@4000K @A001@
+42470	@A03D@3000K @A001@
+42508	Ta bilde med @A02D@
+42550	mens @A01E@ holdes inne
+42598	Ta bilde med @A02E@
+42640	mens @A01E@ holdes inne
+42688	Deaktiver ber
+42716	ringsskjerm.
+42742	Aktiver ber
+42766	ringsskjerm.
+42792	Endre spr
+42812	k.
+42818	Velg funksjonen tildelt
+42868	den valgte knappen
+42906	Hvis P
+42920	 er valgt, kan lukkeren 
+42972	bli utl
+42988	st selv om kameraet 
+43032	ikke er i fokus i S-AF.
+43080	Hvis P
+43094	 er valgt, kan lukkeren 
+43146	bli utl
+43162	st selv om kameraet ikke 
+43216	er i fokus i C-AF
+43252	Velg informasjonen vist
+43306	r @A00F@ eller @A01A@ er trykket.
+43374	Velg kontrollene vist n
+43422	r @A035@ er
+43448	trykket p
+43468	 i hver bildemodus.
+43508	Sett lysstyrkens rekkevidde av
+43572	utheving og skygger til 
+43622	 vise
+43636	et varsel.
+43658	Velg P
+43672	 for 
+43684	 vise hjelp for
+43718	valgt modus n
+43746	r modushjulet er
+43782	rotert.
+43798	Velg hvordan art filter-effekt
+43862	blir vist p
+43886	 skjermen.
+43908	Velg hvordan bildet 
+43952	blir forst
+43974	rret ved 
+43994	 trykke 
+44018	 @A042@ knappen
+44054	r den er P
+44076	, blir eksp.
+44104	komp.verdi lagt til
+44146	blitsens komp.verdi.
+44188	Setter samme hvitbalanse
+44240	kompensasjon i alle modus
+44292	Velg en video opptaksmodus
+44348	mens @A004@ modus.
+44386	Hvis P
+44400	, tar bilde n
+44428	r opptak
+44448	av film avsluttes
+44484	Velg batteriniv
+44516	et der
+44532	@A003@ advarsel vises.
+44578	Aktivere eller deaktivere
+44632	innstillingene p
+44666	 ber
+44676	ringspanelet.
+44704	Se adressebok eller legg til
+44764	en ny host til adresseboken
+44820	Vis eller rediger informasjonen
+44886	for din OLYMPUS PENPAL.
+44934	Velg bildest
+44960	rrelse ved
+44984	overf
+44996	rsel
+45006	Velg bildest
+45032	rrelse ved kopiering
+45074	@A05A@4000K
+45098	@A01E@:Av
+45118	Hjemposisjonsinnst.
+45160	AF OMR
+45174	DE
+45180	3D
+45186	Skift til MF 
+45216	innstilling
+45240	@A01D@:
+45258	Start/Stop
+45282	Filmopptak
+45304	Ett-trykk hvitbal.
+45342	Kompresjon
+45364	Super Fine
+45386	Fine
+45396	Normal
+45410	Basic
+45422	Viser dybdeskarphet
+45462	Skift RAW+JPEG/JPEG
+45504	kvalitetsinnst. Ved
+45548	 vri p
+45562	 hjul
+45574	Testbilde u. Lagring
+45616	dummy
+45628	Lagre
+45640	@A017@Volumbegrenser
+45682	Begrenser automatisk mikrofon-
+45746	inngangsvolum hvis inngangs-
+45806	volum overskrider tilordnet niv
+45874	IS Mode
+45890	@A01D@: Knapper @A02F@ og @A030@
+45956	Velg IS mode
+45982	@A066@: trykk for 
+46020	 bytte
+46036	til Live Guide modus,
+46082	og trykk igjen for 
+46122	 g
+46128	 tilbake.
+46148	@A066@: endre x1/x2.
+46190	Vintage
+46206	Delvis farge
+46232	@A082@Vintage
+46260	@A083@Delvis farge
+46298	Skyggeeff.: venstre og h
+46348	yre
+46356	Skyggeeffekt: topp og bunn
+46410	Arbeid p
+46436	Trykker du @A025@ under
+46486	en Photo Story-
+46518	kt
+46526	kan du velge om du vil
+46574	lagre arbeidet som
+46622	r eller forkaste
+46658	det gjeldende arbeidet.
+46706	Kan ikke innhente fil for 
+46764	gjenoppta fotografering
+46812	Fullf
+46824	r senere
+46842	Forkast
+46858	Velg On for 
+46884	 angi prioritet p
+46926	menneskeansikt eller 
+46970	yne 
+46982	mens autofokus blir bestemt.
+47040	@A023@: Knapper @A02A@ og @A02B@
+47106	Rett kameraet mot 
+47146	et hvitt stykke papir.
+47192	AF alle rammer
+47222	Fokuserer p
+47246	 nytt for alle rammer.
+47292	Fokuserer kun 
+47328	gang n
+47342	r selvutl
+47362	seren starter.
+47392	@A013@Bildestabilisator
+47440	Aktiverer/deaktiverer
+47486	bildestabilisering
+47526	for kontinuerlig fotografering.
+47590	Av
+47596	Bildestabilisering deaktivert
+47658	for 
+47668	 prioritere hastigheten ved
+47726	kontinuerlig fotografering.
+47782	AF-fokusjustering
+47818	AF-omr
+47832	demark.
+47850	@A01E@ L b/s
+47876	@A01E@: Start Filmopptak
+47928	@A030@: Ta Bilde
+47962	@A075@Bleke og lyse farger
+48016	Fokus p
+48032	 ansikt 
+48052	eller 
+48066	yne oppdaget.
+48096	Det n
+48108	rmeste 
+48124	ye p
+48134	 siden 
+48152	vil bli valgt.
+48182	Fokus p
+48198	 ansikt
+48216	eller 
+48230	yne oppdaget.
+48260	Et h
+48270	yre 
+48280	ye vil bli valgt.
+48316	Fokus p
+48332	 ansikt
+48350	eller 
+48364	yne oppdaget.
+48394	Et venstre 
+48418	ye vil bli valgt.
+48454	Ansiktsgjenkjennelse virker ikke.
+48522	Fokus p
+48538	 ansikt oppdaget.
+48580	Bildestabilisering aktivert
+48638	for 
+48648	 prioritere stabilt bilde.
+48704	Hastigheten til kontinuerlig
+48764	opptak kan bli p
+48798	virket.
+48814	Reduserer uskarphet
+48856	pga. at lukkeren slippes.
+48908	C-AF L
+48926	Kontroller
+48948	Dataliste
+48968	Objektivdata
+48994	Standarddata
+49020	Velg AF-m
+49046	og AF modus.
+49072	@A028@: Utvidet ramme. 
+49122	Trykk igjen for 
+49156	 forst
+49170	rre
+49180	bildet i den.
+49208	Hjemposisjonsinnst.
+49250	AF OMR
+49264	DE
+49270	Skift til MF 
+49300	innstilling
+49324	Ett-trykk hvitbal.
+49362	Viser dybdeskarphet
+49402	Ansikt- & 
+49424	yeprioritet P
+49454	Ansikt- & h. 
+49482	yeprioritet P
+49512	Ansikt- & v. 
+49540	yeprioritet P
+49570	Skift RAW+JPEG/JPEG
+49612	kvalitetsinnst. ved
+49656	 vri p
+49670	 hjul
+49682	Testbilde u. Lagring
+49728	r lukkerhastigheten er @A096@
+49790	eller mindre, endres den f
+49844	rste
+49856	lukkergardinen fra mekanisk
+49914	til elektronisk for 
+49956	 redusere
+49978	uskarphet pga. st
+50014	t fra lukkeren.
+50046	Velg farge@A01A@
+50080	Normal
+50094	@A020@
+50108	@A021@
+50122	@A02B@Funksjon
+50152	@A029@ @A001@
+50180	@A02A@ @A001@
+50208	@A046@L
+50232	r den er satt p
+50264	, beholdes
+50288	dybden i feltforh
+50324	ndsvisningen
+50352	selv n
+50366	r knappen slippes opp.
+50412	Panorering
+50434	For fotografering av motiv
+50490	med uskarp bakgrunn.
+50538	viser kamerabevegelsen
+50586	og angir den beste
+50626	lukkerhastigheten.
+50664	@A04E@Funksjon
+50694	@A053@Lys tone
+50724	@A06C@: AEL/AFL
+50756	@A06C@:
+50774	Start/Stop
+50798	Filmopptak
+50820	Viser dybdeskarphet
+50860	Ett-trykk hvitbal.
+50898	Hjemposisjonsinnst.
+50940	AF OMR
+50954	DE
+50960	Skift til MF 
+50990	innstilling
+51014	Skift RAW+JPEG/JPEG
+51056	kvalitetsinnst. Ved
+51100	 vri p
+51114	 hjul
+51126	Testbilde u. Lagring
+51168	Ta bilde med @A06C@
+51210	mens @A06B@ holdes inne
+51258	Ta bilde med @A06D@
+51300	mens @A06B@ holdes inne
+51348	Ta bilde med @A06E@
+51390	mens @A06B@ holdes inne
+51438	Ta bilde med @A06F@
+51480	mens @A06B@ holdes inne
+51528	@A077@Kornet film
+51564	@A06C@: trykk for 
+51602	 bytte
+51618	til Live Guide modus,
+51664	og trykk igjen for 
+51704	 g
+51710	 tilbake.
+51730	@A06C@: endre x1/x2.
+51772	@A076@:Av
+51792	1/2
+51800	1/8
+51808	1/32
+51818	@A01C@: Start filmopptak
+51870	@A01B@: Ta bilde
+51906	@A069@: Film @A05E@
+51946	1/128
+51958	@A087@@A088@
+51984	Still @A089@:
+52014	Bl.nr, lukker 
+52044	vre
+52052	Still @A08A@:
+52082	Bl.nr, lukker 
+52112	vre
+52120	ART13
+52132	ART14
+52144	@A046@
+52158	Endre modus til P/A/S/M.
+52208	Trapeskorreksjon
+52246	r P
+52254	, er trapeskorreksjon
+52300	mulig.
+52316	Indikatorer vil vises p
+52364	 skjermen.
+52386	Trykk for 
+52408	 starte
+52426	trapeskorreksjon. Avslutt ved
+52490	 holde inne knappen.
+52532	Trapeskorreksjon Av
+52572	Trapeskorreksjon P
+52612	Avslutt @A018@
+52642	Kamera velger
+52672	stabilisatorinnstilling ved
+52732	 detektere
+52756	kamerabevegelse.
+52790	Angi korreksjon@A01A@
+52834	@A03C@ halvveis trykk
+52878	Velg P
+52892	 for 
+52904	 vise
+52918	niv
+52930	ling i innebygget EVF.
+52978	Aktiveres under @A058@.
+53026	Hastighet
+53046	@A066@ 4 piks
+53074	@A067@ 5 piks
+53102	@A04A@Funksjon
+53132	EVF auto-luminans
+53168	Grunnleggende info
+53206	Fargeskaper
+53230	@A078@N
+53246	kkelhull
+53264	Panor
+53276	r bildet.
+53296	Etter 
+53310	 ha tatt det f
+53340	rste
+53352	bildet, panorer kameraet
+53404	sakte for 
+53426	 f
+53432	 en rett linje,
+53466	trykk deretter p
+53500	 utl
+53510	seren.
+53524	Slett obj.datasett
+53566	keeffekt: venstre og h
+53612	yre
+53624	keeffekt: topp og bunn
+53670	Elektron. zoom
+53700	Natural@A037@
+53728	Vivid@A037@
+53752	@A0BF@
+53766	@A0D0@
+53780	@A0D1@
+53794	@A0D2@
+53808	@A0D3@
+53822	@A0D4@
+53836	@A0D5@
+53850	@A0D6@
+53864	@A0D7@
+53878	@A0D8@
+53892	@A0D9@
+53906	@A0DA@
+53920	@A0DB@
+53934	@A0DC@
+53948	@A0DD@
+53962	@A0DE@
+53976	@A0DF@
+53990	@A0E0@
+54004	@A0E1@
+54018	@A0E2@
+54032	@A0E3@
+54046	@A0E4@
+54060	@A0E5@
+54074	@A0E6@
+54088	@A0E7@
+54102	@A0E8@
+54116	@A0E9@
+54130	@A0EA@
+54144	@A0EB@
+54158	@A0EC@
+54172	@A0ED@
+54186	@A0EE@
+54200	@A0EF@
+54214	@A0F0@
+54228	@A0F1@
+54242	@A0F2@
+54256	@A0C0@
+54270	@A0C1@
+54284	@A0C2@
+54298	@A0C3@
+54312	@A0C4@
+54326	@A0C5@
+54340	@A0C6@
+54354	@A0C7@
+54368	@A0C8@
+54382	@A0C9@
+54396	@A0CA@
+54410	@A0CB@
+54424	@A0CC@
+54438	@A0CD@
+54452	@A0CE@
+54466	@A0CF@
+54480	@A0D0@
+54494	@A0D1@
+54508	@A0D2@
+54522	@A0D3@
+54536	@A0D4@
+54550	@A0BF@
+54564	@A0D6@
+54578	@A0D7@
+54592	@A0D8@
+54606	@A0D9@
+54620	@A0DA@
+54634	@A0DB@
+54648	@A0DC@
+54662	@A0DD@
+54676	@A0DE@
+54690	@A0DF@
+54704	@A0E0@
+54718	@A0E1@
+54732	@A0E2@
+54746	@A0E3@
+54760	@A0E4@
+54774	@A0E5@
+54788	@A0E6@
+54802	@A0E7@
+54816	@A0E8@
+54830	@A0E9@
+54844	@A0EA@
+54858	@A0EB@
+54872	@A0EC@
+54886	@A0ED@
+54900	@A0EE@
+54914	@A0EF@
+54928	@A0F0@
+54942	@A0F1@
+54956	@A0F2@
+54970	@A0F3@
+54984	@A0F4@
+54998	@A0F5@
+55012	@A0F6@
+55026	@A0F7@
+55040	@A0E2@
+55054	@A0F9@
+55068	@A0FA@
+55082	@A0FB@
+55096	@A0FC@
+55110	@A0FD@
+55124	@A0FE@
+55138	@A0FF@
+55152	@A100@
+55166	@A101@
+55180	@A102@
+55194	@A103@
+55208	@A104@
+55222	@A105@
+55236	Utl
+55244	ser/@A01E@
+55266	Under vann
+55288	Zoom
+55298	@A01E@+Utl
+55320	ser
+55328	@A075@: Endre Innstillinger Enkelt
+55398	Rett kameraet mot 
+55438	et hvitt stykke papir.
+55484	@A06B@: Start Filmopptak
+55536	@A02B@: Ta Bilde
+55570	@A06B@+Utl
+55592	ser
+55600	@A023@: Utvidet ramme. 
+55650	Trykk igjen for 
+55684	 forst
+55698	rre
+55708	bildet i den.
+55736	@A01D@: endre x1/x2.
+55778	@A01D@: trykk for 
+55816	 bytte
+55832	til Live Guide modus,
+55878	og trykk igjen for 
+55918	 g
+55924	 tilbake.
+55944	Forst
+55956	rr et bilde eller @A024@ med hjul
+56024	Velg bilde,s
+56050	 @A06D@:forst
+56078	rr bilde, @A024@
+56112	Meny om utl
+56136	se- og
+56152	kontinuerlige bilderinnstillinger
+56220	Antall bilder som skal tas p
+56284	ett sekund n
+56310	r du bruker 
+56338	sekvensfotografering med @A052@
+56402	Skjermen vill dempes hvis
+56456	ingenting er gjort i en
+56506	gitt tidsperiode.
+56542	@A01E@ H b/s
+56568	Antall bilder som skal tas p
+56632	ett sekund n
+56658	r du bruker 
+56686	sekvensfotografering med @A056@
+56750	@A072@: Vis playback menyen.
+56810	Slett n
+56830	rende bilde
+56856	fra avspillingsmenyen.
+56902	@A072@: Slett n
+56938	renede bilde 
+56968	umiddelbart.
+56996	@A025@: Vis avspillingsmenyen.
+57058	@A025@: Slett n
+57094	rende bilde 
+57122	umiddelbart.
+57148	Angi slett et bilde til enten 
+57212	@A072@ eller @A025@.
+57254	@A011@: Knapper @A02E@ og @A02F@
+57320	Autovalg av ideell modus.
+57374	Live Guide-meny er tilgjengelig.
+57440	Viser fullstendig meny for 
+57498	kamerainnstillinger
+57538	Setter automatisk innstillinger 
+57606	ved Scene-modus du velger.
+57660	Anvend kreative effekter.
+57712	Baklys P
+57730	/Av.
+57740	Juster lysstyrke og
+57782	fargetemperatur p
+57818	 LCD
+57830	skjermen
+57848	fps
+57856	@A014@/@A080@/@A028@
+57898	@A081@/@A082@
+57926	@A04F@Funksjon
+57956	Ved 
+57966	 trykke knapp @A077@ under
+58022	filmopptak med Live Guide, 
+58080	kan du justere Live Guide 
+58136	niv
+58144	et ved rotasjon av fokusring.
+58204	Ved 
+58214	 trykke knapp @A077@ under 
+58272	filmopptak, kan du endre til 
+58334	MF modus. Trykk igjen for 
+58398	 tilbake til AF modus.
+58444	AF-stopp
+58462	Ved 
+58472	 holde @A06D@ knapp nede, 
+58528	kan du deaktivere autofokus 
+58588	og sette fokus p
+58622	 det tidspunkt 
+58656	du trykket knappen.
+58696	Funksjon for 
+58724	 kople ut knapp
+58756	Touchkalibrering.
+58792	Ekstern @A02A@
+58822	mm
+58832	Ekstern @A02E@ Oppt.niv
+58882	Velg AF-m
+58902	l 
+58910	og AF modus.
+58936	3f
+58942	4f
+58948	Kontroll
+58966	Velg IS mode
+58992	@A01D@: Utvidet ramme. 
+59042	Trykk igjen for 
+59076	 forst
+59090	rre
+59100	bildet i den.
+59128	Antall bilder @A033@
+59170	Modus Ringfunksjon
+59208	Sett registrerte Mysets
+59258	til programhjulet.
+59296	Egendefinerte selvutl
+59340	ser Innstillinger
+59376	@A014@ tidtaker
+59408	Intrvl. Sh./tidsforl
+59454	Tar et angitt antall
+59498	bilder i det angitte intervallet
+59566	og skaper intervallfilm.
+59616	Start Ventetid
+59646	Stiller ventetid for 
+59690	 ta
+59700	det f
+59712	rste bildet etter at utl
+59762	ser-
+59774	knappen trykkes.
+59808	Intervalltid
+59834	Auto. avstengning
+59870	4t
+59876	Vent
+59886	@A007@Funksjon
+59916	Velg AF-omr
+59940	de
+59946	Rammehastighet
+59976	@A010@:Av
+59996	Still @A011@:
+60026	Bl.nr, lukker 
+60056	vre
+60064	Still @A012@:
+60094	Bl.nr, lukker 
+60124	vre
+60132	Av
+60138	Etter 
+60152	 ha tatt det f
+60182	rste
+60194	bildet, panorer kameraet
+60246	sakte for 
+60268	 f
+60274	 en rett linje,
+60308	trykk deretter p
+60342	 utl
+60352	seren.
+60366	Innspillingsniv
+60400	Reduksjon av vindst
+60452	Rett kameraet mot 
+60492	et hvitt stykke papir.
+60538	Rett kameraet mot 
+60578	et hvitt stykke papir.
+60624	Rett kameraet mot 
+60664	et hvitt stykke papir.
+60710	@A071@+Utl
+60732	ser
+60740	@A072@+Utl
+60762	ser
+60770	@A070@+Utl
+60792	ser
+60800	@A050@Funksjon
+60830	@A051@Funksjon
+60860	1t
+60866	K. @A004@ Nytte
+60898	@A039@@A03A@
+60924	Galleri
+60940	Hver pilknapp kan tilegnes
+60996	en direktefunksjon n
+61044	de blir trykket p
+61084	under eksponering.
+61122	Funksjon for 
+61150	 kople ut knapp.
+61184	Juster eksponerings-
+61228	kompensasjon
+61254	Juster eksponerings-
+61298	kompensasjon
+61324	Juster eksponerings-
+61368	kompensasjon
+61394	Juster eksponerings-
+61438	kompensasjon
+61464	Velg AF-m
+61484	l 
+61492	og AF modus.
+61518	Velg AF-m
+61538	l 
+61546	og AF modus.
+61572	Velg AF-m
+61592	l 
+61600	og AF modus.
+61626	Velg AF-m
+61646	l 
+61654	og AF modus.
+61680	Velg AF-m
+61700	l 
+61708	og AF modus.
+61734	Velg AF-m
+61754	l 
+61762	og AF modus.
+61788	@A06C@: Knapper @A02A@ og @A02B@
+61854	@A066@: Knapper @A02A@ og @A02B@
+61920	@A066@: AEL/AFL
+61952	@A06E@: AEL/AFL
+61984	@A06F@: AEL/AFL
+62016	@A06D@: AEL/AFL
+62048	@A06C@: Utvidet ramme. 
+62098	Trykk igjen for 
+62132	 forst
+62146	rre
+62156	bildet i den.
+62184	@A066@: Utvidet ramme. 
+62234	Trykk igjen for 
+62268	 forst
+62282	rre
+62292	bildet i den.
+62320	@A06E@: Utvidet ramme. 
+62370	Trykk igjen for 
+62404	 forst
+62418	rre
+62428	bildet i den.
+62456	@A06F@: Utvidet ramme. 
+62506	Trykk igjen for 
+62540	 forst
+62554	rre
+62564	bildet i den.
+62592	@A06D@: Utvidet ramme. 
+62642	Trykk igjen for 
+62676	 forst
+62690	rre
+62700	bildet i den.
+62728	Viser dybdeskarphet
+62768	Viser dybdeskarphet
+62808	Viser dybdeskarphet
+62848	Ett-trykk hvitbal.
+62886	Ett-trykk hvitbal.
+62924	Ett-trykk hvitbal.
+62962	Hjemposisjonsinnst.
+63004	AF OMR
+63018	DE
+63024	Hjemposisjonsinnst.
+63066	AF OMR
+63080	DE
+63086	Hjemposisjonsinnst.
+63128	AF OMR
+63142	DE
+63148	Skift til MF 
+63178	innstilling
+63202	Skift til MF 
+63232	innstilling
+63256	Skift til MF 
+63286	innstilling
+63310	Skift RAW+JPEG/JPEG
+63352	kvalitetsinnst. Ved
+63396	 vri p
+63410	 hjul
+63422	Skift RAW+JPEG/JPEG
+63464	kvalitetsinnst. Ved
+63508	 vri p
+63522	 hjul
+63534	Skift RAW+JPEG/JPEG
+63576	kvalitetsinnst. Ved
+63620	 vri p
+63634	 hjul
+63646	Testbilde u. Lagring
+63688	Testbilde u. Lagring
+63730	Testbilde u. Lagring
+63772	Ta bilde med @A06C@
+63814	mens @A071@ holdes inne
+63862	Ta bilde med @A06D@
+63904	mens @A071@ holdes inne
+63952	Ta bilde med @A06E@
+63994	mens @A071@ holdes inne
+64042	Ta bilde med @A06F@
+64084	mens @A071@ holdes inne
+64132	Ta bilde med @A06C@
+64174	mens @A072@ holdes inne
+64222	Ta bilde med @A06D@
+64264	mens @A072@ holdes inne
+64312	Ta bilde med @A06E@
+64354	mens @A072@ holdes inne
+64402	Ta bilde med @A06F@
+64444	mens @A072@ holdes inne
+64492	Ta bilde med @A02B@
+64534	mens @A072@ holdes inne
+64582	Ta bilde med @A02C@
+64624	mens @A072@ holdes inne
+64672	Ta bilde med @A02D@
+64714	mens @A072@ holdes inne
+64762	Ta bilde med @A02E@
+64804	mens @A072@ holdes inne
+64852	@A06E@: trykk for 
+64890	 bytte
+64906	til Live Guide modus,
+64952	og trykk igjen for 
+64992	 g
+64998	 tilbake.
+65018	@A06F@: trykk for 
+65056	 bytte
+65072	til Live Guide modus,
+65118	og trykk igjen for 
+65158	 g
+65164	 tilbake.
+65184	@A06D@: trykk for 
+65222	 bytte
+65238	til Live Guide modus,
+65284	og trykk igjen for 
+65324	 g
+65330	 tilbake.
+65350	@A06E@: endre x1/x2.
+65392	@A06F@: endre x1/x2.
+65434	@A06D@: endre x1/x2.
+65476	Eye-Fi
+65490	@A05B@Funksjon
+65520	@A05C@Funksjon
+65550	Sjekk status p
+65580	 objektiv.
+65602	Objektivet er l
+65634	st. Frigj
+65654	r sperren.
+65676	Key Line
+65694	@A067@Key Line
+65724	Still inn SCN-modus @A05D@.
+65782	Manuell verdi
+65810	Manuell verdi @A01A@
+65856	Kelvin
+65870	Kamera blits
+65896	Bulb/Time-fokusering
+65938	Velg On for og 
+65972	tillate MF under 
+66010	BULB/TIME fotografering.
+66060	Bulb/Time-timer
+66092	Sett maks tid for
+66130	Bulb/Time-modus.
+66164	Live Bulb
+66184	Bildene vises
+66214	under tiden
+66240	Bulb-modus.
+66264	Live Time
+66284	Bildene vises 
+66316	under tiden 
+66344	Time-modus.
+66368	Vis telling
+66392	ganger
+66406	@A022@ + IS Off
+66442	r innstillt p
+66470	 On, Vil 
+66492	ikke Bilde Stabilisator 
+66544	virke under sekvensfoto.
+66594	Halvveis Rls med IS
+66634	I innstillingen P
+66670	 vil 
+66684	bildestabilisatoren
+66726	virke n
+66742	r utl
+66754	ser blir trykt inn.
+66794	LV-n
+66804	rbilde-modus
+66830	Velg en modus n
+66862	r 
+66870	utl
+66878	serknappen blir trykket 
+66930	ned under forst
+66962	rret live view.
+66998	r utl
+67010	serknappen er trykket 
+67058	halveis inn, vil live view forsvinne 
+67136	og den utvidet rammen bli synlig.
+67208	r utl
+67220	ser knappen er 
+67254	trykket halvveis inn, vil autofokus 
+67330	virke under forst
+67366	rret live view.
+67398	Velg et rutenett.
+67434	@A03B@
+67448	Kamera vil sl
+67476	 seg 
+67490	automatisk av hvis 
+67532	det ikke blir brukt under en tid.
+67600	Live SCP
+67618	@A057@ BatteriPrioritet
+67666	Velg batteri type 
+67706	som vil bli brukt 
+67746	med batterigrepet
+67782	Hus Batteri
+67806	PHB Batteri
+67830	Etter at batteriet i 
+67876	kamerahuset er brukt 
+67922	opp, vil batteriet i 
+67968	batterigrepet bli brukt.
+68022	r batteriet i batterigrepet 
+68082	er brukt opp, 
+68114	vil batteriet i kamera bli brukt.
+68182	Juster mikrofonniv
+68220	et.
+68228	Reduserer vindst
+68272	r man filmer.
+68300	Filmeffekt
+68322	Aktiver eller
+68352	deaktiver film
+68384	effekt i @A008@ modus.
+68430	Innebygd EVF
+68456	Meny for innstilling 
+68502	av den innebygde
+68538	elektronisk s
+68566	ker.
+68576	@A05F@ Rutenett
+68608	Velg et rutenett for 
+68654	den innbygde 
+68684	EVF. Aktiver mens @A05F@.
+68736	Innebygd EVF-stil
+68772	Velg visningstil for innebygd EVF.
+68842	Stil 1
+68856	Stil 2
+68870	Stil 3
+68884	@A03C@ Innstillinger
+68926	Velg visningsinformasjon
+68982	r @A01A@ er nedtrykt
+69026	Aktiver mens @A03C@.
+69068	EVF-autobryter
+69098	Bytt auto. fra skjermvisningen 
+69164	til EVF-skjerm n
+69198	r 
+69206	et 
+69214	ye blir oppdaget ved EVF.
+69266	Deaktiver 
+69288	ye sensor.
+69312	@A059@: for 
+69338	 bytte mellom
+69368	monitor skjerm og
+69406	EVF display.
+69432	Aktiver 
+69450	yesensor.
+69472	@A03D@: live view On/Off.
+69524	Velg bildefrekvens
+69564	i den innebygde EVF.
+69606	Multifunksjon
+69634	@A066@: Trykk for 
+69672	 utf
+69682	re
+69690	de ulike funksjonene,
+69736	og endre funksjon med et trykk.
+69800	@A023@: Trykk for 
+69838	 utf
+69848	re
+69856	de ulike funksjonene,
+69902	og endre funksjon med et trykk.
+69966	One Shot Echo
+69994	Multi Echo
+70016	Dir.Funksjon
+70042	Uthev og skygge-kontroll
+70098	r man presser @A010@ 
+70144	knappen under 
+70176	fotograferingen, 
+70214	kan man velge AF omr
+70256	de.
+70264	MTP
+70272	ESP
+70280	NTSC
+70290	PAL
+70298	USB
+70306	RAW
+70314	@A0B2@arge
+70336	@A037@iddle
+70360	@A038@mall
+70382	Super Fine
+70404	Fine
+70414	Normal
+70428	Basic
+70440	SF
+70458	MF
+70464	fps
+70472	100mm
+70484	150mm
+70496	11"
+70504	17"
+70512	4"
+70518	6"
+70524	8"
+70530	10"
+70538	A0
+70544	A1
+70550	A2
+70556	A3
+70562	A4
+70568	A5
+70574	A6
+70580	A7
+70586	A8
+70592	A9
+70598	B0
+70604	B1
+70610	B2
+70616	B3
+70622	B4
+70628	B5
+70634	B6
+70640	B7
+70646	B8
+70652	B9
+70658	4"
+70664	8"
+70672	Panorama
+70690	4"
+70696	10"
+70706	Panorama
+70724	4"
+70730	11"
+70740	Panorama
+70758	4"
+70764	12"
+70774	Panorama
+70792	10cm
+70802	30cm
+70814	Panorama
+70832	89mm
+70842	254mm
+70856	Panorama
+70874	Adobe RGB
+70894	I.S. 1
+70908	I.S. 2
+70922	Slow
+70932	Slow2
+70944	2nd Curtain
+70968	Vivid
+70980	Natural
+70996	JPEG
+71006	RAW+JPEG
+71024	Portrait
+71058	CWB
+71066	3f 0.3EV
+71084	3f 0.5EV
+71102	3f 0.7EV
+71120	3f 1.0EV
+71138	5f 0.3EV
+71156	5f 0.5EV
+71174	5f 0.7EV
+71192	5f 1.0EV
+71210	mode1
+71222	mode2
+71234	mode3
+71246	mode4
+71258	A Mode
+71272	B Mode
+71286	C Mode
+71300	M Value
+71316	FP M Value
+71338	Channel
+71354	Level
+71366	TTL Value
+71386	Auto Value
+71408	FP TTL Value
+71434	Auto
+71444	@A00A@/FP
+71464	S-AF
+71474	C-AF
+71484	S-AF+MF
+71500	C-AF+TR
+71516	AE BKT
+71530	WB BKT
+71544	FL BKT
+71558	ISO BKT
+71574	P/A/S
+71586	Menu
+71596	1/2EV
+71608	1/3EV
+71620	1EV
+71628	Off
+71636	I.S. 3
+71650	sRGB
+71660	@A0B3@/Value
+71686	AEL/S-AF
+71704	AEL
+71712	AEL/AF Start
+71738	AF Start
+71756	----
+71766	@A0B3@Vivid
+71790	@A0B4@Natural
+71818	@A0B5@Portrait
+71848	Ps
+71854	Auto@A006@
+71876	A-B
+71884	G-M
+71892	Hold
+71902	@A0B4@ 4
+71920	@A0B5@ 9
+71938	@A0B6@ 25
+71958	@A0B6@ 100
+71980	Body
+71990	Lens
+72000	Flash
+72012	Acc
+72020	LV-Info
+72036	RAW/JPEG
+72054	@A013@/@A014@
+72082	ART1
+72092	ART2
+72102	ART3
+72112	ART4
+72122	ART5
+72132	ART6
+72142	ART7
+72152	ART8
+72162	BGM
+72170	480p/576p
+72190	Cool
+72200	Joy
+72208	Melancholy
+72230	HDMI
+72240	TTL Auto
+72258	Manual
+72272	FP TTL Auto
+72296	FP Manual
+72316	Level Lo
+72334	Level Mid
+72354	Level Hi
+72372	ch
+72378	@A0D4@/@A0D5@
+72406	AEL/AFL
+72422	@A040@REC
+72442	iAUTO
+72454	P/A/S/M
+72470	ART9
+72480	ART10
+72492	Full
+72502	2f 0.3EV
+72520	2f 0.5EV
+72538	2f 0.7EV
+72556	2f 1.0EV
+72574	7f 0.3EV
+72592	7f 0.5EV
+72610	7f 0.7EV
+72628	2f
+72634	@A0B7@
+72648	@A0B8@
+72662	@A095@ 5300K
+72688	@A097@ 6000K
+72714	@A096@ 7500K
+72740	@A098@ 3000K
+72766	@A099@ 4000K
+72792	Beat
+72802	ART
+72810	SCN
+72818	Adobe
+72830	@A036@ 5500K
+72856	ART BKT
+72872	Motion JPEG 1280
+72906	720
+72914	Motion JPEG 640
+72946	480
+72954	3D
+72960	1:1
+72968	ART11
+72980	MOV 1920
+72998	1080 Fine
+73018	MOV 1920
+73036	1080 Normal
+73060	MOV 1280
+73078	720 Fine
+73096	MOV 1280
+73114	720 Normal
+73136	Sett intervall for neste bilde.
+73200	time
+73210	Intervallfilm
+73238	Ta opp kun stillbilder.
+73286	Ta opp intervallfilm og stillbilder.
+73360	J. @A008@ Nytte
+73392	@A059@@A024@
+73418	Art Fade
+73436	Akvarell
+73454	@A06F@Akvarell
+73484	Tilkobling til smarttelefon
+73540	Se bilde p
+73566	smarttelefon med 
+73604	FlashAir tilkobling.
+73646	Kortet konfigureres av en annen enhet.
+73726	Kan ikke endre innstillingene.
+73788	Kort kan ikke blir formatert
+73846	Tilkobling p
+73880	Ikke avbryt
+73904	Avbryt tilkobling
+73940	Tilkobling innstillinger
+73990	SSID innstilling
+74024	Startinnstilling fullf
+74070	rt
+74076	Engangstilkobling
+74112	Privat tilkobling
+74148	Passordinnstilling
+74186	Skriv inn engangs passord
+74238	Passord har blitt endret
+74288	Tilkobling starter
+74326	Still-I.S.
+74348	Film-I.S.
+74368	Film-I.S. p
+74394	Endre Bildestabilisator-modus.
+74458	Bilder og filmen.
+74494	Bildestabilisator-funksjoner i
+74558	alle retninger
+74590	ved 
+74600	 registrere kamerabevegelser.
+74660	Kun vertikal stabilisering.
+74718	Hold kameraet horisontalt og
+74778	fotografer panorering horisontalt.
+74848	Kun horisontal stabilisering.
+74910	Hold kameraet vertikalt og
+74966	fotografer panorering horisontalt.
+75036	B.stabilisator er deaktivert.
+75096	Bruker bildestabilisator
+75148	ved Filmopptak
+75178	Bruker bildestabilisator
+75230	i alle retninger i Film
+75280	opptak.
+75296	Bruk lysbildefremvisning av bilder
+75368	og/eller filmer med ulike
+75422	BGM eller effekter.
+75462	HDR BKT
+75478	Endre til HDR BKT mode
+75524	Endre til HDR BKT mode
+75570	Endre til HDR BKT mode
+75616	Flimmerredusering
+75652	Redusere flimmer 
+75690	ved 
+75700	 sette effektfrekvens.
+75746	I omr
+75758	der med 50 Hz effekt,
+75804	flimmer er redusert.
+75846	I omr
+75858	der med 60 Hz effekt,
+75904	flimmer er redusert.
+75946	Reduserer flimmer automatisk.
+76006	Flimmerredusering Av.
+76050	St
+76056	yfilter Av
+76078	St
+76084	yfilter Standard
+76118	St
+76124	yfilter Sterk
+76152	St
+76158	yfilter Lav
+76182	Gjeldende
+76202	Egendefinert1
+76230	Egendefinert2
+76258	Skyggeomr
+76278	dejustering
+76302	Lysomr
+76316	dejustering
+76340	Velg bildefrekvens p
+76382	 Live View.
+76406	Linse I.S. prioritert
+76450	Velg P
+76464	 for bruk av
+76492	linse I.S.
+76514	Slipp forsinkelsestid
+76558	Velg tidsdifferansen mellom
+76620	r utl
+76632	serknappen er trykket 
+76680	ned til bilde blir tatt.
+76730	Endre til @A077@ mode.
+76776	Sl
+76782	r @A07D@ p
+76804	/av.
+76814	Sl
+76820	r @A07D@ p
+76842	/av.
+76852	Endre til @A078@ mode.
+76898	Sl
+76904	r @A07E@ p
+76926	/av.
+76936	Sl
+76942	r @A07E@ p
+76964	/av.
+76974	Endre til @A079@ mode.
+77020	Sl
+77026	r @A07F@ p
+77048	/av.
+77058	Sl
+77064	r @A07F@ p
+77086	/av.
+77096	Endre til @A07A@ mode.
+77142	Sl
+77148	r @A080@ p
+77170	/av.
+77180	Sl
+77186	r @A080@ p
+77208	/av.
+77218	BGM-import
+77240	BGM er overskrivet
+77278	Ikke BGM
+77296	@A027@1s Anti-Shock @A004@
+77350	@A027@2s Anti-Shock @A004@
+77404	@A027@3s Anti-Shock @A004@
+77458	@A027@4s Anti-Shock @A004@
+77512	@A027@5s Anti-Shock @A004@
+77566	@A027@6s Anti-Shock @A004@
+77620	@A027@7s Anti-Shock @A004@
+77674	@A027@8s Anti-Shock @A004@
+77728	@A027@9s Anti-Shock @A004@
+77782	@A027@10s Anti-Shock @A004@
+77838	@A027@11s Anti-Shock @A004@
+77894	@A027@12s Anti-Shock @A004@
+77950	@A027@13s Anti-Shock @A004@
+78006	@A027@14s Anti-Shock @A004@
+78062	@A027@15s Anti-Shock @A004@
+78118	@A027@16s Anti-Shock @A004@
+78174	@A027@17s Anti-Shock @A004@
+78230	@A027@18s Anti-Shock @A004@
+78286	@A027@19s Anti-Shock @A004@
+78342	@A027@20s Anti-Shock @A004@
+78398	@A027@21s Anti-Shock @A004@
+78454	@A027@22s Anti-Shock @A004@
+78510	@A027@23s Anti-Shock @A004@
+78566	@A027@24s Anti-Shock @A004@
+78622	@A027@25s Anti-Shock @A004@
+78678	@A027@26s Anti-Shock @A004@
+78734	@A027@27s Anti-Shock @A004@
+78790	@A027@28s Anti-Shock @A004@
+78846	@A027@29s Anti-Shock @A004@
+78902	@A027@30s Anti-Shock @A004@
+78958	1f
+78964	5f
+78970	6f
+78976	7f
+78982	8f
+78988	9f
+78994	10f
+79002	11B
+79010	12B
+79018	13B
+79026	14B
+79034	15B
+79042	16B
+79050	17B
+79058	18B
+79066	19B
+79074	20B
+79082	21B
+79090	22B
+79098	23B
+79106	24B
+79114	25B
+79122	26B
+79130	27B
+79138	28B
+79146	29B
+79154	30B
+79162	31B
+79170	32B
+79178	33B
+79186	34B
+79194	35B
+79202	36B
+79210	37B
+79218	38B
+79226	39B
+79234	40B
+79242	41B
+79250	42B
+79258	43B
+79266	44B
+79274	45B
+79282	46B
+79290	47B
+79298	48B
+79306	49B
+79314	50B
+79322	51B
+79330	52B
+79338	53B
+79346	54B
+79354	55B
+79362	56B
+79370	57B
+79378	58B
+79386	59B
+79394	60B
+79402	61B
+79410	62B
+79418	63B
+79426	64B
+79434	65B
+79442	66B
+79450	67B
+79458	68B
+79466	69B
+79474	70B
+79482	71B
+79490	72B
+79498	73B
+79506	74B
+79514	75B
+79522	76B
+79530	77B
+79538	78B
+79546	79B
+79554	80B
+79562	81B
+79570	82B
+79578	83B
+79586	84B
+79594	85B
+79602	86B
+79610	87B
+79618	88B
+79626	89B
+79634	90B
+79642	91B
+79650	92B
+79658	93B
+79666	94B
+79674	95B
+79682	96B
+79690	97B
+79698	98B
+79706	99B
+79714	@A052@ 1 s
+79736	@A052@ 3 s
+79758	@A052@ 4 s
+79780	@A052@ 5 s
+79802	@A052@ 6 s
+79824	@A052@ 7 s
+79846	@A052@ 8 s
+79868	@A052@ 9 s
+79890	@A052@ 10 s
+79914	@A052@ 11 s
+79938	@A052@ 13 s
+79962	@A052@ 14 s
+79986	@A052@ 15 s
+80010	@A052@ 16 s
+80034	@A052@ 17 s
+80058	@A052@ 18 s
+80082	@A052@ 19 s
+80106	@A052@ 20 s
+80130	@A052@ 21 s
+80154	@A052@ 22 s
+80178	@A052@ 23 s
+80202	@A052@ 24 s
+80226	@A052@ 25 s
+80250	@A052@ 26 s
+80274	@A052@ 27 s
+80298	@A052@ 28 s
+80322	@A052@ 29 s
+80346	@A052@ 30 s
+80370	SSID
+80380	Password
+80398	URL
+80406	http://flashair/
+80440	S-I.S. Off
+80462	S-I.S. 1
+80480	S-I.S. 2
+80498	S-I.S. 3
+80516	M-I.S. Off
+80538	M-I.S. 1
+80556	M-I.S. 2
+80574	HDR BKT
+80590	HDR BKT Off
+80614	50Hz
+80624	60Hz
+80634	ISO LOW
+80650	LOW
+80658	3f 2.0EV
+80676	3f 3.0EV
+80694	5f 2.0EV
+80712	5f 3.0EV
+80730	7f 2.0EV
+80748	ART12
+80760	@A03C@Niv
+80780	 disp.
+80794	0001.jpg
+80824	Utvid LV dyn. omr
+80860	de
+80866	HDR
+80874	HDR av
+80888	Utskriftrekkef
+80918	lge
+80926	Juster eksponerings-
+80970	kompensasjon
+80996	Forh
+81006	ndsvisn.oppdater.@A040@
+81058	@A068@: AEL/AFL
+81090	@A087@: AEL/AFL
+81122	@A028@: AEL/AFL
+81154	Sl
+81160	r av EVF auto-luminans
+81208	for manuell justering av
+81260	lysstyrke.
+81282	Sl
+81288	r p
+81296	 EVF auto-luminans.
+81338	Lysstyrke vil justeres
+81386	automatisk.
+81410	Sl
+81416	r av innebygget @A068@.
+81464	Stiller programskiftkontrollen
+81528	via bryter i samme retning
+81584	som S.S. hvis i S-modus.
+81634	ISO
+81654	Stiller programskiftkontrollen
+81718	via bryter i samme retning
+81774	som blender hvis i A-modus.
+81830	@A011@: Trykk piltastaturtaster
+81896	for 
+81906	 endre zoomposisjon.
+81950	Operasjonen er kun gyldig
+82004	med elektriske zoomobjektiver.
+82066	Auto I.S.
+82086	Knapp/Hjul/Spak
+82118	Meny for innstilling av knapper,
+82186	hjul og spaker
+82216	B. Knapp/hjul/spak
+82254	FlashAir
+82272	Stopp
+82284	Startopsjon
+82308	Det er koblet til.
+82346	Manuell start
+82374	Automatisk start
+82408	Effekt
+82422	Type
+82432	Type@A00E@
+82454	Type@A00F@
+82476	Type@A010@
+82498	Type@A064@
+82520	Kombinerer to eller flere
+82574	malbilder i ett bilde
+82618	Standard
+82636	Mororammer
+82658	Hvit
+82668	Hvit/hvit kant
+82698	Svart
+82710	Svart/pin-hull
+82740	Film
+82752	yeblikkelig
+82776	@A065@ 3 piks
+82804	@A066@ 3 piks
+82832	@A065@ 2 piks
+82860	@A066@ 2 piks
+82888	Tilkobling til smarttelefon med
+82954	innebygget @A068@.
+82992	Delingsordre
+83018	Delingsordre valgt
+83056	@A041@@A02F@
+83082	@A068@-innstillinger
+83124	Meny for innebygd @A068@.
+83176	@A068@ Tilkoblings-innst.
+83228	Privat
+83242	Engangs
+83258	Velg
+83268	For tilkobling til din smarttelefon.
+83342	For deling med andre
+83386	smarttelefoner. Det vil
+83436	brukes et unikt passord.
+83486	Velg @A068@-tilkobling hver gang.
+83554	Privat passord
+83584	@A021@: Endre passordet for tilkobling
+83664	til din smartphone.
+83704	Nullstill delingsordre
+83750	Nullstill @A068@-innstillinger
+83812	@A005@ Forsiktig nullstiller alle
+83882	@A068@-innstillinger
+83924	Velg @A068@-tilkobling
+83970	Klargj
+83984	re @A068@-tilkobling
+84026	For tilkobling til din smarttelefon.
+84102	Denne konfigureringen er kun
+84166	dvendig 
+84184	n gang.
+84202	@A068@-tilkoblingen
+84244	vil starte senere.
+84282	Installer "OLYMPUS Image Share"
+84352	 din smarttelefon.
+84392	Trykk p
+84408	 @A01F@ etter at
+84444	applikasjonen er installert.
+84502	Kobler til din smarttelefon.
+84562	Les QR-koden med 
+84600	"OLYMPUS Image Share".
+84646	Neste@A019@
+84670	Stopp@A030@
+84694	@A068@ starter
+84724	@A068@ stopper
+84754	For deling med andre
+84798	smarttelefoner. Bruke aktuelt
+84860	passord?
+84878	Bruk aktuelt passord
+84920	Bruk nytt passord
+84956	Dele med andre
+84988	smarttelefoner.
+85022	Les QR-koden gjennom
+85066	"OLYMPUS Image Share"
+85112	eller koble til manuelt.
+85162	Still inn forbindelsen til
+85218	FlashAir-kortet.
+85252	Still inn startopsjon for forbindelsen
+85332	manuelt.
+85350	Automatisk tilkobling etableres n
+85418	r 
+85426	str
+85434	mmen er p
+85458	FlashAir er i drift.
+85502	Kan ikke bruke den
+85542	innebyggede Wi-Fi.
+85580	EVF Auto Bryter
+85612	Bytt auto. fra skjermvisningen 
+85678	til EVF skjerm n
+85712	r 
+85720	et 
+85728	ye blir oppdaget ved EVF.
+85780	Deaktiver 
+85802	yesensoren.
+85828	@A075@: For 
+85854	 bytte mellom
+85884	monitorvisning
+85916	og EVF-display.
+85948	Aktiver 
+85966	yesensoren.
+85990	Bulb/Time-monitor
+86026	Justerer monitor- og
+86070	EVF-lysstyrke mens
+86110	BULB/TIME er valgt.
+86150	AE BKT
+86164	Endre til AE BKT mode
+86208	ART BKT
+86224	Endre til ART BKT mode
+86270	Film @A042@
+86294	S-I.S. av
+86314	S-I.S. auto
+86338	Kamera velger
+86368	stabilisatorinnstilling ved
+86428	 detektere
+86452	kamerabevegelse.
+86486	M-I.S. av
+86506	M-I.S. p
+86526	Bruker bildestabilisator
+86578	ved Filmopptak
+86608	@A088@ Spakfunksjon
+86648	Velg funksjonen som
+86690	tildeles @A088@ spaken.
+86738	Endre bryterfunksjon med @A088@.
+86806	@A089@: F
+86826	lg bryterfunksjons-
+86868	innstillinger.
+86900	@A08A@: Endre ISO-sensitivitet med @A08B@
+86986	eller endre WB-modus med @A076@.
+87052	Endre bryterfunksjon med @A088@.
+87120	@A089@: F
+87140	lg bryterfunksjons-
+87182	innstillinger.
+87214	@A08A@: Endre ISO-sensitivitet med @A076@
+87300	eller endre WB-modus med @A08B@.
+87366	Endre @A024@-knappefunksjon med @A088@.
+87448	@A089@: F
+87468	lg knappefunksjons-
+87510	innstillingene.
+87544	@A08A@: Start/stopp filmopptak.
+87608	Endre AF-modus med @A088@.
+87664	Stiller inn AF-modus for hver
+87726	@A089@ og @A08A@.
+87762	Strimmel
+87780	SETUP@A025@
+87804	@A06B@Funksjon
+87834	Endre til AE BKT mode
+87878	Endre til AE BKT mode
+87922	Endre til AE BKT mode
+87966	Endre til ART BKT mode
+88012	Endre til ART BKT mode
+88058	Endre til ART BKT mode
+88104	@A08C@: AEL/AFL
+88136	Velg AF-m
+88156	l 
+88164	og AF modus.
+88190	@A08C@: endre x1/x2.
+88232	Juster eksponerings-
+88276	kompensasjon
+88302	Endre til HDR BKT mode
+88348	@A08C@: Utvidet ramme. 
+88398	Trykk igjen for 
+88432	 forst
+88446	rre
+88456	bildet i den.
+88484	@A08C@: trykk for 
+88522	 bytte
+88538	til Live Guide modus,
+88584	og trykk igjen for 
+88624	 g
+88630	 tilbake.
+88650	Ta bilde med @A02B@
+88692	mens @A08C@ holdes inne
+88740	Ta bilde med @A02C@
+88782	mens @A08C@ holdes inne
+88830	Ta bilde med @A02D@
+88872	mens @A08C@ holdes inne
+88920	Ta bilde med @A02E@
+88962	mens @A08C@ holdes inne
+89010	Hjemposisjonsinnst.
+89052	AF OMR
+89066	DE
+89072	Skift til MF 
+89102	innstilling
+89126	@A08C@:
+89144	Start/Stop
+89168	Filmopptak
+89190	Ett-trykk hvitbal.
+89228	Viser dybdeskarphet
+89268	Skift RAW+JPEG/JPEG
+89310	kvalitetsinnst. Ved
+89354	 vri p
+89368	 hjul
+89380	Testbilde u. Lagring
+89422	@A08C@: Knapper @A02F@ og @A030@
+89488	AE BKT Off
+89510	Manuell
+89526	Automatisk
+89548	Kombinerer to eller flere
+89602	malbilder i ett bilde
+89648	Ta bilde med Touch
+89686	Velg en modus n
+89718	r fokusringen
+89748	roteres i MF-modus.
+89788	Bildet vil ikke bli forst
+89840	rret
+89852	automatisk n
+89878	r fokusringen
+89908	roteres i MF-modus.
+89948	Velg P
+89962	 for 
+89974	 automatisk
+90000	forst
+90012	rre bildet n
+90038	r fokusringen
+90068	er rotert i MF-modus.
+90112	Peaking
+90128	Motivmerkingen vil ikke vises n
+90198	fokusringen roteres i MF-modus.
+90262	Motivmerkingen vil vises
+90318	r fokusringen roteres i
+90368	MF-modus. Denne funksjonen
+90424	hjelper deg til 
+90458	 justere fokus.
+90490	@A01D@: Trykk for 
+90528	 vise 
+90544	motivmerkingen for 
+90588	justere fokus. Og trykk p
+90644	nytt for 
+90664	 skjule merkingen.
+90702	@A023@: Trykk for 
+90740	 vise 
+90756	motivmerkingen for 
+90800	justere fokus. Og trykk p
+90856	nytt for 
+90876	 skjule merkingen.
+90914	@A08C@: Trykk for 
+90952	 vise 
+90968	motivmerkingen for 
+91012	justere fokus. Og trykk p
+91068	nytt for 
+91088	 skjule merkingen.
+91126	@A06D@: Trykk for 
+91164	 vise 
+91180	motivmerkingen for 
+91224	justere fokus. Og trykk p
+91280	nytt for 
+91300	 skjule merkingen.
+91338	Peaking-innstillinger
+91382	Justerer visningsinnstillinger
+91446	for peaking.
+91472	Hvit
+91482	Svart
+91494	Omr
+91502	der i fokus utheves i
+91548	hvitt under fokus-peaking.
+91602	Omr
+91610	der i fokus utheves i
+91656	svart under fokus-peaking.
+91710	@A029@: Trykk piltastaturtaster
+91776	for 
+91786	 endre zoomposisjon.
+91830	Operasjonen er kun gyldig
+91884	med elektriske zoomobjektiver.
+91946	Velg AF-m
+91972	og AF modus.
+91998	Velg AF-m
+92024	og AF modus.
+92050	@A068@: endre x1/x2.
+92092	@A087@: endre x1/x2.
+92134	@A028@: endre x1/x2.
+92176	@A068@: Trykk for 
+92214	 utf
+92224	re
+92232	de ulike funksjonene,
+92278	og endre funksjon med et trykk.
+92342	@A06E@: Trykk for 
+92380	 utf
+92390	re
+92398	de ulike funksjonene,
+92444	og endre funksjon med et trykk.
+92508	@A06F@: Trykk for 
+92546	 utf
+92556	re
+92564	de ulike funksjonene,
+92610	og endre funksjon med et trykk.
+92674	@A06C@: Trykk for 
+92712	 utf
+92722	re
+92730	de ulike funksjonene,
+92776	og endre funksjon med et trykk.
+92840	@A06D@: Trykk for 
+92878	 utf
+92888	re
+92896	de ulike funksjonene,
+92942	og endre funksjon med et trykk.
+93006	@A087@: Trykk for 
+93044	 utf
+93054	re
+93062	de ulike funksjonene,
+93108	og endre funksjon med et trykk.
+93172	@A028@: Trykk for 
+93210	 utf
+93220	re
+93228	de ulike funksjonene,
+93274	og endre funksjon med et trykk.
+93338	Juster eksponerings-
+93382	kompensasjon
+93408	Juster eksponerings-
+93452	kompensasjon
+93478	Juster eksponerings-
+93522	kompensasjon
+93548	Juster eksponerings-
+93592	kompensasjon
+93618	Trykk for 
+93640	 aktivere
+93662	niv
+93670	visning.
+93690	Trykk igjen for 
+93724	 deaktivere.
+93752	Effektiv i @A03C@.
+93790	Sl
+93796	r HDR p
+93812	/av.
+93822	Sl
+93828	r HDR p
+93844	/av.
+93854	Sl
+93860	r HDR p
+93876	/av.
+93886	Sl
+93892	r HDR p
+93908	/av.
+93918	Sl
+93924	r HDR p
+93940	/av.
+93950	Sl
+93956	r HDR p
+93972	/av.
+93982	Sl
+93988	r HDR p
+94004	/av.
+94014	Sl
+94020	r HDR p
+94036	/av.
+94046	Sl
+94052	r HDR p
+94068	/av.
+94078	@A068@: Utvidet ramme.
+94126	Trykk igjen for 
+94160	 forst
+94174	rre
+94184	bildet i den.
+94212	@A087@: Utvidet ramme.
+94260	Trykk igjen for 
+94294	 forst
+94308	rre
+94318	bildet i den.
+94346	@A068@: trykk for 
+94384	 bytte
+94400	til Live Guide modus,
+94446	og trykk igjen for 
+94486	 g
+94492	 tilbake.
+94512	@A087@: trykk for 
+94550	 bytte
+94566	til Live Guide modus,
+94612	og trykk igjen for 
+94652	 g
+94658	 tilbake.
+94678	@A028@: trykk for 
+94716	 bytte
+94732	til Live Guide modus,
+94778	og trykk igjen for 
+94818	 g
+94824	 tilbake.
+94844	Sl
+94850	r @A07D@ p
+94872	/av.
+94882	Sl
+94888	r @A07D@ p
+94910	/av.
+94920	Sl
+94926	r @A07D@ p
+94948	/av.
+94958	Sl
+94964	r @A07D@ p
+94986	/av.
+94996	Sl
+95002	r @A07D@ p
+95024	/av.
+95034	Sl
+95040	r @A07D@ p
+95062	/av.
+95072	Sl
+95078	r @A07E@ p
+95100	/av.
+95110	Sl
+95116	r @A07E@ p
+95138	/av.
+95148	Sl
+95154	r @A07E@ p
+95176	/av.
+95186	Sl
+95192	r @A07E@ p
+95214	/av.
+95224	Sl
+95230	r @A07E@ p
+95252	/av.
+95262	Sl
+95268	r @A07E@ p
+95290	/av.
+95300	Sl
+95306	r @A07F@ p
+95328	/av.
+95338	Sl
+95344	r @A07F@ p
+95366	/av.
+95376	Sl
+95382	r @A07F@ p
+95404	/av.
+95414	Sl
+95420	r @A07F@ p
+95442	/av.
+95452	Sl
+95458	r @A07F@ p
+95480	/av.
+95490	Sl
+95496	r @A07F@ p
+95518	/av.
+95528	Sl
+95534	r @A080@ p
+95556	/av.
+95566	Sl
+95572	r @A080@ p
+95594	/av.
+95604	Sl
+95610	r @A080@ p
+95632	/av.
+95642	Sl
+95648	r @A080@ p
+95670	/av.
+95680	Sl
+95686	r @A080@ p
+95708	/av.
+95718	Sl
+95724	r @A080@ p
+95746	/av.
+95756	Live-visning av dynamisk omr
+95814	de
+95822	er ikke utvidet.
+95856	Live-visning av dynamisk omr
+95914	de
+95922	er utvidet n
+95948	r HDR
+95962	er i HDR1 eller HDR2.
+96006	Tar 3 bilder med en
+96048	2,0 EV eksponeringsdifferanse.
+96110	Tar 3 bilder med en
+96152	3,0 EV eksponeringsdifferanse.
+96214	Tar 5 bilder med en
+96256	2,0 EV eksponeringsdifferanse.
+96318	Tar 5 bilder med en
+96360	3,0 EV eksponeringsdifferanse.
+96422	Tar 7 bilder med en
+96464	2,0 EV eksponeringsdifferanse.
+96526	Tar 4 bilder samtidig ved
+96580	ulike eksponeringer og
+96628	komponerer automatisk
+96674	et bilde med h
+96704	y kontrast.
+96728	Tar 4 bilder samtidig ved
+96782	ulike eksponeringer og
+96830	komponerer automatisk
+96876	et bilde med superh
+96916	y kontrast.
+96940	Sl
+96946	r HDR av.
+96966	Hjemposisjonsinnst.
+97008	AF OMR
+97022	DE
+97028	Hjemposisjonsinnst.
+97070	AF OMR
+97084	DE
+97090	Funksjoner p
+97116	 @A05F@ knapper
+97150	endres ikke i .
+97182	I  byttes funksjoner for @A05F@
+97248	knapper til @A060@: BKT og @A061@: @A062@.
+97334	Deaktiverer  spakfunksjon.
+97388	@A078@ bytter bryterfunksjoner.
+97454	@A079@: tilpassede
+97494	funksjonsinnstillinger.
+97544	@A07A@: @A07B@ stiller inn ISO,
+97610	@A066@ stiller inn WB.
+97656	@A078@ bytter bryterfunksjoner.
+97722	@A079@: tilpassede
+97762	funksjonsinnstillinger.
+97812	@A07A@: @A066@ stiller inn ISO,
+97878	@A07B@ stiller inn WB.
+97924	@A078@ bytter knappfunksjoner.
+97988	@A079@: tilpassede
+98028	funksjonsinnstillinger.
+98078	@A07A@: @A021@ stiller inn ISO,
+98144	@A059@ stiller inn WB.
+98190	@A078@ bytter knappfunksjoner.
+98254	@A079@: tilpassede
+98294	funksjonsinnstillinger.
+98344	@A07A@: @A059@ stiller inn ISO,
+98410	@A021@ stiller inn WB.
+98456	@A078@ bytter AF-modus
+98504	mellom tilpassede
+98542	AF-innstillinger
+98578	@A079@ og @A07A@.
+98614	Skift til MF
+98642	innstilling
+98666	Skift til MF
+98694	innstilling
+98718	@A068@:
+98736	Start/Stop
+98760	Filmopptak
+98782	@A06E@:
+98800	Start/Stop
+98824	Filmopptak
+98846	@A06F@:
+98864	Start/Stop
+98888	Filmopptak
+98910	@A06D@:
+98928	Start/Stop
+98952	Filmopptak
+98974	@A087@:
+98992	Start/Stop
+99016	Filmopptak
+99038	@A028@:
+99056	Start/Stop
+99080	Filmopptak
+99102	Ett-trykk hvitbal.
+99140	Ett-trykk hvitbal.
+99178	Ett-trykk hvitbal.
+99216	@A068@: Trykk for 
+99254	 vise
+99268	motivmerkingen for 
+99312	justere fokus. Og trykk p
+99368	nytt for 
+99388	 skjule merkingen.
+99426	@A06E@: Trykk for 
+99464	 vise
+99478	motivmerkingen for 
+99522	justere fokus. Og trykk p
+99578	nytt for 
+99598	 skjule merkingen.
+99636	@A06F@: Trykk for 
+99674	 vise
+99688	motivmerkingen for 
+99732	justere fokus. Og trykk p
+99788	nytt for 
+99808	 skjule merkingen.
+99846	@A06C@: Trykk for 
+99884	 vise
+99898	motivmerkingen for 
+99942	justere fokus. Og trykk p
+99998	nytt for 
+100018	 skjule merkingen.
+100056	@A066@: Trykk for 
+100094	 vise
+100108	motivmerkingen for 
+100152	justere fokus. Og trykk p
+100208	nytt for 
+100228	 skjule merkingen.
+100266	@A087@: Trykk for 
+100304	 vise
+100318	motivmerkingen for 
+100362	justere fokus. Og trykk p
+100418	nytt for 
+100438	 skjule merkingen.
+100476	@A028@: Trykk for 
+100514	 vise
+100528	motivmerkingen for 
+100572	justere fokus. Og trykk p
+100628	nytt for 
+100648	 skjule merkingen.
+100686	Viser dybdeskarphet
+100726	Viser dybdeskarphet
+100766	Skift RAW+JPEG/JPEG
+100808	kvalitetsinnst. Ved
+100852	 vri p
+100866	 hjul
+100878	Skift RAW+JPEG/JPEG
+100920	kvalitetsinnst. Ved
+100964	 vri p
+100978	 hjul
+100990	Testbilde u. Lagring
+101032	Testbilde u. Lagring
+101074	Hold @A011@: For 
+101110	 l
+101116	se/l
+101126	se opp
+101142	ber
+101150	ringspaneloperasjonen
+101196	i opptaksmodus.
+101228	Hold @A029@: For 
+101264	 l
+101270	se/l
+101280	se opp
+101296	ber
+101304	ringspaneloperasjonen
+101350	i opptaksmodus.
+101382	@A068@: Knapper @A02A@ og @A02B@
+101448	@A06E@: Knapper @A02A@ og @A02B@
+101514	@A06F@: Knapper @A02A@ og @A02B@
+101580	@A06D@: Knapper @A02A@ og @A02B@
+101646	@A087@: Knapper @A02A@ og @A02B@
+101712	@A028@: Knapper @A02A@ og @A02B@
+101778	Innebygget @A017@
+101814	Innebygget @A02E@ Oppt.niv
+101870	@A080@+@A081@
+101898	@A078@ Spakfunksjon
+101938	Linje inn @A023@
+101972	Linje inn @A02E@ Oppt.niv
+102026	Opprett obj.datasett
+102068	@A026@
+102084	@A05C@Funksjon
+102114	@A043@Fargeskaper
+102150	@A044@e-Portrett
+102184	Justerer hvert m
+102218	lpunkt for
+102242	AF-posisjon for hvert objektiv.
+102306	Gr
+102312	nn m
+102322	lramme vil ikke
+102356	vises for autofokus hvis
+102408	stilt til Av.
+102436	Justerer m
+102458	laktivitetsniv
+102488	et
+102496	under C-AF.
+102520	Live-visning av dynamisk omr
+102578	de
+102586	er utvidet n
+102612	r den stilles til P
+102656	Sett for HDR.
+102684	Hvis stilt p
+102710	 Av,
+102722	endres ikke funksjoner
+102774	 @A081@ knapper i @A080@.
+102826	Velg funksjonen som
+102868	tildeles @A078@ spaken.
+102916	Justerer niv
+102942	 for
+102954	hver mikrofon.
+102984	Ps
+102990	Reduserer uskarphet ved
+103040	opptak med lite lys/
+103084	opplyst scene.
+103114	Starlight
+103134	@A045@L
+103154	Sl
+103160	r @A07D@ p
+103182	/av.
+103192	Sl
+103198	r @A07E@ p
+103220	/av.
+103230	Sl
+103236	r @A07F@ p
+103258	/av.
+103268	Sl
+103274	r @A080@ p
+103296	/av.
+103306	Testbilde u. Lagring
+103348	A-B : WB BKT Off
+103382	G-M : WB BKT Off
+103416	FL BKT Off
+103438	HDR1
+103448	HDR2
+103458	ISO BKT Off
+103482	mode5
+103494	ART BKT Off
+103518	ART BKT On
+103540	A-B : WB BKT
+103566	A-B : 3f 2Step
+103596	A-B : 3f 4Step
+103626	A-B : 3f 6Step
+103656	G-M : WB BKT
+103682	G-M : 3f 2Step
+103712	G-M : 3f 4Step
+103742	G-M : 3f 6Step
+103772	BKT
+103780	Endre til BKT mode.
+103820	Endre til BKT mode.
+103860	Endre til BKT mode.
+103900	Endre til BKT mode.
+103940	Endre til BKT mode.
+103980	Endre til BKT mode.
+104020	Endre til BKT mode.
+104060	Endre til BKT mode.
+104100	Endre til BKT mode.
+104140	@A03F@@A019@
+104170	r du velger bildemodus
+104218	kan du hoppe over punktene
+104274	som ikke har blitt stillt til @A03F@.
+104350	Zoom inn/ut
+104374	@A067@ 2 piks
+104402	Lav
+104410	Layout
+104424	Trykk p
+104440	 lukkerknappen 
+104472	n gang
+104488	for 
+104498	 klargj
+104514	re for 
+104532	Composite-opptak
+104566	Klar for Composite-opptak
+104618	Innstillinger for Composite
+104674	Innstillingsmeny for Composite.
+104740	Kombiner bilder som tas
+104790	med intervallopptak.
+104832	Sammensatt modus
+104866	Gj
+104872	r lysere
+104890	Gj
+104896	r m
+104904	rkere
+104916	Sammenligner piksler for to
+104974	bilder og bruker det med mest lys
+105044	til det sammensatte bildet.
+105100	Sammenligner piksler for to
+105158	bilder og bruker det m
+105204	rkeste
+105220	til det sammensatte bildet.
+105276	Baseeksponeringstid
+105316	Eksponeringstid pr. bilde.
+105372	Eksponeringstid og aperture
+105430	bestemmer baseeksponering.
+105484	Velg P
+105498	 for 
+105516	tillate manuell fokus under 
+105576	Bulb/Time/Comp-opptak.
+105622	Justerer EVF- og display-
+105676	lysstyrke for
+105706	Bulb/Time/Comp-opptak.
+105752	Filmer kan ikke tas mens @A074@ er tilkoblet.
+105844	Lukk@A019@
+105866	Avsl. @A068@@A025@
+105904	Brytere er tilordnet f
+105950	lgende
+105970	r knappen trykkes:
+106010	@A060@: ISO
+106036	@A053@: Hvitb
+106064	Brytere er tilordnet f
+106110	lgende
+106130	r knappen trykkes:
+106170	@A060@: Hvitb
+106200	@A053@: ISO
+106224	Ved 
+106234	 holde knappen nede
+106276	kan du deaktivere autofokus
+106334	og sette fokus p
+106368	 det tidspunkt
+106400	du trykket p
+106426	 knappen.
+106446	Trykk p
+106462	 knappen for
+106492	 aktivere AEL/AFL.
+106530	Start/stopp
+106556	filmopptak.
+106580	Viser dybdeskarphet.
+106622	Ett-trykk hvitbal.
+106660	Velg AF-m
+106680	l 
+106688	og AF-modus.
+106714	Hjemposisjonsinnst.
+106756	AF-OMR
+106770	DE
+106776	Skift til MF-modus.
+106816	Skift RAW+JPEG/JPEG
+106858	kvalitetsinnst. ved 
+106900	 vri p
+106914	 hjul.
+106928	Testbilde uten lagring.
+106976	Sl
+106982	r @A07B@ p
+107004	/av.
+107014	Sl
+107020	r @A07C@ p
+107042	/av.
+107052	Sl
+107058	r @A07D@ p
+107080	/av.
+107090	Sl
+107096	r @A07E@ p
+107118	/av.
+107128	Bytter mellom @A061@/@A062@.
+107186	Juster eksponerings-
+107230	kompensasjon.
+107258	Trykk for 
+107280	 bytte
+107296	til Live Guide-modus,
+107342	og trykk igjen for 
+107382	 g
+107388	 tilbake.
+107408	Bytter mellom x1/x2.
+107450	Vis en utvidet ramme. 
+107498	Trykk igjen for 
+107532	 forst
+107546	rre
+107556	bildet i den.
+107584	Sl
+107590	r HDR p
+107606	/av.
+107616	Endre til BKT-mode.
+107656	Trykk for 
+107678	 utf
+107688	re
+107696	de ulike funksjonene,
+107742	og endre funksjon med bryter.
+107802	Trykk for 
+107824	 vise 
+107840	motivmerkingen for 
+107884	justere fokus. Og trykk p
+107940	nytt for 
+107960	 skjule merkingen.
+107998	@A021@: Start Filmopptak
+108050	@A020@: Ta Bilde
+108086	@A059@: Film @A076@
+108126	Egendefinert selvutl
+108168	ser
+108176	@A093@ Anti-Shock @A004@
+108226	Innstillinger@A01A@
+108266	Velg hvorvidt @A00A@ meny
+108320	skal vises eller skjules.
+108372	Multifunksjonsinnstillinger
+108428	Tilordne funksjonene
+108472	som skal inkluderes i
+108518	multifunksjon ved bruk av @A03F@.
+108586	Film+foto-modus
+108618	Still inn bildeprioritet for
+108678	Film+foto-modus.
+108712	Film gis prioritet.
+108754	@A067@bilde kan tas
+108796	mens filmen tas opp.
+108840	Fotobildekvaliteten er
+108888	begrenset. Aktiv i @A070@.
+108942	Foto gis prioritet.
+108984	Filmer tas opp
+109020	r og etter at
+109050	bilde tas.
+109072	Elektronisk zoomhastighet
+109124	Stiller inn zoomhastigheter for
+109190	bilde- og filmmoduser ved bruk
+109254	av et elektronisk zoomobjektiv.
+109318	Still-I.S. av
+109346	Film-I.S. av
+109372	Klargj
+109386	ring for Composite-opptak.
+109442	Vent litt.
+109464	Hold knappen: For 
+109502	 l
+109508	se/l
+109518	se opp
+109534	ber
+109542	ringspaneloperasjonen
+109588	i opptaksmodus.
+109620	Trykk piltastaturtaster
+109670	for 
+109680	 endre zoomposisjon.
+109724	Operasjonen er kun gyldig
+109778	med elektriske zoomobjektiver.
+109840	@A060@ISO/@A053@WB
+109878	@A060@WB/@A053@ISO
+109916	Nei
+109924	Ja
+109934	yoppl
+109946	st bilde
+109964	Tar og kombinerer 
+110002	tte
+110012	bilder for 
+110036	 lage ett bilde med
+110078	superh
+110092	y oppl
+110106	sning. Bruk stativ.
+110146	Aktiverer H
+110170	yoppl
+110182	st bilde.
+110204	Velg forsinkelsen som gjelder
+110266	etter at utl
+110292	seren trykkes.
+110322	@A00A@Ladetid
+110350	Velg tiden som g
+110384	r fra utl
+110404	seren
+110418	trykkes til blitsen lades.
+110474	Innstillingen er ikke n
+110522	dvendig
+110540	ved bruk av blitsen som h
+110592	rer til.
+110610	Sensorjustering + digitalt
+110664	Bare sensorjustering
+110706	Bildestabilisering gj
+110750	res b
+110762	de
+110770	vha. sensorjustering og
+110820	digitalt.
+110840	Bildestabilisering gj
+110884	res bare
+110904	vha. sensorjustering, ikke
+110960	digitalt.
+110980	Kompr./bithastighet
+111020	Rammehastighet
+111050	Klippinnspillingstid
+111092	Sakte eller fort film
+111136	Filmspesifikasjonsinnstillinger
+111200	Juster filmens bildest
+111246	rrelse,
+111264	komprimering og bithastighet.
+111324	Filmoppl
+111342	sning
+111354	Film @A01A@
+111378	ALL-I-komprimering gir den beste
+111446	bildekvaliteten for avansert
+111506	redigering, men sv
+111544	rt
+111552	store filer.
+111578	IPB-komprimering med
+111626	yest bithastighet gir den beste
+111692	bildekvaliteten, men sv
+111740	rt
+111748	store filer.
+111774	IPB-komprimering med
+111822	y bithastighet gir bedre
+111874	bildekvalitet, men ganske
+111928	store filer.
+111954	IPB-komprimering med
+111998	standard bithastighet gir standard
+112070	bildekvalitet og ikke s
+112122	store filer.
+112148	Jo st
+112160	rre tall, desto
+112194	jevnere blir bildet.
+112236	Sl
+112242	 av Klipp for 
+112272	 bruke standard
+112306	filminnspilling.
+112340	Sl
+112346	 p
+112352	 Klipp for 
+112376	 spille inn
+112402	korte klipp. Disse lagres
+112456	i Mine klipp.
+112484	Filmen spilles inn for
+112532	avspilling i vanlig hastighet.
+112594	Filmen spilles inn for
+112642	avspilling i sakte film.
+112694	Lyden tas ikke opp.
+112734	Filmen spilles inn for
+112782	avspilling i fort film.
+112832	Lyden tas ikke opp.
+112872	Lagt til i Mine klipp.
+112918	Lagret som en standardfilm.
+112974	Denne Mine klipp-mappen er full.
+113040	Flytt et klipp i en Mine klipp-mappe.
+113116	Flytt element til en Mine klipp-mappe.
+113194	Legg til i en ny Mine klipp-mappe.
+113264	Fjern fra Mine klipp.
+113308	Mine klipp
+113330	Legg til i Mine klipp
+113374	Spill Mine klipp
+113408	Eksp. Mine klipp
+113442	Se alle Mine klipp
+113480	Slett Mine klipp
+113514	@A003@ Alle elementer i Mine klipp
+113586	slettes.
+113604	Endre rekkef
+113630	lge
+113638	Forh
+113648	ndsvelg m
+113672	Ditt neste klipp kommer etter
+113734	dette elementet med mindre det er
+113804	et klipp med andre spesifikasjoner
+113876	enn dette klippet i Mine klipp.
+113940	Klippeffekter
+113968	1. Popkunst
+113992	2. Lys Tone
+114016	3. N
+114026	kkelhull
+114044	4. Kryssprosess
+114076	5. Sepia
+114094	6. Gammel film
+114124	Effekter ses ikke ved forh
+114178	ndsvisning.
+114202	Overgangseffekt
+114234	Falme
+114246	Lyd for innspilt klipp
+114292	Volum for innspilt klipp
+114342	Forh.vis
+114360	Start eksporten
+114392	Total klipplengde
+114428	Vent litt.
+114450	Behandlingstiden er to ganger
+114512	den totale filmlengden.
+114560	Ferdig
+114574	Avbrutt
+114590	Iht. PCM-opptaker @A017@
+114644	: Kameraets innstillinger
+114698	optimaliseres i henhold til
+114756	Olympus PCM-opptakeren.
+114804	Multieksponering
+114838	@A00A@ RC-innst.
+114872	@A017@Str
+114892	m ved tilkobling
+114926	Velg Av n
+114946	r du kobler
+114972	til en mikrofon som ikke
+115024	krever str
+115046	m.
+115052	Funksjon: valgfritt hjul
+115102	Velg funksjonen for hjulet
+115162	 det valgfrie grepet.
+115206	Vri hjulet @A07B@ for 
+115252	 justere
+115272	volumet n
+115292	r hodetelefoner
+115326	er tilkoblet.
+115354	Hjulet @A07B@ f
+115386	lger innstillingene
+115428	for hjulfunksjon.
+115464	Selvportretthjelp
+115500	Juster innstillingene som
+115554	skal gjelde n
+115582	r skjermen vippes
+115620	ut for 
+115636	 ta selvportretter.
+115676	Selvportretthjelp-innstillingene
+115744	aktiveres ikke
+115780	r skjermen vippes ut.
+115824	Selvportretthjelp-kontrollene
+115886	vises p
+115902	 skjermen, og
+115932	Live View fungerer som
+115980	et speil.
+116000	@A004@Lukkerfunksjon
+116042	Velg funksjon for utl
+116086	seren
+116100	i modusen @A004@.
+116136	Ta bilde ved 
+116164	 trykke p
+116188	utl
+116196	seren.
+116210	Start/stopp filminnspilling
+116268	ved 
+116278	 trykke p
+116298	 utl
+116308	seren.
+116322	Hodetelefonvolum
+116356	Justerer hodetelefonvolumet.
+116416	Innspillingsvolumet
+116462	virkes ikke.
+116488	@A008@ Innstillinger
+116530	Velg informasjonen som
+116578	skal vises i modusen @A008@.
+116636	Tidskode
+116654	Lydl
+116664	s @A045@bruk
+116690	Hurtig dvalemodus
+116730	r Live View ikke brukes,
+116782	settes kameraet i dvalemodus
+116846	 noen sekunder.
+116878	Menytilbakekalling
+116916	Tilbakekaller forrige menyvalg.
+116980	Tilbakekall
+117004	Nullstill
+117024	Tidskodeinnstillinger
+117068	Juster tidskodeinnstillingene.
+117130	Tidskodemodus
+117158	Utelat bilder
+117186	Ikke utelat
+117210	Justerer for tidsforskjell kontra
+117280	faktisk innspillingstid.
+117332	Brukes ved avansert redigering
+117400	r ekstremt n
+117426	yaktig tid
+117450	kreves.
+117466	Justerer ikke for tidsforskjell
+117532	kontra faktisk innspillingstid.
+117596	Telling
+117612	Bare innspilling
+117646	Alltid
+117660	Teller tidskoden bare
+117710	r film spilles inn.
+117750	Teller tidskoden ogs
+117800	r film ikke spilles inn,
+117852	inkludert n
+117876	r kameraet er
+117906	sl
+117912	tt av.
+117926	Starttid
+117944	Nullstill
+117964	Innstill manuelt
+117998	Gjeldende tid
+118026	Instill time, minutt, sekund og
+118092	bilde til 00.00.00.00.
+118138	Innstill time, minutt, sekund og
+118206	bilde manuelt.
+118236	Innstill time, minutt og sekund til
+118310	gjeldende tid, og sett bilde til 00.
+118384	Peaking-farge
+118416	dt
+118422	Gult
+118432	Omr
+118440	der i fokus utheves i
+118490	dt under fokus-peaking.
+118538	Omr
+118546	der i fokus utheves i
+118592	gult under fokus-peaking.
+118644	Uthevingsintensitet
+118684	Omr
+118692	der i fokus
+118718	utheves svakt.
+118748	Omr
+118756	der i fokus utheves.
+118798	Omr
+118806	der i fokus
+118832	utheves sterkt.
+118864	Juster bildelysstyrken
+118910	Justerer ikke Live View-
+118962	bildets lysstyrke.
+119000	Justerer Live View-bildets
+119056	lysstyrke for 
+119086	 gj
+119094	re uthevingen
+119124	mer synlig. Live View-bildets og det
+119200	endelige bildets lysstyrke avviker.
+119272	Juster sekvens-,
+119308	selvutl
+119324	ser- og
+119342	intervallinnstillinger.
+119390	@A047@ Lydl
+119414	s @A048@
+119432	@A049@ Lydl
+119456	s @A048@
+119474	@A04A@ Lydl
+119498	s @A048@
+119516	@A04B@ Lydl
+119540	s @A048@
+119558	@A04C@ Lydl
+119582	s @A048@
+119600	@A04D@ Lydl
+119624	s @A048@
+119642	@A047@ Anti-Shock @A04E@
+119692	@A04A@ Anti-Shock @A04E@
+119742	@A04B@ Anti-Shock @A04E@
+119792	@A04C@ Anti-Shock @A04E@
+119842	@A04D@ Anti-Shock @A04E@
+119892	Anti-Shock @A04E@/Lydl
+119938	s @A048@
+119956	Juster innstillinger for lydl
+120022	innspilling eller med Anti-Shock.
+120090	Lydl
+120100	s @A048@
+120118	Aktiverer lydl
+120148	s innspilling.
+120180	Blits eller @A004@ fungerer ikke.
+120250	Velg forsinkelsen som gjelder
+120312	etter at utl
+120338	seren trykkes.
+120368	Anti-Shock @A04E@
+120408	r lukkerhastigheten er @A079@
+120470	eller mindre, settes den f
+120524	rste
+120536	lukkergardinen til elektronisk. 
+120604	Velg forsinkelsen som gjelder
+120666	etter at utl
+120692	seren trykkes.
+120722	St
+120728	yreduksjon@A048@
+120762	St
+120768	yreduksjonen fungerer ikke
+120824	under lydl
+120846	s innspilling.
+120876	St
+120882	yreduksjonen fungerer ogs
+120938	under lydl
+120960	s innspilling. Lukkerlyden
+121020	res under klargj
+121054	ringen
+121070	av st
+121082	yreduksjonen.
+121110	Manuelt opptak
+121140	Bulb/Time
+121160	Live Composite
+121190	Andre
+121202	LV-
+121210	kning: manuelt
+121240	LV-
+121248	kning: Bulb/Time
+121282	LV-
+121290	kning: Live Composite
+121334	LV-
+121342	kning: andre
+121384	Live View-lysstyrken gjenspeiler
+121452	eksponeringsinnstillingene.
+121510	Lysstyrken til bildet som vises,
+121578	er den samme som for
+121622	det endelige bildet.
+121664	Live View-lysstyrken gjenspeiler
+121732	ikke eksponeringsinnstillingene,
+121800	men justeres for optimal visning. 
+121872	Avviker fra det endelige bildet.
+121938	Live View-lysstyrke gjensp ikke
+122004	eksponeringsinnst. og optimeres
+122070	ved 
+122080	 redusere bildehast
+122122	i m
+122130	rke motiver. Lysstyrken
+122180	til sluttbildet vil v
+122224	re forskjellig.
+122256	Spill Film
+122278	Vis fra begynnelsen
+122318	Slett hele @A004@
+122354	@A005@ Sletter alle automatisk
+122418	separerte filer fra 
+122460	n enkelt film.
+122490	Vis bare 3D-bilder
+122528	@A078@ bytter mellom bildemoduser.
+122600	Sett til @A079@ for 
+122642	 velge
+122658	bildemodus med modushjulet.
+122716	Sett til @A07A@ for 
+122758	 bruke @A008@.
+122788	@A03D@ Visningsvalg
+122828	Bytter mellom Live View og
+122884	det avanserte kontrollpanelet.
+122948	Bytter mellom EVF og den
+123000	bakre skjermen n
+123042	yesensoren er deaktivert.
+123094	Egendefinert1
+123122	Egendefinert2
+123150	@A071@Funksjon
+123180	@A08D@Funksjon
+123210	@A094@Funksjon
+123240	@A04F@@A02F@
+123266	@A06E@@A041@
+123292	@A07A@ H b/s
+123318	@A07A@ L b/s
+123344	Antall bilder som skal tas p
+123408	ett sekund n
+123434	r du bruker 
+123462	sekvensfotografering med @A07B@
+123526	Antall bilder som skal tas p
+123590	ett sekund n
+123616	r du bruker 
+123644	sekvensfotografering med @A07C@
+123708	@A036@@A020@
+123734	@A06F@@A022@
+123760	FullHD
+123774	HD
+123780	@A013@/@A014@/@A0C7@
+123822	mode6
+123834	@A055@uper @A0B8@arge
+123878	60p
+123886	50p
+123894	30p
+123902	25p
+123910	24p
+123918	MOV 1920
+123936	1080 Fine
+123956	MOV 1920
+123974	1080 ALL-Intra
+124004	MOV 1920
+124022	1080 Super Fine
+124054	MOV 1920
+124072	1080 Fine
+124092	MOV 1920
+124110	1080 Normal
+124134	MOV 1280
+124152	720 ALL-Intra
+124180	MOV 1280
+124198	720 Super Fine
+124228	MOV 1280
+124246	720 Fine
+124264	MOV 1280
+124282	720 Normal
+124304	MOV 1920
+124322	1080
+124332	FHD
+124340	A-I
+124348	ALL-Intra
+124368	@A106@
+124382	1080p
+124394	MIC @A017@
+124416	St
+124422	yreduksjon p
+124452	r.
+124460	Vent litt.
+124482	Innst. fokusdifferensial
+124532	Estimert slutt-tid
+124570	Estimert start-tid
+124608	Innstill antall bilder
+124654	Bytter mellom EVF-visningsmodi.
+124720	Kun effektiv n
+124750	r den vises
+124776	gjennom EVF.
+124802	Effekter av innstillingsjusteringer
+124876	kan bekreftes i sanntid
+124930	r du slipper lukkeren.
+124976	Simulert visning, som om den
+125036	ses gjennom OVF av en SLR.
+125092	Effekter av innstillingsjusteringer
+125166	kan ikke bekreftes f
+125208	r du
+125220	slipper lukkeren.
+125256	Rammehastighet
+125286	Smalt
+125298	S-OVF
+125310	Velg bildefrekvens
+125350	i den innebygde EVF.
+125392	Velg EVF-visningsmodus.
+125440	Aktiver eller deaktiver
+125490	bakre skjerm s AF
+125532	ltastatur for EVF.
+125570	Filminnstillinger
+125606	TL-filmlengde
+125634	AF m
+125644	ltastatur
+125664	Hvitb-niv
+125684	er er ekstreme. Fortsette?
+125738	Bred
+125748	Focus BKT Off
+125776	Focus BKT On
+125802	Focus BKT
+125822	HighSpeed 120fps
+125856	4K
+125862	Foretrukne innstillinger blir lagret
+125938	for enklere tilgang.
+125980	Tilbakestiller innstillingene.
+126042	Privat passord
+126072	Sertifisering
+126100	@A01C@: Endre passordet for tilkobling
+126180	til din smarttelefon.
+126224	@A002@ Sletter alle automatisk
+126288	separerte filer fra 
+126330	n enkelt film.
+126360	Ikke i drift
+126386	MF-kl
+126398	tsj
+126406	Stiller inn MF-kl
+126442	tsj.
+126452	I drift
+126468	Popkunst@A04F@
+126498	Popkunst@A050@
+126528	Bleke og lyse farger@A04F@
+126582	Bleke og lyse farger@A050@
+126636	Kornet film@A04F@
+126672	Kornet film@A050@
+126712	kkelhull@A04F@
+126746	kkelhull@A050@
+126780	kkelhull@A051@
+126810	Diorama@A04F@
+126838	Diorama@A050@
+126866	Kryssprosess@A04F@
+126904	Kryssprosess@A050@
+126942	Dramatisk uttrykk@A04F@
+126990	Dramatisk uttrykk@A050@
+127038	Key Line@A04F@
+127068	Key Line@A050@
+127098	Akvarell@A04F@
+127128	Akvarell@A050@
+127158	Vintage@A04F@
+127186	Vintage@A050@
+127214	Vintage@A051@
+127242	Delvis farge@A04F@
+127280	Delvis farge@A050@
+127318	Delvis farge@A051@
+127356	@A073@Popkunst
+127386	@A052@Mykt fokus
+127420	@A079@Diorama
+127448	@A07A@Kryssprosess
+127486	@A054@Fin sepia
+127518	@A07C@Dramatisk uttrykk
+127566	@A07D@Key Line
+127596	@A07E@Akvarell
+127626	@A07F@Vintage
+127654	@A080@Delvis farge
+127692	@A055@Popkunst@A04F@
+127734	@A056@Popkunst@A050@
+127776	@A057@Bleke og lyse farger@A04F@
+127842	@A058@Bleke og lyse farger@A050@
+127908	@A059@Kornet film@A04F@
+127956	@A05A@Kornet film@A050@
+128004	@A05B@N
+128020	kkelhull@A04F@
+128050	@A05C@N
+128066	kkelhull@A050@
+128096	@A05D@N
+128112	kkelhull@A051@
+128142	@A05E@Diorama@A04F@
+128182	@A05F@Diorama@A050@
+128222	@A060@Kryssprosess@A04F@
+128272	@A061@Kryssprosess@A050@
+128322	@A062@Dramatisk uttrykk@A04F@
+128382	@A063@Dramatisk uttrykk@A050@
+128442	@A064@Key Line@A04F@
+128484	@A065@Key Line@A050@
+128526	@A066@Akvarell@A04F@
+128568	@A067@Akvarell@A050@
+128610	@A068@Vintage@A04F@
+128650	@A069@Vintage@A050@
+128690	@A06A@Vintage@A051@
+128730	@A06B@Delvis farge@A04F@
+128780	@A06C@Delvis farge@A050@
+128830	@A06D@Delvis farge@A051@
+128880	@A06E@Mykt fokus-effekt
+128928	@A06F@N
+128944	kkelhull-effekt
+128976	@A070@Hvitkant-effekt
+129020	@A071@Rammeeffekt
+129056	@A072@Stjernelyseffekt
+129102	@A073@T
+129118	keeffekt: topp og bunn
+129164	@A074@T
+129180	keeffekt: venstre og h
+129226	yre
+129234	@A075@Skyggeeff.: venstre og h
+129296	yre
+129304	@A076@Skyggeeffekt: topp og bunn
+129370	@A0B1@ Lydl
+129394	s @A074@
+129412	Viser sertifisering.
+129454	Brennvidde
+129476	Fargeprofil 1
+129504	Fargeprofil 2
+129532	Fargeprofil 3
+129560	@A0B2@Fargeprofil 1
+129600	@A0B3@Fargeprofil 2
+129640	@A0B4@Fargeprofil 3
+129680	Alle farger@A028@
+129716	Enkeltfarge@A028@
+129752	Monokrom profil 1
+129788	Monokrom profil 2
+129824	Monokrom profil 3
+129860	@A0B5@Monokrom profil 1
+129908	@A0B6@Monokrom profil 2
+129956	@A0B7@Monokrom profil 3
+130004	Ingen
+130016	Gul
+130024	Oransje
+130048	Magenta
+130064	Bl
+130072	Cyan
+130082	Gr
+130088	nn
+130094	Gul-gr
+130108	nn
+130114	Film kornete effekt
+130154	Film kornete effekt av
+130200	Film kornete effekt svak
+130250	Film kornete effekt medium
+130304	Film kornete effekt h
+130352	Midttoneomr
+130376	dejustering
+130404	yl. og sky.@A01A@
+130440	Midttone@A01A@
+130470	Nullst./tildel eg.def. moduser
+130532	Nullstill kamerainnst. eller
+130592	tildel n
+130614	rende innstillinger 
+130658	til egendefinerte moduser.
+130712	Egendef. modus C1
+130748	Egendef. modus C2
+130784	Egendef. modus C3
+130820	Egendef. modus C4
+130856	Bruke C1-innstillinger? Kamera-
+130922	innstillingene blir overskrevet.
+130988	Bruke C2-innstillinger? Kamera-
+131054	innstillingene blir overskrevet.
+131120	Bruke C3-innstillinger? Kamera-
+131186	innstillingene blir overskrevet.
+131252	Bruke C4-innstillinger? Kamera-
+131318	innstillingene blir overskrevet.
+131384	Velg opptaksmodi for 
+131432	 tildele til modushjul-
+131482	posisjoner C3 og C4.
+131524	Modusring C3
+131550	Modusring C4
+131576	Linseinfoinnstillinger
+131622	Angi dataoverf
+131652	ring-
+131666	inkompatibel linseinfo for
+131722	Exif og stabiliseringsoptim.
+131780	Trykk p
+131796	 knappen for 
+131824	 g
+131834	til linseinfoinnstillingene.
+131892	Opprett linseinformasjon
+131942	Rediger linseinformasjon
+131992	Slett linseinformasjon
+132038	Linsenavn
+132058	Blenderverdi
+132084	Fjern sjekk@A026@
+132120	Bruk linseinfo@A026@
+132162	Overskriv
+132182	Lagre som ny oppf
+132218	ring
+132228	@A012@ Ringfunksjon
+132268	Velg funksjonen som
+132310	skal tildeles eksponerings-
+132368	kompenseringsring
+132404	Stille@A048@modusinnstillinger
+132466	Tillat
+132480	Ikke tillat
+132504	Aktiverer stille opptak.
+132556	Velg etter-utl
+132586	ser-
+132598	forsinkelsestid.
+132632	Kunsteffekt av
+132662	Fargefilter: Ingen
+132700	Fargefilter: Gul
+132734	Fargefilter: Oransje
+132776	Fargefilter: R
+132810	Fargefilter: Gr
+132842	nn
+132848	Normal monokrom
+132880	Sepia monokrom
+132910	Bl
+132916	 monokrom
+132936	Purpur monokrom
+132968	Gr
+132974	nn monokrom
+132998	Utl
+133006	ser/@A01E@/IS
+133034	C. Utl
+133048	ser/@A019@/IS
+133076	Meny for utl
+133102	ser, 
+133116	serieopptak og 
+133150	bildestabilisering
+133188	Eksport mislyktes
+133224	Filmer kan ikke innspilles 
+133282	i eksternlukkermodus
+133324	Velg bildemodus.
+133358	Punktm
+133372	ling
+133382	For @A03F@valgte elementer
+133438	vil m
+133450	ling bli utf
+133476	rt i
+133488	omr
+133496	det til AF-m
+133522	let.
+133532	N:Ingen
+133548	N:Normal
+133566	ART1@A04F@
+133588	ART1@A050@
+133610	ART3@A04F@
+133632	ART3@A050@
+133654	ART5@A04F@
+133676	ART5@A050@
+133698	ART6@A04F@
+133720	ART6@A050@
+133742	ART6@A051@
+133764	ART7@A04F@
+133786	ART7@A050@
+133808	ART8@A04F@
+133830	ART8@A050@
+133852	ART10@A04F@
+133876	ART10@A050@
+133900	ART11@A04F@
+133924	ART11@A050@
+133948	ART12@A04F@
+133972	ART12@A050@
+133996	ART13@A04F@
+134020	ART13@A050@
+134044	ART13@A051@
+134068	ART14@A04F@
+134092	ART14@A050@
+134116	ART14@A051@
+134140	C3
+134146	C4
+134152	Color Profile 1
+134184	Color Profile 2
+134216	Color Profile 3
+134248	Mono Profile 1
+134278	Mono Profile 2
+134308	Mono Profile 3
+134338	Kopier
+134352	Kopivalg
+134370	Ny Fil
+134384	Skriv Over
+134406	Under vann
+134428	@A076@Under vann
+134462	Feil ved fokusstabling.
+134512	Bildesammensetting mislyktes.
+134572	@A004@Bildemodus
+134606	Opptak start/stopp for USB-koblet
+134676	PCM-opptaker er uavhengig
+134730	av kameraets opptak start/stopp.
+134796	USB-koblet PCM-opptaker
+134846	starter/stopper automatisk
+134902	opptak samtidig med
+134944	start/stopp av kameraopptak.
+135002	Uten slate-tone.
+135036	USB-tilkoblet PCM-opptaker
+135092	vil skape slate-tone n
+135144	@A04B@knappen trykkes inn og
+135204	holdes under videoopptak.
+135256	Kameraopptaksvolum og
+135302	vindst
+135316	yred. vil v
+135340	re
+135348	ute av drift og opptaksvolum
+135408	vil bli automatisk justert av
+135470	Olympus PCM-opptaker.
+135514	Opptaksvolum kan
+135550	just. med kameraets
+135592	opptaksvolum.
+135620	@A004@St
+135638	yfilter
+135654	Velg @A004@ eksklusiv modus
+135712	for videoopptak
+135746	som skal redigeres etterp
+135802	Velg st
+135818	yred.niv
+135840	for videoopptak ved
+135886	ye ISO-hastigheter.
+135926	Velg st
+135942	yred.niv
+135964	for stillbilde ved
+136008	ye ISO-hastigheter.
+136048	Synkronisert @A03F@Oppt.
+136098	Slate-tone
+136120	Kameraopptaksvolum
+136158	@A077@Dempet farge
+136196	@A078@Kort fullt
+136230	@A079@Kort fullt
+136264	@A078@/@A079@Kort fullt
+136312	@A078@Kort fullt
+136346	@A079@Kort fullt
+136380	@A078@Ingen bilder
+136418	@A079@Ingen bilder
+136456	@A078@Bildefeil
+136488	@A079@Bildefeil
+136520	@A078@Kortfeil
+136550	@A079@Kortfeil
+136580	@A078@/@A079@Kortfeil
+136624	@A078@Feil / @A079@Beskyttet
+136682	@A078@Feil / @A079@Full
+136730	@A078@Skrivebeskytt.
+136772	@A079@Skrivebeskytt.
+136814	@A078@/@A079@Skrivebeskytt.
+136870	@A078@Beskyttet / @A079@Feil
+136928	@A078@Beskyttet / @A079@Full
+136986	@A078@Full / @A079@Feil
+137034	@A078@Full / @A079@Beskyttet
+137092	Skiftet til ny mappe
+137134	Skiftet til@A078@
+137170	Skiftet til@A079@
+137206	@A0A3@Kan ikke lese mappe
+137258	@A0A4@Kan ikke lese mappe
+137310	Kan ikke lese mappe
+137350	@A078@Kan ikke velge mappe
+137404	@A079@Kan ikke velge mappe
+137458	@A078@Bildet kan ikke redigeres
+137522	@A079@Bildet kan ikke redigeres
+137586	@A078@Merk, bildet kan ikke velges
+137656	@A079@Merk, bildet kan ikke velges
+137726	@A07A@Bildefeil
+137758	@A07B@Bildefeil
+137790	@A0A3@Ikke BGM
+137820	@A0A4@Ikke BGM
+137850	@A0A3@Kan ikke skrive ut
+137900	@A0A4@Kan ikke skrive ut
+137950	Olympus-batt. Anbefales
+137998	A1. AF/MF
+138018	A2. AF/MF
+138038	A3. AF/MF
+138058	C1. Utl
+138074	ser/@A013@/IS
+138102	C2. Utl
+138118	ser/@A013@/IS
+138146	D1. Disp/@A001@/PC
+138184	D2. Disp/@A001@/PC
+138222	D3. Disp/@A001@/PC
+138260	D4. Disp/@A001@/PC
+138298	E1. Exp/ISO/BULB/@A077@
+138346	E2. Exp/ISO/BULB/@A077@
+138394	E3. Exp/ISO/BULB/@A077@
+138446	H1. Opptak/slette
+138482	H2. Opptak/slette
+138518	I. EVF
+138532	J1. @A003@ Nytte
+138566	J2. @A003@ Nytte
+138600	Filmmeny
+138618	Meny grunnl. og detaljerte filminnst.
+138694	C-AF-f
+138708	lsomhet
+138724	Juster f
+138742	lsomhet for C-AF-l
+138786	avhengig av bevegelsen til
+138842	motivet.
+138868	Lav
+138876	AF-begrenser
+138902	Begrenser AF-omr
+138936	de til dine
+138962	spesifikasjoner.
+138998	Avstand er omtrentlig.
+139044	Utl
+139052	s. pri.
+139068	Lukkeren kan utl
+139102	ses
+139112	selv om motivet er ute
+139160	av fokus.
+139180	Lukkeren kan ikke utl
+139224	ses
+139238	r motivet er ute
+139274	av fokus.
+139294	Avstandsinnstillinger
+139338	Innstilling 1
+139366	Innstilling 2
+139394	Innstilling 3
+139422	Stiller inn visning av det gr
+139482	nne
+139492	Autofokus-m
+139516	lrammen.
+139534	Viser ikke ramme.
+139570	Viser ramme.
+139596	Viser ramme n
+139624	r lukkerknapp
+139654	er trykket halvveis ned.
+139704	Forh.innstilt MF
+139738	Forh.innstilt MF-avst.
+139784	Stiller inn avstand for forh
+139842	ndsinnst.
+139864	MF. Avstand er omtrentlig.
+139918	Skifter til Forh.innstilt MF-modus.
+139990	Skifter IS Av/P
+140028	Trykk ned og vri p
+140066	 hjulet for
+140094	 skifte mellom IS-moduser.
+140148	Skifter AF-begrenser Av/P
+140206	Trykk ned og vri p
+140244	 hjulet for
+140272	 velge avstand.
+140304	Trykk for 
+140326	 vise @A042@ ramme
+140366	for m
+140378	lretting.
+140404	r m
+140412	let er satt, trykk en gang til
+140476	for 
+140486	 aktivere @A042@-modus.
+140534	Trykk for 
+140556	 skifte til tilegnet
+140600	standard@A078@. Trykk en gang til
+140670	for 
+140680	 g
+140686	 tilbake.
+140706	Innstillinger @A004@Fn-spak
+140762	Tildel en funksjon til Fn-spaken
+140830	for stillbilder.
+140864	@A003@Fn Spakfunksjon
+140908	Skift @A0A9@-funksjon
+140952	@A004@Fn Spakfunksjon
+140996	Tildel en funksjon til Fn-spaken
+141064	for filming.
+141090	Bytter hjulfunksjon.
+141132	Bytter AF-modus/@A0AA@/@A0AB@.
+141200	let kan velges.
+141232	Tildeler f
+141254	lgende fotomoduser:
+141296	Posisjon 1: Innst. for modushjul.
+141366	Posisjon 2: @A004@-modus.
+141418	@A07E@L
+141438	Velg P
+141452	 for 
+141464	 deaktivere @A07E@.
+141504	Fn-spak/str
+141528	mniv
+141540	Bruk Fn-spaken som str
+141586	mbryter.
+141606	Bruk Fn-spaken for tilegnede
+141666	funksjoner. Bruk str
+141708	mbryter
+141726	for 
+141736	 kontrollere str
+141770	m.
+141776	Str
+141784	m 1
+141792	Tildel str
+141814	m til Fn-spak
+141844	som f
+141856	lger:
+141870	Posisjon 1: Str
+141902	m P
+141914	Posisjon 2: Str
+141946	m Av
+141958	Str
+141966	mspak er deaktivert.
+142008	Str
+142016	m 2
+142024	Tildel str
+142046	m til Fn-spak
+142076	som f
+142088	lger:
+142102	Posisjon 1: Str
+142134	m Av
+142146	Posisjon 2: Str
+142178	m P
+142190	Str
+142198	mspak er deaktivert.
+142240	CWB Kelvin
+142266	@A049@-innstillinger
+142308	@A04A@-innstillinger
+142350	Maks. fps
+142370	Begrenser bildeteller
+142414	Prioritet for bildestabilisering
+142482	for kontinuerlig fotografering.
+142546	Prioritet Fps
+142574	Fotohastighet f
+142612	prioritet fremfor bildestabilisering.
+142688	IS-prioritet
+142714	Bildestabilisering f
+142762	prioritet fremfor fotohastighet.
+142828	@A004@HDMI-utgang
+142864	Angir utgangsinnstillinger
+142920	for HDMI-tilkoblet
+142960	filming.
+142978	Utgangsmodus
+143004	Send modusinnstillinger til
+143062	enheter som er tilkoblet med HDMI.
+143132	Skjermmodus
+143156	Sender film- og infovisning
+143214	til enheten. Denne modusen
+143270	anbefales n
+143294	r enheten skal
+143326	brukes som skjerm.
+143364	Opptaksmodus
+143390	Sender bare film, uten
+143438	infovisning. Denne modusen
+143494	anbefales ved innspilling av
+143554	film med enheten.
+143596	Spill inn bit
+143628	Utgangsst
+143648	rrelse
+143662	4K
+143668	Utgangsbildehastighet
+143716	@A004@Spesifikasjonsinnstillinger
+143784	Innstillinger av filmkvalitet.
+143846	@A004@@A024@
+143872	Spiller inn film st
+143912	rrelse
+143928	4096 x 2160 (17:9).
+143968	Spiller inn film st
+144008	rrelse
+144024	3840 x 2160 (16:9).
+144064	Spiller inn film st
+144104	rrelse
+144120	1920 x 1080 (16:9).
+144160	Spiller inn film st
+144200	rrelse
+144216	1280 x 720 (16:9).
+144254	@A013@/@A014@-innstillinger
+144314	r du velger @A013@eller@A014@,
+144378	kan du hoppe over punktene
+144434	som ikke har blitt valgt@A03F@.
+144498	Stiller inn lederutenett som vises p
+144576	skjermen under Live View.
+144628	Skjermfarge
+144652	Forh.innst. 1
+144680	Forh.innst. 2
+144708	@A079@
+144722	Bruk innst. p
+144750	 EVF
+144760	Bruker ikke rutenettinnstillinger for
+144838	bakre skjerm p
+144868	 EVF.
+144880	Bruker rutenettinnstillinger for
+144948	bakre skjerm p
+144978	 EVF.
+144990	Rutenettinnstillinger for EVF
+145050	Stiller inn lederutenett som vises i
+145126	EVF.
+145136	LV-innst. for n
+145168	rbilde
+145182	Innstillinger for visningsmetode
+145250	av LV-n
+145266	rbilde.
+145282	@A046@ Innstillinger
+145324	Innstilliger for forh
+145368	nds-
+145380	visningsmetode.
+145414	Under LV-n
+145436	rbilde justeres
+145470	lysstyrke for enkel bekreftelse.
+145536	Under LV-n
+145558	rbilde justeres ikke
+145602	lysstyrke, og skjermen har samme
+145670	lysstyrke som f
+145702	r LV-n
+145716	rbilde.
+145732	Under forh
+145754	ndsvisning justeres
+145796	lysstyrken for enkel bekreftelse.
+145864	Under forh
+145886	ndsvisning justeres ikke
+145938	lysstyrken, og skjermen har samme
+146008	lysstyrke som f
+146040	r forh
+146054	ndsvisning.
+146078	@A006@@A07A@ Info
+146114	Forst
+146126	rr bilde
+146144	Forst
+146156	rr blaing
+146176	Velg bilde
+146198	@A0AA@-innstillinger
+146244	r du velger AF-m
+146278	lmodus,
+146296	kan du hoppe over punktene
+146352	som ikke har blitt valgt@A058@.
+146416	@A07C@Egendefinerte innstillinger
+146484	Innstillinger for driftsmetode
+146548	til skjermbilde for AF-m
+146598	lvalg.
+146612	Sett 1
+146626	Sett 2
+146640	@A0AA@
+146654	@A0AB@
+146668	@A008@
+146682	Registrerer standard
+146726	AF-modus/@A0AA@/@A0AB@.
+146774	Detaljerte innstillinger for n
+146842	ISO-f
+146854	lsomhet er satt til AUTO.
+146908	vre grense/standard
+146948	Laveste S/S-innstilling
+147000	r lukkerhastigheten n
+147044	r det
+147058	angitte laveste tallet, vil ISO-
+147130	lsomheten begynne 
+147172	ke.
+147182	Gyldig i P- eller A-modus.
+147236	Innstillinger for kortspor
+147290	Innstillinger for lagring
+147344	og avspilling med kort.
+147392	@A003@Lagre innstillinger
+147444	Standard
+147462	Opptak bare til angitt kort.
+147520	Auto-bryter
+147548	r det angitte kortet er fullt,
+147612	bytt til et annet kort for 
+147668	 fortsette
+147694	 fotografere.
+147722	Dobbel uavhengig@A081@
+147768	Lagrer til begge kort med kortenes
+147840	respektive innstillinger.
+147894	Hvis ett kort blir fullt, kan det heller
+147978	ikke lagres til det andre.
+148032	Dobbel uavhengig@A082@
+148078	Lagrer til begge kort med kortenes
+148150	respektive innstillinger.
+148204	Selv om ett kort blir fullt, kan det
+148280	likevel lagres til det andre.
+148340	Dobbel Samme@A081@
+148378	Lagrer til begge kort med de samme
+148450	@A003@@A024@-innstillingene.
+148510	Hvis ett kort blir fullt, kan det heller
+148594	ikke lagres til det andre.
+148648	Dobbel Samme@A082@
+148686	Lagrer til begge kort med de samme
+148758	@A003@@A024@-innstillingene.
+148818	Selv om ett kort blir fullt, kan det
+148894	likevel lagres til det andre.
+148954	@A003@Lagringsspor
+148992	@A004@Lagringsspor
+149030	@A006@Spor
+149052	Tildel lagringsmappe
+149094	Tildel
+149108	Ikke tildel
+149132	Kopier alle bilder lagret p
+149192	ett kort til det andre.
+149240	Tildel mappe det skal kopieres til
+149310	Eksisterende mappe
+149348	Ny mappe
+149366	Batteriinnstillinger
+149408	Se batteriinfo og -innstillinger.
+149476	BatteriPrioritet
+149510	Batteristatus
+149538	Nedbryting
+149560	Lade venstre
+149586	Serienr.
+149604	Bildetelling
+149630	Batteritype
+149654	Trykk-og-hold-tid
+149690	Angi knappens trykk-og-hold-tid
+149756	for hver funksjon som krever
+149816	trykk-og-hold for 
+149854	 aktiveres.
+149878	Avslutt LV@A07A@
+149912	Tildelt trykk-og-hold-knapp avslutter
+149990	Live View-n
+150014	rbilde eller avslutter
+150062	visning av Live View-n
+150108	rbilde.
+150124	Avslutt @A042@
+150154	Trykk-og-hold-knappen avslutter
+150220	@A042@-n
+150238	rbilde eller avslutter
+150286	visning av @A042@-n
+150326	rbilde.
+150342	Avslutt @A006@@A07A@
+150384	Tildelt trykk-og-hold-knapp avslutter
+150462	@A035@-n
+150480	rbilde eller avslutter
+150528	visning av @A035@-n
+150568	rbilde.
+150584	Sett inn platefarge
+150624	Trykk-og-hold @A04B@ under filmopptak
+150702	og den USB-tilkoblede PCM-
+150758	opptakeren setter inn en platefarge.
+150832	Nullstill @A078@
+150866	Trykk-og-hold @A035@-knapp f
+150924	rer
+150934	@A078@ tilbake til midten av skjermbilde
+151018	for AF-m
+151036	lvalg.
+151050	Nullstill LV@A07A@-ramme
+151100	Trykk-og-hold @A035@-knapp f
+151158	rer
+151172	rbilderamme tilbake til
+151222	midten av Live View-skjermbilde.
+151288	Nullstill @A043@
+151322	Trykk-og-hold @A035@-knapp f
+151380	rer
+151390	@A043@-verdier tilbake til standard
+151464	i oppstartsskjermbildet.
+151514	Nullstill @A007@
+151552	r @A007@ er tildelt et hjul, f
+151614	rer trykk-
+151638	og-hold @A035@-knappen verdien for
+151710	eksponeringskompensering tilbake
+151778	til standardverdien i standbyskjermen
+151856	for fotografering.
+151894	Nullstill @A07B@
+151928	Trykk-og-hold @A035@-knapp f
+151986	rer
+151996	innstillingene for Lys- og skygge-
+152068	kontrollverdier tilbake til standard
+152144	i innstillingsskjermbildet.
+152200	Avslutt @A07C@
+152230	Trykk-og-hold @A07C@-knappen
+152290	deaktiverer hj
+152320	rnestens-
+152342	kompensering.
+152370	Nullstill @A07C@
+152404	Trykk-og-hold @A035@-knappen
+152468	rer innstillingene for hj
+152520	rnestens-
+152542	kompensering tilbake til standard
+152612	i innstillingsskjermbildet.
+152668	Nullstill @A042@ bilde
+152714	Trykk-og-hold @A035@-knappen
+152778	rer rammen for videokonf.-
+152838	rbilde tilbake til midtstilling.
+152908	Nullstill @A009@
+152942	Trykk-og-hold @A035@-knappen
+153006	rer innstillingene for blitz-
+153068	intensitet tilbake til standard ved
+153142	foto-standby n
+153172	r @A009@ er tildelt hjulet.
+153228	Bryter @A045@-l
+153264	Trykk-og-hold-knapp tildelt
+153322	@A045@-l
+153340	sbrytere @A045@-l
+153376	s p
+153384	/av.
+153394	Bryter @A061@/@A062@
+153436	Trykk-og-hold-knapp tildelt
+153494	@A061@/@A062@ deaktiverer
+153548	@A061@/@A062@-moduser.
+153594	Innst. for ring BKT
+153634	Trykk-og-hold-knapp tildelt
+153692	BKT trekker opp skjermbildet
+153752	for BKT-innstillinger.
+153798	Auto-bryter Ring EVF
+153840	Trykk-og-hold-knapp tildelt
+153898	@A03D@ trekker opp skjermbildet
+153964	for innstilling av @A03D@-auto-bryter.
+154042	Pro-foto H
+154064	Pro-foto L
+154086	Effekt: H
+154110	Effekt: Lav
+154134	Effekt: Standard
+154168	AV-begrenser: Av
+154202	@A07D@ for 
+154226	 oppdat. avst.
+154256	Nullstill-/egendefinert-modus
+154316	Tildel til egendefinert-modus
+154376	Tilb.kall fra egendef-modus
+154432	Nullstill omfang
+154466	Filmredigering
+154496	In-Movie bildeopptak
+154538	Filmtrimming
+154564	Valgt scene vil slettes.
+154614	@A002@Valgt scene vil slettes.
+154676	@A004@Innstillinger lydopptak
+154736	@A004@Skjerminnstillinger
+154788	Innstillinger for informativ
+154848	skjerm under filmopptak.
+154898	@A004@-infoinnstillinger
+154948	Velg informasjonen som skal
+155006	vises n
+155022	r @A01A@ trykkes p
+155064	Rutenett
+155082	@A004@Innstillinger
+155122	Velg de kontrollene som skal
+155182	vises n
+155198	r @A035@ trykkes p
+155236	 i
+155244	filmmodus.
+155266	@A087@Skjermm
+155294	nster
+155306	Angir visningsmetode for
+155358	batterilading under
+155400	filmopptak.
+155424	@A078@@A004@@A024@
+155462	@A078@@A003@@A024@
+155500	@A079@@A004@@A024@
+155538	@A079@@A003@@A024@
+155576	Velg kort som skal settes opp
+155636	Oppdatering fastvare
+155678	@A002@ N
+155696	r fastevaren er oppdatert,
+155752	kan du ikke g
+155780	 tilbake til gjeldende
+155828	fastvare.
+155848	@A056@Funksjon
+155878	@A0B5@Funksjon
+155908	@A0B6@Funksjon
+155938	@A0B7@Funksjon
+155968	AF-skanner
+155990	Innstillinger for AF-skanner
+156050	at AF starter eller
+156092	while in AF kj
+156122	rer.
+156132	Selv om motivet er uklart
+156186	eller kontrasten er lav,
+156238	vil ikke AF-skanneren aktiveres.
+156304	Hvis motivet er uklart eller hvis
+156374	kontrasten er lav, vil AF-skanneren
+156448	bare kj
+156464	re n
+156474	r AF starter.
+156502	Hvis motivet er uklart eller
+156562	hvis kontrasten er lav, vil
+156620	AF-skanneren likevel aktiveres.
+156684	@A003@AF-modus
+156714	Angi AF-metode
+156746	for stillbilder.
+156780	@A003@Bildestabilisator
+156828	Angir bildestabiliseringsmodus
+156892	for stillbilder.
+156926	@A003@Knappefunksjoner
+156972	Velg funksjoner som skal tildeles
+157042	hver enkelt knapp for
+157088	stillbilder.
+157114	@A003@Ringfunksjon
+157152	Velg funksjoner som skal tildeles
+157222	hvert enkelt hjul for
+157268	stillbilder.
+157294	@A003@St
+157312	yfilter
+157328	@A003@Elektr. zoomhast.
+157376	Angi zoomhastigheter
+157420	for stillbilder n
+157456	r elektronisk
+157486	zoomobjektiv brukes.
+157528	@A003@@A024@
+157554	Velg innstilinger for bildekvalitet
+157628	for stillbilder.
+157662	@A004@Knapp/hjul/spak
+157706	Velg funksjoner som skal tildeles
+157776	knapper og hjul for filming.
+157834	@A004@Knappefunksjoner
+157880	Velg funksjoner som skal tildeles
+157950	hver enkelt knapp for filming.
+158012	@A004@Elektr. zoomhast.
+158060	Angi zoomhastigheter
+158104	for filming n
+158132	r elektronisk
+158162	zoomobjektiv brukes.
+158204	@A004@AF/IS-innstillinger
+158256	Velg bildestabiliseringsmodus
+158318	og fokuseringsmodus
+158360	for filming.
+158386	@A004@AF-modus
+158416	Still inn fokuseringsmetode
+158474	for filming.
+158500	@A004@Bildestabilisator
+158548	Endre bildestabilisatormodus
+158608	for filming.
+158634	Tilkobling til smarttelefon med
+158700	innebygget @A0B8@.
+158738	@A0B8@-innstillinger
+158780	Meny for innebygd @A0B8@.
+158832	@A0B8@ Tilkoblings-innst.
+158884	Velg @A0B8@-tilkobling
+158930	Velg @A0B8@-tilkobling hver gang.
+158998	Nullstill @A0B8@-innstillinger
+159060	@A003@ Forsiktig nullstiller alle
+159130	@A0B8@-innstillinger
+159172	Klargj
+159186	re @A0B8@-tilkobling
+159228	For tilkobling til din smarttelefon.
+159304	Denne konfigureringen er kun
+159368	dvendig 
+159386	n gang.
+159404	@A0B8@-tilkoblingen
+159446	vil starte senere.
+159484	@A0B8@ starter
+159514	@A0B8@ stopper
+159544	Sl
+159550	r av innebygget @A0B8@.
+159598	Avsl. @A0B8@@A01E@
+159640	r lukkerhastigheten er @A07E@
+159702	eller mindre, settes den f
+159756	rste
+159768	lukkergardinen til elektronisk. 
+159836	Velg forsinkelsen som gjelder
+159898	etter at utl
+159924	seren trykkes.
+159954	4K
+159960	C4K
+159968	Color
+159980	Color / Vivid
+160008	MOV 3840
+160026	2160
+160036	MOV 4096
+160054	2160
+160064	MOV 1920
+160082	1080
+160092	MOV 1280
+160110	720
+160118	Bilder f
+160136	r blender
+160156	Rutenettinnstillinger
+160200	@A004@Ringfunksjon
+160238	Velg funksjoner som skal tildeles
+160308	hvert enkelt hjul for filming.
+160370	@A078@Still hjem
+160404	@A078@Punktm
+160430	ling
+160440	EVF-stil
+160458	EVF-autobryter
+160488	Velg AF-omr
+160512	de
+160518	@A078@Hjem
+160540	@A07F@i-Enhance
+160572	Deaktiver 
+160594	yesensor.
+160616	@A03D@: for 
+160642	 skifte mellom
+160674	skjermvisning og
+160710	EVF-visning.
+160736	Trykk for 
+160758	 utf
+160768	re S-AF.
+160786	Funksjoner p
+160812	 @A0A9@ knapper
+160846	endres ikke i @A0BB@.
+160890	I @A0BB@ byttes funksjoner for @A0A9@
+160968	knapper til @A0BC@: BKT og @A0BD@: @A0BE@.
+161054	Deaktiverer Fn-spakfunksjon.
+161112	@A080@Dempet
+161138	@A078@@A01C@
+161164	Velg visningsstil for EVF.
+161218	Skift automatisk fra skjermvisning
+161290	til EVF-visning n
+161332	et 
+161340	ye blir oppdaget ved EVF.
+161392	Detaljerte innstillinger for
+161452	fotografering med @A04A@.
+161504	Velg P
+161518	 for 
+161530	 vise
+161544	niv
+161556	ling i EVF.
+161582	Aktivert n
+161604	r i @A03C@.
+161628	Detaljerte innstillinger for
+161688	fotografering med @A049@.
+161740	Velg bildefrekvens i EVF.
+161792	Overf
+161804	rer Spill inn bit fra kamera til
+161872	tilkoblet opptaksenhet.
+161920	Overf
+161932	rer tidskode fra kamera
+161982	til tilkoblet opptaksenhet.
+162038	Velg EVF-visningsmodus.
+162086	@A089@Dempet farge
+162124	@A081@Under vann
+162158	Velg AF-m
+162178	lpunkt
+162194	og AF-m
+162210	lmodus.
+162226	17:9
+162236	@A0B9@Vivid
+162260	@A0BA@Natural
+162288	@A0BB@Portrait
+162318	Kan ikke velge mappe
+162360	Fn
+162366	50p Prioritet
+162394	60p Prioritet
+162422	G. @A024@/hvitb/Farge
+162466	PCM-opptaker
+162492	Fill-In
+162508	Fokusstabling
+162536	Flere bilder tas med
+162580	fokuspunktet flyttet litt lenger
+162648	bak for hvert bilde.
+162692	Bildene stables ikke.
+162736	Flere bilder tas med
+162780	fokuspunktet flyttet litt fremover
+162852	og bakover fra utgangspunktet.
+162916	Deretter stables bildene.
+162968	Live View-lysstyrken gjenspeiler
+163036	eksponeringsinnstillingene.
+163094	Lysstyrken til bildet som vises,
+163162	er den samme som for
+163206	det endelige bildet.
+163248	Live View-lysstyrken gjenspeiler
+163316	ikke eksponeringsinnstillingene,
+163384	men justeres for optimal visning. 
+163456	Avviker fra det endelige bildet.
+163522	Live View-lysstyrke gjensp ikke
+163588	eksponeringsinnst. og optimeres
+163654	ved 
+163664	 redusere bildehast
+163706	i m
+163714	rke motiver. Lysstyrken
+163764	til sluttbildet vil v
+163808	re forskjellig.
+163840	@A040@: Start/stopp filmopptak.
+163904	@A082@Mykt fokus-effekt
+163952	@A083@N
+163968	kkelhull-effekt
+164000	@A084@Hvitkant-effekt
+164044	@A085@Rammeeffekt
+164080	@A086@Stjernelyseffekt
+164126	@A087@T
+164142	keeffekt: topp og bunn
+164188	@A088@T
+164204	keeffekt: venstre og h
+164250	yre
+164258	@A089@Skyggeeff.: venstre og h
+164320	yre
+164328	@A08A@Skyggeeffekt: topp og bunn
+164394	@A078@Ansiktsdetekt feil
+164444	@A079@Ansiktsdetekt feil
+164494	@A107@
+164508	Vid
+164516	Smal
+164526	Bleach Bypass
+164554	Bleach Bypass@A04F@
+164594	Bleach Bypass@A050@
+164634	@A004@Modusinnstillinger
+164684	Lik verdi
+164704	Avslutt @A090@
+164734	Fiske
+164746	yekomp.
+164762	Vinkel
+164776	Fiske
+164788	yekompensasjon 1
+164822	Fiske
+164834	yekompensasjon 2
+164868	Fiske
+164880	yekompensasjon 3
+164914	@A091@/@A092@Korrigering
+164964	Fiske
+164976	yekomp.
+164992	Trykk-og-hold knapp tilordnet
+165054	@A090@ for 
+165078	 deaktiv. flimmerskann.
+165126	Sl
+165132	r Fiske
+165148	yekompensasjon p
+165182	/av.
+165192	Trykk for 
+165214	 starte Flimmerskann.
+165260	Avslutt ved 
+165286	 holde knappen nede.
+165330	Gjelder i S- eller M-modus.
+165386	@A004@Flimmerskann
+165424	@A0CC@Bleach Bypass
+165464	@A08C@Bleach Bypass@A04F@
+165516	@A08D@Bleach Bypass@A050@
+165568	@A006@@A07A@Standardinnst.
+165622	Juster innstillinger for @A004@-modus.
+165700	Korrigerer forvrengningen av en 
+165768	fiske
+165780	yelinse for 
+165806	 lage et bilde 
+165840	med super-vidvinkel.
+165882	Identifiser flimmer og juster
+165944	lukkerhastighet i mindre trinn
+166008	i S- eller M-modus.
+166048	Velg standard forst
+166088	rrelsesverdi
+166116	for forst
+166136	rrelse av bildeavspilling.
+166190	Identifiser flimmer og juster
+166252	lukkerhastighet i mindre trinn
+166316	i S- eller M-modus.
+166356	Nylig
+166368	@A003@Flimmerskann
+166406	Flimmerskann
+166432	ART15@A04F@
+166456	ART15@A050@
+166480	Kamera vil fortsette sporing
+166540	etter at str
+166566	mmen er sl
+166588	tt av.
+166602	Velg bildefrekvens i EVF.
+166654	Registrer GPS-pos.
+166692	Loggefunksjonen kan ikke
+166744	brukes p
+166762	 dette tidspunktet.
+166802	Aut. tidsjustering
+166840	Posisjonsdata vil ikke 
+166890	bli lagt til bildet.
+166932	Posisjonsdata vil bli lagt 
+166990	til bildet. Still inn p
+167038	 P
+167044	 for 
+167060	 aktivere GPS-en.
+167096	Juster dato og tid manuelt.
+167152	Kameraet justerer dato og tid 
+167216	automatisk basert p
+167262	GPS-informasjon. GPS brukes 
+167322	bare n
+167336	r det gj
+167354	res justeringer.
+167388	Sparing av batteristr
+167432	m prioriteres 
+167464	foran GPS-n
+167488	yaktighet.
+167510	GPS-n
+167522	yaktighet prioriteres foran 
+167582	sparing av batteristr
+167626	m.
+167632	Batteristr
+167658	GPS-prioritet
+167686	GPS-n
+167698	yakt.
+167710	@A08B@ @A01A@
+167738	Legg til GPS-posisjonsdata til 
+167804	bildet. Still inn p
+167844	 P
+167850	 for 
+167868	aktivere GPS-en.
+167902	Stiller inn GPS-pri. for loggsporing.
+167978	Sett dato og tid eller 
+168028	tidssone for kamera.
+168070	@A022@ Innstillinger
+168112	@A022@
+168126	Tidssone
+168144	Instant Film
+168170	@A08E@Instant Film
+168208	@A08F@/Bluetooth-innstillinger
+168270	Juster @A08F@ og 
+168308	Bluetooth-innstillinger.
+168358	Tilgjengelighet
+168390	@A099@/Bluetooth er helt
+168442	deaktivert og tilkobling
+168494	kan ikke starte.
+168528	@A099@/Bluetooth gj
+168568	res tilgjengelig
+168604	for tilkobling.
+168636	Tilkoblingspassord
+168674	@A040@: Endre tilkoblingspassord.
+168744	Nye passord genereres
+168790	automatisk.
+168814	Tilbakestill innstillinger
+168868	@A002@ Tilbakestill alle @A08F@ 
+168936	og Bluetooth-instillinger?
+168990	Sl
+168996	 av standby
+169020	@A08F@/Bluetooth-tilkobling kan ikke
+169096	startes av en enhet n
+169140	r str
+169152	mmen
+169164	er av.
+169178	@A08F@/Bluetooth-tilkobling kan
+169244	startes av en enhet ogs
+169292	 n
+169304	str
+169312	mmen er av.
+169336	Velg om du vil aktivere
+169386	Sl
+169392	 av standby hver gang
+169438	str
+169446	mmen sl
+169462	s av.
+169474	Aktiver @A08F@/Bluetooth sl
+169530	 av 
+169542	standby slik at bilder kan importeres
+169620	mens str
+169638	mmen er av?
+169662	Sl
+169668	 av standby: Av
+169700	Sl
+169706	 av standby: P
+169738	Bekreft hver gang
+169774	Ikke vis denne skjermen igjen
+169834	Bekreft om du vil aktivere
+169890	Sl
+169896	 av standby hver gang str
+169948	mmen
+169960	sl
+169966	s av? Denne innstillingen kan
+170032	r som helst endres fra menyen.
+170094	Overf
+170106	rer data...
+170130	Avbryt
+170144	Fortsett
+170162	Avbryt dataoverf
+170196	ring og
+170214	sl
+170220	 p
+170226	 str
+170236	mmen.
+170248	Avbryt eksisterende 
+170292	bildeoverf
+170314	ringsvalg.
+170336	@A093@ Behold varm farge@A01A@
+170398	Juster innst. for 
+170436	 ta
+170446	bilde med Olympus PCM-opptaker
+170510	tilkoblet.
+170532	@A078@Intet kort
+170566	@A079@Intet kort
+170600	INFO_CONTINUE_TRANSFER_2
+170650	Gjenv
+170662	rende filer
+170686	Sl
+170692	 av etter overf
+170724	ring
+170734	Sl
+170740	 av umiddelbart
+170772	Str
+170780	mmen vil sl
+170804	 seg av automatisk
+170844	etter at alle filene er overf
+170904	rt.
+170912	Avbryter overf
+170942	ring til PC
+170968	og sl
+170980	r av str
+170998	mmen.
+171010	Overf
+171022	rer...
+171036	INFO_WAIT_SP_TRANSFERRED
+171086	Vent til overf
+171116	ringen er fullf
+171148	rt.
+171158	Str
+171166	mmen vil sl
+171190	 seg av automatisk.
+171230	Fotografering med BULB-funksjon
+171294	CAUTION_HIGH_RES_SHOT_CANCELED
+171356	Feil ved opptak av h
+171398	yoppl
+171410	st bilde.
+171432	Image composite mislyktes.
+171486	@A003@ISO
+171506	@A003@Anbefalt ISO
+171544	@A003@ISO-utvidelse
+171584	@A004@ISO
+171604	@A004@Anbefalt ISO
+171642	@A005@ISO-utvidelse
+171682	@A003@Hvitb
+171706	@A004@Hvitb
+171730	@A003@Kelvin
+171756	@A004@Kelvin
+171782	@A003@Auto @A094@
+171818	@A003@@A095@5300K @A094@
+171868	@A003@@A096@7500K @A094@
+171918	@A003@@A097@6000K @A094@
+171968	@A003@@A098@3000K @A094@
+172018	@A003@@A099@4000K @A094@
+172068	@A003@@A036@5500K @A094@
+172118	@A003@@A01E@ @A094@
+172158	@A003@@A01F@ @A094@
+172198	@A003@@A020@ @A094@
+172238	@A003@@A021@ @A094@
+172278	@A004@Auto @A094@
+172314	@A004@@A095@5300K @A094@
+172364	@A004@@A096@7500K @A094@
+172414	@A004@@A097@6000K @A094@
+172464	@A004@@A098@3000K @A094@
+172514	@A004@@A099@4000K @A094@
+172564	@A004@@A036@5500K @A094@
+172614	@A004@@A01E@ @A094@
+172654	@A004@@A01F@ @A094@
+172694	@A004@@A020@ @A094@
+172734	@A004@@A021@ @A094@
+172774	MOVIE_PIC_MODE_LOG
+172812	@A003@CWB @A094@
+172846	@A004@CWB @A094@
+172880	Live-visning@A033@
+172918	Kontinuerlig AF + MF
+172960	AF-sporing + MF
+172992	Opptaksmetode@A01A@
+173032	Live ND-fotogr.: ND2(1EV)
+173084	Live ND-fotogr.: ND4(2EV)
+173136	Live ND-fotogr.: ND8(3EV)
+173188	Live ND-fotogr.: ND16(4EV)
+173242	Live ND-fotogr.: ND32(5EV)
+173296	@A003@Lagringsspor @A078@
+173348	@A003@Lagringsspor @A079@
+173400	@A004@Lagringsspor @A078@
+173452	@A004@Lagringsspor @A079@
+173504	Opptaksmetode
+173532	Tar bilder med kameraet
+173582	stabilisert med et stativ.
+173636	Tar bilder i h
+173666	ndholdt modus.
+173698	Regn med behandlingstid
+173748	etter fotograferingen.
+173796	Blits er ikke tilgjengelig.
+173852	Live ND-fotografering
+173896	ND-nummer
+173916	LV-simulering
+173944	Effekt med sakte lukkerhastighet
+174012	kan ikke ses i Live View.
+174064	Effekt med sakte lukkerhastighet
+174132	kan ses i Live View.
+174176	Forskjellig fra endelig bilde.
+174238	Live View vises ikke
+174282	som et speilbilde
+174324	r skjermen snus.
+174358	Live View vises
+174392	som et speilbilde
+174434	r skjermen snus.
+174468	Info om feltsensor
+174506	Informasjon ved halvveis ned
+174564	Informasjon forblir
+174606	skjult ogs
+174628	 n
+174634	r utl
+174646	ser-
+174658	knappen trykkes halvveis ned.
+174718	Informasjon om eksponering og
+174780	linsens brennvidde vises bare n
+174850	utl
+174858	serknappen trykkes halvveis ned.
+174924	Live View-lysstyrke gjensp ikke
+174990	eksponeringsinnst. og just.
+175048	for optimal visning ved 
+175102	ke
+175112	ke styrken for m
+175146	rke omr
+175162	der.
+175174	Lysst til sluttbildet vil v
+175230	re forskj.
+175252	Live View-lysstyrke gjensp ikke
+175318	eksponeringsinnst. og just.
+175376	for optimal visning ved 
+175430	ke
+175440	ke styrken for m
+175474	rke omr
+175490	der.
+175502	Lysst til sluttbildet vil v
+175558	re forskj.
+175584	2-innstilling
+175612	Kvalitetsprioritet
+175650	Bildehastighetsprioritet
+175700	For Live View prioriteres kvalitet
+175772	fremfor bildehastighet.
+175822	Bildehastigheten vil bli redusert
+175892	i m
+175900	rke motiver.
+175926	For Live View prioriteres
+175980	bildehastighet fremfor kvalitet.
+176048	Farger kan forsvinne
+176092	i m
+176100	rke motiver.
+176128	Dette vil ikke p
+176162	virke sluttbildet.
+176200	Antiflimmer LV
+176230	Opptak m antiflimmer
+176272	Effekten av flimmer som ujevne
+176336	eksponeringer og farger
+176386	reduseres. Tirsfors. for lukkerens
+176458	utl
+176466	sningstid kan bli lengre.
+176520	Gjelder for mekanisk lukker.
+176578	Opptak med antiflimmer
+176626	vil ikke fungere.
+176662	@A003@ISO-Auto
+176692	@A09B@ISO-Auto
+176722	@A003@ISO-Auto-innstilling
+176776	@A09B@ISO-Auto-innstilling
+176830	@A003@Lav ISO-prosess.
+176876	INFO_S_NOISE_REDUCTION_MODE_1
+176936	INFO_S_NOISE_REDUCTION_MODE_2
+176996	Nummerskive M/B
+177028	Veksler AF-modus/AF-s
+177072	kemodus/
+177092	AF-s
+177102	kepunkt i henhold til
+177148	posisjonen til Fn-spak.
+177202	kemodus kan velges.
+177242	@A0AB@ Innstillinger
+177284	@A0AC@Utl
+177304	serknapp
+177322	@A0AC@Multivelger
+177358	@A0AC@Fronthjul
+177390	@A0AC@Bakre hjul
+177424	@A0AC@@A007@-knapp
+177462	@A0AC@@A0AD@-knapp
+177500	@A0AC@@A034@-knapp
+177538	@A0AE@Multivelger
+177574	@A0AE@Fronthjul
+177606	@A0AE@Bakre hjul
+177640	Fn-spak
+177656	@A0AF@-knapp
+177682	@A010@-knapp
+177708	@A082@-knapp
+177734	Ber
+177742	ringsskjerm
+177766	@A0AC@Senterknapp
+177802	AF-s
+177812	kemodus
+177828	AF-s
+177838	kepunkt
+177854	@A0AD@Retningsknapp
+177894	@A0AD@:Av
+177914	INFO_JOY_CROSS_KEY_DIRECT_ON
+177972	Egendef. modus C1
+178008	Egendef. modus C2
+178044	Egendef. modus C3
+178080	Egendef. modus C4
+178116	Sl
+178122	r @A0A6@ p
+178144	/av.
+178154	Sl
+178160	r @A09C@ p
+178182	/av.
+178192	Sl
+178198	r @A09D@ p
+178220	/av.
+178230	Sl
+178236	r @A09E@ p
+178258	/av.
+178268	FN_DIGITAL_ND
+178296	Sl
+178302	r Live ND-fotografering
+178352	av/p
+178366	@A003@@A093@ Behold varm farge
+178428	@A004@@A093@ Behold varm farge
+178490	@A003@Hvitbalanse
+178526	@A004@Hvitbalanse
+178562	@A003@Alle @A094@
+178598	@A004@Alle @A094@
+178634	@A099@ MAC-adresse
+178672	Halvveis ned AF
+178704	AF aktiveres ogs
+178738	 n
+178744	r utl
+178756	ser-
+178768	knappen trykkes halvveis ned i
+178832	modus3/modus4 for S-AF eller C-AF.
+178902	AF aktiveres ikke n
+178942	r utl
+178954	ser-
+178966	knappen trykkes halvveis ned i
+179030	modus3/modus4 for S-AF eller C-AF.
+179100	@A003@AEL/AFL
+179128	@A0A8@
+179142	@A0A2@
+179156	@A003@Sporing av objekt
+179204	Motorsport
+179226	Fly
+179234	Tog
+179242	Objekt ikke spesifisert.
+179292	Biler og motorsykler vil bli
+179352	detektert og sporet.
+179394	Fly og helikoptre vil bli
+179448	detektert og sporet.
+179490	Tog vil bli detektert og sporet.
+179556	@A003@AF+MF
+179580	Deaktiverer fokusringen
+179630	i autofokusmodus.
+179666	Aktiverer fokusringen
+179712	for manuell fokusering
+179760	i autofokusmodus.
+179796	@A003@C-AF senterstart
+179842	@A003@C-AF senterprioritet
+179896	@A003@@A0A2@-innstillinger
+179950	@A003@Orientering koblet @A078@
+180014	@A0A9@AF-s
+180036	kepunkt
+180052	@A0AA@AF-s
+180074	kepunkt
+180090	@A0AB@AF-s
+180112	kepunkt
+180128	@A0A9@AF-s
+180150	kemodus
+180166	@A0AA@AF-s
+180188	kemodus
+180204	@A0AB@AF-s
+180226	kemodus
+180242	@A0A3@S
+180258	kemodusinnstillinger
+180300	St
+180306	rrelse
+180320	Step
+180330	@A0A4@St
+180348	rrelse
+180362	@A0A5@St
+180380	rrelse
+180394	@A0A6@St
+180412	rrelse
+180426	@A0A7@St
+180444	rrelse
+180458	@A0A4@Step
+180480	@A0A5@Step
+180502	@A0A6@Step
+180524	@A0A7@Step
+180546	@A0B9@ @A099@ Koble til
+180594	Min meny
+180612	Ingen elementer er registrert.
+180676	Trykk p
+180692	 @A040@-knappen
+180726	under menyen for 
+180762	 registrere
+180788	elementet til Min meny.
+180836	Du kan lagre menyelementer
+180892	du bruker ofte.
+180926	Bare lagrede elementer vises.
+180986	Min meny 1
+181008	Min meny 2
+181030	Min meny 3
+181052	Min meny 4
+181074	Min meny 5
+181096	Detaljerte innstillinger for n
+181164	ISO-f
+181176	lsomhet er stilt inn p
+181222	 AUTO
+181236	for film.
+181256	Velg hvitbalansemodus
+181302	for film.
+181322	Still inn samme hvitbalanse-
+181382	kompensasjon i alle moduser
+181440	for film.
+181460	For 
+181470	 beholde varme lysfarger
+181522	automatisk i hvitbalansemodus
+181584	for film.
+181604	Avspilling bildehastighet
+181656	Filmen vil bli spilt inn for 
+181718	x0,5 langsom avspilling.
+181768	Filmen vil bli spilt inn for 
+181830	x0,42 langsom avspilling.
+181882	Filmen vil bli spilt inn for 
+181944	x0,25 langsom avspilling.
+181996	Filmen vil bli spilt inn for 
+182058	x0,21 langsom avspilling.
+182110	Filmen vil bli spilt inn for 
+182172	x0,2 langsom avspilling.
+182222	Auto ISO-f
+182244	lsomhet er ikke tilgj.
+182296	r @A004@-modus er stilt inn p
+182356	 M.
+182364	Auto ISO-f
+182386	lsomhet er tilgjengelig
+182440	r @A004@-modus er stilt inn p
+182500	 M.
+182508	@A004@C-AF hastighet
+182550	Velger fokuseringshastigheten
+182612	for C-AF for filming.
+182656	@A004@C-AF-f
+182682	lsomhet
+182698	Juster f
+182716	lsomheten til C-AF-l
+182764	avhengig av bevegelsen til
+182820	objektet for filming.
+182864	Rask
+182874	Langsom
+182890	@A004@IS niv
+182918	Stiller IS-niv
+182948	et for filming.
+182982	Velg Lav for jevnere
+183026	bevegelse ved panorering.
+183078	@A0A0@Visningshjelp
+183122	r den er stilt inn p
+183164	 P
+183170	, justeres
+183194	lysstyrke og farger for optimal
+183260	visning under @A0A0@.
+183304	Bildet vil vises i
+183344	valgt bildemodus.
+183380	Bilde konvertert til BT.709
+183438	equivalent for visning.
+183488	Forskjellig fra innspilt bilde.
+183552	PCM-opptaker vil skape
+183600	en overgangstone n
+183638	r @A083@-knappen
+183674	trykkes inn og holdes
+183720	under videoopptak.
+183758	Opptakshastighet
+183792	Velger lydkvaliteten.
+183836	Min meny er full.
+183872	Lagt til i Min meny.
+183914	Flytt til den nye posisjonen.
+183974	Fjern dette elementet
+184018	Fjern denne @A0A1@-fanen
+184068	Det valgte elementet vil bli fjernet
+184144	fra Min meny.
+184172	Alle elementer i den valgte @A0A1@-fanen
+184256	vil bli fjernet fra Min meny.
+184316	Endre rekkef
+184342	lge
+184350	Velg Min meny for 
+184388	 legge til.
+184412	@A0B3@ Batteri
+184442	@A0B4@ Batteri
+184472	Etter at batteriet i @A0B3@ er utladet,
+184554	vil batteriet i @A0B4@ bli brukt.
+184622	Etter at batteriet i @A0B4@ er utladet,
+184704	vil batteriet i @A0B3@ bli brukt.
+184772	Kalibrer h
+184794	yde
+184802	Still inn gjeldende h
+184846	yde.
+184860	yde/temperatur
+184890	TEMPERATURE_UNIT
+184924	ELEVATION_UNIT
+184954	Velg spor som skal lagres
+185006	@A078@Lagrer loggfiler
+185052	@A079@Lagrer loggfiler
+185098	@A0BD@Lagrer loggfiler
+185144	@A078@Kortets loggkapasitet er full
+185216	@A079@Kortets loggkapasitet er full
+185288	Trykk og hold @A083@ under 
+185346	filmopptak og PCM-opptakeren
+185406	setter inn en overgangstone.
+185464	Tilkobling til smarttelefon
+185522	eller tilgangspunkt ved hjelp av
+185590	tr
+185596	dl
+185602	se funksjoner.
+185632	Tar og kombinerer flere
+185682	bilder for 
+185706	 lage ett bilde
+185740	med superh
+185762	y oppl
+185776	sning.
+185790	Aktiverer sakte lukker
+185838	som ved bruk av ND-filteret.
+185896	A4. AF/MF
+185916	B1. Knapp/hjul/spak
+185956	B2. Knapp/hjul/spak
+185996	J3. @A003@ Nytte
+186030	@A003@C-AF-f
+186056	lsomhet
+186072	Registrerer standard 
+186118	AF-modus/AF-s
+186146	kemodus/
+186166	AF-s
+186176	kepunkt.
+186194	Juster f
+186212	lsomheten til C-AF-l
+186260	avhengig av bevegelsen til
+186316	objektet for stillbilder.
+186368	Elementene hvor @A03F@ er valgt,
+186436	vises n
+186452	r du velger AF-s
+186486	kemodus
+186504	for stillbilder.
+186538	Velg P
+186552	 for 
+186564	 tillate manuell
+186600	fokusering i alle AF-moduser
+186660	for fotografering av stillbilder.
+186728	For @A03F@ valgt i @A0A2@,
+186784	opererer C-AF/C-AF+TR
+186830	i senteromr
+186854	det til omr
+186878	det.
+186888	For @A03F@ valgt i @A0A2@, prioriteres
+186968	senter i omr
+186994	det fremfor
+187020	andre punkter i C-AF.
+187064	Still inn st
+187090	rrelse p
+187108	 s
+187114	keomr
+187126	de
+187134	og step cursor position
+187188	r det flyttes.
+187218	For stillbildeelementer hvor @A03F@
+187292	er valgt, kan stilles inn separat
+187362	for horis eller vertikale stillinger.
+187438	Velg sporet objekt
+187478	for 
+187488	 ta stillbilde.
+187522	Gjelder i C-AF+TR.
+187560	Velg funksjon som skal tilordnes
+187628	til @A0AC@ senterknapp for multivelger 
+187710	ved fotografering.
+187748	Velg funksjon som skal 
+187798	tilordnes til @A0AD@ retningsknapp for 
+187880	multivelger ved fotografering.
+187942	Under @A0AB@ er operasjoner
+188000	som har v
+188020	rt stilt inn p
+188050	 @A03E@,
+188070	deaktivert.
+188094	Velg de kontrollene som skal vises
+188170	r @A083@ trykkes
+188206	for stillbilder.
+188240	Redusere flimmer 
+188278	ved 
+188288	 sette effektfrekvens.
+188334	Detaljerte innstillinger for n
+188402	ISO-f
+188414	lsomhet er stilt inn p
+188460	 AUTO
+188474	for stillbilder.
+188508	Velg bildemodus som
+188550	har automatisk ISO-f
+188592	lsomhet
+188610	for stillbilder.
+188644	Velger bildebehandlingsmetode 
+188708	med lav ISO-hastighet 
+188756	for stillbilder.
+188790	Velg hvitbalansemodus
+188836	for stillbilder.
+188870	Still inn samme hvitbalanse-
+188930	kompensasjon i alle moduser
+188988	for stillbilder.
+189022	For 
+189032	 beholde varme lysfarger
+189084	automatisk i hvitbalansemodus
+189146	for stillbilder.
+189180	Juster innstillinger for
+189236	yde og temperatur.
+189274	Feltsensorlogger
+189308	Henter feltsensorinformasjon
+189368	og lagrer til kortet som loggfil.
+189436	Start logg
+189458	Stopp logg
+189480	Lagre logg
+189502	Kj
+189508	rer
+189516	Stoppet
+189532	@A002@Stoppet
+189564	ft
+189570	Abu Dhabi
+189590	Adelaide
+189608	Alaska
+189622	Anchorage
+189642	Athens
+189656	Auckland
+189674	Azores
+189688	Bangkok
+189704	Beijing
+189720	Berlin
+189734	Buenos Aires
+189760	Cairo
+189772	Casablanca
+189794	Chennai
+189810	Chicago
+189826	Colombo
+189842	Delhi
+189854	Denver
+189868	Dhaka
+189880	Dubai
+189892	Fernando de Noronha
+189932	Fiji
+189942	Guam
+189952	Hawaii
+189966	Helsinki
+189984	Hong Kong
+190004	Honolulu
+190022	Houston
+190038	Islamabad
+190058	Jakarta
+190074	Johannesburg
+190100	Kabul
+190112	Karachi
+190128	Kathmandu
+190148	Kolkata
+190164	Kuala Lumpur
+190190	Kuwait
+190204	La Paz
+190218	Lima
+190228	London
+190242	Los Angeles
+190266	Madrid
+190280	Male
+190290	Manaus
+190304	Mexico City
+190328	Miami
+190340	Midway Islands
+190370	Moscow
+190384	Mumbai
+190398	Nairobi
+190414	New Caledonia
+190442	New York
+190460	Newfoundland
+190486	Paris
+190498	Phoenix
+190514	Rio de Janeiro
+190544	Riyadh
+190558	Rome
+190568	Samoa
+190580	Sao Paulo
+190600	Seattle
+190616	Seoul
+190628	Singapore
+190648	Solomon Islands
+190680	Sydney
+190694	Tahiti
+190708	Taipei
+190722	Tehran
+190736	Tokyo
+190748	Toronto
+190764	Vancouver
+190784	Wellington
+190806	Yangon
+190820	UTC
+190828	ART16
+190840	FHD HighSpeed 120fps
+190882	ND32(5EV)
+190902	ND16(4EV)
+190922	ND8(3EV)
+190940	ND4(2EV)
+190958	ND2(1EV)
+190976	LV OFF-Info
+191000	ISO L64
+191016	ISO L80
+191032	ISO L100
+191050	ISO L125
+191068	ISO L160
+191086	@A0D1@LOCK
+191108	@A0AE@@A010@
+191134	@A0AE@@A0AD@
+191160	@A0AE@@A007@
+191186	@A0AE@@A03F@
+191212	@A0AE@@A03C@
+191238	@A0AE@@A0CB@
+191264	@A0AE@@A034@
+191290	@A0AE@@A0CC@
+191316	@A0AE@@A0CD@
+191342	@A0AE@@A0CE@
+191368	@A0AE@@A0CF@
+191394	@A0AE@@A0D0@
+191420	@A0AC@@A0AD@
+191446	@A0AC@@A007@
+191472	@A0AC@@A034@
+191498	@A0AC@@A0CF@
+191524	@A0AC@@A0D0@
+191550	S-AF@A0BC@
+191572	C-AF@A0BC@
+191594	C-AF+TR@A0BC@
+191622	USB PD
+191636	@A0C8@PC RAW
+191662	96kHz/24bit
+191686	48kHz/16bit
+191710	COMM_MODE_B
+191734	Tilkoblingsoppsett
+191776	lg trinnene for 
+191810	 koble til
+191834	en enhet. Denne innstillingen gj
+191900	res
+191910	bare 
+191922	n gang. @A08F@/Bluetooth 
+191976	aktiveres under oppsettet.
+192030	Installer appen OI.Share p
+192084	 enheten.
+192106	Trykk @A019@ n
+192136	r installeringen
+192172	er fullf
+192190	rt.
+192198	Skann QR-koden 
+192232	med appen OI.Share.
+192272	Starter...
+192294	Kobler fra...
+192322	Koble fra@A018@
+192354	Tilkobling av enhet
+192394	Koble til en enhet.
+192434	Tilkoblingsdetaljer@A01A@
+192486	Enhetstilkobling
+192520	Tilkobling til tilgangspunkt
+192582	ker etter tilgangspunkt...
+192636	Kobler til tilgangspunktet...
+192696	Koble til via WPS
+192732	Koble til fra tilgangspunktliste
+192798	Koble til manuelt
+192834	Detaljinnstillinger
+192874	Ikke tilgjengelig n
+192916	Noen bilder har ikke
+192960	blitt overf
+192984	rt.
+192992	PBC-metode
+193014	PIN-metode
+193036	Koble til med WPS-knappen
+193094	 tilgangspunktet.
+193130	Koble til med PIN-koden
+193184	 tilgangspunktet.
+193220	Trykk p
+193236	 WPS-knappen
+193268	 tilgangspunktet.
+193306	Tilkobling starter etter
+193358	at du har trykket @A083@.
+193410	Tast inn PIN-koden over
+193464	 tilgangspunktet.
+193502	Tilkobling starter etter
+193554	at du har trykket @A083@.
+193610	rste konfigurasjon m
+193652	 utf
+193662	res 
+193674	for 
+193684	 koble til PC ved hjelp av @A099@.
+193760	lg instruksjonene i Olympus
+193818	Capture. F
+193840	rste konfigurasjon m
+193886	utf
+193894	res for hver datamaskin.
+193944	RESULT_WPS_NG
+193972	Tilkobling mislyktes
+194014	Fant ikke tilgangspunkt
+194062	@A099@ kj
+194082	rer
+194090	Koble fra
+194110	Vedlikehold
+194134	Passord
+194150	Velg PC du vil koble til
+194200	Slett
+194212	Slett tilkoblingsinnstillinger fra
+194284	kameraet for dette tilgangspunktet.
+194356	IP_SETTING
+194378	IP-adresse
+194400	Nettverksmaske
+194430	Standard gateway
+194464	Tilordne IP-adresse
+194504	Auto(DHCP)
+194526	Manuelt
+194542	Oppdater innstillinger
+194588	Tilgjengelig n
+194618	r tilgangspunktet
+194656	st
+194662	tter DHCP-funksjonen.
+194708	IP-adressen vil bli tildelt
+194766	automatisk.
+194790	Legg inn IP-adresse manuelt.
+194848	Godkjenning
+194872	Ingen
+194884	Start tilkobling
+194918	Fant ikke tilgangspunkt
+194970	k igjen@A033@
+194998	@A0BA@@A03F@/@A01B@@A01C@
+195050	@A0BA@@A03F@
+195076	Koble til@A019@
+195108	Lukk@A018@
+195130	PC-tilkobling startet
+195174	PC-tilkobling avsluttet
+195222	Kamera er tilkoblet til PC.
+195280	Innspilte bilder overf
+195326	res
+195336	automatisk til PC.
+195374	Tilkobling til PC avsluttet.
+195432	@A002@ Koblet fra PC.
+195478	Kontroller PC-statusen.
+195526	@A002@ Koblet fra nettverket.
+195588	Kontroller status @A099@ og
+195646	koble til tilgangspunktet igjen.
+195712	@A09F@ Dempet farge
+195752	DNS
+195760	WPA2
+195770	Stativ
+195788	ndholdt
+195804	Avbryt overf
+195830	ring av bilder til PC
+195876	og koble fra.
+195912	Lav
+195920	Trykk p
+195936	 @A0AD@ under fotografering
+195994	for 
+196004	 velge AF-s
+196028	keomr
+196040	de.
+196048	NOISE_REDUCTION_STANDARD
+196098	NOISE_REDUCTION_QUALITY
+196146	INFO_S_NOISE_REDUCTION_STANDARD
+196210	INFO_S_NOISE_REDUCTION_QUALITY
+196272	M/B
+196280	@A0D5@
+196294	@A0F8@
+196308	@A078@Velg skjerminnstillinger
+196370	S_NOISE_REDUCTION_LEVEL
+196418	m/ft
+196428	@A0D3@/@A0D4@
+196456	Lader
+196468	Drivprioritet
+196496	Detaljprioritet
+196528	Ved lav ISO-hastighet prioriteres
+196598	maksimum opptakbare
+196640	sekvensfotograferingsbilder
+196698	i bildebehandling fremfor
+196752	stillbilder.
+196778	Ved lav ISO-hastighet
+196824	prioriteres bildedetaljer
+196878	i bildebehandling
+196916	fremfor stillbilder.
+196958	@A0BD@ OM-Log400
+196992	@A003@@A09A@ @A094@
+197032	@A004@@A09A@ @A094@
+197072	2t
+197078	5t
+197084	@A006@@A040@Funksjon
+197126	Velg funksjon som skal tildeles
+197192	@A040@ under avspilling.
+197242	@A04D@-innstillinger
+197284	@A017@-innstillinger
+197326	@A0AC@AF AEL/AFL
+197360	Stjernehimmel-AF kj
+197400	rer
+197408	Stjernehimmel-AF
+197442	Stjernehimmel-AF + MF
+197486	Innst Stjernehimmel-AF
+197532	Velg modus for Stjernehimmel-AF.
+197602	yaktighet
+197622	Hastighet
+197642	AF-n
+197652	yaktighet er prioritert
+197702	over AF-hastighet.
+197742	Prosesseringstid er n
+197786	dvendig
+197804	til AF er fullf
+197836	rt.
+197844	AF-hastighet prioritert
+197894	over AF-n
+197914	yaktighet.
+197936	Fokusringl
+197962	Deaktiverer fokusring
+198008	i manuell fokus-modus.
+198056	Trykk igjen for 
+198090	 g
+198096	 tilbake.
+198116	LV-
+198124	kning
+198136	Sl
+198142	r p
+198150	/av LV-
+198166	kning.
+198182	Trykk ned og vri bryteren for 
+198248	velge innstillingene.
+198292	LV-
+198300	kning P
+198328	Egendef-modus lagre innst
+198380	Vent
+198390	Nullstill
+198410	Under fotografering i egendef-modus
+198484	blir endrede innstillinger lagret
+198554	automatisk.
+198578	Under fotografering i egendef-modus
+198652	blir endrede innstillinger ikke lagret.
+198732	@A008@Ansiktsvalg
+198768	Trykk p
+198784	 knappen for 
+198812	 velge
+198828	ansikt n
+198846	r valgt AF-s
+198872	kepunkt.
+198892	Trykk ned knappen og vri bryteren
+198962	for 
+198972	 velge manuelt.
+199004	@A008@Ansiktsprioritet
+199050	Sl
+199056	r p
+199064	/av @A008@Ansiktsprioritet.
+199122	Trykk ned 
+199144	 vri bryteren for
+199184	 velge innstillingene.
+199230	Ansiktsprioritet AF
+199278	@A078@ Sl
+199298	yfeinnstillinger
+199332	Innstillinger for flytting
+199388	av mark
+199404	r i skjermen for 
+199442	valg av AF-s
+199468	k.
+199474	@A078@ Sl
+199494	yfevalg
+199510	Sl
+199516	yfe 1
+199528	Sl
+199534	yfe 2
+199546	Stopper n
+199566	r AF-s
+199580	kepunktet er
+199608	flyttet til kanten.
+199648	Flytter AF-s
+199674	kepunktet
+199696	til motsatt side
+199732	av samme rad eller kolonne etter
+199800	at AF-s
+199816	kepunktet er forbi kanten.
+199870	Flytter AF-s
+199896	kepunktet
+199918	til motsatt side
+199954	av neste rad eller kolonne
+200010	etter at AF-s
+200038	kepunktet
+200060	er forbi kanten.
+200094	Via @A0AD@
+200116	@A0AD@ blir valgt f
+200162	AF-s
+200172	kepunktet blir flyttet
+200220	til motsatt side.
+200256	@A0AD@ blir ikke valgt f
+200312	AF-s
+200322	kepunktet blir flyttet
+200370	til motsatt side.
+200406	RAW+JPEG @A041@
+200438	Forh
+200448	ndsvelger kun JPEG
+200488	for overf
+200508	ring til en enhet
+200550	r stilt inn til RAW+JPEG.
+200602	Forh
+200612	ndsvelger kun RAW
+200650	for overf
+200670	ring til en enhet
+200712	r stilt inn til RAW+JPEG.
+200764	Forh
+200774	ndsvelger RAW+JPEG
+200814	for overf
+200834	ring til en enhet
+200876	r stilt inn til RAW+JPEG.
+200928	Fokusindikator
+200958	Fokusindikatoren vises ikke n
+201024	du dreier fokusringen
+201070	i MF-modus.
+201094	Fokusretning og -posisjon
+201148	vises n
+201164	r du dreier fokusringen
+201214	i MF-modus. Denne funksjonene
+201276	hjelper deg med 
+201310	 justere fokus.
+201342	Live Composite-timer
+201384	Still inn maks. tid
+201426	for composite-opptak.
+201470	3t
+201476	6t
+201482	Opptaksinformasjon
+201520	@A0BD@L
+201540	Velg P
+201554	 for 
+201566	 deaktivere @A0BD@.
+201608	Viser ramme n
+201636	r lukkerknapp
+201666	er trykket halvveis ned.
+201718	Rammen vises alltid
+201760	i filmopptaksmodus. (@A0AD@, C-AF)
+201830	Trykk p
+201846	 @A040@-knappen
+201880	under menyen for 
+201916	 registrere
+201942	elementet til Min meny.
+201990	@A0AC@AF
+202008	@A0AC@AF@A0BC@
+202038	AEL/@A0AC@AF
+202064	@A0AC@AF Start/Stop
+202104	AF prioriteres for
+202144	registrerte ansikter.
+202188	AF prioriteres for valgt s
+202242	kepunkt
+202260	selv om ansikter
+202296	er registrert.
+202326	LV-
+202334	kning Av
+202352	LV-
+202360	kning P
+202380	Overf
+202392	r valg:
+202410	Velg bilder som skal overf
+202464	res
+202474	til en enhet.
+202502	Valg av flere bilder:
+202548	Velg flere bilder som du skal
+202610	utf
+202618	re en handling med,
+202660	som beskyttelse eller sletting.
+202724	Aktiver 
+202742	yesensor
+202766	r skjermen er lukket.
+202812	@A03D@: live view On/Off.
+202864	RAW-modus
+202884	Sender video i RAW-format
+202938	til st
+202952	ttet enhet.
+202978	Kan ikke lagres p
+203018	kortet i kameraet.
+203056	Tar bilder for 
+203088	 lage 
+203104	et panoramabilde
+203144	 din PC.
+203162	For bilder med kraftig lysskinn; 
+203232	sn
+203238	landskap, hvite 
+203274	sandstrender.
+203302	For bilder opplyst av 
+203350	levende lys. Varme farger
+203404	kommer godt frem.
+203440	For bilder av dokumenter. 
+203498	ker kontrasten mellom 
+203546	brev og bakgrunn.
+203582	Glatt tone for 
+203616	visning p
+203636	 HDTV.
+203650	For landskapsbilder. 
+203696	Bl
+203702	tt og gr
+203720	nt kommer 
+203744	klart frem.
+203768	For bilder av 
+203800	hurtige 
+203820	bevegelser.
+203844	For bilder av soloppgang/
+203898	nedgang. R
+203920	dt og gult 
+203946	kommer sterkt frem.
+203986	Baklys HDR
+204008	Genererer et bilde med 
+204058	optimalt lys ved 
+204100	kombinere en serie med bilder.
+204162	Innend
+204176	rs
+204182	Bevegelse
+204202	Nattscener
+204224	Personer
+204242	Landskap
+204260	Fotografer fyrverkeri ved
+204314	langsommere lukkerhastighet.
+204374	Det anbefales 
+204404	 bruke stativ.
+204434	For bilder med landskap i bakgrunnen. 
+204514	Bl
+204520	tt og gr
+204538	nt kommer klart frem.
+204582	Tar bilder etter hverandre, men bare 
+204660	av omr
+204674	der med endret lysstyrke, 
+204730	og setter sammen disse. 
+204782	Perfekt for 
+204808	 ta bilde av lysspor. 
+204856	Det anbefales 
+204886	 bruke stativ.
+204916	Bruk pop-up@A00A@ og ta bilder av 
+204988	personer mot vakre nattmotiver. 
+205056	Det brukes en langsommere 
+205112	lukkerhastighet. 
+205150	Det anbefales 
+205180	 bruke stativ.
+205210	Ta bilder av vakre nattmotiver 
+205276	med langsommere lukkerhastighet. 
+205346	Det anbefales 
+205376	 bruke stativ.
+205406	For portrettbilder.
+205446	Levende lys
+205470	Barn
+205480	e-Portrett
+205502	Lysspor
+205518	Multifokusopptak
+205556	rbilder
+205572	For n
+205584	rbilder.
+205602	For n
+205614	rbilder av natur.
+205652	Tar mer levende makrobilder
+205710	sammenlignet med standardmakro.
+205774	Perfekt for fotografering der 
+205838	lyd og lys fra kameraet er 
+205896	ugunstig. @A001@, blits og AF-lampe
+205970	deaktiveres.
+205996	Tar flere bilder samtidig
+206050	ved ulike fokusposisjoner.
+206104	Tilkobling av enhet
+206144	Koble til en enhet.
+206184	Denne funksj. krever et kompatibelt objektiv.
+206278	Sett p
+206292	 et kompatibelt objektiv.
+206344	Bruke C-innstillinger? Kamera-
+206408	innstillingene blir overskrevet.
+206474	Egendef. modus C
+206508	Kj
+206514	rer
+206522	@A08F@/Bluetooth gj
+206562	res tilgjengelig
+206598	for tilkobling.
+206630	@A08F@/Bluetooth er helt
+206682	deaktivert og tilkobling
+206734	kan ikke starte.
+206768	Bluetooth
+206788	Tr
+206794	dl
+206800	se funksjoner
+206832	@A0AE@
+206850	@A0AF@
+206864	Deaktiverer Bluetooth.
+206912	Bluetooth er alltid deaktivert
+206980	r str
+206992	mmen er p
+207016	Aktiverer Bluetooth.
+207060	Bluetooth er alltid aktivert
+207120	for tr
+207134	dl
+207140	s utl
+207152	ser
+207166	r str
+207178	mmen er p
+207202	Aktiverer Bluetooth.
+207246	Bluetooth er alltid aktivert
+207306	for smarttelefon
+207346	r str
+207358	mmen er p
+207382	Paring er fullf
+207414	rt.
+207424	Bluetooth-innstilling er endret til p
+207500	@A0AE@.
+207516	Paring p
+207538	r.
+207546	Vennligst utf
+207574	r paring
+207598	 den tr
+207614	dl
+207620	se utl
+207634	seren.
+207648	Slett den parete enheten.
+207702	Ved bruk av tr
+207732	dl
+207738	s utl
+207750	ser vil
+207768	ny paring v
+207792	re p
+207802	krevd.
+207816	Innstilling av tr
+207852	dl
+207858	s utl
+207870	ser
+207878	Starte paring
+207906	Slette paring
+207934	AF-lampe
+207952	Fargeomr
+207970	de
+207976	Eksponeringsutjevning
+208020	Fastvareversjon
+208052	Fungerer i 
+208078	P/A/S/M eksp.innst.
+208118	Intervallmodus
+208148	Rammeprioritet
+208178	Tidsprioritet
+208206	Angir handling
+208242	r USB er tilkoblet.
+208282	Bildegjennomgang
+208316	Webkamera
+208336	Vri modushjulet til @A004@.
+208392	Egendef. modus C2
+208428	Egendef. modus C3
+208464	Egendef. modus C4
+208500	Egendef. modus C
+208534	Sl
+208540	r @A0B1@ p
+208562	/av.
+208572	Prioriterer 
+208598	 holde antall bilderammer.
+208654	Starter neste opptak etter at
+208716	intervalltiden er utl
+208760	pt n
+208770	r de
+208782	nylige rammene er lagret.
+208834	Prioriterer 
+208860	 holde intervalltiden.
+208908	Hopper over neste opptak n
+208968	angitt intervall ikke kan holdes.
+209036	Fotoeksponering for hver ramme
+209100	bruker m
+209118	leresultatet for den rammen.
+209176	Standardiserer fotoeksponeringen
+209244	for alle rammer. Jevner ut endret
+209314	belysning i gjengitte intervall-
+209382	videoer.
+209400	@A002@ Sletter alle automatisk
+209464	separerte filer fra 
+209506	n enkelt film.
+209536	P/A/S/M/B
+209556	P/A/S/M
+209572	@A0BE@ Control
+209606	d ramme under @A0B0@
+209652	r sl
+209662	tt p
+209672	: Visen en r
+209704	ramme p
+209720	 skjermen under opptak.
+225906	OlympusLanguage_nortft

@@ -1,0 +1,7 @@
+anchor_string,block_off_E144,block_off_E148,refs_E144,refs_E148,code_ref_E144,code_ref_E148,prefix_eq,suffix_eq,window_eq
+ch illegal range (0-13):,0x15105ef,0x15144b9,1,1,0x1408457,0x140a55e,18,3,184/224
+[FLSH]Flash Access Guard Error!!!,0x3ed4,0x43d4,2,2,0x819,0x819,20,55,212/224
+app_check_mode():mode=%d;check=%d;status=%d,0xbad61c,0xbac4bc,2,2,0x8fe04a,0x8fdf29,0,0,17/224
+- uITRON Error Code  -,0x1640842,0x1641360,1,1,0x15f24d2,0x15f296a,1,1,156/224
+USBIP_GUSB3PIPECTL0  :,0xf545ce,0xf3b425,1,1,0xcb91c4,0xcb8f18,1,7,164/224
+OlyTaSS,0x56b00,0x57414,1,1,0x30a15,0x30a15,20,3,211/224

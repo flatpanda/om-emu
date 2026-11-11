@@ -1,0 +1,11282 @@
+10	AEL/AFL
+26	@A025@REC
+46	MF
+52	RAW@A024@
+74	nizleme
+90	@A01D@
+104	 Hedef
+186	rk
+198	2f
+204	AEL/AFL Memo
+230	AEL/AFL
+246	AEL 
+266	@A001@ Ayar
+290	 Hedef Ayarla
+318	AF/MF
+330	AF Alan
+348	AF I
+360	kland
+382	AF Modu
+398	Hepsi
+414	m Y
+422	n Titreme 
+444	.S.
+452	Hepsini S
+476	rla
+484	Hepsini Ayarla
+514	Hepsi @A001@
+540	Anti-
+552	ok @A004@
+572	Diyafram 
+592	nceli
+608	Sanat LV Modu
+638	apraz 
+654	lem
+662	Diorama
+678	Dramatik Ton
+704	Hassas Sepya
+730	Grenli Film
+760	k Ton
+772	Soluk ve A
+796	k Renk
+810	Pop Sanat
+830	Yumu
+840	ak Odak
+860	ne Deli
+888	nt
+894	 A
+908	Otomatik
+926	Ayd
+934	nlatmal
+950	 LCD
+960	@A003@ Uyar
+984	 Seviyesi
+1004	Pil Bitmi
+1026	@A001@
+1040	Basamaklama
+1064	Bulb Odaklama
+1092	Bulb Zamanlama
+1128	me/Kadran
+1148	@A003@Kontrol Ayarlar
+1194	@A006@ Yard
+1218	mc
+1226	Kart Hatas
+1250	Kart Dolu
+1270	Kart Dolu
+1290	Kart Kurulumu
+1318	Foto
+1328	raf makinesinin i
+1380	ok y
+1390	ksek. 
+1410	tfen foto
+1430	raf makinesini kullanmadan 
+1490	nce so
+1504	umas
+1518	 bekleyin.
+1540	Lens kilitli.
+1574	tfen lens kilidini a
+1618	n.
+1624	Renk Uzay
+1646	Devaml
+1660	 AF
+1668	AF Takibi
+1688	Kontrast
+1706	Fot.Kopy.Boyutu
+1738	Telif Hakk
+1760	 Ayarlar
+1780	@A004@Mod
+1802	zel
+1816	me Fonksiyonu
+1848	Kadran Y
+1872	Kadran Fonksiyonu
+1908	@A010@Kilit
+1932	Otomatik Fla
+1960	Dolgu
+1972	Fla
+1980	 Kapal
+2000	rm
+2010	 G
+2024	rm
+2034	 G
+2040	z Yava
+2056	Spot I
+2076	Spot G
+2090	lge
+2098	Ekran/@A004@/PC
+2130	dpi Ayarlar
+2156	Ard
+2172	@A014@ Anti-
+2198	ok @A004@
+2218	Tek
+2226	@A014@ Anti-
+2252	ok @A004@
+2272	e-Portre
+2294	zenle
+2306	Dosya 
+2320	smi D
+2332	zenle
+2344	B:Mavi
+2358	G:Ye
+2368	il
+2374	N:Do
+2384	al
+2390	Or:Turuncu
+2412	P:Mor
+2424	R:K
+2432	rm
+2444	S:Sepya
+2460	Ye:Sar
+2476	EV Ad
+2494	EVF Ayarla
+2516	Poz/@A011@/ISO
+2546	Pozlama
+2562	Pozlama De
+2588	imi
+2596	@A008@Y
+2612	z 
+2618	nceli
+2638	z 
+2644	nceli
+2656	i Kapal
+2678	z 
+2684	nceli
+2696	i A
+2710	Dosya Ad
+2730	Bellenim
+2748	@A014@ 
+2764	zel
+2772	@A00A@ Yava
+2796	 Limit
+2810	@A00A@ X-Senk.
+2840	Odak Uzakl
+2868	Odak Halkas
+2894	Dereceleme Ayd
+2924	nl
+2934	Dereceleme Karanl
+2974	Dereceleme Normal
+3014	ksek
+3024	Histogram Ayarlar
+3062	i-Geli
+3076	tirme
+3088	@A01A@/Renk/BA
+3126	nt
+3132	 Sabitleyici
+3158	@A00F@ Ayarlar
+3188	@A00F@/Bilgi Ayarlar
+3232	@A006@ Bilgi
+3258	Adres Defteri
+3286	IS Kapal
+3306	ISO
+3314	ISO-Otomatik
+3340	ISO-Otomatik Ayar
+3376	Geni
+3386	leme
+3396	Tavsiye
+3412	ISO Ad
+3432	Dikey Titreme 
+3462	.S.
+3470	Seviye Ayarlama
+3502	Lo
+3512	ng
+3520	Manuel 
+3536	ekim
+3546	@A009@+@A007@
+3574	@A00E@
+3588	Alb
+3596	m Bel.Kullan
+3626	Men
+3636	@A00E@/@A000@ Men
+3672	 G
+3682	nt
+3706	Merkez A
+3726	rl
+3732	kl
+3740	Spot
+3750	MF Yard
+3770	dk
+3776	Mod K
+3788	lavuzu
+3802	@A016@
+3816	Monoton
+3840	Video
+3852	Video @A017@
+3878	Film+Foto
+3898	raf
+3908	oklu Pozlama
+3934	Donuk
+3946	Gece 
+3958	ekimi
+3970	Hay
+3982	Kart Yok
+4000	Ba
+4006	lant
+4016	 Yok
+4026	Gren Filtresi
+4054	Gren Azaltma
+4080	Poz Yok
+4096	Kapal
+4110	Geri@A018@
+4132	Geri@A019@
+4156	ptal@A018@
+4178	BA Yakala@A01A@
+4210	@A01B@@A01C@
+4236	Ayarla@A019@
+4272	@A01E@
+4286	@A01F@
+4300	OLYMPUS PENPAL'
+4336	Alb
+4344	m Haf
+4356	za Ayar
+4382	nt
+4388	 Modu
+4400	Foto
+4410	raf Modu Ayarlar
+4446	Foto
+4456	raf Hatas
+4478	Piksel Say
+4506	Piksel E
+4524	leme
+4534	@A023@ Yakin Modu
+4570	Bask
+4584	ncelik Ayar
+4610	Otomatik Program
+4652	rlama Korumas
+4682	@A024@
+4696	@A024@ Ayar
+4724	zl
+4730	 Sil
+4740	RAW+JPEG Sil
+4766	Kaydet/Sil
+4788	Kay
+4796	t G
+4804	ster
+4818	rm
+4828	 G
+4834	z + Dolgu
+4854	Dekl
+4864	 Birak
+4878	C-AF B
+4892	rakma 
+4906	nceli
+4922	S-AF B
+4936	rakma 
+4950	nceli
+4974	rla
+4982	Lensi S
+5002	rla
+5010	Reset/Ayar
+5036	@A026@
+5050	Doygunluk
+5070	Sahil ve Kar
+5096	Mum I
+5118	ocuklar
+5134	Dok
+5142	man
+5150	Havai Fi
+5168	ek
+5174	Ayd
+5182	nl
+5192	Manzara
+5208	Karanl
+5226	Makro
+5238	@A03A@ Makro
+5264	Do
+5270	a Makro
+5286	Gece+Portre
+5310	Gece 
+5322	ekimi
+5334	Panorama
+5352	Portre
+5366	DIS Modu
+5384	Spor
+5398	n Bat
+5416	@A03A@ Geni
+5440	 A
+5450	sn.
+5458	@A04E@ Anti-
+5484	ok @A004@
+5504	@A04F@ Anti-
+5530	ok @A004@
+5550	@A02A@ 12 sn
+5576	@A02A@ 2 sn
+5600	Fot.G
+5612	nd.Boyutu
+5632	@A028@
+5650	lge Telafisi
+5680	lge Ayar
+5700	Keskinlik
+5722	rt
+5736	nceli
+5752	Yatay Titreme 
+5782	.S.
+5790	Tek AF
+5804	Tek AF + MF
+5828	Uyku
+5838	@A036@
+5852	Spiral
+5866	Standart
+5884	Ba
+5890	lat
+5898	Depolama
+5920	ksek
+5930	OLYMPUS PENPAL Payl.
+5972	Elektronik Viz
+6006	OLYMPUS PENPAL Alb
+6054	re
+6060	USB Modu
+6078	Video 
+6104	Vol
+6120	tfen Bekleyin
+6148	BA Otomatik
+6172	Bulutlu
+6188	BA Fla
+6204	Floresan
+6222	Akkor
+6234	BA
+6244	lge
+6256	ne
+6262	li
+6280	Yazma Korumas
+6318	Evet
+6328	Y/A/G
+6340	Eye-Fi
+6354	16:9
+6364	4:3
+6372	3:2
+6380	6:6
+6388	3:4
+6396	ESP
+6404	NTSC
+6414	PAL
+6422	RAW
+6430	MF
+6436	Adobe RGB
+6456	I.S. 1
+6470	I.S. 2
+6484	Slow
+6494	Slow2
+6506	1/4
+6514	1/16
+6524	1/64
+6534	2nd Curtain
+6558	Vivid
+6570	Natural
+6586	JPEG
+6596	RAW+JPEG
+6614	Portrait
+6648	CWB
+6656	mode1
+6668	mode2
+6680	S-AF
+6690	C-AF
+6700	P/A/S
+6712	Menu
+6722	1/2EV
+6734	1/3EV
+6746	1EV
+6754	Off
+6762	I.S. 3
+6776	sRGB
+6786	Auto@A010@
+6808	MTP
+6816	Hold
+6826	Body
+6836	Lens
+6846	Flash
+6858	Acc
+6866	LV-Info
+6882	@A014@/@A028@
+6910	ART1
+6920	ART2
+6930	ART3
+6940	ART4
+6950	ART5
+6960	ART6
+6970	ART7
+6980	ART8
+6990	HDMI
+7000	iAUTO
+7012	P/A/S/M
+7028	ART9
+7038	ART10
+7050	Full
+7060	@A084@
+7074	Tarih
+7086	Ayar
+7096	m1
+7102	Ayar
+7112	m2
+7118	Ayar
+7128	m3
+7134	Ayar
+7144	m4
+7150	Ayd
+7158	nlatmal
+7174	 LCD
+7184	Canl
+7194	 K
+7200	lavuz
+7212	Dij. Tele D
+7256	Pozlama @A007@
+7286	P/A/S pozlama 
+7318	modlar
+7332	nda 
+7344	etkilidir.
+7366	Her pozlama 
+7394	modunda etkilidir.
+7436	tfen lens durumunu kontrol edin.
+7502	Arka I
+7516	ik A
+7528	k/Kapal
+7548	Pozland
+7564	rmay
+7574	 ayarla
+7590	@A066@:
+7608	Film Kayd
+7636	Ba
+7642	lat/Durdur
+7664	@A066@ G
+7686	nt
+7692	 derinli
+7718	nizleme.
+7736	AF ALAN 
+7756	modunun hedef
+7786	konumu
+7800	MF moduna ge
+7832	Kadran ile 
+7858	RAW+JPEG/JPEG 
+7890	kalite modlar
+7924	aras
+7934	nda de
+7952	im
+7958	@A013@/@A014@ do
+7992	rudan ayar.
+8016	ISO do
+8030	rudan ayar
+8056	BA modunu do
+8082	rudan ayarlama.
+8114	@A02A@ Bas
+8140	 tutun: direkt @A010@
+8190	lemi kilidini a
+8224	p/kapatmak i
+8250	in
+8256	@A01C@Fonksiyon
+8288	@A048@Fonksiyon
+8320	@A02C@Fonksiyon
+8352	@A009@Fonksiyon
+8384	SF
+8402	@A05C@5300K
+8426	@A05B@7500K
+8450	@A05D@3000K
+8474	@A059@5500K
+8498	@A058@6000K
+8522	Bellek kart
+8546	ndaki b
+8566	n 
+8574	foto
+8584	raflar
+8598	 silin veya bellek
+8638	kart
+8652	 formatlay
+8674	n.
+8680	Ayarlar
+8696	 s
+8706	rlar, veya kamera
+8744	ayarlar
+8764	 MySets olarak 
+8798	kaydeder.
+8818	Sanat filtresini se
+8858	mek veya
+8880	ekim amac
+8900	na uygun olarak
+8934	bitirmek i
+8956	in.
+8964	Foto
+8974	raf veya video 
+9006	ekimine 
+9030	nelik kay
+9050	t modu se
+9070	mek 
+9086	in.
+9094	Foto
+9104	raf 
+9114	ekerken yatay-dikey
+9156	oran
+9170	 de
+9182	tirin.
+9196	Ba
+9202	lang
+9214	 ve basit 
+9236	ekim
+9248	se
+9254	enekleri.
+9274	Ard
+9286	k 
+9292	ekimi veya zamanlay
+9346	ekim ayarlar
+9376	 se
+9384	in.
+9392	Bulanl
+9406	k giderici modunu
+9444	de
+9454	tirin. @A065@ ve @A066@ kameray
+9522	kayd
+9536	rken kullan
+9564	r.
+9570	Foto
+9580	raf makinesi otomatik 
+9628	olarak her karede farkl
+9682	ayarlarla poz 
+9712	eker.
+9724	Birden fazla kareyi birle
+9776	tirerek
+9794	tek bir g
+9818	nt
+9824	 olarak kaydeder.
+9860	Fla
+9868	 yo
+9876	unlu
+9886	unu ayarlar.
+9912	Kablosuz RC fla
+9948	sistemi ile kablosuz fla
+10008	ekim modunu kullan
+10046	n.
+10052	Dijital olarak geni
+10092	letilmi
+10112	foto
+10122	raf 
+10132	ekin.
+10144	Geli
+10154	mi
+10164	ekim se
+10180	enekleri.
+10206	itli BGM veya efektlerle 
+10260	farkl
+10272	 slayt g
+10290	sterileri 
+10318	zenleyin.
+10338	Foto
+10348	raf makinesi d
+10378	nd
+10388	lse 
+10400	bile g
+10418	nt
+10424	ler do
+10438	ru y
+10448	nde 
+10460	ekranda g
+10480	sterilir.
+10508	nt
+10514	 d
+10520	zenlenir.
+10540	Bask
+10550	 verilerini depolanm
+10600	foto
+10610	raflarla birlikte karta kaydedin.
+10682	m g
+10694	nt
+10700	lerin korumas
+10738	iptal edin.
+10762	Oynatma ve r
+10788	tu
+10794	 se
+10802	enekleri.
+10822	Otomatik odak ve manuel
+10872	odak ayarlar
+10898	 ile ilgili men
+10940	me ve kadran ayarlar
+10986	ile ilgili men
+11020	Deklan
+11036	r ayar
+11050	 ile ilgili men
+11094	nt
+11100	, ses ve PC'ye veya 
+11144	yaz
+11156	ya ba
+11168	lant
+11178	 ayarlar
+11202	ile ilgili men
+11236	Pozlama ayarlar
+11274	ile ilgili men
+11308	Fla
+11316	 ayarlar
+11334	 ile ilgili men
+11378	nt
+11384	 rengi veya BA ayarlar
+11434	ile ilgili men
+11468	Kay
+11476	t veya silme ayarlar
+11524	ile ilgili men
+11558	Video ayarlar
+11586	 ile ilgili men
+11622	Di
+11628	er ayarlar ile ilgili men
+11684	Foto
+11694	raf ve video 
+11724	modu i
+11738	in 
+11748	AF modunu se
+11774	in.
+11786	er A
+11798	k se
+11808	ili ise, otomatik
+11846	odaklama deklan
+11880	r d
+11890	mesine
+11906	basmadan 
+11926	nce 
+11936	al
+11944	acakt
+11956	r.
+11962	AF hedef alan
+11994	 se
+12006	AF hedefi se
+12032	erken kadran
+12060	veya ok tu
+12082	lar
+12094	n fonksiyonunu
+12126	se
+12132	er.
+12146	k se
+12156	ene
+12164	i ayarland
+12186	ysa, g
+12206	kapat
+12218	ld
+12228	 zaman lens konumunu
+12280	rlar.
+12292	BULB 
+12304	ekim s
+12318	ras
+12326	nda
+12336	MF'a izin vermek i
+12374	in A
+12386	k se
+12396	in.
+12404	Oda
+12414	 ayarlamak i
+12440	in odak
+12458	halkas
+12476	n d
+12490	 y
+12510	zelle
+12522	tirin.
+12536	Odak halkas
+12560	 MF modunda
+12586	iken g
+12604	nt
+12614	 yak
+12624	nla
+12636	rmak 
+12654	in A
+12666	k se
+12676	in.
+12684	AF hedef alan
+12712	n ba
+12722	lang
+12738	konumunu se
+12762	in.
+12770	LED, d
+12788	k 
+12798	kl
+12804	 ortamlarda
+12830	otomatik odaklamay
+12868	 kolayla
+12894	r.
+12900	Odak veya AE kilidini 
+12948	@A034@ i
+12966	in atay
+12982	n.
+12994	k se
+13004	ilirse, pozlama @A071@
+13056	rak
+13064	ld
+13074	 zaman kilitli
+13106	olarak kalacakt
+13138	r.
+13144	4" Makara
+13164	Kadrana atanan fonksiyonu
+13218	se
+13224	in.
+13232	Kadran
+13246	n d
+13254	nd
+13264	 y
+13278	se
+13284	in.
+13294	ekim modunda @A010@ etkisiz
+13352	yapmak i
+13370	in On se
+13388	in.
+13396	A4 Makara
+13416	HDMI ayarlar
+13446	 yap
+13456	n.
+13462	Adres
+13480	k oldu
+13494	unda, pozlama
+13524	telafisi efektleri monit
+13574	rde
+13592	nt
+13598	lenmeyecektir.
+13628	Hepsi
+13644	aretlerin monit
+13676	rden ne
+13698	rede temizlenece
+13732	ini
+13742	se
+13748	in.
+13756	Se
+13762	ilen periyotta hi
+13798	 i
+13804	lem
+13814	yap
+13822	lmazsa LCD arka
+13868	necektir.
+13888	Se
+13894	ilen zaman diliminde hi
+13942	bir 
+13958	lem yap
+13974	lmazsa foto. makinesi 
+14022	uyku moduna girecektir.
+14070	Odak kilitlendi
+14102	inde duyulan
+14130	bip sesini kapatabilirsiniz.
+14188	Oynatma vol
+14220	 ayarla.
+14238	USB ile ba
+14260	lanacak
+14278	cihaz t
+14302	 se
+14310	in.
+14318	Pozlama parametrelerini
+14368	se
+14374	erken kullan
+14400	lan
+14410	art
+14420	 boyutunu se
+14446	in.
+14454	Bir 
+14470	m modu se
+14490	in.
+14506	m modunu @A034@ ile se
+14552	in.
+14560	ISO hassasiyetini ayarlay
+14612	n.
+14618	Otomatik ISO hassasiyeti
+14674	in kullan
+14694	lan 
+14704	st limiti ve 
+14734	varsay
+14748	lan de
+14762	eri se
+14776	in.
+14784	Otomatik ISO hassasiyetinin
+14842	mevcut oldu
+14866	u 
+14872	ekim modlar
+14904	se
+14910	in.
+14918	BULB 
+14930	ekimi i
+14946	in
+14954	maksimum s
+14976	reyi se
+14992	in.
+15000	Deklan
+15020	n bas
+15032	lmas
+15046	ve b
+15056	rak
+15064	lmas
+15074	 aras
+15086	ndaki
+15100	gecikmeyi se
+15126	in.
+15134	Fla
+15142	 patlat
+15158	ld
+15168	nda en
+15188	ksek enstantane h
+15236	se
+15242	in.
+15250	Fla
+15258	 patlat
+15274	ld
+15284	nda en
+15308	k enstantane h
+15350	se
+15356	in.
+15364	Bu fonksiyon, uzun pozlama
+15424	ras
+15432	nda olu
+15448	an greni
+15468	azalt
+15480	r.
+15490	ksek ISO hassasiyetlerinde
+15546	yap
+15554	lacak gren azaltma
+15594	miktar
+15612	 se
+15620	in.
+15628	Beyaz ayar
+15650	 modunu se
+15672	in.
+15680	Beyaz ayar
+15702	 modunda
+15726	cak renkleri otomatikte 
+15778	tutmak i
+15796	in.
+15804	Renklerin monit
+15836	rde veya
+15856	yaz
+15868	da nas
+15882	l 
+15892	alt
+15900	laca
+15920	se
+15926	in.
+15934	Fla
+15942	 kullan
+15958	rken beyaz ayar
+15996	modunu oto. olarak @A036@ veya 
+16062	oto. 
+16074	eklinde de
+16100	tirmek i
+16118	in.
+16126	Lens tipine g
+16154	re 
+16162	evresel
+16186	kland
+16198	rmay
+16208	 d
+16214	zeltin.
+16238	nt
+16244	 boyutu ve s
+16280	rma
+16290	oran
+16300	 kombinasyonlar
+16332	ndan JPEG
+16354	kay
+16362	t modlar
+16384	n de
+16398	tirilmesi.
+16420	@A037@ ve @A038@ i
+16458	in piksel say
+16498	se
+16504	in.
+16516	er A
+16528	k se
+16538	ili ise, ge
+16562	erli
+16582	nt
+16592	 hemen silin.
+16620	RAW+JPEG dahilinde bir foto
+16676	raf
+16686	silindi
+16702	inde yap
+16720	lacak
+16738	lemi se
+16754	in.
+16762	Eski karttan gelen dosya
+16814	ve dizin numaralar
+16856	 otomatik
+16878	kullan
+16892	r.
+16898	Dosya isminin konumunu
+16950	zenleyip g
+16976	nt
+16982	 dosyalar
+17012	nas
+17020	l adland
+17042	laca
+17058	 se
+17066	in.
+17074	Onay diyaloglar
+17106	 i
+17112	in
+17120	varsay
+17134	lan se
+17148	imi belirleyin.
+17180	Bask
+17204	rl
+17218	 se
+17226	in.
+17234	Yeni foto
+17254	rafa foto
+17274	raf
+17292	ve telif hakk
+17320	 sahibinin
+17344	isimlerini ekleyin.
+17384	Kapal
+17396	 oldu
+17408	unda,
+17422	video 
+17436	ekerken ses kaydedilmez.
+17494	nt
+17504	ekim cihaz
+17530	 ve g
+17546	nt
+17560	leme fonksiyonlar
+17600	 kontrol
+17620	etmek ve ayarlamak i
+17662	in.
+17670	Her 
+17686	m modu i
+17704	in
+17712	optimum pozlamay
+17752	ayr
+17760	 olarak ayarlay
+17792	n.
+17802	zey g
+17814	stergesini kalibre edin.
+17864	Eye-Fi kart ba
+17894	lant
+17916	etkinle
+17932	tirin veya devre 
+17978	 b
+17984	rak
+17992	n.
+17998	Detayl
+18012	 foto
+18024	raf 
+18036	makinesi se
+18060	enekleri.
+18080	OLYMPUS PENPAL payla
+18130	ayarlar
+18146	 ile ilgili men
+18182	Elektronik viz
+18212	r ayarlar
+18232	 ile
+18244	ilgili men
+18278	nt
+18284	leri al veya
+18312	di
+18318	er cihazlardan istek bekle.
+18374	@A00A@ ve @A00B@ aras
+18418	ndaki b
+18438	n 
+18450	rsel ve sesleri kopyala.
+18500	Alb
+18508	mde mevcut olan ve
+18548	depolanabilecek foto
+18590	raflar
+18610	say
+18626	 g
+18632	ster.
+18644	Alb
+18652	mdeki b
+18672	n foto
+18686	raflar
+18704	silin veya alb
+18738	 formatlay
+18760	n.
+18766	Elektronik viz
+18800	n renk 
+18822	cakl
+18840	 ve parlakl
+18878	ayarlar.
+18896	Aksesuar se
+18920	enekleri.
+18940	LCD monit
+18964	n renk 
+18986	cakl
+19004	 ve parlakl
+19042	ayarlar.
+19062	ekimden sonra foto
+19100	raflar
+19120	ne kadar s
+19142	reyle 
+19166	nt
+19172	lenece
+19186	ini se
+19200	in.
+19208	@A00E@ ve @A000@ menuden hangisinin
+19290	nt
+19296	lenece
+19310	ini se
+19338	n bellenim
+19378	 g
+19388	nt
+19394	leyin.
+19408	Basit foto
+19430	raf makinesi 
+19460	fonksiyonlar
+19494	ayarlamak i
+19518	in.
+19528	ekim Men
+19550	 2
+19556	Evet
+19566	Hay
+19578	@A00A@ Men
+19600	 Ekran
+19616	@A000@ Men
+19638	 G
+19648	nt
+19660	Test Pozu
+19680	Fla
+19688	 Modu
+19700	@A06B@:Kapali
+19728	Hepsini Sil
+19752	@A023@: AEL/AFL
+19784	@A023@:
+19802	Film Kayd
+19830	Ba
+19836	lat/Durdur
+19858	@A023@ G
+19880	nt
+19886	 derinli
+19912	nizleme.
+19930	@A023@ Tek dokunu
+19966	 BA.
+19976	AF ALAN 
+19996	modunun hedef
+20026	konumu
+20040	MF moduna ge
+20072	Kadran ile 
+20098	RAW+JPEG/JPEG 
+20130	kalite modlar
+20164	aras
+20174	nda de
+20192	im
+20198	@A023@ Kaydetmeden foto
+20246	raf
+20258	test et.
+20276	@A024@ Tu
+20296	una bas
+20322	olarak @A02B@ ile 
+20360	ekim
+20370	@A024@ Tu
+20390	una bas
+20416	olarak @A02C@ ile 
+20454	ekim
+20464	@A024@ Tu
+20484	una bas
+20510	olarak @A02D@ ile 
+20548	ekim
+20558	@A024@ Tu
+20578	una bas
+20604	olarak @A02E@ ile 
+20642	ekim
+20652	@A023@: Canl
+20678	 K
+20684	lavuz modu i
+20710	in
+20718	bas
+20726	n, geri d
+20746	nmek i
+20760	in tekrar bas
+20788	n.
+20794	@A023@: De
+20820	tir x1/x2
+20840	@A025@:Kapali
+20868	Pozland
+20884	rmay
+20894	 ayarla
+20910	Fla
+20918	 Modunu ayarlar.
+20952	Pozland
+20968	rmay
+20978	 ayarla
+20994	@A012@ Bas
+21020	 tutun: direkt @A010@
+21070	lemi kilidini a
+21104	p/kapatmak i
+21130	in
+21136	Resim Birle
+21160	tirme
+21172	2G
+21182	nt
+21188	 Birle
+21202	imi
+21210	3G
+21220	nt
+21226	 Birle
+21240	imi
+21248	@A009@
+21262	@A01B@ RC Modu
+21294	zel Men
+21312	A. AF/MF
+21330	B. D
+21342	me/Kadran
+21362	C. Dekl
+21378	 Birak
+21392	D. Ekran/@A004@/PC
+21430	E. Poz/@A011@/ISO
+21466	F. @A00A@ 
+21488	zel
+21496	G. @A01A@/Renk/BA
+21532	H. Kaydet/Sil
+21560	I. Video
+21578	J. Dahili EVF
+21610	tfen PIN kodu girin.
+21652	Tam Zamanl
+21674	 AF
+21682	Kay
+21690	tl
+21700	ekim modlar
+21734	ve ayarlar
+21756	 sil.
+21768	Bilgi Kapal
+21794	@A042@ S
+21812	cak Rengi Tut
+21840	@A00A@+BA
+21860	Dokun. Ekran Ayar
+21898	ART
+21906	SCN
+21914	3200
+21924	2400
+21934	2560
+21944	1920
+21954	1920
+21964	1440
+21974	1600
+21984	1200
+21994	1280
+22004	960
+22012	1024
+22022	768
+22030	640
+22038	480
+22046	320
+22054	240
+22062	Foto
+22072	raf
+22080	Video
+22092	S-AF+MF
+22108	C-AF+TR
+22124	RAW/JPEG
+22142	JPEG D
+22156	zenleme
+22176	rm. G
+22188	z D
+22196	zeltme
+22210	@A02B@
+22232	Siyah Beyaz
+22256	Sepya
+22268	Doygunluk
+22288	@A025@
+22302	@A017@
+22316	RAW Veri D
+22338	zenle
+22354	nd
+22364	@A023@
+22380	maj Se
+22396	@A017@ Ba
+22416	lat
+22424	Sil
+22432	Sil
+22440	Se
+22446	ileni Sil
+22466	Se
+22472	ili
+22480	Mevcut 
+22496	ekim modunu
+22522	ve ayarlar
+22544	 d
+22550	zenleyin.
+22570	Video G
+22586	ster
+22596	Bir Resim G
+22620	nder
+22638	rla
+22646	@A03A@Cross Process
+22686	@A033@Dramatik Ton
+22724	Dereceleme
+22746	Renk Filtresi
+22774	Monokrom Rengi
+22804	Asil Boyutu Kullanin
+22846	Foto
+22856	raf modunu se
+22884	erken, A
+22910	olarak ayarlanmam
+22954	eleri
+22968	atlayabilirsiniz.
+23004	OLYMPUS PENPAL alb
+23042	m ayarlar
+23066	ile ilgili men
+23100	Video @A017@ A
+23136	AVCHD 1920
+23158	1080 Normal
+23182	Motion JPEG 1280
+23216	720
+23224	Motion JPEG 640
+23256	480
+23264	@A015@i-Geli
+23290	tirme
+23302	@A07A@Vivid
+23326	@A07C@Portrait
+23356	@A032@Pop Sanat
+23388	@A034@Yumu
+23410	ak Odak
+23426	@A035@Soluk&A
+23454	ik Renk
+23470	@A036@A
+23486	ik Ton
+23500	@A037@Granli Film
+23536	@A038@
+23552	ne Deli
+23572	@A039@Diorama
+23600	Ayar
+23610	m1
+23616	Ayar
+23626	m2
+23632	Ayar
+23642	m3
+23648	Ayar
+23658	m4
+23664	Tam
+23672	Temel
+23684	Ayarla
+23698	Veri Yok
+23716	@A07B@Natural
+23744	@A01F@Donuk
+23768	Efekt
+23780	Ayd
+23788	nl
+23798	Normal
+23812	Karanl
+23830	Monoton
+23846	Monokrom resim i
+23880	in.
+23888	Mavi g
+23902	ky
+23912	 ile bulutlar
+23942	aras
+23952	nda net kontrast
+23992	in yararl
+24016	r.
+24022	Uzaktan telefoto
+24060	ekimi i
+24076	in
+24084	yararl
+24102	r.
+24108	En karanl
+24128	k g
+24136	ky
+24146	 tonlar
+24172	ve en parlak bulutlar
+24216	 dramatik 
+24240	bi
+24246	imde g
+24264	nt
+24270	ler.
+24280	Cilt tonlar
+24312	iyile
+24324	tirir, portre
+24356	ekimlerde y
+24386	mimiklerini 
+24412	ne 
+24422	kar
+24430	r.
+24436	Sepya resim efekti i
+24478	in.
+24486	Mavi resim efekti i
+24526	in.
+24534	Mor resim efekti i
+24572	in.
+24580	Ye
+24586	il resim efekti i
+24622	in.
+24630	Renk Doygunlu
+24658	unu De
+24676	tir
+24684	Renkli G
+24706	nt
+24716	 De
+24728	tir
+24736	Parlakl
+24756	 De
+24768	tir
+24776	Arkaplan
+24794	 Bulan
+24808	kla
+24824	Hareketi 
+24844	fade Et
+24862	ekim 
+24874	pu
+24880	lar
+24890	Fla
+24898	 a
+24906	k oldu
+24920	unda
+24932	canl
+24942	 k
+24948	lavuz
+24962	mevcut de
+24982	ildir
+24994	Net ve Canl
+25024	z ve Mat
+25046	cak
+25054	So
+25060	uk
+25066	Parlak
+25080	Karanl
+25098	Parlak Alan
+25122	 Parlakla
+25150	Parl. Alan
+25172	 Karanl
+25188	kla
+25204	Kar. Alan
+25224	 Parlakla
+25252	Kar. Alan
+25272	 Karanl
+25288	kla
+25304	Bulan
+25320	Keskin
+25334	Bulan
+25346	k Hareket
+25366	Hareket Durdur
+25396	dpi
+25404	@A03B@Hassas Sepya
+25442	Kadran P
+25460	Kadran A
+25478	Kadran S
+25496	Kadran M
+25514	Kadran Men
+25542	Kadran @A006@
+25570	Ps
+25576	@A007@
+25590	FNo.
+25600	Deklan
+25620	@A079@/Value
+25646	Geri/
+25658	leri
+25668	@A08B@
+25682	Bask
+25692	 S
+25698	ras
+25706	 Ayar
+25720	@A022@
+25734	@A00E@
+25748	@A000@
+25762	Bask
+25772	 S
+25778	rada
+25796	rla
+25804	Sakla
+25816	Hay
+25828	Ayarla
+25844	ptal
+25854	2f 0.3EV
+25872	2f 0.5EV
+25890	2f 0.7EV
+25908	2f 1.0EV
+25926	3f 0.3EV
+25944	3f 0.5EV
+25962	3f 0.7EV
+25980	3f 1.0EV
+25998	5f 0.3EV
+26016	5f 0.5EV
+26034	5f 0.7EV
+26052	5f 1.0EV
+26070	7f 0.3EV
+26088	7f 0.5EV
+26106	7f 0.7EV
+26124	2L Format
+26146	WB BKT
+26160	A-B
+26168	3f 2 Ad
+26188	3f 4 Ad
+26208	3f 6 Ad
+26228	G-M
+26236	Kare Say
+26260	Otomatik Kazan
+26292	Birle
+26304	tir
+26312	HDMI 
+26334	HDMI Kontrol
+26360	1080i
+26372	720p
+26382	480p/576p
+26402	Telif Hakk
+26424	 Bilgisi
+26442	Sanat
+26456	 Ad
+26466	Telif Hakk
+26488	 Ad
+26498	AE BKT
+26512	FL BKT
+26526	ISO BKT
+26542	ART BKT
+26562	@A01B@: Video Kayd
+26600	 Ba
+26608	lat
+26618	@A01A@: Foto
+26644	raf 
+26654	ek
+26660	@A063@: Film Kaydi Ba
+26704	lat
+26714	@A02B@: Foto
+26740	raf 
+26750	ek
+26756	Bir Sahne Modu Se
+26792	in
+26798	Bir Sanat Filtresi Se
+26842	in
+26848	@A06C@: Ayarlari Kolayca
+26900	De
+26910	tirme Kilavuzu
+26940	Diyafram
+26958	 ve enstantane 
+27004	 otomatik ayarlay
+27040	n.
+27046	Diyafram
+27064	 elle ayarlay
+27092	n.
+27098	Enstantane h
+27132	 elle ayarlay
+27160	n.
+27166	Diyafram
+27184	 ve enstantane 
+27230	 elle ayarlay
+27258	n.
+27264	@A015@: Video kayd
+27306	 ba
+27314	lat
+27322	n/durdurun.
+27350	k@A019@
+27366	MF AEL/AFL
+27388	mode3
+27400	mode4
+27412	Yar
+27424	Tam
+27432	AEL/S-AF
+27450	Pozlama
+27466	AEL
+27474	AEL/Poz
+27490	AEL/AF Start
+27516	AF Start
+27534	AEL/AFL/Poz
+27558	AFL/Poz
+27574	----
+27586	ekim Men
+27608	 1
+27614	Oynatma Men
+27644	Sanat Filtresi efektinin devaml
+27720	nt
+27726	lenmesi. Baz
+27752	 filtreler
+27776	daha d
+27794	k kare h
+27816	nda g
+27828	sterir.
+27844	Sanat Filtresi efekti LCD'de
+27904	ayd
+27912	nlan
+27922	r ve g
+27940	nt
+27946	leme
+27958	kare h
+27976	 daha y
+27992	ksektir.
+28010	@A042@: Foto
+28036	raf yak
+28052	nla
+28064	r.
+28070	@A042@: Bir geni
+28104	letme 
+28118	er
+28124	evesi
+28146	nt
+28152	leyin ve foto
+28180	raf
+28196	inden b
+28216	tmek i
+28230	in bas
+28244	n.
+28254	ksek I
+28278	lge
+28290	er 10 saniye boyunca i
+28336	lem
+28346	yap
+28354	lmazsa i
+28372	aretler ekrandan
+28408	otomatik olarak temizlenir.
+28466	ekim s
+28480	ras
+28488	nda i
+28500	aretler her
+28526	zaman ekranda g
+28558	sterilir.
+28578	Deklan
+28594	re basarak video
+28630	kayd
+28644	 durdurduktan sonra 
+28688	bir foto
+28706	raf 
+28716	ekmeyin.
+28734	Deklan
+28750	re basarak video 
+28788	kayd
+28802	 durdurduktan sonra 
+28846	bir foto
+28864	raf 
+28874	ekin.
+28886	Ayarla
+28900	Varsay
+28914	lana geri d
+28938	ner.
+28948	Eye-Fi kart ba
+28978	lant
+29002	devre d
+29022	 b
+29028	rak
+29036	n.
+29042	Eye-Fi kart ba
+29072	lant
+29090	 etkinle
+29108	tirin.
+29122	2f
+29132	ksek Poz. Fot.
+29170	k Poz. Fot.
+29194	Bir normal ve bir 
+29238	ksek pozlama seviyesinde 
+29292	iki foto
+29310	raf 
+29320	ekimi.
+29334	Bir normal ve bir 
+29382	k pozlama seviyesinde 
+29430	iki foto
+29448	raf 
+29458	ekimi.
+29472	S-AF AEL/AFL
+29498	C-AF AEL/AFL
+29524	Filtre Tipi
+29548	Filtre Tipi @A00A@
+29586	Filtre Tipi @A00B@
+29624	Efekt Ekle
+29646	Yumu
+29656	ak Odak Efekti
+29690	ne Deli
+29706	i Efekti
+29724	Beyaz Kenar Efekti
+29764	er
+29770	eve Efekti
+29796	ld
+29802	z I
+29816	 Efekti
+29832	3D Foto
+29848	raf
+29856	Portre 
+29872	ekimi
+29886	yapmak i
+29904	in.
+29912	HDTV'de g
+29936	nt
+29942	lemek i
+29958	in
+29966	cilt tonunu p
+29998	zs
+30004	zle
+30012	tirme.
+30026	Manzara 
+30044	ekimi
+30058	yapmak i
+30076	in.
+30086	Mavi ve ye
+30108	il renk
+30126	daha canl
+30152	kar.
+30162	Bulan
+30174	kl
+30180	k 
+30188	olmadan, h
+30210	zl
+30222	hareket eden objeleri
+30270	eker.
+30282	Ak
+30288	am veya gece 
+30320	kl
+30332	manzaralar
+30358	ekmek i
+30374	in. 
+30386	Normal 
+30402	ekimden daha yava
+30444	enstantane h
+30474	 kullan
+30494	r. 
+30504	En iyi sonu
+30528	 i
+30534	in foto
+30550	raf 
+30562	makinesini sabit tutun.
+30610	@A014@POP UP
+30638	Ak
+30644	am veya gece 
+30674	ana objeyi ve arkaplan
+30728	ekmek i
+30744	in. Enstantane
+30784	 yava
+30796	lat
+30808	r.
+30814	Hareketli 
+30836	ocuklar
+30860	ekmek i
+30876	in.
+30884	Etkili foto
+30908	raflar 
+30930	in parlak alanlar
+30970	ne 
+30984	kar
+30992	r.
+30998	Etkili foto
+31022	raflar 
+31044	in karanl
+31064	k alanlar
+31092	ne 
+31102	kar
+31110	r.
+31116	Bu fonksiyon, foto
+31154	raf 
+31164	ekimi
+31182	ras
+31190	nda objenin hareket
+31232	etmesi veya foto
+31266	raf 
+31278	makinesinin sars
+31312	lmas
+31328	sonucu olu
+31350	an bulan
+31368	kl
+31384	azalt
+31396	r.
+31410	k objelerin
+31436	yak
+31444	ndan 
+31460	ekimleri i
+31482	in 
+31492	ideal
+31504	Mum 
+31522	nda
+31534	ekim yapmak i
+31562	in.
+31576	cak renkler
+31602	daha canl
+31628	kar.
+31642	n bat
+31658	nda/g
+31670	n 
+31678	do
+31684	umunda 
+31700	ekim i
+31714	in.
+31724	Sar
+31732	 ve k
+31744	rm
+31754	 renk
+31768	daha canl
+31794	kar.
+31804	Dok
+31812	man vb. 
+31830	ekimi i
+31846	in.
+31856	Arkaplan ve
+31882	harfler aras
+31908	ndaki
+31922	kontrast
+31940	 artt
+31956	r.
+31962	Birle
+31974	tirilerek
+31996	tek bir panoramik
+32034	poz haline
+32058	getirilebilen pozlar
+32104	ekmenize izin verir.
+32146	AF@A039@MF
+32170	Gece havai fi
+32198	ek 
+32212	sterisi 
+32230	ekmek
+32248	in uygundur. 
+32278	Normal 
+32294	ekimden daha 
+32324	yava
+32334	 enstantane h
+32366	 kullan
+32382	r.
+32388	Karla kapl
+32410	 da
+32418	lar
+32426	, 
+32434	do
+32440	a ve beyaz kumlu 
+32478	deniz manzaralar
+32524	ekmek i
+32540	in.
+32548	Yar
+32556	 Bal
+32566	kg
+32604	 FCON-P01 
+32628	ile 
+32638	ekim 
+32652	in.
+32660	Geni
+32670	 D
+32698	WCON-P01 ile
+32728	ekim 
+32742	in.
+32750	Makro D
+32790	MCON-P01/02 
+32818	ile 
+32828	ekim 
+32842	in.
+32850	3D TV veya monit
+32884	r i
+32892	in
+32900	foto
+32910	raf 
+32920	eker.
+32932	Filtre Tipi @A00C@
+32970	2L Makara
+32990	Hepsini 
+33008	ndeksle
+33024	Kabul
+33036	Hepsini Bast
+33066	Geri
+33084	nt
+33090	lenen Izgara
+33118	er
+33124	evesiz
+33138	@A002@ RAW+JPEG Silinir
+33186	Bir resim al
+33212	nmad
+33224	Bir resim al
+33250	nd
+33258	Bir resim g
+33282	nderilmedi
+33304	Bir resim g
+33328	nderildi.
+33348	Me
+33354	gul
+33362	Takvim
+33376	Canl
+33386	 Kontrol
+33404	SKP
+33412	Sanatsal Men
+33440	Sahne Men
+33468	ptal
+33486	nt
+33492	 D
+33498	zenlenemiyor
+33524	Bas
+33532	lam
+33540	yor
+33548	Kart
+33558	Format
+33572	Format
+33586	Dikkat G
+33608	nt
+33614	 Se
+33622	ilemiyor
+33640	Kart
+33650	n temas alan
+33684	kuru bir bezle temizleyin.
+33738	Dikkat @A005@ 
+33770	esine Ba
+33788	lan
+33796	yor
+33804	@A00A@ Dikkat Hepsi Siliniyor
+33864	@A00A@ Dikkat Hepsi Siliniyor
+33924	@A00B@ Dikkat Hepsi Siliniyor
+33984	@A00B@ Dikkat Hepsi Siliniyor
+34044	@A002@ Dikkat Hepsi Siliniyor
+34104	@A002@ Dikkat Hepsi Siliniyor
+34164	Devam
+34176	Hepsini Kopyala
+34208	Varsay
+34222	lan
+34230	Sil
+34238	Ret
+34246	Bulundu
+34262	@A005@
+34276	Kadran1
+34292	Kadran2
+34308	Ba
+34314	lanti Ba
+34332	liyor
+34356	z Tan
+34368	ma Hatas
+34388	Dosya Ad
+34408	Dolu
+34418	1Kare
+34430	@A00B@
+34444	@A00C@
+34464	k ve G
+34478	lge
+34488	st S
+34506	@A00D@
+34520	Sadece 
+34536	maj
+34544	@A00F@
+34558	Mevcut pozisyonda
+34596	0 seviyesine ayarlar.
+34644	le
+34650	me ba
+34662	ar
+34672	z.
+34678	@A026@: 
+34698	Fno.Kapak a
+34728	Kadran @A027@ 
+34758	evirerek
+34778	men
+34786	deki bir sonraki
+34826	eye gidin
+34846	@A027@: 
+34866	Fno.Kapak a
+34896	Kadran @A026@ 
+34926	evirerek
+34946	men
+34954	deki bir sonraki
+34994	eye gidin
+35014	Ba
+35020	lant
+35030	 ba
+35038	lad
+35050	Ar
+35056	yor. L
+35070	tfen bekleyin.
+35100	Talep bekleniyor
+35134	1920x1440 olarak boyutland
+35192	1280x960 olarak boyutland
+35248	Talep bekleniyor
+35282	@A023@ Kameray
+35312	 beyaz
+35328	bir ka
+35344	da do
+35356	ru tutun.
+35376	Foto
+35386	raf makinesini beyaz
+35430	bir ka
+35446	da do
+35458	ru tutun.
+35478	PIN Kodu Girin
+35508	ISO Geni
+35526	leme
+35536	Tavsiye Edilen ISO
+35592	Mektup
+35610	zey G
+35622	stergesi
+35640	L Format
+35666	k Kutusu
+35684	L Makara
+35702	Uzun odak uzakl
+35738	 kullan
+35760	veya yak
+35778	nla
+35788	n.
+35794	Objeden arkaplana daha
+35842	fazla mesafe al
+35874	n.
+35880	Bulan
+35892	k Arkaplan
+35916	ocukla konu
+35940	un ve
+35954	foto
+35964	raf
+35972	 onun
+35990	z hizas
+36006	ndan 
+36018	ekin.
+36030	Devaml
+36048	ekim modunda
+36076	bir
+36084	ok foto
+36100	raf 
+36110	ekin
+36122	ve sonra iyi foto
+36158	raflar
+36172	 se
+36180	in.
+36190	ocuk Foto
+36210	raf
+36224	in 
+36232	pu
+36238	lar
+36248	Evcil hayvana yakla
+36290	n ve
+36302	foto
+36312	raf
+36320	 onun g
+36336	z hizas
+36352	ndan 
+36366	veya daha al
+36392	aktan 
+36406	ekin.
+36418	Evcil hayvan
+36444	n g
+36452	zlerine odaklan
+36484	n. 
+36494	Yiyecek veya oyuncak ile 
+36548	dikkatini 
+36570	ekin.
+36582	Devaml
+36600	ekim modunda
+36628	bir
+36636	ok foto
+36652	raf 
+36662	ekin
+36674	ve sonra iyi foto
+36710	raflar
+36724	 se
+36732	in.
+36740	Evcil Hayvan Foto. 
+36782	in 
+36790	pu
+36796	lar
+36816	in hizas
+36834	ndan veya
+36856	daha al
+36872	aktan foto
+36894	raf 
+36904	ekin.
+36918	Arkaplana dikkat edin.
+36964	Karanl
+36978	k arka plan se
+37008	in
+37016	veya renkli ka
+37048	tlar kullan
+37072	n.
+37080	Yak
+37088	n ve uza
+37108	 bulan
+37122	kla
+37138	n.
+37154	in en yak
+37174	n yapra
+37192	na
+37200	veya pistiline odaklan
+37246	n.
+37252	Bulut g
+37268	lgesi veya parasol
+37314	eklerin g
+37334	lgesini daha
+37362	yumu
+37372	at
+37378	r.
+37390	ek Foto
+37406	raf
+37420	in 
+37428	pu
+37434	lar
+37444	3/4 a
+37458	dan foto
+37476	raf 
+37486	ekmek
+37500	yeme
+37510	e do
+37520	al bir g
+37546	m verir.
+37564	Yemek foto
+37586	raf
+37594	 i
+37600	in ideal yer 
+37630	pencere kenar
+37662	r. 
+37670	apraz arka 
+37702	kla kombin. daha iyi sonu
+37754	 verir.
+37770	Ana objeye yak
+37800	nla
+37810	n.
+37818	Dikey format, g
+37854	nt
+37864	derinli
+37880	i sa
+37890	lar.
+37900	Yemek Foto
+37922	raf
+37936	in 
+37944	pu
+37950	lar
+37960	Foto
+37970	raf
+37978	n 2/3'
+37996	 ana obje ile
+38026	doldurmak iyi bir denge sa
+38080	lar.
+38090	Ana objeyi ve arkaplan
+38140	do
+38146	al bir g
+38168	nt
+38174	 i
+38180	in diyagonal
+38208	bir 
+38218	izgiyle ay
+38244	n.
+38250	Ana objeyi ve di
+38284	erlerini
+38304	do
+38310	al bir g
+38332	nt
+38338	 i
+38344	in diyagonal
+38374	izgi 
+38386	zerine yerle
+38412	tirin.
+38428	er
+38434	eve 
+38446	in 
+38454	pu
+38460	lar
+38470	14-42mm EZ'ye MCON-P02 takarak
+38534	ufak objelerin yak
+38578	foto
+38588	raflar
+38610	ekebilirsiniz.
+38640	14-42mm II R'ye FCON-P01 takarak
+38708	120 derece a
+38736	ya sahip
+38756	bal
+38764	k g
+38776	 foto 
+38790	ekebilirsiniz.
+38820	14-42mm II R'ye WCON-P01 takarak
+38888	11mm geni
+38908	 a
+38920	foto
+38930	raflar 
+38946	ekebilirsiniz.
+38976	Makro 
+38998	 MAL-1 kullanarak,
+39038	Makro foto
+39060	raflardaki 
+39088	k ve
+39104	lgeyi ayarlayabilirsiniz.
+39156	Aksesuar 
+39176	pu
+39182	lar
+39194	Alb
+39202	m Yap
+39214	land
+39228	Video @A017@ Kapal
+39268	Video Aral
+39298	oklu G
+39322	oklu Bask
+39344	Yeni E
+39358	le
+39364	me
+39370	Kartu
+39382	 Yok
+39392	Ka
+39400	t Yok
+39412	Kapal
+39428	ptal@A020@
+39450	Onayl
+39462	yor@A019@
+39482	Di
+39488	er@A022@
+39506	Kolay Bask
+39528	 Ba
+39536	lat@A024@
+39558	sim D
+39570	zelt@A02D@
+39596	k@A018@
+39616	k@A025@
+39632	Bask
+39642	@A01F@
+39656	Deklan
+39672	r D
+39682	mesi
+39692	Tek Bask
+39710	@A020@
+39724	Evet@A019@
+39746	Tamam
+39768	Slayt Aral
+39800	tfen Bekleyin
+39828	Tek Dokunu
+39850	la BA
+39862	Opsiyon Ayar
+39890	Boyut 1: Geni
+39920	Genel
+39932	Adres Listesi
+39964	le
+39970	me Talebini Al
+40000	Ara
+40008	Arama Zamanlay
+40044	Hedef Se
+40064	Alb
+40072	m Haf
+40084	zas
+40092	 Dolu
+40104	Foto
+40114	raf/Sayfa
+40134	Resim G
+40150	nder
+40160	Kartpostal
+40182	@A005@X
+40198	Bask
+40208	 Hatas
+40224	Bask
+40234	 Bilgisi
+40252	Bask
+40262	 Modu Se
+40280	imi
+40288	Bask
+40298	 S
+40304	ras
+40314	Bask
+40324	 Ka
+40340	Servis
+40358	per FP Fla
+40382	Normal
+40396	Resim Al
+40414	Resim Talebini Al
+40450	Talep Bekleniyor
+40484	Al
+40490	yor
+40498	Kalan Foto
+40520	USB Kablosunu 
+40552	kar
+40568	rla
+40576	Boyut 2: Orta
+40604	K.Fot.Say
+40630	@A027@ Monoton
+40660	@A028@
+40674	@A029@ 
+40690	zel
+40702	nderiyor
+40720	Veri Kaydedilmi
+40752	tir
+40760	Ayarlar De
+40786	ti
+40796	sa
+40802	Boyut
+40814	Slayt
+40826	Standart
+40844	Cihaz Detay
+40872	sim
+40882	sim D
+40894	zelt
+40904	Aktar
+40920	yor
+40928	BA
+40934	Otomatik @A001@
+40966	@A034@5500K @A001@
+41004	@A024@ @A001@
+41032	@A025@ @A001@
+41060	@A036@7500K @A001@
+41098	@A037@5300K @A001@
+41136	@A039@ @A001@
+41164	Beyaz Ayar
+41190	Tekrar Dene
+41214	Dahil
+41226	Hari
+41238	Kart
+41248	 Temizleyin
+41272	Ayar@A019@
+41294	3D foto
+41310	raf yarat
+41330	lamad
+41346	3D G
+41356	ster
+41366	Resim Hatas
+41392	640x480 olarak boyutland
+41446	Boyut 1: K
+41476	Boyut 2: Geni
+41506	Boyut 3: Orta
+41536	ptal@A01F@
+41560	ptal@A02C@
+41582	Sil@A02D@
+41602	PC/
+41610	zel Bask
+41628	@A01F@
+41642	WB/@A01A@@A061@
+41674	Odak Uzakl
+41700	@A01A@
+41714	Kelvin@A01A@
+41740	Se
+41746	@A041@
+41760	@A063@@A064@
+41786	@A023@+Deklan
+41816	r D
+41826	mesi
+41836	@A05F@@A033@
+41862	@A02E@@A02F@
+41888	@A030@@A02F@
+41914	@A031@@A02F@
+41940	@A032@@A01A@
+41966	@A042@@A041@
+41992	@A023@@A02F@
+42018	@A03D@@A025@
+42044	BA 
+42052	nizleme@A033@
+42080	Normal otomatik beyaz ayar
+42138	Beyaz ayar
+42160	 modunda 
+42186	cak renkleri otomatikte tutun.
+42248	Efekt
+42260	Fade
+42276	en Foto
+42292	Photo Line
+42322	rlama uygulan
+42350	yor;
+42362	temel 
+42376	ekim fonksiyonlar
+42426	rlanacakt
+42446	r.
+42460	rlama uygulan
+42488	yor;
+42500	tarih, dil ve baz
+42536	 ayarlar d
+42562	ndaki
+42580	m fonksiyonlar s
+42618	rlanacakt
+42638	r.
+42644	Dahili Fla
+42668	AVCHD modu ile video 
+42712	ekemez.
+42728	Bu lens desteklenmiyor.
+42776	@A002@ Dikkat B
+42812	n Ayarlar S
+42840	rlan
+42850	yor
+42858	Aksesuar Portu Men
+42902	Kurulum Men
+42932	A. OLYMPUS PENPAL Payl.
+42980	B. OLYMPUS PENPAL Alb
+43030	C. Elektronik Viz
+43070	Foto
+43080	raf makinesinin 
+43116	tarih ve saatini ayarlay
+43166	n.
+43174	lke veya b
+43196	lgenizde kullan
+43228	lan
+43238	video standard
+43272	 se
+43280	in.
+43288	ISO hassasiyetini
+43326	se
+43332	erken kullan
+43358	lan
+43368	art
+43378	 boyutunu se
+43404	in.
+43412	USB
+43420	100mm
+43432	150mm
+43444	11"
+43452	17"
+43460	4"
+43466	6"
+43472	8"
+43478	10"
+43486	A0
+43492	A1
+43498	A2
+43504	A3
+43510	A4
+43516	A5
+43522	A6
+43528	A7
+43534	A8
+43540	A9
+43546	B0
+43552	B1
+43558	B2
+43564	B3
+43570	B4
+43576	B5
+43582	B6
+43588	B7
+43594	B8
+43600	B9
+43606	4"
+43612	8"
+43620	Panorama
+43638	4"
+43644	10"
+43654	Panorama
+43672	4"
+43678	11"
+43688	Panorama
+43706	4"
+43712	12"
+43722	Panorama
+43740	10cm
+43750	30cm
+43762	Panorama
+43780	89mm
+43790	254mm
+43804	Panorama
+43822	A Mode
+43836	B Mode
+43850	C Mode
+43864	M Value
+43880	FP M Value
+43902	Channel
+43918	Level
+43930	TTL Value
+43950	Auto Value
+43972	FP TTL Value
+43998	Auto
+44008	@A01C@/FP
+44028	@A07D@ 4
+44046	@A07E@ 9
+44064	@A07F@ 25
+44084	@A07F@ 100
+44106	BGM
+44114	Cool
+44124	Joy
+44132	Ard
+44144	k H
+44152	Melancholy
+44174	@A012@ Anti-
+44200	ok @A004@
+44220	TTL Auto
+44238	Ard
+44250	k L
+44258	@A013@ Anti-
+44284	ok @A004@
+44304	@A078@arge
+44326	Orta
+44336	@A074@mall
+44358	@A01C@Fonksiyon
+44394	zgar G
+44408	r. Azaltma
+44430	Foto
+44440	raf makinesini beyaz
+44484	bir ka
+44500	da do
+44512	ru tutun.
+44532	@A03E@+Deklan
+44562	r D
+44572	mesi
+44582	Manual
+44596	FP TTL Auto
+44620	FP Manual
+44640	Level Lo
+44658	Level Mid
+44678	Level Hi
+44696	ch
+44702	Beat
+44712	Adobe
+44724	AVCHD 1920
+44746	1080 Fine
+44766	AVCHD 1280
+44788	720 Fine
+44806	AVCHD 1280
+44828	720 Normal
+44862	@A01D@: AEL/AFL
+44894	@A01E@ Tu
+44914	una bas
+44940	olarak @A02B@ ile 
+44978	ekim
+44988	@A01E@ Tu
+45008	una bas
+45034	olarak @A02C@ ile 
+45072	ekim
+45082	Hem ana obje
+45110	hem de arkaplan
+45148	ekmek i
+45164	in.
+45174	Mavi ve ye
+45196	il renk
+45214	daha canl
+45240	kar.
+45250	Yak
+45258	n 
+45264	ekimler
+45286	in ideal.
+45306	@A03A@ Bal
+45328	kg
+45338	 Etkisi
+45354	Manzara+Portre
+45384	@A033@6000K @A001@
+45422	@A035@4000K @A001@
+45460	@A038@3000K @A001@
+45498	@A01E@ Tu
+45518	una bas
+45544	olarak @A02D@ ile 
+45582	ekim
+45592	@A01E@ Tu
+45612	una bas
+45638	olarak @A02E@ ile 
+45676	ekim
+45686	Dokunmatik ekran
+45726	devre d
+45746	 b
+45752	rak
+45760	n.
+45766	Dokunmatik ekran
+45800	 etkinle
+45818	tirin.
+45832	Dili de
+45852	tirin.
+45866	Se
+45872	ilen d
+45888	meye atanan
+45914	fonksiyonu se
+45942	in.
+45954	er A
+45966	k se
+45976	ili ise, foto. mak.
+46018	S-AF modunda odaklamam
+46072	olsa bile deklan
+46108	r b
+46116	rak
+46124	labilir.
+46146	er A
+46158	k se
+46168	ili ise, foto. mak. 
+46212	C-AF modunda odaklamam
+46266	olsa bile deklan
+46302	r b
+46310	rak
+46318	labilir.
+46336	@A00F@ veya @A01A@ tu
+46380	lar
+46388	na bas
+46406	nca
+46424	nt
+46430	lenen bilgiyi se
+46464	in.
+46472	Her 
+46482	ekim modunda
+46510	@A035@ tu
+46530	una bas
+46550	nca g
+46566	nt
+46572	lenen
+46586	kontrolleri se
+46616	in.
+46624	Uyar
+46634	 g
+46644	nt
+46650	lemek i
+46666	in 
+46676	parlak ve g
+46700	lgeli alanlar
+46728	n 
+46736	parlakl
+46752	k aral
+46774	 ayarlay
+46792	n.
+46798	Mod kadran
+46820	 d
+46826	nd
+46836	ld
+46846	nde 
+46858	se
+46864	ilen mod i
+46886	in yard
+46902	m bilgisi 
+46934	nt
+46940	lemek 
+46954	zere A
+46970	k se
+46980	in.
+46988	Sanat filtresi efektlerinin 
+47048	monit
+47060	rde nas
+47076	l g
+47088	nt
+47094	lenece
+47108	ini 
+47120	se
+47126	in.
+47134	@A042@ tu
+47154	u ile foto
+47176	raflar
+47196	nas
+47204	l geni
+47218	letilece
+47236	ini
+47246	se
+47252	in.
+47266	k oldu
+47280	unda,
+47294	pozlama telafi de
+47330	eri fla
+47346	 telafi
+47364	de
+47370	erine eklenecektir.
+47418	n modlarda ayn
+47448	 beyaz
+47464	ayar
+47474	 telafisini ayarlay
+47514	n.
+47520	@A004@ modunda iken bir video
+47582	kay
+47590	t modu se
+47610	in.
+47624	k olarak ayarlad
+47662	nda,
+47674	video kayd
+47696	 bitti
+47710	inde
+47722	foto
+47732	raf 
+47742	ekmek i
+47758	in.
+47766	@A003@ uyar
+47798	n hangi pil
+47828	zeyinde g
+47852	nt
+47858	lenece
+47872	ini
+47882	se
+47888	in.
+47896	Dokunmatik panel ayarlar
+47956	etkinle
+47972	tirin veya devre 
+48018	 b
+48024	rak
+48032	n.
+48038	Adres defterini g
+48074	ster
+48086	veya adres defterine 
+48132	ekleyin.
+48150	OLYMPUS PENPAL i
+48184	in
+48192	bilgiyi d
+48212	zenle veya g
+48242	nt
+48248	le.
+48260	rsel boyutunun nas
+48304	aktar
+48316	laca
+48332	 se
+48340	in.
+48348	Kopyalanm
+48370	 g
+48376	rsel boyutunu
+48406	se
+48412	in.
+48420	@A05A@4000K
+48444	@A01E@:Kapal
+48472	AF ALAN 
+48492	modunun hedef
+48522	konumu
+48536	3D
+48542	MF moduna ge
+48574	@A01D@:
+48592	Film Kayd
+48620	Ba
+48626	lat/Durdur
+48648	@A01E@ Tek dokunu
+48684	 BA.
+48708	rma
+48716	Super Fine
+48738	Fine
+48748	Normal
+48762	Basic
+48774	@A01D@ G
+48796	nt
+48802	 derinli
+48828	nizleme.
+48846	Kadran ile 
+48872	RAW+JPEG/JPEG 
+48904	kalite modlar
+48938	aras
+48948	nda de
+48966	im
+48972	@A01E@ Kaydetmeden foto
+49020	raf
+49032	test et.
+49050	dummy
+49062	Kaydet
+49076	@A017@Ses D
+49100	z. S
+49114	rlay
+49130	Ses giri
+49148	 seviyesi belirlenen 
+49194	seviyeyi ge
+49218	erse mikrofon 
+49250	giri
+49260	 sesini otomatik s
+49302	rlar.
+49314	IS Modu
+49330	@A01D@: Tu
+49352	 @A02F@ ve @A030@.
+49390	IS modunu ayarla
+49424	@A066@: Canl
+49450	 K
+49456	lavuz modu i
+49482	in
+49490	bas
+49498	n, geri d
+49518	nmek i
+49532	in tekrar bas
+49560	n.
+49566	@A066@: De
+49592	tir x1/x2
+49612	Nostalji
+49634	smi Renkler
+49658	@A082@Nostalji
+49688	@A083@K
+49704	smi Renkler
+49732	lge Efekti: Sol ve Sa
+49782	lge Efekti: 
+49808	st ve Alt
+49830	al
+49838	ma devam ediyor
+49870	Foto
+49880	raf Hikayesi oturumunda 
+49932	@A025@ 
+49950	esine basarak, 
+49984	devam eden 
+50008	al
+50016	may
+50030	kaydedebilir veya 
+50070	mevcut 
+50086	al
+50094	may
+50106	iptal edebilirsiniz.
+50150	ekime devam etmek i
+50190	in dosya al
+50214	nam
+50222	yor
+50230	Sonra bitir
+50256	ptal
+50266	Oto. odak s
+50290	ras
+50298	nda insan y
+50332	veya g
+50346	zleri i
+50362	in 
+50370	ncelik atamak 
+50404	zere A
+50420	k 
+50428	esini se
+50446	in.
+50454	@A023@: Tu
+50476	 @A02A@ ve @A02B@.
+50514	@A01E@ Kameray
+50544	 beyaz
+50560	bir ka
+50576	da do
+50588	ru tutun.
+50608	Her Karede AF
+50636	Her karede yeniden odaklan
+50690	r.
+50696	Yaln
+50706	zca zamanlay
+50740	ba
+50746	lad
+50758	nda bir kez odaklan
+50798	r.
+50804	@A013@G
+50824	nt
+50830	 Sabitleyici
+50856	Devaml
+50874	ekim i
+50888	in
+50904	nt
+50910	 sabitlemeyi
+50938	etkinle
+50954	tirir/devre d
+50986	 b
+50992	rak
+51000	r.
+51006	Kapal
+51020	Devaml
+51038	ekim h
+51056	na 
+51064	ncelik
+51080	vermek i
+51098	in g
+51112	nt
+51118	 sabitleme
+51142	devre d
+51162	 b
+51168	rak
+51180	r.
+51186	AF Odak Ayar
+51214	AF Alan 
+51234	aret
+51244	isi
+51254	@A01E@ L fps
+51280	@A01E@: Film Kaydi Ba
+51324	lat
+51334	@A030@: Foto
+51360	raf 
+51370	ek
+51376	@A064@Soluk ve A
+51412	k Renk
+51430	ze veya g
+51450	zlere
+51464	odaklanma bulundu.
+51504	Yak
+51512	ndaki bir g
+51536	z se
+51546	ilecek.
+51566	ze veya g
+51586	zlere
+51600	odaklanma bulundu.
+51640	Sa
+51646	daki bir g
+51668	z se
+51678	ilecek.
+51698	ze veya g
+51718	zlere
+51732	odaklanma bulundu.
+51772	Soldaki bir g
+51800	z se
+51810	ilecek.
+51830	z tan
+51842	ma 
+51850	al
+51862	yor.
+51876	ze odaklanma bulundu.
+51930	Sabit g
+51950	nt
+51956	ye 
+51964	ncelik
+51980	vermek i
+51998	in g
+52012	nt
+52022	sabitleme etkinle
+52058	tirilir.
+52078	Devaml
+52096	ekim h
+52114	 etkilenebilir.
+52146	Deklan
+52162	rden kaynaklanan
+52198	foto
+52208	raf makinesi
+52236	bulan
+52248	kl
+52262	 azalt
+52276	r.
+52282	C-AF Kilit
+52304	Kontrol
+52320	Veri Listesi
+52346	Lens Verisi
+52370	Varsay
+52384	lan Veri
+52402	AF hedef ve
+52428	AF modu se
+52450	in.
+52458	@A028@: Bir geni
+52492	letme 
+52506	er
+52512	evesi
+52534	nt
+52540	leyin ve foto
+52568	raf
+52584	inden b
+52604	tmek i
+52618	in bas
+52632	n.
+52638	AF ALAN 
+52658	modunun hedef
+52688	konumu
+52702	MF moduna ge
+52734	@A028@ Tek dokunu
+52770	 BA.
+52780	@A028@ G
+52802	nt
+52808	 derinli
+52834	nizleme.
+52856	z ve G
+52870	z 
+52876	nceli
+52888	i A
+52906	z ve Sa
+52922	 G
+52928	z 
+52934	nc. A
+52956	z ve Sol G
+52978	z 
+52984	nc. A
+53002	Kadran ile 
+53028	RAW+JPEG/JPEG 
+53060	kalite modlar
+53094	aras
+53104	nda de
+53122	im
+53128	@A028@ Kaydetmeden foto
+53176	raf
+53188	test et.
+53206	Enstantane @A096@ veya daha
+53272	k oldu
+53286	unda, deklan
+53314	re
+53322	etkisinden kaynaklanan bulan
+53380	kl
+53396	azalt
+53408	lmas
+53418	 i
+53424	in ilk perde
+53452	mekanikten elektroni
+53494	e de
+53508	tirilir.
+53526	Renk Se
+53542	imi@A01A@
+53562	Normal
+53576	@A020@
+53590	@A021@
+53604	@A028@Fonksiyon
+53636	@A026@ @A001@
+53664	@A027@ @A001@
+53692	@A046@Kilit
+53722	k olarak ayarland
+53762	nda, alan
+53786	nizleme derinli
+53818	i d
+53828	me
+53840	rak
+53848	ld
+53858	nda dahi devam eder.
+53900	Pan
+53908	Obje arkaplan
+53946	bulan
+53958	k 
+53964	ekilmesi i
+53986	in.
+53996	Foto
+54006	raf makinesi hareketini
+54056	alg
+54064	lar ve en iyi enstantane
+54128	 belirler.
+54150	@A04E@Fonksiyon
+54182	@A053@A
+54200	k Ton
+54212	@A06C@: AEL/AFL
+54244	@A06C@:
+54262	Film Kayd
+54290	Ba
+54296	lat/Durdur
+54318	@A06C@ G
+54340	nt
+54346	 derinli
+54372	nizleme.
+54390	@A06C@ Tek dokunu
+54426	 BA.
+54436	AF ALAN 
+54456	modunun hedef
+54486	konumu
+54500	MF moduna ge
+54532	Kadran ile 
+54558	RAW+JPEG/JPEG 
+54590	kalite modlar
+54624	aras
+54634	nda de
+54652	im
+54658	@A06C@ Kaydetmeden foto
+54706	raf
+54718	test et.
+54736	@A06B@ Tu
+54756	una bas
+54782	olarak @A06C@ ile 
+54820	ekim
+54830	@A06B@ Tu
+54850	una bas
+54876	olarak @A06D@ ile 
+54914	ekim
+54924	@A06B@ Tu
+54944	una bas
+54970	olarak @A06E@ ile 
+55008	ekim
+55018	@A06B@ Tu
+55038	una bas
+55064	olarak @A06F@ ile 
+55102	ekim
+55112	@A066@Grenli Film
+55148	@A06C@: Canl
+55174	 K
+55180	lavuz modu i
+55206	in
+55214	bas
+55222	n, geri d
+55242	nmek i
+55256	in tekrar bas
+55284	n.
+55290	@A06C@: De
+55316	tir x1/x2
+55336	@A076@:Kapali
+55364	1/2
+55372	1/8
+55380	1/32
+55390	@A01C@: Video Kayd
+55428	 Ba
+55436	lat
+55446	@A01B@: Foto
+55472	raf 
+55482	ek
+55490	@A069@: Video @A05E@
+55532	1/128
+55544	@A087@@A088@
+55570	@A089@: 
+55590	Fno.Kapak a
+55620	@A08A@: 
+55640	Fno.Kapak a
+55670	ART13
+55682	ART14
+55694	@A064@
+55708	Modu P/A/S/M'ye de
+55750	tirin.
+55764	Yamukluk Telafisi
+55806	k oldu
+55820	unda, yamukluk
+55852	telafisi m
+55874	mk
+55880	nd
+55886	r.
+55894	Ekranda g
+55914	stergeler belirecektir.
+55962	Yamukluk telafisini
+56004	ba
+56010	latmak i
+56028	in bas
+56042	n.
+56056	meyi bas
+56078	 tutarak 
+56104	n.
+56110	Yamukluk telafisi Kapal
+56160	Yamukluk telafisi A
+56210	k @A018@
+56228	Foto
+56238	raf makinesi, makine
+56282	hareketini alg
+56312	layarak
+56330	Sabitleyici ayar
+56368	 se
+56376	er.
+56384	Telafi ayarla@A01A@
+56424	@A03C@ Yar
+56446	m Seviye
+56464	Dahili EVF'de d
+56496	zey g
+56508	stergesini
+56540	nt
+56546	lemek i
+56562	in A
+56574	k'
+56580	 se
+56588	in.
+56598	@A058@ s
+56616	ras
+56624	nda etkindir.
+56656	zl
+56664	@A066@ 4 Foto
+56692	raf
+56700	@A067@ 5 Foto
+56728	raf
+56736	@A043@Fonksiyon
+56768	EVF Oto Parlakl
+56804	Temel Bilgiler
+56834	Renk Olu
+56852	turucu
+56866	@A067@
+56882	ne Deli
+56906	rseli hizalay
+56934	n.
+56942	lk foto
+56958	raf
+56970	ektikten sonra,
+57004	kameray
+57020	 yava
+57034	a kayd
+57066	nt
+57072	 hizalay
+57090	n ve deklan
+57116	re
+57124	bas
+57132	n.
+57138	Lens Veri Ayar
+57172	 Sil
+57182	Bulan
+57194	kl
+57200	k Efekti: Sol ve Sa
+57242	Bulan
+57254	kl
+57260	k Efekti: 
+57282	st ve Alt
+57302	Elektr. Yak
+57326	nl
+57336	Natural@A037@
+57364	Vivid@A037@
+57388	@A0BF@
+57402	@A0D0@
+57416	@A0D1@
+57430	@A0D2@
+57444	@A0D3@
+57458	@A0D4@
+57472	@A0D5@
+57486	@A0D6@
+57500	@A0D7@
+57514	@A0D8@
+57528	@A0D9@
+57542	@A0DA@
+57556	@A0DB@
+57570	@A0DC@
+57584	@A0DD@
+57598	@A0DE@
+57612	@A0DF@
+57626	@A0E0@
+57640	@A0E1@
+57654	@A0E2@
+57668	@A0E3@
+57682	@A0E4@
+57696	@A0E5@
+57710	@A0E6@
+57724	@A0E7@
+57738	@A0E8@
+57752	@A0E9@
+57766	@A0EA@
+57780	@A0EB@
+57794	@A0EC@
+57808	@A0ED@
+57822	@A0EE@
+57836	@A0EF@
+57850	@A0F0@
+57864	@A0F1@
+57878	@A0F2@
+57892	@A0C0@
+57906	@A0C1@
+57920	@A0C2@
+57934	@A0C3@
+57948	@A0C4@
+57962	@A0C5@
+57976	@A0C6@
+57990	@A0C7@
+58004	@A0C8@
+58018	@A0C9@
+58032	@A0CA@
+58046	@A0CB@
+58060	@A0CC@
+58074	@A0CD@
+58088	@A0CE@
+58102	@A0CF@
+58116	@A0D0@
+58130	@A0D1@
+58144	@A0D2@
+58158	@A0D3@
+58172	@A0D4@
+58186	@A0D4@
+58200	@A0D6@
+58214	@A0D7@
+58228	@A0D8@
+58242	@A0D9@
+58256	@A0DA@
+58270	@A0DB@
+58284	@A0DC@
+58298	@A0DD@
+58312	@A0DE@
+58326	@A0DF@
+58340	@A0E0@
+58354	@A0E1@
+58368	@A0E2@
+58382	@A0E3@
+58396	@A0E4@
+58410	@A0E5@
+58424	@A0E6@
+58438	@A0E7@
+58452	@A0E8@
+58466	@A0E9@
+58480	@A0EA@
+58494	@A0EB@
+58508	@A0EC@
+58522	@A0ED@
+58536	@A0EE@
+58550	@A0EF@
+58564	@A0F0@
+58578	@A0F1@
+58592	@A0F2@
+58606	@A0F3@
+58620	@A0F4@
+58634	@A0F5@
+58648	@A0F6@
+58662	@A0F7@
+58676	@A0F7@
+58690	@A0F9@
+58704	@A0FA@
+58718	@A0FB@
+58732	@A0FC@
+58746	@A0FD@
+58760	@A0FE@
+58774	@A0FF@
+58788	@A100@
+58802	@A101@
+58816	@A102@
+58830	@A103@
+58844	@A104@
+58858	@A105@
+58872	Dekl
+58882	 Birak
+58896	Sualt
+58910	Zoom
+58920	@A01E@+Deklan
+58950	r D
+58960	mesi
+58970	@A075@: Ayarlari Kolayca
+59022	De
+59032	tirme Kilavuzu
+59062	@A06B@ Kameray
+59092	 beyaz
+59108	bir ka
+59124	da do
+59136	ru tutun.
+59156	@A06B@: Film Kaydi Ba
+59200	lat
+59210	@A02B@: Foto
+59236	raf 
+59246	ek
+59252	@A06B@+Deklan
+59282	r D
+59292	mesi
+59302	@A023@: Bir geni
+59336	letme 
+59350	er
+59356	evesi
+59378	nt
+59384	leyin ve foto
+59412	raf
+59428	inden b
+59448	tmek i
+59462	in bas
+59476	n.
+59482	@A01D@: De
+59508	tir x1/x2
+59528	@A01D@: Canl
+59554	 K
+59560	lavuz modu i
+59586	in
+59594	bas
+59602	n, geri d
+59622	nmek i
+59636	in tekrar bas
+59664	n.
+59670	Resmi veya @A024@ kadran ile geni
+59738	let.
+59748	Kadran ile resim se
+59794	@A06D@:Resmi geni
+59830	let
+59840	veya @A024@.
+59866	Deklan
+59882	r ve devaml
+59910	ekim
+59922	ayarlar
+59938	 ile ilgili men
+59974	@A052@ ile ard
+60008	k 
+60014	ekimde
+60030	bir saniyede 
+60058	ekilen
+60074	foto
+60084	raf say
+60108	 ayarlay
+60126	n.
+60132	Belirtilen zaman diliminde 
+60190	hi
+60196	bir i
+60208	lem yap
+60224	lmazsa 
+60242	monit
+60254	r kararacakt
+60280	r.
+60286	@A01E@ H fps
+60312	@A056@ ile ard
+60346	k 
+60352	ekimde
+60368	bir saniyede 
+60396	ekilen
+60412	foto
+60422	raf say
+60446	 ayarlay
+60464	n.
+60470	@A072@: G
+60490	sterim men
+60516	 g
+60522	nderin.
+60544	sterim men
+60570	nden
+60586	ncel g
+60600	rseli silin.
+60626	@A072@:G
+60644	ncel g
+60658	rseli hemen silin.
+60698	@A025@: G
+60718	sterim men
+60748	 g
+60754	nderin.
+60770	@A025@:G
+60788	ncel g
+60802	rseli hemen
+60828	silin.
+60846	rsel silmeyi @A072@ veya @A025@
+60912	atay
+60922	n.
+60928	@A011@: Tu
+60950	 @A02E@ ve @A02F@.
+60990	deal modu otomatik se
+61034	er.
+61044	Canl
+61054	 K
+61060	lavuz men
+61084	ne eri
+61098	ilebilir.
+61118	Ayarlar i
+61138	in tam men
+61164	 g
+61170	sterir
+61184	Se
+61190	ti
+61196	iniz Sahne moduna
+61234	otomatik ayarlar uygulan
+61284	r.
+61290	Yarat
+61306	 efektler uygulay
+61342	n.
+61348	Arka I
+61362	ik A
+61374	k/Kapal
+61394	LCD monit
+61418	n renk 
+61450	ve parlakl
+61480	 ayarla.
+61498	fps
+61506	@A014@/@A080@/@A028@
+61548	@A081@/@A082@
+61576	@A047@Fonksiyon
+61608	Canl
+61618	 K
+61624	lavuz video kay
+61656	t s
+61664	ras
+61672	nda
+61682	@A077@ tu
+61702	un basarak, Canl
+61736	 K
+61742	lavuz
+61760	zeyini odak halka rotasyonu ile
+61826	ayarlayabilirsiniz.
+61866	Video kay
+61886	t s
+61894	ras
+61902	nda @A077@ 
+61928	tu
+61934	una basarak MF 
+61968	moduna ge
+61988	ebilirsiniz.
+62016	Tekrar basarak AF moduna ge
+62072	in.
+62080	AF Durdur
+62100	@A06D@ tu
+62120	una bas
+62140	 tutarak,
+62162	otomatik odaklamay
+62200	 kapatabilir
+62228	ve odaklamay
+62254	 d
+62262	menin bas
+62282	ld
+62296	yerde sabitleyebilirsiniz.
+62356	me fonksiyonunu iptal etme.
+62412	D.Kalibrasyon
+62440	Harici @A02A@
+62468	mm
+62478	Harici @A02E@ Kay
+62514	t Seviyesi
+62536	AF hedef ve
+62562	AF modu se
+62584	in.
+62592	3f
+62598	4f
+62604	Kontrol
+62620	IS modunu ayarla
+62654	@A01D@: Bir geni
+62688	letme 
+62702	er
+62708	evesi
+62730	nt
+62736	leyin ve foto
+62764	raf
+62780	inden b
+62800	tmek i
+62814	in bas
+62828	n.
+62834	Foto
+62844	raf say
+62864	 @A033@
+62880	Mod Kadran
+62902	 Fonksiyonu
+62926	Kay
+62934	tl
+62944	zel ayarlar
+62972	mod kadran
+62994	na ayarlar.
+63020	zel Zamanlay
+63050	 Ayarlar
+63070	@A014@ Zamanlay
+63108	Aral
+63118	kl
+63124	/H
+63130	zland. 
+63146	ekim
+63156	Belirli say
+63180	da foto
+63196	raf belirli 
+63224	aral
+63234	klarla 
+63250	ekilir ve h
+63274	zland
+63290	lm
+63306	ekimli video olu
+63340	turulur.
+63358	Bekleme S
+63378	resi Ba
+63394	lat
+63402	Deklan
+63418	r d
+63428	mesine bas
+63450	ld
+63456	ktan 
+63470	sonra ilk foto
+63500	raf
+63508	n kaydedilmesi 
+63546	in bekleme s
+63572	resini 
+63590	ayarlar.
+63608	Aral
+63618	k S
+63626	resi
+63636	Otomatik Kapama
+63668	4 saat
+63682	Me
+63688	gul
+63696	@A006@Fonksiyon
+63728	AF Alan Se
+63750	imi
+63760	er
+63766	eve Oran
+63786	@A010@ :Kapal
+63816	Kadran @A011@: 
+63850	Fno. Kapak a
+63882	Kadran @A012@: 
+63916	Fno. Kapak a
+63948	Kapal
+63964	lk foto
+63980	raf
+63992	ektikten sonra,
+64026	kameray
+64042	 yava
+64056	a kayd
+64088	nt
+64094	 hizalay
+64112	n ve deklan
+64138	re
+64146	bas
+64154	n.
+64160	Kay
+64168	t Seviyesi
+64194	zgar G
+64212	lt
+64222	 Azaltma
+64244	ksek
+64254	@A071@ Kameray
+64284	 beyaz
+64300	bir ka
+64316	da do
+64328	ru tutun.
+64348	@A072@ Kameray
+64378	 beyaz
+64394	bir ka
+64410	da do
+64422	ru tutun.
+64442	@A070@ Kameray
+64472	 beyaz
+64488	bir ka
+64504	da do
+64516	ru tutun.
+64536	@A071@+Deklan
+64566	r D
+64576	mesi
+64586	@A072@+Deklan
+64616	r D
+64626	mesi
+64636	@A070@+Deklan
+64666	r D
+64676	mesi
+64686	@A050@Fonksiyon
+64718	@A051@Fonksiyon
+64750	1 saat
+64764	K. @A004@ Yard
+64794	mc
+64802	@A039@@A03A@
+64828	Galeri
+64842	Her ok d
+64862	mesi 
+64878	ekim esnas
+64900	nda 
+64912	bas
+64920	ld
+64930	nda do
+64944	rudan 
+64960	bir fonksiyona atanabilir.
+65020	me fonksiyonu iptal etmek i
+65076	in.
+65084	Pozland
+65100	rmay
+65110	 ayarla
+65126	Pozland
+65142	rmay
+65152	 ayarla
+65168	Pozland
+65184	rmay
+65194	 ayarla
+65210	Pozland
+65226	rmay
+65236	 ayarla
+65252	AF hedef ve
+65278	AF modu se
+65300	in.
+65308	AF hedef ve
+65334	AF modu se
+65356	in.
+65364	AF hedef ve
+65390	AF modu se
+65412	in.
+65420	AF hedef ve
+65446	AF modu se
+65468	in.
+65476	AF hedef ve
+65502	AF modu se
+65524	in.
+65532	AF hedef ve
+65558	AF modu se
+65580	in.
+65588	@A06C@: Tu
+65610	 @A02A@ ve @A02B@.
+65648	@A066@: Tu
+65670	 @A02A@ ve @A02B@.
+65708	@A066@: AEL/AFL
+65740	@A06E@: AEL/AFL
+65772	@A06F@: AEL/AFL
+65804	@A06D@: AEL/AFL
+65836	@A06C@: Bir geni
+65870	letme 
+65884	er
+65890	evesi
+65912	nt
+65918	leyin ve foto
+65946	raf
+65962	inden b
+65982	tmek i
+65996	in bas
+66010	n.
+66016	@A066@: Bir geni
+66050	letme 
+66064	er
+66070	evesi
+66092	nt
+66098	leyin ve foto
+66126	raf
+66142	inden b
+66162	tmek i
+66176	in bas
+66190	n.
+66196	@A06E@: Bir geni
+66230	letme 
+66244	er
+66250	evesi
+66272	nt
+66278	leyin ve foto
+66306	raf
+66322	inden b
+66342	tmek i
+66356	in bas
+66370	n.
+66376	@A06F@: Bir geni
+66410	letme 
+66424	er
+66430	evesi
+66452	nt
+66458	leyin ve foto
+66486	raf
+66502	inden b
+66522	tmek i
+66536	in bas
+66550	n.
+66556	@A06D@: Bir geni
+66590	letme 
+66604	er
+66610	evesi
+66632	nt
+66638	leyin ve foto
+66666	raf
+66682	inden b
+66702	tmek i
+66716	in bas
+66730	n.
+66736	@A06E@ G
+66758	nt
+66764	 derinli
+66790	nizleme.
+66808	@A06F@ G
+66830	nt
+66836	 derinli
+66862	nizleme.
+66880	@A06D@ G
+66902	nt
+66908	 derinli
+66934	nizleme.
+66952	@A06E@ Tek dokunu
+66988	 BA.
+66998	@A06F@ Tek dokunu
+67034	 BA.
+67044	@A06D@ Tek dokunu
+67080	 BA.
+67090	AF ALAN 
+67110	modunun hedef
+67140	konumu
+67154	AF ALAN 
+67174	modunun hedef
+67204	konumu
+67218	AF ALAN 
+67238	modunun hedef
+67268	konumu
+67282	MF moduna ge
+67314	MF moduna ge
+67346	MF moduna ge
+67378	Kadran ile 
+67404	RAW+JPEG/JPEG 
+67436	kalite modlar
+67470	aras
+67480	nda de
+67498	im
+67504	Kadran ile 
+67530	RAW+JPEG/JPEG 
+67562	kalite modlar
+67596	aras
+67606	nda de
+67624	im
+67630	Kadran ile 
+67656	RAW+JPEG/JPEG 
+67688	kalite modlar
+67722	aras
+67732	nda de
+67750	im
+67756	@A06E@ Kaydetmeden foto
+67804	raf
+67816	test et.
+67834	@A06F@ Kaydetmeden foto
+67882	raf
+67894	test et.
+67912	@A06D@ Kaydetmeden foto
+67960	raf
+67972	test et.
+67990	@A071@ Tu
+68010	una bas
+68036	olarak @A06C@ ile 
+68074	ekim
+68084	@A071@ Tu
+68104	una bas
+68130	olarak @A06D@ ile 
+68168	ekim
+68178	@A071@ Tu
+68198	una bas
+68224	olarak @A06E@ ile 
+68262	ekim
+68272	@A071@ Tu
+68292	una bas
+68318	olarak @A06F@ ile 
+68356	ekim
+68366	@A072@ Tu
+68386	una bas
+68412	olarak @A06C@ ile 
+68450	ekim
+68460	@A072@ Tu
+68480	una bas
+68506	olarak @A06D@ ile 
+68544	ekim
+68554	@A072@ Tu
+68574	una bas
+68600	olarak @A06E@ ile 
+68638	ekim
+68648	@A072@ Tu
+68668	una bas
+68694	olarak @A06F@ ile 
+68732	ekim
+68742	@A072@ Tu
+68762	una bas
+68788	olarak @A02B@ ile 
+68826	ekim
+68836	@A072@ Tu
+68856	una bas
+68882	olarak @A02C@ ile 
+68920	ekim
+68930	@A072@ Tu
+68950	una bas
+68976	olarak @A02D@ ile 
+69014	ekim
+69024	@A072@ Tu
+69044	una bas
+69070	olarak @A02E@ ile 
+69108	ekim
+69118	@A06E@: Canl
+69144	 K
+69150	lavuz modu i
+69176	in
+69184	bas
+69192	n, geri d
+69212	nmek i
+69226	in tekrar bas
+69254	n.
+69260	@A06F@: Canl
+69286	 K
+69292	lavuz modu i
+69318	in
+69326	bas
+69334	n, geri d
+69354	nmek i
+69368	in tekrar bas
+69396	n.
+69402	@A06D@: Canl
+69428	 K
+69434	lavuz modu i
+69460	in
+69468	bas
+69476	n, geri d
+69496	nmek i
+69510	in tekrar bas
+69538	n.
+69544	@A06E@: De
+69570	tir x1/x2
+69590	@A06F@: De
+69616	tir x1/x2
+69636	@A06D@: De
+69662	tir x1/x2
+69682	Eye-Fi
+69696	@A05B@Fonksiyon
+69728	@A05C@Fonksiyon
+69764	tfen lens durumunu kontrol edin.
+69834	tfen lensi uzatarak a
+69880	n.
+69886	Anahtar 
+69904	izgi
+69914	@A067@Key Line
+69944	SCN modunu @A05D@ olarak ayarlay
+70010	n.
+70018	Manuel De
+70038	er
+70044	Manuel De
+70064	er @A01A@
+70088	Kelvin
+70102	Foto
+70112	raf Makinesi Fla
+70150	Bulb/Time Odaklama
+70188	BULB/TIME 
+70210	ekim s
+70224	ras
+70232	nda MF
+70252	mk
+70258	n k
+70266	lmak i
+70280	in On se
+70298	in.
+70306	Bulb/Time Zamanlay
+70350	Bulb/Time modu i
+70384	in
+70392	maksimum s
+70414	reyi ayarlay
+70440	n.
+70446	Canl
+70456	 Bulb
+70468	Bulb modunda 
+70496	ekim s
+70510	ras
+70518	nda 
+70538	nt
+70544	ler ekranda 
+70580	nt
+70586	lenecektir.
+70610	Canl
+70620	 Time
+70632	Time modunda 
+70660	ekim s
+70674	ras
+70682	nda 
+70702	nt
+70708	ler ekranda 
+70744	nt
+70750	lenecektir.
+70774	Say
+70782	m G
+70790	ster
+70800	defa
+70810	@A022@ + IS Kapal
+70854	k olarak ayarland
+70894	nda, 
+70908	Bulan
+70920	kl
+70926	k 
+70932	nleyici ard
+70960	k 
+70970	ekim s
+70984	ras
+70992	nda 
+71002	al
+71010	maz.
+71020	IS ile Yar
+71042	 Basma
+71062	k olarak ayarland
+71102	nda, 
+71124	nt
+71130	 Sabitleyici deklan
+71172	re 
+71182	bas
+71190	ld
+71200	nda 
+71210	al
+71218	acakt
+71230	r.
+71236	LV Yak
+71250	n Mod
+71262	Geni
+71272	letilmi
+71288	 canl
+71300	 g
+71310	nt
+71326	ras
+71334	nda deklan
+71358	re bas
+71376	rken 
+71390	bir mod se
+71412	in.
+71420	Deklan
+71436	r d
+71446	mesine yar
+71468	ya kadar
+71488	bas
+71496	ld
+71506	nda, geni
+71526	letilmi
+71542	 canl
+71566	nt
+71572	 kaybolur ve geni
+71608	leme
+71622	er
+71628	evesi g
+71648	nt
+71654	lenir.
+71668	Deklan
+71684	r d
+71694	mesine yar
+71716	ya kadar
+71736	bas
+71744	ld
+71754	nda, otomatik odaklama
+71802	geni
+71812	letilmi
+71828	 canl
+71840	 g
+71850	nt
+71856	de 
+71864	al
+71874	r.
+71882	er
+71888	eveleme 
+71906	zgaras
+71920	 se
+71928	ilir.
+71940	@A03B@
+71954	Se
+71960	ilen zaman diliminde 
+72006	bir i
+72018	lem olmazsa foto. makinesi 
+72076	otomatik kapanacakt
+72116	r.
+72122	Canl
+72132	 SCP
+72142	@A057@ Pil 
+72166	nceli
+72188	 Pil Kasas
+72210	 ile 
+72224	kullan
+72238	lacak batarya tipini 
+72284	se
+72290	iniz.
+72306	vde Pili
+72324	PBH Pili
+72346	vdedeki pil t
+72374	kendikten sonra, pil
+72418	yuvas
+72430	ndaki pil kullan
+72464	lacakt
+72478	r.
+72484	Pil yuvas
+72504	ndaki pil t
+72528	kendikten 
+72552	sonra, g
+72570	vdedeki pil kullan
+72608	lacakt
+72622	r.
+72628	Mikrofon d
+72650	zeyini ayarlay
+72680	n.
+72686	Video 
+72700	ekerken r
+72720	zgar g
+72738	lt
+72752	azalt
+72768	r.
+72774	Video Efekti
+72800	@A008@ modunda video efektini
+72862	etkinle
+72878	tirin veya devre 
+72924	 b
+72930	rak
+72938	n.
+72944	Dahili EVF
+72966	Dahili elektronik viz
+73016	ayarlar
+73032	 ile ilgili men
+73068	@A05F@ G
+73086	sterilen Izgara
+73118	Dahili EVF i
+73144	in 
+73152	er
+73158	eve
+73170	zgaras
+73184	 se
+73192	er.
+73202	@A05F@ s
+73220	ras
+73228	nda etkindir.
+73256	Dahili EVF Stili
+73290	Dahili EVF g
+73320	nt
+73326	leme
+73338	stilini se
+73360	er.
+73368	Stil 1
+73382	Stil 2
+73396	Stil 3
+73410	@A03C@ Bilgi Ayarlar
+73454	@A01A@ 
+73472	esine bas
+73492	ld
+73502	nda
+73520	nt
+73526	lenecek bilgiyi se
+73564	in.
+73574	@A03C@ s
+73592	ras
+73600	nda etkinle
+73624	tirin.
+73638	EVF Otomatik Ge
+73676	EVF'de g
+73694	z alg
+73706	land
+73720	nda 
+73732	monit
+73744	r g
+73756	nt
+73766	nden EVF
+73794	nt
+73804	ne otomatik ge
+73834	in.
+73846	z sens
+73868	 devre d
+73890	 b
+73896	rak
+73904	n.
+73912	@A059@: monit
+73940	r g
+73952	nt
+73962	 ve 
+73974	EVF g
+73990	nt
+74000	 aras
+74012	nda ge
+74036	yapmak i
+74054	in.
+74066	z sens
+74088	 etkinle
+74106	tirin.
+74122	@A03D@: canl
+74148	 g
+74158	nt
+74164	 A
+74172	k/Kapal
+74192	Dahili EVF'deki kare h
+74250	ayarlay
+74266	n.
+74274	oklu Fonks.
+74298	@A066@: Farkl
+74326	 fonksiyonlar
+74360	al
+74372	rmak i
+74386	in bas
+74406	ve kadrandan de
+74442	tirin.
+74456	@A023@: Farkl
+74484	 fonksiyonlar
+74518	al
+74530	rmak i
+74544	in bas
+74564	ve kadrandan de
+74600	tirin.
+74614	Tek Poz Echo
+74642	oklu Echo
+74662	Direkt Fonks.
+74696	k ve G
+74710	lge Kontrol
+74740	ekim s
+74754	ras
+74762	nda @A010@ d
+74790	mesine 
+74808	basarak, AF hedef alan
+74864	se
+74870	ebilirsiniz.
+74896	MTP
+74904	ESP
+74912	NTSC
+74922	PAL
+74930	USB
+74938	RAW
+74946	@A0B2@arge
+74968	@A037@iddle
+74992	@A038@mall
+75014	Super Fine
+75036	Fine
+75046	Normal
+75060	Basic
+75072	SF
+75090	MF
+75096	fps
+75104	100mm
+75116	150mm
+75128	11"
+75136	17"
+75144	4"
+75150	6"
+75156	8"
+75162	10"
+75170	A0
+75176	A1
+75182	A2
+75188	A3
+75194	A4
+75200	A5
+75206	A6
+75212	A7
+75218	A8
+75224	A9
+75230	B0
+75236	B1
+75242	B2
+75248	B3
+75254	B4
+75260	B5
+75266	B6
+75272	B7
+75278	B8
+75284	B9
+75290	4"
+75296	8"
+75304	Panorama
+75322	4"
+75328	10"
+75338	Panorama
+75356	4"
+75362	11"
+75372	Panorama
+75390	4"
+75396	12"
+75406	Panorama
+75424	10cm
+75434	30cm
+75446	Panorama
+75464	89mm
+75474	254mm
+75488	Panorama
+75506	Adobe RGB
+75526	I.S. 1
+75540	I.S. 2
+75554	Slow
+75564	Slow2
+75576	2nd Curtain
+75600	Vivid
+75612	Natural
+75628	JPEG
+75638	RAW+JPEG
+75656	Portrait
+75690	CWB
+75698	3f 0.3EV
+75716	3f 0.5EV
+75734	3f 0.7EV
+75752	3f 1.0EV
+75770	5f 0.3EV
+75788	5f 0.5EV
+75806	5f 0.7EV
+75824	5f 1.0EV
+75842	mode1
+75854	mode2
+75866	mode3
+75878	mode4
+75890	A Mode
+75904	B Mode
+75918	C Mode
+75932	M Value
+75948	FP M Value
+75970	Channel
+75986	Level
+75998	TTL Value
+76018	Auto Value
+76040	FP TTL Value
+76066	Auto
+76076	@A00A@/FP
+76096	S-AF
+76106	C-AF
+76116	S-AF+MF
+76132	C-AF+TR
+76148	AE BKT
+76162	WB BKT
+76176	FL BKT
+76190	ISO BKT
+76206	P/A/S
+76218	Menu
+76228	1/2EV
+76240	1/3EV
+76252	1EV
+76260	Off
+76268	I.S. 3
+76282	sRGB
+76292	@A0B3@/Value
+76318	AEL/S-AF
+76336	AEL
+76344	AEL/AF Start
+76370	AF Start
+76388	----
+76398	@A0B3@Vivid
+76422	@A0B4@Natural
+76450	@A0B5@Portrait
+76480	Ps
+76486	Auto@A006@
+76508	A-B
+76516	G-M
+76524	Hold
+76534	@A0B4@ 4
+76552	@A0B5@ 9
+76570	@A0B6@ 25
+76590	@A0B6@ 100
+76612	Body
+76622	Lens
+76632	Flash
+76644	Acc
+76652	LV-Info
+76668	RAW/JPEG
+76686	@A013@/@A014@
+76714	ART1
+76724	ART2
+76734	ART3
+76744	ART4
+76754	ART5
+76764	ART6
+76774	ART7
+76784	ART8
+76794	BGM
+76802	480p/576p
+76822	Cool
+76832	Joy
+76840	Melancholy
+76862	HDMI
+76872	TTL Auto
+76890	Manual
+76904	FP TTL Auto
+76928	FP Manual
+76948	Level Lo
+76966	Level Mid
+76986	Level Hi
+77004	ch
+77010	@A0B6@/@A0B7@
+77038	AEL/AFL
+77054	@A040@REC
+77074	iAUTO
+77086	P/A/S/M
+77102	ART9
+77112	ART10
+77124	Full
+77134	2f 0.3EV
+77152	2f 0.5EV
+77170	2f 0.7EV
+77188	2f 1.0EV
+77206	7f 0.3EV
+77224	7f 0.5EV
+77242	7f 0.7EV
+77260	2f
+77266	@A0B7@
+77280	@A0B8@
+77294	@A095@ 5300K
+77320	@A097@ 6000K
+77346	@A096@ 7500K
+77372	@A098@ 3000K
+77398	@A099@ 4000K
+77424	Beat
+77434	ART
+77442	SCN
+77450	Adobe
+77462	@A036@ 5500K
+77488	ART BKT
+77504	Motion JPEG 1280
+77538	720
+77546	Motion JPEG 640
+77578	480
+77586	3D
+77592	1:1
+77600	ART11
+77612	MOV 1920
+77630	1080 Fine
+77650	MOV 1920
+77668	1080 Normal
+77692	MOV 1280
+77710	720 Fine
+77728	MOV 1280
+77746	720 Normal
+77768	Bir sonraki foto
+77802	raf
+77810	 kaydetmek 
+77840	in aral
+77856	k s
+77864	resini ayarlar.
+77896	saat
+77910	zland. 
+77926	ekimli Video
+77952	Sadece foto
+77976	raf kaydedin.
+78008	zland
+78024	lm
+78036	ekimli video 
+78066	ve foto
+78082	raf kaydedin.
+78110	J. @A008@ Yard
+78140	mc
+78148	@A059@@A024@
+78174	Sanat Fade
+78196	Suluboya
+78214	@A06F@Suluboya
+78244	Ak
+78250	ll
+78256	 Telefona Ba
+78282	lant
+78294	FlashAir ba
+78318	lant
+78332	 ile g
+78346	rseli
+78360	ak
+78366	ll
+78372	 telefonda g
+78402	nt
+78408	le
+78414	Kart ba
+78430	ka bir cihaz tarafondan ayarland
+78502	Ayarlar de
+78528	emez.
+78540	Kart formatlanamaz.
+78580	Ba
+78586	lant
+78596	 kuruluyor.
+78620	Ba
+78626	lant
+78640	 kesmeyin
+78660	Ba
+78666	lant
+78680	 Kes
+78690	Ba
+78696	lant
+78706	 Ayarlar
+78726	SSID Ayarlar
+78756	lk ayar tamamland
+78794	Bir Defal
+78814	k Ba
+78824	lant
+78838	zel Ba
+78852	lant
+78866	ifre Ayarlar
+78894	Bir defal
+78914	k 
+78920	ifre gir
+78940	ifre de
+78960	ti
+78966	Ba
+78972	lant
+78982	 ba
+78990	lat
+79002	yor
+79010	Foto
+79020	raf-
+79030	.S.
+79038	Video-
+79052	.S.
+79060	Film-I.S. A
+79098	nt
+79104	 Sabitleyici modunu 
+79148	de
+79158	tirin. Foto
+79182	raf ve Video.
+79210	Foto
+79220	raf makinesi hareketini 
+79272	tespit ederek b
+79308	n y
+79316	nlerde 
+79342	nt
+79348	 Sabitleyici fonksiyonlar
+79404	Yaln
+79414	zca Dikey Sabitleme.
+79458	Foto
+79468	raf makinesini yatay tutun
+79524	ve yatay pan s
+79554	ras
+79562	nda
+79574	ekim yap
+79592	n.
+79598	Yaln
+79608	zca Yatay Sabitleme.
+79652	Foto
+79662	raf makinesini dikey tutun
+79718	ve yatay pan s
+79748	ras
+79756	nda
+79768	ekim yap
+79786	n.
+79800	nt
+79806	 Sabitleyici devre d
+79856	Video kay
+79876	t s
+79884	ras
+79892	nda
+79902	Bulan
+79914	kl
+79920	k 
+79926	nleme kullan
+79952	n.
+79958	Video kay
+79978	t s
+79986	ras
+79994	nda b
+80020	nlerde Bulan
+80046	k 
+80052	nleme
+80068	al
+80084	n.
+80090	Foto
+80100	raf ve videolar
+80132	n slayt
+80154	sterisini m
+80178	zik veya efekt
+80210	ile icra edin.
+80240	HDR BKT
+80256	HDR BKT moduna ge
+80296	HDR BKT moduna ge
+80336	HDR BKT moduna ge
+80376	Titre
+80388	im azalt
+80418	 frekans
+80440	 ayarlayarak
+80468	titre
+80480	imi azaltma.
+80506	50 Hz g
+80524	 olan alanlarda
+80558	titre
+80570	im azalt
+80592	r.
+80598	60 Hz g
+80616	 olan alanlarda
+80650	titre
+80662	im azalt
+80684	r.
+80690	Otomatik olarak titre
+80734	imi azalt
+80754	r.
+80760	Titre
+80772	im azalt
+80794	 Kapal
+80812	Gren Filtresi Kapal
+80854	Gren Filtresi: Standard
+80902	Gren Filtresi: Y
+80936	ksek
+80946	Gren Filtresi: D
+80988	Ge
+80994	erli
+81006	zel1
+81018	zel2
+81032	lgeli Alan Ayar
+81066	Parlak Alan Ayar
+81102	Canl
+81112	 G
+81122	nt
+81128	 kare h
+81152	 se
+81160	in.
+81168	Lens 
+81180	.S. 
+81190	nceli
+81206	Lens 
+81218	.S. kullanmak i
+81250	in
+81264	k 
+81272	esini se
+81290	in.
+81298	Gecikme S
+81318	resi
+81328	Deklan
+81344	re bas
+81358	lmas
+81368	 ve 
+81384	rak
+81392	lmas
+81402	 aras
+81414	ndaki s
+81430	re fark
+81454	ayarlay
+81470	n.
+81476	@A077@ moduna ge
+81514	@A07D@'i a
+81538	k/kapal
+81554	 konuma getirir.
+81588	@A07D@'i a
+81612	k/kapal
+81628	 konuma getirir.
+81662	@A078@ moduna ge
+81700	@A07E@'i a
+81724	k/kapal
+81740	 konuma getirir.
+81774	@A07E@'i a
+81798	k/kapal
+81814	 konuma getirir.
+81848	@A079@ moduna ge
+81886	@A07F@'i a
+81910	k/kapal
+81926	 konuma getirir.
+81960	@A07F@'i a
+81984	k/kapal
+82000	 konuma getirir.
+82034	@A07A@ moduna ge
+82072	@A080@'i a
+82096	k/kapal
+82112	 konuma getirir.
+82146	@A080@'i a
+82170	k/kapal
+82186	 konuma getirir.
+82220	BGM 
+82232	e Aktar
+82248	BGM 
+82258	st
+82264	ne yaz
+82278	ld
+82286	BGM Yok
+82302	@A027@1s Anti-
+82332	ok @A004@
+82352	@A027@2s Anti-
+82382	ok @A004@
+82402	@A027@3s Anti-
+82432	ok @A004@
+82452	@A027@4s Anti-
+82482	ok @A004@
+82502	@A027@5s Anti-
+82532	ok @A004@
+82552	@A027@6s Anti-
+82582	ok @A004@
+82602	@A027@7s Anti-
+82632	ok @A004@
+82652	@A027@8s Anti-
+82682	ok @A004@
+82702	@A027@9s Anti-
+82732	ok @A004@
+82752	@A027@10s Anti-
+82784	ok @A004@
+82804	@A027@11s Anti-
+82836	ok @A004@
+82856	@A027@12s Anti-
+82888	ok @A004@
+82908	@A027@13s Anti-
+82940	ok @A004@
+82960	@A027@14s Anti-
+82992	ok @A004@
+83012	@A027@15s Anti-
+83044	ok @A004@
+83064	@A027@16s Anti-
+83096	ok @A004@
+83116	@A027@17s Anti-
+83148	ok @A004@
+83168	@A027@18s Anti-
+83200	ok @A004@
+83220	@A027@19s Anti-
+83252	ok @A004@
+83272	@A027@20s Anti-
+83304	ok @A004@
+83324	@A027@21s Anti-
+83356	ok @A004@
+83376	@A027@22s Anti-
+83408	ok @A004@
+83428	@A027@23s Anti-
+83460	ok @A004@
+83480	@A027@24s Anti-
+83512	ok @A004@
+83532	@A027@25s Anti-
+83564	ok @A004@
+83584	@A027@26s Anti-
+83616	ok @A004@
+83636	@A027@27s Anti-
+83668	ok @A004@
+83688	@A027@28s Anti-
+83720	ok @A004@
+83740	@A027@29s Anti-
+83772	ok @A004@
+83792	@A027@30s Anti-
+83824	ok @A004@
+83844	1f
+83850	5f
+83856	6f
+83862	7f
+83868	8f
+83874	9f
+83880	10f
+83888	11f
+83896	12f
+83904	13f
+83912	14f
+83920	15f
+83928	16f
+83936	17f
+83944	18f
+83952	19f
+83960	20f
+83968	21f
+83976	22f
+83984	23f
+83992	24f
+84000	25f
+84008	26f
+84016	27f
+84024	28f
+84032	29f
+84040	30f
+84048	31f
+84056	32f
+84064	33f
+84072	34f
+84080	35f
+84088	36f
+84096	37f
+84104	38f
+84112	39f
+84120	40f
+84128	41f
+84136	42f
+84144	43f
+84152	44f
+84160	45f
+84168	46f
+84176	47f
+84184	48f
+84192	49f
+84200	50f
+84208	51f
+84216	52f
+84224	53f
+84232	54f
+84240	55f
+84248	56f
+84256	57f
+84264	58f
+84272	59f
+84280	60f
+84288	61f
+84296	62f
+84304	63f
+84312	64f
+84320	65f
+84328	66f
+84336	67f
+84344	68f
+84352	69f
+84360	70f
+84368	71f
+84376	72f
+84384	73f
+84392	74f
+84400	75f
+84408	76f
+84416	77f
+84424	78f
+84432	79f
+84440	80f
+84448	81f
+84456	82f
+84464	83f
+84472	84f
+84480	85f
+84488	86f
+84496	87f
+84504	88f
+84512	89f
+84520	90f
+84528	91f
+84536	92f
+84544	93f
+84552	94f
+84560	95f
+84568	96f
+84576	97f
+84584	98f
+84592	99f
+84600	@A052@ 1 sn
+84624	@A052@ 3 sn
+84648	@A052@ 4 sn
+84672	@A052@ 5 sn
+84696	@A052@ 6 sn
+84720	@A052@ 7 sn
+84744	@A052@ 8 sn
+84768	@A052@ 9 sn
+84792	@A052@ 10 sn
+84818	@A052@ 11 sn
+84844	@A052@ 13 sn
+84870	@A052@ 14 sn
+84896	@A052@ 15 sn
+84922	@A052@ 16 sn
+84948	@A052@ 17 sn
+84974	@A052@ 18 sn
+85000	@A052@ 19 sn
+85026	@A052@ 20 sn
+85052	@A052@ 21 sn
+85078	@A052@ 22 sn
+85104	@A052@ 23 sn
+85130	@A052@ 24 sn
+85156	@A052@ 25 sn
+85182	@A052@ 26 sn
+85208	@A052@ 27 sn
+85234	@A052@ 28 sn
+85260	@A052@ 29 sn
+85286	@A052@ 30 sn
+85312	SSID
+85322	Password
+85340	URL
+85348	http://flashair/
+85382	S-I.S. Off
+85404	S-I.S. 1
+85422	S-I.S. 2
+85440	S-I.S. 3
+85458	M-I.S. Off
+85480	M-I.S. 1
+85498	M-I.S. 2
+85516	HDR BKT
+85532	HDR BKT Off
+85556	50Hz
+85566	60Hz
+85576	ISO LOW
+85592	LOW
+85600	3f 2.0EV
+85618	3f 3.0EV
+85636	5f 2.0EV
+85654	5f 3.0EV
+85672	7f 2.0EV
+85690	ART12
+85702	@A03C@Sev. G
+85728	s.
+85734	0001.jpg
+85764	LV Din. Aral
+85794	 Geni
+85806	let
+85814	HDR
+85822	HDR Kapal
+85844	Bask
+85854	 S
+85860	ras
+85870	Pozland
+85886	rmay
+85896	 ayarla
+85914	nizleme G
+85934	ncellemesi@A040@
+85972	@A068@: AEL/AFL
+86004	@A087@: AEL/AFL
+86036	@A028@: AEL/AFL
+86068	Manuel parlakl
+86098	k ayar
+86112	 i
+86118	in EVF
+86134	Otomatik Parlakl
+86172	 kapal
+86190	konuma getirir.
+86222	Otomatik Parlakl
+86260	 a
+86268	k 
+86276	konuma getirir.
+86310	Parlakl
+86326	k otomatik olarak ayarlan
+86378	r.
+86384	Dahili @A068@ 
+86416	esini kapal
+86446	konuma getirir.
+86478	S modundayken, program kayd
+86534	rma
+86544	kontrol
+86564	 kadranla S.S. ile
+86604	ayn
+86612	 y
+86618	nde ayarlar.
+86644	ISO
+86664	A modundayken, program kayd
+86720	rma
+86730	kontrol
+86750	 kadran arac
+86784	yla 
+86796	diyafram ile ayn
+86830	 y
+86836	nde 
+86848	ayarlar.
+86866	@A011@: Zoom konumunu de
+86920	tirmek
+86940	in ok tu
+86958	 tak
+86972	 tu
+86980	lar
+86988	na
+86996	bas
+87004	n. 
+87014	lem yaln
+87032	zca elektrikli
+87064	zoom lenslerde ge
+87100	erlidir.
+87118	Otomatik 
+87138	.S.
+87146	Tu
+87152	/Kadran/Manivela
+87186	Tu
+87192	, kadran ve manivela
+87236	ayar men
+87262	B. D
+87274	me/Kadran/Kol
+87302	FlashAir
+87324	urdur
+87336	Ba
+87342	latma opsiyonu
+87372	Ba
+87378	land
+87392	Elle Ba
+87408	lat
+87416	Otomatik Ba
+87440	lat
+87448	Efekt
+87460	Tip
+87468	Tip@A00E@
+87488	Tip@A00F@
+87508	Tip@A010@
+87528	Tip@A064@
+87550	ki veya daha fazla taslak g
+87610	nt
+87624	tek bir g
+87648	nt
+87654	 halinde birle
+87684	tirir
+87696	Standart
+87718	lenceli Kareler
+87750	Beyaz
+87762	Beyaz/Beyaz Kenar
+87798	Siyah
+87810	Siyah/
+87826	ne Deli
+87846	Film
+87858	ip
+87864	ak
+87870	@A065@ 3 Foto
+87898	raf
+87906	@A066@ 3 Foto
+87934	raf
+87942	@A065@ 2 Foto
+87970	raf
+87978	@A066@ 2 Foto
+88006	raf
+88014	Dahili @A068@ kullan
+88056	larak
+88070	ak
+88076	ll
+88082	 telefona ba
+88108	lant
+88122	Payla
+88136	m S
+88144	ras
+88154	Payla
+88168	m S
+88176	ras
+88184	 Se
+88192	ildi
+88202	@A041@@A02F@
+88228	@A068@ Ayarlar
+88258	Dahili @A068@ ile ilgili men
+88320	@A068@ Ba
+88340	lant
+88350	 Ayarlar
+88372	zel
+88380	Bir Defal
+88404	Se
+88412	Ak
+88418	ll
+88424	 telefonunuza ba
+88458	lant
+88468	 i
+88474	in.
+88482	Di
+88488	er ak
+88500	ll
+88506	 telefonlarla payla
+88548	m i
+88556	in.
+88568	zg
+88574	n bir 
+88588	ifre kullan
+88612	lacakt
+88626	r.
+88632	Her defas
+88652	nda @A068@
+88676	ba
+88682	lant
+88700	 se
+88708	in.
+88718	zel 
+88728	ifre
+88738	@A021@: ak
+88760	ll
+88766	 telefonunuza ba
+88800	lant
+88810	 i
+88816	in
+88826	ifreyi de
+88850	tir.
+88860	Payla
+88874	m S
+88882	ras
+88894	 S
+88904	rla
+88912	@A068@ Ayarlar
+88946	 S
+88956	rla
+88964	@A005@ Dikkat T
+88996	m @A068@ Ayarlar
+89042	rlan
+89052	yor
+89060	@A068@ Ba
+89080	lant
+89098	 Se
+89108	@A068@ Ba
+89128	lant
+89142	 Haz
+89152	rlan
+89162	yor
+89170	Ak
+89176	ll
+89182	 telefonunuza ba
+89216	lant
+89226	 i
+89232	in.
+89242	Bu yap
+89256	land
+89266	rman
+89276	n bir defa
+89300	yap
+89308	lmas
+89318	 yeterlidir.
+89346	@A068@ ba
+89366	lant
+89380	 daha sonra
+89406	ba
+89412	layacakt
+89430	r.
+89440	tfen ak
+89456	ll
+89466	telefonunuza 'OLYMPUS
+89512	Image Share' uygulamas
+89562	 kurun.
+89580	Uygulama kurulduktan sonra
+89636	@A01F@ tu
+89656	una bas
+89672	n.
+89678	Ak
+89684	ll
+89690	 telefonunuza
+89720	ba
+89726	lan
+89738	yor.
+89750	QR kodunu 'OLYMPUS
+89790	Image Share' ile okutun.
+89840	Sonraki@A019@
+89872	urdur@A030@
+89896	@A068@ Ba
+89916	lat
+89928	yor
+89936	@A068@ Durduruluyor
+89976	Di
+89982	er ak
+89994	ll
+90000	 telefonlarla payla
+90042	m i
+90050	in.
+90060	Mevcut 
+90076	ifre kullan
+90100	ls
+90106	n m
+90118	Mevcut 
+90134	ifreyi kullan
+90162	Yeni 
+90174	ifre kullan
+90198	Di
+90204	er ak
+90216	ll
+90222	 telefonlarla
+90252	payla
+90270	yor.
+90282	QR kodunu 'OLYMPUS
+90322	Image Share' ile okutun
+90372	veya manuel ba
+90402	lan
+90410	n.
+90416	FlashAir kart ba
+90450	lant
+90468	 ayarla.
+90486	Ba
+90492	lant
+90506	 manuel ba
+90528	lat
+90536	r.
+90548	 a
+90556	ld
+90566	nda ba
+90580	lant
+90598	ger
+90606	ekle
+90616	tirir.
+90630	FlashAir 
+90650	al
+90660	yor.
+90672	Dahili Wi-Fi kullan
+90712	lamaz.
+90726	EVF Otomatik D
+90758	me
+90764	EVF'de g
+90782	z alg
+90794	land
+90808	nda
+90818	monit
+90830	r g
+90842	nt
+90852	nden EVF
+90880	nt
+90890	ne otomatik ge
+90928	z sens
+90950	 devre d
+90972	 b
+90978	rak.
+90990	@A075@: monit
+91018	r ekran
+91034	 ile EVF ekran
+91068	aras
+91078	nda ge
+91096	 i
+91102	in.
+91114	z sens
+91136	 etkinle
+91154	tir.
+91164	Bulb/Time Monit
+91202	BULB/TIME se
+91228	ildi
+91238	inde,
+91252	monit
+91268	 ve EVF
+91286	parlakl
+91310	 ayarlar.
+91330	AE BKT
+91344	AE BKT moduna ge
+91382	ART BKT
+91398	ART BKT moduna ge
+91438	Video @A042@
+91464	S-I.S. Kapal
+91492	S-I.S. Otomatik
+91524	Foto
+91534	raf makinesi, makine
+91578	hareketini alg
+91608	layarak
+91626	Sabitleyici ayar
+91664	 se
+91672	er.
+91680	M-I.S. Kapal
+91708	M-I.S. A
+91732	Video kay
+91752	t s
+91760	ras
+91768	nda
+91778	Bulan
+91790	kl
+91796	k 
+91802	nleme kullan
+91828	n.
+91834	@A088@Manivela Fonksiyon
+91884	@A088@Manivelaya atanan
+91934	fonksiyonu se
+91962	in.
+91970	Kadran i
+91988	levini @A088@ ile de
+92034	tirin.
+92050	@A089@: Kadran i
+92084	levi ayarlar
+92114	 yap
+92124	n.
+92132	@A08A@: ISO duyarl
+92182	 @A08B@ ile
+92208	de
+92218	tirin veya Beyaz Dengesi
+92270	modunu @A076@ ile de
+92316	tirin.
+92330	Kadran i
+92348	levini @A088@ ile de
+92394	tirin.
+92410	@A089@: Kadran i
+92444	levi ayarlar
+92474	 yap
+92484	n.
+92492	@A08A@: ISO duyarl
+92542	 @A076@ ile
+92568	de
+92578	tirin veya Beyaz Dengesi
+92630	modunu @A08B@ ile de
+92676	tirin.
+92690	@A024@ d
+92710	mesinin i
+92730	levini @A088@
+92760	ile de
+92778	tirin.
+92794	@A089@: D
+92816	me i
+92826	levi ayarlar
+92856	 yap
+92866	n.
+92874	@A08A@: Video kayd
+92916	 ba
+92924	lat/durdurun.
+92952	AF modunu @A088@ ile de
+93004	tirin.
+93020	Her bir @A089@ ve @A08A@ i
+93074	in
+93082	AF modunu ayarlay
+93118	n.
+93126	izgili
+93140	KURULUM@A025@
+93168	@A06B@Fonksiyon
+93200	AE BKT moduna ge
+93238	AE BKT moduna ge
+93276	AE BKT moduna ge
+93314	ART BKT moduna ge
+93354	ART BKT moduna ge
+93394	ART BKT moduna ge
+93434	@A08C@: AEL/AFL
+93466	AF hedef ve
+93492	AF modu se
+93514	in.
+93522	@A08C@: De
+93548	tir x1/x2
+93568	Pozland
+93584	rmay
+93594	 ayarla
+93610	HDR BKT moduna ge
+93650	@A08C@: Bir geni
+93684	letme 
+93698	er
+93704	evesi
+93726	nt
+93732	leyin ve foto
+93760	raf
+93776	inden b
+93796	tmek i
+93810	in bas
+93824	n.
+93830	@A08C@: Canl
+93856	 K
+93862	lavuz modu i
+93888	in
+93896	bas
+93904	n, geri d
+93924	nmek i
+93938	in tekrar bas
+93966	n.
+93972	@A08C@ Tu
+93992	una bas
+94018	olarak @A02B@ ile 
+94056	ekim
+94066	@A08C@ Tu
+94086	una bas
+94112	olarak @A02C@ ile 
+94150	ekim
+94160	@A08C@ Tu
+94180	una bas
+94206	olarak @A02D@ ile 
+94244	ekim
+94254	@A08C@ Tu
+94274	una bas
+94300	olarak @A02E@ ile 
+94338	ekim
+94348	AF ALAN 
+94368	modunun hedef
+94398	konumu
+94412	MF moduna ge
+94444	@A08C@:
+94462	Film Kayd
+94490	Ba
+94496	lat/Durdur
+94518	@A08C@ Tek dokunu
+94554	 BA.
+94564	@A08C@ G
+94586	nt
+94592	 derinli
+94618	nizleme.
+94636	Kadran ile 
+94662	RAW+JPEG/JPEG 
+94694	kalite modlar
+94728	aras
+94738	nda de
+94756	im
+94762	@A08C@ Kaydetmeden foto
+94810	raf
+94822	test et.
+94840	@A08C@: Tu
+94862	 @A02F@ ve @A030@.
+94900	AE BKT Off
+94922	Elle
+94932	Otomatik
+94952	ki veya daha fazla taslak g
+95012	nt
+95026	tek bir g
+95050	nt
+95056	 halinde birle
+95086	tirir
+95100	Dokunmatik 
+95124	ekim
+95134	MF modunda odak
+95168	halkas
+95190	evirerek
+95210	bir mod se
+95232	in.
+95240	MF modunda odak halkas
+95294	evrildi
+95310	inde g
+95328	nt
+95334	 otomatik 
+95358	olarak b
+95384	lmez.
+95396	Odak halkas
+95420	 MF modunda 
+95452	nd
+95466	rken g
+95484	nt
+95494	 oto. 
+95518	tmek i
+95532	in A
+95544	k'
+95550	 se
+95558	in.
+95566	Vurgulama
+95586	MF modunda odak halkas
+95640	evrildi
+95656	inde
+95668	konu 
+95680	er
+95686	evesi g
+95706	nt
+95712	lenmez.
+95728	MF modunda odak halkas
+95782	evrildi
+95798	inde konu 
+95820	er
+95826	evesi 
+95850	nt
+95856	lenir. 
+95874	Bu fonksiyon odaklamay
+95926	ayarlaman
+95946	za yard
+95962	mc
+95968	 olur.
+95982	@A01D@: Oda
+96008	 ayarlarken konu
+96046	er
+96052	evesini g
+96072	stermek i
+96092	in bas
+96106	n.
+96116	er
+96122	eveyi gizlemek i
+96156	in
+96164	tekrar bas
+96186	n.
+96192	@A023@: Oda
+96218	 ayarlarken konu
+96256	er
+96262	evesini g
+96282	stermek i
+96302	in bas
+96316	n.
+96326	er
+96332	eveyi gizlemek i
+96366	in
+96374	tekrar bas
+96396	n.
+96402	@A08C@: Oda
+96428	 ayarlarken konu
+96466	er
+96472	evesini g
+96492	stermek i
+96512	in bas
+96526	n.
+96536	er
+96542	eveyi gizlemek i
+96576	in
+96584	tekrar bas
+96606	n.
+96612	@A06D@: Oda
+96638	 ayarlarken konu
+96676	er
+96682	evesini g
+96702	stermek i
+96722	in bas
+96736	n.
+96746	er
+96752	eveyi gizlemek i
+96786	in
+96794	tekrar bas
+96816	n.
+96822	Vurgulama Ayarlar
+96860	Vurgulama g
+96888	nt
+96900	ayarlar
+96920	 d
+96926	zenler.
+96942	Beyaz
+96954	Siyah
+96966	Odak vurgulama s
+97000	ras
+97008	nda 
+97020	odaklanan alanlar beyaz 
+97072	renkle vurgulan
+97104	r.
+97110	Odak vurgulama s
+97144	ras
+97152	nda 
+97164	odaklanan alanlar siyah 
+97216	renkle vurgulan
+97248	r.
+97254	@A029@: Zoom konumunu de
+97308	tirmek
+97328	in ok tu
+97346	 tak
+97360	 tu
+97368	lar
+97376	na
+97384	bas
+97392	n. 
+97402	lem yaln
+97420	zca elektrikli
+97452	zoom lenslerde ge
+97488	erlidir.
+97506	AF hedef ve
+97532	AF modu se
+97554	in.
+97562	AF hedef ve
+97588	AF modu se
+97610	in.
+97618	@A068@: De
+97644	tir x1/x2
+97664	@A087@: De
+97690	tir x1/x2
+97710	@A028@: De
+97736	tir x1/x2
+97756	@A068@: Farkl
+97784	 fonksiyonlar
+97818	al
+97830	rmak i
+97844	in bas
+97864	ve kadrandan de
+97900	tirin.
+97914	@A06E@: Farkl
+97942	 fonksiyonlar
+97976	al
+97988	rmak i
+98002	in bas
+98022	ve kadrandan de
+98058	tirin.
+98072	@A06F@: Farkl
+98100	 fonksiyonlar
+98134	al
+98146	rmak i
+98160	in bas
+98180	ve kadrandan de
+98216	tirin.
+98230	@A06C@: Farkl
+98258	 fonksiyonlar
+98292	al
+98304	rmak i
+98318	in bas
+98338	ve kadrandan de
+98374	tirin.
+98388	@A06D@: Farkl
+98416	 fonksiyonlar
+98450	al
+98462	rmak i
+98476	in bas
+98496	ve kadrandan de
+98532	tirin.
+98546	@A087@: Farkl
+98574	 fonksiyonlar
+98608	al
+98620	rmak i
+98634	in bas
+98654	ve kadrandan de
+98690	tirin.
+98704	@A028@: Farkl
+98732	 fonksiyonlar
+98766	al
+98778	rmak i
+98792	in bas
+98812	ve kadrandan de
+98848	tirin.
+98862	Pozland
+98878	rmay
+98888	 ayarla
+98904	Pozland
+98920	rmay
+98930	 ayarla
+98946	Pozland
+98962	rmay
+98972	 ayarla
+98988	Pozland
+99004	rmay
+99014	 ayarla
+99030	Seviye g
+99052	nt
+99058	lemesini
+99078	etkinle
+99094	tirmek i
+99112	in bas
+99126	n.
+99134	Devre d
+99154	 b
+99160	rakmak
+99180	in tekrar bas
+99208	n.
+99216	@A03C@ s
+99234	ras
+99242	nda etkindir.
+99270	HDR'yi a
+99290	k/kapal
+99306	 konuma getirir.
+99340	HDR'yi a
+99360	k/kapal
+99376	 konuma getirir.
+99410	HDR'yi a
+99430	k/kapal
+99446	 konuma getirir.
+99480	HDR'yi a
+99500	k/kapal
+99516	 konuma getirir.
+99550	HDR'yi a
+99570	k/kapal
+99586	 konuma getirir.
+99620	HDR'yi a
+99640	k/kapal
+99656	 konuma getirir.
+99690	HDR'yi a
+99710	k/kapal
+99726	 konuma getirir.
+99760	HDR'yi a
+99780	k/kapal
+99796	 konuma getirir.
+99830	HDR'yi a
+99850	k/kapal
+99866	 konuma getirir.
+99900	@A068@: Bir geni
+99934	letme 
+99948	er
+99954	evesi
+99976	nt
+99982	leyin ve foto
+100010	raf
+100026	inden b
+100046	tmek i
+100060	in bas
+100074	n.
+100080	@A087@: Bir geni
+100114	letme 
+100128	er
+100134	evesi
+100156	nt
+100162	leyin ve foto
+100190	raf
+100206	inden b
+100226	tmek i
+100240	in bas
+100254	n.
+100260	@A068@: Canl
+100286	 K
+100292	lavuz modu i
+100318	in
+100326	bas
+100334	n, geri d
+100354	nmek i
+100368	in tekrar bas
+100396	n.
+100402	@A087@: Canl
+100428	 K
+100434	lavuz modu i
+100460	in
+100468	bas
+100476	n, geri d
+100496	nmek i
+100510	in tekrar bas
+100538	n.
+100544	@A028@: Canl
+100570	 K
+100576	lavuz modu i
+100602	in
+100610	bas
+100618	n, geri d
+100638	nmek i
+100652	in tekrar bas
+100680	n.
+100686	@A07D@'i a
+100710	k/kapal
+100726	 konuma getirir.
+100760	@A07D@'i a
+100784	k/kapal
+100800	 konuma getirir.
+100834	@A07D@'i a
+100858	k/kapal
+100874	 konuma getirir.
+100908	@A07D@'i a
+100932	k/kapal
+100948	 konuma getirir.
+100982	@A07D@'i a
+101006	k/kapal
+101022	 konuma getirir.
+101056	@A07D@'i a
+101080	k/kapal
+101096	 konuma getirir.
+101130	@A07E@'i a
+101154	k/kapal
+101170	 konuma getirir.
+101204	@A07E@'i a
+101228	k/kapal
+101244	 konuma getirir.
+101278	@A07E@'i a
+101302	k/kapal
+101318	 konuma getirir.
+101352	@A07E@'i a
+101376	k/kapal
+101392	 konuma getirir.
+101426	@A07E@'i a
+101450	k/kapal
+101466	 konuma getirir.
+101500	@A07E@'i a
+101524	k/kapal
+101540	 konuma getirir.
+101574	@A07F@'i a
+101598	k/kapal
+101614	 konuma getirir.
+101648	@A07F@'i a
+101672	k/kapal
+101688	 konuma getirir.
+101722	@A07F@'i a
+101746	k/kapal
+101762	 konuma getirir.
+101796	@A07F@'i a
+101820	k/kapal
+101836	 konuma getirir.
+101870	@A07F@'i a
+101894	k/kapal
+101910	 konuma getirir.
+101944	@A07F@'i a
+101968	k/kapal
+101984	 konuma getirir.
+102018	@A080@'i a
+102042	k/kapal
+102058	 konuma getirir.
+102092	@A080@'i a
+102116	k/kapal
+102132	 konuma getirir.
+102166	@A080@'i a
+102190	k/kapal
+102206	 konuma getirir.
+102240	@A080@'i a
+102264	k/kapal
+102280	 konuma getirir.
+102314	@A080@'i a
+102338	k/kapal
+102354	 konuma getirir.
+102388	@A080@'i a
+102412	k/kapal
+102428	 konuma getirir.
+102462	Canl
+102472	 G
+102486	m dinamik aral
+102524	geni
+102534	letilmez.
+102554	HDR, HDR1 veya HDR2
+102596	konumundayken Canl
+102634	 G
+102654	dinamik aral
+102684	 geni
+102696	letilir.
+102714	2.0EV pozlama fark
+102752	na sahip
+102772	3 foto
+102786	raf 
+102796	ekilir.
+102812	3.0EV pozlama fark
+102850	na sahip
+102870	3 foto
+102884	raf 
+102894	ekilir.
+102910	2.0EV pozlama fark
+102948	na sahip
+102968	5 foto
+102982	raf 
+102992	ekilir.
+103008	3.0EV pozlama fark
+103046	na sahip
+103066	5 foto
+103080	raf 
+103090	ekilir.
+103106	2.0EV pozlama fark
+103144	na sahip
+103164	7 foto
+103178	raf 
+103188	ekilir.
+103204	Ayn
+103212	 anda farkl
+103236	 pozlamalara sahip
+103276	4 foto
+103290	raf 
+103300	ekilir ve bu foto
+103336	raflar
+103352	otomatik olarak y
+103388	ksek kontrastl
+103422	tek bir g
+103446	nt
+103452	de birle
+103470	tirilir.
+103488	Ayn
+103496	 anda farkl
+103520	 pozlamalara sahip
+103560	4 foto
+103574	raf 
+103584	ekilir ve bu foto
+103620	raflar
+103636	otomatik olarak s
+103672	per y
+103684	ksek
+103696	kontrastl
+103716	 tek bir g
+103742	nt
+103748	de
+103756	birle
+103768	tirilir.
+103786	HDR'yi kapal
+103812	 konuma getirir.
+103846	AF ALAN
+103864	modunun hedef
+103894	konumu
+103908	AF ALAN
+103926	modunun hedef
+103956	konumu
+103970	@A05F@ d
+103990	melerinin fonksiyonlar
+104040	 dahilinde de
+104072	tirilmez.
+104092	 dahilinde @A05F@ d
+104134	melerinin
+104156	fonksiyonlar
+104186	u 
+104192	ekilde de
+104216	tirilir:
+104236	@A060@: BKT ve @A061@: @A062@.
+104298	 kol fonksiyonunu kapat
+104346	r.
+104352	@A078@ kadran i
+104384	levlerini de
+104414	tirir.
+104430	@A079@: 
+104448	zel i
+104460	lev ayarlar
+104490	@A07A@: @A07B@ ISO'yu, @A066@ WB'yi ayarlar.
+104580	@A078@ kadran i
+104612	levlerini de
+104642	tirir.
+104658	@A079@: 
+104676	zel i
+104688	lev ayarlar
+104718	@A07A@: @A066@ ISO'yu, @A07B@ WB'yi ayarlar.
+104808	@A078@ d
+104828	me i
+104838	levlerini de
+104868	tirir.
+104884	@A079@: 
+104902	zel i
+104914	lev ayarlar
+104944	@A07A@: @A021@ ISO'yu, @A059@ WB'yi ayarlar.
+105034	@A078@ d
+105054	me i
+105064	levlerini de
+105094	tirir.
+105110	@A079@: 
+105128	zel i
+105140	lev ayarlar
+105170	@A07A@: @A059@ ISO'yu, @A021@ WB'yi ayarlar.
+105260	@A078@, AF modunu 
+105298	zel AF
+105314	ayarlar
+105330	 @A079@ ve @A07A@
+105368	aras
+105378	nda de
+105396	tirir.
+105410	MF moduna ge
+105442	MF moduna ge
+105474	@A068@:
+105492	Film Kayd
+105520	Ba
+105526	lat/Durdur
+105548	@A06E@:
+105566	Film Kayd
+105594	Ba
+105600	lat/Durdur
+105622	@A06F@:
+105640	Film Kayd
+105668	Ba
+105674	lat/Durdur
+105696	@A06D@:
+105714	Film Kayd
+105742	Ba
+105748	lat/Durdur
+105770	@A087@:
+105788	Film Kayd
+105816	Ba
+105822	lat/Durdur
+105844	@A028@:
+105862	Film Kayd
+105890	Ba
+105896	lat/Durdur
+105918	@A068@ Tek dokunu
+105954	 BA.
+105964	@A066@ Tek dokunu
+106000	 BA.
+106010	@A087@ Tek dokunu
+106046	 BA.
+106056	@A068@: Oda
+106082	 ayarlarken konu
+106120	er
+106126	evesini g
+106146	stermek i
+106166	in bas
+106180	n.
+106190	er
+106196	eveyi gizlemek i
+106230	in
+106238	tekrar bas
+106260	n.
+106266	@A06E@: Oda
+106292	 ayarlarken konu
+106330	er
+106336	evesini g
+106356	stermek i
+106376	in bas
+106390	n.
+106400	er
+106406	eveyi gizlemek i
+106440	in
+106448	tekrar bas
+106470	n.
+106476	@A06F@: Oda
+106502	 ayarlarken konu
+106540	er
+106546	evesini g
+106566	stermek i
+106586	in bas
+106600	n.
+106610	er
+106616	eveyi gizlemek i
+106650	in
+106658	tekrar bas
+106680	n.
+106686	@A06C@: Oda
+106712	 ayarlarken konu
+106750	er
+106756	evesini g
+106776	stermek i
+106796	in bas
+106810	n.
+106820	er
+106826	eveyi gizlemek i
+106860	in
+106868	tekrar bas
+106890	n.
+106896	@A066@: Oda
+106922	 ayarlarken konu
+106960	er
+106966	evesini g
+106986	stermek i
+107006	in bas
+107020	n.
+107030	er
+107036	eveyi gizlemek i
+107070	in
+107078	tekrar bas
+107100	n.
+107106	@A087@: Oda
+107132	 ayarlarken konu
+107170	er
+107176	evesini g
+107196	stermek i
+107216	in bas
+107230	n.
+107240	er
+107246	eveyi gizlemek i
+107280	in
+107288	tekrar bas
+107310	n.
+107316	@A028@: Oda
+107342	 ayarlarken konu
+107380	er
+107386	evesini g
+107406	stermek i
+107426	in bas
+107440	n.
+107450	er
+107456	eveyi gizlemek i
+107490	in
+107498	tekrar bas
+107520	n.
+107526	@A068@ G
+107548	nt
+107554	 derinli
+107580	nizleme.
+107598	@A087@ G
+107620	nt
+107626	 derinli
+107652	nizleme.
+107670	Kadran ile
+107694	RAW+JPEG/JPEG
+107724	kalite modlar
+107756	aras
+107766	nda de
+107784	im
+107790	Kadran ile
+107814	RAW+JPEG/JPEG
+107844	kalite modlar
+107876	aras
+107886	nda de
+107904	im
+107910	@A068@ Kaydetmeden foto
+107958	raf
+107970	test et.
+107988	@A087@ Kaydetmeden foto
+108036	raf
+108048	test et.
+108066	@A011@ bas
+108092	 tutma: 
+108110	ekim modu
+108136	ras
+108144	nda dokunmatik panel
+108190	al
+108198	mas
+108210	 kilitlemek/a
+108238	mak i
+108250	in
+108256	@A029@ bas
+108282	 tutma: 
+108300	ekim modu
+108326	ras
+108334	nda dokunmatik panel
+108380	al
+108388	mas
+108400	 kilitlemek/a
+108428	mak i
+108440	in
+108446	@A068@: Tu
+108468	 @A02A@ ve @A02B@.
+108506	@A06E@: Tu
+108528	 @A02A@ ve @A02B@.
+108566	@A06F@: Tu
+108588	 @A02A@ ve @A02B@.
+108626	@A06D@: Tu
+108648	 @A02A@ ve @A02B@.
+108686	@A087@: Tu
+108708	 @A02A@ ve @A02B@.
+108746	@A028@: Tu
+108768	 @A02A@ ve @A02B@.
+108806	Dahili @A017@
+108834	Yerle
+108846	ik @A02E@ Kay
+108874	t Seviyesi
+108896	@A080@+@A081@
+108924	@A078@Manivela Fonksiyon
+108974	Dahili @A023@
+109002	Dahili @A02E@ Kay
+109038	t Seviyesi
+109060	Lens Veri Ayar
+109090	 Olu
+109100	tur
+109108	@A026@
+109124	@A05C@Fonksiyon
+109156	@A043@Renk Olu
+109186	turucu
+109200	@A044@e-Portre
+109230	Her bir lensin AF konumunun
+109288	her bir hedef noktas
+109334	 ayarlar.
+109354	Kapal
+109366	 konuma ayarland
+109404	nda, 
+109418	Oto. Odaklama i
+109450	in ye
+109462	il hedef 
+109486	er
+109492	evesi g
+109512	nt
+109518	lenmez.
+109534	C-AF s
+109548	ras
+109556	nda hedef
+109578	aktivite seviyesini ayarlar.
+109642	k konuma ayarland
+109682	nda,
+109694	Canl
+109704	 G
+109718	m dinamik
+109740	aral
+109754	 geni
+109766	letilir.
+109784	HDR i
+109796	in ayarlan
+109818	r.
+109824	Kapal
+109836	 konuma ayarland
+109874	nda
+109884	@A081@ d
+109904	melerinin i
+109928	levleri
+109946	@A080@'de de
+109976	tirilemez.
+109998	@A078@Manivelaya atanan
+110048	fonksiyonu se
+110076	in.
+110084	Her bir mikrofonun seviyesini
+110146	ayarlar.
+110164	Ps
+110170	Lo
+110176	 / ayd
+110190	nlatmal
+110206	 sahnelerde 
+110236	ekimde bulan
+110262	kl
+110272	 azalt
+110286	r.
+110296	ld
+110302	z I
+110318	@A045@Kilit
+110342	@A07D@'i a
+110366	k/kapal
+110382	 konuma getirir.
+110416	@A07E@'i a
+110440	k/kapal
+110456	 konuma getirir.
+110490	@A07F@'i a
+110514	k/kapal
+110530	 konuma getirir.
+110564	@A080@'i a
+110588	k/kapal
+110604	 konuma getirir.
+110638	@A066@ Kaydetmeden foto
+110686	raf
+110698	test et.
+110716	A-B : WB BKT Off
+110750	G-M : WB BKT Off
+110784	FL BKT Off
+110806	HDR1
+110816	HDR2
+110826	ISO BKT Off
+110850	mode5
+110862	ART BKT Off
+110886	ART BKT On
+110908	A-B : WB BKT
+110934	A-B : 3f 2Step
+110964	A-B : 3f 4Step
+110994	A-B : 3f 6Step
+111024	G-M : WB BKT
+111050	G-M : 3f 2Step
+111080	G-M : 3f 4Step
+111110	G-M : 3f 6Step
+111140	BKT
+111148	BKT moduna ge
+111180	BKT moduna ge
+111212	BKT moduna ge
+111244	BKT moduna ge
+111276	BKT moduna ge
+111308	BKT moduna ge
+111340	BKT moduna ge
+111372	BKT moduna ge
+111404	BKT moduna ge
+111436	@A03F@@A019@
+111462	Foto
+111472	raf modunu se
+111500	erken
+111514	@A03F@ olarak ayarlanmayan 
+111572	eleri
+111586	atlayabilirsiniz.
+111622	Yak
+111630	nla
+111642	r/Uzakla
+111668	@A067@ 2 Foto
+111696	raf
+111720	zen
+111728	Kompozit 
+111748	ekime haz
+111768	rlanmak 
+111792	in deklan
+111814	r d
+111824	mesine 
+111842	bir kez bas
+111866	n.
+111872	Kompozit 
+111892	ekime haz
+111916	Kompozit 
+111936	ekim Ayarlar
+111964	Kompozit 
+111984	ekim ayar
+112004	 men
+112024	Aral
+112034	kl
+112044	ekimle olu
+112066	turulan 
+112094	nt
+112100	leri birle
+112122	tirin.
+112136	Karma Mod
+112156	Ayd
+112164	nl
+112170	k yap
+112182	Karanl
+112196	k yap
+112210	ki rsmn pksln kr
+112248	tr 
+112258	ve krm rsm i
+112284	n 
+112292	dha prlk oln
+112318	 kllnr.
+112336	ki rsmn pksln 
+112368	kr
+112378	tr ve krm rsm 
+112414	n dha krnlk oln
+112446	 kllnr.
+112462	Temek Pozlama S
+112494	resi
+112512	nt
+112518	 ba
+112528	na pozlama s
+112554	resi.
+112568	Pozlama s
+112588	resi ve diyafram, temel 
+112640	pozlama de
+112662	erinizi belirleyecektir.
+112712	Bulb/Time/Canl
+112742	 Kompozit 
+112766	modunda manuel odaklama 
+112822	in A
+112834	k 
+112842	esini se
+112860	in.
+112868	Bulb/Time/Canl
+112898	 Kompozit 
+112922	modunda EVF ve ekran 
+112968	parlakl
+112992	 ayarlar.
+113012	@A074@ ba
+113036	yken film 
+113058	ekilemez.
+113078	Kapat@A019@
+113102	Son @A068@@A025@
+113142	meye bas
+113160	ld
+113170	nda 
+113182	kadranlar a
+113212	dakilere atan
+113240	r:
+113248	@A060@: ISO
+113274	@A053@: BA
+113302	meye bas
+113320	ld
+113330	nda 
+113342	kadranlar a
+113372	dakilere atan
+113400	r:
+113408	@A060@: BA
+113432	@A053@: ISO
+113462	me bas
+113480	 tutuldu
+113498	unda, 
+113514	otomatik odaklama devre d
+113576	kal
+113584	r ve odaklama d
+113618	menin 
+113634	bas
+113642	ld
+113652	 noktada sabitlenir.
+113694	AEL/AFL'yi etkinle
+113732	tirmek 
+113754	in d
+113766	meye bas
+113784	n.
+113790	Video Kayd
+113820	Ba
+113826	lat
+113834	n/Durdurun.
+113858	Alan derinli
+113884	i 
+113890	nizlemesi.
+113912	Tek dokunu
+113934	la BA.
+113948	AF hedefi ve
+113976	AF modunu se
+114002	in.
+114010	AF Alan modunun hedef
+114056	konum ayar
+114080	MF moduna ge
+114110	 yap
+114120	n.
+114126	Kadran ile RAW+JPEG/JPEG 
+114180	kalite modlar
+114208	 aras
+114220	nda ge
+114238	 yap
+114248	n.
+114254	Kaydetmeden foto
+114288	raf
+114296	 test edin.
+114320	@A07B@'i a
+114344	k/kapal
+114360	 konuma getirir.
+114394	@A07C@'i a
+114418	k/kapal
+114434	 konuma getirir.
+114468	@A07D@'i a
+114492	k/kapal
+114508	 konuma getirir.
+114542	@A07E@'i a
+114566	k/kapal
+114582	 konuma getirir.
+114616	@A054@/@A055@ aras
+114654	nda ge
+114672	 yapar.
+114688	Pozlama telafisini ayarlay
+114742	n.
+114748	Canl
+114758	 K
+114764	lavuz moduna ge
+114796	mek i
+114808	in
+114816	bas
+114824	n, geri d
+114844	nmek i
+114858	in tekrar bas
+114886	n.
+114892	x1/x2 aras
+114914	nda ge
+114932	 yapar.
+114948	Bir geni
+114966	letme 
+114980	er
+114986	evesi
+115008	nt
+115014	leyin ve i
+115036	indeki foto
+115060	raf
+115080	tmek i
+115094	in tekrar bas
+115122	n.
+115128	HDR'yi a
+115148	k/kapal
+115164	 konuma getirir.
+115198	BKT moduna ge
+115230	 yap
+115240	n.
+115246	Farkl
+115258	 fonksiyonlar
+115292	al
+115304	rmak i
+115318	in bas
+115338	ve fonksiyonu kadranla de
+115394	tirin.
+115408	Odaklamay
+115428	 ayarlarken konu 
+115468	er
+115474	evesini g
+115494	stermek i
+115514	in bas
+115528	n.
+115538	er
+115544	eveyi gizlemek i
+115578	in 
+115588	tekrar bas
+115610	n.
+115616	@A021@: Film Kaydi Ba
+115660	lat
+115670	@A020@: Foto
+115696	raf 
+115706	ek
+115714	@A059@: Video @A076@
+115758	zel Zamanlay
+115790	@A093@ Anti-
+115816	ok @A004@
+115836	Ayarlar@A01A@
+115864	@A00A@ men
+115908	nt
+115914	lemeyi 
+115932	veya gizlemeyi se
+115968	in.
+115978	oklu Fonksiyon Ayarlar
+116026	@A03F@ 
+116044	esini uygulayarak 
+116082	oklu 
+116096	fonksiyona dahil edilecek 
+116152	fonksiyonlar
+116178	 belirleyin.
+116204	Video+Foto
+116226	raf Modu
+116244	Video+Foto
+116266	raf modu i
+116288	in 
+116298	foto
+116308	raf 
+116318	nceli
+116330	i belirleyin.
+116360	ncelik videoya verilmi
+116406	tir.
+116418	Video 
+116432	ekilirken @A067@ foto
+116476	raf 
+116490	ekilebilir.
+116516	Foto
+116526	raf g
+116542	nt
+116548	 kalitesi s
+116576	rl
+116586	r. 
+116596	@A070@ s
+116614	ras
+116622	nda etkindir.
+116652	ncelik foto
+116676	rafa verilmi
+116702	tir.
+116714	Videolar foto
+116742	raf 
+116752	ekiminden 
+116778	nce ve sonra kaydedilir.
+116828	Elektronik Yak
+116858	nla
+116870	rma H
+116888	Elektr. yak
+116912	nla
+116920	. lensi 
+116940	kullan
+116958	rken foto. ve video 
+117002	modlar
+117016	 i
+117022	in yak
+117036	nl. h
+117052	 ayarlan
+117070	r.
+117076	Foto
+117086	raf-
+117096	.S. Kapal
+117118	Video-I.S. Kapal
+117154	Kompozit 
+117174	ekime haz
+117194	rlan
+117204	yor. 
+117222	tfen bekleyin.
+117252	Bekleme d
+117274	mesi: 
+117288	ekim 
+117302	modundayken 
+117330	dokunmatik panel i
+117368	levini 
+117386	kilitlemek/kilidini a
+117430	mak i
+117442	in.
+117450	Elektronik yak
+117480	nla
+117492	rma 
+117504	lensi kullan
+117530	rken, yak
+117550	nla
+117562	rma 
+117574	konumunu de
+117602	tirmek i
+117620	in 
+117630	ok tu
+117642	lar
+117650	na bas
+117664	n.
+117670	@A060@ISO/@A053@WB
+117708	@A060@WB/@A053@ISO
+117746	Hay
+117758	Evet
+117772	ksek 
+117786	z. 
+117794	ekim
+117808	per y
+117820	ksek 
+117834	z. g
+117848	nt
+117860	olu
+117868	turmak i
+117886	in sekiz foto
+117914	raf 
+117928	ekip birle
+117950	tirir. Tripod gereklidir.
+118006	ksek 
+118020	z. 
+118028	ekim sa
+118044	lar.
+118056	Deklan
+118076	 b
+118082	rakt
+118092	ktan sonraki
+118120	gecikme s
+118140	resini se
+118160	in.
+118168	@A00A@
+118182	arj S
+118194	resi
+118204	Deklan
+118220	r b
+118228	rak
+118236	lmas
+118246	 ile fla
+118272	yeniden 
+118290	arj olmas
+118310	 aras
+118322	ndaki
+118340	reyi se
+118356	in.
+118368	zel fla
+118384	 kullan
+118400	yorsan
+118420	bu ayara gerek yoktur.
+118466	Sens
+118476	r Kayd
+118490	rma + Dijital
+118518	Yaln
+118528	zca Sens
+118546	r Kayd
+118560	rma
+118576	nt
+118582	 sabitleme hem sens
+118628	kayd
+118638	rmayla hem de dijital olarak
+118698	yap
+118710	r.
+118724	nt
+118730	 sabitleme yaln
+118762	zca sens
+118786	kayd
+118796	rmayla yap
+118822	r, dijital olarak
+118860	ger
+118868	ekle
+118878	tirilmez.
+118912	rma/Bit H
+118938	Kare H
+118958	Klip Kay
+118976	t S
+118984	resi
+118994	Yava
+119004	/H
+119010	zl
+119020	ekim
+119030	Video 
+119044	zellik Ayarlar
+119076	Video g
+119096	nt
+119102	 boyutunu,
+119140	rma y
+119152	ntemini ve bit oran
+119200	ayarlay
+119216	n.
+119222	Video 
+119246	rl
+119258	Video @A01A@
+119284	ALL-I s
+119310	rma geli
+119328	mi
+119334	 d
+119340	zenleme 
+119364	lemi i
+119378	in en iyi foto
+119408	raf kalitesini 
+119442	sunar, ancak dosya boyutu 
+119496	ok 
+119514	k olacakt
+119534	r.
+119540	En y
+119550	ksek bit h
+119576	na sahip IPB 
+119620	rma en iyi foto
+119652	raf kalitesini 
+119686	sunar, ancak dosya boyutu 
+119740	ok 
+119758	k olacakt
+119778	r.
+119788	ksek bit h
+119814	na sahip IPB 
+119858	rma daha iyi foto
+119894	raf kalitesi
+119922	sunar, ancak dosya boyutu 
+119986	k olacakt
+120006	r.
+120012	Standart bit h
+120046	na sahip IPB 
+120090	rma standart foto
+120126	raf kalitesini
+120158	sunar ve dosya boyutu 
+120204	ok
+120220	k olmayacakt
+120246	r.
+120252	Say
+120260	 ne kadar b
+120288	k olursa,
+120310	foto
+120320	raf o kadar d
+120348	zg
+120354	n olur.
+120370	Standart video kayd
+120410	 i
+120416	in 
+120426	Klipler 
+120446	esini kapat
+120470	n.
+120476	Kliplerim klas
+120510	nde saklanacak 
+120544	olan k
+120558	sa video klipleri kaydetmek 
+120622	in Klipler 
+120648	esini a
+120666	n.
+120672	Video standart h
+120706	zl
+120712	 oynatma
+120736	in kaydedilecek.
+120770	Video yava
+120796	ekim oynatma
+120828	in kaydedilecek.
+120864	Ses kaydedilmeyecek.
+120906	Video h
+120922	zl
+120932	ekim oynatma
+120964	in kaydedilecek.
+121000	Ses kaydedilmeyecek.
+121042	Kliplerim'e eklendi.
+121084	Standart video olarak kaydedildi.
+121152	Bu Kliplerim klas
+121192	 dolu.
+121206	Kliplerim klas
+121240	ndeki klibi ta
+121276	n.
+121282	Bir Kliplerim klas
+121324	ne 
+121334	e ta
+121350	n.
+121356	Yeni bir Kliplerim klas
+121408	ne ekleyin.
+121432	Kliplerim klas
+121466	nden kald
+121490	n.
+121496	Kliplerim
+121516	Kliplerim'e Ekle
+121550	Kliplerim'i Oynat
+121586	Kliplerim'i D
+121616	 Aktar
+121630	Kliplerim'in T
+121660	m G
+121672	Kliplerim'i Sil
+121704	@A003@ Kliplerim klas
+121756	n i
+121764	indeki 
+121786	m 
+121794	eler silinecek.
+121830	ral. Yen. D
+121854	zenle
+121866	Hedefi 
+121882	nc. Tan
+121898	mla
+121906	Sonraki klibiniz, bu Kliplerim 
+121976	esinden farkl
+122004	 olan video 
+122034	zelliklerine sahip bir klip 
+122094	de
+122100	ilse, bu 
+122122	eyi takip edecektir.
+122164	Klip Efektleri
+122194	1. Pop Sanat
+122220	2. A
+122232	k Ton
+122244	3. 
+122254	ne Deli
+122274	4. 
+122282	apraz 
+122298	lem
+122306	5. Sepya
+122324	6. Eski Film
+122350	Efektler 
+122370	nizleme ile g
+122402	lemez.
+122416	Ge
+122426	 Efekti
+122442	Solgun
+122456	Kaydedilen Klip Sesi
+122498	Kay
+122506	tl
+122512	 Klip Ses D
+122536	zeyi
+122548	nizleme
+122570	a Aktarmay
+122592	 Ba
+122600	lat
+122608	Toplam Klip Uzunlu
+122654	tfen bekleyin.
+122688	leme uzunlu
+122712	u toplam video
+122744	uzunlu
+122758	unun 2 kat. e
+122786	it olacakt
+122808	r.
+122814	Tamamland
+122838	ptal Edildi
+122862	PCM Kayded. @A01D@ Ba
+122906	l.
+122918	k se
+122928	ildi
+122938	inde, Olympus PCM
+122976	Kaydedici Ba
+123002	lant
+123016	na g
+123026	re foto.
+123046	makinesi ayarlar
+123084	 optimize eder.
+123118	oklu Pozlama
+123144	@A00A@ RC Modu
+123174	@A017@Fi
+123192	e Tak
+123214	 gerektirmeyen bir mikrofon
+123272	ba
+123278	larken Kapal
+123310	esini
+123324	se
+123330	in.
+123338	Ops. Yak. Kadr. Fonk.
+123384	ste
+123392	e ba
+123406	 yakalama kadran
+123440	na
+123448	atanan fonksiyonu se
+123490	in.
+123498	Kulakl
+123512	klar ba
+123532	yken ses seviyesini
+123574	ayarlamak i
+123598	in kadran
+123618	 @A07B@
+123638	evirin.
+123654	Kadran @A07B@ kadran fonksiyon
+123718	ayarlar
+123738	 takip eder.
+123764	Selfie Yard
+123788	mc
+123800	Selfie 
+123816	ekmek i
+123832	in monit
+123864	nd
+123874	lmesi durumunda
+123908	monit
+123924	n ayarlar
+123948	 yap
+123958	n.
+123964	Selfie Yard
+123988	mc
+123998	 ayarlar
+124020	monit
+124032	r d
+124040	nd
+124050	ld
+124060	nde
+124070	de etkinle
+124092	meyecektir.
+124116	Selfie Yard
+124140	mc
+124150	 kontrolleri
+124178	monit
+124190	rde g
+124206	nt
+124212	lenir ve 
+124234	Canl
+124244	 G
+124254	nt
+124260	 bir ayna 
+124292	nt
+124302	 olarak g
+124326	nt
+124332	lenir.
+124346	@A004@Deklan
+124374	r Fonks.
+124392	@A004@ modundayken fonksiyonu
+124454	deklan
+124470	r d
+124480	mesine atay
+124504	n.
+124510	Deklan
+124526	r d
+124536	mesine basarak
+124568	foto
+124578	raf 
+124588	ekin.
+124600	Deklan
+124616	r d
+124626	mesine basarak
+124658	video kayd
+124684	 Ba
+124692	lat
+124700	n/Durdurun.
+124724	Kulakl
+124738	k Ses Seviyesi
+124768	Kulakl
+124782	k ses seviyesini ayarlar.
+124836	Kay
+124844	t ses seviyesi
+124876	etkilenmeyecektir.
+124914	@A008@ Bilgi Ayarlar
+124958	@A008@ modunda g
+124996	nt
+125002	lenen
+125016	bilgiyi se
+125038	in.
+125046	Zaman Kodu
+125068	Sessiz @A045@ 
+125098	al
+125106	ma
+125116	zl
+125122	 Uyku Modu
+125144	Canl
+125154	 G
+125164	nt
+125170	 modunda de
+125194	ilken,
+125210	foto
+125220	raf makinesi birka
+125262	saniye i
+125280	inde uyku moduna girer.
+125328	Men
+125336	 Geri 
+125356	rma
+125364	En son men
+125386	 se
+125394	imini geri 
+125428	r.
+125434	Geri 
+125464	rla
+125472	Zaman Kodu Ayarlar
+125512	Zaman kodu ayarlar
+125554	 yap
+125564	n.
+125570	Zaman Kodu Modu
+125608	en Kare
+125624	DF Yok
+125638	Zaman fark
+125660	 ve ger
+125676	ek
+125684	kay
+125692	t s
+125700	resini ayarlar.
+125738	renin kesinlikle do
+125778	ru olmas
+125800	gerekti
+125816	i geli
+125830	mi
+125836	 d
+125842	zenleme
+125864	lemlerinde kullan
+125904	r.
+125910	Zaman fark
+125932	 ve ger
+125948	ek
+125956	kay
+125964	t s
+125972	resini ayarlamaz.
+126008	Hesapla
+126024	Kay
+126032	tta 
+126042	al
+126054	Serbest 
+126072	al
+126084	Yaln
+126094	zca video kaydedilirken
+126144	zaman kodunu sayar.
+126184	Video kaydedilmedi
+126222	i s
+126230	rada ve
+126248	foto
+126258	raf makinesi kapal
+126296	yken de
+126314	zaman kodunu sayar.
+126354	Ba
+126360	lang
+126372	 S
+126378	resi
+126396	rla
+126404	Manuel Giri
+126434	ncel Saat
+126454	Saat:dakika:saniye:kareyi
+126508	00:00:00:00: olarak ayarlay
+126564	n.
+126570	Saat, dakika, saniye ve kareyi
+126634	manuel olarak ayarlay
+126678	n.
+126684	Saat, dakika, saniyeyi g
+126734	ncel saate
+126758	ve kareyi 00'a ayarlay
+126804	n.
+126810	Vurgulama Rengi
+126846	rm
+126858	Sar
+126868	Odak vurgulama s
+126902	ras
+126910	nda 
+126922	odaklanan alanlar k
+126962	rm
+126978	renkle vurgulan
+127010	r.
+127016	Odak vurgulama s
+127050	ras
+127058	nda 
+127070	odaklanan alanlar sar
+127120	renkle vurgulan
+127152	r.
+127158	Vurgulama Yo
+127184	unlu
+127198	Odaklanan alanlar hafif
+127252	vurgulan
+127270	r.
+127276	Odaklanan alanlar vurgulan
+127330	r.
+127336	Odaklanan alanlar belirgin
+127394	ekilde vurgulan
+127426	r.
+127440	n. Parlakl
+127462	k Ayar
+127478	Canl
+127488	 G
+127498	nt
+127504	 foto
+127516	raf
+127526	parlakl
+127550	 ayarlamaz.
+127574	Vurgu g
+127598	rl
+127612	 art
+127622	rmak
+127638	in Canl
+127654	 G
+127664	nt
+127670	 foto
+127682	raf 
+127694	parlakl
+127718	 ayarlar. Canl
+127762	nt
+127768	 foto
+127780	raf
+127792	n ve son 
+127814	foto
+127824	raf
+127832	n parlakl
+127856	 de
+127868	ecektir.
+127886	Ard
+127898	k 
+127904	ekim, zamanlay
+127946	ekim
+127958	ve h
+127968	zland
+127984	lm
+127996	ekim ayarlar
+128030	yapar.
+128044	@A047@ Sessiz @A048@
+128086	@A049@ Sessiz @A048@
+128128	@A04A@ Sessiz @A048@
+128170	@A04B@ Sessiz @A048@
+128212	@A04C@ Sessiz @A048@
+128254	@A04D@ Sessiz @A048@
+128296	@A047@ Anti-
+128322	ok @A04E@
+128342	@A04A@ Anti-
+128368	ok @A04E@
+128388	@A04B@ Anti-
+128414	ok @A04E@
+128434	@A04C@ Anti-
+128460	ok @A04E@
+128480	@A04D@ Anti-
+128506	ok @A04E@
+128526	Anti-
+128538	ok@A04E@/Sessiz@A048@
+128582	Sessiz 
+128598	ekim veya anti-
+128630	ok
+128640	ekim i
+128654	in ayarlar
+128676	 yap
+128686	n.
+128692	Sessiz@A048@
+128718	Sessiz 
+128734	ekimi etkinle
+128762	tirir.
+128778	Fla
+128786	 veya @A004@ 
+128814	al
+128822	maz.
+128834	Deklan
+128854	 b
+128860	rakt
+128870	ktan sonra
+128894	gecikme s
+128914	resini se
+128934	in.
+128942	Anti-
+128954	ok@A04E@
+128972	Enstantane h
+129002	 @A079@ veya daha
+129048	k oldu
+129062	unda, birinci deklan
+129112	perdesi elektroni
+129148	e ge
+129162	 yapar. 
+129182	Deklan
+129202	 b
+129208	rakt
+129218	ktan sonra
+129242	gecikme s
+129262	resini se
+129282	in.
+129298	lt
+129304	 Azaltma@A048@
+129334	Sessiz 
+129350	ekim s
+129364	ras
+129372	nda g
+129388	lt
+129398	azaltma 
+129416	al
+129424	maz.
+129434	Sessiz 
+129450	ekim s
+129464	ras
+129472	nda da
+129496	lt
+129502	 azaltma 
+129522	al
+129530	acakt
+129542	r.
+129558	lt
+129564	 azaltma haz
+129590	rl
+129606	lemi s
+129620	ras
+129628	nda bile deklan
+129668	sesi duyulur.
+129696	Manuel 
+129712	ekim
+129722	Bulb/Time
+129742	Canl
+129752	 Kompozit
+129772	Di
+129778	erleri
+129792	Gece 
+129804	ekimi - Manuel 
+129836	ekim
+129846	Gece 
+129858	ekimi - Bulb/Time
+129894	Gece 
+129906	ekimi - Canl
+129932	 Kompozit
+129952	Gece 
+129964	ekimi - Di
+129986	er
+129998	k1
+130010	k2
+130016	Canl
+130026	 G
+130036	nt
+130042	 parlakl
+130068	pozlama ayarlar
+130100	na yans
+130116	yacakt
+130130	r.
+130146	nt
+130152	lenen g
+130172	nt
+130182	n 
+130190	parlakl
+130210	 son
+130230	nt
+130240	n parlakl
+130264	yla ayn
+130284	r.
+130290	Canl
+130300	 G
+130310	nt
+130316	 parlakl
+130338	 pozlama
+130358	ayarlar
+130374	na yans
+130390	maz ve
+130406	en iyi g
+130428	nt
+130434	leme i
+130448	in ayarlan
+130470	r. 
+130480	Son g
+130496	nt
+130502	 parlakl
+130524	 de
+130536	ir.
+130544	Canl
+130554	 G
+130568	m parlakl
+130592	, pozlama
+130614	ayarlar
+130634	 yans
+130646	tmaz ve karanl
+130682	sahneler i
+130704	in kare h
+130728	 azalt
+130742	larak
+130756	optimize edilir.
+130792	Son g
+130808	nt
+130814	 parlakl
+130836	 de
+130848	ir.
+130856	Video Oynat
+130880	Ba
+130886	tan Oynat
+130918	 sil @A004@
+130942	@A005@ Tek videonun otomatik
+131002	olarak ayr
+131024	lm
+131032	 t
+131038	m dosyalar
+131064	 siler.
+131080	Yaln
+131090	zca 3D Foto
+131114	raflar
+131128	 G
+131138	nt
+131144	le
+131150	@A078@ oynatma modlar
+131194	nda 
+131206	ge
+131216	 yapar. Mod kadran
+131254	nda 
+131268	ekim modlar
+131296	 se
+131304	mek i
+131316	in @A079@ 
+131340	olarak ayarlay
+131370	n. @A008@ kullanmak
+131416	in @A07A@ olarak ayarlay
+131466	n.
+131472	@A03D@ G
+131494	nt
+131500	 Se
+131508	imi
+131516	Canl
+131526	 G
+131536	nt
+131542	 ve S
+131554	per Kontrol 
+131582	Paneli aras
+131606	nda ge
+131624	 yapar. 
+131648	z sens
+131666	 devre d
+131698	rak
+131706	ld
+131716	nda, EVF ve arka monit
+131762	r 
+131770	aras
+131780	nda ge
+131798	 yapar.
+131816	zel1
+131828	zel2
+131838	@A056@Fonksiyon
+131870	@A08D@Fonksiyon
+131902	@A094@Fonksiyon
+131934	@A06E@@A043@
+131960	@A06E@@A041@
+131986	@A07A@ H fps
+132012	@A07A@ L fps
+132038	@A07B@ ile ard
+132072	k 
+132078	ekimde
+132094	bir saniyede 
+132122	ekilen
+132138	foto
+132148	raf say
+132172	 ayarlay
+132190	n.
+132196	@A07C@ ile ard
+132230	k 
+132236	ekimde
+132252	bir saniyede 
+132280	ekilen
+132296	foto
+132306	raf say
+132330	 ayarlay
+132348	n.
+132354	@A036@@A020@
+132380	@A06F@@A022@
+132406	FullHD
+132420	HD
+132426	@A018@/@A019@/@A0BA@
+132468	mode6
+132480	@A055@uper @A0B8@arge
+132524	60p
+132532	50p
+132540	30p
+132548	25p
+132556	24p
+132564	MOV 1920
+132582	1080 Fine
+132602	MOV 1920
+132620	1080 ALL-Intra
+132650	MOV 1920
+132668	1080 Super Fine
+132700	MOV 1920
+132718	1080 Fine
+132738	MOV 1920
+132756	1080 Normal
+132780	MOV 1280
+132798	720 ALL-Intra
+132826	MOV 1280
+132844	720 Super Fine
+132874	MOV 1280
+132892	720 Fine
+132910	MOV 1280
+132928	720 Normal
+132950	MOV 1920
+132968	1080
+132978	FHD
+132986	A-I
+132994	ALL-Intra
+133014	@A106@
+133028	1080p
+133044	K @A017@
+133062	Gren azaltma devam ediyor.
+133122	tfen bekleyin.
+133152	Odak farkl
+133186	 ayarla
+133202	Tahmini Biti
+133228	 Zaman
+133244	Tahmini Ba
+133266	l. Zaman
+133288	ekim say
+133314	 ayarla
+133330	EVF ekran modlar
+133364	 aras
+133376	nda
+133386	ge
+133396	 yapar. Yaln
+133422	zca EVF'den
+133456	nt
+133462	leme s
+133476	ras
+133484	nda etkindir.
+133512	Ayarlama efektleri deklan
+133578	rakmadan 
+133598	nce ger
+133614	ek zamanl
+133638	olarak onaylanabilir.
+133682	SLR OVF'sinden g
+133720	ld
+133736	ekliyle sim
+133760	le edilmi
+133780	 g
+133790	nt
+133802	Ayarlama efektleri deklan
+133868	rakmadan 
+133888	nce onaylanamaz.
+133922	Kare H
+133942	Dar
+133950	S-OVF
+133962	Dahili EVF'de kare h
+134012	 se
+134020	in.
+134028	EVF g
+134044	nt
+134050	leme modunu se
+134080	in.
+134088	EVF i
+134100	in arka monit
+134128	r AF
+134140	Hedefleme Tu
+134166	unu etkinle
+134190	tirin
+134204	veya devre d
+134234	 b
+134240	rak
+134248	n.
+134254	Video Ayarlar
+134288	zl. Video Uzunlu
+134326	AF Hedefleme Tu
+134362	BA D
+134372	zeyleri 
+134390	ok y
+134400	ksek.
+134414	Devam edilsin mi?
+134450	Geni
+134462	Focus BKT Off
+134490	Focus BKT On
+134516	Focus BKT
+134536	HighSpeed 120fps
+134570	4K
+134576	Tercih edilen 
+134606	ekim fonksiyonlar
+134650	zl
+134656	, kolay eri
+134680	im i
+134690	in kaydedilebilir.
+134728	Ayarlar
+134744	 ba
+134752	lat
+134760	r.
+134768	zel 
+134778	ifre
+134788	Belgelendirme
+134816	@A01C@: ak
+134838	ll
+134844	 telefonunuza ba
+134878	lant
+134888	 i
+134894	in
+134904	ifreyi de
+134928	tirin.
+134942	@A002@ Tek videonun otomatik
+135002	olarak ayr
+135024	lm
+135032	 t
+135038	m dosyalar
+135064	 siler.
+135080	Ge
+135086	ersiz
+135098	MF Kilit Mekanizmas
+135140	MF kilit mekanizmas
+135184	 ayarlar.
+135204	Ge
+135210	erli
+135220	Pop Sanat@A04F@
+135252	Pop Sanat@A050@
+135284	Soluk ve A
+135308	k Renk@A04F@
+135334	Soluk ve A
+135358	k Renk@A050@
+135384	Grenli Film@A04F@
+135420	Grenli Film@A050@
+135460	ne Deli
+135476	i@A04F@
+135496	ne Deli
+135512	i@A050@
+135532	ne Deli
+135548	i@A051@
+135564	Diorama@A04F@
+135592	Diorama@A050@
+135622	apraz 
+135638	lem@A04F@
+135660	apraz 
+135676	lem@A050@
+135696	Dramatik Ton@A04F@
+135734	Dramatik Ton@A050@
+135772	Anahtar 
+135790	izgi@A04F@
+135812	Anahtar 
+135830	izgi@A050@
+135852	Suluboya@A04F@
+135882	Suluboya@A050@
+135912	Nostalji@A04F@
+135942	Nostalji@A050@
+135972	Nostalji@A051@
+136006	smi Renkler@A04F@
+136046	smi Renkler@A050@
+136086	smi Renkler@A051@
+136122	@A062@Pop Sanat
+136154	@A052@Yumu
+136176	ak Odak
+136192	@A068@Diorama
+136220	@A069@
+136234	apraz 
+136250	lem
+136258	@A054@Hassas Sepya
+136296	@A06B@Dramatik Ton
+136334	@A06C@Anahtar 
+136364	izgi
+136374	@A06D@Suluboya
+136404	@A06E@Nostalji
+136434	@A06F@K
+136450	smi Renkler
+136474	@A055@Pop Sanat@A04F@
+136518	@A056@Pop Sanat@A050@
+136562	@A057@Soluk ve A
+136598	k Renk@A04F@
+136624	@A058@Soluk ve A
+136660	k Renk@A050@
+136686	@A059@Grenli Film@A04F@
+136734	@A05A@Grenli Film@A050@
+136782	@A05B@
+136798	ne Deli
+136814	i@A04F@
+136830	@A05C@
+136846	ne Deli
+136862	i@A050@
+136878	@A05D@
+136894	ne Deli
+136910	i@A051@
+136926	@A05E@Diorama@A04F@
+136966	@A05F@Diorama@A050@
+137006	@A060@
+137020	apraz 
+137036	lem@A04F@
+137056	@A061@
+137070	apraz 
+137086	lem@A050@
+137106	@A062@Dramatik Ton@A04F@
+137156	@A063@Dramatik Ton@A050@
+137206	@A064@Anahtar 
+137236	izgi@A04F@
+137258	@A065@Anahtar 
+137288	izgi@A050@
+137310	@A066@Suluboya@A04F@
+137352	@A067@Suluboya@A050@
+137394	@A068@Nostalji@A04F@
+137436	@A069@Nostalji@A050@
+137478	@A06A@Nostalji@A051@
+137520	@A06B@K
+137536	smi Renkler@A04F@
+137572	@A06C@K
+137588	smi Renkler@A050@
+137624	@A06D@K
+137640	smi Renkler@A051@
+137676	@A06E@Yumu
+137698	ak Odak Efekti
+137728	@A06F@
+137744	ne Deli
+137760	i Efekti
+137778	@A070@Beyaz Kenar Efekti
+137828	@A071@
+137842	er
+137848	eve Efekti
+137870	@A072@Y
+137886	ld
+137892	z I
+137906	 Efekti
+137922	@A073@Bulan
+137946	kl
+137952	k Efekti: 
+137974	st ve Alt
+137994	@A074@Bulan
+138018	kl
+138024	k Efekti: Sol ve Sa
+138066	@A075@G
+138082	lge Efekti: Sol ve Sa
+138128	@A076@G
+138144	lge Efekti: 
+138170	st ve Alt
+138190	@A0B1@ Sessiz @A074@
+138232	Belgelendirmeyi g
+138268	sterir.
+138284	Odak Uzakl
+138312	Renk Profili 1
+138342	Renk Profili 2
+138372	Renk Profili 3
+138402	@A0B2@Renk Profili 1
+138444	@A0B3@Renk Profili 2
+138486	@A0B4@Renk Profili 3
+138532	m renkler@A028@
+138564	Tek renk@A028@
+138594	Monokrom Profili 1
+138632	Monokrom Profili 2
+138670	Monokrom Profili 3
+138708	@A0B5@Monokrom Profili 1
+138758	@A0B6@Monokrom Profili 2
+138808	@A0B7@Monokrom Profili 3
+138858	Yok
+138866	Sar
+138876	Turuncu
+138896	rm
+138908	Eflatun
+138924	Mavi
+138934	Camg
+138944	be
+138954	Ye
+138960	il
+138966	Sar
+138974	-Ye
+138982	il
+138988	Film Gren Efekti
+139022	Film Gren Efekti Kapal
+139070	Film Gren Efekti D
+139116	Film Gren Efekti Orta
+139160	Film Gren Efekti Y
+139198	ksek
+139208	Orta Ton Alan Ayar
+139254	k ve G
+139268	lge@A01A@
+139288	Orta Ton@A01A@
+139320	zel Modlar
+139342	 S
+139352	rla/Ata
+139368	Foto
+139378	raf makinesi ayarlar
+139438	rlay
+139448	n veya mevcut ayarlar
+139500	zel Modlara atay
+139534	n.
+139542	zel Mod C1
+139566	zel Mod C2
+139590	zel Mod C3
+139614	zel Mod C4
+139636	C1 ayarlar
+139658	 uygulans
+139678	n m
+139686	? Mevcut 
+139708	foto
+139718	raf makinesi ayarlar
+139764	n 
+139774	zerine yaz
+139796	lacakt
+139810	r.
+139816	C2 ayarlar
+139838	 uygulans
+139858	n m
+139872	Mevcut foto
+139896	raf makinesi ayarlar
+139950	zerine yaz
+139972	lacakt
+139986	r.
+139992	C3 ayarlar
+140014	 uygulans
+140034	n m
+140048	Mevcut foto
+140072	raf makinesi ayarlar
+140126	zerine yaz
+140148	lacakt
+140162	r.
+140168	C4 ayarlar
+140190	 uygulans
+140210	n m
+140224	Mevcut foto
+140248	raf makinesi ayarlar
+140302	zerine yaz
+140324	lacakt
+140338	r.
+140344	Mod kadran
+140366	 konumlar
+140386	 C3 
+140398	ve C4'e atanacak 
+140434	ekim 
+140448	modlar
+140466	 se
+140474	in.
+140482	Mod Kadran
+140504	 C3
+140512	Mod Kadran
+140534	 C4
+140542	Lens Bilgisi Ayarlar
+140586	Exif ve stabilizasyon
+140632	optimizasyonu i
+140664	in veri aktar
+140700	ile uyumsuz lens bilgisini girin.
+140768	Lens bilgisi ayarlar
+140810	na 
+140820	gitmek i
+140838	in d
+140850	meye bas
+140868	n.
+140874	Lens Bilgisi Olu
+140908	tur
+140916	Lens Bilgisi D
+140946	zenle
+140958	Lens Bilgisi Sil
+140992	Lens Ad
+141010	Diyafram De
+141034	eri
+141042	Onay i
+141056	areti kald
+141078	r@A026@
+141094	Lens bilgisi kullan@A026@
+141148	zerine yaz
+141170	Yeni giri
+141190	 olarak kaydet
+141220	@A012@ Kadran Fonksiyonu
+141270	Pozlama telafisi kadran
+141318	na 
+141328	atanacak fonksiyonu se
+141374	in.
+141382	Sessiz@A048@Modu Ayarlar
+141436	zin Ver
+141454	zin Verme
+141474	Sessiz 
+141490	ekime izin verir.
+141528	Deklan
+141548	 b
+141554	rakman
+141574	ard
+141582	ndan gecikme s
+141612	resini 
+141630	se
+141636	in.
+141644	Sanat Efekti Kapal
+141684	Renk Filtresi: Yok
+141722	Renk Filtresi: Sar
+141762	Renk Filtresi: Turuncu
+141808	Renk Filtresi: K
+141842	rm
+141854	Renk Filtresi: Ye
+141890	il
+141896	Normal Monokrom
+141928	Sepya Monokrom
+141958	Mavi Monokrom
+141986	Mor Monokrom
+142012	Ye
+142018	il Monokrom
+142046	rak/@A01E@/G
+142076	nt
+142082	 Sabitleyici
+142108	C. B
+142118	rak/@A019@/G
+142148	nt
+142154	 Sabitleyici
+142180	Deklan
+142196	r b
+142204	rakma, ard
+142230	k 
+142240	ekim ve g
+142264	nt
+142270	 sabitleyici 
+142300	men
+142322	a aktarma ba
+142348	ar
+142362	Videolar uzak deklan
+142412	modundayken 
+142438	ekilemez.
+142458	Foto
+142468	raf Modunu se
+142496	in.
+142504	Noktasal 
+142534	@A03F@ se
+142554	ili 
+142566	e i
+142574	in, AF hedef 
+142608	lgesinde 
+142634	m yap
+142646	lacakt
+142660	r.
+142666	N:Yok
+142678	N:Normal
+142696	ART1@A04F@
+142718	ART1@A050@
+142740	ART3@A04F@
+142762	ART3@A050@
+142784	ART5@A04F@
+142806	ART5@A050@
+142828	ART6@A04F@
+142850	ART6@A050@
+142872	ART6@A051@
+142894	ART7@A04F@
+142916	ART7@A050@
+142938	ART8@A04F@
+142960	ART8@A050@
+142982	ART10@A04F@
+143006	ART10@A050@
+143030	ART11@A04F@
+143054	ART11@A050@
+143078	ART12@A04F@
+143102	ART12@A050@
+143126	ART13@A04F@
+143150	ART13@A050@
+143174	ART13@A051@
+143198	ART14@A04F@
+143222	ART14@A050@
+143246	ART14@A051@
+143270	C3
+143276	C4
+143282	Color Profile 1
+143314	Color Profile 2
+143346	Color Profile 3
+143378	Mono Profile 1
+143408	Mono Profile 2
+143438	Mono Profile 3
+143468	Kopyala
+143484	Se
+143490	ileni Kopyala
+143518	Yeni Dosya
+143542	st
+143548	ne Yaz
+143562	Sualt
+143576	@A076@Sualt
+143606	ral
+143614	 odaklama hatas
+143660	nt
+143666	 birle
+143680	tirme ba
+143698	ar
+143708	z oldu.
+143724	@A004@G
+143744	nt
+143750	 Modu
+143762	USB ba
+143776	lant
+143790	 PCM kaydedici
+143826	in kay. ba
+143848	latma/durdurma,
+143882	kamera kay. ba
+143912	latma/durdurma
+143948	leminden ba
+143974	ms
+143980	z kal
+143992	r.
+143998	USB ba
+144012	lant
+144026	 PCM kaydedici,
+144060	kamera kay. ba
+144090	latma/durdurma
+144126	lemiyle ayn
+144150	 anda otomatik
+144182	olarak kayd
+144206	 ba
+144214	lat
+144222	r/durdurur.
+144246	Slate tonu yok.
+144278	USB ba
+144292	lant
+144306	 PCM
+144318	Kaydedici, video kayd
+144370	ras
+144378	nda @A044@ d
+144406	mesi bas
+144432	tutuldu
+144448	unda bir slate tonu
+144490	olu
+144498	turacakt
+144516	r.
+144522	Kamera kay. sesi ve r
+144566	zgar
+144586	lt
+144600	 azaltma fonksiyonu
+144642	ge
+144648	ersiz olacak ve kay
+144688	t sesi
+144704	otomatik olarak Olympus PCM
+144762	Kaydedici taraf
+144794	ndan ayarlanacakt
+144830	r.
+144836	Kay
+144844	t sesi, kamera kay.
+144886	sesi ile ayarlanabilir.
+144934	@A004@Gren Filtresi
+144976	ekimden sonra d
+145008	zenlenecek
+145032	video kayd
+145058	n 
+145064	ekimi i
+145080	in bu
+145094	@A004@ 
+145110	zel modu se
+145134	in.
+145146	ksek ISO h
+145168	zlar
+145178	nda video
+145200	kayd
+145210	 i
+145216	in gren azaltma
+145254	zeyini se
+145274	in.
+145286	ksek ISO h
+145308	zlar
+145318	nda foto
+145336	raf
+145348	ekimi i
+145364	in gren azaltma
+145402	zeyini se
+145422	in.
+145430	Senkronize @A01C@Kay.
+145474	Slate Tonu
+145496	Kamera Kay. Sesi
+145530	@A077@Mat Renk
+145560	@A0A3@Kart Dolu
+145592	@A0A4@Kart Dolu
+145624	@A0A3@/@A0A4@Kart Dolu
+145670	@A0A3@Kart Dolu
+145702	@A0A4@Kart Dolu
+145734	@A0A3@Poz Yok
+145762	@A0A4@Poz Yok
+145790	@A0A3@Foto
+145812	raf Hatas
+145834	@A0A4@Foto
+145856	raf Hatas
+145878	@A0A3@Kart Hatas
+145914	@A0A4@Kart Hatas
+145950	@A0A3@/@A0A4@Kart Hatas
+146000	@A0A3@Hata / @A0A4@Korumal
+146056	@A0A3@Hata / @A0A4@Dolu
+146104	@A0A3@Yazma Korumas
+146146	@A0A4@Yazma Korumas
+146188	@A0A3@/@A0A4@Yazma Korumas
+146244	@A0A3@Korumal
+146272	 / @A0A4@Hata
+146300	@A0A3@Korumal
+146328	 / @A0A4@Dolu
+146356	@A0A3@Dolu / @A0A4@Hata
+146404	@A0A3@Dolu / @A0A4@Korumal
+146460	Yeni Klas
+146480	re Ge
+146496	 Yap
+146506	ld
+146516	uraya Ge
+146538	 Yap
+146548	ld
+146554	: @A0A3@
+146574	uraya Ge
+146596	 Yap
+146606	ld
+146612	: @A0A4@
+146630	@A0A3@Klas
+146652	r Olu
+146664	turulam
+146680	yor
+146688	@A0A4@Klas
+146710	r Olu
+146722	turulam
+146738	yor
+146746	Klas
+146756	r Olu
+146768	turulam
+146784	yor
+146792	@A0A3@Klas
+146814	r Se
+146824	ilemiyor
+146842	@A0A4@Klas
+146864	r Se
+146874	ilemiyor
+146892	@A0A3@G
+146912	nt
+146918	 D
+146924	zenlenemiyor
+146950	@A0A4@G
+146970	nt
+146976	 D
+146982	zenlenemiyor
+147008	@A0A3@Dikkat G
+147042	nt
+147048	 Se
+147056	ilemiyor
+147074	@A0A4@Dikkat G
+147108	nt
+147114	 Se
+147122	ilemiyor
+147140	@A0A5@Foto
+147162	raf Hatas
+147184	@A0A6@Foto
+147206	raf Hatas
+147228	@A0A3@BGM Yok
+147256	@A0A4@BGM Yok
+147284	@A0A3@Bas
+147304	lam
+147312	yor
+147320	@A0A4@Bas
+147340	lam
+147348	yor
+147356	Olympus pil 
+147382	nerilir
+147398	A1. AF/MF
+147418	A2. AF/MF
+147438	A3. AF/MF
+147458	C1. Deklan
+147482	r/@A013@/IS
+147506	C2. Deklan
+147530	r/@A013@/IS
+147554	D1. Ekran/@A001@/PC
+147594	D2. Ekran/@A001@/PC
+147634	D3. Ekran/@A001@/PC
+147674	D4. Ekran/@A001@/PC
+147714	E1. Poz/ISO/BULB/@A077@
+147762	E2. Poz/ISO/BULB/@A077@
+147810	E3. Poz/ISO/BULB/@A077@
+147862	H1. Kaydet/Sil
+147892	H2. Kaydet/Sil
+147922	I. EVF
+147936	J1. @A003@ Yard
+147968	mc
+147976	J2. @A003@ Yard
+148008	mc
+148016	Video Men
+148042	Temel ve ayr
+148068	nt
+148078	 video
+148094	ayarlar
+148110	 i
+148116	in men
+148134	C-AF Hassasiyeti
+148168	Hedefinizin hareketine 
+148218	ba
+148228	 olarak C-AF kilit 
+148270	hassasiyetini ayarlay
+148314	n.
+148324	ksek
+148346	AF S
+148360	rlay
+148376	AF aral
+148400	 belirledi
+148422	iniz
+148436	ekilde s
+148458	rlar.
+148472	Mesafe yakla
+148500	kt
+148506	r.
+148516	rakma 
+148530	nceli
+148546	Obje odaklanmam
+148580	 oldu
+148592	unda
+148604	bile deklan
+148630	re bas
+148644	labilir.
+148662	Obje odaklanmam
+148696	 oldu
+148708	unda
+148720	deklan
+148736	re bas
+148750	lamaz.
+148764	Mesafe Ayarlar
+148796	Ayar 1
+148810	Ayar 2
+148824	Ayar 3
+148838	Ye
+148844	il Oto. Odaklama
+148880	hedef 
+148894	er
+148900	evesinin
+148928	nt
+148934	lenmesini ayarlar.
+148974	er
+148980	eveyi g
+149000	nt
+149006	lemez.
+149022	er
+149028	eveyi g
+149048	nt
+149054	ler.
+149064	Deklan
+149080	r d
+149090	mesine yar
+149118	bas
+149130	yken 
+149142	er
+149148	eveyi g
+149168	nt
+149174	ler.
+149186	n ayarl
+149202	 MF
+149212	n ayarl
+149228	 MF mesaf.
+149252	n ayarl
+149268	 MF i
+149280	in mesafeyi ayarlar.
+149324	Mesafe yakla
+149352	kt
+149358	r.
+149366	n Ayarl
+149382	 MF moduna ge
+149414	 yapar.
+149430	IS'yi A
+149448	k/Kapal
+149464	 olarak de
+149490	tirir.
+149506	IS modlar
+149526	 aras
+149538	nda ge
+149556	 yapmak
+149578	in a
+149594	 bas
+149604	n ve kadran
+149632	evirin.
+149648	AF S
+149662	rlay
+149680	 A
+149688	k/Kapal
+149708	olarak de
+149732	tirir.
+149748	Mesafe se
+149768	mek i
+149780	in a
+149796	 bas
+149812	ve kadran
+149836	evirin.
+149852	Hedefleme i
+149876	in @A042@ 
+149898	er
+149904	evesini
+149930	nt
+149936	lemek 
+149950	zere bas
+149968	n.
+149976	Hedef belirlendi
+150010	inde, @A042@ modunu
+150052	etkinle
+150068	tirmek i
+150086	in tekrar bas
+150114	n.
+150120	Belirlenen varsay
+150156	lana
+150168	ge
+150178	 yapmak i
+150198	in bas
+150212	n@A078@.
+150232	Geri d
+150246	nmek i
+150260	in tekrar bas
+150288	n.
+150294	@A004@Fn Kol Ayarlar
+150338	Cans
+150348	z objeleri foto
+150380	raflamak i
+150402	in
+150410	Fn koluna bir fonksiyon atay
+150468	n.
+150474	@A003@Fn Kolu Fonksiyonu
+150524	Ge
+150534	@A0A9@ Fonk.
+150560	@A004@Fn Kolu Fonksiyonu
+150610	Video 
+150624	ekimi i
+150640	in Fn
+150654	koluna bir fonksiyon atay
+150706	n.
+150712	Kadran fonksiyonunu de
+150762	tirir.
+150776	AF modu/@A0AA@/@A0AB@ de
+150830	tirir.
+150846	Hedef se
+150864	ilebilir.
+150894	daki 
+150906	ekim modlar
+150934	 atar:
+150950	Konum 1: Mod Kadran
+150990	 ayar
+151002	na uyar.
+151022	Konum 2: @A004@modu.
+151064	@A0AC@Kilit
+151088	@A0AC@ 
+151106	esini devre d
+151146	rakmak i
+151164	in A
+151176	k'
+151186	se
+151192	in.
+151200	Fn Kolu/G
+151222	 Kolu
+151234	Fn Kolunu g
+151260	 d
+151268	mesi
+151280	olarak kullan
+151308	n.
+151316	Belirlenen fonksiyonlar i
+151368	in
+151376	Fn Kolunu kullan
+151410	n.
+151426	 kontrol etmek i
+151460	in
+151474	 d
+151482	mesini kullan
+151510	n.
+151522	 1
+151528	Fn Koluna a
+151558	daki 
+151570	ekilde
+151592	 atay
+151604	n:
+151612	Konum 1: G
+151636	 A
+151650	Konum 2: G
+151674	 Kapal
+151698	 Kolu devre d
+151730	 b
+151736	rak
+151744	lm
+151756	r.
+151768	 2
+151774	Fn Koluna a
+151804	daki 
+151816	ekilde
+151838	 atay
+151850	n:
+151858	Konum 1: G
+151882	 Kapal
+151900	Konum 2: G
+151924	 A
+151944	 Kolu devre d
+151976	 b
+151982	rak
+151990	lm
+152002	r.
+152008	CWB Kelvin
+152034	@A049@Ayarlar
+152064	@A04A@Ayarlar
+152094	Maks fps
+152112	Kare Say
+152134	 S
+152144	rlay
+152160	Devaml
+152178	ekim i
+152192	in
+152208	nt
+152214	 sabitleme 
+152238	nceli
+152250	i.
+152256	Fps 
+152266	nceli
+152284	ekim h
+152302	, g
+152314	nt
+152320	 sabitlemeye
+152348	kar
+152362	ncelik kazan
+152388	r.
+152394	IS 
+152402	nceli
+152426	nt
+152432	 sabitleme, 
+152458	ekim
+152478	na kar
+152498	ncelik kazan
+152524	r.
+152530	@A004@HDMI 
+152566	HDMI'ya ba
+152592	 video 
+152608	ekimi i
+152624	in
+152642	 ayarlar
+152664	 yapar.
+152690	 Modu
+152702	HDMI ile ba
+152726	lanan cihazlara
+152770	 modu ayarlar
+152802	Monit
+152814	r Modu
+152828	Cihaza video ve bilgi g
+152880	nt
+152894	aktar
+152906	r. Bu mod, cihaz
+152940	n monit
+152962	olarak kullan
+152994	 s
+153000	ras
+153008	nda 
+153018	nerilir.
+153036	Kay
+153044	t Modu
+153058	Bilgi g
+153078	nt
+153088	 olmadan yaln
+153116	zca
+153126	video aktar
+153150	r. Bu mod, cihazla
+153190	video kaydederken 
+153228	nerilir.
+153252	KAYIT Biti
+153288	 Boyutu
+153304	4K
+153320	 Kare H
+153346	@A004@
+153360	zellik Ayarlar
+153392	Video kalitesi i
+153426	in ayarlar.
+153450	@A004@@A024@
+153476	4096 x 2160 (17:9)
+153516	boyutunda video kaydeder.
+153568	3840 x 2160 (16:9)
+153608	boyutunda video kaydeder.
+153660	1920 x 1080 (16:9)
+153700	boyutunda video kaydeder.
+153752	1280 x 720 (16:9)
+153790	boyutunda video kaydeder.
+153842	@A013@/@A014@Ayarlar
+153886	@A013@/@A014@ 
+153918	esini se
+153936	erken
+153950	@A03F@ olarak se
+153984	ilmeyen 
+154004	eleri
+154018	atlayabilirsiniz.
+154054	Canl
+154064	 G
+154074	nt
+154080	 s
+154086	ras
+154094	nda monit
+154114	rde
+154132	nt
+154138	lenen k
+154154	lavuz 
+154168	zgaray
+154186	ayarlar.
+154212	nt
+154218	 Rengi
+154234	n Ayar 1
+154254	n Ayar 2
+154272	@A079@
+154286	EVF'ye Ayar Uygula
+154324	Arka monit
+154346	r 
+154352	zgara
+154366	ayarlar
+154386	 EVF'ye
+154404	uygulamaz.
+154426	Arka monit
+154448	r 
+154454	zgara
+154468	ayarlar
+154488	 EVF'ye
+154506	uygular.
+154524	EVF Izgara Ayarlar
+154564	EVF'de g
+154586	nt
+154592	lenen
+154610	lavuz 
+154624	zgaray
+154638	 ayarlar.
+154658	LV Yak
+154672	n 
+154678	. Ayarlar
+154700	LV Yak
+154714	n 
+154720	ekim g
+154738	nt
+154744	leme
+154760	ntemi i
+154776	in ayarlar.
+154800	@A046@ Ayarlar
+154834	nizleme g
+154858	nt
+154864	 y
+154870	ntemi
+154888	in ayarlar.
+154914	LV Yak
+154928	n 
+154934	ekim s
+154948	ras
+154956	nda,
+154968	daha kolay onaylamak i
+155014	in
+155022	parlakl
+155038	k ayarlan
+155058	r.
+155064	LV Yak
+155078	n 
+155084	ekim s
+155098	ras
+155106	nda
+155116	parlakl
+155132	k ayarlanmaz ve g
+155172	nt
+155182	LV Yak
+155196	n 
+155202	ekim 
+155214	ncesindeki
+155238	ayn
+155246	 parlakl
+155266	a sahip olur.
+155296	nizleme s
+155316	ras
+155324	nda, daha kolay
+155358	onaylamak i
+155382	in parlakl
+155404	k ayarlan
+155424	r.
+155432	nizleme s
+155452	ras
+155460	nda parlakl
+155490	ayarlanmaz ve g
+155526	nt
+155538	nizleme 
+155556	ncesindeki
+155580	ayn
+155588	 parlakl
+155608	a sahip olur.
+155636	@A006@@A07A@ Bilgi
+155674	Kareyi B
+155700	Kayd
+155710	rmay
+155720	 B
+155734	Kare Se
+155752	@A0AA@Ayarlar
+155782	AF hedef modunu se
+155820	erken
+155834	se
+155840	ilmeyen 
+155860	eleri
+155874	atlayabilirsiniz@A04E@.
+155922	@A093@
+155936	zel Ayarlar
+155960	AF hedef se
+155984	im ekran
+156002	 i
+156008	in
+156020	lem y
+156032	ntemine y
+156052	nelik ayarlar.
+156082	Ayar 1
+156096	Ayar 2
+156110	@A0AA@
+156124	@A0AB@
+156138	@A008@
+156152	Varsay
+156166	lan AF modu/@A0AA@/@A0AB@
+156220	kaydedilir.
+156244	ISO hassasiyetinin OTOMAT
+156306	esine ayarlanmas
+156340	na y
+156350	nelik
+156364	ayr
+156372	nt
+156382	 ayarlar.
+156404	st S
+156418	r/Varsay
+156436	lan
+156444	En D
+156458	k S/S Ayar
+156482	Deklan
+156498	r h
+156510	 belirlenen
+156536	en d
+156550	k rakama ula
+156584	nda,
+156596	ISO hassasiyeti y
+156632	kselmeye ba
+156656	lar.
+156668	P veya A modunda ge
+156708	erlidir.
+156726	Kart Yuvas
+156748	 Ayarlar
+156768	Kartla kaydetmek ve oynatmak
+156832	in ayarlar.
+156856	@A004@Ayarlar
+156884	 Kaydet
+156900	Standart
+156918	Yaln
+156928	zca atanan karta kaydeder.
+156982	Otomatik Ge
+157012	Belirlenen kart doldu
+157056	unda,
+157072	ekime devam etmek i
+157112	in
+157120	ba
+157126	ka karta ge
+157154	 yapar.
+157172	ift Ba
+157188	ms
+157194	z@A0AF@
+157212	lgili ayarlar
+157244	 uygulayarak
+157272	iki karta da kaydeder.
+157320	Bir kart dolarsa, di
+157362	erine de
+157382	kaydedilemez.
+157412	ift Ba
+157428	ms
+157434	z@A0B0@
+157452	lgili ayarlar
+157484	 uygulayarak
+157512	iki karta da kaydeder.
+157560	Bir kart dolsa bile di
+157606	erine
+157620	kaydedilebilir.
+157654	ift Ayn
+157670	@A0AF@
+157684	Ayn
+157692	 @A004@@A02E@ayarlar
+157738	 uygulayarak
+157766	iki karta da kaydeder.
+157814	Bir kart dolarsa, di
+157856	erine de
+157876	kaydedilemez.
+157906	ift Ayn
+157922	@A0B0@
+157936	Ayn
+157944	 @A004@@A02E@ayarlar
+157990	 uygulayarak
+158018	iki karta da kaydeder.
+158066	Bir kart dolsa bile di
+158112	erine
+158126	kaydedilebilir.
+158158	@A004@Yuvay
+158182	 Kaydet
+158198	@A006@Yuvay
+158222	 Kaydet
+158238	@A009@Yuva
+158260	Kay
+158268	t Klas
+158290	 Ata
+158300	Ata
+158308	Atama
+158320	Bir karttan di
+158350	erine kaydedilen
+158390	m g
+158402	nt
+158408	leri kopyalay
+158436	n.
+158442	Kopyalanacak Klas
+158482	 Ata
+158492	Mevcut Klas
+158520	Yeni Klas
+158544	Pil Ayarlar
+158570	Pil bilgisine ve ayarlar
+158620	na bak
+158634	n.
+158640	Pil 
+158650	nceli
+158666	Pil Durumu
+158688	Degradasyon
+158712	Kalan 
+158726	arj
+158734	Seri No.
+158754	ekim Say
+158778	Pil T
+158796	Bas
+158808	 Tutma S
+158826	resi
+158836	Etkinle
+158852	tirmek i
+158870	in bas
+158888	 tutmay
+158908	gerektiren her fonksiyon i
+158962	in d
+158974	me
+158982	bas
+158994	 tutma s
+159012	resini ayarlay
+159042	n.
+159048	LV@A07A@ Sonland
+159086	Belirlenen d
+159114	meyi bas
+159140	tutmak, Canl
+159166	 G
+159176	nt
+159182	 yak
+159192	n 
+159198	ekimini
+159216	veya Canl
+159236	 G
+159246	nt
+159252	 yak
+159262	n 
+159268	ekim
+159280	karesini g
+159306	nt
+159312	lemeyi sonland
+159346	r.
+159352	@A042@ Sonland
+159386	Belirlenen d
+159414	meyi bas
+159440	tutmak, @A042@yak
+159476	n 
+159482	ekimini
+159500	veya @A042@yak
+159530	n 
+159536	ekim
+159548	karesini g
+159574	nt
+159580	lemeyi sonland
+159614	r.
+159620	@A006@@A07A@ Sonland
+159666	Belirlenen d
+159694	meyi bas
+159720	tutmak, @A035@yak
+159756	n 
+159762	ekimini
+159780	veya @A035@yak
+159810	n 
+159816	ekim
+159828	karesini g
+159854	nt
+159860	lemeyi sonland
+159894	r.
+159900	Slate Tonunu Gir
+159934	Video kayd
+159956	 s
+159962	ras
+159970	nda @A044@
+159998	esi bas
+160018	 tutuldu
+160036	unda,
+160050	USB'ye ba
+160074	 PCM kaydedici
+160106	bir slate tonu girer.
+160150	@A078@ S
+160172	rla
+160180	@A035@ d
+160200	mesi bas
+160222	 tutuldu
+160240	unda,
+160254	@A078@ AF hedef se
+160292	im ekran
+160320	ortas
+160332	na geri d
+160352	ner.
+160362	LV@A07A@ Karesini S
+160406	rla
+160414	@A035@ d
+160434	mesi bas
+160456	 tutuldu
+160474	unda,
+160488	yak
+160496	n 
+160502	ekim karesi Canl
+160536	 G
+160546	nt
+160556	ekran
+160572	n ortas
+160588	na geri d
+160608	ner.
+160618	@A043@ S
+160640	rla
+160648	@A035@ d
+160668	mesi bas
+160690	 tutuldu
+160708	unda,
+160722	ayar ekran
+160744	nda @A043@ de
+160772	erleri
+160788	varsay
+160802	lana geri d
+160826	ner.
+160836	@A007@ S
+160858	rla
+160866	Bir kadrana @A007@ atand
+160920	nda,
+160934	ekim bekleme ekran
+160972	nda
+160982	@A035@ d
+161002	mesi bas
+161024	 tutulunca
+161048	pozlama telafisi varsay
+161096	lana
+161108	geri d
+161122	ner.
+161132	@A07B@ S
+161154	rla
+161162	@A035@ d
+161182	mesi bas
+161204	 tutuldu
+161222	unda,
+161236	ayar ekran
+161258	nda Y
+161270	ksek I
+161286	k ve
+161302	lge Kontrol
+161326	 ayarlar
+161344	 varsay
+161360	lana
+161372	geri d
+161386	ner.
+161396	@A07C@ Sonland
+161430	@A07C@ d
+161450	mesi bas
+161472	 tutuldu
+161490	unda,
+161504	yamukluk telafisi devre d
+161560	 b
+161566	rak
+161578	r.
+161584	@A07C@ S
+161606	rla
+161614	@A035@ d
+161634	mesi bas
+161656	 tutuldu
+161674	unda,
+161688	ayar ekran
+161710	nda @A07C@ ayarlar
+161752	varsay
+161766	lana geri d
+161790	ner.
+161800	@A042@ Karesini S
+161840	rla
+161848	@A035@ d
+161868	mesi bas
+161890	 tutuldu
+161908	unda,
+161922	video telekon yak
+161958	n 
+161964	ekim karesi
+161990	merkez konumuna geri d
+162036	ner.
+162050	@A009@ S
+162072	rla
+162080	@A035@ d
+162100	mesi bas
+162122	 tutuldu
+162140	unda,
+162156	ekim bekleme durumunda @A009@
+162218	kadrana atand
+162250	 zaman
+162266	fla
+162274	 yo
+162282	unluk ayarlar
+162314	varsay
+162328	lana geri d
+162352	ner.
+162362	@A045@ Kilidini De
+162404	tir
+162412	@A045@Kilidine atanan d
+162462	me
+162470	bas
+162482	 tutuldu
+162500	unda, @A045@Kilidi
+162550	r/kapan
+162566	r.
+162572	@A054@/@A055@ De
+162610	tir
+162618	@A054@/@A055@ 
+162650	esine atanan d
+162682	me
+162690	bas
+162702	 tutuldu
+162720	unda, @A054@/@A055@
+162762	modlar
+162776	 devre d
+162798	 b
+162804	rak
+162816	r.
+162822	BKT Ayarlar
+162864	BKT'ye atanan d
+162898	me bas
+162920	tutuldu
+162936	unda, BKT ayarlar
+162974	ekran
+162986	 yukar
+163004	ekilir.
+163020	EVF Oto Ge
+163060	@A03D@ 
+163078	esine atanan d
+163110	me bas
+163132	tutuldu
+163148	unda, @A03D@oto ge
+163190	 ayarlar
+163212	ekran
+163224	 yukar
+163242	ekilir.
+163258	Pro Yakalama H
+163288	Pro Yakalama L
+163318	Efekt: Y
+163336	ksek
+163346	Efekt: D
+163372	Efekt: Standart
+163404	AF S
+163418	rlay
+163432	:Kapal
+163448	Mesafe g
+163466	ncel. i
+163482	in @A07D@
+163510	rla / 
+163524	zel Modlar
+163548	zel Moda Ata
+163576	zel Moddan Geri 
+163620	Kapsam
+163634	 S
+163644	rla
+163652	Video D
+163668	zenleme
+163684	Video 
+163700	i G
+163708	r. Yakalama
+163732	Video K
+163748	rpma
+163758	Se
+163764	ili sahne silinecektir.
+163812	@A002@Se
+163830	ili sahne silinecektir.
+163878	@A006@Ses Kayd
+163908	 Ayarlar
+163928	@A004@G
+163948	nt
+163954	 Ayarlar
+163974	Video kayd
+163996	 s
+164002	ras
+164010	nda
+164020	bilgi g
+164040	nt
+164046	 ayarlar
+164068	@A004@Bilgi Ayarlar
+164110	@A01A@ 
+164128	esine bas
+164152	nca
+164170	nt
+164176	lenen bilgiyi se
+164210	in.
+164218	Izgara
+164232	@A004@Kontrol Ayarlar
+164278	Video modundayken @A035@
+164334	esine bas
+164354	ld
+164364	nda
+164382	nt
+164388	lenen kontrolleri se
+164430	in.
+164438	@A0B4@G
+164458	nt
+164468	ablonu
+164482	Video kayd
+164504	 s
+164510	ras
+164518	nda
+164528	pil 
+164538	arj
+164550	 g
+164560	nt
+164566	leme
+164582	ntemini ayarlar.
+164616	@A0A3@@A006@@A02E@
+164654	@A0A3@@A004@@A02E@
+164692	@A0A4@@A006@@A02E@
+164730	@A0A4@@A004@@A02E@
+164768	Kurulum i
+164788	in Kart Se
+164812	Bellenim G
+164834	ncellemesi
+164856	@A002@ Bellenim g
+164892	ncellendi
+164912	inde,
+164926	mevcut bellenime geri
+164976	nemeyeceksiniz.
+165008	@A04C@Fonksiyon
+165040	@A0B5@Fonksiyon
+165072	@A0B6@Fonksiyon
+165104	@A0B7@Fonksiyon
+165136	AF Taray
+165160	AF Taray
+165182	 i
+165188	in ayarlar
+165212	AF ba
+165224	lang
+165238	nda veya
+165258	AF modundayken 
+165290	al
+165300	r.
+165306	Obje net g
+165332	nmese veya
+165356	kontrast d
+165382	k olsa bile, AF Taray
+165434	devre d
+165454	 b
+165460	rak
+165468	lacakt
+165482	r.
+165488	Obje net g
+165514	nmezse veya kontrast
+165566	kse, AF ba
+165588	lang
+165602	nda AF
+165618	Taray
+165634	 yaln
+165646	zca bir kez 
+165672	al
+165680	acakt
+165692	r.
+165698	Obje net g
+165724	nmezse veya kontrast
+165776	kse, AF Taray
+165812	yine de etkinle
+165844	tirilecektir.
+165872	@A003@AF Modu
+165900	Cans
+165910	z objeleri foto
+165942	raflamak i
+165964	in
+165972	AF y
+165982	ntemini ayarlay
+166014	n.
+166020	@A003@G
+166040	nt
+166046	 Sabitleyici
+166072	Cans
+166082	z objeleri foto
+166114	raflamak i
+166136	in
+166152	nt
+166158	 sabitleme modunu ayarlar.
+166212	@A003@D
+166230	me Fonksiyonu
+166258	Cans
+166268	z objeleri foto
+166300	raflamak i
+166322	in
+166330	her d
+166344	meye atanacak
+166374	fonksiyonlar
+166400	 se
+166408	in.
+166416	@A003@Kadran Fonksiyonu
+166464	Cans
+166474	z objeleri foto
+166506	raflamak i
+166528	in
+166536	her kadrana atanacak
+166580	fonksiyonlar
+166606	 se
+166614	in.
+166622	@A003@Gren Filtresi
+166662	@A003@Elek. Yak
+166694	nla
+166702	. H
+166716	Elek. yak
+166736	nla
+166744	. lensi kullan
+166774	rken
+166786	cans
+166796	z objeleri foto
+166828	raflamak
+166852	in yak
+166866	nla
+166878	rma h
+166890	zlar
+166904	 ayarlay
+166922	n.
+166928	@A003@@A024@
+166954	Cans
+166964	z objelerin 
+166990	ekimi i
+167006	in
+167022	nt
+167028	 kalite ayarlar
+167064	 se
+167072	in.
+167080	@A004@D
+167098	me/Kadran/Kol
+167126	Video 
+167140	ekimi i
+167156	in d
+167168	melere ve
+167190	kadranlara atanacak fonksiyonlar
+167260	se
+167266	in.
+167274	@A004@D
+167292	me Fonksiyonu
+167320	Video 
+167334	ekimi i
+167350	in her d
+167370	meye
+167382	atanacak fonksiyonlar
+167426	 se
+167434	in.
+167442	@A004@Elek. Yak
+167474	nla
+167482	. H
+167496	Elektronik yak
+167526	nla
+167538	rma lensi
+167560	kullanarak video 
+167596	ekimi i
+167612	in
+167620	yak
+167628	nla
+167640	rma h
+167652	zlar
+167666	 ayarlay
+167684	n.
+167690	@A004@AF/IS Ayarlar
+167732	Video 
+167746	ekimi i
+167762	in g
+167776	nt
+167782	 sabitleyici
+167810	modu ve odaklama y
+167848	ntemi se
+167866	in.
+167874	@A004@AF Modu
+167902	Video 
+167916	ekimi i
+167932	in odaklama
+167962	ntemini ayarlay
+167994	n.
+168000	@A004@G
+168020	nt
+168026	 Sabitleyici
+168052	Video 
+168066	ekimi i
+168082	in g
+168096	nt
+168102	 sabitleyici
+168130	modunu de
+168154	tirin.
+168168	Dahili @A0B8@ kullan
+168210	larak
+168224	ak
+168230	ll
+168236	 telefona ba
+168262	lant
+168276	@A0B8@ Ayarlar
+168306	Dahili @A0B8@ ile ilgili men
+168368	@A0B8@ Ba
+168388	lant
+168398	 Ayarlar
+168418	@A0B8@ Ba
+168438	lant
+168456	 Se
+168466	Her defas
+168486	nda @A0B8@
+168510	ba
+168516	lant
+168534	 se
+168542	in.
+168550	@A0B8@ Ayarlar
+168584	 S
+168594	rla
+168602	@A003@ Dikkat T
+168634	m @A0B8@ Ayarlar
+168680	rlan
+168690	yor
+168698	@A09A@ Ba
+168718	lant
+168732	 Haz
+168742	rlan
+168752	yor
+168760	Ak
+168766	ll
+168772	 telefonunuza ba
+168806	lant
+168816	 i
+168822	in.
+168832	Bu yap
+168846	land
+168856	rman
+168866	n bir defa
+168890	yap
+168898	lmas
+168908	 yeterlidir.
+168936	@A0B8@ ba
+168956	lant
+168970	 daha sonra
+168996	ba
+169002	layacakt
+169020	r.
+169026	@A0B8@ Ba
+169046	lat
+169058	yor
+169066	@A0B8@ Durduruluyor
+169106	Dahili @A0B8@ 
+169138	esini kapal
+169168	konuma getirir.
+169200	Son @A0B8@@A01E@
+169234	Enstantane h
+169264	 @A07E@ veya daha
+169310	k oldu
+169324	unda, birinci deklan
+169374	perdesi elektroni
+169410	e ge
+169424	 yapar. 
+169444	Deklan
+169464	 b
+169470	rakt
+169480	ktan sonra
+169504	gecikme s
+169524	resini se
+169544	in.
+169552	4K
+169558	C4K
+169566	Color
+169578	Color / Vivid
+169606	MOV 3840
+169624	2160
+169634	MOV 4096
+169652	2160
+169662	MOV 1920
+169680	1080
+169690	MOV 1280
+169708	720
+169716	Dekl. 
+169730	ncesi Kareler
+169758	Izgara Ayarlar
+169790	@A004@Kadran Fonksiyonu
+169838	Video 
+169852	ekimi i
+169868	in her kadrana
+169900	atanacak fonksiyonlar
+169944	 se
+169952	in.
+169960	@A078@Hedef Ayarla
+169998	@A078@Noktasal 
+170040	EVF Stili
+170060	EVF Otomatik Ge
+170098	AF Alan Se
+170120	imi
+170128	@A078@Hedef
+170152	@A07F@i-Geli
+170178	tirme
+170194	z sens
+170216	 devre d
+170238	 b
+170244	rak
+170252	n.
+170260	@A03D@: monit
+170288	r g
+170300	nt
+170310	 ve
+170320	EVF g
+170336	nt
+170346	 aras
+170358	nda ge
+170380	yapmak i
+170398	in.
+170406	S-AF'yi 
+170424	al
+170436	rmak i
+170450	in bas
+170464	n.
+170470	@A0A9@ d
+170490	melerinin fonksiyonlar
+170540	@A0BB@ dahilinde de
+170584	tirilmez.
+170604	@A0BB@ dahilinde @A0A9@ d
+170658	melerinin
+170680	fonksiyonlar
+170710	u 
+170716	ekilde de
+170740	tirilir:
+170760	@A0BC@: BKT ve @A0BD@: @A0BE@.
+170822	Fn kolu fonksiyonunu
+170866	devre d
+170886	 b
+170892	rak
+170900	r.
+170906	@A080@Donuk
+170930	@A078@@A01C@
+170956	EVF g
+170972	nt
+170978	leme stilini se
+171010	er.
+171018	EVF'de g
+171036	z alg
+171048	land
+171062	nda
+171072	monit
+171084	r g
+171096	nt
+171106	nden EVF
+171134	nt
+171144	ne otomatik ge
+171174	in.
+171182	@A04A@ 
+171198	ekimi i
+171214	in ayr
+171228	nt
+171238	 ayarlar.
+171258	EVF'de d
+171276	zey g
+171288	stergesini
+171320	nt
+171326	lemek i
+171342	in A
+171354	k'
+171360	 se
+171368	in.
+171378	@A03C@ s
+171396	ras
+171404	nda etkindir.
+171432	@A049@ 
+171448	ekimi i
+171464	in ayr
+171478	nt
+171488	 ayarlar.
+171508	EVF'de kare h
+171544	 se
+171552	in.
+171560	KAYIT Bitini foto
+171596	raf makinesinden
+171632	ba
+171642	 kay
+171652	t cihaz
+171668	na aktar
+171686	r.
+171692	Zaman Kodunu foto
+171728	raf
+171738	makinesinden ba
+171774	 kay
+171790	cihaz
+171802	na aktar
+171820	r.
+171826	EVF g
+171842	nt
+171848	leme modunu se
+171878	in.
+171886	@A09C@Mat Renk
+171916	@A081@Sualt
+171942	AF hedef noktas
+171978	 ve
+171988	AF hedef modunu se
+172026	in.
+172034	17:9
+172044	@A0B9@Vivid
+172068	@A0BA@Natural
+172096	@A0BB@Portrait
+172126	Klas
+172136	r Se
+172146	ilemiyor
+172164	Fn
+172170	50p 
+172180	nceli
+172196	60p 
+172206	nceli
+172222	G. @A024@/BA/Renk
+172258	PCM Kaydedici
+172286	Dolgu
+172302	ral
+172310	 Odaklama
+172330	Her 
+172340	ekimden sonra odak noktas
+172396	hafif
+172408	e daha geriye al
+172442	narak
+172456	birden fazla 
+172484	ekim yap
+172506	r.
+172522	nt
+172528	ler istiflenmez.
+172562	Odak noktas
+172586	, ba
+172596	lang
+172612	noktas
+172626	ndan hafif
+172648	e 
+172654	ne ve
+172668	arkaya ta
+172690	narak birden fazla
+172732	ekim yap
+172754	r.
+172762	Ard
+172770	ndan g
+172788	nt
+172794	ler istiflenir.
+172826	Canl
+172836	 G
+172846	nt
+172852	 parlakl
+172878	pozlama ayarlar
+172910	na yans
+172926	yacakt
+172940	r.
+172956	nt
+172962	lenen g
+172982	nt
+172992	n 
+173000	parlakl
+173020	 son
+173040	nt
+173050	n parlakl
+173074	yla ayn
+173094	r.
+173100	Canl
+173110	 G
+173120	nt
+173126	 parlakl
+173148	 pozlama
+173168	ayarlar
+173184	na yans
+173200	maz ve
+173216	en iyi g
+173238	nt
+173244	leme i
+173258	in ayarlan
+173280	r. 
+173290	Son g
+173306	nt
+173312	 parlakl
+173334	 de
+173346	ir.
+173354	Canl
+173364	 G
+173378	m parlakl
+173402	, pozlama
+173424	ayarlar
+173444	 yans
+173456	tmaz ve karanl
+173492	sahneler i
+173514	in kare h
+173538	 azalt
+173552	larak
+173566	optimize edilir.
+173602	Son g
+173618	nt
+173624	 parlakl
+173646	 de
+173658	ir.
+173666	@A040@: Video kayd
+173708	 ba
+173716	lat
+173724	n/durdurun.
+173748	@A082@Yumu
+173770	ak Odak Efekti
+173800	@A083@
+173816	ne Deli
+173832	i Efekti
+173850	@A084@Beyaz Kenar Efekti
+173900	@A085@
+173914	er
+173920	eve Efekti
+173942	@A086@Y
+173958	ld
+173964	z I
+173978	 Efekti
+173994	@A087@Bulan
+174018	kl
+174024	k Efekti: 
+174046	st ve Alt
+174066	@A088@Bulan
+174090	kl
+174096	k Efekti: Sol ve Sa
+174138	@A089@G
+174154	lge Efekti: Sol ve Sa
+174200	@A08A@G
+174216	lge Efekti: 
+174242	st ve Alt
+174262	@A0A3@Y
+174278	z Tan
+174290	ma Hatas
+174310	@A0A4@Y
+174326	z Tan
+174338	ma Hatas
+174358	@A107@
+174372	Geni
+174384	Dar
+174392	Bleach Atlama
+174420	Bleach Atlama@A04F@
+174460	Bleach Atlama@A050@
+174500	@A004@Mod Ayarlar
+174542	it De
+174554	er
+174560	@A090@ Sonland
+174594	Bal
+174602	kg
+174612	 Telafisi
+174640	Bal
+174648	kg
+174658	 Telafisi 1
+174682	Bal
+174690	kg
+174700	 Telafisi 2
+174724	Bal
+174732	kg
+174742	 Telafisi 3
+174766	@A091@/@A092@D
+174796	zeltme
+174810	Bal
+174818	kg
+174828	 Telafisi
+174848	@A090@ 
+174864	zelli
+174876	ini devre d
+174914	rakmak i
+174932	in @A090@ 
+174954	zelli
+174966	ine 
+174978	atanan d
+174998	meyi bas
+175020	 tutun.
+175036	Bal
+175044	kg
+175054	 Telafisini a
+175082	ar/kapat
+175100	r.
+175106	Titre
+175118	im Kontrol
+175144	 ba
+175152	latmak 
+175174	in bas
+175188	n. 
+175204	meyi bas
+175226	 tutarak 
+175252	n.
+175260	S veya M modunda ge
+175300	erlidir.
+175318	@A004@Titre
+175342	im Taramas
+175366	@A0A7@Bleach Atlama
+175406	@A08C@Bleach Atlama@A04F@
+175458	@A08D@Bleach Atlama@A050@
+175510	@A006@@A07A@Varsay
+175548	lan Ayar
+175566	@A004@ modu i
+175594	in ayarlar
+175616	 yap
+175626	n.
+175636	per geni
+175654	 a
+175666	 g
+175676	nt
+175688	olu
+175696	turmak i
+175714	in bal
+175728	kg
+175742	merce
+175754	inin distorsiyonunu d
+175798	zeltir.
+175814	S veya M modunda titre
+175860	imi tespit 
+175886	edin ve daha k
+175920	k ad
+175930	mlarla 
+175948	deklan
+175964	r h
+175980	 ayarlay
+175998	n.
+176012	nt
+176018	 oynatmay
+176038	 b
+176048	tmek 
+176066	in varsay
+176086	lan b
+176102	tme 
+176114	de
+176120	erini se
+176138	in.
+176146	S veya M modunda titre
+176192	imi tespit 
+176218	edin ve daha k
+176252	k ad
+176262	mlarla 
+176280	deklan
+176296	r h
+176312	 ayarlay
+176330	n.
+176336	Son Kullan
+176358	lan
+176366	@A003@Titre
+176390	im Taramas
+176414	Titre
+176426	im Taramas
+176450	ART15@A04F@
+176474	ART15@A050@
+176498	Fotoapar
+176516	t bude pokra
+176542	ova
+176556	v sledovan
+176578	 po vypnut
+176600	 nap
+176610	jania.
+176624	EVF'de kare h
+176660	 se
+176668	in.
+176680	znam GPS lokality
+176716	Teraz sa ned
+176742	 pou
+176756	 funkcia
+176776	zapisovania do denn
+176816	ka.
+176824	Aut. nast. 
+176848	asu
+176858	daje o lokalite sa nepridaj
+176918	k fotografii.
+176948	daje o lokalite sa pridaj
+177004	k fotografii. Nastavenie na Zap.
+177072	aktivuje GPS.
+177100	Ru
+177110	 nastavenie d
+177138	tumu a 
+177154	asu.
+177164	Fotoapar
+177182	t nastav
+177200	 d
+177206	tum a 
+177220	as
+177228	automaticky na z
+177262	klade 
+177276	dajov
+177290	GPS. GPS sa pou
+177322	ije iba pri
+177348	nastavovan
+177376	etrenie bat
+177400	rie m
+177412	 prednos
+177434	pred presnos
+177460	ou GPS.
+177476	Presnos
+177492	 GPS m
+177506	 prednos
+177528	pred 
+177540	etren
+177552	m bat
+177564	rie.
+177574	Bat
+177582	ria
+177590	Priorita GPS
+177616	Presnos
+177632	 GPS
+177642	@A08B@ @A01A@
+177670	Pridajte k fotografii 
+177716	daje o GPS
+177740	lokalite. Nastavenie na Zap.
+177800	aktivuje GPS.
+177828	Nastav
+177842	 prioritu GPS pre sledovanie
+177902	denn
+177912	ka.
+177920	Foto
+177930	raf makinesi tarih ve
+177976	saatini veya zaman
+178016	dilimini ayarlay
+178050	n.
+178056	@A022@ Ayarlar
+178088	@A022@
+178102	Zaman Dilimi
+178128	Enstantane Film
+178160	@A08E@Enstantane Film
+178204	@A08F@/Bluetooth Ayarlar
+178256	@A08F@ ve Bluetooth
+178298	ayarlar
+178318	 yap
+178328	n.
+178334	Kullan
+178348	labilirlik
+178370	@A0AB@/Bluetooth tamamen
+178422	devre d
+178442	 ve bir ba
+178464	lant
+178478	ba
+178484	lat
+178492	lam
+178500	yor.
+178510	@A0AB@/Bluetooth ba
+178550	lant
+178560	 i
+178566	in
+178574	kullan
+178588	labilir hale getirildi.
+178636	Ba
+178642	lant
+178656	ifresi
+178670	@A040@: Ba
+178692	lant
+178706	ifrelerini de
+178738	tirin.
+178754	Yeni 
+178766	ifreler otomatik olarak
+178816	olu
+178824	turulacak.
+178846	Ayarlar
+178862	 S
+178872	rla
+178880	@A002@ T
+178898	m @A08F@ ve Bluetooth
+178944	ayarlar
+178960	 s
+178970	rlans
+178982	n m
+178994	Kapatma Beklemesi
+179030	@A08F@/G
+179050	 kapal
+179064	yken bir cihaz ile
+179104	Bluetooth ba
+179130	lant
+179148	ba
+179154	lat
+179162	lamaz.
+179176	@A08F@/G
+179196	 kapal
+179210	yken bile bir cihaz
+179252	ile Bluetooth ba
+179286	lant
+179304	ba
+179310	lat
+179318	labilir.
+179342	 her kapat
+179364	ld
+179374	nda
+179384	Kapatma Beklemesinin etkinle
+179442	tirilip
+179460	etkinle
+179476	tirilmeyece
+179500	ini se
+179514	in.
+179522	@A08F@/Bluetooth Kapatma Beklemesi
+179602	nt
+179608	ler g
+179622	 kapal
+179636	yken
+179648	al
+179654	nabilecek 
+179676	ekilde etkinle
+179706	tirilsin mi?
+179732	Kapatma Beklemesi: Kapal
+179784	Kapatma Beklemesi: A
+179832	Her seferinde onayla
+179874	Bu ekran
+179892	 tekrar g
+179912	sterme
+179932	 her kapat
+179954	ld
+179964	nda Kapatma
+179990	Beklemesinin etkinle
+180032	tirilip
+180050	etkinle
+180066	tirilmeyece
+180090	i onaylans
+180112	n m
+180126	Bu ayar men
+180150	den her an de
+180182	tirilebilir.
+180208	Prenos 
+180224	dajov...
+180242	Zru
+180256	Pokra
+180268	ova
+180278	Zru
+180286	te prenos 
+180308	dajov
+180322	a zapnite nap
+180350	janie.
+180364	Mevcut t
+180382	m g
+180394	nt
+180400	 aktar
+180424	n se
+180434	imlerini iptal edin.
+180476	@A093@ S
+180494	cak Rengi Tut@A01A@
+180534	Olympus PCM Kaydedici
+180580	ba
+180590	yken 
+180602	ekim i
+180616	in ayarlar
+180642	yap
+180650	n.
+180656	@A078@
+180670	iadna karta
+180694	@A079@
+180708	iadna karta
+180732	INFO_CONTINUE_TRANSFER_2
+180782	Zvy
+180794	 s
+180800	bory
+180810	Vypn
+180822	 po skon
+180840	en
+180846	 prenosu
+180864	Vypn
+180876	 ihne
+180890	Nap
+180898	janie sa automaticky vypne
+180954	po prenesen
+180978	 v
+180984	etk
+180992	ch s
+181002	borov.
+181016	Zru
+181024	enie prenosu do PC
+181064	a vypnutie nap
+181094	jania.
+181108	Pren
+181120	a sa...
+181136	INFO_WAIT_SP_TRANSFERRED
+181186	Po
+181192	kajte na dokon
+181222	enie prenosu.
+181252	Nap
+181260	janie sa vypne automaticky.
+181316	BULB fonksiyonu ile 
+181358	ekim yapar
+181380	CAUTION_HIGH_RES_SHOT_CANCELED
+181446	ksek 
+181460	z. 
+181468	ekim hatas
+181504	nt
+181510	 birle
+181524	tirme ba
+181542	ar
+181552	z.
+181558	@A003@ISO
+181578	@A003@Tavsiye Edilen ISO
+181628	@A003@ISO Geni
+181658	leme
+181668	@A004@ISO
+181688	@A004@Tavsiye Edilen ISO
+181738	@A005@Roz
+181760	ren
+181768	 ISO
+181778	@A003@BA
+181796	@A004@BA
+181814	@A003@Kelvin
+181840	@A004@Kelvin
+181866	@A003@Otomatik @A094@
+181910	@A003@@A095@5300K @A094@
+181960	@A003@@A096@7500K @A094@
+182010	@A003@@A097@6000K @A094@
+182060	@A003@@A098@3000K @A094@
+182110	@A003@@A099@4000K @A094@
+182160	@A003@@A036@5500K @A094@
+182210	@A003@@A01E@ @A094@
+182250	@A003@@A01F@ @A094@
+182290	@A003@@A020@ @A094@
+182330	@A003@@A021@ @A094@
+182370	@A004@Otomatik @A094@
+182414	@A004@@A095@5300K @A094@
+182464	@A004@@A096@7500K @A094@
+182514	@A004@@A097@6000K @A094@
+182564	@A004@@A098@3000K @A094@
+182614	@A004@@A099@4000K @A094@
+182664	@A004@@A036@5500K @A094@
+182714	@A004@@A01E@ @A094@
+182754	@A004@@A01F@ @A094@
+182794	@A004@@A020@ @A094@
+182834	@A004@@A021@ @A094@
+182874	MOVIE_PIC_MODE_LOG
+182912	@A003@CWB @A094@
+182946	@A004@CWB @A094@
+182982	iv
+182988	 zobrazenie@A033@
+183024	Devaml
+183038	 AF + MF
+183056	AF Takibi + MF
+183088	ekim Y
+183102	ntemi@A01A@
+183126	Canl
+183136	 ND 
+183146	ekimi : ND2(1EV)
+183180	Canl
+183190	 ND 
+183200	ekimi : ND4(2EV)
+183234	Canl
+183244	 ND 
+183254	ekimi : ND8(3EV)
+183288	Canl
+183298	 ND 
+183308	ekimi : ND16(4EV)
+183346	iv
+183352	 sn
+183360	m. s ND: ND32 (5 EV)
+183402	@A003@Z
+183418	suvka ukladania @A078@
+183464	@A003@Z
+183480	suvka ukladania @A079@
+183526	@A004@Z
+183542	suvka ukladania @A078@
+183588	@A004@Z
+183604	suvka ukladania @A079@
+183652	ekim Y
+183666	ntemi
+183682	ayak ile sabitlenmi
+183726	foto
+183736	raf makinesi ile 
+183772	ekim yapar.
+183796	Elde ta
+183818	r modda 
+183836	ekim yapar.
+183864	ekim sonras
+183888	nda i
+183900	leme
+183916	resi gerekir.
+183946	Fla
+183954	 mevcut de
+183976	ildir.
+183990	Canl
+184000	 ND 
+184010	ekimi
+184022	ND Say
+184042	LV Sim
+184056	lasyonu
+184072	Yava
+184082	 deklan
+184100	r h
+184112	 etkisi
+184130	Canl
+184140	 G
+184154	mde g
+184170	lemez.
+184184	Yava
+184194	 deklan
+184212	r h
+184224	 etkisi
+184242	Canl
+184252	 G
+184266	mde g
+184282	lebilir.
+184302	Son g
+184318	nt
+184324	den farkl
+184348	r.
+184354	Monit
+184366	r ters d
+184384	nd
+184394	ld
+184404	nde
+184414	Canl
+184424	 G
+184438	m ayna g
+184460	nt
+184474	olarak g
+184496	nt
+184502	lenmez.
+184518	Monit
+184530	r ters d
+184548	nd
+184558	ld
+184568	nde
+184578	Canl
+184588	 G
+184602	m ayna g
+184624	nt
+184638	olarak g
+184660	nt
+184666	lenir.
+184680	Infor. o sn
+184704	ma
+184710	i po
+184724	Yar
+184732	m basma s
+184752	ras
+184760	nda bilgiler
+184786	Deklan
+184802	re yar
+184822	bas
+184830	ld
+184840	nda bile bilgiler
+184878	gizli kal
+184898	r.
+184904	Pozlama ve objektif odak uzunlu
+184974	bilgileri, yaln
+185006	zca deklan
+185030	re
+185038	yar
+185046	m bas
+185058	ld
+185068	nda g
+185088	r.
+185094	Canl
+185104	 G
+185118	m parlakl
+185142	, pozlama
+185164	ayarlar
+185184	 yans
+185196	tmaz ve karanl
+185232	alanlar i
+185252	in kazan
+185270	 artt
+185286	larak
+185300	optimum g
+185324	nt
+185330	 i
+185336	in ayarlan
+185358	r.
+185366	Son g
+185382	nt
+185388	 parlakl
+185410	 de
+185422	ir.
+185430	Canl
+185440	 G
+185454	m parlakl
+185478	, pozlama
+185500	ayarlar
+185520	 yans
+185532	tmaz ve karanl
+185568	alanlar i
+185588	in kazan
+185606	 artt
+185622	larak
+185636	optimum g
+185660	nt
+185666	 i
+185672	in ayarlan
+185694	r.
+185702	Son g
+185718	nt
+185724	 parlakl
+185746	 de
+185758	ir.
+185772	k2 Ayar
+185790	Kalite 
+185806	nceli
+185822	Kare H
+185844	nceli
+185860	Canl
+185870	 G
+185884	mde kalite,
+185910	kare h
+185928	ndan 
+185940	nce gelir.
+185964	Karanl
+185978	k sahnelerde kare h
+186026	azalt
+186042	r.
+186048	Canl
+186058	 G
+186072	mde kare h
+186104	kaliteden 
+186126	nce gelir.
+186150	Karanl
+186164	k sahnelerde renkler
+186208	kaybolabilir.
+186238	Bu son g
+186260	nt
+186270	 etkilemez.
+186294	Titre
+186306	im 
+186314	nleyici LV
+186336	Tit. 
+186348	nleyici 
+186366	ekim
+186376	Dengesiz pozlama ve renkler
+186434	gibi titre
+186456	im etkileri azalt
+186492	labilir.
+186512	Deklan
+186528	r s
+186536	resi gecikmesi
+186568	daha uzun olabilir.
+186610	Mek. dekl. kullan
+186650	nda ge
+186664	erlidir.
+186682	Titre
+186694	im 
+186702	nleyici 
+186720	ekim
+186734	al
+186742	maz.
+186752	@A003@ISO-Otomatik
+186790	@A09B@ISO-Otomatik
+186828	@A003@ISO-Otomatik Ayar
+186876	@A09B@ISO-Otomatik Ayar
+186924	@A003@D
+186944	k ISO 
+186960	lemesi
+186974	INFO_S_NOISE_REDUCTION_MODE_1
+187034	INFO_S_NOISE_REDUCTION_MODE_2
+187094	Kadran M/B
+187116	Fn kolu konumuna g
+187154	re
+187162	AF modu/AF hedef modu/AF hedef
+187226	noktas
+187240	 aras
+187252	nda ge
+187270	 yapar.
+187288	Hedef se
+187306	ilebilir.
+187326	@A0AB@ Nastavenia
+187362	@A0AC@Tla
+187382	idlo sp
+187400	te
+187406	@A0AC@Viacn
+187430	sobn
+187440	 voli
+187454	@A0AC@Predn
+187478	 oto
+187488	. ovl
+187500	d.
+187506	@A0AC@Zadn
+187528	 oto
+187538	. ovl
+187550	d.
+187556	@A0AC@Tla
+187576	idlo @A007@
+187600	@A0AC@Tla
+187620	idlo @A0AD@
+187644	@A0AC@Tla
+187664	idlo @A034@
+187688	@A0AE@Viacn
+187712	sobn
+187722	 voli
+187736	@A0AE@Predn
+187760	 oto
+187770	. ovl
+187782	d.
+187788	@A0AE@Zadn
+187810	 oto
+187820	. ovl
+187832	d.
+187844	ka Fn
+187856	Tla
+187864	idlo @A0AF@
+187888	Tla
+187896	idlo @A010@
+187920	Tla
+187928	idlo @A082@
+187952	Dotykov
+187968	 displej
+187986	@A0AC@Stredn
+188012	 tla
+188022	idlo
+188032	AF Hedef Modu
+188060	AF Hedef Noktas
+188094	@A0AD@Smerov
+188120	 kl
+188128	ves
+188136	@A0AD@ :Vyp.
+188162	INFO_JOY_CROSS_KEY_DIRECT_ON
+188220	Vlastn
+188234	 re
+188242	im C1
+188254	Vlastn
+188268	 re
+188276	im C2
+188288	Vlastn
+188302	 re
+188310	im C3
+188322	Vlastn
+188336	 re
+188344	im C4
+188356	Zapne/vypne @A0A6@.
+188396	@A09C@ 
+188414	esini a
+188432	k/kapal
+188454	konuma getirir.
+188486	@A09D@ 
+188504	esini a
+188522	k/kapal
+188544	konuma getirir.
+188576	@A09E@ 
+188594	esini a
+188612	k/kapal
+188634	konuma getirir.
+188666	FN_DIGITAL_ND
+188694	Canl
+188704	 ND 
+188714	ekimini
+188736	ar/kapat
+188754	r.
+188760	@A003@@A093@ S
+188790	cak Rengi Tut
+188818	@A004@@A093@ S
+188848	cak Rengi Tut
+188876	@A003@BA
+188894	@A004@BA
+188912	@A003@Hepsi @A094@
+188950	@A004@Hepsi @A094@
+188988	@A099@ Adresa MAC
+189024	Yar
+189032	m AF
+189042	S-AF veya C-AF i
+189076	in mod3/mod4'te
+189110	deklan
+189126	r d
+189136	mesine yar
+189164	bas
+189172	ld
+189182	nda bile AF etkinle
+189222	ir.
+189230	S-AF veya C-AF i
+189264	in mod3/mod4'te
+189298	deklan
+189314	r d
+189324	mesine yar
+189352	bas
+189360	ld
+189370	nda AF etkinle
+189400	mez.
+189410	@A003@AEL/AFL
+189438	@A0A8@
+189452	@A0A2@
+189466	@A003@Objekt sledovania
+189514	Moto
+189524	port
+189534	Lietadl
+189552	Vlaky
+189564	Objekt nie je 
+189594	pecifikovan
+189622	Bud
+189630	 vyh
+189640	adan
+189650	 a sledovan
+189678	vozidl
+189692	 a motocykle.
+189720	Bud
+189728	 vyh
+189738	adan
+189748	 a sledovan
+189776	lietadl
+189792	 a helikopt
+189816	ry.
+189824	Bud
+189832	 vyh
+189842	adan
+189852	 a sledovan
+189880	vlaky.
+189894	@A003@AF+MF
+189918	Otomatik odak modunda
+189964	odak halkas
+189992	 devre d
+190014	 b
+190020	rak
+190028	r.
+190034	Otomatik odak modunda
+190080	manuel odaklama i
+190116	in
+190124	odak halkas
+190152	 etkinle
+190170	tirir.
+190184	@A003@C-AF Merkez Ba
+190226	lang
+190242	@A003@C-AF Merkez 
+190280	nceli
+190296	@A003@@A0A2@Ayarlar
+190338	@A003@Y
+190354	n Ba
+190364	lant
+190378	 @A078@
+190394	@A0A9@AF Hedef Noktas
+190440	@A0AA@AF Hedef Noktas
+190486	@A0AB@AF Hedef Noktas
+190532	@A0A9@AF Hedef Modu
+190572	@A0AA@AF Hedef Modu
+190612	@A0AB@AF Hedef Modu
+190652	@A0A3@Hedef Mod Ayarlar
+190702	Boyut
+190714	Ad
+190724	@A0A4@Boyut
+190748	@A0A5@Boyut
+190772	@A0A6@Boyut
+190796	@A0A7@Boyut
+190820	@A0A4@Ad
+190842	@A0A5@Ad
+190864	@A0A6@Ad
+190886	@A0A7@Ad
+190908	@A0B9@ Pripojenie k @A099@
+190962	Men
+190974	Hi
+190980	bir 
+190992	e kay
+191004	tl
+191010	 de
+191018	il.
+191028	Men
+191036	 s
+191042	ras
+191050	nda @A040@ d
+191078	mesine
+191094	basarak 
+191114	eyi Men
+191136	alan
+191146	na kaydedebilirsiniz.
+191196	ete ulo
+191220	asto pou
+191240	van
+191252	polo
+191262	ky ponuky. Zobrazia sa
+191310	iba ulo
+191326	en
+191332	 polo
+191344	ky.
+191352	Men
+191360	m 1
+191368	Men
+191376	m 2
+191384	Men
+191392	m 3
+191400	Men
+191408	m 4
+191416	Men
+191424	m 5
+191432	Video 
+191446	ekimi i
+191462	in
+191470	ISO hassasiyetinin OTO. 
+191522	esine
+191536	ayarlanmas
+191558	 i
+191564	in ayr
+191578	nt
+191588	 ayarlar.
+191608	Video 
+191622	ekimi i
+191638	in beyaz ayar
+191670	modunu se
+191690	in.
+191698	Video 
+191712	ekimi i
+191728	in b
+191742	n modlarda
+191766	ayn
+191774	 beyaz ayar
+191798	 telafisini
+191824	ayarlay
+191840	n.
+191846	Video 
+191860	ekimi i
+191876	in
+191884	beyaz ayar
+191906	 modunda s
+191928	cak
+191938	renkleri otomatikte tutmak i
+191996	in.
+192004	Oynatma Kare H
+192040	Film, x0,5 a
+192068	r 
+192074	ekim 
+192088	oynatma i
+192108	in kaydedilir.
+192138	Film, x0,42 a
+192168	r 
+192174	ekim 
+192188	oynatma i
+192208	in kaydedilir.
+192238	Film, x0,25 a
+192268	r 
+192274	ekim 
+192288	oynatma i
+192308	in kaydedilir.
+192338	Film, x0,21 a
+192368	r 
+192374	ekim 
+192388	oynatma i
+192408	in kaydedilir.
+192438	Film, x0,2 a
+192466	r 
+192472	ekim 
+192486	oynatma i
+192506	in kaydedilir.
+192536	@A004@ modu M olarak ayarland
+192600	nda
+192610	Oto. ISO hassasiyeti kullan
+192666	lamaz.
+192680	@A004@ modu M olarak ayarland
+192744	nda
+192754	Oto. ISO hassasiyeti kullan
+192810	labilir.
+192828	@A004@C-AF H
+192860	Video 
+192874	ekimi i
+192890	in C-AF
+192908	odaklama h
+192938	 se
+192946	er.
+192954	@A004@C-AF Hassasiyeti
+193000	Video 
+193014	ekimi i
+193030	in
+193038	objenizin hareketine ba
+193090	 olarak
+193108	C-AF kilit hassasiyetini ayarlay
+193174	n.
+193184	zl
+193192	Yava
+193204	@A004@
+193218	rove
+193228	 IS
+193236	Nastavenie 
+193260	rovne IS pre nat
+193296	anie
+193308	videa. Pre plynulej
+193350	 pohyb pri
+193374	panor
+193386	movan
+193398	 zvo
+193408	te N
+193418	zka.
+193428	@A0A0@G
+193452	m Yard
+193478	k olarak ayarland
+193518	nda
+193528	parlakl
+193544	k ve renkler @A0A0@ s
+193588	ras
+193596	nda
+193606	optimum g
+193630	nt
+193636	leme i
+193650	in ayarlan
+193672	r.
+193686	nt
+193692	, se
+193702	ilen foto
+193722	raf
+193732	modunda g
+193760	r.
+193774	nt
+193780	, ekran i
+193800	in BT.709
+193826	de
+193832	erine d
+193856	r.
+193864	Kaydedilen g
+193894	nt
+193900	den farkl
+193924	r.
+193930	PCM rekord
+193952	r vytvor
+193974	synchroniza
+194002	 t
+194008	n pri stla
+194030	en
+194040	a podr
+194054	an
+194060	 tla
+194070	idla @A083@ pri
+194104	nahr
+194114	van
+194122	 videa.
+194138	Kay
+194146	t H
+194160	Ses kalitesini se
+194196	er.
+194204	Men
+194212	m dolu.
+194228	Men
+194236	m'e eklendi.
+194262	Yeni konuma ta
+194298	Bu 
+194308	eyi kald
+194330	Bu @A0A1@ sekmesini kald
+194384	Se
+194390	ilen 
+194404	e Men
+194416	m alan
+194430	ndan
+194442	kald
+194460	r.
+194466	Se
+194472	ilen @A0A1@ sekmesindeki t
+194526	m 
+194534	eler
+194546	Men
+194554	m alan
+194568	ndan kald
+194596	r.
+194606	ral. Yen. D
+194630	zenle
+194642	Eklemek i
+194662	in Men
+194676	m 
+194684	esini se
+194702	in.
+194710	@A0B3@ Bat
+194732	ria
+194740	@A0B4@ Bat
+194762	ria
+194770	Po vybit
+194788	 bat
+194798	rie v @A0B3@ bude
+194836	pou
+194844	it
+194850	 bat
+194860	ria v @A0B4@.
+194888	Po vybit
+194906	 bat
+194916	rie v @A0B4@ bude
+194954	pou
+194962	it
+194968	 bat
+194978	ria v @A0B3@.
+195006	Kalibrova
+195026	 v
+195034	ku
+195040	Nastavte aktu
+195068	lnu v
+195082	ku.
+195096	ka/teplota
+195118	TEMPERATURE_UNIT
+195152	ELEVATION_UNIT
+195182	Vybra
+195194	 prie
+195206	inok na ulo
+195230	enie
+195240	@A078@Ukladanie s
+195276	borov denn
+195298	ka
+195304	@A079@Ukladanie s
+195340	borov denn
+195362	ka
+195368	@A0BD@Ukladanie s
+195404	borov denn
+195426	ka
+195432	@A078@Kapacita pre denn
+195480	k na karte je pln
+195518	@A079@Kapacita pre denn
+195566	k na karte je pln
+195604	Stla
+195614	te a podr
+195634	te @A083@ po
+195660	as
+195668	nahr
+195678	vania videa a PCM
+195716	rekord
+195730	r vlo
+195748	synchroniza
+195776	 t
+195782	n.
+195788	Pripojenie k smartf
+195828	nu alebo
+195848	pr
+195854	stupov
+195868	mu bodu pomocou
+195902	bezdr
+195914	tov
+195922	ch funkci
+195950	per y
+195962	ksek 
+195976	z. g
+195990	nt
+196000	olu
+196008	turmak i
+196026	in birden fazla 
+196062	foto
+196072	raf 
+196082	ekip birle
+196104	tirir.
+196118	ND filtresinin kullan
+196166	ndaki
+196180	gibi yava
+196200	 deklan
+196222	 etkinle
+196240	tirir.
+196254	A4. AF/MF
+196274	B1. Tla
+196290	./Ovl
+196302	da
+196308	/P
+196316	ka
+196322	B2. Tla
+196338	./Ovl
+196350	da
+196356	/P
+196364	ka
+196370	J3. @A003@ Utilita
+196408	@A003@C-AF Hassasiyeti
+196454	Varsay
+196468	lan AF modu/
+196496	AF hedef modu/AF
+196532	hedef noktas
+196562	Cans
+196572	z objeleri foto
+196604	raflamak i
+196626	in
+196634	objenizin hareketine ba
+196686	 olarak
+196704	C-AF kilit hassasiyetini ayarlay
+196770	n.
+196776	Cans
+196786	z objeleri foto
+196818	raflamak i
+196840	in
+196848	AF hedef modu se
+196882	ildi
+196892	inde
+196904	@A03F@ se
+196924	ilen 
+196938	eler g
+196960	r.
+196966	Cans
+196976	z obje foto
+197000	raflamak i
+197022	in
+197034	m AF modlar
+197058	nda manuel
+197082	odaklama i
+197104	in A
+197116	k 
+197124	esini se
+197142	in.
+197150	@A0A2@ i
+197168	inde @A03F@ se
+197198	ildi
+197208	inde,
+197222	C-AF/C-AF+TR, alan
+197260	nda merkez
+197284	alan
+197294	nda 
+197304	al
+197314	r.
+197320	@A0A2@ i
+197338	inde @A03F@ se
+197368	ildi
+197378	inde,
+197392	C-AF'deyken alan
+197426	n merkezi
+197448	di
+197454	er noktalara g
+197484	re 
+197492	nceliklidir.
+197518	Hareket esnas
+197546	nda hedef
+197568	alan boyutunu ve ad
+197608	m imle
+197626	konumunu ayarlay
+197660	n.
+197666	Cans
+197676	z objeleri foto
+197708	raflarken, @A03F@
+197746	se
+197752	ilen 
+197766	eler yatay veya dikey
+197812	konumlarda ayr
+197842	 olarak ayarlanabilir.
+197892	ber objektu sledovania
+197940	pre fotografovanie.
+197982	Plat
+197992	 v re
+198004	ime C-AF+TR.
+198030	Vyberte funkciu na priradenie
+198092	k @A0AC@ stredn
+198124	mu tla
+198138	idlu
+198150	viacn
+198162	sobn
+198172	ho voli
+198188	a pre sn
+198206	manie.
+198220	Vyberte funkciu na priradenie
+198282	k @A0AD@ smerov
+198314	mu kl
+198326	vesu
+198338	viacn
+198350	sobn
+198360	ho voli
+198376	a pre sn
+198394	manie.
+198408	Po
+198414	as @A0AB@ s
+198438	 neakt
+198452	vne
+198464	innosti, ktor
+198492	 s
+198498	 nastaven
+198522	na @A03E@.
+198544	Zvo
+198552	te ovl
+198566	da
+198572	e zobrazen
+198594	 pri
+198606	stla
+198616	en
+198622	 @A083@ pre fotografovanie.
+198684	 frekans
+198706	 ayarlayarak
+198734	titre
+198746	imi azaltma.
+198772	Cans
+198782	z objeleri foto
+198814	raflamak i
+198836	in
+198844	ISO hassasiyetinin OTO. 
+198896	esine
+198910	ayarlanmas
+198932	 i
+198938	in ayr
+198952	nt
+198962	 ayarlar.
+198982	Cans
+198992	z objeleri foto
+199024	raflamak i
+199046	in
+199054	oto. ISO hassasiyetinin mevcut
+199118	oldu
+199128	u 
+199134	ekim modlar
+199162	 se
+199170	in.
+199178	Cans
+199188	z objeleri foto
+199220	raflamak 
+199246	in d
+199260	k ISO h
+199276	zl
+199282	 i
+199288	leme 
+199306	ntemini se
+199328	er.
+199336	Cans
+199346	z objeleri foto
+199378	raflamak i
+199400	in
+199408	beyaz ayar
+199430	 modunu se
+199452	in.
+199460	Cans
+199470	z objeleri foto
+199502	raflamak i
+199524	in
+199540	n modlarda ayn
+199570	 beyaz
+199586	ayar
+199596	 telafisini ayarlay
+199636	n.
+199642	Cans
+199652	z objeleri foto
+199684	raflamak i
+199706	in
+199714	beyaz ayar
+199736	 modunda s
+199758	cak
+199768	renkleri otomatikte tutmak i
+199826	in.
+199836	prava nastaven
+199866	 v
+199874	ky
+199882	a teploty.
+199908	znam sn
+199924	ma
+199930	a po
+199948	skava inform
+199974	cie o sn
+199992	ma
+199998	i po
+200014	a uklad
+200030	 ich na kartu ako denn
+200076	k.
+200082	Spusti
+200096	 denn
+200112	Zastavi
+200128	 denn
+200144	Ulo
+200156	 denn
+200172	Spusten
+200190	Durduruldu
+200212	@A002@Zastaven
+200248	ft
+200254	Abu Dhabi
+200274	Adelaide
+200292	Alaska
+200306	Anchorage
+200326	Athens
+200340	Auckland
+200358	Azores
+200372	Bangkok
+200388	Beijing
+200404	Berlin
+200418	Buenos Aires
+200444	Cairo
+200456	Casablanca
+200478	Chennai
+200494	Chicago
+200510	Colombo
+200526	Delhi
+200538	Denver
+200552	Dhaka
+200564	Dubai
+200576	Fernando de Noronha
+200616	Fiji
+200626	Guam
+200636	Hawaii
+200650	Helsinki
+200668	Hong Kong
+200688	Honolulu
+200706	Houston
+200722	Islamabad
+200742	Jakarta
+200758	Johannesburg
+200784	Kabul
+200796	Karachi
+200812	Kathmandu
+200832	Kolkata
+200848	Kuala Lumpur
+200874	Kuwait
+200888	La Paz
+200902	Lima
+200912	London
+200926	Los Angeles
+200950	Madrid
+200964	Male
+200974	Manaus
+200988	Mexico City
+201012	Miami
+201024	Midway Islands
+201054	Moscow
+201068	Mumbai
+201082	Nairobi
+201098	New Caledonia
+201126	New York
+201144	Newfoundland
+201170	Paris
+201182	Phoenix
+201198	Rio de Janeiro
+201228	Riyadh
+201242	Rome
+201252	Samoa
+201264	Sao Paulo
+201284	Seattle
+201300	Seoul
+201312	Singapore
+201332	Solomon Islands
+201364	Sydney
+201378	Tahiti
+201392	Taipei
+201406	Tehran
+201420	Tokyo
+201432	Toronto
+201448	Vancouver
+201468	Wellington
+201490	Yangon
+201504	UTC
+201512	ART16
+201524	FHD HighSpeed 120fps
+201566	ND32(5EV)
+201586	ND16(4EV)
+201606	ND8(3EV)
+201624	ND4(2EV)
+201642	ND2(1EV)
+201660	LV OFF-Info
+201684	ISO L64
+201700	ISO L80
+201716	ISO L100
+201734	ISO L125
+201752	ISO L160
+201770	@A0D1@LOCK
+201792	@A0AE@@A010@
+201818	@A0AE@@A0AD@
+201844	@A0AE@@A007@
+201870	@A0AE@@A03F@
+201896	@A0AE@@A03C@
+201922	@A0AE@@A0CB@
+201948	@A0AE@@A034@
+201974	@A0AE@@A0CC@
+202000	@A0AE@@A0CD@
+202026	@A0AE@@A0CE@
+202052	@A0AE@@A0CF@
+202078	@A0AE@@A0D0@
+202104	@A0AC@@A0AD@
+202130	@A0AC@@A007@
+202156	@A0AC@@A034@
+202182	@A0AC@@A0CF@
+202208	@A0AC@@A0D0@
+202234	S-AF@A0BC@
+202256	C-AF@A0BC@
+202278	C-AF+TR@A0BC@
+202306	USB PD
+202320	@A0C8@PC RAW
+202346	96kHz/24bit
+202370	48kHz/16bit
+202394	COMM_MODE_B
+202418	Ba
+202424	lant
+202434	 Ayar
+202448	Bir cihaza ba
+202476	lanmak i
+202494	in
+202502	sonraki ad
+202524	mlar
+202534	 izleyin.
+202556	Bu ayar yaln
+202582	zca bir kez gereklidir.
+202632	@A08F@/Bluetooth ayar s
+202680	ras
+202688	nda
+202698	etkinle
+202714	tirilecektir.
+202746	tfen cihaz
+202772	za OI.Share
+202798	uygulamas
+202822	 kurun.
+202844	kleme tamamland
+202880	nda @A019@
+202910	mesine bas
+202932	n.
+202938	OI.Share
+202958	uygulamas
+202982	 kullanarak
+203008	QR kodunu taray
+203040	n.
+203046	Ba
+203052	lat
+203064	yor...
+203078	Ba
+203084	lant
+203094	 kesiliyor...
+203122	Ba
+203128	lant
+203138	 Kes@A018@
+203160	Cihaz Ba
+203178	lant
+203194	Bir cihaza ba
+203222	lan
+203230	n.
+203236	Ba
+203242	lant
+203252	 Ayr
+203262	nt
+203268	lar@A01A@
+203288	Pripojenie zariadenia
+203332	Pripojenie pr
+203360	stupov
+203374	ho bodu
+203390	Vyh
+203398	ad
+203404	va sa pr
+203422	stupov
+203436	 bod...
+203452	Prip
+203462	ja sa k pr
+203484	stupov
+203498	mu bodu...
+203520	Pripoji
+203536	 cez WPS
+203554	Pripoji
+203570	 zo zoznamu pr
+203600	st. bodov
+203620	Pripoji
+203636	 manu
+203648	lne
+203656	Podrob. nastav.
+203688	Teraz nedostupn
+203722	Niektor
+203738	 sn
+203746	mky neboli prenesen
+203790	Met
+203798	da PBC
+203812	Met
+203820	da PIN
+203834	Pripoji
+203850	 stla
+203862	en
+203868	m tla
+203880	idla WPS na
+203906	pr
+203912	stupovom bode.
+203942	Pripoji
+203958	 zadan
+203972	m PIN k
+203988	du
+203996	na pr
+204008	stupovom bode.
+204038	Stla
+204048	te tla
+204062	idlo WPS
+204082	na pr
+204094	stupovom bode.
+204126	Pripojenie sa spust
+204166	, ke
+204180	stla
+204192	te @A083@.
+204214	Zadajte vy
+204238	ie zobrazen
+204262	 PIN k
+204282	na pr
+204294	stupovom bode.
+204326	Pripojenie sa spust
+204366	, ke
+204380	stla
+204392	te @A083@.
+204414	Je potrebn
+204436	 po
+204444	iato
+204458	 konfigur
+204478	cia
+204488	na pripojenie k PC pomocou @A099@.
+204560	Postupujte pod
+204590	a pokynov v
+204616	Olympus Capture. Po
+204656	iat. konfig.
+204684	je potrebn
+204706	 pre ka
+204726	 po
+204736	ta
+204746	RESULT_WPS_NG
+204774	Pripojenie ne
+204802	spe
+204816	Pr
+204822	stupov
+204836	 bod sa nena
+204862	iel
+204870	@A099@ je spusten
+204908	Odpoji
+204924	Zachova
+204942	Heslo
+204954	Vybra
+204966	 PC na pripojenie
+205002	Vymaza
+205018	Vymazanie nastaven
+205056	 pripojenia z
+205086	fotoapar
+205104	tu pre tento pr
+205136	stupov
+205150	 bod.
+205162	IP_SETTING
+205184	IP adresa
+205204	Maska podsiete
+205234	Predvolen
+205254	 br
+205262	na
+205268	Priradenie IP adresy
+205310	Auto (DHCP)
+205334	Manu
+205344	lne
+205352	Aktualizova
+205376	 nastavenia
+205400	Dostupn
+205416	, ke
+205426	 pr
+205434	stupov
+205448	 bod
+205460	podporuje funkciu DHCP.
+205510	IP adresa bude priraden
+205562	automaticky.
+205588	Zadajte IP adresu manu
+205634	lne.
+205644	Overovanie
+205668	iadne
+205680	Spusti
+205694	 pripojenie
+205718	Pr
+205724	stupov
+205738	 bod sa nena
+205764	iel
+205772	Vyh
+205780	ada
+205788	 znovu@A033@
+205814	@A0BA@@A03F@/@A01B@@A01C@
+205866	@A0BA@@A03F@
+205892	Pripoji
+205908	@A019@
+205922	Zatv.@A018@
+205946	Pripojenie k PC spusten
+205996	Pripojenie k PC ukon
+206038	en
+206046	Fotoapar
+206064	t je pripojen
+206092	 k PC.
+206108	Zaznamenan
+206130	 sn
+206138	mky sa automaticky
+206178	prenes
+206192	 do PC.
+206208	Pripojenie k PC bolo ukon
+206260	en
+206270	@A002@ Odpojen
+206300	 od PC.
+206318	Skontrolujte stav PC.
+206362	@A002@ Odpojen
+206392	 od siete. Skontrolujte
+206442	stav @A099@ a znovu sa pripojte
+206508	k pr
+206518	stupov
+206532	mu bodu.
+206550	@A09F@ Mat Renk
+206582	DNS
+206590	WPA2
+206604	ayak
+206614	Elde ta
+206640	Zru
+206648	enie prenosu sn
+206680	mok do PC
+206702	a odpojenie.
+206728	Vysok
+206746	zka
+206754	Stla
+206764	en
+206770	m tla
+206782	idla @A0AD@ po
+206812	as
+206820	fotografovania m
+206856	ete
+206866	vybra
+206878	 cie
+206888	ov
+206894	 oblas
+206908	 AF.
+206918	NOISE_REDUCTION_STANDARD
+206968	NOISE_REDUCTION_QUALITY
+207016	INFO_S_NOISE_REDUCTION_STANDARD
+207080	INFO_S_NOISE_REDUCTION_QUALITY
+207142	M/B
+207150	@A0D5@
+207164	@A0F8@
+207178	@A078@Ekran Ayarlar
+207222	 Se
+207232	S_NOISE_REDUCTION_LEVEL
+207280	m/ft
+207290	@A0D3@/@A0D4@
+207318	Nab
+207326	janie
+207354	nceli
+207370	Ayr
+207378	nt
+207388	nceli
+207412	k ISO h
+207428	zlar
+207438	nda,
+207450	cans
+207460	z objeleri foto
+207492	raflamak
+207516	in g
+207530	nt
+207536	 i
+207542	lemede maksimum
+207576	kaydedilebilir s
+207610	ral
+207622	ekim kareleri
+207654	ncelik al
+207674	r.
+207688	k ISO h
+207704	zlar
+207714	nda,
+207726	cans
+207736	z objeleri foto
+207768	raflamak
+207792	in g
+207806	nt
+207812	 i
+207818	lemede
+207842	nt
+207848	 ayr
+207858	nt
+207864	lar
+207878	ncelik al
+207898	r.
+207904	@A0BD@ OM-Log400
+207938	@A003@@A09A@ @A094@
+207978	@A004@@A09A@ @A094@
+208018	2 saat
+208032	5 h
+208040	@A006@@A040@Fonksiyon
+208084	Oynatma s
+208104	ras
+208112	nda @A040@ i
+208138	in
+208146	atamak 
+208162	zere fonksiyon se
+208198	in.
+208206	@A04D@ Ayarlar
+208238	@A017@ Ayarlar
+208270	@A0AC@AF AEL/AFL
+208308	ld
+208314	zl
+208320	 G
+208326	zy
+208336	 AF 
+208346	al
+208356	yor
+208368	ld
+208374	zl
+208380	 G
+208386	zy
+208396	 AF
+208408	ld
+208414	zl
+208420	 G
+208426	zy
+208436	 AF + MF
+208458	ld
+208464	zl
+208470	 G
+208476	zy. AF Ayar
+208506	ld
+208512	zl
+208518	 G
+208524	zy
+208534	 AF i
+208546	in
+208554	bir mod se
+208576	in.
+208584	Do
+208590	ruluk
+208610	AF do
+208622	rulu
+208632	u, AF h
+208658	zerinde 
+208676	nceli
+208688	e sahiptir.
+208714	AF tamamlanana dek
+208758	lem s
+208770	resi gerekir.
+208798	AF h
+208812	, AF do
+208828	rulu
+208846	zerinde 
+208864	nceli
+208876	e sahiptir.
+208900	Odaklama Halkas
+208932	 Kilidi
+208948	Manuel odaklama modunda odaklama
+209016	halkas
+209034	 devre d
+209056	 b
+209062	rak
+209070	r.
+209078	Geri d
+209092	nmek i
+209106	in tekrar bas
+209134	n.
+209140	Gece 
+209152	ekimi
+209164	Gece 
+209176	ekimini A
+209198	k/Kapal
+209214	 hale getirir.
+209246	Ayarlar
+209262	 se
+209270	mek i
+209282	in d
+209292	ner d
+209306	meyi
+209318	bast
+209332	n ve 
+209344	evirin.
+209360	Gece 
+209372	ekimi A
+209390	k1
+209406	zel Mod Kaydetme Ayarlar
+209458	Tut
+209474	rla
+209484	zel modda 
+209506	ekim yap
+209528	rken
+209540	de
+209550	tirilen ayarlar otomatik
+209602	olarak kaydedilir.
+209642	zel modda 
+209664	ekim yap
+209686	rken
+209698	de
+209708	tirilen ayarlar kaydedilmez.
+209766	@A008@Y
+209782	z Se
+209792	imi
+209800	Se
+209806	ili AF hedef noktas
+209846	na yak
+209866	bir y
+209878	z se
+209888	mek i
+209900	in d
+209912	meye bas
+209930	n.
+209938	Manuel se
+209958	im yapmak i
+209982	in d
+209992	ner
+210008	meyi bast
+210032	n ve 
+210044	evirin.
+210060	@A008@Y
+210076	z 
+210082	nceli
+210098	@A008@Y
+210114	z 
+210120	nceli
+210132	i 
+210138	zelli
+210150	ini A
+210164	k/Kapal
+210184	hale getirir. Ayarlar
+210228	 se
+210236	mek i
+210248	in
+210260	ner d
+210274	meyi bast
+210298	n ve 
+210310	evirin.
+210330	z 
+210336	nceli
+210348	i AF
+210366	@A078@ D
+210384	ng
+210390	 Ayarlar
+210410	AF hedef se
+210434	im ekran
+210452	nda
+210462	imle
+210472	 hareketi i
+210496	in 
+210506	ayarlar.
+210524	@A078@ D
+210542	ng
+210548	 Se
+210556	imi
+210568	ng
+210574	 1
+210584	ng
+210590	 2
+210596	AF hedefini kenara ta
+210646	ktan
+210658	sonra durur.
+210684	AF hedefini kenar
+210720	n 
+210726	tesine
+210742	ta
+210754	ktan sonra ayn
+210792	ran
+210800	n veya s
+210818	tunun
+210836	t ucuna ta
+210860	r.
+210866	AF hedefini kenar
+210910	tesine ta
+210936	ktan sonra
+210960	bir sonraki s
+210988	ra veya
+211010	tunun z
+211026	t ucunda
+211046	hareket ettirir.
+211080	@A0AD@ 
+211096	zerinden
+211114	AF hedefi z
+211138	t uca
+211152	ta
+211160	nmadan 
+211176	nce
+211186	@A0AD@ se
+211206	ilir.
+211218	AF hedefi z
+211242	t uca
+211256	ta
+211264	nmadan 
+211280	nce
+211290	@A0AD@ se
+211310	ilmez.
+211324	RAW+JPEG @A041@
+211356	RAW+JPEG olarak ayar yap
+211406	ld
+211416	nda
+211426	bir cihaza aktar
+211460	m i
+211468	in yaln
+211484	zca
+211494	JPEG 
+211506	n se
+211516	imi yap
+211536	r.
+211542	RAW+JPEG olarak ayar yap
+211592	ld
+211602	nda
+211612	bir cihaza aktar
+211646	m i
+211654	in yaln
+211670	zca
+211680	RAW 
+211690	n se
+211700	imi yap
+211720	r.
+211726	RAW+JPEG olarak ayar yap
+211776	ld
+211786	nda
+211796	bir cihaza aktar
+211830	m i
+211838	in RAW+JPEG
+211866	n se
+211876	iminin ikisi de yap
+211920	r.
+211926	Odaklama G
+211948	stergesi
+211966	Odaklama halkas
+211998	 MF modunda
+212028	nd
+212038	ld
+212048	nde odaklama
+212080	stergesi belirmez.
+212118	Odaklama halkas
+212150	 MF modunda
+212180	nd
+212190	ld
+212200	nde odaklama y
+212238	ve pozisyonu belirir. Bu i
+212292	lev
+212302	oda
+212312	 ayarlaman
+212334	za yard
+212350	mc
+212356	 olur.
+212370	Canl
+212380	 Kom. Zamanlay
+212416	Kompozit 
+212436	ekim i
+212450	in
+212458	maksimum s
+212480	reyi ayarlay
+212506	n.
+212512	3 saat
+212526	6 h
+212536	ekim Bilgileri
+212566	@A0BD@Z
+212582	mok
+212590	Vyberte Zap. pre vypnutie @A0BD@.
+212660	Deklan
+212676	r d
+212686	mesi yar
+212708	bas
+212720	yken 
+212732	er
+212738	eveyi g
+212758	nt
+212764	ler.
+212778	er
+212784	eve daima film 
+212816	ekim modunda
+212852	nt
+212858	lenir. (@A0AD@, C-AF)
+212902	Men
+212910	 s
+212916	ras
+212924	nda @A040@ d
+212952	mesine
+212968	basarak 
+212988	eyi Men
+213010	alan
+213020	na kaydedebilirsiniz.
+213064	@A0AC@AF
+213082	@A0AC@AF@A0BC@
+213112	AEL/@A0AC@AF
+213138	@A0AC@AF Start/Stop
+213178	Saptanan y
+213200	zler i
+213214	in AF'ye
+213236	ncelik verilir.
+213272	zler saptand
+213302	nda dahi se
+213326	ili
+213336	hedef nokta i
+213364	in AF'ye 
+213384	ncelik
+213400	verilir.
+213418	Gece 
+213430	ekimi Kapal
+213456	Gece 
+213468	ekimi A
+213486	k2
+213492	Aktar
+213504	m 
+213510	n Se
+213520	imi:
+213532	Bir cihaza aktarmak i
+213576	in
+213592	nt
+213598	leri 
+213610	nceden se
+213630	in.
+213640	oklu G
+213658	nt
+213664	 Se
+213672	imi:
+213684	Koruma veya silme gibi
+213732	belirli bir i
+213760	lemi uygulamak 
+213792	zere
+213804	birden fazla g
+213838	nt
+213844	 se
+213852	in.
+213860	Monit
+213872	r kapal
+213888	 oldu
+213900	unda
+213916	z sens
+213938	 etkinle
+213956	tirin.
+213972	@A03D@: canl
+213998	 g
+214008	nt
+214014	 A
+214022	k/Kapal
+214042	Re
+214048	im RAW
+214062	Pren
+214074	a video vo form
+214106	te RAW
+214122	do podporovan
+214150	ho zariadenia.
+214182	Ned
+214190	 sa nahra
+214210	 na kartu
+214232	vo fotoapar
+214256	te.
+214264	PC'de panorama g
+214302	nt
+214318	olu
+214326	turmak i
+214344	in foto
+214360	raf 
+214370	ekimi.
+214384	Karla kapl
+214406	 da
+214414	lar
+214422	, do
+214432	a ve 
+214446	beyaz kumlu deniz manzaralar
+214514	vb. 
+214524	ekmek i
+214540	in.
+214548	Mum 
+214566	nda 
+214576	ekim yapmak i
+214604	in.
+214618	cak renkler
+214644	daha canl
+214670	kar.
+214680	Dok
+214688	man vb. 
+214706	ekimi i
+214722	in. 
+214734	Arkaplan ve harfler aras
+214784	ndaki
+214798	kontrast
+214816	 artt
+214832	r.
+214838	HDTV'de g
+214862	nt
+214868	lemek i
+214884	in
+214892	cilt tonunu p
+214924	zs
+214930	zle
+214938	tirme.
+214952	Manzara 
+214970	ekimi yapmak i
+215000	in.
+215010	Mavi ve ye
+215032	il canl
+215054	kar.
+215064	Bulan
+215076	kl
+215082	k olmadan, h
+215108	zl
+215120	hareket eden objeleri
+215168	eker.
+215184	n bat
+215200	nda/do
+215214	umunda 
+215234	ekim i
+215248	in.
+215258	Sar
+215266	 ve k
+215278	rm
+215288	 daha canl
+215316	kar.
+215326	Arka I
+215342	k HDR
+215354	Bir seri g
+215380	nt
+215390	 birle
+215404	tirerek
+215422	en iyi parlakl
+215452	kta g
+215468	nt
+215478	olu
+215486	turur.
+215504	 Mekanlar
+215524	Hareket
+215540	Gece Manzaralar
+215576	nsanlar
+215592	Manzara
+215608	Havai fi
+215626	ekler daha yava
+215662	bir enstantane h
+215700	nda 
+215710	ekilir.
+215728	Tripod kullan
+215756	lmas
+215770	nerilir.
+215788	Hem ana obje hem de arkaplan
+215852	ekmek i
+215868	in.
+215878	Mavi ve ye
+215900	il renk daha canl
+215942	kar.
+215952	Foto
+215962	raflar yaln
+215986	zca parlakl
+216016	ayar
+216026	 de
+216038	tirilmi
+216054	 alanlar kaydedilerek
+216100	ard
+216112	k olarak 
+216132	ekilir ve birle
+216164	tirilir.
+216190	k yollar
+216212	n 
+216218	ekimi i
+216234	in m
+216244	kemmeldir.
+216268	Tripod kullan
+216296	lmas
+216310	nerilir.
+216328	@A00A@POP UP
+216360	zel gece manzaralar
+216408	nde
+216418	insanlar
+216440	ekin. Daha yava
+216472	 bir
+216484	enstantane h
+216514	 kullan
+216534	r.
+216542	Tripod kullan
+216570	lmas
+216584	nerilir.
+216606	zel gece manzaralar
+216650	 daha
+216664	yava
+216674	 bir enstantane h
+216714	nda 
+216724	ekin.
+216738	Tripod kullan
+216766	lmas
+216780	nerilir.
+216798	Portre 
+216814	ekimi yapmak i
+216844	in.
+216852	Mum I
+216874	ocuklar
+216890	e-Portre
+216914	k Yollar
+216936	ok Odakl
+216958	ekim
+216968	Yak
+216976	n 
+216982	ekimler
+216998	Yak
+217006	n foto
+217020	raf
+217034	k i
+217042	in.
+217050	Yak
+217058	n do
+217068	a foto
+217082	raf
+217100	 i
+217106	in. 
+217118	Standart makroya k
+217156	yasla daha 
+217182	canl
+217192	 makro 
+217208	ekimler yap
+217236	r.
+217242	Foto
+217252	raf makinesinden gelen ses 
+217310	ve 
+217326	n d
+217334	zg
+217340	n olmad
+217360	 yerlerde
+217382	foto
+217392	raf 
+217402	ekimi i
+217418	in idealdir.
+217446	@A001@, Fla
+217470	 ve AF I
+217490	kland
+217510	 devre
+217534	 b
+217540	rak
+217548	lacakt
+217562	r.
+217568	Farkl
+217580	 odaklama konumlar
+217618	nda 
+217630	ayn
+217638	 anda birden fazla foto
+217686	raf 
+217700	ekilir.
+217716	Cihaz Ba
+217734	lant
+217750	Bir cihaza ba
+217778	lan
+217786	n.
+217792	Bu fonksiyon uyumlu bir lens gerektirir.
+217880	tfen uyumlu bir lens tak
+217930	n.
+217936	C ayarlar
+217956	 uygulans
+217976	n m
+217990	Mevcut foto
+218014	raf makinesi ayarlar
+218068	zerine yaz
+218090	lacakt
+218104	r.
+218112	zel Mod C
+218134	al
+218144	yor
+218152	@A08F@/Bluetooth ba
+218192	lant
+218202	 i
+218208	in
+218216	kullan
+218230	labilir hale getirildi.
+218278	@A08F@/Bluetooth tamamen
+218330	devre d
+218350	 ve bir ba
+218372	lant
+218386	ba
+218392	lat
+218400	lam
+218408	yor.
+218418	Bluetooth
+218438	Kablosuz 
+218460	levler
+218480	k@A0AE@
+218502	k@A0AF@
+218518	Bluetooth'u devre d
+218562	 b
+218568	rak
+218576	r.
+218590	 a
+218598	kken Bluetooth her zaman
+218650	devre d
+218674	r.
+218680	Bluetooth'u etkinle
+218720	tirir.
+218742	 a
+218750	kken Bluetooth
+218782	kablosuz deklan
+218816	r i
+218824	in
+218832	her zaman etkin olur.
+218876	Bluetooth'u etkinle
+218916	tirir.
+218938	 a
+218946	kken Bluetooth ak
+218982	ll
+218988	 telefon
+219012	in her zaman etkin olur.
+219066	le
+219072	tirme tamamland
+219110	Bluetooth ayar
+219140	 A
+219148	k@A0AE@
+219166	olarak de
+219190	tirildi.
+219212	le
+219218	tirme devam ediyor.
+219264	tfen kablosuz deklan
+219320	mesinde e
+219340	le
+219346	tirme
+219364	lemi ger
+219382	ekle
+219392	tirin.
+219410	le
+219416	tirilen cihaz
+219444	 silin.
+219462	Kablosuz deklan
+219496	r kullan
+219518	rken
+219534	le
+219540	tirme tekrar gereklidir.
+219590	Kablosuz Deklan
+219624	r Ayar
+219644	le
+219650	tirmeyi Ba
+219672	lat
+219684	le
+219690	tirmeyi Sil
+219714	AF I
+219726	kland
+219748	Renk Uzay
+219770	Pozlama D
+219790	zg
+219796	nl
+219810	retici Yaz
+219840	 S
+219856	P/A/S/M pozlama 
+219892	modlar
+219906	nda 
+219918	etkilidir.
+219940	Aral
+219950	k Modu
+219964	Kare 
+219976	nceli
+219992	Zaman 
+220006	nceli
+220022	USB ba
+220040	 oldu
+220052	unda i
+220066	lemi ayarlar.
+220102	nt
+220112	nceleme
+220128	Web Kameras
+220158	tfen mod kadran
+220200	@A004@ konumuna 
+220234	evirin.
+220252	zel Mod C2
+220276	zel Mod C3
+220300	zel Mod C4
+220324	zel Mod C
+220344	@A0B1@ 
+220362	esini a
+220380	k/kapal
+220402	konuma getirir.
+220436	ekim karelerinin say
+220490	korumaya 
+220510	ncelik verir.
+220540	Son kareler kaydedildi
+220586	inde
+220598	aral
+220608	k zaman
+220624	 ge
+220632	tikten
+220648	sonra bir sonraki 
+220686	ekimi ba
+220704	lat
+220712	r.
+220718	Aral
+220728	k s
+220736	resini korumaya 
+220770	ncelik verir.
+220800	Ayar aral
+220824	 korunamad
+220850	nda
+220860	bir sonraki 
+220886	ekimi atlar.
+220912	Her bir kare i
+220942	in
+220952	ekim pozlamas
+220980	nda
+220990	bu kareye y
+221014	nelik
+221036	m sonucu kullan
+221072	r.
+221082	m kareler i
+221106	in
+221116	ekim pozlamas
+221148	 standartla
+221180	r.
+221188	Sunulan h
+221208	zland
+221224	lm
+221232	 videolarda
+221258	parlakl
+221274	k de
+221288	ikliklerini d
+221316	zg
+221322	nle
+221330	tirir.
+221344	@A002@ Tek videonun otomatik
+221404	olarak ayr
+221426	lm
+221434	 t
+221440	m dosyalar
+221466	 siler.
+221482	P/A/S/M/B
+221502	P/A/S/M
+221518	@A0BE@ Control
+221548	@A0B0@ esn Krmz 
+221582	er
+221596	k olarak ayarland
+221636	nda
+221646	video kayd
+221668	 esnas
+221682	nda ekranda
+221712	rm
+221722	 bir d
+221742	er
+221748	eve g
+221764	nt
+221770	ler.
+221788	nt
+221794	 Koruma:
+221822	nt
+221828	leri kazara silmeye
+221870	kar
+221880	 koruyun.
+221900	@A0AD@Ayarlar
+221930	@A0AF@Fonksiyon
+221962	@A00D@Fonksiyon
+221994	@A0B0@Fonksiyon
+238154	OlympusLanguage_trktft

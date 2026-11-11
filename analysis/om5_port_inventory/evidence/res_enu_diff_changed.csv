@@ -1,0 +1,1137 @@
+sid,e144_text,e148_text
+4,"RAW@A024@","RAW@A01A@"
+6,"@A01D@","@A013@"
+94,"@A004@Mode","@A003@Mode"
+136,"@A00A@ Slow Limit","@A006@ Slow Limit"
+137,"@A00A@ X-Sync.","@A006@ X-Sync."
+148,"@A00F@ Settings","@A00B@ Settings"
+164,"@A009@+@A007@","@A010@+@A011@"
+165,"@A00E@","@A00A@"
+175,"@A016@","@A012@"
+190,"No Picture","No Picture "
+195,"Capture WB@A01A@","Capture WB@A012@"
+199,"@A01E@","@A014@"
+200,"@A01F@","@A015@"
+203,"Picture Mode","Picture Mode "
+213,"@A024@","@A01A@"
+226,"@A026@","@A01D@"
+250,"@A02A@ 12 sec","@A020@ 12 sec"
+251,"@A02A@ 2 sec","@A020@ 2 sec"
+340,"@A014@/@A028@","Drive @A00E@/@A00F@"
+365,"It is enabled in the
+P/A/S exposure modes.","It is enabled in the
+P/A/S exposure modes. "
+375,"@A013@/@A014@ direct setting.","@A00E@/@A00F@ direct setting."
+464,"To change white balance mode
+to auto or @A036@ automatically
+when using flash.","To change white balance mode
+to auto or @A021@ automatically
+when using flash."
+467,"Choose the pixel count for
+@A037@ and @A038@.","Choose the pixel count for
+@A036@ and @A037@."
+541,"Info Off","Image Only"
+542,"@A049@ Keep Warm Color","@A020@ Keep Warm Color"
+543,"@A00A@+WB","@A006@+WB"
+562,"@A02B@","@A01F@"
+567,"@A025@","@A01C@"
+568,"@A017@","@A01B@"
+571,"@A023@","@A019@"
+573,"@A017@ Start","@A01B@ Start"
+665,"@A022@","@A018@"
+666,"@A00E@","@A00A@"
+722,"Exit@A019@","Exit@A026@"
+826,"Copy All","Copy All "
+840,"@A00B@","@A007@"
+841,"@A00C@","@A008@"
+844,"@A00D@","@A009@"
+893,"By attaching MCON-P02 to
+14-42mm EZ, you can take close
+up photos of small items.","By attaching MCON-P02,
+you can take close up photos
+of small items."
+955,"@A028@","@A01E@"
+1089,"@A03E@+Shutter Button","@A03D@+Shutter Button"
+1122,"Choose the controls displayed
+when the @A035@ is pressed
+in each shooting mode.","Choose the controls displayed
+when the @A04B@ is pressed
+in each shooting mode."
+1129,"Choose a movie record mode
+while @A004@ mode.","Choose a movie record mode
+while @A003@ mode."
+1154,"@A017@Volume Limiter","@A01B@Volume Limiter"
+1178,"@A013@Image Stabilizer","@A00E@Image Stabilizer"
+1214,"Norm","Normal"
+1215,"@A020@","@A016@"
+1216,"@A021@","@A017@"
+1220,"@A046@Lock","@A027@Lock"
+1223,"For shooting the subject
+with blur background.
+Detects the camera moving
+and sets the best
+shutter speed.","Detects the camera moving
+and sets the best shutter speed
+for blur background.
+Shoots in sequential shooting."
+1225,"@A053@Light Tone","@A054@Light Tone"
+1261,"Set compensation@A01A@","Set compensation@A012@"
+1262,"@A03C@ Half Way Level","@A03B@ Half Way Level"
+1280,"@A0BF@","@A07A@"
+1316,"@A0C0@","@A0CC@"
+1317,"@A0C1@","@A0CD@"
+1318,"@A0C2@","@A0CE@"
+1319,"@A0C3@","@A0CF@"
+1320,"@A0C4@","@A0D0@"
+1321,"@A0C5@","@A0D1@"
+1322,"@A0C6@","@A0D2@"
+1323,"@A0C7@","@A0D3@"
+1324,"@A0C8@","@A0D4@"
+1325,"@A0C9@","@A0D5@"
+1326,"@A0CA@","@A0D6@"
+1327,"@A0CB@","@A0D7@"
+1328,"@A0CC@","@A0D8@"
+1329,"@A0CD@","@A0D9@"
+1330,"@A0CE@","@A0DA@"
+1331,"@A0CF@","@A0DB@"
+1332,"@A0D0@","@A0DC@"
+1333,"@A0D1@","@A0DD@"
+1334,"@A0D2@","@A0DE@"
+1335,"@A0D3@","@A0DF@"
+1336,"@A0D4@","@A0E0@"
+1338,"@A0D6@","@A0E2@"
+1339,"@A0D7@","@A0E3@"
+1340,"@A0D8@","@A0E4@"
+1341,"@A0D9@","@A0E5@"
+1342,"@A0DA@","@A0E6@"
+1343,"@A0DB@","@A0E7@"
+1344,"@A0DC@","@A0E8@"
+1345,"@A0DD@","@A0E9@"
+1346,"@A0DE@","@A0EA@"
+1347,"@A0DF@","@A0EB@"
+1348,"@A0E0@","@A0EC@"
+1349,"@A0E1@","@A0ED@"
+1350,"@A0E2@","@A0EE@"
+1351,"@A0E3@","@A0EF@"
+1352,"@A0E4@","@A0F0@"
+1353,"@A0E5@","@A0F1@"
+1354,"@A0E6@","@A0F2@"
+1355,"@A0E7@","@A0F3@"
+1356,"@A0E8@","@A0F4@"
+1357,"@A0E9@","@A0F5@"
+1358,"@A0EA@","@A0F6@"
+1359,"@A0EB@","@A0F7@"
+1360,"@A0EC@","@A0F8@"
+1361,"@A0ED@","@A0F9@"
+1362,"@A0EE@","@A0FA@"
+1363,"@A0EF@","@A0FB@"
+1364,"@A0F0@","@A0FC@"
+1365,"@A0F1@","@A0FD@"
+1366,"@A0F2@","@A0FE@"
+1367,"@A0F3@","@A0FF@"
+1368,"@A0F4@","@A100@"
+1369,"@A0F5@","@A101@"
+1370,"@A0F6@","@A102@"
+1371,"@A0F7@","@A103@"
+1373,"@A0F9@","@A105@"
+1374,"@A0FA@","@A106@"
+1375,"@A0FB@","@A107@"
+1376,"@A0FC@","@A108@"
+1377,"@A0FD@","@A109@"
+1378,"@A0FE@","@A10A@"
+1379,"@A0FF@","@A10B@"
+1380,"@A100@","@A10C@"
+1381,"@A101@","@A10D@"
+1382,"@A102@","@A10E@"
+1383,"@A103@","@A10F@"
+1384,"@A104@","@A110@"
+1385,"@A105@","@A111@"
+1409,"Camera selects the ideal mode
+for the subject being shot.
+Live Guide menu is accessible.","Auto selects the ideal mode
+Live Guide menu is accessible"
+1411,"Automatic settings applied to
+the Scene mode you select.","Automatic settings applied to
+the Scene mode you select"
+1412,"Apply creative effects.","Apply creative effects"
+1439,"@A014@ Timer","@A00F@ Timer"
+1448,"@A007@Function","@A004@Function"
+1451,"@A010@ :Off","@A004@ :Off"
+1452,"Dial @A011@ : 
+Fno. Shutter upper","Dial @A00C@ : 
+Fno. Shutter upper"
+1453,"Dial @A012@ : 
+Fno. Shutter upper","Dial @A00D@ : 
+Fno. Shutter upper"
+1469,"@A039@@A03A@","@A038@@A039@"
+1564,"@A03B@","@A022@"
+1586,"@A03C@ Info Settings","@A03B@ Info Settings"
+1587,"Choose the information displayed
+when the @A01A@ is pressed.
+Enable while @A03C@.","Choose the information displayed
+when the @A012@ is pressed.
+Enable while @A023@."
+1591,"Enable the eye sensor.
+@A03D@: live view On/Off.","Enable the eye sensor.
+@A024@: live view On/Off."
+1601,"By pressing the @A010@ button during
+shooting, you can select
+the AF target area.","By pressing the @A004@ button during
+shooting, you can select
+the AF target area."
+1608,"@A0B2@arge","@A064@arge"
+1609,"@A037@iddle","@A036@iddle"
+1610,"@A038@mall","@A037@mall"
+1690,"@A00A@/FP","@A006@/FP"
+1707,"@A0B3@/Value","@A0BF@/Value"
+1717,"Auto@A006@","Auto@A038@"
+1721,"@A0B4@ 4","@A065@ 4"
+1722,"@A0B5@ 9","@A066@ 9"
+1723,"@A0B6@ 25","@A067@ 25"
+1724,"@A0B6@ 100","@A067@ 100"
+1731,"@A013@/@A014@","@A00E@/@A00F@"
+1756,"@A040@REC","@A036@REC"
+1770,"@A0B7@","@A068@"
+1771,"@A0B8@","@A05C@"
+1772,"@A095@ 5300K","@A069@ 5300K"
+1773,"@A097@ 6000K","@A06A@ 6000K"
+1774,"@A096@ 7500K","@A06B@ 7500K"
+1775,"@A098@ 3000K","@A06C@ 3000K"
+1776,"@A099@ 4000K","@A06D@ 4000K"
+1781,"@A036@ 5500K","@A021@ 5500K"
+2045,"@A03C@Level Disp","@A023@Level Disp"
+2055,"Preview Update@A040@","Preview Update@A03F@"
+2102,"@A041@@A02F@","@A040@@A02F@"
+2144,"Movie @A042@","Movie @A041@"
+2222,"Press to activate
+level display.
+Press again to deactivate.
+Effective in @A03C@.","Press to activate
+level display.
+Press again to deactivate.
+Effective in @A03B@."
+2313,"Built-In @A017@","Built-In @A01B@"
+2323,"@A043@Color Creator","@A042@Color Creator"
+2324,"@A044@e-Portrait","@A043@e-Portrait"
+2336,"@A045@Lock","@A026@Lock"
+2369,"@A03F@@A019@","@A03E@@A019@"
+2370,"When selecting the picture
+mode, you can skip the items
+that have not been set to @A03F@.","When selecting the picture
+mode, you can skip the items
+that have not been set to @A025@."
+2419,"Settings@A01A@","Settings@A012@"
+2422,"Designate the functions 
+to be included in multi 
+function by applying @A03F@.","Designate the functions 
+to be included in multi 
+function by applying @A025@."
+2441,"@A00A@Charge Time","@A006@Charge Time"
+2442,"Select time between shutter
+release for flash recharge.
+This setting is not necessary
+when using the dedicated flash.","Select time between shutter
+release for flash recharge.
+This setting is not necessary
+when using an Olympus flash."
+2504,"@A00A@ RC Mode","@A006@ RC Mode"
+2505,"@A017@Plug-in Power","@A01B@Plug-in Power"
+2515,"@A004@Shutter Function","@A003@Shutter Function"
+2516,"Assign function to shutter 
+button when in @A004@ mode.","Assign function to shutter 
+button when in @A003@ mode."
+2524,"Silent @A045@Operation","Silent @A026@Operation"
+2576,"Silent@A048@","Silent@A028@"
+2578,"Anti-Shock@A04E@","Anti-Shock@A029@"
+2598,"Delete entire @A004@","Delete entire @A003@"
+2602,"@A03D@ View Selection","@A024@ View Selection"
+2640,"@A106@","@A112@"
+2642,"MIC @A017@","MIC @A01B@"
+2677,"Pop Art@A04F@","Pop Art@A02A@"
+2678,"Pop Art@A050@","Pop Art@A02B@"
+2679,"Pale&Light Color@A04F@","Pale&Light Color@A02A@"
+2680,"Pale&Light Color@A050@","Pale&Light Color@A02B@"
+2681,"Grainy Film@A04F@","Grainy Film@A02A@"
+2682,"Grainy Film@A050@","Grainy Film@A02B@"
+2683,"Pin Hole@A04F@","Pin Hole@A02A@"
+2684,"Pin Hole@A050@","Pin Hole@A02B@"
+2685,"Pin Hole@A051@","Pin Hole@A02C@"
+2686,"Diorama@A04F@","Diorama@A02A@"
+2687,"Diorama@A050@","Diorama@A02B@"
+2688,"Cross Process@A04F@","Cross Process@A02A@"
+2689,"Cross Process@A050@","Cross Process@A02B@"
+2690,"Dramatic Tone@A04F@","Dramatic Tone@A02A@"
+2691,"Dramatic Tone@A050@","Dramatic Tone@A02B@"
+2692,"Key Line@A04F@","Key Line@A02A@"
+2693,"Key Line@A050@","Key Line@A02B@"
+2694,"Watercolor@A04F@","Watercolor@A02A@"
+2695,"Watercolor@A050@","Watercolor@A02B@"
+2696,"Vintage@A04F@","Vintage@A02A@"
+2697,"Vintage@A050@","Vintage@A02B@"
+2698,"Vintage@A051@","Vintage@A02C@"
+2699,"Partial Color@A04F@","Partial Color@A02A@"
+2700,"Partial Color@A050@","Partial Color@A02B@"
+2701,"Partial Color@A051@","Partial Color@A02C@"
+2703,"@A052@Soft Focus","@A053@Soft Focus"
+2706,"@A054@Gentle Sepia","@A055@Gentle Sepia"
+2712,"@A055@Pop Art@A04F@","@A056@Pop Art@A050@"
+2713,"@A056@Pop Art@A050@","@A057@Pop Art@A051@"
+2714,"@A057@Pale&Light Color@A04F@","@A058@Pale&Light Color@A050@"
+2715,"@A058@Pale&Light Color@A050@","@A059@Pale&Light Color@A051@"
+2716,"@A059@Grainy Film@A04F@","@A05A@Grainy Film@A050@"
+2717,"@A05A@Grainy Film@A050@","@A05B@Grainy Film@A051@"
+2718,"@A05B@Pin Hole@A04F@","@A05C@Pin Hole@A050@"
+2719,"@A05C@Pin Hole@A050@","@A05D@Pin Hole@A051@"
+2720,"@A05D@Pin Hole@A051@","@A05E@Pin Hole@A052@"
+2721,"@A05E@Diorama@A04F@","@A05F@Diorama@A050@"
+2722,"@A05F@Diorama@A050@","@A060@Diorama@A051@"
+2723,"@A060@Cross Process@A04F@","@A061@Cross Process@A050@"
+2724,"@A061@Cross Process@A050@","@A062@Cross Process@A051@"
+2725,"@A062@Dramatic Tone@A04F@","@A063@Dramatic Tone@A050@"
+2726,"@A063@Dramatic Tone@A050@","@A064@Dramatic Tone@A051@"
+2727,"@A064@Key Line@A04F@","@A065@Key Line@A050@"
+2728,"@A065@Key Line@A050@","@A066@Key Line@A051@"
+2729,"@A066@Watercolor@A04F@","@A067@Watercolor@A050@"
+2730,"@A067@Watercolor@A050@","@A068@Watercolor@A051@"
+2731,"@A068@Vintage@A04F@","@A069@Vintage@A050@"
+2732,"@A069@Vintage@A050@","@A06A@Vintage@A051@"
+2733,"@A06A@Vintage@A051@","@A06B@Vintage@A052@"
+2734,"@A06B@Partial Color@A04F@","@A06C@Partial Color@A050@"
+2735,"@A06C@Partial Color@A050@","@A06D@Partial Color@A051@"
+2736,"@A06D@Partial Color@A051@","@A06E@Partial Color@A052@"
+2737,"@A06E@Soft Focus Effect","@A06F@Soft Focus Effect"
+2738,"@A06F@Pin Hole Effect","@A070@Pin Hole Effect"
+2739,"@A070@White Edge Effect","@A071@White Edge Effect"
+2740,"@A071@Frame Effect","@A072@Frame Effect"
+2741,"@A072@Star Light Effect","@A073@Star Light Effect"
+2742,"@A073@Blur Effect: Top and Bottom","@A074@Blur Effect: Top and Bottom"
+2743,"@A074@Blur Effect: Left and Right","@A075@Blur Effect: Left and Right"
+2744,"@A075@Shade Effect: Left and Right","@A076@Shade Effect: Left and Right"
+2745,"@A076@Shade Effect: Top and Bottom","@A077@Shade Effect: Top and Bottom"
+2829,"For the @A03F@selected items, 
+metering will be executed
+in the area of the AF target.","For the @A025@selected items, 
+metering will be executed
+in the area of the AF target."
+2832,"ART1@A04F@","ART1@A050@"
+2833,"ART1@A050@","ART1@A051@"
+2834,"ART3@A04F@","ART3@A050@"
+2835,"ART3@A050@","ART3@A051@"
+2836,"ART5@A04F@","ART5@A050@"
+2837,"ART5@A050@","ART5@A051@"
+2838,"ART6@A04F@","ART6@A050@"
+2839,"ART6@A050@","ART6@A051@"
+2840,"ART6@A051@","ART6@A052@"
+2841,"ART7@A04F@","ART7@A050@"
+2842,"ART7@A050@","ART7@A051@"
+2843,"ART8@A04F@","ART8@A050@"
+2844,"ART8@A050@","ART8@A051@"
+2845,"ART10@A04F@","ART10@A050@"
+2846,"ART10@A050@","ART10@A051@"
+2847,"ART11@A04F@","ART11@A050@"
+2848,"ART11@A050@","ART11@A051@"
+2849,"ART12@A04F@","ART12@A050@"
+2850,"ART12@A050@","ART12@A051@"
+2851,"ART13@A04F@","ART13@A050@"
+2852,"ART13@A050@","ART13@A051@"
+2853,"ART13@A051@","ART13@A052@"
+2854,"ART14@A04F@","ART14@A050@"
+2855,"ART14@A050@","ART14@A051@"
+2856,"ART14@A051@","ART14@A052@"
+2872,"@A004@Picture Mode","@A003@Picture Mode"
+2879,"@A004@Noise Filter","@A003@Noise Filter"
+2887,"@A078@Card Full","@A02C@Card Full"
+2888,"@A079@Card Full","@A02D@Card Full"
+2889,"@A078@/@A079@Card Full","@A02C@/@A02D@Card Full"
+2890,"@A078@Card Full","@A02C@Card Full"
+2891,"@A079@Card Full","@A02D@Card Full"
+2892,"@A078@No Picture","@A02C@No Picture "
+2893,"@A079@No Picture","@A02D@No Picture "
+2894,"@A078@Picture Error","@A02C@Picture Error"
+2895,"@A079@Picture Error","@A02D@Picture Error"
+2899,"@A078@Error / @A079@Protected","@A02C@Error / @A02D@Protected"
+2900,"@A078@Error / @A079@Full","@A02C@Error / @A02D@Full"
+2904,"@A078@Protected / @A079@Error","@A02C@Protected / @A02D@Error"
+2905,"@A078@Protected / @A079@Full","@A02C@Protected / @A02D@Full"
+2906,"@A078@Full / @A079@Error","@A02C@Full / @A02D@Error"
+2907,"@A078@Full / @A079@Protected","@A02C@Full / @A02D@Protected"
+2909,"Switched to@A078@","Switched to@A02C@"
+2910,"Switched to@A079@","Switched to@A02D@"
+2914,"@A078@Cannot Select Folder","@A02C@Cannot Select Folder"
+2915,"@A079@Cannot Select Folder","@A02D@Cannot Select Folder"
+2916,"@A078@The Image Cannot Be Edited","@A02C@The Image Cannot Be Edited"
+2917,"@A079@The Image Cannot Be Edited","@A02D@The Image Cannot Be Edited"
+2918,"@A078@Caution Image Cannot Be Selected","@A02C@Caution Image Cannot Be Selected"
+2919,"@A079@Caution Image Cannot Be Selected","@A02D@Caution Image Cannot Be Selected"
+2920,"@A07A@Picture Error","@A02E@Picture Error"
+2921,"@A07B@Picture Error","@A02F@Picture Error"
+2936,"E1. Exp/ISO/BULB/@A077@","E1. Exp/ISO/BULB/@A07C@"
+2937,"E2. Exp/ISO/BULB/@A077@","E2. Exp/ISO/BULB/@A07C@"
+2938,"E3. Exp/ISO/BULB/@A077@","E3. Exp/ISO/BULB/@A07C@"
+2971,"Push to display @A042@ frame
+for targeting.
+Once target is set, push again to
+activate @A042@ mode.","Push to display @A041@ frame
+for targeting.
+Once target is set, push again to
+activate @A041@ mode."
+2972,"Push to switch to designated
+default@A078@. Push again to
+return.","Push to switch to designated
+default@A07D@. Push again to
+return."
+2975,"@A003@Fn Lever Function","@A02D@Fn Lever Function"
+2977,"@A004@Fn Lever Function","@A003@Fn Lever Function"
+3004,"@A004@HDMI Output","@A003@HDMI Output"
+3025,"@A004@@A024@","@A003@@A01A@"
+3031,"When selecting @A013@or@A014@, 
+you can skip the items
+that have not been selected@A03F@.","When selecting @A013@or@A014@, 
+you can skip the items
+that have not been selected@A03E@."
+3036,"@A079@","@A02E@"
+3044,"@A046@ Settings","@A045@ Settings"
+3051,"@A006@@A07A@Info","@A006@@A080@Info"
+3071,"@A003@Save Settings","@A030@Save Settings"
+3076,"Dual Independent@A081@","Dual Independent@A032@"
+3078,"Dual Independent@A082@","Dual Independent@A033@"
+3080,"Dual Same@A081@","Dual Same@A032@"
+3082,"Dual Same@A082@","Dual Same@A033@"
+3084,"@A003@Save Slot","@A030@Save Slot"
+3086,"@A006@Slot","@A034@Slot"
+3105,"End LV@A07A@","End LV@A02F@"
+3107,"End @A042@","End @A041@"
+3108,"Press-and-hold designated button
+ends @A042@close up or ends display 
+of @A042@close up frame.","Press-and-hold designated button
+ends @A041@close up or ends display 
+of @A041@close up frame."
+3109,"End @A006@@A07A@","End @A006@@A080@"
+3110,"Press-and-hold designated button
+ends @A035@close up or ends display 
+of @A035@close up frame.","Press-and-hold designated button
+ends @A083@close up or ends display 
+of @A083@close up frame."
+3113,"Reset @A078@","Reset @A030@"
+3114,"Press-and-hold @A035@ button
+returns @A078@ to center of
+AF target select screen.","Press-and-hold @A083@ button
+returns @A07D@ to center of
+AF target select screen."
+3115,"Reset LV@A07A@ Frame","Reset LV@A02F@ Frame"
+3116,"Press-and-hold @A035@ button
+returns close up frame to
+center of Live View screen.","Press-and-hold @A083@ button
+returns close up frame to
+center of Live View screen."
+3117,"Reset @A043@","Reset @A031@"
+3118,"Press-and-hold @A035@ button
+returns @A043@ values to default
+at the setting screen.","Press-and-hold @A032@ button
+returns @A031@ values to default
+at the setting screen."
+3119,"Reset @A007@","Reset @A011@"
+3120,"When @A007@ is assigned to a dial,
+press-and-hold @A035@ button
+returns exposure compensation
+value to default at the shooting 
+standby screen.","When @A007@ is assigned to a dial,
+press-and-hold @A083@ button
+returns exposure compensation
+value to default at the shooting 
+standby screen."
+3121,"Reset @A07B@","Reset @A033@"
+3122,"Press-and-hold @A035@ button 
+returns Highlight & Shadow Control
+settings to default at the setting
+screen.","Press-and-hold @A083@ button 
+returns Highlight & Shadow Control
+settings to default at the setting
+screen."
+3123,"End @A07C@","End @A034@"
+3124,"Press-and-hold @A07C@ button
+deactivates keystone
+compensation.","Press-and-hold @A034@ button
+deactivates keystone
+compensation."
+3125,"Reset @A07C@","Reset @A034@"
+3126,"Press-and-hold @A035@ button
+returns keystone comp.
+settings to default
+at the setting screen.","Press-and-hold @A083@ button
+returns keystone comp.
+settings to default
+at the setting screen."
+3127,"Reset @A042@ Frame","Reset @A041@ Frame"
+3128,"Press-and-hold @A035@ button
+returns video telecon close up
+frame to the center position.","Press-and-hold @A083@ button
+returns video telecon close up
+frame to the center position."
+3131,"Reset @A009@","Reset @A010@"
+3132,"Press-and-hold @A035@ button
+returns flash intensity settings
+to default at the shooting standby
+when @A009@ is assigned to the dial.","Press-and-hold @A083@ button
+returns flash intensity settings
+to default at the shooting standby
+when @A009@ is assigned to the dial."
+3133,"Switch @A045@ Lock","Switch @A026@ Lock"
+3134,"Press-and-hold button assigned
+to @A045@Lock switches @A045@Lock
+on/off.","Press-and-hold button assigned
+to @A044@Lock switches @A044@Lock
+on/off."
+3140,"Press-and-hold button
+assigned to @A03D@ pulls up
+the @A03D@auto switch settings screen.","Press-and-hold button
+assigned to @A03C@ pulls up
+the @A03C@auto switch settings screen."
+3147,"@A07D@ to update distance","@A035@ to update distance"
+3160,"@A004@Info Settings","@A003@Info Settings"
+3164,"Choose the controls displayed
+when the @A035@ is pressed
+when in movie mode.","Choose the controls displayed
+when the @A083@ is pressed
+when in movie mode."
+3167,"@A078@@A004@@A024@","@A02C@@A003@@A01A@"
+3168,"@A078@@A003@@A024@","@A02C@@A030@@A01A@"
+3169,"@A079@@A004@@A024@","@A02D@@A003@@A01A@"
+3170,"@A079@@A003@@A024@","@A02D@@A030@@A01A@"
+3183,"@A003@AF Mode","@A02D@AF Mode"
+3185,"@A003@Image Stabilizer","@A02D@Image Stabilizer"
+3187,"@A003@Button Function","@A02D@Button Function"
+3189,"@A003@Dial Function","@A02D@Dial Function"
+3191,"@A003@Noise Filter","@A02D@Noise Filter"
+3192,"@A003@Elec. Zoom Speed","@A02D@Elec. Zoom Speed"
+3194,"@A003@@A024@","@A02D@@A01A@"
+3198,"@A004@Button Function","@A003@Button Function"
+3200,"@A004@Elec. Zoom Speed","@A003@Elec. Zoom Speed"
+3204,"@A004@AF Mode","@A003@AF Mode"
+3206,"@A004@Image Stabilizer","@A003@Image Stabilizer"
+3222,"When shutter speed is @A07E@ or
+less, the first shutter curtain is
+switched to electronic. 
+Select the post-shutter
+release delay time.","When shutter speed is @A088@ or
+less, the first shutter curtain is
+switched to electronic. 
+Select the post-shutter
+release delay time."
+3226,"Color / Vivid","Color/Vivid"
+3233,"@A004@Dial Function","@A003@Dial Function"
+3235,"@A078@Set Home","@A07D@Set Home"
+3236,"@A078@Spot Metering","@A030@Spot Metering"
+3240,"@A078@Home","@A030@Home"
+3241,"@A07F@i-Enhance","@A089@i-Enhance"
+3242,"Disable the eye sensor.
+@A03D@: to switch between monitor
+display and EVF display.","Disable the eye sensor.
+@A024@: to switch between monitor
+display and EVF display."
+3247,"@A080@Muted","@A08A@Muted"
+3248,"@A078@@A01C@","@A07D@@A01C@"
+3252,"Select On to display level
+gauge in EVF.
+Enabled when in @A03C@.","Select On to display level
+gauge in EVF.
+Enabled when in @A023@."
+3258,"@A089@Flat","@A03E@Flat"
+3259,"@A081@Underwater","@A08B@Underwater"
+3262,"@A0B9@Vivid","@A0C5@Vivid"
+3263,"@A0BA@Natural","@A0C6@Natural"
+3264,"@A0BB@Portrait","@A0C7@Portrait"
+3278,"@A040@: Start/stop movie recording.","@A03F@: Start/stop movie recording."
+3279,"@A082@Soft Focus Effect","@A08C@Soft Focus Effect"
+3280,"@A083@Pin Hole Effect","@A08D@Pin Hole Effect"
+3281,"@A084@White Edge Effect","@A08E@White Edge Effect"
+3282,"@A085@Frame Effect","@A08F@Frame Effect"
+3283,"@A086@Star Light Effect","@A090@Star Light Effect"
+3284,"@A087@Blur Effect: Top and Bottom","@A091@Blur Effect: Top and Bottom"
+3285,"@A088@Blur Effect: Left and Right","@A092@Blur Effect: Left and Right"
+3286,"@A089@Shade Effect: Left and Right","@A093@Shade Effect: Left and Right"
+3287,"@A08A@Shade Effect: Top and Bottom","@A094@Shade Effect: Top and Bottom"
+3288,"@A078@Face Detect Error","@A02C@Face Detect Error"
+3289,"@A079@Face Detect Error","@A02D@Face Detect Error"
+3290,"@A107@","@A113@"
+3294,"Bleach Bypass@A04F@","Bleach Bypass@A02A@"
+3295,"Bleach Bypass@A050@","Bleach Bypass@A02B@"
+3304,"@A091@/@A092@Correction","@A03A@/@A03B@Correction"
+3309,"@A004@Flicker Scan","@A003@Flicker Scan"
+3311,"@A08C@Bleach Bypass@A04F@","@A096@Bleach Bypass@A050@"
+3312,"@A08D@Bleach Bypass@A050@","@A097@Bleach Bypass@A051@"
+3313,"@A006@@A07A@Default Setting","@A038@@A02F@Default Setting"
+3320,"@A003@Flicker Scan","@A02D@Flicker Scan"
+3322,"ART15@A04F@","ART15@A050@"
+3323,"ART15@A050@","ART15@A051@"
+3338,"@A08B@ @A01A@","@A095@ @A01A@"
+3342,"@A022@ Settings","@A018@ Settings"
+3343,"@A022@","@A018@"
+3346,"@A08E@Instant Film","@A098@Instant Film"
+3347,"@A08F@/Bluetooth Settings","@A099@/Bluetooth Settings"
+3348,"Adjust @A08F@ and Bluetooth
+settings.","Adjust @A099@ and Bluetooth
+settings."
+3353,"@A040@: Change connection passwords.
+New passwords will be generated
+automatically.","@A036@: Change connection passwords.
+New passwords will be generated
+automatically."
+3355,"@A002@ Reset all @A08F@ and Bluetooth
+settings?","@A002@ Reset all @A099@ and Bluetooth
+settings?"
+3357,"@A08F@/Bluetooth connection cannot
+be initiated by a device when power
+is off.","@A099@/Bluetooth connection cannot
+be initiated by a device when power
+is off."
+3358,"@A08F@/Bluetooth connection can be
+initiated by a device even when
+power is off.","@A099@/Bluetooth connection can be
+initiated by a device even when
+power is off."
+3360,"Activate @A08F@/Bluetooth Power-off
+Standby so images can be imported
+while power is off?","Activate @A099@/Bluetooth Power-off
+Standby so images can be imported
+while power is off?"
+3371,"@A093@ Keep Warm Color@A01A@","@A09D@ Keep Warm Color@A01A@"
+3373,"@A078@No Card","@A02C@No Card"
+3374,"@A079@No Card","@A02D@No Card"
+3387,"@A003@ISO","@A02D@ISO"
+3388,"@A003@Recommended ISO","@A02D@Recommended ISO"
+3389,"@A003@ISO Extension","@A02D@ISO Extension"
+3390,"@A004@ISO","@A003@ISO"
+3391,"@A004@Recommended ISO","@A003@Recommended ISO"
+3393,"@A003@WB","@A02D@WB"
+3394,"@A004@WB","@A003@WB"
+3395,"@A003@Kelvin","@A02D@Kelvin"
+3396,"@A004@Kelvin","@A003@Kelvin"
+3397,"@A003@Auto @A094@","@A003@Auto @A09E@"
+3398,"@A003@@A095@5300K @A094@","@A003@@A09F@5300K @A09E@"
+3399,"@A003@@A096@7500K @A094@","@A003@@A0A0@7500K @A09E@"
+3400,"@A003@@A097@6000K @A094@","@A003@@A0A1@6000K @A09E@"
+3401,"@A003@@A098@3000K @A094@","@A003@@A0A2@3000K @A09E@"
+3402,"@A003@@A099@4000K @A094@","@A003@@A0A3@4000K @A09E@"
+3403,"@A003@@A036@5500K @A094@","@A003@@A035@5500K @A09E@"
+3404,"@A003@@A01E@ @A094@","@A003@@A01E@ @A09E@"
+3405,"@A003@@A01F@ @A094@","@A003@@A01F@ @A09E@"
+3406,"@A003@@A020@ @A094@","@A003@@A020@ @A09E@"
+3407,"@A003@@A021@ @A094@","@A003@@A021@ @A09E@"
+3408,"@A004@Auto @A094@","@A004@Auto @A09E@"
+3409,"@A004@@A095@5300K @A094@","@A004@@A09F@5300K @A09E@"
+3410,"@A004@@A096@7500K @A094@","@A004@@A0A0@7500K @A09E@"
+3411,"@A004@@A097@6000K @A094@","@A004@@A0A1@6000K @A09E@"
+3412,"@A004@@A098@3000K @A094@","@A004@@A0A2@3000K @A09E@"
+3413,"@A004@@A099@4000K @A094@","@A004@@A0A3@4000K @A09E@"
+3414,"@A004@@A036@5500K @A094@","@A004@@A035@5500K @A09E@"
+3415,"@A004@@A01E@ @A094@","@A004@@A01E@ @A09E@"
+3416,"@A004@@A01F@ @A094@","@A004@@A01F@ @A09E@"
+3417,"@A004@@A020@ @A094@","@A004@@A020@ @A09E@"
+3418,"@A004@@A021@ @A094@","@A004@@A021@ @A09E@"
+3420,"@A003@CWB @A094@","@A003@CWB @A09E@"
+3421,"@A004@CWB @A094@","@A004@CWB @A09E@"
+3460,"@A003@ISO-Auto","@A02D@ISO-Auto"
+3461,"@A09B@ISO-Auto","@A03F@ISO-Auto"
+3463,"@A09B@ISO-Auto Set","@A0A5@ISO-Auto Set"
+3464,"@A003@Low ISO Processing","@A032@Low ISO Processing"
+3482,"@A010@ button","@A004@ button"
+3485,"@A0AC@Center Button","@A044@Center Button"
+3488,"@A0AD@Direction Key","@A045@Direction Key"
+3489,"@A0AD@ :Off","@A045@ :Off"
+3496,"Switches @A09C@ on/off.","Switches @A0A7@ on/off."
+3497,"Switches @A09D@ on/off.","Switches @A0A8@ on/off."
+3498,"Switches @A09E@ on/off.","Switches @A0A9@ on/off."
+3501,"@A003@@A093@ Keep Warm Color","@A02D@@A020@ Keep Warm Color"
+3502,"@A004@@A093@ Keep Warm Color","@A003@@A020@ Keep Warm Color"
+3503,"@A003@WB","@A02D@WB"
+3504,"@A004@WB","@A003@WB"
+3505,"@A003@All @A094@","@A02D@All @A03C@"
+3506,"@A004@All @A094@","@A003@All @A03C@"
+3512,"@A0A8@","@A040@"
+3513,"@A0A2@","@A03E@"
+3522,"@A003@AF+MF","@A02D@AF+MF"
+3526,"@A003@C-AF Center Priority","@A02D@C-AF Center Priority"
+3527,"@A003@@A0A2@Settings","@A003@@A0AF@Settings"
+3528,"@A003@Orientation Linked @A078@","@A02D@Orientation Linked @A030@"
+3529,"@A0A9@AF Target Point","@A041@AF Target Point"
+3530,"@A0AA@AF Target Point","@A042@AF Target Point"
+3531,"@A0AB@AF Target Point","@A043@AF Target Point"
+3532,"@A0A9@AF Target Mode","@A041@AF Target Mode"
+3533,"@A0AA@AF Target Mode","@A042@AF Target Mode"
+3534,"@A0AB@AF Target Mode","@A043@AF Target Mode"
+3535,"@A0A3@Target Mode Settings","@A0B0@Target Mode Settings"
+3538,"@A0A4@Size","@A0B1@Size"
+3539,"@A0A5@Size","@A0B2@Size"
+3540,"@A0A6@Size","@A0B3@Size"
+3541,"@A0A7@Size","@A0B4@Size"
+3542,"@A0A4@Step","@A0B1@Step"
+3543,"@A0A5@Step","@A0B2@Step"
+3544,"@A0A6@Step","@A0B3@Step"
+3545,"@A0A7@Step","@A0B4@Step"
+3548,"No item registered.
+By pressing the @A040@ button
+during menu, you can register
+the item to My Menu.","No item registered.
+By pressing the @A036@ button
+during menu, you can register
+the item to My Menu."
+3567,"@A004@C-AF Speed","@A003@C-AF Speed"
+3569,"@A004@C-AF Sensitivity","@A003@C-AF Sensitivity"
+3573,"@A004@IS Level","@A027@IS Level"
+3575,"@A0A0@View Assist","@A03D@View Assist"
+3576,"When set to On, brightness
+and colors are adjusted
+for optimal viewing during @A0A0@.","When set to On, brightness
+and colors are adjusted
+for optimal viewing during @A03D@."
+3586,"Remove this @A0A1@ tab","Remove this @A0AE@ tab"
+3588,"All items in the selected @A0A1@ tab
+will be removed from My Menu.","All items in the selected @A0AE@ tab
+will be removed from My Menu."
+3614,"@A003@C-AF Sensitivity","@A02D@C-AF Sensitivity"
+3617,"The items where @A03F@ is selected
+will appear when selecting AF
+target mode for still photography.","The items where @A03E@ is selected
+will appear when selecting AF
+target mode for still photography."
+3619,"For @A03F@ selected in @A0A2@,
+C-AF/C-AF+TR operates
+in the center area of the area.","For @A03E@ selected in @A0AF@,
+C-AF/C-AF+TR operates
+in the center area of the area."
+3620,"For @A03F@ selected in @A0A2@, the
+center of the area takes priority
+over other points when in C-AF.","For @A025@ selected in @A03E@, the
+center of the area takes priority
+over other points when in C-AF."
+3622,"In still photography, items where @A03F@
+is selected can be set separately
+for horizontal or vertical positions.","In still photography, items where @A025@
+is selected can be set separately
+for horizontal or vertical positions."
+3624,"Select function to assign
+to @A0AC@ center button of
+the multi selector for shooting.","Select function to assign
+to @A044@ center button of
+the multi selector for shooting."
+3625,"Select function to assign
+to @A0AD@ direction key of
+the multi selector for shooting.","Select function to assign
+to @A045@ direction key of
+the multi selector for shooting."
+3751,"S-AF@A0BC@","S-AF@A06E@"
+3752,"C-AF@A0BC@","C-AF@A06E@"
+3753,"C-AF+TR@A0BC@","C-AF+TR@A06E@"
+3760,"Follow next steps to connect to a
+device. This setup is required
+only once. @A08F@/Bluetooth will be
+activated during the setup.","Follow next steps to connect to a
+device. This setup is required
+only once. @A099@/Bluetooth will be
+activated during the setup."
+3761,"Please install the OI.Share app
+to your device.
+Press @A019@ once installation is
+complete.","Please install the OI.Share app
+to your device.
+Press @A037@ once installation is
+complete."
+3783,"Press WPS button
+on the access point.
+Connection starts
+after you press @A083@.","Press WPS button
+on the access point.
+Connection starts
+after you press @A038@."
+3784,"Enter PIN code displayed above
+on the access point.
+Connection starts
+after you press @A083@.","Enter PIN code displayed above
+on the access point.
+Connection starts
+after you press @A038@."
+3810,"Search again@A033@","Search again@A04C@"
+3817,"Camera is connected to PC.
+Recorded images are automatically
+transferred to PC.","Camera is connected to PC."
+3821,"@A09F@ Flat","@A03C@ Flat"
+3829,"By pressing @A0AD@ during shooting,
+you can select the AF target area.","By pressing @A045@ during shooting,
+you can select the AF target area."
+3835,"@A0D5@","@A0E1@"
+3836,"@A0F8@","@A104@"
+3837,"@A078@Select Screen Settings","@A030@Select Screen Settings"
+3846,"@A0BD@ OM-Log400","@A07E@ OM-Log400"
+3847,"@A003@@A09A@ @A094@","@A003@@A0A4@ @A09E@"
+3848,"@A004@@A09A@ @A094@","@A004@@A0A4@ @A09E@"
+3851,"@A006@@A040@Function","@A038@@A036@Function"
+3852,"Select function to assign
+to @A040@ during playback.","Select function to assign
+to @A036@ during playback."
+3853,"@A04D@ Settings","@A044@ Settings"
+3855,"@A0AC@AF AEL/AFL","@A0BB@AF AEL/AFL"
+3879,"@A008@Face Selection","@A045@Face Selection"
+3881,"@A008@Face Priority","@A04F@Face Priority"
+3888,"@A078@ Loop Settings","@A030@ Loop Settings"
+3890,"@A078@ Loop Selection","@A030@ Loop Selection"
+3896,"Via @A0AD@","Via @A046@"
+3897,"@A0AD@ will be selected
+before moving the AF target
+to the opposite end.","@A046@ will be selected
+before moving the AF target
+to the opposite end."
+3898,"@A0AD@ will not be selected
+before moving the AF target
+to the opposite end.","@A046@ will not be selected
+before moving the AF target
+to the opposite end."
+3899,"RAW+JPEG @A041@","RAW+JPEG @A047@"
+3911,"@A0BD@Lock","@A050@Lock"
+3912,"Select On to disable @A0BD@.","Select On to disable @A050@."
+3914,"Displays frame while shutter
+button is half-pressed.
+The frame will be always displayed
+in movie shooting mode. (@A0AD@, C-AF)","Displays frame while shutter
+button is half-pressed.
+The frame will be always displayed
+in movie shooting mode. (@A0BC@, C-AF)"
+3915,"By pressing the @A040@ button
+during menu, you can register
+the item to My Menu.","By pressing the @A03F@ button
+during menu, you can register
+the item to My Menu."
+3916,"@A0AC@AF","@A06F@AF"
+3917,"@A0AC@AF@A0BC@","@A06F@AF@A06E@"
+3918,"AEL/@A0AC@AF","AEL/@A0BB@AF"
+3919,"@A0AC@AF Start/Stop","@A0BB@AF Start/Stop"
+3926,"Enable the eye sensor
+when the monitor is closed.
+@A03D@: live view On/Off.","Enable the eye sensor
+when the monitor is closed.
+@A03C@: live view On/Off."
+3929,"Taking pictures to create
+a panorama image by PC.","Interval Shooting"
+3930,"For shooting snowy capped
+mountains, landscapes,white
+sand sea-scapes,etc.","Pro Capture"
+3931,"For shooting under candlelight. 
+Warm colors are reproduced.","Keystone Compensation"
+3932,"For shooting documents, etc.
+Increases contrast between
+letters and background.","Running"
+3933,"Smooth skin tone 
+to view on HDTV.","Bluetooth"
+3934,"For shooting landscapes.
+Vivid reproduction
+of blues and greens.","Birds"
+3935,"Captures fast-moving action 
+without blurring.","On@A048@"
+3936,"For shooting setting/rising sun. 
+Vivid reproduction
+of reds and yellows.","On@A049@"
+3937,"Backlight HDR","Deactivates Bluetooth.
+Bluetooth is always deactivated
+while power is on."
+3938,"Creates an image with optimal
+brightness by combining a
+series of images.","Pairing failed."
+3939,"Indoors","Pairing is complete.
+Bluetooth setting is changed to On@A048@."
+3940,"Motion","Pairing in progress.
+Please perform pairing operation
+on the wireless shutter release."
+3941,"Nightscapes","Delete the paired device.
+Pairing is required again
+when using the wireless shutter."
+3942,"People","Start Pairing"
+3943,"Scenery","Delete Pairing"
+3944,"Capture fireworks at a 
+slower shutter speed.
+Tripod use is recommended.","Executing reset,
+reset all the functions except date,
+language and some settings."
+3945,"For shooting both main subject
+and background. Vivid reproduction
+of blues and greens.","Each arrow pad button can
+be assigned a direct
+function when they are
+pressed while shooting."
+3946,"Images are taken consecutively,
+recording only areas with change in
+brightness, and composited. Perfect
+for capturing light trails. Tripod use is
+recommended.","When shutter button is pressed
+halfway, the enlarged live view
+ends and the enlargement
+frame will be displayed."
+3947,"Using the pop-up@A00A@, capture
+human subjects against beautiful
+nightscapes. A slower shutter
+speed is used. Tripod use is
+recommended.","When shutter button is pressed
+halfway, auto focus will work
+while in the enlarged live view."
+3948,"Capture beautiful nightscapes
+at a slower shutter speed.
+Tripod use is recommended.","Sets waiting time to record
+the first picture after the shutter
+button is pressed."
+3949,"For taking a portrait-style shot.","Image Stabilizer functions in
+all directions
+by detecting camera movement."
+3950,"Candlelight","Vertical Stabilization only.
+Hold the camera horizontally and
+shoot while panning horizontally."
+3951,"Children","Horizontal Stabilization only.
+Hold the camera vertically and
+shoot while panning horizontally."
+3952,"e-Portrait","Camera chooses Stabilizer setting
+by detecting camera movement."
+3953,"Light Trails","The subject outline will appear
+when the focus ring is rotated
+in MF mode. This function helps
+you adjust the focus."
+3954,"Multi Focus Shot","Puts program shift control by dial
+in the same direction as S.S.
+when in S mode."
+3955,"Close-ups","Puts program shift control by dial
+is the same direction as aperture
+when in A mode."
+3956,"For close-up photography.","Press to activate
+level display.
+Press again to deactivate.
+Effective in @A023@."
+3957,"For close-up nature photography.
+Captures more vivid macro shots
+compared to standard macro.","Takes 4 pictures at once
+at different exposures and
+composites automatically into
+a high contrast image."
+3958,"Perfect for photography where
+sound and light from the camera
+are unfavorable. @A001@, Flash, and AF
+Illuminator will be deactivated.","Takes 4 pictures at once
+at different exposures and
+composites automatically into
+a super-high contrast image."
+3959,"Takes multiple pictures at once
+at different focus positions.","Exposure time per image.
+Exposure time and aperture
+will determine your base exposure."
+3960,"Device Connection","By holding down the button, 
+autofocus will be deactivated 
+and the focus will be fixed 
+at the point the button is pressed."
+3961,"Connect to a device.","Press to show the subject
+outline for adjusting the focus.
+And press again to hide the outline."
+3962,"This function requires a compatible lens.
+Please attach a compatible lens.","Hold button: to lock/unlock
+touch panel operation
+while in shooting mode."
+3963,"Apply C settings? Current camera
+settings will be overwritten.","Press arrowpad keys to
+change zoom position
+when using electronic
+zoom lens."
+3964,"Custom Mode C","Select time between shutter
+release for flash recharge.
+This setting is not necessary
+when using the dedicated flash."
+3965,"Running","Image stabilization performed
+both by sensor shift and 
+digitally."
+3966,"@A08F@/Bluetooth is made available
+for a connection.","Image stabilization performed
+only by sensor shift, and not
+digitally."
+3967,"@A08F@/Bluetooth is completely
+deactivated and a connection
+cannot be initiated.","Movie will be recorded for 
+standard-speed playback."
+3968,"Bluetooth","Movie will be recorded for 
+slow motion playback.
+Sound will not be recorded."
+3969,"Wireless Functions","Movie will be recorded for 
+fast motion playback.
+Sound will not be recorded."
+3970,"On@A0AE@","Adjusts for time difference vs.
+actual recording time.
+Used in advanced editing when
+extreme accuracy of time is required."
+3971,"On@A0AF@","Will adjust Live View image 
+brightness to enhance highlight 
+visibility. Brightness of Live View 
+image and final image will differ. "
+3972,"Deactivates Bluetooth.
+Bluetooth is always deactivated
+while power is on.","Noise reduction will work even 
+during silent shooting. Shutter 
+sound will be heard during the
+noise reduction preparation process."
+3973,"Activates Bluetooth.
+Bluetooth is always activated
+for wireless shutter release
+while power is on.","Switches between Live View and
+Super Control Panel.
+When eye sensor is disabled, switches
+between EVF and rear monitor."
+3974,"Activates Bluetooth.
+Bluetooth is always activated for
+smartphones
+while power is on.","Switches IS On/Off.
+Press down and turn dial to
+switch between IS modes."
+3975,"Pairing is complete.
+Bluetooth setting is changed to On@A0AE@.","Switches AF Limiter On/Off.
+Press down and turn dial to
+select distance."
+3976,"Pairing in progress.
+Please perform pairing operation
+on the wireless shutter release.","Assigns following shooting modes:
+Position 1: follows Mode Dial setting.
+Position 2: @A003@mode."
+3977,"Delete the paired device.
+Pairing is required again
+when using the wireless shutter.","Use Fn Lever for designated
+functions. Use power switch
+to control power."
+3978,"Wireless Shutter Setting","Assign power to Fn Lever as follows:
+Position 1: Power On
+Position 2: Power Off
+Power Lever is disabled."
+3979,"Start Pairing","Assign power to Fn Lever as follows:
+Position 1: Power Off
+Position 2: Power On
+Power Lever is disabled."
+3980,"Delete Pairing","Outputs video and info display
+to the device. This mode is 
+recommended when to using the
+device as a monitor."
+3981,"AF Illuminator","Outputs video only, with no
+info display. This mode is 
+recommended when recording
+video with the device."
+3982,"Color Space","Outputs video by RAW format
+to a supported device.
+Can not be recorded
+to the card in camera."
+3983,"Exposure Smoothing","During LV Close Up, brightness is
+adjusted for easy confirmation."
+3984,"Firmware Version","During LV Close Up, brightness is
+not adjusted and the display is the
+same brightness as prior to LV
+Close Up."
+3985,"It is enabled in the
+P/A/S/M exposure modes.","During preview, brightness is
+adjusted for easy confirmation."
+3986,"Interval Mode","During preview, brightness is
+not adjusted and the display is the
+same brightness as prior to preview."
+3987,"Frames Priority","When shutter speed reaches the 
+designated lowest figure, ISO
+sensitivity will begin to rise.
+Valid in P or A mode."
+3988,"Time Priority","Saves to both cards applying 
+their respective settings. 
+If one card becomes full, the
+other cannot be saved to either."
+3989,"Sets the action 
+when USB is connected.","Saves to both cards applying 
+their respective settings. 
+Even if one card becomes full,
+the other can still be saved to."
+3990,"Image Review","Saves to both cards applying same 
+@A030@@A01A@settings.
+If one card becomes full, the
+other cannot be saved to either."
+3991,"Webcam","Saves to both cards applying same 
+@A030@@A01A@settings.
+Even if one card becomes full,
+the other can still be saved to."
+3992,"Please rotate the mode dial to @A004@.","Press-and-hold designated button
+ends Live View close up or ends
+display of Live View close up frame."
+3993,"Custom Mode C2","Press-and-hold @A032@ button
+returns @A030@ to center of
+AF target select screen."
+3994,"Custom Mode C3","Press-and-hold @A032@ button
+returns close up frame to
+center of Live View screen."
+3995,"Custom Mode C4","When @A011@ is assigned to a dial,
+press-and-hold @A032@ button returns
+exposure compensation value to
+default at the shooting standby screen."
+3996,"Custom Mode C","Press-and-hold @A032@ button 
+returns Highlight & Shadow Control
+settings to default at the setting
+screen."
+3997,"Switches @A0B1@ on/off.","Press-and-hold @A032@ button
+returns keystone comp.
+settings to default
+at the setting screen."
+3998,"Prioritizes keeping the no. of shooting
+frames. Starts the next shooting after
+the interval time elapses once the
+recent frames have been recorded.","Press-and-hold @A032@ button
+returns flash intensity settings
+to default at the shooting standby
+when @A010@ is assigned to the dial."
+3999,"Prioritizes keeping the interval time.
+Skips the next shooting when
+the set interval cannot be kept.","Press-and-hold button assigned
+to @A026@Lock switches @A026@Lock
+on/off."
+4000,"Shooting exposure for each frame
+uses the metering result
+for that frame.","Press-and-hold button
+assigned to @A024@ pulls up
+the @A024@auto switch settings screen."
+4001,"Standardizes the shooting exposure
+for all frames. Smoothens 
+the luminance changes 
+in rendered timelapse videos.","Select whether or not to activate
+Power-off Standby each time
+the power is turned off."
+4002,"@A002@ Deletes all automatically
+separated files of single movie.","Transfer Preselection:
+Preselect images to transfer
+to a device."
+4003,"P/A/S/M/B","Multiple Image Selection:
+Choose multiple images to
+apply a certain action to,
+such as protecting or deleting."
+4004,"P/A/S/M","Press to start Flicker Check.
+Quit by holding button down.
+Valid on S or M mode."
+4005,"@A0BE@ Control","Slow shutter speed effect
+can be seen in Live View.
+Differs from final image."
+4006,"Red Frame during @A0B0@","At low ISO speeds,
+maximum recordable sequential
+shooting frames take priority in image
+processing for still photography."
+4007,"When set to On, 
+displays a red outer frame
+on the screen during video recording.","At low ISO speeds,
+image details take priority in image
+processing for still photography."
+4008,"","Switches AF mode/AF target mode/
+AF target point according
+to Fn lever position.
+Target can be selected."
+4009,"","Available when the access point
+supports DHCP function.
+IP address will be assigned
+automatically."
+4010,"","AF accuracy is prioritized
+over AF speed.
+Processing time is required
+until AF is completed."
+4011,"","Disables the focus ring
+in manual focus mode.
+Press again to return."
+4012,"","Switches Live View Boost On/Off.
+Press down and turn dial to
+select the settings."

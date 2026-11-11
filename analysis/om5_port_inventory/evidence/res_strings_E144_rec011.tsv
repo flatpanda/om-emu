@@ -1,0 +1,5875 @@
+10	AEL/AFL
+26	@A025@REC
+46	MF
+52	RAW@A024@
+72	Voorbeeld
+92	@A01D@
+106	 Home
+158	Nederlands
+206	2f
+212	AEL/AFL memo
+238	AEL/AFL
+254	AEL-meting
+276	@A001@ Set-up
+304	 Voorinstelling
+336	AF/MF
+348	AF-veld
+364	AF hulpverl.
+390	AF-modus
+408	Alle
+418	I.S. alle richtingen
+460	Alles resetten
+490	Alles instellen
+522	Alles @A001@
+548	Anti-schok @A004@
+584	Diafragmavoork.
+616	Art LV-modus
+642	Cross-process
+670	Diorama
+686	Dramatische toon
+720	Zacht sepia
+744	Korrelige film
+774	Lichte toon
+798	Bleke/lichte kleur
+836	Pop-art
+852	Soft-focus
+874	Gaatjescamera
+902	Beeldverhouding
+934	Auto
+944	LCD-verl.
+964	@A003@ Batterijniv.
+1004	Batterij leeg
+1032	@A001@
+1046	Bracketing
+1068	Bulb-focus
+1090	Bulb-timer
+1112	Knop/schakelaar
+1144	@A003@Controle-inst.
+1186	@A006@ Hulpprogramma
+1228	Kaartfout
+1248	Kaart vol
+1268	Kaart vol
+1288	Kaart instellen
+1320	Interne cameratemperatuur
+1374	is te hoog. Wacht tot deze
+1430	is gedaald voor gebruik.
+1480	De lens is vergrendeld.
+1530	Schuif de lens uit.
+1570	Kleurruimte
+1594	Continue AF
+1618	AF-tracking
+1642	Contrast
+1660	Grootte kopi
+1686	ren
+1694	Copyright-instellingen
+1740	@A004@Modus
+1764	Aangepast
+1784	Knopfuncties
+1814	Richting regelaar
+1850	Functieregelaar
+1882	@A010@Vergr.
+1908	Auto flits
+1930	Invullen
+1948	Flits uit
+1968	Rode ogen
+1988	Rode ogen traag
+2020	Spot licht
+2042	Spot schaduw
+2068	Scherm/@A004@/PC
+2102	dpi-instellingen
+2136	Repeterend
+2158	@A014@ Anti-schok @A004@
+2208	Enkel
+2220	@A014@ Anti-schok @A004@
+2270	e-Portret
+2290	Bewerk.
+2306	Bestandsn.bew.
+2336	B:Blauw
+2352	G:Groen
+2368	N:Neutraal
+2390	Or:Oranje
+2410	P:Paars
+2426	R:Rood
+2440	S:Sepia
+2456	Ye:Geel
+2472	EV-stap
+2488	EVF-aanpassing
+2518	Belicht/@A011@/ISO
+2556	Belichting
+2578	Belichtingsafst.
+2612	@A008@Gezichtsprio.
+2652	Gezichtsprio. Uit
+2688	Gezichtsprio. Aan
+2724	Bestandsnaam
+2750	Firmware
+2768	@A014@ Aangepast
+2802	@A00A@ Ondergrens
+2838	@A00A@ X-sync.
+2868	Brandp.afst.
+2894	Scherpstelring
+2924	Gradatie High Key
+2960	Gradatie Low Key
+2994	Gradatie normaal
+3028	Hi
+3034	Histogram-instellingen
+3080	i-Enhance
+3100	@A01A@/Kleur/WB
+3132	Beeldstab.
+3154	@A00F@-instellingen
+3194	@A00F@/Info-instellingen
+3244	@A006@ Info
+3268	Adresboek
+3288	Stabilisatie uit
+3322	ISO
+3330	ISO-auto
+3348	ISO-auto set
+3374	Verhoging
+3394	Aanbevolen
+3416	ISO-stap
+3434	Vert. I.S.
+3456	Niveau aanp.
+3482	Lo
+3488	Lus
+3496	Handmatige opname
+3532	@A009@+@A007@
+3560	@A00E@
+3574	Geheugengebruik
+3606	Menu
+3616	@A00E@/@A000@ Menuweergave
+3670	Meting
+3684	Centr.gewogen
+3712	Spot
+3722	MF assist
+3742	min
+3750	Programmauitleg
+3782	@A016@
+3796	Monotoon
+3822	Film
+3832	Film@A017@
+3854	Film+Foto
+3874	Meerv. Belichting
+3910	Laag contrast
+3938	LV versterk.
+3964	Nee
+3972	Geen kaart
+3994	Geen verbinding
+4026	Ruisfilter
+4048	Ruisonderdr.
+4074	Geen foto
+4094	Uit
+4102	Terug@A018@
+4126	Terug@A019@
+4150	Annuleren@A018@
+4182	WB Registr.@A01A@
+4218	@A01B@@A01C@
+4244	Inst.@A019@
+4268	Aan
+4276	@A01E@
+4290	@A01F@
+4304	Mijn OLYMPUS PENPAL
+4344	Albumgeheugeninst.
+4382	Fotomodus
+4402	Beeldmodusinstellingen
+4448	Beeldfout
+4468	Aantal pixels
+4496	Pixel-mapping
+4524	@A023@ Close-Up Modus
+4568	Afdrukken
+4588	Prioriteit instellen
+4630	Progr. auto
+4654	Bescherming resetten
+4696	@A024@
+4710	@A024@ instellen
+4744	Snel Wissen
+4768	RAW+JPEG wissen
+4800	Opnemen/Wissen
+4830	Opn.Beeld
+4850	Rode ogen + invul
+4886	Release
+4902	Ann. prioriteit C
+4938	Ann. prioriteit S
+4974	Resetten
+4992	Reset lens
+5014	Reset/Myset
+5038	@A026@
+5052	Verzadiging
+5076	Strand & sneeuw
+5108	Kaarslicht
+5130	Kinderen
+5148	Documenten
+5170	Vuurwerk
+5188	High Key
+5206	Landschap
+5226	Low Key
+5242	Macro
+5254	@A03A@ Macro
+5280	Natuur macro
+5306	Nacht+portret
+5334	Nachtsc
+5350	ne
+5356	Panorama
+5374	Portret
+5390	DIS-modus
+5410	Sport
+5422	Zonsondergang
+5450	@A03A@ Groothoek
+5484	sec
+5492	@A04E@ Anti-schok @A004@
+5542	@A04F@ Anti-schok @A004@
+5592	@A02A@ 12 sec
+5620	@A02A@ 2 sec
+5646	Grootte versturen
+5682	@A02C@
+5696	Schaduwcomp.
+5722	Schaduw aanpassen
+5758	Scherpte
+5776	Sluiterprioriteit
+5812	Hor. I.S.
+5832	Enkelv. AF
+5854	Enkelv. AF + MF
+5886	Slaapstand
+5908	@A02B@
+5922	Boog
+5932	Standaard
+5952	Start
+5964	Opslag
+5978	Hoog
+5988	OLYMPUS PENPAL Delen
+6030	Elektronische zoeker
+6072	OLYMPUS PENPAL Album
+6114	Tijd
+6124	USB-modus
+6144	Video-uitgang
+6172	Volume
+6186	Even geduld
+6210	WB Auto
+6226	Bewolkt
+6242	WB flitser
+6264	Fluorescerend
+6292	Gloeilamp
+6312	WB
+6318	Schaduw
+6334	Zonnig
+6348	Laag
+6358	Schrijfbeveil.
+6396	Ja
+6402	J/M/D
+6414	Eye-Fi
+6428	16:9
+6438	4:3
+6446	3:2
+6454	6:6
+6462	3:4
+6470	ESP
+6478	NTSC
+6488	PAL
+6496	RAW
+6504	MF
+6510	Adobe RGB
+6530	I.S. 1
+6544	I.S. 2
+6558	Slow
+6568	Slow2
+6580	1/4
+6588	1/16
+6598	1/64
+6608	2nd Curtain
+6632	Vivid
+6644	Natural
+6660	JPEG
+6670	RAW+JPEG
+6688	Portrait
+6722	CWB
+6730	mode1
+6742	mode2
+6754	S-AF
+6764	C-AF
+6774	P/A/S
+6786	Menu
+6796	1/2EV
+6808	1/3EV
+6820	1EV
+6828	Off
+6836	I.S. 3
+6850	sRGB
+6860	Auto@A010@
+6882	MTP
+6890	Hold
+6900	Body
+6910	Lens
+6920	Flash
+6932	Acc
+6940	LV-Info
+6956	@A014@/@A028@
+6984	ART1
+6994	ART2
+7004	ART3
+7014	ART4
+7024	ART5
+7034	ART6
+7044	ART7
+7054	ART8
+7064	HDMI
+7074	iAUTO
+7086	P/A/S/M
+7102	ART9
+7112	ART10
+7124	Full
+7134	@A084@
+7148	Datum
+7160	Myset1
+7174	Myset2
+7188	Myset3
+7202	Myset4
+7216	Verlichte LCD
+7244	Live uitleg
+7268	Dig. televoorzetlens
+7310	Belichting @A007@
+7346	Werkt in de P/A/S-
+7386	belichtings-
+7414	programma's.
+7440	Doeltreffend in alle
+7484	belichtingsmodi.
+7518	Controleer de status van een lens.
+7588	Verlichting aan/uit.
+7630	Belichtingscompensatie
+7678	aanpassen
+7698	@A066@:
+7716	Start/stop
+7740	filmopname
+7762	Voorvertoning
+7792	scherptediepte
+7822	Standaardinstelling 
+7866	voor AF-gebied
+7896	Wijzigen naar
+7926	MF-modus
+7944	RAW+JPEG/JPEG
+7974	kwaliteit wijzigen
+8014	met de draai-
+8044	schakelaar
+8066	@A013@/@A014@
+8096	directe instelling.
+8136	Directe instelling ISO-waarde.
+8198	Directe instelling WB-modus.
+8256	@A02A@ indrukken: om de werking van
+8330	@A010@ te vergrendelen/ontgrendelen
+8404	in de opnamemodus.
+8442	@A01C@Functie
+8470	@A048@Functie
+8498	@A030@Functie
+8526	@A00A@Functie
+8554	SF
+8572	@A05C@5300K
+8596	@A05B@7500K
+8620	@A05D@3000K
+8644	@A059@5500K
+8668	@A058@6000K
+8692	Alle foto's verwijderen van de
+8756	geheugenkaart of de
+8798	geheugenkaart formatteren.
+8852	De instellingen resetten of de
+8916	huidige instellen opslaan als
+8978	'Mysets'.
+8998	De creatieve filter of afwerking
+9066	kiezen voor de betreffende
+9122	opname.
+9138	Een opnamemodus kiezen voor
+9196	het maken van de foto's of films.
+9264	De lengte/breedte-verhouding
+9324	wijzigen tijden het maken van de
+9392	foto's.
+9408	Basisopnameopties.
+9446	Instellingen kiezen voor 
+9500	sequenti
+9518	le opnamen of 
+9550	opnamen met zelfontspanner.
+9606	De beeldstabilisatiemodus
+9660	wijzigen. @A065@ en @A066@ worden
+9730	gebruikt voor het pannen.
+9782	De camera kiest 
+9818	automatisch een andere 
+9868	instelling voor elk beeld.
+9922	Hierbij worden meerdere
+9972	opnamen over elkaar gelegd en
+10034	opgeslagen als 
+10068	n foto.
+10084	De flitserintensiteit aanpassen.
+10150	De draadloze flitserinstelling
+10214	gebruiken met het draadloze
+10272	RC-flitsersysteem.
+10310	Een digitaal vergrote opname
+10370	maken.
+10384	Geavanceerde opnameopties.
+10438	Diavoorstellingen met
+10484	verschillende instellingen en
+10546	effecten.
+10566	De foto's worden in de juiste
+10628	richting getoond, zelfs als de
+10692	camera is gedraaid.
+10732	Bewerkt het beeld.
+10770	Afdrukgegevens bewaren bij de
+10832	foto's op deze kaart.
+10876	De bescherming van alle foto's
+10940	annuleren.
+10962	Weergave- en bewerkingsopties.
+11024	Menu voor autofocus en hand-
+11084	matige scherpstelinstellingen.
+11146	Menu voor knop- en
+11186	schakelaarinstellingen.
+11234	Menu voor ontspanner-
+11280	instellingen.
+11308	Menu voor display-, geluids-,
+11370	printer- en pc-verbindings-
+11428	instellingen.
+11456	Menu voor belichtingsinstellingen.
+11526	Menu voor flitserinstellingen.
+11588	Menu voor beeldkleur- of
+11640	witbalansinstellingen.
+11686	Menu voor opname- en
+11730	wisinstellingen.
+11764	Menu voor filminstellingen.
+11820	Menu voor overige instellingen.
+11884	Kies de AF-modus voor de foto-
+11948	en filmfunctie.
+11980	Als 'Aan' is geselecteerd, werkt
+12048	de autofocus voor het indrukken
+12114	van de ontspanner.
+12152	Kies het AF-gebied.
+12192	Selecteert de werking van de
+12252	schakelaars en pijltoetsen bij de
+12322	keuze van het AF-gebied.
+12372	Bij 'Aan' wordt de focus gereset
+12440	naar oneindigheid wanneer de
+12500	camera wordt uitgeschakeld.
+12556	Selecteer 'Aan' voor MF tijdens
+12622	BULB-opnamen.
+12650	Pas de draairichting van de
+12708	scherpstelring aan om de
+12760	scherpstelling te regelen.
+12814	Kies 'Aan' om het beeld te
+12870	vergroten wanneer de
+12914	scherpstelring op MF staat.
+12970	Kies de uitgangspositie voor het
+13038	AF-gebied.
+13060	Een LED zorgt voor een
+13108	gemakkelijke autofocus bij
+13164	slechte lichtomstandigheden.
+13222	Focus of AE-vergrendeling
+13276	toewijzen aan de @A034@.
+13326	Als 'Aan' is geselecteerd, blijft
+13396	de belichting vergrendeld nadat
+13462	de @A071@ is losgelaten.
+13512	4"-rollen
+13532	Kies de functie die moet worden
+13598	toegewezen aan de schakelaar.
+13658	Kies de draairichting van de
+13718	schakelaar.
+13742	Kies 'Aan' om @A010@ uit te
+13800	schakelen in de opnamemodus.
+13858	A4-rollen
+13878	HDMI-instellingen aanpassen.
+13936	Adres
+13948	Bij 'Aan' zijn de effecten van de
+14018	belichtingscompensatie niet
+14076	zichtbaar op de monitor.
+14126	Alle
+14136	Kies de tijd waarna indicaties
+14200	automatisch van de monitor
+14256	verdwijnen.
+14280	De verlichting van de LCD gaat
+14344	uit wanneer er even geen
+14396	bewerkingen worden uitgevoerd.
+14458	De camera schakelt over naar
+14518	de slaapstand wanneer er geen
+14580	bewerkingen worden uitgevoerd.
+14642	U kunt het geluidsignaal
+14694	uitschakelen dat hoort bij het
+14758	vastzetten van de scherpstelling.
+14826	Weergavevolume aanpassen.
+14878	Selecteer het type apparaat
+14936	om verbinding te maken met USB.
+15000	De grootte van de stappen
+15054	kiezen bij het selecteren van de
+15122	belichtingsinstellingen.
+15172	Een lichtmeetfunctie kiezen.
+15230	Een lichtmeetfunctie kiezen
+15288	met @A034@.
+15312	De ISO-gevoeligheid instellen.
+15374	De bovengrens en standaard-
+15432	waarde kiezen bij voor de
+15486	automatische ISO-gevoeligheid.
+15548	De opnamefuncties kiezen
+15600	waarbij de automatische ISO-
+15660	gevoeligheid beschikbaar is.
+15718	De maximale tijd instellen voor
+15784	BULB-opnamen.
+15812	De vertragingstijd kiezen tussen
+15880	het indrukken en activeren van
+15944	de ontspanner.
+15974	De snelste sluitertijd kiezen die
+16044	beschikbaar moet zijn bij gebruik
+16114	van een flitser.
+16148	De langzaamste sluitertijd
+16204	kiezen die beschikbaar moet
+16262	zijn bij gebruik van een flitser.
+16330	Deze functie vermindert de ruis
+16396	die ontstaat bij een lange
+16452	belichting.
+16476	De mate van ruisreductie
+16528	instellen voor hoge ISO-
+16580	gevoeligheden.
+16610	De witbalansfunctie selecteren.
+16674	Behoud warme kleuren bij de
+16732	automatische witbalans.
+16780	Instellen hoe de kleuren worden
+16846	gereproduceerd op een monitor
+16908	of printer.
+16932	De witbalansfunctie instellen
+16994	op automatisch of op @A036@ bij
+17060	gebruik van een flitser.
+17110	Correcte belichting aan de
+17166	randen conform het soort lens.
+17228	JPEG-instellingen aanpassen met
+17294	combinaties van beeldgrootte 
+17356	en compressieverhouding.
+17406	Het aantal pixels selecteren voor
+17476	@A037@ en @A038@.
+17512	Als 'Aan' is geselecteerd wordt
+17578	de huidige opname direct
+17630	verwijderd.
+17654	De actie kiezen die moet worden
+17720	uitgevoerd waneer een RAW+
+17776	JPEG opname wordt gewist.
+17828	De bestandsnummers en
+17874	mapnummers van de oude kaart
+17934	worden automatisch gebruikt.
+17992	Instellen hoe beeldbestanden
+18052	worden genoemd door de pos. 
+18112	van de naam te bewerken.
+18162	De standaardinstelling 
+18212	selecteren voor 
+18248	bevestigingsdialoogvensters.
+18306	De afdrukresolutie instellen.
+18366	De naam van de fotograaf en
+18424	copyrighthouder toevoegen
+18478	aan nieuwe foto.
+18512	Bij 'Uit' wordt er geen geluid
+18576	opgenomen tijdens het filmen.
+18636	Hiermee worden de functies van
+18700	de pixeltoewijzing gecontroleerd
+18768	en geoptimaliseerd.
+18808	De optimale belichting instellen
+18876	voor elke lichtmeetfunctie.
+18932	De waterpas kalibreren.
+18980	De verbinding voor de Eye-Fi-
+19042	kaart in- of uitschakelen.
+19096	Gedetailleerde cameraopties.
+19154	Menu voor OLYMPUS PENPAL-
+19208	uitwisselinstellingen.
+19254	Menu voor de elektronische-
+19312	zoekerinstellingen.
+19352	Opnamen ontvangen of
+19396	wachten op een verzoek van
+19452	andere apparatuur.
+19490	Alle beeld- en geluidsbestanden
+19556	kopi
+19566	ren van en naar @A00A@ en
+19620	@A00B@.
+19636	Het aantal opnamen weergeven
+19696	dat het in het album is en kan
+19760	worden opgeslagen.
+19798	Alle opnamen uit het album
+19854	verwijderen of het album
+19906	formatteren.
+19932	De helderheid en kleurtemp.
+19990	van de elektronische zoeker
+20048	aanpassen.
+20070	Accessoireopties.
+20106	De helderheid en kleurtemp.
+20164	van de LCD aanpassen.
+20208	Instellen hoe lang de opnamen
+20270	na het maken moeten worden
+20326	getoond.
+20344	Instellen of @A00E@ menu of @A000@
+20416	menu wordt weergegeven.
+20464	De firmwareversie van het
+20518	product bekijken.
+20554	Voor het instellen van de
+20608	basiscamerafuncties.
+20650	Opnamemenu 2
+20676	Ja
+20682	Nee
+20690	@A00A@ Menuweergave
+20730	@A000@ Menuweergave
+20770	Testopname
+20792	Flitsmodus
+20814	@A06B@:Uit
+20836	Alles wissen
+20862	@A023@: AEL/AFL
+20894	@A023@:
+20912	Start/stop
+20936	filmopname
+20958	Voorvertoning
+20988	scherptediepte
+21018	One-touch WB.
+21046	Standaardinstelling 
+21090	voor AF-gebied
+21120	Wijzigen naar
+21150	MF-modus
+21168	RAW+JPEG/JPEG
+21198	kwaliteit wijzigen
+21238	met de draai-
+21268	schakelaar
+21290	Testfoto zonder
+21324	opslaan
+21340	Fotograferen met @A02B@
+21390	terwijl u @A024@ indrukt
+21440	Fotograferen met @A02C@
+21490	terwijl u @A024@ indrukt
+21540	Fotograferen met @A02D@
+21590	terwijl u @A024@ indrukt
+21640	Fotograferen met @A02E@
+21690	terwijl u @A024@ indrukt
+21740	@A023@: Druk in om over te schakelen
+21816	naar de Live Guide, en druk
+21874	nogmaals in om terug te keren.
+21936	@A023@: Wijzig x1/x2.
+21980	@A025@:Uit
+22002	Belichtingscompensatie
+22050	aanpassen
+22070	Hiermee wordt de flitsermodus
+22132	ingesteld.
+22154	Belichtingscompensatie
+22202	aanpassen
+22222	@A012@ indrukken: om de werking van
+22296	@A010@ te vergrendelen/ontgrendelen
+22370	in de opnamemodus.
+22408	Beeldoverlay
+22434	2 Opn. samenv.
+22464	3 Opn. samenv.
+22494	@A009@
+22508	@A01B@ RC-Modus
+22540	Aangepast menu
+22570	A. AF/MF
+22588	B. Knop/schakelaar
+22626	C. Release/@A01E@
+22662	D. Scherm/@A004@/PC
+22702	E. Belicht/@A011@/ISO
+22746	F. @A00A@ Aangepast
+22786	G. @A01A@/Kleur/WB
+22824	H. Opnemen/Wissen
+22860	I. Film
+22876	J. Ingebouwde elektronische zoeker
+22946	Voer een pincode in.
+22988	Fulltime AF
+23012	Wis opgeslagen opname-
+23060	functie en -opties.
+23100	Info uit
+23118	@A049@ Warme kleur
+23156	@A00A@+WB
+23176	Touchscreeninstel.
+23214	ART
+23222	SCN
+23230	3200
+23240	2400
+23250	2560
+23260	1920
+23270	1920
+23280	1440
+23290	1600
+23300	1200
+23310	1280
+23320	960
+23328	1024
+23338	768
+23346	640
+23354	480
+23362	320
+23370	240
+23378	Foto
+23388	Film
+23398	S-AF+MF
+23414	C-AF+TR
+23430	RAW/JPEG
+23448	JPEG bewrk
+23470	Rode ogencorr.
+23500	@A02B@
+23514	Verhouding
+23536	Zwart-wit
+23556	Sepia
+23568	Verzadiging
+23592	@A025@
+23606	@A017@
+23620	RAW-data bewrk
+23650	Roteren
+23666	@A023@
+23680	Kies foto
+23700	@A017@ Start
+23726	Wissen
+23740	Wissen
+23754	Selectie wissen
+23786	Geselecteerd
+23812	Stel huidige opname-
+23856	modus en -instellingen in.
+23910	Film-Weergave
+23938	Verstuur foto
+23966	Resetten
+23984	@A03A@Cross-Process
+24024	@A033@Dramatische Toon
+24070	Gradatie
+24088	Kleurenfilter
+24116	Monochroom
+24138	Gebruik originele grootte.
+24192	Wanneer u de fotofunctie kiest, 
+24260	kunt u items overslaan die niet
+24326	zijn ingesteld op 'Aan'.
+24376	Menu voor OLYMPUS PENPAL-
+24430	albuminstellingen.
+24468	Film@A017@ Aan
+24498	AVCHD 1920
+24520	1080 Normal
+24544	Motion JPEG 1280
+24578	720
+24586	Motion JPEG 640
+24618	480
+24626	@A015@i-Enhance
+24658	@A07A@Vivid
+24682	@A07C@Portrait
+24712	@A032@Popart
+24738	@A034@Soft-Focus
+24772	@A035@Bleke/Lichte Kleur
+24822	@A036@Lichte toon
+24858	@A037@Korrelige Film
+24900	@A038@Pinhole
+24928	@A039@Diorama
+24956	Myset1
+24970	Myset2
+24984	Myset3
+24998	Myset4
+25012	Volledig
+25030	Basis
+25042	Instellen
+25062	Geen geg.
+25082	@A07B@Natural
+25110	@A01F@Laag contr.
+25146	Effect
+25160	High Key
+25178	Normaal
+25194	Low Key
+25210	Monotoon
+25228	Voor monochrome 
+25264	foto's.
+25280	Voor een duidelijk contrast tussen 
+25354	blauwe lucht 
+25384	en wolken.
+25406	Ideaal voor 
+25434	teleopnamen op 
+25468	grotere afstand.
+25502	Voor de donkerste luchttinten en 
+25572	meest heldere wolken.
+25616	Verbetert huidtinten en 
+25668	zet gelaatsuitdrukkingen 
+25722	bij portretten in het licht.
+25780	Voor sepia 
+25806	kleureffect.
+25832	Voor blauw 
+25858	kleureffect.
+25884	Voor paars 
+25910	kleureffect.
+25936	Voor groen 
+25962	kleureffect.
+25988	Wijzig kleurverzadiging
+26036	Wijzig beeldkleur
+26072	Wijzig helderheid
+26108	Wazige achtergrond
+26146	Laat beweging zien
+26184	Fototips
+26202	Live uitleg is niet
+26244	beschikbaar wanneer
+26286	flitser is ingeschakeld
+26334	Helder en levendig
+26372	Eentonig en mat
+26404	Warm
+26414	Koel
+26424	Helder
+26438	Donker
+26452	Helder oplichten
+26486	Helder verduisteren
+26526	Donker oplichten
+26560	Donker verduisteren
+26600	Wazig
+26612	Scherp
+26626	Wazige beweging
+26658	Beweging bevriezen
+26696	dpi
+26704	@A03B@Zacht Sepia
+26740	Regelaar P
+26762	Regelaar A
+26784	Regelaar S
+26806	Regelaar M
+26828	Regelaar menu
+26856	Regelaar @A006@
+26888	Ps
+26894	@A007@
+26908	FNr.
+26918	Sluiter
+26934	@A079@/Value
+26960	Vor./Volg.
+26982	@A08B@
+26996	Inst. Afdrukbestelling
+27042	@A022@
+27056	@A00E@
+27070	@A000@
+27084	Afdruk is al besteld
+27126	Resetten
+27144	Bewaren
+27160	Nee
+27168	Instellen
+27188	Annuleren
+27208	2f 0.3EV
+27226	2f 0.5EV
+27244	2f 0.7EV
+27262	2f 1.0EV
+27280	3f 0.3EV
+27298	3f 0.5EV
+27316	3f 0.7EV
+27334	3f 1.0EV
+27352	5f 0.3EV
+27370	5f 0.5EV
+27388	5f 0.7EV
+27406	5f 1.0EV
+27424	7f 0.3EV
+27442	7f 0.5EV
+27460	7f 0.7EV
+27478	2L-formaat
+27500	WB BKT
+27514	A-B
+27522	3f 2 fasen
+27544	3f 4 fasen
+27566	3f 6 fasen
+27588	G-M
+27596	Aantal beelden
+27626	Auto verst.
+27650	Overlay
+27666	HDMI-uitgang
+27692	HDMI-bediening
+27722	1080i
+27734	720p
+27744	480p/576p
+27764	Copyrightinfo.
+27794	Naam artiest
+27820	Copyrightnaam
+27848	AE BKT
+27862	FL BKT
+27876	ISO BKT
+27892	ART BKT
+27912	@A01B@: Start filmopname
+27964	@A01A@: Maak foto
+28000	@A063@: Start Filmopname
+28052	@A02B@: Maak Foto
+28088	Kies Sc
+28104	neprogramma
+28128	Kies Creatieve Filter
+28172	@A06C@: Uitleg Om Instellingen
+28236	Makkelijk Te Wijzigen
+28280	Automatische instelling
+28330	van diafragma en sluitertijd.
+28390	Handmatige instelling
+28436	van diafragma.
+28466	Handmatige instelling
+28512	van sluitertijd.
+28546	Handmatige instelling
+28592	van diafragma en sluitertijd.
+28652	@A015@: Start filmopname.
+28704	Sluiten@A019@
+28732	MF AEL/AFL
+28754	mode3
+28766	mode4
+28778	Halfweg
+28794	Volledig
+28812	AEL/S-AF
+28830	Belichting
+28852	AEL
+28860	AEL/bel.
+28878	AEL/AF Start
+28904	AF Start
+28922	AEL/AFL/bel.
+28948	AFL/bel.
+28966	----
+28976	Opnamemenu 1
+29002	Weergavemenu
+29028	Continue weergave van een
+29082	kunstfiltereffect. Sommige filters 
+29156	verschijnen met lagere 
+29206	beeldsnelheid.
+29236	Het kunstfiltereffect wordt
+29294	op het LCD getoond en de
+29346	beeldweergavesnelheid is hoger.
+29410	@A042@: Zoom in op een foto.
+29468	@A042@: Toon vergrotingskader en
+29536	druk nogmaals om het beeld
+29592	in het kader te vergroten.
+29646	Licht
+29658	Schaduw
+29674	Indicaties altijd van het scherm
+29742	verwijderen als er binnen 10 sec
+29810	geen bewerking wordt uitgevoerd.
+29876	Indicaties altijd weergeven tijdens
+29950	het fotograferen.
+29986	Na de filmopname kan geen 
+30042	foto worden gemaakt door
+30094	op de ontspanner te drukken.
+30152	Na de filmopname kan een 
+30206	foto worden gemaakt door
+30258	op de ontspanner te drukken.
+30316	Aanpassen
+30336	Terug naar fabrieksinstelling.
+30398	Eye-Fi-kaartverbinding uitschakelen.
+30472	Eye-Fi-kaartverbinding inschakelen.
+30544	2f
+30550	Overbel. foto
+30578	Onderbel. foto
+30608	Er worden twee foto's
+30654	gemaakt: 
+30676	n normaal en
+30708	n met overbelichting.
+30752	Er worden twee foto's
+30798	gemaakt: 
+30820	n normaal en
+30852	n met onderbelichting.
+30898	S-AF AEL/AFL
+30924	C-AF AEL/AFL
+30950	Filtertype
+30972	Filtertype @A00B@
+31008	Filtertype @A00C@
+31044	Effecten toevoegen
+31082	Soft-focuseffect
+31116	Pinhole-effect
+31146	Witte-randeffect
+31180	Kadereffect
+31204	Starlight-effect
+31238	3D-foto
+31254	Voor portretfoto's.
+31294	Zachte huidtinten voor
+31342	weergave op HDTV.
+31378	Voor landschapopnamen. 
+31428	Levendige weergave 
+31470	van blauw en groen.
+31510	Voor niet-wazige
+31546	opname van snel
+31580	bewegende
+31602	onderwerpen.
+31628	Maken van opnamen
+31666	's avonds of 's nachts.
+31716	Werkt met een tragere sluiter-
+31780	tijd dan bij normale opnamen.
+31842	Stabiliseer de camera voor
+31898	het beste resultaat.
+31940	@A014@POP UP
+31968	Voor opname van
+32002	voorwerp en achtergrond 's 
+32060	avonds of 's nachts. 
+32106	Gebruikt een langere 
+32152	sluitertijd dan normaal.
+32202	Spelende 
+32224	kinderen 
+32246	fotograferen.
+32274	Benadrukt 
+32298	heldere delen voor 
+32340	indrukwekkende foto's.
+32386	Benadrukt 
+32410	donkere delen voor 
+32452	indrukwekkende foto's.
+32498	Deze functie 
+32528	vermindert de 
+32560	vervaging, veroorzaakt 
+32610	door een bewegend
+32648	onderwerp of 
+32678	beweging van de camera.
+32726	Ideaal voor 
+32754	close-ups van 
+32786	kleine voorwerpen.
+32824	Voor opname bij
+32858	kaarslicht.
+32884	Warme weergave
+32916	van de kleuren.
+32948	Voor opname van
+32982	zonsondergang/
+33014	zonsopgang.
+33040	Levendige weergave
+33080	van rood en geel.
+33116	Voor foto's van
+33150	documenten.
+33176	Benadrukt het 
+33208	contrast tussen 
+33244	letters en 
+33270	achtergrond.
+33296	Voor het maken
+33328	van foto's die
+33360	gecombineerd 
+33390	kunnen worden 
+33422	tot een enkele
+33454	panoramafoto.
+33482	AF@A039@MF
+33506	Geschikt voor
+33536	nachtsc
+33552	nes (vuurwerk enz.).
+33596	Gebruikt een langere 
+33642	sluitertijd dan bij 
+33686	normale opnamen.
+33720	Voor opname van
+33754	met sneeuw 
+33780	bedekte bergen of
+33818	landschappen, witte 
+33862	stranden enz.
+33890	Voor opnamen met de
+33932	semi-visoogvoorzetlens 
+33982	FCON-P01.
+34002	Voor opnamen met de
+34044	groothoekvoorzetlens 
+34090	WCON-P01.
+34110	Voor opnamen met de
+34152	macrovoorzetlens 
+34190	MCON-P01/02.
+34216	Voor het maken van foto's die
+34278	kunnen worden weergegeven
+34332	op een 3D-tv of -monitor.
+34384	Filtertype @A00D@
+34420	2L-rollen
+34440	Voll. index
+34464	Accepteren
+34486	Alles afdrukken
+34518	Terug
+34530	Rasterweergave
+34560	Zonder rand
+34584	@A002@ RAW+JPEG wissen
+34630	De foto is niet ontvangen.
+34684	De foto is ontvangen.
+34728	De foto is niet verstuurd.
+34782	De foto is verstuurd.
+34826	Bezig
+34838	Kalender
+34856	Live controle
+34884	SCP
+34892	Kunstmenu
+34912	Sc
+34918	nemenu
+34932	Annuleren
+34952	Bewerking beeld niet mogelijk
+35012	Kan niet afdr.
+35042	Kaart
+35054	Formatteren
+35078	Formatteren
+35102	Selectie van beeld niet mogelijk
+35168	Maak de contactpunten van de
+35228	kaart schoon met een droge doek.
+35294	Let op: verbinden met@A004@
+35350	@A00A@ Let op: alles gewist
+35406	@A00A@ Let op: alles gewist
+35462	@A00B@ Let op: alles gewist
+35518	@A00B@ Let op: alles gewist
+35574	@A002@ Let op: alles gewist
+35630	@A002@ Let op: alles gewist
+35686	Doorgaan
+35704	Alles Kopi
+35726	ren
+35734	Standaard
+35754	Verwijderen
+35778	Afwijzen
+35796	Klaar
+35808	@A005@
+35822	Regelaar1
+35842	Regelaar2
+35862	Verbinding maken
+35896	Sluiten
+35912	Gezichtsherkenningsfout
+35960	Bestandsn.
+35982	Full
+35992	1 beeld
+36008	@A00B@
+36022	@A00C@
+36036	Licht&schaduw
+36064	Bovengrens
+36086	@A00D@
+36100	Alleen bld
+36122	@A00F@
+36136	Past het 0-niveau aan 
+36184	naar de huidige positie.
+36234	De koppeling is mislukt.
+36284	SCHAKELAAR @A026@ : 
+36328	F-getal sluiter
+36360	Draai schakelaar @A027@ om
+36416	naar het volgende item
+36464	in het menu te gaan
+36504	SCHAKELAAR @A027@ : 
+36548	F-getal sluiter
+36580	Draai schakelaar @A026@ om
+36636	naar het volgende item
+36684	in het menu te gaan
+36724	Er wordt verbinding gemaakt.
+36782	Bezig met zoeken.
+36820	Even geduld.
+36846	Wachten op verzoek.
+36886	Aanpassen tot 1920x1440.
+36936	Aanpassen tot 1280x960.
+36984	Wachten op antwoord.
+37026	Richt de camera op 
+37068	een blad wit papier.
+37110	Richt de camera op 
+37152	een blad wit papier.
+37194	PINcode invoeren
+37228	ISO, verhoging
+37258	Aanbevolen ISO
+37288	Vastgelopen
+37312	Brief
+37324	Niveaumeter
+37348	L-formaat
+37368	Lichtbak
+37386	L-rollen
+37404	Gebruik langere brandpunts-
+37462	afstand of ga dichterbij staan.
+37526	Vergroot de afstand tussen
+37582	voorwerp en achtergrond.
+37632	Vervaag achtergrond
+37672	Praat tegen een kind
+37716	en maak een foto op 
+37760	zijn/haar ooghoogte.
+37802	Maak meerdere opnamen
+37848	met continu opname en zoek later
+37916	de beste foto's uit.
+37958	Tips bij kinderen
+37994	Ga dicht bij uw huisdier
+38046	staan en maak een foto
+38094	op zijn ooghoogte.
+38132	Stel scherp op de ogen van uw
+38194	huisdier en vang de aandacht
+38254	met eten of speeltjes.
+38300	Maak meerdere opnamen
+38346	met continu opname en zoek later
+38414	de beste foto's uit.
+38456	Tips bij huisdieren
+38496	Maak een foto op de
+38538	hoogte van de bloem 
+38582	of lager. Let op de achtergrond.
+38648	Kies een donkere of
+38690	gekleurde achtergrond
+38736	en vervaag de randen.
+38780	Stel scherp op het kleinste
+38838	detail of blaadje van de bloem.
+38902	De schaduw van een wolk
+38952	of parasol maakt de schaduw
+39010	van bloemen zachter.
+39052	Tips bij bloemen
+39086	Een opnamehoek van 3/4 geeft
+39146	etenswaren iets natuurlijks.
+39204	Fotografeer etenswaren bij
+39260	het raam en indien mogelijk
+39318	met diagonaal tegenlicht.
+39370	Ga dichter bij het voorwerp
+39428	staan. Staande opnamen
+39476	geven meer beelddiepte.
+39524	Tips bij etenswaren
+39564	Zorg dat het belangrijkste
+39620	voorwerp ongeveer 2/3 van 
+39676	het beeld in beslag neemt.
+39730	Diagonaal tussen het centrale
+39792	voorwerp en de achtergrond
+39848	voor een natuurlijk gevoel.
+39904	Plaats het centrale voorwerp
+39964	op de diagonaal voor een 
+40018	natuurlijk gevoel.
+40056	Tips voor kader
+40088	Met de MCON-P02 op de 
+40136	14-42 mm EZ maakt u close-ups
+40198	van kleine voorwerpen.
+40244	Met de FCON-P01 op de
+40290	14-42 mm II R cre
+40326	ert u foto's
+40354	met een 120
+40378	 visoogeffect.
+40408	Met de WCON-P01 op de
+40454	14-42 mm II R maakt u 11-mm
+40512	groothoekopnamen.
+40548	Met het macrolicht MAL-1
+40600	regelt u de lichte en donkere
+40662	delen bij macro-opnamen.
+40712	Tips voor accessoires
+40758	Album format.
+40786	Film@A017@ Uit
+40816	Filminterval
+40842	Multiweerg.
+40866	Meerv. afdrukken
+40900	Nieuwe koppeling
+40934	Geen inkt
+40954	Geen papier
+40978	Uit
+40986	Annuleren@A020@
+41018	Bevestigen@A019@
+41052	Meer@A022@
+41074	Eenvoudig afdrukken start@A024@
+41138	Naam wijzig.@A02D@
+41176	Sluiten@A018@
+41204	Sluiten@A025@
+41232	Afdrukken@A01F@
+41264	Ontspanknop
+41288	Enkele afdruk@A020@
+41328	Ja@A019@
+41346	OK
+41352	Aan
+41360	Dia-interval
+41386	Even wachten
+41412	WB met 
+41430	n toets
+41446	Optie-inst.
+41470	Grootte 1: Groot
+41504	Algemeen
+41522	Adreslijst
+41544	Koppelverzoek ontv.
+41584	Zoeken
+41598	Timer
+41610	Bestemming Selecteren
+41654	Albumgeheugen vol
+41690	Foto/vel
+41708	Foto versturen
+41738	Briefkaart
+41760	@A005@X
+41776	Afdrukfout
+41798	Afdrukinfo
+41820	Afdrukmodus selecteren
+41866	Afdruk besteld
+41896	Afdrukpapier
+41922	Service
+41938	Super FP-Flitser
+41972	Normaal
+41988	Foto ontvangen
+42018	Fotoverzoek ontv.
+42054	Wachten op verzoek
+42092	Bezig met ontvangen
+42132	Rest. foto's
+42158	Verwijder USB-kabel
+42198	Resetten
+42216	Grootte 2: Middel
+42252	Opgesl. foto's
+42282	@A027@ Monotoon
+42314	@A028@
+42328	@A029@ Aangepast
+42362	Bezig met versturen
+42402	Data geregistreerd
+42440	Inst. gewijzigd
+42472	Kort
+42482	Grootte
+42498	Dia
+42506	Standaard
+42526	Apparaatinfo
+42552	Naam
+42562	Naam wijzig.
+42588	Overbrengen
+42612	WB
+42618	Auto @A001@
+42642	@A039@5500K @A001@
+42680	@A027@ @A001@
+42708	@A028@ @A001@
+42736	@A03B@7500K @A001@
+42774	@A03C@5300K @A001@
+42812	@A03E@ @A001@
+42840	WB NG Opnieuw
+42868	Met
+42876	Zonder
+42890	Kaart reinigen
+42920	Inst.@A019@
+42944	Er is geen 3D-foto gemaakt.
+43000	3D-weergave
+43024	Fotofout
+43042	Aanpassen tot 640x480.
+43088	Grootte 1: Klein
+43122	Grootte 2: Groot
+43156	Grootte 3: Middel
+43192	Annuleren@A01F@
+43224	Annuleren@A02C@
+43256	Verwijderen@A02D@
+43292	PC / Aangepast afdrukken@A01F@
+43354	WB/@A01A@@A061@
+43386	Brandp.afst.@A01A@
+43424	Kelvin@A01A@
+43450	Kiezen@A041@
+43476	@A063@@A064@
+43502	@A023@+Ontspanknop
+43540	@A05F@@A033@
+43566	@A02E@@A02F@
+43592	@A030@@A02F@
+43618	@A031@@A02F@
+43644	@A032@@A01A@
+43670	@A042@@A041@
+43696	@A023@@A02F@
+43722	@A03D@@A025@
+43748	WB-voorbeeld @A033@
+43788	Normale automatische witbalans.
+43852	Behoud warme kleuren bij
+43904	de automatische witbalans.
+43958	Effect
+43972	Vervaging
+43992	Vallende foto's
+44024	Fotolijn
+44042	Reset wordt uitgevoerd,
+44092	basisfuncties voor opname
+44146	resetten.
+44166	Reset wordt uitgevoerd,
+44216	alle functies resetten,
+44266	behalve de datum, de taal
+44320	en bepaalde instellingen.
+44372	Ingebouwde flitser
+44410	Kan geen filmopname maken in de AVCHD-
+44490	modus.
+44504	Deze lens wordt niet ondersteund.
+44572	@A002@ Waarschuwing: instellingen
+44642	gereset
+44658	Accessoirepoortmenu
+44698	Setup-menu
+44720	A. OLYMPUS PENPAL Delen
+44768	B. OLYMPUS PENPAL Album
+44816	C. Elektronische zoeker
+44864	De datum en tijd instellen.
+44920	Kies de videostandaard die in
+44982	uw land/regio worden gebruikt.
+45044	De grootte van de stappen
+45098	kiezen bij het selecteren van
+45160	de ISO-gevoeligheid.
+45202	USB
+45210	100mm
+45222	150mm
+45234	11"
+45242	17"
+45250	4"
+45256	6"
+45262	8"
+45268	10"
+45276	A0
+45282	A1
+45288	A2
+45294	A3
+45300	A4
+45306	A5
+45312	A6
+45318	A7
+45324	A8
+45330	A9
+45336	B0
+45342	B1
+45348	B2
+45354	B3
+45360	B4
+45366	B5
+45372	B6
+45378	B7
+45384	B8
+45390	B9
+45396	4"
+45402	8"
+45410	Panorama
+45428	4"
+45434	10"
+45444	Panorama
+45462	4"
+45468	11"
+45478	Panorama
+45496	4"
+45502	12"
+45512	Panorama
+45530	10cm
+45540	30cm
+45552	Panorama
+45570	89mm
+45580	254mm
+45594	Panorama
+45612	A Mode
+45626	B Mode
+45640	C Mode
+45654	M Value
+45670	FP M Value
+45692	Channel
+45708	Level
+45720	TTL Value
+45740	Auto Value
+45762	FP TTL Value
+45788	Auto
+45798	@A01C@/FP
+45818	@A07D@ 4
+45836	@A07E@ 9
+45854	@A07F@ 25
+45874	@A07F@ 100
+45896	BGM
+45904	Cool
+45914	Joy
+45922	Sequentieel H
+45950	Melancholy
+45972	@A012@ Anti-schok @A004@
+46022	TTL Auto
+46040	Sequentieel L
+46068	@A013@ Anti-schok @A004@
+46118	@A078@arge
+46140	Gemiddeld
+46160	@A074@mall
+46182	@A01C@Functie
+46210	Ruisonderdr. wind
+46246	Richt de camera op 
+46288	een blad wit papier.
+46330	@A03E@+Ontspanknop
+46368	Manual
+46382	FP TTL Auto
+46406	FP Manual
+46426	Level Lo
+46444	Level Mid
+46464	Level Hi
+46482	ch
+46488	Beat
+46498	Adobe
+46510	AVCHD 1920
+46532	1080 Fine
+46552	AVCHD 1280
+46574	720 Fine
+46592	AVCHD 1280
+46614	720 Normal
+46636	Vergroting
+46658	@A01D@: AEL/AFL
+46690	Fotograferen met @A02B@
+46740	terwijl u @A01E@ indrukt
+46790	Fotograferen met @A02C@
+46840	terwijl u @A01E@ indrukt
+46890	Voor opname van
+46924	hoofdonderwerp 
+46958	en achtergrond.
+46992	Levendige weergave
+47032	van blauw en groen.
+47072	Ideaal voor 
+47100	close-ups.
+47122	@A03A@ Visoogeffect
+47162	Landschap+portret
+47198	@A038@6000K @A001@
+47236	@A03A@4000K @A001@
+47274	@A03D@3000K @A001@
+47312	Fotograferen met @A02D@
+47362	terwijl u @A01E@ indrukt
+47412	Fotograferen met @A02E@
+47462	terwijl u @A01E@ indrukt
+47512	Touchscreen uitschakelen.
+47564	Touchscreen inschakelen.
+47614	De taal wijzigen.
+47650	Kies de functie die moet
+47702	worden toegewezen aan de
+47754	geselecteerde knop.
+47794	Bij 'Aan' kan de ontspanner ook
+47860	worden gebruikt wanneer de
+47916	camera niet scherp is in S-AF.
+47978	Bij 'Aan' kan de ontspanner ook
+48044	worden gebruikt wanneer de
+48100	camera niet scherp is in C-AF.
+48162	Kies welke informatie moet
+48218	worden weergegeven bij het
+48274	indrukken van @A00F@ of @A01A@.
+48338	Kies welke regelaars worden
+48396	weergegeven bij het indrukken
+48458	van @A035@ bij elke opnamefunctie.
+48528	Instellen bij welke helderheid
+48592	waarschuwingen worden getoond
+48654	voor lichte en schaduwdelen.
+48712	Kies 'Aan' om help te tonen
+48770	voor de gekozen functie bij het
+48836	draaien van de schakelaar.
+48890	Kies hoe de creatieve-filter-
+48952	effecten op de monitor worden
+49014	weergegeven.
+49040	Kies hoe de opname wordt
+49092	vergroot door op de @A042@ knop
+49158	te drukken.
+49182	Bij 'Aan' wordt de belichtings-
+49248	compensatiewaarde toegevoegd
+49308	aan de flitscompensatiewaarde.
+49370	Dezelfde witbalanscompensatie
+49432	instellen voor alle functies.
+49492	Een filmopnamemodus 
+49536	kiezen in de
+49564	@A004@ modus.
+49592	Als 'Aan' is geselecteerd wordt
+49658	een foto gemaakt zodra de
+49712	filmopname stopt.
+49748	Het batterijniveau selecteren
+49810	waarbij de @A003@ waarschuwing
+49874	moet worden weergegeven.
+49924	De touchscreeninstellingen in-
+49988	of uitschakelen.
+50022	Het adresboek bekijken of een
+50084	nieuwe host toevoegen.
+50130	Informatie bekijken of bewerken
+50196	voor OLYMPUS PENPAL.
+50238	De beeldgrootte selecteren
+50294	voor opnamen die worden
+50344	overgezet.
+50366	De beeldgrootte selecteren
+50422	voor opnamen die worden
+50472	gekopieerd.
+50496	@A05A@4000K
+50520	@A01E@:Uit
+50542	Standaardinstelling 
+50586	voor AF-gebied
+50616	3D
+50622	Wijzigen naar
+50652	MF-modus
+50670	@A01D@:
+50688	Start/stop
+50712	filmopname
+50734	One-touch WB.
+50762	Compressie
+50784	Super Fine
+50806	Fine
+50816	Normal
+50830	Basic
+50842	Voorvertoning 
+50874	scherptediepte
+50904	RAW+JPEG/JPEG
+50934	kwaliteit wijzigen
+50974	met de draai-
+51004	schakelaar
+51026	Testfoto zonder
+51060	opslaan
+51076	dummy
+51088	Opslaan
+51104	@A017@Volumebegrenzer
+51148	Beperkt automatisch ingangs-
+51208	volume van microfoon als
+51260	geluidsvolume te hoog komt.
+51316	IS-modus
+51334	@A01D@: Knoppen @A02F@ en @A030@.
+51402	Beeldstabilisatie instellen
+51458	@A066@: Druk in om over te schakelen
+51534	naar de Live Guide, en druk
+51592	nogmaals in om terug te keren.
+51654	@A066@: Wijzig x1/x2.
+51698	Vintage
+51714	Gedeeltelijke kleur
+51754	@A082@Vintage
+51782	@A083@Gedeeltelijke kleur
+51834	Schaduweffect: links/rechts
+51890	Schaduweffect: boven/onder
+51944	Lopend werk
+51968	Door op @A025@ te drukken tijdens
+52038	een Photo Story-sessie, kunt
+52098	u een lopend werk opslaan of
+52158	het huidige werk negeren.
+52210	Kan bestand niet oproepen om
+52270	opname te hervatten
+52310	Later doen
+52332	Weggooien
+52352	Kies 'Aan' om prioriteit voor
+52414	gezichten op te geven bij het
+52476	bepalen van de autofocus.
+52528	@A023@: Knoppen @A02A@ en @A02B@.
+52596	Richt de camera op 
+52638	een blad wit papier.
+52680	Elk frame AF
+52706	Opnieuw scherpstellen voor elk
+52770	frame.
+52784	Stelt slechts 
+52816	n keer scherp bij
+52854	start van zelfontspanner.
+52906	@A013@Beeldstabilisatie
+52954	Activeert/deactiveert beeld-
+53014	stabilisatie voor continue
+53070	opname.
+53086	Uit
+53094	Beeldstabilisatie uitgeschakeld en
+53166	prioriteit voor snelheid van
+53226	continue opname.
+53260	AF-focusaanp.
+53288	AF-meetgebied
+53318	@A01E@ L fps
+53344	@A01E@: Start Filmopname
+53396	@A030@: Maak Foto
+53432	@A075@Bleke/lichte kleur
+53482	Scherpstelling op het
+53528	gezicht of de ogen.
+53570	Een van de ogen wordt gekozen.
+53632	Scherpstelling op het
+53678	gezicht of de ogen.
+53720	Het rechteroog wordt gekozen.
+53780	Scherpstelling op het
+53826	gezicht of de ogen.
+53868	Het linkeroog wordt gekozen.
+53926	Gezichtsherkenning werkt niet.
+53988	Stel scherp op het gedetecteerde
+54056	gezicht.
+54074	Aan
+54082	Beeldstabilisatie ingeschakeld met
+54154	prioriteit voor stabiel beeld.
+54218	Continue opnamesnelheid kan
+54276	be
+54282	nvloed worden.
+54312	Vermindert waasvorming ten
+54368	gevolge van sluiterontspanning.
+54432	C-AF lock
+54452	Controleren
+54476	Datalijst
+54496	Lensdata
+54514	Std. data
+54534	AF-markering en AF-
+54576	modus instellen.
+54610	@A028@: Toon vergrotingskader en
+54678	druk nogmaals om het beeld
+54734	in het kader te vergroten.
+54788	Standaardinstelling 
+54832	voor AF-gebied
+54862	Wijzigen naar
+54892	MF-modus
+54910	One-touch WB.
+54938	Voorvertoning
+54968	scherptediepte
+54998	Gezicht en oog prio. Aan
+55048	Gezicht en r. oog prio. Aan
+55104	Gezicht en l. oog prio. Aan
+55160	RAW+JPEG/JPEG
+55190	kwaliteit wijzigen
+55230	met de draai-
+55260	schakelaar
+55282	Testfoto zonder
+55316	opslaan
+55332	Wanneer sluitersnelheid @A096@
+55396	of minder is, gaat eerste sluiter-
+55468	gordijn van mechanisch naar
+55526	elektronisch om waas door sluiter-
+55598	impact te beperken.
+55638	Kies kleur@A01A@
+55672	Norm.
+55684	@A020@
+55698	@A021@
+55712	@A02B@Functie
+55740	@A029@ @A001@
+55768	@A02A@ @A001@
+55796	@A046@Vergr.
+55822	Indien Aan, wordt het voorbeeld
+55888	van het diepteveld aangehouden,
+55954	ook nadat de knop is ingedrukt.
+56018	Pannen
+56032	Om het onderwerp te 
+56076	fotograferen met wazige 
+56128	achtergrond. Detecteert 
+56180	de camerabeweging 
+56220	en stelt de beste sluitertijd in.
+56288	@A04E@Functie
+56316	@A053@Lichte toon
+56352	@A06C@: AEL/AFL
+56384	@A06C@:
+56402	Start/stop
+56426	filmopname
+56448	Voorvertoning
+56478	scherptediepte
+56508	One-touch WB.
+56536	Standaardinstelling 
+56580	voor AF-gebied
+56610	Wijzigen naar
+56640	MF-modus
+56658	RAW+JPEG/JPEG
+56688	kwaliteit wijzigen
+56728	met de draai-
+56758	schakelaar
+56780	Testfoto zonder
+56814	opslaan
+56830	Fotograferen met @A06C@
+56880	terwijl u @A06B@ indrukt
+56930	Fotograferen met @A06D@
+56980	terwijl u @A06B@ indrukt
+57030	Fotograferen met @A06E@
+57080	terwijl u @A06B@ indrukt
+57130	Fotograferen met @A06F@
+57180	terwijl u @A06B@ indrukt
+57230	@A077@Korrelige film
+57272	@A06C@: Druk in om over te schakelen
+57348	naar de Live Guide, en druk
+57406	nogmaals in om terug te keren.
+57468	@A06C@: Wijzig x1/x2.
+57512	@A076@:Uit
+57534	1/2
+57542	1/8
+57550	1/32
+57560	@A01C@: Start filmopname
+57612	@A01B@: Maak foto
+57650	@A069@: Film@A05E@
+57688	1/128
+57700	@A087@@A088@
+57726	SCHAKELAAR @A089@ : 
+57770	F-getal sluiter
+57802	SCHAKELAAR @A08A@ : 
+57846	F-getal sluiter
+57878	ART13
+57890	ART14
+57902	@A046@
+57916	Wijzig modus naar P/A/S/M.
+57970	Trapeziumcorrectie
+58008	Indien aan, is trapezium-
+58062	corr. mogelijk. Indicaties
+58118	worden weergeg. op het scherm.
+58180	Druk om trapezium-
+58220	correctie te starten. Stop
+58276	door knop ingedrukt te houden.
+58338	Trapeziumcorrectie uit
+58384	Trapeziumcorrectie aan
+58430	Stoppen @A018@
+58460	Camera kiest stabilisatorinstelling
+58534	door detectie van camerabeweging.
+58602	Correctie@A01A@ instellen
+58654	@A03C@ Niv. half indruk.
+58704	Kies Aan om niveaumeter in
+58760	ingebouwde EVF weer te geven.
+58822	Activeren tijdens @A058@.
+58874	Snelheid
+58892	@A066@ 4foto's
+58922	@A067@ 5foto's
+58952	@A04A@Functie
+58980	EVF autom. luminantie
+59024	Basisinformatie
+59056	Kleurenmaker
+59082	@A078@Gaatjescamera
+59122	Kies de juiste positie
+59168	Beweeg de camera na het
+59218	maken van de eerste foto
+59270	langzaam mee en druk op
+59320	de ontspanner.
+59350	Lensdataset verwijderen
+59398	Wazig effect: links/rechts
+59452	Wazig effect: boven/onder
+59504	Elektr. zoom
+59530	Natural@A037@
+59558	Vivid@A037@
+59582	@A0BF@
+59596	@A0D0@
+59610	@A0D1@
+59624	@A0D2@
+59638	@A0D3@
+59652	@A0D4@
+59666	@A0D5@
+59680	@A0D6@
+59694	@A0D7@
+59708	@A0D8@
+59722	@A0D9@
+59736	@A0DA@
+59750	@A0DB@
+59764	@A0DC@
+59778	@A0DD@
+59792	@A0DE@
+59806	@A0DF@
+59820	@A0E0@
+59834	@A0E1@
+59848	@A0E2@
+59862	@A0E3@
+59876	@A0E4@
+59890	@A0E5@
+59904	@A0E6@
+59918	@A0E7@
+59932	@A0E8@
+59946	@A0E9@
+59960	@A0EA@
+59974	@A0EB@
+59988	@A0EC@
+60002	@A0ED@
+60016	@A0EE@
+60030	@A0EF@
+60044	@A0F0@
+60058	@A0F1@
+60072	@A0F2@
+60086	@A0C0@
+60100	@A0C1@
+60114	@A0C2@
+60128	@A0C3@
+60142	@A0C4@
+60156	@A0C5@
+60170	@A0C6@
+60184	@A0C7@
+60198	@A0C8@
+60212	@A0C9@
+60226	@A0CA@
+60240	@A0CB@
+60254	@A0CC@
+60268	@A0CD@
+60282	@A0CE@
+60296	@A0CF@
+60310	@A0D0@
+60324	@A0D1@
+60338	@A0D2@
+60352	@A0D3@
+60366	@A0D4@
+60380	@A0BF@
+60394	@A0D6@
+60408	@A0D7@
+60422	@A0D8@
+60436	@A0D9@
+60450	@A0DA@
+60464	@A0DB@
+60478	@A0DC@
+60492	@A0DD@
+60506	@A0DE@
+60520	@A0DF@
+60534	@A0E0@
+60548	@A0E1@
+60562	@A0E2@
+60576	@A0E3@
+60590	@A0E4@
+60604	@A0E5@
+60618	@A0E6@
+60632	@A0E7@
+60646	@A0E8@
+60660	@A0E9@
+60674	@A0EA@
+60688	@A0EB@
+60702	@A0EC@
+60716	@A0ED@
+60730	@A0EE@
+60744	@A0EF@
+60758	@A0F0@
+60772	@A0F1@
+60786	@A0F2@
+60800	@A0F3@
+60814	@A0F4@
+60828	@A0F5@
+60842	@A0F6@
+60856	@A0F7@
+60870	@A0E2@
+60884	@A0F9@
+60898	@A0FA@
+60912	@A0FB@
+60926	@A0FC@
+60940	@A0FD@
+60954	@A0FE@
+60968	@A0FF@
+60982	@A100@
+60996	@A101@
+61010	@A102@
+61024	@A103@
+61038	@A104@
+61052	@A105@
+61066	Release/@A01E@
+61096	Onder water
+61120	Zoom
+61130	@A01E@+Ontspanknop
+61168	@A075@: Uitleg Om Instellingen
+61232	Makkelijk Te Wijzigen
+61276	Richt de camera op 
+61318	een blad wit papier.
+61360	@A06B@: Start Filmopname
+61412	@A02B@: Maak Foto
+61448	@A06B@+Ontspanknop
+61486	@A023@: Toon vergrotingskader en
+61554	druk nogmaals om het beeld
+61610	in het kader te vergroten.
+61664	@A01D@: Wijzig x1/x2.
+61708	@A01D@: Druk in om over te schakelen
+61784	naar de Live Guide, en druk
+61842	nogmaals in om terug te keren.
+61904	Vergroot een foto of @A024@ met
+61970	schakelaar.
+61994	Kies een foto met de schakelaar. 
+62064	@A06D@: vergroot een foto of @A024@.
+62138	Menu voor ontspanner- en
+62190	repeterende opname-instellingen.
+62256	Kies het aantal opnamen dat in
+62320	1 sec. kan worden gemaakt bij
+62382	sequenti
+62400	le opnamen met @A052@.
+62446	De verlichting van de monitor
+62508	gaat uit wanneer er even geen
+62570	bewerkingen worden uitgevoerd.
+62632	@A01E@ H fps
+62658	Kies het aantal opnamen dat in
+62722	1 sec. kan worden gemaakt bij
+62784	sequenti
+62802	le opnamen met @A056@.
+62848	@A072@: Toon het weergavemenu.
+62912	Verwijder de huidige opname
+62970	uit het weergavemenu.
+63014	@A072@: Verwijder direct de huidige
+63088	opname.
+63106	@A025@: Toon het weergavemenu.
+63168	@A025@: Verwijder direct de huidige
+63242	opname.
+63258	Wijs 'verwijder opname'
+63308	toe aan @A072@ or @A025@.
+63360	@A011@: Knoppen @A02E@ en @A02F@.
+63428	Selecteert de ideale modus.
+63486	Live Guide-menu beschikbaar.
+63544	Toont het volledige menu
+63596	voor camera-instellingen
+63646	Automatische instellingen voor
+63710	de gekozen sc
+63738	nemodus.
+63756	Creatieve effecten toepassen.
+63816	Verlichting aan/uit.
+63858	De helderheid en kleurtemp.
+63916	van de LCD aanpassen.
+63960	fps
+63968	@A014@/@A080@/@A028@
+64010	@A081@/@A082@
+64038	@A04F@Functie
+64066	Door tijdens filmopnamen met de
+64132	Live Guide op @A077@ te drukken, kunt
+64210	u het niveau van de Live Guide
+64274	aanpassen met de scherpstelring.
+64340	Door tijdens filmopnamen op
+64398	@A077@ te drukken, kunt u de 
+64460	MF-modus wijzigen. Door 
+64512	nogmaals te drukken
+64554	keert u terug naar de AF-modus.
+64618	AF stop
+64634	Door @A06D@ ingedrukt te houden,
+64702	kunt u de autofocus deactiveren
+64768	en de focus vastzetten op het
+64830	punt waar de knop werd ingedrukt.
+64898	Werking van de knop uitschakelen.
+64966	Touch-kalibratie.
+65002	Extern @A02A@
+65030	mm
+65040	Extern @A02E@ opnameniv.
+65090	AF-markering en AF-
+65132	modus instellen.
+65166	3f
+65172	4f
+65178	Regeling
+65196	Beeldstabilisatie instellen
+65252	@A01D@: Toon vergrotingskader en
+65320	druk nogmaals om het beeld
+65376	in het kader te vergroten.
+65430	Aantal foto's @A033@
+65472	Functie menuregelaar
+65514	Wijs geregistreerde Mysets
+65570	toe aan de menuschakelaar.
+65624	Zelfontspannerinstellingen
+65678	@A014@ Timer
+65704	Intrvl. opn./tijdopname
+65752	Maakt een opgegeven aantal
+65808	foto's met opgegeven interval.
+65872	En maakt een 'time lapse'-film.
+65936	Start wachttijd
+65968	Stelt de tijd in totdat met
+66026	opnemen wordt begonnen nadat
+66086	de ontspanner is ingedrukt.
+66142	Intervaltijd
+66168	Autom. uitschakelen
+66208	4u
+66214	Bezig
+66226	@A007@Functie
+66254	AF-gebied select.
+66290	Framesnelheid
+66318	@A010@:Uit
+66340	SCHAKELAAR @A011@ : 
+66384	F-getal sluiter
+66416	SCHAKELAAR @A012@ : 
+66460	F-getal sluiter
+66492	Uit
+66500	Beweeg de camera na het
+66550	maken van de eerste foto
+66602	langzaam mee en druk op
+66652	de ontspanner.
+66682	Opnamevolume
+66708	Onderdrukking van windruis
+66762	Hoog
+66772	Richt de camera op 
+66814	een blad wit papier.
+66856	Richt de camera op 
+66898	een blad wit papier.
+66940	Richt de camera op 
+66982	een blad wit papier.
+67024	@A071@+Ontspanknop
+67062	@A072@+Ontspanknop
+67100	@A070@+Ontspanknop
+67138	@A050@Functie
+67166	@A051@Functie
+67194	1u
+67200	K. @A004@ Hulpprogramma
+67248	@A039@@A03A@
+67274	Galerij
+67290	Aan elke pijltoets kan een 
+67348	functie worden toegewezen 
+67404	wanneer deze tijdens de 
+67456	opname wordt ingedrukt.
+67504	Werking van de knop uitschakelen.
+67572	Belichtingscompensatie
+67620	aanpassen
+67640	Belichtingscompensatie
+67688	aanpassen
+67708	Belichtingscompensatie
+67756	aanpassen
+67776	Belichtingscompensatie
+67824	aanpassen
+67844	AF-markering en AF-
+67886	modus instellen.
+67920	AF-markering en AF-
+67962	modus instellen.
+67996	AF-markering en AF-
+68038	modus instellen.
+68072	AF-markering en AF-
+68114	modus instellen.
+68148	AF-markering en AF-
+68190	modus instellen.
+68224	AF-markering en AF-
+68266	modus instellen.
+68300	@A06C@: Knoppen @A02A@ en @A02B@.
+68368	@A066@: Knoppen @A02A@ en @A02B@.
+68436	@A066@: AEL/AFL
+68468	@A06E@: AEL/AFL
+68500	@A06F@: AEL/AFL
+68532	@A06D@: AEL/AFL
+68564	@A06C@: Toon vergrotingskader en
+68632	druk nogmaals om het beeld
+68688	in het kader te vergroten.
+68742	@A066@: Toon vergrotingskader en
+68810	druk nogmaals om het beeld
+68866	in het kader te vergroten.
+68920	@A06E@: Toon vergrotingskader en
+68988	druk nogmaals om het beeld
+69044	in het kader te vergroten.
+69098	@A06F@: Toon vergrotingskader en
+69166	druk nogmaals om het beeld
+69222	in het kader te vergroten.
+69276	@A06D@: Toon vergrotingskader en
+69344	druk nogmaals om het beeld
+69400	in het kader te vergroten.
+69454	Voorvertoning
+69484	scherptediepte
+69514	Voorvertoning
+69544	scherptediepte
+69574	Voorvertoning
+69604	scherptediepte
+69634	One-touch WB.
+69662	One-touch WB.
+69690	One-touch WB.
+69718	Standaardinstelling 
+69762	voor AF-gebied
+69792	Standaardinstelling 
+69836	voor AF-gebied
+69866	Standaardinstelling 
+69910	voor AF-gebied
+69940	Wijzigen naar
+69970	MF-modus
+69988	Wijzigen naar
+70018	MF-modus
+70036	Wijzigen naar
+70066	MF-modus
+70084	RAW+JPEG/JPEG
+70114	kwaliteit wijzigen
+70154	met de draai-
+70184	schakelaar
+70206	RAW+JPEG/JPEG
+70236	kwaliteit wijzigen
+70276	met de draai-
+70306	schakelaar
+70328	RAW+JPEG/JPEG
+70358	kwaliteit wijzigen
+70398	met de draai-
+70428	schakelaar
+70450	Testfoto zonder
+70484	opslaan
+70500	Testfoto zonder
+70534	opslaan
+70550	Testfoto zonder
+70584	opslaan
+70600	Fotograferen met @A06C@
+70650	terwijl u @A071@ indrukt
+70700	Fotograferen met @A06D@
+70750	terwijl u @A071@ indrukt
+70800	Fotograferen met @A06E@
+70850	terwijl u @A071@ indrukt
+70900	Fotograferen met @A06F@
+70950	terwijl u @A071@ indrukt
+71000	Fotograferen met @A06C@
+71050	terwijl u @A072@ indrukt
+71100	Fotograferen met @A06D@
+71150	terwijl u @A072@ indrukt
+71200	Fotograferen met @A06E@
+71250	terwijl u @A072@ indrukt
+71300	Fotograferen met @A06F@
+71350	terwijl u @A072@ indrukt
+71400	Fotograferen met @A02B@
+71450	terwijl u @A072@ indrukt
+71500	Fotograferen met @A02C@
+71550	terwijl u @A072@ indrukt
+71600	Fotograferen met @A02D@
+71650	terwijl u @A072@ indrukt
+71700	Fotograferen met @A02E@
+71750	terwijl u @A072@ indrukt
+71800	@A06E@: Druk in om over te schakelen
+71876	naar de Live Guide, en druk
+71934	nogmaals in om terug te keren.
+71996	@A06F@: Druk in om over te schakelen
+72072	naar de Live Guide, en druk
+72130	nogmaals in om terug te keren.
+72192	@A06D@: Druk in om over te schakelen
+72268	naar de Live Guide, en druk
+72326	nogmaals in om terug te keren.
+72388	@A06E@: Wijzig x1/x2.
+72432	@A06F@: Wijzig x1/x2.
+72476	@A06D@: Wijzig x1/x2.
+72520	Eye-Fi
+72534	@A05B@Functie
+72562	@A05C@Functie
+72590	Controleer de status van een lens.
+72660	Schuif de lens uit.
+72700	Key Line
+72718	@A067@Key Line
+72748	Selecteer SCN-modus @A05D@.
+72806	Handmatige waarde
+72842	Handmatige waarde @A01A@
+72896	Kelvin
+72910	Cameraflitser
+72938	Bulb/Time-focus
+72970	Selecteer 'Aan' voor MF
+73020	tijdens BULB/TIME-opnamen.
+73074	Bulb/Time-timer
+73106	De maximale tijd instellen
+73162	voor Bulb/Time-opnamen.
+73210	Live Bulb
+73230	De foto's worden getoond
+73282	tijdens Bulb-opnamen.
+73326	Live Time
+73346	De foto's worden getoond
+73398	tijdens Time-opnamen.
+73442	Weergave teller
+73474	keer
+73484	@A022@ + IS Uit
+73516	Wanneer Aan is geselecteerd,
+73576	werkt de beeldstabilisator niet
+73642	bij repeterende opnamen.
+73692	Half indrukken bij IS
+73736	Wanneer Aan is geselecteerd,
+73796	werkt de beeldstab. wanneer 
+73856	de ontspanner wordt ingedrukt.
+73918	LV Close-up modus
+73954	Kies een modus wanneer de
+74008	ontspanner wordt ingedrukt
+74064	tijdens de vergrote live view.
+74126	Wanneer de ontspanner half
+74182	wordt ingedrukt, verdwijnt de
+74244	vergrote live view en wordt het
+74310	vergrotingsvenster getoond.
+74366	Wanneer de ontspanner half
+74422	wordt ingedrukt, werkt de
+74476	scherpstelling in de vergrote
+74538	live view.
+74560	Selecteer een raster voor
+74614	de kaderbepaling.
+74650	@A03B@
+74664	De camera wordt automatisch 
+74724	uitgeschakeld wanneer hij een 
+74788	bepaalde tijd buiten gebruik is.
+74854	Live SCP
+74872	@A057@ Batterijvoorkeur
+74920	Selecteer het type batterij dat
+74986	wordt gebruikt voor de
+75034	batterijhouder.
+75066	Batterij-body
+75094	Batterijhouder
+75124	Zodra de batterij in de body
+75184	leeg is, wordt de batterij in de
+75252	batterijhouder gebruikt.
+75302	Zodra de batterij in de batterij-
+75372	houder leeg is, wordt de batterij 
+75444	in de body gebruikt.
+75486	Pas het volume van de
+75532	microfoon aan.
+75562	Onderdrukt windruis bij het
+75620	maken van filmopnamen.
+75666	Filmeffect
+75688	Filmeffect in- of uitschakelen
+75752	in de @A008@ modus.
+75792	Ingebouwde elektronische zoeker
+75856	Menu voor de elektronische-
+75914	zoekerinstellingen.
+75954	@A05F@ Rasterweergave
+75998	Selecteer een raster voor
+76052	de ingebouwde zoeker.
+76098	Inschakelen bij @A05F@.
+76146	Stijl voor zoeker
+76182	Selecteer weergavestijl voor
+76242	de ingebouwde zoeker.
+76286	Stijl 1
+76302	Stijl 2
+76318	Stijl 3
+76334	@A03C@ Info-instellingen
+76384	Kies welke info wordt getoond
+76446	bij het indrukken van @A01A@.
+76508	Inschakelen bij @A03C@.
+76556	EVF autom. schakelen
+76598	Schakel van de monitor-
+76648	weergave naar de zoeker zodra
+76710	een oog wordt waargenomen.
+76764	De oogsensor uitschakelen.
+76820	@A059@: om te schakelen tussen de
+76890	monitorweergave en de zoeker.
+76950	De oogsensor inschakelen.
+77004	@A03D@: live view Aan/Uit.
+77058	Selecteer de framesnelheid
+77114	in de ingebouwde zoeker.
+77164	Multifunctie
+77190	@A066@: Druk om de verschillende
+77258	functies te activeren en gebruik
+77326	de draaischakelaar om een
+77380	nieuwe functie te kiezen.
+77432	@A023@: Druk om de verschillende
+77500	functies te activeren en gebruik
+77568	de draaischakelaar om een
+77622	nieuwe functie te kiezen.
+77678	n echo
+77692	Multi-echo
+77714	Directe functie
+77746	Lichte/schaduwdelen
+77788	Door tijdens het opnemen op de
+77852	@A010@ knop te drukken, kunt u het
+77924	AF-gebied selecteren.
+77968	MTP
+77976	ESP
+77984	NTSC
+77994	PAL
+78002	USB
+78010	RAW
+78018	@A0B2@arge
+78040	@A037@iddle
+78064	@A038@mall
+78086	Super Fine
+78108	Fine
+78118	Normal
+78132	Basic
+78144	SF
+78162	MF
+78168	fps
+78176	100mm
+78188	150mm
+78200	11"
+78208	17"
+78216	4"
+78222	6"
+78228	8"
+78234	10"
+78242	A0
+78248	A1
+78254	A2
+78260	A3
+78266	A4
+78272	A5
+78278	A6
+78284	A7
+78290	A8
+78296	A9
+78302	B0
+78308	B1
+78314	B2
+78320	B3
+78326	B4
+78332	B5
+78338	B6
+78344	B7
+78350	B8
+78356	B9
+78362	4"
+78368	8"
+78376	Panorama
+78394	4"
+78400	10"
+78410	Panorama
+78428	4"
+78434	11"
+78444	Panorama
+78462	4"
+78468	12"
+78478	Panorama
+78496	10cm
+78506	30cm
+78518	Panorama
+78536	89mm
+78546	254mm
+78560	Panorama
+78578	Adobe RGB
+78598	I.S. 1
+78612	I.S. 2
+78626	Slow
+78636	Slow2
+78648	2nd Curtain
+78672	Vivid
+78684	Natural
+78700	JPEG
+78710	RAW+JPEG
+78728	Portrait
+78762	CWB
+78770	3f 0.3EV
+78788	3f 0.5EV
+78806	3f 0.7EV
+78824	3f 1.0EV
+78842	5f 0.3EV
+78860	5f 0.5EV
+78878	5f 0.7EV
+78896	5f 1.0EV
+78914	mode1
+78926	mode2
+78938	mode3
+78950	mode4
+78962	A Mode
+78976	B Mode
+78990	C Mode
+79004	M Value
+79020	FP M Value
+79042	Channel
+79058	Level
+79070	TTL Value
+79090	Auto Value
+79112	FP TTL Value
+79138	Auto
+79148	@A00A@/FP
+79168	S-AF
+79178	C-AF
+79188	S-AF+MF
+79204	C-AF+TR
+79220	AE BKT
+79234	WB BKT
+79248	FL BKT
+79262	ISO BKT
+79278	P/A/S
+79290	Menu
+79300	1/2EV
+79312	1/3EV
+79324	1EV
+79332	Off
+79340	I.S. 3
+79354	sRGB
+79364	@A0B3@/Value
+79390	AEL/S-AF
+79408	AEL
+79416	AEL/AF Start
+79442	AF Start
+79460	----
+79470	@A0B3@Vivid
+79494	@A0B4@Natural
+79522	@A0B5@Portrait
+79552	Ps
+79558	Auto@A006@
+79580	A-B
+79588	G-M
+79596	Hold
+79606	@A0B4@ 4
+79624	@A0B5@ 9
+79642	@A0B6@ 25
+79662	@A0B6@ 100
+79684	Body
+79694	Lens
+79704	Flash
+79716	Acc
+79724	LV-Info
+79740	RAW/JPEG
+79758	@A013@/@A014@
+79786	ART1
+79796	ART2
+79806	ART3
+79816	ART4
+79826	ART5
+79836	ART6
+79846	ART7
+79856	ART8
+79866	BGM
+79874	480p/576p
+79894	Cool
+79904	Joy
+79912	Melancholy
+79934	HDMI
+79944	TTL Auto
+79962	Manual
+79976	FP TTL Auto
+80000	FP Manual
+80020	Level Lo
+80038	Level Mid
+80058	Level Hi
+80076	ch
+80082	@A0D4@/@A0D5@
+80110	AEL/AFL
+80126	@A040@REC
+80146	iAUTO
+80158	P/A/S/M
+80174	ART9
+80184	ART10
+80196	Full
+80206	2f 0.3EV
+80224	2f 0.5EV
+80242	2f 0.7EV
+80260	2f 1.0EV
+80278	7f 0.3EV
+80296	7f 0.5EV
+80314	7f 0.7EV
+80332	2f
+80338	@A0B7@
+80352	@A0B8@
+80366	@A095@ 5300K
+80392	@A097@ 6000K
+80418	@A096@ 7500K
+80444	@A098@ 3000K
+80470	@A099@ 4000K
+80496	Beat
+80506	ART
+80514	SCN
+80522	Adobe
+80534	@A036@ 5500K
+80560	ART BKT
+80576	Motion JPEG 1280
+80610	720
+80618	Motion JPEG 640
+80650	480
+80658	3D
+80664	1:1
+80672	ART11
+80684	MOV 1920
+80702	1080 Fine
+80722	MOV 1920
+80740	1080 Normal
+80764	MOV 1280
+80782	720 Fine
+80800	MOV 1280
+80818	720 Normal
+80840	Stelt de intervaltijd in totdat de
+80912	volgende opname wordt gemaakt.
+80974	uur
+80982	'Time Lapse'-film
+81018	Maakt alleen foto's.
+81060	Maakt een 'time lapse'-film
+81118	en foto's.
+81140	J. @A008@ Instelling
+81182	@A059@@A024@
+81208	Vervaging
+81228	Aquarel
+81244	@A06F@Aquarel
+81272	Verbinding met smartphone
+81324	Bekijk een foto op de
+81370	smartphone via een
+81410	FlashAir-verbinding.
+81452	Kaart geconfigureerd door
+81506	een ander apparaat. Instelling
+81570	kan niet worden gewijzigd.
+81624	Kaart kan niet worden geformatteerd.
+81698	Verbinding wordt tot stand gebracht
+81770	Niet verbreken
+81800	Verbreken
+81820	Verbindingsinstellingen
+81868	SSID-instelling
+81900	Initi
+81912	le instelling voltooid
+81958	Eenmalige verbinding
+82000	Priv
+82010	verbinding
+82032	Wachtwoordinstelling
+82074	Geef eenmalig wachtwoord op
+82130	Wachtwoord kan niet
+82172	worden gewijzigd
+82206	Verbinding wordt gestart
+82256	Fotostabilisatie
+82290	Filmstabilisatie
+82324	Film-I.S. Aan
+82352	Wijzig beeldstabilisatiemodus.
+82416	Foto en film.
+82444	Beeldstabilisatiefuncties in
+82504	alle richtingen op basis van
+82564	camerabeweging.
+82596	Alleen verticale stabilisatie.
+82660	Houd de camera horizontaal en
+82722	fotografeer terwijl u de camera
+82788	horizontaal beweegt.
+82830	Alleen horizontale stabilisatie.
+82898	Houd de camera verticaal en
+82956	fotografeer terwijl u de camera
+83022	horizontaal beweegt.
+83064	Beeldstabilisator uitgeschakeld.
+83130	Activeer beeldstabilisatie
+83186	bij filmopnamen.
+83220	Activeer beeldstabilisatie in
+83282	alle richtingen bij filmopnamen.
+83348	Start diavoorstelling van foto's
+83416	en/of filmopnamen met
+83462	verschillende effecten.
+83510	HDR BKT
+83526	Wijizg naar HDR BKT-modus.
+83580	Wijizg naar HDR BKT-modus.
+83634	Wijizg naar HDR BKT-modus.
+83688	Minder flikkering
+83724	Verminder flikkering door de
+83784	frequentie te wijzigen.
+83832	In delen met 50 Hz is de
+83884	flikkering afgenomen.
+83928	In delen met 60 Hz is de
+83980	flikkering afgenomen.
+84024	Vermindert automatisch flikkering.
+84094	Flikkervermindering Uit.
+84144	Ruisfilter Uit
+84174	Ruisfilter Standaard
+84216	Ruisfilter Hoog
+84248	Ruisfilter Laag
+84280	Huidig
+84294	Aangepast1
+84316	Aangepast2
+84338	Aanpassing schaduwdelen
+84386	Aanpassing lichte delen
+84434	Selecteer framesnelheid voor 
+84496	Live View
+84516	Lensstabilisatie Prio.
+84562	Kies 'Aan' om lensstabilisatie
+84626	te gebruiken.
+84654	Release Lag-Time
+84688	De tijd tussen het moment dat
+84750	de ontspanner wordt ingedrukt
+84812	en de opname wordt gemaakt.
+84868	Wordt gewijzigd naar @A077@ modus.
+84938	Schakelt @A07D@ aan/uit.
+84988	Schakelt @A07D@ aan/uit.
+85038	Wordt gewijzigd naar @A078@ modus.
+85108	Schakelt @A07E@ aan/uit.
+85158	Schakelt @A07E@ aan/uit.
+85208	Wordt gewijzigd naar @A079@ modus.
+85278	Schakelt @A07F@ aan/uit.
+85328	Schakelt @A07F@ aan/uit.
+85378	Wordt gewijzigd naar @A07A@ modus.
+85448	Schakelt @A080@ aan/uit.
+85498	Schakelt @A080@ aan/uit.
+85548	BGM import
+85570	BGM wordt overschreven
+85616	Geen BGM
+85634	@A027@1s Anti-schok @A004@
+85688	@A027@2s Anti-schok @A004@
+85742	@A027@3s Anti-schok @A004@
+85796	@A027@4s Anti-schok @A004@
+85850	@A027@5s Anti-schok @A004@
+85904	@A027@6s Anti-schok @A004@
+85958	@A027@7s Anti-schok @A004@
+86012	@A027@8s Anti-schok @A004@
+86066	@A027@9s Anti-schok @A004@
+86120	@A027@10s Anti-schok @A004@
+86176	@A027@11s Anti-schok @A004@
+86232	@A027@12s Anti-schok @A004@
+86288	@A027@13s Anti-schok @A004@
+86344	@A027@14s Anti-schok @A004@
+86400	@A027@15s Anti-schok @A004@
+86456	@A027@16s Anti-schok @A004@
+86512	@A027@17s Anti-schok @A004@
+86568	@A027@18s Anti-schok @A004@
+86624	@A027@19s Anti-schok @A004@
+86680	@A027@20s Anti-schok @A004@
+86736	@A027@21s Anti-schok @A004@
+86792	@A027@22s Anti-schok @A004@
+86848	@A027@23s Anti-schok @A004@
+86904	@A027@24s Anti-schok @A004@
+86960	@A027@25s Anti-schok @A004@
+87016	@A027@26s Anti-schok @A004@
+87072	@A027@27s Anti-schok @A004@
+87128	@A027@28s Anti-schok @A004@
+87184	@A027@29s Anti-schok @A004@
+87240	@A027@30s Anti-schok @A004@
+87296	1f
+87302	5f
+87308	6f
+87314	7f
+87320	8f
+87326	9f
+87332	10f
+87340	11f
+87348	12f
+87356	13f
+87364	14f
+87372	15f
+87380	16f
+87388	17f
+87396	18f
+87404	19f
+87412	20f
+87420	21f
+87428	22f
+87436	23f
+87444	24f
+87452	25f
+87460	26f
+87468	27f
+87476	28f
+87484	29f
+87492	30f
+87500	31f
+87508	32f
+87516	33f
+87524	34f
+87532	35f
+87540	36f
+87548	37f
+87556	38f
+87564	39f
+87572	40f
+87580	41f
+87588	42f
+87596	43f
+87604	44f
+87612	45f
+87620	46f
+87628	47f
+87636	48f
+87644	49f
+87652	50f
+87660	51f
+87668	52f
+87676	53f
+87684	54f
+87692	55f
+87700	56f
+87708	57f
+87716	58f
+87724	59f
+87732	60f
+87740	61f
+87748	62f
+87756	63f
+87764	64f
+87772	65f
+87780	66f
+87788	67f
+87796	68f
+87804	69f
+87812	70f
+87820	71f
+87828	72f
+87836	73f
+87844	74f
+87852	75f
+87860	76f
+87868	77f
+87876	78f
+87884	79f
+87892	80f
+87900	81f
+87908	82f
+87916	83f
+87924	84f
+87932	85f
+87940	86f
+87948	87f
+87956	88f
+87964	89f
+87972	90f
+87980	91f
+87988	92f
+87996	93f
+88004	94f
+88012	95f
+88020	96f
+88028	97f
+88036	98f
+88044	99f
+88052	@A052@ 1 sec
+88078	@A052@ 3 sec
+88104	@A052@ 4 sec
+88130	@A052@ 5 sec
+88156	@A052@ 6 sec
+88182	@A052@ 7 sec
+88208	@A052@ 8 sec
+88234	@A052@ 9 sec
+88260	@A052@ 10 sec
+88288	@A052@ 11 sec
+88316	@A052@ 13 sec
+88344	@A052@ 14 sec
+88372	@A052@ 15 sec
+88400	@A052@ 16 sec
+88428	@A052@ 17 sec
+88456	@A052@ 18 sec
+88484	@A052@ 19 sec
+88512	@A052@ 20 sec
+88540	@A052@ 21 sec
+88568	@A052@ 22 sec
+88596	@A052@ 23 sec
+88624	@A052@ 24 sec
+88652	@A052@ 25 sec
+88680	@A052@ 26 sec
+88708	@A052@ 27 sec
+88736	@A052@ 28 sec
+88764	@A052@ 29 sec
+88792	@A052@ 30 sec
+88820	SSID
+88830	Password
+88848	URL
+88856	http://flashair/
+88890	S-I.S. Off
+88912	S-I.S. 1
+88930	S-I.S. 2
+88948	S-I.S. 3
+88966	M-I.S. Off
+88988	M-I.S. 1
+89006	M-I.S. 2
+89024	HDR BKT
+89040	HDR BKT Off
+89064	50Hz
+89074	60Hz
+89084	ISO LOW
+89100	LOW
+89108	3f 2.0EV
+89126	3f 3.0EV
+89144	5f 2.0EV
+89162	5f 3.0EV
+89180	7f 2.0EV
+89198	ART12
+89210	@A03C@Niv. weerg.
+89246	0001.jpg
+89276	LV dyn. ber. uitbreiden
+89324	HDR
+89332	HDR Uit
+89348	Afdruk bestellen
+89382	Belichtingscompensatie
+89430	aanpassen
+89450	Voorvertoning update@A040@
+89508	@A068@: AEL/AFL
+89540	@A087@: AEL/AFL
+89572	@A028@: AEL/AFL
+89604	Schakelt EVF automatische
+89658	luminantie uit om de helderheid
+89724	handmatig te regelen.
+89768	Schakelt EVF automatische
+89822	luminantie in. De helderheid
+89882	wordt automatisch geregeld.
+89938	Schakelt ingebouwde @A068@ uit.
+90002	Zet programmaverschuiving
+90056	met knop in dezelfde richting
+90118	als S.S in de S-modus.
+90164	ISO
+90184	Zet programmaverschuiving
+90238	met knop in dezelfde richting
+90300	als diafragma in de A-modus.
+90358	@A011@ :Druk op pendelknoptoetsen
+90428	om zoompositie te wijzigen.
+90486	Alleen mogelijk met elektrische
+90552	zoomlens.
+90572	Automatische I.S.
+90608	Knop/Schakelaar/Hendel
+90654	Menu voor knop-, schakelaar- en
+90720	hendelinstellingen.
+90760	B. Knop/Schakelaar/Hendel
+90812	FlashAir
+90830	Stop
+90840	Startoptie
+90862	Is verbonden.
+90890	Handmatig starten
+90926	Autostart
+90946	Effect
+90960	Type
+90970	Type@A00E@
+90992	Type@A00F@
+91014	Type@A010@
+91036	Type@A064@
+91058	Combineert twee of meer sjabloon-
+91128	beelden tot 
+91156	n beeld
+91172	Standaard
+91192	Leuke kaders
+91218	Wit
+91226	Wit/Witte rand
+91256	Zwart
+91268	Zwart/Gaatjescamera
+91308	Film
+91318	Direct
+91332	@A065@ 3foto's
+91362	@A066@ 3foto's
+91392	@A065@ 2foto's
+91422	@A066@ 2foto's
+91452	Verbinding met smartphone
+91506	met ingebouwd @A068@.
+91550	Deelorder
+91570	Geselect. deelorder
+91610	@A041@@A02F@
+91636	@A068@-instellingen
+91676	Menu over ingebouwd @A068@.
+91732	@A068@-verb.instellingen
+91782	Priv
+91794	Eenmalig
+91812	Selecteren
+91834	Voor verbinding met
+91876	uw smartphone.
+91906	Om te delen met andere
+91954	smartphones.
+91982	Uniek wachtwoord wordt gebruikt.
+92048	Altijd @A068@-verbinding
+92100	kiezen.
+92116	Priv
+92126	-wachtwoord
+92150	@A021@: wijzig het wachtwoord voor
+92222	verbinding met uw smartphone.
+92282	Deelorder resetten
+92320	@A068@-instellingen resetten
+92378	@A005@ Waarschuwing: alle @A068@-
+92448	instellingen resetten
+92492	@A068@-verbinding selecteren
+92550	@A068@-verbinding voorbereiden
+92612	Voor verbinding met uw
+92660	smartphone. Deze configuratie
+92722	is slechts 
+92748	n keer nodig
+92776	@A068@-verbinding start later.
+92838	Installeer
+92862	'OLYMPUS Image Share'
+92908	op uw smartphone.
+92946	Druk op @A01F@ als de applicatie
+93014	ge
+93020	nstalleerd is.
+93050	Verbinding maken met uw
+93100	smartphone.
+93126	Lees de QR-code met
+93168	'OLYMPUS Image Share'.
+93214	Volgende@A019@
+93244	Stop@A030@
+93266	@A068@ starten
+93296	@A068@ stoppen
+93326	Delen met andere smartphones.
+93388	Huidig wachtwoord gebruiken?
+93446	Huidig wachtwoord gebruiken
+93502	Nieuw wachtwoord gebruiken
+93556	Delen met andere
+93592	smartphones.
+93620	Lees de QR-code met
+93662	'OLYMPUS Image Share'
+93708	of verbind handmatig.
+93752	Stelt de verbinding in met de
+93814	FlashAir-kaart.
+93846	Stelt het starten van de verbinding
+93920	handmatig in.
+93948	Er wordt automatisch een
+94000	verbinding tot stand gebracht
+94062	wanneer de camera aan staat.
+94120	FlashAir is actief.
+94162	Kan ingebouwd Wi-Fi niet gebruiken.
+94234	Zoeker schakelen
+94268	Schakel van de monitor-
+94318	weergave naar de zoeker zodra
+94380	een oog wordt waargenomen.
+94434	De oogsensor uitschakelen.
+94490	@A075@: om te schakelen tussen de 
+94562	monitorweergave en de zoeker.
+94622	De oogsensor inschakelen.
+94674	Bulb/Time-monitor
+94710	Past de helderheid van de
+94764	monitor en de zoeker aan
+94816	met BULB/TIME geselecteerd.
+94872	AE BKT
+94886	Wijizg naar AE BKT-modus.
+94938	ART BKT
+94954	Wijizg naar ART BKT-modus.
+95008	Film@A042@
+95030	S-I.S. Uit
+95052	S-I.S. Auto
+95076	Camera kiest stabilisatorinstelling
+95150	door detectie van camerabeweging
+95216	M-I.S. Uit
+95238	M-I.S. Aan
+95260	Activeer beeldstabilisatie
+95316	bij filmopnamen.
+95350	@A088@ Hendelfunctie
+95392	Kies de functie die aan @A088@ moet
+95466	worden toegekend.
+95502	Knopfunctie wijzigen met @A088@.
+95570	@A089@: Instellingen knopfunctie volgen.
+95654	@A08A@: ISO-gevoel. wijzigen met @A08B@
+95736	of WB-modus wijzigen met @A076@.
+95802	Knopfunctie wijzigen met @A088@.
+95870	@A089@: Instellingen knopfunctie volgen.
+95954	@A08A@: ISO-gevoel. wijzigen met @A076@
+96036	of WB-modus wijzigen met @A08B@.
+96102	Functie knop @A024@ wijzigen met @A088@.
+96186	@A089@: Instellingen knopfunctie volgen.
+96270	@A08A@: Filmopname starten/stoppen.
+96342	AF-stand wijzigen met @A088@.
+96404	Stelt AF-stand in voor elke
+96462	@A089@ en @A08A@.
+96498	Streep
+96512	SETUP@A025@
+96536	@A06B@Functie
+96564	Wijizg naar AE BKT-modus.
+96616	Wijizg naar AE BKT-modus.
+96668	Wijizg naar AE BKT-modus.
+96720	Wijizg naar ART BKT-modus.
+96774	Wijizg naar ART BKT-modus.
+96828	Wijizg naar ART BKT-modus.
+96882	@A08C@: AEL/AFL
+96914	AF-markering en AF-
+96956	modus instellen.
+96990	@A08C@: Wijzig x1/x2.
+97034	Belichtingscompensatie
+97082	aanpassen
+97102	Wijizg naar HDR BKT-modus.
+97156	@A08C@: Toon vergrotingskader en
+97224	druk nogmaals om het beeld
+97280	in het kader te vergroten.
+97334	@A08C@: Druk in om over te schakelen
+97410	naar de Live Guide, en druk
+97468	nogmaals in om terug te keren.
+97530	Fotograferen met @A02B@
+97580	terwijl u @A08C@ indrukt
+97630	Fotograferen met @A02C@
+97680	terwijl u @A08C@ indrukt
+97730	Fotograferen met @A02D@
+97780	terwijl u @A08C@ indrukt
+97830	Fotograferen met @A02E@
+97880	terwijl u @A08C@ indrukt
+97930	Standaardinstelling 
+97974	voor AF-gebied
+98004	Wijzigen naar
+98034	MF-modus
+98052	@A08C@:
+98070	Start/stop
+98094	filmopname
+98116	One-touch WB.
+98144	Voorvertoning 
+98176	scherptediepte
+98206	RAW+JPEG/JPEG
+98236	kwaliteit wijzigen
+98276	met de draai-
+98306	schakelaar
+98328	Testfoto zonder
+98362	opslaan
+98378	@A08C@: Knoppen @A02F@ en @A030@.
+98446	AE BKT Off
+98468	Handmatig
+98488	Auto
+98498	Combineert twee of meer sjabloon-
+98568	beelden tot 
+98596	n beeld
+98614	Touch-opname
+98640	Kies een stand wanneer de
+98694	scherpstelring naar de MF-stand
+98760	is gedraaid.
+98786	Het beeld wordt niet automatisch
+98854	vergroot wanneer de scherpstelring
+98926	naar de MF-stand is gedraaid.
+98986	Kies 'Aan' om het beeld te
+99042	vergroten wanneer de
+99086	scherpstelring op MF staat.
+99142	Pieken
+99156	De omtrek van het onderwerp
+99214	verschijnt niet wanneer de
+99270	scherpstelring naar de MF-stand
+99336	is gedraaid.
+99362	De omtrek van het onderwerp
+99420	verschijnt als de scherpstelring
+99488	naar de MF-stand wordt gedraaid.
+99556	Met deze functie kunt u de
+99612	scherpstelling aanpassen.
+99664	@A01D@: Druk om de omtrek van het
+99734	onderwerp weer te geven om de
+99796	scherpstelling aan te passen. Druk
+99868	nogmaals om de omtrek te
+99920	verbergen.
+99942	@A023@: Druk om de omtrek van het
+100012	onderwerp weer te geven om de
+100074	scherpstelling aan te passen. Druk
+100146	nogmaals om de omtrek te
+100198	verbergen.
+100220	@A08C@: Druk om de omtrek van het
+100290	onderwerp weer te geven om de
+100352	scherpstelling aan te passen. Druk
+100424	nogmaals om de omtrek te
+100476	verbergen.
+100498	@A06D@: Druk om de omtrek van het
+100568	onderwerp weer te geven om de
+100630	scherpstelling aan te passen. Druk
+100702	nogmaals om de omtrek te
+100754	verbergen.
+100776	Piekinstellingen
+100810	Past de instellingen voor
+100864	piekweergave aan.
+100900	Wit
+100908	Zwart
+100920	Scherpgestelde gebieden wit
+100978	weergeven tijdens focus peaking.
+101044	Scherpgestelde gebieden zwart
+101106	weergeven tijdens focus peaking.
+101172	@A029@ :Druk op pendelknoptoetsen
+101242	om zoompositie te wijzigen.
+101300	Alleen mogelijk met elektrische
+101366	zoomlens.
+101386	AF-markering en AF-
+101428	modus instellen.
+101462	AF-markering en AF-
+101504	modus instellen.
+101538	@A068@: Wijzig x1/x2.
+101582	@A087@: Wijzig x1/x2.
+101626	@A028@: Wijzig x1/x2.
+101670	@A068@: Druk om de verschillende
+101738	functies te activeren en gebruik
+101806	de draaischakelaar om een
+101860	nieuwe functie te kiezen.
+101912	@A06E@: Druk om de verschillende
+101980	functies te activeren en gebruik
+102048	de draaischakelaar om een
+102102	nieuwe functie te kiezen.
+102154	@A06F@: Druk om de verschillende
+102222	functies te activeren en gebruik
+102290	de draaischakelaar om een
+102344	nieuwe functie te kiezen.
+102396	@A06C@: Druk om de verschillende
+102464	functies te activeren en gebruik
+102532	de draaischakelaar om een
+102586	nieuwe functie te kiezen.
+102638	@A06D@: Druk om de verschillende
+102706	functies te activeren en gebruik
+102774	de draaischakelaar om een
+102828	nieuwe functie te kiezen.
+102880	@A087@: Druk om de verschillende
+102948	functies te activeren en gebruik
+103016	de draaischakelaar om een
+103070	nieuwe functie te kiezen.
+103122	@A028@: Druk om de verschillende
+103190	functies te activeren en gebruik
+103258	de draaischakelaar om een
+103312	nieuwe functie te kiezen.
+103364	Belichtingscompensatie
+103412	aanpassen
+103432	Belichtingscompensatie
+103480	aanpassen
+103500	Belichtingscompensatie
+103548	aanpassen
+103568	Belichtingscompensatie
+103616	aanpassen
+103636	Druk om niveauweergave
+103684	te activeren.
+103714	Druk nogmaals om te
+103756	deactiveren.
+103784	Van toepassing in @A03C@.
+103836	Schakelt HDR aan/uit.
+103880	Schakelt HDR aan/uit.
+103924	Schakelt HDR aan/uit.
+103968	Schakelt HDR aan/uit.
+104012	Schakelt HDR aan/uit.
+104056	Schakelt HDR aan/uit.
+104100	Schakelt HDR aan/uit.
+104144	Schakelt HDR aan/uit.
+104188	Schakelt HDR aan/uit.
+104232	@A068@: Toon vergrotingskader en
+104300	druk nogmaals om het beeld
+104356	in het kader te vergroten.
+104410	@A087@: Toon vergrotingskader en
+104478	druk nogmaals om het beeld
+104534	in het kader te vergroten.
+104588	@A068@: Druk in om over te schakelen
+104664	naar de Live Guide, en druk
+104722	nogmaals in om terug te keren.
+104784	@A087@: Druk in om over te schakelen
+104860	naar de Live Guide, en druk
+104918	nogmaals in om terug te keren.
+104980	@A028@: Druk in om over te schakelen
+105056	naar de Live Guide, en druk
+105114	nogmaals in om terug te keren.
+105176	Schakelt @A07D@ aan/uit.
+105226	Schakelt @A07D@ aan/uit.
+105276	Schakelt @A07D@ aan/uit.
+105326	Schakelt @A07D@ aan/uit.
+105376	Schakelt @A07D@ aan/uit.
+105426	Schakelt @A07D@ aan/uit.
+105476	Schakelt @A07E@ aan/uit.
+105526	Schakelt @A07E@ aan/uit.
+105576	Schakelt @A07E@ aan/uit.
+105626	Schakelt @A07E@ aan/uit.
+105676	Schakelt @A07E@ aan/uit.
+105726	Schakelt @A07E@ aan/uit.
+105776	Schakelt @A07F@ aan/uit.
+105826	Schakelt @A07F@ aan/uit.
+105876	Schakelt @A07F@ aan/uit.
+105926	Schakelt @A07F@ aan/uit.
+105976	Schakelt @A07F@ aan/uit.
+106026	Schakelt @A07F@ aan/uit.
+106076	Schakelt @A080@ aan/uit.
+106126	Schakelt @A080@ aan/uit.
+106176	Schakelt @A080@ aan/uit.
+106226	Schakelt @A080@ aan/uit.
+106276	Schakelt @A080@ aan/uit.
+106326	Schakelt @A080@ aan/uit.
+106376	Dynamisch bereik van Live View
+106440	wordt niet groter.
+106478	Dynamisch bereik van Live View
+106542	wordt groter als HDR in HDR1 of
+106608	HDR2 staat.
+106632	Maakt 3 beelden met een
+106682	belichtingsverschil van
+106732	2,0 EV.
+106748	Maakt 3 beelden met een
+106798	belichtingsverschil van
+106848	3,0 EV.
+106864	Maakt 5 beelden met een
+106914	belichtingsverschil van
+106964	2,0 EV.
+106980	Maakt 5 beelden met een
+107030	belichtingsverschil van
+107080	3,0 EV.
+107096	Maakt 7 beelden met een
+107146	belichtingsverschil van
+107196	2,0 EV.
+107212	Maakt 4 beelden tegelijk
+107264	met verschillende belichting
+107324	en voegt ze automatisch
+107374	samen tot een beeld met
+107424	hoog contrast.
+107454	Maakt 4 beelden tegelijk
+107506	met verschillende belichting
+107566	en voegt ze automatisch
+107616	samen tot een beeld met
+107666	superhoog contrast.
+107706	Schakelt HDR uit.
+107742	Standaardinstelling
+107784	voor AF-gebied
+107814	Standaardinstelling
+107856	voor AF-gebied
+107886	Functies van @A05F@toetsen
+107942	veranderen niet in .
+107984	In  worden functies van @A05F@ 
+108050	knoppen overgeschakelend 
+108104	naar @A060@: BKT en @A061@: @A062@.
+108176	Schakelt  hendelfunctie uit.
+108234	@A078@ schakelt knopfuncties.
+108296	@A079@: aangepaste functie-
+108354	instellingen.
+108384	@A07A@: @A07B@ stelt ISO in, @A066@: stelt
+108472	WB in.
+108486	@A078@ schakelt knopfuncties.
+108548	@A079@: aangepaste functie-
+108606	instellingen.
+108636	@A07A@: @A066@ stelt ISO in, @A07B@: stelt
+108724	WB in.
+108738	@A078@ schakelt toetsfuncties.
+108802	@A079@: aangepaste functie-
+108860	instellingen.
+108890	@A07A@: @A021@ stelt ISO in, @A059@: stelt
+108978	WB in.
+108992	@A078@ schakelt toetsfuncties.
+109056	@A079@: aangepaste functie-
+109114	instellingen.
+109144	@A07A@: @A059@ stelt ISO in, @A021@: stelt
+109232	WB in.
+109246	@A078@ schakelt AF-modus tussen
+109312	aangepaste AF-instellingen
+109368	@A079@ en @A07A@.
+109404	Wijzigen naar
+109434	MF-modus
+109452	Wijzigen naar
+109482	MF-modus
+109500	@A068@:
+109518	Start/stop
+109542	filmopname
+109564	@A06E@:
+109582	Start/stop
+109606	filmopname
+109628	@A06F@:
+109646	Start/stop
+109670	filmopname
+109692	@A06D@:
+109710	Start/stop
+109734	filmopname
+109756	@A087@:
+109774	Start/stop
+109798	filmopname
+109820	@A028@:
+109838	Start/stop
+109862	filmopname
+109884	One-touch WB.
+109912	One-touch WB.
+109940	One-touch WB.
+109968	@A068@: Druk om de omtrek van het
+110038	onderwerp weer te geven om de
+110100	scherpstelling aan te passen. Druk
+110172	nogmaals om de omtrek te
+110224	verbergen.
+110246	@A06E@: Druk om de omtrek van het
+110316	onderwerp weer te geven om de
+110378	scherpstelling aan te passen. Druk
+110450	nogmaals om de omtrek te
+110502	verbergen.
+110524	@A06F@: Druk om de omtrek van het
+110594	onderwerp weer te geven om de
+110656	scherpstelling aan te passen. Druk
+110728	nogmaals om de omtrek te
+110780	verbergen.
+110802	@A06C@: Druk om de omtrek van het
+110872	onderwerp weer te geven om de
+110934	scherpstelling aan te passen. Druk
+111006	nogmaals om de omtrek te
+111058	verbergen.
+111080	@A066@: Druk om de omtrek van het
+111150	onderwerp weer te geven om de
+111212	scherpstelling aan te passen. Druk
+111284	nogmaals om de omtrek te
+111336	verbergen.
+111358	@A087@: Druk om de omtrek van het
+111428	onderwerp weer te geven om de
+111490	scherpstelling aan te passen. Druk
+111562	nogmaals om de omtrek te
+111614	verbergen.
+111636	@A028@: Druk om de omtrek van het
+111706	onderwerp weer te geven om de
+111768	scherpstelling aan te passen. Druk
+111840	nogmaals om de omtrek te
+111892	verbergen.
+111914	Voorvertoning
+111944	scherptediepte
+111974	Voorvertoning
+112004	scherptediepte
+112034	RAW+JPEG/JPEG
+112064	kwaliteit wijzigen
+112104	met de draai-
+112134	schakelaar
+112156	RAW+JPEG/JPEG
+112186	kwaliteit wijzigen
+112226	met de draai-
+112256	schakelaar
+112278	Testfoto zonder
+112312	opslaan
+112328	Testfoto zonder
+112362	opslaan
+112378	@A011@ vasthouden: bediening
+112438	aanraakscherm vergrendelen/
+112496	ontgrendelen in fotografeermodus.
+112564	@A029@ vasthouden: bediening
+112624	aanraakscherm vergrendelen/
+112682	ontgrendelen in fotografeermodus.
+112750	@A068@: Knoppen @A02A@ en @A02B@.
+112818	@A06E@: Knoppen @A02A@ en @A02B@.
+112886	@A06F@: Knoppen @A02A@ en @A02B@.
+112954	@A06D@: Knoppen @A02A@ en @A02B@.
+113022	@A087@: Knoppen @A02A@ en @A02B@.
+113090	@A028@: Knoppen @A02A@ en @A02B@.
+113158	Ingebouwd @A017@
+113192	Ingebouwd @A02E@ opnameniv.
+113248	@A080@+@A081@
+113276	@A078@ Hendelfunctie
+113318	Lijn-in @A023@
+113348	Lijn-in @A02E@ opnameniv.
+113400	Lensdataset cre
+113432	ren
+113440	@A026@
+113456	@A05C@Functie
+113484	@A043@Kleurenmaker
+113522	@A044@e-Portret
+113554	Past elk doelpunt van de
+113606	AF-positie van elke lens aan.
+113666	Groen doelkader verschijnt
+113722	niet voor Autofocus bij
+113772	instelling op Uit.
+113810	Past het doelactiviteitsniveau
+113874	aan tijdens C-AF.
+113910	Dynamisch bereik van Live View
+113974	wordt groter als deze
+114020	functie ingeschakeld is.
+114070	Sets voor HDR.
+114100	In de modus Uit veranderen
+114156	functies van @A081@ toetsen niet
+114224	in @A080@.
+114246	Kies de functie die aan @A078@ moet
+114320	worden toegekend.
+114356	Niveau elke microfoon wijzigen.
+114420	Ps
+114426	Vermindert vervormingen bij
+114484	onder-/overbelichtte sc
+114532	nes.
+114542	Starlight
+114562	@A045@Vergr.
+114588	Schakelt @A07D@ aan/uit.
+114638	Schakelt @A07E@ aan/uit.
+114688	Schakelt @A07F@ aan/uit.
+114738	Schakelt @A080@ aan/uit.
+114788	Testfoto zonder
+114822	opslaan
+114838	A-B : WB BKT Off
+114872	G-M : WB BKT Off
+114906	FL BKT Off
+114928	HDR1
+114938	HDR2
+114948	ISO BKT Off
+114972	mode5
+114984	ART BKT Off
+115008	ART BKT On
+115030	A-B : WB BKT
+115056	A-B : 3f 2Step
+115086	A-B : 3f 4Step
+115116	A-B : 3f 6Step
+115146	G-M : WB BKT
+115172	G-M : 3f 2Step
+115202	G-M : 3f 4Step
+115232	G-M : 3f 6Step
+115262	BKT
+115270	Wijzig naar BKT-modus.
+115316	Wijzig naar BKT-modus.
+115362	Wijzig naar BKT-modus.
+115408	Wijzig naar BKT-modus.
+115454	Wijzig naar BKT-modus.
+115500	Wijzig naar BKT-modus.
+115546	Wijzig naar BKT-modus.
+115592	Wijzig naar BKT-modus.
+115638	Wijzig naar BKT-modus.
+115684	@A03F@@A019@
+115710	Wanneer u de fotofunctie kiest,
+115776	kunt u items overslaan die niet
+115842	zijn ingesteld op @A03F@.
+115894	In-/uitzoomen
+115922	@A067@ 2foto's
+115952	Laag
+115962	Lay-out
+115978	Druk de ontspanknop 
+116022	n keer
+116038	in om de camera klaar te maken
+116102	voor composietopname.
+116146	Klaar voor composietopname.
+116202	Compostiet-inst.
+116236	Instelmenu composiet.
+116282	Combineer beelden gemaakt
+116336	met intervalopname.
+116376	Composietmodus
+116406	Lichter
+116422	Donkerder
+116442	Vergelijkt de pixels van de twee
+116510	beelden en gebruikt het meest
+116572	heldere voor het composietbeeld.
+116638	Vergelijkt de pixels van de twee
+116706	beelden en gebruikt het meest
+116768	donkere voor het composietbeeld.
+116834	Basisbelichtingstijd
+116876	Belichtingstijd per beeld.
+116932	Belichtingstijd en diafragma
+116992	bepalen uw basisbelichting.
+117048	Selecteer Aan voor MF tijdens
+117110	Bulb/Time/COMP-opnamen.
+117158	Past de helderheid van de
+117212	monitor en de zoeker aan met
+117272	Bulb/Time/COMP geselecteerd.
+117330	Films kunnen niet worden gemaakt
+117398	terwijl @A074@ is aangesloten.
+117460	Sluiten@A019@
+117488	Einde @A068@@A025@
+117526	Draaischakelaars worden als volgt
+117596	toegewezen wanneer op de knop
+117658	wordt gedrukt:
+117690	@A060@: ISO
+117716	@A053@: WB
+117738	Draaischakelaars worden als volgt
+117808	toegewezen wanneer op de knop
+117870	wordt gedrukt:
+117902	@A060@: WB
+117926	@A053@: ISO
+117950	Door de knop ingedrukt te houden,
+118020	kunt u de autofocus deactiveren
+118086	en de focus vastzetten op het
+118148	punt waar de knop werd ingedrukt.
+118216	Druk op de knop om AEL/AFL
+118272	te activeren.
+118300	Start/stop de filmopname.
+118352	Voorvertoning
+118382	scherptediepte.
+118414	One-touch WB.
+118442	AF-markering en AF-
+118484	modus instellen.
+118518	Standaardinstelling 
+118562	voor AF-gebied
+118592	Wijzigen naar
+118622	MF-modus.
+118642	RAW+JPEG/JPEG-kwaliteit wijzigen
+118710	met de regelaar.
+118744	Test de foto zonder op te slaan.
+118810	Schakelt @A07B@ aan/uit.
+118860	Schakelt @A07C@ aan/uit.
+118910	Schakelt @A07D@ aan/uit.
+118960	Schakelt @A07E@ aan/uit.
+119010	Schakelt tussen knoppen @A061@/@A062@.
+119088	Pas de belichtingscompensatie aan.
+119158	Druk in om over te schakelen
+119218	naar de Live Guide, en druk
+119276	nogmaals in om terug te keren.
+119338	Schakelt tussen x1/x2.
+119384	Toon vergrotingskader en
+119436	druk nogmaals om het beeld
+119492	in het kader te vergroten.
+119546	Schakelt HDR aan/uit.
+119590	Wijzig naar BKT-modus.
+119636	Druk om de verschillende
+119688	functies te activeren en gebruik
+119756	de regelaar om een
+119796	nieuwe functie te kiezen.
+119848	Druk om de omtrek van het
+119902	onderwerp weer te geven om de
+119964	scherpstelling aan te passen. Druk
+120036	nogmaals om de omtrek te
+120088	verbergen.
+120110	@A021@: Start Filmopname
+120162	@A020@: Maak Foto
+120200	@A059@: Film@A076@
+120238	Eigen zelfontspanner
+120280	@A093@ Anti-schok @A004@
+120330	Instellingen@A01A@
+120368	Selecteer of @A00A@ menu wordt
+120432	weergegeven.
+120458	Multifunction-instellingen
+120512	Geef de functies op voor
+120564	multifunctie door @A03F@ toe te
+120630	passen.
+120646	Film+fotomodus
+120676	Stel fotoprioriteit in voor
+120734	Film+fotomodus.
+120766	Film heeft voorrang.
+120810	@A067@foto kan worden gemaakt
+120872	terwijl film wordt opgenomen.
+120934	Beperkte beeldkwaliteit van foto's.
+121008	Actief in @A070@.
+121044	Foto heeft voorrang.
+121088	Films worden opgenomen
+121136	voor en na het maken van
+121188	de foto.
+121206	Elektronische zoomsnelheid
+121260	Stelt zoomsnelheden in voor
+121318	foto- en filmmodi bij gebruik
+121380	van een elektronische zoomlens.
+121444	Foto-I.S. Uit
+121472	Film-I.S. Uit
+121500	Voorbereiding voor composietopname.
+121574	Even geduld.
+121600	Knop vasthouden: bediening
+121656	aanraakscherm vergrendelen/
+121714	ontgrendelen in fotografeermodus.
+121782	Druk op pendelknoptoetsen
+121836	om zoompositie te wijzigen.
+121894	Alleen mogelijk met elektrische
+121960	zoomlens.
+121980	@A060@ISO/@A053@WB
+122018	@A060@WB/@A053@ISO
+122056	Nee
+122064	Ja
+122070	Opname hoge resol.
+122108	Maakt en combineert
+122150	acht foto's voor een beeld met 
+122216	superh. resolutie. Statief vereist.
+122288	Maakt opname hoge 
+122328	res. mogelijk. Selecteer
+122380	vertragingstijd na activeren sluiter.
+122456	@A00A@Laadtijd
+122486	Selecteer tijd tussen activeren
+122552	sluiter voor opladen flitser.
+122614	Deze instelling is overbodig
+122674	bij de gespecialiseerde flitser.
+122740	Sensorverschuiv. + digitaal
+122796	Alleen sensorverschuiving
+122848	Beeldstabilisatie zowel uitgevoerd
+122920	door sensorverschuiving als 
+122980	digitaal.
+123000	Beeldstabilisatie alleen uitgevoerd
+123074	door sensorverschuiving, niet
+123136	digitaal.
+123156	Compressie/bitsnelh.
+123198	Framesnelheid
+123226	Clip opnametijd
+123258	Langz./snelle weerg.
+123300	Specificatie-instellingen film
+123362	Beeldgrootte, compressiemeth.
+123424	en bitsnelh. van film aanpassen.
+123490	Filmresolutie
+123518	Film@A01A@
+123540	ALL-I-compressie biedt de 
+123596	beste beeldkwaliteit voor geavanc.
+123668	bewerken, maar de bestanden
+123726	worden erg groot.
+123762	IPB-compressie met
+123802	hoogste bitsnelheid levert de beste 
+123878	beeldkwaliteit, maar de bestanden
+123948	worden erg groot.
+123984	IPB-compressie met
+124024	hoge bitsnelheid levert een betere
+124096	beeldkwaliteit, maar de bestanden
+124166	worden tamelijk groot.
+124212	IPB-compressie met
+124252	standaard bitsnelheid levert
+124312	standaard beeldkwaliteit en de
+124376	bestanden worden niet zo groot.
+124440	Hoe groter het getal, hoe
+124494	vloeiender het beeld.
+124538	Schakel Clips uit om standaard 
+124604	filmopname te gebruiken.
+124654	Schakel Clips in om korte 
+124710	filmclips op te nemen voor
+124766	opslag in Mijn Clips.
+124810	Film wordt opgenomen voor 
+124866	weergave met standaard snelheid.
+124932	De film wordt opgenomen voor 
+124994	weergave in slow motion.
+125046	Geluid wordt niet opgenomen.
+125104	De film wordt opgenomen voor 
+125166	weergave met hoge snelheid.
+125224	Geluid wordt niet opgenomen.
+125282	Toegevoegd aan Mijn Clips.
+125336	Opgeslagen als standaard film.
+125398	Deze Mijn Clips-map is vol.
+125454	Verpl. clip binnen een Mijn Clips-map.
+125532	Verpl. item naar een Mijn Clips-map.
+125606	Toev. aan nieuwe Mijn Clips-map.
+125672	Verwijderen uit Mijn Clips.
+125728	Mijn Clips
+125750	Toev. aan Mijn Clips
+125792	Mijn Clips afspelen
+125832	Mijn Clips export.
+125870	Al Mijn Clips weerg.
+125912	Mijn Clips verwijd.
+125952	@A003@ Alle items in Mijn Clips
+126018	worden verwijderd.
+126056	Volgorde wijzigen
+126092	Preset bestem.
+126122	Uw volgende clip volgt op
+126176	dit item, behalve als de filmspecif.
+126252	van de clip afwijken
+126296	van deze Mijn Clips.
+126338	Clipeffecten
+126364	1. Pop-art
+126386	2. Lichte toon
+126416	3. Gaatjescamera
+126450	4. Cross-process
+126484	5. Sepia
+126502	6. Oude film
+126528	Effecten zijn onzichtbaar in voorbeeld.
+126608	Overgangseffect
+126640	Vervaging
+126660	Geluid opgenomen clip
+126704	Volume opgen. clip
+126742	Voorbeeld
+126762	Begin export
+126788	Totale lengte clip
+126826	Even geduld.
+126852	Verwerkingstijd komt overeen
+126912	met tweemaal lengte gehele film.
+126978	Compleet
+126996	Geannuleerd
+127020	PCM Rec. @A017@ kopp.
+127064	Indien Aan: optimaliseert de
+127124	inst. van de camera op basis van
+127192	Olympus PCM Recorder-kopp.
+127246	Meerv. belichting
+127282	@A00A@ RC-modus
+127314	@A017@Insteekvoeding
+127356	Selecteer Uit bij aansluiten
+127416	van een microfoon die geen
+127472	voeding nodig heeft.
+127514	Opt. Func. Drkn. Greep
+127560	Selecteer functie van optionele
+127626	draaiknop op greep.
+127666	Draai knop @A07B@ om het volume
+127732	aan te passen als er een
+127784	hoofdtelefoon is aangesloten.
+127844	Draaiknop @A07B@ volgt functie-
+127910	instelling draaiknop.
+127954	Selfie-hulp
+127978	Monitorinstellingen aan-
+128030	passen wanneer monitor
+128078	voor selfies is uitgeklapt.
+128134	Instellingen Selfie-hulp
+128186	niet actief, zelfs wanneer
+128242	monitor is uitgeklapt.
+128288	Instellingen Selfie-hulp weer-
+128352	gegeven op monitor en
+128398	Live View weergegeven als
+128452	spiegelbeeld.
+128480	@A004@Sluiterfunctie
+128522	Functie toewijzen aan
+128568	sluiterknop in modus @A004@.
+128626	Foto nemen door drukken
+128676	op sluiterknop.
+128708	Filmopname starten/stoppen
+128764	door drukken op sluiterknop.
+128822	Volume hoofdtelefoon
+128864	Past volume hoofdtelefoon aan.
+128928	Dit heeft geen invloed op het
+128990	opnamevolume.
+129018	@A008@ Info-instelling
+129064	Kies de informatie weergegeven
+129128	in modus @A008@.
+129162	Tijdcode
+129180	Stille @A045@werking
+129222	Snelle slaapstand
+129258	Indien niet in Live View
+129310	gaat camera binnen paar
+129360	seconden in slaapstand.
+129408	Menu oproepen
+129436	Roept laatste menukeuze op.
+129492	Oproepen
+129510	Resetten
+129528	Tijdcode-instellingen
+129572	Instellingen tijdcode aanpassen.
+129638	Tijdcodemodus
+129666	DF
+129672	Niet-DF
+129688	Aanpassing voor tijdverschil 
+129750	vs. feitelijke opnametijd.
+129806	Gebruikt bij geavanceerd bewerken
+129876	als extreem nauwkeurige tijden 
+129942	vereist zijn.
+129970	Geen aanpassing voor tijdverschil 
+130042	vs. feitelijke opnametijd.
+130096	Naar boven tellen
+130132	OU
+130138	VU
+130144	Telt de tijdcode alleen
+130194	tijdens opnemen van de film.
+130252	Telt de tijdcode ook als 
+130306	geen film wordt opgenomen,
+130362	ook wanneer de camera 
+130410	is uitgeschakeld.
+130446	Begintijd
+130466	Resetten
+130484	Handmatige invoer
+130520	Huidige tijd
+130546	Uur:minuut:seconde:beeld
+130598	instellen op 00:00:00:00.
+130650	Uur:minuut:seconde:beeld
+130702	handmatig instellen.
+130744	Uur:minuut:seconde op huidige
+130806	tijd en beeld op 00 instellen.
+130868	Piekkleur
+130888	Rood
+130898	Geel
+130908	Scherpgestelde gebieden rood
+130968	weergeven tijdens focus peaking.
+131034	Scherpgestelde gebieden geel
+131094	weergeven tijdens focus peaking.
+131160	Markeringsintensiteit
+131204	Scherpgestelde gebieden
+131254	worden lichtjes gemarkeerd.
+131310	Scherpgestelde gebieden
+131360	worden gemarkeerd.
+131398	Scherpgestelde gebieden
+131448	worden sterk gemarkeerd.
+131498	Aanp. beeldhelderheid
+131542	Past beeldhelderheid niet
+131596	aan in Live Preview.
+131638	Past beeldhelderh. in
+131684	Live Preview aan om
+131726	zichtbaarh. te verbeteren.
+131782	Helderheid van Live 
+131826	Preview en uiteind. beeld versch.
+131894	Inst. aanpassen voor
+131938	sequent. opnamen, foto's met
+131998	zelfontsp. en Time Lapse-foto's.
+132064	@A047@ Stil @A048@
+132102	@A049@ Stil @A048@
+132140	@A04A@ Stil @A048@
+132178	@A04B@ Stil @A048@
+132216	@A04C@ Stil @A048@
+132254	@A04D@ Stil @A048@
+132292	@A047@ Anti-schok @A04E@
+132342	@A04A@ Anti-schok @A04E@
+132392	@A04B@ Anti-schok @A04E@
+132442	@A04C@ Anti-schok @A04E@
+132492	@A04D@ Anti-schok @A04E@
+132542	Anti-schok@A04E@/Stil@A048@
+132598	Instellingen aanpassen voor
+132656	stil of anti-schok opnemen.
+132712	Stil@A048@
+132734	Maakt stil fotograferen mogelijk.
+132804	Flitser of @A004@ werken niet.
+132868	Selecteer vertragingstijd
+132922	na activeren sluiter.
+132966	Anti-schok@A04E@
+133000	Als sluitersnelheid @A079@ of minder
+133076	is, wordt eerste sluitergordijn
+133142	omgeschakeld naar elektronisch. 
+133210	Selecteer vertragingstijd
+133264	na activeren sluiter.
+133308	Geluidsreductie@A048@
+133352	Geluidsreductie werkt niet
+133408	tijdens stil opnemen.
+133452	Geluidsred. werkt 
+133492	zelfs tijdens stil fotogr. 
+133550	sluitergeluid is hoorbaar
+133604	tijdens voorbereiding van 
+133660	geluidsreductie.
+133694	Handmatige opname
+133730	Bulb/Time
+133750	Live Composiet
+133780	Overig
+133794	LV versterk. - Handmatige opname
+133860	LV versterk. - Bulb/Time
+133910	LV versterk. - Live-Composiet
+133970	LV versterk. - Overig
+134014	Aan1
+134024	Aan2
+134034	Helderheid Live View afhankelijk
+134102	van belichtingsinstellingen.
+134162	Helderheid zichtbaar beeld
+134218	gelijk aan die van definitief
+134280	beeld.
+134294	Helderheid Live View
+134338	niet afh. van belichtingsinst.
+134402	en wordt aangepast voor 
+134454	optim. weergave. Helderheid
+134512	van uiteindelijke beeld verschilt.
+134582	Helderh. in LV volgt niet de
+134642	belichtingsinst., maar wordt geoptim.
+134720	door het verl. van de beeldsnelh. in
+134796	donkere sc
+134818	nes. Helderh. van uiteind.
+134874	opn. zal versch. van deze opn.
+134936	Filmweergave
+134962	Afsp. vanaf begin
+134998	Gehele @A004@ verw.
+135038	@A005@ Verwijdert alle automatisch
+135110	gescheiden bestanden van 
+135164	n film.
+135180	Alleen 3D-foto's weergeven
+135234	@A078@ schakelt tussen opnamemodi.
+135306	Stel in op @A079@ om opnamemodi
+135372	met de modusknop te selecteren.
+135438	Stel in op @A07A@ om @A008@ te gebruiken.
+135522	@A03D@ Weergavekeuze
+135564	Wisselt tussen Live View en
+135622	Superbedieningspaneel.
+135670	Indien oogsensor uitgeschakeld,
+135736	wisselen tussen EVF en
+135784	monitor achter.
+135816	Aangepast1
+135838	Aangepast2
+135860	@A071@Functie
+135888	@A08D@Functie
+135916	@A094@Functie
+135944	@A04F@@A02F@
+135970	@A06E@@A041@
+135996	@A07A@ H fps
+136022	@A07A@ L fps
+136048	Kies het aantal opnamen dat in
+136112	1 sec. kan worden gemaakt bij
+136174	sequenti
+136192	le opnamen met @A07B@.
+136238	Kies het aantal opnamen dat in
+136302	1 sec. kan worden gemaakt bij
+136364	sequenti
+136382	le opnamen met @A07C@.
+136428	@A036@@A020@
+136454	@A06F@@A022@
+136480	FullHD
+136494	HD
+136500	@A013@/@A014@/@A0C7@
+136542	mode6
+136554	@A055@uper @A0B8@arge
+136598	60p
+136606	50p
+136614	30p
+136622	25p
+136630	24p
+136638	MOV 1920
+136656	1080 Fine
+136676	MOV 1920
+136694	1080 ALL-Intra
+136724	MOV 1920
+136742	1080 Super Fine
+136774	MOV 1920
+136792	1080 Fine
+136812	MOV 1920
+136830	1080 Normal
+136854	MOV 1280
+136872	720 ALL-Intra
+136900	MOV 1280
+136918	720 Super Fine
+136948	MOV 1280
+136966	720 Fine
+136984	MOV 1280
+137002	720 Normal
+137024	MOV 1920
+137042	1080
+137052	FHD
+137060	A-I
+137068	ALL-Intra
+137088	@A106@
+137102	1080p
+137114	MIC @A017@
+137136	Ruisonderdr. wordt uitgevoerd.
+137200	Even geduld.
+137226	Stel focusdifferent. in
+137274	Geschatte eindtijd
+137312	Geschatte starttijd
+137352	Stel het aantal opn. in
+137400	Schakelt tussen weerg.modus
+137458	elektronische zoeker. Alleen
+137518	effectief bij het bekijken
+137574	door de elektronische zoeker.
+137634	Gevolgen van de instellingaanp.
+137700	in real time bevestigd
+137748	voor activeren sluiter.
+137796	Gesimuleerde weerg., alsof gezien
+137866	op OVF van een SLR.
+137908	Gevolgen van instellingaanp.
+137968	niet bevestigd voorafgaand
+138024	aan activeren van de sluiter.
+138084	Framesnelheid
+138112	Smal
+138122	S-OVF
+138134	Selecteer de framesnelheid
+138190	in de ingebouwde zoeker.
+138240	Selecteer weerg.modus
+138286	elektr. zoeker.
+138318	In- of uitschakelen
+138360	achterscherm AF-gebied
+138408	voor elektr. zoeker.
+138450	Filminstellingen
+138484	TL-filmlengte
+138512	AF-doelgebied
+138540	WB-niveaus zijn extreem. Doorgaan?
+138610	Breed
+138622	Focus BKT Off
+138650	Focus BKT On
+138676	Focus BKT
+138696	HighSpeed 120fps
+138730	4K
+138736	Voorkeursopnamefuncties kunnen 
+138802	worden opgeslagen om ze snel en 
+138870	eenvoudig opnieuw te gebruiken.
+138934	Initialiseert de instellingen.
+138996	Priv
+139006	-wachtwoord
+139030	Certificering
+139058	@A01C@: wijzig het wachtwoord voor
+139130	verbinding met uw smartphone.
+139190	@A002@ Verwijdert alle automatisch
+139262	gescheiden bestanden van 
+139316	n film.
+139332	Niet werkzaam
+139360	MF-schakeling
+139388	Stelt de MF-schakeling in.
+139442	Werkzaam
+139460	Pop-art@A04F@
+139488	Pop-art@A050@
+139516	Bleke/lichte kleur@A04F@
+139566	Bleke/lichte kleur@A050@
+139616	Korrelige film@A04F@
+139658	Korrelige film@A050@
+139700	Gaatjescamera@A04F@
+139740	Gaatjescamera@A050@
+139780	Gaatjescamera@A051@
+139820	Diorama@A04F@
+139848	Diorama@A050@
+139876	Cross-process@A04F@
+139916	Cross-process@A050@
+139956	Dramatische toon@A04F@
+140002	Dramatische toon@A050@
+140048	Key Line@A04F@
+140078	Key Line@A050@
+140108	Aquarel@A04F@
+140136	Aquarel@A050@
+140164	Vintage@A04F@
+140192	Vintage@A050@
+140220	Vintage@A051@
+140248	Gedeeltelijke kleur@A04F@
+140300	Gedeeltelijke kleur@A050@
+140352	Gedeeltelijke kleur@A051@
+140404	@A073@Pop-art
+140432	@A052@Soft-focus
+140466	@A079@Diorama
+140494	@A07A@Cross-process
+140534	@A054@Zacht sepia
+140570	@A07C@Dramatische toon
+140616	@A07D@Key Line
+140646	@A07E@Aquarel
+140674	@A07F@Vintage
+140702	@A080@Gedeeltelijke kleur
+140754	@A055@Pop-art@A04F@
+140794	@A056@Pop-art@A050@
+140834	@A057@Bleke/lichte kleur@A04F@
+140896	@A058@Bleke/lichte kleur@A050@
+140958	@A059@Korrelige film@A04F@
+141012	@A05A@Korrelige film@A050@
+141066	@A05B@Gaatjescamera@A04F@
+141118	@A05C@Gaatjescamera@A050@
+141170	@A05D@Gaatjescamera@A051@
+141222	@A05E@Diorama@A04F@
+141262	@A05F@Diorama@A050@
+141302	@A060@Cross-process@A04F@
+141354	@A061@Cross-process@A050@
+141406	@A062@Dramatische toon@A04F@
+141464	@A063@Dramatische toon@A050@
+141522	@A064@Key Line@A04F@
+141564	@A065@Key Line@A050@
+141606	@A066@Aquarel@A04F@
+141646	@A067@Aquarel@A050@
+141686	@A068@Vintage@A04F@
+141726	@A069@Vintage@A050@
+141766	@A06A@Vintage@A051@
+141806	@A06B@Gedeeltelijke kleur@A04F@
+141870	@A06C@Gedeeltelijke kleur@A050@
+141934	@A06D@Gedeeltelijke kleur@A051@
+141998	@A06E@Soft-focuseffect
+142044	@A06F@Pinhole-effect
+142086	@A070@Witte-randeffect
+142132	@A071@Kadereffect
+142168	@A072@Starlight-effect
+142214	@A073@Wazig effect: boven/onder
+142278	@A074@Wazig effect: links/rechts
+142344	@A075@Schaduweffect: links/rechts
+142412	@A076@Schaduweffect: boven/onder
+142478	@A0B1@ Stil @A074@
+142516	Certificering tonen.
+142558	Brandp.afst.
+142584	Kleurprofiel 1
+142614	Kleurprofiel 2
+142644	Kleurprofiel 3
+142674	@A0B2@Kleurprofiel 1
+142716	@A0B3@Kleurprofiel 2
+142758	@A0B4@Kleurprofiel 3
+142800	Alle kleuren@A028@
+142838	Enkele kleur@A028@
+142876	Monochroom profiel 1
+142918	Monochroom profiel 2
+142960	Monochroom profiel 3
+143002	@A0B5@Monochroom profiel 1
+143056	@A0B6@Monochroom profiel 2
+143110	@A0B7@Monochroom profiel 3
+143164	Geen
+143174	Geel
+143184	Oranje
+143198	Rood
+143208	Magenta
+143224	Blauw
+143236	Groenblauw
+143258	Groen
+143270	Geel-Groen
+143292	Filmkorreleffect
+143326	Filmkorreleffect uit
+143368	Filmkorreleffect laag
+143412	Filmkorreleffect gemiddeld
+143466	Filmkorreleffect hoog
+143510	Aanpassing middentinten
+143558	Ho. en sch.@A01A@
+143594	Middentinten@A01A@
+143632	Aang. modi reset/toew
+143676	Camera-instellingen resetten
+143736	of huidige instellingen toewijzen
+143806	aan aangepaste modi.
+143848	Aangepaste modus C1
+143888	Aangepaste modus C2
+143928	Aangepaste modus C3
+143968	Aangepaste modus C4
+144008	C1-instellingen toepassen? Huidige
+144080	camera-inst.worden overschreven.
+144146	C2-instellingen toepassen? Huidige
+144218	camera-inst.worden overschreven.
+144284	C3-instellingen toepassen? Huidige
+144356	camera-inst.worden overschreven.
+144422	C4-instellingen toepassen? Huidige
+144494	camera-inst.worden overschreven.
+144560	Opnamestanden kiezen om toe
+144618	te wijzen aan selectorstanden
+144680	C3 en C4
+144698	Regelaar C3
+144722	Regelaar C4
+144746	Instellingen lensinfo
+144790	Voor ongeschikte lensinfo voor 
+144856	datatransmissie in voor Exif
+144916	en stabiliseer-optimalisatie.
+144976	Druk op de knop om naar
+145026	instellingen voor lensinfo te gaan.
+145098	Lensinformatie maken
+145140	Lensinformatie bewerken
+145188	Lensinformatie wissen
+145232	Lensnaam
+145250	Diafragmawaarde
+145282	Verwijder controle@A026@
+145332	Gebruik lensinfo@A026@
+145378	Overschrijven
+145406	Als nieuwe ingang opslaan
+145458	Functieregelaar @A012@
+145504	Kies de functie om toe te
+145558	wijzen aan de knop voor
+145608	belichtingscompensatie.
+145656	Instellingen stille modus@A048@
+145720	Toestaan
+145738	Niet toestaan
+145766	Schakelt stil opnemen in.
+145820	Selecteer de sluiterver-
+145872	tragingstijd.
+145900	Creatief effect uit
+145940	Kleurenfilter: geen
+145980	Kleurenfilter: geel
+146020	Kleurenfilter: oranje
+146064	Kleurenfilter: rood
+146104	Kleurenfilter: groen
+146146	Normaal monochroom
+146184	Sepia monochroom
+146218	Blauw monochroom
+146252	Paars monochroom
+146286	Groen monochroom
+146320	Release/@A01E@/Beeldstabilisator
+146386	C. Release/@A019@/Beeldstabilisator
+146458	Menu voor sluiterknop,
+146506	serie-opnames,
+146538	en beeldstabilisator.
+146582	Exporteren mislukt
+146620	Filmopname niet mogelijk in de
+146684	stand externe sluiterknop.
+146738	Opnamestand kiezen.
+146778	Spotmeting
+146800	Voor de @A03F@ geselecteerde items
+146872	wordt gemeten in het AF-doel-
+146934	gebied.
+146950	N:Geen
+146964	N:Normaal
+146984	ART1@A04F@
+147006	ART1@A050@
+147028	ART3@A04F@
+147050	ART3@A050@
+147072	ART5@A04F@
+147094	ART5@A050@
+147116	ART6@A04F@
+147138	ART6@A050@
+147160	ART6@A051@
+147182	ART7@A04F@
+147204	ART7@A050@
+147226	ART8@A04F@
+147248	ART8@A050@
+147270	ART10@A04F@
+147294	ART10@A050@
+147318	ART11@A04F@
+147342	ART11@A050@
+147366	ART12@A04F@
+147390	ART12@A050@
+147414	ART13@A04F@
+147438	ART13@A050@
+147462	ART13@A051@
+147486	ART14@A04F@
+147510	ART14@A050@
+147534	ART14@A051@
+147558	C3
+147564	C4
+147570	Color Profile 1
+147602	Color Profile 2
+147634	Color Profile 3
+147666	Mono Profile 1
+147696	Mono Profile 2
+147726	Mono Profile 3
+147756	Kopi
+147766	ren
+147774	Selectie kopi
+147802	ren
+147810	Nieuw bestand
+147838	Overschr.
+147858	Onder water
+147882	@A076@Onder water
+147918	Fout bij het stapelen van de focus.
+147992	Beeldcompositie mislukt.
+148042	@A004@Fotomodus
+148074	Starten/stoppen van opname
+148130	voor via USB verbonden
+148178	PCM-recorder blijft
+148220	onafhankelijk van starten/stoppen
+148290	van opname op de camera.
+148340	Via USB verbonden
+148378	PCM-recorder start/stopt
+148430	opname automatisch bij start/stop
+148500	opname op camera.
+148536	Zonder slate tone.
+148574	Via USB aangesloten
+148616	PCM-recorder cre
+148650	rt een slate
+148678	tone wanneer de @A04B@-knop
+148736	ingedrukt en vastgehouden
+148790	wordt tijdens video-opname.
+148846	Opnamevolume camera en
+148894	windruisreductie zullen niet
+148954	werkzaam zijn en opnamevolume
+149016	wordt automatisch aangepast
+149074	door de Olympus PCM-recorder.
+149134	Opnamevolume kan
+149170	aangepast worden
+149206	door het opnamevolume
+149252	van de camera.
+149282	@A004@Ruisfilter
+149316	Selecteer de @A004@ exclusieve
+149380	modus om videobeelden op te
+149438	nemen en daarna te bewerken.
+149496	Selecteer de mate van
+149542	ruisreductie voor video-opnamen
+149608	bij hoge ISO-waarden.
+149652	Selecteer de mate van
+149698	ruisreductie voor fotografie
+149758	bij hoge ISO-waarden.
+149802	Synchrone @A03F@Opn.
+149844	Slate tone
+149866	Opn.volume camera
+149902	@A077@Vlak
+149924	@A078@Kaart vol
+149956	@A079@Kaart vol
+149988	@A078@/@A079@Kaart vol
+150034	@A078@Kaart vol
+150066	@A079@Kaart vol
+150098	@A078@Geen foto
+150130	@A079@Geen foto
+150162	@A078@Beeldfout
+150194	@A079@Beeldfout
+150226	@A078@Kaartfout
+150258	@A079@Kaartfout
+150290	@A078@/@A079@Kaartfout
+150336	@A078@Fout / @A079@Beschermd
+150394	@A078@Fout / @A079@Vol
+150440	@A078@Schrijfbeveil.
+150482	@A079@Schrijfbeveil.
+150524	@A078@/@A079@Schrijfbeveil.
+150580	@A078@Beschermd / @A079@Fout
+150638	@A078@Beschermd / @A079@Vol
+150694	@A078@Vol / @A079@Fout
+150740	@A078@Vol / @A079@Beschermd
+150796	Naar nieuwe map geschak.
+150846	Geschakeld naar@A078@
+150890	Geschakeld naar@A079@
+150934	@A0A3@Kan map niet maken
+150984	@A0A4@Kan map niet maken
+151034	Kan map niet maken
+151072	@A078@Kan map niet selecteren
+151132	@A079@Kan map niet selecteren
+151192	@A078@Bewerking beeld niet mogelijk
+151264	@A079@Bewerking beeld niet mogelijk
+151336	@A078@Selectie van beeld niet mogelijk
+151414	@A079@Selectie van beeld niet mogelijk
+151492	@A07A@Fotofout
+151522	@A07B@Fotofout
+151552	@A0A3@Geen BGM
+151582	@A0A4@Geen BGM
+151612	@A0A3@Kan niet afdr.
+151654	@A0A4@Kan niet afdr.
+151696	Olympus-batt. aanbevolen
+151746	A1. AF/MF
+151766	A2. AF/MF
+151786	A3. AF/MF
+151806	C1. Ontspanner/@A013@/IS
+151856	C2. Ontspanner/@A013@/IS
+151906	D1. Scherm/@A001@/PC
+151948	D2. Scherm/@A001@/PC
+151990	D3. Scherm/@A001@/PC
+152032	D4. Scherm/@A001@/PC
+152074	E1. Exp/ISO/BULB/@A077@
+152122	E2. Exp/ISO/BULB/@A077@
+152170	E3. Exp/ISO/BULB/@A077@
+152222	H1. Opnemen/Wissen
+152260	H2. Opnemen/Wissen
+152298	I. Elektronische zoeker
+152346	J1. @A003@ Hulpprogramma
+152396	J2. @A003@ Hulpprogramma
+152446	Videomenu
+152466	Menu voor basis- en gedet.
+152522	video-instinstellingen.
+152570	C-AF-gevoeligheid
+152606	Pas de C-AF-vergrendelings-
+152664	gevoeligheid aan de bewegingen
+152728	van het onderwerp aan.
+152774	Hoog
+152784	Laag
+152794	AF-beperker
+152818	Beperkt het AF-bereik
+152864	volgens uw specificatie.
+152916	Afstand bij benadering.
+152964	Ann. prioriteit
+152996	De sluiter kan worden
+153042	losgelaten zelfs wanneer
+153094	het onderwerp buiten focus is.
+153156	De sluiter kan niet worden
+153212	losgelaten wanneer
+153252	het onderwerp buiten focus is.
+153314	Afstandsinstellingen
+153356	Instelling 1
+153382	Instelling 2
+153408	Instelling 3
+153434	Stelt weergave in van het groene
+153502	Autofocus-doelframe.
+153544	Geeft frame niet weer.
+153590	Geeft frame weer.
+153626	Geeft frame weer
+153662	terwijl sluiterknop
+153704	half ingedrukt is.
+153742	Voorinstelling MF
+153778	Voorinstell. MF-afst.
+153822	Stelt afstand in voor MF
+153874	vooraf instellen.
+153912	Afstand is bij benadering.
+153966	Wijzigt naar vooraf ingestelde
+154030	MF-modus.
+154050	Schakelt IS in en uit.
+154098	Druk op omlaag en
+154136	draai de regelaar om te
+154186	schakelen tussen IS-modi.
+154238	Schakelt AF-beperker in en uit.
+154304	Druk op omlaag en draai de
+154360	regelaar om afstand te selecteren.
+154430	Druk om @A042@ kader te
+154480	weergeven om op te richten.
+154538	Druk nogmaals om @A042@-modus
+154600	te activeren wanneer doel
+154654	is ingesteld.
+154682	Druk om te schakelen naar
+154736	aangegeven standaard@A078@.
+154794	Druk nogmaals
+154824	om terug te keren.
+154862	@A004@Fn-schakelaarinst.
+154912	Kies de functie die aan de
+154968	Fn-schakelaar moet worden
+155022	toegewezen.
+155046	@A003@Fn-schakelrfunctie
+155096	Schakelt@A0A9@ functie
+155142	@A004@Fn-schakelrfunctie
+155192	Een functie toewijzen
+155238	aan de Fn-schakelaar
+155282	voor video-opnamen.
+155322	Wijzigt regelaarfunctie.
+155372	Wijzigt AF-modus/@A0AA@/@A0AB@.
+155438	Het doel is instelbaar.
+155486	Wijst volgende opnamestanden toe:
+155556	Positie 1: volgt inst. v. functieknop.
+155636	Positie 2: @A004@modus.
+155684	@A07E@Vergr.
+155710	Kies Aan om @A07E@ uit te schak.
+155776	Fn-schakelr/Aan/uit-schak.
+155830	Fn-schakelaar gebruiken
+155880	als aan/uit-schakelaar.
+155930	Gebruik Fn-schakelaar voor
+155986	aangegevens functies. Gebruik
+156048	aan/uit-schakelaar voor voeding.
+156114	Voeding 1
+156134	Als volgt stroom toewijzen
+156190	aan Fn-schakelaar:
+156230	Positie 1: Aan
+156262	Positie 2: Uit
+156294	Aan/uit-schakelaar is uitgeschakeld.
+156368	Voeding 2
+156388	Als volgt stroom toewijzen
+156444	aan Fn-schakelaar:
+156484	Positie 1: Uit
+156516	Positie 2: Aan
+156548	Aan/uit-schakelaar is uitgeschakeld.
+156622	CWB Kelvin
+156648	@A049@-instellingen
+156688	@A04A@-instellingen
+156728	Max fps
+156744	Aantal frames bep.
+156782	Prioriteit voor beeldstabiliteit
+156850	voor continu opnemen.
+156894	Fps-prioriteit
+156924	Opnamesnelheid heeft
+156968	prioriteit boven
+157004	beeldstabilisatie.
+157042	IS-prioriteit
+157070	Beeldstabilisatie heeft
+157120	prioriteit boven opnamesnelheid.
+157186	@A004@HDMI-uitvoer
+157224	Stelt uitvoertinstellingen in voor
+157296	HDMI-verbonden
+157328	video-opnamen.
+157358	Uitvoermodus
+157384	Instellingen voor uitvoermodus
+157448	naar apparaten die zijn verbonden
+157518	door HDMI.
+157540	Monitormodus
+157566	Voert video- en infoscherm
+157622	uit naar het apparaat.
+157670	Deze modus wordt aanbev. wanneer
+157738	het apparaat wordt gebruikt
+157796	als een monitor.
+157830	Opnamemodus
+157854	Voert alleen video uit, zonder
+157918	infoscherm. Deze modus wordt
+157978	aanbevolen bij het opnemen
+158034	van video met het apparaat.
+158096	REC Bit
+158116	Uitvoergrootte
+158146	4K
+158152	Framesnelheid v. uitv.
+158202	@A004@Specificatie-instellingen
+158266	Instellingen voor videokwaliteit.
+158334	@A004@@A024@
+158360	Neemt video op
+158392	van formaat 4096 x 2160
+158442	(17:9).
+158458	Neemt video op
+158490	van formaat 3840 x 2160 (16:9).
+158554	Neemt video op
+158586	van formaat 1920 x 1080 (16:9).
+158650	Neemt video op
+158682	van formaat 1280 x 720 (16:9).
+158744	@A013@/@A014@-instellingen
+158798	Wanneer u @A013@of@A014@ kiest,
+158864	kunt u items overslaan die niet
+158930	zijn ingesteld op @A03F@.
+158982	Stelt weergegeven rasterrichtlijnen
+159056	in op de monitor tijdens Live View.
+159128	Weergavekleur
+159156	Gebr.inst. 1
+159182	Gebr.inst. 2
+159208	@A079@
+159222	Inst. toepas. op EVF
+159264	Past geen rasterinstellingen
+159324	toe op achterkant
+159362	van monitor op EVF.
+159402	Past rasterinstellingen toe op
+159466	achterkant van monitor op EVF.
+159528	EVF-rasterinstellingen
+159574	Stelt rasterrichtlijnen in die worden
+159652	weergegeven in EVF.
+159692	LV Close Up-inst.
+159728	Instellingen voor
+159766	weergavemethode
+159800	van LV Close Up.
+159834	@A046@-instellingen
+159874	Instellingen om
+159908	weergavemethode
+159942	weer te geven.
+159974	Tijdens LV Close Up
+160016	is de lichtintensiteit
+160064	eenvoudig bij te stellen.
+160116	Tijdens LV Close Up
+160158	wordt de lichtintensiteit
+160212	niet bijgesteld
+160246	en is het scherm van dezelfde
+160308	lichtintensiteit als v
+160356	r LV Close Up.
+160386	Tijdens het voorbeeld is
+160438	de lichtintensiteit
+160480	eenvoudig bij te stellen.
+160532	Tijdens het voorbeeld is
+160584	de lichtintensiteit eenvoudig
+160646	bij te stellen en is het scherm
+160712	van dezelfde lichtinstensiteit als
+160790	r het voorbeeld.
+160824	@A006@@A07A@ Info
+160860	Frame vergroten
+160892	Schuifbalk vergroten
+160934	Frame selecteren
+160968	@A0AA@-instellingen
+161008	Bij het selecteren van de
+161062	AF-doelmodus kunt u de items
+161122	oversl. die niet zijn geselecteerd@A058@.
+161206	@A07C@Aangepaste instellingen
+161266	Instellingen voor
+161304	bewerkingsmethode
+161342	voor AF-doel selectiescherm.
+161400	Set 1
+161412	Set 2
+161424	@A0AA@
+161438	@A0AB@
+161452	@A008@
+161466	Registreert de standaard
+161518	AF-modus/@A0AA@/@A0AB@.
+161566	Gedetailleerde instellingen
+161624	voor wanneer ISO-gevoeligheid
+161686	is ingesteld op AUTO.
+161730	Bovengrens/Stand.
+161766	Laagste S/S-instelling
+161812	Wanneer de sluitertijd het laagst
+161882	aangegeven cijfer bereikt, neemt de
+161956	ISO-gevoeligheid toe.
+162002	Geldig in P- of A-modus.
+162052	Kaartsleufinstellingen
+162098	Instellingen voor het opslaan en
+162166	weergeven van de inhoud
+162216	van de kaart.
+162244	@A003@-inst. opslaan
+162286	Standaard
+162306	Registreert alleen op de
+162358	toegewezen kaart.
+162394	Autom. schakelen
+162428	Schakelt over naar andere
+162482	kaart om door te gaan met
+162536	opnemen wanneer toegewezen
+162592	kaart vol raakt.
+162626	Dual-onafh.@A081@
+162662	Slaat op beide kaarten op
+162716	volgens hun respectieve instellingen.
+162794	De andere kan op
+162830	geen van beide worden
+162876	opgesl. wanneer 
+162912	n kaart vol raakt.
+162950	Dual-onafh.@A082@
+162986	Slaat op beide kaarten op
+163040	volgens hun respectieve instellingen.
+163118	Zelfs wanneer 
+163150	n kaart vol raakt,
+163190	kan op de andere nog steeds
+163248	worden opgeslagen.
+163286	Dual hetzelfde@A081@
+163328	Slaat op beide kaarten op met
+163390	dezelfde @A003@@A024@instellingen.
+163462	De andere kan op
+163498	geen van beide worden
+163544	opgesl. wanneer 
+163580	n kaart vol raakt.
+163618	Dual hetzelfde@A082@
+163660	Slaat op beide kaarten op met
+163722	dezelfde @A003@@A024@instellingen.
+163794	Zelfs wanneer 
+163826	n kaart vol raakt,
+163866	kan op de andere nog steeds
+163924	worden opgeslagen.
+163962	@A003@Sleuf opslaan
+164002	@A004@Sleuf opslaan
+164042	@A006@Sleuf
+164066	Map voor opsl. toew.
+164108	Toewijzen
+164128	Niet toewijzen
+164158	Alle beelden en kopi
+164200	ren
+164210	van de ene kaart naar de andere.
+164276	Map toewijzen voor kopi
+164324	ren naar
+164342	Bestaande map
+164370	Nieuwe map
+164392	Batterij-instellingen
+164436	Zie batterij-info en -instellingen.
+164508	Batterijvoorkeur
+164542	Batterijstatus
+164572	Afname
+164586	Rest. lading
+164612	Serienummer
+164636	Aantal shots
+164662	Batterijtype
+164688	Tijd indr.-en-vasth.
+164730	De knop indr.-en-vasth.
+164780	inst. voor elke functie
+164830	die indr.-en-vasth. vereist.
+164888	LV@A07A@ be
+164912	indigen
+164928	Door toegew. knop ingedrukt
+164986	te houden, wordt Live View-
+165044	close-up be
+165068	indigd of weergave
+165108	van Live View-close-upframe.
+165166	@A042@ be
+165186	indigen
+165202	Indr.-en-vasth. van de toegew.
+165266	knop be
+165282	indigt
+165298	@A042@-close-up
+165332	of be
+165344	ind. weergave
+165374	van @A042@-close-upframe.
+165426	@A006@@A07A@ be
+165458	indigen
+165474	Indr.-en-vasth. van de toegew.
+165538	knop be
+165554	indigt
+165570	@A035@-close-up
+165604	of be
+165616	ind. weergave
+165646	van @A035@-close-upframe.
+165698	Leisteentint toevoeg.
+165742	Indr.-en-vasth. van @A04B@ tijdens
+165814	video-opnamen, en de
+165858	USB-verbonden PCM-recorder
+165914	voegt een leisteentoon toe.
+165970	@A078@ resetten
+166002	Indr.-en-vasth. van @A035@ tijdens
+166074	video-opnamen, en @A078@
+166126	keert terug naar het
+166170	centrum van het
+166204	AF-doelselectiescherm.
+166250	LV@A07A@-frame resetten
+166298	Indr.-en-vasth. van @A035@
+166354	keert het close-upframe terug
+166416	naar het
+166436	centrum van het
+166470	Live View-scherm.
+166506	@A043@ resetten
+166538	Met @A035@ indr.-en-vasth.
+166594	worden de waarden van @A043@
+166654	hersteld op het instelscherm.
+166714	@A007@ resetten
+166746	Als @A007@ is toegew. aan schakelaar
+166822	en @A035@ wordt ingedrukt, wordt de
+166896	bel.comp.waarde hersteld naar
+166958	standrd in het opn.-standbyscherm.
+167028	@A07B@ resetten
+167060	Als u @A035@ ingedr. houdt worden
+167130	de instellingen van markeren
+167190	en schaduw hersteld naar de
+167248	standaard in het instellingenscherm.
+167322	@A07C@ be
+167342	indigen
+167358	Door de @A07C@-knop ingedrukt te
+167426	houden, deactiveert u de
+167478	basiscompensatie.
+167514	@A07C@ resetten
+167546	Door de @A035@-knop ingedrukt
+167608	te houden worden de
+167650	basiscomp.instellingen
+167698	hersteld naar de standaard
+167754	in het instellingenscherm.
+167808	@A042@-frame resetten
+167852	Door de @A035@-knop in
+167900	te drukken en ingedrukt
+167950	te houden
+167972	keert u de videotelecon-close-up
+168040	terug naar de centrale positie.
+168108	@A009@ resetten
+168140	Houd @A035@ ingedrukt om de
+168198	flitssterkte-inst. te herst. Naar
+168268	standrd in de stand-bymodus van
+168334	opnamest. als @A009@ is toegew.
+168400	aan de regelaar.
+168434	@A045@-vergr. schakelen
+168482	Door de @A045@-knop die is toeg. aan
+168558	@A045@-vergr. ingedrukt
+168608	te houden, worden de
+168652	basiscomp.instellingen
+168700	hersteld naar st. in het inst.scherm.
+168776	@A061@/@A062@ schakelen
+168824	Door de knop ingedrukt te
+168878	houden die is toegewezen
+168930	aan @A061@/@A062@
+168968	deactiveert u de
+169004	@A061@/@A062@-modi.
+169044	BKT-inst. oproepen
+169082	Door de knop ingedrukt te
+169136	houden die is toegewezen
+169188	aan BKT, wordt het BKT-
+169238	instellingenscherm geopend.
+169294	EVF autom. sch. opr.
+169336	Door de knop ingedrukt te
+169390	houden die is toegewezen
+169442	aan @A03D@, wordt het @A03D@autom.
+169514	schakelenscherm geopend.
+169564	Pro Capture H
+169592	Pro Capture L
+169620	Effect: hoog
+169646	Effect: laag
+169672	Effect: standaard
+169708	AF-beperker:uit
+169740	@A07D@ om afst. bij te w.
+169792	Resetten/aangep. modi
+169836	Toewijzen aan aangep. mod.
+169890	Opr. vanuit aangep. mod.
+169940	Bereik resetten
+169972	Film bewerken
+170000	Foto uit filmbeeld
+170038	Film bijsnijden
+170070	De gesel. sc
+170096	ne wordt verwijderd.
+170138	@A002@De gesel. sc
+170176	ne wordt verwijderd.
+170218	@A004@Audio-opname-instellingen
+170282	@A004@Weergave-instellingen
+170338	Instellingen voor
+170376	informatieweergave
+170416	tijdens filmopnamen.
+170458	@A004@-instellingen
+170498	Kies de weergegeven informatie
+170562	wanneer de @A01A@ is ingedrukt.
+170626	Raster
+170640	@A004@Controle-inst.
+170682	Kies de bed.elementen die
+170736	worden weerg. wanneer @A035@
+170796	is ingedr. in de opn.modus.
+170852	@A087@Patroon weerg.
+170894	Stelt weergavemethode
+170940	in van batterij laden
+170986	tijdens filmopnamen.
+171028	@A078@@A004@@A024@
+171066	@A078@@A003@@A024@
+171104	@A079@@A004@@A024@
+171142	@A079@@A003@@A024@
+171180	Kaart selecteren om in te stellen
+171248	Firmware-update
+171280	@A002@ Zodra firmware is bijgewerkt,
+171356	kunt u niet terugkeren
+171404	naar de huidige firmware.
+171456	@A056@Functie
+171484	@A0B5@Functie
+171512	@A0B6@Functie
+171540	@A0B7@Functie
+171568	AF-scanner
+171590	Instellingen voor AF-scanner
+171650	tonen bij het starten met
+171704	of tijdens het opnemen.
+171752	Zelfs wanneer het onderwerp
+171810	onscherp is of wanneer het
+171866	contrast laag is, wordt de
+171922	AF-scanner niet geactiveerd.
+171980	De AF-scanner wordt slechts
+172038	eenmaal uitgevoerd
+172078	wanneer het onderwerp
+172124	onscherp is of wanneer
+172172	het contrast laag is.
+172216	De AF-scanner wordt nog
+172266	steeds geactiveerd wanneer
+172322	het onderwerp onscherp is of
+172382	het contrast laag is.
+172426	@A003@AF-modus
+172456	De AF-methode
+172486	instellen voor fotografie.
+172540	@A003@Beeldstabilisatie
+172588	Stelt de afbeeldings-
+172634	stabilisatiemodus
+172672	in voor fotografie.
+172712	@A003@Knopfuncties
+172750	Kies de functies die moeten
+172808	worden toegewezen aan elke
+172864	knop voor fotografie.
+172908	@A003@Functieregelaar
+172952	Kies de functies die moeten
+173010	worden toegewezen aan elke
+173066	regelaar voor fotografie.
+173118	@A003@Ruisfilter
+173152	@A003@Elektr. zoomsn.
+173196	Kies zoomsnelheden voor
+173246	fotografie bij het gebruik
+173302	van een elektr. zoomlens.
+173354	@A003@@A024@
+173380	Beeldkwaliteitsinstellingen
+173438	instellen voor het maken
+173490	van foto
+173508	s.
+173514	@A004@Knop/Schakelaar/Hendel
+173572	Functies selecteren om
+173620	toe te wijzen aan knoppen en
+173680	regelaars voor video-opnamen.
+173740	@A004@Knopfuncties
+173778	Selecteer functies om toe
+173832	te wijzen aan elke knop
+173882	voor video-opnamen.
+173922	@A004@Elektr. zoomsn.
+173966	Stelt zoomsnelheden in voor
+174024	video-opnamen bij gebruik van
+174086	een elektronische zoomlens.
+174142	@A004@AF/IS-instellingen
+174192	Kies de afbeeldings-
+174236	stabiliseringsmodus en focusmeth.
+174306	voor video-opnamen.
+174346	@A004@AF-modus
+174376	Stel de focusmethode
+174420	in voor video-opnamen.
+174466	@A004@Beeldstabilisatie
+174514	De afbeeldingsstabiliseringsmodus
+174584	voor video-opnamen.
+174624	Verbinding met smartphone
+174678	met ingebouwd @A0B8@.
+174722	@A0B8@-instellingen
+174762	Menu over ingebouwd @A0B8@.
+174818	@A0B8@-verb.instellingen
+174868	@A0B8@-verbinding selecteren
+174926	Altijd @A0B8@-verbinding
+174978	kiezen.
+174994	@A0B8@-instellingen resetten
+175052	@A003@ Waarschuwing: alle @A0B8@-
+175122	instellingen resetten
+175166	@A0B8@-verbinding voorbereiden
+175228	Voor verbinding met uw
+175276	smartphone. Deze configuratie
+175338	is slechts 
+175364	n keer nodig
+175392	@A0B8@-verbinding start later.
+175454	@A0B8@ starten
+175484	@A0B8@ stoppen
+175514	Schakelt ingebouwde @A0B8@ uit.
+175578	Einde @A0B8@@A01E@
+175616	Als sluitersnelheid @A07E@ of minder
+175692	is, wordt eerste sluitergordijn
+175758	omgeschakeld naar elektronisch. 
+175826	Selecteer vertragingstijd
+175880	na activeren sluiter.
+175924	4K
+175930	C4K
+175938	Color
+175950	Color / Vivid
+175978	MOV 3840
+175996	2160
+176006	MOV 4096
+176024	2160
+176034	MOV 1920
+176052	1080
+176062	MOV 1280
+176080	720
+176088	Pre-sluiterframes
+176124	Rasterinstellingen
+176162	@A004@Functieregelaar
+176206	Functies selecteren om toe te
+176268	wijzen aan elke regelaar voor
+176330	video-opnamen.
+176360	@A078@ Voorinstelling
+176404	@A078@Spotmeting
+176438	Stijl voor zoeker
+176474	EVF autom. schakelen
+176516	AF-gebied select.
+176552	@A078@Home
+176574	@A07F@i-Enhance
+176606	De oogsensor uitschakelen.
+176662	@A03D@: om te schakelen tussen de
+176732	monitorweergave en de zoeker.
+176792	Druk om S-AF uit te voeren.
+176848	Functies van @A0A9@knoppen
+176904	veranderen niet in @A0BB@.
+176958	In @A0BB@ worden functies van @A0A9@ 
+177036	knoppen overgeschakelend 
+177090	naar @A0BC@: BKT en @A0BD@: @A0BE@.
+177162	Schakelt Fn-schakelaarfunctie uit.
+177232	@A080@Laag contr.
+177268	@A078@@A01C@
+177294	Selecteert weergavestijl voor
+177356	de zoeker.
+177378	Autom. schakelen van de monitor-
+177446	weergave naar de zoeker zodra
+177508	een oog wordt waargenomen.
+177562	Gedetailleerde instellingen voor
+177630	@A04A@-opnamen.
+177662	Kies Aan om niveaumeter in
+177718	EVF weer te geven.
+177758	Ingeschakeld bij @A03C@.
+177808	Gedetailleerde instellingen voor
+177876	@A049@-opnamen.
+177908	De framesnelheid
+177944	in de zoeker selecteren.
+177994	Verzendt REC Bit van camera
+178052	naar verbonden opnameapparaat.
+178114	Verzendt tijdcode van camera
+178174	naar verbonden opnameapparaat.
+178236	De weergavemodus
+178272	van de elektronische zoeker 
+178332	selecteren.
+178356	@A089@Vlak
+178378	@A081@Onder water
+178414	Selecteer het AF-doelpunt
+178468	en AF-doelmodus.
+178502	17:9
+178512	@A0B9@Vivid
+178536	@A0BA@Natural
+178564	@A0BB@Portrait
+178594	Kan map niet selecteren
+178642	Fn
+178648	50p-prioriteit
+178678	60p-prioriteit
+178708	G. @A024@/WB/Kleur
+178746	PCM-recorder
+178772	Invullen
+178790	Focusstapeling
+178820	Er worden meerdere
+178860	opnamen gemaakt met het
+178910	focale punt telkens iets verder
+178976	terug na elke opname.
+179022	Beelden worden niet samengesteld.
+179090	Er worden meerdere opnamen
+179146	gemaakt met het focale punt
+179204	telkens iets verder voor- of
+179264	achteruit vanaf het beginpunt.
+179328	Daarna worden ze samengesteld.
+179390	Helderheid Live View afhankelijk
+179458	van belichtingsinstellingen.
+179518	Helderheid zichtbaar beeld
+179574	gelijk aan die van definitief
+179636	beeld.
+179650	Helderheid Live View
+179694	niet afh. van belichtingsinst.
+179758	en wordt aangepast voor 
+179810	optim. weergave. Helderheid
+179868	van uiteindelijke beeld verschilt.
+179938	Helderh. in LV volgt niet de
+179998	belichtingsinst., maar wordt geoptim.
+180076	door het verl. van de beeldsnelh. in
+180152	donkere sc
+180174	nes. Helderh. van uiteind.
+180230	opn. zal versch. van deze opn.
+180292	@A040@: Start filmopname.
+180344	@A082@Soft-focuseffect
+180390	@A083@Pinhole-effect
+180432	@A084@Witte-randeffect
+180478	@A085@Kadereffect
+180514	@A086@Starlight-effect
+180560	@A087@Wazig effect: boven/onder
+180624	@A088@Wazig effect: links/rechts
+180690	@A089@Schaduweffect: links/rechts
+180758	@A08A@Schaduweffect: boven/onder
+180824	@A078@Gezichtsherkenningsfout
+180884	@A079@Gezichtsherkenningsfout
+180944	@A107@
+180958	Breed
+180970	Smal
+180980	Bleach Bypass
+181008	Bleach Bypass@A04F@
+181048	Bleach Bypass@A050@
+181088	@A004@-modusinstellingen
+181138	Gelijke waarde
+181168	@A090@ be
+181188	indigen
+181204	Fisheye-compensatie
+181244	Hoek
+181254	Fisheye-compensatie 1
+181298	Fisheye-compensatie 2
+181342	Fisheye-compensatie 3
+181386	@A091@/@A092@-correctie
+181434	Fisheye-compensatie
+181474	Door de @A090@-knop ingedrukt te
+181542	houden, deactiveert u @A090@.
+181602	Hiermee schakelt u
+181642	fisheye-compensatie in/uit.
+181698	Druk hierop om de flikkeringcontrole
+181774	te starten. U stopt de functie
+181838	door de knop ingedrukt te houden.
+181908	Kan worden gebruikt
+181950	in de S- of M-modus.
+181992	@A004@-flikkeringdetectie
+182044	@A0CC@Bleach Bypass
+182084	@A08C@Bleach Bypass@A04F@
+182136	@A08D@Bleach Bypass@A050@
+182188	@A006@@A07A@-standaardinst.
+182244	Wijzig de @A004@-modusinstellingen.
+182316	Corrigeert de vervorming van een
+182384	fisheye-lens om een
+182426	supergroothoekbeeld te cre
+182480	ren.
+182490	Detectie van flikkeringen en
+182550	sluitertijd wordt in kleinere stappen
+182628	gewijzigd in de S- of M-modus.
+182690	Selecteer de standaardvergroting
+182758	voor het beeld
+182790	dat wordt weergegeven.
+182836	Detectie van flikkeringen en
+182896	sluitertijd wordt in kleinere stappen
+182974	gewijzigd in de S- of M-modus.
+183036	Recent
+183050	@A003@-flikkeringdetectie
+183102	Flikkeringdetectie
+183140	ART15@A04F@
+183164	ART15@A050@
+183188	De camera blijft de route vastleggen,
+183266	ook als deze wordt uitgeschakeld.
+183334	De framesnelheid
+183370	in de zoeker selecteren.
+183420	GPS-locatie registr.
+183462	De registratiefunctie kan momenteel
+183536	niet worden gebruikt.
+183580	Autom. tijdaanpassing
+183624	Er worden geen locatiegegevens
+183688	aan uw foto toegevoegd.
+183736	De locatiegegevens worden aan
+183798	uw foto toegevoegd.
+183840	U activeert GPS door de instelling
+183912	op Aan te zetten.
+183948	Pas de datum en tijd handmatig aan.
+184020	De camera past de datum en tijd
+184086	automatisch aan op basis van
+184146	GPS-gegevens. GPS wordt alleen
+184210	gebruikt op het moment dat
+184266	de aanpassing wordt gedaan.
+184322	Het behoud van batterijvermogen
+184388	heeft voorrang op
+184426	de GPS-nauwkeurigheid.
+184472	De GPS-nauwkeurigheid
+184518	heeft voorrang op
+184556	het behoud van batterijvermogen.
+184622	Batterijvermgn
+184652	GPS-prioriteit
+184682	GPS-nauwk.
+184704	@A08B@ @A01A@
+184732	Voeg GPS-locatiegegevens toe aan
+184800	uw foto. U activeert GPS door
+184862	de instelling op Aan te zetten.
+184926	GPS-prioriteit wordt ingesteld
+184990	voor het bijhouden
+185030	van logbestanden.
+185066	Stel de datum en tijd
+185112	of de tijdzone van de camera in.
+185178	@A022@ Instellingen
+185218	@A022@
+185232	Tijdzone
+185250	Direct-klaar-film
+185286	@A08E@Direct-klaar-film
+185334	@A08F@/Bluetooth-instellingen
+185394	Wijzig @A08F@ en
+185430	Bluetooth-instellingen.
+185478	Beschikbaarheid
+185510	@A099@/Bluetooth is volledig
+185570	uitgeschakeld, geen verbinding
+185634	mogelijk.
+185654	@A099@/Bluetooth ingeschakeld
+185716	om verbinding te maken.
+185764	Wachtwoord voor verbinding
+185818	@A040@: Wijzig verbindings-
+185876	wachtwoorden. Nieuwe
+185920	wachtwoorden worden
+185962	automatisch gemaakt.
+186004	Instellingen resetten
+186048	@A002@ alle @A08F@ en Bluetooth-
+186116	instellingen resetten?
+186162	Uitgeschkld. stand-by
+186206	Uitgeschakeld apparaat kan
+186262	@A08F@/Bluetooth-verbinding
+186320	niet starten.
+186348	Ook als apparaat uitgeschakeld is,
+186420	kan het @A08F@/Bluetooth-verbinding
+186494	starten.
+186512	Uitgeschakeld stand-by steeds
+186574	activeren wanneer apparaat
+186630	is uitgeschakeld?
+186666	@A08F@/Bluetooth Uitgeschakeld
+186730	stand-by activeren voor import
+186794	van foto's tijdens uitschakeling?
+186862	Uitgeschkld. stand-by: Uit
+186916	Uitgeschkld. stand-by: Aan
+186970	Elke keer bevestigen
+187012	Dit scherm niet meer tonen
+187066	Bevestig activering Uitgeschakeld
+187136	stand-by als apparaat is
+187188	uitgeschakeld. Wijzigen van instelling
+187268	vanuit het menu is altijd mogelijk.
+187340	Bezig met gegevensoverdracht...
+187404	Annuleren
+187424	Doorgaan
+187442	Gegevensoverdracht annuleren
+187502	en apparaat inschakelen.
+187552	Alle bestaande voorselecties voor
+187622	foto-overdracht annuleren.
+187676	@A093@ Warme kleur@A01A@
+187726	Instellingen aanpassen voor
+187784	opnamen met een aangesloten
+187842	Olympus PCM-recorder.
+187886	@A078@Geen kaart
+187920	@A079@Geen kaart
+187954	INFO_CONTINUE_TRANSFER_2
+188004	Overige bestanden
+188040	Afsluiten na overdracht
+188088	Meteen afsluiten
+188122	Apparaat wordt autom. uitgeschakeld
+188196	nadat alle opnamen zijn overgezet.
+188266	Annuleert overdracht naar de pc
+188332	en schakelt apparaat uit.
+188384	Bezig met overzetten...
+188432	INFO_WAIT_SP_TRANSFERRED
+188482	Wacht totdat de overdr. is voltooid.
+188558	Het apparaat wordt automatisch
+188622	uitgeschakeld.
+188652	Opnemen met de Bulb-functie
+188708	CAUTION_HIGH_RES_SHOT_CANCELED
+188770	Fout bij opname hoge resol.
+188828	Beeldcompositie is ontoereikend.
+188894	@A003@ISO
+188914	@A003@Aanbevolen ISO
+188956	@A003@ISO, verhoging
+188998	@A004@ISO
+189018	@A004@Aanbevolen ISO
+189060	@A005@ISO, verhoging
+189102	@A003@WB
+189120	@A004@WB
+189138	@A003@Kelvin
+189164	@A004@Kelvin
+189190	@A003@Auto @A094@
+189226	@A003@@A095@5300K @A094@
+189276	@A003@@A096@7500K @A094@
+189326	@A003@@A097@6000K @A094@
+189376	@A003@@A098@3000K @A094@
+189426	@A003@@A099@4000K @A094@
+189476	@A003@@A036@5500K @A094@
+189526	@A003@@A01E@ @A094@
+189566	@A003@@A01F@ @A094@
+189606	@A003@@A020@ @A094@
+189646	@A003@@A021@ @A094@
+189686	@A004@Auto @A094@
+189722	@A004@@A095@5300K @A094@
+189772	@A004@@A096@7500K @A094@
+189822	@A004@@A097@6000K @A094@
+189872	@A004@@A098@3000K @A094@
+189922	@A004@@A099@4000K @A094@
+189972	@A004@@A036@5500K @A094@
+190022	@A004@@A01E@ @A094@
+190062	@A004@@A01F@ @A094@
+190102	@A004@@A020@ @A094@
+190142	@A004@@A021@ @A094@
+190182	MOVIE_PIC_MODE_LOG
+190220	@A003@CWB @A094@
+190254	@A004@CWB @A094@
+190288	Live view@A033@
+190320	Continue AF + MF
+190354	AF-tracking + MF
+190388	Opnamemethode@A01A@
+190428	Opn. mkn in live ND: ND2(1EV)
+190488	Opn. mkn in live ND: ND4(2EV)
+190548	Opn. mkn in live ND: ND8(3EV)
+190608	Opn. mkn in live ND: ND16(4EV)
+190670	Opn. mkn in live ND: ND32(5EV)
+190732	@A003@Sleuf opslaan @A078@
+190786	@A003@Sleuf opslaan @A079@
+190840	@A004@Sleuf opslaan @A078@
+190894	@A004@Sleuf opslaan @A079@
+190948	Opnamemethode
+190976	Maakt opnamen met de
+191020	camera die wordt
+191056	gestabiliseerd door een statief.
+191122	Maakt opnamen in hand-
+191170	heldmodus. Verwerkingstijd
+191226	vereist na het maken van
+191278	opnamen. Flitser is niet beschikbaar.
+191354	Opn. mkn in live ND
+191394	ND-nummer
+191414	LV-simulatie
+191440	Lage sluitertijdeffect kan niet
+191506	worden weergegeven in Live View.
+191572	Lage sluitertijdeffect kan
+191628	worden weergegeven in Live View.
+191696	Verschilt van uiteindelijke beeld.
+191766	Live View wordt niet weergegeven
+191834	in spiegelbeeld als de monitor
+191898	is gekanteld.
+191926	Live View wordt weergegeven
+191984	in spiegelbeeld als de monitor
+192048	is gekanteld.
+192076	Veldsensorgegevens
+192114	Informatie tijdens @A015@
+192166	Informatie blijft verborgen,
+192226	zelfs wanneer de ontspanknop
+192286	half is ingedrukt.
+192324	Informatie over de belichting en
+192392	brandpuntsafst. verschijnt alleen
+192462	wanneer de sluiterknop half is ingedr.
+192540	Helderh. in LV volgt niet de
+192600	belichtinst., maar wordt aangep.
+192668	vr. optim. weerg. door verh. gain
+192738	vr donkerdere geb. Helderh. uiteind.
+192814	opn. zal versch. van deze opn.
+192876	Helderh. in LV volgt niet de
+192936	belichtinst., maar wordt aangep.
+193004	vr. optim. weerg. door verh. gain
+193074	vr donkerdere geb. Helderh. uiteind.
+193150	opn. zal versch. van deze opn.
+193212	Aan2-instellingen
+193248	Kwaliteit als prioriteit
+193298	Beeldsnelh. als prior.
+193344	Bij Live View krijgt kwaliteit
+193408	prioriteit over beeldsnelheid.
+193472	De beeldsnelheid wordt verlaagd
+193538	in donkere sc
+193566	nes.
+193576	Bij Live View krijgt beeldsnelheid
+193648	prioriteit over kwaliteit. Kleuren
+193720	kunnen verdwijnen in donkere
+193780	sc
+193786	nes. Dit is niet van invloed op
+193852	het uiteindelijke beeld.
+193902	Anti-flikker LV
+193934	Anti-flikkermodus
+193970	Ongelijke belichting en kleuren als
+194044	gevolg van flikkeren worden
+194102	gecorrigeerd. Vertragingstijd
+194164	vd ontspanner kan langer worden
+194230	Geldt als u de mech. sluiter gebruikt.
+194308	Anti-flikkermodus zal niet
+194364	functioneren.
+194392	@A003@ISO-auto
+194422	@A09B@ISO-auto
+194452	@A003@ISO-auto set
+194490	@A09B@ISO-auto set
+194528	@A003@ Lage ISO-waarde
+194574	INFO_S_NOISE_REDUCTION_MODE_1
+194634	INFO_S_NOISE_REDUCTION_MODE_2
+194694	Regelaar M/B
+194720	Schakelt AF-modus/AF-doelmodus/
+194786	AF-richtpunt in of uit afhankelijk
+194858	van de positie van het Fn-hendeltje.
+194934	Doel kan worden geselecteerd.
+194994	@A0AB@ Instellingen
+195034	@A0AC@ Ontspanknop
+195072	@A0AC@ Multifunctieknop
+195120	@A0AC@ Voorste regelaar
+195168	@A0AC@ Achterste regelaar
+195220	@A0AC@@A007@-knop
+195256	@A0AC@@A0AD@-knop
+195292	@A0AC@@A034@-knop
+195328	@A0AE@ Multifunctieknop
+195376	@A0AE@ Voorste regelaar
+195424	@A0AE@ Achterste regelaar
+195476	Fn-hendeltje
+195502	@A0AF@-knop
+195526	@A010@-knop
+195550	@A082@-knop
+195574	Aanraakscherm
+195602	@A0AC@Middenknop
+195636	AF-doelmodus
+195662	AF-richtpunt
+195688	@A0AD@Richtingstoets
+195730	@A0AD@:Uit
+195752	INFO_JOY_CROSS_KEY_DIRECT_ON
+195810	Aangep. modus C1
+195844	Aangep. modus C2
+195878	Aangep. modus C3
+195912	Aangep. modus C4
+195946	Schakelt @A0A6@ aan/uit.
+195996	Schakelt @A09C@ aan/uit.
+196046	Schakelt @A09D@ aan/uit.
+196096	Schakelt @A09E@ aan/uit.
+196146	FN_DIGITAL_ND
+196174	Hiermee schakelt u opn. mkn in
+196238	live ND in/uit.
+196270	@A003@@A093@ Warme kleur
+196320	@A004@@A093@ Warme kleur
+196370	@A003@WB
+196388	@A004@WB
+196406	@A003@Alles @A094@
+196444	@A004@Alles @A094@
+196482	@A099@ MAC-adres
+196516	AF hlf ingdr. ontspnkn.
+196564	AF wordt geactiveerd wanneer
+196624	de ontspanknop half is ingedrukt
+196692	in mode3/mode4 voor S-AF of C-AF.
+196760	AF wordt niet geactiveerd wanneer
+196830	de ontspanknop half is ingedrukt
+196898	in mode3/mode4 voor S-AF of C-AF.
+196966	@A003@AEL/AFL
+196994	@A0A8@
+197008	@A0A2@
+197022	@A003@ Onderwerp volgen
+197070	Motorsport
+197092	Vliegtuigen
+197116	Treinen
+197132	Onderwerp niet geselecteerd.
+197190	Auto's en motoren worden
+197242	gedetecteerd en gevolgd.
+197292	Vliegtuigen en helikopters worden
+197362	gedetecteerd en gevolgd.
+197412	Treinen worden gedecteerd
+197466	en gevolgd.
+197490	@A003@ AF + MF
+197520	Schakelt de scherpstelring uit
+197584	in de AF-modus.
+197616	Schakelt de scherpstelring in voor 
+197690	handmatig scherpstellen
+197740	in de AF-modus.
+197772	@A003@ C-AF Centrum
+197812	@A003@ C-AF Centrum als prior.
+197874	@A003@@A0A2@-instellingen
+197926	@A003@ Ori
+197948	ntatie verb. met @A078@
+197996	@A0A9@ AF-richtpunt
+198036	@A0AA@ AF-richtpunt
+198076	@A0AB@ AF-richtpunt
+198116	@A0A9@ AF-doelmodus
+198156	@A0AA@ AF-doelmodus
+198196	@A0AB@ AF-doelmodus
+198236	@A0A3@ Modi-inst. voor doelgeb.
+198300	Formaat
+198316	Stap
+198326	@A0A4@ Formaat
+198356	@A0A5@ Formaat
+198386	@A0A6@ Formaat
+198416	@A0A7@ Formaat
+198446	@A0A4@ Stap
+198470	@A0A5@ Stap
+198494	@A0A6@ Stap
+198518	@A0A7@ Stap
+198542	@A0B9@ @A099@ Verbinden
+198590	Mijn menu
+198610	Geen item geregistreerd.
+198662	Door in het menu op de @A040@-knop
+198734	te drukken, kunt u het item
+198792	registreren in Mijn menu.
+198844	U kunt frequent gebruikte menu-
+198910	items opslaan. Alleen opgeslagen
+198978	items worden weergegeven.
+199030	Mijn menu 1
+199054	Mijn menu 2
+199078	Mijn menu 3
+199102	Mijn menu 4
+199126	Mijn menu 5
+199150	Gedetailleerde inst. voor wanneer
+199220	de ISO-gevoeligheid is ingesteld
+199288	op AUTO voor video-opn.
+199336	De witbalansfunctie selecteren
+199400	voor video-opn.
+199432	Dezelfde witbalanscompensatie
+199494	instellen voor alle functies
+199554	voor video-opn.
+199586	Behoud warme kleuren bij de
+199644	automatische witbalans voor
+199702	video-opn.
+199724	Beeldsnelheid tijdens afspelen
+199786	Film wordt opgenomen om af te
+199848	spelen in 0,5x slowmotion.
+199902	Film wordt opgenomen om af te
+199964	spelen in 0,42x slowmotion.
+200020	Film wordt opgenomen om af te
+200082	spelen in 0,25x slowmotion.
+200138	Film wordt opgenomen om af te
+200200	spelen in 0,21x slowmotion.
+200256	Film wordt opgenomen om af te
+200318	spelen in 0,2x slowmotion.
+200372	Auom. ISO-gevoeligheid is niet
+200436	beschikbaar wanneer @A004@-modus
+200504	is ingesteld op M.
+200542	Auom. ISO-gevoeligheid is
+200596	beschikbaar wanneer @A004@-modus
+200664	is ingesteld op M.
+200702	@A004@ C-AF-snelheid
+200744	Selecteert de scherpstelsnelh.
+200808	Van C-AF voor video-opn.
+200858	@A004@C-AF-gevoeligheid
+200906	De vergrendelgevoeligheid van
+200968	C-AF aanpassen op de beweging
+201030	van uw onderwerp voor video-opn.
+201096	Snel
+201106	Langzaam
+201124	@A004@ IS-niveau
+201158	Stelt IS-niveau in voor video-opn.
+201230	Kies Laag voor een vloeiendere
+201294	beweging tijdens het pannen.
+201352	@A0A0@Weergavehulp
+201390	Wanneer dit is ingesch., worden
+201456	kleuren en helderh. aangepast
+201518	voor optim. weerg. tijdens @A0A0@.
+201588	Het beeld verschijnt in de
+201644	geselecteerde beeldmodus.
+201696	Beeld geconverteerd naar
+201748	BT.709-equivalent voor display.
+201814	Verschilt van opgenomen beeld.
+201876	De PCM-recorder cre
+201916	ert een
+201934	slate tone wanneer de @A083@-knop
+202004	ingedrukt en vastgehouden
+202058	wordt tijdens video-opname.
+202114	Opnamekwaliteit
+202146	Kiest de geluidskwaliteit.
+202200	Mijn menu is vol.
+202236	Toegevoegd aan Mijn menu.
+202288	Verplaatsen naar nieuwe positie.
+202354	Dit item verwijderen
+202396	Dit @A0A1@-tabblad verwijderen
+202458	Het geselecteerde item wordt
+202518	verwijderd uit Mijn menu.
+202570	Alle items in het geselecteerde
+202636	@A0A1@-tabblad worden verwijderd
+202704	uit Mijn menu.
+202734	Volgorde wijzigen
+202770	Mijn menu om toe te voegen.
+202826	@A0B3@-batterij
+202858	@A0B4@-batterij
+202890	Zodra de batterij in de @A0B3@ leeg is,
+202972	wordt de batterij in de @A0B4@ gebruikt.
+203054	Zodra de batterij in de @A0B4@ leeg is,
+203136	wordt de batterij in de @A0B3@ gebruikt.
+203218	Elevatie kalibreren
+203258	Stel de huidige elevatie in.
+203316	Elevatie/temperatuur
+203358	TEMPERATURE_UNIT
+203392	ELEVATION_UNIT
+203422	Sleuf selecteren om in op te slaan
+203492	@A078@ Bezig met logboeken opslaan
+203562	@A079@ Bezig met logboeken opslaan
+203632	@A0BD@ Bezig met logboeken opslaan
+203702	@A078@ De kaart is vol
+203748	@A079@ De kaart is vol
+203794	Indr.-en-vasth. van @A083@ tijdens
+203866	video-opnamen en de PCM-
+203918	recorder voegt een slate tone toe.
+203988	Verbinding maken met
+204032	smartphone of toegangspunt
+204088	via de draadloze functies.
+204142	Maakt en combineert
+204184	meerdere foto's voor een 
+204238	beeld met superh. resolutie.
+204296	Geeft een lage sluitertijd,
+204354	waardoor het lijkt alsof u het
+204418	grijsfilter (ND-filter) hebt gebruikt.
+204496	A4. AF/MF
+204516	B1. Knop/Schakelaar/Hendel
+204570	B2. Knop/Schakelaar/Hendel
+204624	J3. @A003@ Hulpprogramma
+204674	@A003@C-AF-gevoeligheid
+204722	Registreert de standaard
+204774	AF-modus/AF-doelmodus en
+204826	het standaard AF-richtpunt.
+204882	De vergrendelgevoeligheid van
+204944	C-AF aanpassen op de beweging
+205006	van uw onderwerp voor fotografie.
+205074	De items waarvoor @A03F@ is geselect.,
+205154	verschijnen tijdens het kiezen van
+205226	de AF-doelmodus voor fotografie.
+205292	Selecteer Inschakelen om handm.
+205358	scherpstellen in te schakelen voor
+205430	alle AF-modi voor fotografie.
+205490	Bij @A03F@ geselecteerd in @A0A2@
+205560	wordt C-AF/C-AF+TR uitgevoerd
+205622	in het midden van het beeld.
+205680	Bij @A03F@ gesel. in @A0A2@ krijgt het
+205760	midden van het beeld in C-AF-
+205822	modus prior. over andere punten.
+205888	Stel het formaat van het
+205940	doelgebied en de stap cursor-
+206002	positie in tijdens het bewegen.
+206066	Bij het mkn van opn. kunnen items
+206136	waarvoor @A03F@ is gesel. afz. worden 
+206216	ingest. op hor. of vert. posities.
+206286	Kies het te volgen onderwerp
+206346	voor fotografie. Geldig in C-AF+TR.
+206418	Selecteer functie voor
+206466	toewijzen multifunctieknop
+206522	opnemen aan @A0AC@ middenknop.
+206584	Selecteer functie voor
+206632	toewijzen multifunctieknop
+206688	opnemen aan @A0AD@ richtingstoets.
+206758	Tijdens @A0AB@ worden
+206804	bewerkingen die op @A03E@ zijn
+206868	ingesteld, uitgeschakeld.
+206920	Kies de bed.elementen die worden
+206988	weerg. wanneer @A083@ is ingedr. in de
+207068	opn.modus.
+207090	Verminder flikkering door de
+207150	frequentie te wijzigen.
+207198	Gedetailleerde inst. voor wanneer
+207268	de ISO-gevoeligheid is ingesteld
+207336	op AUTO voor fotografie.
+207386	De opn.functies kiezen waarbij
+207450	de autom. ISO-gevoeligheid
+207506	beschikbaar is voor fotografie.
+207570	Selecteert beeldverwerkings- 
+207632	methode met lage ISO-waarde
+207690	voor fotografie.
+207724	De witbalansfunctie selecteren
+207788	voor fotografie.
+207822	Dezelfde witbalanscompensatie
+207884	instellen voor alle functies
+207944	voor fotografie.
+207978	Behoud warme kleuren bij de
+208036	automatische witbalans voor
+208094	fotografie.
+208118	Pas de elevatie- en
+208160	temperatuurinstellingen aan.
+208218	Veldsensorlogger
+208252	Verzamelt gegevens van de
+208306	veldsensor en slaat deze
+208358	op de kaart op als een logboek.
+208422	Registr. starten
+208456	Registr. stopz.
+208488	Registr. opslaan
+208522	Bezig
+208534	Gestopt
+208550	@A002@ Gestopt
+208584	ft
+208590	Abu Dhabi
+208610	Adelaide
+208628	Alaska
+208642	Anchorage
+208662	Athens
+208676	Auckland
+208694	Azores
+208708	Bangkok
+208724	Beijing
+208740	Berlin
+208754	Buenos Aires
+208780	Cairo
+208792	Casablanca
+208814	Chennai
+208830	Chicago
+208846	Colombo
+208862	Delhi
+208874	Denver
+208888	Dhaka
+208900	Dubai
+208912	Fernando de Noronha
+208952	Fiji
+208962	Guam
+208972	Hawaii
+208986	Helsinki
+209004	Hong Kong
+209024	Honolulu
+209042	Houston
+209058	Islamabad
+209078	Jakarta
+209094	Johannesburg
+209120	Kabul
+209132	Karachi
+209148	Kathmandu
+209168	Kolkata
+209184	Kuala Lumpur
+209210	Kuwait
+209224	La Paz
+209238	Lima
+209248	London
+209262	Los Angeles
+209286	Madrid
+209300	Male
+209310	Manaus
+209324	Mexico City
+209348	Miami
+209360	Midway Islands
+209390	Moscow
+209404	Mumbai
+209418	Nairobi
+209434	New Caledonia
+209462	New York
+209480	Newfoundland
+209506	Paris
+209518	Phoenix
+209534	Rio de Janeiro
+209564	Riyadh
+209578	Rome
+209588	Samoa
+209600	Sao Paulo
+209620	Seattle
+209636	Seoul
+209648	Singapore
+209668	Solomon Islands
+209700	Sydney
+209714	Tahiti
+209728	Taipei
+209742	Tehran
+209756	Tokyo
+209768	Toronto
+209784	Vancouver
+209804	Wellington
+209826	Yangon
+209840	UTC
+209848	ART16
+209860	FHD HighSpeed 120fps
+209902	ND32(5EV)
+209922	ND16(4EV)
+209942	ND8(3EV)
+209960	ND4(2EV)
+209978	ND2(1EV)
+209996	LV OFF-Info
+210020	ISO L64
+210036	ISO L80
+210052	ISO L100
+210070	ISO L125
+210088	ISO L160
+210106	@A0D1@LOCK
+210128	@A0AE@@A010@
+210154	@A0AE@@A0AD@
+210180	@A0AE@@A007@
+210206	@A0AE@@A03F@
+210232	@A0AE@@A03C@
+210258	@A0AE@@A0CB@
+210284	@A0AE@@A034@
+210310	@A0AE@@A0CC@
+210336	@A0AE@@A0CD@
+210362	@A0AE@@A0CE@
+210388	@A0AE@@A0CF@
+210414	@A0AE@@A0D0@
+210440	@A0AC@@A0AD@
+210466	@A0AC@@A007@
+210492	@A0AC@@A034@
+210518	@A0AC@@A0CF@
+210544	@A0AC@@A0D0@
+210570	S-AF@A0BC@
+210592	C-AF@A0BC@
+210614	C-AF+TR@A0BC@
+210642	USB PD
+210656	@A0C8@PC RAW
+210682	96kHz/24bit
+210706	48kHz/16bit
+210730	COMM_MODE_B
+210754	Verbinding opzetten
+210794	Volg de stappen om verbinding
+210856	te maken met apparaat. Dit is
+210918	slechts 1 keer nodig. @A08F@/Bluetooth
+210998	wordt tijdens deze procedure
+211058	ingeschakeld.
+211086	Installeer de OI.Share-app
+211142	op uw apparaat. Druk op @A019@
+211206	nadat het installeren is voltooid.
+211276	Scan de QR-code met de
+211324	OI.Share-app.
+211352	Bezig met gegevensoverdracht...
+211416	Uitschakelen...
+211448	@A018@Uitschakelen
+211486	Apparaatverbinding
+211524	Aansluiten op een apparaat.
+211580	Verbindingsgegevens@A01A@
+211632	Apparaatverbinding
+211670	Verbinding met toegangspunt
+211726	Zoeken naar toegangspunt...
+211782	Verbinding maken met toegangspunt...
+211856	Verbinding maken via WPS
+211906	Verb. mkn vanaf lijst v. toegansp.
+211976	Handmatig verbinden
+212016	Inst. specific.
+212048	Nu niet beschikbaar
+212088	Sommige opnamen zijn niet overgezet.
+212162	PBC-methode
+212186	PIN-methode
+212210	Maak verbinding door te drukken
+212276	op de WPS-knop van het
+212324	toegangspunt.
+212352	Maak verbinding door de PIN-code
+212420	in te voeren bij het
+212464	toegangspunt.
+212492	Druk op de WPS-knop van
+212542	het toegangspunt. 
+212582	Er wordt verbinding gemaakt 
+212642	zodra u op @A083@ hebt gedrukt.
+212706	Voer de bovenstaande PIN-code
+212768	in bij het toegangspunt.
+212820	Er wordt verbinding gemaakt
+212878	zodra u op @A083@ hebt gedrukt.
+212942	Initi
+212954	le configuratie is vereist
+213010	om te verbinden met de pc via @A099@.
+213088	Volg de instructies in Olympus
+213152	Capture. Initi
+213182	le configuratie is
+213222	vereist voor elke computer.
+213278	RESULT_WPS_NG
+213306	Verbinding maken mislukt
+213356	Toegangspunt niet gevonden
+213410	@A099@ is bezig
+213442	Verbinding verbreken
+213484	Verbinding behouden
+213524	Wachtwoord
+213546	Pc selecteren om mee te verbinden
+213614	Verwijderen
+213638	De verbindingsinst. voor dit
+213698	toegangspunt verwijderen van
+213758	de camera.
+213780	IP_SETTING
+213802	IP-adres
+213820	Subnetmasker
+213846	Standaardgateway
+213880	IP-adres toewijzen
+213918	Autom. (DHCP)
+213946	Handmatig
+213966	Instellingen bijwerken
+214012	Beschikbaar wanneer het
+214062	toegangspunt de DHCP-functie
+214122	ondersteunt. IP-adres wordt
+214180	automatisch toegewezen.
+214228	IP-adres handmatig invoeren.
+214286	Verificatie
+214310	Geen
+214320	Start met verbinden
+214360	Toegangspunt niet gevonden
+214414	Opnieuw zoeken@A033@
+214456	@A0BA@@A03F@/@A01B@@A01C@
+214508	@A0BA@@A03F@
+214534	Verbinden@A019@
+214566	Sluiten@A018@
+214594	Verbinding met de pc
+214636	Verbinding met de pc be
+214684	indigd
+214698	Camera is verbonden met de pc.
+214762	Opnamen worden autom. overgezet
+214828	naar de pc.
+214852	Verbinding met de pc is verbroken.
+214922	@A002@ Losgekoppeld van de pc.
+214986	Controleer de status van de pc.
+215050	@A002@ Verbinding met het netwerk is
+215126	verbroken. Controleer de status van
+215200	@A099@ en maak opn. verbinding met
+215272	het toegangspunt.
+215308	@A09F@ Vlak
+215332	DNS
+215340	WPA2
+215350	Statief
+215366	Hand-held
+215386	Afbeeldingsoverdr. naar pc annul. 
+215458	en verbinding verbreken.
+215508	Hoog
+215518	Laag
+215528	Door tijdens het opnemen
+215580	op de @A0AD@ te drukken, kunt u
+215646	het AF-gebied selecteren.
+215698	NOISE_REDUCTION_STANDARD
+215748	NOISE_REDUCTION_QUALITY
+215796	INFO_S_NOISE_REDUCTION_STANDARD
+215860	INFO_S_NOISE_REDUCTION_QUALITY
+215922	M/B
+215930	@A0D5@
+215944	@A0F8@
+215958	@A078@ Scherminst. selecteren
+216018	S_NOISE_REDUCTION_LEVEL
+216066	m/ft
+216076	@A0D3@/@A0D4@
+216104	Opladen
+216120	Bwgng als prior.
+216154	Details als prior.
+216192	Bij lage ISO-waarden krijgt
+216250	het maximum aantal opeen-
+216304	volgende opnamen prioriteit
+216362	bij de beeldverwerking
+216410	voor fotografie.
+216444	Bij lage ISO-waarden krijgen
+216504	beelddetails prioriteit
+216554	bij de beeldverwerking
+216602	voor fotografie.
+216636	@A0BD@ OM-Log400
+216670	@A003@@A09A@ @A094@
+216710	@A004@@A09A@ @A094@
+216750	2u
+216756	5u
+216762	@A006@@A040@Functie
+216802	Kies functie om @A040@
+216850	toe te wijzen
+216880	tijdens afspelen.
+216916	Instellingen voor @A04D@
+216966	Instellingen voor @A017@
+217016	@A0AC@AF AEL/AFL
+217050	Starry Sky AF is actief
+217098	Starry Sky AF
+217126	Starry Sky AF + MF
+217164	Starry Sky AF-instell.
+217210	Kies een modus voor
+217252	Starry Sky AF.
+217282	Nauwkeurigheid
+217312	Snelheid
+217330	AF-nauwkeurigheid krijgt
+217382	voorrang op AF-snelheid.
+217434	Verwerkingstijd benodigd
+217486	totdat AF is voltooid.
+217532	AF-snelheid krijgt voorrang
+217590	op AF-nauwkeurigheid.
+217634	Vergrendel. focusring
+217678	Schakelt focusring uit
+217726	in handmatige focusmodus.
+217780	Druk opnieuw om terug te keren.
+217844	LV versterk.
+217870	Schakelt LV versterk. aan/uit.
+217934	Druk in en draai keuzeknop
+217990	om de instellingen te selecteren.
+218058	LV versterk. Aan1
+218102	Instell. aangep. mod. opslaan
+218162	Vasthouden
+218184	Reset
+218196	Tijdens opnemen in aangep. modus
+218264	worden gewijzigde instell. autom.
+218334	opgeslagen.
+218358	Tijdens opnemen in aangep. modus
+218426	worden gew. instell. niet opgeslagen.
+218502	@A008@Gezichtsselectie
+218548	Druk knop in om een gezicht te select.
+218628	dicht bij het geselecteerde AF-doel.
+218704	Druk knop in en draai keuzeknop
+218770	om handmatig te selecteren.
+218826	@A008@Gezichtsprio.
+218866	Schakelt @A008@Gez.prioriteit aan/uit.
+218946	Druk in en draai keuzeknop
+219002	om de instellingen te selecteren.
+219070	Gezichtsprioriteit AF
+219122	@A078@ Loop-instellingen
+219172	Instellingen voor cursor-
+219226	bewegingen in het AF-doel
+219280	selectiescherm.
+219312	@A078@ Loop-selectie
+219354	Loop 1
+219368	Loop 2
+219382	Stopt na verplaatsen van AF-doel
+219450	naar de rand.
+219478	Beweegt het AF-doel naar het
+219538	tegenoverliggende einde van
+219596	dezelfde rij of kolom na het
+219656	verplaatsen van het AF-doel
+219714	tot over de rand.
+219750	Verplaatst het AF-doel
+219798	naar het tegenoverliggende einde
+219866	van de volgende rij of kolom
+219926	na verplaatsen van het AF-doel
+219990	tot over de rand.
+220026	Via @A0AD@
+220048	@A0AD@ wordt geselecteerd
+220102	voor het verplaatsen van het AF-doel
+220178	naar het tegenoverliggende einde.
+220246	@A0AD@ wordt niet geselecteerd
+220310	voor het verplaatsen van het AF-doel
+220386	naar het tegenoverliggende einde.
+220454	RAW+JPEG @A041@
+220486	Alleen voorselectie van JPEG
+220546	voor overdracht naar een apparaat
+220616	indien ingesteld op RAW+JPEG.
+220676	Alleen voorselectie van RAW
+220734	voor overdracht naar een apparaat
+220804	indien ingesteld op RAW+JPEG.
+220864	Voorselectie van RAW+JPEG
+220918	voor overdracht naar een apparaat
+220988	indien ingesteld op RAW+JPEG.
+221048	Focus-indicator
+221080	De focus-indicator wordt niet
+221142	weergegeven als de focusring
+221202	naar MF-modus wordt gedraaid.
+221262	The focusrichting en -positie
+221324	worden weergegeven als de
+221378	focusring naar MF-modus wordt
+221440	gedraaid. Deze functie helpt bij
+221508	het instellen van de focus.
+221564	Live Composiet-timer
+221606	Stel de maximumtijd in
+221654	voor composietopnamen.
+221700	3u
+221706	6u
+221712	Opname-informatie
+221748	@A0BD@Vergr.
+221774	Kies Aan om @A0BD@ uit te schak.
+221842	Geeft frame weer
+221878	terwijl sluiterknop
+221920	half ingedrukt is.
+221960	Het frame wordt altijd weergegeven
+222032	in de modus Film opnemen. (@A0AD@, C-AF)
+222114	Door in het menu op de @A040@-knop
+222186	te drukken, kunt u het item
+222244	registreren in Mijn menu.
+222296	@A0AC@AF
+222314	@A0AC@AF@A0BC@
+222344	AEL/@A0AC@AF
+222370	@A0AC@AF Start/Stop
+222410	AF krijgt prioriteit voor
+222464	gedetecteerde gezichten.
+222514	AF krijgt prioriteit voor het
+222576	geselecteerde doel, zelf als
+222636	gezichten worden gedetecteerd.
+222698	LV versterk. Uit
+222732	LV versterk. Aan2
+222768	Voorselectie voor overdracht: 
+222832	maak een voorselectie van 
+222888	foto's om naar het apparaat 
+222948	over te zetten.
+222980	Meerdere foto's selecteren: 
+223040	kies meerdere foto's om een 
+223100	bepaalde actie toe te passen, 
+223164	bijvoorbeeld beveiligen 
+223216	of verwijderen.
+223248	De oogsensor inschakelen
+223300	wanneer de monitor
+223340	is uitgeschakeld.
+223378	@A03D@: live view Aan/Uit.
+223432	RAW-modus
+223452	Voert video in RAW-indeling uit 
+223520	naar een ondersteund apparaat. 
+223586	Kan niet worden opgeslagen
+223642	op de kaart in de camera.
+223694	Foto's maken om een panorama
+223754	te maken op de pc.
+223792	Voor opnamen van besneeuwde
+223850	bergen, landschappen, witte
+223908	stranden enz.
+223936	Voor opnamen bij kaarslicht. 
+223998	Weergave van warme kleuren.
+224054	Voor opnamen van documenten 
+224114	enz. Vergroot het contrast tussen 
+224186	letters en achtergrond.
+224234	Zachte huidtinten voor
+224282	weergave op HDTV.
+224318	Voor opnamen van landschappen. 
+224384	Levendige weergave van blauw 
+224446	en groen.
+224466	Voor niet-wazige
+224502	opname van snel
+224536	bewegende onderwerpen.
+224582	Voor opnamen van zonsopgang/
+224642	-ondergang. Levendige weergave 
+224708	van rood en geel.
+224744	HDR-verlichting
+224776	Maakt een opname met 
+224822	optimale helderheid door een 
+224884	aantal beelden te combineren.
+224944	Binnenshuis
+224968	Beweging
+224986	Nachtlandschappen
+225022	Personen
+225040	Landschap
+225060	Leg vuurwerk vast bij
+225106	een lagere sluitersnelheid.
+225164	Het gebruik van een statief
+225222	is aanbevolen.
+225252	Voor opname van hoofdonderwerp
+225316	en achtergrond. Levendige weergave
+225388	van blauw en groen.
+225428	Beelden worden in serie vastgelegd en
+225506	samengevoegd. Registreert alleen
+225574	gebieden met gewijzigde helderheid.
+225648	Perfect voor lichtstrepen. Het gebruik
+225728	van een statief is aanbevolen.
+225790	Leg met pop-up@A00A@ menselijke
+225856	onderwerpen vast tegen prachtige
+225924	nachtlandschappen. Hiervoor wordt
+225994	een trage sluitersnelheid gebruikt. Het
+226076	gebruik van een statief is aanbevolen.
+226154	Leg prachtige nachtlandschappen vast
+226230	bij een lagere sluitersnelheid.
+226296	Het gebruik van een statief
+226354	is aanbevolen.
+226384	Voor portretfoto's.
+226424	Kaarslicht
+226446	Kinderen
+226464	e-Portret
+226484	Lichtstrepen
+226510	Multifocusopname
+226544	Close-ups
+226564	Voor close-upfoto's.
+226606	Voor close-upnatuurfoto's.
+226662	Maakt meer levendige macro-opnamen
+226734	dan standaardmacro.
+226774	Perfect voor foto's waarbij
+226832	geluid en licht van de camera
+226894	ongunstig zijn. @A001@, Flits en AF-
+226970	hulpverl. worden gedeactiveerd.
+227034	Maakt meerdere foto's tegelijk op
+227104	verschillende focusposities.
+227162	Apparaatverbinding
+227200	Aansluiten op een apparaat.
+227256	Deze functie vereist een compatibele lens.
+227344	Plaats een compatibele lens.
+227402	C-instellingen toepassen? Huidige
+227472	camera-inst. worden overschreven.
+227540	Aangepaste modus C
+227578	Bezig
+227590	@A08F@/Bluetooth ingeschakeld
+227652	om verbinding te maken.
+227700	@A08F@/Bluetooth is volledig
+227760	uitgeschakeld, geen verbinding
+227824	mogelijk.
+227844	Bluetooth
+227864	Draadloze functies
+227902	Aan@A0AE@
+227922	Aan@A0AF@
+227942	Schakelt Bluetooth uit.
+227992	Bluetooth is altijd uitgeschakeld
+228062	wanneer de voeding is ingeschakeld.
+228134	Schakelt Bluetooth in.
+228182	Bluetooth is altijd ingeschakeld voor
+228260	de draadloze sluiterknop
+228312	wanneer de voeding is ingeschakeld.
+228384	Schakelt Bluetooth in.
+228432	Bluetooth is altijd ingeschakeld voor
+228510	smartphones wanneer de voeding
+228574	is ingeschakeld.
+228608	Het koppelen is voltooid.
+228662	De Bluetooth-instelling
+228712	is gewijzigd in Aan@A0AE@.
+228766	Bezig met koppelen.
+228808	Voer de koppelingsbewerking uit op
+228880	de draadloze sluiterknop.
+228932	Verwijder het gekoppelde apparaat.
+229004	Koppelen is opnieuw vereist bij
+229070	gebruik van de draadloze sluiter.
+229138	Instelling draadloze sluiter
+229196	Start koppelen
+229226	Koppelen ongedaan maken
+229274	AF hulpverl.
+229300	Kleurruimte
+229324	Belichtingsegalisatie
+229368	Firmwareversie
+229398	Werkt in de P/A/S/M-
+229442	belichtingsprogramma's.
+229490	Intervalmodus
+229518	Prior.: beelden
+229550	Prior.: tijd
+229576	Stelt in welke actie wordt uitgevoerd
+229654	wanneer de USB is verbonden.
+229712	Beeldweergave
+229740	Webcam
+229754	Draai de modusknop naar @A004@.
+229818	Aangep. modus C2
+229852	Aangep. modus C3
+229886	Aangep. modus C4
+229920	Aangep. modus C
+229952	Schakelt @A0B1@ aan/uit.
+230002	Geeft voorrang aan het volgen van
+230072	het aantal opn. Slaat de volgende opn.
+230152	over nadat de intervaltijd verloopt,
+230228	zodra de recente opn. zijn vastgelegd.
+230306	Geeft voorrang aan het volgen van de
+230382	intervaltijd. Slaat de volgende
+230448	opname over wanneer het ingestelde
+230520	interval niet kan worden gevolgd.
+230588	De opnamebelichting voor 
+230642	elk beeld gebruikt het 
+230692	meetresultaat voor dat beeld.
+230752	Standaardiseert de opnamebelichting
+230826	voor alle beelden. Egaliseert de
+230894	veranderingen in luminantie in 
+230960	gerenderde time-lapsevideo's.
+231020	@A002@ Verwijdert alle automatisch
+231092	gescheiden bestanden van 
+231146	n film.
+231162	P/A/S/M/B
+231182	P/A/S/M
+231198	@A0BE@ Control
+231228	Rood kader tijd. @A0B0@
+231276	Als dit is ingesteld op Aan, wordt
+231348	een rood kader rondom het scherm
+231416	getoond tijdens video-opnamen.
+247614	OlympusLanguage_nldtft

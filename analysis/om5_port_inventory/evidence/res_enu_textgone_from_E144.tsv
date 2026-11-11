@@ -1,0 +1,436 @@
+@A002@ Reset all @A08F@ and Bluetooth / settings?
+@A003@@A01E@ @A094@
+@A003@@A01F@ @A094@
+@A003@@A020@ @A094@
+@A003@@A021@ @A094@
+@A003@@A024@
+@A003@@A036@5500K @A094@
+@A003@@A093@ Keep Warm Color
+@A003@@A095@5300K @A094@
+@A003@@A096@7500K @A094@
+@A003@@A097@6000K @A094@
+@A003@@A098@3000K @A094@
+@A003@@A099@4000K @A094@
+@A003@@A09A@ @A094@
+@A003@@A0A2@Settings
+@A003@AF+MF
+@A003@All @A094@
+@A003@Auto @A094@
+@A003@C-AF Center Priority
+@A003@CWB @A094@
+@A003@ISO Extension
+@A003@ISO-Auto
+@A003@Low ISO Processing
+@A003@Orientation Linked @A078@
+@A003@Save Settings
+@A003@Save Slot
+@A004@@A01E@ @A094@
+@A004@@A01F@ @A094@
+@A004@@A020@ @A094@
+@A004@@A021@ @A094@
+@A004@@A024@
+@A004@@A036@5500K @A094@
+@A004@@A093@ Keep Warm Color
+@A004@@A095@5300K @A094@
+@A004@@A096@7500K @A094@
+@A004@@A097@6000K @A094@
+@A004@@A098@3000K @A094@
+@A004@@A099@4000K @A094@
+@A004@@A09A@ @A094@
+@A004@AF Mode
+@A004@All @A094@
+@A004@Auto @A094@
+@A004@Button Function
+@A004@C-AF Sensitivity
+@A004@C-AF Speed
+@A004@CWB @A094@
+@A004@Dial Function
+@A004@Elec. Zoom Speed
+@A004@Flicker Scan
+@A004@Fn Lever Function
+@A004@HDMI Output
+@A004@IS Level
+@A004@ISO
+@A004@Image Stabilizer
+@A004@Info Settings
+@A004@Kelvin
+@A004@Mode
+@A004@Noise Filter
+@A004@Picture Mode
+@A004@Recommended ISO
+@A004@Shutter Function
+@A004@WB
+@A006@@A040@Function
+@A006@@A07A@Default Setting
+@A006@@A07A@Info
+@A006@Slot
+@A007@Function
+@A008@Face Selection
+@A009@+@A007@
+@A00A@ RC Mode
+@A00A@ Slow Limit
+@A00A@ X-Sync.
+@A00A@+WB
+@A00A@/FP
+@A00A@Charge Time
+@A00B@
+@A00C@
+@A00D@
+@A00E@
+@A00F@ Settings
+@A010@ :Off
+@A010@ button
+@A013@/@A014@
+@A013@/@A014@ direct setting.
+@A013@Image Stabilizer
+@A014@ Timer
+@A014@/@A028@
+@A017@ Start
+@A017@Plug-in Power
+@A017@Volume Limiter
+@A020@
+@A021@
+@A022@ Settings
+@A023@
+@A024@
+@A025@
+@A028@
+@A02A@ 12 sec
+@A02A@ 2 sec
+@A036@ 5500K
+@A037@iddle
+@A038@mall
+@A039@@A03A@
+@A03B@
+@A03C@ Half Way Level
+@A03C@ Info Settings
+@A03C@Level Disp
+@A03D@ View Selection
+@A03E@+Shutter Button
+@A03F@@A019@
+@A040@: Change connection passwords. / New passwords will be generated / automatically.
+@A040@: Start/stop movie recording.
+@A040@REC
+@A041@@A02F@
+@A043@Color Creator
+@A044@e-Portrait
+@A045@Lock
+@A046@ Settings
+@A046@Lock
+@A049@ Keep Warm Color
+@A04D@ Settings
+@A052@Soft Focus
+@A053@Light Tone
+@A054@Gentle Sepia
+@A055@Pop Art@A04F@
+@A057@Pale&Light Color@A04F@
+@A059@Grainy Film@A04F@
+@A05B@Pin Hole@A04F@
+@A05E@Diorama@A04F@
+@A060@Cross Process@A04F@
+@A062@Dramatic Tone@A04F@
+@A064@Key Line@A04F@
+@A066@Watercolor@A04F@
+@A068@Vintage@A04F@
+@A06B@Partial Color@A04F@
+@A06E@Soft Focus Effect
+@A06F@Pin Hole Effect
+@A070@White Edge Effect
+@A071@Frame Effect
+@A072@Star Light Effect
+@A073@Blur Effect: Top and Bottom
+@A074@Blur Effect: Left and Right
+@A075@Shade Effect: Left and Right
+@A076@Shade Effect: Top and Bottom
+@A078@ Loop Selection
+@A078@ Loop Settings
+@A078@/@A079@Card Full
+@A078@@A003@@A024@
+@A078@@A004@@A024@
+@A078@@A01C@
+@A078@Cannot Select Folder
+@A078@Card Full
+@A078@Caution Image Cannot Be Selected
+@A078@Error / @A079@Full
+@A078@Error / @A079@Protected
+@A078@Face Detect Error
+@A078@Full / @A079@Error
+@A078@Full / @A079@Protected
+@A078@Home
+@A078@No Card
+@A078@No Picture
+@A078@Picture Error
+@A078@Protected / @A079@Error
+@A078@Protected / @A079@Full
+@A078@Select Screen Settings
+@A078@Set Home
+@A078@Spot Metering
+@A078@The Image Cannot Be Edited
+@A079@
+@A079@@A003@@A024@
+@A079@@A004@@A024@
+@A079@Cannot Select Folder
+@A079@Card Full
+@A079@Caution Image Cannot Be Selected
+@A079@Face Detect Error
+@A079@No Card
+@A079@No Picture
+@A079@Picture Error
+@A079@The Image Cannot Be Edited
+@A07A@Picture Error
+@A07B@Picture Error
+@A07D@ to update distance
+@A07F@i-Enhance
+@A080@Muted
+@A081@Underwater
+@A082@Soft Focus Effect
+@A083@Pin Hole Effect
+@A084@White Edge Effect
+@A085@Frame Effect
+@A086@Star Light Effect
+@A087@Blur Effect: Top and Bottom
+@A088@Blur Effect: Left and Right
+@A089@Flat
+@A089@Shade Effect: Left and Right
+@A08A@Shade Effect: Top and Bottom
+@A08B@ @A01A@
+@A08C@Bleach Bypass@A04F@
+@A08D@Bleach Bypass@A050@
+@A08E@Instant Film
+@A08F@/Bluetooth Settings
+@A08F@/Bluetooth connection can be / initiated by a device even when / power is off.
+@A08F@/Bluetooth connection cannot / be initiated by a device when power / is off.
+@A08F@/Bluetooth is completely / deactivated and a connection / cannot be initiated.
+@A08F@/Bluetooth is made available / for a connection.
+@A091@/@A092@Correction
+@A093@ Keep Warm Color@A01A@
+@A095@ 5300K
+@A096@ 7500K
+@A097@ 6000K
+@A098@ 3000K
+@A099@ 4000K
+@A09B@ISO-Auto
+@A09B@ISO-Auto Set
+@A09F@ Flat
+@A0A0@View Assist
+@A0A2@
+@A0A3@Target Mode Settings
+@A0A4@Size
+@A0A4@Step
+@A0A5@Size
+@A0A5@Step
+@A0A6@Size
+@A0A6@Step
+@A0A7@Size
+@A0A7@Step
+@A0A8@
+@A0A9@AF Target Mode
+@A0A9@AF Target Point
+@A0AA@AF Target Mode
+@A0AA@AF Target Point
+@A0AB@AF Target Mode
+@A0AB@AF Target Point
+@A0AC@AF
+@A0AC@AF AEL/AFL
+@A0AC@AF Start/Stop
+@A0AC@AF@A0BC@
+@A0AC@Center Button
+@A0AD@ :Off
+@A0AD@ will be selected / before moving the AF target / to the opposite end.
+@A0AD@ will not be selected / before moving the AF target / to the opposite end.
+@A0AD@Direction Key
+@A0B2@arge
+@A0B3@/Value
+@A0B4@ 4
+@A0B5@ 9
+@A0B6@ 100
+@A0B6@ 25
+@A0B7@
+@A0B8@
+@A0B9@Vivid
+@A0BA@Natural
+@A0BB@Portrait
+@A0BD@ OM-Log400
+@A0BD@Lock
+@A0BE@ Control
+@A0C0@
+@A0C1@
+@A0C2@
+@A0C3@
+@A0C4@
+@A0C5@
+@A0C6@
+@A0C7@
+@A0C8@
+@A0C9@
+@A0CA@
+@A0CB@
+AEL/@A0AC@AF
+ART10@A04F@
+ART11@A04F@
+ART12@A04F@
+ART13@A04F@
+ART14@A04F@
+ART15@A04F@
+ART1@A04F@
+ART3@A04F@
+ART5@A04F@
+ART6@A04F@
+ART7@A04F@
+ART8@A04F@
+Activate @A08F@/Bluetooth Power-off / Standby so images can be imported / while power is off?
+Adjust @A08F@ and Bluetooth / settings.
+All items in the selected @A0A1@ tab / will be removed from My Menu.
+Anti-Shock@A04E@
+Apply creative effects.
+Assign function to shutter  / button when in @A004@ mode.
+Auto@A006@
+Automatic settings applied to / the Scene mode you select.
+Bleach Bypass@A04F@
+Bleach Bypass@A050@
+Built-In @A017@
+By attaching MCON-P02 to / 14-42mm EZ, you can take close / up photos of small items.
+By pressing @A0AD@ during shooting, / you can select the AF target area.
+By pressing the @A010@ button during / shooting, you can select / the AF target area.
+By pressing the @A040@ button / during menu, you can register / the item to My Menu.
+C-AF+TR@A0BC@
+C-AF@A0BC@
+Camera is connected to PC. / Recorded images are automatically / transferred to PC.
+Camera selects the ideal mode / for the subject being shot. / Live Guide menu is accessible.
+Capture WB@A01A@
+Capture beautiful nightscapes / at a slower shutter speed. / Tripod use is recommended.
+Captures fast-moving action  / without blurring.
+Choose a movie record mode / while @A004@ mode.
+Choose the controls displayed / when the @A035@ is pressed / in each shooting mode.
+Choose the controls displayed / when the @A035@ is pressed / when in movie mode.
+Choose the information displayed / when the @A01A@ is pressed. / Enable while @A03C@.
+Choose the pixel count for / @A037@ and @A038@.
+Color / Vivid
+Copy All
+Cross Process@A04F@
+Cross Process@A050@
+Delete entire @A004@
+Designate the functions  / to be included in multi  / function by applying @A03F@.
+Dial @A011@ :  / Fno. Shutter upper
+Dial @A012@ :  / Fno. Shutter upper
+Diorama@A04F@
+Diorama@A050@
+Disable the eye sensor. / @A03D@: to switch between monitor / display and EVF display.
+Displays frame while shutter / button is half-pressed. / The frame will be always displayed / in movie shooting mode. (@A0AD@, C-AF)
+Dramatic Tone@A04F@
+Dramatic Tone@A050@
+Dual Independent@A081@
+Dual Independent@A082@
+Dual Same@A081@
+Dual Same@A082@
+E1. Exp/ISO/BULB/@A077@
+E2. Exp/ISO/BULB/@A077@
+E3. Exp/ISO/BULB/@A077@
+Enable the eye sensor / when the monitor is closed. / @A03D@: live view On/Off.
+Enable the eye sensor. / @A03D@: live view On/Off.
+End @A006@@A07A@
+End @A042@
+End @A07C@
+End LV@A07A@
+Enter PIN code displayed above / on the access point. / Connection starts / after you press @A083@.
+Exit@A019@
+Follow next steps to connect to a / device. This setup is required / only once. @A08F@/Bluetooth will be / activated during the setup.
+For @A03F@ selected in @A0A2@, / C-AF/C-AF+TR operates / in the center area of the area.
+For @A03F@ selected in @A0A2@, the / center of the area takes priority / over other points when in C-AF.
+For close-up nature photography. / Captures more vivid macro shots / compared to standard macro.
+For shooting the subject / with blur background. / Detects the camera moving / and sets the best / shutter speed.
+For the @A03F@selected items,  / metering will be executed / in the area of the AF target.
+Grainy Film@A04F@
+Grainy Film@A050@
+In still photography, items where @A03F@ / is selected can be set separately / for horizontal or vertical positions.
+Info Off
+It is enabled in the / P/A/S exposure modes.
+It is enabled in the / P/A/S/M exposure modes.
+Key Line@A04F@
+Key Line@A050@
+MIC @A017@
+Movie @A042@
+Nightscapes
+No item registered. / By pressing the @A040@ button / during menu, you can register / the item to My Menu.
+Norm
+On@A0AE@
+On@A0AF@
+P/A/S/M/B
+Pairing is complete. / Bluetooth setting is changed to On@A0AE@.
+Pale&Light Color@A04F@
+Pale&Light Color@A050@
+Partial Color@A04F@
+Partial Color@A050@
+Partial Color@A051@
+Picture Mode
+Pin Hole@A04F@
+Pin Hole@A050@
+Pin Hole@A051@
+Please install the OI.Share app / to your device. / Press @A019@ once installation is / complete.
+Please rotate the mode dial to @A004@.
+Pop Art@A04F@
+Pop Art@A050@
+Press WPS button / on the access point. / Connection starts / after you press @A083@.
+Press to activate / level display. / Press again to deactivate. / Effective in @A03C@.
+Press-and-hold @A035@ button / returns @A043@ values to default / at the setting screen.
+Press-and-hold @A035@ button / returns @A078@ to center of / AF target select screen.
+Press-and-hold @A035@ button / returns close up frame to / center of Live View screen.
+Press-and-hold @A035@ button / returns flash intensity settings / to default at the shooting standby / when @A009@ is assigned to the dial.
+Press-and-hold @A035@ button / returns keystone comp. / settings to default / at the setting screen.
+Press-and-hold @A035@ button / returns video telecon close up / frame to the center position.
+Press-and-hold @A035@ button  / returns Highlight & Shadow Control / settings to default at the setting / screen.
+Press-and-hold @A07C@ button / deactivates keystone / compensation.
+Press-and-hold button / assigned to @A03D@ pulls up / the @A03D@auto switch settings screen.
+Press-and-hold button assigned / to @A045@Lock switches @A045@Lock / on/off.
+Press-and-hold designated button / ends @A035@close up or ends display  / of @A035@close up frame.
+Press-and-hold designated button / ends @A042@close up or ends display  / of @A042@close up frame.
+Preview Update@A040@
+Push to display @A042@ frame / for targeting. / Once target is set, push again to / activate @A042@ mode.
+Push to switch to designated / default@A078@. Push again to / return.
+RAW+JPEG @A041@
+RAW@A024@
+Red Frame during @A0B0@
+Remove this @A0A1@ tab
+Reset @A007@
+Reset @A009@
+Reset @A042@ Frame
+Reset @A043@
+Reset @A078@
+Reset @A07B@
+Reset @A07C@
+Reset LV@A07A@ Frame
+S-AF@A0BC@
+Search again@A033@
+Select On to disable @A0BD@.
+Select On to display level / gauge in EVF. / Enabled when in @A03C@.
+Select function to assign / to @A040@ during playback.
+Select function to assign / to @A0AC@ center button of / the multi selector for shooting.
+Select function to assign / to @A0AD@ direction key of / the multi selector for shooting.
+Set compensation@A01A@
+Settings@A01A@
+Shooting exposure for each frame / uses the metering result / for that frame.
+Silent @A045@Operation
+Silent@A048@
+Switch @A045@ Lock
+Switched to@A078@
+Switched to@A079@
+Switches @A09C@ on/off.
+Switches @A09D@ on/off.
+Switches @A09E@ on/off.
+Switches @A0B1@ on/off.
+The items where @A03F@ is selected / will appear when selecting AF / target mode for still photography.
+To change white balance mode / to auto or @A036@ automatically / when using flash.
+Using the pop-up@A00A@, capture / human subjects against beautiful / nightscapes. A slower shutter / speed is used. Tripod use is / recommended.
+Via @A0AD@
+Vintage@A04F@
+Vintage@A050@
+Vintage@A051@
+Watercolor@A04F@
+Watercolor@A050@
+When @A007@ is assigned to a dial, / press-and-hold @A035@ button / returns exposure compensation / value to default at the shooting  / standby screen.
+When selecting @A013@or@A014@,  / you can skip the items / that have not been selected@A03F@.
+When selecting the picture / mode, you can skip the items / that have not been set to @A03F@.
+When set to On,  / displays a red outer frame / on the screen during video recording.
+When set to On, brightness / and colors are adjusted / for optimal viewing during @A0A0@.
+When shutter speed is @A07E@ or / less, the first shutter curtain is / switched to electronic.  / Select the post-shutter / release delay time.
+Wireless Functions

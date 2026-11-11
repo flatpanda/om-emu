@@ -1,0 +1,7610 @@
+10	AEL/AFL
+26	@A025@REC
+46	MF
+52	RAW@A024@
+72	Esikats.
+90	@A01D@
+104	 Home
+132	Suomi
+194	2f
+200	AEL/AFL M.
+222	AEL/AFL
+238	AEL-mittaus
+262	@A001@ Asetus
+290	 Aseta oletus
+318	AF/MF
+330	AF-alue
+346	AF-apuvalo
+368	AF-tila
+384	Kaikki
+398	Kaikkiin suuntiin toimiva I.S.
+460	Nol kaik.
+480	As kaik.
+498	Kaikki @A001@
+534	hd.esto @A004@
+564	Aukon esivalinta
+598	Taide LV -tila
+628	Cross-kehitys
+656	Dioraama
+674	Dramaattinen s
+704	vy
+710	Hillit. seepia
+740	Rakeinen filmi
+770	Kevyt s
+786	vy
+792	Vaalea&kevyt v
+822	ri
+828	Poptaide
+846	Pehme
+858	 tarkennus
+880	Neulanreik
+904	Kuvasuhde
+924	Autom.
+938	Taustav. LCD
+964	@A003@ Varoitustaso
+1004	Akku tyhj
+1026	@A001@
+1040	Haarukointi
+1064	Bulb tarkennus
+1094	Bulb-ajastin
+1120	Painike/valitsin
+1154	@A003@Ohjausasetus
+1192	@A006@ Apuohjelmat
+1230	Korttivirhe
+1254	Kortti t
+1272	ynn
+1282	Kortti t
+1300	ynn
+1310	Kortin asetukset
+1344	Kameran sis
+1368	inen l
+1382	mp
+1388	tila
+1400	on liian korkea. Anna
+1446	kameran j
+1468	hty
+1480	Objektiivi on lukittu.
+1528	Ole hyv
+1544	 ja avaa objektiivi.
+1590	riavaruus
+1610	Jatkuva AF
+1632	AF-seuranta
+1656	Kontrasti
+1676	Kopion koko
+1700	Tekij
+1712	noikeusaset.
+1738	@A004@Tila
+1760	Mukautettu
+1782	Painikkeen toiminto
+1826	Valitsimen suunta
+1862	Valitsintoiminto
+1896	@A010@Lukitus
+1924	Aut.salama
+1950	yte
+1958	Salama pois
+1982	Punasilm
+2000	isyyden esto
+2026	Punasilm
+2044	isyyden hidas
+2076	yt
+2082	 ylivalo
+2104	yt
+2110	 varjo
+2128	yt/@A004@/PC
+2154	DPI-asetus
+2176	Sarja
+2188	@A014@ T
+2210	hd.esto @A004@
+2240	Yksitt
+2254	inen
+2264	@A014@ T
+2286	hd.esto @A004@
+2316	e-potretti
+2338	Muokkaa
+2354	Muokkaa tiedostonime
+2398	B:sininen
+2418	G:vihre
+2436	N:neutr.
+2454	Or:orans.
+2474	P:purpp.
+2492	R:punain.
+2512	S:seepia
+2530	Ye:kelt.
+2548	EV-askel
+2566	EVF-s
+2586	Valot/@A011@/ISO
+2620	Valotus
+2636	Valotussiirto
+2664	@A008@Kasvon esival.
+2706	Kasvon esival. pois
+2746	Kasvon esival. p
+2782	ll
+2790	Tiedoston nimi
+2820	Firmware
+2838	@A014@ Mukautettu
+2874	@A00A@ Hidas raja
+2910	@A00A@ X-t
+2932	sm
+2938	ys
+2944	Polttov
+2960	li
+2966	Tark.rengas
+2994	vy yl
+3010	vy
+3020	vy alas
+3036	vy
+3046	vy normaali
+3070	Hi
+3076	Histogrammin asetus
+3116	i-Enhance
+3136	@A01A@/v
+3154	ri/WB
+3166	Kuvanvakaaja
+3192	@A00F@ Asetus
+3220	@A00F@/Info-asetus
+3258	@A006@ Info
+3282	Osoitteet
+3302	IS pois
+3318	ISO
+3326	ISO-auto
+3344	ISO-auto -aset.
+3376	Laajennus
+3396	Suositus
+3414	ISO-askel
+3434	I.S. pysty
+3456	Tasons
+3478	Lo
+3484	Keh
+3494	Manuaalikuvaus
+3524	@A009@+@A007@
+3552	@A00E@
+3566	Albumi muist. k
+3598	yt.
+3606	Valikko
+3622	@A00E@/@A000@ Menu-n
+3664	ytt
+3674	Mittaus
+3690	Kesk. pain.
+3714	Piste
+3726	MF-apu
+3740	min
+3748	Tilaopastus
+3772	@A016@
+3786	Mustavalko
+3816	Video
+3828	Video @A017@
+3854	Video+still
+3878	Monivalotus
+3902	Hillitty
+3932	 rajaus
+3948	Ei
+3954	Ei korttia
+3976	Ei yhteytt
+4000	Kohinasuod.
+4024	Kohinanvaim.
+4050	Ei kuvaa
+4068	Pois
+4078	Takaisin@A018@
+4108	Takaisin@A019@
+4138	Peruuta@A018@
+4166	Ota WB@A01A@
+4192	@A01B@@A01C@
+4218	Aseta@A019@
+4248	ll
+4256	@A01E@
+4270	@A01F@
+4284	My OLYMPUS PENPAL
+4320	Albumin muist. aset.
+4362	Kuvatila
+4380	Kuvatilan asetukset
+4420	Kuvavirhe
+4440	Pikselilask
+4464	Pikselikart.
+4490	@A023@ L
+4508	hikatselu
+4528	Tulosta
+4544	Prioriteettiasetus
+4582	Ohjelmoitu autom.
+4618	Nollaa suojaus
+4648	@A024@
+4662	@A024@ Asetus
+4690	Pikapoisto
+4712	P. RAW+JPEG
+4736	Tallenna/poista
+4768	Kuvausn
+4784	kym
+4794	Punasilm. + t
+4822	yte
+4830	Sarjakuvaus
+4854	Lauk. pr. C
+4878	Lauk. pr. S
+4902	Nollaa
+4916	Nollaa obj.
+4940	Nollaus/o.nollaus
+4976	@A026@
+4994	rikyll
+5008	is.
+5016	Ranta & lumi
+5042	Kynttil
+5060	Lapset
+5074	Asiakirjat
+5096	Ilotulitus
+5118	Yl
+5128	vy
+5134	Maisema
+5150	Alas
+5160	vy
+5166	Makro
+5178	@A03A@ Makro
+5204	Luontomakro
+5232	kuvaus+muotokuva
+5270	kuvaus
+5284	Panoraama
+5304	Muotokuva
+5324	Kuvanvakaus
+5348	Urheilu
+5364	Auringonlasku
+5392	@A03A@ Laajakulma
+5432	@A04E@ T
+5454	hd.esto @A004@
+5484	@A04F@ T
+5506	hd.esto @A004@
+5536	@A02A@ 12 sekuntia
+5574	@A02A@ 2 sekuntia
+5614	hetett
+5632	 koko
+5644	@A02C@
+5658	Varjon komp
+5682	Varj. s
+5706	Ter
+5714	vyys
+5724	Suljinajan esival.
+5762	I.S. vaaka
+5784	Kerta-AF
+5802	Kerta-AF + MF
+5830	Torkku
+5844	@A02B@
+5858	Spiral
+5872	Vakio
+5888	ynnist
+5904	Tallennus
+5924	Korkea
+5938	OLYMPUS PENPAL -jako
+5984	hk
+5990	inen etsin
+6012	OLYMPUS PENPAL -albumi
+6058	Aika
+6068	USB-tila
+6086	Videol
+6100	ht
+6112	nenvoim.
+6130	Odota
+6142	WB autom.
+6162	Pilvinen
+6180	WB salama
+6200	Loisteputki
+6224	Hehkulamppu
+6248	Valkotasap.
+6272	Varjo
+6284	Aurinkoinen
+6308	Matala
+6322	Kirjoitussuojattu
+6366	Kyll
+6378	V/K/P
+6390	Eye-Fi
+6404	16:9
+6414	4:3
+6422	3:2
+6430	6:6
+6438	3:4
+6446	ESP
+6454	NTSC
+6464	PAL
+6472	RAW
+6480	MF
+6486	Adobe RGB
+6506	I.S. 1
+6520	I.S. 2
+6534	Slow
+6544	Slow2
+6556	1/4
+6564	1/16
+6574	1/64
+6584	2nd Curtain
+6608	Vivid
+6620	Natural
+6636	JPEG
+6646	RAW+JPEG
+6664	Portrait
+6698	CWB
+6706	mode1
+6718	mode2
+6730	S-AF
+6740	C-AF
+6750	P/A/S
+6762	Menu
+6772	1/2EV
+6784	1/3EV
+6796	1EV
+6804	Off
+6812	I.S. 3
+6826	sRGB
+6836	Auto@A010@
+6858	MTP
+6866	Hold
+6876	Body
+6886	Lens
+6896	Flash
+6908	Acc
+6916	LV-Info
+6932	@A014@/@A028@
+6960	ART1
+6970	ART2
+6980	ART3
+6990	ART4
+7000	ART5
+7010	ART6
+7020	ART7
+7030	ART8
+7040	HDMI
+7050	iAUTO
+7062	P/A/S/M
+7078	ART9
+7088	ART10
+7100	Full
+7110	@A084@
+7128	iv
+7134	ys
+7140	Omat asetukset1
+7172	Omat asetukset2
+7204	Omat asetukset3
+7236	Omat asetukset4
+7268	LCD-taustavalo
+7298	Live-opas
+7318	Digitaalinen telejatke
+7364	Valotus @A007@
+7394	Toimii P/A/S-
+7424	valotustoiminnoilla.
+7466	Toimii kaikilla 
+7502	valotusohjelmilla.
+7540	Tarkista objektiivin tila.
+7594	Taustavalo 
+7626	ll
+7632	/pois.
+7656	 valotuksen 
+7684	kompensaatiota
+7714	@A066@:
+7732	Aloita/lopeta
+7762	videotallennus
+7792	@A066@ Syv
+7814	ter
+7822	vyyden
+7838	esikatselu.
+7862	AF-ALUE-toiminnon
+7900	asetus
+7914	Vaihda 
+7932	MF-toimintoon
+7960	Vaihda 
+7978	RAW+JPEG-/JPEG- 
+8014	laadut kiekolla
+8046	@A013@/@A014@ suoravalinta.
+8102	ISO-suoravalinta.
+8138	WB-tilan suoravalinta.
+8184	Paina @A02A@: lukitsee/vapauttaa
+8252	suoran @A010@ k
+8284	yt
+8290	n kuvaustilassa.
+8324	@A01C@Toiminto
+8354	@A048@Toiminto
+8384	@A030@Toiminto
+8414	@A00A@Toiminto
+8444	SF
+8462	@A05C@5300K
+8486	@A05B@7500K
+8510	@A05D@3000K
+8534	@A059@5500K
+8558	@A058@6000K
+8582	Poista kaikki kuvat muistikortilta
+8654	tai alusta muisti.
+8692	Palauta kaikki asetukset tai
+8752	tallenna nykyiset asetukset
+8810	omiin asetuksiin.
+8846	Valitse taidesuodin tai viimeistely
+8920	kuvaustilanteen mukaan.
+8968	Valitse tallennustila, jossa
+9028	otat kuvia tai tallennat
+9080	videoleikkeit
+9112	Muuta vaaka-pysty-
+9152	kuvasuhdetta otettaessa kuvia.
+9214	Ensimm
+9228	iset ja perusk
+9258	yt
+9270	kuvausasetukset.
+9304	Valitse sarjakuvauksen tai
+9360	ajastetun kuvauksen asetukset.
+9422	Muuta kuvanvakaimen tilaa.
+9478	@A065@ ja @A066@ k
+9516	ytet
+9528	n liikutet-
+9554	taessa kameraa.
+9586	Kamera kuvaa kunkin kuvan
+9640	automaattisesti eri asetuksilla.
+9714	 kuvat asetetaan
+9756	llekk
+9768	in ja tallennetaan
+9808	yhten
+9820	 kuvana.
+9844	det
+9854	n salaman kirkkautta.
+9902	yt
+9908	 langatonta salaman
+9950	laukaisutilaa langattoman
+10004	RC-salaman kanssa.
+10042	Ota digitaalisesti
+10082	suurennettu kuva.
+10118	Kuvauksen lis
+10146	asetukset.
+10172	yt
+10178	 kuvaesitys tausta-
+10220	musiikki- ja efektivaihto-
+10276	ehdoilla.
+10296	Kuvat n
+10312	ytet
+10324	n oikeassa
+10348	suunnassa, vaikka kameraa
+10408	nnett
+10420	isiin.
+10434	Muokkaa kuvaa.
+10464	Tallenna tulostustiedot,
+10516	jotka on tallennettu kortille
+10578	kuvien kanssa.
+10608	Peruuta kaikkien
+10644	kuvien suojaus.
+10676	Toiston ja retusoinnin asetukset.
+10744	Automaattisen ja manuaalisen
+10804	tarkennuksen asetusten valikko.
+10868	Painikkeiden ja valitsimien 
+10928	asetukset.
+10950	Laukaisimen asetukset.
+11000	yt
+11006	n, 
+11016	nen ja tietokone-/
+11056	tulostinliit
+11082	nn
+11088	n asetukset.
+11114	Valotuksen asetukset.
+11158	Salama-asetusten valikko.
+11214	rien ja valkotasapainon
+11264	asetusten valikko.
+11302	Tallennus- ja poistoasetusten
+11364	valikko.
+11382	Videokuvauksen asetusten
+11434	valikko.
+11452	Muiden asetusten valikko.
+11504	Valitse AF-toiminto still-kuvaus-
+11574	ja videokuvaustoimintoon.
+11626	Jos toiminto on p
+11664	ll
+11676	automaattitarkennus toimii
+11732	ennen laukaisimen painamista.
+11792	Valitse AF-tarkennusalue.
+11844	Valitsee rullas
+11878	timen tai nuoli-
+11914	painikkeiden toiminnon AF-
+11970	kohteen valinnan yhteydess
+12028	Jos toiminto on p
+12066	ll
+12072	, 
+12080	objektiivin tarkennus nollataan
+12150	rett
+12166	n virran katkaisun.
+12206	Valitse toiminto p
+12246	lle saadak-
+12272	sesi manuaalitarkennuksen BULB-
+12338	kuvaukseen.
+12362	Muokkaa tarkennusrenkaan
+12414	suuntaa tarkennusta varten.
+12470	Valitse toiminto p
+12510	lle suuren-
+12536	taaksesi kuvan
+12566	kym
+12576	 manuaali-
+12600	tarkennusta k
+12628	ytett
+12640	ess
+12652	Valitse AF-tarkennuksen 
+12704	oletussijainti.
+12736	LED-valo tekee automaatti-
+12792	tarkennuksen helpommaksi
+12852	ss
+12858	 valossa.
+12878	Aseta tarkennus tai AE-lukitus
+12942	painikkeelle @A034@.
+12984	Jos toiminto on p
+13022	ll
+13028	, valotus
+13050	pysyy lukittuna @A071@ painikkeen
+13120	vapautuksen j
+13148	lkeenkin.
+13168	4" rullat
+13188	Valitse toiminto, joka asetetaan
+13266	kiekolle.
+13286	Valitse valitsimen suunta.
+13340	Valitse toiminto p
+13380	lle est
+13398	ksesi
+13412	@A010@ toimimasta kuvattaessa.
+13474	A4-rullat
+13504	 HDMI-asetuksia.
+13538	Osoite
+13552	Jos toiminto on p
+13590	ll
+13596	, 
+13604	efektien valotuksen korjaukset 
+13670	eiv
+13678	t n
+13686	y n
+13694	yt
+13700	ll
+13710	Kaikki
+13724	Aseta aika, jonka j
+13764	lkeen
+13782	ytt
+13790	tiedot poistuvat n
+13828	yt
+13834	lt
+13844	LCD:n taustavalo himmenee,
+13900	mik
+13908	li m
+13920	ritetyn ajan puitteissa
+13970	ei tehd
+13986	 s
+14006	Kamera menee virrans
+14050	st
+14062	tilaan, mik
+14086	li m
+14098	ritetyn ajan 
+14128	puitteissa ei tehd
+14166	 s
+14186	Voit kytke
+14208	 tarkennuksen 
+14244	nen pois, kun kohde tarkentuu.
+14316	 toiston 
+14338	nenvoimakkuus.
+14368	Valitse USB:hen liitett
+14426	laitteen tyyppi.
+14460	Valitse valotuksen korjauksen
+14532	n portaat.
+14554	Valitse mittaustapa.
+14596	Valitse mittaustapa @A034@ 
+14654	painikkeella.
+14682	Aseta ISO-herkkyys
+14720	Valitse ISO-herkk. ylin taso
+14780	ja perustaso k
+14810	ytt
+14818	ess
+14826	si
+14834	Auto ISO -herkkyytt
+14878	Valitse kuvaamistilat, joissa 
+14942	Auto ISO -toiminto on 
+14994	ytett
+15006	viss
+15020	Aseta BULB-kuvauksen pisin
+15076	aika.
+15088	Valitse laukaisuviive laukaisimen
+15158	painalluksen j
+15188	lkeen.
+15202	Valitse nopein mahdollinen 
+15260	salamat
+15276	sm
+15282	ysaika.
+15298	Valitse hitain mahdollinen 
+15356	salamat
+15372	sm
+15378	ysaika.
+15394	Toiminto v
+15416	hent
+15428	 kohinaa 
+15450	kuvattaessa pitkill
+15490	 suljinajoilla.
+15522	Valitse kohinanvaimennuksen
+15580	taso korkeilla ISO-herkkyyksill
+15648	Valitse valkotasapainon tila.
+15712	ilytt
+15730	n l
+15738	mpim
+15748	t v
+15756	rit
+15766	automaattisen valkotasapainon
+15828	tilassa.
+15846	Valitse v
+15866	riavaruus.
+15888	Vaihtamaan valkotasapainon 
+15946	tilaa automaattiseen tai @A036@ kun 
+16022	kuvataan salamalla.
+16062	Korjaa reuna-alueiden valoi-
+16122	suutta objektiivin mukaisesti.
+16184	Muokkaa JPEG-tiedostojen 
+16238	kuvakokoja ja pakkaussuhteita.
+16300	Valitse kuvakoko @A037@ ja @A038@.
+16370	Jos toiminto on p
+16408	ll
+16414	, kuva
+16430	poistetaan heti.
+16464	Valitse RAW+JPEG-kuvaa 
+16514	poist. tapahtuva toiminto.
+16568	Auto-tila k
+16592	ytt
+16602	 vanhan kortin 
+16636	mukaista tiedoston ja kansion 
+16700	numerointia.
+16726	Valitse, kuinka kuvatiedostot
+16788	nimet
+16802	n, muokkaamalla
+16836	nimen sijaintia.
+16870	Valitse vahvistusdialogin oletus-
+16940	asetukset.
+16962	Valitse tulostusresoluutio.
+17018	Lis
+17028	 kuvaajan ja kuvan 
+17070	oik. omistajan nimet.
+17114	Jos toiminto on pois p
+17162	lt
+17174	videokuv. ei tule
+17216	nt
+17226	Kuvan prosessoinnin ja kennon 
+17290	tarkistamiseen ja s
+17338	n.
+17344	Aseta optimivalotus
+17386	jokaiselle mittaustavalle
+17440	erikseen.
+17460	Kalibroi keinohorisontti.
+17512	Salli tai est
+17540	 Eye-Fi-kortin
+17572	yhteys.
+17588	Tarkat kameran asetukset.
+17640	OLYMPUS PENPAL -kuvajaon
+17692	asetusten valikko.
+17734	hk
+17740	isen etsimen asetusten
+17788	valikko.
+17806	Vastaanota kuvia tai odota
+17862	pyynt
+17876	 muilta laitteilta.
+17916	Kopioi kaikki kuvat ja 
+17966	ni-
+17976	tiedostot @A00A@ ja @A00B@ v
+18034	lill
+18052	yt
+18058	 albumin kuvam
+18094	 ja
+18104	tallennustila.
+18134	Poista kaikki kuvat albumista
+18196	tai alusta albumi.
+18244	 s
+18250	hk
+18256	isen etsimen
+18284	kirkkautta ja v
+18316	ril
+18324	mp
+18330	tilaa.
+18344	Lis
+18352	laitteiden asetukset.
+18406	 LCD-n
+18420	yt
+18426	n kirkkautta
+18454	ja v
+18464	ri
+18474	Valitse kuvien toistoaika kuvan
+18540	ottamisen j
+18564	lkeen.
+18578	Valitse n
+18598	ytet
+18610	nk
+18622	@A00E@ menu vai @A000@ menu.
+18684	yt
+18690	 tuotteen laiteohjelmiston
+18746	versio.
+18762	Kameran perusasetusten
+18810	asettaminen.
+18836	Kuvausvalikko 2
+18868	Kyll
+18880	Ei
+18886	@A00A@ Valikkon
+18918	ytt
+18928	@A000@ Menu-n
+18956	ytt
+18966	Testikuva
+18986	Salaman tila
+19012	@A06B@:Pois
+19036	Poista kaikki
+19064	@A023@: AEL/AFL
+19096	@A023@:
+19114	Aloita/lopeta
+19144	videotallennus
+19174	@A023@ Syv
+19196	ter
+19204	vyyden
+19220	esikatselu.
+19244	@A023@ Kertapainike WB.
+19292	AF-ALUE-toiminnon
+19330	asetus
+19344	Vaihda 
+19362	MF-toimintoon
+19390	Vaihda 
+19408	RAW+JPEG-/JPEG- 
+19444	laadut kiekolla
+19476	@A023@ Testikuva ilman
+19524	tallennusta.
+19550	Kuvaus @A02B@-painikkeella
+19606	painettaessa @A024@-painiketta
+19668	Kuvaus @A02C@-painikkeella
+19724	painettaessa @A024@-painiketta
+19786	Kuvaus @A02D@-painikkeella
+19842	painettaessa @A024@-painiketta
+19904	Kuvaus @A02E@-painikkeella
+19960	painettaessa @A024@-painiketta
+20022	Muuta Live Guide -tilaa painamalla
+20094	@A023@ ja palaa takaisin painamalla
+20168	sit
+20176	 uudelleen.
+20200	@A023@: Muuttaa x1/x2.
+20246	@A025@:Pois
+20280	 valotuksen 
+20308	kompensaatiota
+20338	Salamatilan
+20364	suoravalinta.
+20402	 valotuksen 
+20430	kompensaatiota
+20460	Paina @A012@: lukitsee/vapauttaa
+20528	suoran @A010@ k
+20560	yt
+20566	n kuvaustilassa.
+20600	Kuvan kerrostus
+20632	2 kuvan yhd.
+20658	3 kuvan yhd.
+20684	@A009@
+20698	@A01B@ RC-toiminto
+20736	Mukautettu valikko
+20774	A. AF/MF
+20792	B. Painike/valitsin
+20832	C. Sarjakuvaus @A01E@
+20876	D. N
+20886	yt/@A004@/PC
+20912	E. Valot/@A011@/ISO
+20952	F. @A00A@ Mukautettu
+20994	G. @A01A@/v
+21018	ri/WB
+21030	H. Tallenna/poista
+21068	I. Video
+21086	J. Sis
+21102	nrakennettu s
+21130	hk
+21136	inen etsin
+21158	Sy
+21168	 PIN-koodi
+21190	Kokoaikainen AF
+21222	Tyhjenn
+21238	 tallennettu
+21266	kuvaustila ja -asetukset.
+21318	Info pois
+21338	@A049@ Pid
+21360	 l
+21366	mmin v
+21380	ri
+21386	@A00A@ ja valkotasapaino
+21436	Kosketusn
+21456	yt
+21462	n aset.
+21478	ART
+21486	SCN
+21494	3200
+21504	2400
+21514	2560
+21524	1920
+21534	1920
+21544	1440
+21554	1600
+21564	1200
+21574	1280
+21584	960
+21592	1024
+21602	768
+21610	640
+21618	480
+21626	320
+21634	240
+21642	Still-kuva
+21664	Video
+21676	S-AF+MF
+21692	C-AF+TR
+21708	RAW/JPEG
+21726	JPEG-muokkaus
+21754	Punasilm
+21772	is. korjaus
+21796	@A02B@
+21810	Suhde
+21822	Mustavalko
+21844	Seepia
+21862	rikyll
+21876	is.
+21884	@A025@
+21898	@A017@
+21912	Muokkaa RAW-dataa
+21954	nn
+21962	@A023@
+21976	Valitse kuva
+22002	@A017@K
+22018	ynnist
+22034	Poista
+22048	Poista
+22062	Poista valitut
+22092	Valittu
+22108	Tallenna nykyinen
+22146	kuvaustila ja -asetukset.
+22198	Toisto
+22216	het
+22224	 kuva
+22236	Nollaa
+22250	@A03A@Cross-kehitys
+22290	@A033@Dramaattinen s
+22332	vy
+22342	vy
+22352	risuodin
+22370	Yksiv
+22382	rinen
+22398	yt
+22404	 alkuper
+22422	ist
+22430	 kokoa.
+22446	Kun valitaan kuvatila, voit
+22504	hyp
+22516	 kohteiden yli, jotka
+22562	eiv
+22570	t ole asetettu p
+22606	lle.
+22616	OLYMPUS PENPAL -albumin
+22666	asetusten valikko.
+22704	Video @A017@ p
+22736	ll
+22744	AVCHD 1920
+22766	1080 Normal
+22790	Motion JPEG 1280
+22824	720
+22832	Motion JPEG 640
+22864	480
+22872	@A015@i-Enhance
+22904	@A07A@Vivid
+22928	@A07C@Portrait
+22958	@A032@Poptaide
+22988	@A034@Pehme
+23012	 tarkennus
+23034	@A035@Vaalea&kevyt v
+23076	ri
+23082	@A036@Kevyt s
+23110	vy
+23116	@A037@Rakeinen filmi
+23158	@A038@Neulanreik
+23194	@A039@Dioraama
+23224	Omat asetukset1
+23256	Omat asetukset2
+23288	Omat asetukset3
+23320	Omat asetukset4
+23356	ysi
+23364	Perus
+23376	Aseta
+23388	Ei dataa
+23406	@A07B@Natural
+23434	@A01F@Hillitty
+23464	Efekti
+23478	Yl
+23488	vy
+23494	Normaali
+23512	Alas
+23522	vy
+23528	Mustavalko
+23550	Mustavalkokuvaukseen.
+23594	Hy
+23600	dyllinen kont-
+23632	rastin lis
+23656	miseen
+23672	sinisen taivaan
+23706	ja pilvien v
+23732	lill
+23746	Hy
+23752	dyllinen tele-
+23784	kuvaukseen pitkill
+23826	et
+23832	isyyksill
+23856	Tarjoaa dramaat-
+23892	tiset taivaan ja
+23928	pilvien s
+23948	vyt.
+23958	Korostaa ihon
+23992	vyj
+24000	 ja tuo siten
+24030	kasvojen ilmeet
+24064	paremmin esiin.
+24096	Seepians
+24114	vyisi
+24130	kuvia varten.
+24158	Sinis
+24170	vyisi
+24186	kuvia varten.
+24214	Purppuras
+24234	vyisi
+24250	kuvia varten.
+24278	Vihers
+24292	vyisi
+24308	kuvia varten.
+24346	 v
+24352	rikyll
+24366	isyytt
+24392	 valkotasapainoa
+24436	 kirkkautta
+24460	Sumenna tausta
+24490	Korosta liikett
+24524	Kuvausvinkit
+24550	Live-opas ei ole
+24586	saatavilla, kun
+24620	salama on p
+24646	ll
+24654	Kirkas & v
+24676	rik
+24688	Tasainen & vaimennettu
+24738	mmin
+24748	Viile
+24762	Kirkas
+24776	Tumma
+24788	Kirkasta kirkkaat
+24824	Tummenna kirkkaat
+24860	Kirkasta tummat
+24892	Tummenna tummat
+24924	Sumenna
+24940	Ter
+24952	it
+24960	Liike-ep
+24978	ter
+24986	vyys
+24996	Pys
+25004	yt
+25010	 liike
+25024	dpi
+25032	@A03B@Hillitty sepia
+25074	Valitsin P
+25096	Valitsin A
+25118	Valitsin S
+25140	Valitsin M
+25162	Valitsin Menu
+25190	Valitsin @A006@
+25222	Ps
+25228	@A007@
+25242	Aukko
+25254	Suljinaika
+25276	@A079@/Value
+25302	Edell./seur.
+25328	@A08B@
+25342	Tulostusvar. asetukset
+25388	@A022@
+25402	@A00E@
+25416	@A000@
+25430	Tulostusvaraus olemassa
+25478	Nollaa
+25496	ilyt
+25508	Ei
+25514	Aseta
+25526	Peruuta
+25542	2f 0.3EV
+25560	2f 0.5EV
+25578	2f 0.7EV
+25596	2f 1.0EV
+25614	3f 0.3EV
+25632	3f 0.5EV
+25650	3f 0.7EV
+25668	3f 1.0EV
+25686	5f 0.3EV
+25704	5f 0.5EV
+25722	5f 0.7EV
+25740	5f 1.0EV
+25758	7f 0.3EV
+25776	7f 0.5EV
+25794	7f 0.7EV
+25812	2L-muoto
+25830	WB BKT
+25844	A-B
+25852	3f 2Askel
+25872	3f 4Askel
+25892	3f 6Askel
+25912	G-M
+25920	Ruutu
+25932	Auto gain
+25952	Kerroskuv.
+25974	HDMI-ulostulo
+26002	HDMI-ohjaus
+26026	1080i
+26038	720p
+26048	480p/576p
+26068	Tekij
+26080	noikeustiedot
+26108	Taiteilijan nimi
+26142	Tekij
+26154	noikeusnimi
+26178	AE BKT
+26192	FL BKT
+26206	ISO BKT
+26222	ART BKT
+26242	@A01B@: Aloita videon tallennus
+26308	@A01A@: Ota kuva
+26342	@A063@: Aloita videon tallennus
+26408	@A02B@: Ota kuva
+26442	Valitse aiheohjelma
+26482	Valitse taidesuodin
+26522	@A06C@: Opas helppoon
+26568	asetusten vaihtoon
+26606	Asettaa aukon ja 
+26644	suljinajan automaattisesti.
+26700	Asettaa aukon
+26730	manuaalisesti.
+26760	Asettaa suljinajan
+26800	manuaalisesti.
+26830	Asettaa aukon ja 
+26868	suljinajan manuaalisesti.
+26920	@A015@: Aloita videon tallennus.
+26986	Poistu@A019@
+27012	MF AEL/AFL
+27034	mode3
+27046	mode4
+27058	Puoliv
+27072	li
+27078	Pohjaan
+27094	AEL/S-AF
+27112	Valotus
+27128	AEL
+27136	AEL/Val.
+27154	AEL/AF Start
+27180	AF Start
+27198	AEL/AFL/Val.
+27224	AFL/Val.
+27242	----
+27252	Kuvausvalikko 1
+27284	Toistovalikko
+27312	Jatkuva Taidesuotimen esi-
+27368	katselu. Osa suotimista 
+27420	hidastaa p
+27442	ivitystaajuutta.
+27476	Taidesuotimen esikatselua
+27530	vaalennetaan LCD-n
+27568	yt
+27574	ll
+27580	 ja
+27594	ivitystaajuus on nopeampi.
+27648	@A042@: Zoomaa kuvaa.
+27692	@A042@: N
+27712	yt
+27718	 suurennettu
+27746	ruutu ja paina uudelleen 
+27800	suurentaaksesi kuvaa.
+27844	Ylivalo
+27860	Varjo
+27872	Osoittimet poistetaan
+27922	yt
+27928	st
+27934	 automaattisesti,
+27972	jos mit
+27990	n toimintoa
+28016	ei suoriteta 10 sekunnin aikana.
+28082	Osoittimet aina n
+28118	kyviss
+28136	kuvattaessa.
+28162	Kuvaa ei oteta video-
+28208	kuvauksen p
+28234	tteeksi, 
+28256	vaikka laukaisinta painetaan.
+28316	Ota kuva videokuvauksen
+28372	tteeksi painamalla
+28412	laukaisinta.
+28450	Palauttaa oletusasetuksen.
+28504	Kytke Eye-Fi-korttiyhteys pois.
+28568	Kytke Eye-Fi-korttiyhteys p
+28626	lle.
+28636	2f
+28642	Ylivalotus
+28664	Alivalotus
+28686	Kahden kuvan ottaminen:
+28736	yksi tavallisella valotuksella
+28800	ja yksi ylivalotuksella.
+28850	Kahden kuvan ottaminen:
+28900	yksi tavallisella valotuksella
+28964	ja yksi alivalotuksella.
+29014	S-AF AEL/AFL
+29040	C-AF AEL/AFL
+29066	Suodin
+29080	Suodin @A00B@
+29108	Suodin @A00C@
+29136	Lis
+29146	 efektej
+29166	Pehme
+29178	 tarkennus
+29200	Neulanreik
+29224	Valkoinen reunus
+29258	Kehys
+29274	htivalaistus
+29300	Kolmiulotteinen kuva
+29342	Muotokuvien
+29368	ottamiseen.
+29392	Tasainen ihons
+29422	vy
+29430	katsottavaksi HDTV:ll
+29478	Maisemien
+29500	kuvaamiseen.
+29528	Sinisen ja
+29552	vihre
+29564	n s
+29572	vyt
+29582	toistuvat el
+29612	sti.
+29622	Nopean liikkeen
+29656	tarkkaan kuvaa-
+29690	miseen. Pys
+29714	ytt
+29728	kohteen liikkeen.
+29764	Kuvaamiseen illalla tai 
+29820	ll
+29826	. Suljinaika on pi-
+29868	dempi kuin normaalisti.
+29918	Parhaan lopputuloksen 
+29966	saamiseksi on hyv
+30008	tukea kameraa.
+30038	@A014@POP UP
+30066	Kohteiden kuvaamiseen
+30126	 taustaa vasten. 
+30164	Suljinaika on pidempi kuin
+30220	normaalisti.
+30246	Leikkivien
+30270	lasten
+30286	kuvaamiseen.
+30312	Korostaa kirk-
+30344	kaita alueita
+30374	kuvan el
+30396	it-
+30410	miseksi.
+30428	Korostaa tummia
+30462	alueita kuvan
+30492	el
+30502	itt
+30510	miseksi.
+30532	hent
+30544	 liik-
+30560	kuvan kohteen
+30590	tai kameran liikahta-
+30636	misen aiheuttamaa
+30674	ep
+30680	tarkkuutta.
+30704	Paras pienten
+30734	kohteiden
+30760	hikuvaukseen
+30786	Tunnelmalliseen
+30820	kuvaamiseen
+30846	kynttil
+30862	nvalossa.
+30888	rit toistuvat
+30922	mpimin
+30940	Kuvaamiseen 
+30968	ilta-/aamuaurin-
+31004	gon valossa. 
+31034	Punaisen ja
+31060	keltaisen s
+31084	vyt
+31094	toistuvat el
+31124	sti.
+31134	Asiakirjojen 
+31164	kuvaamiseen.
+31192	Vahvistaa tekstin
+31230	ja taustan v
+31256	list
+31270	kontrastia.
+31294	Mahdollistaa
+31322	kuvien ottamisen
+31358	siten, ett
+31380	 ne voidaan
+31406	my
+31412	hemmin yhdist
+31446	panoraamakuvaksi.
+31482	AF@A039@MF
+31506	Ilotulituksen
+31536	kuvaamiseen.
+31564	Suljinaika on
+31594	pidempi kuin
+31622	normaalisti.
+31648	Lumihuippuisten
+31682	vuorten, maise-
+31716	mien, hiekkarantojen
+31760	jne. kuvaamiseen.
+31796	FCON-P01 Semi
+31826	Kalansilm
+31852	lis
+31860	kkeen
+31874	kanssa kuvaamiseen.
+31914	WCON-P01 laaja-
+31948	kulmalis
+31966	kkeen
+31980	kanssa kuvaamiseen.
+32020	MCON-P01/02 Makro-
+32060	lis
+32068	kkeen kanssa
+32096	kuvaamiseen.
+32122	Ottaa kuvia n
+32150	ytett
+32166	ksi
+32176	kolmiulotteisessa TV:ss
+32224	 tai
+32236	monitorissa.
+32262	Suodin @A00D@
+32290	2L-rullat
+32310	Indeksoi kaikki
+32342	Hyv
+32350	ksy
+32358	Tulosta kaik.
+32386	Takaisin
+32408	yt
+32414	n ruudukko
+32436	Reunaton
+32454	@A002@ RAW ja JPEG poistetaan
+32514	Kuvaa ei vastaanotettu.
+32562	Kuva vastaanotettu.
+32602	Kuvaa ei l
+32624	hetetty.
+32642	Kuva l
+32656	hetetty.
+32674	Odota
+32686	Kalenteri
+32706	Live-ohjaus
+32730	SCP
+32738	Taidesuodinvalikko
+32776	Aiheohjelmavalikko
+32814	Peruuta
+32830	Kuvaa ei voida muokata
+32876	Ei voi tulostaa
+32908	Kortti
+32922	Alusta
+32936	Alusta
+32950	Huom! Kuvaa ei voida valita
+33006	Puhdista kortin kontaktipinta
+33068	kuivalla kankaalla.
+33108	Huom: Yhdistet
+33140	n @A004@
+33158	@A00A@ Huom: Kaikki poistetaan
+33220	@A00A@ Huom: Kaikki poistetaan
+33282	@A00B@ Huom: Kaikki poistetaan
+33344	@A00B@ Huom: Kaikki poistetaan
+33406	@A002@ Huom: Kaikki poistetaan
+33468	@A002@ Huom: Kaikki poistetaan
+33530	Jatka
+33542	Kopioi kaikki
+33570	Oletus
+33584	Poista
+33598	Hylk
+33616	ytyi
+33626	@A005@
+33640	Valitsin 1
+33662	Valitsin 2
+33684	Yhteys avataan
+33714	Poistu
+33728	Kasvontunnistusvirhe
+33770	Tied. nimi
+33796	ysi
+33804	1Ruutu
+33818	@A00B@
+33832	@A00C@
+33846	Ylivalo&varjo
+33874	Yl
+33880	raja
+33890	@A00D@
+33904	Pelkk
+33916	 kuva
+33928	@A00F@
+33942	Asettaa 0-tason
+33976	nykyiseen tilaan.
+34012	Laiteparin kytkent
+34050	 ep
+34058	onnistui.
+34078	VALITSIN @A026@ : 
+34118	fno. suljin
+34148	nn
+34154	 valitsinta @A027@ 
+34196	valitaksesi valikon
+34238	seuraava kohta
+34268	VALITSIN @A027@ : 
+34308	fno. suljin
+34338	nn
+34344	 valitsinta @A026@ 
+34386	valitaksesi valikon
+34428	seuraava kohta
+34458	Yhteys aukeaa.
+34488	Haetaan. Ole hyv
+34522	 ja odota.
+34544	Odottaa pyynt
+34576	Muuta kokoon 1920x1440.
+34624	Muuta kokoon 1280x960.
+34670	Vastausta odotetaan.
+34712	@A023@ Kohdista kamera
+34760	valkoiseen paperiin.
+34802	Kohdista kamera
+34836	valkoiseen paperiin.
+34878	Sy
+34888	 PIN-koodi
+34910	ISO-arvon laajennus
+34950	Suositus-ISO-arvo
+34986	Tukos
+34998	Letter
+35012	Keinohorisontti
+35044	L-muoto
+35060	Valoboksi
+35080	L-rullat
+35102	yt
+35108	 pidemp
+35126	 poltto-
+35150	li
+35156	 tai mene l
+35180	hemm
+35190	ksi.
+35208	 kohteen ja taustan
+35254	lille pidempi et
+35288	isyys.
+35302	Sumenna tausta
+35332	Juttele lapselle ja ota
+35382	kuva h
+35396	nen silmiens
+35428	korkeudelta.
+35454	Ota monta kuvaa
+35488	sarjakuvauksella ja
+35530	valitse parhaat my
+35568	hemmin.
+35584	Lapsikuvausvinkit
+35620	Mene l
+35634	hemm
+35644	ksi lemmikki
+35674	ja ota kuva lemmikin silmien
+35734	korkeudelta tai alempaa.
+35784	Tarkenna lemmikin silmiin.
+35840	Kiinnit
+35856	 huomio ruoalla tai
+35898	lelulla.
+35916	Ota monta kuvaa
+35950	sarjakuvauksella ja
+35992	valitse parhaat my
+36030	hemmin.
+36046	Lemmikkikuvausvinkit
+36088	Ota kuva kukan korkeudelta tai
+36152	alempaa. Kiinnit
+36186	 huomiota
+36208	taustaan.
+36228	Valitse tumma tausta tai
+36284	yt
+36290	 v
+36296	rillisi
+36312	 taustapapereita.
+36350	Sumenna etu- ja taka-ala.
+36402	Tarkenna l
+36424	himp
+36442	kukan ter
+36462	lehteen.
+36480	Pilven tai varjon antama suoja
+36544	tekee kukan varjosta 
+36590	pehme
+36602	mm
+36608	n.
+36614	Kukkakuvausvinkit
+36650	Kuvaus 3/4-kulmasta antaa
+36704	annokselle luonnollisen ilmeen.
+36768	Hyv
+36776	 kuvauspaikka on ikkunan 
+36830	edusta. Paras tulos sivulta
+36888	tulevan taustavalon kanssa.
+36944	Mene l
+36958	hemm
+36968	ksi p
+36982	kohdetta.
+37004	Pystyformaatti antaa kuvalle
+37064	syvyytt
+37084	Ruokakuvausvinkit
+37120	2/3 kuvasta varaaminen 
+37176	koht. antaa hyv
+37208	n tasap.
+37226	Jaa p
+37240	kohde ja tausta 
+37276	diagonaalisella linjalla 
+37330	luonnollisempaa kuvaa varten.
+37390	Aseta p
+37408	kohde ja muut 
+37440	diagonaaliselle linjalle 
+37494	luonnollisempaa kuvaa varten.
+37554	Rajausvinkit
+37580	Liitt
+37596	ll
+37602	 MCON-P02-lis
+37630	kkeen
+37644	14-42mm EZ -objekt. saat 
+37702	hikuvia pienist
+37734	 kohteista.
+37758	Liitt
+37774	ll
+37780	 FCON-P01-lis
+37808	ke
+37816	14-42mm II R -objektiiviin voit 
+37884	ottaa 120 asteen kuvia.
+37932	Liitt
+37948	ll
+37954	 WCON-P01-lis
+37982	ke
+37990	14-42mm II R -objektiiviin voit 
+38058	ottaa 11mm laajakulmakuvia.
+38118	ytt
+38130	ll
+38136	 MAL-1-makrovaloa
+38174	voit hallita valoa ja varjoa
+38234	makrokuvissa.
+38262	Lis
+38270	varustevinkit
+38300	Alusta albumi
+38328	Video @A017@ pois
+38364	Videon aikav
+38390	li
+38396	Multi n
+38412	ytt
+38422	Multi-tulost.
+38450	Uusi laitepari
+38480	Ei mustetta
+38504	Ei paperia
+38526	Pois
+38536	Peruuta@A020@
+38564	Vahvistus@A019@
+38596	Lis
+38606	@A022@
+38620	Helppo tulostus@A024@
+38664	Muuta nimi@A02D@
+38698	Poistu@A018@
+38724	Poistu@A025@
+38750	Tulosta@A01F@
+38778	Laukaisinpainike
+38812	1-tulostus@A020@
+38846	Kyll
+38856	@A019@
+38870	OK
+38882	ll
+38890	Dian aikav
+38912	li
+38918	Odota hetki
+38942	WB:n pikavalinta
+38976	Tulostusvalinta
+39008	Koko 1: Suuri
+39036	Kattava
+39052	Osoitelista
+39076	Ota laiteparipyynt
+39116	Haku
+39126	Hakuajastin
+39150	Valitse kohde
+39178	Albumin muisti t
+39212	ynn
+39222	Kuvia/arkki
+39250	het
+39258	 kuva
+39270	Postikortti
+39294	@A005@X
+39310	Tulostusvirhe
+39338	Tulostustiedot
+39368	Tulostustavan valinta
+39412	Tulostusvar.
+39438	Tulostuspaperi
+39468	Tuki
+39478	Super FP -salama
+39512	Normaali
+39530	Kuvan vastaanotto
+39566	Vastaanota kuvapyynt
+39610	Odottaa pyynt
+39642	Vastaanotetaan
+39672	Kuvia j
+39688	ljell
+39702	Irroita USB-kaapeli
+39742	Nollaa
+39756	Koko 2: Medium
+39786	Kuvia
+39798	@A027@ Mustavalko
+39834	@A028@
+39848	@A029@ Mukautettu
+39888	hetet
+39906	Tiedot on rekister
+39944	ity
+39952	Asetuksia muutettu
+39990	Lyhyt
+40002	Koko
+40012	Liuku
+40024	Vakio
+40036	Laitetiedot
+40060	Nimi
+40070	Muuta nimi
+40092	Siirret
+40114	WB
+40120	Autom. @A001@
+40148	@A039@5500K @A001@
+40186	@A027@ @A001@
+40214	@A028@ @A001@
+40242	@A03B@7500K @A001@
+40280	@A03C@5300K @A001@
+40318	@A03E@ @A001@
+40346	Valkot. ei OK
+40376	Yrit
+40386	 uudelleen
+40408	Tulostetaan
+40432	Ei tulosteta
+40458	Puhdista kortti
+40490	Aseta@A019@
+40514	Kolmiulotteista kuvaa ei luotu.
+40578	3D-toisto
+40598	Kuvavirhe
+40618	Muuta kokoon 640x480.
+40662	Koko 1: Pieni
+40690	Koko 2: Suuri
+40718	Koko 3: Medium
+40748	Peruuta@A01F@
+40776	Peruuta@A02C@
+40804	Del@A02D@
+40824	PC/erik.tulostus@A01F@
+40870	WB/@A01A@@A061@
+40902	Polttov
+40918	li@A01A@
+40936	Kelvin@A01A@
+40962	Valitse@A041@
+40990	@A063@@A064@
+41016	@A023@+Laukaisinpainike
+41064	@A05F@@A033@
+41090	@A02E@@A02F@
+41116	@A030@@A02F@
+41142	@A031@@A02F@
+41168	@A032@@A01A@
+41194	@A042@@A041@
+41220	@A023@@A02F@
+41246	@A03D@@A025@
+41272	WB esikats.@A033@
+41308	Tavallinen automaattinen
+41360	valkotasapaino.
+41396	ilyt
+41406	 l
+41412	mpim
+41422	t valaistusv
+41448	rit
+41458	automaattisella valkotasapainolla.
+41528	Tehoste
+41548	ivytys
+41562	Putoava
+41578	Kuvajono
+41596	Suoritetaan palautus:
+41642	peruskuvaustoiminnot.
+41686	Suoritetaan palautus:
+41732	kaikki toiminnot paitsi p
+41784	iv
+41806	kieli ja tietyt asetukset.
+41860	Sis
+41868	inen salama
+41892	Videoleikett
+41918	 ei voi tallentaa
+41956	AVCHD-tilassa.
+41986	Objektiivia ei tueta.
+42030	@A002@ Varoitus: kaikki asetukset
+42100	palautetaan.
+42126	Lis
+42134	laiteportin valikko
+42174	Asetusvalikko
+42202	A. OLYMPUS PENPAL -jako
+42250	B. OLYMPUS PENPAL -albumi
+42302	C. S
+42312	hk
+42318	inen etsin
+42340	Aseta p
+42356	iv
+42372	 ja aika.
+42392	Valitse k
+42412	ytett
+42434	videostandardi.
+42466	Valitse ISO-herkkyyden
+42524	n portaat.
+42546	USB
+42554	100mm
+42566	150mm
+42578	11"
+42586	17"
+42594	4"
+42600	6"
+42606	8"
+42612	10"
+42620	A0
+42626	A1
+42632	A2
+42638	A3
+42644	A4
+42650	A5
+42656	A6
+42662	A7
+42668	A8
+42674	A9
+42680	B0
+42686	B1
+42692	B2
+42698	B3
+42704	B4
+42710	B5
+42716	B6
+42722	B7
+42728	B8
+42734	B9
+42740	4"
+42746	8"
+42754	Panorama
+42772	4"
+42778	10"
+42788	Panorama
+42806	4"
+42812	11"
+42822	Panorama
+42840	4"
+42846	12"
+42856	Panorama
+42874	10cm
+42884	30cm
+42896	Panorama
+42914	89mm
+42924	254mm
+42938	Panorama
+42956	A Mode
+42970	B Mode
+42984	C Mode
+42998	M Value
+43014	FP M Value
+43036	Channel
+43052	Level
+43064	TTL Value
+43084	Auto Value
+43106	FP TTL Value
+43132	Auto
+43142	@A01C@/FP
+43162	@A07D@ 4
+43180	@A07E@ 9
+43198	@A07F@ 25
+43218	@A07F@ 100
+43240	BGM
+43248	Cool
+43258	Joy
+43266	Jatkuva korkea
+43296	Melancholy
+43318	@A012@ T
+43340	hd.esto @A004@
+43370	TTL Auto
+43388	Jatkuva matala
+43418	@A013@ T
+43440	hd.esto @A004@
+43470	@A078@arge
+43492	Keskitaso
+43512	@A074@mall
+43534	@A01C@Toiminto
+43564	Tuulen kohinan v
+43598	hen.
+43608	@A03E@ Kohdista kamera
+43656	valkoiseen paperiin.
+43698	@A03E@+Laukaisinpainike
+43746	Manual
+43760	FP TTL Auto
+43784	FP Manual
+43804	Level Lo
+43822	Level Mid
+43842	Level Hi
+43860	ch
+43866	Beat
+43876	Adobe
+43888	AVCHD 1920
+43910	1080 Fine
+43930	AVCHD 1280
+43952	720 Fine
+43970	AVCHD 1280
+43992	720 Normal
+44014	Suurenna
+44032	@A01D@: AEL/AFL
+44064	Kuvaus @A02B@-painikkeella
+44120	painettaessa @A01E@-painiketta
+44182	Kuvaus @A02C@-painikkeella
+44238	painettaessa @A01E@-painiketta
+44300	Kohteen
+44318	kuvaamiseen
+44344	et
+44352	ll
+44358	 olevaa taustaa
+44392	vasten. Sinisen ja
+44432	vihre
+44444	n s
+44452	vyt
+44462	toistuvat el
+44492	sti.
+44502	Erikoisohjelma
+44538	hikuvausta
+44562	varten.
+44578	@A03A@ Kalansilm
+44614	Maisema+muotokuva
+44650	@A038@6000K @A001@
+44688	@A03A@4000K @A001@
+44726	@A03D@3000K @A001@
+44764	Kuvaus @A02D@-painikkeella
+44820	painettaessa @A01E@-painiketta
+44882	Kuvaus @A02E@-painikkeella
+44938	painettaessa @A01E@-painiketta
+45000	Kytke kosketusn
+45032	ytt
+45040	 pois.
+45054	Kytke kosketusn
+45086	ytt
+45094	 p
+45102	lle.
+45112	Vaihda kieli.
+45140	Valitse toiminto, joka asetetaan
+45208	valitulle painikkeelle.
+45256	Jos toiminto on p
+45294	ll
+45300	, kuva
+45316	voidaan ottaa vaikka kamera ei
+45380	ole tarkennettuna S-AF-tilassa.
+45444	Jos toiminto on p
+45482	ll
+45488	, kuva
+45504	voidaan ottaa vaikka kamera ei
+45568	ole tarkennettuna C-AF-tilassa.
+45632	Valitse tieto, joka n
+45676	ytet
+45694	@A00F@ ta @A01A@ -painikkeita
+45756	painettaessa.
+45784	Valitse hallintatiedot, jotka
+45850	ytet
+45862	n kun @A035@-painiketta
+45912	painetaan eri kuvaustiloissa.
+45972	Aseta ylivalon ja alivalon
+46028	kirkkauden tasot, jotka 
+46084	ytet
+46096	n varoitettaessa.
+46132	Laita toiminto p
+46168	lle 
+46184	hd
+46190	ksesi valitun toiminnon 
+46242	avut valitsinta k
+46280	nnett
+46292	ess
+46304	Valitse kuinka taidesuotimien
+46366	efektit n
+46386	ytet
+46398	n n
+46406	yt
+46412	ll
+46422	Valitse kuinka kuvaa suuren-
+46482	netaan painettaessa @A042@ 
+46540	painiketta.
+46564	Jos toiminto on p
+46602	ll
+46614	salaman korjaus lis
+46666	valotuksen korjauksen arvoon.
+46726	Aseta sama valkotasapainon
+46782	kompensaatio kaikkiin tiloihin.
+46846	Valitse videokuvaustila
+46896	@A004@-tilassa.
+46928	Jos toiminto on p
+46966	ll
+46972	, kuva
+46988	voidaan ottaa videokuvauksen
+47054	tteeksi.
+47072	Valitse virran taso 
+47116	varoitustasolle @A003@
+47162	Salli tai est
+47190	 kosketusn
+47212	yt
+47224	asetukset.
+47246	Selaa osoitekirjaa tai
+47294	lis
+47304	 uusi is
+47322	nt
+47328	 osoite-
+47348	kirjaan.
+47366	Katso tai muokkaa OLYMPUS
+47420	PENPAL -tietojasi.
+47458	Valitse l
+47478	hetett
+47496	 kuvakoko.
+47518	Valitse kopioitava kuvakoko.
+47576	@A05A@4000K
+47600	@A01E@:Pois
+47624	AF-ALUE-toiminnon
+47662	asetus
+47676	3D
+47682	Vaihda 
+47700	MF-toimintoon
+47728	@A01D@:
+47746	Aloita/lopeta
+47776	videotallennus
+47806	@A01E@ Kertapainike WB.
+47854	Pakkaus
+47870	Super Fine
+47892	Fine
+47902	Normal
+47916	Basic
+47928	@A01D@ Syv
+47950	ter
+47958	vyyden
+47974	esikatselu.
+47998	Vaihda 
+48016	RAW+JPEG-/JPEG- 
+48052	laadut kiekolla
+48084	@A01E@ Testikuva ilman
+48132	tallennusta.
+48158	dummy
+48170	Tallenna
+48188	@A017@
+48204	nenvoim. rajoitin
+48240	Rajoittaa mikrofonin 
+48286	nenvoi-
+48304	makkuutta automaattisesti, jos
+48374	r. tulo
+48392	nen taso ylittyy.
+48428	IS-tila
+48444	@A01D@: Painikkeet @A02F@ ja @A030@.
+48518	Aseta kuvanvakautustila
+48566	Muuta Live Guide -tilaa painamalla
+48638	@A066@ ja palaa takaisin painamalla
+48712	sit
+48720	 uudelleen.
+48744	@A066@: Muuttaa x1/x2.
+48790	Vanhanaikainen
+48820	Osittainen v
+48846	ri
+48852	@A082@Vanhanaikainen
+48894	@A083@Osittainen v
+48932	ri
+48938	Varjostustehoste: vasen-oikea
+48998	Varjostustehoste: yl
+49040	-ala
+49050	Keskener
+49068	iset ty
+49088	Painamalla @A025@ valokuvatarinan
+49158	aikana voit valita
+49198	tallentaa keskener
+49236	iset ty
+49258	tai hyl
+49278	 nykyisen ty
+49304	n.
+49310	Ei voi hakea tiedostoa
+49358	kuvauksen jatkamiseksi
+49404	Viimeis. my
+49428	h.
+49434	Hylk
+49448	Valitse P
+49470	ll
+49476	 asettaaksesi
+49506	kasvon- tai silm
+49540	ntunnistus-
+49566	autom.tarkennuksen.
+49606	@A023@: Painikkeet @A02A@ ja @A02B@.
+49680	@A01E@ Kohdista kamera
+49728	valkoiseen paperiin.
+49770	Jokaisen ruudun AF
+49808	Tarkentaa uudelleen
+49850	jokaista ruutua varten.
+49898	Tarkentaa vain kerran
+49944	itselaukaisimen k
+49980	ynnistyess
+50006	@A013@Kuvanvakaaja
+50044	Ottaa k
+50060	ytt
+50070	n/pois k
+50088	yt
+50094	st
+50104	kuvanvakautuksen
+50140	jatkuvaa kuvausta varten.
+50192	Pois p
+50208	lt
+50216	Kuvanvakautus on pois
+50266	yt
+50272	st
+50278	, jotta jatkuvan
+50314	kuvauksen nopeus olisi
+50362	ensisijainen.
+50390	AF tarkennus s
+50422	t.
+50428	AF-alueosoitin
+50460	@A01E@ L k/s
+50486	@A01E@: Aloita videon tallennus
+50552	@A030@: Ota kuva
+50586	@A075@Vaalea&kevyt v
+50628	ri
+50634	Tarkennus kasvoihin
+50676	tai silmiin. L
+50706	hin silm
+50730	valitaan.
+50750	Tarkennus kasvoihin
+50792	tai silmiin. Oikea silm
+50846	valitaan.
+50866	Tarkennus kasvoihin
+50908	tai silmiin. Vasen silm
+50962	valitaan.
+50982	Kasvontunnistus ei toimi.
+51034	Tarkennus kasvoihin.
+51082	ll
+51090	Kuvanvakautus on
+51130	yt
+51136	ss
+51142	, jotta vakaa kuva
+51182	olisi ensisijainen.
+51224	Jatkuvan kuvauksen nopeus
+51278	voi olla hitaampi.
+51320	hent
+51332	 kameran
+51352	ep
+51358	ter
+51366	vyytt
+51378	, joka aiheutuu
+51412	sulkimen vapauttamisesta.
+51464	C-AF-lukitus
+51490	Tarkistus
+51510	Tiet. listaus
+51538	Objektiiv. tied.
+51572	Oletustiedot
+51598	Valitse AF-kohde ja AF-tila.
+51656	@A028@: N
+51676	yt
+51682	 suurennettu
+51710	ruutu ja paina uudelleen 
+51764	suurentaaksesi kuvaa.
+51808	AF-ALUE-toiminnon
+51846	asetus
+51860	Vaihda 
+51878	MF-toimintoon
+51906	@A028@ Kertapainike WB.
+51954	@A028@ Syv
+51976	ter
+51984	vyyden
+52000	esikatselu.
+52024	Kasvo & Silm
+52050	t p
+52060	ll
+52068	Kasvo & Oikea silm
+52106	 p
+52114	ll
+52122	Kasvo & Vasen silm
+52160	 p
+52168	ll
+52176	Vaihda 
+52194	RAW+JPEG-/JPEG- 
+52230	laadut kiekolla
+52262	@A028@ Testikuva ilman
+52310	tallennusta.
+52336	Kun suljinnopeus on @A096@
+52392	tai pienempi, ensimm
+52434	inen
+52446	suljinverho muutetaan mekaanisesta
+52518	elektroniseksi sulkimen aiheuttaman
+52592	ep
+52598	ter
+52606	vyyden v
+52624	hent
+52634	miseksi.
+52652	Valitse v
+52672	ri@A01A@
+52690	Norm.
+52702	@A020@
+52716	@A021@
+52730	@A02B@Toiminto
+52760	@A029@ @A001@
+52788	@A02A@ @A001@
+52816	@A046@Lukitus
+52844	Kun asetus on p
+52878	ll
+52884	, esikatselun
+52914	syvyysvaikutelma s
+52952	ilytet
+52974	vaikka painike vapautetaan.
+53030	Panorointi
+53052	Kohteen kuvaamiseen
+53094	ep
+53100	ter
+53112	ll
+53118	 taustalla.
+53144	Tunnistaa kameran liikkeen
+53200	ja asettaa parhaan
+53240	suljinnopeuden.
+53272	@A04E@Toiminto
+53302	@A053@Kevyt s
+53330	vy
+53336	@A06C@: AEL/AFL
+53368	@A06C@:
+53386	Aloita/lopeta
+53416	videotallennus
+53446	@A06C@ Syv
+53468	ter
+53476	vyyden
+53492	esikatselu.
+53516	@A06C@ Kertapainike WB.
+53564	AF-ALUE-toiminnon
+53602	asetus
+53616	Vaihda 
+53634	MF-toimintoon
+53662	Vaihda 
+53680	RAW+JPEG-/JPEG- 
+53716	laadut kiekolla
+53748	@A06C@ Testikuva ilman
+53796	tallennusta.
+53822	Kuvaus @A06C@-painikkeella
+53878	painettaessa @A06B@-painiketta
+53940	Kuvaus @A06D@-painikkeella
+53996	painettaessa @A06B@-painiketta
+54058	Kuvaus @A06E@-painikkeella
+54114	painettaessa @A06B@-painiketta
+54176	Kuvaus @A06F@-painikkeella
+54232	painettaessa @A06B@-painiketta
+54294	@A077@Rakeinen filmi
+54336	Muuta Live Guide -tilaa painamalla
+54408	@A06C@ ja palaa takaisin painamalla
+54482	sit
+54490	 uudelleen.
+54514	@A06C@: Muuttaa x1/x2.
+54560	@A076@:Pois
+54584	1/2
+54592	1/8
+54600	1/32
+54610	@A01C@: Aloita videon tallennus
+54676	@A01B@: Ota kuva
+54712	@A069@: Video @A05E@
+54754	1/128
+54766	@A087@@A088@
+54792	VALITSIN @A089@ : 
+54832	fno. suljin
+54856	VALITSIN @A08A@ : 
+54896	fno. suljin
+54920	ART13
+54932	ART14
+54944	@A046@
+54958	Muuta tila P/A/S/M-tilaan.
+55012	Puolisuunn. komp.
+55048	Kun p
+55062	ll
+55068	, puolisuunnikkaan
+55108	kompensaatio on mahdollista.
+55168	Osoittimet ilmaantuvat n
+55218	yt
+55224	lle.
+55234	Paina puolisuunnikkaan
+55282	kompensaation k
+55314	ynnist
+55328	miseksi.
+55348	Lopeta pit
+55374	ll
+55380	 painiketta alhaalla.
+55424	Puolisuunn. komp. ei p
+55472	ll
+55480	Puolisuunn. komp. p
+55522	ll
+55530	Lopeta @A018@
+55558	Kamera valitsee vakautusaset.
+55620	tunnistamalla kameran liikkeen.
+55684	Aseta kompensaatio@A01A@
+55734	@A03C@ Puoliv
+55762	litaso
+55776	Valitse P
+55798	ll
+55804	, jos haluat
+55836	ytt
+55846	 sis
+55856	isen EVF-mittarin
+55894	tason. K
+55912	yt
+55918	ss
+55924	 asetuksella @A058@.
+55966	Nopea
+55978	@A066@ 4 kuvaa
+56008	@A067@ 5 kuvaa
+56038	@A04A@Toiminto
+56068	EVF:n autom. kirkkaus
+56112	Perustiedot
+56140	rivalitsin
+56162	@A078@Neulanreik
+56198	Tasaa kuva.
+56222	Kun olet ottanut ensimm
+56270	isen
+56282	kuvan, k
+56302	nn
+56308	 kameraa hitaasti.
+56348	Kun n
+56360	kym
+56368	 on oikeassa
+56396	kohdassa, paina laukaisinta.
+56454	Poista objektiivin tietosarja
+56514	Sumennustehoste: vasen-oikea
+56572	Sumennustehoste: yl
+56612	-ala
+56626	hk. zoom
+56644	Natural@A037@
+56672	Vivid@A037@
+56696	@A0BF@
+56710	@A0D0@
+56724	@A0D1@
+56738	@A0D2@
+56752	@A0D3@
+56766	@A0D4@
+56780	@A0D5@
+56794	@A0D6@
+56808	@A0D7@
+56822	@A0D8@
+56836	@A0D9@
+56850	@A0DA@
+56864	@A0DB@
+56878	@A0DC@
+56892	@A0DD@
+56906	@A0DE@
+56920	@A0DF@
+56934	@A0E0@
+56948	@A0E1@
+56962	@A0E2@
+56976	@A0E3@
+56990	@A0E4@
+57004	@A0E5@
+57018	@A0E6@
+57032	@A0E7@
+57046	@A0E8@
+57060	@A0E9@
+57074	@A0EA@
+57088	@A0EB@
+57102	@A0EC@
+57116	@A0ED@
+57130	@A0EE@
+57144	@A0EF@
+57158	@A0F0@
+57172	@A0F1@
+57186	@A0F2@
+57200	@A0C0@
+57214	@A0C1@
+57228	@A0C2@
+57242	@A0C3@
+57256	@A0C4@
+57270	@A0C5@
+57284	@A0C6@
+57298	@A0C7@
+57312	@A0C8@
+57326	@A0C9@
+57340	@A0CA@
+57354	@A0CB@
+57368	@A0CC@
+57382	@A0CD@
+57396	@A0CE@
+57410	@A0CF@
+57424	@A0D0@
+57438	@A0D1@
+57452	@A0D2@
+57466	@A0D3@
+57480	@A0D4@
+57494	@A0BF@
+57508	@A0D6@
+57522	@A0D7@
+57536	@A0D8@
+57550	@A0D9@
+57564	@A0DA@
+57578	@A0DB@
+57592	@A0DC@
+57606	@A0DD@
+57620	@A0DE@
+57634	@A0DF@
+57648	@A0E0@
+57662	@A0E1@
+57676	@A0E2@
+57690	@A0E3@
+57704	@A0E4@
+57718	@A0E5@
+57732	@A0E6@
+57746	@A0E7@
+57760	@A0E8@
+57774	@A0E9@
+57788	@A0EA@
+57802	@A0EB@
+57816	@A0EC@
+57830	@A0ED@
+57844	@A0EE@
+57858	@A0EF@
+57872	@A0F0@
+57886	@A0F1@
+57900	@A0F2@
+57914	@A0F3@
+57928	@A0F4@
+57942	@A0F5@
+57956	@A0F6@
+57970	@A0F7@
+57984	@A0E2@
+57998	@A0F9@
+58012	@A0FA@
+58026	@A0FB@
+58040	@A0FC@
+58054	@A0FD@
+58068	@A0FE@
+58082	@A0FF@
+58096	@A100@
+58110	@A101@
+58124	@A102@
+58138	@A103@
+58152	@A104@
+58166	@A105@
+58180	Sarjakuvaus @A01E@
+58218	Vedenalainen
+58244	Zoom
+58254	@A01E@+Laukaisinpainike
+58302	@A075@: Opas helppoon
+58348	asetusten vaihtoon
+58386	@A06B@ Kohdista kamera
+58434	valkoiseen paperiin.
+58476	@A06B@: Aloita videon tallennus
+58542	@A02B@: Ota kuva
+58576	@A06B@+Laukaisinpainike
+58624	@A023@: N
+58644	yt
+58650	 suurennettu
+58678	ruutu ja paina uudelleen 
+58732	suurentaaksesi kuvaa.
+58776	@A01D@: Muuttaa x1/x2.
+58822	Muuta Live Guide -tilaa painamalla
+58894	@A01D@ ja palaa takaisin painamalla
+58968	sit
+58976	 uudelleen.
+59000	Suurenna kuvaa tai @A024@ s
+59058	timell
+59076	Valitse suurennettava kuva.
+59134	@A06D@: suurenna kuvaa tai @A024@.
+59204	Laukaisimen ja sarjakuvauksen
+59266	asetukset.
+59288	Aseta sarjakuvausnopeus 
+59340	tilassa @A052@ kuvattaessa.
+59400	ytt
+59408	 himmenee,
+59432	mik
+59440	li m
+59452	ritetyn ajan puitteissa
+59502	ei tehd
+59518	 s
+59538	@A01E@ H k/s
+59564	Aseta sarjakuvausnopeus 
+59616	tilassa @A056@ kuvattaessa.
+59672	@A072@: N
+59692	yt
+59698	 toistovalikko.
+59732	Poista nykyinen kuva
+59776	toistovalikosta.
+59810	@A072@: Poista nykyinen kuva
+59870	heti.
+59884	@A025@: N
+59904	yt
+59910	 toistovalikko.
+59942	@A025@: Poista nykyinen kuva
+60002	heti.
+60014	Aseta kuvan poisto
+60054	@A072@ tai @A025@:een.
+60100	@A011@: Painikkeet @A02E@ ja @A02F@.
+60174	Auto valitsee kuvaustilan.
+60230	Live Guide -valikko saatavilla.
+60298	ytt
+60308	 t
+60314	yden valikon 
+60344	kamera-asetuksiin
+60380	Asettaa automaattiset asetukset
+60446	valitulle Aiheohjelmalle.
+60498	Aseta luovat efektit.
+60542	Taustavalo 
+60574	ll
+60580	/pois.
+60604	 LCD-n
+60618	yt
+60624	n kirkkautta
+60652	ja v
+60662	ri
+60672	fps
+60680	@A014@/@A080@/@A028@
+60722	@A081@/@A082@
+60750	@A04F@Toiminto
+60780	Painamalla painiketta @A077@
+60840	Live Guide -videokuvauksen
+60896	aikana, voit s
+60934	 Live
+60948	Guide -tasoa objektiivin
+61000	tarkennusrenkaalla.
+61040	Painamalla painiketta @A077@
+61100	videokuvauksen aikana,
+61148	voit vaihtaa MF-tilaan.
+61198	Painamalla uudelleen
+61242	voit palata AF-tilaan.
+61288	AF-pys
+61302	ytys
+61312	Painamalla painiketta @A06D@,
+61374	voit poistaa automaatti-
+61426	tarkennuksen k
+61456	yt
+61462	st
+61472	ja asettaa tarkennuksen
+61522	kyseiseen kohtaan.
+61560	Poistaa painikkeen
+61600	toiminnasta.
+61626	Kosketuskalibrointi
+61666	Ulkoinen @A02A@
+61698	mm
+61708	Ulkoisen @A02E@ tallennustaso
+61768	Valitse AF-kohde ja AF-tila.
+61826	3f
+61832	4f
+61838	Ohjaus
+61852	Aseta kuvanvakautustila
+61900	@A01D@: N
+61920	yt
+61926	 suurennettu
+61954	ruutu ja paina uudelleen 
+62008	suurentaaksesi kuvaa.
+62052	Kuvam
+62070	 @A033@
+62086	Ohjelmavalitsintoiminto
+62134	Asettaa rekister
+62168	idyn
+62180	Oman Asetuksen
+62212	ohjelmavalintakiekolle.
+62260	Mukautettu itselaukaisimen asetus
+62328	@A014@ Ajastin
+62358	Sulk aikav/TimeLapse
+62400	Ottaa valitun m
+62438	n kuvia
+62456	valitulla aikav
+62488	lill
+62504	Time lapse -video luodaan.
+62558	Aloita odotusaika
+62594	Asettaa ensimm
+62624	isen tallennettavan
+62666	kuvan odotusajan laukaisimen 
+62728	painalluksen j
+62758	lkeen.
+62772	Intervalliaika
+62802	Autom. sammutus
+62834	4h
+62840	Odota
+62852	@A007@Toiminto
+62882	AF-alueen val.
+62912	X kuvaa sek.
+62938	@A010@ :Pois
+62964	Valitsin @A011@ : 
+63004	fno. suljin
+63028	Valitsin @A012@ : 
+63068	fno. suljin
+63092	Pois
+63102	Kun olet ottanut ensimm
+63150	isen
+63162	kuvan, k
+63182	nn
+63188	 kameraa hitaasti.
+63228	Kun n
+63240	kym
+63248	 on oikeassa
+63276	kohdassa, paina laukaisinta.
+63334	Tallennustaso
+63362	Tuulen kohinan v
+63396	hennys
+63410	Korkea
+63424	@A071@ Kohdista kamera
+63472	valkoiseen paperiin.
+63514	@A072@ Kohdista kamera
+63562	valkoiseen paperiin.
+63604	@A070@ Kohdista kamera
+63652	valkoiseen paperiin.
+63694	@A071@+Laukaisinpainike
+63742	@A072@+Laukaisinpainike
+63790	@A070@+Laukaisinpainike
+63838	@A050@Toiminto
+63868	@A051@Toiminto
+63898	1h
+63904	K. @A004@ Apuohjelmat
+63948	@A039@@A03A@
+63974	Galleria
+63992	Jokaiselle nuolipainikkeelle
+64052	voidaan osoittaa toiminto
+64106	kun niit
+64124	 painetaan 
+64150	kuvattaessa.
+64176	Poistaa painikkeen
+64216	toiminnasta.
+64252	 valotuksen 
+64280	kompensaatiota
+64320	 valotuksen 
+64348	kompensaatiota
+64388	 valotuksen 
+64416	kompensaatiota
+64456	 valotuksen 
+64484	kompensaatiota
+64514	Valitse AF-kohde ja AF-tila.
+64572	Valitse AF-kohde ja AF-tila.
+64630	Valitse AF-kohde ja AF-tila.
+64688	Valitse AF-kohde ja AF-tila.
+64746	Valitse AF-kohde ja AF-tila.
+64804	Valitse AF-kohde ja AF-tila.
+64862	@A06C@: Painikkeet @A02A@ ja @A02B@.
+64936	@A066@: Painikkeet @A02A@ ja @A02B@.
+65010	@A066@: AEL/AFL
+65042	@A06E@: AEL/AFL
+65074	@A06F@: AEL/AFL
+65106	@A06D@: AEL/AFL
+65138	@A06C@: N
+65158	yt
+65164	 suurennettu
+65192	ruutu ja paina uudelleen 
+65246	suurentaaksesi kuvaa.
+65290	@A066@: N
+65310	yt
+65316	 suurennettu
+65344	ruutu ja paina uudelleen 
+65398	suurentaaksesi kuvaa.
+65442	@A06E@: N
+65462	yt
+65468	 suurennettu
+65496	ruutu ja paina uudelleen 
+65550	suurentaaksesi kuvaa.
+65594	@A06F@: N
+65614	yt
+65620	 suurennettu
+65648	ruutu ja paina uudelleen 
+65702	suurentaaksesi kuvaa.
+65746	@A06D@: N
+65766	yt
+65772	 suurennettu
+65800	ruutu ja paina uudelleen 
+65854	suurentaaksesi kuvaa.
+65898	@A06E@ Syv
+65920	ter
+65928	vyyden
+65944	esikatselu.
+65968	@A06F@ Syv
+65990	ter
+65998	vyyden
+66014	esikatselu.
+66038	@A06D@ Syv
+66060	ter
+66068	vyyden
+66084	esikatselu.
+66108	@A06E@ Kertapainike WB.
+66156	@A06F@ Kertapainike WB.
+66204	@A06D@ Kertapainike WB.
+66252	AF-ALUE-toiminnon
+66290	asetus
+66304	AF-ALUE-toiminnon
+66342	asetus
+66356	AF-ALUE-toiminnon
+66394	asetus
+66408	Vaihda 
+66426	MF-toimintoon
+66454	Vaihda 
+66472	MF-toimintoon
+66500	Vaihda 
+66518	MF-toimintoon
+66546	Vaihda 
+66564	RAW+JPEG-/JPEG- 
+66600	laadut kiekolla
+66632	Vaihda 
+66650	RAW+JPEG-/JPEG- 
+66686	laadut kiekolla
+66718	Vaihda 
+66736	RAW+JPEG-/JPEG- 
+66772	laadut kiekolla
+66804	@A06E@ Testikuva ilman
+66852	tallennusta.
+66878	@A06F@ Testikuva ilman
+66926	tallennusta.
+66952	@A06D@ Testikuva ilman
+67000	tallennusta.
+67026	Kuvaus @A06C@-painikkeella
+67082	painettaessa @A071@-painiketta
+67144	Kuvaus @A06D@-painikkeella
+67200	painettaessa @A071@-painiketta
+67262	Kuvaus @A06E@-painikkeella
+67318	painettaessa @A071@-painiketta
+67380	Kuvaus @A06F@-painikkeella
+67436	painettaessa @A071@-painiketta
+67498	Kuvaus @A06C@-painikkeella
+67554	painettaessa @A072@-painiketta
+67616	Kuvaus @A06D@-painikkeella
+67672	painettaessa @A072@-painiketta
+67734	Kuvaus @A06E@-painikkeella
+67790	painettaessa @A072@-painiketta
+67852	Kuvaus @A06F@-painikkeella
+67908	painettaessa @A072@-painiketta
+67970	Kuvaus @A02B@-painikkeella
+68026	painettaessa @A072@-painiketta
+68088	Kuvaus @A02C@-painikkeella
+68144	painettaessa @A072@-painiketta
+68206	Kuvaus @A02D@-painikkeella
+68262	painettaessa @A072@-painiketta
+68324	Kuvaus @A02E@-painikkeella
+68380	painettaessa @A072@-painiketta
+68442	Muuta Live Guide -tilaa painamalla
+68514	@A06E@ ja palaa takaisin painamalla
+68588	sit
+68596	 uudelleen.
+68620	Muuta Live Guide -tilaa painamalla
+68692	@A06F@ ja palaa takaisin painamalla
+68766	sit
+68774	 uudelleen.
+68798	Muuta Live Guide -tilaa painamalla
+68870	@A06D@ ja palaa takaisin painamalla
+68944	sit
+68952	 uudelleen.
+68976	@A06E@: Muuttaa x1/x2.
+69022	@A06F@: Muuttaa x1/x2.
+69068	@A06D@: Muuttaa x1/x2.
+69114	Eye-Fi
+69128	@A05B@Toiminto
+69158	@A05C@Toiminto
+69188	Tarkista objektiivin tila.
+69242	Objektiivi on lukittu. Avaa objektiivi.
+69322	Key Line
+69340	@A067@Key Line
+69370	Aseta SCN-ohjelma @A05D@.
+69424	Manuaalinen arvo
+69458	Manuaalinen arvo @A01A@
+69510	Kelvin
+69524	Kameran salama
+69554	Bulb/aika-tarkennus
+69594	Valitse P
+69616	ll
+69622	 salliaksesi MF-
+69658	tarkennuksen BULB/AIKA-
+69708	kuvauksessa.
+69734	Bulb/aika-ajastin
+69770	Aseta maksimiaika
+69808	Bulb/aika-kuvaukseen.
+69852	Live bulb
+69872	Kuvat n
+69888	ytet
+69900	n bulb-
+69918	kuvauksen aikana.
+69954	Live aika
+69974	Kuvat n
+69990	ytet
+70002	n aika-
+70020	kuvauksen aikana.
+70060	yt
+70066	 m
+70080	kertaa
+70094	@A022@ + IS Pois
+70128	Kun asetettu P
+70160	lle, kuvan-
+70186	vakaaja ei ole toiminnassa 
+70244	sarjakuvauksen aikana.
+70290	Lauk. painallus ja IS
+70334	Kun kytketty p
+70366	lle, kuvan-
+70392	vakaaja on toiminnassa 
+70442	laukaisinta painettaessa.
+70494	LV-l
+70504	hikuva-toiminto
+70536	Valitse toiminto, jolloin laukaisin
+70610	on puoliksi painettuna suuren-
+70674	netun esikatselukuvan aikana.
+70734	Kun laukaisin on painettuna puoliksi,
+70812	suurennettu n
+70840	kym
+70848	 poistuu ja
+70874	suurennuskehys n
+70908	ytet
+70920	n.
+70926	Kun laukaisin on painettuna puoliksi,
+71004	automaattitarkennus on toiminnassa
+71076	suurennetun n
+71104	kym
+71112	n aikana.
+71132	Valitse rajauskehys.
+71174	@A03B@
+71188	Kamera sammutetaan auto-
+71240	maattisesti mik
+71272	li sit
+71286	 ei k
+71298	ytet
+71312	valittuun aikaan.
+71348	Live SCP
+71366	@A057@ Akun prioriteetti
+71416	Valitse tehoakkukahvassa
+71472	ytett
+71488	n akun tyyppi.
+71518	Rungon akku
+71542	Kahvan akku
+71566	Kun rungon akku on tyhj
+71620	akkukahvan akku otetaan k
+71672	ytt
+71682	n.
+71688	Kun akkukahvan akku on tyhj
+71750	rungon akku otetaan k
+71794	ytt
+71804	n.
+71820	 mikrofonin tasoa.
+71862	hent
+71874	 tuulen aiheuttamaa
+71916	kohinaa videokuvauksessa.
+71968	Videon efekti
+71996	Aseta tai poista videon
+72046	efekti tilassa @A008@.
+72092	Sis
+72102	nrakennettu s
+72130	hk
+72136	inen etsin
+72158	Sis
+72168	nrakennetun etsimen
+72210	asetusten valikko.
+72248	@A05F@ N
+72266	yt
+72272	n ruudukko
+72294	Valitse rajauskehys sis
+72344	n-
+72352	rakennettuun s
+72382	hk
+72388	iseen 
+72404	etsimeen. Salli tilassa @A05F@.
+72468	Sis
+72478	nrak. etsim. tyyli
+72516	Valitse sis
+72542	nrakennetussa
+72572	etsimess
+72590	 k
+72596	ytetty tyyli.
+72624	Tyyli 1
+72640	Tyyli 2
+72656	Tyyli 3
+72672	@A03C@ Info-asetus
+72710	Valitse tiedot, jotka n
+72758	ytet
+72776	painettaessa @A01A@. 
+72822	Kytke p
+72840	lle @A03C@.
+72864	EVF-automaattikytkin
+72906	Vaihda automaattisesti n
+72956	yt
+72962	lt
+72972	etsimeen, kun silm
+73010	 havaitaan
+73034	etsimell
+73056	Kytke silm
+73078	ntunnistin pois
+73118	lt
+73124	. @A059@ vaihtaa n
+73162	yt
+73168	n ja
+73180	etsimen v
+73200	lill
+73214	Kytke silm
+73236	ntunnistin p
+73264	lle.
+73276	@A03D@: Live View p
+73318	lle/pois.
+73338	Valitse etsimen virkistystaajuus.
+73406	Multitoiminto
+73434	@A066@: Paina k
+73466	ynnist
+73482	ksesi
+73496	eri toimintoja ja vaihda toimintoa
+73568	valintakiekolla.
+73602	@A023@: Paina k
+73634	ynnist
+73650	ksesi
+73664	eri toimintoja ja vaihda toimintoa
+73736	valintakiekolla.
+73770	Yksitt
+73784	is Kaiku
+73802	Multi Kaiku
+73826	Suoratoiminto
+73854	Ylivalon/varjon hallinta
+73906	Voit valita AF-alueen painamalla
+73974	painiketta @A010@ kuvauksen aikana.
+74046	MTP
+74054	ESP
+74062	NTSC
+74072	PAL
+74080	USB
+74088	RAW
+74096	@A0B2@arge
+74118	@A037@iddle
+74142	@A038@mall
+74164	Super Fine
+74186	Fine
+74196	Normal
+74210	Basic
+74222	SF
+74240	MF
+74246	fps
+74254	100mm
+74266	150mm
+74278	11"
+74286	17"
+74294	4"
+74300	6"
+74306	8"
+74312	10"
+74320	A0
+74326	A1
+74332	A2
+74338	A3
+74344	A4
+74350	A5
+74356	A6
+74362	A7
+74368	A8
+74374	A9
+74380	B0
+74386	B1
+74392	B2
+74398	B3
+74404	B4
+74410	B5
+74416	B6
+74422	B7
+74428	B8
+74434	B9
+74440	4"
+74446	8"
+74454	Panorama
+74472	4"
+74478	10"
+74488	Panorama
+74506	4"
+74512	11"
+74522	Panorama
+74540	4"
+74546	12"
+74556	Panorama
+74574	10cm
+74584	30cm
+74596	Panorama
+74614	89mm
+74624	254mm
+74638	Panorama
+74656	Adobe RGB
+74676	I.S. 1
+74690	I.S. 2
+74704	Slow
+74714	Slow2
+74726	2nd Curtain
+74750	Vivid
+74762	Natural
+74778	JPEG
+74788	RAW+JPEG
+74806	Portrait
+74840	CWB
+74848	3f 0.3EV
+74866	3f 0.5EV
+74884	3f 0.7EV
+74902	3f 1.0EV
+74920	5f 0.3EV
+74938	5f 0.5EV
+74956	5f 0.7EV
+74974	5f 1.0EV
+74992	mode1
+75004	mode2
+75016	mode3
+75028	mode4
+75040	A Mode
+75054	B Mode
+75068	C Mode
+75082	M Value
+75098	FP M Value
+75120	Channel
+75136	Level
+75148	TTL Value
+75168	Auto Value
+75190	FP TTL Value
+75216	Auto
+75226	@A00A@/FP
+75246	S-AF
+75256	C-AF
+75266	S-AF+MF
+75282	C-AF+TR
+75298	AE BKT
+75312	WB BKT
+75326	FL BKT
+75340	ISO BKT
+75356	P/A/S
+75368	Menu
+75378	1/2EV
+75390	1/3EV
+75402	1EV
+75410	Off
+75418	I.S. 3
+75432	sRGB
+75442	@A0B3@/Value
+75468	AEL/S-AF
+75486	AEL
+75494	AEL/AF Start
+75520	AF Start
+75538	----
+75548	@A0B3@Vivid
+75572	@A0B4@Natural
+75600	@A0B5@Portrait
+75630	Ps
+75636	Auto@A006@
+75658	A-B
+75666	G-M
+75674	Hold
+75684	@A0B4@ 4
+75702	@A0B5@ 9
+75720	@A0B6@ 25
+75740	@A0B6@ 100
+75762	Body
+75772	Lens
+75782	Flash
+75794	Acc
+75802	LV-Info
+75818	RAW/JPEG
+75836	@A013@/@A014@
+75864	ART1
+75874	ART2
+75884	ART3
+75894	ART4
+75904	ART5
+75914	ART6
+75924	ART7
+75934	ART8
+75944	BGM
+75952	480p/576p
+75972	Cool
+75982	Joy
+75990	Melancholy
+76012	HDMI
+76022	TTL Auto
+76040	Manual
+76054	FP TTL Auto
+76078	FP Manual
+76098	Level Lo
+76116	Level Mid
+76136	Level Hi
+76154	ch
+76160	@A0D4@/@A0D5@
+76188	AEL/AFL
+76204	@A040@REC
+76224	iAUTO
+76236	P/A/S/M
+76252	ART9
+76262	ART10
+76274	Full
+76284	2f 0.3EV
+76302	2f 0.5EV
+76320	2f 0.7EV
+76338	2f 1.0EV
+76356	7f 0.3EV
+76374	7f 0.5EV
+76392	7f 0.7EV
+76410	2f
+76416	@A0B7@
+76430	@A0B8@
+76444	@A095@ 5300K
+76470	@A097@ 6000K
+76496	@A096@ 7500K
+76522	@A098@ 3000K
+76548	@A099@ 4000K
+76574	Beat
+76584	ART
+76592	SCN
+76600	Adobe
+76612	@A036@ 5500K
+76638	ART BKT
+76654	Motion JPEG 1280
+76688	720
+76696	Motion JPEG 640
+76728	480
+76736	3D
+76742	1:1
+76750	ART11
+76762	MOV 1920
+76780	1080 Fine
+76800	MOV 1920
+76818	1080 Normal
+76842	MOV 1280
+76860	720 Fine
+76878	MOV 1280
+76896	720 Normal
+76918	Asettaa seuraavan kuvan
+76968	ottamisen intervalliajan.
+77020	tunti
+77032	Time Lapse -video
+77068	Tallenna vain valokuvia.
+77118	Tallenna Time Lapse -videoita
+77180	ja valokuvia.
+77208	J. @A008@ Apuohjelmat
+77252	@A059@@A024@
+77278	Taide H
+77294	ivytys
+77308	Vesiv
+77320	ri
+77326	@A06F@Vesiv
+77350	ri
+77356	Yhteys 
+77372	lypuhelimeen
+77398	Katso kuvia 
+77424	lypuhelimella
+77454	FlashAir-yhteyden avulla.
+77506	Kortti on konfiguroitu toisella
+77572	laitteella. Asetuksia ei voi
+77632	vaihtaa.
+77650	Korttia ei voida alustaa
+77700	Yhteys k
+77718	ynniss
+77740	 keskeyt
+77760	Katkaise yhteys
+77792	Yhteysasetukset
+77824	SSID Asetukset
+77854	Ensiasetukset suoritettu
+77904	Kertayhteys
+77928	Yksityinen yhteys
+77964	Salasanan Asetukset
+78004	Sy
+78014	 kertasalasana
+78044	Salasana vaihdettu
+78082	Yhteys aloitetaan
+78118	Valokuva-I.S.
+78146	Video-I.S.
+78168	Video-I.S. P
+78196	ll
+78204	Vaihda kuvanvakaajan
+78248	tila. Valokuvaus ja
+78290	videokuvaus.
+78316	Kuvanvakaaja toimii kaikissa 
+78378	suunnissa havaitsemalla
+78428	kameran liikkeen.
+78464	Vain pystysuuntainen vakaaja.
+78526	Pid
+78534	 kamera vaakatasossa ja
+78584	kuvaa vaakapanoroinnin aikana.
+78646	Vain vaakasuuntainen vakaaja.
+78708	Pid
+78716	 kamera pystytasossa ja
+78766	kuvaa vaakapanoroinnin aikana.
+78828	Kuvanvakaaja on poistettu
+78886	yt
+78892	st
+78902	Vakauta kuvaa videokuvauksen
+78962	aikana.
+78978	Aktivoi kuvanvakaaja toimimaan
+79042	kaikissa suunnissa videokuvauksen
+79112	aikana.
+79128	Katso diaesitys valinnaisella
+79190	taustamusiikilla ja efektill
+79252	HDR BKT
+79268	Vaihda HDR BKT -tilaan.
+79316	Vaihda HDR BKT -tilaan.
+79364	Vaihda HDR BKT -tilaan.
+79416	lkynn
+79428	n v
+79436	hennys
+79454	hent
+79466	 v
+79472	lkynt
+79486	 asettamalla
+79514	tehon taajuuden.
+79552	hent
+79564	 v
+79570	lkynt
+79588	alueilla, joissa 50Hz teho.
+79648	hent
+79660	 v
+79666	lkynt
+79684	alueilla, joissa 60Hz teho.
+79744	hent
+79756	 v
+79762	lkynt
+79782	automaattisesti.
+79820	lkynn
+79832	n v
+79840	hennys pois p
+79870	lt
+79880	Kohinasuodin pois
+79916	Kohinasuodin standardi
+79962	Kohinasuodin voimakas
+80006	Kohinasuodin matala
+80046	Nykyinen
+80064	Mukautettu1
+80088	Mukautettu2
+80112	Varjoalueen s
+80148	Kirkkaan alueen s
+80192	Valitse Live View -esi-
+80242	katselun taajuus.
+80278	Objektiivin I.S.-priorit.
+80330	Valitse P
+80352	ll
+80358	 k
+80364	ytt
+80374	ksesi
+80388	objektiivin I.S:
+80428	Laukaisuviive
+80456	Aseta laukaisun ja
+80496	valotuksen v
+80522	linen viive.
+80548	Muuta tilaan @A077@.
+80590	Kytkee toiminnon @A07D@
+80646	lle/pois p
+80670	lt
+80680	Kytkee toiminnon @A07D@
+80736	lle/pois p
+80760	lt
+80770	Muuta tilaan @A078@.
+80812	Kytkee toiminnon @A07E@
+80868	lle/pois p
+80892	lt
+80902	Kytkee toiminnon @A07E@
+80958	lle/pois p
+80982	lt
+80992	Muuta tilaan @A079@.
+81034	Kytkee toiminnon @A07F@
+81090	lle/pois p
+81114	lt
+81124	Kytkee toiminnon @A07F@
+81180	lle/pois p
+81204	lt
+81214	Muuta tilaan @A07A@.
+81256	Kytkee toiminnon @A080@
+81312	lle/pois p
+81336	lt
+81346	Kytkee toiminnon @A080@
+81402	lle/pois p
+81426	lt
+81436	BGM Tuonti
+81458	BGM ylikirjoitettu
+81496	Ei BGM
+81510	@A027@1s T
+81536	hd.esto @A004@
+81566	@A027@2s T
+81592	hd.esto @A004@
+81622	@A027@3s T
+81648	hd.esto @A004@
+81678	@A027@4s T
+81704	hd.esto @A004@
+81734	@A027@5s T
+81760	hd.esto @A004@
+81790	@A027@6s T
+81816	hd.esto @A004@
+81846	@A027@7s T
+81872	hd.esto @A004@
+81902	@A027@8s T
+81928	hd.esto @A004@
+81958	@A027@9s T
+81984	hd.esto @A004@
+82014	@A027@10s T
+82042	hd.esto @A004@
+82072	@A027@11s T
+82100	hd.esto @A004@
+82130	@A027@12s T
+82158	hd.esto @A004@
+82188	@A027@13s T
+82216	hd.esto @A004@
+82246	@A027@14s T
+82274	hd.esto @A004@
+82304	@A027@15s T
+82332	hd.esto @A004@
+82362	@A027@16s T
+82390	hd.esto @A004@
+82420	@A027@17s T
+82448	hd.esto @A004@
+82478	@A027@18s T
+82506	hd.esto @A004@
+82536	@A027@19s T
+82564	hd.esto @A004@
+82594	@A027@20s T
+82622	hd.esto @A004@
+82652	@A027@21s T
+82680	hd.esto @A004@
+82710	@A027@22s T
+82738	hd.esto @A004@
+82768	@A027@23s T
+82796	hd.esto @A004@
+82826	@A027@24s T
+82854	hd.esto @A004@
+82884	@A027@25s T
+82912	hd.esto @A004@
+82942	@A027@26s T
+82970	hd.esto @A004@
+83000	@A027@27s T
+83028	hd.esto @A004@
+83058	@A027@28s T
+83086	hd.esto @A004@
+83116	@A027@29s T
+83144	hd.esto @A004@
+83174	@A027@30s T
+83202	hd.esto @A004@
+83232	1f
+83238	5f
+83244	6f
+83250	7f
+83256	8f
+83262	9f
+83268	10f
+83276	11f
+83284	12f
+83292	13f
+83300	14f
+83308	15f
+83316	16f
+83324	17f
+83332	18f
+83340	19f
+83348	20f
+83356	21f
+83364	22f
+83372	23f
+83380	24f
+83388	25f
+83396	26f
+83404	27f
+83412	28f
+83420	29f
+83428	30f
+83436	31f
+83444	32f
+83452	33f
+83460	34f
+83468	35f
+83476	36f
+83484	37f
+83492	38f
+83500	39f
+83508	40f
+83516	41f
+83524	42f
+83532	43f
+83540	44f
+83548	45f
+83556	46f
+83564	47f
+83572	48f
+83580	49f
+83588	50f
+83596	51f
+83604	52f
+83612	53f
+83620	54f
+83628	55f
+83636	56f
+83644	57f
+83652	58f
+83660	59f
+83668	60f
+83676	61f
+83684	62f
+83692	63f
+83700	64f
+83708	65f
+83716	66f
+83724	67f
+83732	68f
+83740	69f
+83748	70f
+83756	71f
+83764	72f
+83772	73f
+83780	74f
+83788	75f
+83796	76f
+83804	77f
+83812	78f
+83820	79f
+83828	80f
+83836	81f
+83844	82f
+83852	83f
+83860	84f
+83868	85f
+83876	86f
+83884	87f
+83892	88f
+83900	89f
+83908	90f
+83916	91f
+83924	92f
+83932	93f
+83940	94f
+83948	95f
+83956	96f
+83964	97f
+83972	98f
+83980	99f
+83988	@A052@ 1 sekuntia
+84024	@A052@ 3 sekuntia
+84060	@A052@ 4 sekuntia
+84096	@A052@ 5 sekuntia
+84132	@A052@ 6 sekuntia
+84168	@A052@ 7 sekuntia
+84204	@A052@ 8 sekuntia
+84240	@A052@ 9 sekuntia
+84276	@A052@ 10 sekuntia
+84314	@A052@ 11 sekuntia
+84352	@A052@ 13 sekuntia
+84390	@A052@ 14 sekuntia
+84428	@A052@ 15 sekuntia
+84466	@A052@ 16 sekuntia
+84504	@A052@ 17 sekuntia
+84542	@A052@ 18 sekuntia
+84580	@A052@ 19 sekuntia
+84618	@A052@ 20 sekuntia
+84656	@A052@ 21 sekuntia
+84694	@A052@ 22 sekuntia
+84732	@A052@ 23 sekuntia
+84770	@A052@ 24 sekuntia
+84808	@A052@ 25 sekuntia
+84846	@A052@ 26 sekuntia
+84884	@A052@ 27 sekuntia
+84922	@A052@ 28 sekuntia
+84960	@A052@ 29 sekuntia
+84998	@A052@ 30 sekuntia
+85036	SSID
+85046	Password
+85064	URL
+85072	http://flashair/
+85106	S-I.S. Off
+85128	S-I.S. 1
+85146	S-I.S. 2
+85164	S-I.S. 3
+85182	M-I.S. Off
+85204	M-I.S. 1
+85222	M-I.S. 2
+85240	HDR BKT
+85256	HDR BKT Off
+85280	50Hz
+85290	60Hz
+85300	ISO LOW
+85316	LOW
+85324	3f 2.0EV
+85342	3f 3.0EV
+85360	5f 2.0EV
+85378	5f 3.0EV
+85396	7f 2.0EV
+85414	ART12
+85426	@A03C@Tason
+85450	yt.
+85458	0001.jpg
+85488	Laaja LV:n dyn.alue
+85528	HDR
+85536	HDR pois
+85554	Tulostusvaraus
+85594	 valotuksen 
+85622	kompensaatiota
+85652	Esikatselun p
+85680	ivitys@A040@
+85710	@A068@: AEL/AFL
+85742	@A087@: AEL/AFL
+85774	@A028@: AEL/AFL
+85806	Kytkee EVF:n automaattisen
+85862	kirkkauden pois p
+85900	lt
+85910	manuaalista kirkkauss
+85962	 varten.
+85980	Kytkee EVF:n automaattisen
+86036	kirkkauden p
+86064	lle. Kirkkautta
+86104	det
+86114	n automaattisesti.
+86152	Kytkee sis
+86174	isen @A068@-toiminnon
+86220	pois p
+86236	lt
+86246	Asettaa ohjelmasiirtym
+86292	n ohjauksen
+86318	valitsimella samaan suuntaan kuin
+86388	S.S. S-tilaa k
+86418	ytett
+86430	ess
+86442	ISO
+86462	Asettaa ohjelmasiirtym
+86508	n ohjauksen
+86534	valitsimella samaan suuntaan kuin
+86604	aukko A-tilaa k
+86636	ytett
+86648	ess
+86660	@A011@: Muuta zoomin sijaintia
+86724	painamalla nuolin
+86760	pp
+86766	imi
+86784	ytt
+86792	 mahdollista vain
+86834	hk
+86840	isell
+86852	 zoom-objektiviilla.
+86894	Autom. I.S.
+86918	Painike/Valitsin/Vipu
+86962	Painikkeen, valitsimen ja 
+87018	vivun asetukset.
+87052	B. Painike/Valitsin/Vipu
+87102	FlashAir
+87120	Pys
+87128	yt
+87140	ynnistysasetukset
+87176	Yhdistetty.
+87200	Manuaalinen K
+87228	ynnistys
+87246	Auto K
+87260	ynnistys
+87278	Tehoste
+87294	Tyyppi
+87308	Tyyppi@A00E@
+87334	Tyyppi@A00F@
+87360	Tyyppi@A010@
+87386	Tyyppi@A064@
+87412	Yhdist
+87428	 v
+87434	hint
+87446	n kaksi 
+87466	mallia yhdeksi kuvaksi
+87512	Vakio
+87524	Hauskat kehykset
+87558	Valkoinen
+87578	Valkoinen/valkoinen reuna
+87630	Musta
+87642	Musta/neulansilm
+87678	Filmi
+87690	Pikakamera
+87712	@A065@ 3 kuvaa
+87742	@A066@ 3 kuvaa
+87772	@A065@ 2 kuvaa
+87802	@A066@ 2 kuvaa
+87832	Yhteys 
+87848	lypuhelimeen
+87876	sis
+87884	isell
+87896	 @A068@-yhteydell
+87936	Jakotilaus
+87958	Jakotilaus valittu
+87996	@A041@@A02F@
+88022	@A068@-asetukset
+88056	Sis
+88064	isen @A068@-yhteyden
+88108	valikko.
+88126	@A068@-yhteysasetukset
+88172	Yksityinen
+88194	Kerta
+88206	Valitse
+88224	lypuhelinliit
+88252	nt
+88260	 varten.
+88278	Muiden 
+88294	lypuhelimien
+88322	kanssa jakamista varten.
+88374	Ainutlaatuista salasanaa k
+88428	ytet
+88440	n.
+88446	Valitse @A068@-yhteys joka kerta.
+88514	Yksityinen salasana
+88554	@A021@: muuta 
+88584	lypuhelinyhteyden
+88622	salasanaa.
+88644	Nollaa jakotilaus
+88680	Nollaa @A068@-asetukset
+88728	@A005@ Varoitus: kaikki @A068@-asetukset
+88812	nollataan
+88832	Valitse @A068@-yhteys
+88876	Valmistellaan @A068@-yhteytt
+88938	lypuhelinliit
+88966	nt
+88974	 varten.
+89002	 m
+89010	ritys tarvitsee tehd
+89056	vain kerran.
+89084	@A068@-yhteys k
+89116	ynnistyy
+89136	my
+89142	hemmin.
+89158	Asenna 
+89176	"OLYMPUS Image Share"
+89224	lypuhelimeesi.
+89256	Paina @A01F@ kun sovellus
+89310	on asennettu.
+89338	Yhdistet
+89358	n 
+89364	lypuhelimeen.
+89394	Lue QR-koodi sovelluksella
+89450	"OLYMPUS Image Share".
+89496	Seuraava@A019@
+89526	Pys
+89534	yt
+89540	@A030@
+89554	@A068@ k
+89572	ynnistyy
+89590	@A068@ katkaistaan
+89628	Muiden 
+89644	lypuhelimien
+89672	kanssa jakamista varten.
+89728	ytet
+89740	nk
+89746	 nykyist
+89764	 salasanaa?
+89792	yt
+89798	 nykyist
+89816	 salasanaa
+89842	yt
+89848	 uutta salasanaa
+89882	Jaetaan muiden
+89916	lypuhelimien kanssa.
+89960	Lue QR-koodi sovelluksella
+90016	"OLYMPUS Image Share"
+90062	tai yhdist
+90084	 manuaalisesti.
+90116	Asettaa FlashAir-kortin
+90166	yhteyden.
+90186	Asettaa yhteyden k
+90224	ynnist
+90238	misen
+90252	manuaalisesti.
+90282	Automaattinen yhteys otetaan, kun
+90352	virta on P
+90376	ll
+90386	FlashAir on k
+90414	ynniss
+90434	Sisist
+90448	 Wi-Fi-yhteytt
+90482	ei voi k
+90500	ytt
+90514	EVF Automaattikytkin
+90556	Vaihda automaattisesti n
+90606	yt
+90612	lt
+90622	etsimeen, kun silm
+90660	 havaitaan
+90684	etsimell
+90706	Kytke silm
+90728	ntunnistin pois
+90768	lt
+90774	. @A075@ vaihtaa n
+90812	yt
+90818	n ja
+90830	etsimen v
+90850	lill
+90864	Kytke silm
+90886	ntunnistin p
+90914	lle.
+90924	Bulb/aika-n
+90948	ytt
+90970	 n
+90976	yt
+90982	n ja etsimen
+91010	kirkkautta, kun BULB/AIKA
+91064	on valittu.
+91088	AE BKT
+91102	Vaihda AE BKT -tilaan.
+91148	ART BKT
+91164	Vaihda ART BKT -tilaan.
+91212	Video @A042@
+91238	S-I.S. pois
+91262	S-I.S. autom.
+91290	Kamera valitsee vakautusasetuksen
+91360	tunnistamalla kameran liikkeen.
+91424	M-I.S. pois
+91448	M-I.S. p
+91468	ll
+91476	Vakauta kuvaa videokuvauksen
+91536	aikana.
+91552	@A088@ Vivun Toiminto
+91596	Valitse toiminto, joka
+91644	asetetaan @A088@ vivulle.
+91696	Muuta s
+91714	dintoimintoa
+91742	valinnalla @A088@. @A089@: Noudata 
+91822	dintoiminnon asetuksia.
+91872	@A08A@: Muuta ISO-herkkyytt
+91928	 @A08B@
+91946	tai muuta valkotasapainotilaa @A076@.
+92022	Muuta s
+92040	dintoimintoa
+92068	valinnalla @A088@. @A089@: Noudata 
+92148	dintoiminnon asetuksia.
+92198	@A08A@: Muuta ISO-herkkyytt
+92254	 @A076@
+92272	tai muuta valkotasapainotilaa @A08B@.
+92348	Muuta @A024@-painikkeen toimintoa
+92418	painamalla @A088@.
+92458	@A089@: Noudata painikkeen
+92514	toimintoasetuksia.
+92554	@A08A@: Aloita/lopeta videotallennus.
+92630	Muuta AF-tilaa @A088@.
+92678	Asettaa AF-tilan kohteille
+92734	@A089@ ja @A08A@.
+92770	Raita
+92782	SETUP@A025@
+92806	@A06B@Toiminto
+92836	Vaihda AE BKT -tilaan.
+92882	Vaihda AE BKT -tilaan.
+92928	Vaihda AE BKT -tilaan.
+92974	Vaihda ART BKT -tilaan.
+93022	Vaihda ART BKT -tilaan.
+93070	Vaihda ART BKT -tilaan.
+93118	@A08C@: AEL/AFL
+93150	Valitse AF-kohde ja AF-tila.
+93208	@A08C@: Muuttaa x1/x2.
+93264	 valotuksen 
+93292	kompensaatiota
+93322	Vaihda HDR BKT -tilaan.
+93370	@A08C@: N
+93390	yt
+93396	 suurennettu
+93424	ruutu ja paina uudelleen 
+93478	suurentaaksesi kuvaa.
+93522	Muuta Live Guide -tilaa painamalla
+93594	@A08C@ ja palaa takaisin painamalla
+93668	sit
+93676	 uudelleen.
+93700	Kuvaus @A02B@-painikkeella
+93756	painettaessa @A08C@-painiketta
+93818	Kuvaus @A02C@-painikkeella
+93874	painettaessa @A08C@-painiketta
+93936	Kuvaus @A02D@-painikkeella
+93992	painettaessa @A08C@-painiketta
+94054	Kuvaus @A02E@-painikkeella
+94110	painettaessa @A08C@-painiketta
+94172	AF-ALUE-toiminnon
+94210	asetus
+94224	Vaihda 
+94242	MF-toimintoon
+94270	@A08C@:
+94288	Aloita/lopeta
+94318	videotallennus
+94348	@A08C@ Kertapainike WB.
+94396	@A08C@ Syv
+94418	ter
+94426	vyyden
+94442	esikatselu.
+94466	Vaihda 
+94484	RAW+JPEG-/JPEG- 
+94520	laadut kiekolla
+94552	@A08C@ Testikuva ilman
+94600	tallennusta.
+94626	@A08C@: Painikkeet @A02F@ ja @A030@.
+94700	AE BKT Off
+94722	Manuaalinen
+94746	Autom.
+94760	Yhdist
+94776	 v
+94782	hint
+94794	n kaksi 
+94814	mallia yhdeksi kuvaksi
+94862	Kuvaus kosketusn
+94896	yt
+94902	ll
+94910	Valitse tila, kun
+94948	tarkennusrengasta
+94992	nnet
+95004	n MF-tilassa.
+95032	Kuvaa ei suurenneta
+95074	automaattisesti, kun
+95118	tarkennusrengasta
+95162	nnet
+95174	n MF-tilassa.
+95202	Valitse toiminto p
+95242	lle suuren-
+95268	taaksesi kuvan
+95298	kym
+95308	 manuaali-
+95332	tarkennusta k
+95360	ytett
+95372	ess
+95384	Korostus
+95402	Kohteen 
+95422	riviivat eiv
+95448	t n
+95456	y,
+95464	kun tarkennusrengasta k
+95514	nnet
+95532	MF-tilassa.
+95556	Kohteen 
+95576	riviivat n
+95598	kyv
+95606	t,
+95614	kun tarkennusrengasta k
+95664	nnet
+95682	MF-tilassa. T
+95714	 toiminto auttaa
+95750	tarkennuksen s
+95786	ss
+95796	@A01D@: Paina n
+95828	ytt
+95838	ksesi kohteen
+95872	riviivat tarkennuksen s
+95928	n.
+95936	Piilota 
+95956	riviivat painamalla
+95998	uudelleen.
+96020	@A023@: Paina n
+96052	ytt
+96062	ksesi kohteen
+96096	riviivat tarkennuksen s
+96152	n.
+96160	Piilota 
+96180	riviivat painamalla
+96222	uudelleen.
+96244	@A08C@: Paina n
+96276	ytt
+96286	ksesi kohteen
+96320	riviivat tarkennuksen s
+96376	n.
+96384	Piilota 
+96404	riviivat painamalla
+96446	uudelleen.
+96468	@A06D@: Paina n
+96500	ytt
+96510	ksesi kohteen
+96544	riviivat tarkennuksen s
+96600	n.
+96608	Piilota 
+96628	riviivat painamalla
+96670	uudelleen.
+96692	Korostusasetukset
+96738	 korostusn
+96760	ytt
+96768	asetuksia.
+96790	Valkoinen
+96810	Musta
+96822	Tarkennetut alueet 
+96864	korostetaan valkoisella 
+96916	tarkennuksen korostuksessa.
+96972	Tarkennetut alueet 
+97014	korostetaan mustalla 
+97060	tarkennuksen korostuksessa.
+97116	@A029@: Muuta zoomin sijaintia
+97180	painamalla nuolin
+97216	pp
+97222	imi
+97240	ytt
+97248	 mahdollista vain
+97290	hk
+97296	isell
+97308	 zoom-objektiviilla.
+97350	Valitse AF-kohde ja AF-tila.
+97408	Valitse AF-kohde ja AF-tila.
+97466	@A068@: Muuttaa x1/x2.
+97512	@A087@: Muuttaa x1/x2.
+97558	@A028@: Muuttaa x1/x2.
+97604	@A068@: Paina k
+97636	ynnist
+97652	ksesi
+97666	eri toimintoja ja vaihda toimintoa
+97738	valintakiekolla.
+97772	@A06E@: Paina k
+97804	ynnist
+97820	ksesi
+97834	eri toimintoja ja vaihda toimintoa
+97906	valintakiekolla.
+97940	@A06F@: Paina k
+97972	ynnist
+97988	ksesi
+98002	eri toimintoja ja vaihda toimintoa
+98074	valintakiekolla.
+98108	@A06C@: Paina k
+98140	ynnist
+98156	ksesi
+98170	eri toimintoja ja vaihda toimintoa
+98242	valintakiekolla.
+98276	@A06D@: Paina k
+98308	ynnist
+98324	ksesi
+98338	eri toimintoja ja vaihda toimintoa
+98410	valintakiekolla.
+98444	@A087@: Paina k
+98476	ynnist
+98492	ksesi
+98506	eri toimintoja ja vaihda toimintoa
+98578	valintakiekolla.
+98612	@A028@: Paina k
+98644	ynnist
+98660	ksesi
+98674	eri toimintoja ja vaihda toimintoa
+98746	valintakiekolla.
+98790	 valotuksen
+98816	kompensaatiota
+98856	 valotuksen
+98882	kompensaatiota
+98922	 valotuksen
+98948	kompensaatiota
+98988	 valotuksen
+99014	kompensaatiota
+99044	Ota tason
+99064	ytt
+99072	 k
+99078	ytt
+99094	painamalla. Poista k
+99136	yt
+99142	st
+99152	painamalla uudelleen.
+99198	Toimii tilassa @A03C@.
+99244	Kytkee HDR-toiminnon
+99294	lle/pois p
+99318	lt
+99328	Kytkee HDR-toiminnon
+99378	lle/pois p
+99402	lt
+99412	Kytkee HDR-toiminnon
+99462	lle/pois p
+99486	lt
+99496	Kytkee HDR-toiminnon
+99546	lle/pois p
+99570	lt
+99580	Kytkee HDR-toiminnon
+99630	lle/pois p
+99654	lt
+99664	Kytkee HDR-toiminnon
+99714	lle/pois p
+99738	lt
+99748	Kytkee HDR-toiminnon
+99798	lle/pois p
+99822	lt
+99832	Kytkee HDR-toiminnon
+99882	lle/pois p
+99906	lt
+99916	Kytkee HDR-toiminnon
+99966	lle/pois p
+99990	lt
+100000	@A068@: N
+100020	yt
+100026	 suurennettu
+100054	ruutu ja paina uudelleen
+100106	suurentaaksesi kuvaa.
+100150	@A087@: N
+100170	yt
+100176	 suurennettu
+100204	ruutu ja paina uudelleen
+100256	suurentaaksesi kuvaa.
+100300	Muuta Live Guide -tilaa painamalla
+100372	@A068@ ja palaa takaisin painamalla
+100446	sit
+100454	 uudelleen.
+100478	Muuta Live Guide -tilaa painamalla
+100550	@A087@ ja palaa takaisin painamalla
+100624	sit
+100632	 uudelleen.
+100656	Muuta Live Guide -tilaa painamalla
+100728	@A028@ ja palaa takaisin painamalla
+100802	sit
+100810	 uudelleen.
+100834	Kytkee toiminnon @A07D@
+100890	lle/pois p
+100914	lt
+100924	Kytkee toiminnon @A07D@
+100980	lle/pois p
+101004	lt
+101014	Kytkee toiminnon @A07D@
+101070	lle/pois p
+101094	lt
+101104	Kytkee toiminnon @A07D@
+101160	lle/pois p
+101184	lt
+101194	Kytkee toiminnon @A07D@
+101250	lle/pois p
+101274	lt
+101284	Kytkee toiminnon @A07D@
+101340	lle/pois p
+101364	lt
+101374	Kytkee toiminnon @A07E@
+101430	lle/pois p
+101454	lt
+101464	Kytkee toiminnon @A07E@
+101520	lle/pois p
+101544	lt
+101554	Kytkee toiminnon @A07E@
+101610	lle/pois p
+101634	lt
+101644	Kytkee toiminnon @A07E@
+101700	lle/pois p
+101724	lt
+101734	Kytkee toiminnon @A07E@
+101790	lle/pois p
+101814	lt
+101824	Kytkee toiminnon @A07E@
+101880	lle/pois p
+101904	lt
+101914	Kytkee toiminnon @A07F@
+101970	lle/pois p
+101994	lt
+102004	Kytkee toiminnon @A07F@
+102060	lle/pois p
+102084	lt
+102094	Kytkee toiminnon @A07F@
+102150	lle/pois p
+102174	lt
+102184	Kytkee toiminnon @A07F@
+102240	lle/pois p
+102264	lt
+102274	Kytkee toiminnon @A07F@
+102330	lle/pois p
+102354	lt
+102364	Kytkee toiminnon @A07F@
+102420	lle/pois p
+102444	lt
+102454	Kytkee toiminnon @A080@
+102510	lle/pois p
+102534	lt
+102544	Kytkee toiminnon @A080@
+102600	lle/pois p
+102624	lt
+102634	Kytkee toiminnon @A080@
+102690	lle/pois p
+102714	lt
+102724	Kytkee toiminnon @A080@
+102780	lle/pois p
+102804	lt
+102814	Kytkee toiminnon @A080@
+102870	lle/pois p
+102894	lt
+102904	Kytkee toiminnon @A080@
+102960	lle/pois p
+102984	lt
+102994	Live View'n dynaamista aluetta
+103058	ei ole laajennettu.
+103098	Live View'n dynaaminen alue
+103156	on laaja, kun HDR on tilassa
+103216	HDR1 tai HDR2.
+103246	Ottaa 3 kuvaa
+103276	2,0EV:n valotuserolla.
+103322	Ottaa 3 kuvaa
+103352	3,0EV:n valotuserolla.
+103398	Ottaa 5 kuvaa
+103428	2,0EV:n valotuserolla.
+103474	Ottaa 5 kuvaa
+103504	3,0EV:n valotuserolla.
+103550	Ottaa 7 kuvaa
+103580	2,0EV:n valotuserolla.
+103626	Ottaa 4 kuvaa kerralla eri
+103682	valotuksilla ja yhdist
+103730	 ne
+103740	automaattisesti suurikontrastiseksi
+103814	kuvaksi.
+103832	Ottaa 4 kuvaa kerralla eri
+103888	valotuksilla ja yhdist
+103936	 ne
+103946	automaattisesti eritt
+103990	in
+103998	suurikontrastiseksi
+104040	kuvaksi.
+104058	Kytkee HDR-toiminnon pois p
+104116	lt
+104126	AF-ALUE-toiminnon
+104164	asetus
+104178	AF-ALUE-toiminnon
+104216	asetus
+104230	@A05F@-painikkeiden toiminnot eiv
+104304	muutu tilassa .
+104336	Tilassa  @A05F@-painikkeiden
+104396	toiminnot vaihdetaan painikkeisiin
+104468	@A060@: BKT ja @A061@: @A062@.
+104530	Poistaa  viputoiminnon k
+104580	yt
+104586	st
+104596	@A078@ vaihtaa valitsimen toimintoja.
+104674	@A079@: mukautetut toimintoasetukset.
+104752	@A07A@: @A07B@ asettaa ISO-arvon,
+104822	@A066@ asettaa valkotasapainon.
+104886	@A078@ vaihtaa valitsimen toimintoja.
+104964	@A079@: mukautetut toimintoasetukset.
+105042	@A07A@: @A066@ asettaa ISO-arvon,
+105112	@A07B@ asettaa valkotasapainon.
+105176	@A078@ vaihtaa painikkeen toimintoja.
+105254	@A079@: mukautetut toimintoasetukset.
+105332	@A07A@: @A021@ asettaa ISO-arvon,
+105402	@A059@ asettaa valkotasapainon.
+105466	@A078@ vaihtaa painikkeen toimintoja.
+105544	@A079@: mukautetut toimintoasetukset.
+105622	@A07A@: @A059@ asettaa ISO-arvon,
+105692	@A021@ asettaa valkotasapainon.
+105756	@A078@ vaihtaa AF-tilaa mukautettujen
+105834	AF-asetusten @A079@ ja @A07A@ v
+105898	lill
+105912	Vaihda
+105928	MF-toimintoon
+105956	Vaihda
+105972	MF-toimintoon
+106000	@A068@:
+106018	Aloita/lopeta
+106048	videotallennus
+106078	@A06E@:
+106096	Aloita/lopeta
+106126	videotallennus
+106156	@A06F@:
+106174	Aloita/lopeta
+106204	videotallennus
+106234	@A06D@:
+106252	Aloita/lopeta
+106282	videotallennus
+106312	@A087@:
+106330	Aloita/lopeta
+106360	videotallennus
+106390	@A028@:
+106408	Aloita/lopeta
+106438	videotallennus
+106468	@A068@ Kertapainike WB.
+106516	@A066@ Kertapainike WB.
+106564	@A087@ Kertapainike WB.
+106612	@A068@: Paina n
+106644	ytt
+106654	ksesi kohteen
+106688	riviivat tarkennuksen s
+106744	n.
+106752	Piilota 
+106772	riviivat painamalla
+106814	uudelleen.
+106836	@A06E@: Paina n
+106868	ytt
+106878	ksesi kohteen
+106912	riviivat tarkennuksen s
+106968	n.
+106976	Piilota 
+106996	riviivat painamalla
+107038	uudelleen.
+107060	@A06F@: Paina n
+107092	ytt
+107102	ksesi kohteen
+107136	riviivat tarkennuksen s
+107192	n.
+107200	Piilota 
+107220	riviivat painamalla
+107262	uudelleen.
+107284	@A06C@: Paina n
+107316	ytt
+107326	ksesi kohteen
+107360	riviivat tarkennuksen s
+107416	n.
+107424	Piilota 
+107444	riviivat painamalla
+107486	uudelleen.
+107508	@A066@: Paina n
+107540	ytt
+107550	ksesi kohteen
+107584	riviivat tarkennuksen s
+107640	n.
+107648	Piilota 
+107668	riviivat painamalla
+107710	uudelleen.
+107732	@A087@: Paina n
+107764	ytt
+107774	ksesi kohteen
+107808	riviivat tarkennuksen s
+107864	n.
+107872	Piilota 
+107892	riviivat painamalla
+107934	uudelleen.
+107956	@A028@: Paina n
+107988	ytt
+107998	ksesi kohteen
+108032	riviivat tarkennuksen s
+108088	n.
+108096	Piilota 
+108116	riviivat painamalla
+108158	uudelleen.
+108180	@A068@ Syv
+108202	ter
+108210	vyyden
+108226	esikatselu.
+108250	@A087@ Syv
+108272	ter
+108280	vyyden
+108296	esikatselu.
+108320	Vaihda
+108336	RAW+JPEG-/JPEG-
+108370	laadut kiekolla
+108402	Vaihda
+108418	RAW+JPEG-/JPEG-
+108452	laadut kiekolla
+108484	@A068@ Testikuva ilman
+108532	tallennusta.
+108558	@A087@ Testikuva ilman
+108606	tallennusta.
+108632	Pid
+108640	 painettuna @A011@: avaa/lukitse
+108708	kosketuspaneelin toiminta
+108762	kuvaustilassa.
+108792	Pid
+108800	 painettuna @A029@: avaa/lukitse
+108868	kosketuspaneelin toiminta
+108922	kuvaustilassa.
+108952	@A068@: Painikkeet @A02A@ ja @A02B@.
+109026	@A06E@: Painikkeet @A02A@ ja @A02B@.
+109100	@A06F@: Painikkeet @A02A@ ja @A02B@.
+109174	@A06D@: Painikkeet @A02A@ ja @A02B@.
+109248	@A087@: Painikkeet @A02A@ ja @A02B@.
+109322	@A028@: Painikkeet @A02A@ ja @A02B@.
+109396	Sis
+109404	inen @A017@
+109428	Sis
+109436	isen @A02E@ tallennustaso
+109488	@A080@+@A081@
+109516	@A078@ Vivun Toiminto
+109560	Linjatulo @A023@
+109594	Linjatulon @A02E@ tallennustaso
+109658	Luo objektiivin tietos.
+109706	@A026@
+109722	@A05C@Toiminto
+109752	@A043@V
+109768	rivalitsin
+109790	@A044@e-potretti
+109836	 objektiivien
+109866	AF-sijainnin kutakin
+109910	kohdepistett
+109940	Vihre
+109952	 kohdekehys ei n
+109992	automaattitarkennuksessa, kun
+110054	asetus on asetettu pois p
+110108	lt
+110130	 kohteen aktiivisuustasoa
+110184	C-AF-toiminnon aikana.
+110230	Live View'n dynaaminen alue
+110288	on laaja, kun asetus on p
+110342	ll
+110352	Asettaa HDR-asetuksen.
+110398	Kun asetus on pois p
+110442	lt
+110454	@A081@-painikkeiden toiminnot eiv
+110528	muutu tilassa @A080@.
+110572	Valitse toiminto, joka
+110620	asetetaan @A078@ vivulle.
+110684	 kunkin mikrofonin tasoa.
+110736	Ps
+110746	hent
+110758	 sumeutta kuvattaessa
+110804	alhaisella valolla.
+110848	htikirkas y
+110872	 k
+110878	sin
+110886	@A045@Lukitus
+110914	Kytkee toiminnon @A07D@
+110970	lle/pois p
+110994	lt
+111004	Kytkee toiminnon @A07E@
+111060	lle/pois p
+111084	lt
+111094	Kytkee toiminnon @A07F@
+111150	lle/pois p
+111174	lt
+111184	Kytkee toiminnon @A080@
+111240	lle/pois p
+111264	lt
+111274	@A066@ Testikuva ilman
+111322	tallennusta.
+111348	A-B : WB BKT Off
+111382	G-M : WB BKT Off
+111416	FL BKT Off
+111438	HDR1
+111448	HDR2
+111458	ISO BKT Off
+111482	mode5
+111494	ART BKT Off
+111518	ART BKT On
+111540	A-B : WB BKT
+111566	A-B : 3f 2Step
+111596	A-B : 3f 4Step
+111626	A-B : 3f 6Step
+111656	G-M : WB BKT
+111682	G-M : 3f 2Step
+111712	G-M : 3f 4Step
+111742	G-M : 3f 6Step
+111772	BKT
+111780	Vaihda BKT-tilaan.
+111818	Vaihda BKT-tilaan.
+111856	Vaihda BKT-tilaan.
+111894	Vaihda BKT-tilaan.
+111932	Vaihda BKT-tilaan.
+111970	Vaihda BKT-tilaan.
+112008	Vaihda BKT-tilaan.
+112046	Vaihda BKT-tilaan.
+112084	Vaihda BKT-tilaan.
+112122	@A03F@@A019@
+112148	Kuvatilaa valitessa voit
+112200	ohittaa kohteet, joita ei
+112254	ole asetettu @A03F@.
+112300	hennys/loitonnus
+112334	@A067@ 2 kuvaa
+112364	Matala
+112378	Layout
+112392	Paina laukaisinta kerran 
+112446	siirty
+112460	ksesi yhdistelm
+112498	kuvaustilaan.
+112526	Valmis yhdistelm
+112560	kuvaukseen
+112582	Yhdistelm
+112602	kuvausasetukset
+112634	Yhdistelm
+112654	kuv. asetusvalikko
+112694	Intervallikuvaustilassa 
+112746	otetut yhdistelm
+112780	kuvat.
+112794	Yhdistelm
+112814	tila
+112824	Vaalenna
+112842	Tummenna
+112860	Vertailee kuvien kuvapisteit
+112922	ja k
+112932	ytt
+112942	 vaaleampia
+112968	yhdistelm
+112988	kuvassa.
+113006	Vertailee kuvien kuvapisteit
+113068	ja k
+113078	ytt
+113088	 tummempia
+113112	yhdistelm
+113132	kuvassa.
+113150	Perusvalotusaika
+113184	Kuvakohtainen valotusaika.
+113240	Perusvalotusaika m
+113284	ytyy
+113296	valotusajan ja aukon perusteella.
+113364	Valitse P
+113386	ll
+113392	 salliaksesi MF-
+113428	tarkennuksen Bulb/AIKA/COMP-
+113488	kuvauksessa.
+113526	 n
+113532	yt
+113538	n ja etsimen
+113566	kirkkautta, kun BULB/AIKA/COMP
+113630	on valittu.
+113654	Liikkuvaa kuvaa ei voida kuvata,
+113722	kun @A074@ on liitettyn
+113774	Sulje@A019@
+113798	Lop. @A068@@A025@
+113834	Valintakiekot m
+113868	ritet
+113882	n 
+113890	seuraavasti painiketta
+113938	painettaessa: 
+113970	@A060@: ISO
+113996	@A053@: WB
+114018	Valintakiekot m
+114052	ritet
+114066	n 
+114074	seuraavasti painiketta 
+114124	painettaessa:
+114154	@A060@: WB
+114178	@A053@: ISO
+114202	Kun painiketta painetaan
+114254	yht
+114262	jaksoisesti, automaatti-
+114314	tarkennus kytkeytyy pois ja
+114372	tarkennus lukitaan, kun
+114422	painiketta painetaan.
+114466	Aktivoi AEL/AFL 
+114502	painamalla painiketta.
+114548	Aloita/lopeta
+114578	videotallennus.
+114610	Syv
+114618	ter
+114626	vyyden 
+114644	esikatselu.
+114668	Kertapainike WB.
+114702	Valitse AF-kohde ja AF-tila.
+114760	AF-alue-toiminnon
+114798	asetus
+114812	Vaihda 
+114830	MF-tilaan.
+114852	Vaihda 
+114870	RAW+JPEG-/JPEG- 
+114906	laadut kiekolla.
+114940	Testaa kuva 
+114968	tallentamatta.
+114998	Kytkee toiminnon @A07B@
+115054	lle/pois p
+115078	lt
+115088	Kytkee toiminnon @A07C@
+115144	lle/pois p
+115168	lt
+115178	Kytkee toiminnon @A07D@
+115234	lle/pois p
+115258	lt
+115268	Kytkee toiminnon @A07E@
+115324	lle/pois p
+115348	lt
+115358	Painikkeet @A061@ ja @A062@.
+115426	 valotuksen
+115452	kompensaatiota.
+115484	Kytke Live Guide painamalla,
+115544	poistu painamalla uudelleen.
+115602	Muuttaa x1/x2.
+115636	yt
+115642	 suurennettu
+115670	ruutu ja paina uudelleen 
+115724	suurentaaksesi kuvaa.
+115768	Kytkee HDR-toiminnon
+115818	lle/pois p
+115842	lt
+115852	Vaihda BKT-tilaan.
+115890	Paina k
+115906	ynnist
+115922	ksesi
+115936	eri toimintoja ja vaihda toimintoa
+116008	valintakiekolla.
+116042	Paina n
+116058	ytt
+116068	ksesi kohteen
+116102	riviivat tarkennuksen s
+116158	n.
+116166	Piilota 
+116186	riviivat painamalla
+116228	uudelleen.
+116250	@A021@: Aloita videon tallennus
+116316	@A020@: Ota kuva
+116352	@A059@: Video @A076@
+116394	Mukautettu itselaukaisin
+116444	@A093@ T
+116466	hd.esto @A004@
+116496	Asetukset@A01A@
+116528	Valitse n
+116548	ytet
+116560	nk
+116572	@A00A@-menu.
+116598	Monitoimiasetukset
+116642	rit
+116650	 toiminnot, joita 
+116694	ytet
+116706	n monitoimiasetuksessa 
+116756	painamalla @A03F@.
+116794	Video+Valokuva-tila
+116834	Aseta valokuvausprioriteetiksi 
+116900	Video+Valokuva-tila.
+116942	Video on etusijalla.
+116986	@A067@valokuva voidaan ottaa
+117046	videokuvauksen aikana.
+117094	Valokuvan kuvanlaatu
+117138	rajoitettu. Akt. toiminnossa @A070@.
+117212	Valokuva on etusijalla.
+117262	Videot tallennetaan 
+117306	ennen valokuvan ottamista ja 
+117368	sen j
+117380	lkeen.
+117398	hk
+117404	toim. zoomausnopeus
+117450	ritt
+117462	 zoomausnopeuden
+117498	valok.- ja videotiloissa s
+117552	hk
+117564	toim. zoom-objektiivilla.
+117616	Valokuva-I.S. pois
+117654	Video-I.S. pois
+117686	Valmistellaan yhdistelm
+117734	kuvaustilaa.
+117762	Odota hetki.
+117788	Paina painiketta: kosketusn
+117844	yt
+117856	lukitus/vapautus
+117892	kuvaustilassa.
+117922	Muuta zoomin sijaintia
+117970	painamalla nuolin
+118006	pp
+118012	imi
+118030	ytt
+118038	 mahdollista vain
+118080	hk
+118086	isell
+118098	 zoom-objektiivilla.
+118140	@A060@ISO/@A053@WB
+118178	@A060@WB/@A053@ISO
+118216	Ei
+118222	Kyll
+118234	HR-kuva
+118250	Ottaa ja yhdist
+118284	 kahdeksan
+118308	kuvaa ja luo niist
+118346	 tarkan 
+118366	HR-kuvan. Edellytt
+118406	 jalustaa.
+118428	Ottaa HR-kuvat k
+118462	ytt
+118472	n.
+118480	Valitse sulkimen vapauttamisen
+118548	lkeinen viiveaika.
+118586	@A00A@Latausaika
+118620	Valitse sulkimen vapauttamisen
+118684	ja salaman latautumisen v
+118736	linen 
+118752	aika. Asetus ei ole pakollinen
+118816	alkuper
+118832	ist
+118840	 salamaa k
+118862	ytett
+118874	ess
+118886	Tunnistimensiirto + digitaal.
+118946	Pelkk
+118958	 tunnistimensiirto
+118996	Kuvanvakaus tehd
+119032	n sek
+119048	tunnistimensiirrolla ett
+119104	digitaalisesti.
+119136	Kuvanvakaus tehd
+119172	n vain
+119188	tunnistimensiirrolla, ei 
+119242	digitaalisesti.
+119274	Pakkaus/bittinopeus
+119314	Kuvataajuus
+119338	Leikkeen tall.aika
+119376	Hidastus tai nopeutus
+119420	Videon tekniset asetukset
+119482	 videon kuvakokoa,
+119522	pakkaustapaa ja bittinopeutta.
+119584	Videotarkkuus
+119612	Video @A01A@
+119638	ALL-I-pakkaaminen tuottaa 
+119694	parhaan kuvanlaadun edistyneeseen 
+119766	muokkaamiseen, mutta tiedostosta 
+119836	tulee eritt
+119860	in suuri.
+119880	Suurinta bittinopeutta k
+119930	ytt
+119942	 IPB-
+119956	pakkaaminen tuottaa parhaan 
+120016	kuvanlaadun, mutta tiedostosta 
+120082	tulee eritt
+120106	in suuri.
+120126	Suurta bittinopeutta k
+120172	ytt
+120184	 IPB-
+120198	pakkaaminen tuottaa paremman 
+120260	kuvanlaadun, mutta tiedostosta 
+120326	tulee suuri.
+120352	Vakiobittinopeutta k
+120394	ytt
+120406	 IPB-
+120420	pakkaaminen tuottaa tavallisen 
+120486	kuvanlaadun eik
+120518	 tiedostosta 
+120548	tule kovin suurta.
+120586	Mit
+120594	 korkeampi luku, sit
+120642	pehme
+120654	mpi kuvasta tulee.
+120692	Ota leikkeet pois 
+120736	yt
+120742	st
+120748	, jos haluat 
+120782	ytt
+120792	 tavallista 
+120820	videotallennusta.
+120856	Ota leikkeet k
+120886	ytt
+120896	n, 
+120906	jos haluat tallentaa 
+120952	lyhyit
+120966	 videoleikkeit
+121002	Omat leikkeet -kansioon.
+121052	Video tallennetaan 
+121094	vakiotoistonopeudella.
+121140	Video tallennetaan 
+121182	hitaalla toistonopeudella.
+121242	nt
+121248	 ei tallenneta.
+121280	Video tallennetaan 
+121322	nopealla toistonopeudella.
+121382	nt
+121388	 ei tallenneta.
+121420	Lis
+121428	tty Omat leikkeet -kansioon.
+121486	Tallennettu tavallisena videona.
+121552	Omat leikkeet -kansio on t
+121606	ynn
+121618	Siirr
+121630	 leikett
+121648	 Omat leikkeet -kans.
+121692	Siirr
+121704	 kohde Omat leikkeet -kansioon.
+121768	Lis
+121778	 uuteen Omat leikkeet -kansioon.
+121844	Poista Omat leikkeet -kansiosta.
+121910	Omat leikkeet
+121938	Lis. Om. leikk.
+121970	Toista Om. leikk.
+122006	Vie Omat leikkeet
+122046	yt
+122052	 Om. leikk.
+122076	Poista Om. leikk.
+122112	@A003@ Kaikki Omat leikkeet -kansiossa
+122192	olevat kohteet poistetaan.
+122246	Muuta j
+122262	rjestyst
+122282	Esiasetettu kohde
+122318	Seuraava leike tulee
+122370	n kohteen j
+122394	lkeen, 
+122412	jollei leike k
+122442	yt
+122448	 t
+122454	st
+122464	Omat leikkeet -kansiosta 
+122518	poikkeavia videoasetuksia.
+122572	Leikkeen tehosteet
+122610	1. Poptaide
+122634	2. Kevyt s
+122656	vy
+122662	3. Neulanreik
+122692	4. Cross-kehitys
+122726	5. Seepia
+122746	6. Vanha filmi
+122776	Tehosteita ei n
+122808	ytet
+122818	 esikatselussa.
+122850	Siirtym
+122866	tehoste
+122886	ivytys
+122900	Tall. leikkeen 
+122934	ni
+122940	Tall. leikkeen 
+122974	nenv.
+122986	Esikats.
+123004	Aloita vienti
+123032	Leikkeen kokonaispituus
+123080	Odota hetki.
+123110	sittelyaika on kaksi
+123154	kertaa videon pituus.
+123198	Valmis
+123212	Peruttu
+123228	PCM-tallennin @A017@ -linkki
+123286	Kun t
+123302	 on k
+123314	yt
+123320	ss
+123326	, kameran 
+123350	asetukset optim. Olympus PCM 
+123412	-tallenninlinkin perusteella.
+123472	Monivalotus
+123496	@A00A@ RC-toiminto
+123534	@A017@Liitinvirta
+123570	Valitse Pois, jos kytket
+123622	mikrofonin, joka ei tarvitse
+123682	virtaa.
+123698	Valinn. s
+123724	kiek. toim.
+123748	Valitse valinnaisen s
+123798	- 
+123806	kiekon toiminto.
+123856	nenvoimakkuutta
+123890	valintakiekolla @A07B@ kuulokkeita
+123966	ytett
+123978	ess
+123990	Valintakiekko @A07B@ k
+124036	ytt
+124046	 valitsin-
+124070	toiminnon asetuksia.
+124112	Omakuvan aputoim.
+124158	 n
+124164	yt
+124170	n asetukset,
+124198	kun n
+124210	ytt
+124220	 k
+124228	nnet
+124240	n 
+124248	omakuvia varten.
+124282	Omakuvan aputoiminnon
+124328	asetuksia ei aktivoida,
+124378	vaikka n
+124396	ytt
+124406	 k
+124414	nnett
+124426	isiin.
+124440	Omakuvan aputoimintojen ohjaimet
+124512	ytet
+124524	n n
+124532	yt
+124538	ss
+124544	 ja
+124554	Live View n
+124578	ytet
+124596	peilikuvana.
+124622	@A004@Laukaisintoiminto
+124670	Aseta laukaisinpainikkeen 
+124726	toiminto @A004@-tilassa.
+124776	Ota kuva painamalla 
+124820	laukaisinpainiketta.
+124862	Aloita/lopeta videotallennus
+124922	painamalla laukaisinpainiketta.
+124986	Kuulokkeiden 
+125016	nenv.
+125040	 kuulokkeiden 
+125072	nenvoim.
+125092	Ei vaikuta tallennustasoon.
+125148	@A008@ Info-asetus
+125186	Valitse @A008@-tilassa
+125238	ytett
+125254	t tiedot.
+125274	Aikakoodi
+125294	Hiljainen @A045@k
+125330	ytt
+125340	Nopea torkkutila
+125374	Kamera siirtyy torkkutilaan
+125432	parissa sekunnissa, kun 
+125484	Live View ei ole k
+125522	yt
+125528	ss
+125538	Valikkomuisti
+125566	Muistaa viimeisimm
+125604	n valinnan.
+125628	Muista
+125642	Nollaa
+125656	Aikakoodiasetukset
+125704	 aikakoodiasetukset.
+125746	Aikakooditila
+125774	DF
+125780	Ei DF
+125804	 aikaeron varsinaiseen
+125852	tallennusaikaan n
+125888	hden.
+125906	ytet
+125918	n edistyneess
+125950	muokkauksessa, kun ajan 
+126002	on oltava eritt
+126034	in tarkka.
+126056	Ei s
+126072	 aikaeroa varsinaiseen
+126120	tallennusaikaan n
+126156	hden.
+126168	Laske yl
+126186	sp
+126192	in
+126198	RR
+126204	FR
+126210	Laskee aikakoodin vain
+126258	videon tallennuksen aikana.
+126314	Laskee aikakoodin silloinkin,
+126376	kun videota ei tallenneta -
+126434	my
+126440	s kameran ollessa
+126478	sammutettuna.
+126506	Aloitusaika
+126530	Nollaa
+126544	Manuaalinen sy
+126574	tt
+126582	Nykyinen aika
+126610	Aseta tunti:minuutti:sekunti:ruutu
+126682	arvoon 00:00:00:00.
+126722	Aseta tunti, minuutti, sekunti ja
+126792	ruutu manuaalisesti.
+126834	Aseta tunti, minuutti ja sekunti
+126902	nykyiseen aikaan ja ruutu arvoon 00.
+126976	Korostettu v
+127002	ri
+127008	Punainen
+127026	Keltainen
+127046	Tarkennetut alueet 
+127088	korostetaan punaisella 
+127138	tarkennuksen korostuksessa.
+127194	Tarkennetut alueet 
+127236	korostetaan keltaisella 
+127288	tarkennuksen korostuksessa.
+127344	Korostuksen voimakk.
+127386	Tarkennettuja alueita 
+127434	korostetaan hieman.
+127474	Tarkennettuja alueita korostetaan.
+127544	Tarkennettuja alueita 
+127592	korostetaan paljon.
+127632	Kuvan kirkkauss
+127672	Ei s
+127688	 Live View
+127712	-kuvan kirkkautta.
+127762	 Live View -kuvan 
+127802	kirkkautta korostuksen 
+127856	kyvyyden parantamiseksi. 
+127910	Live View -kuvan ja lopullisen
+127974	kuvan kirkkaus ei ole sama.
+128040	 sarjakuv., 
+128068	ajastetun kuv. ja 
+128108	Time Lapse -kuv. asetuksia.
+128164	@A047@ Hiljainen @A048@
+128212	@A049@ Hiljainen @A048@
+128260	@A04A@ Hiljainen @A048@
+128308	@A04B@ Hiljainen @A048@
+128356	@A04C@ Hiljainen @A048@
+128404	@A04D@ Hiljainen @A048@
+128452	@A047@ T
+128474	hd.esto @A04E@
+128504	@A04A@ T
+128526	hd.esto @A04E@
+128556	@A04B@ T
+128578	hd.esto @A04E@
+128608	@A04C@ T
+128630	hd.esto @A04E@
+128660	@A04D@ T
+128682	hd.esto @A04E@
+128720	hd.esto@A04E@/Hiljainen@A048@
+128790	 hiljaisen kuvauksen 
+128836	ja t
+128850	hdyksenesto-
+128878	kuvauksen asetuksia.
+128920	Hiljainen@A048@
+128952	Ottaa hiljaisen kuvauksen k
+129008	ytt
+129018	n.
+129026	Salama tai @A004@ ei toimi.
+129084	Valitse sulkimen vapauttamisen
+129152	lkeinen viiveaika.
+129198	hd.esto@A04E@
+129226	Kun suljinnopeus on @A079@ tai
+129294	hemm
+129304	n, ensimm
+129324	inen suljinverho
+129360	vaihdetaan elektroniseen. 
+129416	Valitse sulkimen vapauttamisen
+129484	lkeinen viiveaika.
+129522	Kohinanvaimennus@A048@
+129568	Kohinanvaimennus ei toimi
+129622	hiljaisen kuvaamisen aikana.
+129680	Kohinanvaimennus toimii
+129730	my
+129736	s hiljaisen kuvaamisen aikana. 
+129802	Sulkimen 
+129824	ni kuuluu
+129846	kohinanvaimennuksen valmistelun 
+129914	aikana.
+129930	Manuaalikuvaus
+129960	Bulb/aika
+129980	Live-yhdistelm
+130012	Muut
+130034	 rajaus - manuaalikuvaus
+130096	 rajaus - bulb/aika
+130148	 rajaus - live-yhdistelm
+130212	 rajaus - muut
+130248	ll
+130264	ll
+130274	Live View -kirkkaus
+130316	vastaa valotusasetuksia.
+130372	ytetyn kuvan kirkkaus on 
+130426	sama kuin lopullisessa 
+130476	kuvassa.
+130494	Live View -kirkkaus ei
+130542	vastaa valotusasetuksia, 
+130596	vaan optimoidaan katselulle. 
+130658	Lopullisen kuvan kirkkaus 
+130714	ei ole sama.
+130740	Live View -kirkkaus ei kuvasta 
+130806	valotusasetuksia, ja sit
+130862	optimoidaan pienent
+130906	ll
+130918	kuvanopeutta pime
+130954	ss
+130960	 kuvatessa. 
+130988	Lopullisen kuvan kirkkaus on eri.
+131056	Toisto
+131070	Toista alusta
+131098	Poista koko @A004@
+131136	@A005@ Poistaa kaikki automaattisesti
+131214	erotetut tiedostot videosta.
+131276	yt
+131282	 vain kolmiulotteiset kuvat
+131338	@A078@ vaihtaa kuvaustilaa.
+131396	Aseta tilaan @A079@, jos haluat 
+131464	valita kuvaustilan tilanvalitsimella.
+131542	Aseta tilaan @A07A@, jos haluat 
+131614	ytt
+131624	 @A008@ -toimintoa.
+131664	@A03D@ N
+131682	yt
+131688	 valinta
+131706	Vaihtaa Live View'n ja
+131760	ohjauspaneelin v
+131794	lill
+131810	Vaihtaa EVF:n ja takan
+131856	yt
+131872	lill
+131882	, kun silm
+131904	ntunnistin 
+131930	on poissa k
+131954	yt
+131960	st
+131970	Mukautettu1
+131994	Mukautettu2
+132018	@A071@Toiminto
+132048	@A08D@Toiminto
+132078	@A094@Toiminto
+132108	@A04F@@A02F@
+132134	@A06E@@A041@
+132160	@A07A@ H k/s
+132186	@A07A@ L k/s
+132212	Aseta sarjakuvausnopeus 
+132264	tilassa @A07B@ kuvattaessa.
+132320	Aseta sarjakuvausnopeus 
+132372	tilassa @A07C@ kuvattaessa.
+132428	@A036@@A020@
+132454	@A06F@@A022@
+132480	FullHD
+132494	HD
+132500	@A013@/@A014@/@A0C7@
+132542	mode6
+132554	@A055@uper @A0B8@arge
+132598	60p
+132606	50p
+132614	30p
+132622	25p
+132630	24p
+132638	MOV 1920
+132656	1080 Fine
+132676	MOV 1920
+132694	1080 ALL-Intra
+132724	MOV 1920
+132742	1080 Super Fine
+132774	MOV 1920
+132792	1080 Fine
+132812	MOV 1920
+132830	1080 Normal
+132854	MOV 1280
+132872	720 ALL-Intra
+132900	MOV 1280
+132918	720 Super Fine
+132948	MOV 1280
+132966	720 Fine
+132984	MOV 1280
+133002	720 Normal
+133024	MOV 1920
+133042	1080
+133052	FHD
+133060	A-I
+133068	ALL-Intra
+133088	@A106@
+133102	1080p
+133114	MIC @A017@
+133136	Kohinan v
+133156	hennys k
+133174	ynniss
+133194	Odota hetki.
+133220	Aseta tarkennusero
+133258	Arv. p
+133274	ttymisaika
+133296	Arvioitu alkamisaika
+133338	Aseta kuvam
+133370	EVF-n
+133382	ytt
+133390	tilojen v
+133410	linen
+133424	vaihto toimii vain EVF:n l
+133478	pi
+133486	katseltaessa.
+133514	Asetusten muutosten vaikutukset
+133580	voi vahvistaa reaaliaikaisesti
+133644	ennen sulkimen vapauttamista.
+133704	Simuloitu n
+133728	kym
+133736	, aivan kuin
+133764	SLR:n OVF:n l
+133792	pi katsottuna.
+133824	Asetusten muutosten vaikutuksia
+133890	ei voi vahvistaa reaaliaikaisesti
+133960	ennen sulkimen vapauttamista.
+134020	Kuvataajuus
+134044	Kapea
+134056	S-OVF
+134068	Valitse etsimen virkistystaajuus.
+134136	Valitse EVF-n
+134164	ytt
+134172	tila.
+134184	Ota k
+134196	ytt
+134206	n tai poista
+134238	yt
+134244	st
+134250	 takan
+134264	yt
+134270	n AF-
+134284	kohdistuss
+134308	din EVF:
+134328	 varten.
+134346	Videoasetukset
+134376	TL-videopituus
+134406	AF-kohdistuss
+134436	din
+134444	Valkotasapaino on 
+134484	rimm
+134494	inen.
+134508	Jatka?
+134522	Laaja
+134534	Focus BKT Off
+134562	Focus BKT On
+134588	Focus BKT
+134608	HighSpeed 120fps
+134642	4K
+134648	Mieleisesi kuvaustoiminnot voidaan
+134720	tallentaa nopeasti k
+134762	ytett
+134774	viksi.
+134788	Alustaa asetukset.
+134826	Yksityinen salasana
+134866	Sertifikaatti
+134894	@A01C@: muuta 
+134924	lypuhelinyhteyden
+134962	salasanaa.
+134984	@A002@ Poistaa kaikki automaattisesti
+135062	erotetut tiedostot videosta.
+135120	Ei toiminnassa
+135150	MF-kytkin
+135170	Asettaa MF-kytkimen.
+135212	Toiminnassa
+135236	Poptaide@A04F@
+135266	Poptaide@A050@
+135296	Vaalea&kevyt v
+135326	ri@A04F@
+135344	Vaalea&kevyt v
+135374	ri@A050@
+135392	Rakeinen filmi@A04F@
+135434	Rakeinen filmi@A050@
+135476	Neulanreik
+135498	@A04F@
+135512	Neulanreik
+135534	@A050@
+135548	Neulanreik
+135570	@A051@
+135584	Dioraama@A04F@
+135614	Dioraama@A050@
+135644	Cross-kehitys@A04F@
+135684	Cross-kehitys@A050@
+135724	Dramaattinen s
+135754	vy@A04F@
+135772	Dramaattinen s
+135802	vy@A050@
+135820	Key Line@A04F@
+135850	Key Line@A050@
+135880	Vesiv
+135892	ri@A04F@
+135910	Vesiv
+135922	ri@A050@
+135940	Vanhanaikainen@A04F@
+135982	Vanhanaikainen@A050@
+136024	Vanhanaikainen@A051@
+136066	Osittainen v
+136092	ri@A04F@
+136110	Osittainen v
+136136	ri@A050@
+136154	Osittainen v
+136180	ri@A051@
+136198	@A073@Poptaide
+136228	@A052@Pehme
+136252	 tarkennus
+136274	@A079@Dioraama
+136304	@A07A@Cross-kehitys
+136344	@A054@Hillit. seepia
+136386	@A07C@Dramaattinen s
+136428	vy
+136434	@A07D@Key Line
+136464	@A07E@Vesiv
+136488	ri
+136494	@A07F@Vanhanaikainen
+136536	@A080@Osittainen v
+136574	ri
+136580	@A055@Poptaide@A04F@
+136622	@A056@Poptaide@A050@
+136664	@A057@Vaalea&kevyt v
+136706	ri@A04F@
+136724	@A058@Vaalea&kevyt v
+136766	ri@A050@
+136784	@A059@Rakeinen filmi@A04F@
+136838	@A05A@Rakeinen filmi@A050@
+136892	@A05B@Neulanreik
+136926	@A04F@
+136940	@A05C@Neulanreik
+136974	@A050@
+136988	@A05D@Neulanreik
+137022	@A051@
+137036	@A05E@Dioraama@A04F@
+137078	@A05F@Dioraama@A050@
+137120	@A060@Cross-kehitys@A04F@
+137172	@A061@Cross-kehitys@A050@
+137224	@A062@Dramaattinen s
+137266	vy@A04F@
+137284	@A063@Dramaattinen s
+137326	vy@A050@
+137344	@A064@Key Line@A04F@
+137386	@A065@Key Line@A050@
+137428	@A066@Vesiv
+137452	ri@A04F@
+137470	@A067@Vesiv
+137494	ri@A050@
+137512	@A068@Vanhanaikainen@A04F@
+137566	@A069@Vanhanaikainen@A050@
+137620	@A06A@Vanhanaikainen@A051@
+137674	@A06B@Osittainen v
+137712	ri@A04F@
+137730	@A06C@Osittainen v
+137768	ri@A050@
+137786	@A06D@Osittainen v
+137824	ri@A051@
+137842	@A06E@Pehme
+137866	 tarkennus
+137888	@A06F@Neulanreik
+137924	@A070@Valkoinen reunus
+137970	@A071@Kehys
+137994	@A072@T
+138010	htivalaistus
+138036	@A073@Sumennustehoste: yl
+138088	-ala
+138098	@A074@Sumennustehoste: vasen-oikea
+138168	@A075@Varjostustehoste: vasen-oikea
+138240	@A076@Varjostustehoste: yl
+138294	-ala
+138304	@A0B1@ Hiljainen @A074@
+138356	ytt
+138366	 sertifikaatin.
+138398	Polttov
+138414	li
+138424	riprofiili 1
+138454	riprofiili 2
+138484	riprofiili 3
+138510	@A0B2@V
+138526	riprofiili 1
+138552	@A0B3@V
+138568	riprofiili 2
+138594	@A0B4@V
+138610	riprofiili 3
+138636	Kaikki v
+138654	rit@A028@
+138674	Yksi v
+138688	ri@A028@
+138706	Yksiv
+138718	rinen profiili 1
+138752	Yksiv
+138764	rinen profiili 2
+138798	Yksiv
+138810	rinen profiili 3
+138844	@A0B5@Yksiv
+138868	rinen profiili 1
+138902	@A0B6@Yksiv
+138926	rinen profiili 2
+138960	@A0B7@Yksiv
+138984	rinen profiili 3
+139018	Ei mit
+139038	Keltainen
+139058	Oranssi
+139074	Punainen
+139092	Magenta
+139108	Sininen
+139124	Syaani
+139138	Vihre
+139152	Keltavihre
+139176	Rakeinen filmiefekti
+139218	Rakeinen filmiefekti Pois
+139270	Rakeinen filmiefekti Matala
+139326	Rakeinen filmiefekti Keskit.
+139384	Rakeinen filmiefekti Korkea
+139440	Keskis
+139454	vyalueen s
+139484	Hv. & Va.@A01A@
+139516	Keskis
+139530	vy@A01A@
+139548	Nollaa/Aseta Omat Tilat
+139596	Nollaa kameran asetukset
+139648	tai aseta t
+139676	nhetkiset
+139698	asetukset Omaan Tilaan.
+139746	Oma tila C1
+139770	Oma tila C2
+139794	Oma tila C3
+139818	Oma tila C4
+139846	yt
+139852	 C1-asetuksia? T
+139890	nhetkiset 
+139914	kameran asetukset korvataan.
+139976	yt
+139982	 C2-asetuksia? T
+140020	nhetkiset 
+140044	kameran asetukset korvataan.
+140106	yt
+140112	 C3-asetuksia? T
+140150	nhetkiset 
+140174	kameran asetukset korvataan.
+140236	yt
+140242	 C4-asetuksia? T
+140280	nhetkiset
+140302	kameran asetukset korvataan.
+140360	Valitse kuvaamistilat,
+140408	jotka m
+140426	ritet
+140440	n valitsimen
+140468	asentoihin C3 ja C4.
+140510	Valitsin C3
+140534	Valitsin C4
+140558	Objektiivin tietoaset.
+140604	Sy
+140614	 tiedonsiirtoyhteen-
+140658	sopimattomat obj. asetukset
+140716	Exifin ja stabil. optim. varten.
+140782	Paina painiketta siirty
+140830	ksesi
+140844	objektiivitietoasetuksiin.
+140898	Luo objektiivitiedot
+140940	Muokkaa objektiivitietoja
+140992	Poista objektiivitiedot
+141040	Objektiivin nimi
+141074	Aukon arvo
+141096	Poista valinta@A026@
+141142	yt
+141148	 obj. tietoa@A026@
+141186	Korvaa
+141200	Tallenna uutena kohtana
+141248	@A012@ Valitsintoiminto
+141296	Valitse valotuksen
+141336	kompensaation s
+141370	timeen
+141392	ritett
+141410	 toiminto.
+141432	Hiljaisen@A048@tilan asetukset
+141494	Salli
+141512	 salli
+141526	Mahdollistaa hiljaisen kuvauksen.
+141596	Valitse sulkimen vapauttamisen
+141664	lkeinen viiveaika.
+141702	Taide-efekti Pois
+141742	risuodin: pois
+141776	risuodin: kelt.
+141812	risuodin: orans.
+141850	risuodin: punain.
+141890	risuodin: vihre
+141924	Normaali mustavalkoinen
+141972	Yksiv
+141984	rinen seepia
+142010	Yksiv
+142022	rinen sininen
+142050	Yksiv
+142062	rinen purpp.
+142088	Yksiv
+142100	rinen vihre
+142126	Sarjakuvaus/@A01E@/Kuvanvakaaja
+142190	C. Sarjakuvaus/@A019@/Kuvanvakaaja
+142260	Valikko sulkimen vapautuksen,
+142322	sarjakuvauksen ja 
+142362	kuvanvakaajan k
+142394	ytt
+142404	n.
+142410	Vieminen ep
+142434	onnistui
+142452	Videoita ei voida ottaa
+142502	et
+142508	laukaisinta k
+142536	ytett
+142548	ess
+142560	Valitse kuvatila.
+142596	Pistemittaus
+142622	Valittujen @A03F@kohtien
+142674	mittaus suoritetaan
+142716	AF-kohteen alueella.
+142758	N:ei mit
+142782	N:normaali
+142804	ART1@A04F@
+142826	ART1@A050@
+142848	ART3@A04F@
+142870	ART3@A050@
+142892	ART5@A04F@
+142914	ART5@A050@
+142936	ART6@A04F@
+142958	ART6@A050@
+142980	ART6@A051@
+143002	ART7@A04F@
+143024	ART7@A050@
+143046	ART8@A04F@
+143068	ART8@A050@
+143090	ART10@A04F@
+143114	ART10@A050@
+143138	ART11@A04F@
+143162	ART11@A050@
+143186	ART12@A04F@
+143210	ART12@A050@
+143234	ART13@A04F@
+143258	ART13@A050@
+143282	ART13@A051@
+143306	ART14@A04F@
+143330	ART14@A050@
+143354	ART14@A051@
+143378	C3
+143384	C4
+143390	Color Profile 1
+143422	Color Profile 2
+143454	Color Profile 3
+143486	Mono Profile 1
+143516	Mono Profile 2
+143546	Mono Profile 3
+143576	Kopioi
+143590	Kopiointivalinta
+143624	Uusi tied.
+143646	Korvaa
+143660	Vedenalainen
+143686	@A076@Vedenalain
+143720	Kohdistimen pinoamisivirhe.
+143778	Kuvayhdistelm
+143806	 ep
+143814	onnistui.
+143834	@A004@Kuvatila
+143864	Rec. start/stop USB-liit
+143914	nt
+143920	iselle
+143936	PCM-tallentimelle toimii erill
+144006	kameran rec.
+144034	start/stop -toiminnosta.
+144084	USB-liit. PCM-tallennin k
+144136	ynn./pys.
+144158	Tallennuksen automaattisesti
+144218	kameran rec. start/stop kanssa.
+144282	Ilman slate tone -toimintoa.
+144340	USB-liit
+144358	nt
+144364	inen PCM-tallennin
+144404	luo slate tone -efektin, kun
+144464	@A04B@painiketta painetaan ja
+144526	pidet
+144540	n alhaalla videon
+144578	tallennuksen ajan.
+144620	nenvoimakkuuden
+144654	ja kohinan v
+144680	hent
+144690	minen ei toimi,
+144728	nenvoimakkuutta
+144768	det
+144778	n automaattisesti
+144816	Olympus PCM-tallentimella.
+144870	Tallennuksen
+144902	nenvoimakkuutta voidaan
+144964	 kameran tallennuksen
+145014	nenvoimakkuudesta.
+145052	@A004@Kohinasuod.
+145088	Valitse @A004@ valikoiva tila
+145150	materiaalin kuvausta varten,
+145210	jota editoidaan j
+145246	lkeenp
+145260	in.
+145268	Valitse kohinan alentaminen
+145326	videotallennukselle suurilla
+145386	ISO-nopeuksilla.
+145420	Valitse kohinan alentaminen
+145478	pys
+145486	ytyskuvan ottamiselle
+145532	suurilla ISO-nopeuksilla.
+145584	Synkronoitu @A03F@Rec.
+145630	Slate tone -toiminto
+145672	Tallenn. 
+145694	nenvoim.
+145712	@A077@Tasainen
+145742	@A078@Kortti t
+145772	ynn
+145782	@A079@Kortti t
+145812	ynn
+145822	@A078@/@A079@Kortti t
+145866	ynn
+145876	@A078@Kortti t
+145906	ynn
+145916	@A079@Kortti t
+145946	ynn
+145956	@A078@Ei kuvaa
+145986	@A079@Ei kuvaa
+146016	@A078@Kuvavirhe
+146048	@A079@Kuvavirhe
+146080	@A078@Korttivirhe
+146116	@A079@Korttivirhe
+146152	@A078@/@A079@Korttivirhe
+146202	@A078@Virhe / @A079@Suojattu
+146260	@A078@Virhe / @A079@T
+146304	ynn
+146314	@A078@Kirjoitussuojattu
+146362	@A079@Kirjoitussuojattu
+146410	@A078@/@A079@Kirjoitussuojattu
+146472	@A078@Suojattu / @A079@Virhe
+146530	@A078@Suojattu / @A079@T
+146580	ynn
+146590	@A078@T
+146606	ynn
+146614	 / @A079@Virhe
+146644	@A078@T
+146660	ynn
+146668	 / @A079@Suojattu
+146704	Vaihdettu uuteen kansioon
+146756	Vaihdettu kohteeseen@A078@
+146810	Vaihdettu kohteeseen@A079@
+146864	@A0A3@Kansiota ei voi luoda
+146920	@A0A4@Kansiota ei voi luoda
+146976	Kansiota ei voi luoda
+147020	@A078@Kansiota ei voi valita
+147078	@A079@Kansiota ei voi valita
+147136	@A078@Kuvaa ei voida muokata
+147194	@A079@Kuvaa ei voida muokata
+147252	@A078@Huom! Kuvaa ei voida valita
+147320	@A079@Huom! Kuvaa ei voida valita
+147388	@A07A@Kuvavirhe
+147420	@A07B@Kuvavirhe
+147452	@A0A3@Ei BGM
+147478	@A0A4@Ei BGM
+147504	@A0A3@Ei voi tulostaa
+147548	@A0A4@Ei voi tulostaa
+147592	Olympus-akkua suositellaan
+147646	A1. AF/MF
+147666	A2. AF/MF
+147686	A3. AF/MF
+147706	C1. Kuvaus/@A013@/Kuvanvakaaja
+147768	C2. Kuvaus/@A013@/Kuvanvakaaja
+147830	D1. N
+147842	yt/@A001@/PC
+147868	D2. N
+147880	yt/@A001@/PC
+147906	D3. N
+147918	yt/@A001@/PC
+147944	D4. N
+147956	yt/@A001@/PC
+147982	E1. Valot/ISO/BULB/@A077@
+148034	E2. Valot/ISO/BULB/@A077@
+148086	E3. Valot/ISO/BULB/@A077@
+148142	H1. Tallenna/poista
+148182	H2. Tallenna/poista
+148222	I. S
+148232	hk
+148238	inen etsin
+148260	J1. @A003@ Apuohjelmat
+148306	J2. @A003@ Apuohjelmat
+148352	Videovalikko
+148378	Videon perus- ja
+148414	lis
+148422	asetusten valikko.
+148460	C-AF-herkkyys
+148498	 C-AF-lukituksen herkkyytt
+148558	kohteen liikkeen mukaan.
+148608	Suuri
+148620	Pieni
+148632	AF-rajoitin
+148656	Rajoittaa AF-alueen
+148698	asetuksesi mukaan.
+148738	Et
+148744	isyys on arvio.
+148776	Lauk. pr.
+148796	Sulkimen voi laukaista,
+148846	vaikka kohde ei olisi
+148892	tarkennettuna.
+148922	Suljinta ei voi laukaista,
+148978	kun kohdetta ei ole tarkennettu.
+149044	Et
+149050	isyysasetukset
+149080	Asetus 1
+149098	Asetus 2
+149116	Asetus 3
+149140	ritt
+149152	 automaattitarkennuksen
+149202	vihre
+149214	n kohderuudun n
+149246	yt
+149252	n.
+149258	Ei n
+149268	yt
+149274	 ruutua.
+149296	ytt
+149306	 ruudun.
+149328	ytt
+149338	 ruudun, kun suljin-
+149382	painike on painettu puoliv
+149436	liin.
+149448	Esiasetettu MF
+149478	Esiasetettu MF-et
+149514	is.
+149528	ritt
+149540	 esiasetet. MF-et
+149576	is.
+149586	Et
+149592	isyys on arvio.
+149624	Vaihtaa Esiasetettu MF -tilaan.
+149688	IS k
+149698	ytt
+149708	n/pois.
+149726	Vaihda IS-tilojen v
+149766	lill
+149776	 painamalla
+149802	ja k
+149814	nt
+149824	ll
+149830	 kiekkoa.
+149850	AF-rajoitin k
+149878	ytt
+149888	n/pois.
+149906	Valitse et
+149928	isyys painamalla
+149964	ja k
+149976	nt
+149986	ll
+149992	 kiekkoa.
+150016	yt
+150022	 @A042@ ruutu kohdistusta
+150076	varten painamalla t
+150126	Kun kohde on m
+150158	ritetty, aktivoi
+150194	@A042@ tila painamalla t
+150248	 uudelleen.
+150272	Vaihda m
+150292	ritettyyn
+150314	oletukseen@A078@ painamalla t
+150378	. Palaa
+150396	painamalla t
+150426	 uudelleen.
+150450	@A004@Fn-vipuasetukset
+150502	rit
+150510	 toiminto Fn-vipuun
+150552	still-kuvausta varten.
+150598	@A003@Fn-vivun toiminto
+150646	Vaihda@A0A9@ toiminto
+150690	@A004@Fn-vivun toiminto
+150744	rit
+150752	 toiminto Fn-vipuun
+150794	videon kuvaamista varten.
+150846	Vaihtaa valitsintoiminnon.
+150900	Vaihtaa AF-tilan/@A0AA@/@A0AB@.
+150966	Kohde on valittavissa.
+151018	ritt
+151030	 seuraavat kuvaustilat:
+151080	Asento 1: seuraa tilanval. asetusta.
+151156	Asento 2: @A004@tila.
+151200	@A07E@Lukitus
+151228	Poista @A07E@ k
+151260	yt
+151266	st
+151272	 valit. On.
+151296	Fn-vipu/virtavipu
+151336	yt
+151342	 Fn-vipua virtakytkimen
+151400	yt
+151406	 Fn-vipua m
+151432	ritettyihin
+151458	toimintoihin. K
+151490	yt
+151496	 virtakytkint
+151528	virran kykemiseen.
+151566	Virta 1
+151588	rit
+151596	 virta Fn-vipuun
+151632	seuraavasti:
+151660	Asento 1: Kytkee virran
+151710	Asento 2: Katkaisee virran
+151766	Virtavipu on pois k
+151806	yt
+151812	st
+151822	Virta 2
+151844	rit
+151852	 virta Fn-vipuun
+151888	seuraavasti:
+151916	Asento 1: Katkaisee virran
+151972	Asento 2: Kytkee virran
+152022	Virtavipu on pois k
+152062	yt
+152068	st
+152078	CWB Kelvin
+152104	@A049@Asetukset
+152136	@A04A@Asetukset
+152168	Fps enint.
+152190	Ruutum
+152210	rajoitin
+152228	Kuvanvakautuksen prioriteetti
+152290	jatkuvassa kuvauksessa.
+152338	Fps-prioriteetti
+152372	Kuvausnopeus on
+152406	kuvanvakautusta t
+152442	rke
+152450	mpi.
+152460	IS-prioriteetti
+152492	Kuvanvakautus on
+152528	kuvausnopeutta t
+152562	rke
+152570	mpi.
+152580	@A004@HDMI-l
+152606	ht
+152620	ritt
+152632	 HDMI-liit
+152654	nn
+152666	videokuvauksen
+152702	ht
+152708	asetukset.
+152734	ht
+152740	tila
+152754	ht
+152760	tila-asetukset
+152792	HDMI:hin liitetyille laitteille.
+152862	ytt
+152870	tila
+152884	hett
+152896	 video- ja tieton
+152932	yt
+152944	laitteeseen. T
+152978	 tilaa suositellaan,
+153022	kun laitetta k
+153052	ytet
+153064	n n
+153072	ytt
+153088	Tallennustila
+153120	hett
+153132	 vain videon, ei
+153168	tieton
+153182	ytt
+153192	. T
+153204	 suositellaan,
+153236	kun laitteella tallennetaan videota.
+153316	Tall.bitti
+153346	ht
+153352	koko
+153362	4 K
+153374	ht
+153380	kuvanopeus
+153406	@A004@M
+153424	ritysasetukset
+153454	Videolaadun asetukset.
+153500	@A004@@A024@
+153526	Tallentaa 4096 x 2160 (17:9)
+153586	videota.
+153604	Tallentaa 3840 x 2160 (16:9)
+153664	videota.
+153682	Tallentaa 1920 x 1080 (16:9)
+153742	videota.
+153760	Tallentaa 1280 x 720 (16:9)
+153818	videota.
+153836	@A013@/@A014@Asetukset
+153882	@A013@/@A014@ valitessa voit
+153942	ohittaa kohteet, joita ei
+153996	ole asetettu @A03F@.
+154044	ritt
+154056	 n
+154062	yt
+154068	ss
+154074	 Live-n
+154090	kym
+154104	aikana n
+154122	kyv
+154130	n ohjausruudukon.
+154170	yt
+154176	n v
+154184	ri
+154190	Esiasetus 1
+154214	Esiasetus 2
+154238	@A079@
+154256	yt
+154262	 aset. EVF:
+154292	Ei k
+154302	yt
+154308	 takan
+154322	yt
+154334	ruudukon asetuksia EVF:
+154384	n.
+154394	ytt
+154404	 takan
+154418	yt
+154424	n ruudukon
+154448	asetuksia EVF:
+154480	n.
+154486	EVF-ruudukkoasetukset
+154536	ritt
+154548	 EVF:n ohjainruudukon.
+154594	LV-l
+154604	hennysasetukset
+154636	LV-l
+154646	hennyksen
+154672	ytt
+154680	tavan asetukset.
+154714	@A046@ Asetukset
+154748	Esikatselun n
+154776	ytt
+154784	tavan
+154798	asetukset.
+154822	LV-l
+154832	hennyksen aikana kirkkaus
+154892	tyy vahvistuksen helpottamiseksi.
+154960	LV-l
+154970	hennyksen aikana kirkkaus ei
+155036	dy, ja n
+155054	yt
+155060	n kirkkaus on
+155090	sama kuin
+155112	ennen LV-l
+155134	hennyst
+155154	Esikatselun aikana kirkkaus
+155218	tyy vahvistuksen helpottamiseksi.
+155286	Esikatselun aikana kirkkaus ei
+155356	dy, ja n
+155374	yt
+155380	n kirkkaus on
+155410	sama kuin
+155432	ennen esikatselua.
+155470	@A006@@A07A@ Info
+155506	Suurenna ruutu
+155536	Suurenna vieritys
+155572	Valitse ruutu
+155600	@A0AA@Asetukset
+155632	Kun valitset AF-tilan,
+155680	voit ohittaa kohteet,
+155726	joita ei ole valittu@A058@.
+155782	@A07C@Mukautetut asetukset
+155836	AF-kohteen valintan
+155876	yt
+155892	ytt
+155900	tavan asetukset.
+155934	Sarja 1
+155950	Sarja 2
+155966	@A0AA@
+155980	@A0AB@
+155994	@A008@
+156008	Rekister
+156026	i AF-
+156040	oletustilan/@A0AA@/@A0AB@.
+156094	Lis
+156102	asetukset, kun ISO-herkkyyden
+156164	asetuksena on AUTO.
+156204	Yl
+156210	raja/oletus
+156234	Pienin S/S-asetus
+156270	Kun suljinnopeus saavuttaa
+156332	ritetyn pienimm
+156364	n arvon,
+156384	ISO-herkkyys alkaa suurentua.
+156446	Voimassa P- tai A-tilassa.
+156500	Korttipaikan asetukset
+156546	Kortin tallennus- ja
+156590	toistoasetukset.
+156624	@A003@Tallennusasetukset
+156674	Vakio
+156686	Tallentaa vain m
+156722	ritetylle kortille.
+156762	Automaattikytkin
+156796	Kun m
+156810	ritetty kortti t
+156844	yttyy,
+156860	laite vaihtaa toiselle kortille
+156926	kuvauksen jatkamista varten.
+156984	Itsen. kaksoistila@A081@
+157034	Tallentaa kummallekin kortille niiden
+157112	omien asetusten mukaan.
+157162	Jos toinen kortti t
+157202	yttyy,
+157218	toisellekaan ei voi tallentaa.
+157280	Itsen. kaksoistila@A082@
+157330	Tallentaa kummallekin kortille niiden
+157408	omien asetusten mukaan.
+157458	Vaikka toinen kortti t
+157504	yttyy,
+157520	toiselle voi edelleen tallentaa.
+157586	Sama kaksoistila@A081@
+157632	Tallentaa kummallekin kortille
+157696	samoilla @A003@@A024@asetuksilla.
+157766	Jos toinen kortti t
+157806	yttyy,
+157822	toisellekaan ei voi tallentaa.
+157884	Sama kaksoistila@A082@
+157930	Tallentaa kummallekin kortille
+157994	samoilla @A003@@A024@asetuksilla.
+158064	Vaikka toinen kortti t
+158110	yttyy,
+158126	toiselle voi edelleen tallentaa.
+158192	@A003@Tallennuspaikka
+158236	@A004@Tallennuspaikka
+158280	@A006@Paikka
+158312	r. tallennuskansio
+158356	rit
+158372	 m
+158380	rit
+158390	Kopioi kaikki toiselle kortille
+158456	tallennetut kuvat toiselle kortille.
+158536	rit
+158544	 kopiointikansio
+158578	Valmis kansio
+158606	Uusi kansio
+158630	Akun asetukset
+158660	Katso akun tiedot ja asetukset.
+158724	Akun prioriteetti
+158760	Akun tila
+158780	Heikentynyt
+158804	Varausta
+158822	Sarjanro
+158840	Kuvam
+158860	Akun tyyppi
+158884	Painamis- ja pitoaika
+158934	rit
+158942	 painamis- ja pitoaika
+158990	kaikille toiminnoille, joiden
+159052	aktivoiminen edellytt
+159098	 sit
+159112	Lopeta LV@A07A@
+159150	ritetyn painikkeen pit
+159196	minen
+159210	painettuna lopettaa
+159252	Live-n
+159266	kym
+159274	n l
+159282	hent
+159292	misen
+159306	tai sulkee Live-n
+159342	kym
+159360	hennysruudun.
+159388	Lopeta @A042@
+159422	ritetyn painikkeen pit
+159468	minen
+159482	painettuna lopettaa @A042@l
+159538	hent
+159548	misen
+159562	tai sulkee @A042@l
+159600	hennysruudun.
+159628	Lopeta @A006@@A07A@
+159674	ritetyn painikkeen pit
+159720	minen
+159734	painettuna lopettaa @A035@l
+159790	hent
+159800	misen
+159814	tai sulkee @A035@l
+159852	hennysruudun.
+159880	Lis
+159890	 liuskas
+159908	vy
+159914	Kun pid
+159930	t @A04B@-painiketta painettuna
+159994	videotallennuksessa, USB:hen liitetty
+160072	PCM-tallennin lis
+160110	 liuskas
+160128	vyn.
+160138	Nollaa @A078@
+160166	Kun pid
+160182	t @A035@-painiketta painettuna,
+160248	laite palaa @A078@-asetukseen 
+160312	AF-kohteen valintan
+160352	yt
+160364	keskitt
+160380	mist
+160390	 varten.
+160408	Nollaa LV@A07A@-ruutu
+160452	Kun pid
+160468	t @A035@-painiketta painettuna,
+160534	laite palauttaa l
+160570	hennysruudun
+160598	Live-n
+160612	kym
+160620	n keskitt
+160640	mist
+160650	 varten.
+160668	Nollaa @A043@
+160696	Kun pid
+160712	t @A035@-painiketta painettuna,
+160778	laite palaa @A043@-arvoihin
+160836	asetusn
+160852	yt
+160858	n palauttamiseksi
+160896	oletusasetuksiin.
+160932	Nollaa @A007@
+160960	Kun @A007@ on m
+160994	ritetty kiekkoon,
+161032	@A035@-painikkeen pit
+161076	minen painettuna
+161112	palauttaa valotuksen korjauksen
+161178	arvon oletusarvoon kuvauksen 
+161240	valmiusn
+161258	yt
+161264	ss
+161274	Nollaa @A07B@
+161302	@A035@-painikkeen painaminen
+161362	palauttaa korostuksen ja
+161414	varjostuksen s
+161450	n asetukset
+161476	oletusarvoihin asetusn
+161522	yt
+161528	ss
+161538	Lopeta @A07C@
+161566	@A07C@-painikkeen pit
+161610	minen painettuna
+161646	poistaa trapetsikorjauksen
+161706	yt
+161712	st
+161722	Nollaa @A07C@
+161750	@A035@-painikkeen pit
+161794	minen
+161808	painettuna palauttaa
+161852	trapetsikorjauksen
+161892	asetukset oletusarvoihin
+161944	asetusn
+161960	yt
+161966	ss
+161976	Nollaa @A042@-ruutu
+162016	@A035@-painikkeen pit
+162060	minen
+162074	painettuna palauttaa
+162118	videoteleyhteyden l
+162158	hennysruudun
+162186	keskiasentoon.
+162220	Nollaa @A009@
+162248	@A035@-painikkeen pit
+162292	minen
+162306	painettuna palauttaa salaman
+162366	voimakkuusaset. oletusarv.
+162422	kuvauksen valm.tilassa, kun @A009@ on
+162506	rit. kiekkoon.
+162536	Vaihda @A045@-lukitus
+162580	Kun @A045@Lukitus-toimintoon
+162646	ritetty
+162662	 painiketta
+162688	pidet
+162702	n painettuna
+162730	@A045@Lukitus kytkeytyy k
+162782	ytt
+162792	n/pois.
+162808	Vaihda @A061@/@A062@
+162850	@A061@/@A062@-tilaan m
+162898	ritetty painike
+162932	poistaa @A061@/@A062@-tilat k
+162992	yt
+162998	st
+163008	Hae BKT-asetukset
+163044	BKT:hen m
+163066	ritetyn painikkeen
+163106	pit
+163114	minen painettuna
+163150	avaa BKT-asetusn
+163184	yt
+163190	n.
+163196	Hae EVF-autom.vaihto
+163238	@A03D@-asetukseen m
+163280	ritetyn
+163298	painikkeen pit
+163328	minen painettuna
+163364	avaa @A03D@automaattikytkimen
+163426	asetusn
+163442	yt
+163448	n.
+163454	Pro Capture korkea
+163492	Pro Capture matala
+163530	Tehoste: suuri
+163560	Tehoste: pieni
+163590	Tehoste: vakio
+163620	AF-rajoitin: pois
+163656	@A07D@ et
+163676	isyyd. p
+163694	ivitt.
+163708	Nollaa/mukauta tilat
+163756	rit
+163764	 mukautettuun tilaan
+163806	Palauta mukautet. tilasta
+163858	Nollaa kohde
+163884	Filmin muokkaus
+163916	Kuvakaapp. videoleikk.
+163962	Videoleikkeen korjaus
+164006	Valittu kohtaus poistetaan.
+164062	@A002@Valittu kohtaus poistetaan.
+164130	@A004@
+164146	nitallennusasetukset
+164188	@A004@N
+164204	ytt
+164212	asetukset
+164232	Tieton
+164246	yt
+164252	n asetukset filmin
+164292	tallentamisen aikana.
+164336	@A004@Tietoasetus
+164372	Valitse, mitk
+164400	 tiedot n
+164420	kyv
+164428	t,
+164436	kun @A01A@-painiketta painetaan.
+164502	Ruudukko
+164520	@A004@Ohjausasetus
+164558	Valitse, mitk
+164586	 s
+164594	timet
+164612	kyv
+164620	t, kun @A035@-painiketta
+164672	painetaan filmitilassa.
+164720	@A087@N
+164736	ytt
+164744	kuvio
+164762	ritt
+164774	 akun varauksen
+164812	ytt
+164820	tavan filmitallennuksen
+164870	aikana.
+164886	@A078@@A004@@A024@
+164924	@A078@@A003@@A024@
+164962	@A079@@A004@@A024@
+165000	@A079@@A003@@A024@
+165038	Valitse asennettava kortti
+165092	Laiteohjelmistop
+165126	ivitys
+165140	@A002@ Kun laiteohjelmisto on p
+165204	ivitetty,
+165226	et voi palata k
+165258	ytt
+165278	nykyist
+165294	 laitohjelmistoa.
+165330	@A056@Toiminto
+165360	@A0B5@Toiminto
+165390	@A0B6@Toiminto
+165420	@A0B7@Toiminto
+165450	AF-skanneri
+165474	AF-skannerin asetukset AF:n 
+165534	alkaessa tai ollessa k
+165580	ynniss
+165598	Vaikka kohde olisi ep
+165642	tarkka
+165658	tai kontrasti ei olisi riitt
+165726	AF-skanneri kytkeydy k
+165772	ytt
+165782	n.
+165788	Jos kohde on ep
+165820	tarkka
+165836	tai jos kontrasti ei ole riitt
+165908	AF-skanneri toimii vain AF:n 
+165974	ynnistyess
+166000	Jos kohde on ep
+166032	tarkka
+166048	tai jos kontrasti ei ole riitt
+166120	AF-skanneri kytkeytyy silti 
+166184	ytt
+166194	n.
+166200	@A003@AF-tila
+166234	rit
+166242	 still-kuvauksen
+166278	AF-menetelm
+166306	@A003@Kuvanvakaaja
+166350	ritt
+166362	 still-kuvauksen
+166398	kuvanvakautustilan.
+166438	@A003@Painikkeen toiminto
+166490	Valitse kullekin painikkeelle
+166558	ritett
+166576	t toiminnot
+166602	still-kuvausta varten.
+166648	@A003@Valitsintoiminto
+166694	Valitse kullekin kiekolle
+166754	ritett
+166772	t toiminnot
+166798	still-kuvausta varten.
+166844	@A003@Kohinasuod.
+166880	@A003@S
+166896	hk
+166902	in. zoom.nop.
+166936	rit
+166944	 zoomausnopeudet
+166980	still-kuvausta varten, kun
+167040	yt
+167046	t s
+167054	hk
+167060	ist
+167068	 zoomobjektiivia.
+167104	@A003@@A024@
+167130	Valitse kuvanlaatuasetukset
+167188	still-kuvausta varten.
+167234	@A004@Painike/Valitsin/Vipu
+167290	Valitse painikkeille ja kiekoille
+167366	ritett
+167384	t toiminnot
+167410	videon kuvaamista varten.
+167462	@A004@Painikkeen toiminto
+167514	Valitse kullekin painikkeelle
+167582	ritett
+167600	t toiminnot
+167626	videon kuvaamista varten.
+167678	@A004@S
+167694	hk
+167700	in. zoom.nop.
+167734	rit
+167742	 zoomausnopeudet
+167778	videon kuvaamista varten, kun
+167844	yt
+167850	t s
+167858	hk
+167864	ist
+167872	 zoomobjektiivia.
+167908	@A004@AF-/IS-asetukset
+167954	Valitse kuvanvakautustila
+168008	ja tarkennusmenetelm
+168054	videon kuvaamista varten.
+168106	@A004@AF-tila
+168140	rit
+168148	 tarkennusmenetelm
+168190	videon kuvaamista varten.
+168242	@A004@Kuvanvakaaja
+168280	Vaihda kuvanvakautustila
+168332	videon kuvaamista varten.
+168384	Yhteys 
+168400	lypuhelimeen
+168428	sis
+168436	isell
+168448	 @A0B8@-yhteydell
+168488	@A0B8@-asetukset
+168522	Sis
+168530	isen @A0B8@-yhteyden
+168574	valikko.
+168592	@A0B8@-yhteysasetukset
+168638	Valitse @A0B8@-yhteys
+168682	Valitse @A0B8@-yhteys joka kerta.
+168750	Nollaa @A0B8@-asetukset
+168798	@A003@ Varoitus: kaikki @A0B8@-asetukset
+168882	nollataan
+168902	Valmistellaan @A0B8@-yhteytt
+168964	lypuhelinliit
+168992	nt
+169000	 varten.
+169028	 m
+169036	ritys tarvitsee tehd
+169082	vain kerran.
+169110	@A0B8@-yhteys k
+169142	ynnistyy
+169162	my
+169168	hemmin.
+169184	@A0B8@ k
+169202	ynnistyy
+169220	@A0B8@ katkaistaan
+169258	Kytkee sis
+169280	isen @A0B8@-toiminnon
+169326	pois p
+169342	lt
+169352	Lop. @A0B8@@A01E@
+169388	Kun suljinnopeus on @A07E@ tai
+169456	hemm
+169466	n, ensimm
+169486	inen suljinverho
+169522	vaihdetaan elektroniseen. 
+169578	Valitse sulkimen vapauttamisen
+169646	lkeinen viiveaika.
+169684	4K
+169690	C4K
+169698	Color
+169710	Color / Vivid
+169738	MOV 3840
+169756	2160
+169766	MOV 4096
+169784	2160
+169794	MOV 1920
+169812	1080
+169822	MOV 1280
+169840	720
+169848	Ruudut ennen laukais.
+169892	Ruudukkoasetukset
+169928	@A004@Valitsintoiminto
+169974	Valitse kullekin kiekolle
+170034	ritett
+170052	t toiminnot
+170078	videon kuvaamista varten.
+170130	@A078@Aseta oletus
+170168	@A078@Pistemittaus
+170206	Etsimen tyyli
+170234	EVF-automaattikytkin
+170276	AF-alueen val.
+170306	@A078@Home
+170328	@A07F@i-Enhance
+170360	Kytke silm
+170382	ntunnistin pois p
+170420	lt
+170432	@A03D@: vaihto n
+170466	yt
+170472	n ja
+170484	etsimen v
+170504	lill
+170518	Suorita S-AF painamalla t
+170578	@A0A9@-painikkeiden toiminnot eiv
+170652	muutu tilassa @A0BB@.
+170696	Tilassa @A0BB@ @A0A9@-painikkeiden
+170768	toiminnot vaihdetaan painikkeisiin
+170840	@A0BC@: BKT ja @A0BD@: @A0BE@.
+170902	Poistaa Fn-viputoiminnon k
+170956	yt
+170962	st
+170972	@A080@Hillitty
+171002	@A078@@A01C@
+171028	Valitse etsimess
+171070	ytetty tyyli.
+171098	Vaihda automaattisesti n
+171148	yt
+171154	st
+171164	etsimeen, kun silm
+171202	 havaitaan
+171226	etsimell
+171248	@A04A@-kuvauksen
+171284	lis
+171292	asetukset.
+171314	Valitse P
+171336	ll
+171342	, jos haluat
+171374	ytt
+171384	 EVF-mittarin tason.
+171432	yt
+171438	ss
+171444	 asetuksella @A03C@.
+171486	@A049@-kuvauksen
+171522	lis
+171530	asetukset.
+171552	Valitse etsimen virkistystaajuus.
+171624	hett
+171636	 tallennusbit. kamerasta
+171688	liitettyyn tallennuslaitteeseen.
+171758	hett
+171770	 aikakoodin kamerasta
+171816	liitettyyn tallennuslaitteeseen.
+171882	Valitse EVF-n
+171910	ytt
+171918	tila.
+171930	@A089@Tasainen
+171960	@A081@Vedenalainen
+171998	Valitse AF-kohdepiste
+172044	ja AF-kohdetila.
+172078	17:9
+172088	@A0B9@Vivid
+172112	@A0BA@Natural
+172140	@A0BB@Portrait
+172170	Kansiota ei voi valita
+172216	Fn
+172222	50p prioriteetti
+172256	60p prioriteetti
+172290	G. @A024@/WB/v
+172320	ri
+172326	PCM-tallennin
+172358	yte
+172366	Ter
+172374	vyystas. pinonta
+172408	Useita kuvia otetaan
+172452	tarkennuspiste hieman
+172498	taakse siirrettyn
+172538	kunkin kuvan j
+172568	lkeen.
+172584	Kuvia ei pinota.
+172618	Useita kuvia otetaan
+172662	tarkennuspiste hieman
+172708	aloituspisteest
+172740	 eteen
+172756	ja taakse siirrettyn
+172812	n j
+172820	lkeen kuvat pinotaan.
+172864	Live View -kirkkaus
+172906	vastaa valotusasetuksia.
+172962	ytetyn kuvan kirkkaus on 
+173016	sama kuin lopullisessa 
+173066	kuvassa.
+173084	Live View -kirkkaus ei
+173132	vastaa valotusasetuksia, 
+173186	vaan optimoidaan katselulle. 
+173248	Lopullisen kuvan kirkkaus 
+173304	ei ole sama.
+173330	Live View -kirkkaus ei kuvasta 
+173396	valotusasetuksia, ja sit
+173452	optimoidaan pienent
+173496	ll
+173508	kuvanopeutta pime
+173544	ss
+173550	 kuvatessa. 
+173578	Lopullisen kuvan kirkkaus on eri.
+173646	@A040@: Aloita videon tallennus.
+173712	@A082@Pehme
+173736	 tarkennus
+173758	@A083@Neulanreik
+173794	@A084@Valkoinen reunus
+173840	@A085@Kehys
+173864	@A086@T
+173880	htivalaistus
+173906	@A087@Sumennustehoste: yl
+173958	-ala
+173968	@A088@Sumennustehoste: vasen-oikea
+174038	@A089@Varjostustehoste: vasen-oikea
+174110	@A08A@Varjostustehoste: yl
+174164	-ala
+174174	@A078@Kasvontunnistusvirhe
+174228	@A079@Kasvontunnistusvirhe
+174282	@A107@
+174296	Leve
+174308	Kapea
+174320	Valkaisun ohitus
+174354	Valkaisun ohitus@A04F@
+174400	Valkaisun ohitus@A050@
+174446	@A004@-tilan asetukset
+174492	Sama arvo
+174512	Lopeta @A090@
+174540	Kalansilm
+174560	n kompens.
+174582	Kulma
+174594	Kalansilm
+174614	n kompens. 1
+174640	Kalansilm
+174660	n kompens. 2
+174686	Kalansilm
+174706	n kompens. 3
+174732	@A091@/@A092@-korjaus
+174776	Kalansilm
+174796	n kompens.
+174818	@A090@-painikkeen pit
+174862	minen 
+174878	painettuna poistaa 
+174920	@A090@-v
+174938	lkynn
+174950	n k
+174958	yt
+174964	st
+174974	Ottaa kalansilm
+175006	n 
+175014	kompensaation
+175048	ytt
+175058	n tai 
+175074	pois k
+175088	yt
+175094	st
+175104	Aloita v
+175122	lkynn
+175134	n 
+175142	skannaus painamalla 
+175194	. Lopeta pit
+175224	ll
+175236	painiketta painettuna. Toimii
+175298	S- tai M-tilassa.
+175334	@A004@-v
+175352	lkynn
+175364	n skann.
+175382	@A0CC@Valkaisun ohitus
+175428	@A08C@Valkaisun ohitus@A04F@
+175486	@A08D@Valkaisun ohitus@A050@
+175544	@A006@@A07A@-oletusasetus
+175606	 @A004@-tilan asetuksia.
+175656	Korjaa kalansilm
+175690	linssin 
+175716	ristym
+175730	n superlaaja-
+175760	kulmakuvan luomiseksi.
+175806	Havaitse v
+175828	lkynt
+175840	 ja s
+175864	suljinnopeutta pienemmin v
+175918	lein 
+175932	S- tai M-tilassa.
+175968	Valitse oletusarvoinen suurennus-
+176038	arvo kuvan toiston suurennusta 
+176104	varten.
+176120	Havaitse v
+176142	lkynt
+176154	 ja s
+176178	suljinnopeutta pienemmin v
+176232	lein 
+176246	S- tai M-tilassa.
+176284	skett
+176296	inen
+176306	@A003@-v
+176324	lkynn
+176336	n skann.
+176358	lkynn
+176370	n skannaus
+176392	ART15@A04F@
+176416	ART15@A050@
+176440	Kamera jatkaa hakemista
+176490	virran katkaisun j
+176528	lkeenkin.
+176548	Valitse etsimen virkistystaajuus.
+176616	Tallenna GPS-sijainti
+176660	Kirjaustoimintoa
+176696	ei voi k
+176714	ytt
+176724	 t
+176730	ll
+176736	 hetkell
+176758	Autom. ajan asetus.
+176798	Sijaintitietoja
+176832	ei lis
+176854	valokuvaan.
+176878	Sijaintitietoja
+176912	ei lis
+176934	valokuvaan.
+176966	ll
+176972	-asetus
+176990	aktivoi GPS:n.
+177030	 p
+177036	iv
+177058	ja aikaa manuaalisesti.
+177106	Kamera s
+177132	 p
+177138	iv
+177160	ja aikaa automaattisesti
+177212	GPS-tietojen perusteella.
+177266	GPS-tietoja k
+177294	ytet
+177312	vain s
+177328	dett
+177338	ess
+177350	Akun tehon s
+177378	st
+177384	mist
+177398	priorisoidaan
+177428	GPS-tarkkuuteen
+177466	hden.
+177478	GPS-tarkkuutta priorisoidaan
+177538	akun tehon s
+177566	st
+177572	miseen
+177592	hden.
+177604	Akun teho
+177624	GPS-prioriteetti
+177658	GPS-tarkkuus
+177684	@A08B@ @A01A@
+177712	Lis
+177722	 GPS-sijainti valokuvaan.
+177782	ll
+177788	-asetus aktivoi GPS:n.
+177840	ritt
+177852	 kirjausseurannan
+177890	GPS-prioriteetin.
+177932	rit
+177940	 kameran
+177964	iv
+177980	 ja aika
+178000	tai aikavy
+178022	hyke.
+178034	@A022@ Asetukset
+178068	@A022@
+178082	Aikavy
+178096	hyke
+178106	Pikafilmi
+178126	@A08E@Pikafilmi
+178158	@A08F@-/Bluetooth-asetukset
+178224	 @A08F@- ja
+178250	Bluetooth-asetuksia.
+178292	Saatavuus
+178312	@A099@/Bluetooth poistetaan
+178374	yt
+178380	st
+178386	, eik
+178398	 yhteytt
+178420	voida muodostaa.
+178454	@A099@/Bluetooth otetaan
+178510	ytt
+178520	n, jotta yhteys
+178554	voidaan muodostaa.
+178592	Yhteyden salasana
+178628	@A040@: Vaihda yhteyksien salasanoja.
+178706	Uudet salasanat luodaan
+178756	automaattisesti.
+178790	Palautusasetukset
+178826	@A002@ Palautetaanko kaikki
+178884	@A08F@- ja Bluetooth-asetukset?
+178948	Yhteyden valmiustila
+178990	@A08F@-/Bluetooth-yhteytt
+179042	 laitteelle
+179068	ei voida muodostaa, kun virta
+179130	on katkaistu.
+179158	@A08F@-/Bluetooth-yhteys laitteeseen
+179234	voidaan muodostaa, vaikka virta
+179300	on katkaistu.
+179328	Ota k
+179340	ytt
+179350	n tai poista k
+179380	yt
+179386	st
+179396	yhteyden valmiustila jokaisen
+179458	virrankatkaisun yhteydess
+179514	Otetaanko k
+179538	ytt
+179548	n @A08F@-/Bluetooth-
+179592	yhteyden valmiustila kuvien
+179650	tuomista varten virrankatkaisun
+179716	aikana?
+179732	Yhteyden valmiustila: Pois
+179786	Yhteyden valmiustila: P
+179836	ll
+179844	Varmista joka kerta
+179890	 n
+179896	yt
+179902	 t
+179912	 uudelleen
+179934	Varmistetaanko yhteyden valmius-
+180002	tila jokaisen virrankatkaisun
+180064	yhteydess
+180084	? Asetusta voidaan
+180124	muuttaa valikosta milloin tahansa.
+180194	Siirret
+180212	n tietoja...
+180238	Peruuta
+180254	Jatka
+180266	Peruuta tietojen siirto ja kytke
+180334	virta.
+180348	Peruuta kaikki kuvien
+180394	siirron esivalinnat.
+180436	@A093@ Pid
+180458	 l
+180464	mmin v
+180478	ri@A01A@
+180506	 asetuksia
+180530	kuvattaessa Olympus
+180572	PCM-tallennin kytkettyn
+180624	@A078@Ei korttia
+180658	@A079@Ei korttia
+180692	INFO_CONTINUE_TRANSFER_2
+180742	Tiedostoja j
+180768	ljell
+180782	Katkaise virta siirron j
+180832	lkeen
+180844	Katkaise virta heti
+180884	Virta katkeaa automaattisesti, 
+180950	kun kaikki tiedostot on siirretty.
+181020	Peruuttaa siirron tietokoneeseen 
+181090	ja katkaisee virran.
+181132	Siirret
+181150	n...
+181160	INFO_WAIT_SP_TRANSFERRED
+181210	Odota, kunnes siirto on valmis. 
+181278	Virta katkeaa automaattisesti.
+181340	Kuvaa BULB-toiminnolla
+181386	CAUTION_HIGH_RES_SHOT_CANCELED
+181448	HR-kuvavirhe. 
+181480	Kuvan yhdist
+181506	minen ep
+181524	onnistui.
+181544	@A003@ISO
+181564	@A003@Suositus-ISO-arvo
+181612	@A003@ISO-arvon laajennus
+181664	@A004@ISO
+181684	@A004@Suositus-ISO-arvo
+181732	@A005@ISO-arvon laajennus
+181784	@A003@WB
+181802	@A004@WB
+181820	@A003@Kelvin
+181846	@A004@Kelvin
+181872	@A003@Autom. @A094@
+181912	@A003@@A095@5300K @A094@
+181962	@A003@@A096@7500K @A094@
+182012	@A003@@A097@6000K @A094@
+182062	@A003@@A098@3000K @A094@
+182112	@A003@@A099@4000K @A094@
+182162	@A003@@A036@5500K @A094@
+182212	@A003@@A01E@ @A094@
+182252	@A003@@A01F@ @A094@
+182292	@A003@@A020@ @A094@
+182332	@A003@@A021@ @A094@
+182372	@A004@Autom. @A094@
+182412	@A004@@A095@5300K @A094@
+182462	@A004@@A096@7500K @A094@
+182512	@A004@@A097@6000K @A094@
+182562	@A004@@A098@3000K @A094@
+182612	@A004@@A099@4000K @A094@
+182662	@A004@@A036@5500K @A094@
+182712	@A004@@A01E@ @A094@
+182752	@A004@@A01F@ @A094@
+182792	@A004@@A020@ @A094@
+182832	@A004@@A021@ @A094@
+182872	MOVIE_PIC_MODE_LOG
+182910	@A003@CWB @A094@
+182944	@A004@CWB @A094@
+182978	Live View @A033@
+183012	Jatkuva AF+MF
+183040	AF-seuranta + MF
+183074	Kuvausmenetelm
+183104	@A01A@
+183118	Suora ND-kuvaus: ND2(1EV)
+183170	Suora ND-kuvaus: ND4(2EV)
+183222	Suora ND-kuvaus: ND8(3EV)
+183274	Suora ND-kuvaus: ND16(4EV)
+183328	Suora ND-kuvaus: ND32(5EV)
+183382	@A003@Tallennuspaikka @A078@
+183440	@A003@Tallennuspaikka @A079@
+183498	@A004@Tallennuspaikka @A078@
+183556	@A004@Tallennuspaikka @A079@
+183614	Kuvausmenetelm
+183646	Kuvaus kameran ollessa 
+183696	jalustalla.
+183720	Kuvaus kameran ollessa 
+183774	dess
+183784	. Pidempi k
+183808	sittelyaika 
+183836	kuvauksen j
+183860	lkeen. 
+183878	Salama ei k
+183902	ytett
+183914	viss
+183928	Suora ND-kuvaus
+183960	ND-numero
+183980	LV-simulointi
+184008	Hitaan sulkimen efekti
+184060	ei voi n
+184078	hd
+184084	 Live View -n
+184112	kym
+184120	ss
+184130	Hitaan sulkimen efektin 
+184182	voi n
+184194	hd
+184200	 Live View -n
+184228	kym
+184236	ss
+184242	. 
+184250	Poikkeaa lopullisesta kuvasta.
+184312	Live View ei n
+184342	y peilikuvana, 
+184376	kun n
+184388	ytt
+184396	 k
+184404	nnet
+184416	n.
+184422	Live View n
+184446	kyy peilikuvana, 
+184484	kun n
+184496	ytt
+184504	 k
+184512	nnet
+184524	n.
+184530	Kentt
+184542	anturin tiedot
+184572	Tiedot puoliv
+184600	liin painettaessa
+184636	Tiedot pysyv
+184662	t piilossa, vaikka 
+184704	suljinpainiketta painetaan 
+184762	puoleenv
+184780	liin.
+184792	Valotus- ja objektiivin 
+184844	polttov
+184860	litiedot n
+184882	kyv
+184890	t vain, 
+184910	kun suljinpainike on painettu 
+184974	puoleenv
+184992	liin.
+185004	Live View -kirkkaus ei kuvasta 
+185070	valotusasetuksia eik
+185112	 sit
+185122	 s
+185130	det
+185144	optimaaliseen katseluun lis
+185206	ll
+185218	pimeiden alueiden vahvistusta. 
+185284	Lopullisen kuvan kirkkaus on eri.
+185352	Live View -kirkkaus ei kuvasta 
+185418	valotusasetuksia eik
+185460	 sit
+185470	 s
+185478	det
+185492	optimaaliseen katseluun lis
+185554	ll
+185566	pimeiden alueiden vahvistusta. 
+185632	Lopullisen kuvan kirkkaus on eri.
+185706	ll
+185712	2-asetus
+185730	Laadun priorisointi
+185770	Kuvanopeuden prioris.
+185814	Live View -n
+185840	kym
+185848	ss
+185854	 laatua 
+185874	priorisoidaan kuvanopeuden sijasta. 
+185950	Kuvanopeus pienenee pime
+186000	ss
+186012	kuvatessa.
+186034	Live View -n
+186060	kym
+186068	ss
+186074	 kuva-
+186090	nopeutta priorisoidaan laadun 
+186154	sijasta. V
+186176	rit voivat kadota 
+186216	pime
+186226	ss
+186232	 kuvatessa. T
+186264	 ei 
+186276	vaikuta lopulliseen kuvaan.
+186332	Vilkkumisen eston LV
+186374	Vilkk. esto -kuvaus
+186418	hent
+186430	 vilkunnan vaikutuksia, 
+186482	kuten ep
+186500	tasaisia valotuksia ja 
+186554	rej
+186562	. Suljinajan viive voi kasvaa. 
+186632	yt
+186638	ss
+186644	 mekaaniselle sulkimelle.
+186696	Vilkkumisen esto
+186732	-kuvaus ei toimi.
+186768	@A003@ISO-auto
+186798	@A09B@ISO-auto
+186828	@A003@ISO-auto -aset.
+186872	@A09B@ISO-auto -aset.
+186916	@A003@ ja pieni ISO
+186956	INFO_S_NOISE_REDUCTION_MODE_1
+187016	INFO_S_NOISE_REDUCTION_MODE_2
+187076	Valitsin M/B
+187102	Vaihtaa AF-tilaan/AF-kohde-
+187160	tilaan/AF-kohdepisteeseen Fn-
+187222	vivun paikan mukaan. 
+187268	Kohteen voi valita.
+187308	@A0AB@-asetukset
+187342	@A0AC@-laukaisinpainike
+187390	@A0AC@-monivalitsin
+187430	@A0AC@-etuvalitsin
+187468	@A0AC@-takavalitsin
+187508	@A0AC@@A007@-painike
+187550	@A0AC@@A0AD@-painike
+187592	@A0AC@@A034@-painike
+187634	@A0AE@-monivalitsin
+187674	@A0AE@-etuvalitsin
+187712	@A0AE@-takavalitsin
+187752	Fn-vipu
+187768	@A0AF@-painike
+187798	@A010@-painike
+187828	@A082@-painike
+187858	Kosketusn
+187878	ytt
+187888	@A0AC@-keskipainike
+187928	AF-kohdetila
+187954	AF-kohdepiste
+187982	@A0AD@-suuntan
+188012	pp
+188018	in
+188024	@A0AD@ :Pois
+188050	INFO_JOY_CROSS_KEY_DIRECT_ON
+188108	Oma tila C1
+188132	Oma tila C2
+188156	Oma tila C3
+188180	Oma tila C4
+188204	Kytkee toiminnon @A0A6@
+188260	lle/pois p
+188284	lt
+188294	Kytkee toiminnon @A09C@
+188350	lle/pois p
+188374	lt
+188384	Kytkee toiminnon @A09D@
+188440	lle/pois p
+188464	lt
+188474	Kytkee toiminnon @A09E@
+188530	lle/pois p
+188554	lt
+188564	FN_DIGITAL_ND
+188592	Ottaa suoran ND-kuvauksen 
+188652	ytt
+188662	n/pois.
+188678	@A003@@A093@ Pid
+188712	 l
+188718	mmin v
+188732	ri
+188738	@A004@@A093@ Pid
+188772	 l
+188778	mmin v
+188792	ri
+188798	@A003@Valkotasap.
+188834	@A004@Valkotasap.
+188870	@A003@Kaikki @A094@
+188910	@A004@Kaikki @A094@
+188950	@A099@ MAC -osoite
+188988	Puoliv
+189002	lin AF
+189016	AF on k
+189032	yt
+189038	ss
+189044	, kun suljinpainike 
+189088	on painettu puoleenv
+189130	liin 
+189144	mode3-/mode4-tilassa 
+189190	S-AF tai C-AF valittuna.
+189240	AF ei ole k
+189264	yt
+189270	ss
+189276	, kun 
+189292	suljinpainike on painettu 
+189348	puoleenv
+189366	liin 
+189380	mode3-/mode4-tilassa 
+189426	S-AF tai C-AF valittuna.
+189476	@A003@AEL/AFL
+189504	@A0A8@
+189518	@A0A2@
+189532	@A003@-seurantakohde
+189574	Moottoriurheilu
+189606	Lentokoneet
+189630	Junat
+189642	Kohdetta ei m
+189672	ritetty.
+189690	Autot ja moottoripy
+189734	t 
+189742	havaitaan ja niit
+189778	 seurataan.
+189802	Lentokoneet ja helikopterit 
+189862	havaitaan ja niit
+189898	 seurataan.
+189922	Junat havaitaan ja niit
+189970	 seurataan.
+189994	@A003@-AF+MF
+190020	Poistaa kohdistusrenkaan 
+190074	automaattisessa kohdistustilassa.
+190142	Ottaa kohdistusrenkaan k
+190192	ytt
+190202	n 
+190210	manuaalista kohdistusta varten 
+190276	automaattisessa kohdistustilassa.
+190344	@A003@C-AF-keskikohdan aloitus
+190406	@A003@C-AF-keskikohdan prioris.
+190470	@A003@@A0A2@Asetukset
+190514	@A003@-kuv.suunnan linkki @A078@
+190580	@A0A9@AF-kohdepiste
+190620	@A0AA@AF-kohdepiste
+190660	@A0AB@AF-kohdepiste
+190700	@A0A9@AF-kohdetila
+190738	@A0AA@AF-kohdetila
+190776	@A0AB@AF-kohdetila
+190814	@A0A3@-kohdetilan asetukset
+190870	Koko
+190880	Vaihe
+190892	@A0A4@-koko
+190916	@A0A5@-koko
+190940	@A0A6@-koko
+190964	@A0A7@-koko
+190988	@A0A4@-vaihe
+191014	@A0A5@-vaihe
+191040	@A0A6@-vaihe
+191066	@A0A7@-vaihe
+191092	@A0B9@ @A099@-yhteys
+191134	Oma valikkoni
+191162	Kohteita ei ole rekister
+191212	ity. 
+191226	Painamalla @A040@-painiketta valikossa 
+191308	voit rekister
+191336	id
+191342	 kohteen Omaan 
+191376	valikkoon.
+191398	Voit tallentaa usein 
+191448	ytettyj
+191464	 valikkokohteita. 
+191504	Vain tallennetut kohteet n
+191558	kyv
+191566	t.
+191572	Oma valikkoni 1
+191604	Oma valikkoni 2
+191636	Oma valikkoni 3
+191668	Oma valikkoni 4
+191700	Oma valikkoni 5
+191732	Lis
+191740	asetukset, kun ISO-
+191782	herkkyyden asetuksena on AUTO 
+191846	videokuvauksessa.
+191882	Valitse valkotasapainon 
+191934	tila videokuvaukseen.
+191978	Aseta sama valkotasapainon 
+192036	kompensaatio kaikkiin video-
+192096	kuvauksen tiloihin.
+192140	ilytt
+192158	n l
+192166	mpim
+192176	t v
+192184	rit 
+192196	videokuvauksessa automaattisen 
+192262	valkotasapainon tilassa.
+192312	Toiston kuvanopeus
+192350	Video tallennetaan 
+192392	x0,5 hidastuksella toistettavaksi.
+192462	Video tallennetaan 
+192504	x0,42 hidastuksella toistettavaksi.
+192576	Video tallennetaan 
+192618	x0,25 hidastuksella toistettavaksi.
+192690	Video tallennetaan 
+192732	x0,21 hidastuksella toistettavaksi.
+192804	Video tallennetaan 
+192846	x0,2 hidastuksella toistettavaksi.
+192916	Auto ISO -herkkyys ei ole 
+192976	ytett
+192988	viss
+192998	, kun @A004@-tilana on M.
+193050	Auto ISO -herkkyys on 
+193102	ytett
+193114	viss
+193124	, kun @A004@-tilana on M.
+193176	@A004@C-AF-nopeus
+193212	Valitsee tarkennusnopeuden 
+193270	videon kuvaamiseen C-AF-tilassa.
+193336	@A004@C-AF-herkkyys
+193386	 C-AF-lukituksen herkkyytt
+193446	kohteen liikkeen mukaan video-
+193510	kuvausta varten.
+193544	Nopea
+193556	Hidas
+193568	@A004@IS-taso
+193602	ritt
+193614	 videokuvauksen IS-
+193656	tason. Tasaisempi liike 
+193708	panoroitaessa: valitse Pieni.
+193768	@A0A0@-katseluavustin
+193812	Kun asetus on P
+193846	ll
+193852	, kirkkautta 
+193882	ja v
+193892	rej
+193900	 s
+193908	det
+193918	n optimaalista 
+193952	@A0A0@-katselua varten.
+194000	Kuva n
+194014	kyy valitussa 
+194046	kuvatilassa.
+194076	kyv
+194084	 kuva muunnettu BT.709-
+194134	muotoa vastaavaan muotoon. 
+194192	Poikkeaa tallennetusta kuvasta.
+194256	PCM-tallennin luo 
+194296	slate tone -efektin, kun 
+194350	@A083@-painiketta painetaan ja pidet
+194426	n 
+194434	alhaalla videon tallennuksen ajan.
+194504	Tallennusnopeus
+194536	Valitsee 
+194558	nen laadun.
+194582	Oma valikkoni on t
+194620	ysi.
+194630	Lis
+194638	tty Omaan valikkoon.
+194680	Siirr
+194692	 uuteen sijiantiin.
+194732	Poista t
+194754	 kohde
+194768	Poista t
+194790	 @A0A1@-v
+194810	lilehti
+194826	Valittu kohde poistetaan 
+194880	Omasta valikosta.
+194916	Kaikki valitun @A0A1@-v
+194964	lilehden 
+194986	kohteet poistetaan Omasta valikosta.
+195060	Muuta j
+195076	rjestyst
+195096	Valitse lis
+195120	tt
+195130	 Oma valikko.
+195158	@A0B3@-akku
+195182	@A0B4@-akku
+195206	Kun @A0B3@-akku on tyhj
+195254	, 
+195262	@A0B4@-akku otetaan k
+195306	ytt
+195316	n.
+195322	Kun @A0B4@-akku on tyhj
+195370	, 
+195378	@A0B3@-akku otetaan k
+195422	ytt
+195432	n.
+195438	Kalibroi korkeus
+195472	Valitse nykyinen korkeus.
+195524	Korkeus/l
+195544	mp
+195550	tila
+195560	TEMPERATURE_UNIT
+195594	ELEVATION_UNIT
+195624	Valitse tallennuspaikka
+195672	@A078@Tallennetaan lokitiedostoja
+195740	@A079@Tallennetaan lokitiedostoja
+195808	@A0BD@Tallennetaan lokitiedostoja
+195876	@A078@Kortin lokikapasiteetti on t
+195946	ynn
+195956	@A079@Kortin lokikapasiteetti on t
+196026	ynn
+196036	Kun pid
+196052	t @A083@-painiketta painettuna
+196116	videotallennuksessa, 
+196162	PCM-tallennin lis
+196200	 liuskas
+196218	vyn.
+196228	Yhteys 
+196244	lypuhelimeen tai 
+196282	tukiasemaan langattomien 
+196336	toimintojen avulla.
+196376	Ottaa ja yhdist
+196410	 useita kuvia 
+196442	ja luo niist
+196468	 eritt
+196482	in tarkan 
+196506	HR-kuvan.
+196526	Mahdollistaa hitaan sulkimen 
+196588	kuten ND-suodatinta k
+196632	ytett
+196644	ess
+196656	A4. AF/MF
+196676	B1. Painike/Valitsin/Vipu
+196728	B2. Painike/Valitsin/Vipu
+196780	J3. @A003@ Apuohjelmat
+196826	@A003@C-AF-herkkyys
+196866	Rekister
+196884	i oletusarvoisen
+196920	AF-tilan/AF-kohdetilan/
+196970	AF-kohdepisteen.
+197014	 C-AF-lukituksen herkkyytt
+197074	kohteen liikkeen mukaan still-
+197138	kuvausta varten.
+197172	Kohteet, joissa @A03F@ on valittuna, 
+197254	kyv
+197262	t, kun still-kuvausta varten 
+197324	valitaan AF-kohdetila.
+197370	Salli manuaalinen tarkennus 
+197430	kaikissa AF-tiloissa still-
+197488	kuvauksessa valitsemalla P
+197544	ll
+197554	Kun @A03F@ on valittuna @A0A2@-tilassa, 
+197638	C-AF/C-AF+TR toimii 
+197682	alueen keskell
+197716	Kun @A03F@ on valittuna @A0A2@-tilassa, 
+197800	alueen keskikohtaa priorisoidaan 
+197870	muiden kohtien sijaan C-AF-tilassa.
+197948	rit
+197956	 kohdealueen koko 
+197996	ja vaihekohdistimen paikka 
+198054	liikkumisen aikana.
+198094	Still-kuvauksessa kohteet, joissa 
+198166	@A03F@ on valittu, voidaan m
+198226	ritt
+198244	erikseen vaaka- ja pystysuunnille.
+198314	Valitse seurantakohde 
+198362	still-kuvausta varten. 
+198416	yt
+198422	ss
+198428	 C-AF+TR-tilassa.
+198464	Valitse toiminto
+198500	monivalitsimen @A0AC@-keskipainikkeelle
+198582	kuvausta varten.
+198616	Valitse toiminto monivalitsimen
+198682	@A0AD@-suuntan
+198712	pp
+198718	imelle
+198734	kuvausta varten.
+198768	@A0AB@-tilassa @A03E@-merkill
+198834	valitut toiminnot on 
+198880	poistettu k
+198904	yt
+198910	st
+198920	Valitse, mitk
+198948	 s
+198956	timet 
+198976	kyv
+198984	t, kun @A083@-painiketta 
+199038	painetaan still-kuvauksessa.
+199100	hent
+199112	 v
+199118	lkynt
+199132	 asettamalla
+199160	tehon taajuuden.
+199194	Lis
+199202	asetukset, kun ISO-
+199244	herkkyyden asetuksena on AUTO 
+199308	still-kuvauksessa.
+199346	Valitse kuvaustilat, joissa 
+199406	Auto ISO -toiminto on 
+199458	ytett
+199470	viss
+199480	 still-kuvauksessa.
+199520	Valitsee pienen 
+199556	ISO-nopeuden kuvank
+199596	sittely-
+199616	menetelm
+199634	n still-kuvaukseen.
+199674	Valitse still-kuvauksen 
+199726	valkotasapaino.
+199758	Aseta sama valkotasapainon 
+199816	kompensaatio kaikkiin still-
+199876	kuvauksen tiloihin.
+199920	ilytt
+199938	n l
+199946	mpim
+199956	t v
+199964	rit 
+199976	still-kuvauksessa automaattisen 
+200044	valkotasapainon tilassa.
+200104	 korkeus- ja 
+200138	mp
+200144	tila-asetuksia.
+200176	Kentt
+200188	anturin kirjaaja
+200222	Hankkii kentt
+200250	anturin tiedot 
+200284	ja tallentaa kortille lokitiedostona.
+200360	Aloita loki
+200384	Pys
+200392	yt
+200398	 loki
+200410	Tallenna loki
+200442	ynniss
+200458	Pys
+200466	ytetty
+200480	@A002@Pys
+200500	ytetty
+200518	ft
+200524	Abu Dhabi
+200544	Adelaide
+200562	Alaska
+200576	Anchorage
+200596	Athens
+200610	Auckland
+200628	Azores
+200642	Bangkok
+200658	Beijing
+200674	Berlin
+200688	Buenos Aires
+200714	Cairo
+200726	Casablanca
+200748	Chennai
+200764	Chicago
+200780	Colombo
+200796	Delhi
+200808	Denver
+200822	Dhaka
+200834	Dubai
+200846	Fernando de Noronha
+200886	Fiji
+200896	Guam
+200906	Hawaii
+200920	Helsinki
+200938	Hong Kong
+200958	Honolulu
+200976	Houston
+200992	Islamabad
+201012	Jakarta
+201028	Johannesburg
+201054	Kabul
+201066	Karachi
+201082	Kathmandu
+201102	Kolkata
+201118	Kuala Lumpur
+201144	Kuwait
+201158	La Paz
+201172	Lima
+201182	London
+201196	Los Angeles
+201220	Madrid
+201234	Male
+201244	Manaus
+201258	Mexico City
+201282	Miami
+201294	Midway Islands
+201324	Moscow
+201338	Mumbai
+201352	Nairobi
+201368	New Caledonia
+201396	New York
+201414	Newfoundland
+201440	Paris
+201452	Phoenix
+201468	Rio de Janeiro
+201498	Riyadh
+201512	Rome
+201522	Samoa
+201534	Sao Paulo
+201554	Seattle
+201570	Seoul
+201582	Singapore
+201602	Solomon Islands
+201634	Sydney
+201648	Tahiti
+201662	Taipei
+201676	Tehran
+201690	Tokyo
+201702	Toronto
+201718	Vancouver
+201738	Wellington
+201760	Yangon
+201774	UTC
+201782	ART16
+201794	FHD HighSpeed 120fps
+201836	ND32(5EV)
+201856	ND16(4EV)
+201876	ND8(3EV)
+201894	ND4(2EV)
+201912	ND2(1EV)
+201930	LV OFF-Info
+201954	ISO L64
+201970	ISO L80
+201986	ISO L100
+202004	ISO L125
+202022	ISO L160
+202040	@A0D1@LOCK
+202062	@A0AE@@A010@
+202088	@A0AE@@A0AD@
+202114	@A0AE@@A007@
+202140	@A0AE@@A03F@
+202166	@A0AE@@A03C@
+202192	@A0AE@@A0CB@
+202218	@A0AE@@A034@
+202244	@A0AE@@A0CC@
+202270	@A0AE@@A0CD@
+202296	@A0AE@@A0CE@
+202322	@A0AE@@A0CF@
+202348	@A0AE@@A0D0@
+202374	@A0AC@@A0AD@
+202400	@A0AC@@A007@
+202426	@A0AC@@A034@
+202452	@A0AC@@A0CF@
+202478	@A0AC@@A0D0@
+202504	S-AF@A0BC@
+202526	C-AF@A0BC@
+202548	C-AF+TR@A0BC@
+202576	USB PD
+202590	@A0C8@PC RAW
+202616	96kHz/24bit
+202640	48kHz/16bit
+202664	COMM_MODE_B
+202688	Yhteyden asennus
+202722	Yhdist
+202736	 laitteeseen seuraavasti.
+202790	Asennus vaaditaan vain kerran.
+202854	@A08F@/Bluetooth otetaan k
+202908	ytt
+202924	asennuksen aikana.
+202962	Asenna OI.Share-sovellus laitteeseen.
+203040	Kun asennus on valmis, valitse @A019@.
+203118	Skannaa QR-koodi
+203154	OI.Share-sovelluksella.
+203202	Yhdistet
+203222	n...
+203232	Katkaistaan yhteys...
+203276	Katkaise@A018@
+203306	Laitteen yhteys
+203338	Yhdist
+203352	 laitteeseen.
+203380	Yhteyden tiedot@A01A@
+203424	Laiteyhteys
+203448	Tukiasemayhteys
+203480	Etsit
+203494	n tukiasemaa...
+203526	Yhdistet
+203546	n tukiasemaan...
+203580	Yhdist
+203594	 WPS-yhteydell
+203626	Yhdist
+203640	 tukiasemaluettelosta
+203684	Yhdist
+203698	 manuaalisesti
+203728	Tietoasetukset
+203758	Ei k
+203768	ytett
+203780	viss
+203790	 nyt
+203800	Joitakin kuvia ei ole 
+203848	siirretty.
+203870	PBC-menetelm
+203898	PIN-menetelm
+203926	Yhdist
+203940	 painamalla tukiaseman 
+203990	WPS-painiketta.
+204022	Yhdist
+204036	 antamalla PIN-koodi 
+204082	tukiasemassa.
+204110	Paina tukiaseman
+204146	WPS-painiketta.
+204180	Yhteyden muodostus alkaa,
+204234	kun valitset @A083@.
+204276	Anna PIN-koodi, joka 
+204326	kyy yll
+204342	 tukiasemassa. 
+204376	Yhteyden muodostus alkaa, 
+204432	kun valitset @A083@.
+204474	Alkuasetuksia vaaditaan 
+204526	muodostettaessa @A099@-yhteytt
+204594	tietokoneeseen. Noudata 
+204646	Olympus Capturen 
+204684	ohjeita. Alkuasetukset teht
+204750	jokaiselle tietokoneelle.
+204802	RESULT_WPS_NG
+204830	Yhteys ep
+204850	onnistui
+204868	Tukiasemaa ei l
+204900	ytynyt
+204914	@A099@ on k
+204938	ynniss
+204954	Katkaise yhteys
+204986	Pid
+204996	Salasana
+205014	Valitse yhdistett
+205054	 tietokone
+205076	Poista
+205090	Poista t
+205112	n tukiaseman 
+205142	yhteysasetukset kamerasta.
+205196	IP_SETTING
+205218	IP-osoite
+205238	Aliverkon peite
+205270	Oletusyhdysk
+205296	yt
+205308	IP-osoitteen m
+205340	ritys
+205352	Auto (DHCP)
+205376	Manuaalinen
+205404	ivitysasetukset
+205440	ytett
+205452	viss
+205462	, kun 
+205478	tukiasema tukee DHCP-
+205524	toimintoa. IP-osoite 
+205576	ritet
+205590	n automaattisesti.
+205628	Sy
+205638	 IP-osoite manuaalisesti.
+205690	Todennus
+205708	Ei mit
+205728	Aloita yhteyden muodostus
+205780	Tukiasemaa ei l
+205812	ytynyt
+205826	Etsi uudestaan @A033@
+205870	@A0BA@@A03F@/@A01B@@A01C@
+205922	@A0BA@@A03F@
+205948	Yhdist
+205962	@A019@
+205976	Sulje@A018@
+206000	Tietokoneyhteys aloitettu
+206052	Tietokoneyhteys katkaistu
+206104	Kamera on liitetty tietokoneeseen. 
+206178	Tallennetut kuvat siirtyv
+206230	t 
+206238	tietokoneeseen automaattisesti.
+206302	Yhteys tietokoneeseen lopetettu.
+206368	@A002@ Tietokoneyhteys katkaistu. 
+206440	Tarkista tietokoneen tila.
+206494	@A002@ Verkkoyhteys katkaistu. 
+206560	Tarkista @A099@-tila ja muodosta 
+206630	yhteys tukiasemaan uudelleen.
+206690	@A09F@ Tasainen
+206722	DNS
+206730	WPA2
+206740	Jalusta
+206760	dess
+206772	Peruuta kuvien siirto 
+206820	tietokoneeseen ja 
+206860	katkaise yhteys.
+206894	Suuri
+206906	Pieni
+206918	Voit valita AF-alueen painamalla
+206986	@A0AD@-painiketta kuvauksen aikana.
+207058	NOISE_REDUCTION_STANDARD
+207108	NOISE_REDUCTION_QUALITY
+207156	INFO_S_NOISE_REDUCTION_STANDARD
+207220	INFO_S_NOISE_REDUCTION_QUALITY
+207282	M/B
+207290	@A0D5@
+207304	@A0F8@
+207318	@A078@Valitse n
+207350	ytt
+207358	asetukset
+207378	S_NOISE_REDUCTION_LEVEL
+207426	m/ft
+207436	@A0D3@/@A0D4@
+207464	Lataa
+207476	Suorit. prioris.
+207510	Tarkkuud. prior.
+207544	Pienill
+207560	 ISO-nopeuksilla per
+207602	kk
+207608	in 
+207618	tallennettavien kuvien enimm
+207676	is-
+207698	 priorisoidaan 
+207732	still-kuvauksen kuvank
+207778	sittelyss
+207802	Pienill
+207818	 ISO-nopeuksilla kuvien 
+207870	tarkkuutta priorisoidaan 
+207924	still-kuvauksen kuvank
+207970	sittelyss
+207994	@A0BD@ OM-Log400
+208028	@A003@@A09A@ @A094@
+208068	@A004@@A09A@ @A094@
+208108	2h
+208114	5h
+208120	@A006@@A040@Toiminto
+208162	Valitse @A040@:n toiston aikana
+208232	ytett
+208248	 toiminto.
+208270	@A04D@-asetukset
+208304	@A017@-asetukset
+208338	@A0AC@AF AEL/AFL
+208372	Starry Sky AF on k
+208410	ynniss
+208426	Starry Sky AF
+208454	Starry Sky AF + MF
+208492	Starry Sky AF -asetus
+208536	Valitse k
+208556	ytett
+208576	Starry Sky AF -tila.
+208618	Tarkkuus
+208636	Nopeus
+208650	AF:n tarkkuus on etusijalla
+208708	AF:n nopeuteen n
+208742	hden.
+208760	sittelyaikaa tarvitaan
+208808	AF:n suorittamisen loppuun saakka.
+208878	AF:n nopeus on etusijalla
+208932	AF:n tarkkuuteen n
+208970	hden.
+208982	Tarkennusrengaslukko
+209024	Poistaa tarkennusrenkaan
+209076	manuaalisen tarkennustilan k
+209134	yt
+209140	st
+209152	Palauta painamalla uudelleen.
+209224	 rajaus
+209240	Ottaa h
+209264	n rajauksen k
+209292	ytt
+209308	tai poistaa sen k
+209344	yt
+209350	st
+209362	Valitse asetukset painamalla
+209422	pohjaan ja kiert
+209460	ll
+209466	 valitsinta.
+209504	 rajaus p
+209526	ll
+209544	Mukautet. tilan tallennusaset.
+209606	Pito
+209616	Nollaus
+209632	Muutetut asetukset tallentuvat
+209696	automaattisesti
+209730	mukautetussa tilassa kuvattaessa.
+209798	Muutetut asetukset eiv
+209844	t tallennu
+209868	mukautetussa tilassa kuvattaessa.
+209936	@A008@Kasvojen valinta
+209982	Valitse AF-kohdepisteen l
+210034	hell
+210048	olevat kasvot painiketta painaen.
+210118	Valitse manuaalisesti painamalla
+210186	painiketta ja k
+210220	nt
+210230	ll
+210236	 valitsinta.
+210262	@A008@Kasvon esival.
+210304	Ottaa @A008@kasvontunnistuksen
+210372	ytt
+210382	n tai poistaa sen k
+210422	yt
+210428	st
+210440	Valitse asetukset painamalla
+210500	pohjaan ja kiert
+210538	ll
+210544	 valitsinta.
+210570	Kavontunnistuksen AF
+210620	@A078@ Ympyr
+210646	n asetukset
+210670	Asetukset, joilla s
+210712	det
+210728	kohdistimen liikett
+210772	AF-kohteenvalintan
+210810	kym
+210818	ss
+210828	@A078@ Ympyr
+210854	n valinta
+210874	Ympyr
+210886	 1
+210892	Ympyr
+210904	 2
+210910	Pys
+210918	htyy, kun AF-kohde
+210958	on liikutettu reunalle.
+211006	Siirt
+211020	 AF-kohteen saman rivin
+211070	tai sarakkeen vastakkaiseen p
+211136	n,
+211144	kun AF-kohdetta on liikutettu
+211206	reunan yli.
+211230	Siirt
+211244	 AF-kohteen seuraavan rivin
+211302	tai sarakkeen vastakkaiseen p
+211368	n,
+211376	kun AF-kohdetta on liikutettu
+211438	reunan yli.
+211462	Seuraavan kautta: @A0AD@
+211512	Kohde @A0AD@ valitaan ennen
+211570	AF-kohteen siirt
+211604	mist
+211618	vastakkaiseen p
+211656	n.
+211662	Kohdetta @A0AD@ ei valita ennen
+211728	AF-kohteen siirt
+211762	mist
+211776	vastakkaiseen p
+211814	n.
+211820	RAW+JPEG @A041@
+211852	Esivalitsee laitteeseen siirrett
+211922	ksi
+211932	vain JPEG-tiedoston, kun asetus on
+212004	RAW+JPEG.
+212024	Esivalitsee laitteeseen siirrett
+212094	ksi
+212104	vain RAW-tiedoston, kun asetus on
+212174	RAW+JPEG.
+212194	Esivalitsee laitteeseen siirrett
+212264	ksi
+212274	sek
+212282	 JPEG- ett
+212304	 RAW-tiedostot,
+212338	kun asetus on RAW+JPEG.
+212386	Tarkennuksen osoitin
+212428	Tarkennuksen osoitinta ei n
+212484	y,
+212492	kun tarkennusrengasta kierret
+212560	MF-tilassa.
+212584	Tarkennussuunta ja -asento n
+212642	kyv
+212650	t,
+212658	kun tarkennusrengasta kierret
+212726	MF-tilassa. T
+212758	 toiminto auttaa
+212794	tarkennuksen s
+212830	misess
+212848	Live-yhdistelm
+212878	ajastin
+212894	Aseta yhdistelm
+212926	kuvauksen
+212948	enimm
+212960	isaika.
+212976	3h
+212982	6h
+212988	Kuvaustiedot
+213014	@A0BD@Lukitus
+213042	Poista @A0BD@ k
+213074	yt
+213080	st
+213086	 valit. On.
+213116	ytt
+213126	 ruudun, kun suljin-
+213170	painike on painettu puoliv
+213224	liin.
+213238	Videokuvaustilassa ruutu
+213294	kyy aina. (@A0AD@, C-AF)
+213344	Painamalla @A040@-painiketta valikossa 
+213426	voit rekister
+213454	id
+213460	 kohteen Omaan 
+213494	valikkoon.
+213516	@A0AC@AF
+213534	@A0AC@AF@A0BC@
+213564	AEL/@A0AC@AF
+213590	@A0AC@AF Start/Stop
+213630	AF on ensisijainen
+213670	kasvoja tunnistettaessa.
+213720	AF on ensisijainen
+213760	valitussa kohdepisteess
+213814	vaikka kasvoja ei tunnistettaisi.
+213894	 rajaus pois
+213932	 rajaus p
+213954	ll
+213964	Siirron esivalinta:
+214006	valitse ennalta laitteeseen
+214064	siirrett
+214086	t kuvat.
+214104	Useiden kuvien valinta:
+214154	valitse useita kuvia, joihin
+214218	ytet
+214230	n samaa toimintoa,
+214270	esimerkiksi suojausta tai
+214324	poistoa.
+214342	Kytke silm
+214364	ntunnistin p
+214392	lle,
+214404	kun monitori on suljettu.
+214458	@A03D@: Live View p
+214500	lle/pois.
+214520	RAW-tila
+214542	hett
+214554	 videon RAW-muodossa
+214598	tuettuun laitteeseen.
+214644	Ei voi tallentaa kamerassa
+214700	olevalle kortille.
+214738	Ottaa kuvia, joita voi yhdist
+214806	panoraamaksi tietokoneella.
+214862	Lumihuippuisten vuorten,
+214914	maisemien, hiekkarantojen
+214968	jne. kuvaamiseen.
+215004	Tunnelmalliseen
+215038	kuvaamiseen kynttil
+215078	nvalossa.
+215104	rit toistuvat l
+215136	mpimin
+215154	Asiakirjojen jne. kuvaamiseen. 
+215220	Lis
+215230	 kontrastia.
+215256	Ihons
+215268	vy n
+215278	kyy tasaisena
+215308	HDTV:ll
+215324	 katsottaessa.
+215354	Maisemien kuvaamiseen.
+215402	Sinisen ja vihre
+215436	n s
+215444	vyt
+215454	toistuvat el
+215484	sti.
+215494	Nopean liikkeen tarkkaan
+215546	kuvaamiseen. Pys
+215580	ytt
+215594	kohteen liikkeen.
+215630	Auringonnousun/-laskun
+215678	kuvaamiseen. Punaisen ja 
+215732	keltaisen v
+215756	rin korostus.
+215784	Vastavalo-HDR
+215812	Luo useita kuvia yhdist
+215864	ll
+215876	kuvan, jossa on 
+215912	optimaalinen kirkkaus.
+215958	Sis
+215966	ll
+215974	Liike
+215990	maisemat
+216008	Ihmiset
+216024	Maisema
+216040	Kuvaa ilotulitusta
+216080	hitaammalla 
+216108	laukaisinnopeudella.
+216152	Jalustan k
+216174	ytt
+216182	 on suositeltavaa.
+216220	Kohteen kuvaamiseen
+216262	et
+216270	ll
+216276	 olevaa taustaa vasten.
+216326	Sinisen ja vihre
+216360	n s
+216368	vyt
+216378	toistuvat el
+216408	sti.
+216418	Kuvat otetaan per
+216454	kk
+216460	in ja vain
+216484	ne alueet tallennetaan, joiden
+216548	kirkkaus muuttuu, ja yhdistet
+216610	n.
+216622	ydellinen valoj
+216654	lkien kuvaamiseen.
+216694	Jalustan k
+216716	ytt
+216724	 on suositeltavaa.
+216762	@A00A@POP UP
+216790	Kuvaa ihmisi
+216816	 kaunista y
+216840	maisemaa
+216860	vasten. Hitaampaa laukaisinnopeutta
+216934	suositellaan. Jalustan k
+216984	ytt
+216996	on suositeltavaa.
+217032	Kuvaa kauniita y
+217066	maisemia
+217086	hitaammalla laukaisinnopeudella.
+217154	Jalustan k
+217176	ytt
+217184	 on suositeltavaa.
+217222	Muotokuvien ottamiseen.
+217270	Kynttil
+217288	Lapset
+217302	e-potretti
+217324	Valoj
+217336	ljet
+217346	Monitarkennuskuva
+217386	hikuvat
+217406	hikuvauksiin.
+217438	hikuvauksiin luonnossa. 
+217494	ll
+217500	 saat el
+217522	mpi
+217530	 makrokuvia 
+217558	tavalliseen makroon verrattuna.
+217622	Sopii erinomaisesti kuvauksiin, 
+217690	joissa halutaan v
+217726	ltt
+217736	 kameran 
+217762	nt
+217768	 ja valoa. @A001@, salama ja AF-
+217836	apuvalo poistetaan k
+217878	yt
+217884	st
+217894	Ottaa useita kuvia samanaikaisesti
+217966	eri tarkennusasetuksilla.
+218018	Laitteen yhteys
+218050	Yhdist
+218064	 laitteeseen.
+218092	Toimintoon tarvitaan yhteensopiva
+218162	objektiivi. Liit
+218196	 yhteensopiva objektiivi.
+218252	yt
+218258	 C-asetuksia? T
+218294	nhetkiset 
+218318	kameran asetukset korvataan.
+218376	Oma tila C
+218402	ynniss
+218418	@A08F@/Bluetooth otetaan
+218474	ytt
+218484	n, jotta yhteys
+218518	voidaan muodostaa.
+218556	@A08F@/Bluetooth poistetaan
+218618	yt
+218624	st
+218630	, eik
+218642	 yhteytt
+218664	voida muodostaa.
+218698	Bluetooth
+218718	Langattomat toiminnot
+218768	ll
+218774	@A0AE@
+218794	ll
+218800	@A0AF@
+218814	Poistaa Bluetoothin k
+218858	yt
+218864	st
+218876	Bluetooth on aina pois k
+218926	yt
+218932	st
+218944	kun virta on kytkettyn
+218994	Ottaa Bluetoothin k
+219034	ytt
+219044	n.
+219052	Bluetooth on aina k
+219092	yt
+219098	ss
+219108	langattomalle sulkimelle,
+219162	kun virta on kytkettyn
+219212	Ottaa Bluetoothin k
+219252	ytt
+219262	n.
+219270	Bluetooth on aina k
+219310	yt
+219316	ss
+219328	lypuhelimille,
+219360	kun virta on kytkettyn
+219410	Yhdist
+219424	minen on tehty.
+219458	Bluetooth-asetukseksi vaihtuu
+219526	ll
+219532	@A0AE@.
+219548	Yhdist
+219562	minen k
+219578	ynniss
+219598	Suorita langattoman sulkimen
+219658	vapautuksen yhdist
+219696	mistoiminto.
+219722	Poista yhdistetty laite.
+219774	Yhdist
+219788	minen on teht
+219820	 uudelleen
+219848	ytett
+219860	ess
+219868	 langatonta suljinta.
+219912	Langattom. sulkimen asetus
+219966	Aloita yhdist
+219994	minen
+220006	Poista yhteys
+220034	AF-apuvalo
+220060	riavaruus
+220080	Valotuksen tasoitus
+220120	Laiteohjelmistoversio
+220164	Toimii P/A/S/M-
+220198	valotustoiminnoilla.
+220240	Aikav
+220252	lin tila
+220270	Kuvaprioriteetti
+220304	Aikaprioriteetti
+220344	ritt
+220356	, mit
+220368	 tapahtuu,
+220392	kun USB liitet
+220424	n.
+220430	Kuvan tarkastelu
+220464	Verkkokamera
+220496	nn
+220502	 tilan valitsin asentoon @A004@.
+220568	Oma tila C2
+220592	Oma tila C3
+220616	Oma tila C4
+220640	Oma tila C
+220662	Kytkee toiminnon @A0B1@
+220718	lle/pois p
+220742	lt
+220752	Priorisoi otettavien kuvien m
+220824	noudattamista. Aloittaa seuraavan
+220894	kuvauksen, kun m
+220930	ritetty aika on
+220964	kulunut ja aiemmat kuvat on
+221022	tallennettu.
+221048	Priorisoi aikav
+221080	lin pit
+221096	mist
+221106	 samana.
+221126	Ohittaa seuraavan kuvauksen, kun
+221194	asetettua aikav
+221226	li
+221232	 ei voida pit
+221266	Jokaisen kuvan valotuksessa
+221328	ytet
+221340	n kuvan omaa
+221368	mittaustulosta.
+221404	ytt
+221414	 jokaisessa kuvassa
+221456	vakiovalotusta. Tasoittaa
+221510	kirkkauseroja hahmonnetuissa
+221570	TimeLapse-videoissa.
+221612	@A002@ Poistaa kaikki automaattisesti
+221690	erotetut tiedostot videosta.
+221748	P/A/S/M/B
+221768	P/A/S/M
+221784	@A0BE@ Control
+221814	Punainen kehys @A0B0@
+221858	Kun asetus on k
+221890	yt
+221896	ss
+221912	yt
+221918	ss
+221924	 on punainen ulkoreuna
+221972	videotallennuksen aikana.
+238162	OlympusLanguage_fintft

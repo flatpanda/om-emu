@@ -1,0 +1,8509 @@
+10	AEL/AFL
+26	@A025@REC
+46	MF
+52	RAW@A024@
+72	Granska
+88	@A01D@
+102	 Hem
+172	Svenska
+194	2f
+200	AEL/AFL Mem
+224	AEL/AFL
+240	AEL-L
+252	sning
+264	@A001@ Inst
+288	llning
+302	 St
+310	ll In Hem
+330	AF/MF
+342	AF Area
+358	AF Belysning
+384	AF L
+394	ge
+400	Alla
+410	I.S. i alla riktningar.
+458	Nollst
+472	ll
+482	lj Alla
+498	Alla @A001@
+522	Anti-Chock @A004@
+558	Bl
+564	ndarprioritet
+592	Konst Live View L
+628	ge
+634	Cross Process
+662	Diorama
+678	Dramatiska F
+704	rger
+714	Svag Sepia
+736	Grovkornig Film
+768	Mjuk Ton
+786	Blek&Ljus F
+810	rg
+820	rgstark
+836	Soft Fokus
+862	lkamera
+878	Bildf
+890	rh
+896	llande
+910	Auto
+920	Bakgrundsbelyst LCD
+960	@A003@ Varningsniv
+1000	Batteri Tomt
+1026	@A001@
+1040	Alternativexp.
+1070	Bulb Focusering
+1102	Bulb Timer
+1124	Knapp/Ratt
+1146	@A003@Kontroll Inst.
+1188	@A006@ Hj
+1208	lpprogram
+1228	Kortfel
+1244	Kort Fullt
+1266	Kort Fullt
+1288	Kortkonfiguration
+1324	Intern kameratemperatur
+1376	r f
+1384	r h
+1392	g. L
+1402	t kameran
+1424	kylas ner f
+1448	re anv
+1462	ndning.
+1478	Objektivet 
+1502	r l
+1510	st.
+1524	ll ut objektivet.
+1564	rgomr
+1576	de
+1582	Kontinuerlig AF
+1614	AF-sp
+1626	rning
+1638	Kontrast
+1656	Storlek Bildkopia
+1692	Copyright Inst.
+1724	@A004@L
+1740	ge
+1746	Anpassad
+1764	Knappfunktion
+1796	Rattens riktning
+1830	Funktionsratt
+1858	@A010@L
+1878	Auto Blixt
+1900	Uppl
+1910	ttnad
+1922	Ej Blixt
+1944	da 
+1952	gon
+1964	da 
+1972	gon, l
+1986	ngsam
+1998	Punkt H
+2014	gdager
+2028	Punkt Skugga
+2054	Sk
+2060	rm/@A004@/PC
+2086	dpi Inst
+2104	llning
+2118	Sekvens
+2134	@A014@ Anti-Chock @A004@
+2184	Singel
+2198	@A014@ Anti-Chock @A004@
+2248	e-Portrait
+2270	Redig.
+2284	Red. Filnamn
+2310	B:Bl
+2322	G:Gr
+2336	N:Neutral
+2356	Or:Orange
+2376	P:Violett
+2396	R:R
+2408	S:Sepia
+2424	Ye:Gul
+2438	EV Steg
+2454	EVF Justering
+2482	Exp/@A011@/ISO
+2512	Exponering
+2534	Exp. Alternativ
+2566	@A008@Ansiktsprioritet
+2612	Ansiktsprioritet Av
+2652	Ansiktsprioritet P
+2692	Filnamn
+2708	Firmware
+2726	@A014@ Anpassad
+2758	@A00A@ L
+2776	ngsam Begr.
+2800	@A00A@ X-Synk.
+2830	Br
+2836	nnvidd
+2850	Fokusring
+2870	Effektfull H
+2896	gdager
+2910	Effektfull Skugga
+2946	Effektfull Normal
+2982	Hi
+2988	Histogram Inst.
+3020	i-Enhance
+3040	@A01A@/F
+3058	rg/VB
+3070	Stabilisator
+3096	@A00F@ Inst.
+3122	@A00F@/Info. Inst.
+3160	@A006@ Info.
+3186	Adressbok
+3206	Bildstabilisering Av
+3248	ISO
+3256	ISO-Auto
+3274	ISO-Auto Inst.
+3304	Ut
+3310	kad
+3318	Rekommenderad
+3346	ISO Steg
+3364	Vertikal I.S.
+3392	Niv
+3400	justering
+3420	Lo
+3426	Loop
+3436	Man. Fotografering
+3474	@A009@+@A007@
+3502	@A00E@
+3516	Album Minne Anv.
+3550	Meny
+3560	@A00E@/@A000@ Meny Display
+3618	tning
+3630	Centrumv
+3648	gd
+3654	Punkt
+3666	MF Hj
+3678	lp
+3684	min
+3696	ge Guide
+3714	@A016@
+3728	Monoton
+3752	Film
+3762	Film @A017@
+3786	Film+Stillbild
+3816	Multiexponering
+3848	Muted
+3860	Live View-
+3882	kning
+3894	Nej
+3902	Inget Kort
+3924	Ej Kontakt
+3946	Brusfilter
+3968	Brusreducering
+3998	Inga Bilder
+4022	Av
+4028	Bak
+4036	t@A018@
+4052	Bak
+4060	t@A019@
+4076	Avbryt@A018@
+4106	nga vitbalans@A01A@
+4146	@A01B@@A01C@
+4172	Inst.@A019@
+4202	@A01E@
+4216	@A01F@
+4230	Min OLYMPUS PENPAL
+4268	Album Minne Inst.
+4304	Bildinst.
+4324	Bildl
+4336	ge Inst.
+4354	Bildfel
+4370	Pixeltal
+4388	Pixelmapping
+4414	@A023@ N
+4432	rbilds L
+4450	ge
+4456	Skriv Ut
+4474	Prioritera
+4496	Autoprogram
+4522	terst
+4534	ll skydd
+4552	@A024@
+4566	@A024@ Inst
+4590	llning
+4604	Snabbradera
+4628	Radera RAW+JPEG
+4660	Spela in/Radera
+4692	Snabbgranska
+4722	da 
+4730	gon+Uppl.B.
+4754	Avtryck
+4770	Utl
+4778	sarprioritet C-AF
+4814	Utl
+4822	sarprioritet S-AF
+4860	terst
+4872	ll
+4880	terst
+4892	ll lins
+4910	terst
+4922	ll/Myset
+4940	@A026@
+4958	ttnad
+4970	Strand & Sn
+4996	Stearinljus
+5020	Barn
+5030	Dokument
+5048	Fyrverkeri
+5074	gdager
+5088	Landskap
+5106	Skugga
+5120	Makro
+5132	@A03A@ Makro
+5158	Naturmakro
+5180	Portr
+5192	tt + Natt
+5212	Nattbild
+5230	Panorama
+5248	Portr
+5260	tt
+5266	DIS L
+5278	ge
+5284	Sport
+5296	Solnedg
+5312	ng
+5318	@A03A@ Vidvinkel
+5352	sek
+5360	@A04E@ Anti-Chock @A004@
+5410	@A04F@ Anti-Chock @A004@
+5460	@A02A@ 12 sek
+5488	@A02A@ 2 sek
+5514	Storlek s
+5534	nd bild
+5550	@A02C@
+5564	Skuggkompr.
+5588	Skuggjust.
+5610	Sk
+5616	rpa
+5624	Slutarprioritet
+5656	Horisontell I.S.
+5690	Singel AF
+5710	Singel AF + MF
+5740	Pausl
+5752	ge
+5758	@A02B@
+5772	Spiral
+5786	Standard
+5804	Start
+5816	Spara
+5836	OLYMPUS PENPAL Dela
+5876	Elektronisk S
+5904	kare
+5914	OLYMPUS PENPAL Album
+5956	Tid
+5964	USB L
+5976	ge
+5982	Video Ut
+6000	Volym
+6016	nligen V
+6034	nta
+6042	Vitbalans Auto
+6072	Molnigt
+6088	Vitbalans Blixt
+6120	Lysr
+6130	r.
+6136	Gl
+6142	dande
+6154	Vitbalans
+6174	Skugga
+6188	Soligt
+6210	Skrivskyddat
+6244	Ja
+6252	/M/D
+6262	Eye-Fi
+6276	16:9
+6286	4:3
+6294	3:2
+6302	6:6
+6310	3:4
+6318	ESP
+6326	NTSC
+6336	PAL
+6344	RAW
+6352	MF
+6358	Adobe RGB
+6378	I.S. 1
+6392	I.S. 2
+6406	Slow
+6416	Slow2
+6428	1/4
+6436	1/16
+6446	1/64
+6456	2nd Curtain
+6480	Vivid
+6492	Natural
+6508	JPEG
+6518	RAW+JPEG
+6536	Portrait
+6570	CWB
+6578	mode1
+6590	mode2
+6602	S-AF
+6612	C-AF
+6622	P/A/S
+6634	Menu
+6644	1/2EV
+6656	1/3EV
+6668	1EV
+6676	Off
+6684	I.S. 3
+6698	sRGB
+6708	Auto@A010@
+6730	MTP
+6738	Hold
+6748	Body
+6758	Lens
+6768	Flash
+6780	Acc
+6788	LV-Info
+6804	@A014@/@A028@
+6832	ART1
+6842	ART2
+6852	ART3
+6862	ART4
+6872	ART5
+6882	ART6
+6892	ART7
+6902	ART8
+6912	HDMI
+6922	iAUTO
+6934	P/A/S/M
+6950	ART9
+6960	ART10
+6972	Full
+6982	@A084@
+6996	Datum
+7008	Myset1
+7022	Myset2
+7036	Myset3
+7050	Myset4
+7064	Bakgr.Bel. LCD
+7094	Live Guide
+7116	Digital Tele-omvandl.
+7160	Exponering @A007@
+7196	Det fungerar i 
+7230	P/A/S 
+7246	exponeringsl
+7272	ge.
+7280	Det fungerar i 
+7314	alla 
+7328	exponeringsl
+7354	gen.
+7364	Var v
+7376	nlig kontrollera l
+7414	get p
+7426	 linsen.
+7444	Bakgr.Bel. On/Off.
+7484	ndra exp.
+7506	kompensation
+7532	@A066@:
+7550	Starta/Stoppa
+7580	Filminspelning
+7614	rhandsgranska
+7644	sk
+7650	rpedjup.
+7668	Standardinst
+7694	llning f
+7718	AF omr
+7732	de
+7738	Val av MF l
+7762	ge
+7770	ndra 
+7784	RAW+JPEG/JPEG 
+7816	komprimering 
+7846	med ratt
+7864	@A013@/@A014@ Direktinst
+7914	llning.
+7930	ISO Direktinst
+7960	llning.
+7976	Direkt inst
+8000	llning Vitbalans-l
+8038	ge.
+8046	Tryck in @A02A@ f
+8082	r att l
+8098	sa/
+8112	sa upp best
+8136	m 
+8144	@A010@ funktion i
+8182	fotograferingsl
+8214	get.
+8224	@A01C@Funktion
+8254	@A048@Funktion
+8284	@A030@Funktion
+8314	@A00A@Funktion
+8344	SF
+8362	@A05C@5300K
+8386	@A05B@7500K
+8410	@A05D@3000K
+8434	@A059@5500K
+8458	@A058@6000K
+8482	Radera alla bilder p
+8530	minneskortet eller
+8570	formatera minneskortet.
+8620	terst
+8632	ll inst
+8648	llningarna, eller
+8686	registrera nuvarande
+8730	kamerainst
+8752	llningar som Mysets.
+8798	r att v
+8814	lja art filter eller 
+8864	r att avsluta f
+8896	r 
+8904	fotograferings
+8934	ndam
+8944	let.
+8958	r att v
+8974	lja inspelnings-
+9014	ge f
+9024	r fotografering 
+9060	eller filmning.
+9092	Byt horisontell-till
+9136	-vertikal f
+9160	rh
+9166	llande
+9182	vid fotografering.
+9220	Inledande och grundl
+9262	ggande
+9278	fotograferingsval.
+9320	lj inst
+9336	llningar f
+9358	r 
+9366	sekvensfotografering
+9410	eller sj
+9428	lvutl
+9440	sare.
+9454	ndra bildstabilisatorl
+9500	ge.
+9510	@A065@ och @A066@ anv
+9554	nds f
+9566	r att
+9580	panorera med kameran.
+9624	Kameran fotograferar 
+9670	automatiskt med olika 
+9718	inst
+9728	llningar f
+9750	r varje bild.
+9778	Flera exponeringar 
+9818	verlappas 
+9842	och sparas i en enda bild.
+9896	Justerar blixtstyrkan.
+9942	Anv
+9950	nd fotograferingsl
+9988	get 
+10000	tr
+10006	dl
+10012	s blixt med det 
+10048	tr
+10054	dl
+10060	sa RC blixtsystemet.
+10102	Fotografera med digital zoom.
+10162	Avancerade fotograferingsval.
+10222	Spela bildspel med olika 
+10276	BGM eller effekter.
+10316	Bilderna visas 
+10348	t r
+10356	tt
+10368	ll 
+10376	ven om kameran 
+10410	roteras.
+10428	Redigerar bilden.
+10464	Spara utskriftsdata tillsammans
+10530	med bilderna som finns 
+10580	lagrade p
+10600	 kortet.
+10618	Ta bort skydd f
+10650	r 
+10658	samtliga bilder.
+10692	Uppspelnings och 
+10730	retuscheringsval.
+10766	Meny f
+10780	r inst
+10794	llningar 
+10820	r autofokus och 
+10856	manuell fokus.
+10886	Meny f
+10900	r inst
+10914	llningar f
+10936	r 
+10944	knappar och rattar.
+10984	Meny f
+10998	r slutaren utl
+11028	sning.
+11042	Meny f
+11056	r inst
+11070	llningar 
+11092	av sk
+11104	rm, ljud och 
+11134	PC-anslutning eller skrivare
+11192	Meny f
+11206	r exponerings-
+11238	inst
+11248	llningar.
+11268	Meny f
+11282	r blixtinst
+11306	llningar.
+11326	Meny f
+11340	r inst
+11354	llning 
+11372	av bildf
+11390	rger eller vitbalans.
+11434	Meny f
+11448	r inspelning 
+11478	eller radering av 
+11518	inst
+11528	llningar.
+11548	Meny f
+11562	r filminst
+11584	llningar.
+11604	Meny f
+11618	r 
+11624	vriga inst
+11646	llningar.
+11670	lj AF l
+11686	ge f
+11696	r stillbildsl
+11724	ge 
+11734	och filml
+11754	ge.
+11762	Om P
+11776	r valt, aktiveras 
+11816	autofokus innan 
+11852	avtryckaren trycks ner.
+11904	lj AF markering.
+11942	ljer funktion f
+11974	r ratt eller pil
+12010	vid val av AF markering.
+12060	Vid inst
+12078	llningen P
+12104	terst
+12116	lls
+12126	objektivets sk
+12156	rpa, o
+12170	ndlighet,
+12192	varje g
+12208	ng kameran st
+12236	ngs av.
+12256	lj On f
+12272	r att till
+12294	ta MF 
+12310	vid BULB fotografering.
+12358	Anpassar rotationsriktningen
+12422	r fokuseringsringen f
+12466	r att
+12480	justera fokus.
+12514	lj On f
+12530	r att aut. f
+12556	rstora 
+12574	bilden n
+12592	r fokuseringsringen
+12634	roteras i MF-l
+12664	ge.
+12676	lj AF-markeringen som 
+12724	ska sparas som hemposition
+12778	En LED g
+12796	r auto-
+12814	fokuseringen l
+12844	ttare i 
+12868	rh
+12874	llanden med d
+12902	lig belysning.
+12932	Tilldela fokusering eller 
+12988	AE-l
+12998	s till @A034@.
+13028	Om On 
+13042	r valt, l
+13062	ses 
+13074	exponeringen tills @A071@ 
+13130	sl
+13136	pps.
+13146	4"-Rullar
+13170	lj funktionen som 
+13208	r 
+13216	tilldelad ratten
+13254	lj h
+13264	ll som ratten roteras p
+13320	lj On f
+13336	r att inaktivera @A010@ 
+13388	under fotografering.
+13430	A4-Rullar
+13450	Justera HDMI inst
+13486	llningar.
+13506	Adress
+13520	Om P
+13530	 valt kommer effekterna
+13580	av exponeringskompen.
+13626	ej visas p
+13648	 sk
+13656	rmen.
+13668	Alla
+13682	lj tid som indikatorerna
+13734	automatiskt f
+13762	rsvinner 
+13784	fr
+13790	n sk
+13800	rmen.
+13812	Den bakgrundsbelysta LCD:n
+13868	tonas ned om den inte anv
+13920	nds 
+13932	under en period.
+13966	Kameran st
+13988	ller sig i vilol
+14022	ge 
+14032	om inga funktioner utf
+14078	rs under 
+14100	den valda tidsperioden.
+14148	Signalljudet som avges 
+14202	r sk
+14212	rpan l
+14226	ses kan 
+14246	st
+14252	ngas av.
+14270	Justera uppspelningsvolymen.
+14332	lj typen av enhet som
+14378	ska anslutas med USB.
+14426	lj storleken p
+14456	 stegen som 
+14484	anv
+14492	nds n
+14504	r du v
+14518	ljer 
+14532	exponeringsparametrar.
+14582	lj ett m
+14600	tl
+14606	ge.
+14618	lj ett m
+14636	tl
+14642	ge med @A034@.
+14672	St
+14678	ll in ISO k
+14702	nsligheten.
+14730	lj det 
+14746	vre gr
+14760	nsv
+14768	rdet och 
+14790	standardv
+14810	rdet som anv
+14836	nds
+14850	r ISO-k
+14866	nsligheten.
+14894	lj ett fotograferingsl
+14940	ge d
+14950	r 
+14958	auto ISO-k
+14980	nslighetsinst
+15008	llningen
+15030	r tillg
+15046	nglig.
+15060	St
+15066	ll in max tid f
+15098	r 
+15106	BULB fotografering.
+15150	lj f
+15160	rdr
+15168	jningen mellan att 
+15210	avtryckaren trycks och att 
+15268	slutaren utl
+15294	ses.
+15308	lj den snabbaste slutar-
+15360	tiden som 
+15382	r tillg
+15398	nglig n
+15414	r en
+15426	blixt anv
+15446	nds.
+15460	lj den l
+15478	ngsammaste slutar-
+15518	tiden som 
+15540	r tillg
+15556	nglig n
+15572	r en
+15584	blixt anv
+15604	nds.
+15614	Den h
+15626	r funktionen reducerar 
+15676	bruset som skapas under
+15726	en l
+15736	ng exponering.
+15770	lja m
+15782	ngden brusreducering 
+15828	som utf
+15844	rs vid h
+15862	ga 
+15872	ISO-k
+15884	nsligheter
+15910	lj vitbalans-l
+15940	ge.
+15948	Bibeh
+15960	ller varm f
+15984	rgton vid 
+16008	auto vitbalans-l
+16042	ge.
+16054	lj hur f
+16072	rgerna 
+16088	terges 
+16110	 sk
+16118	rmen eller skrivaren.
+16166	r att byta vitbalans-l
+16212	ge till 
+16232	auto eller @A036@ automatiskt vid 
+16304	anv
+16312	ndning av blixt.
+16346	Korrigera periferibelysning 
+16406	efter objektivtyp.
+16444	Modifierar JPEG-fotografier 
+16504	fr
+16510	n olika storlekar och 
+16558	komprimeringsgrader.
+16604	lj antalet pixlar f
+16644	r 
+16652	@A037@ och @A038@.
+16690	Om P
+16704	r valt, radera 
+16738	aktuell bild omg
+16772	ende.
+16788	lj vad som ska ske n
+16830	r 
+16838	en bild som tagits med inst
+16894	llning
+16910	RAW+JPEG raderas.
+16950	r ett nytt kort s
+16986	tts in 
+17004	kommer filnumreringen 
+17052	att forts
+17072	tta fr
+17086	n f
+17094	rra kortet.
+17122	lj hur bildfiler namnges 
+17176	genom att redigera den del
+17232	av filnamnet som markeras.
+17290	lj det f
+17308	rinst
+17320	llda valet 
+17350	r bekr
+17364	ftelsedialogrutor.
+17406	lj utskriftsuppl
+17440	sning.
+17458	gger till namnet p
+17496	 fotografen
+17522	och copyrightinnehavaren f
+17576	r 
+17584	nya bilder.
+17612	r Av 
+17624	r valt spelas inte
+17664	ljud in vid tagning av
+17712	filmer.
+17732	r att kontrollera och justera 
+17796	bildomvandlaren och 
+17840	bildbehandlingsfunktionerna.
+17898	Justera optimal exponering 
+17956	separat f
+17976	r varje m
+17996	tl
+18002	ge.
+18010	Kalibrera niv
+18042	tare.
+18054	Aktivera eller inaktivera 
+18110	uppkoppling av Eye-Fi kortet.
+18170	Detaljerade kameraval.
+18216	Meny f
+18230	r OLYMPUS PENPAL 
+18268	delningsinst
+18294	llningar.
+18314	Meny f
+18328	r inst
+18342	llningar 
+18368	r elektronisk s
+18400	kare.
+18412	Ta emot bilder eller v
+18458	nta p
+18480	rfr
+18488	gan fr
+18502	n andra enheter.
+18536	Alla bilder och ljudfiler kopieras 
+18610	mellan @A00A@ och @A00B@.
+18662	Visa antalet bilder nu 
+18712	i albumet & antalet ytterligare 
+18780	bilder som kan sparas.
+18826	Raderar alla bilder i 
+18874	albumet eller formatterar
+18928	albumet.
+18946	Justera ljusstyrkan och 
+19002	rgtemperaturen f
+19036	r den 
+19052	elektroniska s
+19082	karen.
+19096	Tillbeh
+19112	rs tillval.
+19136	Justera bildsk
+19166	rmens
+19180	ljusstyrka och f
+19214	rgtemperatur.
+19246	lj hur l
+19264	ng tid bilden 
+19296	visas p
+19312	 sk
+19320	rmen 
+19334	efter fotografering.
+19380	lj visning eller ej
+19422	@A00E@ meny eller @A000@ meny
+19482	Se produktens 
+19514	programvaruversion.
+19554	St
+19560	ll in grundl
+19586	ggande 
+19604	kamerafunktioner.
+19640	Fotograferingsmeny 2
+19682	Ja
+19688	Nej
+19696	@A00A@ Menysk
+19724	rm
+19730	@A000@ Meny Display
+19770	Testbild
+19788	Blixtfunktion
+19816	@A06B@:Av
+19836	Radera Allt
+19860	@A023@: AEL/AFL
+19892	@A023@:
+19910	Starta/Stoppa
+19940	Filminspelning
+19974	rhandsgranska
+20004	sk
+20010	rpedjup.
+20028	WB direktval.
+20056	Standardinst
+20082	llning f
+20106	AF omr
+20120	de
+20126	Val av MF l
+20150	ge
+20158	ndra 
+20172	RAW+JPEG/JPEG 
+20204	komprimering 
+20234	med ratt
+20252	Ta testbild
+20278	utan att spara.
+20310	Fota med @A02B@
+20344	och tryck p
+20368	 @A024@ knappen
+20400	Fota med @A02C@
+20434	och tryck p
+20458	 @A024@ knappen
+20490	Fota med @A02D@
+20524	och tryck p
+20548	 @A024@ knappen
+20580	Fota med @A02E@
+20614	och tryck p
+20638	 @A024@ knappen
+20670	@A023@: Tryck ner f
+20710	r att 
+20724	ndra till
+20746	Live Guide l
+20772	ge, och tryck ner
+20810	igen f
+20824	r att 
+20838	terg
+20852	@A023@: 
+20870	ndra x1/x2.
+20894	@A025@:Av
+20916	ndra exp.
+20938	kompensation
+20964	St
+20970	ller in blixtl
+21000	ge.
+21010	ndra exp.
+21032	kompensation
+21058	Tryck in @A012@ f
+21094	r att l
+21110	sa/
+21124	sa upp best
+21148	m 
+21156	@A010@ funktion i
+21194	fotograferingsl
+21226	get.
+21236	Sammanfoga Bild
+21268	2 Bilder i 1
+21294	3 Bilder i 1
+21320	@A009@
+21334	@A01B@Ext Blixtstyr
+21374	Anpassad meny
+21402	A. AF/MF
+21420	B. Knapp/Ratt
+21448	C. Avtryck/@A01E@
+21484	D. Sk
+21496	rm/@A004@/PC
+21522	E. Exp/@A011@/ISO
+21558	F. @A00A@ Anpassad
+21596	G. @A01A@/F
+21620	rg/VB
+21632	H. Spela in/Radera
+21670	I. Film
+21686	J. Inbyggd EVF
+21720	nligen ange en PIN-kod.
+21768	Fulltids AF
+21792	Radera registrerade
+21834	inst
+21844	llningar.
+21864	Info Av
+21880	@A049@ Beh
+21902	ll Varm f
+21922	rg
+21928	@A00A@+Vitbalans
+21962	Peksk
+21974	rms-inst
+21992	llning
+22006	ART
+22014	SCN
+22022	3200
+22032	2400
+22042	2560
+22052	1920
+22062	1920
+22072	1440
+22082	1600
+22092	1200
+22102	1280
+22112	960
+22120	1024
+22130	768
+22138	640
+22146	480
+22154	320
+22162	240
+22170	Stillbild
+22190	Film
+22200	S-AF+MF
+22216	C-AF+TR
+22232	RAW/JPEG
+22250	JPEG-redigering
+22286	da 
+22294	gon-
+22304	tg
+22310	rd
+22316	@A02B@
+22334	rh
+22340	llande
+22354	Svartvit
+22372	Sepia
+22388	ttnad
+22400	@A025@
+22414	@A017@
+22428	RAW-dataredigering
+22466	Rotera
+22480	@A023@
+22498	lj Bild
+22514	@A017@ Start
+22540	Radera
+22554	Radera
+22568	Radera vald
+22592	Val
+22600	St
+22606	ll in nuvarande foto.l
+22652	ge
+22660	och inst
+22678	llningar.
+22698	Visa Film
+22718	Skicka en bild
+22750	terst
+22762	ll
+22768	@A03A@Cross Process
+22808	@A033@Dramatiska F
+22846	rger
+22856	Effektfull
+22882	rgfilter
+22900	Monokrom f
+22922	rg
+22928	Anv
+22936	nd Original Storlek.
+22982	r bildl
+22998	get v
+23010	ljs, kan du hoppa
+23050	ver de punkter som inte har 
+23110	st
+23116	llts in med On.
+23148	Meny f
+23162	r OLYMPUS PENPAL 
+23200	albuminst
+23220	llningar.
+23240	Film @A017@ P
+23270	AVCHD 1920
+23292	1080 Normal
+23316	Motion JPEG 1280
+23350	720
+23358	Motion JPEG 640
+23390	480
+23398	@A015@i-Enhance
+23430	@A07A@Vivid
+23454	@A07C@Portrait
+23484	@A032@F
+23500	rgstark
+23516	@A034@Soft Fokus
+23550	@A035@Blek&Ljus F
+23586	rg
+23592	@A036@Mjuk Ton
+23622	@A037@Grovkornig Film
+23666	@A038@H
+23682	lkamera
+23698	@A039@Diorama
+23726	Myset1
+23740	Myset2
+23754	Myset3
+23768	Myset4
+23782	Helt
+23792	Grund
+23804	Definiera
+23824	Inga Data
+23844	@A07B@Natural
+23872	@A01F@Muted
+23896	Effekt
+23914	gdager
+23928	Normal
+23942	Skugga
+23956	Monoton
+23976	r svartvita bilder.
+24020	r tydlig kontrast
+24058	mellan bl
+24078	 himmel
+24096	med moln.
+24120	r telefotografering
+24166	 avst
+24178	nd.
+24186	Dramatisk betoning 
+24228	av de m
+24244	rkaste himmelf
+24274	rgerna
+24290	och de ljusaste molnen.
+24338	Naturlig 
+24358	tergivning
+24382	av hudtoner och 
+24418	betoning av ansikts-
+24462	uttryck i portr
+24494	tt.
+24506	r sepia bildeffekt.
+24550	r bl
+24560	 bildeffekt.
+24590	r violett bildeffekt.
+24638	r gr
+24648	n bildeffekt.
+24678	ndra F
+24692	rgm
+24700	ttnad
+24714	ndra Bildens F
+24744	rger
+24756	ndra Kontrast
+24784	Oskarp Bakgrund
+24816	Snabba R
+24834	relser
+24848	Fotograferingstips
+24886	Live guide 
+24910	r inte
+24926	tillg
+24938	nglig
+24956	r blixten 
+24978	r p
+24988	Starka F
+25006	rger
+25020	ttade F
+25036	rger
+25046	Varm
+25056	Kall
+25066	Ljus
+25080	rk
+25086	Ljusa - Ljusa Omr.
+25128	rka - Ljusa Omr.
+25162	Ljusa - M
+25182	rka Omr.
+25204	rka - M
+25220	rka Omr.
+25238	Osk
+25246	rpa
+25254	Skarp
+25266	Oskarp R
+25284	relse
+25296	Stanna R
+25314	relse
+25326	dpi
+25334	@A03B@Svag Sepia
+25368	Ratt P
+25382	Ratt A
+25396	Ratt S
+25410	Ratt M
+25424	Ratt Meny
+25444	Ratt @A006@
+25468	Ps
+25474	@A007@
+25488	FNr.
+25498	Slutare
+25514	@A079@/Value
+25544	reg/N
+25556	sta
+25564	@A08B@
+25578	Utskriftsinst
+25606	llning
+25620	@A022@
+25634	@A00E@
+25648	@A000@
+25662	Utskrift beg
+25688	rd
+25696	terst
+25708	ll
+25714	Beh
+25722	ll
+25728	Nej
+25736	Definiera
+25756	Avbryt
+25770	2f 0.3EV
+25788	2f 0.5EV
+25806	2f 0.7EV
+25824	2f 1.0EV
+25842	3f 0.3EV
+25860	3f 0.5EV
+25878	3f 0.7EV
+25896	3f 1.0EV
+25914	5f 0.3EV
+25932	5f 0.5EV
+25950	5f 0.7EV
+25968	5f 1.0EV
+25986	7f 0.3EV
+26004	7f 0.5EV
+26022	7f 0.7EV
+26040	2L-Format
+26060	WB BKT
+26074	A-B
+26082	3f 2Steg
+26100	3f 4Steg
+26118	3f 6Steg
+26136	G-M
+26144	Bildruta
+26162	Autof
+26174	rst
+26182	rkning
+26196	Sammanfoga
+26218	HDMI Kontakt
+26244	HDMI Kontr.
+26268	1080i
+26280	720p
+26290	480p/576p
+26310	Copyright Info.
+26342	Artistnamn
+26364	Copyright Namn
+26394	AE BKT
+26408	FL BKT
+26422	ISO BKT
+26438	ART BKT
+26458	@A01B@: Starta Filminspelning
+26520	@A01A@: Ta en Bild
+26558	@A063@: Starta Filminspelning
+26620	@A02B@: Ta En Bild
+26662	lj ett scenl
+26688	ge
+26698	lj ett Artfilter
+26732	@A06C@: Guide till att enkelt
+26796	ndra inst
+26816	llningar
+26834	St
+26840	ller in bl
+26862	ndare och slutartid
+26904	automatiskt.
+26930	St
+26936	ll in bl
+26954	ndaren
+26970	manuellt.
+26990	St
+26996	ll in slutartiden manuellt.
+27052	St
+27058	ll in bl
+27076	ndare och slutartid
+27118	manuellt.
+27138	@A015@: Starta/stoppa Filminspelning.
+27214	Sluta@A019@
+27238	MF AEL/AFL
+27260	mode3
+27272	mode4
+27284	Halvv
+27296	gs
+27302	Komplett
+27320	AEL/S-AF
+27338	Exponering
+27360	AEL
+27368	AEL/Exp.
+27386	AEL/AF Start
+27412	AF Start
+27430	AEL/AFL/Exp.
+27456	AFL/Exp.
+27474	----
+27484	Fotograferingsmeny 1
+27526	Uppspelningsmeny
+27560	Kontinuerlig visning av 
+27612	Konstfiltereffekter. Vissa filter
+27682	visas l
+27698	ngsammare.
+27720	Konstfiltereffekten 
+27768	extrabelyst p
+27796	 LCDn och
+27820	versikten 
+27842	r snabbare.
+27866	@A042@: Zooma in bilden.
+27916	@A042@: Visa en f
+27952	rstorad ram
+27978	och tryck igen f
+28012	r att
+28030	rstora motivet i den.
+28078	gdager
+28092	Skugga
+28106	Indikatorer tas automatiskt bort
+28174	fr
+28180	n displayen om inte kameran
+28238	anv
+28246	nds p
+28258	 10 sekunder.
+28286	Indikatorer visas alltid 
+28340	vid fotografering
+28376	Ta inte en bild efter 
+28424	filminspelning n
+28458	r du 
+28472	trycker p
+28492	 avtryckaren.
+28520	Ta en bild efter filminspelning
+28586	genom att trycka p
+28630	avtryckaren.
+28656	Justera
+28674	terst
+28686	ll till normal.
+28718	Inaktivera Eye-Fi kort-anslutning
+28786	Aktivera Eye-Fi kort-anslutning
+28850	2f
+28858	verexp. Bild
+28884	Underexp. Bild
+28914	Tar tv
+28928	 bilder, en med
+28962	normal exp. och en
+29004	verexp.
+29020	Tar tv
+29034	 bilder, en med
+29068	normal exp. och en
+29108	underexp.
+29128	S-AF AEL/AFL
+29154	C-AF AEL/AFL
+29180	Filter Typ
+29202	Filter Typ @A00B@
+29238	Filter Typ @A00C@
+29278	gg Till Effekter
+29316	gg Till Mjukfokuseffekt
+29368	gg Till H
+29388	lkameraeffekt
+29420	gg Till Vitkant-effekt
+29470	gg Till Rameffekt
+29510	gg Till Stj
+29534	rnljus Effekt
+29562	3D Foto
+29582	r fotografering 
+29618	av portr
+29636	tt.
+29644	Sl
+29650	t hy f
+29664	r att 
+29680	visas p
+29696	 HDTV.
+29714	r 
+29722	landskapsmotiv. 
+29758	Med betoning p
+29788	 bl
+29796	- 
+29804	och gr
+29818	ntoner.
+29838	ngar motiv 
+29864	som r
+29876	r sig 
+29892	snabbt, utan 
+29926	relseosk
+29944	rpa.
+29958	r fotografering av
+29998	upplysta f
+30020	rem
+30028	l kv
+30038	lls-
+30050	eller nattetid. Anv
+30090	nder en
+30112	ngre slutartid 
+30144	n normalt.
+30172	ll kameran stadigt
+30216	r b
+30224	sta resultat.
+30252	@A014@POP UP
+30284	r fotografering av 
+30330	de motiv och bakgrund 
+30378	kv
+30384	lls- eller nattetid. 
+30430	Anv
+30438	nder l
+30452	ngre slutartid 
+30488	n normalt.
+30510	Fotografera 
+30538	aktiva barn.
+30568	rh
+30574	jer ljusa 
+30598	partier f
+30618	r 
+30626	effektfulla 
+30654	bilder.
+30674	rh
+30680	jer m
+30692	rka 
+30704	partier f
+30724	r 
+30732	effektfulla 
+30760	bilder.
+30776	Denna funktion 
+30810	reducerar osk
+30838	rpa 
+30850	orsakad av motiv- eller 
+30902	kamera- r
+30922	relse vid 
+30946	fotografering.
+30976	Optimal 
+30996	inst
+31006	llning f
+31024	r 
+31032	makrofotografering 
+31074	av v
+31084	xter och 
+31106	insekter.
+31130	r 
+31138	fotografering 
+31170	i belysning av 
+31204	levande ljus. 
+31236	Varma f
+31252	rger 
+31264	terges.
+31284	r 
+31292	fotografering 
+31324	av solupp-/nedg
+31356	ngar. 
+31372	Med betoning p
+31402	 r
+31408	d- 
+31418	och gultoner.
+31450	r 
+31458	fotografering 
+31490	av dokument etc. 
+31530	kar kontrasten 
+31564	mellan tecken och 
+31604	bakgrund.
+31628	ter dig ta 
+31654	bilder som kan 
+31688	kombineras ihop till 
+31734	en enda panoramabild.
+31778	AF@A039@MF
+31806	mplig f
+31822	r 
+31830	fotografering av fyrverkerier 
+31894	nattetid. 
+31918	Anv
+31926	nder en l
+31946	ngre 
+31960	slutartid 
+31982	n normalt.
+32008	r 
+32016	fotografering 
+32048	av sn
+32064	ckta berg, 
+32090	vita str
+32108	nder etc.
+32132	r fotografering med semi
+32184	Fisheyeomvandlare
+32222	FCON-P01.
+32246	r fotografering med
+32288	Vidvinkelkonverter
+32328	WCON-P01.
+32352	r fotografering med
+32394	Macroomvandlare
+32428	MCON-P01/02.
+32454	Tar bilder f
+32480	r visning p
+32510	3D TV eller sk
+32540	rm.
+32548	Filter Typ @A00D@
+32584	2L-Rullar
+32604	Kontaktkarta
+32630	Acceptera
+32650	Skriv ut Allt
+32678	Bak
+32690	Visa Rutn
+32714	Kantl
+32730	@A002@ B
+32748	de RAW+JPEG raderas
+32788	Bilden 
+32804	r inte mottagen.
+32838	En bild 
+32856	r mottagen.
+32880	Bilden har inte skickats.
+32932	En bild har skickats.
+32976	Uppt.
+32988	Kalender
+33006	Live Kontroll
+33034	SCP
+33042	Konst Meny
+33064	Motivprogram Meny
+33100	Avbryt
+33114	Bilden kan ej redigeras
+33162	Utskr. om
+33182	jl.
+33190	Kort
+33200	Formatera
+33220	Formatera
+33240	Varning, Bilden kan inte v
+33294	ljas
+33308	r rent kontaktytan p
+33350	 kortet
+33368	med en torr trasa.
+33406	Varning! Ansluter till @A004@
+33466	@A00A@ Varning Raderar allt
+33522	@A00A@ Varning Raderar allt
+33578	@A00B@ Varning Raderar allt
+33634	@A00B@ Varning Raderar allt
+33690	@A002@ Varning Raderar allt
+33746	@A002@ Varning Raderar allt
+33802	Forts
+33814	tt
+33820	Kopiera allt
+33846	Standard
+33864	Radera
+33878	Neka
+33888	Hittade
+33904	@A005@
+33918	Ratt1
+33930	Ratt2
+33942	Ansluter!
+33962	Sluta
+33974	Igenk
+33986	nningsfel
+34006	Filnamn
+34026	ng
+34032	1Bild
+34044	@A00B@
+34058	@A00C@
+34076	gdager & Skugga
+34110	vre gr
+34124	ns
+34130	@A00D@
+34144	Bara Bild
+34164	@A00F@
+34178	Justerar 0-niv
+34208	n till 
+34226	aktuell position.
+34262	Gruppering misslyckades.
+34312	RATT @A026@ :
+34342	Bl
+34348	ndare. 
+34366	Slutar
+34380	ppning
+34396	ndra knappen @A027@ 
+34444	r att komma till n
+34482	sta
+34492	val i menyn
+34516	RATT @A027@ :
+34546	Bl
+34552	ndare. 
+34570	Slutar
+34584	ppning
+34600	ndra knappen @A026@ 
+34648	r att komma till n
+34686	sta
+34696	val i menyn
+34720	Anslutning uppr
+34752	ttas.
+34768	ker.
+34784	nligen v
+34802	nta.
+34816	ntar p
+34830	 anrop
+34846	ndra till 1920x1440
+34888	ndra till 1280x960
+34930	ntar p
+34944	 svar.
+34958	Rikta kameran mot ett 
+35006	vitt pappersark.
+35040	Rikta kameran mot ett 
+35088	vitt pappersark.
+35122	Ange PIN-kod
+35148	Ut
+35154	kad ISO
+35170	Rekommenderad ISO
+35206	Pappersstopp
+35232	Brev
+35242	Niv
+35254	tare
+35264	L-Format
+35282	Ljusl
+35294	da
+35300	L-Rullar
+35318	Anv
+35326	nd stort sk
+35350	rpedjup
+35368	eller g
+35384	 n
+35390	rmare.
+35404	Anv
+35412	nd st
+35424	rre avst
+35442	nd
+35450	mellan motiv och bakgrund.
+35504	Oskarp Bakgrund
+35536	Prata med barnet och ta
+35586	bilden fr
+35612	hens 
+35624	gonniv
+35642	Ta m
+35652	nga bilder med
+35684	sekvensfotografering
+35728	och v
+35740	lj ut efter
+35764	t.
+35770	Tips F
+35784	r Barnbilder
+35814	 n
+35820	rmare djuret
+35848	och ta bilder fr
+35882	n djurets
+35906	gonniv
+35920	 eller l
+35938	gre.
+35948	Fokusera p
+35970	 djurets 
+35990	gon.
+36002	Locka med mat eller leksaker.
+36062	Ta m
+36072	nga bilder med
+36104	sekvensfotografering
+36148	och v
+36160	lj ut efter
+36184	t.
+36190	Tips F
+36204	r Djurbilder
+36230	Ta bilden fr
+36256	n blommans
+36280	niv
+36288	 eller l
+36306	gre. T
+36320	nk p
+36334	bakgrunden.
+36358	Anv
+36366	nd m
+36376	rk bakgrund
+36402	eller anv
+36422	nd f
+36432	rgade papper.
+36466	r bakgrunden oskarp.
+36508	Fokusera p
+36530	 den n
+36544	rmaste
+36560	pistillen eller bladet.
+36608	Moln eller ett paraply
+36660	r skuggorna mjukare.
+36702	Tips F
+36716	r Blombilder
+36742	Fotografering fr
+36776	n 3/4 vinkel
+36808	r maten att se mer naturlig ut.
+36872	Fotografering av mat blir 
+36932	ttre vid ett f
+36962	nster.
+36980	 n
+36986	rmare motivet. 
+37020	St
+37026	ende format p
+37054	 bilden
+37072	ger mer djup.
+37100	Tips F
+37114	r Matbilder
+37138	Att motivet tar upp 2/3
+37188	av bilden ger en bra balans.
+37246	Dela upp motivet och
+37290	bakgrunden med en diagonal
+37350	r en naturlig k
+37382	nsla.
+37398	tt huvudmotivet och
+37440	andra motiv p
+37468	 diagonalen
+37498	r en naturlig k
+37530	nsla.
+37542	Tips F
+37556	r Besk
+37570	rning
+37582	Genom att ansluta MCON-P02 till
+37648	14-42mm EZ kan du ta n
+37694	rbilder
+37716	 v
+37722	ldigt sm
+37740	 f
+37746	rem
+37754	l.
+37760	Genom att ansluta FCON-P01 till
+37826	14-42mm II R kan du ta 120
+37882	graders fisheyebilder.
+37928	Genom att ansluta WCON-P01 till
+37994	14-42mm II R kan du ta
+38042	11mm vidvinkelbilder.
+38086	Genom att anv
+38114	nda Macroljuset
+38148	MAL-1 kan du kontrollera ljus 
+38212	och skuggor i dina Macrobilder.
+38276	Tips Med Tillbeh
+38316	Radera Album
+38342	Film @A017@ Av
+38372	Filmintervall
+38400	Multibild
+38420	Multiutskr.
+38444	Ny S
+38454	kning
+38466	Bl
+38472	ck Slut
+38488	Papper Slut
+38512	Av
+38518	Avbryt@A020@
+38544	Bekr
+38554	fta@A019@
+38574	Fler@A022@
+38596	Enkel Utskrift Start@A024@
+38652	ndra Namn@A02D@
+38684	Sluta@A018@
+38708	Sluta@A025@
+38732	Skriv Ut@A01F@
+38762	Avtryckare
+38784	Skriv ut en@A020@
+38820	Ja@A019@
+38838	OK
+38850	Bildintervall
+38878	Ett 
+38888	gonblick
+38906	Vitbalans m. 1 knapptryckning
+38966	Inst
+38976	llning
+38990	Storlek 1: Large
+39024	All Info
+39042	Adresslista
+39070	rfr
+39078	gan gruppering
+39120	ktimer
+39138	lj m
+39152	Album Minne Fullt
+39188	Bilder/Sida
+39212	Skicka bild
+39236	Vykort
+39250	@A005@X
+39266	Skrivarfel
+39288	Skrivarinfo
+39316	lj Skrivarl
+39340	ge
+39346	Utskriftsordning
+39380	Pappersinst.
+39406	Service
+39422	Super FP Blixt
+39452	Normal
+39466	Ta emot bild
+39496	rfr
+39504	gan mottag bild
+39540	ntar p
+39554	 anrop
+39568	Tar emot
+39586	Bilder kvar
+39610	USB-Kabel Bort
+39642	terst
+39654	ll
+39660	Storlek 2: Med
+39690	Sparade bilder
+39720	@A027@ Monoton
+39750	@A028@
+39764	@A029@ Anpassad
+39796	Skickar
+39812	Registrerad Data
+39846	Inst. 
+39860	ndrade
+39874	Kort
+39884	Storlek
+39900	Glida
+39912	Standard
+39930	Detaljer
+39948	Namn
+39960	ndra Namn
+39982	verf
+39996	Vitbalans
+40016	Auto @A001@
+40040	@A039@5500K @A001@
+40078	@A027@ @A001@
+40106	@A028@ @A001@
+40134	@A03B@7500K @A001@
+40172	@A03C@5300K @A001@
+40210	@A03E@ @A001@
+40238	WB Fel F
+40256	rs
+40262	k Igen
+40276	Med
+40284	Utan
+40294	Reng
+40304	r Kort
+40318	Inst.@A019@
+40342	3D foto skapades ej.
+40384	3D visning
+40406	Bildfel
+40424	ndra till 640x480
+40460	Storlek 1: Small
+40494	Storlek 2: Large
+40528	Storlek 3: Med
+40558	Avbryt@A01F@
+40584	Avbryt@A02C@
+40610	Radera@A02D@
+40636	PC/Anpassad Utskrift@A01F@
+40690	WB/@A01A@@A061@
+40722	Br
+40728	nnvidd@A01A@
+40754	Kelvin@A01A@
+40784	lj@A041@
+40802	@A063@@A064@
+40828	@A023@+Avtryckare
+40864	@A05F@@A033@
+40890	@A02E@@A02F@
+40916	@A030@@A02F@
+40942	@A031@@A02F@
+40968	@A032@@A01A@
+40994	@A042@@A041@
+41020	@A023@@A02F@
+41046	@A03D@@A025@
+41076	rhandsgr. Vitbalans@A033@
+41128	Normal auto. vitbalans.
+41176	Beh
+41184	ller varma f
+41210	rger vid autom.
+41244	vitbalans-l
+41268	ge.
+41276	Effekt
+41290	Tona ut
+41306	Fallande foton
+41336	Fotolinje
+41356	Utf
+41364	r 
+41370	terst
+41382	llning,
+41402	terst
+41414	ll grundl
+41434	ggande
+41450	fotograferingsfunktioner.
+41502	Utf
+41510	r 
+41516	terst
+41528	llning,
+41548	terst
+41560	ll alla funktioner utom datum,
+41624	spr
+41632	k och n
+41648	gra inst
+41666	llningar.
+41686	Inbyggd blixt
+41714	Kan ej filma i AVCHD-l
+41760	ge.
+41768	Den h
+41780	r optiken st
+41806	ds ej av kameran.
+41842	@A002@ Varning, 
+41876	terst
+41888	ller alla
+41910	inst
+41920	llningar
+41938	Tillbeh
+41954	rsports-meny
+41980	Inst. meny
+42002	A. OLYMPUS PENPAL Dela
+42048	B. OLYMPUS PENPAL Album
+42096	C. Elektronisk S
+42130	kare
+42140	St
+42146	ll in datum och tid 
+42190	i kameran.
+42216	lj den videostandard
+42260	som anv
+42276	nds i ditt land
+42310	eller region.
+42342	lj storleken p
+42372	 stegen som 
+42400	anv
+42408	nds n
+42420	r du v
+42434	ljer 
+42448	ISO k
+42460	nslighet.
+42480	USB
+42488	100mm
+42500	150mm
+42512	11"
+42520	17"
+42528	4"
+42534	6"
+42540	8"
+42546	10"
+42554	A0
+42560	A1
+42566	A2
+42572	A3
+42578	A4
+42584	A5
+42590	A6
+42596	A7
+42602	A8
+42608	A9
+42614	B0
+42620	B1
+42626	B2
+42632	B3
+42638	B4
+42644	B5
+42650	B6
+42656	B7
+42662	B8
+42668	B9
+42674	4"
+42680	8"
+42688	Panorama
+42706	4"
+42712	10"
+42722	Panorama
+42740	4"
+42746	11"
+42756	Panorama
+42774	4"
+42780	12"
+42790	Panorama
+42808	10cm
+42818	30cm
+42830	Panorama
+42848	89mm
+42858	254mm
+42872	Panorama
+42890	A Mode
+42904	B Mode
+42918	C Mode
+42932	M Value
+42948	FP M Value
+42970	Channel
+42986	Level
+42998	TTL Value
+43018	Auto Value
+43040	FP TTL Value
+43066	Auto
+43076	@A01C@/FP
+43096	@A07D@ 4
+43114	@A07E@ 9
+43132	@A07F@ 25
+43152	@A07F@ 100
+43174	BGM
+43182	Cool
+43192	Joy
+43200	Sekvens H
+43220	Melancholy
+43242	@A012@ Anti-Chock @A004@
+43292	TTL Auto
+43310	Sekvens L
+43330	@A013@ Anti-Chock @A004@
+43380	@A078@arge
+43402	Medel
+43414	@A074@mall
+43436	@A01C@Funktion
+43466	Vindbrusreducering
+43504	Rikta kameran mot ett 
+43552	vitt pappersark.
+43586	@A03E@+Avtryckare
+43622	Manual
+43636	FP TTL Auto
+43660	FP Manual
+43680	Level Lo
+43698	Level Mid
+43718	Level Hi
+43736	ch
+43742	Beat
+43752	Adobe
+43764	AVCHD 1920
+43786	1080 Fine
+43806	AVCHD 1280
+43828	720 Fine
+43846	AVCHD 1280
+43868	720 Normal
+43894	rstora
+43908	@A01D@: AEL/AFL
+43940	Fota med @A02B@
+43974	och tryck p
+43998	 @A01E@ knappen
+44030	Fota med @A02C@
+44064	och tryck p
+44088	 @A01E@ knappen
+44124	r 
+44132	fotografering 
+44164	av b
+44174	de huvudmotiv 
+44206	och bakgrund. 
+44238	Med betoning p
+44268	 bl
+44276	- 
+44284	och gr
+44298	ntoner.
+44318	st f
+44328	r 
+44340	rbilder.
+44358	@A03A@ Fisheye Effekt
+44402	Portr
+44414	tt + Landskap
+44442	@A038@6000K @A001@
+44480	@A03A@4000K @A001@
+44518	@A03D@3000K @A001@
+44556	Fota med @A02D@
+44590	och tryck p
+44614	 @A01E@ knappen
+44646	Fota med @A02E@
+44680	och tryck p
+44704	 @A01E@ knappen
+44736	Inaktivera peksk
+44770	rm.
+44778	Aktivera peksk
+44808	rm.
+44816	Byt spr
+44832	k.
+44842	lj funktionen som tilldelats
+44902	den valda knappen.
+44940	Om P
+44950	 v
+44956	ljs kan slutaren
+44992	utl
+45000	sas 
+45010	ven n
+45022	r kameran
+45044	inte har fokuserat i l
+45090	get S-AF.
+45110	Om P
+45120	 v
+45126	ljs kan slutaren 
+45164	utl
+45172	sas 
+45182	ven n
+45194	r kameran
+45216	inte har fokuserat i l
+45262	get C-AF.
+45286	lj information som skall 
+45340	visas n
+45356	r @A00F@ eller @A01A@ trycks 
+45418	ned.
+45432	lj kontroller som skall visas
+45498	r @A035@ tryck ned i varje
+45554	fotograferingsl
+45586	ge.
+45594	St
+45600	ll in gr
+45618	nsv
+45626	rden f
+45640	r 
+45648	ljusstyrkan f
+45676	r h
+45684	gdager 
+45702	och l
+45714	gdager.
+45734	lj P
+45744	 f
+45750	r att visa hj
+45778	lp f
+45794	valt l
+45808	ge n
+45818	r l
+45826	gesratten
+45848	roteras.
+45870	lj hur konstfilter-effekt visas
+45940	 sk
+45948	rmen.
+45964	lj hur bilden ska f
+46004	rstoras 
+46024	genom att trycka @A042@ knappen
+46092	r P
+46104	r valt l
+46122	ggs exp-
+46142	komp-v
+46156	rdet till blixtkomp-
+46204	rdet.
+46216	St
+46222	ll in samma vitbalans-
+46270	kompensation i alla l
+46314	gen.
+46328	lj ett filminspelningsl
+46376	ge
+46388	r @A004@ l
+46410	ge.
+46418	St
+46424	ll in p
+46440	 On f
+46452	r att ta
+46472	en stillbild n
+46502	r video-
+46522	inspelningen avslutas.
+46572	lj den batteriniv
+46612	vid vilken @A003@ varningar 
+46672	visas.
+46686	Aktivera eller inaktivera 
+46742	peksk
+46754	rmsinst
+46770	llningar.
+46790	Visa adressbok eller l
+46836	gg
+46844	till en ny mottagare till 
+46900	adressboken.
+46926	Visa eller redigera 
+46970	information f
+46998	r din 
+47014	OLYMPUS PENPAL.
+47050	lj storleken med vilken 
+47102	bilderna 
+47122	verf
+47132	rs.
+47144	lj storleken med vilken
+47194	bilderna kopieras.
+47232	@A05A@4000K
+47256	@A01E@:Av
+47276	Standardinst
+47302	llning f
+47326	AF omr
+47340	de
+47346	3D
+47352	Val av MF l
+47376	ge
+47382	@A01D@:
+47400	Starta/Stoppa
+47430	Filminspelning
+47460	WB direktval.
+47488	Komprimering
+47514	Super Fine
+47536	Fine
+47546	Normal
+47560	Basic
+47576	rhandsgranska
+47606	sk
+47612	rpedjup.
+47632	ndra 
+47646	RAW+JPEG/JPEG 
+47678	komprimering 
+47708	med ratt
+47726	Ta testbild
+47752	utan att spara.
+47784	dummy
+47796	Spara
+47808	@A017@ Volymbegr
+47842	nsare
+47854	Begr
+47864	nsar automatiskt mik-
+47910	ing
+47918	ngens volym om ljuding.-
+47970	volymen 
+47988	verstiger inst
+48018	lld niv
+48038	IS L
+48048	ge
+48054	@A01D@: Knappar @A02F@ och @A030@
+48126	lj IS-l
+48142	ge
+48148	@A066@: Tryck ner f
+48188	r att 
+48202	ndra till
+48224	Live Guide l
+48250	ge, och tryck ner
+48288	igen f
+48302	r att 
+48316	terg
+48330	@A066@: 
+48348	ndra x1/x2.
+48372	Gammaldags
+48394	Partiell f
+48416	rg
+48422	@A082@Gammaldags
+48456	@A083@Partiell f
+48490	rg
+48496	Skuggeffekt: v
+48526	nst. och h
+48548	ger
+48556	Skuggeffekt: topp och botten
+48614	Arbete p
+48640	Om du trycker p
+48672	 @A025@ under
+48702	en Photo Story-session
+48754	r du v
+48768	lja att spara ett
+48814	ende arbete eller kasta
+48864	bort det aktuella arbetet.
+48918	Kan inte h
+48940	mta fil f
+48960	r att forts
+48984	tta tagning.
+49010	Slutf
+49022	r sedan
+49038	Kasta bort
+49064	lj P
+49074	 f
+49080	r att tilldela ansikten
+49130	eller 
+49144	gon prioritet vid 
+49184	best
+49194	mmande av autofokus.
+49236	@A023@: Knappar @A02A@ och @A02B@
+49304	Rikta kameran mot ett 
+49352	vitt pappersark.
+49386	AF f
+49396	r varje bildruta
+49430	Fokuserar om f
+49460	r varje bildruta.
+49496	Fokuserar en g
+49526	ng
+49538	r sj
+49548	lvutl
+49560	saren startar.
+49590	@A013@Bildstabilisering
+49638	Aktiverar/avaktiverar
+49684	bildstabilisering
+49726	r serietagning.
+49758	Av
+49764	Bildstabilisering avaktiverad
+49830	r att prioritera hastigheten
+49894	r serietagning.
+49926	AF Fokusjustering
+49962	AF Omr
+49976	desmarkering
+50004	@A01E@ L bps
+50030	@A01E@: Starta Filminspelning
+50092	@A030@: Ta En Bild
+50130	@A075@Blek&Ljus F
+50166	rg
+50172	Fokus p
+50188	 ansikte eller 
+50220	ga 
+50230	har uppt
+50248	ckts. Ett 
+50270	ga i n
+50284	rheten 
+50302	kommer att v
+50328	ljas.
+50340	Fokus p
+50356	 ansikte eller 
+50388	ga 
+50398	har uppt
+50416	ckts. Ett 
+50438	ga p
+50448	 h
+50454	ger 
+50466	sida kommer att v
+50502	ljas.
+50514	Fokus p
+50530	 ansikte eller 
+50562	ga 
+50572	har uppt
+50590	ckts. Ett 
+50612	ga p
+50622	 v
+50628	nster 
+50644	sida kommer att v
+50680	ljas.
+50692	Ansiktsigenk
+50718	nning fungerar ej.
+50756	Fokus p
+50772	 ansikte uppt
+50800	ckt.
+50816	Bildstabilisering avaktiverad
+50882	r att prioritera stabila bilder.
+50950	Hastigheten f
+50978	r serietagning
+51010	kan p
+51022	verkas.
+51038	Minskar kameraosk
+51074	rpa
+51084	orsakad av slutarutl
+51126	sning.
+51140	C-AF L
+51158	Kontroll
+51176	Datalista
+51196	Obj. Data
+51216	Standard
+51238	lj AF-m
+51260	och AF-l
+51278	ge
+51284	@A028@: Visa en f
+51320	rstorad ram
+51346	och tryck igen f
+51380	r att
+51398	rstora motivet i den.
+51442	Standardinst
+51468	llning f
+51492	AF omr
+51506	de
+51512	Val av MF l
+51536	ge
+51542	WB direktval.
+51574	rhandsgranska
+51604	sk
+51610	rpedjup.
+51628	Ansikts- & 
+51652	gonprior. P
+51678	Ansikts- & H.
+51706	gaprior. P
+51730	Ansikts- & V.
+51758	gaprior. P
+51784	ndra 
+51798	RAW+JPEG/JPEG 
+51830	komprimering 
+51860	med ratt
+51878	Ta testbild
+51904	utan att spara.
+51940	r slutartiden 
+51970	r @A096@
+51990	eller mindre, v
+52022	xlar den f
+52044	rsta
+52056	slutarrid
+52076	n fr
+52086	n mekanisk till
+52120	elektronisk f
+52148	r att minska osk
+52182	rpa
+52192	orsakad av slutarens inverkan.
+52258	lj f
+52268	rg@A01A@
+52286	Normal
+52300	@A020@
+52314	@A021@
+52328	@A02B@Funktion
+52358	@A029@ @A001@
+52386	@A02A@ @A001@
+52414	@A046@L
+52438	r P
+52450	r inst
+52464	llt, bevaras det
+52504	rhandsgranskade sk
+52542	rpedjupet
+52566	ven n
+52578	r knappen sl
+52604	ppts.
+52616	Panorering
+52642	r fotografering av motivet
+52698	med oskarp bakgrund.
+52746	nner av kamerans r
+52784	relse
+52798	och st
+52812	ller in den b
+52840	sta
+52850	slutartiden.
+52876	@A04E@Funktion
+52906	@A053@Mjuk Ton
+52936	@A06C@: AEL/AFL
+52968	@A06C@:
+52986	Starta/Stoppa
+53016	Filminspelning
+53050	rhandsgranska
+53080	sk
+53086	rpedjup.
+53104	WB direktval.
+53132	Standardinst
+53158	llning f
+53182	AF omr
+53196	de
+53202	Val av MF l
+53226	ge
+53234	ndra 
+53248	RAW+JPEG/JPEG 
+53280	komprimering 
+53310	med ratt
+53328	Ta testbild
+53354	utan att spara.
+53386	Fota med @A06C@
+53420	och tryck p
+53444	 @A06B@ knappen
+53476	Fota med @A06D@
+53510	och tryck p
+53534	 @A06B@ knappen
+53566	Fota med @A06E@
+53600	och tryck p
+53624	 @A06B@ knappen
+53656	Fota med @A06F@
+53690	och tryck p
+53714	 @A06B@ knappen
+53746	@A077@Grovkornig Film
+53790	@A06C@: Tryck ner f
+53830	r att 
+53844	ndra till
+53866	Live Guide l
+53892	ge, och tryck ner
+53930	igen f
+53944	r att 
+53958	terg
+53972	@A06C@: 
+53990	ndra x1/x2.
+54014	@A076@:Av
+54034	1/2
+54042	1/8
+54050	1/32
+54060	@A01C@: Starta Filminspelning
+54122	@A01B@: Ta en Bild
+54162	@A069@: Film @A05E@
+54202	1/128
+54214	@A087@@A088@
+54240	RATT @A089@ :
+54270	Bl
+54276	ndare. 
+54294	Slutar
+54308	ppning
+54322	RATT @A08A@ :
+54352	Bl
+54358	ndare. 
+54376	Slutar
+54390	ppning
+54404	ART13
+54416	ART14
+54428	@A046@
+54444	ndra l
+54458	ge till P/A/S/M.
+54492	Keystone-komp.
+54522	Vid aktivering 
+54554	r Keystone-
+54580	kompensation tillg
+54618	nglig.
+54634	Indikatorer visas p
+54674	 sk
+54682	rmen.
+54694	Tryck f
+54710	r att starta Keystone-
+54758	kompensation. Avsluta genom att
+54828	lla ner knappen.
+54862	Keystone-kompensation Av
+54912	Keystone-kompensation P
+54962	Avsluta@A018@
+54990	Kameran v
+55010	ljer stabiliserings-
+55054	inst
+55064	llning genom att k
+55102	nna
+55112	av kamerar
+55134	relser.
+55150	Ange kompensation@A01A@
+55198	@A03C@ Halvv
+55224	gsniv
+55242	lj P
+55252	 f
+55258	r att visa niv
+55292	taren
+55306	i den inbyggda EVF.
+55348	Aktivera medan i @A058@.
+55398	Hastighet
+55418	@A066@ 4 bilder
+55450	@A067@ 5 bilder
+55482	@A04A@Funktion
+55512	EVF-autoluminans
+55546	Basinformation
+55580	rgskapare
+55600	@A078@H
+55616	lkamera
+55632	Flytta kameran i sidled.
+55686	r f
+55694	rsta bilden 
+55720	r tagen, 
+55742	panorera kameran l
+55780	ngsamt f
+55804	att ordna bilden manuellt, 
+55862	tryck sedan p
+55890	 avtryckaren.
+55918	Ta bort objektivdatainst.
+55970	Osk
+55978	rpeeffekt: v
+56004	. och h
+56024	Osk
+56032	rpeeffekt: topp och bott.
+56084	Elektr. zoom
+56110	Natural@A037@
+56138	Vivid@A037@
+56162	@A0BF@
+56176	@A0D0@
+56190	@A0D1@
+56204	@A0D2@
+56218	@A0D3@
+56232	@A0D4@
+56246	@A0D5@
+56260	@A0D6@
+56274	@A0D7@
+56288	@A0D8@
+56302	@A0D9@
+56316	@A0DA@
+56330	@A0DB@
+56344	@A0DC@
+56358	@A0DD@
+56372	@A0DE@
+56386	@A0DF@
+56400	@A0E0@
+56414	@A0E1@
+56428	@A0E2@
+56442	@A0E3@
+56456	@A0E4@
+56470	@A0E5@
+56484	@A0E6@
+56498	@A0E7@
+56512	@A0E8@
+56526	@A0E9@
+56540	@A0EA@
+56554	@A0EB@
+56568	@A0EC@
+56582	@A0ED@
+56596	@A0EE@
+56610	@A0EF@
+56624	@A0F0@
+56638	@A0F1@
+56652	@A0F2@
+56666	@A0C0@
+56680	@A0C1@
+56694	@A0C2@
+56708	@A0C3@
+56722	@A0C4@
+56736	@A0C5@
+56750	@A0C6@
+56764	@A0C7@
+56778	@A0C8@
+56792	@A0C9@
+56806	@A0CA@
+56820	@A0CB@
+56834	@A0CC@
+56848	@A0CD@
+56862	@A0CE@
+56876	@A0CF@
+56890	@A0D0@
+56904	@A0D1@
+56918	@A0D2@
+56932	@A0D3@
+56946	@A0D4@
+56960	@A0BF@
+56974	@A0D6@
+56988	@A0D7@
+57002	@A0D8@
+57016	@A0D9@
+57030	@A0DA@
+57044	@A0DB@
+57058	@A0DC@
+57072	@A0DD@
+57086	@A0DE@
+57100	@A0DF@
+57114	@A0E0@
+57128	@A0E1@
+57142	@A0E2@
+57156	@A0E3@
+57170	@A0E4@
+57184	@A0E5@
+57198	@A0E6@
+57212	@A0E7@
+57226	@A0E8@
+57240	@A0E9@
+57254	@A0EA@
+57268	@A0EB@
+57282	@A0EC@
+57296	@A0ED@
+57310	@A0EE@
+57324	@A0EF@
+57338	@A0F0@
+57352	@A0F1@
+57366	@A0F2@
+57380	@A0F3@
+57394	@A0F4@
+57408	@A0F5@
+57422	@A0F6@
+57436	@A0F7@
+57450	@A0E2@
+57464	@A0F9@
+57478	@A0FA@
+57492	@A0FB@
+57506	@A0FC@
+57520	@A0FD@
+57534	@A0FE@
+57548	@A0FF@
+57562	@A100@
+57576	@A101@
+57590	@A102@
+57604	@A103@
+57618	@A104@
+57632	@A105@
+57646	Avtryck/@A01E@
+57676	Undervatten
+57700	Zoom
+57710	@A01E@+Avtryckare
+57746	@A075@: Guide till att enkelt
+57810	ndra inst
+57830	llningar
+57848	Rikta kameran mot ett 
+57896	vitt pappersark.
+57930	@A06B@: Starta Filminspelning
+57992	@A02B@: Ta En Bild
+58030	@A06B@+Avtryckare
+58066	@A023@: Visa en f
+58102	rstorad ram
+58128	och tryck igen f
+58162	r att
+58180	rstora motivet i den.
+58224	@A01D@: 
+58242	ndra x1/x2.
+58266	@A01D@: Tryck ner f
+58306	r att 
+58320	ndra till
+58342	Live Guide l
+58368	ge, och tryck ner
+58406	igen f
+58420	r att 
+58434	terg
+58452	rstora en bild med @A024@
+58506	med kontrollratten.
+58550	lj en bild med
+58582	kontrollratten. 
+58618	@A06D@: F
+58638	rstora en bild eller @A024@
+58694	Meny f
+58708	r inst
+58722	llning f
+58740	r 
+58748	slutarens utl
+58776	sning och 
+58800	sekvensfotografering.
+58844	St
+58850	ll in antalet bilder som
+58902	tas p
+58914	 en sekund vid 
+58948	sekvensfotografering med @A052@.
+59014	Om inga funktioner utf
+59060	rs under 
+59082	den valda tidsperioden blir 
+59142	bakgrundsbelysningen m
+59188	rkare.
+59202	@A01E@ H bps
+59228	St
+59234	ll in antalet bilder som
+59286	tas p
+59298	 en sekund vid 
+59332	sekvensfotografering med @A056@.
+59398	@A072@: Visa uppspelningsmeny.
+59462	Radera aktuell bild fr
+59508	n 
+59516	uppspelningsmenyn.
+59554	@A072@: Radera aktuell bild omg
+59618	ende
+59630	@A025@: Visa uppspelningsmeny
+59690	@A025@: Radera aktuell bild omg
+59754	ende
+59764	Tilldela raderering av en 
+59820	bild till @A072@ eller @A025@.
+59882	@A011@: Knappar @A02E@ och @A02F@
+59954	ljer automatiskt b
+59992	sta l
+60004	get.
+60016	Live Guide meny 
+60050	r tillg
+60066	nglig.
+60080	Visar full meny f
+60116	r kamera-
+60138	inst
+60148	llningar
+60166	Auto-inst
+60186	llningar till
+60214	mpas
+60226	till valt Motivprograml
+60274	ge.
+60286	gg till kreativa effekter.
+60340	Bakgr.Bel. On/Off.
+60378	Justera bildsk
+60408	rmens
+60422	ljusstyrka och f
+60456	rgtemperatur
+60482	fps
+60490	@A014@/@A080@/@A028@
+60532	@A081@/@A082@
+60560	@A04F@Funktion
+60590	Genom att trycka @A077@ knappen 
+60658	under Live Guide filminspelning 
+60726	kan du justera Live Guide-
+60782	niv
+60790	n genom att rotera 
+60832	fokusringen.
+60858	Genom att trycka @A077@ knappen
+60924	under filminspelning, kan du 
+60988	ndra till MF l
+61018	get.
+61030	Tryck igen f
+61056	r att 
+61070	terg
+61080	 till 
+61096	AF-l
+61106	get.
+61116	AF Stopp
+61134	Genom att h
+61158	lla nere @A06D@ knappen 
+61210	kan du inaktivera autofokus och
+61276	fixera fokus p
+61306	 den punkt d
+61332	r 
+61340	knappen trycktes ned.
+61388	r att avaktivera knappfunktion.
+61452	Touch Kalibrering
+61488	Extern @A02A@
+61516	mm
+61526	Extern @A02E@ insp.niv
+61578	lj AF-m
+61600	och AF-l
+61618	ge
+61624	3f
+61630	4f
+61636	Kontroll
+61658	lj IS-l
+61674	ge
+61680	@A01D@: Visa en f
+61716	rstorad ram
+61742	och tryck igen f
+61776	r att
+61794	rstora motivet i den.
+61838	Antal bilder @A033@
+61882	ge Funktionsratt
+61916	St
+61922	ll in registrerade 
+61964	Mysets till funktionshjulet.
+62022	Anpassade inst
+62052	llningar sj
+62076	lvutl
+62088	sare
+62098	@A014@ Timer
+62124	Interv.foto./f
+62154	rdr
+62162	jn.
+62170	Tar det angivna antalet bilder
+62234	i det angivna intervallet. 
+62292	Och skapar en film med f
+62342	rdr
+62350	jn.
+62358	Starta V
+62376	ntetid
+62390	St
+62396	ller in v
+62416	ntetid f
+62434	r 
+62442	inspelning av f
+62474	rsta 
+62488	bilden efter att 
+62526	slutarknappen tryckts ned.
+62580	Intervalltid
+62606	Autom. avst
+62630	ngning
+62644	4 tim
+62656	Uppt.
+62668	@A007@Funktion
+62702	lj AF-Omr
+62722	de
+62728	Bps
+62736	@A010@ :Av
+62758	RATT @A011@ :
+62790	kat bl
+62804	ndar- och slutarv
+62840	rde
+62848	RATT @A012@ :
+62880	kat bl
+62894	ndar- och slutarv
+62930	rde
+62938	Av
+62948	r f
+62956	rsta bilden 
+62982	r tagen, 
+63004	panorera kameran l
+63042	ngsamt f
+63066	att ordna bilden manuellt, 
+63124	tryck sedan p
+63152	 avtryckaren.
+63180	Inspelningsniv
+63212	Reducering av vindbrus
+63266	Rikta kameran mot ett 
+63314	vitt pappersark.
+63348	Rikta kameran mot ett 
+63396	vitt pappersark.
+63430	Rikta kameran mot ett 
+63478	vitt pappersark.
+63512	@A071@+Avtryckare
+63548	@A072@+Avtryckare
+63584	@A070@+Avtryckare
+63620	@A050@Funktion
+63650	@A051@Funktion
+63680	1 tim
+63692	K. @A004@ Hj
+63718	lpprogram
+63738	@A039@@A03A@
+63764	Galleri
+63780	Varje pilknapp kan program-
+63838	eras f
+63852	r att ges en s
+63882	rskild 
+63900	funktion n
+63922	r den trycks 
+63952	ned under fotograferingen.
+64010	r att avaktivera knappfunktion.
+64076	ndra exp.
+64098	kompensation
+64126	ndra exp.
+64148	kompensation
+64176	ndra exp.
+64198	kompensation
+64226	ndra exp.
+64248	kompensation
+64278	lj AF-m
+64300	och AF-l
+64318	ge
+64328	lj AF-m
+64350	och AF-l
+64368	ge
+64378	lj AF-m
+64400	och AF-l
+64418	ge
+64428	lj AF-m
+64450	och AF-l
+64468	ge
+64478	lj AF-m
+64500	och AF-l
+64518	ge
+64528	lj AF-m
+64550	och AF-l
+64568	ge
+64574	@A06C@: Knappar @A02A@ och @A02B@
+64642	@A066@: Knappar @A02A@ och @A02B@
+64710	@A066@: AEL/AFL
+64742	@A06E@: AEL/AFL
+64774	@A06F@: AEL/AFL
+64806	@A06D@: AEL/AFL
+64838	@A06C@: Visa en f
+64874	rstorad ram
+64900	och tryck igen f
+64934	r att
+64952	rstora motivet i den.
+64996	@A066@: Visa en f
+65032	rstorad ram
+65058	och tryck igen f
+65092	r att
+65110	rstora motivet i den.
+65154	@A06E@: Visa en f
+65190	rstorad ram
+65216	och tryck igen f
+65250	r att
+65268	rstora motivet i den.
+65312	@A06F@: Visa en f
+65348	rstorad ram
+65374	och tryck igen f
+65408	r att
+65426	rstora motivet i den.
+65470	@A06D@: Visa en f
+65506	rstorad ram
+65532	och tryck igen f
+65566	r att
+65584	rstora motivet i den.
+65632	rhandsgranska
+65662	sk
+65668	rpedjup.
+65690	rhandsgranska
+65720	sk
+65726	rpedjup.
+65748	rhandsgranska
+65778	sk
+65784	rpedjup.
+65802	WB direktval.
+65830	WB direktval.
+65858	WB direktval.
+65886	Standardinst
+65912	llning f
+65936	AF omr
+65950	de
+65956	Standardinst
+65982	llning f
+66006	AF omr
+66020	de
+66026	Standardinst
+66052	llning f
+66076	AF omr
+66090	de
+66096	Val av MF l
+66120	ge
+66126	Val av MF l
+66150	ge
+66156	Val av MF l
+66180	ge
+66188	ndra 
+66202	RAW+JPEG/JPEG 
+66234	komprimering 
+66264	med ratt
+66284	ndra 
+66298	RAW+JPEG/JPEG 
+66330	komprimering 
+66360	med ratt
+66380	ndra 
+66394	RAW+JPEG/JPEG 
+66426	komprimering 
+66456	med ratt
+66474	Ta testbild
+66500	utan att spara.
+66532	Ta testbild
+66558	utan att spara.
+66590	Ta testbild
+66616	utan att spara.
+66648	Fota med @A06C@
+66682	och tryck p
+66706	 @A071@ knappen
+66738	Fota med @A06D@
+66772	och tryck p
+66796	 @A071@ knappen
+66828	Fota med @A06E@
+66862	och tryck p
+66886	 @A071@ knappen
+66918	Fota med @A06F@
+66952	och tryck p
+66976	 @A071@ knappen
+67008	Fota med @A06C@
+67042	och tryck p
+67066	 @A072@ knappen
+67098	Fota med @A06D@
+67132	och tryck p
+67156	 @A072@ knappen
+67188	Fota med @A06E@
+67222	och tryck p
+67246	 @A072@ knappen
+67278	Fota med @A06F@
+67312	och tryck p
+67336	 @A072@ knappen
+67368	Fota med @A02B@
+67402	och tryck p
+67426	 @A072@ knappen
+67458	Fota med @A02C@
+67492	och tryck p
+67516	 @A072@ knappen
+67548	Fota med @A02D@
+67582	och tryck p
+67606	 @A072@ knappen
+67638	Fota med @A02E@
+67672	och tryck p
+67696	 @A072@ knappen
+67728	@A06E@: Tryck ner f
+67768	r att 
+67782	ndra till
+67804	Live Guide l
+67830	ge, och tryck ner
+67868	igen f
+67882	r att 
+67896	terg
+67910	@A06F@: Tryck ner f
+67950	r att 
+67964	ndra till
+67986	Live Guide l
+68012	ge, och tryck ner
+68050	igen f
+68064	r att 
+68078	terg
+68092	@A06D@: Tryck ner f
+68132	r att 
+68146	ndra till
+68168	Live Guide l
+68194	ge, och tryck ner
+68232	igen f
+68246	r att 
+68260	terg
+68274	@A06E@: 
+68292	ndra x1/x2.
+68316	@A06F@: 
+68334	ndra x1/x2.
+68358	@A06D@: 
+68376	ndra x1/x2.
+68400	Eye-Fi
+68414	@A05B@Funktion
+68444	@A05C@Funktion
+68474	Var v
+68486	nlig kontrollera objektivstatus.
+68552	Objektivet l
+68578	st. Frig
+68596	r med sp
+68614	rren.
+68626	Key Line
+68644	@A067@Key Line
+68674	St
+68680	ll in SCN l
+68704	ge @A05D@.
+68728	Manuellt v
+68750	rde
+68758	Manuellt v
+68780	rde @A01A@
+68806	Kelvin
+68820	Kamerablixt
+68844	Bulb/Time Fokusering
+68890	lj ON f
+68906	r att till
+68928	ta
+68936	MF under BULB/TIME
+68976	fotografering.
+69006	Bulb/Time-timer
+69038	St
+69044	ll in maximal 
+69076	tid f
+69088	r Bulb/Time 
+69116	fotografering.
+69146	Live Bulb
+69166	Bilderna visas under
+69210	tiden vid Bulb fotografering.
+69270	Live Time
+69290	Bilderna visas under
+69334	tiden vid Time fotografering.
+69394	Visa antal
+69420	nger
+69430	@A022@ + IS Off
+69466	r den 
+69480	r inst
+69494	lld p
+69506	 On 
+69518	fungerar inte Bildstabilisatorn
+69584	under sekvensfotografering
+69638	Halvv
+69650	gs avtr. med IS
+69686	r den 
+69700	r inst
+69714	lld p
+69726	 P
+69738	fungerar Bildstabilisatorn
+69798	r avtryckaren trycks ner.
+69850	Live View N
+69874	rbildsl
+69890	ge
+69900	lj l
+69910	ge n
+69920	r avtryckaren 
+69952	trycks ner under f
+69990	rstorad 
+70010	live view.
+70036	r avtryckaren trycks ner 
+70090	halvv
+70102	gs, f
+70114	rsvinner f
+70136	rstorad
+70154	live view och f
+70186	rstorad 
+70206	bild visas ist
+70236	llet.
+70252	r avtryckaren trycks 
+70298	ner halvv
+70318	gs, fungerar 
+70348	autofokus under l
+70384	get 
+70400	rstorad live view.
+70442	lj st
+70454	drutn
+70466	t.
+70472	@A03B@
+70486	Kameran st
+70508	ngs 
+70520	av automatiskt n
+70554	r den inte 
+70580	anv
+70588	nts under vald period.
+70634	Live SCP
+70652	@A057@ Batteriprioritet
+70704	lj batterityp som ska 
+70752	anv
+70760	ndas med batterigreppet.
+70810	Hus batteri
+70834	PBH batteri
+70862	r batteriet i kamerahuset 
+70916	r 
+70924	slut, kommer batteriet i batteri-
+70994	greppet att anv
+71026	ndas.
+71042	r batteriet i batterigreppet 
+71102	r 
+71110	slut, kommer batteriet i kamera-
+71178	huset att anv
+71206	ndas.
+71218	Justera mikrofonens
+71260	inspelningsniv
+71294	Reducerar vindbrus vid filmning.
+71360	Specialeffekt
+71388	Aktivera resp inaktivera
+71440	filmeffekter i @A008@ l
+71488	ge.
+71496	Inbyggd EVF
+71520	Meny f
+71534	r inst
+71548	llning av 
+71572	den inbyggda elektroniska 
+71632	karen.
+71646	@A05F@ Visa Rutn
+71688	lj st
+71700	drutn
+71712	t f
+71720	r den 
+71736	inbyggda elektroniska 
+71788	karen. Aktivera medan @A05F@.
+71848	Inbyggd EVF stil
+71886	lj visningsstil f
+71922	r 
+71930	inbyggd elektronisk 
+71978	kare.
+71990	Stil 1
+72004	Stil 2
+72018	Stil 3
+72032	@A03C@ Info. Inst.
+72074	lj visningsinformation
+72126	r @A01A@ 
+72146	r nedtryckt. 
+72176	Aktivera medan @A03C@.
+72222	EVF aut. v
+72244	xling
+72260	xla autom. fr
+72288	n bildsk
+72306	rm till
+72324	EVF-sk
+72338	rm n
+72348	r 
+72354	gat uppt
+72372	cks
+72382	vid den elektroniska s
+72428	karen.
+72442	Inaktivera 
+72466	gonsensorn.
+72492	@A059@ f
+72510	r att v
+72526	xla mellan
+72550	bildsk
+72564	rmsvisning och EVF
+72604	visning.
+72622	Aktivera 
+72642	gonsensorn.
+72668	@A03D@: live view Av/P
+72722	lj bildhastighet i den 
+72772	inbyggda elektroniska s
+72820	karen.
+72834	Multifunktion
+72862	@A066@: Tryck f
+72894	r att utf
+72914	ra 
+72924	olika funktioner 
+72962	och 
+72972	ndra funktion
+73002	med hj
+73016	lp av ratten.
+73044	@A023@: Tryck f
+73076	r att utf
+73096	ra 
+73106	olika funktioner 
+73144	och 
+73154	ndra funktion
+73184	med hj
+73198	lp av ratten.
+73226	One Shot Echo
+73254	Multi Echo
+73276	Direktfunktion
+73310	gdager & Skuggkontroll
+73358	Genom att trycka @A010@ 
+73410	knappen under
+73440	fotografering, 
+73474	kan du v
+73492	lja AF omr
+73514	de.
+73522	MTP
+73530	ESP
+73538	NTSC
+73548	PAL
+73556	USB
+73564	RAW
+73572	@A0B2@arge
+73594	@A037@iddle
+73618	@A038@mall
+73640	Super Fine
+73662	Fine
+73672	Normal
+73686	Basic
+73698	SF
+73716	MF
+73722	fps
+73730	100mm
+73742	150mm
+73754	11"
+73762	17"
+73770	4"
+73776	6"
+73782	8"
+73788	10"
+73796	A0
+73802	A1
+73808	A2
+73814	A3
+73820	A4
+73826	A5
+73832	A6
+73838	A7
+73844	A8
+73850	A9
+73856	B0
+73862	B1
+73868	B2
+73874	B3
+73880	B4
+73886	B5
+73892	B6
+73898	B7
+73904	B8
+73910	B9
+73916	4"
+73922	8"
+73930	Panorama
+73948	4"
+73954	10"
+73964	Panorama
+73982	4"
+73988	11"
+73998	Panorama
+74016	4"
+74022	12"
+74032	Panorama
+74050	10cm
+74060	30cm
+74072	Panorama
+74090	89mm
+74100	254mm
+74114	Panorama
+74132	Adobe RGB
+74152	I.S. 1
+74166	I.S. 2
+74180	Slow
+74190	Slow2
+74202	2nd Curtain
+74226	Vivid
+74238	Natural
+74254	JPEG
+74264	RAW+JPEG
+74282	Portrait
+74316	CWB
+74324	3f 0.3EV
+74342	3f 0.5EV
+74360	3f 0.7EV
+74378	3f 1.0EV
+74396	5f 0.3EV
+74414	5f 0.5EV
+74432	5f 0.7EV
+74450	5f 1.0EV
+74468	mode1
+74480	mode2
+74492	mode3
+74504	mode4
+74516	A Mode
+74530	B Mode
+74544	C Mode
+74558	M Value
+74574	FP M Value
+74596	Channel
+74612	Level
+74624	TTL Value
+74644	Auto Value
+74666	FP TTL Value
+74692	Auto
+74702	@A00A@/FP
+74722	S-AF
+74732	C-AF
+74742	S-AF+MF
+74758	C-AF+TR
+74774	AE BKT
+74788	WB BKT
+74802	FL BKT
+74816	ISO BKT
+74832	P/A/S
+74844	Menu
+74854	1/2EV
+74866	1/3EV
+74878	1EV
+74886	Off
+74894	I.S. 3
+74908	sRGB
+74918	@A0B3@/Value
+74944	AEL/S-AF
+74962	AEL
+74970	AEL/AF Start
+74996	AF Start
+75014	----
+75024	@A0B3@Vivid
+75048	@A0B4@Natural
+75076	@A0B5@Portrait
+75106	Ps
+75112	Auto@A006@
+75134	A-B
+75142	G-M
+75150	Hold
+75160	@A0B4@ 4
+75178	@A0B5@ 9
+75196	@A0B6@ 25
+75216	@A0B6@ 100
+75238	Body
+75248	Lens
+75258	Flash
+75270	Acc
+75278	LV-Info
+75294	RAW/JPEG
+75312	@A013@/@A014@
+75340	ART1
+75350	ART2
+75360	ART3
+75370	ART4
+75380	ART5
+75390	ART6
+75400	ART7
+75410	ART8
+75420	BGM
+75428	480p/576p
+75448	Cool
+75458	Joy
+75466	Melancholy
+75488	HDMI
+75498	TTL Auto
+75516	Manual
+75530	FP TTL Auto
+75554	FP Manual
+75574	Level Lo
+75592	Level Mid
+75612	Level Hi
+75630	ch
+75636	@A0D4@/@A0D5@
+75664	AEL/AFL
+75680	@A040@REC
+75700	iAUTO
+75712	P/A/S/M
+75728	ART9
+75738	ART10
+75750	Full
+75760	2f 0.3EV
+75778	2f 0.5EV
+75796	2f 0.7EV
+75814	2f 1.0EV
+75832	7f 0.3EV
+75850	7f 0.5EV
+75868	7f 0.7EV
+75886	2f
+75892	@A0B7@
+75906	@A0B8@
+75920	@A095@ 5300K
+75946	@A097@ 6000K
+75972	@A096@ 7500K
+75998	@A098@ 3000K
+76024	@A099@ 4000K
+76050	Beat
+76060	ART
+76068	SCN
+76076	Adobe
+76088	@A036@ 5500K
+76114	ART BKT
+76130	Motion JPEG 1280
+76164	720
+76172	Motion JPEG 640
+76204	480
+76212	3D
+76218	1:1
+76226	ART11
+76238	MOV 1920
+76256	1080 Fine
+76276	MOV 1920
+76294	1080 Normal
+76318	MOV 1280
+76336	720 Fine
+76354	MOV 1280
+76372	720 Normal
+76394	St
+76400	ller in intervalltid
+76448	r inspelning av n
+76484	sta bild.
+76504	timme
+76520	rdr
+76528	jning Film
+76550	Spela endast in stillbilder.
+76608	Spela in filmer och 
+76652	stillbilder med f
+76688	rdr
+76696	jning.
+76710	J. @A008@ Tillb
+76742	@A059@@A024@
+76768	Art Fade
+76786	Vattenf
+76802	rg
+76808	@A06F@Vattenf
+76836	rg
+76842	Anslutning till Smartphone
+76896	Se en bild p
+76922	 smart 
+76940	phone med FlashAir-anslutning.
+77002	Kort konfigurerat av annan utrustning.
+77082	Kan inte 
+77102	ndra inst
+77122	llningarna.
+77146	Kort kan inte formateras
+77196	Anslutning p
+77230	Avbryt ej
+77250	Avbryt anslutning
+77286	Anslutningsinst
+77318	llningar
+77336	SSID Inst
+77356	llning
+77370	Initial inst
+77396	llning avslutad
+77428	Eng
+77436	ngs-anslutning
+77466	Privat anslutning
+77506	senord Inst
+77530	llning
+77544	Ange ett eng
+77570	ngs-l
+77582	senord
+77600	senordet har 
+77628	ndrats
+77642	Anslutning b
+77668	rjar
+77678	Still-I.S.
+77700	Film-I.S.
+77720	Movie-I.S. P
+77750	ndra Bildstabilisator-l
+77798	ge.
+77808	Stillbilder och Film.
+77852	Bildstabilisatorfunktion i alla 
+77920	riktningar genom uppt
+77964	ckt 
+77976	av kamerar
+77998	relser.
+78014	Endast vertikal stabilisering.
+78082	ll kameran horisontellt och 
+78142	ta bilden samtidigt som du 
+78200	panorerar horisontellt.
+78248	Endast horisontell stabilisering.
+78322	ll kameran vertikalt och ta bilden
+78394	samtidigt som du 
+78432	panorerar horisontellt.
+78480	Bildstabilisator 
+78516	r inaktiverad.
+78546	Anv
+78554	nd Bildstabilisator 
+78598	under Filminspelning
+78640	Anv
+78648	nd Bildstabilisator 
+78692	i alla riktningar under 
+78744	Filminspelning.
+78776	Utf
+78784	r bildspel av stillbilder
+78838	och/eller filmer med olika
+78894	BGM eller effekter.
+78934	HDR BKT
+78952	ndra till HDR BKT l
+78992	ge.
+79002	ndra till HDR BKT l
+79042	ge.
+79052	ndra till HDR BKT l
+79092	ge.
+79100	Flimmer-reducering
+79138	Reducerar flimmer 
+79178	genom att st
+79204	lla in
+79224	tfrekvens.
+79246	I omr
+79258	den med 50 Hz 
+79290	frekvens reduceras 
+79332	flimret.
+79350	I omr
+79362	den med 60 Hz 
+79394	frekvens reduceras 
+79436	flimret.
+79454	Reducerar flimmer automatiskt.
+79516	Flimmer-reducering Av.
+79562	Brusfilter Av
+79590	Brusfilter Standard
+79630	Brusfilter Starkt
+79666	Brusfilter Svagt
+79700	Nuvarande
+79720	Anpassad1
+79740	Anpassad2
+79760	Justering av skuggomr
+79804	de
+79810	Justering av ljust omr
+79856	de
+79866	lj bildhastighet av Live View.
+79928	Optik I.S. Prioritet
+79974	lj P
+79984	 f
+79990	r att anv
+80010	nda optik I.S.
+80040	Release Lag-Time
+80074	Ange tidsskillnaden mellan
+80134	r avtryckaren 
+80170	intryckt och slutaren utl
+80222	ses.
+80234	ndra till @A077@ l
+80272	get.
+80286	xlar @A07D@ p
+80314	/av.
+80328	xlar @A07D@ p
+80356	/av.
+80368	ndra till @A078@ l
+80406	get.
+80420	xlar @A07E@ p
+80448	/av.
+80462	xlar @A07E@ p
+80490	/av.
+80502	ndra till @A079@ l
+80540	get.
+80554	xlar @A07F@ p
+80582	/av.
+80596	xlar @A07F@ p
+80624	/av.
+80636	ndra till @A07A@ l
+80674	get.
+80688	xlar @A080@ p
+80716	/av.
+80730	xlar @A080@ p
+80758	/av.
+80768	BGM Import
+80790	BGM skrivs 
+80814	ver
+80822	Ej BGM
+80836	@A027@1s Anti-Chock @A004@
+80890	@A027@2s Anti-Chock @A004@
+80944	@A027@3s Anti-Chock @A004@
+80998	@A027@4s Anti-Chock @A004@
+81052	@A027@5s Anti-Chock @A004@
+81106	@A027@6s Anti-Chock @A004@
+81160	@A027@7s Anti-Chock @A004@
+81214	@A027@8s Anti-Chock @A004@
+81268	@A027@9s Anti-Chock @A004@
+81322	@A027@10s Anti-Chock @A004@
+81378	@A027@11s Anti-Chock @A004@
+81434	@A027@12s Anti-Chock @A004@
+81490	@A027@13s Anti-Chock @A004@
+81546	@A027@14s Anti-Chock @A004@
+81602	@A027@15s Anti-Chock @A004@
+81658	@A027@16s Anti-Chock @A004@
+81714	@A027@17s Anti-Chock @A004@
+81770	@A027@18s Anti-Chock @A004@
+81826	@A027@19s Anti-Chock @A004@
+81882	@A027@20s Anti-Chock @A004@
+81938	@A027@21s Anti-Chock @A004@
+81994	@A027@22s Anti-Chock @A004@
+82050	@A027@23s Anti-Chock @A004@
+82106	@A027@24s Anti-Chock @A004@
+82162	@A027@25s Anti-Chock @A004@
+82218	@A027@26s Anti-Chock @A004@
+82274	@A027@27s Anti-Chock @A004@
+82330	@A027@28s Anti-Chock @A004@
+82386	@A027@29s Anti-Chock @A004@
+82442	@A027@30s Anti-Chock @A004@
+82498	1f
+82504	5f
+82510	6f
+82516	7f
+82522	8f
+82528	9f
+82534	10f
+82542	11E
+82550	12E
+82558	13E
+82566	14E
+82574	15E
+82582	16E
+82590	17E
+82598	18E
+82606	19E
+82614	20E
+82622	21E
+82630	22E
+82638	23E
+82646	24E
+82654	25E
+82662	26E
+82670	27E
+82678	28E
+82686	29E
+82694	30E
+82702	31E
+82710	32E
+82718	33E
+82726	34E
+82734	35E
+82742	36E
+82750	37E
+82758	38E
+82766	39E
+82774	40E
+82782	41E
+82790	42E
+82798	43E
+82806	44E
+82814	45E
+82822	46E
+82830	47E
+82838	48E
+82846	49E
+82854	50E
+82862	51E
+82870	52E
+82878	53E
+82886	54E
+82894	55E
+82902	56E
+82910	57E
+82918	58E
+82926	59E
+82934	60E
+82942	61E
+82950	62E
+82958	63E
+82966	64E
+82974	65E
+82982	66E
+82990	67E
+82998	68E
+83006	69E
+83014	70E
+83022	71E
+83030	72E
+83038	73E
+83046	74E
+83054	75E
+83062	76E
+83070	77E
+83078	78E
+83086	79E
+83094	80E
+83102	81E
+83110	82E
+83118	83E
+83126	84E
+83134	85E
+83142	86E
+83150	87E
+83158	88E
+83166	89E
+83174	90E
+83182	91E
+83190	92E
+83198	93E
+83206	94E
+83214	95E
+83222	96E
+83230	97E
+83238	98E
+83246	99E
+83254	@A052@ 1 sek
+83280	@A052@ 3 sek
+83306	@A052@ 4 sek
+83332	@A052@ 5 sek
+83358	@A052@ 6 sek
+83384	@A052@ 7 sek
+83410	@A052@ 8 sek
+83436	@A052@ 9 sek
+83462	@A052@ 10 sek
+83490	@A052@ 11 sek
+83518	@A052@ 13 sek
+83546	@A052@ 14 sek
+83574	@A052@ 15 sek
+83602	@A052@ 16 sek
+83630	@A052@ 17 sek
+83658	@A052@ 18 sek
+83686	@A052@ 19 sek
+83714	@A052@ 20 sek
+83742	@A052@ 21 sek
+83770	@A052@ 22 sek
+83798	@A052@ 23 sek
+83826	@A052@ 24 sek
+83854	@A052@ 25 sek
+83882	@A052@ 26 sek
+83910	@A052@ 27 sek
+83938	@A052@ 28 sek
+83966	@A052@ 29 sek
+83994	@A052@ 30 sek
+84022	SSID
+84032	Password
+84050	URL
+84058	http://flashair/
+84092	S-I.S. Off
+84114	S-I.S. 1
+84132	S-I.S. 2
+84150	S-I.S. 3
+84168	M-I.S. Off
+84190	M-I.S. 1
+84208	M-I.S. 2
+84226	HDR BKT
+84242	HDR BKT Off
+84266	50Hz
+84276	60Hz
+84286	ISO LOW
+84302	LOW
+84310	3f 2.0EV
+84328	3f 3.0EV
+84346	5f 2.0EV
+84364	5f 3.0EV
+84382	7f 2.0EV
+84400	ART12
+84412	@A03C@Niv
+84432	visn.
+84444	0001.jpg
+84474	Ut
+84480	ka dyn.LV-omr
+84508	de
+84514	HDR
+84522	HDR Av
+84536	Utskriftsbeg
+84562	ran
+84572	ndra exp.
+84594	kompensation
+84624	rh.granska Uppdatera@A040@
+84682	@A068@: AEL/AFL
+84714	@A087@: AEL/AFL
+84746	@A028@: AEL/AFL
+84778	St
+84784	nger av EVF-autoluminans
+84840	r manuell ljusstyrkejustering.
+84902	Sl
+84908	r p
+84916	 EVF-autoluminans.
+84956	Ljusstyrkan justeras automatiskt.
+85024	St
+85030	nger av inbyggd @A068@.
+85078	St
+85084	ller programskiftkontrollen
+85142	via ratt i samma riktning
+85196	som S.S. i S-l
+85226	ge.
+85234	ISO
+85254	St
+85260	ller programskiftkontrollen
+85318	via ratt i samma riktning
+85372	som bl
+85386	ndare i A-l
+85410	ge.
+85418	@A011@ :Tryck p
+85450	 pilknapparna
+85484	r att 
+85498	ndra zooml
+85520	ge.
+85530	Funktionen kan bara anv
+85578	ndas
+85590	med elektriskt zoomobjektiv.
+85648	Automatisk I.S.
+85680	Knapp/Hjul/Spak
+85712	Meny om inst
+85738	llning
+85754	av knappar, hjul och spakar
+85810	B. Knapp/Ratt/Spak
+85848	FlashAir
+85866	Stoppa.
+85882	Startalternativ
+85914	Det 
+85924	r redan anslutet.
+85960	Manuell start
+85988	Autostart
+86008	Effekt
+86022	Typ
+86030	Typ@A00E@
+86050	Typ@A00F@
+86070	Typ@A010@
+86090	Typ@A064@
+86110	Kombinerar tv
+86138	 eller flera
+86166	mallbilder till en bild
+86214	Standard
+86232	Roliga ramar
+86258	Vit
+86266	Vit/vit kant
+86292	Svart
+86304	Svart/N
+86320	lh
+86330	Film
+86340	Snabb
+86352	@A065@ 3 bilder
+86384	@A066@ 3 bilder
+86416	@A065@ 2 bilder
+86448	@A066@ 2 bilder
+86480	Anslutning till smartphone
+86536	med inbyggd @A068@.
+86576	Delningsorder
+86604	Delningsorder vald
+86642	@A041@@A02F@
+86668	@A068@-Inst
+86692	llningar
+86710	Meny om inbyggd @A068@.
+86758	@A068@ Anslutn.inst
+86798	lln.
+86808	Privat
+86822	Eng
+86830	ngs
+86842	lj
+86852	r anslutning till
+86890	smartphone.
+86918	r delning med andra
+86960	smartphones.
+86988	Ett unikt l
+87012	senord anv
+87034	nds.
+87048	lj @A068@-anslutning
+87092	varje g
+87108	ng.
+87116	Privat l
+87134	senord
+87148	@A021@: 
+87166	ndra l
+87180	senordet f
+87208	anslutning till din smarta telefon.
+87282	terst
+87294	ll delningsorder
+87330	terst
+87342	ll @A068@-inst
+87372	llningar
+87390	@A005@ Varning! Alla @A068@-inst
+87456	llningar
+87478	terst
+87490	lls
+87502	lj @A068@-anslutning
+87548	rbereder @A068@-anslutning
+87606	r anslutning till smartphone.
+87668	Den h
+87680	r konfigurationen 
+87718	r bara
+87738	dv
+87744	ndig en g
+87764	ng.
+87774	@A068@-anslutningen startar senare.
+87846	Installera
+87870	'OLYMPUS Image Share'
+87920	 smartphone.
+87948	Tryck p
+87964	 @A01F@ n
+87984	r appen
+88002	har installerats.
+88038	Ansluter till smartphone.
+88096	s QR-koden med
+88128	'OLYMPUS Image Share'.
+88178	sta@A019@
+88198	Stoppa.@A030@
+88226	@A068@ startar
+88256	@A068@ stoppar
+88290	r delning med andra
+88332	smartphones.
+88360	Anv
+88368	nd aktuellt l
+88396	senord?
+88412	Anv
+88420	nd aktuellt l
+88448	senord
+88462	Anv
+88470	nd nytt l
+88490	senord
+88504	Delar med andra
+88538	smartphones.
+88570	s QR-koden med
+88602	'OLYMPUS Image Share'
+88648	eller anslut manuellt.
+88694	St
+88700	ller in anslutningen
+88748	r FlashAir-kortet.
+88786	Anger start f
+88814	r anslutning manuellt.
+88860	Automatiskt anslutning uppr
+88916	ttas
+88932	r str
+88944	mmen 
+88956	r P
+88968	FlashAir 
+88988	r ig
+88998	ng.
+89008	Kan inte anv
+89034	nda inbyggd Wi-Fi.
+89072	EVF Auto Switch
+89108	xla aut. fr bildsk
+89146	rm till
+89164	EVF display n
+89192	r 
+89198	gat 
+89210	uppt
+89220	cks vid elektr.s
+89254	karen.
+89268	Avaktivera 
+89292	gonsensorn.
+89318	@A075@: f
+89338	r att v
+89354	xla mellan bildsk
+89390	rm
+89398	och EVF-display.
+89432	Aktivera 
+89452	gonsensorn.
+89476	Bulb/Time-bildsk
+89510	rm
+89516	Justerar bildsk
+89548	rmens och EVF-
+89580	ljusstyrkan n
+89614	BULB/TIME 
+89636	r valt.
+89652	AE BKT
+89668	ndra till AE BKT l
+89706	ge.
+89714	ART BKT
+89732	ndra till ART BKT l
+89772	ge.
+89780	Film @A042@
+89804	S-I.S. Av
+89824	S-I.S. Auto
+89848	Kameran v
+89868	ljer stabiliserings-
+89912	inst
+89922	llning genom att k
+89960	nna
+89970	av kamerar
+89992	relser.
+90008	M-I.S. Av
+90028	M-I.S. P
+90048	Anv
+90056	nd Bildstabilisator 
+90100	under Filminspelning
+90142	@A088@ Spakfunktion
+90186	lj funktion som
+90220	tilldelats @A088@ spaken.
+90274	ndra rattfunktion med @A088@.
+90336	@A089@: F
+90356	lj rattfunktionsinst
+90398	llningar.
+90420	@A08A@: 
+90438	ndra ISO-k
+90460	nslighet med @A08B@
+90502	eller 
+90516	ndra WB-l
+90536	ge med @A076@.
+90568	ndra rattfunktion med @A088@.
+90630	@A089@: F
+90650	lj rattfunktionsinst
+90692	llningar.
+90714	@A08A@: 
+90732	ndra ISO-k
+90754	nslighet med @A076@
+90796	eller 
+90810	ndra WB-l
+90830	ge med @A08B@.
+90862	ndra @A024@ knappfunktion med @A088@.
+90940	@A089@: F
+90960	lj knappfunktionsinst
+91004	llningar.
+91026	@A08A@: Starta/stoppa filminspelning.
+91104	ndra AF-l
+91124	ge med @A088@.
+91156	St
+91162	ller in AF-l
+91188	ge f
+91198	r varje
+91216	@A089@ och @A08A@.
+91254	Rand
+91264	INST.@A025@
+91288	@A06B@Funktion
+91320	ndra till AE BKT l
+91358	ge.
+91368	ndra till AE BKT l
+91406	ge.
+91416	ndra till AE BKT l
+91454	ge.
+91464	ndra till ART BKT l
+91504	ge.
+91514	ndra till ART BKT l
+91554	ge.
+91564	ndra till ART BKT l
+91604	ge.
+91612	@A08C@: AEL/AFL
+91648	lj AF-m
+91670	och AF-l
+91688	ge
+91694	@A08C@: 
+91712	ndra x1/x2.
+91738	ndra exp.
+91760	kompensation
+91788	ndra till HDR BKT l
+91828	ge.
+91836	@A08C@: Visa en f
+91872	rstorad ram
+91898	och tryck igen f
+91932	r att
+91950	rstora motivet i den.
+91994	@A08C@: Tryck ner f
+92034	r att 
+92048	ndra till
+92070	Live Guide l
+92096	ge, och tryck ner
+92134	igen f
+92148	r att 
+92162	terg
+92176	Fota med @A02B@
+92210	och tryck p
+92234	 @A08C@ knappen
+92266	Fota med @A02C@
+92300	och tryck p
+92324	 @A08C@ knappen
+92356	Fota med @A02D@
+92390	och tryck p
+92414	 @A08C@ knappen
+92446	Fota med @A02E@
+92480	och tryck p
+92504	 @A08C@ knappen
+92536	Standardinst
+92562	llning f
+92586	AF omr
+92600	de
+92606	Val av MF l
+92630	ge
+92636	@A08C@:
+92654	Starta/Stoppa
+92684	Filminspelning
+92714	WB direktval.
+92746	rhandsgranska
+92776	sk
+92782	rpedjup.
+92802	ndra 
+92816	RAW+JPEG/JPEG 
+92848	komprimering 
+92878	med ratt
+92896	Ta testbild
+92922	utan att spara.
+92954	@A08C@: Knappar @A02F@ och @A030@
+93022	AE BKT Off
+93044	Manuell start
+93072	Autostart
+93092	Kombinerar tv
+93120	 eller flera
+93148	mallbilder till en bild
+93198	Touch fotografering
+93242	lj ett l
+93260	ge n
+93270	r fokuserings-
+93302	ringen vrids i MF-l
+93342	ge.
+93350	Bilden f
+93368	rstoras inte automatiskt
+93424	r fokuseringsringen
+93466	vrids i MF-l
+93492	ge.
+93504	lj P
+93514	 f
+93520	r att aut. f
+93546	rstora 
+93564	bilden n
+93582	r fokuseringsringen
+93624	roteras i MF-l
+93654	ge.
+93662	Toppar
+93676	Motivkonturen visas inte
+93732	r fokuseringsringen vrids
+93786	i MF-l
+93800	ge.
+93808	Motivkonturen visas
+93854	r fokuseringsringen vrids
+93908	i MF-l
+93922	ge. Den h
+93942	r funktionen
+93970	hj
+93976	lper dig justera fokuseringen.
+94038	@A01D@: Tryck p
+94070	 f
+94076	r att visa motiv-
+94114	konturen f
+94136	r justering av
+94168	fokuseringen. Tryck igen f
+94228	att d
+94240	lja konturen.
+94268	@A023@: Tryck p
+94300	 f
+94306	r att visa motiv-
+94344	konturen f
+94366	r justering av
+94398	fokuseringen. Tryck igen f
+94458	att d
+94470	lja konturen.
+94498	@A08C@: Tryck p
+94530	 f
+94536	r att visa motiv-
+94574	konturen f
+94596	r justering av
+94628	fokuseringen. Tryck igen f
+94688	att d
+94700	lja konturen.
+94728	@A06D@: Tryck p
+94760	 f
+94766	r att visa motiv-
+94804	konturen f
+94826	r justering av
+94858	fokuseringen. Tryck igen f
+94918	att d
+94930	lja konturen.
+94958	Toppinst
+94976	llningar
+94994	Justerar inst
+95022	llningarna
+95050	r toppvisning.
+95080	Vit
+95088	Svart
+95100	Fokuserade omr
+95130	den markeras
+95158	med vitt i fokusinst
+95200	llningarna.
+95224	Fokuserade omr
+95254	den markeras
+95282	med svart i fokusinst
+95326	llningarna.
+95350	@A029@ :Tryck p
+95382	 pilknapparna
+95416	r att 
+95430	ndra zooml
+95452	ge.
+95462	Funktionen kan bara anv
+95510	ndas
+95522	med elektriskt zoomobjektiv.
+95584	lj AF-m
+95606	och AF-l
+95624	ge
+95634	lj AF-m
+95656	och AF-l
+95674	ge
+95680	@A068@: 
+95698	ndra x1/x2.
+95722	@A087@: 
+95740	ndra x1/x2.
+95764	@A028@: 
+95782	ndra x1/x2.
+95806	@A068@: Tryck f
+95838	r att utf
+95858	ra
+95866	olika funktioner
+95902	och 
+95912	ndra funktion
+95942	med hj
+95956	lp av ratten.
+95984	@A06E@: Tryck f
+96016	r att utf
+96036	ra
+96044	olika funktioner
+96080	och 
+96090	ndra funktion
+96120	med hj
+96134	lp av ratten.
+96162	@A06F@: Tryck f
+96194	r att utf
+96214	ra
+96222	olika funktioner
+96258	och 
+96268	ndra funktion
+96298	med hj
+96312	lp av ratten.
+96340	@A06C@: Tryck f
+96372	r att utf
+96392	ra
+96400	olika funktioner
+96436	och 
+96446	ndra funktion
+96476	med hj
+96490	lp av ratten.
+96518	@A06D@: Tryck f
+96550	r att utf
+96570	ra
+96578	olika funktioner
+96614	och 
+96624	ndra funktion
+96654	med hj
+96668	lp av ratten.
+96696	@A087@: Tryck f
+96728	r att utf
+96748	ra
+96756	olika funktioner
+96792	och 
+96802	ndra funktion
+96832	med hj
+96846	lp av ratten.
+96874	@A028@: Tryck f
+96906	r att utf
+96926	ra
+96934	olika funktioner
+96970	och 
+96980	ndra funktion
+97010	med hj
+97024	lp av ratten.
+97054	ndra exp.
+97076	kompensation
+97104	ndra exp.
+97126	kompensation
+97154	ndra exp.
+97176	kompensation
+97204	ndra exp.
+97226	kompensation
+97252	Tryck f
+97268	r att aktivera
+97300	niv
+97308	visning.
+97328	Tryck igen f
+97354	r att avaktivera.
+97392	Fungerar i @A03C@.
+97430	Sl
+97436	r p
+97444	/av HDR.
+97462	Sl
+97468	r p
+97476	/av HDR.
+97494	Sl
+97500	r p
+97508	/av HDR.
+97526	Sl
+97532	r p
+97540	/av HDR.
+97558	Sl
+97564	r p
+97572	/av HDR.
+97590	Sl
+97596	r p
+97604	/av HDR.
+97622	Sl
+97628	r p
+97636	/av HDR.
+97654	Sl
+97660	r p
+97668	/av HDR.
+97686	Sl
+97692	r p
+97700	/av HDR.
+97718	@A068@: Visa en f
+97754	rstorad ram
+97780	och tryck igen f
+97814	r att
+97832	rstora motivet i den.
+97876	@A087@: Visa en f
+97912	rstorad ram
+97938	och tryck igen f
+97972	r att
+97990	rstora motivet i den.
+98034	@A068@: Tryck ner f
+98074	r att 
+98088	ndra till
+98110	Live Guide l
+98136	ge, och tryck ner
+98174	igen f
+98188	r att 
+98202	terg
+98216	@A087@: Tryck ner f
+98256	r att 
+98270	ndra till
+98292	Live Guide l
+98318	ge, och tryck ner
+98356	igen f
+98370	r att 
+98384	terg
+98398	@A028@: Tryck ner f
+98438	r att 
+98452	ndra till
+98474	Live Guide l
+98500	ge, och tryck ner
+98538	igen f
+98552	r att 
+98566	terg
+98584	xlar @A07D@ p
+98612	/av.
+98626	xlar @A07D@ p
+98654	/av.
+98668	xlar @A07D@ p
+98696	/av.
+98710	xlar @A07D@ p
+98738	/av.
+98752	xlar @A07D@ p
+98780	/av.
+98794	xlar @A07D@ p
+98822	/av.
+98836	xlar @A07E@ p
+98864	/av.
+98878	xlar @A07E@ p
+98906	/av.
+98920	xlar @A07E@ p
+98948	/av.
+98962	xlar @A07E@ p
+98990	/av.
+99004	xlar @A07E@ p
+99032	/av.
+99046	xlar @A07E@ p
+99074	/av.
+99088	xlar @A07F@ p
+99116	/av.
+99130	xlar @A07F@ p
+99158	/av.
+99172	xlar @A07F@ p
+99200	/av.
+99214	xlar @A07F@ p
+99242	/av.
+99256	xlar @A07F@ p
+99284	/av.
+99298	xlar @A07F@ p
+99326	/av.
+99340	xlar @A080@ p
+99368	/av.
+99382	xlar @A080@ p
+99410	/av.
+99424	xlar @A080@ p
+99452	/av.
+99466	xlar @A080@ p
+99494	/av.
+99508	xlar @A080@ p
+99536	/av.
+99550	xlar @A080@ p
+99578	/av.
+99588	Live View-dynamiskt omr
+99636	de
+99644	ut
+99650	kas inte.
+99670	Live View-dynamiskt omr
+99718	de
+99726	ut
+99732	kas n
+99744	r HDR 
+99758	r i l
+99770	ge
+99778	HDR1 eller HDR2.
+99812	Tar 3 bilder med en
+99854	exponeringsskillnad p
+99898	 2.0EV.
+99914	Tar 3 bilder med en
+99956	exponeringsskillnad p
+100000	 3.0EV.
+100016	Tar 5 bilder med en
+100058	exponeringsskillnad p
+100102	 2.0EV.
+100118	Tar 5 bilder med en
+100160	exponeringsskillnad p
+100204	 3.0EV.
+100220	Tar 7 bilder med en
+100262	exponeringsskillnad p
+100306	 2.0EV.
+100322	Tar 4 bilder samtidigt
+100370	med olika exponeringar och
+100426	sl
+100432	r automatiskt ihop till
+100482	en bild med h
+100510	g kontrast.
+100534	Tar 4 bilder samtidigt
+100582	med olika exponeringar och
+100638	sl
+100644	r automatiskt ihop till
+100694	en bild med superh
+100732	g kontrast.
+100756	St
+100762	nger av HDR.
+100788	Standardinst
+100814	llning f
+100838	AF omr
+100852	de
+100858	Standardinst
+100884	llning f
+100908	AF omr
+100922	de
+100928	Funktionerna f
+100958	r @A05F@-knappar
+100996	ndras inte i .
+101026	I , v
+101038	xlar funktionerna f
+101084	@A05F@-knappar till @A060@: BKT
+101150	och @A061@: @A062@.
+101190	Avaktiverar -spakfunktion.
+101244	@A078@ v
+101262	xlar rattfunktioner.
+101306	@A079@: anpassade funktionsinst
+101370	lln.
+101382	@A07A@: @A07B@ ange ISO, @A066@ anger VB.
+101466	@A078@ v
+101484	xlar rattfunktioner.
+101528	@A079@: anpassade funktionsinst
+101592	lln.
+101604	@A07A@: @A066@ ange ISO, @A07B@ anger VB.
+101688	@A078@ v
+101706	xlar knappfunktioner.
+101752	@A079@: anpassade funktionsinst
+101816	lln.
+101828	@A07A@: @A021@ ange ISO, @A059@ anger VB.
+101912	@A078@ v
+101930	xlar knappfunktioner.
+101976	@A079@: anpassade funktionsinst
+102040	lln.
+102052	@A07A@: @A059@ ange ISO, @A021@ anger VB.
+102136	@A078@ v
+102154	xlar AF-l
+102174	ge
+102182	mellan anpassade AF-inst
+102232	llningar
+102252	@A079@ och @A07A@.
+102290	Val av MF l
+102314	ge
+102320	Val av MF l
+102344	ge
+102350	@A068@:
+102368	Starta/Stoppa
+102398	Filminspelning
+102428	@A06E@:
+102446	Starta/Stoppa
+102476	Filminspelning
+102506	@A06F@:
+102524	Starta/Stoppa
+102554	Filminspelning
+102584	@A06D@:
+102602	Starta/Stoppa
+102632	Filminspelning
+102662	@A087@:
+102680	Starta/Stoppa
+102710	Filminspelning
+102740	@A028@:
+102758	Starta/Stoppa
+102788	Filminspelning
+102818	WB direktval.
+102846	WB direktval.
+102874	WB direktval.
+102902	@A068@: Tryck p
+102934	 f
+102940	r att visa motiv-
+102978	konturen f
+103000	r justering av
+103032	fokuseringen. Tryck igen f
+103092	att d
+103104	lja konturen.
+103132	@A06E@: Tryck p
+103164	 f
+103170	r att visa motiv-
+103208	konturen f
+103230	r justering av
+103262	fokuseringen. Tryck igen f
+103322	att d
+103334	lja konturen.
+103362	@A06F@: Tryck p
+103394	 f
+103400	r att visa motiv-
+103438	konturen f
+103460	r justering av
+103492	fokuseringen. Tryck igen f
+103552	att d
+103564	lja konturen.
+103592	@A06C@: Tryck p
+103624	 f
+103630	r att visa motiv-
+103668	konturen f
+103690	r justering av
+103722	fokuseringen. Tryck igen f
+103782	att d
+103794	lja konturen.
+103822	@A066@: Tryck p
+103854	 f
+103860	r att visa motiv-
+103898	konturen f
+103920	r justering av
+103952	fokuseringen. Tryck igen f
+104012	att d
+104024	lja konturen.
+104052	@A087@: Tryck p
+104084	 f
+104090	r att visa motiv-
+104128	konturen f
+104150	r justering av
+104182	fokuseringen. Tryck igen f
+104242	att d
+104254	lja konturen.
+104282	@A028@: Tryck p
+104314	 f
+104320	r att visa motiv-
+104358	konturen f
+104380	r justering av
+104412	fokuseringen. Tryck igen f
+104472	att d
+104484	lja konturen.
+104516	rhandsgranska
+104546	sk
+104552	rpedjup.
+104574	rhandsgranska
+104604	sk
+104610	rpedjup.
+104630	ndra
+104642	RAW+JPEG/JPEG
+104672	komprimering
+104700	med ratt
+104720	ndra
+104732	RAW+JPEG/JPEG
+104762	komprimering
+104790	med ratt
+104808	Ta testbild
+104834	utan att spara.
+104866	Ta testbild
+104892	utan att spara.
+104928	ll ned @A011@: f
+104962	r att l
+104978	sa/l
+104988	sa upp
+105004	peksk
+105016	rmsfunktionen i
+105050	fotograferingsl
+105082	ge.
+105094	ll ned @A029@: f
+105128	r att l
+105144	sa/l
+105154	sa upp
+105170	peksk
+105182	rmsfunktionen i
+105216	fotograferingsl
+105248	ge.
+105256	@A068@: Knappar @A02A@ och @A02B@
+105324	@A06E@: Knappar @A02A@ och @A02B@
+105392	@A06F@: Knappar @A02A@ och @A02B@
+105460	@A06D@: Knappar @A02A@ och @A02B@
+105528	@A087@: Knappar @A02A@ och @A02B@
+105596	@A028@: Knappar @A02A@ och @A02B@
+105664	Inbyggd @A017@
+105694	Inbyggd @A02E@ insp.niv
+105744	@A080@+@A081@
+105772	@A078@ Spakfunktion
+105812	Linjeing
+105830	ng @A023@
+105850	Linjeing
+105868	ng @A02E@ insp.niv
+105908	Skapa objektivdata
+105946	@A026@
+105962	@A05C@Funktion
+105992	@A043@F
+106008	rgskapare
+106028	@A044@e-Portrait
+106062	Justerar varje m
+106096	lpunkt f
+106120	AF-l
+106130	ge f
+106140	r varje objektiv.
+106176	Gr
+106182	n m
+106190	lram visas inte
+106228	r autofokus med
+106262	inst
+106272	llningen p
+106294	 Av.
+106304	Justerar m
+106326	laktivitetsniv
+106362	under C-AF.
+106386	Live View-dynamiskt omr
+106434	de
+106442	ut
+106448	kas n
+106460	r inst
+106474	llningen 
+106494	r P
+106506	Upps. F
+106522	r HDR.
+106536	Vid inst
+106554	llt p
+106566	 Av,
+106580	ndras inte funktionerna f
+106638	@A081@-knappar i @A080@.
+106692	lj funktion som
+106726	tilldelats @A078@ spaken.
+106778	Justerar niv
+106804	n f
+106818	varje mikrofon.
+106850	Ps
+106856	Reduc.osk
+106876	rpa
+106886	vid fotografering
+106924	i svag belysning.
+106960	Handh
+106972	ll. Stj
+106988	rnljus
+107002	@A045@L
+107026	xlar @A07D@ p
+107054	/av.
+107068	xlar @A07E@ p
+107096	/av.
+107110	xlar @A07F@ p
+107138	/av.
+107152	xlar @A080@ p
+107180	/av.
+107190	Ta testbild
+107216	utan att spara.
+107248	A-B : WB BKT Off
+107282	G-M : WB BKT Off
+107316	FL BKT Off
+107338	HDR1
+107348	HDR2
+107358	ISO BKT Off
+107382	mode5
+107394	ART BKT Off
+107418	ART BKT On
+107440	A-B : WB BKT
+107466	A-B : 3f 2Step
+107496	A-B : 3f 4Step
+107526	A-B : 3f 6Step
+107556	G-M : WB BKT
+107582	G-M : 3f 2Step
+107612	G-M : 3f 4Step
+107642	G-M : 3f 6Step
+107672	BKT
+107682	ndra till BKT l
+107714	ge.
+107724	ndra till BKT l
+107756	ge.
+107766	ndra till BKT l
+107798	ge.
+107808	ndra till BKT l
+107840	ge.
+107850	ndra till BKT l
+107882	ge.
+107892	ndra till BKT l
+107924	ge.
+107934	ndra till BKT l
+107966	ge.
+107976	ndra till BKT l
+108008	ge.
+108018	ndra till BKT l
+108050	ge.
+108058	@A03F@@A019@
+108088	r du v
+108102	ljer bildl
+108124	get
+108134	kan du hoppa 
+108162	ver punkterna
+108192	som inte har st
+108224	llts in till @A03F@.
+108266	Zooma in/ut
+108290	@A067@ 2 bilder
+108330	Layout
+108344	Tryck p
+108360	 avtryckaren en g
+108396	ng
+108408	r att f
+108424	rbereda f
+108450	sammansatt fotografering.
+108502	Redo f
+108516	r sammansatt fotogr.
+108558	Sammans
+108574	ttningsinst
+108598	llning.
+108614	Sammans
+108630	ttningsinst
+108654	llningsmeny.
+108682	Sl
+108688	 samman bilder tagna
+108732	med intervallfotografering.
+108788	Sammans
+108804	ttningsl
+108822	ge
+108832	r ljusare
+108856	r m
+108864	rkare
+108880	mf
+108886	r bildpunkterna i de tv
+108938	bilderna och anv
+108972	nd de ljusare
+109006	r den sammansatta bilden.
+109062	mf
+109068	r bildpunkterna i de tv
+109120	bilderna och anv
+109154	nd de m
+109170	rkare
+109188	r den sammansatta bilden.
+109240	Basexponeringstid
+109276	Exponeringstid per bild.
+109328	Exponeringstid och bl
+109372	ndare
+109386	avg
+109394	r din basexponering.
+109440	lj P
+109450	 f
+109456	r att aktivera
+109488	MF under BULB/TIME/COMP.
+109538	Justerar bildsk
+109570	rm och EVF-
+109600	r BULB/TIME/COMP.
+109636	Filmer kan inte spelas in
+109690	medan @A074@ 
+109718	r ansluten.
+109742	St
+109748	ng@A019@
+109766	Avsl. @A068@@A025@
+109804	Rattar tilldelas f
+109842	ljande
+109862	r knappen trycks ned:
+109908	@A060@: ISO
+109934	@A053@: VB
+109956	Rattar tilldelas f
+109994	ljande
+110014	r knappen trycks ned:
+110060	@A060@: VB
+110084	@A053@: ISO
+110108	Genom att h
+110132	lla ned knappen
+110166	avaktiveras autofokus och 
+110222	fokuseringen fixeras vid den
+110282	punkt d
+110298	r knappen trycks ned.
+110342	Tryck p
+110358	 knappen f
+110380	r att
+110394	aktivera AEL/AFL.
+110430	Starta/Stoppa
+110460	Filminspelning.
+110496	rhandsgranska
+110526	sk
+110532	rpedjup.
+110550	Vitbalans direktval.
+110596	lj AF-m
+110618	och AF-l
+110636	ge
+110642	Standardinst
+110668	llning f
+110692	AF omr
+110706	de
+110712	Val av MF l
+110736	ge.
+110746	ndra
+110758	RAW+JPEG/JPEG
+110788	kvalitetsl
+110810	ge
+110818	med ratt.
+110838	Ta testbild
+110864	utan att spara.
+110900	xlar @A07B@ p
+110928	/av.
+110942	xlar @A07C@ p
+110970	/av.
+110984	xlar @A07D@ p
+111012	/av.
+111026	xlar @A07E@ p
+111054	/av.
+111064	Knappar @A061@ och @A062@.
+111120	ndra exponering
+111154	kompensation.
+111182	Tryck ner f
+111206	r att 
+111220	ndra till
+111242	Live Guide l
+111268	ge, och tryck ner
+111306	igen f
+111320	r att 
+111334	terg
+111350	ndra x1/x2.
+111374	Visa en f
+111394	rstorad bild
+111422	och tryck igen f
+111456	r att
+111474	rstora motivet i den.
+111518	Sl
+111524	r p
+111532	/av HDR.
+111552	ndra till BKT l
+111584	ge.
+111592	Tryck f
+111608	r att utf
+111628	ra
+111636	olika funktioner
+111672	och 
+111682	ndra funktion
+111712	med hj
+111726	lp av ratten.
+111754	Tryck p
+111770	 f
+111776	r att visa motiv-
+111814	konturen f
+111836	r justering av
+111868	fokuseringen. Tryck igen f
+111928	att d
+111940	lja konturen.
+111968	@A021@: Starta Filminspelning
+112030	@A020@: Ta En Bild
+112070	@A059@: Film @A076@
+112110	Anpassad sj
+112134	lvutl
+112146	sare
+112156	@A093@ Anti-Chock @A004@
+112206	Inst
+112216	llningar@A01A@
+112250	lj att visa eller d
+112290	lja
+112300	@A00A@ meny.
+112326	Multifunktionsinst
+112364	llningar
+112382	Tilldela de funktioner som
+112438	ska tas med i multifunktion
+112496	genom att anv
+112524	nda @A03F@.
+112548	Film+Fotol
+112570	ge
+112576	St
+112582	ll in fotoprioritet f
+112632	Film+Fotol
+112654	ge.
+112662	Film ges prioritet.
+112704	@A067@foto kan tas medan
+112756	film spelas in.
+112790	Fotobildkvaliteten 
+112836	begr
+112846	nsad. Aktivt i @A070@.
+112892	Foto ges prioritet.
+112934	Filmer spelas in f
+112972	re
+112980	och efter fotot tas.
+113022	Elektr. zoomhastighet
+113066	St
+113072	ller in zoomhastigheten f
+113130	foto-och filml
+113160	gen vid anv.av
+113192	objektiv med elektronisk zoom.
+113254	Still-I.S. Av
+113282	Film-I.S. Av
+113312	rbereder f
+113334	r sammansatt fotografering.
+113396	nta.
+113410	ll ned knappen: f
+113446	r att
+113464	sa/l
+113474	sa upp pekpanelfunktionen
+113528	i fotograferingsl
+113564	ge.
+113572	Tryck p
+113588	 pilknapparna
+113622	r att 
+113636	ndra zooml
+113658	ge.
+113668	Funktionen kan bara anv
+113716	ndas
+113728	med elektriskt zoomobjektiv.
+113786	@A060@ISO/@A053@WB
+113824	@A060@WB/@A053@ISO
+113862	Nej
+113870	Ja
+113880	guppl
+113892	sningsbild
+113914	Fotograf. och kombinerar 
+113966	tta
+113976	bilder f
+113994	r att skapa en extra 
+114044	guppl
+114056	st bild. Stativ kr
+114094	vs.
+114102	Aktiverar h
+114126	guppl
+114138	sningsbild.
+114168	lj senarelagd
+114198	slutartid.
+114220	@A00A@Laddningstid
+114262	lj tid mellan avtryckare
+114314	och blixtutl
+114340	sning.
+114356	Den h
+114368	r inst
+114382	llningen 
+114402	r inte 
+114424	dv
+114430	ndig vid anv
+114456	ndning
+114472	av den dedikerade blixten.
+114526	Sensorv
+114542	xling + Digital
+114574	Endast sensorv
+114604	xling
+114616	Bildstabilisering utf
+114660	rd
+114672	de med sensorv
+114702	xling och
+114724	digitalt.
+114744	Bildstabilisering utf
+114788	rd
+114796	endast med sensorv
+114834	xling och inte
+114866	digitalt.
+114886	Komprim./bithastig.
+114926	Fps
+114934	KlippInspelningstid
+114978	ngs/snabb r
+115002	rel.
+115012	Filmspecifikationsinst
+115058	llningar
+115076	Justera bildstorleken,
+115124	komprimeringsmetoden och
+115176	bithastigheten f
+115210	r filmen.
+115230	Filmuppl
+115248	sning
+115260	Film @A01A@
+115284	ALL-I-kompr. erbjuder optimal
+115346	bildkvalitet f
+115376	r avancerad
+115402	redigering, men filstorleken
+115462	blir mycket stor.
+115502	gsta bithastighetens IPB-
+115556	komprimering erbjuder den b
+115612	sta
+115622	bildkvaliteten, men filstorleken
+115690	blir mycket stor.
+115726	Den h
+115738	ga bithastighetens IPB-
+115788	komprimering erbjuder b
+115836	ttre
+115848	bildkvalitet, men
+115886	filstorleken blir ganska stor.
+115948	Standardbithastighetens IPB-
+116008	kompr. erbjuder standardbildkv. 
+116076	och filstorleken 
+116114	blir inte s
+116138	 stor.
+116152	Ju h
+116162	gre nummer, desto
+116204	ttre blir bildkvaliteten.
+116256	St
+116262	ng av Klipp f
+116290	r att
+116304	anv
+116312	nda normal
+116336	filminspelning.
+116372	tt p
+116382	 Klipp f
+116400	r att spela in
+116432	kortfilmsklipp som 
+116474	sparas i Mina klipp.
+116516	Filmen spelas in f
+116560	uppspelning i standardhastighet.
+116626	Filmen spelas in f
+116670	uppspelning i l
+116702	ngsam hastighet.
+116738	Ljudet spelas inte in.
+116784	Filmen spelas in f
+116822	r 
+116830	uppspelning i snabb hastighet.
+116894	Ljudet spelas inte in.
+116940	Tillagt till Mina klipp.
+116990	Sparad som standardfilm.
+117040	Den h
+117052	r mappen f
+117074	r Mina klipp 
+117102	r full.
+117118	Flytta klipp inom mapp f
+117168	r Mina klipp.
+117196	Flytta obj. till mapp f
+117244	r Mina klipp.
+117276	gg till en ny mapp f
+117318	r Mina klipp.
+117346	Ta bort fr
+117368	n Mina klipp.
+117396	Mina klipp
+117422	gg till i Mina klipp
+117464	Spl upp Mina klipp
+117502	Export. Mina klipp
+117540	Visa alla Mina klipp
+117582	Radera Mina klipp
+117618	@A003@ Alla objekt i Mina klipp
+117684	raderas.
+117704	ndra ordning
+117734	rinst
+117746	ll dest.
+117764	Ditt n
+117778	sta klipp f
+117802	ljer
+117814	det h
+117826	r objektet, om
+117858	det inte 
+117878	r ett klipp
+117904	med filmspecifikationer som
+117962	skiljer sig fr
+117992	n Mina klipp.
+118020	Klippeffekter
+118048	1. F
+118058	rgstark
+118074	2. Mjuk Ton
+118098	3. H
+118108	lkamera
+118124	4. Cross Process
+118158	5. Sepia
+118176	6. Gammal film
+118206	Effekt. kan inte visas i f
+118260	rhandsgr.
+118282	verg
+118292	ngseffekt
+118312	Tona ut
+118328	Inspelat klippljud
+118366	Inspelad klippvolym
+118406	Granska
+118422	Starta export
+118450	Total klippl
+118476	ngd
+118488	nta.
+118498	Bearbetn.tiden motsvarar upp
+118558	till tv
+118574	 g
+118580	nger den totala filml.
+118626	Fullst
+118640	ndig
+118650	Avbruten
+118668	PCM Recorder @A017@ Link
+118722	r funkt. 
+118742	r p
+118750	 optimeras
+118774	kamerans inst
+118802	lln., baserat
+118836	 Olympus PCM Recorder Link.
+118892	Multiexponering
+118924	@A00A@ RC Blixtl
+118958	ge
+118964	@A017@ Inkopplad str
+119014	lj Av vid anslutning av
+119064	en mikrofon som inte
+119108	drar str
+119126	m.
+119132	Valfri grepprattsfunk.
+119182	lj funktionen som ska tilldelas 
+119250	valfri greppratt.
+119286	Vrid ratten @A07B@ f
+119328	r att justera
+119358	volymen n
+119378	r h
+119386	rlurarna
+119408	r anslutna.
+119432	Ratten @A07B@ f
+119464	ljer rattfunktions-
+119506	inst
+119516	llningarna.
+119540	Selfie-assist
+119568	Justera sk
+119590	rminst
+119604	llningarna
+119632	r n
+119640	r sk
+119650	rmen ska
+119674	llas ut f
+119694	r selfies.
+119716	Selfie-assistinst
+119752	llningarna
+119776	aktiveras inte 
+119808	ven
+119818	om sk
+119830	rmen f
+119844	lls ut.
+119860	Selfie-assistkontrollerna
+119914	visas p
+119930	 sk
+119938	rmen och
+119958	livevisningen visas
+120000	som en spegelv
+120030	nd bild.
+120048	@A004@Avtryckarfunktion
+120096	Tilldela funktionen till 
+120150	avtryckarknappen i l
+120192	get @A004@.
+120216	Ta bilden genom att trycka 
+120278	 avtryckarknappen.
+120316	Starta/stoppa filminspelning
+120376	genom att trycka p
+120414	 avtryckaren.
+120446	rlursvolym
+120468	Justera h
+120488	rlursvolym.
+120514	Inspelningsvolymen 
+120556	verkst
+120570	lls inte.
+120590	@A008@ Info. Inst
+120630	lj informationen
+120666	som visas i l
+120694	get @A008@.
+120718	Tidskod
+120734	Tyst @A045@Anv
+120764	ndning
+120778	Snabbvilol
+120800	ge
+120810	r livevisning ej anv
+120852	nds,
+120866	ppnar kameran vilo- 
+120914	get efter n
+120938	gra sekunder.
+120966	Meny
+120976	terkallelse
+121002	terkallar senaste menyvalet.
+121062	terkalla
+121082	terst
+121094	ll
+121100	Tidskodsinst
+121126	llningar
+121144	Justera tidskodsinst
+121186	llningarna.
+121210	Tidskodsl
+121230	ge
+121236	DF
+121242	NDF
+121250	Kompens. f
+121272	r tidsskillnad mot
+121312	faktisk inspelningstid.
+121362	Anv
+121370	nds vid avancerad
+121408	redigering n
+121434	r h
+121448	tidsprecision kr
+121482	vs.
+121490	Kompenserar ej f
+121524	r tidsskillnad
+121556	mot faktisk inspelningstid.
+121616	kna upp
+121632	RR
+121638	FR
+121648	knar endast tidskoden
+121698	r filmen spelas in.
+121742	knar tidskoden 
+121774	ven
+121788	r filmen inte spelas in,
+121840	inklusive n
+121864	r kameran 
+121892	avst
+121902	ngd.
+121912	Starttid
+121932	terst
+121944	ll
+121950	Manuell inmatning
+121986	Aktuell tid
+122010	St
+122016	ll in timme:minut:sekund:bild
+122082	 00:00:00:00.
+122110	St
+122116	ll in timme, minut, sekund och
+122180	bild manuellt.
+122210	St
+122216	ll in timme, minut, sekund p
+122278	aktuell tid och st
+122316	ll in bild p
+122342	 00.
+122356	rginst
+122370	llningar
+122396	Gul
+122404	Fokuserade omr
+122434	den markeras
+122462	med r
+122474	tt i fokusinst
+122504	llningarna.
+122528	Fokuserade omr
+122558	den markeras
+122586	med gult i fokusinst
+122628	llningarna.
+122652	Markera intensitet
+122690	Fokuserade omr
+122720	den 
+122732	markeras l
+122754	tt.
+122762	Fokuserade omr
+122792	den markeras.
+122820	Fokuserade omr
+122850	den 
+122862	markeras kraftigt.
+122900	Bildljusstyrkeinst.
+122940	Justerar inte ljusstyrkan
+122998	r livevisning.
+123028	Justerar ljusstyrkan f
+123074	r 
+123082	livevisning till att f
+123128	rst
+123136	rka
+123146	markering synlighet. Ljusstyrka
+123216	r livevisningsbild och slutlig
+123280	bild skiljer sig 
+123316	t.
+123322	Justera inst. f
+123354	r sekventiell 
+123386	fotogr., sj
+123410	lvutl
+123422	sarfotogr. 
+123448	och f
+123460	rdr
+123468	jd fotografering.
+123504	@A047@ Ljudl
+123530	st @A048@
+123550	@A049@ Ljudl
+123576	st @A048@
+123596	@A04A@ Ljudl
+123622	st @A048@
+123642	@A04B@ Ljudl
+123668	st @A048@
+123688	@A04C@ Ljudl
+123714	st @A048@
+123734	@A04D@ Ljudl
+123760	st @A048@
+123780	@A047@ Anti-st
+123810	t @A04E@
+123828	@A04A@ Anti-st
+123858	t @A04E@
+123876	@A04B@ Anti-st
+123906	t @A04E@
+123924	@A04C@ Anti-st
+123954	t @A04E@
+123972	@A04D@ Anti-st
+124002	t @A04E@
+124020	Anti-st
+124036	t@A04E@/Ljudl
+124064	st@A048@
+124082	Justera inst
+124108	llningarna f
+124140	ljudl
+124152	s fotografering och
+124194	anti-st
+124210	tfotografering.
+124242	Ljudl
+124254	st@A048@
+124272	Aktiverar tyst fotografering.
+124334	Blixt eller @A004@ fungerar inte.
+124408	lj senarelagd
+124438	slutartid.
+124460	Anti-st
+124476	t@A04E@
+124496	r slutartiden 
+124526	r @A079@ eller
+124558	mindre, v
+124578	xlar den f
+124600	rsta slutaren
+124630	till elektronisk. 
+124674	lj senarelagd
+124704	slutartid.
+124726	Brusreducering@A048@
+124768	Brusreducering fungerar inte
+124828	under tyst fotografering.
+124880	Brusred. fungerar 
+124918	ven under
+124940	tyst fotografering. Slutarljudet
+125012	rs under processen f
+125060	brusreducering.
+125092	Manuell fotografering
+125136	Bulb/Time
+125156	Live-komposit
+125184	Annat
+125196	Live View-
+125218	kning - Man. fotografering
+125272	Live View-
+125294	kning - Bulb/Time
+125330	Live View-
+125352	kning - Live-komposit
+125396	Live View-
+125418	kning - Annat
+125462	Live View-ljusstyrkan
+125508	reflekterar exponeringsinst.
+125568	Den visade bildens ljusstyrka
+125632	r samma som f
+125660	r den
+125674	slutliga bilden.
+125708	Live View-ljusstyrkan reflekterar ej
+125784	exponeringsinst
+125816	llningarna, men
+125850	justeras f
+125872	r optimal visning. 
+125914	Ljusstyrkan f
+125942	r slutlig
+125964	bild varierar.
+125994	Livevyns ljusstyrka 
+126036	terspeglar
+126060	inte exponeringsinst
+126102	llningarna och
+126134	optimeras genom att bildfrekvensen
+126206	minskas i m
+126230	rka scener.
+126256	Ljusstyrkan i slutbilden blir olika.
+126330	Visa Film
+126350	Spela fr
+126368	n b
+126376	rjan
+126386	Radera hela @A004@
+126424	@A005@ Raderar alla automatiskt
+126490	uppdelade filer f
+126526	r en film.
+126548	Visa endast 3D-bilder
+126592	@A078@ v
+126610	xlar fotograferingsl
+126652	gen.
+126664	St
+126670	ll in p
+126686	 @A079@ f
+126706	r att
+126724	lja fotograferingsl
+126764	gen I
+126782	gesv
+126792	ljaren. St
+126814	ll in p
+126830	 @A07A@
+126852	r att anv
+126872	nda @A008@.
+126896	@A03D@ visningsval
+126938	xlar mellan livevisning och
+126996	superkontrollpanel.
+127042	r synsensorn 
+127070	r inaktiverad,
+127106	xlar du mellan EVF och 
+127156	bakre sk
+127174	rmen.
+127186	Anpassad1
+127206	Anpassad2
+127226	@A071@Funktion
+127256	@A08D@Funktion
+127286	@A094@Funktion
+127316	@A04F@@A02F@
+127342	@A06E@@A041@
+127368	@A07A@ H bps
+127394	@A07A@ L bps
+127420	St
+127426	ll in antalet bilder som
+127478	tas p
+127490	 en sekund vid 
+127524	sekvensfotografering med @A07B@.
+127590	St
+127596	ll in antalet bilder som
+127648	tas p
+127660	 en sekund vid 
+127694	sekvensfotografering med @A07C@.
+127760	@A036@@A020@
+127786	@A06F@@A022@
+127812	FullHD
+127826	HD
+127832	@A013@/@A014@/@A0C7@
+127874	mode6
+127886	@A055@uper @A0B8@arge
+127930	60p
+127938	50p
+127946	30p
+127954	25p
+127962	24p
+127970	MOV 1920
+127988	1080 Fine
+128008	MOV 1920
+128026	1080 ALL-Intra
+128056	MOV 1920
+128074	1080 Super Fine
+128106	MOV 1920
+128124	1080 Fine
+128144	MOV 1920
+128162	1080 Normal
+128186	MOV 1280
+128204	720 ALL-Intra
+128232	MOV 1280
+128250	720 Super Fine
+128280	MOV 1280
+128298	720 Fine
+128316	MOV 1280
+128334	720 Normal
+128356	MOV 1920
+128374	1080
+128384	FHD
+128392	A-I
+128400	ALL-Intra
+128420	@A106@
+128434	1080p
+128446	MIC @A017@
+128468	Brusreducering p
+128506	r.
+128518	nta.
+128528	St
+128534	ll in fokusdifferent.
+128578	Uppskattad sluttid
+128616	Uppskattad starttid
+128656	St
+128662	ll in antal bilder
+128704	xlar mellan EVF visnings-
+128762	gen. Fungerar endast n
+128814	du tittar genom EVF.
+128856	Effekterna av inst
+128894	llnings
+128910	ndringar
+128930	kan bekr
+128948	ftas i realtid innan
+128992	slutaren friges.
+129026	Simulerad vy som sett
+129072	via OVF p
+129092	 en SLR.
+129112	Effekterna av inst
+129150	llnings
+129166	ndringar
+129186	kan inte bekr
+129214	ftas innan
+129238	slutaren friges.
+129272	Bps
+129280	Smalt
+129292	S-OVF
+129308	lj bildhastighet i den 
+129358	inbyggda elektroniska s
+129406	karen.
+129424	lj visningsl
+129450	ge EVF.
+129466	Aktivera eller avaktivera
+129520	AF m
+129530	lsats till bakre sk
+129570	rmen
+129586	r EVF.
+129600	Filminst
+129618	llningar
+129636	TL Filml
+129654	ngd
+129662	AF M
+129672	lsats
+129684	Extrema vitbalansniv
+129726	er. Forts
+129746	tt?
+129754	Vidvinkel
+129774	Focus BKT Off
+129802	Focus BKT On
+129828	Focus BKT
+129848	HighSpeed 120fps
+129882	4K
+129888	Dina vanligaste inst
+129930	llningar kan
+129958	sparas f
+129976	r snabbare man
+130006	vrering.
+130026	terst
+130038	ller inst
+130058	llningarna.
+130082	Privat l
+130100	senord
+130114	Certifiering
+130140	@A01C@: 
+130158	ndra l
+130172	senordet f
+130200	anslutning till din smartphone.
+130264	@A002@ Raderar alla automatiskt
+130330	uppdelade filer f
+130366	r en film.
+130388	Inaktiv
+130404	MF-koppling
+130428	St
+130434	ller in MF-koppling.
+130476	Aktiv
+130492	rgstark@A04F@
+130524	rgstark@A050@
+130552	Blek&Ljus F
+130576	rg@A04F@
+130594	Blek&Ljus F
+130618	rg@A050@
+130636	Grovkornig Film@A04F@
+130680	Grovkornig Film@A050@
+130728	lkamera@A04F@
+130760	lkamera@A050@
+130792	lkamera@A051@
+130820	Diorama@A04F@
+130848	Diorama@A050@
+130876	Cross Process@A04F@
+130916	Cross Process@A050@
+130956	Dramatiska F
+130982	rger@A04F@
+131004	Dramatiska F
+131030	rger@A050@
+131052	Key Line@A04F@
+131082	Key Line@A050@
+131112	Vattenf
+131128	rg@A04F@
+131146	Vattenf
+131162	rg@A050@
+131180	Gammaldags@A04F@
+131214	Gammaldags@A050@
+131248	Gammaldags@A051@
+131282	Partiell f
+131304	rg@A04F@
+131322	Partiell f
+131344	rg@A050@
+131362	Partiell f
+131384	rg@A051@
+131402	@A073@F
+131418	rgstark
+131434	@A052@Soft Fokus
+131468	@A079@Diorama
+131496	@A07A@Cross Process
+131536	@A054@Svag Sepia
+131570	@A07C@Dramatiska F
+131608	rger
+131618	@A07D@Key Line
+131648	@A07E@Vattenf
+131676	rg
+131682	@A07F@Gammaldags
+131716	@A080@Partiell f
+131750	rg
+131756	@A055@F
+131772	rgstark@A04F@
+131800	@A056@F
+131816	rgstark@A050@
+131844	@A057@Blek&Ljus F
+131880	rg@A04F@
+131898	@A058@Blek&Ljus F
+131934	rg@A050@
+131952	@A059@Grovkornig Film@A04F@
+132008	@A05A@Grovkornig Film@A050@
+132064	@A05B@H
+132080	lkamera@A04F@
+132108	@A05C@H
+132124	lkamera@A050@
+132152	@A05D@H
+132168	lkamera@A051@
+132196	@A05E@Diorama@A04F@
+132236	@A05F@Diorama@A050@
+132276	@A060@Cross Process@A04F@
+132328	@A061@Cross Process@A050@
+132380	@A062@Dramatiska F
+132418	rger@A04F@
+132440	@A063@Dramatiska F
+132478	rger@A050@
+132500	@A064@Key Line@A04F@
+132542	@A065@Key Line@A050@
+132584	@A066@Vattenf
+132612	rg@A04F@
+132630	@A067@Vattenf
+132658	rg@A050@
+132676	@A068@Gammaldags@A04F@
+132722	@A069@Gammaldags@A050@
+132768	@A06A@Gammaldags@A051@
+132814	@A06B@Partiell f
+132848	rg@A04F@
+132866	@A06C@Partiell f
+132900	rg@A050@
+132918	@A06D@Partiell f
+132952	rg@A051@
+132970	@A06E@L
+132986	gg Till Mjukfokuseffekt
+133034	@A06F@L
+133050	gg Till H
+133070	lkameraeffekt
+133098	@A070@L
+133114	gg Till Vitkant-effekt
+133160	@A071@L
+133176	gg Till Rameffekt
+133212	@A072@L
+133228	gg Till Stj
+133252	rnljus Effekt
+133280	@A073@Osk
+133300	rpeeffekt: topp och bott.
+133352	@A074@Osk
+133372	rpeeffekt: v
+133398	. och h
+133418	@A075@Skuggeffekt: v
+133460	nst. och h
+133482	ger
+133490	@A076@Skuggeffekt: topp och botten
+133560	@A0B1@ Ljudl
+133586	st @A074@
+133606	Visar certifiering.
+133646	Br
+133652	nnvidd
+133670	rgprofil 1
+133696	rgprofil 2
+133722	rgprofil 3
+133744	@A0B2@F
+133760	rgprofil 1
+133782	@A0B3@F
+133798	rgprofil 2
+133820	@A0B4@F
+133836	rgprofil 3
+133858	Alla f
+133872	rger@A028@
+133894	En f
+133904	rg@A028@
+133922	Monokrom profil 1
+133958	Monokrom profil 2
+133994	Monokrom profil 3
+134030	@A0B5@Monokrom profil 1
+134078	@A0B6@Monokrom profil 2
+134126	@A0B7@Monokrom profil 3
+134174	Ingen
+134186	Gul
+134194	Orange
+134216	Magenta
+134232	Bl
+134240	Cyan
+134250	Gr
+134260	Gul-Gr
+134278	Filmkornighetseffekt
+134320	Filmkornighetseffekt Av
+134368	Filmkornighetseffekt L
+134418	Filmkornighetseffekt Medel
+134472	Filmkornighetseffekt H
+134522	Justering av mellantoner
+134572	Hi. & Sh.@A01A@
+134604	Midtone@A01A@
+134634	terst
+134646	ll/tilldela egna l
+134684	gen
+134694	terst
+134706	ll kamerainst
+134734	llningar
+134754	eller tilldela aktuella inst
+134812	llningar
+134832	till egna l
+134856	gen.
+134866	Anpassat l
+134888	ge C1
+134900	Anpassat l
+134922	ge C2
+134934	Anpassat l
+134956	ge C3
+134968	Anpassat l
+134990	ge C4
+135002	Anv
+135010	nda C1-inst
+135034	llningar?
+135056	Aktuella kamerainst
+135096	llningar
+135116	skrivs 
+135132	ver.
+135142	Anv
+135150	nda C2-inst
+135174	llningar?
+135196	Aktuella kamerainst
+135236	llningar
+135256	skrivs 
+135272	ver.
+135282	Anv
+135290	nda C3-inst
+135314	llningar?
+135336	Aktuella kamerainst
+135376	llningar
+135396	skrivs 
+135412	ver.
+135422	Anv
+135430	nda C4-inst
+135454	llningar?
+135476	Aktuella kamerainst
+135516	llningar
+135536	skrivs 
+135552	ver.
+135566	lj fotograferingsl
+135604	gen som 
+135624	ska tilldelas l
+135656	gesbrytarposition
+135694	C3 och C4.
+135720	gesbrytare C3
+135752	gesbrytare C4
+135780	Inst
+135790	llningar linsinfo
+135826	Mata in data
+135852	verf
+135862	rings-
+135878	inkompatibel linsinformation f
+135946	Exif och stabiliseringsoptimering.
+136016	Tryck p
+136032	 knappen
+136056	r att komma till 
+136094	inst
+136104	llningarna f
+136130	r linsinformation.
+136168	Skapa linsinformation
+136212	Redigera linsinformation
+136262	Radera linsinformation
+136308	Linsnamn
+136326	Bl
+136332	ndarv
+136344	rde
+136352	Ta bort kontroll@A026@
+136398	Anv
+136406	nd linsinfo@A026@
+136442	Skriv 
+136456	ver
+136464	Spara som ny post
+136500	@A012@ Funktionsratt
+136546	lj vilken funktion som 
+136596	ska tilldelas brytaren f
+136652	exponeringskompensering.
+136702	Inst
+136712	llningar f
+136734	r l
+136742	ge tyst@A048@
+136770	Till
+136784	Till
+136794	t ej
+136804	Aktivera tyst fotografering.
+136868	lj f
+136878	rdr
+136886	jningstid f
+136916	utl
+136924	sning efter avtryck.
+136966	Konsteffekt Av
+137000	rgfilter: Inget
+137036	rgfilter: Gult
+137070	rgfilter: Orange
+137108	rgfilter: R
+137140	rgfilter: Gr
+137166	nt
+137172	Normal monokrom
+137204	Sepia monokrom
+137234	Bl
+137240	 monokrom
+137260	Violett monokrom
+137294	Gr
+137300	n monokrom
+137322	Avtryck/@A01E@/Bildstabilisator
+137386	C. Avtryck/@A019@/Bildstabilisator
+137456	Meny f
+137470	r avtryck,
+137494	sekvensfotografering
+137538	och bildstabilisator.
+137582	Exportering misslyckades
+137632	Det g
+137644	r inte att spela in filmer
+137700	i fj
+137710	rrslutarl
+137730	get.
+137744	lj bildl
+137762	ge.
+137770	Punktm
+137784	tning
+137800	r @A03F@valda poster
+137844	utf
+137852	rs m
+137862	tning i omr
+137886	det
+137900	r AF-m
+137914	let.
+137924	N:Inget
+137940	N:Normal
+137958	ART1@A04F@
+137980	ART1@A050@
+138002	ART3@A04F@
+138024	ART3@A050@
+138046	ART5@A04F@
+138068	ART5@A050@
+138090	ART6@A04F@
+138112	ART6@A050@
+138134	ART6@A051@
+138156	ART7@A04F@
+138178	ART7@A050@
+138200	ART8@A04F@
+138222	ART8@A050@
+138244	ART10@A04F@
+138268	ART10@A050@
+138292	ART11@A04F@
+138316	ART11@A050@
+138340	ART12@A04F@
+138364	ART12@A050@
+138388	ART13@A04F@
+138412	ART13@A050@
+138436	ART13@A051@
+138460	ART14@A04F@
+138484	ART14@A050@
+138508	ART14@A051@
+138532	C3
+138538	C4
+138544	Color Profile 1
+138576	Color Profile 2
+138608	Color Profile 3
+138640	Mono Profile 1
+138670	Mono Profile 2
+138700	Mono Profile 3
+138730	Kopiera
+138746	Kopiera vald
+138772	Ny Fil
+138786	Skriv 
+138800	ver
+138808	Undervatten
+138832	@A076@Undervatten
+138868	Fokus kompositfel.
+138908	Kompositbilder misslyckades.
+138966	@A004@Bildinst
+138996	llning
+139010	Insp. start/stopp f
+139050	r USB-ansluten
+139082	PCM-diktafon f
+139112	rblir
+139126	oberoende av kamerans
+139172	start/stopp av inspelningen.
+139230	USB-ansluten PCM-diktafon
+139284	startar/stoppar automatiskt
+139342	inspelningen samtidigt med
+139398	kamerans start/stopp
+139442	av inspelningen.
+139476	Utan identifieringston.
+139524	USB-ansluten PCM-diktafon
+139578	skapar en identifieringston
+139640	r knappen @A04B@ trycks in
+139696	och h
+139708	lls kvar under
+139740	videoinspelningen.
+139778	Kamera inspelningsvolym
+139828	och reduktion av vindbrus blir
+139892	inaktivt och inspelningsvolymen
+139958	justeras automatiskt
+140002	av Olympus PCM-diktafon.
+140052	Inspelningsvolymen kan
+140100	justeras med kamerans
+140146	inspelningsvolym.
+140182	@A004@Brusfilter
+140220	lj @A004@ exklusivt l
+140264	ge f
+140274	r att
+140288	filma videosekvenser, som ska
+140350	redigeras efter upptagning.
+140410	lj niv
+140424	 av brusreducering
+140468	r videoinspelning, som utf
+140522	rs
+140530	vid h
+140542	ga ISO-k
+140560	nsligheter.
+140588	lj niv
+140602	 av brusreducering f
+140650	stillbildsfotografering som utf
+140714	rs
+140722	vid h
+140734	ga ISO-k
+140752	nsligheter.
+140776	Synkroniserad @A03F@Insp.
+140828	Identifieringston
+140864	Kamera inspeln.volym
+140906	@A077@Platt
+140930	@A078@Kort Fullt
+140964	@A079@Kort Fullt
+140998	@A078@/@A079@Kort Fullt
+141046	@A078@Kort Fullt
+141080	@A079@Kort Fullt
+141114	@A078@Inga Bilder
+141150	@A079@Inga Bilder
+141186	@A078@Bildfel
+141214	@A079@Bildfel
+141242	@A078@Kortfel
+141270	@A079@Kortfel
+141298	@A078@/@A079@Kortfel
+141340	@A078@Fel / @A079@Skyddat
+141392	@A078@Fel / @A079@Fullt
+141440	@A078@Skrivskyddat
+141478	@A079@Skrivskyddat
+141516	@A078@/@A079@Skrivskyddat
+141568	@A078@Skyddat / @A079@Fel
+141620	@A078@Skyddat / @A079@Fullt
+141676	@A078@Fullt / @A079@Fel
+141724	@A078@Fullt / @A079@Skyddat
+141784	xlat till ny mapp
+141824	xlat till@A078@
+141860	xlat till@A079@
+141892	@A0A3@Kan inte skapa mapp
+141944	@A0A4@Kan inte skapa mapp
+141996	Kan inte skapa mapp
+142036	@A078@Kan inte v
+142070	lja mapp
+142088	@A079@Kan inte v
+142122	lja mapp
+142140	@A078@Bilden kan ej redigeras
+142200	@A079@Bilden kan ej redigeras
+142260	@A078@Varning, Bilden kan inte v
+142326	ljas
+142336	@A079@Varning, Bilden kan inte v
+142402	ljas
+142412	@A07A@Bildfel
+142440	@A07B@Bildfel
+142468	@A0A3@Ej BGM
+142494	@A0A4@Ej BGM
+142520	@A0A3@Utskr. om
+142552	jl.
+142560	@A0A4@Utskr. om
+142592	jl.
+142600	Olympusbatt, rekomm.
+142642	A1. AF/MF
+142662	A2. AF/MF
+142682	A3. AF/MF
+142702	C1. Avtryck/@A013@/Bildstabilisator
+142774	C2. Avtryck/@A013@/Bildstabilisator
+142846	D1. Sk
+142860	rm/@A001@/PC
+142886	D2. Sk
+142900	rm/@A001@/PC
+142926	D3. Sk
+142940	rm/@A001@/PC
+142966	D4. Sk
+142980	rm/@A001@/PC
+143006	E1. Exp/ISO/BULB/@A077@
+143054	E2. Exp/ISO/BULB/@A077@
+143102	E3. Exp/ISO/BULB/@A077@
+143154	H1. Spela in/Radera
+143194	H2. Spela in/Radera
+143234	I. EVF
+143248	J1. @A003@ Hj
+143276	lpprogram
+143296	J2. @A003@ Hj
+143324	lpprogram
+143344	Videomeny
+143364	Meny f
+143378	r grundl
+143396	ggande
+143412	och detaljerade videoinst
+143464	llningar.
+143484	C-AF-k
+143498	nslighet
+143516	Justera C-AF-l
+143546	sk
+143552	nsligheten
+143576	beroende p
+143598	 ditt
+143612	motivs r
+143630	relser.
+143662	AF-limiter
+143684	Begr
+143694	nsar AF-r
+143714	ckvidden efter din
+143754	specifikation.
+143786	Avst
+143796	ndet 
+143808	r ungef
+143824	rligt.
+143838	Utl
+143846	sarprioritet
+143872	Slutaren kan sl
+143904	ppas
+143918	ven n
+143930	r motivet ligger
+143966	utanf
+143978	r fokus.
+143996	Slutaren kan inte sl
+144038	ppas
+144054	r motivet ligger utanf
+144100	r fokus.
+144118	Avst
+144128	ndsinst
+144144	llningar
+144162	Inst
+144172	llning 1
+144190	Inst
+144200	llning 2
+144218	Inst
+144228	llning 3
+144246	St
+144252	ller in visningen av den gr
+144308	na
+144320	lramen f
+144338	r autofokus.
+144364	Visar inte ramen.
+144400	Visar ramen.
+144426	Visar ramen medan slutarknappen
+144494	r intryckt halvv
+144528	gs.
+144540	rinst
+144552	lld MF
+144570	rinst
+144582	llt MF-avst
+144606	nd
+144612	St
+144618	ller in avst. f
+144650	r f
+144658	rinst
+144670	lld MF,
+144688	Avst
+144698	ndet 
+144710	r ungef
+144726	rligt.
+144742	ndringar i f
+144768	rinst
+144780	lld MF-l
+144798	ge.
+144806	Sl
+144812	r p
+144820	/av IS.
+144838	Tryck ned och vrid ratten f
+144894	r att
+144912	xla mellan IS-l
+144944	gen.
+144954	Sl
+144960	r p
+144968	/av AF-limitern.
+145004	Tryck ned och vrid ratten f
+145060	r att
+145078	lja avst
+145096	nd.
+145104	Tryck f
+145120	r att visa @A042@ ram
+145170	r m
+145178	ls
+145184	kning.
+145204	r m
+145212	let st
+145226	llts in, tryck igen f
+145276	att aktivera @A042@-l
+145320	ge.
+145328	Tryck f
+145344	r att v
+145360	xla till utsedd
+145394	standard@A078@. Tryck igen f
+145452	r att
+145468	terg
+145482	@A004@Fn spakinst
+145518	llningar
+145536	Tilldela en funktion till Fn-spaken
+145614	r stillbildsfotografering.
+145668	@A003@Fn-Spakfunktion
+145716	xla@A0A9@ funktion
+145754	@A004@Fn-Spakfunktion
+145798	Tilldela en funktion till Fn-spaken
+145876	r att ta video.
+145910	ndrar rattfunktion.
+145952	ndrar AF-modell/@A0AA@/@A0AB@.
+146020	let 
+146030	r valbart.
+146052	Tilldelar f
+146076	ljande fotograferingsl
+146122	gen:
+146134	Position 1: f
+146162	ljer l
+146176	gesrattens inst.
+146212	Position 2: @A004@'l
+146254	ge.
+146262	@A07E@L
+146286	lj P
+146296	 f
+146302	r att inaktivera @A07E@.
+146352	Fn-spak/Str
+146376	mspak
+146388	Anv. Fn-spaken som str
+146434	mbrytare.
+146456	Anv
+146464	nd Fn-spaken till utsedda
+146518	funktioner. Anv
+146550	nd str
+146564	mbrytaren
+146590	r att styra str
+146622	mmen.
+146634	Str
+146642	m 1
+146650	Tilldela str
+146676	m till Fn-spaken
+146712	enligt f
+146730	ljande:
+146748	Position 1: Str
+146780	m p
+146792	Position 2: Str
+146824	m av
+146836	Str
+146844	mspaken 
+146862	r avaktiverad.
+146892	Str
+146900	m 2
+146908	Tilldela str
+146934	m till Fn-spaken
+146970	enligt f
+146988	ljande:
+147006	Position 1: Str
+147038	m av
+147050	Position 2: Str
+147082	m p
+147094	Str
+147102	mspaken 
+147120	r avaktiverad.
+147150	CWB Kelvin
+147176	@A049@-inst
+147200	lln.
+147210	@A04A@-inst
+147234	lln.
+147244	Max fps
+147260	Limiter f
+147280	r ramr
+147294	kning
+147306	Bildstabiliseringsprioritet
+147368	r kontinuerlig fotografering.
+147428	Fps-prioritet
+147456	Fotograferingshastighet ges
+147514	prioritet 
+147536	ver bildstabilisering.
+147582	IS-prioritet
+147608	Bildstabilisering ges
+147654	prioritet 
+147676	ver fotograferingshast.
+147724	@A004@HDMI-utg
+147754	ng
+147760	St
+147766	ller in utg
+147790	ngsinst
+147806	llningar
+147830	r videofotografering med
+147882	HDMI-anslutning.
+147916	Utg
+147924	ngsl
+147934	ge
+147940	Inst
+147950	llningar f
+147972	r utg
+147984	ngsl
+147994	ge till
+148012	enheter anslutna med HDMI.
+148066	Monitorl
+148084	ge
+148090	Visar video och info
+148138	 enheten. Detta l
+148174	ge
+148182	rekommenderas n
+148214	r enheten
+148236	anv
+148244	nds som monitor.
+148278	Inspelningsl
+148304	ge
+148310	Visar endast video utan
+148360	infovisning. Detta l
+148402	ge
+148410	rekommenderas vid inspelning
+148470	av video med enheten.
+148520	INSP-bit
+148542	Utg
+148550	ngsstorlek
+148572	4K
+148578	Utg. ramhastighet
+148618	@A004@Specifikationsinst
+148668	llningar
+148686	Inst
+148696	llningar f
+148718	r videokvalitet.
+148752	@A004@@A024@
+148778	Spelar in video med
+148820	storleken 4096 x 2160 (17:9).
+148880	Spelar in video med
+148922	storleken 3840 x 2160 (16:9).
+148982	Spelar in video med
+149024	storleken 1920 x 1080 (16:9).
+149084	Spelar in video med
+149126	storleken 1280 x 720 (16:9).
+149184	@A013@/@A014@ Inst
+149222	llningar
+149244	r du v
+149258	ljer @A013@eller@A014@
+149306	kan du hoppa 
+149334	ver punkterna
+149364	som inte har st
+149396	llts in @A03F@.
+149428	St
+149434	ller in ledrutn
+149466	tet som visas p
+149502	monitorn under Live View.
+149554	Visningsf
+149574	rg
+149584	rinst
+149596	llning 1
+149618	rinst
+149630	llning 2
+149648	@A079@
+149662	Till
+149672	mpa inst. p
+149696	 EVF
+149706	Till
+149716	mpar inte rutn
+149746	tsinst.
+149768	r bakre monitor p
+149804	 EVF.
+149816	Till
+149826	mpar rutn
+149846	tsinst.
+149868	r bakre monitor p
+149904	 EVF.
+149916	Rutn
+149926	tsinst
+149940	llningar f
+149962	r EVF
+149974	St
+149980	ller in ledrutn
+150012	tet visat i EVF.
+150046	LV n
+150056	rbildsinst
+150078	llningar
+150096	Inst
+150106	llningar f
+150128	r visningsmetod
+150166	r LV n
+150180	rbild.
+150194	@A046@ Inst
+150218	llningar
+150236	Inst
+150246	llningar f
+150268	r metoden f
+150302	rhandsvisning.
+150334	Under LV n
+150356	rbild justeras ljusstyrka
+150414	r enkel bekr
+150440	ftelse.
+150456	Under LV n
+150478	rbild justeras inte
+150520	ljusstyrka och visningen har
+150580	samma ljusstyrka som innan LV
+150646	rbild.
+150660	Under f
+150676	rhandsvisning justeras
+150724	ljusstyrkan f
+150752	r enkel bekr
+150778	ftelse.
+150794	Under f
+150810	rhandsvisn. justeras inte
+150864	ljusstyrkan och visningens ljusstyrka
+150944	r samma som f
+150972	re f
+150982	rhandsvisn.
+151006	@A006@@A07A@ Info.
+151048	rstora ram
+151074	rstora rullning
+151110	lj ram
+151124	@A0AA@ Inst
+151148	llningar
+151170	r du v
+151184	ljer AF-m
+151204	ll
+151210	ge
+151218	kan du hoppa 
+151246	ver punkterna
+151276	som inte har valts@A058@.
+151328	@A07C@Anpassade inst
+151370	llningar
+151388	Inst
+151398	llningar f
+151420	r anv
+151432	ndningsmetod
+151464	r valsk
+151480	rm f
+151490	r AF-m
+151504	l.
+151510	Inst
+151520	llning 1
+151538	Inst
+151548	llning 2
+151566	@A0AA@
+151580	@A0AB@
+151594	@A008@
+151608	Registrerar standard-
+151654	AF-l
+151664	ge/@A0AA@/@A0AB@.
+151700	Detaljerade inst
+151734	llningar f
+151756	r n
+151770	ISO-k
+151782	nslighet 
+151802	r inst
+151816	llt p
+151828	 AUTO.
+151844	vre gr
+151858	ns/standard
+151886	gsta S/S-inst
+151914	llning
+151932	r slutarhastigheten n
+151976	r den
+151990	utsedda l
+152010	gsta siffran b
+152040	rjar ISO-
+152066	nsligheten stiga.
+152104	Giltigt i P- eller A-l
+152150	ge.
+152158	Inst
+152168	llningar f
+152190	r kortplats
+152214	Inst
+152224	llningar f
+152246	r sparande
+152270	och uppspelning med kort.
+152322	@A003@Spara inst
+152356	llningar
+152374	Standard
+152392	Spelar in endast p
+152430	 utn
+152440	mnda kort.
+152462	Automatisk v
+152488	xling
+152504	r det utn
+152524	mnda kortet blir fullt,
+152578	xlar till ett annat kort f
+152632	r att
+152646	forts
+152658	tta med fotografering.
+152704	Dubbelt oberoende@A081@
+152752	Spara p
+152768	 b
+152774	da korten med
+152804	deras respektive inst
+152848	llningar.
+152870	Om ett kort blir fullt g
+152920	r det inte att
+152952	spara p
+152968	 det andra heller.
+153006	Dubbelt oberoende@A082@
+153054	Spara p
+153070	 b
+153076	da korten med
+153106	deras respektive inst
+153150	llningar.
+153174	ven om ett kort blir fullt g
+153232	r det
+153246	att spara p
+153270	 det andra.
+153294	Dubbelt samma@A081@
+153334	Sparar p
+153352	 b
+153358	da korten med samma
+153400	@A003@@A024@-inst
+153436	llningar.
+153458	Om ett kort blir fullt g
+153508	r det inte att
+153540	spara p
+153556	 det andra heller.
+153594	Dubbelt samma@A082@
+153634	Sparar p
+153652	 b
+153658	da korten med samma
+153700	@A003@@A024@-inst
+153736	llningar.
+153760	ven om ett kort blir fullt g
+153818	r det
+153832	att spara p
+153856	 det andra.
+153880	@A003@Spara kortplats
+153924	@A004@Spara kortplats
+153968	@A006@Kortplats
+154000	Tilldela sparmapp
+154036	Tilldela
+154054	Tilldela inte
+154082	Kopiera alla bilder sparde p
+154144	ett kort p
+154166	 det andra.
+154190	Tilldela mapp att kopiera till
+154252	Befintlig mapp
+154282	Ny mapp
+154298	Batteriinst
+154322	llningar
+154340	Se batteriinfo och -inst
+154390	llningar.
+154410	Batteriprioritet
+154444	Batteristatus
+154472	Urladdning
+154494	Laddn. kvar
+154518	Serienr.
+154536	Antal foton
+154560	Batterityp
+154582	Tryck-och-h
+154606	ll-in-tid
+154626	St
+154632	ll in knappens tryck-och-h
+154686	ll-
+154696	in-tid f
+154714	r varje funkt. som kr
+154758	ver
+154768	tryck-och-h
+154792	ll-in f
+154808	r att aktiveras.
+154842	Avsluta LV@A07A@
+154876	Tryck-och-h
+154900	ll-in designerad
+154936	knapp avslutar Live View n
+154990	rbild
+155004	eller avslutar visning av 
+155060	Live View n
+155084	rdbildsram.
+155108	Avsluta @A042@
+155138	Tryck-och-h
+155162	ll-in designerad knapp
+155210	avslutar @A042@-n
+155246	rbild eller avslutar
+155290	visning av @A042@-n
+155330	rdbildsram.
+155354	Avsluta @A006@@A07A@
+155396	Tryck-och-h
+155420	ll-in designerad knapp
+155468	avslutar @A035@-n
+155504	rbild eller avslutar
+155548	visning av @A035@-n
+155588	rbildsram.
+155610	Infoga skifferton
+155646	Tryck-och-h
+155670	ll @A04B@ under video-
+155718	inspelning och USB-ansluten
+155776	PCM-inspelare infogar en skifferton.
+155852	terst
+155864	ll @A078@
+155884	Tryck-och-h
+155908	ll-in @A035@-knappen
+155954	terf
+155964	r @A078@ till mitten av
+156014	valsk
+156026	rmen f
+156040	r AF-m
+156054	l.
+156062	terst
+156074	ll LV@A07A@ ram
+156106	Tryck-och-h
+156130	ll-in @A035@-knappen
+156176	terf
+156186	r n
+156194	rbildsramen till
+156230	mitten av Live View-sk
+156276	rmen.
+156290	terst
+156302	ll @A043@
+156322	Tryck-och-h
+156346	ll-in @A035@-knappen
+156392	terf
+156402	r @A043@ v
+156424	rden till standard
+156464	i inst
+156478	llningssk
+156498	rmen.
+156512	terst
+156524	ll @A007@
+156548	r @A007@ 
+156568	r tilldelad till en ratt 
+156620	terf
+156636	Tryck-och-h
+156660	ll-in @A035@-knappen
+156704	exponeringskompenseringsv
+156756	rdet
+156768	till standard i standbysk
+156820	rmen 
+156838	r fotografering.
+156874	terst
+156886	ll @A07B@
+156906	Tryck-och-h
+156930	ll-in @A035@-knappen
+156976	terf
+156986	r inst
+157000	llningar f
+157022	r h
+157030	gdager-
+157048	och l
+157060	gdagerkontroll
+157092	till standard i inst
+157134	llningssk
+157154	rmen.
+157166	Avsluta @A07C@
+157196	Tryck-och-h
+157220	ll-in @A07C@-knappen
+157264	inaktiverar keystone-
+157310	kompensering.
+157340	terst
+157352	ll @A07C@
+157372	Tryck-och-h
+157396	ll-in @A035@-knappen
+157442	terf
+157452	r inst
+157466	llningarna f
+157498	keystone-komp. till standard
+157558	i inst
+157572	llningssk
+157592	rmen.
+157606	terst
+157618	ll @A042@ ram
+157646	Tryck-och-h
+157670	ll-in @A035@-knappen
+157716	terf
+157726	r videotelekon 
+157764	rbildsram till mittl
+157806	get.
+157822	terst
+157834	ll @A009@
+157854	Tryck-och-h
+157878	ll-in @A035@-knappen
+157924	terf
+157934	r inst
+157948	llningarna f
+157980	blixtintensitet till standard i
+158046	fotograferingsstandby
+158096	r @A009@ har tilldelats till ratten.
+158174	xla @A045@-l
+158204	Tryck-och-h
+158228	ll-in knappen
+158258	som 
+158268	r tilldelad till @A045@-l
+158330	xlar @A045@-l
+158358	set mellan p
+158384	/av.
+158398	xla @A061@/@A062@
+158434	Tryck-och-h
+158458	ll knapp
+158478	tilldelad till @A061@/@A062@ avaktiverar
+158562	@A061@/@A062@-l
+158594	gen.
+158604	Anropa BKT-inst
+158636	lln.
+158646	Tryck-och-h
+158670	ll-in knappen
+158700	som 
+158710	r tilldelad till BKT tar fram 
+158774	sk
+158780	rmen f
+158794	r BKT-inst
+158816	llningar.
+158836	Anrop EVF autov
+158868	xel
+158876	Tryck-och-h
+158900	ll-in knappen
+158930	som 
+158940	r tilldelad till @A03D@ tar fram
+159008	inst
+159018	llningssk
+159038	rm f
+159048	r @A03D@-autov
+159078	xel.
+159088	Pro Capture H
+159116	Pro Capture L
+159144	Effekt: h
+159168	Effekt: l
+159192	Effekt: standard
+159226	AF-limiter: av
+159256	@A07D@ uppdaterar avst.
+159306	terst
+159318	ll/anpassade l
+159348	gen
+159356	Tilldela till Anpassat l
+159406	ge
+159414	terkalla fr
+159438	n Anpassat l
+159464	ge
+159472	terst
+159484	ll omr
+159498	de
+159504	Filmredigering
+159534	Ta bild i Film
+159564	Filmklippning
+159592	Vald scen kommer att raderas.
+159652	@A002@Vald scen kommer att raderas.
+159724	@A004@Ljudinspelningsinst
+159776	llningar
+159794	@A004@Visningsinst
+159832	llningar
+159850	Inst
+159860	llningar f
+159882	r informationsvisning
+159928	under filminspelning.
+159972	@A004@Infoinst
+160002	llningar
+160024	lj den information som visas
+160088	r @A01A@ trycks.
+160122	Rutn
+160136	@A004@Kontroll Inst.
+160182	lj de kontroller som visas
+160242	r @A035@ trycks
+160276	i filml
+160292	ge.
+160300	@A087@Visningsm
+160332	nster
+160344	St
+160350	ller in visningsmetod f
+160404	batteriladdning
+160438	under filminspelning.
+160482	@A078@@A004@@A024@
+160520	@A078@@A003@@A024@
+160558	@A079@@A004@@A024@
+160596	@A079@@A003@@A024@
+160638	lj kort att st
+160668	lla in
+160682	Uppdatering av fast programvara
+160746	@A002@ N
+160764	r fasta programvaran har
+160816	uppdaterats kommer du inte att kunna
+160894	terg
+160904	 till nuv. fast programvara.
+160962	@A056@Funktion
+160992	@A0B5@Funktion
+161022	@A0B6@Funktion
+161052	@A0B7@Funktion
+161082	AF-skanner
+161104	Inst
+161114	llningar f
+161136	r AF-skanner
+161164	vid AF-starter eller
+161208	medan AF k
+161230	rs.
+161238	Om motivet 
+161262	r oklart eller
+161294	om kontrasten 
+161324	r l
+161332	g aktiveras
+161358	inte AF-skannern.
+161394	Om motivet 
+161418	r oklart eller
+161450	om kontrasten 
+161480	r l
+161488	g k
+161496	rs
+161504	AF-skannern bara vid AF-starter.
+161570	Om motivet 
+161594	r oklart eller
+161626	om kontrasten 
+161656	r l
+161664	g f
+161672	rblir
+161686	AF-skannern aktiverad.
+161732	@A003@AF L
+161754	ge
+161760	St
+161766	ll in AF-metod
+161802	r stillbildsfotografering.
+161856	@A003@Bildstabilisering
+161904	St
+161910	ller in bildstabiliseringsl
+161966	get
+161980	r stillbildsfotografering.
+162034	@A003@Knappfunktion
+162078	lj funktioner att tilldela
+162134	till respektive knapp f
+162188	stillbildsfotografering.
+162238	@A003@Funktionsratt
+162282	lj funkt. att tilldela till respektive
+162362	ratt f
+162376	r stillbildsfotografering.
+162430	@A003@Brusfilter
+162464	@A003@Elektr. Zoomhast.
+162512	St
+162518	ll in zoomhastigheter
+162568	r stillbildsfotografering n
+162624	r ett
+162638	elektronisk zoomobjektiv anv
+162696	nds.
+162706	@A003@@A024@
+162736	lj inst
+162752	llningar f
+162774	r bildkvalitet
+162810	r stillbildsfotografering.
+162864	@A004@Knapp/Ratt/Spak
+162912	lj funktioner att tilldela
+162968	till knappar och rattar f
+163026	videofotografering.
+163066	@A004@Knappfunktion
+163110	lj funktioner att tilldela
+163166	till respektive knapp f
+163220	videofotografering.
+163260	@A004@Elektr. Zoomhast.
+163308	St
+163314	ll in zoomhastigheter
+163364	r videofotografering n
+163410	r ett
+163424	elektronisk zoomobjektiv anv
+163482	nds.
+163492	@A004@ AF/IS-inst
+163528	llningar
+163550	lj bildstabiliseringsl
+163596	ge
+163604	och fokuseringsmetod
+163652	r videofotografering.
+163696	@A004@AF L
+163718	ge
+163724	St
+163730	ll in fokuseringsmetod
+163782	r videofotografering.
+163826	@A004@Bildstabilisering
+163876	ndra bildstabiliseringsl
+163926	ge
+163938	r videofotografering.
+163982	Anslutning till smartphone
+164038	med inbyggd @A0B8@.
+164078	@A0B8@-Inst
+164102	llningar
+164120	Meny om inbyggd @A0B8@.
+164168	@A0B8@ Anslutn.inst
+164208	lln.
+164222	lj @A0B8@-anslutning
+164268	lj @A0B8@-anslutning
+164312	varje g
+164328	ng.
+164338	terst
+164350	ll @A0B8@-inst
+164380	llningar
+164398	@A003@ Varning! Alla @A0B8@-inst
+164464	llningar
+164486	terst
+164498	lls
+164510	rbereder @A0B8@-anslutning
+164568	r anslutning till smartphone.
+164630	Den h
+164642	r konfigurationen 
+164680	r bara
+164700	dv
+164706	ndig en g
+164726	ng.
+164736	@A0B8@-anslutningen startar senare.
+164808	@A0B8@ startar
+164838	@A0B8@ stoppar
+164868	St
+164874	nger av inbyggd @A0B8@.
+164922	Avsl. @A0B8@@A01E@
+164964	r slutartiden 
+164994	r @A07E@ eller
+165026	mindre, v
+165046	xlar den f
+165068	rsta slutaren
+165098	till elektronisk. 
+165142	lj senarelagd
+165172	slutartid.
+165194	4K
+165200	C4K
+165208	Color
+165220	Color / Vivid
+165248	MOV 3840
+165266	2160
+165276	MOV 4096
+165294	2160
+165304	MOV 1920
+165322	1080
+165332	MOV 1280
+165350	720
+165358	Ramar f
+165374	re slutare
+165396	Rutn
+165406	tsinst
+165420	llningar
+165438	@A004@Funktionsratt
+165482	lj funktioner att tilldela
+165538	till respektive ratt f
+165590	videofotografering.
+165630	@A078@St
+165648	ll In Hem
+165668	@A078@Punktm
+165694	tning
+165706	EVF-stil
+165724	EVF aut. v
+165746	xling
+165762	lj AF-Omr
+165782	de
+165788	@A078@Hem
+165808	@A07F@i-Enhance
+165840	Inaktivera 
+165864	gonsensorn.
+165890	@A03D@: f
+165910	r att v
+165926	xla mellan
+165950	bildsk
+165964	rmsvisning och EVF
+166004	visning.
+166022	Tryck f
+166038	r att utf
+166058	ra S-AF.
+166076	Funktionerna f
+166106	r @A0A9@-knappar
+166144	ndras inte i @A0BB@.
+166186	I @A0BB@, v
+166210	xlar funktionerna f
+166256	@A0A9@-knappar till @A0BC@: BKT
+166322	och @A0BD@: @A0BE@.
+166362	Avaktiverar Fn-spakfunktion.
+166420	@A080@Muted
+166444	@A078@@A01C@
+166474	ljer visningsstil f
+166520	EVF.
+166534	xla autom. fr
+166562	n bildsk
+166580	rm till
+166598	EVF-sk
+166612	rm n
+166622	r 
+166628	gat uppt
+166646	cks
+166656	vid EVF.
+166674	Detaljerade inst
+166708	llningar f
+166736	@A04A@-fotografering.
+166784	lj P
+166794	 f
+166800	r att visa niv
+166834	taren
+166848	i EVF.
+166864	Aktiverad i @A03C@.
+166904	Detaljerade inst
+166938	llningar f
+166966	@A049@-fotografering.
+167014	lj bildhastighet i EVF.
+167064	verf
+167074	r INSP-bit fr
+167102	n kameran
+167124	till den anslutna inspelningsenheten.
+167202	verf
+167212	r tidskoden fr
+167242	n kameran
+167264	till den anslutna inspelningsenheten.
+167344	lj visningsl
+167370	ge f
+167380	r EVF.
+167394	@A089@Platt
+167418	@A081@Undervatten
+167458	lj AF-m
+167474	lpunkt
+167490	och AF-m
+167508	ll
+167514	ge.
+167522	17:9
+167532	@A0B9@Vivid
+167556	@A0BA@Natural
+167584	@A0BB@Portrait
+167614	Kan inte v
+167636	lja mapp
+167654	Fn
+167660	50p-prioritet
+167688	60p-prioritet
+167716	G. @A024@/VB/F
+167746	rg
+167752	PCM-diktafon
+167778	Uppl
+167788	ttnad
+167800	Fokusstapling
+167828	Flera bilder tas med
+167872	fokuspunkten flyttad aningen
+167932	bak
+167940	t efter varje bild.
+167982	Bilderna sl
+168006	s inte ihop.
+168032	Flera bilder tas med fokuspunkten
+168102	flyttad aningen fram
+168150	och bak
+168166	t fr
+168176	n den f
+168192	rsta
+168204	punkten. Bilderna sl
+168246	s ihop.
+168262	Live View-ljusstyrkan
+168308	reflekterar exponeringsinst.
+168368	Den visade bildens ljusstyrka
+168432	r samma som f
+168460	r den
+168474	slutliga bilden.
+168508	Live View-ljusstyrkan reflekterar ej
+168584	exponeringsinst
+168616	llningarna, men
+168650	justeras f
+168672	r optimal visning. 
+168714	Ljusstyrkan f
+168742	r slutlig
+168764	bild varierar.
+168794	Livevyns ljusstyrka 
+168836	terspeglar
+168860	inte exponeringsinst
+168902	llningarna och
+168934	optimeras genom att bildfrekvensen
+169006	minskas i m
+169030	rka scener.
+169056	Ljusstyrkan i slutbilden blir olika.
+169130	@A040@: Starta/stoppa Filminspelning.
+169206	@A082@L
+169222	gg Till Mjukfokuseffekt
+169270	@A083@L
+169286	gg Till H
+169306	lkameraeffekt
+169334	@A084@L
+169350	gg Till Vitkant-effekt
+169396	@A085@L
+169412	gg Till Rameffekt
+169448	@A086@L
+169464	gg Till Stj
+169488	rnljus Effekt
+169516	@A087@Osk
+169536	rpeeffekt: topp och bott.
+169588	@A088@Osk
+169608	rpeeffekt: v
+169634	. och h
+169654	@A089@Skuggeffekt: v
+169696	nst. och h
+169718	ger
+169726	@A08A@Skuggeffekt: topp och botten
+169796	@A078@Igenk
+169820	nningsfel
+169840	@A079@Igenk
+169864	nningsfel
+169884	@A107@
+169898	Bred
+169908	Smal
+169918	Avst
+169928	 blekning
+169948	Avst
+169958	 blekning@A04F@
+169990	Avst
+170000	 blekning@A050@
+170032	Inst
+170042	llningar f
+170064	r l
+170072	ge @A004@
+170092	Lika v
+170106	rde
+170114	Avsluta @A090@
+170144	Fisk
+170154	gekompensation
+170184	Vinkel
+170198	Fisk
+170208	gekompensation 1
+170242	Fisk
+170252	gekompensation 2
+170286	Fisk
+170296	gekompensation 3
+170330	Korrig. av @A091@/@A092@
+170380	Fisk
+170390	gekompensation
+170420	Tryck-och-h
+170444	ll-in @A090@-knappen
+170488	som 
+170498	r tilldelad till Flicker Scan
+170564	r att inaktivera Flicker Scan.
+170626	Sl
+170632	r p
+170640	/av
+170650	fisk
+170660	gekompensation.
+170692	Tryck f
+170708	r att starta flimmerkontroll.
+170770	Avsluta genom att h
+170810	lla in knappen.
+170844	Giltigt i l
+170868	ge S eller M.
+170896	Flimmerskanning f. @A004@
+170948	@A0CC@Avst
+170970	 blekning
+170990	@A08C@Avst
+171012	 blekning@A04F@
+171044	@A08D@Avst
+171066	 blekning@A050@
+171098	Inst. f
+171114	r att @A07A@ @A006@
+171154	Justera inst
+171180	llningar f
+171202	r l
+171210	get @A004@.
+171234	Korrigerar f
+171260	rvr
+171268	ngningen fr
+171298	ett fisk
+171316	geobjektiv s
+171342	 det skapas
+171368	en bild med superbred vinkel.
+171428	Identifiera flimmer och justera
+171494	slutarhastighet i mindre steg,
+171558	i l
+171566	ge S eller M.
+171598	lj standardf
+171624	rstoringsv
+171646	rde
+171660	r f
+171668	rstoring av uppspelad bild.
+171724	Identifiera flimmer och justera
+171790	slutarhastighet i mindre steg,
+171854	i l
+171862	ge S eller M.
+171890	Nyligen
+171906	Flimmerskanning f. @A003@
+171958	Flimmerskanning
+171990	ART15@A04F@
+172014	ART15@A050@
+172038	Kameran kommer att forts
+172088	tta
+172098	sp
+172104	ra efter att str
+172138	mmen st
+172154	ngs Av.
+172174	lj bildhastighet i EVF.
+172222	Registrera GPS-plats
+172264	Loggningsfunktionen kan inte
+172324	anv
+172332	ndas denna g
+172358	ng.
+172366	Aut. tidsjustering
+172404	Platsdata l
+172428	ggs inte
+172448	till i ditt foto.
+172484	Platsdata l
+172508	ggs till
+172528	ditt foto. Inst
+172560	llning till P
+172592	aktiverar GPS:en.
+172628	Justera datum och tid manuellt.
+172692	Kameran justerar datum och tid
+172756	automatiskt utifr
+172792	n GPS-
+172808	information. GPS anv
+172850	nds
+172860	endast n
+172878	r justering g
+172906	rs.
+172914	Bevarad batteristr
+172958	prioriteras 
+172984	ver GPS-exakthet.
+173020	GPS-exakthet prioriteras
+173074	ver att bevara batteristr
+173126	m.
+173132	Batteristr
+173158	GPS-prioritet
+173186	GPS-exakthet
+173212	@A08B@ @A01A@
+173244	gg till GPS-platsdata till ditt
+173310	foto. Inst
+173332	llning till P
+173360	 aktiverar
+173384	GPS:en.
+173400	St
+173406	ller in GPS-prior. f. loggsp
+173464	rning.
+173478	St
+173484	ll in kamerans datum och tid
+173544	eller tidszon.
+173574	@A022@ Inst
+173598	llningar
+173616	@A022@
+173630	Tidszon
+173646	Snabbfilm
+173666	@A08E@Snabbfilm
+173698	@A08F@/Bluetooth-inst
+173742	llningar
+173760	Justera @A08F@ och Bluetooth-inst.
+173830	Tillg
+173842	nglighet
+173860	@A099@/Bluetooth 
+173896	r helt
+173912	inaktiverat och ingen
+173958	anslutning kan initieras.
+174010	@A099@/Bluetooth g
+174048	rs tillg
+174066	ngligt
+174086	r en anslutning.
+174124	senord f
+174142	r anslutning
+174168	@A040@: Byt l
+174196	senord f
+174214	r anslutning.
+174244	Nya l
+174256	senord kommer att skapas
+174308	automatiskt.
+174336	terst
+174348	ll inst
+174364	llningar
+174382	@A002@ 
+174398	terst
+174410	ll alla @A08F@ och Bluetooth-
+174472	inst
+174482	llningar?
+174506	ntel
+174516	ge vid avst.
+174542	@A08F@/Bluetooth-anslutning kan inte
+174618	initieras av en enhet n
+174666	r str
+174678	mmen
+174692	r av.
+174704	@A08F@/Bluetooth-anslutning kan
+174770	initieras av en enhet 
+174816	ven n
+174834	str
+174842	mmen 
+174854	r av.
+174870	lj om V
+174886	ntel
+174896	ge vid avst
+174920	ngning
+174936	ska aktiveras varje g
+174980	ng
+174988	str
+174996	mmen st
+175012	ngs av eller inte.
+175050	Aktivera @A08F@/Bluetooth V
+175106	ntel
+175116	ge
+175124	vid avst. s
+175148	 att bilder kan importeras
+175204	medan str
+175224	mmen 
+175236	r av?
+175252	ntel
+175262	ge vid avst.: Av
+175300	ntel
+175310	ge vid avst.: P
+175344	Bekr
+175354	fta varje g
+175378	ng
+175384	Visa inte denna sk
+175422	rmbild igen
+175446	Bekr
+175456	fta om V
+175474	ntel
+175484	ge vid avst.
+175512	ska aktiveras varje g
+175556	ng str
+175570	mmen
+175582	st
+175588	ngs av eller inte? Denna inst
+175648	llning 
+175666	kan 
+175676	ndras fr
+175694	n menyn n
+175714	r som helst.
+175742	verf
+175752	r data ...
+175774	Avbryt
+175788	Forts
+175800	tt
+175806	Avbryt data
+175830	verf
+175840	ringen och
+175868	tt p
+175878	 str
+175888	mmen.
+175900	Avbryt alla befintliga f
+175950	rval
+175966	r bild
+175980	verf
+175990	ring.
+176002	@A093@ Beh
+176024	ll Varm f
+176044	rg@A01A@
+176062	Justera inst
+176088	llningarna f
+176114	r att
+176128	fotografera med en Olympus
+176184	PCM-diktafon ansluten.
+176230	@A078@Inget Kort
+176264	@A079@Inget Kort
+176298	INFO_CONTINUE_TRANSFER_2
+176350	terst
+176362	ende filer
+176384	Str
+176392	m av efter 
+176416	verf
+176426	ring
+176436	Str
+176444	m av genast
+176468	Str
+176476	mmen st
+176492	ngs av automatiskt
+176532	efter att alla filer 
+176576	verf
+176586	rts.
+176596	Avbryter 
+176616	verf
+176626	ring till PC
+176654	och st
+176668	nger av str
+176692	mmen.
+176706	verf
+176716	r ...
+176728	INFO_WAIT_SP_TRANSFERRED
+176782	nta tills 
+176804	verf
+176814	ringen 
+176830	r slutf
+176846	rd.
+176856	Str
+176864	mmen st
+176880	ngs av automatiskt.
+176920	Tagningar med BULB-funktion
+176976	CAUTION_HIGH_RES_SHOT_CANCELED
+177038	Fel vid tagning med h
+177082	guppl
+177094	sning.
+177110	Bildkomposit misslyckades.
+177164	@A003@ISO
+177184	@A003@Rekommenderad ISO
+177232	@A003@Ut
+177250	kad ISO
+177266	@A004@ISO
+177286	@A004@Rekommenderad ISO
+177334	@A005@Ut
+177352	kad ISO
+177368	@A003@Vitbalans
+177400	@A004@Vitbalans
+177432	@A003@Kelvin
+177458	@A004@Kelvin
+177484	@A003@Auto @A094@
+177520	@A003@@A095@5300K @A094@
+177570	@A003@@A096@7500K @A094@
+177620	@A003@@A097@6000K @A094@
+177670	@A003@@A098@3000K @A094@
+177720	@A003@@A099@4000K @A094@
+177770	@A003@@A036@5500K @A094@
+177820	@A003@@A01E@ @A094@
+177860	@A003@@A01F@ @A094@
+177900	@A003@@A020@ @A094@
+177940	@A003@@A021@ @A094@
+177980	@A004@Auto @A094@
+178016	@A004@@A095@5300K @A094@
+178066	@A004@@A096@7500K @A094@
+178116	@A004@@A097@6000K @A094@
+178166	@A004@@A098@3000K @A094@
+178216	@A004@@A099@4000K @A094@
+178266	@A004@@A036@5500K @A094@
+178316	@A004@@A01E@ @A094@
+178356	@A004@@A01F@ @A094@
+178396	@A004@@A020@ @A094@
+178436	@A004@@A021@ @A094@
+178476	MOVIE_PIC_MODE_LOG
+178514	@A003@CWB @A094@
+178548	@A004@CWB @A094@
+178582	Livevy@A033@
+178608	Kontinuerlig AF + MF
+178650	AF-sp
+178662	rning + MF
+178684	Bildtagningsmetod@A01A@
+178732	Live-ND-bildtagning: ND2(1EV)
+178792	Live-ND-bildtagning: ND4(2EV)
+178852	Live-ND-bildtagning: ND8(3EV)
+178912	Live-ND-bildtagning: ND16(4EV)
+178974	Live-ND-bildtagning: ND32(5EV)
+179036	@A003@Spara kortplats @A078@
+179094	@A003@Spara kortplats @A079@
+179152	@A004@Spara kortplats @A078@
+179210	@A004@Spara kortplats @A079@
+179268	Bildtagningsmetod
+179304	Tagningar med kameran
+179350	stabiliserad med ett stativ.
+179408	Tagningar i handh
+179444	llet l
+179458	ge.
+179468	Behandlingstid kr
+179504	vs
+179512	efter bildtagning.
+179552	Blixt 
+179566	r inte tillg
+179592	ngligt.
+179608	Live-ND-bildtagning
+179648	ND-nummer
+179668	LV-simulering
+179700	ngsam slutarhastighetseffekt
+179760	kan inte ses i livevy.
+179810	ngsam slutarhastighetseffekt
+179870	kan ses i livevy.
+179908	Skiljer sig fr
+179938	n slutlig bild.
+179970	Livevy visas inte
+180008	som en spegelbild
+180050	r bildsk
+180068	rmen 
+180080	r omv
+180092	nd.
+180100	Livevy visas
+180128	som en spegelbild
+180170	r bildsk
+180188	rmen 
+180200	r omv
+180212	nd.
+180224	ltsensorinfo
+180250	Information vid halvv
+180294	gs
+180300	Information f
+180328	rblir
+180342	dold 
+180354	ven n
+180366	r slutar-
+180388	knappen trycks halvv
+180430	gs.
+180438	Information om exponering
+180492	och objektivets br
+180530	nnvidd visas
+180558	endast n
+180576	r slutaren trycks halvv
+180624	gs.
+180632	Livevyns ljusstyrka 
+180674	terspeglar
+180698	inte exponeringsinst
+180740	llningarna och
+180772	justeras f
+180794	r opt. visning genom att
+180850	rst
+180858	rk. 
+180868	kas f
+180880	r m
+180888	rka omr
+180904	den.
+180916	Ljusstyrkan i slutbilden blir olika.
+180990	Livevyns ljusstyrka 
+181032	terspeglar
+181056	inte exponeringsinst
+181098	llningarna och
+181130	justeras f
+181152	r opt. visning genom att
+181208	rst
+181216	rk. 
+181226	kas f
+181238	r m
+181246	rka omr
+181262	den.
+181274	Ljusstyrkan i slutbilden blir olika.
+181352	2 Inst
+181366	llning
+181380	Kvalitetsprioritet
+181418	Bildfrekvensprioritet
+181466	r livevy f
+181488	r kvalitet
+181512	prioritet 
+181534	ver bildfrekvens.
+181572	Bildfrekvensen minskas
+181620	i m
+181628	rka scener.
+181656	r livevy f
+181678	r bildfrekvens
+181710	prioritet 
+181732	ver kvalitet.
+181766	rger kan f
+181788	rsvinna
+181806	i m
+181814	rka scener.
+181840	Detta p
+181856	verkar inte slutbilden.
+181904	Anti-flimmer-LV
+181936	Anti-flimmer-tagning
+181978	Effekter av flimmer som oj
+182032	mna
+182042	exponeringar och f
+182080	rger
+182092	minskas. Tidsf
+182122	rdr
+182130	jningen f
+182156	frig
+182166	ringen av slutare kan bli l
+182222	ngre.
+182240	ller n
+182254	r mekanisk slutare anv
+182300	nds.
+182310	Anti-flimmer-tagning
+182354	kommer inte att fungera.
+182404	@A003@ISO-Auto
+182434	@A09B@ISO-Auto
+182464	@A003@ISO-Auto Inst.
+182506	@A09B@ISO-Auto Inst.
+182548	@A003@L
+182564	g ISO-behandling
+182598	INFO_S_NOISE_REDUCTION_MODE_1
+182658	INFO_S_NOISE_REDUCTION_MODE_2
+182718	Ratt M/B
+182740	xlar AF-l
+182760	ge/AF-m
+182776	ll
+182782	ge/
+182792	AF-m
+182802	lpunkt enligt
+182832	Fn-spakens position.
+182880	let kan v
+182900	ljas.
+182912	@A0AB@ Inst
+182936	llningar
+182954	@A0AC@Slutarknapp
+182990	@A0AC@Multiv
+183016	ljare
+183028	@A0AC@Ratt fram
+183060	@A0AC@Ratt bak
+183090	@A0AC@Knappen @A007@
+183132	@A0AC@Knappen @A0AD@
+183174	@A0AC@Knappen @A034@
+183216	@A0AE@Multiv
+183242	ljare
+183254	@A0AE@Ratt fram
+183286	@A0AE@Ratt bak
+183316	Fn-spak
+183332	Knappen @A0AF@
+183362	Knappen @A010@
+183392	Knappen @A082@
+183422	Peksk
+183434	rm
+183440	@A0AC@ Centerknapp
+183478	AF-m
+183488	ll
+183494	ge
+183500	AF-m
+183510	lpunkt
+183524	@A0AD@ Riktningsknapp
+183568	@A0AD@ :Av
+183590	INFO_JOY_CROSS_KEY_DIRECT_ON
+183648	Eget l
+183662	ge C1
+183674	Eget l
+183688	ge C2
+183700	Eget l
+183714	ge C3
+183726	Eget l
+183740	ge C4
+183756	xlar @A0A6@ p
+183784	/av.
+183798	xlar @A09C@ p
+183826	/av.
+183840	xlar @A09D@ p
+183868	/av.
+183882	xlar @A09E@ p
+183910	/av.
+183920	FN_DIGITAL_ND
+183948	Sl
+183954	r av/p
+183972	live-ND-bildtagning.
+184014	@A003@@A093@ Beh
+184048	ll Varm f
+184068	rg
+184074	@A004@@A093@ Beh
+184108	ll Varm f
+184128	rg
+184134	@A003@Vitbalans
+184166	@A004@Vitbalans
+184198	@A003@Alla @A094@
+184234	@A004@Alla @A094@
+184270	@A099@ MAC-adress
+184306	Halvv
+184318	gs AF
+184330	AF aktiveras 
+184358	ven n
+184376	slutarknappen trycks halvv
+184430	gs
+184438	i l
+184446	ge 3/l
+184460	ge 4 f
+184474	r S-AF eller C-AF.
+184512	AF aktiveras inte n
+184558	slutarknappen trycks halvv
+184612	gs
+184620	i l
+184628	ge 3/l
+184642	ge 4 f
+184656	r S-AF eller C-AF.
+184694	@A003@AEL/AFL
+184722	@A0A8@
+184736	@A0A2@
+184750	@A003@Sp
+184768	rningsmotiv
+184792	Motorsport
+184814	Flygplan
+184840	Motiv inte angivet.
+184880	Bilar och motorcyklar
+184926	detekteras och sp
+184962	ras.
+184972	Flygplan och helikoptrar
+185024	detekteras och sp
+185060	ras.
+185074	g detekteras och sp
+185114	ras.
+185124	@A003@AF+MF
+185148	Inaktiverar fokusringen
+185198	i autofokusl
+185224	get.
+185234	Aktiverar fokusringen
+185284	r manuell fokusering
+185328	i autofokusl
+185354	get.
+185364	@A003@C-AF Centrum Start
+185414	@A003@C-AF Centrum Prioritet
+185472	@A003@@A0A2@ Inst
+185508	llningar
+185526	@A003@Orienteringsl
+185566	nkat @A078@
+185590	@A0A9@AF-m
+185612	lpunkt
+185626	@A0AA@AF-m
+185648	lpunkt
+185662	@A0AB@AF-m
+185684	lpunkt
+185698	@A0A9@AF-m
+185720	ll
+185726	ge
+185732	@A0AA@AF-m
+185754	ll
+185760	ge
+185766	@A0AB@AF-m
+185788	ll
+185794	ge
+185800	@A0A3@M
+185816	ll
+185822	gesinst
+185838	llningar
+185856	Storlek
+185872	Steg
+185882	@A0A4@Storlek
+185910	@A0A5@Storlek
+185938	@A0A6@Storlek
+185966	@A0A7@Storlek
+185994	@A0A4@Steg
+186016	@A0A5@Steg
+186038	@A0A6@Steg
+186060	@A0A7@Steg
+186082	@A0B9@ @A099@ Anslut
+186124	Min meny
+186142	Inget objekt registrerat.
+186196	Genom att trycka p
+186234	 knappen @A040@
+186272	r du 
+186284	r i menyn kan du registrera
+186342	objektet till Min meny.
+186390	Du kan spara ofta
+186428	anv
+186436	nda menyobjekt.
+186470	Endast sparade objekt visas.
+186528	Min meny 1
+186550	Min meny 2
+186572	Min meny 3
+186594	Min meny 4
+186616	Min meny 5
+186638	Detaljinst
+186660	llningar f
+186682	r n
+186696	ISO-k
+186708	nslighet 
+186728	r inst
+186742	lld p
+186754	 AUTO
+186772	r tagning av video.
+186816	lj vitbalansl
+186844	get
+186858	r tagning av video.
+186898	St
+186904	ll in samma vitbalans-
+186952	kompensation i alla l
+186996	gen
+187010	r tagning av video.
+187054	r att beh
+187074	lla varma belys.f
+187110	rger
+187122	i automatiskt vitbalansl
+187172	ge
+187184	r tagning av video.
+187224	Bildfrekvens vid uppspelning
+187282	Film spelas in f
+187316	r 
+187324	x0,5 slow motion-uppspelning.
+187384	Film spelas in f
+187418	r 
+187426	x0,42 slow motion-uppspelning.
+187488	Film spelas in f
+187522	r 
+187530	x0,25 slow motion-uppspelning.
+187592	Film spelas in f
+187626	r 
+187634	x0,21 slow motion-uppspelning.
+187696	Film spelas in f
+187730	r 
+187738	x0,2 slow motion-uppspelning.
+187798	Auto-ISO-k
+187820	nslighet 
+187840	r inte tillg
+187866	nglig
+187884	r l
+187892	get @A004@ 
+187916	r inst
+187930	llt p
+187942	 M.
+187950	Auto-ISO-k
+187972	nslighet 
+187992	r tillg
+188008	nglig
+188026	r l
+188034	get @A004@ 
+188058	r inst
+188072	llt p
+188084	 M.
+188092	@A004@C-AF-hastighet
+188138	ljer fokushastigheten
+188188	r C-AF f
+188206	r videobildtagning.
+188246	@A004@C-AF-k
+188272	nslighet
+188290	Justera C-AF-l
+188320	sk
+188326	nsligheten
+188350	beroende p
+188372	 hur motivet f
+188408	din videotagning r
+188446	r sig.
+188460	Snabb
+188476	ngsam
+188488	@A004@IS-niv
+188516	St
+188522	ller in IS-niv
+188552	n f
+188560	r videotagning.
+188598	lj L
+188608	g f
+188616	r smidigare
+188646	relse vid panorering.
+188690	@A0A0@ Vy-assist
+188728	r detta 
+188746	r P
+188754	 justeras
+188776	ljusstyrka och f
+188810	rger
+188826	r optimal visning under @A0A0@.
+188890	Bilden visas i
+188922	det valda bildl
+188954	get.
+188964	Bild konverterad till BT.709
+189024	ekvivalent f
+189050	r visning.
+189074	Skiljer sig fr
+189104	n inspelad bild.
+189138	PCM-inspelaren skapar
+189184	en gr
+189196	 ton n
+189210	r knappen @A083@
+189246	trycks och h
+189272	lls in
+189288	under videoinspelning.
+189334	Inspelningshastighet
+189380	ljer ljudkvalitet.
+189418	Min meny 
+189438	r full.
+189454	Tillagt i Min meny.
+189494	Flytta till den nya positionen.
+189558	Ta bort detta objekt
+189600	Ta bort denna flik @A0A1@
+189652	Det valda objektet tas bort
+189710	fr
+189716	n Min meny.
+189740	Alla objekt p
+189768	 den valda fliken @A0A1@
+189820	tas bort fr
+189844	n Min meny.
+189870	ndra ordning
+189900	lj Min meny f
+189928	r att l
+189944	gga til.
+189962	Batteri f
+189982	r @A0B3@
+190000	Batteri f
+190020	r @A0B4@
+190038	Efter att batteriet i @A0B3@ 
+190098	r utt
+190110	mt
+190118	anv
+190126	nds batteriet i @A0B4@.
+190174	Efter att batteriet i @A0B4@ 
+190234	r utt
+190246	mt
+190254	anv
+190262	nds batteriet i @A0B3@.
+190310	Kalibrera h
+190334	jd
+190340	St
+190346	ll in aktuell h
+190378	jd.
+190390	jd/Temperatur
+190418	TEMPERATURE_UNIT
+190452	ELEVATION_UNIT
+190486	lj plats att spara p
+190530	@A078@Sparar loggfiler
+190576	@A079@Sparar loggfiler
+190622	@A0BD@Sparar loggfiler
+190668	@A078@Kortets loggkapacitet 
+190726	r full
+190740	@A079@Kortets loggkapacitet 
+190798	r full
+190812	Tryck och h
+190836	ll in @A083@ under 
+190878	videoinspelning, s
+190916	 s
+190922	tter
+190934	PCM-inspelaren in en gr
+190982	 ton.
+190994	Anslut till smartphone
+191042	eller accesspunkt med
+191088	de tr
+191100	dl
+191106	sa funktionerna.
+191140	Tar och kombinerar flera
+191192	bilder s
+191210	 att det skapas en bild 
+191262	med superh
+191284	g uppl
+191298	sning.
+191316	jligg
+191328	r l
+191336	ngsam slutare
+191366	som om ND-filtret anv
+191410	ndes.
+191422	A4. AF/MF
+191442	B1. Knapp/Ratt/Spak
+191482	B2. Knapp/Ratt/Spak
+191522	J3. @A003@ Hj
+191550	lpprogram
+191570	@A003@C-AF-k
+191596	nslighet
+191614	Registrerar standard- 
+191662	AF-l
+191672	ge/AF-m
+191688	ll
+191694	ge/
+191704	AF-m
+191714	lpunkt.
+191730	Justera C-AF-l
+191760	sk
+191766	nsligheten
+191790	beroende p
+191812	 hur motivet f
+191848	din stillbildsfotografering r
+191908	r sig.
+191922	De objekt d
+191946	r @A03F@ 
+191966	r valt
+191982	visas n
+191998	r du v
+192012	ljer AF-
+192036	ll
+192042	ge f
+192052	r stillbildsfotografering.
+192110	lj P
+192120	 f
+192126	r att till
+192148	ta manuell
+192172	fokusering i alla AF-l
+192218	gen
+192232	r stillbildsfotografering.
+192290	r @A03F@ valt i @A0A2@,
+192340	fungerar C-AF/C-AF+TR
+192386	i omr
+192398	dets centrumomr
+192430	de.
+192442	r @A03F@ valt i @A0A2@ tar
+192498	centrum av omr
+192528	det prioritet
+192560	ver andra punkter i C-AF.
+192612	St
+192618	ll in storleken p
+192654	 m
+192660	lomr
+192670	det
+192680	och stegmark
+192706	rens position
+192736	vid flyttning.
+192766	Vid stillbildsfotogr. kan objekt
+192838	r @A03F@ 
+192858	r valt st
+192878	llas in separat
+192916	r horisontella eller vertikala pos.
+192992	lj sp
+193004	rningsmotivet
+193038	r stillbildsfotografering.
+193098	ller i C-AF+TR.
+193134	lj funktion att tilldela
+193186	till @A0AC@ Centerknapp f
+193244	multiv
+193258	ljaren f
+193276	r fotografering.
+193314	lj funktion att tilldela
+193366	till @A0AD@ Riktningsknapp f
+193430	multiv
+193444	ljaren f
+193462	r fotografering.
+193496	Under @A0AB@ inaktiveras
+193550	tg
+193556	rder som har st
+193588	llts
+193600	in p
+193610	 @A03E@.
+193632	lj de kontroller som visas
+193692	r @A083@ trycks
+193730	r stillbildsfotografering.
+193784	Reducerar flimmer 
+193824	genom att st
+193850	lla in
+193870	tfrekvens.
+193892	Detaljinst
+193914	llningar f
+193936	r n
+193950	ISO-k
+193962	nslighet 
+193982	r inst
+193996	lld p
+194008	 AUTO
+194026	r stillbildsfotografering.
+194084	lj de bildtagningsl
+194124	gen
+194138	r automatisk ISO-k
+194176	nslighet
+194198	r tillg
+194214	nglig f
+194230	r stillbildsfotogr.
+194274	ljer bildbehandlingsmetod 
+194330	med l
+194342	g ISO-hastighet 
+194382	r stillbildsfotografering.
+194440	lj vitbalansl
+194468	get
+194482	r stillbildsfotografering.
+194536	St
+194542	ll in samma vitbalans-
+194590	kompensation i alla l
+194634	gen
+194648	r stillbildsfotografering.
+194706	r att beh
+194726	lla varma belys.f
+194762	rger
+194774	i automatiskt vitbalansl
+194824	ge
+194836	r stillbildsfotografering.
+194890	Justera inst
+194916	llningar av
+194946	jd och temperatur.
+194988	ltsensorlogg
+195018	mtar in f
+195038	ltsensorinformation
+195080	och sparar till kortet som loggfil.
+195152	Starta logg
+195176	Stoppa logg
+195200	Spara logg
+195230	Stoppat
+195246	@A002@Stoppat
+195278	ft
+195284	Abu Dhabi
+195304	Adelaide
+195322	Alaska
+195336	Anchorage
+195356	Athens
+195370	Auckland
+195388	Azores
+195402	Bangkok
+195418	Beijing
+195434	Berlin
+195448	Buenos Aires
+195474	Cairo
+195486	Casablanca
+195508	Chennai
+195524	Chicago
+195540	Colombo
+195556	Delhi
+195568	Denver
+195582	Dhaka
+195594	Dubai
+195606	Fernando de Noronha
+195646	Fiji
+195656	Guam
+195666	Hawaii
+195680	Helsinki
+195698	Hong Kong
+195718	Honolulu
+195736	Houston
+195752	Islamabad
+195772	Jakarta
+195788	Johannesburg
+195814	Kabul
+195826	Karachi
+195842	Kathmandu
+195862	Kolkata
+195878	Kuala Lumpur
+195904	Kuwait
+195918	La Paz
+195932	Lima
+195942	London
+195956	Los Angeles
+195980	Madrid
+195994	Male
+196004	Manaus
+196018	Mexico City
+196042	Miami
+196054	Midway Islands
+196084	Moscow
+196098	Mumbai
+196112	Nairobi
+196128	New Caledonia
+196156	New York
+196174	Newfoundland
+196200	Paris
+196212	Phoenix
+196228	Rio de Janeiro
+196258	Riyadh
+196272	Rome
+196282	Samoa
+196294	Sao Paulo
+196314	Seattle
+196330	Seoul
+196342	Singapore
+196362	Solomon Islands
+196394	Sydney
+196408	Tahiti
+196422	Taipei
+196436	Tehran
+196450	Tokyo
+196462	Toronto
+196478	Vancouver
+196498	Wellington
+196520	Yangon
+196534	UTC
+196542	ART16
+196554	FHD HighSpeed 120fps
+196596	ND32(5EV)
+196616	ND16(4EV)
+196636	ND8(3EV)
+196654	ND4(2EV)
+196672	ND2(1EV)
+196690	LV OFF-Info
+196714	ISO L64
+196730	ISO L80
+196746	ISO L100
+196764	ISO L125
+196782	ISO L160
+196800	@A0D1@LOCK
+196822	@A0AE@@A010@
+196848	@A0AE@@A0AD@
+196874	@A0AE@@A007@
+196900	@A0AE@@A03F@
+196926	@A0AE@@A03C@
+196952	@A0AE@@A0CB@
+196978	@A0AE@@A034@
+197004	@A0AE@@A0CC@
+197030	@A0AE@@A0CD@
+197056	@A0AE@@A0CE@
+197082	@A0AE@@A0CF@
+197108	@A0AE@@A0D0@
+197134	@A0AC@@A0AD@
+197160	@A0AC@@A007@
+197186	@A0AC@@A034@
+197212	@A0AC@@A0CF@
+197238	@A0AC@@A0D0@
+197264	S-AF@A0BC@
+197286	C-AF@A0BC@
+197308	C-AF+TR@A0BC@
+197336	USB PD
+197350	@A0C8@PC RAW
+197376	96kHz/24bit
+197400	48kHz/16bit
+197424	COMM_MODE_B
+197448	Installation av anslutning
+197506	lj n
+197516	sta steg f
+197538	r att ansluta till en
+197584	enhet. Denna installation kr
+197642	vs
+197650	bara en g
+197670	ng. @A08F@/Bluetooth
+197714	aktiveras under installationen.
+197778	Installera appen OI.Share p
+197834	 din enhet.
+197860	Tryck p
+197876	 @A019@ n
+197896	r installationen 
+197932	r klar.
+197948	Skanna QR-koden med
+197990	hj
+197996	lp av appen OI.Share.
+198040	Initierar ...
+198068	Kopplar fr
+198090	n ...
+198102	Koppla fr
+198122	n@A018@
+198138	Enhetsanslutning
+198172	Anslut till en enhet.
+198216	Anslutningsdetaljer@A01A@
+198268	Anslutning till enhet
+198312	Anslutning till accesspunkt
+198372	ker efter accesspunkt ...
+198424	Ansluter till accesspunkten ...
+198488	Anslut via WPS
+198518	Anslut via lista f
+198556	r accesspunkter
+198588	Anslut manuellt
+198620	Detaljinst
+198642	lln.
+198652	Inte tillg
+198674	ngliga nu
+198694	Vissa bilder har
+198730	inte 
+198742	verf
+198752	rts.
+198762	PBC-metod
+198782	PIN-metod
+198802	Anslut genom att trycka p
+198854	 WPS-
+198868	knappen p
+198888	 accesspunkten.
+198920	Anslut genom att ange PIN-kod
+198986	 accesspunkten.
+199018	Tryck p
+199034	 WPS-knappen
+199066	 accesspunkten.
+199100	Anslutningen startar
+199144	efter att du trycker @A083@.
+199202	Ange PIN-koden som visas ovan
+199268	 accesspunkten.
+199302	Anslutningen startar
+199346	efter att du trycker @A083@.
+199404	Inledande konfiguration kr
+199458	vs 
+199472	r att ansluta till PC med @A099@.
+199546	lj instruktionerna i Olympus
+199606	Capture. Inledande konfiguration
+199674	kr
+199680	vs f
+199690	r varje dator.
+199720	RESULT_WPS_NG
+199748	Det gick inte att ansluta
+199800	Accesspunkt hittades inte
+199852	@A099@ k
+199870	rs
+199876	Koppla fr
+199900	Bibeh
+199912	ll
+199922	senord
+199940	lj PC f
+199956	r att ansluta
+199984	Ta bort
+200000	Ta bort anslutningsinst
+200048	llningar fr
+200078	kameran f
+200098	r denna accesspunkt.
+200140	IP_SETTING
+200162	IP-adress
+200182	Deln
+200192	tsmask
+200206	Standardgateway
+200238	Tilldela IP-adress
+200276	Auto(DHCP)
+200298	Manuellt
+200316	Uppdatera inst
+200346	llningar
+200364	Tillg
+200376	ngligt n
+200394	r accesspunkten
+200428	har st
+200442	d f
+200450	r DHCP-funktionen.
+200490	IP-adress tilldelas
+200532	automatiskt.
+200558	Mata in IP-adress manuellt.
+200614	Autentisering
+200642	Ingen
+200654	Starta anslutning
+200690	Accesspunkt hittades inte
+200746	k igen@A033@
+200772	@A0BA@@A03F@/@A01B@@A01C@
+200824	@A0BA@@A03F@
+200850	Anslut@A019@
+200876	St
+200882	ng@A018@
+200900	PC-anslutning startade
+200946	PC-anslutning upph
+200984	rde
+200992	Kameran 
+201010	r ansluten till PC.
+201052	Inspelade bilder 
+201088	verf
+201098	rs
+201106	automatiskt till PC.
+201148	Anslutningen till PC avslutades.
+201214	@A002@ Fr
+201234	nkopplad fr
+201258	n PC.
+201272	Kontrollera PC:ns status.
+201324	@A002@ Fr
+201344	nkopplad fr
+201368	n n
+201376	tverket.
+201396	Kontrollera status f
+201438	r @A099@ och
+201466	anslut till accesspunkten igen.
+201530	@A09F@ Platt
+201556	DNS
+201564	WPA2
+201574	Stativ
+201588	Handkamera
+201610	Avbryt 
+201626	verf
+201636	ring av bilder till PC
+201684	och koppla fr
+201712	n.
+201734	Genom att trycka p
+201772	 @A0AD@ vid bild-
+201810	tagning kan du v
+201844	lja AF-m
+201862	lomr
+201872	det.
+201882	NOISE_REDUCTION_STANDARD
+201932	NOISE_REDUCTION_QUALITY
+201980	INFO_S_NOISE_REDUCTION_STANDARD
+202044	INFO_S_NOISE_REDUCTION_QUALITY
+202106	M/B
+202114	@A0D5@
+202128	@A0F8@
+202142	@A078@Valsk
+202166	rmsinst
+202182	llningar
+202200	S_NOISE_REDUCTION_LEVEL
+202248	m/ft
+202258	@A0D3@/@A0D4@
+202286	Ladda
+202298	Drivprioritet
+202326	Detaljprioritet
+202358	Vid l
+202370	ga ISO-hastigheter
+202410	tar maximala inspelningsbara
+202470	sekvensfotograferingsbilder
+202528	prioritet i bildbehandling
+202588	r stillbildsfotografering.
+202642	Vid l
+202654	ga ISO-hastigheter
+202694	tar bilddetaljer prioritet
+202750	i bildbehandling
+202790	r stillbildsfotografering.
+202844	@A0BD@ OM-Log400
+202878	@A003@@A09A@ @A094@
+202918	@A004@@A09A@ @A094@
+202958	2 tim
+202970	5 tim
+202982	@A006@@A040@Funktion
+203028	lj funktion att tilldela
+203080	till @A040@ under uppspelning.
+203142	@A04D@ Inst
+203166	llningar
+203184	@A017@ Inst
+203208	llningar
+203226	@A0AC@AF AEL/AFL
+203260	Starry Sky AF k
+203292	rs
+203298	Starry Sky AF
+203326	Starry Sky AF + MF
+203364	Inst
+203374	lln. Starry Sky AF
+203416	lj ett l
+203434	ge f
+203450	Starry Sky AF.
+203480	Noggrannhet
+203504	Hastighet
+203524	AF-noggrannhet prioriteras
+203582	ver AF-hastighet.
+203620	Bearbetningstid kr
+203658	vs
+203666	tills AF 
+203686	r slutf
+203702	rd.
+203710	AF-hastighet prioriteras
+203764	ver AF-noggrannhet.
+203808	s fokusring
+203832	Inaktiverar fokusringen
+203882	i manuellt fokusl
+203918	ge.
+203928	Tryck igen f
+203954	r att 
+203968	terg
+203982	Live View-
+204004	kning
+204020	xlar Live View-
+204052	kning P
+204068	/Av.
+204080	Tryck ner och vrid ratten
+204138	r att v
+204154	lja inst
+204172	llning.
+204188	Live View-
+204210	kning P
+204238	Spara inst
+204260	lln. Anpassat l
+204292	ge
+204302	ll
+204310	terst
+204322	ll
+204328	Vid fotografering i anpassat l
+204390	ge
+204398	sparas 
+204414	ndrade inst
+204438	llningar
+204458	automatiskt.
+204484	Vid fotografering i anpassat l
+204546	ge
+204554	sparas inte 
+204580	ndrade inst
+204604	llningar.
+204624	@A008@Ansiktsval
+204658	Tryck p
+204674	 knappen f
+204696	r att v
+204712	lja
+204722	ett ansikte n
+204750	ra vald AF-m
+204776	lpunkt.
+204794	Tryck ner knappen och vrid ratten
+204868	r att v
+204884	lja manuellt.
+204912	@A008@Ansiktsprioritet
+204962	xlar @A008@Ansiktsprioritet P
+205022	/Av.
+205034	Tryck ner och vrid ratten
+205092	r att v
+205108	lja inst
+205126	llning.
+205142	Ansiktsprioritet AF
+205190	@A078@ Slinginst
+205224	llningar
+205242	Inst
+205252	llningar f
+205274	r f
+205282	rflyttningar
+205310	av mark
+205326	ren p
+205338	 sk
+205346	rmen
+205358	AF-m
+205368	lval.
+205380	@A078@ Slingval
+205412	Slinga 1
+205430	Slinga 2
+205448	Stannar n
+205468	r AF-m
+205488	flyttats till kanten.
+205532	Flyttar AF-m
+205558	l till
+205574	motsatta 
+205594	nden av
+205612	samma rad eller kolumn n
+205668	AF-m
+205678	l har flyttats utanf
+205720	r kanten.
+205740	Flyttar AF-m
+205766	l p
+205778	den motsatta 
+205806	nden
+205818	av n
+205828	sta rad eller kolumn
+205876	r AF-m
+205890	l har flyttats
+205922	utanf
+205934	r kanten.
+205954	Via @A0AD@
+205976	@A0AD@ kommer att v
+206016	ljas
+206028	innan AF-m
+206050	l flyttas
+206072	till den motsatta 
+206110	nden.
+206122	@A0AD@ kommer inte att v
+206172	ljas
+206184	innan AF-m
+206206	l flyttas
+206228	till den motsatta 
+206266	nden.
+206278	RAW+JPEG @A041@
+206314	rv
+206320	ljer endast JPEG
+206356	att 
+206366	verf
+206376	ra till en enhet
+206416	r inst
+206430	lld p
+206442	 RAW+JPEG.
+206468	rv
+206474	ljer endast RAW
+206508	att 
+206518	verf
+206528	ra till en enhet
+206568	r inst
+206582	lld p
+206594	 RAW+JPEG.
+206620	rv
+206626	ljer b
+206640	de RAW+JPEG
+206666	att 
+206676	verf
+206686	ra till en enhet
+206726	r inst
+206740	lld p
+206752	 RAW+JPEG.
+206774	Fokusindikator
+206804	Fokusindikatorn visas inte
+206864	r fokusringen vrids
+206906	till MF-l
+206926	ge.
+206934	Fokusriktning och -position
+206992	visas n
+207008	r fokusringen
+207038	vrids till MF-l
+207070	ge. Denna funktion
+207110	hj
+207116	lper dig justera fokus.
+207164	Live-komposit-timer
+207204	St
+207210	ller in maximal tid
+207256	r kompositfotografering.
+207306	3 tim
+207318	6 tim
+207330	Fotograferingsinform.
+207374	@A0BD@L
+207398	lj P
+207408	 f
+207414	r att inaktivera @A0BD@.
+207466	Visar ramen medan slutarknappen
+207534	r intryckt halvv
+207568	gs.
+207578	Ramen visas alltid i
+207622	fotograferingsl
+207654	ge. (@A0AD@, C-AF)
+207692	Genom att trycka p
+207730	 knappen @A040@
+207768	r du 
+207780	r i menyn kan du registrera
+207838	objektet till Min meny.
+207886	@A0AC@AF
+207904	@A0AC@AF@A0BC@
+207934	AEL/@A0AC@AF
+207960	@A0AC@AF Start/Stop
+208000	AF prioriteras f
+208040	registrerade ansikten.
+208086	AF prioriteras f
+208120	r vald
+208140	lpunkt 
+208156	ven om
+208172	ansikten registreras.
+208216	Live View-
+208238	kning Av
+208256	Live View-
+208278	kning P
+208302	rval f
+208316	r 
+208322	verf
+208332	ring:
+208350	rv
+208356	lj bilder att 
+208386	verf
+208396	ra
+208404	till en enhet.
+208434	Val av flera bilder:
+208482	lj flera bilder att
+208524	till
+208534	mpa en viss 
+208560	tg
+208566	rd p
+208582	t.ex. skydda eller radera.
+208636	Aktivera 
+208656	gonsensorn
+208684	r displayen 
+208710	r st
+208720	ngd.
+208732	@A03D@: live view Av/P
+208782	RAW-l
+208794	ge
+208800	Matar ut video i RAW-format
+208858	till en enhet som st
+208900	ds.
+208910	Kan inte spelas in p
+208952	 kamerans kort.
+208984	Ta bilder f
+209008	r att 
+209024	skapa panoramabild
+209064	i datorn.
+209088	r fotografering 
+209124	av sn
+209140	ckta berg, 
+209166	vita str
+209184	nder etc.
+209208	r fotografering 
+209244	i belysning av levande ljus. 
+209306	Varma f
+209322	rger 
+209334	terges.
+209354	r fotografering av text.
+209410	rst
+209418	rker konstrasten mellan
+209468	text och bakgrund.
+209506	Sl
+209512	t hy f
+209526	r att 
+209542	visas p
+209558	 HDTV.
+209576	r landskapsmotiv. 
+209616	Med betoning p
+209646	 bl
+209654	- 
+209662	och gr
+209676	ntoner.
+209696	ngar motiv som r
+209730	r sig 
+209746	snabbt, utan 
+209780	relseosk
+209798	rpa.
+209812	rst
+209820	rker f
+209834	rgerna vid
+209858	solupp-/ nedg
+209886	ng.
+209894	Bakgr.Bel. HDR
+209924	Skapar en bild med optimal
+209980	kontrast genom att kombinera
+210040	en serie bilder.
+210074	Inomhus
+210094	relse
+210106	Nattmotiv
+210126	Personer
+210144	Landskap
+210162	Fotografera fyrverkerier med 
+210228	ngsammare slutarhastighet.
+210284	Det rek. att du anv
+210324	nder stativ.
+210354	r fotografering 
+210390	av b
+210400	de huvudmotiv 
+210432	och bakgrund. 
+210464	Med betoning p
+210494	 bl
+210502	-och gr
+210518	ntoner.
+210534	Bilder tas i ordningsf
+210580	ljd, med
+210600	inspelning av endast omr
+210650	den med
+210676	ndrad ljusstyrka, och sammansatt.
+210746	Perfekt f
+210766	r att f
+210782	 ljussp
+210798	r p
+210806	 bild.
+210822	Det rek. att du anv
+210862	nder stativ.
+210888	@A00A@POP UP
+210916	Ta bilder p
+210940	 m
+210946	nskliga motiv
+210976	med vackra nattmotiv i bakgrunden.
+211052	ngsammare slutarhastighet anv
+211112	nds.
+211124	Det rek. att du anv
+211164	nder stativ.
+211190	Ta bilder p
+211214	 vackra nattlandskap
+211258	med l
+211270	ngsammare slutarhastighet.
+211326	Det rek. att du anv
+211366	nder stativ.
+211396	r fotografering av portr
+211446	tt.
+211454	Stearinljus
+211478	Barn
+211488	e-Portrait
+211510	Ljussp
+211528	Multifokusfotografering
+211580	rbilder
+211600	r n
+211608	rbildsfotografering.
+211654	r naturfotografering med n
+211708	rbild.
+211728	r mer livfulla makrotagningar
+211794	mf
+211800	rt med standardmakro.
+211844	Perfekt f
+211864	r fotografering d
+211906	ljus och ljud fr
+211940	n kameran
+211964	r ogynnsamma. @A001@, blixt och AF-
+212038	belysning inaktiveras.
+212084	Tar flera bilder samtidigt med
+212148	olika fokuspositioner.
+212194	Enhetsanslutning
+212228	Anslut till en enhet.
+212272	Denna funktion kr
+212308	ver ett kompatibelt
+212350	objektiv. S
+212374	tt p
+212384	 ett kompatibelt objektiv.
+212438	Anv
+212446	nda C-inst
+212468	llningar?
+212490	Aktuella kamerainst
+212530	llningar
+212550	skrivs 
+212566	ver.
+212576	Anpassat l
+212598	ge C
+212616	@A08F@/Bluetooth g
+212654	rs tillg
+212672	ngligt
+212692	r en anslutning.
+212726	@A08F@/Bluetooth 
+212762	r helt
+212778	inaktiverat och ingen
+212824	anslutning kan initieras.
+212876	Bluetooth
+212896	Tr
+212902	dl
+212908	sa funktioner
+212940	@A0AE@
+212958	@A0AF@
+212972	Inaktiverar Bluetooth.
+213020	Bluetooth 
+213042	r alltid inaktiverad
+213090	r str
+213102	mmen 
+213114	r p
+213126	Aktiverar Bluetooth.
+213170	Bluetooth 
+213192	r alltid aktiverad
+213236	r tr
+213246	dl
+213252	s avtryckare
+213284	r str
+213296	mmen 
+213308	r p
+213320	Aktiverar Bluetooth.
+213364	Bluetooth 
+213386	r alltid aktiverad p
+213432	smartphones
+213462	r str
+213474	mmen 
+213486	r p
+213498	Parning slutf
+213526	rd.
+213536	Bluetooth-inst
+213566	llning
+213584	r 
+213590	ndrad till P
+213616	@A0AE@.
+213632	Parning p
+213656	r.
+213664	Utf
+213672	r parning p
+213696	 den
+213708	tr
+213714	dl
+213720	sa avtryckaren.
+213752	Ta bort den parade enheten.
+213810	Parning m
+213830	ste utf
+213846	ras igen
+213866	vid anv
+213882	ndning av den
+213912	tr
+213918	dl
+213924	sa avtryckaren.
+213956	Inst
+213966	llning f
+213984	r tr
+213994	dl
+214000	s slutare
+214020	Starta parning
+214050	Ta bort parning
+214082	AF Belysning
+214112	rgomr
+214124	de
+214130	Exponeringsutj
+214160	mning
+214172	Firmware-version
+214206	Det fungerar i
+214238	P/A/S/M
+214256	exponeringsl
+214282	ge.
+214290	Intervall
+214310	ge
+214316	Bildrut. prio.
+214346	Tidsprioritering
+214380	St
+214386	ller in 
+214404	tg
+214410	rden n
+214430	USB ansluts.
+214456	Bildgranskning
+214486	Webbkamera
+214508	Flytta l
+214526	gesratten till @A004@.
+214572	Eget l
+214586	ge C2
+214598	Eget l
+214612	ge C3
+214624	Eget l
+214638	ge C4
+214650	Eget l
+214664	ge C
+214678	xlar @A0B1@ p
+214706	/av.
+214716	Prioriterar att beh
+214756	lla antalet bildrutor.
+214808	rjar n
+214822	sta fotografering efter att 
+214882	intervalltiden har l
+214924	pt ut s
+214940	 snart den 
+214966	senaste bildrutan spelats in.
+215026	Prioriterar att h
+215062	lla intervalltiden.
+215104	Hoppar 
+215120	ver n
+215132	sta fotografering
+215174	r det satta intervallet inte g
+215242	att f
+215254	lja.
+215264	Exponering f
+215290	r varje bildruta som
+215334	fotograferats anv
+215370	nder m
+215384	tresultatet
+215414	r den bildrutan.
+215448	Standardiserar fotoexponeringen
+215518	r alla bildrutor. Utj
+215562	mnar luminans-
+215602	ndringarna i renderade 
+215652	timelapse-videos.
+215688	@A002@ Raderar alla automatiskt
+215754	uppdelade filer f
+215790	r en film.
+215812	P/A/S/M/B
+215832	P/A/S/M
+215848	@A0BE@ Control
+215882	d ram under @A0B0@
+215924	r satt till P
+215952	, visas en r
+215978	d 
+215986	yttre ram p
+216010	 sk
+216018	rmen under 
+216044	video-inspelning.
+232218	OlympusLanguage_svetft

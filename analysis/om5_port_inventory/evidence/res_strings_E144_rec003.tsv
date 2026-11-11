@@ -1,0 +1,11568 @@
+10	AEL/AFL
+26	@A025@REC
+46	MF
+52	RAW@A024@
+76	hled
+86	@A01D@
+100	 Dom
+120	esky
+190	2f
+196	AEL/AFL Pam
+224	AEL/AFL
+246	en
+252	 AEL
+262	@A001@ Nast.
+288	 Nast. v
+306	choz
+318	AF/MF
+334	na AF
+346	AF lampa
+364	Re
+370	im AF
+390	Stab. obr. pro ot
+426	. v
+434	. sm
+444	ry
+450	Resetovat v
+478	Nast. v
+502	e @A001@
+520	Proti N
+536	razu @A004@
+560	Priorita clony
+590	Re
+596	im Art LV
+616	Cross Process
+644	Diorama
+660	Dramatick
+680	 t
+690	Jemn
+700	 s
+706	piov
+718	Zrnit
+730	 film
+742	Jemn
+752	 sv
+760	tlo
+768	Bled
+778	 a sv
+790	tl
+796	 barvy
+810	Pop-Art
+826	Jemn
+836	 kresba
+852	Camera Obscura
+882	Pom
+890	r stran
+906	Auto
+916	Podsv
+928	cen
+936	 LCD
+946	@A003@ Var. 
+972	rove
+984	Baterie vybit
+1014	@A001@
+1028	Bracketing
+1050	MF V Re
+1066	imu B
+1080	asova
+1092	 B
+1098	Tla
+1106	./p
+1114	ep
+1120	na
+1128	@A003@Nast. ovl
+1170	@A006@ Nastaven
+1204	Chyba karty
+1228	Karta pln
+1250	Karta pln
+1272	Nast. karty
+1296	Vnit
+1310	 teplota fotoapar
+1346	tu
+1354	je p
+1366	li
+1372	 vysok
+1386	. Nechejte
+1410	fotoapar
+1428	t vychladnout.
+1458	Objektiv je uzam
+1492	en. Vysu
+1510	te jej.
+1526	Barevn
+1540	 prostor
+1558	Kontinu
+1574	ln
+1580	 AF
+1588	Sledov
+1606	 AF
+1614	Kontrast
+1632	Vel. Ke Kop
+1656	rov
+1670	Copyright - nast.
+1706	@A004@Re
+1724	im
+1730	Vlastn
+1746	Funkce tla
+1770	tka
+1782	Sm
+1788	r p
+1796	ep
+1802	na
+1812	Funkce p
+1830	ep
+1836	na
+1846	@A010@Z
+1862	mek
+1870	Autom. blesk
+1896	Dopl
+1906	kov
+1916	Vypnut
+1932	Redukce 
+1950	erv. o
+1968	Red. 
+1980	erv. o
+1996	 + pom. syn.
+2022	Bodov
+2034	 - p
+2044	eexp.
+2056	Bodov
+2068	 - podexp.
+2090	Disp/@A004@/PC
+2120	Nast dpi
+2138	Sekvence
+2156	@A014@ Proti Naraz @A004@
+2208	Samostatn
+2230	@A014@ Proti N
+2260	razu @A004@
+2284	e-Portr
+2304	Upravit
+2320	Upr. n
+2334	z sn
+2344	mku
+2352	B:Modr
+2368	G:Zelen
+2386	N:Neutr
+2402	ln
+2410	Or:Oran
+2426	ov
+2434	P:Purpurov
+2458	R:
+2464	erven
+2478	S:Sepiov
+2498	Ye:
+2506	lut
+2516	Krok EV
+2532	Korekce EVF
+2556	Exp/@A011@/ISO
+2586	Expozice
+2604	Dolad
+2620	 expozice
+2640	@A008@Prior. tv
+2678	Priorita tv
+2704	e vyp.
+2718	Priorita tv
+2744	e zap.
+2762	zev souboru
+2786	Firmware
+2804	@A014@ Vlastn
+2834	@A00A@ Dlouh
+2860	 exp
+2870	@A00A@ X-Synch
+2900	Ohnisk. vzd
+2924	l.
+2930	Ost
+2944	 prstenec
+2964	Gradace High Key
+2998	Gradace Low Key
+3030	Norm
+3040	ln
+3046	 gradace
+3064	Hi
+3070	Nastaven
+3088	 histogramu
+3112	i-Enhance
+3132	@A01A@/Barva/Vyv. b
+3178	Stab. obrazu
+3204	@A00F@ Nast.
+3230	@A00F@/Info nast.
+3266	@A006@ Info
+3290	Adres
+3306	IS Vypnut
+3328	ISO
+3336	ISO-Autom.
+3358	ISO-Autom. nast.
+3392	Vysok
+3404	 ISO
+3414	Doporu
+3428	eno
+3436	Krok ISO
+3454	Vertik
+3468	ln
+3474	 stab. obr.
+3498	Nastaven
+3520	rovn
+3532	Lo
+3538	Dokola
+3552	Manu
+3562	ln
+3568	 re
+3576	im
+3582	@A009@+@A007@
+3610	@A00E@
+3624	Vyu
+3632	it
+3638	 Pam
+3648	ti Alba
+3664	Menu
+3674	@A00E@/@A000@ Menu Displej
+3734	en
+3742	Integr. m
+3764	en
+3772	Bodov
+3786	Asistent MF
+3810	min
+3818	Pr
+3824	vodce re
+3842	imem
+3852	@A016@
+3866	Monot
+3878	nn
+3894	Video
+3906	Video @A017@
+3932	Video+Foto
+3958	cen
+3966	sobn
+3976	 Exp.
+3988	Pastelov
+4008	Zes
+4016	l. n
+4026	hled
+4036	Ne
+4046	dn
+4052	 karta
+4066	Nen
+4074	 spojen
+4092	Filtr 
+4106	umu
+4114	Redukce 
+4132	umu
+4144	dn
+4150	 sn
+4158	mek
+4166	Vyp
+4174	Zp
+4180	t@A018@
+4196	Zp
+4202	t@A019@
+4218	Zru
+4226	it@A018@
+4244	Vyfo
+4254	 s vyv. b
+4278	@A01A@
+4292	@A01B@@A01C@
+4318	Nast.@A019@
+4342	Zap
+4350	@A01E@
+4364	@A01F@
+4378	My OLYMPUS PENPAL
+4414	Nast. Pam
+4434	ti Alba
+4450	Re
+4456	im sn
+4468	mku
+4476	Nastaven
+4494	 re
+4502	imu sn
+4516	mku
+4524	Obr. nelze 
+4550	st
+4556	Po
+4562	et pixel
+4582	Pixel Mapping
+4610	@A023@ Re
+4630	im Makro
+4648	Tisk
+4658	Nast. Priority
+4688	Program Auto
+4714	Reset ochr.
+4738	@A024@
+4752	@A024@ Nast
+4776	Rychl
+4788	 smaz
+4806	Smazat RAW+JPEG
+4838	Nahr
+4848	v./maz
+4868	Zobraz n
+4886	hled
+4896	Redukce 
+4914	erv. o
+4930	 + dopl.
+4948	Spou
+4962	Prior. spou
+4990	 C-AF
+5002	Prior. spou
+5030	 S-AF
+5042	Reset
+5054	Reset objekt.
+5082	Reset/Moje Nast.
+5116	@A026@
+5130	Saturace
+5148	Pl
+5156	 a sn
+5172	Sv
+5180	ka
+5190	ti
+5196	Dokumenty
+5216	Oh
+5222	ostroj
+5236	High Key
+5254	Krajina
+5270	Low Key
+5286	Makro
+5298	@A03A@ Makro
+5330	rodn
+5340	 makro
+5354	No
+5364	 portr
+5382	No
+5392	 sc
+5400	na
+5406	Panorama
+5424	Portr
+5440	Re
+5446	im dig. stabil.
+5478	Sport
+5494	pad slunce
+5516	@A03A@ 
+5532	iroko
+5544	hl
+5556	@A04E@ Proti N
+5586	razu @A004@
+5610	@A04F@ Proti N
+5640	razu @A004@
+5664	@A02A@ 12s samospou
+5708	@A02A@ 2s samospou
+5750	Vel. K Odesl
+5782	@A02C@
+5796	Korekce st
+5824	Zm
+5830	na st
+5848	Ostrost
+5864	Priorita 
+5884	asu
+5892	Horizont
+5910	ln
+5916	 stab. obr.
+5940	Jednotliv
+5960	 AF
+5968	Jednotliv
+5988	 AF + MF
+6008	sp. re
+6022	im
+6028	@A02B@
+6042	Spir
+6056	Standardn
+6078	Start
+6090	Pam
+6102	Vysok
+6116	OLYMPUS PENPAL Sd
+6152	len
+6162	Electronick
+6186	 Hled
+6200	ek
+6206	OLYMPUS PENPAL Album
+6250	as
+6256	Re
+6262	im USB
+6276	Videov
+6290	st.
+6298	Hlasitost
+6318	Pros
+6328	m Vy
+6338	kejte
+6350	Autom. vyv. b
+6384	Zamra
+6396	eno
+6404	Blesk s vyv. b
+6446	ivka
+6460	rovka
+6472	Vyv
+6482	en
+6488	 b
+6500	St
+6506	ny
+6512	Slune
+6524	no
+6534	zk
+6542	Ochr. p
+6558	ed z
+6568	p.
+6582	Ano
+6590	R/M/D
+6602	Eye-Fi
+6616	16:9
+6626	4:3
+6634	3:2
+6642	6:6
+6650	3:4
+6658	ESP
+6666	NTSC
+6676	PAL
+6684	RAW
+6692	MF
+6698	Adobe RGB
+6718	I.S. 1
+6732	I.S. 2
+6746	Slow
+6756	Slow2
+6768	1/4
+6776	1/16
+6786	1/64
+6796	2nd Curtain
+6820	Vivid
+6832	Natural
+6848	JPEG
+6858	RAW+JPEG
+6876	Portrait
+6910	CWB
+6918	mode1
+6930	mode2
+6942	S-AF
+6952	C-AF
+6962	P/A/S
+6974	Menu
+6984	1/2EV
+6996	1/3EV
+7008	1EV
+7016	Off
+7024	I.S. 3
+7038	sRGB
+7048	Auto@A010@
+7070	MTP
+7078	Hold
+7088	Body
+7098	Lens
+7108	Flash
+7120	Acc
+7128	LV-Info
+7144	@A014@/@A028@
+7172	ART1
+7182	ART2
+7192	ART3
+7202	ART4
+7212	ART5
+7222	ART6
+7232	ART7
+7242	ART8
+7252	HDMI
+7262	iAUTO
+7274	P/A/S/M
+7290	ART9
+7300	ART10
+7312	Full
+7322	@A084@
+7336	Datum
+7348	Moje Nastaven
+7376	 1
+7382	Moje Nastaven
+7410	 2
+7416	Moje Nastaven
+7444	 3
+7450	Moje Nastaven
+7478	 4
+7484	Podsv
+7496	cen
+7504	 LCD
+7514	Pr
+7520	vodce
+7532	Digit
+7544	ln
+7550	 telekonvertor
+7580	Expozice @A007@
+7612	Je efektivn
+7636	 v 
+7646	re
+7652	imech P/A/S.
+7678	Je efektivn
+7702	 ve 
+7718	ech expozi
+7744	ch 
+7754	re
+7760	imech.
+7774	Pros
+7784	m zkontrolujte stav objektivu.
+7846	Podsv
+7858	cen
+7866	 On/Off.
+7884	Upravte korekci
+7918	expozice
+7936	@A066@:
+7954	Start/Stop
+7978	Video Recording
+8010	Hloubka ostrosti.
+8050	choz
+8060	 nastaven
+8084	AF z
+8094	ny
+8104	epnut
+8116	 do MF 
+8134	re
+8140	imu.
+8150	Zm
+8156	na 
+8166	RAW+JPEG/JPEG re
+8200	imu
+8210	kruhov
+8224	m voli
+8238	em.
+8246	@A013@/@A014@
+8286	 nastaven
+8320	 nastaven
+8340	 ISO.
+8362	 nastaven
+8382	 re
+8390	imu vyv. b
+8420	V re
+8430	imu fotografov
+8464	 dr
+8472	te
+8480	@A02A@: pro zamkunt
+8520	/odemknut
+8554	ho ovl
+8576	 @A010@.
+8594	@A01C@Funkce
+8620	@A048@Funkce
+8646	@A030@Funkce
+8672	@A00A@Funkce
+8698	SF
+8716	@A05C@5300K
+8740	@A05B@7500K
+8764	@A05D@3000K
+8788	@A059@5500K
+8812	@A058@6000K
+8836	Vyma
+8846	te v
+8856	echny sn
+8874	mky
+8884	na kart
+8900	 nebo form
+8922	tujte
+8936	pam
+8946	ovou kartu.
+8970	Resetujte nastaven
+9008	 nebo ulo
+9028	te
+9036	aktu
+9046	ln
+9052	 nastaven
+9072	 fotoapar
+9092	tu
+9100	jako Moje nastaven
+9142	Zvolit um
+9162	leck
+9172	 re
+9180	im nebo
+9198	dokon
+9210	it, podle zvolen
+9244	ho
+9252	fotografick
+9276	ho z
+9290	ru.
+9306	r re
+9316	imu z
+9328	znamu,
+9344	ve kter
+9360	m se budou ukl
+9390	dat
+9400	sn
+9406	mky nebo videa.
+9438	Zm
+9444	na pom
+9458	ru stran
+9478	sn
+9484	mku p
+9502	fotografov
+9534	vodn
+9544	 a z
+9554	kladn
+9570	mo
+9576	nosti sn
+9606	Zvolte sekven
+9638	 sn
+9654	 nebo
+9668	focen
+9680	 pomoc
+9694	 samospou
+9722	Zm
+9730	te re
+9742	im stabiliz
+9766	toru.
+9780	@A065@ a @A066@ se pou
+9828	vaj
+9836	 p
+9848	panov
+9864	 s fotoapar
+9888	tem.
+9898	Fotoapar
+9916	t automaticky fot
+9956	s r
+9964	zn
+9970	m nastaven
+9998	ka
+10008	 jednotliv
+10030	 sn
+10038	mek.
+10052	ekryje n
+10070	kolik sn
+10088	mk
+10102	es sebe a ulo
+10132	 je
+10142	jako jeden sn
+10170	mek.
+10182	prava intenzity blesku.
+10230	Se syst
+10246	mov
+10254	mi RC blesky
+10282	pou
+10290	ijte re
+10306	im bezdr
+10324	tov
+10332	ho
+10340	odpalov
+10360	 blesk
+10378	Po
+10388	te digit
+10406	ln
+10412	 zv
+10424	en
+10430	 foto.
+10444	Nastaven
+10462	 pokro
+10476	il
+10482	ch funkc
+10504	Spu
+10520	 prezentace s r
+10552	zn
+10558	mi
+10566	melodiemi nebo efekty.
+10612	Sn
+10618	mek bude zobrazen ve
+10662	spr
+10670	vn
+10676	 orientaci, i kdy
+10716	je fotoapar
+10740	t nato
+10754	en.
+10762	Uprav
+10774	 sn
+10782	mek.
+10792	Ulo
+10802	 tiskov
+10818	 data spolu se
+10850	sn
+10856	mky ulo
+10872	en
+10878	mi na kart
+10904	Zru
+10912	en
+10918	 ochrany
+10942	ech sn
+10956	mk
+10966	Nastaven
+10984	 prohl
+11000	en
+11006	 a 
+11014	prav.
+11026	Menu o nastaven
+11058	 automatick
+11082	ho
+11090	a ru
+11104	ho zaost
+11122	ov
+11136	Menu o nastaven
+11168	 tla
+11180	tek
+11190	a ovl
+11202	dac
+11210	ch prvk
+11230	Menu o nastaven
+11262	 spou
+11282	Menu o nastaven
+11314	 obrazovky,
+11340	zvuku a p
+11360	ipojen
+11374	 k PC nebo
+11398	tisk
+11408	rn
+11418	Menu o nastaven
+11450	 expozice.
+11472	Menu o nastaven
+11504	 blesku.
+11522	Menu o nastaven
+11554	 barvy sn
+11574	mku
+11584	nebo vyv
+11604	en
+11610	 b
+11624	Menu o nastaven
+11656	 nahr
+11680	nebo maz
+11706	Menu o nastaven
+11738	 videa.
+11754	Menu o dal
+11778	ch nastaven
+11802	ch.
+11810	Pro fotografov
+11844	 i
+11852	nahr
+11870	 videa zvolte
+11900	re
+11906	im AF.
+11920	Zapnut
+11934	m bude
+11950	automatick
+11972	 zaost
+11986	ov
+12000	aktivn
+12014	 i p
+12024	ed stisknut
+12048	m spou
+12070	Zvolte oblast AF zaost
+12116	ov
+12130	Zvol
+12140	 fungov
+12160	 ovlada
+12182	a k
+12194	ov
+12200	ho tla
+12216	tka
+12226	pro v
+12242	r AF z
+12256	ny.
+12264	Zapnut
+12278	m dojde k resetu
+12314	zaost
+12326	en
+12332	 na nekone
+12354	no
+12366	i ka
+12380	m vypnut
+12398	 fotoapar
+12418	tu.
+12430	epnut
+12442	m na ZAP umo
+12472	te
+12480	MF ost
+12494	en
+12500	 b
+12506	hem re
+12520	imu BULB.
+12540	Ur
+12546	ete si sm
+12566	r ot
+12578	en
+12588	zaost
+12600	ovac
+12610	ho prstence
+12636	pro p
+12648	esn
+12656	 ru
+12668	 zaost
+12682	en
+12696	epnut
+12708	m na ZAP dojde v
+12744	re
+12750	imu ru
+12768	ho ost
+12782	en
+12788	 v
+12794	dy
+12802	ke zv
+12818	en
+12824	 n
+12830	hledu sn
+12848	mku.
+12858	Zvolte v
+12876	choz
+12886	 polohu 
+12906	pro AF zaost
+12932	ovac
+12942	 z
+12948	nu.
+12956	LED sv
+12970	tlo usnad
+12990	uje autom. 
+13016	ost
+13024	en
+13030	 za 
+13040	patn
+13050	ho sv
+13062	tla.
+13072	Tla
+13082	tku @A034@ p
+13108	id
+13114	lte aretaci
+13140	ost
+13148	en
+13154	 nebo expozice.
+13190	epnut
+13202	m na ZAP z
+13224	stane
+13238	expozice aretov
+13270	na i po
+13288	uvoln
+13304	 tla
+13316	tka @A071@.
+13340	Role 4L
+13356	Zvolte funkci, kterou p
+13408	ad
+13414	te
+13422	vybran
+13436	mu p
+13446	ep
+13452	na
+13458	i.
+13464	Zvolte sm
+13484	r, ve kter
+13506	m se bude
+13532	ep
+13538	na
+13544	 ot
+13554	et.
+13562	Ve foto re
+13584	imu zvolte
+13608	ZAP pro vypnut
+13638	 @A010@.
+13656	Role A4
+13672	Upravit nastaven
+13706	 HDMI.
+13720	Adresa
+13738	epnut
+13750	m na Zap. nedojde
+13788	k zobrazen
+13810	 korekce expozice
+13848	v pr
+13862	 komponovan
+13886	m sn
+13896	mku.
+13914	Zvolte dobu, za kterou se
+13968	informace zobrazen
+14006	 na displeji
+14034	automaticky vypnou.
+14074	Podsv
+14086	cen
+14094	 LCD displeje se
+14130	ztlum
+14142	, pokud po zvolenou dobu
+14194	nedojde k 
+14218	dn
+14224	 akci.
+14238	Fotoapar
+14256	t p
+14264	ejde do 
+14282	sporn
+14294	ho
+14302	re
+14308	imu, pokud po zvolenou dobu
+14366	nedojde k 
+14390	dn
+14396	 akci.
+14414	pnut
+14424	, kter
+14438	 se oz
+14456	 p
+14468	ka
+14478	m automatick
+14504	m zaost
+14520	en
+14538	ete vypnout.
+14564	Nastaven
+14582	 hlasitosti p
+14610	ehr
+14630	Vyberte typ za
+14662	zen
+14670	 k p
+14680	ipojen
+14698	pomoc
+14710	 USB.
+14722	Zvolte velikost kroku, po kter
+14790	bude doch
+14810	zet k prom
+14842	expozi
+14860	ch parametr
+14888	Zvolte re
+14908	im m
+14920	en
+14930	Exp. re
+14946	im zvolte pomoc
+14978	 @A034@.
+14996	Nastavte citlivost ISO.
+15044	Zvolte horn
+15068	 hranici citlivosti ISO,
+15120	kter
+15130	 nebude v automatick
+15178	re
+15184	imu p
+15196	ekro
+15206	ena.
+15216	Zvolte expozi
+15248	 re
+15256	imy,
+15268	ve kter
+15284	ch je automatick
+15318	 ISO
+15330	k dispozici.
+15356	Nastavte max. dobu expozice
+15414	pro focen
+15434	 v re
+15446	imu BULB.
+15466	Zvolte prodlevu od stisknut
+15526	tla
+15536	tka spou
+15558	 po
+15568	samotnou expozici sn
+15610	mku.
+15620	Zvolte nejrychlej
+15658	 mo
+15666	nou
+15676	expozici, dostupnou p
+15726	fotografov
+15752	 s bleskem.
+15776	Zvolte nejdel
+15806	 mo
+15814	nou
+15824	expozici, dostupnou p
+15874	fotografov
+15900	 s bleskem.
+15924	Tato funkce omezuje 
+15966	um,
+15976	kter
+15986	 vznik
+16000	 b
+16006	hem dlouh
+16026	ch
+16034	expozi
+16052	ch 
+16060	as
+16070	Zvolte 
+16086	rove
+16100	potla
+16112	en
+16122	umu p
+16140	vysok
+16152	ch citlivostech ISO.
+16194	Zvolte re
+16214	im vyv
+16230	en
+16236	 b
+16250	Pro teplej
+16274	 pod
+16288	 barev p
+16312	automatick
+16334	m vyv
+16348	en
+16354	 b
+16368	Volba zobrazen
+16398	 barev
+16414	reprodukovan
+16440	ch na
+16454	monitoru nebo tisk
+16492	rn
+16502	Zm
+16508	na re
+16520	imu vyv
+16538	en
+16544	 b
+16558	na automat nebo na @A036@
+16616	i pou
+16628	it
+16634	 blesku.
+16652	Korekce perifern
+16686	ho sv
+16698	tla
+16708	podle typu objektivu.
+16752	Zm
+16758	na form
+16774	tu sn
+16786	mk
+16792	 JPEG
+16808	pravou velikosti sn
+16848	mku
+16858	a kompresn
+16880	ho pom
+16894	ru.
+16902	Pro form
+16920	ty @A037@ a @A038@ zvolte
+16974	rozli
+16986	en
+16992	 v pixelech.
+17022	i p
+17030	epnut
+17042	 na Zap. dojde
+17074	k vymaz
+17094	 aktu
+17106	ln
+17112	ho sn
+17124	mku.
+17134	Vyberte akci, kter
+17172	 se odehraje
+17204	i vymaz
+17224	 sn
+17232	mk
+17238	 ulo
+17248	en
+17254	ch
+17262	jako RAW+JPEG.
+17292	Autom. re
+17312	im bude pokra
+17340	ovat
+17352	v 
+17360	slov
+17374	 sn
+17382	mk
+17388	 a slo
+17402	ek
+17410	z p
+17418	edchoz
+17432	 karty.
+17448	Zvolte zp
+17468	sob pojmenov
+17502	jednotliv
+17522	ch sn
+17534	mk
+17544	pravou
+17560	pozice jejich n
+17592	zvu.
+17602	Zvolte v
+17620	choz
+17630	 v
+17646	pro dialogov
+17672	 okna potvrzen
+17706	Zvolte rozli
+17732	en
+17738	 pro tisk.
+17764	id
+17770	 jm
+17778	no fotografa
+17806	a jeho copyright
+17842	k nov
+17854	mu sn
+17866	mku.
+17880	i nastaven
+17902	 na Vyp.
+17922	se zvuk do vide
+17958	nebude nahr
+17982	vat.
+17992	Zkontroluje a nastav
+18038	obrazov
+18054	 sn
+18062	ma
+18068	 a
+18076	funkce obrazov
+18106	ho procesoru.
+18134	Nastavte optim
+18164	ln
+18170	 expozici
+18192	pro ka
+18210	 re
+18218	im m
+18230	en
+18240	samostatn
+18264	Kalibrace digit
+18296	ln
+18302	 vodov
+18316	hy.
+18324	Zapnout nebo vypnout
+18368	spojen
+18386	karty Eye-Fi.
+18414	Detailn
+18430	 nastaven
+18450	 fotoapar
+18470	tu.
+18478	Menu o nastaven
+18510	 sd
+18518	len
+18526	 modulu 
+18546	OLYMPUS PENPAL.
+18578	Menu o nastaven
+18610	 elektronick
+18636	ho
+18644	hled
+18656	ku.
+18668	ijmout sn
+18688	mky nebo vy
+18712	kat na 
+18730	dotaz z druh
+18756	ho za
+18770	zen
+18782	Kop
+18790	rovat v
+18806	echny sn
+18824	mky a
+18838	zvuk. soubory mezi @A00A@ a @A00B@.
+18910	Uk
+18916	zat po
+18930	et sn
+18942	mk
+18948	, kter
+18962	 jsou
+18976	pr
+18986	 ulo
+18996	eny v albu a
+19024	kolik jich lze je
+19064	 ulo
+19074	it.
+19082	Vymazat v
+19102	echny sn
+19120	mky z alba
+19144	nebo form
+19164	tovat album.
+19190	Nastaven
+19208	 jasu a barevn
+19238	ho
+19246	pod
+19258	 elektronick
+19284	ho
+19292	hled
+19304	ku.
+19312	Nastaven
+19330	 p
+19338	slu
+19346	enstv
+19362	Nastaven
+19380	 jasu
+19394	a barevn
+19412	 teploty
+19432	LCD obrazovky.
+19462	Zvolte dobu, po kterou budou
+19522	sn
+19528	mky zobrazeny na LCD.
+19572	Vyberte, kter
+19600	 ze dvou menu:
+19632	@A00E@ 
+19648	i @A000@, m
+19672	 b
+19678	t zobrazeno.
+19704	Zobrazen
+19722	 verze
+19738	firmwaru va
+19762	eho produktu.
+19790	Pro nastaven
+19816	 z
+19822	kladn
+19834	ch
+19842	funkc
+19854	 fotoapar
+19874	tu.
+19882	Fotografick
+19906	 menu 2
+19922	Ano
+19930	Ne
+19936	@A00A@ Zobrazen
+19968	 menu
+19980	@A000@ Menu Displej
+20020	Test. sn
+20038	mek
+20046	Re
+20052	im blesku
+20072	@A06B@:Vyp
+20094	Smazat v
+20116	@A023@: AEL/AFL
+20148	@A023@:
+20166	Start/Stop
+20190	Video Recording
+20222	Hloubka ostrosti.
+20258	Manu
+20268	ln
+20274	 WB
+20286	choz
+20296	 nastaven
+20320	AF z
+20330	ny
+20340	epnut
+20352	 do MF 
+20370	re
+20376	imu.
+20386	Zm
+20392	na 
+20402	RAW+JPEG/JPEG re
+20436	imu
+20446	kruhov
+20460	m voli
+20474	em.
+20482	Testovac
+20500	 sn
+20508	mek
+20518	bez ulo
+20534	en
+20544	Focen
+20556	 v re
+20568	imu @A02B@
+20596	i stisknut
+20618	m @A024@
+20636	Focen
+20648	 v re
+20660	imu @A02C@
+20688	i stisknut
+20710	m @A024@
+20728	Focen
+20740	 v re
+20752	imu @A02D@
+20780	i stisknut
+20802	m @A024@
+20820	Focen
+20832	 v re
+20844	imu @A02E@
+20872	i stisknut
+20894	m @A024@
+20912	@A023@:Stiskn
+20940	te pro fotopr
+20968	vodce,
+20984	op
+20990	tovn
+21000	m stisknut
+21022	m se vra
+21040	te.
+21048	@A023@: Zm
+21070	na x1/x2.
+21090	@A025@:Vyp
+21112	Upravte korekci
+21146	expozice
+21164	Re
+21170	im blesku - nastaven
+21216	Upravte korekci
+21250	expozice
+21268	V re
+21278	imu fotografov
+21312	 dr
+21320	te
+21328	@A012@: pro zamkunt
+21368	/odemknut
+21402	ho ovl
+21424	 @A010@.
+21442	Slou
+21452	en
+21458	 sn
+21466	mk
+21474	Slou
+21486	 2 sn
+21498	mky
+21506	Slou
+21518	 3 sn
+21530	mky
+21538	@A009@
+21552	@A01B@ Blesk Re
+21584	im
+21594	ivatelsk
+21612	 menu
+21624	A. AF/MF
+21642	B. Tla
+21656	./p
+21664	ep
+21670	na
+21678	C. Spou
+21696	/@A01E@
+21712	D. Disp/@A004@/PC
+21748	E. Exp/@A011@/ISO
+21784	F. @A00A@ Vlastn
+21820	G. @A01A@/Barva/Vyv. b
+21872	H. Nahr
+21888	v./maz
+21908	I. Video
+21926	J. Vestav
+21950	 el. hled
+21972	ek
+21978	Pros
+21988	m zadejte PIN k
+22020	d.
+22026	St
+22036	 AF
+22044	Vyma
+22054	e ulo
+22066	en
+22072	 nastaven
+22096	Info Vyp
+22114	@A049@ Zach. tepl
+22150	 barvy
+22164	@A00A@+vyv. b
+22198	Dotykov
+22214	 obrazovka
+22236	ART
+22244	SCN
+22252	3200
+22262	2400
+22272	2560
+22282	1920
+22292	1920
+22302	1440
+22312	1600
+22322	1200
+22332	1280
+22342	960
+22350	1024
+22360	768
+22368	640
+22376	480
+22384	320
+22392	240
+22400	Fotografie
+22422	Video
+22434	S-AF+MF
+22450	C-AF+TR
+22466	RAW/JPEG
+22486	pravy JPEG
+22508	Red. 
+22520	erv. o
+22538	@A02B@
+22552	Pom
+22560	r stran
+22578	ernob
+22600	pie
+22608	Saturace
+22626	@A025@
+22640	@A017@
+22656	pravy dat RAW
+22684	Ot
+22692	en
+22700	@A023@
+22714	Vybr. sn
+22732	mek
+22740	@A017@ Start
+22766	Smazat
+22780	Smazat
+22794	Smazat vybran
+22824	Vybran
+22840	Ulo
+22850	 sou
+22860	asn
+22868	 nastaven
+22896	ehr Video
+22916	Poslat Sn
+22936	mek
+22944	Reset
+22956	@A03A@Cross Proces
+22994	@A033@Dramatick
+23026	 T
+23036	Gradace
+23052	Barevn
+23066	 filtr
+23080	Monochromat. barvy
+23118	Pou
+23126	ij P
+23136	vodn
+23146	 Rozm
+23158	ry.
+23170	i volb
+23184	 Re
+23192	imu sn
+23206	mku
+23222	ete vynechat polo
+23258	ky, kter
+23280	nebyly nastaveny na ZAP.
+23330	Menu o nastaven
+23362	 alba v modulu
+23394	OLYMPUS PENPAL.
+23426	Video @A017@ zap.
+23462	AVCHD 1920
+23484	1080 Normal
+23508	Motion JPEG 1280
+23542	720
+23550	Motion JPEG 640
+23582	480
+23590	@A015@i-Enhance
+23622	@A07A@Vivid
+23646	@A07C@Portrait
+23676	@A032@Pop-Art
+23704	@A034@Jemn
+23726	 Kresba
+23742	@A035@Bled
+23764	 & Sv
+23776	tl
+23782	 Barvy
+23796	@A036@Jemn
+23818	 Sv
+23826	tlo
+23834	@A037@Zrnit
+23858	 Film
+23870	@A038@Camera Obscura
+23912	@A039@Diorama
+23940	Moje Nast. 1
+23966	Moje Nast. 2
+23992	Moje Nast. 3
+24018	Moje Nast. 4
+24044	Pln
+24058	kladn
+24072	Nastavit
+24090	Bez dat
+24106	@A07B@Natural
+24134	@A01F@Pastelov
+24166	Efekt
+24178	High Key
+24196	Norm
+24206	ln
+24214	Low Key
+24230	Monot
+24242	nn
+24250	Pro monochromatick
+24294	sn
+24300	mky.
+24310	Vhodn
+24322	 pro jasn
+24348	kontrast mezi 
+24380	modrou oblohou 
+24414	a mraky.
+24432	Vhodn
+24444	 p
+24450	i focen
+24472	teleobjektivem z 
+24510	velk
+24520	ch vzd
+24534	lenost
+24552	Vhodn
+24564	 pro extr
+24584	mn
+24596	zv
+24604	en
+24610	 kontrastu 
+24636	mezi oblohou 
+24666	a mraky.
+24684	Vhodn
+24696	 pro ple
+24714	ov
+24726	barvy p
+24742	i portr
+24758	tn
+24770	fotografii.
+24794	Pro s
+24806	piov
+24816	 efekt.
+24832	Pro modr
+24850	 efekt.
+24866	Pro purpurov
+24892	 efekt.
+24908	Pro zelen
+24928	 efekt.
+24944	Zm
+24950	na sytosti barev
+24984	Zm
+24990	na barvy sn
+25014	mku
+25022	Zm
+25028	na jasu
+25044	Rozost
+25058	en
+25064	 pozad
+25080	Zachycen
+25098	 pohybu
+25114	Foto tipy
+25134	Pr
+25140	vodce nen
+25160	 k
+25168	dispozici p
+25198	zapnut
+25212	m blesku
+25230	Jasn
+25240	 a 
+25248	iv
+25256	Ploch
+25268	 a potla
+25286	en
+25294	Tepl
+25306	Studen
+25322	Jasn
+25334	Tmav
+25346	Zjasnit sv
+25368	tl
+25374	 m
+25380	sta
+25388	Ztmavit sv
+25410	tl
+25416	 m
+25422	sta
+25430	Zjasnit tmav
+25456	 m
+25462	sta
+25470	Ztmavit tmav
+25496	 m
+25502	sta
+25510	Rozost
+25524	it
+25530	Zaost
+25542	it
+25548	Rozost
+25562	en
+25568	 pohyb
+25582	Zmrazen
+25598	 pohyb
+25612	dpi
+25620	@A03B@Jemn
+25642	 S
+25648	piov
+25664	ep
+25670	na
+25676	 P
+25686	ep
+25692	na
+25698	 A
+25708	ep
+25714	na
+25720	 S
+25730	ep
+25736	na
+25742	 M
+25748	Menu p
+25762	ep
+25768	na
+25782	ep
+25788	na
+25794	 @A006@
+25810	Ps
+25816	@A007@
+25830	FNr.
+25848	rka
+25856	@A079@/Value
+25886	edch./N
+25902	sl.
+25910	@A08B@
+25924	Objednej K Tisku
+25958	@A022@
+25972	@A00E@
+25986	@A000@
+26000	Tisk objedn
+26028	Reset
+26040	Zachovat
+26058	Ne
+26064	Nastavit
+26082	Zru
+26090	it
+26096	2f 0.3EV
+26114	2f 0.5EV
+26132	2f 0.7EV
+26150	2f 1.0EV
+26168	3f 0.3EV
+26186	3f 0.5EV
+26204	3f 0.7EV
+26222	3f 1.0EV
+26240	5f 0.3EV
+26258	5f 0.5EV
+26276	5f 0.7EV
+26294	5f 1.0EV
+26312	7f 0.3EV
+26330	7f 0.5EV
+26348	7f 0.7EV
+26366	Form
+26376	t 2L
+26386	WB BKT
+26400	A-B
+26408	3f 2 kroky
+26430	3f 4 kroky
+26452	3f 6 krok
+26474	G-M
+26482	Sn
+26488	mek
+26496	Autom. zes
+26518	len
+26532	ekryt
+26550	stup HDMI
+26570	HDMI Control
+26596	1080i
+26608	720p
+26618	480p/576p
+26638	Copyright - info
+26672	Jm
+26678	no autora
+26698	Copyright - jm
+26728	no
+26734	AE BKT
+26748	FL BKT
+26762	ISO BKT
+26778	ART BKT
+26798	@A01B@: Spus
+26824	te z
+26834	znam videa
+26858	@A01A@: Po
+26884	te sn
+26896	mek
+26904	@A063@: Start Video Rec
+26954	@A02B@: Po
+26980	 Sn
+26988	mek
+26996	Vyberte Sc
+27018	nick
+27028	 Re
+27036	im
+27042	Vyberte Um
+27064	leck
+27074	 Filtr
+27088	@A06C@: Pr
+27110	vodce Snadnou
+27140	Zm
+27146	nou Nastaven
+27174	Nastav
+27188	 clonu a
+27210	as automaticky.
+27242	Nastavte clonu
+27274	ru
+27288	Nastavte 
+27308	as
+27316	ru
+27330	Nastavte clonu
+27362	a 
+27368	as ru
+27388	@A015@: Spus
+27414	te/vypn
+27430	te z
+27440	znam videa.
+27464	Konec@A019@
+27488	MF AEL/AFL
+27510	mode3
+27522	mode4
+27534	Nam
+27544	knut
+27556	Zcela
+27568	AEL/S-AF
+27586	Expozice
+27604	AEL
+27612	AEL/Exp
+27628	AEL/AF Start
+27654	AF Start
+27672	AEL/AFL/Exp
+27696	AFL/Exp
+27712	----
+27722	Fotografick
+27746	 menu 1
+27762	Menu p
+27776	ehr
+27794	Kontinu
+27810	ln
+27816	 sledov
+27840	um
+27846	leck
+27856	ch filtr
+27874	. N
+27882	kter
+27896	filtry maj
+27918	 pomalej
+27938	 frekvenci.
+27962	Efekt um
+27980	leck
+27990	ho filtru je
+28018	prosv
+28030	cen na LCD a
+28058	frekvence prohl
+28092	en
+28098	 je vy
+28120	@A042@: Zv
+28146	it sn
+28158	mek.
+28168	@A042@: Zobrazte zv
+28212	ovac
+28230	me
+28236	ek a znovu stiskn
+28272	te
+28280	pro zv
+28298	en
+28304	 sn
+28312	mku.
+28326	eexponovan
+28350	Podexponovan
+28378	Indik
+28390	tory se automaticky vypnou,
+28448	pokud po dobu 10 sekund nedojde
+28514	k 
+28522	dn
+28528	 akci.
+28542	Indik
+28554	tory zapnut
+28586	hem nahr
+28616	Stisknut
+28634	m spou
+28652	 v
+28660	pr
+28670	hu nat
+28686	en
+28692	 videa
+28708	ukon
+28720	te z
+28730	znam.
+28742	Stisknut
+28760	m spou
+28778	 v
+28786	pr
+28796	hu nat
+28812	en
+28818	 videa
+28834	po
+28846	te sn
+28858	mek.
+28868	Nastaven
+28892	choz
+28902	 nastaven
+28926	Vypnout spojen
+28956	 karty Eye-Fi.
+28986	Zapnout spojen
+29016	 karty Eye-Fi.
+29046	2f
+29056	eexpozice
+29076	Podexpozice
+29100	Vyfot
+29112	 dva sn
+29128	mky.
+29140	Jeden s norm
+29166	ln
+29172	 expozic
+29196	druh
+29206	 p
+29212	eexponovan
+29238	Vyfot
+29250	 dva sn
+29266	mky.
+29278	Jeden s norm
+29304	ln
+29310	 expozic
+29334	druh
+29344	 podexponovan
+29376	S-AF AEL/AFL
+29402	C-AF AEL/AFL
+29428	Typ filtru
+29450	Typ filtru @A00B@
+29486	Typ filtru @A00C@
+29526	idat efekty
+29550	Efekt jemn
+29572	ho zaost
+29590	en
+29598	Efekt camery obscury
+29640	Efekt b
+29660	ch okraj
+29680	Efekt r
+29696	me
+29702	ku
+29708	Efekt paprsk
+29736	3D sn
+29748	mky
+29756	Pro fotografov
+29796	portr
+29816	Ple
+29824	ov
+29830	 t
+29836	ny 
+29846	pro HDTV.
+29866	Pro fotografov
+29906	krajiny. 
+29926	iv
+29936	reprodukce modr
+29968	ch
+29976	a zelen
+29992	ch odst
+30016	Pro 
+30028	fotografov
+30060	sportu a jin
+30086	ch 
+30096	rychl
+30108	ch d
+30126	Pro focen
+30146	 no
+30158	ch 
+30168	sc
+30174	n, pou
+30188	ije del
+30214	as ne
+30226	 p
+30232	i b
+30246	m 
+30254	sn
+30260	mku, 
+30274	doporu
+30288	ujeme stativ.
+30316	@A014@POP UP
+30344	Pro ve
+30358	ern
+30366	 a no
+30386	sn
+30400	 objektu
+30420	proti osv
+30440	tlen
+30450	mu 
+30460	pozad
+30472	. Pou
+30490	 del
+30508	exp. 
+30520	asy ne
+30534	 standardn
+30560	Focen
+30572	 d
+30582	 v 
+30592	pohybu.
+30608	Zvy
+30616	uje jas 
+30636	sv
+30642	tl
+30648	ch ploch 
+30670	ve sn
+30682	mku.
+30692	Zv
+30698	raz
+30706	uje
+30716	tmav
+30726	 oblasti 
+30748	ve sn
+30760	mku.
+30770	Tato funkce 
+30798	zm
+30808	uje rozmaz
+30840	zp
+30846	soben
+30858	 pohybem 
+30880	objektu nebo 
+30910	fotoapar
+30928	tu p
+30938	i focen
+30958	Makro re
+30976	im 
+30986	zvy
+30994	uj
+31004	 sytost, 
+31026	ostrost a kontrast.
+31066	Pro fotografov
+31106	se sv
+31118	tlem sv
+31136	ek. 
+31148	Reprodukce tepl
+31180	ch 
+31190	barev.
+31204	Pro 
+31216	fotografov
+31252	chodu/z
+31268	padu 
+31282	slunce. P
+31302	irozen
+31322	reprodukce 
+31346	erven
+31358	ch 
+31368	a 
+31374	lut
+31382	ch odst
+31406	Pro fotografov
+31446	dokument
+31464	 atd.
+31478	Zvy
+31486	uje kontrast mezi 
+31530	smeny a pozad
+31558	m.
+31564	Umo
+31574	uje fotografovat 
+31612	sn
+31618	mky, kter
+31638	 lze 
+31652	zkombinovat a 
+31684	vytvo
+31696	it tak jedinou 
+31730	panoramatickou fotografii.
+31784	AF@A039@MF
+31808	Vhodn
+31820	 pro no
+31846	fotografov
+31872	 oh
+31880	ostroj
+31894	. 
+31902	Pou
+31916	 del
+31932	asy z
+31948	rky 
+31960	ne
+31966	 za norm
+31984	ln
+31990	ch 
+32000	podm
+32010	nek.
+32020	Pro fotografov
+32060	zasn
+32072	en
+32078	ch hor, 
+32098	krajin, b
+32122	ch p
+32132	se
+32142	ch 
+32152	pl
+32162	 atd.
+32174	Pro fotografov
+32212	s ryb
+32224	m okem
+32240	FCON-P01.
+32260	Pro fotografov
+32300	s 
+32306	iroko
+32318	hlou
+32334	eds
+32342	dkou WCON-P01.
+32372	Pro fotografov
+32410	s makro p
+32430	eds
+32438	dkou
+32450	MCON-P01/02.
+32476	Zachyt
+32490	 sn
+32498	mky pro 3D zobraz.
+32536	Typ filtru @A00D@
+32572	Role 2L
+32588	Tisk indexu
+32616	ijmout
+32630	Tisk v
+32644	ech
+32652	Zp
+32662	Zobrazen
+32680	 m
+32690	ka
+32696	Bez okraje
+32718	@A002@ Sma
+32740	e se RAW i JPEG
+32772	Sn
+32778	mek nebyl p
+32802	ijat.
+32814	Sn
+32820	mek byl p
+32840	ijat.
+32852	Sn
+32858	mek nebyl odesl
+32890	n.
+32896	Sn
+32902	mek byl odesl
+32930	n.
+32936	Pracuji
+32952	Kalend
+32970	Ovl
+32988	Stavov
+33002	 Displej
+33020	Menu um
+33036	l. filtr
+33056	Menu sc
+33072	n. re
+33084	im
+33092	Zru
+33100	it
+33106	Sn
+33112	mek nelze upravit
+33148	Nelze tisknout
+33178	Karta
+33190	Form
+33200	tovat
+33212	Form
+33222	tovat
+33234	Pozor - sn
+33256	mek nelze vybrat
+33294	ist
+33302	te kontakty na 
+33336	kart
+33346	 such
+33358	m kusem l
+33378	tky.
+33392	ipojuji k @A004@
+33426	@A00A@ Pozor - Smazat V
+33478	@A00A@ Pozor - Smazat V
+33530	@A00B@ Pozor - Smazat V
+33582	@A00B@ Pozor - Smazat V
+33634	@A002@ Pozor - smazat v
+33686	@A002@ Pozor - smazat v
+33738	Pokra
+33750	ovat
+33760	Kop
+33768	rovat v
+33792	vodn
+33802	 nast.
+33816	Odstranit
+33836	Zam
+33844	tnout
+33856	Nalezen
+33872	@A005@
+33890	ep
+33896	na
+33902	 1
+33912	ep
+33918	na
+33924	 2
+33930	Zah
+33938	jen
+33946	 P
+33952	ipojen
+33968	Konec
+33980	Chyba detekce tv
+34024	zev souboru
+34048	Pln
+34058	1Sn
+34066	mek
+34074	@A00B@
+34088	@A00C@
+34106	eexp. a podexp.
+34138	Horn
+34148	 limit
+34162	@A00D@
+34176	Pouze obr
+34196	@A00F@
+34210	Nast. v
+34226	ch. 
+34236	rovn
+34250	na tuto pozici.
+34286	rov
+34298	 selhalo.
+34322	SLO @A026@: Fno. 
+34360	Horn
+34370	 clona
+34384	Oto
+34392	te ovlada
+34412	em @A027@ pro
+34446	esun na n
+34466	sleduj
+34484	 polo
+34496	ku
+34504	v menu
+34522	SLO @A027@: Fno. 
+34560	Horn
+34570	 clona
+34584	Oto
+34592	te ovlada
+34612	em @A026@ pro
+34646	esun na n
+34666	sleduj
+34684	 polo
+34696	ku
+34704	v menu
+34722	ipojov
+34740	 za
+34758	Hled
+34768	m.
+34776	Pros
+34786	m vy
+34796	kejte.
+34812	ek
+34818	m na dotaz
+34840	Zmen
+34850	i na 1920x1440.
+34882	Zmen
+34892	i na 1280x960.
+34924	ek
+34930	m na odezvu.
+34956	Zami
+34966	te fotoapar
+34990	tem 
+35002	na list b
+35026	ho pap
+35040	ru.
+35048	Zami
+35058	te fotoapar
+35082	tem 
+35094	na list b
+35118	ho pap
+35132	ru.
+35140	Zad
+35152	 PIN K
+35166	du
+35172	Vysok
+35184	 ISO
+35194	Doporu
+35208	en
+35214	 ISO
+35224	Zablokovan
+35248	Dopis
+35260	Vodov
+35272	ha
+35278	Form
+35288	t L
+35296	Prohl
+35310	ec
+35316	 panel
+35330	Role L
+35344	Pou
+35352	ijte del
+35372	 ohnisko
+35392	nebo b
+35408	te bl
+35422	e.
+35428	Posu
+35438	te objekt d
+35462	le od pozad
+35490	Rozost
+35504	en
+35510	 Pozad
+35526	S d
+35534	tmi mluvte
+35558	a fo
+35568	te je z 
+35586	rovn
+35600	jejich o
+35624	Sekvenc
+35640	 po
+35652	te mno
+35666	stv
+35678	sn
+35684	mk
+35690	 a teprve n
+35714	sledn
+35730	vyberte ten spr
+35762	vn
+35772	Tipy pro focen
+35802	 d
+35814	Ke zv
+35828	eti se p
+35846	ibli
+35856	te
+35864	a fo
+35874	te jej z jeho v
+35908	ky
+35916	nebo i z podhledu.
+35954	Zam
+35964	te se na o
+35986	i.
+35994	Upoutejte pozornost hra
+36042	kami.
+36054	Sekvenc
+36070	 po
+36082	te mno
+36096	stv
+36108	sn
+36114	mk
+36120	 a teprve n
+36144	sledn
+36160	vyberte ten spr
+36192	vn
+36202	Tipy pro focen
+36232	 zv
+36242	at
+36248	Fo
+36254	te z v
+36270	ky rostlin, nebo
+36306	z podhledu. Pozor
+36344	na souhru s pozad
+36380	m.
+36386	Volte tmav
+36408	 pozad
+36422	 nebo
+36436	pou
+36444	ijte barevn
+36468	 pap
+36478	ry.
+36488	Rozost
+36502	ete pozad
+36522	 i pop
+36536	ed
+36546	Zaost
+36558	ete na nejbli
+36590	 ty
+36598	inky
+36610	nebo pest
+36630	k kv
+36640	tiny.
+36652	Zast
+36670	 slune
+36688	kem
+36698	nebo jin
+36716	m st
+36730	tkem
+36746	in
+36752	 z
+36762	r m
+36776	m.
+36782	Tipy pro focen
+36812	 kv
+36820	tin
+36828	Focen
+36840	 pod 3/4 
+36860	hlem d
+36886	dlu na tal
+36910	i p
+36918	irozen
+36932	 vzhled.
+36954	dlo fo
+36968	te nap
+36982	. u okna.
+37004	Ide
+37012	ln
+37018	 je kombinace
+37048	zadobo
+37066	ho nasv
+37082	cen
+37098	ibli
+37108	te se k objektu.
+37144	Form
+37154	t na v
+37170	ku dod
+37192	sn
+37198	mku v
+37216	 hloubku.
+37236	Tipy pro focen
+37266	 j
+37272	dla
+37280	Hlavn
+37292	 objekt by m
+37318	l zauj
+37332	mat
+37342	2/3 plochy sn
+37370	mku.
+37380	Rozd
+37390	lte hlavn
+37410	 objekt
+37428	a pozad
+37444	 diagon
+37460	lami, aby
+37482	sn
+37488	mek p
+37500	sobil p
+37516	irozen
+37534	Um
+37540	st
+37546	te hlavn
+37564	 objekt 
+37584	na diagon
+37604	lu, aby
+37622	sn
+37628	mek p
+37640	sobil p
+37656	irozen
+37674	Tipy pro kompozici
+37712	Nasazen
+37728	m adapt
+37744	ru MCON-P02
+37770	na 14-42mm EZ m
+37804	ete po
+37818	izovat
+37834	detailn
+37850	 z
+37860	ry mal
+37874	ch objekt
+37898	Nasazen
+37914	m adapt
+37930	ru FCON-P01
+37956	na 14-42mm II R, m
+37996	ete po
+38010	izovat
+38026	120
+38034	 z
+38044	ry stylu ryb
+38070	ho oka.
+38086	Nasazen
+38102	m adapt
+38118	ru WCON-P01
+38144	na 14-42mm II R, m
+38184	ete zachytit
+38212	11mm 
+38224	iroko
+38236	hl
+38242	 z
+38252	ry.
+38260	Pou
+38268	it
+38274	m makro sv
+38296	tla
+38306	MAL-1, m
+38324	te kontrolu nad
+38358	osv
+38366	tlen
+38376	m makro z
+38408	Tipy pro p
+38432	slu
+38440	enstv
+38456	Form
+38466	tuj Album
+38486	Video @A017@ vyp.
+38522	Video interval
+38552	Multi N
+38568	hl
+38574	Tisk multi
+38596	Nov
+38604	 P
+38610	rov
+38624	Chyb
+38634	 inkoust
+38652	Chyb
+38662	 pap
+38676	Vyp
+38684	Zru
+38692	it@A020@
+38710	Potvrdit@A019@
+38744	ce@A022@
+38762	Snadn
+38774	 tisk - start@A024@
+38814	Nast. Jm
+38832	no@A02D@
+38850	Konec@A018@
+38874	Konec@A025@
+38898	Tisk@A01F@
+38920	Tla
+38930	tko spou
+38954	Tisk jednoho@A020@
+38992	Ano@A019@
+39012	OK
+39018	Zap
+39026	Prom
+39036	tac
+39044	 interval
+39064	Vy
+39070	kejte
+39082	Manu
+39092	ln
+39098	 vyv
+39110	en
+39116	 b
+39128	Nastaven
+39148	Velikost 1: Velk
+39184	Celkov
+39200	Seznam Za
+39222	zen
+39232	Obdr
+39242	et Dotaz P
+39264	rov
+39278	Vyhledat
+39306	 Vyhled
+39332	Zvolte Destinaci
+39366	Pam
+39376	 Alba Je Pln
+39404	Po
+39410	et sn. na list
+39440	Odes
+39458	 Sn
+39466	mku
+39474	Pohlednice
+39496	@A005@X
+39512	Chyba tisku
+39536	Info o tisku
+39562	Vybrat re
+39582	im tisku
+39600	Objedn
+39614	vka tisku
+39634	Pap
+39646	Profil
+39660	Super FP blesk
+39690	Norm
+39700	ln
+39712	ij
+39726	 Sn
+39734	mku
+39742	Obdr
+39752	et Dotaz Sn
+39776	mku
+39786	ek
+39796	 Na Dotaz
+39820	ij
+39834	Voln
+39844	 M
+39850	sto
+39858	Odpojte USB
+39882	Reset
+39894	Velikost 2: St
+39924	ed
+39930	Ji
+39936	 Ulo
+39946	eno
+39954	@A027@ Monot
+39980	nn
+39988	@A028@
+40002	@A029@ Vlastn
+40032	Odes
+40050	Data zaznamen
+40078	na
+40084	Nastaven
+40102	 zm
+40114	no
+40120	Kr
+40126	tk
+40134	Velikost
+40152	Prezentace
+40174	Standardn
+40196	Detail
+40210	Jm
+40216	no
+40222	Nast. Jm
+40240	no
+40250	en
+40264	Vyv
+40274	en
+40280	 b
+40292	Auto @A001@
+40316	@A039@5500K @A001@
+40354	@A027@ @A001@
+40382	@A028@ @A001@
+40410	@A03B@7500K @A001@
+40448	@A03C@5300K @A001@
+40486	@A03E@ @A001@
+40514	WB NG Opakovat
+40548	Bez
+40560	ist
+40568	te kartu
+40586	Nastaven
+40604	@A019@
+40618	3D sn
+40630	mek nebyl vytvo
+40662	en.
+40670	Zobrazen
+40688	 3D
+40696	Obr.Nelze 
+40720	st
+40726	Zmen
+40736	i na 640x480.
+40764	Velikost 1: Mal
+40798	Velikost 2: Velk
+40834	Velikost 3: St
+40864	ed
+40870	Zru
+40878	it@A01F@
+40896	Zru
+40904	it@A02C@
+40922	Odstranit@A02D@
+40954	PC / vlastn
+40978	 tisk@A01F@
+41002	WB/@A01A@@A061@
+41034	Ohnisk. vzd
+41058	l.@A01A@
+41076	Kelviny@A01A@
+41104	Vybrat@A041@
+41130	@A063@@A064@
+41156	@A023@+Tla
+41180	tko Spou
+41204	@A05F@@A033@
+41230	@A02E@@A02F@
+41256	@A030@@A02F@
+41282	@A031@@A02F@
+41308	@A032@@A01A@
+41334	@A042@@A041@
+41360	@A023@@A02F@
+41386	@A03D@@A025@
+41416	hled s vyv. b
+41448	@A033@
+41462	Norm
+41472	ln
+41478	 automatick
+41502	 vyv
+41514	en
+41520	 b
+41534	Teplej
+41550	 pod
+41564	 barev sv
+41584	tel p
+41602	automatick
+41624	m vyv
+41638	en
+41644	 b
+41658	Efekt
+41670	Do ztracena
+41698	hodn
+41708	 fotky
+41724	ada fotek
+41744	Resetov
+41770	zresetuje z
+41794	kladn
+41806	 funkce sn
+41840	Resetov
+41866	zresetuje v
+41890	echny funkce krom
+41930	data, jaz. a n
+41960	kter
+41970	ch nastaven
+41998	Vestav
+42016	 blesk
+42030	Nelze nahr
+42052	t video v
+42074	re
+42080	imu AVCHD.
+42102	Tento objektiv nen
+42140	 podporov
+42160	n.
+42166	@A002@ Pozor, reset v
+42210	ech nastaven
+42238	Menu pro p
+42262	slu
+42270	enstv
+42284	Menu nastaven
+42314	A. OLYMPUS PENPAL Sd
+42356	len
+42366	B. OLYMPUS PENPAL Album
+42414	C. Electronick
+42444	 Hled
+42458	ek
+42464	Nastavte aktu
+42492	ln
+42498	 datum a 
+42518	as.
+42526	Zvolte normu videa pou
+42574	vanou
+42588	ve va
+42602	 zemi nebo regionu.
+42642	Zvolte velikost kroku, po kter
+42710	bude doch
+42730	zet k prom
+42762	hodnot citlivosti ISO.
+42808	USB
+42816	100mm
+42828	150mm
+42840	11"
+42848	17"
+42856	4"
+42862	6"
+42868	8"
+42874	10"
+42882	A0
+42888	A1
+42894	A2
+42900	A3
+42906	A4
+42912	A5
+42918	A6
+42924	A7
+42930	A8
+42936	A9
+42942	B0
+42948	B1
+42954	B2
+42960	B3
+42966	B4
+42972	B5
+42978	B6
+42984	B7
+42990	B8
+42996	B9
+43002	4"
+43008	8"
+43016	Panorama
+43034	4"
+43040	10"
+43050	Panorama
+43068	4"
+43074	11"
+43084	Panorama
+43102	4"
+43108	12"
+43118	Panorama
+43136	10cm
+43146	30cm
+43158	Panorama
+43176	89mm
+43186	254mm
+43200	Panorama
+43218	A Mode
+43232	B Mode
+43246	C Mode
+43260	M Value
+43276	FP M Value
+43298	Channel
+43314	Level
+43326	TTL Value
+43346	Auto Value
+43368	FP TTL Value
+43394	Auto
+43404	@A01C@/FP
+43424	@A07D@ 4
+43442	@A07E@ 9
+43460	@A07F@ 25
+43480	@A07F@ 100
+43502	BGM
+43510	Cool
+43520	Joy
+43528	Sekvence H
+43550	Melancholy
+43572	@A012@ Proti N
+43602	razu @A004@
+43626	TTL Auto
+43644	Sekvence L
+43666	@A013@ Proti N
+43696	razu @A004@
+43720	@A078@arge
+43742	St
+43748	edn
+43758	@A074@mall
+43780	@A01C@Funkce
+43806	Redukce 
+43824	umu v
+43836	tru
+43844	Zami
+43854	te fotoapar
+43878	tem 
+43890	na list b
+43914	ho pap
+43928	ru.
+43936	@A03E@+Tla
+43960	tko spou
+43984	Manual
+43998	FP TTL Auto
+44022	FP Manual
+44042	Level Lo
+44060	Level Mid
+44080	Level Hi
+44098	ch
+44104	Beat
+44114	Adobe
+44126	AVCHD 1920
+44148	1080 Fine
+44168	AVCHD 1280
+44190	720 Fine
+44208	AVCHD 1280
+44230	720 Normal
+44252	Zv
+44262	it
+44268	@A01D@: AEL/AFL
+44300	Focen
+44312	 v re
+44324	imu @A02B@
+44352	i stisknut
+44374	m @A01E@
+44392	Focen
+44404	 v re
+44416	imu @A02C@
+44444	i stisknut
+44466	m @A01E@
+44484	Pro fotografov
+44524	hlavn
+44536	ho objektu 
+44562	a pozad
+44578	. 
+44584	iv
+44596	reprodukce modr
+44628	ch 
+44638	a zelen
+44654	ch odst
+44678	Nejlep
+44700	pro fotografie 
+44734	zbl
+44742	zka.
+44752	@A03A@ Efekt ryb
+44786	ho oka
+44800	Krajina+portr
+44832	@A038@6000K @A001@
+44870	@A03A@4000K @A001@
+44908	@A03D@3000K @A001@
+44946	Focen
+44958	 v re
+44970	imu @A02D@
+44998	i stisknut
+45020	m @A01E@
+45038	Focen
+45050	 v re
+45062	imu @A02E@
+45090	i stisknut
+45112	m @A01E@
+45130	Vypnout re
+45152	im dotykov
+45174	 obrazovky.
+45198	Zapnout re
+45220	im dotykov
+45242	 obrazovky.
+45266	Zm
+45272	na jazyka.
+45294	Zvolte funkci, kterou p
+45346	ad
+45352	te
+45360	vybran
+45374	mu tla
+45390	tku.
+45404	epnut
+45416	m na Zap. m
+45442	ete po
+45458	dit
+45468	sn
+45474	mek, i kdy
+45496	 nedo
+45508	lo v re
+45524	imu
+45534	S-AF k 
+45550	pln
+45558	mu zaost
+45576	en
+45590	epnut
+45602	m na Zap. m
+45628	ete po
+45644	dit
+45654	sn
+45660	mek, i kdy
+45682	 nedo
+45694	lo v re
+45710	imu
+45720	C-AF k 
+45736	pln
+45744	mu zaost
+45762	en
+45772	Zvolte typ a mno
+45806	stv
+45814	 informac
+45838	zobrazovan
+45860	ch p
+45870	i stisknut
+45896	tla
+45906	tek @A00F@ nebo @A01A@.
+45954	Zvolte funkce, zobrazen
+46010	i stisknut
+46032	 @A035@ v jednotliv
+46072	ch
+46080	expozi
+46098	ch re
+46110	imech.
+46124	Zvolte rozsahy p
+46158	eexpozice
+46180	a podexpozice, kter
+46220	 se budou
+46242	zobrazovat barevn
+46278	 na LCD.
+46296	Zvolte Zap. pro n
+46332	pov
+46340	du
+46348	pr
+46358	 vybran
+46374	ho re
+46386	imu
+46396	oto
+46404	en
+46410	m p
+46418	ep
+46424	na
+46430	e re
+46440	im
+46450	Zvolte, jak se zobraz
+46494	 efekt
+46510	um
+46516	leck
+46526	ch filtr
+46544	 na LCD.
+46562	Zvolte, jak bude sn
+46602	mek
+46612	zv
+46622	en po stisknut
+46656	tla
+46666	tka @A042@.
+46694	i nastaven
+46716	 na Zap. bude
+46746	k hodnot
+46764	 komp. blesku
+46798	ipo
+46806	tena i hodnota exp. komp.
+46858	Nastavte stejnou korekci
+46910	vyv. b
+46928	 pro v
+46942	echny re
+46960	imy.
+46974	i zapnut
+46992	m re
+47002	imu @A004@
+47026	zvolte re
+47046	im z
+47056	znamu videa.
+47086	i nastaven
+47108	 na ZAP, dojde k
+47144	zachycen
+47162	 sn
+47170	mku
+47180	po skon
+47196	en
+47202	 video nahr
+47226	vky.
+47236	Zvolte 
+47252	rove
+47262	 nabit
+47276	 baterie,
+47302	i kter
+47316	 se zobraz
+47342	varov
+47358	 @A003@.
+47376	Zapnout nebo vypnout
+47420	nastaven
+47438	 dotykov
+47456	ho displeje.
+47482	Zobrazit adres
+47514	 nebo
+47532	idat nov
+47550	 kontakt
+47570	do adres
+47590	e.
+47596	Zobrazit nebo upravit informace
+47662	o modulu OLYMPUS PENPAL.
+47712	Zvolte velikost sn
+47750	mku
+47760	pro p
+47772	enos.
+47784	Zvolte velikost sn
+47822	mku
+47832	pro vytvo
+47852	en
+47858	 kopie.
+47874	@A05A@4000K
+47898	@A01E@:Vyp
+47924	choz
+47934	 nastaven
+47958	AF z
+47968	ny
+47974	3D
+47984	epnut
+47996	 do MF 
+48014	re
+48020	imu.
+48030	@A01D@:
+48048	Start/Stop
+48072	Video Recording
+48104	Manu
+48114	ln
+48120	 WB
+48128	Komprese
+48146	Super Fine
+48168	Fine
+48178	Normal
+48192	Basic
+48204	Hloubka ostrosti.
+48240	Zm
+48246	na 
+48256	RAW+JPEG/JPEG re
+48290	imu
+48300	kruhov
+48314	m voli
+48328	em.
+48336	Testovac
+48354	 sn
+48362	mek
+48372	bez ulo
+48388	en
+48398	dummy
+48410	Ulo
+48418	it
+48424	@A017@Omezova
+48452	 hlasitosti
+48476	Automaticky omezuje hlasitost
+48538	vstupu mikrofonu, pokud vstupn
+48604	hlas. p
+48620	ekro
+48632	 ur
+48640	enou 
+48652	rove
+48666	Re
+48672	im stab.
+48690	@A01D@: Tla
+48716	tka @A02F@ a @A030@.
+48758	Nastavit IS re
+48788	im
+48794	@A066@:Stiskn
+48822	te pro fotopr
+48850	vodce,
+48866	op
+48872	tovn
+48882	m stisknut
+48904	m se vra
+48922	te.
+48930	@A066@: Zm
+48952	na x1/x2.
+48972	Retro
+48988	ste
+49000	 barva
+49014	@A082@Retro
+49038	@A083@
+49054	ste
+49066	 Barva
+49080	Efekt st
+49098	nu: vlevo a vpravo
+49136	Efekt st
+49154	nu: naho
+49172	e a dole
+49190	Nedokon
+49206	eno
+49214	Stisknut
+49232	m @A025@ b
+49254	hem
+49264	relace Fotop
+49302	se m
+49314	ete rozhodnout, zda
+49356	ulo
+49364	it nedokon
+49386	enou pr
+49402	ci
+49410	nebo aktu
+49430	ln
+49436	 pr
+49444	ci zahodit.
+49468	Nelze na
+49488	st soubor pro obnoven
+49532	 sn
+49550	Dokon. pozd.
+49576	Zahodit
+49596	epn
+49604	te na Zap. pro aktivaci
+49654	priority tv
+49682	 nebo o
+49704	pro v
+49720	r autom. ost
+49746	en
+49756	@A023@: Tla
+49782	tka @A02A@ a @A02B@.
+49824	Zami
+49834	te fotoapar
+49858	tem 
+49870	na list b
+49894	ho pap
+49908	ru.
+49916	AF pro ka
+49940	 sn
+49948	mek
+49956	Znovu zaost
+49982	 pro ka
+50002	 sn
+50010	mek.
+50020	Zaost
+50034	 pouze jednou
+50068	i spu
+50088	 samospou
+50116	@A013@Stab. obrazu
+50154	Aktivuje/deaktivuje
+50196	stabilizaci obrazu
+50236	pro nep
+50252	etr
+50260	it
+50266	 sn
+50286	Vyp.
+50296	Stabilizace obrazu je deaktivov
+50360	na
+50368	pro up
+50382	ednostn
+50402	 rychlosti
+50426	nep
+50434	etr
+50442	it
+50448	ho sn
+50472	Dolad
+50488	 AF
+50496	Ukazatel z
+50518	ny AF
+50532	@A01E@ pomal
+50558	 sekvence
+50578	@A01E@: Start Video Rec
+50628	@A030@: Po
+50654	 Sn
+50662	mek
+50670	@A075@Bled
+50692	 a sv
+50704	tl
+50710	 barvy
+50724	Zaost
+50738	 na detekovan
+50774	i nebo tv
+50802	Zvoleno bude bli
+50840	 oko.
+50852	Zaost
+50866	 na detekovan
+50902	i nebo tv
+50930	Zvoleno bude prav
+50966	 oko.
+50978	Zaost
+50992	 na detekovan
+51028	i nebo tv
+51056	Zvoleno bude lev
+51090	 oko.
+51102	Detekce tv
+51128	 nefunguje.
+51152	Zaost
+51166	 na detekovanou tv
+51210	Zap.
+51220	Stabilizace obrazu je aktivov
+51280	na
+51288	pro up
+51302	ednostn
+51322	 stability obrazu.
+51362	Pravd
+51374	podobn
+51388	 se sn
+51406	 rychlost
+51428	sn
+51446	Omezuje rozmaz
+51480	 fotoapar
+51500	tu
+51512	i uvoln
+51532	 z
+51542	rky.
+51552	C-AF Z
+51566	mek
+51574	Kontrola
+51592	Seznam dat
+51614	Data objektivu
+51648	choz
+51658	 data
+51670	Zvolit AF z
+51694	nu
+51702	a AF re
+51718	im.
+51726	@A028@: Zobrazte zv
+51770	ovac
+51788	me
+51794	ek a znovu stiskn
+51830	te
+51838	pro zv
+51856	en
+51862	 sn
+51870	mku.
+51884	choz
+51894	 nastaven
+51918	AF z
+51928	ny
+51938	epnut
+51950	 do MF 
+51968	re
+51974	imu.
+51984	Manu
+51994	ln
+52000	 WB
+52008	Hloubka ostrosti.
+52044	Prior.tv
+52064	e a o
+52078	 zap.
+52090	Prior.tv
+52110	e a prav.oka zap.
+52146	Prior.tv
+52166	e a lev. oka zap.
+52202	Zm
+52208	na 
+52218	RAW+JPEG/JPEG re
+52252	imu
+52262	kruhov
+52276	m voli
+52290	em.
+52298	Testovac
+52316	 sn
+52324	mek
+52334	bez ulo
+52350	en
+52360	Kdy
+52368	 je expozi
+52394	 doba @A096@
+52422	nebo m
+52440	, p
+52448	epne se p
+52468	edn
+52476	 z
+52492	rka z mechanick
+52524	 na ele-
+52544	ktronickou pro omezen
+52588	 roz-
+52602	maz
+52614	 p
+52620	i uvoln
+52640	 z
+52650	rky.
+52660	Vybrat barvu@A01A@
+52698	Norm
+52708	@A020@
+52722	@A021@
+52736	@A02B@Funkce
+52762	@A029@ @A001@
+52790	@A02A@ @A001@
+52818	@A046@Z
+52834	mek
+52846	i nastaven
+52868	 Zap. je
+52888	zachov
+52902	na hloubka pole n
+52938	hledu
+52952	i po uvoln
+52978	 tla
+52990	tka.
+53000	Vyv
+53010	en
+53018	Pro sn
+53040	 objektu
+53060	na rozmazan
+53084	m pozad
+53106	Detekuje pohyb fotoapar
+53154	tu
+53162	a nastav
+53180	 optim
+53194	ln
+53204	expozi
+53222	 dobu.
+53236	@A04E@Funkce
+53262	@A053@Jemn
+53284	 sv
+53292	tlo
+53300	@A06C@: AEL/AFL
+53332	@A06C@:
+53350	Start/Stop
+53374	Video Recording
+53406	Hloubka ostrosti.
+53442	Manu
+53452	ln
+53458	 WB
+53470	choz
+53480	 nastaven
+53504	AF z
+53514	ny
+53524	epnut
+53536	 do MF 
+53554	re
+53560	imu.
+53570	Zm
+53576	na 
+53586	RAW+JPEG/JPEG re
+53620	imu
+53630	kruhov
+53644	m voli
+53658	em.
+53666	Testovac
+53684	 sn
+53692	mek
+53702	bez ulo
+53718	en
+53728	Focen
+53740	 v re
+53752	imu @A06C@
+53780	i stisknut
+53802	m @A06B@
+53820	Focen
+53832	 v re
+53844	imu @A06D@
+53872	i stisknut
+53894	m @A06B@
+53912	Focen
+53924	 v re
+53936	imu @A06E@
+53964	i stisknut
+53986	m @A06B@
+54004	Focen
+54016	 v re
+54028	imu @A06F@
+54056	i stisknut
+54078	m @A06B@
+54096	@A077@Zrnit
+54120	 film
+54132	@A06C@:Stiskn
+54160	te pro fotopr
+54188	vodce,
+54204	op
+54210	tovn
+54220	m stisknut
+54242	m se vra
+54260	te.
+54268	@A06C@: Zm
+54290	na x1/x2.
+54310	@A076@:Vyp
+54332	1/2
+54340	1/8
+54348	1/32
+54358	@A01C@: Spus
+54384	te z
+54394	znam videa
+54418	@A01B@: Po
+54444	te sn
+54456	mek
+54466	@A069@: Video @A05E@
+54508	1/128
+54520	@A087@@A088@
+54550	SLO @A089@: Fno. 
+54588	Horn
+54598	 clona
+54616	SLO @A08A@: Fno. 
+54654	Horn
+54664	 clona
+54678	ART13
+54690	ART14
+54702	@A046@
+54716	Zm
+54722	nit re
+54736	im na P/A/S/M.
+54766	Korekce lichob
+54802	ku
+54812	i zapnut
+54830	 je mo
+54848	 korekce
+54868	lichob
+54888	kov
+54896	ho zkreslen
+54926	Na displeji se objev
+54968	 kontrolky.
+54992	Stisknut
+55010	m spust
+55026	te korekci
+55050	lichob
+55070	kov
+55078	ho zkreslen
+55102	. Zru
+55116	te
+55128	idr
+55136	en
+55142	m tla
+55156	tka.
+55166	Korekce lichob
+55202	ku vyp.
+55218	Korekce lichob
+55254	ku zap.
+55270	Zru
+55278	it @A018@
+55298	Fotoapar
+55316	t zvol
+55330	 nast. stabilizace
+55370	detekov
+55390	m pohybu fotoapar
+55426	tu.
+55434	Nastaven
+55452	 korekce@A01A@
+55482	@A03C@ Vodov. nam
+55520	k.
+55534	rem Zap. zobraz
+55566	te
+55574	vodov
+55586	hu v zabudovan
+55616	m EVF.
+55632	Aktivujte p
+55656	i @A058@.
+55676	Rychlost
+55694	@A066@ 4 sn
+55718	mky
+55726	@A067@ 5 sn
+55750	mk
+55758	@A04A@Funkce
+55784	Automatick
+55806	 jas EVF
+55828	kladn
+55840	 informace
+55864	pravy barev
+55888	@A078@Camera Obscura
+55930	Srovnejte obraz.
+55964	Po prvn
+55980	m sn
+55990	mku posu
+56008	te 
+56018	fotoap., pak 
+56048	stiskn
+56062	te spou
+56084	Odstranit datovou sadu objektivu
+56150	Efekt rozmaz.: vlevo a vpravo
+56210	Efekt rozmaz.: naho
+56250	e a dole
+56268	Elektr. zoom
+56294	Natural@A037@
+56322	Vivid@A037@
+56346	@A0BF@
+56360	@A0D0@
+56374	@A0D1@
+56388	@A0D2@
+56402	@A0D3@
+56416	@A0D4@
+56430	@A0D5@
+56444	@A0D6@
+56458	@A0D7@
+56472	@A0D8@
+56486	@A0D9@
+56500	@A0DA@
+56514	@A0DB@
+56528	@A0DC@
+56542	@A0DD@
+56556	@A0DE@
+56570	@A0DF@
+56584	@A0E0@
+56598	@A0E1@
+56612	@A0E2@
+56626	@A0E3@
+56640	@A0E4@
+56654	@A0E5@
+56668	@A0E6@
+56682	@A0E7@
+56696	@A0E8@
+56710	@A0E9@
+56724	@A0EA@
+56738	@A0EB@
+56752	@A0EC@
+56766	@A0ED@
+56780	@A0EE@
+56794	@A0EF@
+56808	@A0F0@
+56822	@A0F1@
+56836	@A0F2@
+56850	@A0C0@
+56864	@A0C1@
+56878	@A0C2@
+56892	@A0C3@
+56906	@A0C4@
+56920	@A0C5@
+56934	@A0C6@
+56948	@A0C7@
+56962	@A0C8@
+56976	@A0C9@
+56990	@A0CA@
+57004	@A0CB@
+57018	@A0CC@
+57032	@A0CD@
+57046	@A0CE@
+57060	@A0CF@
+57074	@A0D0@
+57088	@A0D1@
+57102	@A0D2@
+57116	@A0D3@
+57130	@A0D4@
+57144	@A0BF@
+57158	@A0D6@
+57172	@A0D7@
+57186	@A0D8@
+57200	@A0D9@
+57214	@A0DA@
+57228	@A0DB@
+57242	@A0DC@
+57256	@A0DD@
+57270	@A0DE@
+57284	@A0DF@
+57298	@A0E0@
+57312	@A0E1@
+57326	@A0E2@
+57340	@A0E3@
+57354	@A0E4@
+57368	@A0E5@
+57382	@A0E6@
+57396	@A0E7@
+57410	@A0E8@
+57424	@A0E9@
+57438	@A0EA@
+57452	@A0EB@
+57466	@A0EC@
+57480	@A0ED@
+57494	@A0EE@
+57508	@A0EF@
+57522	@A0F0@
+57536	@A0F1@
+57550	@A0F2@
+57564	@A0F3@
+57578	@A0F4@
+57592	@A0F5@
+57606	@A0F6@
+57620	@A0F7@
+57634	@A0E2@
+57648	@A0F9@
+57662	@A0FA@
+57676	@A0FB@
+57690	@A0FC@
+57704	@A0FD@
+57718	@A0FE@
+57732	@A0FF@
+57746	@A100@
+57760	@A101@
+57774	@A102@
+57788	@A103@
+57802	@A104@
+57816	@A105@
+57830	Spou
+57842	/@A01E@
+57858	Podvodn
+57876	Zoom
+57886	@A01E@+Tla
+57910	tko Spou
+57934	@A075@: Pr
+57956	vodce Snadnou
+57986	Zm
+57992	nou Nastaven
+58020	Zami
+58030	te fotoapar
+58054	tem 
+58066	na list b
+58090	ho pap
+58104	ru.
+58112	@A06B@: Start Video Rec
+58162	@A02B@: Po
+58188	 Sn
+58196	mek
+58204	@A06B@+Tla
+58228	tko Spou
+58252	@A023@: Zobrazte zv
+58296	ovac
+58314	me
+58320	ek a znovu stiskn
+58356	te
+58364	pro zv
+58382	en
+58388	 sn
+58396	mku.
+58406	@A01D@: Zm
+58428	na x1/x2.
+58448	@A01D@:Stiskn
+58476	te pro fotopr
+58504	vodce,
+58520	op
+58526	tovn
+58536	m stisknut
+58558	m se vra
+58576	te.
+58584	Zv
+58594	it sn
+58606	mek
+58616	nebo @A024@ pomoc
+58652	 voli
+58664	e.
+58670	Voli
+58680	em vyberte sn
+58708	mek.
+58720	@A06D@: Zv
+58748	te sn
+58760	mek
+58770	nebo @A024@.
+58796	Menu o nastaven
+58828	 spou
+58848	a kontinu
+58868	ln
+58874	ho sn
+58898	Zvolte po
+58918	et sn
+58930	mk
+58936	 po
+58946	zen
+58954	ch
+58966	hem jedn
+58984	 sekundy v re
+59012	imu
+59022	sekven
+59040	ho sn
+59060	 @A052@.
+59078	Obrazovka ztmavne,
+59118	pokud po zvolenou dobu
+59166	nedojde k 
+59190	dn
+59196	 akci.
+59210	@A01E@ rychl
+59236	 sekvence
+59256	Zvolte po
+59276	et sn
+59288	mk
+59294	 po
+59304	zen
+59312	ch
+59324	hem jedn
+59342	 sekundy v re
+59370	imu
+59380	sekven
+59398	ho sn
+59418	 @A056@.
+59436	@A072@: Zobrazit menu prohl
+59494	en
+59506	Vymazat aktu
+59532	ln
+59538	 sn
+59546	mek
+59556	v re
+59566	imu prohl
+59588	en
+59598	@A072@: Vymazat aktu
+59640	ln
+59646	 sn
+59654	mek
+59664	okam
+59674	it
+59686	@A025@: Zobrazit menu prohl
+59744	en
+59754	@A025@: Vymazat aktu
+59796	ln
+59802	 sn
+59810	mek
+59820	okam
+59830	it
+59852	te maz
+59870	 sn
+59878	mk
+59884	 tla
+59896	tku
+59906	@A072@ nebo @A025@.
+59946	@A011@: Tla
+59972	tka @A02E@ a @A02F@.
+60014	Fotoapar
+60032	t vybere vhodn
+60062	 re
+60070	im 
+60080	pro po
+60096	zen
+60104	 sn
+60112	mku subjektu.
+60142	Nab
+60150	dka Live Guide je dostupn
+60206	Zobraz
+60220	 menu pro nast. fotoapar
+60270	tu
+60276	Automaticky pou
+60308	ije nastaven
+60338	vybran
+60352	ho sc
+60364	nick
+60374	ho re
+60386	imu.
+60396	Pou
+60404	ije kreativn
+60430	 efekty.
+60448	Podsv
+60460	cen
+60468	 On/Off.
+60486	Nastavte jas a 
+60520	barevnou teplotu
+60556	LCD obrazovky.
+60586	fps
+60594	@A014@/@A080@/@A028@
+60636	@A081@/@A082@
+60664	@A04F@Funkce
+60690	Stisknut
+60708	m tla
+60722	tka @A077@ b
+60748	hem
+60758	nat
+60768	en
+60774	 videa v Live Guide re
+60820	imu,
+60838	ete upravit 
+60864	rove
+60874	 Live Guide
+60900	ot
+60908	en
+60914	m ost
+60932	m prstencem.
+60958	Stisknut
+60976	m tla
+60990	tka @A077@ b
+61016	hem
+61026	nat
+61036	en
+61042	 videa,
+61066	ete p
+61078	epnout do re
+61104	imu MF.
+61122	Dal
+61132	m stisknut
+61154	m se vr
+61174	te do AF.
+61194	AF Stop
+61214	idr
+61222	en
+61228	m tla
+61242	tka @A06D@,
+61274	ete vypnout autofokus
+61320	a uzamknout zaost
+61356	en
+61362	 na m
+61374	st
+61384	ve kter
+61400	m bylo tla
+61424	tko stisknuto.
+61454	Deaktivace funkce tla
+61500	tka.
+61510	Kalibrace dotyku.
+61546	Extern
+61560	 @A02A@
+61576	mm
+61586	Extern
+61600	 @A02E@ hlas. z
+61632	znamu
+61644	Zvolit AF z
+61668	nu
+61676	a AF re
+61692	im.
+61700	3f
+61706	4f
+61712	Ovl
+61730	Nastavit IS re
+61760	im
+61766	@A01D@: Zobrazte zv
+61810	ovac
+61828	me
+61834	ek a znovu stiskn
+61870	te
+61878	pro zv
+61896	en
+61902	 sn
+61910	mku.
+61920	Po
+61926	et sn
+61938	mk
+61944	 @A033@
+61960	Funkce p
+61978	ep
+61984	na
+61990	e re
+62000	im
+62008	Vlo
+62018	 ulo
+62028	en
+62034	 vlastn
+62050	 nastaven
+62074	do p
+62084	ep
+62090	na
+62096	e re
+62106	im
+62116	Vlastn
+62130	 nastaven
+62150	 samospou
+62176	@A014@ 
+62192	asova
+62206	Interval./
+62228	asosb. sn
+62248	m.
+62254	Po
+62266	 ur
+62274	en
+62280	 po
+62288	et sn
+62300	mk
+62310	v p
+62318	edem ur
+62334	en
+62340	m intervalu
+62366	a vytvo
+62388	asosb
+62400	rn
+62406	 video.
+62422	Prodleva spou
+62456	Nastav
+62470	 prodlevu od stisknut
+62518	spou
+62532	 po po
+62548	zen
+62556	 prvn
+62572	fotografie.
+62596	Interval
+62614	Automatick
+62636	 vypnut
+62654	4 h
+62662	Pracuji
+62678	@A007@Funkce
+62704	Volba z
+62720	ny AF
+62732	S./Sek.
+62748	@A010@ :Vypnuto
+62784	SLO @A011@: Fno. 
+62822	Horn
+62832	 clona
+62850	SLO @A012@: Fno. 
+62888	Horn
+62898	 clona
+62912	Vyp
+62920	Po prvn
+62936	m sn
+62946	mku posu
+62964	te 
+62974	fotoap., pak 
+63004	stiskn
+63018	te spou
+63040	Hlasitost z
+63064	znamu
+63076	Redukce 
+63094	umu v
+63106	tru
+63114	Vysok
+63128	Zami
+63138	te fotoapar
+63162	tem 
+63174	na list b
+63198	ho pap
+63212	ru.
+63220	Zami
+63230	te fotoapar
+63254	tem 
+63266	na list b
+63290	ho pap
+63304	ru.
+63312	Zami
+63322	te fotoapar
+63346	tem 
+63358	na list b
+63382	ho pap
+63396	ru.
+63404	@A071@+Tla
+63428	tko Spou
+63452	@A072@+Tla
+63476	tko Spou
+63500	@A070@+Tla
+63524	tko Spou
+63548	@A050@Funkce
+63574	@A051@Funkce
+63600	1 h
+63608	K. @A004@ Nastaven
+63648	@A039@@A03A@
+63674	Galerie
+63690	Ka
+63700	mu tla
+63716	tku
+63732	e b
+63740	t p
+63752	azena
+63766	funkce p
+63784	i sn
+63806	Deaktivace funkce tla
+63852	tka.
+63862	Upravte korekci
+63896	expozice
+63914	Upravte korekci
+63948	expozice
+63966	Upravte korekci
+64000	expozice
+64018	Upravte korekci
+64052	expozice
+64070	Zvolit AF z
+64094	nu
+64102	a AF re
+64118	im.
+64126	Zvolit AF z
+64150	nu
+64158	a AF re
+64174	im.
+64182	Zvolit AF z
+64206	nu
+64214	a AF re
+64230	im.
+64238	Zvolit AF z
+64262	nu
+64270	a AF re
+64286	im.
+64294	Zvolit AF z
+64318	nu
+64326	a AF re
+64342	im.
+64350	Zvolit AF z
+64374	nu
+64382	a AF re
+64398	im.
+64406	@A06C@: Tla
+64432	tka @A02A@ a @A02B@.
+64474	@A066@: Tla
+64500	tka @A02A@ a @A02B@.
+64542	@A066@: AEL/AFL
+64574	@A06E@: AEL/AFL
+64606	@A06F@: AEL/AFL
+64638	@A06D@: AEL/AFL
+64670	@A06C@: Zobrazte zv
+64714	ovac
+64732	me
+64738	ek a znovu stiskn
+64774	te
+64782	pro zv
+64800	en
+64806	 sn
+64814	mku.
+64824	@A066@: Zobrazte zv
+64868	ovac
+64886	me
+64892	ek a znovu stiskn
+64928	te
+64936	pro zv
+64954	en
+64960	 sn
+64968	mku.
+64978	@A06E@: Zobrazte zv
+65022	ovac
+65040	me
+65046	ek a znovu stiskn
+65082	te
+65090	pro zv
+65108	en
+65114	 sn
+65122	mku.
+65132	@A06F@: Zobrazte zv
+65176	ovac
+65194	me
+65200	ek a znovu stiskn
+65236	te
+65244	pro zv
+65262	en
+65268	 sn
+65276	mku.
+65286	@A06D@: Zobrazte zv
+65330	ovac
+65348	me
+65354	ek a znovu stiskn
+65390	te
+65398	pro zv
+65416	en
+65422	 sn
+65430	mku.
+65440	Hloubka ostrosti.
+65476	Hloubka ostrosti.
+65512	Hloubka ostrosti.
+65548	Manu
+65558	ln
+65564	 WB
+65572	Manu
+65582	ln
+65588	 WB
+65596	Manu
+65606	ln
+65612	 WB
+65624	choz
+65634	 nastaven
+65658	AF z
+65668	ny
+65678	choz
+65688	 nastaven
+65712	AF z
+65722	ny
+65732	choz
+65742	 nastaven
+65766	AF z
+65776	ny
+65786	epnut
+65798	 do MF 
+65816	re
+65822	imu.
+65836	epnut
+65848	 do MF 
+65866	re
+65872	imu.
+65886	epnut
+65898	 do MF 
+65916	re
+65922	imu.
+65932	Zm
+65938	na 
+65948	RAW+JPEG/JPEG re
+65982	imu
+65992	kruhov
+66006	m voli
+66020	em.
+66028	Zm
+66034	na 
+66044	RAW+JPEG/JPEG re
+66078	imu
+66088	kruhov
+66102	m voli
+66116	em.
+66124	Zm
+66130	na 
+66140	RAW+JPEG/JPEG re
+66174	imu
+66184	kruhov
+66198	m voli
+66212	em.
+66220	Testovac
+66238	 sn
+66246	mek
+66256	bez ulo
+66272	en
+66282	Testovac
+66300	 sn
+66308	mek
+66318	bez ulo
+66334	en
+66344	Testovac
+66362	 sn
+66370	mek
+66380	bez ulo
+66396	en
+66406	Focen
+66418	 v re
+66430	imu @A06C@
+66458	i stisknut
+66480	m @A071@
+66498	Focen
+66510	 v re
+66522	imu @A06D@
+66550	i stisknut
+66572	m @A071@
+66590	Focen
+66602	 v re
+66614	imu @A06E@
+66642	i stisknut
+66664	m @A071@
+66682	Focen
+66694	 v re
+66706	imu @A06F@
+66734	i stisknut
+66756	m @A071@
+66774	Focen
+66786	 v re
+66798	imu @A06C@
+66826	i stisknut
+66848	m @A072@
+66866	Focen
+66878	 v re
+66890	imu @A06D@
+66918	i stisknut
+66940	m @A072@
+66958	Focen
+66970	 v re
+66982	imu @A06E@
+67010	i stisknut
+67032	m @A072@
+67050	Focen
+67062	 v re
+67074	imu @A06F@
+67102	i stisknut
+67124	m @A072@
+67142	Focen
+67154	 v re
+67166	imu @A02B@
+67194	i stisknut
+67216	m @A072@
+67234	Focen
+67246	 v re
+67258	imu @A02C@
+67286	i stisknut
+67308	m @A072@
+67326	Focen
+67338	 v re
+67350	imu @A02D@
+67378	i stisknut
+67400	m @A072@
+67418	Focen
+67430	 v re
+67442	imu @A02E@
+67470	i stisknut
+67492	m @A072@
+67510	@A06E@:Stiskn
+67538	te pro fotopr
+67566	vodce,
+67582	op
+67588	tovn
+67598	m stisknut
+67620	m se vra
+67638	te.
+67646	@A06F@:Stiskn
+67674	te pro fotopr
+67702	vodce,
+67718	op
+67724	tovn
+67734	m stisknut
+67756	m se vra
+67774	te.
+67782	@A06D@:Stiskn
+67810	te pro fotopr
+67838	vodce,
+67854	op
+67860	tovn
+67870	m stisknut
+67892	m se vra
+67910	te.
+67918	@A06E@: Zm
+67940	na x1/x2.
+67960	@A06F@: Zm
+67982	na x1/x2.
+68002	@A06D@: Zm
+68024	na x1/x2.
+68044	Eye-Fi
+68058	@A05B@Funkce
+68084	@A05C@Funkce
+68110	Pros
+68120	m zkontrolujte stav objektivu.
+68182	Objektiv je uzam
+68216	en. Vysu
+68234	te jej.
+68250	Komiks
+68264	@A067@Komiks
+68290	Pros
+68300	m nastavte sc
+68328	n. re
+68340	im @A05D@.
+68364	Manu
+68374	ln
+68380	 hodnota
+68398	Manu
+68408	ln
+68414	 hodnota @A01A@
+68450	Kelviny
+68466	Vestav
+68484	 blesk
+68498	Ost
+68506	en
+68512	 BULB/TIME
+68534	Zvolte On pro povolen
+68578	 MF
+68592	hem BULB/TIME focen
+68638	asova
+68650	 BULB/TIME
+68672	Nastavte maxim
+68702	ln
+68712	as pro
+68728	focen
+68740	 v re
+68752	imu BULB/TIME.
+68782	Live BULB
+68802	Sn
+68808	mky budou v pr
+68842	hu focen
+68864	v re
+68874	imu BULB zobrazov
+68910	ny.
+68918	Live TIME
+68938	Sn
+68944	mky budou v pr
+68978	hu focen
+69000	v re
+69010	imu TIME zobrazov
+69046	ny.
+69054	Po
+69062	tadlo
+69074	kr
+69084	@A022@ + IS Off
+69120	i zapnut
+69138	 na On nebude v 
+69174	pr
+69184	hu sekven
+69208	ho sn
+69232	fungovat stabiliz
+69268	tor obrazu.
+69292	Nam
+69302	k. se stab. obr.
+69340	i p
+69348	epnut
+69360	 na Zap. bude p
+69392	i 
+69400	stisknut
+69418	 spou
+69434	 fungovat
+69456	stabilizace obrazu.
+69496	LV makro re
+69520	im
+69526	Zvolte re
+69546	im, kdy bude
+69574	tla
+69584	tko spou
+69606	 stisknuto b
+69632	hem
+69642	zv
+69652	en
+69658	ho 
+69666	iv
+69672	ho n
+69682	hledu.
+69696	Kdy
+69704	 je nam
+69722	knuta spou
+69752	zv
+69762	en
+69768	 n
+69774	hled zmiz
+69798	a na obrazovce se zn
+69840	zorn
+69854	zv
+69864	ovac
+69874	 r
+69880	me
+69886	ek.
+69894	Kdy
+69902	 je nam
+69920	knuta spou
+69950	automatick
+69972	 ost
+69982	en
+69988	 bude
+70002	fungovat ve zv
+70036	en
+70042	m n
+70050	hledu.
+70064	Zvolte kompozi
+70098	 m
+70108	ku.
+70116	@A03B@
+70130	Fotoapar
+70148	t se s
+70162	m vypne,
+70182	pokud nen
+70202	 pou
+70224	po zvolenou dobu.
+70260	Live SCP
+70278	@A057@ Priorita baterie
+70326	Zvolte typ baterie, kter
+70380	bude pou
+70398	ita s bateriov
+70434	gripem.
+70450	Baterie v t
+70474	le
+70480	Baterie v gripu
+70512	Pot
+70520	 co dojde k vybit
+70556	 baterie
+70576	v t
+70584	le, za
+70598	ne se pou
+70620	vat
+70630	baterie um
+70652	st
+70662	 v gripu.
+70682	Pot
+70690	 co dojde k vybit
+70726	 baterie
+70746	v gripu, za
+70770	ne se pou
+70792	vat
+70802	baterie um
+70824	st
+70834	 v t
+70844	le.
+70852	Nastavte 
+70872	rove
+70882	 mikrofonu.
+70906	Redukuje v
+70928	trn
+70940	um
+70952	i nat
+70966	en
+70972	 video z
+71002	Video efekt
+71026	Zapnout nebo vypnout
+71070	video efekt v re
+71104	imu @A008@.
+71128	Vestav
+71146	 el. hled
+71168	ek
+71174	Nastaven
+71192	 menu vestav
+71222	ho
+71230	elektronick
+71254	ho hled
+71272	ku.
+71280	@A05F@ Zobrazen
+71312	 m
+71322	ka
+71328	Zvolte kompozi
+71362	 m
+71372	ku
+71380	pro elektronick
+71412	 hled
+71426	ek.
+71436	Zapnout p
+71456	i @A05F@.
+71476	Styl el. hled
+71506	ku
+71512	Zvolte styl zobrazen
+71554	 pro
+71566	vestav
+71584	 el. hled
+71606	ek.
+71614	Styl 1
+71628	Styl 2
+71642	Styl 3
+71656	@A03C@ Info nast.
+71692	Zvolte typ zobrazen
+71732	 informace
+71760	i stisknut
+71782	 @A01A@.
+71802	Zapnout p
+71822	i @A03C@.
+71842	Auto. zapnut
+71868	 el. hled.
+71894	epne automaticky z obrazovky
+71954	na el. hled
+71980	ek, kdy
+71996	 se
+72006	k n
+72014	mu p
+72024	ibl
+72036	 oko.
+72048	Vypnout o
+72072	 senzor.
+72092	@A059@: pro p
+72120	epnut
+72132	 z obrazovky
+72160	na el. hled
+72186	ek.
+72194	Zapnout o
+72218	 senzor.
+72238	@A03D@: 
+72256	iv
+72262	 n
+72268	hled zap./vyp.
+72298	Zvolte obnovovac
+72332	 frekvenci
+72356	vestav
+72374	ho el. hled
+72400	ku.
+72408	Multi funkce
+72434	@A066@: Stiskn
+72464	te pro potvrzen
+72500	vybran
+72514	 funkce a zm
+72542	te
+72550	funkci kruhov
+72578	m voli
+72592	em.
+72600	@A023@: Stiskn
+72630	te pro potvrzen
+72666	vybran
+72680	 funkce a zm
+72708	te
+72716	funkci kruhov
+72744	m voli
+72758	em.
+72766	Single Echo
+72790	Multi Echo
+72822	 volba
+72836	Kontrola p
+72858	eexp. a podexp.
+72892	Stisknut
+72910	m tla
+72924	tka @A010@ b
+72950	hem
+72960	focen
+72972	 m
+72980	ete zvolit
+73008	nu AF.
+73022	MTP
+73030	ESP
+73038	NTSC
+73048	PAL
+73056	USB
+73064	RAW
+73072	@A0B2@arge
+73094	@A037@iddle
+73118	@A038@mall
+73140	Super Fine
+73162	Fine
+73172	Normal
+73186	Basic
+73198	SF
+73216	MF
+73222	fps
+73230	100mm
+73242	150mm
+73254	11"
+73262	17"
+73270	4"
+73276	6"
+73282	8"
+73288	10"
+73296	A0
+73302	A1
+73308	A2
+73314	A3
+73320	A4
+73326	A5
+73332	A6
+73338	A7
+73344	A8
+73350	A9
+73356	B0
+73362	B1
+73368	B2
+73374	B3
+73380	B4
+73386	B5
+73392	B6
+73398	B7
+73404	B8
+73410	B9
+73416	4"
+73422	8"
+73430	Panorama
+73448	4"
+73454	10"
+73464	Panorama
+73482	4"
+73488	11"
+73498	Panorama
+73516	4"
+73522	12"
+73532	Panorama
+73550	10cm
+73560	30cm
+73572	Panorama
+73590	89mm
+73600	254mm
+73614	Panorama
+73632	Adobe RGB
+73652	I.S. 1
+73666	I.S. 2
+73680	Slow
+73690	Slow2
+73702	2nd Curtain
+73726	Vivid
+73738	Natural
+73754	JPEG
+73764	RAW+JPEG
+73782	Portrait
+73816	CWB
+73824	3f 0.3EV
+73842	3f 0.5EV
+73860	3f 0.7EV
+73878	3f 1.0EV
+73896	5f 0.3EV
+73914	5f 0.5EV
+73932	5f 0.7EV
+73950	5f 1.0EV
+73968	mode1
+73980	mode2
+73992	mode3
+74004	mode4
+74016	A Mode
+74030	B Mode
+74044	C Mode
+74058	M Value
+74074	FP M Value
+74096	Channel
+74112	Level
+74124	TTL Value
+74144	Auto Value
+74166	FP TTL Value
+74192	Auto
+74202	@A00A@/FP
+74222	S-AF
+74232	C-AF
+74242	S-AF+MF
+74258	C-AF+TR
+74274	AE BKT
+74288	WB BKT
+74302	FL BKT
+74316	ISO BKT
+74332	P/A/S
+74344	Menu
+74354	1/2EV
+74366	1/3EV
+74378	1EV
+74386	Off
+74394	I.S. 3
+74408	sRGB
+74418	@A0B3@/Value
+74444	AEL/S-AF
+74462	AEL
+74470	AEL/AF Start
+74496	AF Start
+74514	----
+74524	@A0B3@Vivid
+74548	@A0B4@Natural
+74576	@A0B5@Portrait
+74606	Ps
+74612	Auto@A006@
+74634	A-B
+74642	G-M
+74650	Hold
+74660	@A0B4@ 4
+74678	@A0B5@ 9
+74696	@A0B6@ 25
+74716	@A0B6@ 100
+74738	Body
+74748	Lens
+74758	Flash
+74770	Acc
+74778	LV-Info
+74794	RAW/JPEG
+74812	@A013@/@A014@
+74840	ART1
+74850	ART2
+74860	ART3
+74870	ART4
+74880	ART5
+74890	ART6
+74900	ART7
+74910	ART8
+74920	BGM
+74928	480p/576p
+74948	Cool
+74958	Joy
+74966	Melancholy
+74988	HDMI
+74998	TTL Auto
+75016	Manual
+75030	FP TTL Auto
+75054	FP Manual
+75074	Level Lo
+75092	Level Mid
+75112	Level Hi
+75130	ch
+75136	@A0D4@/@A0D5@
+75164	AEL/AFL
+75180	@A040@REC
+75200	iAUTO
+75212	P/A/S/M
+75228	ART9
+75238	ART10
+75250	Full
+75260	2f 0.3EV
+75278	2f 0.5EV
+75296	2f 0.7EV
+75314	2f 1.0EV
+75332	7f 0.3EV
+75350	7f 0.5EV
+75368	7f 0.7EV
+75386	2f
+75392	@A0B7@
+75406	@A0B8@
+75420	@A095@ 5300K
+75446	@A097@ 6000K
+75472	@A096@ 7500K
+75498	@A098@ 3000K
+75524	@A099@ 4000K
+75550	Beat
+75560	ART
+75568	SCN
+75576	Adobe
+75588	@A036@ 5500K
+75614	ART BKT
+75630	Motion JPEG 1280
+75664	720
+75672	Motion JPEG 640
+75704	480
+75712	3D
+75718	1:1
+75726	ART11
+75738	MOV 1920
+75756	1080 Fine
+75776	MOV 1920
+75794	1080 Normal
+75818	MOV 1280
+75836	720 Fine
+75854	MOV 1280
+75872	720 Normal
+75894	Nastav
+75908	 interval mezi jednotliv
+75958	mi
+75966	sn
+75972	mky.
+75982	hodin
+75996	asosb
+76008	rn
+76014	 video
+76028	Nahraje pouze fotografie.
+76080	Nahraje 
+76098	asosb
+76110	rn
+76116	 video
+76132	a fotografie.
+76160	J. @A008@ Nastaven
+76200	@A059@@A024@
+76226	Art p
+76238	echod
+76250	Akvarel
+76266	@A06F@Akvarel
+76298	ipojen
+76312	 ke smartphonu
+76342	Prohl
+76354	dnout fotku 
+76382	na Smartphonu p
+76414	es
+76422	FlashAir p
+76444	ipojen
+76462	Karta byla konfigurov
+76506	na na jin
+76526	m za
+76538	zen
+76546	. 
+76554	Nelze zm
+76572	nit jej
+76588	 nastaven
+76612	Kartu nelze naform
+76650	tovat
+76662	Aktivn
+76676	 p
+76682	ipojen
+76698	Nep
+76706	eru
+76714	ujte
+76728	eru
+76736	it p
+76746	ipojen
+76762	Nastaven
+76780	 p
+76786	ipojen
+76802	SSID nastaven
+76834	vodn
+76844	 nastaven
+76864	 dokon
+76878	eno
+76886	Jednor
+76900	zov
+76908	 p
+76914	ipojen
+76930	Priv
+76940	tn
+76946	 p
+76952	ipojen
+76968	Nastaven
+76986	 hesla
+77000	Zadejte heslo do
+77034	as. p
+77046	ipojen
+77062	Heslo bylo zm
+77094	no
+77100	Za
+77112	 p
+77118	ipojov
+77138	Stab. foto
+77160	Stab. videa
+77184	Video-I.S. Zap
+77214	Zm
+77220	nit re
+77234	im stabilizace.
+77268	Foto a video.
+77296	Stabilizace obrazu funguje ve
+77362	ech sm
+77376	rech
+77388	detekc
+77402	 pohybu fotoapar
+77436	tu.
+77444	Pouze svisl
+77468	 stabilizace obrazu.
+77512	Dr
+77518	te fotoapar
+77542	t vodorovn
+77564	 a p
+77580	focen
+77592	 pohybujte apar
+77624	tem ve
+77640	vodorovn
+77658	 rovin
+77676	Pouze vodorovn
+77706	 stabil. obrazu.
+77742	Dr
+77748	te fotoapar
+77772	t na v
+77788	ku a p
+77808	focen
+77820	 pohybujte apar
+77852	tem ve 
+77870	vodorovn
+77888	 rovin
+77906	Stabilizace obrazu je vypnut
+77968	Zapnut
+77982	 stabiliz
+78002	tor obrazu
+78030	hem nat
+78048	en
+78054	 videa
+78068	Zapnut
+78082	 stabiliz
+78102	tor obrazu
+78126	funk
+78140	 ve v
+78152	ech os
+78166	ch 
+78180	hem nat
+78198	en
+78204	 videa.
+78224	ehr
+78240	 sn
+78248	mk
+78258	a/nebo vide
+78282	 s r
+78292	zn
+78298	mi
+78306	zvuky a efekty.
+78338	HDR BKT
+78354	Zm
+78360	nit na re
+78380	im HDR BKT.
+78404	Zm
+78410	nit na re
+78430	im HDR BKT.
+78454	Zm
+78460	nit na re
+78480	im HDR BKT.
+78504	Redukce blik
+78536	Redukce blik
+78570	nastaven
+78588	m frekvence nap
+78620	jen
+78632	V oblastech s 50Hz nap
+78678	jen
+78692	je blik
+78712	 redukov
+78730	no.
+78738	V oblastech s 60Hz nap
+78784	jen
+78798	je blik
+78818	 redukov
+78836	no.
+78844	Automaticky redukuje blik
+78904	Redukce blik
+78934	 vypnuta.
+78954	Filtr 
+78968	umu vyp.
+78986	Filtr 
+79000	umu: standard
+79028	Filtr 
+79042	umu: vysok
+79066	Filtr 
+79080	umu: n
+79094	zk
+79102	Aktu
+79112	ln
+79120	Vlastn
+79134	 nast.1
+79150	Vlastn
+79164	 nast.2
+79180	Korekce stinn
+79208	ch oblast
+79230	Korekce sv
+79252	tl
+79258	ch oblast
+79280	Zvolte rychlost zobrazen
+79338	iv
+79344	ho n
+79354	hledu
+79366	Priorita stab. obr. v obj.
+79420	Pro pou
+79436	it
+79446	stabilizace v objektivu
+79496	zvolte zap.
+79520	Prodleva spou
+79554	Nastavte prodlevu mezi
+79602	stisknut
+79620	m spou
+79638	 a
+79646	samotnou expozic
+79680	 sn
+79688	mku.
+79702	epn
+79710	te do re
+79728	imu @A077@
+79750	Zapne/vypne @A07D@.
+79790	Zapne/vypne @A07D@.
+79834	epn
+79842	te do re
+79860	imu @A078@
+79882	Zapne/vypne @A07E@.
+79922	Zapne/vypne @A07E@.
+79966	epn
+79974	te do re
+79992	imu @A079@
+80014	Zapne/vypne @A07F@.
+80054	Zapne/vypne @A07F@.
+80098	epn
+80106	te do re
+80124	imu @A07A@
+80146	Zapne/vypne @A080@.
+80186	Zapne/vypne @A080@.
+80226	Import hud. kulisy
+80264	Hud. kulisa je p
+80298	eps
+80306	na
+80316	dn
+80322	 hud. kulisa
+80348	@A027@1s Proti N
+80382	razu @A004@
+80406	@A027@2s Proti N
+80440	razu @A004@
+80464	@A027@3s Proti N
+80498	razu @A004@
+80522	@A027@4s Proti N
+80556	razu @A004@
+80580	@A027@5s Proti N
+80614	razu @A004@
+80638	@A027@6s Proti N
+80672	razu @A004@
+80696	@A027@7s Proti N
+80730	razu @A004@
+80754	@A027@8s Proti N
+80788	razu @A004@
+80812	@A027@9s Proti N
+80846	razu @A004@
+80870	@A027@10s Proti N
+80906	razu @A004@
+80930	@A027@11s Proti N
+80966	razu @A004@
+80990	@A027@12s Proti N
+81026	razu @A004@
+81050	@A027@13s Proti N
+81086	razu @A004@
+81110	@A027@14s Proti N
+81146	razu @A004@
+81170	@A027@15s Proti N
+81206	razu @A004@
+81230	@A027@16s Proti N
+81266	razu @A004@
+81290	@A027@17s Proti N
+81326	razu @A004@
+81350	@A027@18s Proti N
+81386	razu @A004@
+81410	@A027@19s Proti N
+81446	razu @A004@
+81470	@A027@20s Proti N
+81506	razu @A004@
+81530	@A027@21s Proti N
+81566	razu @A004@
+81590	@A027@22s Proti N
+81626	razu @A004@
+81650	@A027@23s Proti N
+81686	razu @A004@
+81710	@A027@24s Proti N
+81746	razu @A004@
+81770	@A027@25s Proti N
+81806	razu @A004@
+81830	@A027@26s Proti N
+81866	razu @A004@
+81890	@A027@27s Proti N
+81926	razu @A004@
+81950	@A027@28s Proti N
+81986	razu @A004@
+82010	@A027@29s Proti N
+82046	razu @A004@
+82070	@A027@30s Proti N
+82106	razu @A004@
+82130	1f
+82136	5f
+82142	6f
+82148	7f
+82154	8f
+82160	9f
+82166	10f
+82174	11f
+82182	12f
+82190	13f
+82198	14f
+82206	15f
+82214	16f
+82222	17f
+82230	18f
+82238	19f
+82246	20f
+82254	21f
+82262	22f
+82270	23f
+82278	24f
+82286	25f
+82294	26f
+82302	27f
+82310	28f
+82318	29f
+82326	30f
+82334	31f
+82342	32f
+82350	33f
+82358	34f
+82366	35f
+82374	36f
+82382	37f
+82390	38f
+82398	39f
+82406	40f
+82414	41f
+82422	42f
+82430	43f
+82438	44f
+82446	45f
+82454	46f
+82462	47f
+82470	48f
+82478	49f
+82486	50f
+82494	51f
+82502	52f
+82510	53f
+82518	54f
+82526	55f
+82534	56f
+82542	57f
+82550	58f
+82558	59f
+82566	60f
+82574	61f
+82582	62f
+82590	63f
+82598	64f
+82606	65f
+82614	66f
+82622	67f
+82630	68f
+82638	69f
+82646	70f
+82654	71f
+82662	72f
+82670	73f
+82678	74f
+82686	75f
+82694	76f
+82702	77f
+82710	78f
+82718	79f
+82726	80f
+82734	81f
+82742	82f
+82750	83f
+82758	84f
+82766	85f
+82774	86f
+82782	87f
+82790	88f
+82798	89f
+82806	90f
+82814	91f
+82822	92f
+82830	93f
+82838	94f
+82846	95f
+82854	96f
+82862	97f
+82870	98f
+82878	99f
+82886	@A052@ 1s samospou
+82928	@A052@ 3s samospou
+82970	@A052@ 4s samospou
+83012	@A052@ 5s samospou
+83054	@A052@ 6s samospou
+83096	@A052@ 7s samospou
+83138	@A052@ 8s samospou
+83180	@A052@ 9s samospou
+83222	@A052@ 10s samospou
+83266	@A052@ 11s samospou
+83310	@A052@ 13s samospou
+83354	@A052@ 14s samospou
+83398	@A052@ 15s samospou
+83442	@A052@ 16s samospou
+83486	@A052@ 17s samospou
+83530	@A052@ 18s samospou
+83574	@A052@ 19s samospou
+83618	@A052@ 20s samospou
+83662	@A052@ 21s samospou
+83706	@A052@ 22s samospou
+83750	@A052@ 23s samospou
+83794	@A052@ 24s samospou
+83838	@A052@ 25s samospou
+83882	@A052@ 26s samospou
+83926	@A052@ 27s samospou
+83970	@A052@ 28s samospou
+84014	@A052@ 29s samospou
+84058	@A052@ 30s samospou
+84102	SSID
+84112	Password
+84130	URL
+84138	http://flashair/
+84172	S-I.S. Off
+84194	S-I.S. 1
+84212	S-I.S. 2
+84230	S-I.S. 3
+84248	M-I.S. Off
+84270	M-I.S. 1
+84288	M-I.S. 2
+84306	HDR BKT
+84322	HDR BKT Off
+84346	50Hz
+84356	60Hz
+84366	ISO LOW
+84382	LOW
+84390	3f 2.0EV
+84408	3f 3.0EV
+84426	5f 2.0EV
+84444	5f 3.0EV
+84462	7f 2.0EV
+84480	ART12
+84492	@A03C@Zobr. vod.
+84526	0001.jpg
+84556	Roz
+84568	it LV dyn rozs
+84598	HDR
+84606	HDR vyp.
+84624	Objedn
+84638	vka tisku
+84658	Upravte korekci
+84692	expozice
+84710	Aktual. n
+84730	hledu@A040@
+84758	@A068@: AEL/AFL
+84790	@A087@: AEL/AFL
+84822	@A028@: AEL/AFL
+84854	Vypne Automatick
+84888	 jas EVF
+84908	pro ru
+84926	 nastaven
+84946	 jasu.
+84960	Zapne Automatick
+84994	 jas EVF.
+85016	Jas bude nastaven
+85054	automaticky.
+85080	Vypne vestav
+85106	nou s
+85120	 @A068@.
+85142	epne ovl
+85168	 posunu programu
+85204	oto
+85216	m p
+85224	ep
+85230	na
+85236	em do stejn
+85260	ho
+85268	sm
+85274	ru jako S.S. v re
+85310	imu S.
+85324	ISO
+85348	epne ovl
+85374	 posunu programu
+85410	oto
+85422	m p
+85430	ep
+85436	na
+85442	em do stejn
+85466	ho
+85474	sm
+85480	ru jako clona v re
+85518	imu A.
+85532	@A011@ :Stisknut
+85566	m k
+85578	ov
+85584	ho ovlada
+85610	zm
+85618	te polohu zoomu.
+85654	Funguje pouze s objektivem
+85710	s elektrick
+85734	m zoomem.
+85754	Autom. stab. obr.
+85790	Tla
+85798	/Ovlada
+85814	/P
+85822	ka
+85828	Menu o nastaven
+85860	 tla
+85872	tek,
+85884	kruhov
+85898	ch
+85906	voli
+85918	 a p
+85930	ky
+85936	B. Tla
+85950	./p
+85958	ep
+85964	na
+85970	/p
+85978	ka
+85984	FlashAir
+86002	Stop
+86012	Mo
+86018	nosti spu
+86048	Je p
+86058	ipojeno
+86074	Manu
+86084	ln
+86090	 spu
+86110	Auto Start
+86132	Efekt
+86144	Typ
+86152	Typ@A00E@
+86172	Typ@A00F@
+86192	Typ@A010@
+86212	Typ@A064@
+86232	Kombinuje dva nebo v
+86274	ce 
+86282	ablo- 
+86298	nov
+86306	ch sn
+86318	mk
+86324	 do jednoho sn
+86354	mku
+86362	Standardn
+86388	bavn
+86398	 r
+86404	me
+86410	ky
+86434	/b
+86444	 okraj
+86460	ern
+86472	ern
+86480	/camera obscura
+86512	Film
+86522	Rychle
+86536	@A065@ 3 sn
+86560	mky
+86568	@A066@ 3 sn
+86592	mky
+86600	@A065@ 2 sn
+86624	mky
+86632	@A066@ 2 sn
+86656	mky
+86664	Propojen
+86682	 se smartphonem
+86716	pomoc
+86728	 zabudovan
+86750	 s
+86760	 @A068@.
+86784	kaz sd
+86798	len
+86808	Vybr
+86818	n p
+86828	kaz sd
+86842	len
+86852	@A041@@A02F@
+86878	Nastaven
+86896	 @A068@
+86912	Nab
+86920	dka o zabudovan
+86960	ti @A068@.
+86982	Nast. p
+86998	ipojen
+87012	 @A068@
+87028	Soukrom
+87046	Jednor
+87060	zov
+87070	Vybrat
+87084	Pro p
+87096	ipojen
+87110	 k
+87118	va
+87124	emu smartphonu.
+87156	Pro sd
+87170	len
+87178	 s dal
+87194	mi
+87202	smartphony.
+87228	Bude pou
+87246	ito jedine
+87272	 heslo.
+87288	Vyberte p
+87308	ipojen
+87322	 @A068@
+87340	poka
+87358	Soukrom
+87374	 heslo
+87388	@A021@: zm
+87412	te heslo pro p
+87442	ipojen
+87460	k va
+87470	emu chytr
+87490	mu telefonu.
+87516	Resetovat p
+87542	kaz sd
+87556	len
+87566	Resetovat nastaven
+87604	 @A068@
+87620	@A005@ Pozor, reset v
+87664	ech
+87674	nastaven
+87692	 @A068@
+87708	Vybrat p
+87726	ipojen
+87740	 @A068@
+87762	prava p
+87778	ipojen
+87792	 @A068@
+87808	Pro p
+87820	ipojen
+87834	 k va
+87846	emu
+87856	smartphonu. Tato konfigurace
+87916	je nutn
+87932	 pouze jednou.
+87968	ipojen
+87982	 @A068@ se spust
+88016	 pozd
+88028	ji.
+88036	Nainstalujte
+88064	'OLYMPUS Image Share'
+88110	do va
+88122	eho smartphonu.
+88156	Po dokon
+88174	en
+88180	 instalace
+88204	aplikace stiskn
+88236	te @A01F@.
+88262	ipojov
+88280	 k va
+88292	emu
+88302	smartphonu.
+88328	Na
+88338	te k
+88348	d QR pomoc
+88374	'OLYMPUS Image Share'.
+88420	Dal
+88430	@A019@
+88444	Stop@A030@
+88466	Spou
+88484	 @A068@
+88500	Zastavov
+88522	 @A068@
+88538	Pro sd
+88552	len
+88560	 s dal
+88576	mi smartphony.
+88608	Pou
+88618	t aktu
+88632	ln
+88638	 heslo?
+88654	Pou
+88664	t aktu
+88678	ln
+88684	 heslo
+88698	Pou
+88708	t nov
+88720	 heslo
+88734	Sd
+88740	len
+88748	 s dal
+88764	mi
+88772	smartphony.
+88798	Na
+88808	te k
+88818	d QR pomoc
+88844	'OLYMPUS Image Share'
+88890	nebo se p
+88910	ipojte ru
+88938	Slou
+88950	 k nastaven
+88974	 p
+88980	ipojen
+88998	karty FlashAir.
+89030	Slou
+89042	 k nastaven
+89066	 spu
+89088	pro ru
+89106	 p
+89112	ipojen
+89130	Automatick
+89152	 p
+89158	ipojen
+89172	 je
+89182	nav
+89194	no p
+89204	i zapnut
+89222	 nap
+89232	jen
+89244	FlashAir je spu
+89280	no.
+89290	Nelze pou
+89312	t zabudovanou s
+89346	 Wi-Fi.
+89362	EVF Auto p
+89384	ep
+89390	na
+89402	epne automaticky z obrazovky
+89462	do el. hled
+89488	ku, kdy
+89504	 se
+89514	k n
+89522	mu p
+89532	ibl
+89544	 oko.
+89556	Deaktivujte sn
+89586	ma
+89592	 o
+89606	@A075@: pro p
+89634	epnut
+89646	 mezi displejem
+89680	monitoru a displejem EVF.
+89732	Aktivujte sn
+89758	ma
+89764	 o
+89776	Sledov
+89794	 BULB/TIME
+89816	Uprav
+89828	 jas monitoru a EVF
+89870	kdy
+89878	 je vybr
+89896	no
+89904	BULB/TIME.
+89926	AE BKT
+89940	Zm
+89946	nit na re
+89966	im AE BKT.
+89988	ART BKT
+90004	Zm
+90010	nit na re
+90030	im ART BKT.
+90054	Video @A042@
+90080	S-I.S. Vyp
+90102	S-I.S. Auto
+90126	Fotoapar
+90144	t vol
+90156	 nast. Stabiliz
+90188	tor
+90198	detekov
+90218	m pohybu fotoapar
+90254	tu.
+90262	M-I.S. Vyp
+90284	M-I.S. Zap
+90306	Zapnut
+90320	 stabiliz
+90340	tor obrazu
+90368	hem nat
+90386	en
+90392	 videa
+90406	@A088@ Funkce p
+90440	ky
+90446	Vyberte funkci p
+90484	azenou
+90500	@A088@ p
+90520	ce.
+90528	Zm
+90536	te funkci voli
+90566	e vol. @A088@.
+90598	@A089@: Postupujte podle nast. voli
+90670	e.
+90678	@A08A@: Zm
+90702	te citlivost ISO vol. @A08B@
+90762	nebo zm
+90780	te re
+90792	im WB vol. @A076@.
+90830	Zm
+90838	te funkci voli
+90868	e vol. @A088@.
+90900	@A089@: Postupujte podle nast. voli
+90972	e.
+90980	@A08A@: Zm
+91004	te citlivost ISO vol. @A076@
+91064	nebo zm
+91082	te re
+91094	im WB vol. @A08B@.
+91132	Zm
+91140	te funkci tla
+91170	tka @A024@ vol. @A088@.
+91220	@A089@: Postupujte podle nast. tla
+91296	@A08A@: Spus
+91322	te/zastavte z
+91350	zn. filmu.
+91372	Zm
+91380	te re
+91392	im AF pomoc
+91416	 @A088@.
+91436	Nastav
+91450	 re
+91458	im AF pro ka
+91492	@A089@ a @A08A@.
+91526	Pruh
+91536	SETUP@A025@
+91560	@A06B@Funkce
+91586	Zm
+91592	nit na re
+91612	im AE BKT.
+91634	Zm
+91640	nit na re
+91660	im AE BKT.
+91682	Zm
+91688	nit na re
+91708	im AE BKT.
+91730	Zm
+91736	nit na re
+91756	im ART BKT.
+91780	Zm
+91786	nit na re
+91806	im ART BKT.
+91830	Zm
+91836	nit na re
+91856	im ART BKT.
+91880	@A08C@: AEL/AFL
+91912	Zvolit AF z
+91936	nu
+91944	a AF re
+91960	im.
+91968	@A08C@: Zm
+91990	na x1/x2.
+92010	Upravte korekci
+92044	expozice
+92062	Zm
+92068	nit na re
+92088	im HDR BKT.
+92112	@A08C@: Zobrazte zv
+92156	ovac
+92174	me
+92180	ek a znovu stiskn
+92216	te
+92224	pro zv
+92242	en
+92248	 sn
+92256	mku.
+92266	@A08C@:Stiskn
+92294	te pro fotopr
+92322	vodce,
+92338	op
+92344	tovn
+92354	m stisknut
+92376	m se vra
+92394	te.
+92402	Focen
+92414	 v re
+92426	imu @A02B@
+92454	i stisknut
+92476	m @A08C@
+92494	Focen
+92506	 v re
+92518	imu @A02C@
+92546	i stisknut
+92568	m @A08C@
+92586	Focen
+92598	 v re
+92610	imu @A02D@
+92638	i stisknut
+92660	m @A08C@
+92678	Focen
+92690	 v re
+92702	imu @A02E@
+92730	i stisknut
+92752	m @A08C@
+92774	choz
+92784	 nastaven
+92808	AF z
+92818	ny
+92828	epnut
+92840	 do MF 
+92858	re
+92864	imu.
+92874	@A08C@:
+92892	Start/Stop
+92916	Video Recording
+92948	Manu
+92958	ln
+92964	 WB
+92972	Hloubka ostrosti.
+93008	Zm
+93014	na 
+93024	RAW+JPEG/JPEG re
+93058	imu
+93068	kruhov
+93082	m voli
+93096	em.
+93104	Testovac
+93122	 sn
+93130	mek
+93140	bez ulo
+93156	en
+93166	@A08C@: Tla
+93192	tka @A02F@ a @A030@.
+93234	AE BKT Off
+93256	Ru
+93268	Automaticky
+93292	Kombinuje dva nebo v
+93334	ce 
+93342	ablo- 
+93358	nov
+93366	ch sn
+93378	mk
+93384	 do jednoho sn
+93414	mku
+93424	Dotykov
+93440	 sn
+93458	Vyberte re
+93480	im p
+93490	i ot
+93502	en
+93508	 zaost-
+93528	ovac
+93538	ho krou
+93554	ku v re
+93570	imu MF.
+93586	Obraz nebude automaticky
+93638	zv
+93648	en p
+93658	i ot
+93670	en
+93676	 zaost
+93690	ovac
+93700	ho
+93708	krou
+93718	ku v re
+93734	imu MF.
+93754	epnut
+93766	m na Zap. dojde v
+93804	re
+93810	imu ru
+93828	ho ost
+93842	en
+93848	 v
+93854	dy
+93862	ke zv
+93878	en
+93884	 n
+93890	hledu sn
+93908	mku.
+93918	Zv
+93924	razn
+93944	i ot
+93956	en
+93962	 zaost
+93976	ovac
+93986	ho krou
+94002	ku
+94010	v re
+94020	imu MF se nezobraz
+94062	obrys objektu.
+94096	i ot
+94108	en
+94114	 zaost
+94128	ovac
+94138	ho krou
+94154	ku
+94162	v re
+94172	imu MF se zobraz
+94210	obrys objektu. Tato funkce pom
+94280	upravit zaost
+94308	en
+94318	@A01D@: Stisknut
+94352	m zobraz
+94370	te obrys
+94390	objektu pro upraven
+94430	 zaost
+94444	en
+94456	Dal
+94466	m stisknut
+94488	m obrys skryjete.
+94524	@A023@: Stisknut
+94558	m zobraz
+94576	te obrys
+94596	objektu pro upraven
+94636	 zaost
+94650	en
+94662	Dal
+94672	m stisknut
+94694	m obrys skryjete.
+94730	@A08C@: Stisknut
+94764	m zobraz
+94782	te obrys
+94802	objektu pro upraven
+94842	 zaost
+94856	en
+94868	Dal
+94878	m stisknut
+94900	m obrys skryjete.
+94936	@A06D@: Stisknut
+94970	m zobraz
+94988	te obrys
+95008	objektu pro upraven
+95048	 zaost
+95062	en
+95074	Dal
+95084	m stisknut
+95106	m obrys skryjete.
+95142	Nastaven
+95160	 zv
+95168	razn
+95184	Upravuje nastaven
+95220	 zv
+95228	razn
+95258	ern
+95268	Zaost
+95280	en
+95286	 oblasti budou
+95318	v pr
+95332	hu zv
+95344	razn
+95362	ozna
+95372	en
+95378	 b
+95384	lou barvou.
+95408	Zaost
+95420	en
+95426	 oblasti budou
+95458	v pr
+95472	hu zv
+95484	razn
+95502	ozna
+95512	en
+95522	ernou barvou.
+95550	@A029@ :Stisknut
+95584	m k
+95596	ov
+95602	ho ovlada
+95628	zm
+95636	te polohu zoomu.
+95672	Funguje pouze s objektivem
+95728	s elektrick
+95752	m zoomem.
+95772	Zvolit AF z
+95796	nu
+95804	a AF re
+95820	im.
+95828	Zvolit AF z
+95852	nu
+95860	a AF re
+95876	im.
+95884	@A068@: Zm
+95906	na x1/x2.
+95926	@A087@: Zm
+95948	na x1/x2.
+95968	@A028@: Zm
+95990	na x1/x2.
+96010	@A068@: Stiskn
+96040	te pro potvrzen
+96076	vybran
+96090	 funkce a zm
+96118	te
+96126	funkci kruhov
+96154	m voli
+96168	em.
+96176	@A06E@: Stiskn
+96206	te pro potvrzen
+96242	vybran
+96256	 funkce a zm
+96284	te
+96292	funkci kruhov
+96320	m voli
+96334	em.
+96342	@A06F@: Stiskn
+96372	te pro potvrzen
+96408	vybran
+96422	 funkce a zm
+96450	te
+96458	funkci kruhov
+96486	m voli
+96500	em.
+96508	@A06C@: Stiskn
+96538	te pro potvrzen
+96574	vybran
+96588	 funkce a zm
+96616	te
+96624	funkci kruhov
+96652	m voli
+96666	em.
+96674	@A06D@: Stiskn
+96704	te pro potvrzen
+96740	vybran
+96754	 funkce a zm
+96782	te
+96790	funkci kruhov
+96818	m voli
+96832	em.
+96840	@A087@: Stiskn
+96870	te pro potvrzen
+96906	vybran
+96920	 funkce a zm
+96948	te
+96956	funkci kruhov
+96984	m voli
+96998	em.
+97006	@A028@: Stiskn
+97036	te pro potvrzen
+97072	vybran
+97086	 funkce a zm
+97114	te
+97122	funkci kruhov
+97150	m voli
+97164	em.
+97172	Upravte korekci
+97206	expozice
+97224	Upravte korekci
+97258	expozice
+97276	Upravte korekci
+97310	expozice
+97328	Upravte korekci
+97362	expozice
+97380	Stisknut
+97398	m aktivujete
+97426	zobrazen
+97444	 vodov
+97458	hy.
+97468	Dal
+97478	m stisknut
+97500	m deaktivujete.
+97538	inn
+97546	 v @A03C@.
+97568	Zapne/vypne HDR.
+97602	Zapne/vypne HDR.
+97636	Zapne/vypne HDR.
+97670	Zapne/vypne HDR.
+97704	Zapne/vypne HDR.
+97738	Zapne/vypne HDR.
+97772	Zapne/vypne HDR.
+97806	Zapne/vypne HDR.
+97840	Zapne/vypne HDR.
+97874	@A068@: Zobrazte zv
+97918	ovac
+97936	me
+97942	ek a znovu stiskn
+97978	te
+97986	pro zv
+98004	en
+98010	 sn
+98018	mku.
+98028	@A087@: Zobrazte zv
+98072	ovac
+98090	me
+98096	ek a znovu stiskn
+98132	te
+98140	pro zv
+98158	en
+98164	 sn
+98172	mku.
+98182	@A068@:Stiskn
+98210	te pro fotopr
+98238	vodce,
+98254	op
+98260	tovn
+98270	m stisknut
+98292	m se vra
+98310	te.
+98318	@A087@:Stiskn
+98346	te pro fotopr
+98374	vodce,
+98390	op
+98396	tovn
+98406	m stisknut
+98428	m se vra
+98446	te.
+98454	@A028@:Stiskn
+98482	te pro fotopr
+98510	vodce,
+98526	op
+98532	tovn
+98542	m stisknut
+98564	m se vra
+98582	te.
+98590	Zapne/vypne @A07D@.
+98630	Zapne/vypne @A07D@.
+98670	Zapne/vypne @A07D@.
+98710	Zapne/vypne @A07D@.
+98750	Zapne/vypne @A07D@.
+98790	Zapne/vypne @A07D@.
+98830	Zapne/vypne @A07E@.
+98870	Zapne/vypne @A07E@.
+98910	Zapne/vypne @A07E@.
+98950	Zapne/vypne @A07E@.
+98990	Zapne/vypne @A07E@.
+99030	Zapne/vypne @A07E@.
+99070	Zapne/vypne @A07F@.
+99110	Zapne/vypne @A07F@.
+99150	Zapne/vypne @A07F@.
+99190	Zapne/vypne @A07F@.
+99230	Zapne/vypne @A07F@.
+99270	Zapne/vypne @A07F@.
+99310	Zapne/vypne @A080@.
+99350	Zapne/vypne @A080@.
+99390	Zapne/vypne @A080@.
+99430	Zapne/vypne @A080@.
+99470	Zapne/vypne @A080@.
+99510	Zapne/vypne @A080@.
+99550	Dynamick
+99568	 rozsah Live View
+99606	nen
+99614	 roz
+99628	en.
+99636	Dynamick
+99654	 rozsah Live View
+99692	je roz
+99710	en, kdy
+99726	 je HDR
+99744	v HDR1 nebo HDR2.
+99780	Po
+99792	 3 sn
+99804	mky s
+99818	exp. rozd
+99838	lem 2,0EV.
+99860	Po
+99872	 3 sn
+99884	mky s
+99898	exp. rozd
+99918	lem 3,0EV.
+99940	Po
+99952	 5 sn
+99964	mky s
+99978	exp. rozd
+99998	lem 2,0EV.
+100020	Po
+100032	 5 sn
+100044	mky s
+100058	exp. rozd
+100078	lem 3,0EV.
+100100	Po
+100112	 7 sn
+100124	mky s
+100138	exp. rozd
+100158	lem 2,0EV.
+100180	Po
+100192	 4 sn
+100204	mky najednou
+100236	i r
+100244	zn
+100250	ch expozic
+100272	ch a
+100284	automaticky je zkombinuje
+100338	do sn
+100350	mku s vysok
+100374	m kontrastem.
+100402	Po
+100414	 4 sn
+100426	mky najednou
+100458	i r
+100466	zn
+100472	ch expozic
+100494	ch a
+100506	automaticky je zkombinuje
+100560	do sn
+100572	mku se supervys. kontrastem.
+100630	Vypne HDR.
+100656	choz
+100666	 nastaven
+100690	AF z
+100700	ny
+100710	choz
+100720	 nastaven
+100744	AF z
+100754	ny
+100760	Funkce tla
+100784	tek @A05F@ nejsou
+100822	zm
+100832	ny v .
+100846	V  jsou funkce tla
+100886	tek @A05F@
+100914	epnuty na
+100936	@A060@: BKT a @A061@: @A062@.
+100996	Deaktivuje funkci p
+101038	ky .
+101048	@A078@ p
+101066	ep
+101076	 funkce oto
+101100	. voli
+101114	e.
+101122	@A079@: vlastn
+101152	 nastaven
+101172	 funkc
+101192	@A07A@: @A07B@ nast. ISO, @A066@ nast. WB.
+101278	@A078@ p
+101296	ep
+101306	 funkce oto
+101330	. voli
+101344	e.
+101352	@A079@: vlastn
+101382	 nastaven
+101402	 funkc
+101422	@A07A@: @A066@ nast. ISO, @A07B@ nast. WB.
+101508	@A078@ p
+101526	ep
+101536	 funkce tla
+101562	tka.
+101574	@A079@: vlastn
+101604	 nastaven
+101624	 funkc
+101644	@A07A@: @A021@ nast. ISO, @A059@ nast. WB.
+101730	@A078@ p
+101748	ep
+101758	 funkce tla
+101784	tka.
+101796	@A079@: vlastn
+101826	 nastaven
+101846	 funkc
+101866	@A07A@: @A059@ nast. ISO, @A021@ nast. WB.
+101952	@A078@ p
+101970	ep
+101980	 re
+101988	im AF
+102002	mezi vlastn
+102026	mi nastaven
+102050	mi AF
+102064	@A079@ a @A07A@.
+102102	epnut
+102114	 do MF
+102130	re
+102136	imu.
+102150	epnut
+102162	 do MF
+102178	re
+102184	imu.
+102194	@A068@:
+102212	Start/Stop
+102236	Video Recording
+102268	@A06E@:
+102286	Start/Stop
+102310	Video Recording
+102342	@A06F@:
+102360	Start/Stop
+102384	Video Recording
+102416	@A06D@:
+102434	Start/Stop
+102458	Video Recording
+102490	@A087@:
+102508	Start/Stop
+102532	Video Recording
+102564	@A028@:
+102582	Start/Stop
+102606	Video Recording
+102638	Manu
+102648	ln
+102654	 WB
+102662	Manu
+102672	ln
+102678	 WB
+102686	Manu
+102696	ln
+102702	 WB
+102710	@A068@: Stisknut
+102744	m zobraz
+102762	te obrys
+102782	objektu pro upraven
+102822	 zaost
+102836	en
+102848	Dal
+102858	m stisknut
+102880	m obrys skryjete.
+102916	@A06E@: Stisknut
+102950	m zobraz
+102968	te obrys
+102988	objektu pro upraven
+103028	 zaost
+103042	en
+103054	Dal
+103064	m stisknut
+103086	m obrys skryjete.
+103122	@A06F@: Stisknut
+103156	m zobraz
+103174	te obrys
+103194	objektu pro upraven
+103234	 zaost
+103248	en
+103260	Dal
+103270	m stisknut
+103292	m obrys skryjete.
+103328	@A06C@: Stisknut
+103362	m zobraz
+103380	te obrys
+103400	objektu pro upraven
+103440	 zaost
+103454	en
+103466	Dal
+103476	m stisknut
+103498	m obrys skryjete.
+103534	@A066@: Stisknut
+103568	m zobraz
+103586	te obrys
+103606	objektu pro upraven
+103646	 zaost
+103660	en
+103672	Dal
+103682	m stisknut
+103704	m obrys skryjete.
+103740	@A087@: Stisknut
+103774	m zobraz
+103792	te obrys
+103812	objektu pro upraven
+103852	 zaost
+103866	en
+103878	Dal
+103888	m stisknut
+103910	m obrys skryjete.
+103946	@A028@: Stisknut
+103980	m zobraz
+103998	te obrys
+104018	objektu pro upraven
+104058	 zaost
+104072	en
+104084	Dal
+104094	m stisknut
+104116	m obrys skryjete.
+104152	Hloubka ostrosti.
+104188	Hloubka ostrosti.
+104224	Zm
+104230	na
+104238	RAW+JPEG/JPEG re
+104272	imu
+104282	kruhov
+104296	m voli
+104310	em.
+104318	Zm
+104324	na
+104332	RAW+JPEG/JPEG re
+104366	imu
+104376	kruhov
+104390	m voli
+104404	em.
+104412	Testovac
+104430	 sn
+104438	mek
+104448	bez ulo
+104464	en
+104474	Testovac
+104492	 sn
+104500	mek
+104510	bez ulo
+104526	en
+104540	idr
+104548	en
+104554	m @A011@: zamkn
+104586	te/
+104596	odemkn
+104610	te dotykov
+104632	 panel
+104648	v re
+104658	imu sn
+104688	idr
+104696	en
+104702	m @A029@: zamkn
+104734	te/
+104744	odemkn
+104758	te dotykov
+104780	 panel
+104796	v re
+104806	imu sn
+104832	@A068@: Tla
+104858	tka @A02A@ a @A02B@.
+104900	@A06E@: Tla
+104926	tka @A02A@ a @A02B@.
+104968	@A06F@: Tla
+104994	tka @A02A@ a @A02B@.
+105036	@A06D@: Tla
+105062	tka @A02A@ a @A02B@.
+105104	@A087@: Tla
+105130	tka @A02A@ a @A02B@.
+105172	@A028@: Tla
+105198	tka @A02A@ a @A02B@.
+105240	Vestav
+105258	 @A017@
+105274	Vestav. @A02E@ hlas. z
+105320	znamu
+105332	@A080@+@A081@
+105360	@A078@ Funkce p
+105394	ky
+105400	Linkov
+105414	 @A023@
+105430	Linkov
+105444	 @A02E@ hlas. z
+105476	znamu
+105488	Vytvo
+105500	it dat sadu obj.
+105534	@A026@
+105550	@A05C@Funkce
+105576	@A043@
+105590	pravy barev
+105614	@A044@e-Portr
+105646	Upravuje jednotl. c
+105686	lov
+105694	 body
+105708	polohy AF jednotl. objektiv
+105772	i nastaven
+105794	 Vyp. se zelen
+105832	lov
+105840	 r
+105846	me
+105852	ek nezobraz
+105876	 pro
+105888	Automatick
+105910	 ost
+105920	en
+105930	Upravuje 
+105950	rove
+105960	 aktivity c
+105984	le
+105996	hem C-AF.
+106020	i nastaven
+106042	 Zap. je roz
+106072	en
+106080	dynamick
+106098	 rozsah Live View.
+106136	Slou
+106148	 k nastaven
+106172	 HDR.
+106188	i nastaven
+106210	 Vyp.
+106224	nejsou funkce tla
+106262	tek @A081@
+106286	zm
+106296	ny v @A080@.
+106322	Vyberte funkci p
+106360	azenou
+106376	@A078@ p
+106396	ce.
+106404	Upravuje hlasitost
+106444	ka
+106454	ho mikrofonu.
+106482	Ps
+106488	Redukuje rozmaz
+106524	 p
+106530	i sn
+106554	patn
+106564	 osv
+106574	tlen
+106584	ch sc
+106596	n.
+106602	No
+106612	 obloha
+106628	@A045@Z
+106644	mek
+106652	Zapne/vypne @A07D@.
+106692	Zapne/vypne @A07E@.
+106732	Zapne/vypne @A07F@.
+106772	Zapne/vypne @A080@.
+106812	Testovac
+106830	 sn
+106838	mek
+106848	bez ulo
+106864	en
+106874	A-B : WB BKT Off
+106908	G-M : WB BKT Off
+106942	FL BKT Off
+106964	HDR1
+106974	HDR2
+106984	ISO BKT Off
+107008	mode5
+107020	ART BKT Off
+107044	ART BKT On
+107066	A-B : WB BKT
+107092	A-B : 3f 2Step
+107122	A-B : 3f 4Step
+107152	A-B : 3f 6Step
+107182	G-M : WB BKT
+107208	G-M : 3f 2Step
+107238	G-M : 3f 4Step
+107268	G-M : 3f 6Step
+107298	BKT
+107306	Zm
+107312	nit na re
+107332	im BKT.
+107348	Zm
+107354	nit na re
+107374	im BKT.
+107390	Zm
+107396	nit na re
+107416	im BKT.
+107432	Zm
+107438	nit na re
+107458	im BKT.
+107474	Zm
+107480	nit na re
+107500	im BKT.
+107516	Zm
+107522	nit na re
+107542	im BKT.
+107558	Zm
+107564	nit na re
+107584	im BKT.
+107600	Zm
+107606	nit na re
+107626	im BKT.
+107642	Zm
+107648	nit na re
+107668	im BKT.
+107684	@A03F@@A019@
+107714	i volb
+107728	 re
+107736	imu sn
+107750	mku
+107766	ete vynechat polo
+107802	ky,
+107812	kter
+107822	 nebyly nastaveny na @A03F@.
+107884	ibl
+107894	it/odd
+107908	lit
+107916	@A067@ 2 sn
+107940	mky
+107952	zk
+107960	Layout
+107974	Jedn
+107984	m stisknut
+108006	m tla
+108020	tka 
+108040	rky p
+108052	ipravte kompozitn
+108092	sn
+108110	Kompozitn
+108130	 sn
+108146	 p
+108152	ipraveno.
+108172	Kompozitn
+108192	 nastaven
+108214	Nab
+108222	dka kompozitn
+108250	ch nastaven
+108280	Zkombinujte sn
+108310	mky po
+108326	zen
+108338	s intervalov
+108364	m sn
+108382	m.
+108388	Kompozitn
+108408	 re
+108416	im
+108422	Zesv
+108432	tlit
+108442	Ztmavit
+108458	Porovn
+108472	 pixely obou sn
+108504	mk
+108514	a pou
+108526	ije sv
+108540	tlej
+108552	 pro
+108564	kompozitn
+108584	 sn
+108592	mek.
+108602	Porovn
+108616	 pixely obou sn
+108648	mk
+108658	a pou
+108670	ije tmav
+108690	 pro
+108702	kompozitn
+108722	 sn
+108730	mek.
+108744	kl. d
+108756	lka expozice
+108784	as expozice na sn
+108820	mek.
+108834	as expozice a clona ur
+108880	uj
+108890	va
+108896	i z
+108904	kladn
+108916	 expozici.
+108938	Zvolte Zap. pro povolen
+108986	 MF
+109000	hem re
+109014	imu
+109024	BULB/TIME/
+109046	iv
+109052	 kompoz.
+109070	Uprav
+109082	 jas monitoru a EVF
+109124	pro re
+109138	im
+109146	BULB/TIME/
+109168	iv
+109174	 kompoz.
+109192	Nelze nat
+109214	et videa
+109234	kdy
+109242	 je p
+109254	ipojeno @A074@.
+109286	Zav
+109296	t@A019@
+109312	Kon. @A068@@A025@
+109348	Stisknut
+109366	m tla
+109380	tka jsou p
+109402	ep
+109408	na
+109430	azeny n
+109446	sleduj
+109464	 funkce:
+109484	@A060@: ISO
+109510	@A053@: Vyv
+109536	en
+109542	 b
+109554	Stisknut
+109572	m tla
+109586	tka jsou p
+109608	ep
+109614	na
+109636	azeny n
+109652	sleduj
+109670	 funkce:
+109690	@A060@: Vyv
+109716	en
+109722	 b
+109736	@A053@: ISO
+109764	idr
+109772	en
+109778	m tohoto tla
+109806	tka
+109822	ete vypnout autofokus
+109868	a uzamknout zaost
+109904	en
+109914	v okam
+109928	iku, kdy bylo
+109958	tla
+109968	tko stisknuto.
+109998	Stisknut
+110016	m tla
+110030	tka
+110040	aktivujte AEL/AFL.
+110078	Spustit/zastavit
+110118	znam videa.
+110142	Hloubka ostrosti.
+110178	Manu
+110188	ln
+110194	 vyv
+110206	en
+110212	 b
+110226	Zvolit z
+110244	nu AF
+110258	a re
+110268	im AF.
+110286	choz
+110296	 nastaven
+110320	re
+110326	imu z
+110338	ny AF
+110354	epnut
+110366	 do re
+110380	imu MF.
+110396	Zm
+110402	na 
+110412	re
+110418	imu RAW+JPEG/JPEG
+110456	kruhov
+110470	m p
+110478	ep
+110484	na
+110490	em.
+110498	Zku
+110506	ebn
+110514	 sn
+110522	mek
+110532	bez ulo
+110548	en
+110558	Zapne/vypne @A07B@.
+110598	Zapne/vypne @A07C@.
+110638	Zapne/vypne @A07D@.
+110678	Zapne/vypne @A07E@.
+110718	Tla
+110728	tka @A061@ a @A062@.
+110770	Upravte korekci
+110804	expozice.
+110824	Stiskn
+110838	te pro fotopr
+110866	vodce,
+110882	op
+110888	tovn
+110898	m stisknut
+110920	m se vra
+110938	te.
+110946	Zm
+110952	na x1/x2.
+110972	Zobrazte zv
+111000	ovac
+111018	me
+111024	ek a znovu stiskn
+111060	te
+111068	pro zv
+111086	en
+111092	 sn
+111100	mku.
+111110	Zapne/vypne HDR.
+111144	Zm
+111150	nit na re
+111170	im BKT.
+111186	Stiskn
+111200	te pro potvrzen
+111236	vybran
+111250	 funkce a zm
+111278	te
+111286	funkci kruhov
+111314	m p
+111322	ep
+111328	na
+111334	em.
+111342	Stisknut
+111360	m zobraz
+111378	te obrys
+111398	objektu pro upraven
+111438	 zaost
+111452	en
+111464	Dal
+111474	m stisknut
+111496	m obrys skryjete.
+111532	@A021@: Start Video Rec
+111582	@A020@: Po
+111608	 Sn
+111616	mek
+111626	@A059@: Film @A076@
+111666	Vlastn
+111680	 samospou
+111704	@A093@ Proti N
+111734	razu @A004@
+111758	Nastaven
+111776	@A01A@
+111790	Vyberte, zda m
+111820	 b
+111826	t menu
+111842	@A00A@ zobrazeno nebo skryto.
+111902	Nastaven
+111920	 multi funkce
+111948	Ur
+111954	ete funkce, kter
+111988	 maj
+112006	t zahrnuty do multi 
+112050	funkce pou
+112072	it
+112078	m @A03F@.
+112098	Re
+112104	im Video+Foto
+112132	Nastaven
+112150	 priority Foto
+112182	pro re
+112196	im Video+Foto.
+112226	Prioritu m
+112248	 Video.
+112266	@A067@ foto lze po
+112306	dit p
+112324	nahr
+112342	 videa.
+112360	Kvalita obrazu foto
+112402	omezena. Aktivn
+112434	 v @A070@.
+112456	Prioritu m
+112478	 Foto.
+112494	Videa se nahr
+112522	vaj
+112540	ed a po 
+112560	fotografov
+112590	Rychlost elektron. zoomu
+112640	Nastaven
+112658	 rychlost
+112678	 zoomu pro
+112702	re
+112708	im Foto a Video p
+112744	i pou
+112756	it
+112766	elektron. zoomovac
+112804	ho objektivu.
+112832	Stab. obrazu vyp.
+112868	Stab. videa vyp.
+112908	prava kompozitn
+112940	ho sn
+112966	Po
+112972	kejte pros
+112994	m.
+113004	idr
+113012	en
+113018	m tla
+113032	tka:
+113044	zamkn
+113056	te/odemkn
+113076	te
+113084	dotykov
+113100	 panel
+113116	v re
+113126	imu sn
+113152	Stisknut
+113170	m k
+113182	ov
+113188	ho ovlada
+113214	zm
+113222	te polohu zoomu.
+113258	Funguje pouze s objektivem
+113314	s elektronick
+113342	m zoomem.
+113362	@A060@ISO/@A053@WB
+113400	@A060@WB/@A053@ISO
+113438	Ne
+113444	Ano
+113452	Sn
+113458	mek s vys. rozli
+113496	Nasn
+113510	 a zkombinuje osm
+113548	fotogr. a vytvo
+113582	 sn
+113590	mek s velmi 
+113618	vys. rozli
+113640	en
+113646	m. Vy
+113658	aduje stativ.
+113686	Povol
+113698	 sn
+113706	mek s vysok
+113730	m rozli
+113746	en
+113752	m.
+113760	Vyberte 
+113778	as zpo
+113800	 po
+113810	uvoln
+113826	 z
+113836	rky.
+113846	@A00A@Doba nab
+113876	jen
+113886	Vyberte dobu nab
+113920	jen
+113928	 blesku mezi
+113956	uvoln
+113972	mi uz
+113988	rky. Toto nastaven
+114030	nen
+114038	 nutn
+114050	, pokud pou
+114080	te blesk.
+114100	Posun sn
+114118	ma
+114124	e + digit
+114144	ln
+114152	Pouze posun sn
+114182	ma
+114192	Stabilizace obrazu je prov
+114250	na
+114258	pomoc
+114270	 posunu sn
+114292	ma
+114298	e i 
+114310	digit
+114322	ln
+114332	Stabilizace obrazu je prov
+114390	na
+114398	pouze pomoc
+114422	 posunu obrazu,
+114456	ne digit
+114474	ln
+114484	Komprese/p
+114506	en.rychl.
+114526	sn./s
+114538	Klip - doba z
+114566	znamu
+114578	Pomal
+114590	/rychl
+114604	 p
+114610	ehr.
+114620	Nastaven
+114638	 tech. 
+114654	daj
+114662	 videa
+114676	Nastavte velikost sn
+114718	mku, zp
+114734	sob
+114744	komprese a p
+114770	en. rychlost videa.
+114810	Rozli
+114822	en
+114828	 videa
+114842	Video @A01A@
+114868	ALL-I - tato komprese poskytuje
+114934	nejlep
+114950	 kvalitu obrazu umo
+114992	uj
+115006	pokro
+115018	il
+115028	pravy, ale v
+115054	sledn
+115070	soubor bude velmi velk
+115120	Komprese IPB s nejvy
+115174	enosovou rychlost
+115210	 poskytuje
+115234	nejlep
+115250	 kvalitu obrazu, ale velikost
+115312	souboru je st
+115340	le velmi velk
+115372	Komprese IPB s vysokou
+115424	enosovou rychlost
+115460	 poskytuje
+115484	vy
+115494	 kvalitu obrazu, ale
+115538	velikost souboru je po
+115586	d zna
+115606	Komprese IPB se standardn
+115666	enosovou rychlost
+115702	 poskytuje
+115726	standardn
+115746	 kvalitu obrazu a
+115784	velikost souboru nebude tak velk
+115858	m v
+115872	 je 
+115884	slo, t
+115898	m 
+115906	plynulej
+115926	 bude obraz.
+115952	Vypnut
+115966	m polo
+115980	ky Klipy m
+116004	ete
+116014	pou
+116024	t standardn
+116048	 z
+116054	znam videa.
+116078	Zapnut
+116092	m polo
+116106	ky Klipy
+116132	ete nahr
+116150	vat kr
+116164	tk
+116174	videoklipy, kter
+116208	 budou
+116224	ukl
+116236	ny do adres
+116262	e 
+116270	Moje klipy.
+116294	Video bude zaznamen
+116338	no pro
+116358	ehr
+116374	 se standardn
+116402	 rychlost
+116426	Video bude zaznamen
+116470	no
+116478	pro p
+116490	ehr
+116506	 s pomalou rychlost
+116552	Zvuk nebude zaznamen
+116594	n.
+116600	Video bude zaznamen
+116644	no
+116652	pro p
+116664	ehr
+116680	 s vysokou rychlost
+116726	Zvuk nebude zaznamen
+116768	n.
+116778	id
+116784	no do adres
+116810	e Moje klipy.
+116838	Ulo
+116846	eno jako b
+116874	 videoz
+116890	znam.
+116902	Tento adres
+116928	 Moje klipy je pln
+116974	esunout klip v r
+117008	mci adr. Moje klipy.
+117054	esunout polo
+117080	ku do adr. Moje klipy.
+117130	idat do nov
+117154	ho adr. Moje klipy.
+117194	Odebrat z adr. Moje klipy.
+117248	Moje klipy
+117274	id. do Moje klipy
+117314	ehr
+117322	t Moje klipy
+117348	Export. Moje klipy
+117386	Zobr. v
+117402	. Moje klipy
+117428	Odstr. Moje klipy
+117464	@A003@ Odebr
+117490	ny budou v
+117512	echny polo
+117534	ky
+117542	v adres
+117560	i Moje klipy.
+117588	Zm
+117594	nit po
+117608	ad
+117620	ednastavit c
+117656	 n
+117662	sleduj
+117680	 klip
+117694	se bude 
+117714	dit podle t
+117738	to polo
+117754	ky, 
+117766	pokud nejde o klip
+117806	s technick
+117828	mi 
+117836	daji videa odli
+117872	mi
+117880	od tohoto adres
+117914	e Moje klipy.
+117942	Klip - efekty
+117970	1. Pop-Art
+117992	2. Jemn
+118008	 sv
+118016	tlo
+118024	3. Camera Obscura
+118060	4. Cross Process
+118094	5. S
+118104	pie
+118112	6. Star
+118128	 film
+118140	Efekty nelze zobrazit v n
+118192	hledu.
+118206	Efekt p
+118222	echodu
+118236	Do ztracena
+118260	Zvuk zaznam. klipu
+118298	Hlas. zaznam. klipu
+118342	hled
+118352	Zah
+118360	jit export
+118382	Celkov
+118396	 d
+118402	lka klipu
+118422	Po
+118428	kejte pros
+118450	m.
+118456	Doba zpracov
+118486	 bude odpov
+118510	dat
+118520	dvojn
+118532	sobku celkov
+118558	 d
+118564	lky videa.
+118586	Hotovo
+118600	Zru
+118608	eno
+118620	ep. se z
+118638	zn. PCM @A017@
+118668	Je-li tato polo
+118700	ka zapnut
+118720	, budou
+118738	nast. fotoapar
+118768	tu optimal. podle
+118810	ipojen
+118824	 se z
+118836	zn. Olympus PCM.
+118874	cen
+118882	sobn
+118892	 exp.
+118904	@A00A@ Re
+118924	im RC
+118936	@A017@Nap
+118956	jen
+118964	 pom. p
+118980	ip.
+118988	Vyberte Vyp., pokud p
+119032	ipojujete
+119054	mikrofon, kter
+119084	 nevy
+119096	aduje
+119110	nap
+119118	jen
+119130	Vol. funk. vol. na dr.
+119176	Vyberte funkci p
+119214	azenou
+119230	voliteln
+119248	mu voli
+119264	i na dr
+119282	ku.
+119290	Oto
+119298	en
+119304	m voli
+119318	e @A07B@ upravte
+119354	hlasitost p
+119378	i p
+119386	ipojen
+119400	ch 
+119410	sluch
+119422	tk
+119428	ch.
+119436	Voli
+119446	 @A07B@ se 
+119476	 podle
+119492	nastaven
+119510	 funkce
+119528	voli
+119538	e.
+119544	Pom. p
+119558	i autoportr
+119582	tu
+119588	Upravte nastaven
+119622	 displeje
+119644	pro vyklopen
+119670	 displeje
+119696	i sn
+119714	 autoportr
+119736	tu.
+119744	Nastaven
+119762	 pomocn
+119778	ka
+119790	i autoportr
+119814	tu
+119822	se neaktivuj
+119848	 ani
+119860	po vyklopen
+119884	 displeje.
+119906	Ovl
+119914	dac
+119922	 prvky pomocn
+119950	ka
+119962	i autoportr
+119986	tu
+119994	budou zobrazeny na monitoru a
+120058	iv
+120064	 n
+120070	hled bude zobrazen jako
+120120	zrcadlov
+120138	 obraz.
+120154	@A004@Funkce spou
+120208	te funkci tla
+120238	tku
+120248	spou
+120262	 v re
+120274	imu @A004@.
+120298	Po
+120308	te fotografii
+120338	stisknut
+120356	m spou
+120378	Spus
+120388	te/zastavte z
+120416	znam
+120428	videa stisknut
+120458	m spou
+120480	Hlasitost sluch
+120512	tek
+120520	Upravte hlasitost sluch
+120568	tek.
+120580	Hlasitost z
+120604	znamu nebude
+120632	ovlivn
+120646	na.
+120654	@A008@ Info nast.
+120690	Vyberte informace
+120728	zn
+120734	zorn
+120748	 v re
+120760	imu @A008@.
+120788	d 
+120794	asu
+120802	Tich
+120812	 @A045@provoz
+120840	Rychl
+120856	sporn
+120868	 re
+120876	im
+120882	Pokud fotoapar
+120912	t nen
+120928	v re
+120938	imu 
+120948	iv
+120954	ho n
+120964	hledu, p
+120982	ejde
+120994	do 
+121002	spor. re
+121020	imu za n
+121038	kolik sek.
+121060	Vyvol
+121076	 nab
+121086	dky
+121094	Vyvol
+121106	 posledn
+121124	 v
+121134	r nab
+121146	dky.
+121156	Vyvolat
+121172	Reset
+121184	Nastaven
+121202	 k
+121208	du 
+121216	asu
+121224	Upravte nastaven
+121258	 k
+121264	du 
+121272	asu.
+121282	Re
+121288	im k
+121298	du 
+121306	asu
+121314	Vynech.sn
+121334	mku
+121342	Bez vynech.
+121368	prava rozd
+121390	lu 
+121398	asu v porovn
+121432	se skute
+121450	nou dobou z
+121474	znamu.
+121490	Pou
+121504	 se p
+121516	i pokro
+121532	il
+121538	ch
+121548	prav
+121558	ch vy
+121570	aduj
+121584	ch extr
+121600	mn
+121614	esnost 
+121630	asu.
+121640	Nebude prov
+121668	t 
+121674	pravu
+121688	rozd
+121698	lu 
+121706	asu v porovn
+121740	se skute
+121758	nou dobou z
+121782	znamu.
+121796	Po
+121818	h z
+121826	znamu
+121838	Voln
+121848	 b
+121858	Po
+121870	 k
+121876	d 
+121882	asu pouze
+121904	v pr
+121918	hu z
+121928	znamu videa.
+121954	Po
+121966	 k
+121972	d 
+121978	asu i v dob
+122008	kdy neb
+122028	 z
+122034	znam videa,
+122064	etn
+122072	 doby, kdy je
+122102	fotoapar
+122120	t vypnut
+122142	Po
+122150	te
+122164	as
+122170	Reset
+122182	Ru
+122192	 vlo
+122202	en
+122210	Aktu
+122220	ln
+122230	as
+122236	Nastavit hod:min:s:sn
+122280	mek
+122290	na 00:00:00:00.
+122322	Nastavit hodinu, minutu, sekundu
+122390	a sn
+122400	mek ru
+122422	Nastavit hodinu, minutu a sekundu na
+122498	aktu
+122508	ln
+122518	as a nastavit sn
+122552	mek na 00.
+122574	Barva zv
+122592	razn
+122610	erven
+122626	lut
+122636	Zaost
+122648	en
+122654	 oblasti budou
+122686	v pr
+122700	hu zv
+122712	razn
+122730	ozna
+122740	en
+122750	ervenou barvou.
+122782	Zaost
+122794	en
+122800	 oblasti budou
+122832	v pr
+122846	hu zv
+122858	razn
+122876	ozna
+122886	en
+122896	lutou barvou.
+122924	Intenzita zv
+122950	razn
+122966	Zaost
+122978	en
+122984	 oblasti budou
+123016	jemn
+123026	 zv
+123034	razn
+123044	ny.
+123052	Zaost
+123064	en
+123070	 oblasti budou
+123102	zv
+123108	razn
+123118	ny.
+123126	Zaost
+123138	en
+123144	 oblasti budou
+123176	siln
+123186	 zv
+123194	razn
+123204	ny.
+123214	pr. jasu obrazu
+123248	prava jasu obrazu v re
+123294	imu 
+123304	iv
+123310	ho
+123322	hledu nebude provedena.
+123372	prava jasu obrazu v re
+123418	imu 
+123428	iv
+123434	ho
+123446	hledu bude provedena s c
+123496	lem
+123506	vylep
+123518	it viditelnost zv
+123554	razn
+123574	Jas obrazu v re
+123606	imu 
+123616	iv
+123622	ho n
+123632	hledu
+123646	se bude li
+123668	it od jasu kon. sn
+123706	mku.
+123716	Upravte nastaven
+123750	 pro sekven
+123782	sn
+123796	, sn
+123814	 pomoc
+123828	 samosp.
+123848	a 
+123854	asosb
+123866	rn
+123872	 sn
+123892	@A047@ Tich
+123916	 @A048@
+123932	@A049@ Tich
+123956	 @A048@
+123972	@A04A@ Tich
+123996	 @A048@
+124012	@A04B@ Tich
+124036	 @A048@
+124052	@A04C@ Tich
+124076	 @A048@
+124092	@A04D@ Tich
+124116	 @A048@
+124132	@A047@ Proti n
+124162	razu @A04E@
+124186	@A04A@ Proti n
+124216	razu @A04E@
+124240	@A04B@ Proti n
+124270	razu @A04E@
+124294	@A04C@ Proti n
+124324	razu @A04E@
+124348	@A04D@ Proti n
+124378	razu @A04E@
+124402	Proti n
+124418	razu@A04E@/Tich
+124450	@A048@
+124464	Upravte nastaven
+124498	 pro tich
+124522	sn
+124536	 nebo sn
+124562	 v re
+124574	imu
+124584	Proti n
+124600	razu.
+124612	Tich
+124622	@A048@
+124636	Umo
+124646	uje tich
+124664	 sn
+124686	Blesk ani @A004@ nelze pou
+124742	t.
+124750	Vyberte 
+124768	as zpo
+124790	 po
+124800	uvoln
+124816	 z
+124826	rky.
+124836	Proti n
+124852	razu@A04E@
+124874	Je-li rychlost z
+124912	rky @A079@ nebo
+124946	men
+124956	, bude prvn
+124980	 clona z
+125002	rky
+125016	epnuta na elektronickou. 
+125070	Vyberte 
+125088	as zpo
+125110	 po
+125120	uvoln
+125136	 z
+125146	rky.
+125156	Redukce 
+125174	umu@A048@
+125194	Redukci 
+125212	umu nelze
+125234	pou
+125244	t v pr
+125262	hu tich
+125278	ho sn
+125302	Redukci 
+125320	umu bude mo
+125352	pou
+125362	t i v pr
+125384	hu tich
+125400	ho
+125408	sn
+125422	. V pr
+125440	hu p
+125452	pravy
+125466	redukce 
+125484	umu
+125494	bude sly
+125512	et zvuk z
+125536	rky.
+125546	Ru
+125556	 sn
+125574	BULB/TIME
+125596	iv
+125602	 kompoz. sn
+125636	Jin
+125646	Zes
+125654	l. n
+125664	hled - ru
+125688	 sn
+125706	Zes
+125714	l. n
+125724	hled - BULB/TIME
+125758	Zes
+125766	l. n
+125776	hled - 
+125792	iv
+125798	 kompozitn
+125820	 sn
+125838	Zes
+125846	l. n
+125856	hled - jin
+125880	Zap1
+125890	Zap2
+125900	Jas re
+125914	imu 
+125924	iv
+125930	ho n
+125940	hledu
+125954	bude odr
+125974	et nastaven
+125998	 expozice.
+126022	Zobrazen
+126040	 jas sn
+126056	mku bude
+126076	stejn
+126088	 jako u kone
+126118	ho
+126126	sn
+126132	mku.
+126142	Jas re
+126156	imu 
+126166	iv
+126172	ho n
+126182	hledu
+126196	nebude odr
+126220	et nastaven
+126248	expozice a bude upraven
+126298	pro optim
+126318	ln
+126324	 zobrazen
+126344	. 
+126352	Jas kone
+126374	ho sn
+126386	mku se bude li
+126416	it.
+126424	Jas 
+126434	iv. n
+126446	h. nebude odpov
+126478	dat
+126488	nastaven
+126506	 exp. a bude optimalizov
+126562	sn
+126570	en
+126576	m sn
+126586	mkovac
+126600	 frekvence 
+126626	tmav
+126636	ch sc
+126648	n.
+126656	Jas kone
+126678	ho sn
+126690	mku bude jin
+126724	ehr. video
+126750	ehr
+126758	t od za
+126776	tku
+126784	Odstranit cel
+126812	 @A004@
+126828	@A005@ Odstran
+126858	 v
+126864	echny automaticky
+126902	odd
+126910	len
+126918	 soubory jednoho videa.
+126966	Zobrazit pouze 3D sn
+127008	mky
+127016	@A078@ p
+127034	epne re
+127050	imy sn
+127078	Nastaven
+127096	m na @A079@ vyberte re
+127142	imy
+127152	sn
+127166	 na voli
+127184	i re
+127194	im
+127206	Nastaven
+127224	m na @A07A@ pou
+127256	ijte @A008@.
+127282	@A03D@ V
+127304	r zobrazen
+127332	ep
+127342	 mezi 
+127356	iv
+127362	m n
+127370	hledem a
+127390	super ovl
+127410	dac
+127418	m panelem.
+127446	i vypnut
+127464	m sn
+127474	ma
+127480	i oka
+127498	ep
+127508	 mezi elektronick
+127550	hled
+127562	kem a zadn
+127584	m displejem.
+127610	Vlastn
+127624	 nast.1
+127640	Vlastn
+127654	 nast.2
+127670	@A071@Funkce
+127696	@A08D@Funkce
+127722	@A094@Funkce
+127748	@A04F@@A02F@
+127774	@A06E@@A041@
+127800	@A07A@ rychl
+127826	 sekvence
+127846	@A07A@ pomal
+127872	 sekvence
+127892	Zvolte po
+127912	et sn
+127924	mk
+127930	 po
+127940	zen
+127948	ch
+127960	hem jedn
+127978	 sekundy v re
+128006	imu
+128016	sekven
+128034	ho sn
+128054	 @A07B@.
+128072	Zvolte po
+128092	et sn
+128104	mk
+128110	 po
+128120	zen
+128128	ch
+128140	hem jedn
+128158	 sekundy v re
+128186	imu
+128196	sekven
+128214	ho sn
+128234	 @A07C@.
+128252	@A036@@A020@
+128278	@A06F@@A022@
+128304	FullHD
+128318	HD
+128324	@A013@/@A014@/@A0C7@
+128366	mode6
+128378	@A055@uper @A0B8@arge
+128422	60p
+128430	50p
+128438	30p
+128446	25p
+128454	24p
+128462	MOV 1920
+128480	1080 Fine
+128500	MOV 1920
+128518	1080 ALL-Intra
+128548	MOV 1920
+128566	1080 Super Fine
+128598	MOV 1920
+128616	1080 Fine
+128636	MOV 1920
+128654	1080 Normal
+128678	MOV 1280
+128696	720 ALL-Intra
+128724	MOV 1280
+128742	720 Super Fine
+128772	MOV 1280
+128790	720 Fine
+128808	MOV 1280
+128826	720 Normal
+128848	MOV 1920
+128866	1080
+128876	FHD
+128884	A-I
+128892	ALL-Intra
+128912	@A106@
+128926	1080p
+128938	MIC @A017@
+128960	Prob
+128974	 redukce 
+128994	umu.
+129006	Po
+129012	kejte pros
+129034	m.
+129040	Rozd
+129050	l zaost
+129066	en
+129074	Odhad. 
+129090	as konce
+129108	Odhad. 
+129124	as za
+129138	tku
+129146	Po
+129152	et sn
+129164	mk
+129176	ep
+129186	 mezi re
+129204	imy zobrazen
+129234	el. hled
+129254	ku. 
+129266	inn
+129274	 pouze p
+129298	pohledu do el. hled
+129340	ku.
+129348	Vliv 
+129360	prav nastaven
+129392	lze ov
+129408	it v re
+129424	ln
+129430	m 
+129436	ase
+129450	ed uvoln
+129472	m spou
+129494	Simulovan
+129514	 zobrazen
+129538	pomoc
+129550	 optick
+129566	ho hled.
+129586	jednook
+129602	 zrcadlovky.
+129630	Vliv 
+129642	prav nast. nelze ov
+129684	it
+129696	ed uvoln
+129718	m spou
+129740	sn./s
+129754	zk
+129762	Simul. optick
+129790	 hled.
+129804	Zvolte obnovovac
+129838	 frekvenci
+129862	vestav
+129880	ho el. hled
+129906	ku.
+129914	Vyberte re
+129936	im zobrazen
+129960	 el. hled.
+129982	Povol
+129994	 nebo zak
+130022	zadn
+130032	 tl. zaost
+130054	ovac
+130064	 oblasti
+130084	AF pro elektronick
+130122	 hled
+130136	ek.
+130144	Nastaven
+130162	 videa
+130180	lka 
+130190	asosb
+130202	r. videa
+130220	Tl. zaost
+130240	. oblasti AF
+130266	Extr
+130276	mn
+130286	rovn
+130296	 vyv
+130308	en
+130314	 b
+130330	Chcete pokra
+130356	ovat?
+130370	irok
+130382	Focus BKT Off
+130410	Focus BKT On
+130436	Focus BKT
+130456	HighSpeed 120fps
+130490	4K
+130496	Preferovan
+130518	 funkce sn
+130548	 m
+130556	e 
+130568	t ulo
+130580	ena pro rychl
+130608	 p
+130616	stup.
+130628	Inicializace nastaven
+130676	Soukrom
+130692	 heslo
+130706	Certifikace
+130730	@A01C@: zm
+130754	te heslo pro p
+130784	ipojen
+130802	k va
+130812	emu smartphonu.
+130844	@A002@ Odstran
+130874	 v
+130880	echny automaticky
+130918	odd
+130926	len
+130934	 soubory jednoho videa.
+130982	Nefunk
+131006	padka MF
+131024	Nastav
+131038	 z
+131044	padku MF.
+131064	Funk
+131080	Pop-Art@A04F@
+131108	Pop-Art@A050@
+131136	Bled
+131146	 a sv
+131158	tl
+131164	 barvy@A04F@
+131190	Bled
+131200	 a sv
+131212	tl
+131218	 barvy@A050@
+131244	Zrnit
+131256	 film@A04F@
+131280	Zrnit
+131292	 film@A050@
+131316	Camera Obscura@A04F@
+131358	Camera Obscura@A050@
+131400	Camera Obscura@A051@
+131442	Diorama@A04F@
+131470	Diorama@A050@
+131498	Cross Process@A04F@
+131538	Cross Process@A050@
+131578	Dramatick
+131598	 t
+131604	n@A04F@
+131620	Dramatick
+131640	 t
+131646	n@A050@
+131662	Komiks@A04F@
+131688	Komiks@A050@
+131714	Akvarel@A04F@
+131742	Akvarel@A050@
+131770	Retro@A04F@
+131794	Retro@A050@
+131818	Retro@A051@
+131846	ste
+131858	 barva@A04F@
+131888	ste
+131900	 barva@A050@
+131930	ste
+131942	 barva@A051@
+131968	@A073@Pop-Art
+131996	@A052@Jemn
+132018	 kresba
+132034	@A079@Diorama
+132062	@A07A@Cross Process
+132102	@A054@Jemn
+132124	 s
+132130	piov
+132142	@A07C@Dramatick
+132174	 t
+132184	@A07D@Komiks
+132210	@A07E@Akvarel
+132238	@A07F@Retro
+132262	@A080@
+132278	ste
+132290	 barva
+132304	@A055@Pop-Art@A04F@
+132344	@A056@Pop-Art@A050@
+132384	@A057@Bled
+132406	 a sv
+132418	tl
+132424	 barvy@A04F@
+132450	@A058@Bled
+132472	 a sv
+132484	tl
+132490	 barvy@A050@
+132516	@A059@Zrnit
+132540	 film@A04F@
+132564	@A05A@Zrnit
+132588	 film@A050@
+132612	@A05B@Camera Obscura@A04F@
+132666	@A05C@Camera Obscura@A050@
+132720	@A05D@Camera Obscura@A051@
+132774	@A05E@Diorama@A04F@
+132814	@A05F@Diorama@A050@
+132854	@A060@Cross Process@A04F@
+132906	@A061@Cross Process@A050@
+132958	@A062@Dramatick
+132990	 t
+132996	n@A04F@
+133012	@A063@Dramatick
+133044	 t
+133050	n@A050@
+133066	@A064@Komiks@A04F@
+133104	@A065@Komiks@A050@
+133142	@A066@Akvarel@A04F@
+133182	@A067@Akvarel@A050@
+133222	@A068@Retro@A04F@
+133258	@A069@Retro@A050@
+133294	@A06A@Retro@A051@
+133330	@A06B@
+133346	ste
+133358	 barva@A04F@
+133384	@A06C@
+133400	ste
+133412	 barva@A050@
+133438	@A06D@
+133454	ste
+133466	 barva@A051@
+133492	@A06E@Efekt jemn
+133526	ho zaost
+133544	en
+133552	@A06F@Efekt camery obscury
+133606	@A070@Efekt b
+133638	ch okraj
+133658	@A071@Efekt r
+133686	me
+133692	ku
+133698	@A072@Efekt paprsk
+133738	@A073@Efekt rozmaz.: naho
+133790	e a dole
+133808	@A074@Efekt rozmaz.: vlevo a vpravo
+133880	@A075@Efekt st
+133910	nu: vlevo a vpravo
+133948	@A076@Efekt st
+133978	nu: naho
+133996	e a dole
+134014	@A0B1@ Tich
+134038	 @A074@
+134054	Zobraz
+134068	 certifikaci.
+134096	Ohnisk. vzd
+134120	l.
+134126	Barevn
+134140	 profil 1
+134160	Barevn
+134174	 profil 2
+134194	Barevn
+134208	 profil 3
+134228	@A0B2@Barevn
+134254	 profil 1
+134274	@A0B3@Barevn
+134300	 profil 2
+134320	@A0B4@Barevn
+134346	 profil 3
+134370	echny barvy@A028@
+134406	Jedna barva@A028@
+134442	Monochromatick
+134472	 profil 1
+134492	Monochromatick
+134522	 profil 2
+134542	Monochromatick
+134572	 profil 3
+134592	@A0B5@Monochromatick
+134634	 profil 1
+134654	@A0B6@Monochromatick
+134696	 profil 2
+134716	@A0B7@Monochromatick
+134758	 profil 3
+134782	dn
+134792	lut
+134802	Oran
+134812	ov
+134822	erven
+134836	Magenta
+134852	Modr
+134864	Azurov
+134880	Zelen
+134896	lutozelen
+134918	Efekt zrnit
+134942	ho filmu
+134960	Efekt zrnit
+134984	ho filmu - vyp.
+135016	Efekt zrnit
+135040	ho filmu - n
+135066	zk
+135074	Efekt zrnit
+135098	ho filmu - st
+135130	Efekt zrnit
+135154	ho filmu - vys.
+135186	Korekce oblast
+135216	 st
+135224	. t
+135238	Sv. a tm.@A01A@
+135270	St
+135276	edn
+135284	 t
+135290	ny@A01A@
+135308	Obnovit/p
+135332	adit u
+135346	iv. re
+135360	imy
+135368	Obnovte nastaven
+135402	 fotoapar
+135422	tu
+135430	nebo p
+135452	te aktu
+135468	ln
+135474	 nastaven
+135502	ivatelsk
+135520	m re
+135530	im
+135536	m.
+135546	ivatelsk
+135564	 re
+135572	im C1
+135588	ivatelsk
+135606	 re
+135614	im C2
+135630	ivatelsk
+135648	 re
+135656	im C3
+135672	ivatelsk
+135690	 re
+135698	im C4
+135710	Pou
+135720	t nastaven
+135742	 C1? Aktu
+135762	ln
+135772	nastaven
+135790	 fotoapar
+135810	tu bude p
+135830	eps
+135838	no.
+135846	Pou
+135856	t nastaven
+135878	 C2? Aktu
+135898	ln
+135908	nastaven
+135926	 fotoapar
+135946	tu bude p
+135966	eps
+135974	no.
+135982	Pou
+135992	t nastaven
+136014	 C3? Aktu
+136034	ln
+136044	nastaven
+136062	 fotoapar
+136082	tu bude p
+136102	eps
+136110	no.
+136118	Pou
+136128	t nastaven
+136150	 C4? Aktu
+136170	ln
+136180	nastaven
+136198	 fotoapar
+136218	tu bude p
+136238	eps
+136246	no.
+136254	Vyberte re
+136276	imy sn
+136310	azen
+136320	 pozic
+136334	m voli
+136354	re
+136360	im
+136366	 C3 a C4.
+136386	Voli
+136396	 re
+136404	im
+136410	 C3
+136418	Voli
+136428	 re
+136436	im
+136442	 C4
+136450	Nastaven
+136468	 inf. o obj.
+136494	Zadejte informace o objektivu
+136556	nekompatibiln
+136584	m s p
+136596	enosem dat
+136620	pro data Exif a optim. stabiliz.
+136686	Stiskem tla
+136712	tka p
+136724	ejdete
+136740	do nastaven
+136764	 informac
+136784	 o objektivu.
+136812	Vytvo
+136824	it informace
+136850	Upravit informace
+136886	Odstranit informace
+136930	zev objektivu
+136958	Hodnota clony
+136986	Odstranit kontrolu@A026@
+137036	Pou
+137046	t inf. o obj.@A026@
+137090	epsat
+137102	Ulo
+137110	it jako nov
+137134	 z
+137140	znam
+137150	@A012@ Funkce p
+137182	ep
+137188	na
+137198	Vyberte funkci, kter
+137244	bude p
+137262	azena voli
+137290	expozi
+137308	 kompenzace.
+137334	Nastaven
+137352	 tich
+137364	ho@A048@ re
+137388	imu
+137396	Povolit
+137412	Nepovolit
+137432	Umo
+137442	uje tich
+137460	 sn
+137482	Vyberte d
+137502	lku prodlevy
+137530	po stisknut
+137554	 spou
+137574	Um
+137580	leck
+137590	 efekt - vypnuto
+137624	Barevn
+137638	 filtr: 
+137658	dn
+137666	Barevn
+137680	 filtr: 
+137698	lut
+137708	Barevn
+137722	 filtr: oran
+137748	ov
+137756	Barevn
+137770	 filtr: 
+137788	erven
+137802	Barevn
+137816	 filtr: zelen
+137846	Norm
+137856	ln
+137862	 monochromatick
+137900	piov
+137910	 monochromatick
+137944	Modr
+137954	 monochromatick
+137988	Purpurov
+138006	 monochromat.
+138034	Zelen
+138046	 monochromatick
+138080	Spou
+138092	/@A01E@/Stabilizace obrazu
+138146	C. Spou
+138164	/@A019@/Stabilizace obrazu
+138218	Menu pro stisknut
+138254	 spou
+138276	sekven
+138294	 sn
+138314	a stabilizaci obrazu.
+138358	Export se nezda
+138390	il
+138396	Videosekvence nelze sn
+138442	mat
+138452	v re
+138462	imu vzd
+138478	len
+138486	 spou
+138506	Vyberte re
+138528	im sn
+138540	mku.
+138550	Bodov
+138562	 m
+138570	en
+138578	Pro @A03F@vybran
+138612	 polo
+138624	ky
+138632	bude provedeno m
+138668	en
+138678	v oblasti automatick
+138720	ho ost
+138734	en
+138744	N:
+138752	dn
+138760	N:Norm
+138774	ln
+138782	ART1@A04F@
+138804	ART1@A050@
+138826	ART3@A04F@
+138848	ART3@A050@
+138870	ART5@A04F@
+138892	ART5@A050@
+138914	ART6@A04F@
+138936	ART6@A050@
+138958	ART6@A051@
+138980	ART7@A04F@
+139002	ART7@A050@
+139024	ART8@A04F@
+139046	ART8@A050@
+139068	ART10@A04F@
+139092	ART10@A050@
+139116	ART11@A04F@
+139140	ART11@A050@
+139164	ART12@A04F@
+139188	ART12@A050@
+139212	ART13@A04F@
+139236	ART13@A050@
+139260	ART13@A051@
+139284	ART14@A04F@
+139308	ART14@A050@
+139332	ART14@A051@
+139356	C3
+139362	C4
+139368	Color Profile 1
+139400	Color Profile 2
+139432	Color Profile 3
+139464	Mono Profile 1
+139494	Mono Profile 2
+139524	Mono Profile 3
+139554	Kopie
+139574	r kopie
+139590	Nov
+139598	 soubor
+139618	epsat
+139630	Podvodn
+139648	@A076@Podvodn
+139678	Chyba ukl
+139706	 zaost
+139720	en
+139732	Slo
+139740	en
+139746	 obr
+139756	zku selhalo.
+139782	@A004@Re
+139800	im sn
+139812	mku
+139820	Spu
+139836	/zastaven
+139856	 z
+139862	zn. pro z
+139882	zn.
+139892	PCM p
+139904	ipojen
+139918	 pomoc
+139932	 USB bude
+139954	nez
+139962	visl
+139972	 na spu
+139996	/zast.
+140016	zn. na fotoapar
+140048	tu.
+140060	zn. PCM p
+140080	ipojen
+140094	 pomoc
+140108	 USB
+140120	automaticky spust
+140156	/zastav
+140172	 z
+140178	znam
+140190	sou
+140198	asn
+140206	 se spu
+140230	m/zastaven
+140262	zn. na fotoapar
+140294	tu.
+140302	Bez z
+140314	kladn
+140326	ho t
+140336	nu.
+140348	znamn
+140360	k PCM p
+140376	ipojen
+140394	pomoc
+140406	 USB spust
+140428	 z
+140434	kladn
+140446	 t
+140462	i stisknut
+140484	 a podr
+140500	en
+140506	 tla
+140518	tka @A04B@
+140542	v pr
+140556	hu z
+140566	znamu videa.
+140592	Hlasitost z
+140616	zn. fot. a redukce
+140660	tru bude nefunk
+140696	 a hlasitost
+140728	znamu bude automaticky
+140776	upravena pomoc
+140806	 z
+140812	znamn
+140824	ku
+140832	PCM Olympus.
+140858	Hlasitost z
+140882	znamu lze upravit
+140920	pomoc
+140932	 hlasitosti z
+140960	zn. fot.
+140978	@A004@Filtr 
+141004	umu
+141020	rem tohoto @A004@ exkluzivn
+141076	ho
+141084	re
+141090	imu m
+141104	ete po nahr
+141136	upravovat nahran
+141170	 video.
+141186	Zvolte 
+141202	rove
+141212	 pro potla
+141234	en
+141246	umu pro nahr
+141280	 videa
+141300	i vysok
+141316	ch citlivostech ISO.
+141358	Zvolte 
+141374	rove
+141384	 pro potla
+141406	en
+141418	umu pro z
+141438	znam obr
+141456	zk
+141470	i vysok
+141486	ch citlivostech ISO.
+141528	Synchron. @A03F@nahr.
+141576	kladn
+141588	 t
+141598	Hlasitost z
+141622	zn. fot.
+141640	@A077@Ploch
+141664	 barvy
+141678	@A078@ karta pln
+141714	@A079@ karta pln
+141750	@A078@/@A079@ karta pln
+141800	@A078@ karta pln
+141836	@A079@ karta pln
+141872	@A078@ 
+141890	dn
+141896	 sn
+141904	mek
+141912	@A079@ 
+141930	dn
+141936	 sn
+141944	mek
+141952	@A078@ obr. nelze 
+141992	st
+141998	@A079@ obr. nelze 
+142038	st
+142044	@A078@ chyba karty
+142082	@A079@ chyba karty
+142120	@A078@/@A079@ chyba karty
+142172	@A078@ chyba / @A079@ chr
+142232	@A078@ chyba / @A079@ pln
+142286	@A078@ ochr. p
+142316	ed z
+142326	p.
+142332	@A079@ ochr. p
+142362	ed z
+142372	p.
+142378	@A078@/@A079@ ochr. p
+142422	ed z
+142432	p.
+142438	@A078@ chr
+142464	n / @A079@ chyba
+142498	@A078@ chr
+142524	n / @A079@ pln
+142556	@A078@ pln
+142578	 / @A079@ chyba
+142610	@A078@ pln
+142632	 / @A079@ chr
+142672	epnuto do nov
+142700	 slo
+142710	ky
+142720	epnuto na @A078@
+142758	epnuto na @A079@
+142792	@A0A3@ nem
+142816	e vytvo
+142832	it slo
+142846	ku
+142852	@A0A4@ nem
+142876	e vytvo
+142892	it slo
+142906	ku
+142912	Nem
+142922	e vytvo
+142938	it slo
+142952	ku
+142958	@A078@ nem
+142982	e vybrat slo
+143008	ku
+143014	@A079@ nem
+143038	e vybrat slo
+143064	ku
+143070	@A078@ sn
+143090	mek nelze upravit
+143126	@A079@ sn
+143146	mek nelze upravit
+143182	@A078@ pozor - sn
+143218	mek nelze vybrat
+143252	@A079@ pozor - sn
+143288	mek nelze vybrat
+143322	@A07A@ chyba sn
+143354	mku
+143362	@A07B@ chyba sn
+143394	mku
+143402	@A0A3@ 
+143420	dn
+143426	 hud. kulisa
+143452	@A0A4@ 
+143470	dn
+143476	 hud. kulisa
+143502	@A0A3@ nelze tisknout
+143546	@A0A4@ nelze tisknout
+143590	Doporu
+143604	ujeme bat. Olympus
+143642	A1. AF/MF
+143662	A2. AF/MF
+143682	A3. AF/MF
+143702	C1. Spou
+143722	/@A013@/Stabilizace obrazu
+143776	C2. Spou
+143796	/@A013@/Stabilizace obrazu
+143850	D1. Disp/@A001@/PC
+143888	D2. Disp/@A001@/PC
+143926	D3. Disp/@A001@/PC
+143964	D4. Disp/@A001@/PC
+144002	E1. Exp/ISO/BULB/@A077@
+144050	E2. Exp/ISO/BULB/@A077@
+144098	E3. Exp/ISO/BULB/@A077@
+144150	H1. Nahr
+144168	v./maz
+144188	H2. Nahr
+144206	v./maz
+144226	I. EVF
+144240	J1. @A003@ Nastaven
+144282	J2. @A003@ Nastaven
+144324	Menu videa
+144346	Nab
+144354	dka pro z
+144374	kladn
+144390	a podrobn
+144410	 nastaven
+144430	 videa.
+144446	Citlivost C-AF
+144476	Upravte citlivost aretace C-AF
+144540	podle pohybu sn
+144572	man
+144580	ho
+144588	objektu.
+144606	Vysok
+144624	zk
+144632	Omezova
+144648	 AF
+144656	Omezuje dosah AF dle va
+144704	ich
+144714	specifikac
+144742	Vzd
+144750	lenost je p
+144774	ibli
+144792	Prior. spou
+144830	rku lze spustit,
+144866	i kdy
+144878	 je subjekt mimo
+144914	ohnisko.
+144940	rku nelze spustit, pokud
+144992	je subjekt mimo ohnisko.
+145042	Nastaven
+145060	 vzd
+145070	lenosti
+145086	Nastaven
+145104	 1
+145110	Nastaven
+145128	 2
+145134	Nastaven
+145152	 3
+145158	Nastavuje zobrazen
+145196	 zelen
+145210	ho
+145222	lov
+145230	ho r
+145240	me
+145246	ku pro automatick
+145286	ost
+145294	en
+145308	me
+145314	ek se nezobrazuje.
+145356	me
+145362	ek se zobrazuje.
+145396	Zobrazuje r
+145420	me
+145426	ek p
+145436	i p
+145444	im
+145452	knut
+145466	tla
+145476	tka z
+145492	rky.
+145502	Nastaven
+145520	 MF
+145528	Nast. vzd
+145548	lenosti MF
+145570	Ur
+145576	uje vzd
+145592	lenost pro nast. MF.
+145636	Vzd
+145644	lenost je p
+145668	ibli
+145686	Zm
+145692	ny v re
+145708	imu nast. MF.
+145740	ep
+145750	 IS. Stiskn
+145774	te tla
+145790	tko
+145800	dol
+145808	 a oto
+145822	en
+145828	m kruhov
+145846	ho
+145858	ep
+145864	na
+145870	e p
+145878	ep
+145884	nejte mezi re
+145912	imy IS.
+145932	ep
+145942	 omezova
+145960	 AF. Vzd
+145978	lenost
+145994	nastav
+146008	te stiskem tla
+146040	tka dol
+146060	a oto
+146072	en
+146078	m kruhov
+146096	ho p
+146106	ep
+146112	na
+146118	e.
+146124	Stiskem zobraz
+146154	te r
+146164	me
+146170	ek
+146178	@A042@ pro zam
+146210	ov
+146226	Po nastaven
+146250	 c
+146256	le op
+146268	tovn
+146284	stiskem aktivujete re
+146328	im @A042@.
+146350	Stiskem p
+146370	epnete na ur
+146396	en
+146410	choz
+146420	 re
+146428	im @A078@. Op
+146456	tovn
+146472	stiskem se vr
+146504	te.
+146512	Nast. p
+146530	ky @A004@ Fn
+146568	te funkci k p
+146598	ce Fn
+146612	k fotografov
+146646	@A003@Funkce Fn p
+146684	ky
+146694	epnout funkci @A0A9@
+146736	@A004@Funkce Fn p
+146774	ky
+146792	te funkci k p
+146822	ce Fn
+146836	k nat
+146850	en
+146856	 videa.
+146880	 funkci kole
+146906	kov
+146914	ho ovlada
+146934	e.
+146948	 re
+146956	im AF/@A0AA@/@A0AB@.
+147004	l lze vybrat.
+147040	azuje n
+147056	sleduj
+147074	 re
+147082	imy videa:
+147106	Poloha 1: dle nast. kole
+147156	ka re
+147168	imu.
+147180	Poloha 2: re
+147206	im @A004@.
+147228	@A07E@Z
+147244	mek
+147252	Zvolte ZAP pro vypnut
+147296	 @A07E@.
+147320	ka Fn/vyp. p
+147348	ka
+147354	Pou
+147362	ijte p
+147378	ku Fn jako vyp
+147408	na
+147420	Pou
+147428	ijte p
+147444	ku Fn pro
+147466	ur
+147472	en
+147478	 funkce. Pomoc
+147512	vyp
+147520	na
+147526	e ovl
+147542	te nap
+147556	jen
+147568	Nap
+147576	jen
+147584	 1
+147590	Ovl
+147598	dejte nap
+147618	jen
+147626	 p
+147634	kou Fn
+147654	sledovn
+147676	Poloha 1: Zapnuto
+147714	Poloha 2: Vypnuto
+147752	Nap
+147760	jec
+147768	 p
+147776	ka je vypnuta.
+147806	Nap
+147814	jen
+147822	 2
+147828	Ovl
+147836	dejte nap
+147856	jen
+147864	 p
+147872	kou Fn
+147892	sledovn
+147914	Poloha 1: Vypnuto
+147952	Poloha 2: Zapnuto
+147990	Nap
+147998	jec
+148006	 p
+148014	ka je vypnuta.
+148044	Kelviny CWB
+148072	Nastaven
+148090	 @A049@
+148106	Nastaven
+148124	 @A04A@
+148140	Max po
+148154	et sn
+148166	mk
+148172	 / s
+148182	Omezova
+148198	 sn
+148206	mk
+148214	Priorita stabilizace obrazu
+148276	i nep
+148288	etr
+148296	it
+148302	m sn
+148324	Priorita fps
+148350	Rychlost sn
+148382	 m
+148392	prioritu nad stabilizac
+148440	 obrazu.
+148458	Priorita IS
+148482	Stabilizace obrazu m
+148524	 prioritu
+148546	nad rychlost
+148572	 sn
+148596	stup HDMI @A004@
+148630	Ur
+148636	uje v
+148648	stupn
+148660	 nastaven
+148684	pro sn
+148706	 videa pomoc
+148740	ipojen
+148754	ho HDMI.
+148772	Re
+148778	im v
+148788	stupu
+148800	Nastaven
+148818	 re
+148826	imu v
+148838	stupu do
+148858	za
+148866	zen
+148874	 p
+148880	ipojen
+148894	ch p
+148904	es HDMI.
+148922	Re
+148928	im monitoru
+148952	Vys
+148964	 video a informa
+149006	daje
+149018	do za
+149032	zen
+149040	. Tento re
+149062	im
+149070	doporu
+149084	ujeme p
+149100	i pou
+149126	za
+149134	zen
+149142	 jako monitoru.
+149174	Nahr
+149194	Vys
+149206	 pouze video bez
+149242	zobrazen
+149260	 informac
+149280	. Tento
+149298	re
+149304	im doporu
+149324	ujeme
+149342	i nahr
+149364	 videa pomoc
+149390	 za
+149400	zen
+149418	Bity REC
+149440	Velikost v
+149462	stupu
+149474	4K
+149484	stupn
+149496	 sn
+149504	mky
+149516	Nastaven
+149534	 specifikace @A004@
+149574	Nastaven
+149592	 kvality videa.
+149624	@A004@@A024@
+149650	Nahr
+149664	 video o velikosti
+149704	4096 x 2160 (17:9).
+149744	Nahr
+149758	 video o velikosti
+149798	3840 x 2160 (16:9).
+149838	Nahr
+149852	 video o velikosti
+149892	1920 x 1080 (16:9).
+149932	Nahr
+149946	 video o velikosti
+149986	1280 x 720 (16:9).
+150024	Nastaven
+150042	 @A013@/@A014@
+150076	i volb
+150090	 re
+150098	imu @A013@/@A014@
+150142	ete vynechat polo
+150178	ky,
+150188	kter
+150198	 nebyly nastaveny na @A03F@.
+150256	Nastavuje nav
+150292	 m
+150302	ku
+150310	zobrazenou na monitoru p
+150366	Live View.
+150388	Barva zobrazen
+150420	Nastaven
+150438	 1
+150444	Nastaven
+150462	 2
+150468	@A079@
+150482	Pou
+150492	t nast. na EVF
+150522	Nepou
+150534	ije nastaven
+150560	 m
+150570	ky zadn
+150586	ho
+150594	monitoru na EVF.
+150628	Pou
+150636	ije nastaven
+150662	 m
+150672	ky zadn
+150688	ho
+150696	monitoru na EVF.
+150730	Nastaven
+150748	 m
+150758	ky EVF
+150772	Nastavuje nav
+150808	 m
+150818	ku
+150826	zobrazenou v EVF.
+150862	Nastaven
+150880	 detailu LV
+150904	Nastaven
+150922	 pro zobrazen
+150954	detailu LV.
+150978	Nastaven
+150996	 @A046@
+151012	Nastaven
+151030	 pro zobrazen
+151066	hledu.
+151086	hem detailu LV se uprav
+151134	 jas
+151146	za 
+151156	elem snadn
+151178	ho potvrzen
+151210	hem detailu LV se jas
+151256	neuprav
+151272	 a displej bude
+151310	t stejn
+151326	 jas jako
+151352	ed detailem LV.
+151388	hem n
+151400	hledu se uprav
+151430	 jas
+151442	pro 
+151454	ely snadn
+151474	ho potvrzen
+151506	hem n
+151518	hledu se jas neuprav
+151564	a displej bude m
+151598	t stejn
+151614	 jas
+151626	jako p
+151640	ed n
+151650	hledem.
+151666	@A006@@A07A@ Info
+151702	Zv
+151712	ovac
+151722	 r
+151728	me
+151734	ek
+151740	Zv
+151750	ovac
+151760	 posuvn
+151780	Vybrat r
+151798	me
+151804	ek
+151810	Nastaven
+151828	 @A0AA@
+151848	i v
+151860	ru c
+151870	lov
+151878	ho re
+151890	imu
+151900	AF m
+151912	ete p
+151924	esko
+151934	it polo
+151950	ky,
+151960	kter
+151970	 nebyly nastaveny na @A058@.
+152028	Vlastn
+152042	 nastaven
+152062	@A07C@
+152076	Nastaven
+152094	 pro re
+152110	im provozu
+152134	pro obrazovku v
+152170	ru c
+152180	le AF.
+152194	Sada 1
+152208	Sada 2
+152222	@A0AA@
+152236	@A0AB@
+152250	@A008@
+152264	Registruje v
+152290	choz
+152300	 re
+152308	im
+152316	AF/@A0AA@/@A0AB@.
+152352	Podrobn
+152368	 nastaven
+152388	, kdy
+152400	 je
+152410	citlivost ISO nastavena na AUTO.
+152476	Horn
+152486	 limit / P
+152508	vodn
+152518	 nast.
+152532	Nejni
+152548	 nast. S/S
+152570	Kdy
+152578	 rychlost z
+152606	rky dos
+152622	hne
+152632	nejni
+152648	 nastaven
+152668	 hodnoty,
+152690	za
+152696	ne stoupat citlivost ISO.
+152750	Plat
+152760	 v re
+152772	imu P nebo A.
+152800	Nastaven
+152818	 slotu karty
+152844	Nastaven
+152862	 pro ukl
+152892	a p
+152900	ehr
+152916	 z karty.
+152936	Ulo
+152944	it nastaven
+152968	 @A003@
+152984	Standardn
+153006	Nahr
+153020	 pouze na p
+153048	azenou kartu.
+153076	Automaticky p
+153104	ep
+153110	nat
+153118	Kdy
+153126	 se ur
+153140	en
+153146	 karta zapln
+153182	epne se na jinou kartu
+153230	a sn
+153248	 m
+153256	e pokra
+153272	ovat.
+153284	Du
+153290	ln
+153296	 nez
+153306	vis. @A081@
+153330	Ukl
+153342	 na ob
+153356	 karty p
+153374	i pou
+153386	it
+153402	slu
+153414	ch nastaven
+153444	Pokud se jedna karta zapln
+153504	nelze ukl
+153524	dat ani na druhou kartu.
+153574	Du
+153580	ln
+153586	 nez
+153596	vis. @A082@
+153620	Ukl
+153632	 na ob
+153646	 karty p
+153664	i pou
+153676	it
+153692	slu
+153704	ch nastaven
+153734	Pokud se jedna karta zapln
+153794	na druhou kartu lze st
+153840	le ukl
+153854	dat.
+153864	Du
+153870	ln
+153876	 stejn
+153890	 @A081@
+153906	Ukl
+153918	 na ob
+153932	 karty p
+153950	i pou
+153962	it
+153972	stejn
+153984	ch nastaven
+154008	 @A003@@A024@.
+154040	Pokud se jedna karta zapln
+154100	nelze ukl
+154120	dat ani na druhou kartu.
+154170	Du
+154176	ln
+154182	 stejn
+154196	 @A082@
+154212	Ukl
+154224	 na ob
+154238	 karty p
+154256	i pou
+154268	it
+154278	stejn
+154290	ch nastaven
+154314	 @A003@@A024@.
+154346	Pokud se jedna karta zapln
+154406	na druhou kartu lze st
+154452	le ukl
+154466	dat.
+154478	lo
+154488	 slot @A003@
+154516	lo
+154526	 slot @A004@
+154552	Slot @A006@
+154584	adit slo
+154602	ku ulo
+154616	en
+154632	adit
+154642	Nep
+154654	azovat
+154668	Kop
+154676	rovat v
+154692	echny sn
+154710	mky
+154720	ulo
+154728	en
+154734	 na jedn
+154752	 kart
+154768	na kartu druhou.
+154810	adit slo
+154828	ku ke kop
+154848	rov
+154862	Existuj
+154882	 slo
+154892	ka
+154898	Nov
+154906	 slo
+154916	ka
+154922	Nastaven
+154940	 baterie
+154958	Zobrazen
+154976	 informac
+154996	 a nastaven
+155024	o baterii.
+155046	Priorita baterie
+155080	Stav baterie
+155106	Degradace
+155130	ra nabit
+155154	riov
+155170	slo
+155178	Po
+155184	et sn
+155196	mk
+155204	Typ baterie
+155228	Doba p
+155242	idr
+155250	en
+155258	Nastav
+155272	 dobu p
+155288	idr
+155296	en
+155302	 pro
+155314	ka
+155320	dou funkci, kter
+155354	 vy
+155362	aduje
+155380	idr
+155388	en
+155394	 ke sv
+155408	 aktivaci.
+155430	Ukon
+155440	it LV @A07A@
+155470	idr
+155478	en
+155484	 ur
+155492	en
+155498	ho tla
+155514	tka
+155524	ukon
+155536	 detail Live View nebo
+155584	ukon
+155596	 zobrazen
+155616	 r
+155622	me
+155628	ku
+155636	detailu Live View.
+155674	Ukon
+155684	it @A042@
+155708	idr
+155716	en
+155722	 ur
+155730	en
+155736	ho tla
+155752	tka ukon
+155776	detail @A042@ nebo ukon
+155826	 zobrazen
+155854	me
+155860	ku detailu @A042@.
+155898	Ukon
+155908	it @A006@@A07A@
+155944	idr
+155952	en
+155958	 ur
+155966	en
+155972	ho tla
+155988	tka ukon
+156012	detail @A035@ nebo ukon
+156062	 zobrazen
+156090	me
+156096	ku detailu @A035@.
+156134	Vlo
+156142	it t
+156152	n klapky
+156174	idr
+156182	te @A04B@ b
+156206	hem nahr
+156236	videa a rekord
+156266	r PC p
+156280	ipojen
+156302	es USB vlo
+156326	 t
+156332	n klapky.
+156352	Obnovit @A078@
+156386	idr
+156394	en
+156400	 tla
+156412	tka @A035@ vr
+156448	@A078@ do st
+156474	edu obrazovky
+156512	ru c
+156522	le AF.
+156536	Obnovit r
+156556	m LV @A07A@
+156584	idr
+156592	en
+156598	 tla
+156610	tka @A035@ vr
+156650	me
+156656	ek detailu do st
+156690	edu
+156700	obrazovky Live View.
+156742	Obnovit @A043@
+156776	idr
+156784	en
+156790	 tla
+156802	tka @A035@ vr
+156838	hodnoty @A043@ do v
+156878	choz
+156888	ho
+156896	stavu na obrazovce nastaven
+156956	Obnovit @A007@
+156990	i p
+157002	azen
+157012	 @A007@ ke kole
+157044	ku vr
+157068	idr
+157076	en
+157082	 tla
+157094	tka @A035@ hodnotu
+157134	kompenzace expozice
+157176	na v
+157186	choz
+157196	 hodnotu na obrazovce
+157242	pohotovosti ke sn
+157290	Obnovit @A07B@
+157324	idr
+157332	en
+157338	 tla
+157350	tka @A035@ vr
+157386	nastaven
+157404	 kontroly sv
+157430	tel
+157440	a st
+157454	 do v
+157466	choz
+157476	ho nastaven
+157504	na obrazovce nastaven
+157552	Ukon
+157562	it @A07C@
+157586	idr
+157594	en
+157600	 tla
+157612	tka @A07C@
+157636	deaktivuje kompenzaci
+157690	rky.
+157700	Obnovit @A07C@
+157734	idr
+157742	en
+157748	 tla
+157760	tka @A035@ vr
+157796	nastaven
+157814	 kompenzace
+157848	rky do v
+157866	choz
+157876	ho nastaven
+157904	na obrazovce nastaven
+157952	Obnovit r
+157972	me
+157978	ek @A042@
+158002	idr
+158010	en
+158016	m tla
+158030	tka @A035@
+158054	vr
+158064	te r
+158074	me
+158080	ek detailu
+158104	telekonference do centr
+158152	ln
+158162	polohy.
+158182	Obnovit @A009@
+158216	idr
+158224	en
+158230	 tla
+158242	tka @A035@ vr
+158278	nastaven
+158296	 intenzity blesku
+158334	do v
+158344	choz
+158354	ho nastaven
+158378	 p
+158390	pohotovosti ke sn
+158434	 v p
+158446	pad
+158462	e je @A009@ p
+158494	azeno ke kole
+158522	ku.
+158534	epnout z
+158552	mek @A045@
+158578	idr
+158586	en
+158592	m tla
+158606	tka p
+158622	azen
+158632	ho
+158640	k z
+158648	mku @A045@ p
+158674	epne z
+158688	mek @A045@.
+158716	ep
+158722	na
+158728	 @A061@/@A062@
+158762	idr
+158770	en
+158776	 tla
+158788	tka p
+158804	azen
+158814	ho
+158822	k @A061@/@A062@ deaktivuje
+158878	re
+158884	imy @A061@/@A062@.
+158922	Vyvolat nast. BKT
+158962	idr
+158970	en
+158976	 tla
+158988	tka p
+159004	azen
+159014	ho k BKT
+159034	vyvol
+159046	 obrazovku nastaven
+159090	BKT.
+159100	Vyvolat aut. p
+159130	. EVF
+159146	idr
+159154	en
+159160	 tla
+159172	tka p
+159188	azen
+159198	ho k @A03D@
+159224	vyvol
+159236	 obrazovku nastaven
+159280	automatick
+159302	ho p
+159312	ep
+159318	na
+159324	e @A03D@.
+159344	Pro Capture H
+159372	Pro Capture L
+159400	Efekt: Vysok
+159428	Efekt: N
+159446	zk
+159454	Efekt: Standardn
+159490	Omezova
+159506	 AF: Vyp
+159524	@A07D@ akt. vzd
+159556	lenosti
+159572	Obnovit / vlastn
+159606	 re
+159614	imy
+159630	adit k vlastn
+159658	mu re
+159670	imu
+159678	Vyvolat z vlastn
+159712	ho re
+159724	imu
+159732	Obnovit rozsah
+159764	prava videa
+159788	Focen
+159800	 p
+159806	i videu
+159822	St
+159828	ih videoz
+159848	znamu
+159860	Vybran
+159874	 sc
+159882	na bude smaz
+159908	na.
+159916	@A002@Vybran
+159942	 sc
+159950	na bude smaz
+159976	na.
+159984	@A004@Nastaven
+160014	 z
+160020	znamu zvuku
+160044	@A004@Nastaven
+160074	 displeje
+160094	Nastaven
+160112	 zobrazovan
+160136	ch informac
+160168	i nat
+160182	en
+160188	 videa.
+160204	@A004@Informa
+160236	 nastaven
+160258	Vyberte zobrazen
+160292	 informace
+160320	i stisku @A01A@.
+160362	ka
+160368	@A004@Nast. ovl
+160410	Vyberte ovl
+160434	dac
+160442	 prvky zobrazen
+160482	i stisku @A035@ v re
+160524	imu videa.
+160546	@A087@ Zobr. vzorec
+160586	Nastavuje zp
+160612	sob zobrazen
+160642	nabit
+160654	 baterie
+160678	i nat
+160692	en
+160698	 videa.
+160714	@A078@@A004@@A024@
+160752	@A078@@A003@@A024@
+160790	@A079@@A004@@A024@
+160828	@A079@@A003@@A024@
+160866	Vyberte kartu k nastaven
+160918	Aktualizace firmware
+160960	@A002@ Po aktualizaci firmware nebude
+161038	mo
+161048	 prov
+161060	st n
+161070	vrat k sou
+161092	asn
+161104	verzi firmware.
+161136	@A056@Funkce
+161162	@A0B5@Funkce
+161188	@A0B6@Funkce
+161214	@A0B7@Funkce
+161240	Scanner AF
+161262	Nastaven
+161280	 scanneru AF.
+161308	Pokud je subjekt rozmazan
+161364	nebo pokud je kontrast n
+161414	zk
+161426	scanner AF se deaktivuje.
+161478	Pokud je subjekt rozmazan
+161530	 nebo
+161544	pokud je kontrast n
+161584	zk
+161590	, aktivuje se
+161620	scanner AF pouze jednou.
+161670	Pokud je subjekt rozmazan
+161726	nebo pokud je kontrast n
+161776	zk
+161788	aktivuje se scanner AF.
+161836	@A003@Re
+161854	im AF
+161866	Nastavte zp
+161890	sob AF p
+161914	fotografov
+161944	@A003@Stab. obrazu
+161982	Nastavuje re
+162008	im stabilizace obrazu
+162058	i fotografov
+162092	@A003@Funkce tla
+162128	tka
+162136	Vyberte funkce k p
+162178	azen
+162192	k jednotliv
+162216	m tla
+162230	tk
+162246	i fotografov
+162280	@A003@Funkce p
+162310	ep
+162316	na
+162326	Vyberte funkce k p
+162368	azen
+162382	k jednotliv
+162406	m kole
+162434	i fotografov
+162468	@A003@Filtr 
+162494	umu
+162502	@A003@Rych. el. zoomu
+162546	Nastavuje rychlost p
+162588	ibli
+162598	ov
+162616	i fotografov
+162646	 a pou
+162660	it
+162670	elektronick
+162694	 p
+162700	ibli
+162710	ovac
+162728	ky.
+162736	@A003@@A024@
+162762	Vyberte nastaven
+162796	 kvality sn
+162820	mku
+162834	i fotografov
+162868	@A004@Tla
+162888	./p
+162896	ep
+162902	na
+162908	/p
+162916	ka
+162922	Nastavuje funkce k p
+162968	azen
+162982	k jednotliv
+163006	m tla
+163020	tk
+163032	a kole
+163050	m p
+163058	i sn
+163076	 videa.
+163092	@A004@Funkce tla
+163128	tka
+163136	Vyberte funkce k p
+163178	azen
+163192	k jednotliv
+163216	m tla
+163230	tk
+163236	m p
+163250	sn
+163264	 videa.
+163280	@A004@Rych. el. zoomu
+163324	Nastavte rychlosti p
+163366	ibli
+163376	ov
+163394	i sn
+163412	 videa p
+163430	i pou
+163442	it
+163452	elektronick
+163476	 p
+163482	ibli
+163492	ovac
+163510	ky.
+163518	Nastaven
+163536	 @A004@ AF/IS
+163572	r re
+163582	imu stabilizace sn
+163620	mku
+163630	a zp
+163640	sobu zaost
+163662	ov
+163672	 p
+163684	sn
+163698	 videa.
+163714	@A004@Re
+163732	im AF
+163744	Nastav
+163758	 zp
+163766	sob zaost
+163786	ov
+163804	i sn
+163822	 videa.
+163838	@A004@Stab. obrazu
+163876	Zm
+163886	 re
+163894	im stabilizace obrazu
+163944	i sn
+163962	 videa.
+163978	Propojen
+163996	 se smartphonem
+164030	pomoc
+164042	 zabudovan
+164064	 s
+164074	 @A0B8@.
+164092	Nastaven
+164110	 @A0B8@
+164126	Nab
+164134	dka o zabudovan
+164174	ti @A0B8@.
+164196	Nast. p
+164212	ipojen
+164226	 @A0B8@
+164242	Vybrat p
+164260	ipojen
+164274	 @A0B8@
+164290	Vyberte p
+164310	ipojen
+164324	 @A0B8@
+164342	poka
+164360	Resetovat nastaven
+164398	 @A0B8@
+164414	@A003@ Pozor, reset v
+164458	ech
+164468	nastaven
+164486	 @A0B8@
+164508	prava p
+164524	ipojen
+164538	 @A0B8@
+164554	Pro p
+164566	ipojen
+164580	 k va
+164592	emu
+164602	smartphonu. Tato konfigurace
+164662	je nutn
+164678	 pouze jednou.
+164714	ipojen
+164728	 @A0B8@ se spust
+164762	 pozd
+164774	ji.
+164782	Spou
+164800	 @A0B8@
+164816	Zastavov
+164838	 @A0B8@
+164854	Vypne vestav
+164880	nou s
+164894	 @A0B8@.
+164912	Kon. @A0B8@@A01E@
+164948	Je-li rychlost z
+164986	rky @A07E@ nebo
+165020	men
+165030	, bude prvn
+165054	 clona z
+165076	rky
+165090	epnuta na elektronickou. 
+165144	Vyberte 
+165162	as zpo
+165184	 po
+165194	uvoln
+165210	 z
+165220	rky.
+165230	4K
+165236	C4K
+165244	Color
+165256	Color / Vivid
+165284	MOV 3840
+165302	2160
+165312	MOV 4096
+165330	2160
+165340	MOV 1920
+165358	1080
+165368	MOV 1280
+165386	720
+165394	Sn
+165400	mky p
+165412	ed z
+165426	rkou
+165436	Nastaven
+165454	 m
+165464	ky
+165470	@A004@Funkce p
+165500	ep
+165506	na
+165516	Vyberte funkce k p
+165558	azen
+165572	k jednotliv
+165596	m kole
+165614	m p
+165628	sn
+165642	 videa.
+165658	@A078@Nast. v
+165686	choz
+165698	@A078@Bodov
+165722	 m
+165730	en
+165738	Styl EVF
+165756	Aut. p
+165770	ep
+165776	na
+165782	 EVF
+165792	Volba z
+165808	ny AF
+165820	@A078@Dom
+165842	@A07F@i-Enhance
+165874	Vypnout o
+165898	 senzor.
+165918	@A03D@: pro p
+165946	epnut
+165958	 z obrazovky
+165986	na zobrazen
+166010	 EVF.
+166022	Stiskem provedete S-AF.
+166070	Funkce tla
+166094	tek @A0A9@ nejsou
+166132	zm
+166142	ny v @A0BB@.
+166168	V @A0BB@ jsou funkce tla
+166220	tek @A0A9@
+166248	epnuty na
+166270	@A0BC@: BKT a @A0BD@: @A0BE@.
+166330	Vyp
+166342	 funkci p
+166364	ky Fn.
+166378	@A080@Pastelov
+166410	@A078@@A01C@
+166436	Vyb
+166448	 styl zobrazen
+166478	 EVF.
+166494	epne automaticky z obrazovky
+166554	na EVF, kdy
+166578	 se k n
+166594	mu
+166606	ibl
+166618	 oko.
+166630	Podrobn
+166646	 nastaven
+166666	 pro
+166678	fotografov
+166704	 @A04A@.
+166730	rem Zap. zobraz
+166762	te
+166770	vodov
+166782	hu v EVF.
+166804	Aktivn
+166818	 p
+166824	i @A03C@.
+166844	Podrobn
+166860	 nastaven
+166880	 pro
+166892	fotografov
+166918	 @A049@.
+166936	Zvolte frekvenci
+166972	EVF.
+166982	Vys
+166994	 bit REC z kamery do
+167042	ipojen
+167056	ho rekord
+167076	ru.
+167084	Vys
+167100	asov
+167110	 k
+167116	d z fotoapar
+167142	tu
+167150	do p
+167160	ipojen
+167174	ho rekord
+167194	ru.
+167202	Vyberte re
+167224	im zobrazen
+167248	 EVF.
+167260	@A089@Ploch
+167284	 barvy
+167298	@A081@Podvodn
+167328	Vyberte c
+167348	lov
+167356	 bod AF
+167374	a re
+167384	im zam
+167400	ov
+167410	 AF.
+167420	17:9
+167430	@A0B9@Vivid
+167454	@A0BA@Natural
+167482	@A0BB@Portrait
+167512	Nem
+167522	e vybrat slo
+167548	ku
+167554	Fn
+167560	Priorita 50p
+167586	Priorita 60p
+167612	G. @A024@/Vyv. b
+167650	/Barva
+167668	zn. PCM
+167684	Dopl
+167694	kov
+167704	Skl
+167712	dan
+167720	 makro
+167734	Nasn
+167748	 v
+167754	ce obr
+167768	zk
+167774	 s posunut
+167802	bodu zaost
+167824	en
+167830	 vzad po ka
+167864	obr
+167872	zku. Obr
+167890	zky nejsou ulo
+167920	eny
+167930	na sebe.
+167948	Nasn
+167962	 v
+167968	ce obr
+167982	zk
+167988	 s posunut
+168016	bodu zaost
+168038	en
+168044	 vp
+168052	ed a vzad od
+168084	vodn
+168094	ho bodu. Obr
+168120	zky
+168130	jsou pak ulo
+168156	eny na sebe.
+168182	Jas re
+168196	imu 
+168206	iv
+168212	ho n
+168222	hledu
+168236	bude odr
+168256	et nastaven
+168280	 expozice.
+168304	Zobrazen
+168322	 jas sn
+168338	mku bude
+168358	stejn
+168370	 jako u kone
+168400	ho
+168408	sn
+168414	mku.
+168424	Jas re
+168438	imu 
+168448	iv
+168454	ho n
+168464	hledu
+168478	nebude odr
+168502	et nastaven
+168530	expozice a bude upraven
+168580	pro optim
+168600	ln
+168606	 zobrazen
+168626	. 
+168634	Jas kone
+168656	ho sn
+168668	mku se bude li
+168698	it.
+168706	Jas 
+168716	iv. n
+168728	h. nebude odpov
+168760	dat
+168770	nastaven
+168788	 exp. a bude optimalizov
+168844	sn
+168852	en
+168858	m sn
+168868	mkovac
+168882	 frekvence 
+168908	tmav
+168918	ch sc
+168930	n.
+168938	Jas kone
+168960	ho sn
+168972	mku bude jin
+169002	@A040@: Spus
+169028	te/vypn
+169044	te z
+169054	znam videa.
+169078	@A082@Efekt jemn
+169112	ho zaost
+169130	en
+169138	@A083@Efekt camery obscury
+169192	@A084@Efekt b
+169224	ch okraj
+169244	@A085@Efekt r
+169272	me
+169278	ku
+169284	@A086@Efekt paprsk
+169324	@A087@Efekt rozmaz.: naho
+169376	e a dole
+169394	@A088@Efekt rozmaz.: vlevo a vpravo
+169466	@A089@Efekt st
+169496	nu: vlevo a vpravo
+169534	@A08A@Efekt st
+169564	nu: naho
+169582	e a dole
+169600	@A078@Chyba detekce tv
+169652	@A079@Chyba detekce tv
+169704	@A107@
+169720	irok
+169734	zk
+169742	Bez b
+169754	len
+169764	Bez b
+169776	len
+169784	@A04F@
+169798	Bez b
+169810	len
+169818	@A050@
+169832	@A004@Nastaven
+169862	 re
+169870	imu
+169878	Ekviv. hodnota
+169908	Ukon
+169918	it @A090@
+169938	Kompenz. ryb
+169964	ho oka
+169980	hel
+169988	Kompenzace ryb
+170018	ho oka 1
+170036	Kompenzace ryb
+170066	ho oka 2
+170084	Kompenzace ryb
+170114	ho oka 3
+170132	@A091@/@A092@Korekce
+170174	Kompenz. ryb
+170200	ho oka
+170214	Stiskem a podr
+170244	en
+170250	m tla
+170264	tka @A090@
+170296	azen
+170306	ho kontrole blik
+170348	deaktivujete kontrolu blik
+170410	Zapne/vypne kompenzaci
+170458	ryb
+170466	ho oka.
+170482	Stiskem spust
+170510	te kontrolu
+170536	blik
+170550	. Podr
+170564	en
+170570	m tla
+170584	tka funkci
+170608	ukon
+170620	te. Plat
+170638	 v re
+170650	imech S nebo M.
+170682	@A004@Kontrola blik
+170728	@A0CC@Bez b
+170752	len
+170762	@A08C@Bez b
+170786	len
+170794	@A04F@
+170808	@A08D@Bez b
+170832	len
+170840	@A050@
+170854	@A006@@A07A@V
+170882	choz
+170892	 nastav.
+170910	Upravte nastaven
+170944	 pro re
+170960	im @A004@.
+170982	Zkoriguje deformaci objektivu typu
+171054	ryb
+171062	 oko a vytvo
+171090	 tak v
+171104	razn
+171120	iroko
+171132	hl
+171138	 sn
+171146	mek.
+171156	Rozpozn
+171176	 blik
+171192	 a 
+171200	prava
+171214	rychlosti z
+171242	rky v men
+171264	ch
+171272	kroc
+171282	ch v re
+171298	imech S nebo M.
+171330	Zvolte v
+171348	choz
+171358	 hodnotu p
+171380	ibl
+171390	en
+171400	pro zv
+171418	en
+171424	 p
+171430	i prohl
+171448	en
+171454	 sn
+171462	mk
+171472	Rozpozn
+171492	 blik
+171508	 a 
+171516	prava
+171530	rychlosti z
+171558	rky v men
+171580	ch
+171588	kroc
+171598	ch v re
+171614	imech S nebo M.
+171646	Ned
+171654	vno pou
+171674	@A003@Kontrola blik
+171720	Kontrola blik
+171754	ART15@A04F@
+171778	ART15@A050@
+171802	Fotoapar
+171820	t bude pokra
+171846	ovat v 
+171868	znamu trasy i po jeho vypnut
+171930	Zvolte obnovovac
+171964	 frekvenci
+171988	elektronick
+172012	ho hled
+172030	ku.
+172042	znam polohy GPS
+172074	Funkci protokolov
+172114	 nelze
+172130	v tuto chv
+172152	li pou
+172168	t.
+172174	Aut. nast. 
+172198	asu.
+172208	Informace o poloze nebudou
+172264	do va
+172276	eho sn
+172290	mku p
+172302	id
+172308	ny.
+172316	Informace o poloze budou p
+172370	id
+172376	ny
+172384	do va
+172396	eho sn
+172410	mku. Zapnut
+172440	se aktivuje funkce GPS.
+172488	Nastavte datum a 
+172524	as ru
+172544	Fotoapar
+172562	t nastav
+172580	 datum a 
+172600	as
+172608	automaticky podle informac
+172662	 GPS.
+172676	Funkce GPS bude pou
+172716	ita pouze
+172742	i prov
+172764	 nastaven
+172788	Spot
+172798	eba energie baterie m
+172850	ednost p
+172868	ed p
+172878	esnost
+172892	 GPS.
+172908	esnost GPS m
+172934	 p
+172940	ednost p
+172958	ed
+172966	spot
+172976	ebou energie baterie.
+173020	Energie baterie
+173052	Priorita GPS
+173082	esnost GPS
+173104	@A08B@ @A01A@
+173136	id
+173142	 informace o poloze GPS
+173192	do va
+173204	eho sn
+173218	mku. Zapnut
+173248	se aktivuje funkce GPS.
+173296	Nast. priority GPS pro sled. trasy.
+173368	Nastavte datum a 
+173404	as nebo
+173424	asov
+173434	 p
+173440	smo fotoapar
+173466	tu.
+173474	Nastaven
+173492	 @A022@
+173508	@A022@
+173524	asov
+173534	 p
+173540	smo
+173548	Instantn
+173566	 film
+173578	@A08E@Instantn
+173608	 film
+173620	Nastaven
+173638	 @A08F@/Bluetooth
+173674	Upravte @A08F@ a nastaven
+173730	Bluetooth.
+173752	Dostupnost
+173774	Technologie @A099@/Bluetooth
+173834	je zcela deaktivovan
+173880	a p
+173888	ipojen
+173902	 nelze zah
+173924	jit.
+173934	Technologie @A099@/Bluetooth
+173994	je zp
+174008	stupn
+174020	na pro p
+174038	ipojen
+174056	Heslo p
+174072	ipojen
+174088	@A040@: Zm
+174110	na hesel p
+174132	ipojen
+174152	Nov
+174160	 hesla budou
+174188	vygenerovan
+174212	 automaticky.
+174240	Resetovat nastaven
+174280	@A002@ Resetovat v
+174318	echna nastaven
+174352	@A08F@ a Bluetooth?
+174392	Pohotov. re
+174416	. p
+174424	i vyp.
+174442	ipojen
+174456	 @A08F@/Bluetooth nelze
+174506	za
+174514	zen
+174522	m zah
+174534	jit p
+174546	i vypnut
+174570	nap
+174578	jen
+174594	ipojen
+174608	 @A08F@/Bluetooth lze
+174654	za
+174662	zen
+174670	m zah
+174682	jit p
+174694	i vypnut
+174718	nap
+174726	jen
+174738	Vyberte, zda aktivovat nebo
+174796	neaktivovat pohotovostn
+174844	 re
+174852	im
+174864	i vypnut
+174882	 p
+174888	i ka
+174902	m vypnut
+174924	Aktivovat pohotovostn
+174968	 re
+174976	im p
+174992	vypnut
+175006	 @A08F@/Bluetooth pro
+175052	import sn
+175072	mk
+175078	 p
+175084	i vypnut
+175106	Pohotovostn
+175130	 re
+175138	im p
+175148	i vypnut
+175166	: Vyp
+175178	Pohotovostn
+175202	 re
+175210	im p
+175220	i vypnut
+175238	: Zap
+175254	dy potvrzovat
+175282	Nezobrazovat znovu tuto obrazovku
+175350	Potvr
+175362	te, zda aktivovat nebo
+175410	neaktivovat pohotovostn
+175458	 re
+175466	im
+175478	i vypnut
+175496	 p
+175502	i ka
+175516	m vypnut
+175540	Nastaven
+175558	 lze kdykoli zm
+175590	nit z menu.
+175614	Prob
+175628	 p
+175634	enos dat...
+175658	Zru
+175666	it
+175672	Pokra
+175684	ovat
+175694	Zru
+175702	it p
+175712	enos dat a zapnout nap
+175758	jen
+175770	Zru
+175778	it v
+175788	echny st
+175806	vaj
+175818	 p
+175824	edb
+175850	ry p
+175860	enosu sn
+175878	mk
+175888	@A093@ Zach. tepl
+175924	 barvy@A01A@
+175950	Upravte nastaven
+175984	 pro z
+175998	znam
+176010	s p
+176018	ipojen
+176032	m z
+176040	znamn
+176052	kem PCM
+176070	Olympus.
+176088	@A078@
+176104	dn
+176110	 karta
+176124	@A079@
+176140	dn
+176146	 karta
+176160	INFO_CONTINUE_TRANSFER_2
+176210	Zb
+176216	vaj
+176228	 soubory
+176246	Vypnout po dokon
+176280	en
+176286	 p
+176292	enosu
+176304	Vypnout ihned
+176332	Po dokon
+176350	en
+176356	 p
+176362	enosu v
+176378	ech soubor
+176404	dojde k vypnut
+176438	Zru
+176448	 p
+176454	enos soubor
+176482	a vypne se.
+176510	enos...
+176526	INFO_WAIT_SP_TRANSFERRED
+176576	Po
+176582	kejte na dokon
+176612	en
+176618	 p
+176624	enosu.
+176640	Pot
+176648	 dojde k automatick
+176688	mu vypnut
+176712	Sn
+176718	mky s funkc
+176742	 BULB
+176754	CAUTION_HIGH_RES_SHOT_CANCELED
+176816	Chyba sn
+176834	mku s vys. rozli
+176874	Skl
+176890	 sn
+176898	mku selhalo.
+176924	@A003@ISO
+176944	@A003@Doporu
+176970	en
+176976	 ISO
+176986	@A003@Vysok
+177010	 ISO
+177020	@A004@ISO
+177040	@A004@Doporu
+177066	en
+177072	 ISO
+177082	@A005@Vysok
+177106	 ISO
+177116	@A003@Vyv
+177138	en
+177144	 b
+177156	@A004@Vyv
+177178	en
+177184	 b
+177196	@A003@Kelviny
+177224	@A004@Kelviny
+177252	@A003@Auto @A094@
+177288	@A003@@A095@5300K @A094@
+177338	@A003@@A096@7500K @A094@
+177388	@A003@@A097@6000K @A094@
+177438	@A003@@A098@3000K @A094@
+177488	@A003@@A099@4000K @A094@
+177538	@A003@@A036@5500K @A094@
+177588	@A003@@A01E@ @A094@
+177628	@A003@@A01F@ @A094@
+177668	@A003@@A020@ @A094@
+177708	@A003@@A021@ @A094@
+177748	@A004@Auto @A094@
+177784	@A004@@A095@5300K @A094@
+177834	@A004@@A096@7500K @A094@
+177884	@A004@@A097@6000K @A094@
+177934	@A004@@A098@3000K @A094@
+177984	@A004@@A099@4000K @A094@
+178034	@A004@@A036@5500K @A094@
+178084	@A004@@A01E@ @A094@
+178124	@A004@@A01F@ @A094@
+178164	@A004@@A020@ @A094@
+178204	@A004@@A021@ @A094@
+178244	MOVIE_PIC_MODE_LOG
+178282	@A003@CWB @A094@
+178316	@A004@CWB @A094@
+178352	iv
+178358	 n
+178364	hled @A033@
+178388	Kontinu
+178404	ln
+178410	 AF+MF
+178424	Sledov
+178442	 AF + MF
+178460	Metoda sn
+178488	@A01A@
+178502	Sn
+178516	 Live ND : ND2(1EV)
+178556	Sn
+178570	 Live ND : ND4(2EV)
+178610	Sn
+178624	 Live ND : ND8(3EV)
+178664	Sn
+178678	 Live ND : ND16(4EV)
+178720	Sn
+178734	 Live ND : ND32(5EV)
+178778	lo
+178788	 slot @A003@ @A078@
+178830	lo
+178840	 slot @A003@ @A079@
+178882	lo
+178892	 slot @A004@ @A078@
+178934	lo
+178944	 slot @A004@ @A079@
+178984	Metoda sn
+179014	Po
+179020	izuje sn
+179038	mky z fotoapar
+179068	tu
+179076	stabilizovan
+179102	ho stativem.
+179128	Po
+179134	izuje sn
+179152	mky z ruky.
+179178	Po po
+179192	zen
+179200	 sn
+179208	mku
+179218	doch
+179232	 k jeho zpracov
+179274	Blesk nen
+179294	 k dispozici.
+179322	Sn
+179336	 Live ND
+179358	slo ND
+179372	Simulace 
+179392	iv. n
+179404	h.
+179410	Efekt pomal
+179434	 z
+179444	rky
+179454	nen
+179462	 mo
+179474	 zobrazit v 
+179500	iv. n
+179512	h.
+179518	Efekt pomal
+179542	 z
+179552	rky
+179562	je mo
+179578	 zobrazit v 
+179604	iv. n
+179616	h.
+179624	Li
+179632	 se od fin
+179654	ln
+179660	ho sn
+179672	mku.
+179684	iv
+179690	 n
+179696	hled 
+179710	se nezobrazuje zrcadlov
+179758	, 
+179766	pokud je monitor p
+179804	evr
+179812	cen
+179826	iv
+179832	 n
+179838	hled 
+179852	se zobrazuje zrcadlov
+179896	, 
+179904	pokud je monitor p
+179942	evr
+179950	cen
+179962	Info. senzoru pole
+180000	Informace p
+180024	i nam
+180038	knut
+180050	Informace z
+180074	st
+180080	vaj
+180088	 skryty,
+180108	i kdy
+180120	 je tla
+180138	tko spou
+180164	pouze nam
+180186	knuto.
+180200	Informace o expozici 
+180246	a ohniskov
+180268	 vzd
+180278	lenosti
+180296	objektivu se objev
+180334	, pokud 
+180354	je tla
+180370	tko spou
+180392	 jen nam
+180412	knuto.
+180426	Jas 
+180436	iv. n
+180448	h. nebude odpov
+180480	dat
+180490	nastaven
+180508	 expozice a bude upraven
+180560	pro optim
+180580	ln
+180586	 prohl
+180602	en
+180608	 zv
+180616	razn
+180636	temn
+180646	ch oblast
+180672	Jas kone
+180694	ho sn
+180706	mku bude jin
+180736	Jas 
+180746	iv. n
+180758	h. nebude odpov
+180790	dat
+180800	nastaven
+180818	 expozice a bude upraven
+180870	pro optim
+180890	ln
+180896	 prohl
+180912	en
+180918	 zv
+180926	razn
+180946	temn
+180956	ch oblast
+180982	Jas kone
+181004	ho sn
+181016	mku bude jin
+181046	Nastaven
+181064	 Zap2
+181076	Priorita kvality
+181110	Priorita sn. frekvence
+181156	V 
+181162	iv. n
+181174	h. m
+181184	 kvalita p
+181206	ednost
+181226	ed sn
+181238	mkovac
+181252	 frekvenc
+181272	. 
+181280	V tmav
+181294	ch sc
+181310	ch
+181318	bude sn
+181334	m. frekvence sn
+181368	ena.
+181378	V 
+181384	iv. n
+181396	h. m
+181406	 sn
+181414	mkovac
+181428	 frekvence
+181456	ednost p
+181474	ed kvalitou.
+181502	V tmav
+181516	ch sc
+181532	ch
+181540	mohou zmizet barvy.
+181582	Kone
+181596	 sn
+181604	mek to neovlivn
+181642	iv. n
+181654	h. bez blik
+181684	Sn
+181698	 bez blik
+181724	Efekty blik
+181752	 jako nap
+181774	klad
+181786	nerovn
+181800	 expozice a barvy se sn
+181858	Zpo
+181874	 uvoln
+181892	 z
+181902	rky
+181918	e b
+181926	t del
+181946	Plat
+181956	 pro mechanickou z
+181998	rku.
+182008	Sn
+182022	 bez blik
+182050	nebude fungovat.
+182084	@A003@ISO-Autom.
+182118	@A09B@ISO-Autom.
+182152	@A003@ISO-Autom. nast.
+182198	@A09B@ISO-Autom. nast.
+182244	@A003@Zprac. n
+182274	zk
+182280	ho ISO
+182294	INFO_S_NOISE_REDUCTION_MODE_1
+182354	INFO_S_NOISE_REDUCTION_MODE_2
+182418	ep
+182424	na
+182430	 M/B
+182440	Podle pozice p
+182470	ep
+182476	na
+182482	e Fn
+182498	ep
+182508	 mezi re
+182526	imem AF/
+182546	re
+182552	imem c
+182566	le AF/bodem c
+182594	le AF.
+182614	l lze zvolit.
+182642	@A0AB@ Nastaven
+182676	@A0AC@Tla
+182698	tko spou
+182722	@A0AC@V
+182738	cen
+182746	sobn
+182756	 voli
+182770	@A0AC@P
+182786	edn
+182794	 kruh. voli
+182820	@A0AC@Zadn
+182842	 kruh. voli
+182868	@A0AC@@A007@ tla
+182904	tko
+182912	@A0AC@@A0AD@ tla
+182948	tko
+182956	@A0AC@@A034@ tla
+182992	tko
+183000	@A0AE@V
+183016	cen
+183024	sobn
+183034	 voli
+183048	@A0AE@P
+183064	edn
+183072	 kruh. voli
+183098	@A0AE@Zadn
+183120	 kruh. voli
+183150	ep
+183156	na
+183162	 Fn
+183170	@A0AF@ tla
+183194	tko
+183202	@A010@ tla
+183226	tko
+183234	@A082@ tla
+183258	tko
+183266	Dotykov
+183282	 obrazovka
+183304	@A0AC@ St
+183324	edov
+183334	 tla
+183346	tko
+183354	Re
+183360	im c
+183370	le AF
+183382	Bod c
+183394	le AF
+183406	@A0AD@ Sm
+183426	rov
+183434	 kl
+183442	vesa
+183452	@A0AD@ :Vypnuto
+183484	INFO_JOY_CROSS_KEY_DIRECT_ON
+183546	ivatelsk
+183564	 re
+183572	im C1
+183588	ivatelsk
+183606	 re
+183614	im C2
+183630	ivatelsk
+183648	 re
+183656	im C3
+183672	ivatelsk
+183690	 re
+183698	im C4
+183710	Zapne/vypne @A0A6@.
+183750	Zapne/vypne @A09C@.
+183790	Zapne/vypne @A09D@.
+183830	Zapne/vypne @A09E@.
+183870	FN_DIGITAL_ND
+183898	Zapne/vypne
+183926	iv
+183932	 sn
+183948	 ND.
+183958	@A003@@A093@ Zach. tepl
+184006	 barvy
+184020	@A004@@A093@ Zach. tepl
+184068	 barvy
+184082	@A003@Vyv
+184104	en
+184110	 b
+184122	@A004@Vyv
+184144	en
+184150	 b
+184162	@A003@V
+184178	e @A094@
+184196	@A004@V
+184212	e @A094@
+184230	@A099@ MAC adresa
+184266	AF na p
+184282	l spou
+184302	V re
+184312	imu 3 nebo 4 
+184342	a S-AF nebo C-AF
+184378	je AF aktivov
+184406	no, i kdy
+184432	je tla
+184448	tko spou
+184476	jen nam
+184494	knuto.
+184508	V re
+184518	imu 3 nebo 4 
+184548	a S-AF nebo C-AF
+184584	je AF deaktivov
+184616	no, pokud 
+184640	je tla
+184656	tko spou
+184684	jen nam
+184702	knuto.
+184716	@A003@AEL/AFL
+184744	@A0A8@
+184758	@A0A2@
+184772	@A003@Sledov
+184802	 subjektu
+184822	Automobily
+184844	Letadla
+184860	Vlaky
+184872	Nespecifikovan
+184902	 subjekt.
+184922	Dojde k detekci a sledov
+184980	automobil
+185000	 a motocykl
+185028	Dojde k detekci a sledov
+185086	letadel a helikopt
+185124	r.
+185130	Dojde ke sledov
+185166	 vlak
+185182	@A003@AF+MF
+185206	V re
+185216	imu automatick
+185246	ho ost
+185260	en
+185270	deaktivuje ost
+185300	ic
+185306	 kruh.
+185320	V re
+185330	imu automatick
+185360	ho ost
+185374	en
+185384	aktivuje ost
+185410	ic
+185416	 kruh
+185430	pro manu
+185448	ln
+185454	 ost
+185464	en
+185474	@A003@C-AF Start ve st
+185520	edu
+185528	@A003@C-AF Priorita st
+185574	edu
+185582	@A003@Nastaven
+185612	 @A0A2@
+185628	@A003@ Orientace sv
+185672	na @A078@
+185692	@A0A9@Bod c
+185716	le AF
+185728	@A0AA@Bod c
+185752	le AF
+185764	@A0AB@Bod c
+185788	le AF
+185800	@A0A9@Re
+185818	im c
+185828	le AF
+185840	@A0AA@Re
+185858	im c
+185868	le AF
+185880	@A0AB@Re
+185898	im c
+185908	le AF
+185920	@A0A3@Nastaven
+185950	 re
+185958	imu c
+185970	le
+185976	Velikost
+185994	Krok
+186004	@A0A4@Velikost
+186034	@A0A5@Velikost
+186064	@A0A6@Velikost
+186094	@A0A7@Velikost
+186124	@A0A4@Krok
+186146	@A0A5@Krok
+186168	@A0A6@Krok
+186190	@A0A7@Krok
+186212	@A0B9@ @A099@ P
+186244	ipojit
+186258	Moje nab
+186276	dka
+186288	dn
+186294	 ulo
+186304	en
+186310	 polo
+186322	ka.
+186332	Stisknut
+186350	m tla
+186364	tka @A040@
+186388	v nab
+186400	dce ho m
+186420	ete p
+186432	idat
+186444	do Moj
+186458	 nab
+186468	dky.
+186484	ete ukl
+186500	dat 
+186510	asto pou
+186530	van
+186542	polo
+186552	ky nab
+186566	dky.
+186578	Zobraz
+186592	 se pouze ulo
+186620	en
+186626	 polo
+186638	ky.
+186646	Moje nab
+186664	dka 1
+186676	Moje nab
+186694	dka 2
+186706	Moje nab
+186724	dka 3
+186736	Moje nab
+186754	dka 4
+186766	Moje nab
+186784	dka 5
+186796	Podrobn
+186812	 nastaven
+186832	, kdy
+186844	 je
+186854	citlivost ISO nastavena na AUTO
+186924	i nat
+186938	en
+186944	 videa.
+186960	Zvolte re
+186980	im vyv
+186996	en
+187002	 b
+187020	i nat
+187034	en
+187040	 videa.
+187056	Nastavte stejnou korekci
+187108	vyv. b
+187126	 pro v
+187140	echny 
+187156	re
+187162	imy nat
+187180	en
+187186	 videa.
+187202	Pro teplej
+187226	 pod
+187240	 barev
+187260	i automatick
+187286	m vyv
+187300	en
+187306	 b
+187324	i nat
+187338	en
+187344	 videa.
+187360	Sn
+187366	mkovac
+187380	 frekvence p
+187406	ehr
+187428	znam se p
+187448	ehraje ve zpomalen
+187490	na 0,5n
+187506	sobek.
+187524	znam se p
+187544	ehraje ve zpomalen
+187586	na 0,42n
+187604	sobek.
+187622	znam se p
+187642	ehraje ve zpomalen
+187684	na 0,25n
+187702	sobek.
+187720	znam se p
+187740	ehraje ve zpomalen
+187782	na 0,21n
+187800	sobek.
+187818	znam se p
+187838	ehraje ve zpomalen
+187880	na 0,2n
+187896	sobek.
+187910	Pokud je re
+187934	im @A004@ 
+187958	nastaven na M, 
+187992	automatick
+188014	 citlivost ISO 
+188048	nen
+188056	 dostupn
+188078	Pokud je re
+188102	im @A004@
+188124	nastaven na M,
+188156	automatick
+188178	 citlivost ISO
+188210	je dostupn
+188236	@A004@C-AF Rychlost
+188276	Zvol
+188286	 rychlost ost
+188314	en
+188320	 C-AF
+188338	i nat
+188352	en
+188358	 videa.
+188374	@A004@Citlivost C-AF
+188416	Upravte citlivost z
+188456	mku C-AF
+188476	v z
+188484	vislosti na pohybu
+188524	va
+188530	eho subjektu p
+188560	i nat
+188574	en
+188580	 videa.
+188596	Rychl
+188610	Pomal
+188624	@A004@IS 
+188644	rove
+188656	Nastav
+188674	r. IS p
+188690	i nat
+188704	en
+188710	 videa.
+188728	Pro plynulej
+188756	 pohyb p
+188774	i posunu
+188794	vyberte n
+188814	zkou.
+188826	@A0A0@ Asist. Zobrazen
+188874	Pokud je zapnuto,
+188912	jas a barvy jsou upraveny
+188966	pro optim
+188986	ln
+188992	 prohl
+189008	en
+189014	 v @A0A0@.
+189036	Sn
+189042	mek se zobraz
+189074	ve zvolen
+189094	m re
+189104	imu.
+189114	Sn
+189120	mek p
+189132	eveden
+189146	 p
+189152	i zobrazen
+189180	do ekvivalentu BT.709.
+189228	Li
+189236	 se od zaznamenan
+189272	ho sn
+189284	mku.
+189298	znamn
+189310	k PCM spust
+189342	n klapky p
+189364	i stisknut
+189390	a podr
+189404	en
+189410	 tla
+189422	tka @A083@
+189446	v pr
+189460	hu z
+189470	znamu videa.
+189496	Frekvence nahr
+189536	Vybere kvalitu zvuku.
+189580	Moje nab
+189598	dka je pln
+189628	id
+189634	no do Moj
+189654	 nab
+189664	dky.
+189678	esunout na novou pozici.
+189728	Odstranit tuto polo
+189768	ku
+189774	Odstranit tuto kartu @A0A1@
+189830	Zvolen
+189844	 polo
+189856	ka bude odstran
+189888	na
+189896	z Moj
+189908	 nab
+189918	dky.
+189932	echny polo
+189954	ky na zvolen
+189980	 kart
+189992	 @A0A1@
+190010	budou odstran
+190038	ny z Moj
+190056	 nab
+190066	dky.
+190076	Zm
+190082	nit po
+190096	ad
+190104	Vyberte Moji nab
+190138	dku pro p
+190158	id
+190172	@A0B3@ Baterie
+190202	@A0B4@ Baterie
+190232	Jakmile bude vy
+190264	erp
+190272	na kapacita
+190298	baterie @A0B3@, za
+190336	ne se pou
+190358	vat
+190368	baterie @A0B4@.
+190400	Jakmile bude vy
+190432	erp
+190440	na kapacita
+190466	baterie @A0B4@, za
+190504	ne se pou
+190526	vat
+190536	baterie @A0B3@.
+190568	Kalibrovat nadm. v
+190608	ku
+190614	Nastavte aktu
+190642	ln
+190648	 nadm. v
+190668	ku.
+190676	Nadm. v
+190694	ka/Teplota
+190716	TEMPERATURE_UNIT
+190750	ELEVATION_UNIT
+190780	Vybrat slot pro ulo
+190820	en
+190828	@A078@Ukl
+190856	 souboru protokolu
+190894	@A079@Ukl
+190922	 souboru protokolu
+190960	@A0BD@Ukl
+190988	 souboru protokolu
+191026	@A078@Kapacita protokolu na kart
+191092	 je pln
+191110	@A079@Kapacita protokolu na kart
+191176	 je pln
+191198	idr
+191206	te @A083@ b
+191230	hem 
+191242	nahr
+191260	 videa a rekord
+191292	r PCM 
+191308	vlo
+191318	 t
+191324	n klapky.
+191348	ipojen
+191362	 k chytr
+191380	mu telefonu
+191406	nebo p
+191422	stupov
+191436	mu bodu
+191454	bezdr
+191466	tov
+191474	mi funkcemi.
+191500	Po
+191512	 a zkombinuje v
+191544	ce fotografi
+191576	a vytvo
+191594	 sn
+191602	mek 
+191614	s velmi vysok
+191642	m rozli
+191658	en
+191664	m.
+191670	Povol
+191682	 pomalou z
+191708	rku
+191718	jako za pou
+191742	it
+191748	 filtru ND.
+191772	A4. AF/MF
+191792	B1. Tla
+191808	./p
+191816	ep
+191822	na
+191828	/p
+191836	ka
+191842	B2. Tla
+191858	./p
+191866	ep
+191872	na
+191878	/p
+191886	ka
+191892	J3. @A003@ Nastaven
+191934	@A003@Citlivost C-AF
+191976	Registruje v
+192002	choz
+192012	 re
+192020	im AF/
+192036	re
+192042	im c
+192052	le AF/bodu c
+192078	le AF.
+192092	Upravte citlivost z
+192132	mku C-AF
+192152	v z
+192160	vislosti na pohybu
+192200	va
+192206	eho subjektu p
+192236	i fotografov
+192270	Polo
+192280	ky, u kter
+192302	ch se zobraz
+192328	 @A03F@
+192350	i v
+192362	ru re
+192374	imu c
+192386	le AF
+192400	v re
+192410	imu fotografie.
+192442	Pro statickou fotografii zapn
+192502	te,
+192512	abyste umo
+192534	nili manu
+192554	ln
+192560	 ost
+192570	en
+192580	ve v
+192590	ech re
+192604	imech.
+192618	Pro @A03F@ zvolen
+192654	 v @A0A2@
+192676	funguje C-AF/C-AF+TR
+192720	ve st
+192732	edu oblasti.
+192758	Pro @A03F@ zvolen
+192794	 v @A0A2@
+192820	 st
+192828	ed oblasti
+192856	ednost p
+192874	ed body v C-AF.
+192906	Nastav
+192920	 velikost c
+192944	lov
+192952	 oblasti
+192972	a pozici krokovac
+193008	ho kurzoru
+193036	i pohybu.
+193060	i fotografov
+193090	 mohou b
+193114	polo
+193124	ky s v
+193142	rem @A03F@ nastaveny
+193186	jednotliv
+193206	 v horiz. a vert. pozici.
+193258	Vyberte subjekt ke sledov
+193318	na statick
+193340	 fotografii.
+193368	Platn
+193380	 pro C-AF+TR.
+193408	Vyberte funkci, kterou chcete
+193478	adit st
+193494	edov
+193504	mu tla
+193520	tku @A0AC@
+193544	na v
+193554	cen
+193562	sobn
+193572	m voli
+193586	i p
+193594	i sn
+193616	Vyberte funkci, kterou chcete
+193686	adit sm
+193702	rov
+193710	 kl
+193718	vese @A0AD@
+193744	na v
+193754	cen
+193762	sobn
+193772	m voli
+193786	i p
+193794	i sn
+193820	i @A0AB@ jsou zak
+193860	ny
+193868	operace nastaven
+193902	 na @A03E@.
+193926	Zvolte ovl
+193948	dac
+193956	 prvky zobrazen
+193996	i stisku @A083@ v re
+194038	imu fotografie.
+194070	Redukce blik
+194104	nastaven
+194122	m frekvence nap
+194154	jen
+194166	Podrobn
+194182	 nastaven
+194202	, kdy
+194214	 je
+194224	citlivost ISO nastavena na AUTO
+194290	v re
+194300	imu fotografie.
+194332	Zvolte re
+194352	imy sn
+194380	ve kter
+194396	ch je dostupn
+194428	automatick
+194450	 citlivost ISO.
+194482	Zvol
+194492	 metodu zpracov
+194532	sn
+194538	mku s n
+194554	zk
+194560	m ISO
+194574	u statick
+194594	 fotografie.
+194620	Zvolte re
+194640	im vyv
+194656	en
+194662	 b
+194676	v re
+194686	imu fotografie.
+194718	Nastavte stejnou korekci
+194770	vyv. b
+194788	 pro v
+194802	echny 
+194818	re
+194824	imy fotografie.
+194856	Pro teplej
+194880	 pod
+194894	 barev
+194914	i automatick
+194940	m vyv
+194954	en
+194960	 b
+194974	v re
+194984	imu fotografie.
+195016	Upravte nastaven
+195054	nadm. v
+195072	ky a teploty.
+195104	znamy senz. pole
+195142	sk
+195152	 informace ze senzoru pole
+195208	a ukl
+195224	 je do protokolu na kartu.
+195278	Spustit z
+195298	znam
+195308	Ukon
+195318	it z
+195328	znam
+195338	Ulo
+195346	it z
+195356	znam
+195366	Prob
+195382	Zastaveno
+195402	@A002@Zastaveno
+195438	ft
+195444	Abu Dhabi
+195464	Adelaide
+195482	Alaska
+195496	Anchorage
+195516	Athens
+195530	Auckland
+195548	Azores
+195562	Bangkok
+195578	Beijing
+195594	Berlin
+195608	Buenos Aires
+195634	Cairo
+195646	Casablanca
+195668	Chennai
+195684	Chicago
+195700	Colombo
+195716	Delhi
+195728	Denver
+195742	Dhaka
+195754	Dubai
+195766	Fernando de Noronha
+195806	Fiji
+195816	Guam
+195826	Hawaii
+195840	Helsinki
+195858	Hong Kong
+195878	Honolulu
+195896	Houston
+195912	Islamabad
+195932	Jakarta
+195948	Johannesburg
+195974	Kabul
+195986	Karachi
+196002	Kathmandu
+196022	Kolkata
+196038	Kuala Lumpur
+196064	Kuwait
+196078	La Paz
+196092	Lima
+196102	London
+196116	Los Angeles
+196140	Madrid
+196154	Male
+196164	Manaus
+196178	Mexico City
+196202	Miami
+196214	Midway Islands
+196244	Moscow
+196258	Mumbai
+196272	Nairobi
+196288	New Caledonia
+196316	New York
+196334	Newfoundland
+196360	Paris
+196372	Phoenix
+196388	Rio de Janeiro
+196418	Riyadh
+196432	Rome
+196442	Samoa
+196454	Sao Paulo
+196474	Seattle
+196490	Seoul
+196502	Singapore
+196522	Solomon Islands
+196554	Sydney
+196568	Tahiti
+196582	Taipei
+196596	Tehran
+196610	Tokyo
+196622	Toronto
+196638	Vancouver
+196658	Wellington
+196680	Yangon
+196694	UTC
+196702	ART16
+196714	FHD HighSpeed 120fps
+196756	ND32(5EV)
+196776	ND16(4EV)
+196796	ND8(3EV)
+196814	ND4(2EV)
+196832	ND2(1EV)
+196850	LV OFF-Info
+196874	ISO L64
+196890	ISO L80
+196906	ISO L100
+196924	ISO L125
+196942	ISO L160
+196960	@A0D1@LOCK
+196982	@A0AE@@A010@
+197008	@A0AE@@A0AD@
+197034	@A0AE@@A007@
+197060	@A0AE@@A03F@
+197086	@A0AE@@A03C@
+197112	@A0AE@@A0CB@
+197138	@A0AE@@A034@
+197164	@A0AE@@A0CC@
+197190	@A0AE@@A0CD@
+197216	@A0AE@@A0CE@
+197242	@A0AE@@A0CF@
+197268	@A0AE@@A0D0@
+197294	@A0AC@@A0AD@
+197320	@A0AC@@A007@
+197346	@A0AC@@A034@
+197372	@A0AC@@A0CF@
+197398	@A0AC@@A0D0@
+197424	S-AF@A0BC@
+197446	C-AF@A0BC@
+197468	C-AF+TR@A0BC@
+197496	USB PD
+197510	@A0C8@PC RAW
+197536	96kHz/24bit
+197560	48kHz/16bit
+197584	COMM_MODE_B
+197608	Nastaven
+197626	 p
+197632	ipojen
+197648	Pomoc
+197660	 tohoto postupu se p
+197702	ipojte
+197718	k za
+197730	zen
+197738	. Nastaven
+197760	 je t
+197772	eba
+197782	prov
+197792	st jen jednou. B
+197826	hem nastaven
+197856	bude aktivov
+197882	no @A08F@/Bluetooth.
+197924	Nainstalujte aplikaci OI.Share
+197988	do va
+198000	eho za
+198016	zen
+198024	. Po
+198036	dokon
+198048	en
+198054	 instalace stiskn
+198090	te @A019@.
+198112	Naskenujte QR k
+198150	pomoc
+198162	 aplikace
+198184	OI.Share.
+198204	Zahajov
+198224	...
+198232	Odpojov
+198252	...
+198260	Odpojit@A018@
+198292	ipojen
+198306	 za
+198316	zen
+198330	ipojit k za
+198356	zen
+198368	Podrobnosti o p
+198400	ipojen
+198414	@A01A@
+198432	ipojen
+198446	 za
+198456	zen
+198470	ipojen
+198484	 p
+198492	stupov
+198506	ho bodu
+198522	Vyhled
+198544	 p
+198552	stupov
+198566	ho bodu...
+198592	ipojov
+198610	 k p
+198622	stupov
+198636	mu bodu...
+198662	ipojit p
+198680	es WPS
+198698	ipojit ze seznamu p
+198740	st. bod
+198762	ipojit ru
+198788	Podrobnosti
+198812	Moment
+198826	ln
+198832	 nen
+198842	 k dispozici
+198872	kter
+198882	 sn
+198890	mky se nep
+198912	enesly.
+198928	Metoda PBC
+198950	Metoda PIN
+198976	ipojit stisknut
+199008	m tla
+199022	tka WPS
+199040	na p
+199052	stupov
+199066	m bodu.
+199086	ipojit zad
+199112	m k
+199120	du PIN
+199136	na p
+199148	stupov
+199162	m bodu.
+199178	Stiskn
+199192	te tla
+199208	tko WPS
+199226	na p
+199238	stupov
+199252	m bodu.
+199274	ipojen
+199288	 bude zah
+199308	jeno stiskem
+199336	tla
+199346	tka @A083@.
+199370	Zadejte PIN k
+199398	d zobrazen
+199424	na p
+199436	stupov
+199450	m bodu v
+199470	e.
+199482	ipojen
+199496	 bude zah
+199516	jeno stiskem
+199544	tla
+199554	tka @A083@.
+199578	Prvn
+199588	 konfigurace 
+199618	mus
+199626	 b
+199632	t provedena
+199662	es p
+199672	ipojen
+199686	 k PC za pou
+199712	it
+199718	 @A099@.
+199738	Dodr
+199748	ujte pokyny 
+199776	v Olympus Capture.
+199816	Prvn
+199826	 konfiguraci je pot
+199866	eba prov
+199884	st
+199892	na ka
+199908	m po
+199920	ta
+199926	i.
+199932	RESULT_WPS_NG
+199964	ipojen
+199978	 selhalo
+200002	stupov
+200016	 bod nenalezen
+200046	@A099@ b
+200070	Odpojit
+200086	Udr
+200094	ovat
+200104	Heslo
+200116	Vyberte p
+200136	ipojen
+200150	 po
+200160	ta
+200168	Odstranit
+200188	Odstranit nastaven
+200226	 p
+200232	ipojen
+200250	fotoapar
+200268	tu k tomuto 
+200302	stupov
+200316	mu bodu.
+200334	IP_SETTING
+200356	IP adresa
+200376	Maska pods
+200408	choz
+200418	 br
+200426	na
+200440	azen
+200450	 IP adresy
+200472	Auto. (DHCP)
+200498	Ru
+200510	Aktualizovat nastaven
+200556	Dostupn
+200572	, pokud p
+200594	stupov
+200608	 bod
+200620	podporuje funkci DHCP.
+200668	IP adresa bude p
+200706	azena
+200720	automaticky.
+200746	Zadejte IP adresu ru
+200796	Ov
+200804	ov
+200820	dn
+200828	Spustit p
+200848	ipojen
+200870	stupov
+200884	 bod nenalezen
+200914	Hledat znovu @A033@
+200954	@A0BA@@A03F@/@A01B@@A01C@
+201006	@A0BA@@A03F@
+201036	ipojit@A019@
+201062	Zav
+201072	t@A018@
+201092	ipojen
+201106	 k PC zah
+201126	jeno
+201140	ipojen
+201154	 k PC ukon
+201176	eno
+201184	Fotoapar
+201202	t je p
+201216	ipojen k PC.
+201244	Ulo
+201252	en
+201258	 sn
+201266	mky se automaticky
+201310	enesou do PC.
+201342	ipojen
+201356	 k PC bylo ukon
+201388	eno.
+201398	@A002@ Odpojeno od PC.
+201446	Zkontrolujte stav PC.
+201490	@A002@ Odpojeno od s
+201542	Zkontrolujte stav @A099@ a p
+201600	ipojte se 
+201624	k p
+201634	stupov
+201648	mu bodu znovu.
+201678	@A09F@ Ploch
+201704	 barvy
+201718	DNS
+201726	WPA2
+201736	Stativ
+201750	Z ruky
+201764	Zru
+201772	it p
+201782	enos sn
+201798	mk
+201804	 do PC
+201820	a odpojit.
+201842	Vysok
+201860	zk
+201868	Stisknut
+201886	m @A0AD@ b
+201908	hem focen
+201938	ete zvolit z
+201964	nu AF.
+201978	NOISE_REDUCTION_STANDARD
+202028	NOISE_REDUCTION_QUALITY
+202076	INFO_S_NOISE_REDUCTION_STANDARD
+202140	INFO_S_NOISE_REDUCTION_QUALITY
+202202	M/B
+202210	@A0D5@
+202224	@A0F8@
+202238	@A078@Zvolte nastaven
+202282	 obraz.
+202298	S_NOISE_REDUCTION_LEVEL
+202346	m/ft
+202356	@A0D3@/@A0D4@
+202384	Nab
+202392	jen
+202402	Priorita disku
+202432	Priorita detailu
+202470	i n
+202478	zk
+202484	m nastaven
+202506	 ISO
+202518	maj
+202526	 sekven
+202546	 sn
+202554	mky
+202568	i zpracov
+202592	 p
+202598	ednost 
+202620	ed statick
+202642	mi sn
+202654	mky.
+202668	i n
+202676	zk
+202682	m nastaven
+202704	 ISO
+202716	maj
+202724	 detaily sn
+202748	mku
+202762	i zpracov
+202786	 p
+202792	ednost 
+202814	ed statick
+202836	mi sn
+202848	mky.
+202858	@A0BD@ OM-Log400
+202892	@A003@@A09A@ @A094@
+202932	@A004@@A09A@ @A094@
+202972	2 h
+202980	5 h
+202988	@A006@@A040@Funkce
+203026	Vyberte funkci, kter
+203068	 bude
+203090	azena @A040@ b
+203120	hem p
+203132	ehr
+203152	@A04D@ Nastaven
+203186	@A017@ Nastaven
+203220	@A0AC@AF AEL/AFL
+203254	Starry Sky AF b
+203292	Starry Sky AF
+203320	Starry Sky AF + MF
+203358	Nastav. Starry Sky AF
+203402	Zvolit re
+203422	im pro
+203438	Starry Sky AF.
+203472	esnost
+203486	Rychlost
+203508	esnost AF m
+203532	 p
+203538	ednost
+203558	ed rychlost
+203582	 AF.
+203594	Do dokon
+203612	en
+203618	 AF je pot
+203640	ebn
+203654	as na zpracov
+203690	Rychlost AF m
+203718	 p
+203724	ednost
+203744	ed p
+203754	esnost
+203768	 AF.
+203782	mek zaost
+203802	en
+203810	Deaktivuje zaost
+203844	en
+203854	v re
+203864	imu manu
+203882	ln
+203888	ho ost
+203902	en
+203914	Znovu stiskn
+203940	te pro n
+203958	vrat.
+203970	Zes
+203978	l. n
+203988	hled
+203998	Zapnut
+204012	/vypnut
+204028	 zes
+204038	len
+204046	ho n
+204056	hledu.
+204072	Stiskn
+204086	te a ot
+204104	en
+204110	m ovlada
+204134	vyberte nastaven
+204172	Zes
+204180	l. n
+204190	hled zap1
+204218	Nast. ukl
+204246	 vlast. re
+204268	imu
+204276	Podr
+204286	et
+204292	Resetovat
+204316	i focen
+204332	 s pou
+204346	it
+204352	m vlastn
+204370	ho re
+204382	imu
+204392	doch
+204406	 k ulo
+204420	en
+204426	 zm
+204434	n nastaven
+204460	automaticky.
+204490	i focen
+204506	 s pou
+204520	it
+204526	m vlast
+204542	ho re
+204554	imu
+204564	nebudou zm
+204586	ny nastaven
+204610	 ulo
+204620	eny.
+204630	@A008@ Volba tv
+204668	Stisknut
+204686	m tla
+204700	tka zvolte tv
+204730	 v
+204738	bl
+204744	zkosti vybran
+204772	ho c
+204782	lov
+204790	ho bodu AF.
+204816	Stiskn
+204830	te tla
+204844	. a ot
+204860	en
+204866	m ovl
+204878	da
+204890	prove
+204902	te v
+204916	r manu
+204930	ln
+204940	@A008@Prior. tv
+204978	Zapnut
+204992	/vypnut
+205008	 priority tv
+205036	e @A008@.
+205058	Nastaven
+205076	 zvolte stisknut
+205110	m a
+205120	ot
+205128	en
+205134	m ovlada
+205152	e.
+205158	AF priority tv
+205202	@A078@ Nastaven
+205234	 smy
+205244	ky
+205250	Nastaven
+205268	 pro pohyb
+205292	kurzoru v obrazovce volby
+205350	le AF.
+205364	@A078@ Volba smy
+205398	ky
+205404	Smy
+205412	ka 1
+205422	Smy
+205430	ka 2
+205440	Zastav
+205454	 se po p
+205472	esunu c
+205488	le AF
+205502	k okraji.
+205526	esune c
+205542	l AF
+205554	k opa
+205570	mu okraji
+205592	ve stejn
+205610	m 
+205618	dku nebo sloupci
+205654	po p
+205664	esunu c
+205680	le AF za okraj.
+205716	esune c
+205732	l AF
+205744	k opa
+205760	mu okraji
+205782	v dal
+205796	m 
+205804	dku nebo sloupci
+205840	po p
+205850	esunu c
+205866	le AF
+205880	za okraj.
+205904	es @A0AD@
+205924	@A0AD@ bude vybr
+205958	no
+205970	ed p
+205980	esunem c
+205998	le AF
+206012	k opa
+206028	mu konci.
+206048	@A0AD@ nebude vybr
+206086	no
+206098	ed p
+206108	esunem c
+206126	le AF
+206140	k opa
+206156	mu konci.
+206176	RAW+JPEG @A041@
+206212	i nastaven
+206234	 RAW+JPEG
+206260	edem vybere pouze JPEG
+206308	pro p
+206320	enos do za
+206344	zen
+206360	i nastaven
+206382	 RAW+JPEG
+206408	edem vybere pouze RAW
+206454	pro p
+206466	enos do za
+206490	zen
+206506	i nastaven
+206528	 RAW+JPEG
+206554	edem vybere RAW+JPEG
+206598	pro p
+206610	enos do za
+206634	zen
+206646	Indik
+206658	tor ost
+206674	en
+206682	Indik
+206694	tor ost
+206710	en
+206716	 se nezobraz
+206748	pokud se v re
+206776	imu MF
+206792	zobrazuje rotuj
+206828	 kole
+206840	ko.
+206848	Sm
+206854	r a pozice ost
+206884	en
+206894	se zobraz
+206914	, zobrazuje-li se v re
+206960	. MF
+206972	rotuj
+206988	 kole
+207000	ko. Tato funkce
+207034	pom
+207046	 nastavit ost
+207074	en
+207086	asova
+207102	iv. komp. sn
+207128	m.
+207134	Nastavit maxim
+207164	ln
+207174	as
+207182	kompozitn
+207202	ho sn
+207226	3 h
+207234	6 h
+207242	Informace o sn
+207282	@A0BD@Z
+207298	mek
+207306	Zvolte ZAP pro vypnut
+207350	 @A0BD@.
+207370	Zobrazuje r
+207394	me
+207400	ek p
+207410	i p
+207418	im
+207426	knut
+207440	tla
+207450	tka z
+207466	rky.
+207482	me
+207488	ek se bude v
+207514	dy zobrazovat
+207544	v re
+207554	imu po
+207568	izov
+207582	 videa. (@A0AD@, C-AF)
+207628	Stisknut
+207646	m tla
+207660	tka @A040@
+207684	v nab
+207696	dce m
+207710	ete polo
+207728	ku
+207740	idat do Moj
+207764	 nab
+207774	dky.
+207784	@A0AC@AF
+207802	@A0AC@AF@A0BC@
+207832	AEL/@A0AC@AF
+207858	@A0AC@AF Start/Stop
+207898	AF m
+207908	 p
+207914	i detekci
+207936	tv
+207946	 p
+207952	ednost.
+207968	Pro vybran
+207990	 c
+207996	lov
+208008	bod m
+208020	 p
+208026	ednost AF, i kdy
+208064	byly detekov
+208090	ny tv
+208104	e.
+208110	Zes
+208118	l. n
+208128	hled vyp
+208146	Zes
+208154	l. n
+208164	hled zap2
+208188	edb
+208202	 v
+208212	r p
+208220	enosu:
+208240	edb
+208254	 vyberte sn
+208278	mky,
+208290	kter
+208300	 budou p
+208318	eneseny do za
+208348	zen
+208368	r v
+208376	ce sn
+208388	mk
+208400	vyberte v
+208420	ce sn
+208432	mk
+208438	, na kter
+208462	bude pou
+208480	ita ur
+208494	it
+208500	 akce, nap
+208528	ochrana nebo odstran
+208578	Zapnout o
+208602	 senzor,
+208622	kdy
+208630	 je displej zav
+208662	en
+208674	@A03D@: 
+208692	iv
+208698	 n
+208704	hled zap./vyp.
+208734	Re
+208740	im RAW
+208754	Poskytuje video v
+208790	stup ve form
+208816	tu
+208824	RAW do podporovan
+208860	ho za
+208874	zen
+208888	Nelze nahr
+208910	t na
+208922	kartu fotoapar
+208952	tu.
+208960	Po
+208968	zen
+208976	 sn
+208984	mk
+208990	 pro 
+209004	vytvo
+209016	en
+209022	 panoramatu 
+209050	v PC.
+209062	Pro focen
+209082	 zasn
+209096	en
+209102	ch 
+209112	hor, krajinek, b
+209150	ch 
+209158	tes
+209166	, 
+209178	se
+209188	ch pl
+209204	 atd.
+209216	Pro fotografov
+209256	se sv
+209268	tlem sv
+209286	ek. 
+209298	Reprodukce tepl
+209330	ch barev.
+209350	Pro fotografov
+209384	 dokument
+209404	, 
+209412	atd. Zvy
+209430	uje kontrast mezi 
+209474	smeny a pozad
+209502	m.
+209508	Ple
+209516	ov
+209522	 t
+209528	ny 
+209538	pro HDTV.
+209558	Pro fotografov
+209598	krajiny. 
+209618	iv
+209624	 reprodukce 
+209652	modr
+209662	ch a zelen
+209684	ch odst
+209708	Pro fotografov
+209748	rychl
+209760	ho pohybu
+209782	bez rozmaz
+209812	Pro focen
+209832	 v
+209838	chodu/z
+209854	padu 
+209868	slunce. P
+209888	irozen
+209902	 reprodukce 
+209932	erven
+209944	 a 
+209952	lut
+209964	HDR v protisv
+209992	tle
+210000	Vytvo
+210014	 sn
+210022	mek s optim
+210046	ln
+210058	vyv
+210068	en
+210074	m jasu d
+210092	ky kombinaci 
+210122	slo
+210130	en
+210136	 s
+210142	rie sn
+210156	mk
+210166	Interi
+210180	ry
+210186	Pohyb
+210198	No
+210208	 sc
+210216	ny
+210222	Lid
+210232	Scen
+210242	rie
+210250	Zachyt
+210264	 oh
+210272	ostroj s ni
+210304	expozi
+210322	 dobou.
+210340	Doporu
+210354	uje se pou
+210378	t stativ.
+210398	Pro fotografov
+210432	 hlavn
+210446	ho objektu 
+210472	a pozad
+210488	. 
+210494	iv
+210500	 reprodukce modr
+210534	ch 
+210544	a zelen
+210560	ch odst
+210584	Sn
+210590	mky jsou po
+210614	izov
+210624	ny postupn
+210660	em
+210666	 se zaznamenaj
+210696	 pouze oblasti
+210728	se zm
+210740	nou jasu, a n
+210768	sledn
+210780	 slo
+210790	eny.
+210802	Ide
+210810	ln
+210816	 pro zachycen
+210844	 sv
+210852	teln
+210862	ch stop.
+210882	Doporu
+210896	uje se pou
+210920	t stativ.
+210940	@A00A@POP UP
+210968	Zachycen
+210986	 osob v n
+211006	dhern
+211018	 no
+211034	sc
+211044	. Pou
+211056	ije se del
+211080	 expozi
+211104	doba. Doporu
+211130	uje se pou
+211154	t stativ.
+211174	Zachycen
+211192	 n
+211198	dhern
+211210	 no
+211222	 sc
+211230	ny
+211242	i del
+211256	 expozi
+211276	 dob
+211292	Doporu
+211306	uje se pou
+211330	t stativ.
+211350	Pro fotografov
+211384	 portr
+211406	Sv
+211414	ka
+211424	ti
+211430	e-Portr
+211450	Sv
+211456	teln
+211466	 stopy
+211480	Sn
+211486	mek s v
+211502	cen
+211510	s. zaost
+211528	en
+211538	Makro
+211550	Pro fotografov
+211584	 v re
+211596	imu makro.
+211618	Pro fotografov
+211652	 v re
+211664	imu makro.
+211688	Ve srovn
+211710	 se standardn
+211738	m makrem
+211758	budou makrosn
+211786	mky 
+211796	iv
+211812	Ide
+211820	ln
+211826	 pro fotografov
+211862	 v situac
+211882	ch,
+211892	kdy nen
+211914	douc
+211924	 zvuk a sv
+211946	tlo
+211956	z fotoapar
+211978	tu. Funkce @A001@, blesk
+212030	a AF lampa budou deaktivov
+212084	ny.
+212092	Po
+212104	 v
+212110	ce sn
+212122	mk
+212128	 najednou
+212150	s r
+212158	zn
+212164	m zaost
+212180	en
+212186	m.
+212196	ipojen
+212210	 za
+212220	zen
+212234	ipojit k za
+212260	zen
+212272	Tato funkce vy
+212302	aduje kompatibiln
+212342	objektiv. Nasa
+212372	te kompatibiln
+212402	 objektiv.
+212424	Pou
+212434	t nastaven
+212456	 C? Aktu
+212474	ln
+212486	nastaven
+212504	 fotoapar
+212524	tu bude p
+212544	eps
+212552	no.
+212564	ivatelsk
+212582	 re
+212590	im C
+212600	Prob
+212616	Technologie @A08F@/Bluetooth
+212676	je zp
+212690	stupn
+212702	na pro p
+212720	ipojen
+212738	Technologie @A08F@/Bluetooth
+212798	je zcela deaktivovan
+212844	a p
+212852	ipojen
+212866	 nelze zah
+212888	jit.
+212898	Bluetooth
+212918	Bezdr
+212930	tov
+212938	 funkce
+212954	Zap@A0AE@
+212974	Zap@A0AF@
+212994	Deaktivuje Bluetooth.
+213040	Bluetooth je v
+213070	dy deaktivovan
+213106	kdy
+213114	 je zapnuto nap
+213146	jen
+213156	Aktivuje Bluetooth.
+213198	Po zapnut
+213218	 nap
+213228	jen
+213236	 je
+213250	dy aktivovan
+213276	 Bluetooth
+213300	pro bezdr
+213320	tovou spou
+213348	Aktivuje Bluetooth.
+213390	Po zapnut
+213410	 nap
+213420	jen
+213428	 je
+213442	dy aktivovan
+213468	 Bluetooth
+213492	pro smartphony.
+213528	rov
+213540	 je dokon
+213560	eno.
+213572	Nastaven
+213590	 Bluetooth se zm
+213624	nilo
+213636	na Zap@A0AE@.
+213664	Prob
+213678	 sp
+213686	rov
+213704	Prove
+213716	te operaci sp
+213744	rov
+213760	na bezdr
+213778	tov
+213786	 spou
+213798	ti.
+213806	Odstra
+213820	te sp
+213832	rovan
+213844	 za
+213854	zen
+213872	i pou
+213884	it
+213890	 bezdr
+213904	tov
+213912	 spou
+213932	bude znovu nutn
+213964	 sp
+213972	rov
+213988	Nastaven
+214006	 bezdr
+214020	t. spou
+214042	Zah
+214050	jit sp
+214064	rov
+214078	Odstranit sp
+214104	rov
+214118	AF lampa
+214136	Barevn
+214150	 prostor
+214168	Vyhlazov
+214190	 expozice
+214210	Verze firmwaru
+214240	Je efektivn
+214264	 v 
+214274	re
+214280	imech P/A/S/M.
+214310	Intervalov
+214332	 re
+214340	im
+214346	Priorita sn
+214370	mk
+214378	Priorita 
+214398	asu
+214406	Nastaven
+214424	 akce p
+214440	i p
+214448	ipojen
+214462	 USB.
+214474	Kontrola sn
+214498	mk
+214506	Webkamera
+214526	Oto
+214534	te p
+214544	ep
+214550	na
+214556	 re
+214564	im
+214570	 do polohy @A004@.
+214612	ivatelsk
+214630	 re
+214638	im C2
+214654	ivatelsk
+214672	 re
+214680	im C3
+214696	ivatelsk
+214714	 re
+214722	im C4
+214738	ivatelsk
+214756	 re
+214764	im C
+214774	Zapne/vypne @A0B1@.
+214814	Up
+214820	ednostn
+214836	 dodr
+214848	en
+214854	 po
+214862	tu
+214870	sn
+214876	mk
+214882	. Zah
+214898	 dal
+214910	 sn
+214926	 po
+214936	uplynut
+214956	asu intervalu, jakmile
+215004	byly zaznamen
+215032	ny minul
+215050	 sn
+215058	mky.
+215068	Up
+215074	ednostn
+215090	 dodr
+215102	en
+215112	asov
+215122	ho
+215130	intervalu. P
+215156	esko
+215168	 dal
+215180	 sn
+215202	pokud nastaven
+215232	 interval nelze
+215266	dodr
+215276	et.
+215284	Expozice sn
+215316	 pro ka
+215336	 sn
+215344	mek
+215354	pou
+215362	ije v
+215374	sledek m
+215394	en
+215400	 pro dan
+215422	sn
+215428	mek.
+215438	Standardizuje expozici sn
+215502	pro v
+215514	echny sn
+215532	mky. Vyhlad
+215556	 zm
+215564	ny
+215572	jasu ve vytvo
+215600	en
+215606	ch 
+215614	asosb
+215626	rn
+215632	ch
+215640	vide
+215650	ch.
+215658	@A002@ Odstran
+215688	 v
+215694	echny automaticky
+215732	odd
+215740	len
+215748	 soubory jednoho videa.
+215796	P/A/S/M/B
+215816	P/A/S/M
+215832	@A0BE@ Control
+215864	erven
+215876	 r
+215882	m. p
+215892	i @A0B0@
+215914	i zapnut
+215932	 zobraz
+215952	erven
+215964	 vn
+215986	me
+215992	ek na obrazovce b
+216028	hem
+216042	znamu videa.
+232206	OlympusLanguage_csytft

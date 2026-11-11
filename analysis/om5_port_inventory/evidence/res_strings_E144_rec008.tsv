@@ -1,0 +1,7612 @@
+10	AEL/AFL
+26	@A025@REC
+46	MF
+52	RAW@A024@
+72	Pr
+78	visu.
+90	@A01D@
+104	Accueil
+138	Fran
+148	ais
+204	2Im
+212	Memo AEL/AFL
+238	AEL/AFL
+254	Lecture AEL
+282	glage @A001@
+308	 R
+314	glage initial
+342	AF/MF
+354	Zone AF
+370	Lumi
+380	re AF
+392	Mode AF
+408	Tout
+418	S.I. trembl. ttes directions
+480	initial tout
+510	glage tout
+532	Tout @A001@
+556	Anti-Vibration @A004@
+600	Priorit
+616	 ouverture
+638	Priorit
+654	 Live View Art
+684	Traitement crois
+720	Diorama
+736	Ton dramatique
+770	pia
+778	Film grain noir&blanc
+822	Tonalit
+838	 lumineuse
+860	Ton neutre&lumineux
+900	Pop art
+916	Soft focus
+938	St
+944	nop
+954	Choix cadrage
+982	Auto
+992	LCD r
+1004	tro
+1012	clair
+1026	Niveau batterie
+1058	Batterie 
+1078	 plat
+1090	@A001@
+1104	Bracketing
+1126	Pause Mise Point
+1160	Temps Pose
+1182	Touche Dial
+1206	@A003@R
+1222	glage
+1234	Fonction @A006@
+1266	Erreur carte
+1292	Carte pleine
+1318	Carte pleine
+1344	Configurer carte
+1378	Temp
+1388	rature interne trop
+1432	lev
+1440	e. SVP attendez avant
+1486	d'utiliser l'appareil.
+1532	L'objectif est verrouill
+1582	. 
+1590	Veuillez d
+1612	verrouiller l'objectif.
+1660	Espace couleur
+1690	AF continu
+1712	Suivi AF
+1730	Contraste
+1750	Taille copie image
+1792	glages copyright
+1826	@A004@Mode
+1848	Perso
+1860	Touche Fonction
+1896	Sens molette/pav
+1932	Fonction molette/pav
+1976	@A010@Verrou.
+2004	Flash auto
+2026	Flash forc
+2050	Flash Off
+2070	Yeux rouges
+2094	Yeux rouges vitesse lente
+2146	Spot hautes lumi
+2180	res
+2188	Spot basses lumi
+2222	res
+2232	cran/@A004@/PC
+2266	glage DPI
+2290	quence
+2304	@A014@ Anti-Vibration @A004@
+2362	Simple
+2376	@A014@ Anti-Vibration @A004@
+2434	e-Portrait
+2456	Edit
+2466	Modifier nom fichier
+2508	B : Bleu
+2526	G : Vert
+2544	N:Neutre
+2562	Or : Orange
+2586	P : Violet
+2608	R : Rouge
+2628	S : S
+2640	pia
+2648	Ye : Jaune
+2672	tape EV
+2692	glage EVF
+2712	Expo/@A011@/ISO
+2744	Exposition
+2770	glage exposition
+2804	@A008@Priorit
+2832	 visage
+2848	Priorit
+2864	 visage Off
+2888	Priorit
+2904	 visage On
+2926	Nom fichier
+2950	Firmware
+2968	Flash perso/@A014@
+3006	Flash lent @A00A@
+3042	Flash sync X @A00A@
+3082	Longueur focale
+3114	Sens de la bague MF
+3154	Haute luminosit
+3188	Basse luminosit
+3222	Luminosit
+3242	 standard
+3262	Hi
+3272	glage histogramme
+3308	i-Enhance
+3328	@A01A@/Couleur/WB
+3364	Stabilisateur
+3392	@A00F@ R
+3410	glages
+3424	@A00F@/Info r
+3452	glage
+3464	@A006@ Info
+3492	pertoire
+3510	IS Off
+3524	ISO
+3532	ISO auto
+3554	gl. ISO auto
+3580	Extension
+3600	Recommand
+3624	tape ISO
+3642	S.I. trembl. vert.
+3680	Ajuste r
+3698	glage
+3710	Lo
+3716	Boucle
+3730	Prise vue manuelle
+3768	@A009@+@A007@
+3796	@A00E@
+3810	Memoire usage album
+3850	Menu
+3860	@A00E@/@A000@ Menu Ecran
+3910	Mesure
+3924	Pond. centr.
+3950	Mesure spot
+3974	Assist MF
+3994	min
+4002	Mode Guide
+4024	@A016@
+4038	Monochrome
+4068	Vid
+4080	Vid
+4088	o @A017@
+4106	Vid
+4114	o+Photo
+4130	Multi Exposition
+4164	Doux
+4174	Extend. LV
+4196	Non
+4204	Pas de carte
+4230	Non connect
+4256	Filtre bruit
+4286	duc bruit
+4306	Pas image
+4326	Off
+4334	Retour@A018@
+4360	Retour@A019@
+4386	Annuler@A018@
+4414	Capture WB@A01A@
+4448	@A01B@@A01C@
+4478	gl@A019@
+4496	On
+4502	@A01E@
+4516	@A01F@
+4530	Mes Infos OLYMPUS PENPAL
+4584	glage m
+4600	moire album
+4624	Mode Image
+4646	Personnaliser mode Image
+4696	Erreur d'Image
+4726	Taille image
+4752	Mappage pixels
+4782	@A023@ Mode Macro
+4818	Impression
+4844	glage priorit
+4874	Programme auto
+4904	Annuler protection
+4942	@A024@
+4960	glage @A024@
+4986	Effacement rapide
+5022	Effacement RAW+JPEG
+5062	Efface enreg
+5088	Visual image
+5114	Flash + Anti Yr
+5146	Relecture
+5166	Priorit
+5182	 C-AF
+5194	Priorit
+5210	 S-AF
+5226	initialiser
+5254	init. objectif
+5288	init./Mon R
+5312	glage
+5324	@A026@
+5338	Saturation
+5360	Plage & Neige
+5388	Bougie
+5402	Enfants
+5418	Documents
+5438	Feux d'artifices
+5472	Haute lumi
+5494	re
+5500	Paysage
+5516	Basse lumi
+5538	re
+5544	Gros plan
+5564	@A03A@ Macro
+5590	Mode Macro nature
+5626	Nuit + Portrait
+5658	Sc
+5664	ne nuit
+5680	Panorama
+5698	Portrait
+5716	Mode DIS
+5734	Sport
+5746	Coucher de soleil
+5782	@A03A@ Grand angle
+5820	sec
+5828	@A04E@ Anti-Vibration @A004@
+5886	@A04F@ Anti-Vibration @A004@
+5944	@A02A@ 12 sec
+5972	@A02A@ 2 sec
+5998	Taille Envoi Img
+6032	@A02C@
+6046	Comp. vignetage
+6078	Ombre ajus
+6100	Nettet
+6116	Priorit
+6132	 obturateur
+6156	S.I. trembl. horiz.
+6196	AF simple
+6216	AF simple + MF
+6246	Veille
+6260	@A02B@
+6274	Spiral
+6288	Standard
+6310	marrer
+6324	Normal
+6340	lev
+6350	Partage OLYMPUS PENPAL
+6396	Viseur Electronique
+6436	Album OLYMPUS PENPAL
+6478	Heure
+6490	Mode USB
+6508	Sortie vid
+6534	Volume
+6548	Patientez Svp
+6576	WB auto
+6592	Nuageux
+6608	Flash WB
+6626	Fluorescent
+6650	Faible lumi
+6674	re
+6680	WB
+6686	Ombre
+6698	Lumineux
+6716	Faible
+6732	crit. prot
+6770	Oui
+6778	A/M/J
+6790	Eye-Fi
+6804	16:9
+6814	4:3
+6822	3:2
+6830	6:6
+6838	3:4
+6846	ESP
+6854	NTSC
+6864	PAL
+6872	RAW
+6880	MF
+6886	Adobe RGB
+6906	I.S. 1
+6920	I.S. 2
+6934	Slow
+6944	Slow2
+6956	1/4
+6964	1/16
+6974	1/64
+6984	2nd Curtain
+7008	Vivid
+7020	Natural
+7036	JPEG
+7046	RAW+JPEG
+7064	Portrait
+7098	CWB
+7106	mode1
+7118	mode2
+7130	S-AF
+7140	C-AF
+7150	P/A/S
+7162	Menu
+7172	1/2EV
+7184	1/3EV
+7196	1EV
+7204	Off
+7212	I.S. 3
+7226	sRGB
+7236	Auto@A010@
+7258	MTP
+7266	Hold
+7276	Body
+7286	Lens
+7296	Flash
+7308	Acc
+7316	LV-Info
+7332	@A014@/@A028@
+7360	ART1
+7370	ART2
+7380	ART3
+7390	ART4
+7400	ART5
+7410	ART6
+7420	ART7
+7430	ART8
+7440	HDMI
+7450	iAUTO
+7462	P/A/S/M
+7478	ART9
+7488	ART10
+7500	Full
+7510	@A084@
+7524	Date
+7534	Mon R
+7546	glage 1
+7562	Mon R
+7574	glage 2
+7590	Mon R
+7602	glage 3
+7618	Mon R
+7630	glage 4
+7646	LCD Retro
+7666	clair
+7680	Live Guide
+7710	convertisseur num
+7746	Exposition@A007@
+7780	Fonctionne dans 
+7816	les modes 
+7840	d'exposition P/A/S.
+7880	Fonctionne dans 
+7916	tous les modes 
+7950	d'exposition.
+7978	Merci de v
+8000	rifier les conditions
+8046	d'utilisation de l'objectif.
+8108	tro Eclairage ON/OFF.
+8156	glez la compensation
+8200	d'exposition
+8226	@A066@:
+8248	but/Arr
+8270	Enregistrement Vid
+8312	Test de profondeur
+8352	de champs.
+8378	initialisation du
+8416	mode AF
+8436	glage du 
+8458	mode MF
+8478	glage les modes 
+8514	qualit
+8534	RAW+JPEG/JPEG 
+8566	avec le cadran
+8596	@A013@/@A014@ R
+8628	glage direct.
+8660	glage direct ISO.
+8700	glage direct 
+8730	de la balance 
+8762	des blancs.
+8786	Presser @A02A@: pour verrouiller/
+8860	verrouiller @A010@ en mode photo
+8926	@A01C@Fonction
+8956	@A048@Fonction
+8986	@A030@Fonction
+9016	@A00A@Fonction
+9046	SF
+9064	@A05C@5300K
+9088	@A05B@7500K
+9112	@A05D@3000K
+9136	@A059@5500K
+9160	@A058@6000K
+9184	Effacer toutes les images 
+9240	ou formater la carte m
+9286	moire.
+9300	Effacer les r
+9328	glages 
+9346	ou les sauvegarder.
+9386	Choisir le filtre artistique 
+9448	ou le rendu.
+9474	Choisir la qualit
+9510	 des photos 
+9538	ou des vid
+9560	os.
+9568	Choisir le cadrage des photos.
+9634	glages photo basiques.
+9680	Choisir photo vue par vue 
+9736	ou rafale.
+9758	Changer le mode de stabi-
+9812	lisation. @A065@ et @A066@ sont utilis
+9896	pour cr
+9912	er des effets de fil
+9958	L'appareil photo r
+9996	alise 
+10012	diff
+10022	rentes images avec 
+10064	des r
+10076	glages diff
+10100	rents.
+10114	Fusionne plusieurs images
+10168	en une seule.
+10196	Ajuster l'intensit
+10234	 du flash.
+10256	Utiliser la fonction
+10300	de pilotage de flash
+10344	sans fil.
+10364	Utiliser le zoom num
+10406	rique.
+10420	Menu photo avanc
+10454	e.
+10464	aliser des diaporamas
+10510	avec des effets.
+10544	Affiche les images
+10584	automatiquement dans 
+10630	le bon sens.
+10658	dite l'image.
+10686	Sauvegarder les 
+10722	param
+10734	tres d'impression.
+10776	verrouiller la protection
+10830	des images.
+10854	Mode Lecture et 
+10890	options de retouche.
+10932	Menu des modes 
+10966	autofocus et manuels.
+11010	Menu des boutons et 
+11054	des r
+11066	glages des 
+11092	touches dial.
+11120	Menu des r
+11142	glages de lecture.
+11180	Menu du mode d'affichage,
+11234	audio et de connexion 
+11282	PC ou imprimante.
+11318	Menu des r
+11340	glages d'exposition.
+11382	Menu des r
+11404	glages du flash.
+11438	Menu des r
+11460	glages de
+11482	couleur et de balance 
+11530	des blancs.
+11554	Menu d'enregistrement et 
+11608	de suppression d'images.
+11658	Menu vid
+11676	os.
+11684	Menu des autres r
+11720	glages.
+11736	Choisir le mode AF
+11776	en photo ou vid
+11808	o.
+11814	Si On est s
+11838	lectionn
+11862	l'AF sera actif avant 
+11910	d'appuyer sur le d
+11948	clencheur.
+11970	Choisir la zone AF.
+12010	Choisir la zone AF avec
+12060	les touches dial ou les f
+12112	ches
+12124	du pav
+12138	 directionnel.
+12168	Quand On activ
+12198	, r
+12206	initialisez 
+12234	mise au point objectif 
+12282	 l'infini 
+12306	lorsque appareil est 
+12350	teint.
+12368	lectionner ON pour 
+12410	utiliser MF en mode BULB.
+12462	Personnaliser le sens 
+12510	de rotation de la bague
+12560	de mise au point.
+12600	lectionner ON pour automati-
+12660	quement agrandir l'image en 
+12720	mode MF avec la bague de MAP.
+12780	Choisir la position de
+12832	part de la zone AF.
+12872	La LED rend la mise 
+12916	au point plus facile en
+12966	basse lumi
+12988	re.
+12996	Assigner le verrouillage
+13048	AE/AF 
+13062	 la touche @A034@.
+13100	Si ON est s
+13124	lectionn
+13142	, 
+13150	l'exposition sera conserv
+13208	apr
+13216	s que @A071@ ait 
+13256	 relach
+13276	Roulx 4"
+13294	Choisir la fonction
+13336	de la touche dial.
+13374	Choisir le sens de 
+13416	rotation de la touche dial.
+13476	lectionner On pour 
+13522	sactiver @A010@ en prise 
+13576	de vue photo.
+13604	Roulx A4
+13626	glez les param
+13656	tres HDMI.
+13678	Adresse
+13694	Lorsque On est s
+13728	lectionn
+13750	l'effet de la comp. d'exposition
+13818	ne sera pas visible sur l'
+13872	cran.
+13884	Tout
+13894	Choisir le temps pendant lequel
+13960	seront affich
+13988	es les informations
+14030	avant de dispara
+14064	tre de l'
+14084	cran
+14094	L'
+14100	cran s'
+14116	teint automatiquement
+14162	si l'appareil est non utilis
+14224	pendant la p
+14250	riode choisie.
+14280	L'appareil photo passera en
+14338	veille s'il n'est pas utilis
+14400	pendant la p
+14426	riode s
+14442	lectionn
+14460	e.
+14466	Vous pouvez d
+14494	sactiver le beep
+14532	mis lorsque l'autofocus
+14582	se verrouille sur un sujet.
+14642	glage du volume de lecture.
+14702	lectionnez le type d'appareil
+14766	 connecter en USB.
+14804	Choisir la valeur d'incr
+14854	mentation
+14876	utilis
+14890	e lors des r
+14916	glages
+14932	des param
+14952	tres d'exposition.
+14990	Choisir un mode de mesure.
+15044	Choisir le mode de mesure
+15098	avec @A034@.
+15128	glage de la sensibilit
+15174	 ISO.
+15186	Choisir la valeur maximum et
+15246	la valeur par d
+15278	faut utilis
+15302	es
+15310	pour le mode ISO automatique.
+15370	Choisir les modes photo
+15420	dans lesquels le r
+15458	glage ISO
+15480	auto est disponible.
+15526	gler le mode BULB
+15564	sur le temps maximum.
+15608	Choisir le d
+15634	lai entre la pression
+15680	du d
+15690	clencheur et le 
+15730	clenchement de l'obturateur.
+15788	Choisir la vitesse d'obturation
+15854	la plus rapide disponible
+15908	lorsque le flash est utilis
+15968	Choisir la vitesse d'obturation
+16034	la plus lente disponible
+16086	lorsque le flash est utilis
+16146	Cette fonction r
+16180	duit le bruit
+16222	 pendant de 
+16250	longues expositions.
+16292	Choisir le niveau de 
+16342	duction de bruit 
+16380	dans les hautes sensibilit
+16434	s.
+16440	Choisir la balance des blancs.
+16502	Conserve les couleurs chaudes
+16564	en balance des blancs auto.
+16620	Choisir comment les couleurs
+16680	sont reproduites sur 
+16724	cran
+16736	ou sur imprimante.
+16774	Modifier la balance des blancs
+16838	sur auto ou @A036@
+16878	en utilisant le flash.
+16924	Illumination p
+16954	riph
+16964	rique correcte
+16996	compte tenu de l'objectif utilis
+17066	Choisir les dimensions 
+17116	et les taux de compression
+17172	des formats JPEG.
+17208	Choisir le d
+17234	compte des pixels
+17272	pour @A037@ et @A038@.
+17318	Lorsque On est s
+17352	lectionn
+17376	effacer l'image instantan
+17428	ment.
+17440	Choisir l'action 
+17476	 effectuer
+17500	lorsqu'une image au format
+17556	RAW+JPEG est effac
+17594	e.
+17600	Utiliser les num
+17634	ros
+17644	de fichiers et de dossiers
+17700	de l'ancienne carte.
+17742	Choisir comment les images
+17798	sont renomm
+17822	es en s
+17838	lectionnant
+17864	la position du nom de fichier.
+17926	Choisir la s
+17952	lection par d
+17980	faut
+17992	pour confirmer les boites
+18046	de dialogue.
+18072	Choisir la r
+18098	solution d'impression.
+18144	Ajouter les noms du
+18186	photographe et le
+18224	copyright 
+18246	 la nouvelle image.
+18290	gl
+18296	 sur Off, permet
+18332	d'enregistrer une vid
+18382	sans le son.
+18408	Contr
+18420	ler et optimiser les
+18464	fonctions de prise de vue
+18518	et de traitement d'image.
+18574	gler l'exposition optimale
+18630	pour chaque mode
+18666	de mesure d'exposition.
+18714	Calibrer le niveau spatial.
+18770	Activer ou d
+18796	sactiver
+18816	la connexion par carte Eye-Fi.
+18878	Options avanc
+18906	s de l'APN.
+18930	Menu de partage 
+18966	OLYMPUS PENPAL.
+18998	Menu de r
+19018	glages 
+19036	du viseur 
+19058	lectronique.
+19084	Recevoir les images ou attendre
+19150	la demande d'autres appareils.
+19212	Copier toutes les images et sons
+19280	entre @A00A@ et @A00B@.
+19328	Nombre d'images
+19362	actuellement dans l'album et
+19422	pouvant 
+19440	tre stock
+19460	es.
+19468	Effacer toutes les images
+19522	de l'album ou formater
+19570	l'album
+19590	glez la luminosit
+19626	 et
+19636	la temp
+19652	rature de couleur 
+19692	du viseur 
+19714	lectronique.
+19740	Options accessoires.
+19786	gler la luminosit
+19828	et la temp
+19850	rature de 
+19874	couleur de l'
+19902	cran LCD.
+19922	Choisir le temps 
+19960	d'affichage des images
+20008	apr
+20016	s la photo.
+20040	Choisir d'afficher le
+20086	menu @A00E@ ou le menu @A000@.
+20148	Versions des firmwares.
+20200	gler les fonctions basiques.
+20258	Menu Prise de vue 2
+20298	Oui
+20306	Non
+20314	@A00A@ Menu 
+20340	cran
+20350	@A000@ Menu Ecran
+20386	Photo test
+20408	Mode Flash
+20430	@A06B@:D
+20448	sactive
+20464	Tout effacer
+20490	@A023@: AEL/AFL
+20522	@A023@:
+20544	but/Arr
+20566	Enregistrement Vid
+20608	Test de profondeur
+20648	de champs.
+20670	WB Une Touche.
+20704	initialisation du
+20742	mode AF
+20762	glage du 
+20784	mode MF
+20804	glage des modes 
+20840	qualit
+20860	RAW+JPEG/JPEG 
+20892	avec le cadran
+20922	Image test sans
+20956	sauvegarde.
+20984	clenchez avec @A02B@
+21028	en pressant sur 
+21064	la touche @A024@
+21102	clenchez avec @A02C@
+21146	en pressant sur 
+21182	la touche @A024@
+21220	clenchez avec @A02D@
+21264	en pressant sur 
+21300	la touche @A024@
+21338	clenchez avec @A02E@
+21382	en pressant sur 
+21418	la touche @A024@
+21452	@A023@: Presser pour passer mode 
+21522	Live Guide, presser encore 
+21580	pour revenir.
+21608	@A023@: Changer x1/x2.
+21654	@A025@:D
+21672	sactive
+21692	glez la compensation
+21736	d'exposition
+21762	Mode Flash r
+21788	glage direct.
+21820	glez la compensation
+21864	d'exposition
+21890	Presser @A012@: pour verrouiller/
+21964	verrouiller @A010@ en mode photo
+22030	Superposition im.
+22066	Fusion 2 Images
+22098	Fusion 3 Images
+22130	@A009@
+22144	Mode RC @A01B@
+22174	Menu Personnalis
+22210	A. AF/MF
+22228	B. Touche Dial
+22258	C. Relecture/@A01E@
+22298	D. 
+22306	cran/@A004@/PC
+22336	E. Expo/@A011@/ISO
+22374	F. Flash Perso/@A00A@
+22418	G. @A01A@/Couleur/WB
+22460	H. Efface enreg
+22492	I. Vid
+22510	J. Viseur 
+22532	lectronique int
+22564	gr
+22572	Rentrez le code PIN SVP.
+22622	AF temps r
+22644	el
+22650	Effacer mes modes 
+22690	et r
+22700	glages.
+22716	Info Off
+22734	@A049@ Couleur chaude
+22778	@A00A@+WB
+22802	glages 
+22818	cran tactile
+22844	ART
+22852	SCN
+22860	3200
+22870	2400
+22880	2560
+22890	1920
+22900	1920
+22910	1440
+22920	1600
+22930	1200
+22940	1280
+22950	960
+22958	1024
+22968	768
+22976	640
+22984	480
+22992	320
+23000	240
+23008	Format photo
+23034	Vid
+23046	S-AF+MF
+23062	C-AF+TR
+23078	RAW/JPEG
+23098	diter JPEG
+23120	Yeux rouges
+23144	@A02B@
+23158	Aspect
+23172	Noir&Blanc
+23198	pia
+23206	Saturation
+23228	@A025@
+23242	@A017@
+23258	dit. donn
+23278	es RAW
+23292	Pivoter
+23308	@A023@
+23326	lection image
+23354	@A017@D
+23370	marrer
+23384	Effacer
+23400	Effacer
+23416	Effacer s
+23436	lection
+23456	lectionn
+23476	Valider mes modes
+23514	et r
+23524	glages.
+23540	Lecture vid
+23568	Envoyer Photo
+23600	initialiser
+23624	@A03A@Traitement Crois
+23672	@A033@Ton Dramatique
+23714	Luminosit
+23736	Filtre couleur
+23766	Couleur monochrome
+23804	Utiliser La Taille Originale
+23862	En s
+23872	lectionnant ce mode
+23914	vous pouvez personnaliser 
+23970	vos param
+23990	tres d'image.
+24018	Menu d'album OLYMPUS PENPAL.
+24076	Vid
+24084	o @A017@ On
+24108	AVCHD 1920
+24130	1080 Normal
+24154	Motion JPEG 1280
+24188	720
+24196	Motion JPEG 640
+24228	480
+24236	@A015@i-Enhance
+24268	@A07A@Vivid
+24292	@A07C@Portrait
+24322	@A032@Pop Art
+24350	@A034@Soft Focus
+24384	@A035@Ton Neutre&Lumineux
+24436	@A036@Tonalite Lumineuse
+24486	@A037@Film Grain noir&blanc
+24542	@A038@St
+24560	nop
+24570	@A039@Diorama
+24598	Mon R
+24610	glage 1
+24626	Mon R
+24638	glage 2
+24654	Mon R
+24666	glage 3
+24682	Mon R
+24694	glage 4
+24710	Complet
+24726	Basique
+24746	gl
+24752	Pas donn
+24774	@A07B@Natural
+24802	@A01F@Doux
+24824	Effet
+24836	Haute lumi
+24858	re
+24864	Normal
+24878	Basse lumi
+24900	re
+24906	Monochrome
+24928	Pour image 
+24954	monochrome.
+24978	Utile pour des
+25010	contrastes marqu
+25044	s 
+25052	entre le ciel et les 
+25098	nuages.
+25114	Utile pour la 
+25146	prise de vue 
+25176	en t
+25194	 distance.
+25216	Accentue le contraste 
+25264	entre les tons bleus 
+25310	du ciel et les nuages 
+25358	lumineux.
+25378	Am
+25384	liore les tons 
+25418	chairs et r
+25446	le les 
+25464	expressions des 
+25500	portraits.
+25522	Pour image effet 
+25564	pia.
+25574	Pour image effet bleu.
+25620	Pour image effet 
+25658	violet.
+25674	Pour image effet vert.
+25720	Changer intensit
+25754	 couleurs
+25774	Changer l'ambiance
+25812	Changer luminosit
+25850	Arri
+25860	re-plan flou
+25886	Effet de mouvement
+25924	Astuces photos
+25954	Le Live Guide n'est pas
+26004	disponible quand le 
+26048	flash est utilis
+26084	Moins de couleurs
+26120	Plus de couleurs
+26154	Plus chaude
+26178	Plus froide
+26202	Plus claire
+26226	Plus sombre
+26252	clair. zone claire
+26290	Foncer zone claire
+26330	clair. zone sombre
+26368	Foncer zone sombre
+26406	Plus flou
+26426	Plus net
+26444	Mouvement flou
+26474	Mouvement fig
+26504	dpi
+26512	@A03B@S
+26528	pia
+26536	Molette P
+26556	Molette A
+26576	Molette S
+26596	Molette M
+26616	Molette Menu
+26642	Molette @A006@
+26672	Ps
+26678	@A007@
+26692	Fno
+26700	Obturateur
+26722	@A079@/Value
+26748	Avant/Apr
+26772	@A08B@
+26786	Demande D'Impression
+26828	@A022@
+26842	@A00E@
+26856	@A000@
+26870	Impression demand
+26914	initialiser
+26938	Conserver
+26958	Non
+26970	gl
+26976	Annuler
+26992	2f 0.3EV
+27010	2f 0.5EV
+27028	2f 0.7EV
+27046	2f 1.0EV
+27064	3f 0.3EV
+27082	3f 0.5EV
+27100	3f 0.7EV
+27118	3f 1.0EV
+27136	5f 0.3EV
+27154	5f 0.5EV
+27172	5f 0.7EV
+27190	5f 1.0EV
+27208	7f 0.3EV
+27226	7f 0.5EV
+27244	7f 0.7EV
+27262	Format 2L
+27282	WB BKT
+27296	A-B
+27304	3lm 2
+27316	tape
+27326	3lm 4
+27338	tape
+27348	3lm 6
+27360	tape
+27370	G-M
+27378	Nbre d'images
+27406	Gain auto
+27426	Superposition
+27454	Sortie HDMI
+27478	Commande HDMI
+27506	1080i
+27518	720p
+27528	480p/576p
+27548	Infos copyright
+27580	Nom auteur
+27602	Nom copyright
+27630	AE BKT
+27644	FL BKT
+27658	ISO BKT
+27674	ART BKT
+27694	@A01B@: D
+27714	but enreg vid
+27748	@A01A@: Prendre une photo
+27800	@A063@: D
+27820	but Enreg Vid
+27854	@A02B@: Prendre Une Photo
+27910	lect Mode Scene
+27946	lect Filtre Artistique
+27992	@A06C@: Guide Facile pour 
+28048	changement de r
+28080	glage
+28096	glage auto de l'ouverture
+28150	et vitesse d'obturation.
+28204	glage manuel 
+28234	de l'ouverture.
+28270	glage manuel de la
+28310	vitesse d'obturation.
+28358	glage manuel de 
+28394	l'ouverture et vitesse d'obturation.
+28468	@A015@ : D
+28490	but/Fin enreg vid
+28526	o.
+28532	Quitte@A019@
+28558	MF AEL/AFL
+28580	mode3
+28592	mode4
+28604	Mi-course
+28624	Complet
+28640	AEL/S-AF
+28658	Exposition
+28680	AEL
+28688	AEL/Expo
+28706	AEL/AF Start
+28732	AF Start
+28750	AEL/AFL/Expo
+28776	AFL/Expo
+28794	----
+28804	Menu Prise de vue 1
+28844	Menu Lecture
+28870	Affichage continu d'un filtre
+28932	artistique. Certains affichent
+28996	une vitesse r
+29024	duite.
+29038	Le filtre artistique est 
+29092	illumin
+29108	 sur l'
+29124	cran LCD et la
+29156	vitesse est plus rapide.
+29206	@A042@: Zoom image.
+29246	@A042@: Affichez un cadre large
+29312	et pressez 
+29336	 nouveau 
+29358	pour agrandir encore l'image.
+29418	Haute lumi
+29440	re
+29446	Ombre
+29458	Indicateurs 
+29484	teints 
+29502	apr
+29510	s 10 secondes
+29540	sans op
+29556	ration.
+29572	Indicateurs toujours
+29616	visibles en prise de vue.
+29668	Ne pas prendre une photo 
+29724	 la fin de l'enregistrement vid
+29794	en appuyant sur le d
+29836	clencheur.
+29858	Prenez une photo apr
+29900	s 
+29908	arr
+29916	t de l'enregistrement vid
+29968	o 
+29976	en appuyant sur le d
+30018	clencheur.
+30044	gler
+30054	Retour r
+30072	glage usine.
+30102	sactiver connexion carte Eye-Fi.
+30168	Activer la connexion carte Eye-Fi.
+30238	2f
+30244	Photo surexp.
+30272	Photo sous-exp.
+30304	Prendre deux photos : une
+30358	expos
+30370	e normalement et l'autre
+30422	surexpos
+30440	e.
+30446	Prendre deux photos : une
+30500	expos
+30512	e normalement et l'autre
+30564	sous-expos
+30586	e.
+30592	S-AF AEL/AFL
+30618	C-AF AEL/AFL
+30644	Effet Filtre artistique
+30692	Effet
+30704	@A00B@
+30718	Effet
+30730	@A00C@
+30744	Effet suppl
+30768	mentaire
+30786	Effet Soft focus
+30820	Effet St
+30838	nop
+30848	Effet Fondu bords blancs
+30898	Effet encadr
+30926	Effet 
+30940	toile
+30952	Photo 3D
+30970	Pour prendre une
+31006	vue de type
+31032	portrait.
+31052	Tonalit
+31068	 peau naturelle 
+31104	sur une t
+31128	 HD.
+31138	Pour prise de vue
+31176	de paysages.
+31204	Reproduction
+31234	clatante des
+31262	bleus et des
+31290	verts.
+31304	Saisit une action
+31342	rapide sans flou.
+31378	Pour la prise de vue de 
+31430	sc
+31436	nes illumin
+31460	es le soir 
+31486	ou de nuit.Vitesse 
+31532	obturation plus lente 
+31580	que la normale.Pour meilleurs 
+31648	sultats, stabiliser l
+31692	appareil.
+31712	@A014@POP UP
+31740	Pour prise de vue 
+31780	du sujet et de
+31812	l'arri
+31826	re-plan le soir 
+31862	ou la nuit. Vitesse 
+31906	d'obturation lente.
+31946	Prise de vue 
+31976	enfants actifs.
+32008	Rehausse les 
+32038	zones lumineuses 
+32076	pour des photos
+32110	impressionnantes.
+32146	Rehausse les 
+32176	zones sombres 
+32208	pour des photos
+32242	impressionnantes.
+32278	Cette fonction 
+32316	duit le flou d
+32354	 un mouvement du 
+32392	sujet ou un boug
+32426	 de 
+32438	l'appareil lors de la 
+32486	prise de vue.
+32514	Id
+32520	al pour 
+32540	photos 
+32558	rapproch
+32576	es de 
+32592	petits sujets.
+32622	Pour prise de vue
+32662	 l'
+32670	clairage des
+32698	bougies.
+32718	Des couleurs chaudes 
+32764	sont reproduites.
+32800	Pour prise de vue 
+32840	de lever/coucher 
+32878	de soleil. Reproduction
+32930	clatante des rouges 
+32974	et des jaunes.
+33004	Pour prise de vue
+33042	de documents, etc.
+33082	Augmente le
+33108	contraste entre les 
+33152	lettres et
+33176	l'arri
+33190	re-plan.
+33208	Vous permet de
+33240	prendre des vues
+33276	qui peuvent 
+33302	tre
+33312	assembl
+33328	es pour
+33346	faire une vue
+33376	panoramique.
+33402	AF@A039@MF
+33426	Convient pour la
+33462	prise de vue de 
+33498	feux d'artifice. 
+33536	Vitesse d'obturation 
+33582	lente.
+33596	Pour prise de vue 
+33636	de montagnes sous 
+33676	la neige, etc.
+33708	Reproduction 
+33736	clatante 
+33758	du ciel, des verts et
+33804	des personnages.
+33838	Convertisseur
+33868	Fisheye FCON-P01.
+33904	Convertisseur
+33934	Gd Angle WCON-P01.
+33972	Convertisseur
+34002	Macro MCON-P01/02.
+34040	Prenez des photos et 
+34086	visualisez-les en 3D sur une
+34146	TV ou un 
+34166	cran d'ordinateur.
+34204	Effet
+34216	@A00D@
+34230	Roulx 2L
+34248	Indexer tout
+34274	Accepter
+34292	Imprimer tout
+34320	Retour
+34334	Affichage grille
+34368	Sans bord
+34388	@A002@ Effacement RAW+JPEG
+34442	La photo n'a pas 
+34482	 re
+34490	ue
+34496	La photo a 
+34524	 re
+34532	ue
+34538	La photo n'a pas 
+34578	 envoy
+34596	La photo a 
+34624	 envoy
+34642	Occup
+34656	Calendrier
+34678	Commande direct
+34710	SCP
+34718	Menu Art
+34736	Menu Sc
+34752	ne
+34758	Annuler
+34774	L'image ne peut 
+34808	tre 
+34818	dit
+34830	Impression impossible
+34874	Carte
+34886	Formater
+34904	Formater
+34926	lection image impossible
+34976	Nettoyez les contacts de
+35028	la carte avec un chiffon sec.
+35088	Attention Connexion au @A004@
+35148	@A00A@ Attention tout effacer
+35208	@A00A@ Attention tout effacer
+35268	@A00B@ Attention tout effacer
+35328	@A00B@ Attention tout effacer
+35388	@A002@ Attention Effacement total
+35456	@A002@ Attention Effacement total
+35524	Poursuivre
+35546	Tout copier
+35574	faut
+35584	Effacer
+35600	Rejeter
+35616	Trouver
+35632	@A005@
+35646	Molette1
+35664	Molette2
+35686	but de la connexion
+35726	Quitter
+35742	Erreur D
+35760	tection visage
+35790	Nom fichier
+35814	Plein format
+35840	1Image
+35854	@A00B@
+35868	@A00C@
+35882	Haute lum&ombre
+35914	Valeur maximale
+35946	@A00D@
+35960	Image seule
+35984	@A00F@
+35998	Ajuste le niveau 0
+36040	 la position actuelle.
+36086	Erreur appareil.
+36120	Cadran @A026@
+36150	Fno obturateur Haut
+36190	Tournez la molette @A027@ pour
+36254	afficher le r
+36282	glage suivant
+36312	dans le menu.
+36340	Cadran @A027@
+36370	Fno obturateur Haut
+36410	Tournez la molette @A026@ pour
+36474	afficher le r
+36502	glage suivant
+36532	dans le menu.
+36560	La connexion est en cours.
+36614	Recherche en cours.
+36656	Patientez.
+36678	Attente de demande
+36716	Redimensionner 
+36748	 1920x1440.
+36772	Redimensionner 
+36804	 1280x960.
+36826	Attente de r
+36852	ponse.
+36866	Visez une feuille de 
+36912	papier blanche.
+36944	Visez une feuille de 
+36990	papier blanche.
+37022	Saisie Code PIN
+37054	ISO extension
+37082	ISO recommand
+37112	Bourrage
+37130	Lettre
+37144	Jauge de niveau
+37176	Format L
+37194	Table lumineuse
+37226	Roulx L
+37242	Utilisez un zoom plus 
+37290	important ou rapprochez-vous 
+37352	du sujet.
+37372	Prenez une distance 
+37416	plus grande entre le 
+37462	sujet et l'arri
+37494	re plan.
+37512	Arri
+37522	re Plan Flou
+37548	Parlez-lui et prenez la photo
+37612	 la hauteur de ses yeux.
+37662	Prenez de nombreuses photos
+37720	en mode rafale, et 
+37766	lectionnez ensuite la meilleure.
+37832	Conseils pour photos d'enfants
+37894	Rapprochez-vous plus 
+37940	pr
+37946	s de l'animal et prenez 
+37998	la photo 
+38018	 sa hauteur.
+38044	Concentrez-vous sur son 
+38096	regard et ses r
+38128	actions avec
+38156	des jouets et de la nourriture.
+38220	Prenez de nombreuses photos
+38278	en mode rafale, et 
+38324	lectionnez ensuite la meilleure.
+38390	Conseils pour photo d'animaux
+38450	Prenez une photo 
+38492	hauteur de la fleur. 
+38538	Attention 
+38560	 l'arri
+38576	re-plan.
+38594	Choisissez un arri
+38632	re-
+38642	plan fonc
+38662	 ou utilisez
+38690	des fonds de couleur.
+38734	Faites la mise au point le plus
+38800	pr
+38806	s possible.
+38830	L'ombre des nuages 
+38872	rend l'ombre des fleurs 
+38924	plus douce.
+38948	Conseils pour photo de fleurs
+39008	Un cadrage avec un angle 
+39062	3/4 donne une pr
+39096	sence 
+39112	naturelle 
+39134	 la cuisine.
+39160	Prenez la nourriture pr
+39208	s d'une 
+39228	fen
+39236	tre. Mieux de combiner avec 
+39296	une lumi
+39314	re arri
+39330	re diagonale.
+39358	Rapprochez-vous du sujet
+39410	principal. Le format portrait
+39472	donne plus de profondeur.
+39524	Conseils pour photo culinaire
+39584	Si le sujet principal occupe
+39644	les 2/3 de la photo, le 
+39696	cadrage est bon.
+39730	Divisez le sujet principal et le 
+39800	fond par une ligne diagonale 
+39862	pour une sensation naturelle.
+39922	Placez le sujet principal et 
+39984	d'autres sur la ligne diagonale 
+40052	pour un rendu naturel.
+40098	Conseils de cadrage
+40138	Avec le MCON-P02 utilis
+40186	 sur le
+40204	14-42mm EZ, vous photographiez
+40268	des petits objets en macro.
+40324	Avec le FCON-P01 utilis
+40372	 sur le
+40390	14-42mm II R, vous photographiez
+40458	avec un effet fisheye de 120
+40520	Avec le WCON-P01 utilis
+40568	 sur le
+40586	14-42mm II R, vous photographiez
+40654	avec un grand angle de 11mm.
+40712	Avec la lampe macro MAL-1 
+40768	vous contr
+40790	lez la lumi
+40814	re
+40822	de vos sujets en photo macro.
+40882	Conseils accessoires
+40926	Format Album
+40952	Vid
+40960	o @A017@ Off
+40986	Intervalle vid
+41020	Multi-Vues
+41042	Impr multi
+41064	Nouvel Appareil
+41096	Pas d'encre
+41120	Pas de papier
+41152	sactiv
+41168	Annuler@A020@
+41196	Confirmation@A019@
+41234	Plus@A022@
+41260	marrer impression facile@A024@
+41322	Editer Nom@A02D@
+41356	Quitte@A018@
+41382	Quitte@A025@
+41408	Impression@A01F@
+41446	clencheur
+41466	1 impression@A020@
+41504	Oui@A019@
+41524	OK
+41530	Active
+41544	Intervalle diaporama
+41586	Un moment
+41606	Touche Balance blancs
+41654	glage
+41666	Taille 1 : Grand
+41708	ral
+41716	Liste des appareils
+41756	Demande de connexion
+41798	Rechercher
+41820	Progr. Recherche
+41858	lectionner l'appareil
+41906	moire album pleine
+41944	Images/page
+41968	Envoyer Photo
+41996	Carte postale
+42024	@A005@X
+42040	Erreur impr
+42064	Info impr
+42088	lection mode impr.
+42126	Demande d'impression
+42168	Papier impression
+42204	Type
+42214	Super FP Flash
+42244	Normal
+42262	ception Photo
+42290	Demande r
+42310	ception photo
+42338	Attente de demande
+42380	ception en cours
+42414	Photos Rest.
+42440	Retirer c
+42460	ble USB
+42480	initialiser
+42504	Taille 2 : Moyen
+42538	Photos Enreg.
+42566	@A027@ Monochrome
+42602	@A028@
+42616	@A029@ Perso
+42642	Envoi
+42654	Donn
+42664	e enregistr
+42692	Nouveaux r
+42714	glages
+42728	Court
+42740	Taille
+42754	Diapositive
+42778	Standard
+42800	tails
+42812	Nom
+42820	Editer Nom
+42842	Transfert
+42862	WB
+42868	Auto @A001@
+42892	@A039@5500K @A001@
+42930	@A027@ @A001@
+42958	@A028@ @A001@
+42986	@A03B@7500K @A001@
+43024	@A03C@5300K @A001@
+43062	@A03E@ @A001@
+43090	WB Incorrecte 
+43126	essayer
+43142	Avec
+43152	Sans
+43162	Nettoie carte
+43194	gl@A019@
+43212	Photo 3D non cr
+43246	e.
+43252	Visualisation 3D
+43286	Erreur D'Image
+43316	Redimensionner 
+43348	 640x480.
+43368	Taille 1 : Petit
+43402	Taille 2 : Grand
+43436	Taille 3 : Moyen
+43470	Annuler@A01F@
+43498	Annuler@A02C@
+43526	Del@A02D@
+43546	PC/Impression perso@A01F@
+43598	WB/@A01A@@A061@
+43630	Longueur focale@A01A@
+43674	Kelvin@A01A@
+43700	Select@A041@
+43726	@A063@@A064@
+43752	@A023@+D
+43770	clencheur
+43790	@A05F@@A033@
+43816	@A02E@@A02F@
+43842	@A030@@A02F@
+43868	@A031@@A02F@
+43894	@A032@@A01A@
+43920	@A042@@A041@
+43946	@A023@@A02F@
+43972	@A03D@@A025@
+43998	Pr
+44004	visua WB@A033@
+44034	Balance des blancs auto.
+44084	Conserve les couleurs chaudes
+44146	en mode balance des blancs auto.
+44212	Effet
+44224	Fondu
+44236	Suite d'images
+44266	ligne photo
+44290	Pour effectuer une r
+44332	initialisation,
+44370	initialisez les r
+44406	glages de base.
+44438	Pour effectuer une r
+44480	initialisation,
+44518	initialisez tous les r
+44564	glages
+44580	sauf la date, la langue et
+44636	quelques r
+44658	glages.
+44674	Flash int
+44694	gr
+44702	Impossible de filmer en AVCHD.
+44764	Cet objectif n'est pas support
+44830	@A002@ Attention, r
+44870	initialisation totale
+44914	Menu Port Externe
+44950	Menu R
+44964	glages
+44978	A. Partage OLYMPUS PENPAL
+45030	B. Album OLYMPUS PENPAL
+45078	C. Viseur Electronique
+45128	gler la date et l'heure.
+45182	lectionner le format 
+45228	vid
+45236	o standard utilis
+45278	dans votre pays.
+45312	Choisir la valeur d'incr
+45362	mentation
+45384	utilis
+45398	e lors des r
+45424	glages
+45440	des param
+45460	tres ISO.
+45480	USB
+45488	100mm
+45500	150mm
+45512	11"
+45520	17"
+45528	4"
+45534	6"
+45540	8"
+45546	10"
+45554	A0
+45560	A1
+45566	A2
+45572	A3
+45578	A4
+45584	A5
+45590	A6
+45596	A7
+45602	A8
+45608	A9
+45614	B0
+45620	B1
+45626	B2
+45632	B3
+45638	B4
+45644	B5
+45650	B6
+45656	B7
+45662	B8
+45668	B9
+45674	4"
+45680	8"
+45688	Panorama
+45706	4"
+45712	10"
+45722	Panorama
+45740	4"
+45746	11"
+45756	Panorama
+45774	4"
+45780	12"
+45790	Panorama
+45808	10cm
+45818	30cm
+45830	Panorama
+45848	89mm
+45858	254mm
+45872	Panorama
+45890	A Mode
+45904	B Mode
+45918	C Mode
+45932	M Value
+45948	FP M Value
+45970	Channel
+45986	Level
+45998	TTL Value
+46018	Auto Value
+46040	FP TTL Value
+46066	Auto
+46076	@A01C@/FP
+46096	@A07D@ 4
+46114	@A07E@ 9
+46132	@A07F@ 25
+46152	@A07F@ 100
+46174	BGM
+46182	Cool
+46192	Joy
+46204	quence H
+46222	Melancholy
+46244	@A012@ Anti-Vibration @A004@
+46302	TTL Auto
+46324	quence L
+46342	@A013@ Anti-Vibration @A004@
+46400	@A078@arge
+46422	Moyen
+46434	@A074@mall
+46456	@A01C@Fonction
+46490	duct. bruit parasite
+46532	Visez une feuille de 
+46578	papier blanche.
+46610	@A03E@+D
+46628	clencheur
+46648	Manual
+46662	FP TTL Auto
+46686	FP Manual
+46706	Level Lo
+46724	Level Mid
+46744	Level Hi
+46762	ch
+46768	Beat
+46778	Adobe
+46790	AVCHD 1920
+46812	1080 Fine
+46832	AVCHD 1280
+46854	720 Fine
+46872	AVCHD 1280
+46894	720 Normal
+46916	Gros plan
+46936	@A01D@: AEL/AFL
+46972	clenchez avec @A02B@
+47016	en pressant sur 
+47052	la touche @A01E@
+47090	clenchez avec @A02C@
+47134	en pressant sur 
+47170	la touche @A01E@
+47204	Pour prise de vue
+47242	du sujet et de
+47274	l'arri
+47288	re-plan.
+47308	Reproduction
+47338	clatante des
+47366	bleus et des verts.
+47406	Id
+47412	al pour 
+47432	photos rapproch
+47464	es.
+47472	@A03A@ Fisheye
+47502	Paysg+portrait
+47532	@A038@6000K @A001@
+47570	@A03A@4000K @A001@
+47608	@A03D@3000K @A001@
+47650	clenchez avec @A02D@
+47694	en pressant sur 
+47730	la touche @A01E@
+47768	clenchez avec @A02E@
+47812	en pressant sur 
+47848	la touche @A01E@
+47886	sactiver 
+47906	cran tactile.
+47934	Activer 
+47952	cran tactile.
+47980	Choisir le langage.
+48020	Choisir la fonction des 
+48072	boutons s
+48092	lectionn
+48110	s.
+48116	Si On est s
+48140	lectionn
+48164	l'obturateur peut 
+48202	tre rel
+48218	ch
+48232	me si pas en mode S-AF.
+48280	Si On est s
+48304	lectionn
+48328	l'obturateur peut 
+48366	tre rel
+48382	ch
+48396	me si pas en mode C-AF.
+48448	lectionner l'info 
+48492	afficher lorsque @A00F@ ou
+48548	@A01A@ est press
+48586	Pour chaque mode photo
+48634	choisir les contr
+48670	les 
+48680	 afficher
+48702	lorsque l'on appuie sur @A035@.
+48766	Choisir la plage de luminosit
+48830	entre hautes et basses lumi
+48886	res 
+48898	pour afficher une alerte.
+48950	Choisir On pour afficher l'aide
+49016	du mode s
+49036	lectionn
+49058	avec la touche dial.
+49100	Choisir comment les filtres
+49158	artistiques sont affich
+49212	sur l'
+49226	cran.
+49238	Choisir comment l'image
+49288	sera agrandie en pressant
+49342	le bouton @A042@.
+49382	gl
+49388	 sur On, la correction
+49436	du flash s'appliquera 
+49482	 la
+49492	compensation d'exposition.
+49550	gler la m
+49570	me compensation
+49604	de balance des blancs dans
+49660	tous les modes.
+49692	Choisir le mode vid
+49738	pendant le mode @A004@.
+49790	gl
+49796	 sur ON, permet de
+49836	faire une photo 
+49870	 la fin
+49888	d'une vid
+49908	o.
+49914	Choisir le niveau d'
+49956	tat de la
+49978	batterie 
+49998	 partir duquel le @A003@ 
+50052	indique un message d'alerte.
+50110	Activer ou d
+50136	sactiver
+50156	les param
+50176	tres tactiles.
+50206	Voir le r
+50226	pertoire ou
+50252	ajouter un nouvel appareil
+50308	au r
+50318	pertoire.
+50338	Voir ou 
+50356	diter les informations
+50404	de votre OLYMPUS PENPAL.
+50454	Choix du format des images
+50512	 envoyer.
+50532	Choisir la taille de l'image
+50594	 copier.
+50612	@A05A@4000K
+50636	@A01E@:D
+50654	sactive
+50674	initialisation du
+50712	mode AF
+50728	3D
+50738	glage du 
+50760	mode MF
+50776	@A01D@:
+50798	but/Arr
+50820	Enregistrement Vid
+50862	WB Une Touche.
+50892	Compression
+50916	Super Fine
+50938	Fine
+50948	Normal
+50962	Basic
+50974	Test de profondeur
+51014	de champs.
+51040	glage des modes 
+51076	qualit
+51096	RAW+JPEG/JPEG 
+51128	avec le cadran
+51158	Image test sans
+51192	sauvegarde.
+51216	dummy
+51228	Enreg.
+51242	@A017@Limiteur de volume
+51292	Limite automatique du vol.
+51348	d'entr
+51362	e du microphone s'il 
+51412	passe le niveau sp
+51450	cifi
+51464	Mode IS
+51480	@A01D@: Touches @A02F@ et @A030@.
+51552	glage mode IS
+51580	@A066@: Presser pour passer en mode 
+51656	Live Guide, presser encore 
+51714	pour revenir.
+51742	@A066@: Changer x1/x2.
+51788	Vintage
+51804	Couleur partielle
+51840	@A082@Vintage
+51868	@A083@Couleur Partielle
+51916	Effet de teinte : gauche/droite
+51980	Effet de teinte : haut et bas
+52040	Travaux en cours
+52074	Appuyer sur @A025@ lors
+52124	d'une session Photo Story
+52178	vous permet d'enregistrer
+52232	une t
+52244	che en cours ou
+52278	de l'effacer.
+52306	Impossible de retrouver le
+52362	fichier pour reprendre la
+52416	prise de vue
+52442	Finir plus tard
+52474	Jeter
+52490	lectionner ON sur un visage
+52548	ou les yeux quand la mise 
+52604	au point est faite.
+52644	@A023@: Touches @A02A@ et @A02B@.
+52712	Visez une feuille de 
+52758	papier blanche.
+52790	Tous les cadres AF
+52828	Effectue une nouvelle
+52874	mise au point pour
+52914	tous les cadres.
+52948	Effectue une seule
+52988	mise au point uniquement
+53040	au d
+53050	marrage du minuteur.
+53092	@A013@Stabilisateur
+53132	Active/D
+53150	sactive
+53168	la stabilisation d'image
+53220	pour une prise de vue en rafale.
+53290	sactiv
+53306	Stabilisation d'image d
+53354	sactiv
+53374	pour privil
+53398	gier la vitesse de la
+53444	prise de vue en rafale.
+53496	gl. mise au pt AF
+53532	Collimateur AF
+53564	L im/s @A01E@
+53592	@A01E@: D
+53612	but Enreg Vid
+53646	@A030@: Prendre Une Photo
+53698	@A075@Ton neutre&lumineux
+53750	Mise au point d
+53782	tect
+53792	e sur 
+53808	le visage ou les yeux.
+53856	L'
+53862	il le plus proche
+53900	sera s
+53914	lectionn
+53936	Mise au point d
+53968	tect
+53978	e sur 
+53994	le visage ou les yeux.
+54042	L'
+54048	il droit sera s
+54080	lectionn
+54102	Mise au point d
+54134	tect
+54144	e sur 
+54160	le visage ou les yeux.
+54208	L'
+54214	il gauche sera
+54250	lectionn
+54276	tection visage ne fonctionne pas.
+54344	Mise au point sur visage d
+54398	tect
+54408	e.
+54414	Activ
+54428	Stabilisation d'image activ
+54490	pour privil
+54514	gier la vitesse de la
+54560	prise de vue en rafale.
+54612	duit le flou de l'appareil photo
+54680	provoqu
+54696	 par le d
+54716	clenchement
+54742	de l'obturateur.
+54776	Verrouillage AF
+54812	rification
+54834	Liste donn
+54856	es
+54862	Infos objectif
+54892	Erreur info
+54920	lection cible AF
+54956	et mode AF.
+54980	@A028@: Affichez un cadre large
+55046	et pressez 
+55070	 nouveau 
+55092	pour agrandir encore l'image.
+55156	initialisation du
+55194	mode AF
+55214	glage du 
+55236	mode MF
+55252	WB Une Touche.
+55282	Test de profondeur
+55322	de champs.
+55344	Priorit
+55360	 visage et Regard
+55396	Priorit
+55412	 visage et 
+55436	il droit
+55454	Priorit
+55470	 visage et 
+55494	il gche
+55514	glage des modes 
+55550	qualit
+55570	RAW+JPEG/JPEG 
+55602	avec le cadran
+55632	Image test sans
+55666	sauvegarde.
+55690	Quand la vitesse d'obt. est
+55748	de @A096@ ou moins, la lamelle
+55816	canique de l'obt. devient
+55872	lectronique pour r
+55910	duire le flou
+55940	caus
+55950	 par l'impact de l'obturateur.
+56016	l. couleur@A01A@
+56050	Normal
+56064	@A020@
+56078	@A021@
+56092	@A02B@Fonction
+56122	@A029@ @A001@
+56150	@A02A@ @A001@
+56178	@A046@Verrou.
+56206	Sur Activ
+56226	, l'aper
+56244	u profondeur
+56272	de champ est maintenu m
+56320	me
+56328	apr
+56336	s rel
+56348	chement du bouton.
+56386	Panoramique
+56410	Pour prendre le sujet en photo
+56474	avec un arri
+56500	re-plan flout
+56538	tecte le mouvement de
+56584	l'appareil photo et d
+56628	finit la
+56648	meilleure vitesse d'obturation.
+56712	@A04E@Fonction
+56742	@A053@Tonalit
+56770	 lumineuse
+56792	@A06C@: AEL/AFL
+56824	@A06C@:
+56846	but/Arr
+56868	Enregistrement Vid
+56910	Test de profondeur
+56950	de champs.
+56972	WB Une Touche.
+57006	initialisation du
+57044	mode AF
+57064	glage du 
+57086	mode MF
+57106	glage les modes 
+57142	qualit
+57162	RAW+JPEG/JPEG 
+57194	avec le cadran
+57224	Image test sans
+57258	sauvegarde.
+57286	clenchez avec @A06C@
+57330	en pressant sur 
+57366	la touche @A06B@
+57404	clenchez avec @A06D@
+57448	en pressant sur 
+57484	la touche @A06B@
+57522	clenchez avec @A06E@
+57566	en pressant sur 
+57602	la touche @A06B@
+57640	clenchez avec @A06F@
+57684	en pressant sur 
+57720	la touche @A06B@
+57754	@A077@Film grain noir&blanc
+57810	@A06C@: Presser pour passer en mode 
+57886	Live Guide, presser encore 
+57944	pour revenir.
+57972	@A06C@: Changer x1/x2.
+58018	@A076@:D
+58036	sactive
+58052	1/2
+58060	1/8
+58068	1/32
+58078	@A01C@: D
+58098	but enreg vid
+58132	@A01B@: Prendre une photo
+58186	@A069@: Film @A05E@
+58226	1/128
+58238	@A087@@A088@
+58264	Cadran @A089@
+58294	Fno obturateur Haut
+58334	Cadran @A08A@
+58364	Fno obturateur Haut
+58404	ART13
+58416	ART14
+58428	@A046@
+58442	Passez en mode P/A/S/M.
+58490	Compens. trap
+58518	zo
+58524	d.
+58530	Compens. trap
+58558	zo
+58564	dale possible
+58594	quand activ
+58618	. Des indicateurs
+58656	apparaissent 
+58684	 l'
+58692	cran.
+58704	Appuyez pour lancer la compens.
+58770	trap
+58780	zo
+58786	dale. Quittez en restant
+58838	appuy
+58850	 sur le bouton bas.
+58890	Compens. trap. D
+58924	sactiv
+58942	Compens. trap. Activ
+58988	Quitter @A018@
+59018	L'appareil photo opte pour
+59074	le stabilisateur lorsqu'il
+59134	tecte un mouvement.
+59178	gler la compensation@A01A@
+59232	@A03C@ Niveau mi-course
+59284	lectionner On pour afficher
+59342	la jauge de niveau dans l'EVF
+59404	int
+59412	gr
+59418	. Activer pendant le @A058@.
+59476	Vitesse
+59492	@A066@ 4 photos
+59524	@A067@ 5 photos
+59556	@A04A@Fonction
+59586	Luminosit
+59606	 auto EVF
+59626	Informations de base
+59668	Cr
+59674	ateur couleur
+59702	@A078@St
+59720	nop
+59730	Alignez l'image.
+59764	Une fois la premi
+59800	re photo
+59820	captur
+59834	e, d
+59844	placez lentement 
+59882	l'appareil photo alignez l'image 
+59952	manuellement, puis d
+59994	clenchez.
+60014	Effacer jeu de donn
+60054	es
+60060	Effet flou : gauche/droite
+60114	Effet flou : haut et bas
+60164	Zoom 
+60176	lectriq.
+60194	Natural@A037@
+60222	Vivid@A037@
+60246	@A0BF@
+60260	@A0D0@
+60274	@A0D1@
+60288	@A0D2@
+60302	@A0D3@
+60316	@A0D4@
+60330	@A0D5@
+60344	@A0D6@
+60358	@A0D7@
+60372	@A0D8@
+60386	@A0D9@
+60400	@A0DA@
+60414	@A0DB@
+60428	@A0DC@
+60442	@A0DD@
+60456	@A0DE@
+60470	@A0DF@
+60484	@A0E0@
+60498	@A0E1@
+60512	@A0E2@
+60526	@A0E3@
+60540	@A0E4@
+60554	@A0E5@
+60568	@A0E6@
+60582	@A0E7@
+60596	@A0E8@
+60610	@A0E9@
+60624	@A0EA@
+60638	@A0EB@
+60652	@A0EC@
+60666	@A0ED@
+60680	@A0EE@
+60694	@A0EF@
+60708	@A0F0@
+60722	@A0F1@
+60736	@A0F2@
+60750	@A0C0@
+60764	@A0C1@
+60778	@A0C2@
+60792	@A0C3@
+60806	@A0C4@
+60820	@A0C5@
+60834	@A0C6@
+60848	@A0C7@
+60862	@A0C8@
+60876	@A0C9@
+60890	@A0CA@
+60904	@A0CB@
+60918	@A0CC@
+60932	@A0CD@
+60946	@A0CE@
+60960	@A0CF@
+60974	@A0D0@
+60988	@A0D1@
+61002	@A0D2@
+61016	@A0D3@
+61030	@A0D4@
+61044	@A0BF@
+61058	@A0D6@
+61072	@A0D7@
+61086	@A0D8@
+61100	@A0D9@
+61114	@A0DA@
+61128	@A0DB@
+61142	@A0DC@
+61156	@A0DD@
+61170	@A0DE@
+61184	@A0DF@
+61198	@A0E0@
+61212	@A0E1@
+61226	@A0E2@
+61240	@A0E3@
+61254	@A0E4@
+61268	@A0E5@
+61282	@A0E6@
+61296	@A0E7@
+61310	@A0E8@
+61324	@A0E9@
+61338	@A0EA@
+61352	@A0EB@
+61366	@A0EC@
+61380	@A0ED@
+61394	@A0EE@
+61408	@A0EF@
+61422	@A0F0@
+61436	@A0F1@
+61450	@A0F2@
+61464	@A0F3@
+61478	@A0F4@
+61492	@A0F5@
+61506	@A0F6@
+61520	@A0F7@
+61534	@A0E2@
+61548	@A0F9@
+61562	@A0FA@
+61576	@A0FB@
+61590	@A0FC@
+61604	@A0FD@
+61618	@A0FE@
+61632	@A0FF@
+61646	@A100@
+61660	@A101@
+61674	@A102@
+61688	@A103@
+61702	@A104@
+61716	@A105@
+61730	Relecture/@A01E@
+61764	Sous-marin
+61786	Zoom
+61796	@A01E@+D
+61814	clencheur
+61834	@A075@: Guide Facile pour 
+61890	changement de r
+61922	glage
+61934	Visez une feuille de 
+61980	papier blanche.
+62012	@A06B@: D
+62032	but Enreg Vid
+62066	@A02B@: Prendre Une Photo
+62118	@A06B@+D
+62136	clencheur
+62156	@A023@: Affichez un cadre large
+62222	et pressez 
+62246	 nouveau 
+62268	pour agrandir encore l'image.
+62328	@A01D@: Changer x1/x2.
+62374	@A01D@: Presser pour passer mode 
+62444	Live Guide, presser encore 
+62502	pour revenir.
+62530	Agrandir l'image ou @A024@ avec DIAL
+62608	lectionner une image avec DIAL
+62672	@A06D@: Agrandir l'image
+62724	ou @A024@.
+62746	Menu des r
+62768	glages
+62784	de lecture et de prises
+62834	de vue en continu.
+62872	Choisir le nombre d'images
+62928	par seconde en utilisant le
+62986	mode rafale @A052@.
+63026	L'
+63032	cran s'
+63048	teint automatiquement
+63094	si l'appareil est non utilis
+63156	pendant la p
+63182	riode choisie.
+63212	H im/s @A01E@
+63240	Choisir le nombre d'images
+63296	par seconde en utilisant le
+63354	mode rafale @A056@.
+63394	@A072@ : Afficher le menu lecture. 
+63468	Supprimez l'image du 
+63514	menu lecture.
+63542	@A072@: Supprimer l'image 
+63598	imm
+63606	diatement.
+63630	@A025@: Afficher le menu lecture
+63696	@A025@: Supprimer l'image 
+63752	imm
+63760	diatement.
+63782	Annuler image avec @A072@ ou @A025@.
+63856	@A011@: Touches @A02E@ et @A02F@.
+63928	gle automatiquement le 
+63978	mode id
+63994	al du menu Live Guide.
+64040	Affiche l'ensemble 
+64082	des r
+64094	glages de l'appareil
+64140	glage adapt
+64164	 automatiquement
+64200	au mode sc
+64222	ne s
+64232	lectionn
+64254	Appliquez des effets cr
+64302	atifs.
+64320	tro Eclairage ON/OFF.
+64368	gler la luminosit
+64410	et la temp
+64432	rature de 
+64456	couleur de l'
+64484	cran LCD.
+64504	fps
+64512	@A014@/@A080@/@A028@
+64554	@A081@/@A082@
+64582	@A04F@Fonction
+64612	Utilisez le bouton @A077@ pour r
+64678	gler
+64690	le Live Guide pendant la vid
+64754	en utilisant la bague
+64800	de mise au point.
+64836	Utilisez le bouton @A077@ 
+64892	pour passer en mode MF.
+64942	Pressez 
+64960	 nouveau pour
+64990	retourner en mode AF.
+65034	AF stop
+65050	En maintenant press
+65094	le bouton @A06D@, vous pouvez 
+65162	sactiver l'AF et conserver
+65218	la distance de mise au point.
+65282	sactiver la fonction.
+65326	Calibrage Toucher.
+65364	Externe @A02A@
+65394	mm
+65404	Externe @A02E@ Niveau d'enreg.
+65470	lection cible AF
+65506	et mode AF.
+65530	3Im
+65538	4Im
+65546	Contr
+65558	le
+65568	glage mode IS
+65596	@A01D@: Affichez un cadre large
+65662	et pressez 
+65686	 nouveau 
+65708	pour agrandir encore l'image.
+65768	Nombre d'images @A033@
+65814	Fonction mode molette/pav
+65868	Enregistrez vos r
+65904	glages
+65920	Mysets sur le mode cadran
+65976	glage personnalis
+66012	 du retardateur
+66044	@A014@ Timer
+66074	gl. laps du temps
+66110	Prend le nombre d'images
+66164	 l'intervalle sp
+66198	cifi
+66208	 et cr
+66222	e 
+66230	une vid
+66246	o en timelapse.
+66282	but d
+66294	lai d'attente
+66326	glage du temps d'attente
+66378	d'enregistrement de la 
+66428	premi
+66440	re image apr
+66466	s 
+66474	que l'obturateur soit press
+66534	Temps d'intervalle
+66572	Arr
+66580	t automatique
+66608	4h
+66614	Occup
+66628	@A007@Fonction
+66658	Zone AF perso.
+66688	Taux compression
+66722	@A010@ :Off
+66746	Cadran @A011@
+66776	Fno obturateur haut
+66816	Cadran @A012@
+66846	Fno obturateur haut
+66886	Off
+66894	Une fois la premi
+66930	re photo
+66950	captur
+66964	e, d
+66974	placez lentement 
+67012	l'appareil photo alignez l'image 
+67082	manuellement, puis d
+67124	clenchez.
+67144	Niv. enregistrement
+67188	duction bruit parasite
+67234	Haute
+67246	Visez une feuille de 
+67292	papier blanche.
+67324	Visez une feuille de 
+67370	papier blanche.
+67402	Visez une feuille de 
+67448	papier blanche.
+67480	@A071@+D
+67498	clencheur
+67518	@A072@+D
+67536	clencheur
+67556	@A070@+D
+67574	clencheur
+67594	@A050@Fonction
+67624	@A051@Fonction
+67654	1h
+67660	K. Fonction @A004@
+67698	@A039@@A03A@
+67724	Gallerie
+67742	Touche de direction pourra
+67798	avoir une fonction directe
+67854	si activ
+67872	e lors de la
+67900	prise de vue.
+67932	sactiver la fonction.
+67980	glez la compensation
+68024	d'exposition
+68054	glez la compensation
+68098	d'exposition
+68128	glez la compensation
+68172	d'exposition
+68202	glez la compensation
+68246	d'exposition
+68276	lection cible AF
+68312	et mode AF.
+68340	lection cible AF
+68376	et mode AF.
+68404	lection cible AF
+68440	et mode AF.
+68468	lection cible AF
+68504	et mode AF.
+68532	lection cible AF
+68568	et mode AF.
+68596	lection cible AF
+68632	et mode AF.
+68656	@A06C@: Touches @A02A@ et @A02B@.
+68724	@A066@: Touches @A02A@ et @A02B@.
+68792	@A066@: AEL/AFL
+68824	@A06E@: AEL/AFL
+68856	@A06F@: AEL/AFL
+68888	@A06D@: AEL/AFL
+68920	@A06C@: Affichez un cadre large
+68986	et pressez 
+69010	 nouveau 
+69032	pour agrandir encore l'image.
+69092	@A066@: Affichez un cadre large
+69158	et pressez 
+69182	 nouveau 
+69204	pour agrandir encore l'image.
+69264	@A06E@: Affichez un cadre large
+69330	et pressez 
+69354	 nouveau 
+69376	pour agrandir encore l'image.
+69436	@A06F@: Affichez un cadre large
+69502	et pressez 
+69526	 nouveau 
+69548	pour agrandir encore l'image.
+69608	@A06D@: Affichez un cadre large
+69674	et pressez 
+69698	 nouveau 
+69720	pour agrandir encore l'image.
+69780	Test de profondeur
+69820	de champs.
+69842	Test de profondeur
+69882	de champs.
+69904	Test de profondeur
+69944	de champs.
+69966	WB Une Touche.
+69996	WB Une Touche.
+70026	WB Une Touche.
+70060	initialisation du
+70098	mode AF
+70118	initialisation du
+70156	mode AF
+70176	initialisation du
+70214	mode AF
+70234	glage du 
+70256	mode MF
+70276	glage du 
+70298	mode MF
+70318	glage du 
+70340	mode MF
+70360	glage des modes 
+70396	qualit
+70416	RAW+JPEG/JPEG 
+70448	avec le cadran
+70482	glage des modes 
+70518	qualit
+70538	RAW+JPEG/JPEG 
+70570	avec le cadran
+70604	glage des modes 
+70640	qualit
+70660	RAW+JPEG/JPEG 
+70692	avec le cadran
+70722	Image test sans
+70756	sauvegarde.
+70780	Image test sans
+70814	sauvegarde.
+70838	Image test sans
+70872	sauvegarde.
+70900	clenchez avec @A06C@
+70944	en pressant sur 
+70980	la touche @A071@
+71018	clenchez avec @A06D@
+71062	en pressant sur 
+71098	la touche @A071@
+71136	clenchez avec @A06E@
+71180	en pressant sur 
+71216	la touche @A071@
+71254	clenchez avec @A06F@
+71298	en pressant sur 
+71334	la touche @A071@
+71372	clenchez avec @A06C@
+71416	en pressant sur 
+71452	la touche @A072@
+71490	clenchez avec @A06D@
+71534	en pressant sur 
+71570	la touche @A072@
+71608	clenchez avec @A06E@
+71652	en pressant sur 
+71688	la touche @A072@
+71726	clenchez avec @A06F@
+71770	en pressant sur 
+71806	la touche @A072@
+71844	clenchez avec @A02B@
+71888	en pressant sur 
+71924	la touche @A072@
+71962	clenchez avec @A02C@
+72006	en pressant sur 
+72042	la touche @A072@
+72080	clenchez avec @A02D@
+72124	en pressant sur 
+72160	la touche @A072@
+72198	clenchez avec @A02E@
+72242	en pressant sur 
+72278	la touche @A072@
+72312	@A06E@: Presser pour passer mode 
+72382	Live Guide, presser encore 
+72440	pour revenir.
+72468	@A06F@: Presser pour passer mode 
+72538	Live Guide, presser encore 
+72596	pour revenir.
+72624	@A06D@: Presser pour passer mode 
+72694	Live Guide, presser encore 
+72752	pour revenir.
+72780	@A06E@: Changer x1/x2.
+72826	@A06F@: Changer x1/x2.
+72872	@A06D@: Changer x1/x2.
+72918	Eye-Fi
+72932	@A05B@Fonction
+72962	@A05C@Fonction
+72992	SVP v
+73004	rifier utilisation de l'objectif.
+73072	Merci de d
+73094	verrouiller l'objectif.
+73142	Feutre
+73156	@A067@Feutre
+73182	Veuillez basculer en mode SCN @A05D@.
+73260	Param
+73272	tre manuel
+73294	Param
+73306	tre manuel @A01A@
+73346	Kelvin
+73360	Flash
+73372	Prise vue BULB/TIME
+73416	lectionnez On pour 
+73458	utiliser le mode MF 
+73502	pendant les modes BULB/TIME.
+73560	Timer BULB/TIME
+73596	glez la dur
+73626	maximale de la
+73658	prise de vue BULB/TIME.
+73706	Live BULB
+73726	Les images seront affich
+73776	es
+73784	pendant la prise de vue en
+73840	mode BULB.
+73862	Live TIME
+73882	Les images seront affich
+73932	es
+73940	pendant la prise de vue 
+73992	en mode TIME.
+74020	Affich. d
+74040	compte
+74054	Temps
+74066	@A022@ + IS Off
+74098	Lorsqu'il est r
+74130	gl
+74136	 sur On,
+74156	le stabilisateur d'images ne 
+74218	fonctionne pas en mode rafale.
+74284	gl. mi-course IS
+74318	Quand r
+74334	gl
+74340	 sur On, le stabili-
+74384	sateur d'images fonctionnera 
+74446	lors de l'appui sur d
+74490	clencheur.
+74512	Mode macro LV
+74544	lectionnez un mode lors du 
+74606	clenchement de l'obturateur 
+74666	lors le grossissement Live view.
+74732	Lorsque le bouton du d
+74778	clencheur
+74800	est press
+74824	 mi-course,
+74850	la fen
+74864	tre Live view dispara
+74914	pour afficher les images.
+74966	Lorsque le bouton du d
+75012	clencheur
+75034	est press
+75058	 mi-course, 
+75086	l'autofocus fonctionnera 
+75140	pendant l'agrandissement
+75192	de la fen
+75212	tre du Live view.
+75252	lectionnez une
+75284	grille de cadrage.
+75322	@A03B@
+75336	L'appareil s'
+75364	teindra auto-
+75394	matiquement s'il n'est pas 
+75452	utilis
+75466	 pendant le temps choisi.
+75518	SCP Live
+75536	@A057@Priorit
+75564	 batterie
+75588	lectionnez le type de
+75634	batterie 
+75654	 utiliser dans
+75686	le grip d'alimentation.
+75734	Batterie
+75752	Batterie PBH
+75778	Lorsque la batterie 
+75822	du bo
+75834	tier est 
+75854	puis
+75864	e, 
+75874	le grip d'alimentation
+75922	prend le relai.
+75954	Lorsque la batterie du grip
+76012	d'alimentation est 
+76052	puis
+76062	e,
+76070	la batterie du bo
+76106	tier prend le relai.
+76148	Ajustez le volume 
+76188	du microphone.
+76222	duit les bruits
+76256	parasites lors des vid
+76302	os.
+76310	Effet vid
+76334	Activez ou d
+76360	sactivez
+76380	l'effet vid
+76404	o dans le mode @A008@.
+76450	Viseur 
+76466	lectronique int
+76498	gr
+76506	Menu du viseur 
+76538	lectronique.
+76564	@A05F@ Affichage grille
+76616	lectionnez la grille
+76660	de cadrage du viseur 
+76706	int
+76714	gr
+76720	. Activez-l
+76744	 pendant @A05F@.
+76778	Viseur 
+76794	lectronique
+76822	lectionnez le mode 
+76864	d'affichage du viseur.
+76910	Mode 1
+76924	Mode 2
+76938	Mode 3
+76952	@A03C@ Info r
+76980	glage
+76996	lectionnez les infos
+77042	 afficher lorsque @A01A@ est
+77102	activ
+77114	. Actif pendant @A03C@.
+77162	Bascule viseur/
+77194	cran
+77204	Basculez automatiquement
+77256	de l'
+77268	cran vers le viseur 
+77312	lorsque celui-ci d
+77350	tecte l'
+77368	il.
+77380	sactivez la d
+77408	tection auto 
+77438	du viseur 
+77460	lectronique. @A059@: pour 
+77516	basculer entre l'
+77552	cran et le viseur.
+77590	Activer la d
+77616	tection
+77634	de vis
+77648	e 
+77654	 l'
+77662	il.
+77672	@A03D@ : live view On/Off.
+77730	lectionnez la vitesse
+77776	d'affichage du viseur.
+77822	Multi fonction
+77852	@A066@ : presser pour activer 
+77916	diff
+77926	rentes fonctions et
+77968	pour les modifier avec 
+78018	la touche dial.
+78050	@A023@ : presser pour activer 
+78114	diff
+78124	rentes fonctions et
+78166	pour les modifier avec 
+78216	la touche dial.
+78248	Echo unique
+78272	Echo multiple
+78300	Fonct. directe
+78334	rif haute lum&ombre
+78376	En pressant le bouton @A010@
+78436	pendant la prise de vue,
+78488	vous pouvez s
+78516	lectionner 
+78542	la cible AF.
+78568	MTP
+78576	ESP
+78584	NTSC
+78594	PAL
+78602	USB
+78610	RAW
+78618	@A0B2@arge
+78640	@A037@iddle
+78664	@A038@mall
+78686	Super Fine
+78708	Fine
+78718	Normal
+78732	Basic
+78744	SF
+78762	MF
+78768	fps
+78776	100mm
+78788	150mm
+78800	11"
+78808	17"
+78816	4"
+78822	6"
+78828	8"
+78834	10"
+78842	A0
+78848	A1
+78854	A2
+78860	A3
+78866	A4
+78872	A5
+78878	A6
+78884	A7
+78890	A8
+78896	A9
+78902	B0
+78908	B1
+78914	B2
+78920	B3
+78926	B4
+78932	B5
+78938	B6
+78944	B7
+78950	B8
+78956	B9
+78962	4"
+78968	8"
+78976	Panorama
+78994	4"
+79000	10"
+79010	Panorama
+79028	4"
+79034	11"
+79044	Panorama
+79062	4"
+79068	12"
+79078	Panorama
+79096	10cm
+79106	30cm
+79118	Panorama
+79136	89mm
+79146	254mm
+79160	Panorama
+79178	Adobe RGB
+79198	I.S. 1
+79212	I.S. 2
+79226	Slow
+79236	Slow2
+79248	2nd Curtain
+79272	Vivid
+79284	Natural
+79300	JPEG
+79310	RAW+JPEG
+79328	Portrait
+79362	CWB
+79370	3f 0.3EV
+79388	3f 0.5EV
+79406	3f 0.7EV
+79424	3f 1.0EV
+79442	5f 0.3EV
+79460	5f 0.5EV
+79478	5f 0.7EV
+79496	5f 1.0EV
+79514	mode1
+79526	mode2
+79538	mode3
+79550	mode4
+79562	A Mode
+79576	B Mode
+79590	C Mode
+79604	M Value
+79620	FP M Value
+79642	Channel
+79658	Level
+79670	TTL Value
+79690	Auto Value
+79712	FP TTL Value
+79738	Auto
+79748	@A00A@/FP
+79768	S-AF
+79778	C-AF
+79788	S-AF+MF
+79804	C-AF+TR
+79820	AE BKT
+79834	WB BKT
+79848	FL BKT
+79862	ISO BKT
+79878	P/A/S
+79890	Menu
+79900	1/2EV
+79912	1/3EV
+79924	1EV
+79932	Off
+79940	I.S. 3
+79954	sRGB
+79964	@A0B3@/Value
+79990	AEL/S-AF
+80008	AEL
+80016	AEL/AF Start
+80042	AF Start
+80060	----
+80070	@A0B3@Vivid
+80094	@A0B4@Natural
+80122	@A0B5@Portrait
+80152	Ps
+80158	Auto@A006@
+80180	A-B
+80188	G-M
+80196	Hold
+80206	@A0B4@ 4
+80224	@A0B5@ 9
+80242	@A0B6@ 25
+80262	@A0B6@ 100
+80284	Body
+80294	Lens
+80304	Flash
+80316	Acc
+80324	LV-Info
+80340	RAW/JPEG
+80358	@A013@/@A014@
+80386	ART1
+80396	ART2
+80406	ART3
+80416	ART4
+80426	ART5
+80436	ART6
+80446	ART7
+80456	ART8
+80466	BGM
+80474	480p/576p
+80494	Cool
+80504	Joy
+80512	Melancholy
+80534	HDMI
+80544	TTL Auto
+80562	Manual
+80576	FP TTL Auto
+80600	FP Manual
+80620	Level Lo
+80638	Level Mid
+80658	Level Hi
+80676	ch
+80682	@A0D4@/@A0D5@
+80710	AEL/AFL
+80726	@A040@REC
+80746	iAUTO
+80758	P/A/S/M
+80774	ART9
+80784	ART10
+80796	Full
+80806	2f 0.3EV
+80824	2f 0.5EV
+80842	2f 0.7EV
+80860	2f 1.0EV
+80878	7f 0.3EV
+80896	7f 0.5EV
+80914	7f 0.7EV
+80932	2f
+80938	@A0B7@
+80952	@A0B8@
+80966	@A095@ 5300K
+80992	@A097@ 6000K
+81018	@A096@ 7500K
+81044	@A098@ 3000K
+81070	@A099@ 4000K
+81096	Beat
+81106	ART
+81114	SCN
+81122	Adobe
+81134	@A036@ 5500K
+81160	ART BKT
+81176	Motion JPEG 1280
+81210	720
+81218	Motion JPEG 640
+81250	480
+81258	3D
+81264	1:1
+81272	ART11
+81284	MOV 1920
+81302	1080 Fine
+81322	MOV 1920
+81340	1080 Normal
+81364	MOV 1280
+81382	720 Fine
+81400	MOV 1280
+81418	720 Normal
+81444	glage du temps d'intervalle
+81502	pour enregistrer prochaine
+81558	photo.
+81572	heure
+81584	Temps enregist vid
+81626	Temps d'enregistrement
+81674	pour les photos uniquement.
+81730	Temps d'enregistrement
+81778	des photos et vid
+81814	os.
+81822	J. Fonction @A008@
+81860	@A059@@A024@
+81886	Filtre ton pale
+81918	Aquarelle
+81938	@A06F@Aquarelle
+81970	Connexion 
+81992	 un smartphone
+82022	Regardez une image 
+82064	sur un smartphone 
+82104	via la connexion FlashAir
+82156	Carte configur
+82186	e par un 
+82208	autre syst
+82230	me . Impossible de
+82270	changer les r
+82298	glages.
+82314	La carte ne peut pas 
+82358	tre format
+82384	Connexion en cours
+82422	Ne pas int
+82444	rrompre
+82460	Comnexion int
+82488	rompue
+82506	glages connexions
+82546	glages SSID
+82570	Les r
+82582	glages initiaux
+82616	ont 
+82630	 faits
+82644	Premi
+82656	re connexion
+82682	Connexion priv
+82720	glage mot de passe
+82758	Entrez mot de passe
+82798	Le mot de passe 
+82840	 chang
+82860	but connexion
+82888	Photo-I.S.
+82910	Vid
+82918	o-I.S.
+82932	S.I.-Vid
+82950	o On
+82960	Changez le mode de 
+83002	stabilisateur d'image. 
+83052	Photo et vid
+83078	o.
+83084	Fonctions de stabilisateur d'image
+83156	dans toutes les directions 
+83214	quand l'appareil photo est en
+83276	mouvement.
+83298	Stabilisation verticale seulement. 
+83372	Tenez l'appareil photo 
+83422	horizontalement
+83456	et faire un panorama horizontal.
+83522	Stabilisation horizontale seulement.
+83598	Tenez l'appareil photo
+83646	verticalement
+83676	et faire un panorama horizontal.
+83742	La stabilisation d'image
+83794	est d
+83806	connect
+83822	e.
+83828	Stabilisation d'image
+83874	pendant la vid
+83908	Stabilisation d'image
+83954	dans toutes
+83980	les directions en 
+84020	vid
+84032	Diaporama d'images et/ou vid
+84090	os
+84098	avec diff
+84118	rents effets
+84144	HDR BKT
+84160	Passer au mode HDR BKT
+84206	Passer au mode HDR BKT
+84252	Passer au mode HDR BKT
+84302	duct clignotement
+84342	duire du clignotement 
+84390	en r
+84400	glant la puissance 
+84442	de fr
+84454	quence.
+84470	Zone avec une puissance
+84520	de 50Hz, le clignotement
+84572	est r
+84584	duit.
+84596	Zone avec une puissance
+84646	de 60Hz, le clignotement
+84698	est r
+84710	duit.
+84726	duit automatiquement
+84770	le scintillement.
+84810	duction clignotement Off.
+84862	Filtre bruit Off
+84896	Filtre bruit standard
+84940	Filtre bruit fort
+84976	Filtre bruit bas
+85010	Actuelle
+85028	Perso1
+85042	Perso2
+85056	Ajuster zone ombres
+85096	Ajuster zone luminosit
+85144	Choisissez le cadre
+85186	photo dans Live View
+85228	Priorit
+85244	 I.S. objectif
+85278	lectionnez On pour
+85318	utiliser l'I.S. de l'objectif.
+85380	Temps de latence
+85418	glez le temps entre
+85460	la pression et le 
+85504	clenchement de l'obturation.
+85562	Changez en mode@A077@
+85606	Active/D
+85624	sactive @A07D@.
+85656	Active/D
+85674	sactive @A07D@.
+85706	Changez en mode@A078@
+85750	Active/D
+85768	sactive @A07E@.
+85800	Active/D
+85818	sactive @A07E@.
+85850	Changez en mode@A079@
+85894	Active/D
+85912	sactive @A07F@.
+85944	Active/D
+85962	sactive @A07F@.
+85994	Changez en mode@A07A@
+86038	Active/D
+86056	sactive @A080@.
+86088	Active/D
+86106	sactive @A080@.
+86138	BGM Import
+86160	Remplacement du BGM
+86200	Pas de BGM
+86222	@A027@1s Anti-Vibration @A004@
+86284	@A027@2s Anti-Vibration @A004@
+86346	@A027@3s Anti-Vibration @A004@
+86408	@A027@4s Anti-Vibration @A004@
+86470	@A027@5s Anti-Vibration @A004@
+86532	@A027@6s Anti-Vibration @A004@
+86594	@A027@7s Anti-Vibration @A004@
+86656	@A027@8s Anti-Vibration @A004@
+86718	@A027@9s Anti-Vibration @A004@
+86780	@A027@10s Anti-Vibration @A004@
+86844	@A027@11s Anti-Vibration @A004@
+86908	@A027@12s Anti-Vibration @A004@
+86972	@A027@13s Anti-Vibration @A004@
+87036	@A027@14s Anti-Vibration @A004@
+87100	@A027@15s Anti-Vibration @A004@
+87164	@A027@16s Anti-Vibration @A004@
+87228	@A027@17s Anti-Vibration @A004@
+87292	@A027@18s Anti-Vibration @A004@
+87356	@A027@19s Anti-Vibration @A004@
+87420	@A027@20s Anti-Vibration @A004@
+87484	@A027@21s Anti-Vibration @A004@
+87548	@A027@22s Anti-Vibration @A004@
+87612	@A027@23s Anti-Vibration @A004@
+87676	@A027@24s Anti-Vibration @A004@
+87740	@A027@25s Anti-Vibration @A004@
+87804	@A027@26s Anti-Vibration @A004@
+87868	@A027@27s Anti-Vibration @A004@
+87932	@A027@28s Anti-Vibration @A004@
+87996	@A027@29s Anti-Vibration @A004@
+88060	@A027@30s Anti-Vibration @A004@
+88124	1Im
+88132	5Im
+88140	6Im
+88148	7Im
+88156	8Im
+88164	9Im
+88172	10Im
+88182	11Im
+88192	12Im
+88202	13Im
+88212	14Im
+88222	15Im
+88232	16Im
+88242	17Im
+88252	18Im
+88262	19Im
+88272	20Im
+88282	21Im
+88292	22Im
+88302	23Im
+88312	24Im
+88322	25Im
+88332	26Im
+88342	27Im
+88352	28Im
+88362	29Im
+88372	30Im
+88382	31Im
+88392	32Im
+88402	33Im
+88412	34Im
+88422	35Im
+88432	36Im
+88442	37Im
+88452	38Im
+88462	39Im
+88472	40Im
+88482	41Im
+88492	42Im
+88502	43Im
+88512	44Im
+88522	45Im
+88532	46Im
+88542	47Im
+88552	48Im
+88562	49Im
+88572	50Im
+88582	51Im
+88592	52Im
+88602	53Im
+88612	54Im
+88622	55Im
+88632	56Im
+88642	57Im
+88652	58Im
+88662	59Im
+88672	60Im
+88682	61Im
+88692	62Im
+88702	63Im
+88712	64Im
+88722	65Im
+88732	66Im
+88742	67Im
+88752	68Im
+88762	69Im
+88772	70Im
+88782	71Im
+88792	72Im
+88802	73Im
+88812	74Im
+88822	75Im
+88832	76Im
+88842	77Im
+88852	78Im
+88862	79Im
+88872	80Im
+88882	81Im
+88892	82Im
+88902	83Im
+88912	84Im
+88922	85Im
+88932	86Im
+88942	87Im
+88952	88Im
+88962	89Im
+88972	90Im
+88982	91Im
+88992	92Im
+89002	93Im
+89012	94Im
+89022	95Im
+89032	96Im
+89042	97Im
+89052	98Im
+89062	99Im
+89072	@A052@ 1 sec
+89098	@A052@ 3 sec
+89124	@A052@ 4 sec
+89150	@A052@ 5 sec
+89176	@A052@ 6 sec
+89202	@A052@ 7 sec
+89228	@A052@ 8 sec
+89254	@A052@ 9 sec
+89280	@A052@ 10 sec
+89308	@A052@ 11 sec
+89336	@A052@ 13 sec
+89364	@A052@ 14 sec
+89392	@A052@ 15 sec
+89420	@A052@ 16 sec
+89448	@A052@ 17 sec
+89476	@A052@ 18 sec
+89504	@A052@ 19 sec
+89532	@A052@ 20 sec
+89560	@A052@ 21 sec
+89588	@A052@ 22 sec
+89616	@A052@ 23 sec
+89644	@A052@ 24 sec
+89672	@A052@ 25 sec
+89700	@A052@ 26 sec
+89728	@A052@ 27 sec
+89756	@A052@ 28 sec
+89784	@A052@ 29 sec
+89812	@A052@ 30 sec
+89840	SSID
+89850	Password
+89868	URL
+89876	http://flashair/
+89910	S-I.S. Off
+89932	S-I.S. 1
+89950	S-I.S. 2
+89968	S-I.S. 3
+89986	M-I.S. Off
+90008	M-I.S. 1
+90026	M-I.S. 2
+90044	HDR BKT
+90060	HDR BKT Off
+90084	50Hz
+90094	60Hz
+90104	ISO LOW
+90120	LOW
+90128	3f 2.0EV
+90146	3f 3.0EV
+90164	5f 2.0EV
+90182	5f 3.0EV
+90200	7f 2.0EV
+90218	ART12
+90230	@A03C@Niv. Disp.
+90264	0001.jpg
+90296	tendre gam. dyn. LV
+90336	HDR
+90344	HDR Off
+90360	Demande d'impression
+90406	glez la compensation
+90450	d'exposition
+90476	Aper
+90486	u mise a jour@A040@
+90530	@A068@: AEL/AFL
+90562	@A087@: AEL/AFL
+90594	@A028@: AEL/AFL
+90630	sactive la luminosit
+90672	 auto EVF
+90694	pour ajuster la luminosit
+90750	manuellement.
+90778	Active la luminosit
+90818	 auto EVF.
+90842	La luminosit
+90868	 sera ajust
+90898	automatiquement.
+90936	sactive le @A068@ int
+90980	gr
+90990	Contr
+91002	le le changement 
+91040	de programme via un bouton,
+91098	dans le m
+91118	me sens 
+91138	que S.S. lorsque le
+91180	mode S fonctionne.
+91218	ISO
+91238	Contr
+91250	le le changement 
+91288	de programme via un bouton,
+91346	dans le m
+91366	me sens 
+91386	que l'ouverture lorsque le
+91442	mode A fonctionne.
+91480	@A011@: appuyer sur les touches de
+91552	la molette pour modifier la position
+91628	du zoom.
+91648	Fonctionne uniquement avec
+91704	un objectif zoom 
+91740	lectrique.
+91762	S.I. auto
+91782	Touche/cadran/levier
+91824	Menu concernant : 
+91864	le r
+91874	glage des touches, 
+91916	du cadran, du levier
+91958	B. Touche/cadran/levier
+92006	FlashAir
+92024	Stop
+92034	Option de d
+92058	marrage
+92074	Connexion OK
+92100	Manuel de d
+92124	marrage
+92140	Auto Start
+92162	Effet
+92174	Type
+92184	Type@A00E@
+92206	Type@A00F@
+92228	Type@A010@
+92250	Type@A064@
+92272	Combine deux images template 
+92334	ou plus en une seule
+92376	Standard
+92394	Cadres amusants
+92426	Blanc
+92438	Blanc/Bords blancs
+92476	Noir
+92486	Noir/St
+92502	nop
+92512	Film
+92522	Instantan
+92544	@A065@ 3 photos
+92576	@A066@ 3 photos
+92608	@A065@ 2 photos
+92640	@A066@ 2 photos
+92672	Connexion au smartphone
+92724	 l'aide du @A068@ int
+92768	gr
+92776	Partage ordres
+92806	Partage ordres choisi
+92850	@A041@@A02F@
+92880	glages @A068@
+92908	Menu - @A068@ int
+92944	gr
+92956	gl. connexion @A068@
+92998	Priv
+93012	Unique
+93030	lectionner
+93052	Pour connecter
+93084	votre smartphone.
+93120	Pour partager avec
+93160	d'autres smartphones.
+93206	Un seul mot de passe
+93250	est utilis
+93280	lectionner la
+93310	connexion @A068@ 
+93350	 chaque fois.
+93378	Mot de passe priv
+93416	@A021@: modifiez le mot de passe
+93484	pour connecter votre
+93528	smartphone.
+93556	initialiser partage ordres
+93614	initialiser r
+93642	glages @A068@
+93670	@A005@ Attention, r
+93710	initialiser tous
+93746	les r
+93758	glages @A068@
+93790	lectionner la connexion @A068@
+93852	Pr
+93858	paration de la connexion @A068@
+93922	Pour connecter votre smartphone.
+93990	Cette configuration est n
+94042	cessaire
+94062	une seule fois.
+94096	La connexion @A068@ se lancera 
+94162	plus tard.
+94184	Veuillez installer
+94224	'OLYMPUS Image Share'
+94270	sur votre smartphone.
+94316	Une fois l'application install
+94378	e,
+94386	appuyez sur @A01F@.
+94426	Connexion au smartphone.
+94478	Lire le code QR par
+94520	'OLYMPUS Image Share'.
+94566	Suivant@A019@
+94594	Stop@A030@
+94616	Lancement du @A068@
+94656	Arr
+94664	t du @A068@
+94688	Pour partager avec d'autres
+94746	smartphones.
+94774	Utiliser le mot de passe actuel ?
+94842	Utiliser le mot de passe actuel
+94906	Utiliser un nouveau mot de passe
+94972	Partage avec d'autres
+95018	smartphones.
+95046	Lire le code QR par
+95088	'OLYMPUS Image Share' ou
+95140	connecter manuellement.
+95192	glages connexion carte
+95240	FlashAir.
+95264	glages d
+95282	marrage 
+95302	de la connexion manuelle.
+95354	Connexion automatique 
+95400	tablie
+95416	lorsque l'appareil est allum
+95478	FlashAir est en cours
+95524	d'utilisation.
+95556	Impossible d'utiliser le Wi-Fi int
+95626	gr
+95636	Bascule viseur/
+95668	cran
+95678	Basculez automatiquement
+95730	de l'
+95742	cran vers le viseur 
+95786	lorsque celui-ci d
+95824	tecte l'
+95842	il.
+95854	sactiver la d
+95882	tection 
+95902	de vis
+95916	e 
+95922	 l'
+95930	il.
+95940	@A075@: pour basculer entre 
+96000	l'
+96006	cran et le viseur.
+96044	Activer la d
+96070	tection
+96088	de vis
+96102	e 
+96108	 l'
+96116	il.
+96126	cran BULB/TIME
+96156	Ajuste l'
+96176	cran et la luminosit
+96222	du viseur lorsque
+96260	BULB/TIME est s
+96292	lectionn
+96312	AE BKT
+96326	Changez le mode AE BKT
+96372	ART BKT
+96388	Changez le mode ART BKT
+96436	Film @A042@
+96460	S-I.S. Off
+96482	S-I.S. Auto
+96506	L'appareil photo opte pour
+96562	le stabilisateur lorsqu'il
+96622	tecte un mouvement.
+96662	M-I.S. Off
+96684	M-I.S. On
+96704	Stabilisation d'image
+96750	pendant la vid
+96784	Fonction du levier @A088@
+96836	Choisir la fonction
+96878	pour le levier @A088@
+96922	Remplacer fonction Dial par @A088@.
+96996	@A089@: Suivre r
+97030	glages fonction Dial
+97074	@A08A@: Remplacer sensibilit
+97132	 ISO 
+97146	par @A08B@ 
+97172	ou remplacer mode WB par @A076@.
+97238	Remplacer fonction Dial par @A088@.
+97312	@A089@: Suivre r
+97346	glages fonction Dial
+97390	@A08A@: Remplacer sensibilit
+97448	 ISO 
+97462	par @A076@ 
+97488	ou remplacer mode WB par @A08B@.
+97554	Remplacer la fonction du 
+97608	bouton @A024@ par @A088@.
+97662	@A089@: Suivre r
+97696	gl. fonction bouton.
+97740	@A08A@: D
+97760	marrer/Arr
+97782	ter 
+97794	l'enregistrement vid
+97836	o.
+97842	Remplacer le mode AF par @A088@.
+97914	finit le mode AF pour
+97960	@A089@ et @A08A@.
+97996	Bande
+98008	SETUP@A025@
+98032	@A06B@Fonction
+98062	Changez le mode AE BKT
+98108	Changez le mode AE BKT
+98154	Changez le mode AE BKT
+98200	Changez le mode ART BKT
+98248	Changez le mode ART BKT
+98296	Changez le mode ART BKT
+98344	@A08C@: AEL/AFL
+98380	lection cible AF
+98416	et mode AF.
+98440	@A08C@: Changer x1/x2.
+98490	glez la compensation
+98534	d'exposition
+98560	Passer au mode HDR BKT
+98606	@A08C@: Affichez un cadre large
+98672	et pressez 
+98696	 nouveau 
+98718	pour agrandir encore l'image.
+98778	@A08C@: Presser pour passer mode 
+98848	Live Guide, presser encore 
+98906	pour revenir.
+98938	clenchez avec @A02B@
+98982	en pressant sur 
+99018	la touche @A08C@
+99056	clenchez avec @A02C@
+99100	en pressant sur 
+99136	la touche @A08C@
+99174	clenchez avec @A02D@
+99218	en pressant sur 
+99254	la touche @A08C@
+99292	clenchez avec @A02E@
+99336	en pressant sur 
+99372	la touche @A08C@
+99410	initialisation du
+99448	mode AF
+99468	glage du 
+99490	mode MF
+99506	@A08C@:
+99528	but/Arr
+99550	Enregistrement Vid
+99592	WB Une Touche.
+99622	Test de profondeur
+99662	de champs.
+99688	glage des modes 
+99724	qualit
+99744	RAW+JPEG/JPEG 
+99776	avec le cadran
+99806	Image test sans
+99840	sauvegarde.
+99864	@A08C@: Touches @A02F@ et @A030@.
+99932	AE BKT Off
+99954	Manuel
+99968	Auto
+99978	Combine deux images template 
+100040	ou plus en une seule
+100084	Prise de vue tactile
+100126	Choisissez un mode lorsque
+100182	l'anneau de mise au point est 
+100246	positionn
+100266	 sur le mode MF.
+100300	L'image ne s'agrandit pas
+100354	automatiquement lorsque l'anneau
+100422	de mise au point est positionn
+100488	sur le mode MF.
+100524	lectionner ON pour automati-
+100584	quement agrandir l'image en 
+100644	mode MF avec la bague de MAP.
+100704	Intensification
+100736	Les contours du sujet
+100782	n'apparaissent pas lorsque
+100838	l'anneau de mise au point
+100892	est positionn
+100920	 sur le mode MF.
+100954	Les contours du sujet apparaissent
+101026	lorsque l'anneau AF est
+101076	positionn
+101096	 sur le mode MF.
+101132	Cette fonction vous permet de
+101198	gler la mise au point.
+101244	@A01D@ : appuyez pour afficher les
+101316	contours du sujet et r
+101362	gler
+101374	la mise au point.
+101412	Appuyez de nouveau sur la
+101466	touche pour masquer les contours.
+101534	@A023@ : appuyez pour afficher les
+101606	contours du sujet et r
+101652	gler
+101664	la mise au point.
+101702	Appuyez de nouveau sur la
+101756	touche pour masquer les contours.
+101824	@A08C@ : appuyez pour afficher les
+101896	contours du sujet et r
+101942	gler
+101954	la mise au point.
+101992	Appuyez de nouveau sur la
+102046	touche pour masquer les contours.
+102114	@A06D@ : appuyez pour afficher les
+102186	contours du sujet et r
+102232	gler
+102244	la mise au point.
+102282	Appuyez de nouveau sur la
+102336	touche pour masquer les contours.
+102408	gl. intensification
+102448	Ajuste les param
+102482	tres
+102494	d'affichage de la fonction
+102550	d'intensification.
+102588	Blanc
+102600	Noir
+102610	Les contours du sujet sont blancs 
+102682	lorsque la fonction d'intensification
+102760	fonctionne.
+102784	Les contours du sujet sont noirs
+102852	lorsque la fonction d'intensification
+102930	fonctionne.
+102954	@A029@: appuyer sur les touches de
+103026	la molette pour modifier la position
+103102	du zoom.
+103122	Fonctionne uniquement avec
+103178	un objectif zoom 
+103214	lectrique.
+103240	lection cible AF
+103276	et mode AF.
+103304	lection cible AF
+103340	et mode AF.
+103364	@A068@: Changer x1/x2.
+103410	@A087@: Changer x1/x2.
+103456	@A028@: Changer x1/x2.
+103502	@A068@ : presser pour activer
+103564	diff
+103574	rentes fonctions et
+103616	pour les modifier avec
+103664	la touche dial.
+103696	@A06E@ : presser pour activer
+103758	diff
+103768	rentes fonctions et
+103810	pour les modifier avec
+103858	la touche dial.
+103890	@A06F@ : presser pour activer
+103952	diff
+103962	rentes fonctions et
+104004	pour les modifier avec
+104052	la touche dial.
+104084	@A06C@ : presser pour activer
+104146	diff
+104156	rentes fonctions et
+104198	pour les modifier avec
+104246	la touche dial.
+104278	@A06D@ : presser pour activer
+104340	diff
+104350	rentes fonctions et
+104392	pour les modifier avec
+104440	la touche dial.
+104472	@A087@ : presser pour activer
+104534	diff
+104544	rentes fonctions et
+104586	pour les modifier avec
+104634	la touche dial.
+104666	@A028@ : presser pour activer
+104728	diff
+104738	rentes fonctions et
+104780	pour les modifier avec
+104828	la touche dial.
+104864	glez la compensation
+104908	d'exposition
+104938	glez la compensation
+104982	d'exposition
+105012	glez la compensation
+105056	d'exposition
+105086	glez la compensation
+105130	d'exposition
+105156	Appuyer pour activer
+105200	l'affichage du niveau.
+105248	Appuyer de nouveau
+105288	pour d
+105302	sactiver.
+105324	Efficace en @A03C@.
+105364	Active/D
+105382	sactive le mode HDR.
+105424	Active/D
+105442	sactive le mode HDR.
+105484	Active/D
+105502	sactive le mode HDR.
+105544	Active/D
+105562	sactive le mode HDR.
+105604	Active/D
+105622	sactive le mode HDR.
+105664	Active/D
+105682	sactive le mode HDR.
+105724	Active/D
+105742	sactive le mode HDR.
+105784	Active/D
+105802	sactive le mode HDR.
+105844	Active/D
+105862	sactive le mode HDR.
+105904	@A068@: Affichez un cadre large
+105970	et pressez 
+105994	 nouveau
+106014	pour agrandir encore l'image.
+106074	@A087@: Affichez un cadre large
+106140	et pressez 
+106164	 nouveau
+106184	pour agrandir encore l'image.
+106244	@A068@: Presser pour passer mode
+106312	Live Guide, presser encore
+106368	pour revenir.
+106396	@A087@: Presser pour passer mode
+106464	Live Guide, presser encore
+106520	pour revenir.
+106548	@A028@: Presser pour passer mode
+106616	Live Guide, presser encore
+106672	pour revenir.
+106700	Active/D
+106718	sactive @A07D@.
+106750	Active/D
+106768	sactive @A07D@.
+106800	Active/D
+106818	sactive @A07D@.
+106850	Active/D
+106868	sactive @A07D@.
+106900	Active/D
+106918	sactive @A07D@.
+106950	Active/D
+106968	sactive @A07D@.
+107000	Active/D
+107018	sactive @A07E@.
+107050	Active/D
+107068	sactive @A07E@.
+107100	Active/D
+107118	sactive @A07E@.
+107150	Active/D
+107168	sactive @A07E@.
+107200	Active/D
+107218	sactive @A07E@.
+107250	Active/D
+107268	sactive @A07E@.
+107300	Active/D
+107318	sactive @A07F@.
+107350	Active/D
+107368	sactive @A07F@.
+107400	Active/D
+107418	sactive @A07F@.
+107450	Active/D
+107468	sactive @A07F@.
+107500	Active/D
+107518	sactive @A07F@.
+107550	Active/D
+107568	sactive @A07F@.
+107600	Active/D
+107618	sactive @A080@.
+107650	Active/D
+107668	sactive @A080@.
+107700	Active/D
+107718	sactive @A080@.
+107750	Active/D
+107768	sactive @A080@.
+107800	Active/D
+107818	sactive @A080@.
+107850	Active/D
+107868	sactive @A080@.
+107900	La gamme dynamique
+107940	Live View n'a pas 
+107988	tendue.
+108004	La gamme dynamique
+108044	Live View est 
+108074	tendue
+108090	lorsqu'elle est sur HDR1 ou HDR2.
+108158	Prend 3 photos avec
+108200	diff
+108210	rentes expositions
+108250	du EV 2.0.
+108272	Prend 3 photos avec
+108314	diff
+108324	rentes expositions
+108364	du EV 3.0.
+108386	Prend 5 photos avec
+108428	diff
+108438	rentes expositions
+108478	du EV 2.0.
+108500	Prend 5 photos avec
+108542	diff
+108552	rentes expositions
+108592	du EV 3.0.
+108614	Prend 7 photos avec
+108656	diff
+108666	rentes expositions
+108706	du EV 2.0.
+108728	Prend 4 photos 
+108760	 la fois
+108780	sous diff
+108800	rentes expositions
+108840	et composites automatiquement
+108902	avec un contraste 
+108940	lev
+108952	Prend 4 photos 
+108984	 la fois
+109004	sous diff
+109024	rentes expositions
+109064	et composites automatiquement
+109126	avec un contraste tr
+109168	s 
+109174	lev
+109190	sactive le mode HDR.
+109236	initialisation du
+109274	mode AF
+109294	initialisation du
+109332	mode AF
+109348	Les fonctions des boutons @A05F@
+109416	ne sont pas modifi
+109454	es en .
+109470	En , les fonctions 
+109512	des boutons @A05F@ passent
+109568	vers @A060@: BKT et @A061@:@A062@.
+109642	sactive la fonction
+109684	levier .
+109702	@A078@: modifie les fonctions dial.
+109776	@A079@: r
+109796	glages fonctions 
+109834	personnalis
+109858	es.
+109868	@A07A@: @A07B@ ajuste l'ISO, 
+109930	@A066@ ajuste WB.
+109966	@A078@: modifie les fonctions dial.
+110040	@A079@: r
+110060	glages fonctions 
+110098	personnalis
+110122	es.
+110132	@A07A@: @A066@ ajuste l'ISO, 
+110194	@A07B@ ajuste WB.
+110230	@A078@: modifie la touche.
+110286	@A079@: r
+110306	glages fonctions 
+110344	personnalis
+110368	es.
+110378	@A07A@: @A021@ ajuste l'ISO, 
+110440	@A059@ ajuste WB.
+110476	@A078@: modifie la touche.
+110532	@A079@: r
+110552	glages fonctions 
+110590	personnalis
+110614	es.
+110624	@A07A@: @A059@ ajuste l'ISO, 
+110686	@A021@ ajuste WB.
+110722	@A078@: modifie le mode AF
+110778	parmi les r
+110802	glages AF
+110824	personnalis
+110848	s @A079@ et @A07A@.
+110892	glage du
+110912	mode MF
+110932	glage du
+110952	mode MF
+110968	@A068@:
+110990	but/Arr
+111012	Enregistrement Vid
+111054	@A06E@:
+111076	but/Arr
+111098	Enregistrement Vid
+111140	@A06F@:
+111162	but/Arr
+111184	Enregistrement Vid
+111226	@A06D@:
+111248	but/Arr
+111270	Enregistrement Vid
+111312	@A087@:
+111334	but/Arr
+111356	Enregistrement Vid
+111398	@A028@:
+111420	but/Arr
+111442	Enregistrement Vid
+111484	WB Une Touche.
+111514	WB Une Touche.
+111544	WB Une Touche.
+111574	@A068@ : appuyez pour afficher les
+111646	contours du sujet et r
+111692	gler
+111704	la mise au point.
+111742	Appuyez de nouveau sur la
+111796	touche pour masquer les contours.
+111864	@A06E@ : appuyez pour afficher les
+111936	contours du sujet et r
+111982	gler
+111994	la mise au point.
+112032	Appuyez de nouveau sur la
+112086	touche pour masquer les contours.
+112154	@A06F@ : appuyez pour afficher les
+112226	contours du sujet et r
+112272	gler
+112284	la mise au point.
+112322	Appuyez de nouveau sur la
+112376	touche pour masquer les contours.
+112444	@A06C@ : appuyez pour afficher les
+112516	contours du sujet et r
+112562	gler
+112574	la mise au point.
+112612	Appuyez de nouveau sur la
+112666	touche pour masquer les contours.
+112734	@A066@ : appuyez pour afficher les
+112806	contours du sujet et r
+112852	gler
+112864	la mise au point.
+112902	Appuyez de nouveau sur la
+112956	touche pour masquer les contours.
+113024	@A087@ : appuyez pour afficher les
+113096	contours du sujet et r
+113142	gler
+113154	la mise au point.
+113192	Appuyez de nouveau sur la
+113246	touche pour masquer les contours.
+113314	@A028@ : appuyez pour afficher les
+113386	contours du sujet et r
+113432	gler
+113444	la mise au point.
+113482	Appuyez de nouveau sur la
+113536	touche pour masquer les contours.
+113604	Test de profondeur
+113644	de champs.
+113666	Test de profondeur
+113706	de champs.
+113732	glage des modes
+113766	qualit
+113784	RAW+JPEG/JPEG
+113814	avec le cadran
+113848	glage des modes
+113882	qualit
+113900	RAW+JPEG/JPEG
+113930	avec le cadran
+113960	Image test sans
+113994	sauvegarde.
+114018	Image test sans
+114052	sauvegarde.
+114076	Maintenir @A011@: 
+114116	pour verrouiller/d
+114154	verrouiller
+114180	l'
+114186	cran tactile lors de 
+114232	l'utilisation du mode
+114278	de prise de vue.
+114312	Maintenir @A029@: 
+114352	pour verrouiller/d
+114390	verrouiller
+114416	l'
+114422	cran tactile lors de 
+114468	l'utilisation du mode
+114514	de prise de vue.
+114548	@A068@: Touches @A02A@ et @A02B@.
+114616	@A06E@: Touches @A02A@ et @A02B@.
+114684	@A06F@: Touches @A02A@ et @A02B@.
+114752	@A06D@: Touches @A02A@ et @A02B@.
+114820	@A087@: Touches @A02A@ et @A02B@.
+114888	@A028@: Touches @A02A@ et @A02B@.
+114956	Int
+114964	gr
+114970	 @A017@
+114986	Int
+114994	gr
+115000	 @A02E@ Niveau d'enreg.
+115048	@A080@+@A081@
+115076	Fonction du levier @A078@
+115128	Entr
+115138	e Line-In @A023@
+115172	Line-In @A02E@ Niveau d'enreg.
+115234	Cr
+115240	er jeu de donn
+115270	es
+115276	@A026@
+115292	@A05C@Fonction
+115322	@A043@Cr
+115340	ateur couleur
+115368	@A044@e-Portrait
+115402	Ajuste chaque point de cible
+115462	de la position AF de chaque 
+115522	objectif.
+115542	Le cadre cible vert ne s'affiche 
+115612	pas pour la mise au point auto
+115676	lorsqu'il est fix
+115712	 sur Off.
+115732	Ajuste le niveau d'activit
+115786	 cible
+115802	lors du mode C-AF.
+115840	La gamme dynamique
+115880	Live View est 
+115910	tendue
+115926	lorsqu'elle est fix
+115966	e sur On.
+115990	glages du mode HDR.
+116030	Sur Off, les fonctions
+116078	des boutons @A081@ ne sont
+116134	pas modifi
+116156	es en @A080@.
+116184	Choisir la fonction
+116226	pour le levier @A078@
+116270	Ajuste le niveau de
+116312	chaque microphone.
+116350	Ps
+116360	duction du flou
+116394	lors de prises de vue 
+116442	en faible luminosit
+116486	Nuit main lev
+116518	@A045@Verrou.
+116546	Active/D
+116564	sactive @A07D@.
+116596	Active/D
+116614	sactive @A07E@.
+116646	Active/D
+116664	sactive @A07F@.
+116696	Active/D
+116714	sactive @A080@.
+116746	Image test sans
+116780	sauvegarde.
+116804	A-B : WB BKT Off
+116838	G-M : WB BKT Off
+116872	FL BKT Off
+116894	HDR1
+116904	HDR2
+116914	ISO BKT Off
+116938	mode5
+116950	ART BKT Off
+116974	ART BKT On
+116996	A-B : WB BKT
+117022	A-B : 3f 2Step
+117052	A-B : 3f 4Step
+117082	A-B : 3f 6Step
+117112	G-M : WB BKT
+117138	G-M : 3f 2Step
+117168	G-M : 3f 4Step
+117198	G-M : 3f 6Step
+117228	BKT
+117236	Passer au mode BKT.
+117276	Passer au mode BKT.
+117316	Passer au mode BKT.
+117356	Passer au mode BKT.
+117396	Passer au mode BKT.
+117436	Passer au mode BKT.
+117476	Passer au mode BKT.
+117516	Passer au mode BKT.
+117556	Passer au mode BKT.
+117596	@A03F@@A019@
+117622	Quand mode image s
+117660	lect
+117672	les num
+117688	ros peuvent 
+117714	tre
+117724	saut
+117734	s si pas dans @A03F@.
+117778	Zoom avant/arri
+117810	re
+117816	@A067@ 2 photos
+117848	Faible
+117862	Layout
+117876	Appuyez une fois sur le bouton 
+117942	de l'obturateur pour pr
+117990	parer
+118004	la prise de vue composite.
+118058	Pr
+118064	t pour p. de vue composite
+118122	glages Composite
+118156	Menu de r
+118176	glage Composite.
+118212	Combine les images prises 
+118268	avec prise de vue 
+118306	 intervalle.
+118332	Mode Composite
+118364	claircir
+118382	Assombrir
+118402	Compare les pixels des deux
+118460	images et utilise les plus clairs
+118530	pour l'image composite.
+118578	Compare les pixels des deux
+118636	images et utilise les plus sombres
+118708	pour l'image composite.
+118756	Dur
+118764	e expos. de base
+118798	Dur
+118806	e d'exposition par image.
+118860	La dur
+118874	e d'exposition et l'ouverture
+118940	terminent l'exposition de base.
+119008	lectionnez On pour activer
+119064	prise de vue manuelle en
+119116	modes BULB/TIME/COMP.
+119160	Ajuste l'
+119180	cran et la luminosit
+119226	du viseur en modes
+119266	BULB/TIME/COMP.
+119298	Impossible de filmer
+119342	lorsque @A074@ est connect
+119400	Fermer@A019@
+119426	Fin @A068@@A025@
+119460	Affectation des touches lorsque
+119526	vous appuyez sur ce bouton :
+119586	@A060@: ISO
+119612	@A053@: WB
+119634	Affectation des touches lorsque
+119700	vous appuyez sur ce bouton :
+119760	@A060@: WB
+119784	@A053@: ISO
+119808	Maintenez enfonc
+119842	 ce bouton pour 
+119882	sactiver la mise au point auto 
+119948	et fixer la mise au point 
+120004	lorsque vous appuyez
+120048	sur le bouton.
+120078	Appuyez sur ce bouton pour 
+120136	activer AEL/AFL.
+120174	marrer/arr
+120196	ter
+120206	enregistrement vid
+120244	o.
+120250	Test de profondeur
+120290	de champs.
+120312	WB Une Touche.
+120346	lection cible AF
+120382	et mode AF.
+120410	initialisation du
+120448	mode AF
+120468	glage du
+120488	mode MF.
+120510	glage des modes
+120544	qualit
+120562	RAW+JPEG/JPEG
+120592	avec le cadran.
+120624	Image test sans
+120658	sauvegarde.
+120682	Active/D
+120700	sactive @A07B@.
+120732	Active/D
+120750	sactive @A07C@.
+120782	Active/D
+120800	sactive @A07D@.
+120832	Active/D
+120850	sactive @A07E@.
+120882	Touches @A061@ et @A062@.
+120938	glez la compensation
+120982	d'exposition.
+121010	Appuyez pour passer mode 
+121064	Live Guide, appuyez 
+121106	 nouveau 
+121128	pour revenir.
+121156	Changer x1/x2.
+121186	Affichez un cadre large
+121236	et appuyez 
+121260	 nouveau 
+121282	pour agrandir encore l'image.
+121342	Active/D
+121360	sactive le mode HDR.
+121402	Passer au mode BKT.
+121442	Appuyez pour activer
+121486	diff
+121496	rentes fonctions et
+121538	pour les modifier avec
+121586	la touche dial.
+121618	Appuyez pour afficher les
+121672	contours du sujet et r
+121718	gler
+121730	la mise au point.
+121768	Appuyez de nouveau sur la
+121822	touche pour masquer les contours.
+121890	@A021@: D
+121910	but Enreg Vid
+121944	@A020@: Prendre Une Photo
+121998	@A059@: Film @A076@
+122038	Retardateur personnalis
+122088	@A093@ Anti-Vibration @A004@
+122150	glages@A01A@
+122176	Choisir d'afficher le
+122222	menu @A00A@.
+122252	glages de la multifonction
+122310	signe les fonctions 
+122356	 inclure dans la multifonction
+122420	en appliquant @A03F@.
+122464	Mode Vid
+122482	o+Photo
+122502	finir priorit
+122530	 photo pour
+122556	le mode Vid
+122580	o+Photo.
+122598	Mode Vid
+122616	o prioritaire.
+122648	@A067@Mode photo disponible
+122706	lorsque mode Vid
+122740	o en cours.
+122766	Qualit
+122780	 de l'image
+122806	restreinte. Actif dans @A070@.
+122868	Mode Photo prioritaire.
+122918	Vid
+122926	os enregistr
+122952	es 
+122962	avant et apr
+122988	s la 
+123002	prise de photos.
+123036	Vitesse zoom 
+123064	lectronique
+123092	gle vitesse zoom pour modes
+123150	photo et vid
+123176	o lorsque obj.
+123208	zoom 
+123220	lectronique utilis
+123262	S.I.-Photo Off
+123292	S.I.-Vid
+123310	o Off
+123322	Pr
+123328	paration prise de vue composite.
+123396	Veuillez patienter.
+123436	Bouton Attente : verr./d
+123486	verr.
+123500	des touches du panneau tactile
+123564	en mode de prise de vue.
+123614	Appuyez sur les touches de
+123670	la molette pour modifier la position
+123746	du zoom.
+123766	Fonctionne uniquement avec
+123822	un objectif zoom 
+123858	lectrique.
+123880	@A060@ISO/@A053@WB
+123918	@A060@WB/@A053@ISO
+123956	Non
+123964	Oui
+123972	Prise de vue hte r
+124010	s.
+124016	Prend et associe 8 images
+124070	pour cr
+124086	er une image ultra-haute
+124142	solution. Tr
+124168	pied requis.
+124194	Active la Prise de vue
+124242	haute r
+124258	solution.
+124284	lectionnez le d
+124316	lai apr
+124338	le rel
+124352	chement du d
+124378	clencheur.
+124400	@A00A@Temps de charge
+124448	lectionnez le d
+124480	lai entre le
+124508	rel
+124516	chement du d
+124542	clencheur et
+124570	la recharge du flash.
+124616	Ceci n'est pas n
+124650	cessaire
+124670	pour l'utilisation du flash d
+124730	di
+124744	glage d
+124760	tection. + Num.
+124796	glage d
+124812	tect. uniquement
+124846	Stabilisation d'image effectu
+124912	par le r
+124930	glage de d
+124952	tection et
+124976	num
+124984	riquement.
+125006	Stabilisation d'image effectu
+125072	uniquement par le r
+125112	glage
+125126	de d
+125136	tection et
+125160	non num
+125176	riquement.
+125198	Compr./D
+125216	bit binaire
+125240	Taux compression
+125274	Dur
+125282	e d'enr. clip
+125310	Ralenti ou acc
+125350	Param. de sp
+125376	cif. vid
+125398	Ajustez la taille de l'image,
+125460	la m
+125470	thode de compression
+125514	et le d
+125530	bit binaire de la vid
+125574	o.
+125584	solution vid
+125614	Vid
+125622	o @A01A@
+125640	La compression ALL-I offre une
+125704	meilleure qualit
+125738	 pour l'
+125756	dition
+125772	avanc
+125784	e, mais la taille du fichier
+125844	sera tr
+125860	s importante.
+125888	La compression D
+125922	bit binaire sup.
+125958	IPB offre une meilleure qualit
+126024	d'image, mais la taille du fichier 
+126098	sera tr
+126114	s importante.
+126142	La compr. D
+126166	bit binaire 
+126192	lev
+126200	 IPB
+126212	offre une meilleure qualit
+126266	 d'image,
+126288	mais la taille du fichier sera
+126352	assez importante.
+126388	La compression D
+126422	bit binaire
+126448	standard IPB
+126476	offre une qualit
+126510	 d'image standard
+126548	et la taille du fichier sera normale.
+126624	Plus le chiffre est 
+126666	lev
+126674	, plus 
+126692	l'image est nette.
+126734	sactivez l'option Clips
+126784	pour utiliser l'enregistrement
+126848	vid
+126856	o standard.
+126880	Activez l'option Clips pour
+126938	enregistrer des clips vid
+126996	courts qui seront 
+127036	enregistr
+127056	s dans Mes clips.
+127092	La vid
+127106	o sera enregistr
+127140	e avec 
+127158	une vitesse de lecture standard.
+127224	La vid
+127238	o sera enregistr
+127272	e avec 
+127290	une vitesse de lecture ralentie.
+127358	Le son ne sera pas enregistr
+127420	La vid
+127434	o sera enregistr
+127468	e avec 
+127486	une vitesse de lecture acc
+127548	e.
+127556	Le son ne sera pas enregistr
+127618	Ajout
+127630	e 
+127636	 Mes clips.
+127660	Enreg. en tant que vid
+127706	o standard.
+127730	Ce dossier Mes clips est complet.
+127802	pl. un clip dans un doss. Mes clips.
+127880	pl. l'
+127898	ment ds un doss. Mes clips.
+127954	Ajout. l'
+127978	ment ds un doss. Mes clips.
+128034	Suppr. l'
+128058	ment du dossier Mes clips.
+128112	Mes clips
+128132	Ajouter 
+128150	 Mes clips
+128172	Lire Mes clips
+128202	Exporter Mes clips
+128240	Aff. tous Mes clips
+128280	Supprimer Mes clips
+128320	@A003@ Tous les 
+128358	ments du dossier
+128394	Mes clips seront supprim
+128444	s.
+128454	organiser l'ordre
+128490	Pr
+128500	finir la dest.
+128530	Votre prochain clip suivra
+128586	cet 
+128600	ment, sauf s'il s'agit d'un clip
+128668	dont les sp
+128692	c. vid
+128706	o diff
+128720	rent
+128732	de celles de ce dossier Mes clips.
+128802	Effets clip
+128826	1. Pop art
+128848	2. Tonalit
+128870	 lumineuse
+128892	3. St
+128904	nop
+128914	4. Traitement crois
+128956	5. S
+128966	pia
+128974	6. Film ancien
+129004	Les effets ne peuvent pas 
+129058	tre pr
+129072	v.
+129078	Effet de transition
+129118	Fondu
+129130	Son du clip enregistr
+129176	Volume du clip enr.
+129216	Pr
+129222	visu.
+129234	Lancer l'exportation
+129276	Longueur totale du clip
+129324	Veuillez patienter.
+129364	Le temps de trait. sera 
+129414	quiv. au
+129434	double de la long. tot. de la vid
+129502	o.
+129508	Termin
+129524	Annul
+129538	Liaison enreg. PCM @A017@
+129590	Cette option optimise les param.
+129658	de l'app. photo d'apr
+129702	s la liaison
+129730	enreg. PCM Olympus.
+129770	Multi exposition
+129804	Mode RC @A00A@
+129834	@A017@Alim. branchement
+129886	lectionnez D
+129912	sactiv
+129926	 pour
+129940	un microphone qui ne requiert
+130002	pas d'alimentation.
+130042	Opt. Fonc. cadran grip
+130092	lectionnez la fonction
+130140	attribu
+130156	e au 
+130170	cadran de grip en option.
+130222	Activez le cadran @A07B@ pour r
+130286	gler
+130298	le volume lorsque des 
+130344	couteurs 
+130366	sont branch
+130390	s.
+130396	Le cadran @A07B@ respecte les
+130458	param
+130470	tres
+130482	de fonction du cadran.
+130528	Assist. Autoportrait
+130574	glez les param
+130604	tres de l'
+130626	cran
+130638	lorsque l'
+130660	cran est 
+130682	retourn
+130698	 pour un autoportrait.
+130744	Les param
+130764	tres de l'Assistant
+130806	Autoportrait
+130834	ne s'activent pas, m
+130876	me
+130884	si l'
+130896	cran est retourn
+130934	Les commandes de l'Assistant
+130994	Autoportrait
+131022	s'affichent sur l'
+131060	cran et 
+131080	le Live View s'affiche en
+131134	image miroir.
+131162	@A004@Fonct. d
+131192	clencheur
+131212	Attribuez une fonction
+131260	au d
+131270	clencheur 
+131294	en mode @A004@.
+131326	Prenez une photo en appuyant
+131386	sur le d
+131404	clencheur.
+131430	marrez/arr
+131452	tez l'enregistrement
+131496	de vid
+131510	o en appuyant
+131540	sur le d
+131558	clencheur.
+131580	Volume des 
+131604	couteurs
+131626	gle le volume des 
+131664	couteurs.
+131686	Le volume d'enregistrement ne 
+131750	sera pas affect
+131786	@A008@ Info r
+131814	glage
+131826	Choisissez les informations
+131884	pr
+131890	sent
+131900	es en mode @A008@.
+131938	Code temporel
+131966	Fonct. @A045@Silence
+132008	Mode veille rapide
+132046	Lorsqu'il n'est pas en Live View,
+132116	l'appareil entre en mode
+132168	veille en quelques secondes.
+132226	Menu Rappel
+132250	Rappelle la derni
+132286	re
+132298	lection de menu.
+132332	Rappel
+132350	initialiser
+132374	Param. de code temporel
+132426	glez les param. 
+132462	de code temporel.
+132498	Mode code temporel
+132536	DF
+132542	NDF
+132550	Ajuste la diff
+132580	rence temporelle
+132616	par rapport 
+132642	 la dur
+132658	e d'enr. r
+132680	elle.
+132694	Utilis
+132708	 dans l'
+132726	dition avanc
+132752	e si une
+132772	pr
+132778	cision de temps extr
+132820	me est 
+132838	requise.
+132856	N'ajuste pas la diff
+132898	rence temp.
+132924	par rapport 
+132950	 la dur
+132966	e d'enr. r
+132988	elle.
+133000	Haut
+133010	Enregistrement
+133040	Libre
+133052	Compte le code temp. uniquement
+133118	lors de l'enr. vid
+133156	o.
+133162	Compte 
+133178	galement le code temp. 
+133228	en dehors de l'enr. vid
+133276	o,
+133284	y compris lorsque l'app. photo est
+133358	teint.
+133372	Heure de d
+133394	but
+133406	initialiser
+133430	Saisie manuelle
+133462	Heure actuelle
+133496	finissez heure:minute:seconde:image
+133570	sur 00:00:00:00.
+133608	finissez l'heure, la minute,
+133668	la seconde et
+133698	l'image manuellement.
+133746	f. heure, minute et seconde sur
+133812	l'heure actuelle et d
+133856	f. image sur 00.
+133890	Couleur d'intens.
+133926	Rouge
+133938	Jaune
+133950	Les contours du sujet sont rouges
+134020	lorsque la fonction d'intensification
+134098	fonctionne.
+134122	Les contours du sujet sont jaunes
+134192	lorsque la fonction d'intensification
+134270	fonctionne.
+134294	Intensit
+134312	 des contours
+134340	Les contours du sujet ressortent
+134416	rement.
+134432	Les contours du sujet ressortent.
+134500	Les contours du sujet ressortent
+134568	fortement.
+134594	gl. luminosit
+134622	 image
+134636	N'ajuste pas la luminosit
+134692	d'image Live View.
+134730	Ajuste la luminosit
+134770	 d'image
+134790	Live View pour am
+134826	liorer la visibilit
+134870	des contours.
+134900	La luminosit
+134926	 de l'image Live View
+134972	et l'image finale diff
+135018	rent.
+135034	glez les par. pour la prise
+135092	de vue s
+135110	quentielle, 
+135136	 retard. 
+135158	et en laps de temps.
+135200	@A047@ Silence @A048@
+135244	@A049@ Silence @A048@
+135288	@A04A@ Silence @A048@
+135332	@A04B@ Silence @A048@
+135376	@A04C@ Silence @A048@
+135420	@A04D@ Silence @A048@
+135464	@A047@ Anti-vibration @A04E@
+135522	@A04A@ Anti-vibration @A04E@
+135580	@A04B@ Anti-vibration @A04E@
+135638	@A04C@ Anti-vibration @A04E@
+135696	@A04D@ Anti-vibration @A04E@
+135754	Anti-vibration@A04E@/Silence@A048@
+135828	glez les param. de prise de
+135886	vue silencieuse ou anti-vibration.
+135956	Silence@A048@
+135984	Active la prise de vue silencieuse.
+136058	Le flash ou @A004@ ne fonctionnera
+136130	pas.
+136146	lectionnez le d
+136178	lai apr
+136200	le rel
+136214	chement du d
+136240	clencheur.
+136262	Anti-vibration@A04E@
+136304	Si la vit. d'obturation est @A079@
+136376	ou moins, le 1er rideau de l'obt.
+136446	est r
+136458	gl
+136468	lectroniquement. 
+136510	lectionnez le d
+136542	lai apr
+136564	le rel
+136578	chement du d
+136604	cl.
+136616	duction du bruit@A048@
+136662	La r
+136672	duction du bruit ne
+136714	fonctionnera pas
+136750	au cours de la prise de vue
+136808	silencieuse.
+136834	La r
+136844	d. du bruit fonctionne aussi
+136904	avec la prise de vue silenc. Le son 
+136980	de l'obturateur est audible au cours
+137056	du processus de pr
+137094	p. de r
+137110	duction
+137128	du bruit.
+137148	Prise de vue manuelle
+137192	Bulb/Time
+137212	Live Composite
+137242	Autres
+137256	Extend. LV - Prise de vue manuelle
+137326	Extend. LV - Bulb/Time
+137372	Extend. LV - Live Composite
+137428	Extend. LV - Autres
+137468	On1
+137476	On2
+137484	La lum. Live View
+137522	refl
+137532	te les param
+137558	tres d'exposition.
+137598	La lum. de l'image aper
+137646	ue est
+137662	identique 
+137684	 celle de l'image 
+137724	finale.
+137740	La lum. Live View ne refl
+137792	te pas
+137808	les param. d'expo. et est ajust
+137878	pour un affich. optimal. La lum. de
+137952	l'image finale sera diff
+138002	rente.
+138016	La luminosit
+138042	 Live View ne suivra
+138086	pas les param. d'expo. et sera
+138150	optimis
+138166	e en r
+138180	duis. la fr
+138204	q.
+138212	d'img pour les sc
+138248	nes sombres.
+138276	La luminosit
+138302	 de l'img fin. sera diff.
+138354	Lecture vid
+138382	Lire depuis le d
+138416	but
+138424	Supprimer tout @A004@
+138468	@A005@ Supprime tous les fichiers
+138538	automatiquement s
+138574	par
+138582	s d'une vid
+138606	o.
+138612	Afficher photos 3D uniquement
+138672	@A078@ bascule entre les modes
+138736	de prise de vue. Choisissez @A079@
+138808	pour s
+138822	lect. les modes de prise
+138874	de vue dans le cadran de mode.
+138938	Choisissez @A07A@ pour utiliser @A008@.
+139018	@A03D@ Afficher s
+139054	lection
+139070	Bascule entre Live View et
+139126	le SCP. Lorsque la d
+139168	tection
+139186	de vis
+139200	e 
+139206	 l'
+139214	il est d
+139232	sactiv
+139246	e,
+139254	bascule entre EVF et 
+139302	cran arri
+139322	re.
+139330	Perso1
+139344	Perso2
+139358	@A071@Fonction
+139388	@A08D@Fonction
+139418	@A094@Fonction
+139448	@A04F@@A02F@
+139474	@A06E@@A041@
+139500	H im/s @A07A@
+139528	L im/s @A07A@
+139556	Choisir le nombre d'images
+139612	par seconde en utilisant le
+139670	mode rafale @A07B@.
+139710	Choisir le nombre d'images
+139766	par seconde en utilisant le
+139824	mode rafale @A07C@.
+139864	@A036@@A020@
+139890	@A06F@@A022@
+139916	FullHD
+139930	HD
+139936	@A013@/@A014@/@A0C7@
+139978	mode6
+139990	@A055@uper @A0B8@arge
+140034	60p
+140042	50p
+140050	30p
+140058	25p
+140066	24p
+140074	MOV 1920
+140092	1080 Fine
+140112	MOV 1920
+140130	1080 ALL-Intra
+140160	MOV 1920
+140178	1080 Super Fine
+140210	MOV 1920
+140228	1080 Fine
+140248	MOV 1920
+140266	1080 Normal
+140290	MOV 1280
+140308	720 ALL-Intra
+140336	MOV 1280
+140354	720 Super Fine
+140384	MOV 1280
+140402	720 Fine
+140420	MOV 1280
+140438	720 Normal
+140460	MOV 1920
+140478	1080
+140488	FHD
+140496	A-I
+140504	ALL-Intra
+140524	@A106@
+140538	1080p
+140550	MIC @A017@
+140576	duction du bruit en cours.
+140632	Veuillez patienter.
+140672	Diff
+140682	rentiel mise au pt
+140720	Heure de fin estim
+140762	Heure de d
+140784	ma. estim.
+140806	Nb. de prises de vues
+140850	Bascule entre les modes
+140900	d'affichage EVF. Effectif
+140954	uniquement lors
+140988	de l'affichage EVF.
+141028	Les effets des ajustements
+141084	des param
+141104	tres
+141116	peuvent 
+141134	tre confirm
+141164	en temps r
+141186	el
+141194	avant l'ouverture de l'obturateur.
+141264	Vue simul
+141284	e, comme via
+141312	l'OVF d'un app. reflex mono-object.
+141386	Les effets des ajustements des
+141450	param. ne peuvent pas 
+141496	tre
+141506	valid
+141518	s avt l'ouvert. de l'obturateur.
+141584	Taux compression
+141620	troite
+141634	S-OVF
+141650	lectionnez la vitesse
+141696	d'affichage du viseur.
+141746	lectionner le mode
+141786	d'affichage EVF.
+141820	Activer ou d
+141846	sactiver le pav
+141882	de ciblage AF arri
+141920	re
+141928	du moniteur pour EVF.
+141972	Param
+141984	tres vid
+142006	Longueur vid
+142032	o TL
+142042	Pav
+142050	 de ciblage AF
+142080	Les niveaux WB sont extr
+142130	mes.
+142142	Poursuivre?
+142168	tendue
+142182	Focus BKT Off
+142210	Focus BKT On
+142236	Focus BKT
+142256	HighSpeed 120fps
+142290	4K
+142296	Sauvegarde des fonctions 
+142350	favorites pour un acc
+142394	s rapide.
+142414	Initialise les r
+142448	glages.
+142464	Mot de passe priv
+142502	Certification
+142530	@A01C@ : modifiez le mot de passe
+142600	pour connecter votre
+142644	smartphone.
+142668	@A002@ Supprime tous les fichiers
+142738	automatiquement s
+142774	par
+142782	s d'une vid
+142806	o.
+142816	sactiver
+142834	Activation MM
+142866	finit l'activation de mise au
+142928	point manuelle.
+142960	Activer
+142976	Pop art@A04F@
+143004	Pop art@A050@
+143032	Ton neutre&lumineux@A04F@
+143084	Ton neutre&lumineux@A050@
+143136	Film grain noir&blanc@A04F@
+143192	Film grain noir&blanc@A050@
+143248	St
+143254	nop
+143262	@A04F@
+143276	St
+143282	nop
+143290	@A050@
+143304	St
+143310	nop
+143318	@A051@
+143332	Diorama@A04F@
+143360	Diorama@A050@
+143388	Traitement crois
+143422	@A04F@
+143436	Traitement crois
+143470	@A050@
+143484	Ton dramatique@A04F@
+143526	Ton dramatique@A050@
+143568	Feutre@A04F@
+143594	Feutre@A050@
+143620	Aquarelle@A04F@
+143652	Aquarelle@A050@
+143684	Vintage@A04F@
+143712	Vintage@A050@
+143740	Vintage@A051@
+143768	Couleur partielle@A04F@
+143816	Couleur partielle@A050@
+143864	Couleur partielle@A051@
+143912	@A073@Pop art
+143940	@A052@Soft focus
+143974	@A079@Diorama
+144002	@A07A@Traitement crois
+144050	@A054@S
+144066	pia
+144074	@A07C@Ton dramatique
+144116	@A07D@Feutre
+144142	@A07E@Aquarelle
+144174	@A07F@Vintage
+144202	@A080@Couleur partielle
+144250	@A055@Pop art@A04F@
+144290	@A056@Pop art@A050@
+144330	@A057@Ton neutre&lumineux@A04F@
+144394	@A058@Ton neutre&lumineux@A050@
+144458	@A059@Film grain noir&blanc@A04F@
+144526	@A05A@Film grain noir&blanc@A050@
+144594	@A05B@St
+144612	nop
+144620	@A04F@
+144634	@A05C@St
+144652	nop
+144660	@A050@
+144674	@A05D@St
+144692	nop
+144700	@A051@
+144714	@A05E@Diorama@A04F@
+144754	@A05F@Diorama@A050@
+144794	@A060@Traitement crois
+144840	@A04F@
+144854	@A061@Traitement crois
+144900	@A050@
+144914	@A062@Ton dramatique@A04F@
+144968	@A063@Ton dramatique@A050@
+145022	@A064@Feutre@A04F@
+145060	@A065@Feutre@A050@
+145098	@A066@Aquarelle@A04F@
+145142	@A067@Aquarelle@A050@
+145186	@A068@Vintage@A04F@
+145226	@A069@Vintage@A050@
+145266	@A06A@Vintage@A051@
+145306	@A06B@Couleur partielle@A04F@
+145366	@A06C@Couleur partielle@A050@
+145426	@A06D@Couleur partielle@A051@
+145486	@A06E@Effet Soft focus
+145532	@A06F@Effet St
+145562	nop
+145572	@A070@Effet Fondu bords blancs
+145634	@A071@Effet encadr
+145674	@A072@Effet 
+145700	toile
+145712	@A073@Effet flou : haut et bas
+145774	@A074@Effet flou : gauche/droite
+145840	@A075@Effet de teinte : gauche/droite
+145916	@A076@Effet de teinte : haut et bas
+145988	@A0B1@ Silence @A074@
+146032	Affiche la certification.
+146084	Longueur focale
+146116	Profil couleur
+146150	Profil couleur
+146184	Profil couleur
+146218	@A0B2@Profil couleur
+146264	@A0B3@Profil couleur
+146310	@A0B4@Profil couleur
+146356	Toutes couleurs@A028@
+146400	Couleur unique@A028@
+146442	Profil monochrome
+146482	Profil monochrome
+146522	Profil monochrome
+146562	@A0B5@Profil monochrome
+146614	@A0B6@Profil monochrome
+146666	@A0B7@Profil monochrome
+146718	Aucun
+146730	Jaune
+146742	Orange
+146756	Rouge
+146768	Magenta
+146784	Bleu
+146794	Cyan
+146804	Vert
+146814	Jaune-Vert
+146836	Effet grain film
+146870	Effet grain film d
+146908	sactiv
+146924	Effet grain film faible
+146972	Effet grain film moyen
+147018	Effet grain film 
+147054	lev
+147064	Ajuster zone midtone
+147106	Hi. & Sh.@A01A@
+147138	Midtone@A01A@
+147170	init./attr. modes perso.
+147224	init. param
+147248	tres appareil photo
+147290	ou attribuer param
+147328	tres actuels
+147356	aux modes personnalis
+147400	s.
+147406	Mode personnalis
+147440	 C1
+147448	Mode personnalis
+147482	 C2
+147490	Mode personnalis
+147524	 C3
+147532	Mode personnalis
+147566	 C4
+147574	Appliquer param
+147606	tres C1
+147622	? Les
+147636	param
+147648	tres d'appareil photo actuels
+147710	seront remplac
+147740	s.
+147746	Appliquer param
+147778	tres C2
+147794	? Les
+147808	param
+147820	tres d'appareil photo actuels
+147882	seront remplac
+147912	s.
+147918	Appliquer param
+147950	tres C3
+147966	? Les
+147980	param
+147992	tres d'appareil photo actuels
+148054	seront remplac
+148084	s.
+148090	Appliquer param
+148122	tres C4
+148138	? Les
+148152	param
+148164	tres d'appareil photo actuels
+148226	seront remplac
+148256	s.
+148266	lection des modes de prise de
+148328	vue 
+148338	 attr. aux pos. mol./pav
+148392	de mode C3 et C4.
+148428	Mode mol./pav
+148456	 C3
+148464	Mode mol./pav
+148492	 C4
+148500	Param. infos objectif
+148544	Entrez infos objectif incomp.
+148606	transmission de donn
+148648	es pour
+148666	Exif et optim. de stabilisation.
+148732	Appuyez sur le bouton pour
+148788	acc
+148796	der aux param
+148824	tres
+148836	d'informations d'objectif.
+148890	Cr
+148896	er informations d'objectif
+148950	Modifier informations d'objectif
+149016	Supprimer informations d'objectif
+149084	Nom objectif
+149110	Valeur d'ouverture
+149148	Suppr. v
+149166	rification@A026@
+149200	Utiliser infos obj.@A026@
+149252	Remplacer
+149272	Enreg. en tant que nouvelle entr
+149342	@A012@ Fonct. mol./pav
+149390	Choisissez la fonction 
+149442	attribuer 
+149464	 la fonction
+149492	molette/pav
+149516	 d'exposition.
+149546	Param. mode silencieux@A048@
+149604	Autoris
+149622	Non autoris
+149648	Active la prise silencieuse.
+149712	lectionnez d
+149738	lai lib
+149754	ration
+149770	apr
+149778	s d
+149786	clencheur.
+149808	Effet artistique d
+149846	sactiv
+149862	Filtre couleur
+149892	: aucun
+149908	Filtre couleur
+149938	: jaune
+149954	Filtre couleur
+149984	: orange
+150002	Filtre couleur
+150032	: rouge
+150048	Filtre couleur
+150078	: vert
+150092	Monochrome normal
+150128	Monochrome s
+150154	pia
+150162	Monochrome bleu
+150194	Monochrome violet
+150230	Monochrome vert
+150262	Relecture/@A01E@/Stabilisateur image
+150336	C. Relecture/@A019@/Stabilisateur image
+150416	Menu pour lib
+150444	ration d
+150462	clencheur,
+150486	prise de vue s
+150516	quentielle
+150540	et stabilisateur d'image.
+150594	chec export
+150618	Les vid
+150634	os ne peuvent pas 
+150672	tre
+150682	prises en mode d
+150716	clencheur 
+150738	 distance.
+150764	lectionner Mode image.
+150810	Mesure point
+150836	Pour les @A03F@
+150872	ments s
+150888	lect., 
+150906	la mesure sera ex
+150942	cut
+150956	dans la zone de la cible AF.
+151014	N : Aucun
+151034	N : Normal
+151056	ART1@A04F@
+151078	ART1@A050@
+151100	ART3@A04F@
+151122	ART3@A050@
+151144	ART5@A04F@
+151166	ART5@A050@
+151188	ART6@A04F@
+151210	ART6@A050@
+151232	ART6@A051@
+151254	ART7@A04F@
+151276	ART7@A050@
+151298	ART8@A04F@
+151320	ART8@A050@
+151342	ART10@A04F@
+151366	ART10@A050@
+151390	ART11@A04F@
+151414	ART11@A050@
+151438	ART12@A04F@
+151462	ART12@A050@
+151486	ART13@A04F@
+151510	ART13@A050@
+151534	ART13@A051@
+151558	ART14@A04F@
+151582	ART14@A050@
+151606	ART14@A051@
+151630	C3
+151636	C4
+151642	Color Profile 1
+151674	Color Profile 2
+151706	Color Profile 3
+151738	Mono Profile 1
+151768	Mono Profile 2
+151798	Mono Profile 3
+151828	Copier
+151846	lect. copier
+151872	Nouv fichier
+151898	Remplacer
+151918	Sous-marin
+151940	@A076@Sous-marin
+151974	Erreur superpos. mise au point.
+152042	chec image composite.
+152086	@A004@Mode Image
+152120	Le d
+152130	marrage/arr
+152154	t enr. pour
+152180	enregistreur PCM reste
+152228	ind
+152236	pendant du d
+152262	marrage/arr
+152292	de l'enr. de l'appareil.
+152342	L'enr. PCM reli
+152374	 par USB
+152398	marre/arr
+152418	te auto.
+152438	l'enr. selon d
+152468	m./arr
+152488	d'enr. de l'appareil.
+152532	Sans son synchro.
+152568	L'enr. PCM reli
+152600	 par USB
+152620	cr
+152626	era un son synchro si le
+152678	@A04B@bouton est maintenu enfonc
+152748	pendant l'enregistrement vid
+152806	o.
+152812	Le volume d'enr. de l'app. et la
+152884	duction du bruit du vent ne
+152942	seront pas activ
+152976	s et le volume
+153008	d'enr. sera automatiquement ajust
+153080	par l'enr. PCM Olympus.
+153128	Le volume d'enr. peut 
+153174	tre
+153184	ajust
+153196	 par le volume d'enr.
+153242	de l'appareil photo.
+153284	@A004@Filtre bruit
+153326	lectionnez ce @A004@ mode
+153380	exclusif pour que la prise
+153436	vid
+153444	o soit post-
+153470	dit
+153478	e.
+153488	lectionnez le niv. de r
+153536	duction
+153554	du bruit pour l'enreg. vid
+153616	 sensibilit
+153640	 ISO 
+153652	lev
+153660	e.
+153670	lectionnez le niv. de r
+153718	duction
+153736	du bruit pour les photographies
+153804	 sensibilit
+153828	 ISO 
+153840	lev
+153848	e.
+153854	@A03F@Enr. synchronis
+153900	Son synchro
+153924	Volume enr. app.
+153958	@A077@Couleur att
+153994	nu
+154004	@A078@Carte pleine
+154042	@A079@Carte pleine
+154080	@A078@/@A079@Carte pleine
+154132	@A078@Carte pleine
+154170	@A079@Carte pleine
+154208	@A078@Pas image
+154240	@A079@Pas image
+154272	@A078@Erreur d'Image
+154314	@A079@Erreur d'Image
+154356	@A078@Erreur carte
+154394	@A079@Erreur carte
+154432	@A078@/@A079@Erreur carte
+154484	@A078@Erreur / @A079@Prot
+154544	@A078@Erreur / @A079@Pleine
+154600	@A078@
+154614	crit. prot
+154644	@A079@
+154658	crit. prot
+154688	@A078@/@A079@
+154716	crit. prot
+154746	@A078@Prot
+154772	e / @A079@Erreur
+154806	@A078@Prot
+154832	e / @A079@Pleine
+154866	@A078@Pleine / @A079@Erreur
+154922	@A078@Pleine / @A079@Prot
+154982	Basculer vers nv dossier
+155032	Basculer vers@A078@
+155072	Basculer vers@A079@
+155112	@A0A3@Impossible de cr
+155158	er dossier
+155180	@A0A4@Impossible de cr
+155226	er dossier
+155248	Impossible de cr
+155282	er dossier
+155304	@A078@Impossible de s
+155348	lectionner dossier
+155386	@A079@Impossible de s
+155430	lectionner dossier
+155468	@A078@L'image ne peut 
+155514	tre 
+155524	dit
+155536	@A079@L'image ne peut 
+155582	tre 
+155592	dit
+155604	@A078@S
+155620	lection image impossible
+155670	@A079@S
+155686	lection image impossible
+155736	@A07A@Erreur d'image
+155778	@A07B@Erreur d'image
+155820	@A0A3@Pas de BGM
+155854	@A0A4@Pas de BGM
+155888	@A0A3@Impression impossible
+155944	@A0A4@Impression impossible
+156000	Batt. Olympus recommand
+156050	A1. AF/MF
+156070	A2. AF/MF
+156090	A3. AF/MF
+156110	C1. D
+156122	clencher/@A013@/Stabilis. image
+156186	C2. D
+156198	clencher/@A013@/Stabilis. image
+156262	D1. 
+156272	cran/@A001@/PC
+156302	D2. 
+156312	cran/@A001@/PC
+156342	D3. 
+156352	cran/@A001@/PC
+156382	D4. 
+156392	cran/@A001@/PC
+156422	E1. Exp/ISO/BULB/@A077@
+156470	E2. Exp/ISO/BULB/@A077@
+156518	E3. Exp/ISO/BULB/@A077@
+156570	H1. Efface enreg
+156604	H2. Efface enreg
+156638	I. Viseur 
+156660	lectronique
+156684	J1. Fonction @A003@
+156724	J2. Fonction @A003@
+156764	Menu Vid
+156786	Menu pour param
+156818	tres vid
+156842	de base et d
+156868	taill
+156880	s.
+156886	Sensibilit
+156908	 C-AF
+156920	Ajuste la sensibilit
+156962	 C-AF
+156976	en fonction du mouvement
+157028	du sujet.
+157050	lev
+157060	Faible
+157074	Limiteur AF
+157098	Limite la plage AF 
+157138	 votre
+157154	sp
+157160	cification.
+157186	La distance est approximative.
+157248	Priorit
+157270	clenchement possible
+157318	me lorsque le sujet n'est pas
+157380	mis au point.
+157412	clenchement impossible
+157460	lorsque sujet pas mis au point.
+157524	Param
+157536	tres distance
+157564	Param
+157576	tre 1
+157588	Param
+157600	tre 2
+157612	Param
+157624	tre 3
+157640	finit l'affiche du cadre
+157692	cible vert de mise au point auto.
+157760	N'affiche pas le cadre.
+157808	Affiche le cadre.
+157844	Affiche le cadre lorsque le d
+157904	clench.
+157922	est enfonc
+157948	 mi-course.
+157972	Pr
+157982	glage MF
+158000	Pr
+158010	glage Dist. MF
+158044	finit distance pr pr
+158090	glage MF.
+158112	La distance est approximative.
+158174	Bascule en mode Pr
+158216	glage MF.
+158236	Bascule IS sur On/Off.
+158284	Appuyez sur bas et tournez molette
+158356	pour basculer entre les modes IS.
+158424	Bascule limiteur AF sur marche/arr
+158494	t.
+158502	Appuyez sur bas et tournez cadran
+158572	pour s
+158586	lectionner la distance.
+158634	Appuyez pour afficher cadre @A042@
+158706	pour ciblage.
+158736	Une fois la cible d
+158776	finie, rappuyez
+158810	pour activer mode @A042@.
+158862	Appuyez pour basculer sur val.
+158926	par d
+158938	faut d
+158952	finie@A078@. Rappuyez pr
+159004	revenir.
+159022	@A004@Param. levier Fn
+159068	Attribuez une fonction au levier Fn
+159142	pour la photographie.
+159186	@A003@Fonction levier Fn
+159236	Fonction Basculer@A0A9@
+159284	@A004@Fonction levier Fn
+159334	Attribuez une fonction au levier Fn
+159408	pour enregistrer des vid
+159458	os.
+159466	Modifie la fonction de la molette.
+159536	Change le mode AF/@A0AA@/@A0AB@.
+159604	La cible est s
+159634	lectionnable.
+159662	Attribue les modes de prise de vue :
+159738	Position 1 : param. molette de mode.
+159814	Position 2 : mode@A004@.
+159864	@A07E@Verrou.
+159896	lection. On pr d
+159930	sactiv. @A07E@.
+159962	Levier Fn/Levier Alim.
+160008	Utilis. Levier Fn comme bouton alim.
+160084	Utilisez le levier Fn pr des fonctions
+160164	sp
+160170	cifiques. Utiliser le bouton d'alim.
+160246	pour contr
+160268	ler l'alimentation.
+160308	Alimentation 1
+160338	Attribuez une alim au levier Fn
+160404	comme suit :
+160432	Position 1 : Marche
+160474	Position 2 : Arr
+160514	Levier d'alim d
+160546	sactiv
+160564	Alimentation 2
+160594	Attribuez une alim au levier Fn
+160660	comme suit :
+160688	Position 1 : Arr
+160728	Position 2 : Marche
+160770	Levier d'alim d
+160802	sactiv
+160820	CWB Kelvin
+160846	@A049@Param
+160870	tres
+160880	@A04A@Param
+160904	tres
+160914	Fps max
+160930	Limiteur nbre d'images
+160976	Priorit
+160992	 de stabilisation image
+161042	pour prise de vue continue.
+161098	Priorit
+161114	 fps
+161124	La vitesse de prise de vue a
+161184	la priorit
+161206	 sur stabilisation image.
+161258	Priorit
+161274	 IS
+161282	Stabilisation image a la
+161334	priorit
+161350	 sur vitesse de prise de vue.
+161410	@A004@Sortie HDMI
+161450	finit param
+161474	tres de sortie
+161506	pour enregistrement vid
+161560	HDMI.
+161572	Mode de sortie
+161602	Param
+161614	tres de mode de sortie
+161662	aux appareils connect
+161706	s en HDMI.
+161728	Mode Moniteur
+161756	Transmet vid
+161782	o et affichage d'info
+161830	 l'appareil. Ce mode est
+161882	recommand
+161902	 lorsque l'appareil est
+161952	utilis
+161966	 comme un moniteur.
+162006	Mode Enregistr.
+162038	Transmet la vid
+162070	o uniquement, sans
+162110	affichage d'info. Ce mode est
+162172	recommand
+162192	 pour l'enregistrement
+162240	vid
+162248	o avec l'appareil.
+162292	Bit REC
+162312	Taille de sortie
+162346	4K
+162352	Fr
+162358	q. trame de sortie
+162400	@A004@Param
+162424	tres sp
+162440	cification
+162462	Param
+162474	tres pour la qualit
+162514	 vid
+162524	o.
+162530	@A004@@A024@
+162556	Enregistre la vid
+162592	o en r
+162606	solution
+162626	4096 x 2160 (17:9).
+162666	Enregistre la vid
+162702	o en r
+162716	solution
+162736	3840 x 2160 (16:9).
+162776	Enregistre la vid
+162812	o en r
+162826	solution
+162846	1920 x 1080 (16:9).
+162886	Enregistre la vid
+162922	o en r
+162936	solution
+162956	1280 x 720 (16:9).
+162994	Param
+163006	tres@A013@/@A014@
+163042	Lors de la s
+163068	lection de @A013@ou@A014@,
+163124	vous pouvez ignorer les 
+163178	ments
+163192	qui n'ont pas 
+163226	 s
+163232	lectionn
+163250	s@A03F@.
+163268	Grille guide affich
+163308	e sur
+163322	l'
+163328	cran pendant Live View.
+163376	Couleur d'affichage
+163416	Pr
+163426	glage 1
+163442	Pr
+163452	glage 2
+163468	@A079@
+163482	Appl. param. au viseur
+163528	N'applique pas les param
+163578	tres de
+163596	grille de l'
+163622	cran arri
+163642	re au viseur.
+163670	Applique les param
+163708	tres de
+163726	grille de l'
+163752	cran arri
+163772	re au viseur.
+163800	Param. de grille du viseur
+163854	Grille guide affich
+163894	e sur le viseur.
+163928	Param
+163940	tres macro LV
+163968	Param
+163980	tres pour la m
+164010	thode
+164024	d'affichage de Macro LV.
+164074	@A046@ Param
+164100	tres
+164110	Param
+164122	tres pour la m
+164152	thode
+164166	d'affichage d'aper
+164204	u.
+164212	Pendant Macro LV, la luminosit
+164278	est r
+164290	gl
+164296	e pr faciliter la confirmation.
+164360	Pendant Macro LV, la luminosit
+164426	n'est pas r
+164450	gl
+164456	e et l'
+164472	cran est
+164492	aussi lumineux qu'avant
+164542	Macro LV.
+164562	Pendant l'aper
+164592	u, la luminosit
+164628	est r
+164640	gl
+164646	e pr faciliter la confirmation.
+164710	Pendant l'aper
+164740	u, la luminosit
+164776	n'est pas r
+164800	gl
+164806	e et l'
+164822	cran est
+164842	aussi lumineux qu'avant
+164892	l'aper
+164906	u.
+164912	@A006@@A07A@ Info
+164948	Agrandir image
+164978	Agrandir d
+165000	filement
+165022	lectionner image
+165056	Param
+165068	tres@A0AA@
+165090	Lors de la s
+165116	lection du mode
+165150	cible AF, vous pouvez ignorer
+165212	les 
+165226	ments non s
+165250	lectionn
+165268	s@A058@.
+165286	@A07C@Param
+165310	tres perso.
+165334	Param. pr m
+165358	thode fonctionnement
+165402	pr l'
+165414	cran de s
+165434	lect. de la cible AF.
+165478	Ensemble 1
+165500	Ensemble 2
+165522	@A0AA@
+165536	@A0AB@
+165550	@A008@
+165564	Enregistre mode AF
+165604	par d
+165616	faut/@A0AA@/@A0AB@.
+165656	Param
+165668	tres d
+165682	taill
+165694	s lorsque
+165716	sensibilit
+165738	 ISO d
+165752	finie sur AUTO.
+165784	Valeur maximale/d
+165820	faut
+165830	Param
+165842	tre S/S bas
+165866	Lorsque la vit. de d
+165908	clench. atteint
+165942	la limite inf
+165970	rieure, la sensibilit
+166014	 ISO
+166026	commencera 
+166050	 augmenter.
+166076	Valide en mode P ou A.
+166122	Param. emplacement carte
+166172	Param
+166184	tres pour enregistrer
+166230	et lire avec la carte.
+166276	@A003@Param. Enregistr.
+166324	Standard
+166342	Enregistre sur carte d
+166388	finie uniqu.
+166414	Basculement auto.
+166450	Lorsque la carte d
+166488	finie est pleine,
+166526	bascule vers l'autre carte avant de
+166600	poursuivre la prise de vue.
+166656	Double ind
+166678	pend.@A081@
+166702	Enregistre sur les deux cartes en
+166772	appliquant leurs param. respectifs.
+166846	Si une carte est pleine, il n'est pas
+166924	possible d'enregistrer sur l'autre.
+166996	Double ind
+167018	pend.@A082@
+167042	Enregistre sur les deux cartes en
+167112	appliquant leurs param. respectifs.
+167190	me si une carte est pleine, il est
+167262	possible d'enregistrer sur l'autre.
+167334	Double identique@A081@
+167380	Enregistre sur les deux cartes en
+167450	appliquant les m
+167484	mes param.@A003@@A024@.
+167534	Si une carte est pleine, il n'est pas
+167612	possible d'enregistrer sur l'autre.
+167684	Double identique@A082@
+167730	Enregistre sur les deux cartes en
+167800	appliquant les m
+167834	mes param.@A003@@A024@.
+167888	me si une carte est pleine, il est
+167960	possible d'enregistrer sur l'autre.
+168032	@A003@Emplac. enregistr.
+168082	@A004@Emplac. enregistr.
+168132	@A006@Emplac.
+168160	Dossier enregistr.
+168198	Attribuer
+168218	Ne pas attrib.
+168248	Copier toutes les images enregistr.
+168322	sur une carte vers l'autre.
+168378	Attribuer dossier 
+168416	 Copier vers
+168442	Dossier existant
+168476	Nouveau dossier
+168508	Param
+168520	tres batterie
+168548	Voir info et param
+168586	tres batterie.
+168616	Priorit
+168632	 batterie
+168654	tat de la batterie
+168696	gradation
+168716	Charge rest.
+168746	 de s
+168758	rie
+168766	Nbre prises
+168790	Type batterie
+168818	Dur
+168826	e bouton enfonc
+168864	finit dur
+168884	e maintien enfonc
+168920	 du
+168930	bouton pr chaque fonction avec
+168994	activation du maintien enfonc
+169058	Fin LV@A07A@
+169084	Maintien enfonc
+169116	 du bouton d
+169142	sign
+169156	termine macro LV ou l'affichage
+169222	de l'image macro LV.
+169264	Fin @A042@
+169286	Maintien enfonc
+169318	 du bouton d
+169344	sign
+169358	termine macro@A042@ ou l'affichage
+169430	de l'image macro@A042@.
+169478	Fin @A006@@A07A@
+169512	Maintien enfonc
+169544	 du bouton d
+169570	sign
+169584	termine macro@A035@ ou l'affichage
+169656	de l'image macro@A035@.
+169704	Ins
+169712	rer tonalit
+169736	 Slate
+169750	Maintenir enfonc
+169784	 @A04B@ pdt enregistr.
+169832	vid
+169840	o et l'enregistreur PCM connect
+169908	en USB ins
+169930	re une tonalit
+169960	 Slate.
+169980	initialiser @A078@
+170018	Le maintien enfonc
+170056	 du bouton @A035@
+170094	retourne @A078@ au centre de l'
+170158	cran
+170170	de s
+170180	lection de la cible AF.
+170232	initial. Image LV@A07A@
+170280	Le maintien enfonc
+170318	 du bouton @A035@
+170356	retourne l'image macro au centre
+170424	de l'
+170436	cran Live View.
+170472	initialiser @A043@
+170510	Le maintien enfonc
+170548	 du bouton @A035@
+170590	initialise les valeurs @A043@ 
+170652	 celles
+170670	par d
+170682	faut sur l'
+170706	cran de config.
+170742	initialiser @A007@
+170780	Quand @A007@ attribu
+170826	 pos. molette,
+170858	le maintien enfonc
+170896	 du bouton @A035@
+170938	initialise la valeur de compensation
+171014	d'expos. 
+171034	 celle par d
+171060	f. sur l'
+171080	cran
+171092	d'attente de prise de vue.
+171150	initialiser @A07B@
+171188	Maintenir enfoncer le bouton @A035@
+171266	initialise les param. 
+171312	clairage
+171332	& ombrage 
+171354	 ceux par d
+171378	faut
+171390	sur l'
+171404	cran de config.
+171436	Terminer @A07C@
+171468	Le maintien enfonc
+171506	 du bouton @A07C@
+171548	sactive la compensation Keystone.
+171620	initialiser @A07C@
+171658	Maintenir enfoncer le bouton @A035@
+171736	initialise les param. de comp.
+171800	Keystone 
+171820	 ceux par d
+171844	faut sur
+171864	l'
+171870	cran de config.
+171906	initialiser image @A042@
+171956	Le maintien enfonc
+171994	 du bouton @A035@
+172032	retourne l'image macro vid
+172086	o t
+172098	con
+172110	 la position centrale.
+172164	initialiser @A009@
+172202	Maintenir enfoncer le bouton @A035@
+172280	initialise les param. d'intensit
+172350	du flash en attente de prise de vue
+172424	qd @A009@ est attribu
+172472	 la molette.
+172498	Basculer verrou @A045@
+172544	Le maintien enfonc
+172582	 du bouton
+172606	attribu
+172626	 Verrou@A045@ bascule
+172672	Verrou@A045@ sur on/off.
+172722	Basculer @A061@/@A062@
+172768	Le maintien enfonc
+172806	 du bouton
+172830	attribu
+172850	 @A061@@A062@ d
+172882	sactive
+172900	les modes @A061@/@A062@.
+172950	Afficher param. BKT
+172990	Le maintien enfonc
+173028	 du bouton
+173052	attribu
+173072	 BKT affiche l'
+173104	cran
+173116	des param
+173136	tres BKT.
+173156	Bascul. auto. viseur
+173198	Le maintien enfonc
+173236	 du bouton
+173260	attribu
+173280	 @A03D@ affiche l'
+173318	cran
+173330	des param
+173350	tres de bascul. auto@A03D@.
+173406	Capture Pro H
+173434	Capture Pro L
+173462	Effet : 
+173480	lev
+173490	Effet : Faible
+173520	Effet : Standard
+173554	Limiteur AF : Off
+173590	@A07D@ pour actualiser dist.
+173652	initialiser / Modes perso.
+173706	Attribuer 
+173728	 mode perso.
+173754	Rappeler de mode perso.
+173802	Port
+173812	e de la r
+173832	initialisation
+173864	diter film
+173886	Capturer images vid
+173930	Coupure vid
+173958	Suppression sc
+173988	ne s
+173998	lectionn
+174016	e.
+174022	@A002@Suppression sc
+174064	ne s
+174074	lectionn
+174092	e.
+174098	@A004@Param
+174122	tres d'enregistrement audio
+174178	@A004@Param
+174202	tres d'affichage
+174236	Param
+174248	tres d'affichage des infos
+174304	pendant l'enregistrement vid
+174362	o.
+174368	@A004@Param
+174392	tres d'info
+174416	Choisissez les infos affich
+174472	es
+174480	lorsque le bouton @A01A@ est enfonc
+174556	Grille
+174570	@A004@R
+174586	glage
+174598	Choisissez les contr
+174640	les affich
+174668	lorsque @A035@ est enfonc
+174724	en mode film.
+174752	@A087@Mod
+174772	le d'affichage
+174806	finit la m
+174828	thode d'affichage
+174866	de la charge de la batterie
+174924	pendant l'enregistrement vid
+174982	o.
+174988	@A078@@A004@@A024@
+175026	@A078@@A003@@A024@
+175064	@A079@@A004@@A024@
+175102	@A079@@A003@@A024@
+175144	lectionnez la carte 
+175186	 configurer
+175210	Mise 
+175222	 jour du micrologiciel
+175268	@A002@ Lorsque le micrologiciel est mis
+175352	 jour,vous ne pourrez pas revenir
+175424	 l'ancien micrologiciel.
+175474	@A056@Fonction
+175504	@A0B5@Fonction
+175534	@A0B6@Fonction
+175564	@A0B7@Fonction
+175594	Scanner AF
+175616	Param
+175628	tres du scanner AF
+175668	au d
+175678	clenchement AF ou qd
+175722	AF est en cours d'ex
+175764	cution.
+175780	Si le sujet est flou ou si le
+175842	contraste est faible, le Scanner
+175910	AF sera d
+175930	sactiv
+175948	Si le sujet est flou ou si le
+176010	contraste est faible, le Scanner
+176078	AF sera ex
+176100	cut
+176108	 une fois seulement.
+176150	Si le sujet est flou ou si le
+176212	contraste est faible, le Scanner
+176280	AF sera quand m
+176312	me activ
+176334	@A003@Mode AF
+176366	finir la m
+176388	thode AF pour
+176418	la photographie.
+176452	@A003@Stabilisateur
+176496	finit le mode de stabilisation
+176560	d'image pour la photographie.
+176620	@A003@Touche Fonction
+176668	lectionnez des fonctions 
+176724	attribuer 
+176746	 chaque bouton pour
+176788	la photographie.
+176822	@A003@Fonction molette/pav
+176882	lectionnez des fonctions 
+176938	attribuer 
+176960	 chaque pos. de molette
+177010	pour la photographie.
+177054	@A003@Filtre bruit
+177092	@A003@Vitess. zoom 
+177132	lectr.
+177150	finissez les vitesses de zoom
+177212	pour la photographie lors de
+177272	l'utilisation d'un zoom 
+177322	lectronique.
+177348	@A003@@A024@
+177378	lectionnez les param
+177420	tres de
+177438	qualit
+177452	 d'image pour la photo.
+177500	@A004@Touche/cadran/levier
+177558	lectionnez les fonctions 
+177614	attribuer aux boutons et position
+177684	de molette pour la vid
+177730	o.
+177736	@A004@Touche Fonction
+177784	lectionnez les fonctions 
+177840	attribuer 
+177862	 chaque bouton
+177894	pour la vid
+177918	o.
+177924	@A004@Vitess. zoom 
+177964	lectr.
+177982	finissez les vitesses de zoom
+178044	pour la vid
+178068	o lors de l'utilisation
+178118	d'un zoom 
+178140	lectronique.
+178166	@A004@Param
+178190	tres AF/IS
+178216	lectionnez le mode stabilisateur
+178284	d'image et la m
+178316	thode de mise
+178346	au point pour la vid
+178388	o.
+178394	@A004@Mode AF
+178426	finissez la m
+178454	thode de mise
+178484	au point pour la vid
+178526	o.
+178532	@A004@Stabilisateur
+178572	Modifiez le mode stabilisateur
+178636	d'image pour la vid
+178676	o.
+178682	Connexion au smartphone
+178734	 l'aide du @A0B8@ int
+178778	gr
+178790	glages @A0B8@
+178818	Menu - @A0B8@ int
+178854	gr
+178868	gl. connexion @A0B8@
+178914	lectionner la connexion @A0B8@
+178980	lectionner la
+179010	connexion @A0B8@ 
+179050	 chaque fois.
+179082	initialiser r
+179110	glages @A0B8@
+179138	@A003@ Attention, r
+179178	initialiser tous
+179214	les r
+179226	glages @A0B8@
+179254	Pr
+179260	paration de la connexion @A0B8@
+179324	Pour connecter votre smartphone.
+179392	Cette configuration est n
+179444	cessaire
+179464	une seule fois.
+179498	La connexion @A0B8@ se lancera 
+179564	plus tard.
+179586	Lancement du @A0B8@
+179626	Arr
+179634	t du @A0B8@
+179662	sactive le @A0B8@ int
+179706	gr
+179716	Fin @A0B8@@A01E@
+179750	Si la vit. d'obturation est @A07E@
+179822	ou moins, le 1er rideau de l'obt.
+179892	est r
+179904	gl
+179914	lectroniquement. 
+179956	lectionnez le d
+179988	lai apr
+180010	le rel
+180024	chement du d
+180050	cl.
+180058	4K
+180064	C4K
+180072	Color
+180084	Color / Vivid
+180112	MOV 3840
+180130	2160
+180140	MOV 4096
+180158	2160
+180168	MOV 1920
+180186	1080
+180196	MOV 1280
+180214	720
+180222	Cadres pr
+180242	-d
+180248	clench.
+180264	Param. de grille
+180298	@A004@Fonction molette/pav
+180358	lectionnez les fonctions 
+180414	attribuer 
+180436	 chaque position de
+180478	molette pour la vid
+180518	o.
+180524	@A078@R
+180540	glage initial
+180568	@A078@Mesure point
+180606	Viseur 
+180622	lectronique
+180646	Bascule viseur/
+180678	cran
+180688	Zone AF perso.
+180718	Accueil@A078@
+180746	@A07F@i-Enhance
+180782	sactivez la d
+180810	tection auto
+180838	du viseur 
+180860	lectronique.
+180888	@A03D@ : pour basculer entre l'
+180952	cran
+180964	et le viseur.
+180992	Appuyez pour ex
+181024	cuter S-AF.
+181048	Les fonctions des boutons @A0A9@
+181116	ne sont pas modifi
+181154	es en @A0BB@.
+181182	En @A0BB@, les fonctions 
+181236	des boutons @A0A9@ passent
+181292	vers @A0BC@: BKT et @A0BD@:@A0BE@.
+181366	sactive la fonction
+181408	levier Fn.
+181430	@A080@Doux
+181452	@A078@@A01C@
+181482	lectionnez le mode
+181522	d'affichage du viseur.
+181568	Basculez automatiquement
+181620	de l'
+181632	cran vers le viseur
+181674	lorsque celui-ci d
+181712	tecte l'
+181730	il.
+181738	Param
+181750	tres d
+181764	taill
+181776	s pour
+181792	prise de vue @A04A@.
+181838	lectionner On pour afficher
+181896	la jauge de niveau dans l'EVF.
+181960	Activer pendant le @A03C@.
+182014	Param
+182026	tres d
+182040	taill
+182052	s pour
+182068	prise de vue @A049@.
+182114	lectionnez la vitesse
+182160	d'affichage du viseur.
+182206	Transmet Bit REC de l'app. photo
+182276	 l'appareil d'enregistr. connect
+182346	Transmet le Time Code de l'app.
+182412	photo 
+182426	 l'app. d'enregistr. connect
+182492	lectionnez le mode
+182532	d'affichage EVF.
+182566	@A089@Couleur att
+182602	nu
+182612	@A081@Sous-marin
+182650	lectionnez le point cible AF
+182710	et le mode cible AF.
+182752	17:9
+182762	@A0B9@Vivid
+182786	@A0BA@Natural
+182814	@A0BB@Portrait
+182844	Impossible de s
+182876	lectionner dossier
+182914	Fn
+182920	Priorit
+182936	 50p
+182946	Priorit
+182962	 60p
+182972	G. @A024@/WB/Couleur
+183014	Enregistr. PCM
+183044	Flash
+183056	Hyperfocus
+183078	Plusieurs photos sont prises,
+183140	avec la mise au point l
+183192	rement
+183208	recul
+183220	e 
+183226	 chaque prise.
+183258	Les images ne sont pas
+183306	superpos
+183324	es.
+183332	Plusieurs photos sont prises,
+183394	avec la mise au point l
+183446	rement
+183462	avanc
+183474	e et recul
+183496	e par rapport au
+183532	point initial. Les images sont
+183596	ensuite superpos
+183630	es.
+183638	La lum. Live View
+183676	refl
+183686	te les param
+183712	tres d'exposition.
+183752	La lum. de l'image aper
+183800	ue est
+183816	identique 
+183838	 celle de l'image 
+183878	finale.
+183894	La lum. Live View ne refl
+183946	te pas
+183962	les param. d'expo. et est ajust
+184032	pour un affich. optimal. La lum. de
+184106	l'image finale sera diff
+184156	rente.
+184170	La luminosit
+184196	 Live View ne suivra
+184240	pas les param. d'expo. et sera
+184304	optimis
+184320	e en r
+184334	duis. la fr
+184358	q.
+184366	d'img pour les sc
+184402	nes sombres.
+184430	La luminosit
+184456	 de l'img fin. sera diff.
+184508	@A040@ : D
+184530	but/Fin enreg vid
+184566	o.
+184572	@A082@Effet Soft focus
+184618	@A083@Effet St
+184648	nop
+184658	@A084@Effet Fondu bords blancs
+184720	@A085@Effet encadr
+184760	@A086@Effet 
+184786	toile
+184798	@A087@Effet flou : haut et bas
+184860	@A088@Effet flou : gauche/droite
+184926	@A089@Effet de teinte : gauche/droite
+185002	@A08A@Effet de teinte : haut et bas
+185074	@A078@Erreur D
+185104	tection visage
+185134	@A079@Erreur D
+185164	tection visage
+185194	@A107@
+185210	largi
+185224	troit
+185236	Traitement sans blanchiment
+185292	Trait. sans blanchiment@A04F@
+185352	Trait. sans blanchiment@A050@
+185416	glages du mode@A004@
+185458	Valeur 
+185474	gale
+185484	Terminer @A090@
+185516	Compensation Fisheye
+185558	Angle
+185570	Compensation Fisheye 1
+185616	Compensation Fisheye 2
+185662	Compensation Fisheye 3
+185708	Correction@A091@/@A092@
+185756	Compensation Fisheye
+185798	Bouton cliquer-d
+185832	poser
+185846	attribu
+185862	 au @A090@
+185886	pour d
+185900	sactiver le @A090@.
+185940	Active/D
+185958	sactive
+185976	la compensation
+186010	Fisheye.
+186028	Appuyez pour lancer la v
+186078	rification
+186102	du scientillement. Laissez appuy
+186172	pour quitter.
+186202	Validez sur mode S ou M.
+186252	@A004@Scan scintillement
+186302	@A0CC@Trait. sans blanchiment
+186362	@A08C@Trait. sans blanchiment@A04F@
+186434	@A08D@Trait. sans blanchiment@A050@
+186510	gl. par d
+186530	faut@A006@@A07A@
+186564	Ajuste les r
+186590	glages
+186606	pour le mode @A004@.
+186648	Corrige la distortion d'un objectif
+186722	fisheye pour cr
+186754	er une image
+186782	super grand-angle.
+186820	Identifie le scintillement et ajuste
+186896	la vitesse de l'obturateur en
+186958	mode S ou M.
+186988	lectionne la valeur par d
+187040	faut
+187052	pour le grossissement de lecture
+187120	d'image.
+187138	Identifie le scintillement et ajuste
+187214	la vitesse de l'obturateur en
+187276	mode S ou M.
+187302	Le plus r
+187322	cent
+187332	@A003@Scan scintillement
+187382	Scan scintillement
+187420	ART15@A04F@
+187444	ART15@A050@
+187468	Si GPS sur ON, le GPS continue 
+187538	fonctionner m
+187566	me si vous 
+187596	connectez l'appareil.
+187644	lectionnez la vitesse
+187690	d'affichage du viseur.
+187736	Enreg. emplac. GPS
+187774	La fonction journal ne peut
+187832	pas 
+187842	tre utilis
+187864	e pour le moment.
+187900	Ajust. auto. dur
+187938	Les donn
+187956	es d'emplacement ne
+187998	seront pas ajout
+188032	es 
+188040	 votre photo.
+188068	Les donn
+188086	es d'emplacement
+188122	seront ajout
+188148	es 
+188156	 votre photo. 
+188188	Choisir On pour activer le GPS.
+188256	gler la date et l'heure 
+188308	manuellement.
+188336	L'appareil photo r
+188374	gle la date
+188400	et l'heure automatiquement
+188456	d'apr
+188468	s les informations du
+188514	GPS. Le GPS sera utilis
+188568	uniquement au moment du r
+188620	glage.
+188634	Niveau de conservation du niveau
+188702	de batterie prioritaire sur la pr
+188770	cision
+188786	du GPS.
+188802	Pr
+188808	cision du GPS prioritaire 
+188864	sur la conservation du niveau de 
+188934	batterie.
+188954	Niveau batterie
+188986	Priorit
+189002	 GPS
+189012	Pr
+189018	cision GPS
+189040	@A08B@ @A01A@
+189068	Ajout de donn
+189096	es d'emplacement
+189132	GPS 
+189142	 votre photo. Choisir On
+189194	pour activer le GPS.
+189236	Priorit
+189252	 GPS pour le suivi journal.
+189312	gler la date et l'heure de 
+189370	l'appareil photo ou le
+189418	fuseau horaire.
+189450	@A022@ Param
+189476	tres
+189486	@A022@
+189500	Fuseau horaire
+189530	Film instantan
+189562	@A08E@Film instantan
+189610	glages @A08F@/Bluetooth
+189658	Ajuste les
+189686	glages @A08F@ et Bluetooth.
+189742	Disponibilit
+189770	@A099@/Bluetooth est enti
+189822	rement
+189842	sactiv
+189856	. Impossible d'
+189888	tablir
+189904	une connexion.
+189934	@A099@/Bluetooth est disponible
+190000	pour une connexion.
+190040	Mot de passe de connexion
+190092	@A040@: Modifier les mots de passe
+190164	de connexion. Des nouveaux mots
+190230	de passe seront g
+190280	automatiquement.
+190318	initialiser les r
+190354	glages
+190368	@A002@ R
+190386	initialiser tous les r
+190432	glages
+190448	Bluetooth et @A08F@ ?
+190492	Veille hors tension
+190532	La connexion @A08F@/Bluetooth
+190594	ne peut pas 
+190620	tre 
+190630	tablie par
+190654	un appareil lorsque celui-ci
+190714	est hors tension.
+190750	La connexion @A08F@/Bluetooth
+190812	peut 
+190824	tre 
+190834	tablie par un appareil
+190886	me lorsque celui-ci
+190928	est hors tension.
+190964	Choisissez d'activer
+191008	la veille hors tension chaque fois
+191080	que l'appareil est hors tension.
+191146	Activez la veille hors tension
+191210	@A08F@/Bluetooth. Les images peuvent
+191286	ainsi 
+191300	tre import
+191322	es lorsque 
+191348	l'appareil est hors tension.
+191406	Veille hors tension : Off
+191458	Veille hors tension : On
+191508	Confimer 
+191528	 chaque fois
+191554	Ne plus montrer ce message
+191608	Choisissez d'activer la veille
+191672	hors tension chaque fois que
+191732	l'appareil est hors tension. Ce r
+191800	glage
+191814	peut 
+191826	tre modifi
+191848	 dans le menu.
+191878	Transfert de donn
+191914	es en cours...
+191944	Annuler
+191960	Poursuivre
+191982	Annuler le transfert de donn
+192040	es
+192048	et allumer l'appareil.
+192094	Annuler toutes les pr
+192138	-s
+192144	lections
+192164	de transfert d'images existantes.
+192232	@A093@ Couleur chaude@A01A@
+192292	glez les param
+192322	tres de prise
+192352	de vue avec un enregistreur
+192410	PCM Olympus connect
+192454	@A078@Pas de carte
+192492	@A079@Pas de carte
+192530	INFO_CONTINUE_TRANSFER_2
+192580	Fichiers restants
+192618	teindre apr
+192642	s transfert
+192668	teindre imm
+192692	diatement
+192712	L'alim. s'
+192734	teint automatiquement
+192780	apr
+192788	s le transfert de tous les fichiers.
+192862	Annule le transfert vers le PC
+192926	et met l'appareil hors tension.
+192990	Transfert en cours...
+193034	INFO_WAIT_SP_TRANSFERRED
+193084	Veuillez attendre la fin du transfert.
+193164	L'alim. s'
+193186	teint automatiquement.
+193232	Prise de vue avec
+193270	la fonction BULB
+193304	CAUTION_HIGH_RES_SHOT_CANCELED
+193366	Erreur prise de vue hte r
+193418	s.
+193426	L'image composite a 
+193468	chou
+193482	@A003@ISO
+193502	@A003@ISO recommand
+193544	@A003@ISO extension
+193584	@A004@ISO
+193604	@A004@ISO recommand
+193646	@A005@ISO extension
+193686	@A003@WB
+193704	@A004@WB
+193722	@A003@Kelvin
+193748	@A004@Kelvin
+193774	@A003@Auto @A094@
+193810	@A003@@A095@5300K @A094@
+193860	@A003@@A096@7500K @A094@
+193910	@A003@@A097@6000K @A094@
+193960	@A003@@A098@3000K @A094@
+194010	@A003@@A099@4000K @A094@
+194060	@A003@@A036@5500K @A094@
+194110	@A003@@A01E@ @A094@
+194150	@A003@@A01F@ @A094@
+194190	@A003@@A020@ @A094@
+194230	@A003@@A021@ @A094@
+194270	@A004@Auto @A094@
+194306	@A004@@A095@5300K @A094@
+194356	@A004@@A096@7500K @A094@
+194406	@A004@@A097@6000K @A094@
+194456	@A004@@A098@3000K @A094@
+194506	@A004@@A099@4000K @A094@
+194556	@A004@@A036@5500K @A094@
+194606	@A004@@A01E@ @A094@
+194646	@A004@@A01F@ @A094@
+194686	@A004@@A020@ @A094@
+194726	@A004@@A021@ @A094@
+194766	MOVIE_PIC_MODE_LOG
+194804	@A003@CWB @A094@
+194838	@A004@CWB @A094@
+194872	Live view@A033@
+194904	AF continu + MF
+194936	Suivi AF + MF
+194964	Prise de vue@A01A@
+195002	Prise ND directe : ND2(1EV)
+195058	Prise ND directe : ND4(2EV)
+195114	Prise ND directe : ND8(3EV)
+195170	Prise ND directe : ND16(4EV)
+195228	Prise ND directe : ND32(5EV)
+195286	@A003@Emplac. enregistr. @A078@
+195350	@A003@Emplac. enregistr. @A079@
+195414	@A004@Emplac. enregistr. @A078@
+195478	@A004@Emplac. enregistr. @A079@
+195542	Prise de vue
+195568	Photo avec appareil
+195610	stabilis
+195628	 sur tr
+195644	pied.
+195656	Photo avec appareil en main.
+195720	lai de traitement requis
+195772	apr
+195780	s prise de vue.
+195814	Flash non disponible.
+195858	Prise ND directe
+195892	Num
+195900	ro ND
+195912	Simulation LV
+195940	Vitesse lente d'obturation
+195996	invisible dans Live View.
+196048	Vitesse lente d'obturation
+196104	visible dans Live View.
+196154	Diff
+196164	re de l'image finale.
+196208	Live View ne s'affiche pas
+196264	en tant qu'image miroir
+196314	lorsque l'
+196336	cran est invers
+196372	Live View s'affiche
+196414	en tant qu'image miroir
+196464	lorsque l'
+196486	cran est invers
+196522	Infos capt. de champ
+196564	Informations 
+196592	 mi-course
+196614	Les infos restent cach
+196660	es
+196672	me lorsque le d
+196704	clencheur
+196726	est enfonc
+196752	 mi-course.
+196776	Les infos sur l'expo. et
+196828	la dist. focale de l'objectif
+196890	s'affichent uniq. lorsque
+196944	le d
+196954	cl. est enfonc
+196988	 mi-course.
+197012	La luminosit
+197038	 Live View ne suivra
+197082	pas les param. d'expo. et sera
+197146	ajust. de fa
+197172	on optimale en augm.
+197216	le gain dans les zones sombres.
+197282	La luminosit
+197308	 de l'img fin. sera diff.
+197360	La luminosit
+197386	 Live View ne suivra
+197430	pas les param. d'expo. et sera
+197494	ajust. de fa
+197520	on optimale en augm.
+197564	le gain dans les zones sombres.
+197630	La luminosit
+197656	 de l'img fin. sera diff.
+197708	Param
+197720	tres On2
+197738	Priorit
+197758	 la qualit
+197782	Prior. 
+197798	 la fr
+197812	q. d'img
+197830	Pour Live View, la qualit
+197882	 est prio.
+197906	par rapp. 
+197928	 la fr
+197942	q. d'img.
+197964	La fr
+197976	q. d'img sera r
+198008	duite
+198022	lors des sc
+198046	nes sombres.
+198072	Pour Live View, la fr
+198116	q. d'img
+198136	est prio. sur la qualit
+198190	Les coul. pvt dispara
+198234	tre
+198244	lors des sc
+198268	nes sombres.
+198296	L'img fin. n'en sera pas affect
+198360	e.
+198366	LV anti-scintillement
+198410	Photo antiscintillement
+198458	Les scintillements comme les expo.
+198530	et coul. in
+198554	g. seront r
+198578	duits.
+198594	Le d
+198604	lai de d
+198622	clench. de l'obturateur
+198672	peut 
+198684	tre plus long.
+198716	Valide avec 1 obturateur m
+198770	canique.
+198788	Le mode
+198806	Photo anti-scintillement
+198858	ne fonctionnera pas.
+198900	@A003@ISO auto
+198930	@A09B@ISO auto
+198960	@A003@R
+198976	gl. ISO auto
+199002	@A09B@R
+199018	gl. ISO auto
+199044	@A003@Faible trait. ISO
+199092	INFO_S_NOISE_REDUCTION_MODE_1
+199152	INFO_S_NOISE_REDUCTION_MODE_2
+199212	Molette M/B
+199236	Commute mode AF / cible AF /
+199296	point cible AF en fonction de
+199358	la position du levier Fn.
+199412	La cible peut 
+199442	tre s
+199454	lect.
+199466	@A0AB@ Param
+199492	tres
+199502	@A0AC@Bouton d'arr
+199544	@A0AC@S
+199560	lecteur multiple
+199594	@A0AC@Cadran avant
+199632	@A0AC@Cadran arri
+199668	re
+199674	@A0AC@Bouton @A007@
+199714	@A0AC@Bouton @A0AD@
+199754	@A0AC@Bouton @A034@
+199794	@A0AE@S
+199810	lecteur multiple
+199844	@A0AE@Cadran avant
+199882	@A0AE@Cadran arri
+199918	re
+199924	Levier Fn
+199944	Bouton @A0AF@
+199972	Bouton @A010@
+200000	Bouton @A082@
+200030	cran tactile
+200056	Bouton central@A0AC@
+200098	Mode cible AF
+200126	Point cible AF
+200156	Touche direction@A0AD@
+200202	@A0AD@ :Off
+200226	INFO_JOY_CROSS_KEY_DIRECT_ON
+200284	Mode personnalis
+200318	 C1
+200326	Mode personnalis
+200360	 C2
+200368	Mode personnalis
+200402	 C3
+200410	Mode personnalis
+200444	 C4
+200452	Active/D
+200470	sactive @A0A6@.
+200502	Active/D
+200520	sactive @A09C@.
+200552	Active/D
+200570	sactive @A09D@.
+200602	Active/D
+200620	sactive @A09E@.
+200652	FN_DIGITAL_ND
+200680	Active/D
+200698	sactive
+200716	la fonction
+200742	Prise ND directe.
+200778	@A003@@A093@ Couleur chaude
+200834	@A004@@A093@ Couleur chaude
+200890	@A003@WB
+200908	@A004@WB
+200926	@A003@Tout @A094@
+200962	@A004@Tout @A094@
+200998	@A099@ Adresse MAC
+201036	AF 
+201044	 mi-course
+201066	L'AF est activ
+201096	 m
+201102	me lorsque le
+201136	clencheur est enfonc
+201182	 mi-course
+201206	en mode3/mode4 pour S-AF/C-AF.
+201268	L'AF n'est pas activ
+201310	 m
+201316	me lorsq. le
+201348	clencheur est enfonc
+201394	 mi-course
+201418	en mode3/mode4 pour S-AF/C-AF.
+201480	@A003@AEL/AFL
+201508	@A0A8@
+201522	@A0A2@
+201536	@A003@Suivi du sujet
+201578	Sport auto
+201600	Avions
+201614	Trains
+201628	Sujet non sp
+201654	cifi
+201668	Les voitures et les motos seront
+201740	tect
+201750	es et suivies.
+201780	Les avions et les h
+201820	licopt
+201834	res
+201844	seront d
+201862	tect
+201872	s et suivis.
+201898	Les trains seront d
+201938	tect
+201948	s et suivis.
+201974	@A003@AF + MF
+202006	sactive la bague
+202042	de mise au point
+202078	en mode mise au point auto.
+202134	Active la bague de mise au point
+202202	pour la mise au point manuelle
+202266	en mode mise au point auto.
+202322	@A003@Act. du centre C-AF
+202374	@A003@Priorit
+202402	 au centre C-AF
+202434	@A003@Param
+202458	tres@A0A2@
+202480	@A003@Orientation li
+202522	e 
+202528	 @A078@
+202544	@A0A9@Point cible AF
+202586	@A0AA@Point cible AF
+202628	@A0AB@Point cible AF
+202670	@A0A9@Mode cible AF
+202710	@A0AA@Mode cible AF
+202750	@A0AB@Mode cible AF
+202790	@A0A3@Param. du mode cible
+202844	Taille
+202858	Position
+202876	@A0A4@Taille
+202902	@A0A5@Taille
+202928	@A0A6@Taille
+202954	@A0A7@Taille
+202980	@A0A4@Position
+203010	@A0A5@Position
+203040	@A0A6@Position
+203070	@A0A7@Position
+203100	@A0B9@ Connexion @A099@
+203148	Mon menu
+203166	Aucun article enregistr
+203220	En app. sur le bouton @A040@
+203280	dans le menu, vous pouvez enreg.
+203348	l'
+203358	ment dans Mon menu.
+203398	Vous pouvez enreg. les 
+203450	m.
+203458	de menu fr
+203480	q. utilis
+203500	s.
+203508	Seuls les 
+203534	m. enreg. s'affichent.
+203580	Mon menu 1
+203602	Mon menu 2
+203624	Mon menu 3
+203646	Mon menu 4
+203668	Mon menu 5
+203690	Param
+203702	tres d
+203716	taill
+203728	s lorsque
+203750	sensibilit
+203772	 ISO d
+203786	finie sur AUTO
+203818	pour enregistrer des vid
+203868	os.
+203876	Chois. la balance des blancs
+203936	pour enregistrer des vid
+203986	os.
+203998	f. la compens. pour la balance
+204062	des blancs pour ts les modes
+204122	pour enreg. des vid
+204162	os.
+204170	Conserve les couleurs chaudes
+204232	en balance des blancs auto
+204288	pour enregistrer des vid
+204338	os.
+204346	Vitesse lect. des trames
+204396	Le film sera enregistr
+204442	 pour
+204456	une lecture ralentie de x0,5.
+204516	Le film sera enregistr
+204562	 pour
+204576	une lecture ralentie de x0,42.
+204638	Le film sera enregistr
+204684	 pour
+204698	une lecture ralentie de x0,25.
+204760	Le film sera enregistr
+204806	 pour
+204820	une lecture ralentie de x0,21.
+204882	Le film sera enregistr
+204928	 pour
+204942	une lecture ralentie de x0,2.
+205002	Sensibilit
+205024	 ISO auto. non disponible 
+205080	lorsque le mode @A004@ est r
+205138	gl
+205144	 sur M.
+205160	Sensibilit
+205182	 ISO auto. disponible 
+205230	lorsque le mode @A004@ est r
+205288	gl
+205294	 sur M.
+205310	@A004@Vitesse C-AF
+205352	lect. la vitesse de mise au point
+205422	pour C-AF l'enreg. des vid
+205476	os.
+205484	@A004@Sensibilit
+205518	 C-AF
+205534	glez la sensibil. du verr. C-AF
+205600	en fonction du mvt de votre sujet
+205670	pour enregistrer des vid
+205720	os.
+205728	Rapide
+205742	Lente
+205754	@A004@Niveau IS
+205790	f. niv. IS pour enreg. des vid
+205852	os.
+205866	lect. Faible pour un mouvement
+205930	plus fluide pour le panorama.
+205990	@A0A0@View Assist
+206026	Une fois l'option activ
+206074	e, la lumin.
+206102	et les coul. sont ajust
+206150	es pour
+206168	une visual. optimale pendant @A0A0@.
+206242	L'image appara
+206272	tra dans
+206292	le mode d'image s
+206328	lectionn
+206350	Image convertie en BT.709
+206406	quiv. pour l'affichage.
+206456	Diff
+206466	re de l'image enregistr
+206514	e.
+206520	L'enr. PCM cr
+206548	era un son
+206572	synchro si le @A083@bouton est
+206636	maintenu enfonc
+206668	 pendant
+206688	l'enregistrement vid
+206730	o.
+206736	Qualit
+206750	 d'enreg.
+206774	lectionne la qualit
+206814	 du son.
+206832	Mon menu est plein.
+206872	Ajout
+206888	 Mon menu.
+206910	Aller 
+206924	 la nouv. position.
+206964	Supprimer cet 
+206998	ment
+207008	Supprimer cet onglet @A0A1@
+207064	L'
+207074	ment s
+207088	lectionn
+207106	 sera supprim
+207138	de Mon menu.
+207164	Tous les 
+207188	ments de l'onglet @A0A1@
+207244	lect. seront suppr. de mon menu.
+207314	organiser l'ordre
+207354	lect. Mon menu 
+207386	 ajouter.
+207406	@A0B3@ Batterie
+207438	@A0B4@ Batterie
+207470	Lorsque la batterie de @A0B3@ est 
+207544	puis
+207554	e, la batterie @A0B4@ prend le relai.
+207630	Lorsque la batterie de @A0B4@ est 
+207704	puis
+207714	e, la batterie @A0B3@ prend le relai.
+207790	Calibrer l'altitude.
+207836	finir l'altitude actuelle.
+207890	Altitude / Temp
+207922	rature
+207936	TEMPERATURE_UNIT
+207970	ELEVATION_UNIT
+208004	lect. l'empl. d'enreg.
+208050	@A078@Sauveg. des fich. journaux
+208116	@A079@Sauveg. des fich. journaux
+208182	@A0BD@Sauveg. des fich. journaux
+208248	@A078@Carte journal pleine
+208302	@A079@Carte journal pleine
+208356	Maintenir enfonc
+208390	 @A083@ pdt enregistr.
+208438	vid
+208446	o et l'enregistreur PCM
+208496	ins
+208504	re une tonalit
+208534	 Slate.
+208550	Connexion au smartphone
+208600	ou au pt d'acc
+208630	s 
+208636	 l'aide
+208654	des fonctions sans fil.
+208702	Prend et associe plusieurs
+208758	images pour cr
+208788	er une image
+208816	ultra-haute r
+208844	solution.
+208864	Active l'obturation lente
+208918	comme avec le filtre ND.
+208968	A4. AF/MF
+208988	B1. Touche/cadran/levier
+209038	B2. Touche/cadran/levier
+209088	J3. Fonction @A003@
+209128	@A003@Sensibilit
+209162	 C-AF
+209174	Enreg. le mode AF /
+209216	mode de cible AF /
+209256	point cible AF par d
+209298	faut.
+209314	glez la sensibilit
+209352	 du verr.
+209374	C-AF en fonction du mouvement
+209436	de votre sujet pour les photos.
+209500	Les 
+209514	m. pr lesquels @A03F@ est coch
+209580	s'affichent lors de la s
+209630	lect. du
+209650	mode de cible AF pour les photos.
+209722	lect. Activ
+209746	 pour permettre
+209780	la mise au point manuelle dans
+209844	tous les modes AF pour les photos.
+209914	Lorsque @A03F@ est coch
+209962	 dans @A0A2@,
+209992	C-AF / C-AF + TR fonctionne
+210050	au centre de la zone.
+210094	Lorsque @A03F@ est coch
+210142	 dans @A0A2@,
+210172	le centre de la zone est prio.
+210236	sur les autres points dans C-AF.
+210306	f. la taille de la zone cible
+210368	et la position du curseur
+210422	lors du d
+210442	placement.
+210464	Pour les photos, les 
+210512	m. o
+210522	 @A03F@
+210540	est coch
+210558	 pvt 
+210570	tre r
+210582	gl
+210588	s s
+210596	par
+210604	m.
+210612	pour les positions horiz. ou vertic.
+210690	lect. le suivi du sujet
+210740	pour les photos.
+210776	Valable dans C-AF+TR.
+210824	lectionnez une fonction
+210876	 attribuer au bouton central @A0AC@
+210950	du multi-s
+210972	lecteur pour la prise.
+211022	lectionnez une fonction
+211074	 attribuer 
+211098	 la touche direction@A0AD@
+211154	du multi-s
+211176	lecteur pour la prise.
+211222	Pendant @A0AB@, les op
+211268	rations
+211286	qui ont 
+211308	 coch
+211320	es @A03E@
+211342	sont d
+211356	sactiv
+211370	es.
+211378	Chois. les contr
+211412	les affich
+211440	lorsque @A083@ est enfonc
+211496	pour les photos.
+211534	duire du clignotement 
+211582	en r
+211592	glant la puissance 
+211634	de fr
+211646	quence.
+211662	Param
+211674	tres d
+211688	taill
+211700	s lorsque
+211722	sensibilit
+211744	 ISO d
+211758	finie sur AUTO
+211790	pour les photos.
+211824	Chois. les modes photo dans
+211882	lesquels le r
+211910	gl. ISO auto est
+211946	disponible pour les photos.
+212006	lect. la m
+212028	thode de trait.
+212062	d'image 
+212080	 faible sens. ISO
+212118	pour les photos.
+212152	Chois. la balance des blancs
+212212	pour les photos.
+212250	f. la compensation pour
+212300	la balance des blancs pour ts
+212362	les modes pour les photos.
+212416	Conserv. les coul. chaudes
+212472	dans la balance des blancs
+212528	auto pour les photos.
+212572	Ajuster les param.
+212612	d'altitude et
+212642	de temp
+212658	rature.
+212674	Enregist. capt. champ
+212718	Acquiert des infos sur le
+212772	capteur de champ et enreg. sur
+212836	la carte en tant que fich. journal.
+212908	Lancer journal
+212938	Terminer journal
+212972	Enregist. journal
+213008	En cours
+213026	Arr
+213040	@A002@Arr
+213070	ft
+213076	Abu Dhabi
+213096	Adelaide
+213114	Alaska
+213128	Anchorage
+213148	Athens
+213162	Auckland
+213180	Azores
+213194	Bangkok
+213210	Beijing
+213226	Berlin
+213240	Buenos Aires
+213266	Cairo
+213278	Casablanca
+213300	Chennai
+213316	Chicago
+213332	Colombo
+213348	Delhi
+213360	Denver
+213374	Dhaka
+213386	Dubai
+213398	Fernando de Noronha
+213438	Fiji
+213448	Guam
+213458	Hawaii
+213472	Helsinki
+213490	Hong Kong
+213510	Honolulu
+213528	Houston
+213544	Islamabad
+213564	Jakarta
+213580	Johannesburg
+213606	Kabul
+213618	Karachi
+213634	Kathmandu
+213654	Kolkata
+213670	Kuala Lumpur
+213696	Kuwait
+213710	La Paz
+213724	Lima
+213734	London
+213748	Los Angeles
+213772	Madrid
+213786	Male
+213796	Manaus
+213810	Mexico City
+213834	Miami
+213846	Midway Islands
+213876	Moscow
+213890	Mumbai
+213904	Nairobi
+213920	New Caledonia
+213948	New York
+213966	Newfoundland
+213992	Paris
+214004	Phoenix
+214020	Rio de Janeiro
+214050	Riyadh
+214064	Rome
+214074	Samoa
+214086	Sao Paulo
+214106	Seattle
+214122	Seoul
+214134	Singapore
+214154	Solomon Islands
+214186	Sydney
+214200	Tahiti
+214214	Taipei
+214228	Tehran
+214242	Tokyo
+214254	Toronto
+214270	Vancouver
+214290	Wellington
+214312	Yangon
+214326	UTC
+214334	ART16
+214346	FHD HighSpeed 120fps
+214388	ND32(5EV)
+214408	ND16(4EV)
+214428	ND8(3EV)
+214446	ND4(2EV)
+214464	ND2(1EV)
+214482	LV OFF-Info
+214506	ISO L64
+214522	ISO L80
+214538	ISO L100
+214556	ISO L125
+214574	ISO L160
+214592	@A0D1@LOCK
+214614	@A0AE@@A010@
+214640	@A0AE@@A0AD@
+214666	@A0AE@@A007@
+214692	@A0AE@@A03F@
+214718	@A0AE@@A03C@
+214744	@A0AE@@A0CB@
+214770	@A0AE@@A034@
+214796	@A0AE@@A0CC@
+214822	@A0AE@@A0CD@
+214848	@A0AE@@A0CE@
+214874	@A0AE@@A0CF@
+214900	@A0AE@@A0D0@
+214926	@A0AC@@A0AD@
+214952	@A0AC@@A007@
+214978	@A0AC@@A034@
+215004	@A0AC@@A0CF@
+215030	@A0AC@@A0D0@
+215056	S-AF@A0BC@
+215078	C-AF@A0BC@
+215100	C-AF+TR@A0BC@
+215128	USB PD
+215142	@A0C8@PC RAW
+215168	96kHz/24bit
+215192	48kHz/16bit
+215216	COMM_MODE_B
+215240	Configuration de la connexion
+215300	Suivez les 
+215324	tapes suivantes pour
+215368	connecter l'appareil. L'installation
+215444	est requise une fois uniquement.
+215512	Le @A08F@/Bluetooth sera activ
+215578	pendant l'installation.
+215626	Veuillez installer l'appli
+215682	OI.Share sur votre appareil.
+215742	Une fois l'installation termin
+215804	e,
+215812	appuyez sur @A019@.
+215852	Scannez le code QR
+215892	via l'appli OI.Share.
+215936	Initialisation de la connexion...
+216008	connexion en cours...
+216056	connecter@A018@
+216088	Connexion de l'appareil
+216136	Connexion 
+216158	 un appareil.
+216190	tails de connexion@A01A@
+216240	Connexion appareil
+216278	Connexion point d'acc
+216326	Rech. d'un point d'acc
+216372	s...
+216382	Connexion 
+216404	 un point d'acc
+216436	s...
+216446	Connexion via WPS
+216482	Connexion via les pts d'acc
+216542	Connexion manuelle
+216580	Pr
+216586	ciser param.
+216612	Indisponible
+216638	Certaines img n'ont pas
+216694	 transf
+216714	es.
+216726	thode PBC
+216750	thode PIN
+216770	Connectez-vous en appuyant sur
+216834	le bouton WPS du pt d'acc
+216886	s.
+216892	Connectez-vous en entrant le
+216952	code PIN sur le pt d'acc
+217002	s.
+217008	App. sur le bouton WPS 
+217058	sur le point d'acc
+217096	s.
+217104	La connex. d
+217130	marre d
+217146	s que
+217160	vous avez app. sur @A083@.
+217214	Entr. le code PIN ci-dessus
+217272	sur le pt d'acc
+217304	s.
+217312	La connex. d
+217338	marre d
+217354	s que
+217368	vous avez app. sur @A083@.
+217422	La config. initiale est requise
+217488	pour se connect. au PC via @A099@.
+217560	Suivez les instruct. dans Olympus
+217630	Capture. La config. initiale est
+217698	requise pour chaque ordinateur.
+217762	RESULT_WPS_NG
+217792	chec de la connexion
+217834	Point d'acc
+217858	s introuvable
+217886	@A099@ est en cours
+217930	connexion
+217950	Maintien
+217968	Mot de passe
+217998	lect. PC pour connexion
+218046	Supprimer
+218066	Suppr. les param. de connexion
+218130	de l'appareil pour ce pt d'acc
+218192	s.
+218198	IP_SETTING
+218220	Adresse IP
+218242	Masque sous-r
+218270	seau
+218280	Passerelle par d
+218314	f.
+218320	Attrib. adresse IP
+218358	Auto (DHCP)
+218382	Manuel
+218396	Mettre 
+218412	 j. param.
+218434	Dispo. quand le pt d'acc
+218490	prend en charge la fonct. DHCP.
+218556	L'adresse IP sera attribu
+218614	automatiquement.
+218648	Entr. l'adresse IP manuellement.
+218714	Authentification
+218748	Aucun
+218760	Lancer la connexion
+218800	Point d'acc
+218824	s introuvable
+218852	Relanc. la recherche@A033@
+218906	@A0BA@@A03F@/@A01B@@A01C@
+218958	@A0BA@@A03F@
+218984	Connexion@A019@
+219016	Fermer@A018@
+219042	Connexion PC initi
+219084	Arr
+219092	t connexion PC
+219122	L'appareil est connect
+219168	 au PC.
+219186	Les img enreg. sont automatiquement
+219260	transf
+219278	es sur le PC.
+219306	Connexion PC termin
+219346	e.
+219352	@A002@ D
+219370	connect
+219386	 du PC.
+219408	rif. l'
+219424	tat du PC.
+219446	@A002@ D
+219464	connect
+219480	 du r
+219492	seau.
+219510	rif. l'
+219526	tat du @A099@ et
+219562	reconnexion au pt d'acc
+219610	s.
+219616	@A09F@ Couleur att
+219654	nu
+219664	DNS
+219672	WPA2
+219682	Tr
+219688	pied
+219698	En main
+219714	Annulez le transfert d'img sur le PC
+219790	et d
+219800	connectez-vous.
+219834	lev
+219844	Faible
+219858	En pressant le bouton @A0AD@
+219918	pendant la prise de vue,
+219970	vous pouvez s
+219998	lectionner
+220022	la zone cible AF.
+220058	NOISE_REDUCTION_STANDARD
+220108	NOISE_REDUCTION_QUALITY
+220156	INFO_S_NOISE_REDUCTION_STANDARD
+220220	INFO_S_NOISE_REDUCTION_QUALITY
+220282	M/B
+220290	@A0D5@
+220304	@A0F8@
+220318	@A078@S
+220334	lect. param. de l'
+220372	cran
+220382	S_NOISE_REDUCTION_LEVEL
+220430	m/ft
+220440	@A0D3@/@A0D4@
+220468	Charge
+220482	Prior. au mouv.
+220514	Prior. aux d
+220540	t.
+220548	 des vit. ISO basses,
+220594	les img enregistrables
+220642	au maximum en rafale
+220686	sont prio. au niv. du
+220732	trait. d'img pour les photos.
+220794	 des vit. ISO basses,
+220840	les d
+220852	tails de l'img sont prio.
+220906	au niv. du traitement
+220952	de l'img pour les photos.
+221004	@A0BD@ OM-Log400
+221038	@A003@@A09A@ @A094@
+221078	@A004@@A09A@ @A094@
+221118	2h
+221124	5h
+221130	@A006@@A040@Fonction
+221176	lectionner une fonction
+221228	 attribuer 
+221252	 @A040@ pendant
+221286	la lecture.
+221310	@A04D@ Param
+221336	tres
+221346	@A017@ Param
+221372	tres
+221382	@A0AC@AF AEL/AFL
+221416	Starry Sky AF est en cours
+221470	Starry Sky AF
+221498	Starry Sky AF + MF
+221540	glage Starry Sky AF
+221580	Choisissez un mode pour
+221630	Starry Sky AF.
+221660	Pr
+221666	cision
+221680	Vitesse
+221696	La pr
+221708	cision AF est prioritaire
+221762	par rapport 
+221788	 la vitesse AF.
+221822	Le temps de traitement est requis
+221892	jusqu'
+221906	 ce que l'AF soit termin
+221960	La vitesse AF est prioritaire
+222022	par rapport 
+222048	 la pr
+222062	cision AF.
+222084	Verr. Bague
+222112	sactive la bague
+222148	de mise au point dans
+222194	le mode de mise au point manuelle.
+222266	Appuyez de nouveau pour revenir.
+222332	Extend. LV
+222354	Active/D
+222372	sact. Extend. LV.
+222410	Appuyez sur la fl
+222446	che du bas
+222470	pour s
+222484	lectionnner les r
+222520	glages.
+222536	Extend. LV On1
+222574	Sauv. r
+222590	gl. mode perso.
+222622	Maintenir
+222646	initialiser
+222670	Lors de la prise de vue en mode
+222736	perso, les r
+222762	glages modifi
+222790	s sont
+222806	sauvegard
+222826	s automatiquement.
+222864	Lors de la prise de vue en mode
+222930	perso, les r
+222956	glages modifi
+222984	s ne sont
+223006	pas sauvegard
+223034	s automatiquement.
+223076	lection @A008@Visage
+223118	Appuyez sur le bouton pour
+223178	lectionner un visage proche du
+223242	point cible AF s
+223276	lectionn
+223294	. Appuyez
+223316	sur bas et tournez la molette
+223378	pour s
+223392	lectionner manuellement.
+223442	@A008@Priorit
+223470	 visage
+223486	Active/D
+223504	sact. Priorit
+223532	 @A008@Visage.
+223564	Appuyez sur bas et tournez la
+223626	molette pour s
+223656	lectionner les
+223692	glages.
+223708	Priorit
+223724	 Visage AF
+223758	glage boucle @A078@
+223802	glages pour le d
+223836	placement
+223858	du curseur dans l'
+223896	cran de
+223918	lection de la cible AF.
+223970	lection boucle @A078@
+224014	Boucle 1
+224032	Boucle 2
+224050	S'arr
+224062	te apr
+224076	s le d
+224090	placement
+224112	de la cible AF vers le bord.
+224174	place la cible AF
+224214	 l'extr
+224230	mit
+224238	 oppos
+224258	de la m
+224274	me rang
+224290	e ou colonne
+224318	apr
+224326	s avoir d
+224346	plac
+224356	 la cible AF
+224384	au-del
+224398	 du bord.
+224422	place la cible AF
+224462	 l'extr
+224478	mit
+224486	 oppos
+224506	de la rang
+224528	e ou colonne suivante
+224574	apr
+224582	s avoir d
+224602	plac
+224612	 la cible AF
+224640	au-del
+224654	 du bord.
+224674	Via @A0AD@
+224696	@A0AD@ sera s
+224724	lectionn
+224742	 avant 
+224760	le d
+224770	placement de la cible AF 
+224824	vers l'extr
+224848	mit
+224856	 oppos
+224870	e.
+224876	@A0AD@ ne sera pas s
+224918	lectionn
+224936	 avant
+224952	le d
+224962	placement de la cible AF
+225014	vers l'extr
+225038	mit
+225046	 oppos
+225060	e.
+225066	RAW+JPEG @A041@
+225098	Pr
+225108	lectionne uniquement JPEG
+225162	pour transf
+225186	rer vers un appareil
+225230	lors de la s
+225256	lection RAW+JPEG.
+225292	Pr
+225302	lectionne uniquement RAW
+225354	pour transf
+225378	rer vers un appareil
+225422	lors de la s
+225448	lection RAW+JPEG.
+225484	Pr
+225494	lectionne RAW+JPEG
+225534	pour transf
+225558	rer vers un appareil
+225602	lors de la s
+225628	lection RAW+JPEG.
+225664	Indic. mise au point
+225706	L'indicateur de mise au point
+225768	n'appara
+225786	tra pas lorsque la bague
+225838	de mise au point sera sur mode MF.
+225908	La direction et la position de mise au
+225988	point appara
+226014	tront lorsque la bague
+226062	de mise au point sera sur mode MF. 
+226136	Cette fonction vous aidera 
+226198	ajuster la mise au point.
+226250	Timer Live Composite
+226296	lectionne la dur
+226330	e maximale
+226354	pour la prise de vue composite.
+226418	3h
+226424	6h
+226430	Infos prise de vue
+226468	@A0BD@Verrou.
+226500	lection. On pr d
+226534	sactiv. @A0BD@.
+226568	Affiche le cadre lorsque le d
+226628	clench.
+226646	est enfonc
+226672	 mi-course.
+226698	Le cadre sera toujours affich
+226758	 en
+226768	mode prise de vue vid
+226812	o (@A0AD@, C-AF)
+226846	En app. sur le bouton @A040@
+226906	dans le menu, vous pouvez enreg.
+226974	l'
+226984	ment dans Mon menu.
+227024	@A0AC@AF
+227042	@A0AC@AF@A0BC@
+227072	AEL/@A0AC@AF
+227098	@A0AC@AF Start/Stop
+227138	L'AF est prioritaire pour
+227192	les visages d
+227220	tect
+227230	s.
+227236	L'AF est proritaire pour le point
+227306	cible AF m
+227328	me lorsque des 
+227362	visages sont d
+227392	tect
+227402	s.
+227408	Extend. LV Off
+227438	Extend. LV On2
+227468	Pr
+227474	-s
+227480	lection transfert :
+227522	Pr
+227528	-s
+227534	lectionnez des images
+227582	 transf
+227598	rer vers un appareil.
+227646	lection de plusieurs images :
+227708	Choisissez plusieurs images
+227768	 appliquer sur une action
+227822	sp
+227828	cifique telle que la
+227872	protection ou la suppression.
+227932	Activer la d
+227958	tection
+227976	de vis
+227990	e 
+227996	 l'
+228004	il
+228012	lorsque l'
+228034	cran est ferm
+228068	@A03D@ : live view On/Off.
+228122	Mode RAW
+228140	Transmet la vid
+228172	o au format RAW
+228206	sur l'appareil compatible.
+228262	Pas d'enregistrement sur carte SD.
+228332	Prendre des photos pour 
+228384	cr
+228390	er une image de 
+228426	panorama par PC.
+228460	Prise de vue de montagnes
+228514	enneig
+228528	es, paysages, 
+228560	sable blanc, etc.
+228596	Prise de vue 
+228624	clairage
+228644	bougie. Couleurs chaudes 
+228698	sont reproduites.
+228734	Prise de vue de documents, 
+228792	etc. augmente le contraste
+228848	avec l'arri
+228872	re-plan.
+228890	Tonalit
+228906	 peau naturelle 
+228942	sur une t
+228966	 HD.
+228976	Prise de vue de paysages.
+229030	Reproduction parfaite des
+229084	bleus et des verts.
+229124	Saisit une action
+229162	rapide sans flou.
+229198	Prise de vue coucher/lever 
+229256	soleil. Reproduction vive des
+229318	rouges et jaunes.
+229354	Filtre HDR
+229376	Cr
+229382	e une image avec une
+229426	luminosit
+229446	 optimale en
+229474	combinant une s
+229506	rie d'images.
+229534	Int
+229542	rieur
+229554	Mouvement
+229574	Paysages de nuit
+229608	Personnes
+229628	Paysage
+229644	Capture des feux d'artifice avec
+229712	une vitesse d'obturation plus lente.
+229788	Tr
+229794	pied recommand
+229828	Pour prise de vue du sujet et de
+229896	l'arri
+229910	re-plan.
+229930	Reproduction 
+229958	clatante des
+229986	bleus et des verts.
+230026	Images prises successivement
+230086	en enregistrant uniquement les zones
+230162	avec changement de luminosit
+230220	, puis 
+230238	composit
+230256	es. Id
+230270	al pour les tra
+230306	es 
+230316	lumineuses. Tr
+230346	pied recommand
+230380	@A00A@POP UP
+230408	Capture des sujets humains
+230464	dans de superbes paysages de
+230524	nuit. Une vitesse d'obturation plus
+230598	lente est utilis
+230632	e. Tr
+230644	pied recommand
+230678	Capture de superbes paysages de
+230744	nuit avec vitesse d'obturation plus
+230818	lente. Tr
+230838	pied recommand
+230872	Pour prendre une
+230908	vue de type portrait.
+230952	Bougie
+230966	Enfants
+230982	e-Portrait
+231004	Tra
+231016	es lumineuses
+231044	Clich
+231056	 Mise au point multiple
+231104	Gros plans
+231126	Pour la photographie en gros plan.
+231196	Pour photographier la nature en
+231262	gros plan. Capture davantage de
+231328	clich
+231340	s macro par rapport 
+231382	 une
+231394	macro standard.
+231426	Id
+231432	al pour la photographie lorsque 
+231500	le son et la lumi
+231536	re provenant de 
+231572	l'appareil ne sont pas favorables. 
+231646	@A001@, le flash et la lumi
+231702	re AF 
+231718	seront d
+231736	sactiv
+231750	s.
+231756	Prises de vue multiples 
+231806	 diff
+231818	rentes
+231834	positions de mise au point.
+231890	Connexion de l'appareil
+231938	Connexion 
+231960	 un appareil.
+231988	Cette fonction requiert un objectif compatible
+232084	Veuillez fixer un objectif compatible.
+232162	Appliquer param
+232194	tres C ? Les
+232222	param
+232234	tres d'appareil photo actuels
+232296	seront remplac
+232326	s.
+232332	Mode personnalis
+232366	 C
+232372	En cours
+232390	@A08F@/Bluetooth est disponible
+232456	pour une connexion.
+232496	@A08F@/Bluetooth est enti
+232548	rement
+232568	sactiv
+232582	. Impossible d'
+232614	tablir
+232630	une connexion.
+232660	Bluetooth
+232680	Fonctions sans fil
+232718	On@A0AE@
+232736	On@A0AF@
+232758	sactive le Bluetooth.
+232804	Le Bluetooth est toujours
+232862	sactiv
+232876	 lorsque l'appareil
+232918	est sous tension.
+232954	Active le Bluetooth.
+232998	Le Bluetooth est toujours
+233052	activ
+233064	 pour l'obturateur
+233104	sans fil sous tension.
+233150	Active le Bluetooth.
+233194	Le Bluetooth est toujours
+233248	activ
+233260	 pour les smartphones
+233306	sous tension.
+233334	Jumelage termin
+233372	Le Bluetooth est d
+233410	sormais activ
+233438	@A0AE@.
+233454	Jumelage en cours.
+233494	Lancez la proc
+233524	dure de jumelage
+233560	sur l'obturateur sans fil.
+233614	Supprimer l'appareil jumel
+233674	Effectuer le jumelage de nouveau
+233742	lors de l'utilisation de l'obturateur.
+233824	glage obturateur sans fil
+233880	marrer le jumelage
+233918	Supprimer le jumelage
+233962	Lumi
+233972	re AF
+233984	Espace couleur
+234014	Exposition fluide
+234050	Version du micrologiciel
+234100	Fonctionne dans 
+234136	les modes 
+234160	d'exposition P/A/S/M.
+234204	Mode Intervalle
+234236	Priorit
+234252	 images
+234268	Priorit
+234284	 temps
+234302	finit l'action effectu
+234354	lorsqu'un support USB est connect
+234426	Affichage des images
+234468	Webcam
+234482	Tournez la molette
+234522	de s
+234532	lection sur @A004@.
+234572	Mode personnalis
+234606	 C2
+234614	Mode personnalis
+234648	 C3
+234656	Mode personnalis
+234690	 C4
+234698	Mode personnalis
+234732	 C
+234738	Active/D
+234756	sactive @A0B1@.
+234788	Maintient en priorit
+234830	 le nombre
+234854	d'images. La prise de vue suivante
+234926	commence apr
+234952	s l'intervalle une fois
+235002	les images r
+235028	centes enregistr
+235062	es.
+235070	Maintient en priorit
+235112	 le temps 
+235136	d'intervalle. La prise de vue suivante
+235216	est ignor
+235236	e si l'intervalle d
+235276	fini
+235288	ne peut pas 
+235314	tre respect
+235342	L'exposition de chaque image
+235402	utilise le r
+235428	sultat de la mesure
+235470	correspondant 
+235500	 cette image.
+235528	Harmonise l'exposition entre toutes 
+235604	les images. Fluidifie les 
+235660	changements de luminosit
+235714	dans les vid
+235740	os en time-lapse.
+235776	@A002@ Supprime tous les fichiers
+235846	automatiquement s
+235882	par
+235890	s d'une vid
+235914	o.
+235920	P/A/S/M/B
+235940	P/A/S/M
+235956	@A0BE@ Control
+235986	Cadre rouge avec @A0B0@
+236034	Lorsque ce r
+236060	glage est activ
+236092	, 
+236100	un cadre ext
+236126	rieur rouge appara
+236164	t 
+236174	 l'
+236182	cran pdt l'enregistrement vid
+236242	o.
+252386	OlympusLanguage_fratft

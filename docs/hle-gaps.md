@@ -1632,9 +1632,10 @@ the camera units' interrupt handlers and cam.c's second init, builds the device 
 `cam_fe` opt-in (the Player's `cam_fe`, off by default; golden unchanged). Result: the chain from the units' handlers
 to EXP's callbacks is read, but no handler is found that passes `0x300` to EXP, and the records are armed only through
 the front end's entry, whose callers (the movie sequence's frame step, cam_still_drv.c and the handlers of the module
-the second init's seventh step `0x5019c70f` sets up) none runs in the lab; so no stand-in raises an interrupt and
-EXP_MOVIE waits as before (X). `emu/test/test_camfe.mjs` camFeUnits (15 of 15), `emu/test/test_expcb.mjs`
-camFrontEndSession (9 of 9) and `emu/test/test_take_release.mjs` camFeSession (5 of 5) pin what follows.
+the second init's seventh step `0x5019c70f` sets up, which cam.c's request 6 starts) none reaches in the lab; so no
+stand-in raises an interrupt and EXP_MOVIE waits as before (X). `emu/test/test_camfe.mjs` camFeUnits (15 of 15),
+`emu/test/test_expcb.mjs` camFrontEndSession (9 of 9) and `emu/test/test_take_release.mjs` camFeSession (5 of 5) pin
+what follows.
 
 - **The records' readers.** An immediate scan of cam.c's range (`0x50150000..0x501a8000`) for 2464 and 2532 (and their
   +44, +48, +64) finds: the fill `0x5016f5a6` (`0x5016ffab`, `0x5016ffeb`: 2464's +24 from `(12, (4, request))` and
@@ -1702,26 +1703,31 @@ camFrontEndSession (9 of 9) and `emu/test/test_take_release.mjs` camFeSession (5
   which is called by the four builders above, by cam_still_drv.c (18 sites `0x5085a2f3..0x5085ae74`) and by the kind-7
   sender `0x5019d460` (`0x5019d499`; no slot copy, its kind and pointers from its caller), which the handlers
   `0x5019c8de` and `0x5019ceaa` call (`0x5019cd8f`, `0x5019cf56`): the event handlers that `0x5019c843` / `0x5019ce1c`
-  register on an instance of the sequence engine before posting `0x10000001` / `0x10000002`, which the message handler
-  `0x5019c7d3` of the module the second init's seventh step `0x5019c70f` sets up schedules for its kinds 1 and 2 (who
-  sends those is ?; whether these requests set the context bits 23 / 24 the records need is not read). Request 7's kind
-  1 (`0x50198993`) keeps the item in `0x62a24248` with the state `0x62a24244` = 1 and posts it to INFN and SQMV; it
-  reaches the front end only from the frame step `0x5019981d`, whose one caller is kind 10's handler `0x50199383`. The
-  first step sets the state 2 and fires nothing (`0x50199a1e..0x50199a2e`); each later one calls the item's notifier
-  with `0x202` when its `0x200` mask has bit 0 (`0x50199a33..0x50199a51`). Kind 10 is sent by cam_still_drv.c's
-  `0x5085aeef`, the first step of the list `0x509e4da0` that the row of event `0x10000100` in cam_still_seq.c's table
-  `0x5033c224..` (read by `0x5085f9d0`) names; the dispatcher's other callers send kinds 1 and 3 (requests 7 and 8), 12
-  and 13 (`0x5019d3f8`), 8, 9, 11 and 14-17 (cam_still_drv.c), and the messages a front-end context holds (descriptor
-  +16 .. +28, bits 0, 1, 53, 54, the start loop's `0x50170b57..0x50170b90`): the context's +8, +148, +288 and +428
-  (`0x501740aa`, `0x501740b4`, `0x5017428e`, `0x50174299`), of kinds 4, 5, 6 and 7 (the context init,
-  `0x5017313a..0x5017317e`; X in each of the 15, camFrontEndSession), which the dispatcher hands to `0x50198e56` (when
-  the byte +46 of the message's +112 block is 1 it copies that block's +48..+119 to `0x62a23efc` + 72 (kind - 4); then
-  it calls the message's +120, X: `0x501704ef`), not to the frame step. X (an experiment, not pinned): kind-10 messages
-  given by hand after request 7, under a recording stub over the camera blocks, run the frame step, which hands the
-  front end two kind-7 requests (from `0x5019c4ff` and `0x5019c5df`; contexts `0x629b23fc` and `0x629aa520`); cam.c logs
-  `0x0a143000` (line 3718, `0x5018a616`) and `0x0a113001` (line 3938, `0x5019ab61`), no unit is started, and the next
-  idle stops at a system clock change (the kernel's clk_ctrl; `0x5005e55c` reads `0x98580014`, which the lab does not
-  model).
+  register on an instance of the sequence engine before posting an event (`0x10000001`, or `0x10000002` by
+  `(0x62960790)`), which the message handler `0x5019c7d3` of the module the second init's seventh step `0x5019c70f` sets
+  up schedules for its kinds 1 and 2; those are cam.c's requests 6 and 5 (`0x5015552a`, `0x5015553b`, through
+  `0x50155ad9`), and request 6 is the one TAKE_FUNC_CP's start makes, which S-TAKECAM answers in the probe (4.2.3).
+  Whether these kind-7 requests set the context bits 23 / 24 the records need is not read. X (an experiment, not pinned;
+  camapp 1, `--take probe`, `cam_fe`): request 6 made of the switch natively after H-CAMINIT2 runs `0x5015552a`,
+  `0x5019c7d3`, the deferred `0x50153844` (9 times) and `0x5019c843`, and the event handler `0x5019c8de` 10 times in 300
+  ms, but neither the sender `0x5019d460` nor the front end's entry; cam.c logs nothing and S-CAMFE takes no access.
+  Request 7's kind 1 (`0x50198993`) keeps the item in `0x62a24248` with the state `0x62a24244` = 1 and posts it to INFN
+  and SQMV; it reaches the front end only from the frame step `0x5019981d`, whose one caller is kind 10's handler
+  `0x50199383`. The first step sets the state 2 and fires nothing (`0x50199a1e..0x50199a2e`); each later one calls the
+  item's notifier with `0x202` when its `0x200` mask has bit 0 (`0x50199a33..0x50199a51`). Kind 10 is sent by
+  cam_still_drv.c's `0x5085aeef`, the first step of the list `0x509e4da0` that the row of event `0x10000100` in
+  cam_still_seq.c's table `0x5033c224..` (read by `0x5085f9d0`) names; the dispatcher's other callers send kinds 1 and 3
+  (requests 7 and 8), 12 and 13 (`0x5019d3f8`), 8, 9, 11 and 14-17 (cam_still_drv.c), and the messages a front-end
+  context holds (descriptor +16 .. +28, bits 0, 1, 53, 54, the start loop's `0x50170b57..0x50170b90`): the context's +8,
+  +148, +288 and +428 (`0x501740aa`, `0x501740b4`, `0x5017428e`, `0x50174299`), of kinds 4, 5, 6 and 7 (the context
+  init, `0x5017313a..0x5017317e`; X in each of the 15, camFrontEndSession), which the dispatcher hands to `0x50198e56`
+  (when the byte +46 of the message's +112 block is 1 it copies that block's +48..+119 to `0x62a23efc` + 72 (kind - 4);
+  then it calls the message's +120, X: `0x501704ef`), not to the frame step. X (an experiment, not pinned): kind-10
+  messages given by hand after request 7, under a recording stub over the camera blocks, run the frame step, which hands
+  the front end two kind-7 requests (from `0x5019c4ff` and `0x5019c5df`; contexts `0x629b23fc` and `0x629aa520`); cam.c
+  logs `0x0a143000` (line 3718, `0x5018a616`) and `0x0a113001` (line 3938, `0x5019ab61`), no unit is started, and the
+  next idle stops at a system clock change (the kernel's clk_ctrl; `0x5005e55c` reads `0x98580014`, which the lab does
+  not model).
 - **cam.c's second init (X: its trace under a recording stub; D: the code at the pcs).** With the first init run
   (H-CAMINIT) it returns 0 after 358 writes and 40 reads of 256 registers in 15 blocks, all 4 bytes: SLVS `0x98280198`;
   `0x9a801c00..0x9a801c34` (14 words; 12 of them read-modify-written, `|= 1`, `|= 2`, `|= 4`, each under the lock
@@ -1761,8 +1767,9 @@ camFrontEndSession (9 of 9) and `emu/test/test_take_release.mjs` camFeSession (5
   type 7's job callbacks (`0x5015d6c3`.., above) pass bit 0 or 1, so the callers of a record's +44 outside cam_bright.c
   read to the bit EXP's mask takes (half a day). (2) The frame step's sender:
   cam_still_seq.c's run to event `0x10000100`, and the system clock controller at `0x98580000` the experiment stopped at
-  (days, open-ended; 4.2 seam D). Only then can a stand-in at a unit's interrupt (paced by the lab's frame clock) have a
-  job to complete.
+  (days, open-ended; 4.2 seam D). (3) The shorter lead to the front end: request 6 natively under `cam_fe` (TAKE's,
+  which S-TAKECAM answers now), read to what the event handler `0x5019c8de` waits for before its kind-7 requests
+  (hours). Only then can a stand-in at a unit's interrupt (paced by the lab's frame clock) have a job to complete.
 
 ### 4.3 Still capture, image processing and recording
 

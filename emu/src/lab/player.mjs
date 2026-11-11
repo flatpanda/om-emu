@@ -289,6 +289,7 @@ export class Player {
     this.camapp_components = false;  // S-BOOTDONE / S-CPU3 too (control camapp 2): the HLS components run
     this.camapp_native_tra = false;  // control camapp 3: the components with the transaction path native (camapp.mjs TRAACK_KEPT)
     this.camapp_play_native = false; // with camapp 3 only: the play module natively (playmod.mjs; set by its tests)
+    this.cam_fe = false;             // --take probe: cam.c's second init against S-CAMFE (take.mjs H-CAMINIT2); off by default
     this.phase = 'starting';
     this.error = null;
     this.status_seq = 0;
@@ -351,7 +352,7 @@ export class Player {
       ...((a.take ?? 'stand-in') !== 'stand-in' ? { take: a.take } : {}),   // the TAKE probe (take.mjs); absent by default
       ...((a.cpu2 ?? 'stand-in') !== 'stand-in' ? { cpu2: a.cpu2 } : {}),   // CPU 2 natively (cpu2.mjs)
       ...(this.camapp_components ? { camapp_components: true } : {}), ...(this.camapp_native_tra ? { camapp_native_tra: true } : {}),
-      ...(this.camapp_native_tra && this.camapp_play_native ? { camapp_play_native: true } : {}) };
+      ...(this.camapp_native_tra && this.camapp_play_native ? { camapp_play_native: true } : {}), ...(this.cam_fe ? { cam_fe: true } : {}) };
   }
   open_session() {
     const a = this.a;
@@ -495,6 +496,7 @@ export class Player {
     if (this.session?.camapp?.take?.focus_tid) used.push('H-TAKEFOCUS');                     // --take probe: TAKE_FOCUS natively (take.mjs)
     if (this.session?.camapp?.take?.thr_takeover_set) used.push('S-THRTAKEOVER');            // --take probe under camapp 3 (take.mjs)
     if (this.session?.camapp?.take?.cam_inited) used.push('H-CAMINIT');                      // --take probe (take.mjs)
+    if (this.session?.camapp?.take?.cam_fe_inited) used.push('H-CAMINIT2', 'S-CAMFE', 'A-CAMFE-1', 'A-CAMFE-2');   // and cam_fe
     if (this.session?.camapp?.take?.exp_tid != null) used.push('H-EXPINIT');                 // and --cpu2 native
     const stb = this.session?.camapp?.take;                                                  // --take probe: the strobe natively (take.mjs, shoe.mjs)
     if (stb?.stb_tids) used.push('H-STBINIT', 'S-HOTSHOE', ...(stb.shoe.mapped ? ['H-SIOMAP'] : []), 'A-HOTSHOE-1', 'A-HOTSHOE-2');

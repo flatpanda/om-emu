@@ -263,6 +263,16 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   ss.bad.forEach((x) => console.log('  ', x));
   bad += ss.bad.length;
 }
+// the release route with cam.c's second init (test_take_release.mjs camFeSession, the probe's cam_fe opt-in:
+// H-CAMINIT2, S-CAMFE): S1 as focusSession's, cam.c takes EXP_MOVIE's requests without an error, nothing runs the movie
+// sequence's frame step, EXP_MOVIE still waits; S2 stops at S-DISPQ
+{
+  const { camFeSession } = await import('../test/test_take_release.mjs');
+  const cs = await camFeSession();
+  console.log(`the release route with cam.c's second init (H-CAMINIT2, S-CAMFE) in play: ${cs.checks - cs.bad.length}/${cs.checks}`);
+  cs.bad.forEach((x) => console.log('  ', x));
+  bad += cs.bad.length;
+}
 // CPU 2 natively (--cpu2 native): its boot to the idle loop, its first device accesses, CPU 0's CPUCONN and the tasks
 // CPU 0's boot stages start on it, and the Super Control Panel's posts answered by its AUD_LEVEL_MONITOR as S-CPU2
 // answered them; under control camapp 3 the GUI's histogram drawn by its OSD_DRAW_CPU2; off by default
@@ -466,15 +476,17 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 }
 // S-EXPOSE's readers in a default session, and the EXP callback that would write the AE results run natively as far
 // as it goes (test_expcb.mjs, --take probe with --cpu2 native: EXP_MOVIE's AE request stops before the callback);
-// cam.c's inits and requests natively, step by step (camDriverSession)
+// cam.c's inits and requests natively, step by step (camDriverSession); its second init against S-CAMFE
+// (camFrontEndSession)
 {
-  const { aeReadersSession, expCallbackSession, camDriverSession } = await import('../test/test_expcb.mjs');
+  const { aeReadersSession, expCallbackSession, camDriverSession, camFrontEndSession } = await import('../test/test_expcb.mjs');
   const ar = await aeReadersSession();
   const ec = await expCallbackSession();
   const cd = await camDriverSession();
-  console.log(`S-EXPOSE's readers in play: ${ar.checks - ar.bad.length}/${ar.checks}; the EXP callback, rounds 1 and 2: ${ec.checks - ec.bad.length}/${ec.checks}; cam.c natively: ${cd.checks - cd.bad.length}/${cd.checks}`);
-  [...ar.bad, ...ec.bad, ...cd.bad].forEach((x) => console.log('  ', x));
-  bad += ar.bad.length + ec.bad.length + cd.bad.length;
+  const cf = await camFrontEndSession();
+  console.log(`S-EXPOSE's readers in play: ${ar.checks - ar.bad.length}/${ar.checks}; the EXP callback, rounds 1 and 2: ${ec.checks - ec.bad.length}/${ec.checks}; cam.c natively: ${cd.checks - cd.bad.length}/${cd.checks}; its second init against S-CAMFE: ${cf.checks - cf.bad.length}/${cf.checks}`);
+  [...ar.bad, ...ec.bad, ...cd.bad, ...cf.bad].forEach((x) => console.log('  ', x));
+  bad += ar.bad.length + ec.bad.length + cd.bad.length + cf.bad.length;
 }
 // the lens on the mount natively: the serial controller, the deferred-call triggers, S-LENSMCU, the driver's start:
 // E143 here, E146 and E147 each in a process of its own (the model is fixed when the lab is imported)

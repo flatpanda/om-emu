@@ -75,6 +75,7 @@ import { pack } from '../util/bytes.mjs';
 import { OLYQEWR } from './display.mjs';
 import { HotShoe } from './shoe.mjs';
 import { CPU2_TASKS } from './cpu2.mjs';
+import { CamFe } from '../dev/camfe.mjs';
 
 export class TakeError extends FirmwareError {}
 
@@ -252,6 +253,7 @@ export class TakeProbe {
     s.settle('H-TAKEINIT');
     for (const t of Object.values(this.tids)) if ((lab.nk.state(t) & 0xF) !== 4) throw new TakeError(`H-TAKEINIT: task ${t} is not waiting after its start (state ${lab.nk.state(t)})`);
     this.log.push(['init', `TAKE_FUNC task ${this.tids.func}, TAKE_FUNC_CP task ${this.tids.cp} waiting`]);
+    this.cam_fe_bring_up();                                             // round 5: H-CAMINIT2 (the cam_fe opt-in)
     this.neighbours_bring_up();                                         // round 2 (below)
     this.cam_exp_bring_up();                                            // round 4: H-EXPINIT (--cpu2 native)
     this.bring_up_main();
@@ -603,6 +605,8 @@ export class TakeProbe {
   cam_install() {
     const lab = this.lab, C = CAM_E143;
     this.cam_inited = false;
+    this.cam_fe_inited = false;       // round 5 (H-CAMINIT2)
+    this.camfe = null;
     this.exp_tid = null;
     this.cam = { native: [], errlogs: [], lines: [], frames: [], waits: [], answers: [] };
     lab.observe(C.errlog, (l, r) => {
@@ -645,6 +649,25 @@ export class TakeProbe {
     this.s.settle('H-CAMINIT');
     this.cam_inited = true;
     this.log.push(['init', `cam.c's init ${h8(C.init)}: the request pool's head ${h}`]);
+  }
+  // H-CAMINIT2 (from bring_up, after H-TAKEINIT; only with the session's cam_fe opt-in, off by default;
+  // docs/hle-gaps.md 4.2.5): cam.c's second init natively against S-CAMFE (src/dev/camfe.mjs, built here), as USTART
+  // calls it (0x50024d80) after TAKE_FUNC's init and its tasks' start (0x50024c2d..0x50024c54) and before USTART2's
+  // stage task (0x50024d9b). Its ten steps register the movie sequence's queues (0x5019868e) and run the front end's
+  // init (0x5016efcd), which attaches the camera units' interrupts (IRQs 15-22, 24-42, 243-247); S-CAMFE drives none of
+  // them. Checked: it returns 0, cam.c logs nothing and it writes every register of S-CAMFE's program
+  cam_fe_bring_up() {
+    if (!this.s.opts.cam_fe) return;
+    const lab = this.lab, C = CAM_E143, e0 = this.cam.errlogs.length;
+    this.camfe = new CamFe(lab.sim.m);
+    const rc = lab.call(C.init2, null, null, null, LIMIT * 25).d0 & 0xFFFF;
+    this.s.settle('H-CAMINIT2');
+    const fe = this.camfe;
+    if (rc !== 0 || this.cam.errlogs.length !== e0 || fe.regs.size !== fe.allowed.size) {
+      throw new TakeError(`H-CAMINIT2: cam.c's second init ${h8(C.init2)} returned ${rc}, logged [${this.cam.errlogs.slice(e0).map(h8)}], wrote ${fe.regs.size} of S-CAMFE's ${fe.allowed.size} registers`);
+    }
+    this.cam_fe_inited = true;
+    this.log.push(['init', `cam.c's second init ${h8(C.init2)}: ${fe.writes} writes and ${fe.reads} reads of S-CAMFE`]);
   }
   // H-EXPINIT (from bring_up, after H-TAKENBINIT; with --cpu2 native only, as EXP's evaluation runs on CPU 2): what
   // USTART2's stage runs for EXP, in its order: IMG_PRECON's module init (0x502a49b3, the stage's call at 0x501e8ec0),
@@ -757,8 +780,16 @@ CAM_REQUESTS[144] = 'TAKE_MAIN RdyFcsRdy1, 0x503c2e21';
 //              from EXP_MOVIE) then go natively and are recorded; EXP's frame callbacks (request 7's completion +72 and
 //              the slots for the events 0x200, 0x300 and 0x400, +80, +84, +88) are observed. What fires them on the
 //              camera is the front end (not read to an interrupt), so EXP_MOVIE waits on its flag 21
+// Round 5, cam.c's second init (docs/hle-gaps.md 4.2.5; `--take probe` with the session's cam_fe opt-in, off by
+// default):
+//   H-CAMINIT2 after H-TAKEINIT: cam.c's second init natively against S-CAMFE (src/dev/camfe.mjs), the register file
+//              that takes exactly the values that init writes (cam_fe_bring_up); without the opt-in it is not run
+//              (above). With it cam.c takes EXP_MOVIE's requests 8 and 7 without an error and keeps request 7's
+//              item for the movie sequence's frame step, which nothing in the lab runs, so EXP_MOVIE still waits on
+//              its flag 21
 export const CAM_E143 = {
   init: 0x502A49EC,
+  init2: 0x50155357,          // cam.c's second init (USTART's call at 0x50024d80; H-CAMINIT2, round 5)
   pool: 0x6299726C,           // the request pool's free-list head (u16; 0xffff: empty)
   errlog: 0x501504D0,         // cam.c's error log (d0 the code, d1 the source line; X: the code reaches the kernel's)
   exp: {

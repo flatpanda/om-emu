@@ -22,6 +22,7 @@
 //                   application's synchronous command 15 waits, is kept and run after it, then the display manager's
 //                   two command 18 requests; the idle then stops at the sub-CPU's command 0x14, which S1 held brings
 //                   about a second after S1 with or without S2
+//   camFeSession    round 5 (docs/hle-gaps.md 4.2.5): focusSession's S1 and S2 with the probe's cam_fe opt-in (below)
 //   node emu/test/test_take_release.mjs
 import { fileURLToPath } from 'node:url';
 
@@ -256,6 +257,66 @@ export async function focusSession() {
   return { checks, bad, notes };
 }
 
+// Round 5 (H-CAMINIT2, S-CAMFE; docs/hle-gaps.md 4.2.5): camapp 3 with --take probe, --cpu2 native and the probe's
+// cam_fe opt-in, so cam.c's second init has run against S-CAMFE. S1 goes as in focusSession (the same record, S1_EXP,
+// and the sequence's events 826 and 794); EXP_MOVIE gives cam.c requests 8 and 7, which it now takes without an error,
+// the movie sequence keeps request 7's item (state 1, 0x62a24244) and nothing runs its frame step (0x5019981d), so
+// EXP_MOVIE still waits on flag 21 for bit 0x1000 and TAKE_MAIN in RdyFcsRdy3 for token 15; S-CAMFE takes no access
+// after the init. S2 stops where it did, at S-DISPQ
+export async function camFeSession() {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
+  const { Player } = await import('../src/lab/player.mjs');
+  const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+  const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
+  const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, take: 'probe', cpu2: 'native' }, env);
+  pl.camapp_components = true; pl.camapp_native_tra = true; pl.cam_fe = true;
+  try {
+    pl.open_session();
+    const s = pl.session, lab = s.lab, take = s.camapp.take, fe = take.camfe;
+    const idle = (ms) => { const to = lab.lab_time() + ms * 1e6; while (lab.lab_time() < to) s.idle_slice(Math.min(to, lab.lab_time() + 50e6)); };
+    const u16 = (a) => { const b = lab.sim.read(a, 2); return b[0] | b[1] << 8; };
+    const str = (a) => { let t = ''; for (let c; (c = lab.sim.read(a + t.length, 1)[0]) && t.length < 32;) t += String.fromCharCode(c); return t; };
+    const stateName = (n) => str(lab.sim.u32(MAIN_STATES + 20 * n + 4) >>> 0);
+    const seen = [];
+    lab.observe(SEQ_EVENT, (l, r) => {
+      const id = l.sim.read((r.sp >>> 0) + 16, 2).reduce((a, b, k) => a | b << 8 * k, 0);
+      if (id !== HISTOGRAM) seen.push(`event ${id} in phase ${r.d0}`);
+    }, 'test sequence');
+    let steps = 0;
+    lab.observe(0x5019981D, () => { steps++; }, 'test movie frame step');
+    let n = 0;
+    const since = () => { const out = take.requests.slice(n).map((r) => canon2(r, stateName)); n = take.requests.length; return out; };
+    const used = pl.stand_ins_in_use();
+    ok(s.status().gui === '0x0108' && ['H-CAMINIT2', 'S-CAMFE', 'H-EXPINIT', 'H-TAKEFOCUS'].every((x) => used.includes(x)) && fe?.regs.size === 256,
+      `the start reaches the shooting screen (GUI ${s.status().gui}) with ${used.filter((x) => /CAM|EXP/.test(x))}`);
+    idle(1000);
+    since(); seen.length = 0;
+    const c0 = { native: take.cam.native.length, waits: take.cam.waits.length, errlogs: take.cam.errlogs.length }, w0 = fe.writes, r0 = fe.reads;
+    let stop = null;
+    try { s.key('s1', 'down'); s.camapp.pump(); idle(600); } catch (e) { stop = e; }
+    const s1 = since(), native = take.cam.native.slice(c0.native).map((x) => `${x.task} ${x.id}`), w = take.cam.waits.slice(c0.waits).at(-1);
+    ok(stop === null && JSON.stringify(s1) === JSON.stringify(S1_EXP) && JSON.stringify(seen) === JSON.stringify(['event 826 in phase 101', 'event 794 in phase 102']),
+      `S1: the record as focusSession's (${s1.length} entries, ${JSON.stringify(s1.slice(-5))}), events ${JSON.stringify(seen)} (stop ${stop ? stop.message.slice(0, 200) : 'none'})`);
+    ok(JSON.stringify(native) === JSON.stringify(['EXP_MOVIE 8', 'EXP_MOVIE 7']) && take.cam.errlogs.length === c0.errlogs && u16(0x62A24244) === 1 && !steps,
+      `EXP_MOVIE gives cam.c ${JSON.stringify(native)}, logged ${take.cam.errlogs.slice(c0.errlogs).map(h8)} (none), the movie sequence's state ${u16(0x62A24244)} (1), frame steps ${steps} (0)`);
+    ok(w?.flag === EXP_WAIT.flag && w?.bits === EXP_WAIT.bits && w?.from === EXP_WAIT.from && !take.cam.frames.length && !take.cam.answers.length && take.ae_writes === 0
+      && stateName(u16(MAIN_STATE)) === 'RdyFcsRdy3' && (lab.sim.u32(MAIN_PENDING) >>> 0) === 0x200 && fe.writes === w0 && fe.reads === r0,
+      `EXP_MOVIE waits on flag ${w?.flag} for ${h8(w?.bits)}, no frame callback, answer or AE write; TAKE_MAIN in ${stateName(u16(MAIN_STATE))} pending ${h8(lab.sim.u32(MAIN_PENDING))}; S-CAMFE untouched since the init (${fe.writes - w0} writes, ${fe.reads - r0} reads)`);
+    let stop2 = null;
+    since(); seen.length = 0;
+    const ds0 = lab.display_sends.length;
+    try { s.key('s2', 'down'); s.camapp.pump(); idle(700); } catch (e) { stop2 = e; }
+    const sends = lab.display_sends.slice(ds0).map(([c, , f]) => [c, f]);
+    ok(stop2 !== null && S2_STOP.test(stop2.message) && !since().length && JSON.stringify(seen) === JSON.stringify(['event 824 in phase 103']) && JSON.stringify(sends) === JSON.stringify(S2_SENDS),
+      `S2 stops at S-DISPQ as before (${seen}; ${stop2 ? stop2.message.slice(0, 160) : 'no stop'})`);
+  } catch (e) { bad.push(`camapp 3 --take probe, cam_fe: ${e.message.slice(0, 800)}`); }
+  pl.close_session();
+  return { checks, bad };
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const r = await releaseSession();
   console.log(`the release route to TAKE_EXEC: ${r.checks - r.bad.length}/${r.checks}`);
@@ -263,5 +324,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const f = await focusSession();
   console.log(`the release route, rounds 2 and 4: TAKE_FOCUS and EXP (H-TAKEFOCUS, H-EXPINIT): ${f.checks - f.bad.length}/${f.checks}`);
   f.bad.forEach((x) => console.log('  ', x));
-  process.exit(r.bad.length || f.bad.length ? 1 : 0);
+  const c = await camFeSession();
+  console.log(`the release route with cam.c's second init (H-CAMINIT2, S-CAMFE): ${c.checks - c.bad.length}/${c.checks}`);
+  c.bad.forEach((x) => console.log('  ', x));
+  process.exit(r.bad.length || f.bad.length || c.bad.length ? 1 : 0);
 }

@@ -37,6 +37,7 @@
 //                       (0x505975ba). In neither does the request's callback or the AE result writer 0x50596187 run,
 //                       so S-EXPOSE stays
 //   camDriverSession    round 2 (docs/hle-gaps.md 4.2.3): cam.c natively (below)
+//   camFrontEndSession  round 3 (docs/hle-gaps.md 4.2.5): cam.c's second init against S-CAMFE (below)
 //   aeReadersSession    S-EXPOSE's readers in a default session (below)
 //   node emu/test/test_expcb.mjs
 import { fileURLToPath } from 'node:url';
@@ -267,6 +268,71 @@ export async function camDriverSession() {
   return { checks, bad };
 }
 
+// Round 3 (docs/hle-gaps.md 4.2.5): the probe with its cam_fe opt-in (camapp 1, --take probe, --cpu2 native) runs
+// cam.c's second init 0x50155357 against S-CAMFE (H-CAMINIT2, src/lab/take.mjs; src/dev/camfe.mjs). (1) It writes
+// S-CAMFE's whole program and attaches the front end's handlers in the interrupt table 0xa32600c0 (IRQ n at +4 n; the
+// handlers below, X), cam_bright.c's per-bit callback tables are in RAM (0x629a7c64: AE1's 15 from 0x5015db6a;
+// 0x629a7cdc: AWB1's 8, the per-area entry 0x5015e629 at +4) and the movie sequence's queues SQMV, MQEX, INFN and SMFM
+// are registered (their handles 0x62a252a4, 0x62a252a8, 0x62a24288, 0x62a252ac). (2) TAKE_EXPOSE's 0xa00 (mode 0, as
+// expCallbackSession): EXP_MOVIE gives cam.c requests 8 and 7, which it takes without an error (before: 0x0a283000
+// three times); the movie sequence's kind 1 (0x50198993) keeps request 7's item (0x62a24248) with its state 1
+// (0x62a24244) and posts it, and nothing goes further: the sequence's frame step 0x5019981d (kind 10) never runs, so
+// the front end's entry 0x5016f2ae and cam_bright.c's job queue 0x50165b82 do not either, S-CAMFE takes no access, no
+// frame callback runs and EXP_MOVIE waits on its flag 21 for bit 0x1000
+const IRQ_TABLE = 0xA32600C0;
+const FE_IRQS = { 15: 0x501A2478, 16: 0x501A24C2, 17: 0x501A250C, 18: 0x5019E218, 19: 0x501A2EC1, 22: 0x501A2F9F, 24: 0x50195B8E,
+  25: 0x501A3BEA, 26: 0x50156528, 27: 0x501919B4, 31: 0x50191DF2, 32: 0x5015789D, 33: 0x501579AA, 34: 0x50157AB7, 35: 0x50157D21,
+  36: 0x50157F8B, 37: 0x501581F5, 38: 0x501616F7, 39: 0x5018D3F1, 40: 0x50163408, 41: 0x5016763B, 42: 0x501667C9, 243: 0x5019F0D1,
+  247: 0x5019F5DA };
+const SEQ = { queues: [0x62A252A4, 0x62A252A8, 0x62A24288, 0x62A252AC], state: 0x62A24244, item: 0x62A24248, step: 0x5019981D };
+export async function camFrontEndSession() {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
+  const { Player } = await import('../src/lab/player.mjs');
+  const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+  const { pack } = await import('../src/util/bytes.mjs');
+  const { disasm } = await import('../src/lab/hle.mjs');
+  const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
+  const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, take: 'probe', cpu2: 'native' }, env);
+  pl.cam_fe = true;
+  try {
+    pl.open_session();
+    const s = pl.session, lab = s.lab, take = s.camapp.take, fe = take.camfe;
+    const u32 = (a) => lab.sim.u32(a) >>> 0, u16 = (a) => { const b = lab.sim.read(a, 2); return b[0] | b[1] << 8; };
+    const used = pl.stand_ins_in_use();
+    ok(pl.opts().cam_fe === true && ['H-CAMINIT', 'H-CAMINIT2', 'S-CAMFE', 'A-CAMFE-1', 'A-CAMFE-2', 'H-EXPINIT'].every((x) => used.includes(x))
+      && fe && fe.regs.size === 256 && fe.writes === 358 && fe.reads === 40,
+      `the probe runs H-CAMINIT2 against S-CAMFE (${used.filter((x) => /CAM/.test(x))}): ${fe?.regs.size} registers, ${fe?.writes} writes, ${fe?.reads} reads`);
+    const irqs = Object.entries(FE_IRQS).filter(([n, at]) => disasm(u32(IRQ_TABLE + 4 * Number(n))) !== at).map(([n]) => n);
+    ok(!irqs.length, `the front end's handlers are in the interrupt table (wrong: ${irqs.map((n) => `${n}: ${h8(disasm(u32(IRQ_TABLE + 4 * n)))}`)})`);
+    ok(disasm(u32(0x629A7C64)) === 0x5015DB6A && disasm(u32(0x629A7C8C)) === 0x5015DDF6 && disasm(u32(0x629A7CE0)) === 0x5015E629,
+      `cam_bright.c's per-bit tables: AE1's [0] ${h8(disasm(u32(0x629A7C64)))}, [10] ${h8(disasm(u32(0x629A7C8C)))}, AWB1's [1] ${h8(disasm(u32(0x629A7CE0)))}`);
+    ok(SEQ.queues.every((q) => u32(q) !== 0) && u16(SEQ.state) === 0 && u32(SEQ.item) === 0, `the movie sequence's queues are registered (${SEQ.queues.map((q) => h8(u32(q)))}), no item`);
+    const seen = [];
+    for (const [at, what] of [[0x5016F2AE, 'front end'], [0x50165B82, 'job'], [SEQ.step, 'frame step']]) lab.observe(at, () => seen.push(what), `camfe ${what}`);
+    const c0 = { native: take.cam.native.length, errlogs: take.cam.errlogs.length, waits: take.cam.waits.length }, w0 = fe.writes, r0 = fe.reads;
+    const param = lab.alloc(new Uint8Array(52), 4);
+    const msg = lab.alloc(pack('<IIII', 0, 1, 0xA00, param), 4), desc = lab.alloc(pack('<II', msg, 16), 4);
+    lab.call(E.olyqewr, { d0: E.take_expose, d1: 0xFFFFFFFF, a0: desc }, null, null, 2000000);
+    s.settle('camfe TAKE_EXPOSE 0xa00');
+    const idle = (ms) => { const to = lab.lab_time() + ms * 1e6; while (lab.lab_time() < to) s.idle_slice(Math.min(to, lab.lab_time() + 50e6)); };
+    idle(300);
+    const native = take.cam.native.slice(c0.native), w = take.cam.waits.slice(c0.waits).at(-1);
+    const r7 = native.find((x) => x.id === 7)?.record;
+    ok(JSON.stringify(native.map((x) => `${x.task} ${x.id}`)) === JSON.stringify(['EXP_MOVIE 8', 'EXP_MOVIE 7']) && take.cam.errlogs.length === c0.errlogs,
+      `cam.c takes EXP_MOVIE's requests 8 and 7 with no error (${JSON.stringify(native.map((x) => x.id))}, logs ${take.cam.errlogs.slice(c0.errlogs).map(h8)})`);
+    ok(r7 === E.frame_record && u16(SEQ.state) === 1 && u32(SEQ.item) !== 0,
+      `the movie sequence keeps request 7's item ${h8(u32(SEQ.item))} with its state ${u16(SEQ.state)} (want 1)`);
+    ok(!seen.length && fe.writes === w0 && fe.reads === r0, `no frame step, front-end entry or unit job follows (${seen}), S-CAMFE untouched (${fe.writes - w0} writes, ${fe.reads - r0} reads)`);
+    ok(!take.cam.frames.length && !take.cam.answers.length && w?.flag === 21 && w?.bits === 0x1000 && (lab.nk.state(take.exp_tid) & 0xF) === 4,
+      `no frame callback (${take.cam.frames}), no answer (${take.cam.answers.length}); EXP_MOVIE waits on flag ${w?.flag} for ${h8(w?.bits)}`);
+  } catch (e) { bad.push(`camFrontEndSession: ${e.message.slice(0, 600)}`); }
+  pl.close_session();
+  return { checks, bad };
+}
+
 // S-EXPOSE's readers in a default session (camapp 1, no probe): every property read of the three AE result objects
 // 0xc12a / 0xc0ba / 0xc0ca through the getter 0x500417da, every set through 0x5004188b, the application's get by
 // index 0x503ee3c8 for their indices 4011..4013 (the list 0x606239e4 + 2 (index - 4000)) and every run of the plan
@@ -331,8 +397,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const c = await camDriverSession();
   console.log(`cam.c natively: ${c.checks - c.bad.length}/${c.checks}`);
   c.bad.forEach((x) => console.log('  ', x));
+  const f = await camFrontEndSession();
+  console.log(`cam.c's second init against S-CAMFE: ${f.checks - f.bad.length}/${f.checks}`);
+  f.bad.forEach((x) => console.log('  ', x));
   const a = await aeReadersSession();
   console.log(`S-EXPOSE's readers: ${a.checks - a.bad.length}/${a.checks}`);
   a.bad.forEach((x) => console.log('  ', x));
-  process.exit(r.bad.length || c.bad.length || a.bad.length ? 1 : 0);
+  process.exit(r.bad.length || c.bad.length || f.bad.length || a.bad.length ? 1 : 0);
 }

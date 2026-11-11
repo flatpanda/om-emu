@@ -4139,8 +4139,8 @@ there (it stays on the other bodies).
   (the HLS side); RAW and RAW + JPEG (`FileType` 0, `ExifFileType`, the type table `0x60358df8`); `Free` and its
   completion with a requester (api_rec); REC_MAIN's task and the image pipeline (REC_IMAGE's task runs natively on
   E143 since 2026-11-10, 4.3.3, X); the E144
-  family (E144 and E148 keep S-RECFILE's DCF steps; their REC is another version, below). E146 and E147 since the same
-  day (below).
+  family's E130 (its REC_FILE inlines its start and finish; the eight others natively since 2026-11-10, below). E146
+  and E147 since the same day (below).
 - **The second slot (survey, D):** the packet carries it (`Media2`, `ExifFileTypeDoubleSlot`, `BuffAddrDoubleSlot`,
   `SlotNo`) and REC_FILE records both slots in `rec_file_record_DoubleSlot` (`0x5053f97d`, the second file context
   `0x62a8c540`): the type `0..12` by `ExifFileType` and `ExifFileTypeDoubleSlot` (0 JPEG, 2 RAW, 5 RAW + JPEG;
@@ -4203,8 +4203,33 @@ there (it stays on the other bodies).
   (E144 task 31, `0x503f5dc0`, priority 54) blocks in REC's receive wrapper `0x503f1206` (300 bytes; no event flag,
   no bind, and the receive does not pass `rec_file.c`), the EXIF template init `0x5030b384` has no cache flush and
   its template is 31700 bytes, the date set loads the time record with a 16-bit add in another order, and E143's
-  crop-area pick and file-context pick are not found (not read further). E144 and E148 keep S-RECFILE's DCF steps; a
-  port needs those forms read.
+  crop-area pick and file-context pick are not found (not read further). Read and run since 2026-11-10 (below).
+- **The E144 family natively (2026-11-10; D on E144 unless tagged; `docs/model-survey.md` findings 118 to 123).**
+  REC_FILE runs natively on E144, E148, E139, E134, E137, E142, E140 and E125 (`src/fw/models.mjs` rec_native) at the
+  addresses and layouts a second rule reads (`src/fw/facts.mjs` recFileQueue, fact `rec_file` in recFile's shape and
+  the clock read; `test/test_facts.mjs` pins the eight):
+  - *The version:* REC_FILE (E144 task 31, `0x503f5dc0`) waits on its queue alone (`0x60041864`; no event flag, no
+    bind), takes REC's 300-byte packet, whose dump names every field in it (Addr and Size too: no image record), and
+    runs rec_file_start_process, the destination record (rec_make_file, rec_file_record through a file context of
+    E143's layout and the recorder's own builders), rec_file_finish_process; REC_IMAGE's rec_make_image_finish posts a
+    still's packet to that queue itself (`0x503f8da9`), so S-RECIMAGE's post is the camera's route. rec_jpeg_exec
+    clears no header area through the image engine (S-JPEGENC stands in for the encode alone) and the EXIF init
+    flushes no cache; the header maker divides by the shot's crop area (+31550 on E144), which S-EXIFPRM sets to the
+    full frame. The camera's clock setting and read are read by their own form (the one `mov 10499,d0; movhu
+    d0,(8,a2); ret` of each image and the function after it), as the 100-byte recorder is on E144 and E148 alone.
+  - *What runs (X, `test/test_storage.mjs --session` per body; refs/exif.mjs and exiftool):* S2 gives
+    `PB080001.JPG` in `100OMSYS` (E144, E148) or `100OLYMP` (the six others), 62,857 bytes (41,984 of the
+    firmware's header, then the lab's stream), with the body's Make (`OM Digital Solutions` on E144 and E148,
+    `OLYMPUS CORPORATION` on the others), Model (`OM-5`, `OM-5MarkII`, `E-M1MarkIII`, `E-M1X`, `E-M5MarkIII`, `E-P7`,
+    `E-M10MarkIV`, `E-M1MarkII`), Exif version (0231; 0300 on E148, 0230 on E125), the clock's dates, maker notes
+    (`OM SYSTEM`; `OLYMPUS` on the six), XMP on E144 and E148 only and IFD1's thumbnail of length 0; the firmware's
+    image count 1 and its fnode 1 the file in the same session (S-CARD's count retired there), file 2 next at the
+    next session's mount; E143's REC warnings around S2 (E144, E139). test_playinfo passes on the eight.
+  - *Open:* E130, and E145, E133, E129 and E132 outside the family, whose REC_FILE inlines its start and finish
+    (rec_native false: S-RECFILE through fileif); the 96-byte recorder those and the eight hold (finding 122: E139's
+    builders read, its entry block without E144's word at +28; the rule `recorder` keeps the 100-byte form, so the DCF
+    steps are not extended); REC_IMAGE's own task on the family; the thumbnail and shooting values; RAW; the second
+    slot.
 
 ### 4.9 HDMI and DisplayPort
 

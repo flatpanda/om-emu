@@ -1873,6 +1873,95 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    DEVICE's masks are null on the kind-3 bodies and the three helpers (and play's TH live view) refuse there with that
    reason, where they had reached an unplaced function; none of them runs on the family's paths (X: modelcheck's E118,
    E120 and E122 runs unchanged).
+118. **The E144 family's REC version: REC_FILE on its queue alone** (2026-11-10, `src/fw/facts.mjs` recFileQueue, fact
+   `rec_file`, `docs/hle-gaps.md` 4.8.10; D on E144 unless tagged; finding 83's stop). REC_FILE (task 31,
+   `0x503f5dc0`) receives REC's packet of 300 bytes from its queue (the word `0x60041864`, id 73) through REC's
+   receive wrapper (`0x503f1206`: the kernel's receive with "rec.c", no timeout), with no event flag and no bind. For
+   each packet its loop calls a trace, rec_file_start_process (`0x503f73c2`), where NoRecord (+282) is 1 the buffers'
+   free (`0x503f5f3f`), else rec_file_destination_record (`0x503f6bb9`: RecordDevice bit 0 to rec_make_file
+   `0x503f5e47`, rec_file_record `0x503f5fbb`), whose status it keeps (`mov d0,d2` at `0x503f5e05`, the lab's
+   handled), rec_file_finish_process (`0x503f74a1`) and with Free (+286) the reply (`0x503f1192`); a status of 8064 to
+   8191 ends the loop. The packet dump (`0x503f8314`) names every field in the packet, the image's address and size
+   too (no image record, unlike E146's): pExifParam +28, HandleTarget +116, BuffAddr1 / BuffSize1 +136 / +140,
+   HeaderSize +176, Addr / Size +180 / +184, Status +192, Mode +194, Media +198, Media2 +200, RecordDevice +202,
+   ImgAspect +283, Free +286, FileType +298 (+296 on E134, E137 and E125). REC_IMAGE's rec_make_image_finish
+   (`0x503f8c55`) posts a still's packet to REC_FILE's queue itself (`0x503f8da9`: Mode 4097 by its table
+   `0x605791a4`, Status not 40662 and the shot's record's +28600 not 5) with "REC post_msg" (`0x503f1256`, 300 bytes),
+   where E143's goes through REC's ring (`docs/hle-gaps.md` 4.3.3): S-RECIMAGE's post is the camera's route here. The
+   other seven run the same loop as task 30 or 31; E139, E134 and E125 (the double-slot bodies) first call
+   `0x503f2402` (E139's) with a 92-byte record of the task's stack (sp + 304) and, where its +88 is 1,
+   rec_make_file_DoubleSlot (`0x503f3e0c`) in the destination record's place (I: the second slot's record); E137, E142
+   and E140 call rec_make_file there directly. REC's module init is the function that ends `mov 8191,d0; ret` right
+   before REC_MAIN's task, which holds the "rec_main" trace (E144 `0x503f0fa9` before `0x503f1010`; E143's
+   `0x50539665` before `0x505396d1`), and binds one queue, to REC_MAIN's flag (E144 `0x60041868` to `0x60041726`, as
+   E143's binds `0x60043252` to `0x600430fe`); E143's bind of REC_FILE's queue (`0x5053f189`) has no counterpart.
+119. **The family's header maker and EXIF module** (2026-11-10; D on E144 unless tagged). rec_jpeg_exec
+   (`0x503ff3e3`) takes the file's buffer from REC's pool 3 (`0x50401673`) into Addr, runs rec_jpeg_make_image
+   (`0x503ff598`), frees a work area (`0x50401965`) and, with Status 0, runs rec_jpeg_make_header (`0x503ff64c`); no
+   header area is cleared through the image engine before the encode (E143's `0x5054c982` has no counterpart), so
+   S-JPEGENC stands in for the encode alone. The header maker sets HeaderSize 41984 (`0x503fff59`) and writes SOI,
+   APP1 `Exif` (its length 41982 less `0x5030c51b`'s, the serializer `0x5030b3d4`) and after it `0x5030c4d4`'s part;
+   it divides by the shot's crop area at +31550 ({x, y, xden, yden}, `0x503ffa31`, `0x503ffa6e`; rec_raw_make_header
+   by +31558, `0x50405d8c`), which S-EXIFPRM sets to {0, 0, 1, 1} as on E143 (X: with it 0 the header maker faulted
+   at `0x503ffa82`, the divide). The EXIF module's init (`0x5030b384`, its inner `0x5030b38d` loading the template
+   `0x620eb760`) flushes no cache; TAKE's copy (`0x5030b3b9`) copies 31700 bytes; the EXIF set's date formatting
+   (`0x5030dc6a`) takes the time record at +28508 with the format `0x4200` into DateTimeOriginal +4089, copied to
+   CreateDate +4109 and DateTime +1364, in a 16-bit form of E143's add; E137 and E125 add the time to a3, E142, E140
+   and E130 to d0 kept at (12,sp) (`0x502fcdfe`, `0x502e26c3`; X, a scan of the three forms: one hit per image). By
+   body (X, the rule): the template 31708 bytes on E148, 29068 on E139 and E134, 27928 on E137, 27620 on E125, 27332
+   on E142, 26956 on E140; the time record +28516, +25868, +25868, +24728, +23984, +23832, +23824; DateTimeOriginal
+   +4089 on E148, +1785 on the six others (CreateDate +1805); DigitalZoomRatio +4224 on E144 and E148, +1920, and
+   +1900 on E125; Make +1480 and Model +1504 on all; the crop areas E148 +31558 / +31566, E139 and E134 +28910 /
+   +28918, E137 +27778 / +27786, E125 +27462 / +27470, E142 +27180 and E140 +26804 (no RAW header's area: their
+   rec_raw_make_header holds no such divide).
+120. **The family's file contexts and the camera's clock, by form** (2026-11-10; D unless tagged). E144's
+   rec_file_record fills one file context of E143's 92-byte layout (`0x62127124`, `0x503f6041..0x503f60b6`: +8 the
+   DCF block, +12 and +32 the chain write's and the entry's blocks (I: E142's fill sizes them 116 and 96), +40
+   pExifParam, +44 the time record, +48 HeaderSize, +52 the size, +76 Media, +78 the type, +80 FileType; X: the fnode
+   at +36 and the stamp in the DCF block read through it give the card's file) and records through it with the
+   whole-file recorder's own builders (the open `0x50400188`,
+   the reservation `0x50400368`, the chain write `0x504003f8`, the entry `0x50400556`, the registration `0x504006d5`,
+   finding 71). E139, E134 and E125 pick one of two by Media as E143 does (E139 `0x503f4a61`: `0x62165420`,
+   `0x6216547c`); E142 and E140 load theirs into a2 for the context fill `0x503c4340` (E142's: `0x622930f4`, its entry
+   block one of 96 bytes). The camera's clock setting is the one function of each of the 19 images that ends `mov
+   10499,d0; movhu d0,(8,a2); ret` (E144 `0x500f022e`), and its clock read the function right after it (E144
+   `0x500f024e`), the port's place of E143's `0x5012b7cd` on all 19 (X, a scan): the rule reads both there, where
+   recFile took the read from the recorder (fact `recorder`, read on E144 and E148 only).
+121. **REC_FILE natively on eight E144-family bodies** (2026-11-10, X: `test/test_storage.mjs --session` per body,
+   32 checks each; refs/exif.mjs and exiftool). With the clock set through each body's clock setting (2026-11-08
+   12:34:56) S2 gives `C:\DCIM\100OMSYS\PB080001.JPG` on E144 and E148 and `C:\DCIM\100OLYMP\PB080001.JPG` on E139,
+   E134, E137, E142, E140 and E125: 62,857 bytes, 41,984 of the firmware's header, then the lab's stream after its
+   SOI, from cluster 5. Its Exif: on E144 and E148 Make `OM Digital Solutions`, Model `OM-5` and `OM-5MarkII`, Exif
+   version 0231 and 0300, the maker notes `OM SYSTEM` (19,636 and 19,644 bytes, CameraType2 the Model) and an XMP
+   segment after the Exif (`0a 00` past HeaderSize, as E143's); on the six others Make `OLYMPUS CORPORATION`, Model
+   `E-M1MarkIII`, `E-M1X`, `E-M5MarkIII`, `E-P7`, `E-M10MarkIV` and `E-M1MarkII`, Exif version 0231 (0230 on E125),
+   the maker notes `OLYMPUS` (CameraID `OLYMPUS DIGITAL CAMERA`, 16,996 to 19,164 bytes) and no XMP, the Exif segment
+   then reaching 2 bytes past HeaderSize; on all eight the three dates the clock's and IFD1's thumbnail of length 0,
+   read by exiftool without a warning. The firmware's image count is 1 and its fnode 1 the file in the same session
+   (S-CARD's count and list retired there, `src/lab/camapp.mjs` dcf_db), and the next session's numbering mount gives
+   file 2. Around S2 E144 and E139 log E143's REC warnings (`0x0d090002`, `0x1e01500e`, `0x1e001001`, `0x1e01500d`
+   twice). `test/test_playinfo.mjs` (two pictures, RIGHT, LEFT, INFO's three views) passes on all eight, 14 checks
+   each. The rule reads none on E130, E145, E133, E129 and E132 (finding 123) nor on the E118 family, whose loop has
+   the form but whose table names no "REC post_msg" function (the post's `0x1002` trace's code names the name before
+   it, X).
+122. **A correction to finding 71, and REC's trace table** (2026-11-10). Finding 71's recorder is one form of two: the
+   whole-file recorder with blocks of 64, 96 and 116 bytes (the second the directory entry's) is on E139, E134, E137,
+   E125, E142, E140, E130, E145, E133, E129 and E132 (X, a scan; E139 `0x515be1ab`, its clock read `0x500f0d89` and
+   builders `0x503fede6` ..), none on the E118 family, so "none on the other 13" holds for the 100-byte form only.
+   E139's builders are E144's instruction for instruction (D, but for data addresses and the folder name's `LYMP`)
+   except the entry's block, which lacks E144's word at +28: the stamps at +28 and +32, the first cluster +36, the
+   attribute +42, the folder's entry place +80 (`0x503ff344` against `0x50400556`, the place's copy `0x5062a1bc` against
+   `0x506682e2`); E134's, E137's and E125's are E139's but for their error traces' line numbers (X, a diff); those of
+   E142, E140, E130, E145, E133, E129 and E132 differ (not read). The rule `recorder` keeps the 100-byte form, so
+   S-RECFILE's DCF steps are not extended to them. REC's trace table is on all 19 images (X); recFile's read of it,
+   which wants a NUL before its head string, misses E134's, E137's and E125's, where a word precedes it (E134
+   `0x6055d190`), and recFileQueue reads it there.
+123. **What is left of the family's REC** (2026-11-10; D unless tagged). E130, E145, E133, E129 and E132: REC_FILE's
+   task inlines its start and finish processes (E130 `0x503d9350`, both traces in its loop, `0x503d9382` and
+   `0x503d942f`), and E130 loads no "pExifParam " dump (X); they give rec_native false and keep S-RECFILE through
+   fileif, their 96-byte recorder's builders not read (finding 122). On the eight: REC_IMAGE's own task (the post of
+   rec_make_image_finish read, finding 118), the thumbnail and the shooting values in Exif (S-EXIFPRM leaves the
+   template's), RAW files and the second slot, the shot's DCF checkout (`0x1e001001`, the HLS media check-in).
 
 
 

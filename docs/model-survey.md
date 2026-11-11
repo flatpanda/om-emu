@@ -1920,12 +1920,16 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    pExifParam, +44 the time record, +48 HeaderSize, +52 the size, +76 Media, +78 the type, +80 FileType; X: the fnode
    at +36 and the stamp in the DCF block read through it give the card's file) and records through it with the
    whole-file recorder's own builders (the open `0x50400188`, the reservation `0x50400368`, the chain write
-   `0x504003f8`, the entry `0x50400556`, the registration `0x504006d5`, finding 71). E139, E134 and E125 pick one of two by Media as E143 does (E139 `0x503f4a61`: `0x62165420`,
-   `0x6216547c`); E142 and E140 load theirs into a2 for the context fill `0x503c4340` (E142's: `0x622930f4`, its entry
-   block one of 96 bytes). The camera's clock setting is the one function of each of the 19 images that ends `mov
+   `0x504003f8`, the entry `0x50400556`, the registration `0x504006d5`, finding 71). E139, E134 and E125 pick one of
+   two by Media as E143 does (E139 `0x503f4a61`: `0x62165420`, `0x6216547c`); E142 and E140 load theirs into a2 for
+   the context fill `0x503c4340` (E142's: `0x622930f4`, its entry block one of 96 bytes). Where there is one, the rule
+   takes the one data address rec_file_record loads into an address register whose +52 and +78 it also stores to by
+   address (E144 `0x503f6083` and `0x503f6093`, E142 `0x503c491f` and `0x503c4919`; the same on E148, E137 and E140,
+   X: a scan). The camera's clock setting is the one function of each of the 19 images that ends `mov
    10499,d0; movhu d0,(8,a2); ret` (E144 `0x500f022e`), and its clock read the function right after it (E144
    `0x500f024e`), the port's place of E143's `0x5012b7cd` on all 19 (X, a scan): the rule reads both there, where
-   recFile took the read from the recorder (fact `recorder`, read on E144 and E148 only).
+   recFile took the read from the recorder (fact `recorder`, read on E144 and E148 only). It is also the clock read
+   the 96-byte recorder calls on the eleven images that hold one (finding 122; X, a scan of its third call).
 121. **REC_FILE natively on eight E144-family bodies** (2026-11-10, X: `test/test_storage.mjs --session` per body,
    32 checks each; refs/exif.mjs and exiftool). With the clock set through each body's clock setting (2026-11-08
    12:34:56) S2 gives `C:\DCIM\100OMSYS\PB080001.JPG` on E144 and E148 and `C:\DCIM\100OLYMP\PB080001.JPG` on E139,

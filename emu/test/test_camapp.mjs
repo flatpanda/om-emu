@@ -395,6 +395,11 @@ export async function traRoutingSession() {
           `${tag}: channel 0 composes its 1920 x 1080 window, no plane drawn (the GUI's HDMI layout is not drawn): ${c.status} ${JSON.stringify(hd)}`);
         continue;
       }
+      // the take API (0x50417cd9, d0 the control) and Com_EvSenderManager's 794 build (0x50d77eaf) from here on, read
+      // after the last pass (docs/hle-gaps.md 4.1.10)
+      const takeApi = [], built794 = [];
+      lab.observe(0x50417CD9, (l, r) => takeApi.push(r.d0 >>> 0), 'test: the take API');
+      lab.observe(0x50D77EAF, () => built794.push(lab.lab_time()), 'test: the 794 build');
       // passes of S1 and S2: the OXF main thread's events do not stay (docs/hle-gaps.md 4.4.2)
       const oxf = () => [...lab.heap_sizes].filter(([a, size]) => size === 32 && [0x60EF3504, 0x60DCB42C].includes(lab.sim.u32(a) >>> 0)).length;
       const pass = () => {
@@ -448,15 +453,12 @@ export async function traRoutingSession() {
       // the furthest point: a pass of S1 and S2 after them records its picture, and MENU is then not taken (its key
       // code reaches UI_IN, the GUI gets no event): with the through image running, S1 passes the sequence parts' guard
       // and the sequence waits in phase 102 for TAKE's take-ready, which no module answers; isCtrlReleaseEnable then
-      // refuses every key (docs/hle-gaps.md 4.3.2). Its first take request, not a second: TAKE does not run (TAKE_EXEC
-      // is S-MODACK's), so no TAKE_MAIN posts the event 0x04080032 from which Com_EvSenderManager builds 794 (the
-      // build at 0x50d77eaf; docs/hle-gaps.md 4.1.10)
-      const takeApi = [], built794 = [];
-      lab.observe(0x50417CD9, (l, r) => takeApi.push(r.d0 >>> 0), 'test: the take API');
-      lab.observe(0x50D77EAF, () => built794.push(lab.lab_time()), 'test: the 794 build');
+      // refuses every key (docs/hle-gaps.md 4.3.2). The session's first take request, not a second (the passes before
+      // the menu make none): TAKE does not run (TAKE_EXEC is S-MODACK's), so no TAKE_MAIN posts the event 0x04080032
+      // from which Com_EvSenderManager builds 794 (docs/hle-gaps.md 4.1.10)
       pass();
       ok(ca.module_queues.has(0x5A) && JSON.stringify(takeApi) === '[32,64]' && !built794.length,
-        `${tag}: the pass's take requests (controls ${takeApi.map(hx)}) go to S-MODACK's TAKE_EXEC (${ca.module_queues.has(0x5A)}), no 794 built (${built794.length})`);
+        `${tag}: the session's take requests (controls ${takeApi.map(hx)}) are this pass's, to S-MODACK's TAKE_EXEC (${ca.module_queues.has(0x5A)}), no 794 built (${built794.length})`);
       const phase = lab.sim.u32(SEQ_PHASE), unresponsive = [];
       lab.observe(RELEASE_UNRESPONSIVE, (l, r) => unresponsive.push(l.sim.u32((r.sp >>> 0) + 8)), 'test: isCtrlReleaseEnable\'s refusal');
       const [after, rec] = key('menu');

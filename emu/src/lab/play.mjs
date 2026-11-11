@@ -1726,7 +1726,7 @@ export class PlaySession extends N.NavSession {
     if (action !== 'remove' && action !== 'insert') throw new ValueError(`card: action ${show(action)} (remove, insert)`);
     if ((action === 'remove') !== st.card.present) throw new ValueError(`card ${action}: the card is ${st.card.present ? 'in' : 'out of'} the slot already`);
     if (media.busy()) throw new ValueError(`card ${action}: the media layer is busy (a format or a card change runs)`);
-    const sw = media.f.slots[0].switch, c = CONTROLS.find((x) => x.kind === 'fwswitch' && x.uiin[3] === sw);
+    const sw = media.f.slots[0].switch, c = CONTROLS.find((x) => x.kind === 'fwswitch' && x.uiin?.[3] === sw);   // (a row not wired has none)
     if (!c) throw new ValueError(`card: no UI_IN switch control for the card switch 0x${fx(sw, 4)}`);
     const lab = this.lab, tag = `card ${action}`, [g, b, bit, , , pol] = c.uiin;
     this.begin(`${String(this.steps.length).padStart(2, '0')}-${tag}`);

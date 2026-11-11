@@ -1958,8 +1958,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    `0x6055d190`), and recFileQueue reads it there.
 123. **What is left of the family's REC** (2026-11-10; D unless tagged). E130, E145, E133, E129 and E132: REC_FILE's
    task inlines its start and finish processes (E130 `0x503d9350`, both traces in its loop, `0x503d9382` and
-   `0x503d942f`), and E130 loads no "pExifParam " dump (X); they give rec_native false and keep S-RECFILE through
-   fileif, their 96-byte recorder's builders not read (finding 122). On the eight: REC_IMAGE's own task (the post of
+   `0x503d942f`), and E130 loads no "pExifParam " dump (X); they keep S-RECFILE through fileif (no rec_native, which
+   test_facts leaves to each body, E142 giving it), their 96-byte recorder's builders not read (finding 122). On the eight: REC_IMAGE's own task (the post of
    rec_make_image_finish read, finding 118), the thumbnail and the shooting values in Exif (S-EXIFPRM leaves the
    template's), RAW files and the second slot, the shot's DCF checkout (`0x1e001001`, the HLS media check-in).
 

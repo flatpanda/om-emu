@@ -845,12 +845,15 @@ export function factsTests() {
   // identity and the port's own fields, the knobs not listed in `carry` and the stand-ins that are a body's own by
   // nature (src/fw/knobs.mjs: return_stubs, call_skips, vsync_alias_flags), ui_out, the lamps' module, which the lab
   // runs where the card's file system is native and needs it (E134; E125, ported through it, keeps S-CARD's card) and
-  // where the AF beep asks it for its sound (E143), and
+  // where the AF beep asks it for its sound (E143),
   // res_nand, the resource loader's NAND areas, which lie elsewhere in each body's NAND (E146's and E147's sound index
-  // at 0x4e3e0000, X: a scan of their loaders) and are given where they were checked (E143)
+  // at 0x4e3e0000, X: a scan of their loaders) and are given where they were checked (E143), and rec_native, given
+  // where the rule reads the body's own REC version (src/fw/facts.mjs recFile, recFileQueue: fact rec_file) and its S2
+  // was seen to record so: E142's REC_FILE runs natively, E130's, E145's and E133's, which port through it, inline
+  // their start and finish (docs/model-survey.md finding 123)
   const OWN = new Set(['name', 'bin', 'version', 'res_block', 'rom_len', 'rom_sha256', 'image_base', 'res_len', 'res_sha256',
     'panels', 'card_fs', 'board', 'port_via', 'overrides', 'carry', 'checked', 'return_stubs', 'call_skips',
-    'vsync_alias_flags', 'ui_out', 'res_nand', ...Object.keys(KNOBS)]);
+    'vsync_alias_flags', 'ui_out', 'res_nand', 'rec_native', ...Object.keys(KNOBS)]);
   for (const [code, m] of Object.entries(MODELS)) {
     if (!m.port_via) continue;
     const open = Object.keys(MODELS[m.port_via]).filter((k) => !OWN.has(k) && !Object.hasOwn(m, k) && !Object.hasOwn(FACTS[code] ?? {}, k));

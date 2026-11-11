@@ -4226,7 +4226,7 @@ there (it stays on the other bodies).
     image count 1 and its fnode 1 the file in the same session (S-CARD's count retired there), file 2 next at the
     next session's mount; E143's REC warnings around S2 (E144, E139). test_playinfo passes on the eight.
   - *Open:* E130, and E145, E133, E129 and E132 outside the family, whose REC_FILE inlines its start and finish
-    (rec_native false: S-RECFILE through fileif); the 96-byte recorder those and the eight hold (finding 122: E139's
+    (no rec_native: S-RECFILE through fileif); the 96-byte recorder those and the eight hold (finding 122: E139's
     builders read, its entry block without E144's word at +28; the rule `recorder` keeps the 100-byte form, so the DCF
     steps are not extended); REC_IMAGE's own task on the family; the thumbnail and shooting values; RAW; the second
     slot.

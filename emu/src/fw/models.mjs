@@ -938,9 +938,6 @@ export const MODELS = {
     // TFT 1.04M dots; no EVF
     panels: { tft: [720, 480], evf: null },
     card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
-    // not REC_FILE natively: its REC_FILE task inlines the start and finish processes (their traces in its loop), so
-    // src/fw/facts.mjs recFileQueue reads none (X); S-RECFILE (docs/model-survey.md finding 123)
-    rec_native: false,
     board: { family: 'E144' },
     // the map from E142 pairs 2.01M instructions with 121 conflicts, the one from E140 2.17M (116), from E144 1.83M
     // (117); through E142 120 of the overrides carry (60 nulls) and 14 fail, 77 lab addresses stay unplaced, through
@@ -961,9 +958,6 @@ export const MODELS = {
     // TFT 1.037M dots; no EVF
     panels: { tft: [720, 480], evf: null },
     card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
-    // not REC_FILE natively: its REC_FILE task inlines the start and finish processes (their traces in its loop), so
-    // src/fw/facts.mjs recFileQueue reads none (X); S-RECFILE (docs/model-survey.md finding 123)
-    rec_native: false,
     board: { family: 'E144' },
     // the map from E143 pairs 1.04M instructions; from E142 2.24M with 122 conflicts, from E140 2.35M (120), from E125
     // 5.20M (84), from E145 2.04M (79); through E142 120 of the overrides carry (60 nulls) and 12 fail, through E140
@@ -983,9 +977,6 @@ export const MODELS = {
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
     card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
-    // not REC_FILE natively: its REC_FILE task inlines the start and finish processes (their traces in its loop), so
-    // src/fw/facts.mjs recFileQueue reads none (X); S-RECFILE (docs/model-survey.md finding 123)
-    rec_native: false,
     board: { family: 'E144' },
     // the map from E143 pairs 1.02M instructions; from E142 2.11M with 45 conflicts, from E140 2.15M (47), from E145
     // 1.98M (71); through E142 118 of the overrides carry (60 nulls) and 14 fail, through E140 117 (60) and 16, through
@@ -1007,9 +998,6 @@ export const MODELS = {
     // the vendor's specification gives the TFT as 460K dots, not its pixel geometry (I: unchecked); no EVF
     panels: { tft: null, evf: null },
     card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
-    // not REC_FILE natively: its REC_FILE task inlines the start and finish processes (their traces in its loop), so
-    // src/fw/facts.mjs recFileQueue reads none (X); S-RECFILE (docs/model-survey.md finding 123)
-    rec_native: false,
     // the family's stub pages and the serial controllers' blocks of channels 9, 2 and 3, as E132's (its sessions write
     // those blocks and no other, X)
     board: { family: 'E144', stub_pages: [0x98800000, 0x98F20000, 0x9A200000, 0x9B800000, 0x9B801000, 0x9BC00000, 0x9BD00000, 0x9A100000, 0x98500000, 0x98600000] },
@@ -1034,9 +1022,6 @@ export const MODELS = {
     // a TG-5 (the reply's model_name TG-5(KOUICHIRO)): its TFT of 460K dots, no geometry given; no EVF
     panels: { tft: null, evf: null },
     card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
-    // not REC_FILE natively: its REC_FILE task inlines the start and finish processes (their traces in its loop), so
-    // src/fw/facts.mjs recFileQueue reads none (X); S-RECFILE (docs/model-survey.md finding 123)
-    rec_native: false,
     // the family's stub pages (src/fw/board.mjs FAMILIES.E144) and the register blocks of the serial controllers its
     // channels use once PER_SIO's channel map is set (H-SIOMAP, src/lab/sio.mjs): channel map 0x604aa840 (core 0's,
     // the setter's table 0x604aa830 / 0x604aa86c), channel 9 -> index 7, 2 -> index 2 and 3 -> index 3, and the

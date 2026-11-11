@@ -265,7 +265,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 }
 // the release route with cam.c's second init (test_take_release.mjs camFeSession, the probe's cam_fe opt-in:
 // H-CAMINIT2, S-CAMFE): S1 as focusSession's, cam.c takes EXP_MOVIE's requests without an error, nothing runs the movie
-// sequence's frame step, EXP_MOVIE still waits; S2 stops at S-DISPQ
+// sequence's frame step, EXP_MOVIE still waits; S2 as focusSession's, its idle stopping at the sub-CPU's command 0x14
 {
   const { camFeSession } = await import('../test/test_take_release.mjs');
   const cs = await camFeSession();

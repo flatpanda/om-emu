@@ -1758,7 +1758,8 @@ what follows.
   and the sequence's events 826 and 794 as there; cam.c takes requests 8 and 7 without an error, EXP_MOVIE waits on
   flag 21 for `0x1000`, TAKE_MAIN stays in RdyFcsRdy3 with the pending bits `0x200` (TAKE_EXPOSE's token 15), so
   RdyTrig2Wait is not reached; no frame callback, answer or AE result write (S-EXPOSE's writer `0x50596187` does not
-  run). S2 stops at S-DISPQ as in 4.2.3, before any TAKE_EXPOSE `0x600`.
+  run). S2 goes as focusSession's: S-DISPQ keeps its nested DISPLAY posts (4.1.9) and its idle stops at the sub-CPU's
+  command 0x14, before any TAKE_EXPOSE `0x600` (X, after the round's merge).
 - **Corrections to 4.2.3.** "The units' per-bit handlers call a record's +44 with its +48 mask": they call it with
   their own bit and'ed with the mask, and the mask holds EXP's bits (above). "The movie sequence gives it 144-byte
   kind-7 requests": `0x501984e7` is cam_seq_dram_capture.c's; `0x5019c498`, `0x5019c50a` and `0x5019c57c` are

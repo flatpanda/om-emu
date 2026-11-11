@@ -262,7 +262,8 @@ export async function focusSession() {
 // and the sequence's events 826 and 794); EXP_MOVIE gives cam.c requests 8 and 7, which it now takes without an error,
 // the movie sequence keeps request 7's item (state 1, 0x62a24244) and nothing runs its frame step (0x5019981d), so
 // EXP_MOVIE still waits on flag 21 for bit 0x1000 and TAKE_MAIN in RdyFcsRdy3 for token 15; S-CAMFE takes no access
-// after the init. S2 stops where it did, at S-DISPQ
+// after the init. S2 goes as in focusSession: its DISPLAY sends the same, its idle stops at the sub-CPU's command 0x14
+// (S2_STOP; docs/hle-gaps.md 4.1.9)
 export async function camFeSession() {
   const bad = [];
   let checks = 0;
@@ -311,7 +312,7 @@ export async function camFeSession() {
     try { s.key('s2', 'down'); s.camapp.pump(); idle(700); } catch (e) { stop2 = e; }
     const sends = lab.display_sends.slice(ds0).map(([c, , f]) => [c, f]);
     ok(stop2 !== null && S2_STOP.test(stop2.message) && !since().length && JSON.stringify(seen) === JSON.stringify(['event 824 in phase 103']) && JSON.stringify(sends) === JSON.stringify(S2_SENDS),
-      `S2 stops at S-DISPQ as before (${seen}; ${stop2 ? stop2.message.slice(0, 160) : 'no stop'})`);
+      `S2 as focusSession's, its idle stopped at the sub-CPU's command 0x14 (${seen}; ${stop2 ? stop2.message.slice(0, 160) : 'no stop'})`);
   } catch (e) { bad.push(`camapp 3 --take probe, cam_fe: ${e.message.slice(0, 800)}`); }
   pl.close_session();
   return { checks, bad };

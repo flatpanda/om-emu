@@ -1039,9 +1039,10 @@ and dispqSession (X, 12 of 12), and `emu/test/test_take_release.mjs` focusSessio
   run, so task 168 went on past a send it waits in on the camera and made its post while cmd 15 was still open; on
   the camera task 168 posts cmd 18 only after its own command's reply, which comes after cmd 15's (D, above). (3)
   Ruled out: the post's site is the display manager's request S-DISPQ already runs (`0x503eba07`); only the depth
-  refused it. Why task 168 runs inside cmd 15 at all is the lab's (I): a run takes its sender's priority (55), not
-  the DISPLAY task's 26, so a ready task of the same priority runs between the run's block and its resumption;
-  whether task 168 runs during that wait on the camera depends on timing (?), and either way its command waits.
+  refused it. That task 168 runs while cmd 15 waits is not the lab's (I): on the camera the DISPLAY task's block in
+  the same wait lets a ready task run too, and whether task 168 is ready then is timing (?). The lab's difference is
+  the wait's end: the run has its sender's priority (55), not the DISPLAY task's 26, so it does not take the CPU back
+  from a running task of priority 55 when the wait ends. Either way task 168's command waits behind cmd 15 (D, above).
 - **The change (X).** A DISPLAY run is open from its start to its loop's next receive (`PlayLab.task_message` over
   `DisplayQueue`, `emu/src/lab/dispq.mjs`). While one is open S-DISPQ keeps a post to the DISPLAY queue (the display
   manager's request, or a synchronous send's own post, return `0x5002e411`), copied at the post; when the outermost
@@ -1050,9 +1051,13 @@ and dispqSession (X, 12 of 12), and `emu/test/test_take_release.mjs` focusSessio
   queue created, its post kept, its receive blocking; the kept message's run sends the reply to the send's own queue
   natively (`0x501c490c`), which readies the task. A reply to queue 6 goes through S-CAMAPP's pump after the step as
   before (4.4.2). Unchanged: a send of a run's own task (a handler's) runs nested at once, a post inside a run of
-  another loop (CHANGE, touch) is refused, and the dispq-at-once mutant (the control) gives the old discipline back.
-  The kept message's word 1 is the DISPLAY task's id 54 (`0x36`), the camera's the sender's: in a display run get_tid
-  is the lab's stand-in (DISPLAY_TID); the reply echoes the word and the send reads only the status halfword (D).
+  another loop (CHANGE, touch) with no DISPLAY run open is refused, and the dispq-at-once mutant (the control) gives
+  the old discipline back. The kept message's word 1 is the DISPLAY task's id 54 (`0x36`) where the camera's is the
+  sender's (X: the kept cmd 4's words `{0x104, 0x36, 4, param}`): get_tid's lab stand-in answers DISPLAY_TID to any
+  task while `in_display_run()` holds (`emu/src/lab/menu.mjs`; the run depth is the lab's, not a task's), so to task
+  168's send too. The reply echoes the word and the send reads only the status halfword (D); the loop itself reads
+  word 1 only for an error log (`0x501c36c6`, D) and hands the whole message to `0x501c7fb2` and `0x501c4980`, which
+  are not read to their end (?).
 - **The siblings (D, X).** None of the three named stand-ins runs another task's loop inside a command. S-MODACK
   takes the application's posts to module queues off at the post and answers them after the step through S-CAMAPP's
   pump, each with a settle, in their order; its synchronous branch (`camapp.mjs` `_sync_send`, module queues)

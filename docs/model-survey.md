@@ -1966,6 +1966,92 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    the eight: REC_IMAGE's own task (the post of rec_make_image_finish read, finding 118), the thumbnail and the
    shooting values in Exif (S-EXIFPRM leaves the template's), RAW files and the second slot, the shot's DCF checkout
    (`0x1e001001`, the HLS media check-in).
+102. **The E118 family's REC version and its header maker, by a rule** (2026-11-10, `src/fw/facts.mjs` recHeader, fact
+   `rec_header`; D on E122 unless tagged; answers finding 93's stop). The family's REC is older than E143's: its packet
+   has no dump (no "pExifParam " in the image), REC's post (the function of the trace "REC post_msg_main", id 4; E143's
+   post traces "REC post_msg", id 5, which the family's table names but no code traces) sends it with `mov SIZE,d1; mov
+   "rec.c",a1; call` (`0x5050bcaf`: 216 bytes on E122, 280 on E118 and E120), and no receive loads "rec_file.c" (finding
+   93). rec_jpeg_exec (`0x50515ab1`) opens `mov a0,a3; mov (124,a3),d3; mov 68,a2; add a0,a2; movhu (a2),d0`: d3 is the
+   shot's EXIF parameter block, which its header maker hands the EXIF module's serializer (below; so finding 93's "block
+   at +124", ?, is pExifParam), +68 is Mode, which rec_make_image dispatches on (`0x50510ca8`, 4097 the first of
+   4097..4111 through the table `0x6063e3f4` to rec_make_image_exec `0x50510d0e`, which calls rec_jpeg_exec at
+   `0x50510da6` where the packet's +208 is not 3 and two checks answer 0). It keeps the buffer REC's pool gives
+   (`0x50517600`, rec_misc.c's `0x50516b3f`; its size from a table by the image size and the setting 53140, read with
+   the port's place of E143's settings read, plus 41984, `0x50519ec1`) at +200 (`mov d0,(8,sp); mov d0,(200,a3)`,
+   `0x50515afa`), calls rec_jpeg_make_image (`0x50515c18`) for a Mode other than 4100, 4107 and 4103 where `0x505170c8`
+   answers 0, then the header maker rec_jpeg_make_header (`0x50515cbb`) where the encode left +14 0 (`0x50515b67`). The
+   header maker loads the block (`add 124,d0`) and the buffer (`mov (32,sp),a0; mov (200,a0),d0`), stores HeaderSize,
+   `mov 41984,d0; mov d0,(196,a0)` (`0x5051618d`), and writes SOI, `ff e1`, the length 41982 and "Exif\0\0"
+   (`0x5051623c..0x5051626d`) before the EXIF module's serializer (`0x5052b526`, the port's place of E143's
+   `0x50429935`, X) writes the TIFF data at +12. E118 and E120 (D): the same code with pExifParam +188, Addr +264 and
+   HeaderSize +260 (`0x504fe72e`, `0x504fe77b`, `0x504fed96`), the packet in (28,sp) in the header maker. Finding 93's
+   two traces: the second function of E118's rec_jpeg_make_header trace and of E120's rec_jpeg_exec and
+   rec_jpeg_make_header traces call another trace function, with a string in a0 (E120 `0x504c15d8` -> `0x504b9a22`, E118
+   `0x504e732e`; what they are, ?); the rule takes the rec_jpeg_exec of the family's opening that calls the traced
+   rec_jpeg_make_image and the traced header maker it calls, one on each of the three, and the packet's fields from
+   those instructions (the names E143's for the same uses, I: no dump names them). It finds it on E122, E118 and E120
+   and on none of the other 16 images (X); `test/test_facts.mjs` pins the three (REC_HEADER_FOUND).
+103. **The family's EXIF module and the shot's parameters** (2026-11-10, D on E122 unless tagged). The EXIF module's
+   init (`0x5052b4d9`, `call; clr d0; ret`; one caller, `0x50186c73`) calls the template's init (`0x5052b4e2`: `mov
+   0x618bb6b8,a0; call 0x5052c570`, then three stores and `ret`), which has no cache flush where E143's calls one; the
+   template's copy follows it, `mov 0x618bb6b8,a1; mov -5520,d1; setlb; ...; lne; retf` (`0x5052b50b`: 22080 bytes; E118
+   `0x50514558` 20084, E120 `0x504ed754` 20004). The EXIF set (`0x5052b51e` -> `0x5052cda4`) formats the dates `mov
+   (8,sp),a2; mov (8,sp),a3; add 2313,a2; add 18404,a3; mov a2,a0; mov a3,a1; mov 0x4200,d0; call 0x5016841d`
+   (`0x5052dcff`, one function from the entry: no return between, X) and copies them to +2333 and +1364 (`0x50002cb7`):
+   the capture's time record at +18404 (E118 +18340, E120 +18284), a 16-bit add where E143's is 32-bit; the tag table's
+   DateTime, DateTimeOriginal and CreateDate are these offsets and Make and Model +1480 and +1504 on the three (X;
+   finding 93's table). The camera's clock setting `0x50167f55` ends `mov 10499,d0; movhu d0,(8,a2); ret` as E143's
+   does, the one such end in each image (X), and the clock read follows it (`0x50167f73`, the port's place of E143's
+   `0x5012b7cd`, X; E118 `0x501569b3`, E120 `0x5015274e`). X, a play session per body: the init leaves Make and Model in
+   the template, 'OLYMPUS CORPORATION' and 'PEN-F' on E122, 'OLYMPUS IMAGING CORP.' and 'E-M5MarkII' on E118, 'OLYMPUS
+   CORPORATION' and 'E-M10MarkII' on E120 (from the settings store as on E143, I; E118's Make is not a string of its
+   main block, X); the clock set through the clock setting, the clock read gives it to the time record and the format
+   `2026:11:08 12:34:56`. The EXIF set called natively on the copied block divides by zero (`div` at `0x50212ef5`, by a
+   halfword read through a pointer on the stack, in TAKE's state; X), as E143's does (hle-gaps 4.8.10), so the lab
+   formats the dates as it does and the exposure fields stay the template's.
+104. **S2's file carries the firmware's Exif on the family** (2026-11-10, X: `test/test_storage.mjs` per body, 28 of 28
+   checks on each; `src/lab/recheader.mjs`, `src/fw/models.mjs` exif_native). At the first picture H-EXIFINIT runs the
+   EXIF module's init natively; at each picture S-EXIFPRM gives the shot's block (the template copied, the clock read
+   and the dates formatted natively; no crop area or zoom ratio set, the header maker dividing by none of the block's
+   zeros, X) and S-RECHDR the packet rec_jpeg_exec would hand its header maker (Mode 4097, pExifParam, Addr a lab buffer
+   holding the lab's stream without its APP0 at +41984, the rest 0, I) and runs rec_jpeg_make_header natively; S-RECFILE
+   writes the buffer's 41984 bytes and the stream as the file, through fileif as before. The file
+   (`C:\DCIM\100OLYMP\P1010001.JPG`, its size 41984 plus the stream's): SOI, APP1 Exif of 41982 bytes, then the stream's
+   tables at 41986 (its SOI under APP1's end, as on E143); refs/exif.mjs reads IFD0's Make and Model as in finding 103,
+   ImageDescription 'OLYMPUS DIGITAL CAMERA', Software 'Version 0.0' (where it comes from is not read, ?), DateTime,
+   DateTimeOriginal and CreateDate the clock's, Exif version `0230`, FlashPix `0100`, the maker notes 'OLYMPUS' (14072
+   bytes on E122, 13924 on E118, 13832 on E120), IFD1 with its thumbnail slot of length 0; ExposureTime 0/100, FNumber
+   0/10, ISO 0, FocalLength 0/10 and PixelXDimension 0, the template's, as the EXIF set does not run. The file decodes
+   (refs/jpeg.mjs) to the capture's block means. The header maker's return value is not used (d0 0 on E122, 0x1c on E118
+   and E120: not a status, I).
+105. **The family's DCF steps are not run** (2026-11-10, D on E122 unless tagged; "as on E144" does not carry).
+   REC_FILE's rec_file_record (`0x50510091`) makes the five requests in its own builders, at the port's places of E143's
+   but the registration's: the open (`0x505162f8`, its block +2 drive, +4 `xxxOLYMP`, +16 the stamp, the fnode back at
+   +24, code 0x32 by the synchronous send `0x5004c303`, E143's `0x5002e39d`), the entry (`0x50516667`, 0x66) and the
+   registration (`0x5051679a`, 0x33) as E143's; but the reservation calls the file system's cluster allocation itself in
+   REC's task (`0x50516481` -> `0x50566a01` -> `0x5056f91d`; the port's place of E143's, `0x505164cf`, is its twin with
+   `0x50566a51`, called from `0x5051c8e3`), not FILECLBK's 0xf1, and the chain write posts the message {reply queue
+   `(0x60041144)`, code 0x54, the block} asynchronously to the queue the open's send names (`(0x600410de)`, I:
+   FILECLBK's) through rec_media.c's send (`0x50516530` -> `0x505186eb`; for the drive word 0x8010 a message 258 to
+   another queue, `(0x6004117c)`, ?), its block in E143's layout (+6 drive, +8 cluster, +12 sector, +16 sectors, +20
+   buffer, +28 mode, +32 cluster, +36 bytes) with the sectors by the drive's own form (`0x50568f79`: 512-byte sectors
+   rounded up to whole 2048-byte units where `0x50582b63` answers non-zero). X on E122: S-RECFILE's DCF steps
+   (src/lab/storage.mjs record(), E143's requests to FILECLBK, as on E144 and E148) with the family's clock read get the
+   open's and the reservation's status 0 and the chain write's 0xe13, the one load of it in the file system's code,
+   `0x5056baaf`, in a cluster chain's walk (I: the chain ends while sectors remain; not read further). So the family
+   keeps S-RECFILE's fileif path, and the DCF database learns of the file at the next mount, as before. Next: the chain
+   write's cluster chain against the reservation the family makes itself (its mode word +72 2, D), then a rule of the
+   family's builders.
+106. **The family's playback header load, and what stands for it** (2026-11-10; D after finding 92, X where tagged).
+   With finding 104 the file holds what the play module's header parse requires: play_load_load_exif_header (E122
+   `0x50ad901c`) reads the file's first bytes, at most 66560, which hold the whole 41986-byte APP1, and the EXIF
+   module's JPEG parse (operation 1, E122 `0x5052a7d7`) needs SOI and an APP1 whose data opens `Exif\0` (X: the file's
+   bytes 0, 2 and 6; the parse itself not run). None of it runs in the lab (finding 90's observation, not repeated with
+   the new file), and S-PLAYSEQ answers getStillInfo from the lab's record of the capture (camapp.mjs still_record). The
+   two now differ: INFO shows the record's exposure, ISO and focal length (`125`, `25mm`, finding 91), where the file's
+   Exif holds the template's zeros (finding 104), so a native load would show other values until TAKE's EXIF set fills
+   the block (I). Running the load needs the play module's handle, play buffer and image record (finding 92), which the
+   PLAY tasks and the component's start make.
 
 
 

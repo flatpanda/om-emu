@@ -385,8 +385,16 @@ the survey table.
   scheduler runs; modelcheck runs the family's EVF through playback). Open on the family: the picture's Exif and
   the play module's load of it, which INFO's still information stands in for (finding 57) as on every body (findings
   90 to 92, 2026-11-10: S-PLAYSEQ and S-PLAYCOMP stand for the same component method, play API, header read and
-  parse, which run on no body), and the Exif in S2's file, which the family's REC, another version, does not write in
-  the lab (finding 93, as on E130 and the E144 family); PLAY from the playback wizard (OK), which faults on the family
+  parse, which run on no body; with S2's file now holding the firmware's Exif, a native load would read the
+  template's zero exposure where S-PLAYSEQ answers the capture's, finding 106); the Exif's shooting values, which
+  TAKE's EXIF set fills and which divides by zero in the lab as on E143 (finding 103), and REC_FILE's DCF steps, of
+  another form on the family (the reservation in REC's own task, the chain write posted to FILECLBK with a reply; the
+  lab's E143-form requests stop at the chain write's 0xe13, finding 105), so S-RECFILE still writes the file through
+  fileif, which since 2026-11-10 carries the header the family's own header maker builds natively (findings 102 to
+  104, where finding 93 had found none in the lab: `src/fw/facts.mjs` recHeader reads the older REC's packet, header
+  maker and EXIF module on the three, S-RECHDR runs rec_jpeg_make_header on the lab's packet; IFD0's Make and Model,
+  the clock's dates, Exif version `0230`, the Olympus maker notes and IFD1's thumbnail slot, read back by
+  `refs/exif.mjs` in `test/test_storage.mjs` on each); PLAY from the playback wizard (OK), which faults on the family
   and on E130 (finding 94: the GUI's current screen object 0); erase, which runs on no body and whose request (301)
   S-PLAYSEQ would finish with no file removed (finding 94). A second picture, RIGHT, LEFT and INFO's three views run
   on the family as on the other bodies, its EVFs too (finding 94; `test/test_playinfo.mjs` takes them on the 19 since

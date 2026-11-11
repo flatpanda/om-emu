@@ -1623,6 +1623,117 @@ camapp 3's frames and compares them with camapp 1's. The default stays camapp 1.
 - **Corrections.** 4.1.5's, 4.2.1's and 4.3.1's "the composite is refused" and 4.6.2's "no frame shows the column"
   hold only without A-VSCHIST-3; 4.2.1's open item on the composite is answered here (as an assumption, not a fact).
 
+#### 4.2.5 The front end's interrupt and cam.c's second init (2026-11-10; D unless tagged, addresses E143's)
+
+4.2.3 stopped at the front end: request 7's events `0x300` / `0x400` reach EXP through the front end's records +2464 /
++2532, whose interrupt was not read. This round reads every reader of those records and of request 7's event slots,
+the camera units' interrupt handlers and cam.c's second init, builds the device model the second init needs (S-CAMFE,
+`emu/src/dev/camfe.mjs`) and runs that init natively (H-CAMINIT2, `emu/src/lab/take.mjs` round 5) behind the probe's
+`cam_fe` opt-in (the Player's `cam_fe`, off by default; golden unchanged). Result: the chain from the units' handlers
+to EXP's callbacks is read, but no handler is found that passes `0x300` to EXP, and the records are armed only by the
+movie sequence's frame step, which nothing in the lab runs; so no stand-in raises an interrupt and EXP_MOVIE waits as
+before (X). `emu/test/test_camfe.mjs` camFeUnits (15 of 15), `emu/test/test_expcb.mjs` camFrontEndSession (8 of 8)
+and `emu/test/test_take_release.mjs` camFeSession (5 of 5) pin what follows.
+
+- **The records' readers.** An immediate scan of cam.c's range (`0x50150000..0x501a8000`) for 2464 and 2532 (and their
+  +44, +48, +64) finds: the fill `0x5016f5a6` (`0x5016ffab`, `0x5016ffeb`: +24, +48 from the kind-7 request's +84 / +88,
+  +64 the enable; the request is the fill's d0, `0x5016f33b`), the context init at `0x50173c67` / `0x50173c7c` (+0 the
+  type 7, +44 the callback from the init's stack table, +36), and the descriptor registrations `0x501741c2` /
+  `0x501741ce` (entries 23 and 24 of the table `0x5021f958`, which `0x5017ada3`, cam_frame_queue.c, runs for each set
+  bit of a context's 64-bit mask into the descriptor `(0x62a21504) + 244 k`, `0x50179450`) and `0x501796ae`,
+  `0x50179c86` (the same slots wholesale): the record's address goes to the descriptor's +192 / +196. The 2464 / 2532 at
+  `0x501a18fa`, `0x501a4d49` and `0x501a512f` are offsets into another structure (`(0x62a26a58)`). Nothing else reads
+  the records but through those slots: the start loop `0x50170a96` (called from the front end, the movie sequence's
+  states and the cam_still code at `0x5086004c`) calls entry k of the table `0x5021c800` for each set bit, and entries
+  23 / 24 (`0x50170e00`, `0x50170e12`) hand the record to cam_bright.c's start `0x50158cac`, which dispatches by its u16
+  type.
+- **Request 7's event slots.** Read by the notifier `0x50155e66` (4.2.3), by the movie sequence's frame step
+  `0x501999f4` (the item's +64, event `0x200`) and by the two kind-7 request builders, `0x501984e7`
+  (cam_seq_dram_capture.c) and `0x5019c498` (cam_seq_movie.c): each copies the item's +8..+111 to the request's
+  +24..+127, so the request's +84 / +88 are the item's `0x300` / `0x400` masks (EXP's 3 and 2, 4.2.3), and puts its
+  wrapper at +128 (`0x5019862f`, `0x5019c69c`) and the item at +136.
+- **The chain to EXP's callbacks.** A unit's per-bit handler calls the record's +44 with a0 the record, d0 0 and d1
+  its own bit masked by the record's +48. Record 2464's +44 `0x5017078f` takes the request from `(8, (40, record))`,
+  ands d1 with its +84 and, if nonzero, calls the wrapper with a1 `0x300`; 2532's `0x501707c0` the same with +88 and
+  `0x400`. The wrapper `0x5019862f` calls the item's notifier (+116) with a1 or'd with 4, and the notifier EXP's slot
+  callback when the slot's mask and d1 share a bit (4.2.3).
+- **The record type's units.** `0x50158cac` by type: 9 `0x5015900e` / `0x5015969f` (jobs on the handles
+  `(0x629a7e64)`, `(0x629a7e68)`), 128 `0x50159d30`.. and 7 `0x50158d54` (a job on each of the handles
+  `(0x629a7e6c)`..`(0x629a7e78)` for each of the record's +8, +12, +16, +20 that is set; nothing when +4 is 0), 144 /
+  145 `0x5015b9bd`.. / `0x5015bac1`... The job queue is `0x50165b82` (handle, unit number, callback, record).
+- **The units' interrupts (D; X: the table `0xa32600c0`, IRQ n at +4 n, after the second init).** The handlers
+  cam_bright.c's six use: IRQ 32 `0x5015789d` and 33 `0x501579aa` (AE1, AE2), 34-37 `0x50157ab7`, `0x50157d21`,
+  `0x50157f8b`, `0x501581f5` (AWB1-4); each reads its status (`0x9b380044`, `0x9b381044`, `0x9b382044`, `0x9b382844`,
+  `0x9b383044`, `0x9b383844`), writes the value back and calls per bit from a RAM table copied from the image's
+  `0x6022575c` (X): 15 entries each from `0x629a7c64` for AE1 / AE2, 8 each from `0x629a7cdc` for AWB1-4, an entry
+  taking the unit's current or next job (`0x629a7d5c` / `0x629a7d60` for IRQ 32, ..). The entries of IRQ 32 + u use the
+  handle `(0x629a7e64 + 4 u)`, u = 0..5, so the type-7 jobs are AWB1-4's. The first device word the other front-end
+  handlers read: SSG1 15-17 `0x9b000004` and `0x9b000018` (each and'ed with its enable `0x9b000008`.. / `0x9b00001c`..,
+  then written back), 18 `0x9b00060c`, SSG2 19-22 `0x9b080004` / `0x9b080018`, 24 `0x9b181028`, 26 `0x9b280024` (the
+  base word `0x629a7afc`, X: `0x9b280000`; its mask a RAM word, `(0x629a7af8)` + 40, X: `0xa039a028`; correction to
+  4.2's "cam.c, unknown, RAM only"), PRO 27-31 `0x9b300018`.., AF 38 `0x9b400018`, PFP 39 `0x9b480020`, the clock block
+  40 `0x9b500028`, DMA 41 / 42 `0x9b580080` / `0x9b600080`, SLVS 243-247 `0x982800a0`... What sets any of these bits is
+  ?.
+- **No handler passes `0x300` to EXP (D; why is ?).** AWB's per-area handlers (AWB1's `0x5015e629`, `0x5015e6c7`,
+  `0x5015e766`, `0x5015e805` for status bits 4..7 with the job's pending bit) copy the unit's results
+  (`0x9b382200..0x9b3822ec`) into the record's buffers and call +44 with `0x200`, `0x400`, `0x800`, `0x1000`; AE's with
+  `0x20`, `0x40`, `0x80`, .., `0x4000`. Record 2464's +48 is EXP's mask 3, so none of these bits reaches the wrapper.
+  cam_bright.c calls a record's +44 with 1 only from type 9's job callback `0x5015bd6d` (its pointer at `0x50159036`)
+  and with 2 only from type 128's (`0x5015cce1`.., pointers at `0x50159d4f`, `0x5015a687`, `0x5015acf8`, `0x5015b36b`),
+  while the context init gives 2464 and 2532 type 7. Which path delivers bit 0 or 1 to a type-7 record is not found:
+  either the type or the mask changes on the way (no such write was found) or the event comes from elsewhere (?).
+- **What arms the records: the movie sequence's frame step (D).** The front end's entry `0x5016f2ae` is called by the
+  two builders above and by cam_still_drv.c (18 sites `0x5085a2f3..0x5085ae74`). Request 7's kind 1 (`0x50198993`)
+  keeps the item in `0x62a24248` with the state `0x62a24244` = 1 and posts it to INFN and SQMV; it reaches the front end
+  only from the frame step `0x5019981d`, whose one caller is kind 10's handler `0x50199383`. The first step sets the
+  state 2 and fires nothing (`0x50199a1e..0x50199a2e`); each later one calls the item's notifier with `0x202` when its
+  `0x200` mask has bit 0 (`0x50199a33..0x50199a51`). Kind 10 is sent by cam_still_drv.c's `0x5085aeef`, the first step
+  of the list `0x509e4da0` that the row of event `0x10000100` in cam_still_seq.c's table `0x5033c224..` (read by
+  `0x5085f9d0`) names; the dispatcher's other callers send kinds 1 and 3 (requests 7 and 8), 12 and 13 (`0x5019d3f8`),
+  8, 9, 11 and 14-17 (cam_still_drv.c), and the messages a front-end context holds (descriptor +16 .. +28, bits 0, 1,
+  53, 54; their kinds are not read). X (an experiment, not pinned): kind-10 messages given by hand after request 7,
+  under a recording stub over the camera blocks, run the frame step, which hands the front end two kind-7 requests
+  (from `0x5019c4ff` and `0x5019c5df`; contexts `0x629b23fc` and `0x629aa520`); cam.c logs `0x0a143000` (line 3718,
+  `0x5018a616`) and `0x0a113001` (line 3938, `0x5019ab61`), no unit is started, and the next idle stops at a system
+  clock change (the kernel's clk_ctrl; `0x5005e55c` reads `0x98580014`, which the lab does not model).
+- **cam.c's second init (X: its trace under a recording stub; D: the code at the pcs).** With the first init run
+  (H-CAMINIT) it returns 0 after 358 writes and 40 reads of 256 registers in 15 blocks, all 4 bytes: SLVS `0x98280198`;
+  `0x9a801c00..0x9a801c34` (14 words; 12 of them read-modify-written, `|= 1`, `|= 2`, `|= 4`, each under the lock
+  `0x500640d4` / `0x500640de`, `0x501639bb..0x50163ca6`); SSG1 `0x9b000000` (`&= ~8`, `0x501a0948`), +0x14, +0xa08
+  (`&= ~0x10000000`, `0x5019d89f`); SSG2 `0x9b080000` (`&= ~8`, `0x501a2de0`); `0x9b180000` (9), `0x9b200000` (1),
+  `0x9b280000` (4); PRO `0x9b300000..0x9b304fff` (30); AE / AWB `0x9b380000..0x9b384fff` (21); AF `0x9b400000` (2); PFP
+  `0x9b480000` (8); the clock and control block `0x9b500000` (102: the clock gates `0x9b500800`..`0x9b500898`, single
+  bits, `0x9b500800` = `0x2000` first, `0x5015ff22`, under a reference count at `0x629a7f37`; +0xa08 written 1 and
+  polled until it does not read 1, `0x5016381a..0x5016382c`; tables from `0x602259c0..` and `0x60225a2c..`); DMA
+  `0x9b580000` (36) and `0x9b600000` (22); `0x9b680000` (2); plus `0x98800340..0x98800398` in a stub page. It attaches
+  IRQs 15-22, 24-42 and 243-247. It reads nothing else: no code in cam.c's range reads the clock gates by address.
+- **S-CAMFE (`emu/src/dev/camfe.mjs`).** A register file over those 256 registers that takes exactly the values the
+  init writes (330 pairs, recorded from the trace) and refuses any other value, address, width or a debugger write
+  (a bus error, printed), so a later write that would start a unit or change a clock stops loudly. **Assumed
+  (A-CAMFE-1, I):** the read-before-write registers read 0 (their reset value is ?); the init branches on none of
+  them, so the value reaches only bits it does not touch, which nothing in the lab reads. **Assumed (A-CAMFE-2, I):**
+  +0xa08's bit 0 has cleared by the next read. No status register is modelled and no line is driven: none of the
+  handlers above runs. The probe builds it (not the machine) when the session's opts carry `cam_fe`.
+- **Run natively (X, camFrontEndSession: camapp 1, `--take probe --cpu2 native`, `cam_fe`).** H-CAMINIT2 after
+  H-TAKEINIT, as USTART calls the second init after TAKE_FUNC's start (`0x50024d80`): it writes S-CAMFE's whole program,
+  the handlers above are in the table, the bright unit's tables are in RAM and the movie sequence's queues are
+  registered. TAKE_EXPOSE `0xa00` (mode 0, as 4.2.2): cam.c takes EXP_MOVIE's requests 8 and 7 with no error (before:
+  `0x0a283000` three times), the movie sequence keeps the item with state 1, and in 300 ms no frame step, front-end
+  entry or job follows, S-CAMFE takes no access, no frame callback runs and EXP_MOVIE waits on flag 21 for `0x1000`.
+- **S1 and S2 (X, camFeSession: camapp 3, `--take probe --cpu2 native`, `cam_fe`).** S1's record is 4.2.3's (S1_EXP)
+  and the sequence's events 826 and 794 as there; cam.c takes requests 8 and 7 without an error, EXP_MOVIE waits on
+  flag 21 for `0x1000`, TAKE_MAIN stays in RdyFcsRdy3 with the pending bits `0x200` (TAKE_EXPOSE's token 15), so
+  RdyTrig2Wait is not reached; no frame callback, answer or AE result write (S-EXPOSE's writer `0x50596187` does not
+  run). S2 stops at S-DISPQ as in 4.2.3, before any TAKE_EXPOSE `0x600`.
+- **Corrections to 4.2.3.** "The units' per-bit handlers call a record's +44 with its +48 mask": they call it with
+  their own bit and'ed with the mask, and the mask holds EXP's bits (above). "The movie sequence gives it 144-byte
+  kind-7 requests": `0x501984e7` is cam_seq_dram_capture.c's, `0x5019c498` cam_seq_movie.c's.
+- **Next (I; Claude wall-clock).** (1) The `0x300` path for a type-7 record: the fill's other writes and the AWB jobs'
+  callbacks (`0x5015d733`..) read to the bit EXP's mask takes (half a day). (2) The frame step's sender:
+  cam_still_seq.c's run to event `0x10000100`, and the system clock controller at `0x98580000` the experiment stopped at
+  (days, open-ended; 4.2 seam D). Only then can a stand-in at a unit's interrupt (paced by the lab's frame clock) have a
+  job to complete.
+
 ### 4.3 Still capture, image processing and recording
 
 - **Tasks (D):** CPU 0: ISEQ_MAIN 0x44 `0x5086516f`, ISEQ_ASIC 0x81, ISEQ_IMG_PROC 0x7d, ISEQ_IMG_COMP 0x7c,

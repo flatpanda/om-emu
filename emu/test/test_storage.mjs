@@ -30,7 +30,7 @@
 //                   version, dates, maker notes and thumbnail slot read by refs/exif.mjs, then the lab's stream;
 //                   REC_IMAGE's own task made it from S-RECREQ's packet: the encode in task 28, the header area
 //                   cleared by the imgpro unit's fill natively, REC_FILE's reply, pAlive cleared, the aspect from the
-//                   setting and the ISO REC_IMAGE derives from the Sv 0, on E143, E146 and E147), the JPEG decoded
+//                   setting and the ISO from the record's Sv 0, on E143, E146 and E147), the JPEG decoded
 //                   (refs/jpeg.mjs) to the capture's block means, and the next session's DCF numbering mount and
 //                   image count find it; where the body runs the HLS media side (card_fs.hls: E143, E146) Card
 //                   Formatting from the menu (S-MDACTRL): the card read back is freshly formatted, the counts reset and
@@ -504,7 +504,7 @@ export async function storageSession() {
           ok(y && y.status === 0 && y.free === 1 && y.header === HEADER && y.size === HEADER + stream.length && run.alive === 0, `REC_FILE's reply (S-RECREQ): ${JSON.stringify(y)}, pAlive ${run?.alive}`);
           ok(fill?.length === 1 && fill[0].mode === 4 && fill[0].dst === y?.addr && fill[0].bytes === HEADER && fill[0].value === 0, `the header area cleared by the imgpro unit natively (one linear fill of 0 over the buffer's ${HEADER} bytes): ${JSON.stringify(fill)}`);
           ok(y?.aspect === run.take[12417] && run.take[40401] === 1, `ImgAspect from the record's aspect, TAKE's setting 12417 (${run?.take?.[12417]}): ${y?.aspect}; the bracket's 40401 ${run?.take?.[40401]}`);
-          ok(x?.exif?.get(0x8827) === 25 && x?.exif?.get(0x8831) === 25, `the ISO REC_IMAGE derives from the Sv 0 (rec_bracket_after_trig 0x5053bfe2: the packet's on E143, the image record's on E146 and E147), ISO and StandardOutputSensitivity: ${x?.exif?.get(0x8827)} ${x?.exif?.get(0x8831)}`);
+          ok(x?.exif?.get(0x8827) === 25 && x?.exif?.get(0x8831) === 25, `the ISO REC_IMAGE derives from the Sv 0 (rec_bracket_after_trig 0x5053bfe2: the shot's record's +38174, on E146 and E147 +37826), ISO and StandardOutputSensitivity: ${x?.exif?.get(0x8827)} ${x?.exif?.get(0x8831)}`);
         }
       } else ok(data && want && data.every((b, i) => b === want[i]), 'the file\'s bytes are the JPEG the lab handed the file module');
       const d = data ? decodeJpeg(data) : null, [w, h, rows] = want ? s2.picture_frame(s2.camapp.views.get(img.release)) : [0, 0, []];

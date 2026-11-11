@@ -19,7 +19,8 @@
 //               SYNC_FOUND, its module-9 readers against MODULE9_FOUND and E143's lab lists, its language setting
 //               against LANG_FOUND, the menu memories against MEMORY_FOUND, the touch-panel driver against
 //               NO_TOUCH_DRIVER, the lens mount against NO_LENS_MOUNT, the lens driver against LENS_DRIVER_FOUND and
-//               A() of its flags and queue word, the IIC driver's wait against IIC_FOUND, the
+//               A() of its flags and queue word, REC_IMAGE's task against REC_IMAGE_FOUND, the IIC driver's wait
+//               against IIC_FOUND, the
 //               touch panel's traced I2C functions against TOUCH_FOUND, the device open's frame wait and the
 //               software-timer sleep against FRAME_WAIT_FOUND and TIMER_SLEEP_FOUND, the shooting service's traces
 //               against SHOOTING_FOUND, the AE init against AE_FOUND and A(), the GUI task's take against TAKE_FOUND,
@@ -44,7 +45,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
   TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
-  PROP_STORE_E143, CTORS_E143, REC_FILE_E143 } from '../src/fw/facts.mjs';
+  PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -344,6 +345,23 @@ const REC_FILE_FOUND = {
       image: { record: { init: 0x5053A22F, bytes: 52, at: 180 }, addr: 8, size: 12 } },
     contexts: [0x62AB7D08, 0x62AB7D64], clock_set: 0x501358FD,
   },
+};
+// REC_IMAGE's task natively (rec_image; src/fw/facts.mjs recImage), where recFile reads REC_FILE's parts: E143's as
+// src/lab/rec.mjs gave them by hand before the rule (REC_IMAGE_E143, D), E146's and E147's as read in their code (D,
+// 2026-11-10: REC_IMAGE task 28 at E146 0x5051ee03 / E147 0x5052def3 reading the queue word 0x6004328e / 0x60043200
+// and calling the image record's init, E146 0x5051ee45; REC's shared init E146 0x5052c2e8 binding REC_FILE's flag at
+// 0x5052c3d8, its done byte set at 0x5052c42b; the image library's init E146 0x5045f14f, the unit's init 0x504fe0d8;
+// REC_FILE's handler E146 0x5051c153 replying at 0x5051c20d; TAKE's fills E146 0x503bc653..0x503bc6c5 and 0x503bc962
+// with the settings read 0x500423e1, at E143's offsets less 348; X: their sessions make S2's picture in REC_IMAGE's
+// task with them), none on the other 15 bodies (recFile reads no REC_FILE there)
+const REC_IMAGE_FOUND = {
+  E143: REC_IMAGE_E143,
+  E146: { task: { id: 28, entry: 0x5051EE03, queue: 0x6004328E }, shared: { init: 0x5052C2E8, done: 0xA332B8F1 },
+    imgpro: [0x5047E67F, 0x5047DC11, 0x504FE0D8], reply: { fn: 0x50516D81, from: 0x5051C212 }, alive: 0, settings: 0x500423E1,
+    take: [[35217, 37726, 2], [38737, 37728, 2], [38769, 37730, 2], [38785, 37732, 2], [40401, 37738, 1], [12417, 37774, 1]] },
+  E147: { task: { id: 28, entry: 0x5052DEF3, queue: 0x60043200 }, shared: { init: 0x5053B50F, done: 0xA3322075 },
+    imgpro: [0x5048CF75, 0x5048C507, 0x5050D1AA], reply: { fn: 0x50525E69, from: 0x5052B302 }, alive: 0, settings: 0x50042360,
+    take: [[35217, 37726, 2], [38737, 37728, 2], [38769, 37730, 2], [38785, 37732, 2], [40401, 37738, 1], [12417, 37774, 1]] },
 };
 // The IIC bus driver's completion wait (iic.waits; src/fw/facts.mjs iicWaits), as read (D: E143's at 0x5004cbf6,
 // waiting on (0x60043086), which its callback 0x5004cb95 sets; E145's at 0x50044d60, the compass WHOAMI read's at
@@ -871,6 +889,7 @@ export function factsTests() {
     // the camera application's module queues use) at the rule's
     if (code === 'E143' || PORTS[code]) ok(same(placed?.lens_driver, LENS_DRIVER_FOUND[code]), `${code}: lens_driver ${hx(placed?.lens_driver ?? placed)}, found ${hx(LENS_DRIVER_FOUND[code] ?? 'none')}`);
     if (code === 'E143' || PORTS[code]) ok(same(placed?.rec_file, REC_FILE_FOUND[code]), `${code}: rec_file ${hx(placed?.rec_file ?? placed)}, found ${hx(REC_FILE_FOUND[code] ?? 'none')}`);
+    if (code === 'E143' || PORTS[code]) ok(same(placed?.rec_image, REC_IMAGE_FOUND[code]), `${code}: rec_image ${hx(placed?.rec_image ?? placed)}, found ${hx(REC_IMAGE_FOUND[code] ?? 'none')}`);
     const ld = placed?.lens_driver;
     if (ld && PORTS[code]) {
       const a = (v) => (PORTS[code][v] === undefined ? v : PORTS[code][v]), e = LENS_DRIVER_E143;

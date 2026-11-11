@@ -3032,40 +3032,58 @@ const EXIF_CROP = [0xa0, 0x03, 0xc9, 0x0c, 0x5c, null, 0xfc, 0xd0, null, null, n
 const REC_CONTEXTS = [0xfa, 0x63, null, null, 0xfc, 0xde, null, null, null, null, 0xa0, 0x01, 0xc9, 0x08, 0xfc, 0xde];
 const CLOCK_UNSET = [0x2c, null, null, 0xf8, 0x72, 0x08];
 const EXIF_TAG_TYPES = new Set([1, 2, 3, 4, 5, 7, 9, 10]);
+// REC's trace table and the trace calls (recFile, recImage): {ids: name -> id, traces: 'kind:code' -> the offsets of
+// their `or K,d0`}, read once per image; null where the image holds no trace table. Throws for two tables.
+const recTraceScans = new WeakMap();
+function recTraceScan(img, rule) {
+  if (recTraceScans.has(img)) return recTraceScans.get(img);
+  const { base } = imageBase(img), D = (o) => h8(0x50000000 + o), u16 = (o) => img[o] | img[o + 1] << 8;
+  const text = (o) => { let e = o; while (img[e]) e++; return String.fromCharCode(...img.subarray(o, e)); };
+  const heads = findString(img, REC_TRACE_HEAD, { nul: true, after: true }).flatMap((o) => wordsOf(img, (base + o) >>> 0))
+    .filter((p) => u32(img, p + 4) === 1 && text(u32(img, p + 8) - base) === REC_TRACE_NEXT && u32(img, p + 12) === 2);
+  if (heads.length > 1) throw new Error(`${rule}: ${heads.length} trace tables (${heads.map(D).join(', ')}), want one`);
+  let scan = null;
+  if (heads.length) {
+    const ids = new Map();
+    for (let p = heads[0]; ; p += 8) {
+      const a = u32(img, p) - base, id = u32(img, p + 4);
+      if (a < 0 || a >= img.length || id === 0 || id > 0xffff || !/^[ -~]+$/.test(text(a))) break;
+      ids.set(text(a), id);
+    }
+    // the trace calls by kind and code (`or K,d0` with K's low half 0, then `mov code << 16 | line,d1`): offsets
+    const traces = new Map();
+    for (let o = img.indexOf(0xe4); o >= 0; o = img.indexOf(0xe4, o + 1)) {
+      const t = o - 1;
+      if (img[t] !== 0xfc || img[t + 2] || img[t + 3]) continue;
+      for (let q = t + 6; q < t + REC_TRACE_GAP; q++) {
+        if (img[q] !== 0xfc || img[q + 1] !== 0xcd) continue;
+        const key = `${u16(t + 4)}:${u16(q + 4)}`;
+        traces.set(key, [...(traces.get(key) ?? []), t]);
+        break;
+      }
+    }
+    scan = { ids, traces };
+  }
+  recTraceScans.set(img, scan);
+  return scan;
+}
+// The function that holds REC's trace of name with kind K's high half (its entry's offset), undefined where the name
+// or its trace is not found; throws for a trace in two functions.
+function recTraced(img, scan, rule, name, kind) {
+  const id = scan.ids.get(name);
+  if (id === undefined) return undefined;
+  const fns = new Set((scan.traces.get(`${kind}:${id - 1}`) ?? []).map((t) => entryOf(img, t, REC_FN_SPAN)));
+  if (fns.size > 1 || fns.has(undefined)) throw new Error(`${rule}: the trace of "${name}" in ${fns.size} functions, want one`);
+  return fns.size ? [...fns][0] : undefined;
+}
 export function recFile(img, kcb) {
   const rule = 'recFile', { base } = imageBase(img), D = (o) => h8(0x50000000 + o), s16 = (o) => (img[o] | img[o + 1] << 8) << 16 >> 16;
   const u16 = (o) => img[o] | img[o + 1] << 8, text = (o) => { let e = o; while (img[e]) e++; return String.fromCharCode(...img.subarray(o, e)); };
   const step = (p) => p + (callAt(img, p)?.len ?? insnLength(img[p], img[p + 1]));
   // REC's trace table and the functions that hold its traces
-  const heads = findString(img, REC_TRACE_HEAD, { nul: true, after: true }).flatMap((o) => wordsOf(img, (base + o) >>> 0))
-    .filter((p) => u32(img, p + 4) === 1 && text(u32(img, p + 8) - base) === REC_TRACE_NEXT && u32(img, p + 12) === 2);
-  if (heads.length > 1) throw new Error(`${rule}: ${heads.length} trace tables (${heads.map(D).join(', ')}), want one`);
-  if (!heads.length) return undefined;
-  const ids = new Map();
-  for (let p = heads[0]; ; p += 8) {
-    const a = u32(img, p) - base, id = u32(img, p + 4);
-    if (a < 0 || a >= img.length || id === 0 || id > 0xffff || !/^[ -~]+$/.test(text(a))) break;
-    ids.set(text(a), id);
-  }
-  // the trace calls by kind and code (`or K,d0` with K's low half 0, then `mov code << 16 | line,d1`): offsets
-  const traces = new Map();
-  for (let o = img.indexOf(0xe4); o >= 0; o = img.indexOf(0xe4, o + 1)) {
-    const t = o - 1;
-    if (img[t] !== 0xfc || img[t + 2] || img[t + 3]) continue;
-    for (let q = t + 6; q < t + REC_TRACE_GAP; q++) {
-      if (img[q] !== 0xfc || img[q + 1] !== 0xcd) continue;
-      const key = `${u16(t + 4)}:${u16(q + 4)}`;
-      traces.set(key, [...(traces.get(key) ?? []), t]);
-      break;
-    }
-  }
-  const traced = (name, kind) => {
-    const id = ids.get(name);
-    if (id === undefined) return undefined;
-    const fns = new Set((traces.get(`${kind}:${id - 1}`) ?? []).map((t) => entryOf(img, t, REC_FN_SPAN)));
-    if (fns.size > 1 || fns.has(undefined)) throw new Error(`${rule}: the trace of "${name}" in ${fns.size} functions, want one`);
-    return fns.size ? [...fns][0] : undefined;
-  };
+  const scan = recTraceScan(img, rule);
+  if (scan === null) return undefined;
+  const traced = (name, kind) => recTraced(img, scan, rule, name, kind);
   // the task: its receive with "rec_file.c", its static task, the bind before its entry, REC's module init
   const recvs = [];
   for (const o of findString(img, REC_FILE_SOURCE, { nul: true, after: true })) {
@@ -3194,6 +3212,148 @@ export function recFile(img, kcb) {
     packet: { size: recv.size, post: 0x50000000 + post, fields },
     jpeg: { exec: 0x50000000 + exec, make_image: 0x50000000 + make, header, fill: 0x50000000 + fill.to, fill_return: 0x50000000 + fill.ret, image },
     contexts: [u32(img, cx + 6), u32(img, cx + 16)], clock_set: 0x50000000 + set,
+  };
+}
+
+// REC_IMAGE's task natively (fact 'rec_image', src/lab/rec.mjs H-RECSHARED, H-RECIMGPRO, H-RECIMAGE, S-RECREQ,
+// S-EXIFPRM; docs/hle-gaps.md 4.3.3, 4.3.5), read where recFile reads REC_FILE's parts (rec, its result), at the port's
+// place of E143's CPU 0 kcb. D on E143 (REC_IMAGE_E143: the values src/lab/rec.mjs gave by hand before the rule) unless
+// tagged; REC's traced functions by recTraced (rec_bracket_entry 0x5053b1dc and rec_make_image_finish 0x50541ec5 with K
+// 0x31010000, rec_bracket_update 0x5053b39c with 0x31000000, "REC post_msg_main" 0x5053984b with 0x11010000):
+// - task {id, entry, queue}: the static task (taskRows) whose code runs to a call of rec_bracket_entry within
+//   REC_IMAGE_SPAN bytes (28, 0x50541c45; the call 0x50541c95), opening `movm [d2,d3,a2,a3],(sp); add -N,sp; mov
+//   (0x8050),d1; movhu (Q),Dn` (Q: the word of CPU 0's queue REC_EXEC_IMAGE 70, 0x60043250; the next `movhu` is CPU
+//   2's, 0x6004369a, taken when (0x8050) is not 0), the packet at sp + 4 (`mov sp,a2; inc4 a2`), its first call REC's
+//   receive of rec's packet.size bytes (`mov SIZE,d1` in its first REC_RECV_SPAN bytes: 0x505398bf, 316); where rec's
+//   packet points at REC_IMAGE's image record (rec.jpeg.image.record), the task calls the record's init before
+//   rec_bracket_entry (E146 0x5051ee45, D), else not
+// - alive: pAlive's offset in the packet, the word REC_IMAGE clears after rec_make_image_finish, `mov (4 +
+//   alive,sp),a0; clr d0; mov d0,(a0)` (0x50541d5f; the packet dump's first field on all three, D)
+// - shared {init, done}: REC's shared objects' init, the function that binds REC_FILE's flag (rec.task.flag) to entry 7
+//   of its bind table, `movhu (F),d2; mov 7,d0; exth d2; mov d2,a0; clr d1; mov 1,a1; call` (0x5054dcc4, in
+//   0x5054dbe8), and its done byte, the one byte it sets to 1 after that, `mov 1,d0; movbu d0,(B)` (0xa332ce59)
+// - imgpro [attach, clear, unit]: the imgpro unit's init, `mov 1,d2; mov d2,(U + 4); mov d2,(U + 0x30)` with U
+//   IMGPRO_UNIT_E143 (src/fw/board.mjs imgpro; 0x5050a6b2), one function; the units' init, its one caller's function
+//   (0x50481211); the image library's init, the one caller of that, `call A; call C; call UNITS; call; clr d0; ret`
+//   after a return (0x5046d7ab): A the IRQ attach (0x5048c3a0) and C the id bitmap's clear (0x5048ba3a)
+// - reply {fn, from}: REC_FILE's handler (the call that returns to rec.task.handled) ends with REC's reply to the
+//   packet's ObjResponse when Free is set, `movbu (Free,a3),d1; cmp 0,d1; beq L; ...; call R; L:` (0x5053f3a5), R
+//   "REC post_msg_main"'s function (0x5053984b) and from L (0x5053f3c0)
+// - settings, take: the record fields REC_IMAGE reads that TAKE fills from the settings store, [id, offset, bytes]:
+//   rec_bracket_entry's bracket test, `movhu (B0,a2),d0; cmp 0,d0; bne; movhu (B1,a2),d0; cmp 0,d0; bne; movbu
+//   (B4,a2),d0; cmp 1,d0; beq` and after it `movhu (B2,a2),Dn; movhu (B3,a2),Dm; movbu (B4,a2),Dk` (0x5053b321,
+//   0x5053b345), rec_bracket_update's aspect, `movbu (AS,An),d0; bra; mov 1,d0; mov (8,sp),a0; movbu
+//   d0,(ImgAspect,a0)` (0x5053b45d); each one's TAKE fill, `mov ID,d0; mov 0,a0; call S; mov (4,sp),a0; clr d1;
+//   movhu d0,(B,a0)` (`movbu` for a byte; 0x503bbd26..0x503bbd98, 0x503bc035), one site each, S one settings read
+//   (0x500417da)
+// E146 and E147 read every part (X: their sessions make S2's picture in REC_IMAGE's task with them; D: E146's task
+// 0x5051ee03 and the rest at docs/hle-gaps.md 4.3.5). Returns the parts in REC_IMAGE_E143's shape; throws where a part
+// is not found in its shape or is found twice.
+export const REC_IMAGE_E143 = {
+  task: { id: 28, entry: 0x50541C45, queue: 0x60043250 },
+  shared: { init: 0x5054DBE8, done: 0xA332CE59 },
+  imgpro: [0x5048C3A0, 0x5048BA3A, 0x5050A6B2],
+  reply: { fn: 0x5053984B, from: 0x5053F3C0 },
+  alive: 0,
+  settings: 0x500417DA,
+  take: [[35217, 38074, 2], [38737, 38076, 2], [38769, 38078, 2], [38785, 38080, 2], [40401, 38086, 1], [12417, 38122, 1]],
+};
+export const IMGPRO_UNIT_E143 = 0x9C600000;
+const REC_IMAGE_SPAN = 0x200, REC_RECV_SPAN = 0x20, REC_SHARED_SPAN = 0x200, IMGPRO_UNITS_SPAN = 0x200, REC_HANDLER_SPAN = 0x200;
+const REC_TASK_OPEN = [0xcf, 0xf0, 0xfa, 0xfe, null, null, 0x31, 0x50, 0x80, 0xfc];
+const REC_BRACKET = [0xfc, 0x62, null, null, null, null, 0xa0, 0x00, 0xc9, null, 0xfc, 0x62, null, null, null, null, 0xa0, 0x00,
+  0xc9, null, 0xfc, 0x42, null, null, null, null, 0xa0, 0x01, 0xc8];
+export function recImage(img, kcb, rec) {
+  const rule = 'recImage', D = (o) => h8(0x50000000 + o), s8 = (o) => img[o] << 24 >> 24;
+  const step = (p) => p + (callAt(img, p)?.len ?? insnLength(img[p], img[p + 1]));
+  const scan = recTraceScan(img, rule);
+  if (scan === null) throw new Error(`${rule}: no REC trace table`);
+  const traced = (name, kind) => {
+    const fn = recTraced(img, scan, rule, name, kind);
+    if (fn === undefined) throw new Error(`${rule}: no function holds the trace of "${name}" (kind 0x${kind.toString(16)})`);
+    return fn;
+  };
+  const bracketEntry = traced('rec_bracket_entry', 0x3101), bracketUpdate = traced('rec_bracket_update', 0x3100);
+  const finish = traced('rec_make_image_finish', 0x3101), reply = traced('REC post_msg_main', 0x1101);
+  // the calls a function makes from `from` to its first return, within span bytes: [{at, to, len}]
+  const callsIn = (from, span) => {
+    const out = [];
+    for (let p = from; p < from + span && !isRet(img, p); p = step(p)) { const c = callAt(img, p); if (c) out.push({ at: p, to: c.to, len: c.len }); }
+    return out;
+  };
+  // the task
+  const rows = taskRows(img, kcb, rule).filter(({ entry }) => callsIn(entry - 0x50000000, REC_IMAGE_SPAN).some((c) => c.to === bracketEntry));
+  if (rows.length !== 1) throw new Error(`${rule}: ${rows.length} static tasks call rec_bracket_entry ${D(bracketEntry)} within 0x${REC_IMAGE_SPAN.toString(16)} bytes, want one`);
+  const [task] = rows, e = task.entry - 0x50000000, calls = callsIn(e, REC_IMAGE_SPAN);
+  if (!bytesAt(img, e, REC_TASK_OPEN) || (img[e + 10] & 0xfc) !== 0xac) throw new Error(`${rule}: REC_IMAGE's task ${D(e)} does not open with its queue's read after (0x8050)`);
+  const queue = u32(img, e + 11), recv = calls[0];
+  let pk = -1;
+  for (let p = e; p < recv.at && pk < 0; p = step(p)) if (img[p] === 0x3e && img[p + 1] === 0x52) pk = p;
+  if (pk < 0) throw new Error(`${rule}: REC_IMAGE's task ${D(e)} keeps no packet at sp + 4 before its receive ${D(recv.at)}`);
+  let sized = false;
+  for (let p = recv.to; p < recv.to + REC_RECV_SPAN; p = step(p)) if (img[p] === 0x2d && (img[p + 1] | img[p + 2] << 8) === rec.packet.size) sized = true;
+  if (!sized) throw new Error(`${rule}: REC_IMAGE's receive ${D(recv.to)} does not take ${rec.packet.size}-byte packets`);
+  const record = rec.jpeg.image.record, bi = calls.findIndex((c) => c.to === bracketEntry);
+  const inits = record ? calls.slice(0, bi).filter((c) => c.to === record.init - 0x50000000).length : 0;
+  if (inits !== (record ? 1 : 0)) throw new Error(`${rule}: REC_IMAGE's task calls the image record's init ${inits} times before rec_bracket_entry, want ${record ? 1 : 0}`);
+  const fi = calls.findIndex((c) => c.to === finish), after = fi < 0 ? -1 : calls[fi].at + calls[fi].len;
+  if (after < 0 || !bytesAt(img, after, [0x5c, null, 0x00, 0x60]) || img[after + 1] < 4) throw new Error(`${rule}: REC_IMAGE's task ${D(e)} clears no word through the packet after rec_make_image_finish ${D(finish)}`);
+  const alive = img[after + 1] - 4;
+  // REC's shared objects' init and its done byte
+  const binds = [];
+  const bind = [0xfc, 0xae, ...le32(rec.task.flag), 0x80, 0x07, 0x1a, 0xf1, 0xe8, 0x04, 0x95, 0x01];
+  for (let o = img.indexOf(0xfc); o >= 0; o = img.indexOf(0xfc, o + 1)) if (bytesAt(img, o, bind)) binds.push(o);
+  if (binds.length !== 1) throw new Error(`${rule}: ${binds.length} binds of REC_FILE's flag ${h8(rec.task.flag)} to entry 7, want one`);
+  const shared = entryOf(img, binds[0], REC_SHARED_SPAN), dones = [];
+  if (shared === undefined) throw new Error(`${rule}: the bind of REC_FILE's flag at ${D(binds[0])} is in no called function`);
+  for (let p = binds[0]; !isRet(img, p); p = step(p)) if (bytesAt(img, p, [0x80, 0x01, 0xfc, 0x82])) dones.push(u32(img, p + 4));
+  if (dones.length !== 1) throw new Error(`${rule}: REC's shared init ${D(shared)} sets ${dones.length} bytes to 1 after the bind, want one`);
+  // the image library's IRQ attach, id bitmap clear and the imgpro unit's init
+  const U = IMGPRO_UNIT_E143, unit = oneAt(img, [0x8a, 0x01, 0xfc, 0x89, ...le32(U + 4), 0xfc, 0x89, ...le32(U + 0x30)], rule, 'imgpro unit inits');
+  const unitCalls = unit === null ? [] : callsTo(img, unit), units = unitCalls.length === 1 ? entryOf(img, unitCalls[0], IMGPRO_UNITS_SPAN) : undefined;
+  const libCalls = units === undefined ? [] : callsTo(img, units), c = libCalls[0];
+  if (libCalls.length !== 1) throw new Error(`${rule}: the imgpro unit's init ${unit === null ? 'is not found' : `${D(unit)} is called ${unitCalls.length} times`}, or its units' init ${units === undefined ? 'has no entry' : `${D(units)} ${libCalls.length} times`}, want one each`);
+  const lib = [callAt(img, c - 14), callAt(img, c - 7), callAt(img, c), callAt(img, c + 7)];
+  if (lib.some((x) => x?.len !== 7) || !isRet(img, c - 17) || img[c + 14] !== 0x00 || !isRet(img, c + 15)) throw new Error(`${rule}: the image library's init around ${D(c)} is not four calls and a return`);
+  // REC_FILE's reply at its handler's end
+  const hc = [callAt(img, rec.task.handled - 0x50000000 - 5), callAt(img, rec.task.handled - 0x50000000 - 7)].find((x, k) => x?.len === 5 + 2 * k);
+  if (!hc) throw new Error(`${rule}: no call returns to REC_FILE's handled ${h8(rec.task.handled)}`);
+  const F = rec.packet.fields.Free, frees = [];
+  for (let p = hc.to; p < hc.to + REC_HANDLER_SPAN; p++) if (bytesAt(img, p, [0xfa, 0x47, F & 0xff, F >> 8, 0xa5, 0x00, 0xc8])) frees.push(p);
+  if (frees.length !== 1) throw new Error(`${rule}: REC_FILE's handler ${D(hc.to)} tests Free (+${F}) ${frees.length} times, want once`);
+  const from = frees[0] + 6 + s8(frees[0] + 7), rc = [callAt(img, from - 5), callAt(img, from - 7)].find((x, k) => x?.len === 5 + 2 * k);
+  if (rc?.to !== reply) throw new Error(`${rule}: REC_FILE's handler's last call before ${D(from)} is ${rc ? D(rc.to) : 'none'}, not "REC post_msg_main" ${D(reply)}`);
+  // the record fields REC_IMAGE reads and TAKE's fill of each from the settings store
+  const bt = oneAt(img, REC_BRACKET, rule, 'bracket tests', bracketEntry, bracketEntry + REC_IMAGE_SPAN);
+  if (bt === null) throw new Error(`${rule}: rec_bracket_entry ${D(bracketEntry)} has no bracket test`);
+  const B4 = u32(img, bt + 22);
+  let pair = -1;
+  for (let p = bt + 29; p < bt + 0x40 && pair < 0; p++) if (img[p] === 0xfc && (img[p + 1] & 0xf3) === 0x62 && img[p + 6] === 0xfc && (img[p + 7] & 0xf3) === 0x62 && img[p + 12] === 0xfc && (img[p + 13] & 0xf3) === 0x42 && u32(img, p + 14) === B4) pair = p;
+  if (pair < 0) throw new Error(`${rule}: rec_bracket_entry's bracket test at ${D(bt)} reads no product of its fields after it`);
+  const IA = rec.packet.fields.ImgAspect;
+  const as = oneAt(img, [0xfc, null, null, null, null, null, 0xca, 0x04, 0x80, 0x01, 0x5c, 0x08, 0xfa, 0x50, IA & 0xff, IA >> 8], rule, 'aspect reads', bracketUpdate, bracketUpdate + REC_IMAGE_SPAN);
+  if (as === null || (img[as + 1] & 0xf0) !== 0x40) throw new Error(`${rule}: rec_bracket_update ${D(bracketUpdate)} sets ImgAspect (+${IA}) from no record field`);
+  const fields = [[u32(img, bt + 2), 2], [u32(img, bt + 12), 2], [u32(img, pair + 2), 2], [u32(img, pair + 8), 2], [B4, 1], [u32(img, as + 2), 1]];
+  const take = [], reads = new Set();
+  for (const [at, n] of fields) {
+    const sites = [];
+    for (let o = img.indexOf(0x90); o >= 0; o = img.indexOf(0x90, o + 1)) {
+      if (!bytesAt(img, o, [0x90, 0x00, 0xdd, null, null, null, null, null, null, 0x5c, 0x04, 0x04, 0xfc, n === 2 ? 0x70 : 0x50, ...le32(at)])) continue;
+      const id = img[o - 6] === 0xfc && img[o - 5] === 0xcc ? u32(img, o - 4) : img[o - 3] === 0x2c ? img[o - 2] | img[o - 1] << 8 : null;
+      if (id !== null) sites.push({ o, id, read: callAt(img, o + 2).to });
+    }
+    if (sites.length !== 1) throw new Error(`${rule}: ${sites.length} fills of the record's +${at} from the settings store, want one`);
+    take.push([sites[0].id, at, n]); reads.add(sites[0].read);
+  }
+  if (reads.size !== 1) throw new Error(`${rule}: TAKE's fills call ${reads.size} settings reads, want one`);
+  return {
+    task: { id: task.id, entry: task.entry, queue },
+    shared: { init: 0x50000000 + shared, done: dones[0] },
+    imgpro: [0x50000000 + lib[0].to, 0x50000000 + lib[1].to, 0x50000000 + unit],
+    reply: { fn: 0x50000000 + reply, from: 0x50000000 + from },
+    alive,
+    settings: 0x50000000 + [...reads][0],
+    take,
   };
 }
 
@@ -3965,7 +4125,7 @@ export function readPlacedFacts({ img, at }) {
   const lens = kcb !== null && taSt !== null && qerd !== null && lensQueue !== null ? lensDriver(img, { kcb, taSt, qerd, commandQueue: lensQueue }) : undefined;
   if (lens !== undefined) facts.lens_driver = lens;
   const rec = kcb !== null ? recFile(img, kcb) : undefined;
-  if (rec !== undefined) facts.rec_file = rec;
+  if (rec !== undefined) { facts.rec_file = rec; facts.rec_image = recImage(img, kcb, rec); }
   const apiReturn = at(API_SEND_RETURN_E143);
   if (apiReturn !== null) facts.api = apiTargets(img, apiReturn);
   return facts;

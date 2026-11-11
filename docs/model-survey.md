@@ -1990,7 +1990,11 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    `0x504e732e`; what they are, ?); the rule takes the rec_jpeg_exec of the family's opening that calls the traced
    rec_jpeg_make_image and the traced header maker it calls, one on each of the three, and the packet's fields from
    those instructions (the names E143's for the same uses, I: no dump names them). It finds it on E122, E118 and E120
-   and on none of the other 16 images (X); `test/test_facts.mjs` pins the three (REC_HEADER_FOUND).
+   and on none of the other 16 images (X); `test/test_facts.mjs` pins the three (REC_HEADER_FOUND). Added in review
+   (D): the header maker's mode checks (`0x5051790e`: 4108, 4099, 4100; `0x50517407`: 4100, 4099, 4106, 8193) answer 0
+   for 4097, the Mode the lab gives (that 4097 is the still, as E143's, I); rec.c holds a 216-byte receive
+   (`0x5050bbec`, through `0x5051869e` to the queue read `0x5004830d`, which loads "OlyQeRdCpu"; eight callers), the
+   size REC's post sends; which caller is REC_FILE's is not read (?).
 103. **The family's EXIF module and the shot's parameters** (2026-11-10, D on E122 unless tagged). The EXIF module's
    init (`0x5052b4d9`, `call; clr d0; ret`; one caller, `0x50186c73`) calls the template's init (`0x5052b4e2`: `mov
    0x618bb6b8,a0; call 0x5052c570`, then three stores and `ret`), which has no cache flush where E143's calls one; the
@@ -2009,7 +2013,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    `2026:11:08 12:34:56`. The EXIF set called natively on the copied block divides by zero (`div` at `0x50212ef5`, by a
    halfword read through a pointer on the stack, in TAKE's state; X), as E143's does (hle-gaps 4.8.10), so the lab
    formats the dates as it does and the exposure fields stay the template's.
-104. **S2's file carries the firmware's Exif on the family** (2026-11-10, X: `test/test_storage.mjs` per body, 28 of 28
+104. **S2's file carries the firmware's Exif on the family** (2026-11-10, X: `test/test_storage.mjs` per body, 29 of 29
    checks on each; `src/lab/recheader.mjs`, `src/fw/models.mjs` exif_native). At the first picture H-EXIFINIT runs the
    EXIF module's init natively; at each picture S-EXIFPRM gives the shot's block (the template copied, the clock read
    and the dates formatted natively; no crop area or zoom ratio set, the header maker dividing by none of the block's
@@ -2017,7 +2021,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    holding the lab's stream without its APP0 at +41984, the rest 0, I) and runs rec_jpeg_make_header natively; S-RECFILE
    writes the buffer's 41984 bytes and the stream as the file, through fileif as before. The file
    (`C:\DCIM\100OLYMP\P1010001.JPG`, its size 41984 plus the stream's): SOI, APP1 Exif of 41982 bytes, then the stream's
-   tables at 41986 (its SOI under APP1's end, as on E143); refs/exif.mjs reads IFD0's Make and Model as in finding 103,
+   tables at 41986 (its SOI as APP1's last 2 bytes, which the header maker leaves, X, where E143's XMP overwrites
+   it); refs/exif.mjs reads IFD0's Make and Model as in finding 103 (exiftool 13.55 reads the same on E122, X in
+   review, with 8 warnings: 4 undefined values, the dates' odd offsets, zero thumbnail and preview lengths),
    ImageDescription 'OLYMPUS DIGITAL CAMERA', Software 'Version 0.0' (where it comes from is not read, ?), DateTime,
    DateTimeOriginal and CreateDate the clock's, Exif version `0230`, FlashPix `0100`, the maker notes 'OLYMPUS' (14072
    bytes on E122, 13924 on E118, 13832 on E120), IFD1 with its thumbnail slot of length 0; ExposureTime 0/100, FNumber

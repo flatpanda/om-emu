@@ -388,7 +388,7 @@ the survey table.
   parse, which run on no body; with S2's file now holding the firmware's Exif, a native load would read the
   template's zero exposure where S-PLAYSEQ answers the capture's, finding 106); the Exif's shooting values, which
   TAKE's EXIF set fills and which divides by zero in the lab as on E143 (finding 103), and REC_FILE's DCF steps, of
-  another form on the family (the reservation in REC's own task, the chain write posted to FILECLBK with a reply; the
+  another form on the family (the reservation in REC's own task, the chain write posted with a reply queue; the
   lab's E143-form requests stop at the chain write's 0xe13, finding 105), so S-RECFILE still writes the file through
   fileif, which since 2026-11-10 carries the header the family's own header maker builds natively (findings 102 to
   104, where finding 93 had found none in the lab: `src/fw/facts.mjs` recHeader reads the older REC's packet, header

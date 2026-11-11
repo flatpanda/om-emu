@@ -1676,29 +1676,34 @@ traRoutingSession, below).
   is 0x2000)`. That function:
   - first asks REC's cache (`0x505387c9`): 33 slots, a 36-byte block at `0xa33201b8 + 36 n` and a 336-byte work
     record at `0xa332065c + 336 n` with its key at +320; the slot whose key is the record's +38532 (low half) is copied
-    to the record's +37810.. and the rest skipped (not when the record's +41000 has bit 2, or its +38764 is 11 with
-    +38118 not 0 and the flag 0);
+    to the record's +37810.. and the computation skipped, `0x50538ced` still run (`0x50538522`) (not when the record's
+    +41000 has bit 2, or its +38764 is 11 with +38118 not 0 and the flag 0);
   - else computes the block: from the record's +6334, +6512 or +6504 halved (by +38775) when +7626, or +6140 with
     +41001, is set and +37992 (I: the white balance's mode) is 0 or 4; otherwise from a 336-byte work record of its
     fields (+38190, +38196, +10542.., +38160, +38008, +37992, +37988, +37990, +6720, +38764, +38210, +38775) and the
-    object `0x50534dd1(0x503afb12(HandleTarget))`, through TAKE's white balance module (`0x503909cf` -> `0x50390fcb`;
-    `0x50538ec8` -> `0x503972f3`; `0x50538feb`, `0x50538ced`), then `0x50390ed5` for the rest of the block (+14 and
-    +16 4095, +18.., I: nine halfwords);
+    object `0x50534dd1(0x503afb12(HandleTarget))`, through TAKE's code (`0x503909cf` -> `0x50390fcb`;
+    `0x50538ec8` -> `0x503972f3`; `0x50538feb`, `0x50538ced`; I: its white balance computation, in the fixed-point
+    block whose role 4.1 left ?), then `0x50390ed5` for the rest of the block (+14 and +16 4095, +18.., I: nine
+    halfwords);
   - then `0x50538887` keeps the block in the cache and writes it to the record's +37810 (`0x5053894a`), and
     `0x50538979` writes the record's +7444, +7446, +6504.., +6334.., +6512.. (doubled), +7490.. and +7494...
 
   So neither the capture sequence, the sensor mode table nor TAKE's S2 path writes the divisor, but REC_PREPRO, from
-  the cache or from the shot record's fields that TAKE fills. The default still's white balance is Auto (X: exiftool's
-  WhiteBalance and WhiteBalance2, the template's).
+  the cache or from the shot record's fields that TAKE fills (a scan for the offset 37810: TAKE's code holds none; the
+  image's three users outside REC, `0x508686f0..0x50869f36`, lie among the iseq_pixshift_sr_*.c functions, a 36-byte
+  copy there among them, I: High Res Shot's). The default still's white balance is Auto (X: exiftool's WhiteBalance and
+  WhiteBalance2, the template's).
 - **In the lab (X).** S-RECREQ posts to REC_IMAGE's queue, so rec_precon_exec does not run and the block stays the
   template's 0. Run natively on the lab's record (a probe): rec_precon_wb_exec takes a cache slot whose key 0 matches
-  the template's +38532 0 (the restore answers 1) and the block is 0 again; with a key not in the cache (a probe's) the
-  computation divides by zero at `0x503932d7` (in `0x50392d64`, under `0x50390fcb`) on its zero inputs. The source is
-  a computation over TAKE's shot fields (I: the white balance the live view measures among them, 4.2 seam B, 4.2.2),
-  not a table and settings, so no stand-in gives the gains and the divide stays.
+  the template's +38532 0 (the restore answers 1; all 33 slots' keys are 0, the cache never written in the lab) and
+  the block is 0 again; with a key not in the cache (a probe's) the computation divides by zero at `0x503932d7` (in
+  `0x50392d64`, under `0x50390fcb`) on its zero inputs. The source is a computation over TAKE's shot fields (I: the
+  white balance the live view measures among them, 4.2 seam B, 4.2.2), not a table and settings, so no stand-in gives
+  the gains and the divide stays.
 - **rec_jpeg_make_image's steps.** `0x50549b42` runs rec_ImgPro_CreateParam and, with its status 0, the create
   (`0x50491699`, the id to +36), ImageParam (with the create's status 0), the run (`0x50542407`, with ImageParam's 0),
-  rec_ImgPro_Jpeg_Result (`0x50542ce1`, with the run's 0) and in every case the release (`0x5054322e`: IFinishID +40
+  rec_ImgPro_Jpeg_Result (`0x50542ce1`, with the run's 0) and, once the create has run, the release in every case
+  (CreateParam's non-zero status skips both, `0x50549b7f`; the release `0x5054322e`: IFinishID +40
   through `0x5054381a` and `0x5048e6ab` when set, `0x5054372e`, `0x5054363a`, then `0x50491c04` with the id, I: the
   library's delete), and sets Status (+208) to the status.
   - The run is `0x50492758(id, 0xffff)` and `0x504929e9(id)` (4.3.3); what they issue is not read.
@@ -1726,8 +1731,21 @@ traRoutingSession, below).
   CreateParam, the create, ImageParam's body and the release run natively in REC_IMAGE's task. The files' bytes are
   unchanged (X: two shots, byte for byte the previous round's); the create gives the same handle at each shot (X:
   `0x6246b220`), the release having deleted it. E146 and E147 keep S-JPEGENC over all of rec_jpeg_make_image
-  (S-RECIMAGE). `emu/test/test_storage.mjs` storageSession checks the steps (E143 57 of 57); traRoutingSession's four
+  (S-RECIMAGE). `emu/test/test_storage.mjs` storageSession checks the steps (E143 58 of 58); traRoutingSession's four
   pictures take them too (24 of 24).
+  - ImageParam's sources natively (D, X). Through `0x505489d4` ImageParam sets the request's four sources:
+    rec_ImgProCtrl_Src_Bayer (`0x50549017`), _Src_Thumb (`0x505493be`), _Src_ThumbICam1 (`0x50549441`) and
+    _Src_ThumbICam2 (`0x505494f5`; REC's trace ids 130..133). Each asks TAKE for the HandleTarget's (+116) buffer
+    handle (`0x503af9de`, `0x503afb12`, `0x503afb5d`, `0x503afbf3`: an id 1..115 whose entry at `0x62a494a4 + 32 n`
+    has the lookup's flag, masks 1, 1, 0x10 and 0x40, gives a halfword of it, any other logs `0x25000402` and gives 0)
+    and MM's `0x50534dd1` for its address. In the lab shot 1's entry has none of the flags (I: TAKE, which does not
+    run, fills it): each lookup logs `0x25000402` and MM logs `0x08010004` for handle 0 (X: four pairs a shot, the only
+    logs from the post to the set's call; the record's errlog, which storageSession pins).
+  - In keys (golden) the native steps add 18,866 instructions, 97 stops (28 get_tid, 20 memset, 8 errlog, 4 malloc
+    and 4 free, 2 S-JPEGENC, 1 memcpy, 1 the release's observer and 29 single steps) and, in the player's status,
+    these 8 logs' kernel events (harness entries +8) and the create's 4 allocations, freed by the release (heap
+    new and freed +4, top +22,240); the 7 IRQ rows after it keep their pcs, only their instruction counts move, and the
+    screen, the session's end in lab time and the file are the same (X).
 - **The exposure values in the file.**
   - ISO (corrects 4.3.3, which had it from the packet's Sv as S-RECREQ leaves it). The packet's +292 and +294 are
     GainAdj and SvAdj (the dump's names), and REC_IMAGE sets both: rec_bracket_update calls rec_bracket_update_iso
@@ -1747,13 +1765,14 @@ traRoutingSession, below).
     REC_FILE's reply sends Number and Packet back to ObjResponse (`0x5053984f..0x5053987a`). The requester (I: TAKE
     through api_rec, 4.3's first step) does not run in the lab; S-RECREQ leaves them 0 and takes the reply.
   - S-EXPOSE's values cannot be delivered honestly: it sets the AE result objects `0xc12a`, `0xc0ba` and `0xc0ca`, and
-    of the record's exposure fields only +38198 comes from one of them, through takepic; the others come from TAKE's
-    state and exposure record at the take, which TAKE (not run) fills. S-EXIFPRM writing S-EXPOSE's values there would
-    invent takepic's mapping, so it does not.
-- **Open.** The gains' computation and its inputs (TAKE's shot fields; the cache's keys); the run's kinds and units
-  (development, encode, thumbnail, view) and the allocator's list; the record's +41052 block, the layout with PlayPic,
-  and Jpeg_Result's EXIF writes (ExifImageWidth and the thumbnail's length stay 0 in the file, X); takepic and the
-  EXIF set for the exposure fields.
+    of the record's exposure fields takepic reads only +38198 from one of them; the others come from TAKE's state and
+    the exposure record takepic is handed, which TAKE (not run) fills from what is not read. S-EXIFPRM writing
+    S-EXPOSE's values there would invent that mapping, so it does not.
+- **Open.** The gains' computation and its inputs (TAKE's shot fields; the cache's keys); TAKE's shot table
+  (`0x62a494a4`) and MM's banks behind ImageParam's sources; the run's kinds and units (development, encode,
+  thumbnail, view) and the allocator's list; the record's +41052 block, the layout with PlayPic, and Jpeg_Result's EXIF
+  writes (ExifImageWidth and the thumbnail's length stay 0 in the file, X); takepic and the EXIF set for the exposure
+  fields.
 
 #### 4.3.5 REC_IMAGE on E146 and E147 (2026-11-10; D unless tagged)
 

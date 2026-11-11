@@ -16,7 +16,8 @@
 //                  2) also opens the EVF under the running histogram and logs 0x37001418 once. From the Super Control
 //                  Panel, whose open stops the histogram, LV and the eye switch run: ChangeOutline reads module 9's
 //                  state, which the components set to 0, at both its sites (0x50abcfd7, 0x50abcfe2), which the switch's
-//                  post-condition allows under camapp 3 since 2026-11-10 (it refused the second)
+//                  post-condition allows under camapp 3 since 2026-11-10 (it refused the second), with the
+//                  application's second read (0x50abb044) and none of the components' own readers
 //   node emu/test/test_c3power.mjs [power|evf]
 const h8 = (v) => '0x' + (v >>> 0).toString(16);
 
@@ -45,6 +46,9 @@ const TRA_SHUTDOWN = 586, TRA_HIST_STOP = 937, TRA_OUTPUT = 588, APP_KEY_TASK = 
 // ChangeOutline's two module-9 reads (menu.mjs TAKEOVER_READERS: the returns after 0x50ab5780) and the Super Control
 // Panel's GUI state
 const CHANGE_OUTLINE_READS = [0x50ABCFD7, 0x50ABCFE2], GUI_SCP = '0x0403';
+// the application's two-read test in 0x50abb032 (camapp.mjs CA_MODULE9_READERS, CMP_MODULE9_READERS), which the eye
+// switch back to the TFT makes twice (X); none of the components' own readers is read at a switch
+const APP_TEST_READS = [0x50ABB039, 0x50ABB044];
 
 async function setup() {
   const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
@@ -153,8 +157,18 @@ export async function evfSwitchSession() {
     try {
       for (const a of CHANGE_OUTLINE_READS) watch(lab, a, (l, r) => reads.push([h8(a), r.d0 | 0]), 'test: ChangeOutline\'s module-9 read');
       for (const [id, action] of [['ok', 'down'], ['ok', 'up']]) pl.run_input({ type: 'key', id, action });
-      const run = lab.sim.u32(HIST_RUN), gui0 = s.status().gui, got = [];
-      for (const id of ['lv', 'eye']) for (const action of ['down', 'up']) { pl.run_input({ type: 'key', id, action }); got.push(s.status().gui); }
+      const run = lab.sim.u32(HIST_RUN), gui0 = s.status().gui, got = [], m9 = [];
+      for (const id of ['lv', 'eye']) {
+        for (const action of ['down', 'up']) {
+          const m0 = lab.module9_reads.length;
+          pl.run_input({ type: 'key', id, action });
+          got.push(s.status().gui);
+          m9.push(lab.module9_reads.slice(m0).map(([, site]) => h8(site)));
+        }
+      }
+      // every module-9 read of the switches: LV's ChangeOutline pair; the eye switch's and the application's pair twice
+      const want = [CHANGE_OUTLINE_READS, [], [...CHANGE_OUTLINE_READS, ...APP_TEST_READS, ...APP_TEST_READS], []].map((l) => l.map(h8));
+      ok(JSON.stringify(m9) === JSON.stringify(want), `camapp 3 from the Super Control Panel: the switches' module-9 reads ${JSON.stringify(m9)}, want ${JSON.stringify(want)}`);
       ok(gui0 === GUI_SCP && run === 0 && got.every((g) => g === GUI_SCP) && lab.sim.u32(OPENED) === 1
         && JSON.stringify(reads) === JSON.stringify(CHANGE_OUTLINE_READS.map((a) => [h8(a), 0]).flatMap((x, i, all) => i ? [] : [...all, ...all])),
         `camapp 3 from the Super Control Panel (${gui0}, the histogram's run word ${run}): LV and the eye switch keep ${got}, the TFT open again (${h8(lab.sim.u32(OPENED))}), ChangeOutline's reads ${JSON.stringify(reads)}`);

@@ -156,6 +156,11 @@ export const DIAL_WRITE = A(0x5014BAE6), UIIN_INJECT = A(0x5014C12E), MODE_DIAL_
 // survey read, the dial is one group of 0x1901 entries (X)
 export const MODE_DIAL_CODE = 0x1901;
 export const SCP_STATES = [0x0401, 0x0403, 0x0404], CONTROL_SETTINGS_ID = 330;
+// the second reads of the module-9 tests that read the state twice, a 2 first and then a 3 or a 1 (D): ChangeOutline's
+// at 0x50abcfe2 (menu.mjs TAKEOVER_READERS) and the application's in 0x50abb032 at 0x50abb044. S-TAKEOVER's 2 ends
+// each test at its first read; the components' 0 (control camapp 3, 0x50ca4ae1) reaches the second (X: switch-scp's
+// LV and eye switch; docs/hle-gaps.md 4.3.6)
+const MODULE9_SECOND_READS = [MM.TAKEOVER_READERS[1], A(0x50ABB044)];
 // S-TOUCHMAP: HFW status -> GUI touch kind, by name (I)
 export const TOUCHMAP = new Map([[225, [1, 'TOUCH']], [226, [2, 'LONG TOUCH']], [227, [3, 'RELEASE']], [228, [4, 'TAP']],
   [230, [5, 'DOUBLE TAP']], [229, [6, 'SLIDE']], [300, [7, 'FLICK -> 7 (unnamed)']]]);
@@ -1917,9 +1922,11 @@ export class PlaySession extends N.NavSession {
     const same = state0 === 0x0401 ? SCP_STATES.includes(lab.state()) : lab.state() === state0 && panel1 === panel0;
     if (!same) problems.push(`the re-entry landed on GUI state ${h4(lab.state())} panel ${panel1}, not the screen the switch left (${h4(state0)} panel ${panel0})`);
     // the module-9 reads a switch may make: ChangeOutline's first (S-TAKEOVER's state 2 ends it there, X) and the
-    // application's; under control camapp 3, where the components write the state themselves (0x50ca4ae1), the
-    // session's S-TAKEOVER scope, ChangeOutline's second read among it (docs/hle-gaps.md 4.3.6)
-    const may = this.camapp?.native_tra ? lab.takeover_allowed : new Set([MM.TAKEOVER_READERS[0], ...CA_MODULE9_READERS]);
+    // application's; under control camapp 3, where the components write the state themselves (0x50ca4ae1), also
+    // the second reads that state 0 reaches (MODULE9_SECOND_READS), not the other readers of the session's
+    // S-TAKEOVER scope (camapp.mjs CMP_MODULE9_READERS: none is read at a switch, X; docs/hle-gaps.md 4.3.6)
+    const may = new Set([MM.TAKEOVER_READERS[0], ...CA_MODULE9_READERS,
+      ...(this.camapp?.native_tra ? MODULE9_SECOND_READS : [])]);
     if (reads.some((x) => !may.has(x))) problems.push(`module 9 read from ${show(reads.map(hex))}`);
     if (this.touch_on && want === 'tft' && state0 === STATE_SHOOTING && lab.sim.u32(TP_MASK_WORD) !== TP_MASK_ALL) {
       problems.push(`TFT shooting screen rebuilt with gesture mask 0x${lab.sim.u32(TP_MASK_WORD).toString(16)}`);

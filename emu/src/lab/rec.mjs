@@ -34,7 +34,7 @@
 //               picture: its queues bound to its tasks' flags (REC_FILE's at 0x5053f189), REC's memory pools
 //               (0x5054b00d)
 //   H-RECFILE   REC_FILE (task 27) started with act_tsk, as the start function starts REC's tasks after the init (I:
-//               which call starts it is not read); it then waits on its flag
+//               which call starts it is not read); it then waits on its flag (the E144 family's on its queue)
 //   S-EXIFPRM   the shot's EXIF parameter block (pExifParam, the packet's +28; on the camera TAKE's per-shot record,
 //               0x503afc3e(HandleTarget), 92252 bytes), as TAKE would hand it to REC, whose shooting info TAKE fills
 //               and the lab does not run: the template copied by TAKE's own copy (0x504298f9, TAKE's call 0x503bba70);
@@ -152,11 +152,14 @@ const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 // format 0x5012bd20 and the string copy 0x50003843, REC_FILE's file contexts (92 bytes) for Media and Media2
 // 0x62a8c4e4 and 0x62a8c540. The bodies' differences (E146 and E147: the packet of 276 bytes with other offsets, the
 // image's address and size in REC_IMAGE's image record, another EXIF parameter block's size and offsets past its
-// tags) are the rule's values; docs/hle-gaps.md 4.8.10
+// tags; the E144 family, by recFileQueue: the packet of 300 bytes, REC_FILE's queue with no flag, no cache flush and
+// no fill (cflush and fill null), one file context or two, the clock read clock_read) are the rule's values;
+// docs/hle-gaps.md 4.8.10
 export const REC_NATIVE = MODEL_INFO.rec_native === true;
 // REC_IMAGE's task natively (H-RECSHARED, H-RECIMGPRO, H-RECIMAGE, S-RECREQ; docs/hle-gaps.md 4.3.3, 4.3.5), wherever
-// REC_FILE runs natively, at the addresses the rule reads (fact 'rec_image', src/fw/facts.mjs recImage, with their
-// evidence; E143's REC_IMAGE_E143 there, the values given here by hand before the rule):
+// REC_FILE runs natively in recFile's REC version (E143, E146, E147; the E144 family's keeps S-RECIMAGE), at the
+// addresses the rule reads (fact 'rec_image', src/fw/facts.mjs recImage, with their evidence; E143's REC_IMAGE_E143
+// there, the values given here by hand before the rule):
 //   task      REC_IMAGE: static task 28, its entry, the word that holds its queue's id (REC_EXEC_IMAGE 70; read by its
 //             receive 0x50541c4e, by REC_PREPRO's post 0x5054edda and by the object-name list, which only names it)
 //   shared    REC's shared objects' init (REC_MAIN_CPU2's start, 0x5053d5e4) and its done byte (0x5054dd19)
@@ -194,7 +197,8 @@ const ASPECT = 1;
 const JFIF_APP0 = 0xE0;
 // REC_FILE's file context and its DCF block (src/lab/storage.mjs REC for the fnode's and dnode's fields): the same on
 // E146 and E147 (D: rec_file_record stores the context's +78 and +52 as E143's does; X: their files' fnodes and
-// folders read back through them match the card)
+// folders read back through them match the card) and on the E144 family's eight (D on E144 and E142, the same stores;
+// X, the same read back; docs/model-survey.md finding 120)
 const CTX = { dcf: 8, fnode: 36, status: 84 }, DCF_STAMP = 16;
 const SLICE_MS = 5, LIMIT_MS = 20000, WAI = 4;
 // HeaderSize: rec_jpeg_make_header's (0x5054a5b9), and the header area rec_jpeg_exec reserves before the encode: its

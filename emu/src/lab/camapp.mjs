@@ -39,11 +39,11 @@
 //              native lens's LENS_EXEC and LENS_COMMAND, TAKE's with --take probe)
 //   S-MODPOST  (E143) the posts to S-MODACK's queues from elsewhere than the API sender that the module's task would
 //              take (MODPOST_E143; docs/hle-gaps.md 4.1.11 enumerates the senders): the API layer's direct posts to
-//              TAKE_EXEC and TAKE_FUNC and 0x503a05fb's TAKE_FUNC command 29, of which the lab reaches two under
-//              control camapp 3 (TAKE_FUNC 29 at the start, TAKE_EXEC 5 from the take API at S2); none names a reply
-//              queue, so none is sent. OlyQeWr returns E_OK without putting the message in the kernel's queue (until
-//              2026-11-10 those two stayed there, one message each). Any other such post stays in the queue, recorded,
-//              and the blocked-send guard names it when the queue is full (play.mjs check_sends)
+//              TAKE_EXEC, TAKE_FUNC and ZOOM_EXEC and 0x503a05fb's TAKE_FUNC command 29, of which the lab reaches
+//              two under control camapp 3 (TAKE_FUNC 29 at the start, TAKE_EXEC 5 from the take API at S2); none
+//              names a reply queue, so none is sent. OlyQeWr returns E_OK without putting the message in the kernel's
+//              queue (until 2026-11-10 those two stayed there, one message each). Any other such post stays in the
+//              queue, recorded, and the blocked-send guard names it when the queue is full (play.mjs check_sends)
 //   S-DISPQ's replies (with the application): the replies the DISPLAY loop sends to queue 6 while S-DISPQ runs it
 //              (play.mjs, 0x501c490c / 0x501c496d), which S-DISPQ records, go to queue 6 after the step, each followed
 //              by a settle: the application's event task (entry 0x50abbf0c) reads that queue (0x503ebf63), and a reply
@@ -232,13 +232,15 @@ export const MODULE_QUEUES = new Set([...Object.values(API_QUEUES_E143), PC_PD_E
 // the same queues by their id words in the static queue-id table (0x600431c6, id n at +2(n - 1)), in MODULE_QUEUES'
 // order: on E143 they hold the table's ids and the object-name table's PC_PD_CMD_EXEC (module_queues checks it); on
 // another body none is read (the last one's place gave another queue on E137 and E125, finding 130)
+// (fact() gives undefined for a fact read as null, as for card.movie_rate below: `?? null` keeps pc_pd's null)
+const pcPdQueue = () => fact('api.pc_pd', PC_PD_E143) ?? null;
 export const MODULE_QUEUE_WORDS = [A(0x600432B0), A(0x60043242), A(0x6004328C), A(0x60043278), A(0x60043252), A(0x60043202), A(0x600431CA), A(0x600431D6), A(0x600432A6), A(0x60043220), A(0x600431C6), A(0x60043280), A(0x600432BE), A(0x600431FA), A(0x600432BC), A(0x600431D4), A(0x60043226), A(0x60043320), A(0x600432F4), A(0x60043362)];
 const apiQueues = () => fact('api.queues', API_QUEUES_E143);
 // A body's API target table can name module queues E143's has no counterpart of (src/fw/models.mjs modack_queues:
 // [queue id, its name in the object-name table]; E132's CATEGORY_MAIN and LOGGER_MAIN): S-MODACK answers them too
 export function module_queues(image) {
   const word = (a) => image[a - IMAGE_BASE] | image[a - IMAGE_BASE + 1] << 8;
-  const pc = fact('api.pc_pd', PC_PD_E143), ids = [...Object.values(apiQueues()).filter((q) => q !== null), ...(pc === null ? [] : [pc])];
+  const pc = pcPdQueue(), ids =[...Object.values(apiQueues()).filter((q) => q !== null), ...(pc === null ? [] : [pc])];
   if (ON_LAB_MODEL && (ids.join() !== [...MODULE_QUEUES].join() || MODULE_QUEUE_WORDS.map(word).join() !== ids.join() || objectNameId(image, PC_PD_NAME) !== pc)) throw new Error('module_queues: E143 table is not MODULE_QUEUES');
   const more = (MODEL_INFO.modack_queues ?? []).map(([q]) => q);
   if (more.some((q) => ids.includes(q))) throw new Error(`module_queues: ${MODEL}'s modack_queues ${more.join(', ')} repeat a queue of E143's table (${ids.join(', ')})`);
@@ -250,8 +252,9 @@ const OLYQEWR = A(0x5002C151), API_SEND_RETURN = A(0x503EBA07);
 // sender (D): [queue (apiQueues' name), OlyQeWr's return in the sender's wrapper, the 16-byte message {reply queue,
 // token, command, parameter}, the sender, the module's task]. Two are reached in the lab (X): TAKE_EXEC 5 at S2 and
 // TAKE_FUNC 29 at the start, both under control camapp 3; the others are read only (D). No message names a reply
-// queue (word 0 is 0), and TAKE's replies (0x502ce619, X: TAKE_FUNC's and TAKE_MAIN's in the probe; 0x502ce5e6) send
-// nothing for word 0 = 0, so none is sent; what a handler would do besides is not done (as for S-MODACK's answers).
+// queue (word 0 is 0), and TAKE's replies (0x502ce619, X: TAKE_FUNC's and TAKE_MAIN's in the probe; 0x502ce5e6) and
+// ZOOM's send nothing for word 0 = 0, so none is sent; what a handler would do besides is not done (as for S-MODACK's
+// answers).
 //   TAKE_EXEC: TAKE_MAIN receives every TAKE_EXEC message once its wait pattern holds the queue's bit
 //     (0x50399839..58) and runs its state's handler for the command, or for one its state lacks logs errlog
 //     0x25000e02 after two debug dumps (0x502ce33f, 0x502ce28b); the senders: the take API 0x50417cd9's control 0x40
@@ -263,6 +266,10 @@ const OLYQEWR = A(0x5002C151), API_SEND_RETURN = A(0x503EBA07);
 //     0x503ebe46; 0x503a05fb (API 0x200ca, 0x50416123, called by CmpSqp_SequencePartsBase at 0x50c9d778) through
 //     0x502ce57b while TAKE's start-up flag 0x62a3f2bc is 0, which it then sets (the byte's absolute stores are that
 //     and TAKE_FUNC's init 0x502ccff8's clear), its parameter 0x62a3f2be referenced there alone
+//   ZOOM_EXEC: ZOOM's task (task 0x6e) receives every message with timeout -1 and, after the command, replies
+//     {status 0, token, word 3}, S-MODACK's layout, to word 0's queue only where word 0 is not 0 (D, docs/hle-gaps.md
+//     4.1.11 has the addresses); the sender: API 0x20030 by its kind 1, 2, 3, 4, 7, 8 (commands 2, 1, 9, 8, 7, 6; kind
+//     0's command 3 is a synchronous send) through 0x503ebe46
 const API_POST = 0x503EBE71, TAKE_SEND = 0x502CE58C;
 export const MODPOST_E143 = [
   ['TAKE_EXEC', API_POST, [0, 0, 5, 0], 'the take API 0x50417cd9 (control 0x40)', 'TAKE_MAIN'],
@@ -277,6 +284,7 @@ export const MODPOST_E143 = [
   ['TAKE_FUNC', API_POST, [0, 0, 37, 0], 'API 0x20139 (0x5041c726)', 'TAKE_FUNC'],
   ['TAKE_FUNC', API_POST, [0, 0, 54, 0], 'API 0x20014 (0x5040f040), kind 5', 'TAKE_FUNC'],
   ['TAKE_FUNC', TAKE_SEND, [0, 0, 29, 0x62A3F2BE], '0x503a05fb (API 0x200ca, 0x50416123)', 'TAKE_FUNC'],
+  ...[[1, 2], [2, 1], [3, 9], [4, 8], [7, 7], [8, 6]].map(([kind, c]) => ['ZOOM_EXEC', API_POST, [0, 0, c, 0], `API 0x20030, kind ${kind}`, 'ZOOM']),
 ];
 // the entry of MODPOST_E143 a direct post matches (q its queue, ra OlyQeWr's return in disassembly notation, words the
 // message's four words, or null for a message of another length; queues: the body's apiQueues()), or null; none off
@@ -543,7 +551,7 @@ export const CAMAPP_STAND_INS = {
   "H-GUIBYAPP": "the lab's bring-up does not create the GUI (the creator 0x5108bc37): the application's start does, from CA_MAIN's code (0x510609ce), as on the camera; the lab takes the GUI's task and OSD records after it. Created twice, the lab's idle GUI kept a root of output 0 and one of the two buffers of OSD layer 1 (the registry 0x62b26528), so the shown root's double buffer had layer 1 on one side only: on the EVF the bottom bar and most of the information were missing in every other frame (docs/om1-shutter-spec.md section 7 item 59)",
 "S-CAMAPP": "the camera application runs natively in every session: the boot chain's HighLevel steps (0x50ab222a, 0x50ab22bc), the event broker init 0x502a48b6 and act_tsk(58) at bring-up; its task entries are allowed, its nine module-9 readers join S-TAKEOVER's, its output-device read (0x50b76dbe) joins S-PROP; the application maps keys and moves the GUI itself (docs/om1-shutter-spec.md section 7); control camapp 2 starts a session with the HLS components running too; control camapp 3 runs them with the transaction path native, the OXF main thread started before HL_INIT",
   "S-MODACK": "the module tasks do not run: every request the application's API sender posts to a module queue (OlyQeWr returning to 0x503eba07; E143's target table's module queues, on another body its own table's entries at the same targets, src/fw/facts.mjs apiTargets, and those a body's src/fw/models.mjs modack_queues adds: E132's CATEGORY_MAIN and LOGGER_MAIN) is answered after the step with [status 0, token, word 3] to the reply queue in its word 0, the layout of DISPLAY's replies (0x501c48bf); every synchronous send (0x5002e39d) the lab otherwise refuses returns E_OK. Nothing a module would write back is written (I). The request's message is taken as the module's task would take it: OlyQeWr returns E_OK and the message is not left in the kernel's queue, which no task reads (until 2026-11-10 it was left there, and a module queue filled: PLAY_EXEC holds two messages, so under control camapp 3 the third play request blocked the OXF main thread for good, X; docs/hle-gaps.md 4.3.2). The queues of the modules that run natively are left to them: the file module's FILECLBK with the card's file system, and with --audio on AUD_MAIN's AUD_EXEC (0x08; H-AUDSTART), synchronous sends included; with the native lens (H-LENSINIT) the requests to LENS_EXEC (0x2e) and LENS_COMMAND (0x31), whose tasks wait on them (X; until 2026-11-10 S-MODACK answered these too, and the tasks took the messages; the golden sessions post none, X), a synchronous send to them still returning E_OK",
-  "S-MODPOST": "(E143) the posts to S-MODACK's module queues that do not come through the API sender, from code that runs in the application's own tasks, and that the module's task would take (docs/hle-gaps.md 4.1.11 enumerates every such sender, D): the API layer's direct posts to TAKE_EXEC (the take API's control 0x40, command 5; APIs 0x20014, 0x200a0, 0x200eb, 0x2006b: commands 14 to 17, 19, 20) and to TAKE_FUNC (APIs 0x20071, 0x20139, 0x20014: 5, 37, 54) through the API's direct post 0x503ebe46 or TAKE's send 0x502ce57b, and TAKE_FUNC command 29 with the parameter 0x62a3f2be, which 0x503a05fb posts once while TAKE's start-up flag is 0 (D). TAKE_MAIN receives every TAKE_EXEC message and TAKE_FUNC every message of its queue, and none of these names a reply queue, so none is replied to (D). The lab reaches two (X): command 29 at control camapp 3's start and command 5 at its S2 once the through image runs. Each is taken as the module's task would take it: OlyQeWr returns E_OK and the message is not left in the kernel's queue; nothing the handler would do is done (I: as for S-MODACK's answers). Until 2026-11-10 those two stayed in their queues, one message each (X). Any other post of the kind stays in the queue, recorded with its sender and task, and the blocked-send guard names it when the queue is full (X: API 0x20030's ZOOM_EXEC posts, the queue holding one)",
+  "S-MODPOST": "(E143) the posts to S-MODACK's module queues that do not come through the API sender, from code that runs in the application's own tasks, and that the module's task would take (docs/hle-gaps.md 4.1.11 enumerates every such sender, D): the API layer's direct posts to TAKE_EXEC (the take API's control 0x40, command 5; APIs 0x20014, 0x200a0, 0x200eb, 0x2006b: commands 14 to 17, 19, 20) and to TAKE_FUNC (APIs 0x20071, 0x20139, 0x20014: 5, 37, 54) and ZOOM_EXEC (API 0x20030: 2, 1, 9, 8, 7, 6) through the API's direct post 0x503ebe46 or TAKE's send 0x502ce57b, and TAKE_FUNC command 29 with the parameter 0x62a3f2be, which 0x503a05fb posts once while TAKE's start-up flag is 0 (D). TAKE_MAIN receives every TAKE_EXEC message, TAKE_FUNC and ZOOM's task every message of their queues, and none of these names a reply queue, so none is replied to (D: ZOOM's task replies only to a nonzero word 0). The lab reaches two (X): command 29 at control camapp 3's start and command 5 at its S2 once the through image runs. Each is taken as the module's task would take it: OlyQeWr returns E_OK and the message is not left in the kernel's queue; nothing the handler would do is done (I: as for S-MODACK's answers). Until 2026-11-10 those two stayed in their queues, one message each (X). Any other post of the kind stays in the queue, recorded with its sender and task, and the blocked-send guard names it when the queue is full (X: ZOOM_EXEC's command 3, which no sender of 4.1.11's scan posts, posted from the lab through 0x503ebe46, the queue holding one)",
   "S-DISPSYNC": "the release of the GUI's synced display updates: while the application's sync word for a panel is set (CameraCommon::setDispSync, which E137's GUI asks for at the start), the GUI's update is a request of type 3, which leaves its buffers pending until an image sync; their one sender, the shooting sequence's stopRecView, does not run in an idle session, so E137's screen stayed blank (X). After each step the lab releases each device with such a request: both panels' sync words cleared through the application's setter, as stopRecView does, then the image sync of kind 1, whose event the display manager takes in the state the type-3 request leaves, and the pending buffers are committed (D). stopRecView's kind 2 is not taken there: under it E137's screen came only at its GUI's next update, a 250 ms redraw of a blinking item, and E125's GUI, which sends none, kept a one-colour frame (X). The camera releases it with the image's next update (on the E118 family, D: DevDpc_DispCtrlBase's imageUpdate() clears a panel's sync word after its image update once api_disp_Disp_Get_Wait_State answers 0, as setThroughPermit() and the still shooting component's rcvShtDrawThrough() do); the lab runs no image update and releases at the step's end (I: the camera's first one comes with its through image's start)",
   "S-RVSTANDBY": "the rec view component in standby: the shooting components' RecView does not run; its entryStandby would store state 1 in the application's state word (fact recview), which starts at 0, and getRecViewState takes 0 for a rec view, so E142's GUI showed the rec view's items at the start (EVT_REC_DISP_RECVIEW, 0xf005) instead of the shooting screen (X). The lab stores 1 before the application starts; that the camera's component is in standby then is I",
   "S-TRAACK": "the HLS transaction layer's synchronous exec (0x50af7cb9 / 0x50af7cbe) returns 0: no local handler is ever registered (on the camera either), so every transaction goes to the active state's components, where the shooting component CmpSht_ShootingComponent_NEW answers TRA 990 and 991; it runs only with the HLS components, and the remote channel answers 0xf0000001 (startShootingService fails on TRA 990 without it, X). With the file system native and its HLS side (card_fs.hls: E143, E146) the media control's start (TRA 1511; E146's 1509) also goes to S-MDACTRL (media.mjs). Under control camapp 3 it answers none (its list TRAACK_KEPT is empty): every transaction goes to the exec natively and, S-RPC lifted from the receiver's send and the remote-call method, to the components, which answer the start's 990 and the rest natively (X; docs/hle-gaps.md 4.1.5)",
@@ -945,7 +953,7 @@ export class CamApp {
   // a module queue's name: the API target table's (apiQueues), PC_PD_CMD_EXEC or a body's modack_queues name
   queue_name(q) {
     const named = Object.entries(apiQueues()).find(([, id]) => id === q)?.[0]
-      ?? (q === fact('api.pc_pd', PC_PD_E143) ? PC_PD_NAME : (MODEL_INFO.modack_queues ?? []).find(([id]) => id === q)?.[1]);
+      ?? (q === pcPdQueue() ? PC_PD_NAME : (MODEL_INFO.modack_queues ?? []).find(([id]) => id === q)?.[1]);
     return named ? `${named} (${q})` : `queue ${q}`;
   }
   install() {

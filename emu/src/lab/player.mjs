@@ -427,7 +427,7 @@ export class Player {
     if ((a.device ?? 'tft') === 'evf' && a.x_mutant !== 'evf-store-after-open') used.push('H-STOREFIRST');   // :2521
     if (!a.no_bgdraw) used.push('S-BGDRAW');
     if (this.idle === 'wall') used.push('H-IDLE');
-    if (a.touch !== 'off') used.push('H-TPINIT', 'H-TPSTART', 'S-TPREG', 'S-TPINT', 'S-GPIO-TP', 'H-TOUCHGAP');
+    if (a.touch !== 'off') used.push('H-TPINIT', ...(this.session?.tp_start === false ? [] : ['H-TPSTART']), 'S-TPREG', 'S-TPINT', 'S-GPIO-TP', 'H-TOUCHGAP');
     if (a.touch === 'gui' && !this.session?.app_touch) used.push('S-CAFWD', 'S-TOUCHMAP');   // not where the application forwards them (play.mjs app_touch)
     used.push(a.us_clock === 'reads' ? 'H-USCOUNT' : 'A-USLAB');                              // the us clock from the reset
     if (this.scene_used) used.push('S-SCENE', 'H-REQ');                                      // the image sensor stand-in's live view

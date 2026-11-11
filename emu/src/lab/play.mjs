@@ -493,8 +493,8 @@ export class PlayLab extends N.NavLab {
   // flag: on E118, whose list waits for the INT inline, the init after the open left the message unseen and the driver
   // unarmed (X, docs/model-survey.md finding 88). On E143 the open runs no touch
   // code and the order changes nothing the touch path reads; moved there too, it changed 28 golden sessions' stops and
-  // replay outcomes (X), so E143 keeps the lab's order. The touch task's start and the panel's open (H-TPSTART) stay
-  // in the play bring-up
+  // replay outcomes (X), so E143 keeps the lab's order. The touch task's start stays in the play bring-up, and the
+  // panel's open (H-TPSTART) there only where H-TPINIT keeps the lab's order (touch_bring_up)
   kernel_display(device = 'tft', ctors = true, before_open = null) {
     super.kernel_display(device, ctors, () => {
       if (before_open) before_open();
@@ -1374,6 +1374,16 @@ export class PlaySession extends N.NavSession {
     if (rc !== K.E_OK) throw new PlayError(`H-TPINIT: act_tsk(${tid}) = ${rc}`);
     this.touch_tid = tid;
     this.settle('H-TPINIT touch task start');
+    // H-TPSTART: the panel's open with HFW's callback and the gesture mask, from the lab task. The camera
+    // application's start does both itself on every body (its touch module's end closes the panel, its action
+    // starts it through HFW's touch init, which opens it with that callback, and the GUI sets the mask per screen:
+    // E122 0x50b802d1, 0x50b80365, 0x5073a8a7; E143 0x5105e182, 0x5105e216, 0x50b76d47, D; X: the driver's close
+    // and open in the start on the 13 bodies of the E144 and E118 families and on E143, docs/model-survey.md
+    // finding 114). It is left out where H-TPINIT runs before the display open (touch_init_early, fact touch_int:
+    // the E144 and E118 families), whose touch is the application's alone (X: test/test_touch.mjs on the 13 bodies
+    // without it); E143's, E146's and E147's sessions keep it, which golden records on E143 (not tried without it)
+    this.tp_start = !lab.touch_init_early;
+    if (!this.tp_start) return;
     const r = lab.call(TP_OPEN, { a0: runtime(HFW_CALLBACK), a1: 0 }, null, null, 5000);
     if (r.d0 !== 0) throw new PlayError(`H-TPSTART: TP_OPEN ${h8(TP_OPEN)} = 0x${r.d0.toString(16)}`);
     const mask = lab.alloc(pack('<I', TP_MASK_ALL), 4);

@@ -139,8 +139,8 @@ import { DISPLAY_SYNC_E143, RECVIEW_E143, CBS_E143, LENS_ZOOM_TABLE_E143, CARD_D
 //              written through the file module (S-RECFILE, storage.mjs) in place of REC_FILE, whose recording modules
 //              do not run (on E143, E146, E147 and the E144 family but E130 REC_FILE's own task records it, rec.mjs).
 //              Where REC's recorder or REC_FILE records it (storage.mjs record(), rec.mjs; dcf_db) the firmware's
-//              DCF database counts it at once, and the image count (IMAGE_COUNT) and playback's pictures are the database's;
-//              elsewhere S-CARD answers the count from its list and the database learns of the file at the next
+//              DCF database counts it at once, and the image count (IMAGE_COUNT) and playback's pictures are the
+//              database's; elsewhere S-CARD answers the count from its list and the database learns of the file at the next
 //              mount (none while the card is out of the slot, and a format from the menu clears them: media.mjs).
 //              The firmware counts the remaining shots
 //              (getAvailableShootCount's query 0x50419164) and the movie time (0x5042da58) from the card itself, and

@@ -122,6 +122,11 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // recFileQueue reads, with no 'rec_image': REC_IMAGE's part in the lab's call (H-EXIFINIT, H-RECINIT, H-RECFILE,
 // S-EXIFPRM, S-RECIMAGE, S-JPEGENC);
 // given for a body whose S2 is known to record so (X). A body without it keeps S-RECFILE (src/lab/storage.mjs)
+// `exif_native`: S-RECFILE's file carries the header REC_IMAGE's own header maker builds natively
+// (src/lab/recheader.mjs H-EXIFINIT, S-EXIFPRM, S-RECHDR; docs/model-survey.md findings 102 to 105), at the
+// addresses and offsets src/fw/facts.mjs recHeader reads (fact 'rec_header'): the E118 family, whose REC is an older
+// version than rec_native's; given for a body whose S2 file is known to carry it (X). A body without it writes the
+// lab's JFIF
 //
 // `scpu_lle`: the sub-CPU's own firmware, which the lab can run on the STM32L4 machine in S-SCPUDEV's place (opt-in,
 // src/lab/scpum4.mjs; docs/om1-scpu-spec.md section 8 step 6), given only for a body whose image that machine is
@@ -1075,6 +1080,8 @@ export const MODELS = {
     // formatted FAT32 'NO NAME' at 8192 with 32 KiB clusters, 2116 shots and 0:37:19 from it, S2's file read back (X:
     // bin/modelcheck.mjs, the OSD records)
     card_fs: { native: true },
+    // S2's file with the header maker's Exif (X: test_storage's S2 file, its Exif Model 'E-M5MarkII')
+    exif_native: true,
     board: { family: 'E118' },
     // through E122 (port_via): the family's reference, whose overrides it takes over (the evidence at E122's entry)
     port_via: 'E122',
@@ -1117,6 +1124,8 @@ export const MODELS = {
     // forms; the blank 8 GiB card formatted FAT32 'NO NAME' at 8192 with 32 KiB clusters, 1470 shots and 0:37:19 from
     // it, S2's file read back (X: bin/modelcheck.mjs, the OSD records)
     card_fs: { native: true },
+    // S2's file with the header maker's Exif (X: test_storage's S2 file, its Exif Model 'PEN-F')
+    exif_native: true,
     board: { family: 'E118' },
     // the map from E143 leaves 116 of the lab's addresses unplaced; through E125 113 (107 of its overrides carried, 62
     // nulls, 26 failed), through E130 114 (122 carried, 71 nulls, 18 failed); through E142, E137, E144 and E140 the
@@ -1173,6 +1182,8 @@ export const MODELS = {
     // the card native since 2026-10-30 (docs/model-survey.md finding 50): the play bring-up mounts it, the blank 8 GiB
     // card formatted FAT32 and DCF folder 100, file 1 (X: a play session per device, and modelcheck's path, finding 56)
     card_fs: { native: true },
+    // S2's file with the header maker's Exif (X: test_storage's S2 file, its Exif Model 'E-M10MarkII')
+    exif_native: true,
     board: { family: 'E118' },
     // through E122 (port_via): the family's reference, whose overrides it takes over (the evidence at E122's entry)
     port_via: 'E122',

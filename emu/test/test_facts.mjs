@@ -436,6 +436,38 @@ const REC_IMAGE_FOUND = {
 // 0x50044c97, callback 0x50044cff, flag (0x60041508)); E134 has another driver and none (D: 0x50042df1); the other
 // 15 bodies have one each (X, the rule)
 const IIC_FOUND = { E143: [0x5004CBF6], E145: [0x50044D60], E134: [] };
+// The E118 family's REC header maker (rec_header; src/fw/facts.mjs recHeader): E122's as read by hand (D, 2026-11-10:
+// rec_jpeg_exec 0x50515ab1 opening `mov (124,a3),d3; mov 68,a2`, the buffer kept at +200 (0x50515afc), its call of
+// rec_jpeg_make_image 0x50515c18 and of the header maker 0x50515cbb, which stores 41984 at +196 (0x50516193) and writes
+// SOI and APP1 at 0x5051623c; REC's post sending 216 bytes at 0x5050bcaf; the EXIF init 0x5052b4d9, its template
+// 0x618bb6b8 and copy 0x5052b50b of 5520 words; the date set 0x5052dcff with the time record at +18404; the clock
+// setting 0x50167f55 and its clock read 0x50167f73), E118's and E120's as the rule reads them (X: their sessions' S2
+// files carry the header, with their own Model; D: E118's packet fields 0x504fe72e, 0x504fe77b, 0x504fed96, its copy
+// 0x50514558 of 5021 words, E120's copy 0x504ed754 of 5001 words), none on the other 16 bodies (X: no traced
+// rec_jpeg_exec of that opening calls rec_jpeg_make_image there)
+const REC_HEADER_FOUND = {
+  E122: {
+    exif: { init: 0x5052B4D9, template: 0x618BB6B8, copy: 0x5052B50B, size: 22080, time: 18404,
+      date: { format: 0x5016841D, code: 0x4200, copy: 0x50002CB7, original: 2313, created: 2333, modified: 1364 }, tags: { make: 1480, model: 1504 } },
+    clock: { set: 0x50167F55, read: 0x50167F73 },
+    packet: { size: 216, fields: { pExifParam: 124, Mode: 68, Addr: 200, HeaderSize: 196 } },
+    jpeg: { exec: 0x50515AB1, make_image: 0x50515C18, make_header: 0x50515CBB, header: 41984 },
+  },
+  E118: {
+    exif: { init: 0x50514526, template: 0x618966E8, copy: 0x50514558, size: 20084, time: 18340,
+      date: { format: 0x50156E5D, code: 0x4200, copy: 0x50002CB0, original: 2313, created: 2333, modified: 1364 }, tags: { make: 1480, model: 1504 } },
+    clock: { set: 0x50156995, read: 0x501569B3 },
+    packet: { size: 280, fields: { pExifParam: 188, Mode: 68, Addr: 264, HeaderSize: 260 } },
+    jpeg: { exec: 0x504FE72D, make_image: 0x504FE899, make_header: 0x504FE93E, header: 41984 },
+  },
+  E120: {
+    exif: { init: 0x504ED722, template: 0x618943FC, copy: 0x504ED754, size: 20004, time: 18284,
+      date: { format: 0x50152BF8, code: 0x4200, copy: 0x50002CD9, original: 2313, created: 2333, modified: 1364 }, tags: { make: 1480, model: 1504 } },
+    clock: { set: 0x50152730, read: 0x5015274E },
+    packet: { size: 280, fields: { pExifParam: 188, Mode: 68, Addr: 264, HeaderSize: 260 } },
+    jpeg: { exec: 0x504D7D1D, make_image: 0x504D7E89, make_header: 0x504D7F2E, header: 41984 },
+  },
+};
 // The touch panel's traced I2C functions (touch, [i2c_write, i2c_read]; src/fw/facts.mjs touchI2c): E134's as read at
 // their traces (D: 0x5021843d, 0x5017ca38, each its function's first call after a return), the others' as a byte
 // scan of each expanded image found the traces and their functions (X); E137's write is traced inside a larger
@@ -987,6 +1019,7 @@ export function factsTests() {
     if (code === 'E143' || (PORTS[code] && got.ctors?.length === 4 && !['E118', 'E122'].includes(code))) ok(same(tables, got.ctors?.slice(0, 3).map(([t]) => t)), `${code}: A() of the constructor tables ${hx(tables)}, the rule's ${hx(got.ctors ?? got)}`);
     for (const [t, n] of got.ctors ?? []) ok(u32(run, t - m.image_base + 4 * n) === 0xFFFFFFFF, `${code}: the constructor table ${hx(t)} is not ended after its ${n} pointers`);
     if (CBS_FOUND[code]) ok(same(got.cbs, CBS_FOUND[code]), `${code}: cbs ${hx(got.cbs ?? got)}, found ${hx(CBS_FOUND[code])}`);
+    ok(same(got.rec_header, REC_HEADER_FOUND[code]), `${code}: rec_header ${hx(got.rec_header ?? 'none')}, found ${hx(REC_HEADER_FOUND[code] ?? 'none')}`);
     if (SYNC_FOUND[code]) ok(same(got.display?.sync, SYNC_FOUND[code]), `${code}: display.sync ${hx(got.display ?? got)}, found ${hx(SYNC_FOUND[code])}`);
     ok(got.board?.vsc?.levels === LEVELS_FOUND[code], `${code}: board.vsc ${hx(got.board?.vsc ?? got)}, found ${LEVELS_FOUND[code] === undefined ? 'none (not kind 3)' : `levels ${LEVELS_FOUND[code]}`}`);
     ok(got.touch_panel?.driver === !NO_TOUCH_DRIVER.includes(code), `${code}: touch_panel ${hx(got.touch_panel ?? got)}, found ${NO_TOUCH_DRIVER.includes(code) ? 'no driver' : 'a driver'}`);

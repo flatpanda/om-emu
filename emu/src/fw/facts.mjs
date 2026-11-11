@@ -3596,6 +3596,143 @@ export function recFileQueue(img, kcb) {
     contexts, clock_set: 0x50000000 + set, clock_read: 0x50000000 + clockRead,
   };
 }
+// The E118 family's REC header maker (fact 'rec_header', src/lab/recheader.mjs; docs/model-survey.md findings 102 to
+// 104): REC_IMAGE's header maker of an older REC version than E143's, whose packet has no dump (no "pExifParam " in
+// the image) and whose REC_FILE receives through rec.c's wrapper (no load of "rec_file.c", finding 93). D on E122
+// unless tagged:
+// - REC's functions by their traces, as recFile reads them (the table {"ERROR TRACE ID", 1}, {"rec_main", 2}, E122
+//   0x5061cde8, 165 names; a trace `or 0x31000000,d0; ...; mov (id - 1) << 16 | line,d1`): exec, the traced
+//   rec_jpeg_exec that calls the traced rec_jpeg_make_image (E122 0x50515ab1, its call 0x50515b4f to 0x50515c18);
+//   make_header, the traced rec_jpeg_make_header that exec calls (0x50515b67 -> 0x50515cbb, where the encode left the
+//   packet's +14 0). E118 traces rec_jpeg_make_header in two functions and E120 rec_jpeg_exec and rec_jpeg_make_header
+//   in two each; the second of each traces to another trace function, with a string in a0 (E120 0x504c15d8 ->
+//   0x504b9a22, E118 0x504e732e; what they are, ?), so the calls tell them apart, not the traces (X)
+// - packet.fields: rec_jpeg_exec opens `mov a0,a3; mov (P,a3),d3; mov M,a2; add a0,a2; movhu (a2),d0`, pExifParam P,
+//   the shot's EXIF parameter block (124 on E122, 188 on E118 and E120), and Mode M (68), which rec_make_image
+//   dispatches on (0x50510ca8: 4097 to rec_make_image_exec 0x50510d0e, which calls rec_jpeg_exec at 0x50510da6); it
+//   keeps the file's buffer from REC's pool (0x50517600) at Addr, `mov d0,(8,sp); mov d0,(B,a3)` (200; 264), which the
+//   header maker loads, `mov (S,sp),a0; mov (B,a0),d0`, and HeaderSize, the header maker's `mov H,d0; mov d0,(F,a0)`
+//   (196; 260). The names are E143's for the same uses (I: no dump names them here). size, the bytes REC's post sends
+//   (the function of the "REC post_msg_main" trace, `mov SIZE,d1; mov "rec.c",a1; call`: 216 on E122, 0x5050bcaf; 280
+//   on E118 and E120)
+// - jpeg.header: H (41984 on the three), after which the header maker writes SOI and APP1's head to the buffer, `mov
+//   0xd8ff,d0; movhu d0,(a0)`, 0xe1ff at +2, the length 41982 at +4 and "Exif\0\0" (0x5051623c..0x5051626d), then has
+//   the EXIF module's serializer write the TIFF data at +12 (0x5052b526, the port's place of E143's 0x50429935, X)
+// - exif: the EXIF module's init `call; clr d0; ret` (0x5052b4d9), the template's init right after it, which loads the
+//   template T into a0 first (`mov T,a0`, 0x5052b4e2; it ends in three stores, without E143's cache flush), and the
+//   template's copy right after that one's ret, `mov T,a1; mov -N,d1; setlb; mov (a1),d0; inc4 a1; mov d0,(a0); inc4
+//   a0; inc d1; lne; retf` (0x5052b50b; size 4N: 22080 on E122, 20084 on E118, 20004 on E120); the EXIF set's dates,
+//   `mov (8,sp),a2; mov (8,sp),a3; add DTO,a2; add TIME,a3; mov a2,a0; mov a3,a1; mov CODE,d0; call FORMAT`
+//   (0x5052dcff: the time record TIME 18404, E118 18340, E120 18284; CODE 0x4200, DateTimeOriginal 2313), then DTO
+//   copied twice as E143's (CreateDate 2333, DateTime 1364); tags: Make's and Model's offsets in the EXIF tag table
+//   (as recFile reads it: 1480 and 1504 on the three), whose three dates must be the date set's
+// - clock: the camera's clock setting, the one function of the image that ends `mov 10499,d0; movhu d0,(8,a2); ret`
+//   (E122 0x50167f55; E143's 0x5012b7a7 ends so), and the clock read right after it (0x50167f73, the port's place of
+//   E143's 0x5012b7cd, X: one such end on each of the three)
+// Found on E122, E118 and E120, none on the other 16 images (X). Returns undefined where no traced rec_jpeg_exec of
+// that opening calls rec_jpeg_make_image; throws where one does and a part after it is not found, or found twice.
+const REC_HDR_OPEN = [[0x93, 0xf8, 0x0f], [0x93, 0xfa, 0x0f]];       // mov a0,a3; mov (d8 / d16,a3),d3
+const REC_HDR_SIZE = [0xfc, 0xcc, null, null, 0x00, 0x00, 0xfa, 0x10];   // mov H,d0 (H below 0x10000); mov d0,(d16,a0)
+const REC_HDR_SOI = [0xfc, 0xcc, 0xff, 0xd8, 0x00, 0x00, 0xf0, 0x70], REC_HDR_APP1 = [0xfc, 0xcc, 0xff, 0xe1, 0x00, 0x00, 0xf8, 0x70, 0x02];
+const EXIF_DATES_OLD = [0x5e, null, 0x5f, null, 0xfa, 0xd2, null, null, 0xfa, 0xd3, null, null, 0x98, 0x9d, 0x2c, null, null, 0xdd];
+const CLOCK_SET_END = [0x2c, 0x03, 0x29, 0xf8, 0x72, 0x08];
+const REC_HDR_SPAN = 0x700, REC_HDR_POST_SPAN = 0x60, REC_HDR_TEMPLATE_SPAN = 0x40;
+export function recHeader(img) {
+  const rule = 'recHeader', { base } = imageBase(img), D = (o) => h8(0x50000000 + o), s16 = (o) => (img[o] | img[o + 1] << 8) << 16 >> 16;
+  const u16 = (o) => img[o] | img[o + 1] << 8, text = (o) => { let e = o; while (img[e]) e++; return String.fromCharCode(...img.subarray(o, e)); };
+  const step = (p) => p + (callAt(img, p)?.len ?? insnLength(img[p], img[p + 1]));
+  const body = (fn, span = REC_HDR_SPAN) => { const at = []; for (let p = fn; p < fn + span && !isRet(img, p); p = step(p)) at.push(p); return at; };
+  const calls = (fn) => body(fn).map((p) => callAt(img, p) && { at: p, to: callAt(img, p).to }).filter(Boolean);
+  // REC's trace table, and the functions that hold each name's trace of a kind
+  const heads = findString(img, REC_TRACE_HEAD, { nul: true, after: true }).flatMap((o) => wordsOf(img, (base + o) >>> 0))
+    .filter((p) => u32(img, p + 4) === 1 && text(u32(img, p + 8) - base) === REC_TRACE_NEXT && u32(img, p + 12) === 2);
+  if (heads.length !== 1) return undefined;
+  const ids = new Map();
+  for (let p = heads[0]; ; p += 8) {
+    const a = u32(img, p) - base, id = u32(img, p + 4);
+    if (a < 0 || a >= img.length || id === 0 || id > 0xffff || !/^[ -~]+$/.test(text(a))) break;
+    ids.set(text(a), id);
+  }
+  const traced = (name, kind) => {
+    const id = ids.get(name), out = new Set();
+    if (id === undefined) return out;
+    const pat = [0xfc, 0xcd, (id - 1) & 0xff, (id - 1) >> 8];
+    for (let o = img.indexOf(0xe4); o >= 0; o = img.indexOf(0xe4, o + 1)) {
+      const t = o - 1;
+      if (img[t] !== 0xfc || img[t + 2] || img[t + 3] || u16(t + 4) !== kind) continue;
+      for (let q = t + 6; q < t + REC_TRACE_GAP; q++) if (img[q] === 0xfc && img[q + 1] === 0xcd) { if (bytesAt(img, q + 4, pat.slice(2))) out.add(entryOf(img, t, REC_FN_SPAN)); break; }
+    }
+    return out;
+  };
+  const makes = [...traced('rec_jpeg_make_image', REC_ENTRY_TRACE)].filter((e) => e !== undefined);
+  const execs = [...traced('rec_jpeg_exec', REC_ENTRY_TRACE)].filter((e) => e !== undefined && REC_HDR_OPEN.some((o) => bytesAt(img, e, o))
+    && calls(e).some((c) => makes.includes(c.to)));
+  if (execs.length > 1) throw new Error(`${rule}: ${execs.length} traced rec_jpeg_exec of the family's opening call rec_jpeg_make_image (${execs.map(D).join(', ')}), want one`);
+  if (!execs.length) return undefined;
+  const [exec] = execs, wide = img[exec + 1] === 0xfa, pParam = wide ? s16(exec + 3) : img[exec + 3] << 24 >> 24, m = exec + (wide ? 5 : 4);
+  if (!bytesAt(img, m, [0x9a, null, 0xf1, 0x72, 0xf0, 0x62])) throw new Error(`${rule}: rec_jpeg_exec ${D(exec)} does not take Mode as \`mov M,a2; add a0,a2; movhu (a2),d0\` at ${D(m)}`);
+  const pMode = img[m + 1] << 24 >> 24, make = calls(exec).find((c) => makes.includes(c.to)).to;
+  const keep = body(exec).filter((p) => bytesAt(img, p, [0x42, 0x08, 0xfa, 0x13]));
+  if (keep.length !== 1) throw new Error(`${rule}: rec_jpeg_exec ${D(exec)} keeps ${keep.length} results as \`mov d0,(8,sp); mov d0,(B,a3)\`, want one (the buffer)`);
+  const pAddr = s16(keep[0] + 4);
+  // the header maker: the traced rec_jpeg_make_header exec calls; its buffer, HeaderSize, SOI and APP1's head
+  const headerFns = traced('rec_jpeg_make_header', REC_ENTRY_TRACE), mh = calls(exec).filter((c) => headerFns.has(c.to));
+  if (mh.length !== 1) throw new Error(`${rule}: rec_jpeg_exec ${D(exec)} calls ${mh.length} traced rec_jpeg_make_header, want one`);
+  const hdr = mh[0].to, hb = body(hdr);
+  const sizes = hb.filter((p) => bytesAt(img, p, REC_HDR_SIZE)), sois = hb.filter((p) => bytesAt(img, p, REC_HDR_SOI));
+  const bufs = hb.filter((p) => img[p] === 0x5c && bytesAt(img, p + 2, [0xfa, 0x00]) && s16(p + 4) === pAddr);
+  const param = hb.slice(0, 4).some((p) => (bytesAt(img, p, [0xf1, 0xd0, 0x28]) && img[p + 3] << 24 >> 24 === pParam) || (bytesAt(img, p, [0xf1, 0xd0, 0xfa, 0xc0]) && s16(p + 4) === pParam));
+  const app1 = sois.length === 1 && hb.some((p) => p > sois[0] && p < sois[0] + REC_TRACE_GAP && bytesAt(img, p, REC_HDR_APP1));
+  if (sizes.length !== 1 || sois.length !== 1 || !app1 || !bufs.length || !param) {
+    throw new Error(`${rule}: the header maker ${D(hdr)}: ${sizes.length} HeaderSize stores, ${sois.length} SOI writes${sois.length === 1 ? ` (APP1's head ${app1 ? '' : 'not '}after it)` : ''}, ${bufs.length} loads of Addr (+${pAddr}), the EXIF parameters ${param ? '' : 'not '}from +${pParam}`);
+  }
+  const header = u32(img, sizes[0] + 2), pHeader = s16(sizes[0] + 8);
+  // the packet's size: what REC's post sends
+  const posts = [...traced('REC post_msg_main', REC_POST_TRACE)];
+  if (posts.length !== 1 || posts[0] === undefined) throw new Error(`${rule}: the trace of "REC post_msg_main" in ${posts.length} functions, want one`);
+  const sends = body(posts[0], REC_HDR_POST_SPAN * 4).filter((p) => img[p] === 0x2d && bytesAt(img, p + 3, [0xfc, 0xdd]) && callAt(img, p + 9) && /\.c$/.test(text(u32(img, p + 5) - base)));
+  if (sends.length !== 1) throw new Error(`${rule}: REC's post ${D(posts[0])} sends ${sends.length} times with \`mov SIZE,d1; mov FILE,a1; call\`, want once`);
+  const size = s16(sends[0] + 1);
+  if (Math.max(pParam + 4, pMode + 2, pAddr + 4, pHeader + 4) > size) throw new Error(`${rule}: the packet's fields (+${pParam}, +${pMode}, +${pAddr}, +${pHeader}) do not lie in its ${size} bytes`);
+  // the EXIF module: its init, the template's init right after it, the template's copy right after that
+  const copies = [];
+  for (let o = img.indexOf(0xdd); o >= 0; o = img.indexOf(0xdd, o + 1)) {
+    const c = o - 1, t = u32(img, c + 2);
+    if (!bytesAt(img, c, EXIF_COPY) || !bytesAt(img, c - 3, [0xdf, 0x00, 0x04])) continue;
+    const init = [...Array(REC_HDR_TEMPLATE_SPAN).keys()].map((k) => c - 3 - k).find((e) => bytesAt(img, e - EXIF_INIT.length, EXIF_INIT) && bytesAt(img, e, [0xfc, 0xdc, ...le32(t)]) && runsTo(img, e, c - 3));
+    if (init !== undefined) copies.push({ c, t, init: init - EXIF_INIT.length });
+  }
+  if (copies.length !== 1) throw new Error(`${rule}: ${copies.length} EXIF template copies right after a template init that loads the template, want one`);
+  const [{ c: copy, t: template, init: exifInit }] = copies;
+  const dt = oneAt(img, EXIF_DATES_OLD, rule, 'EXIF date sets of the family\'s form');
+  if (dt === null) throw new Error(`${rule}: no EXIF date set of the family's form`);
+  const fmt = callAt(img, dt + 17), c1 = dt + 17 + fmt.len, c2 = c1 + EXIF_DATE_COPY.length + 6;
+  if (!bytesAt(img, c1, EXIF_DATE_COPY) || !bytesAt(img, c2, EXIF_DATE_COPY) || callAt(img, c1 + 7).to !== callAt(img, c2 + 7).to) throw new Error(`${rule}: the EXIF date set ${D(dt)} is not followed by its two copies`);
+  const date = { format: 0x50000000 + fmt.to, code: u16(dt + 15), copy: 0x50000000 + callAt(img, c1 + 7).to, original: s16(dt + 6), created: s16(c1 + 5), modified: s16(c2 + 5) };
+  const time = s16(dt + 10);
+  const dtTag = [];
+  for (let o = img.indexOf(0x32); o >= 0; o = img.indexOf(0x32, o + 1)) if (bytesAt(img, o, [0x32, 0x01, 0x02, 0x00, 20, 0, 0, 0])) dtTag.push(o);
+  if (dtTag.length !== 1) throw new Error(`${rule}: ${dtTag.length} EXIF tag tables' DateTime, want one`);
+  const tag = new Map();
+  let lo = dtTag[0];
+  while (EXIF_TAG_TYPES.has(u16(lo - 10)) && dtTag[0] - lo < REC_TAG_SPAN * 12) lo -= 12;
+  for (let o = lo; EXIF_TAG_TYPES.has(u16(o + 2)) && o - lo < REC_TAG_SPAN * 12; o += 12) if (!tag.has(u16(o))) tag.set(u16(o), u32(img, o + 8));
+  if (tag.get(0x0132) !== date.modified || tag.get(0x9003) !== date.original || tag.get(0x9004) !== date.created || ![0x010f, 0x0110].every((t) => tag.has(t))) {
+    throw new Error(`${rule}: the EXIF tag table's dates (${[0x0132, 0x9003, 0x9004].map((t) => tag.get(t)).join(', ')}) are not the date set's (${date.modified}, ${date.original}, ${date.created}), or it has no Make or Model`);
+  }
+  // the camera's clock setting and its clock read right after it
+  const ends = [];
+  for (let o = img.indexOf(0x2c); o >= 0; o = img.indexOf(0x2c, o + 1)) if (bytesAt(img, o, CLOCK_SET_END) && isRet(img, o + 6)) ends.push(o);
+  if (ends.length !== 1) throw new Error(`${rule}: ${ends.length} clock settings' ends (\`mov 10499,d0; movhu d0,(8,a2); ret\`), want one`);
+  const read = ends[0] + 9, set = entryOf(img, ends[0], REC_FN_SPAN);
+  if (set === undefined || !callAt(img, read) || !isRet(img, read + callAt(img, read).len)) throw new Error(`${rule}: the clock setting's end ${D(ends[0])} has no entry, or no clock read (a call and a return) right after it`);
+  return {
+    exif: { init: 0x50000000 + exifInit, template, copy: 0x50000000 + copy, size: -s16(copy + 7) * 4, time, date, tags: { make: tag.get(0x010f), model: tag.get(0x0110) } },
+    clock: { set: 0x50000000 + set, read: 0x50000000 + read },
+    packet: { size, fields: { pExifParam: pParam, Mode: pMode, Addr: pAddr, HeaderSize: pHeader } },
+    jpeg: { exec: 0x50000000 + exec, make_image: 0x50000000 + make, make_header: 0x50000000 + hdr, header },
+  };
+}
 // The event broker's init (fact 'broker.init', and through bin/port.mjs the place of E143's BROKER_E143 0x502a48b6,
 // src/lab/camapp.mjs BROKER_INIT, which the lab calls as the boot chain's wrapper does): it opens with its queue's id
 // word, `movhu (W),d0; exth d0; call` (fc ac W 18, then call d16 or d32), and clears its slots in a loop that starts
@@ -4390,6 +4527,7 @@ export function readPlacedFacts({ img, at }) {
 // none, every body but E120 and E122; the frame wait null where its rule reads none, E120's, which S-FRAMEWAIT then
 // leaves out,
 // src/lab/menu.mjs; mm_init null where its rule reads none, every body but the E118 family's). Throws for a reset_head with no rule here, and where a rule throws.
+// Also {rec_header: {exif, clock, packet, jpeg}}, none where recHeader reads none (every body but the E118 family's).
 export function readFacts({ img, family, resLoad }) {
   const facts = {};
   if (family.reset_head === 'flash-copy') {
@@ -4442,6 +4580,8 @@ export function readFacts({ img, family, resLoad }) {
   const storage = fileSystem(img);
   if (storage !== undefined) facts.storage = storage;
   facts.recorder = recorder(img);
+  const recHdr = recHeader(img);
+  if (recHdr !== undefined) facts.rec_header = recHdr;
   facts.dcf = { counts: dcfCounts(img) };
   const usbOff = usbPowerOff(img);
   if (usbOff !== undefined) facts.power_off = { usb_disconnect: usbOff };

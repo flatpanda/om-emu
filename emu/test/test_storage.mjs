@@ -33,7 +33,9 @@
 //                   ImageParam's parameter set on; before it the error logs of ImageParam's four sources' lookups
 //                   only), the header area cleared by the imgpro unit's fill natively, REC_FILE's reply, pAlive
 //                   cleared, the aspect from the setting and the ISO from the record's +38174 0,
-//                   on E143, E146 and E147), the JPEG decoded
+//                   on E143, E146 and E147; on the E118 family the header its own header maker built natively, its
+//                   Make, Model, dates, Exif version, maker notes and thumbnail slot read by refs/exif.mjs, then the
+//                   lab's stream, through S-RECFILE), the JPEG decoded
 //                   (refs/jpeg.mjs) to the capture's block means, and the next session's DCF numbering mount and
 //                   image count find it; where the body runs the HLS media side (card_fs.hls: E143, E146) Card
 //                   Formatting from the menu (S-MDACTRL): the card read back is freshly formatted, the counts reset and
@@ -73,6 +75,13 @@ const EXIF_BODY = { E143: { model: 'OM-1', version: '0231', ...OM }, E146: { mod
   E144: { model: 'OM-5', version: '0231', ...OM }, E148: { model: 'OM-5MarkII', version: '0300', ...OM }, E139: { model: 'E-M1MarkIII', version: '0231', ...OLY },
   E134: { model: 'E-M1X', version: '0231', ...OLY }, E137: { model: 'E-M5MarkIII', version: '0231', ...OLY }, E142: { model: 'E-P7', version: '0231', ...OLY },
   E140: { model: 'E-M10MarkIV', version: '0231', ...OLY }, E125: { model: 'E-M1MarkII', version: '0230', ...OLY } };
+// What the E118 family's header maker writes in S2's file (src/lab/recheader.mjs): IFD0's Make and Model, the ones the
+// EXIF template's init takes from the settings store (X, refs/exif.mjs, 2026-11-10; the Model strings are in each
+// image, D: E122 'PEN-F' at 0x6009698c, E118 'E-M5MarkII' at 0x600a8560, E120 'E-M10MarkII' at 0x600a5bec; E118's Make
+// is not a string of its main block, X), the Exif version '0230' and the maker notes' 'OLYMPUS' on all three
+const EXIF_FAMILY = { E122: { make: 'OLYMPUS CORPORATION', model: 'PEN-F' }, E118: { make: 'OLYMPUS IMAGING CORP.', model: 'E-M5MarkII' },
+  E120: { make: 'OLYMPUS CORPORATION', model: 'E-M10MarkII' } };
+const EXIF_FAMILY_VERSION = '0230', EXIF_FAMILY_NOTES = 'OLYMPUS';
 
 // A FAT32 volume built here, for the reader: [read(lba, n), the files' bytes]. 70000 sectors at LBA 2048, 512-byte
 // clusters: 69416 clusters, past FAT16's 65524, so FAT32 by the specification's cluster count
@@ -473,6 +482,7 @@ export async function storageSession() {
     try {
       pl.open_session();
       const rec = pl.session.storage.rec, DATE = [2026, 11, 8, 12, 34, 56], HEADER = rec?.header, body = EXIF_BODY[MODEL];
+      const hdr = pl.session.storage.exif;      // the E118 family's header maker natively (src/lab/recheader.mjs)
       // the DCF name: the file letter, the month in hex and the day of the capture's stamp (docs/hle-gaps.md 4.8.9)
       const file1 = rec ? `${DIR}/P${DATE[1].toString(16).toUpperCase()}${String(DATE[2]).padStart(2, '0')}0001.${names.ext}` : FILE1;
       if (rec) {
@@ -482,6 +492,12 @@ export async function storageSession() {
         lab.call(rec.R.clock_set, { a0: at }, null, null, 2000000);
         pl.session.settle('the clock setting');
       }
+      if (hdr) {            // the E118 family: the clock set first through its clock setting (rec_header clock.set)
+        const lab = pl.session.lab, at = lab.alloc(new Uint8Array(10), 4);
+        lab.sim.write(at, pack('<HBBBBBBH', ...DATE, 0, 0));
+        lab.call(hdr.R.clock.set, { a0: at }, null, null, 2000000);
+        pl.session.settle('the clock setting');
+      }
       for (const inp of [...(LIVE_VIEW ? [{ type: 'scene', change: { liveview: true } }] : []), { type: 'token', token: 'WAIT:100' }, { type: 'key', id: 's1', action: 'down' },
         { type: 'key', id: 's2', action: 'down' }, { type: 'token', token: 'WAIT:700' }, { type: 'key', id: 's2', action: 'up' }, { type: 'key', id: 's1', action: 'up' }]) pl.run_input(inp);
       const s2 = pl.session, img = s2.camapp.images[0];
@@ -489,7 +505,7 @@ export async function storageSession() {
       ok(img?.file?.path === `${names.drive}:\\${file1.replaceAll('/', '\\')}`, `S2 wrote the picture's file: ${JSON.stringify(img?.file)}`);
       const jfif = img ? jpegOfFrame(s2.picture_frame(s2.camapp.views.get(img.release) ?? null)) : null;
       // natively the file is the firmware's header and the encoder's stream after it (src/lab/rec.mjs S-JPEGENC)
-      const stream = jfif && rec ? encoderStream(jfif) : null, want = jfif && (rec ? { length: HEADER + stream.length } : jfif);
+      const stream = jfif && (rec || hdr) ? encoderStream(jfif) : null, want = jfif && (rec ? { length: HEADER + stream.length } : hdr ? { length: hdr.header + stream.length } : jfif);
       const vol = new FatVolume((lba, n) => card.read(lba, n), mbrPartition(card.read(0, 1)).start);
       const e = vol.find(file1);
       ok(e && !e.dir && want && e.size === want.length, `the directory entry ${file1}: ${JSON.stringify(e && { size: e.size, cluster: e.cluster })}, the file ${want?.length} bytes`);
@@ -526,7 +542,21 @@ export async function storageSession() {
           ok(y?.aspect === run.take[12417] && run.take[40401] === 1, `ImgAspect from the record's aspect, TAKE's setting 12417 (${run?.take?.[12417]}): ${y?.aspect}; the bracket's 40401 ${run?.take?.[40401]}`);
           ok(x?.exif?.get(0x8827) === 25 && x?.exif?.get(0x8831) === 25, `the ISO REC_IMAGE derives from the record's +38174 0 (rec_bracket_after_trig 0x5053bfe2: the shot's record's +38174, on E146 and E147 +37826; on E143 also the SvAdj rec_bracket_update_iso 0x5053bca6 sets), ISO and StandardOutputSensitivity: ${x?.exif?.get(0x8827)} ${x?.exif?.get(0x8831)}`);
         }
-      } else ok(data && want && data.every((b, i) => b === want[i]), 'the file\'s bytes are the JPEG the lab handed the file module');
+      } else if (!hdr) ok(data && want && data.every((b, i) => b === want[i]), 'the file\'s bytes are the JPEG the lab handed the file module');
+      // the E118 family: the header its header maker built natively (S-RECHDR), the lab's stream, through S-RECFILE
+      if (hdr) {
+        const H = hdr.header, used = pl.stand_ins_in_use(), fam = EXIF_FAMILY[MODEL], t = (m, k) => m?.get(k)?.trim?.();
+        const segs = data ? jpegSegments(data) : [], x = data ? readExif(data) : null, version = x?.exif ? String.fromCharCode(...x.exif.get(0x9000)) : null;
+        const dt = `${DATE[0]}:${DATE.slice(1, 3).map((v) => String(v).padStart(2, '0')).join(':')} ${DATE.slice(3).map((v) => String(v).padStart(2, '0')).join(':')}`;
+        ok(['H-EXIFINIT', 'S-EXIFPRM', 'S-RECHDR', 'S-RECFILE'].every((n) => used.includes(n)) && !used.includes('H-RECFILE'), `${MODEL}: the header maker natively, the file through S-RECFILE: ${used.filter((n) => /REC|EXIF/.test(n)).join(' ')}`);
+        ok(data && stream && data.subarray(H + 2).every((b, i) => b === stream[i + 2]), `after the ${H}-byte header the bytes are the lab's JPEG stream (but its SOI)`);
+        ok(segs[1]?.marker === 0xE1 && segs[1].at === 2 && segs[1].length === H - 2 && segs[2]?.at === H + 2, `SOI, APP1 Exif of ${H - 2} bytes, then the stream's tables: ${segs.slice(0, 3).map((g) => `${g.marker.toString(16)}@${g.at}+${g.length}`).join(' ')}`);
+        ok(fam && t(x?.ifd0, 0x10F) === fam.make && t(x?.ifd0, 0x110) === fam.model, `the firmware's Make and Model (refs/exif.mjs): '${t(x?.ifd0, 0x10F)}' '${t(x?.ifd0, 0x110)}', ${MODEL}'s '${fam?.make}' '${fam?.model}'`);
+        ok(x?.ifd0.get(0x132) === dt && x?.exif?.get(0x9003) === dt && x?.exif?.get(0x9004) === dt, `the firmware's dates are the clock's ${dt}: ${x?.ifd0.get(0x132)}, ${x?.exif?.get(0x9003)}, ${x?.exif?.get(0x9004)}`);
+        ok(version === EXIF_FAMILY_VERSION && x.makernote?.header === EXIF_FAMILY_NOTES && x.ifd1?.has(0x201) && x.ifd1.get(0x202) === 0,
+          `ExifVersion ${version}, the maker notes '${x?.makernote?.header}' (${x?.makernote?.length} bytes), IFD1's thumbnail slot of length ${x?.ifd1?.get(0x202)}`);
+        ok(hdr.headers.length === 1 && hdr.headers[0].date === dt && hdr.headers[0].header === H, `one header made, dated ${hdr.headers[0]?.date}`);
+      }
       const d = data ? decodeJpeg(data) : null, [w, h, rows] = want ? s2.picture_frame(s2.camapp.views.get(img.release)) : [0, 0, []];
       ok(d && d.width === w && d.height === h && d.components.length === 3, `the file decodes (refs/jpeg.mjs): ${d?.width} x ${d?.height}, frame ${w} x ${h}`);
       if (d) {

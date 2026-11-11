@@ -54,7 +54,9 @@
 //               file requests (mkdir, fopen 'wb', fwrite in chunks, fclose; the FlashAir configuration writer's calls)
 //               put the JPEG at the DCF name the numbering mount gave (folder 100: C:\DCIM\100OMSYS or 100OLYMP, file
 //               P1010001.JPG and on; the DCF module's initial names, storage.names, D), and the DCF database learns of
-//               the file at the next mount
+//               the file at the next mount. On the E118 family (src/fw/models.mjs exif_native) the file put there is
+//               the header REC_IMAGE's own header maker builds natively and the stream after it (src/lab/recheader.mjs
+//               H-EXIFINIT, S-EXIFPRM, S-RECHDR)
 //   S-CARD      (the insertion) the media control's requests on a card insertion, sent to the file module's queue as
 //               the HLS media layer would send them (it does not run in the lab; which requests it sends, and in which
 //               order, is I): the FAT mount; on a card with no file system the format (the request Card Formatting
@@ -70,6 +72,7 @@ import { STUB } from './display.mjs';
 import { SdCard, SECTOR } from './sdcard.mjs';
 import { MODEL, MODEL_INFO, fact } from '../fw/model.mjs';
 import { RecFile, REC_NATIVE } from './rec.mjs';
+import { RecHeader, EXIF_NATIVE } from './recheader.mjs';
 import { BOARD } from '../fw/board.mjs';
 import { STORAGE_E143, STORAGE_LIB, CARD_DETECT_E143, RECORDER_E143 } from '../fw/facts.mjs';
 
@@ -158,6 +161,8 @@ export class Storage {
     this.reply = null;
     // REC_FILE natively where the body gives rec_native (src/lab/rec.mjs; MODELS), in S-RECFILE's place
     this.rec = REC_NATIVE ? new RecFile(this) : null;
+    // the E118 family: S-RECFILE's file with the header REC_IMAGE's header maker builds natively (recheader.mjs)
+    this.exif = EXIF_NATIVE ? new RecHeader(this) : null;
   }
   // H-FILEINIT, H-FILECLBK, S-SDHOST, S-SDCARD, S-FSNAND, S-ALBM, then the insertion (S-CARD); in the play bring-up,
   // before the application starts
@@ -354,7 +359,7 @@ export class Storage {
   }
   // S-RECFILE: the picture's bytes to a file of the DCF; returns {path, size, folder, number} (record() also the
   // cluster, the stamp and the clock record)
-  write_picture(bytes) { return this.rec ? this.rec_picture(bytes) : this.f.recorder ? this.record(bytes) : this.fileif_picture(bytes); }
+  write_picture(bytes) { return this.rec ? this.rec_picture(bytes) : this.f.recorder ? this.record(bytes) : this.fileif_picture(this.exif ? this.exif.file(bytes) : bytes); }
   // REC_FILE natively (src/lab/rec.mjs): its file, with the header REC_IMAGE's header maker builds
   rec_picture(bytes) {
     const file = this.rec.record(bytes);

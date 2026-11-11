@@ -15,8 +15,9 @@
 //                 default), read the tap's reports while the GUI's gesture mask on the EVF passes no press or tap
 //                 (EVF_PAD's mask) and HFW sees nothing; with the pad on (its store id set to 1 before the GUI exists,
 //                 S-PERSIST's seed, as the menu would set it) the mask is 0x1f1 and a tap inside the pad's area
-//                 reaches HFW (a press at the pixel and its end), one left of the area (EVF_PAD's x0) nothing; no tap
-//                 changes the frame or the GUI's state
+//                 reaches HFW (a press at the pixel and CLICK, on E120 the first one LIFTOFF: PAD_FIRST_END), one left
+//                 of the area (EVF_PAD's x0) nothing; no tap changes the frame or the GUI's state; a later tap inside
+//                 the pad ends as CLICK on every body
 //   node emu/test/test_touch.mjs   (with OM_EMU_MODEL=E144 etc.; exit 1 on a failure)
 import { createHash } from 'node:crypto';
 import zlib from 'node:zlib';
@@ -47,6 +48,10 @@ export const EVF_PAD = {
 // E118's application holds no EVF touch pad and closes the panel off the TFT's display states (finding 113)
 export const EVF_BODIES = ['E118', ...Object.keys(EVF_PAD)];
 const PAD_IN = [360, 240], PAD_OUT = [40, 333], PAD_ON_MASK = 0x1f1;
+// the end HFW sees of the first tap inside the pad where it is not CLICK: E120's driver derives no end for that tap's
+// point, so it ends as LIFTOFF at 0, 0, at any pixel and after any wait; its later taps end as CLICK (X,
+// docs/model-survey.md finding 116; why the first tap's derivation sees no end is not read)
+const PAD_FIRST_END = { E120: 'LIFTOFF' };
 
 async function labEnv() {
   const { loadImage, loadBlock, loadNand } = await import('../bin/run.mjs');
@@ -137,8 +142,10 @@ async function evfOnce(pad, ok) {
       while (s.pending_touch()) s.touch_gui_step();
       return [lab.tp_reads.slice(r0), lab.gestures.slice(g0).map((g) => [g.name, g.x, g.y])];
     };
+    const t1 = lab.lab_time();
     const [reads, gestures] = tap(PAD_IN);
     const [x, y] = PAD_IN;
+    const end = (g) => g.filter(([n]) => n !== 'PRESS').map(([n]) => n).join(',');
     if (sid === null) {
       ok(reads.length === 0, `${what}: the closed panel's tap is not read (${JSON.stringify(reads)})`);
       ok(gestures.length === 0, `${what}: HFW sees no gesture (${JSON.stringify(gestures)})`);
@@ -147,7 +154,8 @@ async function evfOnce(pad, ok) {
       if (!pad) ok(gestures.length === 0, `${what}: HFW sees no gesture under the mask 0x${offMask.toString(16)} (${JSON.stringify(gestures)})`);
       else {
         ok(gestures.some(([n, gx, gy]) => n === 'PRESS' && gx === x && gy === y), `${what}: HFW saw the press at ${x},${y} inside the pad (${JSON.stringify(gestures)})`);
-        ok(gestures.some(([n]) => n === 'CLICK' || n === 'LIFTOFF'), `${what}: HFW saw the tap's end (${JSON.stringify(gestures)})`);
+        const want = PAD_FIRST_END[MODEL] ?? 'CLICK';
+        ok(end(gestures) === want, `${what}: the first tap inside the pad ends as ${want} (${JSON.stringify(gestures)})`);
         if (x0 > 0) {
           const [, out] = tap(PAD_OUT);
           ok(out.length === 0, `${what}: a tap at ${PAD_OUT} left of the pad's area (x0 ${x0}) reaches HFW as nothing (${JSON.stringify(out)})`);
@@ -155,6 +163,13 @@ async function evfOnce(pad, ok) {
       }
     }
     ok(lab.state() === state0 && digest() === before, `${what}: the GUI's state and the frame are unchanged (0x${state0.toString(16)} -> 0x${lab.state().toString(16)})`);
+    if (pad) {
+      // a later tap inside the pad, more than the driver's 800 ms double-tap window after the first, ends as CLICK on
+      // every body (E120's first one too, PAD_FIRST_END)
+      s.idle_slice(Math.max(lab.lab_time(), t1 + 1000e6));
+      const [, again] = tap(PAD_IN);
+      ok(again.some(([n, gx, gy]) => n === 'PRESS' && gx === x && gy === y) && end(again) === 'CLICK', `${what}: a later tap inside the pad is PRESS and CLICK (${JSON.stringify(again)})`);
+    }
   } finally { pl.close_session(); }
 }
 

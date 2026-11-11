@@ -190,8 +190,9 @@ The plan:
    the built-in EVF, the family's device code 6, where the lab had opened the NTSC output (findings 35 and 36). Since
    2026-10-30 E122's TFT and EVF frames show its clock warning: the palettes by GUI layer (finding 38), S-DISPSYNC
    releasing its display sync module's synced updates (finding 39) and S-TPSEND serving its touch queue for the EVF
-   (finding 40). Since 2026-11-10 the family's touch task runs natively, tapped on the TFT (finding 88); touch on the
-   EVF is not tried (finding 89).
+   (finding 40). Since 2026-11-10 the family's touch task runs natively, tapped on the TFT (finding 88) and with the
+   EVF active as the code says (findings 113 to 116: E118's panel closed, the others' EVF touch pad gated by the AF
+   Targeting Pad).
 6. Tier D: no work planned. Their ports place 60-80% of what tier A places; the survey keeps them as a record.
 7. **Depth on the bodies that reach their shooting screen** (proposed 2026-10-21). Take E144, E139, E134, E137, E142,
    E140, E125 and E130 through modelcheck's path: S2 writes a card image, playback shows it, the menu opens; then the
@@ -301,19 +302,24 @@ the survey table.
   of the touch message; a tap on the touch mode icon cycles it on E144, E148, E139, E134, E137, E142, E140, E125, E130
   and E133 (`test/test_touch.mjs`), and a tap in the super control panel selects its cell. Open: the controller's own
   event codes and status bit (I / ?, FIDELITY 7.11); the control area (the application's Set_Touch_Panel_Ctrl_Area is
-  not called in the lab); touch AF's tap, which reaches HFW and is dropped with S-CAFWD's forward, as on E143 with
-  S-LENS; touch on the EVF. The event map's shift on E137, E142, E140, E125, E130 and E133 (two entries fewer
-  before E143's 109) also moves MENU_EVENT and CONNECT_EVENT there (finding 75).
+  called on the EVF alone); touch AF's tap, which reaches HFW and is dropped with S-CAFWD's forward, as on E143 with
+  S-LENS. Touch on the EVF since 2026-11-10 (survey findings 113 to 116): the application's EVF touch pad (its control
+  area x 290..719) and the GUI's mask by the AF Targeting Pad, a tap reaching HFW only with the pad on, X on the eight
+  with an EVF; the pad's slide and double tap are not tried. The event map's shift on E137, E142, E140, E125, E130 and
+  E133 (two entries fewer before E143's 109) also moves MENU_EVENT and CONNECT_EVENT there (finding 75).
 - **Touch on the E118 family:** done (2026-11-10, survey findings 84 to 89): the open read by its form and the
   gesture mask's word by its set's store (on E130 and E133 too, whose map had placed another word), E118's inline INT
   waits by a third form for S-TPINTWAIT, the controller's version `0xc400` and S-TPREGLIST for E118's power-up list
   (a firmware download, a calibration and a register list over the touch transport, which E120 and E122 do not run);
   a tap on the touch mode icon cycles it and a tap in the super control panel selects its cell on E118, E120 and
-  E122 (`test/test_touch.mjs`), the touch message at index 107 as on E137. Open: which version an E-M5 II's
-  controller reports (?: with another the list runs the download through the write's stand-in and skips the
-  calibration, touch still working, X with 0; a controller whose version changes with the download is not modelled);
-  touch on the EVF; the application's own touch start (the close, the open with HFW's callback and the masks per
-  screen, X on the family and E144) supersedes H-TPSTART's there, which could go on those bodies.
+  E122 (`test/test_touch.mjs`), the touch message at index 107 as on E137. Since 2026-11-10 (survey findings 113 to
+  117): touch with the EVF active as the code says (E118's application closes the panel; E120's and E122's EVF touch
+  pad, x 290..719 and the whole panel, passes taps only with the AF Targeting Pad on, X); H-TPSTART left out on the
+  family and the E144 family, whose application's start opens the panel itself (as E143's does, X; E143 keeps it);
+  the list's own checks take `0xc400` as the firmware it downloads (I, from the list). Open: which version a
+  controller answers before any download (?: a read on a camera, or of the downloaded Thumb program's handler, would
+  settle it; with 0 the download runs through the write's stand-in, touch still working, X; a controller whose
+  version changes with the download is not modelled); the 117 bytes at `0x1400` (a record that is 0 in the lab).
 - **E145's AF upload:** read (2026-10-29, survey finding 22): the TG-7's frame plane has modes 1 and 2 only, its
   mode 2 the place of E143's UP_LOCKON, and nothing writes the mode-3 frames DISP_FRAME reads, so S-AFOSD gives it
   no upload (rule framePlane, which also places UP_AF on the other clamp-form bodies and retires E130's override;

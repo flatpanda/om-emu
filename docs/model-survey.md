@@ -1635,10 +1635,10 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    `0x502f4ad9`, in the API `0xd001c` wrapper HFW's touch init calls, D), 615.4 ms of lab time, and sets the gesture
    mask for each screen (six sets in the start, one at a later redraw); E118 does the same (the close at 629.4 ms,
    the open at 651.6 ms) and E144 at 2830.1 ms. H-TPSTART's open and mask at the bring-up are thus superseded on those
-   bodies (not looked at on the others; E143's `camapp 1` runs no such start). The close clears the driver's control
-   area (E122 `0x5030bccb` -> `0x5030bda9` with five words 0, D, X), and no TFT session sets one, so the driver passes
-   the controller's events as on E144 (finding 75); on E122's EVF the application's Set_Touch_Panel_Ctrl_Area runs
-   (finding 40), and touch on the EVF is not tried.
+   bodies (not looked at on the others; corrected 2026-11-10: E143's start runs the same, finding 114). The close
+   clears the driver's control area (E122 `0x5030bccb` -> `0x5030bda9` with five words 0, D, X), and no TFT session
+   sets one, so the driver passes the controller's events as on E144 (finding 75); on E122's EVF the application's
+   Set_Touch_Panel_Ctrl_Area runs (finding 40), and touch on the EVF is not tried (since tried, findings 113 to 116).
 90. **What S-PLAYSEQ stands in for on the E118 family** (2026-11-10, `src/lab/camapp.mjs` S-PLAYSEQ; addresses E122's, D
    unless tagged). PlyCom's requests go to the play module as transactions the HLS play component answers: the
    synchronous getStillInfo (3, `0x506aae51`: the request set by `0x506af68a`, run by `0x506af724`, its response read by
@@ -2267,6 +2267,74 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    ERASE_DIALOG's four bodies, Delete (the dialog's state), UP, OK (the refusal of request 21) and both files on the
    card. X: 17 checks pass on twelve bodies, 18 on the family, 20 on E142, E140, E130 and E133, 338 in all; with the
    camapp.mjs before these findings the new steps stop E122, E130 and E143 at PLAY in the wizard.
+113. **What the application does with touch on the EVF** (2026-11-10, D on E122 and E144 unless tagged; the camera
+   application's touch module, SubAppMdlTouchPanel, by its traces). Its action (`actionTouchPanel`, E122 `0x50b80365`)
+   and its display change (`DispalyChangeTouchPanel`, `0x50b80b53`, called at `0x50b75eb1`) read the display state
+   (`0x50b7637d`). On 2 and 3 (the monitor's, I) its TFT judge (`0x50b807e0`: the module enabled, getSettingUser(426) 1,
+   setting 285 0) starts the panel with every gesture flag but FLICK, 0x1f1 (`0x50b801f4`, `0x50b8025b`: the open
+   through HFW's touch init) or ends it (`0x50b802d1`: the close). On 6, the built-in EVF (finding 36), its EVF judge
+   (`0x50b8083b`: the module enabled, settings 284, 38 and 15130 and two state reads, not read further) passing, starts
+   it again as the "EVF touch pad" (the display change ends it first) (`0x50b80a38`, "activated EVF Touch Pad"): the
+   driver's control area on (its area set `0x5030bda9` with mode 1 over x 0..719, y 0..479 on E122, `0x50b80aa6`; over x
+   290..719 on E120 and the E144 family, E144 `0x50cedd96`), the gesture flags by its argument (0x1f1 again, through
+   HFW's mask builder `0x5073a6fb`, where the argument is 1; DCLICK alone, 0x40, where it is 0), then the start; where
+   the judge or the pad's own check fails (E122: a check of id 867 through another settings object and getSetting(426)
+   1; E144: of 1417; what that check reads is not read) it ends the pad (`0x50b80b00`: area mode 0, the module's state
+   ended). The argument is a store value: E122's id 867 at the action (`0x50b803c3`), 1109 at other states
+   (`0x50b7bc6e`); 0 on E144 in the lab's default session (X: the mask 0x40). E118's module has no EVF branch: its
+   action (`0x50b75a42`) starts the panel on its judge (`0x50b75e24`, E122's TFT judge, display state 2 or 3) and ends
+   it otherwise (`0x50b759ae`), and its image holds no "EVF Touch Pad" trace and no area set (X, a string scan and a
+   scan for the area's clamp), so the E-M5 II's panel is closed while its EVF shows (X, finding 116).
+114. **H-TPSTART is the application's start's** (2026-11-10, X: observers on the driver's open, close and mask set in a
+   TFT session per body; corrects finding 89's sentence on E143). The camera application's start ends the panel (the
+   driver's close), starts it through HFW's touch init, which opens it with HFW's callback, and the GUI sets the mask
+   per screen on E143 too: the close `0x501e4139`, the init `0x50b76d47` and the open, which returns 0, at 2756.2 and
+   again at 2771.3 ms of lab time (finding 89 had "E143's `camapp 1` runs no such start"). H-TPSTART's open and mask at
+   the bring-up are overwritten before any input on every body that runs the start. The lab now leaves H-TPSTART out
+   where H-TPINIT runs before the display open (`src/lab/play.mjs` touch_bring_up, fact touch_int: the E144 and E118
+   families; the player's stand-in list drops it there): without it each of the 13 bodies' starts opens the panel once
+   with HFW's callback (E122 at 615.4 ms, E118 and E120 651.6, E144 2830.1, E134 416.4) and the TFT shooting screen's
+   mask is the GUI's (0x11f1; E118's 0x1f1, set by its GUI at 6757.6 ms), and `test/test_touch.mjs` passes the TFT taps
+   on all 13 as before. E143, E146 and E147 keep it: golden records E143's sessions with it, and its removal there is
+   not tried.
+115. **The GUI's gesture mask on the EVF, and the AF Targeting Pad** (2026-11-10, D unless tagged; `test/test_touch.mjs`
+   EVF_PAD). The GUI's gesture set for a screen (E122 `0x50d0e9bb`, nine callers; E144 `0x50f32327`) returns unless a
+   setting reads 1 (E122's 426), sets every flag and, where HFW's output state is 5 (the EVF, I; X: the EVF sessions
+   take that branch), reads one store id: with 1 it traces "[GuiTouch] Set EVF Touch To ON" and passes every gesture but
+   FLICK (0x1f1), otherwise "... OFF" and its build's mask: 0 on E122, SLIDE and DCLICK (0x140) on E120, E137 and E130,
+   DCLICK (0x40) on E144, E148, E139, E134, E140 and E125 (the flags stored after each trace's load, X: a scan of the
+   ten); on another output it copies the screen's own eight flags. The id is E143's 1415, the menu's row "AF Targeting
+   Pad" (tab id 3, page 218, values 0 and 1, by its menu data); at the same place E120 867, E122 1109, E144 and E134
+   1417, E148 1453, E139 1416, E137 1418, E140 1427, E125 1425, E130 1426 (I: each its build's AF Targeting Pad). The
+   GUI's double tap on the EVF (E122 `0x50d011cd`, "[GuiTouch] ActivateEVFTouchPad"; E144 `0x50f22bb8`) acts only with
+   that id at 1 and then toggles a second one (E122 867, E144 858). In the lab's store every pad id reads 0 (X,
+   S-PERSIST's 'before' in finding 116), the setting's Off.
+116. **Taps with the EVF active** (2026-11-10, X: play sessions started on the EVF, `test/test_touch.mjs` evfSession).
+   E118: no report is read and HFW sees nothing (its panel closed, finding 113). The ten others, the pad off: the start
+   leaves the GUI's OFF mask of finding 115 (on E122 at the GUI's set at 6907.5 ms, after the application's 0x1f1), a
+   tap at 360, 240 is read (two reports) and HFW sees no gesture. With the pad's id set to 1 before the GUI exists
+   (S-PERSIST's seed through the firmware's property set, 0 -> 1), the mask is 0x1f1 and the tap reaches HFW as PRESS at
+   the pixel and CLICK (E120: LIFTOFF at 0, 0, why not read), and on E120 and the E144 family a tap at 40, 333, left of
+   the pad's area, reaches nothing. No tap changes the frame or the GUI's state (the pad's AF target moves with a slide,
+   I: "[GuiTouch] Evf_Touch_Pad_Slide" `0x50d012e2`; not tried). On E122 with the pad on a second tap within 800 ms is a
+   DCLICK, and the GUI's double tap ran twice for its one post (id 867 1 -> 0 -> 1, from the GUI's action loops
+   `0x50d01984` and `0x50d0e84e`; why twice is not read). Checks with the TFT's: 16 on E118, 26 on E120 and E144, 25 on
+   E122, 22 on E148, E139, E134, E137, E140, E125 and E130, all pass.
+117. **E118's download and the controller's version** (2026-11-10, D unless tagged; answers finding 86's "?" in part).
+   The download (op 7, `0x502e4bec`) clears the INT word, writes `30` and `10` to slave `0x48` and then 24496 bytes from
+   the image itself (run-time `0x603f1f85`, beside the driver's "prm_calib_data", "read_calib_data" and
+   "tp_drv_adjust_jd_a/b" traces). The version read (`0x502e4b94`) keeps b0 << 8 | b1 of `0x1c14` and logs "not
+   available" outside 0x3000, 0x9e00, 0xc400 and 0xd700, and both of the list's checks take 0xc400 alone: before the
+   download it skips the download (entry 1), after it it goes on to the calibration (entry 12), any other value taking
+   the list past the calibration (entry 16). So the build reads 0xc400 as a controller that runs the firmware it
+   carries, the value a controller answers after this download (I, from the list). No second constant names it: the blob
+   holds no 16- or 32-bit 0xc400 literal (its one `00 c4` pair lies in its code, X); it is a Cortex-M program by the
+   vector table at its offset 9 (initial SP 0x10007da0, reset 0x00005ec1; I), after `48`, a length 0x5fa8 and four more
+   bytes. S-TPREG's 0xc400 stays, tagged I; what a controller answers before any download is ?, which a read of the
+   register on a camera, or a read of the blob's handler of `0x1c14` (Thumb), would settle. The 117 bytes at `0x1400`
+   (op 8 with 0, on the no-download path alone) are the record of id 36049 (`0x50055b7c`, a table indexed by id >> 4):
+   in the lab the record is found (E118 `0x61b121fc`) and its 117 bytes are 0 (X); what fills it on a camera is not read
+   (the panel's adjustment data, I).
 
 
 

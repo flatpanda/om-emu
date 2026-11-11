@@ -113,11 +113,11 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // the addresses src/fw/facts.mjs powerOff reads (fact 'power.off'); given for a body whose power-off is known to run so
 // (X). A body without it closes the session at the lever's off at once
 //
-// `rec_native`: REC_FILE's own task records S2's picture from the packet REC_IMAGE posts it, with the file's header
-// built by REC_IMAGE's header maker natively (src/lab/rec.mjs H-EXIFINIT, H-RECINIT, H-RECFILE, S-EXIFPRM, S-RECIMAGE,
-// S-JPEGENC; docs/hle-gaps.md 4.8.10), at the addresses and layouts src/fw/facts.mjs recFile reads (fact 'rec_file');
-// on E143 REC_IMAGE's own task posts the packet (H-RECSHARED, H-RECIMGPRO, H-RECIMAGE and S-RECREQ in S-RECIMAGE's
-// place, S-JPEGENC left with the encode alone; docs/hle-gaps.md 4.3.3);
+// `rec_native`: REC_FILE's own task records S2's picture from the packet REC_IMAGE's own task posts it, with the
+// file's header built by REC_IMAGE's header maker natively (src/lab/rec.mjs H-EXIFINIT, H-RECINIT, H-RECSHARED,
+// H-RECIMGPRO, H-RECFILE, H-RECIMAGE, S-EXIFPRM, S-RECREQ, S-JPEGENC with the encode alone; docs/hle-gaps.md 4.8.10,
+// 4.3.3, 4.3.5), at the addresses and layouts src/fw/facts.mjs recFile and recImage read (facts 'rec_file' and
+// 'rec_image'; recImage throws where REC_IMAGE's forms differ, so a body with REC_FILE's parts read has both);
 // given for a body whose S2 is known to record so (X). A body without it keeps S-RECFILE (src/lab/storage.mjs)
 //
 // `scpu_lle`: the sub-CPU's own firmware, which the lab can run on the STM32L4 machine in S-SCPUDEV's place (opt-in,
@@ -202,7 +202,8 @@ export const MODELS = {
     // the power manager started and the power-off run natively (src/lab/power.mjs; docs/hle-gaps.md 4.7.4), at the
     // addresses src/fw/facts.mjs powerOff reads (POWER_OFF_E143 there, with their evidence)
     power_native: true,
-    // REC_FILE natively (src/lab/rec.mjs), at the addresses src/fw/facts.mjs recFile reads (REC_FILE_E143 there)
+    // REC_FILE and REC_IMAGE natively (src/lab/rec.mjs), at the addresses src/fw/facts.mjs recFile and recImage read
+    // (REC_FILE_E143 and REC_IMAGE_E143 there)
     rec_native: true,
     // UI_OUT, the module of the camera's lamps and its operation sounds (src/lab/play.mjs H-UIOUTSTART; D unless
     // tagged): the boot calls its init 0x5014f4e9 after its checkpoint "2_9" (0x501e8f24..0x501e8f31), then starts the
@@ -544,7 +545,8 @@ export const MODELS = {
     // the power manager and the power-off natively, with E143's IO expanders (X: test_scpu's and test_scpum4's power
     // sessions; docs/hle-gaps.md 4.7.4)
     power_native: true,
-    // REC_FILE natively, at the addresses recFile reads (X: test_storage's S2 file, its Exif Model 'OM-1MarkII')
+    // REC_FILE and REC_IMAGE natively, at the addresses recFile and recImage read (X: test_storage's S2 file, its Exif
+    // Model 'OM-1MarkII', made in REC_IMAGE's task 28 since 2026-11-10, docs/hle-gaps.md 4.3.5)
     rec_native: true,
     // as E143's (D): the GIO init 0x50002a21 ends with 0x50002b5e (0x50002a2e), slots at 0xa32c1f74; the EDID state is
     // the word 0x62a67880 its getter 0x501d8647 reads. The hot-plug handler's work runs in the display init's HDMI task
@@ -598,7 +600,8 @@ export const MODELS = {
     // 0x50045807; X: a scan finds the expanders' task names only in a name list no code loads), so S-IOEXP does not
     // run (X: test_scpu's power session; docs/hle-gaps.md 4.7.4)
     power_native: true,
-    // REC_FILE natively, at the addresses recFile reads (X: test_storage's S2 file, its Exif Model 'OM-3')
+    // REC_FILE and REC_IMAGE natively, at the addresses recFile and recImage read (X: test_storage's S2 file, its Exif
+    // Model 'OM-3', made in REC_IMAGE's task 28 since 2026-11-10, docs/hle-gaps.md 4.3.5)
     rec_native: true,
     // as E146's (D): the GIO init 0x50002a11 ends with 0x50002b50 (0x50002a1e), slots at 0xa32c1c44; the EDID state
     // word 0x62a655e4 (its getter at 0x501e078a); the hot-plug work runs in the HDMI task 0x501e3eca

@@ -149,13 +149,21 @@ const rec = (k) => {
   } catch (e) { frame = 'error: ' + e.message.split('\\n')[0].slice(0, 120); }
   out.push([k, lab.state(), lab.state_names.get(lab.state()) ?? '?', s.camapp.status().card_images, frame, digest, values]);
 };
-s.idle_slice(lab.lab_time() + 1500e6); rec('start');
+// idle to lab time t in slices that end at each of the camera's timed events due before t: src/lab/camapp.mjs tick
+// posts them only at an idle slice's end, so one slice to t would post them as late as the step's end (X: E146's and
+// E147's TFT S2 then got END_RECVIEW at the end of its 1200 ms and composed 1.2 ms later, before the GUI's redraw,
+// its OSD planes blank; docs/hle-gaps.md 4.3.5)
+const idle = (t) => {
+  for (let due; (due = s.camapp.timed.find(([d]) => d > lab.lab_time())?.[0]) !== undefined && due < t;) s.idle_slice(due);
+  s.idle_slice(t);
+};
+idle(lab.lab_time() + 1500e6); rec('start');
 // the count probe's window: WINDOW frames (the composite's words) WINDOW_NS apart, each pixel's first value and whether
 // it held it through the window
 const window_ = () => {
   let w, h, val, stable;
   for (let k = 0; k < WINDOW; k++) {
-    if (k) s.idle_slice(lab.lab_time() + WINDOW_NS);
+    if (k) idle(lab.lab_time() + WINDOW_NS);
     const [fw, fh, raw] = s.frame('boundary', true), px = new Uint32Array(raw.buffer.slice(raw.byteOffset, raw.byteOffset + 4 * fw * fh));
     if (!k) { [w, h, val, stable] = [fw, fh, px, new Uint8Array(px.length).fill(1)]; continue; }
     if (fw !== w || fh !== h) throw new Error('the frame changed size');
@@ -173,7 +181,7 @@ const boxOf = (w, n, want) => {
   return box;
 };
 // a key pressed as a step of the path: 150 ms down, then 1200 ms of idle
-const press = (k) => { s.key(k, 'down'); s.camapp.pump(); s.idle_slice(lab.lab_time() + 150e6); s.key(k, 'up'); s.camapp.pump(); s.idle_slice(lab.lab_time() + 1200e6); };
+const press = (k) => { s.key(k, 'down'); s.camapp.pump(); idle(lab.lab_time() + 150e6); s.key(k, 'up'); s.camapp.pump(); idle(lab.lab_time() + 1200e6); };
 // PROBE_REDRAW's key, where the body has one: pressed until the screen is back to its frame and GUI state before the
 // first press, n times; redraw() then presses it n times and checks the GUI state came back
 const cycle = () => {
@@ -206,8 +214,8 @@ for (const k of JSON.parse(process.argv[3])) {
     };
     if (s.storage) card.shots = lab.call(q, { d0: 0 }, null, null, 2000000).d0 | 0;
     const keep = s.storage ? null : s.camapp.card_shots, a = window_();
-    set(PROBE_SHOTS); redraw(); s.idle_slice(lab.lab_time() + PROBE_NS); const b = window_();
-    set(keep); redraw(); s.idle_slice(lab.lab_time() + PROBE_NS); const c = window_();
+    set(PROBE_SHOTS); redraw(); idle(lab.lab_time() + PROBE_NS); const b = window_();
+    set(keep); redraw(); idle(lab.lab_time() + PROBE_NS); const c = window_();
     const count = (i) => a.stable[i] && b.stable[i] && a.val[i] !== b.val[i], n = a.val.length;
     probe = { count: boxOf(a.w, n, count), back: boxOf(a.w, n, (i) => count(i) && (!c.stable[i] || c.val[i] !== a.val[i])), redraw: turn ? turn.n : 0 };
   } catch (e) { probe = { error: e.message.split('\\n')[0].slice(0, 120) }; }

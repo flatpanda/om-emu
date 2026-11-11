@@ -2144,6 +2144,24 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    tried); the menu path to Format, read from the frames and checked by the start's command, not found by a rule in the
    menu's tables (the family's Menu_Viewer tables are not decoded in the lab); where the family returns after a Format
    on the camera (?).
+130. **S-MODACK's PC_PD_CMD_EXEC on E137 and E125** (2026-11-10, `src/fw/facts.mjs` objectNameId, fact `api.pc_pd`,
+   `src/lab/camapp.mjs` module_queues; corrects finding 99's rule). The target tables name no PC_PD_CMD_EXEC: E143's
+   (`0x606214a0`, 44 targets), E137's (`0x604de358`, 44) and E125's (`0x604f7d68`, 43) hold XTC_APP_EXEC, PLAY_EXEC,
+   TFT_EXEC, TAKE_EXEC, REC_EXEC_MAIN, FILECLBK_UEXEC, LENS_EXEC, ADJ_EXEC, TAKE_FUNC, ZOOM_EXEC, FCS_EXEC, PWR_EXEC,
+   DPST_APP, ADJ_SLF_EXEC, BC_EXEC, DISPLAY, AUD_EXEC, UI_OUT_EXEC, LENS_COMMAND, MOVE_MAIN, C3D and API_DUMMY at the
+   same targets (D: the words; the names X, from the object-name tables), so there is no entry to read: the queue is
+   a kernel object with a name, and the body's form is whether its object-name table, the `{char name[24], u16 id}`
+   records, holds that name. E137's (250 records from `0x6144108c`) and E125's (249 from `0x614385ac`) do not (X); the
+   port's place of E143's id word `0x60043362` there (E137 `0x60040eda`, E125 `0x6004119c`) is REC_EXEC_PROGRESS's
+   (0xd6) and FMEMEXEC's (0xdc) word. The rule now reads the queue by its name (objectNameId: the record whose name
+   field is the name, in a run of at least 100 records; refused where two hold it): 0xcf on E143, E146 and E147, 0xd6
+   on E144, E148 and E139, 0xdc on E134, each the queue the port's word read (X), and none on E137, E125 and the ten
+   others, where S-MODACK so no longer counts REC_EXEC_PROGRESS or FMEMEXEC as a module queue. No session changes by
+   it (I, from the paths): the API sender posts only to its table's queues, and the camera application's
+   synchronous-send stand-in returns E_OK to a queue without a running receiver whether S-MODACK names it or not; on
+   E143 the queue's 12 id-word reads are 9 synchronous sends, 2 posts and a receive at `0x5102b35f..0x5102ba1a`
+   (D; beside the C3D module's code, I; docs/hle-gaps.md 4.1.11). `bin/modelcheck.mjs` after the re-port: its 31 runs
+   pass (X).
 
 
 

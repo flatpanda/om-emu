@@ -4631,7 +4631,9 @@ there (it stays on the other bodies).
   happens without the opt-in, from S-MODACK's replies: 3 errlogs at PLAY, 8 after its return, 15 after a further
   pass; none in camapp 1. Not fixed here: the table's init belongs to the boot every session runs.
 - **Open.** The decode's units (kind 10, `0x9c200000`) and the callback's phases; the thumbnail (IFD1 empty); INFO's
-  histogram (above); the queue bind table; PLAY_IMAGE's and PLAY_SOUND's parts (not followed). On the other bodies the
+  histogram (above); the queue bind table; PLAY_IMAGE's and PLAY_SOUND's parts (not followed); the album / index
+  build behind the component's index and right / left (not read, ?: playOneFrameStart's Get_Album_Num `0x503dd27f`,
+  called at `0x50c500c5`, was not entered at PLAY in a run with one picture, X). On the other bodies the
   module stays stood in (finding 92's addresses), and the E118 family's files lack the firmware's Exif (finding 93).
 
 ### 4.9 HDMI and DisplayPort

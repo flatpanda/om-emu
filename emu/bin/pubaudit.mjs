@@ -55,6 +55,8 @@ const SHOW = 20;
 export const ALLOW = [
   { rule: 'size', path: '**/isa_vectors.json', max: 2 << 20,
     reason: 'the recorded ISA vectors: instruction encodings and register values, memory from a seeded generator (about 1.3 MB)' },
+  { rule: 'size', path: 'emu/src/fw/ports.mjs', max: 2 << 20,
+    reason: "bin/port.mjs's generated address tables of the ported bodies: addresses and facts (about 1.05 MB)" },
   { rule: 'firmware', path: 'artifacts/nd128/manifest.json', blob: 'aef7d3028a',
     reason: "the ND128 patch's preimage at its patch site (58 bytes of E143 code), as tools/om1_nd128.py records it" },
   { rule: 'binary', path: 'docs/img/om3-setup-menu.png', blob: '222dc7de78',

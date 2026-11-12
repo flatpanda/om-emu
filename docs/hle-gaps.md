@@ -26,6 +26,10 @@ from the module map (section 2.2). Every effort figure is a rough estimate of fo
   over an empty hot shoe (4.1.4, 4.1.6-4.1.8, 4.12.1); with `--cpu2 native` CPU 2 and its queue tasks (4.6.1, 4.6.2);
   with `control camapp 3` the HLS transactions, the VSC histogram and the imgpro unit `0x9c600000` (4.1.5, 4.2.1,
   4.3.1), with its play opt-in the play module (4.8.11); with the probe's `cam_fe` cam.c's second init (4.2.5).
+  Since 2026-11-11 (X): camapp 3's half-press shots end in STANDBY past phase 111 and a full shot waits in phase 106
+  for TAKE's capture (S-TAKERDY, 4.1.12); the histogram unit's bins are counted (4.2.7); the play opt-in's view is
+  decoded on the image library's pipeline block (S-IMGPIPE, 4.8.13); cam.c's request 6, the sensor's power-on, runs
+  under `cam_fe` as far as SSG1's command unit when a test makes it (S-TAKECAM keeps it in sessions, 4.2.6).
 - **In code:** the lab executes 287,101 of the main block's 5,186,071 instructions (5.54%), about 6.1% of the code a
   camera runs in normal use (section 2.2). The largest unrun blocks are playback (613k instructions), AF / lens / IS
   (505k), still capture (421k), the AV codec back end (411k), the sensor / ISP / live view (321k) and the TAKE module
@@ -146,8 +150,8 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **AV codec back end** (4.5) | 0 | none for HLE: seam S6 bypasses it | CPU 1; the codec engines; IRQs 303-306 | 416,471 / 411,438 (overlay segment 8, CPU 1) | ?: native needs register-level codec models, no documentation | native movie encode and playback below the HLS (I) |
 | **CPUs 1-3 and inter-core** (4.6) | S: K-OTHERCPU, K-BOOTSYNC, K-IPI, no start barrier; S-CPU2 (one post), S-CPU3, S-DISPFRAME on CPU 0; any other doorbell is an error | run CPUs 1-3 natively on one bus; per-core `0x8000` page, INTC bank n to core n, `+0x808/+0x80c` IRQ 324, `+0x810/+0x814` IRQ 325, `+0x800/+0x804` ISC IRQ 323, ticks 139..141. A53: "off" or ISC node 4 | a machine refactor (per-core CPU state), a per-core kernel lab, flash reads for CPU 2's loader and CPU 3's boot jobs, ROADMAP phases 3-4 | 5,422 keyed; 441,542 reachable only from CPU 1-3 tasks (a lower bound) | 5-7 weeks for the cores | the histogram, a native DISP_FRAME, cross-core owners (AUD_MAIN, AVM) can start; three stand-ins and four kernel stand-ins retire |
 | **SCPU, power, clock, on-board sensors, persistence** (4.7) | N: PER_SCPU, its start and its transactions, over the link to S-SCPUDEV, the sub-CPU's transport-level model (since 2026-10-23: `0x85`, `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1; S-SIO2, H-SCPUSTART); S: the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / S-NVRAM (the players' default since 2026-11-08); N: the ACC module init, ACC_MAIN, PER_SLOPE, the level gauge and Level Adjust with the accelerometer at its sample cache (since 2026-10-23, 4.7.3; H-ACCINIT, S-ACCREG, S-ACCSAMPLE, H-SLOPEINIT); PER_ROTATE with `--rotate on` (since 2026-11-08, 4.7.3; H-ROTINIT) | the accelerometer at the PER_SIO transfer and its data-ready pin (ACC_SENS_MAIN native); PER_ROTATE by default; S-NVRAM's NAND seam as the default | lab time; the UI_IN, SCPU and PER_SIO inits, the GIO init for the data-ready pin; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, rotation by default, eye sensor (Level Adjust, the level gauge and, with `--rotate on`, the orientation and the gauge's portrait layout in, 4.7.3) |
-| **Card and file system** (4.8) | N on E143 since 2026-10-23 (4.8.2): the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, the format, dosfat, DCF and the shots / movie-time counts natively on an 8 GiB SDHC card at the SD command layer (S-SDCARD, S-SDHOST, S-FSNAND, S-ALBM, H-FILEINIT, H-FILECLBK); the picture's file at S2 through the file module (S-RECFILE; since 2026-11-08 REC_FILE's task natively from REC_IMAGE's packet with the firmware's own header on E143, E146 and E147, 4.8.10: H-RECFILE, S-RECIMAGE, S-EXIFPRM, S-JPEGENC; on E143 since 2026-11-10 REC_IMAGE's own task, 4.3.3: H-RECIMAGE, S-RECREQ in S-RECIMAGE's place, S-JPEGENC the encode only; on E146 and E147 too since the same day, 4.3.5); since 2026-10-24 (4.8.3) Card Formatting from the menu (S-MDACTRL) and the card's removal and insertion (S-MEDIA), the application's media control native; S: S-CARD's insertion requests, its HLS mount state and image list; every other body now runs the same file system (4.8.4, 4.8.8; `emu/src/fw/models.mjs` card_fs), the HLS side on E146 (4.8.7) and on the E118 family (S-MDAEND, `docs/model-survey.md` findings 124 to 129) | the SD host's registers and interrupts with a card model (seam A), the rule-found seam on the other bodies, REC_IMAGE and the image pipeline (the thumbnail, the shooting values in Exif) | the HLS media layer (which sends the insertion), REC_MAIN / REC_FILE (the picture's file), TAKE_MOV's movie take (the movie module's set-up, whose frame rate the movie time query reads: 0 before a take on the camera too), IRQs anywhere for the SD host | 115,103 / 108,887 (17k of it self-test and debug) | 1-2 weeks left: REC_FILE's DCF steps, both slots, exFAT, the other bodies | a card that fills, real files in DCIM, both slots |
-| **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW; on E143 under `control camapp 3` behind an opt-in the play module's tasks natively, its view decoded on the model of the image library's pipeline block and JPEG codec, a pre-reduced one stood in (H-PLAYSTART, S-IMGPIPE, S-PLAYDEC, A-JPEGDHT-1; since 2026-11-10, 4.8.11, 4.8.13) | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
+| **Card and file system** (4.8) | N on E143 since 2026-10-23 (4.8.2): the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, the format, dosfat, DCF and the shots / movie-time counts natively on an 8 GiB SDHC card at the SD command layer (S-SDCARD, S-SDHOST, S-FSNAND, S-ALBM, H-FILEINIT, H-FILECLBK); the picture's file at S2 through the file module (S-RECFILE; since 2026-11-08 REC_FILE's task natively from REC_IMAGE's packet with the firmware's own header on E143, E146 and E147, 4.8.10: H-RECFILE, S-RECIMAGE, S-EXIFPRM, S-JPEGENC; on E143 since 2026-11-10 REC_IMAGE's own task, 4.3.3: H-RECIMAGE, S-RECREQ in S-RECIMAGE's place, S-JPEGENC the encode only; on E146 and E147 too since the same day, 4.3.5; S-JPEGENC the run and Jpeg_Result on the three since 2026-11-11, 4.3.9); since 2026-10-24 (4.8.3) Card Formatting from the menu (S-MDACTRL) and the card's removal and insertion (S-MEDIA), the application's media control native; S: S-CARD's insertion requests, its HLS mount state and image list; every other body now runs the same file system (4.8.4, 4.8.8; `emu/src/fw/models.mjs` card_fs), the HLS side on E146 (4.8.7) and on the E118 family (S-MDAEND, `docs/model-survey.md` findings 124 to 129), since 2026-11-11 on E147, E148 and eight E144-family bodies (findings 149 to 152); two slots on E143 and E146, the second empty by default (2026-11-11, 4.8.12) | the SD host's registers and interrupts with a card model (seam A), the rule-found seam on the other bodies, REC_IMAGE and the image pipeline (the thumbnail, the shooting values in Exif) | the HLS media layer (which sends the insertion), REC_MAIN / REC_FILE (the picture's file), TAKE_MOV's movie take (the movie module's set-up, whose frame rate the movie time query reads: 0 before a take on the camera too), IRQs anywhere for the SD host | 115,103 / 108,887 (17k of it self-test and debug) | 1-2 weeks left: REC_FILE's DCF steps, both slots, exFAT, the other bodies | a card that fills, real files in DCIM, both slots |
+| **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW; on E143 under `control camapp 3` behind an opt-in the play module's tasks natively, its view decoded on the model of the image library's pipeline block and JPEG codec, a pre-reduced one stood in (H-PLAYSTART, S-IMGPIPE, S-PLAYDEC, A-JPEGDHT-1; since 2026-11-10, 4.8.11, 4.8.13); since 2026-11-11 Delete's eraseCurrent by the firmware's own attribute and object delete (H-OBJDEL, `docs/model-survey.md` findings 137 to 140) on the bodies of `emu/test/test_erase.mjs` ERASE_NATIVE | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
 | **HDMI and DisplayPort** (4.9) | N with `--hdmi on` (since 2026-10-23, E143, E146, E147): a plug runs the hot-plug pin's IRQ 109, the HDMI init, two E-DDC reads with IRQ 239, the EDID's checks and parse and the connect report to UI_IN natively (H-GIOSLOTS, S-HDMISINK); off by default. On E143 since 2026-11-08 the application's TRA 588 is taken by S-OUTDEV, and CapIod's open, the transmitter's open (PHY, SCDC, update) and VSC channel 0 at 1080p59.94 run natively; channel 0 composes its window, nothing drawn on it; the unplug runs down to the disconnect report (A-HDMI-1) (X) | TX byte registers at `0x99c07000` (HPD / RxSense byte 8, DDC `0xa80..0xa83`, the buffer `0xc00`, IRQ 239, the open's words), the PHY words at `0x99c08000` and the GIO pin 77 (`0x9b881540`, IRQ 109), all modelled; VSC channel 0 | the application's notification of the open (CmpCst_Function's 494, the TRA reply), the GUI's planes on channel 0, the return to the TFT at an unplug | about 11k (3.3k plus the TX / DP driver's 7.7k) | 1 week left (the notification and the GUI's HDMI layout) | the HDMI output a TV shows |
 | **USB** (4.10) | 0 on E143 | the event level first (EV_USB_CONNECTED 8, EV_USB_RXDETECT `0x040d00d2`, the select screen); later a DWC3-family device at `0x9a600000` (IRQ 223) | SCPU (PD, power source), ADC flag `0xbf`, the PC_* tasks, storage for MSC | 121,861 / 117,704 | 1-2 weeks events; 4-8 weeks data path | the USB select screen, charging state; later MSC, MTP, PTP |
 | **PC connection over PTP (TPC)** (4.10) | 0 | ? (the bulk of the USB data path) | a USB or Wi-Fi transport, storage | about 52.6k / about 52k (21.4k of it filed under factory code) | ? | tethering, the PTP firmware-update path |
@@ -1035,7 +1039,10 @@ shot gets none. The two sessions differ: 4.2.3's runs TAKE natively (`--take pro
     result its argument decides (d0, kept in d3; 0 here, X). With 1 it builds a response object (`0x50ab7316`) and then
     793 too (`0x50bc7ad4`, D). With 0 it goes to `0x50bc7aec`: a response object (`0x50ab705f`, with that result)
     handed to the object at +2848 (its vt[1], D), and no 793. The API returns the request's token `0xf0070000`, so this
-    stop takes the second path. That TAKE's reply to command 7 is what would bring 793 is I (X in 4.1.12: through
+    stop takes the second path. (Since the second slot is empty by default, 4.8.12, the token is `0xf0060000`, X:
+    secondShotSession's STOP_TOKEN at the round's merge; I: camapp 3's media manager no longer sends drive 1's mount
+    through the API sender at the start.)
+    That TAKE's reply to command 7 is what would bring 793 is I (X in 4.1.12: through
     `0x50bca801`). The other builders of 793 (`0x50bca801`, `0x50bcb5bc`, `0x50cd42fc`, D) do not run.
   - The sequence moves to phase 111. Phase 111's dispatcher `0x50c611d5` (pointer to member at `0x603644e4`; table
     run-time `0x60e9aeb0`, 46 ids in 282..1247, read in the lab) takes 793, 791, 789, 786 and 794. It does not take
@@ -1351,7 +1358,8 @@ between them; a full shot goes on to phase 106 and waits there for TAKE's captur
     retirement (4.1.8's list). Until then a full shot under camapp 3 leaves the keys untaken.
   - With TAKE native: EXP_MOVIE's frame events (4.2.5), then RdyTrig2Wait's command 7 and RdyAbort's `0x501`
     (4.1.10).
-  - The histogram's bins with IMG1 on (the stop of an S1 after playback of a card with pictures).
+  - The histogram's bins with IMG1 on (the stop of an S1 after playback of a card with pictures; counted since
+    4.2.7, the second end above).
   - S-RELSEQ's callbacks beside the sequence's own under camapp 3 (above); the take-ready's time (I) and what
     `0x506e6475` and the word `0x62a4cee0` are; the kinds other than 0; RdyFcsRdy1's way from the stop to its
     reply; who writes 3 to module 9; what the READY state's release guard `0x50c8d721` tests; where a key is
@@ -2249,7 +2257,8 @@ unchanged (X: golden identical). The registers and formulas are in `docs/om1-vsc
   panels of bars in GUI layer 1 itself (no drawHistogram send, so the same with `--cpu2 native`): bars of 11 pixels
   every 10 from x 555, the panels' bottom rows 129, 215, 301 and 387, a bar `ceil(bin * 78 / 32)` rows high, in
   the palette's white, red, green and blue. What the bins are counted from: the plane's bytes as they are.
-  S-PLAYDEC writes no pixel (4.8.11), so the plane holds the imgpro fill's Y 11, Cb and Cr 128, and all four
+  S-PLAYDEC writes no pixel (4.8.11; still so for this view since 4.8.13, whose decode has a pre-reduction S-IMGPIPE
+  refuses), so the plane holds the imgpro fill's Y 11, Cb and Cr 128, and all four
   histograms are bin 1 at the clip. The test writes a pattern into the plane at the first start, and the four
   histograms and the bars are the pattern's. INFO no longer stops; the detail view's frame is still refused, for
   the highlight unit's area alone: HIAREA1-3 (`0x48c..0x494`, the window), written at PLAY by `0x501e1c14`,
@@ -2477,7 +2486,8 @@ traRoutingSession, below).
   - Followed in 4.8.11 (2026-11-10, X; the writer D): with the play module's tasks native (an opt-in under camapp 3)
     PLAY_LOAD's load sets the record's +12 (`0x518b53b7`, the writer read there), and once the picture's stream carries
     the firmware's own Huffman tables (A-JPEGDHT-1) the getter answers 0 and PLAY shows the picture's view, its decode
-    stood in at the image library (S-PLAYDEC). Without the opt-in this stop is unchanged.
+    stood in at the image library (S-PLAYDEC). Without the opt-in this stop is unchanged. (Since 2026-11-11 the view
+    is decoded on the pipeline block's model, S-IMGPIPE, and S-PLAYDEC keeps a pre-reduced view alone, 4.8.13.)
 - **No key after a shot (stop 1): TAKE does not finish the take-ready (X, D).** Before the menu CapThr's state word
   `0x60362b38` reads `0x02010202` (S-TAKEOVER's static value, 4.1.7), so S1 (826) is refused in phase 101 by the
   sequence parts' guard `0x50bcdef7` and goes no further, as in 4.1.7. The menu's close restarts the through image
@@ -2490,7 +2500,9 @@ traRoutingSession, below).
   module event `0x04080032` through Com_EvSenderManager (4.1.10), and TAKE does not run (TAKE_EXEC is S-MODACK's, X:
   no 794 is built); the menu's shot is the session's first take request. The releases (828, 827) are taken in
   phase 102 and leave
-  the sequence there, with no take API call (X). The key path then refuses: the application's key handler (task 165)
+  the sequence there, with no take API call (X; after S2 only: S1 released alone goes to phase 111 and back to
+  STANDBY, and since 2026-11-11 S-TAKERDY posts TAKE's event, so a shot gets 794 and phase 103 and a full shot waits
+  in phase 106, 4.1.12). The key path then refuses: the application's key handler (task 165)
   asks isCtrlReleaseEnable (`0x50ab5c04`), which answers 1 for the phases 100 and 101 and otherwise logs
   "isCtrlReleaseEnable UNRESPONSIVE(Seq=%d)" (`0x50ab5c26`) and answers 0, so MENU, OK and PLAY send no GUI event (X:
   for MENU after the shot it reads the phase three times, at `0x50ab5c09`, `0x50ab5c12` and `0x50ab5c23`, and logs
@@ -2508,11 +2520,13 @@ traRoutingSession, below).
   (CapThr's top byte 2 before it, 1 after): PLAY shows ID_ST_NO_PICTURE with three pictures on the card, the header
   getter's code 6152, the capability's state 4; right (one fill, of `0x9a43e000`) and left are taken and PLAY returns;
   a pass records the fourth picture with the sequence in phase 102, and MENU's EV_PRESS_MENU_KEY sets no GUI event,
-  isCtrlReleaseEnable refusing it in phase 102. The control (S-MODACK's old way for PLAY_EXEC) blocks at right and the
+  isCtrlReleaseEnable refusing it in phase 102 (since 4.1.12 and 4.2.7 that pass's shot waits in phase 106, where
+  MENU sets no GUI event either, X there). The control (S-MODACK's old way for PLAY_EXEC) blocks at right and the
   guard names queue 63 and task 57. In both of its sessions the native lens's two queues are out of S-MODACK's set,
   LENS_MAIN and LENS_COMMAND waiting on them.
 - **Open.** TAKE's take-ready and capture under camapp 3 (stop 1, with 4.1.8's list; with TAKE native the second
-  shot, 4.1.10); the play module (stop 2: its decode and INFO's histogram, 4.8.11); posts
+  shot, 4.1.10; the take-ready since 2026-11-11, 4.1.12); the play module (stop 2: its decode and INFO's histogram,
+  4.8.11; read since, 4.8.13 and 4.2.7); posts
   to module queues outside the API sender (TAKE_EXEC's command 5; S-MODPOST since 4.1.11); E132's old LOGGER_MAIN stop
   (not reproduced).
 
@@ -2809,7 +2823,8 @@ traRoutingSession, below).
     So the 25 comes from the parameter block, not from a packet's Sv. This corrects 4.3.3's and 4.8.10's "from the
     packet's Sv (+294), which S-RECREQ leaves 0": the packet's +294 is written from +38174 on that path, not read.
 - **The lab (`emu/src/lab/rec.mjs`).** All three now run H-RECSHARED, H-RECIMGPRO, H-RECIMAGE and S-RECREQ.
-  S-EXIFPRM writes TAKE's six fields at the rule's offsets, and S-JPEGENC does the encode only. S-RECIMAGE and its
+  S-EXIFPRM writes TAKE's six fields at the rule's offsets, and S-JPEGENC does the encode only (since 2026-11-11 the
+  parameter set's call, the run and Jpeg_Result at the rule's points, as on E143, 4.3.9). S-RECIMAGE and its
   path are removed: no body uses them. On E146 and E147 S-RECREQ posts in REC_RAWNR's place, so REC_RAWNR's copy and
   its check do not run. The four halfwords stay 0, and neither REC_IMAGE nor REC_FILE reads them on this path (X: log
   watchpoints on each task's own copy of +250..+261 see only OptView, +250).
@@ -3192,7 +3207,9 @@ mode follows the lever in camapp 1 as it does in camapp 3.
   whatever the focus mode (review, D); S-RELSEQ has never posted a START_READY in either mode, and whether the camera's
   flag lets it through is not read (?).
 - **The same, measured (X).** Under camapp 3 after a menu pass (4.1.10) S1 enters READY (phase 102) and the sender
-  runs: at SW_2 it builds nothing, at SW_1 one 1323. With TAKE native (`--take probe --cpu2 native`) S1 at SW_2 ends
+  runs: at SW_2 it builds nothing, at SW_1 one 1323 (since S-TAKERDY's merge, 4.1.12, S1 down then goes on to phase
+  103 in the same step: X, fnLeverSequenceSession; 102 with S-TAKERDY off).
+  With TAKE native (`--take probe --cpu2 native`) S1 at SW_2 ends
   READY in its own step: phase 103, the take status's word 0 `0x00100007` (STANDBY's 1, READY's 2, READY_FINISH's 4),
   isFocus 0, and neither 1323 nor 1321 built; at SW_1 the sequence builds 1323 and waits in 102 with the word
   `0x00100003` (the AF does not end in the lab). So READY_FINISH is the take-ready's end, not the AF lock's state:
@@ -3243,7 +3260,8 @@ mode follows the lever in camapp 1 as it does in camapp 3.
   AF OSD, the lens where it was set, and S2's picture; the lever refused while S1 is held and taken after the release;
   S-AF with MODE_HALF_RELEASE_AF_SAF 0; getShutterSpeedLimit's gate call at M) and fnLeverSequenceSession (4 checks:
   camapp 3 at each lever position, the store, the property and the lever's transactions, and its own StartFocus sender
-  building no TRA 1323 at SW_2 and one at SW_1), registered in `emu/bin/test.mjs`. `emu/test/test_camapp.mjs`
+  building no TRA 1323 at SW_2 and one at SW_1; S1 down's phase 103 since S-TAKERDY, 4.1.12), registered in
+  `emu/bin/test.mjs`. `emu/test/test_camapp.mjs`
   camapp3FramesSession (13 checks, 12 before) rewrites 4.3.7's AF pins: the two camapps show the same frame at SW_1,
   MF at SW_2 (1,655 pixels against the start, the two frames equal, the gate 1 at both changes, S-SEQSTANDBY listed in
   camapp 1 alone) and the start's frame again at SW_1; control: with the stand-in's standby taken away camapp 1 is
@@ -3497,7 +3515,10 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   PLAY no longer stops (4.1.9). 4.2.4 counted GUI states only: switch-scp's EVF frames were refused there already
   (three PLANC_UNOBSERVED in each EVF composite, below).
 - **After this round** 16 of the 19 scenarios run to their end under camapp 3 and 3 stop (power's first lab,
-  power-replay, tokens-3b):
+  power-replay, tokens-3b). These counts and the table were measured on the c3-default branch, before the round's
+  merge, and are not measured again here: since the merge S-TAKERDY takes a shot under camapp 3 past phase 111 and
+  leaves a full shot waiting in phase 106 (4.1.12), the second slot is empty by default (4.8.12) and the histogram's
+  bins are counted (4.2.7).
 
   | Scenario | Under camapp 3 against camapp 1 | First cause | Status |
   |---|---|---|---|
@@ -3616,7 +3637,7 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
     panel 0) and camapp 3's keeps panel 10; the multi-selector's press and its up and right reach the GUI in
     camapp 1 (`0xf835`, `0xf83c`, `0xf858`, `0x9005`, `0xf85b`, `0x900b`) and not in camapp 3. Not followed here:
     the shot under camapp 3 (S1 is refused by the sequence parts' guard before a menu pass, 4.3.2, 4.1.7) and MF
-    (4.3.7) are the tracks take-111 and af-gate.
+    (4.3.7) are the tracks take-111 and af-gate (4.1.12, 4.3.8).
 - **Group 4, the menu's entry takes lab time (tokens, play-perf, pace-wall): no defect.** OPEN (the GUI's menu
   request, sent by the lab) leaves the GUI in `0x0b01` (ID_ST_MENU_ENTRY): the GUI task sends TRA 994 four times,
   694, 991 and 593 and sleeps; 10 ms later it sends DISPLAY cmd 4 and 5, 23 ms after that cmd 17, and `0x0b02` is
@@ -3627,7 +3648,8 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   the menu's request and the next one that lets lab time pass.
 - **Group 5, the first 0.3 s after the start (playback, inputs).** The lab's start ends when the GUI shows its first
   screen (2.855 s); the application's start goes on (the date prompt's panel 324 gives way to panel 10 at the first
-  idle in both camapps; camapp 3's media manager ends its second slot's mount at 3.06 s, 4.3.7). playback: PLAY's
+  idle in both camapps; camapp 3's media manager ends its second slot's mount at 3.06 s, 4.3.7; with the second slot
+  empty by default since 4.8.12 port 1 gets no command). playback: PLAY's
   step ends before the GUI leaves the shooting screen and No Picture is there at the next call (4.1.9 has the
   order). inputs: the GUI answers the application's touch forward (event 35) with 94 for the Wi-Fi icon at
   (90, 30) in camapp 1, and the application opens Wi-Fi Connection; under camapp 3 the tap, which ends 0.1 s after
@@ -5706,7 +5728,9 @@ on both ends and what the sender waits for, and S-SCPUDEV takes the write (`emu/
   since 2026-11-10, `docs/model-survey.md` findings 121 and 104; on E143 under camapp 3's play opt-in the play module
   reads it, 4.8.11.)
 - **Playback:** with S-PLAYSEQ, S-PLAYCOMP and S-PLAYVIEW kept, real files need a JPEG decoder at the codec seam (4.3's
-  C2 `decode_jpeg`, `play_img.c`): 2-4 weeks on top of storage. A native path needs the HLS play components (310k),
+  C2 `decode_jpeg`, `play_img.c`): 2-4 weeks on top of storage (on E143 under camapp 3's play opt-in the play
+  module's own decode runs on the pipeline block's model since 2026-11-11, 4.8.13).
+  A native path needs the HLS play components (310k),
   segment 9's PLAY_* / MOVP / MOVE, the AV back end for movies and the CIC engine for RAW: a block of its own.
 - **First step:** done (2026-10-23, 4.8.2): the bring-up and the mount ran natively, with the seam one layer below the
   one recommended here (the SD command layer, not the sdmem request: sdmem's own card state, which the mount fills and
@@ -5728,7 +5752,10 @@ on both ends and what the sender waits for, and S-SCPUDEV takes the write (`emu/
   Then on E146 and E147 too, at the addresses and layouts a rule reads; the E144 family's REC surveyed (4.8.10).
   Round 10 (2026-11-11, 4.8.12): the second card slot on E143 and E146: two slots, the second empty by default, each
   slot's card-detect pin as the SD driver reads it, a second card mounted by the firmware from its own port, and S2's
-  picture on the card the save settings name.
+  picture on the card the save settings name. The same round: the play module's view decoded on the pipeline block's
+  model under camapp 3's play opt-in (4.8.13); the HLS side on E147, E148 and eight E144-family bodies, REC_FILE's
+  task on E130, E133, E129 and the E118 family, and Delete's eraseCurrent natively (`docs/model-survey.md` findings
+  131 to 154).
 
 #### 4.8.1 The sdmem request contract (D unless tagged)
 
@@ -6345,8 +6372,10 @@ steps are now read and run, the lab handing over only what the capture pipeline 
   has none (its view and still information are then those of no capture).
 - **Open:** the recorder's own run in REC_FILE's task (the context the capture pipeline fills: on E143 since round 9,
   4.8.10); the older 13 bodies'
-  recording modules (their builders of the same codes, not read; S-RECFILE writes through fileif there); RAW and
-  RAW + JPEG files (types 0 / 3 / 9, the fnode's second file at +60..+72); the second slot.
+  recording modules (their builders of the same codes, not read; S-RECFILE writes through fileif there; read since:
+  `docs/model-survey.md` findings 118 to 123, 131 to 136 and 143 to 148, E132 and E145 left, finding 136); RAW and
+  RAW + JPEG files (types 0 / 3 / 9, the fnode's second file at +60..+72); the second slot (on E143 and E146 since
+  2026-11-11, 4.8.12).
 
 #### 4.8.10 REC_FILE's task natively, round 9 (2026-11-08; D unless tagged, addresses E143's)
 
@@ -6415,7 +6444,8 @@ there (it stays on the other bodies).
   sets `Size` (I). Since 2026-11-10 (4.3.3) REC_IMAGE's own task runs this on E143 (S-RECREQ in S-RECIMAGE's place)
   and the header clear's fill runs natively on the imgpro unit, so S-JPEGENC keeps the encode only there; on E146 and
   E147 it still does the fill too (a kind-14 request whose wait cannot end in S-RECIMAGE's lab call, 4.3.1). Since
-  the same day REC_IMAGE's task runs it on E146 and E147 too (4.3.5), S-RECIMAGE retired.
+  the same day REC_IMAGE's task runs it on E146 and E147 too (4.3.5), S-RECIMAGE retired. Since 2026-11-11 S-JPEGENC
+  keeps the parameter set's call skipped, the run and Jpeg_Result on the three, the rest of the encode native (4.3.9).
 - **What it does (X, E143):** S2 gives `C:\DCIM\100OMSYS\P1010001.JPG` (41984 bytes of the firmware's header, then the
   lab's stream; 73,410 bytes with the live view); with the clock set first through the firmware's clock setting
   (`0x5012b7a7`, 2026-11-08 12:34:56) `PB080001.JPG`, whose Exif (read by `emu/refs/exif.mjs` and exiftool) has Make
@@ -6929,7 +6959,7 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
 - **The frame against camapp 1's (X, playDecodeSession).** Two pictures of two scenes (S-SCENE's static and chart
   presets), taken in camapp 1 with the live view, and under camapp 3 the same two from the same scene views and a
   third of the static one (camapp 3's live view stops at the histogram, 4.2.4, so the test gives each picture its
-  view). Differences, each with its cause:
+  view; the bins are counted since 4.2.7). Differences, each with its cause:
   - *The picture.* Mean luma difference 1.47 (static) and 5.29 (chart); against the other picture 79.8 and 77.0.
     Camapp 1 shows the scene's frame, which S-PLAYVIEW renders again and the VSC scales from 1620 x 1080; camapp 3
     shows the file: S-JPEGENC's stream keeps each 8 x 8 block's mean only, then the prefilter and the resizer's map
@@ -6960,7 +6990,10 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
 - **Stand-ins under the opt-in (X).** Over PLAY, right and left no S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW or S-PLAYDEC
   fires; the first three install no hook, S-PLAYDEC's observe the issue and the wait and pass a request without a
   pre-reduction to the firmware. S-ALBM answers once, at the mount, as in every session with the file
-  system. Lifted, the storage bring-up stops at once: the album manager's init starts a task (entry `0x508b7e91`) the
+  system. (Since the second slot is empty by default, 4.8.12, camapp 3's media manager no longer mounts drive 1,
+  whose mount's init that answer was, so S-ALBM answers nothing after the bring-up there: 0 in playDecodeSession, X
+  at the round's merge.)
+  Lifted, the storage bring-up stops at once: the album manager's init starts a task (entry `0x508b7e91`) the
   lab's kernel does not allow, before the application starts. It stays: no still path needs it.
 - **Tests (X).** `emu/test/test_imgpipe.mjs`: the decoder against refs/jpeg.mjs 6 of 6 (the lab's stream sample for
   sample; streams with AC coefficients in three samplings within 1 level), the model on a bare machine 30 of 30.
@@ -6969,7 +7002,8 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
   `+0xc00`, the resizer's program and filter (A-IMGPIPE-2); the units' time (A-IMGPIPE-1); the codec's own registers
   beyond the driver's words, and its encode (another track); the request's callback phases 21, 22, 15 and 38; the
   second request for a destination under 1/7 of the source; the index view, movies and the album manager; INFO's
-  histogram (4.8.11); the other bodies.
+  histogram (4.8.11; its bins counted since 4.2.7, from the fill while this view's pixels are S-PLAYDEC's); the other
+  bodies.
 
 ### 4.9 HDMI and DisplayPort
 

@@ -279,7 +279,9 @@ export class Player {
     // host's (env.card, OM_EMU_CARD), else one in memory for the player's life
     this.env = STORAGE && !env.card ? { ...env, card: memoryCard() } : env;
     // the second slot (a body whose second slot the lab models): the host's card (env.card2, OM_EMU_CARD2), else
-    // empty until a card input puts a card in, which then stays for the player's life
+    // empty until a card input puts a card in, which then stays for the player's life; a host's second card on a
+    // body whose second slot the lab does not model is refused, not left out
+    if (env.card2 && !STORAGE?.slots) throw new ValueError(`a second card (OM_EMU_CARD2, OM_EMU_CARD2_SIZE): ${MODEL}'s second card slot is not modelled (src/fw/models.mjs card_fs.second_slot)`);
     if (STORAGE?.slots && !this.env.card2) this.env = { ...this.env, card2: memorySlot() };
     this.nvram_record = null;        // S-NVRAM: what each session started from (session.json's nvram, nvram_use)
     if (env.nvram) this.nvram_use(env.nvram);

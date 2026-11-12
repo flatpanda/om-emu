@@ -837,7 +837,8 @@ loads first) is unknown.
 
 Approach: start at the main block's reset path, let each unmapped MMIO access fault (fault 2), and add a stub or model
 for that device only with code evidence, as for the panel-side stub (`docs/om1-vsc-spec.md` §9). Two constant clusters
-that look like device regions are not roles to model: `0x9a000000`'s constants are AVFW return codes, and
+that look like device regions are not roles to model: `0x9a000000`'s constants are AVFW return codes (but the boot
+also programs an address-decode error monitor there, hle-gaps.md 4.6.3), and
 `0x9c700000` is touched only by LLF bus-arbiter and DRAM bus-measurement debug code (hle-gaps.md §9 items 5, 6). The
 interrupts, the timer block and the lab clock exist (M9); a full boot also needs acceptance anywhere, the display tasks
 as real tasks and time mode by default (the M9 follow-ups, architecture phase 4).

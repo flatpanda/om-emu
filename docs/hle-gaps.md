@@ -3899,7 +3899,7 @@ Since 2026-10-29 the native lens is E146's (OM-1 II) and E147's (OM-3) default t
      zero-padded after entry 0, as the TG-7's is, X); no lab input asks for them. What a listener hears at S1 is
      therefore the lab's beep, not the camera's: the OM-1's own sounds are not in the update.
   4. *The driver* (`--audio auto` or `on`, E143; `emu/src/lab/audiohw.mjs`, `emu/src/dev/audio.mjs`,
-     `emu/src/lab/wm8946.mjs`). AUD_MAIN (task 0x52, entry `0x50a62a05`) runs as USTART2 starts it (`0x501e950b`;
+     `emu/src/lab/wm8946.mjs`). AUD_MAIN (task 0x52, entry `0x50a62a05`) runs as USTART3 starts it (`0x501e950b`;
      H-AUDSTART: act_tsk, its stage-6 wait answered by the stage bit), S-AUDCPU2 answers its CPU 2 starts of AUD_WAKEUP
      0x2017 and AUD_LEVEL_MONITOR 0x200e and posts AUD_WAKEUP's reply (`0x50035afd(0, 0x60a83d95, 0)`, flag 0xf9), and
      its driver init attaches IRQ 43 and 45 and starts AUD_COPY_DATA 0x51 and AUD_WATCH_DOG 0x07 itself; S-WM8946 serves
@@ -4278,6 +4278,308 @@ runs the same instructions (the cost bullet). Round 1's open item 1 is corrected
   the session's MMIO record now holds the machine's trace hook while CPU 2 runs): 1-2 h. (5) The release, the boot
   ring and the start bits need CPU 0's reset path and CPUs 1 and 3 (above). (6) The flash DMA `0x98d00200` would be
   needed only for a cold boot's loader, which the lab does not run (I).
+
+#### 4.6.3 The start tasks and their phases (2026-11-11; D unless tagged, addresses E143's)
+
+4.8.11 found that none of the conditions USTART4 and USTART5 wait for is met in the lab. This section maps every start
+task: what each waits for, what it calls and starts and in what order, who sets each condition, and which of the lab's
+steps stands for which part. A probe then runs each start task natively, as far as it goes (`emu/bin/ustart.mjs`,
+`emu/test/test_ustart.mjs`; off by default, no session runs it). One order the map showed wrong is fixed: the event
+broker's init now runs before the HighLevel steps (below); the default sessions change in instruction counts only.
+
+- **The chain.** The kernel's static task table names seven start tasks on CPU 0. The docs' names are the ones the
+  firmware logs at each start; the task name table's are in brackets.
+  - BOOT_CPU0 (task 1, `0x5002cca5`, priority 1) is the init task. It starts USTART_L and then runs two functions in
+    its own context: stage 0 (`0x50023eca`, marks `0_`) and stage 1 (`0x500248b4`, called at `0x50024172`, print
+    "Usr1", marks `1_`). Stage 1 ends by starting USTART2 and calling OlyTaSE (`0x5002c701`), which for the four init
+    tasks is `chg_pri(70)` and the idle loop `0x5002c756`.
+  - USTART_L (USRSTART_LOAD, task `0x2b`, `0x5002417a`, marks `L_`), started at `0x5002cd98`.
+  - USR_FAST_APP (task `0x55`, `0x501e673b`, priority 36, marks "MIS" / "MIE"), started by stage 1 at `0x50024c7a`.
+  - USTART2 (USRSTART2, `0x28`, `0x501e8e84`), USTART3 (USRSTART3, `0x2a`, `0x501e94a5`), USTART4 (USRSTART4, `0x29`,
+    `0x501e9d54`) and USTART5 (USRSTART5, `0x27`, `0x501e9e94`), all priority 55. Each prints "UsrN", runs its steps
+    and ends by starting the next (`0x50024d9b`, `0x501e9393`, `0x501e9d1c`, `0x501e9e5c`), printing "PrN" and
+    calling OlyTaSE, which for any other task is ext_tsk. So they run one after another, never two at once.
+  - Beside them run the loaders USTART_L2 (CPU 2, `0x2013`, `0x50024572`, marks `N_`; 4.6.1) and USTART_L3 (CPU 3,
+    `0x300e`, `0x5002440b`, marks `M_`), started by their cores' init tasks.
+  - Two more start functions are no tasks: "UsrA" (`0x501e93cb`, called from `0x50420349` with a mode word; for one
+    mode it starts ADJSLF after a wait for phase 9) and `0x501ea75d` / `0x501ea792`, which start (OlyTaSt) and end
+    (OlyTaSp) ASH_REC_SHELL and FILEISCAM on CPU 1, called from `0x5003be41` and `0x5003bf0c` beside the A53's start.
+
+  The four USTART tasks make 28, 47, 3 and 56 direct OlyTaSt calls (the cores spec's 83 / 17 / 26 / 10 count the
+  starts per target core), stage 0 seven and stage 1 seventeen.
+- **The conditions they wait for** are of four kinds. No wait but one has a timeout.
+  - *Phases:* bit n - 1 of `0xa32df1f4`, n 1..10. USTART_L2 loads segment n (`0x50024e6b`, which sets the same bit of
+    `0xa32df1f8`) and posts the CREQ that runs `0x50024eda(n)` on CPU 0 (n = 8 on CPU 1; 4.6.2), whose last store sets
+    the bit (`0x50024ffa`). `0x50024de8(n)` waits for it in 2 ms sleeps; `0x50024dcf(n)` reads it.
+
+    | Phase | Waited for by (the call) | Read by |
+    |---|---|---|
+    | 1 | stage 1 (`0x500248d0`), BOOT_CPU1, 2, 3 (`0x50008ce7`, `0x50009072`, `0x50009474`) | |
+    | 2 | USTART_L (`0x5002422b`), USTART2 (`0x501e8ea5`) | `0x50023b4e` |
+    | 3 | USTART3 (`0x501e94d3`) | `0x5016ecad`, `0x5018a5f0` |
+    | 4 | USTART_L (`0x50024299`), USTART3 (`0x501e94e9`) | |
+    | 5 | nobody | |
+    | 6 | USTART4 (`0x501e9d80`), AUD_MAIN (`0x50a62a48`) | `0x502a52ab`, `0x502a52cb` |
+    | 7 | USTART4 (`0x501e9d89`), USTART_L2 before segment 8's CREQ (`0x50024803`) | |
+    | 8 | USTART_L (`0x5002435c`), USTART_L2 before segment 9's CREQ (`0x5002483f`), USTART5 (`0x501e9ec2`) | |
+    | 9 | USTART5 (`0x501e9ed8`), `0x50a6c5b4`, UsrA's `0x5187d20f` | `0x5004066c..0x500406df`, `0x50954c53` |
+    | 10 | USTART5 (`0x501e9eee`) | `0x50047391` |
+
+  - *Loader bytes* `0xa32df1ad..0xa32df1c0`, each set to 1 when a step of a loader is done. They tie the three loaders
+    to one another and gate four of the start tasks:
+
+    | Byte | Set by | Waited for by |
+    |---|---|---|
+    | `1ad` | USTART_L2 after segment 1 (`0x500245a7`) | USTART_L (`0x5002418a`), USTART_L3 (`0x50024488`) |
+    | `1ae..1b5` | USTART_L2 after the segments 2..9 | nobody (4.6.2) |
+    | `1b6` | USTART_L2 after segment 10 (`0x5002487f`) | USTART_L's end (`0x500243d1`), USTART4 (`0x501e9e17`) |
+    | `1b7` | USTART_L3 after "D1" (`0x5002443e`): `0x50040d4d`, a flash read of 512 KiB from `0x400c0000` | USTART_L (`0x500241ac`), stage 1 before `0x50040d78` (`0x50024d57`) |
+    | `1b8` | USTART_L3 after "LB" (`0x50024482`): `0x5012a799(0xa32df1cc)` | USTART3 (`0x501e9957`) |
+    | `1b9` | USTART_L2 after "LF" (`0x5002464c`): a 32-byte flash read from `0x51ffffe0` | USTART3 (`0x501e996c`) |
+    | `1ba` | USTART_L after "DP" (`0x50024253`) | USTART_L3 (`0x50024444`) |
+    | `1bb` | USTART_L after "FB", the file system's init (`0x500242c1`) | USTART_L3 (`0x500244c8`), USTART3 before FILECLBK's start (`0x501e9c3f`) |
+    | `1bc` | USTART_L after "FD" (`0x50024291`) | USTART3 before the FACE tasks' starts (`0x501e9670`) |
+    | `1bd` | `0x50003f99` (mark "C1E"), called by the resource read's block loader `0x5003cab3` (from `0x501a98af`) | USTART_L3 (`0x50024508`) |
+    | `1be` | USTART_L3 after "DL", `0x50156352(1)` (`0x500244b5`) | USTART_L (`0x50024259`), USTART2 (`0x501e9202`), USTART3 (`0x501e9c8e`) |
+    | `1bf` | USTART_L3 after "DS", `0x50156352(2)` (`0x500244f5`) | USTART_L (`0x500242dd`), USTART3 (`0x501e9ca3`) |
+    | `1c0` | USTART_L3 after "DM", `0x50156352(4)` (`0x50024535`) | USTART_L (`0x50024323`), USTART4 (`0x501e9e2c`) |
+
+    `0x50156352(bit)` ORs the bit into `0xa32db174` and calls `0x50167b5e`; it lies among the camera driver's
+    functions (CAM_MAIN's entry is `0x501562a3`), and what each step loads is not read (?). The block loader's one
+    caller is the resource read's helper `0x501a986a`, for a read mode other than 1 (`0x501a9891`; mode 1 is the plain
+    flash read the resource loader's own reads take, X below). Which reads pass that mode is not read; USTART_L's
+    "LC0" (`res_read(11, 0)` at `0x5002430f`), its first `res_read`, comes right before its wait for `1c0` (I: that
+    read sets `1bd`). So USTART4's two bytes (4.8.11) mark the end of the overlay loader (`1b6`) and the last of
+    USTART_L3's steps (`1c0`), which waits for USTART_L's file init and for `1bd`.
+  - *Magics and done bytes* of the other cores (4.6.1): the four init tasks' done bytes `0x97f00094..97`
+    (`0x5003b4e8`), which BOOT_CPU0 polls without a sleep (`0x5002cd70..0x5002cd79`); the tick magic `0x97f00088` and
+    the watchdog magic `0x97f006fc` (stage 0, `0x50024042`), which CPUs 1..3 wait for; CPU 3's magic `0x97f00090`
+    after its boot jobs (`0x50009450`), which stage 1 waits for at `0x500249d1`, the one wait with a timeout (1000
+    polls of 1 ms, then `0x50053ebe(0)`, `0x5000275e(1)` and a branch to itself, `0x5003b632..0x5003b643`); and the
+    idle magics `0xa3193680 / 84 / 88` of CPUs 1..3, which USTART2 waits for (`0x501e8ed6`).
+  - *The fast start's levels.* USR_FAST_APP is a sequencer beside the start tasks. By its logs it runs the lens
+    set-up, the through image's start, a second stage and a hand-over to the HighLevel ("Flg-LensSetupStart",
+    "Flg-ThroughStart", "Flg-2ndStart", "Flg-2ndChk", "Flg-2ndEnd", "Flg-TakeFunc", "Flg-RhpTake", "Flg-EcecEnd",
+    "Exch-DispDevice"; the hand-over's call `0x50ab22cb` logs "rhp_take_over : bootState %d"; what "Rhp" stands for is
+    ?). It first waits for the camera-on word `0xa32dddcc`, which stage 0's `0x50023db7` clears and its power callback
+    `0x50023e71` sets to 1 (mark "FPE"; 99, "camNoon", where the start factor forbids the start). Then it waits on
+    flag `0x82` (the id word `0x60043074`) for the pattern `0x1ff` (`0x501e67a5`) and serves the bits: 1 set by stage
+    1 ("FSS", `0x50024d2f`), 2 by USTART2 ("FTS", `0x501e9054`), 8 by USTART3 ("F2C", `0x501e9cdb`), 128 by the
+    callback USTART4 registers with the HighLevel ("FastEndCb" `0x501e8a5f`, its set at `0x501e8a74`), 32 by itself
+    (`0x501e6890`); who sets 4, 16, 64 and 256 is not read (?). Its state word `0xa32dddbc` (cleared by stage 0,
+    `0x50023d89`; 5, 11, 12 and 13 stored at `0x501e687a`, `0x501e68cc`, `0x501e6959`, `0x501e69d1`, others in its
+    handlers) is waited for by `0x501e6a34(n)`: 13 by USTART_L (`0x50024370`) and by that callback (`0x501e8a7b`), 4
+    by USTART4's take-over (`0x501e6af2`). The permit word `0xa32dddc0` is the start tasks' answer: SetPermit
+    `0x501e6a7f(n)` with 1 in USTART2 ("FPE", `0x501e90ab`), 2 in USTART2 after byte `1be` ("FPT", `0x501e9226`), 4
+    in USTART3 after `1be` and `1bf` ("FP2", `0x501e9cc7`) and 5 in USTART4 after `1b6` and `1c0` (`0x501e9e43`). The
+    sequencer waits for levels of it (`0x501e6a55`: 5 before the hand-over, `0x501e6952`; 1, 4, 4, 2, 3 and 4 in
+    handlers not read). So `0x501e6a7f(5)`, which 4.8.11 left unread, lets the fast start hand over once the overlay
+    loader and USTART_L3 are done.
+- **The steps in order, against the lab.** "W" marks a wait; a start names the task and its site. The right column
+  names the lab's step that does the same work, or says that nothing does. The lab's own order is in the next bullet.
+
+  | Mark | BOOT_CPU0: its init, stage 0, stage 1 | In the lab |
+  |---|---|---|
+  | OIE..SCE | tick init `0x5003121c`; tick magic; starts CPUCONN_CPU0, CPUCALL_CPU0, CONTEST_CPU0 (act_tsk) | H-BOOTTIME; H-CPU2RELEASE and H-CPUCONN0 with `--cpu2 native` |
+  | | `0x50039e4b`, `0x50039c2c`; IRQ 325 attached (`0x50003ff1`); done byte; W the other cores' done bytes | none |
+  | | hardware and software timer inits `0x500642dd`, `0x50058959`; starts USTART_L | H-BOOTTIME |
+  | 0_1 | the address-decode monitor's init `0x50031892` (below) | none |
+  | 0_3..0_l | `0x50038e7a`, `0x50025003`, `0x50047287`, five calls from `0x5005f404` to `0x5005373b`, `0x5004d3c3`, `0x5005d52c`, `0x50031f02`, the queue bind table `0x5002bfb9` ("QIS"), `0x5002e30d` | none in a default session (4.8.11: the bind table) |
+  | 0_p | `0x5003ccdd`; starts SYS_WDT on each core; watchdog magic | none |
+  | 1_b | starts PER_SCPU (`0x50024079`); `0x50055e10`, `0x500540fc` | H-SCPUSTART, at the store init |
+  | 0_y, 0_A | `0x50059649`; the power manager's init `0x50044eb6`; starts PWR_MAIN (`0x500240d2`); `0x50044fe0` | H-PWRSTART, after UI_IN's port scan |
+  | 0_F | the fast start's reset `0x50023d89` and power start `0x50023db7`; `0x50053dd9`; starts PER_IN | none |
+  | 1_1 | W phase 1 | S-BOOTSTAGE |
+  | 1_2 | the deferred task's init `0x5005304d` | H-DEFER, in H-BOOTTIME |
+  | 1_6..1_e | `0x50046660`, `0x50044c83`; starts DBG_OUT, S_SHELL, U_SHELL; `0x5012b767`; UI_IN's `0x5014b714`; `0x50059680`; starts FLASH_PRM_EXEC_ASYNC | none |
+  | | W CPU 3's magic (its boot jobs: the registry bootstrap `0x50040aeb` among them); `0x50003cf9` | the registry bootstrap at the store init |
+  | DIS, DIE | the flash access guard's check; the display task's init `0x501c2f13`; `0x50108fe0`, `0x5010fc72` | the display task init, in the display start |
+  | 1_f | `0x50050db0` (I: the eye sensor's) | none |
+  | 1_h | cam.c's first init `0x502a49ec` | H-CAMINIT (`--take probe`) |
+  | 1_i, 1_j | the lens module's init `0x502a5d10`; starts LENS_MAIN, LENS_ASKDATA | H-LENSINIT |
+  | 1_o, 1_k | `0x5012abfa`; starts SC_TTIMER; `0x5013e4bd`; starts BC_MAIN, BC_INDICATOR | none (S-MODACK answers BC_EXEC) |
+  | 1_l | UI_IN's module init `0x5014bf91` (the ring init, the port scan `0x5005d36a`) and start stage `0x5014bfc6`; starts UI_IN (`0x50024b92`) | H-UIINRING, H-UIINSCAN, H-UIINPORT, H-UIIN |
+  | 1_B, 1_C | `0x5004e53f`; `0x500649d8` (the pin block `0x9b880000`) | none |
+  | 1_D | TAKE_FUNC's init `0x502ccff8`; starts TAKE_FUNC, TAKE_FUNC_CP | H-TAKEINIT (`--take probe`) |
+  | 1_E | starts USR_FAST_APP | none |
+  | 1_G | the touch init `0x501e3dca`; starts TOUCHPANEL, DISPLAY, DISPLAY_CHANGE | H-TPINIT; S-DISPQ runs DISPLAY's loop; K-CHANGE |
+  | 1_H..1_J | `0x501c2238`; `0x5014110d`; flag bit 1 ("FSS"); `0x50044ed7` | none |
+  | 1_K | W byte `1b7`; `0x50040d78` | none |
+  | 1_L | cam.c's second init `0x50155357` | H-CAMINIT2 (the probe's cam_fe) |
+  | 1_M | starts USTART2 | |
+
+  | Mark | USTART_L (`0x5002417a`) | In the lab |
+  |---|---|---|
+  | L_0, L_2 | W bytes `1ad`, `1b7`; `chg_pri(54)` | |
+  | RES | the resource loader `0x501a8ca0` | H-RESINIT with S-RESNAND |
+  | FLS | W the lens module's init (its last store sets `0x6296c28e`, `0x502a5dd6`); the lens data cache load `0x502a6371`; `0x502a5dff` | H-LENSINIT, in this order |
+  | DPS | W phase 2; `0x5042615c`; byte `1ba`; W byte `1be` | none |
+  | FDS | `0x505171ae`; byte `1bc` | none |
+  | FBS | W phase 4; the file system's init `0x5088fc8d`; byte `1bb`; `chg_pri` back | H-FILEINIT |
+  | L_b, LC0 | W byte `1bf`; `0x5003ca96`; `res_read(11, 0)` | none |
+  | LC1 | W byte `1c0`; sound 0 loaded to `0xa4000000` (`0x50024353`) | H-RESINIT, right after the loader |
+  | L_c | W phase 8; W the fast start's state 13 | none |
+  | LC2 | `res_read(11, 37)`; `0x5003cc38`; starts SYS_CA53_PWR_MNG (CPU 1); W byte `1b6`; `0x50553e51(0)` | none |
+
+  | Mark | USTART2 (`0x501e8e84`) | In the lab |
+  |---|---|---|
+  | 2_1 | W phase 2; its stage word `0xa32d6d58` = 1 (`0x5012abef`) | H-TAKEINIT sets the word |
+  | 2_5 | IMG_PRECON's module init `0x502a49b3` | H-EXPINIT (`--take probe --cpu2 native`) |
+  | 2_6 | W the idle magics of CPUs 1..3 | none |
+  | 2_7, 2_8 | `0x501ea93d`; `0x5038f7e0`; starts ZOOM | none |
+  | 2_9 | UI_OUT's init `0x5014f4e9`; starts UI_OUT | H-UIOUTSTART |
+  | 2_b | the motion engine's init `0x501a6827` (IRQ 276, EMS1) | none (S-EMS1 is the register file) |
+  | 2_d, 2_e | `0x506e41fe`; TAKE_MAIN's module init `0x50399619`; starts TAKE_MOV | H-TAKEMAIN (`--take probe`) |
+  | 2_g, 2_h | starts STB_HANDLER_PROC, STB_CHARGE, STB_EXTERNAL; `0x501c169d`; starts STB_SEQ | H-STBINIT (`--take probe`) |
+  | FTS | flag bit 2; the event broker's init through `0x502a48a0` (`0x501e9059`) | S-CAMAPP's broker init |
+  | | the settings init chain `0x503dae30` (its fifth is the property store's `0x503ee2d6`); `0x502d03a7` | H-STOREINIT |
+  | 2_l | `0x501eac35` (the settings-DB init `0x503c5473`); TAKE_FOCUS's interface init `0x506ea9d7` | the store init; H-TAKEFOCUS |
+  | FPE | SetPermit(1) | none |
+  | 2_p | TAKE_EXPOSE's init `0x50591220`; EXP's init `0x50553649`; starts TAKE_EXPOSE, EXP_MOVIE, EXP_MOVIE2, 3 | H-TAKENBINIT, H-EXPINIT; H-AEINIT runs one table init of EXP's |
+  | 2_q, 2_s | WB_MOV's init `0x5046aa2b`; starts WB_MOV; starts DSP0, 1, 2 (CPU 1) | H-CPU2TASKS (`--cpu2 native`) |
+  | 2_t, 2_u | the image library's init `0x5046d7ab`; `0x50534a20`; MVR's init `0x5045fed3` | H-IMGPROINIT / H-RECIMGPRO in part; H-CPU2TASKS |
+  | 2_r, FPT | W byte `1be`; SetPermit(2); starts MVR_MAIN and ten more MVR tasks (CPU 2), TAKE_POWER_MANAGER | H-CPU2TASKS (MVR_MAIN); H-TAKENBINIT |
+  | 2_w | starts USTART3 | |
+
+  | Mark | USTART3 (`0x501e94a5`) | In the lab |
+  |---|---|---|
+  | 3_2, 3_3 | W phases 3 and 4 | |
+  | 3_4 | `0x501553fa`; starts AUD_MAIN (`0x501e950b`); `0x5055368d` | H-AUDSTART |
+  | 3_5 | the AF library's init `0x508bede6`; `0x508c0e38`; TAKE_FOCUS's module init `0x509a0e37` | H-FCSAF in part; H-TAKEFOCUS |
+  | 3_6 | starts FCS_MOVIE and eight more FCS tasks (CPUs 0, 1, 3), TAKE_FOCUS | H-TAKEFOCUS starts TAKE_FOCUS |
+  | 3_7 | W byte `1bc`; starts FACE_FD; `0x50510afd`; starts FACE_MAIN; `0x50512a3c`; starts FACE_BEAUTY | none |
+  | 3_8 | starts SDET (CPU 2) | H-CPU2TASKS |
+  | 3_a | the DML driver's init `0x507f906b`; `0x507f9c18`, `0x507fbdd9`, `0x508042df`; starts seven MDET tasks; `0x50804377` | H-MDETINIT, S-MDETDL |
+  | 3_b | REC's init `0x50539665`; starts REC_PREPRO, REC_IMAGE (`0x501e984a`), REC_FILE (`0x501e9880`), REC_MAIN and seven more | H-RECINIT, H-RECIMAGE, H-RECFILE |
+  | PC3, PC4 | `0x50044f7d`; W bytes `1b8`, `1b9`; the versions' log | none |
+  | 3_c, 3_d, 3_e | the EXIF module's init `0x504298bd`; disp_sync's init `0x507f2fe0`; `0x509b2281`; starts SERV_MAIN | H-EXIFINIT; the disp_sync init, in the display start |
+  | 3_f..3_j | `0x50863cb5`; starts four ISEQ tasks, PER_CCD_TEMP_MAIN, LENS_COMMAND, LENS_FLASH (after `0x50120cc4`), TAKE_MAIN, TAKE_MAIN_CP, TAKE_PROXY | the native lens starts LENS_COMMAND; H-TAKEMAIN |
+  | 3_l..3_n | the ACC init `0x50048cad`; `0x5004bc72`; PER_SLOPE's init `0x5005fb31`; PER_ROTATE's `0x5005a08c` | H-ACCINIT, H-SLOPEINIT, H-ROTINIT |
+  | 3_o | W byte `1bb`; starts FILECLBK (`0x501e9c5b`) | H-FILECLBK |
+  | 3_p, 3_q | `0x501eaa1b`; W bytes `1be`, `1bf`; SetPermit(4) ("FP2"); flag bit 8 ("F2C") | none |
+  | 3_r, 3_u | starts DBG_MESS1; starts USTART4 | |
+
+  | Mark | USTART4 (`0x501e9d54`) | In the lab |
+  |---|---|---|
+  | 4_2 | W phases 6 and 7 | H-AUDSTART sets 6 |
+  | 4_4 | `0x501ea849`, an empty function (`retf`) | |
+  | 4_5 | the HighLevel object's create `0x50ab222a` (MainSystem.cpp); starts HIGHLEVEL_MAIN (`0x501e9dca`); its init `0x50ab22bc` | S-CAMAPP |
+  | | `0x501e6aa9`: the fast start's two callbacks registered (`0x50ab22f6`, `0x50ab2331`) | none |
+  | 4_a | the take-over `0x501e6adb`: W the fast start's state 4, then `0x50ab2309` | S-TAKEOVER writes the module state the take-over leaves |
+  | 4_b | starts CA_MAIN (`0x501e9e03`) | S-CAMAPP |
+  | FPT | W bytes `1b6`, `1c0`; SetPermit(5) | none |
+  | 4_v | starts USTART5 | |
+
+  | Mark | USTART5 (`0x501e9e94`) | In the lab |
+  |---|---|---|
+  | 5_2..5_4 | W phases 8, 9, 10; `0x518f724a`; `0x50155412` | S-STAGE9 sets 9 (camapp 3) |
+  | 5_5 | starts PLAY_MAIN, PLAY_LOAD, PLAY_IMAGE, PLAY_SOUND, PLAY_DECODE, PLAY_LOADDRAW | H-PLAYSTART (the opt-in of 4.8.11) |
+  | 5_6..5_8 | `0x51031b76`; starts EFFECT_EXE; `0x51030b0d`; starts EFFECT; `0x51017051`; starts IMG_PRECON | none |
+  | 5_9 | starts OSD_DRAW_CPU2; `0x5100d04a`; starts DISP_FRAME (CPU 3) | H-CPU2TASKS; S-DISPFRAME |
+  | 5_a..5_r | 45 more starts with their inits: TPC, BAS, C3D, MVR_ENC, MOVP, MOVE, the AV middleware (`0x50527bcf`), SAICAS, DPS, PTP, PC, FIRMUP, ADJ, the WIFI tasks | none |
+
+- **Where the lab's order differs (D for the camera's, X for the lab's).** The lab's bring-up is not the chain run in
+  order: each step was placed where a session first needed it.
+  - *Fixed: the event broker's init.* The lab ran it after the HighLevel create and init (S-CAMAPP's order since its
+    probe, shutter spec section 7 item 7). On the camera USTART2 runs it (`0x501e9059`) and USTART4 the HighLevel
+    steps (`0x501e9dbc`, `0x501e9dd1`), with all of USTART3 between: the broker's tables are cleared, UI_IN's forward
+    gate and the publish gate (`0xa31f1d26` = 119) are open before the HighLevel object exists. The lab now runs the
+    broker init first (`emu/src/lab/camapp.mjs` start). The same order holds on the 18 ported bodies: each image holds
+    one call of the broker init's wrapper after a boot mark of start function 2 or 3 ("FTS" on E146 and E147, "2_h" on
+    the E144 family, "3_1" on the E118 family) and the create and init calls, 21 bytes apart, after a mark of start
+    function 4 ("4_5", "4_4", "4_7") at a higher address (D: a scan of each image for the three call sites and the
+    mark loaded before each; that their start functions chain as E143's is I).
+    What the order changes: after the bring-up of a default E143 session the two orders' DRAM differs in one byte,
+    `0xa31f1d27` (X). The broker init clears it (`0x502a494c`); the HighLevel init's `0x50ab2d1c`
+    (OlyHfwHighLevelService.cpp) sets it to 1 through the broker's setter `0x503eb246(1)` (`0x50ab2d5b`). So the lab's
+    old order left it 0, and the camera's order leaves it 1 (D). The publish `0x50025095` tests it (`0x503eb0c5`,
+    called at `0x500250d1`): with it set, the event `0x02022301` is dropped unless `0x50424f9a` returns non-zero for
+    each of `0x02021706`, `0x0202170a` and `0x0202170e`, and every other code passes two instructions later than with
+    it clear (D; what the event and the three values are is ?). That is the whole difference in the default sessions
+    (X, the traces of both orders compared item by item): golden's devices layer differs in 22 scenarios only in the
+    instruction counts the interrupt rows and the IPI records carry, 2 or 6 higher (I: two instructions per publish
+    since the machine's counter last restarted), check_perf's P10b runs 14 instructions more (185,434,420) with the
+    same frames, lab time and hook log, and the screens, the outputs and the final registers are the same. An earlier
+    comparison of frames, lab times, hook-log lengths, error-log counts and heap top under camapp 1, 2 and 3 (a start,
+    1.5 s, a shot, the menu, playback) found no difference either.
+  - *The power manager.* Stage 0 runs its init and starts PWR_MAIN before UI_IN's module init runs the port scan
+    (stage 1, `1_l`); the lab starts it after the scan (H-PWRSTART's text says so). So the lab's sub-CPU sees `0x88`
+    before `0x82 {45}` and `0x12 {5}`, the camera's the other way round. Not changed: the swap is two lines of
+    `play_bring_up`, but it reorders the link's frames in every session of E143, E146 and E147.
+  - *PER_SCPU and the registry bootstrap* run before the display task's init on the camera (stage 0; CPU 3's boot
+    job, whose magic stage 1 waits for before "DIS"). The lab runs both in the store init: after the display's
+    open, or between its init and its open for an EVF start (H-STOREFIRST). The settings-DB init is USTART2's on the
+    camera, after the display task's init, as in the lab.
+  - *The display.* DISPLAY_CHANGE starts after the display task's init on the camera (`0x50024a6c`, then
+    `0x50024ce6`); the lab starts it before (K-CHANGE, checked waiting). disp_sync's init is USTART3's (`3_d`); the
+    lab runs it right after the display task's init. The touch init is before the DISPLAY task's start on the camera
+    and after the lab's open (H-TPINIT's text has the reason it stays).
+  - *The resource loader and the file system.* USTART_L runs the loader, the lens data cache load and then the file
+    system's init; sound 0 is loaded last. The lab runs the file system's bring-up first (S-RESNAND and S-LENSNAND
+    are layered over S-FSNAND), then the loader with sound 0 at once, then the lens steps.
+  - *REC and EXIF.* USTART3 starts REC_IMAGE before REC_FILE and runs the EXIF module's init after both; the lab runs
+    H-EXIFINIT first and starts REC_FILE before REC_IMAGE, all before the first picture. Each task waits on its own
+    queue after its start.
+  - *The accelerometer, UI_OUT and the AE table.* The lab runs H-AEINIT, then H-ACCINIT, then H-UIOUTSTART; the
+    camera UI_OUT's init (`2_9`), EXP's init (`2_p`), then the ACC init (`3_l`).
+  - *AUD_MAIN* starts at the head of USTART3 on the camera, before the FCS, REC and ACC steps; the lab starts it
+    last in the bring-up. *The take-over* is USTART4's, between the HighLevel init and CA_MAIN's start; the lab writes
+    the module state before the application starts (S-TAKEOVER). *HIGHLEVEL_MAIN* starts between the create and the
+    init on the camera: so under camapp 3; under camapp 2 the lab starts it after both.
+- **The probe (X).** `node emu/bin/ustart.mjs [TASK ...]` runs each start task in a lab of its own, from the state
+  the lab's reset path leaves: segment 2's static constructors, the kernel's own init from its entry to its idle
+  loop, the init task ended and the lab task created. The lab is made bare first: the RTOS wrappers' and every other
+  stand-in hook a lab is built with are taken out and the lab stub's pages closed, so that anything the machine does
+  not model is a bus error. The host's memset and memcpy, the lab's heap behind malloc and free, the error log and the
+  UART prints (recorded) stay. Its own steps: H-PROBECTORS runs the constructors of the segments 6 and 7 before the
+  task starts, as the lab's display bring-up does. S-NOSTART records each task the start task would start and answers
+  E_OK without starting it. S-STARTCOND records a start condition the task waits for and then grants it: the bit,
+  byte, word or magic is written as its writer writes it, and the writer's other work is not done. H-PROBETICK gives
+  the kernel's tick from the idle point while the task is in a timed wait; no lab time passes. The module lies
+  under `bin/`, not `src/lab/`, so that its E143-only addresses are none of the port's literals. The seven records
+  take about 1 s together.
+
+  | Task | First stop: the condition nobody sets | Marks reached, conditions granted | The stop that ends the run | What it needs |
+  |---|---|---|---|---|
+  | BOOT_CPU0 | the done bytes `0x97f00095..97` (the spin at `0x5002cd70`) | OIE..SCE, `0_1`; its four starts recorded; the tick and timer inits run | a bus error: `0x50031a6c` writes `0x1fe` to `0x9a000004` (in `0x50031892`, stage 0's first call) | the address-decode monitor `0x9a000000` |
+  | USTART_L | byte `1ad` (`0x5002418a`) | `L_0`, `L_2`, RES; bytes `1ad`, `1b7` | a bus error: `0x50000e32` writes 1 to `0x98d011c0` (the flash driver under the resource loader, the call at `0x500241d8`) | the flash controller's NAND path (the block `0x98d01000`, IRQ 237 attached right before, `0x50000de9`); in sessions S-RESNAND answers the loader's reads |
+  | USR_FAST_APP | the camera-on word `0xa32dddcc` (`0x501e675a`) | MIS | waits in OlyEvWt on flag `0x82`, pattern `0x1ff` (`0x501e67a5`) | the stages' flag bits; this is its event loop |
+  | USTART2 | phase 2 (`0x501e8ea5`) | `2_1`..`2_b`; phase 2, the idle magics; ZOOM and UI_OUT recorded; 831 error logs `0x1c005002` from `0x5004098b` (I: lookups in the settings store, whose registry is not built) | a bus error: `0x501a5bd9` writes `0x40` to `0x98800344` (the motion engine's init `0x501a6827`, before EMS1's first register) | the block `0x98800000`'s `+0x344`, a lab-stub page in sessions |
+  | USTART3 | phase 3 (`0x501e94d3`) | `3_1`..`3_4`; phases 3, 4; AUD_MAIN recorded | fault 6 at `0x50578db0`: `divu` by 0 in `0x50578d9e` (EXP's `0x5055368d`, called at `0x501e951f`) | EXP's init `0x50553649`, which USTART2 runs first (checked, below) |
+  | USTART4 | phase 6 (`0x501e9d80`) | `4_1`..`4_5`; phases 6, 7; four tasks of the HighLevel's own and HIGHLEVEL_MAIN recorded | a timed wait retried for 5000 ticks: the HighLevel init's transaction waits in the receiver for its answer (`0x50af855c`: 1 s waits on a semaphore, "TRA REQ TIMEOUT" logged after five) | the tasks it started (S-NOSTART), the OXF main thread among them; S-CAMAPP's part in sessions |
+  | USTART5 | phase 8 (`0x501e9ec2`) | `5_1`..`5_4`; phases 8, 9, 10 | a bus error: `0x50001129` writes 1 to `0x98d011c0` (the flash driver under `0x518f724a`, the call at `0x501e9ef5`) | the flash controller's NAND path, as USTART_L |
+
+  So from the lab's reset state every start task stops at once at a condition of the overlay loader, of another
+  loader or of another core, as the map says it must (a default E143 session's bring-up sets the phases 1 and 6 and
+  none of the bytes; camapp 3 adds phase 9). With those granted, four of the seven stop at a device the lab has no
+  model of (two at the flash controller), one at an init an earlier start task runs, one at tasks the probe does not
+  start, and one in its own event loop.
+  - *The check of a need (X).* `--before ADDR` calls a function natively before the task starts. With EXP's init
+    first (`--before 0x50553649 USRSTART3`) USTART3 does not divide: it goes on through `3_5`..`3_a`, records 15
+    starts, has byte `1bc` granted and stops at the DML driver's init (`0x507f906b`, the call at `0x501e9719`), whose
+    `0x507f68d3` writes `0x10000000` to `0x98800348`. The table init H-AEINIT runs (`0x50560b29`) does not suffice (X:
+    the same divide with it first).
+  - *The address-decode monitor.* `0x50031892` attaches IRQs 0..3, one per core, to `0x50031aa1` and IRQ 4 to
+    `0x50031bb7`, keeps a table of four register blocks at `0x9a000000 + 0x100 * core` (+0 control, +4, +8 the
+    address, +0xc the read data, +0x10 the write data, +0x14 the status) and writes `0x1fe` to each `+4` and bits 2
+    and 1 into each `+0`, then the same at `0x9a000400`. The handlers print "[SYS WANA] ADDEC ERROR", the core and
+    the four words. So `0x9a000000` is MMIO after all: section 9 item 5's return codes are real, and so is this unit.
+  - The records are regression data: `test_ustart.mjs` pins each task's marks, starts, conditions and stop, the
+    check above, and every call site of the phase wait, the phase test, SetPermit, the flag's sets and the state
+    waits in the image against the tables here.
+- **Corrected by this section.** AUD_MAIN is started by USTART3 (`0x501e950b` lies in `0x501e94a5..0x501e9d54`), not
+  USTART2 (4.5, `audiohw.mjs`, H-AUDSTART's text). FILECLBK's start, "not traced" in H-FILECLBK's text, is USTART3's
+  at `0x501e9c5b`, after byte `1bb`. REC_IMAGE's start, "not read" in H-RECIMAGE's text, is USTART3's at
+  `0x501e984a`, before REC_FILE's at `0x501e9880` ("not read" in H-RECFILE's comment, `rec.mjs`). The code texts
+  are left for the owners of those files to update. That the lens data cache load follows the lens module's init
+  (H-LENSINIT's I) is the firmware's own wait on `0x6296c28e`. 4.8.11's two bytes and its `0x501e6a7f(5)` are read
+  above. The event broker's init runs before the HighLevel steps, not after them (S-CAMAPP's order, fixed above).
+- **Open.** What `0x50156352`'s three steps load; who sets the flag's bits 4, 16, 64 and 256; the fast start's
+  handlers past its flag wait (`0x501e6d17..0x501e8a5e`) and what its hand-over does; stage 0's unread calls
+  (`0_3`..`0_l`); the block `0x98800000` (`+0x344`, `+0x348`: I, the engines' resets or gates, beside the cores'
+  release bits of 4.6.2); a model of the flash controller's NAND path (`0x98d011c0`, IRQ 237), which two start tasks
+  stop at (the overlay loader stops at the same block's DMA for chip 1, `0x98d00200`, 4.6.2); the order differences
+  kept above, each with its cost.
 
 ### 4.7 SCPU, power, clock, on-board sensors and persistence
 
@@ -6024,7 +6326,7 @@ there (it stays on the other bodies).
   (X: traRoutingSession and camapp3FramesSession pass as before; golden runs no camapp 3 session).
 - **The start.** USTART4 (`0x501e9d54`) starts CA_MAIN (`0x501e9e03`) and then USTART5 (task 39, `0x501e9e5c`), both
   through OlyTaSt (`0x5002c546`). In between it waits for the bytes `0xa32df1b6` and `0xa32df1c0` to be set (2 ms
-  sleeps, `0x501e9e17..0x501e9e3f`) and calls `0x501e6a7f` with 5; what these mark is not read (?).
+  sleeps, `0x501e9e17..0x501e9e3f`) and calls `0x501e6a7f` with 5; what these mark is not read (?; read since: 4.6.3).
   USTART5 waits for the stages 8, 9 and 10 (`0x501e9ec0..0x501e9ef2`), calls `0x518f724a` (a log area at `0x63ae0000`
   checked, the task of the word `0x60042e34` started: not the play module's) and `0x50155412`, and then starts six
   tasks (`0x501e9f17..0x501e9fab`, the tids from the words `0x60042d58`, `0x60042d56`, `0x60042d54`, `0x60042d5a`,
@@ -6970,7 +7272,8 @@ The order follows what each step unblocks: the keystones first, because each lat
 5. **Task-start and module-init infrastructure:** let selected USTART steps and module inits run with recording stubs,
    one block at a time, so each block's first native run shows its first device access; with it, the HLS component
    bring-up (`control camapp 2`) as the default of the coverage workload, so the HLS half of TAKE (196k, 1.3% run) is
-   measured before TAKE is attempted.
+   measured before TAKE is attempted. The start tasks' own order, the conditions each waits for and where each stops
+   when run natively are in 4.6.3 (2026-11-11).
 6. **Storage at the sdmem seam.** It needs steps 3 and 5 but not TAKE, and gives a real card, counts and Card
    Formatting. Capture, movie, playback, USB and wireless all write or read through it. Started on E143 (2026-10-23,
    4.8.2) one layer lower, at the SD command layer, without steps 3 and 5: the command layer completes at once, and the
@@ -7157,7 +7460,10 @@ Corrections to earlier readings, each now owned here or by the document named.
 4. **The settings mirrors' boot load runs on CPU 3, not CPU 1** (D): `0x5000941f` lies inside BOOT_CPU3's body (4.6).
 5. **`0x9a000000` is not MMIO** (D): its 577 "references" are AVFW return codes `0x9a00CCNN`, e.g. `0x51672e7f` `mov
    0x9a000103,d0; bra` right after a log call in CAvfwComponent.cpp; top values `0x9a000101` (152), `0x9a000103` (69),
-   `0x9a000108` (42). `0x9bf1000x` and `0x9c01000e` are probably codes of the same kind (I, not checked).
+   `0x9a000108` (42). `0x9bf1000x` and `0x9c01000e` are probably codes of the same kind (I, not checked). Corrected
+   2026-11-11 (4.6.3): the codes are codes, but the block is MMIO too. The boot's first stage-0 call `0x50031892`
+   programs an address-decode error monitor at `0x9a000000..0x9a000414` (D), and its first store is a bus error in
+   the lab (X).
 6. **`0x9c700000` needs no model** (D): all of its 674 references are LLF bus-arbiter and DRAM bus-measurement debug
    code in gap@0x50026fe0.
 7. **Data decoded as code** (I from string overlaps, D for the sites): about 58k instructions (1.1% of the map), all

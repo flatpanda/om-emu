@@ -560,8 +560,8 @@ export async function storageSession() {
         // registration: its stamp the FAT stamp of the clock's date, as the directory entry's
         if (rec.R.reply) {
           const fat = ((DATE[0] - 1980) << 25 | DATE[1] << 21 | DATE[2] << 16 | DATE[3] << 11 | DATE[4] << 5 | DATE[5] >> 1) >>> 0;
-          ok(rec.R.contexts === null && rec.reply?.status === 0 && rec.context?.stamp === fat && img?.file?.stamp === fat,
-            `REC_FILE's reply taken (S-RECIMAGE) with status ${rec.reply?.status}, its context's stamp at the registration ${rec.context?.stamp} (the clock's ${fat})`);
+          ok(rec.R.contexts === null && rec.reply?.status === 0 && rec.context?.stamp === fat && img?.file?.stamp === fat && e?.date === fat >>> 16 && e?.time === (fat & 0xFFFF),
+            `REC_FILE's reply taken (S-RECIMAGE) with status ${rec.reply?.status}, its context's stamp at the registration ${rec.context?.stamp} (the clock's ${fat}, the directory entry's ${e && (e.date << 16 | e.time) >>> 0})`);
         }
       } else if (!hdr) ok(data && want && data.every((b, i) => b === want[i]), 'the file\'s bytes are the JPEG the lab handed the file module');
       // the E118 family: the header its header maker built natively (S-RECHDR), the lab's stream, through S-RECFILE

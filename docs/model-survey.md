@@ -2494,6 +2494,205 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    request's fields the lab leaves 0 (usDst and usSrc among them: which values TAKE's request gives a still is not
    read), the thumbnail and the shooting values in Exif (S-EXIFPRM leaves the template's), RAW files, the shot's DCF
    checkout. The rule `recorder` still reads the 100-byte form alone; no body takes S-RECFILE's DCF-steps path.
+137. **The erase on E143, read from Delete to the DCF edit** (2026-11-11; D unless tagged; answers finding 110's "which
+   request the component sends for it, with which block and to which queue, and how the database's count follows"). The
+   GUI: Delete's handler (`0x510d7773`) opens the erase dialog through `0x510d783e` (finding 111; X since finding 138:
+   the synchronous 285 and the request 286, then SS_MENU_MAIN/ID_ST_WIZARD_MENU_ENTRY), and the dialog's Yes (UP, OK)
+   calls OlyHfwOpePlySfr::eraseCurrent, which sends request 21 (X: its execute returns to `0x50b6faa2`). The component:
+   CmpPls_PlaySingleComponent's erase_current_start_enter (`0x50c2c35f`) stores the state 110, reads the picture's album
+   number (`0x50bbdfa6`), skips the protection test for an album 100 to 165 (the short-movie albums, I), else tests it
+   (`0x50c3a742`: the media API's attribute of the current index, `0x503fdcb1`, bit 0) and answers a protected picture
+   `0xf000003a` (`0x50c2c3dc`) without erasing; else it clears the list's caches and calls app_play_idle_erase
+   (`0x50c328a2`), which runs app_select_execute (`0x50c33967`) with `0x02000089`, whose delete step (`0x50c3492b`, a
+   word of the step table) takes the drive (`0x62b0ab28`) and the current index (`0x50bc00ff`), reads the picture's file
+   type (`0x5040184d`; for type 5 the setting 139 picks a part, 1 or 2, else 0), runs a gate (`0x50c392e4`: two virtual
+   calls of the component's object at +1056; an answer other than 0 takes another path, `0x50c34a07`, not read), sets
+   the access slot (`0x50c3ab42`) and starts the media access lamp (`0x50c37ec4`), asks Get_Album_Num (`0x503dd27f`) and
+   calls the picture file API's object delete, `0x503fd974(d0 drive, d1 index, a0 part)` (api_picfile.c, API id
+   `0x7000f`; a drive of 2 or more returns 0 with a trace, `0x503fd9c2`), keeping its token with the API function's
+   address (`0x50c37554`). The API: a 56-byte block with +2 the drive, +4 the fnode of the index (the getter
+   `0x50874bc9`, the DCF process's command 5) and +12 the option (0; for a part 1, 2 or 3 the option 4, 2 or 1), posted
+   by the API's sender (`0x503eb960`, target 17: queue `0x1f`, FILECLBK's) as {the API's reply queue 6, the token, the
+   code, the block}: code 33 (`0x21`, `0x503fda48`) for the whole object, 40 (`0x28`) for a part. FILECLBK
+   (`0x5088fd8a`) maps the codes `0x21..0x2d` through its table `0x60a104ec` to the DCF edit's operations (dcfedit.c
+   `0x508727c4`, its table `0x60a0e4c8`), named by the file trace's table (`0x5089c7c3`, `0x60a150f4`): `0x21` 0
+   DCFED_OBJ_DEL, `0x27` 1 OBJ_DEL_OPT, `0x28` 2 OBJ_DEL_PART, `0x22` 3 OBJ_COPY, `0x23` 4 OBJ_LOCK, `0x24` 5
+   OBJ_UNLOCK, `0x2b` 6 OBJ_RATING, `0x25` 7 ALL_DELETE, `0x26` 8 ALL_COPY, `0x2c` 9 ALL_RATING, `0x29` 10 MULTI_DELETE,
+   `0x2a` 11 MULTI_COPY, `0x2d` 12 MULTI_RATING (`0x20`, with a null block, sets the edit's abort flag `0x62ad86c0`).
+   The object delete (`0x50872887`): an fnode whose byte +89 has bit 0 (the lock: OBJ_LOCK sets it and OBJ_UNLOCK clears
+   it, `0x50872e87`, `0x50872ea8`, each with dosfile's FILE_LOCK_FILE or FILE_UNLOCK_FILE on the entry) returns 0 with
+   nothing erased (`0x508728bc`); else the DCF process's command 3, the file's delete (`0x508730f1(fnode, 2, 1)`:
+   dosfile's operation 2, FILE_DELETE_FILE, `0x50888c9f`, by the fnode's 8.3 name in its folder's cluster; the object's
+   other files are its extensions 2 WAV, 3 ORF, 4 JPG, 5 TPS, 6 ORI), the notification `0x5089c2d8(5, drive, folder x
+   10000 + file)` (the registration's is 4, 4.8.9), a print-order update where the fnode's +90 is set (`0x5088d4df`,
+   `0x5088d6f5`), the folder's delete where the option's bit 3 and the dnode's +24 bit 0 are clear (`0x5087321c`:
+   dosfile's operation 3, FILE_DELETE_DIR, whose error 3597 for a folder not empty is passed over; an emptied folder's
+   dnode is then taken out, `0x50873b9c`, `0x508720bb`, `0x50871fca`), the database's re-read (`0x5087366a`: the DCF
+   process's command 8, `0x508778f9` with operation 2, which finds the folder's files again and sets each type's count,
+   `0x50874b48`), the DCF process's command 4 and the delete mount (`0x50873626`: dcfnum's operation 4, DCFNUM_DELMOUNT,
+   `0x5087860d`). FILECLBK replies {status, token} to queue 6, where the application's event task (`0x50abbf0c`) frees
+   the request's slot (`0x503ebae0`). The component takes the completion in state 110 (`0x50c2c4b5`, event 363): it
+   drops the list's caches (`0x50bc09c9`, `0x50bc1343`), reads the drive's count again and, where its current index is
+   past it, takes the count (`0x50bc09e6`: the media API's count `0x503fdc1d`, the index `0x62b0ab5c`), and with no
+   picture left calls `0x50bc188e`; the request's completion (kind 2) makes the single-frame callback (`0x50b712c4`)
+   post CBC_PLAY_SINGLE_FRAME / CBS_ERASE_CURRENT with no parameter (finding 110). X (a call trace of H-OBJDEL's erase
+   of the second of two pictures, finding 139, rerun 2026-11-11): from the lab's task the API's attribute and the fnode
+   getter, then the object delete (d1 2) and the fnode getter; in FILECLBK's task dcfedit, the object delete, command 3,
+   the file delete (dosfile 2 with dosfat's chain read, chain write and FAT update), the notification with 1000002, the
+   folder delete (dosfile 3, two chain reads, not empty), the re-read (command 8, a find, the eleven counts), command 4,
+   the delete mount (dosfile 1 and 10); then the reply (`0x503ebae0`, d0 `0xf0000000`) in the event task. Not read:
+   app_select_execute's other steps and its progress notifications (kind 3), the component's path for an album picture
+   and for a status not 0, what the notification `0x5089c2d8` does, and how the answer `0xf000003a` reaches the GUI (?).
+138. **The media status word, and why E143's Delete opened nothing** (2026-11-11, `src/lab/camapp.mjs` S-CARD's
+   CARD_STATUS; corrects finding 111's reading of 3238 as a property someone sets). 3238 is the erase mode's row in the
+   restriction table: canExecute (`0x50b01314` -> `0x50b7ae3f` -> `0x50b7aeae` -> `0x50b7e4b8`) evaluates the row of the
+   id (637 rows of 12 bytes from `0x60e4bdcc`: the id, a list of condition numbers, their count), each condition a
+   function of the table `0x60e4ad9c`, and answers 1 where none restricts (D). X on E143, Delete with two pictures: the
+   row's conditions 1, 2, 5 and 48 answer 0 and condition 122 (`0x50b7e96b`) answers 1, restricted, so canExecute
+   answers 0; with the status OK, 122 and the row's 124 and 129 answer 0 too and canExecute 1 (X, rerun 2026-11-11 with
+   the status written by hand). It looks the play medium's status (`0x50b80ba1`, from the HLS media words through
+   `0x50aca556`) up in list 3 of `0x60e4eafc`: `0xf000`, `0x3000`, `0x3001` (D). The status is the HLS media layer's
+   word per medium (SD `0x60360bec`, SD2 `0x60360be4`, IN `0x60360bdc`; an override at `0x60360bf0` while it is not
+   `0xffff`), whose setter (`0x50aca703`) names the values in its trace: 0 NO_MOUNT, `0x1000` COVER_OPEN, `0x1001`
+   NOT_PRESENT, `0x2000` UNFORMAT, `0x2001` ERROR, `0x3000` PROTECT, `0x3001` DATA_PROTECT, `0xf000` OK (D). The HLS
+   media manager sets it (`0x50bb9b99` and, after a mount whose device reports no error and is mounted, OK at
+   `0x50bb816e..0x50bb8183`, D; that a healthy card's device answers so is I), and a media device's function clears a
+   slot's mount state with the status NO_MOUNT or NOT_PRESENT (`0x50c93a33..0x50c93a59`, SD2's at `0x50c93b5f`; which at
+   a removal is not read, ?). The lab runs neither: S-CARD wrote the mount state 8 and left the status at the image's 0,
+   NO_MOUNT, so the erase mode was restricted and Delete opened no dialog: a lab defect, a stand-in's value missing
+   beside the one it gave. S-CARD now sets the first slot's status to OK with the mount state, on every body, at the
+   word the setter's medium 4 stores (`src/fw/facts.mjs` mediaStatus, fact `media_status`, which places E143's word for
+   the port: one setter on each of the 19 images, X; D on E144, E137, E130 and E122, `test/test_facts.mjs`
+   MEDIA_STATUS_FOUND). (Corrected on review, 2026-11-11: the map had placed the word 8 bytes low, on the second slot's,
+   on the eleven bodies whose setter has a fourth medium, 32, after E143's three, its words 8 bytes apart: E137, E142,
+   E140, E130, E145, E133, E129, E132, E122, E118 and E120; D, E130 `0x506ff7fd`: 4 `0x62399b14`, 8 `0x62399b0c`, 1
+   `0x62399b04`, 32 `0x62399afc`.) After it (X, `test/test_erase.mjs`): Delete opens the erase dialog on E143, E146,
+   E147, E144, E148, E139, E134, E137 and E125 too (finding 111's list of bodies where it changed nothing loses them;
+   E125's word was already the right one before the rule; nothing pressed Delete there until test_erase held
+   ERASE_DIALOG both ways on review), and UP and OK send request 21; on the E118 family it still opens nothing (why,
+   ?). No default session's screen changes by it (X: golden's screen layer, 240 sessions), but the evaluations that
+   read the status take other paths, so the instruction counts of 23 scenario sessions' interrupt rows and stops move
+   (playback's first difference: an IRQ 310 row 117 instructions later) and check_perf's P6 instruction count with them;
+   with the
+   write removed again all of them are identical (X; a15-open too, rerun on review), so the write alone moves them
+   (playback's trace with and without it differs in the irq rows' instruction counts, the stops, the final instruction
+   count and the digests alone, X); which reads of the status they are, on screens without the erase mode, is not traced
+   (?). Re-recorded with this reason (finding 142). Open: at a card out and in at run time (`src/lab/media.mjs` S-MEDIA,
+   which sets the mount state through the firmware's setter) the status stays OK. Open too, older than this finding:
+   the same layout moves S-CARD's second mount-state word (E143 `0x60360c08`, the mount setter's media 1 and 8,
+   `0x50aca6b1`), which the port places on the medium 32's word, not medium 1's, on the ten bodies whose mount setter
+   takes 4, 1 and 32: E142, E140, E130, E145, E133, E129, E132, E122, E118 and E120 (D, E130 `0x506ff7ab`: 1
+   `0x62399b30`, 32 `0x62399b3c`, the port's `0x62399b3c`; X, a scan of the 19); not changed here.
+139. **The erase performed natively (H-OBJDEL)** (2026-11-11, `src/lab/camapp.mjs` S-PLAYSEQ's play_erase, H-OBJDEL;
+   `src/lab/storage.mjs` api_request). S-PLAYSEQ takes eraseCurrent (21) at its execute and, where it runs natively
+   (finding 140), performs it after the step, before its finish: from the lab's task it makes the component's calls in
+   the component's order (finding 137) for the picture shown (the DCF index is its place in the list, which is the
+   database's fnode by index): the media API's attribute (`0x503fdcb1(0, index)`), whose bit 0 refuses the erase with a
+   FirmwareError naming the answer `0xf000003a` the component would give (how the GUI takes that answer is not read, and
+   E143's GUI does not send the request for a protected picture: its Delete tests isProtect first and blinks the protect
+   mark, X); then the object delete for the whole object (`0x503fd974(0, index, 0)`: the lab's pictures are JPEG alone,
+   so the component's part, by the setting 139 for a RAW + JPEG object, is 0). The API posts FILECLBK the DCF edit's
+   object delete, which runs natively in FILECLBK's task; Storage.api_request lets lab time run until FILECLBK waits on
+   its queue again and takes its one reply to the API's token (the call's d0, `0xf0000000 | slot << 16`, X), whose
+   status must be 0 (any other stops the session: the component's path for it is not read). Then, as the component after
+   the reply (`0x50bc09e6`): the list is the database's again, the image shown keeps its index or takes the last where
+   it was past the count, none where none is left, and the count must have dropped by one; S-CARD's record of the
+   picture is dropped. The request is then finished as every request (kind 2), the single-frame callback posts
+   CBS_ERASE_CURRENT and the GUI asks for the single frame again (request 8, X), which S-PLAYSEQ answers with the
+   picture now shown, or which shows No Picture (SS_PLAY_SINGLE/ID_ST_NO_PICTURE, X) where none is left. Not run: the
+   component's state machine itself, app_select_execute's progress notifications, the album test (Get_Album_Num) and the
+   deferred work of the component's list caches. S-PLAYCOMP's isProtect now answers the attribute of the picture shown,
+   as the play start read it (it answered 0 before; a picture the lab takes is not locked, so no session changes by it,
+   I). X, `test/test_erase.mjs` on E143 (31 checks): three pictures, the first locked by the firmware's own DCF edit
+   (FILECLBK's OBJ_LOCK, code `0x23`, sent by the test: the entry's read-only bit on the card, the API's attribute 1);
+   Delete, UP and OK erase P1010003 (two left, image 2 shown, number 2, the frame redrawn) and then P1010002 (one left,
+   the protected 100-0001 shown); after each, read back by `refs/fat.mjs`, the file's entry is marked deleted (`0xe5`,
+   its other ten name bytes, first cluster and size kept), every cluster of its chain is free in the FAT, the free count
+   and FSInfo's rise by the chain, and the other files keep their bytes and first cluster. Delete on the protected
+   picture opens no dialog (ID_ST_PROTECT_BLINK_SINGLE, back to the single frame within a second by itself), the lab's
+   erase of it is refused, and the firmware's object delete asked for it directly returns status 0 with the file, the
+   FAT and the count unchanged (the DCF edit's lock test, `0x508728bc`); after OBJ_UNLOCK (code `0x24`; the entry's
+   read-only bit cleared) the dialog erases it: No Picture, a count of 0, the emptied folder `100OMSYS` removed from
+   DCIM (its entry marked deleted, its cluster free, the free count up by the chain and the folder's cluster). PLAY
+   returns to the shooting screen, and S1 and S2 take 100-0001 again, counted and on the card (X; that the delete
+   mount's renumbering gives it is I).
+140. **The erase on the other bodies, by a rule** (2026-11-11, `src/fw/facts.mjs` pictureErase, fact `erase`;
+   `src/lab/camapp.mjs` erase_unnative). The picture file API's functions (api_picfile.c) each open by loading their own
+   API id into d0 for the trace's enter call (`mov ID,d0; call`), the id the function's other trace calls carry in a0 (D
+   on E143: the object delete's `0x7000f` at `0x503fd979`, the attribute's `0x70012` at `0x503fdcb3`). The rule finds
+   the one load of each id (`fc cc` and the id), takes the greatest call target within `0x20` bytes before it as the
+   function's entry (the entry a `call` reaches, after any `movm` prologue: E143's delete has one at `0x503fd96f`), and
+   holds it to its code: `mov 33,d0` (the DCF edit's object delete) within `0x200` bytes of whole instructions of the
+   delete, `movbu (89,aN),dM` (the fnode's attribute byte) within as many of the attribute. It throws for an id loaded
+   twice, a load with no call target before it or a function without its code, and gives null where an id is not loaded.
+   X, the port of the 18 bodies (src/fw/ports.mjs FACTS): one load of each id on 16 of them, none on E118 and E120
+   (null; both hold api_picfile.c, X: its name, with 17 loads of it on E118 against E143's 32; where their object
+   delete is, if anywhere, is not read, ?), each function holding its code (D for E144's `0x502dfaa5`
+   and `0x502dfde3`, code 33 at `0x502dfb7a` and the +89 read at `0x502dfe5a`, and E130's `0x502d7450` and `0x502d7809`,
+   at `0x502d7564` and `0x502d7899`; `test/test_facts.mjs` ERASE_FOUND holds them). The first slot's media status word
+   of finding 138 is placed by a rule of its own (mediaStatus, finding 138). Where the fact is null eraseCurrent is
+   refused with that reason; where it is
+   read but the DCF database does not hold the lab's pictures in the session (no recorder or REC_FILE registering them,
+   so the database learns of them only at the next mount and its index is not the picture's: E130, E145, E133, E129,
+   E132 and E122) it is refused with that one. So eraseCurrent runs natively on eleven bodies: E143, E146, E147 and the
+   E144 family's E144, E148, E139, E134, E137, E142, E140 and E125 (H-OBJDEL; `test/test_erase.mjs` ERASE_NATIVE, held
+   both ways). X, `test/test_erase.mjs` per body: 31 checks pass on each of the eleven, all through the erase dialog
+   (E137 and E125 since review: 27 before, when the test took their Delete to open nothing and called S-PLAYSEQ's erase
+   itself), 3 on E130 and E133 (eraseCurrent refused at its execute, both files kept) and 4 on E145, E129, E132, E122,
+   E118 and E120 (those, and Delete opening no dialog, or refused where the body has no Delete key), 371 in all
+   (review, 2026-11-11). On E142, E140 and E137 S1 and S2 after PLAY back from playback release nothing, with or
+   without an erase (X on E142 without one too; why, ?), so the next picture's number is taken on the eight others
+   alone (test_erase
+   SHOOTS_AFTER_PLAY). Once REC_FILE registers the pictures on E130 or the E118 family the rule's calls make E130 and
+   E122 native too (I; ERASE_NATIVE would have to follow).
+141. **The edit-save requests** (2026-11-11, `src/lab/camapp.mjs` EDIT_SAVE; D: each id is the one its sender sets after
+   its entry trace, as finding 110's). The play requests that save a file an edit made: OlyHfwOpeEdtRsz::save 120 (E143
+   `0x50b5ec3e`), OlyHfwOpeEdtTrm::save 131 (`0x50b5f886`), OlyHfwOpeEdtCol::save 142 (`0x50b5b3ed`),
+   OlyHfwEditRedEyeAdjustOperation::save 164 (`0x50b5e86a`), OlyHfwOpeEdtSdw::save 173 (`0x50b5f098`),
+   OlyHfwOpeEdtBty::save 186 (`0x50b5aebd`), OlyHfwEditAspectOperation::save 281 (`0x50b5ab14`), OlyHfwOpeEdtRaw::save
+   284 (`0x50b5de7a`), OlyHfwOpeEdtImgOve::save 331 (`0x50b5c248`), OlyHfwOpeEdtRaw's saveCurrentModeEdit 404
+   (`0x50b5dfae`), saveCustomEdit 408 (`0x50b5e057`) and saveArtBktEdit 456 (`0x50b5df05`), and
+   OlyHfwOpePlyMov::saveEditMovie 477 (`0x50ad5c6f`): thirteen, each id the same on the 19 bodies (X: a scan of each
+   image for the entry traces, `::save#` and its siblings, and the id set after each). The same scan finds a fourteenth
+   sender on E134, E125, E130, E145, E133, E129 and E132 alone: OlyHfwOpeEdtMov::save, which sends 533 for its argument
+   1 and 535 for 2 (E125 `0x50823ab5`, `0x50823ac2`; neither id has a sender on E143, X: every `mov 533,d0` and `mov
+   535,d0` there). S-PLAYSEQ finished each as every request, result 0 with no file written (finding 110's "open"); it
+   now refuses the fifteen ids at their execute with a FirmwareError naming the request and its caller, as the erases it
+   does not perform. No session of golden, modelcheck or the tests sends one (X: golden and modelcheck after the change,
+   finding 142; the GUI reaches the edits from the playback wizard's items, of which the lab's wizard offers Rating
+   alone, finding 108). OlyHfwOpePlyRec::record (115, `0x50b6e195`; the picture's sound record by its name, I) also
+   writes a file and is still finished as every request: not an edit's save, not read, open. So is
+   OlyHfwOpeEdtMov::startImageCapture (527, E143 `0x50b5cb72`, D; a still taken from a movie by its name, I): whether
+   its request writes a file is not read (review, 2026-11-11), open.
+142. **Coverage, and what is left of erase** (2026-11-11, `test/test_erase.mjs`, `test/test_playinfo.mjs`, both in
+   `bin/test.mjs`). test_erase (finding 139's session on ERASE_NATIVE's eleven bodies, each body but E143 in a process
+   of its own; on a native body whose Delete opened no dialog it would call S-PLAYSEQ's erase as the request would and
+   leave playback and enter it again, since no request tells that GUI of the erase; since review none does): after the
+   session, each refused request at its execute (the erases 23, 301, 510, 395, 396 and 497, the synchronous 265, the
+   fifteen saves of finding 141), nothing taken; on the eight others two pictures, eraseCurrent refused at its execute
+   and both files on the card; on every body outside ERASE_DIALOG Delete opening no dialog (held both ways since
+   review). test_playinfo: Delete, UP and OK at its end now erase one of its two pictures on ERASE_NATIVE's bodies with
+   a dialog (one file left on the card, one counted) and stop with the refusal on E130 and E133; its ERASE_DIALOG is
+   test_erase's (finding 138). X: test_erase 371 checks (finding 140; 357 before review); test_playinfo 20 checks on
+   E143, E146, E147, E144, E148, E139, E134, E137, E142, E140, E125, E130 and E133, 17 on E145, E129 and E132, 18 on
+   the family, 365 in all (359 before review, 338 before these findings, finding 112). Mutations (X, review, E143's
+   test_erase): the index off by one, the attribute's refusal dropped and S-PLAYCOMP's isProtect at 0 each fail it.
+   Golden and modelcheck (X): before the re-record 25 sessions differed in a gating layer
+   (23 scenario sessions' instruction counts, run/perf and run/perf-fault) and 3 in the harness layer alone, each by the
+   media status write (finding 138), none by an erase or an edit's save, which no session sends; re-recorded with
+   finding 138's reason (28 sessions), then all 240 identical; `bin/modelcheck.mjs --no-port` after `bin/port.mjs all`
+   on the final sources: its 31 runs pass. (Review, 2026-11-11: that re-port predated two literals of EDIT_SAVE's
+   comment, X; after mediaStatus the re-port places them and the status word alone anew, and modelcheck `--no-port`
+   after it passes its 31 runs again, and golden's 240 sessions are identical, X: E143 is not touched by it.) Left
+   open: the other erase requests' component paths (PlyCom::erase 301 by
+   name, PlaySelect's 510, the light box's 395 and 396, the index playback's 497, the single frame's erase all 23,
+   PlayRecord's 265; refused); the menu's All Erase (the media control's command, DCFED_ALL_DELETE `0x25`, not driven,
+   finding 129); a RAW + JPEG object's part (OBJ_DEL_PART, by the setting 139) and an album picture (100 to 165), which
+   the lab's pictures are not; how the component's `0xf000003a` reaches the GUI; the media status at a card out and in
+   at run time (finding 138); S-CARD's second mount-state word on ten bodies (finding 138); why the E118 family's
+   Delete opens no dialog (?); OlyHfwOpePlyRec::record 115 and OlyHfwOpeEdtMov::startImageCapture 527 (finding 141);
+   and the family's isProtect (303), which S-PLAYSEQ answers 0 whatever the attribute (finding 109): no body of the
+   family erases natively yet.
 143. **The E118 family's REC_FILE task, by a rule** (2026-11-11, `src/fw/facts.mjs` recFileFrame, fact `rec_file`; D on
    E122 unless tagged; answers finding 102's "which caller is REC_FILE's" and finding 105's "Next"). The object-name
    table names task 33 REC_FILE, queue 78 REC_EXEC_FILE, queue 85 REC_POST_FILE, queue 34 FILECLBK_UEXEC and semaphore
@@ -2849,205 +3048,6 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    about 800 ms by body; the walker's limits (the items' English names, a cursor marked by the row's band, a draw log
    kept to its last 2,000 entries: a screen whose full clear has left the log is refused); `bin/nav.mjs` and the
    browser player have no such walk.
-137. **The erase on E143, read from Delete to the DCF edit** (2026-11-11; D unless tagged; answers finding 110's "which
-   request the component sends for it, with which block and to which queue, and how the database's count follows"). The
-   GUI: Delete's handler (`0x510d7773`) opens the erase dialog through `0x510d783e` (finding 111; X since finding 138:
-   the synchronous 285 and the request 286, then SS_MENU_MAIN/ID_ST_WIZARD_MENU_ENTRY), and the dialog's Yes (UP, OK)
-   calls OlyHfwOpePlySfr::eraseCurrent, which sends request 21 (X: its execute returns to `0x50b6faa2`). The component:
-   CmpPls_PlaySingleComponent's erase_current_start_enter (`0x50c2c35f`) stores the state 110, reads the picture's album
-   number (`0x50bbdfa6`), skips the protection test for an album 100 to 165 (the short-movie albums, I), else tests it
-   (`0x50c3a742`: the media API's attribute of the current index, `0x503fdcb1`, bit 0) and answers a protected picture
-   `0xf000003a` (`0x50c2c3dc`) without erasing; else it clears the list's caches and calls app_play_idle_erase
-   (`0x50c328a2`), which runs app_select_execute (`0x50c33967`) with `0x02000089`, whose delete step (`0x50c3492b`, a
-   word of the step table) takes the drive (`0x62b0ab28`) and the current index (`0x50bc00ff`), reads the picture's file
-   type (`0x5040184d`; for type 5 the setting 139 picks a part, 1 or 2, else 0), runs a gate (`0x50c392e4`: two virtual
-   calls of the component's object at +1056; an answer other than 0 takes another path, `0x50c34a07`, not read), sets
-   the access slot (`0x50c3ab42`) and starts the media access lamp (`0x50c37ec4`), asks Get_Album_Num (`0x503dd27f`) and
-   calls the picture file API's object delete, `0x503fd974(d0 drive, d1 index, a0 part)` (api_picfile.c, API id
-   `0x7000f`; a drive of 2 or more returns 0 with a trace, `0x503fd9c2`), keeping its token with the API function's
-   address (`0x50c37554`). The API: a 56-byte block with +2 the drive, +4 the fnode of the index (the getter
-   `0x50874bc9`, the DCF process's command 5) and +12 the option (0; for a part 1, 2 or 3 the option 4, 2 or 1), posted
-   by the API's sender (`0x503eb960`, target 17: queue `0x1f`, FILECLBK's) as {the API's reply queue 6, the token, the
-   code, the block}: code 33 (`0x21`, `0x503fda48`) for the whole object, 40 (`0x28`) for a part. FILECLBK
-   (`0x5088fd8a`) maps the codes `0x21..0x2d` through its table `0x60a104ec` to the DCF edit's operations (dcfedit.c
-   `0x508727c4`, its table `0x60a0e4c8`), named by the file trace's table (`0x5089c7c3`, `0x60a150f4`): `0x21` 0
-   DCFED_OBJ_DEL, `0x27` 1 OBJ_DEL_OPT, `0x28` 2 OBJ_DEL_PART, `0x22` 3 OBJ_COPY, `0x23` 4 OBJ_LOCK, `0x24` 5
-   OBJ_UNLOCK, `0x2b` 6 OBJ_RATING, `0x25` 7 ALL_DELETE, `0x26` 8 ALL_COPY, `0x2c` 9 ALL_RATING, `0x29` 10 MULTI_DELETE,
-   `0x2a` 11 MULTI_COPY, `0x2d` 12 MULTI_RATING (`0x20`, with a null block, sets the edit's abort flag `0x62ad86c0`).
-   The object delete (`0x50872887`): an fnode whose byte +89 has bit 0 (the lock: OBJ_LOCK sets it and OBJ_UNLOCK clears
-   it, `0x50872e87`, `0x50872ea8`, each with dosfile's FILE_LOCK_FILE or FILE_UNLOCK_FILE on the entry) returns 0 with
-   nothing erased (`0x508728bc`); else the DCF process's command 3, the file's delete (`0x508730f1(fnode, 2, 1)`:
-   dosfile's operation 2, FILE_DELETE_FILE, `0x50888c9f`, by the fnode's 8.3 name in its folder's cluster; the object's
-   other files are its extensions 2 WAV, 3 ORF, 4 JPG, 5 TPS, 6 ORI), the notification `0x5089c2d8(5, drive, folder x
-   10000 + file)` (the registration's is 4, 4.8.9), a print-order update where the fnode's +90 is set (`0x5088d4df`,
-   `0x5088d6f5`), the folder's delete where the option's bit 3 and the dnode's +24 bit 0 are clear (`0x5087321c`:
-   dosfile's operation 3, FILE_DELETE_DIR, whose error 3597 for a folder not empty is passed over; an emptied folder's
-   dnode is then taken out, `0x50873b9c`, `0x508720bb`, `0x50871fca`), the database's re-read (`0x5087366a`: the DCF
-   process's command 8, `0x508778f9` with operation 2, which finds the folder's files again and sets each type's count,
-   `0x50874b48`), the DCF process's command 4 and the delete mount (`0x50873626`: dcfnum's operation 4, DCFNUM_DELMOUNT,
-   `0x5087860d`). FILECLBK replies {status, token} to queue 6, where the application's event task (`0x50abbf0c`) frees
-   the request's slot (`0x503ebae0`). The component takes the completion in state 110 (`0x50c2c4b5`, event 363): it
-   drops the list's caches (`0x50bc09c9`, `0x50bc1343`), reads the drive's count again and, where its current index is
-   past it, takes the count (`0x50bc09e6`: the media API's count `0x503fdc1d`, the index `0x62b0ab5c`), and with no
-   picture left calls `0x50bc188e`; the request's completion (kind 2) makes the single-frame callback (`0x50b712c4`)
-   post CBC_PLAY_SINGLE_FRAME / CBS_ERASE_CURRENT with no parameter (finding 110). X (a call trace of H-OBJDEL's erase
-   of the second of two pictures, finding 139, rerun 2026-11-11): from the lab's task the API's attribute and the fnode
-   getter, then the object delete (d1 2) and the fnode getter; in FILECLBK's task dcfedit, the object delete, command 3,
-   the file delete (dosfile 2 with dosfat's chain read, chain write and FAT update), the notification with 1000002, the
-   folder delete (dosfile 3, two chain reads, not empty), the re-read (command 8, a find, the eleven counts), command 4,
-   the delete mount (dosfile 1 and 10); then the reply (`0x503ebae0`, d0 `0xf0000000`) in the event task. Not read:
-   app_select_execute's other steps and its progress notifications (kind 3), the component's path for an album picture
-   and for a status not 0, what the notification `0x5089c2d8` does, and how the answer `0xf000003a` reaches the GUI (?).
-138. **The media status word, and why E143's Delete opened nothing** (2026-11-11, `src/lab/camapp.mjs` S-CARD's
-   CARD_STATUS; corrects finding 111's reading of 3238 as a property someone sets). 3238 is the erase mode's row in the
-   restriction table: canExecute (`0x50b01314` -> `0x50b7ae3f` -> `0x50b7aeae` -> `0x50b7e4b8`) evaluates the row of the
-   id (637 rows of 12 bytes from `0x60e4bdcc`: the id, a list of condition numbers, their count), each condition a
-   function of the table `0x60e4ad9c`, and answers 1 where none restricts (D). X on E143, Delete with two pictures: the
-   row's conditions 1, 2, 5 and 48 answer 0 and condition 122 (`0x50b7e96b`) answers 1, restricted, so canExecute
-   answers 0; with the status OK, 122 and the row's 124 and 129 answer 0 too and canExecute 1 (X, rerun 2026-11-11 with
-   the status written by hand). It looks the play medium's status (`0x50b80ba1`, from the HLS media words through
-   `0x50aca556`) up in list 3 of `0x60e4eafc`: `0xf000`, `0x3000`, `0x3001` (D). The status is the HLS media layer's
-   word per medium (SD `0x60360bec`, SD2 `0x60360be4`, IN `0x60360bdc`; an override at `0x60360bf0` while it is not
-   `0xffff`), whose setter (`0x50aca703`) names the values in its trace: 0 NO_MOUNT, `0x1000` COVER_OPEN, `0x1001`
-   NOT_PRESENT, `0x2000` UNFORMAT, `0x2001` ERROR, `0x3000` PROTECT, `0x3001` DATA_PROTECT, `0xf000` OK (D). The HLS
-   media manager sets it (`0x50bb9b99` and, after a mount whose device reports no error and is mounted, OK at
-   `0x50bb816e..0x50bb8183`, D; that a healthy card's device answers so is I), and a media device's function clears a
-   slot's mount state with the status NO_MOUNT or NOT_PRESENT (`0x50c93a33..0x50c93a59`, SD2's at `0x50c93b5f`; which at
-   a removal is not read, ?). The lab runs neither: S-CARD wrote the mount state 8 and left the status at the image's 0,
-   NO_MOUNT, so the erase mode was restricted and Delete opened no dialog: a lab defect, a stand-in's value missing
-   beside the one it gave. S-CARD now sets the first slot's status to OK with the mount state, on every body, at the
-   word the setter's medium 4 stores (`src/fw/facts.mjs` mediaStatus, fact `media_status`, which places E143's word for
-   the port: one setter on each of the 19 images, X; D on E144, E137, E130 and E122, `test/test_facts.mjs`
-   MEDIA_STATUS_FOUND). (Corrected on review, 2026-11-11: the map had placed the word 8 bytes low, on the second slot's,
-   on the eleven bodies whose setter has a fourth medium, 32, after E143's three, its words 8 bytes apart: E137, E142,
-   E140, E130, E145, E133, E129, E132, E122, E118 and E120; D, E130 `0x506ff7fd`: 4 `0x62399b14`, 8 `0x62399b0c`, 1
-   `0x62399b04`, 32 `0x62399afc`.) After it (X, `test/test_erase.mjs`): Delete opens the erase dialog on E143, E146,
-   E147, E144, E148, E139, E134, E137 and E125 too (finding 111's list of bodies where it changed nothing loses them;
-   E125's word was already the right one before the rule; nothing pressed Delete there until test_erase held
-   ERASE_DIALOG both ways on review), and UP and OK send request 21; on the E118 family it still opens nothing (why,
-   ?). No default session's screen changes by it (X: golden's screen layer, 240 sessions), but the evaluations that
-   read the status take other paths, so the instruction counts of 23 scenario sessions' interrupt rows and stops move
-   (playback's first difference: an IRQ 310 row 117 instructions later) and check_perf's P6 instruction count with them;
-   with the
-   write removed again all of them are identical (X; a15-open too, rerun on review), so the write alone moves them
-   (playback's trace with and without it differs in the irq rows' instruction counts, the stops, the final instruction
-   count and the digests alone, X); which reads of the status they are, on screens without the erase mode, is not traced
-   (?). Re-recorded with this reason (finding 142). Open: at a card out and in at run time (`src/lab/media.mjs` S-MEDIA,
-   which sets the mount state through the firmware's setter) the status stays OK. Open too, older than this finding:
-   the same layout moves S-CARD's second mount-state word (E143 `0x60360c08`, the mount setter's media 1 and 8,
-   `0x50aca6b1`), which the port places on the medium 32's word, not medium 1's, on the ten bodies whose mount setter
-   takes 4, 1 and 32: E142, E140, E130, E145, E133, E129, E132, E122, E118 and E120 (D, E130 `0x506ff7ab`: 1
-   `0x62399b30`, 32 `0x62399b3c`, the port's `0x62399b3c`; X, a scan of the 19); not changed here.
-139. **The erase performed natively (H-OBJDEL)** (2026-11-11, `src/lab/camapp.mjs` S-PLAYSEQ's play_erase, H-OBJDEL;
-   `src/lab/storage.mjs` api_request). S-PLAYSEQ takes eraseCurrent (21) at its execute and, where it runs natively
-   (finding 140), performs it after the step, before its finish: from the lab's task it makes the component's calls in
-   the component's order (finding 137) for the picture shown (the DCF index is its place in the list, which is the
-   database's fnode by index): the media API's attribute (`0x503fdcb1(0, index)`), whose bit 0 refuses the erase with a
-   FirmwareError naming the answer `0xf000003a` the component would give (how the GUI takes that answer is not read, and
-   E143's GUI does not send the request for a protected picture: its Delete tests isProtect first and blinks the protect
-   mark, X); then the object delete for the whole object (`0x503fd974(0, index, 0)`: the lab's pictures are JPEG alone,
-   so the component's part, by the setting 139 for a RAW + JPEG object, is 0). The API posts FILECLBK the DCF edit's
-   object delete, which runs natively in FILECLBK's task; Storage.api_request lets lab time run until FILECLBK waits on
-   its queue again and takes its one reply to the API's token (the call's d0, `0xf0000000 | slot << 16`, X), whose
-   status must be 0 (any other stops the session: the component's path for it is not read). Then, as the component after
-   the reply (`0x50bc09e6`): the list is the database's again, the image shown keeps its index or takes the last where
-   it was past the count, none where none is left, and the count must have dropped by one; S-CARD's record of the
-   picture is dropped. The request is then finished as every request (kind 2), the single-frame callback posts
-   CBS_ERASE_CURRENT and the GUI asks for the single frame again (request 8, X), which S-PLAYSEQ answers with the
-   picture now shown, or which shows No Picture (SS_PLAY_SINGLE/ID_ST_NO_PICTURE, X) where none is left. Not run: the
-   component's state machine itself, app_select_execute's progress notifications, the album test (Get_Album_Num) and the
-   deferred work of the component's list caches. S-PLAYCOMP's isProtect now answers the attribute of the picture shown,
-   as the play start read it (it answered 0 before; a picture the lab takes is not locked, so no session changes by it,
-   I). X, `test/test_erase.mjs` on E143 (31 checks): three pictures, the first locked by the firmware's own DCF edit
-   (FILECLBK's OBJ_LOCK, code `0x23`, sent by the test: the entry's read-only bit on the card, the API's attribute 1);
-   Delete, UP and OK erase P1010003 (two left, image 2 shown, number 2, the frame redrawn) and then P1010002 (one left,
-   the protected 100-0001 shown); after each, read back by `refs/fat.mjs`, the file's entry is marked deleted (`0xe5`,
-   its other ten name bytes, first cluster and size kept), every cluster of its chain is free in the FAT, the free count
-   and FSInfo's rise by the chain, and the other files keep their bytes and first cluster. Delete on the protected
-   picture opens no dialog (ID_ST_PROTECT_BLINK_SINGLE, back to the single frame within a second by itself), the lab's
-   erase of it is refused, and the firmware's object delete asked for it directly returns status 0 with the file, the
-   FAT and the count unchanged (the DCF edit's lock test, `0x508728bc`); after OBJ_UNLOCK (code `0x24`; the entry's
-   read-only bit cleared) the dialog erases it: No Picture, a count of 0, the emptied folder `100OMSYS` removed from
-   DCIM (its entry marked deleted, its cluster free, the free count up by the chain and the folder's cluster). PLAY
-   returns to the shooting screen, and S1 and S2 take 100-0001 again, counted and on the card (X; that the delete
-   mount's renumbering gives it is I).
-140. **The erase on the other bodies, by a rule** (2026-11-11, `src/fw/facts.mjs` pictureErase, fact `erase`;
-   `src/lab/camapp.mjs` erase_unnative). The picture file API's functions (api_picfile.c) each open by loading their own
-   API id into d0 for the trace's enter call (`mov ID,d0; call`), the id the function's other trace calls carry in a0 (D
-   on E143: the object delete's `0x7000f` at `0x503fd979`, the attribute's `0x70012` at `0x503fdcb3`). The rule finds
-   the one load of each id (`fc cc` and the id), takes the greatest call target within `0x20` bytes before it as the
-   function's entry (the entry a `call` reaches, after any `movm` prologue: E143's delete has one at `0x503fd96f`), and
-   holds it to its code: `mov 33,d0` (the DCF edit's object delete) within `0x200` bytes of whole instructions of the
-   delete, `movbu (89,aN),dM` (the fnode's attribute byte) within as many of the attribute. It throws for an id loaded
-   twice, a load with no call target before it or a function without its code, and gives null where an id is not loaded.
-   X, the port of the 18 bodies (src/fw/ports.mjs FACTS): one load of each id on 16 of them, none on E118 and E120
-   (null; both hold api_picfile.c, X: its name, with 17 loads of it on E118 against E143's 32; where their object
-   delete is, if anywhere, is not read, ?), each function holding its code (D for E144's `0x502dfaa5`
-   and `0x502dfde3`, code 33 at `0x502dfb7a` and the +89 read at `0x502dfe5a`, and E130's `0x502d7450` and `0x502d7809`,
-   at `0x502d7564` and `0x502d7899`; `test/test_facts.mjs` ERASE_FOUND holds them). The first slot's media status word
-   of finding 138 is placed by a rule of its own (mediaStatus, finding 138). Where the fact is null eraseCurrent is
-   refused with that reason; where it is
-   read but the DCF database does not hold the lab's pictures in the session (no recorder or REC_FILE registering them,
-   so the database learns of them only at the next mount and its index is not the picture's: E130, E145, E133, E129,
-   E132 and E122) it is refused with that one. So eraseCurrent runs natively on eleven bodies: E143, E146, E147 and the
-   E144 family's E144, E148, E139, E134, E137, E142, E140 and E125 (H-OBJDEL; `test/test_erase.mjs` ERASE_NATIVE, held
-   both ways). X, `test/test_erase.mjs` per body: 31 checks pass on each of the eleven, all through the erase dialog
-   (E137 and E125 since review: 27 before, when the test took their Delete to open nothing and called S-PLAYSEQ's erase
-   itself), 3 on E130 and E133 (eraseCurrent refused at its execute, both files kept) and 4 on E145, E129, E132, E122,
-   E118 and E120 (those, and Delete opening no dialog, or refused where the body has no Delete key), 371 in all
-   (review, 2026-11-11). On E142, E140 and E137 S1 and S2 after PLAY back from playback release nothing, with or
-   without an erase (X on E142 without one too; why, ?), so the next picture's number is taken on the eight others
-   alone (test_erase
-   SHOOTS_AFTER_PLAY). Once REC_FILE registers the pictures on E130 or the E118 family the rule's calls make E130 and
-   E122 native too (I; ERASE_NATIVE would have to follow).
-141. **The edit-save requests** (2026-11-11, `src/lab/camapp.mjs` EDIT_SAVE; D: each id is the one its sender sets after
-   its entry trace, as finding 110's). The play requests that save a file an edit made: OlyHfwOpeEdtRsz::save 120 (E143
-   `0x50b5ec3e`), OlyHfwOpeEdtTrm::save 131 (`0x50b5f886`), OlyHfwOpeEdtCol::save 142 (`0x50b5b3ed`),
-   OlyHfwEditRedEyeAdjustOperation::save 164 (`0x50b5e86a`), OlyHfwOpeEdtSdw::save 173 (`0x50b5f098`),
-   OlyHfwOpeEdtBty::save 186 (`0x50b5aebd`), OlyHfwEditAspectOperation::save 281 (`0x50b5ab14`), OlyHfwOpeEdtRaw::save
-   284 (`0x50b5de7a`), OlyHfwOpeEdtImgOve::save 331 (`0x50b5c248`), OlyHfwOpeEdtRaw's saveCurrentModeEdit 404
-   (`0x50b5dfae`), saveCustomEdit 408 (`0x50b5e057`) and saveArtBktEdit 456 (`0x50b5df05`), and
-   OlyHfwOpePlyMov::saveEditMovie 477 (`0x50ad5c6f`): thirteen, each id the same on the 19 bodies (X: a scan of each
-   image for the entry traces, `::save#` and its siblings, and the id set after each). The same scan finds a fourteenth
-   sender on E134, E125, E130, E145, E133, E129 and E132 alone: OlyHfwOpeEdtMov::save, which sends 533 for its argument
-   1 and 535 for 2 (E125 `0x50823ab5`, `0x50823ac2`; neither id has a sender on E143, X: every `mov 533,d0` and `mov
-   535,d0` there). S-PLAYSEQ finished each as every request, result 0 with no file written (finding 110's "open"); it
-   now refuses the fifteen ids at their execute with a FirmwareError naming the request and its caller, as the erases it
-   does not perform. No session of golden, modelcheck or the tests sends one (X: golden and modelcheck after the change,
-   finding 142; the GUI reaches the edits from the playback wizard's items, of which the lab's wizard offers Rating
-   alone, finding 108). OlyHfwOpePlyRec::record (115, `0x50b6e195`; the picture's sound record by its name, I) also
-   writes a file and is still finished as every request: not an edit's save, not read, open. So is
-   OlyHfwOpeEdtMov::startImageCapture (527, E143 `0x50b5cb72`, D; a still taken from a movie by its name, I): whether
-   its request writes a file is not read (review, 2026-11-11), open.
-142. **Coverage, and what is left of erase** (2026-11-11, `test/test_erase.mjs`, `test/test_playinfo.mjs`, both in
-   `bin/test.mjs`). test_erase (finding 139's session on ERASE_NATIVE's eleven bodies, each body but E143 in a process
-   of its own; on a native body whose Delete opened no dialog it would call S-PLAYSEQ's erase as the request would and
-   leave playback and enter it again, since no request tells that GUI of the erase; since review none does): after the
-   session, each refused request at its execute (the erases 23, 301, 510, 395, 396 and 497, the synchronous 265, the
-   fifteen saves of finding 141), nothing taken; on the eight others two pictures, eraseCurrent refused at its execute
-   and both files on the card; on every body outside ERASE_DIALOG Delete opening no dialog (held both ways since
-   review). test_playinfo: Delete, UP and OK at its end now erase one of its two pictures on ERASE_NATIVE's bodies with
-   a dialog (one file left on the card, one counted) and stop with the refusal on E130 and E133; its ERASE_DIALOG is
-   test_erase's (finding 138). X: test_erase 371 checks (finding 140; 357 before review); test_playinfo 20 checks on
-   E143, E146, E147, E144, E148, E139, E134, E137, E142, E140, E125, E130 and E133, 17 on E145, E129 and E132, 18 on
-   the family, 365 in all (359 before review, 338 before these findings, finding 112). Mutations (X, review, E143's
-   test_erase): the index off by one, the attribute's refusal dropped and S-PLAYCOMP's isProtect at 0 each fail it.
-   Golden and modelcheck (X): before the re-record 25 sessions differed in a gating layer
-   (23 scenario sessions' instruction counts, run/perf and run/perf-fault) and 3 in the harness layer alone, each by the
-   media status write (finding 138), none by an erase or an edit's save, which no session sends; re-recorded with
-   finding 138's reason (28 sessions), then all 240 identical; `bin/modelcheck.mjs --no-port` after `bin/port.mjs all`
-   on the final sources: its 31 runs pass. (Review, 2026-11-11: that re-port predated two literals of EDIT_SAVE's
-   comment, X; after mediaStatus the re-port places them and the status word alone anew, and modelcheck `--no-port`
-   after it passes its 31 runs again, and golden's 240 sessions are identical, X: E143 is not touched by it.) Left
-   open: the other erase requests' component paths (PlyCom::erase 301 by
-   name, PlaySelect's 510, the light box's 395 and 396, the index playback's 497, the single frame's erase all 23,
-   PlayRecord's 265; refused); the menu's All Erase (the media control's command, DCFED_ALL_DELETE `0x25`, not driven,
-   finding 129); a RAW + JPEG object's part (OBJ_DEL_PART, by the setting 139) and an album picture (100 to 165), which
-   the lab's pictures are not; how the component's `0xf000003a` reaches the GUI; the media status at a card out and in
-   at run time (finding 138); S-CARD's second mount-state word on ten bodies (finding 138); why the E118 family's
-   Delete opens no dialog (?); OlyHfwOpePlyRec::record 115 and OlyHfwOpeEdtMov::startImageCapture 527 (finding 141);
-   and the family's isProtect (303), which S-PLAYSEQ answers 0 whatever the attribute (finding 109): no body of the
-   family erases natively yet.
 
 
 

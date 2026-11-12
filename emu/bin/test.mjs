@@ -376,6 +376,19 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...su.bad, ...ss.bad, ...sx.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += su.bad.length + ss.bad.length + sx.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
+// the second card slot (test_storage.mjs --slot2: E143's and E146's two card slots, one card and two, the save slot,
+// the cards out and in, on E143 also under control camapp 3; docs/hle-gaps.md 4.8.12), each body in a process of
+// its own
+{
+  const { spawnSync } = await import('node:child_process');
+  const runs = ['E143', 'E146'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_storage.mjs', import.meta.url).pathname, '--slot2'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
+  });
+  console.log(`the second card slot: ${runs.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  runs.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`))).forEach((x) => console.log('  ', x));
+  bad += runs.filter(([, rc]) => rc !== 0).length;
+}
 // Playback with two pictures (RIGHT, LEFT, OK's wizard and PLAY from it, INFO's three views, the erase dialog's request
 // performed or refused where Delete opens it) and INFO's still information, from the picture's own
 // record: E143 here (S-PLAYCOMP's answer in the

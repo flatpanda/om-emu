@@ -188,8 +188,9 @@ const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 // its queue 0x6004324e and its handler's return 0x5053f20d, REC_IMAGE's post of a packet (a0) to a queue (d0)
 // 0x5053990f, rec_jpeg_make_image 0x50549b42 (where recImage reads S-JPEGENC's points), the clock read 0x5012b7cd
 // (fact 'recorder'), the date
-// format 0x5012bd20 and the string copy 0x50003843, REC_FILE's file contexts (92 bytes) for Media and Media2
-// 0x62a8c4e4 and 0x62a8c540. The bodies' differences (E146 and E147: the packet of 276 bytes with other offsets, the
+// format 0x5012bd20 and the string copy 0x50003843, REC_FILE's file contexts (92 bytes) for Media 0 and Media 1
+// 0x62a8c4e4 and 0x62a8c540 (picked by Media's value, 0x5053ff29; not Media's and Media2's, as said before
+// 2026-11-11). The bodies' differences (E146 and E147: the packet of 276 bytes with other offsets, the
 // image's address and size in REC_IMAGE's image record, another EXIF parameter block's size and offsets past its
 // tags; the E144 family, by recFileQueue: the packet of 300 bytes, REC_FILE's queue with no flag, no cache flush and
 // no fill (cflush and fill null), one file context or two, the clock read clock_read; E130, E133 and E129, by
@@ -350,9 +351,11 @@ export class RecFile {
     return { x, clock: { date: [t[0] | t[1] << 8, t[2], t[3], t[4], t[5], t[6]], status: t[8] | t[9] << 8 }, date: this.text(x + D.original, 20), take };
   }
   // The picture's file from the lab's JPEG (a JFIF file, src/lab/jpeg.mjs): S-EXIFPRM, then S-RECREQ and REC_IMAGE
-  // natively with S-JPEGENC (the E144 family: S-RECIMAGE), then REC_FILE natively. Returns the file's record {path,
-  // size, folder, number, cluster, stamp, clock, header, date}
-  record(jpeg) {
+  // natively with S-JPEGENC (the E144 family: S-RECIMAGE), then REC_FILE natively. media: the packet's Media, the
+  // drive REC_FILE records on (0, or 1 for the second slot's card: DevRec_Rec's apiRecInfo.slot[0], which REC_MAIN
+  // copies there, docs/hle-gaps.md 4.8.12; Media2 stays none: the double-slot record is not made here). Returns the
+  // file's record {path, size, folder, number, cluster, stamp, clock, header, date}
+  record(jpeg, media = 0) {
     const lab = this.lab, sim = lab.sim, R = this.R, P = R.packet.fields, who = this.image ? 'S-RECREQ' : 'S-RECIMAGE';
     if (!this.started) this.bring_up();
     if (!this.waiting()) throw new RecError(`${who}: REC_FILE (task ${R.task.id}) is not waiting on its input`);
@@ -361,7 +364,7 @@ export class RecFile {
     const { x, clock, date, take } = this.exif_param();
     const pk = lab.alloc(new Uint8Array(R.packet.size), 4);
     const put = (field, fmt, v) => sim.write(pk + P[field], pack(fmt, v));
-    put('pExifParam', '<I', x); put('HandleTarget', '<I', SHOT); put('Mode', '<H', STILL); put('Media', '<H', 0);
+    put('pExifParam', '<I', x); put('HandleTarget', '<I', SHOT); put('Mode', '<H', STILL); put('Media', '<H', media);
     if (this.frame) {       // the E118 family's packet: FileType a halfword, no second slot; RecordDevice on E118 only
       put('FileType', '<H', JPEG);
       if (P.RecordDevice !== undefined) put('RecordDevice', '<H', CARD);
@@ -372,30 +375,33 @@ export class RecFile {
       put('FileType', '<B', JPEG);
     }
     const { header, size } = this.image ? this.image_native(pk, stream, take) : this.image_lab(pk, stream);
-    // the file, from REC_FILE's context for Media (its fnode and DCF block, storage.mjs REC's layouts); where
-    // rec_make_file keeps the context on its stack (recFileInline: contexts null), from the fnode and the stamp it
-    // held at the registration (image_lab); on the E118 family from the registration's block as FILECLBK replied to it
-    // (frame_watch)
-    const kept = !this.frame && R.contexts === null ? this.context : null, ctx = this.frame || kept ? null : R.contexts[0];
+    // the file, from REC_FILE's context of the packet's Media (rec_file_record picks it by Media's value, the second
+    // for 1: 0x5053ff29..0x5053ff37, D; its fnode and DCF block, storage.mjs REC's layouts); where rec_make_file keeps
+    // the context on its stack (recFileInline: contexts null), from the fnode and the stamp it held at the
+    // registration (image_lab); on the E118 family from the registration's block as FILECLBK replied to it
+    // (frame_watch). Those two forms record on the first slot alone in the lab
+    if ((this.frame || R.contexts === null) && media !== 0) throw new RecError(`REC_FILE: Media ${media} on a body whose REC version the lab records on the first slot alone`);
+    const kept = !this.frame && R.contexts === null ? this.context : null, ctx = this.frame || kept ? null : R.contexts[media];
     if (!this.frame && R.contexts === null && !kept) throw new RecError('REC_FILE: its record step did not reach the registration');
+    if (!this.frame && !kept && ctx === undefined) throw new RecError(`REC_FILE: no file context of Media ${media} is read on this body (fact rec_file contexts)`);
     const file = {
       ...(this.frame ? this.records.at(-1).file
         : kept ? { ...this.dcf_file(kept.fnode, kept.dcf, 'its context at the registration'), stamp: kept.stamp }
-          : this.dcf_file(sim.u32(ctx + CTX.fnode) >>> 0, sim.u32(ctx + CTX.dcf) >>> 0, `its context ${h8(ctx)}`)),
+          : this.dcf_file(sim.u32(ctx + CTX.fnode) >>> 0, sim.u32(ctx + CTX.dcf) >>> 0, `its context ${h8(ctx)}`, media)),
       clock, header, date,
     };
     if (file.size !== size) throw new RecError(`REC_FILE: the fnode's size ${file.size}, the packet's ${size}`);
     this.pictures += 1;
     return file;
   }
-  // A recorded file by its fnode fn and its DCF block blk (storage.mjs REC's layouts): {path, size, folder, number,
-  // cluster, stamp}
-  dcf_file(fn, blk, what) {
+  // A recorded file by its fnode fn and its DCF block blk (storage.mjs REC's layouts) on the slot of Media media (the
+  // file layer's letter 'C' + media): {path, size, folder, number, cluster, stamp}
+  dcf_file(fn, blk, what, media = 0) {
     const sim = this.lab.sim, F = this.st.rec_layout(), dn = fn ? sim.u32(fn + F.f.dnode) >>> 0 : 0;
     if (!fn || !dn) throw new RecError(`REC_FILE: ${what} holds fnode ${h8(fn)}, folder ${h8(dn)}`);
     const w16 = (a) => { const b = sim.read(a, 2); return b[0] | b[1] << 8; }, names = this.st.f.names;
     return {
-      path: `${names.drive}:\\DCIM\\${this.text(dn + F.d.name, 11)}\\${this.text(fn + F.f.name, 8)}.${this.text(fn + F.f.ext, 4)}`,
+      path: `${String.fromCharCode(names.drive.charCodeAt(0) + media)}:\\DCIM\\${this.text(dn + F.d.name, 11)}\\${this.text(fn + F.f.name, 8)}.${this.text(fn + F.f.ext, 4)}`,
       size: sim.u32(fn + F.f.size) >>> 0, folder: w16(dn + F.d.number), number: w16(fn + F.f.number),
       cluster: sim.u32(fn + F.f.cluster) >>> 0, stamp: sim.u32(blk + DCF_STAMP) >>> 0,
     };

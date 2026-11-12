@@ -529,17 +529,18 @@ export async function traRoutingSession() {
 // OlyHfwOpeShoot writes only while the sequence parts stand by (SHOOT_PHASE 101): camapp 3 writes 1, camapp 1 (phase
 // 100, no sequence parts) refuses; with the lever to 1 (API_LEVER_SW_1) camapp 3 writes 0 and its screen is camapp 1's
 // word for word, and camapp 1's lever changes nothing: back at API_LEVER_SW_2 camapp 3 shows its MF frame again and
-// camapp 1's write is refused again. The menu's movie Card Slot Settings row (FRAMES_SLOT_ROW: enabled in camapp 3) is
-// greyed unless both slots' media flags (MEDIA_FLAGS, 15261 and 15262) are 1: camapp 3's media manager sets both, the
-// second after its mount of the second slot, whose port S-SDCARD's one card answers too (api_media's status of that
-// slot SLOT2_STATUS: the card bit 0x80 in camapp 3, not in camapp 1); camapp 1 runs no media manager and has neither,
-// and with both set through the store's setter the slot update uses (MEDIA_FLAG_SET) its menu is camapp 3's word for
-// word
+// camapp 1's write is refused again. The menu's movie Card Slot Settings row is greyed unless both slots' media flags
+// (MEDIA_FLAGS, 15261 and 15262) are 1. Since 2026-11-11 (docs/hle-gaps.md 4.8.12) the lab's second card slot is
+// empty by default: camapp 3's media manager finds no card there (api_media's status of that slot SLOT2_STATUS, 1)
+// and leaves the flags 1 and 0, as S-CARD does in camapp 1, so the two menus are the same word for word, the row
+// grey; with both flags set through the store's setter the slot update uses (MEDIA_FLAG_SET) camapp 1's menu has the
+// row enabled (FRAMES_SLOT_ROW: the pixels that differed between camapp 3 and camapp 1 while S-SDCARD's one card
+// answered both ports). test_storage.mjs storageSlots has the two-card sessions
 const FRAMES_LV_BANK = 0x98D4D800, FRAMES_LV_STRIDE = 11136, FRAMES_IMG2 = 1;
 const FRAMES_HIST_COLUMN = { pixels: 126, box: [14, 110, 15, 172] };
 const FRAMES_AF_MODE = { pixels: 1655, box: [417, 72, 894, 334] }, FRAMES_SLOT_ROW = { pixels: 4602, box: [38, 283, 871, 327] };
 const MODE_AF_CHANGE = 535, MEDIA_FLAGS = [15261, 15262], LEVER_MS = 1000;
-const MEDIA_STATUS = 0x503F0BD7, SLOT2_STATUS = { 3: 0x3780, 1: 0x600 }, MEDIA_FLAG_SET = 0x50AB4F75;
+const MEDIA_STATUS = 0x503F0BD7, SLOT2_STATUS = { 3: 1, 1: 1 }, MEDIA_FLAG_SET = 0x50AB4F75;
 // the shooting phase query OlyHfwOpeShoot's gate asks: 101 the sequence parts' standby, 100 with no sequence parts
 const SHOOT_PHASE = 0x50AB57E9, PHASE = { 3: 101, 1: 100 };
 // the pixels two frames differ in, and their box
@@ -631,12 +632,12 @@ export async function camapp3FramesSession() {
     ok(same(af, FRAMES_AF_MODE) && c3.af === 1 && c1.af === 0 && c3.phase === PHASE[3] && c1.phase === PHASE[1],
       `the shooting screen: camapp 3 MF (535 = ${c3.af}, shooting phase ${c3.phase}) where camapp 1 shows S-AF (535 = ${c1.af}, phase ${c1.phase}), ${af.pixels} pixels in ${JSON.stringify(af.box)}, want ${FRAMES_AF_MODE.pixels} in ${JSON.stringify(FRAMES_AF_MODE.box)}`);
     const row = framesDiff(c1.menu, c3.menu);
-    ok(c3.gui === GUI_MENU && c1.gui === GUI_MENU && same(row, FRAMES_SLOT_ROW) && c3.flags.join() === '1,1' && c1.flags.join() === '0,0'
+    ok(c3.gui === GUI_MENU && c1.gui === GUI_MENU && row.pixels === 0 && c3.flags.join() === '1,0' && c1.flags.join() === '1,0'
       && c3.slot2 === SLOT2_STATUS[3] && c1.slot2 === SLOT2_STATUS[1],
-      `the menu: the movie Card Slot Settings row, ${row.pixels} pixels in ${JSON.stringify(row.box)} (want ${FRAMES_SLOT_ROW.pixels} in ${JSON.stringify(FRAMES_SLOT_ROW.box)}); the media flags ${MEDIA_FLAGS} camapp 3 ${c3.flags}, camapp 1 ${c1.flags}; the second slot's media status camapp 3 ${hx(c3.slot2)}, camapp 1 ${hx(c1.slot2)}`);
-    const flagged = framesDiff(c1.flagged, c3.menu);
-    ok(c1.gui_flagged === GUI_MENU && flagged.pixels === 0,
-      `control: camapp 1 with both media flags set (${hx(MEDIA_FLAG_SET)}) shows camapp 3's menu (${c1.gui_flagged}): ${flagged.pixels} pixels differ in ${JSON.stringify(flagged.box)}`);
+      `the menu with one card: camapp 3's is camapp 1's but for ${row.pixels} pixels (the movie Card Slot Settings row grey in both); the media flags ${MEDIA_FLAGS} camapp 3 ${c3.flags}, camapp 1 ${c1.flags}; the empty second slot's media status camapp 3 ${hx(c3.slot2)}, camapp 1 ${hx(c1.slot2)}`);
+    const flagged = framesDiff(c1.flagged, c1.menu);
+    ok(c1.gui_flagged === GUI_MENU && same(flagged, FRAMES_SLOT_ROW),
+      `control: camapp 1 with both media flags set (${hx(MEDIA_FLAG_SET)}) has the row enabled (${c1.gui_flagged}): ${flagged.pixels} pixels differ in ${JSON.stringify(flagged.box)} (want ${FRAMES_SLOT_ROW.pixels} in ${JSON.stringify(FRAMES_SLOT_ROW.box)})`);
     const lever = framesDiff(c1.lever, c3.lever), still = framesDiff(c1.before, c1.lever);
     ok(c3.af_lever === 0 && c1.af_lever === 0 && lever.pixels === 0 && still.pixels === 0,
       `the Fn lever to 1: camapp 3 writes 535 = ${c3.af_lever} and differs from camapp 1 in ${lever.pixels} pixels; camapp 1's 535 ${c1.af_lever}, its frame changed in ${still.pixels} pixels`);

@@ -713,6 +713,13 @@ const DETECT_FOUND = {
   E145: [0xA2219288, 1], E133: [0xA2B16D0C, 1], E130: [0xA2B6A660, 1], E129: [0xA2B747D8, 1], E132: [0xA2B74D4C, 1],
   E118: [0xA1C47794, 1], E122: [0xA1C878DC, 1], E120: [0xA1C46B78, 1], E148: [0xA2750A68, 1],
 };
+// The second card slot (card.slots; src/fw/facts.mjs cardSlots; docs/hle-gaps.md 4.8.12): E143's as read by hand (D:
+// the SD driver's detect 0x508b0221 with its helper 0x508b0859, the GIO codes 0x0200000f / 0x02000010 through the
+// class-2 reader 0x50052e28 to the IO expander's input shadow 0xa32c5310, the command layer's port index +12, the
+// record controller's settings 1129 and 1130 at 0x50c73f16), E146's by the same reading of its code (D: 0x508ca01d,
+// 0x508ca655, 0x50c81e24); no other body has the detect helper's form (X: the rule reads none on the 17 others)
+const SLOTS_E143_FAMILY = (fn) => ({ port: 12, detect: { fn, switches: [0x1506, 0x1518], pins: [[0xA32C5314, 7], [0xA32C5318, 0]] }, record: { mode: 1129, slot: 1130 } });
+const SLOTS_FOUND = { E143: SLOTS_E143_FAMILY(0x508B0221), E146: SLOTS_E143_FAMILY(0x508CA01D) };
 // The card's file system seams (storage; src/fw/facts.mjs fileSystem): E143's as src/fw/models.mjs gave them by hand
 // before the rule (D, its storage entry; the tasks then by their entries 0x50894e37 and 0x5087cda8, whose starts read
 // the id words), and of a body of each lineage the bring-up, FILECLBK's entry and busy word, the NAND access and the
@@ -963,7 +970,7 @@ const E143_FACTS = {
   timer: { reload_less_one: false }, dial: { select: 0x5014B7C7, select_end: 0x1A, table_ptr: 0xA32DAAB0, table0: 0x60223DBC },
   touch_panel: { driver: true }, lens: { mount: true }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
-  broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] }, movie_rate: null },
+  broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] }, movie_rate: null, slots: SLOTS_FOUND.E143 },
   boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, mm_init: null, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, recorder: RECORDER_E143, dcf: { counts: DCF_COUNTS_E143 }, erase: ERASE_E143, media_status: MEDIA_STATUS_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143, touch_int: null,
   cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143, prop_store: PROP_STORE_FOUND.E143, ctors: CTORS_E143,
 };
@@ -1208,6 +1215,8 @@ export function factsTests() {
     ok(got.card?.shots_query === SHOTS_FOUND[code], `${code}: card ${hx(got.card ?? got)}, found ${hx(SHOTS_FOUND[code])}`);
     // the card slots' detect states (cardDetect)
     ok(same([got.card?.detect?.table, got.card?.detect?.drives], DETECT_FOUND[code]), `${code}: card detect ${hx(got.card?.detect)}, found ${hx(DETECT_FOUND[code])}`);
+    // the second card slot (cardSlots): E143's and E146's, none elsewhere
+    ok(same(got.card?.slots ?? null, SLOTS_FOUND[code] ?? null), `${code}: the second card slot ${hx(got.card?.slots ?? null)}, found ${hx(SLOTS_FOUND[code] ?? null)}`);
     // the card's file system seams (fileSystem): the fields found by reading each body's code
     const sf = STORAGE_FOUND[code];
     if (sf === null) ok(got.storage === undefined, `${code}: storage ${hx(got.storage)}, found none`);

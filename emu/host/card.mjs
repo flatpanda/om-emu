@@ -6,7 +6,7 @@
 // Node-only (host/).
 import fs from 'node:fs';
 import path from 'node:path';
-import { SdCard, cardImage, cardFromImage } from '../src/lab/sdcard.mjs';
+import { SdCard, cardImage, cardFromImage, cardSectors, memoryCard } from '../src/lab/sdcard.mjs';
 
 // sectors: the capacity a new card gets (null: the default card's); a saved card of another capacity is refused, so
 // a size option never silently stands for a different card
@@ -30,4 +30,15 @@ export function fileCard(file, { sectors = null } = {}) {
       fs.renameSync(tmp, file);
     },
   };
+}
+
+// The second slot's card for a node-hosted lab (env.card2, src/lab/storage.mjs S-SDCARD): {card2} from a file (kept
+// between sessions as the first slot's is) and / or a new card's size in GiB, or {} for an empty second slot. The
+// file is never the first slot's (first): each slot takes a card of its own
+export function secondCard(file, size, first) {
+  if (!file && !size) return {};
+  const sectors = size ? { sectors: cardSectors(size) } : {};
+  if (!file) return { card2: memoryCard(sectors) };
+  if (first && path.resolve(file) === path.resolve(first)) throw new Error(`secondCard: ${file} is the first slot's card file (OM_EMU_CARD): the second slot takes a card of its own`);
+  return { card2: fileCard(file, sectors) };
 }

@@ -2353,6 +2353,80 @@ export function cardDetect(img) {
   return { table: u32(img, t + 10), drives: img[t + 3] };
 }
 
+// The second card slot (fact 'card.slots', src/lab/storage.mjs S-SDDETECT and S-SDCARD's ports, src/lab/camapp.mjs
+// S-CARD's save slot; docs/hle-gaps.md 4.8.12). D, E143's addresses:
+// - detect: the SD driver's card detect of a port (0x508b0221: `mov d0,d2; mov 0x1301,d0; movhu d0,(4,sp); exthu d2;
+//   mov d2,d0; mov sp,a0; inc4 a0; call H`), which the drive status (0x508a8327: 1, no card, where it is not 0), the
+//   sdmem request's card check (0x508b3acf) and logsec's init (0x508ac195) call. Its helper H (0x508b0859) reads a GIO
+//   pin by the port, `cmp 0,d0; beq; cmp 1,d0; beq; ..; mov G0,d0; ..; mov G1,d0; call R`, stores 0 where the pin
+//   reads 0 and 1 otherwise, and always returns 1, so the function's answer is that word (0: a card in the slot) and
+//   the UI_IN levels it reads where H returns 0 (`mov 0x1506,d0; call L` at +0x1f, `mov 0x1518,d0; call L` at +0x2f:
+//   0 a card in the slot too, the fact's switches) are never asked. G0 and G1 are 0x0200000f and 0x02000010: the GIO
+//   read R (0x5000297f) maps the code (0x500029ad: class 2's row of the map table 0x6034db0c has no board table, so
+//   the code is the pin) and calls its class's reader from the table 0x60118f30, class 2's 0x50052e28: `exthu d0;
+//   asl2 d0; mov MT,a0; mov (d0,a0),d0; call P` with the pin's mask of the table MT (0x601190c4: 1 << pin) to P
+//   (0x5005605b), which tests the mask's byte in the word of that index of the body IO expander's input shadow
+//   (0xa32c5310, three words: `extbu d0; asl2 d0; mov SH,a0; mov (d0,a0),d0; asl 3,d1; lsr d1,d2; and d0,d2`). The
+//   expander's driver fills the shadow from the chip's three input ports (0x50056e2e, called by its init 0x50055e10
+//   and its task's refresh 0x50056514). pins: for each port, the shadow word's address and the bit
+// - port: the offset of the port index in a command of the SD command layer (storage.command, 0x508ad03c: `mov
+//   P,d2; add a3,d2; mov d2,a0; movhu (a0),d0`, its index of the ports' busy words)
+// - record: the settings the HLS record controller picks a still's card by (CmpSts_RecordController 0x50c73f16:
+//   `mov a0,(8,sp); mov MODE,d0; call G; mov d0,d3; mov SLOT,d0; call G; movhu d0,(12,sp)`): mode 1129 (0 and 1:
+//   the card of slot, 1 + its value; 2 to 5: both cards where both are usable) and slot 1130
+// Returns undefined where the image has no helper of H's form (a body whose detect is not read here); throws where
+// it has one and a later form differs.
+export const CARD_SLOTS_E143 = { port: 12, detect: { fn: 0x508B0221, switches: [0x1506, 0x1518], pins: [[0xA32C5314, 7], [0xA32C5318, 0]] },
+  record: { mode: 1129, slot: 1130 } };
+const N4 = [null, null, null, null];
+const SLOT_HELPER = [0x92, 0x1c, 0xa0, 0x00, 0xc8, 0x08, 0xa0, 0x01, 0xc8, 0x0c, 0xca, 0x19, 0xfc, 0xcc, ...N4, 0xca, 0x08, 0xfc, 0xcc, ...N4,
+  0xdd, ...N4, 0x00, 0x04, 0xca, 0x04, 0x80, 0x01, 0xa0, 0x00, 0xc8, 0x06, 0x80, 0x01, 0xca, 0x03, 0x00, 0xf0, 0x72, 0x80, 0x01, 0xdf, 0x20, 0x08];
+const SLOT_DETECT = [0x82, 0x2c, 0x01, 0x13, 0xf8, 0x93, 0x04, 0x1e, 0x88, 0x3c, 0x50];
+const SLOT_GIO_READ = [0xcd, null, null, 0xf0, 0x1c, 0xfa, 0xc8, 0xff, 0x00, 0xc9, 0x0a, 0xfc, 0xcc, 0xff, 0xff, 0x00, 0x00, 0xca, 0x1a, 0x81, 0xf8,
+  0xc5, 0x18, 0xf8, 0xe1, 0x0f, 0x15, 0x55, 0xfc, 0xdc, ...N4, 0xf3, 0x84, 0xfa, 0xe0, 0xff, 0xff, 0x1c, 0xf0, 0xf0];
+const SLOT_GIO_MAP = [0xf9, 0x15, 0x0c, 0xf1, 0xe7, 0xfc, 0xd3], SLOT_GIO_MAP_SPAN = 0x30;
+const SLOT_PIN_READ = [0xf8, 0xfe, 0xfc, 0x1c, 0x54, 0xfc, 0xdc, ...N4, 0xf3, 0x00, 0xcd, null, null, 0x80, 0x14, 0xdf, 0x00, 0x04];
+const SLOT_SHADOW = [0x14, 0x54, 0xfc, 0xdc, ...N4, 0xf3, 0x00, 0xf8, 0xc1, 0x03, 0xf2, 0xa6, 0xf2, 0x02], SLOT_SHADOW_SPAN = 0x50;
+const SLOT_PORT = [0x93, 0xbf, 0x00, 0xc9, 0x05, 0xdf, 0xf0, 0x14, 0x8a, null, 0xf1, 0x5e, 0xf1, 0xe8, 0xf0, 0x60];
+const SLOT_RECORD = [0x43, 0x08, 0x2c, null, null, 0xdd, ...N4, 0x00, 0x04, 0x83, 0x2c, null, null, 0xdd, ...N4, 0x00, 0x04, 0xf8, 0x93, 0x0c];
+export function cardSlots(img, command) {
+  const rule = 'cardSlots', { base } = imageBase(img), D = (o) => h8(0x50000000 + o), word = (a) => u32(img, a - base);
+  const scan = (form) => { const at = []; for (let o = img.indexOf(form[0]); o >= 0; o = img.indexOf(form[0], o + 1)) if (bytesAt(img, o, form)) at.push(o); return at; };
+  // the helpers of H's form (E143 has two: the write-protect read 0x508b01f7's, 0x508b0824, reads pins 21 and 22 so)
+  const helpers = new Set(scan(SLOT_HELPER));
+  if (!helpers.size) return undefined;
+  const fns = scan(SLOT_DETECT).filter((o) => helpers.has(callAt(img, o + SLOT_DETECT.length)?.to));
+  if (fns.length !== 1) throw new Error(`${rule}: ${fns.length} functions of the detect's form call a helper (${[...helpers].map(D).join(', ')}), want one`);
+  const F = fns[0], H = callAt(img, F + SLOT_DETECT.length).to, gio = [u32(img, H + 14), u32(img, H + 22)], R = callAt(img, H + 26).to;
+  const switches = [0x1f, 0x2f].map((k) => (img[F + k] === 0x2c ? img[F + k + 1] | img[F + k + 2] << 8 : null));
+  if (switches.includes(null)) throw new Error(`${rule}: the detect ${D(F)} does not load its two switch codes at +0x1f and +0x2f`);
+  if (!bytesAt(img, R, SLOT_GIO_READ)) throw new Error(`${rule}: ${D(R)} is not the GIO read`);
+  const readers = u32(img, R + 30), M = callAt(img, R).to;
+  let mapAt = -1;
+  for (let o = M; o < M + SLOT_GIO_MAP_SPAN; o++) if (bytesAt(img, o, SLOT_GIO_MAP)) { mapAt = o; break; }
+  if (mapAt < 0) throw new Error(`${rule}: the GIO code map ${D(M)} has no class table`);
+  const map = u32(img, mapAt + SLOT_GIO_MAP.length);
+  const pins = gio.map((code, port) => {
+    const cls = code >>> 24, pin = code & 0xffff;
+    if (word(map + 12 * cls + 4) !== 0 || code >= word(map + 12 * cls + 8)) throw new Error(`${rule}: port ${port}'s GIO code ${h8(code)} is not a pin of a class without a board table (${h8(map)})`);
+    const rd = word(readers + 4 * cls) - base;
+    if (!bytesAt(img, rd, SLOT_PIN_READ)) throw new Error(`${rule}: class ${cls}'s reader ${D(rd)} is not the masked shadow read`);
+    const mask = word(u32(img, rd + 7) + 4 * pin), P = callAt(img, rd + 13).to;
+    let sh = -1;
+    for (let o = P; o < P + SLOT_SHADOW_SPAN; o++) if (bytesAt(img, o, SLOT_SHADOW)) { sh = o; break; }
+    if (sh < 0) throw new Error(`${rule}: ${D(P)} reads no input shadow`);
+    const index = mask & 0xff ? 0 : mask & 0xff00 ? 1 : mask & 0xff0000 ? 2 : -1, bits = index < 0 ? 0 : (mask >>> (8 * index)) & 0xff;
+    if (index < 0 || (bits & (bits - 1)) !== 0) throw new Error(`${rule}: port ${port}'s pin ${pin} has the mask ${h8(mask)}, not one bit of the shadow's three bytes`);
+    return [(u32(img, sh + 4) + 4 * index) >>> 0, Math.log2(bits)];
+  });
+  const C = command - 0x50000000;
+  if (!bytesAt(img, C, SLOT_PORT)) throw new Error(`${rule}: the SD command layer ${h8(command)} does not index its ports by a field of the command`);
+  const rec = scan(SLOT_RECORD).filter((o) => callAt(img, o + 5).to === callAt(img, o + 16).to);
+  if (rec.length !== 1) throw new Error(`${rule}: ${rec.length} functions of the record controller's card choice's form, want one`);
+  const id = (o) => img[o] | img[o + 1] << 8;
+  return { port: img[C + 9], detect: { fn: 0x50000000 + F, switches, pins }, record: { mode: id(rec[0] + 3), slot: id(rec[0] + 14) } };
+}
+
 // The movie record time's division by the movie info's frame rate (fact 'card.movie_rate', src/lab/camapp.mjs
 // S-MOVRATE): the movie time query (E143's MOVIE_TIME_QUERY 0x5042da58, the place E118 0x5051875a) fills the movie
 // module's record time into its caller's struct through a function (E118 0x50535bf4) that opens `mov a0,a2; clr d2;
@@ -3246,8 +3320,9 @@ export function recorder(img) {
 //   stores the buffer there and reads the size from there after the header maker), with the record's init, the
 //   function that ends `mov 1,d0; movbu d0,(48,a2); mov a2,(P,a3); ret` after clearing N bytes, `mov N,d1` (E146
 //   0x5052b008, 52 bytes; REC_IMAGE calls it with a record on its stack, 0x5051ee45, D): {record: {init, bytes, at: P}}
-// - contexts: rec_file_record's (by its trace) file contexts for Media and Media2, `movhu (Media,a3),d0; mov C0,a2;
-//   cmp 1,d0; bne; mov C1,a2` (0x5053ff29)
+// - contexts: rec_file_record's (by its trace) file contexts for Media 0 and Media 1 (the drive: the second where
+//   Media is 1; not Media2's, as said before 2026-11-11), `movhu (Media,a3),d0; mov C0,a2; cmp 1,d0; bne; mov C1,a2`
+//   (0x5053ff29)
 // - exif: the template's copy, `mov T,a1; mov -N,d1; setlb; mov (a1),d0; inc4 a1; mov d0,(a0); inc4 a0; inc d1; lne;
 //   retf` (0x504298f9; size 4N, 92252), right after the template init's `call cflush; ret` (cflush its return,
 //   0x504298f6), a function that loads T into a0 first and that the module init `call; clr d0; ret` right before it
@@ -5409,6 +5484,9 @@ export function readFacts({ img, family, resLoad }) {
   if (sio !== undefined) facts.sio = sio;
   const storage = fileSystem(img);
   if (storage !== undefined) facts.storage = storage;
+  // the second card slot (cardSlots), on a body whose detect helper has E143's form
+  const slots = storage !== undefined ? cardSlots(img, storage.command) : undefined;
+  if (slots !== undefined) facts.card.slots = slots;
   const media = mediaHls(img, storage);
   if (media !== undefined) facts.media = media;
   facts.recorder = recorder(img);

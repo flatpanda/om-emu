@@ -44,7 +44,7 @@ import { show } from '../util/show.mjs';
 import { decimalInt, intLiteral } from '../util/parse.mjs';
 import { setKey } from '../util/tracejson.mjs';
 import { LiveDebug } from '../debug/live.mjs';
-import { memoryCard } from './sdcard.mjs';
+import { memoryCard, memorySlot } from './sdcard.mjs';
 import { STORAGE } from './storage.mjs';
 import { recStandIns } from './rec.mjs';
 import { AudioRing } from './audio.mjs';
@@ -278,6 +278,9 @@ export class Player {
     // the card in the first slot (storage.mjs) stays in the slot across the player's sessions (a power cycle): the
     // host's (env.card, OM_EMU_CARD), else one in memory for the player's life
     this.env = STORAGE && !env.card ? { ...env, card: memoryCard() } : env;
+    // the second slot (a body whose second slot the lab models): the host's card (env.card2, OM_EMU_CARD2), else
+    // empty until a card input puts a card in, which then stays for the player's life
+    if (STORAGE?.slots && !this.env.card2) this.env = { ...this.env, card2: memorySlot() };
     this.nvram_record = null;        // S-NVRAM: what each session started from (session.json's nvram, nvram_use)
     if (env.nvram) this.nvram_use(env.nvram);
     this.wall = env.wallClock ?? (() => performance.now() / 1000);
@@ -1019,7 +1022,10 @@ export class Player {
       return s.touch(act, x, y);
     }
     if (t === 'hdmi') return s.hdmi_input(get(inp, 'action'));
-    if (t === 'card') return s.card_input(get(inp, 'action'));
+    if (t === 'card') {                                              // slot: 1 (the default) or 2; size: a new second card's GiB
+      const slot = has(inp, 'slot') ? get(inp, 'slot') : 1, size = has(inp, 'size') ? get(inp, 'size') : null;
+      return s.card_input(get(inp, 'action'), slot, size);
+    }
     if (t === 'tilt') {                                              // degrees, fractions kept; a field left out is 0
       const deg = (k) => {
         if (!has(inp, k)) return 0;

@@ -28,7 +28,15 @@
 //              card-out event). In (level 0): 711 {kind, 1, 0} (its card-in event), S-CARD's insertion requests, the
 //              mount state mounted and 711 {kind, 1, 2} (notifyRecMountEnd: EV_MEDIA_MOUNT_REC) and {kind, 1, 8}
 //              (mountProcEnd). Each notification's layout and sender is D; which ones the media manager sends at a
-//              change, and in which order, is I. The level's meaning is I (models.mjs slots)
+//              change, and in which order, is I. The level's meaning is D on E143 and E146 (the SD driver's detect
+//              takes level 0 for a card in the slot, docs/hle-gaps.md 4.8.12), I elsewhere (models.mjs slots).
+//              The same for the second slot's card and switch on a body whose second slot the lab models
+//              (storage.mjs S-SDCARD), where no media manager runs. With control camapp 3 the firmware's own media
+//              manager runs and takes the second slot's change itself (X): S-MEDIA then only reads the slot's state
+//              back. And, where no media manager runs, the slots' media flags (S-CARD's, flags()): the manager's
+//              slot update sets a slot's flag (f.ctrl.flag: 15261 + slot on E143) to 1 where the slot is mounted and
+//              to 0 where it is not (0x50bba897, D); S-CARD sets them so after its insertions and S-MEDIA after each
+//              change, through the store's setter the update uses
 //   S-MDAEND   (the E118 family and the E144 family but E148, whose facts the rule reads: src/fw/facts.mjs mediaHls,
 //              fact 'media'; no S-MDACTRL there) the camera base's part of the media control's end. Their application
 //              runs the media control itself, in its event manager's process (OlyHfwOpeMdaCtrlProcessEvFw; the E144
@@ -56,7 +64,10 @@ export class MediaError extends FirmwareError {}
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 const OLYQEWR = [...RTOS].find(([, n]) => n === 'OlyQeWr')[0];
 const LIMIT = 50000000, REPLY_LIMIT_MS = 30000, PROGRESS_DONE = 100, LEVEL_OUT = 1;
-const SLOT = 0;                     // the first slot, drive 0 (storage.mjs)
+const SLOT = 0, SECOND = 1;         // the first slot, drive 0, and the second, drive 1 (storage.mjs)
+// the media status bits the manager's slot update tests (flags(), D): mounted, the two error bits, and the bit that
+// keeps the flag
+const FLAG_MOUNTED = 0x1000, FLAG_ERRORS = 4 | 8, FLAG_KEEP = 0x4000;
 
 export class HlsMedia {
   // session: the PlaySession; storage: its Storage (storage.mjs), whose facts carry hls
@@ -66,6 +77,7 @@ export class HlsMedia {
     this.ctrl = null;               // S-MDACTRL: the format in progress {cmd, media, cbc, token, t0, progress, sent, reply}
     this.formats = 0;               // formats finished
     this.switched = false;          // S-MEDIA: the slot's card switch changed, not yet handled
+    this.switched2 = false;         // S-MEDIA: the second slot's (a body whose second slot the lab models)
     this.notified = [];             // the notifications delivered, [id or 711 state, the reception's answer]
     this.ends = [];                 // S-MDAEND: the media control's requests to the camera base, not yet handled
     this.ended = 0;                 // S-MDAEND: their closures run
@@ -73,7 +85,9 @@ export class HlsMedia {
     this.started = null;            // the last media control start seen, either way {cmd, media}
   }
   install() {
-    const lab = this.lab, f = this.f, slot = f.slots[SLOT];
+    const lab = this.lab, f = this.f, slot = f.slots[SLOT], two = this.storage.f.slots, slot2 = two ? f.slots[SECOND] : null;
+    // the second slot: the HLS side's switch codes are the ones the SD driver's detect names (storage.mjs slots)
+    if (two && f.slots.some((x, i) => x.switch !== two.detect.switches[i])) throw new MediaError(`S-MEDIA: the slots' card switches ${f.slots.map((x) => h8(x.switch))} are not the SD driver's detect's ${two.detect.switches.map(h8)}`);
     if (f.cab) this._install_end();
     // the file module's reply to the API queue for the format's token (S-MDACTRL)
     if (f.ctrl) lab.wrap(OLYQEWR, (prev) => (h, r) => {
@@ -89,13 +103,14 @@ export class HlsMedia {
       const code = r.d0 >>> 0;
       if (f.ctrl && code === f.ctrl.progress_event && this.ctrl !== null) this.ctrl.progress += 1;
       if (code === (f.switch_event | slot.switch) >>> 0) this.switched = true;
+      if (slot2 && code === (f.switch_event | slot2.switch) >>> 0) this.switched2 = true;
     };
     if (lab.hooks.has(runtime(f.publish))) lab.wrap(f.publish, (prev) => (h, r) => { pub(r); return prev(h, r); });
     else lab.hook(f.publish, (h, r) => { pub(r); lab.passthrough(r); }, 'S-MEDIA (events)');
   }
   // a format runs (S-MDACTRL's from TRA 1511 to its result, S-MDAEND's from the application's start to its end) or a
   // card switch or an end is not yet handled: the card input refuses (play.mjs), camapp's pump ticks
-  busy() { return this.ctrl !== null || this.mda !== null || this.switched || this.ends.length > 0; }
+  busy() { return this.ctrl !== null || this.mda !== null || this.switched || this.switched2 || this.ends.length > 0; }
   // S-MDAEND: the media control process's sends of its requests to the camera base (f.cab.post called from one of
   // f.cab.sites), recorded with the closure each carries
   _install_end() {
@@ -213,33 +228,70 @@ export class HlsMedia {
     });
     this._result(f.ids.progress, c.cbc, f.ctrl.kinds.progress, PROGRESS_DONE, 0);
     this._media(1, c.media);
-    this.storage.renumber('S-MDACTRL');
+    // (the second slot's card, where the lab models it: its own drive's mount, and its state and flag after it)
+    const second = this.storage.f.slots && c.media === SECOND;
+    this.storage.renumber('S-MDACTRL', second ? SECOND : SLOT);
+    if (second) { this.storage.refresh(SECOND); this.flags(); }
     this.ctrl = null;
     this.formats += 1;
     this.s.camapp?.card_formatted?.();
     this._result(f.ids.result, c.cbc, f.ctrl.kinds.done, 0, 0);
   }
   // ---- S-MEDIA
-  level() { return this.lab.call(this.f.switch_level, { d0: this.f.slots[SLOT].switch }, null, null, LIMIT).d0 >>> 0; }
-  _changed() {
-    const st = this.storage, kind = this.f.slots[SLOT].kind, m = this.f.mount, level = this.level();
-    this.switched = false;
-    this.log.push(['switch', `the card switch's level ${level}, the card ${st.card.present ? 'in' : 'out of'} the slot`]);
-    if (level === LEVEL_OUT) {
-      if (!st.mounted) { this.log.push(['switch', 'no card was mounted: nothing to unmount']); return; }
-      this._mount_state(kind, m.unmounted);
-      st.remove('S-MEDIA');
-      this._mount(kind, 0, 0);
+  level(i = SLOT) { return this.lab.call(this.f.switch_level, { d0: this.f.slots[i].switch }, null, null, LIMIT).d0 >>> 0; }
+  // a slot's card switch changed (i: the first slot, or SECOND)
+  _changed(i = SLOT) {
+    const st = this.storage, kind = this.f.slots[i].kind, m = this.f.mount, level = this.level(i), one = st._slot(i), card = st.card_of(i);
+    const of = i === SLOT ? '' : 'slot 2: ';
+    if (i === SLOT) this.switched = false; else this.switched2 = false;
+    this.log.push(['switch', `${of}the card switch's level ${level}, the card ${card?.present ? 'in' : 'out of'} the slot`]);
+    // the second slot with the firmware's own media manager (control camapp 3): the manager takes the change (X)
+    if (i !== SLOT && this.manager()) {
+      const now = st.refresh(i);
+      if (level !== LEVEL_OUT && now.mounted) now.insertions += 1;
+      if (level === LEVEL_OUT) now.removals += 1;
+      this.log.push(['switch', `${of}left to the firmware's media manager: the drive status ${h8(now.drive_status)}`]);
       return;
     }
-    if (st.mounted) { this.log.push(['switch', 'the card is mounted already']); return; }
-    if (!st.card.present) { this.log.push(['switch', 'no card in the slot: no mount (I: what the media manager does then is not read)']); return; }
+    if (level === LEVEL_OUT) {
+      if (!one.mounted) { this.log.push(['switch', `${of}no card was mounted: nothing to unmount`]); return; }
+      this._mount_state(kind, m.unmounted);
+      st.remove('S-MEDIA', i);
+      this._mount(kind, 0, 0);
+      this.flags();
+      return;
+    }
+    if (one.mounted) { this.log.push(['switch', `${of}the card is mounted already`]); return; }
+    if (!card?.present) { this.log.push(['switch', `${of}no card in the slot: no mount (I: what the media manager does then is not read)`]); return; }
     this._mount(kind, 1, 0);
-    st.insert('S-MEDIA');
-    st.insertions += 1;
+    st.insert('S-MEDIA', i);
+    one.insertions += 1;
     this._mount_state(kind, m.mounted);
     this._mount(kind, 1, m.rec_end);
     this._mount(kind, 1, m.end);
+    this.flags();
+  }
+  // whether the firmware's own media manager runs (control camapp 3 creates it; camapp 1 and 2 do not, X)
+  manager() { return !!this.s.camapp?.native_tra; }
+  // S-CARD's media flags on a body whose second slot the lab models, where no media manager runs: each slot's flag as
+  // the manager's slot update leaves it (CapMed_MediaManager 0x50bba897, D), by the slot's media status read natively
+  // (f.ctrl.status): 1 where the slot is mounted (the DCF mount's bit 0x1000, the device's test 0x50d8a16a) or has
+  // the bit 4 or 8 (a card with no file system has 4, X), else 0 unless the status has the bit 0x4000 (left as it
+  // is); through the store's setter the update uses. The manager's start clears an empty slot's flag itself
+  // (0x50bb7c53..0x50bb7c6e), which the same rule gives (its status is 1, no card). The update's other condition, the
+  // slot controller's own state (its +168 not 0: not mounted), is the manager's and is taken as 0 (I). The update's
+  // other work for a flag of 1 is not done: the setting 4510 (slot 1) or 4521 (slot 2) to -1 and api_rec's
+  // 0x504169b2 for both slots (0x50bba8ff..0x50bba95a, D; what they keep is not read)
+  flags() {
+    const lab = this.lab, f = this.f, st = this.storage;
+    if (!st.f.slots || !f.ctrl || this.manager()) return;
+    f.slots.forEach((slot, i) => {
+      const status = lab.call(f.ctrl.status, { d0: i }, null, null, LIMIT).d0 & 0xFFFF;
+      const on = status & (FLAG_MOUNTED | FLAG_ERRORS) ? 1 : status & FLAG_KEEP ? null : 0;
+      if (on === null) { this.log.push(['flag', `${f.ctrl.flag[1] + i} left (slot ${i + 1}'s media status ${h8(status)})`]); return; }
+      lab.call(f.ctrl.flag[0], { d0: f.ctrl.flag[1] + i, d1: on }, null, null, LIMIT);
+      this.log.push(['flag', `${f.ctrl.flag[1] + i} = ${on} (slot ${i + 1}'s media status ${h8(status)})`]);
+    });
   }
   // After a step or an idle slice (camapp.mjs pump): the work the components would do meanwhile
   tick() {
@@ -252,11 +304,14 @@ export class HlsMedia {
     }
     while (this.ends.length) this._end(this.ends.shift());                   // S-MDAEND
     if (this.switched && this.ctrl === null) this._changed();
+    if (this.switched2 && this.ctrl === null) this._changed(SECOND);
   }
   take_log() { return this.log.splice(0); }
   status() {
     return { formatting: this.ctrl !== null || this.mda !== null, formats: this.formats, ...(this.f.cab && { ends: this.ended }), switch_pending: this.switched, notified: this.notified.length,
-      mount_state: this.mount_state(this.f.slots[SLOT].kind) };
+      mount_state: this.mount_state(this.f.slots[SLOT].kind),
+      // the second slot, once it holds a card (a session with the default empty slot keeps the document it had)
+      ...(this.storage.second?.card ? { switch2_pending: this.switched2, mount_state2: this.mount_state(this.f.slots[SECOND].kind) } : {}) };
   }
 }
 

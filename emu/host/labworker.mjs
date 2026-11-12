@@ -14,7 +14,7 @@ import { PortQueue, F_KILL } from './portqueue.mjs';
 import { stackOf } from '../checks/lib/errors.mjs';
 import { installChildTrace, tracedPlay } from '../checks/lib/childtrace.mjs';
 import { fileNvram } from './nvram.mjs';
-import { fileCard } from './card.mjs';
+import { fileCard, secondCard } from './card.mjs';
 import { memoryCard, cardSectors } from '../src/lab/sdcard.mjs';
 import { debugHost } from './debughost.mjs';
 import { CARD_VIEW } from '../web/cardfiles.mjs';
@@ -64,6 +64,11 @@ const env = {
   // for the player's life without OM_EMU_CARD
   ...(process.env.OM_EMU_CARD ? { card: fileCard(process.env.OM_EMU_CARD, cardSize) }
     : process.env.OM_EMU_CARD_SIZE ? { card: memoryCard(cardSize) } : {}),
+  // OM_EMU_CARD2=FILE: a card in the second slot from the start, kept in FILE (a body whose second slot the lab
+  // models, src/fw/models.mjs card_fs.second_slot; never the first slot's file: host/card.mjs secondCard);
+  // OM_EMU_CARD2_SIZE=GiB: its capacity when new, and without OM_EMU_CARD2 a blank card in memory for the player's
+  // life. Without either the second slot is empty until a card input puts a card in (src/lab/play.mjs card_input)
+  ...secondCard(process.env.OM_EMU_CARD2, process.env.OM_EMU_CARD2_SIZE, process.env.OM_EMU_CARD),
   // OM_EMU_SCPU=native: the sub-CPU's own firmware in S-SCPUDEV's place, on E143 and E146 (menu.mjs scpu_native)
   ...scpuEnv(),
   cardView: CARD_VIEW,               // the Card panel's reads of the card's files (web/cardfiles.mjs, refs/fat.mjs)

@@ -232,3 +232,10 @@ export function memoryCard({ sectors = null } = {}) {
   let card = null;
   return { open: () => (card ??= new SdCard(sectors === null ? {} : { sectors })), save: (c) => { card = c; } };
 }
+// The second slot between a player's sessions where the host gives it no card (env.card2, src/lab/player.mjs): empty
+// (open() null) until a card is put in (the Player's card input, src/lab/play.mjs card_input), then that card, in or
+// out of the slot as the last session left it
+export function memorySlot() {
+  let card = null;
+  return { open: () => card, save: (c) => { card = c; }, put: (c) => { card = c; } };
+}

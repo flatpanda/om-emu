@@ -59,8 +59,19 @@
 //                   the E144 family's: Format from Card Setup, then S2's picture on the formatted card; the card out,
 //                   the camera's no-card state, the card in, its count back, then S2's picture on it; E143's line:
 //                   Card Formatting, the card out and in)
-//   node emu/test/test_storage.mjs [--session] [--sdxc] [--hls]
-import { SdCard, NO_RESPONSE, SECTOR, crc7, r2Words, cardImage, cardFromImage, cardSectors } from '../src/lab/sdcard.mjs';
+//   storageSlots    (firmware, --slot2) the second card slot on the body of OM_EMU_MODEL (card_fs.second_slot: E143,
+//                   E146; docs/hle-gaps.md 4.8.12): with one card the SD driver's detect, the drive status and the
+//                   media status give slot 2 empty, its port gets no command, S-CARD's media flags are 1 and 0, the
+//                   firmware's remaining shots are 0 with the save slot at slot 2 and S2 makes no file there, and
+//                   the first slot's card is refused for the second; with two cards both mount, each from its own
+//                   card, the menu's movie Card Slot Settings row is enabled, S2's file lands on the card of the
+//                   save slot (read back independently on that card alone), each card goes out and in while the
+//                   camera runs; a blank card put into the empty slot stays unformatted until Card Formatting formats
+//                   it from the menu, and the player keeps it for its next session; the double-slot save modes stop
+//                   the session; on E143 under control camapp 3 the firmware's own media manager does the same:
+//                   one card, its menu camapp 1's; two cards mounted by it, S2 on the second, the second out and in
+//   node emu/test/test_storage.mjs [--session] [--sdxc] [--hls] [--slot2]
+import { SdCard, NO_RESPONSE, SECTOR, crc7, r2Words, cardImage, cardFromImage, cardSectors, memorySlot } from '../src/lab/sdcard.mjs';
 import { FatVolume, mbrPartition } from '../refs/fat.mjs';
 import { ExfatVolume } from '../refs/exfat.mjs';
 import { openVolume } from '../refs/volume.mjs';
@@ -385,6 +396,16 @@ export function storageUnits() {
     ok(readExif(Uint8Array.from([0xff, 0xd8, 0xff, 0xda, 0, 2])) === null, 'a JPEG without an Exif APP1 reads as none');
   }
   menuWalkUnits(ok);
+  // the second slot's holder between a player's sessions (memorySlot): empty until a card is put in, then that card
+  {
+    const slot = memorySlot(), c = new SdCard();
+    ok(slot.open() === null, 'memorySlot: no card until one is put in');
+    slot.put(c);
+    c.remove();
+    ok(slot.open() === c && slot.open().present === false, 'memorySlot: the card put in, out of the slot as it was left');
+    slot.save(c);
+    ok(slot.open() === c, 'memorySlot: save keeps the card');
+  }
   return { checks, bad };
 }
 
@@ -797,6 +818,8 @@ async function hlsFormat(card, tag, ok, bad, notes) {
     ok(vol0.find(FILE1) && vol0.freeClusters() < fresh && s.camapp.images.length === 1, `${tag}: before the format: the picture's file on the card, ${vol0.freeClusters()} of ${fresh} clusters free`);
     press(s, 'menu');
     const menu = frame(s);
+    // (with one card a body whose second slot the lab models shows no "Select Card to Set Up" panel, X,
+    // docs/hle-gaps.md 4.8.12: the walker passes that panel only where it shows)
     notes.push(`${tag}: the menu's path to the format: ${(await walkToFormat(s, press)).join('; ')}`);
     const busy = frame(s), media = s.camapp.media, t0 = lab.lab_time();
     ok((media.ctrl !== null || media.formats === 1) && media.started?.cmd === media.f.ctrl.format && media.started.media === 0, `${tag}: Format Card, Yes: the media control's start reached S-MDACTRL with the format's command for the first card: ${JSON.stringify(media.started)}`);
@@ -1099,6 +1122,232 @@ export async function storageSdxc(sizes = [64, 128], hlsSizes = [64]) {
   return { checks, bad, notes };
 }
 
+// The second card slot (src/lab/storage.mjs S-SDCARD's slots, src/lab/media.mjs S-MEDIA and S-CARD's flags,
+// src/lab/camapp.mjs S-CARD's save slot; docs/hle-gaps.md 4.8.12) on the body of OM_EMU_MODEL (card_fs.second_slot:
+// E143, E146). X unless tagged; the row's pixels are E143's (test_camapp.mjs FRAMES_SLOT_ROW pinned them between
+// camapp 3 and camapp 1 while one card answered both ports)
+const SLOT_ROW = { pixels: 4602, box: [38, 283, 871, 327] };
+// the media status's bits (api_media 0x503f0bd7's, D): no card (the drive status 1), a card with no file system (X),
+// the card present, the DCF mount
+const MS_NO_CARD = 1, MS_UNFORMATTED = 4, MS_CARD = 0x80, MS_MOUNTED = 0x1000;
+export async function storageSlots() {
+  const bad = [], notes = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
+  const { Player } = await import('../src/lab/player.mjs');
+  const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+  const { A, MODEL, ON_LAB_MODEL } = await import('../src/fw/model.mjs');
+  const { STORAGE: F, SECOND, DRIVE_NO_CARD } = await import('../src/lab/storage.mjs');
+  if (!F?.slots) return { checks: 1, bad: [`${MODEL}: the lab does not model a second card slot (src/fw/models.mjs card_fs.second_slot)`], notes };
+  const H = F.hls, FLAG = H.ctrl.flag[1], { mode: MODE, slot: SAVE } = F.slots.record, { SHOTS } = cardQueries(A);
+  const names = F.names, DIR = `DCIM/100${names.folder}`, file = (n) => `${DIR}/${names.file}${String(n).padStart(4, '0')}.${names.ext}`;
+  const hx = (v) => '0x' + (v >>> 0).toString(16), J = JSON.stringify;
+  const holder = (card) => ({ open: () => card, save() {} });
+  const env = () => ({ rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 });
+  const player = (card, card2 = null, camapp = 1) => {
+    const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true },
+      { ...env(), card: holder(card), ...(card2 ? { card2: holder(card2) } : {}) });
+    if (camapp === 3) { pl.camapp_components = true; pl.camapp_native_tra = true; }
+    pl.open_session();
+    return pl;
+  };
+  const idle = (s, ms) => { const to = s.lab.lab_time() + ms * 1e6; while (s.lab.lab_time() < to) s.idle_slice(Math.min(to, s.lab.lab_time() + 50e6)); };
+  const press = (s, k) => { s.key(k, 'down'); s.camapp.pump(); idle(s, 100); s.key(k, 'up'); s.camapp.pump(); idle(s, 500); };
+  const shoot = (s) => { s.key('s1', 'down'); s.camapp.pump(); idle(s, 600); s.key('s2', 'down'); s.camapp.pump(); idle(s, 1200); s.key('s2', 'up'); s.key('s1', 'up'); s.camapp.pump(); idle(s, 800); };
+  const frame = (s) => s.frame('boundary')[2];
+  const menu = (s) => { press(s, 'menu'); const f = frame(s); press(s, 'menu'); return f; };
+  const diff = (a, b, w = 900) => {
+    const at = [];
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) at.push([i % w, Math.floor(i / w)]);
+    return { pixels: at.length, box: at.length ? at.reduce((r, [x, y]) => [Math.min(r[0], x), Math.min(r[1], y), Math.max(r[2], x), Math.max(r[3], y)], [1e9, 1e9, -1, -1]) : null };
+  };
+  // the slots as the firmware has them: the SD driver's detect, the file layer's drive status, api_media's status, the
+  // media flags, the HLS mount states, the card switches' levels (UI_IN's getter), and the commands each port got
+  const state = (s) => {
+    const lab = s.lab, st = s.storage, m = s.camapp.media, two = [0, 1];
+    return { det: two.map((d) => st.detect(d)), drive: two.map((d) => st.status_word(d)), api: two.map((d) => lab.call(H.ctrl.status, { d0: d }, null, null, 2000000).d0 & 0xFFFF),
+      flags: two.map((i) => lab.get(FLAG + i)), mount: H.slots.map((x) => m.mount_state(x.kind)), level: two.map((i) => m.level(i)), ports: [...st.port_commands] };
+  };
+  const show = (x) => J({ ...x, drive: x.drive.map(hx), api: x.api.map(hx) });
+  const shots = (s) => s.lab.call(SHOTS, { d0: 0 }, null, null, 2000000).d0 | 0;
+  const vol = (card) => { try { return openVolume((lba, n) => card.read(lba, n)); } catch (e) { return null; } };
+  const has = (card, n) => vol(card)?.find(file(n)) ?? null;
+  const mounted = (x, d) => (x.api[d] & (MS_CARD | MS_MOUNTED)) === (MS_CARD | MS_MOUNTED) && x.det[d] === 0;
+  const empty = (x, d) => x.det[d] !== 0 && x.drive[d] === DRIVE_NO_CARD && x.api[d] === MS_NO_CARD;
+  const cardA = new SdCard(), cardB = new SdCard();
+  let menu1 = null, menu2 = null;
+  // the node host's second card (host/card.mjs secondCard): none without an option, a blank card of the size asked
+  // for, a file's card, and the first slot's file refused
+  {
+    const { secondCard } = await import('../host/card.mjs');
+    const sized = secondCard(undefined, '64', undefined).card2?.open(), same = (() => { try { secondCard('/tmp/x.omsd', undefined, '/tmp/./x.omsd'); return null; } catch (e) { return e.message; } })();
+    ok(J(secondCard(undefined, undefined, '/tmp/x.omsd')) === '{}' && sized?.kind === 'SDXC' && typeof secondCard('/tmp/y.omsd', undefined, '/tmp/x.omsd').card2?.open === 'function'
+      && /a card of its own/.test(same ?? ''), `secondCard: no option, no card; a size, a blank card (${sized?.kind}); the first slot's file refused: ${same}`);
+  }
+
+  // ---- one card (the default): the second slot empty
+  let pl = null;
+  try {
+    pl = player(cardA);
+    const s = pl.session, lab = s.lab;
+    idle(s, 1500);
+    const x = state(s);
+    ok(x.det[0] === 0 && empty(x, SECOND) && x.ports[0] > 0 && x.ports[1] === 0 && x.level.join() === '0,1',
+      `one card: the SD driver's detect answers a card in slot 1 and none in slot 2, whose drive status is ${DRIVE_NO_CARD} and media status ${MS_NO_CARD}; its port gets no command; the card switches' levels 0 and 1: ${show(x)}`);
+    ok(mounted(x, 0) && x.flags.join() === '1,0' && x.mount.join() === '8,8' && s.storage.second.card === null && !('second' in s.storage.status()),
+      `one card: slot 1 mounted, S-CARD's media flags ${FLAG} / ${FLAG + 1} as the manager's update leaves them (1, 0), the mount states 8 and 8: ${show(x)}`);
+    let refused = null;
+    try { s.storage.put_card(s.storage.card); } catch (e) { refused = e.message; }
+    ok(/each slot takes a card of its own/.test(refused ?? ''), `the first slot's card is refused for the second slot: ${refused}`);
+    menu1 = menu(s);
+    // the count and the record destination follow the save slot (the firmware's own query and S-CARD's save_slot)
+    const n0 = shots(s);
+    s.set(SAVE, 1); idle(s, 300);
+    const n1 = shots(s);
+    shoot(s);
+    const none = s.storage.files.length === 0 && s.camapp.images.length === 0 && s.camapp.card_images(0) === 0;
+    ok(n0 > 0 && n1 === 0 && none, `one card, the save slot (setting ${SAVE}) at slot 2: the firmware's remaining shots ${n1} (slot 1: ${n0}), and S2 makes no file: ${J(s.storage.files.map((f) => f.path))}`);
+    s.set(SAVE, 0); idle(s, 300);
+    shoot(s);
+    const f1 = has(cardA, 1);
+    ok(s.storage.files.length === 1 && s.storage.files[0].path.startsWith(`${names.drive}:`) && f1 && f1.size === s.storage.files[0].size && s.camapp.card_images(0) === 1,
+      `one card, the save slot back at slot 1: S2's file ${s.storage.files[0]?.path} on the card (${f1?.size} bytes, read independently), the firmware's image count ${s.camapp.card_images(0)}`);
+    // the double-slot record modes are refused
+    s.set(MODE, 2); idle(s, 300);
+    let stop = null;
+    try { shoot(s); } catch (e) { stop = e.message; }
+    ok(/double-slot record/.test(stop ?? ''), `the save mode (setting ${MODE}) 2: S2 stops the session, the double-slot record not made: ${(stop ?? 'no stop').slice(0, 160)}`);
+  } catch (e) { bad.push(`one card: ${e.message.slice(0, 500)}`); }
+  try { pl?.close_session(); } catch { /* closed */ }
+  for (const c of [cardA]) { c.state = 'idle'; c.selected = false; c.bus4 = false; }
+
+  // ---- two cards: a blank one in slot 1, the card with the picture in slot 2
+  try {
+    pl = player(cardB, cardA);
+    const s = pl.session, st = s.storage;
+    idle(s, 1500);
+    const x = state(s), writes = cardA.writes;
+    ok(mounted(x, 0) && mounted(x, 1) && x.ports[1] > 0 && x.flags.join() === '1,1' && x.level.join() === '0,0' && st.second.mounted && !st.second.formatted,
+      `two cards: both mounted (S-CARD's request for drive 1 the DCF numbering mount alone), the second on its own port, not formatted by the lab, flags 1, 1: ${show(x)}`);
+    ok(st.second.dcf?.file === 2 && s.camapp.card_images(0) === 0 && s.camapp.card_images(1) === 1,
+      `two cards: the second card's DCF database has its picture (count ${s.camapp.card_images(1)}, next file ${st.second.dcf?.file}), the first card's none (${s.camapp.card_images(0)})`);
+    menu2 = menu(s);
+    const row = menu1 && diff(menu1, menu2);
+    ok(row && row.pixels > 0 && (!ON_LAB_MODEL || (row.pixels === SLOT_ROW.pixels && J(row.box) === J(SLOT_ROW.box))),
+      `the menu with two cards against one: the movie Card Slot Settings row enabled, ${row?.pixels} pixels in ${J(row?.box)}${ON_LAB_MODEL ? ` (want ${SLOT_ROW.pixels} in ${J(SLOT_ROW.box)})` : ''}`);
+    // the save slot picks the card
+    s.set(SAVE, 1); idle(s, 300);
+    shoot(s);
+    const f2 = has(cardA, 2), second = st.files[0];
+    ok(st.files.length === 1 && second.path.startsWith(`${String.fromCharCode(names.drive.charCodeAt(0) + 1)}:`) && second.number === 2 && f2 && f2.size === second.size && has(cardA, 1) && !has(cardB, 1)
+      && cardA.writes > writes && s.camapp.card_images(1) === 2 && s.camapp.card_images(0) === 0,
+      `the save slot at slot 2: S2's file ${second?.path} is on the second card (${f2?.size} bytes beside its first picture, read independently) and not on the first; the image counts ${s.camapp.card_images(0)} and ${s.camapp.card_images(1)}`);
+    s.set(SAVE, 0); idle(s, 300);
+    shoot(s);
+    const f1 = has(cardB, 1);
+    ok(st.files.length === 2 && st.files[1].path.startsWith(`${names.drive}:`) && f1 && f1.size === st.files[1].size && !has(cardA, 3) && s.camapp.card_images(0) === 1,
+      `the save slot at slot 1: S2's file ${st.files[1]?.path} is on the first card (${f1?.size} bytes) and the second card got none`);
+    // the second card out and in while the camera runs, then the first
+    const out = pl.run_input({ type: 'card', action: 'remove', slot: 2 });
+    idle(s, 1000);
+    let y = state(s);
+    ok(out && mounted(y, 0) && empty(y, SECOND) && y.flags.join() === '1,0' && y.level.join() === '0,1' && s.camapp.card_images(1) === 0,
+      `the second card out: slot 2 empty to the firmware, its flag 0, the first card still mounted: ${show(y)}`);
+    pl.run_input({ type: 'card', action: 'insert', slot: 2 });
+    idle(s, 1500);
+    y = state(s);
+    ok(mounted(y, 0) && mounted(y, 1) && y.flags.join() === '1,1' && y.ports[1] > x.ports[1] && s.camapp.card_images(1) === 2,
+      `the second card in again: mounted by the firmware from its own card (its two pictures counted), flags 1, 1: ${show(y)}`);
+    pl.run_input({ type: 'card', action: 'remove' });
+    idle(s, 1000);
+    y = state(s);
+    ok(empty(y, 0) && mounted(y, 1) && y.flags.join() === '0,1', `the first card out: slot 1 empty to the firmware (drive status ${hx(y.drive[0])}), the second still mounted: ${show(y)}`);
+    pl.run_input({ type: 'card', action: 'insert' });
+    idle(s, 1500);
+    y = state(s);
+    ok(mounted(y, 0) && mounted(y, 1) && y.flags.join() === '1,1', `the first card in again: both mounted: ${show(y)}`);
+    let twice = null;
+    try { pl.run_input({ type: 'card', action: 'insert', slot: 2 }); } catch (e) { twice = e.message; }
+    ok(/in the slot already/.test(twice ?? ''), `a second insert into slot 2 is refused: ${twice}`);
+  } catch (e) { bad.push(`two cards: ${e.message.slice(0, 500)}`); }
+  try { pl?.close_session(); } catch { /* closed */ }
+
+  // ---- a new blank card put into the empty second slot while the camera runs; the Player keeps it for its next
+  // session
+  try {
+    for (const c of [cardB]) { c.state = 'idle'; c.selected = false; c.bus4 = false; }
+    pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, { ...env(), card: holder(cardB) });
+    pl.open_session();
+    let s = pl.session;
+    idle(s, 1500);
+    pl.run_input({ type: 'card', action: 'insert', slot: 2 });
+    idle(s, 1500);
+    const x = state(s), c2 = s.storage.second.card;
+    ok(c2 && c2 !== cardB && c2.present && x.det[1] === 0 && (x.api[1] & MS_UNFORMATTED) && !(x.api[1] & MS_MOUNTED) && c2.writes === 0 && x.ports[1] > 0 && x.flags.join() === '1,1',
+      `a blank card into slot 2: the firmware finds no file system (media status ${hx(x.api[1])}), does not format it (${c2?.writes} sectors written) and leaves it unmounted; the update's rule flags it: ${show(x)}`);
+    // Card Formatting from the menu: with two cards the panel "Select Card to Set Up", its second card, Format Card, Yes
+    shoot(s);
+    press(s, 'menu');
+    for (const k of ['ok', 'down', 'ok', 'up', 'ok', 'up', 'ok']) press(s, k);
+    const media = s.camapp.media;
+    for (let i = 0; i < 200 && media.formats === 0; i++) idle(s, 50);
+    idle(s, 1000);
+    const y = state(s), v = vol(c2);
+    ok(media.formats === 1 && mounted(y, 1) && mounted(y, 0) && v && v.label.trim() !== '' && v.list().length === 0 && has(cardB, 1) && c2.writes > 0,
+      `Card Formatting, the second card: formatted by the firmware's own request (media 1), '${v?.label.trim()}' ${v?.type} with an empty root, mounted; the first card keeps its picture: ${show(y)}`);
+    press(s, 'menu');
+    pl.close_session();
+    for (const c of [cardB, c2]) { c.state = 'idle'; c.selected = false; c.bus4 = false; }
+    pl.open_session();
+    s = pl.session;
+    idle(s, 1500);
+    const z = state(s);
+    ok(s.storage.second.card === c2 && mounted(z, 0) && mounted(z, 1) && !s.storage.second.formatted, `the player's next session starts with the same second card, mounted: ${show(z)}`);
+  } catch (e) { bad.push(`a new second card: ${e.message.slice(0, 500)}`); }
+  try { pl?.close_session(); } catch { /* closed */ }
+
+  // ---- control camapp 3 (E143): the firmware's own media manager
+  if (ON_LAB_MODEL) {
+    for (const [tag, cards] of [['one card', [new SdCard()]], ['two cards', [new SdCard(), cardA]]]) {
+      try {
+        for (const c of cards) { c.state = 'idle'; c.selected = false; c.bus4 = false; }
+        pl = player(cards[0], cards[1] ?? null, 3);
+        const s = pl.session;
+        idle(s, 2000);
+        const x = state(s), m = menu(s), same = diff(m, cards.length === 1 ? menu1 : menu2);
+        if (cards.length === 1) {
+          ok(mounted(x, 0) && empty(x, SECOND) && x.flags.join() === '1,0' && x.ports[1] === 0 && x.mount.join() === '8,8' && same.pixels === 0,
+            `camapp 3, one card: the media manager finds slot 2 empty, clears its flag and sends its port nothing; its menu is camapp 1's word for word (${same.pixels} pixels differ): ${show(x)}`);
+          continue;
+        }
+        ok(mounted(x, 0) && mounted(x, 1) && x.flags.join() === '1,1' && x.ports[1] > 0 && x.mount.join() === '8,8' && same.pixels === 0,
+          `camapp 3, two cards: the media manager mounts the second card itself (${x.ports[1]} commands on its port), both flags 1; its menu is camapp 1's with two cards (${same.pixels} pixels differ): ${show(x)}`);
+        const before = s.camapp.card_images(1);
+        s.set(SAVE, 1); idle(s, 300);
+        shoot(s);
+        const got = s.storage.files[0], f = got && has(cardA, got.number);
+        ok(s.storage.files.length === 1 && got.path.startsWith(`${String.fromCharCode(names.drive.charCodeAt(0) + 1)}:`) && f && f.size === got.size && s.camapp.card_images(1) === before + 1,
+          `camapp 3, the save slot at slot 2: S2's file ${got?.path} on the second card (${f?.size} bytes), its image count ${before} + 1`);
+        // the second card out and in: the manager's own unmount and mount. With the save slot back at slot 1: the
+        // removal of the card the save slot names stops under camapp 3, at the sequence parts' read of module 9's
+        // state (0x50c8a335, outside S-TAKEOVER's list), as the first slot's does (docs/hle-gaps.md 4.8.12, open)
+        s.set(SAVE, 0); idle(s, 300);
+        pl.run_input({ type: 'card', action: 'remove', slot: 2 });
+        idle(s, 1500);
+        let y = state(s);
+        ok(mounted(y, 0) && empty(y, SECOND) && y.flags.join() === '1,0' && y.mount[1] === 0, `camapp 3, the second card out: the manager unmounts it and clears its flag: ${show(y)}`);
+        pl.run_input({ type: 'card', action: 'insert', slot: 2 });
+        idle(s, 2500);
+        y = state(s);
+        ok(mounted(y, 0) && mounted(y, 1) && y.flags.join() === '1,1' && y.mount[1] === 8 && s.storage.slot(SECOND).mounted, `camapp 3, the second card in: the manager mounts it again: ${show(y)}`);
+      } catch (e) { bad.push(`camapp 3, ${tag}: ${e.message.slice(0, 500)}`); }
+      try { pl?.close_session(); } catch { /* closed */ }
+    }
+  }
+  return { checks, bad, notes };
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const u = storageUnits();
   console.log(`card, FAT and exFAT reader units: ${u.checks - u.bad.length}/${u.checks}`);
@@ -1114,6 +1363,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     const x = await storageHls();
     console.log(`the HLS media side in play: ${x.checks - x.bad.length}/${x.checks}`);
     x.notes.forEach((t) => console.log('   note:', t));
+    x.bad.forEach((t) => console.log('  ', t));
+    n += x.bad.length;
+  }
+  if (process.argv.includes('--slot2')) {
+    const x = await storageSlots();
+    console.log(`the second card slot in play: ${x.checks - x.bad.length}/${x.checks}`);
     x.bad.forEach((t) => console.log('  ', t));
     n += x.bad.length;
   }

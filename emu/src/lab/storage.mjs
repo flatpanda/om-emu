@@ -29,7 +29,19 @@
 //               SD command layer (storage.command): each command the firmware sends is answered there, its response,
 //               its data and its status written into the command (at its fields, storage.command_fields: the E118
 //               family's lie 4 to 12 bytes lower than E143's) and its completion called at once, as the layer itself
-//               does for a busy port; sd_mount's card init, the transfers and the format run natively above it
+//               does for a busy port; sd_mount's card init, the transfers and the format run natively above it.
+//               On a body with the second slot's facts (src/fw/models.mjs card_fs.second_slot: E143, E146; fact
+//               'card.slots', src/fw/facts.mjs cardSlots, docs/hle-gaps.md 4.8.12) the lab has two card slots, and
+//               each command goes to the card of its port (the command's port index, storage.slots.port): the first
+//               slot's card to port 0, the second slot's to port 1, an empty slot answering nothing. The second slot
+//               is empty unless the host gives a second card (env.card2, node's OM_EMU_CARD2 / OM_EMU_CARD2_SIZE) or
+//               the Player's card input puts one in; it is never the first slot's card (refused). Each slot's
+//               card-detect pin follows its card: the SD driver's detect (storage.slots.detect) reads the body IO
+//               expander's input shadow, which the expander's task would fill from the chip and S-IOEXP's does not
+//               (src/lab/power.mjs), so the lab writes the pin's bit there, 0 with a card in the slot and 1 without
+//               (D: the detect answers "no card" for a pin that does not read 0); and its card switch, the same pin
+//               as UI_IN names it (I), is at the no-card level in S-KEYBITS' image (src/lab/play.mjs). On the other
+//               bodies the one card answers every port and no pin is written, as before
 //   S-FSNAND    the file system's NAND area (storage.nand.area: 512 KiB of NAND on E143, 384 or 256 KiB of the E144
 //               family's flash, the E118 family's two file-layer records in flash) behind its access
 //               (storage.nand.access): it reads erased (0xff) on a camera that
@@ -60,7 +72,10 @@
 //               the HLS media layer would send them (it does not run in the lab; which requests it sends, and in which
 //               order, is I): the FAT mount; on a card with no file system the format (the request Card Formatting
 //               makes, I) and the mount again; the DCF process's card-in and list commands; the DCF numbering mount,
-//               which leaves the drive mounted (the drive status's bit 0x1000). The same at a runtime insertion
+//               which leaves the drive mounted (the drive status's bit 0x1000). With a card in the second slot (a
+//               body whose second slot the lab models) and no media manager, the manager's own request for drive
+//               1, the DCF numbering mount alone (insert_second; control camapp 3's manager sends it itself, X).
+//               The same at a runtime insertion
 //               (src/lab/media.mjs S-MEDIA), and at a removal the DCF process's card out; after a format from the menu
 //               the DCF numbering mount again, for the next file number (src/lab/media.mjs S-MDACTRL; on the bodies
 //               whose application runs the media control itself S-MDAEND)
@@ -69,13 +84,18 @@ import { pack } from '../util/bytes.mjs';
 import { RTOS } from './rtos.mjs';
 import { K_CFLUSH } from './menu.mjs';
 import { STUB } from './display.mjs';
-import { SdCard, SECTOR } from './sdcard.mjs';
+import { SdCard, SECTOR, NO_RESPONSE } from './sdcard.mjs';
 import { A, MODEL, MODEL_INFO, fact } from '../fw/model.mjs';
 import { RecFile, REC_NATIVE } from './rec.mjs';
 import { BOARD } from '../fw/board.mjs';
-import { STORAGE_E143, STORAGE_LIB, CARD_DETECT_E143, RECORDER_E143, MEDIA_LIB } from '../fw/facts.mjs';
+import { STORAGE_E143, STORAGE_LIB, CARD_DETECT_E143, CARD_SLOTS_E143, RECORDER_E143, MEDIA_LIB } from '../fw/facts.mjs';
 
 export class StorageError extends FirmwareError {}
+// The card slots of a body with the second slot's facts (docs/hle-gaps.md 4.8.12, D): slot n is drive n, the SD host's
+// port n (the drive-to-port map 0x508accba gives 0 and 1 themselves) and the file layer's letter 'C' + n (0x508a8149,
+// X for C and D); the detect pin's level without a card (the detect answers 1, no card, for a pin that does not read
+// 0, 0x508b0859); the drive status of a slot whose detect answers so (0x508a835f)
+export const SLOTS = 2, SECOND = 1, PIN_NO_CARD = 1, DRIVE_NO_CARD = 1;
 const MODULE_EVENT_POST = 0x50025095;      // E143's module event post (mediaFacts)
 
 // The facts of this body's file system, or null where its MODELS entry does not run it (card_fs, each body's with its
@@ -90,7 +110,14 @@ export function storageFacts() {
   if (!f) throw new StorageError(`${MODEL}: src/fw/models.mjs card_fs is native but src/fw/facts.mjs fileSystem found no file system`);
   const { drive, ...lib } = STORAGE_LIB;
   return { ...f, ...lib, names: { ...f.names, drive }, detect: fact('card.detect', CARD_DETECT_E143).table, host: BOARD.sd, hls: cf.hls === 'rule' ? mediaFacts() : cf.hls ?? null,
-    recorder: fact('recorder', RECORDER_E143) ?? null };
+    recorder: fact('recorder', RECORDER_E143) ?? null, slots: cf.second_slot ? slotFacts() : null };
+}
+// The second card slot where the MODELS entry gives it (card_fs.second_slot): the rule's facts (src/fw/facts.mjs
+// cardSlots, fact 'card.slots'; a body whose forms the rule does not read has none, and fact() throws here)
+function slotFacts() {
+  const f = fact('card.slots', CARD_SLOTS_E143);
+  if (f.detect.pins.length !== SLOTS || f.detect.switches.length !== SLOTS) throw new StorageError(`${MODEL}: src/fw/facts.mjs cardSlots read ${f.detect.pins.length} card-detect pins, want ${SLOTS}`);
+  return f;
 }
 // The HLS side where the rule reads it (card_fs.hls 'rule': the E118 family and the E144 family but E148):
 // src/fw/facts.mjs mediaHls (fact 'media') with the library's numbers (MEDIA_LIB) and the module event post, the
@@ -152,6 +179,14 @@ export class Storage {
     this.s = session; this.lab = session.lab; this.f = f;
     this.host = this.lab.env.card ?? null;
     this.card = this.host ? this.host.open() : new SdCard();
+    // the second slot (f.slots: a body with its facts), empty unless the host gives its card (env.card2: {open() ->
+    // SdCard or null, save(card)}) or the Player's card input puts one in (put_card); its own state, as the first
+    // slot's below
+    this.second = f.slots ? { host: this.lab.env.card2 ?? null, card: null, mounted: false, removals: 0, insertions: 0, formatted: false, dcf: null,
+      next_file: null, drive_status: null } : null;
+    if (this.second) this.put_card(session.card2 ?? null);         // (the session opened the host's, play.mjs)
+    this.port_commands = [0, 0];   // S-SDCARD: the commands of each port
+    this.pins = null;              // the card-detect pins' levels the lab wrote (f.slots), checked at each later write
     this.nand = new Uint8Array(f.nand.area[1]).fill(ERASED);
     this.nand_writes = 0;
     this.log = [];                 // [kind, detail] of every stand-in action at the bring-up and the insertion
@@ -215,6 +250,7 @@ export class Storage {
       if (!entries.has(t)) throw new StorageError(`H-FILEINIT: the bring-up starts task ${t}, which is not a static task`);
       lab.lt.allow.add(entries.get(t));
     }
+    if (f.slots) this.detect_pins();                                 // before logsec's init asks the detect
     lab.call(f.init, null, null, null, 2000000);
     for (const t of tids) this._task(entries.get(t), 'H-FILEINIT');
     this.s.settle('H-FILEINIT');
@@ -226,7 +262,38 @@ export class Storage {
     this.s.settle('H-FILECLBK');
     if (!this.idle()) throw new StorageError(`H-FILECLBK: FILECLBK (task ${tid}) is not waiting on its queue after its start`);
     this.insert();
+    // the second slot's card where no media manager runs: control camapp 3's mounts it itself at its start (X)
+    if (this.second?.card?.present && !this.s.opts?.camapp_native_tra) this.insert_second();
   }
+  // The second slot's card (null: none): never the first slot's, nor a card that shares its sector store
+  put_card(card) {
+    if (!this.second) throw new StorageError(`${MODEL}: no second card slot in the lab (src/fw/models.mjs card_fs.second_slot)`);
+    if (card !== null && (card === this.card || card.data === this.card.data)) throw new StorageError('S-SDCARD: the second slot\'s card is the first slot\'s (the same card or the same sector store): each slot takes a card of its own');
+    this.second.card = card;
+  }
+  // the card of a slot (null: an empty second slot) and the slot's state (the first slot's fields are this object's)
+  card_of(drive) { return drive === DRIVE ? this.card : this._slot(drive).card; }
+  _slot(drive) {
+    if (drive === DRIVE) return this;
+    if (drive !== SECOND || !this.second) throw new StorageError(`${MODEL}: drive ${drive} is no card slot of the lab`);
+    return this.second;
+  }
+  // S-SDCARD's card-detect pins: each slot's bit of the body IO expander's input shadow (f.slots.detect.pins), 0 with a
+  // card in the slot. The words are the expander driver's, which does not run in the lab (S-IOEXP): a bit that no
+  // longer holds what the lab wrote was written by the firmware, and the session stops
+  detect_pins() {
+    const sim = this.lab.sim, pins = this.f.slots.detect.pins;
+    if (this.pins) pins.forEach(([word, bit], i) => {
+      if (((sim.u32(word) >>> bit) & 1) !== this.pins[i]) throw new StorageError(`S-SDCARD: slot ${i + 1}'s card-detect pin (${h8(word)} bit ${bit}) no longer reads ${this.pins[i]}: the firmware wrote the IO expander's input shadow`);
+    });
+    this.pins = pins.map(([word, bit], i) => {
+      const level = this.card_of(i)?.present ? 0 : PIN_NO_CARD, w = sim.u32(word) >>> 0;
+      sim.write(word, pack('<I', level ? w | 1 << bit : w & ~(1 << bit)));
+      return level;
+    });
+  }
+  // the SD driver's own card detect of a slot's port, natively: 0 a card in the slot
+  detect(drive) { return this.lab.call(this.f.slots.detect.fn, { d0: drive }, null, null, 200000).d0 & 0xFFFF; }
   // S-SDHOST: the pages in the stub's allow table and the polled bit in its presets, in their first free entries
   install_host() {
     const sim = this.lab.sim, free = (base, n, size) => {
@@ -321,8 +388,9 @@ export class Storage {
     return { status: mine[0][1], ms: Math.round((lab.lab_time() - t0) / 1e5) / 10 };
   }
   // The insertion's requests (S-CARD); at runtime (who S-MEDIA) the card is S-SDCARD's again before them
-  insert(who = 'S-CARD') {
-    const lab = this.lab, f = this.f, c = f.codes;
+  insert(who = 'S-CARD', drive = DRIVE) {
+    if (drive !== DRIVE) return this.insert_second(who);
+    const f = this.f, c = f.codes;
     if (!this.card.present) throw new StorageError(`${who}: the insertion's requests with the card out of the slot`);
     let err = this._fat(c.mount, 'mount', who);
     if (err === f.unformatted) {
@@ -339,18 +407,38 @@ export class Storage {
     this.log.push(['drive', `status ${h8(this.drive_status)}`]);
     if (!this.mounted) throw new StorageError(`${who}: the drive status after the insertion is ${h8(this.drive_status)}, not mounted (0x1000)`);
   }
+  // The second slot's insertion: the one request the firmware's media manager sends for the slot's mount, the DCF
+  // numbering mount of drive 1 (X under control camapp 3: FILECLBK 0x31 {0, drive 1} from the API sender and no
+  // other request for the drive; docs/hle-gaps.md 4.8.12), which mounts the volume and reads the card's lists itself.
+  // A card with no file system stays as the manager leaves it, not formatted and not mounted (X: the drive status
+  // 0x8704, the media status's bit 2); Card Formatting from the menu formats it
+  insert_second(who = 'S-CARD') {
+    const st = this.second;
+    if (!st?.card?.present) throw new StorageError(`${who}: drive ${SECOND}: the insertion's request with no card in the second slot`);
+    this.renumber(who, SECOND);
+    this.refresh(SECOND);
+    this.log.push(['drive', `drive ${SECOND}: status ${h8(st.drive_status)}${st.mounted ? '' : ', not mounted'}`]);
+  }
+  // The second slot's state as the firmware has it now (control camapp 3: its media manager mounts and unmounts the
+  // slot itself): the drive status read natively
+  refresh(drive = SECOND) {
+    const st = this._slot(drive);
+    st.drive_status = this.status_word(drive);
+    st.mounted = st.drive_status !== DRIVE_NO_CARD && (st.drive_status & DRIVE_MOUNTED) !== 0;
+    return st;
+  }
   // A DCF process command {u16 command, u16 drive}
-  _dcf(cmd, label, who) {
-    const lab = this.lab, prm = lab.alloc(pack('<HHIII', cmd, DRIVE, 0, 0, 0), 4);
+  _dcf(cmd, label, who, drive = DRIVE) {
+    const lab = this.lab, prm = lab.alloc(pack('<HHIII', cmd, drive, 0, 0, 0), 4);
     const [, ms] = this.request(this.f.codes.dcf, prm, 16, label, who);
-    this.log.push([label, `detect state ${lab.sim.read(this.f.detect + 2 * DRIVE, 2)[0]} after ${ms} ms`]);
+    this.log.push([label, `${drive === DRIVE ? '' : `drive ${drive}: `}detect state ${lab.sim.read(this.f.detect + 2 * drive, 2)[0]} after ${ms} ms`]);
   }
   // A picture of the DCF database by its index (from 1): {folder, number, attr, fnode} from its fnode (attr: its byte
   // +89, whose bit 0 is the DCF edit's lock, the picture's protection) and its folder's dnode, or null where the DCF
   // process answers none
-  fnode(index, who = 'S-CARD') {
+  fnode(index, who = 'S-CARD', drive = DRIVE) {
     const lab = this.lab, sim = lab.sim, prm = lab.alloc(new Uint8Array(16), 4);
-    sim.write(prm, pack('<HHI', DCF_FNODE, DRIVE, index));
+    sim.write(prm, pack('<HHI', DCF_FNODE, drive, index));
     sim.write(prm + 12, pack('<H', DCF_FNODE_FLAG));
     const { status } = this.ask(this.f.codes.dcf, prm, 16, 'dcf fnode', who);
     const fn = status === 0 ? sim.u32(prm + DCF_FNODE_AT) >>> 0 : 0, dn = fn ? sim.u32(fn + REC.f.dnode) >>> 0 : 0;
@@ -359,25 +447,28 @@ export class Storage {
     return { folder: u16(dn + REC.d.number), number: u16(fn + REC.f.number), attr: sim.read(fn + REC.f.attr, 1)[0], fnode: fn };
   }
   // The DCF numbering mount: the next folder and file (S-RECFILE's names)
-  renumber(who) {
-    const lab = this.lab, blk = lab.alloc(pack('<HH', 0, DRIVE), 4);
+  renumber(who, drive = DRIVE) {
+    const lab = this.lab, blk = lab.alloc(pack('<HH', 0, drive), 4), st = this._slot(drive);
     lab.sim.write(blk + 4, new Uint8Array(124));
     const [b, ms] = this.request(this.f.codes.number, blk, 48, 'dcf number', who);
-    this.dcf = { folder: b[42] | b[43] << 8, file: b[44] | b[45] << 8 };
-    this.next_file = this.dcf.file;
-    this.log.push(['dcf number', `next folder ${this.dcf.folder}, file ${this.dcf.file} after ${ms} ms`]);
+    st.dcf = { folder: b[42] | b[43] << 8, file: b[44] | b[45] << 8 };
+    st.next_file = st.dcf.file;
+    this.log.push(['dcf number', `${drive === DRIVE ? '' : `drive ${drive}: `}next folder ${st.dcf.folder}, file ${st.dcf.file} after ${ms} ms`]);
   }
   // S-MEDIA's removal: the card is out of the slot (S-SDCARD answers nothing), then the DCF process's card out and
   // sdmem's card info cleared (the next mount initialises the card again)
-  remove(who = 'S-MEDIA') {
-    this._dcf(this.f.card_out, 'dcf card out', who);
-    const req = this.lab.alloc(new Uint8Array(128), 4);                          // drive 0: sdmem's card info cleared
+  remove(who = 'S-MEDIA', drive = DRIVE) {
+    const st = this._slot(drive), of = drive === DRIVE ? '' : `drive ${drive}: `;
+    this._dcf(this.f.card_out, 'dcf card out', who, drive);
+    const blk = new Uint8Array(128);                                             // the drive's sdmem card info cleared
+    blk[0] = drive;                                                              // (the request's +0 u16, its drive)
+    const req = this.lab.alloc(blk, 4);
     const [b] = this.request(this.f.card_info, req, 64, 'sdmem card info', who);
-    this.log.push(['sdmem card info', `status 0x${(b[60] | b[61] << 8).toString(16)}`]);
-    this.drive_status = this.status_word();
-    this.mounted = false;
-    this.removals += 1;
-    this.log.push(['drive', `status ${h8(this.drive_status)}`]);
+    this.log.push(['sdmem card info', `${of}status 0x${(b[60] | b[61] << 8).toString(16)}`]);
+    st.drive_status = this.status_word(drive);
+    st.mounted = false;
+    st.removals += 1;
+    this.log.push(['drive', `${of}status ${h8(st.drive_status)}`]);
   }
   // A fileif request (storage.fileif, src/fw/facts.mjs STORAGE_LIB): the block's result word
   fileif(code, args, label) {
@@ -392,11 +483,16 @@ export class Storage {
   }
   // S-RECFILE: the picture's bytes to a file of the DCF; returns {path, size, folder, number} (record() also the
   // cluster, the stamp and the clock record)
-  write_picture(bytes) { return this.rec ? this.rec_picture(bytes) : this.f.recorder ? this.record(bytes) : this.fileif_picture(bytes); }
+  // drive: the slot's the firmware's save settings name (camapp.mjs save_slot); the second slot's only where REC_FILE
+  // records natively
+  write_picture(bytes, drive = DRIVE) {
+    if (drive !== DRIVE && !this.rec) throw new StorageError(`S-RECFILE: a picture for drive ${drive}: the lab records on the second slot only where REC_FILE runs natively (src/fw/models.mjs rec_native)`);
+    return this.rec ? this.rec_picture(bytes, drive) : this.f.recorder ? this.record(bytes) : this.fileif_picture(bytes);
+  }
   // REC_FILE natively (src/lab/rec.mjs): its file, with the header REC_IMAGE's header maker builds
-  rec_picture(bytes) {
-    const file = this.rec.record(bytes);
-    this.next_file = file.number + 1;
+  rec_picture(bytes, drive = DRIVE) {
+    const file = this.rec.record(bytes, drive);
+    this._slot(drive).next_file = file.number + 1;
     this.files.push(file);
     this.log.push(['rec', `${file.path}: ${file.size} bytes (header ${file.header}) from cluster ${file.cluster}, dated '${file.date}'`]);
     return file;
@@ -504,14 +600,22 @@ export class Storage {
   _command(h, r) {
     const sim = this.lab.sim, c = r.a0 >>> 0, L = this.f.command_fields;
     const code = sim.u32(c + L.code), arg = sim.u32(c + L.arg), buf = sim.u32(c + L.buffer), count = sim.u32(c + L.count), bsize = sim.u32(c + L.block);
-    const x = this.card.exec(code, arg, count, bsize);
+    // the card of the command's port where the lab has two slots (an empty slot answers nothing); else the one card
+    let card = this.card;
+    if (this.f.slots) {
+      const p = sim.read(c + this.f.slots.port, 2), port = p[0] | p[1] << 8;
+      if (port >= SLOTS) throw new StorageError(`S-SDCARD: a command for port ${port} from ${where(r.mdr)}: the lab has the ports of ${SLOTS} card slots`);
+      card = this.card_of(port);
+      this.port_commands[port] += 1;
+    }
+    const x = card ? card.exec(code, arg, count, bsize) : { status: NO_RESPONSE };
     this.commands += 1;
     if (x.status === 0) {
       sim.write(c + L.resp, pack('<IIII', ...x.resp));
       if (x.data) sim.write(buf, x.data.subarray(0, Math.min(x.data.length, count * bsize || x.data.length)));
       if (x.write) {
         const b = sim.read(buf, count * SECTOR);
-        for (let i = 0; i < count; i++) this.card.writeSector(arg + i, b.subarray(SECTOR * i, SECTOR * (i + 1)));
+        for (let i = 0; i < count; i++) card.writeSector(arg + i, b.subarray(SECTOR * i, SECTOR * (i + 1)));
       }
     }
     sim.write(c + L.status, pack('<H', x.status));
@@ -531,13 +635,28 @@ export class Storage {
     h.finish(r, { d0: 0 });
   }
   // the host keeps the card when the session ends, if the firmware wrote to it
-  close() { if (this.host && this.card.take_dirty()) this.host.save(this.card); }
+  close() {
+    if (this.host && this.card.take_dirty()) this.host.save(this.card);
+    const c2 = this.second?.card ?? null;
+    if (c2 && this.second.host && c2.take_dirty()) this.second.host.save(c2);
+  }
   take_log() { return this.log.splice(0); }
   // the slot at run time (a card input's record, src/lab/play.mjs)
-  slot() { return { present: this.card.present, mounted: this.mounted, removals: this.removals, insertions: this.insertions }; }
+  slot(drive = DRIVE) {
+    const st = drive === DRIVE ? this : this.refresh(drive);    // (the second slot's as the firmware has it now)
+    return { present: !!this.card_of(drive)?.present, mounted: st.mounted, removals: st.removals, insertions: st.insertions };
+  }
   status() {
     return { mounted: this.mounted, formatted: this.formatted, dcf: this.dcf, drive_status: this.drive_status === null ? null : h8(this.drive_status),
       card: { kind: this.card.kind, sectors: this.card.sectors, stored: this.card.data.size, reads: this.card.reads, writes: this.card.writes },
-      commands: this.commands, flushes: this.flushes, nand_writes: this.nand_writes, files: this.files.length, next_file: this.next_file };
+      commands: this.commands, flushes: this.flushes, nand_writes: this.nand_writes, files: this.files.length, next_file: this.next_file,
+      // the second slot, once it holds a card (a session with the default empty slot keeps the document it had)
+      ...(this.second?.card ? { second: this.second_status() } : {}) };
+  }
+  second_status() {
+    const st = this.second, card = st.card;
+    return { present: card.present, mounted: st.mounted, formatted: st.formatted, dcf: st.dcf, drive_status: st.drive_status === null ? null : h8(st.drive_status),
+      card: { kind: card.kind, sectors: card.sectors, stored: card.data.size, reads: card.reads, writes: card.writes }, commands: this.port_commands[SECOND],
+      next_file: st.next_file };
   }
 }

@@ -12,7 +12,8 @@ import { SET_INPUTS } from '../dev/scpu.mjs';
 import { PLUG, UNPLUG, EDID, W_EDID_LEN, W_CABLE, W_DDC_READS, W_SCDC_WRITES } from '../dev/hdmi.mjs';
 import { sinkEdid } from './edid.mjs';
 import { Accelerometer } from './acc.mjs';
-import { Storage, STORAGE } from './storage.mjs';
+import { Storage, STORAGE, SECOND } from './storage.mjs';
+import { SdCard, cardSectors } from './sdcard.mjs';
 import { NativeLens } from './lens.mjs';
 import { ResNand } from './resnand.mjs';
 import { IoExpanders, PowerOff, POWER_OFF, startPowerManager } from './power.mjs';
@@ -1057,6 +1058,14 @@ export class PlaySession extends N.NavSession {
     const llpsw = CONTROLS.find((c) => c.uiin?.[3] === LLPSW)?.uiin ?? null;
     this.lens = MODEL_INFO.lens_native && native && this.storage_runs() ? new NativeLens(this, llpsw) : null;
     if (this.lens) this.lens.lock(this.images);
+    // the second card slot (storage.mjs STORAGE.slots, a body with its facts): its card, the host's (env.card2) or
+    // none; while the slot is empty its card switch is at the no-card level in the idle image, before the groups are
+    // pushed (S-KEYBITS: the level the camera's switch has without a card, docs/hle-gaps.md 4.8.12)
+    this.card2 = null;
+    if (STORAGE?.slots && this.storage_runs()) {
+      this.card2 = env.card2?.open() ?? null;
+      if (!this.card2?.present) this.card_switch(STORAGE.slots.detect.switches[SECOND], false);
+    }
     // Whether the camera application forwards the touches to the GUI itself (docs/hle-gaps.md 4.4.2, D unless
     // tagged): its event task (entry 0x5108ba1b, task 165 in the lab) takes the touch events 0x03000072..78 and posts
     // each to the GUI as index 109 with its kind (0x5108ba30), then waits for the GUI's answer 0x0400001f, the GUI's
@@ -1778,27 +1787,48 @@ export class PlaySession extends N.NavSession {
     this.begin(`${String(this.steps.length).padStart(2, '0')}-${tag}`);
     return this.wait_until(lab.lab_time() + (this.acc.rotate ? ROTATE_TILT_MS : TILT_MS) * 1000000, tag, true, { kind: 'tilt', extra: () => ({ acc: this.acc.status(), gauge: this.acc.gauge() }) });
   }
-  // The card in the first slot (a body with the file system native and its HLS side, src/fw/models.mjs card_fs.hls):
-  // 'remove' takes it out (S-SDCARD's card answers no command), 'insert' puts the same card back. The slot's card
+  // The card in a slot (a body with the file system native and its HLS side, src/fw/models.mjs card_fs.hls): 'remove'
+  // takes it out (S-SDCARD's card answers no command), 'insert' puts the same card back. The slot's card
   // switch changes as a body's does (S-KEYBITS' bit of UI_IN's group, which UI_IN decodes natively and the file
   // layer's callback takes), and S-MEDIA (media.mjs) runs the media manager's part of the change in the step; then
-  // CARD_MS of lab time
-  card_input(action) {
+  // CARD_MS of lab time. slot: 1 (the default), or 2 on a body whose second slot the lab models (card_fs.second_slot):
+  // 'insert' into the empty second slot puts a new blank card there (size: its capacity in GiB, the default card's
+  // when null), which the host keeps for the player's next sessions where it can (env.card2's put); with the slot's
+  // card the card-detect pin changes too (storage.mjs S-SDCARD)
+  card_input(action, slot = 1, size = null) {
     const st = this.storage, media = this.camapp?.media ?? null;
     if (!st || !media) throw new ValueError(`card: ${MODEL} has no card in the lab with its file system and its HLS media side (src/fw/models.mjs card_fs)`);
     if (action !== 'remove' && action !== 'insert') throw new ValueError(`card: action ${show(action)} (remove, insert)`);
-    if ((action === 'remove') !== st.card.present) throw new ValueError(`card ${action}: the card is ${st.card.present ? 'in' : 'out of'} the slot already`);
-    if (media.busy()) throw new ValueError(`card ${action}: the media layer is busy (a format or a card change runs)`);
-    const sw = media.f.slots[0].switch, c = CONTROLS.find((x) => x.kind === 'fwswitch' && x.uiin?.[3] === sw);   // (a row not wired has none)
-    if (!c) throw new ValueError(`card: no UI_IN switch control for the card switch 0x${fx(sw, 4)}`);
-    const lab = this.lab, tag = `card ${action}`, [g, b, bit, , , pol] = c.uiin;
+    if (slot !== 1 && !(slot === 2 && st.second)) throw new ValueError(`card: slot ${show(slot)} (${st.second ? '1, 2' : '1: the lab models one card slot on this body'})`);
+    const drive = slot - 1, at = drive ? ' (slot 2)' : '';
+    let card = st.card_of(drive);
+    if (size !== null && !(action === 'insert' && card === null)) throw new ValueError(`card ${action}${at}: a size is a new card's, for an insert into the empty second slot`);
+    if ((action === 'remove') !== !!card?.present) throw new ValueError(`card ${action}${at}: the card is ${card?.present ? 'in' : 'out of'} the slot already`);
+    if (media.busy()) throw new ValueError(`card ${action}${at}: the media layer is busy (a format or a card change runs)`);
+    const sw = media.f.slots[drive].switch, tag = `card ${action}${drive ? ' 2' : ''}`, lab = this.lab;
+    if (card === null) {                                                           // a new card for the second slot
+      card = new SdCard(size === null ? {} : { sectors: cardSectors(size) });
+      card.remove();
+      st.put_card(card);
+      lab.env.card2?.put?.(card);
+    }
     this.begin(`${String(this.steps.length).padStart(2, '0')}-${tag}`);
-    if (action === 'remove') st.card.remove(); else st.card.insert();          // S-SDCARD
-    set_bit(this.images[g], b, bit, action === 'remove' ? 1 - pol : pol);         // the card switch, S-KEYBITS
+    if (action === 'remove') card.remove(); else card.insert();                 // S-SDCARD
+    if (st.f.slots) st.detect_pins();                                              // its card-detect pin
+    const g = this.card_switch(sw, action === 'insert');                           // the card switch, S-KEYBITS
     const [codes] = this.push_group(g);
     this.camapp.pump();                                                            // S-MEDIA's change, in the step
     return this.wait_until(lab.lab_time() + CARD_MS * 1000000, tag, true,
-      { kind: 'card', extra: () => ({ card: st.status(), slot: st.slot(), media: media.status(), uiin_codes: codes.map(h8) }) });
+      { kind: 'card', extra: () => ({ card: st.status(), slot: st.slot(drive), media: media.status(), uiin_codes: codes.map(h8) }) });
+  }
+  // a card switch's bit in S-KEYBITS' image of its UI_IN group (the switch's entry of CONTROLS), at the level of a
+  // card in the slot or of none; returns the group
+  card_switch(sw, present) {
+    const c = CONTROLS.find((x) => x.kind === 'fwswitch' && x.uiin?.[3] === sw);   // (a row not wired has none)
+    if (!c) throw new ValueError(`card: no UI_IN switch control for the card switch 0x${fx(sw, 4)}`);
+    const [g, b, bit, , , pol] = c.uiin;
+    set_bit(this.images[g], b, bit, present ? pol : 1 - pol);
+    return g;
   }
   // the port as the lab sees it: the cable, the E-DDC reads the sink answered, the driver's EDID state, the SCDC
   // writes the sink did not acknowledge and, once the firmware opened the HDMI device, the channel's timing

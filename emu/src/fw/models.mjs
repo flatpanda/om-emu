@@ -91,7 +91,11 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // the menu, the card out and in; E143, E146, E147 and E148, whose HLS function component formats the card), or 'rule'
 // where src/fw/facts.mjs mediaHls reads them (fact 'media': the E118 family and the E144 family but E148, whose
 // application formats it itself). Every body gives it, one that does not run it with its reason (why);
-// such a body keeps S-CARD's card without a file system (src/lab/camapp.mjs)
+// such a body keeps S-CARD's card without a file system (src/lab/camapp.mjs); second_slot, the lab models the body's
+// second card slot (src/lab/storage.mjs S-SDCARD: two slots, the second empty unless the host gives its card, each
+// slot's card-detect pin; docs/hle-gaps.md 4.8.12) at what src/fw/facts.mjs cardSlots reads (fact 'card.slots'):
+// given for a body whose two slots are known to run so (X); a body that gives it and whose forms the rule does not
+// read throws at its first session
 //
 // `audio`: the audio hardware a session runs with --audio auto (the default) or on (src/lab/audiohw.mjs,
 // src/dev/audio.mjs; E143): AUD_MAIN's entry and id word, the id words of the CPU 0 tasks it starts and of its CPU 2
@@ -236,6 +240,8 @@ export const MODELS = {
     card_fs: {
       native: true,
       errlog: [MOVIE_TIME_ERRLOG],
+      // the second card slot (X: test_storage's --slot2 sessions, docs/hle-gaps.md 4.8.12)
+      second_slot: true,
       // The HLS side of the card (src/lab/media.mjs; docs/hle-gaps.md 4.8.3). D unless tagged.
       // reception: OlyHfwReception's singleton getter (0x6035f0fc, made by 0x50af8959) and its vtable slot 2
       // (0x50af8c96: the receive body 0x50af89f9 with d0 = 1), which hands an event to every receptor of its list
@@ -539,6 +545,8 @@ export const MODELS = {
     card_fs: {
       native: true,
       errlog: [MOVIE_TIME_ERRLOG],
+      // the second card slot at the forms the rule reads in its image (X: test_storage's --slot2 sessions)
+      second_slot: true,
       hls: {
         reception: 0x50AC655A, sync_slot: 2, new: 0x50DACAF5,
         events: { result: [0x50AD32E7, 44], media: [0x50AD2FD2, 36], mount: [0x50AD324A, 40] },

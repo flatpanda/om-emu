@@ -2886,64 +2886,82 @@ export function fileSystem(img) {
   };
 }
 
-// The HLS media side of the card on the E118 family (fact 'media', src/lab/media.mjs S-MEDIA and S-MDAEND;
-// docs/model-survey.md findings 124 to 129). D at E122's addresses unless tagged; E118 and E120 by the same rule (X).
-// On E143 and E146 the HLS function component formats the card and src/fw/models.mjs gives their addresses by hand
-// (card_fs.hls); the family's application runs the media control itself, in its event manager's process
-// (OlyHfwOpeMdaCtrlProcessEvFw, a class the E143 family and E148 do not hold), so the rule starts there:
-// - the process's event handler (E122 0x506a7d08): the one function that compares the event with the file module's
-//   progress 0x04020011 (`cmp imm32,d0`, fc c8 11 00 02 04) within MDA_HEAD bytes after its `movm [..],(sp); add
-//   -n,sp` and allocates (operator new with the process's source file, `mov FILE,a0`) within MDA_FILE bytes after the
-//   compare; it ends at the first `ret` with its movm's registers and frame. new: operator new, the call after that
-//   load and the line's `mov imm,d1` (E122 0x5092fa4e)
+// The HLS media side of the card on the bodies whose application runs the media control itself (fact 'media',
+// src/lab/media.mjs S-MEDIA and S-MDAEND; docs/model-survey.md findings 124 to 129 and 151). D at E122's addresses
+// unless tagged, the E144 family's forms at E144's; the others by the same rule (X). On E143, E146, E147 and E148 the
+// HLS function component formats the card and src/fw/models.mjs gives their addresses by hand (card_fs.hls); here the
+// application has an event manager's process for it (OlyHfwOpeMdaCtrlProcessEvFw, a class those four do not hold), so
+// the rule starts there:
+// - the process's event handler (E122 0x506a7d08, E144 0x5084a3a1): the one function that compares the event with the
+//   file module's progress 0x04020011 (`cmp imm32,d0`, fc c8 11 00 02 04) within MDA_HEAD bytes after its `movm
+//   [..],(sp); add -n,sp` and allocates (operator new with the process's source file, `mov FILE,a0`) within MDA_FILE
+//   bytes after the compare; it ends at the first `ret` with its movm's registers and frame. new: operator new, the
+//   call after that load and the line's `mov imm,d1` (E122 0x5092fa4e)
 // - cab: the handler's sends of its requests to the camera base (Cab_CameraBase, an HLS component): `mov
 //   0xdeadbeef,d1; call (its trace); mov a3,a0; call POST` (E122 0x506a8002, 0x506a8167; POST 0x5073c573, which gens
 //   the event to the camera base's reactive, D), the return addresses of POST's calls so placed (sites) and of its
-//   other calls in the handler (other: 0x506a8101's, on the path of another command or an error, 0x506a80a2); start,
-//   the media control's start (E122 0x506a819b; X: d0 the command, 1 at Format, d1 the media), which opens `mov
-//   a0,(24,sp); mov a1,(28,sp); movbu d0,(32,sp); movhu d1,(38,sp); clr d0; movhu d0,(36,sp)` and allocates the
-//   process with its file within MDA_FILE bytes
-// - reception: OlyHfwReception's singleton creator (E122 0x506d0e75), `mov (S),a0; cmp 0,a0; bne; mov n,d0; mov
-//   FILE,a0` with the class's source file (the application's getter 0x5069b01c, E143's 0x50abc5a3, caches what it
-//   returns); sync_slot: the slot of its vtable (the ctor's `mov a0,a2; mov VT,d0; mov d0,(a2)`) that calls the
-//   receive body with `mov 1,d0` where another slot calls it with `clr d0` (E122 slot 2, 0x506d119e, E143's
-//   0x50af8c96's form)
-// - events.mount: the media manager's mount notification (E143's 711, E122's 13596): of the constructors of the form
-//   `mov a1,a2; mov d1,d3; mov d0,d2; call; mov VT,d0; mov d0,(a0); mov ID,d0; movhu d0,(4,a0); mov d2,(28,a0); mov
-//   d3,(32,a0); mov a2,(36,a0); ret` called within MDA_SEND bytes after an operator new with CapMed_MediaManager.cpp
-//   (two on the family, X: 0x506a670d and 0x50771482, id 5627), the one whose sends give it the mount states 2, 4 and
-//   8 (`mov N,a1` just before the call); with that new's size (`mov 40,d0`, E122 0x5076f154): [ctor, size]
+//   other calls in the handler (other: 0x506a8101's, on the path of another command or an error, 0x506a80a2). The
+//   E144 family's handler has a third site, on that other path after its `other` send (E144 0x5084a8d9, after
+//   0x5084a864), and its last send is shared with it (0x5084a995), so a format's two sends are still the first and the
+//   last. start, the media control's start (E122 0x506a819b, E144 0x5084a9bb; X: d0 the command, 1 at Format, d1 the
+//   media), which opens `mov a0,(N,sp); mov a1,(N+4,sp); movbu d0,(N+8,sp)` (N 24, and 28 on E144, E139, E134, E137
+//   and E125, X; E144's start takes a second media on the stack, `movhu (104,sp),d0`, D) and allocates the process
+//   with its file within MDA_FILE bytes; one such opening on each of the 15 images that hold the class (X)
+// - reception: OlyHfwReception's singleton creator, which returns the object in a0. Either it allocates it, `mov
+//   (S),a0; cmp 0,a0; bne; mov n,d0; mov FILE,a0` with the class's source file (E122 0x506d0e75; the application's
+//   getter 0x5069b01c, E143's 0x50abc5a3, caches what it returns), or the object is static and constructed in place
+//   once, `mov (F),d0; cmp 0,d0; bne; inc d0; mov d0,(F); mov OBJ,a0; call CTOR; mov OBJ,a0; ret` (E144 0x50878729,
+//   the object 0x6218ae04; also E139, E142 and E140, X), where the class is told by its vtable: one of its first
+//   MDA_VT slots loads the class's file within MDA_VT_FILE bytes (E144 slot 5, 0x50878ada, at 0x50878b37). sync_slot:
+//   the slot of the vtable (the ctor's `mov a0,a2; mov VT,d0; mov d0,(a2)`, E144 0x5087868c) that calls the receive
+//   body with `mov 1,d0` where another slot calls it with `clr d0` (E122 slot 2, 0x506d119e, E143's 0x50af8c96's form;
+//   E144 slot 2, 0x50878a66, and slot 1, 0x508787b5)
+// - events.mount: the media manager's mount notification (E143's 711, E122's 13596, E144's 712): of the constructors
+//   of the form `mov a1,a2; mov d1,d3; mov d0,d2; call; mov VT,d0; mov d0,(a0); mov ID,d0; movhu d0,(4,a0); mov
+//   d2,(28,a0); mov d3,(32,a0); mov a2,(36,a0); ret` called within MDA_SEND bytes after an operator new with
+//   CapMed_MediaManager.cpp (two on E122, X: 0x506a670d and 0x50771482, id 5627), the one whose sends give it the
+//   mount states 2, 4 and 8 (`mov N,a1` just before the call; E144 0x5084a059 from 0x509379c4, 0x50937930 and
+//   0x50937841); with that new's size (`mov 40,d0`, E122 0x5076f154): [ctor, size]
 // - mount: the HLS mount state's getter and setter by media kind (E122 0x506a7488, 0x506a7597; E143 0x50aca51d,
-//   0x50aca6b1): `clr d2; call; cmp 4,d0; beq; cmp 1,d0; beq; cmp K,d0; beq` and `cmp 4,d0; beq; cmp 1,d0; beq; cmp
-//   K,d0; beq; bra; mov (a0),d0; mov imm32,d1`; one setter, and of the three getters of the form (three tables, X)
-//   the one whose SD word, `mov (W),d2` after its compares, the setter's `mov d0,(W)` writes; kinds [4, 1, K] (K 32
-//   on the family, 8 on E143)
+//   0x50aca6b1; E144 0x508491e1, 0x508493a5): `clr d2; call; cmp 4,d0; beq; cmp 1,d0; beq; cmp K,d0; beq ...; bra; mov
+//   (W),d2` and `cmp 4,d0; beq; cmp 1,d0; beq; cmp K,d0; beq ...; bra; mov (a0),d0; mov imm32,d1; mov d0,(W)`, with
+//   three kinds or four; one setter, and of the getters of the form (three or more tables, X) the one with the
+//   setter's kinds whose first word W the setter writes; kinds [4, 1, 32] (E143's third is 8), and [4, 1, 32, 8] on
+//   E144, E139, E134, E137 and E125, whose getter reads kind 8 from kind 1's word (E144 0x61e4336c)
 // - slots: the first slot's card switch code, of those the file layer registers with UI_IN, `mov CODE,d0; mov 3,d1;
-//   mov FN,a0; call` (E122 0x50562ce6, 0x1506; E143 0x50877e75 and 0x50877e87), the ones the SD driver also asks
-//   UI_IN's level getter for, `mov CODE,d0; call LEVEL; cmp 0,d0` (E122 0x50582a1d -> 0x50177e44, the port's place
-//   of E143's 0x5014c015; the family registers 0x121c the same way and asks for it otherwise, X), with the media kind
-//   4 (SD, the getter's first); switch_level: that getter, one. The second slot (E143's 0x1518) is not read
-// Returns undefined where the image holds no OlyHfwOpeMdaCtrlProcessEvFw (E143, E146, E147, E148, X) or a part is not
-// read (complete on E118, E120, E122 and E145; X, not read in the forms above: the E144 family's start and mount
-// state, E142's and E140's reception creator, the TG-5s' and E125's level getter); throws for two handlers or a
+//   mov FN,a0; call` (E122 0x50562ce6, 0x1506; E143 0x50877e75 and 0x50877e87; E144 0x5066d7e5 and 0x5066d7f7), the
+//   ones the SD driver asks UI_IN's level getter for, `mov CODE,d0; call LEVEL; cmp 0,d0` (E122 0x50582a1d ->
+//   0x50177e44, E144 0x506a3e96 -> 0x5010f862, the port's place of E143's 0x5014c015), with the media kind 4 (SD, the
+//   getter's first); switch_level: that getter, one. The SD driver's asks are the ones within MDA_SD bytes of the
+//   storage rule's command layer (X, the 19 images: 0x17db to 0x3214 bytes after it; the bodies register 0x121c,
+//   0x101 and 0x2006 with UI_IN the same way and ask for them, or not, at least 0x57616 bytes away, and E139, E125,
+//   E130, E133, E129 and E132 register 0x80 with another module and ask other getters for it, E139 0x509c5579). The
+//   second slot (0x1518) is not read
+// Returns undefined where the image holds no OlyHfwOpeMdaCtrlProcessEvFw (E143, E146, E147, E148, X), no file system
+// (storage: fileSystem's fact) or a part is not read; complete on the 15 images that hold the class (X: the E118
+// family, E144, E139, E134, E137, E142, E140, E125, E130, E145, E133, E129 and E132); throws for two handlers or a
 // handler without its end or its operator new.
-// The family's library numbers the lab adds to the fact (src/lab/storage.mjs storageFacts; D at E122's addresses, the
-// sessions X on all three): the mount states as E143's (unmounted 0, unmountPreprocess's; mounted 8, S-CARD's start
-// value; 2 and 8 the states of notifyRecMountEnd and mountProcEnd, which the application's handler (E122 0x506a8722,
-// E143's 0x50acaeb5 by the map) turns into 193 and 195 as E143's), UI_IN's switch event 0x02020000 | code; the
-// request event's closure at +28 (its base constructor 0x50697afc stores a1 there), the closure's argument at +12 and
-// function at +16 (its constructor 0x506d164f; its vt[0] 0x506d1691 calls fn(arg) when fn is not 0), and the media
-// control's command 1, the format (getMediaCtrlCBC's 1 -> 16 in the application, 0x506a844c)
+// The library numbers the lab adds to the fact (src/lab/storage.mjs storageFacts; D at E122's addresses and at
+// E144's, the sessions X on each body that runs the side): the mount states as E143's (unmounted 0,
+// unmountPreprocess's; mounted 8, S-CARD's start value; 2 and 8 the states of notifyRecMountEnd and mountProcEnd,
+// which the application's handler (E122 0x506a8722, E143's 0x50acaeb5 by the map) turns into 193 and 195 as E143's),
+// UI_IN's switch event 0x02020000 | code; the request event's closure at +28 (its base constructor 0x50697afc, E144
+// 0x508372d6, stores a1 there), the closure's argument at +12 and function at +16 (its constructor 0x506d164f; its
+// vt[0] 0x506d1691 calls fn(arg) when fn is not 0; E144's 0x50878f17 and 0x50878f59, the same instruction for
+// instruction), and the media control's command 1, the format (getMediaCtrlCBC's 1 -> 16 in the application,
+// 0x506a844c)
 export const MEDIA_LIB = { mount: { unmounted: 0, mounted: 8, rec_end: 2, end: 8 }, switch_event: 0x02020000, cab: { closure: 28, fn: 16, format: 1 } };
 const MDA_PROC_FILE = 'OlyHfwOpeMdaCtrlProcessEvFw.cpp', MDA_RECEPTION_FILE = 'OlyHfwReception.cpp', MDA_MANAGER_FILE = 'CapMed_MediaManager.cpp';
 const MDA_HEAD = 0x20, MDA_FILE = 0x60, MDA_BODY = 0x1000, MDA_SEND = 0x40, MDA_SLOTS = 4, MDA_SLOT_SPAN = 0x30;
+const MDA_VT = 6, MDA_VT_FILE = 0x80, MDA_SD = 0x8000;
 const MDA_PROGRESS = [0xfc, 0xc8, 0x11, 0x00, 0x02, 0x04], MDA_TRACE = [0xfc, 0xcd, 0xef, 0xbe, 0xad, 0xde];
-const MDA_START = [0x43, 0x18, 0x47, 0x1c, 0xf8, 0x92, 0x20, 0xf8, 0x97, 0x26, 0x00, 0xf8, 0x93, 0x24];
+const MDA_START = (n) => [0x43, n, 0x47, n + 4, 0xf8, 0x92, n + 8];
+const MDA_STATIC = [0xfc, 0xa4, null, null, null, null, 0xa0, 0x00, 0xc9, null, 0x40, 0xfc, 0x81, null, null, null, null, 0xfc, 0xdc];
 const MDA_MOUNT_CTOR = [0x96, 0x87, 0x82, 0xcd, null, null, null, null, 0xfc, 0xcc, null, null, null, null, 0x60, 0x2c, null, null, 0xf8, 0x70, 0x04,
   0xf8, 0x18, 0x1c, 0xf8, 0x1c, 0x20, 0xf8, 0x38, 0x24, 0xdf];
-const MDA_GET = (k) => [0x08, 0xcd, null, null, null, null, 0xa0, 0x04, 0xc8, null, 0xa0, 0x01, 0xc8, null, 0xa0, k, 0xc8];
-const MDA_SET = (k) => [0xa0, 0x04, 0xc8, null, 0xa0, 0x01, 0xc8, null, 0xa0, k, 0xc8, null, 0xca, null, 0x70, 0xfc, 0xcd];
-export function mediaHls(img) {
+const MDA_KINDS = [0xa0, 0x04, 0xc8, null, 0xa0, 0x01, 0xc8, null, 0xa0, null, 0xc8], MDA_GET_HEAD = [0x08, 0xcd];
+const MDA_GET_WORD = [0xca, null, 0xfc, 0xa6], MDA_SET_WORD = [0xca, null, 0x70, 0xfc, 0xcd, null, null, null, null, 0xfc, 0x81];
+export function mediaHls(img, storage = fileSystem(img)) {
   const rule = 'mediaHls', { base } = imageBase(img), D = (o) => h8(0x50000000 + o), A = (o) => (o === null ? null : 0x50000000 + o);
   const fileAt = (name) => {
     const at = findString(img, name, { nul: true });
@@ -2983,10 +3001,26 @@ export function mediaHls(img) {
   const post = one([...posts]), sites = [], other = [];
   if (post !== null) for (const c of callsWhere(img, (t) => t === post)) if (c.at >= entry && c.at < end) (traced.has(c.at + c.len) ? sites : other).push(0x50000000 + c.at + c.len);
   const starts = [];
-  for (let o = img.indexOf(0x43); o >= 0; o = img.indexOf(0x43, o + 1)) if (bytesAt(img, o, MDA_START) && loadsIn(procLoads, o, o + MDA_FILE).length) starts.push(o);
+  for (let o = img.indexOf(0x43); o >= 0; o = img.indexOf(0x43, o + 1)) if (bytesAt(img, o, MDA_START(img[o + 1])) && loadsIn(procLoads, o, o + MDA_FILE).length) starts.push(o);
   const start = one(starts);
   // the reception's creator and its synchronous slot
-  const creator = one([...loads(fileAt(MDA_RECEPTION_FILE))].map((p) => p - 12).filter((e) => bytesAt(img, e, [0xfc, 0xa0, null, null, null, null, 0xb0, 0x00, 0xc9, null, 0x80, null])));
+  const recLoads = loads(fileAt(MDA_RECEPTION_FILE));
+  const syncOf = (ctor) => {
+    if (ctor === null || !bytesAt(img, ctor, [0x92, 0xfc, 0xcc, null, null, null, null, 0x62])) return null;
+    const vt = u32(img, ctor + 3) - base, bodies = [];
+    for (let i = 0; i < MDA_SLOTS; i++) {
+      const fn = u32(img, vt + 4 * i) - base;
+      for (let p = fn; p < fn + MDA_SLOT_SPAN && !isRet(img, p); p = next(p)) {
+        const c = callAt(img, p);
+        if (c && img[p - 1] === 0x00) bodies.push({ i, to: c.to, sync: false });
+        else if (c && [1, 3, 5].some((k) => bytesAt(img, p - k - 2, [0x80, 0x01]))) bodies.push({ i, to: c.to, sync: true });
+      }
+    }
+    const slot = one(bodies.filter((x) => x.sync && bodies.some((y) => !y.sync && y.to === x.to)))?.i ?? null;
+    return slot === null ? null : { slot, vt };
+  };
+  // a heap singleton (E122): the creator allocates it with the class's file
+  let creator = one([...recLoads].map((p) => p - 12).filter((e) => bytesAt(img, e, [0xfc, 0xa0, null, null, null, null, 0xb0, 0x00, 0xc9, null, 0x80, null])));
   let syncSlot = null;
   if (creator !== null) {
     let ctor = null;
@@ -2994,18 +3028,22 @@ export function mediaHls(img) {
       const c = callAt(img, p);
       if (c && c.to !== newCall.to) ctor = c.to;
     }
-    if (ctor !== null && bytesAt(img, ctor, [0x92, 0xfc, 0xcc, null, null, null, null, 0x62])) {
-      const vt = u32(img, ctor + 3) - base, bodies = [];
-      for (let i = 0; i < MDA_SLOTS; i++) {
-        const fn = u32(img, vt + 4 * i) - base;
-        for (let p = fn; p < fn + MDA_SLOT_SPAN && !isRet(img, p); p = next(p)) {
-          const c = callAt(img, p);
-          if (c && img[p - 1] === 0x00) bodies.push({ i, to: c.to, sync: false });
-          else if (c && [1, 3, 5].some((k) => bytesAt(img, p - k - 2, [0x80, 0x01]))) bodies.push({ i, to: c.to, sync: true });
-        }
-      }
-      syncSlot = one(bodies.filter((x) => x.sync && bodies.some((y) => !y.sync && y.to === x.to)))?.i ?? null;
+    syncSlot = syncOf(ctor)?.slot ?? null;
+  } else {
+    // a static one (E144): the creator constructs it in place once; the class is told by a slot of its vtable that
+    // loads its file
+    const statics = [];
+    for (let o = img.indexOf(0xfc); o >= 0; o = img.indexOf(0xfc, o + 1)) {
+      if (!bytesAt(img, o, MDA_STATIC)) continue;
+      const c = callAt(img, o + MDA_STATIC.length + 4);
+      if (!c || !bytesAt(img, o + MDA_STATIC.length + 4 + c.len, [0xfc, 0xdc, ...img.subarray(o + MDA_STATIC.length, o + MDA_STATIC.length + 4), 0xdf])) continue;
+      const sync = syncOf(c.to);
+      if (sync === null) continue;
+      const fns = [...Array(MDA_VT).keys()].map((i) => u32(img, sync.vt + 4 * i) - base);
+      if (fns.some((fn) => loadsIn(recLoads, fn, fn + MDA_VT_FILE).length)) statics.push({ o, slot: sync.slot });
     }
+    const st = one(statics);
+    if (st !== null) { creator = st.o; syncSlot = st.slot; }
   }
   // the mount notification: of the constructors of its form called after an allocation with the media manager's file,
   // the one its sends give the mount states 2, 4 and 8 (`mov N,a1` within the five bytes before a call, E122
@@ -3021,32 +3059,38 @@ export function mediaHls(img) {
   }
   const states = (to) => new Set(callsWhere(img, (t) => t === to).flatMap((c) => [0, 1, 2, 3].filter((k) => img[c.at - k - 2] === 0x95).map((k) => img[c.at - k - 1])));
   const mount = one([...ctors].filter(([to]) => [2, 4, 8].every((n) => states(to).has(n))));
-  // the mount state's getter and setter, by their compares of the media kinds (three getters of the form read three
-  // tables, X: the one whose SD word, `mov (W),d2` after the compares, the setter's `mov d0,(W)` writes)
+  // the mount state's getter and setter, by their compares of the media kinds, three or four (several getters of the
+  // form read as many tables, X: the one with the setter's kinds whose SD word, `mov (W),d2` after the compares, the
+  // setter's `mov d0,(W)` writes)
   const gets = [], sets = [];
   for (let o = img.indexOf(0xa0); o >= 0; o = img.indexOf(0xa0, o + 1)) {
-    if (bytesAt(img, o, MDA_SET(null))) sets.push(o);
-    if (o >= 6 && bytesAt(img, o - 6, MDA_GET(null))) gets.push(o - 6);
+    if (!bytesAt(img, o, MDA_KINDS)) continue;
+    const kinds = [];
+    let p = o;
+    for (; img[p] === 0xa0 && img[p + 2] === 0xc8; p += 4) kinds.push(img[p + 1]);
+    if (bytesAt(img, p, MDA_SET_WORD)) sets.push({ o, kinds, word: u32(img, p + MDA_SET_WORD.length) });
+    if (o >= 6 && bytesAt(img, o - 6, MDA_GET_HEAD) && bytesAt(img, p, MDA_GET_WORD)) gets.push({ o: o - 6, kinds, word: u32(img, p + MDA_GET_WORD.length) });
   }
-  const set = one(sets), word = (o, at) => (img[o + at - 2] === 0xfc ? u32(img, o + at) : null);
-  const get = set === null ? null : one(gets.filter((g) => word(g, 22) !== null && word(g, 22) === word(set, 23) && img[g + 15] === img[set + 9]));
-  // the card slots' switch codes: those the file layer registers with UI_IN and the SD driver asks UI_IN's level getter
-  // for (0x121c, which the family registers the same way, is asked otherwise, X)
-  const tests = new Map();
-  for (let o = img.indexOf(0x2c); o >= 0; o = img.indexOf(0x2c, o + 1)) {
-    const c = callAt(img, o + 3);
-    if (c && bytesAt(img, o + 3 + c.len, [0xa0, 0x00])) tests.set(img[o + 1] | img[o + 2] << 8, [...(tests.get(img[o + 1] | img[o + 2] << 8) ?? []), c.to]);
+  const set = one(sets);
+  const get = set === null ? null : one(gets.filter((g) => g.word === set.word && g.kinds.join() === set.kinds.join()));
+  // the card slots' switch codes: those the file layer registers with UI_IN and the SD driver, the code within MDA_SD
+  // bytes of the storage rule's command layer, asks UI_IN's level getter for (the bodies' other switches registered
+  // the same way are asked from elsewhere, X)
+  const sd = storage ? storage.command - 0x50000000 : null, asks = new Map();
+  for (let o = img.indexOf(0x2c); o >= 0 && sd !== null; o = img.indexOf(0x2c, o + 1)) {
+    const c = callAt(img, o + 3), code = img[o + 1] | img[o + 2] << 8;
+    if (c && Math.abs(o - sd) < MDA_SD && bytesAt(img, o + 3 + c.len, [0xa0, 0x00])) asks.set(code, [...(asks.get(code) ?? []), c.to]);
   }
   const codes = [];
   for (let o = img.indexOf(0x2c); o >= 0; o = img.indexOf(0x2c, o + 1)) {
     const code = img[o + 1] | img[o + 2] << 8;
-    if (bytesAt(img, o + 3, [0x85, 0x03, 0xfc, 0xdc]) && callAt(img, o + 11) && tests.has(code) && !codes.includes(code)) codes.push(code);
+    if (bytesAt(img, o + 3, [0x85, 0x03, 0xfc, 0xdc]) && callAt(img, o + 11) && asks.has(code) && !codes.includes(code)) codes.push(code);
   }
-  const level = one([...new Set(codes.flatMap((code) => tests.get(code)))]);
+  const level = one([...new Set(codes.flatMap((code) => asks.get(code)))]);
   if ([creator, syncSlot, mount, get, level, post, start].includes(null)) return undefined;
   return {
     reception: A(creator), sync_slot: syncSlot, new: 0x50000000 + newCall.to, events: { mount: [0x50000000 + mount[0], mount[1]] },
-    mount: { get: A(get), set: A(set), kinds: [4, 1, img[set + 9]] },
+    mount: { get: A(get.o), set: A(set.o), kinds: set.kinds },
     slots: [{ kind: 4, switch: codes[0] }], switch_level: A(level),
     cab: { start: A(start), post: A(post), sites, other },
   };
@@ -5311,7 +5355,7 @@ export function readFacts({ img, family, resLoad }) {
   if (sio !== undefined) facts.sio = sio;
   const storage = fileSystem(img);
   if (storage !== undefined) facts.storage = storage;
-  const media = mediaHls(img);
+  const media = mediaHls(img, storage);
   if (media !== undefined) facts.media = media;
   facts.recorder = recorder(img);
   facts.dcf = { counts: dcfCounts(img) };

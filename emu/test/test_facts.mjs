@@ -899,16 +899,24 @@ const DPC_FOUND = { E132: { init: 0x5004A115, board: { triggers: 0x9B800030, irq
 // The movie record time's division by the frame rate (card.movie_rate; src/fw/facts.mjs movieRate): E118's (D: the
 // function 0x50535bf4, its divu by the byte 0xa1c2fad8 at 0x50535c40); none on E143
 const MOVIE_RATE_FOUND = { E143: null, E122: null, E118: { div: 0x50535C40, rate: 0xA1C2FAD8 } };
-// The E118 family's HLS media side (media; src/fw/facts.mjs mediaHls): E122's as found without the rule (D: the creator
+// The HLS media side of the bodies whose application runs the media control (media; src/fw/facts.mjs mediaHls): E122's
+// as found without the rule (D: the creator
 // 0x506d0e75 by its file name, the vtable slot 2 0x506d119e as E143's 0x50af8c96, operator new 0x5092fa4e, the mount
 // notification 0x506a670d by its sends 0x5076f37d / 0x5076f429 / 0x5076f491 after new(40), the mount state getter and
 // setter 0x506a7488 / 0x506a7597 by the map's pairing with E143's 0x50aca51d / 0x50aca6b1, the switch 0x1506 at
 // 0x50562ce6 and the SD driver's ask 0x50582a1d; X: the media control's start 0x506a819b, the handler 0x506a7d08's
 // sends 0x506a8010 and 0x506a8175 of the post 0x5073c573, observed at Format's Yes); E118's and E120's the rule's, run
-// in their sessions (test_storage --hls); none where the image holds no OlyHfwOpeMdaCtrlProcessEvFw (E143, X) or a part
-// is not read (E144's reception, X)
+// in their sessions (test_storage --hls); E144's as read in its disassembly (D, docs/model-survey.md finding 151: the
+// static creator 0x50878729 of the object 0x6218ae04, its vtable's slot 2 0x50878a66 and slot 1 0x508787b5, operator
+// new 0x50b1eafa at the handler 0x5084a3a1's allocations, the mount notification 0x5084a059 (id 712) sent the states
+// 2, 4 and 8 at 0x509379c4, 0x50937930 and 0x50937841, the four-kind getter and setter 0x508491e1 / 0x508493a5 on
+// the word 0x61e43360, the switch 0x1506 registered at 0x5066d7e5 and asked for at 0x506a3e96, the start 0x5084a9bb
+// and the handler's four calls of the post 0x508f89d9, the one at 0x5084a864 without the trace); none where the
+// image holds no OlyHfwOpeMdaCtrlProcessEvFw (E143 and E148, X)
 const MEDIA_FOUND = {
-  E143: undefined, E144: undefined,
+  E143: undefined, E148: undefined,
+  E144: { reception: 0x50878729, sync_slot: 2, new: 0x50B1EAFA, events: { mount: [0x5084A059, 40] }, mount: { get: 0x508491E1, set: 0x508493A5, kinds: [4, 1, 32, 8] },
+    slots: [{ kind: 4, switch: 0x1506 }], switch_level: 0x5010F862, cab: { start: 0x5084A9BB, post: 0x508F89D9, sites: [0x5084A76A, 0x5084A8E0, 0x5084A99C], other: [0x5084A86B] } },
   E122: { reception: 0x506D0E75, sync_slot: 2, new: 0x5092FA4E, events: { mount: [0x506A670D, 40] }, mount: { get: 0x506A7488, set: 0x506A7597, kinds: [4, 1, 32] },
     slots: [{ kind: 4, switch: 0x1506 }], switch_level: 0x50177E44, cab: { start: 0x506A819B, post: 0x5073C573, sites: [0x506A8017, 0x506A817C], other: [0x506A8108] } },
   E118: { reception: 0x506DF0C7, sync_slot: 2, new: 0x5093FA56, events: { mount: [0x506B564A, 40] }, mount: { get: 0x506B63BF, set: 0x506B64CE, kinds: [4, 1, 32] },

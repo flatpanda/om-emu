@@ -504,6 +504,7 @@ export class DisplayLab extends OsdLab {
     this.line_ns = new Map();
     this.img = null;
     this.img_attach = new Map();
+    this.img_decoded = null;       // the frames a decode wrote (src/lab/playmod.mjs), for the IMG edge guard
     this.img_path = null;
     this.assumptions_in_use = new Set();
     this.chgwait_native = [];
@@ -1208,6 +1209,25 @@ export class DisplayLab extends OsdLab {
     const off = this.vsc.offsets.get(`IMG${p + 1}RSZ1`), flags = this.vsc.flags(c, 'm');
     return !!flags[off >> 2] && (this.sim.u32(VSC_CHANNEL[c] + 0x2000 + off) & 0x11) === 0;
   }
+  // IMG1 of channel c latched onto a frame the pipeline block's decode wrote (img_decoded: the play module native,
+  // src/lab/playmod.mjs; docs/hle-gaps.md 4.8.13) and drawn one source pixel per output pixel: no horizontal resize
+  // (RSZ1 bit 0 clear) and no vertical one (bit 4 clear, or RSZ4 the channel's unit, A12). The firmware's own DISPLAY
+  // cmd 5 attaches it, so no attach of the lab's records it; the guard then measures the fetched span against the
+  // frame the newest such run wrote there. null for any other plane
+  decoded_fit(c, regs) {
+    const frames = this.img_decoded ? this.img_decoded() : [];
+    if (!frames.length || regs[0] === null || regs[5] === null || regs[6] === null) return null;
+    const [rsz1, , rsz4, , , sadr, dmald] = regs, unit = c === 2 ? 8192 : 4096;
+    if ((rsz1 & 1) || ((rsz1 & 0x10) && rsz4 !== unit)) return null;
+    const at = sadr * 16, stride = (dmald >>> 3) * 128;
+    for (let i = frames.length - 1; i >= 0; i--) {
+      const f = frames[i];
+      if (at >= f.dst && at < f.dst + f.dst_height * f.pitch) {
+        return f.pitch === stride ? { regs, src: [f.dst_width, f.dst_height], base: f.dst, stride: f.pitch, path: 'decode' } : null;
+      }
+    }
+    return null;
+  }
   img_steps(c, mirror = false) {
     const flags = this.vsc.flags(c, mirror ? 'm' : 'w'), base = VSC_CHANNEL[c] + (mirror ? 0x2000 : 0);
     return IMG_STEP_REGS.map((n) => { const off = this.vsc.offsets.get(n); return flags[off >> 2] ? this.sim.u32(base + off) : null; });
@@ -1282,9 +1302,9 @@ export class DisplayLab extends OsdLab {
       // bank as IMG2 behind the menu, docs/hle-gaps.md 4.2.4). IMG1 keeps its attach rule (its 1:1 on channel 2 rests
       // on A12)
       if (p > 0 && this.unscaled(c, p)) continue;
-      let fit = name === 'IMG1' ? (this.img_attach.get(c) ?? null) : null;
-      const source = fit && (fit.path === 'TH' ? this._th_source(fit) : fit.src);
       const regs = name === 'IMG1' ? this.img_steps(c, true) : null;
+      let fit = name === 'IMG1' ? (this.decoded_fit(c, regs) ?? this.img_attach.get(c) ?? null) : null;
+      const source = fit && (fit.path === 'TH' ? this._th_source(fit) : fit.src);
       let reason = fit === null ? 1 : !deepEqual(regs, fit.regs) ? 2 : source === null ? 4 : 0;
       let offset, stride, rsz1, rsz2, rsz4, area1, area2;
       if (!reason) fit = { ...fit, src: source };

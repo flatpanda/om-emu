@@ -190,13 +190,14 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   bad += mu.bad.length + ms.bad.length;
 }
 // control camapp 3 with the play module native (src/lab/playmod.mjs, docs/hle-gaps.md 4.8.11): the PLAY tasks load the
-// card's picture, its header and still information natively; the view's decode is S-PLAYDEC's
+// card's picture, its header and still information natively; the view's decode runs on the pipeline block's model
+// (S-IMGPIPE, docs/hle-gaps.md 4.8.13: playDecodeSession), the detail view's is S-PLAYDEC's
 {
-  const { playNativeSession } = await import('../test/test_camapp.mjs');
-  const pn = await playNativeSession();
-  console.log(`camapp 3 with the play module native: ${pn.checks - pn.bad.length}/${pn.checks}`);
-  pn.bad.forEach((x) => console.log('  ', x));
-  bad += pn.bad.length;
+  const { playNativeSession, playDecodeSession } = await import('../test/test_camapp.mjs');
+  const pn = await playNativeSession(), pd = await playDecodeSession();
+  console.log(`camapp 3 with the play module native: ${pn.checks - pn.bad.length}/${pn.checks}; its view decode: ${pd.checks - pd.bad.length}/${pd.checks}`);
+  [...pn.bad, ...pd.bad].forEach((x) => console.log('  ', x));
+  bad += pn.bad.length + pd.bad.length;
 }
 // control camapp 3's power-off and EVF switch (test_c3power.mjs, docs/hle-gaps.md 4.3.6): where each stops and why
 {

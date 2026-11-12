@@ -1063,7 +1063,8 @@ export class CamApp {
     // would take it from them: the two queues leave it; a synchronous send to them still returns E_OK below, the
     // lab's own stand-in refusing it
     if (this.s.lens) for (const q of [apiQueues().LENS_EXEC, apiQueues().LENS_COMMAND]) if (q !== null) this.module_queues.delete(q);
-    // with the play module native (playmod.mjs) PLAY_MAIN takes PLAY_EXEC's requests; S-PLAYDEC stands in for a decode
+    // with the play module native (playmod.mjs) PLAY_MAIN takes PLAY_EXEC's requests; its decode runs on S-IMGPIPE,
+    // and S-PLAYDEC stands in for one with a pre-reduction
     if (this.play_native) { this.module_queues.delete(apiQueues().PLAY_EXEC); this.play_native.install(); }
     if (this.s.storage?.f.hls) { this.media = new HlsMedia(this.s, this.s.storage); this.media.install(); }   // its HLS side (card_fs.hls)
     this.s.lab.panel_done = true;                                                  // S-PANELDONE (menu.mjs)

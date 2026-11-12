@@ -60,8 +60,9 @@
 //                  src/lab/playmod.mjs): H-PLAYSTART starts the six PLAY tasks, which wait on their queues; two
 //                  pictures carry the firmware's own Huffman tables (A-JPEGDHT-1) and decode (refs/jpeg.mjs); PLAY
 //                  loads the newest from the card natively (the header getter's code 0, the play capability's state
-//                  0), the view's decode is S-PLAYDEC's (its request recorded: the file, 7170, 1620 x 1080 to the
-//                  through image's bank, 3074, 900 x 600), and the GUI shows ID_ST_DISP_SIMPLE with the component's
+//                  0), the view's decode runs natively on the pipeline block's model (S-IMGPIPE; its request recorded:
+//                  the file, 7170, 1620 x 1080 to the through image's bank, 3074, 900 x 600; playDecodeSession checks
+//                  the picture), and the GUI shows ID_ST_DISP_SIMPLE with the component's
 //                  getNumber 2 of file 2 in folder 100; right and left move between the two (1, then 2) and PLAY
 //                  returns; INFO's detail view takes its still information from the file's own Exif and SOF (the
 //                  date, size, exposure and ISO the file holds, not still_record's), and DISPLAY cmd 16's reads of
@@ -69,6 +70,21 @@
 //                  the model refused the first until 2026-11-11, 4.8.11); control:
 //                  with the lab's own one-symbol AC tables the play module's JPEG parse refuses the second DHT
 //                  (12428), the header getter answers 6152 and PLAY shows No Picture
+//   playDecodeSession  control camapp 3 with the play module native: the view's decode on the pipeline block's model
+//                  (S-IMGPIPE, docs/hle-gaps.md 4.8.13). Two pictures of two scenes are taken in camapp 1 with the
+//                  live view (the reference: S-PLAYVIEW shows each scene's frame through the VSC's scaler), and under
+//                  camapp 3 the same two from the same scene views and a third of the first scene; there PLAY runs the
+//                  firmware's kind-10 request on the model: the codec's stream is the card's file from SOI, the 1620 x
+//                  1080 picture goes to 900 x 600 in the through image's bank with the prefilter's taps and the map's
+//                  steps the firmware wrote, the bank's bytes are the test's own computation from the independent
+//                  decoder's samples, IMG1 shows the bank one pixel per pixel and the composite's picture is the
+//                  bank's samples; each picture's frame is nearer camapp 1's frame of its scene than of the other, the
+//                  OSD differs only in the information rows; PLAY shows the third, right wraps to the first, left
+//                  back to the third and left again shows the second, each view in the other bank than the one before
+//                  and with the component's getNumber of its picture; over it all the short-movie album's count is
+//                  not asked, S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW and S-PLAYDEC do not fire, each view's file reads are
+//                  the play module's own (one by PLAY_LOAD, two by PLAY_LOADDRAW) and a move asks the DCF database for
+//                  the picture's fnode by its index
 //   node emu/test/test_camapp.mjs
 import fs from 'node:fs';
 import path from 'node:path';
@@ -660,8 +676,8 @@ export async function camapp3FramesSession() {
 //   OlyHfwOpePlyCom's getNumber wrapper (a1 the index, d0 the file number, d1 the folder, as camapp.mjs PLAY_COMPONENT
 //   writes them) and the still information converter (src/fw/facts.mjs STILL_CONVERT_E143: a1 the GUI's record, read
 //   at its return; the record's fields as test_playinfo.mjs GUI names them, ISO at +88, fact play.still)
-//   the view's decode S-PLAYDEC records (X): the source format 7170 (the lab's 4:2:2 picture), 1620 x 1080, to the
-//   through image's bank in format 3074, 900 x 600 at a pitch of 5568 pixels
+//   the view's decode's request, recorded at the issue (X): the source format 7170 (the lab's 4:2:2 picture), 1620 x
+//   1080, to the through image's bank in format 3074, 900 x 600 at a pitch of 5568 pixels
 //   INFO's histogram (X; docs/hle-gaps.md 4.2.7): DISPLAY cmd 16's reads of the VSC histogram's bins (0x501e150e, from
 //   0x501d7121) are answered, the unit counting the picture's plane in four runs (Y, R, G, B); until 2026-11-11 the
 //   model refused the first (HIST_UNMODELLED at 0x501e153d) and INFO stopped there
@@ -696,8 +712,8 @@ export async function playNativeSession() {
       // the control: S-CARD's pictures with the lab's own tables (A-JPEGDHT-1 not applied)
       if (control) Object.defineProperty(pm, 'dht', { value: undefined });
       const used = pl.stand_ins_in_use();
-      ok(pm && ['H-PLAYSTART', 'S-PLAYDEC', 'A-JPEGDHT-1'].every((x) => used.includes(x)) && !['S-PLAYSEQ', 'S-PLAYCOMP', 'S-PLAYVIEW'].some((x) => used.includes(x)),
-        `${tag}: the stand-ins ${used.filter((x) => /PLAY|JPEGDHT/.test(x))}`);
+      ok(pm && ['H-PLAYSTART', 'S-IMGPIPE', 'A-IMGPIPE-1', 'A-IMGPIPE-2', 'S-PLAYDEC', 'A-JPEGDHT-1'].every((x) => used.includes(x)) && !['S-PLAYSEQ', 'S-PLAYCOMP', 'S-PLAYVIEW'].some((x) => used.includes(x)),
+        `${tag}: the stand-ins ${used.filter((x) => /PLAY|JPEGDHT|IMGPIPE/.test(x))}`);
       const waiting = pm.tids.map(([t]) => (lab.nk.state(t) & 0xF) === 4);
       ok(JSON.stringify(pm.tids) === JSON.stringify(PN_TASKS) && waiting.every(Boolean) && !ca.module_queues.has(0x3F),
         `${tag}: H-PLAYSTART's tasks ${JSON.stringify(pm.tids)} waiting ${waiting}, PLAY_EXEC in S-MODACK's set ${ca.module_queues.has(0x3F)}`);
@@ -735,7 +751,7 @@ export async function playNativeSession() {
       const dec = pm.decodes[0] ?? {}, view = Object.entries(PN_VIEW).every(([k, v]) => dec[k] === v);
       ok(play === GUI_DISP_SIMPLE && codes.length && codes.every((c) => c === 0) && JSON.stringify(parses.slice(0, 2)) === JSON.stringify([PN_THUMB_NONE, 0]) && cap === PN_PLAY_CAP_OK
         && pm.decodes.length === 1 && pm.waits === 1 && view && JSON.stringify(numbers.at(-1)) === JSON.stringify([2, img.number, PN_FOLDER]),
-        `${tag}: PLAY shows ${play}: the header getter's codes ${codes}, the size parse ${parses}, the capability's state ${cap}, S-PLAYDEC ${JSON.stringify(pm.decodes)} (${pm.waits} waits), getNumber ${JSON.stringify(numbers.at(-1))}`);
+        `${tag}: PLAY shows ${play}: the header getter's codes ${codes}, the size parse ${parses}, the capability's state ${cap}, the decode's requests ${JSON.stringify(pm.decodes)} (${pm.waits} waits), getNumber ${JSON.stringify(numbers.at(-1))}`);
       // right and left move between the two, each loaded and its view decoded; PLAY returns
       numbers.length = 0;
       const right = key('right'), n1 = numbers.at(-1), left = key('left'), n2 = numbers.at(-1), back = key('play');
@@ -757,6 +773,141 @@ export async function playNativeSession() {
         `${tag}: INFO reaches ${lab.state_names.get(lab.state())} (${info}) past DISPLAY cmd 16's bins reads: the histogram unit's runs counted ${unit.histMeasured()}, R, G or B ${unit.histColour()}: ${stop?.slice(0, 300) ?? 'no stop'}`);
     } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 600)}`); }
     finally { pl.close_session(); }                                   // the control's continue too
+  }
+  return { checks, bad };
+}
+
+// control camapp 3 with the play module native: the view's decode on the pipeline block's model (docs/hle-gaps.md
+// 4.8.13; E143; src/dev/imgpipe.mjs, src/lab/playmod.mjs). D unless tagged:
+//   the through image's two banks the decode writes in turn and their pitch in bytes (X); the view's size and the
+//   picture's; the prefilter's taps [centre, next, outer] of the image library's row for the ratio 1620 / 900
+//   (thresholds 0x5066fb58: 1778 < 1843 <= 1909, row 9); the map's steps, 4.12 fixed ((1619 * 100 << 12) / (899 *
+//   100) and the same of 1079 and 599, 0x504784f4..0x5047853e) and the source position of the destination's pixel
+//   (0, 0) in 1/4096 (X)
+//   PlayCommon's getShortMovieAlbumNum (Get_Album_Num 0x503dd27f, the album manager's count of short-movie albums);
+//   the DCF database's fnode by index (0x50874bc9: d0 the drive, d1 the index) the media API asks at a move, and the
+//   play module's file read (play_file_read 0x518b017f: a request of code 0x53 to the file module, 0x518b0236..40)
+//   the information rows of the single-frame view, where its OSD differs between the two applications (X: from row
+//   PD_INFO_ROW down)
+//   PD_SCENE: each of camapp 3's pictures by camapp 1's picture of the same scene view (the test's choice)
+const PD_BANKS = [0x98D4D800, 0x9A43E000], PD_PITCH = 11136, PD_VIEW = [900, 600], PD_PICTURE = [1620, 1080];
+const PD_TAPS = [68, 34, -4], PD_STEP = [7376, 7378], PD_FROM = [200, 81];
+const PD_ALBUM_NUM = 0x503DD27F, PD_FNODE = 0x50874BC9, PD_FILE_READ = 0x518B017F, PD_INFO_ROW = 500;
+const PD_VIEW_IMG = 1, PD_VIEW_OSD = 0x38, PD_VIEW_ALL = 0x3F, PD_TFT = 2;
+const PD_SCENE = [1, 2, 1];
+export async function playDecodeSession() {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
+  const { Player } = await import('../src/lab/player.mjs');
+  const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+  const { openVolume } = await import('../refs/volume.mjs');
+  const { decodeJpeg } = await import('../refs/jpeg.mjs');
+  const { expectedView } = await import('./test_imgpipe.mjs');
+  const { runtime } = await import('../src/lab/hle.mjs');
+  const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
+  const ref = {};                                                      // camapp 1: the views kept, each picture's frames
+  let views = null;
+  for (const camapp of [1, 3]) {
+    const tag = camapp === 1 ? 'camapp 1 (the reference)' : 'play native';
+    const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, env);
+    if (camapp === 3) { pl.camapp_components = true; pl.camapp_native_tra = true; pl.camapp_play_native = true; }
+    try {
+      pl.open_session();
+      const s = pl.session, lab = s.lab, ca = s.camapp, pm = ca.play_native;
+      const idle = (ms) => { const to = lab.lab_time() + ms * 1e6; while (lab.lab_time() < to) s.idle_slice(Math.min(to, lab.lab_time() + 50e6)); };
+      const key = (k) => { s.key(k, 'down'); s.camapp.pump(); idle(100); s.key(k, 'up'); s.camapp.pump(); idle(900); return s.status().gui; };
+      // a picture: camapp 1 keeps the live view's scene with it (S-SCENE's view, as the Player's key input does);
+      // under camapp 3, whose live view stops at the histogram's read (4.2.4), the test gives the picture that view
+      const shot = (view) => {
+        s.key('s1', 'down'); if (!view) s.scene_key('s1', 'down'); s.camapp.pump(); idle(600);
+        s.key('s2', 'down'); if (view) ca.card_view(structuredClone(view)); else s.scene_key('s2', 'down');
+        s.camapp.pump(); idle(700);
+        s.key('s2', 'up'); s.camapp.pump(); s.key('s1', 'up'); s.camapp.pump(); idle(2000);
+      };
+      // the shown frame, and its picture and its OSD alone (the lab's view mask)
+      const shown = () => {
+        const all = Uint32Array.from(s.frame()[2]), part = (mask) => { lab.vsc.set_view(PD_TFT, mask); const c = lab.compose('tft', false, false); lab.vsc.set_view(PD_TFT, PD_VIEW_ALL); return c.status === 'NONE' ? Uint32Array.from(c.words) : null; };
+        return { all, img: part(PD_VIEW_IMG), osd: part(PD_VIEW_OSD), planes: s.last_planes?.planes ?? {} };
+      };
+      if (camapp === 1) {
+        s.scene_input({ liveview: true }); idle(300);
+        shot(null);
+        s.scene_input({ preset: 'chart' }); idle(300);
+        shot(null);
+        views = ca.images.map((im) => ca.views.get(im.release) ?? null);
+        const play = key('play'), p2 = shown(), right = key('right'), p1 = shown();
+        Object.assign(ref, { 1: p1, 2: p2 });
+        ok(views.length === 2 && views.every(Boolean) && play === GUI_DISP_SIMPLE && right === GUI_DISP_SIMPLE && p1.img && p2.img && p1.img.some((w, i) => w !== p2.img[i]),
+          `${tag}: two pictures of two scenes (${views.map((v) => v?.scene?.preset)}), PLAY (${play}) and right (${right}) show two different frames (S-PLAYVIEW)`);
+        continue;
+      }
+      // camapp 3: the same two pictures, then a third of the first scene
+      for (const v of views ? PD_SCENE.map((k) => views[k - 1]) : []) shot(v);
+      const used = pl.stand_ins_in_use(), st = s.storage, vol = openVolume((lba, n) => st.card.read(lba, n));
+      const files = ca.images.map((im) => vol.data(vol.find(im.file.path.slice(3).replaceAll('\\', '/'))));
+      ok(ca.card_images() === PD_SCENE.length && ca.views.size === PD_SCENE.length && ['S-IMGPIPE', 'A-IMGPIPE-1', 'A-IMGPIPE-2'].every((x) => used.includes(x)) && files.every((f) => { const d = decodeJpeg(f); return d.width === PD_PICTURE[0] && d.height === PD_PICTURE[1]; }),
+        `${tag}: ${ca.card_images()} pictures with their scene views (${ca.views.size}); the stand-ins ${used.filter((x) => /PLAY|IMGPIPE/.test(x))}`);
+      // observers: the album's count, the fnode by index, the play module's file reads, by task
+      const tid = () => { const cur = lab.lt.current(); for (const [t] of lab.nk.tasks()) if (lab.nk.tcb(t) === cur) return t; return null; };
+      const watch = (addr, fn, name) => { if (lab.hooks.has(runtime(addr))) lab.wrap(addr, (prev) => (l, r) => { fn(r); prev(l, r); }); else lab.observe(addr, (l, r) => fn(r), name); };
+      const seen = { album: 0, fnode: [], reads: [], numbers: [] }, u32 = (a) => lab.sim.u32(a) >>> 0;
+      watch(PD_ALBUM_NUM, () => { seen.album += 1; }, 'test: Get_Album_Num');
+      watch(PD_FNODE, (r) => seen.fnode.push(r.d1 >>> 0), 'test: the fnode by index');
+      watch(PD_FILE_READ, () => seen.reads.push(tid()), 'test: play_file_read');
+      lab.observe(PN_GET_NUMBER, (l, r) => {
+        const p = [r.a1 >>> 0, r.d0 >>> 0, r.d1 >>> 0], ret = r.mdr >>> 0;
+        lab.hook_rt(ret, (h, rr) => { lab.hooks.delete(ret); seen.numbers.push(p.map(u32)); lab.passthrough(rr); }, 'test: getNumber\'s return');
+      }, 'test: getNumber');
+      const log0 = lab.log.length, bus = lab.sim.m.devices.bus;
+      // one view of picture k: the component's number, the run, the bank's bytes against the test's own computation,
+      // the frame
+      const view = (what, k, bank, gui) => {
+        const number = seen.numbers.at(-1), at = [k, ca.images[k - 1].number, PN_FOLDER];
+        ok(JSON.stringify(number) === JSON.stringify(at), `${tag}: ${what}: getNumber ${JSON.stringify(number)}, want ${JSON.stringify(at)}`);
+        const run = pm.unit.last() ?? {}, file = files[k - 1], want = expectedView(decodeJpeg(file), ...PD_VIEW, PD_TAPS), row = 2 * PD_VIEW[0];
+        const got = new Uint8Array(row * PD_VIEW[1]);
+        for (let y = 0; y < PD_VIEW[1]; y++) bus.read(bank + y * PD_PITCH, got, y * row, row);
+        let wrong = 0;
+        for (let i = 0; i < got.length; i++) if (got[i] !== want.out[i]) wrong++;
+        ok(gui === GUI_DISP_SIMPLE && run.stream === pm.decodes.at(-1)?.src && run.bytes === file.length && run.width === PD_PICTURE[0] && run.height === PD_PICTURE[1] && run.dst === bank && run.pitch === PD_PITCH
+          && run.dst_width === PD_VIEW[0] && run.dst_height === PD_VIEW[1] && JSON.stringify([run.step, run.from, run.taps]) === JSON.stringify([PD_STEP, PD_FROM, [PD_TAPS, PD_TAPS]]) && !bus.span(run.work, 1),
+          `${tag}: ${what} (${gui}) decodes picture ${k}'s file (${file.length} bytes from SOI) to the bank 0x${bank.toString(16)}: ${JSON.stringify(run)}`);
+        ok(wrong === 0, `${tag}: ${what}: the bank's ${got.length} bytes are the test's own computation from the independent decoder's samples (${wrong} differ)`);
+        const f = shown(), img1 = f.planes.IMG1 ?? {};
+        let off = 0;
+        for (let i = 0; f.img && i < f.img.length; i++) { const o = 2 * i, pair = o & ~3; if (f.img[i] !== ((got[o] | got[pair + 1] << 8 | got[pair + 3] << 16) >>> 0)) off++; }
+        ok(img1.result === 'drawn' && img1.base === bank && img1.stride === PD_PITCH && img1.w === PD_VIEW[0] && img1.h === PD_VIEW[1] && f.img !== null && off === 0,
+          `${tag}: ${what}: IMG1 shows the bank one pixel per pixel (${JSON.stringify(img1)}); the composite's picture differs from the bank's samples in ${off} pixels`);
+        // against camapp 1's frames: nearer the same picture's than the other's (the luma's mean difference)
+        const luma = (a, b) => { let d = 0; for (let i = 0; i < a.length; i++) d += Math.abs((a[i] & 0xFF) - (b[i] & 0xFF)); return d / a.length; };
+        const scene = PD_SCENE[k - 1], same = luma(f.img, ref[scene].img), other = luma(f.img, ref[3 - scene].img);
+        let osd = 0, top = PD_VIEW[1];
+        for (let i = 0; i < f.osd.length; i++) if (f.osd[i] !== ref[scene].osd[i]) { osd++; top = Math.min(top, Math.floor(i / PD_VIEW[0])); }
+        ok(same < other && osd > 0 && top >= PD_INFO_ROW,
+          `${tag}: ${what}: the picture's mean luma difference from camapp 1's frame of its scene (picture ${scene}) is ${same.toFixed(2)}, from its other picture's ${other.toFixed(2)}; the OSD differs in ${osd} pixels from row ${top} down`);
+        return f;
+      };
+      // PLAY shows the newest; right wraps to the first; left wraps back to the newest; left again the one before it
+      const f3 = view('PLAY', 3, PD_BANKS[0], key('play'));
+      const reads_play = seen.reads.splice(0), fnode0 = seen.fnode.length;
+      const f1 = view('right', 1, PD_BANKS[1], key('right'));
+      const fnode_move = seen.fnode.slice(fnode0), reads_move = seen.reads.splice(0);
+      const f3b = view('left', 3, PD_BANKS[0], key('left'));
+      const f2 = view('left again', 2, PD_BANKS[1], key('left'));
+      ok(f3b.all.every((w, i) => w === f3.all[i]) && f2.all.some((w, i) => w !== f1.all[i]) && f2.all.some((w, i) => w !== f3.all[i]) && pm.unit.runs === 4 && pm.decodes.length === 4
+        && pm.decodes.every((d) => !d.stood_in && d.reduction.every((x) => x === 0)),
+        `${tag}: left shows PLAY's frame again, the second picture another; ${pm.unit.runs} runs for ${pm.decodes.length} requests (${pm.decodes.filter((d) => d.stood_in).length} stood in)`);
+      // the album, the stand-ins, the file system's part
+      const fired = [...new Set(lab.log.slice(log0))].filter((n) => /^S-(PLAYSEQ|PLAYCOMP|PLAYVIEW|PLAYDEC|ALBM)/.test(n));
+      const tasks = Object.fromEntries(pm.tids.map(([t, n]) => [n, t]));
+      ok(seen.album === 0 && !fired.length && s.storage.log.filter(([k]) => k === 'albm').length === 1,
+        `${tag}: over PLAY, right and left the short-movie albums' count is asked ${seen.album} times and ${fired.length ? fired : 'no play or album stand-in'} fires (S-ALBM answered the mount's init once)`);
+      ok(JSON.stringify(reads_play) === JSON.stringify([tasks.PLAY_LOAD, tasks.PLAY_LOADDRAW, tasks.PLAY_LOADDRAW]) && JSON.stringify(reads_move) === JSON.stringify(reads_play) && fnode_move.includes(1),
+        `${tag}: a view's file reads are the play module's (tasks ${reads_play} at PLAY, ${reads_move} at right; PLAY_LOAD ${tasks.PLAY_LOAD}, PLAY_LOADDRAW ${tasks.PLAY_LOADDRAW}); the move asks the DCF database for a fnode by its index ${fnode_move.length} times (indices ${[...new Set(fnode_move)]})`);
+    } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 700)}`); }
+    finally { pl.close_session(); }                                   // camapp 1's continue too
   }
   return { checks, bad };
 }
@@ -828,7 +979,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const t = await run('tra', traRoutingSession);
   const f = await run('frames', camapp3FramesSession);
   const pn = await run('playnative', playNativeSession);
-  console.log(`camapp session: ${r.checks - r.bad.length}/${r.checks}; the heap over an idle: ${h.checks - h.bad.length}/${h.checks}; the heap over a workload: ${w.checks - w.bad.length}/${w.checks}; the mode dial: ${m.checks - m.bad.length}/${m.checks}; camapp 3's transactions: ${t.checks - t.bad.length}/${t.checks}; camapp 3's frames: ${f.checks - f.bad.length}/${f.checks}; the play module native: ${pn.checks - pn.bad.length}/${pn.checks}`);
-  [...r.bad, ...h.bad, ...w.bad, ...m.bad, ...t.bad, ...f.bad, ...pn.bad].forEach((x) => console.log('  ', x));
-  process.exit(r.bad.length || h.bad.length || w.bad.length || m.bad.length || t.bad.length || f.bad.length || pn.bad.length ? 1 : 0);
+  const pd = await run('playdecode', playDecodeSession);
+  console.log(`camapp session: ${r.checks - r.bad.length}/${r.checks}; the heap over an idle: ${h.checks - h.bad.length}/${h.checks}; the heap over a workload: ${w.checks - w.bad.length}/${w.checks}; the mode dial: ${m.checks - m.bad.length}/${m.checks}; camapp 3's transactions: ${t.checks - t.bad.length}/${t.checks}; camapp 3's frames: ${f.checks - f.bad.length}/${f.checks}; the play module native: ${pn.checks - pn.bad.length}/${pn.checks}; its decode: ${pd.checks - pd.bad.length}/${pd.checks}`);
+  [...r.bad, ...h.bad, ...w.bad, ...m.bad, ...t.bad, ...f.bad, ...pn.bad, ...pd.bad].forEach((x) => console.log('  ', x));
+  process.exit(r.bad.length || h.bad.length || w.bad.length || m.bad.length || t.bad.length || f.bad.length || pn.bad.length || pd.bad.length ? 1 : 0);
 }

@@ -2512,9 +2512,12 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    posts: the word `0x60041136` is loaded at five places, REC_FILE's two, the object-name list's and REC_IMAGE's two
    (`0x50510be4`, `0x50510c2b`), each `movhu (Q),d0; mov a3,a0; exth d0; call 0x5050bc4a`, REC's post (216 bytes with
    "rec.c", `0x5050bcae`; it holds the family's `0x1002` trace, whose code names "REC post_msg_main", finding 121).
-   REC_IMAGE's finish goes by Mode through the table `0x6063e3bc` (4097..4110): 4097
-   to `0x50510c02`, which posts to REC_FILE (`0x50510c2b`) unless the record's +18494 is 5 with the packet's +208 3
-   (`0x50510c02..0x50510c27`), 4098, 4099, 4101, 4102, 4104, 4109 and 4110 to REC's reply at once (`0x50510bd9`). E118
+   REC_IMAGE's finish goes by Mode through the table `0x6063e3bc` (4097..4110, its words read): 4097, 4106, 4108 and
+   a Mode outside it to `0x50510c02`, which posts to REC_FILE (`0x50510c2b`) unless the record's +18494 is 5; with 5
+   `0x5051790e(packet)` decides (not 0: a FileType +208 of 3 posted as 9 and any other kept back; 0: a 3 kept back
+   and any other posted as 0; `0x50510c02..0x50510c28`); 4100, 4103 and 4105 post at once (`0x50510bc4`), 4107
+   unless `0x505178bf` is 1 (`0x50510bc6`, its post `0x50510be4`), and 4098, 4099, 4101, 4102, 4104, 4109 and 4110
+   go to REC's reply at once (`0x50510bd9`). E118
    and E120 (X, the rule; D where an address is given): the packet is 280 bytes with the fields past +106 64 higher;
    E118's loop also calls rec_file_start_process (`0x504f70fd`) and its record step is rec_file_destination_record
    (`0x504f6bae`), which counts the bits of RecordDevice +74 (0 logs `0x1e015001`, more than one answers 8062) and
@@ -2633,16 +2636,19 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
      limits from settings 49418 and 50026 (`0x50232883..0x502328ab`; both 0 in the family's store in the lab and 761,
      the 12-40mm's F2.8, in E143's, X: I, the lens's).
    - *ISO +2406.* Not the EXIF set's but REC_IMAGE's: rec_bracket_update (`0x5050d111`) calls rec_bracket_update_iso
-     (`0x5050d8cb`, from `0x5050d48b`). With the record's bracket byte +18644 1 its Sv is the record's +18720 where
+     (`0x5050d8cb`, from `0x5050d48b`). With the record's bracket byte +18644 1 the Sv it gives rec_bracket_after_trig
+     (`0x5050dbe5`, where the byte +5262 is 0) is the record's +18720 on both of its paths: `0x5050da3b`, where they
+     meet, reads the halfword at the record's +18720 again. What the two paths differ in is the packet: where
      `0x50517407(packet, record)` is 1 (Modes 4099, 4100 and 4106 with the record's byte +22041 1, and 8193 with that
-     byte and the packet's +144 bit 13), else, a still's Mode 4097 among them, +18720 plus a term of +4758
-     (`0x5050d9d6..0x5050da2f`; I: 256 log2(+4758 / 256), from the constants 256.0 and 0.30103, E143's form with
-     +38174 and +6594 in `docs/hle-gaps.md` 4.3.4; +4758 is the template's 256 in the lab, X); with that byte not 1
-     it comes from rec_bracket_update's argument (`0x5050da41..0x5050da77`, not read). The Sv goes to the packet's
-     +212 and, where the byte +5262 is 0, to rec_bracket_after_trig (`0x5050dbe5`), which for Mode 4097
-     (`0x50517407` 0) stores `0x505b6264(Sv)` in the tag (`0x5050dc18..0x5050dc22`). `0x505b6264` takes the Sv in
-     APEX units times 256 (X on E122: 1024 gives 50, 1280 100, 1536 200, 2048 800, 3072 12800, and 0 to 512 its floor
-     25, E143's 25 in `docs/hle-gaps.md` 4.3.5). TAKE writes +18720 from its state's +1478 (`0x502336e9`).
+     byte and the packet's +144 bit 13) its +212 gets +18720 and its +210 a value of +18574 and +4758 (not read);
+     else, a still's Mode 4097 among them, +212 gets +18720 plus a term of +4758 and +210 gets +4758
+     (`0x5050d9d6..0x5050da37`; I: 256 log2(+4758 / 256), from the constants 256.0 and 0.30103; E143's SvAdj and
+     GainAdj in form, +38174 and +6594 in `docs/hle-gaps.md` 4.3.4, where after_trig too takes +38174 alone, 4.3.5;
+     +4758 is the template's 256 in the lab, X). With that byte not 1 after_trig is given the packet's +212 as
+     `0x5050da91` leaves it from rec_bracket_update's argument (`0x5050da41..0x5050da7a`, not read). For Mode 4097
+     (`0x50517407` 0) after_trig stores `0x505b6264(Sv)` in the tag (`0x5050dc18..0x5050dc22`). `0x505b6264` takes the
+     Sv in APEX units times 256 (X on E122: 1024 gives 50, 1280 100, 1536 200, 2048 800, 3072 12800, and 0 to 512 its
+     floor 25, E143's 25 in `docs/hle-gaps.md` 4.3.5). TAKE writes +18720 from its state's +1478 (`0x502336e9`).
    - *Whether the lab can deliver them.* Not as on E143, because E143 delivers none of the three from a capture
      stand-in either: there the clock gives the dates, ExposureTime and FNumber stay the template's 0 and S-EXPOSE's
      values reach none of the record's exposure fields honestly (`docs/hle-gaps.md` 4.3.4), and the ISO's 25 is the

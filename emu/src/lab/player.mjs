@@ -955,7 +955,7 @@ export class Player {
       return;
     }
     s.camapp?.expose();                              // S-EXPOSE: the camera plans again after the input
-    this.input_error = rec.dial_unread ?? null;
+    this.input_error = rec.dial_unread ?? rec.switch_unmade ?? null;   // switch_unmade: play.mjs native_switch
     const entry = this.log_input(inp, rec, lab_ns);
     this.after_lab_time(m);
     entry.frame = this.frame ? this.frame[3] : null;

@@ -173,6 +173,10 @@ export const TOUCH_MESSAGE = 0x9100;
 // M10B display switches: the GUI-busy note, H-EYESTATE / H-STOREFIRST addresses
 export const GUI_BUSY_NOTE = 'e.g. Level Adjust -> Adjust: 0x5004ad13 sleeps for about 1 s while it takes 12 sensor samples';
 export const EYE_SET = A(0x50050EFD), EYE_STATE = { evf: 2, tft: 1 }, EYE_WORD = A(0xA32C1F44), EYE_CALLBACK = A(0xA32C1F48), EYE_TIMER = A(0xA32C1F4C);
+// the property the eye callback's registration reads for the EVF's burn-in timer (docs/om1-vsc-spec.md section 9 item
+// 10: armed only at 0) and, under control camapp 3, the one at whose 0 the application's eye handler asks for no
+// output (X, native_switch; I: the EVF auto switch)
+const EYE_SWITCH_PROPERTY = 1947;
 
 // The status line while a frame rests on A15 under the bracket guard.
 export function a15_text(verdict) {
@@ -848,6 +852,11 @@ export class PlayLab extends N.NavLab {
   open(device) {
     if (this.brackets !== undefined && this.brackets !== null) this.brackets.set(lookup(D.DEVICE, device).channel, this.constructor._bracket_state());
     super.open(device);
+  }
+  // Before the firmware opens the device itself (control camapp 3's display switch, PlaySession.native_switch): the
+  // A15 bracket record of its channel starts again, as at the lab's own OPEN. No DISPLAY command of the lab's.
+  native_open_begin(device) {
+    if (this.brackets !== undefined && this.brackets !== null) this.brackets.set(lookup(D.DEVICE, device).channel, this.constructor._bracket_state());
   }
   // The bracket guard's verdict for the shown channel: 'closed' (A15 may be assumed), or why not.
   a15_verdict(device) {
@@ -1922,6 +1931,7 @@ export class PlaySession extends N.NavSession {
     if (!this.gate_open()) throw new PlayError(`display switch while the GUI awaits event 0x${lab.sim.u32(B7_GATE).toString(16)} (B7)`);
     const busy = this.gui_busy();
     if (busy) throw new ValueError(`display switch refused: ${busy}`);
+    if (this.camapp?.native_tra) return this.native_switch(want, cause);
     const state0 = lab.state();
     const panel0 = lab.panels.length ? lab.panels[lab.panels.length - 1][1] : null;
     this.begin(`${String(this.steps.length).padStart(2, '0')}-SWITCH:${want}`);
@@ -1970,6 +1980,88 @@ export class PlaySession extends N.NavSession {
       panels_on_connect: on_connect, ctrl3, resend: sends.map(([c, d, r]) => [c, bytesHex(d), h8(r)]) };
     const indices = [CONNECT_INDEX];
     return this.end(`${cause} -> SWITCH:${want}`, 'display', indices, [], { device: want, switch: rec, state_from: h4(state0) });
+  }
+  // SWITCH under control camapp 3 (docs/hle-gaps.md 4.3.10): the firmware's own output change. The lab gives two
+  // inputs: the eye sensor's state (H-EYESTATE, whose setter publishes EV_EYESENSOR_STATUS natively) and the
+  // application's choice of output (S-OUTDISP answers INTERNAL_EVF while this.device is the EVF). From there the
+  // firmware runs (X): the application's display change asks getOutputDisplay, on the way to the EVF stops the VSC
+  // histogram (TRA 937, DISPLAY cmd 15) and sends the GUI request 131 itself (0x5105053c); the GUI's
+  // ConnectChangePlay calls the camera API's output change, which sends TRA 588; CapIod_IODevice opens the device
+  // (the opened word) and writes the output-device property, which S-PROP follows (camapp.mjs); on the way back to
+  // the TFT the application starts the histogram again (TRA 938). The lab's own DISPLAY cmd 2 OPEN, H-RESEND and
+  // H-CONNECT stand in for that chain in camapp 1 and 2 and are not made here: made here, the OPEN closed the TFT
+  // under the running histogram before the application's stop (errlog 0x37001418, 4.3.6). Post-conditions: the
+  // device the firmware opened, the property, the GUI's connect state, no error log, the module-9 readers. The screen
+  // the GUI is on afterwards is recorded and not judged: the lab's switch re-enters the screen it left, the
+  // application's own change picks its screen (X: from the Super Control Panel it goes to the shooting screen; the
+  // step takes the chain's lab time, about 0.13 s to the EVF, in which the start's date prompt, panel 324, gives way
+  // to the shooting screen's panel as in an idle slice).
+  // The application's eye handler asks for its output only while property 1947 is not 0 (X: at 0 it sends no 131 and
+  // nothing opens; I: the EVF auto switch off, where the camera switches by its EVF button, EV_PRESS_EVFSW, which
+  // has no producer in the lab): the step then records that no change was made and the device stays.
+  native_switch(want, cause) {
+    const lab = this.lab, d = lookup(D.DEVICE, want), from = this.device;
+    if (this.opts.mutant) throw new ValueError(`display switch: the mutant ${show(this.opts.mutant)} is the lab's own switch's, which control camapp 3 does not make`);
+    const state0 = lab.state();
+    const panel0 = lab.panels.length ? lab.panels[lab.panels.length - 1][1] : null;
+    this.begin(`${String(this.steps.length).padStart(2, '0')}-SWITCH:${want}`);
+    lab.harvest();
+    const e0 = lab.exec_history.length, m9 = lab.module9_reads.length, err0 = lab.kernel.errors.length;
+    const b0 = lab.b2_trace.length, np0 = lab.panels.length;
+    const layout0 = lab.b2_snapshot(), opened0 = lab.sim.u32(D.OPENED_WORD) >>> 0, prop0 = lab.props.get(lab.prop_device);
+    lab.native_open_begin(want);
+    this.device = want;                                            // S-OUTDISP's answer from here on
+    const state = lookup(EYE_STATE, want);
+    lab.call(EYE_SET, { d0: state }, null, null, 20000);           // H-EYESTATE
+    const eye = lab.sim.read(EYE_WORD, 1)[0];
+    if (eye !== state) throw new PlayError(`H-EYESTATE: ${h8(EYE_SET)}(${state}) left ${h8(EYE_WORD)} = ${eye}`);
+    this.camapp.prop_follow = true;                               // S-PROP follows CapIod's write (camapp.mjs)
+    try {
+      this.settle(`SWITCH:${want}`);
+      this.camapp.pump();
+    } finally { this.camapp.prop_follow = false; }
+    lab.harvest();
+    const trace = lab.b2_trace.slice(b0), names = trace.map((t) => t[1]);
+    const vt20 = trace.filter((t) => t[1] === 'vt+20 ret').map((t) => t[2]);
+    const states = trace.filter((t) => t[1] === 'SetConnectState').map((t) => t[2]);
+    const layout = lab.b2_snapshot(), opened = lab.sim.u32(D.OPENED_WORD) >>> 0, prop = lab.props.get(lab.prop_device);
+    const errlog = lab.kernel.errors.slice(err0).filter(([c]) => !D.EXPECTED_ERRLOG.has(c));
+    const reads = lab.module9_reads.slice(m9).map(([, site]) => site);
+    const shown = trace.map((t) => [t[1], '0x' + t[2].toString(16), typeof t[3] === 'number' ? '0x' + t[3].toString(16) : t[3]]).slice(0, 24);
+    const problems = [];
+    if (errlog.length) problems.push(`firmware error log: ${errlog.map(([c, , , caller]) => `${h8(c)} from ${caller}`).join('; ')}`);
+    const may = new Set([MM.TAKEOVER_READERS[0], ...CA_MODULE9_READERS, ...MODULE9_SECOND_READS]);
+    if (reads.some((x) => !may.has(x))) problems.push(`module 9 read from ${show(reads.map(hex))}`);
+    // the screen after it is the firmware's (recorded, not a post-condition: the application's display change picks
+    // it, e.g. it leaves the Super Control Panel for the shooting screen on the way to the EVF, X)
+    const panel1 = lab.panels.length ? lab.panels[lab.panels.length - 1][1] : null;
+    const base = { cause, native: true, opened: [h8(opened0), h8(opened)], property: prop, layout_before: layout0, layout_after: layout,
+      screen: { from: [h4(state0), panel0], to: [h4(lab.state()), panel1] },
+      connect_trace: shown, module9_reads: reads.map(h8), eye, engine: lab.exec_history.length - e0, panels_on_connect: lab.panels.slice(np0).map(([, p]) => p) };
+    if (!names.includes('ConnectChangePlay') && opened === opened0 && prop === prop0 && layout.connect === layout0.connect) {
+      // the application made no output change on the eye sensor's event
+      if (problems.length) throw new PlayError(`SWITCH:${want} (the firmware's own, control camapp 3): ` + problems.join('; '));
+      this.device = from;
+      const unmade = `${cause}: the application made no output change to the ${want} on the eye sensor's event (state ${state}); ` +
+        `property ${EYE_SWITCH_PROPERTY} reads ${this.get(EYE_SWITCH_PROPERTY)}, and its eye handler asks for the output only while that is not 0`;
+      return this.end(`${cause} -> SWITCH:${want} (not made)`, 'display', [], [], { device: from, switch: { ...base, changed: false, problems }, switch_unmade: unmade, state_from: h4(state0) });
+    }
+    if (opened !== d.mask) problems.push(`the firmware's output change left the opened word ${h8(opened)} (${h8(opened0)} before), not the ${want}'s ${h8(d.mask)}`);
+    if (prop !== d.prop) problems.push(`the output-device property is ${show(prop)}, not the ${want}'s ${d.prop}`);
+    if (!names.includes('ConnectChangePlay')) problems.push('ConnectChangePlay did not run (the application sent the GUI no 131)');
+    if (vt20.length && vt20[vt20.length - 1] !== 0) problems.push(`ChangeOutline vt+20 returned ${show(vt20)}`);
+    if (!states.length || states[states.length - 1] !== lookup(CONNECT_STATE, want)) problems.push(`SetConnectState ${show(states)}, expected ${lookup(CONNECT_STATE, want)}`);
+    if (layout.connect !== lookup(CONNECT_STATE, want)) problems.push(`connect state ${show(layout.connect)}, expected ${lookup(CONNECT_STATE, want)}`);
+    if (this.touch_on && want === 'tft' && state0 === STATE_SHOOTING && lab.sim.u32(TP_MASK_WORD) !== TP_MASK_ALL) {
+      problems.push(`TFT shooting screen rebuilt with gesture mask 0x${lab.sim.u32(TP_MASK_WORD).toString(16)}`);
+    }
+    if (problems.length) throw new PlayError(`SWITCH:${want} (the firmware's own, control camapp 3): ` + problems.join('; ') + `; trace ${show(shown)}`);
+    lab.device = want;
+    this.switches += 1;
+    if (this.scene !== null && this.scene.liveview) this.scene_attach();
+    const ctrl3 = {};
+    for (const dev of Object.keys(D.DEVICE)) ctrl3[dev] = lab.vsc.bank(D.DEVICE[dev].channel, true).get('CTRL3') ?? null;
+    return this.end(`${cause} -> SWITCH:${want}`, 'display', [], [], { device: want, switch: { ...base, changed: true, problems, ctrl3 }, state_from: h4(state0) });
   }
   // ---- touch
   // down / move / up at pixel (x, y) of the TFT panel (MODEL_INFO.panels: E143's 0..899, 0..599)

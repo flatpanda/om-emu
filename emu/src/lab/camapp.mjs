@@ -617,6 +617,9 @@ const CBS_AF_LOCK = 155;
 // calls it when the menu closes (0x503f019d).
 // S-OUTDISP: the application's choice of output, getOutputDisplay (0x5104fd44: d0 = 2 TFT, 3 EVF, 5 EVF, 6 INTERNAL_EVF,
 // ...), which its output switch (0x5104fb9b) compares with the current output and sends to the GUI as request 131.
+// Under control camapp 3 the display switch is the firmware's own output change (play.mjs native_switch), which sets
+// the session's device before the eye sensor's event: S-OUTDISP's EVF answer is then the input that starts it
+// (docs/hle-gaps.md 4.3.10), with no OPEN or H-CONNECT of the lab's
 const OUTPUT_DISPLAY = A(0x5104FD44), OUTPUT_INTERNAL_EVF = 6;
 // S-THROUGH: OlyHfwOpeShoot::ctrlAutoThrough(ctrl), 0 as the menu opens, 1 as it closes (bin/port.mjs places it by
 // src/fw/facts.mjs shootingService, the function that loads its trace)
@@ -732,6 +735,7 @@ export class CamApp {
     this.outdev = this.s.hdmi_port && MODEL === 'E143' ? [] : null;   // S-OUTDEV: TRA 588 requests to take after the step
     this.outdev_done = [];     // S-OUTDEV: [device, second, CapIod's state after the event]
     this.outdev_prop = undefined;   // S-OUTDEV: the output-device property CapIod writes in the event (null: none yet)
+    this.prop_follow = false;       // camapp 3's display switch: S-PROP follows the property's writes (install)
     this.aflock = false;       // S-AFLOCK: installed (E143 with UI_OUT running); af_stage: null, 'ready' (S1 down) or
     this.af_stage = null;      // 'focus' (the AF lock holds); aflock_fed: the END_FOCUS(OK)s fed so far (the player
     this.aflock_fed = 0;       // lists the stand-in once one was)
@@ -1174,8 +1178,20 @@ export class CamApp {
     const fd = fact('func_direct.id', { sp: 28 });
     lab.observe(FUNC_DIRECT_RUN, (l, r) => this.funcs.push(fd.reg ? r[fd.reg] >>> 0 : lab.sim.u32((r.sp >>> 0) + fd.sp)), 'S-RELSEQ function direct');
     lab.hook(TRA_EXEC_CALL, (h, r) => tra(h, r, false), 'S-TRAACK');
-    if (this.outdev !== null) lab.observe(OUTDEV_PROP_SET, (l, r) => {               // S-OUTDEV: CapIod's property write
-      if ((r.d0 & 0xFFFF) === lab.prop_device && this.outdev_prop !== undefined) this.outdev_prop = r.d1 >>> 0;
+    // CapIod's write of the output-device property. S-OUTDEV keeps the one its event makes (output_device). In control
+    // camapp 3's display switch (play.mjs native_switch, which sets prop_follow for its step) CapIod runs the output
+    // change itself (TRA 588 natively), and S-PROP's value follows its write as it is made, so that the application's
+    // reads at S-PROP's sites see the device the firmware opened: with the value of the lab's last open the
+    // application sends the GUI 131 again and again (X; docs/hle-gaps.md 4.3.10). At camapp 3's HDMI plug S-PROP is
+    // left as it was (it keeps the panel's value; with the follow the GUI goes on to a vsync wait on channel 0 before
+    // the lab has set its line time, X: open, 4.3.10)
+    if (this.outdev !== null || this.native_tra) lab.observe(OUTDEV_PROP_SET, (l, r) => {
+      if ((r.d0 & 0xFFFF) !== lab.prop_device) return;
+      if (this.prop_follow) {
+        const v = r.d1 >>> 0;
+        this.log.push(['outdev', `S-PROP: property ${lab.prop_device} = ${v}, as written from ${where(r.mdr)} (the display switch)`]);
+        lab.props.set(lab.prop_device, v);
+      } else if (this.outdev_prop !== undefined) this.outdev_prop = r.d1 >>> 0;
     }, 'S-OUTDEV (output-device property)');
     if (this.components) lab.hook(SCPU_STATUS, (h, r) => h.finish(r, { d0: 0 }), 'S-BOOTDONE (sub-CPU status)');
     for (const a of LONG_TIMER_SET) lab.observe(a, (l, r) => {

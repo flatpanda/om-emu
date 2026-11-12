@@ -2946,7 +2946,7 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   | power (lab 1), power-replay | PowerError 10 s after the lever's off | TRA 586 unanswered (4.3.6); the lever's own route to shutDown not found: the sequence parts take its code and, in standby, do nothing (below) | stop; neighbour named |
   | switch-shoot | the same states, the date prompt's panel 324 gone by the first switch's end; every EVF composite refused | fixed: the lab's switch (below); then PLANC `0xca` on the EVF (A7) | runs; EVF frames refused |
   | switch-scp | the Super Control Panel is left for the shooting screen at the first switch; every EVF composite refused | the application's own display change; PLANC `0xca` | runs; other states |
-  | eye-burn | the eye sensor makes no switch (the scenario sets property 1947 to 0), the TFT stays | the application's eye handler asks for no output at 1947 = 0 | runs; other end |
+  | eye-burn | the eye sensor makes no switch (the scenario sets property 1947 to 0), the TFT stays; the date prompt's panel 324 gone by that step's end, where camapp 1 keeps it to the WAIT (X, review) | the application's eye handler asks for no output at 1947 = 0 | runs; other end |
   | tokens-3b | LV switches; the WINDOWS token, which needs a composite, then stops | PLANC `0xca` on the EVF (A7) | stops; neighbour named |
   | keys | panel 10 from S2 on where camapp 1 shows panel 0 (S2's rec view, I); the multi-selector's keys reach no GUI event | fixed: the scope guard's list (below); the shot under camapp 3 (4.3.2, 4.1.7) and MF (4.3.7) are other tracks' | runs; other states |
   | tokens | OPEN leaves the GUI in `0x0b01`, and CLOSE and EV:217, sent with no lab time between, change nothing | the menu's entry takes lab time under camapp 3 (below) | runs; other end |
@@ -2977,7 +2977,7 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   - *Why 4.3.6's diagnostic 2 ended in a storm.* With no OPEN of the lab's, S-PROP kept the TFT's value for the
     output-device property (4513), which the lab sets only at its own OPEN: the application read it at S-PROP's site,
     found the output unchanged and sent 131 again after every change (more than 810 GESetEvent calls; errlog
-    `0x3700140c` from `0x501dc7a7` 603 times; I: the open's device step, repeated). With S-PROP following CapIod's
+    `0x3700140c` from `0x501dc7a7` about 600 times; I: the open's device step, repeated). With S-PROP following CapIod's
     write the chain ends as above. 4.3.6's "S-OUTDISP answers the EVF only while the lab's own OPEN holds it" was
     not the cause.
   - *The change.* Under camapp 3 the SWITCH is the firmware's own output change (`emu/src/lab/play.mjs`
@@ -2996,22 +2996,29 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
     0.2 s after the start in that run), so the answer the lab gives decides. The step records the switch as not made,
     with the reason, and puts S-OUTDISP back, so the device stays (camapp 1's lab switch does not ask 1947). That
     1947 is the menu's EVF auto switch (0: off) is I (the eye callback's registration arms the EVF's burn-in timer
-    only at 0, vsc spec section 9 item 10); its name in the menu is not read.
+    only at 0, vsc spec section 9 item 10); its name in the menu is not read. No change with 1947 not 0 has no reason
+    read and stops the step (since the review, 2026-11-11): after a switch not made the eye state stays the EVF's,
+    so with 1947 set back to 1 an LV to the EVF finds the setter's state unchanged, nothing is published and nothing
+    changes (X); until then the step recorded that as not made, with 1947's text.
   - *From the Super Control Panel.* The application's change leaves the panel: the GUI is on the shooting screen
     (`0x0108`, panel 10) on the EVF and stays there on the way back, where the lab's switch (camapp 1, and camapp 3
     until this round) re-entered `0x0403`. Which the camera shows is not settled by a camera.
   - *What stops next: the EVF's plane level.* After the firmware's own open the three OSD planes of the EVF have
-    PLANC `0xca`: the open's level step (`0x501c4f14`: the TFT's `0x501d8a10` or, with the EVF open, the EVF level
-    table's `0x501c67aa`) is called with index 7, entry 7 of the table gives level 101, and the EVF level writer
-    `0x501e2bcb` sets it on OSD1 to OSD3 (property 587 reads 1 on the way, so vsc spec item 3's 587 = 0 path is not
-    the one taken). The compositor knows a plane level of 128 and of 0 (A7) and refuses any other
-    (PLANC_UNOBSERVED), so every EVF composite after a switch is refused: the frames keep the last good one, and
-    tokens-3b's WINDOWS token, which needs a composite, stops the session. The lab's own OPEN (DISPLAY cmd 2) leaves
-    level 128, so camapp 1's EVF composes. That the camera's EVF runs its OSD at level 101 with a brightness setting
-    of 0 follows from the firmware's own open (D for the table, X for the path); what a level between 1 and 127
-    does to the pixels is A7's open question (hardware). The same three errors are in the EVF composites of
-    camapp 3's switch from the Super Control Panel before this round (the GUI's output change sent TRA 588 there
-    too), which 4.2.4 and 4.3.6 counted as running.
+    PLANC `0xca`. The level comes with DISPLAY cmd 7, which the OXF main thread (task 57) sends synchronously after
+    the open (from api_disp `0x503e624d`, the request's first byte 7; X, corrected in review: not a step of the open
+    itself). The command's handler passes that byte to the level step `0x501c4f14` (`0x501c3580..0x501c3582`, D),
+    which with the EVF open calls the EVF level table's `0x501c67aa` (the TFT's `0x501d8a10` otherwise,
+    `0x501c4f2e..0x501c4f4f`, D); entry 7 of the table gives level 101, and the EVF level writer `0x501e2bcb` sets it
+    on OSD1 to OSD3 (property 587 reads 1 on the way, so vsc spec item 3's 587 = 0 path is not the one taken). The
+    compositor knows a plane level of 128 and of 0 (A7) and refuses any other (PLANC_UNOBSERVED), so every EVF
+    composite after a switch is refused: the frames keep the last good one, and tokens-3b's WINDOWS token, which
+    needs a composite, stops the session. The lab's own OPEN (DISPLAY cmd 2) leaves level 128 and camapp 1's switch
+    sends no cmd 7 (X), so camapp 1's EVF composes. Where the index 7 comes from is not read (?): it is not vsc spec
+    item 3's property 449 + 7 (with 449 set to 1 the index is still 7, X), so "a brightness setting of 0" is not
+    shown. Whether the camera's EVF runs its OSD at level 101 follows only if its chain sends the same command (I);
+    what a level between 1 and 127 does to the pixels is A7's open question (hardware). The same three errors are in
+    the EVF composites of camapp 3's switch from the Super Control Panel before this round (the GUI's output change
+    sent TRA 588 there too), which 4.2.4 and 4.3.6 counted as running.
 - **Group 2, the power-off: not fixed; the lever's route to shutDown is not found.** Symptom and 586's stop as
   4.3.6. New: with the lever's off alone (the switch step, no S-SHUTDOWN) the components see the code, and do
   nothing with it in standby. CmpSqp_SequencePartsBase's handler `0x50c94612` (its log "APPEVENT_CAMST_POWER")
@@ -3021,8 +3028,10 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   the method at offset 4980 runs (`0x50cbf5c3`), then the error sequence's step `0x50cbd6a1` (D, X). `0x50cbf5c3`
   finds the code in its table (`0x60eb47c8`, entry 12, X) and branches on the sequence word `0x60364980` (D: 1 or 6
   sets the error sequence's code at +216 through `0x50cb11d6`, `0x50cbf6f2`): it is 0 (X), and on that branch the
-  power code (`0x50cbfb83`, D) asks the method at offset 4736 (`0x50cbc194`: the byte `0x60364950` is 1), which
-  returns 0 (X), and the function returns. `0x50cbd6a1` then reads +216 = 0 and returns at once (`0x50cbd6c9`, X).
+  power code (`0x50cbfb83`, D) asks the method at offset 4736 (`0x50cbc194`, X: the vtable's entry; it answers 1
+  only while the byte `0x60364950` is 1, D), which returns 0 (X: the byte is 0), and the function returns; only at
+  1 would the power code go on (`0x50cbfb94..0x50cbfc2f`: two calls of `0x50c86837` and one of `0x50bc79dc`, D; what
+  they do and who sets the byte are not read). `0x50cbd6a1` then reads +216 = 0 and returns at once (`0x50cbd6c9`, X).
   So in standby the sequence parts take the power switch's code and start no error sequence (I: the error sequence
   aborts a running shooting sequence; the names of `0x60364980` and `0x60364950` are not read). In 12 s of idle
   after it: no transaction but 944 and 994, no CameraCommon::shutDown (`0x50afd2d7`), no startShutDown, the sequence
@@ -3036,8 +3045,8 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
     (4.2.4).
   - *Candidates.* (1) A reader of the components' own state that the list lacks. (2) Code that depends on
     S-TAKEOVER's stand-in value 2.
-  - *Verified: (1).* `0x50c8a335` is in the sequence parts' standby entry (`0x50c89da1`, the function that sets
-    phase 100 and 101): with its word `0x60364954` set it reads module 9's state (`0x50c8a32c`) and, at 3, writes 0
+  - *Verified: (1).* `0x50c8a335` is in the sequence parts' standby entry (`0x50c89da1`, whose start sets phase 101,
+    `0x50c89db1`): with its word `0x60364954` set it reads module 9's state (`0x50c8a32c`) and, at 3, writes 0
     (`0x50c8a339..0x50c8a33c`), else goes on (D). Under camapp 3 the state is the components' own from the start on
     (0 from `0x50ca4ae1`, 4.1.5): the read returns 0 with the word at 1, and the components write 0 again from
     `0x50ca4ae1` and `0x50c78b0e` (X). The site joins CMP_MODULE9_READERS (`emu/src/lab/camapp.mjs`); taken out
@@ -3085,21 +3094,24 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   from the application's own display change on the eye sensor's event, before the GUI's 131, not after it (its
   order there was the lab's switch's); diagnostic 2's storm was S-PROP's stale value. 4.3.6's "the lever's off
   alone sends no transaction and calls no shutDown" holds, and the components do see the code (group 2).
-- **Tests (X).** `emu/test/test_c3power.mjs`: evfSwitchSession (8 checks: under camapp 3 LV is the firmware's own
+- **Tests (X).** `emu/test/test_c3power.mjs`: evfSwitchSession (9 checks: under camapp 3 LV is the firmware's own
   change with TRA 937 before TRA 588, the EVF open, the property 8, the run word 0 and no `0x37001418`; the EVF's
   composite stops at three PLANC `0xca`; back, TRA 588 before TRA 938, the TFT open and composing, the histogram
-  running; with 1947 at 0 the eye sensor's switch is recorded as not made; from the Super Control Panel both
+  running; with 1947 at 0 the eye sensor's switch is recorded as not made, and with 1947 back at 1 LV's unchanged
+  eye state stops the step; from the Super Control Panel both
   switches land on the shooting screen, the module-9 reads listed; camapp 1's order and the output change without
   the application's stop as in 4.3.6), leverSession (2: under camapp 3 the lever's off reaches `0x50c94612` once,
   takes the standby branch (`0x60364980` 0, the method at 4736 returning 0) and leaves `0x50cbd6a1` at its +216
   test, with no shutDown, no TRA 586 and the phase 101 1.5 s on; none of it in camapp 1), standbySession (2: the
   standby entry's read returns 0 with its word at 1 and the step runs; without the list's entry it stops at the
   guard), powerOffSession (7, unchanged).
-- **Open.** The VSC's plane level (A7: PLANC `0xca`, the EVF after the firmware's own open); what carries the
-  lever's off to shutDown on the camera (not the sequence parts in standby); the EVF button's producer and what the
-  camera's eye sensor does with 1947 at 0; which screen the camera shows after a switch from the Super Control
-  Panel; the application's gate after a slide's notifyGesture; the GUI's answer to a tap in the first 0.2 s; the
-  HDMI layout under camapp 3.
+- **Open.** The VSC's plane level (A7: PLANC `0xca`, the EVF after the firmware's own open) and where DISPLAY
+  cmd 7's index 7 comes from; what carries the lever's off to shutDown on the camera (not the sequence parts in
+  standby; the byte `0x60364950` the power code asks for); the EVF button's producer and what the camera's eye sensor
+  does with 1947 at 0 (the lab's LV is an eye-state change under camapp 3, so with 1947 at 0 LV switches nothing and
+  the eye state stays the EVF's); which screen the camera shows after a switch from the Super Control Panel; the
+  application's gate after a slide's notifyGesture; the GUI's answer to a tap in the first 0.2 s; the HDMI layout
+  under camapp 3.
 
 ### 4.4 AF, lens and body IS
 

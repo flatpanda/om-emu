@@ -18,7 +18,11 @@
 //              poll's empty reply, a long write in chunks and a long read in chunks padded to 4, and the refusals
 //              (the gate before the power-on, a second power-on, an unmodelled command, an unlisted word, a wrong
 //              size, clocking an unarmed SPI, an event the command manager has no transition for, a quiet command
-//              that is not a write of its own); the inbound direction: a message drops the message line while idle
+//              that is not a write of its own); the power manager's 0x14: a write with no reply and no message, the
+//              two slots' inserted and second bytes kept as the sub-CPU keeps them (byte 0 unread), 0xff again
+//              after a reset, the refusals (a size but 5, the PBH's battery inserted, a body with another sub-CPU
+//              image, the sibling writes 0x11 and 0x13) and the bodies that take it (E143, E146: the image's digest);
+//              the inbound direction: a message drops the message line while idle
 //              and the poll's reply carries it, a second waits in the queue, one during a transaction drops the line
 //              at once, one taken with the request line low waits for the release; 0x88 answers {result, busy} and
 //              enables the report, PC13's changes then come as 0x08; 0x85's releases drop the queue and set the
@@ -38,7 +42,8 @@ import { createMachine, SCPU_DOORBELL } from '../src/machine.mjs';
 import { SET_INPUTS } from '../src/dev/scpu.mjs';
 import { BUS } from '../src/core/mem.mjs';
 import { BOARD } from '../src/fw/board.mjs';
-import { ScpuMemory, ScpuDev, ScpuError, dateBytes, dateClass, RTC_INVALID } from '../src/lab/scpudev.mjs';
+import { ScpuMemory, ScpuDev, ScpuError, dateBytes, dateClass, RTC_INVALID, SOURCES_IMAGE } from '../src/lab/scpudev.mjs';
+import { MODELS } from '../src/fw/models.mjs';
 import { bytesHex } from '../src/util/bytes.mjs';
 
 const hexOf = (b) => bytesHex(b);
@@ -202,8 +207,8 @@ function mnScript(dev) {
     },
   };
 }
-const booted = (now, quiet = [0x21]) => {
-  const dev = new ScpuDev(new ScpuMemory(() => now.t), { words: [[2, 0]], quiet }), mn = mnScript(dev);
+const booted = (now, quiet = [0x21], sources = false) => {
+  const dev = new ScpuDev(new ScpuMemory(() => now.t), { words: [[2, 0]], quiet, sources }), mn = mnScript(dev);
   mn.boot();
   return [dev, mn];
 };
@@ -258,6 +263,45 @@ function devTests(ok) {
   ok(throwsAs(() => { while (d6.step()); }, ScpuError), 'a release while the sub-CPU receives: no transition');
   ok(throwsAs(() => new ScpuDev(new ScpuMemory(() => 0), { words: [], quiet: [0x81] }), ScpuError), 'a quiet command must be a write of its own');
   void d2; void d5;
+  sourceTests(ok, now);
+}
+
+// The power manager's 0x14 (docs/hle-gaps.md 4.7.6): {x, inserted 0, inserted 1, recommend 0, recommend 1}, slot 0 the
+// body's battery and slot 1 the PBH's; the sub-CPU keeps per slot the inserted byte (0, 1, else 0xff) and a second
+// one (0xff with the inserted byte 0, else 1 for recommend 1, 0 for 2, 0xff for any other), builds no reply and
+// sends no message; `kept` below is the two slots' [inserted byte, second byte]
+function sourceTests(ok, now) {
+  const on = (sources = true) => { const [d, m] = booted(now, [], sources); m.send(0x85, [2, 0, 0]); return [d, m]; };
+  const kept = (d) => JSON.stringify(d.sources.map((s) => [s.inserted, s.second]));
+  const [dev, mn] = on();
+  ok(kept(dev) === '[[255,255],[255,255]]', `the two slots' bytes after the start: ${kept(dev)}`);
+  const reply = mn.send(0x14, [0, 1, 0, 3, 0]);
+  ok(reply === null && JSON.stringify(dev.frames.at(-1)) === JSON.stringify({ cmd: '0x14', data: '0001000300', reply: null }) && kept(dev) === '[[1,255],[0,255]]',
+    `0x14 {0, 1, 0, 3, 0}, the session's frame: a write, the body inserted with recommend 3 kept as 0xff, the PBH not inserted: ${JSON.stringify(dev.frames.at(-1))}, ${kept(dev)}`);
+  ok(mn.st.message === 1 && mn.st.ready === 1 && dev.state === 'idle' && !dev.inbox.length && !dev.queue.length && dev.slot === null && /^power sources: body inserted 0x01 second byte 0xff, PBH inserted 0x00 second byte 0xff$/.test(dev.log.at(-1)),
+    `it posts the MN no message and leaves the manager idle: message line ${mn.st.message}, ${dev.state}, log ${dev.log.at(-1)}`);
+  ok(mn.send(0x8f, [], true) === '04000000', 'a poll after it: the empty reply');
+  const after = (data) => { mn.send(0x14, data); return kept(dev); };
+  ok(after([9, 1, 0, 1, 2]) === '[[1,1],[0,255]]', `recommend 1 is kept as 1, byte 0 is not read, a slot not inserted keeps 0xff whatever its recommend byte: ${kept(dev)}`);
+  ok(after([0, 1, 0, 2, 0]) === '[[1,0],[0,255]]', `recommend 2 is kept as 0: ${kept(dev)}`);
+  ok(after([0, 2, 0, 1, 0]) === '[[255,1],[0,255]]', `an inserted byte other than 0 or 1 is kept as 0xff, its recommend byte still taken: ${kept(dev)}`);
+  ok(after([0, 0, 0, 1, 1]) === '[[0,255],[0,255]]', `neither inserted: both second bytes 0xff: ${kept(dev)}`);
+  mn.send(0x14, [0, 1, 0, 1, 0]);
+  mn.boot();
+  ok(kept(dev) === '[[255,255],[255,255]]', `a reset: the bytes of the start again: ${kept(dev)}`);
+  const [, m2] = on();
+  ok(throwsAs(() => m2.send(0x14, [0, 1, 0, 3]), ScpuError), 'a 0x14 of a size its sender does not send is refused');
+  const [, m3] = on();
+  ok(throwsAs(() => m3.send(0x14, [0, 1, 1, 3, 3]), ScpuError), 'a 0x14 with the PBH\'s battery inserted stops the session: the grip\'s bring-up is not modelled');
+  const [, m4] = on();
+  ok(throwsAs(() => m4.send(0x13, [0]), ScpuError), 'the power manager\'s 0x13 stays refused');
+  const [, m5] = on();
+  ok(throwsAs(() => m5.send(0x11, [0, 0, 0, 0]), ScpuError), 'its battery request 0x11 stays refused');
+  const [d6, m6] = on(false);
+  ok(throwsAs(() => m6.send(0x14, [0, 1, 0, 3, 0]), ScpuError) && kept(d6) === '[[255,255],[255,255]]', 'a body whose sub-CPU image is not the one read has its 0x14 refused');
+  ok(throwsAs(() => new ScpuDev(new ScpuMemory(() => 0), { words: [], quiet: [0x14] }), ScpuError), '0x14 cannot be a body\'s quiet write');
+  const taking = Object.keys(MODELS).filter((m) => MODELS[m].scpu_lle?.sha256 === SOURCES_IMAGE);
+  ok(JSON.stringify(taking) === JSON.stringify(['E143', 'E146']), `the bodies whose sub-CPU image is the one 0x14 is read from (src/lab/menu.mjs takes it on those): ${taking}`);
 }
 
 // The inbound direction, as PER_SCPU drives it: a message drops the message line, the MN polls [2, 0x8f] while the

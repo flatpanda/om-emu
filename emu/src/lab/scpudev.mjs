@@ -63,7 +63,8 @@
 // nothing), 0x01 / 0x81 the date, 0x06 / 0x86 a backup register, 0x88 the port scan, 0x82 a GIO port's level
 // (0x800cfef -> 0x800cdc4: one byte, the pin's; the model's levels are the port scan's inputs, ports 45 PC13 and 37
 // PC5, and another port is refused) and the power manager's 0x12 {5}, which the sub-CPU answers with its own message
-// 0x12 {5} (below, PWR_SYNC; the MN's power manager waits for it, docs/hle-gaps.md 4.7.4). The words a body uses are its
+// 0x12 {5} (below, PWR_SYNC; the MN's power manager waits for it, docs/hle-gaps.md 4.7.4) and its 0x14, the notice of
+// its power sources (below, PWR_SOURCES). The words a body uses are its
 // fact scpu.words, [index, byte], and a request for another is refused (no caller sends one); a body's fact
 // scpu.quiet lists writes taken without an effect (E134's 0x21: what it means is ?). Every other command stops the
 // session naming it and its handler: the MN's sessions send none, and an answer the sub-CPU makes from its hardware
@@ -88,6 +89,20 @@
 // switch 0x0400. In the model the result follows the levels at once (I: the 3-sample debounce on the scan's cyclic
 // timer is not timed), the scan is never busy (I: busy is set by 0x8012664, whose caller is not read), the report is
 // disabled by a reset, and PC5's other effects in the power manager (0x801a49a -> 0x801acb0) are not modelled.
+// The power sources (docs/hle-gaps.md 4.7.6, D both ends unless tagged): the MN's power manager sends 0x14 {0,
+// inserted 0, inserted 1, recommend 0, recommend 1} when a slot's recommend byte changes, slot 0 the body's battery
+// and slot 1 the PBH's (I: the grip's), and waits for the write's end only (its sender waits for a message of the
+// sub-CPU's after 0x11 and 0x12 alone). The handler 0x8015345 gives the 5 bytes to the sub-CPU's power manager as
+// its message 11 (0x80155cc), and that message's handler 0x801a4d2 keeps two bytes per slot in the manager's object
+// (0x2000a7c8 + 10 * slot): the inserted byte (0 or 1, any other value 0xff) and a second one, 0xff while the
+// inserted byte is 0 and else by the recommend byte (1 -> 1, 2 -> 0, any other 0xff). It does not read byte 0, sends
+// the MN nothing and builds no reply (a write). Both bytes of both slots are 0xff after the image's start (X: read
+// from its SRAM; kept so here after a reset, I). A slot's inserted byte changing calls 0x801acb0(8): with the PBH's
+// inserted byte at 1 that may switch the grip's supply and start its IO expander (I; GIO ports 36 and 24, 0x8013ebe),
+// by flags of the manager's own that the model does not keep (its object's +0x15, +0x20, +0x21), so such a frame
+// stops the session; with any other value it drives GIO port 36 low at most, which no model here reads. The handler
+// is read from E143's image (SOURCES_IMAGE, its sha256), which E146 carries too; a body with another image or none
+// known (the constructor's `sources`) has its 0x14 refused.
 import { FirmwareError } from './hle.mjs';
 import { bytesHex } from '../util/bytes.mjs';
 
@@ -95,10 +110,16 @@ export class ScpuError extends FirmwareError {}
 
 export const DATE_BYTES = 9, RX_BYTES = 10, CONTEXT_BYTES = 20;
 export const SET_DATE = 0x01, GET_DATE = 0x81, WRITE_WORD = 0x06, READ_WORD = 0x86, SYSCTRL = 0x85, POLL = 0x8f, CHUNK = 0x0f, GIO_WRITE = 0x02;
-export const PORT_SCAN = 0x88, SCAN_REPORT = 0x08, GIO_READ = 0x82, PWR_WRITE = 0x12;
+export const PORT_SCAN = 0x88, SCAN_REPORT = 0x08, GIO_READ = 0x82, PWR_WRITE = 0x12, PWR_SOURCES = 0x14;
 // the power manager's handshake: the MN's 0x12 {5} becomes its message 12 (0x801570b -> 0x801534c), whose handler
 // answers with the message 0x12 {5} (0x801a53c -> 0x801526e), D (docs/om1-scpu-spec.md 3.3, 3.4)
 const PWR_SYNC = 5;
+// the power manager's two source slots (0x14's bytes 1 + slot and 3 + slot; its object's 10 bytes a slot) and the
+// byte it keeps for a value it does not know, both bytes' value after the image's start (X)
+export const SOURCE_SLOTS = ['body', 'PBH'], SOURCE_UNKNOWN = 0xff;
+// the sub-CPU image the 0x14 handler and message 11 are read from: E143's SCPU block (src/fw/models.mjs scpu_lle)
+export const SOURCES_IMAGE = '2d930ac588014c250391d6af3a49fe7372852fc5eafbac5d2ac73df04be94807';
+const blankSources = () => SOURCE_SLOTS.map(() => ({ inserted: SOURCE_UNKNOWN, second: SOURCE_UNKNOWN }));
 // the port scan's inputs, by the GIO port the scan reads (0x80128e0) and the result bit it gives (D)
 export const SCAN_PORTS = { PC13: { gio: 45, bit: 0 }, PC5: { gio: 37, bit: 1 } };
 // The levels the model starts with (a model choice): PC13 low gives the result bit 0, which the MN turns into UI_IN's
@@ -192,11 +213,13 @@ const HANDLERS = new Map([[0x01, 0x80116ab], [0x81, 0x8011709], [0x02, 0x800cfe7
 
 export class ScpuDev {
   // memory: an ScpuMemory; body: {words: the backup words the body uses, [index, byte]; quiet: its writes without
-  // an effect} (facts scpu.words, scpu.quiet)
-  constructor(memory, { words, quiet }) {
+  // an effect (facts scpu.words, scpu.quiet); sources: whether its sub-CPU's image is the one the power manager's
+  // 0x14 is read from (E143's), without which that command is refused}
+  constructor(memory, { words, quiet, sources = false }) {
     this.memory = memory;
     this.words = words;
-    for (const c of quiet) if (c & 0x80 || c === CHUNK || [SET_DATE, WRITE_WORD, SYSCTRL, GIO_WRITE, PWR_WRITE].includes(c)) throw new ScpuError(`S-SCPUDEV: quiet command ${hx(c)}: not a write of its own`);
+    this.takesSources = sources;
+    for (const c of quiet) if (c & 0x80 || c === CHUNK || [SET_DATE, WRITE_WORD, SYSCTRL, GIO_WRITE, PWR_WRITE, PWR_SOURCES].includes(c)) throw new ScpuError(`S-SCPUDEV: quiet command ${hx(c)}: not a write of its own`);
     this.quiet = new Set(quiet);
     this.labels = ['S-SCPUDEV', 'A-SCPUDEV-1'];   // what the session's stand-ins name (player.mjs)
     this.lines = null;
@@ -222,6 +245,7 @@ export class ScpuDev {
     this.offArg = 0;                         // mode 1's second byte, kept by the 0x85 handler (the task's +21)
     this.scan = { ...SCAN_IDLE };            // the port scan's input levels
     this.scanReport = false;                 // the scan's report enabled (by a 0x88 read)
+    this.sources = blankSources();           // the power manager's two slots: the two bytes it keeps of each
     this.log = [];                           // the sub-CPU's own events: messages, power states (text)
   }
   // ---- the model's inputs on the sub-CPU's side (an LLE's own tasks make these)
@@ -311,6 +335,7 @@ export class ScpuDev {
     for (const m of [...this.inbox, ...(this.slot ? [this.slot] : []), ...this.queue]) m.fate = 'lost';
     this.inbox = []; this.slot = null; this.queue = [];
     this.dropping = false; this.power = POWER_STATES[0]; this.offArg = 0; this.scanReport = false;
+    this.sources = blankSources();           // I: the manager's object is loaded again at the start (its values X)
     this.drive('ready', 0);
     this.drive('message', 1);                // I: an input while the reset is held, as PC3
   }
@@ -494,7 +519,7 @@ export class ScpuDev {
   size(cmd, data, n, name) { if (data.length !== n) this.fail(`${name} (${hx(cmd)}) with ${data.length} data bytes: its senders send ${n}`); }
   unknown(cmd, data) {
     const h = HANDLERS.get(cmd);
-    return this.fail(`command ${hx(cmd)} (data ${bytesHex(data)}): not modelled (${h ? `the sub-CPU's handler ${hx(h, 7)}; ` : 'no handler in the sub-CPU\'s table; '}only 0x85, 0x01 / 0x81, 0x06 / 0x86, 0x88, 0x82 of the scan's ports and 0x12 {5}${this.quiet.size ? ` and the body's quiet ${[...this.quiet].map((c) => hx(c)).join(', ')}` : ''} are)`);
+    return this.fail(`command ${hx(cmd)} (data ${bytesHex(data)}): not modelled (${h ? `the sub-CPU's handler ${hx(h, 7)}; ` : 'no handler in the sub-CPU\'s table; '}only 0x85, 0x01 / 0x81, 0x06 / 0x86, 0x88, 0x82 of the scan's ports${this.takesSources ? ', 0x12 {5} and 0x14' : ' and 0x12 {5}'}${this.quiet.size ? ` and the body's quiet ${[...this.quiet].map((c) => hx(c)).join(', ')}` : ''} are)`);
   }
   // the register a word request {index, ..., byte} names, refused unless the body uses it
   word(data) {
@@ -506,8 +531,32 @@ export class ScpuDev {
     if (cmd === SET_DATE) { this.size(cmd, data, DATE_BYTES, 'set date'); this.memory.setDate(data); return; }
     if (cmd === WRITE_WORD) { this.size(cmd, data, 6, 'write backup word'); this.memory.setReg(this.word(data), new DataView(data.buffer, data.byteOffset + 1, 4).getUint32(0, true)); return; }
     if (cmd === PWR_WRITE && data[0] === PWR_SYNC) { this.size(cmd, data, 1, 'power manager sync'); this.post(PWR_WRITE, [PWR_SYNC]); return; }
+    if (cmd === PWR_SOURCES) {
+      if (!this.takesSources) this.fail(`command ${hx(cmd)} (data ${bytesHex(data)}): the power manager's source notice is read from E143's sub-CPU image only (its handler 0x8015345, docs/hle-gaps.md 4.7.6), and this body's image is another`);
+      this.size(cmd, data, 1 + 2 * SOURCE_SLOTS.length, 'power sources');
+      this.setSources(data);
+      return;
+    }
     if (this.quiet.has(cmd)) return;
     this.unknown(cmd, data);
+  }
+  // the power manager's message 11 (0x801a4d2), a slot at a time: the inserted byte, 0x801acb0(8) when it changed
+  // (which reads the PBH's inserted byte as it is then), the second byte
+  setSources(data) {
+    const pbh = SOURCE_SLOTS.indexOf('PBH');
+    SOURCE_SLOTS.forEach((name, i) => {
+      const s = this.sources[i], was = s.inserted, v = data[1 + i], r = data[1 + SOURCE_SLOTS.length + i];
+      s.inserted = v === 0 || v === 1 ? v : SOURCE_UNKNOWN;
+      if (s.inserted !== was && this.sources[pbh].inserted === 1) {
+        this.fail(`command ${hx(PWR_SOURCES)} (data ${bytesHex(data)}): the ${name}'s inserted byte changes (${hx(was)} -> ${hx(s.inserted)}) `
+          + 'with the PBH\'s at 1: the sub-CPU\'s power manager may then switch the grip\'s supply and start its IO expander '
+          + '(0x801acb0(8): GIO ports 36 and 24, 0x8013ebe) by flags of its own that are not modelled, and what the MN sees '
+          + 'of it is not known');
+      }
+      s.second = s.inserted === 0 ? SOURCE_UNKNOWN : r === 1 ? 1 : r === 2 ? 0 : SOURCE_UNKNOWN;
+    });
+    const text = (s, i) => `${SOURCE_SLOTS[i]} inserted ${hx(s.inserted)} second byte ${hx(s.second)}`;
+    this.log.push(`power sources: ${this.sources.map(text).join(', ')}`);
   }
   read(cmd, data) {
     if (cmd === GET_DATE) { this.size(cmd, data, 0, 'get date'); return this.memory.date(); }

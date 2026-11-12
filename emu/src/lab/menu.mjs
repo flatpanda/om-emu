@@ -13,7 +13,7 @@ import * as T from './text.mjs';
 import { FirmwareError, disasm, runtime, where } from './hle.mjs';
 import { EXEC_SLOTS, GUI_GUARDS, KIND3_RECORD, NRECORDS, REGISTRY, STRIDE, EngineError } from './osd.mjs';
 import { RTOS } from './rtos.mjs';
-import { ScpuDev, ScpuMemory } from './scpudev.mjs';
+import { ScpuDev, ScpuMemory, SOURCES_IMAGE } from './scpudev.mjs';
 import { ScpuLink, PER_SCPU_TASK } from './scpulink.mjs';
 import { ScpuM4 } from './scpum4.mjs';
 import { ValueError, RuntimeError, AssertionError } from './errors.mjs';
@@ -677,10 +677,12 @@ export class MenuLab extends T.TextDisplayLab {
     // (src/lab/scpulink.mjs, src/lab/scpudev.mjs); the requests (the API's entry), the requesters' waits (OlyEvWt
     // 0x5002bdd8 on their flags) and the replies' readers run natively and are observed. A model whose SCPU keeps no
     // backup words or clock (SCPU_BACKUP; E144: no Sctime/ScpuBkup requests, D) has none of these sites, and the lab
-    // does not start its PER_SCPU. The sub-CPU is S-SCPUDEV, or its own firmware (scpu_native)
+    // does not start its PER_SCPU. The sub-CPU is S-SCPUDEV, or its own firmware (scpu_native). S-SCPUDEV takes the
+    // power manager's 0x14 on the bodies whose sub-CPU image is the one its handler is read from (scpu_lle's digest
+    // that image's: E143 and E146, which carries it byte for byte; docs/hle-gaps.md 4.7.6)
     if (SCPU_BACKUP) {
       this.scpu_dev = this.scpu_native() ? this.scpu_m4(nvram)
-        : new ScpuDev(this.scpu_memory, { words: fact('scpu.words', [[2, 0]]), quiet: fact('scpu.quiet', []) });
+        : new ScpuDev(this.scpu_memory, { words: fact('scpu.words', [[2, 0]]), quiet: fact('scpu.quiet', []), sources: MODEL_INFO.scpu_lle?.sha256 === SOURCES_IMAGE });
       this.store_log.scpu_frames = this.scpu_dev.frames;
       this.scpu_link = new ScpuLink(this, this.scpu_dev);
       this.scpu_link.bring_up();

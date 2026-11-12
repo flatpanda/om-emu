@@ -165,6 +165,10 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   exec would (S-TRAACK; `docs/hle-gaps.md` 4.4.2, the heap's growth), and the modules'
   notifications of a release (focus, exposure, rec view) are posted as the callbacks the HLS would make of them
   (S-RELSEQ); no image is captured. The focus result and the exposure time come from S-SCENE when its live view is on.
+  On E143 the AF mode follows the Fn lever (`docs/hle-gaps.md` 4.3.8): the session starts with the lever at its first
+  position (S-AF with the factory lever function), the lever's change is taken at the HLS's standby gate
+  (S-SEQSTANDBY, in the sequence parts' place) and shows MF at the other position, and S1 then posts no focus
+  callback, as the sequence parts' own test of the focus mode decides.
 - Each release sounds as the mechanical shutter does (S-SHUTTERSND, `src/lab/shuttersnd.mjs`): an open click at
   S-RELSEQ's START_EXPOSE and a close click with the charge at END_EXPOSE, the shutter time in use later (S-SCENE's,
   else 1/125 s). On the camera that sound is the mechanism's, not the firmware's (the stock firmware plays nothing at a

@@ -84,7 +84,8 @@
 //                  and with the component's getNumber of its picture; over it all the short-movie album's count is
 //                  not asked, S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW and S-PLAYDEC do not fire, each view's file reads are
 //                  the play module's own (one by PLAY_LOAD, two by PLAY_LOADDRAW) and a move asks the DCF database for
-//                  the picture's fnode by its index
+//                  the picture's fnode by its index; the lab's rule for S-PLAYDEC gives the library's own scale ratios
+//                  for each view, and INFO's detail view, whose ratios take a pre-reduction, is S-PLAYDEC's
 //   node emu/test/test_camapp.mjs
 import fs from 'node:fs';
 import path from 'node:path';
@@ -780,10 +781,14 @@ export async function playNativeSession() {
 // control camapp 3 with the play module native: the view's decode on the pipeline block's model (docs/hle-gaps.md
 // 4.8.13; E143; src/dev/imgpipe.mjs, src/lab/playmod.mjs). D unless tagged:
 //   the through image's two banks the decode writes in turn and their pitch in bytes (X); the view's size and the
-//   picture's; the prefilter's taps [centre, next, outer] of the image library's row for the ratio 1620 / 900
-//   (thresholds 0x5066fb58: 1778 < 1843 <= 1909, row 9); the map's steps, 4.12 fixed ((1619 * 100 << 12) / (899 *
+//   picture's; the prefilter's taps [centre, next, outer] of the image library's row for the ratio of 1620 to 900
+//   (thresholds 0x5066fb58: 1778 < 1844 <= 1909, row 9); the map's steps, 4.12 fixed ((1619 * 100 << 12) / (899 *
 //   100) and the same of 1079 and 599, 0x504784f4..0x5047853e) and the source position of the destination's pixel
 //   (0, 0) in 1/4096 (X)
+//   the library's scale ratios, .10 fixed, as d0 / d1 at its prefilter's call 0x504782ac: ((1619 * 100) << 10) /
+//   (899 * 100) and ((1079 * 100) << 10) / (599 * 100) for the view; for INFO's detail view (474 x 316) those of 473
+//   and 315, 3504 and 3507, above the threshold 3327 of the last row without a pre-reduction (X: the firmware's own
+//   at 0x504782ac in a run that passed that request to the model, which refused it at the set-up's +0xf00)
 //   PlayCommon's getShortMovieAlbumNum (Get_Album_Num 0x503dd27f, the album manager's count of short-movie albums);
 //   the DCF database's fnode by index (0x50874bc9: d0 the drive, d1 the index) the media API asks at a move, and the
 //   play module's file read (play_file_read 0x518b017f: a request of code 0x53 to the file module, 0x518b0236..40)
@@ -795,6 +800,7 @@ const PD_TAPS = [68, 34, -4], PD_STEP = [7376, 7378], PD_FROM = [200, 81];
 const PD_ALBUM_NUM = 0x503DD27F, PD_FNODE = 0x50874BC9, PD_FILE_READ = 0x518B017F, PD_INFO_ROW = 500;
 const PD_VIEW_IMG = 1, PD_VIEW_OSD = 0x38, PD_VIEW_ALL = 0x3F, PD_TFT = 2;
 const PD_SCENE = [1, 2, 1];
+const PD_RATIO = 0x504782AC, PD_VIEW_RATIO = [1844, 1844], PD_DETAIL = [474, 316], PD_DETAIL_RATIO = [3504, 3507];
 export async function playDecodeSession() {
   const bad = [];
   let checks = 0;
@@ -856,6 +862,8 @@ export async function playDecodeSession() {
       watch(PD_ALBUM_NUM, () => { seen.album += 1; }, 'test: Get_Album_Num');
       watch(PD_FNODE, (r) => seen.fnode.push(r.d1 >>> 0), 'test: the fnode by index');
       watch(PD_FILE_READ, () => seen.reads.push(tid()), 'test: play_file_read');
+      seen.ratios = [];
+      lab.observe(PD_RATIO, (l, r) => seen.ratios.push([r.d0 & 0xFFFF, r.d1 & 0xFFFF]), 'test: the library\'s scale ratios');
       lab.observe(PN_GET_NUMBER, (l, r) => {
         const p = [r.a1 >>> 0, r.d0 >>> 0, r.d1 >>> 0], ret = r.mdr >>> 0;
         lab.hook_rt(ret, (h, rr) => { lab.hooks.delete(ret); seen.numbers.push(p.map(u32)); lab.passthrough(rr); }, 'test: getNumber\'s return');
@@ -906,6 +914,16 @@ export async function playDecodeSession() {
         `${tag}: over PLAY, right and left the short-movie albums' count is asked ${seen.album} times and ${fired.length ? fired : 'no play or album stand-in'} fires (S-ALBM answered the mount's init once)`);
       ok(JSON.stringify(reads_play) === JSON.stringify([tasks.PLAY_LOAD, tasks.PLAY_LOADDRAW, tasks.PLAY_LOADDRAW]) && JSON.stringify(reads_move) === JSON.stringify(reads_play) && fnode_move.includes(1),
         `${tag}: a view's file reads are the play module's (tasks ${reads_play} at PLAY, ${reads_move} at right; PLAY_LOAD ${tasks.PLAY_LOAD}, PLAY_LOADDRAW ${tasks.PLAY_LOADDRAW}); the move asks the DCF database for a fnode by its index ${fnode_move.length} times (indices ${[...new Set(fnode_move)]})`);
+      // the lab's rule for S-PLAYDEC against the library's own ratios, then INFO's detail view: a pre-reduction, stood in
+      ok(JSON.stringify(seen.ratios) === JSON.stringify(pm.decodes.map((d) => d.ratio)) && pm.decodes.every((d) => JSON.stringify(d.ratio) === JSON.stringify(PD_VIEW_RATIO)),
+        `${tag}: the library's ratios at 0x${PD_RATIO.toString(16)} ${JSON.stringify(seen.ratios)}, the lab's rule's ${JSON.stringify(pm.decodes.map((d) => d.ratio))} (want ${PD_VIEW_RATIO} each)`);
+      const n0 = pm.decodes.length, s0 = pm.unit.runs;
+      let info = null;
+      try { info = key('info'); } catch (e) { info = e.message.slice(0, 120); }
+      const dd = pm.decodes.at(-1) ?? {};
+      ok(pm.decodes.length === n0 + 1 && dd.dst_width === PD_DETAIL[0] && dd.dst_height === PD_DETAIL[1] && dd.stood_in && JSON.stringify(dd.ratio) === JSON.stringify(PD_DETAIL_RATIO)
+        && JSON.stringify(dd.reduction) === JSON.stringify([1, 1]) && pm.unit.runs === s0 && seen.ratios.length === n0,
+        `${tag}: INFO (${info}): the detail view's request ${JSON.stringify(dd)} stood in by S-PLAYDEC (want ${PD_DETAIL}, ratios ${PD_DETAIL_RATIO}, codes 1, 1); runs ${pm.unit.runs - s0}, the library's ratio taken ${seen.ratios.length - n0} times`);
     } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 700)}`); }
     finally { pl.close_session(); }                                   // camapp 1's continue too
   }

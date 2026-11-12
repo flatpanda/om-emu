@@ -33,11 +33,12 @@
 //                0x5048c3a0 registers), and the request's callback (0x518b4b0b) and the wait run natively. The lab
 //                records each request at the issue
 //   S-PLAYDEC    what remains of the decode's stand-in: a request the library would run with a pre-reduction ahead
-//                of the resizer, which the block's model refuses (its unit is not read). The library picks it by the
-//                ratio of the source's size to the destination's, .10 fixed, per axis (0x50478284..0x504782ac: the
-//                divisions; 0x504e23a5: the first of the 40 thresholds at 0x5066fb58 the ratio does not exceed; that
-//                row's first halfword, 0x506a4a64's pointers: 0 none, 1, 3 or 7): a ratio above 3.249 (X: the detail
-//                view's 474 x 316 of 1620 x 1080, 3.42; the view's 900 x 600 has none). For such a request the issue
+//                of the resizer, which the block's model refuses (its unit is not read). The library picks it per axis
+//                by the ratio ((source - 1) * 100 << 10) / ((destination - 1) * 100), .10 fixed (0x50477e57..86,
+//                0x50478284..0x504782ac; reduction() below; 0x504e23a5: the first of the 40 thresholds at 0x5066fb58
+//                the ratio does not exceed; that row's first halfword, 0x506a4a64's pointers: 0 none, 1, 3 or 7): a
+//                ratio above 3327, 3.249 (X: the detail view's 474 x 316 of 1620 x 1080, 3504 and 3507; the view's 900
+//                x 600, 1844 and 1844, has none). For such a request the issue
 //                and its wait return 0 (accepted, done) from the play module's call sites, the request recorded;
 //                nothing is written to the destination and the request's callback (0x518b4b0b) is not called (I: the
 //                done path's phases are not read)
@@ -62,8 +63,9 @@ const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 //           the rows' pointers (run-time 0x606c5a84) and their number; a row's first halfword is its pre-reduction
 //   issue   the image library's issue and wait the play module's decode calls, each with the return addresses of its
 //           two call sites (0x518b446f / 0x518b478b, 0x518b447d / 0x518b4799)
-//   request the request's fields the lab records at the issue: the source's address, format and size, the work
-//           buffer and its bytes, the destination's address, format, pitch and size (above)
+//   request the request's fields the lab records at the issue: the source's address, format and size, the size the
+//           library's packing scales from (+16 / +18, 0x50477e57), the work buffer and its bytes, the destination's
+//           address, format, pitch and size (above)
 export const PLAY_MODULE_E143 = {
   tasks: [[0x60042D58, 'PLAY_MAIN'], [0x60042D56, 'PLAY_LOAD'], [0x60042D54, 'PLAY_IMAGE'], [0x60042D5A, 'PLAY_SOUND'],
     [0x60042E12, 'PLAY_DECODE'], [0x60042E14, 'PLAY_LOADDRAW']],
@@ -71,7 +73,7 @@ export const PLAY_MODULE_E143 = {
   prefilter: { thresholds: 0x60690B78, rows: 0x606C5A84, n: 40 },
   issue: { fn: 0x5048F331, from: [0x518B4476, 0x518B4792] },
   wait: { fn: 0x5048F6E4, from: [0x518B4484, 0x518B47A0] },
-  request: { src: 0, format: 8, width: 12, height: 14, work: 28, bytes: 36 },
+  request: { src: 0, format: 8, width: 12, height: 14, area_width: 16, area_height: 18, work: 28, bytes: 36 },
   dest: { addr: 0, format: 8, pitch: 10, width: 12, height: 14 },
 };
 const WAI = 4;
@@ -100,17 +102,27 @@ export class PlayModule {
     this._dht = b;
     return b;
   }
-  // the pre-reduction code the image library picks for a source of n pixels scaled to m (0 none): an axis whose
-  // ratio n / m, .10 fixed (a 16-bit quotient, 0x5047828d..0x504782ab), is above 1 (0x504e2437) takes the row of the
-  // first threshold the ratio does not exceed, and the last row above them all (0x504e23c8)
-  reduction(n, m) {
+  // The ratios and pre-reduction codes [x, y] the image library picks for a request (rec: its fields above; a code 0
+  // is none). Its packing 0x50477d5b scales from the source's +16 / +18 to the destination's +12 / +14: per axis the
+  // ratio ((source - 1) * 100 << 10) / ((destination - 1) * k), .10 fixed, from a 32-bit dividend to a 16-bit quotient
+  // (0x50477e57..0x50477e86, 0x50478284..0x504782ab; X: 1844 for 1620 to 900, the firmware's own at 0x504782ac), k 100
+  // for a source format whose bits 15..10 are not 1, 3 or 4 (0x50477d68..0x50477d7a, 0x50477e43; the play module's
+  // 7170 and 7171 are 7; the others take k from a table, not read: refused). An axis whose ratio is above 1024
+  // (0x504e2437) takes the row of the first threshold the ratio does not exceed, the last row above them all
+  // (0x504e23a5..0x504e23c8). X: both of the play module's requests reach this choice (0x50478271)
+  reduction(rec) {
     const sim = this.lab.sim, T = this.P.prefilter, u16 = (a) => { const b = sim.read(a, 2); return b[0] | b[1] << 8; };
-    if (!m) return 0;
-    const ratio = Math.floor((n * 1024) / m) & 0xFFFF;
-    if (ratio <= 1024) return 0;
-    let i = 0;
-    while (i < T.n - 1 && ratio > u16(T.thresholds + 2 * i)) i++;
-    return u16(sim.u32(T.rows + 4 * i) >>> 0);
+    if ([1, 3, 4].includes(rec.format >> 10)) throw new PlayModError(`S-PLAYDEC: the source format ${rec.format}: the image library's divisor for it is not read (0x50477d7d, 0x50477dca)`);
+    const axis = (n, m) => {
+      if (n < 1 || m < 2) throw new PlayModError(`S-PLAYDEC: ${n} source pixels to ${m}: the image library's ratio is not followed there`);
+      const ratio = Math.floor(((((n - 1) * 100) << 10) >>> 0) / ((m - 1) * 100)) & 0xFFFF;
+      if (ratio <= 1024) return [ratio, 0];
+      let i = 0;
+      while (i < T.n - 1 && ratio > u16(T.thresholds + 2 * i)) i++;
+      return [ratio, u16(sim.u32(T.rows + 4 * i) >>> 0)];
+    };
+    const x = axis(rec.area_width, rec.dst_width), y = axis(rec.area_height, rec.dst_height);
+    return { ratio: [x[0], y[0]], codes: [x[1], y[1]] };
   }
   // The decode's requests at the issue and the wait: recorded, and run natively on the block's model (S-IMGPIPE)
   // unless the library would pre-reduce the picture (S-PLAYDEC). The frames the block's runs wrote are those the
@@ -123,8 +135,10 @@ export class PlayModule {
       if (!P.issue.from.includes(disasm(r.mdr))) throw new PlayModError(`the image library's issue ${h8(P.issue.fn)} from ${where(r.mdr)}: only the play module's decode is known to call it`);
       const blk = r.a0 >>> 0, req = u32(blk), dst = u32(blk + 4), Q = P.request, D = P.dest;
       const rec = { from: disasm(r.mdr), src: u32(req + Q.src), format: u16(req + Q.format), width: u16(req + Q.width), height: u16(req + Q.height),
+        area_width: u16(req + Q.area_width), area_height: u16(req + Q.area_height),
         work: u32(req + Q.work), bytes: u32(req + Q.bytes), dst: u32(dst + D.addr), dst_format: u16(dst + D.format), pitch: u16(dst + D.pitch), dst_width: u16(dst + D.width), dst_height: u16(dst + D.height) };
-      rec.reduction = [this.reduction(rec.width, rec.dst_width), this.reduction(rec.height, rec.dst_height)];
+      const pick = this.reduction(rec);
+      rec.ratio = pick.ratio; rec.reduction = pick.codes;
       rec.stood_in = rec.reduction.some((k) => k !== 0);
       this.decodes.push(rec);
       this.ca.log.push(['playdec', `view decode from ${h8(rec.from)}: ${rec.width} x ${rec.height} (format ${rec.format}) at ${h8(rec.src)} -> ${rec.dst_width} x ${rec.dst_height} (format ${rec.dst_format}, pitch ${rec.pitch}) at ${h8(rec.dst)}${rec.stood_in ? `, pre-reduction ${rec.reduction}: not decoded (S-PLAYDEC)` : ''}`]);

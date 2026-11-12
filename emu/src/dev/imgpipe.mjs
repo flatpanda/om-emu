@@ -68,13 +68,14 @@
 //           in units of 64 pixels (0x5047ef83..b0)
 //   +0x2e60 the prefilter's mode, 0x500 with bit 0 for x and bit 1 for y, and its taps: +0x2e64 the x filter's centre
 //           tap | the next << 16, +0x2e68 its outer tap; +0x2e6c, +0x2e70 the y filter's; +0x2e7c..+0x2e8c the same
-//           again (0x504e2425: for each axis the source is larger in, the row 0x504e23a5 finds by the ratio source /
-//           destination, .10 fixed, in the 40 thresholds at 0x5066fb58; the rows, 0x506a4a64's pointers: a
-//           pre-reduction code 0, 1, 3 or 7 and three taps). Every row's taps make 128 as centre + 2 * next + 2 *
-//           outer (X: all 40), so a symmetric filter of 5 taps in 1/128 (I). X: 68, 34 and -4 for the view's 1.8.
-//           A row with a pre-reduction (a ratio above 3.249, the detail view's 3.42) changes the unit masks, the
-//           source's size and more words: refused here (the reduction's unit is not read), and the play module's lab
-//           side keeps such a request (src/lab/playmod.mjs S-PLAYDEC)
+//           again (0x504e2425: for each axis whose ratio is above 1024, the row 0x504e23a5 finds by the ratio, .10
+//           fixed, ((source - 1) * 100 << 10) / ((destination - 1) * 100), 0x50478284..ab, in the 40 thresholds at
+//           0x5066fb58; the rows, 0x506a4a64's pointers: a pre-reduction code 0, 1, 3 or 7 and three taps). Every
+//           row's taps make 128 as centre + 2 * next + 2 * outer (X: all 40), so a symmetric filter of 5 taps in 1/128
+//           (I). X: 68, 34 and -4 for the view's 1844 (1.80). A row with a pre-reduction (a ratio above 3327, 3.249;
+//           X: the detail view's 3504 and 3507) changes the unit masks, the source's size and more words: refused
+//           here (X: at the set-up's write of +0xf00, outside the pages; the reduction's unit is not read), and the
+//           play module's lab side keeps such a request (src/lab/playmod.mjs S-PLAYDEC)
 // So a destination pixel (x, y) reads the source at centre + (+0xb514 + x * step) / 4096: 0.049 .. 1618.95 for 0 ..
 // 899 of the 900 x 600 view (X).
 // A-IMGPIPE-2 (I): what the units between the codec and the output do to the samples is read only as far as the

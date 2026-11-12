@@ -125,8 +125,13 @@ w **tych samych** offsetach (A: 0x825fe0→0x60847000, raw 0x477800; B: 0xc9d7e0
 raw 0x685000), różne tylko payload packed (E148 ~200 KB ciaśniejszy) [INV §1].
 Obrazy rozwinięte po 24,903,616 B; równość bajtowa całości **22.05 %**
 (5,491,417/24,903,616; 1,243 regiony różnic po scaleniu luk ≤64 B; nagłówek 0x00..0x825fe0:
-21.94 %) [INV §1; INV: expanded_main_diff_regions.csv]. Base run-time **0x60021020** dla obu
+21.94 %) [INV §1; INV: expanded_main_diff_regions.csv].¹ Base run-time **0x60021020** dla obu
 (main code; `runtime = block offset + 0x60021020`) [INV §0; REPO: docs/model-survey.md finding 65].
+
+> ¹ Niezależny review 2026-11-12 przy własnym re-merge luk ≤64 B otrzymał **1,269** regionów na tym
+> samym zbiorze różnic (różnica parametryzacji scalania, nie danych). Kanoniczne pozostaje liczba
+> **1,243** z zakomitowanego `expanded_main_diff_regions.csv`; rozbieżność odnotowana, nie
+> rozstrzygana w tym pakiecie.
 
 ## 2.3. Pokrewieństwo kodu (dlaczego port jest w ogóle realny)
 
@@ -174,21 +179,27 @@ Obrazy rozwinięte po 24,903,616 B; równość bajtowa całości **22.05 %**
 - Block zasobów E144 jest **większy** o 1,441,792 B mimo mniejszej liczby stringów — E148
   zmieścił +896 sidów × 18 języków w bloku o 1.44 MB mniejszym, więc dopisanie ~900 sidów na
   bazie E144 ma materialny zapas miejsca [INV §1; I — część różnicy mogą stanowić nie-stringi].
+  **Zastrzeżenie (review 2026-11-12):** szacowany wzrost z dopisania (~896 × 18 języków ≈
+  **+1.3–1.6 MB**; kotwica per-rekord: enu 231,424 B → 315,904 B [INV: res_lang_table.csv]) jest
+  **tego samego rzędu** co cała różnica 1.44 MB — zapas **nie jest gwarantowany**. Dlatego
+  inwentaryzacja wolnego miejsca (WS0-7) gate'uje też pakowanie B: dopóki nie wykaże ciągłego
+  zapasu, dopisanie sidów wymaga trybu block-resize T4/WS5 (patrz risks.md R12).
 
 ## 2.5. Rejestry trybów (app_check_mode i tabela równoległa)
 
 - **E144 (D):** rejestr row-disable 12-bajtowych wierszy `{u16 mode, u16, u32 ptr, u8 n}`:
   **667 wierszy** @ block 0xbab574 (runtime 0x60bcc594); bound `cmp 667,d3` @ rozwinięte 0x8fe0da
-  po `mov 0x60bcc594,d0` @0x8fe0d3; scan mostkowany przechodzi 652/667, 650 unikalnych mode-id
-  [INV §3; INV: scan_appcheck_E144.tsv; REPO: analysis/om-c-firmware/README.md §3.6 — E143 miała
-  637 wierszy @0x60e4bdcc i 172 callbacki @0x60e4ad9c].
+  po `mov 0x60bcc594,d0` @0x8fe0c8 (literał stałej @0x8fe0ca); scan mostkowany przechodzi 652/667,
+  650 unikalnych mode-id [INV §3; INV: scan_appcheck_E144.tsv; REPO: analysis/om-c-firmware/README.md
+  §3.6 — E143 miała 637 wierszy @0x60e4bdcc i 172 callbacki @0x60e4ad9c].
 - **E148 (D, częściowo):** równoległy region istnieje (ścisły bieg 357 wierszy @0xbab084, pierwszy
   mode 3356; kotwica mode 23 kotwiczy 336 kolejnych @0xbab4e0), ale **count-compare nie został
   zlokalizowany — liczba wierszy UNRESOLVED** [INV §3; INV: scan_appcheck_E148.tsv].
 - Tabela równoległa: E144 @0x477b78 (461 wierszy mostkowanych) vs E148 @0x475110 (440; pierwsze
   mode `24,15205,3010,15258,1482,…` vs `24,15205,3008,15258,1446,…`); zbiory id różnią się
   ~190/side, ale oba scany są podatne na urwanie — surowe dane, **nie** materiał na patch
-  [INV §3; INV: scan_descriptors_E1xx.tsv].
+  [INV §3; poza zakomitowanym evidence — przebieg sesyjny, treść niezależnie zweryfikowana
+  w review 2026-11-12; pliki `scan_descriptors_E1xx.tsv` w evidence są puste (0 bajtów)].
 - Tabela deskryptorów ustawień (20-bajtowy wiersz, kształt `emu/refs/settings.mjs DESCRIPTORS`)
   **nie została znaleziona** na żadnym build (reguła biegów ≥200 wierszy) — UNRESOLVED [INV §3/§6.3].
 - Implikacja portowa: dodanie wiersza menu do E144 (styl om-c) wymaga poprawy **bound** 667 przy
@@ -202,9 +213,9 @@ Obrazy rozwinięte po 24,903,616 B; równość bajtowa całości **22.05 %**
 |---|---|---|
 | USB IP | **ten sam** DWC3-class gadget IP (`USBIP_GUSB2PHYCFG0`, `USBIP_GUSB3PIPECTL0`), klastry 8 szablonów deskryptorów **bcdUSB 0x0300** @0x15bae53 (E144) / 0x15bf68f (E148), niemal identyczne bajty (164/224 w oknie) | [INV §2] |
 | Wi-Fi | E148: `cyw43439-brcmfmac-v5.15.58-2023_1128`, `brcmfmac43439-sdio.clm_blob`, kernel 5.10.197 (0x0106). **E144: chip UNRESOLVED** (payload inaczej kompresowany: squashfs 4.0 @0x216cfe0, bytes_used 0x435929; E148: squashfs @0x1b6ffe0, bytes_used 0x8bc0de; buildroot path E144 `…S0101_20220714/PF20/src/buildroot`, `GLIBC_2.7`) | [INV §2/§6.1; REPO: analysis/om-c-firmware/README.md §7.3] |
-| Bluetooth | 184 stringi „bluetooth" w main block obu; E148 +17 wierszy enu /Bluetooth/; BLE 69→102 | [INV §2; INV: feature_census_enu.tsv] |
+| Bluetooth | 184 stringi „bluetooth" w main block obu; E148: **+17 nowych tekstów** /Bluetooth/ (text-keyed) [INV: res_enu_textnew_in_E148.tsv] na **+11 nowych sidach** (4019/4020/4225/4226/4322/4323/4324/4429/4435/4547/4580) [INV: res_enu_diff_added.tsv]; BLE 69→102 | [INV §2; INV: feature_census_enu.tsv] |
 | Display | te same panele (TFT 720×480, EVF 1024×768), modelcheck przechodzi na TFT i EVF dla obu | [INV §2; REPO: emu/src/fw/models.mjs; docs/model-survey.md finding 65] |
-| RAM | rodzina płyty `board: {family: 'E144'}` także dla E148; DRAM end 0xb0000000 (256 MiB wg `board.mjs`); MMIO ISC 0x8fe00000, VSC 0x9c000000, engine 0x9c100000; kensus literałów: scratch 0xa2xxxxxx 8,576/8,537, image-range 654,000/604,424; 21 stringów „SDRAM" każda strona. **[PRIOR] twierdzi 1 GB RAM — KONFLIKT do rozstrzygnięcia (sekcja 8, Q9)** | [INV §2; INV: ram_literal_census.csv; REPO: emu/src/fw/board.mjs; docs/model-survey.md finding 65] |
+| RAM | rodzina płyty `board: {family: 'E144'}` także dla E148; DRAM end 0xb0000000 (256 MiB wg `board.mjs`); MMIO ISC 0x8fe00000, VSC 0x9c000000, engine 0x9c100000; kensus literałów: scratch 0xa2xxxxxx 8,576/8,537, image-range 654,000/604,424; 20 stringów „SDRAM" (minlen=6) każda strona, 20/20 [INV: ascii_strings_E1xx.tsv]. **[PRIOR] twierdzi 1 GB RAM — KONFLIKT do rozstrzygnięcia (sekcja 8, Q9)** | [INV §2; INV: ram_literal_census.csv; REPO: emu/src/fw/board.mjs; docs/model-survey.md finding 65] |
 | Sensor/ISP | **nic bajtowo-widocznego** (po 1 trafieniu „IMX", w danych niepowiązanych); różnice za sterownikiem ISC — ? | [INV §2/§6.4] |
 | GPS | brak różnicy user-visible (9→9 wierszy enu; kod modułu TG: 341/352 stringów „GPS") | [INV §2; INV: feature_census_enu.tsv] |
 | Grafika updaterra | E148 +3,145,728 B, własny indeks 126 wpisów (rekordy 0x2600 B w E144 vs 0x1a00 B w E148); brak JPEG/RIFF po magic-scan, po 1 magii PNG; customowa forma bitmapy | [INV §2] |
@@ -343,10 +354,15 @@ poza wspólnym MMIO) paruje z kodem obecnym w E144, argument „software-only" j
 - **Wiersze E148:** 4322 „Activate Wi-Fi/Bluetooth Power-off Standby so images can be imported
   while power is off?", 4323/4324 (opisy stanów), 4019/4020 „Activates Bluetooth…", 4225/4226
   (enable/disable komunikacji), 4429, 4435 „Sets Bluetooth action", 4547, 4580 „Wi-Fi/Bluetooth",
-  +17 wierszy /Bluetooth/ ogółem; BLE 69→102; „Reset all … and Bluetooth settings" [INV §2;
-  INV: res_enu_diff_added.tsv; INV: feature_census_enu.tsv]. Main-block: 184 stringi „bluetooth"
-  w obu buildach [INV §2].
+  +17 nowych tekstów /Bluetooth/ (text-keyed) na +11 nowych sidach ogółem; BLE 69→102;
+  „Reset all … and Bluetooth settings" [INV §2; INV: res_enu_diff_added.tsv;
+  INV: res_enu_textnew_in_E148.tsv; INV: feature_census_enu.tsv]. Main-block: 184 stringi
+  „bluetooth" w obu buildach [INV §2].
 - **Baza w E144:** Bluetooth pairing/ustawienia istnieją (3347–3357) [INV: res_strings_E144_enu.tsv].
+  **Uwaga:** baza E144 zawiera już sid **3356 „Power-off Standby"** i **3357** („@A08F@/Bluetooth
+  connection cannot…") — częściowa obecność UI w E144; E148 dokłada re-binding ścieżki pod nowymi
+  sidami 4322–4324/4225–4226 (analogicznie do wzorca F1: 4037–4042 vs istniejące 3426–3430). To
+  **nie zmienia** klasyfikacji (iii) — dotyczy warstwy menu, nie radia/zasilania.
 - **Klasa: (iii) PRAWDOPODOBNIE SPRZĘTOWA — warunkowa (radio + zasilanie).** Uzasadnienie: sam
   kod BLE/gap jest w main block obu build (184 stringi), ale **standby** wymaga utrzymania zasilania
   radia przy „wyłączonym" korpusie — decyzja PMIC/rail + zdolność chipu do duty-cycle standby.
@@ -626,6 +642,9 @@ i pokazuje, jak reguły 4.4 grają razem.
 4. **Sid map (T2):** 4037–4042/4702/4750/4703–4705/4719–4722 → dopisać pod tymi samymi numerami
    na E144 (przestrzeń 4013+ jest wolna; sidy E148 == sidy nowe E144, 1:1 dla czytelności),
    18 języków; **zakaz** ruszania 3426–3430 (stare wiersze zostają — oba zbiory współistnieją w E148).
+   Sid E148 z zakresu 4013..4908 **bez tekstu enu** (24 takich w E148 [INV: res_enu_diff_added.tsv
+   ma 872 z 896]) jest **pomijany** w mapie 1:1 i odnotowany w raporcie mappingu — nie wyzwala
+   fail-closed T2.
 5. **Menu row:** page/row-order per metoda om-c [REPO: analysis/om-c-firmware/README.md §3.6] —
    wiersz „Live ND Shooting" rozszerzony o wartości; app_check_mode bound 667→667+k z relokacją,
    jeśli rejestr trybów obejmuje te mody (ustala pełny scan WS0-12/scan_appcheck).
@@ -744,7 +763,10 @@ runnerem i pinami SHA-256 wejść. Miejsce: `analysis/om5_port_spec/tools/` albo
   kontenera; ostrzeżenie przy przekroczeniu zapasu — patrz S4 i ryzyko R12 (risks.md)).
 - **Fail-closed:** odmowa dopisania, gdy: którykolwiek język brakuje tekstu (nie „fallback enu" —
   puste = stop; decyzja o placeholderach wymaga osobnego zapisu per sid), kolizja sid istniejącego,
-  zmiana treści istniejącego sida.
+  zmiana treści istniejącego sida. **Wyjątek (żeby 1:1 append nie zahaczył o własny fail-closed):**
+  sid z zakresu E148 4013..4908 bez tekstu enu (24 takich; `res_enu_diff_added.tsv` pokrywa 872
+  z 896) = **pomijany**, nie błąd — każde pominięcie trafia do raportu mappingu (`sid_append_report`).
+  Tryb 1:1 „sidy E148 == nowe sidy E144" stosuje tę regułę domyślnie.
 - **Zakaz:** nadpisywanie tekstów in-place (621 przykładów E148 pokazuje, że producent tak robi —
   my nie, aby nie łamać funkcji E144).
 
@@ -764,6 +786,15 @@ runnerem i pinami SHA-256 wejść. Miejsce: `analysis/om5_port_spec/tools/` albo
 ### T4 — `repack-builder` (WS5, R-PKG-1)
 
 - **Cel:** deterministyczny build kontenera `OE` z manifestem.
+- **Tryby:** (a) **patch-in-place** (domyślny) — edycje w istniejących zakresach, rozmiary bloków
+  i offsety pliku bez zmian; (b) **block-resize** — zmiana długości całego bloku (np. dopisanie
+  sidów do 0x0101, gdy zapas ciągły jest niewystarczający): per blok nowa długość, przesunięcie
+  offsetów plikowych wszystkich bloków za nim, aktualizacja pól head bloku zmienianego (w tym
+  **body length @0x0C** [REPO: docs/firmware-container.md; tools/olyfw.py parse_head]) i wynikowej
+  długości pliku; kontrola, że tablica bloków nadal tile-uje cały plik i żadna para head/body/tail
+  nie nachodzi. Regresja trybu (b): **re-unpack outputu przez `tools/olyfw.py`** (parsowanie head,
+  descramble, tile'ing) + sum32 każdego bloku + piny SHA-256 (digest pins) wejść i oczekiwanych
+  długości.
 - **Wejście:** bazowy kontener E144 (pin), lista patch-range (z T1–T3), parametry kontenera
   (Model nibble `1440`, BCD `0x1200`).
 - **Wyjście:** `*.RESEARCH_SKELETON_ONLY.BIN` + `*.manifest.csv` (zakres, before-hash, after-hash,
@@ -771,7 +802,8 @@ runnerem i pinami SHA-256 wejść. Miejsce: `analysis/om5_port_spec/tools/` albo
 - **Fail-closed:** odmowa gdy manifest nie pokrywa 100 % różnic (porównanie bajtowe output vs input
   musi się sprowadzać do manifestu — zero dryfu), gdy którykolwiek zakres dotyka segmentów boot
   (Block 0 boot/recovery — [PRIOR] Z3) bez formalnego flaga `SAFETY_DECISION_PRESENT`, gdy wywołania
-  w transplantowanym kodzie trafiają w blacklist MDN (WS6-3), gdy BCD/nibble niezgodne z parametrami.
+  w transplantowanym kodzie trafiają w blacklist MDN (WS6-3), gdy BCD/nibble niezgodne z parametrami;
+  w trybie block-resize dodatkowo odmowa przy niespójnym tile-ing head/body/tail po resize.
 - **Sprawdzenie poprawności:** idempotencja (build z tego samego manifestu = identyczne bajty),
   round-trip (rozkodowanie output przez narzędzia inwentarza musi dać przewidywane wartości
   [INV reproduce.py jako oracle]).
@@ -805,7 +837,7 @@ Rozszerzenie z mitygacjami i detectability: `risks.md` (pakiet). Tutaj zwięzła
 | S8 | Dual-band path stock w RTOS+olnet (band +0xd1 → hw_mode=a/ieee80211ac=1) — ścieżka istnieje w kodzie rodziny | [REPO: analysis/om-c-firmware/README.md §3.4] | radio: gdy chip E144 ≡ E148, potencjał 5 GHz (badawczo; patrz Z12) |
 | S9 | Emulator rodziny gotowy: modelcheck przechodzi dla E144 i E148 (port chainowany przez E144: 98/117 override'ów), sesje menu od findings 66–68 | [REPO: docs/model-survey.md finding 65–68] | walidacja L2 bez sprzętu; WS1 tanie |
 | S10 | Komplet narzędzi offline: StringTable parser, menudata/nav, fw-survey, reproduce.py inwentarza (deterministyczny) | [REPO: emu/src/lab/*; INV reproduce.py] | powtarzalność dowodów (seal/manifest) |
-| S11 | Ta sama rodzina płyty (board family E144 także dla E148), 21× „SDRAM" equal, brak różnic paneli | [INV §2; REPO: emu/src/fw/models.mjs] | memory-map/DRAM init bez zmian — brak Ryzyka relokacji stosu/heapu |
+| S11 | Ta sama rodzina płyty (board family E144 także dla E148), 20× „SDRAM" equal (20/20), brak różnic paneli | [INV §2; INV: ascii_strings_E1xx.tsv; REPO: emu/src/fw/models.mjs] | memory-map/DRAM init bez zmian — brak Ryzyka relokacji stosu/heapu |
 | S12 | Precedensy repack i add-row: nd128 (re-encode + tail sum32, 58 B diff) i om-c (menu rows + bound +639→…) udokumentowane end-to-end | [REPO: analysis/nd128/README.md; analysis/om-c-firmware/README.md §3.6] | WS5/WS4 nie zaczyna od zera |
 
 ## 5.2. ZAGROŻENIA (Z1–Z13)
@@ -851,16 +883,23 @@ Zadania (priorytetowo):
 2. WS0-2 **E148 app_check_mode count:** zlokalizować count-compare (analogia E144: `cmp imm,d3`
    po `mov base,d0`); pełny scan z bridgingiem. [Blokuje tylko A; niski priorytet]
 3. WS0-3 **Updater acceptance E144:** przeczytać walidację updatera korpusu E144 (static); katalog
-   kodów błędów (analogia E143 0x3202/0x3210–0x3213 [INV §5]). [Blokuje A; wyższy priorytet dla
-   dokumentacji bezpieczeństwa]
+   kodów błędów (analogia E143 0x3202/0x3210–0x3213 [INV §5]). Sub-pytanie (review 2026-11-12):
+   czy E144 trzyma **jeden obraz czy banki A/B** i **gdzie updater faktycznie zapisuje** (blok
+   docelowy/offset) — wpływa na strategię A i na §7 (plan rescue); evidence w repo tego nie
+   rozstrzyga. [Blokuje A; wyższy priorytet dla dokumentacji bezpieczeństwa]
 4. WS0-4 **Settings-descriptor table:** zlokalizować (kształt 20 B `emu/refs/settings.mjs` albo
    inny), mechanism memories 1909/1910 na E144. [**Twarda blokada B+**]
 5. WS0-5 **E144 radio chip:** rozpakować 0x0106 E144 (squashfs @0x216cfe0), identyfikacja chipu
    (CYWxxxx) i wersji kernela. [Blokuje F5; informuje Z12/Q11]
 6. WS0-6 **0x010e decision:** map zależności main↔misc loader (który build wymaga którego).
    [Blokuje A]
-7. WS0-7 **Resources diff inwentaryzacja:** co jest w +1.44 MB E144 (fonty/ikony/nie-stringi).
-   [Blokuje A zasoby; B niewrażliwe]
+7. WS0-7 **Resources diff inwentaryzacja (w tym zapas wolnego miejsca 0x0101):** co jest w +1.44 MB
+   E144 (fonty/ikony/nie-stringi) **oraz** ile ciągłego wolnego miejsca zostaje w bloku zasobów
+   E144 po policzeniu wzrostu z dopisania sidów: ~896 sidów × 18 języków ≈ **+1.3–1.6 MB** bloku
+   0x0101 (I; kotwica: rekord enu **231,424 B** w E144 vs **315,904 B** w E148 [INV:
+   res_lang_table.csv]). **[Blokuje A zasoby; B: gate pakowania — gdy dopisywane sidy przekroczą
+   ciągły zapas, B wymaga trybu block-resize T4/WS5 zamiast append w wolną przestrzeń; patrz
+   risks.md R12 i §2.4]**
 8. WS0-8 **NVRAM drift re-verification:** odzyskać ślady [PRIOR] (gyro offsets) i zweryfikować na
    obrazach tego clone (kod czytający NVRAM — offsety stałe); tabela remapu WS2. [**Blokada F3/A**]
 9. WS0-9 **CJK diff:** rozszerzyć diff tekstów na jpn/chn (obecnie tylko sids-count [INV §6.6]).
@@ -947,12 +986,16 @@ Zadania:
    [INV §1; REPO: docs/firmware-container.md].
 2. Re-encode spanów olycompress (raw sizes równe [INV §1]) — precedens nd128 (58 B packed diff +
    4 B tail [REPO: analysis/nd128/README.md]).
-3. Manifest: wszystkie zakresy z before/after-hashami (styl 153+99 oly-fw-analysis [REPO:
+3. **Tryb block-resize (T4b):** powiększenie bloku (np. 0x0101 po dopisaniu sidów poza ciągły
+   zapas): per blok nowa długość, przesunięcie offsetów kolejnych bloków, aktualizacja head
+   (body length @0x0C) i długości pliku; regresja = re-unpack `tools/olyfw.py` + sum32 + piny
+   digestów (szczegóły: T4, §4.5).
+4. Manifest: wszystkie zakresy z before/after-hashami (styl 153+99 oly-fw-analysis [REPO:
    oly-fw-analysis r.17]), deterministyczny (byte-identical na powtórny run — jak reproduce.py
    inwentarza [INV §0]).
-4. Sanity pre-checki 0x3202/0x3210–0x3213 jako testy lokalnej poprawności (bez twierdzenia o
+5. Sanity pre-checki 0x3202/0x3210–0x3213 jako testy lokalnej poprawności (bez twierdzenia o
    akceptacji updatera — R-UPD-1).
-5. Naming: `*.RESEARCH_SKELETON_ONLY.BIN`, sha256 sidecar, brak nazw sugerujących użyteczność
+6. Naming: `*.RESEARCH_SKELETON_ONLY.BIN`, sha256 sidecar, brak nazw sugerujących użyteczność
    instalacyjną.
 
 **Exit criteria:** builder deterministyczny, manifesty kompletne, dryf zerowy poza zakresami
@@ -988,8 +1031,11 @@ WS1 ────────────────► (równolegle od startu)
 WS6 ────────────────► (wszystkie)
 ```
 
-**Suma wave 1 (B):** ~40–65 h pracy, 0.7–1.3 M tokenów łącznie (WS0 min + WS1 + WS2 + WS4 + WS5 +
-WS6). **Suma z B+:** ~65–110 h, 1.2–2.2 M tokenów. A pozostaje poza harmonogramem do czasu bramek.
+**Suma wave 1 (B):** suma arytmetyczna zakresów komponentów (WS0 min 4–10 h + WS1 6–12 h + WS2
+6–10 h + WS4 23–38 h + WS5 4–8 h + WS6 4–8 h) = **47–86 h** pracy, **0.88–1.85 M tokenów**.
+**Suma z B+:** + WS3 (20–40 h; 300–700k) = **67–126 h**, **1.18–2.55 M tokenów** (koszt funkcji
+katalogu wave 2 na ListMenu budżetowany jest osobno w 4.3.3 — nie sumowany tu dwukrotnie).
+A pozostaje poza harmonogramem do czasu bramek.
 
 ## 6.2. Scenariusze walidacyjne (szablony WS1 — konkret per funkcja)
 
@@ -1068,7 +1114,9 @@ Numeracja Q1..Q15; każdy ma właściciela-WS i koszt wstępnego rozstrzygnięci
   WS0-12. 3–6 h. Surowe dane dla B+.
 - **Q6 — CJK/jpn resource diff** (INV §6.6): zdekodowane, nieporównane jako tekst. WS0-9. 2–4 h.
 - **Q7 — E144 updater acceptance rules** (INV §6.7/§5): kod walidacji nieprzeczytany. WS0-3. 3–6 h.
-  Blokuje A; normatywnie dla WS6.
+  Blokuje A; normatywnie dla WS6. Sub-pytanie (review 2026-11-12): czy E144 trzyma jeden obraz
+  czy banki A/B i gdzie updater zapisuje (wpływa na strategię A i §7 rescue) — evidence w repo
+  nie rozstrzyga.
 - **Q8 — 0x0106 record-level** (NN models, rootfs detail) (INV §6.8): inwentaryzacja per rekord.
   Dotyczy F2 (warunek LUT/ISP). 4–10 h (częściowe 1–2 h na sam warunek F2).
 
@@ -1089,7 +1137,7 @@ Numeracja Q1..Q15; każdy ma właściciela-WS i koszt wstępnego rozstrzygnięci
 - **Q14 — Homology liczby** — [PRIOR] „~82% shared strings, 9122 new in E148" vs inwentarz:
   1,196 nowych tekstów enu / 896 nowych sidów (per-sid), 436 znikło [INV §3]. Różnica metodyki
   (prawdopodobnie content-keyed all-languages vs enu) — ustalić, zanim liczby wejdą do dalszych
-  dokumentów. 1 h.
+  dokumentów. **Właściciel: WS0** (przy odzyskiwaniu śladów [PRIOR] — WS0-8/WS0-1). 1 h.
 - **Q15 — „Micro-USB vs USB-C"** (konflikt (a)): **ROZSTRZYGNIĘTY przez inwentarz** — oba korpusy
   mają ten sam DWC3-class IP i szablony bcdUSB 0x0300; E148 dodaje jedynie wiersze menu USB
   (4569/4570/4748) [INV §2]. Priors-claim nieaktualny; zostaje tylko pytanie o **kontroler ładowania**

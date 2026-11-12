@@ -74,14 +74,15 @@ is 21.94 % equal. These are full rebuilds, not patched builds.
   om-c study §7.3, which lists chips only for E146/E147/E148).
 - **Bluetooth (D).** Both main blocks hold 184 "bluetooth" strings; E148 adds the user-visible rows "…/Bluetooth
   Settings", "Bluetooth power-off standby so images can be imported while power is off", "Reset all … and Bluetooth
-  settings" (17 new enu rows matching /Bluetooth/), i.e. BT settings surface in the menu, and BLE rows grow 69 → 102.
+  settings" — 17 new enu texts matching /Bluetooth/ (text-keyed; on 11 new sids 4019/4020/4225/4226/4322/4323/4324/
+  4429/4435/4547/4580), i.e. BT settings surface in the menu, and BLE rows grow 69 → 102.
 - **Display (D, repo).** Same panels per `emu/src/fw/models.mjs` (TFT 720x480, EVF 1024x768) and both modelcheck on
   them (`docs/model-survey.md` finding 65). No panel-name strings differ.
 - **RAM (D, repo + X census).** Board family identical (`board: { family: 'E144' }` for E148 in `models.mjs`; MMIO
   ISC 0x8fe00000, VSC 0x9c000000). `board.mjs` gives the family DRAM end 0xb0000000 (256 MiB). Literal census over
   the expanded images (`evidence/ram_literal_census.csv`): scratch 0xa2xxxxxx literals 8,576 (E144) vs 8,537 (E148);
-  image-range literals 654,000 vs 604,424. No SDRAM-init table difference found at string level (21 'SDRAM' strings
-  each side).
+  image-range literals 654,000 vs 604,424. No SDRAM-init table difference found at string level (20 'SDRAM' strings
+  each side, 20/20; count corrected in review 2026-11-12).
 - **Sensor/ISP: nothing byte-visible** (?). No sensor part-number strings in either expanded main block (1 'IMX'
   hit each, in unrelated data). Sensor differences would live behind the ISC driver; not further resolved.
 - **Extras (D).** No GPS diff (both carry the shared GPS module code, TG-family: 341/352 'GPS' strings). The E148-only
@@ -141,16 +142,19 @@ BLE 69 → 102, AF Focus Adjustment 0 → 2, Webcam 1 → 2, Starry 5 → 9, Air
 **Registries (partial).** The `app_check_mode`-style row-disable registry (12-byte rows `{u16 mode, u16, u32 ptr,
 u8 n}`, om-c study §3.6):
 
-- **E144 (D):** base literal `mov 0x60bcc594,d0` at expanded offset 0x8fe0d3 followed by the bound `cmp 667,d3`
-  (`CB 9B 02`) at 0x8fe0da → **667 rows** at block offset 0xbab574 (E143 has 637, for scale). A bridged shape scan
-  passes 652 of them (`evidence/scan_appcheck_E144.tsv`); 650 distinct mode ids.
+- **E144 (D):** base literal `mov 0x60bcc594,d0` at expanded offset 0x8fe0c8 (literal @0x8fe0ca; offset corrected
+  in review 2026-11-12) followed by the bound `cmp 667,d3` (`CB 9B 02`) at 0x8fe0da → **667 rows** at block offset
+  0xbab574 (E143 has 637, for scale). A bridged shape scan passes 652 of them (`evidence/scan_appcheck_E144.tsv`);
+  650 distinct mode ids.
 - **E148 (D, partial):** a parallel region exists (strict run of 357 rows at 0xbab084 first mode 3356; a row with
   mode 23 anchors 336 more at 0xbab4e0) but **no count-compare was located and the row scan truncates — the E148
   registry's row count is UNRESOLVED in this pass**.
 - A second parallel mode table: E144 at 0x477b78 (461 rows bridged) vs E148 at 0x475110 (440 rows, first modes
   `24, 15205, 3010, 15258, 1482, …` vs E144's `24, 15205, 3008, 15258, 1446, …`). Their mode-id sets differ
   substantially (~190 ids each side) but both scans are truncation-prone, so the set diff is NOT reliable raw
-  material; the scans are committed for whoever reads the tables' referencing code next.
+  material. Provenance note (review 2026-11-12): these two scans are session-derived — the committed
+  `scan_descriptors_E1xx.tsv` files are 0 bytes, so the 461/440 numbers above are not in committed evidence; the
+  content was independently re-verified in that review.
 - The E143-style 20-byte settings-descriptor table (`emu/refs/settings.mjs DESCRIPTORS` shape) was **not found** by
   this package's shape rule (runs >= 200 rows) on either build — the rule or the layout differs; UNRESOLVED.
 

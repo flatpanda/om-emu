@@ -45,7 +45,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
   TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
-  PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143, recImage, KCB0_E143 } from '../src/fw/facts.mjs';
+  PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143, recImage, recFileInline, KCB0_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -332,13 +332,27 @@ const LENS_DRIVER_FOUND = {
 // step's return 0x503f5e05, the post 0x503f1256, the dump 0x503f8314, rec_jpeg_exec 0x503ff3e3 with no header fill,
 // HeaderSize's store 0x503fff59, the crop areas 0x503ffa31 and the RAW one 0x50405d8c, the context 0x503f60ff, the
 // clock setting 0x500f022e), E148, E139, E134, E137, E142, E140 and E125 as the rule reads them (X: their sessions
-// record S2's file natively with them), none on E130 (its REC_FILE's loop inlines the start and the finish, X)
+// record S2's file natively with them). The version before it (src/fw/facts.mjs recFileInline, 2026-11-11): E130's as
+// read by hand (D: REC_FILE task 30 at 0x503d9350 with the start's and the finish's traces in its loop, waiting on its
+// queue word 0x60420eae for packets of 284 bytes, its record step's return 0x503d9429 from rec_make_file 0x503d94e1,
+// which keeps its file context on its stack and passes it to the recorder's builders, the registration 0x503dfbf1;
+// its reply 0x503d5071 before 0x503d94ba; the post 0x503d5134; rec_jpeg_exec 0x503df01e keeping the buffer at +260
+// and setting +216 / +220 from the size +264, the header maker's store of 41984 at +256, 0x503df699; the EXIF init
+// 0x503035f9 and its copy 0x5030362b of 6580 words, the date set 0x50305c65 with the time at +22708; the clock
+// setting 0x500de2c8), E133's and E129's as the rule reads them (X: their sessions record S2's file natively with
+// them), none on E132 (its record step is rec_file_destination_record) and E145 (the E144 version's dump with an
+// inlined loop), X
 // the packet's fields (300 bytes; FileType at +298, on E134, E137 and E125 at +296), rec_jpeg_exec's parts and the
 // date set's offsets the eight share (D, the rule's reads)
 const QF = (FileType) => ({ pExifParam: 28, HandleTarget: 116, BuffAddr1: 136, BuffSize1: 140, HeaderSize: 176, Status: 192, Mode: 194,
   Media: 198, Media2: 200, RecordDevice: 202, ImgAspect: 283, Free: 286, FileType });
 const QJ = (exec, make_image) => ({ exec, make_image, header: 41984, fill: null, fill_return: null, image: { record: null, addr: 180, size: 184 } });
 const QD = (format, copy, original) => ({ format, code: 0x4200, copy, original, created: original + 20, modified: 1364 });
+// recFileInline's packet (284 bytes; Media2 and RecordDevice not read by its record path) and rec_jpeg_exec's parts
+// the three share (D on E130, the rule's reads)
+const IF = { pExifParam: 152, HandleTarget: 148, BuffAddr1: 216, BuffSize1: 220, HeaderSize: 256, Status: 14, Mode: 72, Media: 76, Media2: null,
+  RecordDevice: null, ImgAspect: 164, Free: 168, FileType: 272 };
+const IJ = (exec, make_image) => ({ exec, make_image, header: 41984, fill: null, fill_return: null, image: { record: null, addr: 260, size: 264 } });
 const REC_FILE_FOUND = {
   E143: REC_FILE_E143,
   E146: {
@@ -418,6 +432,30 @@ const REC_FILE_FOUND = {
     init: 0x503F34CD, task: { id: 31, entry: 0x503F9238, flag: null, queue: 0x6004107C, handled: 0x503F929E },
     packet: { size: 300, post: 0x503F3776, fields: QF(296) }, jpeg: QJ(0x50402BF6, 0x50402E5A),
     contexts: [0x622713A0, 0x622713FC], clock_set: 0x500E4F49, clock_read: 0x500E4F67,
+  },
+  E130: {
+    exif: { init: 0x503035F9, cflush: null, template: 0x62667FE4, copy: 0x5030362B, size: 26320, time: 22708,
+      date: QD(0x500DE798, 0x50002A43, 1785), tags: { make: 1480, model: 1504, zoom: 1920 }, crop: [] },
+    init: 0x503D4EAA, task: { id: 30, entry: 0x503D9350, flag: null, queue: 0x60420EAE, handled: 0x503D9429 },
+    packet: { size: 284, post: 0x503D5134, fields: IF }, jpeg: IJ(0x503DF01E, 0x503DF122),
+    contexts: null, context: { at: 0x503DFBF1, dcf: 8, fnode: 32 }, reply: { fn: 0x503D5071, from: 0x503D94BA },
+    clock_set: 0x500DE2C8, clock_read: 0x500DE2E8,
+  },
+  E133: {
+    exif: { init: 0x502F539F, cflush: null, template: 0x62630628, copy: 0x502F53D1, size: 25780, time: 22736,
+      date: QD(0x500D6B21, 0x50002ABD, 1785), tags: { make: 1480, model: 1504, zoom: 1920 }, crop: [] },
+    init: 0x503C9169, task: { id: 30, entry: 0x503CD7C4, flag: null, queue: 0x60420FF8, handled: 0x503CD89D },
+    packet: { size: 284, post: 0x503C93F3, fields: IF }, jpeg: IJ(0x503D3776, 0x503D38B5),
+    contexts: null, context: { at: 0x503D4473, dcf: 8, fnode: 32 }, reply: { fn: 0x503C9330, from: 0x503CD956 },
+    clock_set: 0x500D6651, clock_read: 0x500D6671,
+  },
+  E129: {
+    exif: { init: 0x502D6B27, cflush: null, template: 0x62638004, copy: 0x502D6B59, size: 25700, time: 22116,
+      date: QD(0x500EA9AE, 0x50002CA5, 1785), tags: { make: 1480, model: 1504, zoom: 1920 }, crop: [] },
+    init: 0x503A4A7A, task: { id: 30, entry: 0x503A900B, flag: null, queue: 0x60421362, handled: 0x503A90F4 },
+    packet: { size: 284, post: 0x503A4D04, fields: IF }, jpeg: IJ(0x503AF13D, 0x503AF25B),
+    contexts: null, context: { at: 0x503AFCED, dcf: 8, fnode: 32 }, reply: { fn: 0x503A4C41, from: 0x503A9185 },
+    clock_set: 0x500EA4BD, clock_read: 0x500EA4DD,
   },
 };
 // REC_IMAGE's task natively (rec_image; src/fw/facts.mjs recImage), where recFile reads REC_FILE's parts: E143's as
@@ -909,9 +947,9 @@ export function factsTests() {
   // where the AF beep asks it for its sound (E143),
   // res_nand, the resource loader's NAND areas, which lie elsewhere in each body's NAND (E146's and E147's sound index
   // at 0x4e3e0000, X: a scan of their loaders) and are given where they were checked (E143), and rec_native, given
-  // where the rule reads the body's own REC version (src/fw/facts.mjs recFile, recFileQueue: fact rec_file) and its S2
-  // was seen to record so: E142's REC_FILE runs natively, E130's, E145's and E133's, which port through it, inline
-  // their start and finish (docs/model-survey.md finding 123)
+  // where the rule reads the body's own REC version (src/fw/facts.mjs recFile, recFileQueue, recFileInline: fact
+  // rec_file) and its S2 was seen to record so: E142's REC_FILE runs natively by recFileQueue, E130's and E133's,
+  // which port through it, by recFileInline, E145's by neither (docs/model-survey.md findings 123, 131 to 136)
   const OWN = new Set(['name', 'bin', 'version', 'res_block', 'rom_len', 'rom_sha256', 'image_base', 'res_len', 'res_sha256',
     'panels', 'card_fs', 'board', 'port_via', 'overrides', 'carry', 'checked', 'return_stubs', 'call_skips',
     'vsync_alias_flags', 'ui_out', 'res_nand', 'rec_native', ...Object.keys(KNOBS)]);
@@ -1037,6 +1075,17 @@ export function factsTests() {
       // (36,a2)) and the status test after the parameter set's call made `mov d0,d3` (0x50542c9e: 82 -> 83)
       const kept = refused(0x50549b8e, 0x12, /keeps the create's handle at 0x50549b8d in another form/), set = refused(0x50542c9e, 0x83, /0 times in the set's form/);
       ok(kept === true && set === true, `recImage: the create's handle kept in another form and another test after the set's call refused: ${kept}, ${set}`);
+    }
+    // recFileInline too: E130's image with the loop's state log before the reply made 63 (0x503d94ab: mov 62,d0)
+    // and with the record step's status kept in d3 (0x503d9429: mov d0,d2 -> mov d0,d3)
+    if (code === 'E130' && placed?.rec_file) {
+      const refused = (addr, v, re) => {
+        const m = run.slice();
+        m[addr - 0x50000000] = v;
+        try { recFileInline(m, at(KCB0_E143)); return 'read'; } catch (e) { return re.test(e.message) || e.message; }
+      };
+      const end = refused(0x503d94ac, 0x3f, /0 ends of REC_FILE's loop/), step = refused(0x503d9429, 0x83, /has no record step/);
+      ok(end === true && step === true, `recFileInline: the loop's other end and a status kept elsewhere refused: ${end}, ${step}`);
     }
     const ld = placed?.lens_driver;
     if (ld && PORTS[code]) {

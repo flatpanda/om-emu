@@ -3798,6 +3798,258 @@ export function recFileQueue(img, kcb) {
     contexts, clock_set: 0x50000000 + set, clock_read: 0x50000000 + clockRead,
   };
 }
+// REC_FILE's task natively, the REC version before the E144 family's (fact 'rec_file' in recFile's shape but for its
+// file context and its reply, read where recFile and recFileQueue read none; src/lab/rec.mjs; docs/model-survey.md
+// findings 131 to 136). D on E130 unless tagged; at the port's place of E143's CPU 0 kcb (KCB0_E143):
+// - the version: REC's packet has no dump (no "pExifParam " string in the image, which recFileQueue's version holds:
+//   undefined with one), REC_MAIN's request has one (usMode, usMedia, .., 0x503d53c8..0x503d5759, where it fills the
+//   packet from the request: Mode +72 from usMode, Media +76, Media2 +78, RecordDevice +82, the shot's handle +148
+//   and its record from TAKE's getter +152, 0x503d5a1b..0x503d5a4f); the packet's names here are E143's for the same
+//   uses (I)
+// - task {id, entry, flag: null, queue, handled}: the static task (taskRows) whose own code, to its first return,
+//   holds the traces of rec_file_start_process and rec_file_finish_process (one each: inlined, where recFileQueue's
+//   loop calls them; undefined where no task holds them). It keeps the packet at sp + P (`mov sp,a3; add P,a3`, P 8)
+//   and opens its loop `movhu (Q),d0; mov a3,a0; exth d0; call RECV` (task 30 0x503d9350: Q 0x60420eae, RECV
+//   0x503d50e5, no event flag); the record step is its last call before the finish's trace, after NoRecord's branch,
+//   `movhu (Status + P,sp),d2; bra; mov a3,a0; call RECORD; mov d0,d2` (0x503d941e: Status 14, RECORD 0x503d94e1,
+//   handled its return 0x503d9429), and RECORD is rec_make_file (below; undefined where it is another function:
+//   E132's is rec_file_destination_record 0x503acf1e, which calls rec_make_file 0x503acb85 for the bit 0 of
+//   RecordDevice +82, D, another form). packet.size: RECV's `mov SIZE,d1; mov "rec.c",a1` (0x503d50ef: 284), the
+//   same in the post's send (E133's post loads it as its line number, `mov SIZE,d0; mov d0,(8,sp); mov d0,d1; mov
+//   d2,d0; mov "rec.c",a1`, 0x503c9441)
+// - reply {fn, from} and the fields Free and Mode: the loop ends `movhu (Free + P,sp),d1; cmp 0,d1; bne; movhu (Dst +
+//   P,sp),d1; cmp 0,d1; bne SKIP; movhu (Mode + P,sp),d1; mov 62,d0; call; mov a3,a0; mov d2,d0; exthu d0; call
+//   REPLY; SKIP: exthu d2; cmp 8064,d2` (0x503d949a: Free 168, Dst 84, Mode 72, REPLY 0x503d5071, the function of
+//   the "REC post_msg_main" trace, from 0x503d94ba): REC_FILE answers the requester's ObjResponse queue (+8) with the
+//   status where Free is set or Dst is 0. Free is REC_IMAGE's: its task stores rec_bracket_update's result there, 1
+//   for the frame that ends a shot (0x503d9d3c..0x503d9d44, 0x503d6b93..0x503d6ba7)
+// - packet.post: "REC post_msg"'s function (0x503d5134), which REC_IMAGE's task calls with Q after its image
+//   (rec_make_image_finish inlined, 0x503d9e33 for Mode 4097; at least one load of Q outside the task leads to it)
+// - packet.fields: pExifParam, the shot's record the loop loads before its finish trace, `movhu (Mode + P,sp),d0;
+//   mov (pExifParam + P,sp),a2; or ..` (0x503d942a: 152), which rec_jpeg_exec takes from the packet before its first
+//   call (`mov a0,a2`, then `mov (152,a2),a3`, 0x503df01e, or `mov 152,a0; add a2,a0`, E133 0x503d3777) and the
+//   header maker serializes (0x503df1d4, 0x503df6db); HandleTarget, the receive's `mov (H,a2),d1; call` (0x503d5119:
+//   148, the handle whose abort it tests, 1..27); Addr, Size, BuffAddr1 and BuffSize1 by rec_jpeg_exec: `mov
+//   d0,(8,sp); mov d0,(Addr,a2)` after the buffer's allocation (0x503df064: 260) and after the header maker `mov
+//   (Size,a2),d1; mov d1,(..,sp); movbu (R,a2),d0; cmp 0,d0; beq; mov d1,(..,a2); mov (8,sp),d0; mov d0,(..,a2); bra;
+//   mov d1,(BuffSize1,a2); mov (8,sp),d0; mov d0,(BuffAddr1,a2)` (0x503df0cc: Size 264, the second buffer +224 / +228
+//   where the byte +192 is set, else BuffAddr1 216 and BuffSize1 220); HeaderSize, rec_jpeg_make_header's `mov H,d0;
+//   mov d0,(HeaderSize,a0)` (0x503df699: 41984 at +256); ImgAspect, rec_bracket_update's `mov 1,d0; movbu
+//   d0,(ImgAspect,a3)` (0x503d6a46: 164), which the header maker reads (`movbu (ImgAspect,a0),d0`, 0x503df234); Media
+//   and FileType, rec_make_file's fill of its context, `movhu (Media,a0),d0; movhu d0,(..,sp); movhu
+//   (FileType,a0),d0; movhu d0,(..,sp)` (0x503d9566: 76 and 272; FileType 1 is JPG with DCF kind 1 by its tables
+//   0x60911ee0 and 0x60911f08). Media2 and RecordDevice null: this form's record path reads neither (rec_make_file
+//   takes Media alone)
+// - jpeg: exec, make_image and the header maker by their traces (0x503df01e, 0x503df122, 0x503df1d2); header H;
+//   fill null (no header clear through the image engine: exec's calls are the size estimate 0x503e3bf7 and
+//   0x503e3c1d, the buffer 0x503e0a4f, by Mode the encode, the work area's free 0x503e0bfa and the header maker);
+//   image {record: null, addr, size}
+// - context {at, dcf, fnode}, contexts null: rec_make_file keeps its file context on its own stack (84 bytes at sp +
+//   28, 0x503d952d..0x503d957c: +8 the DCF block, +12 the chain write's and +28 the entry's blocks, +36 pExifParam,
+//   +40 the time record, +44 HeaderSize, +48 the size, +56 / +60 this write's bytes and buffer, +68 Media, +70
+//   FileType, +72 the colour space, +74 the status) and passes it to each builder in a0. The builders are the
+//   whole-file recorder's (the one function with blocks of 64, 96 and 116 bytes, 0x512dd4a3: its calls after them
+//   the lock 0x503df6e9, the clock read, the open 0x503df720, the reservation 0x503df8ee, the chain write
+//   0x503df963, the entry 0x503dfabf and the registration 0x503dfbf1, whose three send FILECLBK's codes 0x32, 0x66
+//   and 0x33 once each, to their first return); rec_make_file is the one other function that calls the open. at: the
+//   registration's entry, where a0 is the context with the file's fnode; dcf: the DCF block's place in it, the
+//   open's `mov 1,d0; mov (dcf,a0),a3; movhu d0,(a3)` (0x503df785: 8); fnode: `mov (24,a3),d1; mov d1,(fnode,a0)`
+//   after its send (0x503df7f4: 32, the fnode the DCF block's +24 returns)
+// - init: REC's module init as recFileQueue reads it (0x503d4eaa before REC_MAIN's task 0x503d4f08)
+// - exif: the template's copy after its init with no cache flush, the tag table and the dates as recFileQueue reads
+//   them (the copy 0x5030362b, 26320 bytes, the template 0x62667fe4); the date set in two more orders of the same
+//   instructions (EXIF_DATES_I: E130 0x50305c65, time 22708, original 1785; E129 0x502d92ef); crop []: the header
+//   maker divides by no crop area (it makes the area from ImgAspect and the image size's code, 0x503df290..)
+// - clock_set, clock_read: as recFileQueue reads them (0x500de2c8, 0x500de2e8, the recorder's clock read)
+// E130, E133 and E129 read every part (X: their sessions record S2's file natively with them). Returns undefined
+// where the image holds the E144 version's dump (E145, whose loop inlines the two as well), no trace table, no task
+// of this form (the E118 family) or another record step (E132); throws for a part of the task's form not found or
+// found twice.
+const REC_ALLOC96 = [[0x80, 0x40, 0xdd], [0x80, 0x60, 0xdd], [0x80, 0x74, 0xdd]], REC_INLINE_SPAN = 0x400;
+// the loop's open, record step, end and load of the shot's record; rec_jpeg_exec's buffer and results; rec_make_file's
+// fill of Media and FileType
+const REC_INLINE_RECV = [0xfc, 0xac, null, null, null, null, 0x9c, 0x18];
+const REC_INLINE_STEP = [0xf8, 0xbe, null, 0xca, 0x09, 0x9c];
+const REC_INLINE_END = [0xf8, 0xbd, null, 0xa5, 0x00, 0xc9, 0x09, 0xf8, 0xbd, null, 0xa5, 0x00, 0xc9, 0x14, 0xf8, 0xbd, null, 0x80, 0x3e, 0xcd, null,
+  null, null, null, 0x9c, 0x88, 0x1c, 0xcd, null, null, null, null, 0x1e, 0xfa, 0xca, 0x80, 0x1f];
+const REC_INLINE_SHOT = [0xf8, 0xbc, null, 0x5e, null, 0xfc, 0xe4];
+const REC_INLINE_KEEP = [0x42, 0x08, 0xfa, 0x12];
+const REC_INLINE_BUFFS = [0xfa, 0x06, null, null, 0x46, null, 0xfa, 0x42, null, null, 0xa0, 0x00, 0xc8, 0x0e, 0xfa, 0x16, null, null, 0x58, 0x08,
+  0xfa, 0x12, null, null, 0xca, 0x0c, 0xfa, 0x16, null, null, 0x58, 0x08, 0xfa, 0x12];
+const REC_INLINE_FILL = [0xf8, 0x60, null, 0xf8, 0x93, null, 0xfa, 0x60, null, null, 0xf8, 0x93];
+// the EXIF set's date formatting in this version's two orders (recFileQueue's third form is E130's): `add DTO,a2;
+// add TIME,d0; mov d0,(12,sp); mov a2,a0; mov d0,a1` (E130 0x50305c65) and `add DTO,a2; mov a2,a0; add TIME,d0; mov
+// d0,(12,sp); mov d0,a1` (E129 0x502d92ef), then `mov CODE,d0` and the call
+const EXIF_DATES_I = [
+  { pat: [0xfa, 0xd2, null, null, 0xfa, 0xc0, null, null, 0x42, 0x0c, 0x98, 0xf1, 0xe1, 0x2c, null, null], time: 6, code: 14 },
+  { pat: [0xfa, 0xd2, null, null, 0x98, 0xfa, 0xc0, null, null, 0x42, 0x0c, 0xf1, 0xe1, 0x2c, null, null], time: 7, code: 14 },
+];
+export function recFileInline(img, kcb) {
+  const rule = 'recFileInline', D = (o) => h8(0x50000000 + o), s16 = (o) => (img[o] | img[o + 1] << 8) << 16 >> 16;
+  const u16 = (o) => img[o] | img[o + 1] << 8;
+  const step = (p) => p + (callAt(img, p)?.len ?? insnLength(img[p], img[p + 1]));
+  // the instructions of the function from `from` to its first return (calls stepped over), and its calls
+  const walk = (from, span = REC_DUMP_SPAN) => { const v = []; for (let p = from; p < from + span && !isRet(img, p); p = step(p)) v.push(p); return v; };
+  const callsIn = (v) => v.filter((p) => callAt(img, p)).map((p) => ({ at: p, ...callAt(img, p) }));
+  const hits = (v, pat) => v.filter((p) => bytesAt(img, p, pat));
+  // the one hit of a form in a function's instructions, or a throw that names it
+  const one = (v, pat, what) => {
+    const at = hits(v, pat);
+    if (at.length !== 1) throw new Error(`${rule}: ${at.length} ${what}${at.length ? ` (${at.map(D).join(', ')})` : ''}, want one`);
+    return at[0];
+  };
+  if (hasString(img, REC_DUMP_FIELD)) return undefined;
+  const scan = recTraceScan(img, rule);
+  if (scan === null) return undefined;
+  const sites = (name, kind) => { const id = scan.ids.get(name); return id === undefined ? [] : scan.traces.get(`${kind}:${id - 1}`) ?? []; };
+  const traced = (name, kind) => {
+    const fn = recTraced(img, scan, rule, name, kind);
+    if (fn === undefined) throw new Error(`${rule}: no function holds the trace of "${name}" (kind 0x${kind.toString(16)})`);
+    return fn;
+  };
+  // the task: the static task whose own code holds the start's and the finish's traces
+  const starts = sites('rec_file_start_process', REC_ENTRY_TRACE), finishes = sites('rec_file_finish_process', REC_ENTRY_TRACE);
+  const tasks = [];
+  for (const row of taskRows(img, kcb, rule)) {
+    const e = row.entry - 0x50000000;
+    if (e < 0 || e >= img.length) continue;
+    const body = walk(e, REC_INLINE_SPAN), at = new Set(body);
+    const s = starts.filter((t) => at.has(t)), f = finishes.filter((t) => at.has(t));
+    if (s.length || f.length) tasks.push({ row, e, body, s, f });
+  }
+  if (!tasks.length) return undefined;
+  if (tasks.length > 1 || tasks[0].s.length !== 1 || tasks[0].f.length !== 1 || starts.length !== 1 || finishes.length !== 1) {
+    throw new Error(`${rule}: ${tasks.length} static tasks hold ${starts.length} start and ${finishes.length} finish traces (${tasks.map((t) => D(t.e)).join(', ')}), want one task with one of each`);
+  }
+  const [{ row, e, body, f: [finish] }] = tasks, calls = callsIn(body), recv = calls[0];
+  const pk = body.findIndex((p) => img[p] === 0x3f && img[p + 1] === 0x23);
+  if (!recv || pk < 0 || body[pk] > recv.at || !bytesAt(img, recv.at - 8, REC_INLINE_RECV)) {
+    throw new Error(`${rule}: REC_FILE's task ${D(e)} does not keep its packet at sp + P in a3 and open with \`movhu (Q),d0; mov a3,a0; exth d0; call\``);
+  }
+  const P = img[body[pk] + 2], Q = u32(img, recv.at - 6);
+  // the record step: the last call before the finish's trace, its status kept
+  const rc = calls.filter((c) => c.at < finish).pop();
+  if (!rc || img[rc.at + rc.len] !== 0x82 || !bytesAt(img, rc.at - 6, REC_INLINE_STEP)) throw new Error(`${rule}: REC_FILE's task ${D(e)} has no record step \`movhu (Status + P,sp),d2; bra; mov a3,a0; call; mov d0,d2\` before its finish trace ${D(finish)}`);
+  const Status = img[rc.at - 4] - P, handled = rc.at + rc.len;
+  // the whole-file recorder's builders; the record step is rec_make_file, the one other function that calls its open
+  const recs = [];
+  for (let o = img.indexOf(0x80); o >= 0; o = img.indexOf(0x80, o + 1)) {
+    if (!bytesAt(img, o, REC_ALLOC96[0])) continue;
+    let p = o;
+    for (const pat of REC_ALLOC96.slice(1)) {
+      let q = -1;
+      for (let k = p + 3; k < p + REC_ALLOC_GAP && q < 0; k++) if (bytesAt(img, k, pat)) q = k;
+      p = q;
+      if (p < 0) break;
+    }
+    if (p < 0) continue;
+    const cs = [];
+    for (let q = p + 2; q < p + REC_SPAN && cs.length < REC_CALLS; q = step(q)) { const c = callAt(img, q); if (c) cs.push({ at: q, to: c.to }); }
+    recs.push({ at: o, calls: cs });
+  }
+  if (recs.length !== 1 || recs[0].calls.length < REC_CALLS) throw new Error(`${rule}: ${recs.length} whole-file recorders with blocks of 64, 96 and 116 bytes (${recs.map((r) => D(r.at)).join(', ')}), want one that makes ${REC_CALLS} calls after them`);
+  const [, , clock, open, , , entry, register] = recs[0].calls, c = STORAGE_LIB.rec.codes;
+  for (const [fn, code, what] of [[open, c.open, 'open'], [entry, c.entry, 'entry'], [register, c.register, 'registration']]) {
+    const sends = walk(fn.to, REC_INLINE_SPAN).filter((o) => img[o] === 0x85 && img[o + 1] === code && (callAt(img, o + 2) || (img[o + 2] === 0x18 && callAt(img, o + 3)))).length;
+    if (sends !== 1) throw new Error(`${rule}: the recorder's ${what} ${D(fn.to)} sends code 0x${code.toString(16)} ${sends} times to its first return, want once`);
+  }
+  const opens = callsTo(img, open.to).filter((p) => p !== open.at), mk = opens.length === 1 ? entryOf(img, opens[0], REC_INLINE_SPAN) : undefined;
+  if (mk === undefined) throw new Error(`${rule}: ${opens.length} calls of the recorder's open ${D(open.to)} outside the recorder, want one in a called function (rec_make_file)`);
+  // (E132's record step is rec_file_destination_record, which calls rec_make_file for RecordDevice's bit 0: another
+  // form, not this one's)
+  if (rc.to !== mk) return undefined;
+  const mf = walk(mk);
+  // the loop's end: Free, the reply
+  const end = one(body, REC_INLINE_END, `ends of REC_FILE's loop ${D(e)} (Free's and Dst's tests, the reply)`);
+  const Free = img[end + 2] - P, Mode = img[end + 16] - P, replyFn = callAt(img, end + 27).to, replyFrom = end + 32;
+  if (traced('REC post_msg_main', 0x1101) !== replyFn) throw new Error(`${rule}: REC_FILE's reply ${D(replyFn)} is not the function of the "REC post_msg_main" trace`);
+  // the size a send or receive passes the kernel with its file name: `mov SIZE,d1; mov FILE,a1`, one in the function
+  const sizeIn = (fn, what) => {
+    const v = walk(fn, REC_FN_SPAN), names = v.filter((p) => img[p] === 0xfc && img[p + 1] === 0xdd);
+    const sizes = names.map((p) => (img[p - 3] === 0x2d ? p - 3 : bytesAt(img, p - 2, [0x81, 0x88]) ? v.filter((q) => q < p && bytesAt(img, q, [0x2c, null, null, 0x42, 0x08])).pop() : undefined));
+    if (sizes.length !== 1 || sizes[0] === undefined) throw new Error(`${rule}: ${sizes.length} sizes with a file name in ${what} ${D(fn)}, want one`);
+    return s16(sizes[0] + 1);
+  };
+  const size = sizeIn(recv.to, "REC_FILE's receive"), post = traced('REC post_msg', REC_POST_TRACE);
+  if (sizeIn(post, 'the post') !== size) throw new Error(`${rule}: the post ${D(post)} sends another size than REC_FILE's receive (${size})`);
+  const last = body[body.length - 1];
+  const posts = halfLoads(img, Q).filter((p) => p < e || p > last).filter((p) => {
+    let q = p, c = null;
+    for (let k = 0; k < REC_CALL_WALK && !(c = callAt(img, q)); k++) q = step(q);
+    return c?.to === post;
+  });
+  if (!posts.length) throw new Error(`${rule}: no post of REC_FILE's queue ${h8(Q)} through ${D(post)} outside its task`);
+  const ht = one(walk(recv.to, REC_FN_SPAN), [0xfa, 0x06, null, null, 0xcd], `reads of the shot's handle before a call in REC_FILE's receive ${D(recv.to)}`);
+  // REC's module init: `mov 8191,d0; ret` right before the function of the "rec_main" trace
+  const mainTrace = sites(REC_TRACE_NEXT, 0x1000);
+  let init;
+  for (const t of mainTrace) for (let p = t; p > t - REC_FN_SPAN && init === undefined; p--) if (bytesAt(img, p - 6, [0x2c, 0xff, 0x1f]) && isRet(img, p - 3) && runsTo(img, p, t)) init = entryOf(img, p - 6, REC_FN_SPAN);
+  if (mainTrace.length !== 1 || init === undefined) throw new Error(`${rule}: ${mainTrace.length} "rec_main" traces, no REC module init ending right before its function`);
+  // rec_jpeg_exec: the packet's shot record and Mode, the buffer, the results; the header maker's HeaderSize
+  const exec = traced('rec_jpeg_exec', REC_ENTRY_TRACE), make = traced('rec_jpeg_make_image', REC_ENTRY_TRACE), header = traced('rec_jpeg_make_header', REC_ENTRY_TRACE);
+  const ex = walk(exec), hd = walk(header);
+  if (!bytesAt(img, finish - 5, REC_INLINE_SHOT) || img[finish - 3] - P !== Mode) throw new Error(`${rule}: REC_FILE's finish trace ${D(finish)} does not follow \`movhu (Mode + P,sp),d0; mov (pExifParam + P,sp),a2\` with the loop's Mode (+${Mode})`);
+  const pExifParam = img[finish - 1] - P, first = callsIn(ex)[0]?.at ?? exec;
+  const takes = ex.filter((p) => p < first && img[p] === 0x92 && ((bytesAt(img, p + 1, [0xfa, 0x2e]) && s16(p + 3) === pExifParam) || bytesAt(img, p + 1, [0x90, pExifParam, 0xf1, 0x78])));
+  if (takes.length !== 1) throw new Error(`${rule}: rec_jpeg_exec ${D(exec)} does not take the shot's record from the packet's +${pExifParam} (\`mov a0,a2\`, then \`mov (d16,a2),a3\` or \`mov imm8,a0; add a2,a0\`) before its first call`);
+  if (!callsIn(ex).some((c) => c.to === make) || !callsIn(ex).some((c) => c.to === header)) throw new Error(`${rule}: rec_jpeg_exec ${D(exec)} does not call rec_jpeg_make_image ${D(make)} and rec_jpeg_make_header ${D(header)}`);
+  const keep = one(ex, REC_INLINE_KEEP, `keeps of the file's buffer \`mov d0,(8,sp); mov d0,(Addr,a2)\` in rec_jpeg_exec ${D(exec)}`);
+  const bf = one(ex, REC_INLINE_BUFFS, `sets of the buffers from Size in rec_jpeg_exec ${D(exec)}`);
+  const hs = one(hd.filter((p) => img[p] === 0xfc && img[p + 1] === 0xcc && u32(img, p + 2) < 0x10000 && bytesAt(img, p + 6, [0xfa, 0x10])), [0xfc], `stores of HeaderSize in rec_jpeg_make_header ${D(header)}`);
+  const ia = one(walk(traced('rec_bracket_update', REC_ENTRY_TRACE)), [0x80, 0x01, 0xfa, 0x53], 'sets of ImgAspect to 1 in rec_bracket_update');
+  const ImgAspect = s16(ia + 4);
+  if (!hits(hd, [0xfa, 0x40, ImgAspect & 0xff, ImgAspect >> 8]).length) throw new Error(`${rule}: rec_jpeg_make_header ${D(header)} does not read ImgAspect (+${ImgAspect})`);
+  const fl = one(mf, REC_INLINE_FILL, `fills of the file context's Media and FileType in rec_make_file ${D(mk)}`);
+  if (img[fl + 12] !== img[fl + 5] + 2) throw new Error(`${rule}: rec_make_file ${D(mk)} does not store FileType right after Media in its context`);
+  const ob = walk(open.to, REC_INLINE_SPAN);
+  const dcf = one(ob, [0x80, 0x01, 0xf8, 0x2c, null, 0xf0, 0x73], `sets of the DCF block's op through the context in the open ${D(open.to)}`);
+  const fn = one(ob, [0xf8, 0x07, 0x18, 0xf8, 0x14], `stores of the DCF block's fnode in the context in the open ${D(open.to)}`);
+  // the EXIF module: the template's copy right after its init's return, no cache flush before it; the dates; the tags
+  const copies = [];
+  for (let o = img.indexOf(0xdd); o >= 0; o = img.indexOf(0xdd, o + 1)) {
+    const cp = o - 1, t = u32(img, cp + 2);
+    if (!bytesAt(img, cp, EXIF_COPY) || !bytesAt(img, cp - 3, [0xdf, 0x00, 0x04]) || callAt(img, cp - 10)?.len === 7) continue;
+    const inner = entryOf(img, cp - 3, REC_FN_SPAN);
+    if (inner !== undefined && bytesAt(img, inner, [0xfc, 0xdc, ...le32(t)]) && bytesAt(img, inner - EXIF_INIT.length, EXIF_INIT)) copies.push({ cp, t, init: inner - EXIF_INIT.length });
+  }
+  const dts = [];
+  for (let o = img.indexOf(0xfa); o >= 0; o = img.indexOf(0xfa, o + 1)) {
+    for (const form of EXIF_DATES_I) if (bytesAt(img, o, form.pat) && callAt(img, o + form.pat.length)) dts.push({ o, form });
+  }
+  if (copies.length !== 1 || dts.length !== 1) throw new Error(`${rule}: ${copies.length} EXIF template copies after an init without a cache flush and ${dts.length} date sets of this version's forms, want one each`);
+  const [{ cp: copy, t: template, init: exifInit }] = copies, [{ o: dt, form }] = dts, fmt = callAt(img, dt + form.pat.length);
+  const c1 = dt + form.pat.length + fmt.len, c2 = c1 + EXIF_DATE_COPY.length + 6;
+  if (!bytesAt(img, c1, EXIF_DATE_COPY) || !bytesAt(img, c2, EXIF_DATE_COPY) || callAt(img, c1 + 7).to !== callAt(img, c2 + 7).to) throw new Error(`${rule}: the date set ${D(dt)} does not copy its date twice`);
+  const date = { format: 0x50000000 + fmt.to, code: u16(dt + form.code), copy: 0x50000000 + callAt(img, c1 + 7).to, original: u16(dt + 2), created: u16(c1 + 5), modified: u16(c2 + 5) };
+  const dtTag = [];
+  for (let o = img.indexOf(0x32); o >= 0; o = img.indexOf(0x32, o + 1)) if (bytesAt(img, o, [0x32, 0x01, 0x02, 0x00, 20, 0, 0, 0])) dtTag.push(o);
+  if (dtTag.length !== 1) throw new Error(`${rule}: ${dtTag.length} EXIF DateTime tag entries, want one`);
+  const tag = new Map();
+  let lo = dtTag[0];
+  while (EXIF_TAG_TYPES.has(u16(lo - 10)) && dtTag[0] - lo < REC_TAG_SPAN * 12) lo -= 12;
+  for (let o = lo; EXIF_TAG_TYPES.has(u16(o + 2)) && o - lo < REC_TAG_SPAN * 12; o += 12) if (!tag.has(u16(o))) tag.set(u16(o), u32(img, o + 8));
+  if (tag.get(0x0132) !== date.modified || tag.get(0x9003) !== date.original || tag.get(0x9004) !== date.created || ![0x010f, 0x0110, 0xa404].every((t) => tag.has(t))) throw new Error(`${rule}: the EXIF tag table ${D(lo)} does not hold the date set's dates`);
+  // the camera's clock setting and its clock read, the one the recorder calls
+  const unset = oneAt(img, CLOCK_UNSET_RET, rule, 'clock settings'), clockRead = unset === null ? -1 : unset + CLOCK_UNSET_RET.length + 2;
+  const set = unset !== null && callAt(img, clockRead) ? entryOf(img, unset, REC_FN_SPAN) : undefined;
+  if (set === undefined || clock.to !== clockRead) throw new Error(`${rule}: no clock setting ending \`mov 10499,d0; movhu d0,(8,a2); ret\` before the recorder's clock read ${D(clock.to)}`);
+  const fields = { pExifParam, HandleTarget: s16(ht + 2), BuffAddr1: s16(bf + 34), BuffSize1: s16(bf + 28), HeaderSize: s16(hs + 8), Status, Mode,
+    Media: img[fl + 2], Media2: null, RecordDevice: null, ImgAspect, Free, FileType: s16(fl + 8) };
+  for (const [name, at] of Object.entries(fields)) if (at !== null && (at < 0 || at + REC_FIELDS[name] > size)) throw new Error(`${rule}: ${name} (+${at}) does not lie in the ${size}-byte packet`);
+  return {
+    exif: {
+      init: 0x50000000 + exifInit, cflush: null, template, copy: 0x50000000 + copy, size: -s16(copy + 7) * 4,
+      time: u16(dt + form.time), date, tags: { make: tag.get(0x010f), model: tag.get(0x0110), zoom: tag.get(0xa404) }, crop: [],
+    },
+    init: 0x50000000 + init,
+    task: { id: row.id, entry: row.entry, flag: null, queue: Q, handled: 0x50000000 + handled },
+    packet: { size, post: 0x50000000 + post, fields },
+    jpeg: { exec: 0x50000000 + exec, make_image: 0x50000000 + make, header: u32(img, hs + 2), fill: null, fill_return: null, image: { record: null, addr: s16(keep + 4), size: s16(bf + 2) } },
+    contexts: null, context: { at: 0x50000000 + register.to, dcf: img[dcf + 4], fnode: img[fn + 5] },
+    reply: { fn: 0x50000000 + replyFn, from: 0x50000000 + replyFrom },
+    clock_set: 0x50000000 + set, clock_read: 0x50000000 + clockRead,
+  };
+}
 // The E118 family's REC header maker (fact 'rec_header', src/lab/recheader.mjs; docs/model-survey.md findings 102 to
 // 104): REC_IMAGE's header maker of an older REC version than E143's, whose packet has no dump (no "pExifParam " in
 // the image) and whose REC_FILE receives in another form than recFile's (no load of "rec_file.c", finding 93; rec.c
@@ -4738,7 +4990,7 @@ export function readPlacedFacts({ img, at }) {
   const lensQueue = at(LENS_COMMAND_QUEUE_E143);
   const lens = kcb !== null && taSt !== null && qerd !== null && lensQueue !== null ? lensDriver(img, { kcb, taSt, qerd, commandQueue: lensQueue }) : undefined;
   if (lens !== undefined) facts.lens_driver = lens;
-  const recF = kcb !== null ? recFile(img, kcb) : undefined, rec = recF ?? (kcb !== null ? recFileQueue(img, kcb) : undefined);
+  const recF = kcb !== null ? recFile(img, kcb) : undefined, rec = recF ?? (kcb !== null ? recFileQueue(img, kcb) ?? recFileInline(img, kcb) : undefined);
   if (rec !== undefined) facts.rec_file = rec;
   // REC_IMAGE's parts where REC is recFile's version (REC_FILE on its flag, which REC's shared init binds); the E144
   // family's version (recFileQueue: REC_FILE on its queue alone) is not recImage's form

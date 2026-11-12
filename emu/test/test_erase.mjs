@@ -27,13 +27,17 @@ import { createHash } from 'node:crypto';
 import zlib from 'node:zlib';
 
 // the bodies whose eraseCurrent runs natively (X, 2026-11-11; the rule's calls and REC_FILE's or the recorder's
-// registration in the DCF database, src/lab/camapp.mjs erase_native), held strictly both ways
-export const ERASE_NATIVE = new Set(['E143', 'E146', 'E147', 'E144', 'E148', 'E139', 'E134', 'E137', 'E142', 'E140', 'E125']);
+// registration in the DCF database, src/lab/camapp.mjs erase_native), held strictly both ways; E130, E133, E129 and
+// E122 since REC_FILE runs natively there too (e130-recfile, e118-recfile; X at the round's merge: their DCF database
+// holds the session's pictures; E118 and E120 have no erase fact)
+export const ERASE_NATIVE = new Set(['E143', 'E146', 'E147', 'E144', 'E148', 'E139', 'E134', 'E137', 'E142', 'E140', 'E125', 'E130', 'E133', 'E129', 'E122']);
 // the bodies whose Delete in playback opens the erase dialog in the lab (X; finding 138 for E143 and, with the media
 // status at the word the setter's SD case stores, E137 and E125, finding 111 for the others), held strictly: on a
 // body outside them Delete is pressed and must open nothing (or, on NO_DELETE_KEY's, be refused by the player), and on
-// a native one the session then erases by S-PLAYSEQ's erase itself (erase() below)
-export const ERASE_DIALOG = new Set(['E143', 'E146', 'E147', 'E144', 'E148', 'E139', 'E134', 'E137', 'E142', 'E140', 'E125', 'E130', 'E133']);
+// a native one the session then erases by S-PLAYSEQ's erase itself (erase() below). The E118 family's Delete opens it
+// since its REC_FILE runs natively (X at the round's merge; I: the DCF database now holds the pictures, the one
+// difference there); on E122 the dialog's Yes then makes no request in the lab (X, cause not read)
+export const ERASE_DIALOG = new Set(['E143', 'E146', 'E147', 'E144', 'E148', 'E139', 'E134', 'E137', 'E142', 'E140', 'E125', 'E130', 'E133', 'E122', 'E118', 'E120']);
 // the bodies whose UI_IN tables hold no Delete key (finding 111; the player refuses the key there, X)
 export const NO_DELETE_KEY = new Set(['E145', 'E129', 'E132']);
 // of the native bodies, those whose shooting service starts again after PLAY's return from playback in the lab (X); on

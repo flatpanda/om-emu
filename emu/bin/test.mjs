@@ -26,7 +26,7 @@
 // file system on E143, E146, E147, E144, E142, E134, E148, E137, E125, E130, E133, E129 and the E118 family (S2's
 // file with its header maker's Exif) and SDXC cards on E143 (test_storage.mjs), INFO's still information
 // in playback with two pictures, RIGHT, LEFT, OK's wizard, INFO's three views and the erase or its refusal on the 19
-// bodies (test_playinfo.mjs), the erase in playback natively on eleven bodies and its refusal on the eight others
+// bodies (test_playinfo.mjs), the erase in playback natively on fifteen bodies and its refusal on the four others
 // (test_erase.mjs), a tap on the touch mode icon on E143, ten bodies of the E144
 // family and the E118 family, and in the super control panel on E144 and the E118 family, and with the EVF active
 // on the E118 family and the E144 family's bodies with an EVF, the AF Targeting Pad off and on (test_touch.mjs),

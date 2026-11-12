@@ -30,7 +30,8 @@
 //              reset loses the messages
 //   scpuSession  (firmware; the model of OM_EMU_MODEL) a play session's start through the link: the stand-ins, the
 //              frames of PER_SCPU's start and the store init with their replies, IRQ 119 attached, the pins in
-//              PER_SCPU's order, PER_SCPU waiting with no errlog of its own; H-UIINSCAN's 0x88 where the body has it;
+//              PER_SCPU's order, PER_SCPU waiting with no errlog of its own; S-SCPUDEV taking the power manager's
+//              0x14 on E143 and E146 only (docs/hle-gaps.md 4.7.6); H-UIINSCAN's 0x88 where the body has it;
 //              the inbound path natively: 0x08 {0} polled and dispatched to the producer, PC13 high reported as 0x08
 //              {1} and decoded by UI_IN as the switch 0x0400; a body without the link's pins stops at its start; on
 //              a body that runs its power manager and power-off (power.mjs: E143, E146, E147): the power manager's start frames
@@ -452,6 +453,10 @@ export async function scpuSession() {
   const pins = lab.sim.m.devices.linkpins.log.map(([n, v]) => `${({ ready: 'r', reset: 's', request: 'q' })[n]}${v}`).join(' ');
   ok(pins.startsWith('r1 s1 r0 s0 q1 r1 q0 r0 r1 r0 r1 q1 '), `${MODEL}: the pins in PER_SCPU's order (r ready, s reset, q request): ${pins}`);
   ok(lab.nk.state(link.tid) === 4 && lab.scpu_dev.state === 'idle' && lab.scpu_dev.powered && !link.open, `${MODEL}: PER_SCPU waits, the sub-CPU idle with its gate open, the channel closed`);
+  // the power manager's 0x14: taken where the sub-CPU's image is the one its handler is read from (E143's, which E146
+  // carries), refused on the other linked bodies (src/lab/menu.mjs; docs/hle-gaps.md 4.7.6)
+  const sources = ['E143', 'E146'].includes(MODEL);
+  ok(lab.scpu_dev.takesSources === sources, `${MODEL}: S-SCPUDEV ${sources ? 'takes' : 'refuses'} the power manager's 0x14 (takesSources ${lab.scpu_dev.takesSources})`);
   // (a log the body's entry expects is not PER_SCPU's: E147's card's file system asks the SCPU clock first, models.mjs)
   const own = lab.kernel.errors.filter(([c]) => (c >>> 16) === 0x1900 && !EXPECTED_ERRLOG.has(c >>> 0)).map(([c]) => '0x' + c.toString(16));
   ok(own.length === 0, `${MODEL}: no errlog of PER_SCPU's or PER_SIO's: ${own}`);

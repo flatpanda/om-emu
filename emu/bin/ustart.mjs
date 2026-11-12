@@ -48,7 +48,8 @@
 // The record of a task: its trace in order (boot marks, prints, the tasks it would start, the conditions granted,
 // error-log calls, ticks), and the stop that ends the run: a fault (with the access the machine refused), a wait
 // without a timeout (the wrapper's call and the call chain), a timed wait that 5000 ticks do not end, a spin, or the
-// task's own end. The first condition granted is the task's first stop in the lab as it is.
+// task's own end. The first condition granted is the task's first stop in the lab as it is. A known condition that
+// holds while the task sleeps on it for 5000 ticks is the probe's misreading, a StartProbeError, not a stop.
 import { fileURLToPath } from 'node:url';
 import { FirmwareError, disasm, runtime } from '../src/lab/hle.mjs';
 import * as K from '../src/lab/kernel.mjs';
@@ -236,7 +237,8 @@ export class StartProbe {
     };
     const u = (a, size) => (size === 1 ? sim.read(a, 1)[0] : sim.u32(a) >>> 0);
     // S-STARTCOND at the idle point: the condition the sleeping task polls (by the chain c), granted where it does not
-    // hold; false where the sleep is none the probe knows
+    // hold; the poll's site (the return address the condition is known by), or false where the sleep is none the probe
+    // knows
     const condition = (c) => {
       const k = c.indexOf(S.phase.poll);
       if (k >= 0) {
@@ -245,7 +247,7 @@ export class StartProbe {
           grant({ what: 'phase', n, at: h8(c[k + 1]), address: h8(S.phase.word), who: `USTART_L2's CREQ of ${h8(S.phase.set)}(${n})` });
           sim.word(S.phase.word, word | 1 << (n - 1));
         }
-        return true;
+        return c[k + 1];
       }
       for (const [i, ret] of c.entries()) {
         const p = S.polls.get(ret);
@@ -256,7 +258,7 @@ export class StartProbe {
           grant({ what, ...(value === null ? { n: want } : {}), at: h8(value === null ? c[i + 1] : ret), address: short.length === 1 ? h8(short[0]) : short.map(h8), who });
           for (const a of short) sim.write(a, size === 1 ? pack('<B', want) : pack('<I', want));
         }
-        return true;
+        return ret;
       }
       const a = c.length ? byte_wait(c[0]) : null;
       if (a === null) return false;
@@ -264,14 +266,21 @@ export class StartProbe {
         grant({ what: 'byte', at: h8(c[0]), address: h8(a), who: S.bytes.get(a) ?? 'not read' });
         sim.write(a, pack('<B', 1));
       }
-      return true;
+      return c[0];
     };
     // H-PROBETICK: at the idle point, a tick while the task is in a timed wait
-    let site = null, run = 0;
+    // (a condition that holds while the task sleeps on it wakes the task within its sleep; one that holds for
+    // DELAY_LIMIT ticks in a row and does not is one the probe misreads: an error, not a stop)
+    let site = null, run = 0, held = null, holds = 0;
     const pending = () => {
       if ((nk.state(tid) & 0x1F) === DMT || !nk.timed_waiters().includes(tid)) return false;
-      const c = chain();
-      if (condition(c)) { site = null; return true; }
+      const c = chain(), n = rec.granted.length, known = condition(c);
+      if (known !== false) {
+        site = null;
+        if (rec.granted.length > n || known !== held) { held = known; holds = 0; }
+        if (++holds > DELAY_LIMIT) throw new StartProbeError(`${rec.task}: the start condition polled at ${h8(known)} holds, and the task has slept on it for ${DELAY_LIMIT} ticks`);
+        return true;
+      }
       // a timed wait for no start condition the probe knows: time passes, up to DELAY_LIMIT ticks at one site
       const at = c[0] ?? 0;
       if (at !== site) { site = at; run = 0; }

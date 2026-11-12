@@ -20,7 +20,8 @@
 //                  USRSTART5      waits for the phases 8, 9 and 10; then 0x518f724a's NAND access writes 0x98d011c0
 //                and the check of what USRSTART3's stop needs: with EXP's init 0x50553649 (USRSTART2's call at
 //                0x501e90c4) run first it does not divide, goes on to the mark 3_a and stops at the DML driver's
-//                write of 0x98800348; a second run of a task gives the same record; an unknown task is refused
+//                write of 0x98800348; a second run of a task gives the same record; an unknown task is refused; a
+//                condition the probe misreads (a poll pointed at another word) is an error after 5000 ticks
 //   node emu/test/test_ustart.mjs
 import { fileURLToPath } from 'node:url';
 
@@ -147,6 +148,13 @@ export async function ustartProbe() {
   let refused = null;
   try { probe.run(['USRSTART1']); } catch (e) { if (e instanceof StartProbeError) refused = e.message; else throw e; }
   ok(refused !== null && /no start task USRSTART1/.test(refused), `an unknown task is refused: ${refused}`);
+  // a condition the probe misreads: USR_FAST_APP's camera-on poll pointed at another word, which the probe then sets
+  // while the task sleeps on 0xa32dddcc: an error after 5000 ticks, not a stop and not a run without end
+  const wrong = new StartProbe(env);
+  wrong.S = { ...START_E143, polls: new Map([...START_E143.polls].map(([k, v]) => [k, k === 0x501E677C ? ['camera-on', 0xA32DDDD0, 4, 1, 'a wrong word'] : v])) };
+  let misread = null;
+  try { wrong.run(['USR_FAST_APP']); } catch (e) { if (e instanceof StartProbeError) misread = e.message; else throw e; }
+  ok(misread !== null && /polled at 0x501e677c holds, and the task has slept on it for 5000 ticks/.test(misread), `a misread condition: ${misread}`);
   return { checks, bad };
 }
 

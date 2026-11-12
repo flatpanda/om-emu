@@ -540,8 +540,9 @@ export async function storageSession() {
           ok(steps && steps.set === 1 && steps.run === 1 && steps.result === 1 && steps.id !== 0 && steps.id === steps.handle && steps.released === 1, `S-JPEGENC's steps: the parameter set skipped once, the run and Jpeg_Result stood in once, the create's id (the set's handle) and the release native: ${JSON.stringify(steps)}`);
           // ImageParam's four sources natively: TAKE's shot table has no buffer (0x25000402 from each lookup), MM none
           // for handle 0 (0x08010004), and nothing else logged before the parameter set's call; each body's callers
-          // pinned as run (X; on E146 and E147 the first lookup's log comes twice: rec_ImgProCtrl_Dst_Bayer calls that
-          // lookup there before the sources, D on E146 0x50525505)
+          // pinned as run (X; on E146 and E147 the first lookup's log comes twice: the Bayer source's
+          // rec_misc_select_bayer asks it again when its answer's high byte is clear, D on E146 0x5052af6b and
+          // 0x5052af7a, E147 0x5053a192 and 0x5053a1a1; X on E146: the lookup's only two calls in the shot)
           const SRC = { E143: [['0x503afa1f', '0x503afb54', '0x503afb9f', '0x503afc35'], '0x50534ec2', 1], E146: [['0x503afacd', '0x503afc0a', '0x503afc57', '0x503afcf1'], '0x50511fbc', 2],
             E147: [['0x503b9d62', '0x503b9e97', '0x503b9ee2', '0x503b9f78'], '0x50521140', 2] }[MODEL];
           const SRC_LOGS = SRC ? SRC[0].flatMap((at, k) => [...new Array(k === 0 ? SRC[2] : 1).fill(['0x25000402', at]), ['0x08010004', SRC[1]]]) : null;

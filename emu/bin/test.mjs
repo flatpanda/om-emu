@@ -199,13 +199,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...pn.bad, ...pd.bad].forEach((x) => console.log('  ', x));
   bad += pn.bad.length + pd.bad.length;
 }
-// control camapp 3's power-off and EVF switch (test_c3power.mjs, docs/hle-gaps.md 4.3.6): where each stops and why
+// control camapp 3 against the golden sessions (test_c3power.mjs, docs/hle-gaps.md 4.3.6, 4.3.10): where the power-off
+// stops and why, the lever's off in the components, the display switch as the firmware's own output change, the
+// sequence parts' module-9 read
 {
-  const { powerOffSession, evfSwitchSession } = await import('../test/test_c3power.mjs');
-  const po = await powerOffSession(), ev = await evfSwitchSession();
-  console.log(`camapp 3's power-off (TRA 586, the flash's stop): ${po.checks - po.bad.length}/${po.checks}; camapp 3's EVF switch (the histogram's stop): ${ev.checks - ev.bad.length}/${ev.checks}`);
-  [...po.bad, ...ev.bad].forEach((x) => console.log('  ', x));
-  bad += po.bad.length + ev.bad.length;
+  const { powerOffSession, leverSession, evfSwitchSession, standbySession } = await import('../test/test_c3power.mjs');
+  const po = await powerOffSession(), lv = await leverSession(), ev = await evfSwitchSession(), sb = await standbySession();
+  console.log(`camapp 3's power-off (TRA 586, the flash's stop): ${po.checks - po.bad.length}/${po.checks}; the lever's off in the components: ${lv.checks - lv.bad.length}/${lv.checks}; camapp 3's display switch (the firmware's own): ${ev.checks - ev.bad.length}/${ev.checks}; the standby entry's module-9 read: ${sb.checks - sb.bad.length}/${sb.checks}`);
+  [...po.bad, ...lv.bad, ...ev.bad, ...sb.bad].forEach((x) => console.log('  ', x));
+  bad += po.bad.length + lv.bad.length + ev.bad.length + sb.bad.length;
 }
 // the VSC's histogram unit in play (test_hist.mjs, docs/hle-gaps.md 4.2.7): the live histogram with S-SCENE's live
 // view and playback's four histograms from the unit's bins, without and with --cpu2 native; the EVF switch under a run

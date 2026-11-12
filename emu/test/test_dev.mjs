@@ -116,6 +116,10 @@ export async function vscHistUnits() {
     t.reg(R.DMAEN, 0); t.reg(R.HIST2, 0x00110112);       // source IMG2 at the read
     ok(t.bin(0) === 0 && t.v.dget(V.D.HIST_KEPT_READS) === 2, 'with the written HIST2[17:16] not 0 too');
     ok(t.v.histRuns() === 1 && t.v.histMeasured() === 0 && t.v.histBins(C).source === false, `no run counted: ${JSON.stringify([t.v.histRuns(), t.v.histMeasured()])}`);
+    // the next run: once it begins the ended run's bins are gone, and a read before its end is HIST_UNMODELLED
+    t.start(); t.frame();
+    ok(t.hist().state === 2 && t.v.histBins(C) === null && t.bin(0) === 'BUS',
+      `a read in the next run, the last one's bins kept: ${JSON.stringify([t.hist().state, t.v.histBins(C)])}`);
   }
   // INTEN1 bit 8: the end raises the channel's IRQ, a write-1 to INTST1 bit 8 lowers it
   {
@@ -352,6 +356,17 @@ async function vscHistBins(createMachine, V, BUS) {
     t.reg(R.HIST2, 0x00100002);
     t.run();
     ok(nz(t.bins(128)) === '0:8 1:12 50:4 127:8', `source 0 IMG1's: ${nz(t.bins(128))}`);
+  }
+  // the source's own DMAEN bit (5 - source): IMG2 off with IMG1 on is no source, its bins 0; IMG2 on alone counted
+  {
+    const t = fresh([...AREA, [R.HIST2, 0x00110002]]);
+    picture(t.v, PLANE2, 8, 16, () => 64);
+    t.run();
+    const off = t.v.histBins(C), zero = t.words(64).every((x) => x === 0);
+    t.reg(R.DMAEN, 0x10);
+    t.run();
+    ok(off?.source === false && zero && nz(t.bins(128)) === '32:32' && t.v.histMeasured() === 1,
+      `IMG2 the source: with DMAEN 0x20 none (${JSON.stringify(off?.source)}, its bins 0 ${zero}), with 0x10 ${nz(t.bins(128))} (want 32:32)`);
   }
   // the frame measured: the bank latched when the run began and the rows memory holds at its end; a picture and an
   // area written after the end do not change the bins read

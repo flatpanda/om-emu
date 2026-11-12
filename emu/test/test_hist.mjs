@@ -17,7 +17,8 @@
 //                  histograms of a test pattern the test writes into the plane at the first start (S-PLAYDEC, the
 //                  lab's stand-in for the decode, writes no pixel), counted here by the lab's PNG conversion
 //                  (A-VSCHIST-6); they reach CapPlh's four buffers and the GUI draws them as four panels of bars in
-//                  GUI layer 1, white, red, green and blue, each bar ceil(bin * 78 / 32) rows high
+//                  GUI layer 1, white, red, green and blue, each bar ceil(bin * 78 / 32) rows high; the detail view's
+//                  frame is refused for the highlight unit's area alone (HIAREA1-3, FEATURE_UNOBSERVED): the next stop
 //   histEvfSession  LV under the running histogram (docs/hle-gaps.md 4.3.6): the run that is on ends on the TFT's
 //                  channel, which still runs (the open has changed the opened word and not yet closed the channel),
 //                  and the ISR does what its code says (0x501dec88..e4): the device not open, errlog 0x37001418, the
@@ -250,12 +251,14 @@ export async function histInfoSession() {
       const hue = rgb.map(([r, g, b]) => (Math.min(r, g, b) > 200 ? 'white' : r > g && r > b ? 'red' : g > r && g > b ? 'green' : b > r && b > g ? 'blue' : '?'));
       ok(heights.every((h, p) => same(h, tall[p])) && same(hue, ['white', 'red', 'green', 'blue']),
         `${tag}: the GUI's four panels of bars follow the bins (${heights.map((h, p) => same(h, tall[p]))}; e.g. B's bars ${heights[3].join(' ')}), drawn ${hue.join(', ')} (palette indices ${colours.map(h8)}: ${JSON.stringify(rgb)})`);
-      // the detail view's frame: the next stop is outside the unit (the highlight unit's area HIAREA1-3, written at
-      // PLAY by 0x501e1c14 / 0x501e1c47 / 0x501e1c51, is in A13's never-written class)
+      // the detail view's frame, the next stop (X), outside the unit: refused for the highlight unit's area HIAREA1-3
+      // alone (written at PLAY by 0x501e1c14 / 0x501e1c47 / 0x501e1c51, in A13's never-written class):
+      // FEATURE_UNOBSERVED at each of the three and at nothing else
       let frame = null;
       try { frame = Array.isArray(s.frame()[2]) ? 'composes' : 'no frame'; } catch (e) { frame = e.message; }
-      const hi = /FEATURE_UNOBSERVED/.test(frame) && [0x048c, 0x0490, 0x0494].every((o) => frame.includes(`off 0x${o.toString(16).padStart(4, '0')}`)) && !/off 0x0(04c|474|478|47c|748|74c) /.test(frame);
-      ok(frame === 'composes' || hi, `${tag}: the detail view's frame composes, or is refused for HIAREA1-3 alone and none of the histogram's registers: ${frame.slice(0, 300)}`);
+      const refusals = [...frame.matchAll(/"(\w+) pc 0x[0-9a-f]+ ch (\d) off 0x([0-9a-f]{4}) /g)].map((m) => `${m[1]} ${m[2]} ${m[3]}`);
+      ok(/^composite FEATURE_UNOBSERVED: /.test(frame) && same(refusals, ['048c', '0490', '0494'].map((o) => `FEATURE_UNOBSERVED ${TFT} ${o}`)),
+        `${tag}: the detail view's frame is refused for HIAREA1-3 alone (${refusals.join(', ')}): ${frame.slice(0, 300)}`);
     } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 700)}`); }
     try { pl?.close_session(); } catch { /* the session stopped */ }
   }

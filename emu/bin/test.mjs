@@ -180,6 +180,16 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...ca.bad, ...hp.bad, ...hw.bad, ...md.bad, ...tr.bad, ...fr.bad].forEach((x) => console.log('  ', x));
   bad += ca.bad.length + hp.bad.length + hw.bad.length + md.bad.length + tr.bad.length + fr.bad.length;
 }
+// the Fn lever and the AF mode in the default session (test_fnlever.mjs, docs/hle-gaps.md 4.3.8; E143): the idle lever
+// at API_LEVER_SW_1, S-SEQSTANDBY at the standby gate, S1 with and without the half-press AF; the sequence parts' own
+// StartFocus by the focus mode under control camapp 3
+{
+  const { fnLeverSession, fnLeverSequenceSession } = await import('../test/test_fnlever.mjs');
+  const fl = await fnLeverSession(), fq = await fnLeverSequenceSession();
+  console.log(`the Fn lever and the AF mode: ${fl.checks - fl.bad.length}/${fl.checks}; the sequence's StartFocus by the focus mode: ${fq.checks - fq.bad.length}/${fq.checks}`);
+  [...fl.bad, ...fq.bad].forEach((x) => console.log('  ', x));
+  bad += fl.bad.length + fq.bad.length;
+}
 // S-MODPOST (test_modpost.mjs): the direct posts to S-MODACK's queues the module's task would take, taken under
 // camapp 3, no module queue holding a message over a long workload, a post it does not take named by the guard
 {

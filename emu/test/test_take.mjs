@@ -2,11 +2,11 @@
 //   takeSession  a default session has no probe (camapp.take null, no take option in the recorded options, S-MODACK
 //                answers TAKE_FUNC's queue); with --take probe, under camapp 1 and camapp 2 (control camapp 2), the
 //                application's start reaches the shooting screen with TAKE_FUNC and TAKE_FUNC_CP native, and the
-//                record of what they take and ask is exactly START (camapp 2: START_COMPONENTS): command 0's start
+//                record of what they take and ask is exactly START_LAB (camapp 2: START_COMPONENTS): command 0's start
 //                sequence in TAKE_FUNC_CP (the camera driver's requests 148 and 6, BC_EXEC, the native LENS_EXEC,
 //                STB_EXTERNAL twice and the dust filter, each answered where TAKE waits, then TAKE's reply to the
-//                application), commands 13 and 18 (and with the components 29 and 22); then a live view, S1, S2, MENU
-//                in and out reach TAKE with nothing, a mode change P -> A is MODE_CHANGE, and the through start
+//                application), commands 13, 18 and 22 (with the components 29 before 22); then a live view, S1, S2,
+//                MENU in and out reach TAKE with nothing, a mode change P -> A is MODE_CHANGE, and the through start
 //                (command 25) is never taken: the shooting component that would start the through image does not
 //                get TRA 991 while S-TRAACK answers it (docs/hle-gaps.md 4.1.2). Round 2 (H-TAKENBINIT,
 //                docs/hle-gaps.md 4.1.6): TAKE_EXPOSE and TAKE_POWER_MANAGER run natively too; command 13's request
@@ -40,6 +40,10 @@ export const START = [...CP0, 'TAKE_FUNC <= 13', 'TAKE_FUNC -> TAKE_EXPOSE 0 syn
   'TAKE_FUNC <= 18', 'TAKE_FUNC -> TAKE_FOCUS 0 sync (native)', 'TAKE_FOCUS <= 0', 'TAKE_FOCUS -> reply', 'TAKE_FUNC -> reply'];
 const C22 = ['TAKE_FUNC <= 22', 'TAKE_FUNC -> TAKE_FOCUS 2 sync (native)', 'TAKE_FOCUS <= 2', 'TAKE_FOCUS -> reply', 'TAKE_FUNC -> reply'];
 export const START_COMPONENTS = [...START, 'TAKE_FUNC <= 29', 'TAKE_FUNC -> reply', ...C22];
+// camapp 1 since 2026-11-11 (docs/hle-gaps.md 4.3.8): the probe starts with the Fn lever at API_LEVER_SW_2
+// (play.mjs LEVER_PROBE_STATE) and S-SEQSTANDBY takes the start's setFocusModeChange(1), so the application asks
+// TAKE for the focus mode's change (command 22) as camapp 2's start does
+export const START_LAB = [...START, ...C22];
 const PROBE_STAND_INS = ['H-TAKEINIT', 'S-TAKEREQ', 'S-TAKECAM', 'S-TAKEUSF', 'H-TAKENBINIT', 'H-STBINIT', 'S-HOTSHOE', 'H-SIOMAP',
   'A-HOTSHOE-1', 'A-HOTSHOE-2', 'H-TAKEFOCUS', 'H-CAMINIT'];
 export const MODE_CHANGE = [...C22, ...C22, ...C22];
@@ -118,7 +122,7 @@ export async function takeSession() {
       const same = (got, want, what) => ok(JSON.stringify(got) === JSON.stringify(want), `camapp ${mode}, ${what}: the record ${JSON.stringify(got)}, want ${JSON.stringify(want)}`);
       ok(pl.opts().take === 'probe' && [...PROBE_STAND_INS, 'S-MODACK'].every((x) => pl.stand_ins_in_use().includes(x)) && s.status().gui === '0x0108',
         `camapp ${mode}: the probe runs and the start reaches the shooting screen (GUI ${s.status().gui}, stand-ins ${pl.stand_ins_in_use().filter((x) => x.includes('TAKE'))})`);
-      same(since(), mode === 2 ? START_COMPONENTS : START, 'the start');
+      same(since(), mode === 2 ? START_COMPONENTS : START_LAB, 'the start');
       idle(1000);
       s.scene_input({ liveview: true }); s.camapp.pump(); idle(1000);
       s.key('s1', 'down'); s.camapp.pump(); idle(600);

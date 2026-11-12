@@ -118,7 +118,13 @@
 //              without START_SHOOTING_MOVIE the GUI shows nothing while recording. During the movie the shooting phase
 //              query (0x50ab57e9, 100 with no sequence controller) answers the phases the shooting component's sequence
 //              would enter (MOVIE_PHASE), so getMovieState is 1 and the GUI lays out its REC mark and recording time.
-//              Which notification each module sends, and when, is not known: the order follows the callbacks' names
+//              Which notification each module sends, and when, is not known: the order follows the callbacks' names.
+//              On E143 S1's focus callbacks follow the focus mode as the sequence parts' own test does (HALF_AF's
+//              comment): in MF, or with the half-press AF off, none is posted
+//   S-SEQSTANDBY (E143, control camapp 1, where no sequence controller exists) the sequence parts' standby at
+//              OlyHfwOpeShoot's gate 0x50ab5f6f (STANDBY_GATE_RETURN's comment): the gate's phase query answers 101
+//              while S-RELSEQ's release sequence is at rest, so Shooting::setFocusModeChange writes MODE_AF_CHANGE
+//              and the AF mode follows the Fn lever
 //   S-SHUTTERSND (a host that plays sound: PlaySession.audio, src/lab/audio.mjs) the mechanical shutter's sound,
 //              which on the camera is the mechanism's, synthesized (src/lab/shuttersnd.mjs): an open click at each
 //              release's START_EXPOSE and a close click at its END_EXPOSE's due time, the shutter time in use later
@@ -126,11 +132,13 @@
 //              the AF module would hold it, fed from S-RELSEQ's focus callbacks (see TAKE_STATUS_SET): S1 down sets
 //              the still sequence's READY bit in the shared take status, END_FOCUS(OK) its READY_FINISH bit and the
 //              take information's isFocus, and the AF module's state getter answers indicator 1; S1 up clears them.
+//              Where S1 runs no AF (HALF_AF's comment) READY_FINISH's bit follows READY's at once, with no isFocus,
+//              no indicator and no AF lock callback.
 //              It also posts the AF lock's callback, CBS_AF_LOCK(1) after END_FOCUS(OK) and CBS_AF_LOCK(0) at S1 up,
 //              whose 0 re-arms the GUI's beep (CBS_AF_LOCK's comment). The application's own changedFocus then plays
 //              the AF beep natively down to UI_OUT's sound request and, with the audio hardware, to the audio port
 import { FirmwareError, where, runtime, disasm, SP } from './hle.mjs';
-import { OPENED_WORD, HDMI_MASK, VSC_CHANNEL } from './display.mjs';
+import { OPENED_WORD, HDMI_MASK, VSC_CHANNEL, PROP_GET } from './display.mjs';
 import { AssertionError } from './errors.mjs';
 import { RPC_ENTRIES, bootFacts } from './menu.mjs';
 import { packRegs } from './sim.mjs';
@@ -414,6 +422,35 @@ export const CBS = fact('cbs', CBS_E143);
 // setter 0x50cc6121: 113 at 0x50c87a17 (MOV_READY, I), 114 MOV_READY_FINISH, 115 MOV_RECORDING, 117 MOV_END), which the
 // phase query 0x50ab57e9 answers in place of 100 (no sequence controller in camapp 1). getMovieState is 1 at 113..115.
 const PHASE_QUERY = A(0x50AB57E9);
+// S-SEQSTANDBY (E143; docs/hle-gaps.md 4.3.8; D unless tagged). OlyHfwOpeShoot's gate 0x50ab5f6f answers 1 where the
+// phase query answers 101, the sequence parts' STANDBY (X: control camapp 3's answer at the shooting screen and with
+// the menu, the Super Control Panel or playback open; 102 from S1's READY on). The gate has three callers: the two
+// forms of Shooting::setFocusModeChange (API 0x20183: 0x50b53072 -> 0x50adfbc3 and 0x50b53009 -> 0x50adfb2a), which
+// write MODE_AF_CHANGE (535) only behind it and return 0xf0000058 otherwise, and
+// OlyHfwLowApiWrap::getShutterSpeedLimit (at 0x50ac4792, reached with MODE_CAMERA 6 only: the dial's M and B, X). With
+// no sequence controller ((0x6035f024) 0: control camapp 1, where the HLS components do not run) the query answers
+// 100: the start's setFocusModeChange and every later one of the Fn lever's were refused (X). The stand-in answers
+// the gate's own call of the query (the return address 0x50ab5f74, no other of the query's callers) with 101 while
+// that word is 0 and S-RELSEQ's release sequence is at rest (standby(): no shutter stage held, no callback of a
+// release pending, no recording), under control camapp 1 alone: under control camapp 2 the word is 0 at the start
+// too (X: answered there, the start took one more focus-mode request to TAKE, test_take.mjs), and the components'
+// query stays the firmware's. That the camera's sequence stands by through a rec view's end is not measured (the
+// lab's own shot under control camapp 3 does not end): until S-RELSEQ's last callback of a release the gate keeps
+// its refusal
+const STANDBY_GATE_RETURN = A(0x50AB5F74), SEQ_CONTROLLER = A(0x6035F024), PHASE_STANDBY = 101;
+// HALF_AF: whether S1 runs an AF (E143; docs/hle-gaps.md 4.3.8; D unless tagged). The sequence parts send
+// evTraResShtStartFocus (TRA 1323, the reactive's START_FOCUS) from READY's entry (0x50c88324 -> 0x50cad835) only
+// where 0x50ca8b44 answers 1, whose last test 0x50ccef3c reads the property MODE_FOCUS (25, through 0x503ee3bf: 0
+// S-AF, 1 MF, 2 C-AF; X: the store's 0 reads 0 and its 2, the shooting screen's MF, reads 1). 0 asks
+// MODE_HALF_RELEASE_AF_SAF (1933) for 1, or, with the store's MODE_FOCUS at 11 or 12 (0x50bcacce; which modes they
+// are is not read), MODE_START_STAR_AF (2092) for 0; 2 asks MODE_HALF_RELEASE_AF_CAF (1934) for 1; any other value, MF
+// among them, answers 0. Without it the sequence builds neither 1323 nor END_FOCUS's 1321 and READY ends at once (X:
+// control camapp 3 with --take probe at SW_2, phase 103 and the take status's READY and READY_FINISH bits in S1's
+// step, isFocus 0; at SW_1 it builds 1323 and waits in phase 102). 0x50ca8b44's tests before it (0x504106f8, a state
+// test and the take capability's 0x50bc71cc, objects control camapp 1 does not have) are taken as passing (I). The
+// property and setting ids are E143's: another body's S1 posts its focus callbacks as before
+const PROP_FOCUS = 25, FOCUS_SAF = 0, FOCUS_CAF = 2, FOCUS_STAR = [11, 12];
+const HALF_AF_SAF = 1933, HALF_AF_CAF = 1934, STAR_AF_START = 2092;
 // S-RELSEQ's release sequences run only while the application's shooting service runs: OlyHfwOpeShoot's
 // startShootingService (its start, 0x50ae1124) and endShootingService (0x50ad7e8a; playback ends it), each at the load
 // of its opening trace (bin/port.mjs places both by src/fw/facts.mjs shootingService).
@@ -691,8 +728,9 @@ export const CAMAPP_STAND_INS = {
   "S-DISPFRAME": "CPU 3's task DISP_FRAME on the lab CPU: its start (the frame colour table 0x51016eb1, the data pointers of the three settings objects its draws read), the TFT and EVF channels' eight face-plane colours converted from that table as the channel setup does (0x501db1b4), the TFT frame-state byte 0xa32ddaf6 at 0 (the value of a display setup with the configuration word 0xFACE, I), and one turn of its loop, natively, for each post to its flag (ring [3][0], function 0x5002587a); its 1 ms sleeps while it waits for the frame plane's buffer swap (0x5100d398..) run on the display clock (A10), so the VSC latches the new address at a frame boundary. It draws the AF frames, the focus indicator and S-SUBJECT's subject frames into its 8-bit plane (VSC IMG3, format 2); the composite shows the plane under the A19 opt-in",
   "S-RECVIEW": "(with S-SCENE's live view) from START_RECVIEW to END_RECVIEW the live-view plane holds the frame S-SCENE rendered at the capture (S2 down, the exposure in use) instead of the live scene; the camera would show the developed image through its playback path, which the lab does not run (I)",
   "S-TAKEFRAME": "the frame display mode the TAKE module sets for the live view (0x5039f583 -> 0x500256d9): 4, the AF frames and the indicator (the mask TAKE requests in S-AF is I); on E143, where MDET_DL runs natively, with 1 added (TAKE's request 1, the subject frames DISP_FRAME draws from MDET's frame table) while S-TAKEMDET has subject detection started and the live scene is shown, and taken away otherwise (I: TAKE's live-view request sets that bit unless one of its conditions clears it, which are not read in a running camera, docs/om1-subject-spec.md 5.1 and U10)",
-  "S-AFOSD": "the AF module's OSD upload (upload_af_info 0x508c8554 -> 0x500257ce) at S-RELSEQ's END_FOCUS: in focus, indicator 1 and one frame at the AF target (centre 400, 300, 60 x 60 in DISP_FRAME's coordinates, I); not in focus, indicator 9 and no frame (I); at the S1 release, none. A build whose frame plane has no AF upload (E145, the TG-7: modes 1 and 2 only, src/fw/facts.mjs framePlane) is given none: no code of its image stores the plane's mode-3 frames (X, a byte scan), so the camera's AF draws none there either (I)",
-  "S-AFLOCK": "(E143, while UI_OUT runs: H-UIOUTSTART) the AF lock as the shooting sequence, the take capability and the AF module would hold it, fed from S-RELSEQ's focus callbacks: S1 down sets the still sequence's READY bit (2) of the shared take status's word 0 and END_FOCUS(OK) its READY_FINISH bit (4), both through the status's own setter 0x50ab61ee (which bit is which state: D, the sequence parts' READY and READY_FINISH entries call the setters of 2 and 4), and the take information's isFocus (0x62af6e28) as CapTre_TakeReady::notifyAFOK stores it; while the lock holds the AF module's state getter 0x509b06f6 answers indicator 1, S-AFOSD's in-focus code (natively it answers 0: the module is not initialised in the lab); S1 up clears the two bits through the status's clear 0x50ab52ad and isFocus. The application's getCondition then sees the lock, and its changedFocus plays the AF beep natively through playAfSound, the sound control's playTarget and api_sound to UI_OUT's sound request (X: sound 0, volume 60, the settings id 18 the Setup item 1037 sets too; with the audio hardware it sounds, S-SOUNDRES's lab-made beep). The GUI plays it once per lock until its own afSound flag is cleared again: S-AFLOCK posts the AF lock's callback CBS_AF_LOCK (155) through S-RELSEQ's post, 1 after END_FOCUS(OK) and 0 at S1 up, and the application turns 0 into GUI event 0x0300002d, whose handlers clear the flag (D), so each half press in focus beeps once (X); that the camera's sequence posts it so is I (the shooting reactive's AF lock case posts CBS_AF_LOCK with 1 or 0, D; when the AF module raises it is not traced). Not installed under control camapp 2 (the HLS components run there)",
+  "S-AFOSD": "the AF module's OSD upload (upload_af_info 0x508c8554 -> 0x500257ce) at S-RELSEQ's END_FOCUS: in focus, indicator 1 and one frame at the AF target (centre 400, 300, 60 x 60 in DISP_FRAME's coordinates, I); not in focus, indicator 9 and no frame (I); at the S1 release, none; where S1 runs no AF (E143: MF or the half-press AF off, S-RELSEQ) no upload at all (I). A build whose frame plane has no AF upload (E145, the TG-7: modes 1 and 2 only, src/fw/facts.mjs framePlane) is given none: no code of its image stores the plane's mode-3 frames (X, a byte scan), so the camera's AF draws none there either (I)",
+  "S-AFLOCK": "(E143, while UI_OUT runs: H-UIOUTSTART) the AF lock as the shooting sequence, the take capability and the AF module would hold it, fed from S-RELSEQ's focus callbacks: S1 down sets the still sequence's READY bit (2) of the shared take status's word 0 and END_FOCUS(OK) its READY_FINISH bit (4), both through the status's own setter 0x50ab61ee (which bit is which state: D, the sequence parts' READY and READY_FINISH entries call the setters of 2 and 4), and the take information's isFocus (0x62af6e28) as CapTre_TakeReady::notifyAFOK stores it; while the lock holds the AF module's state getter 0x509b06f6 answers indicator 1, S-AFOSD's in-focus code (natively it answers 0: the module is not initialised in the lab); S1 up clears the two bits through the status's clear 0x50ab52ad and isFocus. The application's getCondition then sees the lock, and its changedFocus plays the AF beep natively through playAfSound, the sound control's playTarget and api_sound to UI_OUT's sound request (X: sound 0, volume 60, the settings id 18 the Setup item 1037 sets too; with the audio hardware it sounds, S-SOUNDRES's lab-made beep). The GUI plays it once per lock until its own afSound flag is cleared again: S-AFLOCK posts the AF lock's callback CBS_AF_LOCK (155) through S-RELSEQ's post, 1 after END_FOCUS(OK) and 0 at S1 up, and the application turns 0 into GUI event 0x0300002d, whose handlers clear the flag (D), so each half press in focus beeps once (X); that the camera's sequence posts it so is I (the shooting reactive's AF lock case posts CBS_AF_LOCK with 1 or 0, D; when the AF module raises it is not traced). Where S1 runs no AF (MF or the half-press AF off, S-RELSEQ) S1 down sets READY's and READY_FINISH's bits at once and nothing else: no isFocus, the getter native, no CBS_AF_LOCK, so no beep (X: control camapp 3's own sequence with TAKE native reaches READY_FINISH in S1's step in MF, the word 0x00100007, isFocus 0; docs/hle-gaps.md 4.3.8). Not installed under control camapp 2 (the HLS components run there)",
+  "S-SEQSTANDBY": "(E143, control camapp 1, the default, where no sequence controller exists; not under control camapp 2 or 3) the sequence parts' standby at OlyHfwOpeShoot's gate 0x50ab5f6f, which answers 1 only where the shooting phase query 0x50ab57e9 answers 101 (D). The HLS components' sequence parts answer 101 at the shooting screen and with the menu, the Super Control Panel or playback open, and 102 from S1 on (X: control camapp 3); without them the query answers 100 for good, so both forms of Shooting::setFocusModeChange (0x50adfbc3, 0x50adfb2a) returned 0xf0000058 and MODE_AF_CHANGE (535) was never written: the Fn lever's focus function (the factory lever function, the menu's mode2) was dead (X). The stand-in answers the gate's own call of the query (return 0x50ab5f74; the query's other call sites, 223 by a byte scan, are left alone) with 101 while the controller word (0x6035f024) is 0 and S-RELSEQ's release sequence is at rest: no shutter stage held, no callback of a release pending, no recording (I: that the camera's sequence is back in standby when the rec view ends). The lever then writes 535, 0 at API_LEVER_SW_1 and 1 at API_LEVER_SW_2, and the shooting screen shows S-AF or MF as under control camapp 3 (X: the same frames). The gate's third caller, OlyHfwLowApiWrap::getShutterSpeedLimit (0x50ac4792, with the mode dial at M or B), takes its standby branch too, as under control camapp 3 (X; docs/hle-gaps.md 4.3.8)",
   "S-SUBJECT": "(on a body where MDET_DL does not run natively: none today, E143 runs it, S-MDETDL; with S-SCENE's live view, while the camera's subject-detection setting names a kind) the subject detection CPU 3's MDET would run: S-SCENE's subjects of that kind (the rider stands for motorsports) written into MDET's frame table as list records (four corners each, through DISP_FRAME's own transform taken back, so they land on the subject as the panel shows it), the getter's aspect pair and active byte set, the frame mode's subject bit added (I) and UP_FACE posted (0x50025747); DISP_FRAME reads the table through FACE's and MDET's getters and draws the frames natively (subject.mjs; docs/om1-subject-spec.md 5.1, 5.5)",
   "S-TAKEMDET": "(E143, with S-SCENE's live view, while the camera's subject-detection setting names a kind) the requests TAKE and take_mov would make to MDET, which do not run in the lab: before the first, TAKE's registration of its LAF status-change callback (0x506d98ed through mdet_laf_dl_set_status_change_callback 0x506e68b4, as TAKE's start does at 0x506d8109), then mdet_dl_start(kind), mdet_dl_change_mode(kind) at a change of kind and mdet_dl_end at OFF, and one mdet_dl_offer_yc_data per S-SCENE frame step with the record {frame number, buffer id, 640 x 480, still, no digital zoom, DISP_FRAME's aspect code}, each natively from the lab task (LAF maps the offer's aspect code to the frame getter's aspect pair natively); the buffer id names a 640 x 480 YC buffer the stand-in takes from S-HEAP (not written: nothing reads its pixels), whose lock, address and release the YC buffer manager is answered for. TAKE's callback, when LAF's tracking status changes, posts TAKE its message 81, which stays in TAKE's queue: TAKE does not run. Its handler would hand take_mov the LAF mode bit of MDET's tracking (0x10, from TAKE's tracking sources), whose rise starts LAF's PDT / TRC side through TAKE_MOV's start and makes take_mov ask LAF for a chase cycle after its EMS1 run on every live-view frame; those frames come from the image pipeline's live-view sequencer, which does not run, and LAF started without them stops writing MDET's frame table (X), so the message is not served in a session (test_mdet.mjs serves it: the start and the end run natively). The LAF parameters and the chase requests are not made (mdet.mjs; docs/om1-subject-spec.md 5.3, 5.7, 5.8, 5.9)",
   "H-TAKEINIT": "(--take probe, E143) TAKE_FUNC's module init (0x502ccff8, USTART's call at 0x50024c2d) natively before the application starts, after USTART2's stage word 0xa32d6d58 is set to 1 as USTART2 sets it (0x5012abef; TAKE_FUNC_CP's start polls it), then TAKE_FUNC (task 105) and TAKE_FUNC_CP (task 106) started with act_tsk as USTART starts them after the init; the application's requests to TAKE_FUNC's queue (0x5e) then go to it natively, the synchronous ones included, and leave S-MODACK (src/lab/take.mjs; docs/hle-gaps.md 4.1.4)",
@@ -744,7 +782,7 @@ export const CAMAPP_STAND_INS = {
   "S-IMGPRO": "the imgpro unit at 0x9c600000, the image library's unit 7 (src/dev/imgpro.mjs, board imgpro; docs/om1-imgpro-spec.md): its registers as storage (the power, control and parameter words its driver 0x5050a6b2..0x5050b547 names as operands; any other address a bus error, kind 6's parameter blocks, which its set-up 0x5050b328 writes through a base register, among them), the status write 1 to clear, IRQ 300 high while its end bit and the enable are set, a run started by +0x00c then +0x018 written 1 while powered up. Of the runs only kind 14's fills are computed (op 3: mode 4 the linear fill, mode 5 the rectangle fill, from the address, pitch, sizes and 32-bit value the set-up 0x5050b118 writes, and only when no other parameter word was written since the last start; how the unit reads these words is I, and the value is taken as a little-endian word at 4-byte aligned addresses, I) and their bytes written to the bus's memory; every other operation (kind 13's copies, kind 16, kind 17's scaler, which writes no +0x380, kind 6, whose op 3 writes +0x380..+0x3ac whole), a fill whose value's phase off a 4-byte boundary would matter and a read of kind 16's result are refused (a bus error). Only control camapp 3 reaches it: the menu's fill of the through image's bank (900 x 600 pixels, 0x800b800b, X; docs/hle-gaps.md 4.3.1)",
   "A-IMGPRO-1": "(with S-IMGPRO) a run of the imgpro unit writes its bytes and raises its end 1 ms of lab time after its start (I: the unit's time is not known; the request's wait allows 1000 ms, 0x5049362a, so only the lab's pace depends on it)",
   "S-CPU3": "the posts to CPU 3 through ring [3][0] are taken off the ring in order and acknowledged, each by its function: DISP_FRAME's remote calls of 0x5002587a (each setting bits of DISP_FRAME's flag), after each step, S-DISPFRAME then running one turn of DISP_FRAME for their bits; on E143 MDET's post, at once at its poster's return, and LAF's event setters, the EMS2 clear and PDT's and TRC's dispatches (src/fw/models.mjs mdet.events, mdet.posts; the dispatches with the core register at 3), each run in interrupt context, S-MDETDL then running CPU 3's tasks (mdet.mjs); a CPU 0 wait for LAF's answer (mdet_laf_end's on the flag 0x600430c4's id) is preceded by this service, the waiting call's stack kept (nested); a post of any other function stops the session; the lab has no CPU 3",
-  "S-RELSEQ": "the modules' notifications of a release as the callbacks the HLS shooting reactive posts for them (0x50af4451, CBC_SHOOTING_COMMON), while the application's shooting service runs (from startShootingService 0x50ae1124 to endShootingService 0x50ad7e8a; in playback S1 only takes the application back to shooting): S1 down -> START_FOCUS, END_FOCUS (OK, or NG when S-SCENE's live view has nothing focusable under its AF point); S2 down -> START_SHOOTING_PICTURE, START_EXPOSE, END_EXPOSE after the shutter time in use, END_SHOOTING_PICTURE, START_RECVIEW, END_RECVIEW 500 ms later, then START_THROUGH_IMAGE_PROCESS (the through image's restart, on which the GUIs of the E118 family, E142, E140, E130, E133, E145, E129 and E132 leave the rec view's display); the application's RECORDING_MOVIE function starts a recording (READY_MOVIE, START_SHOOTING_MOVIE, START_RECORDING_MOVIE, UPDATE_SHOOTING_TIME every second) or ends it (STOP_SHOOTING_MOVIE, END_RECORDING_MOVIE); meanwhile the shooting phase query 0x50ab57e9 answers the movie phases of the shooting component's sequence (113 ready, 114 ready finish, 115 recording, 117 end), so getMovieState is 1 and the GUI lays out its REC mark. The callbacks due at one lab time (END_EXPOSE and END_SHOOTING_PICTURE) are posted together before the application runs, as the modules' notifications would reach its queue while it works (E145's application defers an event until END_SHOOTING_PICTURE, X). The order follows the callbacks' names (I). No image is developed: S-RECVIEW shows the capture's frame",
+  "S-RELSEQ": "the modules' notifications of a release as the callbacks the HLS shooting reactive posts for them (0x50af4451, CBC_SHOOTING_COMMON), while the application's shooting service runs (from startShootingService 0x50ae1124 to endShootingService 0x50ad7e8a; in playback S1 only takes the application back to shooting): S1 down -> START_FOCUS, END_FOCUS (OK, or NG when S-SCENE's live view has nothing focusable under its AF point), on E143 only where the focus mode runs an AF at S1, as the sequence parts' own test before evTraResShtStartFocus decides (0x50ccef3c: the property MODE_FOCUS 0, S-AF, with MODE_HALF_RELEASE_AF_SAF 1, or 2, C-AF, with MODE_HALF_RELEASE_AF_CAF 1; in MF neither callback is posted and S-SCENE's lens stays where it is; D, and X: control camapp 3's sequence builds no START_FOCUS in MF); S2 down -> START_SHOOTING_PICTURE, START_EXPOSE, END_EXPOSE after the shutter time in use, END_SHOOTING_PICTURE, START_RECVIEW, END_RECVIEW 500 ms later, then START_THROUGH_IMAGE_PROCESS (the through image's restart, on which the GUIs of the E118 family, E142, E140, E130, E133, E145, E129 and E132 leave the rec view's display); the application's RECORDING_MOVIE function starts a recording (READY_MOVIE, START_SHOOTING_MOVIE, START_RECORDING_MOVIE, UPDATE_SHOOTING_TIME every second) or ends it (STOP_SHOOTING_MOVIE, END_RECORDING_MOVIE); meanwhile the shooting phase query 0x50ab57e9 answers the movie phases of the shooting component's sequence (113 ready, 114 ready finish, 115 recording, 117 end), so getMovieState is 1 and the GUI lays out its REC mark. The callbacks due at one lab time (END_EXPOSE and END_SHOOTING_PICTURE) are posted together before the application runs, as the modules' notifications would reach its queue while it works (E145's application defers an event until END_SHOOTING_PICTURE, X). The order follows the callbacks' names (I). No image is developed: S-RECVIEW shows the capture's frame",
   "S-SHUTTERSND": "(a host that plays sound: the players' pages) the mechanical shutter's sound at each release S-RELSEQ makes, synthesized (src/lab/shuttersnd.mjs: seeded noise through decaying resonators, no audio asset): an open click at START_EXPOSE and a close click with the charge motor at END_EXPOSE, the shutter time in use later (S-SCENE's, else 1/125 s), sent to the page over the lab's audio output (src/lab/audio.mjs, GET /api/audio) and played with WebAudio once a key or a click has started it. On the camera that sound is the mechanism's own, not the firmware's: the stock firmware plays nothing at a release and the electronic shutter is silent (I: the patch tool om-c, on the same base images, has to add both a call of the sound engine's play method before the capture's begin and the sound; in the lab's S2, where S-RELSEQ stands in for the release and that capture begin does not run, the play method is not called, X of the lab only); which drive settings select the electronic shutter is not decoded (?), so every release sounds as the mechanical shutter. Nothing about the clicks is measured from a camera (I)",
 };
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
@@ -788,9 +826,11 @@ export class CamApp {
     this.outdev_done = [];     // S-OUTDEV: [device, second, CapIod's state after the event]
     this.outdev_prop = undefined;   // S-OUTDEV: the output-device property CapIod writes in the event (null: none yet)
     this.prop_follow = false;       // camapp 3's display switch: S-PROP follows the property's writes (install)
-    this.aflock = false;       // S-AFLOCK: installed (E143 with UI_OUT running); af_stage: null, 'ready' (S1 down) or
+    this.aflock = false;       // S-AFLOCK: installed (E143 with UI_OUT running); af_stage: null, 'ready' (S1 down),
     this.af_stage = null;      // 'focus' (the AF lock holds); aflock_fed: the END_FOCUS(OK)s fed so far (the player
-    this.aflock_fed = 0;       // lists the stand-in once one was)
+    this.aflock_fed = 0;       // lists the stand-in once one was); 'finish': READY_FINISH with no AF (HALF_AF)
+    this.standby_answers = 0;  // S-SEQSTANDBY: the gate's queries answered 101 so far
+    this.s1_af = null;         // S-RELSEQ: whether the release's S1 held ran an AF (HALF_AF); null with none held
     this.components = !!session.opts.camapp_components;   // S-BOOTDONE / S-CPU3: the HLS components run (control camapp 2)
     // control camapp 3: the components with the transaction path native (TRAACK_KEPT); tra_native: [id, caller, the
     // exec's result or null where its return was not observed] of each transaction handed to the exec
@@ -1050,7 +1090,8 @@ export class CamApp {
   }
   // S-AFLOCK (TAKE_STATUS_SET's comment): 'ready' at S1 down, before START_FOCUS; 'focus' at END_FOCUS(OK), before
   // its post (the take capability's notifyAFOK comes with the AF module's result, before the application's
-  // callback, I); 'release' at S1 up. The take status through its own setter and clear, natively; the AF lock's
+  // callback, I); 'finish' where S1 runs no AF (HALF_AF's comment): READY_FINISH's bit with no isFocus;
+  // 'release' at S1 up. The take status through its own setter and clear, natively; the AF lock's
   // callback CBS_AF_LOCK (CBS_AF_LOCK's comment) posted after END_FOCUS(OK) with 1 (af_lock_post) and at the release
   // of a lock with 0, while the shooting service runs
   af_lock(stage) {
@@ -1349,7 +1390,12 @@ export class CamApp {
       h.finish(r, { d0: 0 });
     }, 'S-SETSAVE (block)');
     lab.hook(PHASE_QUERY, (h, r) => {
-      if (this.movie_phase === null) lab.passthrough(r); else h.finish(r, { d0: this.movie_phase });
+      if (this.movie_phase !== null) h.finish(r, { d0: this.movie_phase });
+      else if (ON_LAB_MODEL && !this.components && disasm(r.mdr) === STANDBY_GATE_RETURN && lab.sim.u32(SEQ_CONTROLLER) === 0
+        && this.standby()) {
+        this.standby_answers += 1;                                                   // S-SEQSTANDBY
+        h.finish(r, { d0: PHASE_STANDBY });
+      } else lab.passthrough(r);
     }, 'S-RELSEQ (shooting phase)');
     // the TAKE probe (take.mjs, --take probe): TAKE_FUNC's queue leaves S-MODACK, S-TAKEREQ on top of its hooks
     if ((this.s.opts.take ?? 'stand-in') === 'probe') { this.take = new TakeProbe(this.s, this); this.take.install(); }
@@ -1833,17 +1879,31 @@ export class CamApp {
     }
   }
   at(delay_ns, name, param = 0) { this.timed.push([this.s.lab.lab_time() + delay_ns, name, param]); this.timed.sort((a, b) => a[0] - b[0]); }
+  // S-SEQSTANDBY: S-RELSEQ's release sequence at rest (STANDBY_GATE_RETURN's comment)
+  standby() { return !this.s.pressed.has('s1') && !this.s.pressed.has('s2') && !this.timed.length && this.recording === null; }
+  // HALF_AF: whether S1 runs an AF, by the sequence parts' own test of the focus mode (E143; elsewhere always)
+  half_af() {
+    if (!ON_LAB_MODEL) return true;
+    const lab = this.s.lab, focus = lab.call(PROP_GET, { d0: PROP_FOCUS }, null, null, 20000).d0 & 0xFFFF;
+    if (focus === FOCUS_SAF) return FOCUS_STAR.includes(lab.get(PROP_FOCUS)) ? lab.get(STAR_AF_START) === 0 : lab.get(HALF_AF_SAF) === 1;
+    return focus === FOCUS_CAF && lab.get(HALF_AF_CAF) === 1;
+  }
   // After the session's key step: the release sequence for the shutter stages that went down in it, and a recording
   // started or ended by the application's RECORDING_MOVIE.
   // shooting: whether the shooting service ran as the key went down (S1 in playback ends it and starts the service).
   key(downs, rec_down = false, ups = [], shooting = this.shooting) {
-    const sc = this.s.scene, live = sc !== null && sc.liveview;
-    if (ups.includes('s1')) this.af_lock('release');   // S-AFLOCK: also when S1 goes up in playback
+    const sc = this.s.scene, live = sc !== null && sc.liveview, s1_up = ups.includes('s1');
+    if (s1_up) this.af_lock('release');            // S-AFLOCK: also when S1 goes up in playback
     if (!shooting) {                               // playback: the modules see no release
       if (downs.length) this.log.push(['cbs', `${downs.join(', ')} down without the shooting service: no release`]);
       downs = []; ups = [];
     }
-    if (downs.includes('s1')) {
+    if (downs.includes('s1')) this.s1_af = this.half_af();
+    if (downs.includes('s1') && !this.s1_af) {                                       // HALF_AF: READY ends with no AF
+      this.af_lock('ready');
+      this.af_lock('finish');
+      this.log.push(['cbs', 'S1 with no half-press AF (the focus mode): no START_FOCUS, no END_FOCUS']);
+    } else if (downs.includes('s1')) {
       this.af_lock('ready');                                                         // S-AFLOCK: the sequence's READY
       this.post('START_FOCUS');
       const ok = !(live && SC.focusAt(sc, this.s.lab.lab_time() / 1e9) === null);
@@ -1852,7 +1912,8 @@ export class CamApp {
       if (ok && this.af_stage === 'focus') this.af_lock_post(1);                      // S-AFLOCK: the AF lock's callback
       if (ok) this.af_upload(INDICATOR_FOCUS, [AF_FRAME]); else this.af_upload(INDICATOR_NO_FOCUS, []);   // S-AFOSD
     }
-    if (ups.includes('s1')) this.af_upload(0, []);
+    if (ups.includes('s1') && this.s1_af !== false) this.af_upload(0, []);            // none after an S1 with no AF
+    if (s1_up) this.s1_af = null;
     if (downs.includes('s2')) {
       this.release += 1;
       this.view_release = this.release;

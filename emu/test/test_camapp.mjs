@@ -49,10 +49,12 @@
 //   camapp3FramesSession  control camapp 3's frames (E143): the TFT composes with the histogram's registers under
 //                  A-VSCHIST-3 at the shooting screen, the menu (the through image's bank as IMG2, the background's
 //                  colour) and its close, PLAY and its return; with --cpu2 native the histogram's bin 5 column is the
-//                  one change (docs/hle-gaps.md 4.2.4); against camapp 1 the shooting screen's MF (MODE_AF_CHANGE from
-//                  the Fn lever, written only while the sequence parts stand by: the lever to 1 makes the two equal,
-//                  back again camapp 3 alone shows MF) and the menu's movie Card Slot Settings row (both slots' media
-//                  flags: set in camapp 1, its menu is camapp 3's) differ (4.3.7)
+//                  one change (docs/hle-gaps.md 4.2.4); against camapp 1 the shooting screen is the same, S-AF, with
+//                  the Fn lever at its idle position (API_LEVER_SW_1), both show MF with the lever at API_LEVER_SW_2
+//                  (MODE_AF_CHANGE, which camapp 1 writes behind S-SEQSTANDBY's answer at the standby gate and
+//                  refuses without it) and S-AF again with it back (4.3.8); the menu's movie Card Slot Settings row
+//                  is grey in both with the second slot empty (4.8.12) and enabled in camapp 1 with both slots' media
+//                  flags set (4.3.7)
 //   modeDialSession  the mode dial in play (E143): it starts at P, the start's mode; each position's change sets its
 //                  mode (MODE_EXPOSE, the custom banks' MODE_RAW, B's MODE_DIAL_B_ONOFF) and keeps the other settings,
 //                  each position shows a screen of its own, and away from P OK opens the Super Control Panel and MENU
@@ -279,8 +281,13 @@ export async function heapSession() {
 //     whose freeing after a reply no code of its class shows (D)
 // (S-HEAP rounds to 16 bytes) and nothing else: before S-DISPQ's replies went to the application's queue, its display manager's 192-byte
 // request buffers (0x503eb91b) stayed as well, 6 a pass (the control below)
+// Event 294 is the user setting manager's notification of a setting written (OlyHfwUserSettingManager.cpp, 0x50b7d1c7
+// -> the observer 0x50d7e0f4): 19 a pass since 2026-11-11, 21 before, when PLAY's return wrote MODE_SELF_SHOT_BEAUTY
+// (679) and MODE_SELF_SHOT_CUSTOM (680) besides 2108: the application writes those two only where the Fn lever stands
+// at API_LEVER_SW_2 with MODE_AF_CHANGE still 0, the state the refused setFocusModeChange left the lab in (X: the same
+// three writes again with S-SEQSTANDBY's standby taken away and the lever moved; docs/hle-gaps.md 4.3.8)
 const HEAP_KINDS = [['event 294', 32, 0x60EF3504], ['event 0x60dcb42c', 32, 0x60DCB42C], ['S-RPC request', 80, 0x60DE54E8]];
-const HEAP_PASS_KEPT = { default: { 'event 294': 21, 'event 0x60dcb42c': 1, 'S-RPC request': 5 }, components: { 'S-RPC request': 5 } };
+const HEAP_PASS_KEPT = { default: { 'event 294': 19, 'event 0x60dcb42c': 1, 'S-RPC request': 5 }, components: { 'S-RPC request': 5 } };
 const DISPQ_BUFFER = 0x503EB922, DISPQ_BUFFERS_A_PASS = 6;
 export async function heapWorkloadSession() {
   const bad = [];
@@ -340,7 +347,10 @@ export async function heapWorkloadSession() {
 
 // control camapp 3 (docs/hle-gaps.md 4.1.5; E143). The sessions take no frames (camapp3FramesSession takes them: the
 // histogram's registers HIST1, HISTAREA1..3, HIST2 and HIST3 compose under A-VSCHIST-3, docs/hle-gaps.md 4.2.4)
-const START_TRAS = [415, 598, 614, 990, 958, 1515, 994, 955, 1001, 1061, 992, 1503, 1065, 1045, 938, 974];
+// (until 2026-11-11 the start, with the Fn lever at API_LEVER_SW_2, also sent 958 and 1515, setAelState's, and 955,
+// endMfAssist's, after its setFocusModeChange(1), with 994 between them: the lever's change to API_LEVER_SW_2 sends
+// them now, test_fnlever.mjs; docs/hle-gaps.md 4.3.8)
+const START_TRAS = [415, 598, 614, 990, 1001, 1061, 992, 1503, 994, 1065, 1045, 938, 974];
 const NATIVE_RESULT = { 992: 0xF0000058 };
 // the imgpro unit's run as the menu opens (docs/hle-gaps.md 4.3.1; X): kind 14's rectangle fill (op 3, mode 5) of the
 // through image's bank, 600 rows of 1800 bytes (900 pixels) at a pitch of 11136 bytes, with the YCbCr pair 0x800b800b
@@ -557,26 +567,30 @@ export async function traRoutingSession() {
 // the background's (the fill's Y 11, Cb and Cr 128: the composite without IMG2 is the same, X); with --cpu2 native
 // OSD_DRAW_CPU2's histogram adds bin 5's column (the firmware's 64 in bin 5 for an IMG1 that is off, A-VSCHIST-2)
 // and nothing else: two columns of the histogram box (FRAMES_HIST_COLUMN)
-// The pinned differences against camapp 1 (docs/hle-gaps.md 4.3.7; X): the shooting screen's focus mode
-// (FRAMES_AF_MODE: MF and no AF target where camapp 1 shows S-AF) is MODE_AF_CHANGE (535), which the application's
-// start sets from the Fn lever (API_LEVER_SW_2 in the lab's idle image, the factory lever function 4) and which
-// OlyHfwOpeShoot writes only while the sequence parts stand by (SHOOT_PHASE 101): camapp 3 writes 1, camapp 1 (phase
-// 100, no sequence parts) refuses; with the lever to 1 (API_LEVER_SW_1) camapp 3 writes 0 and its screen is camapp 1's
-// word for word, and camapp 1's lever changes nothing: back at API_LEVER_SW_2 camapp 3 shows its MF frame again and
-// camapp 1's write is refused again. The menu's movie Card Slot Settings row is greyed unless both slots' media flags
-// (MEDIA_FLAGS, 15261 and 15262) are 1. Since 2026-11-11 (docs/hle-gaps.md 4.8.12) the lab's second card slot is
-// empty by default: camapp 3's media manager finds no card there (api_media's status of that slot SLOT2_STATUS, 1)
-// and leaves the flags 1 and 0, as S-CARD does in camapp 1, so the two menus are the same word for word, the row
-// grey; with both flags set through the store's setter the slot update uses (MEDIA_FLAG_SET) camapp 1's menu has the
-// row enabled (FRAMES_SLOT_ROW: the pixels that differed between camapp 3 and camapp 1 while S-SDCARD's one card
-// answered both ports). test_storage.mjs storageSlots has the two-card sessions
+// Against camapp 1 (docs/hle-gaps.md 4.3.8, which supersedes 4.3.7's AF item; X): the shooting screen's focus mode is
+// MODE_AF_CHANGE (535), which the application sets from the Fn lever (the factory lever function 4) and which
+// OlyHfwOpeShoot writes only behind its standby gate (LEVER_GATE: d0 at the return of setFocusModeChange's call of
+// it). With the lever at the idle image's API_LEVER_SW_1 both camapps hold 0 and show the same screen, S-AF; at
+// API_LEVER_SW_2 (input 0) both write 1 and show MF and no AF target (FRAMES_AF_MODE against the start), the same
+// frame, the gate answering 1 in both, in camapp 3 from the sequence parts' standby (SHOOT_PHASE 101), in camapp 1
+// from S-SEQSTANDBY (the lab's own call of the query still reads 100: only the gate's is answered); back at
+// API_LEVER_SW_1 both write 0 and show the start's frame. Control: camapp 1 with S-SEQSTANDBY's standby taken away
+// is refused at the gate (0), keeps 0 and its frame, as before 2026-11-11. The menu's movie Card Slot Settings row
+// (docs/hle-gaps.md 4.3.7) is greyed unless both slots' media flags (MEDIA_FLAGS, 15261 and 15262) are 1. Since
+// 2026-11-11 (docs/hle-gaps.md 4.8.12) the lab's second card slot is empty by default: camapp 3's media manager finds
+// no card there (api_media's status of that slot SLOT2_STATUS, 1) and leaves the flags 1 and 0, as S-CARD does in
+// camapp 1, so the two menus are the same word for word, the row grey; with both flags set through the store's setter
+// the slot update uses (MEDIA_FLAG_SET) camapp 1's menu has the row enabled (FRAMES_SLOT_ROW: the pixels that differed
+// between camapp 3 and camapp 1 while S-SDCARD's one card answered both ports). test_storage.mjs storageSlots has the
+// two-card sessions
 const FRAMES_LV_BANK = 0x98D4D800, FRAMES_LV_STRIDE = 11136, FRAMES_IMG2 = 1;
 const FRAMES_HIST_COLUMN = { pixels: 126, box: [14, 110, 15, 172] };
 const FRAMES_AF_MODE = { pixels: 1655, box: [417, 72, 894, 334] }, FRAMES_SLOT_ROW = { pixels: 4602, box: [38, 283, 871, 327] };
-const MODE_AF_CHANGE = 535, MEDIA_FLAGS = [15261, 15262], LEVER_MS = 1000;
+const MODE_AF_CHANGE = 535, MEDIA_FLAGS = [15261, 15262], LEVER_MS = 1000, INFO_MS = 3500;
 const MEDIA_STATUS = 0x503F0BD7, SLOT2_STATUS = { 3: 1, 1: 1 }, MEDIA_FLAG_SET = 0x50AB4F75;
-// the shooting phase query OlyHfwOpeShoot's gate asks: 101 the sequence parts' standby, 100 with no sequence parts
-const SHOOT_PHASE = 0x50AB57E9, PHASE = { 3: 101, 1: 100 };
+// the shooting phase query OlyHfwOpeShoot's gate asks: 101 the sequence parts' standby, 100 with no sequence parts;
+// the return of Shooting::setFocusModeChange's call of the gate (0x50adfbc3's, at 0x50adfbda)
+const SHOOT_PHASE = 0x50AB57E9, PHASE = { 3: 101, 1: 100 }, LEVER_GATE = 0x50ADFBE1;
 // the pixels two frames differ in, and their box
 const framesDiff = (a, b) => {
   const diff = [];
@@ -605,12 +619,22 @@ export async function camapp3FramesSession() {
       const key = (k) => { s.key(k, 'down'); s.camapp.pump(); idle(100); s.key(k, 'up'); s.camapp.pump(); idle(800); return s.status().gui; };
       // a frame of the shown state, or the composite's refusal
       const frame = () => { try { return s.frame()[2]; } catch (e) { return e.message.slice(0, 300); } };
-      // the Fn lever to input 1 (API_LEVER_SW_1) and back to the idle level's API_LEVER_SW_2
+      // the Fn lever to input 0 (API_LEVER_SW_2) and back to the idle level's API_LEVER_SW_1; for camapp 1 then
+      // once more with S-SEQSTANDBY's standby taken away (the control), after the shooting information the return
+      // from playback shows has gone again (X: 8,343 pixels, within 3 s)
+      const gates = [];
+      lab.observe(LEVER_GATE, (l, r) => gates.push(r.d0), 'obs-lever-gate');
+      const to = (v) => { s.switch_input('lever', v); s.camapp.pump(); idle(LEVER_MS); return [frame(), lab.get(MODE_AF_CHANGE)]; };
       const lever = (before) => {
-        s.switch_input('lever', 1); s.camapp.pump(); idle(LEVER_MS);
-        const sw1 = frame(), af1 = lab.get(MODE_AF_CHANGE);
-        s.switch_input('lever', 0); s.camapp.pump(); idle(LEVER_MS);
-        Object.assign(pin, { before, lever: sw1, af_lever: af1, back: frame(), af_back: lab.get(MODE_AF_CHANGE) });
+        const n0 = gates.length, [sw2, af2] = to(0), [back, af_back] = to(1);
+        Object.assign(pin, { before, lever: sw2, af_lever: af2, back, af_back, gates: gates.slice(n0), used: pl.stand_ins_in_use() });
+        if (camapp !== 1) return;
+        idle(INFO_MS);
+        const n1 = gates.length, rest = frame();
+        s.camapp.standby = () => false;
+        const [off, af_off] = to(0);
+        to(1);
+        Object.assign(pin, { rest, off, af_off, gates_off: gates.slice(n1) });
       };
       idle(2000);
       const f0 = frame(), used = pl.stand_ins_in_use();
@@ -663,8 +687,8 @@ export async function camapp3FramesSession() {
   ok(frames, `the frames of camapp 3 and camapp 1 for the comparison: ${JSON.stringify(keys.map((k) => [Array.isArray(c3?.[k]), Array.isArray(c1?.[k])]))}, camapp 1's flagged menu ${Array.isArray(c1?.flagged)}`);
   if (frames) {
     const af = framesDiff(c1.start, c3.start);
-    ok(same(af, FRAMES_AF_MODE) && c3.af === 1 && c1.af === 0 && c3.phase === PHASE[3] && c1.phase === PHASE[1],
-      `the shooting screen: camapp 3 MF (535 = ${c3.af}, shooting phase ${c3.phase}) where camapp 1 shows S-AF (535 = ${c1.af}, phase ${c1.phase}), ${af.pixels} pixels in ${JSON.stringify(af.box)}, want ${FRAMES_AF_MODE.pixels} in ${JSON.stringify(FRAMES_AF_MODE.box)}`);
+    ok(af.pixels === 0 && c3.af === 0 && c1.af === 0 && c3.phase === PHASE[3] && c1.phase === PHASE[1],
+      `the shooting screen with the lever at its idle API_LEVER_SW_1: camapp 3 (535 = ${c3.af}, shooting phase ${c3.phase}) and camapp 1 (535 = ${c1.af}, the lab's query ${c1.phase}) show the same frame but for ${af.pixels} pixels`);
     const row = framesDiff(c1.menu, c3.menu);
     ok(c3.gui === GUI_MENU && c1.gui === GUI_MENU && row.pixels === 0 && c3.flags.join() === '1,0' && c1.flags.join() === '1,0'
       && c3.slot2 === SLOT2_STATUS[3] && c1.slot2 === SLOT2_STATUS[1],
@@ -672,13 +696,20 @@ export async function camapp3FramesSession() {
     const flagged = framesDiff(c1.flagged, c1.menu);
     ok(c1.gui_flagged === GUI_MENU && same(flagged, FRAMES_SLOT_ROW),
       `control: camapp 1 with both media flags set (${hx(MEDIA_FLAG_SET)}) has the row enabled (${c1.gui_flagged}): ${flagged.pixels} pixels differ in ${JSON.stringify(flagged.box)} (want ${FRAMES_SLOT_ROW.pixels} in ${JSON.stringify(FRAMES_SLOT_ROW.box)})`);
-    const lever = framesDiff(c1.lever, c3.lever), still = framesDiff(c1.before, c1.lever);
-    ok(c3.af_lever === 0 && c1.af_lever === 0 && lever.pixels === 0 && still.pixels === 0,
-      `the Fn lever to 1: camapp 3 writes 535 = ${c3.af_lever} and differs from camapp 1 in ${lever.pixels} pixels; camapp 1's 535 ${c1.af_lever}, its frame changed in ${still.pixels} pixels`);
-    // back to API_LEVER_SW_2: camapp 3's setFocusModeChange(1) is taken (MF again), camapp 1's refused (0xf0000058)
+    // to API_LEVER_SW_2: both write 1 behind the gate's 1 and show MF, the same frame; S-SEQSTANDBY in camapp 1 alone
+    const lever = framesDiff(c1.lever, c3.lever), mf3 = framesDiff(c3.before, c3.lever), mf1 = framesDiff(c1.before, c1.lever);
+    ok(c3.af_lever === 1 && c1.af_lever === 1 && lever.pixels === 0 && same(mf3, FRAMES_AF_MODE) && same(mf1, FRAMES_AF_MODE)
+      && c3.gates.join() === '1,1' && c1.gates.join() === '1,1' && c1.used.includes('S-SEQSTANDBY') && !c3.used.includes('S-SEQSTANDBY'),
+      `the Fn lever to API_LEVER_SW_2: camapp 3 writes 535 = ${c3.af_lever}, camapp 1 ${c1.af_lever}; MF and no AF target, ${mf3.pixels} and ${mf1.pixels} pixels in ${JSON.stringify(mf3.box)} and ${JSON.stringify(mf1.box)} (want ${FRAMES_AF_MODE.pixels} in ${JSON.stringify(FRAMES_AF_MODE.box)}), the two frames differing in ${lever.pixels}; the gate at the two changes camapp 3 ${c3.gates}, camapp 1 ${c1.gates}; S-SEQSTANDBY listed in camapp 1 ${c1.used.includes('S-SEQSTANDBY')}, camapp 3 ${c3.used.includes('S-SEQSTANDBY')}`);
+    // back to API_LEVER_SW_1: both write 0 and show the frame before
     const back3 = framesDiff(c3.before, c3.back), back1 = framesDiff(c1.before, c1.back);
-    ok(c3.af_back === 1 && c1.af_back === 0 && back3.pixels === 0 && back1.pixels === 0,
-      `the Fn lever back: camapp 3 writes 535 = ${c3.af_back} and its frame is its MF frame but for ${back3.pixels} pixels; camapp 1's 535 ${c1.af_back}, its frame changed in ${back1.pixels} pixels`);
+    ok(c3.af_back === 0 && c1.af_back === 0 && back3.pixels === 0 && back1.pixels === 0,
+      `the Fn lever back: camapp 3 writes 535 = ${c3.af_back}, camapp 1 ${c1.af_back}; their frames differ from the ones before in ${back3.pixels} and ${back1.pixels} pixels`);
+    // control: without S-SEQSTANDBY's standby camapp 1's setFocusModeChange is refused (the gate 0), 535 and the
+    // frame stay; back at API_LEVER_SW_1 the application finds MODE_AF_CHANGE 0 and asks for no change (one gate call)
+    const off = Array.isArray(c1.off) && Array.isArray(c1.rest) ? framesDiff(c1.rest, c1.off) : { pixels: -1 };
+    ok(c1.af_off === 0 && off.pixels === 0 && c1.gates_off.join() === '0',
+      `control: camapp 1 with no standby answer keeps 535 = ${c1.af_off} at API_LEVER_SW_2, its frame changed in ${off.pixels} pixels, the gate ${c1.gates_off}`);
   }
   return { checks, bad };
 }

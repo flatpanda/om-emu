@@ -448,6 +448,7 @@ export class Player {
     if (this.session?.ui_out_tid) used.push('H-UIOUTSTART');                                // UI_OUT started (E134, E143)
     if (this.session?.camapp?.erased) used.push('H-OBJDEL');                                 // a picture erased in playback (camapp.mjs)
     if (this.session?.camapp?.aflock_fed) used.push('S-AFLOCK');                             // an AF lock fed (E143)
+    if (this.session?.camapp?.standby_answers) used.push('S-SEQSTANDBY');                    // the standby gate answered (E143)
     if (this.session?.camapp?.modpost_taken) used.push('S-MODPOST');                         // a direct module post taken (E143)
     if (this.session?.camapp?.takerdy_events) used.push('S-TAKERDY');                        // a take-ready finished (E143, camapp 3)
     if (this.session?.boot_key !== undefined) used.push('S-BOOTKEY');                       // UI_IN's boot key: the power switch

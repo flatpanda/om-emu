@@ -662,7 +662,7 @@ HIST2 `0x748`, HIST3 `0x74C`, INTEN1 / INTST1 bit 8, and the bins at `+0x4000`.
 | HIST2 | bit 20 | always set (?) |
 | HIST2 | [25:24] | the component: 0 Y, 1 R, 2 G, 3 B (the firmware's names for the four runs of playback) |
 | HIST3 | [31:16] | the clip: a bin's largest value |
-| HIST3 | [15:0] | twice the scale s = `N << 16 / (width * height)`, at most 8190 (I: bin = count * s >> 16) |
+| HIST3 | [15:0] | twice the scale s, at most 8190: `N << 16 / (width * height)` for the live view's main area (its second area's and playback's: the table below; I: bin = count * s >> 16) |
 | INTEN1 / INTST1 | bit 8 | the run's end: enabled by the start, acknowledged by the ISR with INTST1 = `0x100` |
 | `+0x4000` | n / 2 words | the bins, 16 bits each, two a word, the low half first; one series a run |
 

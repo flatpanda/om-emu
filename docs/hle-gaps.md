@@ -1901,12 +1901,13 @@ unchanged (X: golden identical). The registers and formulas are in `docs/om1-vsc
   screens show of a histogram are stand-ins: the shooting screen's box is empty because S-TRAACK answers
   getHistogramData (TRA 944) without filling its series and S-MODACK answers the GUI's drawHistogram send (4.6.2);
   INFO's detail view shows S-PLAYSEQ's empty histogram (getHistogram, sync 7: the flags and bins 0).
-- **Tests (X).** `emu/test/test_dev.mjs` vscHistUnits (57 checks; 25 of them vscHistBins: the bins of a 16 x 8
-  plane against histograms computed by hand, for 128, 64 and 32 bins, the scale, the clip, the firmware's scale
-  formula, a resized plane, the four components, the source field, the frame measured, and eight cases that stay
-  unknown). `emu/test/test_hist.mjs` histLiveSession (14 checks, without and with `--cpu2 native`),
-  histInfoSession (12) and histEvfSession (3). `emu/test/test_camapp.mjs` playNativeSession's pinned stop moved:
-  INFO reaches ID_ST_DISP_DETAIL past the bins' reads.
+- **Tests (X).** `emu/test/test_dev.mjs` vscHistUnits (59 checks, a read in the run after an ended one among
+  them; 26 of them vscHistBins: the bins of a 16 x 8 plane against histograms computed by hand, for 128, 64 and 32
+  bins, the scale, the clip, the firmware's scale formula, a resized plane, the four components, the source field
+  and the source's own DMAEN bit, the frame measured, and eight cases that stay unknown). `emu/test/test_hist.mjs`
+  histLiveSession (14 checks, without and with `--cpu2 native`), histInfoSession (12, the detail view's stop at
+  HIAREA1-3 alone among them) and histEvfSession (3). `emu/test/test_camapp.mjs` playNativeSession's pinned stop
+  moved: INFO reaches ID_ST_DISP_DETAIL past the bins' reads.
 - **Corrections.** 4.2.1 and the vsc spec left `0x501e1488`'s second caller unread and its field at [31:24]: it is
   kind - 1 in [25:24]. 4.2.1's "which component, Y or another" is answered for the names (D), not for the unit
   (I). 4.2.4's and 4.8.11's stops at the bins' read are gone; 4.2.1's "bins with an IMG plane on are refused" no

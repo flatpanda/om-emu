@@ -926,8 +926,12 @@ export async function playDecodeSession() {
       // the album, the stand-ins, the file system's part
       const fired = [...new Set(lab.log.slice(log0))].filter((n) => /^S-(PLAYSEQ|PLAYCOMP|PLAYVIEW|PLAYDEC|ALBM)/.test(n));
       const tasks = Object.fromEntries(pm.tids.map(([t, n]) => [n, t]));
-      ok(seen.album === 0 && !fired.length && s.storage.log.filter(([k]) => k === 'albm').length === 1,
-        `${tag}: over PLAY, right and left the short-movie albums' count is asked ${seen.album} times and ${fired.length ? fired : 'no play or album stand-in'} fires (S-ALBM answered the mount's init once)`);
+      // (S-ALBM's answers after the bring-up's log: none since the second slot is empty by default, docs/hle-gaps.md
+      // 4.8.12; before it camapp 3's media manager mounted drive 1 from the lab's one card on both ports, and S-ALBM
+      // answered that mount's init, drive 1, once, X)
+      const albm = s.storage.log.filter(([k]) => k === 'albm');
+      ok(seen.album === 0 && !fired.length && albm.length === 0,
+        `${tag}: over PLAY, right and left the short-movie albums' count is asked ${seen.album} times and ${fired.length ? fired : 'no play or album stand-in'} fires (S-ALBM: ${JSON.stringify(albm)}, none after the bring-up)`);
       ok(JSON.stringify(reads_play) === JSON.stringify([tasks.PLAY_LOAD, tasks.PLAY_LOADDRAW, tasks.PLAY_LOADDRAW]) && JSON.stringify(reads_move) === JSON.stringify(reads_play) && fnode_move.includes(1),
         `${tag}: a view's file reads are the play module's (tasks ${reads_play} at PLAY, ${reads_move} at right; PLAY_LOAD ${tasks.PLAY_LOAD}, PLAY_LOADDRAW ${tasks.PLAY_LOADDRAW}); the move asks the DCF database for a fnode by its index ${fnode_move.length} times (indices ${[...new Set(fnode_move)]})`);
       // the lab's rule for S-PLAYDEC against the library's own ratios, then INFO's detail view: a pre-reduction, stood in

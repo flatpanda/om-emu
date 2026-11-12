@@ -6,8 +6,9 @@
 //   the decoder: the lab's own stream (every block its mean) sample for sample, and streams with AC coefficients,
 //   zero runs and all three samplings from a small encoder of the test's own, within 1 level (the two inverse DCTs
 //   round apart); its refusals (a progressive frame, a restart interval, a cut stream);
-//   the register file and the bus errors around it: a word the driver does not read, an address outside the units'
-//   pages, the codec's encode words, another access width; the commit word's low byte reading 0;
+//   the register file and the bus errors around it: a word the driver does not read, a block word the decode does not
+//   write, an address outside the units' pages, the codec's encode words, another access width; the commit word's low
+//   byte reading 0;
 //   a decode of 160 x 96 to 80 x 48 (the prefilter's row for a ratio of 2) and one to 160 x 96 (no prefilter): the
 //   destination's bytes against the test's own computation from the independent decoder's samples (the prefilter's
 //   taps, the map's steps and start as the words give them, linear interpolation: A-IMGPIPE-2's arithmetic written
@@ -174,9 +175,9 @@ export function imgpipeUnits() {
   const mem = (a, n) => { const b = new Uint8Array(n); bus.read(a, b); return b; };
   ok(u !== undefined && u.cfg.base === 0x9C200000 && u.cfg.codec === 0x99900000 && irq === 288 && !u.touched, 'the machine builds the block and the codec on the E143 board with IRQ 288, untouched');
   // the register file's edges
-  ok([0x038, 0x10c, 0x2f4, 0x400, 0xb470, 0x20000].every((o) => throwsAs(() => rd(o), BUS)) && [0x300, 0x1000, 0x2900, 0xb800, 0x1fffc].every((o) => throwsAs(() => wr(o, 0), BUS))
+  ok([0x038, 0x10c, 0x2f4, 0x400, 0xb470, 0x20000].every((o) => throwsAs(() => rd(o), BUS)) && [0x028, 0x114, 0x1b4, 0x2ec, 0x300, 0x1000, 0x2900, 0xb800, 0x1fffc].every((o) => throwsAs(() => wr(o, 0), BUS))
     && throwsAs(() => wr(0x2d8, 1, 2), BUS) && throwsAs(() => rd(0x228, 1), BUS),
-    'a word the driver does not read, an address outside the decode\'s units and another width are bus errors');
+    'a word the driver does not read, a block word the decode does not write (the handler\'s +0x1b4 among them), an address outside the decode\'s units and another width are bus errors');
   ok([0x1014, 0x1058, 0x1200, 0x1c00].every((o) => throwsAs(() => jwr(o, 0), BUS)) && throwsAs(() => jwr(J.encode, 1), BUS) && throwsAs(() => jrd(J.mode2), BUS) && throwsAs(() => jwr(J.mode, 0x8008), BUS),
     'the codec\'s encode words and modes are bus errors');
   wr(0x2f8, 0x2611);

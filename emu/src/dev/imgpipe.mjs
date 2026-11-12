@@ -14,17 +14,18 @@
 // 0x50482e38), +0xb000 (C bit 0, the codec's output), +0xb080 and +0x3a00 (C bit 1, the codec's side), +0xae00 (C
 // bit 2, the codec's stream), and +0xc00 (0x50481c53, 0x50482444, always written). A bit 19 and C bit 8 have no
 // pages of their own on this path (X).
-//   +0x000..+0x2fc  the block's own words:
+//   +0x000..+0x2fc  the block's own words, only those the decode writes (OWN, X); any other is UNKNOWN:
 //     +0x000 / +0x004, +0x010 / +0x014, +0x018 / +0x01c  written with the masks A, B and C: +0x004, +0x014, +0x01c by
 //           the set-up (0x50481393..a9), +0x000, +0x010, +0x018 by the end (0x50481715..25); storage (I: set and
 //           clear pairs)
-//     +0x020..+0x03c, +0x0c8, +0x130, +0x150, +0x154, +0x248..+0x26c, +0x2d8..+0x2f4  the go's, the end's and the
-//           clock words' (0x5048d48a, 0x5048d53a) writes: storage
+//     +0x020, +0x024, +0x030..+0x03c, +0x0c8, +0x130, +0x150, +0x154, +0x248..+0x254, +0x260..+0x26c, +0x2d8..+0x2e8,
+//           +0x2f0, +0x2f4  the go's, the end's and the clock words' (0x5048d48a, 0x5048d53a) writes: storage
 //     +0x0cc, +0x0e8, +0x0f4  the go's starts (0x5048198b: +0x0c8 = 0x102 and +0x0cc = 5 after the codec's own start,
 //           then +0x0e8 = B & 0x700000 and last +0x0f4 = 5): the model starts a run at +0x0f4 written 5 after the
 //           other three (I: which word starts which unit is not read)
-//     +0x10c..+0x12c  statuses, write 1 to clear (the handler writes back what it read, 0x5048bbc6..cf; the end
-//           writes the unit masks, 0x504815dd..0x50481611). The model sets +0x120 bit 20, the resizer's end
+//     +0x10c, +0x110, +0x11c, +0x120, +0x12c  statuses, write 1 to clear (the handler writes back what it read,
+//           0x5048bbc6..cf; the end writes the unit masks, 0x504815dd..0x50481611). The model sets +0x120 bit 20, the
+//           resizer's end
 //     +0x134, +0x13c, +0x140  IRQ 288's enables of +0x110, +0x120 and +0x12c (the handler 0x5048bb88 ands each pair
 //           and clears the three enables): the line is high while a pair has a common bit (I, from the handler)
 //     +0x228, +0x2b4  read, masked and written back by the set-up and the end (0x50481c62, 0x504813c8, 0x5048150d):
@@ -32,9 +33,10 @@
 //     +0x2f8  written 0x2611 after the clock words; the driver then waits until its low byte reads 0 (0x5048d523..
 //           2f): the low byte reads 0 at once (I: the hardware's time)
 //   +0xb470  written 0x47f after the resizer's words (0x50482bc6..ce): storage; +0xb478 its interrupt enable; +0xb47c
-//           its status, which the handler reads with +0xb478: bit 0 the end (the callback's phase 12, 0x5048bcba),
-//           bit 1 another end (phase 12 with the record's halfword +46, I: an error). The set-up writes it 0 from the
-//           image (X); the model sets bit 0 at a run's end
+//           its status, which the handler reads with +0xb478: bit 0 the end (the callback's phase 12, 0x5048bcba; but
+//           where the record's halfword +44 has bit 5 the handler writes +0x1b4 = 0x800000 and returns, 0x5048bc05..19,
+//           not taken here, X), bit 1 another end (phase 12 with the record's halfword +46, I: an error). The set-up
+//           writes it 0 from the image (X); the model sets bit 0 at a run's end
 // The codec's words (its start 0x5050a2ba with mode 0, the decode): +0x000c written 4, then 0 after a short loop
 // (0x5050a2d2..e4), and 5 by the end (0x50481657); +0x0008 = 0 (1 for an encode); +0x1000 = 0x8004, +0x100c = 0x8002,
 // +0x1028 = +0x102c = 0xffff, then +0x1000 read and written back with bit 0 set (0x5050a4a5..a9): the codec's start.
@@ -87,8 +89,9 @@
 // A-IMGPIPE-1 (I): the destination is written and the end raised RUN_NS of lab time after the start (the units' time
 // is not known).
 // A width other than 4, an unaligned access, an address outside the map, a read of a word the driver does not read,
-// a debugger write and a start while a run is in progress are UNKNOWN (a bus error, printed for a CPU access). Built
-// by the machine on a board that gives imgpipe (src/machine.mjs); passive until the firmware writes it.
+// a write of a block word the decode does not write, a debugger write and a start while a run is in progress are
+// UNKNOWN (a bus error, printed for a CPU access). Built by the machine on a board that gives imgpipe
+// (src/machine.mjs); passive until the firmware writes it.
 import { BUS, K_MMIO, addRegion, ctx } from '../core/mem.mjs';
 import { decodeJpeg } from '../lab/jpeg.mjs';
 
@@ -96,13 +99,18 @@ const hex8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 export const PIPE_SIZE = 0x25000, CODEC_SIZE = 0x2000;
 // the block's words the model gives a behaviour
 export const COMMIT = 0x2f8, GO = [[0x0c8, 0x102], [0x0cc, 5], [0x0e8, 0x100000], [0x0f4, 5]];
-export const STATUS = [0x10c, 0x110, 0x114, 0x118, 0x11c, 0x120, 0x124, 0x128, 0x12c];
+export const STATUS = [0x10c, 0x110, 0x11c, 0x120, 0x12c];
 export const IRQ_PAIRS = [[0x110, 0x134], [0x120, 0x13c], [0x12c, 0x140]];
 export const END_STATUS = 0x120, END_BIT = 0x100000, RSZ_ENABLE = 0xb478, RSZ_STATUS = 0xb47c, RSZ_END = 1;
 // the decode's unit masks, in the words the set-up writes them to
 export const MASKS = [[0x004, 0x80301], [0x014, 0x100001], [0x01c, 0x107]];
-// the units' pages the decode's set-up, go and end write (storage)
-const RANGES = [[0x000, 0x300], [0x400, 0x500], [0x800, 0x900], [0xc00, 0xf00], [0x2400, 0x2600], [0x2e00, 0x2f00],
+// the block's own words the decode's set-up, go, handler and end write (X; the others are UNKNOWN: a start word the
+// lab does not know, such as the handler's +0x1b4, must not pass for storage)
+export const OWN = new Set([0x000, 0x004, 0x010, 0x014, 0x018, 0x01c, 0x020, 0x024, 0x030, 0x034, 0x038, 0x03c, 0x0c8,
+  0x0cc, 0x0e8, 0x0f4, ...STATUS, 0x130, 0x134, 0x13c, 0x140, 0x150, 0x154, 0x228, 0x248, 0x24c, 0x250, 0x254, 0x260,
+  0x264, 0x268, 0x26c, 0x2b4, 0x2d8, 0x2dc, 0x2e0, 0x2e4, 0x2e8, 0x2f0, 0x2f4, 0x2f8]);
+// the units' pages the decode's set-up and end write (storage)
+const RANGES = [[0x400, 0x500], [0x800, 0x900], [0xc00, 0xf00], [0x2400, 0x2600], [0x2e00, 0x2f00],
   [0x3a00, 0x3b00], [0xae00, 0xaf00], [0xb000, 0xb100], [0xb400, 0xb800], [0x20000, 0x25000]];
 // the words the driver reads on this path
 const READS = new Set([0x110, 0x120, 0x12c, 0x134, 0x13c, 0x140, 0x228, 0x2b4, COMMIT, RSZ_ENABLE, RSZ_STATUS]);
@@ -165,7 +173,7 @@ export class ImgPipe {
     if (!dbg) this.m.stderr(`om-emu: om1.imgpipe UNKNOWN ${kind} ${hex8(addr)} size ${size} value ${hex8(value)} pc ${hex8(ctx.pc())}${why ? ` (${why})` : ''}`);
     throw BUS;
   }
-  known(off) { return RANGES.some(([lo, hi]) => off >= lo && off < hi); }
+  known(off) { return off < 0x300 ? OWN.has(off) : RANGES.some(([lo, hi]) => off >= lo && off < hi); }
   busy() { return this.due !== Infinity; }
   r(off) { return this.regs[off >> 2]; }
   update() { this.intc.setLine(this.cfg.irq, IRQ_PAIRS.some(([s, e]) => (this.r(s) & this.r(e)) !== 0)); }

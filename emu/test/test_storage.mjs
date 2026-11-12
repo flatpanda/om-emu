@@ -66,10 +66,11 @@
 //                   the first slot's card is refused for the second; with two cards both mount, each from its own
 //                   card, the menu's movie Card Slot Settings row is enabled, S2's file lands on the card of the
 //                   save slot (read back independently on that card alone), each card goes out and in while the
-//                   camera runs; a blank card put into the empty slot stays unformatted until Card Formatting formats
-//                   it from the menu, and the player keeps it for its next session; the double-slot save modes stop
-//                   the session; on E143 under control camapp 3 the firmware's own media manager does the same:
-//                   one card, its menu camapp 1's; two cards mounted by it, S2 on the second, the second out and in
+//                   camera runs; a blank card put into the empty slot stays unformatted (out and in again too) until
+//                   Card Formatting formats it from the menu, and the player keeps it for its next session; the
+//                   double-slot save modes stop the session; on E143 under control camapp 3 the firmware's own media
+//                   manager does the same: one card, its menu camapp 1's, a blank card in and out; two cards mounted
+//                   by it, S2 on the second, the second out and in
 //   node emu/test/test_storage.mjs [--session] [--sdxc] [--hls] [--slot2]
 import { SdCard, NO_RESPONSE, SECTOR, crc7, r2Words, cardImage, cardFromImage, cardSectors, memorySlot } from '../src/lab/sdcard.mjs';
 import { FatVolume, mbrPartition } from '../refs/fat.mjs';
@@ -1286,7 +1287,20 @@ export async function storageSlots() {
     const x = state(s), c2 = s.storage.second.card;
     ok(c2 && c2 !== cardB && c2.present && x.det[1] === 0 && (x.api[1] & MS_UNFORMATTED) && !(x.api[1] & MS_MOUNTED) && c2.writes === 0 && x.ports[1] > 0 && x.flags.join() === '1,1',
       `a blank card into slot 2: the firmware finds no file system (media status ${hx(x.api[1])}), does not format it (${c2?.writes} sectors written) and leaves it unmounted; the update's rule flags it: ${show(x)}`);
-    // Card Formatting from the menu: with two cards the panel "Select Card to Set Up", its second card, Format Card, Yes
+    // the blank card out and in again before its format: out, slot 2 empty, its flag 0 and its mount state 0, as the
+    // manager leaves them under control camapp 3 (below), and S-MEDIA in use; in, the same unformatted card again
+    pl.run_input({ type: 'card', action: 'remove', slot: 2 });
+    idle(s, 1000);
+    const xo = state(s);
+    ok(empty(xo, SECOND) && mounted(xo, 0) && xo.flags.join() === '1,0' && xo.mount[1] === 0 && pl.stand_ins_in_use().includes('S-MEDIA'),
+      `the blank card out again: slot 2 empty, its flag 0, its mount state 0, S-MEDIA in the stand-ins in use: ${show(xo)}`);
+    pl.run_input({ type: 'card', action: 'insert', slot: 2 });
+    idle(s, 1500);
+    const xi = state(s);
+    ok(s.storage.second.card === c2 && (xi.api[1] & MS_UNFORMATTED) && !(xi.api[1] & MS_MOUNTED) && c2.writes === 0 && xi.flags.join() === '1,1' && xi.ports[1] > x.ports[1],
+      `the blank card in again: unformatted and unmounted as before, flags 1, 1: ${show(xi)}`);
+    // Card Formatting from the menu: with two cards the panel "Select Card to Set Up", its second card, Format Card,
+    // Yes
     shoot(s);
     press(s, 'menu');
     for (const k of ['ok', 'down', 'ok', 'up', 'ok', 'up', 'ok']) press(s, k);
@@ -1319,6 +1333,17 @@ export async function storageSlots() {
         if (cards.length === 1) {
           ok(mounted(x, 0) && empty(x, SECOND) && x.flags.join() === '1,0' && x.ports[1] === 0 && x.mount.join() === '8,8' && same.pixels === 0,
             `camapp 3, one card: the media manager finds slot 2 empty, clears its flag and sends its port nothing; its menu is camapp 1's word for word (${same.pixels} pixels differ): ${show(x)}`);
+          // a blank card into the empty slot and out again: the manager's flags and mount states, the ones S-CARD and
+          // S-MEDIA give in camapp 1 (above); S-MEDIA is not in use
+          pl.run_input({ type: 'card', action: 'insert', slot: 2 });
+          idle(s, 2500);
+          const xi = state(s);
+          pl.run_input({ type: 'card', action: 'remove', slot: 2 });
+          idle(s, 1500);
+          const xo = state(s);
+          ok((xi.api[1] & MS_UNFORMATTED) && !(xi.api[1] & MS_MOUNTED) && xi.flags.join() === '1,1' && xi.mount[1] === 8 && empty(xo, SECOND) && xo.flags.join() === '1,0'
+            && xo.mount[1] === 0 && s.storage.slot(SECOND).insertions === 1 && s.storage.slot(SECOND).removals === 1 && !pl.stand_ins_in_use().includes('S-MEDIA'),
+            `camapp 3, a blank card into slot 2 and out: the manager flags it, then clears its flag and mount state; S-MEDIA not in use: ${show(xi)} ${show(xo)}`);
           continue;
         }
         ok(mounted(x, 0) && mounted(x, 1) && x.flags.join() === '1,1' && x.ports[1] > 0 && x.mount.join() === '8,8' && same.pixels === 0,

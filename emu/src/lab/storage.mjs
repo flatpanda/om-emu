@@ -181,9 +181,9 @@ export class Storage {
     this.card = this.host ? this.host.open() : new SdCard();
     // the second slot (f.slots: a body with its facts), empty unless the host gives its card (env.card2: {open() ->
     // SdCard or null, save(card)}) or the Player's card input puts one in (put_card); its own state, as the first
-    // slot's below
+    // slot's below (inserted: held(), its mount request sent and no removal since)
     this.second = f.slots ? { host: this.lab.env.card2 ?? null, card: null, mounted: false, removals: 0, insertions: 0, formatted: false, dcf: null,
-      next_file: null, drive_status: null } : null;
+      next_file: null, drive_status: null, inserted: false } : null;
     if (this.second) this.put_card(session.card2 ?? null);         // (the session opened the host's, play.mjs)
     this.port_commands = [0, 0];   // S-SDCARD: the commands of each port
     this.pins = null;              // the card-detect pins' levels the lab wrote (f.slots), checked at each later write
@@ -417,8 +417,13 @@ export class Storage {
     if (!st?.card?.present) throw new StorageError(`${who}: drive ${SECOND}: the insertion's request with no card in the second slot`);
     this.renumber(who, SECOND);
     this.refresh(SECOND);
+    st.inserted = true;
     this.log.push(['drive', `drive ${SECOND}: status ${h8(st.drive_status)}${st.mounted ? '' : ', not mounted'}`]);
   }
+  // A slot the insertion's requests went to, with no removal since (S-MEDIA's removal): the first slot's card
+  // mounted; the second slot's sent its mount request (insert_second), mounted or left unmounted by the firmware (a
+  // card with no file system)
+  held(drive) { return drive === DRIVE ? this.mounted : this._slot(drive).inserted; }
   // The second slot's state as the firmware has it now (control camapp 3: its media manager mounts and unmounts the
   // slot itself): the drive status read natively
   refresh(drive = SECOND) {
@@ -460,13 +465,16 @@ export class Storage {
   remove(who = 'S-MEDIA', drive = DRIVE) {
     const st = this._slot(drive), of = drive === DRIVE ? '' : `drive ${drive}: `;
     this._dcf(this.f.card_out, 'dcf card out', who, drive);
-    const blk = new Uint8Array(128);                                             // the drive's sdmem card info cleared
-    blk[0] = drive;                                                              // (the request's +0 u16, its drive)
+    // the drive's sdmem card info cleared: the request's +0 u16 is its drive (D: the clear, src/fw/facts.mjs
+    // STORAGE_LIB card_info's handler, maps it to its port)
+    const blk = new Uint8Array(128);
+    blk[0] = drive;
     const req = this.lab.alloc(blk, 4);
     const [b] = this.request(this.f.card_info, req, 64, 'sdmem card info', who);
     this.log.push(['sdmem card info', `${of}status 0x${(b[60] | b[61] << 8).toString(16)}`]);
     st.drive_status = this.status_word(drive);
     st.mounted = false;
+    if (drive !== DRIVE) st.inserted = false;
     st.removals += 1;
     this.log.push(['drive', `${of}status ${h8(st.drive_status)}`]);
   }

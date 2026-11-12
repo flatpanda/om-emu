@@ -247,14 +247,16 @@ export class HlsMedia {
     this.log.push(['switch', `${of}the card switch's level ${level}, the card ${card?.present ? 'in' : 'out of'} the slot`]);
     // the second slot with the firmware's own media manager (control camapp 3): the manager takes the change (X)
     if (i !== SLOT && this.manager()) {
+      // (each change counted as the manager is handed it: its mount comes 0.2 to 1.3 s after an insertion, X)
       const now = st.refresh(i);
-      if (level !== LEVEL_OUT && now.mounted) now.insertions += 1;
-      if (level === LEVEL_OUT) now.removals += 1;
+      if (level === LEVEL_OUT) now.removals += 1; else now.insertions += 1;
       this.log.push(['switch', `${of}left to the firmware's media manager: the drive status ${h8(now.drive_status)}`]);
       return;
     }
     if (level === LEVEL_OUT) {
-      if (!one.mounted) { this.log.push(['switch', `${of}no card was mounted: nothing to unmount`]); return; }
+      // (a second card its insertion left unmounted, one with no file system, goes out as a mounted one: under
+      // control camapp 3 the manager unmounts it, sends 711 {8, 0, 0} and clears its flag the same way, X)
+      if (!st.held(i)) { this.log.push(['switch', `${of}no card was mounted: nothing to unmount`]); return; }
       this._mount_state(kind, m.unmounted);
       st.remove('S-MEDIA', i);
       this._mount(kind, 0, 0);

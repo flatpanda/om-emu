@@ -488,7 +488,9 @@ export class Player {
     const media = this.session?.camapp?.media;
     if (media?.f.ctrl && (media.formats || media.ctrl)) used.push('S-MDACTRL');            // a Card Formatting from the menu (media.mjs)
     if (media?.ended) used.push('S-MDAEND');                                                 // the application's own media control's end (media.mjs)
-    if (this.session?.storage?.removals || this.session?.storage?.insertions) used.push('S-MEDIA');   // a card taken out or put back (media.mjs)
+    // a card taken out or put back (media.mjs): the first slot's, or the second slot's where no media manager runs
+    const card2 = this.session?.storage?.second, media2 = !media?.manager() && (card2?.removals || card2?.insertions);
+    if (this.session?.storage?.removals || this.session?.storage?.insertions || media2) used.push('S-MEDIA');
     if (this.session?.lens) used.push('H-DPCINIT', 'H-LENSINIT', 'S-LENSNAND', 'H-LENSON', 'S-LENSMCU', 'A-LENSSSC-1', 'A-LENSMCU-1', 'A-LENSMCU-2', 'A-LENSMCU-3', 'A-DPC-1');   // the lens on the mount natively (lens.mjs)
     if (this.session?.acc) used.push('H-ACCINIT', 'S-ACCREG', 'S-ACCSAMPLE', 'H-SLOPEINIT', 'A-ACC-1', 'A-ACC-2', 'A-ACC-3');   // a body whose accelerometer is stood in at its sample cache
     if (this.session?.acc?.rotate_tid != null) used.push('H-ROTINIT');                       // --rotate on: PER_ROTATE natively (acc.mjs)

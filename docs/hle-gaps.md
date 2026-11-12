@@ -1274,6 +1274,7 @@ adds S-MODPOST, which takes those the task would take (`emu/src/lab/camapp.mjs` 
   at its first end; the unit's real time per run (A-VSCHIST-1 sets only the lab's pace); the ring's reader (no literal
   of `0x62a3cab8` but the writer's, I: a computed address), what the application does with `0x04020301`, and what
   OSD_DRAW_CPU2 draws from the bins (4.6).
+  The bins are counted since 4.2.7, which also reads where the bins go and the callers that name the event.
 
 #### 4.2.2 The EXP callback and the AE results (2026-11-09; D unless tagged, addresses E143's)
 
@@ -1598,6 +1599,7 @@ camapp 3's frames and compares them with camapp 1's. The default stays camapp 1.
   - *Live view* (S-SCENE's): camapp 1 composes it; camapp 3 stops at the histogram's first end with IMG1 on, the bins'
     read at `0x501e153d` (fault 2, HIST_UNMODELLED: A-VSCHIST-2 gives no bins for a plane that is on; 2.9 s of lab
     time). That is 4.2.1's open item, now observed.
+    Since 4.2.7 the unit's bins are counted and camapp 3's live view runs on.
 - **Tests (X).** `emu/test/test_dev.mjs` vscHistUnits (30 checks with the new vscHistCompose: the six registers at the
   run's values leave a composite of the TFT's open state with one OSD plane word for word as it is without them under
   the opt-in, are FEATURE_UNOBSERVED without it, and twelve values outside the forms stay refused one at a time);
@@ -1784,6 +1786,140 @@ what follows.
   (days, open-ended; 4.2 seam D). (3) The shorter lead to the front end: request 6 natively under `cam_fe` (TAKE's,
   which S-TAKECAM answers now), read to what the event handler `0x5019c8de` waits for before its kind-7 requests
   (hours). Only then can a stand-in at a unit's interrupt (paced by the lab's frame clock) have a job to complete.
+
+#### 4.2.7 The histogram unit (2026-11-11; D unless tagged, addresses E143's)
+
+4.2.1 modelled the unit's runs and their end and refused its bins wherever the firmware keeps them
+(HIST_UNMODELLED): under `control camapp 3` a live view stopped at the first end with IMG1 on (4.2.4) and INFO's
+detail view at its first read (4.8.11). This round reads the rest of the driver and its callers, counts the bins in
+the VSC model, and has the live histogram and playback's drawn from them. What the unit counts is in no code: it is
+modelled under three named assumptions (A-VSCHIST-4 to A-VSCHIST-6). Default sessions do not start the unit and are
+unchanged (X: golden identical). The registers and formulas are in `docs/om1-vsc-spec.md` section 13.
+
+- **Two modes and the kinds of run.** DISPLAY cmd 13 (`0x501d7286`) copies the request's 40 bytes to `0x62a3eac0`
+  (`0x501d6a58`) and its byte +4 to the mode byte `0x62a3eafc`. Cmd 14 (`0x501d729b(device, message)`) picks the run
+  by that byte and calls the start path `0x501d6bec(device, a0 mode, d1 kind)`:
+  - *mode byte 1, the live view:* the message's +4 and +8 are the buffers of the main and the second area (both
+    must be set, `0x501d72b8..c3`); kind 1, start-path mode 1. Kind 1 measures the main area with the scale s =
+    `N << 16 / (w * h)`, kind 5 the second area with `(N >> 3) << 16 / (w2 * h2)` (`0x501d6d24..4b`,
+    `0x501d6d87..b1`); no address goes to the set-up, and the component field is 0 (`0x501e1488(ch, 0)` at
+    `0x501d6e01`). Each end's cmd 16 starts the other kind (`0x501d742e..3c`).
+  - *mode byte 3, playback:* the first non-zero of the message's +4, +12, +16 and +20 is the buffer, and its
+    place the kind 1..4 (`0x501d72dd..0x501d731f`); start-path mode 2, one run a cmd 14. The scale is
+    `N << 15 / (w * h)` (`0x501d6f43..63`); the request's image handle (+32), unless 0 or -1, goes through
+    `0x50534dd1` to an address the set-up looks for among the planes (`0x501d6fa7..c0`); the component field is
+    kind - 1 (`0x501d6fd3..d8`).
+  - A kind above 6, a mode above 3 or an area of no width or height starts nothing (`0x501d6bfa..27`); each s is at
+    most 8190. The request (offsets from `0x62a3eac0`): +8 u32 N, +12 u16 the bin count (clamped to 32..128), +14
+    u16 the clip, +16 the main area {x, y, w, h}, +24 the second area, +32 the handle.
+- **The components are Y, R, G and B.** The field `0x501e1488` stores is HIST2[25:24] (mask `~0x03000000`). In
+  playback CapPlh::execute (`0x50be03c2`, CapPlh_PlayHistogram.cpp, "APP_HISTOGRAM_EXEC_MODE_STILL") makes four
+  starts through the API's start (`0x503ed991`, api_histogram.c, id `0x170006`: its request is {the buffers of kind
+  1 and of the second area, of kinds 2, 3 and 4, the device}). The first has its buffer `0x62b1205c` at +0 and
+  logs "Disp_Start_Histogram_Calculation Y err" on failure, the second `0x62b11e5c` at +8 ("R err"), the third
+  `0x62b11c5c` at +12 ("G err"), the fourth `0x62b11a5c` at +16 ("B err"). Each is bracketed by calls that name
+  the event `0x04020301`, cmd 16's post to queue 6 (`0x50b7e281` before it, `0x50b7e314` after a start that
+  succeeded; I: registering for the event and awaiting it), and followed by the stop (`0x503edc05`). So kinds
+  1..4, HIST2[25:24] 0..3, are Y, R, G and B.
+  OlyHfwOpePlyCom::getHistogram copies the four series out in that order with the logs yChannel, rChannel, gChannel
+  and bChannel (`0x50acdeb0..0x50acdf8e`), and the GUI draws them white, red, green and blue (X, below). CapPlh's
+  divisions: 64 bins with N 1024 and clip 64, 128 with 3072 and 128, 32 with 256 and 32 (`0x50be0439..97`).
+- **The read-out.** One series a run: `0x501e150e(ch, n, buffer)` reads n / 2 words from `+0x4000`, two 16-bit bins
+  a word, the low half first, clips each to the mirror's HIST3[31:16] and stores it as a u32 in the buffer the
+  message named (`0x62a3eb00`, or `0x62a3eb04` for kind 5: `0x501d737a..91`). That buffer is the consumer's own
+  (CapHis's `0x62b07ccc` and `0x62b080cc` in the live view, CapPlh's four in playback; X), so the ring
+  `0x62a3cab8`, written after it, is a second copy: 4.2.1's open item on the ring's reader. There is no register
+  per component: the component is a field of the run.
+- **The end and the stop.** The channel's ISR (`0x501de8df`) takes INTST1 & INTEN1 (`0x501e049e`). For bit 8 it
+  takes the channel's device from the opened word (`0x501c3f0d`, masked `0xff000004`, 2 or 1 for channels 0, 1, 2);
+  where that device is not open it takes the channel's bit anyway and logs `0x37001418` once (`0x501dec88..d4`). It
+  posts the done callback with that mask (`0x501d6a03`) and acknowledges with INTST1 = `0x100` (`0x501e14fc`). The
+  stop (cmd 15, `0x501d734c` -> `0x501d709f`) clears the mode byte and `0x62a3eabe` and waits up to 50 ms for the
+  running run's end. It writes no register: a run is never cut short, HIST1 is cleared only by the next set-up
+  (`& ~0xf`, `0x501e142b` / `0x501e145e`), and INTEN1 bit 8 goes off only where a cmd 16 finds `0x62a3eabe` clear
+  (`0x501e14d4` from `0x501d70fb`). A cmd 16 whose device is not open runs no handler (`0x501c3793..b9`), so no
+  bins are read and nothing restarts.
+- **What the unit counts (I; A-VSCHIST-4, A-VSCHIST-6).** No code computes a bin: the driver programs the unit and
+  reads the result. The model takes:
+  - *the pixels:* those of the source plane (HIST2[17:16]) as its resizer puts them on the output, inside the
+    area. For it: the area is in output coordinates (the set-up adds the window's origin, `0x501e1379..f6`), the
+    scale divides by the area's size in those pixels, and the source is named by a plane's DMA address.
+  - *the bins:* value v in bin `v * count >> 8`, the count 32, 64 or 128 by HIST2[1:0] (0, 1, 2). D: the codes
+    (`0x501e12b1..cb`); X: every request with code 0 asks 32 (INFO's); I: the unit's count at code 0. Code 3 (256)
+    is never written (the clamp) and stays refused.
+  - *the scale and the clip:* with HIST2 bit 8 a bin is `count * HIST3[15:0] >> 17`, with bit 4 at most
+    HIST3[31:16]. D: HIST3[15:0] = 2 s with the formulas above, so the bins of an area sum to about N (1024 for
+    the live view's main area, 128 for its second, half the request's N in playback); I: the unit's arithmetic.
+  - *the component (A-VSCHIST-6):* 0 the pixel's Y; 1, 2, 3 its R, G, B by A9's inverse full-range BT.601, the
+    conversion the lab's PNG uses. The names are D (above); the unit's own conversion is ? (no constant for it in
+    the VSC's code).
+- **The model (X; `emu/src/dev/vsc.mjs`, `emu/src/dev/vsccompose.mjs` histMeasure).** At the boundary that ends a
+  run (A-VSCHIST-1) the model counts the bins from the bank latched for the frame measured and the source plane's
+  rows as memory holds them then, with the compositor's own sampling (imgRows, shared with drawImg). A run whose
+  source plane had its DMAEN bit clear has no source: its bins read 0. That is A-VSCHIST-2 where the firmware
+  discards them, as before, and A-VSCHIST-5 (I) where it keeps them: the plane came on between the frame measured
+  and the read (one run at the live view's start, X); what the unit gives without a source is ?. A plane the
+  compositor does not draw as YC 4:2:2, an area not inside the plane, a register outside its writers' form or a
+  count that does not fit 16 bits leaves the bins unknown, and a read of them is HIST_UNMODELLED with the reason
+  (a bus error), as is a read with no run ended and a word past the run's bins. A-VSCHIST-3's form of HIST2 now
+  takes the component field. S-SCENE renders the live view's frame only when a composite is taken, so the unit
+  asks it for the frame of its own time (the device's histSource hook, `emu/src/lab/play.mjs` scene_frame): the
+  bins do not depend on the composites taken (a `--replay` takes fewer than the session it replays).
+- **The live histogram (X).** With S-SCENE's live view under camapp 3 IMG1 is the scene's 1620 x 1080 resized to
+  the window's 900 x 600, and the request asks 128 bins, N 1024 and clip 64 over 800 x 600 at {50, 0} and 100 x 75
+  at {400, 263} (HIST3 `0x00400116` / `0x004008bc`). The session runs on: the run the live view starts under is
+  kept as 0 (A-VSCHIST-5), every later read returns the unit's 128 bins, the two areas in turn. They equal the
+  histogram counted from the TFT's composite of IMG1 alone inside the area (the static scene: 40 bins set, sum 978;
+  the spot's sum 121). They reach CapHis's buffers and, through TRA 944, the two series of the GUI's drawHistogram
+  request (4.6.2). Without CPU 2 S-MODACK answers that send and the box stays as the GUI cleared it. With
+  `--cpu2 native` OSD_DRAW_CPU2 draws every column from them: the second area's series from the box's bottom row
+  in the colour at +34, the main area's above it in the colour +31, +32 or +33 for a bin below the limit at +26,
+  below the one at +28, or neither (`0x51016015..31`; X: limits 1 and 127, so 0, 1..126 and 127). With a moving
+  scene the bins change from run to run.
+- **Playback's histogram (X; the Player's `camapp_play_native`, 4.8.11).** INFO's detail view asks 32 bins, N 256
+  and clip 32 over the picture's 474 x 316 at {24, 62}, with the handle `0x0a02`: `0x9a43e000`, IMG1's address
+  there, so the source field stays 0. Four runs follow, HIST2 `0x00100110` with [25:24] 0, 1, 2, 3 and HIST3
+  `0x00200070`, each read into CapPlh's buffer of its kind; the view asks twice (eight runs). The GUI draws four
+  panels of bars in GUI layer 1 itself (no drawHistogram send, so the same with `--cpu2 native`): bars of 11 pixels
+  every 10 from x 555, the panels' bottom rows 129, 215, 301 and 387, a bar `ceil(bin * 78 / 32)` rows high, in
+  the palette's white, red, green and blue. What the bins are counted from: the plane's bytes as they are.
+  S-PLAYDEC writes no pixel (4.8.11), so the plane holds the imgpro fill's Y 11, Cb and Cr 128, and all four
+  histograms are bin 1 at the clip. The test writes a pattern into the plane at the first start, and the four
+  histograms and the bars are the pattern's. INFO no longer stops; the detail view's frame is still refused, for
+  the highlight unit's area alone: HIAREA1-3 (`0x48c..0x494`, the window), written at PLAY by `0x501e1c14`,
+  `0x501e1c47` and `0x501e1c51`, are in A13's never-written class (`docs/om1-vsc-spec.md` section 7).
+- **The EVF switch under a run (X, D): not a defect of the unit's model.** The lab's SWITCH (4.3.6) calls DISPLAY
+  cmd 2 OPEN of the EVF with a run on. The opened word is 2 before the run ends; the run ends at the TFT channel's
+  next boundary, 16.7 ms after the key, with the channel running as before (INTEN1 `0x101`, DMAEN 7); the ISR finds the
+  device not open, logs `0x37001418`, posts the done callback with the channel's bit 1 and acknowledges, as its
+  code says. The open keeps bit 8 enabled while it waits (INTEN1 `0x100`, `0x501e03f5`) and closes the channel
+  216 ms later (INTEN1 0 at `0x501e032a`, CTRL2 6, DMAEN 0, INTST1 all ones at `0x501e0344`, the resets), with no
+  run on. So the interrupt on a closed device is the firmware's own path once an open comes before the
+  application's stop (TRA 937, 4.3.6's order), and nothing in the model is changed; the session still stops at
+  the harness's refusal of an error log in a DISPLAY step.
+- **Default sessions (X).** Camapp 1 and 2 do not write HIST1 (4.2.1), so no bin is counted there. What their
+  screens show of a histogram are stand-ins: the shooting screen's box is empty because S-TRAACK answers
+  getHistogramData (TRA 944) without filling its series and S-MODACK answers the GUI's drawHistogram send (4.6.2);
+  INFO's detail view shows S-PLAYSEQ's empty histogram (getHistogram, sync 7: the flags and bins 0).
+- **Tests (X).** `emu/test/test_dev.mjs` vscHistUnits (57 checks; 25 of them vscHistBins: the bins of a 16 x 8
+  plane against histograms computed by hand, for 128, 64 and 32 bins, the scale, the clip, the firmware's scale
+  formula, a resized plane, the four components, the source field, the frame measured, and eight cases that stay
+  unknown). `emu/test/test_hist.mjs` histLiveSession (14 checks, without and with `--cpu2 native`),
+  histInfoSession (12) and histEvfSession (3). `emu/test/test_camapp.mjs` playNativeSession's pinned stop moved:
+  INFO reaches ID_ST_DISP_DETAIL past the bins' reads.
+- **Corrections.** 4.2.1 and the vsc spec left `0x501e1488`'s second caller unread and its field at [31:24]: it is
+  kind - 1 in [25:24]. 4.2.1's "which component, Y or another" is answered for the names (D), not for the unit
+  (I). 4.2.4's and 4.8.11's stops at the bins' read are gone; 4.2.1's "bins with an IMG plane on are refused" no
+  longer holds.
+- **Open.** The unit's arithmetic and its conversion to R, G and B, and what it gives without a source: a camera's
+  histogram of a known chart would settle them (the code cannot). HIST2 bit 20, HIST1[3:1] and HISTAREA3's role;
+  the bin count at code 0; the unit's time per run. CapHis_Histogram.cpp's code that makes four rounds with the
+  buffers `0x62b07ccc`, `0x62b084cc`, `0x62b088cc` and `0x62b08ccc` (`0x50bb6600..0x50bb69f0`; its caller and its
+  mode are not read) is not followed. The detail view's composite (HIAREA1-3) and the decode's pixels (S-PLAYDEC),
+  without which INFO's histogram is the fill's.
+  The EVF switch's order (4.3.6). S-SCENE seeds a frame's noise with the count of frames rendered, which follows
+  the composites taken while no run asks for a frame: a moving scene's bins can then differ by that noise between
+  a session and its replay (not changed here).
 
 ### 4.3 Still capture, image processing and recording
 
@@ -5252,6 +5388,7 @@ there (it stays on the other bodies).
 - **The next stop (X).** At INFO's detail view DISPLAY cmd 16 (`0x501c3788` -> `0x501d7377` -> `0x501d7121`) reads
   the VSC histogram's bins on channel 2 (`0x501e150e`, its load at `0x501e153d`). No run has ended since the last
   began, so the model refuses the read (HIST_UNMODELLED; A-VSCHIST-2's scope, 4.2.1).
+  Since 4.2.7 the bins are counted and INFO's four histograms are drawn; the detail view's frame is the next stop.
 - **Seen on the way: queue 6's bind record in low RAM (X, D).** Each send to queue 6 logs errlog `0x43002002` (OlyEvSt
   -18, E_ID). OlyQeWr finds a queue's bound flag through a table pointer at `0xa3258350` + 4 x the queue id's bits
   12..14, the record 12 x ((id & `0xfff`) - 1) past it (`0x5002c246..0x5002c27b`). Only `0x5002bfb9` sets it (its one

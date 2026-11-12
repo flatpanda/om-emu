@@ -40,7 +40,7 @@ Each note was checked against the cited code. Paths are relative to the reposito
 
 **Where:** `emu/src/dev/vsc.mjs:154-167`, `emu/src/dev/vsc.mjs:311-316`, `emu/src/lab/display.mjs:1078-1084`, `emu/src/lab/play.mjs:980-983`
 
-**Emulator:** A frame boundary only latches the mirror bank and sets INTST1 bit 0 (`boundary`), and bit 8 where it ends a histogram run (`docs/om1-vsc-spec.md` section 13). Pixels are produced only when the harness rings the COMPOSE doorbell, which is the only caller of `compose()`. The visible image is a snapshot of the latched registers and memory at a time the harness picks.
+**Emulator:** A frame boundary only latches the mirror bank and sets INTST1 bit 0 (`boundary`), and bit 8 where it ends a histogram run, whose bins are counted at that boundary from the bank and the plane's memory as they are then (`docs/om1-vsc-spec.md` section 13). Pixels are produced only when the harness rings the COMPOSE doorbell, which is the only caller of `compose()`. The visible image is a snapshot of the latched registers and memory at a time the harness picks.
 
 **Expected / concern:** Real hardware scans out continuously, fetching plane data by DMA while the frame is displayed. Tearing, mid-frame register or buffer updates, and anything else that depends on scan-out timing are not represented.
 
@@ -248,6 +248,8 @@ level between 1 and 127, such as the EVF menu's 0xb2 (DISPLAY cmd 30), is refuse
 known. OSDFMT1/OSDFMT2 must be 0x111/0x11. SPOS is supported only in a restricted form, and resize only for the RSZ1 bits 0x11 with no extra resize registers. PEAK/BC must have the observed values. Both IMG planes (`drawImg`, two-tap linear) and OSD planes (8-bit index, nearest sampling, blending through the palette) are implemented.
 With the A-VSCHIST-3 opt-in (camapp 3) the histogram unit's six registers, in the forms of their only writers, are
 accepted as leaving the picture unchanged, an assumption (`docs/hle-gaps.md` 4.2.4).
+The unit's bins are the lab's reading of what it counts, which no code states: the source plane's output pixels in
+the area, scaled and clipped, Y or the lab's own R, G, B (A-VSCHIST-4 to A-VSCHIST-6, `docs/hle-gaps.md` 4.2.7).
 
 **Expected / concern:** In practice this is a check that the firmware set up the configuration seen so far. It is not a general compositor. Any other mode the firmware uses (other formats, scaling, peaking, channel 0) produces an error and no image.
 

@@ -266,10 +266,10 @@ Compositor (COMPOSE(ch), mirror bank only; channels 1/2, and E143's HDMI channel
 | A18 | the fetch starts SPOS pixels into the 128-byte burst that holds the DMASADR address: start = `((DMASADR << 4) & ~127) + SPOS * Bpp`, Bpp 2 for IMG format 0 and 1 for OSD; DMABN counts bursts from the burst start | M: the OSD writer `0x501e01b9` stores address & 127 as SPOS (`0x501e01e9..0x501e0207`) next to `DMASADR = address >> 4`, so DMASADR alone loses the start's low 4 bits; the IMG writer `0x501e0137` stores `(x mod pixels-per-burst) & 126` (`0x501e0173..0x501e01b5`) and the TH path the address of pixel `x & ~1`; the IMG burst count of `0x501e0045` (`ceil((w + SPOS) / ppb)`, `0x501e00a7..0x501e00cb`) counts from the burst start. The OSD count does not support that reading: `0x501e00d0` writes `ceil(w / 128) << 3` and `0x501e01b9` adds a raw 1 (bit 0, not a burst) only when `(w mod 128) + SPOS > 128` (`0x501e0208..0x501e022f`), nothing when w mod 128 == 0 whatever SPOS is; the firmware's own pair for width 896 at x = 5 is DMABN `0x38` (896 bytes) with SPOS 5, which A18 refuses as DMABN_SHORT (901 bytes from the burst start; check_display group 7). This contradiction is open. Reading the start as `DMASADR << 4` alone drops the OSD's low bits; `(DMASADR << 4) + SPOS` counts the offset twice and contradicts the IMG burst sum | the pair is consistent: `(DMASADR << 4)` bits 6..4 == `(SPOS * Bpp)` bits 6..4, `SPOS * Bpp < 128`, SPOS even for IMG format 0; DMABN covers `SPOS * Bpp` plus the fetched span; each such composite carries the record `SPOS_A18` (plane << 8 \| SPOS). The OSD writer's DMABN +1 (bit 0) stays DMA_FIELD; any other pair is SPOS_UNMODELLED |
 | A19 (opt-in) | IMG3 with format 2 and PLANC `0x1000` or `0x1100` (bit 12 with the level at 0 or at A7's full 128, section 9 item 12; the face-frame plane CPU 3's DISP_FRAME draws into, set up by `0x501dcb1a`) is rows of 8-bit indices, nearest-neighbour scaled by the plane's resize steps (output pixel i of row j takes source column `floor(i * sh / 4096)` of source row `floor(j * sv / uv)`); index 0 leaves the pixel below, 1..7 replace it with the word at `+0xD00 + 4 * index` (Cr << 16 \| Cb << 8 \| Y); `+0xD00..+0xD1C` change the composite only so | X: DISP_FRAME (`0x5100d05a`, run on the lab CPU, shutter spec section 7 item 50) writes indices 0, 1, 2, 5 and 6 into a 900 x 600 buffer of stride 1024 that it shows as IMG3 (AREA 98, 8; DMALD/DMABN `0x40`), the drawn shapes (AF frames, the focus indicator) are where index 0 is not; the eight words are the frame colour table of `0x51016e3e` converted by the display setup (`0x501db1b4`: `Y = (19595 R + 38470 G + 7471 B) >> 16`, `Cb = ((-11056 R - 21712 G + 32768 B) >> 16) + 128`, `Cr = ((32768 R - 27440 G - 5328 B) >> 16) + 128`), which fits a palette; index 0 transparent is D: DISP_FRAME keeps the 900 x 600 plane enabled over the whole live view and leaves every pixel it does not draw at 0 (after its erase the plane is all 0, and the composite equals the one without the plane), so an opaque index 0 would black out the live view of every camera; opaque 1..7 is I; what the level does to a bit-12 plane is ? (`0x1000` and `0x1100` are drawn alike) | only when the harness sets the debug-window bit (`DisplayLab.assume('A19', on, channels)`, bit 2 of CH_ASSUME); IMG3 format 2 with PLANC `0x1000` or `0x1100`, SPOS 0, and steps that do not shrink (`sh <= 4096`, `sv <= uv`; RSZ_UNMODELLED otherwise); an index of 8 or more or an unwritten word is PAL_UNWRITTEN; each such composite carries the note `ASSUMED` (offset `0xD00`, value 2) and header `assumed` bit 2; the harness skips its IMG edge check for that plane. Default off; S-DISPFRAME sets it for the TFT and the EVF. On the EVF channel DISP_FRAME's 800-wide plane is shown 1600 x 1200 with RSZ1 `0x11` and steps `0x800` horizontally and vertically (X); indices are not interpolated (I) |
 | A20 (opt-in) | HILIGHT1 (`+0x5D0`) written 0 shows the same picture as HILIGHT1 unwritten (A13): highlight off and zebra off | its three writers are read-modify-writes of bit 0 (`0x501e1b2c`, `0x501e1e08`) and of bits `0x330` (`0x501e1bb1`, the zebra setter, value `(old & ~0x330) \| x << 8 \| y << 4`); `0x501cc522` only reads it; so no code sets another bit, and 0 is both features off over the 0 an unwritten register reads (D). Playback's entry (the camera application, PLAY) writes it with zebra off | with the opt-in (CH_ASSUME bit 3; the player's camapp mode sets it on both channels), HILIGHT1 written 0 is accepted on channel 1 or 2 like an unwritten register (header assumed bit 3, an ASSUMED note); otherwise, and for any other value, FEATURE_UNOBSERVED |
-| A-VSCHIST-3 (opt-in, 2026-11-10) | the histogram unit's registers HIST1, HISTAREA1-3, HIST2 and HIST3, written in the forms of their only writers, leave the mixer output unchanged | the writers are the unit's driver alone (D: an immediate scan of the block and the generic writer's 63 call sites); every field whose formula is read is a measurement parameter, the result goes to the CPU (the bins) and the histogram shown is drawn by CPU 2 into GUI layer 1 from them (D, X); that the unit adds nothing to the output is I (section 13) | with the opt-in (CH_ASSUME bit 4; camapp 3 sets it on every channel): HIST1 0 or 1; HIST2 bit 20 with fields [1:0], 4, 8 and [17:16] (0..2), bits 12 and 31..24 clear; HIST3 any; HISTAREA1 / HISTAREA2 a non-empty area inside the window; HISTAREA3 HISTAREA2's y (header assumed bit 4, an ASSUMED note per register, the debug word `0x038` counts the composites); otherwise, and for any other value, FEATURE_UNOBSERVED |
+| A-VSCHIST-3 (opt-in, 2026-11-10) | the histogram unit's registers HIST1, HISTAREA1-3, HIST2 and HIST3, written in the forms of their only writers, leave the mixer output unchanged | the writers are the unit's driver alone (D: an immediate scan of the block and the generic writer's 63 call sites); every field whose formula is read is a measurement parameter, the result goes to the CPU (the bins) and the histogram shown is drawn by CPU 2 into GUI layer 1 from them (D, X); that the unit adds nothing to the output is I (section 13) | with the opt-in (CH_ASSUME bit 4; camapp 3 sets it on every channel): HIST1 0 or 1; HIST2 bit 20 with fields [1:0], 4, 8, [17:16] (0..2) and the component [25:24] (since 2026-11-11, section 13), bits 12 and 31..26 clear; HIST3 any; HISTAREA1 / HISTAREA2 a non-empty area inside the window; HISTAREA3 HISTAREA2's y (header assumed bit 4, an ASSUMED note per register, the debug word `0x038` counts the composites); otherwise, and for any other value, FEATURE_UNOBSERVED |
 | A17 | CPU `0xB8000000..0xBFFFFFFF` shows bus segment `(byte 3 of 0x98100058) << 27`; bytes 0..2 are the identity segments of CPU `0xA0`/`0xA8`/`0xB0` and only `14 15 16` is accepted; reset `0x17161514` | `0x50036da4`/`0x50036d95` (code); the identity reading of bytes 0..3 (I), pinned by check_liveview G1 against independent DRAM reads; the reset value is the firmware's restore value (the reset value itself is not in the code) | the harness's frame writes and reads (`DisplayLab.bus_rows`, `emu/src/lab/display.mjs`), which call the firmware's own window functions |
 
-Errors (each a reason the composite could be wrong; the plane, or the composite, is skipped): REG_UNKNOWN, WIDTH, MIRROR_WRITE, MIRROR_LIVE, RO_WRITE, DEBUG_CPU_WRITE, DOORBELL, NOT_LATCHED, FIELD_MODE (SYNC1 bit 24 = 0 or SYNC4 != 0), WINDOW, MIX_UNOBSERVED (flag only; A5), PLANC_UNOBSERVED (neither 0x100 nor 0), FMT_UNMODELLED (IMG FMT != 0; OSDFMT1 != 0x111 or OSDFMT2 != 0x11 skips all three OSD planes; YPYC, IMG1FMT[5:4] written by `0x501e07e5` and set at `0x501dad90` for BT709 -> BT601; the M8 model investigation found no conversion coefficients for it in code, section 10.2), SPOS_UNMODELLED (an address/SPOS pair outside A18), DMA_FIELD (DMALD/DMABN low bits, DMALD >> 15, DMASADR bits 31..28, DMAEN bits above 5), DMABN_SHORT (fetched span > DMABN bursts), DMA_RANGE (fetched span not inside one backed range of `om1.bus`, A16), RSZ_UNMODELLED (RSZ1 bits other than 0/4, RSZ3/5/6 != 0), PEAK_BC (PEAK1 & 0x11 with IMG1/IMG2, BC != 0x10F), BG_FIELD, OSDCP2_FIELD, PAL_UNWRITTEN / PAL_FIELD (counted per plane, pixels not drawn), UNWRITTEN (a consumed register never written), NOT_RUNNING, ORDER, FEATURE_UNOBSERVED (A13; on channel 0 always but E143's HDMI state, section 10.10), HIST_UNMODELLED (section 13: a bin read the model does not know, a start during a run; the access is a bus error). The harness adds IMG_EDGE_UNKNOWN (A6, section 8) to a composite's error list; it is not a model error. Records that are not errors (the notes ring, one per composite and plane): ASSUMED (A15), SPOS_A18 (A18), PLANC_ZERO (A7: a plane with PLANC 0 was not drawn), VIEW (the lab view mask CH_VIEW is not 0x3F, section 8), HIST_NO_SOURCE (section 13: a bin word read as 0 under A-VSCHIST-2).
+Errors (each a reason the composite could be wrong; the plane, or the composite, is skipped): REG_UNKNOWN, WIDTH, MIRROR_WRITE, MIRROR_LIVE, RO_WRITE, DEBUG_CPU_WRITE, DOORBELL, NOT_LATCHED, FIELD_MODE (SYNC1 bit 24 = 0 or SYNC4 != 0), WINDOW, MIX_UNOBSERVED (flag only; A5), PLANC_UNOBSERVED (neither 0x100 nor 0), FMT_UNMODELLED (IMG FMT != 0; OSDFMT1 != 0x111 or OSDFMT2 != 0x11 skips all three OSD planes; YPYC, IMG1FMT[5:4] written by `0x501e07e5` and set at `0x501dad90` for BT709 -> BT601; the M8 model investigation found no conversion coefficients for it in code, section 10.2), SPOS_UNMODELLED (an address/SPOS pair outside A18), DMA_FIELD (DMALD/DMABN low bits, DMALD >> 15, DMASADR bits 31..28, DMAEN bits above 5), DMABN_SHORT (fetched span > DMABN bursts), DMA_RANGE (fetched span not inside one backed range of `om1.bus`, A16), RSZ_UNMODELLED (RSZ1 bits other than 0/4, RSZ3/5/6 != 0), PEAK_BC (PEAK1 & 0x11 with IMG1/IMG2, BC != 0x10F), BG_FIELD, OSDCP2_FIELD, PAL_UNWRITTEN / PAL_FIELD (counted per plane, pixels not drawn), UNWRITTEN (a consumed register never written), NOT_RUNNING, ORDER, FEATURE_UNOBSERVED (A13; on channel 0 always but E143's HDMI state, section 10.10), HIST_UNMODELLED (section 13: a read of the bins with no run ended, of bins the model cannot count or past the run's bins, a start during a run; the access is a bus error). The harness adds IMG_EDGE_UNKNOWN (A6, section 8) to a composite's error list; it is not a model error. Records that are not errors (the notes ring, one per composite and plane): ASSUMED (A15), SPOS_A18 (A18), PLANC_ZERO (A7: a plane with PLANC 0 was not drawn), VIEW (the lab view mask CH_VIEW is not 0x3F, section 8), HIST_NO_SOURCE (section 13: a bin word of a run without a source plane, read as 0: A-VSCHIST-2 and A-VSCHIST-5).
 
 Every one of the 503 channel registers is in exactly one class (the model's in `emu/src/dev/vsccompose.mjs`,
 `REG_MODEL`/`REG_STORED`/`FEATURES` in `emu/refs/display.mjs`; check_display group 12a checks that both agree name by
@@ -642,28 +642,63 @@ notation) was found to share and not share with kind 2 (2026-10-30, `docs/model-
   the scan reaches the line, once a frame, while INTEN1 holds it (`emu/src/fw/board.mjs` `line_irq`; the line count
   being MONI3's is I); what raises bit 5 is ?.
 
-## 13. Histogram unit (kind 1; 2026-11-09)
+## 13. Histogram unit (kind 1; 2026-11-09, the bins 2026-11-11)
 
 Read on E143 v1.9 (disassembly notation; D unless tagged) and run under `control camapp 3` on the TFT channel 2
-(X; `docs/hle-gaps.md` 4.2.1 has the round). Registers: HIST1 `0x04C`, HISTAREA1-3 `0x474..0x47C`, HIST2 `0x748`,
-HIST3 `0x74C`, INTEN1 / INTST1 bit 8, and the bins at `+0x4000`.
+(X; `docs/hle-gaps.md` 4.2.1 and 4.2.7 have the rounds). Registers: HIST1 `0x04C`, HISTAREA1-3 `0x474..0x47C`,
+HIST2 `0x748`, HIST3 `0x74C`, INTEN1 / INTST1 bit 8, and the bins at `+0x4000`.
+
+| Register | Field | Meaning (D: what the driver writes; I: what the unit does with it) |
+|---|---|---|
+| HIST1 | bit 0 | the start: the set-up clears [3:0], the start writes 1, once a run (I: an edge) |
+| HIST1 | [3:1] | cleared with bit 0, never set (?) |
+| HISTAREA1 | [31:16], [12:0] | the area's x in output pixels (the window's origin added) and its width |
+| HISTAREA2 | [31:16], [15:0] | the area's y and its height (both halved in two-field scan) |
+| HISTAREA3 | [15:0] | the area's y again (its role beside HISTAREA2 is ?) |
+| HIST2 | [1:0] | the bin count's code: 3 for 256, 2 for 128, 1 for 64, else 0 (32 in every request, X) |
+| HIST2 | bit 4, bit 8 | the clip and the scale are on (HIST3) |
+| HIST2 | bit 12 | two-field scan (SYNC1 bit 24 clear) |
+| HIST2 | [17:16] | the source: the IMG plane (0 IMG1, 1 IMG2, 2 IMG3) whose DMA address the request names |
+| HIST2 | bit 20 | always set (?) |
+| HIST2 | [25:24] | the component: 0 Y, 1 R, 2 G, 3 B (the firmware's names for the four runs of playback) |
+| HIST3 | [31:16] | the clip: a bin's largest value |
+| HIST3 | [15:0] | twice the scale s = `N << 16 / (width * height)`, at most 8190 (I: bin = count * s >> 16) |
+| INTEN1 / INTST1 | bit 8 | the run's end: enabled by the start, acknowledged by the ISR with INTST1 = `0x100` |
+| `+0x4000` | n / 2 words | the bins, 16 bits each, two a word, the low half first; one series a run |
 
 - **DISPLAY commands (jump table `0x602abbfc`):** cmd 13 `0x501c365b` -> `0x501d7286` (the request's byte +4 to
   `0x62a3eafc`, then `0x501d6a58` copies its 40 bytes to `0x62a3eac0` and clamps them: the bin count `0x62a3eacc` to
   32..128, `0x501d6aa6..cb`); cmd 14 `0x501c36a4` -> `0x501d729b` (starts a run, `0x501d6bec`); cmd 15
   `0x501c373b` -> `0x501d734c` -> `0x501d709f` (stops: below); cmd 16 `0x501c3788` -> `0x501d7377` for each opened
-  device in the message's mask (a run's end: below).
+  device in the message's mask (a run's end: below). Their senders are api_histogram.c's set, start and stop (ids
+  `0x170005`, `0x170006`, `0x170007`: `0x503ed991` the start, `0x503edc05` the stop).
+- **The request and the kinds of run (2026-11-11).** The request at `0x62a3eac0`: +4 u8 the mode, +8 u32 N, +12
+  u16 the bin count, +14 u16 the clip, +16 the main area {x, y, w, h} (u16 each), +24 the second area, +32 u32 an
+  image handle. Cmd 14's message is {the device mask, the buffers of kind 1, of the second area and of kinds 2, 3
+  and 4}; `0x501d729b` picks the kind (`0x62a3eafd`) and the buffer (`0x62a3eb00`, `0x62a3eb04` the second
+  area's) and calls the start path `0x501d6bec(device, a0 mode, d1 kind)`:
+
+  | Mode byte | Start-path mode | Kinds | Scale s | Address to the set-up | HIST2[25:24] |
+  |---|---|---|---|---|---|
+  | 1, the live view | 1 | 1 (the main area), 5 (the second), in turn | `N << 16 / (w * h)`; kind 5 `(N >> 3) << 16 / (w2 * h2)` | none | 0 |
+  | 3, playback | 2 | 1..4 (Y, R, G, B), the first buffer set | `N << 15 / (w * h)` | `0x50534dd1(handle)` | kind - 1 |
+
+  A mode byte of 2 starts nothing. X: the live view asks N 1024, 128 bins, clip 64, 800 x 600 at {50, 0} and
+  100 x 75 at {400, 263}; INFO's detail view N 256, 32 bins, clip 32, 474 x 316 at {24, 62}, handle `0x0a02`.
 - **Set-up `0x501e127f(d0 ch, a0 area, d1 address, a1 parameters)`:** HIST2 = `0x100000 | n | src << 16`, n 3 / 2 / 1 /
   0 for 256 / 128 / 64 / other bins (`0x501e12b1..cb`), bit 12 with SYNC1 bit 24 clear (two-field scan, `0x501dff54`),
   src the index (1 IMG2, 2 IMG3) of the IMG plane whose DMA address is d1 and whose DMAEN bit 5 - src is set, else 0:
   IMG1 matching, no plane matching, d1 0 and the area's word +32 0 or -1 (which skip the search) all leave it 0
-  (`0x501e12e9..66`). The start path passes d1 = 0 and the word +32 = 0 (`clr d3` at `0x501d6d3f` / `0x501d6da5`, stored
-  and passed at `0x501d6dee..f7`), so its runs skip the search and src is 0. HISTAREA1 = `(x0 + x) << 16 | width`,
+  (`0x501e12e9..66`). The live start passes d1 = 0 and the word +32 = 0 (`clr d3` at `0x501d6d3f` / `0x501d6da5`, stored
+  and passed at `0x501d6dee..f7`), so its runs skip the search and src is 0. Playback's passes the address of the
+  request's handle (`0x501d6fa7..c0`); INFO's is IMG1's address, so src is 0 there too (X).
+  HISTAREA1 = `(x0 + x) << 16 | width`,
   HISTAREA2 = `(y0 + y) << 16 | height`, HISTAREA3 = `y0 + y` ({x0, y0} from `0x501df27a`, {x, y} and the size the
   request's; y and the height halved in two-field scan, `0x501e1379..f6`). A clip c sets HIST2 bit 4 and HIST3[31:16] =
-  c; a scale s sets bit 8 and HIST3[15:0] = 2s (`0x501e13f8..5e`); each clears HIST1[3:0]. The start path computes s =
-  `(eac8 << 16) / (width * height)` (`eac8 >> 3` for the second area), at most 8190 (`0x501d6d24..4b`,
-  `0x501d6d87..b1`); c is the request's halfword at `0x62a3eace`.
+  c; a scale s sets bit 8 and HIST3[15:0] = 2s (`0x501e13f8..5e`); each clears HIST1[3:0]. The start path computes s
+  (the table above; `0x501d6d24..4b`, `0x501d6d87..b1`, `0x501d6f43..63`), at most 8190; c is the request's halfword
+  at `0x62a3eace`. After the set-up `0x501e1488(ch, d1)` stores the component: HIST2 = `(HIST2 & ~0x03000000) | d1
+  << 24`, d1 0 from the live start (`0x501d6e01`) and kind - 1 from playback's (`0x501d6fd8`).
 - **Start `0x501e14a4(ch)`:** INTEN1 |= `0x100`, HIST1 = 1, under the interrupt lock `0x50053ebe` / `0x50053f07`. The
   start path `0x501d6bec` first sets the run word `0x62a3eaf8` = 1 (waiting, 10 ms sleeps, while a previous run's is 1,
   `0x501d6c28..63`), runs the set-up and then waits a frame at a time (`0x501de78f`, at most 20, then errlog
@@ -675,11 +710,13 @@ HIST3 `0x74C`, INTEN1 / INTST1 bit 8, and the bins at `+0x4000`.
   ring), and `0x501e14fc` writes INTST1 = `0x100`. The callback clears `0x62a3eaf8`, stores the mask at
   `0x62a3eaec + 4 ch` and, while the word `0x62a3eabe` is set, posts DISPLAY cmd 16 `{0, 0, 16, 0x62a3eaec + 4 ch}`
   (OlyQeWr at `0x501d7227`); then it sets bit 0 of the flag whose id is at `0x6004303a` (iOlyEvSt or OlyEvSt by
-  `0x50017b6a`).
+  `0x50017b6a`). Where the channel's device is not open the ISR goes on with the channel's own bit (`0xff000004`, 2
+  or 1 for channels 0, 1, 2; `0x501dec8c..a7`), and cmd 16 then runs no handler for it (`0x501c3793..b9`).
 - **Bins (`0x501d70e6`, from cmd 16):** with `0x62a3eabe` clear INTEN1 bit 8 goes off (`0x501e14d4`) and no bin is read.
   The bins are read only while `0x62a3eabe` is set and the start path's result `0x62a3eae8` (written at `0x501d708c`) is
-  1 (`0x501d7106..17`): `0x501e150e(ch, n, buffer)` reads n / 2 words from `+0x4000` (n = `0x62a3eacc`, 128 in the lab,
-  X), two 16-bit bins a word, the low half first, each clipped to the mirror HIST3[31:16]; then, if the written DMAEN
+  1 (`0x501d7106..17`): `0x501e150e(ch, n, buffer)` reads n / 2 words from `+0x4000` (n = `0x62a3eacc`: 128 in the
+  live view, 32 at INFO, X), two 16-bit bins a word, the low half first, each clipped to the mirror HIST3[31:16] and
+  stored as a u32 in the buffer the message named, the consumer's own; then, if the written DMAEN
   bit 5 (IMG1) is clear and `0x501e1462` reads the written HIST2[17:16] as 0 (it gives 0 for 0 and for 3; `0x501e2260`
   reads DMAEN), the buffer is overwritten with 0 and 64 in bin 5 (`0x501d712d..54`); the buffer goes to the ring
   `0x62a3cab8 + 1024 (k & 7)`, k the count `0x62a3eab8` (`0x501d7159..84`). Cmd 16 then posts 12 bytes (a halfword 0,
@@ -690,36 +727,48 @@ HIST3 `0x74C`, INTEN1 / INTST1 bit 8, and the bins at `+0x4000`.
   the firmware's own histogram for an off IMG1 reads as the background's, at the clip (I).
 - **Stop (cmd 15, `0x501d709f`):** clears `0x62a3eabe` and, while `0x62a3eaf8` is 1, clears the flag and waits for it
   up to 50 ms (OlyEvWt at `0x501d70d1`, the result not read): the flag's only waiter (its id word is read at
-  `0x501d70b2`, `0x501d70c5` and by the callback only). The next end then posts no cmd 16 and nothing restarts.
+  `0x501d70b2`, `0x501d70c5` and by the callback only). The next end then posts no cmd 16 and nothing restarts. The
+  stop writes no register: the run that is on ends as any other, and HIST1 is cleared only by the next set-up.
 - **Executed (X):** the start's values, full area then spot: HISTAREA1 `0x00940320` / `0x01f20064`, HISTAREA2
   `0x00080258` / `0x010f004b`, HISTAREA3 `8` / `0x10f`, HIST2 `0x00100112`, HIST3 `0x00400116` / `0x004008bc` (128 bins,
   source field 0, clip 64, scales 139 and 1118 for 800 x 600 at {148, 8} and 100 x 75 at {498, 271}); DMAEN 7 (no IMG
   plane in the lab). A run every 50.05 ms (three TFT frames: the frame the end's cmd 16 waits for the registers to
   latch, the frame before the run begins, the run's), 40 in the start and 2 s of idle, each end's cmd 16 reading 64 bin
   words, a queue-6 post every fourth.
-- **Model (`emu/src/dev/vsc.mjs`):** a write of HIST1 bit 0 arms a run; A-VSCHIST-1: the run measures the frame that
-  begins at the channel's next boundary and ends at the boundary after it, where INTST1 bit 8 is set (also while
-  masked); one-shot. The IRQ line includes bit 8 (`board.vsc.irq_mask` `0x103`; the ISR handles it, D, the line carrying
-  it is I). A-VSCHIST-2: the bins of a run whose source plane (taken as the IMG plane HIST2[17:16] names, I, latched at
-  the run's start) had its DMAEN bit clear read as 0, only while the written DMAEN bit 5 is clear and HIST2[17:16] is 0
-  at the read, the firmware's discard test above (the model refuses the 3 it also takes), which makes their value
-  irrelevant; each such read counts in the debug word `0x034` (record HIST_NO_SOURCE). Any other bin read (no run ended
-  since the last began, the source plane on, the read's test false) and a start while a run is armed or runs are
-  HIST_UNMODELLED and a bus error (a word past the 64 stays REG_UNKNOWN). Debug window: the channel block's byte `0x3B`
-  is the unit's state (0 idle, 1 started, 2 running), its word `0x3C` the runs ended. Default sessions do not write
-  HIST1 (X: camapp 1 and 2), so the unit stays idle there.
-- **Not known (?):** what the unit counts (an IMG plane's pixels is I, from the set-up's search; which plane, if any,
-  src 0 names when no address was passed, as in every run the start path makes; which component, Y or another) and how
-  values map to bins; what the scale (HIST3[15:0], HIST2 bit 8) and HIST2 bit 20 do; HIST1[3:1]; HISTAREA3's role beside
-  HISTAREA2; whether HIST1 is a start command or a level; the unit's time per run; who reads the ring `0x62a3cab8` (no
-  literal of it but the writer's, I: a computed address) and what the application does with `0x04020301`. The composite
-  is unchanged: HIST1, HISTAREA1-3 and HIST2/3 stay in A13's never-written class (section 7), so a composite with any of
-  them written is FEATURE_UNOBSERVED, unless A-VSCHIST-3 (below) accepts them.
+- **What the unit counts (I; 2026-11-11).** No code computes a bin, so this is the lab's reading of the driver's
+  parameters. A-VSCHIST-4: the pixels of the source plane as its resizer puts them on the output, inside the area;
+  a pixel of component value v in bin `v * count >> 8`; with the scale on each bin is `count * HIST3[15:0] >> 17`,
+  so the bins of an area sum to about N (D: the formulas; I: the arithmetic), and with the clip on at most
+  HIST3[31:16]. A-VSCHIST-6: the component is the pixel's Y, or its R, G or B by A9's inverse full-range BT.601
+  (section 7); the unit's own conversion is ?.
+- **Model (`emu/src/dev/vsc.mjs`, `emu/src/dev/vsccompose.mjs` histMeasure):** a write of HIST1 bit 0 arms a run;
+  A-VSCHIST-1: the run measures the frame that begins at the channel's next boundary and ends at the boundary after
+  it, where INTST1 bit 8 is set (also while masked); one-shot. The IRQ line includes bit 8 (`board.vsc.irq_mask`
+  `0x103`; the ISR handles it, D, the line carrying it is I). At that end the bins are counted from the bank latched
+  for the frame and the source plane's rows as memory holds them, sampled as COMPOSE samples the plane (the lab's
+  hook histSource lets S-SCENE put its frame of that time into the live view's bank first). A run whose source
+  plane had its DMAEN bit clear in that bank has no source and its bins read 0 (record HIST_NO_SOURCE, counted in
+  the debug word `0x034`): A-VSCHIST-2 where the written DMAEN bit 5 is clear and HIST2[17:16] is 0 at the read,
+  the firmware's discard test above (the model refuses the 3 it also takes), which makes the value irrelevant;
+  A-VSCHIST-5 (I) where the firmware keeps them, the plane having come on in between (counted in the debug word
+  `0x03C`). The bins are unknown, and a read of them HIST_UNMODELLED and a bus error with the reason, for a
+  register outside its writers' form or never written, two-field scan, 256 bins, a plane COMPOSE does not draw as
+  YC 4:2:2, an area not inside the plane or a count that does not fit 16 bits. So are a read with no run ended
+  since the last began, a word past the run's bins and a start while a run is armed or runs (a word past the 64
+  stays REG_UNKNOWN). Debug window: the channel block's byte `0x3B` is the unit's state (0 idle, 1 started, 2
+  running), its word `0x3C` the runs ended. Default sessions do not write HIST1 (X: camapp 1 and 2), so the unit
+  stays idle there.
+- **Not known (?):** the unit's arithmetic and its conversion to R, G and B (the two assumptions above), and what
+  it gives without a source; the bin count at code 0 (32 in every request); what HIST2 bit 20 does; HIST1[3:1];
+  HISTAREA3's role beside HISTAREA2; whether HIST1 is a start command or a level; the unit's time per run. A
+  camera's histogram of a known chart would settle the first three; the code cannot. The composite is unchanged:
+  HIST1, HISTAREA1-3 and HIST2/3 stay in A13's never-written class (section 7), so a composite with any of them
+  written is FEATURE_UNOBSERVED, unless A-VSCHIST-3 (below) accepts them.
 - **The composite (A-VSCHIST-3, 2026-11-10; `docs/hle-gaps.md` 4.2.4).** The only stores that name the six registers'
   addresses are the driver's (D): the set-up `0x501e127f` (HIST2 `0x501e1378`, `|= 0x10` `0x501e1406`, `|= 0x100`
   `0x501e1438`; HISTAREA1 `0x501e1396`, HISTAREA3 `0x501e13c6`, HISTAREA2 `0x501e13f6`; HIST3 `0x501e141b`,
   `0x501e144e`; HIST1 `&= ~0xf` `0x501e142b`, `0x501e145e`), `0x501e1488` (HIST2 `= (HIST2 & ~0x03000000) | d1 << 24`
-  at `0x501e14a0`: d1 0 from `0x501d6e01`, `(a3 - 1) & 0xffff` from `0x501d6fd8`) and the start (HIST1 = 1,
+  at `0x501e14a0`: d1 0 from `0x501d6e01`, the kind - 1 from `0x501d6fd8`) and the start (HIST1 = 1,
   `0x501e14c8`); no call of the generic writer `0x501e2ce6` passes their word indices (19, 285-287, 466, 467); a store
   through another computed address is not excluded (I). Under camapp 3 the TFT's composite was refused for these six and
   nothing else (X). The opt-in A-VSCHIST-3 (section 7's table; `emu/src/dev/vsccompose.mjs` histForm) accepts them in

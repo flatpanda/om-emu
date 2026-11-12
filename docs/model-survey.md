@@ -2571,7 +2571,7 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    E125's word was already the right one before the rule; nothing pressed Delete there until test_erase held
    ERASE_DIALOG both ways on review), and UP and OK send request 21; on the E118 family it still opens nothing (why,
    ?; it opens since the family's REC_FILE runs natively, X: test_erase's ERASE_DIALOG at the round's merge, I: the
-   DCF database now holds the pictures, finding 146).
+   DCF database now holds the pictures, finding 146; finding 155).
    No default session's screen changes by it (X: golden's screen layer, 240 sessions), but the evaluations that
    read the status take other paths, so the instruction counts of 23 scenario sessions' interrupt rows and stops move
    (playback's first difference: an IRQ 310 row 117 instructions later) and check_perf's P6 instruction count with them;
@@ -2648,7 +2648,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    SHOOTS_AFTER_PLAY). Once REC_FILE registers the pictures on E130 or the E118 family the rule's calls make E130 and
    E122 native too (I; ERASE_NATIVE would have to follow). (At the round's merge, 2026-11-12, with REC_FILE native
    there, findings 135 and 146, ERASE_NATIVE holds E130, E133, E129 and E122 too, X: test_erase; E118 and E120 keep
-   no erase fact.)
+   no erase fact. Finding 155: E122's dialog's Yes sends nothing in the lab, so its session erases through
+   S-PLAYSEQ's erase.)
 141. **The edit-save requests** (2026-11-11, `src/lab/camapp.mjs` EDIT_SAVE; D: each id is the one its sender sets after
    its entry trace, as finding 110's). The play requests that save a file an edit made: OlyHfwOpeEdtRsz::save 120 (E143
    `0x50b5ec3e`), OlyHfwOpeEdtTrm::save 131 (`0x50b5f886`), OlyHfwOpeEdtCol::save 142 (`0x50b5b3ed`),
@@ -2697,7 +2698,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    Delete opens no dialog (?; it opens since the merge, finding 138);
    OlyHfwOpePlyRec::record 115 and OlyHfwOpeEdtMov::startImageCapture 527 (finding 141);
    and the family's isProtect (303), which S-PLAYSEQ answers 0 whatever the attribute (finding 109): no body of the
-   family erases natively yet (since the merge ERASE_NATIVE holds E122, finding 140).
+   family erases natively yet.
+   (2026-11-12, finding 155: 303 answers the attribute now; since the merge ERASE_NATIVE holds E122 (finding 140),
+   which erases natively through S-PLAYSEQ's erase, its Yes waiting on a software timer the lab does not run.)
 143. **The E118 family's REC_FILE task, by a rule** (2026-11-11, `src/fw/facts.mjs` recFileFrame, fact `rec_file`; D on
    E122 unless tagged; answers finding 102's "which caller is REC_FILE's" and finding 105's "Next"). The object-name
    table names task 33 REC_FILE, queue 78 REC_EXEC_FILE, queue 85 REC_POST_FILE, queue 34 FILECLBK_UEXEC and semaphore
@@ -3056,6 +3059,64 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    about 800 ms by body; the walker's limits (the items' English names, a cursor marked by the row's band, a draw log
    kept to its last 2,000 entries: a screen whose full clear has left the log is refused); `bin/nav.mjs` and the
    browser player have no such walk.
+155. **E122's erase after the round's merge: the mount state word, and a Yes that waits on a timer the lab does not
+   run** (2026-11-12, `src/fw/facts.mjs` mountState, fact `mount_state`; `src/lab/camapp.mjs` S-PLAYSEQ's isProtect;
+   `test/test_erase.mjs` ERASE_YES_UNTIMED; D on E122 unless tagged). *The symptom.* At master `4e08ef9` E122's
+   test_erase passed 8 of 31 checks, not the 13 the merge saw: PLAY showed no picture (the DCF database counted three,
+   the list none), and test_playinfo passed 1 of 9 and `test_storage --session` 53 of 61 (X). The re-port of
+   `4e08ef9` had placed E143's SD mount state word `0x60360bfc` (S-CARD's first CARD_STATE word, which it sets to 8)
+   on E122's `0x601f1e06` and E118's `0x601dd7ca`, bytes of the image copy (X: the map's votes for E122's
+   `0x616022d8` and `0x616022e4` tied at 4 each, so `src/fw/place.mjs` took the walks' pairing of those data bytes as
+   code; every earlier port had `0x616022d8` and `0x615e04a4`; that round 5's literals, which seed the maps, made the
+   tie is I). The rule mountState places the word as the mount state's setter stores it for medium 4 (finding 138's
+   setter, mediaHls's `mount.set`; one on each of the 19 images, X), the same as the map on the other 17. With it
+   E122 is back at the merge's 13 of 31: Delete opens the erase dialog, UP puts the cursor on Yes, and OK draws Yes
+   pressed and sends nothing (X: the frames; no request executed, no erase). *The cause.* E143's Yes handler calls
+   PlaySingleFrame::eraseCurrent at once (X: its API wrapper `0x50b4b697` from the GUI, then `0x50b6fa0b`, request
+   21); E122's reaches neither its wrapper (`0x50711813`, API `0x3020d`) nor eraseCurrent (`0x507330b4`), X. At OK
+   it arms a GUI timer (X, the instructions only OK runs: `0x50cf2b9b` -> `0x50baa781`, which fills a slot of the
+   ten-slot table `0x6160c2f0` with the callback, the period and the start from the tick count `0x6160cb98`), so the
+   action waits for the timer. The GUI's timers are served by the task `0x50bb0afc`, woken through the semaphore its
+   10 ms tick `0x50bb0aca` signals; the tick is a cyclic of the OS layer (id 10: created `0x507428f2` ->
+   `0x506d9288`, which answers its id, and started `0x506d931c`, which answers 0, X at the start), and that layer's
+   start gives a cyclic below 1000 ms to the software timer driver (`0x506a47a5`: `0x50065e8a` with kind 1 and the
+   callback `0x506a48fa`; from 1000 ms on the long timer set `0x502efa48` that S-LONGTIMER observes,
+   `0x506a478b`). The driver's own 2 ms service (`0x500662bb`, kind 128) runs on its
+   hardware entry 0, which its init starts (X: `0x500660cc` -> `0x500640ba`, `0x50064118`): channel 0 of a second
+   timer unit, ctl `0x9b800010` 1, reload `0x9b800014` `0x21`, IE `0x9b8000dc` bit 0, status `0x9b8000c4`. The lab
+   models the timer block at `0x98900000` alone; at `0x9b800000` it has plain storage (X: the words read back as
+   written), so the unit never counts, the service and the entry's
+   callback (`0x50066025`) never run, and E122's tick count stays 0 where E143's (`0x603679d0`) counts the lab's ms
+   (X). This is `src/fw/board.mjs`'s "source not read" of the family's software timers: read now, not modelled; every
+   software timer of the family, the GUI's among them, is stopped in the lab (I for the others). The other
+   candidates do not hold: the key order (UP puts the cursor on Yes, X), a request through a sender S-PLAYSEQ does not
+   observe (none at all is executed at OK, and eraseCurrent's entry is not reached, X), the erase fact's form or a
+   restriction (S-PLAYSEQ's erase with E122's fact erases each picture natively, X below). *What changed.* E122
+   stays in ERASE_NATIVE: test_erase holds the inert Yes strictly once (Delete, UP, OK: the dialog still open, no
+   request executed, nothing erased; PLAY twice back to the picture) and then erases through S-PLAYSEQ's erase after
+   the dialog opens and MENU closes it (before OK the GUI takes MENU, after it neither MENU nor 2 s of lab time close
+   the dialog, X). Each erase then runs natively with E122's fact: the file's entry deleted, its chain and the free
+   counts, the emptied folder, No Picture, and S1 and S2 after PLAY take 100-0001 in a new folder (X; so E122 joins
+   SHOOTS_AFTER_PLAY). E118 and E120 are in ERASE_YES_UNTIMED too: their OK sends no request either (X:
+   `test/test_playinfo.mjs`, which since the merge expected the refusal of request 21 there and the erase on E122: 20
+   of 21 on E118 and E120, 19 of 21 on E122 with the mount state word placed; it now holds the open dialog and both
+   files). S-PLAYSEQ's answer to the family's
+   synchronous isProtect (303, finding 109) is now the shown picture's attribute, bit 0, as S-PLAYCOMP's isProtect has
+   answered since finding 139 (it answered 0 whatever the attribute, finding 142's open item): on E122 Delete on the
+   picture the DCF edit locked then opens no dialog but ID_ST_PROTECT_BLINK_SINGLE (X; the first evidence for 303's
+   name, finding 109's I), whose blink, which E143's GUI ends within a second, stays through MENU, PLAY, OK, LEFT and
+   RIGHT (X; I: on a GUI timer as well), so test_erase does not press Delete there on E122. *E118 and E120.* Their
+   Delete opens the dialog (finding 138's "why, ?" is the DCF database holding the pictures since finding 146, I), and
+   their erase stays refused: their builds hold no `mov ID,d0` of the object delete's API id `0x7000f` nor of the
+   attribute's `0x70012` (finding 140; X, a byte scan: no `0x70012` at all on E118), so pictureErase reads no fact,
+   and neither change here gives them one; where their erase deletes the file is not read (?). X (each in the
+   worktree, after `bin/port.mjs all`): test_erase E122 35 of 35 checks, E143 31, E130 31, E118 and E120 3 each;
+   test_playinfo E122, E118 and E120 21 each, E143 and E130 20; `test_storage --session` on E122 70 of 70;
+   `bin/test-pure.mjs` all passed (firmware facts 1513 of 1513). Open: a model of the second timer unit (its IRQ and
+   ISR are not read), after which the family's Yes would be expected to send request 21 and ERASE_YES_UNTIMED to go;
+   the place.mjs fallback that took a tied vote's data bytes as code, which can misplace other words (E122's re-port
+   at `4e08ef9` also changed six other places, `0x50416123`, `0x5019868e` and `0x50c9d778` among them, X; not
+   checked here).
 
 
 

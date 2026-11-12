@@ -257,7 +257,8 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 // the release route, round 2 (test_take_release.mjs focusSession, --take probe round 3: H-TAKEFOCUS): under camapp 3
 // TAKE_FOCUS runs natively, S1's take request goes through RdyFcsRdy1..3; with --cpu2 native (round 4: H-CAMINIT,
 // H-EXPINIT) TAKE_EXPOSE's request reaches EXP_MOVIE, which waits for the frame events; S2's DISPLAY commands go in the
-// DISPLAY task's order (S-DISPQ's queue) and its idle stops at the sub-CPU's command 0x14
+// DISPLAY task's order (S-DISPQ's queue) and its idle goes on past the power manager's sub-CPU command 0x14, which
+// S-SCPUDEV takes (docs/hle-gaps.md 4.7.6)
 {
   const { focusSession } = await import('../test/test_take_release.mjs');
   const fs = await focusSession();
@@ -278,7 +279,8 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 // TAKE's take-ready on the second shot (test_take_ready.mjs, camapp 3 with --take probe and --cpu2 native): the first
 // S1's 794 comes from TAKE_MAIN's event 0x04080032 through Com_EvSenderManager; S1's release stops the take-ready with
 // TAKE_EXEC command 7, which TAKE_MAIN does not read in RdyFcsRdy3, so the sequence waits in phase 111 and the second
-// S1 makes no take request; with S-SCPUDEV the power manager's 0x14 stops the session first
+// S1 makes no take request; the power manager's 0x14, which the first S1 brings at the manager's next cyclic tick, is
+// taken by S-SCPUDEV as by the sub-CPU's own firmware, with the same bytes kept (docs/hle-gaps.md 4.7.6)
 {
   const { secondShotSession } = await import('../test/test_take_ready.mjs');
   const ss = await secondShotSession();
@@ -299,7 +301,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 }
 // the release route with cam.c's second init (test_take_release.mjs camFeSession, the probe's cam_fe opt-in:
 // H-CAMINIT2, S-CAMFE): S1 as focusSession's, cam.c takes EXP_MOVIE's requests without an error, nothing runs the movie
-// sequence's frame step, EXP_MOVIE still waits; S2 as focusSession's, its idle stopping at the sub-CPU's command 0x14
+// sequence's frame step, EXP_MOVIE still waits; S2 as focusSession's, the sub-CPU's command 0x14 taken and no stop
 {
   const { camFeSession } = await import('../test/test_take_release.mjs');
   const cs = await camFeSession();

@@ -12,12 +12,17 @@
 //                  waits in phase 111, whose table takes 793 and not S1 or its release (its default case takes
 //                  them). TAKE_EXEC then holds the command 7, which TAKE_MAIN does not read in RdyFcsRdy3 (whose
 //                  command table is empty).
-//                  With S-SCPUDEV the session stops 1.16 s after the first S1: the power manager (task 10) sends the
-//                  sub-CPU 0x14 {0, 1, 0, 3, 0}, which S-SCPUDEV does not model.
-//                  With the sub-CPU's own firmware (env.scpu 'native') the session runs on: the 0x14 is the link's
-//                  only transfer from S1 on (no message back), and the second S1 is event 826 in phase 111, which
-//                  makes no take request: no 794, TAKE takes nothing; MENU after it reaches UI_IN and sets no GUI
-//                  event, with no event to the sequence and no isCtrlReleaseEnable call (where it is dropped: not read)
+//                  The power manager's 0x14 (docs/hle-gaps.md 4.7.6): at S1 TAKE_MAIN's RdyFcsRdy1 clears and then
+//                  sets the power manager's cyclic-check byte (0x50043c6c: 0 from the state's entry, 1 from its
+//                  handler 0x503c2d08), so the manager's next cyclic tick, 1.16 s after S1, runs a source check, the
+//                  session's first: the body's battery reads as inserted, its recommend byte becomes 3, and the notice
+//                  0x500444b3 sends the sub-CPU 0x14 {0, 1, 0, 3, 0} from the manager's task (task 10). It is the
+//                  link's only transfer from S1 on and nothing comes back, with S-SCPUDEV, which keeps the two slots'
+//                  bytes, as with the sub-CPU's own firmware (env.scpu 'native'), whose power manager's object holds
+//                  the same bytes after it.
+//                  The second S1 is event 826 in phase 111, which makes no take request: no 794, TAKE takes nothing;
+//                  MENU after it reaches UI_IN and sets no GUI event, with no event to the sequence and no
+//                  isCtrlReleaseEnable call (where it is dropped: not read)
 //   takeReadyUnits  (no firmware) S-TAKERDY's rule take_ready_rule (src/lab/camapp.mjs; docs/hle-gaps.md 4.1.12): a
 //                  request the API sender posts to TAKE_EXEC is the take-ready (command 0 of the packet's kind 0: the
 //                  reply, then TAKE's event), the take-picture request (command 11: taken, not answered), a command 0
@@ -70,9 +75,14 @@ const EVENT_TASK = 0x50ABBF0C, PWR_TASK = 0x50043CDB;
 const PHASE111_TABLE = 0x60E9AEB0, PHASE111_BASE = 281, PHASE111 = 0x50C611D5, PHASE111_DEFAULT = 0x50C615E4;
 // the stop's request as the API sender posts it (OlyQeWr's return 0x503eba07): {reply queue 6, token, command 7}
 const OLYQEWR = 0x5002C151, API_SEND_RETURN = 0x503EBA07, STOP_COMMAND = 7, STOP_TOKEN = 0xF0070000;
-// S-SCPUDEV's stop and the frame the power manager sends (its state-change notice 0x500444b3, from 0x50044533)
-const SCPU_STOP = /S-SCPUDEV: command 0x14 \(data 0001000300\): not modelled/, PWR_14_FROM = 0x50044533;
-const LINK_14 = '07140001000300000000';
+// the frame the power manager sends (docs/hle-gaps.md 4.7.6): its builder 0x500435b0 (a0 the two inserted bits, a1 the
+// two recommend bytes), called from its notice 0x500444b3 (a0 the published state record, a1 the new one: +22
+// pwr_ins, +30 and +64 the slots' recommend bytes; returning to 0x50044533); the cyclic-check byte's setter
+// 0x50043c6c and TAKE_MAIN's two calls of it in RdyFcsRdy1 (returns 0x503c29c2, d0 0, and 0x503c2d32, d0 1); TAKE_MAIN
+// by its task's entry (X: E143's task 107); the sub-CPU's power manager's object (its two slots' bytes at +0 and +10)
+const PWR_14_FROM = 0x50044533, PWR_NOTICE = 0x500444B3, PWR_CYCLIC_SET = 0x50043C6C, TAKE_MAIN_TASK = 0x503996C3;
+const CYCLIC_CALLS = [[0, 0x503C29C2], [1, 0x503C2D32]];
+const LINK_14 = '07140001000300000000', SCPU_PWR_OBJECT = 0x2000A7C8, KEPT_14 = [[1, 0xFF], [0, 0xFF]];
 
 export async function secondShotSession() {
   const bad = [];
@@ -82,7 +92,8 @@ export async function secondShotSession() {
   const { Player } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { disasm, runtime } = await import('../src/lab/hle.mjs');
-  const { S1_EXP, canon2 } = await import('./test_take_release.mjs');
+  const { S1_EXP, canon2, PWR_14_FRAME } = await import('./test_take_release.mjs');
+  const { SRAM } = await import('../src/core/m4/boot.mjs');
   const base = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000 };
   const args = { ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, take: 'probe', cpu2: 'native' };
   for (const native of [false, true]) {
@@ -121,9 +132,12 @@ export async function secondShotSession() {
       let p111 = null;
       watch(PHASE111, (l, r) => { p111 = r.d0 & 0xFFFF; }, 'test phase 111');
       watch(PHASE111_DEFAULT, () => { if (p111 !== HISTOGRAM) seen.push(`phase 111's default case for ${p111}`); }, 'test phase 111 default');
-      const refused = [], pwr = [];
+      const refused = [], pwr = [], cyclic = [], notices = [];
+      const hex = (a, n) => Buffer.from(lab.sim.read(a >>> 0, n)).toString('hex');
       watch(UNRESPONSIVE, (l, r) => refused.push(l.sim.u32((r.sp >>> 0) + 8)), 'test refusal');
-      watch(PWR_14, (l, r) => pwr.push({ task: lab.nk.entry(task()), from: disasm(r.mdr), t: lab.lab_time() }), 'test power 0x14');
+      watch(PWR_14, (l, r) => pwr.push({ task: lab.nk.entry(task()), from: disasm(r.mdr), t: lab.lab_time(), bytes: hex(r.a0, 2) + hex(r.a1, 2) }), 'test power 0x14');
+      watch(PWR_CYCLIC_SET, (l, r) => cyclic.push([r.d0 & 0xFF, disasm(r.mdr), lab.nk.entry(task())]), 'test power cyclic byte');
+      watch(PWR_NOTICE, (l, r) => notices.push([r.a0, r.a1].map((a) => [22, 30, 64].map((o) => lab.sim.read((a >>> 0) + o, 1)[0]))), 'test power notice');
       const posts = [];
       lab.wrap(OLYQEWR, (prev) => (h, r) => {
         if ((r.d0 & 0xFFFF) === TAKE_EXEC && disasm(r.mdr) === API_SEND_RETURN) {
@@ -136,7 +150,7 @@ export async function secondShotSession() {
       let n = take.requests.length;
       const since = () => { const out = take.requests.slice(n).map((r) => canon2(r, stateName)); n = take.requests.length; return out; };
       seen.length = 0;
-      const t0 = lab.lab_time(), x0 = lab.scpu_link.transfers.length;
+      const t0 = lab.lab_time(), x0 = lab.scpu_link.transfers.length, f0 = lab.store_log.scpu_frames.length;
       // the first S1: 794 from TAKE_MAIN's module event, through Com_EvSenderManager
       key('s1', 'down'); idle(600);
       const s1 = since(), seen1 = seen.splice(0);
@@ -146,6 +160,8 @@ export async function secondShotSession() {
         `${tag}: S1 in phase 101, the take request, 794 built in Com_EvSenderManager's case for 0x04080032 and taken in phase 102: ${JSON.stringify(seen1)}`);
       ok(main() === 'RdyFcsRdy3 0x200 0x5' && held() === 0 && (lab.nk.state(take.exp_tid) & 0xF) === 4,
         `${tag}: TAKE_MAIN waits in ${main()} (want RdyFcsRdy3, pending 0x200, pattern 0x5), TAKE_EXEC holds ${held()}, EXP_MOVIE's state ${lab.nk.state(take.exp_tid)}`);
+      ok(JSON.stringify(cyclic.map(([v, from]) => [v, from])) === JSON.stringify(CYCLIC_CALLS) && cyclic.every(([, , entry]) => entry === TAKE_MAIN_TASK) && !pwr.length,
+        `${tag}: at S1 TAKE_MAIN's RdyFcsRdy1 clears and sets the power manager's cyclic-check byte: ${JSON.stringify(cyclic.map(([v, from, entry]) => [v, h8(from), h8(entry)]))}; no 0x14 yet (${pwr.length})`);
       // S1's release: the stop, command 7, left in TAKE_EXEC; the sequence in phase 111
       posts.length = 0;
       key('s1', 'up');
@@ -158,37 +174,39 @@ export async function secondShotSession() {
       const cmds = (() => { const out = [], t = lab.sim.u32(MAIN_STATES + 20 * u16(MAIN_STATE) + 12) >>> 0; for (let a = t; t && u16(a) !== 0xFFFF && out.length < 64; a += 8) out.push(u16(a)); return out; })();
       ok(table.includes(793) && ![824, 826, 827, 828].some((x) => table.includes(x)) && cmds.length === 0,
         `${tag}: phase 111's table takes 793 and not S1, S2 or their releases (${table.length} ids, 793 ${table.includes(793)}); ${stateName(u16(MAIN_STATE))}'s command table ${JSON.stringify(cmds)}`);
-      if (!native) {
-        let stop = null;
-        try { idle(800); } catch (e) { stop = e.message; }
-        const p = pwr.at(-1), ms = p ? (p.t - t0) / 1e6 : null;
-        ok(stop !== null && SCPU_STOP.test(stop) && pwr.length === 1 && p.task === PWR_TASK && p.from === PWR_14_FROM && ms > 1100 && ms < 1200,
-          `${tag}: the power manager's 0x14 stops the session (its task ${h8(p?.task)}, from ${h8(p?.from)}, ${ms?.toFixed(1)} ms after S1): ${stop?.slice(0, 200)}`);
-      } else {
-        idle(800); idle(1000);
-        const link = lab.scpu_link.transfers.slice(x0).map((x) => x.tx);
-        ok(JSON.stringify(link) === JSON.stringify([LINK_14]) && pwr.length === 1 && pwr[0].task === PWR_TASK,
-          `${tag}: the power manager's 0x14 is the link's one transfer since S1, the sub-CPU sends nothing back: ${JSON.stringify(link)}`);
-        ok(main() === 'RdyFcsRdy3 0x200 0x5' && held() === 1 && lab.sim.u32(SEQ_PHASE) === STOP_PHASE && !since().length,
-          `${tag}: 1.8 s after the release TAKE_MAIN still waits in ${main()}, TAKE_EXEC holds ${held()}, the sequence in phase ${lab.sim.u32(SEQ_PHASE)}`);
-        // the second S1: phase 111's default case takes it and its release; no take request, no 794
-        seen.length = 0;
-        key('s1', 'down'); idle(600);
-        const seen3 = seen.splice(0), s3 = since();
-        key('s1', 'up'); idle(800);
-        const seen4 = seen.splice(0), s4 = since();
-        ok(JSON.stringify(seen3) === JSON.stringify(['event 826 in phase 111', 'phase 111\'s default case for 826'])
-          && JSON.stringify(seen4) === JSON.stringify(['event 827 in phase 111', 'phase 111\'s default case for 827'])
-          && !s3.length && !s4.length && held() === 1 && lab.sim.u32(SEQ_PHASE) === STOP_PHASE,
-          `${tag}: the second S1 and its release in phase 111 go to its default case, make no take request and get no 794 (${JSON.stringify([...seen3, ...seen4])}), TAKE takes nothing (${JSON.stringify([...s3, ...s4])}), TAKE_EXEC holds ${held()}`);
-        // and the keys: MENU reaches UI_IN and sets no GUI event; nothing reaches the sequence and isCtrlReleaseEnable
-        // is not asked (in phase 102 it refuses MENU, docs/hle-gaps.md 4.3.2)
-        refused.length = 0;
-        const rec = s.key('menu', 'down'); s.camapp.pump(); idle(100); s.key('menu', 'up'); s.camapp.pump(); idle(800);
-        const seen5 = seen.splice(0);
-        ok(rec.events.length === 0 && rec.uiin?.[0]?.ev === 'EV_PRESS_MENU_KEY' && !refused.length && !seen5.length && s.status().gui === '0x0108',
-          `${tag}: MENU's ${rec.uiin?.[0]?.ev} sets no GUI event (${rec.events.length}), the sequence takes ${JSON.stringify(seen5)}, isCtrlReleaseEnable's refusals ${refused}, GUI ${s.status().gui}`);
-      }
+      // the power manager's 0x14 at its next cyclic tick: the session's first source check finds the body's
+      // battery inserted (pwr_ins 0 -> 1) and sets its recommend byte 3, which the notice sends
+      idle(800);
+      const p = pwr.at(-1), ms = p ? (p.t - t0) / 1e6 : null, nt = notices.at(-1);
+      ok(pwr.length === 1 && p.task === PWR_TASK && p.from === PWR_14_FROM && ms > 1100 && ms < 1200 && p.bytes === '01000300'
+        && notices.length === 1 && JSON.stringify(nt) === JSON.stringify([[0, 0, 0], [1, 3, 0]]),
+        `${tag}: the power manager's task (${h8(p?.task)}) builds 0x14 from its notice (${h8(p?.from)}) ${ms?.toFixed(1)} ms after S1 with the bits and bytes ${p?.bytes}; the records' pwr_ins and recommend bytes, published and new: ${JSON.stringify(nt)}`);
+      idle(1000);
+      const link = lab.scpu_link.transfers.slice(x0).map((x) => x.tx), frames = lab.store_log.scpu_frames.slice(f0), dev = lab.scpu_dev;
+      const kept = native ? [0, 10].map((o) => [...dev.m.sram.subarray(SCPU_PWR_OBJECT - SRAM + o, SCPU_PWR_OBJECT - SRAM + o + 2)]) : dev.sources.map((x) => [x.inserted, x.second]);
+      ok(JSON.stringify(link) === JSON.stringify([LINK_14]) && JSON.stringify(frames) === JSON.stringify([PWR_14_FRAME]) && pwr.length === 1 && dev.out.message === 1,
+        `${tag}: the power manager's 0x14 is the link's one transfer since S1, a write, and the sub-CPU sends nothing back: ${JSON.stringify(link)}, ${JSON.stringify(frames)}, message line ${dev.out.message}`);
+      ok(JSON.stringify(kept) === JSON.stringify(KEPT_14),
+        `${tag}: the sub-CPU's power manager keeps the two slots' bytes {inserted, second}: ${JSON.stringify(kept)} (want ${JSON.stringify(KEPT_14)})`);
+      ok(main() === 'RdyFcsRdy3 0x200 0x5' && held() === 1 && lab.sim.u32(SEQ_PHASE) === STOP_PHASE && !since().length,
+        `${tag}: 1.8 s after the release TAKE_MAIN still waits in ${main()}, TAKE_EXEC holds ${held()}, the sequence in phase ${lab.sim.u32(SEQ_PHASE)}`);
+      // the second S1: phase 111's default case takes it and its release; no take request, no 794
+      seen.length = 0;
+      key('s1', 'down'); idle(600);
+      const seen3 = seen.splice(0), s3 = since();
+      key('s1', 'up'); idle(800);
+      const seen4 = seen.splice(0), s4 = since();
+      ok(JSON.stringify(seen3) === JSON.stringify(['event 826 in phase 111', 'phase 111\'s default case for 826'])
+        && JSON.stringify(seen4) === JSON.stringify(['event 827 in phase 111', 'phase 111\'s default case for 827'])
+        && !s3.length && !s4.length && held() === 1 && lab.sim.u32(SEQ_PHASE) === STOP_PHASE,
+        `${tag}: the second S1 and its release in phase 111 go to its default case, make no take request and get no 794 (${JSON.stringify([...seen3, ...seen4])}), TAKE takes nothing (${JSON.stringify([...s3, ...s4])}), TAKE_EXEC holds ${held()}`);
+      // and the keys: MENU reaches UI_IN and sets no GUI event; nothing reaches the sequence and isCtrlReleaseEnable
+      // is not asked (in phase 102 it refuses MENU, docs/hle-gaps.md 4.3.2)
+      refused.length = 0;
+      const rec = s.key('menu', 'down'); s.camapp.pump(); idle(100); s.key('menu', 'up'); s.camapp.pump(); idle(800);
+      const seen5 = seen.splice(0);
+      ok(rec.events.length === 0 && rec.uiin?.[0]?.ev === 'EV_PRESS_MENU_KEY' && !refused.length && !seen5.length && s.status().gui === '0x0108',
+        `${tag}: MENU's ${rec.uiin?.[0]?.ev} sets no GUI event (${rec.events.length}), the sequence takes ${JSON.stringify(seen5)}, isCtrlReleaseEnable's refusals ${refused}, GUI ${s.status().gui}`);
     } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 800)}`); }
     pl.close_session();
   }

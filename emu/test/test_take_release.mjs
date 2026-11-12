@@ -20,8 +20,10 @@
 //                   token 15 (pending bits 0x200). S2 (event 824) reaches no TAKE task; its DISPLAY commands go in
 //                   the DISPLAY task's order (docs/hle-gaps.md 4.1.9): the GUI's command 17, sent while the
 //                   application's synchronous command 15 waits, is kept and run after it, then the display manager's
-//                   two command 18 requests; the idle then stops at the sub-CPU's command 0x14, which S1 held brings
-//                   about a second after S1 with or without S2
+//                   two command 18 requests. REC_FILE runs natively on S2 and the sequence goes to phase 106. The
+//                   power manager's sub-CPU command 0x14, which S1 brings at the manager's next cyclic tick with or
+//                   without S2 (docs/hle-gaps.md 4.7.6), is taken by S-SCPUDEV as the write it is, and the idle
+//                   goes on: no lab stop
 //   camFeSession    round 5 (docs/hle-gaps.md 4.2.5): focusSession's S1 and S2 with the probe's cam_fe opt-in (below)
 //   node emu/test/test_take_release.mjs
 import { fileURLToPath } from 'node:url';
@@ -156,12 +158,29 @@ export const S1_EXP = [...S1_FOCUS, 'TAKE_EXPOSE -> EXP_MOVIE 1289 (native)', 'T
 // by S-DISPQ from the send's own post (0x5002e411) and run when command 15's run ends, and the GUI's command 17 again;
 // the display manager's two command 18 requests (0x503eba07) after them, each with one reply to queue 6; until
 // 2026-11-10 (docs/hle-gaps.md 4.1.9) the GUI's 17 ran inside command 15's run and S2 stopped at the GUI's command 18
-// post there (depth 1). The idle's stop after S2: the power manager's sub-CPU command 0x14 (S-SCPUDEV), which S1 held
-// brings about 1.1 s after S1 without S2 too (X)
+// post there (depth 1). The GUI's command 17 goes on about every 125 ms of the idle (S2_SENDS: the first three). Until
+// 2026-11-11 the idle after S2 stopped at the power manager's sub-CPU command 0x14 {0, 1, 0, 3, 0}, which S1 brings at
+// the manager's next cyclic tick (about 1.1 s after S1, with or without S2); S-SCPUDEV takes that write since
+// (PWR_14_FRAME, its one frame of the session after the start; docs/hle-gaps.md 4.7.6), keeping the two slots' bytes
+// (S2_KEPT: the body's battery inserted, its recommend byte 3 kept as 0xff; the PBH's not inserted), and no stop
+// follows: the session rests with TAKE_MAIN in RdyFcsRdy3 and the sequence in phase 106 (S2_PHASE: from 103 within
+// 0.1 s of S2, X; phase 106's dispatcher is not read)
 const EXP_WAIT = { flag: 21, bits: 0x1000, from: 0x5056BA2C }, CAM_NOQUEUE = 0x0A283000, CAM_NOPOOL = 0x0A103000;
-const S2_STOP = /^idle slice to \d+ ns: S-SCPUDEV: command 0x14 \(data 0001000300\): not modelled/;
-const S2_SENDS = [[15, 0x503EC117], [17, 0x507F66D1], [17, 0x507F66D1]];
+export const PWR_14_FRAME = { cmd: '0x14', data: '0001000300', reply: null };
+const S2_SENDS = [[15, 0x503EC117], [17, 0x507F66D1], [17, 0x507F66D1]], GUI_17 = [17, 0x507F66D1];
 const S2_DISPQ = [[17, 168, '0x5002e411'], [18, null, null], [18, null, null]];
+const S2_KEPT = [[1, 0xFF], [0, 0xFF]], S2_PHASE = 106, SEQ_PHASE = 0x60364A1C;
+// what S2's idle leaves: the DISPLAY sends beyond S2_SENDS are the GUI's command 17 again; the link's frames since
+// `from` are the 0x14 alone and the sub-CPU's model keeps S2_KEPT; null when so, else what differs
+function s2Rest(lab, sends, from) {
+  const frames = lab.store_log.scpu_frames.slice(from), kept = lab.scpu_dev.sources?.map((x) => [x.inserted, x.second]);
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  if (!same(sends.slice(0, S2_SENDS.length), S2_SENDS) || !sends.slice(S2_SENDS.length).every((x) => same(x, GUI_17))) return `DISPLAY sends ${JSON.stringify(sends)}`;
+  if (!same(frames, [PWR_14_FRAME])) return `the link's frames ${JSON.stringify(frames)}`;
+  if (!same(kept, S2_KEPT)) return `S-SCPUDEV's slots ${JSON.stringify(kept)}`;
+  if (lab.scpu_dev.out.message !== 1) return 'a message waiting for the MN';
+  return null;
+}
 
 export async function focusSession() {
   const bad = [], notes = [];
@@ -206,7 +225,7 @@ export async function focusSession() {
       `MODE_UPDATE's AF mode set reaches the lens once as a0 b0 [fe 00] (${mcu ? JSON.stringify(mcu.frames.filter(([f]) => /^a0 b/.test(f))) : 'no native lens'})`);
     idle(1000);
     since(); seen.length = 0;
-    const e0 = lab.kernel.errors.length, f0 = mcu ? mcu.frames.length : null;
+    const e0 = lab.kernel.errors.length, f0 = mcu ? mcu.frames.length : null, link0 = lab.store_log.scpu_frames.length;
     const c0 = { native: take.cam.native.length, waits: take.cam.waits.length, errlogs: take.cam.errlogs.length };
     let stop = null;
     try { s.key('s1', 'down'); s.camapp.pump(); idle(600); } catch (e) { stop = e; }
@@ -237,7 +256,8 @@ export async function focusSession() {
     ok(JSON.stringify(got) === JSON.stringify(['RdyFcsRdy3', 0x200]) && errs.filter((c) => c === FOCUS_STOP).length === 1
       && camerr.length === 3 && camerr.every((c) => c === CAM_NOQUEUE) && !errs.includes(CAM_NOPOOL),
       `TAKE_MAIN is in ${got[0]} with the pending bits ${h8(got[1])} (want RdyFcsRdy3, 0x200); the errors since S1 ${errs.map(h8)} (TAKE_FOCUS's ${h8(FOCUS_STOP)} once; cam.c's ${camerr.map(h8)}: ${h8(CAM_NOQUEUE)} three times, not ${h8(CAM_NOPOOL)})`);
-    // S2: its DISPLAY commands in the DISPLAY task's order (S-DISPQ's queue), then the idle's stop
+    // S2: its DISPLAY commands in the DISPLAY task's order (S-DISPQ's queue); the idle goes on past the power
+    // manager's 0x14, which S-SCPUDEV takes
     let stop2 = null;
     since(); seen.length = 0;
     const ds0 = lab.display_sends.length, st0 = s.steps.length;
@@ -247,11 +267,14 @@ export async function focusSession() {
     const dq = [...s.steps.slice(st0).flatMap((x) => x.dispq ?? []), ...lab.dispq].filter((d) => d.cmd !== 16).slice(0, 3);
     const dqs = dq.map((d) => [d.cmd, d.kept?.task ?? null, d.kept?.from ?? null]);
     if (process.env.TF_PRINT) console.log(JSON.stringify({ s2, seen, sends, dq, stop2: stop2?.message.slice(0, 300) }, null, 1));
-    ok(JSON.stringify(seen) === JSON.stringify(['event 824 in phase 103']) && JSON.stringify(sends) === JSON.stringify(S2_SENDS)
+    const rest = s2Rest(lab, sends, link0), phase = lab.sim.u32(SEQ_PHASE);
+    ok(JSON.stringify(seen) === JSON.stringify(['event 824 in phase 103']) && JSON.stringify(sends.slice(0, S2_SENDS.length)) === JSON.stringify(S2_SENDS)
       && JSON.stringify(dqs) === JSON.stringify(S2_DISPQ) && dq.slice(1).every((d) => d.replies === 1 && d.words[0] === '0x6'),
       `S2 is event 824 in phase 103 (${JSON.stringify(seen)}); its synchronous DISPLAY sends ${JSON.stringify(sends.map(([c, f]) => [c, h8(f)]))}, S-DISPQ's runs ${JSON.stringify(dqs)} (want ${JSON.stringify(S2_DISPQ)}), the requests' replies ${JSON.stringify(dq.slice(1).map((d) => d.replies))}`);
-    ok(stop2 !== null && S2_STOP.test(stop2.message) && !s2.length && stateName(u16(MAIN_STATE)) === 'RdyFcsRdy3',
-      `S2's idle stops at the sub-CPU's command 0x14 (${stop2 ? stop2.message.slice(0, 200) : 'no stop'}); TAKE takes nothing (${JSON.stringify(s2)}), TAKE_MAIN in ${stateName(u16(MAIN_STATE))}`);
+    ok(stop2 === null && rest === null,
+      `S2's idle goes on past the power manager's 0x14, the link's one frame since S1, which S-SCPUDEV takes with no answer (${rest ?? 'so'}; ${stop2 ? stop2.message.slice(0, 200) : 'no stop'})`);
+    ok(!s2.length && stateName(u16(MAIN_STATE)) === 'RdyFcsRdy3' && (lab.sim.u32(MAIN_PENDING) >>> 0) === 0x200 && phase === S2_PHASE,
+      `TAKE takes nothing (${JSON.stringify(s2)}), TAKE_MAIN in ${stateName(u16(MAIN_STATE))} pending ${h8(lab.sim.u32(MAIN_PENDING))}, the sequence in phase ${phase} (want ${S2_PHASE})`);
   } catch (e) { bad.push(`camapp 3 --take probe: ${e.message.slice(0, 800)}`); }
   pl.close_session();
   return { checks, bad, notes };
@@ -262,8 +285,8 @@ export async function focusSession() {
 // and the sequence's events 826 and 794); EXP_MOVIE gives cam.c requests 8 and 7, which it now takes without an error,
 // the movie sequence keeps request 7's item (state 1, 0x62a24244) and nothing runs its frame step (0x5019981d), so
 // EXP_MOVIE still waits on flag 21 for bit 0x1000 and TAKE_MAIN in RdyFcsRdy3 for token 15; S-CAMFE takes no access
-// after the init. S2 goes as in focusSession: its DISPLAY sends the same, its idle stops at the sub-CPU's command 0x14
-// (S2_STOP; docs/hle-gaps.md 4.1.9)
+// after the init. S2 goes as in focusSession: its DISPLAY sends the same, the power manager's 0x14 taken by S-SCPUDEV
+// and no stop (s2Rest; docs/hle-gaps.md 4.1.9, 4.7.6)
 export async function camFeSession() {
   const bad = [];
   let checks = 0;
@@ -296,6 +319,7 @@ export async function camFeSession() {
     idle(1000);
     since(); seen.length = 0;
     const c0 = { native: take.cam.native.length, waits: take.cam.waits.length, errlogs: take.cam.errlogs.length }, w0 = fe.writes, r0 = fe.reads;
+    const link0 = lab.store_log.scpu_frames.length;
     let stop = null;
     try { s.key('s1', 'down'); s.camapp.pump(); idle(600); } catch (e) { stop = e; }
     const s1 = since(), native = take.cam.native.slice(c0.native).map((x) => `${x.task} ${x.id}`), w = take.cam.waits.slice(c0.waits).at(-1);
@@ -311,8 +335,10 @@ export async function camFeSession() {
     const ds0 = lab.display_sends.length;
     try { s.key('s2', 'down'); s.camapp.pump(); idle(700); } catch (e) { stop2 = e; }
     const sends = lab.display_sends.slice(ds0).map(([c, , f]) => [c, f]);
-    ok(stop2 !== null && S2_STOP.test(stop2.message) && !since().length && JSON.stringify(seen) === JSON.stringify(['event 824 in phase 103']) && JSON.stringify(sends) === JSON.stringify(S2_SENDS),
-      `S2 as focusSession's, its idle stopped at the sub-CPU's command 0x14 (${seen}; ${stop2 ? stop2.message.slice(0, 160) : 'no stop'})`);
+    const rest = s2Rest(lab, sends, link0), phase = lab.sim.u32(SEQ_PHASE);
+    ok(stop2 === null && rest === null && !since().length && JSON.stringify(seen) === JSON.stringify(['event 824 in phase 103']) && phase === S2_PHASE
+      && stateName(u16(MAIN_STATE)) === 'RdyFcsRdy3' && fe.writes === w0 && fe.reads === r0,
+      `S2 as focusSession's: the power manager's 0x14 taken and no stop (${seen}; ${rest ?? 'the link and the DISPLAY sends so'}; ${stop2 ? stop2.message.slice(0, 160) : 'no stop'}), the sequence in phase ${phase}, TAKE_MAIN in ${stateName(u16(MAIN_STATE))}, S-CAMFE untouched`);
   } catch (e) { bad.push(`camapp 3 --take probe, cam_fe: ${e.message.slice(0, 800)}`); }
   pl.close_session();
   return { checks, bad };

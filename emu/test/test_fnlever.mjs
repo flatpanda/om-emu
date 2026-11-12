@@ -15,7 +15,11 @@
 //                  sender, which builds no evTraResShtStartFocus (TRA 1323); at API_LEVER_SW_1 it builds one; the
 //                  lever's change to API_LEVER_SW_2 sends the focus mode change's transactions, the ones camapp 1's
 //                  lever sends to S-TRAACK
-//   node emu/test/test_fnlever.mjs [lever|sequence]
+//   fnLeverUnits   (firmware-free, bin/test-pure.mjs) HALF_AF's rule on a stub lab, every branch of the sequence parts'
+//                  test 0x50ccef3c: S-AF with MODE_HALF_RELEASE_AF_SAF, the store's MODE_FOCUS 11 or 12 with
+//                  MODE_START_STAR_AF, C-AF with MODE_HALF_RELEASE_AF_CAF, MF and any other mode; S-SEQSTANDBY's rest
+//                  test (no shutter stage held, no release callback pending, no recording)
+//   node emu/test/test_fnlever.mjs [lever|sequence|units]
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 
 // The lever read (OlyHfwOpeCamCom 0x50abdd4b: 0 API_LEVER_SW_1, 1 API_LEVER_SW_2), the property getter and the
@@ -183,11 +187,56 @@ export async function fnLeverSequenceSession() {
   return { checks, bad };
 }
 
+// the settings HALF_AF reads (camapp.mjs): the store's MODE_FOCUS for 11 and 12, MODE_START_STAR_AF and the half-press
+// AF of C-AF (D: 0x50ccef3c, 0x50bcacce); the property's C-AF and a value the test has no case for
+const STAR_AF_START = 2092, HALF_AF_CAF = 1934, PROP_CAF = 2, PROP_OTHER = 3;
+export async function fnLeverUnits() {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { CamApp } = await import('../src/lab/camapp.mjs');
+  const { PROP_GET: PROP_GET_AT } = await import('../src/lab/display.mjs');
+  const { ON_LAB_MODEL } = await import('../src/fw/model.mjs');
+  // a CamApp on a stub lab: the property getter answers prop for MODE_FOCUS, the store answers the ids in store; any
+  // other call or id throws, so a read the rule does not make fails the case
+  const app = (prop, store) => {
+    const c = Object.create(CamApp.prototype);
+    c.s = { lab: {
+      call: (fn, regs) => { if (fn !== PROP_GET_AT || regs.d0 !== FOCUS) throw new Error(`call ${h8(fn)} with d0 ${regs.d0}`); return { d0: prop }; },
+      get: (id) => { if (!(id in store)) throw new Error(`a read of ${id}`); return store[id]; },
+    } };
+    return c;
+  };
+  const half = (prop, store) => { try { return app(prop, store).half_af(); } catch (e) { return e.message; } };
+  if (!ON_LAB_MODEL) {
+    ok(half(PROP_MF, {}) === true, `another body: S1 runs its AF in any focus mode (${half(PROP_MF, {})})`);
+  } else {
+    for (const [prop, store, want, what] of [
+      [PROP_SAF, { [FOCUS]: STORE_SAF, [HALF_AF_SAF]: 1 }, true, 'S-AF with the half-press AF on'],
+      [PROP_SAF, { [FOCUS]: STORE_SAF, [HALF_AF_SAF]: 0 }, false, 'S-AF with the half-press AF off'],
+      [PROP_SAF, { [FOCUS]: 11, [STAR_AF_START]: 0, [HALF_AF_SAF]: 0 }, true, 'S-AF, the store at 11, MODE_START_STAR_AF 0'],
+      [PROP_SAF, { [FOCUS]: 12, [STAR_AF_START]: 1, [HALF_AF_SAF]: 1 }, false, 'S-AF, the store at 12, MODE_START_STAR_AF 1'],
+      [PROP_CAF, { [HALF_AF_CAF]: 1 }, true, 'C-AF with its half-press AF on'],
+      [PROP_CAF, { [HALF_AF_CAF]: 0 }, false, 'C-AF with its half-press AF off'],
+      [PROP_MF, {}, false, 'MF'],
+      [PROP_OTHER, {}, false, 'another focus mode'],
+    ]) ok(half(prop, store) === want, `HALF_AF, ${what}: ${half(prop, store)} (want ${want})`);
+  }
+  // S-SEQSTANDBY's rest: [keys held, pending callbacks, recording since, want]
+  for (const [held, timed, recording, want] of [[[], [], null, true], [['s1'], [], null, false], [['s2'], [], null, false],
+    [[], [[0, 'END_RECVIEW', 0]], null, false], [[], [], 0, false]]) {
+    const c = Object.create(CamApp.prototype);
+    c.s = { pressed: new Set(held) }; c.timed = timed; c.recording = recording;
+    ok(c.standby() === want, `S-SEQSTANDBY's rest with ${JSON.stringify({ held, timed: timed.map(([, n]) => n), recording })}: ${c.standby()} (want ${want})`);
+  }
+  return { checks, bad };
+}
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const only = process.argv[2];
   const run = async (name, fn) => (!only || only === name ? fn() : { checks: 0, bad: [] });
-  const l = await run('lever', fnLeverSession), q = await run('sequence', fnLeverSequenceSession);
-  console.log(`the Fn lever and the AF mode: ${l.checks - l.bad.length}/${l.checks}; the sequence's StartFocus by the focus mode: ${q.checks - q.bad.length}/${q.checks}`);
-  [...l.bad, ...q.bad].forEach((x) => console.log('  ', x));
-  process.exit(l.bad.length || q.bad.length ? 1 : 0);
+  const l = await run('lever', fnLeverSession), q = await run('sequence', fnLeverSequenceSession), u = await run('units', fnLeverUnits);
+  console.log(`the Fn lever and the AF mode: ${l.checks - l.bad.length}/${l.checks}; the sequence's StartFocus by the focus mode: ${q.checks - q.bad.length}/${q.checks}; the S1 rule and the rest test: ${u.checks - u.bad.length}/${u.checks}`);
+  [...l.bad, ...q.bad, ...u.bad].forEach((x) => console.log('  ', x));
+  process.exit(l.bad.length || q.bad.length || u.bad.length ? 1 : 0);
 }

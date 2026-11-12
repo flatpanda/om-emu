@@ -36,8 +36,10 @@ const LEVER_MODE2 = 4, STORE_SAF = 0, STORE_MF = 2, PROP_SAF = 0, PROP_MF = 1;
 const TAKE_STATUS_GET = 0x50AB5716, TAKE_IS_FOCUS = 0x62AF6E28, SEQ_READY = 2, SEQ_READY_FINISH = 4;
 // S-SCENE's AF point on the signpost at 1.5 m (test_scene.mjs), and a distance set by hand
 const AF_POINT = [0.72, 0.35], SIGNPOST_M = 1.5, HAND_M = 5;
-// the sequence parts' StartFocus sender, the builder of TRA 1323 it calls where its test passes, READY's phase
-const START_FOCUS_SENDER = 0x50CAD835, BUILD_1323 = 0x50AF2775, PHASE_READY = 102;
+// the sequence parts' StartFocus sender, the builder of TRA 1323 it calls where its test passes, READY's phase and
+// the phase after it once S-TAKERDY's take-ready event (794) is taken there, which S1 down reaches in camapp 3 since
+// S-TAKERDY (X: 102 with S-TAKERDY off; docs/hle-gaps.md 4.1.12)
+const START_FOCUS_SENDER = 0x50CAD835, BUILD_1323 = 0x50AF2775, PHASE_READY = 102, PHASE_TAKE_READY = 103;
 // The transaction exec's two entries (camapp.mjs TRA_EXEC_CALLS / CALL: a1 the request, its id at +4) and what a
 // change of the focus mode sends through them (X): 974, then OlyHfwOpeShoot::setAelState's 958 and 1515 (returns
 // 0x50adf18c, 0x50adf209), endMfAssist's 955 (0x50ad7c3b) and 974 again; 944 is the histogram's, about five a second,
@@ -179,8 +181,8 @@ export async function fnLeverSequenceSession() {
       const phase = call(SHOOT_PHASE);
       ok(lab.get(AF_CHANGE) === 1 - input && prop === (input ? PROP_SAF : PROP_MF) && tras.join() === want.join(),
         `camapp 3 at ${name}: MODE_AF_CHANGE ${lab.get(AF_CHANGE)}, the property MODE_FOCUS ${prop}, the lever's transactions ${tras} (want ${want})`);
-      ok(phase === PHASE_READY && senders === 1 && builds === built,
-        `camapp 3 at ${name}, S1 down: phase ${phase} (want ${PHASE_READY}), the StartFocus sender ran ${senders} time(s) and built ${builds} TRA 1323 (want ${built})`);
+      ok(phase === PHASE_TAKE_READY && senders === 1 && builds === built,
+        `camapp 3 at ${name}, S1 down: phase ${phase} (want ${PHASE_TAKE_READY}: READY's ${PHASE_READY}, then S-TAKERDY's 794), the StartFocus sender ran ${senders} time(s) and built ${builds} TRA 1323 (want ${built})`);
     } catch (e) { bad.push(`camapp 3 at ${name}: ${e.message.slice(0, 600)}`); }
     finally { pl.close_session(); }
   }

@@ -223,6 +223,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   iu.bad.forEach((x) => console.log('  ', x));
   bad += iu.bad.length;
 }
+// the pipeline block's and the JPEG codec's model (S-IMGPIPE) on a bare machine and the lab's baseline JPEG decoder
+// against the independent one; the firmware's driver on the model runs in playDecodeSession above
+{
+  const { jpegUnits, imgpipeUnits } = await import('../test/test_imgpipe.mjs');
+  const ju = jpegUnits(), pu = imgpipeUnits();
+  console.log(`the baseline JPEG decoder: ${ju.checks - ju.bad.length}/${ju.checks}; the pipeline block (S-IMGPIPE), its units: ${pu.checks - pu.bad.length}/${pu.checks}`);
+  [...ju.bad, ...pu.bad].forEach((x) => console.log('  ', x));
+  bad += ju.bad.length + pu.bad.length;
+}
 // the TAKE probe (--take probe): TAKE_FUNC and TAKE_FUNC_CP natively, the record of a start, a live view, S1, S2, the
 // menu and a mode change under camapp 1 and 2; off by default
 {

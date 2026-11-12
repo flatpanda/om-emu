@@ -123,6 +123,12 @@ export const FAMILIES = {
     // 0..3 (0x5048c728..0x5048c799) and each request's go enables on the calling core (0x5050a8bd). E143's (D); E146
     // and E147 sit on the same board, their drivers not read; passive until a start
     imgpro: { base: 0x9C600000, irq: 300 },
+    // the image library's pipeline block and the JPEG codec (src/dev/imgpipe.mjs, S-IMGPIPE; docs/hle-gaps.md 4.8.13):
+    // the words the play module's view decode writes (the units' set-up 0x5048134d, the go 0x504814d2, the end
+    // 0x504814ef, the codec's start 0x5050a2ba) and IRQ 288, which the library's init attaches with the handler
+    // 0x5048bb88 at level 5 on CPUs 0..3 (0x5048c3a0..0x5048c40a). E143's (D); E146 and E147 sit on the same board,
+    // their drivers not read; passive until a start
+    imgpipe: { base: 0x9C200000, codec: 0x99900000, irq: 288 },
     // the lens mount (src/dev/lensssc.mjs; docs/hle-gaps.md 4.4.1, 4.4.2): the lens serial controller's registers
     // (every operand of LENS_SSC 0x502c0ea5..0x502c2193) and its IRQ 14 (the open 0x502c0e4e attaches 0x502c12c0 at
     // level 3); the units the lens path writes a few words of: the FCS unit, whose two words the open clears
@@ -247,7 +253,7 @@ export const FAMILIES = {
     // the HDMI port and the lens mount: not read on this family; the deferred-call triggers per body, read by
     // src/fw/facts.mjs (deferredCalls: the six words 0x9b800030..0x9b800044 and IRQs 29..34 on every body of the family)
     hdmi: UNKNOWN, audio: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN, dml: UNKNOWN, pdt: UNKNOWN, ems1: UNKNOWN,
-    imgpro: UNKNOWN,
+    imgpro: UNKNOWN, imgpipe: UNKNOWN,
     // per body, read by src/fw/facts.mjs (coreByte; resetHead's library and preload rows; vectorPage: 0x6003xxxx on
     // E144, 0x6041xxxx on the 0x60400020 bodies, X; dramSize: 256 MiB on E144, 512 MiB on the 0x60400020 bodies, X)
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,
@@ -360,7 +366,7 @@ export const FAMILIES = {
     // the deferred-call triggers per body, read by src/fw/facts.mjs (deferredCalls: four words 0x9b8000f4..0x9b800100
     // and IRQs 30..33 on all three, in the stub page 0x9b800000 before 2026-10-30)
     scpu_link: UNKNOWN, hdmi: UNKNOWN, audio: UNKNOWN, lens: UNKNOWN, dpc: UNKNOWN, dml: UNKNOWN, pdt: UNKNOWN, ems1: UNKNOWN,
-    imgpro: UNKNOWN,
+    imgpro: UNKNOWN, imgpipe: UNKNOWN,
     core_byte: UNKNOWN, library: UNKNOWN, preload: UNKNOWN, vector_page: UNKNOWN, dram_size: UNKNOWN,
     // E143's scratch DRAM holds E122's icons record (the loader's destination 0xa1fa6c00, 0x730a00 bytes decoded: X,
     // src/fw/facts.mjs resLoader and resources.mjs record): the lab's scratch is E144's lab region, which E118, E120

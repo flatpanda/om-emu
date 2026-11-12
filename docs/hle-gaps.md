@@ -1381,7 +1381,7 @@ between them; a full shot goes on to phase 106 and waits there for TAKE's captur
 
   | Block | MMIO | IRQs |
   |---|---|---|
-  | SSG1 (sync generator, I) | `0x9b000000` | 15, 16, 17, 18 |
+  | SSG1 (sync generator, I; +0xa00 the sensor's command unit, 4.2.6) | `0x9b000000` | 15, 16, 17, 18 |
   | SSG2 (I) | `0x9b080000` | 19-22 |
   | SLVS receiver (I) | `0x98280000` | 243-247 |
   | PRO1 / PRO2 (cam_prepro.c) | `0x9b300000..0x9b304fff` | 27-31 |
@@ -1666,6 +1666,7 @@ and camDriverSession (X, 7 of 7) pin what follows.
   controller and the deferred-call triggers; neither completes in 100 ms. Request 6 logs `0x0a273000` (the engine
   instance code `0x501536b4..0x5015382c`) until the second init's first nine calls have run, and is then deferred
   (`0x50153844`) and queued without completing. So S-TAKECAM keeps answering TAKE's requests; EXP_MOVIE's go natively.
+  (4.2.6: request 6 is the sensor's power-on; the item it queues here comes from the test's argument 1, not TAKE's 0.)
 - **H-EXPINIT (X).** After H-TAKENBINIT, with `--cpu2 native`: IMG_PRECON's init `0x502a49b3`, EXP's init `0x50553649`,
   EXP_MOVIE (task 88) by act_tsk and EXP_MOVIE2 / 3 on CPU 2 by OlyTaSt, as test_expcb.mjs did by hand (4.2.2); EXP's
   queues 0x17 / 0x18 then go natively. The stage runs IMG_PRECON's init before TAKE_MAIN's and EXP's before
@@ -1974,6 +1975,175 @@ what follows.
   (days, open-ended; 4.2 seam D). (3) The shorter lead to the front end: request 6 natively under `cam_fe` (TAKE's,
   which S-TAKECAM answers now), read to what the event handler `0x5019c8de` waits for before its kind-7 requests
   (hours). Only then can a stand-in at a unit's interrupt (paced by the lab's frame clock) have a job to complete.
+  (3) is read in 4.2.6: request 6 is the sensor's power-on, which natively stops at the sensor's serial unit.
+
+#### 4.2.6 cam.c's request 6 and the arming of the front end (2026-11-11; D unless tagged, addresses E143's)
+
+4.2.5 ended at the third way into the front end's entry: the module the second init's seventh step sets up, which
+cam.c's request 6 starts and whose handler ran ten times in the reviewer's experiment without reaching the kind-7
+sender. This round reads that module. It is cam_seq_power.c: request 6 is the sensor's power-on and request 5 its
+power-off. The ten runs were the experiment's own argument (1), which makes the power-on wait for the mechanism
+driver; TAKE_FUNC_CP's start passes 0. With 0 the power-on runs natively under `cam_fe` through the sensor's eight
+power rails and the camera clocks (S-CAMFE takes four more clock enables, `emu/src/dev/camfe.mjs` POWER_ON) and stops
+at the first unsettled device, the unit of SSG1 that sends the sensor its serial commands (`0x9b000a04`, IRQ 18). The
+front end's entry lies behind three requests to that unit and the units' set-up, and in a permissive experiment the
+power-on's kind-7 request arms neither record +2464 nor +2532. So no stand-in is added, S-TAKECAM keeps requests 6 and
+5, and EXP_MOVIE waits as before (X). `emu/test/test_camfe.mjs` camFeUnits (18 of 18), `emu/test/test_expcb.mjs`
+camFrontEndSession (15 of 15) and camDriverSession (8 of 8) and `emu/test/test_take_release.mjs` camFeSession (6 of 6)
+pin what follows.
+
+- **The files of cam.c's range.** The error log's file names are literals in the code: cam_lens.c (first at
+  `0x50151623`), cam_list.c (`0x50151d40`), cam_mec_ctrl.c (`0x501525f4`), cam_sem.c (`0x501539c6`), cam_strobe.c
+  (`0x50153abd`), cam_time_m.c (`0x5015470b`), cam_timer.c (`0x50154a4f`), cam_watchdog_timer.c (`0x501550f1`), cam.c
+  (`0x50155556..0x50155e46`), cam_bright.c (`0x50159011`), cam_contrast.c (`0x50161db5`), cam_cpm.c (`0x50165ded`),
+  cam_expcal.c (`0x5016d148`), cam_frame_driver.c (`0x50171ae8..0x501722e0`), cam_frame_queue.c (`0x501794ff`),
+  cam_imgdev_sio.c (`0x5017ed3a`), cam_param.c (`0x5018a38f`), cam_pfp.c (`0x5018d8fb`), cam_prepro.c (`0x5018f09e`),
+  cam_seq_dram_capture.c (`0x501982bd`), cam_seq_movie.c (`0x50198945`), cam_seq_power.c (`0x5019c8ed..0x5019d6fe`)
+  and cam_slvs.c (`0x5019f485`). So 4.2.3's "sequence engine" `0x501524c0` is cam_mec_ctrl.c's item entry (items 15,
+  16, 13, 144 and 145; any other logs `0x002b0000`, `0x50152504`), and its "engine instance code"
+  `0x501536b4..0x5015382c` is cam_sem.c's (I: by the name's place): `0x501536b4(n)` gives a semaphore, `0x5015373a`
+  (a0 the semaphore, a1 a function, d1 its argument) runs the function once the semaphore is free (deferred,
+  `0x50153844`) and `0x501537d8` releases it (I: from their use below).
+- **The module (cam_seq_power.c).** Its init `0x5019c70f` clears its 32 bytes `0x62a25494..`, takes a semaphore
+  (`0x501536b4(11)`, `0x62a25498`), four event queues (`0x50150f8e(2..5, 1)`: `0x62a254a4`, `0x62a254a8`,
+  `0x62a2549c`, `0x62a254a0`) and two watchdogs (`0x501550e1`, cam_watchdog_timer.c: the records {100, the handler
+  `0x5019d659` / `0x5019d6aa`, 14880 / 14881, the code `0x0a113002`, 3}, `0x62a254ac` / `0x62a254b0`; their period is
+  not read, ?). Requests 6 and 5 (`0x5015552a`, `0x5015553b`) build a 24-byte record through `0x50155ad9`: +0 the
+  kind 1 / 2, +4 the request + 4, +8 the request's argument byte +3, +12 the completion relay `0x50155d90`, +16 the
+  request, +20 a status. The relay frees the record, tells cam.c's state setter `0x50156519` 2 after the first
+  power-on and 1 after the last power-off (by the count `0x5019c83a` returns) and calls the request's completion +72
+  with the status. The message handler `0x5019c7d3` gives the record to the semaphore with the kind's start function,
+  `0x5019c843` (1, power-on) or `0x5019ce1c` (2, power-off); another kind logs `0x0a113002` (line 338).
+- **The power-on's events.** The start counts the power-ons in the byte `0x62a25494`: at 1 it registers the handler
+  `0x5019c8de` on the queue `(0x62a2549c)` (`0x5015110c`, the record its argument, `0x50151210`) and posts event
+  `0x10000001`, or `0x10000002` while the byte `0x62960790` is set (below); at more than 1 it calls the record's +12
+  and releases the semaphore. The handler ors each event into the word `0x603502c8`, takes a 12-byte block {queue,
+  the next event, record} for the step's completion callback (`0x5019d4d8` and `0x5019d518` post the block's event,
+  `0x5019d558` the same as a kind-7 request's completion +132) and looks the event less `0x10000000` up in 32 slots
+  of {key, case} at `0x602a29f8` (slot key & 31, linear probe; a key with no slot only sets its bit):
+  - `0x1`, `0x2` (`0x5019c96f`): the watchdog `(0x62a254ac)` on (`0x50155166`); for `0x1` rail step 0, whose end
+    posts `0x4`, for `0x2` a post of `0x800000`. Then by the argument byte: with 1 or 2 a cam_mec_ctrl.c item 13
+    (`0x501524c0`; its +4 0 for 1, else 1; its +8 `0x5019d62c` posts `0x10`, its +12 `0x5019d607` posts `0x8`), with
+    any other value posts of `0x10` and `0x8` at once.
+  - `0x4`, `0x20`, `0x40`, `0x80`, `0x100`, `0x200`, `0x400` (`0x5019ca2b..0x5019ca79`): rail steps 1..7, whose ends
+    post `0x20`, `0x40`, `0x80`, `0x100`, `0x200`, `0x400` and `0x800`. `0x800` (`0x5019ca96`) posts `0x800000`.
+  - `0x800000`, `0x8` (`0x5019caac`), only once both are in (`0x10800008`): the camera clocks on (`0x5019d213`),
+    `0x5017c624`, cam_frame_driver.c's `0x50171ade(0, 0; 133)`, port 16 on; `0x1000` after a delay of 7
+    (`0x50154b03`; cam_timer.c's by its place, I).
+  - `0x1000` (`0x5019caf7`): port 13 on; `0x1000000` after a delay of 1.
+  - `0x1000000` (`0x5019cb24`): ports 14 and 15 on; the SSG's requests 7 (with the table `0x50180bcf()` returns) and
+    8, which program SSG1's command unit (below); the end of `0x50171ade(1, 0; 131)` posts `0x2000`.
+  - `0x2000` (`0x5019cb90`): `0x50154c04(150)` (not read); the end of `0x50171ade(1, 1; 131)` posts `0x4000`.
+    `0x4000` (`0x5019cbad`): `0x8000` after a delay of 20. `0x8000` (`0x5019cbc4`): the end of `0x50171ade(1, 2;
+    131)` posts `0x10000`.
+  - `0x10000` (`0x5019cbe8`): the units' set-up `0x5019d287`, a 68-byte record {130} to `0x5018ed9e`, then the
+    kind-7 sender `0x5019d460(7, 0, request + 4)`, whose completion posts `0x20000`.
+  - `0x20000` (`0x5019cc40`): `0x5019d167`, `0x50180bc6`, `0x501a0958`, the movie sequence's kind 12 (`0x5019d3f8`),
+    `0x501a1f1b`, `0x501a1fef`, `0x501a20c3`, `0x50171b9c(10)`; the end of `0x50171b9c(135)` posts `0x40000`.
+  - `0x40000` (`0x5019cc96`): ports 14 and 15 off, `0x501a1ee6`, `0x501a1fba`, `0x501a208e`; the ends of
+    `0x50171ade(3, 3; 131)`, of `0x5019f0b0` (I: the SLVS receiver's, by its place before IRQ 243's handler) and of
+    `0x50171b9c(136)` post `0x80000`, `0x200000` and `0x100000`; then `0x50171e8b(3)`.
+  - `0x80000` (`0x5019cd4f`): `0x5019db7d`, the command unit's +0xa18 / +0xa1c written again. `0x100000`
+    (`0x5019cd56`): the kind-7 sender `0x5019d460(7, 1, request + 4)`, whose completion posts `0x400000`. `0x200000`
+    (`0x5019cd96`): `0x50171ade(1, 0; 132)`.
+
+  After each case, once the word holds `0x10e00010` (`0x10`, `0x200000`, `0x400000` and `0x800000` are in), the
+  power-on is done (`0x5019cdc1..0x5019ce16`): the byte `0x62960790` is cleared, the record's +12 is called with the
+  status +20 (the relay above; for TAKE's request the completion is `0x502cd4d0`), the handler is unregistered
+  (`0x5015121d`), the word cleared, the watchdog stopped (`0x501551b1`) and the semaphore released. So both of 4.2.5's
+  kind-7 requests from `0x5019c8de` are steps of the sensor's power-on, each a wait for the front end.
+- **What the ten runs waited for (X, camDriverSession).** They are what the argument 1 gives; camDriverSession's records
+  carry +3 = 1, as TAKE's request 148 does. With 1 the first event queues cam_mec_ctrl.c's item 13, whose first job
+  (147, the table `0x602253d8`) asks the mechanism driver's request 34 (`0x5010914d` from `0x501532d8`; 7.2's driver,
+  whose queue handle `(0x629651b4)` is 0 in the lab, X); its function `0x50109c7b` never runs, so `0x10000008` never
+  comes. The handler takes `0x1`, `0x4`, `0x20` .. `0x800` (the eight rails) and `0x800000`: ten events, the last of
+  which finds bit 3 missing at `0x5019caac`. S-CAMFE saw no access because the clocks come after that test (X under
+  `cam_fe` too, an experiment). TAKE_FUNC_CP's start passes 0: `0x502cda4a..0x502cda61` makes request 6 only when d2 is
+  0 and gives d2 as the argument (X: S-TAKECAM's record of it has the parameter 0). Correction to 4.2.3: "request 6 is
+  then deferred and queued without completing" holds for the argument 1 only; the item queued is the mechanism's.
+- **The rails.** `0x500236fe` (d0 the step, a0 a callback, a1 its argument): the step's row of the table `0x600472e0`
+  (8 bytes: u16 port, u16 on-delay, u16 off-delay, the levels) gives the GIO port to turn on (`0x5002357c(port, 1,
+  level)`) and the delay after which the callback runs (`0x5005899c`; a delay of 0 as a deferred call, `0x500504aa`).
+  Steps 0..7: ports 132, 44, 38, 39, 40, 186, 134, 133 with on-delays 5, 5, 0, 5, 5, 0, 2, 5 (X: milliseconds, 27 ms
+  in all; which rail each port switches is ?). The module can run all eight by itself (`0x5002381f`, a chain through
+  the step word `0x62960784`), after which it sets `0x62960790` (`0x500238b2`): the power-on then starts at event
+  `0x2` and skips the rails. Who starts that chain is not read (?); in the lab the byte is 0 (X). The power-off uses the
+  rows' off side through `0x5002374e`.
+- **Natively under `cam_fe` (X, camFrontEndSession: camapp 1, `--take probe --cpu2 native`, `cam_fe`).** S-TAKECAM
+  answers TAKE's own request 6 at the start and no event of the power sequence runs (the probe records them:
+  `take.cam.power`). The test then makes request 6 of the switch as TAKE does (argument 0, +72 `0x502cd4d0`). The
+  handler takes `0x1`, `0x10`, `0x8`, `0x4`, `0x20`, `0x40`, `0x80`, `0x100`, `0x200`, `0x400`, `0x800`, `0x800000`,
+  `0x1000` and `0x1000000`; the eight rail steps run in order and the ports go on as in the list above (132 .. 133, then
+  16, 13, 14, 15; their GIO words are the lab stub's, which keeps them); `0x800000` comes 27 ms after `0x1`, `0x1000` 7
+  ms and `0x1000000` 1 ms later. At `0x800000` S-CAMFE takes the clocks (below; 8 writes and 3 reads with the SSG's
+  register clock +0x810 = 1 of the next step). At `0x1000000` the SSG's request 8 writes the command unit's first
+  register, `0x9b000a04` = `0x2100` at `0x5019dcb6`, which S-CAMFE refuses by name: the session stops there, 35 ms after
+  the request. The kind-7 sender, the front end's entry and TAKE's completion are not reached, and cam.c logs nothing.
+- **S-CAMFE takes the power-on's clock enables.** The clock block's gate functions share one shape: a count byte in
+  RAM, the gate's bit written to the gate's "on" word when the count leaves 0 and to its "off" word when it returns
+  to 0 (`0x5015ff11`, count `0x629a7f37`: `0x2000` to +0x800; `0x5015fbc3` / `0x5015ff58`, `0x629a7f2a`: 1 to +0x800
+  / +0x808; `0x501602fa` / `0x50160601`, `0x629a7f50`: 1 to +0x810 / +0x818, around every access of SSG1's registers;
+  `0x501609e6`, `0x629a7f3a`: 1 to +0x870). The second init's program already holds those of +0x800..+0x818. The
+  power-on's `0x5019d213` adds four registers (X: its trace): +0x870 = 1 (`0x501609f6`); +0x008 = `0x700`
+  (`0x5015fb32`, in `0x5015fb17` under the count `0x629a7f28`, whose reverse `0x5015fb69` writes `0x700` to +0x004: a
+  set / clear pair of three enables, I; the init writes `0x100` here); and cam_cpm.c's `0x5016591d(0x20000010)`,
+  which ors `0x10` into +0x9a0 and +0x9e0 (`0x50165955..0x50165962`) before the strobe +0xa08 = 1 and its poll
+  (`0x50165b31`, A-CAMFE-2's word). They are enables no code reads back by address and nothing in the lab acts on, so
+  the register file takes exactly these values beside the init's (POWER_ON; any other value or gate word is still a
+  bus error). **A-CAMFE-1 now covers +0x9a0 and +0x9e0 (I):** they read 0 before their first write; the code
+  branches on neither value. Which clocks the gates are is ?.
+- **The first unsettled device: SSG1's command unit.** `(0x62a254c0)` = `0x9b000a00`. The SSG's request 7 (`0x5019d91a`)
+  keeps a parameter table and request 8 (`0x5019dacb`) applies it through `0x5019dc8f`, by the table's flag bits:
+  +0xa00, +0xa04, +0xa08, +0xa0c, +0xa14, +0xa18, +0xa1c, +0xa20, +0xa24 and the ten words +0xa40..+0xa64. The unit's
+  driver (`0x5019deed..0x5019e47c`, its state from `0x62a25548`, the active request `0x62a25ed8`) has two modes. Mode 0
+  (`0x5019e0a0`) copies up to 120 8-byte entries from the request's list into the command RAM `0x9b003000..` and starts
+  the unit with +0xa00 = count << 8 | 1. Mode 1 (`0x5019e17a`) writes one entry, +0xa04 and +0xa0c from `0x62a254e0` /
+  `0x62a254e4` and +0xa00 = `0x101`. Before either the driver clears bit 6 of `0x9b000000`, and the request's sender
+  sets +0xa14 to 0 (`0x5019dc77`; the handler puts back the value the enqueue saved, `0x5019e01e`, `0x5019e31b`, when
+  the queue empties). IRQ 18's handler `0x5019e218` takes SSG1's status +0x004 and'ed with +0x014 (the init's
+  `0x700000`: bits 20..22) and writes it back: bit 21 (`0x5019e279`) ends a mode-0 batch (+0xa00 = 0, then the next
+  batch or, the list done, bit 6 of `0x9b000000` set again and the request's callback +4), bit 20 (`0x5019e34b`) ends a
+  mode-1 entry and stores the reply +0xa10 in the request's buffer +12, bit 22 (`0x5019e47c`) calls once the function
+  kept in `0x62a25edc` (who sets it is not read). The reads of +0x60c around these steps are kept in `0x62a25ee4`, which
+  nothing reads back (dummy reads, I). Correction to 4.2.5: IRQ 18's status is +0x004 under the mask +0x014, as IRQs
+  15-17's is under theirs; +0x60c is only the first word its handler reads. What is not settled: when a started batch
+  ends (+0xa18 / +0xa1c, which five functions `0x5019db7d..0x5019dc21` rewrite from parameter pairs, are its timing, I;
+  written `0x12d50001` / 0 here, meaning ?), whether the unit runs without the sync generator (+0xa14, ?), and what the
+  sensor answers a mode-1 entry. So S-CAMFE refuses the unit (its registers, +0x60c) and the lab stub the command RAM.
+- **Beyond the stop (X: an experiment, not pinned).** With every register S-CAMFE and the stub refuse made storage
+  that reads 0, and each start of +0xa00 answered at once by status bit 21 on IRQ 18 (values chosen to see the road,
+  not the camera's), the power-on goes on: request 8 writes +0xa04 = `0x2100`, +0xa08 = `0x10100020`, +0xa14 = 1,
+  +0xa18 = `0x12d50001`, +0xa20 = +0xa24 = `0x10101` and +0xa40..+0xa64 = 1..10; the three `0x50171ade(1, n; 131)`
+  are mode-0 requests of 1227 entries (ten batches of 120 and one of 27), 1 and 1, each entry {`0x60000000`, a word
+  with the low byte `0x81`} (the first three words `0x00000081`, `0x01fc0081`, `0x39030081`, the two single ones
+  `0x00010081` and `0x005a0081`; I: a register number and a value for the sensor), with the 20 ms delay before the
+  last. Between the last of them and the entry the firmware writes 597 registers of the clock block, 168 and 204 of
+  the DMA blocks, 26 of `0x9b180000` and three blocks 4.2 does not list (`0x98b00140..`, 7 registers; `0x99d00000`,
+  50; `0x9c700000`, 626). The kind-7 sender then calls the front end's entry, whose start loop (`0x50170a96`) gets
+  the mask `0x00000caa:0x8001735d`: 18 bits, without 23 and 24, so this request arms neither record +2464 nor +2532
+  (4.2.5's open question, for the first of the two requests); cam_bright.c's start runs once, for a type-7 record
+  (context 0's +744), and queues no job. The context's pending count +3274 falls from 27 to 7 in the same instant
+  (`0x50170947`) and stays: the handlers of IRQs 15-17, 24, 26, 27, 32, 33, 40-42 and 243 do not run, the request's
+  completion `0x5019d558` does not come in 1.5 s and `0x20000` is never posted. Which seven units are pending is not
+  read (?).
+- **AE1 / AE2 from the frame clock: not built.** A stand-in at IRQ 32 / 33 would still have no job to complete: the only
+  native way to the entry in the lab is this power-on, it stops before the sensor's serial unit, and its first kind-7
+  request does not start the AE units (X, the experiment). EXP_MOVIE's flag 21 wait does not end and S1 goes as far as
+  in 4.2.5 (X, camFeSession: TAKE_MAIN in RdyFcsRdy3 with the pending bits `0x200`).
+- **The power-off (request 5, kind 2).** `0x5019ce1c` counts down and at the last power-off registers `0x5019ceaa` on
+  `(0x62a254a0)` (table `0x602a2af8`, events `0x1` .. `0x4000`). Its first event starts the second watchdog and
+  sends the front end a kind-7 request (`0x5019cf56`, d1 2); the later ones undo the set-up and the SSG
+  (`0x5019d339`, `0x5019d1bd`, `0x5019dc4a`), turn ports off and run the rails' off side (`0x5002374e`). Read by its
+  calls only; it cannot complete natively either (its first step waits for the front end).
+- **S-TAKECAM stays for requests 6 and 5 (X, camFeSession).** Natively TAKE_FUNC_CP's start would wait on
+  TAKE_CAM_EVENT for a completion that needs the sensor, so the stand-in answers as before: through the start, S1 and
+  S2 no power-sequence event or rail step runs and the front end's entry is not called.
+- **Next (I; Claude wall-clock).** (1) SSG1's command unit as a device of S-CAMFE: the RAM, the start and the end on
+  IRQ 18 are read; the end's delay needs +0xa18 / +0xa1c read in `0x50180bcf`'s tables, else a named assumption (a
+  day). (2) The set-up's programs (the clock block's 597 registers, the DMA blocks, `0x98b00000`, `0x99d00000`,
+  `0x9c700000`) as register files, each block's reads checked for branches (days). (3) The seven units the first
+  kind-7 request leaves pending, from the start loop's table `0x5021c800` to their interrupts: the first interrupt a
+  stand-in must raise (days, open-ended; 4.2 seam D). (4) The argument 1 / 2 path needs the mechanism driver (7.2).
 
 #### 4.2.7 The histogram unit (2026-11-11; D unless tagged, addresses E143's)
 

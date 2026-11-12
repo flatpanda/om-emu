@@ -365,7 +365,7 @@ node emu/bin/play.mjs --take probe               # TAKE_FUNC and TAKE_FUNC_CP na
                                                  # cam.c's first init (H-CAMINIT) and, with --cpu2 native, EXP
                                                  # (H-EXPINIT): EXP_MOVIE waits for the frame events (4.2.3);
                                                  # with the Player's cam_fe (no option) cam.c's second init
-                                                 # against S-CAMFE (H-CAMINIT2, A-CAMFE-1, A-CAMFE-2; 4.2.5)
+                                                 # against S-CAMFE (H-CAMINIT2, A-CAMFE-1, A-CAMFE-2; 4.2.5, 4.2.6)
 node emu/bin/play.mjs --cpu2 native              # CPU 2 on the machine's second core from its entry (E143, off by
                                                  # default; S-CPU2 lifted; docs/hle-gaps.md 4.6.1)
                                                  # with CPU 0's CPUCONN (H-CPUCONN0), USTART_L2 stood in

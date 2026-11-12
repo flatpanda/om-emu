@@ -355,8 +355,8 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 // lab is imported); E146's with the HLS media side (Card Formatting from the menu, the card out and in), and that side
 // alone on E122, E118 and E120 (the E118 family's, read by a rule); E148, E137 and E125 for the E144 family's REC_FILE
 // natively in the forms the others do not take (Exif 0300, the E137 date set, two file contexts with Exif 0230;
-// src/fw/facts.mjs recFileQueue); E122, E118 and E120 also for their S2 file, which carries the header their own
-// header maker builds natively (src/lab/recheader.mjs)
+// src/fw/facts.mjs recFileQueue); E122, E118 and E120 also for their S2 files, which their own REC_FILE records
+// natively in the family's older REC version (src/fw/facts.mjs recFileFrame)
 {
   const { storageUnits, storageSession, storageSdxc } = await import('../test/test_storage.mjs');
   const { spawnSync } = await import('node:child_process');

@@ -1,10 +1,11 @@
 // REC_FILE natively on E143, E146 and E147, on the E144 family's E144, E148, E139, E134, E137, E142, E140 and
-// E125, and on E130, E133 and E129, whose REC is the version before the family's (src/fw/models.mjs rec_native;
-// docs/hle-gaps.md 4.8.10, docs/model-survey.md findings 131 to 136): S2's picture
+// E125, on E130, E133 and E129, whose REC is the version before the family's, and on the E118 family's E122, E118
+// and E120 (src/fw/models.mjs rec_native; docs/hle-gaps.md 4.8.10, docs/model-survey.md findings 131 to 136): S2's
+// picture
 // file recorded by REC_FILE's own task from the packet REC_IMAGE posts it, with the file's header made by REC_IMAGE's
 // own header maker. Addresses and offsets are E143's (D unless tagged); each body's are the ones the rule reads (fact
-// 'rec_file', src/fw/facts.mjs recFile, on the E144 family recFileQueue, on E130, E133 and E129 recFileInline). The
-// other bodies keep S-RECFILE (src/lab/storage.mjs).
+// 'rec_file', src/fw/facts.mjs recFile, on the E144 family recFileQueue, on E130, E133 and E129 recFileInline, on
+// the E118 family recFileFrame). The other bodies keep S-RECFILE (src/lab/storage.mjs).
 //
 // REC's packet (316 bytes): its fields by the firmware's own names, from the packet dump 0x50541561 (D). REC_MAIN
 // builds it (0x50539e89..0x50539f0e clear it), REC_IMAGE posts it to REC_FILE's queue REC_EXEC_FILE 69 (0x6004324e)
@@ -38,6 +39,20 @@
 // Free and takes the reply (fact rec_file.reply), as S-RECREQ does on E143; the EXIF init flushes no cache,
 // rec_jpeg_exec clears no header area, and the header maker divides by no crop area (it makes the area from
 // ImgAspect and the image size's code: crop [])
+// The E118 family's REC version (E122, E118, E120; D on E122, docs/model-survey.md findings 143 to 146; every address
+// and offset the rule's, src/fw/facts.mjs recFileFrame, with E122's as its evidence: this file names none of them,
+// src/lab's literals being E143's, bin/port.mjs): the packet is 216 bytes (280 on E118 and E120) with no dump, its
+// fields read from the code that uses them; REC_FILE (task 33) keeps it on its stack and waits on its queue
+// REC_EXEC_FILE alone, to which REC_IMAGE's task posts a still's packet with REC's post; it calls rec_make_file (E118
+// through rec_file_destination_record, by RecordDevice bit 0), whose rec_file_record keeps the file context in its
+// own frame and makes the DCF steps itself: the open (code 0x32), the reservation, a call of the file system's
+// allocation in REC_FILE's own task, the chain write, a message {REC_POST_FILE, , 0x54, block} to the file module
+// with the reply read from the queue REC_POST_FILE, which FILECLBK's reply answers natively, the directory entry
+// (0x66) and the registration (0x33); then the buffer freed to REC's pool, the shot's DCF checkout (no pending entry:
+// REC's checkout warning, E143's) and, unless the packet's Free is 0 and its Dst is not, REC's reply {Status, +16,
+// +20} to the packet's ObjResponse. The EXIF init flushes no cache, rec_jpeg_exec takes the file's buffer from REC's
+// pool, clears no header area and sets BuffAddr1 / BuffSize1 itself, and the header maker divides by none of the
+// block's zeros (no crop area, no zoom ratio set)
 //
 //   H-EXIFINIT  the EXIF module's init (0x504298bd, the start function's call at 0x501e9a7c, not run by the lab)
 //               natively before the first picture: the EXIF parameter template (0x62a6c358, 92252 bytes; 0x5042aca2:
@@ -110,7 +125,12 @@
 //               to REC_FILE's queue is the route rec_make_image_finish takes for a still (docs/model-survey.md finding
 //               119); on E143 a normal JPEG goes through REC's ring (above, docs/hle-gaps.md 4.3.3). Where the body
 //               keeps the image in an image record (E146 and E147, not the E144 family) the record first: REC_IMAGE's
-//               own init of it on a record the lab allocates
+//               own init of it on a record the lab allocates. On the E118 family the packet is REC_IMAGE's for a
+//               still as far as REC_FILE and rec_jpeg_exec read it (Mode 4097, HandleTarget 1, pExifParam, Media 0,
+//               FileType 1 as a halfword, the extension table's `JPG`; ImgAspect 1; on E118 RecordDevice 1, the card;
+//               NoRecord, Free and Dst 0, I: what REC_IMAGE's rec_bracket_update gives Free is not read), and with
+//               Free 0 and Dst 0 REC_FILE replies to the packet's ObjResponse, which no requester owns in the lab
+//               (ObjResponse 0): the reply is taken at REC's reply and answered as sent, as S-RECREQ takes E143's
 //   S-JPEGENC   the image pipeline's work inside rec_jpeg_exec, where the lab has no image pipeline: the JPEG encode
 //               writes the lab's JPEG stream (src/lab/jpeg.mjs, without its JFIF APP0: SOI, DQT, SOF0, DHT, SOS, the
 //               data, EOI) at Addr + HeaderSize and sets Size (+192; on E146 and E147 the image record's +12) to
@@ -221,6 +241,10 @@ const JFIF_APP0 = 0xE0;
 // folders read back through them match the card) and on the E144 family's eight (D on E144 and E142, the same stores;
 // X, the same read back; docs/model-survey.md finding 120)
 const CTX = { dcf: 8, fnode: 36, status: 84 }, DCF_STAMP = 16;
+// (the E118 family's file, read at FILECLBK's reply) the DCF block's fnode (the open's back at +24, as E143's, D:
+// src/fw/facts.mjs recFileFrame's record), FILECLBK's message {reply queue, word, code, block} (STORAGE_LIB there)
+// and its reply of a message put back on its queue (src/lab/storage.mjs REQUEUE)
+const DCF_FNODE = 24, MSG = { code: 8, block: 12 }, REQUEUE = 0xFFF0;
 const SLICE_MS = 5, LIMIT_MS = 20000, WAI = 4;
 // HeaderSize: rec_jpeg_make_header's (0x5054a5b9), and the header area rec_jpeg_exec reserves before the encode: its
 // buffer's size estimate adds it (0x5054a7b3) and its clear covers it (0x5054986f); the encoder's stream follows it
@@ -239,7 +263,8 @@ export class RecFile {
     this.clock_read = this.R.clock_read ?? storage.f.recorder?.time;
     if (this.clock_read === undefined) throw new RecError('S-EXIFPRM: neither the rule (rec_file.clock_read) nor the recorder (fact \'recorder\') gives the camera\'s clock read');
     this.handled = null;           // the last packet's status at REC_FILE's handler return
-    this.context = null;           // the last file's {fnode, stamp} where rec_make_file keeps its context on its stack
+    this.context = null;           // the last file's {fnode, dcf, stamp} where rec_make_file keeps its context on its
+                                   // stack (recFileInline's version)
     this.reply = null;             // REC_FILE's reply to the last packet's requester, taken (recFileInline's version)
     this.pictures = 0;
     this.started = false;
@@ -249,6 +274,11 @@ export class RecFile {
     this.image = this.R.task.flag !== null ? recImageFacts() : null;
     this.imgpro_init = false;      // H-RECIMGPRO run (the application's start had not run the image library's init)
     this.images = [];              // each picture's REC_IMAGE run {task, encoded, reply, alive, fills, take}
+    // the E118 family's REC version (recFileFrame): REC_FILE's file context is rec_file_record's frame's, so each
+    // picture's file is read from the registration's block at FILECLBK's reply, and REC_FILE's reply is taken (the
+    // rule's record steps; recFileInline's version has no file context either, but its registration's, context)
+    this.frame = this.R.record !== undefined;
+    this.records = [];             // (the family) each picture's REC_FILE run {requests, allocs, reply, file}
   }
   get header() { return this.R.jpeg.header; }
   // whether H-RECIMGPRO runs (or ran) at the first picture: where camapp 3's H-IMGPROINIT did not run at the start
@@ -307,7 +337,7 @@ export class RecFile {
     lab.call(D.format, { a0: x + D.original, a1: x + X.time, d0: D.code }, null, null, 2000000);
     for (const to of [D.created, D.modified]) lab.call(D.copy, { a0: x + to, a1: x + D.original }, null, null, 2000000);
     for (const at of X.crop) sim.write(x + at, pack('<HHHH', 0, 0, 1, 1));
-    sim.write(x + X.tags.zoom, pack('<II', 1, 1));
+    if (X.tags.zoom !== null) sim.write(x + X.tags.zoom, pack('<II', 1, 1));
     // the fields REC_IMAGE reads that TAKE's fill takes from the settings store, read as it reads them (where REC_IMAGE
     // runs natively)
     const take = {};
@@ -332,27 +362,75 @@ export class RecFile {
     const pk = lab.alloc(new Uint8Array(R.packet.size), 4);
     const put = (field, fmt, v) => sim.write(pk + P[field], pack(fmt, v));
     put('pExifParam', '<I', x); put('HandleTarget', '<I', SHOT); put('Mode', '<H', STILL); put('Media', '<H', 0);
-    // (null: the version's record path reads no such field, src/fw/facts.mjs recFileInline)
-    if (P.Media2 !== null) put('Media2', '<H', NO_MEDIA);
-    if (P.RecordDevice !== null) put('RecordDevice', '<H', CARD);
-    put('FileType', '<B', JPEG);
+    if (this.frame) {       // the E118 family's packet: FileType a halfword, no second slot; RecordDevice on E118 only
+      put('FileType', '<H', JPEG);
+      if (P.RecordDevice !== undefined) put('RecordDevice', '<H', CARD);
+    } else {
+      // (null: the version's record path reads no such field, src/fw/facts.mjs recFileInline)
+      if (P.Media2 !== null) put('Media2', '<H', NO_MEDIA);
+      if (P.RecordDevice !== null) put('RecordDevice', '<H', CARD);
+      put('FileType', '<B', JPEG);
+    }
     const { header, size } = this.image ? this.image_native(pk, stream, take) : this.image_lab(pk, stream);
-    // the file, from REC_FILE's context for Media (its fnode and folder, storage.mjs REC's layouts); where
-    // rec_make_file keeps the context on its stack (contexts null), from the fnode and the stamp it held at the
-    // registration (image_lab)
-    const F = this.st.rec_layout(), kept = R.contexts === null ? this.context : null, ctx = kept ? null : R.contexts[0];
-    if (R.contexts === null && !kept) throw new RecError('REC_FILE: its record step did not reach the registration');
-    const fn = kept ? kept.fnode : sim.u32(ctx + CTX.fnode) >>> 0, dn = fn ? sim.u32(fn + F.f.dnode) >>> 0 : 0;
-    if (!fn || !dn) throw new RecError(`REC_FILE: its context ${kept ? 'at the registration' : h8(ctx)} holds fnode ${h8(fn)}, folder ${h8(dn)}`);
-    const w16 = (a) => { const b = sim.read(a, 2); return b[0] | b[1] << 8; }, names = this.st.f.names;
+    // the file, from REC_FILE's context for Media (its fnode and DCF block, storage.mjs REC's layouts); where
+    // rec_make_file keeps the context on its stack (recFileInline: contexts null), from the fnode and the stamp it
+    // held at the registration (image_lab); on the E118 family from the registration's block as FILECLBK replied to it
+    // (frame_watch)
+    const kept = !this.frame && R.contexts === null ? this.context : null, ctx = this.frame || kept ? null : R.contexts[0];
+    if (!this.frame && R.contexts === null && !kept) throw new RecError('REC_FILE: its record step did not reach the registration');
     const file = {
-      path: `${names.drive}:\\DCIM\\${this.text(dn + F.d.name, 11)}\\${this.text(fn + F.f.name, 8)}.${this.text(fn + F.f.ext, 4)}`,
-      size: sim.u32(fn + F.f.size) >>> 0, folder: w16(dn + F.d.number), number: w16(fn + F.f.number),
-      cluster: sim.u32(fn + F.f.cluster) >>> 0, stamp: kept ? kept.stamp : sim.u32((sim.u32(ctx + CTX.dcf) >>> 0) + DCF_STAMP) >>> 0, clock, header, date,
+      ...(this.frame ? this.records.at(-1).file
+        : kept ? { ...this.dcf_file(kept.fnode, kept.dcf, 'its context at the registration'), stamp: kept.stamp }
+          : this.dcf_file(sim.u32(ctx + CTX.fnode) >>> 0, sim.u32(ctx + CTX.dcf) >>> 0, `its context ${h8(ctx)}`)),
+      clock, header, date,
     };
     if (file.size !== size) throw new RecError(`REC_FILE: the fnode's size ${file.size}, the packet's ${size}`);
     this.pictures += 1;
     return file;
+  }
+  // A recorded file by its fnode fn and its DCF block blk (storage.mjs REC's layouts): {path, size, folder, number,
+  // cluster, stamp}
+  dcf_file(fn, blk, what) {
+    const sim = this.lab.sim, F = this.st.rec_layout(), dn = fn ? sim.u32(fn + F.f.dnode) >>> 0 : 0;
+    if (!fn || !dn) throw new RecError(`REC_FILE: ${what} holds fnode ${h8(fn)}, folder ${h8(dn)}`);
+    const w16 = (a) => { const b = sim.read(a, 2); return b[0] | b[1] << 8; }, names = this.st.f.names;
+    return {
+      path: `${names.drive}:\\DCIM\\${this.text(dn + F.d.name, 11)}\\${this.text(fn + F.f.name, 8)}.${this.text(fn + F.f.ext, 4)}`,
+      size: sim.u32(fn + F.f.size) >>> 0, folder: w16(dn + F.d.number), number: w16(fn + F.f.number),
+      cluster: sim.u32(fn + F.f.cluster) >>> 0, stamp: sim.u32(blk + DCF_STAMP) >>> 0,
+    };
+  }
+  // (the E118 family) REC_FILE's run on S-RECIMAGE's packet, watched: its requests to the file module, [code, status]
+  // as FILECLBK replies to each (the message {reply queue, word, code, block}, fact storage's fileclbk.reply; a reply
+  // of 0xfff0, the message put back, is not one), the file from the registration's block; its own cluster allocation
+  // {drive, bytes, mode}; and its reply to the packet's ObjResponse, taken (S-RECIMAGE). Returns {run, done}
+  frame_watch() {
+    const lab = this.lab, sim = lab.sim, R = this.R, st = this.st, C = st.f.rec.codes, P = R.packet.fields;
+    const run = { requests: [], allocs: [], reply: null, file: null }, hooked = [st.f.fileclbk.reply, R.record.alloc, R.reply.fn];
+    const u16 = (a) => { const b = sim.read(a, 2); return b[0] | b[1] << 8; };
+    lab.observe(st.f.fileclbk.reply, (l, r) => {
+      const msg = r.a0 >>> 0, code = sim.u32(msg + MSG.code) >>> 0, status = r.d0 & 0xFFFF;
+      if (status === REQUEUE) return;
+      run.requests.push([code, status]);
+      if (code === C.register && status === 0) { const blk = sim.u32(msg + MSG.block) >>> 0; run.file = this.dcf_file(sim.u32(blk + DCF_FNODE) >>> 0, blk, `the registration's block ${h8(blk)}`); }
+    }, 'obs-rec-fileclbk');
+    lab.observe(R.record.alloc, (l, r) => { run.allocs.push({ drive: r.d0 & 0xFFFF, bytes: r.d1 >>> 0, mode: sim.u32(r.a1 >>> 0) >>> 0 }); }, 'obs-rec-alloc');
+    lab.hook(R.reply.fn, (h, r) => {
+      if (disasm(r.mdr) !== R.reply.from) throw new RecError(`S-RECIMAGE: REC's reply ${h8(R.reply.fn)} from ${where(r.mdr)}: only REC_FILE's (return ${h8(R.reply.from)}) is taken`);
+      const p = r.a0 >>> 0;
+      run.reply = { status: r.d0 & 0xFFFF, free: u16(p + P.Free), dst: u16(p + P.Dst) };
+      h.finish(r, { d0: 1 });
+    }, 'S-RECIMAGE');
+    return { run, done: () => { for (const a of hooked) lab.hooks.delete(runtime(a)); } };
+  }
+  // (the E118 family) what REC_FILE did with the packet: its four requests in order, each answered 0, one allocation
+  // of the file's bytes, the file registered, the reply with the status 0
+  frame_check(run, size) {
+    const C = this.st.f.rec.codes, want = [C.open, C.write, C.entry, C.register], rec = run.requests.filter(([c]) => [...want, C.cancel].includes(c));
+    this.records.push(run);
+    if (JSON.stringify(rec) !== JSON.stringify(want.map((c) => [c, 0])) || run.allocs.length !== 1 || run.allocs[0].bytes !== size || !run.file || run.reply?.status !== 0) {
+      throw new RecError(`REC_FILE: its requests ${JSON.stringify(run.requests.map(([c, v]) => [`0x${c.toString(16)}`, `0x${v.toString(16)}`]))} (want the open, the chain write, the entry and the registration, each answered 0), its allocations ${JSON.stringify(run.allocs)} (want one of ${size} bytes), the file ${JSON.stringify(run.file)}, its reply ${JSON.stringify(run.reply)}`);
+    }
   }
   // S-RECREQ's post of the packet pk to REC_IMAGE's queue (REC_PREPRO's post; on E146 and E147 REC_RAWNR's),
   // REC_IMAGE's task natively with S-JPEGENC's encode (the lab's stream), REC_FILE natively, S-RECREQ's reply taken;
@@ -467,8 +545,8 @@ export class RecFile {
     // shot (I: the lab's one frame), with which REC_FILE answers the requester's ObjResponse queue (as it does with
     // Dst 0, which the lab leaves, so the reply does not test Free, X): no requester owns one in the lab, so the reply
     // is taken at REC_FILE's call of it and answered as sent; and the file's context, on rec_make_file's stack, read
-    // at the registration's entry (a0), where it holds the fnode and the DCF block
-    if (R.reply) {
+    // at the registration's entry (a0), where it holds the fnode and the DCF block (the E118 family: frame_watch)
+    if (R.reply && !this.frame) {
       sim.write(pk + P.Free, Uint8Array.of(1));
       lab.hook(R.reply.fn, (h, r) => {
         if (disasm(r.mdr) !== R.reply.from) throw new RecError(`${who}: REC's reply ${h8(R.reply.fn)} from ${where(r.mdr)}: only REC_FILE's (return ${h8(R.reply.from)}) is taken`);
@@ -477,16 +555,17 @@ export class RecFile {
       }, 'S-RECIMAGE');
       hooked.push(R.reply.fn);
     }
-    if (R.contexts === null) {
+    if (R.contexts === null && !this.frame) {
       const C = R.context;
       lab.observe(C.at, (l, r) => {
         // (the whole-file recorder calls the same registration: only REC_FILE's task records in the lab)
         if (lab.lt.current() !== lab.nk.tcb(R.task.id)) throw new RecError(`${who}: the registration ${h8(C.at)} outside REC_FILE's task (${R.task.id}), from ${where(r.mdr)}`);
-        const c = r.a0 >>> 0;
-        this.context = { fnode: sim.u32(c + C.fnode) >>> 0, stamp: sim.u32((sim.u32(c + C.dcf) >>> 0) + DCF_STAMP) >>> 0 };
+        const c = r.a0 >>> 0, dcf = sim.u32(c + C.dcf) >>> 0;
+        this.context = { fnode: sim.u32(c + C.fnode) >>> 0, dcf, stamp: sim.u32(dcf + DCF_STAMP) >>> 0 };
       }, 'obs-rec-register');
       hooked.push(C.at);
     }
+    const watch = this.frame ? this.frame_watch() : null;
     try {
       const q = sim.read(R.task.queue, 2), r = lab.call(R.packet.post, { a0: pk, d0: q[0] | q[1] << 8 }, null, null, 2000000);
       if (r.d0 !== 1) throw new RecError(`${who}: the post ${h8(R.packet.post)} to REC_FILE's queue returned ${r.d0 | 0}`);
@@ -497,9 +576,10 @@ export class RecFile {
         if (lab.lab_time() - t0 > LIMIT_MS * 1e6) throw new RecError(`${who}: REC_FILE has not handled the packet after ${LIMIT_MS} ms of lab time`);
         lab.elapse(SLICE_MS, `${who} REC_FILE`);
       }
-    } finally { for (const a of hooked) lab.hooks.delete(runtime(a)); }
+    } finally { for (const a of hooked) lab.hooks.delete(runtime(a)); watch?.done(); }
     if (this.handled !== 0) throw new RecError(`REC_FILE: the packet's status 0x${this.handled.toString(16)}`);
-    if (R.reply && (this.reply?.status !== 0 || this.reply.shot !== u32('pExifParam'))) throw new RecError(`${who}: REC_FILE's reply ${JSON.stringify(this.reply)}, want status 0 for the packet of the shot ${h8(u32('pExifParam'))}`);
+    if (R.reply && !this.frame && (this.reply?.status !== 0 || this.reply.shot !== u32('pExifParam'))) throw new RecError(`${who}: REC_FILE's reply ${JSON.stringify(this.reply)}, want status 0 for the packet of the shot ${h8(u32('pExifParam'))}`);
+    if (watch) this.frame_check(watch.run, size);
     return { header, size };
   }
 }

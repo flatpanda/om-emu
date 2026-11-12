@@ -25,17 +25,19 @@
 //                   remaining shots and movie time from the card (the queries S-CARD answered before), smaller on a 4 GiB
 //                   card; a saved card (env.card) mounts in the next session without a format, and a player keeps
 //                   its card across a power cycle; S2 with the live view writes the picture's file (S-RECFILE; on
-//                   E143, E146, E147 and the E144 family but E145 and E132 REC_FILE natively, the clock set first): its
-//                   directory entry, size and bytes
+//                   E143, E146, E147, the E118 family and the E144 family but E145 and E132 REC_FILE natively, the
+//                   clock set first): its directory entry, size and bytes
 //                   read back independently (natively the firmware's header, its Make, the body's Model and Exif
 //                   version, dates, maker notes and thumbnail slot read by refs/exif.mjs, then the lab's stream;
 //                   REC_IMAGE's own task made it from S-RECREQ's packet: the encode in task 28 (S-JPEGENC from
 //                   ImageParam's parameter set on; before it the error logs of ImageParam's four sources' lookups
 //                   only), the header area cleared by the imgpro unit's fill natively, REC_FILE's reply, pAlive
 //                   cleared, the aspect from the setting and the ISO from the record's +38174 0,
-//                   on E143, E146 and E147; on the E118 family the header its own header maker built natively, its
-//                   Make, Model, dates, Exif version, maker notes and thumbnail slot read by refs/exif.mjs, then the
-//                   lab's stream, through S-RECFILE), the JPEG decoded
+//                   on E143, E146 and E147; on the E118 family REC_FILE's own four requests to the file module
+//                   each answered 0, its own cluster allocation of the file's bytes and its reply taken, the whole
+//                   stream after the header, the directory entry's stamp the clock's, then a second picture, PLAY
+//                   and back and a third: the firmware's own numbers, counts, clusters and the FAT's free count
+//                   follow each), the JPEG decoded
 //                   (refs/jpeg.mjs) to the capture's block means, and the next session's DCF numbering mount and
 //                   image count find it; where the body runs the HLS media side (card_fs.hls: E143, E146) Card
 //                   Formatting from the menu (S-MDACTRL): the card read back is freshly formatted, the counts reset and
@@ -74,20 +76,19 @@ const cardQueries = (A) => ({ SHOTS: A(0x50419164), MOVIE: A(0x5042DA58) });
 // notes 'OM SYSTEM' and an XMP segment after the Exif on E144 and E148, Make 'OLYMPUS CORPORATION', 'OLYMPUS' and no
 // XMP on the six others; E130's, E133's and E129's (X, 2026-11-11, refs/exif.mjs and exiftool: the REC version before
 // the family's, src/fw/facts.mjs recFileInline; the Model strings in each image, D: E130 'E-M10 Mark III' at body
-// 0x60a74, E133 'E-PL9' at 0x589c0, E129 'TG-5' at 0x5cdd0), as the six
+// 0x60a74, E133 'E-PL9' at 0x589c0, E129 'TG-5' at 0x5cdd0), as the six; the E118 family's (X, 2026-11-10 with the
+// header maker alone, 2026-11-11 with REC_FILE natively; refs/exif.mjs): the Make and Model the EXIF template's init
+// takes from the settings store (the Model strings are in each image, D: E122 'PEN-F' at 0x6009698c, E118 'E-M5MarkII'
+// at 0x600a8560, E120 'E-M10MarkII' at 0x600a5bec; E118's Make is not a string of its main block, X), the Exif version
+// '0230', the maker notes' 'OLYMPUS' and no XMP on all three
 const OM = { make: 'OM Digital Solutions', notes: 'OM SYSTEM', xmp: true }, OLY = { make: 'OLYMPUS CORPORATION', notes: 'OLYMPUS', xmp: false };
 const EXIF_BODY = { E143: { model: 'OM-1', version: '0231', ...OM }, E146: { model: 'OM-1MarkII', version: '0231', ...OM }, E147: { model: 'OM-3', version: '0300', ...OM },
   E144: { model: 'OM-5', version: '0231', ...OM }, E148: { model: 'OM-5MarkII', version: '0300', ...OM }, E139: { model: 'E-M1MarkIII', version: '0231', ...OLY },
   E134: { model: 'E-M1X', version: '0231', ...OLY }, E137: { model: 'E-M5MarkIII', version: '0231', ...OLY }, E142: { model: 'E-P7', version: '0231', ...OLY },
   E140: { model: 'E-M10MarkIV', version: '0231', ...OLY }, E125: { model: 'E-M1MarkII', version: '0230', ...OLY },
-  E130: { model: 'E-M10 Mark III', version: '0231', ...OLY }, E133: { model: 'E-PL9', version: '0231', ...OLY }, E129: { model: 'TG-5', version: '0231', ...OLY } };
-// What the E118 family's header maker writes in S2's file (src/lab/recheader.mjs): IFD0's Make and Model, the ones the
-// EXIF template's init takes from the settings store (X, refs/exif.mjs, 2026-11-10; the Model strings are in each
-// image, D: E122 'PEN-F' at 0x6009698c, E118 'E-M5MarkII' at 0x600a8560, E120 'E-M10MarkII' at 0x600a5bec; E118's Make
-// is not a string of its main block, X), the Exif version '0230' and the maker notes' 'OLYMPUS' on all three
-const EXIF_FAMILY = { E122: { make: 'OLYMPUS CORPORATION', model: 'PEN-F' }, E118: { make: 'OLYMPUS IMAGING CORP.', model: 'E-M5MarkII' },
-  E120: { make: 'OLYMPUS CORPORATION', model: 'E-M10MarkII' } };
-const EXIF_FAMILY_VERSION = '0230', EXIF_FAMILY_NOTES = 'OLYMPUS';
+  E130: { model: 'E-M10 Mark III', version: '0231', ...OLY }, E133: { model: 'E-PL9', version: '0231', ...OLY }, E129: { model: 'TG-5', version: '0231', ...OLY },
+  E122: { model: 'PEN-F', version: '0230', ...OLY }, E118: { model: 'E-M5MarkII', version: '0230', ...OLY, make: 'OLYMPUS IMAGING CORP.' },
+  E120: { model: 'E-M10MarkII', version: '0230', ...OLY } };
 
 // A FAT32 volume built here, for the reader: [read(lba, n), the files' bytes]. 70000 sectors at LBA 2048, 512-byte
 // clusters: 69416 clusters, past FAT16's 65524, so FAT32 by the specification's cluster count
@@ -488,8 +489,6 @@ export async function storageSession() {
     try {
       pl.open_session();
       const rec = pl.session.storage.rec, DATE = [2026, 11, 8, 12, 34, 56], HEADER = rec?.header, body = EXIF_BODY[MODEL];
-      const hdr = pl.session.storage.exif;      // the E118 family's header maker natively (src/lab/recheader.mjs)
-      ok(!!hdr === !!EXIF_FAMILY[MODEL], `${MODEL}: the header maker natively (exif_native) ${hdr ? 'on' : 'off'}, want ${EXIF_FAMILY[MODEL] ? 'on' : 'off'}`);
       // the DCF name: the file letter, the month in hex and the day of the capture's stamp (docs/hle-gaps.md 4.8.9)
       const file1 = rec ? `${DIR}/P${DATE[1].toString(16).toUpperCase()}${String(DATE[2]).padStart(2, '0')}0001.${names.ext}` : FILE1;
       if (rec) {
@@ -499,20 +498,15 @@ export async function storageSession() {
         lab.call(rec.R.clock_set, { a0: at }, null, null, 2000000);
         pl.session.settle('the clock setting');
       }
-      if (hdr) {            // the E118 family: the clock set first through its clock setting (rec_header clock.set)
-        const lab = pl.session.lab, at = lab.alloc(new Uint8Array(10), 4);
-        lab.sim.write(at, pack('<HBBBBBBH', ...DATE, 0, 0));
-        lab.call(hdr.R.clock.set, { a0: at }, null, null, 2000000);
-        pl.session.settle('the clock setting');
-      }
-      for (const inp of [...(LIVE_VIEW ? [{ type: 'scene', change: { liveview: true } }] : []), { type: 'token', token: 'WAIT:100' }, { type: 'key', id: 's1', action: 'down' },
-        { type: 'key', id: 's2', action: 'down' }, { type: 'token', token: 'WAIT:700' }, { type: 'key', id: 's2', action: 'up' }, { type: 'key', id: 's1', action: 'up' }]) pl.run_input(inp);
+      const SHOT = [{ type: 'token', token: 'WAIT:100' }, { type: 'key', id: 's1', action: 'down' }, { type: 'key', id: 's2', action: 'down' }, { type: 'token', token: 'WAIT:700' },
+        { type: 'key', id: 's2', action: 'up' }, { type: 'key', id: 's1', action: 'up' }];
+      for (const inp of [...(LIVE_VIEW ? [{ type: 'scene', change: { liveview: true } }] : []), ...SHOT]) pl.run_input(inp);
       const s2 = pl.session, img = s2.camapp.images[0];
       if (rec) ok(rec.started && rec.waiting(), `REC_FILE (task ${rec.R.task.id}) started at the picture and waiting on its input again`);
       ok(img?.file?.path === `${names.drive}:\\${file1.replaceAll('/', '\\')}`, `S2 wrote the picture's file: ${JSON.stringify(img?.file)}`);
       const jfif = img ? jpegOfFrame(s2.picture_frame(s2.camapp.views.get(img.release) ?? null)) : null;
       // natively the file is the firmware's header and the encoder's stream after it (src/lab/rec.mjs S-JPEGENC)
-      const stream = jfif && (rec || hdr) ? encoderStream(jfif) : null, want = jfif && (rec ? { length: HEADER + stream.length } : hdr ? { length: hdr.header + stream.length } : jfif);
+      const stream = jfif && rec ? encoderStream(jfif) : null, want = jfif && (rec ? { length: HEADER + stream.length } : jfif);
       const vol = new FatVolume((lba, n) => card.read(lba, n), mbrPartition(card.read(0, 1)).start);
       const e = vol.find(file1);
       ok(e && !e.dir && want && e.size === want.length, `the directory entry ${file1}: ${JSON.stringify(e && { size: e.size, cluster: e.cluster })}, the file ${want?.length} bytes`);
@@ -558,27 +552,27 @@ export async function storageSession() {
         // the REC version before the family's (src/fw/facts.mjs recFileInline: E130, E133, E129): REC_FILE's reply to
         // the requester taken with status 0, and the file's context, on rec_make_file's stack, read at the
         // registration: its stamp the FAT stamp of the clock's date, as the directory entry's
-        if (rec.R.reply) {
+        if (rec.R.reply && !rec.frame) {
           const fat = ((DATE[0] - 1980) << 25 | DATE[1] << 21 | DATE[2] << 16 | DATE[3] << 11 | DATE[4] << 5 | DATE[5] >> 1) >>> 0;
           ok(rec.R.contexts === null && rec.reply?.status === 0 && rec.context?.stamp === fat && img?.file?.stamp === fat && e?.date === fat >>> 16 && e?.time === (fat & 0xFFFF),
             `REC_FILE's reply taken (S-RECIMAGE) with status ${rec.reply?.status}, its context's stamp at the registration ${rec.context?.stamp} (the clock's ${fat}, the directory entry's ${e && (e.date << 16 | e.time) >>> 0})`);
         }
-      } else if (!hdr) ok(data && want && data.every((b, i) => b === want[i]), 'the file\'s bytes are the JPEG the lab handed the file module');
-      // the E118 family: the header its header maker built natively (S-RECHDR), the lab's stream, through S-RECFILE
-      if (hdr) {
-        const H = hdr.header, used = pl.stand_ins_in_use(), fam = EXIF_FAMILY[MODEL], t = (m, k) => m?.get(k)?.trim?.();
-        const segs = data ? jpegSegments(data) : [], x = data ? readExif(data) : null, version = x?.exif ? String.fromCharCode(...x.exif.get(0x9000)) : null;
-        const dt = `${DATE[0]}:${DATE.slice(1, 3).map((v) => String(v).padStart(2, '0')).join(':')} ${DATE.slice(3).map((v) => String(v).padStart(2, '0')).join(':')}`;
-        ok(['H-EXIFINIT', 'S-EXIFPRM', 'S-RECHDR', 'S-RECFILE'].every((n) => used.includes(n)) && !used.includes('H-RECFILE'), `${MODEL}: the header maker natively, the file through S-RECFILE: ${used.filter((n) => /REC|EXIF/.test(n)).join(' ')}`);
-        // the header maker leaves APP1's last 2 bytes, the stream's SOI (on E143 the XMP's end overwrites them, X)
-        ok(data && stream && data.subarray(H).every((b, i) => b === stream[i]), `after the ${H}-byte header the bytes are the lab's whole JPEG stream, its SOI as APP1's last 2 bytes`);
-        ok(segs[1]?.marker === 0xE1 && segs[1].at === 2 && segs[1].length === H - 2 && segs[2]?.at === H + 2, `SOI, APP1 Exif of ${H - 2} bytes, then the stream's tables: ${segs.slice(0, 3).map((g) => `${g.marker.toString(16)}@${g.at}+${g.length}`).join(' ')}`);
-        ok(fam && t(x?.ifd0, 0x10F) === fam.make && t(x?.ifd0, 0x110) === fam.model, `the firmware's Make and Model (refs/exif.mjs): '${t(x?.ifd0, 0x10F)}' '${t(x?.ifd0, 0x110)}', ${MODEL}'s '${fam?.make}' '${fam?.model}'`);
-        ok(x?.ifd0.get(0x132) === dt && x?.exif?.get(0x9003) === dt && x?.exif?.get(0x9004) === dt, `the firmware's dates are the clock's ${dt}: ${x?.ifd0.get(0x132)}, ${x?.exif?.get(0x9003)}, ${x?.exif?.get(0x9004)}`);
-        ok(version === EXIF_FAMILY_VERSION && x.makernote?.header === EXIF_FAMILY_NOTES && x.ifd1?.has(0x201) && x.ifd1.get(0x202) === 0,
-          `ExifVersion ${version}, the maker notes '${x?.makernote?.header}' (${x?.makernote?.length} bytes), IFD1's thumbnail slot of length ${x?.ifd1?.get(0x202)}`);
-        ok(hdr.headers.length === 1 && hdr.headers[0].date === dt && hdr.headers[0].header === H, `one header made, dated ${hdr.headers[0]?.date}`);
-      }
+        // the E118 family's REC version (src/lab/rec.mjs frame; docs/model-survey.md findings 143 to 146): REC_FILE's
+        // own steps seen where they reach the file module and the file system, and the file's whole stream
+        if (rec.frame) {
+          const used = pl.stand_ins_in_use(), run = rec.records[0], C = STORAGE.rec.codes, hexs = (v) => v.map((n) => `0x${n.toString(16)}`).join(' ');
+          ok(['H-EXIFINIT', 'H-RECINIT', 'H-RECFILE', 'S-EXIFPRM', 'S-RECIMAGE', 'S-JPEGENC'].every((n) => used.includes(n)) && !used.includes('S-RECHDR'), `${MODEL}: rec_jpeg_exec and REC_FILE natively: ${used.filter((n) => /REC|EXIF|JPEG/.test(n)).join(' ')}`);
+          const own = run?.requests.filter(([c]) => [C.open, C.write, C.entry, C.register, C.cancel, C.reserve].includes(c)) ?? [];
+          ok(rec.records.length === 1 && JSON.stringify(own) === JSON.stringify([C.open, C.write, C.entry, C.register].map((c) => [c, 0])), `REC_FILE's requests to the file module, each answered 0: the open, the chain write, the entry, the registration (${hexs([C.open, C.write, C.entry, C.register])}; no reservation request 0x${C.reserve.toString(16)}): ${JSON.stringify(run?.requests.map(([c, v]) => [`0x${c.toString(16)}`, v]))}`);
+          ok(run?.allocs.length === 1 && run.allocs[0].drive === 0 && run.allocs[0].bytes === want?.length && run.allocs[0].mode === 2, `the reservation is REC_FILE's own call of the file system's allocation, once, for drive 0, the file's ${want?.length} bytes, mode 2: ${JSON.stringify(run?.allocs)}`);
+          ok(run?.reply && run.reply.status === 0 && run.reply.free === 0 && run.reply.dst === 0, `REC_FILE's reply to the packet's ObjResponse taken (S-RECIMAGE), status 0 with Free 0 and Dst 0: ${JSON.stringify(run?.reply)}`);
+          // the header maker leaves APP1's last 2 bytes, the stream's SOI (on E143 the XMP's end overwrites them, X)
+          ok(data && stream && data.subarray(HEADER).every((b, i) => b === stream[i]) && segs[1].at === 2 && segs[1].length === HEADER - 2, `after the ${HEADER}-byte header the bytes are the lab's whole JPEG stream, its SOI as APP1's last 2 bytes (APP1 of ${segs[1]?.length} bytes)`);
+          // the directory entry's stamp is the capture's, packed from the shot's time record (the FAT date and time)
+          const fd = (DATE[0] - 1980) << 9 | DATE[1] << 5 | DATE[2], ft = DATE[3] << 11 | DATE[4] << 5 | DATE[5] >> 1;
+          ok(e && e.date === fd && e.time === ft && (e.attr & 0x20) !== 0 && img.file.stamp === ((fd << 16 | ft) >>> 0), `the directory entry's date and time 0x${e?.date.toString(16)} 0x${e?.time.toString(16)} are the clock's (0x${fd.toString(16)} 0x${ft.toString(16)}), an archive (attribute 0x${e?.attr.toString(16)}); the DCF block's stamp 0x${img.file.stamp?.toString(16)}`);
+        }
+      } else ok(data && want && data.every((b, i) => b === want[i]), 'the file\'s bytes are the JPEG the lab handed the file module');
       const d = data ? decodeJpeg(data) : null, [w, h, rows] = want ? s2.picture_frame(s2.camapp.views.get(img.release)) : [0, 0, []];
       ok(d && d.width === w && d.height === h && d.components.length === 3, `the file decodes (refs/jpeg.mjs): ${d?.width} x ${d?.height}, frame ${w} x ${h}`);
       if (d) {
@@ -600,15 +594,42 @@ export async function storageSession() {
         ok(f1 && f1.folder === img.file.folder && f1.number === img.file.number && s2.storage.fnode(2, 'test') === null, `the database's picture 1: ${JSON.stringify(f1)}, the file's ${img.file.folder}-${img.file.number}`);
         ok(e && e.cluster === img.file.cluster, `the directory entry's first cluster ${e?.cluster}, the reservation's ${img.file.cluster}`);
       }
+      // the E118 family: a second picture, then PLAY and back and a third: each recorded by REC_FILE under the
+      // firmware's next number, counted by its database, on the card under its own directory entry, the FAT's free
+      // count less each file's clusters (refs/fat.mjs)
+      if (rec?.frame) {
+        const lab = s2.lab, cam = s2.camapp, shooting = lab.state(), per = vol.spc * 512, free0 = vol.freeClusters();
+        const press = (k) => { for (const inp of [{ type: 'key', id: k, action: 'down' }, { type: 'token', token: 'WAIT:150' }, { type: 'key', id: k, action: 'up' }, { type: 'token', token: 'WAIT:1200' }]) pl.run_input(inp); };
+        const shot = (n, what) => {
+          for (const inp of SHOT) pl.run_input(inp);
+          pl.run_input({ type: 'token', token: 'WAIT:1200' });
+          const im = cam.images[n - 1], name = `${DIR}/P${DATE[1].toString(16).toUpperCase()}${String(DATE[2]).padStart(2, '0')}${String(n).padStart(4, '0')}.${names.ext}`;
+          const v = new FatVolume((lba, k) => card.read(lba, k), mbrPartition(card.read(0, 1)).start), en = v.find(name), bytes = en ? v.data(en) : null, x = bytes ? readExif(bytes) : null;
+          const count = lab.call(A(0x503FEEA4), { d0: 0, d1: 1 }, null, null, 2000000).d0, fnode = s2.storage.fnode(n, 'test'), d = bytes ? decodeJpeg(bytes) : null;
+          ok(cam.images.length === n && im?.file?.path === `${names.drive}:\\${name.replaceAll('/', '\\')}` && im.file.number === n && count === n && cam.card_images() === n && fnode?.number === n && fnode.folder === 100,
+            `${what}: picture ${n} is the firmware's next number: ${JSON.stringify(im?.file && { path: im.file.path, number: im.file.number })}, its image count ${count}, its fnode ${JSON.stringify(fnode)}`);
+          ok(en && en.size === im?.file?.size && en.cluster === im.file.cluster && x?.exif?.get(0x9003) === x?.ifd0.get(0x132) && d?.width > 0, `${what}: its directory entry ${JSON.stringify(en && { size: en.size, cluster: en.cluster })} is the fnode's (${im?.file?.size} bytes from cluster ${im?.file?.cluster}), its Exif dated ${x?.exif?.get(0x9003)} and its JPEG decoding (${d?.width} x ${d?.height})`);
+          const used = cam.images.slice(1, n).reduce((a, i) => a + Math.ceil(i.file.size / per), 0);
+          ok(v.freeClusters() === free0 - used && v.fsInfo()?.free === v.freeClusters(), `${what}: the FAT's free clusters ${v.freeClusters()}, ${used} less than after the first picture (${free0}); FSInfo's ${v.fsInfo()?.free}`);
+          ok(rec.records.length === n && rec.waiting(), `${what}: REC_FILE handled ${rec.records.length} packets and waits on its queue again`);
+        };
+        shot(2, 'a second S2');
+        press('play');
+        ok(lab.state_names.get(lab.state()) === 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE' && cam.play_cur === 1, `PLAY shows the newest of the two pictures: ${lab.state_names.get(lab.state())}, image ${cam.play_cur + 1}`);
+        press('play');
+        ok(lab.state() === shooting, `PLAY again returns to the shooting screen (0x${lab.state().toString(16)}, 0x${shooting.toString(16)} before)`);
+        shot(3, 'S2 after playback');
+      }
+      const taken = s2.camapp.images.length;
       pl.close_session();
       pl.open_session();
       const st = pl.session.steps.find((x) => x.storage)?.storage, lab = pl.session.lab;
-      ok(st?.dcf?.folder === 100 && st?.dcf?.file === 2, `the next session's DCF numbering mount finds the file: next ${JSON.stringify(st?.dcf)}`);
+      ok(st?.dcf?.folder === 100 && st?.dcf?.file === taken + 1, `the next session's DCF numbering mount finds the ${taken === 1 ? 'file' : `${taken} files`}: next ${JSON.stringify(st?.dcf)}`);
       const key = runtime(A(0x503FEEA4)), hook = lab.hooks.get(key);   // S-CARD's image count (camapp.mjs IMAGE_COUNT) aside
       lab.hooks.delete(key);
       const n = lab.call(A(0x503FEEA4), { d0: 0, d1: 1 }, null, null, 2000000).d0;
       if (hook) lab.hooks.set(key, hook);
-      ok(n === 1, `the firmware's own image count (type 1) in the next session: ${n}`);
+      ok(n === taken, `the firmware's own image count (type 1) in the next session: ${n}`);
     } catch (e) { bad.push(`S2 picture: ${e.message.slice(0, 400)}`); }
     try { pl.close_session(); } catch { /* closed */ }
   }

@@ -39,8 +39,9 @@
 //               would start, sends its first request to the image engine (0x5048ee61 on E143, a kind 14 fill on the
 //               imgpro unit 0x9c600000, whose model S-IMGPRO the IRQ attach of camapp 3's H-IMGPROINIT serves only
 //               after the mount: docs/hle-gaps.md 4.3.1), and the movie module it asks does not run
-//   S-RECFILE   (not on E143, E146, E147 and the E144 family but E145 and E132, where REC_FILE runs natively in its
-//               task from REC_IMAGE's packet, src/lab/rec.mjs) the picture's file at a release's END_SHOOTING_PICTURE
+//   S-RECFILE   (not on E143, E146, E147, the E118 family and the E144 family but E145 and E132, where REC_FILE runs
+//               natively in its task from REC_IMAGE's packet, src/lab/rec.mjs) the picture's file at a release's
+//               END_SHOOTING_PICTURE
 //               (src/lab/camapp.mjs S-CARD),
 //               the JPEG the capture pipeline would hand REC_FILE, which does not run: a JPEG the lab encodes
 //               (src/lab/jpeg.mjs: S-SCENE's frame at the capture, each 8 x 8 block its mean, or a black frame). On a
@@ -54,9 +55,7 @@
 //               file requests (mkdir, fopen 'wb', fwrite in chunks, fclose; the FlashAir configuration writer's calls)
 //               put the JPEG at the DCF name the numbering mount gave (folder 100: C:\DCIM\100OMSYS or 100OLYMP, file
 //               P1010001.JPG and on; the DCF module's initial names, storage.names, D), and the DCF database learns of
-//               the file at the next mount. On the E118 family (src/fw/models.mjs exif_native) the file put there is
-//               the header REC_IMAGE's own header maker builds natively and the stream after it (src/lab/recheader.mjs
-//               H-EXIFINIT, S-EXIFPRM, S-RECHDR)
+//               the file at the next mount
 //   S-CARD      (the insertion) the media control's requests on a card insertion, sent to the file module's queue as
 //               the HLS media layer would send them (it does not run in the lab; which requests it sends, and in which
 //               order, is I): the FAT mount; on a card with no file system the format (the request Card Formatting
@@ -73,7 +72,6 @@ import { STUB } from './display.mjs';
 import { SdCard, SECTOR } from './sdcard.mjs';
 import { A, MODEL, MODEL_INFO, fact } from '../fw/model.mjs';
 import { RecFile, REC_NATIVE } from './rec.mjs';
-import { RecHeader, EXIF_NATIVE } from './recheader.mjs';
 import { BOARD } from '../fw/board.mjs';
 import { STORAGE_E143, STORAGE_LIB, CARD_DETECT_E143, RECORDER_E143, MEDIA_LIB } from '../fw/facts.mjs';
 
@@ -173,8 +171,6 @@ export class Storage {
     this.reply = null;
     // REC_FILE natively where the body gives rec_native (src/lab/rec.mjs; MODELS), in S-RECFILE's place
     this.rec = REC_NATIVE ? new RecFile(this) : null;
-    // the E118 family: S-RECFILE's file with the header REC_IMAGE's header maker builds natively (recheader.mjs)
-    this.exif = EXIF_NATIVE ? new RecHeader(this) : null;
   }
   // H-FILEINIT, H-FILECLBK, S-SDHOST, S-SDCARD, S-FSNAND, S-ALBM, then the insertion (S-CARD); in the play bring-up,
   // before the application starts
@@ -371,7 +367,7 @@ export class Storage {
   }
   // S-RECFILE: the picture's bytes to a file of the DCF; returns {path, size, folder, number} (record() also the
   // cluster, the stamp and the clock record)
-  write_picture(bytes) { return this.rec ? this.rec_picture(bytes) : this.f.recorder ? this.record(bytes) : this.fileif_picture(this.exif ? this.exif.file(bytes) : bytes); }
+  write_picture(bytes) { return this.rec ? this.rec_picture(bytes) : this.f.recorder ? this.record(bytes) : this.fileif_picture(bytes); }
   // REC_FILE natively (src/lab/rec.mjs): its file, with the header REC_IMAGE's header maker builds
   rec_picture(bytes) {
     const file = this.rec.record(bytes);

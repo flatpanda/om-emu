@@ -123,13 +123,10 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // recFileQueue reads, with no 'rec_image': REC_IMAGE's part in the lab's call (H-EXIFINIT, H-RECINIT, H-RECFILE,
 // S-EXIFPRM, S-RECIMAGE, S-JPEGENC); on the REC version before the family's (E130, E133, E129: a 284-byte packet,
 // REC_FILE's loop inlining its start and finish, rec_make_file's file context on its stack) at the addresses
-// src/fw/facts.mjs recFileInline reads, with the same stand-ins;
+// src/fw/facts.mjs recFileInline reads, with the same stand-ins; on the E118 family's older REC version (REC_FILE's
+// packet on its stack, the file context in rec_file_record's frame, the reservation its own call of the file system)
+// the same stand-ins at the addresses src/fw/facts.mjs recFileFrame reads (docs/model-survey.md findings 143 to 146);
 // given for a body whose S2 is known to record so (X). A body without it keeps S-RECFILE (src/lab/storage.mjs)
-// `exif_native`: S-RECFILE's file carries the header REC_IMAGE's own header maker builds natively
-// (src/lab/recheader.mjs H-EXIFINIT, S-EXIFPRM, S-RECHDR; docs/model-survey.md findings 102 to 105), at the
-// addresses and offsets src/fw/facts.mjs recHeader reads (fact 'rec_header'): the E118 family, whose REC is an older
-// version than rec_native's; given for a body whose S2 file is known to carry it (X). A body without it writes the
-// lab's JFIF
 //
 // `scpu_lle`: the sub-CPU's own firmware, which the lab can run on the STM32L4 machine in S-SCPUDEV's place (opt-in,
 // src/lab/scpum4.mjs; docs/om1-scpu-spec.md section 8 step 6), given only for a body whose image that machine is
@@ -1091,8 +1088,9 @@ export const MODELS = {
     // bin/modelcheck.mjs, the OSD records); its HLS media side read by the rule as E122's (hls 'rule', X:
     // test/test_storage.mjs --hls)
     card_fs: { native: true, hls: 'rule' },
-    // S2's file with the header maker's Exif (X: test_storage's S2 file, its Exif Model 'E-M5MarkII')
-    exif_native: true,
+    // REC_FILE records S2's file natively, its header the header maker's (X: test_storage's S2 file, its Exif Model
+    // 'E-M5MarkII', the firmware's count and directory entry; docs/model-survey.md finding 146)
+    rec_native: true,
     board: { family: 'E118' },
     // through E122 (port_via): the family's reference, whose overrides it takes over (the evidence at E122's entry)
     port_via: 'E122',
@@ -1138,8 +1136,9 @@ export const MODELS = {
     // S-MEDIA) at the addresses src/fw/facts.mjs mediaHls reads (fact 'media'), since 2026-11-10 (docs/model-survey.md
     // findings 124 to 129; X: test/test_storage.mjs --hls)
     card_fs: { native: true, hls: 'rule' },
-    // S2's file with the header maker's Exif (X: test_storage's S2 file, its Exif Model 'PEN-F')
-    exif_native: true,
+    // REC_FILE records S2's file natively, its header the header maker's (X: test_storage's S2 file, its Exif Model
+    // 'PEN-F', the firmware's count and directory entry; docs/model-survey.md finding 146)
+    rec_native: true,
     board: { family: 'E118' },
     // the map from E143 leaves 116 of the lab's addresses unplaced; through E125 113 (107 of its overrides carried, 62
     // nulls, 26 failed), through E130 114 (122 carried, 71 nulls, 18 failed); through E142, E137, E144 and E140 the
@@ -1197,8 +1196,9 @@ export const MODELS = {
     // card formatted FAT32 and DCF folder 100, file 1 (X: a play session per device, and modelcheck's path, finding
     // 56); its HLS media side read by the rule as E122's (hls 'rule', X: test/test_storage.mjs --hls)
     card_fs: { native: true, hls: 'rule' },
-    // S2's file with the header maker's Exif (X: test_storage's S2 file, its Exif Model 'E-M10MarkII')
-    exif_native: true,
+    // REC_FILE records S2's file natively, its header the header maker's (X: test_storage's S2 file, its Exif Model
+    // 'E-M10MarkII', the firmware's count and directory entry; docs/model-survey.md finding 146)
+    rec_native: true,
     board: { family: 'E118' },
     // through E122 (port_via): the family's reference, whose overrides it takes over (the evidence at E122's entry)
     port_via: 'E122',

@@ -45,7 +45,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
   TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
-  PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143, recImage, recFileInline, KCB0_E143 } from '../src/fw/facts.mjs';
+  PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143, recImage, recFileInline, recHeader, recFileFrame, KCB0_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
 import { expandImage } from '../src/fw/expand.mjs';
@@ -457,6 +457,51 @@ const REC_FILE_FOUND = {
     contexts: null, context: { at: 0x503AFCED, dcf: 8, fnode: 32 }, reply: { fn: 0x503A4C41, from: 0x503A9185 },
     clock_set: 0x500EA4BD, clock_read: 0x500EA4DD,
   },
+  // The E118 family's (src/fw/facts.mjs recFileFrame, 2026-11-11; the header maker's parts recHeader's, below): E122's
+  // as read by hand (D: REC's receive 0x5050bbec with HandleTarget's read 0x5050bc20, REC_FILE task 33 at 0x5050ff06
+  // with the packet at sp + 4, its queue word 0x60041136, its NoRecord test 0x5050ff2c, its record step's return
+  // 0x5050ff44, its Free and Dst tests 0x5050ff4b and its reply's call 0x5050ff66 of 0x5050bb96; the post 0x5050bc4a;
+  // rec_jpeg_exec's ImgAspect 0x50515ae1, Size 0x50515b6c and BuffSize1 / BuffAddr1 0x50515ba0; rec_file_record
+  // 0x50510091 copying Media and FileType at 0x505100ec and calling the open 0x505162f8 at 0x50510121, the reservation
+  // 0x50516481 with its allocation 0x50566a01 at 0x505164bb, the chain write 0x50516511 with its post 0x50516530 and
+  // wait 0x5051661b, the entry 0x50516667 and the registration 0x5051679a; REC's init 0x5050b8d0 before REC_MAIN
+  // 0x5050b912), E118's and E120's as the rule reads them (X: their sessions record S2's files natively with them; D:
+  // E118's task 0x504f651d calling rec_file_destination_record 0x504f6bae, whose RecordDevice +74 bit 0 calls
+  // rec_make_file 0x504f65a9 at 0x504f6c2c; E120's task 0x504d082c with the packet at sp + 8 and rec_make_file
+  // 0x504d08f7 holding the record's steps itself, the open's calls 0x504d09b8 and 0x504d0c42)
+  E122: {
+    exif: { init: 0x5052B4D9, cflush: null, template: 0x618BB6B8, copy: 0x5052B50B, size: 22080, time: 18404,
+      date: { format: 0x5016841D, code: 0x4200, copy: 0x50002CB7, original: 2313, created: 2333, modified: 1364 }, tags: { make: 1480, model: 1504, zoom: null }, crop: [] },
+    init: 0x5050B8D0, task: { id: 33, entry: 0x5050FF06, flag: null, queue: 0x60041136, handled: 0x5050FF44 },
+    packet: { size: 216, post: 0x5050BC4A, fields: { pExifParam: 124, HandleTarget: 120, BuffAddr1: 172, BuffSize1: 176, HeaderSize: 196, Status: 14, Mode: 68, Media: 72,
+      ImgAspect: 136, Free: 140, FileType: 208, NoRecord: 106, Dst: 76 } },
+    jpeg: { exec: 0x50515AB1, make_image: 0x50515C18, make_header: 0x50515CBB, header: 41984, fill: null, fill_return: null, image: { record: null, addr: 200, size: 204 } },
+    contexts: null, clock_set: 0x50167F55, clock_read: 0x50167F73, reply: { fn: 0x5050BB96, from: 0x5050FF6B },
+    record: { open: 0x505162F8, reserve: 0x50516481, alloc: 0x50566A01, write: 0x50516511, post: 0x50516530, wait: 0x5051661B, entry: 0x50516667, register: 0x5051679A,
+      file_queue: 0x600410DE, reply_queue: 0x60041144 },
+  },
+  E118: {
+    exif: { init: 0x50514526, cflush: null, template: 0x618966E8, copy: 0x50514558, size: 20084, time: 18340,
+      date: { format: 0x50156E5D, code: 0x4200, copy: 0x50002CB0, original: 2313, created: 2333, modified: 1364 }, tags: { make: 1480, model: 1504, zoom: null }, crop: [] },
+    init: 0x504F1516, task: { id: 33, entry: 0x504F651D, flag: null, queue: 0x60041122, handled: 0x504F6561 },
+    packet: { size: 280, post: 0x504F1892, fields: { pExifParam: 188, HandleTarget: 184, BuffAddr1: 236, BuffSize1: 240, HeaderSize: 260, Status: 14, Mode: 68, Media: 72,
+      RecordDevice: 74, ImgAspect: 200, Free: 204, FileType: 272, NoRecord: 106, Dst: 76 } },
+    jpeg: { exec: 0x504FE72D, make_image: 0x504FE899, make_header: 0x504FE93E, header: 41984, fill: null, fill_return: null, image: { record: null, addr: 264, size: 268 } },
+    contexts: null, clock_set: 0x50156995, clock_read: 0x501569B3, reply: { fn: 0x504F17DE, from: 0x504F6588 },
+    record: { open: 0x504FEE8D, reserve: 0x504FF01A, alloc: 0x50556307, write: 0x504FF0AA, post: 0x504FF0C9, wait: 0x504FF1B6, entry: 0x504FF202, register: 0x504FF349,
+      file_queue: 0x600410CA, reply_queue: 0x60041130 },
+  },
+  E120: {
+    exif: { init: 0x504ED722, cflush: null, template: 0x618943FC, copy: 0x504ED754, size: 20004, time: 18284,
+      date: { format: 0x50152BF8, code: 0x4200, copy: 0x50002CD9, original: 2313, created: 2333, modified: 1364 }, tags: { make: 1480, model: 1504, zoom: null }, crop: [] },
+    init: 0x504CBA9E, task: { id: 33, entry: 0x504D082C, flag: null, queue: 0x60041088, handled: 0x504D08AF },
+    packet: { size: 280, post: 0x504CBE1A, fields: { pExifParam: 188, HandleTarget: 184, BuffAddr1: 236, BuffSize1: 240, HeaderSize: 260, Status: 14, Mode: 68, Media: 72,
+      ImgAspect: 200, Free: 204, FileType: 272, NoRecord: 106, Dst: 76 } },
+    jpeg: { exec: 0x504D7D1D, make_image: 0x504D7E89, make_header: 0x504D7F2E, header: 41984, fill: null, fill_return: null, image: { record: null, addr: 264, size: 268 } },
+    contexts: null, clock_set: 0x50152730, clock_read: 0x5015274E, reply: { fn: 0x504CBD66, from: 0x504D08D0 },
+    record: { open: 0x504D842F, reserve: 0x504D85BC, alloc: 0x5052E7CE, write: 0x504D864C, post: 0x504D866B, wait: 0x504D8758, entry: 0x504D87A4, register: 0x504D88D9,
+      file_queue: 0x60041030, reply_queue: 0x60041096 },
+  },
 };
 // REC_IMAGE's task natively (rec_image; src/fw/facts.mjs recImage), where recFile reads REC_FILE's parts: E143's as
 // src/lab/rec.mjs gave them by hand before the rule (REC_IMAGE_E143, D), E146's and E147's as read in their code (D,
@@ -486,7 +531,8 @@ const REC_IMAGE_FOUND = {
 // 0x50044c97, callback 0x50044cff, flag (0x60041508)); E134 has another driver and none (D: 0x50042df1); the other
 // 15 bodies have one each (X, the rule)
 const IIC_FOUND = { E143: [0x5004CBF6], E145: [0x50044D60], E134: [] };
-// The E118 family's REC header maker (rec_header; src/fw/facts.mjs recHeader): E122's as read by hand (D, 2026-11-10:
+// The E118 family's REC header maker (src/fw/facts.mjs recHeader, whose parts recFileFrame gives the lab in fact
+// rec_file; a fact of its own, rec_header, until 2026-11-11): E122's as read by hand (D, 2026-11-10:
 // rec_jpeg_exec 0x50515ab1 opening `mov (124,a3),d3; mov 68,a2`, the buffer kept at +200 (0x50515afc), its call of
 // rec_jpeg_make_image 0x50515c18 and of the header maker 0x50515cbb, which stores 41984 at +196 (0x50516193) and writes
 // SOI and APP1 at 0x5051623c; REC's post sending 216 bytes at 0x5050bcaf; the EXIF init 0x5052b4d9, its template
@@ -1087,6 +1133,18 @@ export function factsTests() {
       const end = refused(0x503d94ac, 0x3f, /0 ends of REC_FILE's loop/), step = refused(0x503d9429, 0x83, /has no record step/);
       ok(end === true && step === true, `recFileInline: the loop's other end and a status kept elsewhere refused: ${end}, ${step}`);
     }
+    // recFileFrame refuses a form it does not know rather than reading it: E122's image with REC_FILE's NoRecord test
+    // made `cmp 2,d0` (0x5050ff2f: a0 01 -> a0 02: no task of REC's loop left), with the chain write's code 0x55
+    // (0x505165a3: 80 54 -> 80 55) and with the registration's code 0x34 (0x505167ff: 85 33 -> 85 34)
+    if (code === 'E122' && placed?.rec_file) {
+      const kcb = at(KCB0_E143), refused = (o, v, re) => {
+        const m = run.slice();
+        m[o - 0x50000000] = v;
+        try { recFileFrame(m, kcb); return 'read'; } catch (e) { return re.test(e.message) || e.message; }
+      };
+      const task = refused(0x5050ff30, 0x02, /0 static tasks of REC's loop/), write = refused(0x505165a4, 0x55, /does not send code 0x54/), reg = refused(0x50516800, 0x34, /0 of the file context's steps send code 0x33/);
+      ok(task === true && write === true && reg === true, `recFileFrame: another NoRecord test, chain write code and registration code refused: ${task}, ${write}, ${reg}`);
+    }
     const ld = placed?.lens_driver;
     if (ld && PORTS[code]) {
       const a = (v) => (PORTS[code][v] === undefined ? v : PORTS[code][v]), e = LENS_DRIVER_E143;
@@ -1102,7 +1160,7 @@ export function factsTests() {
     if (code === 'E143' || (PORTS[code] && got.ctors?.length === 4 && !['E118', 'E122'].includes(code))) ok(same(tables, got.ctors?.slice(0, 3).map(([t]) => t)), `${code}: A() of the constructor tables ${hx(tables)}, the rule's ${hx(got.ctors ?? got)}`);
     for (const [t, n] of got.ctors ?? []) ok(u32(run, t - m.image_base + 4 * n) === 0xFFFFFFFF, `${code}: the constructor table ${hx(t)} is not ended after its ${n} pointers`);
     if (CBS_FOUND[code]) ok(same(got.cbs, CBS_FOUND[code]), `${code}: cbs ${hx(got.cbs ?? got)}, found ${hx(CBS_FOUND[code])}`);
-    ok(same(got.rec_header, REC_HEADER_FOUND[code]), `${code}: rec_header ${hx(got.rec_header ?? 'none')}, found ${hx(REC_HEADER_FOUND[code] ?? 'none')}`);
+    { const rh = recHeader(img); ok(same(rh, REC_HEADER_FOUND[code]), `${code}: recHeader ${hx(rh ?? 'none')}, found ${hx(REC_HEADER_FOUND[code] ?? 'none')}`); }
     if (SYNC_FOUND[code]) ok(same(got.display?.sync, SYNC_FOUND[code]), `${code}: display.sync ${hx(got.display ?? got)}, found ${hx(SYNC_FOUND[code])}`);
     ok(got.board?.vsc?.levels === LEVELS_FOUND[code], `${code}: board.vsc ${hx(got.board?.vsc ?? got)}, found ${LEVELS_FOUND[code] === undefined ? 'none (not kind 3)' : `levels ${LEVELS_FOUND[code]}`}`);
     ok(got.touch_panel?.driver === !NO_TOUCH_DRIVER.includes(code), `${code}: touch_panel ${hx(got.touch_panel ?? got)}, found ${NO_TOUCH_DRIVER.includes(code) ? 'no driver' : 'a driver'}`);

@@ -4051,11 +4051,11 @@ export function recFileInline(img, kcb) {
     clock_set: 0x50000000 + set, clock_read: 0x50000000 + clockRead,
   };
 }
-// The E118 family's REC header maker (fact 'rec_header', src/lab/recheader.mjs; docs/model-survey.md findings 102 to
-// 104): REC_IMAGE's header maker of an older REC version than E143's, whose packet has no dump (no "pExifParam " in
+// The E118 family's REC header maker (recFileFrame's part of fact 'rec_file', below; docs/model-survey.md findings 102
+// to 104): REC_IMAGE's header maker of an older REC version than E143's, whose packet has no dump (no "pExifParam " in
 // the image) and whose REC_FILE receives in another form than recFile's (no load of "rec_file.c", finding 93; rec.c
-// has a 216-byte receive, 0x5050bbec with eight callers, and which of them is REC_FILE's is not read, ?). D on E122
-// unless tagged:
+// has a 216-byte receive, 0x5050bbec with eight callers, of which recFileFrame reads REC_FILE's). D on E122 unless
+// tagged:
 // - REC's functions by their traces, as recFile reads them (the table {"ERROR TRACE ID", 1}, {"rec_main", 2}, E122
 //   0x5061cde8, 165 names; a trace `or 0x31000000,d0; ...; mov (id - 1) << 16 | line,d1`): exec, the traced
 //   rec_jpeg_exec that calls the traced rec_jpeg_make_image (E122 0x50515ab1, its call 0x50515b4f to 0x50515c18);
@@ -4188,6 +4188,244 @@ export function recHeader(img) {
     clock: { set: 0x50000000 + set, read: 0x50000000 + read },
     packet: { size, fields: { pExifParam: pParam, Mode: pMode, Addr: pAddr, HeaderSize: pHeader } },
     jpeg: { exec: 0x50000000 + exec, make_image: 0x50000000 + make, make_header: 0x50000000 + hdr, header },
+  };
+}
+// The E118 family's REC_FILE task (fact 'rec_file' in recFile's shape, src/lab/rec.mjs; docs/model-survey.md findings
+// 143 to 145), read where recHeader reads the family's header maker (its exif, clock, jpeg and the packet's
+// pExifParam, Mode, Addr and HeaderSize are that rule's), at the port's place of E143's CPU 0 kcb. The family's REC is
+// neither recFile's version (no "rec_file.c" receive, no flag) nor recFileQueue's (no packet dump, no "REC post_msg"
+// trace, no static file context): REC_FILE keeps the packet on its task's stack and rec_file_record its file context
+// in its own frame. D on E122 unless tagged (E118 and E120: X, the rule; their forms differ where said):
+// - packet.size, the receive: REC's receive wrapper, `mov a0,a2; mov -1,d1; mov d1,(4,sp); mov LINE,d1; mov d1,(8,sp);
+//   mov SIZE,d1; mov "rec.c",a1; call` (0x5050bbec: SIZE 216, recHeader's packet.size; REC's queue read below it
+//   0x5051869e), one such function, which then tests the shot's abort word, `mov (HandleTarget,a2),d1; udfu01
+//   N,d0` (0x5050bc20: the table 0x618b9be4 by the packet's +12 and HandleTarget - 1, so HandleTarget is from 1; N
+//   320, a row of 40 shots, on E118 and E120 224)
+// - task {id, entry, queue, handled}: the static task (taskRows) that opens `movm [d2,a2],(sp); add -N,sp; mov sp,a2;
+//   inc4 a2` (E120 `add 8,a2`: the packet at sp + 4, E120 sp + 8) `; movhu (Q),d0; mov a2,a0; exth d0; call RECEIVE`
+//   (33, 0x5050ff06; Q 0x60041136, the word of the queue the object-name table names REC_EXEC_FILE, 78, X) and whose
+//   record step reaches the DCF open's builder within REC_FRAME_REACH calls. Its loop: `movhu (Mode,sp),d1; mov 60,d0;
+//   call` (0x5051062a: a note of the running task), on E118 rec_file_start_process (0x504f70fd), then `movhu
+//   (NoRecord,sp),d0; cmp 1,d0; bne L`: 1 frees the buffers and takes the packet's Status (`movhu (Status,sp),d2`),
+//   else L: `mov a2,a0; call RECORD; mov d0,d2` (handled: that `mov`, d0 the status; RECORD rec_make_file 0x5050ff88,
+//   on E118 rec_file_destination_record 0x504f6bae, which calls it); rec_file_finish_process (0x50510583; none on
+//   E120); then the reply's test, `movhu (Free,sp),d1; cmp 0,d1; bne R; movhu (Dst,sp),d1; cmp 0,d1; bne SKIP; R:
+//   movhu (Mode,sp),d1; mov 62,d0; call; mov a2,a0; mov d2,d0; exthu d0; call REPLY` (0x5050ff4b: the reply unless
+//   Free is 0 and Dst is not; the names E143's for the same uses, I: E143's REC_FILE tests Free alone, 0x5053f3a5, and
+//   its rec_bracket_update the word at Dst's place with Mode 4097 as the family's does, 0x5053b42f and 0x5050d14c);
+//   the loop ends on a status of 8064 to 8191
+// - reply {fn, from}: REPLY, REC's reply to the packet's ObjResponse, `mov (8,a2),d0` then 12 bytes {Status, the
+//   packet's +16, +20} sent with "rec.c" (0x5050bb96, the send 0x505186eb), and its return in REC_FILE (0x5050ff6b)
+// - packet.post: REC's post of a packet (a0) to a queue (d0), the one `mov d2,d0; mov SIZE,d1; mov "rec.c",a1; call`
+//   (0x5050bc4a, the send at 0x5050bcae), which REC_IMAGE's task calls with Q for a still (0x50510c2b: every load of Q
+//   outside REC_FILE's task but the object-name list's leads to it, X)
+// - packet.fields past recHeader's: Status, NoRecord, Free and Dst from the task (less the packet's place in its
+//   frame); HandleTarget from the receive; ImgAspect, rec_jpeg_exec's `movbu (ImgAspect,a3),d1` before its buffer's
+//   size (0x50515ae1: the size's table takes ImgAspect - 1, 0x50519ec5); Size, its `mov (Size,a3),d1; mov d1,(12,sp)`
+//   after the header maker, and BuffSize1 and BuffAddr1, `mov (12,sp),d0; mov d0,(BuffSize1,a3); mov (8,sp),d0; mov
+//   d0,(BuffAddr1,a3)` (0x50515b6c, 0x50515ba0); Media and FileType, the two halfwords the record's code copies into
+//   the file context, `movhu (Media,aN),d0; movhu d0,(S,sp); movhu (FileType,aN),d0; movhu d0,(S + 2,sp)` (0x505100ec:
+//   the context's +64, which the open's builder makes the DCF block's drive, and +66, the index of the extension's
+//   table 0x6063e664, 1 `JPG`); RecordDevice where the task's record step is rec_file_destination_record (E118),
+//   `movhu (a2),d0; and 1,d0; cmp 1,d0; bne; mov a3,a0; call rec_make_file` with a2 the packet's field, `mov N,a2; add
+//   a0,a2` (0x504f6c22, N 74: bit 0 the card, as E143's 0x50540392; bit 2 another destination, 0x504f6ce0; the count
+//   of its bits must be 1, 0x504f6bd7), none where the step is rec_make_file itself. E122: Status 14, Mode 68, Media
+//   72, Dst 76, NoRecord 106, HandleTarget 120, pExifParam 124, ImgAspect 136, Free 140, BuffAddr1 172, BuffSize1 176,
+//   HeaderSize 196, Addr 200, Size 204, FileType 208; E118 and E120 (X, the rule): the same to NoRecord, then
+//   HandleTarget 184, pExifParam 188, ImgAspect 200, Free 204, BuffAddr1 236, BuffSize1 240, HeaderSize 260, Addr 264,
+//   Size 268, FileType 272
+// - record: the DCF steps rec_file_record makes with its file context (a0, `mov (K,sp),a0; call`): open, the one
+//   function that loads `xxxO` (0x505162f8: the DCF block +2 Media, +4 `xxxOLYMP`, +16 and +20 the stamp packed from
+//   the time record, sent synchronously with code 0x32 to the queue of the word file_queue, 0x600410de, the
+//   file module's, through 0x5004c303; the fnode back at +24, its letter `_` where the record's +18594 is 1, its
+//   extension by FileType); reserve, the call after it (0x50516481: mode 2 at the context's +72, then alloc, the file
+//   system's own allocation, `mov 2,d0; mov d0,(a1); movhu (a3),d0; mov (48,a2),d1; mov (36,a2),a0; call`,
+//   0x50566a01 -> 0x5056f91d in REC_FILE's task, with mode 0 where 2 finds none; the first cluster to the context's
+//   +16 and +20, 0x50516911); write, the next (0x50516511: post, 0x50516530, builds the chain write's block, +6 Media,
+//   +8 the cluster, +12 the sector in it, +16 the sectors, +20 the buffer, +28 the mode, +32 the cluster, +36 the
+//   bytes, and sends {the id of the word reply_queue, , 0x54, the block} to file_queue with no wait, `mov 84,d0; mov
+//   d0,(20,sp); movhu (reply_queue),d0`; wait, 0x5051661b, receives 12 bytes from reply_queue, 0x60041144, the queue
+//   named REC_POST_FILE, 85, and returns their first halfword; the loop repeats while that is 0xbb01); entry and
+//   register, the two that send 0x66 and 0x33 synchronously (0x50516667: the block of the 96-byte recorder's form,
+//   docs/model-survey.md finding 122; 0x5051679a: the fnode's +88 kind, +44 first cluster, +48 size). FILECLBK
+//   answers reply_queue: its reply (fact 'storage' fileclbk.reply, 0x50577e41) sends {status, the message's +4, its
+//   block} to the message's +0 where that is not 0 (0x50577e41..0x50577e5e). On E120 rec_make_file holds the steps
+//   itself (no rec_file_record function, 0x504d08f7)
+// - init: REC's module init, the function that ends `mov 8191,d0; ret` right before REC_MAIN's task, the function of
+//   the "rec_main" trace (0x5050b8d0 before 0x5050b912, recFileQueue's read with the family's trace kind 0x1001)
+// - contexts null: the file context is rec_file_record's frame's (0x505100bb: sp + 20 of 364 bytes), so the lab takes
+//   the file from the registration's block at FILECLBK's reply; exif.cflush, jpeg.fill null, exif.crop [] and
+//   exif.tags.zoom null: no cache flush, no fill, and the header maker divides by none of the block's zeros (X)
+// Returns undefined where recHeader reads no header maker; throws where it does and a part is not found in its form,
+// or is found twice.
+const REC_FRAME_RECV = [0x92, 0x85, 0xff, 0x46, 0x04, 0x2d, null, null, 0x46, 0x08, 0x2d, null, null, 0xfc, 0xdd];
+const REC_FRAME_TASK = [0xcf, 0xa0, 0xfa, 0xfe, null, null, 0x3e], REC_FRAME_QUEUE = [0xfc, 0xac, null, null, null, null, 0x98, 0x18];
+const REC_FRAME_OPEN = [0xfc, 0xcc, 0x78, 0x78, 0x78, 0x4f], REC_FRAME_ALLOC = [0x80, 0x02, 0x61, 0xf0, 0x63, 0xf8, 0x06, null, 0xf8, 0x22, null];
+const REC_FRAME_WRITE = [0x80, 0x54, 0x42, 0x14, 0xfc, 0xac], REC_FRAME_REPLY = [0x80, 0x3e], REC_FRAME_REPLY_ARGS = [0x98, 0x88, 0x1c];
+const REC_FRAME_SPAN = 0x400, REC_FRAME_LOOP = 0x100, REC_FRAME_REACH = 3, REC_FRAME_FILL = 0x80;
+const REC_FRAME_FIELDS = { pExifParam: 4, Mode: 2, Addr: 4, HeaderSize: 4, Status: 2, NoRecord: 2, Free: 2, Dst: 2, HandleTarget: 4, ImgAspect: 1, Size: 4,
+  BuffAddr1: 4, BuffSize1: 4, Media: 2, FileType: 2, RecordDevice: 2 };
+export function recFileFrame(img, kcb) {
+  const hdr = recHeader(img);
+  if (hdr === undefined) return undefined;
+  const rule = 'recFileFrame', { base } = imageBase(img), D = (o) => h8(0x50000000 + o), s16 = (o) => (img[o] | img[o + 1] << 8) << 16 >> 16;
+  const u16 = (o) => img[o] | img[o + 1] << 8, text = (o) => { let e = o; while (img[e]) e++; return String.fromCharCode(...img.subarray(o, e)); };
+  const step = (p) => p + (callAt(img, p)?.len ?? insnLength(img[p], img[p + 1]));
+  const need = (v, what) => { if (v === undefined || v === null) throw new Error(`${rule}: ${what}`); return v; };
+  // the instructions of a function (calls stepped over) to its end, the return that a called offset follows (an
+  // error path's return in its middle does not end it: E118's rec_file_destination_record), and its calls
+  const entries = new Set(callScan(img).to);
+  const body = (fn, span = REC_FRAME_SPAN) => { const at = []; for (let p = fn; p < fn + span && !(isRet(img, p) && entries.has(p + 3)); p = step(p)) at.push(p); return at; };
+  const called = new Map();
+  const calls = (fn) => { if (!called.has(fn)) called.set(fn, body(fn).map((p) => callAt(img, p) && { at: p, to: callAt(img, p).to }).filter(Boolean)); return called.get(fn); };
+  // a function's sends of a code, `mov CODE,d1; [exth d0;] call`: the offsets of their `mov`
+  const sendsOf = (fn, code) => body(fn).filter((p) => img[p] === 0x85 && img[p + 1] === code && (callAt(img, p + 2) || (img[p + 2] === 0x18 && callAt(img, p + 3))));
+  const off = (a) => a - 0x50000000, P = hdr.packet.fields, size = hdr.packet.size;
+  const exec = off(hdr.jpeg.exec), makeHeader = off(hdr.jpeg.make_header);
+  // REC's receive of the packet, and HandleTarget in its abort test
+  const rv = need(oneAt(img, REC_FRAME_RECV, rule, 'receive wrappers'), 'no receive wrapper of REC\'s form');
+  if (s16(rv + 11) !== size || text(u32(img, rv + 15) - base) !== 'rec.c') throw new Error(`${rule}: the receive ${D(rv)} takes ${s16(rv + 11)} bytes with "${text(u32(img, rv + 15) - base)}", want recHeader's ${size} with "rec.c"`);
+  const recC = u32(img, rv + 15), queueRead = need(callAt(img, rv + 19), `the receive ${D(rv)} makes no call after its file name`).to;
+  const udf = (p) => img[p + 1] === 0x14 && (img[p] === 0xfb || img[p] === 0xf9);          // udfu01 imm16 / imm8,d0
+  const ht = body(rv, REC_FN_SPAN).filter((p) => (bytesAt(img, p, [0xf8, 0x06]) && udf(p + 3)) || (bytesAt(img, p, [0xfa, 0x06]) && udf(p + 4)));
+  if (ht.length !== 1) throw new Error(`${rule}: the receive ${D(rv)} indexes its abort table by ${ht.length} fields (\`mov (HandleTarget,a2),d1; udfu01 N,d0\`), want one`);
+  const HandleTarget = img[ht[0]] === 0xf8 ? img[ht[0] + 2] : u16(ht[0] + 2);
+  // REC's post and reply, by what they send with "rec.c": the packet (`mov d2,d0; mov SIZE,d1`), 12 bytes (`mov 12,d1`)
+  const sendAt = (pat, what) => {
+    const at = need(oneAt(img, [...pat, 0xfc, 0xdd, ...le32(recC)], rule, what), `no ${what}`);
+    return need(entryOf(img, at, REC_FN_SPAN), `the ${what} at ${D(at)} lies in no function`);
+  };
+  const post = sendAt([0x88, 0x2d, size & 0xff, size >> 8], 'post of a packet'), reply = sendAt([0x85, 0x0c], 'reply of 12 bytes');
+  // the DCF open's builder, and the synchronous send of its code
+  const C = STORAGE_LIB.rec.codes, openAt = need(oneAt(img, REC_FRAME_OPEN, rule, 'loads of `xxxO`'), 'no DCF open builder (no load of `xxxO`)');
+  const open = need(entryOf(img, openAt, REC_FN_SPAN), `the load of \`xxxO\` at ${D(openAt)} lies in no function`);
+  // a builder's synchronous send of code: `movhu (W),d0; ...; mov CODE,d1; [exth d0;] call`: {queue: W, send}
+  const sends = (fn, code, what) => {
+    const at = sendsOf(fn, code);
+    if (at.length !== 1) throw new Error(`${rule}: the ${what} ${D(fn)} sends code 0x${code.toString(16)} ${at.length} times, want once`);
+    const q = [...Array(16).keys()].map((k) => at[0] - 6 - k).find((p) => bytesAt(img, p, [0xfc, 0xac]));
+    return { queue: u32(img, need(q, `the ${what} ${D(fn)} loads no queue word before its send`) + 2), send: (callAt(img, at[0] + 2) ?? callAt(img, at[0] + 3)).to };
+  };
+  const opened = sends(open, C.open, 'DCF open');
+  // the task: REC's loop on a packet in its frame whose record step reaches the open's builder
+  const reaches = (fn, depth) => fn === open || (depth > 0 && fn >= 0 && fn < img.length && calls(fn).some((c) => reaches(c.to, depth - 1)));
+  const tasks = [];
+  for (const row of taskRows(img, kcb, rule)) {
+    const e = row.entry - 0x50000000;
+    if (e < 0 || e >= img.length || !bytesAt(img, e, REC_FRAME_TASK)) continue;
+    let p = e + REC_FRAME_TASK.length, at;
+    if (img[p] === 0x52) { at = 4; p += 1; } else if (img[p] === 0x22) { at = img[p + 1]; p += 2; } else continue;
+    if (!bytesAt(img, p, REC_FRAME_QUEUE) || callAt(img, p + 8)?.to !== rv) continue;
+    const Q = u32(img, p + 2), loop = body(p + 8, REC_FRAME_LOOP);
+    // `movhu (NoRecord,sp),d0; cmp 1,d0; bne L`, and at L `mov a2,a0; call RECORD; mov d0,d2`
+    const nr = loop.filter((q) => bytesAt(img, q, [0xf8, 0xbc]) && bytesAt(img, q + 3, [0xa0, 0x01, 0xc9]));
+    if (nr.length !== 1) continue;
+    const L = nr[0] + 5 + (img[nr[0] + 6] << 24 >> 24), rec = img[L] === 0x98 ? callAt(img, L + 1) : null;
+    if (!rec || img[L + 1 + rec.len] !== 0x82 || !reaches(rec.to, REC_FRAME_REACH)) continue;
+    tasks.push({ row, e, at, Q, loop, nr: nr[0], record: rec.to, handled: L + 1 + rec.len });
+  }
+  if (tasks.length !== 1) throw new Error(`${rule}: ${tasks.length} static tasks of REC's loop whose record step reaches the DCF open ${D(open)} (${tasks.map((t) => D(t.e)).join(', ')}), want one`);
+  const [T] = tasks, sp8 = (q, what) => { if (img[q + 2] < T.at) throw new Error(`${rule}: ${what} at ${D(q)} reads sp + ${img[q + 2]}, below the packet (sp + ${T.at})`); return img[q + 2] - T.at; };
+  const NoRecord = sp8(T.nr, 'the NoRecord test');
+  // the branch not taken: the packet's Status as the loop's status, `movhu (Status,sp),d2`
+  const st = T.loop.filter((q) => q > T.nr && q < T.handled && bytesAt(img, q, [0xf8, 0xbe]));
+  if (st.length !== 1) throw new Error(`${rule}: REC_FILE ${D(T.e)} takes ${st.length} halfwords of its frame as its status between its NoRecord test and its record step, want one`);
+  const Status = sp8(st[0], 'the status');
+  // the reply: `movhu (Free,sp),d1; cmp 0,d1; bne; movhu (Dst,sp),d1; cmp 0,d1; bne; movhu (Mode,sp),d1; mov 62,d0;
+  // call; mov a2,a0; mov d2,d0; exthu d0; call REPLY`
+  const rp = T.loop.filter((q) => q > T.handled && bytesAt(img, q, REC_FRAME_REPLY) && callAt(img, q + 2) && bytesAt(img, q + 2 + callAt(img, q + 2).len, REC_FRAME_REPLY_ARGS));
+  if (rp.length !== 1) throw new Error(`${rule}: REC_FILE ${D(T.e)} has ${rp.length} replies of the form \`mov 62,d0; call; mov a2,a0; mov d2,d0; exthu d0; call\` after its record step, want one`);
+  const rc = rp[0] + 2 + callAt(img, rp[0] + 2).len + REC_FRAME_REPLY_ARGS.length, replied = callAt(img, rc), t = rp[0] - 17;
+  if (replied?.to !== reply) throw new Error(`${rule}: REC_FILE's reply call at ${D(rc)} is not of REC's reply ${D(reply)}`);
+  if (!bytesAt(img, t, [0xf8, 0xbd, null, 0xa5, 0x00, 0xc9, 0x09, 0xf8, 0xbd, null, 0xa5, 0x00, 0xc9, null, 0xf8, 0xbd]) || sp8(t + 14, 'the reply\'s Mode') !== P.Mode) {
+    throw new Error(`${rule}: REC_FILE ${D(T.e)} does not test Free and Dst before its reply at ${D(rp[0])}`);
+  }
+  const Free = sp8(t, 'the Free test'), Dst = sp8(t + 7, 'the Dst test');
+  // every other load of Q but one leads to the post (REC_IMAGE's), the one left is the object-name list's
+  const end = T.loop[T.loop.length - 1], others = halfLoads(img, T.Q).filter((p) => p < T.e || p > end);
+  const posts = others.filter((p) => { let q = p, c = null; for (let k = 0; k < REC_CALL_WALK && !(c = callAt(img, q)); k++) q = step(q); return c?.to === post; });
+  if (!posts.length || others.length - posts.length > 1) throw new Error(`${rule}: of the ${others.length} loads of REC_FILE's queue word ${h8(T.Q)} outside its task ${posts.length} lead to the post ${D(post)}, want all but the name list's`);
+  // rec_jpeg_exec's fields
+  const eb = body(exec), keep = eb.find((p) => bytesAt(img, p, [0x42, 0x08, 0xfa, 0x13]) && s16(p + 4) === P.Addr), mh = eb.find((p) => callAt(img, p)?.to === makeHeader);
+  const aspects = eb.filter((p) => p < keep && (bytesAt(img, p, [0xfa, 0x47]) || bytesAt(img, p, [0xf8, 0x47])));
+  const sizes = eb.filter((p) => p > mh && bytesAt(img, p, [0xfa, 0x07]) && bytesAt(img, p + 4, [0x46, 0x0c]));
+  const buffs = eb.filter((p) => p > mh && bytesAt(img, p, [0x58, 0x0c, 0xfa, 0x13]) && bytesAt(img, p + 6, [0x58, 0x08, 0xfa, 0x13]));
+  if (keep === undefined || mh === undefined || aspects.length !== 1 || sizes.length !== 1 || buffs.length !== 1) {
+    throw new Error(`${rule}: rec_jpeg_exec ${D(exec)}: ${aspects.length} reads of ImgAspect before its buffer, ${sizes.length} of Size and ${buffs.length} stores of BuffSize1 and BuffAddr1 after its header maker, want one each`);
+  }
+  const ImgAspect = img[aspects[0]] === 0xfa ? s16(aspects[0] + 2) : img[aspects[0] + 2], Size = s16(sizes[0] + 2), BuffSize1 = s16(buffs[0] + 4), BuffAddr1 = s16(buffs[0] + 10);
+  // the record's code: the calls of the open's builder with the file context, `mov (K,sp),a0; call OPEN`, the two
+  // steps after each, and before each the context's Media and FileType
+  const sites = callsTo(img, open).filter((p) => img[p - 2] === 0x5c);
+  if (!sites.length) throw new Error(`${rule}: no call of the DCF open ${D(open)} with a file context of the caller's frame (\`mov (K,sp),a0\`)`);
+  // (the context's steps after the open's call at p: the calls with the same `mov (K,sp),a0` before them)
+  const stepsAfter = (p) => body(step(p)).filter((q) => img[q - 2] === 0x5c && img[q - 1] === img[p - 1] && callAt(img, q)).map((q) => callAt(img, q).to);
+  const next2 = sites.map((p) => stepsAfter(p).slice(0, 2).join());
+  if (new Set(next2).size !== 1 || next2[0].split(',').length !== 2) throw new Error(`${rule}: the steps after the DCF open's ${sites.length} calls differ or are not two (${next2.join('; ')})`);
+  const [reserve, write] = next2[0].split(',').map(Number);
+  // (`movhu (d8 / d16,aN),d0` and `movhu d0,(d8 / d16,sp)` at q: [the register or 'sp', the displacement, the length])
+  const half = (q) => (img[q] === 0xf8 && (img[q + 1] & 0xfc) === 0x60 ? [img[q + 1] & 3, img[q + 2], 3] : img[q] === 0xfa && (img[q + 1] & 0xfc) === 0x60 ? [img[q + 1] & 3, u16(q + 2), 4]
+    : img[q] === 0xf8 && img[q + 1] === 0x93 ? ['sp', img[q + 2], 3] : img[q] === 0xfa && img[q + 1] === 0x93 ? ['sp', u16(q + 2), 4] : null);
+  const fills = [];
+  for (const p of sites) {
+    for (let q = p - REC_FRAME_FILL; q < p; q++) {
+      const a = half(q), b = a && half(q + a[2]), c = b && half(q + a[2] + b[2]), d = c && half(q + a[2] + b[2] + c[2]);
+      if (d && a[0] !== 'sp' && b[0] === 'sp' && c[0] === a[0] && d[0] === 'sp' && d[1] === b[1] + 2) fills.push({ at: q, media: a[1], type: c[1] });
+    }
+  }
+  if (fills.length !== 1) throw new Error(`${rule}: ${fills.length} copies of the packet's Media and FileType into a file context before the DCF open's calls, want one`);
+  const [{ media: Media, type: FileType }] = fills;
+  // the reservation's allocation, the chain write's post and wait
+  const al = body(reserve, REC_FN_SPAN).filter((p) => bytesAt(img, p, REC_FRAME_ALLOC) && callAt(img, p + REC_FRAME_ALLOC.length));
+  if (al.length !== 1) throw new Error(`${rule}: the reservation ${D(reserve)} makes ${al.length} allocations of the form \`mov 2,d0; mov d0,(a1); ...; call\`, want one`);
+  const alloc = callAt(img, al[0] + REC_FRAME_ALLOC.length).to, wc = calls(write);
+  if (wc.length !== 2) throw new Error(`${rule}: the chain write ${D(write)} makes ${wc.length} calls, want its post and its wait`);
+  const [{ to: wpost }, { to: wait }] = wc, wm = oneAt(img, REC_FRAME_WRITE, rule, 'chain write messages', wpost, wpost + REC_BUILD);
+  // (from the message's code to its send: the reply queue's word, then the file module's)
+  const words = [];
+  for (let q = wm === null ? -1 : wm + 4; q >= 0 && q < wm + REC_FRAME_FILL && !callAt(img, q); q = step(q)) if (bytesAt(img, q, [0xfc, 0xac])) words.push(u32(img, q + 2));
+  if (words.length !== 2 || words[1] !== opened.queue) throw new Error(`${rule}: the chain write's post ${D(wpost)} does not send code 0x${C.write.toString(16)} with a reply queue to the open's queue ${h8(opened.queue)} (${words.map(h8).join(', ')})`);
+  const replyQueue = words[0], wr = body(wait, REC_FN_SPAN);
+  if (!wr.some((p) => bytesAt(img, p, [0xfc, 0xac, ...le32(replyQueue)])) || !wr.some((p) => callAt(img, p)?.to === queueRead)) throw new Error(`${rule}: the chain write's wait ${D(wait)} does not read the reply queue ${h8(replyQueue)} through REC's queue read ${D(queueRead)}`);
+  // the entry and the registration: the context's steps that send their codes as the open sends its own
+  const ctxCalls = [...new Set(sites.flatMap(stepsAfter))];
+  const sender = (code, what) => {
+    const fns = ctxCalls.filter((fn) => sendsOf(fn, code).length === 1);
+    if (fns.length !== 1) throw new Error(`${rule}: ${fns.length} of the file context's steps send code 0x${code.toString(16)} (the ${what}), want one`);
+    const s = sends(fns[0], code, what);
+    if (s.queue !== opened.queue || s.send !== opened.send) throw new Error(`${rule}: the ${what} ${D(fns[0])} does not send as the DCF open does (queue ${h8(opened.queue)}, send ${D(opened.send)})`);
+    return fns[0];
+  };
+  const entry = sender(C.entry, 'directory entry'), register = sender(C.register, 'registration');
+  // REC's module init: `mov 8191,d0; ret` right before the function of the "rec_main" trace
+  const scan = need(recTraceScan(img, rule), 'no REC trace table'), mainId = need(scan.ids.get(REC_TRACE_NEXT), 'the trace table names no "rec_main"') - 1;
+  const mainTrace = [0x1000, 0x1001].flatMap((k) => scan.traces.get(`${k}:${mainId}`) ?? []);
+  let init;
+  for (const tr of mainTrace) for (let p = tr; p > tr - REC_FN_SPAN && init === undefined; p--) if (bytesAt(img, p - 6, [0x2c, 0xff, 0x1f]) && isRet(img, p - 3) && runsTo(img, p, tr)) init = entryOf(img, p - 6, REC_FN_SPAN);
+  if (mainTrace.length !== 1 || init === undefined) throw new Error(`${rule}: ${mainTrace.length} "rec_main" traces, no REC module init ending right before its function`);
+  // RecordDevice, where the task's record step is rec_file_destination_record (E118): its bit 0 the card, `movhu
+  // (a2),d0; and 1,d0; cmp 1,d0; bne; mov a3,a0; call rec_make_file`, a2 the packet's field (`mov N,a2; add a0,a2`)
+  const rb = body(T.record), dev = rb.filter((p) => bytesAt(img, p, [0xf0, 0x62, 0xf8, 0xe0, 0x01, 0xa0, 0x01, 0xc9, null, 0x9c]) && callAt(img, p + 10));
+  const devAt = rb.filter((p) => bytesAt(img, p, [0x9a, null, 0xf1, 0x72]));
+  if (dev.length > 1 || (dev.length === 1 && (devAt.length !== 1 || devAt[0] > dev[0] || !reaches(callAt(img, dev[0] + 10).to, REC_FRAME_REACH - 1)))) {
+    throw new Error(`${rule}: REC_FILE's record step ${D(T.record)} tests ${dev.length} device bits before a call and takes ${devAt.length} packet fields into a2, want none, or one of each before the record's call`);
+  }
+  const RecordDevice = dev.length ? img[devAt[0] + 1] : undefined;
+  // (recFile's fields in its order, then the family's own)
+  const fields = { pExifParam: P.pExifParam, HandleTarget, BuffAddr1, BuffSize1, HeaderSize: P.HeaderSize, Status, Mode: P.Mode, Media, ...(RecordDevice !== undefined && { RecordDevice }),
+    ImgAspect, Free, FileType, NoRecord, Dst };
+  for (const [name, at] of Object.entries({ ...fields, Addr: P.Addr, Size })) if (!(at >= 0 && at + REC_FRAME_FIELDS[name] <= size)) throw new Error(`${rule}: the packet's ${name} +${at} does not lie in its ${size} bytes`);
+  const X = hdr.exif;
+  return {
+    exif: { init: X.init, cflush: null, template: X.template, copy: X.copy, size: X.size, time: X.time, date: X.date, tags: { ...X.tags, zoom: null }, crop: [] },
+    init: 0x50000000 + init,
+    task: { id: T.row.id, entry: T.row.entry, flag: null, queue: T.Q, handled: 0x50000000 + T.handled },
+    packet: { size, post: 0x50000000 + post, fields },
+    jpeg: { exec: hdr.jpeg.exec, make_image: hdr.jpeg.make_image, make_header: hdr.jpeg.make_header, header: hdr.jpeg.header, fill: null, fill_return: null, image: { record: null, addr: P.Addr, size: Size } },
+    contexts: null, clock_set: hdr.clock.set, clock_read: hdr.clock.read,
+    reply: { fn: 0x50000000 + reply, from: 0x50000000 + rc + replied.len },
+    record: { open: 0x50000000 + open, reserve: 0x50000000 + reserve, alloc: 0x50000000 + alloc, write: 0x50000000 + write, post: 0x50000000 + wpost,
+      wait: 0x50000000 + wait, entry: 0x50000000 + entry, register: 0x50000000 + register, file_queue: opened.queue, reply_queue: replyQueue },
   };
 }
 // The event broker's init (fact 'broker.init', and through bin/port.mjs the place of E143's BROKER_E143 0x502a48b6,
@@ -4927,7 +5165,8 @@ export function objectNameId(img, name) {
 // clamp; no frame_plane part where neither it nor the port
 // places the frame display mode set, or the set is not the clamp form; no prop part where a property read site is not;
 // no lens_driver part where CPU 0's kcb, OlyTaSt, OlyQeRd or LENS_COMMAND's queue word is not or the boot starts no
-// lens task; no rec_file part where CPU 0's kcb is not or recFile reads none). Throws where both AE forms are found.
+// lens task; no rec_file part where CPU 0's kcb is not or none of recFile, recFileQueue, recFileInline and recFileFrame
+// reads one). Throws where both AE forms are found.
 export function readPlacedFacts({ img, at }) {
   const facts = {}, getter = at(MODULE_STATE_GET), loader = at(LANG_LOADER), interp = at(AE_INTERP), component = at(COMPONENT_GETTER_E143);
   const qewr = at(OLYQEWR_E143), qerd = at(OLYQERD_E143), kcb = at(KCB0_E143), wup = at(WUP_TSK_E143), tsnd = at(TSND_DTQ_E143);
@@ -4993,6 +5232,9 @@ export function readPlacedFacts({ img, at }) {
   if (lens !== undefined) facts.lens_driver = lens;
   const recF = kcb !== null ? recFile(img, kcb) : undefined, rec = recF ?? (kcb !== null ? recFileQueue(img, kcb) ?? recFileInline(img, kcb) : undefined);
   if (rec !== undefined) facts.rec_file = rec;
+  // the E118 family's REC version (recFileFrame: REC_FILE on its queue alone, the file context in the record's frame)
+  const recFrame = rec === undefined && kcb !== null ? recFileFrame(img, kcb) : undefined;
+  if (recFrame !== undefined) facts.rec_file = recFrame;
   // REC_IMAGE's parts where REC is recFile's version (REC_FILE on its flag, which REC's shared init binds); the E144
   // family's version (recFileQueue: REC_FILE on its queue alone) is not recImage's form
   if (recF !== undefined) facts.rec_image = recImage(img, kcb, recF);
@@ -5018,7 +5260,6 @@ export function readPlacedFacts({ img, at }) {
 // none, every body but E120 and E122; the frame wait null where its rule reads none, E120's, which S-FRAMEWAIT then
 // leaves out,
 // src/lab/menu.mjs; mm_init null where its rule reads none, every body but the E118 family's). Throws for a reset_head with no rule here, and where a rule throws.
-// Also {rec_header: {exif, clock, packet, jpeg}}, none where recHeader reads none (every body but the E118 family's).
 export function readFacts({ img, family, resLoad }) {
   const facts = {};
   if (family.reset_head === 'flash-copy') {
@@ -5073,8 +5314,6 @@ export function readFacts({ img, family, resLoad }) {
   const media = mediaHls(img);
   if (media !== undefined) facts.media = media;
   facts.recorder = recorder(img);
-  const recHdr = recHeader(img);
-  if (recHdr !== undefined) facts.rec_header = recHdr;
   facts.dcf = { counts: dcfCounts(img) };
   const usbOff = usbPowerOff(img);
   if (usbOff !== undefined) facts.power_off = { usb_disconnect: usbOff };

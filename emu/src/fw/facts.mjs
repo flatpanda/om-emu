@@ -3140,7 +3140,8 @@ export function recorder(img) {
 //   or reads with their widths, which must lie in the packet
 // - jpeg: exec, make_image (S-JPEGENC) by their traces; header, the size rec_jpeg_exec clears before the encode, the
 //   first `mov H,d1` below 0x10000 in it (41984, 0x5054986f), its next call the header clear (0x5054c982), whose first
-//   call into the image is the image engine's fill (0x5048ee61, its return 0x5054c9da); image: the dump's Addr and
+//   call into the image is the image engine's fill (0x5048ee61, its return 0x5054c9da: read as the form, not given,
+//   since the imgpro unit runs the fill natively and no stand-in reads it, 2026-11-11); image: the dump's Addr and
 //   Size, in the packet on E143 (188 and 192, record null), in the record on E146 and E147 (8 and 12; X: rec_jpeg_exec
 //   stores the buffer there and reads the size from there after the header maker), with the record's init, the
 //   function that ends `mov 1,d0; movbu d0,(48,a2); mov a2,(P,a3); ret` after clearing N bytes, `mov N,d1` (E146
@@ -3179,7 +3180,7 @@ export const REC_FILE_E143 = {
       Media: 214, Media2: 216, RecordDevice: 218, ImgAspect: 299, Free: 302, FileType: 314 },
   },
   jpeg: {
-    exec: 0x505497E5, make_image: 0x50549B42, header: 41984, fill: 0x5048EE61, fill_return: 0x5054C9DA,
+    exec: 0x505497E5, make_image: 0x50549B42, header: 41984,
     image: { record: null, addr: 188, size: 192 },
   },
   contexts: [0x62A8C4E4, 0x62A8C540], clock_set: 0x5012B7A7,
@@ -3377,7 +3378,7 @@ export function recFile(img, kcb) {
     init: 0x50000000 + init,
     task: { id: task.id, entry: task.entry, flag, queue: Q, handled: 0x50000000 + recv.handled },
     packet: { size: recv.size, post: 0x50000000 + post, fields },
-    jpeg: { exec: 0x50000000 + exec, make_image: 0x50000000 + make, header, fill: 0x50000000 + fill.to, fill_return: 0x50000000 + fill.ret, image },
+    jpeg: { exec: 0x50000000 + exec, make_image: 0x50000000 + make, header, image },
     contexts: [u32(img, cx + 6), u32(img, cx + 16)], clock_set: 0x50000000 + set,
   };
 }
@@ -3413,9 +3414,21 @@ export function recFile(img, kcb) {
 //   d0,(ImgAspect,a0)` (0x5053b45d); each one's TAKE fill, `mov ID,d0; mov 0,a0; call S; mov (4,sp),a0; clr d1;
 //   movhu d0,(B,a0)` (`movbu` for a byte; 0x503bbd26..0x503bbd98, 0x503bc035), one site each, S one settings read
 //   (0x500417da)
+// - encode {set_call, set, run, result, release, id, packet}: S-JPEGENC's points (src/lab/rec.mjs; docs/hle-gaps.md
+//   4.3.4, 4.3.9; given there by hand for E143 before the rule, REC_ENCODE_E143). rec_jpeg_make_image (rec's
+//   jpeg.make_image) calls, to its return, its trace, a clear, rec_ImgPro_CreateParam (by its trace, K 0x31000000),
+//   the image library's create, rec_ImgPro_ImageParam (by its trace), an error log, the run, rec_ImgPro_Jpeg_Result
+//   (by its trace) and the release: run the call before Jpeg_Result's, result Jpeg_Result, release the call after it,
+//   the last (0x50542407, 0x50542ce1, 0x5054322e). id: where the create's handle is kept in the image (the packet, or
+//   REC_IMAGE's image record where rec has one), `mov d0,(ID,a3)` right after the create's call (36, 0x50549b8d), with
+//   a record `mov (P,a3),a1; mov d0,(a1)` (0; E146 0x50527c76). ImageParam opens `mov a0,(N,sp)`, packet N its frame
+//   slot of the packet (24); its second call is the library's handle-to-context getter (0x50491c98), and set_call is
+//   its one call, `mov (An),d0; call d32; mov d0,d2; mov d2,d1; exthu d1; cmp 0,d1; beq`, of the function right after
+//   the getter's 7 bytes, set, the library's parameter set (0x50542c97, 0x50491c9f)
 // E146 and E147 read every part (X: their sessions make S2's picture in REC_IMAGE's task with them; D: E146's task
-// 0x5051ee03 and the rest at docs/hle-gaps.md 4.3.5). Returns the parts in REC_IMAGE_E143's shape; throws where a part
-// is not found in its shape or is found twice.
+// 0x5051ee03 and the rest at docs/hle-gaps.md 4.3.5; the encode's points D on E146: 0x5051ff50, 0x50484597,
+// 0x5051f653, 0x5051ff9a, 0x50520568). Returns the parts in REC_IMAGE_E143's shape; throws where a part is not found
+// in its shape or is found twice.
 export const REC_IMAGE_E143 = {
   task: { id: 28, entry: 0x50541C45, queue: 0x60043250 },
   shared: { init: 0x5054DBE8, done: 0xA332CE59 },
@@ -3424,9 +3437,12 @@ export const REC_IMAGE_E143 = {
   alive: 0,
   settings: 0x500417DA,
   take: [[35217, 38074, 2], [38737, 38076, 2], [38769, 38078, 2], [38785, 38080, 2], [40401, 38086, 1], [12417, 38122, 1]],
+  encode: { set_call: 0x50542C97, set: 0x50491C9F, run: 0x50542407, result: 0x50542CE1, release: 0x5054322E, id: 36, packet: 24 },
 };
 export const IMGPRO_UNIT_E143 = 0x9C600000;
 const REC_IMAGE_SPAN = 0x200, REC_RECV_SPAN = 0x20, REC_SHARED_SPAN = 0x200, IMGPRO_UNITS_SPAN = 0x200, REC_HANDLER_SPAN = 0x200;
+const REC_PARAM_SPAN = 0x900, IMGPRO_GETTER = 7;
+const REC_SET_TEST = [0x82, 0x89, 0x1d, 0xa5, 0x00, 0xc8];
 const REC_TASK_OPEN = [0xcf, 0xf0, 0xfa, 0xfe, null, null, 0x31, 0x50, 0x80, 0xfc];
 const REC_BRACKET = [0xfc, 0x62, null, null, null, null, 0xa0, 0x00, 0xc9, null, 0xfc, 0x62, null, null, null, null, 0xa0, 0x00,
   0xc9, null, 0xfc, 0x42, null, null, null, null, 0xa0, 0x01, 0xc8];
@@ -3513,6 +3529,22 @@ export function recImage(img, kcb, rec) {
     take.push([sites[0].id, at, n]); reads.add(sites[0].read);
   }
   if (reads.size !== 1) throw new Error(`${rule}: TAKE's fills call ${reads.size} settings reads, want one`);
+  // S-JPEGENC's points: rec_jpeg_make_image's calls, the create's handle in the image, ImageParam's call of the set
+  const make = rec.jpeg.make_image - 0x50000000, mk = callsIn(make, REC_FN_SPAN);
+  const createParam = traced('rec_ImgPro_CreateParam', 0x3100), imageParam = traced('rec_ImgPro_ImageParam', 0x3100);
+  const result = traced('rec_ImgPro_Jpeg_Result', 0x3100);
+  const ci = mk.findIndex((x) => x.to === createParam), ii = mk.findIndex((x) => x.to === imageParam), ri = mk.findIndex((x) => x.to === result);
+  if (ci < 0 || ii !== ci + 2 || ri < ii + 2 || ri !== mk.length - 2) throw new Error(`${rule}: rec_jpeg_make_image ${D(make)} does not call CreateParam, the create, ImageParam, the run, Jpeg_Result and the release in turn (calls ${ci}, ${ii}, ${ri} of ${mk.length})`);
+  const created = mk[ci + 1].at + mk[ci + 1].len;
+  let id = null;
+  if (record === null && bytesAt(img, created, [0xf8, 0x13, null]) && img[created + 2] < 0x80) id = img[created + 2];
+  if (record !== null && bytesAt(img, created, [0xfa, 0x27, record.at & 0xff, record.at >> 8, 0x61])) id = 0;
+  if (id === null) throw new Error(`${rule}: rec_jpeg_make_image keeps the create's handle at ${D(created)} in another form`);
+  const ip = callsIn(imageParam, REC_PARAM_SPAN);
+  if (img[imageParam] !== 0x43 || ip.length < 3) throw new Error(`${rule}: rec_ImgPro_ImageParam ${D(imageParam)} does not open with its packet's store, or makes ${ip.length} calls`);
+  const getter = ip[1].to;
+  const sets = ip.filter((x) => x.to === getter + IMGPRO_GETTER && x.len === 7 && (img[x.at - 1] & 0xfc) === 0x70 && bytesAt(img, x.at + 7, REC_SET_TEST));
+  if (sets.length !== 1) throw new Error(`${rule}: rec_ImgPro_ImageParam ${D(imageParam)} calls the function after the library's getter ${D(getter)} ${sets.length} times in the set's form, want once`);
   return {
     task: { id: task.id, entry: task.entry, queue },
     shared: { init: 0x50000000 + shared, done: dones[0] },
@@ -3521,6 +3553,8 @@ export function recImage(img, kcb, rec) {
     alive,
     settings: 0x50000000 + [...reads][0],
     take,
+    encode: { set_call: 0x50000000 + sets[0].at, set: 0x50000000 + sets[0].to, run: 0x50000000 + mk[ri - 1].to, result: 0x50000000 + result,
+      release: 0x50000000 + mk[ri + 1].to, id, packet: img[imageParam + 1] },
   };
 }
 

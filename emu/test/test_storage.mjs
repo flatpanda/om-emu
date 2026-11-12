@@ -29,7 +29,7 @@
 //                   directory entry, size and bytes
 //                   read back independently (natively the firmware's header, its Make, the body's Model and Exif
 //                   version, dates, maker notes and thumbnail slot read by refs/exif.mjs, then the lab's stream;
-//                   REC_IMAGE's own task made it from S-RECREQ's packet: the encode in task 28 (on E143 S-JPEGENC from
+//                   REC_IMAGE's own task made it from S-RECREQ's packet: the encode in task 28 (S-JPEGENC from
 //                   ImageParam's parameter set on; before it the error logs of ImageParam's four sources' lookups
 //                   only), the header area cleared by the imgpro unit's fill natively, REC_FILE's reply, pAlive
 //                   cleared, the aspect from the setting and the ISO from the record's +38174 0,
@@ -532,15 +532,19 @@ export async function storageSession() {
           const used = pl.stand_ins_in_use(), run = rec.images[0], y = run?.reply, fill = run?.fills;
           ok(['H-RECSHARED', 'H-RECIMGPRO', 'H-RECIMAGE', 'S-RECREQ', 'S-IMGPRO'].every((n) => used.includes(n)) && !used.includes('S-RECIMAGE'), `REC_IMAGE natively, S-RECIMAGE not in use: ${used.filter((n) => /REC|IMGPRO|JPEG/.test(n)).join(' ')}`);
           ok(rec.images.length === 1 && run.task === rec.image.task.id && run.encoded === 1 && rec.waiting(rec.image.task.id), `the encode ran once in REC_IMAGE's task (${rec.image.task.id}), which waits on its queue again: ${JSON.stringify(run && { task: run.task, encoded: run.encoded })}`);
-          // S-JPEGENC from ImageParam's parameter set on (E143): CreateParam, the create (its id in the packet),
-          // ImageParam's body and the release natively (docs/hle-gaps.md 4.3.4); on E146 and E147
-          // rec_jpeg_make_image as a whole, no steps
+          // S-JPEGENC from ImageParam's parameter set on, at the points the rule reads (fact rec_image encode; E146
+          // and E147 since 2026-11-11): CreateParam, the create (its handle in the packet, on E146 and E147 in the
+          // image record), ImageParam's body and the release natively (docs/hle-gaps.md 4.3.4, 4.3.9)
           const steps = run?.steps;
-          ok(ON_LAB_MODEL ? steps && steps.set === 1 && steps.run === 1 && steps.result === 1 && steps.id !== 0 && steps.released === 1 : steps === null, `S-JPEGENC's steps: the parameter set skipped once, the run and Jpeg_Result stood in once, the create's id and the release native: ${JSON.stringify(steps)}`);
-          // E143: ImageParam's four sources natively: TAKE's shot table has no buffer (0x25000402 from each lookup), MM
-          // none for handle 0 (0x08010004), and nothing else logged before the parameter set's call
-          const SRC_LOGS = ['0x503afa1f', '0x503afb54', '0x503afb9f', '0x503afc35'].flatMap((at) => [['0x25000402', at], ['0x08010004', '0x50534ec2']]);
-          if (ON_LAB_MODEL) ok(JSON.stringify(run?.errlog) === JSON.stringify(SRC_LOGS), `the error logs up to the parameter set's call: ImageParam's sources' lookups (TAKE's 0x25000402, MM's 0x08010004) four times: ${JSON.stringify(run?.errlog)}`);
+          ok(steps && steps.set === 1 && steps.run === 1 && steps.result === 1 && steps.id !== 0 && steps.released === 1, `S-JPEGENC's steps: the parameter set skipped once, the run and Jpeg_Result stood in once, the create's id and the release native: ${JSON.stringify(steps)}`);
+          // ImageParam's four sources natively: TAKE's shot table has no buffer (0x25000402 from each lookup), MM none
+          // for handle 0 (0x08010004), and nothing else logged before the parameter set's call; each body's callers
+          // pinned as run (X; on E146 and E147 the first lookup's log comes twice: rec_ImgProCtrl_Dst_Bayer calls that
+          // lookup there before the sources, D on E146 0x50525505)
+          const SRC = { E143: [['0x503afa1f', '0x503afb54', '0x503afb9f', '0x503afc35'], '0x50534ec2', 1], E146: [['0x503afacd', '0x503afc0a', '0x503afc57', '0x503afcf1'], '0x50511fbc', 2],
+            E147: [['0x503b9d62', '0x503b9e97', '0x503b9ee2', '0x503b9f78'], '0x50521140', 2] }[MODEL];
+          const SRC_LOGS = SRC ? SRC[0].flatMap((at, k) => [...new Array(k === 0 ? SRC[2] : 1).fill(['0x25000402', at]), ['0x08010004', SRC[1]]]) : null;
+          ok(JSON.stringify(run?.errlog) === JSON.stringify(SRC_LOGS), `the error logs up to the parameter set's call: ImageParam's sources' lookups (TAKE's 0x25000402, MM's 0x08010004 after each): ${JSON.stringify(run?.errlog)}`);
           ok(y && y.status === 0 && y.free === 1 && y.header === HEADER && y.size === HEADER + stream.length && run.alive === 0, `REC_FILE's reply (S-RECREQ): ${JSON.stringify(y)}, pAlive ${run?.alive}`);
           ok(fill?.length === 1 && fill[0].mode === 4 && fill[0].dst === y?.addr && fill[0].bytes === HEADER && fill[0].value === 0, `the header area cleared by the imgpro unit natively (one linear fill of 0 over the buffer's ${HEADER} bytes): ${JSON.stringify(fill)}`);
           ok(y?.aspect === run.take[12417] && run.take[40401] === 1, `ImgAspect from the record's aspect, TAKE's setting 12417 (${run?.take?.[12417]}): ${y?.aspect}; the bracket's 40401 ${run?.take?.[40401]}`);

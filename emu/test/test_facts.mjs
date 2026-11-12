@@ -348,7 +348,7 @@ const REC_FILE_FOUND = {
     init: 0x50516B8A, task: { id: 27, entry: 0x5051BFA3, flag: 0x600431B0, queue: 0x6004328C, handled: 0x5051C00C },
     packet: { size: 276, post: 0x50516E45, fields: { pExifParam: 20, HandleTarget: 100, BuffAddr1: 132, BuffSize1: 136, HeaderSize: 172,
       Status: 184, Mode: 186, Media: 190, Media2: 192, RecordDevice: 194, ImgAspect: 269, Free: 271, FileType: 273 } },
-    jpeg: { exec: 0x5052785E, make_image: 0x50527C29, header: 41984, fill: 0x5048142B, fill_return: 0x5052ABBF,
+    jpeg: { exec: 0x5052785E, make_image: 0x50527C29, header: 41984,
       image: { record: { init: 0x5052B008, bytes: 52, at: 180 }, addr: 8, size: 12 } },
     contexts: [0x62ABB0CC, 0x62ABB128], clock_set: 0x5012BAD8,
   },
@@ -359,7 +359,7 @@ const REC_FILE_FOUND = {
     init: 0x50525C72, task: { id: 27, entry: 0x5052B093, flag: 0x60043122, queue: 0x600431FE, handled: 0x5052B0FC },
     packet: { size: 276, post: 0x50525F2D, fields: { pExifParam: 20, HandleTarget: 100, BuffAddr1: 132, BuffSize1: 136, HeaderSize: 172,
       Status: 184, Mode: 186, Media: 190, Media2: 192, RecordDevice: 194, ImgAspect: 269, Free: 271, FileType: 273 } },
-    jpeg: { exec: 0x50536A6C, make_image: 0x50536E37, header: 41984, fill: 0x5048FD21, fill_return: 0x50539DE0,
+    jpeg: { exec: 0x50536A6C, make_image: 0x50536E37, header: 41984,
       image: { record: { init: 0x5053A22F, bytes: 52, at: 180 }, addr: 8, size: 12 } },
     contexts: [0x62AB7D08, 0x62AB7D64], clock_set: 0x501358FD,
   },
@@ -427,15 +427,21 @@ const REC_FILE_FOUND = {
 // 0x5052c3d8, its done byte set at 0x5052c42b; the image library's init E146 0x5045f14f, the unit's init 0x504fe0d8;
 // REC_FILE's handler E146 0x5051c153 replying at 0x5051c20d; TAKE's fills E146 0x503bc653..0x503bc6c5 and 0x503bc962
 // with the settings read 0x500423e1, at E143's offsets less 348; X: their sessions make S2's picture in REC_IMAGE's
-// task with them), none on the other 15 bodies (recFile reads no REC_FILE there)
+// task with them), none on the other 15 bodies (recFile reads no REC_FILE there). S-JPEGENC's points (encode,
+// 2026-11-11): E143's as src/lab/rec.mjs gave them by hand before the rule (D), E146's and E147's as read in their code
+// (D: rec_jpeg_make_image E146 0x50527c29 / E147 0x50536e37 calling CreateParam, the create, ImageParam 0x5051f7c2 /
+// 0x5052e8b2, the run, Jpeg_Result and the release, the create's handle stored through the image record, `mov
+// (180,a3),a1; mov d0,(a1)`, ImageParam's call of the parameter set E146 0x5051ff50 / E147 0x5052f03f)
 const REC_IMAGE_FOUND = {
   E143: REC_IMAGE_E143,
   E146: { task: { id: 28, entry: 0x5051EE03, queue: 0x6004328E }, shared: { init: 0x5052C2E8, done: 0xA332B8F1 },
     imgpro: [0x5047E67F, 0x5047DC11, 0x504FE0D8], reply: { fn: 0x50516D81, from: 0x5051C212 }, alive: 0, settings: 0x500423E1,
-    take: [[35217, 37726, 2], [38737, 37728, 2], [38769, 37730, 2], [38785, 37732, 2], [40401, 37738, 1], [12417, 37774, 1]] },
+    take: [[35217, 37726, 2], [38737, 37728, 2], [38769, 37730, 2], [38785, 37732, 2], [40401, 37738, 1], [12417, 37774, 1]],
+    encode: { set_call: 0x5051FF50, set: 0x50484597, run: 0x5051F653, result: 0x5051FF9A, release: 0x50520568, id: 0, packet: 24 } },
   E147: { task: { id: 28, entry: 0x5052DEF3, queue: 0x60043200 }, shared: { init: 0x5053B50F, done: 0xA3322075 },
     imgpro: [0x5048CF75, 0x5048C507, 0x5050D1AA], reply: { fn: 0x50525E69, from: 0x5052B302 }, alive: 0, settings: 0x50042360,
-    take: [[35217, 37726, 2], [38737, 37728, 2], [38769, 37730, 2], [38785, 37732, 2], [40401, 37738, 1], [12417, 37774, 1]] },
+    take: [[35217, 37726, 2], [38737, 37728, 2], [38769, 37730, 2], [38785, 37732, 2], [40401, 37738, 1], [12417, 37774, 1]],
+    encode: { set_call: 0x5052F03F, set: 0x50492DE6, run: 0x5052E743, result: 0x5052F089, release: 0x5052F657, id: 0, packet: 24 } },
 };
 // The IIC bus driver's completion wait (iic.waits; src/fw/facts.mjs iicWaits), as read (D: E143's at 0x5004cbf6,
 // waiting on (0x60043086), which its callback 0x5004cb95 sets; E145's at 0x50044d60, the compass WHOAMI read's at
@@ -1027,6 +1033,10 @@ export function factsTests() {
       };
       const open = refused(0x50541c4f, 0xa2, /does not open with its queue's read/), bind = refused(0x5054dccb, 6, /0 binds of REC_FILE's flag/);
       ok(open === true && bind === true, `recImage: the task's other open and the bind to another entry refused: ${open}, ${bind}`);
+      // and S-JPEGENC's points: the create's handle kept through another register (0x50549b8d: mov d0,(36,a3) ->
+      // (36,a2)) and the status test after the parameter set's call made `mov d0,d3` (0x50542c9e: 82 -> 83)
+      const kept = refused(0x50549b8e, 0x12, /keeps the create's handle at 0x50549b8d in another form/), set = refused(0x50542c9e, 0x83, /0 times in the set's form/);
+      ok(kept === true && set === true, `recImage: the create's handle kept in another form and another test after the set's call refused: ${kept}, ${set}`);
     }
     const ld = placed?.lens_driver;
     if (ld && PORTS[code]) {

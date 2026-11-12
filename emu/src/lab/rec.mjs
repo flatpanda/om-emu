@@ -153,7 +153,7 @@ const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 // 0x504298bd with its cache flush's return 0x504298f6 (H-EXIFINIT), the template 0x62a6c358 (0x504298c6) and TAKE's
 // copy of it to a shot 0x504298f9, REC's init 0x50539665 (H-RECINIT), REC_FILE 0x5053f1a4 with its flag 0x60043182,
 // its queue 0x6004324e and its handler's return 0x5053f20d, REC_IMAGE's post of a packet (a0) to a queue (d0)
-// 0x5053990f, rec_jpeg_exec 0x505497e5 and rec_jpeg_make_image 0x50549b42 (S-JPEGENC), the clock read 0x5012b7cd
+// 0x5053990f, rec_jpeg_make_image 0x50549b42 (where recImage reads S-JPEGENC's points), the clock read 0x5012b7cd
 // (fact 'recorder'), the date
 // format 0x5012bd20 and the string copy 0x50003843, REC_FILE's file contexts (92 bytes) for Media and Media2
 // 0x62a8c4e4 and 0x62a8c540. The bodies' differences (E146 and E147: the packet of 276 bytes with other offsets, the

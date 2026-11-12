@@ -3138,7 +3138,9 @@ export function recorder(img) {
 //   packet, a2, a3 + N (`mov N,a2; add a3,a2`), or a1, the record a3 points at once moved past the packet's fields
 //   (`add P,a3; mov (a3),a1`: E146 and E147, after a return a conditional branch skips, X); the fields the lab writes
 //   or reads with their widths, which must lie in the packet
-// - jpeg: exec, make_image (S-JPEGENC) by their traces; header, the size rec_jpeg_exec clears before the encode, the
+// - jpeg: make_image (S-JPEGENC) by its trace; rec_jpeg_exec by its trace too, read as the form but not given since
+//   2026-11-11 (no stand-in reads it: REC_IMAGE's task runs it); header, the size rec_jpeg_exec clears before the
+//   encode, the
 //   first `mov H,d1` below 0x10000 in it (41984, 0x5054986f), its next call the header clear (0x5054c982), whose first
 //   call into the image is the image engine's fill (0x5048ee61, its return 0x5054c9da: read as the form, not given,
 //   since the imgpro unit runs the fill natively and no stand-in reads it, 2026-11-11); image: the dump's Addr and
@@ -3180,7 +3182,7 @@ export const REC_FILE_E143 = {
       Media: 214, Media2: 216, RecordDevice: 218, ImgAspect: 299, Free: 302, FileType: 314 },
   },
   jpeg: {
-    exec: 0x505497E5, make_image: 0x50549B42, header: 41984,
+    make_image: 0x50549B42, header: 41984,
     image: { record: null, addr: 188, size: 192 },
   },
   contexts: [0x62A8C4E4, 0x62A8C540], clock_set: 0x5012B7A7,
@@ -3378,7 +3380,7 @@ export function recFile(img, kcb) {
     init: 0x50000000 + init,
     task: { id: task.id, entry: task.entry, flag, queue: Q, handled: 0x50000000 + recv.handled },
     packet: { size: recv.size, post: 0x50000000 + post, fields },
-    jpeg: { exec: 0x50000000 + exec, make_image: 0x50000000 + make, header, image },
+    jpeg: { make_image: 0x50000000 + make, header, image },
     contexts: [u32(img, cx + 6), u32(img, cx + 16)], clock_set: 0x50000000 + set,
   };
 }

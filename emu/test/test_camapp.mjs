@@ -64,8 +64,9 @@
 //                  through image's bank, 3074, 900 x 600), and the GUI shows ID_ST_DISP_SIMPLE with the component's
 //                  getNumber 2 of file 2 in folder 100; right and left move between the two (1, then 2) and PLAY
 //                  returns; INFO's detail view takes its still information from the file's own Exif and SOF (the
-//                  date, size, exposure and ISO the file holds, not still_record's), then DISPLAY cmd 16 reads the
-//                  VSC histogram's bins of a run not ended: the furthest point (docs/hle-gaps.md 4.8.11); control:
+//                  date, size, exposure and ISO the file holds, not still_record's), and DISPLAY cmd 16's reads of
+//                  the VSC histogram's bins are answered: four runs on the picture's plane (docs/hle-gaps.md 4.2.7;
+//                  the model refused the first until 2026-11-11, 4.8.11); control:
 //                  with the lab's own one-symbol AC tables the play module's JPEG parse refuses the second DHT
 //                  (12428), the header getter answers 6152 and PLAY shows No Picture
 //   node emu/test/test_camapp.mjs
@@ -661,14 +662,15 @@ export async function camapp3FramesSession() {
 //   at its return; the record's fields as test_playinfo.mjs GUI names them, ISO at +88, fact play.still)
 //   the view's decode S-PLAYDEC records (X): the source format 7170 (the lab's 4:2:2 picture), 1620 x 1080, to the
 //   through image's bank in format 3074, 900 x 600 at a pitch of 5568 pixels
-//   INFO's stop (X): DISPLAY cmd 16's read of the VSC histogram's bins (0x501e150e, its load at 0x501e153d, from
-//   0x501d7121) refused by the model (HIST_UNMODELLED: no run ended since the last began)
+//   INFO's histogram (X; docs/hle-gaps.md 4.2.7): DISPLAY cmd 16's reads of the VSC histogram's bins (0x501e150e, from
+//   0x501d7121) are answered, the unit counting the picture's plane in four runs (Y, R, G, B); until 2026-11-11 the
+//   model refused the first (HIST_UNMODELLED at 0x501e153d) and INFO stopped there
 const PN_TASKS = [[25, 'PLAY_MAIN'], [24, 'PLAY_LOAD'], [23, 'PLAY_IMAGE'], [26, 'PLAY_SOUND'], [118, 'PLAY_DECODE'], [119, 'PLAY_LOADDRAW']];
 const GUI_DISP_SIMPLE = '0x0508', GUI_DISP_DETAIL = '0x050b', PN_PLAY_CAP_OK = 0;
 const PN_HEADER_CODE = 0x518B63DA, PN_SIZE_PARSE = 0x518B2045, PN_THUMB_NONE = 12418, PN_DHT_REFUSED = 12428, PN_GET_NUMBER = 0x50ACF1A8, PN_CONVERTER = 0x50ACC981;
 const PN_GUI = { year: 0, month: 2, day: 3, hour: 4, minute: 5, width: 8, height: 10, exp: 40, focal: 56, iso: 88 };
 const PN_VIEW = { format: 7170, width: 1620, height: 1080, dst: 0x98D4D800, dst_format: 3074, dst_width: 900, dst_height: 600, pitch: 5568 };
-const PN_FOLDER = 100, PN_STOP = /HIST_UNMODELLED pc 0x6020255d /;
+const PN_FOLDER = 100, PN_HIST_COLOUR_RUNS = 3;
 const EXIF_DATE_ORIGINAL = 0x9003, EXIF_EXPOSURE = 0x829A, EXIF_ISO = 0x8827, DHT = 0xC4;
 export async function playNativeSession() {
   const bad = [];
@@ -750,8 +752,9 @@ export async function playNativeSession() {
       ok(g && JSON.stringify(gui) === JSON.stringify(date.slice(0, 5)) && le(g, PN_GUI.width, 2) === pic.width && le(g, PN_GUI.height, 2) === pic.height
         && JSON.stringify(exp) === JSON.stringify(exif.exif?.get(EXIF_EXPOSURE)) && iso === exif.exif?.get(EXIF_ISO),
         `${tag}: INFO's still information ${JSON.stringify({ gui, exp, iso, size: g && [le(g, PN_GUI.width, 2), le(g, PN_GUI.height, 2)] })}, the file's ${JSON.stringify({ date, exp: exif.exif?.get(EXIF_EXPOSURE), iso: exif.exif?.get(EXIF_ISO), size: [pic.width, pic.height] })}`);
-      ok(info === null && PN_STOP.test(stop ?? '') && lab.state_names.get(lab.state())?.endsWith('ID_ST_DISP_DETAIL'),
-        `${tag}: INFO reaches ${lab.state_names.get(lab.state())} and stops at DISPLAY cmd 16's bins read (want HIST_UNMODELLED at 0x501e153d): ${info ?? stop?.slice(0, 300)}`);
+      const unit = lab.sim.m.devices.vsc;
+      ok(info === GUI_DISP_DETAIL && stop === null && unit.histColour() >= PN_HIST_COLOUR_RUNS && lab.state_names.get(lab.state())?.endsWith('ID_ST_DISP_DETAIL'),
+        `${tag}: INFO reaches ${lab.state_names.get(lab.state())} (${info}) past DISPLAY cmd 16's bins reads: the histogram unit's runs counted ${unit.histMeasured()}, R, G or B ${unit.histColour()}: ${stop?.slice(0, 300) ?? 'no stop'}`);
     } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 600)}`); }
     finally { pl.close_session(); }                                   // the control's continue too
   }

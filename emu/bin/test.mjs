@@ -14,7 +14,8 @@
 // (test_camapp.mjs, with S-HEAP over an idle and a workload, the mode dial's positions and camapp 3 with its
 // frames), S-MODPOST (test_modpost.mjs), the TAKE
 // probe's record of what TAKE_FUNC takes and asks on E143 (test_take.mjs), CPU 2 natively on the machine's second
-// core (test_cpu2.mjs), the lab's audio output and the
+// core (test_cpu2.mjs), the VSC's histogram unit in play under camapp 3 (test_hist.mjs),
+// the lab's audio output and the
 // synthesized shutter sound at a
 // release, and the AF beep end to end (test_audio.mjs), the audio hardware and AUD_EXEC's play path on E143
 // (test_audiohw.mjs), the SCPU's clock, ports, link pins and sub-CPU model
@@ -204,6 +205,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`camapp 3's power-off (TRA 586, the flash's stop): ${po.checks - po.bad.length}/${po.checks}; camapp 3's EVF switch (the histogram's stop): ${ev.checks - ev.bad.length}/${ev.checks}`);
   [...po.bad, ...ev.bad].forEach((x) => console.log('  ', x));
   bad += po.bad.length + ev.bad.length;
+}
+// the VSC's histogram unit in play (test_hist.mjs, docs/hle-gaps.md 4.2.7): the live histogram with S-SCENE's live
+// view and playback's four histograms from the unit's bins, without and with --cpu2 native; the EVF switch under a run
+{
+  const { histLiveSession, histInfoSession, histEvfSession } = await import('../test/test_hist.mjs');
+  const hl = await histLiveSession(), hi = await histInfoSession(), he = await histEvfSession();
+  console.log(`the VSC's histogram unit in play: the live histogram ${hl.checks - hl.bad.length}/${hl.checks}; playback's ${hi.checks - hi.bad.length}/${hi.checks}; the EVF switch under a run ${he.checks - he.bad.length}/${he.checks}`);
+  [...hl.bad, ...hi.bad, ...he.bad].forEach((x) => console.log('  ', x));
+  bad += hl.bad.length + hi.bad.length + he.bad.length;
 }
 // the imgpro unit's model (S-IMGPRO) on a bare machine; the firmware's driver on it runs in camapp 3 above
 {

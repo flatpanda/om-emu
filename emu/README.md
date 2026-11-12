@@ -313,7 +313,11 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   keys are no longer taken after a menu pass and a shot, playback shows No Picture with pictures on the
   card (the next stops, 4.3.1; their causes, 4.3.2), and the first power-off of the golden power and power-replay
   scenarios ends in S-SHUTDOWN's PowerError where camapp 1's turns off (4.2.4; the cause in 4.3.6: TRA 586 is not
-  answered, the flash capability still running when the shooting component's teardown asks for its stop). With the
+  answered, the flash capability still running when the shooting component's teardown asks for its stop). Its LV and
+  eye-sensor switch is the firmware's own output change (the application stops the histogram and sends the GUI 131,
+  the GUI's output change sends TRA 588, CapIod opens the device; no OPEN, H-RESEND or H-CONNECT of the lab's), after
+  which the EVF's composite stops at the OSD planes' level 101 (PLANC `0xca`, A7); with it 16 of golden's 19 Player
+  scenarios run to their end under camapp 3 (`docs/hle-gaps.md` 4.3.10 has the table). With the
   Player's `camapp_play_native` (off by default) the play module runs natively too (H-PLAYSTART, `src/lab/playmod.mjs`;
   S-PLAYSEQ, S-PLAYCOMP and S-PLAYVIEW not installed): PLAY loads and parses the picture and shows its view, decoded
   by the firmware's own request on the model of the image library's pipeline block and JPEG codec (S-IMGPIPE,

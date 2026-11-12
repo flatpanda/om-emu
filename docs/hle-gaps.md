@@ -4275,7 +4275,7 @@ runs the same instructions (the cost bullet). Round 1's open item 1 is corrected
 | `0x07` | - / - | `0x5005d464` | the SCPU firmware update: `0x510369f8` ("[scpu]Start !") transfers the image (`0x51036bd6`), sends `0x85 {2}`, `0x07`, then polls `0x87` |
 | `0x87` | - / 1 | `0x5005d480` (PER_SCPU_GETFIRMUP_COMP 0xf4) | update state, polled while it reads 1 |
 | `0x88` | - / 2 | `0x5005d36a` from UI_IN `0x5014bf91` (PER_SCPU_GET_PORT_SCAN_ 0xd7) | port scan: retried up to 5000 times while rx[1] is not 0 (errlog `0x19002710`), then rx[0] bit 0 -> UI_IN group 4 `0x0400`; the sub-CPU's reply is {result, busy}, result bit 0 PC13 and bit 1 PC5, and the read enables its report `0x08` (D, scpu spec 3.4) |
-| `0x12`, `0x13`, `0x14` | short writes, batched | the power manager through `0x5004322c` (semaphore PWR_COMM_SCPU 0x68, flag PWR_COMM_SND_SCPU_WAIT 0xee; builders `0x500433f9`, `0x50043452`, `0x500435b0`, `0x50043a47`, `0x50043abd`) | SCPU handlers `0x801570b`, `0x801535f`, `0x8015345` (and `0x80150a5` for an `0x11` with no MN sender) in its power manager; formats ? but for `0x12 {5}`, the start's handshake, which the sub-CPU answers with its message `0x12 {5}` (4.7.4); the formats, the two `0x11` builders and what each sender waits for: 4.7.6 (2026-11-11) |
+| `0x12`, `0x13`, `0x14` | short writes, batched | the power manager through `0x5004322c` (semaphore PWR_COMM_SCPU 0x68, flag PWR_COMM_SND_SCPU_WAIT 0xee; builders `0x500433f9`, `0x50043452`, `0x500435b0`, `0x50043a47`, `0x50043abd`) | SCPU handlers `0x801570b`, `0x801535f`, `0x8015345` (and `0x80150a5` for `0x11`, which the MN sends too, 4.7.6) in its power manager; formats ? but for `0x12 {5}`, the start's handshake, which the sub-CPU answers with its message `0x12 {5}` (4.7.4); the formats, the two `0x11` builders and what each sender waits for: 4.7.6 (2026-11-11) |
 | `0x40` | n / - | `0x5102b8f7` (semaphore PC_PD_COMMUNICATION 0x7c; "USB SCPU_CONN", "PCPDC" beside it) | USB power delivery (I) |
 
 The flag and semaphore names are the object-name table's (D); the commands' meanings beyond the strings are I.
@@ -4953,7 +4953,8 @@ on both ends and what the sender waits for, and S-SCPUDEV takes the write (`emu/
   reads it. A body's quiet list may not name `0x14`. The handler is read from E143's image, which E146 carries
   byte for byte (scpu spec 2), so the model takes `0x14` on those two (`src/lab/menu.mjs`: the bodies whose
   `scpu_lle` digest is that image's, `SOURCES_IMAGE`) and refuses it on the other linked bodies (E147's own build,
-  E139's and E134's lineages), whose handlers are not read.
+  E139's and E134's lineages), whose handlers are not read; `emu/test/test_scpu.mjs` scpuSession checks which body
+  takes it on each of the five (X: E143 23 of 23, E146 and E147 20 of 20, E139 and E134 11 of 11).
 - **How far S1 and S2 go now (X).** With the write taken no lab stop follows in 8 s of lab time after S1 or after S2.
   - S1 held: the `0x14` 1.16 s after S1 is the link's only transfer. Every later tick runs the source check, finds
     nothing changed and sends nothing. TAKE_MAIN stays in RdyFcsRdy3 (pending `0x200`, pattern `0x5`) and the sequence

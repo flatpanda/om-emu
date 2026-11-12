@@ -164,7 +164,7 @@ export const MODELS = {
     // the EDID state byte 0x62a3c8ec, read by 0x501d30f6 (D)
     hdmi: { gio_slots: 0x50002B5D, state: [0x62A3C8EC, 1] },
     // the audio hardware (--audio on; src/lab/audiohw.mjs H-AUDSTART, S-AUDCPU2): AUD_MAIN's entry 0x50a62a05 and its
-    // id word 0x60042dca (USTART2's OlyTaSt at 0x501e950b); the id words of the CPU 0 tasks it starts, AUD_COPY_DATA
+    // id word 0x60042dca (USTART3's OlyTaSt at 0x501e950b); the id words of the CPU 0 tasks it starts, AUD_COPY_DATA
     // 0x60042dc8 (0x50a62a72) and AUD_WATCH_DOG 0x60042d34 (0x50a62aa0), and of its CPU 2 tasks, AUD_WAKEUP
     // 0x60043614 (0x50a62a14) and AUD_LEVEL_MONITOR 0x60043602 (0x50a62a90); OlyTaStCpu 0x5002d325, which OlyTaSt
     // calls for another core's id (0x5002c552); AUD_WAKEUP's reply 0x50a62d75 (the run-time 0x60a83d95 it posts at

@@ -96,7 +96,7 @@ const portedText = files.filter((f) => f.endsWith('.mjs') && ported(path.relativ
 for (const [, t] of portedText) for (const m of t.matchAll(LIT)) lits.add(parseInt(m[1], 16) >>> 0);
 // The literals translated like the others that do not seed the direct maps, each with what its seed did. A seed is
 // anchored where its window is unique in the other build, which can be the wrong place, and a wrong anchor narrows the
-// gap fill of the seeds around it (src/fw/xmap.mjs). 0x501e950b and 0x501e94fd, USTART2's two calls before AUD_MAIN's
+// gap fill of the seeds around it (src/fw/xmap.mjs). 0x501e950b and 0x501e94fd, USTART3's two calls before AUD_MAIN's
 // start (src/lab/audiohw.mjs, comments only): seeded, E145's direct map pairs 0x501e950b at 0x501845c5, 263 bytes
 // below the place of the boot's call 0x501e9060 before it (0x501846cc), so 0x501e9060's gap fill finds no window, the
 // settings DB init's call at 0x501eac42 is not paired, and the DB init 0x503c5473 (menu.mjs SETTINGS_DB_INIT), its

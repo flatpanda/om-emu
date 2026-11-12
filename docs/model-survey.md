@@ -2700,11 +2700,13 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    firmware switch rows). Three candidates: a row before the card switch's has no UI_IN code on this body; E147's
    tables lack `0x1506`, so there is no row to find; the block's switch code is not E147's. The first is the cause:
    once the body's key matrix replaces E143's (apply_uiin_layout), a code its tables lack leaves its row not wired,
-   without a UI_IN place; E147's lack `0x2007`, `0x1518`, `0x2006`, `0x300a` and `0x2003` (X), and the row of `0x2007`
+   without a UI_IN place; of the switch rows the search walks E147's lack five, `0x2007`, `0x1518`, `0x2006`, `0x300a`
+   and `0x2003` (X; they also lack 17 codes of key rows, which it does not walk), and the row of `0x2007`
    comes before the row of `0x1506`. `0x1506` is in its tables (group 0 byte 0 bit 4; E143's group 1 byte 1 bit 0)
    and its file layer registers it with UI_IN (`0x50896d7e`), which rules the other two out. So finding 126's
    inference holds, now X, and its fix (`x.uiin?.[3]`) is the fix; the other readers of a row's code refuse a row not
-   wired first or test for the place (X, a search of `src/lab`).
+   wired first or test for the place (X, a search of `src/lab`), all but S-BOOTKEY's read of the power row
+   (`src/lab/play.mjs` boot_key_bring_up), a row wired on all 19 bodies (X).
    *The seams.* E147's block is E143's by the rule E146's was made by: each function S-MDACTRL and S-MEDIA call, and
    the senders and the reactive whose ids and sizes they rely on, paired by the map and compared with E143's
    instruction for instruction, absolute addresses and source line numbers masked: identical but for E146's three ids

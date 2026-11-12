@@ -316,7 +316,8 @@ export const FAMILIES = {
     // us free-run channel 9, reload 0x3fffffff (0x500030af), read at 0x50001ecf. The tick init the boot calls for CPU 0
     // (0x5004d779) starts channel 1 at reload 999 on IRQ 58 (CPUs 1 and 2 start channels 2 and 3 from their own
     // inits, 0x5004d806, 0x5004d863). The software-timer init 0x50065e50 starts no channel (X: after it only channels 1
-    // and 9 run): its timers count in 2 ms units (0x50066238) from a source not read (?), so soft_tick is null. The
+    // and 9 run): its timers count in 2 ms units (0x50066238) on a second timer unit's channel 0 (0x9b800010, which the
+    // lab does not model: docs/model-survey.md finding 155), so soft_tick is null. The
     // hardware-timer init 0x5006ed9b walks 10 entries (the table 0x6012fa78) and its guard functions take an entry
     // index below 10 (`cmp 10,d2`, 0x5006eddb); hw_channels is the range the lab checks those indices against
     timer: {

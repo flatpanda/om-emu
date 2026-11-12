@@ -3254,6 +3254,34 @@ export function mediaStatus(img) {
   if (img[sd] !== 0xfc || img[sd + 1] !== 0x85) throw new Error(`mediaStatus: the setter ${h8(0x50000000 + at)}'s medium 4 branches to ${h8(0x50000000 + sd)}, not a \`mov d1,(abs32)\``);
   return u32(img, sd + 2);
 }
+// The HLS media layer's mount state word of the SD card in the first slot (fact 'mount_state', and through bin/port.mjs
+// the place of E143's MOUNT_STATE_E143; src/lab/camapp.mjs S-CARD's first CARD_STATE word; docs/model-survey.md finding
+// 155). D on E143: the mount state's setter (0x50aca6b1, mediaHls's `mount.set` form) compares the medium with 4, 1
+// and 8 and branches each to its store, `mov (a0),d0; mov imm32,d1; mov d0,(W)`; medium 4's (the SD card) is the code
+// right after the compares' `bra` (0x50aca6bf, W 0x60360bfc at 0x50aca6c6; E122 0x506a75ac, W 0x616022d8). One such
+// setter on each of the 19 expanded images, with [4, 1, 8], [4, 1, 32] or [4, 1, 32, 8], medium 4 first and its
+// branch to the code after the `bra` (X, a byte scan).
+// The map had placed E143's word on E122's 0x601f1e06 and E118's 0x601dd7ca, data bytes it had paired as code, where
+// the votes for E122's 0x616022d8 and 0x616022e4 (medium 1's) tied at 4 each (X: bin/port.mjs at master 4e08ef9; the
+// earlier ports had 0x616022d8 and 0x615e04a4, the setter's). Returns W; throws unless one setter, or where medium 4
+// is not its first medium or does not branch to the code after the compares.
+export const MOUNT_STATE_E143 = 0x60360BFC;
+export function mountState(img) {
+  const found = [];
+  for (let o = img.indexOf(0xa0); o >= 0; o = img.indexOf(0xa0, o + 1)) {
+    if (!bytesAt(img, o, MDA_KINDS)) continue;
+    const kinds = [];
+    let p = o;
+    for (; img[p] === 0xa0 && img[p + 2] === 0xc8; p += 4) kinds.push({ kind: img[p + 1], to: p + 2 + (img[p + 3] << 24 >> 24) });
+    if (bytesAt(img, p, MDA_SET_WORD)) found.push({ o, p, kinds });
+  }
+  if (found.length !== 1) throw new Error(`mountState: ${found.length} mount state setters (${found.map((f) => h8(0x50000000 + f.o)).join(', ')}), want one`);
+  const [{ o, p, kinds }] = found;
+  if (kinds[0].kind !== 4 || kinds[0].to !== p + 2) {
+    throw new Error(`mountState: the setter ${h8(0x50000000 + o)}'s first medium ${kinds[0].kind} branches to ${h8(0x50000000 + kinds[0].to)}, not medium 4 to the store after its \`bra\` (${h8(0x50000000 + p + 2)})`);
+  }
+  return u32(img, p + MDA_SET_WORD.length);
+}
 const REC_ALLOC = [[0x80, 0x40, 0xdd], [0x80, 0x64, 0xdd], [0x80, 0x74, 0xdd]], REC_ALLOC_GAP = 16, REC_CALLS = 10, REC_SPAN = 0x100;
 const REC_BUILD = 0x1c0;
 export function recorder(img) {
@@ -5493,6 +5521,7 @@ export function readFacts({ img, family, resLoad }) {
   facts.dcf = { counts: dcfCounts(img) };
   facts.erase = pictureErase(img);
   facts.media_status = mediaStatus(img);
+  facts.mount_state = mountState(img);
   const usbOff = usbPowerOff(img);
   if (usbOff !== undefined) facts.power_off = { usb_disconnect: usbOff };
   facts.gui = guiCanvas(img);
@@ -5517,7 +5546,8 @@ export function readFacts({ img, family, resLoad }) {
 // error log by its test of the id's module (errlogEntry, 'module-test'); the interrupt handler tables at the attach's
 // stores (handlerTables, 'attach-stores'); the remaining-shots query at the callee whose
 // result the application's getAvailableShootCount stores (shotsQuery, 'shots-method'); the SD card's HLS media status
-// word at the one its setter's medium 4 stores (mediaStatus, 'status-setter'); the touch panel's open by its
+// word at the one its setter's medium 4 stores (mediaStatus, 'status-setter'), its mount state word at the one the
+// mount state's setter stores for medium 4 (mountState, 'mount-setter'); the touch panel's open by its
 // trace or its form (touchOpen, 'open-rule'); the display task init as the function that creates the DISPLAY queue
 // (displayTaskInit, 'queue-init'); the face plane's colour setter at the one that loads its trace (faceColourSet,
 // 'cpdata-trace').
@@ -5534,6 +5564,7 @@ export function rulePlaces(facts) {
     ...(facts.kernel.handlers !== undefined ? [[HANDLER_TABLE_E143, { to: facts.kernel.handlers, how: 'attach-stores' }]] : []),
     [SHOTS_QUERY_E143, { to: facts.card.shots_query, how: 'shots-method' }],
     [MEDIA_STATUS_E143, { to: facts.media_status, how: 'status-setter' }],
+    [MOUNT_STATE_E143, { to: facts.mount_state, how: 'mount-setter' }],
     ...(facts.touch_api ? [[TP_OPEN_E143, { to: facts.touch_api.open, how: 'open-rule' }]] : []),
     ...(facts.display.task_init !== undefined ? [[DISPLAY_TASK_INIT_E143, { to: facts.display.task_init, how: 'queue-init' }]] : []),
     ...(facts.display.face_colour !== undefined ? [[FACE_COLOUR_SET_E143, { to: facts.display.face_colour, how: 'cpdata-trace' }]] : []),

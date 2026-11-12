@@ -458,6 +458,8 @@ const SHOOTING_START = A(0x50AE1124), SHOOTING_END = A(0x50AD7E8A);
 const MOVIE_PHASE = { START_READY_MOVIE: 113, END_READY_MOVIE: 114, START_SHOOTING_MOVIE: 115, START_RECORDING_MOVIE: 115,
   STOP_SHOOTING_MOVIE: 117, END_RECORDING_MOVIE: null };
 const RECVIEW_NS = 500e6, DEFAULT_SHUTTER_S = 1 / 125;
+// S-CARD's mount state words; the port places the first by the rule (src/fw/facts.mjs mountState: the mount state
+// setter's medium 4 store, docs/model-survey.md finding 155)
 const CARD_STATE = [A(0x60360BFC), A(0x60360C08)], CARD_MOUNTED = 8, SHOTS_QUERY = A(0x50419164), MOVIE_TIME_QUERY = A(0x5042DA58);
 // S-CARD's media status: the HLS media layer's status word of the first slot's card (SD 0x60360bec, SD2 0x60360be4,
 // IN 0x60360bdc; its setter 0x50aca703 names the values in its trace: 0 NO_MOUNT, 0x1000 COVER_OPEN, 0x1001

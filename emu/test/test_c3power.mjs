@@ -18,11 +18,13 @@
 //                  native_switch, 4.3.10): the lab sets the eye sensor's state and S-OUTDISP's answer, the application
 //                  stops the VSC histogram (TRA 937) before it sends the GUI 131, the GUI's output change sends TRA
 //                  588, CapIod opens the EVF and writes the output-device property, which S-PROP follows; no errlog
-//                  0x37001418. The EVF's composite then stops at the three OSD planes' PLANC 0xca, the level 101 the
-//                  firmware's own open sets from the EVF level table (A7 knows only 128 and 0). Back to the TFT the
-//                  application starts the histogram again (TRA 938) and the TFT composes. With property 1947 at 0 the
-//                  application's eye handler asks for no output: the step records the switch as not made and the
-//                  device stays. From the Super Control Panel the application's change goes to the shooting screen.
+//                  0x37001418. The EVF's composite then stops at the three OSD planes' PLANC 0xca, the level 101 that
+//                  DISPLAY cmd 7 from the OXF main thread sets after the open, from the EVF level table (A7 knows only
+//                  128 and 0). Back to the TFT the application starts the histogram again (TRA 938) and the TFT
+//                  composes. With property 1947 at 0 the application's eye handler asks for no output: the step
+//                  records the switch as not made and the device stays; with 1947 back at 1 and the eye state unchanged
+//                  nothing changes either, which stops the step. From the Super Control Panel the application's change
+//                  goes to the shooting screen.
 //                  Camapp 1 keeps the lab's own switch: its OPEN, then the GUI's vt+20 with device 16, then task
 //                  165's TRA 937. The firmware's output change called without the application's stop (vt+20 with
 //                  device 16 from the lab task: TRA 588, CapIod's DISPLAY cmd 45 with code 2) opens the EVF under the
@@ -67,7 +69,8 @@ const APP_TEST_READS = [0x50ABB039, 0x50ABB044];
 // shooting screen
 const PROP_TFT = 1, PROP_EVF = 8, OPEN_TFT = 1, TRA_HIST_START = 938, GUI_SHOOTING = '0x0108';
 // the OSD planes' level after the firmware's own open of the EVF: PLANC = level 101 << 1, entry 7 of the EVF level
-// table 0x602ae4b4 (docs/om1-vsc-spec.md section 9 items 3 and 12), which the compositor refuses (A7)
+// table 0x602ae4b4 (docs/om1-vsc-spec.md section 9 items 3 and 12), which DISPLAY cmd 7's index 7 selects (X; sent by
+// the OXF main thread after the open, docs/hle-gaps.md 4.3.10); the compositor refuses it (A7)
 const EVF_PLANC = 0xCA;
 // the property at whose 0 the application's eye handler asks for no output (play.mjs EYE_SWITCH_PROPERTY)
 const EYE_SWITCH_PROPERTY = 1947;
@@ -182,6 +185,13 @@ export async function evfSwitchSession() {
       ok(eye.switch.native && eye.switch.changed === false && /property 1947 reads 0/.test(eye.switch_unmade ?? '') && s.device === 'tft'
         && lab.sim.u32(OPENED) === OPEN_TFT && !tras(eye).includes(TRA_OUTPUT),
         `camapp 3: the eye sensor with property ${EYE_SWITCH_PROPERTY} at 0 makes no output change: ${JSON.stringify(eye.switch_unmade)}, device ${s.device}, opened ${h8(lab.sim.u32(OPENED))}, TRAs ${tras(eye).filter((x) => x !== 944)}`);
+      // 1947 back at 1: the eye state is still the EVF's, the setter publishes nothing and nothing changes, which has
+      // no reason read and stops the step (not recorded as not made)
+      s.set(EYE_SWITCH_PROPERTY, 1);
+      let stop = null;
+      try { pl.run_input({ type: 'key', id: 'lv', action: 'down' }); } catch (e) { stop = e; }
+      ok(stop?.constructor.name === 'PlayError' && /state 2 -> 2\) with property 1947 at 1: no reason read/.test(stop.message),
+        `camapp 3: LV with property ${EYE_SWITCH_PROPERTY} back at 1 after the eye sensor's unmade switch stops: ${stop?.constructor.name} ${stop?.message.slice(0, 240)}`);
     } catch (e) { bad.push(`camapp 3: ${e.message.slice(0, 600)}`); }
     try { pl.close_session(); } catch { /* the session stopped */ }
   }

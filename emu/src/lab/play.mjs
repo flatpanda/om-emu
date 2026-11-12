@@ -1998,10 +1998,14 @@ export class PlaySession extends N.NavSession {
   // to the shooting screen's panel as in an idle slice).
   // The application's eye handler asks for its output only while property 1947 is not 0 (X: at 0 it sends no 131 and
   // nothing opens; I: the EVF auto switch off, where the camera switches by its EVF button, EV_PRESS_EVFSW, which
-  // has no producer in the lab): the step then records that no change was made and the device stays.
+  // has no producer in the lab): the step then records that no change was made and the device stays (the eye state
+  // stays the one set). No change with 1947 not 0 has no reason read and is an error.
+  // A VSC kind 3 body is refused: the lab's OPEN sets such a channel's line time for the device it opens (display.mjs
+  // open), the firmware's own open does not.
   native_switch(want, cause) {
     const lab = this.lab, d = lookup(D.DEVICE, want), from = this.device;
     if (this.opts.mutant) throw new ValueError(`display switch: the mutant ${show(this.opts.mutant)} is the lab's own switch's, which control camapp 3 does not make`);
+    if (BOARD.vsc.kind === 3) throw new ValueError(`display switch under control camapp 3 on ${MODEL} (VSC kind 3): the channel's line time at the firmware's own open is not set`);
     const state0 = lab.state();
     const panel0 = lab.panels.length ? lab.panels[lab.panels.length - 1][1] : null;
     this.begin(`${String(this.steps.length).padStart(2, '0')}-SWITCH:${want}`);
@@ -2011,7 +2015,7 @@ export class PlaySession extends N.NavSession {
     const layout0 = lab.b2_snapshot(), opened0 = lab.sim.u32(D.OPENED_WORD) >>> 0, prop0 = lab.props.get(lab.prop_device);
     lab.native_open_begin(want);
     this.device = want;                                            // S-OUTDISP's answer from here on
-    const state = lookup(EYE_STATE, want);
+    const state = lookup(EYE_STATE, want), eye0 = lab.sim.read(EYE_WORD, 1)[0];
     lab.call(EYE_SET, { d0: state }, null, null, 20000);           // H-EYESTATE
     const eye = lab.sim.read(EYE_WORD, 1)[0];
     if (eye !== state) throw new PlayError(`H-EYESTATE: ${h8(EYE_SET)}(${state}) left ${h8(EYE_WORD)} = ${eye}`);
@@ -2041,9 +2045,13 @@ export class PlaySession extends N.NavSession {
     if (!names.includes('ConnectChangePlay') && opened === opened0 && prop === prop0 && layout.connect === layout0.connect) {
       // the application made no output change on the eye sensor's event
       if (problems.length) throw new PlayError(`SWITCH:${want} (the firmware's own, control camapp 3): ` + problems.join('; '));
+      const auto = this.get(EYE_SWITCH_PROPERTY);
+      if (auto !== 0) {
+        throw new PlayError(`SWITCH:${want} (the firmware's own, control camapp 3): the application made no output change on the eye sensor's event (state ${eye0} -> ${state}) with property ${EYE_SWITCH_PROPERTY} at ${auto}: no reason read`);
+      }
       this.device = from;
       const unmade = `${cause}: the application made no output change to the ${want} on the eye sensor's event (state ${state}); ` +
-        `property ${EYE_SWITCH_PROPERTY} reads ${this.get(EYE_SWITCH_PROPERTY)}, and its eye handler asks for the output only while that is not 0`;
+        `property ${EYE_SWITCH_PROPERTY} reads 0, and its eye handler asks for the output only while that is not 0`;
       return this.end(`${cause} -> SWITCH:${want} (not made)`, 'display', [], [], { device: from, switch: { ...base, changed: false, problems }, switch_unmade: unmade, state_from: h4(state0) });
     }
     if (opened !== d.mask) problems.push(`the firmware's output change left the opened word ${h8(opened)} (${h8(opened0)} before), not the ${want}'s ${h8(d.mask)}`);

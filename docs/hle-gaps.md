@@ -1381,7 +1381,7 @@ between them; a full shot goes on to phase 106 and waits there for TAKE's captur
 
   | Block | MMIO | IRQs |
   |---|---|---|
-  | SSG1 (sync generator, I; +0xa00 the sensor's command unit, 4.2.6) | `0x9b000000` | 15, 16, 17, 18 |
+  | SSG1 (sync generator, I; +0xa00 the sensor's command unit, I, 4.2.6) | `0x9b000000` | 15, 16, 17, 18 |
   | SSG2 (I) | `0x9b080000` | 19-22 |
   | SLVS receiver (I) | `0x98280000` | 243-247 |
   | PRO1 / PRO2 (cam_prepro.c) | `0x9b300000..0x9b304fff` | 27-31 |
@@ -1666,7 +1666,7 @@ and camDriverSession (X, 7 of 7) pin what follows.
   controller and the deferred-call triggers; neither completes in 100 ms. Request 6 logs `0x0a273000` (the engine
   instance code `0x501536b4..0x5015382c`) until the second init's first nine calls have run, and is then deferred
   (`0x50153844`) and queued without completing. So S-TAKECAM keeps answering TAKE's requests; EXP_MOVIE's go natively.
-  (4.2.6: request 6 is the sensor's power-on; the item it queues here comes from the test's argument 1, not TAKE's 0.)
+  (4.2.6: request 6 is the sensor's power-on; the test's argument 1 queues that item, TAKE_FUNC_CP's start passes 0.)
 - **H-EXPINIT (X).** After H-TAKENBINIT, with `--cpu2 native`: IMG_PRECON's init `0x502a49b3`, EXP's init `0x50553649`,
   EXP_MOVIE (task 88) by act_tsk and EXP_MOVIE2 / 3 on CPU 2 by OlyTaSt, as test_expcb.mjs did by hand (4.2.2); EXP's
   queues 0x17 / 0x18 then go natively. The stage runs IMG_PRECON's init before TAKE_MAIN's and EXP's before
@@ -1982,15 +1982,16 @@ what follows.
 4.2.5 ended at the third way into the front end's entry: the module the second init's seventh step sets up, which
 cam.c's request 6 starts and whose handler ran ten times in the reviewer's experiment without reaching the kind-7
 sender. This round reads that module. It is cam_seq_power.c: request 6 is the sensor's power-on and request 5 its
-power-off. The ten runs were the experiment's own argument (1), which makes the power-on wait for the mechanism
-driver; TAKE_FUNC_CP's start passes 0. With 0 the power-on runs natively under `cam_fe` through the sensor's eight
-power rails and the camera clocks (S-CAMFE takes four more clock enables, `emu/src/dev/camfe.mjs` POWER_ON) and stops
-at the first unsettled device, the unit of SSG1 that sends the sensor its serial commands (`0x9b000a04`, IRQ 18). The
-front end's entry lies behind three requests to that unit and the units' set-up, and in a permissive experiment the
-power-on's kind-7 request arms neither record +2464 nor +2532. So no stand-in is added, S-TAKECAM keeps requests 6 and
-5, and EXP_MOVIE waits as before (X). `emu/test/test_camfe.mjs` camFeUnits (18 of 18), `emu/test/test_expcb.mjs`
-camFrontEndSession (15 of 15) and camDriverSession (8 of 8) and `emu/test/test_take_release.mjs` camFeSession (6 of 6)
-pin what follows.
+power-off (that the image sensor is what they power is I: the rails, the camera clocks and the serial commands that
+follow). The ten runs were the experiment's own argument (1), which makes the power-on wait for the mechanism driver;
+TAKE_FUNC_CP's start passes 0 (other senders in TAKE's code pass 2, below). With 0 the power-on runs natively under
+`cam_fe` through the sensor's eight power rails and the camera clocks (S-CAMFE takes four more clock enables,
+`emu/src/dev/camfe.mjs` POWER_ON) and stops at the first unsettled device, the unit of SSG1 that sends the sensor its
+serial commands (that role I; `0x9b000a04`, IRQ 18). The front end's entry lies behind three requests to that unit and
+the units' set-up, and in a permissive experiment the power-on's kind-7 request arms neither record +2464 nor +2532.
+So no stand-in is added, S-TAKECAM keeps requests 6 and 5, and EXP_MOVIE waits as before (X).
+`emu/test/test_camfe.mjs` camFeUnits (18 of 18), `emu/test/test_expcb.mjs` camFrontEndSession (15 of 15) and
+camDriverSession (8 of 8) and `emu/test/test_take_release.mjs` camFeSession (6 of 6) pin what follows.
 
 - **The files of cam.c's range.** The error log's file names are literals in the code: cam_lens.c (first at
   `0x50151623`), cam_list.c (`0x50151d40`), cam_mec_ctrl.c (`0x501525f4`), cam_sem.c (`0x501539c6`), cam_strobe.c
@@ -1999,9 +2000,9 @@ pin what follows.
   cam_expcal.c (`0x5016d148`), cam_frame_driver.c (`0x50171ae8..0x501722e0`), cam_frame_queue.c (`0x501794ff`),
   cam_imgdev_sio.c (`0x5017ed3a`), cam_param.c (`0x5018a38f`), cam_pfp.c (`0x5018d8fb`), cam_prepro.c (`0x5018f09e`),
   cam_seq_dram_capture.c (`0x501982bd`), cam_seq_movie.c (`0x50198945`), cam_seq_power.c (`0x5019c8ed..0x5019d6fe`)
-  and cam_slvs.c (`0x5019f485`). So 4.2.3's "sequence engine" `0x501524c0` is cam_mec_ctrl.c's item entry (items 15,
-  16, 13, 144 and 145; any other logs `0x002b0000`, `0x50152504`), and its "engine instance code"
-  `0x501536b4..0x5015382c` is cam_sem.c's (I: by the name's place): `0x501536b4(n)` gives a semaphore, `0x5015373a`
+  and cam_slvs.c (`0x5019f485`). So 4.2.3's "sequence engine" `0x501524c0` is cam_mec_ctrl.c's item entry (I: by the
+  name's place; items 15, 16, 13, 144 and 145; any other logs `0x002b0000`, `0x50152504`), and its "engine instance
+  code" `0x501536b4..0x5015382c` is cam_sem.c's (I: likewise): `0x501536b4(n)` gives a semaphore, `0x5015373a`
   (a0 the semaphore, a1 a function, d1 its argument) runs the function once the semaphore is free (deferred,
   `0x50153844`) and `0x501537d8` releases it (I: from their use below).
 - **The module (cam_seq_power.c).** Its init `0x5019c70f` clears its 32 bytes `0x62a25494..`, takes a semaphore
@@ -2059,8 +2060,12 @@ pin what follows.
   comes. The handler takes `0x1`, `0x4`, `0x20` .. `0x800` (the eight rails) and `0x800000`: ten events, the last of
   which finds bit 3 missing at `0x5019caac`. S-CAMFE saw no access because the clocks come after that test (X under
   `cam_fe` too, an experiment). TAKE_FUNC_CP's start passes 0: `0x502cda4a..0x502cda61` makes request 6 only when d2 is
-  0 and gives d2 as the argument (X: S-TAKECAM's record of it has the parameter 0). Correction to 4.2.3: "request 6 is
-  then deferred and queued without completing" holds for the argument 1 only; the item queued is the mechanism's.
+  0 and gives d2 as the argument (X: S-TAKECAM's record of it has the parameter 0). It is not TAKE's only sender: its
+  request builder `0x502cd411` (d1 the argument, +3) is called with 6 and 2 at `0x503c2882`, `0x503a8cca` and
+  `0x506d8488`, and `0x503c288d` makes request 6 with 0 through `0x502cd403` (their callers are not read); with 2 the
+  power-on takes the mechanism's path as with 1 (item 13 with +4 = 1). None of them runs in camFeSession (X: one
+  request 6, TAKE_FUNC_CP's). Correction to 4.2.3: "request 6 is then deferred and queued without completing" holds
+  for an argument of 1 or 2 only; the item queued is the mechanism's.
 - **The rails.** `0x500236fe` (d0 the step, a0 a callback, a1 its argument): the step's row of the table `0x600472e0`
   (8 bytes: u16 port, u16 on-delay, u16 off-delay, the levels) gives the GIO port to turn on (`0x5002357c(port, 1,
   level)`) and the delay after which the callback runs (`0x5005899c`; a delay of 0 as a deferred call, `0x500504aa`).

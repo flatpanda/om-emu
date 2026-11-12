@@ -3857,8 +3857,9 @@ export function recFileQueue(img, kcb) {
 //   after its send (0x503df7f4: 32, the fnode the DCF block's +24 returns)
 // - init: REC's module init as recFileQueue reads it (0x503d4eaa before REC_MAIN's task 0x503d4f08)
 // - exif: the template's copy after its init with no cache flush, the tag table and the dates as recFileQueue reads
-//   them (the copy 0x5030362b, 26320 bytes, the template 0x62667fe4); the date set in two more orders of the same
-//   instructions (EXIF_DATES_I: E130 0x50305c65, time 22708, original 1785; E129 0x502d92ef); crop []: the header
+//   them (the copy 0x5030362b, 26320 bytes, the template 0x62667fe4); the date set in recFileQueue's third order,
+//   E142's (E130 0x50305c65, time 22708, original 1785; E133 0x502f7a0b), or one more of the same instructions (E129
+//   0x502d92ef), EXIF_DATES_I (X, a scan of the four forms: one hit on each of the three); crop []: the header
 //   maker divides by no crop area (it makes the area from ImgAspect and the image size's code, 0x503df290..)
 // - clock_set, clock_read: as recFileQueue reads them (0x500de2c8, 0x500de2e8, the recorder's clock read)
 // E130, E133 and E129 read every part (X: their sessions record S2's file natively with them). Returns undefined
@@ -3877,7 +3878,7 @@ const REC_INLINE_KEEP = [0x42, 0x08, 0xfa, 0x12];
 const REC_INLINE_BUFFS = [0xfa, 0x06, null, null, 0x46, null, 0xfa, 0x42, null, null, 0xa0, 0x00, 0xc8, 0x0e, 0xfa, 0x16, null, null, 0x58, 0x08,
   0xfa, 0x12, null, null, 0xca, 0x0c, 0xfa, 0x16, null, null, 0x58, 0x08, 0xfa, 0x12];
 const REC_INLINE_FILL = [0xf8, 0x60, null, 0xf8, 0x93, null, 0xfa, 0x60, null, null, 0xf8, 0x93];
-// the EXIF set's date formatting in this version's two orders (recFileQueue's third form is E130's): `add DTO,a2;
+// the EXIF set's date formatting in this version's two orders (the first is recFileQueue's third, E142's): `add DTO,a2;
 // add TIME,d0; mov d0,(12,sp); mov a2,a0; mov d0,a1` (E130 0x50305c65) and `add DTO,a2; mov a2,a0; add TIME,d0; mov
 // d0,(12,sp); mov d0,a1` (E129 0x502d92ef), then `mov CODE,d0` and the call
 const EXIF_DATES_I = [

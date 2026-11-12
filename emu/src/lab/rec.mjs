@@ -464,9 +464,10 @@ export class RecFile {
     lab.observe(R.task.handled, (l, r) => { this.handled = r.d0 & 0xFFFF; }, 'obs-rec-file');
     const hooked = [R.task.handled];
     // the version before the E144 family's (recFileInline): Free as REC_IMAGE's task sets it for the frame that ends a
-    // shot (I: the lab's one frame), with which REC_FILE answers the requester's ObjResponse queue: no requester owns
-    // one in the lab, so the reply is taken at REC_FILE's call of it and answered as sent; and the file's context, on
-    // rec_make_file's stack, read at the registration's entry (a0), where it holds the fnode and the DCF block
+    // shot (I: the lab's one frame), with which REC_FILE answers the requester's ObjResponse queue (as it does with
+    // Dst 0, which the lab leaves, so the reply does not test Free, X): no requester owns one in the lab, so the reply
+    // is taken at REC_FILE's call of it and answered as sent; and the file's context, on rec_make_file's stack, read
+    // at the registration's entry (a0), where it holds the fnode and the DCF block
     if (R.reply) {
       sim.write(pk + P.Free, Uint8Array.of(1));
       lab.hook(R.reply.fn, (h, r) => {

@@ -2443,10 +2443,12 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    {at: the registration's entry, dcf, fnode}, `reply` {fn, from}, and Media2 and RecordDevice null: rec_make_file reads
    neither (D). The lab (the stand-ins the family's: H-EXIFINIT, H-RECINIT, H-RECFILE, S-EXIFPRM, S-RECIMAGE, S-JPEGENC)
    writes no field the fact gives null and no crop area; S-RECIMAGE sets Free 1, as REC_IMAGE's task does for the frame
-   that ends a shot (I: the lab's one frame), so REC_FILE replies; no requester owns the ObjResponse queue in the lab,
-   and the reply is taken at REC_FILE's call and answered as sent, as S-RECREQ takes E143's. The file's record (its
-   path, size, cluster and stamp) is read through the fnode and the DCF block the context held at the registration's
-   entry, since the context is gone when rec_make_file returns.
+   that ends a shot (I: the lab's one frame), and REC_FILE replies; it would with Free 0 too, since the lab leaves Dst
+   0 (X: a session without the write, its reply status 0), so the sessions do not test Free. No requester owns the
+   ObjResponse queue in the lab, and the reply is taken at REC_FILE's call and answered as sent, as S-RECREQ takes
+   E143's. The file's record (its path, size, cluster and stamp) is read through the fnode and the DCF block the
+   context held at the registration's entry, since the context is gone when rec_make_file returns (X: the stamp is
+   the clock's, as the directory entry's date and time).
 135. **REC_FILE natively on E130, E133 and E129** (2026-11-11, X: `test/test_storage.mjs --session` per body, 34 checks
    each, in `bin/test.mjs`; refs/exif.mjs and exiftool). With the clock set through each body's clock setting
    (2026-11-08 12:34:56) S2 gives `C:\DCIM\100OLYMP\PB080001.JPG` on the three: 62,857 bytes, 41,984 of the firmware's

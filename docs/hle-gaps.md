@@ -147,7 +147,7 @@ live view and playback) runs natively (X: 2,330 instructions) and has no owner b
 | **CPUs 1-3 and inter-core** (4.6) | S: K-OTHERCPU, K-BOOTSYNC, K-IPI, no start barrier; S-CPU2 (one post), S-CPU3, S-DISPFRAME on CPU 0; any other doorbell is an error | run CPUs 1-3 natively on one bus; per-core `0x8000` page, INTC bank n to core n, `+0x808/+0x80c` IRQ 324, `+0x810/+0x814` IRQ 325, `+0x800/+0x804` ISC IRQ 323, ticks 139..141. A53: "off" or ISC node 4 | a machine refactor (per-core CPU state), a per-core kernel lab, flash reads for CPU 2's loader and CPU 3's boot jobs, ROADMAP phases 3-4 | 5,422 keyed; 441,542 reachable only from CPU 1-3 tasks (a lower bound) | 5-7 weeks for the cores | the histogram, a native DISP_FRAME, cross-core owners (AUD_MAIN, AVM) can start; three stand-ins and four kernel stand-ins retire |
 | **SCPU, power, clock, on-board sensors, persistence** (4.7) | N: PER_SCPU, its start and its transactions, over the link to S-SCPUDEV, the sub-CPU's transport-level model (since 2026-10-23: `0x85`, `0x01`, `0x81`, `0x06`, `0x86`; 4.7.1; S-SIO2, H-SCPUSTART); S: the SCPU window's storage (`0x00`, `0x08..0x3c`), command word and its clock `0xe8 / 0xec` ticking with lab time; group 0 through the event and port words and IRQ 320 natively (since 2026-10-23, 4.7.2; H-SCPUIRQ, H-UIINPORT, H-SCPUPORT), H-POWER, H-EYESTATE, S-SETSAVE / S-NVRAM (the players' default since 2026-11-08); N: the ACC module init, ACC_MAIN, PER_SLOPE, the level gauge and Level Adjust with the accelerometer at its sample cache (since 2026-10-23, 4.7.3; H-ACCINIT, S-ACCREG, S-ACCSAMPLE, H-SLOPEINIT); PER_ROTATE with `--rotate on` (since 2026-11-08, 4.7.3; H-ROTINIT) | the accelerometer at the PER_SIO transfer and its data-ready pin (ACC_SENS_MAIN native); PER_ROTATE by default; S-NVRAM's NAND seam as the default | lab time; the UI_IN, SCPU and PER_SIO inits, the GIO init for the data-ready pin; CPU 3 for the store's boot load in a native boot | 64,446 / 56,954 | 4-5 weeks (steps 1-4), 7-9 with the power manager and NAND | a running clock, persistence by default, native power lever and power-down, rotation by default, eye sensor (Level Adjust, the level gauge and, with `--rotate on`, the orientation and the gauge's portrait layout in, 4.7.3) |
 | **Card and file system** (4.8) | N on E143 since 2026-10-23 (4.8.2): the file system's bring-up, FILECLBK, FILEFGND, DCFPROC_SUB, sd_mount, sdmem, the format, dosfat, DCF and the shots / movie-time counts natively on an 8 GiB SDHC card at the SD command layer (S-SDCARD, S-SDHOST, S-FSNAND, S-ALBM, H-FILEINIT, H-FILECLBK); the picture's file at S2 through the file module (S-RECFILE; since 2026-11-08 REC_FILE's task natively from REC_IMAGE's packet with the firmware's own header on E143, E146 and E147, 4.8.10: H-RECFILE, S-RECIMAGE, S-EXIFPRM, S-JPEGENC; on E143 since 2026-11-10 REC_IMAGE's own task, 4.3.3: H-RECIMAGE, S-RECREQ in S-RECIMAGE's place, S-JPEGENC the encode only; on E146 and E147 too since the same day, 4.3.5); since 2026-10-24 (4.8.3) Card Formatting from the menu (S-MDACTRL) and the card's removal and insertion (S-MEDIA), the application's media control native; S: S-CARD's insertion requests, its HLS mount state and image list; every other body now runs the same file system (4.8.4, 4.8.8; `emu/src/fw/models.mjs` card_fs), the HLS side on E146 (4.8.7) and on the E118 family (S-MDAEND, `docs/model-survey.md` findings 124 to 129) | the SD host's registers and interrupts with a card model (seam A), the rule-found seam on the other bodies, REC_IMAGE and the image pipeline (the thumbnail, the shooting values in Exif) | the HLS media layer (which sends the insertion), REC_MAIN / REC_FILE (the picture's file), TAKE_MOV's movie take (the movie module's set-up, whose frame rate the movie time query reads: 0 before a take on the camera too), IRQs anywhere for the SD host | 115,103 / 108,887 (17k of it self-test and debug) | 1-2 weeks left: REC_FILE's DCF steps, both slots, exFAT, the other bodies | a card that fills, real files in DCIM, both slots |
-| **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW; on E143 under `control camapp 3` behind an opt-in the play module's tasks natively, its decode stood in (H-PLAYSTART, S-PLAYDEC, A-JPEGDHT-1; since 2026-11-10, 4.8.11) | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
+| **Playback** (4.8) | S: S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW; on E143 under `control camapp 3` behind an opt-in the play module's tasks natively, its view decoded on the model of the image library's pipeline block and JPEG codec, a pre-reduced one stood in (H-PLAYSTART, S-IMGPIPE, S-PLAYDEC, A-JPEGDHT-1; since 2026-11-10, 4.8.11, 4.8.13) | with the S-PLAY* stand-ins kept: a JPEG decoder at the codec seam; native: the HLS play components, PLAY_* / MOVP / MOVE, the AV back end for movies, CIC for RAW | storage, imgpro C2, CIC `0x9be80000`, the AV back end | 684,201 / 612,936 (HLS components 310k, GUI 80k+, segment-9 PLAY_* / MOVP / MOVE 113k): the largest block | 2-4 weeks on top of storage with S-PLAY* kept; native: a block of its own (?) | playback of real files, index, zoom, histogram, erase, protect |
 | **HDMI and DisplayPort** (4.9) | N with `--hdmi on` (since 2026-10-23, E143, E146, E147): a plug runs the hot-plug pin's IRQ 109, the HDMI init, two E-DDC reads with IRQ 239, the EDID's checks and parse and the connect report to UI_IN natively (H-GIOSLOTS, S-HDMISINK); off by default. On E143 since 2026-11-08 the application's TRA 588 is taken by S-OUTDEV, and CapIod's open, the transmitter's open (PHY, SCDC, update) and VSC channel 0 at 1080p59.94 run natively; channel 0 composes its window, nothing drawn on it; the unplug runs down to the disconnect report (A-HDMI-1) (X) | TX byte registers at `0x99c07000` (HPD / RxSense byte 8, DDC `0xa80..0xa83`, the buffer `0xc00`, IRQ 239, the open's words), the PHY words at `0x99c08000` and the GIO pin 77 (`0x9b881540`, IRQ 109), all modelled; VSC channel 0 | the application's notification of the open (CmpCst_Function's 494, the TRA reply), the GUI's planes on channel 0, the return to the TFT at an unplug | about 11k (3.3k plus the TX / DP driver's 7.7k) | 1 week left (the notification and the GUI's HDMI layout) | the HDMI output a TV shows |
 | **USB** (4.10) | 0 on E143 | the event level first (EV_USB_CONNECTED 8, EV_USB_RXDETECT `0x040d00d2`, the select screen); later a DWC3-family device at `0x9a600000` (IRQ 223) | SCPU (PD, power source), ADC flag `0xbf`, the PC_* tasks, storage for MSC | 121,861 / 117,704 | 1-2 weeks events; 4-8 weeks data path | the USB select screen, charging state; later MSC, MTP, PTP |
 | **PC connection over PTP (TPC)** (4.10) | 0 | ? (the bulk of the USB data path) | a USB or Wi-Fi transport, storage | about 52.6k / about 52k (21.4k of it filed under factory code) | ? | tethering, the PTP firmware-update path |
@@ -5400,10 +5400,11 @@ there (it stays on the other bodies).
   6's flag word. Each later send to queue 6 then sets flag `0x640000` after the message is queued, and fails. The same
   happens without the opt-in, from S-MODACK's replies: 3 errlogs at PLAY, 8 after its return, 15 after a further
   pass; none in camapp 1. Not fixed here: the table's init belongs to the boot every session runs.
-- **Open.** The decode's units (kind 10, `0x9c200000`) and the callback's phases; the thumbnail (IFD1 empty); INFO's
+- **Open.** The decode's units (kind 10, `0x9c200000`: read and modelled 2026-11-11, 4.8.13, where S-PLAYDEC keeps
+  only the requests with a pre-reduction) and the callback's phases; the thumbnail (IFD1 empty); INFO's
   histogram (above); the queue bind table; PLAY_IMAGE's and PLAY_SOUND's parts (not followed); the album / index
-  build behind the component's index and right / left (not read, ?: playOneFrameStart's Get_Album_Num `0x503dd27f`,
-  called at `0x50c500c5`, was not entered at PLAY in a run with one picture, X). On the other bodies the
+  build behind the component's index and right / left (read 2026-11-11, 4.8.13: the album is the short-movie album
+  manager's, and the index is the DCF database's). On the other bodies the
   module stays stood in (finding 92's addresses), and the E118 family's files lack the firmware's Exif (finding 93;
   they carry it since findings 102 to 104, and its native load would read it, finding 106).
 
@@ -5580,6 +5581,148 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
   S-MEDIA's place for the first slot (`0x31`, `0x35`); `0x72`; the write-protect pins; the expander's chip and
   UI_IN's group 1 producer; the removal of the save slot's card under camapp 3; E139, E134 and E125; the browser
   player's page (the input works through the API; no control for the second slot yet).
+
+#### 4.8.13 The play module's decode and the album (2026-11-11; D unless tagged, addresses E143's)
+
+- **Why.** 4.8.11 left the view's decode stood in (S-PLAYDEC: no pixel written) and the album open. This round reads
+  the decode from the play module's request down to the registers, models the block the request drives, and reads what
+  "album" and the picture index are. Everything is behind `camapp_play_native` under `control camapp 3`; the default
+  sessions are unchanged (X: golden identical).
+- **The path.** PLAY_LOADDRAW (119) reads the file (two requests) and posts PLAY_DECODE's queue 194 {`0x42`, 0, 1, a
+  parameter}; PLAY_DECODE (118) runs play_img_make_view_division, whose request (4.8.11) carries one more field: +28
+  a work buffer for the decoded planes (+36 its bytes), X: bus `0xcfbd5400` and `0xe2f61400`, outside the lab's
+  memory (the lab backs 384 MiB of DRAM from bus `0xa0000000`). The source's +0 is a bus address too (X: `0xaefce700`,
+  the whole file). The issue `0x5048f331` builds a local request of kind 10 (`0x5048f39d`), the source's 64 bytes at
+  its +20 and each destination's 56 from +84. It compares the destination with the source's size over 7, plus 1, made
+  even (`0x5048f3d1..0x5048f40a`): a smaller destination takes an intermediate image and a further call
+  (`0x5048f4b3..0x5048f559`, not followed); the views here (900 x 600, 474 x 316) are larger (X). The dispatch
+  `0x5046d814` gives kind 10 to the generic handler `0x5046d994` -> `0x5046d9a6`: the parameters' packing
+  `0x504809ec` into a register image (X: at `0x62a83228`, more than 11 KiB), the callback's phase 4, the units' set-up
+  `0x5048134d`, phase 5, the go `0x504814d2`, phase 6. After the end's interrupt the end function `0x504814ef` runs
+  (X: its writes follow the handler's).
+- **The block: the image library's pipeline at `0x9c200000`, and the JPEG codec at `0x99900000`.** Not the imgpro
+  unit `0x9c600000` (4.3.1). The register image's first three words are unit masks A, B and C; the set-up writes each
+  unit's words by its bit (`0x50481cd5..0x50482224`). The decode's masks are A `0x80301`, B `0x100001`, C `0x107` (X),
+  and its units:
+
+  | Unit | Bit | What (D where the code computes its words, else I) |
+  |---|---|---|
+  | `+0x000..+0x2fc` | - | the block's own: unit masks, starts, statuses, IRQ enables, clock words |
+  | `+0x400` | A 0 | ? (28 words) |
+  | `+0x2e00` | A 8 | the prefilter: mode and taps (below) |
+  | `+0x2400` | A 9 | the resizer's map: centres, steps, cross terms |
+  | `+0x800` | B 0 | the output: format, pitch |
+  | `+0xb400`, `+0x20000` | B 20 | the resizer: source, destination, sizes; its program (`0x13a2` words, below) |
+  | `+0xb000` | C 0 | the codec's output: the work buffer, the MCUs a row |
+  | `+0xb080`, `+0x3a00` | C 1 | the codec's side: MCU counts, the mode |
+  | `+0xae00` | C 2 | the codec's stream: its address |
+  | `+0xc00..+0xeff` | - | written for every request (`0x50481c53`, `0x50482444`); ? |
+
+  The resizer's program is copied from the image's table `0x5063a040` (`0x50482e38`), the same for every request.
+  The codec's driver is `0x5050a2ba`: mode 0 is the decode (`+0x1000` = `0x8004`, `+0x100c` = `0x8002`, `+0x1028` =
+  `+0x102c` = `0xffff`, then `+0x1000` bit 0 set); any other mode is the encode, which writes the size, the MCU count
+  and the Huffman tables (`+0x1200..+0x1800`, `0x5050a606`), as does the start beside it (`0x5050a4ad`, with the
+  quantization tables at `+0x1c00` and `+0x1c80`). The codec parses the stream's headers itself (I: the driver gives it
+  the file from SOI and no table).
+- **The protocol (D; X: 5,465 register accesses a request, 5,026 of them the program's copy).** The set-up writes the
+  clock words (`0x5048d48a`: `+0x2d8`, `+0x2e8`, `+0x2e0`, `+0x2f4`, then `+0x2f8` = `0x2611` and a wait until its low
+  byte reads 0), the masks to `+0x004`, `+0x014`, `+0x01c`, and the units' words. The go (`0x5048198b`): the codec's
+  start, `+0x0c8` = `0x102`, `+0x12c` = 60, the masks to `+0x034`, `+0x03c`, `+0x0cc` = 5, `+0x024`, `+0x13c` =
+  `0x100000`, `+0x0e8` = B & `0x700000`, `+0x0f4` = 5. The end is IRQ 288 (the handler `0x5048bb88`, attached at level
+  5 by the library's `0x5048c3a0`, which H-IMGPROINIT runs): it ands the statuses `+0x110`, `+0x120`, `+0x12c` with
+  their enables `+0x134`, `+0x13c`, `+0x140`, writes the results back and clears the enables; with `+0x120` bit 20 it
+  reads the resizer's status `+0xb47c` and enable `+0xb478`: bit 0 calls the request's callback with phase 12 (X: the
+  wait then returns). The end function writes the masks to the statuses (`+0x10c`, `+0x11c`, `+0x120`, `+0x12c`) and
+  to `+0x020`, `+0x030`, `+0x038`, `+0x000`, `+0x010`, `+0x018`, the codec's `+0x000c` = 5 and the clock words
+  (`0x5048d53a`). The driver reads no codec register but `+0x1000` and no result word on this path (X: 13 reads a
+  request).
+- **The geometry is in the words (D).** The stream: `+0xae04` = the request's source +0 (`0x50477451`). The codec's
+  output: `+0xb00c` = the work buffer >> 4 (`0x504773c2`), `+0xb08c` / `+0xb080` the MCUs a row and the MCU rows
+  (`0x504772d5..fe`). The resizer reads the same buffer (`+0xb550`, `0x5047991b`; `+0xb548` the size) and maps each
+  destination pixel into the source about the two centres: `+0x249c` / `+0x24a0` = (size - 1) << 3, `+0x24ac` /
+  `+0x24b0` the steps in 4.12 fixed (`0x504784f4..0x5047853e`; X: `0x1cd0`, `0x1cd2` = (1619 << 12) / 899 and (1079
+  << 12) / 599), `+0x24b4` a cross term (`0x5047a47a`: the map is affine), `+0xb514` / `+0xb518` the position of
+  pixel (0, 0) from the source's centre (step * -(size - 1) / 2), `+0xb598` / `+0xb59c` the destination's centre.
+  So x reads the source at 809.5 + (x - 449.5) * 1.80078: 0.049 .. 1618.95 (X). The destination: `+0xb560` =
+  address >> 4, `+0xb5a0` the size, `+0x8b8` the format (the low nibble 2, bit 8 clear for 3074, `0x5047ecbf..`),
+  `+0x8ac` the pitch in units of 64 pixels (`0x5047ef83..b0`).
+- **The prefilter (D for the table and the words; its form I).** `0x504e2425` writes the unit `+0x2e00` for each axis
+  the source is larger in: the row `0x504e23a5` finds by the ratio source / destination (.10 fixed) in 40 thresholds
+  (`0x5066fb58`; the rows, `0x506a4a64`'s pointers). A row is a pre-reduction code (0, 1, 3 or 7) and three taps;
+  every row's taps make 128 as centre + 2 * next + 2 * outer (X: all 40), so a symmetric filter of 5 taps in 1/128
+  (I), its pass band narrowing with the ratio. The view's 1.8 takes row 9: 68, 34, -4 (X: `+0x2e64` = `0x220044`,
+  `+0x2e68` = `0xfffc`). A ratio above 3.249 takes a pre-reduction: INFO's detail view (474 x 316, 3.42) has code 1,
+  and its request differs in 57 words beside the program's copy (X): B is `0x101001`, the resizer's source is 810 x
+  540 (`+0x249c` = `0x1948`), `+0xcd8`, `+0xce8`, `+0xd00`, `+0xf00`, `+0xb4b8`, `+0xb4dc`, `+0xb588` change. Which
+  unit halves the picture, and how, is not read (?). The table fits codes 1, 3 and 7 being reductions by 2, 4 and 8
+  (I): rows 16 to 23, 24 to 31 and 32 to 39 repeat the taps of rows 8 to 15 at 2, 4 and 8 times their thresholds (X:
+  3557, 7114, 14228 against 1778; the last threshold is 65535, so a 16-bit ratio always finds a row).
+- **The model (X, `emu/src/dev/imgpipe.mjs`, board `imgpipe`).** S-IMGPIPE: the pages above as storage, the commit
+  word's low byte 0, the statuses' write 1 to clear, IRQ 288 while a status and its enable share a bit. At the go's
+  last word it computes the one program read here and refuses any other with a bus error (other masks, a missing
+  word, the 4:2:0 mode, a crop, a cross term, format 3330, a pre-reduction, a work buffer on the lab's memory, the
+  encode): the stream from `+0xae04` decoded by the lab's own baseline decoder (`emu/src/lab/jpeg.mjs` decodeJpeg;
+  SOF0, 8 bits, one interleaved scan), checked against the words' size and MCU counts, then **A-IMGPIPE-2 (I)**: each
+  plane through the prefilter's taps along x and y (edge samples repeated), sampled at the mapped position by linear
+  interpolation, the chroma at each pair's even pixel; the destination written as Y Cb Y Cr, the layout the library's
+  fill gives format 3074 (4.3.1). **A-IMGPIPE-1 (I)**: the end comes 1 ms of lab time after the go. The work buffer
+  is not written. What the units at `+0x400` and `+0xc00` and the resizer's program do to the samples is not read;
+  the resizer's own filter and the chroma's siting are assumptions. What would settle them: the program's meaning, or
+  a frame read back from a camera.
+- **S-PLAYDEC, what remains.** A request with a pre-reduction (the lab applies the library's own rule to the
+  request's sizes, the thresholds read from the image) is answered as before: issue and wait 0, no pixel. X: the
+  detail view's. S-PLAYSEQ, S-PLAYCOMP and S-PLAYVIEW stay out; S-ALBM stays (below).
+- **Where the result is shown (X).** The destination is one of the through image's two banks in turn (`0x98d4d800`,
+  `0x9a43e000`; the request's +64). The display interface then sends DISPLAY cmd 5 (the function ending at
+  `0x507f67fb`, through `0x5002e39d`) and the TFT's IMG1 is latched on the bank: DMASADR = address >> 4, DMALD `0x2b8`,
+  AREA 900 x 600, FMT 0, RSZ1 `0x10` with RSZ4 `0x2000`, no horizontal resize. That is one source row per line only
+  with IMG1's vertical unit of 1/8192 on channel 2 (A12): a 600-row picture for a 600-line window is evidence for A12
+  (I). The lab's IMG edge guard knew no such attach; it now passes an IMG1 drawn one pixel per pixel from a frame a
+  decode wrote (`emu/src/lab/display.mjs` decoded_fit).
+- **The frame against camapp 1's (X, playDecodeSession).** Two pictures of two scenes (S-SCENE's static and chart
+  presets), taken in camapp 1 with the live view, and under camapp 3 the same two from the same scene views and a
+  third of the static one (camapp 3's live view stops at the histogram, 4.2.4, so the test gives each picture its
+  view). Differences, each with its cause:
+  - *The picture.* Mean luma difference 1.47 (static) and 5.29 (chart); against the other picture 79.8 and 77.0.
+    Camapp 1 shows the scene's frame, which S-PLAYVIEW renders again and the VSC scales from 1620 x 1080; camapp 3
+    shows the file: S-JPEGENC's stream keeps each 8 x 8 block's mean only, then the prefilter and the resizer's map
+    (A-IMGPIPE-2). The chart's fine detail is what the block means lose.
+  - *The plane.* Camapp 1: IMG1 on the lab's live-view bank, resized by the VSC. Camapp 3: IMG1 on the bank the
+    firmware chose, one pixel per pixel.
+  - *The OSD.* 11,744 (picture 1), 11,849 (picture 2) and 12,124 pixels (picture 3 against camapp 1's picture 1),
+    all from row 519 down: the information rows. Camapp 3's values are the file's Exif (4.8.11: no date with the
+    clock unset, ISO L25, 3:2, 1/1), camapp 1's S-PLAYCOMP's record.
+  The bank's 1,080,000 bytes equal the test's own computation from the independent decoder's samples, and the
+  composite's picture equals the bank's samples (0 differ, four views).
+- **The album is the short-movie album manager (D).** ALBM's functions are albm_main_* over "smv" and "4gb" albums
+  (its console's `albm add FILENAME ALBUM_NO ..`), and Get_Album_Num `0x503dd27f` is PlayCommon's
+  getShortMovieAlbumNum. playOneFrameStart calls it only where `0x5040111b(4, index)` returns 0 and a flag word is 0
+  (`0x50c50096..0x50c500c5`). X: not entered with one, two or three stills over PLAY, right and left. Stills have no
+  album.
+- **The picture index is the DCF database (D, X).** The play module builds no index of its own. A move's requests
+  are PLAY's: the play API posts PLAY_EXEC {6, a token, 0 (load), parameter}, then {.., `0xb` (load and draw), ..}.
+  The picture is named by its DCF index: the media API reads the count from the database's table (`0x50874b39`: the
+  word at `0xa33aa5b4` + 52 * slot) and the fnode by index through `0x50874bc9`, which sends the DCF process command
+  5, the one the lab's S-CARD list sends (`emu/src/lab/storage.mjs` fnode). play_file_read (`0x518b017f`) takes the
+  file part's offset and size from the fnode (`0x508750f6`: +68 / +72 for part 3) and sends the file module a request
+  of code `0x53` (`0x518b0236..40`). X, three pictures: PLAY shows index 3, right 1, 2, 3 (it wraps), left 2; each
+  view makes three reads (PLAY_LOAD one, PLAY_LOADDRAW two) and one decode. X (playDecodeSession, three pictures):
+  PLAY 3, right 1, left 3, left 2, each with the component's getNumber (index, file number, folder 100) and the
+  decode into the other bank than the view before; the move right calls the fnode getter 49 times, for the indices 1
+  and 3.
+- **Stand-ins under the opt-in (X).** Over PLAY, right and left no S-PLAYSEQ, S-PLAYCOMP, S-PLAYVIEW or S-PLAYDEC
+  fires; the first three install no hook, S-PLAYDEC's observe the issue and the wait and pass a request without a
+  pre-reduction to the firmware. S-ALBM answers once, at the mount, as in every session with the file
+  system. Lifted, the storage bring-up stops at once: the album manager's init starts a task (entry `0x508b7e91`) the
+  lab's kernel does not allow, before the application starts. It stays: no still path needs it.
+- **Tests (X).** `emu/test/test_imgpipe.mjs`: the decoder against refs/jpeg.mjs 6 of 6 (the lab's stream sample for
+  sample; streams with AC coefficients in three samplings within 1 level), the model on a bare machine 30 of 30.
+  `emu/test/test_camapp.mjs`: playDecodeSession 25 of 25, playNativeSession 11 of 11.
+- **Open.** The pre-reduction (which unit, its phase), so the detail view's decode; the units at `+0x400` and
+  `+0xc00`, the resizer's program and filter (A-IMGPIPE-2); the units' time (A-IMGPIPE-1); the codec's own registers
+  beyond the driver's words, and its encode (another track); the request's callback phases 21, 22, 15 and 38; the
+  second request for a destination under 1/7 of the source; the index view, movies and the album manager; INFO's
+  histogram (4.8.11); the other bodies.
 
 ### 4.9 HDMI and DisplayPort
 

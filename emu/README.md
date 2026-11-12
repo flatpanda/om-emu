@@ -315,11 +315,13 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   scenarios ends in S-SHUTDOWN's PowerError where camapp 1's turns off (4.2.4; the cause in 4.3.6: TRA 586 is not
   answered, the flash capability still running when the shooting component's teardown asks for its stop). With the
   Player's `camapp_play_native` (off by default) the play module runs natively too (H-PLAYSTART, `src/lab/playmod.mjs`;
-  S-PLAYSEQ, S-PLAYCOMP and S-PLAYVIEW not installed): PLAY loads and parses the picture and shows its view, the
-  decode stood in at the image library (S-PLAYDEC: no pixel written), the lab's stream carrying the firmware's own
-  Huffman tables (A-JPEGDHT-1), and INFO's detail view draws its four histograms (Y, R, G, B) from the VSC unit's
-  bins, the fill's while no pixel is decoded; its frame is refused for the highlight unit's area (`docs/hle-gaps.md`
-  4.8.11, 4.2.7).
+  S-PLAYSEQ, S-PLAYCOMP and S-PLAYVIEW not installed): PLAY loads and parses the picture and shows its view, decoded
+  by the firmware's own request on the model of the image library's pipeline block and JPEG codec (S-IMGPIPE,
+  `src/dev/imgpipe.mjs`: the lab's baseline decoder, the scaling under A-IMGPIPE-2, the time A-IMGPIPE-1), the lab's
+  stream carrying the firmware's own Huffman tables (A-JPEGDHT-1); a request with a pre-reduction stays stood in
+  (S-PLAYDEC: INFO's detail view, no pixel written), and that view draws its four histograms (Y, R, G, B) from the
+  VSC unit's bins, the fill's while no pixel is decoded; its frame is refused for the highlight unit's area
+  (`docs/hle-gaps.md` 4.8.11, 4.2.7, 4.8.13).
 - The mode dial shows each position by the firmware's name for it: UI_IN's dial table gives the position's mode code
   and the build names the codes (fact `mode_dial`, `src/fw/facts.mjs` modeDial), so E143's positions 0..9 are S, M,
   B, C1..C4 (MY_MODE1..4), Movie, P and A (`docs/om1-input-spec.md` section 2). A session starts with the dial at P,

@@ -207,7 +207,7 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   its mean), recorded as REC_FILE's recorder records a file: its requests to the file module, each run natively,
   so the firmware's DCF database counts the picture at once and playback shows the database's pictures
   (`docs/hle-gaps.md` 4.8.9; on E146, E147, E144 and E148 too, the other bodies with a native card through the file
-  module's own file requests). On E143, E146, E147 and the E144 family but E130 REC_FILE's own task records it
+  module's own file requests). On E143, E146, E147 and the E144 family but E145 and E132 REC_FILE's own task records it
   (`src/lab/rec.mjs`,
   `docs/hle-gaps.md` 4.8.10): the packet REC_IMAGE posts it, with the file's header (Exif with the Make, Model,
   dates and maker notes, XMP) built by REC_IMAGE's header maker natively from the shot's EXIF parameters (S-EXIFPRM)

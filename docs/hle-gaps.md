@@ -5026,7 +5026,8 @@ there (it stays on the other bodies).
   (the HLS side); RAW and RAW + JPEG (`FileType` 0, `ExifFileType`, the type table `0x60358df8`); `Free` and its
   completion with a requester (api_rec); REC_MAIN's task and the image pipeline (REC_IMAGE's task runs natively on
   E143 since 2026-11-10, 4.3.3, X); the E144
-  family's E130 (its REC_FILE inlines its start and finish; the eight others natively since 2026-11-10, below). E146
+  family's E145 and E132 (E130, E133 and E129 natively since 2026-11-11, `docs/model-survey.md` findings 131 to 136;
+  the eight others since 2026-11-10, below). E146
   and E147 since the same day (below).
 - **The second slot (survey, D):** the packet carries it (`Media2`, `ExifFileTypeDoubleSlot`, `BuffAddrDoubleSlot`,
   `SlotNo`) and REC_FILE records both slots in `rec_file_record_DoubleSlot` (`0x5053f97d`, the second file context
@@ -5112,11 +5113,12 @@ there (it stays on the other bodies).
     (`OM SYSTEM`; `OLYMPUS` on the six), XMP on E144 and E148 only and IFD1's thumbnail of length 0; the firmware's
     image count 1 and its fnode 1 the file in the same session (S-CARD's count retired there), file 2 next at the
     next session's mount; E143's REC warnings around S2 (E144, E139). test_playinfo passes on the eight.
-  - *Open:* E130, and E145, E133, E129 and E132 outside the family, whose REC_FILE inlines its start and finish
-    (no rec_native: S-RECFILE through fileif); the 96-byte recorder those and the eight hold (finding 122: E139's
-    builders read, its entry block without E144's word at +28; the rule `recorder` keeps the 100-byte form, so the DCF
-    steps are not extended); REC_IMAGE's own task on the family; the thumbnail and shooting values; RAW; the second
-    slot.
+  - *Open:* E145 and E132 (no rec_native: S-RECFILE through fileif; `docs/model-survey.md` finding 136). E130, E133
+    and E129, whose REC is the version before the family's (a 284-byte packet, REC_FILE's loop inlining its start
+    and finish, rec_make_file's context on its stack), run REC_FILE natively since 2026-11-11 by a rule of their own
+    (`src/fw/facts.mjs` recFileInline, findings 131 to 135), which also reads the 96-byte recorder's builders on
+    them (the rule `recorder` keeps the 100-byte form); REC_IMAGE's own task on the family; the thumbnail and
+    shooting values; RAW; the second slot.
 
 #### 4.8.11 The play module's load under camapp 3 (2026-11-10; D unless tagged, addresses E143's)
 

@@ -2254,7 +2254,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    which test_facts leaves to each body, E142 giving it), their 96-byte recorder's builders not read (finding 122). On
    the eight: REC_IMAGE's own task (the post of rec_make_image_finish read, finding 118), the thumbnail and the
    shooting values in Exif (S-EXIFPRM leaves the template's), RAW files and the second slot, the shot's DCF checkout
-   (`0x1e001001`, the HLS media check-in).
+   (`0x1e001001`, the HLS media check-in). Since 2026-11-11 E130, E133 and E129 run REC_FILE natively by a rule of
+   their own, E130's builders read (findings 131 to 135); E132 and E145 are finding 136.
 124. **The E118 family's Format runs in its application** (2026-11-10, `src/fw/facts.mjs` mediaHls, `src/lab/media.mjs`;
    D at E122's addresses unless tagged). The menu path on the family (X, frames on E122, E118 and E120): MENU opens
    Shooting Menu 1, whose first row is Card Setup; RIGHT enters the page and OK opens it, which offers All Erase and
@@ -2359,6 +2360,131 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    E143 the queue's 12 id-word reads are 9 synchronous sends, 2 posts and a receive at `0x5102b35f..0x5102ba1a`
    (D; beside the C3D module's code, I; docs/hle-gaps.md 4.1.11). `bin/modelcheck.mjs` after the re-port: its 31 runs
    pass (X).
+131. **The REC version before the E144 family's: E130's REC_FILE** (2026-11-11, `src/fw/facts.mjs` recFileInline, fact
+   `rec_file`; D on E130 unless tagged; finding 123's stop). REC_FILE is static task 30 (`0x503d9350`, a stack of 2048
+   bytes), its packet on its frame at sp + 8, and waits on its queue alone (the word `0x60420eae`; no event flag)
+   through REC's receive wrapper `0x503d50e5`: the kernel's receive (`0x503e1dbf`) of 284 bytes with "rec.c" and no
+   timeout, then the abort test of the packet's shot (`0x503d5cd3` with the handle at +148, 1 to 27: an 8-byte entry of
+   a table, `0xa2ab3fa4`; set, Status becomes 7937). For each packet the loop logs state 60 (`0x503d9864`), runs
+   rec_file_start_process inline (its trace at `0x503d9382`, line 2192, where the family's loop calls a function), for
+   NoRecord (+126) 1 the buffers' free (rec_file_free_addr's trace, `0x503e0ad7` for +216 and +224) with the packet's
+   Status (+14), else the record step rec_make_file (`0x503d94e1`), whose status it keeps (`mov d0,d2` at `0x503d9429`,
+   the lab's handled), runs rec_file_finish_process inline (`0x503d942f`, line 2223) and, where Free (+168) is not 0 or
+   Dst (+84) is 0, logs state 62 and replies (`0x503d5071`, the function of the "REC post_msg_main" trace: {status, the
+   packet's +16 and +20}, 12 bytes, to the queue at +8); a status of 8064 to 8191 ends the loop (`0x503d5032`). The
+   packet has no dump (no "pExifParam " in the image, X); REC_MAIN's request has one (`0x503d53c8..0x503d5759`: com,
+   usMode, usSubMode, fnSetPercent, ulHandle[], usMedia, usMedia2, usRecordMediaMode, usRecordDevice, ulDispDevice,
+   usDst, usSrc, .., usNoRecord, usDst2, .., pDcfFnode), and REC_MAIN fills the packet from the request beside it
+   (`0x503d5396..0x503d59f5`): usMode to +72, usSubMode +74, fnSetPercent +28, the nine handles +36, usMedia +76,
+   usMedia2 +78, usRecordMediaMode +80, usRecordDevice +82, usDst +84 and +168, usSrc's bytes +86 and +172, usNoRecord
+   +126 (for the Modes 4097, 4103, 4108 and 4113), usDst2 +128; then the shot's handle +148 and the shot's record +152
+   from TAKE's getter (`0x5029940c`, `0x503d5a1b..0x503d5a4f`), Status 0, +164 1 and the buffers +216..+236 0. So the
+   names the lab uses (pExifParam +152, HandleTarget +148, Mode, Media, Status, ImgAspect +164, FileType +272, BuffAddr1
+   / BuffSize1 +216 / +220, HeaderSize +256, Addr / Size +260 / +264) are E143's for the same uses (I). Free is
+   REC_IMAGE's: its task (31, `0x503d9cf9`, the queue word `0x60420eb0`) stores rec_bracket_update's result at +168 over
+   usDst's copy (`0x503d9d3c..0x503d9d44`), 1 when the bracket's frame count passes its last (`0x503d6b93..0x503d6ba7`),
+   and after its image (rec_make_image_finish inline, by Mode through the table `0x60911c2c`) posts a still's packet to
+   REC_FILE's queue itself with "REC post_msg" (`0x503d5134`, 284 bytes, from `0x503d9e33` for Mode 4097): S-RECIMAGE's
+   post is the camera's route, as on the family (finding 118).
+132. **E130's record step: rec_make_file, its context on the stack, and the recorder's builders** (2026-11-11; D on E130
+   unless tagged; finding 122's "not read"). rec_make_file (`0x503d94e1`, a frame of 388 bytes) holds rec_file_record
+   inline (its traces `0x503d95c5..0x503d973f`; no code holds rec_file_destination_record's trace, X) and keeps the file
+   context on its own stack: 84 bytes at sp + 28 (`0x503d952d..0x503d957c`: +8 the DCF block, 64 bytes at sp + 112; +12
+   the chain write's block, 116 at sp + 272; +16 the first cluster, +20 and +24 the write's cluster and sector, +28 the
+   entry's block, 96 at sp + 176; +32 the fnode, +36 the shot's record, +40 its time record +22708, +44 HeaderSize, +48
+   the size, +52 the bytes written, +56 and +60 this write's bytes and buffer, +64 the reservation's mode, +68 Media,
+   +70 FileType, +72 the record's +22926, with 1 the name's first letter `_`, +74 the status), passed to each step in
+   a0. The steps are the whole-file recorder's own (the 96-byte recorder, whose three blocks open the one function at
+   `0x512dd4a3`, which fills the same context on its stack): the lock `0x503df6e9` (the semaphore word `0x60420b88`),
+   the open `0x503df720` (the DCF block's +0 1, +2 Media, +4 `xxxOLYMP`, +16 and +20 the stamp of the time record by
+   `0x500de4be`, +32 0 or 0x80; FILECLBK's code 0x32 by the synchronous send `0x50034a38`; the fnode back at +24, kept
+   at the context's +32, its extension by the table `0x60911ee0`: ORF, JPG, TIF, ORF, RAW, WAV, TXT, MPO, ORI, ORF), the
+   reservation `0x503df8ee` (`0x505c4c3e` with Media, the size, the shot's record and the mode), the chain write
+   `0x503df963` (its block's +6 Media, +8 the cluster, +12 the sector, +16 the sectors, +20 the buffer, +28 the mode,
+   +36 the bytes; the message {REC's reply queue `0x60420ebc`, 0x54, the block} sent to FILECLBK's queue and the 12-byte
+   reply received, a status 0xbb01 sent again), the entry `0x503dfabf` (E139's 96-byte block, finding 122: +28 and +32
+   the stamp, +36 the first cluster, +42 the attribute 0x20, the folder's entry place by `0x505ba8e6`; code 0x66), the
+   buffer's free, for a second buffer (+224 / +228) the three again, the registration `0x503dfbf1` (the DCF block's +0
+   2, the fnode's +88 the DCF kind by the table `0x60911f08`, 1 for FileType 1, +44 the first cluster, +48 the size;
+   code 0x33) and the unlock `0x503df6f9`; after a failed step the cancel (`0x503dfd18`, code 0x36), else, unless the
+   packet's +165 is set, the shot's DCF checkout (`0x503dfcd1` to `0x505c4b29`), whose miss is REC's warning
+   `0x1e001001`, as on E143 (`docs/hle-gaps.md` 4.8.10). The recorder calls the camera's clock read before the open
+   (`0x500de2e8`, the function after the clock setting `0x500de2c8`); rec_make_file takes the time from the shot's
+   record.
+133. **E130's rec_jpeg_exec, header maker and EXIF module** (2026-11-11; D on E130 unless tagged). rec_jpeg_exec
+   (`0x503df01e`, from rec_make_image_exec `0x503d9f48` unless FileType is 3, the RAW's `0x503e3e0a`) sizes the file's
+   buffer from the record's +22904 and +22908 (`0x503e3bf7`, `0x503e3c1d`), takes it from REC's pool (`0x503e0a4f`) into
+   Addr, and by Mode runs rec_ImgPro_Ycc2Jpeg (`0x503dab8d`, Mode 4100), nothing (4103, 4107), or after the ePortrait
+   test (`0x503e0527`) rec_ePortrait_make_image (`0x503d828f`) or rec_jpeg_make_image (`0x503df122`); it frees a work
+   area (`0x503e0bfa`) and, with Status 0, runs rec_jpeg_make_header (`0x503df1d2`), then sets BuffSize1 and BuffAddr1
+   from Size and the buffer (the second buffer's pair +224 / +228 where the byte +192 is set, `0x503df0cc`);
+   fnSetPercent is called with 50 and 90 for the Modes 4100 and 4108. No header area is cleared through the image
+   engine, as on the family (finding 119). The header maker makes the crop area itself, at the record's +5172, from
+   ImgAspect and the image size's code +22904 (`0x503df290..0x503df39f`; with ImgAspect 1 and the record's own aspect 1
+   it is {0, 0, width - 1, height - 1} with no divide), where the family's divides by an area TAKE fills; it stores
+   HeaderSize 41984 (`0x503df699`), SOI, APP1 with the length 41982 and `Exif`, and has the serializer write the TIFF
+   data at +12 (`0x50303646`). The EXIF module is the family's form: the init `0x503035f9`, the template's init
+   `0x50303602` with no cache flush (the template `0x62667fe4`, 26320 bytes), the copy `0x5030362b`, the date set
+   `0x50305c65` (the time record +22708, DateTimeOriginal +1785, CreateDate +1805, DateTime +1364; the form of E142's,
+   finding 119), Make +1480, Model +1504, DigitalZoomRatio +1920. REC's module init is `0x503d4eaa`, right before
+   REC_MAIN's task (32, `0x503d4f08`), and binds REC_MAIN's queue to its flag (`0x60420eb2` to `0x60420de6`).
+134. **The rule recFileInline and the lab's part** (2026-11-11, `src/fw/facts.mjs` recFileInline, `src/lab/rec.mjs`;
+   `test/test_facts.mjs` pins the three). The rule reads the version where recFile and recFileQueue read none: undefined
+   with the family's dump string, without the trace table, without a static task whose own code holds the start's and
+   the finish's traces, or where that task's record step is not rec_make_file; past that a part not found throws. It
+   reads the task and its queue from the loop's opening, the record step and Status from the call before the finish's
+   trace, Free, Dst, Mode and the reply from the loop's end, pExifParam from the loop's load of the shot's record (which
+   rec_jpeg_exec must take from the packet), the size from the receive and the post, Addr, Size, BuffAddr1 and BuffSize1
+   from rec_jpeg_exec, HeaderSize from the header maker, ImgAspect from rec_bracket_update (which the header maker must
+   read), Media and FileType from rec_make_file's fill of its context, the builders from the 96-byte recorder's calls
+   (the open, the entry and the registration each sending their code once), rec_make_file as the one other caller of the
+   open, and the context's DCF block (+8) and fnode (+32) from the open; the EXIF module, REC's init and the clock as
+   recFileQueue does, with the date set's order its own. The fact has recFile's shape with `contexts` null and `context`
+   {at: the registration's entry, dcf, fnode}, `reply` {fn, from}, and Media2 and RecordDevice null: rec_make_file reads
+   neither (D). The lab (the stand-ins the family's: H-EXIFINIT, H-RECINIT, H-RECFILE, S-EXIFPRM, S-RECIMAGE, S-JPEGENC)
+   writes no field the fact gives null and no crop area; S-RECIMAGE sets Free 1, as REC_IMAGE's task does for the frame
+   that ends a shot (I: the lab's one frame), so REC_FILE replies; no requester owns the ObjResponse queue in the lab,
+   and the reply is taken at REC_FILE's call and answered as sent, as S-RECREQ takes E143's. The file's record (its
+   path, size, cluster and stamp) is read through the fnode and the DCF block the context held at the registration's
+   entry, since the context is gone when rec_make_file returns.
+135. **REC_FILE natively on E130, E133 and E129** (2026-11-11, X: `test/test_storage.mjs --session` per body, 34 checks
+   each, in `bin/test.mjs`; refs/exif.mjs and exiftool). With the clock set through each body's clock setting
+   (2026-11-08 12:34:56) S2 gives `C:\DCIM\100OLYMP\PB080001.JPG` on the three: 62,857 bytes, 41,984 of the firmware's
+   header, then the lab's stream after its SOI, from cluster 5. Its Exif: Make `OLYMPUS CORPORATION`, Model
+   `E-M10 Mark III`, `E-PL9` and `TG-5` (the strings in each image, D: E130 body `0x60a74`), Exif version 0231, the
+   maker notes `OLYMPUS` (15,844, 15,884 and 14,612 bytes; CameraID `OLYMPUS DIGITAL CAMERA`, CameraType2
+   `E-M10MarkIII`, `E-PL9`, `TG-5`, AspectRatio 4:3), no XMP, the three dates the clock's, DigitalZoomRatio 1 and IFD1's
+   thumbnail of length 0, read by exiftool without a warning (E130's with its validation: 8 minor ones and the
+   thumbnail's length). The firmware's image count is 1 and its fnode 1 the file in the same session, the directory
+   entry's first cluster the context's, and the next session's numbering mount gives file 2. Around S2 each logs one REC
+   warning, `0x1e001001` (the checkout, E130 from `0x503dfd13`), and REC_FILE's reply carries status 0. E133 (task 30
+   `0x503cd7c4`) and E129 (task 30 `0x503a900b`) read every part by the rule (X) with the packet's offsets E130's; they
+   differ in what was met: E133's rec_jpeg_exec opens `mov 152,a0; add a2,a0` (`0x503d3777`) and its post loads the size
+   as its line number (`0x503c9441`), E129's loop calls `0x503b0e95` before the start's trace and its date set has
+   another order (`0x502d92ef`); their templates are 25,780 and 25,700 bytes, the time records +22736 and +22116.
+   `test/test_playinfo.mjs` passes on the three (20, 20 and 17 checks), `test/test_facts.mjs` with the three pinned
+   (1429 checks).
+136. **The two that are left, and what is open** (2026-11-11; D unless tagged). Of the five bodies of finding 123, E132
+   and E145 keep S-RECFILE through fileif (no `rec_native`); the rule returns undefined on both and on the 14 others
+   (X). E132 (the other TG-5 build) has E130's loop (task 30 `0x503aca0e`, the same end and reply) but its record step
+   is rec_file_destination_record (`0x503acf1e`: RecordDevice +82, bit 0 to rec_make_file `0x503acb85`, bit 1 to
+   rec_file_wifi_record_start's part, `0x503acfb1`), its NoRecord branch calls rec_file_free_addr as a function
+   (`0x503acebe`), and its rec_jpeg_exec (`0x503b3092`) keeps the packet in a3 and the buffer in d3 and has a third
+   buffer pair (+248 / +252 where +206 is 2): another form, not read further. E145 (TG-7) holds the family's version,
+   its 300-byte packet (the receive `0x503ca2b6`) and the dump string, with the loop inlining the start and the finish
+   as E130's does (task 30 `0x503cf34b`, traces `0x503cf38c` and `0x503cf438`; the record step
+   rec_file_destination_record `0x503cf915` with RecordDevice +202) and a date set in a fifth order (`0x502ed923`):
+   recFileQueue wants the two in functions of their own, so neither rule reads it. A scratch copy of recFileQueue that
+   takes the inlined loop (not committed) reads its other parts by the family's forms but for two (X): the date set's
+   order (the time record's offset 8 bytes in, +24844) and the crop area, which E145's header maker makes itself as
+   E130's does, from ImgAspect and an aspect code it sets at the record's +7314 (the record's +25148, or 1): with both 1
+   it divides by nothing, else by 2 and by what `0x503dbcb8` and `0x503dbccc` return (not read), never by an area TAKE
+   fills (`0x503d6c0e..0x503d6d12`, D), so no crop area is read; the packet's fields are E134's (FileType +296). Its
+   record step's card path (RecordDevice's bit 0) is not read, and no session ran it. Both hold the 96-byte recorder
+   (finding 122). Open on the three that run: REC_IMAGE's own task (its post and Free are read, finding 131), the
+   request's fields the lab leaves 0 (usDst and usSrc among them: which values TAKE's request gives a still is not
+   read), the thumbnail and the shooting values in Exif (S-EXIFPRM leaves the template's), RAW files, the shot's DCF
+   checkout. The rule `recorder` still reads the 100-byte form alone; no body takes S-RECFILE's DCF-steps path.
 
 
 
@@ -2565,6 +2691,8 @@ MiB (with E143's 384 MiB its application start faulted in a copy to `0xbfc59440`
 at the DRAM's top is I. S-PANELDONE answers three panel-flag waits in its start (X); which waits these are is not read.
 Open: which touch controller it polls is not checked against S-TPREG's; its zoom table (+644) and lens buffer are the
 rules', not checked against a lens attach.
+Since 2026-11-11 REC_FILE's own task records S2's file natively, with the firmware's Exif header (Model
+`E-M10 Mark III`; findings 131 to 135).
 
 **E133 (E-PL9).** Ported through E142 (2.24M instructions paired, against 1.04M directly). Since 2026-10-29
 `bin/modelcheck.mjs` passes on the TFT (no EVF), the count probe and the card included (its card's file system native:
@@ -2582,6 +2710,8 @@ boot key (`0xa2ae718c`) and the second factor (`0x62399284`) were 0. E130 gets 4
 and 149 wait too once their start is done (X). S-BOOTKEY gives the boot key the power switch's code 0x000C, which
 the issue maps to 1 (`0x5071c3b7..c7`, D). Open: the second factor's source; the E-PL9's power key code is taken from
 the issue's own test, not from its key matrix.
+Since 2026-11-11 REC_FILE's own task records S2's file natively, with the firmware's Exif header (Model `E-PL9`;
+findings 131 to 135).
 
 **E129 (TG-5).** Ported through E145 (2.61M instructions paired, against 0.94M directly). The TG-5's panel driver (E129
 `0x5015b466`) sends its command list over serial channel 2 with GPIO 117 around each send and waits on a completion
@@ -2599,6 +2729,8 @@ part read in `0xa2b4d2d0` by the loader `0x50022ec0`), its region set-up of the 
 its hook list (empty for stage 1, `0x50173c78`) are not run (D). Since 2026-10-29 (finding 24) the charger's
 transfers are served (S-SIOIIC, S-CHARGER, H-SIOMAP) and the card is native: the start ends in the date and time
 setting, which MENU cancels, and `bin/modelcheck.mjs` passes.
+Since 2026-11-11 REC_FILE's own task records S2's file natively, with the firmware's Exif header (Model `TG-5`;
+findings 131 to 135).
 
 **E132 (TG-5).** Ported through E145 (2.68M instructions paired, against 0.94M). Its registry bootstrap has no such
 wait (D). It stopped in CamApp.start (`camapp.mjs`), every task blocked: the lab task requests serial channel 9 (E132

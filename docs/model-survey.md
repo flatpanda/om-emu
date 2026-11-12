@@ -2570,7 +2570,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    E147, E144, E148, E139, E134, E137 and E125 too (finding 111's list of bodies where it changed nothing loses them;
    E125's word was already the right one before the rule; nothing pressed Delete there until test_erase held
    ERASE_DIALOG both ways on review), and UP and OK send request 21; on the E118 family it still opens nothing (why,
-   ?). No default session's screen changes by it (X: golden's screen layer, 240 sessions), but the evaluations that
+   ?; it opens since the family's REC_FILE runs natively, X: test_erase's ERASE_DIALOG at the round's merge, I: the
+   DCF database now holds the pictures, finding 146).
+   No default session's screen changes by it (X: golden's screen layer, 240 sessions), but the evaluations that
    read the status take other paths, so the instruction counts of 23 scenario sessions' interrupt rows and stops move
    (playback's first difference: an IRQ 310 row 117 instructions later) and check_perf's P6 instruction count with them;
    with the
@@ -2644,7 +2646,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    without an erase (X on E142 without one too; why, ?), so the next picture's number is taken on the eight others
    alone (test_erase
    SHOOTS_AFTER_PLAY). Once REC_FILE registers the pictures on E130 or the E118 family the rule's calls make E130 and
-   E122 native too (I; ERASE_NATIVE would have to follow).
+   E122 native too (I; ERASE_NATIVE would have to follow). (At the round's merge, 2026-11-12, with REC_FILE native
+   there, findings 135 and 146, ERASE_NATIVE holds E130, E133, E129 and E122 too, X: test_erase; E118 and E120 keep
+   no erase fact.)
 141. **The edit-save requests** (2026-11-11, `src/lab/camapp.mjs` EDIT_SAVE; D: each id is the one its sender sets after
    its entry trace, as finding 110's). The play requests that save a file an edit made: OlyHfwOpeEdtRsz::save 120 (E143
    `0x50b5ec3e`), OlyHfwOpeEdtTrm::save 131 (`0x50b5f886`), OlyHfwOpeEdtCol::save 142 (`0x50b5b3ed`),
@@ -2690,9 +2694,10 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    finding 129); a RAW + JPEG object's part (OBJ_DEL_PART, by the setting 139) and an album picture (100 to 165), which
    the lab's pictures are not; how the component's `0xf000003a` reaches the GUI; the media status at a card out and in
    at run time (finding 138); S-CARD's second mount-state word on ten bodies (finding 138); why the E118 family's
-   Delete opens no dialog (?); OlyHfwOpePlyRec::record 115 and OlyHfwOpeEdtMov::startImageCapture 527 (finding 141);
+   Delete opens no dialog (?; it opens since the merge, finding 138);
+   OlyHfwOpePlyRec::record 115 and OlyHfwOpeEdtMov::startImageCapture 527 (finding 141);
    and the family's isProtect (303), which S-PLAYSEQ answers 0 whatever the attribute (finding 109): no body of the
-   family erases natively yet.
+   family erases natively yet (since the merge ERASE_NATIVE holds E122, finding 140).
 143. **The E118 family's REC_FILE task, by a rule** (2026-11-11, `src/fw/facts.mjs` recFileFrame, fact `rec_file`; D on
    E122 unless tagged; answers finding 102's "which caller is REC_FILE's" and finding 105's "Next"). The object-name
    table names task 33 REC_FILE, queue 78 REC_EXEC_FILE, queue 85 REC_POST_FILE, queue 34 FILECLBK_UEXEC and semaphore
@@ -2897,7 +2902,8 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    getter asks a media API (`0x503fab11`, E143's `0x503f0b4d`) for the media 0 and 1 and answers 2 on E147 (page 668
    is opened, `0x51179157(8, 668)`) and 10 on E143 (578): the OM-3 has one slot (its file layer one drive, `cmp 1,a2`
    at `0x50896d7a`, E143's 2); that the lab's E143 counts its second slot, which holds no card, is S-CARD's mount
-   state for it (hle-gaps 4.8.3, I). With the keys of E147's own path (OK, UP, OK, UP, OK) the request reaches
+   state for it (hle-gaps 4.8.3, I; since hle-gaps 4.8.12 the second slot is empty by default and E143's OK opens
+   the card's Format Card at once, X there). With the keys of E147's own path (OK, UP, OK, UP, OK) the request reaches
    S-MDACTRL (TRA 1509, command 1, media 0) and the format runs (X), which rules the other two out. The fix is not
    another list of keys: the path is found on the screen (finding 153).
    *The card input.* The symptom (X, with the lookup as it was): `TypeError: Cannot read properties of null (reading
@@ -3033,12 +3039,14 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    E122 a frame around the row. The rule is kept honest by what follows the last key: the media control's start with
    the format's command for media 0, which the tests check; a walk to another row would start nothing or another
    command, which stops the session. X: the keys it finds are E143's and E146's old six (OK, OK at the card choice,
-   UP, OK, UP, OK), five on E147 and E148 (no card choice), RIGHT, OK, DOWN, OK, UP, OK on the E118 family after a
+   UP, OK, UP, OK; with one card no card choice since hle-gaps 4.8.12),
+   five on E147 and E148 (no card choice), RIGHT, OK, DOWN, OK, UP, OK on the E118 family after a
    picture, and on the E144 family five DOWNs, RIGHT, OK, (OK at the card choice,) DOWN, OK, UP, OK. It is not a
    decode of the menu's tables: the E144 and E118 families' Menu_Viewer tables stay undecoded, and the walker knows
    an item only by its name on the screen.
 154. **Left open** (2026-11-11). The second slot on every body (E139, E134 and E125 show the card choice; the walker
-   takes the first card, and the rule reads the first switch alone); the media control's other commands (All Erase is
+   takes the first card, and the rule reads the first switch alone; on E143 and E146 modelled, hle-gaps 4.8.12);
+   the media control's other commands (All Erase is
    on the family's screen, not driven) and the handlers' other ends, which stop the session; the E144 family's first
    step for a media whose status has bit 7 clear (`0x502d3982`, not read, not reached in the lab); the camera base's
    own work for 611 and 590, and where the family returns after a Format on the camera (the lab's is the shooting
@@ -3054,7 +3062,9 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
 ## Per-body status
 
 The state as of 2026-10-23, of E148 since 2026-11-01 (finding 65), and of the menus since 2026-11-02 (findings 66 to
-68: MENU runs in a play session on every body of the E144 and E118 families, and modelcheck takes it). Each body's `MODELS` entry (`src/fw/models.mjs`)
+68: MENU runs in a play session on every body of the E144 and E118 families, and modelcheck takes it); the last lines
+of the bodies below are the round of 2026-11-11 (findings 131 to 154, merged 2026-11-12).
+Each body's `MODELS` entry (`src/fw/models.mjs`)
 carries the numbers its `port_via` choice rests on and the evidence of every hand value. On that date
 `bin/modelcheck.mjs --no-port` passes E146, E147, E144,
 E139, E134, E137, E140, E125 and E130 on the TFT and the EVF and E142 (no EVF) on the TFT (their `MODELS` entries are
@@ -3075,6 +3085,9 @@ ms, counted in CPU reads, had made it 300 s on the TFT and 380 to 500 s on the E
 card), PLAY, INFO, PLAY. Their TFT start keeps the composite's UNWRITTEN error. E147 shoots and plays back. Since
 2026-10-29 both run the lens natively by default, as E143 does (finding 25). Since 2026-11-08 REC_FILE's own task
 records S2's file on both, with the firmware's Exif header (finding 83).
+Since 2026-11-11 Delete's eraseCurrent runs natively on both (H-OBJDEL, findings 137 to 140), E147's Card Formatting
+and card input natively at E143's seams (finding 149), E146 has its second card slot (hle-gaps 4.8.12), and
+S-JPEGENC keeps the parameter set's call, the run and Jpeg_Result on both, as on E143 (hle-gaps 4.3.9).
 
 **E144 (OM-5).** Boots natively to its shooting screen (kernel, display open, settings store, camera application, GUI;
 the kind-2 VSC compositor draws the OSD planes), takes S1, and the player settles running with the shooting screen in
@@ -3092,6 +3105,8 @@ start powers the TFT down, the EVF up and runs the DISPLAY_CHANGE task natively,
 EVF shooting screen (finding 10, X). Since 2026-11-02 its menu shows its rows: its OSD planes are stacked the other
 way round from E139's (finding 66). Open: IMG planes (live view, playback) are not modelled on the kind-2 VSC yet;
 which register selects a kind-2 channel's timing bank is ?.
+Since 2026-11-11 its application's own Format and the card out and in run (S-MDAEND, S-MEDIA; findings 151 and 152),
+and Delete's eraseCurrent runs natively (finding 140).
 
 **E148 (OM-5 II).** Ported through E144 (the map pairs 9.5M instructions with E144's build against 2.47M with E143's;
 finding 65) and boots natively to its shooting screen; `bin/modelcheck.mjs` passes on the TFT and the EVF with the count
@@ -3101,6 +3116,8 @@ E143, E146 and E147 read slot 12 (`src/fw/facts.mjs` menuMemory; finding 65). It
 2026-11-02, as the family's (findings 66 to 68). Open: nav's own GUI bring-up reads unplaced data (0x62b3e364), as
 the family's stops at its checks (finding 68); 19 of E144's carried overrides fail
 and 49 addresses stay unmapped (`port.json`; finding 65).
+Since 2026-11-11 Card Formatting and the card input run at E143's seams (finding 150), and Delete's eraseCurrent
+natively (finding 140).
 
 **E139 (E-M1 III).** Ported through E144 and boots natively to its shooting screen as E144 does; the TFT session stays
 in `0x108` ID_ST_CA_REQ_DISP and takes S1 (UI_IN codes `0x2000100` down, `0x2010100` up), with the same events as E144's
@@ -3115,6 +3132,8 @@ callback, the colour-conversion end, `upload_af_info`, the GUI creation site and
 `carry_failed`); errlog `0x28001412` (the UI_IN forward finds no sink for startup key codes) is not checked on E144.
 `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23, X): S2's card image, playback and INFO as E144's; the
 EVF start creates its change task (`display.change_entry` `0x50174f55`) and shows the scaled EVF screen.
+Since 2026-11-11 its application's Format (after its card choice) and the card out and in run (findings 151 and 152),
+and Delete's eraseCurrent natively (finding 140).
 
 **E134 (E-M1X).** Ported through E139 (the map from E139 pairs 8.12M instructions, the one from E144 5.88M, and through
 E139 fewer overrides fail, X) and boots natively to its shooting screen; the TFT session stays in `0x108` and takes S1,
@@ -3131,6 +3150,8 @@ running the touch task's loop for it (finding 11); `bin/modelcheck.mjs` passes o
 times (findings 15 and 16, X); since finding 18 it shows the first slot and 999 shots (X). Open: what S1 runs beyond the
 GUI state is not checked; the lab reads the touch I2C hooks' arguments in E143's layout, where E134's length is the
 caller's (4,sp) (D), so the i2c records are not trustworthy on ported bodies.
+Since 2026-11-11 its application's Format (after its card choice) and the card out and in run (findings 151 and 152),
+and Delete's eraseCurrent natively (finding 140).
 
 **E137 (E-M5 III).** Ported through E144 (E144's board traits, no SCPU backup, font limit `0x9fc00` and E144's EVF
 code, D) and boots natively to its shooting screen; the TFT session stays in `0x108` and takes S1 (X). It has no hand
@@ -3153,6 +3174,8 @@ checked); the
 touch write is still the direct map's wrong `0x50177137`; the operating-time count would write NAND natively once the
 SCPU counter advances; the movie function id (90 on E137 where E143's `FUNC_RECORDING_MOVIE` is 27) is unknown.
 `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23, X; its change task `0x5016187e`).
+Since 2026-11-11 its application's Format and the card out and in run (findings 151 and 152), and Delete opens the
+erase dialog, its eraseCurrent native (findings 138 and 140).
 
 **E142 (E-P7).** Ported through E144 (the map from E139 pairs more, 4.63M instructions against 3.47M, but E142 has
 E144's board traits, D) and boots natively to its shooting screen: the TFT session takes S1 and draws the full E-P7
@@ -3171,6 +3194,8 @@ screen showed "Card Full" from the start on; with its shots query placed at its 
 shots and passes the count probe (X). Open: S-TPREG serves touch data only for E143's controller (slave `0x70`, register
 2), where E142 polls slave `0x48`; its facts carry an EVF frame period word (`0x6222cd88`) from E144's, though the E-P7
 has no EVF (not checked).
+Since 2026-11-11 its application's Format and the card out and in run (findings 151 and 152), and Delete's
+eraseCurrent natively (finding 140).
 
 **E140 (E-M10 IV).** Ported through E142 (the map from E142 pairs 6.56M instructions with 81 conflicts, the one from
 E144 3.49M with 111; through E142 none of the 134 carried overrides fails, through E144 8 of 126, X) and boots natively
@@ -3186,6 +3211,8 @@ the lens record's zoom table and buffer read per build removed (finding 13); wit
 `bin/modelcheck.mjs` passes on the TFT and the EVF (2026-10-23, X; its EVF change task `0x5015713e`). Its screen showed
 "Card Full" as E142's; since finding 15 it shows 999 shots on the TFT and the EVF and passes the count probe (X). Open:
 E140's eye state (its word `0xa2717360`, stored in another shape than E144's, D).
+Since 2026-11-11 its application's Format and the card out and in run (findings 151 and 152), and Delete's
+eraseCurrent natively (finding 140).
 
 **E125 (E-M1 II).** Ported through E134 (of E139, E144 and E134, through E134 the most overrides carry, 108, the fewest
 fail, 7, and only there is the EVF vtotal function placed at its entry, D) and boots natively to its shooting screen;
@@ -3205,6 +3232,8 @@ bit 4, which the clamp form's set stores as mode 0 (`0x50021ea7`, D), while the 
 (`0x50021f60`, D), on the whole E144 family; UI_IN's key dispatch `0x500ffa76` logs errlog `0x28001412` for each pushed
 key, its callback word `(0xa2764448)` being 0 (D), with no effect checked. `bin/modelcheck.mjs` passes on the TFT and
 the EVF (2026-10-23, X); its change task is the static one, run as on E143 (`display.change_task`).
+Since 2026-11-11 its application's Format (after its card choice) and the card out and in run (findings 151 and
+152), and Delete opens the erase dialog, its eraseCurrent native (findings 138 and 140).
 
 **E145 (TG-7).** Ported through E142 (of E142, E140 and E144, only through E142 are the DB init and its flash-save
 return placed). It runs the kernel, display start, settings store, camera application and GUI natively, but its start
@@ -3239,6 +3268,8 @@ MENU cancels to `0x108` (finding 17, X); S1 then stopped at S-AFOSD. Since 2026-
 upload (its frame plane has no mode 3, and nothing writes the mode-3 frames, D / X), S2's OSD format 1 is decoded and
 S-RELSEQ posts same-time callbacks together, and `bin/modelcheck.mjs` passes on the TFT (MENU after the start), the
 card's file system native and the count probe included (X).
+Its REC_FILE's form is read (2026-11-11, finding 136): the family's version with an inlined loop, which no rule
+reads, so S-RECFILE stays.
 
 **E130 (E-M10 III).** Ported through E142 (the map from E142 pairs 2.11M instructions against 1.02M from E143; through
 E142 118 overrides carry and 14 fail; through E145 the start stops earlier, at the settings store's unplaced init, X)
@@ -3255,7 +3286,9 @@ at the DRAM's top is I. S-PANELDONE answers three panel-flag waits in its start 
 Open: which touch controller it polls is not checked against S-TPREG's; its zoom table (+644) and lens buffer are the
 rules', not checked against a lens attach.
 Since 2026-11-11 REC_FILE's own task records S2's file natively, with the firmware's Exif header (Model
-`E-M10 Mark III`; findings 131 to 135).
+`E-M10 Mark III`; findings 131 to 135), its application's Format and the card out and in run (findings 151 and
+152), and since the round's merge (2026-11-12) Delete's eraseCurrent runs natively (X, `test/test_erase.mjs`
+ERASE_NATIVE).
 
 **E133 (E-PL9).** Ported through E142 (2.24M instructions paired, against 1.04M directly). Since 2026-10-29
 `bin/modelcheck.mjs` passes on the TFT (no EVF), the count probe and the card included (its card's file system native:
@@ -3274,7 +3307,8 @@ and 149 wait too once their start is done (X). S-BOOTKEY gives the boot key the 
 the issue maps to 1 (`0x5071c3b7..c7`, D). Open: the second factor's source; the E-PL9's power key code is taken from
 the issue's own test, not from its key matrix.
 Since 2026-11-11 REC_FILE's own task records S2's file natively, with the firmware's Exif header (Model `E-PL9`;
-findings 131 to 135).
+findings 131 to 135); since the round's merge (2026-11-12) Delete's eraseCurrent runs natively (X, `test/test_erase.mjs`
+ERASE_NATIVE).
 
 **E129 (TG-5).** Ported through E145 (2.61M instructions paired, against 0.94M directly). The TG-5's panel driver (E129
 `0x5015b466`) sends its command list over serial channel 2 with GPIO 117 around each send and waits on a completion
@@ -3293,7 +3327,8 @@ its hook list (empty for stage 1, `0x50173c78`) are not run (D). Since 2026-10-2
 transfers are served (S-SIOIIC, S-CHARGER, H-SIOMAP) and the card is native: the start ends in the date and time
 setting, which MENU cancels, and `bin/modelcheck.mjs` passes.
 Since 2026-11-11 REC_FILE's own task records S2's file natively, with the firmware's Exif header (Model `TG-5`;
-findings 131 to 135).
+findings 131 to 135); since the round's merge (2026-11-12) eraseCurrent runs natively (X, `test/test_erase.mjs`
+ERASE_NATIVE; the TG-5 has no Delete key, finding 111).
 
 **E132 (TG-5).** Ported through E145 (2.68M instructions paired, against 0.94M). Its registry bootstrap has no such
 wait (D). It stopped in CamApp.start (`camapp.mjs`), every task blocked: the lab task requests serial channel 9 (E132
@@ -3325,6 +3360,8 @@ transfers are served (S-SIOIIC, S-CHARGER, H-SIOMAP); the "Busy" screen was the 
 request to CATEGORY_MAIN S-MODACK now answers (modack_queues), as LOGGER_MAIN's; the card is native; the start ends in
 the date and time setting without Cancel, the clock set by modelcheck's prompt answer, and `bin/modelcheck.mjs`
 passes; S1 does not stop at S-AFOSD since the framePlane rule gates it (finding 22).
+Its REC_FILE's form is read (2026-11-11, finding 136): another record step, rec_file_destination_record, which no
+rule reads, so S-RECFILE stays.
 
 **E118 (E-M5 II), E122 (PEN-F), E120 (E-M10 II).** Until 2026-10-30 they stopped at import on 18 board facts their
 family scaffold left unread (`intc.irq_osd_engine` first, X). The board is read since (finding 28): E122's start runs
@@ -3361,6 +3398,8 @@ retired); since finding 108 PLAY from the playback wizard returns to the shootin
 taps with the EVF active run as the code says; since findings 124 to 129 Card Setup's Format runs natively but for the
 camera base's part of its end (S-MDAEND), and the card out and in run through S-MEDIA (X, `test/test_storage.mjs`,
 `test/test_playinfo.mjs`, `test/test_touch.mjs`).
+At the round's merge (2026-11-12) Delete opens the erase dialog on the three (X, `test/test_erase.mjs` ERASE_DIALOG)
+and E122 is in ERASE_NATIVE; E118 and E120 have no erase fact (finding 140).
 
 ## The chained port
 

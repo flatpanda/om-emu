@@ -20,6 +20,7 @@
 // the lab's baseline JPEG decoder and the pipeline block's register file (test_imgpipe.mjs jpegUnits, imgpipeUnits,
 // S-IMGPIPE),
 // S-MODPOST's rule, the guard's report of it and the object-name table's rule (test_modpost.mjs modpostUnits),
+// S-TAKERDY's rule (test_take_ready.mjs takeReadyUnits),
 // S-DISPQ's queue discipline (test_dispq.mjs dispqUnits),
 // the camera front end's control plane as cam.c's second init programs it (test_camfe.mjs camFeUnits, S-CAMFE),
 // the lens serial controller, the deferred-call triggers and S-LENSMCU's replies (test_lens.mjs),
@@ -65,6 +66,7 @@ import { ems1Units } from '../test/test_ems1.mjs';
 import { imgproUnits } from '../test/test_imgpro.mjs';
 import { jpegUnits, imgpipeUnits } from '../test/test_imgpipe.mjs';
 import { modpostUnits } from '../test/test_modpost.mjs';
+import { takeReadyUnits } from '../test/test_take_ready.mjs';
 import { dispqUnits } from '../test/test_dispq.mjs';
 import { camFeUnits } from '../test/test_camfe.mjs';
 import { lensUnits } from '../test/test_lens.mjs';
@@ -130,6 +132,7 @@ report('the imgpro unit\'s register file: the fills, their bytes and ends, refus
 report('the lab\'s baseline JPEG decoder against the independent one (src/lab/jpeg.mjs, refs/jpeg.mjs)', jpegUnits());
 report('the pipeline block\'s and the JPEG codec\'s register file: a decode, its bytes and end, refusals (S-IMGPIPE)', imgpipeUnits());
 report('S-MODPOST: the posts it takes, the guard\'s report, the object-name table (src/lab/camapp.mjs, src/fw/facts.mjs objectNameId)', await modpostUnits());
+report('S-TAKERDY: the take requests it follows with TAKE\'s event or leaves unanswered (src/lab/camapp.mjs take_ready_rule)', await takeReadyUnits());
 report('S-DISPQ\'s queue: posts in an open DISPLAY run kept for the outermost run\'s end, in order (src/lab/dispq.mjs)', await dispqUnits());
 report('the camera front end\'s control plane: the second init\'s program, A-CAMFE-1 / 2, refusals (S-CAMFE)', camFeUnits());
 report('the lens serial controller, deferred-call triggers and the lens (S-LENSMCU)', lensUnits());

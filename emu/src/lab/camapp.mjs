@@ -44,6 +44,13 @@
 //              names a reply queue, so none is sent. OlyQeWr returns E_OK without putting the message in the kernel's
 //              queue (until 2026-11-10 those two stayed there, one message each). Any other such post stays in the
 //              queue, recorded, and the blocked-send guard names it when the queue is full (play.mjs check_sends)
+//   S-TAKERDY  (E143, control camapp 3 without --take probe) what TAKE_MAIN sends beyond S-MODACK's status for the
+//              take requests the sequence's take capability makes of TAKE_EXEC (TAKERDY_E143; docs/hle-gaps.md
+//              4.1.12): the take-ready request's reply is followed by TAKE's module event 0x04080032, from which the
+//              application builds the sequence's TakeReadyFinish (794), and the take-picture request (command 11),
+//              which TAKE_MAIN answers once the picture is taken, is taken and not answered. The stop of a take-ready
+//              (command 7) keeps S-MODACK's reply, TAKE_MAIN's own status 0, from which the take capability builds
+//              StopTakeReadyDone (793) and the sequence returns to its standby
 //   S-DISPQ's replies (with the application): the replies the DISPLAY loop sends to queue 6 while S-DISPQ runs it
 //              (play.mjs, 0x501c490c / 0x501c496d), which S-DISPQ records, go to queue 6 after the step, each followed
 //              by a settle: the application's event task (entry 0x50abbf0c) reads that queue (0x503ebf63), and a reply
@@ -214,10 +221,14 @@ export const CA_PROP_SITE = A(0x50B76DBE);
 // the module-9 reads the native transaction path reaches (control camapp 3, X): the shooting component's set-up after
 // TRA 990 (0x50c78b35: state 2 takes CapThr's start at 0x50c78bc1, D), the application's second read in 0x50abb032,
 // made once the components have set the state to 0 (0x50ca4ae1), the two reads of 0x50d787f0 at the HDMI plug, and
-// the sequence parts' standby entry (0x50c89da1), which with its word 0x60364954 set reads the state and at 3 writes 0
+// the sequence parts' two reads, each a test for 3 alone: the STANDBY entry's (0x50c89da1 at 0x50c8a32e, on the way
+// back from END_WAIT while the word 0x60364954 is set, the through image's, from 0x50c9d590), which at 3 writes 0
 // (0x50c8a32c..0x50c8a33c, D; X: at a lens attach after a shot and at S1's release after a menu and a PLAY pass, the
-// state 0 both times, docs/hle-gaps.md 4.3.10)
-export const CMP_MODULE9_READERS = [A(0x50C78BB4), A(0x50ABB044), A(0x50D78808), A(0x50D78815), A(0x50C8A335)];
+// state 0 both times, docs/hle-gaps.md 4.3.10), and the through start's (0x50ca435e at 0x50ca4a30, while 0x50cbcd07
+// answers non-zero: S1 held on the Super Control Panel's item, X). What they read is the components' own 0
+// (0x50ca4ae1, X), and no call of the setter 0x50ab6299 writes 3 there (docs/hle-gaps.md 4.1.12)
+export const CMP_MODULE9_READERS = [A(0x50C78BB4), A(0x50ABB044), A(0x50D78808), A(0x50D78815), A(0x50C8A335),
+  A(0x50CA4A37)];
 // the target table at 0x606214a0 (docs/om1-shutter-spec.md 2.2) without DISPLAY (0x88), plus PC_PD_CMD_EXEC (0xcf):
 // E143's module queues by name, each the target table's entry at its target (src/fw/facts.mjs API_TARGETS_E143), which
 // a ported body's fact 'api.queues' gives from its own table (src/fw/facts.mjs apiTargets: its ids differ, E122's
@@ -297,6 +308,35 @@ export const MODPOST_E143 = [
 export function modpost_entry(q, ra, words, queues = apiQueues(), onLab = ON_LAB_MODEL) {
   if (!onLab || !words) return null;
   return MODPOST_E143.find(([name, via, msg]) => queues[name] === q && via === ra && msg.every((w, k) => (words[k] >>> 0) === (w >>> 0))) ?? null;
+}
+// S-TAKERDY (E143, control camapp 3; not with --take probe, where TAKE_MAIN answers itself): what TAKE_MAIN sends
+// for the requests the sequence's take capability (CapTak_Take) makes of TAKE_EXEC through the API sender, where it
+// is more than S-MODACK's status (docs/hle-gaps.md 4.1.12), by the request's command:
+//   0, the packet's kind (its word +8) 0: the take-ready (the take API 0x50417cd9's default branch for a control it
+//     does not list, CapTak_Take's 0x20 at S1; the kinds 1..4, 0x2000 and 0x4000 are its controls 8, 16, 2048, 128,
+//     512 and 1024, D). TAKE_MAIN replies status 0 (RdyFcsRdy1's token 5, 0x50399c4f) and then posts its module event
+//     0x04080032 {u16 0, event, 0} to the request's reply queue (RdyFcsRdy2's token 13: 0x503c3262 through
+//     0x502ce5e6, unless 0x506e6475 answers non-zero or the word 0x62a4cee0 is 3, neither read), X: the probe's
+//     session, where TAKE_FOCUS reports its result at once (4.1.8, 4.1.10). Com_EvSenderManager's case 0x50d77e6a
+//     builds the sequence's event 794 (TakeReadyFinish) from it. S-MODACK's reply is followed by that event; that
+//     the camera's take-ready ends without a wait is I (its AF and AE come first)
+//   7, the take-ready's stop (control 0): TAKE_MAIN replies status 0, from Idle at once (0x50399c0b) and from the
+//     ready states through RdyAbort and RdyEnd (0x503c3f37, 0x503c4013; D). S-MODACK's reply is that reply; the
+//     take capability's observer builds 793 (StopTakeReadyDone) from it (X)
+//   11, takePicture (api_rec 0x5040ee43): TAKE_MAIN replies when the picture is taken (I). The reply is the
+//     sequence's TakePictureDone (791, X), on which the rec view reads the picture's record: answered status 0 at
+//     once, the rec view controller's 0x50bdb01a divides by that record's zero (0x50bdb830, X). TAKE's capture is
+//     not modelled, so the request is taken off the queue and not answered: the sequence waits in its phase 106
+// kind_at: the kind's offset in the request's packet (word 3 of the message)
+export const TAKERDY_E143 = { queue: 'TAKE_EXEC', ready: 0, ready_kind: 0, kind_at: 8, event: 0x04080032, take: 11 };
+// what S-TAKERDY does with a request the API sender posts to queue q (command: the message's word 2; kind: the
+// packet's word at kind_at): 'ready' (the reply, then the event), 'take' (taken, no reply), 'other-kind' (command 0
+// of another kind: S-MODACK's status alone, logged) or null (not S-TAKERDY's: S-MODACK's status); null off E143
+export function take_ready_rule(q, command, kind, queues = apiQueues(), onLab = ON_LAB_MODEL) {
+  const T = TAKERDY_E143;
+  if (!onLab || queues[T.queue] !== q) return null;
+  if (command === T.ready) return (kind >>> 0) === T.ready_kind ? 'ready' : 'other-kind';
+  return command === T.take ? 'take' : null;
 }
 // S-DISPSYNC: the request type that waits for an image sync; the release's sync-word store (its value; the panels'
 // d1 values, as stopRecView passes them, and the image sync's kind, the one the type-3 request's pending state takes,
@@ -638,6 +678,7 @@ export const CAMAPP_STAND_INS = {
   "S-DISPSYNC": "the release of the GUI's synced display updates: while the application's sync word for a panel is set (CameraCommon::setDispSync, which E137's GUI asks for at the start), the GUI's update is a request of type 3, which leaves its buffers pending until an image sync; their one sender, the shooting sequence's stopRecView, does not run in an idle session, so E137's screen stayed blank (X). After each step the lab releases each device with such a request: both panels' sync words cleared through the application's setter, as stopRecView does, then the image sync of kind 1, whose event the display manager takes in the state the type-3 request leaves, and the pending buffers are committed (D). stopRecView's kind 2 is not taken there: under it E137's screen came only at its GUI's next update, a 250 ms redraw of a blinking item, and E125's GUI, which sends none, kept a one-colour frame (X). The camera releases it with the image's next update (on the E118 family, D: DevDpc_DispCtrlBase's imageUpdate() clears a panel's sync word after its image update once api_disp_Disp_Get_Wait_State answers 0, as setThroughPermit() and the still shooting component's rcvShtDrawThrough() do); the lab runs no image update and releases at the step's end (I: the camera's first one comes with its through image's start)",
   "S-RVSTANDBY": "the rec view component in standby: the shooting components' RecView does not run; its entryStandby would store state 1 in the application's state word (fact recview), which starts at 0, and getRecViewState takes 0 for a rec view, so E142's GUI showed the rec view's items at the start (EVT_REC_DISP_RECVIEW, 0xf005) instead of the shooting screen (X). The lab stores 1 before the application starts; that the camera's component is in standby then is I",
   "S-TRAACK": "the HLS transaction layer's synchronous exec (0x50af7cb9 / 0x50af7cbe) returns 0: no local handler is ever registered (on the camera either), so every transaction goes to the active state's components, where the shooting component CmpSht_ShootingComponent_NEW answers TRA 990 and 991; it runs only with the HLS components, and the remote channel answers 0xf0000001 (startShootingService fails on TRA 990 without it, X). With the file system native and its HLS side (card_fs.hls: E143, E146) the media control's start (TRA 1511; E146's 1509) also goes to S-MDACTRL (media.mjs). Under control camapp 3 it answers none (its list TRAACK_KEPT is empty): every transaction goes to the exec natively and, S-RPC lifted from the receiver's send and the remote-call method, to the components, which answer the start's 990 and the rest natively (X; docs/hle-gaps.md 4.1.5)",
+  "S-TAKERDY": "(E143, control camapp 3 without --take probe) what TAKE_MAIN sends, beyond S-MODACK's status, for the requests the shooting sequence's take capability makes of TAKE_EXEC through the API sender (docs/hle-gaps.md 4.1.12). The take-ready request (command 0 with the packet's kind 0: the take API's control 0x20 at S1) is answered with S-MODACK's status 0 and then TAKE's module event 0x04080032 {u16 0, event, 0} on the request's reply queue, the order and the messages TAKE_MAIN sends natively in the probe's session (its reply at RdyFcsRdy1's token 5, the event at RdyFcsRdy2's token 13, 0x503c3262; X), from which Com_EvSenderManager builds the sequence's event 794 (TakeReadyFinish) and the sequence goes from its phase 102 to 103; that the camera's take-ready ends without a wait is I (its AF and AE come first). The stop of the take-ready at the S1 release (command 7) keeps S-MODACK's reply, TAKE_MAIN's own status 0 (D), from which the take capability's observer builds 793 (StopTakeReadyDone) and the sequence returns from END_WAIT (111) to its standby (101), where the keys are taken again (X). The take-picture request at S2 (command 11) is taken off the queue and not answered: TAKE_MAIN answers it when the picture is taken, and answered at once the rec view divides by the picture record's zero (X); the sequence then waits in its phase 106 and the keys are refused (the picture on the card is S-RELSEQ's). A command 0 of another kind keeps S-MODACK's status alone, logged. Until 2026-11-11 no take-ready ended: the sequence waited in phase 102 after the first S1 that passed its guard, and no key was taken after it",
   "S-CARD": "a card in the SD slot. With the file system native (a body that runs it, src/fw/models.mjs card_fs; storage.mjs) the card is S-SDCARD's, which the firmware formats and mounts itself at the insertion, and S-CARD keeps only the HLS media mount state (0x60360bfc, 0x60360c08) at 8 and, since 2026-11-11, the first slot's media status (0x60360bec, placed on each body by its setter's SD store, src/fw/facts.mjs mediaStatus) at 0xf000, OK, as the HLS media manager would set them on the file layer's mount (the status stayed the image's 0, NO_MOUNT, before: the restriction table's erase mode, which wants OK or a protect status, kept E143's Delete from opening its dialog, docs/model-survey.md finding 138), and its record of each picture taken (S-RELSEQ's END_SHOOTING_PICTURE: its release, S-SCENE's scene, the clock and the lens at the capture), whose file S-RECFILE writes (on E143, E146, E147, the E118 family and the E144 family but E145 and E132 REC_FILE natively, from the packet of REC_IMAGE's own task on E143, E146 and E147 and from S-RECIMAGE's on the E144 and E118 families: rec.mjs). Where REC's recorder records the file (S-RECFILE's DCF steps) or REC_FILE does, the firmware's own DCF database counts it in the same session: the media API's image count (0x503feea4) and each picture's folder and number in playback are the database's (its fnode by index), S-CARD's image list retired; elsewhere the pictures are S-CARD's list, of folder 100 numbered from 1, the image count answering their number for type 1, and the database learns of each file at the next mount. The firmware answers the remaining shots and the movie time from the card. While the card is out of the slot (media.mjs S-MEDIA) the image count is 0; a format from the menu (S-MDACTRL) clears the records. On the other bodies the card has no file system: the card driver's detect state of the first slot is 2, inserted (src/fw/facts.mjs cardDetect), set before the application starts; the remaining-shots module query 0x50419164 answers 999 less the images; the movie time query 0x5042da58 answers a time left of 1:00:00 less the time recorded so far, and the current recording's time; a DCF remain count that tests only the drive status's error bits (MODEL_INFO.dcf_mount_test) is given the mount test E143's count makes, so it returns as not mounted. An image is its number, its exposure and S-SCENE's scene at the capture. On E143 and E146, whose second card slot the lab models (docs/hle-gaps.md 4.8.12): where no media manager runs S-CARD also mounts a card in the second slot (the manager's own request, the DCF numbering mount of drive 1) and sets the slots' media flags (15261 and 15262) by the manager's slot update's rule, 1 for a mounted slot (or a card with no file system) and 0 for an empty one (the flag alone, not the update's other work); and a picture goes to the card the firmware's save settings name, as the HLS record controller picks it: the save slot (setting 1130) in the save modes 0 and 1 (setting 1129), no picture where that slot has no mounted card; the modes 2 to 5 (both cards) stop the session",
   "S-PLAYSEQ": "the play module's notifications: each asynchronous HLS play request (OlyHfwOpePlyComAsyncRsb::execute 0x50ad26fb) is finished after the step by its notify function (0x50ad2bc2) with the request's id and kind 2, as the module would: startPlayService (0) makes PlyCom's callback post CBS_END and the GUI leave ID_ST_PREPARE, startSingleFrame (8) and moveCurrent (9) make the single-frame callback post CBS_FINISH_DRAW and the GUI show the image. While a request's transaction runs (S-TRAACK) the module's answer is written: canMoveCurrent (sync 344) can move whenever there are two images or more (they wrap around), moveCurrent's result is 1 and the image shown moves (direction 3 left, 4 right). Where PlyCom asks the play module rather than a component (the E118 family always), getNumber (sync 5) is answered with the image's index, file number and folder, getStillInfo (sync 3) with the picture's own record: the date the camera's clock gave at the capture (the family's default while its clock is not set: 2016-01-01 00:00 on E122, 2015-01-01 on E118 and E120), its file's JPEG size, the release's exposure and the lens's focal length at the capture; getHistogram (sync 7) is answered empty (the lab decodes no picture), getImageType (sync 2) with a still's type, 1, the type E143's component gives the DCF file type of the lab's pictures (docs/model-survey.md finding 108), and isProtect (303), isRecording (304), getSelectPicNumber (306) and getShortMovieAlbumNo (501), which read the same response word, with 0 (finding 109); any other synchronous request is logged as not answered, its response left as the last answer left it. That every request finishes at once, with result 0 and no other data, is an inference from the callbacks (I). PlaySingleFrame::eraseCurrent (21) is performed with the firmware's own calls (H-OBJDEL) where the rule reads them and the DCF database holds the pictures, and then finished as the others: the single-frame callback posts CBS_ERASE_CURRENT, the GUI asks for the single frame again, and S-PLAYSEQ shows the picture that took the erased one's index, the last where it was the last, none (the GUI's No Picture) where none is left (findings 137 to 139); for a protected picture, and on a body without those calls or whose database learns of the files only at a mount, it is refused. The other requests that erase from the card (the single frame's erase all 23, PlyCom::erase 301, PlaySelect::eraseCurrent 510, the light box's eraseCurrent 395 and erase 396, the index playback's eraseAlbum 497; the same ids on the 19 bodies, D) are refused at their execute, and the synchronous PlayRecord::erase (265) at its request: their component paths are not read, and finishing one would keep the file (finding 110). The requests that save an edit's file (EditResize::save 120, EditTrimming 131, EditColor 142, EditRedEyeAdjust 164, EditShadowAdjust 173, EditBeautyAdjust 186, EditAspect 281, EditRaw::save 284, EditImageOverlay 331, EditRaw's saveCurrentModeEdit 404, saveCustomEdit 408 and saveArtBktEdit 456, PlyMov::saveEditMovie 477, the same ids on the 19 bodies; EditMovie::save's 533 and 535 on E134, E125, E130, E145, E133, E129 and E132; D) are refused at their execute too: the lab runs no edit, and until 2026-11-11 one was finished as a success with no file written (finding 141)",
   "H-OBJDEL": "(S-PLAYSEQ's eraseCurrent, on a body whose calls the rule reads, src/fw/facts.mjs pictureErase: E143, E146, E147 and the E144 family's bodies whose REC_FILE runs natively) the erase the play component makes, by the firmware's own calls in its order (E143's CmpPls_PlaySingleComponent::erase_current_start_enter 0x50c2c35f and the select execute's delete step 0x50c3492b, D), each made from the lab's task: the media API's attribute of the picture shown (0x503fdcb1: the fnode's byte +89, bit 0 the DCF edit's lock), for which the component answers 0xf000003a and erases nothing (the lab refuses it: how that answer reaches the GUI is not read), then the picture file API's object delete (0x503fd974: drive, the picture's index, the whole object), which posts FILECLBK the DCF edit's object delete (code 0x21, DCFED_OBJ_DEL) with the API's reply queue. FILECLBK runs it natively (0x50872887): dosfile's FILE_DELETE_FILE marks the directory entry deleted and frees the cluster chain in the FAT and FSInfo, the folder is removed where it is left empty, and the DCF database's delete mount takes the picture out of its lists, its counts and its numbering; the application's event task takes the reply. A reply status other than 0 stops the session (the component's error path is not read). The lab then follows the component's update after the reply (0x50bc09e6): the pictures are the database's again and the image shown keeps its index or takes the count. Not run: the component's progress notifications, its album test (Get_Album_Num, the short-movie albums 100 to 165), a RAW + JPEG object's part by the setting 139 (the lab's pictures are JPEG alone), and the delete step's other calls before the object delete (its gate, whose answer other than 0 takes another path, the access slot's set and the media access lamp's start; docs/model-survey.md finding 137, D, not read further)",
@@ -710,6 +751,13 @@ export class CamApp {
     this.acks = [];            // module requests waiting for their reply
     this.modpost_taken = 0;    // S-MODPOST: the posts taken so far (the player lists the stand-in once one was),
     this.modpost_left = new Map();  // queue -> [{what, from, task, step}] of the direct posts left in it
+    // S-TAKERDY: on (control camapp 3 on E143 without the TAKE probe, whose TAKE_MAIN answers itself; a test's
+    // control sets it false before the first take request); the take-ready events posted so far (the player lists
+    // the stand-in once one was); the take-picture requests taken and not answered [lab ns, token]
+    this.takerdy_on = ON_LAB_MODEL && !!session.opts.camapp_components && !!session.opts.camapp_native_tra
+      && (session.opts.take ?? 'stand-in') !== 'probe';
+    this.takerdy_events = 0;
+    this.takerdy_takes = [];
     this.dispsync = new Set(); // S-DISPSYNC: the device codes with a synced display request waiting
     this.dispsync_released = 0; // S-DISPSYNC: the releases so far (the player lists the stand-in once one ran)
     this.log = [];             // [kind, detail] of every stand-in action, the session's record
@@ -1018,6 +1066,21 @@ export class CamApp {
     lab.call(SHOOT_POST, { a0: this.find_reactive(), d0: CBS_AF_LOCK, d1: locked }, null, null, 50000000);
     this.s.settle('S-AFLOCK AF_LOCK');
   }
+  // S-TAKERDY (TAKERDY_E143's comment): a request the API sender posts to S-MODACK's queue q, w its four words;
+  // returns take_ready_rule's answer: 'ready' (the caller's reply is followed by TAKE's event, pump), 'take' (taken,
+  // recorded, no reply), else S-MODACK's status alone
+  take_ready(q, w) {
+    if (!this.takerdy_on) return null;
+    const lab = this.s.lab, T = TAKERDY_E143, kind = (w[2] >>> 0) === T.ready ? lab.sim.u32((w[3] >>> 0) + T.kind_at) >>> 0 : 0;
+    const rule = take_ready_rule(q, w[2] >>> 0, kind), what = `${this.queue_name(q)} cmd ${w[2]} [${w.map(h8).join(' ')}]`;
+    if (rule === 'take') {
+      this.takerdy_takes.push([lab.lab_time(), w[1] >>> 0]);
+      this.log.push(['takerdy', `${what} (take picture): taken, not answered: TAKE's capture is not modelled`]);
+    } else if (rule === 'other-kind') {
+      this.log.push(['takerdy', `${what} of kind ${h8(kind)}: not the take-ready S-TAKERDY knows, S-MODACK's status alone`]);
+    }
+    return rule;
+  }
   // S-MODPOST: a post to one of S-MODACK's queues that does not come through the API sender (MODPOST_E143's comment;
   // docs/hle-gaps.md 4.1.11). Taken (true) where MODPOST_E143 lists it; any other goes to the kernel's queue as before,
   // which no task reads, recorded by queue so that the blocked-send guard names it once the queue fills
@@ -1127,8 +1190,9 @@ export class CamApp {
     lab.wrap(OLYQEWR, (prev) => (h, r) => {                                         // on top of S-DISPQ's hook
       const q = r.d0 & 0xFFFF;
       if (disasm(r.mdr) === API_SEND_RETURN && this.module_queues.has(q)) {
-        const p = lab.sim.u32(r.a0 >>> 0);
-        this.acks.push({ q, w: [0, 1, 2, 3].map((k) => lab.sim.u32(p + 4 * k)) });
+        const p = lab.sim.u32(r.a0 >>> 0), w = [0, 1, 2, 3].map((k) => lab.sim.u32(p + 4 * k));
+        const rule = this.take_ready(q, w);                                        // S-TAKERDY
+        if (rule !== 'take') this.acks.push({ q, w, ...(rule === 'ready' ? { then: [0, TAKERDY_E143.event, 0] } : {}) });
         h.finish(r, { d0: 0 });                                                    // taken: not left in the queue
         return;
       }
@@ -1313,12 +1377,19 @@ export class CamApp {
       }
       if (this.acks.length) {
         if (++n > 200) throw new FirmwareError(`S-MODACK: more than 200 module requests in one step (${this.acks.length} pending)`);
-        const { q, w } = this.acks.shift();
+        const { q, w, then } = this.acks.shift();
         this.log.push(['ack', `queue ${q} [${w.map(h8).join(' ')}] -> queue ${w[0]}`]);
         const payload = lab.alloc(pack('<III', 0, w[1], w[3]), 4);
         const desc = lab.alloc(pack('<II', payload, 12), 4);
         lab.call(OLYQEWR, { d0: w[0], d1: 0xFFFFFFFF, a0: desc }, null, null, 2000000);
         s.settle('S-MODACK reply');
+        if (then) {                                                                // S-TAKERDY: TAKE's module event
+          this.takerdy_events += 1;
+          this.log.push(['takerdy', `TAKE's event ${h8(then[1])} -> queue ${w[0]} (the take-ready of token ${h8(w[1])} finished)`]);
+          const event = lab.alloc(pack('<II', lab.alloc(pack('<III', ...then), 4), 12), 4);
+          lab.call(OLYQEWR, { d0: w[0], d1: 0xFFFFFFFF, a0: event }, null, null, 2000000);
+          s.settle('S-TAKERDY event');
+        }
         continue;
       }
       if (++m > 50) throw new FirmwareError(`S-PLAYSEQ: more than 50 play requests in one step (${this.play_pending.length} pending)`);

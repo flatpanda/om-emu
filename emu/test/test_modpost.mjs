@@ -9,7 +9,8 @@
 //                  tables (the id, none, a record outside a run of records, two records)
 //   modpostSession E143 in play. Control camapp 3: the start's TAKE_FUNC command 29 (from 0x503a05fb) is taken, the
 //                  queue holds nothing and the player lists S-MODPOST; once the menu has restarted the through image
-//                  S2 posts TAKE_EXEC command 5 (the take API's control 0x40), taken too; over a long workload (the
+//                  S2 posts TAKE_EXEC command 5 (the take API's control 0x40: the S2 of a take-ready not finished,
+//                  so with S-TAKERDY off, src/lab/camapp.mjs takerdy_on), taken too; over a long workload (the
 //                  heapWorkloadSession pattern: passes of S1, S2, the menu and playback) no queue of S-MODACK's holds a
 //                  message; the control (S-MODPOST's list emptied) leaves one message in each queue, named with its
 //                  sender and task. The default session (camapp 1): the same workload makes no direct post and leaves
@@ -105,6 +106,10 @@ export async function modpostSession() {
     const close = () => { pl.close_session(); MODPOST_E143.push(...saved); };       // (until the session closes)
     try { pl.open_session(); } catch (e) { close(); throw e; }
     const s = pl.session, lab = s.lab, ca = s.camapp;
+    // S-TAKERDY off (docs/hle-gaps.md 4.1.12): with it S1's take-ready finishes at once and S2 asks for the picture
+    // through the API sender (command 11); the take API's control 0x40, the direct post of command 5, is the S2 of a
+    // take-ready not yet finished, which the lab reaches only so
+    ca.takerdy_on = false;
     const idle = (ms) => { const to = lab.lab_time() + ms * 1e6; while (lab.lab_time() < to) s.idle_slice(Math.min(to, lab.lab_time() + 50e6)); };
     const key = (k) => { s.key(k, 'down'); s.camapp.pump(); idle(100); s.key(k, 'up'); s.camapp.pump(); idle(800); };
     const pass = (more = true) => {

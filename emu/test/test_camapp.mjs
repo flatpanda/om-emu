@@ -37,10 +37,11 @@
 //                  end taken natively through IRQ 300) and the image player's stage 9 is readied (S-STAGE9): the menu
 //                  opens and closes, the through image running again after it; PLAY shows playback's No Picture with
 //                  the card's pictures (the play module's header getter finds the picture not loaded), right (which
-//                  fills the other bank) and left are taken, PLAY returns; then a pass of S1 and S2 records its
-//                  picture and MENU is not taken (no GUI event, the sequence waiting in phase 102 for a take-ready
-//                  nothing finishes, as TAKE_EXEC is S-MODACK's and no 794 is built: the furthest point,
-//                  docs/hle-gaps.md 4.3.2, 4.1.10); control: S-MODACK's requests left
+//                  fills the other bank) and left are taken, PLAY returns; then S1 makes the session's first take
+//                  request, S-TAKERDY's event finishes the take-ready (794, phase 103) and the through image's
+//                  histogram runs again with IMG1 on, left enabled by playback: its bins' read is not modelled and
+//                  stops the session (the furthest point, docs/hle-gaps.md 4.1.12; where it is modelled: S2's
+//                  take-picture request is not answered, phase 106, MENU not taken); control: S-MODACK's requests left
 //                  in PLAY_EXEC's queue, right's blocks the OXF main thread there; with --hdmi on the plug's TRA 588
 //                  is the component's (no S-OUTDEV), the HDMI device opens and channel 0 composes its window with no
 //                  plane drawn, and the plug's cmd 15 waits as the menu's does; in both, the native lens's LENS_EXEC
@@ -353,13 +354,17 @@ const GUI_MENU = '0x0b02', GUI_SHOOTING = '0x0108', GUI_NO_PICTURE = '0x0505';
 //   0x518b62dc: 6152 where the picture's record (0x518bfc7e returns it) is not marked loaded (+12 not 1); the play
 //   capability then sets its state word 0x62b0dc8c to 4 (0x50bb20dd), from which playOneFrameStart answers 0xf0000001
 //   (0x50c5007b); right fills the other bank (X)
-//   the sequence parts' phase (0x60364a1c, getter 0x50cc60fa): 102 after an S1 whose take-ready nothing finishes;
-//   isCtrlReleaseEnable (0x50ab5c04) logs "UNRESPONSIVE(Seq=%d)" at 0x50ab5c26, the phase at (8,sp), and refuses
-//   the key for any phase but 100 and 101
+//   the sequence parts' phase (0x60364a1c, getter 0x50cc60fa)
 //   the control: PLAY_EXEC's queue (0x3f), which holds two messages (X: 40 bytes, 20 a message)
 const THR_STATE = 0x60362B38, THR_RUNNING = 1, THR_NOT_RUNNING = 2;
 const HEADER_INFO_CODE = 0x518B62DC, HEADER_NOT_LOADED = 6152, PLAY_CAP_STATE = 0x62B0DC8C, PLAY_CAP_FAILED = 4;
-const RIGHT_BANK = 0x9A43E000, SEQ_PHASE = 0x60364A1C, PHASE_TAKE_READY = 102, RELEASE_UNRESPONSIVE = 0x50AB5C26;
+//   the furthest point (docs/hle-gaps.md 4.1.12): the sequence parts' phases 103 (the take-ready finished, 794) and
+//   106 (after S2, waiting for TAKE's answer to the take-picture request); the TFT channel's DMAEN (bit 5: IMG1) and
+//   the VSC model's refusal of a read of the histogram's bins (+0x4000) of a run whose source plane was on (its
+//   value 1, src/dev/vsc.mjs)
+const RIGHT_BANK = 0x9A43E000, SEQ_PHASE = 0x60364A1C, PHASE_READY_FINISH = 103, PHASE_TAKE_PICTURE = 106;
+const TFT_DMAEN = 0x9BB90060, DMAEN_IMG1 = 0x20;
+const HIST_SOURCE_READ = /vsc ERROR HIST_UNMODELLED pc \S+ ch 2 off 0x4000 value 0x00000001 /;
 const PLAY_EXEC = 0x3F, API_SEND_RETURN = 0x503EBA07, OLYQEWR = 0x5002C151, OXF_MAIN_TASK = 57;
 const hx = (v) => (v === undefined || v === null ? String(v) : '0x' + (v >>> 0).toString(16));
 // LENS_EXEC and LENS_COMMAND, and the native lens's tasks that wait on them (LENS_MAIN 92, LENS_COMMAND 91); a data
@@ -483,21 +488,32 @@ export async function traRoutingSession() {
       const runs1 = unit.runs, [right] = key('right'), fillR = unit.last(), [left] = key('left'), [back] = key('play');
       ok(right === GUI_NO_PICTURE && unit.runs - runs1 === 1 && fillR?.dst === RIGHT_BANK && left === GUI_NO_PICTURE && back === GUI_SHOOTING,
         `${tag}: right (${right}) fills ${hx(fillR?.dst)} (runs ${unit.runs - runs1}), left (${left}), PLAY returns (${back})`);
-      // the furthest point: a pass of S1 and S2 after them records its picture, and MENU is then not taken (its key
-      // code reaches UI_IN, the GUI gets no event): with the through image running, S1 passes the sequence parts' guard
-      // and the sequence waits in phase 102 for TAKE's take-ready, which no module answers; isCtrlReleaseEnable then
-      // refuses every key (docs/hle-gaps.md 4.3.2). The session's first take request, not a second (the passes before
-      // the menu make none): TAKE does not run (TAKE_EXEC is S-MODACK's), so no TAKE_MAIN posts the event 0x04080032
-      // from which Com_EvSenderManager builds 794 (docs/hle-gaps.md 4.1.10)
-      pass();
-      ok(ca.module_queues.has(0x5A) && JSON.stringify(takeApi) === '[32,64]' && !built794.length,
-        `${tag}: the session's take requests (controls ${takeApi.map(hx)}) are this pass's, to S-MODACK's TAKE_EXEC (${ca.module_queues.has(0x5A)}), no 794 built (${built794.length})`);
-      const phase = lab.sim.u32(SEQ_PHASE), unresponsive = [];
-      lab.observe(RELEASE_UNRESPONSIVE, (l, r) => unresponsive.push(l.sim.u32((r.sp >>> 0) + 8)), 'test: isCtrlReleaseEnable\'s refusal');
-      const [after, rec] = key('menu');
-      ok(ca.card_images() === 4 && after === GUI_SHOOTING && rec.events.length === 0 && rec.uiin?.[0]?.ev === 'EV_PRESS_MENU_KEY'
-        && phase === PHASE_TAKE_READY && unresponsive.length >= 1 && unresponsive.every((p) => p === PHASE_TAKE_READY),
-        `${tag}: after a further pass (${ca.card_images()} pictures, the sequence in phase ${phase}) MENU's ${rec.uiin?.[0]?.ev} sets no GUI event (${rec.events.length}), isCtrlReleaseEnable refusing it in phases ${unresponsive}, the GUI stays ${after}`);
+      // the furthest point (docs/hle-gaps.md 4.1.12): with the through image running, S1 after them passes the
+      // sequence parts' guard: the session's first take request (the passes before the menu make none), to S-MODACK's
+      // TAKE_EXEC, whose status S-TAKERDY follows with TAKE's event 0x04080032; Com_EvSenderManager builds 794 and the
+      // sequence goes to phase 103 (until 2026-11-11 nothing finished the take-ready and it waited in phase 102).
+      // The through image's histogram, which the menu's cmd 15 stopped, then runs again, and playback of the card's
+      // pictures has left IMG1 enabled on the TFT channel (DMAEN bit 5): DISPLAY cmd 16's read of the bins of a run
+      // whose source plane is on is not modelled (A-VSCHIST-2 covers a plane that is off), and the session stops
+      // there, in S1's step. Where that read is modelled the pass goes on as on a card without pictures
+      // (test_take_ready.mjs takeReadySession): S2 is the take-picture request, which S-TAKERDY does not answer, the
+      // sequence waits in phase 106 and MENU sets no GUI event
+      const img1 = (lab.sim.u32(TFT_DMAEN) & DMAEN_IMG1) !== 0;
+      let stop = null;
+      try { s.key('s1', 'down'); s.camapp.pump(); idle(600); } catch (e) { stop = e.message; }
+      const phase = lab.sim.u32(SEQ_PHASE);
+      ok(ca.module_queues.has(0x5A) && JSON.stringify(takeApi) === '[32]' && built794.length === 1 && ca.takerdy_events === 1 && phase === PHASE_READY_FINISH,
+        `${tag}: the session's first take request (controls ${takeApi.map(hx)}) is this S1's, to S-MODACK's TAKE_EXEC (${ca.module_queues.has(0x5A)}); S-TAKERDY's event (${ca.takerdy_events}) brings 794 (${built794.length}) and phase ${phase}`);
+      if (stop !== null) {
+        ok(img1 && HIST_SOURCE_READ.test(stop) && ca.card_images() === 3,
+          `${tag}: with IMG1 left on by playback (${img1}) the histogram's bins read stops the session in S1's step: ${stop.slice(0, 300)}`);
+      } else {
+        s.key('s2', 'down'); s.camapp.pump(); idle(700);
+        s.key('s2', 'up'); s.camapp.pump(); s.key('s1', 'up'); s.camapp.pump(); idle(2000);
+        const [after, rec] = key('menu'), waits = lab.sim.u32(SEQ_PHASE);
+        ok(ca.card_images() === 4 && ca.takerdy_takes.length === 1 && waits === PHASE_TAKE_PICTURE && after === GUI_SHOOTING && rec.events.length === 0 && rec.uiin?.[0]?.ev === 'EV_PRESS_MENU_KEY',
+          `${tag}: the pass records its picture (${ca.card_images()}), its take-picture request not answered (${ca.takerdy_takes.length}), the sequence in phase ${waits}; MENU's ${rec.uiin?.[0]?.ev} sets no GUI event (${rec.events.length}), the GUI stays ${after}`);
+      }
     } catch (e) { bad.push(`${tag}: ${e.message.slice(0, 600)}`); }
     pl.close_session();
   }

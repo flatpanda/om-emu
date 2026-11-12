@@ -286,6 +286,17 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   ss.bad.forEach((x) => console.log('  ', x));
   bad += ss.bad.length;
 }
+// S-TAKERDY (test_take_ready.mjs, camapp 3 without the probe): TAKE's event after S-MODACK's answer to the take-ready
+// request brings 794; three half-press shots end in STANDBY (the stop's reply, 793, phase 111's exit) with the menu
+// and playback taken between them; a full shot's take-picture request is not answered and the sequence waits in
+// phase 106; the controls (S-TAKERDY off; the take-picture request answered at once: the rec view's divide)
+{
+  const { takeReadyUnits, takeReadySession } = await import('../test/test_take_ready.mjs');
+  const tu = await takeReadyUnits(), ts = await takeReadySession();
+  console.log(`S-TAKERDY: its rule ${tu.checks - tu.bad.length}/${tu.checks}; three shots and a full shot in play (camapp 3) ${ts.checks - ts.bad.length}/${ts.checks}`);
+  [...tu.bad, ...ts.bad].forEach((x) => console.log('  ', x));
+  bad += tu.bad.length + ts.bad.length;
+}
 // the release route with cam.c's second init (test_take_release.mjs camFeSession, the probe's cam_fe opt-in:
 // H-CAMINIT2, S-CAMFE): S1 as focusSession's, cam.c takes EXP_MOVIE's requests without an error, nothing runs the movie
 // sequence's frame step, EXP_MOVIE still waits; S2 as focusSession's, its idle stopping at the sub-CPU's command 0x14

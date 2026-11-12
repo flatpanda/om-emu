@@ -224,7 +224,12 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   input `{"type": "card", "action": "remove"}` takes the card out of the slot while the camera runs and `"insert"`
   puts it back: the card switch changes as a body's does and UI_IN decodes it natively, S-MEDIA (in place of the HLS
   media manager) has the firmware unmount and mount it again, and the shooting screen drops the card's counts and
-  shows them again. The card stays in the slot across a player's power
+  shows them again. On E143 and E146 the lab has the body's two card slots (`docs/hle-gaps.md` 4.8.12): the second
+  is empty unless `OM_EMU_CARD2=FILE` (or `OM_EMU_CARD2_SIZE=GiB`) gives it a card of its own or the input
+  `{"type": "card", "action": "insert", "slot": 2}` puts a blank one in; each slot's card-detect pin and card switch
+  follow its card, the firmware mounts each card from its own port, and S2's picture goes to the card the firmware's
+  save settings name (the save slot; the double-slot save modes stop the session).
+  The card stays in the slot across a player's power
   cycles; `OM_EMU_CARD=FILE` keeps it between sessions (`host/card.mjs`). `OM_EMU_CARD_SIZE=GiB` (the browser
   player's Card start option) gives a new card another capacity, above 32 GiB an SDXC card, which the firmware formats
   exFAT (`docs/hle-gaps.md` 4.8.6; `refs/exfat.mjs` reads it back), and formats exFAT again from the menu; the card
@@ -370,6 +375,8 @@ OM_EMU_CARD=emu/out/card/E143.omsd sh emu/play.sh   # keep the card between sess
                                                  # pictures' files stay on it (src/lab/sdcard.mjs cardImage)
 OM_EMU_CARD_SIZE=64 sh emu/play.sh               # a blank 64 GiB SDXC card in place of the 8 GiB SDHC one, formatted
                                                  # exFAT by the firmware (docs/hle-gaps.md 4.8.6)
+OM_EMU_CARD2=emu/out/card/E143-2.omsd sh emu/play.sh   # a card in the second slot too (E143, E146), kept in a file
+                                                 # of its own; without it the second slot is empty (4.8.12)
 node emu/bin/nav.mjs --time --png each 'DOWN OK MENU'     # a scripted menu session: a line and a PNG per step
 node emu/bin/play.mjs --patch FILE                # the player on the stock blocks with FILE's patches (Patch overlays)
 node emu/bin/run.mjs all --trace emu/out/js      # the replayed scenarios, traced (37 labs, about 3 min)

@@ -1588,6 +1588,7 @@ camapp 3's frames and compares them with camapp 1's. The default stays camapp 1.
     time, and every settable one together) they leave its menu unchanged (1259 and 1261 are 85, which their descriptor
     lists do not hold, and equal in camapp 2). What decides the row: both slots' media flags 15261 and 15262, which
     have no descriptor (4.3.7). IMG2 is drawn under the menu and changes no pixel (above).
+    (Since 2026-11-11, 4.8.12: the lab's second slot is empty by default and the row is grey in both, X.)
   - *PLAY* (No Picture, no shots taken): identical.
   - *The histogram* (GUI layer 1's box at x 4..259, y 110..172 on the shooting screen): empty in camapp 1 with or
     without `--cpu2 native` (S-MODACK answers OSD_DRAW_CPU2's send, 4.6.2) and in camapp 3 without it; in camapp 3
@@ -2527,6 +2528,8 @@ reads. No stand-in changed this round; the default stays camapp 1.
   (I: not mounted): the request vt 20 with 3 (`0x50bb7e8c`), the kind's mount state 2 (`0x50bb7e7b`; X, that slot's
   path). No test of the card's presence is on that path: the branches before it test the device's vt 140, api_media's
   bit 0x100 and UI_IN's `0x0400` (`0x50bb7db8..0x50bb7e42`), not the card bit 0x80 (4.8.3: a card out clears it, X).
+  (Corrected 2026-11-11, 4.8.12: the start does test the card's presence first, at `0x50bb7af6`, the device's state
+  4097 for a slot whose detect answers no card; that path clears the slot's flag.)
 - **The runs (X).** Camapp 1 runs no media manager: both flags 0, the row grey. Camapp 3's manager sets 15261 = 1 at
   2.756 s (the first slot's card) and 15262 = 1 at 3.06 s: its mount of the second slot runs the DCF card-in for drive 1
   (detect state 2 at `0x5087bd4e`) and the second slot's SD port, the command's u16 at +12 (port 1; the command layer
@@ -2548,6 +2551,10 @@ reads. No stand-in changed this round; the default stays camapp 1.
   card-in to sd_mount's init is not read; S-SDHOST keeps the host's registers as written and models no card detect).
   This also answers 4.8.3's (?) (D): its format sets both flags (S-CARD gives both slots the mount state 8, the second
   with no card in it: a lab input of the same kind), so the row is available after it.
+  Settled 2026-11-11 (4.8.12): the SD driver's detect of a port is a pin of the body IO expander, not UI_IN's level,
+  and the lab's read "card present" for both; with the second slot empty (the lab's default now) the manager clears
+  15262 and the row is grey with one card, in camapp 3 as in camapp 1 (D, X). The mount state 8 of the empty slot is
+  the manager's own (X), not a lab input, and the menu's format no longer flags the empty slot.
 - **Corrections.** 4.2.4's return chain past `0x50b530c1` was not one: `0x50e171e0` is the log format `%1s(%d)` that
   `0x50b53072` logs with (run-time `0x60e38200`), `0x50db73f1` the string "Shooting::setFocusModeChange" and
   `0x512ac5e4` "changeFunctionButton", stack words a scan took for return addresses; the caller is initLeverSwitch
@@ -2558,6 +2565,8 @@ reads. No stand-in changed this round; the default stays camapp 1.
   slot's media status 0x3780 and 0x600, and camapp 1 with both flags set shows camapp 3's menu word for word; with the
   Fn lever moved to 1 camapp 3 writes 535 = 0 and is camapp 1's frame word for word, and camapp 1's frame does not
   change; moved back, camapp 3 writes 535 = 1 and shows its MF frame again, and camapp 1 keeps 0 and its frame.
+  (Changed 2026-11-11, 4.8.12: with the second slot empty both menus are the same word for word, flags (1, 0) in
+  both and the slot's media status 1; the 4,602 pixels are now camapp 1's with both flags set against without.)
 
 #### 4.3.9 The JPEG encode (2026-11-11; D unless tagged, addresses E143's)
 
@@ -4343,6 +4352,9 @@ bytes on; E143's places in brackets):
   Round 9 (2026-11-08, 4.8.10): REC_FILE's task natively on E143 from the packet REC_IMAGE posts it, the file's header
   (Exif with the maker notes, XMP) by REC_IMAGE's own header maker, S-RECFILE retired there; the second slot surveyed.
   Then on E146 and E147 too, at the addresses and layouts a rule reads; the E144 family's REC surveyed (4.8.10).
+  Round 10 (2026-11-11, 4.8.12): the second card slot on E143 and E146: two slots, the second empty by default, each
+  slot's card-detect pin as the SD driver reads it, a second card mounted by the firmware from its own port, and S2's
+  picture on the card the save settings name.
 
 #### 4.8.1 The sdmem request contract (D unless tagged)
 
@@ -4456,6 +4468,7 @@ found on the way:
   REC_FILE natively (on E143, E146 and E147 since 2026-11-08, 4.8.10), the SD host at its registers with
   interrupts (seam A),
   playback of the files (a JPEG decoder at the codec seam); round 2's open points are in 4.8.3.
+  (The second slot: 4.8.12, 2026-11-11.)
 
 #### 4.8.3 The card on E143, round 2: the menu's format, removal and insertion (2026-10-24; D unless tagged)
 
@@ -4548,6 +4561,8 @@ to the card switch), and are stood in at their seams with the firmware's own eve
   media manager in camapp 2); the media control's other commands (2, 3, 5, 6: erase all, copy, unlock, ...); the SD
   host's card detect (seam A); a card the firmware cannot mount (unreadable; an SDXC card it formats and mounts,
   4.8.6); what the camera draws without a card ("No Card", the card icon).
+  (The second slot is modelled since 2026-11-11, 4.8.12: its mount state 8 at the start is what the media manager
+  leaves for an empty slot, X, and its switch `0x1518` and card-detect pin follow its card.)
 
 #### 4.8.4 The card on more bodies, round 3 (2026-10-25; D unless tagged)
 
@@ -5054,6 +5069,8 @@ there (it stays on the other bodies).
   double-slot mode (Card Slot Settings; the source of `RecordMediaMode`, `Media` and `Media2` in REC_MAIN's packet),
   and sd_mount's and the insertion's path for port 1. So the model keeps one slot: the lab's insertion mounts drive 0
   only, and the second slot is left out of the model.
+  (Read and modelled 2026-11-11, 4.8.12, which also corrects the contexts above: they are drive 0's and drive 1's,
+  picked by `Media`'s value, not `Media`'s and `Media2`'s.)
 - **E146 and E147 (2026-11-08; D unless tagged).** REC_FILE runs natively on both (`src/fw/models.mjs` `rec_native`),
   every address and layout `src/lab/rec.mjs` uses read from each image by a rule (`src/fw/facts.mjs` `recFile`, fact
   `rec_file`; on E143 it reads the values given by hand before, `REC_FILE_E143`, and `test/test_facts.mjs` pins all
@@ -5251,6 +5268,173 @@ there (it stays on the other bodies).
   called at `0x50c500c5`, was not entered at PLAY in a run with one picture, X). On the other bodies the
   module stays stood in (finding 92's addresses), and the E118 family's files lack the firmware's Exif (finding 93;
   they carry it since findings 102 to 104, and its native load would read it, finding 106).
+
+#### 4.8.12 The second card slot (2026-11-11; D unless tagged, addresses E143's)
+
+The lab has the body's two card slots on E143 and E146 (`src/fw/models.mjs` `card_fs.second_slot`): the second is
+empty unless the host gives it a card of its own, and what the firmware does with an empty slot, with two cards and
+with the save settings is its own code's (`emu/src/lab/storage.mjs`, `media.mjs`, `camapp.mjs`; every address the lab
+uses in `src/fw/facts.mjs` `cardSlots`, fact `card.slots`). Until this round one card answered both SD ports and both
+slots read "card present", so `control camapp 3` mounted the first slot's card in the second slot too (4.3.7).
+
+- **How the firmware numbers the slots.** Slot 1 and slot 2 are 0 and 1 everywhere below the menu's texts: the file
+  layer's drives 0 and 1 (`C:` and `D:`, `0x508a8149`: the letter less `C`), the SD host's ports 0 and 1 (the
+  drive-to-port map `0x508accba` returns 0, 1 and 2 themselves and 3 for drive 8; the hosts `0x99000000` and
+  `0x9a300000`, 4.8), a command's port index at its +12 (`0x508ad044`), the media API's slot (`0x503f0bd7(slot)`),
+  the HLS media kinds 4 and 8 with their mount state words `0x60360bfc` and `0x60360c08`, the card switches' UI_IN
+  codes `0x1506` and `0x1518`, the media flags 15261 and 15262, the save settings' values 0 and 1 (`MODE_MEDIA_SLOT0` /
+  `_SLOT1` in the shell's usage texts), the DCF count table's rows of 52 bytes, and REC's `Media` (below). The HLS
+  record controller alone counts from 1 (1 slot 1, 2 slot 2, 3 both).
+- **The card detect is a pin of the body IO expander.** The SD driver's detect of a port is `0x508b0221(port)`. Its
+  helper `0x508b0859` reads the GIO code `0x0200000f` (port 0) or `0x02000010` (port 1) through the GIO read
+  `0x5000297f`, stores 0 where the pin reads 0 and 1 otherwise, and always returns 1; so the detect answers that word,
+  0 for a card in the slot. Its other path, taken where the helper returns 0 (never on this build), starts from
+  `0x1301` and answers 0 where UI_IN's level of `0x1506` / `0x1518` is 0 (`0x508b0240..0x508b025f`): level 0 is a
+  card in the slot there too, which makes 4.8.3's reading of the level D. The GIO read maps the code (`0x500029ad`:
+  class 2's row of the map table `0x6034db0c` has no board table, the code is the pin) and calls the class's reader
+  from the table `0x60118f30`; class 2's (`0x50052e28`) takes the pin's mask from `0x601190c4` (1 << pin) and tests
+  it (`0x5005605b`) in the word of the mask's byte in the body IO expander's input shadow, three words at
+  `0xa32c5310`. The expander's driver fills the shadow with three one-byte reads of the chip (`0x50056e2e`, from its
+  init `0x50055e10`, its refresh `0x50056514` and `0x50056f03`). So the card detects are the expander's pins 15 and
+  16 (the shadow's word 1 bit 7 and word 2 bit 0). The expander's init also reads three bytes of the chip (its
+  command 217; which register, ?) and stores a UI_IN code for the first bit set among them (`0x50055eed`: pin 15
+  `0x1506`, pin 16 `0x1518`, pin 5 `0x0004`, pin 6 `0x000b`, pin 17 `0x2004`), so the pins 15 and 16 are also
+  UI_IN's card switches (I, from the matching pins and codes; how the pins reach UI_IN's group 1 image is not read,
+  ?). The write-protect read `0x508b01f7` has the detect's form over the pins 21 and 22 (`0x508b0824`; I: the two
+  cards' write-protect switches, which read 0 in the lab). Callers of the detect:
+  the drive status (below), logsec's init (`0x508ac195`: it marks a port whose detect answers `0x1301`, which this
+  build's never does), the sdmem request's card check for a UHS-II card (`0x508b3acf`) and `0x508966a1`,
+  `0x508a8498`.
+- **An empty slot to the firmware.** The file layer's drive status (`0x508a8327`) returns 1 at once for drive 0 or 1
+  whose detect does not answer 0 (`0x508a834f..0x508a8361`); api_media's status (`0x503f0bd7`) copies that bit 0;
+  DevMed_MediaControl's state of the slot (`0x50d896f3`, the device's vtable +124) is then 4097, where a present
+  card gives `0xf000` (the status's 0x80), 8192 (4), 8193 (8 or 0x20), 12288 (2) or 12289 (0x10). In the lab
+  the shadow is never written (the expander's task does not run, S-IOEXP), so both pins read 0: two cards present.
+  The drive status of the empty second slot was `0x8600` (camapp 1) and, with S-SDCARD's card answering port 1,
+  `0x13780` (camapp 3). 4.3.7's trial of UI_IN's `0x1518` at the no-card level changed nothing because this detect
+  does not read it.
+- **The media manager's start, per slot** (`0x50bb7bba`, a slot's controller: +172 the slot, +320 its device). It
+  first asks whether the device's state is 4097 (`0x50bb7af6`). If so it clears the slot's media flag (15261 + slot,
+  `0x50bb7c53..0x50bb7c6e`) and ends the slot's mount process (`0x50bb8092`). 4.3.7 read "no test of the card's
+  presence on that path": this is the test, missed there. X, `control camapp 3`, one card: the device's state
+  `0xf000` for slot 1 and 4097 for slot 2; 15261 = 1 and 15262 = 0 at 2.756 s; the mount state of kind 4 goes 2, 4, 8
+  with the notifications 711 {4, 1, 2}, {4, 1, 4}, {4, 1, 8}, the mount state of kind 8 is set to 8 with no
+  notification, and port 1 gets no command. So S-CARD's 8 for the empty second slot's mount state is what the manager
+  leaves, not a lab input as 4.3.7 and 4.8.3 said. X, a second card with the firmware's file system: mount state
+  of kind 8 = 1, then one request to the file module, FILECLBK `0x31` {0, drive 1} through the API sender (reply
+  queue 6): the DCF numbering mount alone, which mounts the volume and reads the card's lists itself (56 commands on
+  port 1 for a formatted card with no picture, 66 for one with two pictures in the tests; the drive status
+  `0x13780`); 299 ms later 15262 = 1 and the states 2, 4, 8 with 711 {8, 1, 2}, {8, 1, 4},
+  {8, 1, 8}; after each slot's end a synchronous request `0x72` to the file module (its block `{0x60038c9a, 1,
+  drive}`; what it is, ?). S-CARD's insertion of the first slot sends four requests (`0x51`, `0xf0` 1 and 3, `0x31`,
+  4.8.2, I); the manager's own is `0x31` alone (X). X, a blank second card: the same `0x31`; the drive status ends
+  `0x8704` (media status `0x704`: its 4 set, its 0x80 not), nothing is written to the card, and the slot update
+  sets 15262 = 1 (for the 4): the camera does not format a card by itself, where S-CARD's first-slot insertion does
+  (I, 4.8.2).
+- **The slot update and the movie Card Slot Settings row.** The update (`0x50bba897`, 4.3.7) sets the flag to 1
+  where the slot's device answers mounted (`0x50d8a16a`: the status's 0x1000; and the controller's +168 is 0) or
+  the status has 4 or 8, else to 0 unless it has 0x4000. With one card the flags are (1, 0), and the row's
+  restriction (4.3.7: available only at (1, 1)) greys it. So a camera with one card in slot 1 shows the row grey (D
+  for the logic; X in the lab under camapp 3: its menu is then camapp 1's word for word). This settles 4.3.7's open
+  question. With two cards the flags are (1, 1) and the row is available (X: 4,602 pixels in x 38..871, y 283..327,
+  the box 4.3.7 pinned).
+- **A change at run time (X, `control camapp 3`).** The second card out: the mount state of kind 8 is set to 0 (first
+  from the sequence parts, `0x50c93b5a`), 711 {8, 0, 0}, one request FILECLBK `0x35` {drive 1} from the API sender
+  (I: the DCF unmount; S-MEDIA's removal sends the DCF process's card out and sdmem's card-info clear instead, I),
+  15262 = 0 (DevMed_MediaControl, `0x50d89227`), 711 {8, 0, 8}; the drive status is 1 and the mount state stays 0.
+  Back in: 711 {8, 1, 0}, `0x35` again, then the start's sequence (state 1, `0x31` {drive 1}, 1.34 s later 15262 = 1
+  and 2, 4, 8). The removal of the card the save slot names stops the session at the sequence parts' read of module
+  9's state (`0x50c8a335`, outside S-TAKEOVER's list): the first slot's with the default settings, the second's
+  after the save slot is set to it (X; open).
+- **The save settings.** 1129 (data object `0x52b1`, the shell's `MODE_PICTURE_RECORD_MEDIA`; six values 0..5), 1130
+  (the still save slot, 0 or 1), 1131 (the movie slot, 0 or 1; also the id of the menu row 4.3.7 followed), 1132 (0
+  or 1), 1134 and 1404; in the lab's blank store all are 0 but 1134, which is 1 (X). Who reads them:
+  - *The record controller's card choice* (CmpSts_RecordController `0x50c73f16`): for 1129 = 0 or 1 the card of
+    1130 (1 + its value), whatever is in the slot; for 2 to 5 both cards (3) where its own test `0x50c73fd5`
+    passes for both slots (not read) and neither media status has a bit of the mask 0x12, else the one slot that
+    passes, else 0. DevRec_Rec::recordMedia (`0x50d8b0a1`) turns it into `apiRecInfo`: `slot[0]` the drive
+    (0, 1, or `0xffff` for none), `slot[1]` 1 for both cards else `0xffff`, and 1129 itself; REC_MAIN copies the
+    request's +76 / +78 / +80 / +82 into the packet's `Media` / `Media2` / `RecordMediaMode` (+297) /
+    `RecordDevice` (`0x50539cb0..0x50539cd7`). rec_file_record picks its file context by `Media`'s value
+    (`0x5053ff29`: `0x62a8c4e4`, or `0x62a8c540` where `Media` is 1). Correction to 4.8.10: the two contexts are
+    drive 0's and drive 1's, not `Media`'s and `Media2`'s.
+  - *The remaining shots* (`0x50419164`): for 1129 = 0, or 1 with 1134 = 0, the count of the card of 1130 where its
+    status has bit 0x80, else 0; otherwise both cards' counts (0 for an absent one), combined by `0x5041b58d` for 1
+    (not read), the smaller for 2 and 4, the larger for 3 and 5.
+  - *The application's card check* (checkMediaErrorSubAppMdlShootingCmn `0x5105c978`): in a movie mode the error
+    of the slot 1131; for stills 1129 = 0 the slot 1130's (none where exactly one slot has the factor 1), 2 and 4
+    an error where either slot has one, 1, 3 and 5 only where both have. setRecordMedia (`0x5107dc70`): with 1129 =
+    1 and 1134 = 1 it moves 1130 to the other slot when `0x5105ccd5` answers for the save slot and not for the
+    other (validateAutoCardSwitch `0x5107dcf5`; I: the slot is full). One case of `0x51052056` sets the playback
+    slot 1404 from 1131 in a movie mode, from 1130 for 1129 = 0 or 1, else from 1132
+    (`0x51052084..0x510520da`).
+  - *Below the HLS:* TAKE's shot record (`0x503bbb6f`: for 2 and 3 it reads further settings into the record's
+    +38000..+38020), the file layer's DCF numbering across the two drives (`0x5087b07d`, `0x5087acfd`,
+    `0x5087ad37`), the play module, the movie module (1131).
+  - The menu's names of the six values are not read. By the logic 0 records on the save slot, 1 switches cards
+    (1134), 2 and 4 need both cards and 3 and 5 go on with one (I: Standard, Auto Switch, Dual Independent and Dual
+    Same in their two forms).
+- **The menu with one card (X).** OK on Card Formatting opens the card's Format Card / No screen at once; with two
+  cards it opens "Select Card to Set Up" first (4.8.2). `test_storage.mjs`'s menu format takes the one-card path on
+  E143 and E146 now.
+- **The lab's model.**
+  - *S-SDCARD's slots:* two cards, each answering the commands of its port (the command's +12); an empty slot
+    answers nothing. The second card is the host's `env.card2` (node: `OM_EMU_CARD2=FILE`, `OM_EMU_CARD2_SIZE=GiB`),
+    or a new blank card from the Player's input `{"type": "card", "action": "insert", "slot": 2}` (`"size"` in GiB),
+    which the player keeps for its later sessions; the first slot's card, or one sharing its sector store, is
+    refused. Each slot's card-detect pin is written into the expander's input shadow, 0 with a card and 1 without
+    (the seam is S-IOEXP's: its task would store the chip's reads there; a bit the firmware changed stops the
+    session), and the slot's card switch in S-KEYBITS' image is at level 1 without a card.
+  - *S-CARD:* with a second card and no media manager (camapp 1 and 2) its insertion is the manager's own request,
+    `0x31` for drive 1, at the bring-up and at a card input; a card with no file system stays unformatted and
+    unmounted, and Card Formatting from the menu formats it (S-MDACTRL with media 1, then the same mount). The
+    media flags follow the slot update's rule from each slot's media status, through the store's setter
+    (`0x50ab4f75`), at the start and after each change: (1, 0) with one card, where camapp 1 had (0, 0) before. A
+    picture goes to the card the record controller's rule names: the slot 1130 for 1129 = 0 or 1, REC's `Media`;
+    no picture where that slot has no mounted card; 1129 = 2..5 stop the session (the double-slot record is not
+    made). The settings are the store's as they stand: a test sets 1130 through the store's setter, not through
+    the menu, and whether the application lets the save slot stand at an empty slot is not read (?).
+  - *S-MEDIA:* the second slot's switch as the first's where no manager runs; under camapp 3 the manager takes the
+    second slot's change itself and S-MEDIA only reads the drive status back. The first slot under camapp 3 is as
+    before (S-CARD mounts it before the application starts).
+  - *What stays I or lab choice:* that the camera's expander pin reads 1 for an empty slot (the code only tests for
+    not 0); S-CARD's four requests and S-MEDIA's removal requests for the first slot (the manager's are `0x31` and
+    `0x35`, X); the slot controller's +168 in S-CARD's flags (taken as 0). S-CARD sets the flag alone: for a flag
+    of 1 the update also sets 4510 (slot 1) or 4521 (slot 2) to -1 and calls api_rec's `0x504169b2` for both slots
+    (`0x50bba8ff..0x50bba95a`, D; what they keep is not read), which camapp 1 and 2 do not get (open).
+- **E146.** The rule reads the same forms in its image (the detect `0x508ca01d`, its helper `0x508ca655`, the same
+  shadow words, the port index +12, the record controller's 1129 and 1130 at `0x50c81e24`); its sessions pass
+  (below). The other bodies with two slots (E139, E134, E125: `card.detect` drives 2) have no helper of this form;
+  their one card answers every port as before (open).
+- **Tests (X).** `emu/test/test_storage.mjs --slot2` (storageSlots; E143 25 of 25, E146 20 of 20; registered in
+  `bin/test.mjs`). One card: detect 0 and 1, the second drive's status 1 and media status 1, no command on port 1,
+  flags (1, 0), mount states 8 and 8, switch levels 0 and 1; the first slot's card refused for the second; with the
+  save slot at slot 2 the firmware's remaining shots are 0 (803 at slot 1) and S2 makes no file; back at slot 1 S2's
+  file is on the card; 1129 = 2 stops S2. Two cards (a blank one and the one with that picture): both mounted, the
+  second not formatted by the lab, its DCF database counting its picture (next file 2); the row enabled; S2 with the
+  save slot at slot 2 gives `D:\DCIM\100OMSYS\P1010002.JPG`, read back on the second card by `refs/volume.mjs` and
+  absent on the first; at slot 1 `C:\...\P1010001.JPG` on the first only; the second card out (drive status 1, flag
+  0, the first still mounted) and in, then the first out and in. A blank card put into the empty slot: media status
+  with the 4, 0 sectors written, flags (1, 1); "Select Card to Set Up", the second card, Format Card, Yes formats
+  and mounts it, the first card keeps its picture; the player's next session starts with it mounted. E143 under
+  camapp 3: one card (the manager clears 15262, its menu camapp 1's word for word), two cards (mounted by the
+  manager, the menu camapp 1's with two cards, S2 on the second card, the second card out and in by the manager).
+  `test_camapp.mjs` camapp3FramesSession (12 of 12) now pins the one-card menus equal and the row's pixels against
+  camapp 1 with both flags set. `test_facts.mjs` pins `card.slots` on E143 and E146 and none on the 17 others (1447
+  of 1447). storageSession passes on E143 (59 of 59) and E146 (58 of 58) with the one-card menu path.
+- **Golden (X).** The default sessions are a camera with one card in slot 1 now, so 28 of golden's sessions change:
+  the 26 Player sessions (devices, output, stops, harness) and `run/perf`, `run/perf-fault` (output: the play
+  workload's hook log, register digest and instruction count; still ok). The screen layer is identical in every
+  session, and the devices layer differs only in the instruction stamps of the interrupt and IPI rows. The
+  replayed outcomes differ in the same few ways everywhere: UI_IN's idle codes gain `0x02021518` (slot 2's card
+  switch at the no-card level), 15261 is 1 where it was 0, the GUI reads 1129, 1130, 1404, 44 and 15209 more often
+  and 15262 no longer, and the GUI's extra work moves its stand-in counts and heap (S-RPC request addresses by `0x50`).
+  Re-recorded with that reason (evidence: firmware).
+- **Open.** The double-slot record (`rec_file_record_DoubleSlot`, 1129 = 2..5) and the auto switch; the movie slot
+  1131 beyond the row; the playback slot (1404, `startSlotSwitch`); the manager's own requests in S-CARD's and
+  S-MEDIA's place for the first slot (`0x31`, `0x35`); `0x72`; the write-protect pins; the expander's chip and
+  UI_IN's group 1 producer; the removal of the save slot's card under camapp 3; E139, E134 and E125; the browser
+  player's page (the input works through the API; no control for the second slot yet).
 
 ### 4.9 HDMI and DisplayPort
 

@@ -277,7 +277,10 @@ the survey table.
   version with an inlined loop, finding 136);
   RAW and RAW + JPEG files; the HLS media manager itself (camapp 2 does
   not create it) in place of S-CARD's and S-MEDIA's requests; the second slot (its switch `0x1518`, and S-CARD's start
-  value of its mount state); the media control's other commands (erase all, copy, unlock); an SDXC card (done
+  value of its mount state: done 2026-11-11 on E143 and E146, hle-gaps.md 4.8.12: two card slots, the second empty
+  by default, each slot's card-detect pin a pin of the body IO expander, a second card mounted from its own port, S2
+  on the card the save settings name; open: the double-slot record modes and the other two-slot bodies);
+  the media control's other commands (erase all, copy, unlock); an SDXC card (done
   2026-10-29, hle-gaps.md 4.8.6: S-SDCARD's card SDXC above 32 GiB by `OM_EMU_CARD_SIZE`, an independent exFAT
   reader `refs/exfat.mjs`; the firmware formats a blank 64 or 128 GiB card exFAT in an MBR partition and mounts it,
   X; the tooling, the HLS side and the other bodies with it on 2026-10-29, 4.8.6 round 5: the Card panel and

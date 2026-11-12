@@ -14,8 +14,8 @@
 // (test_camapp.mjs, with S-HEAP over an idle and a workload, the mode dial's positions and camapp 3 with its
 // frames), S-MODPOST (test_modpost.mjs), the TAKE
 // probe's record of what TAKE_FUNC takes and asks on E143 (test_take.mjs), CPU 2 natively on the machine's second
-// core (test_cpu2.mjs), the VSC's histogram unit in play under camapp 3 (test_hist.mjs),
-// the lab's audio output and the
+// core (test_cpu2.mjs), the VSC's histogram unit in play under camapp 3 (test_hist.mjs), the firmware's start
+// tasks' conditions and the start probe's records on E143 (test_ustart.mjs), the lab's audio output and the
 // synthesized shutter sound at a
 // release, and the AF beep end to end (test_audio.mjs), the audio hardware and AUD_EXEC's play path on E143
 // (test_audiohw.mjs), the SCPU's clock, ports, link pins and sub-CPU model
@@ -323,6 +323,15 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`CPU 2's queues (--cpu2 native), the histogram on OSD_DRAW_CPU2: ${ch.checks - ch.bad.length}/${ch.checks}`);
   ch.bad.forEach((x) => console.log('  ', x));
   bad += ch.bad.length;
+}
+// the firmware's start tasks (bin/ustart.mjs, docs/hle-gaps.md 4.6.3): the start conditions' call sites in the image,
+// and the start probe's record of each start task run natively in a bare lab of its own (no session runs it)
+{
+  const { ustartMap, ustartProbe } = await import('../test/test_ustart.mjs');
+  const um = await ustartMap(), up = await ustartProbe();
+  console.log(`the start tasks: the conditions' call sites ${um.checks - um.bad.length}/${um.checks}; the start probe ${up.checks - up.bad.length}/${up.checks}`);
+  [...um.bad, ...up.bad].forEach((x) => console.log('  ', x));
+  bad += um.bad.length + up.bad.length;
 }
 // the SCPU interface's clock and ports, the link's pins and the sub-CPU's model (S-SCPUDEV) without firmware, then the
 // link at a play session's start: E143 here, E146, E147, E139 and E134

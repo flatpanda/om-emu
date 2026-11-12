@@ -396,6 +396,9 @@ node emu/bin/modelcheck.mjs [MODEL ...]          # the ported models' smoke test
 node emu/bin/modelcheck.mjs --card-size 64       # the same with a blank 64 GiB SDXC card on each native card
 node emu/bin/port.mjs all                        # re-port every model after a change to the rules, src/lab or overrides
 node emu/bin/xto.mjs E144 0x501e04b7             # where an E143 code address is in a ported model (xwhere.mjs: back)
+node emu/bin/ustart.mjs [TASK ...]               # the start probe (E143): each of the firmware's start tasks run
+                                                 # natively in a bare lab, as far as it goes, with the conditions it
+                                                 # waits for and the stop that ends it (docs/hle-gaps.md 4.6.3)
 node emu/bin/fw-survey.mjs survey                # the multi-model survey's columns for every .BIN in fw/ and fw/old/
 node emu/bin/fwmap.mjs                           # the firmware map: static map, coverage run, report (about 5 min)
 node emu/bin/m4census.mjs                        # the SCPU image's Thumb-2 instruction census (the Cortex-M4 core's scope)

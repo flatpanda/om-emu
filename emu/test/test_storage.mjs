@@ -571,6 +571,11 @@ export async function storageSession() {
           // the directory entry's stamp is the capture's, packed from the shot's time record (the FAT date and time)
           const fd = (DATE[0] - 1980) << 9 | DATE[1] << 5 | DATE[2], ft = DATE[3] << 11 | DATE[4] << 5 | DATE[5] >> 1;
           ok(e && e.date === fd && e.time === ft && (e.attr & 0x20) !== 0 && img.file.stamp === ((fd << 16 | ft) >>> 0), `the directory entry's date and time 0x${e?.date.toString(16)} 0x${e?.time.toString(16)} are the clock's (0x${fd.toString(16)} 0x${ft.toString(16)}), an archive (attribute 0x${e?.attr.toString(16)}); the DCF block's stamp 0x${img.file.stamp?.toString(16)}`);
+          // the shooting values are the EXIF template's, held strictly: the EXIF set, which converts the record's Tv and
+          // Av, and REC_IMAGE's rec_bracket_update_iso, which converts its Sv, do not run, and the lab has no source for
+          // the three records on the family (docs/model-survey.md finding 147); a change that fills them updates this
+          const tags = [0x829A, 0x829D, 0x8827, 0x920A].map((k) => JSON.stringify(x?.exif?.get(k)));
+          ok(tags.join(' ') === '[0,100] [0,10] 0 [0,10]', `ExposureTime, FNumber, ISO and FocalLength are the template's 0/100, 0/10, 0 and 0/10: ${tags.join(' ')}`);
         }
       } else ok(data && want && data.every((b, i) => b === want[i]), 'the file\'s bytes are the JPEG the lab handed the file module');
       const d = data ? decodeJpeg(data) : null, [w, h, rows] = want ? s2.picture_frame(s2.camapp.views.get(img.release)) : [0, 0, []];

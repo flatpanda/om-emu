@@ -22,7 +22,8 @@
 // S-MODPOST's rule, the guard's report of it and the object-name table's rule (test_modpost.mjs modpostUnits),
 // S-TAKERDY's rule (test_take_ready.mjs takeReadyUnits),
 // S-DISPQ's queue discipline (test_dispq.mjs dispqUnits),
-// the camera front end's control plane as cam.c's second init programs it (test_camfe.mjs camFeUnits, S-CAMFE),
+// the camera front end's control plane as cam.c's second init programs it, with the clock enables of the sensor's
+// power-on (test_camfe.mjs camFeUnits, S-CAMFE),
 // the lens serial controller, the deferred-call triggers and S-LENSMCU's replies (test_lens.mjs),
 // PER_SIO's served IIC transfers and the TG-5's charger (test_sio.mjs),
 // the debug API's argument checks, halt,

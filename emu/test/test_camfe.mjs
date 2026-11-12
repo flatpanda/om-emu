@@ -3,12 +3,15 @@
 // other value refused, A-CAMFE-1's read-before-write registers (0, then what was written; the init's |= 1, |= 2, |= 4
 // and &= ~bit read back), A-CAMFE-2's start bit (+0xa08 of the clock block reads 0 after its write of 1), the reads of
 // write-only registers (the clock gates among them) and of addresses outside the program refused, widths, unaligned and
-// debugger accesses refused, no interrupt line driven, and a second device over the same blocks refused.
+// debugger accesses refused, no interrupt line driven, and a second device over the same blocks refused. And the
+// power-on's clock enables (docs/hle-gaps.md 4.2.6; POWER_ON): the gate +0x870 = 1, +0x008 = 0x700 beside the init's
+// 0x100, cam_cpm.c's |= 0x10 of +0x9a0 and +0x9e0 (A-CAMFE-1: 0, then what was written), any other value or gate
+// refused, and SSG1's command unit (the sensor's serial channel, +0xa00..+0xa64 and +0x60c) refused by name.
 //   node emu/test/test_camfe.mjs
 import { fileURLToPath } from 'node:url';
 import { createMachine } from '../src/machine.mjs';
 import { BUS } from '../src/core/mem.mjs';
-import { CamFe, PROGRAM, RMW, POLL } from '../src/dev/camfe.mjs';
+import { CamFe, PROGRAM, RMW, POLL, POWER_ON, POWER_RMW } from '../src/dev/camfe.mjs';
 
 const throwsAs = (fn, cls) => { try { fn(); return false; } catch (e) { if (e === cls || e instanceof cls) return true; throw e; } };
 const tester = () => { const bad = []; let checks = 0; return { bad, get checks() { return checks; }, ok: (c, what) => { checks++; if (!c) bad.push(what); } }; };
@@ -48,6 +51,21 @@ export function camFeUnits() {
     && throwsAs(() => fe.write(0x9B500010, 3, 4, true), BUS), 'a halfword, an unaligned address and a debugger write are bus errors');
   const n = fe.reads;
   ok(fe.read(0x9A801C00, 4, true) === 7 && fe.reads === n && n === 13, `a debugger read of a readable register has no side effect and is not counted (${n} CPU reads)`);
+  // the power-on's clock enables (0x501609f6, 0x5015fb32, 0x50165955..0x50165962)
+  const pregs = POWER_ON.reduce((k, [, r]) => k + r.length, 0);
+  wr(0x9B500870, 1); wr(0x9B500008, 0x700); wr(0x9B500008, 0x100); wr(0x9B500008, 0x700);
+  wr(0x9B5009A0, rd(0x9B5009A0) | 0x10); wr(0x9B5009E0, rd(0x9B5009E0) | 0x10);
+  ok(POWER_ON.length === 1 && pregs === 4 && fe.power.size === 4 && POWER_RMW.length === 2 && fe.regs.get(0x9B500870) === 1
+    && fe.regs.get(0x9B500008) === 0x700 && rd(0x9B5009A0) === 0x10 && rd(0x9B5009E0) === 0x10,
+    `the power-on's clock enables are kept (${pregs} registers): +0x870 ${fe.regs.get(0x9B500870)}, +0x008 ${fe.regs.get(0x9B500008)}, +0x9a0 ${fe.regs.get(0x9B5009A0)}, +0x9e0 ${fe.regs.get(0x9B5009E0)}`);
+  ok([[0x9B500870, 2], [0x9B500878, 1], [0x9B500004, 0x700], [0x9B5009A0, 0x30], [0x9B5009A4, 0x10]].every(([a, x]) => throwsAs(() => wr(a, x), BUS))
+    && throwsAs(() => rd(0x9B500870), BUS) && throwsAs(() => rd(0x9B500008), BUS),
+    'another value, the gates\' other words (+0x878, +0x004) and a read of a gate are bus errors');
+  const l0 = lines.length;
+  ok([[0x9B000A04, 0x2100], [0x9B000A08, 0x10100020], [0x9B000A14, 0], [0x9B000A00, 0x7801]].every(([a, x]) => throwsAs(() => wr(a, x), BUS))
+    && throwsAs(() => rd(0x9B00060C), BUS) && throwsAs(() => rd(0x9B000A10), BUS)
+    && lines.slice(l0).length === 6 && lines.slice(l0).every((l) => /SSG1's command unit, the sensor's serial channel: not modelled/.test(l)),
+    `SSG1's command unit (+0xa04, +0xa08's power-on value, +0xa14, its start +0xa00, +0x60c, its reply +0xa10) is refused by name: ${lines.slice(l0, l0 + 1)}`);
   ok(lines.length > 0 && lines.every((l) => /^om-emu: om1\.camfe UNKNOWN (read|write) 0x[0-9a-f]{8} size \d/.test(l)), `each refused CPU access is printed: ${lines.slice(0, 2)}`);
   ok([15, 16, 17, 18, 19, 26, 32, 34, 37, 40, 243].every((irq) => intc.line[irq] === 0 && !intc.driven[irq]), 'no interrupt line is driven');
   ok(throwsAs(() => new CamFe(m), Error), 'a second device over the same blocks is refused');

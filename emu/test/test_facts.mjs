@@ -44,7 +44,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
-  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
+  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, ERASE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
   PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143, recImage, recFileInline, recHeader, recFileFrame, KCB0_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
@@ -942,6 +942,11 @@ const MM_INIT_FOUND = { E143: null, E144: null, E134: null, E122: 0x50483A1F, E1
 // 0x510c2b0a a0 and a1; E139 0x50cc4a51, its value by hand before the rule, E122 0x50b983a0, E118 0x50b93405 and E120
 // 0x5091416e, d1 and a0)
 const STATE_LOG_FOUND = { E143: ['a0', 'a1'], E139: ['d1', 'a0'], E122: ['d1', 'a0'], E118: ['d1', 'a0'], E120: ['d1', 'a0'] };
+// The picture file API's object delete and attribute (erase; src/fw/facts.mjs pictureErase), as read (D: E144's code 33
+// at 0x502dfb7a and its fnode +89 read at 0x502dfe5a, E130's at 0x502d7564 and 0x502d7899, each after its API id's
+// load as E143's), and none on E118 and E120, which load neither id (X: a byte scan)
+const ERASE_FOUND = { E143: ERASE_E143, E144: { object_delete: 0x502DFAA5, attribute: 0x502DFDE3 },
+  E130: { object_delete: 0x502D7450, attribute: 0x502D7809 }, E118: null, E120: null };
 // E143's own facts: its loader's limits, its menus are ListMenu (src/lab/menu.mjs LIST_MENU) with their memories, its
 // traits and its dial select (src/lab/menu.mjs dialSelect)
 const E143_FACTS = {
@@ -955,7 +960,7 @@ const E143_FACTS = {
   touch_panel: { driver: true }, lens: { mount: true }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
   broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] }, movie_rate: null },
-  boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, mm_init: null, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, recorder: RECORDER_E143, dcf: { counts: DCF_COUNTS_E143 }, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143, touch_int: null,
+  boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, mm_init: null, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, recorder: RECORDER_E143, dcf: { counts: DCF_COUNTS_E143 }, erase: ERASE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143, touch_int: null,
   cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143, prop_store: PROP_STORE_FOUND.E143, ctors: CTORS_E143,
 };
 
@@ -1056,6 +1061,7 @@ export function factsTests() {
     // the port places E143's GUI task at the rule's (bin/port.mjs, how 'task-trace')
     if (got.menu?.task !== undefined && PORTS[code]) ok(PORTS[code][0x5115BA0C] === got.menu.task, `${code}: A() of the GUI task ${hx(PORTS[code][0x5115BA0C])}, the rule's ${hx(got.menu.task)}`);
     if (Object.hasOwn(MM_INIT_FOUND, code)) ok(got.mm_init === MM_INIT_FOUND[code], `${code}: mm_init ${hx(got.mm_init ?? got)}, found ${hx(MM_INIT_FOUND[code])}`);
+    if (Object.hasOwn(ERASE_FOUND, code)) ok(same(got.erase, ERASE_FOUND[code]), `${code}: erase ${hx(got.erase === undefined ? got : got.erase)}, found ${hx(ERASE_FOUND[code])}`);
     if (STATE_LOG_FOUND[code]) ok(same(placed?.state_log?.regs, STATE_LOG_FOUND[code]), `${code}: state_log ${hx(placed?.state_log ?? placed)}, found ${hx(STATE_LOG_FOUND[code])}`);
     if (TASK_INIT_FOUND[code]) ok(got.display?.task_init === TASK_INIT_FOUND[code], `${code}: display.task_init ${hx(got.display ?? got)}, found ${hx(TASK_INIT_FOUND[code])}`);
     // the port places E143's display task init at the rule's (bin/port.mjs, how 'queue-init')

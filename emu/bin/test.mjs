@@ -24,8 +24,9 @@
 // on) on E143 and E146 (test_acc.mjs), the card and the
 // file system on E143, E146, E147, E144, E142, E134, E148, E137, E125, E130, E133, E129 and the E118 family (S2's
 // file with its header maker's Exif) and SDXC cards on E143 (test_storage.mjs), INFO's still information
-// in playback with two pictures, RIGHT, LEFT, OK's wizard, INFO's three views and the erase's refusal on the 19 bodies
-// (test_playinfo.mjs), a tap on the touch mode icon on E143, ten bodies of the E144
+// in playback with two pictures, RIGHT, LEFT, OK's wizard, INFO's three views and the erase or its refusal on the 19
+// bodies (test_playinfo.mjs), the erase in playback natively on eleven bodies and its refusal on the eight others
+// (test_erase.mjs), a tap on the touch mode icon on E143, ten bodies of the E144
 // family and the E118 family, and in the super control panel on E144 and the E118 family, and with the EVF active
 // on the E118 family and the E144 family's bodies with an EVF, the AF Targeting Pad off and on (test_touch.mjs),
 // subject
@@ -376,7 +377,7 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   bad += su.bad.length + ss.bad.length + sx.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // Playback with two pictures (RIGHT, LEFT, OK's wizard and PLAY from it, INFO's three views, the erase dialog's request
-// refused where Delete opens it) and INFO's still information, from the picture's own
+// performed or refused where Delete opens it) and INFO's still information, from the picture's own
 // record: E143 here (S-PLAYCOMP's answer in the
 // component's struct), and E146, E147, the E118 family (S-PLAYSEQ's answer to the play module's request 3) and the
 // E144 family (S-PLAYCOMP's) each in a process of its own, PLAYINFO_JOBS at once
@@ -398,6 +399,30 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`INFO's still information: E143 ${pi.checks - pi.bad.length}/${pi.checks}; ${others.map(([m, rc, lines]) => `${m} ${rc === 0 ? lines[0].split(': ').pop() : 'FAILED'}`).join(', ')}`);
   [...pi.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += pi.bad.length + others.filter(([, rc]) => rc !== 0).length;
+}
+// The erase in playback (S-PLAYSEQ's eraseCurrent with the firmware's own calls, H-OBJDEL): three pictures, one
+// locked by the DCF edit, each erased through the erase dialog where the body's Delete opens it, the card read back by
+// the independent FAT reader, the protected one refused, No Picture after the last, and the refused erases and edit
+// saves; on a body without the native erase its refusal with the files kept: E143 here, the others each in a
+// process of its own, ERASE_JOBS at once
+{
+  const { eraseSession } = await import('../test/test_erase.mjs');
+  const { spawn } = await import('node:child_process');
+  const ERASE_BODIES = ['E146', 'E147', 'E144', 'E148', 'E139', 'E134', 'E137', 'E142', 'E140', 'E125', 'E130', 'E145', 'E133', 'E129', 'E132', 'E122', 'E118', 'E120'];
+  const ERASE_JOBS = 8;
+  const er = await eraseSession();
+  const one = (m) => new Promise((done) => {
+    const c = spawn(process.execPath, [new URL('../test/test_erase.mjs', import.meta.url).pathname], { env: { ...process.env, OM_EMU_MODEL: m } });
+    let out = '';
+    c.stdout.on('data', (d) => { out += d; }); c.stderr.on('data', (d) => { out += d; });
+    c.on('close', (rc) => done([m, rc, out.trim().split('\n')]));
+  });
+  const others = [], queue = [...ERASE_BODIES];
+  await Promise.all(Array.from({ length: ERASE_JOBS }, async () => { while (queue.length) { const m = queue.shift(); others.push(await one(m)); } }));
+  others.sort((x, y) => ERASE_BODIES.indexOf(x[0]) - ERASE_BODIES.indexOf(y[0]));
+  console.log(`the erase in playback: E143 ${er.checks - er.bad.length}/${er.checks}; ${others.map(([m, rc, lines]) => `${m} ${rc === 0 ? lines[0].split(': ').pop() : 'FAILED'}`).join(', ')}`);
+  [...er.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += er.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // touch in play: a tap on the shooting screen's touch mode icon reaching HFW and the frame, E143 here and the E144
 // and E118 families' bodies with a touch panel each in a process of its own, four at a time (there, on a body with

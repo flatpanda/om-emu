@@ -122,6 +122,23 @@ export class FatVolume {
     }
     return out;
   }
+  // the deleted entries of a directory (first byte 0xe5; the long-name entries left out): {tail: the short name's
+  // other ten bytes as 'XXXXXXX.EXT' after the lost first letter, attr, cluster, size}
+  deleted(dir = this.rootCluster) {
+    const cluster = dir !== null && typeof dir === 'object' ? dir.cluster : dir ?? this.rootCluster;
+    if (cluster === 0) throw new ValueError('FatVolume: deleted() of the FAT12/16 root is not read here');
+    const out = [];
+    for (const c of this.chain(cluster)) {
+      const b = this.read(this.sectorOf(c), this.spc);
+      for (let o = 0; o + 32 <= b.length; o += 32) {
+        if (b[o] === 0) return out;
+        if (b[o] !== 0xe5 || b[o + 11] === 0x0f) continue;
+        const base = ascii(b, o + 1, 7).trimEnd(), ext = ascii(b, o + 8, 3).trimEnd();
+        out.push({ tail: ext ? `${base}.${ext}` : base, attr: b[o + 11], cluster: (u16(b, o + 20) << 16 | u16(b, o + 26)) >>> 0, size: u32(b, o + 28) });
+      }
+    }
+    return out;
+  }
   // the entry at a path ('DCIM/100OMSYS/P1010001.JPG', names compared without case), or null
   find(path) {
     let cluster = this.rootCluster, entry = null;

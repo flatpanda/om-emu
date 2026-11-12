@@ -22,11 +22,17 @@
 //                    PLAY from it returns to the shooting screen (it called a null screen before the image type
 //                    was answered, docs/model-survey.md finding 108) and PLAY shows the newest picture again with
 //                    PLAY's frame. At the end, on ERASE_DIALOG's bodies, Delete opens the erase dialog, UP moves its
-//                    cursor and OK sends PlaySingleFrame::eraseCurrent (21), which S-PLAYSEQ refuses (finding 110):
-//                    the session stops with that refusal and both pictures stay on the card
+//                    cursor and OK sends PlaySingleFrame::eraseCurrent (21): on ERASE_NATIVE's bodies S-PLAYSEQ
+//                    performs it (test/test_erase.mjs has the erase's checks: here one picture left, counted and on
+//                    the card), on the others it refuses it (findings 110 and 140): the session stops with that
+//                    refusal and both pictures stay on the card
 //   node emu/test/test_playinfo.mjs   (with OM_EMU_MODEL=E122 etc.; exit 1 on a failure)
 import { createHash } from 'node:crypto';
 import zlib from 'node:zlib';
+// the bodies whose Delete in playback opens the erase dialog (test/test_erase.mjs ERASE_DIALOG: X, 2026-11-10, and
+// E143 since its media status is OK, finding 138; E145's, E129's and E132's UI_IN tables hold no Delete key), and
+// those whose eraseCurrent runs natively (ERASE_NATIVE there)
+import { ERASE_DIALOG, ERASE_NATIVE } from './test_erase.mjs';
 
 // the GUI's still information record (OlyHfwOpePlyCom's dump 0x50acd02d names the fields: createDate.year +0, month
 // +2, date +3, hour +4, minute +5, pictureSize +8 / +10, expTime +40 / +44, focalLength +56; D, src/fw/facts.mjs
@@ -38,10 +44,6 @@ const START_KEYS = { E132: ['up', 'ok', 'up', 'ok', 'up', 'ok', 'up', 'ok', 'up'
 // the bodies whose OK in playback opens nothing (X, 2026-11-10: the state and the frame stay; why is not read, ?),
 // held strictly: a body that opens the wizard fails here until it is taken out
 const OK_OPENS_NOTHING = new Set(['E147', 'E144', 'E139', 'E134', 'E148']);
-// the bodies whose Delete in playback opens the erase dialog (X, 2026-11-10; E143's Delete opens it only where
-// canExecute(MODE_ERASE) or isProtect is 1, which the lab answers 0, finding 111; E145's, E129's and E132's UI_IN
-// tables hold no Delete key)
-const ERASE_DIALOG = new Set(['E142', 'E140', 'E130', 'E133']);
 const WIZARD = 'SS_MENU_MAIN/ID_ST_WIZARD_MENU_ENTRY', SINGLE = 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE';
 export async function playInfoSession() {
   const bad = [];
@@ -131,17 +133,24 @@ export async function playInfoSession() {
   ok(name() === 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE', `${MODEL}: INFO a third time ${name()}`);
   press('play');
   ok(lab.state() === shooting, `${MODEL}: PLAY back to 0x${lab.state().toString(16)} ${name()}, the shooting screen's 0x${shooting.toString(16)}`);
-  // the erase dialog and S-PLAYSEQ's refusal of the erase (finding 110): no silent success, both files kept
+  // the erase dialog, and the erase (S-PLAYSEQ's eraseCurrent natively, finding 137) or its refusal (findings 110
+  // and 140): no silent success, both files kept
   if (ERASE_DIALOG.has(MODEL)) {
+    const native = ERASE_NATIVE.has(MODEL);
     press('play');
     press('delete');
     ok(name() === WIZARD, `${MODEL}: Delete ${name()} (the erase dialog)`);
     press('up');
     let refusal = null;
     try { press('ok'); } catch (e) { refusal = e; }
-    ok(refusal !== null && /S-PLAYSEQ: play request 21 \(PlaySingleFrame::eraseCurrent\)/.test(refusal.message), `${MODEL}: OK in the erase dialog: ${refusal ? refusal.message.slice(0, 160) : 'no refusal'}`);
     const vol2 = openVolume((lba, n) => st.card.read(lba, n)), kept = s.storage.files.filter((x) => vol2.find(x.path.slice(3).replaceAll('\\', '/')));
-    ok(kept.length === 2 && cam.card_images() === 2, `${MODEL}: after the refusal ${kept.length} of the 2 files on the card, ${cam.card_images()} counted`);
+    if (native) {
+      ok(refusal === null && name() === SINGLE && cam.play_cur === 0, `${MODEL}: OK in the erase dialog: ${refusal ? refusal.message.slice(0, 160) : `${name()}, image ${cam.play_cur === null ? '-' : cam.play_cur + 1} shown`}`);
+      ok(kept.length === 1 && cam.card_images() === 1 && cam.erased === 1, `${MODEL}: after the erase ${kept.length} of the 2 files on the card, ${cam.card_images()} counted, ${cam.erased} erased`);
+    } else {
+      ok(refusal !== null && /S-PLAYSEQ: play request 21 \(PlaySingleFrame::eraseCurrent\)/.test(refusal.message), `${MODEL}: OK in the erase dialog: ${refusal ? refusal.message.slice(0, 160) : 'no refusal'}`);
+      ok(kept.length === 2 && cam.card_images() === 2, `${MODEL}: after the refusal ${kept.length} of the 2 files on the card, ${cam.card_images()} counted`);
+    }
   }
   return { checks, bad };
 }

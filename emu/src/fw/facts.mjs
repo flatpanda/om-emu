@@ -3126,6 +3126,40 @@ export function dcfCounts(img) {
   if (at === null) throw new Error('dcfCounts: no DCF count getter');
   return u32(img, at + 14);
 }
+// The picture file API's erase calls (fact 'erase', src/lab/camapp.mjs H-OBJDEL; docs/model-survey.md findings 137
+// and 140). D on E143, api_picfile.c, whose functions each open by loading their own API id for the trace's enter
+// call (`mov ID,d0; call`), the id its other trace calls carry in a0:
+// - object_delete (id 0x7000f, 0x503fd974: d0 drive, d1 the picture's index, a0 the part) builds the DCF edit's
+//   request: for a part 1, 2 or 3 the option 4, 2 or 1 and FILECLBK's code 40 (0x28, DCFED_OBJ_DEL_PART), else the
+//   option 0 and the code 33 (0x21, DCFED_OBJ_DEL: `mov 33,d0; mov d0,(M,sp)`, 0x503fda48), then the fnode of the
+//   index (0x50874bc9) to the block's +4 and the API's sender (0x503eb960, target 17: FILECLBK's queue, the reply to
+//   the API's queue);
+// - attribute (id 0x70012, 0x503fdcb1: d0 drive, d1 the index) answers the fnode's byte +89 (`movbu (89,aN),dM`,
+//   0x503fdd28), whose bit 0 the DCF edit's lock sets and its unlock clears (0x50872e87, 0x50872ea8) and whose
+//   object delete erases nothing where it is set (0x508728bc).
+// The entry of each is the greatest call target within API_ENTRY bytes before its id's load. One load of each id
+// in d0 on 17 images, none on E118 and E120 (X, a byte scan; E144's and E130's functions read as E143's, D: E144
+// 0x502dfa9f.., E130 0x502d7450..). Returns {object_delete, attribute}, or null where an id is not loaded; throws for
+// an id loaded twice, a load with no call target before it, or a function without its code or its read within
+// API_BODY bytes of whole instructions.
+export const ERASE_E143 = { object_delete: 0x503FD974, attribute: 0x503FDCB1 };
+const API_OBJECT_DELETE = 0x7000F, API_ATTRIBUTE = 0x70012, API_ENTRY = 0x20, API_BODY = 0x200, DCFED_OBJ_DEL = 0x21, FNODE_ATTR = 89;
+export function pictureErase(img) {
+  const rule = 'pictureErase', D = (o) => h8(0x50000000 + o);
+  const fn = (id, what, has) => {
+    const load = oneAt(img, [0xfc, 0xcc, ...le32(id)], rule, `loads of the API id 0x${id.toString(16)} in d0`);
+    if (load === null) return null;
+    const { to } = callScan(img);
+    let entry = -1;
+    for (let i = 0; i < to.length; i++) if (to[i] <= load && to[i] > load - API_ENTRY && to[i] > entry) entry = to[i];
+    if (entry < 0) throw new Error(`${rule}: no call target within 0x${API_ENTRY.toString(16)} bytes before the id's load at ${D(load)}`);
+    for (let q = entry; q < entry + API_BODY; q += insnLength(img[q], img[q + 1])) if (has(q)) return 0x50000000 + entry;
+    throw new Error(`${rule}: the function at ${D(entry)} (API id 0x${id.toString(16)}) has no ${what} within 0x${API_BODY.toString(16)} bytes`);
+  };
+  const del = fn(API_OBJECT_DELETE, "`mov 33,d0` (the DCF edit's object delete)", (q) => img[q] === 0x80 && img[q + 1] === DCFED_OBJ_DEL);
+  const attr = fn(API_ATTRIBUTE, "`movbu (89,aN),dM` (the fnode's attribute)", (q) => img[q] === 0xf8 && (img[q + 1] & 0xf0) === 0x40 && img[q + 2] === FNODE_ATTR);
+  return del === null || attr === null ? null : { object_delete: del, attribute: attr };
+}
 const REC_ALLOC = [[0x80, 0x40, 0xdd], [0x80, 0x64, 0xdd], [0x80, 0x74, 0xdd]], REC_ALLOC_GAP = 16, REC_CALLS = 10, REC_SPAN = 0x100;
 const REC_BUILD = 0x1c0;
 export function recorder(img) {
@@ -5359,6 +5393,7 @@ export function readFacts({ img, family, resLoad }) {
   if (media !== undefined) facts.media = media;
   facts.recorder = recorder(img);
   facts.dcf = { counts: dcfCounts(img) };
+  facts.erase = pictureErase(img);
   const usbOff = usbPowerOff(img);
   if (usbOff !== undefined) facts.power_off = { usb_disconnect: usbOff };
   facts.gui = guiCanvas(img);

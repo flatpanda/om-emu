@@ -133,7 +133,8 @@ const REQUEST_TAG = 0x4C41 << 16, REQUEUE = 0xFFF0;
 // +46 the attribute (0x20, an archive), +84.. the dnode's entry place (0x5054adda..0x5054ae30)
 const REC = {
   block: 64, chain: 116, entry: 100, folder: 'xxx', drive: 2, folder_name: 4, stamp: [16, 20], flags: 32, fnode: 24,
-  f: { dnode: 8, name: 12, ext: 20, number: 38, cluster: 44, size: 48, flags: 86, kind: 88 },
+  // (+89 the fnode's attribute: bit 0 the DCF edit's lock, 0x50872e87, read by the media API's attribute 0x503fdd28)
+  f: { dnode: 8, name: 12, ext: 20, number: 38, cluster: 44, size: 48, flags: 86, kind: 88, attr: 89 },
   d: { name: 8, number: 22, cluster: 28, place: 32 },
   // the reservation's modes: 2 first, then 0 where it finds no cluster (0x5087e21a, from 0x5054a9e3); the entry's
   // flag of a JPEG recorded in mode 2 (fnode +86 bit 2, 0x5054ad8a)
@@ -296,6 +297,29 @@ export class Storage {
     if (this.reply === null) throw new StorageError(`${who}: ${label}: FILECLBK made no reply`);
     return { status: this.reply, bytes, ms };
   }
+  // A request one of the firmware's own API functions posts to the file module, with the API's reply queue (the
+  // application's event task takes the reply there): call() makes the call natively and returns the API's token, the
+  // word of the message it posted (0xf0000000 | slot << 16, the sender 0x503eb960, D). FILECLBK's reply to that word
+  // is observed, and lab time runs in slices until FILECLBK waits on its queue again. Returns {status, ms}
+  api_request(call, label, who) {
+    const lab = this.lab, s = this.s, reply = this.f.fileclbk.reply, seen = [];
+    if (!this.idle()) throw new StorageError(`${who}: ${label}: FILECLBK is busy before the request`);
+    lab.observe(reply, (l, r) => { if ((r.d0 & 0xFFFF) !== REQUEUE) seen.push([l.sim.u32((r.a0 >>> 0) + 4) >>> 0, r.d0 & 0xFFFF]); }, 'obs-fileclbk-reply');
+    let token;
+    const t0 = lab.lab_time();
+    try {
+      token = call();
+      for (;;) {
+        s.settle(`${who} ${label}`);
+        if (this.idle()) break;
+        if (lab.lab_time() - t0 > REQUEST_LIMIT_MS * 1e6) throw new StorageError(`${who}: ${label}: FILECLBK still busy after ${REQUEST_LIMIT_MS} ms of lab time`);
+        lab.elapse(REQUEST_SLICE_MS, `${who} ${label}`);
+      }
+    } finally { lab.hooks.delete(runtime(reply)); }
+    const mine = seen.filter(([word]) => word === token);
+    if (mine.length !== 1) throw new StorageError(`${who}: ${label}: ${mine.length} replies of FILECLBK to the API's token ${h8(token)} (replies to ${seen.map(([w]) => h8(w)).join(', ') || 'none'})`);
+    return { status: mine[0][1], ms: Math.round((lab.lab_time() - t0) / 1e5) / 10 };
+  }
   // The insertion's requests (S-CARD); at runtime (who S-MEDIA) the card is S-SDCARD's again before them
   insert(who = 'S-CARD') {
     const lab = this.lab, f = this.f, c = f.codes;
@@ -321,8 +345,9 @@ export class Storage {
     const [, ms] = this.request(this.f.codes.dcf, prm, 16, label, who);
     this.log.push([label, `detect state ${lab.sim.read(this.f.detect + 2 * DRIVE, 2)[0]} after ${ms} ms`]);
   }
-  // A picture of the DCF database by its index (from 1): {folder, number} from its fnode and its folder's dnode, or null
-  // where the DCF process answers none
+  // A picture of the DCF database by its index (from 1): {folder, number, attr, fnode} from its fnode (attr: its byte
+  // +89, whose bit 0 is the DCF edit's lock, the picture's protection) and its folder's dnode, or null where the DCF
+  // process answers none
   fnode(index, who = 'S-CARD') {
     const lab = this.lab, sim = lab.sim, prm = lab.alloc(new Uint8Array(16), 4);
     sim.write(prm, pack('<HHI', DCF_FNODE, DRIVE, index));
@@ -331,7 +356,7 @@ export class Storage {
     const fn = status === 0 ? sim.u32(prm + DCF_FNODE_AT) >>> 0 : 0, dn = fn ? sim.u32(fn + REC.f.dnode) >>> 0 : 0;
     if (!dn) return null;
     const u16 = (a) => { const b = sim.read(a, 2); return b[0] | b[1] << 8; };
-    return { folder: u16(dn + REC.d.number), number: u16(fn + REC.f.number) };
+    return { folder: u16(dn + REC.d.number), number: u16(fn + REC.f.number), attr: sim.read(fn + REC.f.attr, 1)[0], fnode: fn };
   }
   // The DCF numbering mount: the next folder and file (S-RECFILE's names)
   renumber(who) {

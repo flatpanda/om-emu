@@ -213,8 +213,11 @@ export const CA_MODULE9_READERS = [A(0x50ABE026), A(0x50AF63F3), A(0x50ABB039), 
 export const CA_PROP_SITE = A(0x50B76DBE);
 // the module-9 reads the native transaction path reaches (control camapp 3, X): the shooting component's set-up after
 // TRA 990 (0x50c78b35: state 2 takes CapThr's start at 0x50c78bc1, D), the application's second read in 0x50abb032,
-// made once the components have set the state to 0 (0x50ca4ae1), and the two reads of 0x50d787f0 at the HDMI plug
-export const CMP_MODULE9_READERS = [A(0x50C78BB4), A(0x50ABB044), A(0x50D78808), A(0x50D78815)];
+// made once the components have set the state to 0 (0x50ca4ae1), the two reads of 0x50d787f0 at the HDMI plug, and
+// the sequence parts' standby entry (0x50c89da1), which with its word 0x60364954 set reads the state and at 3 writes 0
+// (0x50c8a32c..0x50c8a33c, D; X: at a lens attach after a shot and at S1's release after a menu and a PLAY pass, the
+// state 0 both times, docs/hle-gaps.md 4.3.10)
+export const CMP_MODULE9_READERS = [A(0x50C78BB4), A(0x50ABB044), A(0x50D78808), A(0x50D78815), A(0x50C8A335)];
 // the target table at 0x606214a0 (docs/om1-shutter-spec.md 2.2) without DISPLAY (0x88), plus PC_PD_CMD_EXEC (0xcf):
 // E143's module queues by name, each the target table's entry at its target (src/fw/facts.mjs API_TARGETS_E143), which
 // a ported body's fact 'api.queues' gives from its own table (src/fw/facts.mjs apiTargets: its ids differ, E122's

@@ -44,7 +44,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { imageBase, resLoader, readFacts, readPlacedFacts, callAt, INDEX_READ, TOUCH_ARGS_E143, DISPLAY_START_E143,
-  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, ERASE_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
+  TOUCH_TASK_QUEUE_E143, TP_FLAG_E143, CBS_E143, LENS_ZOOM_TABLE_E143, STORAGE_E143, RECORDER_E143, DCF_COUNTS_E143, ERASE_E143, MEDIA_STATUS_E143, SIO_E143, LENS_DRIVER_E143, POWER_OFF_E143, MODE_DIAL_E143,
   PROP_STORE_E143, CTORS_E143, REC_FILE_E143, REC_IMAGE_E143, recImage, recFileInline, recHeader, recFileFrame, KCB0_E143 } from '../src/fw/facts.mjs';
 import { loadAddress } from '../src/lab/resources.mjs';
 import { imageView, ImageRangeError } from '../src/fw/image.mjs';
@@ -947,6 +947,10 @@ const STATE_LOG_FOUND = { E143: ['a0', 'a1'], E139: ['d1', 'a0'], E122: ['d1', '
 // load as E143's), and none on E118 and E120, which load neither id (X: a byte scan)
 const ERASE_FOUND = { E143: ERASE_E143, E144: { object_delete: 0x502DFAA5, attribute: 0x502DFDE3 },
   E130: { object_delete: 0x502D7450, attribute: 0x502D7809 }, E118: null, E120: null };
+// The SD card's HLS media status word (media_status; src/fw/facts.mjs mediaStatus), as read (D: the setter's medium 4
+// store, E144 0x5084940a, E137 0x507b72ef, E130 0x506ff7fd, E122 0x506a75e9; the map had E137's, E130's and E122's 8
+// bytes low, on the second slot's word)
+const MEDIA_STATUS_FOUND = { E143: MEDIA_STATUS_E143, E144: 0x61E43350, E137: 0x61E9B408, E130: 0x62399B14, E122: 0x616022C8 };
 // E143's own facts: its loader's limits, its menus are ListMenu (src/lab/menu.mjs LIST_MENU) with their memories, its
 // traits and its dial select (src/lab/menu.mjs dialSelect)
 const E143_FACTS = {
@@ -960,7 +964,7 @@ const E143_FACTS = {
   touch_panel: { driver: true }, lens: { mount: true }, iic: { waits: IIC_FOUND.E143 }, touch_api: { open: TP_OPEN_FOUND.E143 }, shooting: { start: 0x50AE1124, end: 0x50AD7E8A, auto_through: 0x50ABD373 },
   func_direct: { run: 0x51068E37, id: { sp: 28 } },
   broker: { init: 0x502A48B6 }, card: { shots_query: SHOTS_FOUND.E143, detect: { table: DETECT_FOUND.E143[0], drives: DETECT_FOUND.E143[1] }, movie_rate: null },
-  boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, mm_init: null, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, recorder: RECORDER_E143, dcf: { counts: DCF_COUNTS_E143 }, erase: ERASE_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143, touch_int: null,
+  boot: { key: 0xA32DAB30, stage: 0xA32DF1F4 }, mm_init: null, dpc: { init: 0x50050279 }, sio: SIO_E143, storage: STORAGE_E143, recorder: RECORDER_E143, dcf: { counts: DCF_COUNTS_E143 }, erase: ERASE_E143, media_status: MEDIA_STATUS_E143, power_off: { usb_disconnect: 0x510617BD }, gui: E143_GUI, recview: RECVIEW_FOUND.E143, touch_int: null,
   cbs: CBS_FOUND.E143, mode_dial: MODE_DIAL_FOUND.E143, prop_store: PROP_STORE_FOUND.E143, ctors: CTORS_E143,
 };
 
@@ -1062,6 +1066,9 @@ export function factsTests() {
     if (got.menu?.task !== undefined && PORTS[code]) ok(PORTS[code][0x5115BA0C] === got.menu.task, `${code}: A() of the GUI task ${hx(PORTS[code][0x5115BA0C])}, the rule's ${hx(got.menu.task)}`);
     if (Object.hasOwn(MM_INIT_FOUND, code)) ok(got.mm_init === MM_INIT_FOUND[code], `${code}: mm_init ${hx(got.mm_init ?? got)}, found ${hx(MM_INIT_FOUND[code])}`);
     if (Object.hasOwn(ERASE_FOUND, code)) ok(same(got.erase, ERASE_FOUND[code]), `${code}: erase ${hx(got.erase === undefined ? got : got.erase)}, found ${hx(ERASE_FOUND[code])}`);
+    if (Object.hasOwn(MEDIA_STATUS_FOUND, code)) ok(got.media_status === MEDIA_STATUS_FOUND[code], `${code}: media_status ${hx(got.media_status ?? got)}, found ${hx(MEDIA_STATUS_FOUND[code])}`);
+    // the port places E143's media status word at the rule's (bin/port.mjs, how 'status-setter')
+    if (got.media_status !== undefined && PORTS[code]) ok(PORTS[code][MEDIA_STATUS_E143] === got.media_status, `${code}: A() of the media status ${hx(PORTS[code][MEDIA_STATUS_E143])}, the rule's ${hx(got.media_status)}`);
     if (STATE_LOG_FOUND[code]) ok(same(placed?.state_log?.regs, STATE_LOG_FOUND[code]), `${code}: state_log ${hx(placed?.state_log ?? placed)}, found ${hx(STATE_LOG_FOUND[code])}`);
     if (TASK_INIT_FOUND[code]) ok(got.display?.task_init === TASK_INIT_FOUND[code], `${code}: display.task_init ${hx(got.display ?? got)}, found ${hx(TASK_INIT_FOUND[code])}`);
     // the port places E143's display task init at the rule's (bin/port.mjs, how 'queue-init')

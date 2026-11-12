@@ -3160,6 +3160,26 @@ export function pictureErase(img) {
   const attr = fn(API_ATTRIBUTE, "`movbu (89,aN),dM` (the fnode's attribute)", (q) => img[q] === 0xf8 && (img[q + 1] & 0xf0) === 0x40 && img[q + 2] === FNODE_ATTR);
   return del === null || attr === null ? null : { object_delete: del, attribute: attr };
 }
+// The HLS media layer's status word of the SD card in the first slot (fact 'media_status', and through bin/port.mjs
+// the place of E143's MEDIA_STATUS_E143; src/lab/camapp.mjs S-CARD's CARD_STATUS; docs/model-survey.md finding 138).
+// D on E143: the status setter (0x50aca703, which the HLS media manager calls with OK after a mount, 0x50bb8183) opens
+// `mov d0,d2; cmp 4,d2; beq; cmp 8,d0; beq; cmp 1,d0; beq` and stores d1 to the word of the medium d0: 4 the SD card
+// (0x60360bec, the medium the mount state's setter also takes first, mediaHls), 8 the second slot's, 1 the internal
+// one's. The E144 family's and the E118 family's setters have a fourth case, 32, and their four words lie 8 bytes
+// apart (D on E130 0x506ff7fd: 4 0x62399b14, 8 0x62399b0c, 1 0x62399b04, 32 0x62399afc; E122 0x506a75e9); the map
+// placed E143's word 8 bytes low, on the second slot's, on E137, E142, E140, E130, E145, E133, E129, E132, E122, E118
+// and E120 (X: src/fw/ports.mjs before this rule). One such opening on each of the 19 expanded images, its medium-4
+// branch to `mov d1,(abs32)` (X, a byte scan). Returns that word; throws unless one opening, or where its branch is not
+// that store.
+export const MEDIA_STATUS_E143 = 0x60360BEC;
+const MEDIA_STATUS_SET = [0x82, 0xaa, 0x04, 0xc8, null, 0xa0, 0x08, 0xc8, null, 0xa0, 0x01, 0xc8];
+export function mediaStatus(img) {
+  const at = oneAt(img, MEDIA_STATUS_SET, 'mediaStatus', 'media status setters');
+  if (at === null) throw new Error('mediaStatus: no media status setter');
+  const sd = at + 3 + (img[at + 4] << 24 >> 24);
+  if (img[sd] !== 0xfc || img[sd + 1] !== 0x85) throw new Error(`mediaStatus: the setter ${h8(0x50000000 + at)}'s medium 4 branches to ${h8(0x50000000 + sd)}, not a \`mov d1,(abs32)\``);
+  return u32(img, sd + 2);
+}
 const REC_ALLOC = [[0x80, 0x40, 0xdd], [0x80, 0x64, 0xdd], [0x80, 0x74, 0xdd]], REC_ALLOC_GAP = 16, REC_CALLS = 10, REC_SPAN = 0x100;
 const REC_BUILD = 0x1c0;
 export function recorder(img) {
@@ -5394,6 +5414,7 @@ export function readFacts({ img, family, resLoad }) {
   facts.recorder = recorder(img);
   facts.dcf = { counts: dcfCounts(img) };
   facts.erase = pictureErase(img);
+  facts.media_status = mediaStatus(img);
   const usbOff = usbPowerOff(img);
   if (usbOff !== undefined) facts.power_off = { usb_disconnect: usbOff };
   facts.gui = guiCanvas(img);
@@ -5417,7 +5438,8 @@ export function readFacts({ img, family, resLoad }) {
 // 'take-caller'); the GUI task's entry at its start trace's load (guiTask, 'task-trace'); the function direct start after its checks (funcDirect, 'direct-checks'); the event broker init by its opening and slot loop (brokerInit, 'broker-slots'); the
 // error log by its test of the id's module (errlogEntry, 'module-test'); the interrupt handler tables at the attach's
 // stores (handlerTables, 'attach-stores'); the remaining-shots query at the callee whose
-// result the application's getAvailableShootCount stores (shotsQuery, 'shots-method'); the touch panel's open by its
+// result the application's getAvailableShootCount stores (shotsQuery, 'shots-method'); the SD card's HLS media status
+// word at the one its setter's medium 4 stores (mediaStatus, 'status-setter'); the touch panel's open by its
 // trace or its form (touchOpen, 'open-rule'); the display task init as the function that creates the DISPLAY queue
 // (displayTaskInit, 'queue-init'); the face plane's colour setter at the one that loads its trace (faceColourSet,
 // 'cpdata-trace').
@@ -5433,6 +5455,7 @@ export function rulePlaces(facts) {
     [ERRLOG_E143, { to: facts.errlog.entry, how: 'module-test' }],
     ...(facts.kernel.handlers !== undefined ? [[HANDLER_TABLE_E143, { to: facts.kernel.handlers, how: 'attach-stores' }]] : []),
     [SHOTS_QUERY_E143, { to: facts.card.shots_query, how: 'shots-method' }],
+    [MEDIA_STATUS_E143, { to: facts.media_status, how: 'status-setter' }],
     ...(facts.touch_api ? [[TP_OPEN_E143, { to: facts.touch_api.open, how: 'open-rule' }]] : []),
     ...(facts.display.task_init !== undefined ? [[DISPLAY_TASK_INIT_E143, { to: facts.display.task_init, how: 'queue-init' }]] : []),
     ...(facts.display.face_colour !== undefined ? [[FACE_COLOUR_SET_E143, { to: facts.display.face_colour, how: 'cpdata-trace' }]] : []),

@@ -4496,12 +4496,16 @@ broker's init now runs before the HighLevel steps (below); the default sessions 
     called at `0x500250d1`): with it set, the event `0x02022301` is dropped unless `0x50424f9a` returns non-zero for
     each of `0x02021706`, `0x0202170a` and `0x0202170e`, and every other code passes two instructions later than with
     it clear (D; what the event and the three values are is ?). That is the whole difference in the default sessions
-    (X, the traces of both orders compared item by item): golden's devices layer differs in 22 scenarios only in the
+    (X, the traces of both orders compared item by item): golden's devices layer differs in 23 sessions only in the
     instruction counts the interrupt rows and the IPI records carry, 2 or 6 higher (I: two instructions per publish
     since the machine's counter last restarted), check_perf's P10b runs 14 instructions more (185,434,420) with the
     same frames, lab time and hook log, and the screens, the outputs and the final registers are the same. An earlier
     comparison of frames, lab times, hook-log lengths, error-log counts and heap top under camapp 1, 2 and 3 (a start,
-    1.5 s, a shot, the menu, playback) found no difference either.
+    1.5 s, a shot, the menu, playback) found no difference either. Under camapp 1 and camapp 3 the flag is 1 after the
+    bring-up, and over S1, S2, MENU, playback, INFO, OK, the arrows and REC 21 event codes reach `0x503eb0c5`, none of
+    them `0x02022301` (X). The broker init still follows the lab's store init (H-STOREINIT, the settings-DB init),
+    which USTART2 runs right after it (`0x501e9060`, `2_l`): not changed; whether either touches the other's state is
+    not read (?).
   - *The power manager.* Stage 0 runs its init and starts PWR_MAIN before UI_IN's module init runs the port scan
     (stage 1, `1_l`); the lab starts it after the scan (H-PWRSTART's text says so). So the lab's sub-CPU sees `0x88`
     before `0x82 {45}` and `0x12 {5}`, the camera's the other way round. Not changed: the swap is two lines of
@@ -4537,7 +4541,8 @@ broker's init now runs before the HighLevel steps (below); the default sessions 
   byte, word or magic is written as its writer writes it, and the writer's other work is not done. H-PROBETICK gives
   the kernel's tick from the idle point while the task is in a timed wait; no lab time passes. The module lies
   under `bin/`, not `src/lab/`, so that its E143-only addresses are none of the port's literals. The seven records
-  take about 1 s together.
+  take about 1 s together. A known condition that holds while the task sleeps on it for 5000 ticks is the probe's
+  misreading and a thrown error, not a record.
 
   | Task | First stop: the condition nobody sets | Marks reached, conditions granted | The stop that ends the run | What it needs |
   |---|---|---|---|---|
@@ -4566,7 +4571,8 @@ broker's init now runs before the HighLevel steps (below); the default sessions 
     the four words. So `0x9a000000` is MMIO after all: section 9 item 5's return codes are real, and so is this unit.
   - The records are regression data: `test_ustart.mjs` pins each task's marks, starts, conditions and stop, the
     check above, and every call site of the phase wait, the phase test, SetPermit, the flag's sets and the state
-    waits in the image against the tables here.
+    waits in the image against the tables here, and that a misread condition (a poll pointed at another word) is the
+    error above.
 - **Corrected by this section.** AUD_MAIN is started by USTART3 (`0x501e950b` lies in `0x501e94a5..0x501e9d54`), not
   USTART2 (4.5, `audiohw.mjs`, H-AUDSTART's text). FILECLBK's start, "not traced" in H-FILECLBK's text, is USTART3's
   at `0x501e9c5b`, after byte `1bb`. REC_IMAGE's start, "not read" in H-RECIMAGE's text, is USTART3's at

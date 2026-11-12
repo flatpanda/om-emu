@@ -22,8 +22,8 @@
 // E143 through debug.mjs, play.mjs and nav.mjs), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample, check_level on E146 and its PER_ROTATE groups (--rotate
 // on) on E143 and E146 (test_acc.mjs), the card and the
-// file system on E143, E146, E147, E144, E142, E134, E148, E137, E125 and the E118 family (S2's file with its header
-// maker's Exif) and SDXC cards on E143 (test_storage.mjs), INFO's still information
+// file system on E143, E146, E147, E144, E142, E134, E148, E137, E125, E130, E133, E129 and the E118 family (S2's
+// file with its header maker's Exif) and SDXC cards on E143 (test_storage.mjs), INFO's still information
 // in playback with two pictures, RIGHT, LEFT, OK's wizard, INFO's three views and the erase's refusal on the 19 bodies
 // (test_playinfo.mjs), a tap on the touch mode icon on E143, ten bodies of the E144
 // family and the E118 family, and in the super control panel on E144 and the E118 family, and with the EVF active

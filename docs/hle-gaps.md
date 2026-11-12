@@ -2598,7 +2598,8 @@ reads. No stand-in changed this round; the default stays camapp 1.
   4, 10, 11, 12 and 15 the generic one `0x5046d994`; 13, 14, 16 and 17 `0x5046daa2` (the imgpro unit, 4.3.1); 5
   `0x5046db4d`, 6 `0x5046dc32`, 7 `0x5046dbc3`, 8 `0x5046dca7`, 9 `0x5046dd0b`, 18 `0x5046debd`, 19 `0x5046df39`, 20
   `0x5046df46`, 21 `0x5046dfaa`. So a still's development and its primary JPEG are one kind 0 request, an encode from
-  a YCbCr image in memory is kind 3, and play's decode is kind 10 (4.8.11): all three the generic handler's.
+  a YCbCr image in memory is kind 3 (I: stage 3's request and the appended stage's, above), and play's decode is kind
+  10 (4.8.11): all three the generic handler's.
 - **The generic handler drives the pipeline unit at `0x9c200000`.** `0x5046d994` (through `0x5046d9a6`) packs the
   request into the unit's parameter block (`0x50472941`, `0x5047291a`: the straight-line packing of 4.3), then runs
   the unit's set-up `0x5048134d` and its go `0x504814d2`, calling the request's callback between them
@@ -2640,11 +2641,12 @@ reads. No stand-in changed this round; the default stays camapp 1.
 | `0xc00`, `0xc80` | 32 words each, two table bytes a word: the luma and the chroma table in zigzag order | quantisation |
 
   - The tables are the library's own data. Quantisation: T.81's K.1 and K.2 in zigzag order at `0x506b3bc8` and
-    `0x506b3c08` (their pointers at `0x506b3bb8`, the two register addresses at `0x506b3bc0`), each entry scaled as
-    (q x scale + 128) >> 8 and capped at 255 (`0x5050a45f..0x5050a47b`), the scale the descriptor's halfword +40 (1
-    for 0): 256 leaves the tables as they are. Huffman: BITS and HUFFVAL at `0x506b3c48..0x506b3de3`, K.3's four
-    tables, byte for byte those of the EXIF module's DHT segment at `0x50605318` (4.8.11's A-JPEGDHT-1; a comparison
-    of the image's bytes).
+    `0x506b3c08` (their pointers at `0x506b3bb8`, the two register addresses at `0x506b3bc0`), K.2 exactly and K.1
+    but for one entry, 61 for its 62 at row 3, column 7, zigzag position 53 (X, a comparison of the image's bytes
+    with T.81's tables; corrected in review, 2026-11-11). Each entry is scaled as (q x scale + 128) >> 8 and capped
+    at 255 (`0x5050a45f..0x5050a47b`), the scale the descriptor's halfword +40 (1 for 0): 256 leaves the tables as
+    they are. Huffman: BITS and HUFFVAL at `0x506b3c48..0x506b3de3`, K.3's four tables, byte for byte those of the
+    EXIF module's DHT segment at `0x50605318` (4.8.11's A-JPEGDHT-1; X, a comparison of the image's bytes).
   - X (a probe: the start run natively on a lab-made destination of 1620 x 1080, rounded width 1632, flag word 0,
     the codec's pages on the lab stub for that call): for 7170, scale 256, flags 1 it writes `0x8008`, `0x8200`, the
     limit capacity + 64, `0x60`, 13769 MCUs less one (102 x 135 - 1), 1620, 1080, 2, `0x10`, K.1 and K.2 unscaled
@@ -2655,14 +2657,17 @@ reads. No stand-in changed this round; the default stays camapp 1.
     (`0x5048c95d..`), and `0x50483474` enables it, with IRQ 290 (its handler not read), on the calling core when
     the request uses the codec (`0x50483595..0x504835a2`). The handler reads the cause, clears it, writes 1 to
     `0x99900000` (I: the acknowledge) and dispatches through `0x50640388` (27 entries).
-    - A stream's end (`0x5048c225`): with bit 4 of `+0x000` set it writes 4 to the pipeline unit's `0x9c200108` and
-      returns. Else it reads the length (`+0x024` << 16 | `+0x020`), takes the unit's record (`0x50481790(1)`, or
-      unit 0's where that one's word +44 lacks bit 2), writes the pipeline unit's `0x9c200108` and, by the record's
-      flags, `0x9c200140` or `0x9c200168`, sets bit 8 of the record's +44 and calls the record's callback with phase
-      8 and the length (`0x5048011d`).
+    - A stream's end (`0x5048c225`): with bit 2 of `+0x000` set (the mask 4, which the decode's `0x8004` has; bit 4
+      until the review, 2026-11-11) it writes 4 to the pipeline unit's `0x9c200108` and returns. Else it reads the
+      length (`+0x024` << 16 | `+0x020`), takes the unit's record (`0x50481790(1)`, or unit 0's where that one's
+      halfword +44 lacks bit 1, the mask 2), writes the pipeline unit's `0x9c200108` and, by `+0x000`'s bit 5 and the
+      record's flags, `0x9c200140` or `0x9c200168`, sets bit 8 of the record's +44 and calls the record's callback
+      with phase 8 and the length (`0x5048011d`).
     - A header read (`0x5048c2d0`; I: a decode's): `+0x068` must be 2, `+0x074` 0 and `+0x070` `0x10` or `0x11`
       (else error 40553); it rounds `+0x060` and `+0x064` up to whole MCUs and writes 6 to `+0x000`.
-    - The other causes are errors 40544..40552: `+0x000` = `0x8000` and `0x50481825(error)`.
+    - The other causes are errors: 21..27 give 40548, 40549, 40550, 40546, 40544, 40551 and 40552, 3..20 and any
+      cause out of 1..27 40547 (`0x5048c34b..0x5048c387`; no cause gives 40545): `+0x000` = `0x8000` and
+      `0x50481825(error)`.
 - **How the length comes back.** The record's callback is the request's own (`0x50494a24`, its argument the issue
   record, 60 bytes at the handle's +8320 + 60 n): phase 8 stores the length in the issue record's +20
   (`0x50494a7e`). rec_ImgPro_Jpeg_Result reads the destination record's +36 (56-byte records at the handle's +6740,
@@ -2677,15 +2682,19 @@ reads. No stand-in changed this round; the default stays camapp 1.
   fills on the camera (4.3's seam C1, I). So the primary JPEG is made in the development's own pass, with no
   full-size YCbCr image in memory for REC to hand over (I: stage 3 issues one request, with a Bayer source and JPEG
   destinations). The images that do lie in memory are the work pool's intermediates, which kind 3 encodes.
-  - No rec_ImgPro_Ycc2Jpeg runs on E143. REC's trace table names it (id 87), but no trace call carries the id: of
-    the calls of REC's trace `0x5053d959`, 86 (rec_ImgPro_Bayer2Ycc, `0x505432d8`) and 82 (Jpeg_Result) have a
-    site, 87, 88 and 136 (rec_ImgProCtrl_Src_Yc) none (X, a scan of the image: 244 calls, 243 with the code, the id
-    less one, in d1's high half; the other, `0x50546b67`, in a callback the library is handed at `0x50545c45`,
-    passes a value of its own). rec_jpeg_exec's Mode tests only skip
-    rec_jpeg_make_image (for 4103 and 4114, and for 4100 when the record's +38037 is 8 or its +38008 is 67,
-    `0x5054987a..0x505498a8`). rec_ImgPro_Bayer2Ycc (`0x505432bb`, from rec_make_image at `0x50541eb1`) is the same
-    create, ImageParam, run and release without Jpeg_Result. The E144 family's rec_jpeg_exec does call a
-    rec_ImgPro_Ycc2Jpeg by Mode (E144 `0x503f9e56`, `emu/src/fw/facts.mjs` recFileQueue).
+  - No rec_ImgPro_Ycc2Jpeg runs on E143 (I: REC's functions trace their entry, as each one read here does). REC's
+    trace table names it (id 87), but no trace call carries the id: of the calls of REC's trace `0x5053d959`, 86
+    (rec_ImgPro_Bayer2Ycc, `0x505432d8`) and 82 (Jpeg_Result) have a site, 87, 88 and 136 (rec_ImgProCtrl_Src_Yc)
+    none (X, a scan of the image: 244 calls, 243 with the code, the id less one, in d1's high half; the other,
+    `0x50546b67`, in a callback the library is handed at `0x50545c45`, passes a value of its own). Nor do
+    rec_jpeg_exec's branches call one: before the header, with the record's +38006 set, Mode 4100 calls
+    rec_cam_dram_capture_exec_icam_raw_edit (`0x5053cd0a`, REC's trace id 68) and another Mode, with the packet's +309
+    not 1 and `0x5054bf6c` 1, rec_cam_dram_capture_exec_icam_pixshift_sr (`0x5053cb72`, id 67;
+    `0x5054980c..0x50549844`); after it the Mode tests only skip rec_jpeg_make_image (for 4103 and 4114, and for 4100
+    when the record's +38037 is 8 or its +38008 is 67, `0x5054987a..0x505498a8`). rec_ImgPro_Bayer2Ycc
+    (`0x505432bb`, from rec_make_image at `0x50541eb1`) is the same create, ImageParam, run and release without
+    Jpeg_Result. The E144 family's rec_jpeg_exec does call a rec_ImgPro_Ycc2Jpeg by Mode (E144 `0x503f9e56`,
+    `emu/src/fw/facts.mjs` recFileQueue).
 - **The request REC leaves in the lab (X, a probe at the parameter set's call, `0x50542c94`).** Three JPEG
   destinations, each of format 7170 (4:2:2):
 
@@ -2724,13 +2733,19 @@ reads. No stand-in changed this round; the default stays camapp 1.
     (`mov (180,a3),a1; mov d0,(a1)`, E146 `0x50527c76`), and S-JPEGENC is narrowed there as on E143: CreateParam, the
     create, ImageParam's body and the release run natively, the parameter set's call is skipped, the run and
     Jpeg_Result are stood in. X (`emu/test/test_storage.mjs` storageSession, E143 59 of 59, E146 59 of 59, E147 41 of
-    41): on each body the steps once, a handle from the create and the release, and the error logs of ImageParam's
-    four lookups up to the set's call, the callers each body's own; on E146 and E147 the first lookup's log comes
-    twice before MM's. The first is rec_ImgProCtrl_Dst_Bayer's (D on E146: `0x50525452`, REC's trace id 110 there,
-    calls the lookup `0x503afa8a` at `0x50525505`, from the function ImageParam calls at `0x5051fa75`, before the
-    sources' at `0x5051fa9d`; E143's lookup has one caller in REC, Src_Bayer's `0x5054904d`; E147's I, the same).
-    The files are byte for byte the previous round's (X: S2's picture as storageSession takes it, 73,410 bytes on
-    each, sha256 `bd2e3ed5...` on E146 and `0032e248...` on E147 on both commits) and E143's sessions are golden's.
+    41): on each body the steps once, the create's handle read at the rule's id the one ImageParam hands the set (in
+    d0 at its call; added in review, as reading the handle through the packet on E146 passed unseen before, X) and the
+    release, and the error logs of ImageParam's four lookups up to the set's call, the callers each body's own; on
+    E146 and E147 the first lookup's log comes twice before MM's. Both are the Bayer source's: on E146 and E147
+    rec_ImgProCtrl_Src_Bayer calls rec_misc_select_bayer (E146 `0x5052af03`, REC's trace id 147, from
+    `0x5052700e`), which asks TAKE's lookup (`0x503afa8a`) at `0x5052af6b` and, the answer's high byte clear, again at
+    `0x5052af7a` before MM's `0x50515182` (D; E147's `0x5053a12a` from `0x5053621c`, asking at `0x5053a192` and
+    `0x5053a1a1`, D; X on E146: an observer at each of the lookup's call sites in REC sees these two only, and its
+    entry twice). E143's trace table has no rec_misc_select_bayer: its Src_Bayer asks the lookup itself, once
+    (`0x5054904d`). (Corrected in review, 2026-11-11: the extra log was taken for rec_ImgProCtrl_Dst_Bayer's, E146
+    `0x50525452`, whose entry the shot never reaches, X; nor E143's `0x50547695`, X.) The files are byte for byte the
+    previous round's (X: S2's picture as storageSession takes it, 73,410 bytes on each, sha256 `bd2e3ed5...` on E146
+    and `0032e248...` on E147 on both commits; the review's own run the same) and E143's sessions are golden's.
 
 | Part | E143 | E146 | E147 |
 |---|---|---|---|
@@ -2738,11 +2753,12 @@ reads. No stand-in changed this round; the default stays camapp 1.
 | the run, Jpeg_Result, the release | `0x50542407`, `0x50542ce1`, `0x5054322e` | `0x5051f653`, `0x5051ff9a`, `0x50520568` | `0x5052e743`, `0x5052f089`, `0x5052f657` |
 | the handle, the packet's frame slot | packet +36, 24 | record +0, 24 | record +0, 24 |
 
-  - recFile no longer gives rec_file's `jpeg.fill` and `jpeg.fill_return` (E143, E146, E147): nothing has read them
-    there since the imgpro unit runs the header clear's fill (4.3.3, 4.3.5); the rule still reads the fill as part of
-    the form. The E144 family's recFileQueue keeps its `fill: null, fill_return: null`, which S-RECIMAGE's lab call
-    tests (`emu/src/lab/rec.mjs` image_lab; that rule and path are another topic's). `jpeg.exec` stays: S-RECIMAGE
-    calls it on the E144 family.
+  - recFile no longer gives rec_file's `jpeg.exec`, `jpeg.fill` and `jpeg.fill_return` (E143, E146, E147): nothing
+    reads them there, the fill not since the imgpro unit runs the header clear's fill (4.3.3, 4.3.5) and rec_jpeg_exec
+    not since REC_IMAGE's task runs it (the lab called it only in S-RECIMAGE's call; `jpeg.exec` dropped in review,
+    2026-11-11); the rule still reads both as part of the form. The E144 family's recFileQueue gives its own `exec` and
+    `fill: null, fill_return: null`, which S-RECIMAGE's lab call uses (`emu/src/lab/rec.mjs` image_lab; that rule and
+    path are another topic's).
 
 ### 4.4 AF, lens and body IS
 

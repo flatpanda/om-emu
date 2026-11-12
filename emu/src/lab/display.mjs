@@ -31,7 +31,7 @@ export const VSC_OUTBLOCK = LATER ? null : 0x9BB98000;
 export const OUTPUT = 0x89000000, DEBUG = 0x89800000, DOORBELL = 0x89810000, STUB = 0x89900000, DOORBELL_STUB = A(0xA2100400);
 export const CMD_ADVANCE = 1, CMD_RUN_TO_FRAME = 2, CMD_COMPOSE = 3, CMD_CLEAR = 4, CMD_RUN_TO_EVENT = 5;
 export const DBG_ERR_TOTAL = 0x08, DBG_NOTE_TOTAL = 0x0C, DBG_T = 0x10, DBG_LAST_RESULT = 0x1C, DBG_ARG0 = 0x20;
-export const DBG_EVENT_SOURCES = 0x30, DBG_HIST_ZERO_READS = 0x34, DBG_HIST_ASSUMED = 0x38, DBG_CHAN = 0x40, DBG_HDR = 0x100, DBG_PLANE = 0x180, DBG_ERR_RING = 0x400, DBG_NOTE_RING = 0x1000;
+export const DBG_EVENT_SOURCES = 0x30, DBG_HIST_ZERO_READS = 0x34, DBG_HIST_ASSUMED = 0x38, DBG_HIST_KEPT_READS = 0x3C, DBG_CHAN = 0x40, DBG_HDR = 0x100, DBG_PLANE = 0x180, DBG_ERR_RING = 0x400, DBG_NOTE_RING = 0x1000;
 export const CH_ASSUME = 0x38, CH_VIEW = 0x39, DBG_FLAGS = 0x4000, DBG_FLAGS_SIZE = 0x1400, ERR_SLOTS = 64, NOTE_SLOTS = 512;
 export const ERRORS = ['NONE', 'REG_UNKNOWN', 'WIDTH', 'MIRROR_WRITE', 'MIRROR_LIVE', 'RO_WRITE', 'DEBUG_CPU_WRITE',
   'DOORBELL', 'NOT_LATCHED', 'FIELD_MODE', 'WINDOW', 'MIX_UNOBSERVED', 'PLANC_UNOBSERVED', 'FMT_UNMODELLED',
@@ -362,8 +362,10 @@ export class VscDebug {
     return { state: this.sim.read(at + 0x3B, 1)[0], runs: this.sim.u32(at + 0x3C) };
   }
   hist_runs() { let n = 0; for (let c = 0; c < VSC_CHANNEL.length; c++) n += this.hist(c).runs; return n; }
-  // the bin reads answered under A-VSCHIST-2 (0, the source plane off and the firmware's discard test true)
+  // the bin reads answered 0 for a run without a source plane: all of them (A-VSCHIST-2 where the firmware's discard
+  // test is true at the read), and those of them it is false at (A-VSCHIST-5)
   hist_zero_reads() { return this.u32(DBG_HIST_ZERO_READS); }
+  hist_kept_reads() { return this.u32(DBG_HIST_KEPT_READS); }
   // the composites that applied A-VSCHIST-3 (the opt-in, src/dev/vsccompose.mjs histForm)
   hist_assumed() { return this.u32(DBG_HIST_ASSUMED); }
   irq_line(c) { return this.u32(DBG_CHAN + 0x40 * c + 0x10); }
@@ -1129,14 +1131,21 @@ export class DisplayLab extends OsdLab {
     return address;
   }
   // Write a test frame into live-view bank `bank` element `element` at buffer pixel `crop`, through the bus window.
-  load_lv_frame(frame, bank = 0x0A, element = 1, crop = [0, 0]) {
+  // direct: the element's address, known from an earlier load; the rows then go through the bus device, with no
+  // firmware call and no bus-window mapping (a load made inside a device event, play.mjs scene_frame).
+  load_lv_frame(frame, bank = 0x0A, element = 1, crop = [0, 0], direct = null) {
     const [width, height, rows] = frame, [x, y] = crop;
     if (x % 2 || x + width > LV_FROM_AREA[0] || y + height > LV_FROM_AREA[1]) {
       throw new ValueError(`${width}x${height} at ${show(crop)} does not fit the ${show(LV_FROM_AREA)} live-view buffer`);
     }
-    const address = this.bus_address(bank, element);
+    const address = direct ?? this.bus_address(bank, element);
     const base = address + y * LV_STRIDE + 2 * x;
-    this.bus_rows(base, LV_STRIDE, 2 * width, height, rows);
+    if (direct === null) this.bus_rows(base, LV_STRIDE, 2 * width, height, rows);
+    else {
+      const bus = this.sim.m.devices.bus;
+      if (!bus.span(base, (height - 1) * LV_STRIDE + 2 * width)) throw new FirmwareError(`load_lv_frame: ${h8(base)} is not in the bus's memory`);
+      rows.forEach((row, r) => bus.write(base + r * LV_STRIDE, row));
+    }
     this.img = { width, height, base, stride: LV_STRIDE, sha256: this._sha(rows), bus: true, bank, element, crop: [x, y], address };
     return address;
   }

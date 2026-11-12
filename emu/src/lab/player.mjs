@@ -475,7 +475,9 @@ export class Player {
     if (this.session?.camapp?.outdev_done?.length) used.push('S-OUTDEV');                   // an output-device change taken (camapp.mjs)
     if (this.session?.camapp?.hist_ends) used.push('S-HISTEND');                            // camapp 3 (camapp.mjs)
     const vsc = this.session?.lab?.sim?.m?.devices?.vsc;                                     // the VSC's histogram (vsc.mjs)
-    if (vsc?.histRuns()) used.push('A-VSCHIST-1', ...(vsc.histZeroReads() ? ['A-VSCHIST-2'] : []));
+    if (vsc?.histRuns()) used.push('A-VSCHIST-1', ...(vsc.histZeroReads() > vsc.histKeptReads() ? ['A-VSCHIST-2'] : []));
+    if (vsc?.histMeasured()) used.push('A-VSCHIST-4', ...(vsc.histColour() ? ['A-VSCHIST-6'] : []));   // bins counted
+    if (vsc?.histKeptReads()) used.push('A-VSCHIST-5');                                     // a sourceless run's, kept
     if (vsc?.histAssumed()) used.push('A-VSCHIST-3');                                     // camapp 3 (vsccompose.mjs)
     if (this.session?.camapp?.imgpro_inited) used.push('H-IMGPROINIT', 'S-STAGE9');          // camapp 3 (camapp.mjs)
     const imgpro = this.session?.lab?.sim?.m?.devices?.imgpro;                              // the imgpro unit (imgpro.mjs)

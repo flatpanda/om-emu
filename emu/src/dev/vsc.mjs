@@ -2,16 +2,16 @@
 // the register file (the firmware's name tables, read from the image by vscregs.mjs, plus FACE 0xD00..0xD1C), the
 // mirror bank +0x2000, palettes +0x4400 and LUT +0x5C00, the output block, the written/latched/palette flags in the
 // debug window, notes and errors, the channel clock on the lab clock (frame boundaries, RUN_TO_FRAME,
-// RUN_TO_EVENT), kind 1's histogram unit (its runs and end; its bins only where A-VSCHIST-2 gives them), the doorbell
-// with its error paths, and COMPOSE with its IMG planes (vsccompose.mjs, draw_img included; kinds 2 and 3:
-// vsccompose2.mjs).
+// RUN_TO_EVENT), kind 1's histogram unit (its runs and end, its bins counted from the source plane: vsccompose.mjs
+// histMeasure), the doorbell with its error paths, and COMPOSE with its IMG planes (vsccompose.mjs, draw_img included;
+// kinds 2 and 3: vsccompose2.mjs).
 import { MODEL_INFO } from '../fw/model.mjs';
 import { BOARD } from '../fw/board.mjs';
 import { BUS, K_MMIO, K_ROMD, addRegion, allocWindow, buf, U8, ctx } from '../core/mem.mjs';
 import { CLOCK_NONE } from './timer.mjs';
 import { IRQ_VSC } from './intc.mjs';
 import { vscTables } from './vscregs.mjs';
-import { compose } from './vsccompose.mjs';
+import { compose, histMeasure } from './vsccompose.mjs';
 import { compose2 } from './vsccompose2.mjs';
 
 // The model's VSC (src/fw/board.mjs). Kind 1 (E143, E147): what this header says. Kind 2 (E144): two channels of
@@ -47,7 +47,8 @@ export const NOTE = { RESET_READ: 1, MIRROR_RESET_READ: 2, SRAM_RESET_READ: 3, O
   COMPOSE_RESET: 6, ASSUMED: 7, SPOS_A18: 8, PLANC_ZERO: 9, VIEW: 10, HIST_NO_SOURCE: 11 };
 export const D = { MAGIC: 0x000, VERSION: 0x004, ERR_TOTAL: 0x008, NOTE_TOTAL: 0x00C, T_LO: 0x010, T_HI: 0x014,
   LAST_CMD: 0x018, LAST_RESULT: 0x01C, ARG0: 0x020, ARG1: 0x024, COMMANDS: 0x028, CPU_ACCESSES: 0x02C,
-  EVENT_SOURCES: 0x030, HIST_ZERO_READS: 0x034, HIST_ASSUMED: 0x038, CHAN: 0x040, CHAN_SIZE: 0x40, HDR: 0x100, PLANE: 0x180,
+  EVENT_SOURCES: 0x030, HIST_ZERO_READS: 0x034, HIST_ASSUMED: 0x038, HIST_KEPT_READS: 0x03C, CHAN: 0x040, CHAN_SIZE: 0x40,
+  HDR: 0x100, PLANE: 0x180,
   ERR_RING: 0x400, ERR_SLOTS: 64, NOTE_RING: 0x1000, NOTE_SLOTS: 512, FLAGS: 0x4000, FLAGS_SIZE: 0x1400, OUT_FLAGS: 0x8000 };
 export const CH = { RUNNING: 0x00, FRAMES: 0x04, FIELD: 0x08, MONI3: 0x0C, IRQ: 0x10, LINE_NS: 0x14, START_LO: 0x18,
   START_HI: 0x1C, LEN: 0x20, LATCHED: 0x24, COMPOSE: 0x28, LINE_NS_EVF: 0x2C, ORDER: 0x30, ASSUME: 0x38, VIEW: 0x39,
@@ -64,17 +65,25 @@ const STORE_FLAGGED = K3 ? (V.store[1] - V.store[0]) / 4 : 0xC00, VL = 0x400;
 const LATCH = K3 ? V.latch : null, LATCHED = new Set(K3 ? V.latched : []);
 const SERIAL_START = 0x3214, SERIAL_DONE = 0x8000;
 // Kind 1's histogram unit (docs/om1-vsc-spec.md section 13): a write of HIST1 with bit 0 set starts a run (the start
-// 0x501e14a4 writes HIST1 = 1 after INTEN1 |= 0x100, D). A-VSCHIST-1: the run measures the frame that begins at the
-// channel's next boundary and ends at the boundary after it, where INTST1 bit 8 is set (also while masked, as bit 0);
-// a run is one-shot. The source plane is taken as the IMG plane HIST2[17:16] names, its DMAEN bit 5 - n (I: the set-up
-// 0x501e127f stores there the index, 0 IMG1 .. 2 IMG3, of the IMG plane whose DMA address is the request's, else 0;
-// the start path passes no address, so the field is 0, D: docs/om1-vsc-spec.md section 13). The bins are words at
-// +0x4000, two 16-bit bins each, read 0x501e150e (d1 / 2 words, d1 at most 128 by the clamp at 0x501d6aa6..cb, D).
-// A-VSCHIST-2: the bins of a run whose source plane was off are read as 0, only while the firmware discards them: the
-// written DMAEN bit 5 clear and the written HIST2[17:16] 0 at the read (0x501d712d..54 overwrite the bins read then,
-// D); any other read of them is HIST_UNMODELLED (what the unit counts and how is ?)
+// 0x501e14a4 writes HIST1 = 1 after INTEN1 |= 0x100; the set-up before it clears HIST1[3:0], 0x501e142b / 0x501e145e,
+// D). A-VSCHIST-1: the run measures the frame that begins at the channel's next boundary and ends at the boundary
+// after it, where INTST1 bit 8 is set (also while masked, as bit 0); a run is one-shot. Nothing stops a run: the
+// firmware's stop (DISPLAY cmd 15, 0x501d709f) writes no register and waits for the end, and its ISR acknowledges the
+// end with INTST1 = 0x100 (0x501e14fc, D).
+// The bins are words at +0x4000, two 16-bit bins each, the low half first, read 0x501e150e (count / 2 words, the
+// count at most 128 by the clamp at 0x501d6aa6..cb, D). What they hold is histMeasure's (vsccompose.mjs, A-VSCHIST-4),
+// counted at the run's end from the bank latched for the frame measured and the source plane's rows in memory then
+// (BINS_MEASURED). A run whose source plane (the IMG plane HIST2[17:16] names: the set-up 0x501e127f stores there the
+// index, 0 IMG1 .. 2 IMG3, of the IMG plane whose DMA address is the request's, else 0, D) had its DMAEN bit clear in
+// that bank has no source (BINS_NO_SOURCE): its bins read 0. A-VSCHIST-2: that 0 where the firmware discards the bins
+// it read, the written DMAEN bit 5 clear and the written HIST2[17:16] 0 at the read (0x501d712d..54 overwrite them
+// then, D), so the value does not matter. A-VSCHIST-5 (I): the same 0 where the firmware keeps them (the plane came
+// on between the frame measured and the read); what the unit gives without a source is ?. Each such read counts
+// (HIST_ZERO_READS, of which HIST_KEPT_READS are A-VSCHIST-5's). Bins histMeasure does not know (BINS_UNKNOWN), a read
+// with no run ended since the last began and a word past the run's bins are HIST_UNMODELLED and a bus error.
 const HIST1 = 0x04C, HIST2 = 0x748, DMAEN = 0x060, HIST_DONE = 0x100, HIST_BINS = 0x4000, HIST_BIN_WORDS = 64;
 const HIST_IDLE = 0, HIST_ARMED = 1, HIST_RUNNING = 2;
+const BINS_NONE = 0, BINS_NO_SOURCE = 1, BINS_UNKNOWN = 2, BINS_MEASURED = 3;
 // the read's discard condition (A-VSCHIST-2): the written bank's DMAEN bit 5 (IMG1) clear and HIST2[17:16] 0
 const histDiscards = (w) => !(w[DMAEN / 4] & 0x20) && ((w[HIST2 / 4] >>> 16) & 3) === 0;
 export const FACE_FIRST = 0xD00, FACE_LAST = 0xD1C;
@@ -93,11 +102,17 @@ export class Vsc {
     for (let c = 0; c < CHANNELS; c++) {
       this.ch.push({ w: new Uint32Array(REG_WORDS), m: new Uint32Array(REG_WORDS), pal: new Uint32Array(PAL_WORDS),
         lut: new Uint32Array(LUT_WORDS), running: false, latched: false, field: 0, curLen: 0, frames: 0, frameStart: 0,
-        bank: 0, lineFrame: -1, hist: HIST_IDLE, histNoSource: false, bins: null, histRuns: 0 });
+        bank: 0, lineFrame: -1, hist: HIST_IDLE, histRuns: 0, histMeasured: 0, histColour: 0,
+        // the last ended run's bins (BINS_*): their count and values, or why they are not known (HIST_WHY, two words)
+        bins: BINS_NONE, binCount: 0, binValues: new Uint16Array(2 * HIST_BIN_WORDS), binWhy: 0, binA0: 0, binA1: 0 });
     }
     this.ow = new Uint32Array(REG_WORDS); this.osram = new Uint32Array(OSRAM_WORDS);
     this.chanValid = null; this.outValid = null; this.chanRegs = null; this.image = image;
     this.noted = new Set();
+    // the lab's hook at the end of a histogram run, before its bins are counted: a lab that fills a source plane's
+    // memory only when asked (S-SCENE's live view, src/lab/play.mjs scene_frame) fills it here. Always a function,
+    // so a machine snapshot leaves it as it is (src/debug/snapshot.mjs skips functions)
+    this.histSource = () => {};
     const off = allocWindow(DEBUG_SIZE);
     this.dbg = U8.subarray(off, off + DEBUG_SIZE);
     this.d32 = new Uint32Array(buf, off, DEBUG_SIZE / 4);
@@ -217,12 +232,13 @@ export class Vsc {
   boundary(c, at) {
     this.tables();
     const ch = this.ch[c], wf = this.wFlags(c), mf = this.mFlags(c);
+    if (!LATER && ch.hist === HIST_RUNNING) this.histEnd(c);        // from the bank the frame was shown with
     for (let i = 0; i < REG_WORDS; i++) {
       if (this.chanValid[i] === 1 && !liveRegister(4 * i)) { ch.m[i] = ch.w[i]; this.dbg[mf + i] = this.dbg[wf + i]; }
     }
     ch.latched = true;
     ch.w[R.INTST1 / 4] |= 1;
-    if (!LATER) this.histBoundary(ch);
+    if (!LATER && ch.hist === HIST_ARMED) { ch.hist = HIST_RUNNING; ch.bins = BINS_NONE; }
     ch.frames = (ch.frames + 1) >>> 0;
     ch.frameStart = at;
     // kind 2 has no second-field register (progressive, I)
@@ -230,25 +246,38 @@ export class Vsc {
     if (f2) { ch.field ^= 1; ch.curLen = ch.field ? f2 : f1; } else { ch.field = 0; ch.curLen = f1; }
     if (!ch.curLen || !this.lineNs(c)) ch.running = false;
   }
-  // the histogram unit's runs ended on every channel, and its bin reads answered under A-VSCHIST-2 (the player's list)
+  // the histogram unit's runs ended on every channel, those whose bins were counted (A-VSCHIST-4), and its bin reads
+  // answered 0 for a run without a source (A-VSCHIST-2; those the firmware kept: A-VSCHIST-5) (the player's list)
   histRuns() { return this.ch.reduce((n, ch) => n + ch.histRuns, 0); }
+  histMeasured() { return this.ch.reduce((n, ch) => n + ch.histMeasured, 0); }
+  histColour() { return this.ch.reduce((n, ch) => n + ch.histColour, 0); }       // of those, R, G or B (A-VSCHIST-6)
   histZeroReads() { return this.dget(D.HIST_ZERO_READS); }
+  histKeptReads() { return this.dget(D.HIST_KEPT_READS); }
   // the composites that applied A-VSCHIST-3 (vsccompose.mjs histForm)
   histAssumed() { return this.dget(D.HIST_ASSUMED); }
-  // the histogram unit at a boundary (A-VSCHIST-1, HIST1's comment): a run ends, its bins known only as A-VSCHIST-2
-  // gives them; a started run begins, its source plane's DMAEN bit taken from the bank latched for its frame
-  histBoundary(ch) {
-    if (ch.hist === HIST_RUNNING) {
-      ch.hist = HIST_IDLE;
-      ch.histRuns = (ch.histRuns + 1) >>> 0;
-      ch.w[R.INTST1 / 4] |= HIST_DONE;
-      ch.bins = ch.histNoSource ? 'no-source' : 'unknown';
-    } else if (ch.hist === HIST_ARMED) {
-      const src = (ch.m[HIST2 / 4] >>> 16) & 3;
-      ch.hist = HIST_RUNNING;
-      ch.histNoSource = src < 3 && !(ch.m[DMAEN / 4] & (0x20 >>> src));
-      ch.bins = null;
-    }
+  // the last ended run's bins on channel c as the unit holds them (the lab's view, no read counted): null where no
+  // run ended since the last began, else { source, bins } (source false: none, its bins 0) or { why: [code, a0, a1] }
+  histBins(c) {
+    const ch = this.ch[c];
+    if (ch.bins === BINS_NONE) return null;
+    if (ch.bins === BINS_UNKNOWN) return { why: [ch.binWhy, ch.binA0, ch.binA1] };
+    return { source: ch.bins === BINS_MEASURED, bins: Array.from(ch.binValues.subarray(0, ch.binCount)) };
+  }
+  // the histogram unit at the end of the frame it measured (A-VSCHIST-1, HIST1's comment), before the next bank is
+  // latched: the run ends, its bins histMeasure's
+  histEnd(c) {
+    this.histSource(c);
+    const ch = this.ch[c], r = histMeasure(this, c);
+    ch.hist = HIST_IDLE;
+    ch.histRuns = (ch.histRuns + 1) >>> 0;
+    ch.w[R.INTST1 / 4] |= HIST_DONE;
+    ch.binValues.fill(0); ch.binCount = 0; ch.binWhy = 0; ch.binA0 = 0; ch.binA1 = 0;
+    if (r.kind === 'none') { ch.bins = BINS_NO_SOURCE; ch.binCount = 2 * HIST_BIN_WORDS; }
+    else if (r.kind === 'bins') {
+      ch.bins = BINS_MEASURED; ch.binCount = r.n; ch.binValues.set(r.bins);
+      ch.histMeasured = (ch.histMeasured + 1) >>> 0;
+      if (r.comp) ch.histColour = (ch.histColour + 1) >>> 0;
+    } else { ch.bins = BINS_UNKNOWN; ch.binWhy = r.why; ch.binA0 = r.a0; ch.binA1 = r.a1; }
   }
   clockNext() {
     let at = CLOCK_NONE;
@@ -361,15 +390,25 @@ export class Vsc {
       if (!dbg && !this.dbg[this.mFlags(c) + off / 4]) this.note(NOTE.MIRROR_RESET_READ, c, local, ch.latched ? 1 : 0);
       return data;
     }
-    // the histogram's bins (HIST1's comment): 0 under A-VSCHIST-2, else unknown (value: 0 no run ended since the last
-    // began, 1 the source plane was on, 2 its bins but the read's discard condition does not hold)
+    // the histogram's bins (HIST1's comment): the last ended run's, two to a word, the low half first. HIST_UNMODELLED
+    // (value: 0 no run ended since the last began, args the unit's state; 1 its bins are not known, args histMeasure's
+    // reason; 2 a word past the run's bins, args the word and the run's bin count)
     if (!LATER && local >= HIST_BINS && local < HIST_BINS + 4 * HIST_BIN_WORDS) {
-      if (ch.bins === 'no-source' && histDiscards(ch.w)) {
-        if (!dbg) { this.note(NOTE.HIST_NO_SOURCE, c, local, 0); this.dset(D.HIST_ZERO_READS, this.dget(D.HIST_ZERO_READS) + 1); }
-        return 0;
+      const i = (local - HIST_BINS) / 4;
+      if (ch.bins === BINS_NONE || ch.bins === BINS_UNKNOWN || 2 * i >= ch.binCount) {
+        if (!dbg) {
+          if (ch.bins === BINS_NONE) this.recordError(E.HIST_UNMODELLED, c, local, 0, ch.hist, 0, 0);
+          else if (ch.bins === BINS_UNKNOWN) this.recordError(E.HIST_UNMODELLED, c, local, 1, ch.binWhy, ch.binA0, ch.binA1);
+          else this.recordError(E.HIST_UNMODELLED, c, local, 2, i, ch.binCount, 0);
+        }
+        throw BUS;
       }
-      if (!dbg) this.recordError(E.HIST_UNMODELLED, c, local, ch.bins === null ? 0 : ch.bins === 'unknown' ? 1 : 2, ch.hist, 0, 0);
-      throw BUS;
+      if (ch.bins === BINS_NO_SOURCE && !dbg) {
+        this.note(NOTE.HIST_NO_SOURCE, c, local, 0);
+        this.dset(D.HIST_ZERO_READS, this.dget(D.HIST_ZERO_READS) + 1);
+        if (!histDiscards(ch.w)) this.dset(D.HIST_KEPT_READS, this.dget(D.HIST_KEPT_READS) + 1);
+      }
+      return (ch.binValues[2 * i] | ch.binValues[2 * i + 1] << 16) >>> 0;
     }
     const s = this.sramWord(c, local);
     if (s === null) {

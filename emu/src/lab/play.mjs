@@ -2263,20 +2263,23 @@ export class PlaySession extends N.NavSession {
     return { step, t: (step * SCENE_STEP_NS) / 1e9 };
   }
   // The scene's frame for the next composite: rendered again when the scene changed or one of its layers moves (then
-  // at most every 1/15 s of lab time).
-  scene_frame() {
+  // at most every 1/15 s of lab time). The VSC's histogram unit asks for it too, at the end of the frame it measures
+  // (src/dev/vsc.mjs histSource; in_event: inside a device event, so the rows go through the bus device): its bins
+  // are then the scene's of that lab time, whether or not a composite was taken since (a --replay takes fewer).
+  scene_frame(in_event = false) {
     const sc = this.scene, lv = this.lv;
     if (sc === null || !sc.liveview || lv === null) return;
     if (this.recview_hold || this.playview_hold) return;   // S-RECVIEW / S-PLAYVIEW: the shown capture stays
+    const direct = in_event ? lv.address : null;
     if (this.through_off) {                        // S-THROUGH: black until the application starts the through image
-      if (lv.key !== 'through off') { lv.key = 'through off'; this.lab.load_lv_frame(this.black_frame(), SCENE_BANK, 1, D.LV_SCALED_CROP); }
+      if (lv.key !== 'through off') { lv.key = 'through off'; this.lab.load_lv_frame(this.black_frame(), SCENE_BANK, 1, D.LV_SCALED_CROP, direct); }
       return;
     }
     const { step, t } = this.scene_step();
     const key = JSON.stringify([sc.preset, sc.layers, sc.ev, sc.lens, sc.exposure, step]);
     if (key === lv.key) return;
     lv.key = key;
-    this.lab.load_lv_frame(this.scene_render(t), SCENE_BANK, 1, D.LV_SCALED_CROP);
+    this.lab.load_lv_frame(this.scene_render(t), SCENE_BANK, 1, D.LV_SCALED_CROP, direct);
   }
   // S-RECVIEW (camapp mode, at the application's START_RECVIEW / END_RECVIEW callbacks): while the GUI shows its rec
   // view, the live-view plane holds the frame of the last capture instead of the live scene. The camera would show the
@@ -2324,6 +2327,8 @@ export class PlaySession extends N.NavSession {
     const th = lab.live_view(dev, D.ThRequest.scaled(D.deviceMask(dev), address, D.LV_SCALED_CROP, src, dst, at));
     if (th.img0 !== th.start) throw new PlayError(`S-SCENE: the TH API left img[0] = ${h8(th.img0)}, not the request's start ${h8(th.start)}`);
     this.lv = { device: dev, address, key: this.through_off ? 'through off' : null };
+    // the VSC's histogram unit reads the bank at the end of the frame it measures: the scene's frame of that time
+    lab.sim.m.devices.vsc.histSource = () => this.scene_frame(true);
   }
   scene_blank() {
     this.lab.load_lv_frame(this.black_frame(), SCENE_BANK, 1, D.LV_SCALED_CROP);

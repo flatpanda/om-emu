@@ -5,7 +5,9 @@
 // (8-bit index, nearest sampling, palette bank by OSDCP2, linear blend in tra / 31) and the IMG planes (format 0: YC
 // 4:2:2 Y0 Cb Y1 Cr, two-tap linear, opaque; ycComp, imgRow, drawImg), and with the A19 opt-in the face/AF frame
 // plane: IMG format 2, an 8-bit index into the eight YCbCr words at +0xD00..+0xD1C, index 0 transparent (drawFace);
-// with the A-VSCHIST-3 opt-in the histogram unit's registers in their writers' form (histForm).
+// with the A-VSCHIST-3 opt-in the histogram unit's registers in their writers' form (histForm). histMeasure: the
+// histogram unit's bins of a frame, counted from the IMG plane the unit's source field names, sampled as drawImg
+// samples it (imgRows).
 import { MODEL, MODEL_INFO } from '../fw/model.mjs';
 import { BOARD } from '../fw/board.mjs';
 import { E, NOTE, D, CH, FACE_FIRST, FACE_LAST, PAL_BASE, OUTPUT_SIZE, chanDbg, udiv } from './vsc.mjs';
@@ -66,9 +68,26 @@ const A_VSCHIST3_BIT = 16;
 const HIST = { HIST1: 0x04C, HISTAREA1: 0x474, HISTAREA2: 0x478, HISTAREA3: 0x47C, HIST2: 0x748, HIST3: 0x74C };
 const HIST_OFFS = new Set(Object.values(HIST));
 // HIST2's fields the set-up writes in progressive scan: the bin count's code [1:0], the clip and scale enables (bits 4,
-// 8), the source plane [17:16] and bit 20, which it always sets (0x501e12cb); bit 12 (two-field scan) and the field
-// 0x501e1488 stores at [31:24] (0 in every lab run, X; its second caller's value is not read) are outside the form
-const HIST2_FIELDS = 0x30113, HIST2_ALWAYS = 0x100000;
+// 8), the source plane [17:16] and bit 20, which it always sets (0x501e12cb); the component [25:24], which 0x501e1488
+// stores (its mask ~0x03000000; 0 from the live start 0x501d6e01, the playback kind - 1 = 0..3 from 0x501d6fd8, D).
+// Bit 12 (two-field scan) is outside the form
+const HIST2_FIELDS = 0x3030113, HIST2_ALWAYS = 0x100000;
+// histMeasure (below): the bin counts HIST2[1:0] codes (0x501e12b1..cb: 3 for 256, 2 for 128, 1 for 64, else 0; the
+// request's count is clamped to 32..128, 0x501d6aa6..cb, so 3 is never written and 0 is 32 in every request read, D
+// for the codes, X for INFO's 32, I for the unit's count at code 0), and why a run's bins are not known (the
+// HIST_UNMODELLED record's first argument at a read of them)
+const HIST_BIN_COUNTS = [32, 64, 128];
+export const HIST_WHY = { FORM: 1, UNWRITTEN: 2, FIELD_MODE: 3, WINDOW: 4, PLANE: 5, PLANE_KIND: 6, AREA: 7, OVERFLOW: 8 };
+// A-VSCHIST-6: the component HIST2[25:24] of a YC word (Cr << 16 | Cb << 8 | Y): 0 its Y; 1, 2, 3 the R, G, B of
+// A9's inverse full-range BT.601 (the JFIF integers the lab's PNG uses, src/lab/display.mjs ycc_to_rgb), clamped to
+// 0..255. The firmware names the four Y, R, G, B (CapPlh::execute's four starts, 0x50be06ff..0x50be0955, D); the
+// unit's own conversion is ? (no constant for it in the VSC's code)
+export function histComponent(word, comp) {
+  const y = word & 0xFF, cb = ((word >>> 8) & 0xFF) - 128, cr = ((word >>> 16) & 0xFF) - 128;
+  const x = comp === 0 ? y : comp === 1 ? y + ((91881 * cr + 32768) >> 16)
+    : comp === 2 ? y + ((-22554 * cb - 46802 * cr + 32768) >> 16) : y + ((116130 * cb + 32768) >> 16);
+  return x < 0 ? 0 : x > 255 ? 255 : x;
+}
 
 // blend(): per component ((a * tra + b * (31 - tra) + 15) / 31), unsigned. A table of every (tra, a, b), built once.
 let LUT = null;
@@ -108,15 +127,19 @@ class Compose {
   constructor(v, c) {
     this.v = v; this.c = c; this.m = v.ch[c].m; this.mf = v.mFlags(c); this.out = v.out;
     this.ox = 0; this.oy = 0; this.vw = 0; this.vh = 0; this.errors = 0; this.palUnwritten = 0; this.face = false;
+    // quiet (histMeasure): the geometry's errors and notes are counted and returned, not recorded: the unit's
+    // measurement is no composite, and its refusal is recorded once, at the read of its bins
+    this.quiet = false;
   }
   mw(i) { return this.v.dbg[this.mf + i]; }
-  cerror(code, off, value, a0, a1, a2) { this.errors++; this.v.recordError(code, this.c, off, value, a0, a1, a2); }
+  cerror(code, off, value, a0, a1, a2) { this.errors++; if (!this.quiet) this.v.recordError(code, this.c, off, value, a0, a1, a2); }
+  cnote(kind, off, value) { if (!this.quiet) this.v.noteRecord(kind, this.c, off, value); }
   need(off) {                  // a consumed register: never written -> error (null), the caller skips
     if (!this.mw(off / 4)) { this.cerror(E.UNWRITTEN, off, 0, 0, 0, 0); return null; }
     return this.m[off / 4];
   }
   zeroReg(off) {               // must hold 0 in the modelled domain: never written counts as 0 and is noted
-    if (!this.mw(off / 4)) { this.v.note(NOTE.COMPOSE_RESET, this.c, off, 0); return 0; }
+    if (!this.mw(off / 4)) { if (!this.quiet) this.v.note(NOTE.COMPOSE_RESET, this.c, off, 0); return 0; }
     return this.m[off / 4];
   }
   // A-VSCHIST-3: the latched histogram register off in its writers' form (D, docs/om1-vsc-spec.md section 13): HIST1 0
@@ -154,7 +177,7 @@ class Compose {
       return E.WINDOW;
     }
     pl.x0 = xs - this.ox; pl.y0 = ys - this.oy;
-    if (planc === 0) { this.v.noteRecord(NOTE.PLANC_ZERO, this.c, plancOff, p); return PLANE_NOT_DRAWN; }
+    if (planc === 0) { this.cnote(NOTE.PLANC_ZERO, plancOff, p); return PLANE_NOT_DRAWN; }
     pl.fmt = 0;
     if (p === P_IMG3 && this.face && FACE_PLANCS.includes(planc)) {   // A19 (opt-in): the face/AF frame plane
       const fmt = this.need(R.IMG_FMT + 4 * q);
@@ -179,7 +202,7 @@ class Compose {
         this.cerror(E.SPOS_UNMODELLED, sposOff, spos, addr, p, 0);
         return E.SPOS_UNMODELLED;
       }
-      this.v.noteRecord(NOTE.SPOS_A18, this.c, sposOff, (p << 8) | spos);
+      this.cnote(NOTE.SPOS_A18, sposOff, (p << 8) | spos);
     }
     pl.base = ((addr & ~127) + sbytes) >>> 0;
     pl.sposBytes = sbytes;
@@ -223,9 +246,10 @@ class Compose {
     if (!this.v.bus.span(pl.base, span)) { this.cerror(E.DMA_RANGE, sadrOff, pl.base, span % 4294967296, p, 0); return E.DMA_RANGE; }
     return 0;
   }
-  // drawImg: per output row j, source row r = j * sv / uv with remainder g; row r through imgRow, and for
-  // g != 0 row r + 1 too, mixed per component (a * (uv - g) + c * g + uv / 2) / uv. Every product stays below 2^53.
-  drawImg(pl) {
+  // imgRows: the plane's output rows j0 .. j1 - 1 as YC words (Cr << 16 | Cb << 8 | Y), put(j, row) for each (row is
+  // reused): per output row j, source row r = j * sv / uv with remainder g; row r through imgRow, and for g != 0 row
+  // r + 1 too, mixed per component (a * (uv - g) + c * g + uv / 2) / uv. Every product stays below 2^53.
+  imgRows(pl, j0, j1, put) {
     const hpos = (pl.w - 1) * pl.sh;
     const last = Math.floor(hpos / 4096) + ((hpos % 4096) ? 1 : 0);
     const bytes = 4 * (Math.floor(last / 2) + 1);
@@ -233,23 +257,28 @@ class Compose {
     const top = new Uint32Array(pl.w), bot = new Uint32Array(pl.w);
     const S = new Int32Array(pl.w), F = new Int32Array(pl.w);
     for (let i = 0; i < pl.w; i++) { const pos = i * pl.sh; S[i] = Math.floor(pos / 4096); F[i] = pos % 4096; }
-    const uv = pl.uv, half = Math.floor(uv / 2), out = this.out;
-    for (let j = 0; j < pl.h; j++) {
+    const uv = pl.uv, half = Math.floor(uv / 2);
+    for (let j = j0; j < j1; j++) {
       const vpos = j * pl.sv, r = Math.floor(vpos / uv), g = vpos % uv;
       this.v.bus.read((pl.base + r * pl.stride) >>> 0, b0, 0, bytes);
       imgRow(b0, pl.w, S, F, top);
-      const d0 = (pl.y0 + j) * this.vw + pl.x0;
-      if (!g) { out.set(top, d0); continue; }
-      this.v.bus.read((pl.base + (r + 1) * pl.stride) >>> 0, b1, 0, bytes);
-      imgRow(b1, pl.w, S, F, bot);
-      const k = uv - g;
-      for (let i = 0; i < pl.w; i++) {
-        const a = top[i], c = bot[i];
-        out[d0 + i] = Math.floor(((a & 0xFF) * k + (c & 0xFF) * g + half) / uv)
-          | Math.floor(((a >>> 8 & 0xFF) * k + (c >>> 8 & 0xFF) * g + half) / uv) << 8
-          | Math.floor(((a >>> 16 & 0xFF) * k + (c >>> 16 & 0xFF) * g + half) / uv) << 16;
+      if (g) {
+        this.v.bus.read((pl.base + (r + 1) * pl.stride) >>> 0, b1, 0, bytes);
+        imgRow(b1, pl.w, S, F, bot);
+        const k = uv - g;
+        for (let i = 0; i < pl.w; i++) {
+          const a = top[i], c = bot[i];
+          top[i] = Math.floor(((a & 0xFF) * k + (c & 0xFF) * g + half) / uv)
+            | Math.floor(((a >>> 8 & 0xFF) * k + (c >>> 8 & 0xFF) * g + half) / uv) << 8
+            | Math.floor(((a >>> 16 & 0xFF) * k + (c >>> 16 & 0xFF) * g + half) / uv) << 16;
+        }
       }
+      put(j, top);
     }
+  }
+  drawImg(pl) {
+    const out = this.out, vw = this.vw;
+    this.imgRows(pl, 0, pl.h, (j, row) => out.set(row, (pl.y0 + j) * vw + pl.x0));
   }
   // A19: rows of 8-bit indices; output pixel (i, j) takes source column floor(i * sh / 4096) of source row
   // floor(j * sv / uv) (nearest neighbour: an index is not interpolated; unscaled on the TFT, twice the size on the
@@ -435,4 +464,59 @@ export function compose(v, c) {
   for (let i = 0; i < 16; i++) v.dset(D.HDR + 4 * i, hdr[i]);
   v.dset(chanDbg(c, CH.COMPOSE), status ? status : (k.errors ? 0x200 | k.errors : 0x100));
   return status;
+}
+
+// The histogram unit's bins of the frame channel c shows from its latched bank (kind 1; docs/om1-vsc-spec.md section
+// 13). The caller (vsc.mjs boundary) asks at the measured frame's end, before the next bank is latched: the registers
+// are those the frame was scanned with, the source rows what memory holds then. D: the driver programs a bin count
+// code, an area in output coordinates (HISTAREA1 x << 16 | width, HISTAREA2 y << 16 | height, HISTAREA3 y), a source
+// IMG plane by its DMA address (HIST2[17:16]), a component (HIST2[25:24]), a clip (HIST2 bit 4, HIST3[31:16]) and a
+// scale (HIST2 bit 8, HIST3[15:0] = 2 s, s = N << 16 / (width * height) with N the sum it wants of the bins, at most
+// 8190), and reads count / 2 words of two 16-bit bins, the low half first. A-VSCHIST-4 (I) is what the unit counts,
+// which no code says: the selected plane's pixels as its resizer puts them on the output inside the area (the area is
+// in output pixels and the scale divides by its size in them), their component (histComponent, A-VSCHIST-6), value v
+// in bin v * count >> 8, each bin count * HIST3[15:0] >> 17 where the scale is on (so the bins of a full area sum to
+// about N) and then clipped.
+// Returns { kind: 'none' } where the source plane's DMAEN bit is clear (the unit has no source: A-VSCHIST-2 and
+// A-VSCHIST-5, vsc.mjs), { kind: 'bins', n, bins, comp } or { kind: 'unknown', why, a0, a1 } (HIST_WHY: a register
+// outside its writers' form or never written, two-field scan, a plane the compositor does not draw as YC 4:2:2, an
+// area not inside the plane, a count that does not fit a bin). Records no error and no note.
+export function histMeasure(v, c) {
+  const k = new Compose(v, c), m = k.m;
+  k.quiet = true;
+  const unknown = (why, a0 = 0, a1 = 0) => ({ kind: 'unknown', why, a0: a0 >>> 0, a1: a1 >>> 0 });
+  const h2 = m[HIST.HIST2 / 4], src = (h2 >>> 16) & 3;
+  if (src === 3) return unknown(HIST_WHY.FORM, HIST.HIST2, h2);
+  if (!(m[R.DMAEN / 4] & (0x20 >>> src))) return { kind: 'none' };
+  for (const off of [HIST.HIST2, HIST.HISTAREA1, HIST.HISTAREA2, HIST.HISTAREA3, R.SYNC1, R.VIDEOAREA1, R.VIDEOAREA2]) {
+    if (!k.mw(off / 4)) return unknown(HIST_WHY.UNWRITTEN, off);
+  }
+  if (((h2 & ~HIST2_FIELDS) >>> 0) !== HIST2_ALWAYS || (h2 & 3) === 3) return unknown(HIST_WHY.FORM, HIST.HIST2, h2);
+  const h3 = m[HIST.HIST3 / 4], scaled = !!(h2 & 0x100), clipped = !!(h2 & 0x10);
+  if ((scaled || clipped) && !k.mw(HIST.HIST3 / 4)) return unknown(HIST_WHY.UNWRITTEN, HIST.HIST3);
+  if (!(m[R.SYNC1 / 4] & (1 << 24)) || (k.zeroReg(R.SYNC4) & 0x7FFF)) return unknown(HIST_WHY.FIELD_MODE, R.SYNC1, m[R.SYNC1 / 4]);
+  const va1 = m[R.VIDEOAREA1 / 4], va2 = m[R.VIDEOAREA2 / 4];
+  k.ox = va1 >>> 16; k.vw = va1 & 0xFFFF; k.oy = va2 >>> 16; k.vh = va2 & 0xFFFF;
+  if (!k.vw || !k.vh) return unknown(HIST_WHY.WINDOW, va1, va2);
+  k.face = !!(v.dbg[chanDbg(c, CH.ASSUME)] & A19_BIT);
+  const pl = { p: src, x0: 0, y0: 0, w: 0, h: 0, base: 0, stride: 0, burst: 0, sh: 0, sv: 0, uv: 0, sposBytes: 0 };
+  const code = k.planeGeometry(pl);
+  if (code === PLANE_NOT_DRAWN || (!code && pl.fmt !== 0)) return unknown(HIST_WHY.PLANE_KIND, src, code);
+  if (code) return unknown(HIST_WHY.PLANE, src, code);
+  const a1 = m[HIST.HISTAREA1 / 4], a2 = m[HIST.HISTAREA2 / 4];
+  const ax = (a1 >>> 16) - k.ox - pl.x0, aw = a1 & 0xFFFF, ay = (a2 >>> 16) - k.oy - pl.y0, ah = a2 & 0xFFFF;
+  if (m[HIST.HISTAREA3 / 4] !== a2 >>> 16) return unknown(HIST_WHY.FORM, HIST.HISTAREA3, m[HIST.HISTAREA3 / 4]);
+  if (!aw || !ah || ax < 0 || ay < 0 || ax + aw > pl.w || ay + ah > pl.h) return unknown(HIST_WHY.AREA, a1, a2);
+  const n = HIST_BIN_COUNTS[h2 & 3], counts = new Uint32Array(n), shift = 8 - Math.log2(n), comp = (h2 >>> 24) & 3;
+  k.imgRows(pl, ay, ay + ah, comp === 0
+    ? (j, row) => { for (let i = ax; i < ax + aw; i++) counts[(row[i] & 0xFF) >>> shift]++; }
+    : (j, row) => { for (let i = ax; i < ax + aw; i++) counts[histComponent(row[i], comp) >>> shift]++; });
+  const bins = new Uint16Array(n), factor = h3 & 0xFFFF, clip = h3 >>> 16;
+  for (let b = 0; b < n; b++) {
+    let x = scaled ? Math.floor(counts[b] * factor / 131072) : counts[b];
+    if (clipped && x > clip) x = clip;
+    if (x > 0xFFFF) return unknown(HIST_WHY.OVERFLOW, b, x);
+    bins[b] = x;
+  }
+  return { kind: 'bins', n, bins, comp };
 }

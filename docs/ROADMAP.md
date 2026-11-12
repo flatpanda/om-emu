@@ -417,8 +417,9 @@ the survey table.
   template's zero exposure where S-PLAYSEQ answers the capture's, finding 106); the Exif's shooting values: the
   exposure time and F number are the EXIF set's, converted from the Tv and Av TAKE puts in the shot's record, and the
   ISO REC_IMAGE's, from that record's Sv (finding 147: read, D); the EXIF set divides by zero in the lab as on E143
-  (finding 103), REC_IMAGE's task does not run on the family, and the lab has no source for the three there (the
-  family's AE plan record has another layout than the one S-EXPOSE reads, X), so they stay the template's zeros.
+  (finding 103), REC_IMAGE's task does not run on the family, and as on E143 no capture stand-in delivers the three
+  honestly (S-EXPOSE's plan is read at E143's offsets, where the family's record holds no Tv, Sv and Av, I), so
+  they stay the template's zeros.
   Done on the family (2026-11-11, findings 143 to 146): REC_FILE's own task records S2's file on E122, E118 and E120,
   read by a rule (`src/fw/facts.mjs` recFileFrame: the task by its loop, the packet's fields from the code that uses
   them, the DCF open, REC's own cluster allocation, the chain write with the reply queue FILECLBK answers, the entry

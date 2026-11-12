@@ -2620,10 +2620,10 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
      and +1364 (finding 103). The lab does both natively: the dates are the clock's (X).
    - *ExposureTime +2356.* The EXIF set (`0x5052cda4`, called through `0x5052b51e` from TAKE's `0x50233f9f` and
      `0x502341d4` and from `0x50ad2a4d` and `0x50ad35ea`, in the play module's range, I): where the record's +18576 is
-     58 or its Tv +18712
-     is -32768 it stores +18756 / 10 over 100 (`0x5052debd`), else it calls `0x505a4ae0(the tag, Tv, the record's
-     +18714, +18716, the step)`, which clamps Tv between the two and converts it by the step, 256, 128 or thirds
-     (`0x505b6216`, `0x505b61f8`, `0x505b61da`); the step is setting 35818 (`0x5052ce6b`; 85 in the lab's store, X).
+     58 or its Tv +18712 is -32768 it stores +18756 / 10 over 100 (`0x5052debd`), else it calls `0x505a4ae0(the tag,
+     Tv, the record's +18714, +18716, the step)`, which clamps Tv between the two and converts it by the step, 256,
+     128 or thirds (`0x505b6216`, `0x505b61f8`, `0x505b61da`); the step is setting 35818 (`0x5052ce6b`; 85 in the
+     lab's store, X).
      TAKE writes Tv from the +4 of a record of its own (`0x502264a5`; `0x502336c4`, the record its shot's +60 points
      at; or its state's +1734 where the byte +1726 is set, `0x50233669`), and the two limits by `0x505bd5b5`, which
      copies the words `0x618d2678` and `0x618d2676` (`0x502328af`; I: TAKE_EXPOSE's, the function lies by the plan's
@@ -2633,23 +2633,33 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
      limits from settings 49418 and 50026 (`0x50232883..0x502328ab`; both 0 in the family's store in the lab and 761,
      the 12-40mm's F2.8, in E143's, X: I, the lens's).
    - *ISO +2406.* Not the EXIF set's but REC_IMAGE's: rec_bracket_update (`0x5050d111`) calls rec_bracket_update_iso
-     (`0x5050d8cb`, from `0x5050d48b`), which with the record's bracket byte +18644 1 takes the record's +18720 as Sv
-     and, where the byte +5262 is 0, calls rec_bracket_after_trig (`0x5050dbe5`): `0x505b6264(Sv)` into the tag
-     (`0x5050dc18..0x5050dc22`; 25 for an Sv of 0, X, E143's value in `docs/hle-gaps.md` 4.3.5). TAKE writes +18720
-     from its state's +1478 (`0x502336e9`).
-   - *Whether the lab can deliver them.* Not now, for three reasons, each a missing source and none a missing call.
+     (`0x5050d8cb`, from `0x5050d48b`). With the record's bracket byte +18644 1 its Sv is the record's +18720 where
+     `0x50517407(packet, record)` is 1 (Modes 4099, 4100 and 4106 with the record's byte +22041 1, and 8193 with that
+     byte and the packet's +144 bit 13), else, a still's Mode 4097 among them, +18720 plus a term of +4758
+     (`0x5050d9d6..0x5050da2f`; I: 256 log2(+4758 / 256), from the constants 256.0 and 0.30103, E143's form with
+     +38174 and +6594 in `docs/hle-gaps.md` 4.3.4; +4758 is the template's 256 in the lab, X); with that byte not 1
+     it comes from rec_bracket_update's argument (`0x5050da41..0x5050da77`, not read). The Sv goes to the packet's
+     +212 and, where the byte +5262 is 0, to rec_bracket_after_trig (`0x5050dbe5`), which for Mode 4097
+     (`0x50517407` 0) stores `0x505b6264(Sv)` in the tag (`0x5050dc18..0x5050dc22`). `0x505b6264` takes the Sv in
+     APEX units times 256 (X on E122: 1024 gives 50, 1280 100, 1536 200, 2048 800, 3072 12800, and 0 to 512 its floor
+     25, E143's 25 in `docs/hle-gaps.md` 4.3.5). TAKE writes +18720 from its state's +1478 (`0x502336e9`).
+   - *Whether the lab can deliver them.* Not as on E143, because E143 delivers none of the three from a capture
+     stand-in either: there the clock gives the dates, ExposureTime and FNumber stay the template's 0 and S-EXPOSE's
+     values reach none of the record's exposure fields honestly (`docs/hle-gaps.md` 4.3.4), and the ISO's 25 is the
+     template's Sv run through REC_IMAGE's own task (4.3.5). On the family the dates are delivered the same way;
+     the other three stay the template's for three reasons.
      (1) The EXIF set does not run: it divides by zero in a white balance helper of TAKE's state (`0x50212ef5`, the
      ratio of two gains, finding 103), so only its parts can run, as its dates do. (2) Its two conversions need the
-     record's Tv and Av, which TAKE copies from its exposure record at the release; the lab's only exposure is
-     S-EXPOSE's plan, and on the family that plan is read at E143's offsets (+6, +10, +14 of the port's place of
-     E143's plan record), where the family's record holds 1536, 0 and 0 (E122, E118; 1280, 0, 0 on E120) under a Bv
-     of 1792: not a Tv, Sv and Av, which E143's 2052, 1536 and 1276 are (2052 + 1276 = 1792 + 1536). The family's AE
-     regions are 6 bytes shorter up to their first absolute load (+20 against E143's +26, X), so its layout is
-     another and no rule reads it (I: the plan itself runs, its Bv at +0 is the scene's). The family's play sessions
-     have no S-SCENE capture either, so INFO shows the release's default 1/125 s and no F number or ISO
-     (`src/lab/camapp.mjs` still_record, finding 91).
-     (3) The ISO is REC_IMAGE's, whose task does not run on the family (finding 145), and the F number's limits, the
-     lens's, are 0 in the store. So ExposureTime, FNumber, ISO and FocalLength stay the template's 0/100, 0/10, 0 and
+     record's Tv and Av, which TAKE copies from a record of its own (from what it fills that one is not read, ?); the
+     lab's only exposure is S-EXPOSE's plan, and on the family that plan is read at E143's offsets (+6, +10, +14 of
+     the port's place of E143's plan record), where the family's record holds 1536, 0 and 0 (E122, E118; 1280, 0, 0
+     on E120) under a Bv of 1792 at +0 (X): not a Tv, Sv and Av, which E143's 2052, 1536 and 1276 are (2052 + 1276 =
+     1792 + 1536, X). The first absolute load into the family's record is at +20 where E143's is at +26 (X, a scan):
+     its layout is another (I) and no rule reads it. The family's play sessions have no S-SCENE capture either, so
+     INFO shows the release's default 1/125 s and no F number or ISO (`src/lab/camapp.mjs` still_record, finding 91).
+     (3) The ISO is REC_IMAGE's, whose task does not run on the family (finding 145; the lab's block has the bracket
+     byte +18644 0 and +18720 0, X: S-EXIFPRM writes no TAKE field there), and the F number's limits, the lens's, are
+     0 in the store. So ExposureTime, FNumber, ISO and FocalLength stay the template's 0/100, 0/10, 0 and
      0/10, which `test/test_storage.mjs` now holds strictly, and finding 106's difference between INFO and the file
      stays.
 148. **Left open** (2026-11-11). REC_IMAGE's own task on the family (task 34, `0x50510a9f`: rec_bracket_entry

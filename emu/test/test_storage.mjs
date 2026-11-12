@@ -25,7 +25,7 @@
 //                   remaining shots and movie time from the card (the queries S-CARD answered before), smaller on a 4 GiB
 //                   card; a saved card (env.card) mounts in the next session without a format, and a player keeps
 //                   its card across a power cycle; S2 with the live view writes the picture's file (S-RECFILE; on
-//                   E143, E146, E147 and the E144 family but E130 REC_FILE natively, the clock set first): its
+//                   E143, E146, E147 and the E144 family but E145 and E132 REC_FILE natively, the clock set first): its
 //                   directory entry, size and bytes
 //                   read back independently (natively the firmware's header, its Make, the body's Model and Exif
 //                   version, dates, maker notes and thumbnail slot read by refs/exif.mjs, then the lab's stream;
@@ -72,12 +72,15 @@ const cardQueries = (A) => ({ SHOTS: A(0x50419164), MOVIE: A(0x5042DA58) });
 // E143 'OM-1' at body 0x76da8, E146 'OM-1MarkII' at 0x8c300, E147 'OM-3' at 0x74a84), the maker notes' 'OM SYSTEM'
 // on all three; the E144 family's (X, 2026-11-10, refs/exif.mjs and exiftool): Make 'OM Digital Solutions', the maker
 // notes 'OM SYSTEM' and an XMP segment after the Exif on E144 and E148, Make 'OLYMPUS CORPORATION', 'OLYMPUS' and no
-// XMP on the six others
+// XMP on the six others; E130's, E133's and E129's (X, 2026-11-11, refs/exif.mjs and exiftool: the REC version before
+// the family's, src/fw/facts.mjs recFileInline; the Model strings in each image, D: E130 'E-M10 Mark III' at body
+// 0x60a74, E133 'E-PL9' at 0x589c0, E129 'TG-5' at 0x5cdd0), as the six
 const OM = { make: 'OM Digital Solutions', notes: 'OM SYSTEM', xmp: true }, OLY = { make: 'OLYMPUS CORPORATION', notes: 'OLYMPUS', xmp: false };
 const EXIF_BODY = { E143: { model: 'OM-1', version: '0231', ...OM }, E146: { model: 'OM-1MarkII', version: '0231', ...OM }, E147: { model: 'OM-3', version: '0300', ...OM },
   E144: { model: 'OM-5', version: '0231', ...OM }, E148: { model: 'OM-5MarkII', version: '0300', ...OM }, E139: { model: 'E-M1MarkIII', version: '0231', ...OLY },
   E134: { model: 'E-M1X', version: '0231', ...OLY }, E137: { model: 'E-M5MarkIII', version: '0231', ...OLY }, E142: { model: 'E-P7', version: '0231', ...OLY },
-  E140: { model: 'E-M10MarkIV', version: '0231', ...OLY }, E125: { model: 'E-M1MarkII', version: '0230', ...OLY } };
+  E140: { model: 'E-M10MarkIV', version: '0231', ...OLY }, E125: { model: 'E-M1MarkII', version: '0230', ...OLY },
+  E130: { model: 'E-M10 Mark III', version: '0231', ...OLY }, E133: { model: 'E-PL9', version: '0231', ...OLY }, E129: { model: 'TG-5', version: '0231', ...OLY } };
 // What the E118 family's header maker writes in S2's file (src/lab/recheader.mjs): IFD0's Make and Model, the ones the
 // EXIF template's init takes from the settings store (X, refs/exif.mjs, 2026-11-10; the Model strings are in each
 // image, D: E122 'PEN-F' at 0x6009698c, E118 'E-M5MarkII' at 0x600a8560, E120 'E-M10MarkII' at 0x600a5bec; E118's Make
@@ -551,6 +554,14 @@ export async function storageSession() {
           ok(fill?.length === 1 && fill[0].mode === 4 && fill[0].dst === y?.addr && fill[0].bytes === HEADER && fill[0].value === 0, `the header area cleared by the imgpro unit natively (one linear fill of 0 over the buffer's ${HEADER} bytes): ${JSON.stringify(fill)}`);
           ok(y?.aspect === run.take[12417] && run.take[40401] === 1, `ImgAspect from the record's aspect, TAKE's setting 12417 (${run?.take?.[12417]}): ${y?.aspect}; the bracket's 40401 ${run?.take?.[40401]}`);
           ok(x?.exif?.get(0x8827) === 25 && x?.exif?.get(0x8831) === 25, `the ISO REC_IMAGE derives from the record's +38174 0 (rec_bracket_after_trig 0x5053bfe2: the shot's record's +38174, on E146 and E147 +37826; on E143 also the SvAdj rec_bracket_update_iso 0x5053bca6 sets), ISO and StandardOutputSensitivity: ${x?.exif?.get(0x8827)} ${x?.exif?.get(0x8831)}`);
+        }
+        // the REC version before the family's (src/fw/facts.mjs recFileInline: E130, E133, E129): REC_FILE's reply to
+        // the requester taken with status 0, and the file's context, on rec_make_file's stack, read at the
+        // registration: its stamp the FAT stamp of the clock's date, as the directory entry's
+        if (rec.R.reply) {
+          const fat = ((DATE[0] - 1980) << 25 | DATE[1] << 21 | DATE[2] << 16 | DATE[3] << 11 | DATE[4] << 5 | DATE[5] >> 1) >>> 0;
+          ok(rec.R.contexts === null && rec.reply?.status === 0 && rec.context?.stamp === fat && img?.file?.stamp === fat,
+            `REC_FILE's reply taken (S-RECIMAGE) with status ${rec.reply?.status}, its context's stamp at the registration ${rec.context?.stamp} (the clock's ${fat})`);
         }
       } else if (!hdr) ok(data && want && data.every((b, i) => b === want[i]), 'the file\'s bytes are the JPEG the lab handed the file module');
       // the E118 family: the header its header maker built natively (S-RECHDR), the lab's stream, through S-RECFILE

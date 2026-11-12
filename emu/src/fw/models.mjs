@@ -121,7 +121,9 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // 'rec_image'; recImage throws where REC_IMAGE's forms differ, so a body with recFile's parts read has both); on the
 // E144 family's REC version (REC_FILE waiting on its queue alone, no header fill) at the addresses src/fw/facts.mjs
 // recFileQueue reads, with no 'rec_image': REC_IMAGE's part in the lab's call (H-EXIFINIT, H-RECINIT, H-RECFILE,
-// S-EXIFPRM, S-RECIMAGE, S-JPEGENC);
+// S-EXIFPRM, S-RECIMAGE, S-JPEGENC); on the REC version before the family's (E130, E133, E129: a 284-byte packet,
+// REC_FILE's loop inlining its start and finish, rec_make_file's file context on its stack) at the addresses
+// src/fw/facts.mjs recFileInline reads, with the same stand-ins;
 // given for a body whose S2 is known to record so (X). A body without it keeps S-RECFILE (src/lab/storage.mjs)
 // `exif_native`: S-RECFILE's file carries the header REC_IMAGE's own header maker builds natively
 // (src/lab/recheader.mjs H-EXIFINIT, S-EXIFPRM, S-RECHDR; docs/model-survey.md findings 102 to 105), at the
@@ -964,6 +966,8 @@ export const MODELS = {
     // TFT 1.037M dots; no EVF
     panels: { tft: [720, 480], evf: null },
     card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // REC_FILE natively, as E130's (src/fw/facts.mjs recFileInline; X: test_storage's session, 2026-11-11)
+    rec_native: true,
     board: { family: 'E144' },
     // the map from E143 pairs 1.04M instructions; from E142 2.24M with 122 conflicts, from E140 2.35M (120), from E125
     // 5.20M (84), from E145 2.04M (79); through E142 120 of the overrides carry (60 nulls) and 12 fail, through E140
@@ -983,6 +987,9 @@ export const MODELS = {
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
     card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // REC_FILE natively (src/lab/rec.mjs; src/fw/facts.mjs recFileInline: the REC version before the E144 family's;
+    // X: test_storage's session, 2026-11-11)
+    rec_native: true,
     board: { family: 'E144' },
     // the map from E143 pairs 1.02M instructions; from E142 2.11M with 45 conflicts, from E140 2.15M (47), from E145
     // 1.98M (71); through E142 118 of the overrides carry (60 nulls) and 14 fail, through E140 117 (60) and 16, through
@@ -1004,6 +1011,8 @@ export const MODELS = {
     // the vendor's specification gives the TFT as 460K dots, not its pixel geometry (I: unchecked); no EVF
     panels: { tft: null, evf: null },
     card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // REC_FILE natively, as E130's (src/fw/facts.mjs recFileInline; X: test_storage's session, 2026-11-11)
+    rec_native: true,
     // the family's stub pages and the serial controllers' blocks of channels 9, 2 and 3, as E132's (its sessions write
     // those blocks and no other, X)
     board: { family: 'E144', stub_pages: [0x98800000, 0x98F20000, 0x9A200000, 0x9B800000, 0x9B801000, 0x9BC00000, 0x9BD00000, 0x9A100000, 0x98500000, 0x98600000] },

@@ -361,8 +361,10 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   const { storageUnits, storageSession, storageSdxc } = await import('../test/test_storage.mjs');
   const { spawnSync } = await import('node:child_process');
   const su = storageUnits(), ss = await storageSession(), sx = await storageSdxc();
+  // E130, E133 and E129 for REC_FILE natively in the REC version before the E144 family's, each in a form the other
+  // two do not take (E133's rec_jpeg_exec, E129's date set; src/fw/facts.mjs recFileInline)
   // the E118 family's HLS media side alone (--hls: Format from Card Setup, the card out and in, a picture after each)
-  const others = [...['E146', 'E147', 'E144', 'E142', 'E134', 'E148', 'E137', 'E125', 'E122', 'E118', 'E120'].map((m) => [m, '--session']), ...['E122', 'E118', 'E120'].map((m) => [m, '--hls'])].map(([m, arg]) => {
+  const others = [...['E146', 'E147', 'E144', 'E142', 'E134', 'E148', 'E137', 'E125', 'E130', 'E133', 'E129', 'E122', 'E118', 'E120'].map((m) => [m, '--session']), ...['E122', 'E118', 'E120'].map((m) => [m, '--hls'])].map(([m, arg]) => {
     const r = spawnSync(process.execPath, [new URL('../test/test_storage.mjs', import.meta.url).pathname, arg], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
     return [arg === '--session' ? m : `${m} ${arg}`, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
   });

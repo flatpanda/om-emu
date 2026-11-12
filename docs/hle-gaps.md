@@ -2264,15 +2264,19 @@ unchanged (X: golden identical). The registers and formulas are in `docs/om1-vsc
   histograms and the bars are the pattern's. INFO no longer stops; the detail view's frame is still refused, for
   the highlight unit's area alone: HIAREA1-3 (`0x48c..0x494`, the window), written at PLAY by `0x501e1c14`,
   `0x501e1c47` and `0x501e1c51`, are in A13's never-written class (`docs/om1-vsc-spec.md` section 7).
-- **The EVF switch under a run (X, D): not a defect of the unit's model.** The lab's SWITCH (4.3.6) calls DISPLAY
-  cmd 2 OPEN of the EVF with a run on. The opened word is 2 before the run ends; the run ends at the TFT channel's
-  next boundary, 16.7 ms after the key, with the channel running as before (INTEN1 `0x101`, DMAEN 7); the ISR finds the
+- **The EVF switch under a run (X, D): not a defect of the unit's model.** Until 4.3.10 the lab's SWITCH (4.3.6)
+  called DISPLAY cmd 2 OPEN of the EVF with a run on; under camapp 3 LV is now the firmware's own output change,
+  whose stop (DISPLAY cmd 15) waits for the run: it ends 16.7 ms after the stop on the TFT still open (the ISR's
+  a2 1, the opened word 1, no errlog), and TRA 588 opens the EVF 50 ms later (X). histEvfSession pins both: LV
+  that way, and the lab's OPEN made by the test itself under a run (camapp 1 and 2's switch makes it, with the
+  unit not started there). The opened word is 2 before the run ends; the run ends at the TFT channel's
+  next boundary, 17.6 ms after the open, with the channel running as before (INTEN1 `0x101`, DMAEN 7); the ISR finds the
   device not open, logs `0x37001418`, posts the done callback with the channel's bit 1 and acknowledges, as its
   code says. The open keeps bit 8 enabled while it waits (INTEN1 `0x100`, `0x501e03f5`) and closes the channel
   216 ms later (INTEN1 0 at `0x501e032a`, CTRL2 6, DMAEN 0, INTST1 all ones at `0x501e0344`, the resets), with no
   run on. So the interrupt on a closed device is the firmware's own path once an open comes before the
-  application's stop (TRA 937, 4.3.6's order), and nothing in the model is changed; the session still stops at
-  the harness's refusal of an error log in a DISPLAY step.
+  application's stop (TRA 937, 4.3.6's order), and nothing in the model is changed; the open's step stops at the
+  harness's refusal of an error log in a DISPLAY step.
 - **Default sessions (X).** Camapp 1 and 2 do not write HIST1 (4.2.1), so no bin is counted there. What their
   screens show of a histogram are stand-ins: the shooting screen's box is empty because S-TRAACK answers
   getHistogramData (TRA 944) without filling its series and S-MODACK answers the GUI's drawHistogram send (4.6.2);
@@ -2282,8 +2286,9 @@ unchanged (X: golden identical). The registers and formulas are in `docs/om1-vsc
   bins, the scale, the clip, the firmware's scale formula, a resized plane, the four components, the source field
   and the source's own DMAEN bit, the frame measured, and eight cases that stay unknown). `emu/test/test_hist.mjs`
   histLiveSession (14 checks, without and with `--cpu2 native`), histInfoSession (12, the detail view's stop at
-  HIAREA1-3 alone among them) and histEvfSession (3). `emu/test/test_camapp.mjs` playNativeSession's pinned stop
-  moved: INFO reaches ID_ST_DISP_DETAIL past the bins' reads.
+  HIAREA1-3 alone among them) and histEvfSession (5: the lab's OPEN under a run, 3; LV under a run, 2).
+  `emu/test/test_camapp.mjs` playNativeSession's pinned stop moved: INFO reaches ID_ST_DISP_DETAIL past the bins'
+  reads.
 - **Corrections.** 4.2.1 and the vsc spec left `0x501e1488`'s second caller unread and its field at [31:24]: it is
   kind - 1 in [25:24]. 4.2.1's "which component, Y or another" is answered for the names (D), not for the unit
   (I). 4.2.4's and 4.8.11's stops at the bins' read are gone; 4.2.1's "bins with an IMG plane on are refused" no

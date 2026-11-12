@@ -19,10 +19,15 @@
 //                  (A-VSCHIST-6); they reach CapPlh's four buffers and the GUI draws them as four panels of bars in
 //                  GUI layer 1, white, red, green and blue, each bar ceil(bin * 78 / 32) rows high; the detail view's
 //                  frame is refused for the highlight unit's area alone (HIAREA1-3, FEATURE_UNOBSERVED): the next stop
-//   histEvfSession  LV under the running histogram (docs/hle-gaps.md 4.3.6): the run that is on ends on the TFT's
-//                  channel, which still runs (the open has changed the opened word and not yet closed the channel),
-//                  and the ISR does what its code says (0x501dec88..e4): the device not open, errlog 0x37001418, the
-//                  done callback posted with the channel's device bit, INTST1 bit 8 acknowledged
+//   histEvfSession  the EVF switch under the running histogram (docs/hle-gaps.md 4.2.7, 4.3.6, 4.3.10): the lab's
+//                  DISPLAY cmd 2 OPEN of the EVF made with a run on (the open of the lab's own switch, camapp 1 and
+//                  2's, and camapp 3's until its switch became the firmware's own): the run that is on ends on the
+//                  TFT's channel, which still runs (the open has changed the opened word and not yet closed the
+//                  channel), and the ISR does what its code says (0x501dec88..e4): the device not open, errlog
+//                  0x37001418, the done callback posted with the channel's device bit, INTST1 bit 8 acknowledged.
+//                  LV under camapp 3, the firmware's own output change (play.mjs native_switch), stops the histogram
+//                  first: DISPLAY cmd 15 waits for the run that is on, which ends on the TFT still open (the same end
+//                  branch with the device open, no errlog), and only then does TRA 588 open the EVF
 //   node emu/test/test_hist.mjs [live|info|evf]
 const h8 = (v) => '0x' + (v >>> 0).toString(16);
 const same = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
@@ -54,6 +59,8 @@ const PANEL = { x: 555, pitch: 10, bottoms: [129, 215, 301, 387], rows: 78 };
 const GUI_DISP_DETAIL = '0x050b';
 // the opened word and the histogram's run word (vsc spec section 13), the ISR's error log
 const OPENED = 0xA32DB39C, HIST_RUN = 0x62A3EAF8, HIST_ERRLOG = 0x37001418, OPEN_TFT = 1, OPEN_EVF = 2;
+// the histogram's stop, DISPLAY cmd 15 (0x501d709f: waits up to 50 ms for the running run's end; hle-gaps 4.2.7)
+const HIST_STOP = 0x501D709F;
 
 async function setup() {
   const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
@@ -270,21 +277,31 @@ export async function histEvfSession() {
   let checks = 0;
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
   const { player, tools } = await setup();
-  let pl = null;
-  try {
-    pl = player({}, 'auto');
-    const { lab, vsc, ch } = tools(pl);
-    const run = lab.sim.u32(HIST_RUN), o0 = lab.sim.u32(OPENED), t0 = lab.lab_time(), ends = [], posts = [], acked = [];
+  // the ISR's end branch, the done callback's post and the ISR's return, as observed in a session
+  const watchIsr = (lab, vsc, ch) => {
+    const ends = [], posts = [], acked = [];
     lab.observe(ISR_END, (l, r) => ends.push({ ns: l.lab_time(), open: r.a2 >>> 0, opened: l.sim.u32(OPENED), running: vsc.ch[TFT].running,
       inten: ch.w[R.INTEN1 / 4], intst: ch.w[R.INTST1 / 4], dmaen: ch.w[R.DMAEN / 4], runs: vsc.ch[TFT].histRuns }), 'test: the ISR\'s end branch');
     lab.observe(DONE_POST, (l, r) => posts.push(r.d0 >>> 0), 'test: the done callback\'s post');
     lab.observe(ISR_ACKED, () => acked.push(ch.w[R.INTST1 / 4]), 'test: the ISR\'s return');
+    return { ends, posts, acked };
+  };
+  // The lab's DISPLAY cmd 2 OPEN of the EVF with a run on. Since the display switch under camapp 3 is the firmware's
+  // own output change (2026-11-11, 4.3.10) LV no longer makes that open (X: the run ends on the open TFT, below);
+  // the open is the one the lab's own switch makes (display.mjs open, camapp 1 and 2's SWITCH, where no histogram
+  // runs, 4.2.7), so the test makes it itself, under the run, as LV did before. Its step refuses the error log.
+  let pl = null;
+  try {
+    pl = player({}, 'auto');
+    const { lab, vsc, ch } = tools(pl);
+    const run = lab.sim.u32(HIST_RUN), o0 = lab.sim.u32(OPENED), t0 = lab.lab_time();
+    const { ends, posts, acked } = watchIsr(lab, vsc, ch);
     const runs0 = vsc.ch[TFT].histRuns;
     let err = null;
-    try { pl.run_input({ type: 'key', id: 'lv', action: 'down' }); } catch (e) { err = e; }
+    try { lab.open('evf'); } catch (e) { err = e; }
     const e = ends[0], frame = vsc.nextBoundary(TFT) - ch.frameStart;
     ok(run === 1 && o0 === OPEN_TFT && ends.length === 1 && e.runs === runs0 + 1 && e.ns - t0 <= 2 * frame && e.running === true && (e.inten & e.intst & 0x100) !== 0 && e.dmaen !== 0,
-      `LV with a run on (run word ${run}, opened ${h8(o0)}): the run ends on the TFT's channel ${((e?.ns - t0) / 1e6).toFixed(1)} ms later (a frame is ${(frame / 1e6).toFixed(1)} ms), the channel still running (${e?.running}; INTEN1 ${h8(e?.inten ?? 0)}, INTST1 ${h8(e?.intst ?? 0)}, DMAEN ${h8(e?.dmaen ?? 0)})`);
+      `the lab's OPEN of the EVF with a run on (run word ${run}, opened ${h8(o0)}): the run ends on the TFT's channel ${((e?.ns - t0) / 1e6).toFixed(1)} ms later (a frame is ${(frame / 1e6).toFixed(1)} ms), the channel still running (${e?.running}; INTEN1 ${h8(e?.inten ?? 0)}, INTST1 ${h8(e?.intst ?? 0)}, DMAEN ${h8(e?.dmaen ?? 0)})`);
     ok(ends.length === 1 && e.open === 0 && e.opened === OPEN_EVF && same(posts, [OPEN_TFT]) && acked.length === 1 && !(acked[0] & 0x100)
       && err && new RegExp(`firmware error log: ${h8(HIST_ERRLOG)} from \\S+ \\(disasm 0x501deccc\\)`).test(err.message),
       `the ISR's end branch as its code says: the channel's device not open (a2 ${h8(e?.open ?? 1)}, the opened word ${h8(e?.opened ?? 0)}), errlog ${h8(HIST_ERRLOG)}, the done callback posted with the channel's device bit (${posts.map(h8)}), INTST1 bit 8 acknowledged (INTST1 ${acked.map(h8)} at its return): ${err?.message.slice(0, 160)}`);
@@ -292,6 +309,26 @@ export async function histEvfSession() {
     ok(ch.w[R.DMAEN / 4] === 0 && ch.w[R.INTEN1 / 4] === 0 && lab.vsc.hist(TFT).state === 0 && vsc.ch[TFT].histRuns === runs0 + 1,
       `the open then closed the channel (DMAEN ${h8(ch.w[R.DMAEN / 4])}, INTEN1 ${h8(ch.w[R.INTEN1 / 4])}) with the unit idle (${lab.vsc.hist(TFT).state}) and no further run (${vsc.ch[TFT].histRuns - runs0})`);
   } catch (e) { bad.push(`evf: ${e.message.slice(0, 700)}`); }
+  try { pl?.close_session(); } catch { /* the session stopped */ }
+  // LV with a run on, the firmware's own output change: the application's stop (TRA 937, DISPLAY cmd 15) waits for
+  // the run, which ends on the TFT still open, and the EVF opens after it (TRA 588; test_c3power evfSwitchSession
+  // pins the transactions' order)
+  pl = null;
+  try {
+    pl = player({}, 'auto');
+    const { lab, vsc, ch } = tools(pl);
+    const run = lab.sim.u32(HIST_RUN), o0 = lab.sim.u32(OPENED), e0 = lab.kernel.errors.length, stops = [];
+    const { ends, posts, acked } = watchIsr(lab, vsc, ch);
+    lab.observe(HIST_STOP, (l) => stops.push(l.lab_time()), 'test: the histogram\'s stop');
+    const runs0 = vsc.ch[TFT].histRuns;
+    const rec = pl.run_input({ type: 'key', id: 'lv', action: 'down' }), e = ends[0];
+    const logged = lab.kernel.errors.slice(e0).filter(([c]) => c === HIST_ERRLOG).length;
+    ok(run === 1 && o0 === OPEN_TFT && rec.switch?.native === true && rec.switch.changed === true && stops.length === 1 && ends.length === 1
+      && stops[0] <= e.ns && e.open === OPEN_TFT && e.opened === OPEN_TFT && same(posts, [OPEN_TFT]) && acked.length === 1 && !(acked[0] & 0x100) && logged === 0,
+      `LV with a run on (run word ${run}, opened ${h8(o0)}) is the firmware's own change (${rec.switch?.native}, made ${rec.switch?.changed}): the stop (${stops.length}) waits for the run, which ends ${((e?.ns - stops[0]) / 1e6).toFixed(1)} ms after it on the TFT still open (a2 ${h8(e?.open ?? 0)}, the opened word ${h8(e?.opened ?? 0)}); the done callback posted with ${posts.map(h8)}, INTST1 ${acked.map(h8)} at the ISR's return, ${h8(HIST_ERRLOG)} logged ${logged} time(s)`);
+    ok(lab.sim.u32(OPENED) === OPEN_EVF && lab.sim.u32(HIST_RUN) === 0 && lab.vsc.hist(TFT).state === 0 && vsc.ch[TFT].histRuns === runs0 + 1,
+      `then the EVF opens (the opened word ${h8(lab.sim.u32(OPENED))}) with the histogram stopped (run word ${lab.sim.u32(HIST_RUN)}, the unit ${lab.vsc.hist(TFT).state}) and no further run (${vsc.ch[TFT].histRuns - runs0})`);
+  } catch (e) { bad.push(`evf LV: ${e.message.slice(0, 700)}`); }
   try { pl?.close_session(); } catch { /* the session stopped */ }
   return { checks, bad };
 }

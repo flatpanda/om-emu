@@ -1,0 +1,12 @@
+# E144 .BIN container walk (tools/fwread.unpack_bin)
+# vendor file: fw/OLY_E_144_1200_0000_0000.BIN
+# vendor sha256: a0c91f3ac7caaf0925b2af609e711183cf3b5982b3333224bcef26c0c5943d11
+# head fields: type model load bodylen version flags checksum_ok
+
+block @0x00000000 tag=OE model=0x4014 load=0x40780000 len=0x17BFFC0 ver=0x1200 flags=0x0100 checksum_ok=True descrambled_sha256=cf4babeab5f516514e4a9b6032b0374e643830511e083b9cdd26bcb02980af88
+block @0x017C0000 tag=OE model=0x4014 load=0x42140000 len=0xD5FFC0 ver=0x0100 flags=0x0101 checksum_ok=True descrambled_sha256=36d70aaef469dbeb4feba9cfe5946c64b1e957e12f7a7692ead2955d3cc41f1a
+block @0x02520000 tag=OE model=0x4014 load=0x42EA0000 len=0x2B9FFC0 ver=0x0100 flags=0x0106 checksum_ok=True descrambled_sha256=8bda3804fddcc206f7c1a78b30b0765eb69b84b15c872eec99cda46be795b8aa
+block @0x050C0000 tag=OE model=0x4014 load=0x00000000 len=0x3FFC0 ver=0x0001 flags=0x010E checksum_ok=True descrambled_sha256=b61feee4954ac5ea46d9b07677e68e1190a7eba69cffe1a8e46d058eeb94ab3b
+block @0x05100000 tag=OE model=0x4014 load=0x45CC0000 len=0x6FFFC0 ver=0x1000 flags=0x0102 checksum_ok=True descrambled_sha256=6bcc8258768c05717430fb39afe4761b3aded45e76bcc0e7fed328b076d1de33
+
+all 5 blocks: descrambled sha256 match BLOBS.sha256 pins; checksum_ok True

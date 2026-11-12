@@ -1,0 +1,7 @@
+path,sha256,bytes,role
+fw/OLY_E_144_1200_0000_0000.BIN,a0c91f3ac7caaf0925b2af609e711183cf3b5982b3333224bcef26c0c5943d11,92274688,vendor updater image (OM-5 v1.2, E144); sole input of reproduce.py
+unpacked/E144/OLY_E_144_1200_0000_0000.BIN.blk00000000.OE.0100.bin,cf4babeab5f516514e4a9b6032b0374e643830511e083b9cdd26bcb02980af88,24903616,derived: main code block, descrambled (re-verified against this pin by reproduce.py)
+unpacked/E144/OLY_E_144_1200_0000_0000.BIN.blk017c0000.OE.0101.bin,36d70aaef469dbeb4feba9cfe5946c64b1e957e12f7a7692ead2955d3cc41f1a,14024640,derived: languages/strings/fonts block (radio scan input)
+unpacked/E144/OLY_E_144_1200_0000_0000.BIN.blk02520000.OE.0106.bin,8bda3804fddcc206f7c1a78b30b0765eb69b84b15c872eec99cda46be795b8aa,45744064,derived: large-data block incl. the squashfs rootfs overlay (re-verified)
+unpacked/E144/OLY_E_144_1200_0000_0000.BIN.blk050c0000.OE.010e.bin,b61feee4954ac5ea46d9b07677e68e1190a7eba69cffe1a8e46d058eeb94ab3b,262080,derived: misc block (radio scan input)
+unpacked/E144/OLY_E_144_1200_0000_0000.BIN.blk05100000.OE.0102.bin,6bcc8258768c05717430fb39afe4761b3aded45e76bcc0e7fed328b076d1de33,7339968,derived: images block (radio scan input)

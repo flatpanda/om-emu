@@ -1,0 +1,11 @@
+# /bin/isc_olnet extracted from the E144 rootfs (squashfs -> fragment 3)
+path            /bin/isc_olnet
+inode           type 2 (file), mode 0755, uid/gid 0/0, mtime 1657804144
+storage         fragment 3 (start 1351741, size 52680), fragment offset 44020,
+                no full blocks (block_list empty)
+size            60932 bytes
+sha256          618ffe3994dc85df240b4709cbd5874a3854e17edc5d5e3205444b44a38945e0
+elf header      7f 45 4c 46, 32-bit LSB, e_machine 0x28 (ARM),
+                linked against libwpa_client.so + libolnet.so (wpa_ctrl)
+re-derive       python reproduce.py  (writes evidence/tmp/isc_olnet.bin;
+                the .bin is gitignored, tracked by this hash only)

@@ -1,0 +1,23 @@
+# the squashfs 4.0 image inside blk02520000 (large data, load 0x42ea0000)
+magic at body offset 0x216CFE0
+inodes 266, fragments 17, block_size 131072 (2^17), compression id 3 (LZO),
+mkfs_time 1657804150 (2022-07-14), flags 0x02c0, no_ids 1, version 4.0
+root_inode 0x087607d4, bytes_used 0x435929
+NONSTANDARD superblock: directory_table_start field (0x38) = 0xffffffffffffffff;
+the real tables (found by metadata-chain discovery, then pinned):
+  inode table   fs+0x433db9 (2 meta blocks: 2164B->8192B, 743B->2036B)
+  dir table     fs+0x434918 (1 meta block: 3098B->4780B)
+  frag entries  fs+0x435534 (155B->272B = 17 x 16B)
+  frag index    fs+0x4355d1 (one u64 -> 0x435534)
+
+root directory (5 entries): bin, lib, lib32(symlink), sbin, share
+this squashfs is the A53's network userland overlay (hostapd,
+wpa_supplicant, dnsmasq, xtables, libc/libnl/libcurl, isc_olnet).
+
+LZO decode cross-check: my decoder vs python-lzo 1.15
+(one-time reference run; hashes pinned here, re-verified on every run):
+  meta block fs+0x433db9: mine 3695eedcadaed9e90083ffdb18118381e3d1f5796148eb27a513f6575b653186  pinned ref 3695eedcadaed9e90083ffdb18118381e3d1f5796148eb27a513f6575b653186  MATCH
+  meta block fs+0x43462f: mine 741d4453270c83efe67c20c1c6ab1af8d23405cb33f722adfd6c638a2b823893  pinned ref 741d4453270c83efe67c20c1c6ab1af8d23405cb33f722adfd6c638a2b823893  MATCH
+  meta block fs+0x434918: mine e5ba962dfcf122b5b9d084652d7d727db72bc3fe4dc81a70f54f8534b837fa9a  pinned ref e5ba962dfcf122b5b9d084652d7d727db72bc3fe4dc81a70f54f8534b837fa9a  MATCH
+  meta block fs+0x435534: mine e17a00f57cb995a46fb8ed929ad45248f1fc646dcdc95cd37ee8ec22a38391d5  pinned ref e17a00f57cb995a46fb8ed929ad45248f1fc646dcdc95cd37ee8ec22a38391d5  MATCH
+  fragment 3 data (start 1351741, size 52680): mine 032ff91a6636453a465794a9ebfd55f433d35669300d500e2cc08d10f2afa7e4  pinned ref 032ff91a6636453a465794a9ebfd55f433d35669300d500e2cc08d10f2afa7e4  MATCH

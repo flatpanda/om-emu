@@ -1,0 +1,292 @@
+# MN10300 base disassembly of the E144 wifi sites (tools/mn103dis.py,
+# implementing docs/mn10300-isa-spec.md section 3; register order
+# src=bits 3-2, dst=bits 1-0 per emu/src/core/cpu.mjs).
+# Code VMA = body offset + 0x50000000. Linear decode from the given start.
+
+==== AP channel function (the analog of om-c's E143 0x517f04d6..0x517f05d1) ====
+==== window 0x514083fc..0x514084f4 ====
+  514083fc:  00               clr d0
+  514083fd:  42 0c            mov d0,(12,sp)
+  514083ff:  fc cc a1 ec 00 00 mov 0x0000eca1,d0
+  51408405:  90 00            mov 0x00,a0
+  51408407:  04               clr d1
+  51408408:  dd 65 66 c3 fe c0 0c call 0x5003ea6d,[a2,a3],12
+  5140840f:  83               mov d0,d3
+  51408410:  fc dc fc 15 53 61 mov 0x615315fc,a0   ; -> 0x615315fc (data off 0x15105dc) "PRM_WIFI_CHANNEL :"
+  51408416:  1c               extbu d0
+  51408417:  cd af 90 00 04   call 0x514014c6,[],4
+  5140841c:  2c 71 02         mov 0x0271,d0   ; param625
+  5140841f:  90 00            mov 0x00,a0
+  51408421:  04               clr d1
+  51408422:  dd 4b 66 c3 fe c0 0c call 0x5003ea6d,[a2,a3],12
+  51408429:  14               extbu d0
+  5140842a:  a0 00            cmp 0,d0
+  5140842c:  c9 05            bne 0x51408431
+  5140842e:  cc b1 00         jmp 0x514084df
+  51408431:  fc a5 08 c2 72 a2 mov (0xa272c208),d1
+  51408437:  a5 02            cmp 2,d1
+  51408439:  c8 08            beq 0x51408441
+  5140843b:  a5 05            cmp 5,d1
+  5140843d:  c8 47            beq 0x51408484
+  5140843f:  ca 26            bra 0x51408465
+  51408441:  2c f1 01         mov 0x01f1,d0   ; param497
+  51408444:  90 00            mov 0x00,a0
+  51408446:  04               clr d1
+  51408447:  dd 26 66 c3 fe c0 0c call 0x5003ea6d,[a2,a3],12
+  5140844e:  83               mov d0,d3
+  5140844f:  8d               mov d3,d1
+  51408450:  1d               extbu d1
+  51408451:  a5 0d            cmp 13,d1
+  51408453:  c3 31            ble 0x51408484
+  51408455:  fc dc 0f 16 53 61 mov 0x6153160f,a0   ; -> 0x6153160f (data off 0x15105ef) "ch illegal range (0-13):"
+  5140845b:  1f               extbu d3
+  5140845c:  8c               mov d3,d0
+  5140845d:  cd 69 90 00 04   call 0x514014c6,[],4
+  51408462:  0c               clr d3
+  51408463:  ca 21            bra 0x51408484
+  51408465:  2c f1 01         mov 0x01f1,d0   ; param497
+  51408468:  90 00            mov 0x00,a0
+  5140846a:  04               clr d1
+  5140846b:  dd 02 66 c3 fe c0 0c call 0x5003ea6d,[a2,a3],12
+  51408472:  83               mov d0,d3
+  51408473:  fc a4 08 c2 72 a2 mov (0xa272c208),d0
+  51408479:  fc dc 28 16 53 61 mov 0x61531628,a0   ; -> 0x61531628 (data off 0x1510608) "communication illegal mode"
+  5140847f:  cd 47 90 00 04   call 0x514014c6,[],4
+  51408484:  8d               mov d3,d1
+  51408485:  1d               extbu d1
+  51408486:  a5 00            cmp 0,d1
+  51408488:  c9 57            bne 0x514084df
+  5140848a:  fc de d0 c4 72 a2 mov 0xa272c4d0,a2
+  51408490:  98               mov a2,a0
+  51408491:  00               clr d0
+  51408492:  85 10            mov 16,d1
+  51408494:  dd 97 7c bd e5 a0 08 call 0x36fe012b,[d3,a3],8
+  5140849b:  9f 01            mov 0x01,a3
+  5140849d:  8a 01            mov 1,d2
+  5140849f:  fc cc 43 16 53 61 mov 0x61531643,d0   ; -> 0x61531643 (data off 0x1510623) "C:\\WFCL0%03d.BIN"
+  514084a5:  42 04            mov d0,(4,sp)
+  514084a7:  4a 08            mov d2,(8,sp)
+  514084a9:  98               mov a2,a0
+  514084aa:  dd 85 40 cc fe 00 0c call 0x500cc52f,[],12
+  514084b1:  98               mov a2,a0
+  514084b2:  dd 23 33 28 ff 00 08 call 0x5068b7d5,[],8
+  514084b9:  a0 00            cmp 0,d0
+  514084bb:  c8 06            beq 0x514084c1
+  514084bd:  4f 0c            mov a3,(12,sp)
+  514084bf:  ca 07            bra 0x514084c6
+  514084c1:  48               inc d2
+  514084c2:  aa 0d            cmp 13,d2
+  514084c4:  c3 db            ble 0x5140849f
+  514084c6:  58               inc4 a0
+  514084c7:  0c               clr d3
+  514084c8:  a0 00            cmp 0,d0
+  514084ca:  c8 05            beq 0x514084cf
+  514084cc:  8b               mov d2,d3
+  514084cd:  ca 12            bra 0x514084df
+  514084cf:  fc ad 24 c1 72 a2 movhu (0xa272c124),d1
+  514084d5:  a5 00            cmp 0,d1
+  514084d7:  c8 08            beq 0x514084df
+  514084d9:  fc af 24 c1 72 a2 movhu (0xa272c124),d3
+  514084df:  fc 8f d4 c2 72 a2 movhu d3,(0xa272c2d4)
+  514084e5:  fc dc 55 16 53 61 mov 0x61531655,a0   ; -> 0x61531655 (data off 0x1510635) "access point channel :"
+  514084eb:  1f               extbu d3
+  514084ec:  8c               mov d3,d0
+  514084ed:  dd 6d fe 3f ff 00 04 call 0x5080835a,[],4
+
+==== caller wifi_mngr_set_apl_prm: the call and the band-byte store ====
+==== window 0x514079ab..0x514079f0 ====
+  514079ab:  cd 51 0a f0 20   call 0x514083fc,[d2,d3,a2,a3],32
+  514079b0:  fc ac d4 c2 72 a2 movhu (0xa272c2d4),d0
+  514079b6:  a0 23            cmp 35,d0
+  514079b8:  c0 06            blt 0x514079be
+  514079ba:  80 01            mov 1,d0
+  514079bc:  ca 03            bra 0x514079bf
+  514079be:  00               clr d0
+  514079bf:  fc 82 d9 c2 72 a2 movbu d0,(0xa272c2d9)
+  514079c5:  fc a8 24 c2 72 a2 movbu (0xa272c224),d0
+  514079cb:  a0 00            cmp 0,d0
+  514079cd:  c8 5a            beq 0x51407a27
+  514079cf:  fc a4 c8 c4 72 a2 mov (0xa272c4c8),d0
+  514079d5:  fc dc 3d 13 53 61 mov 0x6153133d,a0   ; -> 0x6153133d (data off 0x151031d) "1user_connection_mode "
+  514079db:  dd 7f 09 40 ff 00 04 call 0x5080835a,[],4
+  514079e2:  fc dc 0c c3 72 a2 mov 0xa272c30c,a0
+  514079e8:  00               clr d0
+  514079e9:  85 04            mov 4,d1
+  514079eb:  dd 40 87 bd e5 a0 08 call 0x36fe012b,[d3,a3],8
+
+==== country setter: segment header, 3-byte country memcpy to OLNET_PRM+0x1d ====
+==== window 0x514085a5..0x51408600 ====
+  514085a5:  86               mov d1,d2
+  514085a6:  fc a0 74 1e 53 61 mov (0x61531e74),a0   ; -> 0x61531e74 (data off 0x1510e54)
+  514085ac:  f0 f4            jmp (a0)
+  514085ae:  fc a1 ec 11 53 61 mov (0x615311ec),a1   ; -> 0x615311ec (data off 0x15101cc)
+  514085b4:  fc dc 25 c2 72 a2 mov 0xa272c225,a0
+  514085ba:  80 03            mov 3,d0
+  514085bc:  dd 63 7a bd e5 f0 1c call 0x36fe001f,[d2,d3,a2,a3],28
+  514085c3:  aa 05            cmp 5,d2
+  514085c5:  c8 0a            beq 0x514085cf
+  514085c7:  fc a4 f0 11 53 61 mov (0x615311f0),d0   ; -> 0x615311f0 (data off 0x15101d0)
+  514085cd:  ca 08            bra 0x514085d5
+  514085cf:  fc a4 f4 11 53 61 mov (0x615311f4),d0   ; -> 0x615311f4 (data off 0x15101d4)
+  514085d5:  fc 81 28 c2 72 a2 mov d0,(0xa272c228)
+  514085db:  ca 0f            bra 0x514085ea
+  514085dd:  fc dc 93 16 53 61 mov 0x61531693,a0   ; -> 0x61531693 (data off 0x1510673) "UNKNOWN_AREA : region_code = "
+  514085e3:  80 02            mov 2,d0
+  514085e5:  cd e1 8e 00 04   call 0x514014c6,[],4
+  514085ea:  df 80 08         ret [a3],8
+  514085ed:  fc dc b1 16 53 61 mov 0x615316b1,a0   ; -> 0x615316b1 (data off 0x1510691) "state"
+  514085f3:  82               mov d0,d2
+  514085f4:  dd 66 fd 3f ff 00 04 call 0x5080835a,[],4
+  514085fb:  fc a0 e4 c4 72 a2 mov (0xa272c4e4),a0
+
+==== region-code validation and jump table (region 0..10) ====
+==== window 0x51408619..0x51408665 ====
+  51408619:  87               mov d1,d3
+  5140861a:  f1 e2            mov d0,a2
+  5140861c:  8a ff            mov -1,d2
+  5140861e:  cd 78 d2 00 00   call 0x51405896,[],0
+  51408623:  a0 00            cmp 0,d0
+  51408625:  c9 05            bne 0x5140862a
+  51408627:  cc 06 01         jmp 0x5140872d
+  5140862a:  ba 00            cmp 0x00,a2
+  5140862c:  c6 05            bcc 0x51408631
+  5140862e:  cc dd 00         jmp 0x5140870b
+  51408631:  ba 0a            cmp 0x0a,a2
+  51408633:  c7 05            bls 0x51408638
+  51408635:  cc d6 00         jmp 0x5140870b
+  51408638:  f1 d9            mov a2,d1
+  5140863a:  55               asl2 d1
+  5140863b:  fc dc 98 1e 53 61 mov 0x61531e98,a0   ; -> 0x61531e98 (data off 0x1510e78)
+  51408641:  f3 84            mov (d1,a0),a0
+  51408643:  f0 f4            jmp (a0)
+  51408645:  fc a0 dc c1 72 a2 mov (0xa272c1dc),a0
+  5140864b:  b0 00            cmp 0x00,a0
+  5140864d:  c9 05            bne 0x51408652
+  5140864f:  cc bc 00         jmp 0x5140870b
+  51408652:  fc a0 dc c1 72 a2 mov (0xa272c1dc),a0
+  51408658:  ca 72            bra 0x514086ca
+  5140865a:  fc a0 e0 c1 72 a2 mov (0xa272c1e0),a0
+  51408660:  b0 00            cmp 0x00,a0
+  51408662:  c9 05            bne 0x51408667
+  51408664:  cc a7 00         jmp 0x5140870b
+
+==== wifi_mngr_set_apl_prm_fact: the second (stock) channel+band writer ====
+==== window 0x51407aca..0x51407b90 ====
+  51407aca:  fc dc a6 13 53 61 mov 0x615313a6,a0   ; -> 0x615313a6 (data off 0x1510386) "wifi_mngr_set_apl_prm_fact : start"
+  51407ad0:  cd 34 9a 00 04   call 0x51401504,[],4
+  51407ad5:  f8 42 01         movbu (1,a0),d2
+  51407ad8:  90 03            mov 0x03,a0
+  51407ada:  fc 82 24 c3 72 a2 movbu d0,(0xa272c324)
+  51407ae0:  f8 42 02         movbu (2,a0),d2
+  51407ae3:  f1 78            add a2,a0
+  51407ae5:  10               extbu d0
+  51407ae6:  fc 81 08 c2 72 a2 mov d0,(0xa272c208)
+  51407aec:  43 04            mov a0,(4,sp)
+  51407aee:  dd 99 b5 bf fe 00 00 call 0x50003087,[],0
+  51407af5:  82               mov d0,d2
+  51407af6:  48               inc d2
+  51407af7:  fc df 2c c2 72 a2 mov 0xa272c22c,a3
+  51407afd:  00               clr d0
+  51407afe:  85 21            mov 33,d1
+  51407b00:  9c               mov a3,a0
+  51407b01:  dd 2a 86 bd e5 a0 08 call 0x36fe012b,[d3,a3],8
+  51407b08:  5d               asl2 d1
+  51407b09:  04               clr d1
+  51407b0a:  88               mov d2,d0
+  51407b0b:  9c               mov a3,a0
+  51407b0c:  dd 13 85 bd e5 f0 1c call 0x36fe001f,[d2,d3,a2,a3],28
+  51407b13:  f8 42 64         movbu (100,a0),d2
+  51407b16:  a0 00            cmp 0,d0
+  51407b18:  c9 0b            bne 0x51407b23
+  51407b1a:  00               clr d0
+  51407b1b:  fc 81 0c c2 72 a2 mov d0,(0xa272c20c)
+  51407b21:  ca 0c            bra 0x51407b2d
+  51407b23:  80 03            mov 3,d0
+  51407b25:  fc 81 0c c2 72 a2 mov d0,(0xa272c20c)
+  51407b2b:  80 01            mov 1,d0
+  51407b2d:  fc 81 10 c2 72 a2 mov d0,(0xa272c210)
+  51407b33:  8f 24            mov 36,d3
+  51407b35:  f1 5b            add a2,d3
+  51407b37:  f1 ec            mov d3,a0
+  51407b39:  dd 4e b5 bf fe 00 00 call 0x50003087,[],0
+  51407b40:  82               mov d0,d2
+  51407b41:  48               inc d2
+  51407b42:  fc df 50 c2 72 a2 mov 0xa272c250,a3
+  51407b48:  9c               mov a3,a0
+  51407b49:  00               clr d0
+  51407b4a:  85 40            mov 64,d1
+  51407b4c:  dd df 85 bd e5 a0 08 call 0x36fe012b,[d3,a3],8
+  51407b53:  f1 ed            mov d3,a1
+  51407b55:  88               mov d2,d0
+  51407b56:  9c               mov a3,a0
+  51407b57:  dd c8 84 bd e5 f0 1c call 0x36fe001f,[d2,d3,a2,a3],28
+  51407b5e:  f8 42 65         movbu (101,a0),d2
+  51407b61:  10               extbu d0
+  51407b62:  fc 83 d4 c2 72 a2 movhu d0,(0xa272c2d4)
+  51407b68:  1c               extbu d0
+  51407b69:  a0 23            cmp 35,d0
+  51407b6b:  c0 06            blt 0x51407b71
+  51407b6d:  80 01            mov 1,d0
+  51407b6f:  ca 03            bra 0x51407b72
+  51407b71:  00               clr d0
+  51407b72:  fc 82 d9 c2 72 a2 movbu d0,(0xa272c2d9)
+  51407b78:  22 68            add 104,a2
+  51407b7a:  72               mov (a2),d0
+  51407b7b:  f8 e0 ff         and 0xff,d0
+  51407b7e:  fc 82 17 c2 72 a2 movbu d0,(0xa272c217)
+  51407b84:  72               mov (a2),d0
+  51407b85:  fa e0 00 ff      and 0xff00,d0
+  51407b89:  f8 c8 08         asr 8,d0
+  51407b8c:  fc 82 16 c2 72 a2 movbu d0,(0xa272c216)
+
+==== the settings getter called with 60577/625/497 ====
+==== window 0x5003ea6d..0x5003ead0 ====
+  5003ea6d:  87               mov d1,d3
+  5003ea6e:  82               mov d0,d2
+  5003ea6f:  b0 00            cmp 0x00,a0
+  5003ea71:  c9 12            bne 0x5003ea83
+  5003ea73:  1c               extbu d0
+  5003ea74:  cd ac ef 80 14   call 0x5003da20,[a3],20
+  5003ea79:  b0 00            cmp 0x00,a0
+  5003ea7b:  c9 05            bne 0x5003ea80
+  5003ea7d:  00               clr d0
+  5003ea7e:  ca 0e            bra 0x5003ea8c
+  5003ea80:  f8 20 04         mov (4,a0),a0
+  5003ea83:  1e               extbu d2
+  5003ea84:  1f               extbu d3
+  5003ea85:  8d               mov d3,d1
+  5003ea86:  88               mov d2,d0
+  5003ea87:  cd 8a 06 c0 0c   call 0x5003f111,[a2,a3],12
+  5003ea8c:  df c0 0c         ret [a2,a3],12
+  5003ea8f:  93               mov a0,a3
+  5003ea90:  82               mov d0,d2
+  5003ea91:  1e               extbu d2
+  5003ea92:  88               mov d2,d0
+  5003ea93:  cd 8d ef 80 14   call 0x5003da20,[a3],20
+  5003ea98:  b0 00            cmp 0x00,a0
+  5003ea9a:  c9 06            bne 0x5003eaa0
+  5003ea9c:  00               clr d0
+  5003ea9d:  df f0 14         ret [d2,d3,a2,a3],20
+  5003eaa0:  f8 28 04         mov (4,a2),a0
+  5003eaa3:  88               mov d2,d0
+  5003eaa4:  cd b6 ff 00 04   call 0x5003ea5a,[],4
+  5003eaa9:  83               mov d0,d3
+  5003eaaa:  af 00            cmp 0,d3
+  5003eaac:  c8 3d            beq 0x5003eae9
+  5003eaae:  98               mov a2,a0
+  5003eaaf:  cd 0f df 00 04   call 0x5003c9be,[],4
+  5003eab4:  f1 e1            mov d0,a1
+  5003eab6:  f8 ee 08         btst 0x08,d2
+  5003eab9:  c8 0f            beq 0x5003eac8
+  5003eabb:  f8 e2 07         and 0x07,d2
+  5003eabe:  aa 04            cmp 4,d2
+  5003eac0:  c8 15            beq 0x5003ead5
+  5003eac2:  aa 02            cmp 2,d2
+  5003eac4:  c8 15            beq 0x5003ead9
+  5003eac6:  ca 18            bra 0x5003eade
+  5003eac8:  f8 e2 07         and 0x07,d2
+  5003eacb:  aa 04            cmp 4,d2
+  5003eacd:  c8 08            beq 0x5003ead5
+  5003eacf:  aa 02            cmp 2,d2
+
+undecoded ('??') slots total: 0

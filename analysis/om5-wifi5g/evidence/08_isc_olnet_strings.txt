@@ -1,0 +1,230 @@
+# /bin/isc_olnet strings relevant to the 5 GHz change
+# offset = byte offset in the extracted file (60932 bytes, sha256 618ffe3994dc85df240b4709cbd5874a3854e17edc5d5e3205444b44a38945e0)
+# decoded with the fixed decoder; full deterministic re-derivation via
+# reproduce.py.  Curated keys: hw_mode,ieee80211,country,channel,chan,OLNET,olnet,hostapd,band,bcmdhd,brcmfmac,cfg80211,insmod,cyw,freq,vht,wmm,wpa_supplicant,dnsmasq,ol_wifi,wlan,interface=,driver=,ap_conf,acs_,chanlist,AP-STA,AP-ENABLED,WPS-,sta_conf,conf_,nvram
+@002575 libolnet.so
+@046440 ISC_OLNET_CMD_CONFIG
+@046480 ISC_OLNET_CMD_OPEN
+@046520 ISC_OLNET_CMD_START
+@046560 ISC_OLNET_CMD_CLOSE
+@046600 ISC_OLNET_CMD_STOP
+@046640 ISC_OLNET_CMD_SCAN
+@046680 ISC_OLNET_CMD_SCAN_RESULTS
+@046720 ISC_OLNET_CMD_WPS
+@046760 ISC_OLNET_CMD_GET_MAC
+@046800 ISC_OLNET_CMD_GET_IP
+@046840 ISC_OLNET_CMD_STA_ENUM
+@046880 ISC_OLNET_CMD_AP_INFO
+@046920 ISC_OLNET_CMD_IP_RENEW
+@046960 ISC_OLNET_CMD_TTCP
+@047000 ISC_OLNET_CMD_RSSI
+@047040 ISC_OLNET_CMD_THROUGHPUT
+@047080 ISC_OLNET_CMD_MFG_COMMAND
+@047120 ISC_OLNET_CMD_HEARTBEAT
+@047160 ISC_OLNET_CMD_LIMIT_CHANGE
+@047200 ISC_OLNET_CMD_LOG_LEVEL
+@047240 ISC_OLNET_CMD_NONE
+@047392 ISC_OLNET_EVT_OPENED
+@047416 ISC_OLNET_EVT_CONNECT
+@047440 ISC_OLNET_EVT_DISCONNECT
+@047468 ISC_OLNET_EVT_CLOSED
+@047492 ISC_OLNET_EVT_SCAN_RESULTS
+@047520 ISC_OLNET_EVT_STA_ENUM
+@047544 ISC_OLNET_EVT_TIMEOUTED
+@047568 ISC_OLNET_EVT_IP_CHANGED
+@047596 ISC_OLNET_EVT_WPS_ERROR
+@047620 SendOLNETEvtInfo:I - %X
+@047732 SendOLNETEvtInfo:O - %d
+@047796 /usr/bin/isc_olnet
+@047816 RecvOLNETReqInfo:I
+@048068 isc_olnet_ans_info.buf %p
+@048096 isc_olnet_ans_info.len %d
+@048148 RecvOLNETReqInfo next
+@048172 RecvOLNETReqInfo:O - %d
+@048200 OLNETEvtOpened:I
+@048220 SendOLNETEvtInfo(%X) error %ld
+@048252 OLNETEvtOpened:O - %d
+@048276 OLNETEvtConnected:I
+@048300 OLNETEvtConnected:O - %d
+@048328 OLNETEvtDisconnected:I
+@048352 OLNETEvtDisconnected:O - %d
+@048384 OLNETEvtClosed:I
+@048404 OLNETEvtClosed:O - %d
+@048428 OLNETEvtScanResults:I
+@048452 OLNETEvtScanResults:O - %d
+@048480 OLNETEvtStaEnumcmd_func:I
+@048508 OLNETEvtStaEnum:O - %d
+@048532 OLNETTimeouted:I
+@048552 OLNETTimeouted:O - %d
+@048576 OLNETIpChanged:I
+@048596 OLNETIpChanged:O - %d
+@048620 OLNETWPSError:I
+@048640 OLNETWPSError:O - %d
+@048784 olnet_uty_shm %p
+@048932 shmdt(olnet_uty_shm) error %d
+@049392 ol_wifi_msg_cb : %s
+@049416 ol_wifi_ctrl_open:I %s
+@049492 ol_wifi_ctrl_open:O
+@049516 ol_wifi_ctrl_close:I
+@049564 ol_wifi_ctrl_close:O
+@049588 ol_wifi_config_value_set:I
+@049616 ol_wifi_config_value_set:O
+@049644 ol_wifi_append_file:I
+@049696 ol_wifi_append_file:O
+@049720 ol_wifi_patch_system:I
+@049848 ol_wifi_patch_system:O
+@049872 ol_wifi_nvram_country_set:I
+@049928 ol_wifi_nvram_country_set:O
+@049960 ol_wifi_config:I
+@049980 mode %ld secmode %ld encmode %ld ssid %s pass %s channel %d
+@050044 ol_wifi_config:O
+@050100 bcmdhd
+@050172 insmod /lib/modules/4.4.127/kernel/drivers/mmc/host/mn-sdmmc.ko
+@050236 /sbin/insmod /lib/modules/4.4.127/extra/bcmdhd.ko firmware_path=/lib/firmware/cyw43455_softap.bin nvram_path=/
+@050400 /sbin/insmod /lib/modules/4.4.127/extra/bcmdhd.ko firmware_path=/lib/firmware/cyw43455_sta.bin nvram_path=/lib
+@050596 /sbin/rmmod bcmdhd
+@050664 ol_wifi_open:I
+@050680 ol_wifi_open:O - %d
+@050704 ol_wifi_close:I
+@050724 ol_wifi_close:O
+@050744 ol_wifi_wpa_command:I
+@050800 ol_wifi_wpa_command:O
+@050844 /var/run/dhcpcd-wlan0.pid
+@050920 ol_wifi_start:I
+@050976 ol_wifi_start:O - %d
+@051080 /var/run/hostapd/wlan0
+@051104 wlan_if_name = %s
+@051160 /var/run/wpa_supplicant/wlan0
+@051268 wpa_supplicant error
+@051364 ol_wifi_disconnect:I
+@051480 ol_wifi_disconnect:O
+@051504 ol_wifi_stop:I
+@051520 /var/run/wpa_supplicant.pid
+@051548 ol_wifi_stop:O - %d
+@052080 ol_wifi_scan:I
+@052148 ol_wifi_scan:O
+@052172 ol_wifi_scan_results:I
+@052276 ol_wifi_scan_results:O
+@052316 ol_wifi_wps:I
+@052332 ol_wifi_wps:O - %d
+@052384 ol_wifi_wps:O
+@052424 ol_wifi_get_mac:I
+@052444 ol_wifi_get_mac:O - %d
+@052468 ol_wifi_get_ip:I
+@052488 ol_wifi_get_ip:O
+@052508 ol_wifi_sta_enum:I
+@052548 ol_wifi_sta_enum:O
+@052720 freq=
+@052728 freq=%d
+@052736 band_type = %d
+@053076 /etc/wpa_supplicant.conf
+@053132 ol_wifi_ap_info:I
+@053240 [0].band_type = %d
+@053280 ol_wifi_ap_info:O
+@053300 ol_wifi_ip_renew:I
+@053348 ol_wifi_ip_renew:O - %d
+@053376 ol_wifi_ttcp:I
+@053508 ol_wifi_ttcp:O
+@053524 ol_wifi_rssi:I
+@053580 ol_wifi_rssi:O
+@053596 ol_wifi_throughput:I
+@053620 ol_wifi_throughput_val->bytes = %d
+@053656 ol_wifi_throughput_val->msec = %d
+@053692 ol_wifi_throughput:O
+@053716 ol_wifi_mfg_command:I
+@053740 /sbin/insmod /lib/modules/4.4.127/extra/bcmdhd.ko firmware_path=/lib/firmware/cyw43455_mfg.bin nvram_path=/lib
+@053888 ol_wifi_mfg_command:O
+@053912 ol_wifi_heartbeat:I
+@053952 ol_wifi_heartbeat:O
+@053976 ol_wifi_log_level:I
+@054016 ol_wifi_log_level:O
+@054040 ol_wifi_limit_change:I
+@054120 ol_wifi_limit_change:O
+@054144 ol_wifi_set_default_gw:I
+@054196 ol_wifi_set_default_gw:O
+@054256 ol_wifi_receive_msgs()
+@054288 ol_wifi_receive_msgs %s
+@054364 AP-STA-CONNECTED
+@054436 AP-STA-DISCONNECTED
+@054668 WPS-OVERLAP-DETECTED
+@054692 WPS-OVERLAP-DETECTED
+@054716 AP-ENABLED
+@054812 ol_wifi_receive_msgs terminated
+@054848 ol_wifi_evt_receiver_thread:I
+@054880 ol_wifi_evt_receiver_thread:O
+@054912 ol_wifi_make_dnsmasq_conf:I
+@055216 /etc/dnsmasq.conf
+@055240 ol_wifi_make_dnsmasq_conf failed
+@055276 ol_wifi_make_dnsmasq_conf:O
+@055320 ifconfig wlan0 %d.%d.%d.%d netmask %d.%d.%d.%d
+@055384 route add default gw %d.%d.%d.%d wlan0
+@055460 ifconfig wlan0 0.0.0.0
+@055484 ifconfig wlan0 down
+@055504 conf_create:I
+@055528 conf_create:O
+@055544 conf_update:I
+@055580 conf_update:O
+@055596 conf_close:I
+@055612 conf_close:O
+@055628 ap_conf_add_if:I
+@055648 ap_conf_add_if:O
+@055668 interface=wlan0
+@055684 driver=nl80211
+@055699 ctrl_interface=/var/run/hostapd
+@055745 ieee80211n=1
+@055758 ieee80211ac=1
+@055772 wmm_enabled=1
+@055788 ap_conf_add_ssid:I
+@055820 ap_conf_add_ssid:O
+@055840 ap_conf_add_channel:I
+@055864 hw_mode=g
+@055874 channel=%d
+@055888 ieee80211d=1
+@055901 ieee80211h=1
+@055914 country_code=JP
+@055930 hw_mode=a
+@055940 channel=%d
+@055951 vht_oper_chwidth=1
+@055970 vht_oper_centr_freq_seg0_idx=%d
+@056004 acs_num_scans=1
+@056020 acs_chan_bias=1:0.8 6:0.8 11:0.8
+@056053 chanlist=1 6 11
+@056200 ap_conf_add_misc:I
+@056220 ap_conf_add_misc:O
+@056370 vht_capab=[SHORT-GI-80]
+@056452 ap_conf_add_sec:I
+@056472 ap_conf_add_sec:O
+@056580 ieee80211w=2
+@056664 ieee80211w=1
+@056764 /etc/hostapd.conf
+@056784 ol_wifi_ap_start:I
+@056804 /etc/init.d/dnsmasq start
+@056832 hostapd -B -P %s %s
+@056852 /var/run/hostapd.pid
+@056876 hostapd start failed
+@056912 ol_wifi_ap_start:O
+@056932 ol_wifi_ap_stop:I
+@056984 hostapd stop failed
+@057024 /etc/init.d/dnsmasq stop
+@057052 ol_wifi_ap_stop:O
+@057072 sta_conf_add_if:I
+@057092 sta_conf_add_if:O
+@057112 ctrl_interface=/var/run/wpa_supplicant
+@057636 sta_conf_param:I
+@057696 ap_channel = %d
+@057717 scan_freq=%d
+@057732 sta_conf_param:O
+@057763 ieee80211w=1
+@058160 freq_list=%d
+@058176 /etc/wpa_supplicant.conf
+@058204 ol_wifi_sta_start:I
+@058228 wpa_supplicant -i wlan0 -P %s -c %s -B
+@058268 /var/run/wpa_supplicant.pid
+@058296 ol_wifi_sta_start:O - %d
+@058324 ol_wifi_sta_stop:I
+@058360 wpa_supplicant stop failed
+@058412 ol_wifi_sta_stop:O - %d
+@058440 ol_wifi_sta_restart:I
+@058480 ol_wifi_sta_restart:O - %d
+@058520 wlan0
+@058848 wlan0

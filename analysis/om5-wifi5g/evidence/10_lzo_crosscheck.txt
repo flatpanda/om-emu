@@ -1,0 +1,10 @@
+# LZO1X decoder validation (tools/sqfs.py, pure-stdlib)
+# algorithm: Linux lib/lzo/lzo1x_decompress_safe.c (GPL-2.0), reimplemented
+# in Python.  Empirically pinned: M2_MAX_OFFSET = 0x800 (with 0x400 the four
+# table blocks still match but fragment 3 diverges; 0x800 byte-matches the
+# reference on all five blocks).
+# Reference hashes generated once with python-lzo 1.15 (C liblzo2
+# lzo1x_decompress) and pinned in make_evidence.py REF_DECODE_SHA256;
+# this run re-derives MY decode and compares against the pins.
+
+result: 5/5 blocks byte-identical to the pinned reference decodes

@@ -1,0 +1,17 @@
+# E144 main code block: run-time image (in-place olycompress expansion)
+# offsets unchanged by expansion: code VMA = body offset + 0x50000000,
+# run-time data address = body offset + 0x60021020 (emu/src/fw/expand.mjs)
+expanded image: 24903616 bytes, sha256 692f1b9eb6f89fe6467ade3c88092305b0423ac1aa6ba759eac83b6cd5d36487
+olycompress containers (offset, packed, raw):
+  0x825fe0 packed=2254189 raw=4683776
+  0xc9d7e0 packed=2697821 raw=6836224
+  raw total 11520000 (the survey's 'about 11.5 MB raw in all')
+'BCS\0' boot section table at body offset 0x6fd8:
+  +00 42 43 53 00 00 b0 0e 60 00 a0 84 40 00 00 00 00
+  +10 00 f8 29 60 00 e8 9f 40 00 00 00 00 00 e8 5c 60
+  +20 00 d8 d2 40 00 00 00 00 00 70 62 60 00 60 d8 40
+  +30 00 00 00 00 00 30 84 60 00 20 fa 40 00 00 00 00
+
+note: the table rows read as {u32 a, u32 b, 0} pairs of data/flash
+addresses; the two olycompress spans are self-describing and are the
+authoritative form (emu/src/fw/expand.mjs decodes in place, offsets unchanged).

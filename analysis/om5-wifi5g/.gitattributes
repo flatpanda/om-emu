@@ -1,0 +1,2 @@
+# keep the package byte-reproducible on any checkout (seal.sha256 pins LF content)
+* text eol=lf

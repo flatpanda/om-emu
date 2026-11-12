@@ -1,0 +1,23 @@
+# anchor string hits in the expanded main code block
+# offset = body offset; run-time data address = offset + 0x60021020
+string,hits,body_offsets
+ch illegal range,1,0x15105ef
+C:\WFCL0,1,0x1510623
+PRM_WIFI_CHANNEL :,1,0x15105dc
+wifi_mngr_set_apl_prm,5,0x1510285 0x1510369 0x1510386 0x15103aa 0x15103cc
+access point channel :,1,0x1510635
+communication illegal mode,1,0x1510608
+UNKNOWN_AREA : region_code,1,0x1510673
+OLNET_PRM ,2,0x15108de 0x1510d3c
+isc_olnet_req_config,1,0x150746b
+region_code          : ,1,0x1510a2a
+ ap_channel           : 0x,1,0x1510a8f
+ band_type            : 0x,1,0x1510ac5
+ g_access_point_channel    : 0x,1,0x1510d8d
+# refs to data 0x6153160f (ch illegal range): 0x1408457
+# refs to data 0x61531643 (C:\WFCL0): 0x14084a1
+# refs to data 0x615315fc (PRM_WIFI_CHANNEL :): 0x1408412
+# refs to data 0x615312a5 (wifi_mngr_set_apl_prm): 0x1407653
+# refs to data 0x61531655 (access point channel :): 0x14084e7
+# refs to data 0x61531628 (communication illegal mode): 0x140847b
+# refs to data 0x61531693 (UNKNOWN_AREA : region_code): 0x14085df

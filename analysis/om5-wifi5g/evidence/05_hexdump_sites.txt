@@ -1,0 +1,40 @@
+# before-bytes (stock E144) of the patch-relevant windows
+# format: body_offset | code_VMA | bytes
+
+---- H1 channel function: entry, param 60577 fetch, log, param 625 ----
+  0x14083fc  514083fc  00 42 0c fc cc a1 ec 00 00 90 00 04 dd 65 66 c3
+  0x140840c  5140840c  fe c0 0c 83 fc dc fc 15 53 61 1c cd af 90 00 04
+  0x140841c  5140841c  2c 71 02 90
+
+---- H2 mode switch, param 497, the 13 range check, illegal log, clr d3 ----
+  0x1408431  51408431  fc a5 08 c2 72 a2 a5 02 c8 08 a5 05 c8 47 ca 26
+  0x1408441  51408441  2c f1 01 90 00 04 dd 26 66 c3 fe c0 0c 83 8d 1d
+  0x1408451  51408451  a5 0d c3 31 fc dc 0f 16 53 61 1f 8c cd 69 90 00
+  0x1408461  51408461  04 0c ca 21 2c
+
+---- H3 join, WFCL probe loop, channel store to +0xcc, final log ----
+  0x1408466  51408466  f1 01 90 00 04 dd 02 66 c3 fe c0 0c 83 fc a4 08
+  0x1408476  51408476  c2 72 a2 fc dc 28 16 53 61 cd 47 90 00 04 8d 1d
+  0x1408486  51408486  a5 00 c9 57 fc de d0 c4 72 a2 98 00 85 10 dd 97
+  0x1408496  51408496  7c bd e5 a0 08 9f 01 8a 01 fc cc 43 16 53 61 42
+  0x14084a6  514084a6  04 4a 08 98 dd 85 40 cc fe 00 0c 98 dd 23 33 28
+  0x14084b6  514084b6  ff 00 08 a0 00 c8 06 4f 0c ca 07 48 aa 0d c3 db
+  0x14084c6  514084c6  58 0c a0 00 c8 05 8b ca 12 fc ad 24 c1 72 a2 a5
+  0x14084d6  514084d6  00 c8 08 fc af 24 c1 72 a2 fc 8f d4 c2 72 a2 fc
+  0x14084e6  514084e6  dc 55 16 53 61 1f 8c dd 6d fe 3f ff 00 04
+
+---- H4 caller: call to the channel function and band = (channel >= 35) ----
+  0x14079ab  514079ab  cd 51 0a f0 20 fc ac d4 c2 72 a2 a0 23 c0 06 80
+  0x14079bb  514079bb  01 ca 03 00 fc 82 d9 c2 72 a2 fc a8 24
+
+---- H5 fact path: the second channel+band writer (stock, no clamp call) ----
+  0x1407b5e  51407b5e  f8 42 65 10 fc 83 d4 c2 72 a2 1c a0 23 c0 06 80
+  0x1407b6e  51407b6e  01 ca 03 00 fc 82 d9 c2 72 a2
+
+---- H6 country memcpy into OLNET_PRM+0x1d (3 bytes from a table pointer) ----
+  0x14085ae  514085ae  fc a1 ec 11 53 61 fc dc 25 c2 72 a2 80 03 dd 63
+
+---- H7 region-code range check (cmp 0 / cmp 0x0a) and jump-table load ----
+  0x1408619  51408619  87 f1 e2 8a ff cd 78 d2 00 00 a0 00 c9 05 cc 06
+  0x1408629  51408629  01 ba 00 c6 05 cc dd 00 ba 0a c7 05 cc d6 00 f1
+  0x1408639  51408639  d9 55 fc dc 98 1e 53 61 f3 84 f0 f4 fc a0 dc

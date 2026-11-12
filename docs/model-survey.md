@@ -2678,6 +2678,169 @@ A port considers the 936 32-bit hex literals of the lab's ported sources (`emu/s
    not 0). The checkout's pending entry (the HLS media check-in, as on E143). The image's size and the thumbnail in
    the Exif. What the lab's packet leaves 0 that REC_MAIN would set (ObjResponse, the reply's two words, the callback
    at +28, which rec_file_record calls with 90 for the modes 4108, 4099 and 4100 only, `0x5051020e`).
+149. **E147's two stops on the HLS side, and its seams** (2026-11-11, `src/fw/models.mjs` E147 card_fs.hls; hle-gaps
+   4.8.7's two failures; D unless tagged). *Format Card's Yes.* The symptom (X): with E143's keys after MENU (OK, OK,
+   UP, OK, UP, OK) the application made no media control request (no TRA 1509 in S-TRAACK's log, S-MDACTRL not
+   started), and the frames show the keys at work elsewhere: the first OK opens Card Formatting itself, with no
+   "Select Card to Set Up" screen before it; the second takes the row its cursor starts on, No, back to the menu; UP
+   wraps to Edit Filename, and the last three keys open and walk that item. Three candidates: the keys are E143's
+   path and not E147's; the request's id or S-TRAACK's exec does not match on E147; the application's sender refuses
+   (its check `0x50add973` before the request, E143's `0x50ac9072`). The first is the cause. The row's handler
+   (`0x51183dc6`, E143's `0x511666f4`) asks which slots hold a card through a getter's vt[0] (the object from
+   `0x50b15f5f`; E143 `0x50b0049f`) and picks the page by the answer: 10, both, page 587, the card choice (E143's 578);
+   2, the first alone, page 668, its Card Formatting (E143's 627); 8, page 669 (628); anything else no page. X: the
+   getter asks a media API (`0x503fab11`, E143's `0x503f0b4d`) for the media 0 and 1 and answers 2 on E147 (page 668
+   is opened, `0x51179157(8, 668)`) and 10 on E143 (578): the OM-3 has one slot (its file layer one drive, `cmp 1,a2`
+   at `0x50896d7a`, E143's 2); that the lab's E143 counts its second slot, which holds no card, is S-CARD's mount
+   state for it (hle-gaps 4.8.3, I). With the keys of E147's own path (OK, UP, OK, UP, OK) the request reaches
+   S-MDACTRL (TRA 1509, command 1, media 0) and the format runs (X), which rules the other two out. The fix is not
+   another list of keys: the path is found on the screen (finding 153).
+   *The card input.* The symptom (X, with the lookup as it was): `TypeError: Cannot read properties of null (reading
+   '3')` in the card input's search for the switch's control row (`src/lab/play.mjs` card_input, `x.uiin[3]` over the
+   firmware switch rows). Three candidates: a row before the card switch's has no UI_IN code on this body; E147's
+   tables lack `0x1506`, so there is no row to find; the block's switch code is not E147's. The first is the cause:
+   once the body's key matrix replaces E143's (apply_uiin_layout), a code its tables lack leaves its row not wired,
+   without a UI_IN place; E147's lack `0x2007`, `0x1518`, `0x2006`, `0x300a` and `0x2003` (X), and the row of `0x2007`
+   comes before the row of `0x1506`. `0x1506` is in its tables (group 0 byte 0 bit 4; E143's group 1 byte 1 bit 0)
+   and its file layer registers it with UI_IN (`0x50896d7e`), which rules the other two out. So finding 126's
+   inference holds, now X, and its fix (`x.uiin?.[3]`) is the fix; the other readers of a row's code refuse a row not
+   wired first or test for the place (X, a search of `src/lab`).
+   *The seams.* E147's block is E143's by the rule E146's was made by: each function S-MDACTRL and S-MEDIA call, and
+   the senders and the reactive whose ids and sizes they rely on, paired by the map and compared with E143's
+   instruction for instruction, absolute addresses and source line numbers masked: identical but for E146's three ids
+   (the request TRA 1509, the progress 1511, the result 1512), the API's reply queue halfword (`0x60043180`, read at
+   `0x503fa89d`) and UI_IN's level getter (`0x501570c5`: 7 groups, the special codes `0x1901`, `0x1909` and
+   `0x1906`). Its end sets the flags 15261 and 15262 for both media kinds as E143's (`0x50d08056..0x50d080a2`) and its
+   file layer registers both switch codes (`0x50896d7e`, `0x50896d90`), though its UI_IN tables hold `0x1506` alone.
+   X (`test/test_storage.mjs --hls` and `--session`, 21 of 21 HLS checks): the menu's format within 1,929 ms of lab
+   time, the card input refused while it runs, FAT32 `OM SYSTEM` again, the counts reset, back to the menu, and after
+   MENU S2's picture on the card as its first file; out and in, the mount 924.1 ms after the insertion, 803 shots
+   before and after, then S2's picture on the card. The E143 line's checks (E143, E146, E147, E148) gained those
+   three, the refusal and the two pictures, which the E118 family's had (21 of 21 on each).
+150. **E148 is of E143's line here, not of its family's** (2026-11-11, `src/fw/models.mjs` E148 card_fs.hls; D unless
+   tagged). Of the E144 family's thirteen images E148 alone holds no OlyHfwOpeMdaCtrlProcessEvFw (X, finding 127): its
+   OlyHfwOpeMdaCtrl sends the media control's start as a transaction (`0x50847f19`, E143's `0x50ac937f`; its class
+   ctor `0x5084029e`), and its CmpCst_Function takes it (rcvReqFncMediaCtrlStartComplete `0x50a6c61c`, E143's
+   `0x50cec0ff`, 492 instructions the same but for one id and two line numbers). So its block is E143's, by the map
+   from E143 and the same comparison: the reception's getter, creator, slot 2 and receive body, operator new, the
+   three event constructors, getMediaCtrlCBC, getMediaProgress, executeMediaFormatStart, the flag setter and the
+   mount state's getter and setter are E143's instruction for instruction but for ids and line numbers. Its ids are
+   one higher: the request TRA 1512, the progress 1514, the result 1515, and 698 and 712 where E143 has 697 and 711.
+   api_media's format takes one drive (`cmp 1,d0` at `0x502d6139`) and reads the reply queue's halfword `0x600417f8`
+   (`0x502d61af`); the media status (`0x502d64ad`), UI_IN's level getter (`0x5010ff98`) and the module event post
+   (`0x50025611`, behind another opening) are E143's shape, not its bytes. Its menu is ListMenu too
+   (`src/fw/facts.mjs` listMenu) and its card one slot: MENU opens on Card Formatting, and OK opens it without a card
+   choice, as E147's (X). X (21 of 21 HLS checks, `--hls` and `--session`): the format within 1,929 ms, the card
+   input refused while it runs, FAT32 `OM SYSTEM`, the counts reset, back to the menu, S2's picture on the card after
+   it; out and in, the mount 890.8 ms after the insertion, 826 shots before and after, S2's picture after. S-MEDIA's
+   and S-MDACTRL's log now names each event by the id its constructor stored (`src/lab/media.mjs`), where it printed
+   E143's 697 and 711.
+151. **The E144 family's application formats the card itself: its forms, and the rule's reach** (2026-11-11,
+   `src/fw/facts.mjs` mediaHls, `test/test_facts.mjs` MEDIA_FOUND; D at E144's addresses unless tagged; answers
+   finding 127's "?"). The family's media control is the E118 family's design: Card Setup's Format calls the start
+   (`0x5084a9bb`, d0 the command, d1 the media; X: 1 and 0 at Yes), which registers a process with the event manager,
+   and the process's handler (`0x5084a3a1`) takes the file module's progress and the API's reply. E144's differ in
+   forms the rule did not read, and in what the handler does:
+   - the start takes a second media on the stack (`movhu (104,sp),d0`) and opens `mov a0,(28,sp); mov a1,(32,sp);
+     movbu d0,(36,sp)` where E122's stores at 24, 28 and 32; the rule takes the three stores at any N, with the
+     process's file loaded within 0x60 bytes: one such opening on each of the 15 images that hold the class (X);
+   - the handler is a machine of two steps (the process's +40): for a media whose status (`0x502d2fa9`) has bit 7
+     clear it first sends a media API (`0x502d3982(3, {media, 0xffff})`, not read) and waits for that reply; then, or
+     at once, it calls the command's API through the dispatcher (`0x5084aba0`; X: at once in the lab, whose card is
+     mounted: the dispatcher is called once at Yes and `0x502d3982` not at all). At the format's reply with status 0
+     it sets the slots' format flags itself, 15261 and 15262 for the media kinds 4 and 8 whose status has bit 0 clear
+     and whose mount state is 8 (`0x5084a5f2..0x5084a636`), which on E143 is the function component's end (hle-gaps
+     4.8.3); posts the progress at 100 and the result (kind 72); and sends the camera base two requests: 611 (+32 1;
+     its closure has no function) and 590 (+32 a code from `0x50849bc7`, +36 1), whose closure holds `0x5084a2b1`
+     and the result callback. `0x5084a2b1` is E122's `0x506a7c9e` (the callback's post, then `0x508f84f7(15, 0)`,
+     whose (15, 1) the start made), the closure's class (`0x50878f17`, vt[0] `0x50878f59`) E122's instruction for
+     instruction, and the event's base stores the closure at +28 (`0x508372d6`), so MEDIA_LIB's numbers hold;
+   - the handler posts to the camera base four times, three after the trace the rule's sites are told by: the
+     format's two (returns `0x5084a76a` and `0x5084a99c`), and on the path of another command or an error one
+     without the trace (`0x5084a86b`, the rule's `other`, which stops the session) and then two with it
+     (`0x5084a8e0`, and `0x5084a99c` again). A format's sends are the first and the last, as S-MDAEND takes them;
+   - OlyHfwReception is a static object (`0x6218ae04`) on E144, E139, E142 and E140: its creator `0x50878729` is
+     `mov (F),d0; cmp 0,d0; bne; inc d0; mov d0,(F); mov OBJ,a0; call CTOR; mov OBJ,a0; ret` and loads no file. The
+     rule finds it by that form and tells the class by its vtable: a constructor of E122's form (`0x5087868c`),
+     slot 1 (`0x508787b5`) and slot 2 (`0x50878a66`) calling one body with `clr d0` and `mov 1,d0`, and a slot
+     that loads the class's file (slot 5, `0x50878ada`, at `0x50878b37`). Two static creators of the form with a
+     constructor of that shape on those four images, one on the eleven others (X), the vtable telling which;
+   - the HLS mount state's getter and setter compare four media kinds on E144, E139, E134, E137 and E125 (`cmp
+     4,d0; cmp 1,d0; cmp 32,d0; cmp 8,d0`, `0x508491e1` and `0x508493a5`), the getter reading kind 8 from kind 1's
+     word (`0x61e4336c`); the rule reads the kinds as a list and pairs the getter with the setter's first word
+     (`0x61e43360`);
+   - the card switches: every body registers `0x1506` and `0x1518` with UI_IN from its file layer, and other
+     switches the same way from elsewhere (`0x121c`, `0x101`, on some `0x2006`), and six of the family register
+     `0x80` with another module and ask other getters for it. The rule had taken every code so registered and asked
+     for, so it found no single level getter there, and on E144 it would have taken `0x101` for the first slot. It
+     now takes the codes the SD driver asks for: the asks within 0x8000 bytes of the storage rule's SD command layer
+     (X, the 19 images: the driver's asks lie 0x17db to 0x3214 bytes after it, every other ask of a registered code
+     at least 0x57616 bytes away).
+   The mount notification is read as it was (`0x5084a059`, id 712, sent the states 2, 4 and 8 at `0x509379c4`,
+   `0x50937930` and `0x50937841`). The rule reads every part on all 15 images that hold the class (X: the E118
+   family's values unchanged, `test/test_facts.mjs`; E144's against the values read by hand above), so E133, E145,
+   E129 and E132 have the fact too; their sessions are not tried (finding 154). hle-gaps 4.8.7's "no
+   `CmpCst_Function.cpp`" on E144 is wrong: its block holds the file name at `0x60c543f5` with 109 loads (E143 160,
+   E148 163; X), a function component without the media control.
+152. **The family's HLS side in play** (2026-11-11, X: `test/test_storage.mjs --hls` per body, 21 of 21 checks on each
+   of E144, E139, E134, E137, E142, E140, E125 and E130, the E118 family's checks; `src/fw/models.mjs` card_fs.hls
+   'rule'). On a blank 8 GiB card after S2's picture, MENU and the walk (finding 153): Card Setup is the Setup Menu's
+   first row, five tabs below Shooting Menu 1, on all eight; OK opens All Erase and Format, and on E139, E134 and E125
+   first a "Select Card to Set Up" screen, passed with OK; Format, and Yes from the confirm's No. The application's
+   start with command 1, media 0; the card input refused while the format runs; the first request to the camera base
+   logged without a closure and the second's closure run through its class's vt[0], which takes the application from
+   Busy to the shooting screen (the ids 611 and 590 on E144, E139, E137, E142 and E140, 12986 and 12965, E122's, on
+   E134, E125 and E130; the closure functions E144 `0x5084a2b1`, E139 `0x50805924`, E134 `0x50829d48`, E137
+   `0x507b818a`, E142 `0x5075e3be`, E140 `0x5075e0a5`, E125 `0x507a028c`, E130 `0x506fff1b`). The format within
+   1,845 to 1,847 ms of lab time after Yes on the first five and 623 ms on E134, E125 and E130 (50 ms steps). Read
+   back independently (`refs/volume.mjs`): the insertion's FAT32 volume again (`OM SYSTEM` on E144, `NO NAME` on the
+   seven others) at 8192 with 32 KiB clusters, the root empty, the picture gone, 260,351 of 260,352 clusters free in
+   the FAT and FSInfo; the firmware's image count 0, its next file 1, the remaining shots the fresh card's; S2 then
+   writes the first file again. The card out: the drive unmounted (detect state 1, the HLS mount state 0), UI_IN's
+   `0x02021506` with the level 1, the screen changed, a second removal refused. The card in: sd_mount initialises the
+   card again, the FAT mount 795 to 824 ms after the insertion on E144, E139, E137, E142 and E140, 285 and 290 ms on
+   E130 and E125 and 55 ms on E134 (why they differ is not read, ?), the boot sector unchanged, the count and the
+   whole screen as before the removal; S2 then writes its picture. The sessions of `bin/test.mjs` that these bodies
+   already had (E144, E142, E134, E137, E125: `--session`) now run the HLS checks at their end, and E139, E140 and
+   E130 run `--hls` there. E143's and E146's checks (with the three finding 149 adds, 21 of 21 each) and the E118
+   family's (21 of 21 each) pass with the walked path (X).
+153. **The menu's path to Format, found on the screen** (2026-11-11, `src/lab/menuwalk.mjs`, `test/test_storage.mjs`
+   walkToFormat and menuWalkUnits; answers finding 129's open point by another road than the menu's tables). The
+   tests reached Format by key counts (E143's six keys, the E118 family's six), which is what stopped E147, and no
+   count fits the bodies: the item is on the opening page (the ListMenu bodies, the E118 family) or five tabs down
+   (the E144 family), a card choice comes or not, the confirm is direct or behind All Erase. The lab already records
+   what the firmware draws on every body: the port places E143's DrawText (`0x510ab0f9`) and rectangle fill
+   (`0x510bceba`) in all 18 other images (X, `src/fw/ports.mjs`), and `src/lab/menu.mjs`'s observers log each call's
+   string, box and graphics context (draw_log). The walker reads the screen from that log (the texts since the text
+   layer's last full clear, each at its box) and walks by the items' names in the session's language: the row Card
+   Formatting or Card Setup, the screen Select Card to Set Up (left with OK), the row Format Card or Format, the row
+   Yes. Where no goal is on the screen and the cursor is in no list it goes down the tabs, until the first screen's
+   texts come back (refused); a goal's row with the cursor outside the list takes RIGHT, another row one UP or DOWN,
+   and the screen is read again after every key. The cursor's row is read from the composed frame, as a user sees
+   it: a row's band is the colour most pixels have in the strip left of its text; in a list of three rows or more
+   the rows but at most one share a band and the other has the cursor; in a shorter one a row of the page's colour
+   (the band one pitch above the list) is unselected, and where every row is off it the rows are bars, told by the
+   bar colour a longer list showed before, or refused where none did. That every body marks the cursor's row by its
+   band is I; X on the fifteen bodies the tests walk: the ListMenu bodies draw every row as a bar and the cursor's
+   in another colour, the E144 family's others a yellow bar over the page with the row's text in another colour,
+   E122 a frame around the row. The rule is kept honest by what follows the last key: the media control's start with
+   the format's command for media 0, which the tests check; a walk to another row would start nothing or another
+   command, which stops the session. X: the keys it finds are E143's and E146's old six (OK, OK at the card choice,
+   UP, OK, UP, OK), five on E147 and E148 (no card choice), RIGHT, OK, DOWN, OK, UP, OK on the E118 family after a
+   picture, and on the E144 family five DOWNs, RIGHT, OK, (OK at the card choice,) DOWN, OK, UP, OK. It is not a
+   decode of the menu's tables: the E144 and E118 families' Menu_Viewer tables stay undecoded, and the walker knows
+   an item only by its name on the screen.
+154. **Left open** (2026-11-11). The second slot on every body (E139, E134 and E125 show the card choice; the walker
+   takes the first card, and the rule reads the first switch alone); the media control's other commands (All Erase is
+   on the family's screen, not driven) and the handlers' other ends, which stop the session; the E144 family's first
+   step for a media whose status has bit 7 clear (`0x502d3982`, not read, not reached in the lab); the camera base's
+   own work for 611 and 590, and where the family returns after a Format on the camera (the lab's is the shooting
+   screen, as the E118 family's, ?); E133, E145, E129 and E132, whose facts the rule now reads but whose
+   `card_fs.hls` is not set (not tried); an SDXC card on any of these bodies' HLS sides (not tried; E144 stops with
+   one before its application starts, hle-gaps 4.8.7); why the card's mount after an insertion takes 55, about 290 or
+   about 800 ms by body; the walker's limits (the items' English names, a cursor marked by the row's band, a draw log
+   kept to its last 2,000 entries: a screen whose full clear has left the log is refused); `bin/nav.mjs` and the
+   browser player have no such walk.
 
 
 

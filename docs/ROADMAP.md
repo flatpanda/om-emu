@@ -239,11 +239,16 @@ the survey table.
   the E118 family (E118, E120, E122) since 2026-11-10 (model-survey findings 124 to 129): its application runs the
   media control itself, so Card Setup's Format formats the card natively and only the camera base's part of its end
   is stood in (S-MDAEND); the card out shows the firmware's own No Card screen and the card in brings the count
-  back (S-MEDIA), at the seams a rule reads (`src/fw/facts.mjs` mediaHls). Left: the HLS side on E147 (Format Card's
-  Yes does not reach S-MDACTRL, not read; the card input found a control row without a UI_IN code, I the stop
-  fixed 2026-11-10, finding 126, E147 not tried again) and on the E144 family (its application holds the E118
-  family's media control process, finding 127; not tried); E133's, E129's and E132's cards are native since their
-  starts run (2026-10-29).
+  back (S-MEDIA), at the seams a rule reads (`src/fw/facts.mjs` mediaHls). On E147 and E148 since 2026-11-11
+  (model-survey findings 149 and 150): E143's seams, each function paired by the map and compared; E147's two stops
+  were the test's keys (E143's path, past a card choice the one-slot OM-3 does not show) and the card input's
+  lookup. On E144, E139, E134, E137, E142, E140, E125 and E130 since 2026-11-11 (findings 151 and 152): their
+  application formats the card itself as the E118 family's, and the rule reads their forms (a static reception,
+  four media kinds, another start, the card switch by the SD driver's asks). The tests walk the menu to Format by
+  what the firmware draws (`src/lab/menuwalk.mjs`, finding 153), not by key counts. Left (finding 154): the second
+  slot, the media control's other commands, the HLS side on E133, E145, E129 and E132 (the rule reads their facts;
+  not tried) and with an SDXC card on these bodies; E133's, E129's and E132's cards are native since their starts
+  run (2026-10-29).
 - **The card, next on E143:** Card Formatting from the menu and the card's removal and insertion while the camera
   runs are done (2026-10-24, hle-gaps.md 4.8.3: S-MDACTRL and S-MEDIA stand in for the HLS function component and
   media manager, the application's media control runs natively). REC_FILE's own DCF steps since 2026-11-02

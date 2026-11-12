@@ -107,8 +107,8 @@ in the server's environment, in the browser by the start options above the camer
 Card menu's `?card_size=GiB`: 64 or 128 GiB, an SDXC card). HDMI: Plug in sends `{"type": "hdmi", "action": "plug"}` in a session with the port (the
 cable, the DDC reads, the driver's EDID state and, once the firmware opened it, the HDMI output's format and timing from
 the status), and is disabled with the reason without one; Unplug sends the unplug (A-HDMI-1). Card: Take out and Put in
-are the card inputs (S-MEDIA, the HLS media side of E143, E146 and the E118 family; another body refuses them with the
-reason), and the
+are the card inputs (S-MEDIA, the HLS media side of E143, E146, E147, the E118 family and the E144 family but E133,
+E145, E129 and E132, which refuse them with the reason), and the
 list is the card's files read with the independent FAT and exFAT readers (`refs/volume.mjs` picks `refs/fat.mjs` or
 `refs/exfat.mjs` by the boot sector; `web/cardfiles.mjs`) between the lab's steps, not through the firmware, in or out of the slot and
 while the camera is off, with the card's kind and capacity (`GET /api/card`; a volume the readers do not read, a blank
@@ -237,10 +237,11 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   camera too, is stood in as the MN103's DIVU by 0, S-MOVRATE, `docs/model-survey.md` findings 50, 51, 59): a blank card formatted and mounted, the counts from it, each picture's file written (the movie time left
   on E144, E139, E137 and E125 is an orange `0:00:00`: the blank settings store's movie mode, UHD 4K at 60p, is one
   they cannot record, `docs/hle-gaps.md` 4.8.5; E134's query answers 0 for the same reason); the menu's Card
-  Formatting and the card input run on E143 and E146 (`docs/hle-gaps.md` 4.8.7) and on the E118 family, whose
+  Formatting and the card input run on E143, E146, E147 and E148 (`docs/hle-gaps.md` 4.8.7, `docs/model-survey.md`
+  findings 149 and 150) and on the E118 family and E144, E139, E134, E137, E142, E140, E125 and E130, whose
   application runs the media control itself: Card Setup's Format with the camera base's part of its end stood in
   (S-MDAEND, `src/lab/media.mjs`) and the card out and in through S-MEDIA (`docs/model-survey.md` findings 124 to
-  129); they are refused on the others. With a
+  129, 151 and 152); they are refused on E133, E145, E129 and E132. With a
   64 GiB SDXC card (`modelcheck.mjs --card-size 64`) each of them formats it exFAT; all but E144 run on, and E144
   stops at the camera application's start on its own divide by zero (its movie parameters, with that movie mode and
   an exFAT card, divide by a size the rate table did not give; the hardware's result is undefined, so emu stops

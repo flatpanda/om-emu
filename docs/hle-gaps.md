@@ -4803,6 +4803,19 @@ the firmware's code for a card above 32 GiB is not read (?).
   lookup fixed in `docs/model-survey.md` finding 126; E147 not tried again). E144's HLS function component is
   another build (no `CmpCst_Function.cpp`; getMediaCtrlCBC and getMediaProgress do not pair): not attempted. (Finding
   127: the E144 family's application holds the E118 family's media control process, X; its Format is not tried.)
+  Since 2026-11-11 (`docs/model-survey.md` findings 149 to 154): both of E147's stops are read. Its Yes was never
+  pressed: the OM-3 has one slot and opens Card Formatting without the card choice (the row's handler `0x51183dc6`,
+  D; X), so E143's keys took the dialog's No; the card input's stop was the lookup (X: the row of `0x2007`, which
+  E147's UI_IN tables lack, comes before the card switch's). Its HLS side runs at E143's seams by E146's comparison
+  (ids 1509, 1511 and 1512, the reply queue's halfword `0x60043180`; X: 21 of 21 checks). E148's does too: of the
+  E144 family it alone has the function component format the card (ids 1512, 1514 and 1515, 698 and 712; 21 of 21).
+  E144, E139, E134, E137, E142, E140, E125 and E130 format the card in their application's media control process as
+  the E118 family does, at the seams `src/fw/facts.mjs` mediaHls reads in their forms (a static reception, four media
+  kinds, another start, the card switch by the SD driver's asks), with S-MDAEND for the camera base's part and
+  S-MEDIA for the card out and in (X: `test/test_storage.mjs --hls`, 21 of 21 on each). The tests walk the menu to
+  Format by what the firmware draws (`src/lab/menuwalk.mjs`), not by key counts. The sentence above on E144's
+  function component is wrong in one point: E144 holds `CmpCst_Function.cpp` (at `0x60c543f5`, 109 loads, X); it is
+  its media control that the component lacks.
 - **E134's card (goal d; `docs/model-survey.md` finding 23):** the queue FILECLBK blocked on is UI_OUT's, the module of
   the camera's lamps, not UI_IN's: E134's file layer asks it for the card's access lamp around its accesses, and
   nothing ran UI_OUT. H-UIOUTSTART runs its init and starts its task at the play bring-up (MODELS `ui_out`); the
@@ -4810,7 +4823,8 @@ the firmware's code for a card above 32 GiB is not read (?).
   shots; `test_storage.mjs --session`, 22 of 22, in `bin/test.mjs`). Its movie time is 0, as on the E144 family
   (4.8.5; X: mode 1 at 60, the logs `0x3a040001` and `0x39000105`).
 - **Open:** the HLS side on E147 (the two failures above) and on the E144 family (its own function component; the
-  media control process, finding 127); a
+  media control process, finding 127), both done on 2026-11-11 but for what `docs/model-survey.md` finding 154
+  lists (the second slot, the other commands, E133, E145, E129 and E132, an SDXC card there); a
   real E144's movie mode at the factory; the hardware's DIVU by 0 (a capture would settle 3.2).
 
 #### 4.8.8 The E118 family's card, round 7 (2026-10-30; D unless tagged, addresses E122's)

@@ -352,8 +352,10 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 // sessions whose card the firmware formats and mounts itself: E143 here (an 8 GiB SDHC card, then blank 64 and 128 GiB
 // SDXC cards, whose findings print as notes), and E146, E147, E144, E142 and E134 (the OM-1 family, the E144 family,
 // the E142 lineage and the E-M1X, whose card needs UI_OUT) each in a process of its own (the model is fixed when the
-// lab is imported); E146's with the HLS media side (Card Formatting from the menu, the card out and in), and that side
-// alone on E122, E118 and E120 (the E118 family's, read by a rule); E148, E137 and E125 for the E144 family's REC_FILE
+// lab is imported); each with the HLS media side where the body runs it (Card Formatting from the menu, the card out
+// and in: E146, E147 and E148 as E143; E144, E142, E134, E137 and E125 by the rule), and that side alone on E122,
+// E118 and E120 (the E118 family's, read by a rule), on E139 and E140 (the E144 family's bodies whose session is
+// not run here) and on E130; E148, E137 and E125 for the E144 family's REC_FILE
 // natively in the forms the others do not take (Exif 0300, the E137 date set, two file contexts with Exif 0230;
 // src/fw/facts.mjs recFileQueue); E122, E118 and E120 also for their S2 files, which their own REC_FILE records
 // natively in the family's older REC version (src/fw/facts.mjs recFileFrame)
@@ -363,8 +365,8 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   const su = storageUnits(), ss = await storageSession(), sx = await storageSdxc();
   // E130, E133 and E129 for REC_FILE natively in the REC version before the E144 family's, each in a form the other
   // two do not take (E133's rec_jpeg_exec, E129's date set; src/fw/facts.mjs recFileInline)
-  // the E118 family's HLS media side alone (--hls: Format from Card Setup, the card out and in, a picture after each)
-  const others = [...['E146', 'E147', 'E144', 'E142', 'E134', 'E148', 'E137', 'E125', 'E130', 'E133', 'E129', 'E122', 'E118', 'E120'].map((m) => [m, '--session']), ...['E122', 'E118', 'E120'].map((m) => [m, '--hls'])].map(([m, arg]) => {
+  // the HLS media side alone (--hls: Format from Card Setup, the card out and in, a picture after each)
+  const others = [...['E146', 'E147', 'E144', 'E142', 'E134', 'E148', 'E137', 'E125', 'E130', 'E133', 'E129', 'E122', 'E118', 'E120'].map((m) => [m, '--session']), ...['E122', 'E118', 'E120', 'E139', 'E140', 'E130'].map((m) => [m, '--hls'])].map(([m, arg]) => {
     const r = spawnSync(process.execPath, [new URL('../test/test_storage.mjs', import.meta.url).pathname, arg], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
     return [arg === '--session' ? m : `${m} ${arg}`, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
   });

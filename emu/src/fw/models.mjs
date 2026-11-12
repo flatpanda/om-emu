@@ -88,8 +88,9 @@ const MOVIE_TIME_ERRLOG = [0x39000903, 'the movie time query\'s frame rate is 0:
 // `card_fs`: whether the card's file system runs natively (src/lab/storage.mjs; docs/hle-gaps.md 4.8.4): native, at
 // the seams src/fw/facts.mjs fileSystem reads (fact storage); errlog, the error logs its card's queries make in the lab
 // (src/lab/display.mjs EXPECTED_ERRLOG); hls, the HLS media side's addresses (src/lab/media.mjs: Card Formatting from
-// the menu, the card out and in; E143 and E146), or 'rule' where src/fw/facts.mjs mediaHls reads them (fact 'media':
-// the E118 family). Every body gives it, one that does not run it with its reason (why);
+// the menu, the card out and in; E143, E146, E147 and E148, whose HLS function component formats the card), or 'rule'
+// where src/fw/facts.mjs mediaHls reads them (fact 'media': the E118 family and the E144 family but E148, whose
+// application formats it itself). Every body gives it, one that does not run it with its reason (why);
 // such a body keeps S-CARD's card without a file system (src/lab/camapp.mjs)
 //
 // `audio`: the audio hardware a session runs with --audio auto (the default) or on (src/lab/audiohw.mjs,
@@ -603,7 +604,37 @@ export const MODELS = {
     // this code for any other state (0x50057211..0x5005721d, D); the field is 42 4 ms later (X: 0 at 323 ms, 42 at
     // 327 ms; the wait's `mov 42,d0; call 0x5004fb2c` at 0x50057378, D). On E143 and E146 the field is 42 before the
     // bring-up (X); which boot step sets it first on the camera is ?
-    card_fs: { native: true, errlog: [[0x19001004, 'the file system\'s first call of the SCPU clock\'s API finds its state not yet set (the clock\'s first wait sets it)'], MOVIE_TIME_ERRLOG] },
+    // hls: its HLS side (src/lab/media.mjs; docs/model-survey.md finding 149), E143's (its entry has the meaning of
+    // each field), each function paired by the map (bin/xto.mjs) and compared with E143's instruction for instruction
+    // but for absolute addresses and source line numbers (D), as E146's: the reception's getter, creator, slot 2 and
+    // the receive body, operator new, the event classes' ctors (697, 711 and 696 as E143's; the senders allocate 44, 36
+    // and 40 bytes, 0x50d080ff, 0x50d0815a, 0x50bd3c7a), the media control's class ctor (0x50ad49bb) and its sender
+    // (0x50addc80), getMediaCtrlCBC, getMediaProgress, executeMediaFormatStart (the progress event 0x04020011),
+    // api_media's format and media status, the flag setter, the mount state getter and setter and the module event
+    // post. The ids are E146's: the media control request TRA 1509, the progress 1511 and the result 1512
+    // (cbMediaCtrlResult 0x50d07505, the progress send 0x50d07cae, the end 0x50d07f43 and the reactive's state 6
+    // 0x50adfe58 test them); the API's reply queue is the halfword 0x60043180 (api_media's format reads it at
+    // 0x503fa89d). The end sets the flags 15261 and 15262 for the media kinds 4 and 8 as E143's (0x50d08056..
+    // 0x50d080a2), though the body has one card slot: its file layer registers both switch codes with UI_IN
+    // (0x50896d7e, 0x50896d90) for one drive (`cmp 1,a2` at 0x50896d7a, E143's 2), and its UI_IN tables hold 0x1506
+    // alone (X: src/lab/play.mjs uiin_layout; group 0 byte 0 bit 4). UI_IN's level getter 0x501570c5 is E143's
+    // 0x5014c015 with 7 groups (`cmp 7,d1`, E143's 5) and the special codes 0x1901, 0x1909 and 0x1906 (E143's 0x1901,
+    // 0x1235, 0x200f, 0x1234 and 0x200e; D)
+    card_fs: {
+      native: true,
+      errlog: [[0x19001004, 'the file system\'s first call of the SCPU clock\'s API finds its state not yet set (the clock\'s first wait sets it)'], MOVIE_TIME_ERRLOG],
+      hls: {
+        reception: 0x50AD0628, sync_slot: 2, new: 0x50DB82B6,
+        events: { result: [0x50ADD60E, 44], media: [0x50ADD2F9, 36], mount: [0x50ADD571, 40] },
+        ids: { progress: 1511, result: 1512 },
+        ctrl: { request: 1509, cmd: 32, media: 34, option: 36, format: 1, cbc: 0x50D07D2E, progress: 0x50D077B0,
+          api: 0x503FA7E4, reply_queue: 0x60043180, progress_event: 0x04020011, kinds: { progress: 3, done: 72 },
+          status: 0x503FAB9B, flag: [0x50AC8F6B, 15261] },
+        mount: { get: 0x50ADEE2B, set: 0x50ADEFBF, unmounted: 0, mounted: 8, rec_end: 2, end: 8 },
+        slots: [{ kind: 4, switch: 0x1506 }, { kind: 8, switch: 0x1518 }],
+        switch_level: 0x501570C5, switch_event: 0x02020000, publish: 0x500250DF,
+      },
+    },
     // the power manager and the power-off natively; its power-off sends no IO expander a command (D: the sequence
     // 0x50045807; X: a scan finds the expanders' task names only in a name list no code loads), so S-IOEXP does not
     // run (X: test_scpu's power session; docs/hle-gaps.md 4.7.4)
@@ -636,7 +667,12 @@ export const MODELS = {
     res_len: 7835616, res_sha256: '1bc282d99c073bee159fbffa85c27b48782a7c083cfcc55bd086410790960b36',
     panels: { tft: [720, 480], evf: [1024, 768] },
     overrides: OVERRIDES_E144,
-    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // hls 'rule': the HLS media side (Format from Card Setup, the card out and in; src/lab/media.mjs S-MDAEND and
+    // S-MEDIA) at the addresses src/fw/facts.mjs mediaHls reads (fact 'media': the family's application runs the media
+    // control itself, as the E118 family's), since 2026-11-11 (docs/model-survey.md findings 151 and 152; X:
+    // test/test_storage.mjs --hls)
+    card_fs: { native: true, hls: 'rule' },
     // REC_FILE natively, at the addresses src/fw/facts.mjs recFileQueue reads (X: test_storage's S2 file, its Exif
     // Model 'OM-5')
     rec_native: true,
@@ -676,7 +712,35 @@ export const MODELS = {
     image_base: 0x60021020,
     res_len: 12582848, res_sha256: 'b31199742b06197e17bf3386ab48f3a936c8c333dd1b3b8a04a419bef862a369',
     panels: { tft: [720, 480], evf: [1024, 768] },
-    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card). hls: its HLS side
+    // (src/lab/media.mjs; docs/model-survey.md finding 150). E148's application holds no media control process (no
+    // OlyHfwOpeMdaCtrlProcessEvFw.cpp, X), unlike the family's other bodies: its OlyHfwOpeMdaCtrl sends the HLS
+    // function component a transaction (0x50847f19, E143's 0x50ac937f; CmpCst_Function.cpp), so the block is E143's
+    // (its entry has the meaning of each field), each function paired by the map (bin/xto.mjs) and compared with E143's
+    // instruction for instruction but for absolute addresses and source line numbers (D): the reception's getter,
+    // creator, slot 2 and the receive body, operator new, the event classes' ctors (the senders allocate 44, 36 and 40
+    // bytes), the media control's class ctor (0x5084029e), getMediaCtrlCBC, getMediaProgress, executeMediaFormatStart,
+    // the end (rcvReqFncMediaCtrlStartComplete 0x50a6c61c, its flags 15261 and 15262), the flag setter and the mount
+    // state getter and setter. Its ids are one higher than E143's: the media control request TRA 1512, the progress
+    // 1514, the result 1515, and 698 and 712 where E143 has 697 and 711 (the ctors' ids). api_media's format takes one
+    // drive (`cmp 1,d0` at 0x502d6139, E143's 2) and reads the reply queue's halfword 0x600417f8 (0x502d61af); the
+    // media status (0x502d64ad, API 0xe000b) and UI_IN's level getter (0x5010ff98) are of E143's shape with other
+    // registers and special codes, and the module event post is 0x50025611 (E143's 0x50025095 behind another opening,
+    // `mov d0,d3; mov d1,a2`; D)
+    card_fs: {
+      native: true,
+      hls: {
+        reception: 0x5083BF33, sync_slot: 2, new: 0x50B1BB11,
+        events: { result: [0x5084A01D, 44], media: [0x50849D08, 36], mount: [0x50849F80, 40] },
+        ids: { progress: 1514, result: 1515 },
+        ctrl: { request: 1512, cmd: 32, media: 34, option: 36, format: 1, cbc: 0x50A6C407, progress: 0x50A6BE89,
+          api: 0x502D60F6, reply_queue: 0x600417F8, progress_event: 0x04020011, kinds: { progress: 3, done: 72 },
+          status: 0x502D64AD, flag: [0x50834A90, 15261] },
+        mount: { get: 0x50849183, set: 0x50849317, unmounted: 0, mounted: 8, rec_end: 2, end: 8 },
+        slots: [{ kind: 4, switch: 0x1506 }, { kind: 8, switch: 0x1518 }],
+        switch_level: 0x5010FF98, switch_event: 0x02020000, publish: 0x50025611,
+      },
+    },
     // REC_FILE natively, at the addresses src/fw/facts.mjs recFileQueue reads (X: test_storage's S2 file, its Exif
     // Model 'OM-5MarkII')
     rec_native: true,
@@ -711,7 +775,9 @@ export const MODELS = {
     res_len: 11726816, res_sha256: '0d4c92407626a32ae4173fc2d6efc5360d75b5c271f088339830ffe1455e157e',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
-    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card); its HLS media side by the rule
+    // as E144's (hls 'rule', X: test/test_storage.mjs --hls)
+    card_fs: { native: true, hls: 'rule' },
     // REC_FILE natively, at the addresses src/fw/facts.mjs recFileQueue reads (X: test_storage's S2 file, its Exif
     // Model 'E-M1MarkIII')
     rec_native: true,
@@ -771,8 +837,9 @@ export const MODELS = {
     // layer asks for the card's access lamp around its accesses (0x5066dea4: lamp 6, 0xffff and 500 to start, 0 to
     // stop, I: a blink of 500 ms; from the file layer's 0x50648255, 0x506483cf, 0x5064840c, 0x50648540, 0x50648562 and
     // 0x506595b8), and with UI_OUT not run the 54th send blocked FILECLBK in S-RECFILE's first fopen (X: 53 sends, no
-    // read in 10 s of lab time). E143's and E144's file layers make no such request (X)
-    card_fs: { native: true },
+    // read in 10 s of lab time). E143's and E144's file layers make no such request (X). Its HLS media side by the
+    // rule as E144's (hls 'rule', X: test/test_storage.mjs --hls)
+    card_fs: { native: true, hls: 'rule' },
     // REC_FILE natively, at the addresses src/fw/facts.mjs recFileQueue reads (X: test_storage's S2 file, its Exif
     // Model 'E-M1X')
     rec_native: true,
@@ -822,7 +889,9 @@ export const MODELS = {
     res_len: 24465888, res_sha256: '4d0643ac1b46c33c074f5fad669d197c80a62d9590586904e68a53379ff9712f',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
-    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card); its HLS media side by the rule
+    // as E144's (hls 'rule', X: test/test_storage.mjs --hls)
+    card_fs: { native: true, hls: 'rule' },
     // REC_FILE natively, at the addresses src/fw/facts.mjs recFileQueue reads (X: test_storage's S2 file, its Exif
     // Model 'E-M5MarkIII')
     rec_native: true,
@@ -846,7 +915,9 @@ export const MODELS = {
     res_len: 22091232, res_sha256: '61d008779b2952a50936d58aa45390a7b1e918f4edcd49f20b3c82d235dac9da',
     // TFT 1.037M dots; no EVF
     panels: { tft: [720, 480], evf: null },
-    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card); its HLS media side by the rule
+    // as E144's (hls 'rule', X: test/test_storage.mjs --hls)
+    card_fs: { native: true, hls: 'rule' },
     // REC_FILE natively, at the addresses src/fw/facts.mjs recFileQueue reads (X: test_storage's S2 file, its Exif
     // Model 'E-P7')
     rec_native: true,
@@ -875,7 +946,9 @@ export const MODELS = {
     res_len: 21919200, res_sha256: '483aa7d7b8b64f11d851f5e9083ceea479b22905f0b338ff9229600e5d315aa6',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
-    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card); its HLS media side by the rule
+    // as E144's (hls 'rule', X: test/test_storage.mjs --hls)
+    card_fs: { native: true, hls: 'rule' },
     // REC_FILE natively, at the addresses src/fw/facts.mjs recFileQueue reads (X: test_storage's S2 file, its Exif
     // Model 'E-M10MarkIV')
     rec_native: true,
@@ -902,7 +975,9 @@ export const MODELS = {
     res_len: 23330784, res_sha256: 'bd25f933ce5572b799776b5eaadc11876cd096e78a4182c71cebc44649ad386e',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
-    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card); its HLS media side by the rule
+    // as E144's (hls 'rule', X: test/test_storage.mjs --hls)
+    card_fs: { native: true, hls: 'rule' },
     // REC_FILE natively, at the addresses src/fw/facts.mjs recFileQueue reads (X: test_storage's S2 file, its Exif
     // Model 'E-M1MarkII')
     rec_native: true,
@@ -983,7 +1058,9 @@ export const MODELS = {
     res_len: 21476832, res_sha256: 'a21935005597087e0a43f0a99cee28376c142a4e55339d76ab2ed8286228cb15',
     // TFT 1.037M dots, EVF 2.36M dots
     panels: { tft: [720, 480], evf: [1024, 768] },
-    card_fs: { native: true },   // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card)
+    // the card's file system natively (src/lab/storage.mjs; X: modelcheck's card); its HLS media side by the rule
+    // as E144's (hls 'rule', X: test/test_storage.mjs --hls)
+    card_fs: { native: true, hls: 'rule' },
     // REC_FILE natively (src/lab/rec.mjs; src/fw/facts.mjs recFileInline: the REC version before the E144 family's;
     // X: test_storage's session, 2026-11-11)
     rec_native: true,

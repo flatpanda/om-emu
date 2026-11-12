@@ -62,8 +62,8 @@
 //               makes, I) and the mount again; the DCF process's card-in and list commands; the DCF numbering mount,
 //               which leaves the drive mounted (the drive status's bit 0x1000). The same at a runtime insertion
 //               (src/lab/media.mjs S-MEDIA), and at a removal the DCF process's card out; after a format from the menu
-//               the DCF numbering mount again, for the next file number (src/lab/media.mjs S-MDACTRL; on the E118
-//               family S-MDAEND)
+//               the DCF numbering mount again, for the next file number (src/lab/media.mjs S-MDACTRL; on the bodies
+//               whose application runs the media control itself S-MDAEND)
 import { FirmwareError, where, disasm, runtime } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { RTOS } from './rtos.mjs';
@@ -92,10 +92,10 @@ export function storageFacts() {
   return { ...f, ...lib, names: { ...f.names, drive }, detect: fact('card.detect', CARD_DETECT_E143).table, host: BOARD.sd, hls: cf.hls === 'rule' ? mediaFacts() : cf.hls ?? null,
     recorder: fact('recorder', RECORDER_E143) ?? null };
 }
-// The HLS side where the rule reads it (card_fs.hls 'rule': the E118 family): src/fw/facts.mjs mediaHls (fact 'media')
-// with the family's library numbers (MEDIA_LIB) and the module event post, the port's place of E143's 0x50025095 (the
-// post S-LONGTIMER publishes through on every body). No S-MDACTRL part: the application starts the media control
-// itself there (src/lab/media.mjs S-MDAEND)
+// The HLS side where the rule reads it (card_fs.hls 'rule': the E118 family and the E144 family but E148):
+// src/fw/facts.mjs mediaHls (fact 'media') with the library's numbers (MEDIA_LIB) and the module event post, the
+// port's place of E143's 0x50025095 (the post S-LONGTIMER publishes through on every body). No S-MDACTRL part: the
+// application starts the media control itself there (src/lab/media.mjs S-MDAEND)
 function mediaFacts() {
   const m = fact('media', undefined);
   if (!m) throw new StorageError(`${MODEL}: src/fw/models.mjs card_fs.hls is 'rule' but src/fw/facts.mjs mediaHls read no HLS media side`);

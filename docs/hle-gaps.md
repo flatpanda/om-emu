@@ -989,6 +989,7 @@ and dispqSession (X, 12 of 12), and `emu/test/test_take_release.mjs` focusSessio
   sub-CPU's handler `0x8015345`, its message 11), not modelled. S2 does not bring it: with S1 alone held it comes at
   5.08 s, 1.16 s after S1, with the old discipline too (dispq-at-once). Which of the power manager's builders sends
   it, and why S1 held brings it, is ?.
+  (2026-11-11, 4.7.6: both are read, S-SCPUDEV takes the write, and S2's idle goes on with no stop.)
 - **Golden (X).** `emu/bin/golden.mjs check`: identical, every one of its 240 sessions (the default is camapp 1, whose
   sessions this change leaves as they were); no re-record.
 - **Corrections.** 4.2.3's S2 record ("the GUI's command 17 runs nested in it", the S-DISPQ stop) and 4.2.4's
@@ -1074,11 +1075,16 @@ shot gets none. The two sessions differ: 4.2.3's runs TAKE natively (`--take pro
     way.
   - S-SCPUDEV is left as it is: it is every body's model, and nothing shows what message 11 changes. focusSession
     does not reach the write, since its S2 stops first.
+  - 2026-11-11 (4.7.6): the state change is the session's first source check, which TAKE_MAIN's RdyFcsRdy1 lets the
+    power manager's cyclic tick run; message 11 keeps the two battery slots' bytes and sends the MN nothing; S-SCPUDEV
+    takes the write, and the stop is gone.
 - **Tests (X).** secondShotSession's two sessions:
   - with S-SCPUDEV: the first S1's record (focusSession's S1_EXP) and the 794 build in the event task, the release's
     stop and phase 111, phase 111's table, the stop at `0x14` (the power manager's task, 1.1 to 1.2 s after S1);
   - with the sub-CPU's firmware: the link's one transfer, the state 1.8 s after the release, the second S1 and its
     release (each in phase 111's default case), and MENU.
+  - 2026-11-11 (4.7.6): both sessions run both parts (24 of 24), with the `0x14`'s cause and the bytes each sub-CPU
+    keeps in place of the stop.
 
   `emu/test/test_camapp.mjs` traRoutingSession (25 of 25) adds a check: the session's only take requests are the
   post-menu pass's (`0x20`, `0x40`), they go to S-MODACK's TAKE_EXEC, and no 794 is built.
@@ -1087,6 +1093,7 @@ shot gets none. The two sessions differ: 4.2.3's runs TAKE natively (`--take pro
   793 and phase 111's exit are read in 4.1.12, where the session without the probe gets past phase 111 (S-TAKERDY)
   and waits, after S2, for TAKE's capture. Also open: S-SCPUDEV's `0x14`, and without the probe TAKE itself (4.1.8
   item 5).
+  (S-SCPUDEV's `0x14`: closed 2026-11-11, 4.7.6.)
 
 #### 4.1.11 Messages posted directly to module queues (2026-11-10; D unless tagged, addresses E143's)
 
@@ -1684,7 +1691,7 @@ and camDriverSession (X, 7 of 7) pin what follows.
   18 (reply queue 6, token `0xf0080000`) through the application's API sender (`0x503eba07`), which S-DISPQ does not
   stand in for inside a DISPLAY run (depth 1). TAKE takes nothing. The stop is the lab's; what command 18 does there
   is not read. (The lab before 4.1.9, which found the nesting the lab's: S-DISPQ keeps such posts since, and S2's idle
-  stops at S-SCPUDEV's `0x14`.)
+  stops at S-SCPUDEV's `0x14`; taken since 2026-11-11, 4.7.6: no stop.)
 - **Next (I; Claude wall-clock).** (1) The consumer of the records +2464 / +2532 read to its interrupt (half a day to a
   day); if it is a unit whose status the lab can raise from its frame clock, an S- stand-in at that interrupt, with the
   front end's init (its devices) as the cost (4.2 seam D). (2) Then EXP_MOVIE's answer, TAKE_EXPOSE's token 15 and
@@ -1954,7 +1961,8 @@ what follows.
   flag 21 for `0x1000`, TAKE_MAIN stays in RdyFcsRdy3 with the pending bits `0x200` (TAKE_EXPOSE's token 15), so
   RdyTrig2Wait is not reached; no frame callback, answer or AE result write (S-EXPOSE's writer `0x50596187` does not
   run). S2 goes as focusSession's: S-DISPQ keeps its nested DISPLAY posts (4.1.9) and its idle stops at the sub-CPU's
-  command 0x14, before any TAKE_EXPOSE `0x600` (X, after the round's merge).
+  command 0x14, before any TAKE_EXPOSE `0x600` (X, after the round's merge). (Since 2026-11-11, 4.7.6, S-SCPUDEV takes
+  the 0x14 and S2's idle goes on with no stop; TAKE still takes nothing, X.)
 - **Corrections to 4.2.3.** "The units' per-bit handlers call a record's +44 with its +48 mask": they call it with
   their own bit and'ed with the mask, and the mask holds EXP's bits (above). "The movie sequence gives it 144-byte
   kind-7 requests": `0x501984e7` is cam_seq_dram_capture.c's; `0x5019c498`, `0x5019c50a` and `0x5019c57c` are
@@ -4267,7 +4275,7 @@ runs the same instructions (the cost bullet). Round 1's open item 1 is corrected
 | `0x07` | - / - | `0x5005d464` | the SCPU firmware update: `0x510369f8` ("[scpu]Start !") transfers the image (`0x51036bd6`), sends `0x85 {2}`, `0x07`, then polls `0x87` |
 | `0x87` | - / 1 | `0x5005d480` (PER_SCPU_GETFIRMUP_COMP 0xf4) | update state, polled while it reads 1 |
 | `0x88` | - / 2 | `0x5005d36a` from UI_IN `0x5014bf91` (PER_SCPU_GET_PORT_SCAN_ 0xd7) | port scan: retried up to 5000 times while rx[1] is not 0 (errlog `0x19002710`), then rx[0] bit 0 -> UI_IN group 4 `0x0400`; the sub-CPU's reply is {result, busy}, result bit 0 PC13 and bit 1 PC5, and the read enables its report `0x08` (D, scpu spec 3.4) |
-| `0x12`, `0x13`, `0x14` | short writes, batched | the power manager through `0x5004322c` (semaphore PWR_COMM_SCPU 0x68, flag PWR_COMM_SND_SCPU_WAIT 0xee; builders `0x500433f9`, `0x50043452`, `0x500435dc`, `0x50043a47`, `0x50043abd`) | SCPU handlers `0x801570b`, `0x801535f`, `0x8015345` (and `0x80150a5` for an `0x11` with no MN sender) in its power manager; formats ? but for `0x12 {5}`, the start's handshake, which the sub-CPU answers with its message `0x12 {5}` (4.7.4) |
+| `0x12`, `0x13`, `0x14` | short writes, batched | the power manager through `0x5004322c` (semaphore PWR_COMM_SCPU 0x68, flag PWR_COMM_SND_SCPU_WAIT 0xee; builders `0x500433f9`, `0x50043452`, `0x500435b0`, `0x50043a47`, `0x50043abd`) | SCPU handlers `0x801570b`, `0x801535f`, `0x8015345` (and `0x80150a5` for an `0x11` with no MN sender) in its power manager; formats ? but for `0x12 {5}`, the start's handshake, which the sub-CPU answers with its message `0x12 {5}` (4.7.4); the formats, the two `0x11` builders and what each sender waits for: 4.7.6 (2026-11-11) |
 | `0x40` | n / - | `0x5102b8f7` (semaphore PC_PD_COMMUNICATION 0x7c; "USB SCPU_CONN", "PCPDC" beside it) | USB power delivery (I) |
 
 The flag and semaphore names are the object-name table's (D); the commands' meanings beyond the strings are I.
@@ -4369,7 +4377,7 @@ The flag and semaphore names are the object-name table's (D); the commands' mean
     what the camera does on the USB switch is past the lab's stand-ins, so no input sets PC13.
   - **Not covered:** the sources of the battery, power-manager and USB PD messages (the model posts only the port
     scan's `0x08`; `post` can send any), the sub-CPU's wake after a power-off and its own power events, the watchdog's
-    and the reset's error paths (the sub-CPU always answers), every command but the six (eight since 2026-10-29: `0x82` of the scan's ports and `0x12 {5}`, 4.7.4), PER_SIO at the register
+    and the reset's error paths (the sub-CPU always answers), every command but the six (eight since 2026-10-29: `0x82` of the scan's ports and `0x12 {5}`, 4.7.4; nine since 2026-11-11: the power manager's `0x14`, 4.7.6), PER_SIO at the register
     level.
   - **The window clock** ticks with lab time on the E143 board (E143, E146, E147) and on E139 and E134 (their MODELS
     boards). The other E144-family bodies keep it still: E137's and E130's operating-time count (E137 `0x5004d531`)
@@ -4815,6 +4823,166 @@ bytes on; E143's places in brackets):
   reads the channel's FIFO depth (16, 64 for channel 4), an idle transmitter, so the driver's polled send, which waits
   for that value, returns (E118's EVF panel commands over channel 2); that the word counts free entries is I, and
   nothing is received.
+
+#### 4.7.6 The sub-CPU's command 0x14 (2026-11-11; D unless tagged, addresses E143's)
+
+4.1.9 and 4.1.10 left a lab stop: under `--take probe --cpu2 native` the MN's power manager sends the sub-CPU
+`0x14 {0, 1, 0, 3, 0}` 1.16 s after S1, and S-SCPUDEV refused it. This round reads the sender's chain, the five bytes
+on both ends and what the sender waits for, and S-SCPUDEV takes the write (`emu/src/lab/scpudev.mjs`). Pinned by
+`emu/test/test_scpu.mjs` scpuUnits (X, 105 of 105, firmware-free), `emu/test/test_take_ready.mjs` secondShotSession
+(X, 24 of 24) and `emu/test/test_take_release.mjs` focusSession (X, 13 of 13) and camFeSession (X, 5 of 5).
+
+- **The power manager's record and its names.** The manager keeps a 100-byte record at `0x62963ca4`, id 0 of its
+  table `0x60115464` (`{u16 id, +4 size, +8 address}`, 30 ids; `0x50043bae(id, to)` reads one, `0x50043bdb(id, from)`
+  writes one under the interrupt lock `0x50053ebe(3)`). Its debug print `0x50044acc` (run when `(0x62963d18)` has
+  pattern 1) names the fields: of a message `cmd` (u16 +0), `s_cmd` (+2), `batt_eve` (+3); of the record `pwr_src`
+  (u16 +0), `bat_lv` (u16 +2), `bat_emp` (+4), `vb_ad[B]` and `vb_ad[P]` (u16 +18, +20), `pwr_ins` (+22), `bat_prio`
+  (+23), `bat_use` (+24), `psrc_bit` (+25), and two 34-byte battery records, "[B BODY]" at +30 and "[B PBH]" at +64,
+  each `recommend` (+0), `batt_lev` (u16 +2), `d_percent` (u16 +4). The source check's prints name +6 "PWR LEVER", +7
+  "PBH CONNECT", +8 "PBH COVER", +9 "PD ST", +10 "PD VOLT", +12 "PD CURR", +14 "BODY TEMP AD", +16 "PBH TEMP AD". That
+  the PBH is the battery holder grip is I.
+- **The message handler and the source check.** `0x5004408f(message)`: `cmd` with pattern 1 reads a state id, with 2
+  writes one; with `0x30` it copies the record and calls the functions of the table `0x6011563c` (`{u16 mask, +4
+  function}`) whose mask meets `cmd`, each with the message and the copy (`0x500440d0`); any other (`0x100`) goes by
+  `s_cmd` through the table `0x601156c0` (`0x50044687`). `cmd` `0x10` is the source check:
+  - `0x500457da` runs the steps of the table `0x60115870` (`{u8 mask, +4 function}`) whose mask meets `s_cmd`. With
+    `s_cmd` 1: the lever (`0x50045928`), the PBH's connection (`0x50045956`, `0x5000297f(8)`) and cover
+    (`0x500459b7`), the PD state (`0x500459e8`), the temperature A/D values (`0x50045a54`: `0x50042366(4)` the body's,
+    `(5)` the PBH's, `0xffff` for a PBH whose connection byte is not 0), the inserted sources (`0x50045ab5`) and the
+    priority (`0x50045b2d`). `s_cmd` 2 adds the mask-2 steps (`0x500458e6`, `0x50045b6b`, `0x50045bc7`: "INIT USE",
+    the battery voltages, "USE").
+  - The inserted sources: `pwr_ins` is cleared, then bit 0 is set when `0x500467e8(0, the body's temperature value)`
+    answers 0 and bit 1 when `0x500467e8(1, the PBH's)` does (each: the value below 3766), and bit 4 when the PD state
+    is 1.
+  - `0x5004581d` (the judge `0x50045c6a`), `0x50045861`, then `0x50042535`, which compares the copy's `pwr_ins` with
+    the published record's: a bit that went clears that slot's battery record (`recommend` 0) and its counter (state
+    id `0x8103` for the body, `0x8104` for the PBH, by `0x5004716b`); a bit that came sets the slot's `recommend` to
+    3 (`0x500425c5..c7`).
+  - Last, mask `0x30`: `0x5004418b` calls the notices of the list `0x6011569c` with the published record and the
+    copy: `0x500441c8`, `0x50044218`, `0x5004434c`, `0x50044393`, `0x500444b3`, `0x5004453e`, `0x500445bb` (which
+    publishes the copy, `0x50043bdb(0, copy)`) and `0x500445c8` (the module events `0x040a0074`, `0x040a0081`,
+    `0x040a0070`, `0x040a0071` through `0x50025095`).
+- **The sender and the five bytes.** The notice `0x500444b3` takes, for slot 0 (the body) and slot 1 (the PBH), bit
+  `slot` of the copy's `pwr_ins` and the slot's `recommend`. When either slot's `recommend` differs from the published
+  record's it builds one record with `0x500435b0` (called at `0x5004452e`) and sends it with `0x5004322c`
+  (`0x50044536`). The record is `{0x14, 5, {0, pwr_ins bit 0, pwr_ins bit 1, recommend of the body, recommend of the
+  PBH}}`. So `0x14 {0, 1, 0, 3, 0}` says: the body's battery inserted, the PBH's not, the body's `recommend` 3 (set at
+  the insertion), the PBH's 0.
+- **What the sender waits for.** `0x5004322c(batch, out)` takes a batch `{+0 records, +4 u8 count, +8 wait bits}` of
+  12-byte records `{command, size, data}`. It takes the semaphore PWR_COMM_SCPU (`(0x60042f28)`, no timeout) and, per
+  record, posts a PER_SCPU request (`0x5005cd17`: the command, s_size, tx = the record + 2, no rx, the completion
+  `0x500435fe`) and waits with no timeout for pattern 1 of the flag PWR_COMM_SND_SCPU_WAIT (`(0x6004314c)`), which the
+  completion sets. Then `0x5004363f(the first record's command, wait bits, out)`: after `0x11` and after `0x12` it
+  waits 5000 for the wait bits on the flag `(0x6004314e)`, which the MN's handlers of the sub-CPU's messages `0x11`
+  and `0x12` set (a timeout logs `0x1d00a001`; after `0x11` it copies the 104 bytes of battery information at
+  `0x62963c38` to out); after any other command it returns at once. So after `0x14` the sender waits for the write's
+  end only, and PER_SCPU calls a write's completion once its frame is sent, with no reply frame (4.7.1).
+- **The sub-CPU's end.** The handler `0x8015345` posts its power manager message 11 with the 5 bytes
+  (`0x80155cc(11, data, 5)`). The manager's task (`0x801a1ec`; its dispatch `0x801a29c`, a `tbb` over ids 1..32)
+  takes it at `0x801a4d2`, which copies the bytes (`0x801a67e`) and, for slot 0 and then slot 1, keeps two bytes in
+  the manager's object at `0x2000a7c8 + 10 * slot`:
+  - byte 0, the inserted byte: 0 or 1 as sent, `0xff` for any other value; when it changed, `0x801acb0(8)`;
+  - byte 1: `0xff` when byte 0 is 0, else 1 for `recommend` 1, 0 for `recommend` 2 and `0xff` for any other.
+
+  It does not read the frame's byte 0. `0x801acb0(8)` acts on the PBH's inserted byte (+10) as it is at the call. When
+  `0x801ac9a()` answers 1 (bit 0 of the object's +0x20 or +0x21) and +0x15 is 1 (its copy of !PC5, scpu spec 3.4): for
+  1, GIO port 36 high, `0x8013790(200)`, GIO port 24 low and `0x8013ebe(1)`, with a timer started when that answers
+  non-zero (`0x801adc8`; its log string names it PBH_IOEXP_RETRY_TIMER); for 0, GIO port 36 low. When `0x801ac9a()`
+  does not answer 1 and `0x801ac84()` answers 2 (bit 1 of +0x20 or +0x21): GIO port 36 low, whatever the PBH's byte
+  (`0x801ad72` branches past its test `0x801ad68`). Otherwise nothing. None of these paths posts the MN a message
+  (no call of `0x80133dc` or of its users `0x801526e`, `0x80152b0`), and a write has no reply frame (scpu spec 3.2).
+  What reads a slot's byte 1 is not read (?). I: `0x8013ebe(1)` starts the PBH's IO expander (by the timer's name)
+  and GIO ports 36 and 24 switch the grip's supply.
+  X (the image on the lab's Cortex-M4, S-SCPUBOARD): after its start the two slots read `ff ff`, +0x14 and +0x15 `01
+  01`, +0x20 and +0x21 `00 00`; after the session's `0x14` the slots read `01 ff` and `00 ff`, and the link carries
+  nothing more in the 2.5 s the run went on.
+- **Why S1 brings it (X where tagged).** The manager's task starts a PER_MINTIMER (`0x50043c75`: id 130, count 1000,
+  callback `0x50043e2c`), whose callback sets pattern 1 of the task's flag 11, and the loop then runs `0x50043e6d`
+  (`0x50043e13`). That function reads the byte `(0xa32bfb58)` (A), the state id `0x8101` (B: 1 when it is 1..5) and
+  the byte `(0xa32bfb59)` (C) and gives the handler a message: `{0x30, 1}` for A 1, B 1, C 1; `{0x20, 1}` for A 1, B
+  1, C 0; `{0x10, 1}` for A 1, B 0, C 1; `{0x10, 1}` between `0x5000f9aa(0, 54)` and `0x5000f9aa(0, 55)` for A 0, C
+  1; nothing otherwise. So C lets the cyclic source check run, and A with the state `0x8101` the battery check (`cmd`
+  `0x20`).
+  - The setters are `0x50043c63` (A) and `0x50043c6c` (C). The task's start clears both (`0x50043cfe`, `0x50043d09`).
+  - The boot calls three inits. `0x50044eb6` (from `0x500240c4`) sends `{0x100, 0x20}`: the one H-PWRSTART runs
+    (4.7.4). `0x50044ed7` (from `0x50024d43`) sends the source check `{0x10, 2}`. `0x50044f7d` (from `0x501e9943`)
+    sends `{0x10, 2}` again, posts event 9 to queue 10 and sets A and C. The lab runs neither of the last two (X: at a
+    session's open the record is as `{0x100, 0x20}` leaves it, `pwr_ins` 0 and both temperature values `0xffff`, and A
+    and C are 0).
+  - TAKE_MAIN sets C on its own: RdyFcsRdy1's entry `0x503c2961` clears it (`0x503c29bb`), and `0x503c2d08`, which the
+    entry registers with 20 in TAKE_MAIN's 12-slot handler table `0x62a3f050` (`0x5039a5ad`, at `0x503c297e..89`; what
+    20 selects is not read), sets it (`0x503c2d2b`). The setters' other callers are not read: C's `0x503b2302`,
+    `0x503b2fac`, `0x503b30de` and `0x519d04c6`, A's `0x503bae7c`, `0x503bae88` and `0x519d04a0`, the queue's events 4
+    and 5 (C, `0x5004402a` / `0x5004402d`), and for both the sleep return (`0x5004553c`, `0x50045543`) and the
+    power-off (`0x50045588`, `0x5004558e`).
+  - X (the probe's session): A and C are 0 from the start, so a tick does nothing (one at 3.45 s of lab time sends no
+    message). S1 comes at 3.92 s, and TAKE_MAIN (task 107) calls `0x50043c6c(0)` and `0x50043c6c(1)`. The next tick,
+    at 5.08 s, finds A 0 and C 1 and runs `{0x10, 1}`, the session's first source check: `pwr_ins` goes 0 to 1, the
+    body's `recommend` 0 to 3, `pwr_src` to `0x200`, and the notice sends `0x14 {0, 1, 0, 3, 0}`. The 1.16 s are what
+    was left of the timer's period at S1, not a delay S1 starts: the ticks come 1.08 to 1.63 s of lab time apart
+    (the count's unit is ?, 4.7.1). Without S1 neither byte is set and no source check runs; a default session
+    (camapp 1, no probe) sends no `0x14` through S1, S2 and 3 s more.
+  - The inserted battery is the lab's (X): the A/D driver `0x5004d4f4` knows no channel there (its count
+    `(0xa32bff14)` is 0; I: its init is not among the lab's bring-ups), so the request for channel 4 fails with 1 and
+    `0x50042366` answers 0 without a sample, which is below 3766. The PBH's connection byte reads `0xff`, so its
+    value is `0xffff`.
+  - I: on the camera the boot's `0x50044ed7` makes the first source check, so the `0x14` for an inserted battery goes
+    out at the start, and the one the lab sees after the first S1 is that one, late.
+- **The sibling commands.**
+
+  | Command | Bytes and builder | Sent when | What the sender waits for | The sub-CPU's handler |
+  |---|---|---|---|---|
+  | `0x11` | `{0, slot, kind, 0}` for kinds 0..2 (`0x500436f6`), `{0, slot, kind, 0, 2 bytes}` for kinds 3, 4 (`0x50043736`), by the rows of `0x601152f0` (`{kind, +4 builder, +8 / +12 the answer's takers, +16 / +20 the wait bit of slot 0 / 1}`) through `0x50043308` | the battery check's requests for a pack's information (callers `0x50042705`, `0x50042a18`, `0x50042b41`, `0x500448dd`; their conditions not read) | the sub-CPU's message `0x11` for each slot asked, 5000 (flag `(0x6004314e)`, the rows' bits 1, 2, 4, 8) | `0x80150a5`: takes byte 0 = 0 only and calls `0x8016116(0x10, 1)`; the rest, from `0x80150be`, is not read |
+  | `0x12` | `{5}` (`0x500433f9`) | the start's handshake (4.7.4) | the message `0x12 {5}`, 5000 (bit `0x10000`) | `0x801570b` -> its message 12 |
+  | `0x12` | `{2, a, b, 0}` (`0x50043a47`, a request of its own with the flag `(0x60043150)`, "ChargeCtrlW") | from `0x5014f07d` (not read) | the write's end | `0x80156f0(a, b)` |
+  | `0x12` | `{0, 0, 0, x}`, `{1, ..}`, `{3, ..}` or `{4, ..}` (`0x50043abd`, the same flag) | from `0x50043a21` (callers `0x5040d6ec`, `0x5040d751`, not read) | the write's end | none: `0x801570b` takes the first bytes 2 and 5 only |
+  | `0x13` | `{0}` (`0x50043452`) | the notice `0x50044393` -> `0x5004443c`: the PD state 1 and both slots' `d_percent` at most 10 (at most 0 when the product of the PD volt and PD curr values reaches 18,000,000) | the write's end | `0x801535f` -> its message 20 |
+  | `0x13` | `{1}` (`0x5004347d`) | the same notice -> `0x500443af`: the PD state 1 and neither battery inserted; the MN then logs `0x1d00b001` and stops (`0x5003cc5c(1)`, a branch to itself) | the write's end | its message 27 |
+  | `0x13` | `{2}` (`0x500434a9`) | `{0x100, 3}` (`0x50044a4e`), sent on the queue's event 13 (`0x50043fe9`) | the write's end | its message 28 |
+  | `0x14` | `{0, inserted 0, inserted 1, recommend 0, recommend 1}` (`0x500435b0`) | the notice `0x500444b3`: a slot's `recommend` changed | the write's end | `0x8015345` -> its message 11 (above) |
+
+  What the sub-CPU's messages 20, 27 and 28 do is not read (?). `recommend`'s values: 3 is set at an insertion, 0 at a
+  removal and at the start; the MN asks for a pack's information while it is 2 (`0x500426d1`), and the sub-CPU tells
+  1 and 2 apart. What 1 and 2 mean and who sets them is not read (?).
+- **Built (S-SCPUDEV).** `0x14` with 5 data bytes is taken as the write it is: no reply frame, no message, the
+  command manager idle after the release. The model keeps the two slots' bytes as `0x801a4d2` keeps them (`sources`;
+  `0xff` at the start, X, and after a reset, I) and logs them. Refused, each stopping the session: a `0x14` of another
+  size (no sender builds one); a `0x14` that changes a slot's inserted byte while the PBH's is 1 (the grip's bring-up
+  depends on the manager's flags +0x15, +0x20 and +0x21, which the model does not keep, and what the MN then sees is
+  not known); `0x11`, `0x13` and the `0x12` writes but `{5}`, as before. GIO port 36 is not modelled: nothing here
+  reads it. A body's quiet list may not name `0x14`. The handler is read from E143's image, which E146 carries
+  byte for byte (scpu spec 2), so the model takes `0x14` on those two (`src/lab/menu.mjs`: the bodies whose
+  `scpu_lle` digest is that image's, `SOURCES_IMAGE`) and refuses it on the other linked bodies (E147's own build,
+  E139's and E134's lineages), whose handlers are not read.
+- **How far S1 and S2 go now (X).** With the write taken no lab stop follows in 8 s of lab time after S1 or after S2.
+  - S1 held: the `0x14` 1.16 s after S1 is the link's only transfer. Every later tick runs the source check, finds
+    nothing changed and sends nothing. TAKE_MAIN stays in RdyFcsRdy3 (pending `0x200`, pattern `0x5`) and the sequence
+    in phase 103.
+  - S1 released: 4.1.10's second part, which ran with the sub-CPU's own firmware only, runs with S-SCPUDEV too: phase
+    111, TAKE_EXEC holding command 7, the second S1 and its release in phase 111's default case, MENU setting no GUI
+    event.
+  - S2 0.72 s after S1 (focusSession): event 824 in phase 103. REC_FILE (task 27) runs and calls the power manager's
+    `0x50045477(1)` at `0x50540773` 85 to 135 ms after S2 (two traces whose idles are sliced differently): the
+    message `{0x100, 34}`, whose handler `0x500446c3` adds the byte to the u16 counter of the battery in use (id
+    `0x8103`, the body's) unless `pwr_src` is `0x401`. A default session's shot does the same (the counter reads 1
+    after it). Around S2 the firmware logs the REC warnings 4.8.10 lists (`0x0d090002`, `0x1e01500e`, `0x1e001001`,
+    `0x1e01500d` twice). The sequence goes from phase 103 to 106 within 0.1 s of S2. The `0x14` comes about 0.37 s
+    after S2. DISPLAY takes cmd 15 and then the GUI's cmd 17 about every 125 ms. TAKE takes nothing and TAKE_MAIN
+    stays in RdyFcsRdy3. The releases of S2 and S1 are events 828 and 827 in phase 106, which stays. Phase 106's
+    dispatcher is not read (?).
+  - With the probe's `cam_fe` opt-in (camFeSession) S2 goes the same way, and S-CAMFE takes no access.
+- **Golden (X).** `emu/bin/golden.mjs check`: identical; no default session sends `0x14`.
+- **Corrections.** 4.1.9's "Which of the power manager's builders sends it, and why S1 held brings it, is ?" and
+  4.1.10's "Which state change comes 1.16 s after S1 is not read" are answered above, and their stop is gone. 4.7.1's
+  table and scpu spec 3.3 said `0x11` has no MN sender: it has two builders (the table above). 4.7.1's table named
+  `0x500435dc` among the builders: that is the store of `0x14` inside the builder `0x500435b0`. 4.7.4's "bit 2", "bit 4"
+  and "bit 1" of the task's flag are the patterns 2, 4 and 1.
+- **Open.** (1) The power manager's two later inits, `0x50044ed7` and `0x50044f7d`, at the bring-up: every session
+  would then send `0x14` at its start and run the cyclic checks, whose `0x11` requests need the sub-CPU's battery
+  task and a pack on its UART (scpu spec 4.2). (2) The A/D driver's init and its channels' values: the lab's failed
+  read counts as an inserted battery. (3) Who sets `recommend` to 1 and 2 (the battery check's handlers
+  `0x5004261a..0x500428b5`). (4) The sub-CPU's messages 20, 27 and 28, the reader of a slot's byte 1 and its flags
+  +0x20 and +0x21. (5) PER_MINTIMER's unit. (6) Phase 106.
 
 ### 4.8 Card, file system and playback
 

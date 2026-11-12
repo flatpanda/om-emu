@@ -1221,10 +1221,11 @@ between them; a full shot goes on to phase 106 and waits there for TAKE's captur
     (constructor `0x50be6e24`). CapTak_Take's reactive (state dispatch `0x50bca3cc` -> `0x50bca600`; table run-time
     `0x60e67230`, 23 ids in 119..422) takes 143 in case `0x50bca7ea`, which builds 793 (StopTakeReadyDone, at
     `0x50bca801`: one of 4.1.10's "other builders") and sends it to the sequence.
-  - Phase 111's dispatcher takes 793 in case `0x50c6149a` (the controller's vt +8556 -> `0x50c9fa76`: its vt +4484
-    `0x50cac8f9` and vt +3552 `0x50c9fa90`, which builds the parts' own event 1078 through `0x50cae2d5` at
-    `0x50c9fcdb`) and then 1078 in case `0x50c61530` (vt +5324 -> `0x50c8d093`), which enters STANDBY: phase 101. The
-    controller's vtable is run-time `0x60eb54f8` (X).
+  - Phase 111's dispatcher takes 793 in case `0x50c6149a` (the controller's vt +8556, the thunk `0x50cc82b3` to its
+    vt +3548, `0x50c9fa76`: its vt +4484 `0x50cac8f9` and vt +3552 `0x50c9fa90`, which builds the parts' own event
+    1078 through `0x50cae2d5` at `0x50c9fcdb`) and then 1078 in case `0x50c61530` (vt +5324, the thunk `0x50ccbc3e` to
+    its vt +416, `0x50c8d093`), which enters STANDBY: phase 101. The controller's vtable is run-time `0x60eb54f8` (X:
+    the slots read in a session).
   - Phase 111's default case's callee (vt +5220, 4.1.10's ?) is `0x50ccbe73`, a bare return: S1 and its release do
     nothing in phase 111.
 - **The symptom, session by session (X; the lab before this round).**
@@ -1281,13 +1282,17 @@ between them; a full shot goes on to phase 106 and waits there for TAKE's captur
     queue word `0x600431d0` and +8 the kind: 0 for a control the API does not list (CapTak_Take's `0x20`), 2, 1, 4,
     `0x2000`, `0x4000` and 3 for the controls 16, 8, 128, 512, 1024 and 2048 (`0x50417fcf..0x50418010`); control 256
     is command 6. TAKE_MAIN replies status 0 at RdyFcsRdy1's token 5 (4.1.8) and, at RdyFcsRdy2's token 13
-    (`0x503c3214`), clears pending bit `0x1000` and posts `0x04080032` with parameter 0 to the request's reply queue
-    (`0x62a4cef4`; `0x502ce5e6` at `0x503c3262`), unless `0x506e6475` answers non-zero or the word `0x62a4cee0` is 3
-    (neither read, ?); X in the probe's session (4.1.8, 4.1.10). S-TAKERDY sends the two in that order, each followed
-    by a settle: S-MODACK's reply, then `{u16 0, 0x04080032, 0}` to the same queue. 794 is then built in the event
-    task and taken in phase 102, 17.4 to 17.6 ms of lab time after S1 (X; the native TAKE's: 66.7 ms). That the
-    camera's take-ready ends without a wait is I: its AF and AE come between (TAKE_FOCUS's callbacks and
-    TAKE_EXPOSE's `0x503`, 4.1.8), and S-RELSEQ's START_FOCUS and END_FOCUS still follow in the same step.
+    (`0x503c3214`), clears pending bit `0x1000` and posts `0x04080032` with parameter 0 to the queue the packet names:
+    the word `0x62a4cef4` (`0x502ce5e6` at `0x503c3262`), which TAKE_MAIN copies from the packet's +4 on taking the
+    request (`0x503c275c`, a2 the packet, X), not from the request's reply queue word; unless `0x506e6475` answers
+    non-zero or the word `0x62a4cee0` is 3 (neither read, ?); X in the probe's session (4.1.8, 4.1.10), where both
+    queues are 6 and the event's 12 bytes were `00000000 32000804 00000000` (its +2 half is not written: `movhu` at
+    `0x502ce600`, D; 0 there, X). S-TAKERDY sends the two in that order, each followed by a settle: S-MODACK's reply
+    to the request's reply queue, then `{u16 0, 0x04080032, 0}`, the same 12 bytes, to the queue the packet names when
+    the request is taken (6). 794 is then built in the event task and taken in phase 102, 16.7 to 17.6 ms of lab time
+    after the take request in the sessions measured (X; the native TAKE's: 66.7 ms). That the camera's take-ready
+    ends without a wait is I: its AF and AE come between (TAKE_FOCUS's callbacks and TAKE_EXPOSE's `0x503`, 4.1.8),
+    and S-RELSEQ's START_FOCUS and END_FOCUS still follow in the same step.
   - *The stop: command 7.* S-MODACK's reply is TAKE_MAIN's (above); nothing is added.
   - *takePicture: command 11* (api_rec `0x5040ee43`, 4.1.8). RdyTrig2Wait takes it (`0x503c40b2`); when TAKE_MAIN
     replies is not read (I: at the capture's end). The reply is the sequence's 791 (X: event 791 in phase 106 right

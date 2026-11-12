@@ -12,11 +12,12 @@
 // rule needs one).
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { walk, readBlock } from '../src/fw/olyfw.mjs';
 import { lz4Block } from '../src/lab/resources.mjs';
 import { ask, replyTag as tag } from '../src/fw/updater.mjs';
 
-const REPO = path.resolve(new URL('../../', import.meta.url).pathname);
+const REPO = fileURLToPath(new URL('../../', import.meta.url));
 const MAGIC = Buffer.from('olycompress');
 const say = (s) => process.stderr.write(`fw-survey: ${s}\n`);
 const hex = (v) => '0x' + (v >>> 0).toString(16);

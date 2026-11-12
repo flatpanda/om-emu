@@ -5396,17 +5396,22 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
     the menu, and whether the application lets the save slot stand at an empty slot is not read (?).
   - *S-MEDIA:* the second slot's switch as the first's where no manager runs; under camapp 3 the manager takes the
     second slot's change itself and S-MEDIA only reads the drive status back. The first slot under camapp 3 is as
-    before (S-CARD mounts it before the application starts).
+    before (S-CARD mounts it before the application starts). A second card its insertion left unmounted (one with
+    no file system) goes out as a mounted one: mount state 0, the removal's requests (the card-info clear's block +0
+    is the drive, which `0x508b2b51` maps to its port, D), 711 {8, 0, 0}, flag 0; under
+    camapp 3 the manager also unmounts it (state 0, 711 {8, 0, 0}, `0x35`, 15262 = 0, 711 {8, 0, 8}, X). Corrected
+    in review: S-MEDIA had left such a card's flag at 1 and its port's card info set, and the card came back
+    unmountable (media status `0x608`) and its format failed (`0x1402`) (X).
   - *What stays I or lab choice:* that the camera's expander pin reads 1 for an empty slot (the code only tests for
-    not 0); S-CARD's four requests and S-MEDIA's removal requests for the first slot (the manager's are `0x31` and
-    `0x35`, X); the slot controller's +168 in S-CARD's flags (taken as 0). S-CARD sets the flag alone: for a flag
-    of 1 the update also sets 4510 (slot 1) or 4521 (slot 2) to -1 and calls api_rec's `0x504169b2` for both slots
-    (`0x50bba8ff..0x50bba95a`, D; what they keep is not read), which camapp 1 and 2 do not get (open).
+    not 0); S-CARD's four requests for the first slot and S-MEDIA's removal requests for either (the manager's are
+    `0x31` and `0x35`, X); the slot controller's +168 in S-CARD's flags (taken as 0). S-CARD sets the flag alone: for
+    a flag of 1 the update also sets 4510 (slot 1) or 4521 (slot 2) to -1 and calls api_rec's `0x504169b2` for both
+    slots (`0x50bba8ff..0x50bba95a`, D; what they keep is not read), which camapp 1 and 2 do not get (open).
 - **E146.** The rule reads the same forms in its image (the detect `0x508ca01d`, its helper `0x508ca655`, the same
   shadow words, the port index +12, the record controller's 1129 and 1130 at `0x50c81e24`); its sessions pass
   (below). The other bodies with two slots (E139, E134, E125: `card.detect` drives 2) have no helper of this form;
   their one card answers every port as before (open).
-- **Tests (X).** `emu/test/test_storage.mjs --slot2` (storageSlots; E143 25 of 25, E146 20 of 20; registered in
+- **Tests (X).** `emu/test/test_storage.mjs --slot2` (storageSlots; E143 28 of 28, E146 22 of 22; registered in
   `bin/test.mjs`). One card: detect 0 and 1, the second drive's status 1 and media status 1, no command on port 1,
   flags (1, 0), mount states 8 and 8, switch levels 0 and 1; the first slot's card refused for the second; with the
   save slot at slot 2 the firmware's remaining shots are 0 (803 at slot 1) and S2 makes no file; back at slot 1 S2's
@@ -5415,9 +5420,11 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
   save slot at slot 2 gives `D:\DCIM\100OMSYS\P1010002.JPG`, read back on the second card by `refs/volume.mjs` and
   absent on the first; at slot 1 `C:\...\P1010001.JPG` on the first only; the second card out (drive status 1, flag
   0, the first still mounted) and in, then the first out and in. A blank card put into the empty slot: media status
-  with the 4, 0 sectors written, flags (1, 1); "Select Card to Set Up", the second card, Format Card, Yes formats
+  with the 4, 0 sectors written, flags (1, 1); out again (slot 2 empty, flag 0, mount state 0, S-MEDIA in use) and
+  in again as before; "Select Card to Set Up", the second card, Format Card, Yes formats
   and mounts it, the first card keeps its picture; the player's next session starts with it mounted. E143 under
-  camapp 3: one card (the manager clears 15262, its menu camapp 1's word for word), two cards (mounted by the
+  camapp 3: one card (the manager clears 15262, its menu camapp 1's word for word; a blank card in and out, the
+  manager's flags and mount states those camapp 1's above give), two cards (mounted by the
   manager, the menu camapp 1's with two cards, S2 on the second card, the second card out and in by the manager).
   `test_camapp.mjs` camapp3FramesSession (12 of 12) now pins the one-card menus equal and the row's pixels against
   camapp 1 with both flags set. `test_facts.mjs` pins `card.slots` on E143 and E146 and none on the 17 others (1447

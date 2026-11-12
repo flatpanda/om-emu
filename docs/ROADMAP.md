@@ -436,10 +436,15 @@ the survey table.
   Open there: REC_IMAGE's own task, the shooting values, the record's other paths (finding 148). PLAY from the
   playback wizard (OK), which faulted on the family
   and on E130 (finding 94: the GUI's current screen object 0) and returns to the shooting screen since finding 108
-  (the image type answered, on 14 bodies; E147, E144, E139, E134 and E148 still open nothing at OK, ?); erase, which
-  runs on no body: S-PLAYSEQ refuses its requests (21, 23, 301, 510, 395, 396, 497 and 265) since finding 110, where
-  it had finished them with no file removed, and the native erase needs the DCF edit's object delete read (findings
-  110 to 112). A second picture, RIGHT, LEFT and INFO's three views run
+  (the image type answered, on 14 bodies; E147, E144, E139, E134 and E148 still open nothing at OK, ?); erase:
+  since 2026-11-11 Delete's eraseCurrent (21) runs natively on E143, E146, E147 and the eight E144-family bodies
+  whose REC_FILE runs natively, by the firmware's own attribute and object delete (H-OBJDEL: the file's entry and
+  clusters freed by FILECLBK's DCF edit, the database's count and numbering after it, No Picture after the last,
+  a protected picture refused; findings 137 to 140), and is refused on the family and the other five, whose DCF
+  database learns of the lab's pictures only at a mount (E118's and E120's builds hold no such API either); the
+  other erase requests (23, 301, 510, 395, 396, 497 and 265) are refused since finding 110, and the edits' saves,
+  which S-PLAYSEQ finished with no file written, since finding 141. A second picture, RIGHT, LEFT and INFO's three
+  views run
   on the family as on the other bodies, its EVFs too (finding 94; `test/test_playinfo.mjs` takes them on the 19 since
   2026-11-10): E118's never waited for the line compare (finding 95); the
   MN103's DIVU by 0 in E118's record time, which divides by a frame rate that is 0 before a movie take on the camera

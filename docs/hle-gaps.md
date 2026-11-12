@@ -1337,6 +1337,7 @@ between them; a full shot goes on to phase 106 and waits there for TAKE's captur
     are taken in phase 106 and change nothing. The picture on the card is S-RELSEQ's. MENU then reaches UI_IN and
     sets no GUI event, and isCtrlReleaseEnable is not asked, as in the probe's phase 111 (4.1.10; where the key is
     dropped is not read, ?). This is the furthest point: a second full shot is 826 and 824 in phase 106.
+    A card switch's change is not handed to the media manager there either (4.8.12, X; merge fix 2026-11-12).
   - *The controls.* With S-TAKERDY off: S1 on the Super Control Panel's item returns to the shooting screen with the
     through start's read of module 9 (0); after the menu, S1 and S2 leave the sequence in phase 102 with the take
     API's controls `0x20` and `0x40` and no 794, and MENU is refused there (the table's third row). With the
@@ -6752,6 +6753,18 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
   and 2, 4, 8). The removal of the card the save slot names stops the session at the sequence parts' read of module
   9's state (`0x50c8a335`, outside S-TAKEOVER's list): the first slot's with the default settings, the second's
   after the save slot is set to it (X; open).
+- **Who hands the change to the manager: the sequence's phase (merge fix, 2026-11-12).** The UI_IN change reaches
+  the shooting sequence first (event 1083, in each phase's case, which calls the sequence parts' vt +4920,
+  `0x50c93ac7`). That handler writes the mount state above (`0x50c93b47` in, `0x50c93b5a` out) and returns 1 where
+  both media flags are 0, the phase is not 101, 102 or 103 (`0x50cc60fa` at `0x50c93b82..0x50c93ba7`), one of
+  three tests `0x50c8ce8c(0x200000)`, `(0x4000)`, `(0x400)` answers non-zero, or the save slot 1130 is 1; else 0
+  (D). On 1 the phase's case passes the switch's code `0x02021518` to its own virtual (phase 102's vt +4984
+  `0x50cbfc3a`, phase 106's vt +5024 `0x50cc00d4`, D; what they do with it, ?). X: in the phases 101 and 102 the
+  handler returns 0 and the manager then takes the change (`0x50bb89b2` from `0x50bb81f9`) and unmounts or mounts
+  as above; in 106, where S-TAKERDY's unanswered take-picture request leaves the sequence after S2 (4.1.12), it
+  returns 1, the manager is not called, 15262 stays 1 and an insertion is not mounted. The round's slot2 test made
+  the change after S2, which the lab then left in phase 102 (no 794); after take-111's merge the sequence was in 106
+  and two checks failed. The test now makes the change before S2, in phase 101.
 - **The save settings.** 1129 (data object `0x52b1`, the shell's `MODE_PICTURE_RECORD_MEDIA`; six values 0..5), 1130
   (the still save slot, 0 or 1), 1131 (the movie slot, 0 or 1; also the id of the menu row 4.3.7 followed), 1132 (0
   or 1), 1134 and 1404; in the lab's blank store all are 0 but 1134, which is 1 (X). Who reads them:
@@ -6831,7 +6844,7 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
   and mounts it, the first card keeps its picture; the player's next session starts with it mounted. E143 under
   camapp 3: one card (the manager clears 15262, its menu camapp 1's word for word; a blank card in and out, the
   manager's flags and mount states those camapp 1's above give), two cards (mounted by the
-  manager, the menu camapp 1's with two cards, S2 on the second card, the second card out and in by the manager).
+  manager, the menu camapp 1's with two cards, the second card out and in by the manager, then S2 on the second card).
   `test_camapp.mjs` camapp3FramesSession (12 of 12) now pins the one-card menus equal and the row's pixels against
   camapp 1 with both flags set. `test_facts.mjs` pins `card.slots` on E143 and E146 and none on the 17 others (1447
   of 1447). storageSession passes on E143 (59 of 59) and E146 (58 of 58) with the one-card menu path.

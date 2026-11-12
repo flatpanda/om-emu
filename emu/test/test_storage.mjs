@@ -1348,16 +1348,14 @@ export async function storageSlots() {
         }
         ok(mounted(x, 0) && mounted(x, 1) && x.flags.join() === '1,1' && x.ports[1] > 0 && x.mount.join() === '8,8' && same.pixels === 0,
           `camapp 3, two cards: the media manager mounts the second card itself (${x.ports[1]} commands on its port), both flags 1; its menu is camapp 1's with two cards (${same.pixels} pixels differ): ${show(x)}`);
-        const before = s.camapp.card_images(1);
-        s.set(SAVE, 1); idle(s, 300);
-        shoot(s);
-        const got = s.storage.files[0], f = got && has(cardA, got.number);
-        ok(s.storage.files.length === 1 && got.path.startsWith(`${String.fromCharCode(names.drive.charCodeAt(0) + 1)}:`) && f && f.size === got.size && s.camapp.card_images(1) === before + 1,
-          `camapp 3, the save slot at slot 2: S2's file ${got?.path} on the second card (${f?.size} bytes), its image count ${before} + 1`);
-        // the second card out and in: the manager's own unmount and mount. With the save slot back at slot 1: the
-        // removal of the card the save slot names stops under camapp 3, at the sequence parts' read of module 9's
-        // state (0x50c8a335, outside S-TAKEOVER's list), as the first slot's does (docs/hle-gaps.md 4.8.12, open)
-        s.set(SAVE, 0); idle(s, 300);
+        // the second card out and in: the manager's own unmount and mount, with the sequence in its standby (101) and
+        // the save slot at slot 1. The removal of the card the save slot names stops under camapp 3, at the sequence
+        // parts' read of module 9's state (0x50c8a335, outside S-TAKEOVER's list), as the first slot's does
+        // (docs/hle-gaps.md 4.8.12, open). Before S2, not after it: the sequence parts hand a card switch's change on
+        // to the manager only in the phases 101, 102 and 103 (0x50c93ac7's test at 0x50c93b82..0x50c93ba7, D); in
+        // 106, where S-TAKERDY's unanswered take-picture request leaves the sequence after S2, the phase's own case
+        // (vt +5024, 0x50cc00d4) takes it and the manager neither unmounts nor mounts the card (X, docs/hle-gaps.md
+        // 4.1.12)
         pl.run_input({ type: 'card', action: 'remove', slot: 2 });
         idle(s, 1500);
         let y = state(s);
@@ -1366,6 +1364,12 @@ export async function storageSlots() {
         idle(s, 2500);
         y = state(s);
         ok(mounted(y, 0) && mounted(y, 1) && y.flags.join() === '1,1' && y.mount[1] === 8 && s.storage.slot(SECOND).mounted, `camapp 3, the second card in: the manager mounts it again: ${show(y)}`);
+        const before = s.camapp.card_images(1);
+        s.set(SAVE, 1); idle(s, 300);
+        shoot(s);
+        const got = s.storage.files[0], f = got && has(cardA, got.number);
+        ok(s.storage.files.length === 1 && got.path.startsWith(`${String.fromCharCode(names.drive.charCodeAt(0) + 1)}:`) && f && f.size === got.size && s.camapp.card_images(1) === before + 1,
+          `camapp 3, the save slot at slot 2: S2's file ${got?.path} on the second card (${f?.size} bytes), its image count ${before} + 1`);
       } catch (e) { bad.push(`camapp 3, ${tag}: ${e.message.slice(0, 500)}`); }
       try { pl?.close_session(); } catch { /* closed */ }
     }

@@ -534,9 +534,10 @@ export async function storageSession() {
           ok(rec.images.length === 1 && run.task === rec.image.task.id && run.encoded === 1 && rec.waiting(rec.image.task.id), `the encode ran once in REC_IMAGE's task (${rec.image.task.id}), which waits on its queue again: ${JSON.stringify(run && { task: run.task, encoded: run.encoded })}`);
           // S-JPEGENC from ImageParam's parameter set on, at the points the rule reads (fact rec_image encode; E146
           // and E147 since 2026-11-11): CreateParam, the create (its handle in the packet, on E146 and E147 in the
-          // image record), ImageParam's body and the release natively (docs/hle-gaps.md 4.3.4, 4.3.9)
+          // image record), ImageParam's body and the release natively (docs/hle-gaps.md 4.3.4, 4.3.9); the handle read
+          // at the rule's id the one ImageParam hands the set
           const steps = run?.steps;
-          ok(steps && steps.set === 1 && steps.run === 1 && steps.result === 1 && steps.id !== 0 && steps.released === 1, `S-JPEGENC's steps: the parameter set skipped once, the run and Jpeg_Result stood in once, the create's id and the release native: ${JSON.stringify(steps)}`);
+          ok(steps && steps.set === 1 && steps.run === 1 && steps.result === 1 && steps.id !== 0 && steps.id === steps.handle && steps.released === 1, `S-JPEGENC's steps: the parameter set skipped once, the run and Jpeg_Result stood in once, the create's id (the set's handle) and the release native: ${JSON.stringify(steps)}`);
           // ImageParam's four sources natively: TAKE's shot table has no buffer (0x25000402 from each lookup), MM none
           // for handle 0 (0x08010004), and nothing else logged before the parameter set's call; each body's callers
           // pinned as run (X; on E146 and E147 the first lookup's log comes twice: rec_ImgProCtrl_Dst_Bayer calls that

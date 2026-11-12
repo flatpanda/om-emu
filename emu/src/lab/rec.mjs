@@ -184,8 +184,8 @@ export const REC_NATIVE = MODEL_INFO.rec_native === true;
 //             set_call (a call d32, 7 bytes) of the image library's parameter set (set), which divides the request's
 //             white balance gains; the run; rec_ImgPro_Jpeg_Result (result), which sets Size; and, run natively and
 //             observed, the release and the create's handle, at id in the image (the packet's ImgProID[0], the dump's
-//             +36; on E146 and E147 the image record's +0); packet: ImageParam's frame slot of its a0, the packet
-//             (0x50542528), at the set's call
+//             +36; on E146 and E147 the image record's +0; checked against the handle ImageParam hands the set in
+//             d0); packet: ImageParam's frame slot of its a0, the packet (0x50542528), at the set's call
 export const recImageFacts = () => fact('rec_image', REC_IMAGE_E143);
 // the shot's EXIF parameter block (S-EXIFPRM): the fields the lab writes are the rule's (exif: E143's the EXIF module's
 // tag table at body 0x6058e0, {u16 tag, u16 type, u32 bytes, u32 offset}, gives DateTime 0x0132 +1364, DateTimeOriginal
@@ -350,7 +350,7 @@ export class RecFile {
     const E = I.encode, M = J.image;
     const c = sim.read(runtime(E.set_call), 7);
     if (c[0] !== 0xDD || ((E.set_call + (c[1] | c[2] << 8 | c[3] << 16 | c[4] << 24)) >>> 0) !== E.set) throw new RecError(`S-JPEGENC: ${h8(E.set_call)} is not ImageParam's call of the parameter set ${h8(E.set)}`);
-    const run = { task: null, encoded: 0, set: 0, run: 0, id: 0, released: 0, addr: null, reply: null, errlog: null };
+    const run = { task: null, encoded: 0, set: 0, run: 0, id: 0, handle: 0, released: 0, addr: null, reply: null, errlog: null };
     const ours = (at, what) => { if (u32(at, 'pExifParam') !== u32(pk, 'pExifParam')) throw new RecError(`S-JPEGENC: ${what} on a packet ${h8(at)} that is not S-RECREQ's`); };
     // the image: the packet, or REC_IMAGE's image record the packet points at
     const image = (at) => (M.record ? sim.u32(at + M.record.at) >>> 0 : at);
@@ -363,11 +363,12 @@ export class RecFile {
     };
     const hooked = [I.reply.fn, E.set_call, E.run, E.result, E.release];
     // the firmware's error logs from the post to the parameter set's call (ImageParam's sources, docs/hle-gaps.md
-    // 4.3.4): [code, caller] each
+    // 4.3.4): [code, caller] each; and the handle ImageParam hands the set (d0, loaded from the image right before the
+    // call, the rule's form), which the run's read at the rule's id must match
     const e0 = lab.kernel.errors.length;
     lab.hook(E.set_call, (h, r) => {
       ours(sim.u32(r.sp + E.packet) >>> 0, "ImageParam's call of the parameter set");
-      run.set += 1;
+      run.set += 1; run.handle = r.d0 >>> 0;
       run.errlog = lab.kernel.errors.slice(e0).map(([c, , , w]) => [h8(c), /disasm (0x[0-9a-f]+)/.exec(w)?.[1] ?? w]);
       h.skip_call({ ...r, d0: 0 });
     }, 'S-JPEGENC');
@@ -394,10 +395,10 @@ export class RecFile {
     } finally { for (const a of hooked) lab.hooks.delete(runtime(a)); }
     const y = run.reply, fills = (imgpro?.log ?? []).filter((f) => f.n > runs0);
     // S-JPEGENC's steps
-    const steps = { set: run.set, run: run.run, result: run.encoded, id: run.id, released: run.released };
+    const steps = { set: run.set, run: run.run, result: run.encoded, id: run.id, handle: run.handle, released: run.released };
     const record = { task: run.task, encoded: run.encoded, steps, errlog: run.errlog, reply: y, alive: sim.u32(alive) >>> 0, fills: fills.map((f) => ({ mode: f.mode, dst: f.dst, bytes: f.bytes, rows: f.rows, value: f.value })), take };
     this.images.push(record);
-    if (run.encoded !== 1 || run.set !== 1 || run.run !== 1 || !run.id || run.released !== 1 || run.task !== I.task.id || y.status !== 0 || y.header !== J.header || y.addr !== run.addr || y.size !== y.header + stream.length || record.alive !== 0) {
+    if (run.encoded !== 1 || run.set !== 1 || run.run !== 1 || !run.id || run.id !== run.handle || run.released !== 1 || run.task !== I.task.id || y.status !== 0 || y.header !== J.header || y.addr !== run.addr || y.size !== y.header + stream.length || record.alive !== 0) {
       throw new RecError(`${who}: REC_IMAGE encoded ${run.encoded} times${run.task === I.task.id ? ' in its task' : ''} (S-JPEGENC's steps ${JSON.stringify(steps)}), REC_FILE replied status 0x${y.status.toString(16)}, HeaderSize ${y.header}, BuffAddr1 ${h8(y.addr)} (the encode's ${h8(run.addr)}), BuffSize1 ${y.size} (the stream ${stream.length} bytes), pAlive ${record.alive}`);
     }
     return { header: y.header, size: y.size };

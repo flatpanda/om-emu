@@ -390,17 +390,18 @@ export function mode_start() {
 // positions (docs/hle-gaps.md 4.3.8; D unless tagged). The lever read 0x50abdd4b answers 0 for that state and 1 for any
 // other, and the shell's enum names 0 API_LEVER_SW_1 and 1 API_LEVER_SW_2; as a power switch (property 15260 at 1, the
 // menu's "ON/OFF") the switch table gives SW_1 EV_POWER_SW_ON and SW_2 EV_POWER_SW_OFF. The firmware has no default
-// for a lever, but its factory store is the store of a camera at SW_1: with the factory lever function (534 = 4, the
-// menu's mode2, "Switches AF mode/AF target mode/AF target point according to Fn lever position", X) the start's
-// initLeverSwitch writes MODE_AF_CHANGE (535) from the lever, 0 at SW_1 and 1 at SW_2, and the store's default is 0,
-// the S-AF bank (MODE_FOCUS_STILL 0; SW_2's bank MODE_FOCUS_AF_CHANGE_STILL is 2, MF, X). Until 2026-11-11 the idle
-// image left the bit 0 with every other switch bit, the state of every lab before M10 and no decision about the
-// lever: SW_2, where a camera with that store starts in MF (X: control camapp 3 did) while the default session showed
-// S-AF and ran an AF at S1. A ported model's lever keeps bit 0: what its start makes of the lever is not read.
-// The TAKE probe's sessions (--take probe) start at API_LEVER_SW_2 instead, MF: there TAKE_MAIN's take-ready runs with
-// no request to TAKE_FOCUS and ends (RdyFcsRdy3, event 794), the state every result of the probe was measured in
-// before the lever's position was known to matter (docs/hle-gaps.md 4.1.10, 4.2.3, 4.2.5), while at API_LEVER_SW_1
-// it waits for an AF the lab's TAKE_FOCUS does not finish (RdyFcsRdy1, pending 0x5b, X: 4.3.8)
+// for a lever, but its factory store reads as the store of a camera at SW_1 (I): with the factory lever function
+// (534 = 4, the menu's mode2, "Switches AF mode/AF target mode/AF target point according to Fn lever position", X)
+// the start's initLeverSwitch writes MODE_AF_CHANGE (535) from the lever, 0 at SW_1 and 1 at SW_2, and the store's
+// default is 0, the S-AF bank (MODE_FOCUS_STILL 0; SW_2's bank MODE_FOCUS_AF_CHANGE_STILL is 2, MF, X). Until
+// 2026-11-11 the idle image left the bit 0 with every other switch bit, the state of every lab before M10 and no
+// decision about the lever: SW_2, where a camera with that store starts in MF (X: control camapp 3 did) while the
+// default session showed S-AF (the gate's refusal, not the lever) and ran an AF at S1. A ported model's lever keeps
+// bit 0: what its start makes of the lever is not read.
+// The TAKE probe's sessions (--take probe) start at API_LEVER_SW_2 instead, the lever every result of the probe was
+// measured at before its position was known to matter (docs/hle-gaps.md 4.1.10, 4.2.3, 4.2.5): MF under control
+// camapp 3, where TAKE_MAIN's take-ready runs with no request to TAKE_FOCUS and ends (RdyFcsRdy3, event 794), while
+// at API_LEVER_SW_1 it waits for an AF the lab's TAKE_FOCUS does not finish (RdyFcsRdy1, pending 0x5b, X: 4.3.8)
 export const LEVER_IDLE_STATE = 1, LEVER_PROBE_STATE = 0;
 // the lever's bit of group images at a state: state 0 is the bit at its polarity
 function set_lever(imgs, state) {

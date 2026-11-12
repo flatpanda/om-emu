@@ -395,7 +395,7 @@ A bitmap of format 1 (2026-10-29) is a stream of 4-bit tokens, low nibble first,
 
 **Where:** `emu/src/lab/play.mjs:270-305` (S-KEYBITS idle image), `emu/src/lab/play.mjs:367-369`
 
-**Emulator:** The idle image gives every UI_IN switch a level at the start: bit 0 for most switches on E143 (its pinned tables), and on a ported body the power lever on and the USB connection 0x0400 with no cable, each set by its state under that body's polarity, except in the group the firmware's group-4 producer pushes from its own image, where the E143 family's 0x0400 lies. No producer of the real levels (the sub-CPU's port scan, the USB detection) runs.
+**Emulator:** The idle image gives every UI_IN switch a level at the start: bit 0 for most switches on E143 (its pinned tables; the Fn lever's bit 1 since 2026-11-11, API_LEVER_SW_1, the position the factory store reads as, I: `docs/hle-gaps.md` 4.3.8), and on a ported body the power lever on and the USB connection 0x0400 with no cable, each set by its state under that body's polarity, except in the group the firmware's group-4 producer pushes from its own image, where the E143 family's 0x0400 lies. No producer of the real levels (the sub-CPU's port scan, the USB detection) runs.
 
 **Expected / concern:** A real camera starts with whatever its switches read. The lab models one start, power lever on and no cable; a USB start, a charge start or another switch position is not represented. On the E143 family 0x0400 stays at state 0, which the E144 family's firmware reads as a cable; their starts do not act on it, but other paths that read it may.
 

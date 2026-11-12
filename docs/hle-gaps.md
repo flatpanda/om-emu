@@ -3512,15 +3512,18 @@ mode follows the lever in camapp 1 as it does in camapp 3.
   set every switch bit 0, "the old state of every lab before M10" (`docs/om1-input-spec.md`), except the monitor's and
   the mode dial's. For the lever that is state 0, SW_2. Nobody chose it. With the factory store a start at SW_2 runs
   setFocusModeChange(1) and rewrites the store to bank 1, as camapp 3's start did (4.3.7, X).
-- **The factory store is a camera's at SW_1.** Its MODE_AF_CHANGE is 0, the value the start writes at SW_1. Its two
-  records of the lever say position 1 as well: MODE_LEVER_SWITCH_LOCK_STATE (1685) is written 1 where the lever read
-  answers 0 and 2 where it answers 1 by three application sites (`0x5107fbe4`, `0x51083f83`, `0x511682ae`), and its
-  default is 1, as MODE_LOCKING_FN_LEVER_POSITION's (1476) is. The lab's lever events do not reach those sites (X: 1685
-  stays 1 over both changes in both camapps), and the readers of 1685 and 1476 are not read (?). The firmware cannot
-  know a lever's position without reading it, and which position a camera ships in is a fact about hardware (?).
-- **Decision: the lab's input was wrong, and is corrected.** A session is a camera with a factory store at its first
-  start; the store is position 1's, and the lab's default session showed S-AF and ran an AF at S1, which is position
-  1's behaviour, while its lever input said position 2. The idle image now sets the lever to state 1, API_LEVER_SW_1
+- **The factory store reads as a camera's at SW_1 (I, from the defaults below).** Its MODE_AF_CHANGE is 0, the value
+  the start writes at SW_1. Its two records of the lever say position 1 as well: MODE_LEVER_SWITCH_LOCK_STATE (1685)
+  is written 1 where the lever read answers 0 and 2 where it answers 1 by three application sites (`0x5107fbe4`,
+  `0x51083f83`, `0x511682ae`), and its default is 1; MODE_LOCKING_FN_LEVER_POSITION's (1476) default is 1 too (X),
+  that its 1 means position 1 is I (its name; no writer of it is read). The lab's lever events do not reach those
+  sites (X: 1685 stays 1 over both changes in both camapps), and the readers of 1685 and 1476 are not read (?). The
+  firmware cannot know a lever's position without reading it, and which position a camera ships in is a fact about
+  hardware (?).
+- **Decision: the lab's input is corrected (I: it rests on the reading above).** A session is a camera with a factory
+  store at its first start; the store reads as position 1's, while the lever input said position 2. (The default
+  session's S-AF before this round is no evidence for either: it came from the refused gate, 4.3.7, not from the
+  lever.) The idle image now sets the lever to state 1, API_LEVER_SW_1
   (`play.mjs` LEVER_IDLE_STATE), as the mode dial starts where the store's mode is (`docs/om1-input-spec.md`). With it
   camapp 3 starts with 535 at 0 and its shooting screen is camapp 1's pixel for pixel; at SW_2 it writes 1 and shows
   MF, 1,655 pixels in x 417..894, y 72..334, 4.3.7's box (X). 4.3.7's "the lever at API_LEVER_SW_2 (UI_IN's decode of
@@ -3528,11 +3531,13 @@ mode follows the lever in camapp 1 as it does in camapp 3.
   shows MF after power-on (D for the logic; the order against the sequence parts' standby is I, as in 4.3.7). The
   other bodies' idle images keep the lever's bit 0: what their starts make of the lever is not read.
 - **The TAKE probe keeps SW_2 (`play.mjs` LEVER_PROBE_STATE).** Every result of `--take probe` (4.1.4 to 4.1.10, 4.2.3,
-  4.2.5) was measured with the lever at SW_2, in MF, where TAKE_MAIN's take-ready asks TAKE_FOCUS for nothing and ends
-  (RdyFcsRdy3, event 794). At SW_1 it waits in RdyFcsRdy1 with the pending bits `0x5b` for an AF the lab's TAKE_FOCUS
-  does not finish, and the second shot's and the release route's sessions stop there (X: `test_take_ready.mjs` and
-  `test_take_release.mjs` rounds 2 and 4 fail with the probe at SW_1). So the probe's sessions start at SW_2, a
-  stated input of the probe, not the default's.
+  4.2.5) was measured with the lever at SW_2. Under control camapp 3, where the gate passed, that is MF, and
+  TAKE_MAIN's take-ready asks TAKE_FOCUS for nothing and ends (RdyFcsRdy3, event 794); under control camapp 1 the gate
+  refused and 535 stayed 0 until this round (its probe start now takes the change and sends command 22 too,
+  `test_take.mjs` START_LAB). At SW_1 the take-ready waits in RdyFcsRdy1 with the pending bits `0x5b` for an AF the
+  lab's TAKE_FOCUS does not finish, and the second shot's and the release route's sessions stop there (X:
+  `test_take_ready.mjs` and `test_take_release.mjs` rounds 2 and 4 fail with the probe at SW_1). So the probe's
+  sessions start at SW_2, a stated input of the probe, not the default's.
 - **The gate and its callers.** `0x50ab5f6f` answers 1 where the phase query `0x50ab57e9` answers 101 (4.3.7). A byte
   scan finds three calls of it, against more than 200 of the query: `0x50adfbda` in setFocusModeChange's first form
   (`0x50adfbc3`, from the API `0x20183`'s `0x50b53072`), `0x50adfb4c` in its second (`0x50adfb2a`, from the same API's
@@ -3545,9 +3550,10 @@ mode follows the lever in camapp 1 as it does in camapp 3.
   484 and 24 through 480 of some interface; which are Shooting's is not read (?), so what reaches the forms is the run
   below (X). Both forms return `0xf0000058` behind a 0. getShutterSpeedLimit reaches its call only with the property
   MODE_CAMERA (26) at 6, 477 and 754 at 0, 598 at neither 1 nor 2 and two state tests not 1 (`0x50ab57e0`,
-  `0x50ab5780(3)`). A 0 sends it to `0x50ac47b7`, which sets shtSpdLimt[0] from the shutter value (property 4) alone:
-  1 at `0x8001`, 682's test at `0x7fff`, else 0. A 1 sends it on to `0x5040ecc2` and 682 and, with neither at 1, to
-  `0x50ac47dd`, which with MODE_DIAL_B_ONOFF (1444) not 1 leaves both limits as the range compare before it set them.
+  `0x50ab5780(3)`). A 0 sends it to `0x50ac47b7`, which sets shtSpdLimt[0] from the shutter value (property 4): 1
+  at `0x8001`, 682's test at `0x7fff` (which also clears shtSpdLimt[1]), else 0. A 1 sends it on to `0x5040ecc2`
+  and 682 and, with neither at 1, to `0x50ac47dd`, which with MODE_DIAL_B_ONOFF (1444) not 1 leaves both limits as
+  the range compare before it set them.
 - **The camera's standby (X: control camapp 3).** The query answers 101 at the shooting screen, with the menu or the
   Super Control Panel open and in playback (where the shooting service has ended), and 102 from S1 down on. With S1
   held the lever's setFocusModeChange is refused and 535 stays.
@@ -3578,7 +3584,10 @@ mode follows the lever in camapp 1 as it does in camapp 3.
   (1934) for 1; any other value, MF's 1 among them, answers 0. After posting, the sender sets word 16 of the table that
   holds module 9's state to 1 (`0x50ab6299(16, 1)`); END_FOCUS's sender (`0x50cad03e`, TRA 1321) clears it and is
   guarded by its callback flag alone. Its twelve callers are the statechart's transition actions; one (`0x50c8f9b6`)
-  sends only while that word is 1, the guards of the others are not read (?).
+  sends only while that word is 1, the guards of the others are not read (?). Just before it READY's entry calls
+  `0x50cad93f`, which builds TRA 1319 (START_READY, builder `0x50af26c5`) behind its callback flag's bit `0x20` alone,
+  whatever the focus mode (review, D); S-RELSEQ has never posted a START_READY in either mode, and whether the camera's
+  flag lets it through is not read (?).
 - **The same, measured (X).** Under camapp 3 after a menu pass (4.1.10) S1 enters READY (phase 102) and the sender
   runs: at SW_2 it builds nothing, at SW_1 one 1323. With TAKE native (`--take probe --cpu2 native`) S1 at SW_2 ends
   READY in its own step: phase 103, the take status's word 0 `0x00100007` (STANDBY's 1, READY's 2, READY_FINISH's 4),
@@ -3605,15 +3614,25 @@ mode follows the lever in camapp 1 as it does in camapp 3.
   start's new 477 -> 468); which code takes that path at SW_2 is not read (?). (2) S-SEQSTANDBY: the start's and PLAY's
   return's setFocusModeChange(0) is answered at the gate and taken, the stand-in listed from the first outcome on
   (with (1), the start step's hook stops 9,201 -> 9,648 and prop_get 2,667 -> 3,259). (3) HALF_AF: keys' S1 asks
-  the focus mode (S1 down prop_get +7, memset +1, hook stops +8; its callbacks the same, S-AF). (4) inputs' lever step
-  submits 0 (above); that scenario's composite stops at its FEATURE_UNOBSERVED before and after, so no frame shows the
-  MF. Every screen is identical; every devices item is identical with the instruction counts masked (the irq rows'
-  and the xcpu ring rows' instruction word); run/perf's P10b play workload has the same frames, lab time, hook log and
-  settle and elapse logs and 315,470 instructions (185,434,406 -> 185,749,876) and 949 register reads more. Control:
+  the focus mode (S1 down 18 stops more: prop_get 7, memset 1 and 10 unnamed; its callbacks the same, S-AF). (4)
+  inputs' lever step submits 0 (above); that scenario's composite stops at its FEATURE_UNOBSERVED before and after,
+  so no frame shows the MF. Every screen is identical; every devices item is identical with the instruction counts
+  masked (the irq rows' and the xcpu ring rows' instruction word); run/perf's P10b play workload has the same
+  frames, lab time, hook log and settle and elapse logs and 315,470 instructions (185,434,406 -> 185,749,876) and 949 register reads more. Control:
   this tree with the lever at SW_2 and S-SEQSTANDBY off gives P10b's recorded detail in every field and golden.json's
   digests for shoot-tft, playback and power-replay (keys then differs in stops, harness and output alone, HALF_AF's
   reads); the lever at SW_1 alone is 71,678 instructions and 322 reads fewer, so the stand-in's taken path is
   387,148 and 1,271 more. Re-recorded with that reason, evidence firmware.
+  Review (2026-11-12, X): with the three switches off (the idle lever's bit 0, S-SEQSTANDBY's answer, HALF_AF) and the
+  inputs file as before, all 28 sessions check identical, every layer, against golden.json as it was before this
+  round, so these causes are the whole difference. Three of its parts are not a start's, all from (1) and (2): at the
+  menu's close (menu-tft's second MENU, play-perf's step 304) the application's lever code (`0x510548cc`, after the
+  lever read API's `0x50afe42e`) reads 534 once more at SW_1, 6 stops; the object at `(0x60361c24)` that `0x50b822cf`
+  makes on its first use (7 heap blocks, 0x1b0, 0x100 and five of 0x50, and 10 memsets) was made by the start's SW_2
+  path and is now made by its next user, queue's RIGHT (its tick 4, through `0x50b7b79a` -> `0x50ac3cb7` ->
+  `0x50b822ec`), 17 stops there, and the sessions that reach no other user never make it; playback's PLAY return is
+  978 stops where a start is 943: at SW_2 it found that object made, and its difference has 9 property reads more than
+  the start's (535 three times, 44, 855, 1138, 1320, 1837, 15209; which code makes them is not read, ?).
 - **Tests (X).** `emu/test/test_fnlever.mjs` fnLeverSession (12 checks: the idle lever read as API_LEVER_SW_1, the
   factory lever function and banks, S-SEQSTANDBY listed from the start and the lab's own query still 100; S1 in S-AF
   with its callbacks, the AF lock and S-SCENE's focus; the lever to SW_2 writing 535 behind the gate's 1, MF, with the
@@ -3635,14 +3654,18 @@ mode follows the lever in camapp 1 as it does in camapp 3.
   Results: test_fnlever 12/12 and 4/4; test_camapp 33/33, 2/2, 5/5, 25/25, 25/25, 13/13, 11/11; test_take 27/27;
   test_take_ready 15/15; test_take_release 8/8, 12/12, 5/5; test_expcb, test_storage (session), test_audio (session),
   test_cpu2, test_c3power, test_dispq, test_modpost, test_scene, test_live and test_fnkeys unchanged and passing;
-  test-pure all passed.
+  test-pure all passed. Review (2026-11-12): the sessions left HALF_AF's C-AF and 11/12 branches unpinned (X: HALF_AF
+  answering 1 for every mode but MF passed fnLeverSession's 12 checks), so fnLeverUnits (13 checks, firmware-free,
+  registered in `emu/bin/test-pure.mjs`) runs every branch of the rule and S-SEQSTANDBY's rest test on a stub lab;
+  mutating the C-AF branch, the 11/12 branch or the rest test's pending callbacks fails it (X).
 - **Open.** Which position a camera ships in, and the shooting screen of one started at position 2 with a factory
   store (the order of the start against the sequence parts' standby, 4.3.7's question). The sequence's phase after S2
   and through the rec view (the stand-in refuses there). The guards of END_FOCUS's other senders. The readers of 1685
   and 1476; property 15267, which the sites that write 1685 test for 2; 595 (MODE_LEVER_SWITCH_LINKAGE) and
   1304..1306 (MODE_FOCUS_AF_CHANGE_ONOFF_STILL and its target mode and target point siblings, all 1 in the factory
   store), whose part in the bank's switch is not read. Which application sites call the Shooting interface's slots 480
-  and 484 besides initLeverSwitch. getShutterSpeedLimit's limits at the shutter range's end. TAKE's frame mode in MF
+  and 484 besides initLeverSwitch. getShutterSpeedLimit's limits at the shutter range's end. START_READY (TRA 1319) at
+  READY's entry, which S-RELSEQ does not post in either focus mode. TAKE's frame mode in MF
   (S-TAKEFRAME keeps the AF frames' 4). The other bodies: the lever's idle bit, the gate and S1's test are as before;
   their ids and addresses are not read.
 - **Corrections.** 4.3.7's decision (camapp 1's S-AF "the wrong one", the idle level's API_LEVER_SW_2 a free input)

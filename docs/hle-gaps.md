@@ -5624,7 +5624,7 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
   and the Huffman tables (`+0x1200..+0x1800`, `0x5050a606`), as does the start beside it (`0x5050a4ad`, with the
   quantization tables at `+0x1c00` and `+0x1c80`). The codec parses the stream's headers itself (I: the driver gives it
   the file from SOI and no table).
-- **The protocol (D; X: 5,465 register accesses a request, 5,026 of them the program's copy).** The set-up writes the
+- **The protocol (D; X: 5,464 register accesses a request, 5,026 of them the program's copy).** The set-up writes the
   clock words (`0x5048d48a`: `+0x2d8`, `+0x2e8`, `+0x2e0`, `+0x2f4`, then `+0x2f8` = `0x2611` and a wait until its low
   byte reads 0), the masks to `+0x004`, `+0x014`, `+0x01c`, and the units' words. The go (`0x5048198b`): the codec's
   start, `+0x0c8` = `0x102`, `+0x12c` = 60, the masks to `+0x034`, `+0x03c`, `+0x0cc` = 5, `+0x024`, `+0x13c` =
@@ -5632,10 +5632,11 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
   5 by the library's `0x5048c3a0`, which H-IMGPROINIT runs): it ands the statuses `+0x110`, `+0x120`, `+0x12c` with
   their enables `+0x134`, `+0x13c`, `+0x140`, writes the results back and clears the enables; with `+0x120` bit 20 it
   reads the resizer's status `+0xb47c` and enable `+0xb478`: bit 0 calls the request's callback with phase 12 (X: the
-  wait then returns). The end function writes the masks to the statuses (`+0x10c`, `+0x11c`, `+0x120`, `+0x12c`) and
-  to `+0x020`, `+0x030`, `+0x038`, `+0x000`, `+0x010`, `+0x018`, the codec's `+0x000c` = 5 and the clock words
-  (`0x5048d53a`). The driver reads no codec register but `+0x1000` and no result word on this path (X: 13 reads a
-  request).
+  wait then returns), unless the record's halfword +44 has bit 5: then it writes `+0x1b4` = `0x800000` and returns
+  (`0x5048bc05..19`; not taken here, X). The end function writes the masks to the statuses (`+0x10c`, `+0x11c`,
+  `+0x120`, `+0x12c`) and to `+0x020`, `+0x030`, `+0x038`, `+0x000`, `+0x010`, `+0x018`, the codec's `+0x000c` = 5
+  and the clock words (`0x5048d53a`). The driver reads no codec register but `+0x1000` and no result word on this
+  path (X: 13 reads a request).
 - **The geometry is in the words (D).** The stream: `+0xae04` = the request's source +0 (`0x50477451`). The codec's
   output: `+0xb00c` = the work buffer >> 4 (`0x504773c2`), `+0xb08c` / `+0xb080` the MCUs a row and the MCU rows
   (`0x504772d5..fe`). The resizer reads the same buffer (`+0xb550`, `0x5047991b`; `+0xb548` the size) and maps each
@@ -5646,32 +5647,41 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
   So x reads the source at 809.5 + (x - 449.5) * 1.80078: 0.049 .. 1618.95 (X). The destination: `+0xb560` =
   address >> 4, `+0xb5a0` the size, `+0x8b8` the format (the low nibble 2, bit 8 clear for 3074, `0x5047ecbf..`),
   `+0x8ac` the pitch in units of 64 pixels (`0x5047ef83..b0`).
-- **The prefilter (D for the table and the words; its form I).** `0x504e2425` writes the unit `+0x2e00` for each axis
-  the source is larger in: the row `0x504e23a5` finds by the ratio source / destination (.10 fixed) in 40 thresholds
-  (`0x5066fb58`; the rows, `0x506a4a64`'s pointers). A row is a pre-reduction code (0, 1, 3 or 7) and three taps;
-  every row's taps make 128 as centre + 2 * next + 2 * outer (X: all 40), so a symmetric filter of 5 taps in 1/128
-  (I), its pass band narrowing with the ratio. The view's 1.8 takes row 9: 68, 34, -4 (X: `+0x2e64` = `0x220044`,
-  `+0x2e68` = `0xfffc`). A ratio above 3.249 takes a pre-reduction: INFO's detail view (474 x 316, 3.42) has code 1,
+- **The prefilter (D for the table and the words; its form I).** The packing `0x50477d5b` takes per axis the ratio
+  ((source - 1) * 100 << 10) / ((destination - 1) * k), .10 fixed, from a 32-bit dividend to a 16-bit quotient: the
+  source's size from its +16 / +18 (`0x50477e57..6e`), the destination's from its +12 / +14 (`0x50477e70..86`), k
+  100 for a source format whose bits 15..10 are not 1, 3 or 4 (`0x50477e43`; 7170 and 7171 are 7; the others take k
+  from a table, not read), the divisions at `0x50478284..ab` (X: d0 / d1 at `0x504782ac` 1844 and 1844 for the view,
+  where (1620 << 10) / 900 would give 1843). `0x504e2425` writes the unit `+0x2e00` for each axis whose ratio is above
+  1024: the row `0x504e23a5` finds, the first of 40 thresholds (`0x5066fb58`) the ratio does not exceed, the last row
+  above them all (`0x504e23c8`; the rows, `0x506a4a64`'s pointers). A row is a pre-reduction code (0, 1, 3 or 7) and
+  three taps; every row's taps make 128 as centre + 2 * next + 2 * outer (X: all 40), so a symmetric filter of 5 taps
+  in 1/128 (I), its pass band narrowing with the ratio. The view's 1844 (1.80) takes row 9 (1778 < 1844 <= 1909): 68,
+  34, -4 (X: `+0x2e64` = `0x220044`, `+0x2e68` = `0xfffc`). A ratio above 3327 (3.249) takes a pre-reduction: INFO's
+  detail view (474 x 316; X: 3504 and 3507 at `0x504782ac` in a run that passed the request to the model) has code 1,
   and its request differs in 57 words beside the program's copy (X): B is `0x101001`, the resizer's source is 810 x
   540 (`+0x249c` = `0x1948`), `+0xcd8`, `+0xce8`, `+0xd00`, `+0xf00`, `+0xb4b8`, `+0xb4dc`, `+0xb588` change. Which
   unit halves the picture, and how, is not read (?). The table fits codes 1, 3 and 7 being reductions by 2, 4 and 8
   (I): rows 16 to 23, 24 to 31 and 32 to 39 repeat the taps of rows 8 to 15 at 2, 4 and 8 times their thresholds (X:
   3557, 7114, 14228 against 1778; the last threshold is 65535, so a 16-bit ratio always finds a row).
-- **The model (X, `emu/src/dev/imgpipe.mjs`, board `imgpipe`).** S-IMGPIPE: the pages above as storage, the commit
-  word's low byte 0, the statuses' write 1 to clear, IRQ 288 while a status and its enable share a bit. At the go's
-  last word it computes the one program read here and refuses any other with a bus error (other masks, a missing
-  word, the 4:2:0 mode, a crop, a cross term, format 3330, a pre-reduction, a work buffer on the lab's memory, the
-  encode): the stream from `+0xae04` decoded by the lab's own baseline decoder (`emu/src/lab/jpeg.mjs` decodeJpeg;
-  SOF0, 8 bits, one interleaved scan), checked against the words' size and MCU counts, then **A-IMGPIPE-2 (I)**: each
-  plane through the prefilter's taps along x and y (edge samples repeated), sampled at the mapped position by linear
-  interpolation, the chroma at each pair's even pixel; the destination written as Y Cb Y Cr, the layout the library's
-  fill gives format 3074 (4.3.1). **A-IMGPIPE-1 (I)**: the end comes 1 ms of lab time after the go. The work buffer
-  is not written. What the units at `+0x400` and `+0xc00` and the resizer's program do to the samples is not read;
-  the resizer's own filter and the chroma's siting are assumptions. What would settle them: the program's meaning, or
-  a frame read back from a camera.
-- **S-PLAYDEC, what remains.** A request with a pre-reduction (the lab applies the library's own rule to the
-  request's sizes, the thresholds read from the image) is answered as before: issue and wait 0, no pixel. X: the
-  detail view's. S-PLAYSEQ, S-PLAYCOMP and S-PLAYVIEW stay out; S-ALBM stays (below).
+- **The model (X, `emu/src/dev/imgpipe.mjs`, board `imgpipe`).** S-IMGPIPE: the units' pages above as storage and,
+  of the block's own words, the 45 the decode writes (X; any other, such as the handler's `+0x1b4`, a bus error), the
+  commit word's low byte 0, the statuses' write 1 to clear, IRQ 288 while a status and its enable share a bit. At the
+  go's last word it computes the one program read here and refuses any other with a bus error (other masks, a missing
+  word, the 4:2:0 mode, a crop, a cross term, format 3330, a work buffer on the lab's memory, the encode; a
+  pre-reduction already at its set-up's write of `+0xf00`, X): the stream from `+0xae04` decoded by the lab's own
+  baseline decoder (`emu/src/lab/jpeg.mjs` decodeJpeg; SOF0, 8 bits, one interleaved scan), checked against the
+  words' size and MCU counts, then **A-IMGPIPE-2 (I)**: each plane through the prefilter's taps along x and y (edge
+  samples repeated), sampled at the mapped position by linear interpolation, the chroma at each pair's even pixel;
+  the destination written as Y Cb Y Cr, the layout the library's fill gives format 3074 (4.3.1). **A-IMGPIPE-1
+  (I)**: the end comes 1 ms of lab time after the go. The work buffer is not written. What the units at `+0x400` and
+  `+0xc00` and the resizer's program do to the samples is not read; the resizer's own filter and the chroma's siting
+  are assumptions. What would settle them: the program's meaning, or a frame read back from a camera.
+- **S-PLAYDEC, what remains.** A request with a pre-reduction (the lab applies the library's own rule above to the
+  request's fields, the thresholds read from the image; another source format is refused) is answered as before:
+  issue and wait 0, no pixel. X: the detail view's (ratios 3504 and 3507, codes 1 and 1); for each view the rule's
+  ratios equal the library's own at `0x504782ac` (playDecodeSession). S-PLAYSEQ, S-PLAYCOMP and S-PLAYVIEW stay out;
+  S-ALBM stays (below).
 - **Where the result is shown (X).** The destination is one of the through image's two banks in turn (`0x98d4d800`,
   `0x9a43e000`; the request's +64). The display interface then sends DISPLAY cmd 5 (the function ending at
   `0x507f67fb`, through `0x5002e39d`) and the TFT's IMG1 is latched on the bank: DMASADR = address >> 4, DMALD `0x2b8`,
@@ -5717,7 +5727,7 @@ slots read "card present", so `control camapp 3` mounted the first slot's card i
   lab's kernel does not allow, before the application starts. It stays: no still path needs it.
 - **Tests (X).** `emu/test/test_imgpipe.mjs`: the decoder against refs/jpeg.mjs 6 of 6 (the lab's stream sample for
   sample; streams with AC coefficients in three samplings within 1 level), the model on a bare machine 30 of 30.
-  `emu/test/test_camapp.mjs`: playDecodeSession 25 of 25, playNativeSession 11 of 11.
+  `emu/test/test_camapp.mjs`: playDecodeSession 27 of 27, playNativeSession 11 of 11.
 - **Open.** The pre-reduction (which unit, its phase), so the detail view's decode; the units at `+0x400` and
   `+0xc00`, the resizer's program and filter (A-IMGPIPE-2); the units' time (A-IMGPIPE-1); the codec's own registers
   beyond the driver's words, and its encode (another track); the request's callback phases 21, 22, 15 and 38; the

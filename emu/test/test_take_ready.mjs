@@ -73,8 +73,10 @@ const EVENT_TASK = 0x50ABBF0C, PWR_TASK = 0x50043CDB;
 // its table (run-time 0x60e9aeb0, 64 slots {id - 281, case}) and its default case 0x50c615e4 for an id not in it (a
 // virtual call, vt +5220, of the object at +2784, not read), which the histogram's 944 reaches too
 const PHASE111_TABLE = 0x60E9AEB0, PHASE111_BASE = 281, PHASE111 = 0x50C611D5, PHASE111_DEFAULT = 0x50C615E4;
-// the stop's request as the API sender posts it (OlyQeWr's return 0x503eba07): {reply queue 6, token, command 7}
-const OLYQEWR = 0x5002C151, API_SEND_RETURN = 0x503EBA07, STOP_COMMAND = 7, STOP_TOKEN = 0xF0070000;
+// the stop's request as the API sender posts it (OlyQeWr's return 0x503eba07): {reply queue 6, token, command 7}; the
+// token's slot is 6 since the second card slot is empty by default (X: 7 before slot2's merge, 6 after it; I: camapp
+// 3's media manager no longer sends drive 1's mount through the API sender at the start, docs/hle-gaps.md 4.8.12)
+const OLYQEWR = 0x5002C151, API_SEND_RETURN = 0x503EBA07, STOP_COMMAND = 7, STOP_TOKEN = 0xF0060000;
 // the frame the power manager sends (docs/hle-gaps.md 4.7.6): its builder 0x500435b0 (a0 the two inserted bits, a1 the
 // two recommend bytes), called from its notice 0x500444b3 (a0 the published state record, a1 the new one: +22
 // pwr_ins, +30 and +64 the slots' recommend bytes; returning to 0x50044533); the cyclic-check byte's setter

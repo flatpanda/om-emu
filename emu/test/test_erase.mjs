@@ -20,7 +20,8 @@
 //                 the edits' saves (finding 141's fifteen), with nothing taken.
 //                 On a body without the native erase (the rule reads no calls, or its DCF database does not hold the
 //                 pictures in the session: ERASE_NATIVE has the others) the session takes two pictures and checks that
-//                 eraseCurrent is refused at its execute and both files stay.
+//                 eraseCurrent is refused at its execute and both files stay. On every body outside ERASE_DIALOG
+//                 Delete is pressed in playback and must open no dialog.
 //   node emu/test/test_erase.mjs   (with OM_EMU_MODEL=E146 etc.; exit 1 on a failure)
 import { createHash } from 'node:crypto';
 import zlib from 'node:zlib';
@@ -28,9 +29,13 @@ import zlib from 'node:zlib';
 // the bodies whose eraseCurrent runs natively (X, 2026-11-11; the rule's calls and REC_FILE's or the recorder's
 // registration in the DCF database, src/lab/camapp.mjs erase_native), held strictly both ways
 export const ERASE_NATIVE = new Set(['E143', 'E146', 'E147', 'E144', 'E148', 'E139', 'E134', 'E137', 'E142', 'E140', 'E125']);
-// the bodies whose Delete in playback opens the erase dialog in the lab (X; finding 138 for E143, finding 111 for
-// the others); on a native body outside them the session erases by S-PLAYSEQ's erase itself (erase() below)
-export const ERASE_DIALOG = new Set(['E143', 'E146', 'E147', 'E144', 'E148', 'E139', 'E134', 'E142', 'E140', 'E130', 'E133']);
+// the bodies whose Delete in playback opens the erase dialog in the lab (X; finding 138 for E143 and, with the media
+// status at the word the setter's SD case stores, E137 and E125, finding 111 for the others), held strictly: on a
+// body outside them Delete is pressed and must open nothing (or, on NO_DELETE_KEY's, be refused by the player), and on
+// a native one the session then erases by S-PLAYSEQ's erase itself (erase() below)
+export const ERASE_DIALOG = new Set(['E143', 'E146', 'E147', 'E144', 'E148', 'E139', 'E134', 'E137', 'E142', 'E140', 'E125', 'E130', 'E133']);
+// the bodies whose UI_IN tables hold no Delete key (finding 111; the player refuses the key there, X)
+export const NO_DELETE_KEY = new Set(['E145', 'E129', 'E132']);
 // of the native bodies, those whose shooting service starts again after PLAY's return from playback in the lab (X); on
 // the others S1 and S2 release nothing there, with or without an erase (X: PLAY and PLAY again with no picture on
 // E142; not the erase's, open), so the next picture's number is not taken there
@@ -72,6 +77,12 @@ export async function eraseSession() {
     return { v, dcim, dir, files, deleted: dir && v.type === 'FAT32' ? v.deleted(dir) : [], free: v.freeClusters(), fsinfo: v.fsInfo() };
   };
   const fileName = (pic) => [...card().files.keys()].find((n) => new RegExp(`${String(pic.number).padStart(4, '0')}\\.JPG$`).test(n));
+  // ERASE_DIALOG held the other way: Delete on a body outside it opens nothing, or is refused where it has no key
+  const noDialog = () => {
+    let e = null;
+    try { press('delete'); } catch (x) { e = x.message; }
+    ok(NO_DELETE_KEY.has(MODEL) ? /not wired/.test(e ?? '') : e === null && name() !== WIZARD, `${MODEL}: Delete ${e ? e.slice(0, 120) : name()} (no erase dialog expected: ERASE_DIALOG)`);
+  };
   // one erase: through the GUI's dialog where Delete opens it (Delete, UP to Yes, OK: the GUI sends eraseCurrent and
   // S-PLAYSEQ finishes it); else S-PLAYSEQ's erase called here as the request would have it called (the firmware's
   // calls, the list and the image shown), then PLAY out and in, since no request tells that GUI of the erase
@@ -81,13 +92,14 @@ export async function eraseSession() {
       ok(name() === WIZARD, `${MODEL}: Delete ${name()} (the erase dialog)`);
       press('up');
       press('ok');
-    } else { cam.play_erase({ id: 21 }); press('play'); press('play'); }
+    } else { noDialog(); cam.play_erase({ id: 21 }); press('play'); press('play'); }
   };
   s.idle_slice(lab.lab_time() + 1500e6);
   if (!native) {
     for (const k of [...(START_KEYS[MODEL] ?? []), 's1', 's2', 's1', 's2']) press(k);
     const before = card();
     press('play');
+    if (!dialog) noDialog();
     const rsb = lab.alloc(new Uint8Array(RSB_REQUEST + 8), 4), req = lab.alloc(pack('<IIIII', 21, 0, 0, 0, 0), 4);
     lab.sim.write(rsb + RSB_REQUEST, pack('<I', req));
     let refusal = null;

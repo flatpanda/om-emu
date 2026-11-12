@@ -30,7 +30,8 @@
 import { createHash } from 'node:crypto';
 import zlib from 'node:zlib';
 // the bodies whose Delete in playback opens the erase dialog (test/test_erase.mjs ERASE_DIALOG: X, 2026-11-10, and
-// E143 since its media status is OK, finding 138; E145's, E129's and E132's UI_IN tables hold no Delete key), and
+// E143, E137 and E125 since their media status is OK, finding 138; E145's, E129's and E132's UI_IN tables hold no
+// Delete key), and
 // those whose eraseCurrent runs natively (ERASE_NATIVE there)
 import { ERASE_DIALOG, ERASE_NATIVE } from './test_erase.mjs';
 

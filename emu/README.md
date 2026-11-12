@@ -215,9 +215,10 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   4.3.3; on E146 and E147 since 2026-11-10 at the addresses a rule reads, 4.3.5), which S-RECREQ posts to it as
   REC_PREPRO would (on E146 and E147 REC_RAWNR), the header clear's fill runs natively on the imgpro unit and
   S-JPEGENC stands in for the encode only; on the E144 family S-RECIMAGE runs REC_IMAGE's part in a lab call, where
-  rec_jpeg_exec asks no fill. On the E118 family, whose REC is an older version, S-RECFILE's file carries the header
-  the family's own header maker builds natively from the packet S-RECHDR hands it (`src/lab/recheader.mjs`,
-  `docs/model-survey.md` findings 102 to 104). Card Formatting from the menu formats it: the menu's
+  rec_jpeg_exec asks no fill. On the E118 family, whose REC is an older version, REC_FILE's own task records the
+  file too since 2026-11-11 (`src/fw/facts.mjs` recFileFrame, `docs/model-survey.md` findings 143 to 148): S-RECIMAGE
+  runs rec_jpeg_exec with the family's own header maker in a lab call and takes REC_FILE's reply. Card Formatting
+  from the menu formats it: the menu's
   Yes reaches the file module through api_media's own format call (S-MDACTRL, `src/lab/media.mjs`, `docs/hle-gaps.md`
   4.8.3, in place of the HLS function component), its progress bar runs and the application returns to the menu. The
   input `{"type": "card", "action": "remove"}` takes the card out of the slot while the camera runs and `"insert"`

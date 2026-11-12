@@ -4868,8 +4868,9 @@ findings 31, 41). The family runs the other bodies' storage library; the rule no
   converter read getNumber's leftovers from the shared response block (0x0, 0mm, `0001.00.00`). On the camera the HLS
   play component answers it from api_play_Get_StillInfo_ExifData (`0x502e16b2`), which reads the Exif tags of the
   image the play module loaded into its play buffer (`play_exif_search_tag`); neither runs in the lab, and S2's
-  picture is S-RECFILE's JPEG without Exif (with the firmware's Exif since 2026-11-10, S-RECHDR, `docs/model-survey.md`
-  findings 102 to 104). S-PLAYSEQ now answers request 3 from the picture's own record: the
+  picture is S-RECFILE's JPEG without Exif (with the firmware's Exif since 2026-11-10, `docs/model-survey.md`
+  findings 102 to 104, and recorded by REC_FILE's own task since 2026-11-11, findings 143 to 148). S-PLAYSEQ now
+  answers request 3 from the picture's own record: the
   camera's clock at the capture (its read, since 2026-11-02 E143's `0x5005a59e` at its place, the RTC driver's get
   `0x50068dbc` that api_sctime_GET_REAL_TIME calls; before, the API by its name, fact `clock.real_time`, retired),
   the JPEG's size, the release's exposure and

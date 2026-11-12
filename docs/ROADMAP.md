@@ -441,7 +441,7 @@ the survey table.
   whose REC_FILE runs natively, by the firmware's own attribute and object delete (H-OBJDEL: the file's entry and
   clusters freed by FILECLBK's DCF edit, the database's count and numbering after it, No Picture after the last,
   a protected picture refused; findings 137 to 140), and is refused on the family and the other five, whose DCF
-  database learns of the lab's pictures only at a mount (E118's and E120's builds hold no such API either); the
+  database learns of the lab's pictures only at a mount (the rule reads no such calls in E118's and E120's either); the
   other erase requests (23, 301, 510, 395, 396, 497 and 265) are refused since finding 110, and the edits' saves,
   which S-PLAYSEQ finished with no file written, since finding 141. A second picture, RIGHT, LEFT and INFO's three
   views run

@@ -202,7 +202,7 @@ export async function secondShotSession() {
 //   entry's 0x50c8a335 and the through start's 0x50ca4a37, d0 the state)
 const PHASE_SET = 0x50CC6121, TAKE_READY_END = 0x50BCB823, TAKE_EVENT_143 = 0x50BCA7EA;
 const STANDBY_MODULE9 = 0x50C8A335, THROUGH_MODULE9 = 0x50CA4A37;
-const TAKE_READY_EVENT = 0x04080032, KIND_AT = 8, API_EVENT = 6, READY_COMMAND = 0, TAKE_COMMAND = 11;
+const TAKE_READY_EVENT = 0x04080032, KIND_AT = 8, QUEUE_AT = 4, API_EVENT = 6, READY_COMMAND = 0, TAKE_COMMAND = 11;
 const GUI_SHOOTING = '0x0108', GUI_MENU = '0x0b02', GUI_NO_PICTURE = '0x0505', GUI_SCP_ITEM = '0x0418';
 // the rec view controller's divide by the picture record's zero (0x50bdb01a, called from
 // CmpCtp_RecViewControllerParts 0x50c849d0), where the session stops when the take-picture request is answered at once
@@ -214,8 +214,8 @@ export async function takeReadyUnits() {
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
   const { take_ready_rule, TAKERDY_E143 } = await import('../src/lab/camapp.mjs');
   const Q = { TAKE_EXEC: 0x5A, TAKE_FUNC: 0x5E }, rule = (q, c, k, queues = Q, lab = true) => take_ready_rule(q, c, k, queues, lab);
-  ok(TAKERDY_E143.event === TAKE_READY_EVENT && TAKERDY_E143.kind_at === KIND_AT && TAKERDY_E143.take === TAKE_COMMAND,
-    `S-TAKERDY's event ${h8(TAKERDY_E143.event)}, the kind at +${TAKERDY_E143.kind_at}, the take-picture command ${TAKERDY_E143.take}`);
+  ok(TAKERDY_E143.event === TAKE_READY_EVENT && TAKERDY_E143.kind_at === KIND_AT && TAKERDY_E143.queue_at === QUEUE_AT && TAKERDY_E143.take === TAKE_COMMAND,
+    `S-TAKERDY's event ${h8(TAKERDY_E143.event)}, the kind at +${TAKERDY_E143.kind_at}, the event's queue at +${TAKERDY_E143.queue_at}, the take-picture command ${TAKERDY_E143.take}`);
   ok(rule(0x5A, 0, 0) === 'ready', `TAKE_EXEC command 0 of kind 0 is the take-ready: ${rule(0x5A, 0, 0)}`);
   const kinds = [1, 2, 3, 4, 0x2000, 0x4000].map((k) => rule(0x5A, 0, k));
   ok(kinds.every((x) => x === 'other-kind'), `command 0 of the take API's other kinds keeps S-MODACK's status: ${kinds}`);
@@ -267,11 +267,11 @@ export async function takeReadySession() {
       watch(STANDBY_MODULE9, (l, r) => seen.push(`STANDBY reads module 9: ${r.d0}`), 'test STANDBY module 9');
       watch(THROUGH_MODULE9, (l, r) => seen.push(`the through start reads module 9: ${r.d0}`), 'test through module 9');
       watch(UNRESPONSIVE, (l, r) => refused.push(l.sim.u32((r.sp >>> 0) + 8)), 'test refusal');
-      // the API sender's posts to TAKE_EXEC {reply queue, token, command, the packet's kind} and what reaches the
-      // application's queue with one of their tokens or TAKE's event
+      // the API sender's posts to TAKE_EXEC {reply queue, token, command, the packet's kind and queue word} and what
+      // reaches the application's queue with one of their tokens or TAKE's event
       lab.wrap(OLYQEWR, (prev) => (h, r) => {
         const q = r.d0 & 0xFFFF, m = lab.sim.u32(r.a0 >>> 0) >>> 0, w = [0, 1, 2, 3].map((k) => lab.sim.u32(m + 4 * k) >>> 0);
-        if (q === TAKE_EXEC && disasm(r.mdr) === API_SEND_RETURN) posts.push({ reply: w[0], token: w[1], command: w[2], kind: lab.sim.u32(w[3] + KIND_AT) >>> 0 });
+        if (q === TAKE_EXEC && disasm(r.mdr) === API_SEND_RETURN) posts.push({ reply: w[0], token: w[1], command: w[2], kind: lab.sim.u32(w[3] + KIND_AT) >>> 0, queue: lab.sim.u32(w[3] + QUEUE_AT) >>> 0 });
         else if (q === API_EVENT && (w[1] === TAKE_READY_EVENT || posts.some((x) => x.token === w[1]))) replies.push(w[1] === TAKE_READY_EVENT ? 'event' : `reply to command ${posts.find((x) => x.token === w[1]).command}`);
         return prev(h, r);
       }, 'test TAKE_EXEC posts and replies');
@@ -300,7 +300,7 @@ export async function takeReadySession() {
       const p0 = posts.length, r0 = replies.length;
       key('s1', 'down'); idle(600);
       const down = seen.splice(0), rq = posts.slice(p0);
-      ok(same(down, S1_DOWN) && phase() === 103 && rq.length === 1 && rq[0].reply === API_EVENT && rq[0].command === READY_COMMAND && rq[0].kind === 0
+      ok(same(down, S1_DOWN) && phase() === 103 && rq.length === 1 && rq[0].reply === API_EVENT && rq[0].command === READY_COMMAND && rq[0].kind === 0 && rq[0].queue === API_EVENT
         && same(replies.slice(r0), ['reply to command 0', 'event']) && ca.takerdy_events === n + 1,
         `S-TAKERDY: shot ${n + 1}'s S1: ${JSON.stringify(down)}, the take request ${JSON.stringify(rq)}, answered ${JSON.stringify(replies.slice(r0))}, events ${ca.takerdy_events}, phase ${phase()}`);
       const p1 = posts.length, r1 = replies.length;

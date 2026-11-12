@@ -301,7 +301,8 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 }
 // the release route with cam.c's second init (test_take_release.mjs camFeSession, the probe's cam_fe opt-in:
 // H-CAMINIT2, S-CAMFE): S1 as focusSession's, cam.c takes EXP_MOVIE's requests without an error, nothing runs the movie
-// sequence's frame step, EXP_MOVIE still waits; S2 as focusSession's, the sub-CPU's command 0x14 taken and no stop
+// sequence's frame step, EXP_MOVIE still waits; S2 as focusSession's, the sub-CPU's command 0x14 taken and no stop;
+// TAKE's request 6 (the sensor's power-on) stays with S-TAKECAM
 {
   const { camFeSession } = await import('../test/test_take_release.mjs');
   const cs = await camFeSession();
@@ -553,8 +554,8 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
 }
 // S-EXPOSE's readers in a default session, and the EXP callback that would write the AE results run natively as far
 // as it goes (test_expcb.mjs, --take probe with --cpu2 native: EXP_MOVIE's AE request stops before the callback);
-// cam.c's inits and requests natively, step by step (camDriverSession); its second init against S-CAMFE
-// (camFrontEndSession)
+// cam.c's inits and requests natively, step by step (camDriverSession); its second init against S-CAMFE, and its
+// request 6 (the sensor's power-on) natively to the sensor's serial unit (camFrontEndSession)
 {
   const { aeReadersSession, expCallbackSession, camDriverSession, camFrontEndSession } = await import('../test/test_expcb.mjs');
   const ar = await aeReadersSession();

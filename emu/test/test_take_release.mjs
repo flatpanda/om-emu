@@ -24,7 +24,8 @@
 //                   power manager's sub-CPU command 0x14, which S1 brings at the manager's next cyclic tick with or
 //                   without S2 (docs/hle-gaps.md 4.7.6), is taken by S-SCPUDEV as the write it is, and the idle
 //                   goes on: no lab stop
-//   camFeSession    round 5 (docs/hle-gaps.md 4.2.5): focusSession's S1 and S2 with the probe's cam_fe opt-in (below)
+//   camFeSession    round 5 (docs/hle-gaps.md 4.2.5): focusSession's S1 and S2 with the probe's cam_fe opt-in (below);
+//                   round 6 (4.2.6): cam.c's request 6, the sensor's power-on, stays with S-TAKECAM
 //   node emu/test/test_take_release.mjs
 import { fileURLToPath } from 'node:url';
 
@@ -286,7 +287,12 @@ export async function focusSession() {
 // the movie sequence keeps request 7's item (state 1, 0x62a24244) and nothing runs its frame step (0x5019981d), so
 // EXP_MOVIE still waits on flag 21 for bit 0x1000 and TAKE_MAIN in RdyFcsRdy3 for token 15; S-CAMFE takes no access
 // after the init. S2 goes as in focusSession: its DISPLAY sends the same, the power manager's 0x14 taken by S-SCPUDEV
-// and no stop (s2Rest; docs/hle-gaps.md 4.1.9, 4.7.6)
+// and no stop (s2Rest; docs/hle-gaps.md 4.1.9, 4.7.6).
+// Round 6 (docs/hle-gaps.md 4.2.6): the sensor is never powered on here. TAKE_FUNC_CP's start makes cam.c's request 6
+// (cam_seq_power.c's power-on) with the argument 0 and S-TAKECAM answers it, as without cam_fe: natively the power-on
+// would stop at the sensor's serial unit (test_expcb.mjs camFrontEndSession) and TAKE's start would not end. So
+// through the start, S1 and S2 no event of the power sequence and no power rail step runs, the front end's entry is
+// not called and its records stay unarmed, which is why EXP_MOVIE's wait above cannot end in this session
 export async function camFeSession() {
   const bad = [];
   let checks = 0;
@@ -309,8 +315,9 @@ export async function camFeSession() {
       const id = l.sim.read((r.sp >>> 0) + 16, 2).reduce((a, b, k) => a | b << 8 * k, 0);
       if (id !== HISTOGRAM) seen.push(`event ${id} in phase ${r.d0}`);
     }, 'test sequence');
-    let steps = 0;
+    let steps = 0, entries = 0;
     lab.observe(0x5019981D, () => { steps++; }, 'test movie frame step');
+    lab.observe(0x5016F2AE, () => { entries++; }, 'test front end entry');
     let n = 0;
     const since = () => { const out = take.requests.slice(n).map((r) => canon2(r, stateName)); n = take.requests.length; return out; };
     const used = pl.stand_ins_in_use();
@@ -339,6 +346,11 @@ export async function camFeSession() {
     ok(stop2 === null && rest === null && !since().length && JSON.stringify(seen) === JSON.stringify(['event 824 in phase 103']) && phase === S2_PHASE
       && stateName(u16(MAIN_STATE)) === 'RdyFcsRdy3' && fe.writes === w0 && fe.reads === r0,
       `S2 as focusSession's: the power manager's 0x14 taken and no stop (${seen}; ${rest ?? 'the link and the DISPLAY sends so'}; ${stop2 ? stop2.message.slice(0, 160) : 'no stop'}), the sequence in phase ${phase}, TAKE_MAIN in ${stateName(u16(MAIN_STATE))}, S-CAMFE untouched`);
+    // round 6: request 6 stayed with S-TAKECAM, so nothing powered the sensor on or called the front end's entry
+    const r6 = take.requests.filter((x) => x.dir === 'out' && x.queue === null && x.command === 6);
+    ok(r6.length === 1 && r6[0].task === 'TAKE_FUNC_CP' && r6[0].parameter === 0 && /^accepted \(0\), then its completion/.test(r6[0].answer)
+      && !take.cam.power.length && !entries && fe.writes === w0 && fe.reads === r0,
+      `TAKE_FUNC_CP's request 6 (argument ${r6[0]?.parameter}, want 0) is S-TAKECAM's (${r6[0]?.answer}); power-sequence events and rail steps ${take.cam.power.length}, front-end entries ${entries} (want 0, 0), S-CAMFE untouched (${fe.writes - w0} writes)`);
   } catch (e) { bad.push(`camapp 3 --take probe, cam_fe: ${e.message.slice(0, 800)}`); }
   pl.close_session();
   return { checks, bad };

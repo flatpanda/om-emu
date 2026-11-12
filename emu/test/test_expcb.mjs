@@ -37,7 +37,8 @@
 //                       (0x505975ba). In neither does the request's callback or the AE result writer 0x50596187 run,
 //                       so S-EXPOSE stays
 //   camDriverSession    round 2 (docs/hle-gaps.md 4.2.3): cam.c natively (below)
-//   camFrontEndSession  round 3 (docs/hle-gaps.md 4.2.5): cam.c's second init against S-CAMFE (below)
+//   camFrontEndSession  round 3 (docs/hle-gaps.md 4.2.5): cam.c's second init against S-CAMFE (below); round 4 (4.2.6):
+//                       cam.c's request 6, the sensor's power-on, natively to the sensor's serial unit
 //   aeReadersSession    S-EXPOSE's readers in a default session (below)
 //   node emu/test/test_expcb.mjs
 import { fileURLToPath } from 'node:url';
@@ -186,10 +187,22 @@ export async function expCallbackSession() {
 // sequence's queues SQMV, MQEX, INFN and SMFM, 0x5019868e) return 0 and touch no device; request 6 is then deferred
 // (0x50153844) and queues its item, and is not completed either. The tenth call, the front end's init 0x5016efcd,
 // writes 0x98800340 (which the lab stub keeps) and then the camera clock gate 0x9b500800, which the lab does not model:
-// the session stops there
+// the session stops there.
+// Round 4 (docs/hle-gaps.md 4.2.6): what request 6's item is. The request is cam_seq_power.c's power-on (the module
+// the seventh call 0x5019c70f sets up), and this test's records carry the argument 1 (+3), with which the power-on's
+// first event queues cam_mec_ctrl.c's item 13 (0x5019c9bb..0x5019ca00) beside the sensor's power rails; the item asks
+// the mechanism driver's request 34 (0x5010914d from 0x501532d8), whose function 0x50109c7b never runs (that driver
+// is not brought up here), so the event 0x10000008 the item's completion 0x5019d607 posts never comes: the power-on's
+// handler 0x5019c8de takes ten events (1, 4, 0x20 .. 0x800 for the rails, then 0x10800000) and waits at 0x5019caac for
+// the bits 0x10800008. TAKE_FUNC_CP's start passes the argument 0 (0x502cda60; camFrontEndSession), which posts
+// 0x10000010 and 0x10000008 at once
 const CAM = {
   init: 0x502A49EC, pool: 0x6299726C, pool_base: 0x629A71DC, sw: 0x502A4A46, completion: 0x502CD4D0,
   deferred: 0x500504AA, item: 0x501524C0, errlog: 0x501504D0, handlers: { 148: 0x502A4B74, 6: 0x50153844, 144: 0x5015582D }, no6: 0x0A273000,
+  // round 4: the power-on's handler (d1 the event), the mechanism driver's request (a0 its record, +0 the type) and
+  // request 34's function, the item's completion; the events the handler takes with the argument 1
+  power_on: 0x5019C8DE, mec_request: 0x5010914D, mec_34: 0x50109C7B, item_done: 0x5019D607,
+  events_arg1: [0x10000001, 0x10000004, 0x10000020, 0x10000040, 0x10000080, 0x10000100, 0x10000200, 0x10000400, 0x10000800, 0x10800000],
   init2: [0x50152401, 0x50150B66, 0x501550BC, 0x50151D07, 0x5015F38F, 0x501A3559, 0x5019C70F, 0x5019868E, 0x5019813D],
   front_end: 0x5016EFCD,
 };
@@ -215,6 +228,10 @@ export async function camDriverSession() {
     lab.observe(CAM.deferred, (l, r) => deferred.push(h8(disasm(r.a0))), 'camdrv deferred');
     lab.observe(CAM.item, (l, r) => items.push(u16(r.a0 >>> 0)), 'camdrv item');
     lab.observe(CAM.completion, (l, r) => completions.push(h8(r.a0)), 'camdrv completion');
+    const power = [], mec = [];
+    lab.observe(CAM.power_on, (l, r) => power.push(r.d1 >>> 0), 'camdrv power-on event');
+    lab.observe(CAM.mec_request, (l, r) => mec.push(`request ${u16(r.a0 >>> 0)}`), 'camdrv mechanism request');
+    for (const [at, what] of [[CAM.mec_34, 'request 34 runs'], [CAM.item_done, 'item 13 done']]) lab.observe(at, () => mec.push(what), `camdrv ${what}`);
     // the device accesses (the lab's lock registers, which the kernel touches throughout, aside)
     let mmio = [];
     m.setMmioTrace((dir, a, v, w, name, cpu) => { if (cpu === 0 && name !== 'om1.isc-locks') mmio.push({ dir: dir ? 'W' : 'R', a: a >>> 0, name }); });
@@ -254,9 +271,12 @@ export async function camDriverSession() {
     mmio = [];
     const rcs = CAM.init2.map((f) => lab.call(f, null, null, null, 50000000).d0 & 0xFFFF);
     ok(rcs.every((x) => x === 0) && !mmio.length, `the second init's first nine calls return ${rcs} and touch ${JSON.stringify(mmio.map((x) => h8(x.a)))}`);
+    power.length = 0; mec.length = 0;
     const q6b = request(6);
     ok(q6b.r === 0 && q6b.deferred === h8(CAM.handlers[6]) && q6b.items > 0 && !q6b.done && !q6b.errors.length,
       `request 6 after them: deferred to ${h8(CAM.handlers[6])}, an item queued, not completed in 100 ms: ${shown(q6b)}`);
+    ok(JSON.stringify(power) === JSON.stringify(CAM.events_arg1) && JSON.stringify(mec) === JSON.stringify(['request 34']),
+      `with the argument 1 the power-on takes the events ${power.map(h8)} (want the ten of the rails and 0x10800000) and its item 13 asks the mechanism driver ${JSON.stringify(mec)} (want request 34, never run or completed)`);
     mmio = [];
     let stop = null;
     try { lab.call(CAM.front_end, null, null, null, 50000000); } catch (e) { stop = e.message; }
@@ -282,8 +302,26 @@ export async function camDriverSession() {
 // three times); the movie sequence's kind 1 (0x50198993) keeps request 7's item (0x62a24248) with its state 1
 // (0x62a24244) and posts it, and nothing goes further: the sequence's frame step 0x5019981d (kind 10) never runs, so
 // the front end's entry 0x5016f2ae and cam_bright.c's job queue 0x50165b82 do not either, S-CAMFE takes no access, no
-// frame callback runs and EXP_MOVIE waits on its flag 21 for bit 0x1000
+// frame callback runs and EXP_MOVIE waits on its flag 21 for bit 0x1000.
+// Round 4 (docs/hle-gaps.md 4.2.6): cam.c's request 6, cam_seq_power.c's power-on of the sensor. (3) TAKE_FUNC_CP's
+// start made it with the argument 0 and S-TAKECAM answered it: no event of the power sequence ran. (4) The test makes
+// it of the switch natively as TAKE makes it (argument 0, +72 TAKE's completion 0x502cd4d0): the handler 0x5019c8de
+// takes event 0x10000001 (the watchdog, rail 0, and with the argument 0 the posts of 0x10000010 and 0x10000008), then
+// 4, 0x20 .. 0x400 (rails 1..7: the ports 132, 44, 38, 39, 40, 186, 134, 133 on, after the table's delays 5, 5, 0, 5,
+// 5, 0, 2 and 5 ms), 0x800 and 0x10800000, which turns the camera clocks on (0x5019d213: S-CAMFE takes the gates
+// +0x800 = 0x2000 and 1, +0x870 = 1, +0x008 = 0x700, cam_cpm.c's +0x9a0 / +0x9e0 |= 0x10 and the strobe +0xa08) and
+// port 16; 7 ms later 0x10001000 (port 13), 1 ms later 0x11000000 (ports 14 and 15), whose configuration of SSG1's
+// command unit stops the session at that unit's first register: 0x9b000a04 = 0x2100 written at 0x5019dcb6, 35 ms
+// after the request, with the SSG's register clock on (+0x810 = 1). The kind-7 sender 0x5019d460, the front end's
+// entry and TAKE's completion are not reached
 const IRQ_TABLE = 0xA32600C0;
+const POWER = {
+  events: [0x10000001, 0x10000010, 0x10000008, 0x10000004, 0x10000020, 0x10000040, 0x10000080, 0x10000100, 0x10000200, 0x10000400,
+    0x10000800, 0x10800000, 0x10001000, 0x11000000],
+  ports: [132, 44, 38, 39, 40, 186, 134, 133, 16, 13, 14, 15], port: 0x5002357C, sender: 0x5019D460, completion: 0x502CD4D0,
+  clocks: [[0x9B500870, 1], [0x9B500008, 0x700], [0x9B5009A0, 0x10], [0x9B5009E0, 0x10], [0x9B500810, 1]],
+  stop: /stopped at 0x[0-9a-f]+ \(disasm 0x5019dcb6\) fault=2[\s\S]*om1\.camfe UNKNOWN write 0x9b000a04 size 4 value 0x00002100 [\s\S]*SSG1's command unit/,
+};
 const FE_IRQS = { 15: 0x501A2478, 16: 0x501A24C2, 17: 0x501A250C, 18: 0x5019E218, 19: 0x501A2EC1, 22: 0x501A2F9F, 24: 0x50195B8E,
   25: 0x501A3BEA, 26: 0x50156528, 27: 0x501919B4, 31: 0x50191DF2, 32: 0x5015789D, 33: 0x501579AA, 34: 0x50157AB7, 35: 0x50157D21,
   36: 0x50157F8B, 37: 0x501581F5, 38: 0x501616F7, 39: 0x5018D3F1, 40: 0x50163408, 41: 0x5016763B, 42: 0x501667C9, 243: 0x5019F0D1,
@@ -342,6 +380,33 @@ export async function camFrontEndSession() {
     ok(!seen.length && fe.writes === w0 && fe.reads === r0, `no frame step, front-end entry or unit job follows (${seen}), S-CAMFE untouched (${fe.writes - w0} writes, ${fe.reads - r0} reads)`);
     ok(!take.cam.frames.length && !take.cam.answers.length && w?.flag === 21 && w?.bits === 0x1000 && (lab.nk.state(take.exp_tid) & 0xF) === 4,
       `no frame callback (${take.cam.frames}), no answer (${take.cam.answers.length}); EXP_MOVIE waits on flag ${w?.flag} for ${h8(w?.bits)}`);
+    // round 4 (3): TAKE's own request 6 at the start, which S-TAKECAM answered
+    const r6 = take.requests.filter((x) => x.dir === 'out' && x.queue === null && x.command === 6);
+    ok(r6.length === 1 && r6[0].task === 'TAKE_FUNC_CP' && r6[0].parameter === 0 && /^accepted \(0\), then its completion/.test(r6[0].answer) && !take.cam.power.length,
+      `TAKE_FUNC_CP's start made request 6 with the argument ${r6[0]?.parameter} (want 0), S-TAKECAM answered it (${r6[0]?.answer}) and no power-sequence event ran (${take.cam.power.length})`);
+    // round 4 (4): the same request natively
+    const ports = [], reached = [];
+    lab.observe(POWER.port, (l, r) => ports.push([r.d0 & 0xFFFF, r.d1 & 0xFFFF]), 'camfe port');
+    lab.observe(POWER.sender, () => reached.push('kind-7 sender'), 'camfe kind-7 sender');
+    lab.observe(POWER.completion, () => reached.push('TAKE\'s completion'), 'camfe completion');
+    const rec = lab.alloc(new Uint8Array(192), 4), w1 = fe.writes, r1 = fe.reads, e1 = take.cam.errlogs.length;
+    lab.sim.write(rec, Uint8Array.of(6, 0, 0, 0));
+    lab.sim.write(rec + 72, pack('<I', POWER.completion - 0x50000000 + 0x60021020));
+    const rc = lab.call(E.cam_switch, { a0: rec }, null, null, 20000000).d0 & 0xFFFF;
+    s.settle('camfe request 6');
+    let stop = null;
+    try { idle(100); } catch (e) { stop = e.message; }
+    const on = take.cam.power.filter((x) => x.what === 'on'), events = on.map((x) => x.event), at = new Map(on.map((x) => [x.event, x.t_ns]));
+    const rails = take.cam.power.filter((x) => x.what === 'rail').map((x) => x.step);
+    ok(rc === 0 && JSON.stringify(events) === JSON.stringify(POWER.events) && JSON.stringify(rails) === JSON.stringify([0, 1, 2, 3, 4, 5, 6, 7]),
+      `request 6 natively (argument 0): the power-on takes the events ${events.map(h8)} (want ${POWER.events.map(h8)}) and runs the rail steps ${rails}`);
+    ok(JSON.stringify(ports) === JSON.stringify(POWER.ports.map((p) => [p, 1])), `the ports it turns on, in order: ${ports.map(([p, v]) => `${p}=${v}`)} (want ${POWER.ports})`);
+    const ms = (a, b) => (at.get(b) - at.get(a)) / 1e6, dt = [ms(0x10000001, 0x10800000), ms(0x10800000, 0x10001000), ms(0x10001000, 0x11000000)].map((x) => Math.round(x));
+    ok(JSON.stringify(dt) === JSON.stringify([27, 7, 1]), `the rails take ${dt[0]} ms (want 27: 5 + 5 + 0 + 5 + 5 + 0 + 2 + 5), then ${dt[1]} ms and ${dt[2]} ms (want 7 and 1)`);
+    ok(POWER.clocks.every(([a, v]) => fe.regs.get(a) === v) && fe.writes - w1 === 8 && fe.reads - r1 === 3,
+      `S-CAMFE takes the power-on's clock enables (${POWER.clocks.map(([a]) => `${h8(a)} = ${h8(fe.regs.get(a) ?? 0xFFFFFFFF)}`)}; ${fe.writes - w1} writes, ${fe.reads - r1} reads, want 8 and 3)`);
+    ok(stop !== null && POWER.stop.test(stop) && !reached.length && !seen.length && take.cam.errlogs.length === e1,
+      `it stops at SSG1's command unit (${String(stop).replace(/\s+/g, ' ').slice(0, 330)}); reached ${JSON.stringify(reached)} ${JSON.stringify(seen)} (want nothing), cam.c logs ${take.cam.errlogs.slice(e1).map(h8)}`);
   } catch (e) { bad.push(`camFrontEndSession: ${e.message.slice(0, 600)}`); }
   pl.close_session();
   return { checks, bad };

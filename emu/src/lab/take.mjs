@@ -39,7 +39,9 @@
 //               (and 144) only queues an item of its sequence engine, which nothing completes in the lab, and request 6
 //               logs 0x0a273000 (X; I: the front end would complete them, after the second init). So the stand-in
 //               records the request, returns 0 (accepted) and after the step calls the request's completion natively
-//               with d0 0 and a0 the request, as the driver does (0x502a4b92..0x502a4b96, 0x502a4c31..0x502a4c3f)
+//               with d0 0 and a0 the request, as the driver does (0x502a4b92..0x502a4b96, 0x502a4c31..0x502a4c3f).
+//               Round 6 (below; docs/hle-gaps.md 4.2.6): request 6 is the sensor's power-on, which natively stops at
+//               the sensor's serial unit even with the second init run, so the stand-in keeps requests 6 and 5
 //   S-TAKEUSF   the dust filter's gate-on API (0x50064a69, "USF GATE CONTROL") from TAKE's tasks: TAKE_FUNC_CP's start
 //               asks it (0x502cdb34) with its record {callback 0x502cdc97, 0} and waits on flag TAKE_FUNC_CP bit 1,
 //               which the callback's deferred count sets (0x502cdcae); the API drives the filter through the timer
@@ -608,7 +610,7 @@ export class TakeProbe {
     this.cam_fe_inited = false;       // round 5 (H-CAMINIT2)
     this.camfe = null;
     this.exp_tid = null;
-    this.cam = { native: [], errlogs: [], lines: [], frames: [], waits: [], answers: [] };
+    this.cam = { native: [], errlogs: [], lines: [], frames: [], waits: [], answers: [], power: [] };
     lab.observe(C.errlog, (l, r) => {
       this.cam.errlogs.push(r.d0 >>> 0);
       this.cam.lines.push([r.d0 >>> 0, r.d1 >>> 0, disasm(r.mdr)]);
@@ -627,6 +629,17 @@ export class TakeProbe {
       this.cam.answers.push(disasm(r.mdr));
       this.log.push(['cam', `EXP_MOVIE answers EXP_MOVIE_POST (from ${h8(disasm(r.mdr))})`]);
     }, 'H-EXPINIT (answer)');
+    // round 6 (docs/hle-gaps.md 4.2.6): cam_seq_power.c's sequences, when something runs them natively (S-TAKECAM
+    // answers TAKE's requests 6 and 5, so nothing in the probe's own flows does): each event its handlers take and
+    // each power rail step, in order ({what 'on' / 'off', event, t_ns} and {what 'rail', step})
+    for (const [at, what] of [[C.power.on, 'on'], [C.power.off, 'off']]) lab.observe(at, (l, r) => {
+      this.cam.power.push({ what, event: r.d1 >>> 0, t_ns: l.lab_time() });
+      this.log.push(['cam', `cam_seq_power.c's power-${what} takes event ${h8(r.d1)}`]);
+    }, 'H-CAMINIT2 (power sequence)');
+    lab.observe(C.power.rail, (l, r) => {
+      this.cam.power.push({ what: 'rail', step: r.d0 & 0xFF });
+      this.log.push(['cam', `the sensor's power rail step ${r.d0 & 0xFF} (from ${h8(disasm(r.mdr))})`]);
+    }, 'H-CAMINIT2 (power rail)');
   }
   // (from cam_request) the switch called from a task that is not TAKE's: natively, recorded (EXP_MOVIE's requests 8
   // and 7 once H-EXPINIT runs)
@@ -787,11 +800,28 @@ CAM_REQUESTS[144] = 'TAKE_MAIN RdyFcsRdy1, 0x503c2e21';
 //              (above). With it cam.c takes EXP_MOVIE's requests 8 and 7 without an error and keeps request 7's
 //              item for the movie sequence's frame step, which nothing in the lab runs, so EXP_MOVIE still waits on
 //              its flag 21
+// Round 6, cam.c's request 6 (docs/hle-gaps.md 4.2.6; no new stand-in). Requests 6 and 5 go to cam_seq_power.c, the
+// module the second init's seventh step 0x5019c70f sets up (0x5015552a / 0x5015553b -> 0x50155ad9: a 24-byte record,
+// +0 the kind 1 / 2, +8 the request's argument +3, +12 the completion relay 0x50155d90, +16 the request), which runs
+// each as a chain of events on an event queue of its own (0x50150f8e(4, 1) / (5, 1); power-on 0x5019c843, handler
+// 0x5019c8de, its table 0x602a29f8; power-off 0x5019ce1c, handler 0x5019ceaa, table 0x602a2af8). The power-on: the
+// sensor's eight power rails (0x500236fe, steps 0..7 of the table 0x600472e0: a GIO port and a delay each) and, with
+// an argument of 1 or 2, cam_mec_ctrl.c's item 13 for the mechanism driver beside them (TAKE_FUNC_CP's start passes
+// 0, 0x502cda60); then the camera clocks (0x5019d213), four more ports, the configuration of SSG1's command unit (the
+// SSG's requests 7 and 8, applied by 0x5019dc8f), three requests of cam_frame_driver.c (0x50171ade with 131), the
+// units' set-up (0x5019d287) and the kind-7 sender 0x5019d460, which calls the front end's entry (hle-gaps 4.2.5),
+// twice. Natively under cam_fe it runs the rails and the clocks, which S-CAMFE takes (camfe.mjs POWER_ON), and stops
+// at the command unit's first register (0x9b000a04, written at 0x5019dcb6): the sensor's serial channel is not
+// modelled, and the request would not complete. So S-TAKECAM keeps answering requests 6 and 5 (the power-off's first
+// event sends the front end a kind-7 request, 0x5019cf56), and cam_install only records the sequences' events and
+// rail steps for a test that makes the request itself (test_expcb.mjs camFrontEndSession)
 export const CAM_E143 = {
   init: 0x502A49EC,
   init2: 0x50155357,          // cam.c's second init (USTART's call at 0x50024d80; H-CAMINIT2, round 5)
   pool: 0x6299726C,           // the request pool's free-list head (u16; 0xffff: empty)
   errlog: 0x501504D0,         // cam.c's error log (d0 the code, d1 the source line; X: the code reaches the kernel's)
+  // round 6: cam_seq_power.c's event handlers (a0 the record, d1 the event) and the power rail step (d0 the step)
+  power: { on: 0x5019C8DE, off: 0x5019CEAA, rail: 0x500236FE },
   exp: {
     inits: [0x502A49B3, 0x50553649],                                  // IMG_PRECON's module init, EXP's init
     movie: { tid: 0x60042DD6, entry: 0x50553697 },                    // EXP_MOVIE, task 88

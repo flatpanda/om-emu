@@ -160,7 +160,8 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   90 degrees), its step waits 500 ms and records the orientation, and the camera turned past 50 degrees of roll has
   the GUI lay the level gauge out for portrait.
 - module requests are answered (S-MODACK; on E143 the application's posts to those queues that bypass the API sender
-  are taken as the module's task would take them, S-MODPOST, `docs/hle-gaps.md` 4.1.11), the HLS transaction layer's
+  are taken as the module's task would take them, S-MODPOST, `docs/hle-gaps.md` 4.1.11; under `control camapp 3` TAKE's
+  take-ready event follows the answer, S-TAKERDY, 4.1.12), the HLS transaction layer's
   exec succeeds and deletes its request as the
   exec would (S-TRAACK; `docs/hle-gaps.md` 4.4.2, the heap's growth), and the modules'
   notifications of a release (focus, exposure, rec view) are posted as the callbacks the HLS would make of them
@@ -218,7 +219,9 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   and the lab's JPEG after it (S-JPEGENC). REC_IMAGE's own task takes the packet (H-RECIMAGE, `docs/hle-gaps.md`
   4.3.3; on E146 and E147 since 2026-11-10 at the addresses a rule reads, 4.3.5), which S-RECREQ posts to it as
   REC_PREPRO would (on E146 and E147 REC_RAWNR), the header clear's fill runs natively on the imgpro unit and
-  S-JPEGENC stands in for the encode only; on the E144 family S-RECIMAGE runs REC_IMAGE's part in a lab call, where
+  S-JPEGENC stands in for the encode only (since 2026-11-11 for the parameter set's call, the run and Jpeg_Result,
+  the rest of the encode native, `docs/hle-gaps.md` 4.3.9);
+  on the E144 family S-RECIMAGE runs REC_IMAGE's part in a lab call, where
   rec_jpeg_exec asks no fill. On the E118 family, whose REC is an older version, REC_FILE's own task records the
   file too since 2026-11-11 (`src/fw/facts.mjs` recFileFrame, `docs/model-survey.md` findings 143 to 148): S-RECIMAGE
   runs rec_jpeg_exec with the family's own header maker in a lab call and takes REC_FILE's reply. Card Formatting
@@ -315,13 +318,16 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   stage the play buffer waits for (`docs/hle-gaps.md` 4.3.1). The TFT composes with the histogram's registers under
   the opt-in A-VSCHIST-3 (`docs/hle-gaps.md` 4.2.4). It is not the default:
   keys are no longer taken after a menu pass and a shot, playback shows No Picture with pictures on the
-  card (the next stops, 4.3.1; their causes, 4.3.2), and the first power-off of the golden power and power-replay
+  card (the next stops, 4.3.1; their causes, 4.3.2; since 2026-11-11 S-TAKERDY follows S-MODACK's answer to the
+  take-ready with TAKE's event, so half-press shots end in STANDBY and a full shot waits in phase 106 for TAKE's
+  capture, 4.1.12), and the first power-off of the golden power and power-replay
   scenarios ends in S-SHUTDOWN's PowerError where camapp 1's turns off (4.2.4; the cause in 4.3.6: TRA 586 is not
   answered, the flash capability still running when the shooting component's teardown asks for its stop). Its LV and
   eye-sensor switch is the firmware's own output change (the application stops the histogram and sends the GUI 131,
   the GUI's output change sends TRA 588, CapIod opens the device; no OPEN, H-RESEND or H-CONNECT of the lab's), after
   which the EVF's composite stops at the OSD planes' level 101 (PLANC `0xca`, A7); with it 16 of golden's 19 Player
-  scenarios run to their end under camapp 3 (`docs/hle-gaps.md` 4.3.10 has the table). With the
+  scenarios run to their end under camapp 3 (`docs/hle-gaps.md` 4.3.10 has the table, measured on its branch before
+  the round's merge). With the
   Player's `camapp_play_native` (off by default) the play module runs natively too (H-PLAYSTART, `src/lab/playmod.mjs`;
   S-PLAYSEQ, S-PLAYCOMP and S-PLAYVIEW not installed): PLAY loads and parses the picture and shows its view, decoded
   by the firmware's own request on the model of the image library's pipeline block and JPEG codec (S-IMGPIPE,
@@ -348,7 +354,11 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   settings' flash save, S-SETSAVE; on every other ported body too since 2026-11-02, its pages navigated natively,
   `docs/model-survey.md` findings 66 to 68), PLAY playback (the pictures taken, newest first, through S-PLAYSEQ, S-PLAYCOMP and
   S-PLAYVIEW; left and right move between them, INFO shows the detail view, PLAY or S1 returns; "No Picture" before
-  any), and LV or the eye sensor switches to the EVF with the application re-entering the screen (S-OUTDISP). The
+  any; since 2026-11-11 Delete erases the picture shown by the firmware's own attribute and object delete, H-OBJDEL,
+  on the bodies of `test/test_erase.mjs` ERASE_NATIVE, S-CARD setting the first slot's media status OK and
+  S-PLAYCOMP's isProtect answering the picture's lock, S-PLAYVIEW released after the last, `docs/model-survey.md`
+  findings 137 to 140),
+  and LV or the eye sensor switches to the EVF with the application re-entering the screen (S-OUTDISP). The
   application creates the GUI itself (H-GUIBYAPP), so the EVF shows its information and bottom bar in every frame.
 
 ## Run

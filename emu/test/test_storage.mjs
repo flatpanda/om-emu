@@ -16,7 +16,9 @@
 //                   each checksum and the name hash refused when wrong, a looping chain, a cluster the bitmap does
 //                   not allocate and one it leaks reported; refs/volume.mjs picking the reader; the picture
 //                   file's JPEG through the independent decoder (refs/jpeg.mjs): its size, sampling and block means;
-//                   the independent Exif reader (refs/exif.mjs) on an APP1 this test builds, and its refusals
+//                   the independent Exif reader (refs/exif.mjs) on an APP1 this test builds, and its refusals; the
+//                   menu walker (src/lab/menuwalk.mjs) on menus this test draws: the screen's texts, a list's rows,
+//                   the cursor's row in both looks, the walks to the Format's Yes and their refusals
 //   storageSession  (firmware) play sessions on the body of OM_EMU_MODEL (E143 by default; its card_fs native): the
 //                   file system's bring-up and the card's insertion (H-FILEINIT, S-SDCARD, S-CARD) leave the drive
 //                   mounted by the firmware's own path, on a blank card the firmware formatted itself; the card read
@@ -39,10 +41,12 @@
 //                   and back and a third: the firmware's own numbers, counts, clusters and the FAT's free count
 //                   follow each), the JPEG decoded
 //                   (refs/jpeg.mjs) to the capture's block means, and the next session's DCF numbering mount and
-//                   image count find it; where the body runs the HLS media side (card_fs.hls: E143, E146) Card
-//                   Formatting from the menu (S-MDACTRL): the card read back is freshly formatted, the counts reset and
-//                   the application returns to the menu; the card out and back in (S-MEDIA): the drive unmounted and the
-//                   screen without the counts, then mounted again by the firmware with the counts back
+//                   image count find it; where the body runs the HLS media side (card_fs.hls) Card Formatting from
+//                   the menu (S-MDACTRL on E143, E146, E147 and E148; S-MDAEND where the application formats the card
+//                   itself), the menu's path walked by what the firmware draws (src/lab/menuwalk.mjs): the card read
+//                   back is freshly formatted, the counts reset and the application returns to the menu; the card out
+//                   and back in (S-MEDIA): the drive unmounted and the screen without the counts, then mounted again
+//                   by the firmware with the counts back
 //   storageSdxc     (firmware) blank 64 and 128 GiB SDXC cards on the body of OM_EMU_MODEL: formatted and mounted by
 //                   the firmware, read back independently whichever file system it chose (refs/volume.mjs) and
 //                   consistent, S2's file found with its bytes, the remaining shots counted; where the body runs the
@@ -51,9 +55,10 @@
 //                   mounted again without a format, the counts back); what the firmware chose (exFAT on E143,
 //                   docs/hle-gaps.md 4.8.6: the layout, the cluster size), the lab times and the counts are reported
 //                   as notes
-//   storageHls      (firmware, --hls) the HLS media side alone on the body of OM_EMU_MODEL (the E118 family's: Format
-//                   from Card Setup, then S2's picture on the formatted card; the card out, the camera's no-card
-//                   state, the card in, its count back, then S2's picture on it)
+//   storageHls      (firmware, --hls) the HLS media side alone on the body of OM_EMU_MODEL (the E118 family's and
+//                   the E144 family's: Format from Card Setup, then S2's picture on the formatted card; the card out,
+//                   the camera's no-card state, the card in, its count back, then S2's picture on it; E143's line:
+//                   Card Formatting, the card out and in)
 //   node emu/test/test_storage.mjs [--session] [--sdxc] [--hls]
 import { SdCard, NO_RESPONSE, SECTOR, crc7, r2Words, cardImage, cardFromImage, cardSectors } from '../src/lab/sdcard.mjs';
 import { FatVolume, mbrPartition } from '../refs/fat.mjs';
@@ -63,6 +68,7 @@ import { jpegOfFrame } from '../src/lab/jpeg.mjs';
 import { decodeJpeg } from '../refs/jpeg.mjs';
 import { readExif, jpegSegments } from '../refs/exif.mjs';
 import { MODELS } from '../src/fw/models.mjs';
+import { screenTexts, rowsOf, bandColour, cursorOf, MenuWalk, TEXT_LAYER, CLEAR_COLOUR } from '../src/lab/menuwalk.mjs';
 
 const throwsLike = (fn, re) => { try { fn(); return false; } catch (e) { return re.test(e.message); } };
 const cmd = (index, rt, acmd = false) => index | (acmd ? 0x40 : 0) | rt << 8;
@@ -378,7 +384,89 @@ export function storageUnits() {
     ok(throwsLike(() => readExif(file(far)), /out of the segment/), 'a tag\'s value out of the segment is refused');
     ok(readExif(Uint8Array.from([0xff, 0xd8, 0xff, 0xda, 0, 2])) === null, 'a JPEG without an Exif APP1 reads as none');
   }
+  menuWalkUnits(ok);
   return { checks, bad };
+}
+
+// The menu walker (src/lab/menuwalk.mjs) on menus this test draws: each a set of screens {title, rows, cursor (a row
+// or null: on the tabs), page (the page's colour)}, drawn as the lab's observers record a body's (a full clear of the
+// text layer, the title, the rows; the graphics context's origin negated) into a frame of 320 x 240. Two looks:
+// 'frame', the Menu_Viewer bodies' (the cursor a mark over the page, the menu opened on the tabs, the dialogs on a page
+// of another colour, the selected row's text in another colour), and 'bar', the ListMenu bodies' (every row a bar, the
+// cursor's of another colour; a title drawn as the rows are; a card choice whose rows are pictures)
+function menuWalkUnits(ok) {
+  const W = 320, H = 240, X = 40, ROW = [200, 20], PITCH = 26, SEL = 0xcc3366, BAR = 0x333333;
+  const menu = (look, screens, start) => {
+    const m = { at: start, draws: [], keys: [], done: false };
+    const draw = () => {
+      const scr = screens[m.at], text = (t, y, colour) => m.draws.push({ op: 'text', text: t, colour, box: [0, 0, ROW[0] - 1, ROW[1] - 1], origin: [-X, -y], draw_offset: [0, 0] });
+      m.draws.push({ op: 'rect', x: 0, y: 0, w: W, h: H, colour: CLEAR_COLOUR, layer: TEXT_LAYER });
+      if (look === 'bar') text(scr.title, 0, 16); else m.draws.push({ op: 'text', text: scr.title, colour: 25, box: [0, 0, 279, 19], origin: [-20, -4], draw_offset: [0, 0] });
+      scr.rows.forEach((t, i) => text(t, scr.top + PITCH * i, look === 'frame' && i === scr.cursor ? 34 : 22));
+    };
+    m.frame = () => {
+      const scr = screens[m.at], words = new Uint32Array(W * H).fill(scr.page);
+      scr.rows.forEach((t, i) => {
+        const colour = i === scr.cursor ? SEL : look === 'bar' ? BAR : null, y = scr.top + PITCH * i;
+        if (colour !== null) for (let yy = y; yy < y + ROW[1]; yy++) words.fill(colour, yy * W + X - 14, yy * W + X + ROW[0]);
+      });
+      return [W, H, words];
+    };
+    m.press = (key) => {
+      const scr = screens[m.at];
+      m.keys.push(key);
+      if (scr.cursor === null) {
+        if (key === 'down') m.at = scr.next; else if (key === 'right') scr.cursor = 0; else throw new Error(`${key} on the tabs`);
+      } else if (key === 'down' || key === 'up') scr.cursor = (scr.cursor + (key === 'down' ? 1 : scr.rows.length - 1)) % Math.max(scr.rows.length, 1);
+      else if (key === 'ok') { const to = scr.ok[scr.rows.length ? scr.rows[scr.cursor] : '']; if (to === 'done') m.done = true; else if (to === undefined) throw new Error(`OK on ${scr.rows[scr.cursor]}`); else m.at = to; }
+      else throw new Error(`${key} in a list`);
+      draw();
+    };
+    draw();
+    return m;
+  };
+  const GOALS = [{ row: ['Card Formatting', 'Card Setup'] }, { pass: ['Select Card to Set Up'], key: 'ok' }, { row: ['Format Card', 'Format'] }, { row: ['Yes'] }];
+  const walk = (m) => { const w = new MenuWalk({ press: m.press, frame: m.frame, draws: () => m.draws }); w.to(GOALS); return w; };
+  const viewer = () => menu('frame', {
+    shoot: { title: 'Shooting Menu 1', rows: ['Reset', 'Picture Mode', 'Image Aspect'], cursor: null, top: 40, page: 0, next: 'setup' },
+    setup: { title: 'Setup Menu', rows: ['Clock', 'Card Setup', 'Language', 'Firmware'], cursor: null, top: 40, page: 0, next: 'shoot', ok: { 'Card Setup': 'card' } },
+    card: { title: 'Card Setup', rows: ['All Erase', 'Format'], cursor: 0, top: 100, page: 0x0a0a0a, ok: { Format: 'yes' } },
+    yes: { title: 'Format', rows: ['Yes', 'No'], cursor: 1, top: 120, page: 0x0a0a0a, ok: { Yes: 'done' } },
+  }, 'shoot');
+  const list = (slots) => menu('bar', {
+    main: { title: '1.Card/Folder/File', rows: ['Card Formatting', 'Assign Save Folder', 'File Name', 'Edit Filename'], cursor: 0, top: 60, page: 0x0a0a0a, ok: { 'Card Formatting': slots === 2 ? 'select' : 'card' } },
+    select: { title: 'Select Card to Set Up', rows: [], cursor: 0, top: 100, page: 0x0a0a0a, ok: { '': 'card' } },
+    card: { title: 'Card Formatting', rows: ['Format Card', 'No'], cursor: 1, top: 150, page: 0x0a0a0a, ok: { 'Format Card': 'yes' } },
+    yes: { title: 'Format Card', rows: ['Yes', 'No'], cursor: 1, top: 150, page: 0x0a0a0a, ok: { Yes: 'done' } },
+  }, 'main');
+  // the screen's texts and a list's rows
+  const v = viewer(), texts = screenTexts(v.draws, [W, H]), reset = texts.find((t) => t.text === 'Reset');
+  ok(texts.length === 4 && reset.box.join() === [X, 40, X + ROW[0] - 1, 40 + ROW[1] - 1].join(), `screenTexts: the title and three rows, each at its box on the screen: ${JSON.stringify(texts.map((t) => [t.text, t.box]))}`);
+  ok(rowsOf(texts, reset).map((t) => t.text).join() === 'Reset,Picture Mode,Image Aspect' && rowsOf(texts, texts.find((t) => t.text === 'Shooting Menu 1')).length === 1, 'rowsOf: the three rows from the top; the title is a list of its own');
+  v.draws.push({ op: 'rect', x: 0, y: 60, w: W, h: 60, colour: CLEAR_COLOUR, layer: TEXT_LAYER }, { op: 'text', text: 'Art', colour: 22, box: [0, 0, ROW[0] - 1, ROW[1] - 1], origin: [-X, -66], draw_offset: [0, 0] });
+  ok(screenTexts(v.draws, [W, H]).map((t) => t.text).join() === 'Shooting Menu 1,Reset,Art', `a partial clear takes the texts it covers, a later draw at a place replaces the earlier: ${screenTexts(v.draws, [W, H]).map((t) => t.text)}`);
+  ok(throwsLike(() => screenTexts(v.draws.filter((e) => e.w !== W), [W, H]), /no full clear/), 'no full clear of the text layer among the draws: refused');
+  const l = list(1), lt = screenTexts(l.draws, [W, H]), lrows = rowsOf(lt, lt.find((t) => t.text === 'File Name'));
+  ok(lrows.length === 4 && lrows[0].text === 'Card Formatting', `rowsOf: a title drawn as the rows are, off their pitch, is not a row: ${lrows.map((t) => t.text)}`);
+  // the cursor
+  const bands = lrows.map((r) => bandColour(l.frame(), r.box));
+  ok(bands.join() === [SEL, BAR, BAR, BAR].join() && bandColour(l.frame(), [4, 0, 40, 19]) === null, 'bandColour: the bar left of each row\'s text; no band where the strip leaves the frame');
+  ok(JSON.stringify(cursorOf(bands, 0x0a0a0a, null)) === JSON.stringify({ cursor: 0, bar: BAR }) && cursorOf([0, 0, 0], 0x202020, null).cursor === null && cursorOf([0, 0, 0], 0, null).bar === null,
+    'cursorOf, three rows or more: the row off the common band; none off, the cursor is not in the list; bars are learned where the common band is not the page\'s');
+  ok(cursorOf([SEL, 7], 7, null).cursor === 0 && cursorOf([7, 7], 7, null).cursor === null && cursorOf([BAR, SEL], 7, BAR).cursor === 1 && cursorOf([BAR], 7, BAR).cursor === null,
+    'cursorOf, one or two rows: the row off the page\'s colour, or with bars the row off the learned bar colour');
+  ok(throwsLike(() => cursorOf([BAR, SEL], 7, null), /no bar colour learned/) && throwsLike(() => cursorOf([1, 2, 3], 7, null), /2 of 3 rows off/) && throwsLike(() => cursorOf([SEL, 7], null, null), /no page above/) && throwsLike(() => cursorOf([null, 7], 7, null), /no band/),
+    'cursorOf refuses two barred rows with no bar learned, two rows off the common band, a short list with no page above it, a row with no band');
+  // the walks
+  const wv = viewer();
+  ok(walk(wv) && wv.done && wv.keys.join() === 'down,right,down,ok,down,ok,up,ok', `the Menu_Viewer look: the tabs down to the one with Card Setup, into its list, Format, Yes: ${wv.keys}`);
+  const w1 = list(1), w2 = list(2);
+  ok(walk(w1) && w1.done && w1.keys.join() === 'ok,up,ok,up,ok', `the ListMenu look with one slot: Card Formatting, Format Card, Yes: ${w1.keys}`);
+  ok(walk(w2) && w2.done && w2.keys.join() === 'ok,ok,up,ok,up,ok', `with two slots: the card choice passed with OK: ${w2.keys}`);
+  const none = viewer(), lone = list(1);
+  ok(throwsLike(() => new MenuWalk({ press: none.press, frame: none.frame, draws: () => none.draws }).to([{ row: ['Sensor Cleaning'] }]), /none of the goals on any of the 2 tabs/) && none.keys.join() === 'down,down', `a goal on no tab: refused after the tabs came round: ${none.keys}`);
+  lone.at = 'card'; lone.press('down'); lone.press('down');
+  ok(throwsLike(() => walk(lone), /no bar colour learned/) && lone.keys.length === 2, 'a walk that starts in a list of two bars: refused, no key pressed');
 }
 
 // (firmware) the play session's card on the model of OM_EMU_MODEL (E143 by default), a body whose file system runs
@@ -655,15 +743,33 @@ export async function storageSession() {
   return { checks, bad };
 }
 
-// The HLS media side on a card (src/fw/models.mjs card_fs.hls: E143, E146; the E118 family's read by the rule,
-// src/fw/facts.mjs mediaHls), whichever file system the firmware gave it at
+// The HLS media side on a card (src/fw/models.mjs card_fs.hls: E143, E146, E147 and E148 by hand; the E118 family's
+// and the E144 family's read by the rule, src/fw/facts.mjs mediaHls), whichever file system the firmware gave it at
 // the insertion (refs/volume.mjs reads either). ok(cond, what) counts a check, bad collects a throw, notes what the
 // firmware did (the layout, the lab times).
+//
+// The menu's path to the Format's Yes is not a list of keys: the walker (src/lab/menuwalk.mjs) finds it on the screen
+// the firmware draws, by the items' English names: the row Card Formatting (the ListMenu bodies) or Card Setup (the
+// Menu_Viewer bodies, on whichever tab holds it: the walker goes down the tabs), the card choice of a body with two
+// slots in use (passed with OK: its cursor starts on the first card, X; the format's media 0 checks it), the row
+// Format Card or Format, and Yes. A body with one slot opens Card Formatting without the card choice (E147, E148), an
+// empty card's Card Setup the confirm without All Erase (the E118 family, X). The path is checked by what the
+// application does at its end: the media control's start with the format's command (a wrong row starts no format, or
+// another command, which stops the session)
 //
 // Card Formatting from the menu (S-MDACTRL, media.mjs) after a picture: the format reaches the card from the
 // firmware's own request, the card read back independently is freshly formatted with the file system it had (its
 // label, an empty root, the free count of the volume as the insertion's format left it; FAT32's FSInfo with it, an
-// exFAT volume consistent with its backup boot region), the counts reset, the application leaves Busy for the menu
+// exFAT volume consistent with its backup boot region), the counts reset, the application leaves Busy for the menu;
+// the card input is refused while the format runs, and after MENU S2's picture lands on the card as the first file
+const FORMAT_GOALS = [{ row: ['Card Formatting', 'Card Setup'] }, { pass: ['Select Card to Set Up'], key: 'ok' }, { row: ['Format Card', 'Format'] }, { row: ['Yes'] }];
+// from the menu MENU opened to the Format's Yes taken: the keys and what the walker read for each
+async function walkToFormat(s, press) {
+  const { MenuWalk } = await import('../src/lab/menuwalk.mjs');
+  const walk = new MenuWalk({ press: (k) => press(s, k), frame: () => s.frame('boundary'), draws: () => s.lab.draw_log });
+  walk.to(FORMAT_GOALS);
+  return walk.log;
+}
 async function hlsFormat(card, tag, ok, bad, notes) {
   const { STORAGE: F } = await import('../src/lab/storage.mjs');
   if (F.hls.cab) return hlsFormatFamily(card, tag, ok, bad, notes);
@@ -687,13 +793,17 @@ async function hlsFormat(card, tag, ok, bad, notes) {
     const first = openVolume(read), fresh = first.freeClusters();
     notes.push(`${tag}: before the menu's format: ${layout(mbrPartition(read(0, 1)), first)}`);
     press(s, 's2'); s.idle_slice(lab.lab_time() + 1000e6);
-    const vol0 = openVolume(read);
+    const vol0 = openVolume(read), shooting = lab.state();
     ok(vol0.find(FILE1) && vol0.freeClusters() < fresh && s.camapp.images.length === 1, `${tag}: before the format: the picture's file on the card, ${vol0.freeClusters()} of ${fresh} clusters free`);
     press(s, 'menu');
     const menu = frame(s);
-    for (const k of ['ok', 'ok', 'up', 'ok', 'up', 'ok']) press(s, k);
+    notes.push(`${tag}: the menu's path to the format: ${(await walkToFormat(s, press)).join('; ')}`);
     const busy = frame(s), media = s.camapp.media, t0 = lab.lab_time();
-    ok(media.ctrl !== null || media.formats === 1, `${tag}: Format Card, Yes: the media control start reached S-MDACTRL`);
+    ok((media.ctrl !== null || media.formats === 1) && media.started?.cmd === media.f.ctrl.format && media.started.media === 0, `${tag}: Format Card, Yes: the media control's start reached S-MDACTRL with the format's command for the first card: ${JSON.stringify(media.started)}`);
+    // the format runs (S-MDACTRL's start seen, its end not yet): the card input is refused
+    let held = false;
+    try { pl.run_input({ type: 'card', action: 'remove' }); } catch (e) { held = /media layer is busy/.test(e.message); }
+    ok(media.ctrl !== null && held && s.storage.card.present, `${tag}: while the format runs the card input is refused (S-MDACTRL ${media.ctrl === null ? 'done' : 'running'})`);
     for (let i = 0; i < 100 && media.formats === 0; i++) s.idle_slice(lab.lab_time() + 50e6);
     const took = lab.lab_time() - t0;
     s.idle_slice(lab.lab_time() + 1000e6);
@@ -714,13 +824,18 @@ async function hlsFormat(card, tag, ok, bad, notes) {
     const after = frame(s);
     ok(rows(after, 0, 130) === rows(menu, 0, 130) && rows(after, 200, 600) !== rows(busy, 200, 600), `${tag}: the application left Busy for the menu (its tab bar and title as before the format)`);
     ok(pl.stand_ins_in_use().includes('S-MDACTRL'), `${tag}: the player lists S-MDACTRL`);
+    press(s, 'menu'); s.idle_slice(lab.lab_time() + 500e6);
+    press(s, 's2'); s.idle_slice(lab.lab_time() + 1000e6);
+    const e = openVolume(read).find(FILE1);
+    ok(lab.state() === shooting && e && e.size > 0 && s.camapp.images.length === 1, `${tag}: MENU, then S2 as before the format (state 0x${lab.state().toString(16)}, 0x${shooting.toString(16)} then): its picture on the card as ${FILE1} again (${e?.size} bytes)`);
   } catch (e) { bad.push(`${tag}: menu format: ${e.message.slice(0, 400)}`); }
   try { pl.close_session(); } catch { /* closed */ }
 }
 
 // The card taken out and put back while the camera runs (S-MEDIA, media.mjs): the card switch through UI_IN, the
 // firmware unmounts and the screen loses the card's counts; back in, the firmware initialises and mounts the card again
-// (without a format: the volume it had, read back the same) and the counts come back
+// (without a format: the volume it had, read back the same) and the counts come back; then S2's picture lands on the
+// card
 async function hlsOutIn(card, tag, ok, bad, notes) {
   const { STORAGE: F } = await import('../src/lab/storage.mjs');
   if (F.hls.cab) return hlsOutInFamily(card, tag, ok, bad, notes);
@@ -729,6 +844,7 @@ async function hlsOutIn(card, tag, ok, bad, notes) {
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { A } = await import('../src/fw/model.mjs');
   const { SHOTS } = cardQueries(A), read = (lba, n) => card.read(lba, n);
+  const FILE1 = `DCIM/100${F.names.folder}/${F.names.file}0001.${F.names.ext}`;
   const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true },
     { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000, card: { open: () => card, save() {} } });
   const box = (s) => { const [w, , words] = s.frame('boundary'), out = []; for (let y = 0; y < 45; y++) for (let x = 230; x < 460; x++) out.push(words[y * w + x]); return out.join(','); };
@@ -759,18 +875,22 @@ async function hlsOutIn(card, tag, ok, bad, notes) {
     const shots2 = lab.call(SHOTS, { d0: 0 }, null, null, 2000000).d0 | 0;
     ok(shots2 === shots && box(s) === counts, `${tag}: in: the counts are back (${shots2} shots, ${shots} before; the screen's counts as before)`);
     notes.push(`${tag}: the card out and in: ${shots} remaining shots before, ${shots2} after`);
+    s.key('s2', 'down'); s.camapp.pump(); s.idle_slice(lab.lab_time() + 100e6); s.key('s2', 'up'); s.camapp.pump();
+    s.idle_slice(lab.lab_time() + 1400e6);
+    const e = openVolume(read).find(FILE1);
+    ok(e && e.size > 0 && s.camapp.images.length === 1, `${tag}: S2 after the card came back: its picture on the card as ${FILE1} (${e?.size} bytes)`);
     ok(pl.stand_ins_in_use().includes('S-MEDIA'), `${tag}: the player lists S-MEDIA`);
   } catch (e) { bad.push(`${tag}: card out and in: ${e.message.slice(0, 400)}`); }
   try { pl.close_session(); } catch { /* closed */ }
 }
 
-// The E118 family's HLS side (S-MDAEND and S-MEDIA, src/lab/media.mjs; docs/model-survey.md findings 124 to 129), in
-// a player on the body of OM_EMU_MODEL. The menu path to Format is the family's own, read from its frames (X, the same
-// on E118, E120 and E122): MENU opens Shooting Menu 1, whose first row is Card Setup; RIGHT enters the page and OK
-// opens Card Setup, which offers All Erase and Format while the card holds a picture (Format, DOWN) and the Format
-// confirm alone on an empty card; the confirm's cursor is on No, DOWN takes it to Yes. The path is checked by what the
-// application does at its end: the media control's start with the format's command, which S-MDAEND reads where the
-// application makes it (a wrong row would start no format or another command, and the session would stop)
+// The HLS side of the bodies whose application runs the media control itself (S-MDAEND and S-MEDIA,
+// src/lab/media.mjs; the E118 family, docs/model-survey.md findings 124 to 129, and the E144 family but E148,
+// findings 151 and 152), in a player on the body of OM_EMU_MODEL. The menu's path is walked (walkToFormat): on the
+// E118 family MENU opens Shooting Menu 1, whose first row is Card Setup, on the E144 family Card Setup is the Setup
+// Menu's first row, five tabs down; Card Setup offers All Erase and Format while the card holds a picture, and the
+// confirm's cursor is on No (X, the walker's notes). The path is checked by what the application does at its end: the
+// media control's start with the format's command, which S-MDAEND reads where the application makes it
 const familyPress = (s, k) => { s.key(k, 'down'); s.camapp.pump(); s.idle_slice(s.lab.lab_time() + 150e6); s.key(k, 'up'); s.camapp.pump(); s.idle_slice(s.lab.lab_time() + 600e6); };
 const familyPlayer = async (card) => {
   const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
@@ -800,11 +920,11 @@ async function hlsFormatFamily(card, tag, ok, bad, notes) {
     ok(vol0.find(FILE1) && vol0.freeClusters() < fresh && s.camapp.images.length === 1, `${tag}: before the format: the picture's file on the card, ${vol0.freeClusters()} of ${fresh} clusters free`);
     familyPress(s, 'menu');
     ok(lab.state() !== shooting, `${tag}: MENU left the shooting screen (state 0x${lab.state().toString(16)})`);
-    for (const k of ['right', 'ok', 'down', 'ok', 'down', 'ok']) familyPress(s, k);
+    notes.push(`${tag}: the menu's path to the format: ${(await walkToFormat(s, familyPress)).join('; ')}`);
     // the format runs (S-MDAEND's start seen, its end not yet): the card input is refused, as E143's during S-MDACTRL
     let held = false;
     try { pl.run_input({ type: 'card', action: 'remove' }); } catch (e) { held = /media layer is busy/.test(e.message); }
-    ok(media.mda !== null && held && s.storage.card.present, `${tag}: while the format runs the card input is refused (start ${JSON.stringify(media.mda)})`);
+    ok(media.mda !== null && media.started?.cmd === media.f.cab.format && media.started.media === 0 && held && s.storage.card.present, `${tag}: the application's start with the format's command for the first card; while the format runs the card input is refused (start ${JSON.stringify(media.started)})`);
     notes.push(`${tag}: the media control's start (the application's own): ${JSON.stringify(media.mda)}`);   // camapp's pump takes the log meanwhile
     const t0 = lab.lab_time();
     for (let i = 0; i < 100 && media.formats === 0; i++) s.idle_slice(lab.lab_time() + 50e6);
@@ -878,7 +998,8 @@ async function hlsOutInFamily(card, tag, ok, bad, notes) {
 }
 
 // The HLS media side alone (--hls): Card Formatting from the menu and the card out and in on a blank 8 GiB card each,
-// on the body of OM_EMU_MODEL whose card_fs runs it (bin/test.mjs runs it on the E118 family)
+// on the body of OM_EMU_MODEL whose card_fs runs it (bin/test.mjs runs it on the bodies whose --session it does not
+// run, and on the E118 family)
 export async function storageHls() {
   const bad = [], notes = [];
   let checks = 0;

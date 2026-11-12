@@ -17,7 +17,9 @@
 //              result (its class is not read; a remount, I). The component sends 1513 / 1514 through the reception's
 //              asynchronous slot, to the reactive's OXF main thread, which does not run in camapp 1: the synchronous
 //              slot stands in for that thread's dispatch (I). Any other command, and an error status, stops the
-//              session: the component's other starts and its error kinds (70 / 71 / 118) are not modelled
+//              session: the component's other starts and its error kinds (70 / 71 / 118) are not modelled. The
+//              ids are E143's: a later build renumbers them (src/fw/models.mjs card_fs.hls of E146, E147 and E148),
+//              and the log names each event by the id its constructor gave it
 //   S-MEDIA    the media manager's part of a card's removal and insertion, from the card switch's change: UI_IN decodes
 //              the switch natively (and calls the file layer's own callback for it) and publishes the slot's switch
 //              event; the stand-in reads the switch's level through UI_IN's getter natively. Out (level 1, I): the
@@ -27,13 +29,14 @@
 //              mount state mounted and 711 {kind, 1, 2} (notifyRecMountEnd: EV_MEDIA_MOUNT_REC) and {kind, 1, 8}
 //              (mountProcEnd). Each notification's layout and sender is D; which ones the media manager sends at a
 //              change, and in which order, is I. The level's meaning is I (models.mjs slots)
-//   S-MDAEND   (the E118 family, whose facts the rule reads: src/fw/facts.mjs mediaHls, fact 'media'; no S-MDACTRL
-//              there) the camera base's part of the media control's end. The family's application runs the media
-//              control itself, in its event manager's process (OlyHfwOpeMdaCtrlProcessEvFw): Card Setup's Format
-//              calls api_media's format, the file module formats the card and replies, and the process's progress
-//              callbacks drive the bar, all natively (X). The start's command is read where the application makes it
-//              (f.cab.start: d0 the command, d1 the media); any command but the format stops the session (the
-//              others are not driven here). At its end the process sends the camera base
+//   S-MDAEND   (the E118 family and the E144 family but E148, whose facts the rule reads: src/fw/facts.mjs mediaHls,
+//              fact 'media'; no S-MDACTRL there) the camera base's part of the media control's end. Their application
+//              runs the media control itself, in its event manager's process (OlyHfwOpeMdaCtrlProcessEvFw; the E144
+//              family's in two steps and with the slots' format flags, docs/model-survey.md finding 151): Card
+//              Setup's Format calls api_media's format, the file module formats the card and replies, and the
+//              process's progress callbacks drive the bar, all natively (X). The start's command is read where the
+//              application makes it (f.cab.start: d0 the command, d1 the media); any command but the format stops
+//              the session (the others are not driven here). At its end the process sends the camera base
 //              (Cab_CameraBase, an HLS component on the OXF main thread, which does not run) a request event that
 //              carries a closure (+28: the closure, its +12 the argument, +16 the function, vt[0] its call), whose
 //              function posts the result callback (CBC 16, kind 72 for a format) and ends the media lock (D). The
@@ -41,9 +44,9 @@
 //              does in the lab; after the step S-MDAEND runs the DCF numbering mount (storage.mjs: the next file
 //              number, I as S-MDACTRL's) and then the closure through its own vt[0], natively. That the camera base
 //              calls the closure once its request is done is I (its handler passes the closure on with a request
-//              of its own, not read, ?); an event without a closure function (the format's first, 12986 on E122) is
-//              logged and left, the camera base's work for it not done (?). The process's sends on its other path
-//              (another command's end or an error, f.cab.other) stop the session
+//              of its own, not read, ?); an event without a closure function (the format's first, 12986 on E122,
+//              611 on E144) is logged and left, the camera base's work for it not done (?). The process's sends on
+//              its other path (another command's end or an error, f.cab.other) stop the session
 import { FirmwareError, disasm, runtime, where } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { RTOS } from './rtos.mjs';
@@ -67,6 +70,7 @@ export class HlsMedia {
     this.ends = [];                 // S-MDAEND: the media control's requests to the camera base, not yet handled
     this.ended = 0;                 // S-MDAEND: their closures run
     this.mda = null;                // S-MDAEND: the media control's start in progress {cmd, media}
+    this.started = null;            // the last media control start seen, either way {cmd, media}
   }
   install() {
     const lab = this.lab, f = this.f, slot = f.slots[SLOT];
@@ -107,6 +111,7 @@ export class HlsMedia {
     const start = (r) => {
       const cmd = r.d0 & 0xFF, media = r.d1 & 0xFFFF;
       this.log.push(['control', `command ${cmd}, media ${media} (the application's own start)`]);
+      this.started = { cmd, media };
       if (cmd !== c.format) throw new MediaError(`S-MDAEND: the media control's command ${cmd} (media ${media}): only the format's (${c.format}) end is stood in`);
       if (this.mda !== null) throw new MediaError('S-MDAEND: a second media control start while the format runs');
       this.mda = { cmd, media };
@@ -143,6 +148,8 @@ export class HlsMedia {
     this.notified.push([what, r.d0 >>> 0]);
     this.log.push(['notify', `${what}: the reception answered ${r.d0 >>> 0}`]);
   }
+  // an event's id, as its constructor stored it (+4, u16)
+  _id(ev) { const b = this.lab.sim.read(ev + 4, 2); return b[0] | b[1] << 8; }
   // 1513 / 1514: {id, CBC, word +32, words +36, +40}
   _result(id, cbc, w32, w36, w40) {
     const [ctor, size] = this.f.events.result, ev = this._new(size);
@@ -152,12 +159,12 @@ export class HlsMedia {
   _media(w28, media) {
     const [ctor, size] = this.f.events.media, ev = this._new(size);
     this.lab.call(ctor, { a0: ev, d0: w28, d1: media }, null, null, LIMIT);
-    this._deliver(ev, `697 {${w28}, ${media}}`);
+    this._deliver(ev, `${this._id(ev)} {${w28}, ${media}}`);
   }
   _mount(kind, flag, state) {
     const [ctor, size] = this.f.events.mount, ev = this._new(size);
     this.lab.call(ctor, { a0: ev, d0: kind, d1: flag, a1: state }, null, null, LIMIT);
-    this._deliver(ev, `711 {${kind}, ${flag}, ${state}}`);
+    this._deliver(ev, `${this._id(ev)} {${kind}, ${flag}, ${state}}`);
   }
   _mount_state(kind, value) {
     const lab = this.lab, p = lab.alloc(pack('<I', value), 4);
@@ -171,6 +178,7 @@ export class HlsMedia {
     const lab = this.lab, c = this.f.ctrl, b = lab.sim.read(req, c.option + 2);
     const cmd = b[c.cmd], media = b[c.media] | b[c.media + 1] << 8, option = b[c.option] | b[c.option + 1] << 8;
     this.log.push(['control', `command ${cmd}, media ${media}, option ${option}`]);
+    this.started = { cmd, media };
     if (cmd !== c.format) throw new MediaError(`S-MDACTRL: the media control's command ${cmd} (media ${media}): only the format (${c.format}) is stood in`);
     if (this.ctrl !== null) throw new MediaError('S-MDACTRL: a second media control start while the format runs');
     this.ctrl = { cmd, media, cbc: null, token: null, queue: null, t0: null, progress: 0, sent: 0, reply: null };

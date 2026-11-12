@@ -332,10 +332,10 @@ export class RecFile {
     const pk = lab.alloc(new Uint8Array(R.packet.size), 4);
     const put = (field, fmt, v) => sim.write(pk + P[field], pack(fmt, v));
     put('pExifParam', '<I', x); put('HandleTarget', '<I', SHOT); put('Mode', '<H', STILL); put('Media', '<H', 0);
-    put('FileType', '<B', JPEG);
     // (null: the version's record path reads no such field, src/fw/facts.mjs recFileInline)
     if (P.Media2 !== null) put('Media2', '<H', NO_MEDIA);
     if (P.RecordDevice !== null) put('RecordDevice', '<H', CARD);
+    put('FileType', '<B', JPEG);
     const { header, size } = this.image ? this.image_native(pk, stream, take) : this.image_lab(pk, stream);
     // the file, from REC_FILE's context for Media (its fnode and folder, storage.mjs REC's layouts); where
     // rec_make_file keeps the context on its stack (contexts null), from the fnode and the stamp it held at the

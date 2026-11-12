@@ -18,6 +18,8 @@
 //                 and on the card. Then the requests S-PLAYSEQ refuses, each at its execute as the observer meets it:
 //                 the erases whose component path is not read (23, 301, 510, 395, 396, 497; the synchronous 265) and
 //                 the edits' saves (finding 141's fifteen), with nothing taken.
+//                 On ERASE_YES_UNTIMED's native body (E122) the dialog's Yes sends nothing in the lab (finding 155):
+//                 that is held once, and each erase opens the dialog, closes it with MENU and calls S-PLAYSEQ's erase.
 //                 On a body without the native erase (the rule reads no calls, or its DCF database does not hold the
 //                 pictures in the session: ERASE_NATIVE has the others) the session takes two pictures and checks that
 //                 eraseCurrent is refused at its execute and both files stay. On every body outside ERASE_DIALOG
@@ -36,14 +38,25 @@ export const ERASE_NATIVE = new Set(['E143', 'E146', 'E147', 'E144', 'E148', 'E1
 // body outside them Delete is pressed and must open nothing (or, on NO_DELETE_KEY's, be refused by the player), and on
 // a native one the session then erases by S-PLAYSEQ's erase itself (erase() below). The E118 family's Delete opens it
 // since its REC_FILE runs natively (X at the round's merge; I: the DCF database now holds the pictures, the one
-// difference there); on E122 the dialog's Yes then makes no request in the lab (X, cause not read)
+// difference there); on E122 the dialog's Yes then makes no request in the lab (ERASE_YES_UNTIMED)
 export const ERASE_DIALOG = new Set(['E143', 'E146', 'E147', 'E144', 'E148', 'E139', 'E134', 'E137', 'E142', 'E140', 'E125', 'E130', 'E133', 'E122', 'E118', 'E120']);
+// of the bodies with the dialog, those whose Yes sends nothing in the lab (docs/model-survey.md finding 155): the E118
+// family's Yes handler arms a GUI timer and acts when it runs out, and the GUI's timers count on its 10 ms tick, a
+// cyclic of the OS layer on the software timer driver, whose 2 ms service runs on the second timer unit, which the lab
+// does not model (D on E122, X: the tick's time word stays 0; X on E118 and E120: OK sends no request there either,
+// test/test_playinfo.mjs, where the dialog is not native). On the native E122 held strictly: Delete, UP and OK leave
+// the dialog open with no request taken and nothing erased, and PLAY twice comes back to the picture; each erase then
+// opens the dialog, closes it with MENU (before OK the GUI takes it, X) and erases by S-PLAYSEQ's erase itself, as on a
+// body without the dialog. Delete on the protected picture is not pressed there: it opens no dialog (X) but its protect
+// blink, which E143's GUI ends within a second, stays through MENU, PLAY, OK, LEFT and RIGHT (X; I: on a GUI timer too)
+export const ERASE_YES_UNTIMED = new Set(['E122', 'E118', 'E120']);
 // the bodies whose UI_IN tables hold no Delete key (finding 111; the player refuses the key there, X)
 export const NO_DELETE_KEY = new Set(['E145', 'E129', 'E132']);
 // of the native bodies, those whose shooting service starts again after PLAY's return from playback in the lab (X); on
 // the others S1 and S2 release nothing there, with or without an erase (X: PLAY and PLAY again with no picture on
-// E142; not the erase's, open), so the next picture's number is not taken there
-export const SHOOTS_AFTER_PLAY = new Set(['E143', 'E146', 'E147', 'E144', 'E148', 'E139', 'E134', 'E125']);
+// E142; not the erase's, open), so the next picture's number is not taken there. E122's starts again (X, finding 155:
+// 100-0001 in a new folder, as E143's)
+export const SHOOTS_AFTER_PLAY = new Set(['E143', 'E146', 'E147', 'E144', 'E148', 'E139', 'E134', 'E125', 'E122']);
 const START_KEYS = { E132: ['up', 'ok', 'up', 'ok', 'up', 'ok', 'up', 'ok', 'up', 'ok'] };
 const WIZARD = 'SS_MENU_MAIN/ID_ST_WIZARD_MENU_ENTRY', SINGLE = 'SS_PLAY_SINGLE/ID_ST_DISP_SIMPLE', NONE = 'SS_PLAY_SINGLE/ID_ST_NO_PICTURE';
 // FILECLBK's codes of the DCF edit's lock and unlock of one object (DCFED_OBJ_LOCK, DCFED_OBJ_UNLOCK: dcfedit's ops 4
@@ -90,10 +103,18 @@ export async function eraseSession() {
   // one erase: through the GUI's dialog where Delete opens it (Delete, UP to Yes, OK: the GUI sends eraseCurrent and
   // S-PLAYSEQ finishes it); else S-PLAYSEQ's erase called here as the request would have it called (the firmware's
   // calls, the list and the image shown), then PLAY out and in, since no request tells that GUI of the erase
+  // (ERASE_YES_UNTIMED: the dialog opened and closed with MENU, then S-PLAYSEQ's erase as without it)
+  const untimed = ERASE_YES_UNTIMED.has(MODEL);
   const erase = () => {
     if (dialog) {
       press('delete');
       ok(name() === WIZARD, `${MODEL}: Delete ${name()} (the erase dialog)`);
+      if (untimed) {
+        press('menu');
+        ok(name() === SINGLE, `${MODEL}: MENU ${name()} (the dialog closed)`);
+        cam.play_erase({ id: 21 }); press('play'); press('play');
+        return;
+      }
       press('up');
       press('ok');
     } else { noDialog(); cam.play_erase({ id: 21 }); press('play'); press('play'); }
@@ -130,6 +151,18 @@ export async function eraseSession() {
     `${MODEL}: the DCF edit's lock of picture 1: status ${lock}, ${first.name}'s attribute 0x${first.attr.toString(16)} on the card, the API's attribute ${attribute(1)} (picture 2's ${attribute(2)})`);
   press('play');
   ok(name() === SINGLE && cam.play_cur === 2 && cam.shown()?.number === 3, `${MODEL}: PLAY ${name()}, image ${cam.play_cur + 1} of 3 shown (number ${cam.shown()?.number})`);
+  // ERASE_YES_UNTIMED: the dialog's Yes sends nothing; PLAY twice back to the picture
+  if (untimed) {
+    const files = card().files.size, execute = cam.play_execute, ids = [];
+    press('delete'); press('up');
+    // every request the GUI executes at OK (S-PLAYSEQ's observer calls play_execute)
+    cam.play_execute = (rsb, from) => { const req = lab.sim.u32(rsb + RSB_REQUEST) >>> 0; if (req) ids.push(lab.sim.u32(req) >>> 0); return execute.call(cam, rsb, from); };
+    try { press('ok'); } finally { cam.play_execute = execute; }
+    ok(name() === WIZARD && cam.erased === 0 && cam.card_images() === 3 && card().files.size === files && ids.length === 0,
+      `${MODEL}: Delete, UP, OK: ${name()}, ${cam.erased} erased, ${cam.card_images()} counted, ${card().files.size} of ${files} files, requests [${ids.join(' ')}] (ERASE_YES_UNTIMED: none)`);
+    press('play'); press('play');
+    ok(name() === SINGLE && cam.play_cur === 2 && cam.shown()?.number === 3, `${MODEL}: PLAY twice ${name()}, image ${cam.play_cur === null ? '-' : cam.play_cur + 1} of 3 shown`);
+  }
   // erase the newest (the last index): the picture before it is shown; then that one: the first, the protected one
   for (const [number, left, shown] of [[3, 2, 2], [2, 1, 1]]) {
     const before = card(), file = fileName({ number }), e = before.files.get(file), frame = sha(s.frame('boundary', true)[2]);
@@ -153,7 +186,7 @@ export async function eraseSession() {
   {
     const before = card(), file = fileName({ number: 1 });
     ok(cam.play_list[0]?.attr === 1, `${MODEL}: the picture shown is protected in the list (attribute ${cam.play_list[0]?.attr})`);
-    if (dialog) {
+    if (dialog && !untimed) {
       press('delete');
       const at = name();
       s.idle_slice(lab.lab_time() + 1500e6);

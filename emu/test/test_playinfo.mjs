@@ -25,15 +25,17 @@
 //                    cursor and OK sends PlaySingleFrame::eraseCurrent (21): on ERASE_NATIVE's bodies S-PLAYSEQ
 //                    performs it (test/test_erase.mjs has the erase's checks: here one picture left, counted and on
 //                    the card), on the others it refuses it (findings 110 and 140): the session stops with that
-//                    refusal and both pictures stay on the card
+//                    refusal and both pictures stay on the card; on ERASE_YES_UNTIMED's (the E118 family) OK
+//                    sends nothing in the lab (finding 155): the dialog stays open and both pictures stay
 //   node emu/test/test_playinfo.mjs   (with OM_EMU_MODEL=E122 etc.; exit 1 on a failure)
 import { createHash } from 'node:crypto';
 import zlib from 'node:zlib';
 // the bodies whose Delete in playback opens the erase dialog (test/test_erase.mjs ERASE_DIALOG: X, 2026-11-10, and
 // E143, E137 and E125 since their media status is OK, finding 138; E145's, E129's and E132's UI_IN tables hold no
 // Delete key), and
-// those whose eraseCurrent runs natively (ERASE_NATIVE there)
-import { ERASE_DIALOG, ERASE_NATIVE } from './test_erase.mjs';
+// those whose eraseCurrent runs natively (ERASE_NATIVE there), and those whose dialog's Yes sends nothing in the lab
+// (ERASE_YES_UNTIMED there)
+import { ERASE_DIALOG, ERASE_NATIVE, ERASE_YES_UNTIMED } from './test_erase.mjs';
 
 // the GUI's still information record (OlyHfwOpePlyCom's dump 0x50acd02d names the fields: createDate.year +0, month
 // +2, date +3, hour +4, minute +5, pictureSize +8 / +10, expTime +40 / +44, focalLength +56; D, src/fw/facts.mjs
@@ -145,7 +147,10 @@ export async function playInfoSession() {
     let refusal = null;
     try { press('ok'); } catch (e) { refusal = e; }
     const vol2 = openVolume((lba, n) => st.card.read(lba, n)), kept = s.storage.files.filter((x) => vol2.find(x.path.slice(3).replaceAll('\\', '/')));
-    if (native) {
+    if (ERASE_YES_UNTIMED.has(MODEL)) {
+      ok(refusal === null && name() === WIZARD && cam.erased === 0, `${MODEL}: OK in the erase dialog: ${refusal ? refusal.message.slice(0, 160) : `${name()}, ${cam.erased} erased`} (ERASE_YES_UNTIMED: nothing sent)`);
+      ok(kept.length === 2 && cam.card_images() === 2, `${MODEL}: after OK ${kept.length} of the 2 files on the card, ${cam.card_images()} counted`);
+    } else if (native) {
       ok(refusal === null && name() === SINGLE && cam.play_cur === 0, `${MODEL}: OK in the erase dialog: ${refusal ? refusal.message.slice(0, 160) : `${name()}, image ${cam.play_cur === null ? '-' : cam.play_cur + 1} shown`}`);
       ok(kept.length === 1 && cam.card_images() === 1 && cam.erased === 1, `${MODEL}: after the erase ${kept.length} of the 2 files on the card, ${cam.card_images()} counted, ${cam.erased} erased`);
     } else {

@@ -22,7 +22,10 @@
 // (the overlay's summary), and --serve's load without an image loads it, its response's image 'patched: FILE...'. --trace
 // PATH runs the machine in the one-instruction mode (every instruction a one-instruction TB) and writes QEMU -d exec's
 // 'MN10300 pc=' lines (its 'Trace 0:' lines carry host pointers and are not written). As for the checks, OM_MACHINE
-// gives the machine options (checks/lib/env.mjs). Also:
+// gives the machine options (checks/lib/env.mjs). --loaded auto|on|off: the loaded-ranges mode (S-STALERAM,
+// src/lab/sim.mjs loadedRanges: the DRAM the boot does not load holds a fill, an instruction there an uncaught
+// FirmwareError naming the section and its end word, exit 1); auto, the default, is on with --patch on a body whose
+// section loader the lab reads, off otherwise. Also:
 //   --serve                     the JSON-lines mode (no --entry needed)
 //   --watch ADDR:LEN[:KIND]     a stopping watchpoint (KIND r, w or rw; default w), per virtual address; a stop on it
 //                               adds "watch" to the output
@@ -53,6 +56,7 @@ const ACTIONS = [
   { opt: '--image', type: 'path', metavar: 'IMAGE' },
   { opt: '--patch', type: 'path', repeat: true, metavar: 'FILE' },
   { opt: '--main', type: 'path', metavar: 'FILE' },
+  { opt: '--loaded', type: 'str', choices: ['auto', 'on', 'off'], default: 'auto' },
   { opt: '--entry', type: 'int', required: true, metavar: 'ADDR' },
   { opt: '--attach', type: 'str', metavar: 'URL' },
   { opt: '--stop', type: 'int', repeat: true, metavar: 'ADDR' },
@@ -142,7 +146,8 @@ function main(argv) {
   if (serve) { startServe(); return 0; }
   const { regs, writes, reads, watches, disasms } = items(args);       // all checked before the machine starts
   const oneInsn = args.trace !== undefined || args.trace_mode === 'one-insn' && args.exec_trace !== undefined;
-  const env = { rom: loadImage(overlay?.label ?? args.image ?? PATCHED), createHash, machine: { ...envMachine(), ...(oneInsn ? { oneInsn } : {}) } };
+  const env = { rom: loadImage(overlay?.label ?? args.image ?? PATCHED), createHash, machine: { ...envMachine(), ...(oneInsn ? { oneInsn } : {}) },
+    ...(overlay ? { patch: overlay.summary } : {}), loaded: args.loaded };
   const sim = new Simulator(env, args.insn_limit ?? null);
   const dbg = Debugger.attach(sim, { disasm });
   const sinks = [];

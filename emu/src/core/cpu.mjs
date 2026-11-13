@@ -162,6 +162,11 @@ export function setExecTrace(f) { XT = f; }
 // per decode.
 export let CV = null;
 export function setCoverage(f) { CV = f; }
+// The fetch guard (createMachine's unloaded option, S-STALERAM): FG(pc, len) once per instruction that reaches step(),
+// after its code fetch and before it runs; it throws to refuse the instruction. interp.mjs calls it when it decodes a pc
+// into the cache, before the slot is filled. null (the default): one test per helper step and per decode.
+export let FG = null;
+export function setFetchGuard(f) { FG = f; }
 
 // ---- step: one instruction, all memory accesses before register writes
 // refetch: an instruction fetched from MMIO (interp.mjs, mem.mjs cbIo): after the translator's reads of every byte the
@@ -181,6 +186,7 @@ export function step(refetch = false) {
       p = op >= 0xf0 && op <= 0xfe && op !== 0xf7 ? cb(pc + 1) : 0;
     }
   } catch (e) { if (e instanceof Fault) { R[FAULT] = e.code; e.done = true; } throw e; }   // code fetch: not counted
+  if (FG !== null) FG(pc, insnLength(op, p));
   if (XT !== null) XT(pc, op);
   if (CV !== null) CV(pc);
   let src = (op >> 2) & 3, dst = op & 3;

@@ -20,7 +20,10 @@
 // release, and the AF beep end to end (test_audio.mjs), the audio hardware and AUD_EXEC's play path on E143
 // (test_audiohw.mjs), the SCPU's clock, ports, link pins and sub-CPU model
 // (test_scpu.mjs), the publication audit (test_pubaudit.mjs), patch overlays (test_patch.mjs: the rules, --patch and
-// --main on E143 through debug.mjs, play.mjs and nav.mjs, the hook rule; an om3-patch-2 file and --main on E147), the HDMI port and a plug in play on E143,
+// --main on E143 through debug.mjs, play.mjs and nav.mjs, the hook rule; an om3-patch-2 file and --main on E147), the
+// boot's section loader (test_sections.mjs: the rules and the unloaded ranges on a synthetic block, a patched routine
+// past section 6's end through debug.mjs on E143 and E147, and S-SECLOADED with its negative control on E143), the HDMI
+// port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample, check_level on E146 and its PER_ROTATE groups (--rotate
 // on) on E143 and E146 (test_acc.mjs), the card and the
 // file system on E143, E146, E147, E144, E142, E134, E148, E137, E125, E130, E133, E129 and the E118 family (S2's
@@ -382,6 +385,18 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`patch overlays: units ${pu.checks - pu.bad.length}/${pu.checks}; on E143 ${ps.checks - ps.bad.length}/${ps.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
   [...pu.bad, ...ps.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += pu.bad.length + ps.bad.length + others.filter(([, rc]) => rc !== 0).length;
+}
+// the boot's section loader (src/fw/sections.mjs, S-SECLOADED, S-STALERAM): the units, then E143 here and E147 in a
+// process of its own (the model is fixed when the lab is imported)
+{
+  const { sectionsUnits, sectionsSession } = await import('../test/test_sections.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const su = await sectionsUnits(), ss = await sectionsSession();
+  const r = spawnSync(process.execPath, [new URL('../test/test_sections.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' });
+  const lines = (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0);
+  console.log(`section loader: units ${su.checks - su.bad.length}/${su.checks}; on E143 ${ss.checks - ss.bad.length}/${ss.checks}; E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
+  [...su.bad, ...ss.bad, ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
+  bad += su.bad.length + ss.bad.length + (r.status === 0 ? 0 : 1);
 }
 // the publication audit (bin/pubaudit.mjs) on a throwaway repository with made-up firmware
 {

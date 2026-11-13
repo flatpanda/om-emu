@@ -80,11 +80,16 @@ const NVRAM = { opt: '--nvram', type: 'str', metavar: 'on|off|FILE' };
 // insertion mounts it (src/lab/cardfs.mjs withCardFiles, in the lab worker), on the card OM_EMU_CARD keeps, which must
 // be one the firmware formatted (node emu/bin/card.mjs new); the lab's env too, not among session.json's args
 const CARD_PUT = { opt: '--card-put', type: 'str', repeat: true, metavar: 'DOS/PATH=LOCAL' };
+// --loaded auto|on|off: the loaded-ranges mode (S-STALERAM, src/lab/sim.mjs loadedRanges): the DRAM the boot does not
+// load holds a fill, and code run there stops the session; auto, the default, is on with --patch or --main on a body
+// whose section loader the lab reads (E143, E146, E147), off otherwise. The lab's env too, not among session.json's args
+const LOADED = { opt: '--loaded', type: 'str', choices: ['auto', 'on', 'off'], default: 'auto' };
 // The parsed options: every option's key in ACTIONS' order, then no_wait_on_error; the --patch files, if any, as the
 // non-enumerable patch, --main's file (null when not given) as the non-enumerable main, --nvram's value (null when
-// not given) as the non-enumerable nvram and the --card-put items as the non-enumerable card_put ([] when none).
+// not given) as the non-enumerable nvram, the --card-put items as the non-enumerable card_put ([] when none) and
+// --loaded's as loaded.
 export function parsePlayArgs(argv) {
-  const r = parseArgs(PROG, argv, [...ACTIONS, PATCH, MAIN, NVRAM, CARD_PUT]);
+  const r = parseArgs(PROG, argv, [...ACTIONS, PATCH, MAIN, NVRAM, CARD_PUT, LOADED]);
   if ((r.x_mutant || r.x_trim_keep) && !r.debug_api) r.error('--x-mutant and --x-trim-keep need --debug-api');
   if (r.main !== undefined && r.patch.length) r.error('--main and --patch exclude each other (--main is the whole change to the main code block)');
   const a = {};
@@ -93,6 +98,7 @@ export function parsePlayArgs(argv) {
   Object.defineProperty(a, 'nvram', { value: r.nvram ?? null });
   for (const item of r.card_put) if (!/^[^=]+=.+$/.test(item)) r.error(`--card-put ${item}: DOS/PATH=LOCAL`);
   Object.defineProperty(a, 'card_put', { value: r.card_put });
+  Object.defineProperty(a, 'loaded', { value: r.loaded });
   for (const x of ACTIONS) {
     const k = x.opt.slice(2).replaceAll('-', '_');
     a[k] = r[k];
@@ -278,7 +284,7 @@ export async function main(argv) {
   }
   // a 16 MB stack (node's default is 4 MB): headroom for a request body that nests deeply, should a message of the lab
   // show part of it
-  worker = new Worker(new URL('./labworker.mjs', import.meta.url), { workerData: { args: a, flags, port: port2, out, argv, patches, nvram: nv.file, cardFiles }, transferList: [port2],
+  worker = new Worker(new URL('./labworker.mjs', import.meta.url), { workerData: { args: a, flags, port: port2, out, argv, patches, nvram: nv.file, cardFiles, loaded: a.loaded }, transferList: [port2],
     resourceLimits: { stackSizeMb: 16 } });
   worker.on('message', (m) => proxy.onMessage(m));
   const ended = await new Promise((resolve) => {

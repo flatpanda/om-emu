@@ -2,9 +2,11 @@
 // without the PERF2 machinery (no host reads, register cache, write elision or HLE builtins), over
 // the machine API. Stats: g_count and g_digest (sha256 of every 'g' reply
 // in order), insns (the sum of insns deltas between a register write or read and the next read), probes.
-import { A, IMAGE_BASE, IMAGE_END } from '../fw/model.mjs';
-import { createMachine, RspError } from '../machine.mjs';
-import { RuntimeError, ValueError, AssertionError } from './errors.mjs';
+import { A, IMAGE_BASE, IMAGE_END, fact } from '../fw/model.mjs';
+import { SECTIONS_E143 } from '../fw/facts.mjs';
+import { bootLoads, gapMessage, POISON } from '../fw/sections.mjs';
+import { createMachine, RspError, UnloadedCode } from '../machine.mjs';
+import { RuntimeError, FirmwareError, ValueError, AssertionError } from './errors.mjs';
 import { bytesHex, hexBytes } from '../util/bytes.mjs';
 
 export const REGS = ['d0', 'd1', 'd2', 'd3', 'a0', 'a1', 'a2', 'a3', 'sp', 'pc', 'psw', 'mdr', 'lir', 'lar', 'fault', 'insns'];
@@ -35,6 +37,21 @@ export function packRegs(regs) {
 const u32le = (b, o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0;
 const le4 = (v) => new Uint8Array([v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff, (v >>> 24) & 0xff]);
 
+// The build's section loader (fact 'sections', src/fw/facts.mjs sectionLoader), or null where its rule reads none
+export const sectionsFact = () => fact('sections', SECTIONS_E143) ?? null;
+// The loaded-ranges mode (S-STALERAM): env.loaded 'on', 'off' or 'auto' (absent: auto, on for patched firmware,
+// env.patch, on a body whose section loader the rule reads, else off). Returns null when off, else what the boot loads
+// of env.rom (src/fw/sections.mjs bootLoads: read from the image in use, a patched end word's value included). 'on' on
+// a body without the rule throws.
+export function loadedRanges(env) {
+  const mode = env.loaded ?? 'auto';
+  if (!['on', 'off', 'auto'].includes(mode)) throw new ValueError(`loaded ${mode}: on, off or auto`);
+  const f = sectionsFact();
+  if (mode === 'off' || (mode === 'auto' && (!env.patch || f === null))) return null;
+  if (f === null) throw new ValueError('--loaded on: this build holds no section loader the rule reads (src/fw/facts.mjs sectionLoader), so what its boot loads is not known');
+  return bootLoads(env.rom, IMAGE_BASE, f);
+}
+
 export class Simulator {
   // env: { rom, createHash, clock?, stats? (a Stats or null), slice? (instructions per continue slice), onSlice?,
   // machine? (the machine options passed to createMachine: mutant, a negative control's number, oneInsn, the
@@ -43,7 +60,11 @@ export class Simulator {
   constructor(env, insnLimit = null, keepStderr = false) {
     this.env = env;
     const { mutant = 0, oneInsn = false, coverage = null, hdmi = false, audio = false, cores = null } = env.machine ?? {};
-    this.m = createMachine({ rom: env.rom, insnLimit: insnLimit === null ? 1000000 : insnLimit, ...(env.clock ? { clock: env.clock } : {}), mutant, oneInsn, keepStderr, coverage, hdmi, audio, cores });
+    // S-STALERAM (loadedRanges): the unloaded ranges filled, an instruction there refused with its gap named
+    this.loads = loadedRanges(env);
+    const f = this.loads ? sectionsFact() : null;
+    const unloaded = this.loads ? { gaps: this.loads.gaps, fill: POISON, message: (g, pc) => gapMessage(g, pc, IMAGE_BASE, f) } : null;
+    this.m = createMachine({ rom: env.rom, insnLimit: insnLimit === null ? 1000000 : insnLimit, ...(env.clock ? { clock: env.clock } : {}), mutant, oneInsn, keepStderr, coverage, hdmi, audio, cores, unloaded });
     this.breakpoints = new Set();
     this.known_insns = 0; this.ran = false;
     this.fast = false;
@@ -195,6 +216,7 @@ export class Simulator {
       }
     } catch (e) {
       if (e instanceof RspError) throw new RuntimeError(`GDB ${text.slice(0, 80)}: ${e.code}`);
+      if (e instanceof UnloadedCode) throw new FirmwareError(e.message);       // S-STALERAM: the firmware ran there
       throw e;
     }
   }

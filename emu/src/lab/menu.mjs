@@ -17,12 +17,12 @@ import { ScpuDev, ScpuMemory, SOURCES_IMAGE } from './scpudev.mjs';
 import { ScpuLink, PER_SCPU_TASK } from './scpulink.mjs';
 import { ScpuM4 } from './scpum4.mjs';
 import { ValueError, RuntimeError, AssertionError } from './errors.mjs';
-import { packRegs } from './sim.mjs';
+import { packRegs, sectionsFact } from './sim.mjs';
 import { show } from '../util/show.mjs';
 import { pack, unpack, unpackFrom, bytesHex } from '../util/bytes.mjs';
 import { hex, hexDigits as fx } from '../util/hex.mjs';
 import { Tally } from '../util/tally.mjs';
-import { BOOT_E143, PROP_STORE_E143, CTORS_E143, STATE_PARENTS_E143 } from '../fw/facts.mjs';
+import { BOOT_E143, PROP_STORE_E143, CTORS_E143, STATE_PARENTS_E143, sectionEnds } from '../fw/facts.mjs';
 // an om1.scpu command line on stderr (src/dev/scpu.mjs): its value, pc and count
 const SCPU_COMMAND = /^om-emu: scpu command 0x([0-9a-f]+) pc 0x([0-9a-f]+) #([0-9]+)(?: |$)/;
 
@@ -714,6 +714,7 @@ export class MenuLab extends T.TextDisplayLab {
       }
     }
     this.boot_stage();
+    this.sections_loaded();
     const reg = this.native(REGISTRY_INIT, null, 'registry bootstrap 0x50040aeb');
     // with saved images (M, E; B in the SCPU words) the bootstrap restores those stores ('xlR.'); one it rejects is a
     // broken save, not a blank camera
@@ -768,6 +769,23 @@ export class MenuLab extends T.TextDisplayLab {
     if (b & 1) throw new MenuError(`S-BOOTSTAGE: the stage word ${h8(word)} has stage 1's bit before the store's start`);
     this.sim.write(word, Uint8Array.of(b | 1));
     this.boot_staged = true;
+  }
+  // S-SECLOADED: the boot's sections copied, one bit per section in the section loader's copied mask (fact
+  // 'sections.copied', src/fw/facts.mjs sectionLoader), as load_section sets bit n - 1 after section n's copy on CPU 2
+  // (USTART_L2), which the lab does not run (docs/hle-gaps.md 4.6.3): the lab's image is in place from the machine's
+  // creation, every section of it (S-STALERAM leaves out only what lies past a section's end). The count is the image's
+  // own, the cases of its end switch (patched firmware's as it is). No instruction of the stock builds reads the word (X:
+  // E143, E146, E147), so their runs do not change; code a patch adds may (caduceus-om3's half-press gate tests it for
+  // every section, their editor.s pr_gate). Before the store's start, beside S-BOOTSTAGE; the stages' ready word, which
+  // the per-section init sets for the same sections, has readers and keeps only S-BOOTSTAGE's bit. no_secloaded (set
+  // in lab_created): the stand-in left out, a negative control
+  sections_loaded() {
+    const f = sectionsFact();
+    if (f === null || this.no_secloaded) return;     // a build without the loader the rule reads (the E144 and E118 families)
+    const count = sectionEnds(this.env.rom, IMAGE_BASE, f.switch, 'S-SECLOADED').length, word = this.sim.u32(f.copied);
+    if (word !== 0) throw new MenuError(`S-SECLOADED: the copied mask ${h8(f.copied)} holds ${h8(word)} before the store's start`);
+    this.sim.write(f.copied, pack('<I', (2 ** count - 1) >>> 0));
+    this.sections_copied = count;
   }
   // The sub-CPU's own firmware at the far end of the link (src/lab/scpum4.mjs; docs/om1-scpu-spec.md section 8 step 6),
   // opt-in (env.scpu 'native', node's OM_EMU_SCPU=native) on a body whose SCPU image the STM32L4 machine is known to

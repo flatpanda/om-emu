@@ -464,8 +464,10 @@ export class Player {
     if (this.session?.camapp?.modpost_taken) used.push('S-MODPOST');                         // a direct module post taken (E143)
     if (this.session?.camapp?.takerdy_events) used.push('S-TAKERDY');                        // a take-ready finished (E143, camapp 3)
     if (this.session?.boot_key !== undefined) used.push('S-BOOTKEY');                       // UI_IN's boot key: the power switch
-    if (this.session?.lab?.boot_staged) used.push('S-BOOTSTAGE');
-    if (this.patch_tasks.size || this.session?.lab?.lt?.patch_tasks?.length) used.push('H-PATCHTASK');   // a task a patch overlay made started (kernel.mjs), in any session                          // the boot's first stage readied
+    if (this.session?.lab?.boot_staged) used.push('S-BOOTSTAGE');                          // the boot's first stage readied
+    if (this.session?.lab?.sections_copied) used.push('S-SECLOADED');                      // the boot's sections copied (menu.mjs)
+    if (this.session?.lab?.sim?.loads) used.push('S-STALERAM');                            // the loaded-ranges mode (sim.mjs)
+    if (this.patch_tasks.size || this.session?.lab?.lt?.patch_tasks?.length) used.push('H-PATCHTASK');   // a task a patch overlay made started (kernel.mjs), in any session
     if (this.session?.lab?.iic_answered) used.push('S-IICWAIT');                            // a body whose firmware waits on the IIC bus
     if (this.session?.camapp?.dispsync_released) used.push('S-DISPSYNC');                   // a body whose GUI synced its display updates
     if (this.session?.camapp?.subject?.used) used.push('S-SUBJECT');                         // subject detection's frames drawn (subject.mjs)

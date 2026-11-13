@@ -6,7 +6,7 @@ import { BOARD, boardKnows } from './fw/board.mjs';
 import { IMAGE_BASE } from './fw/model.mjs';
 import * as mem from './core/mem.mjs';
 import { Fault, Unported, TbUndecidable, K_RAM, K_ROM, K_ROMD, K_MMIO, BUS, addRegion, allocWindow } from './core/mem.mjs';
-import { R, S, PC, PSW, UNDEF, HAZ, HI, UC, UD, UV, resetCpu, execInterrupt, getRegs, setRegs, limitFault, trapLines, admits, setExecTrace, setCoverage } from './core/cpu.mjs';
+import { R, S, PC, PSW, UNDEF, HAZ, HI, UC, UD, UV, resetCpu, execInterrupt, getRegs, setRegs, limitFault, trapLines, admits, setExecTrace, setCoverage, setFetchGuard } from './core/cpu.mjs';
 import { run, resetInterp, configureInterp, setBreakpoints, setWatch, windowRemapped, stepAny, setForceHelper, flushDecode, interpState, setInterpState, RUN_VISIT, RUN_LIMIT, RUN_FAULT, RUN_BP } from './core/interp.mjs';
 import { Intc, setIrqTrace } from './dev/intc.mjs';
 import { snapshotDevices, restoreDevices, devicesBytes } from './debug/snapshot.mjs';
@@ -38,6 +38,11 @@ export class Aborted extends Error {           // any call on a machine after ab
 export class RspError extends Error {          // the debug stub's error reply (E14, E22)
   constructor(code) { super(code); this.code = code; this.name = 'RspError'; }
 }
+// An instruction fetched from a range the boot does not load (the unloaded option, S-STALERAM), refused before it runs:
+// pc and the range ({lo, hi, ...} as the option gave it). A host error: the machine then refuses to run (HostStopped)
+export class UnloadedCode extends Error {
+  constructor(message, pc, gap) { super(message); this.name = 'UnloadedCode'; this.pc = pc >>> 0; this.gap = gap; }
+}
 const hex8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 const HLE_BASE = 0x89A30000, HLE_SIZE = 0x4000, HLE_MAGIC = 0x31454C48;
 // the lab's doorbell of the SCPU interface (src/dev/scpu.mjs): the input levels of its ports
@@ -46,6 +51,20 @@ export const SCPU_DOORBELL = 0x89A40000;
 export const HDMI_WINDOW = 0x89A50000, HDMI_DOORBELL = 0x89A51000;
 let generation = 0;
 const LONG_CONT = 50000;
+// S-STALERAM's fetch guard (cpu.mjs setFetchGuard): refuses an instruction with a byte in one of the gaps, in either
+// DRAM view
+function fetchGuard({ gaps, message }) {
+  const lo0 = Math.min(...gaps.map((g) => g.lo)), hi0 = Math.max(...gaps.map((g) => g.hi));
+  return (pc, len) => {
+    for (let k = 0; k < len; k++) {
+      let a = (pc + k) >>> 0;
+      if (a >= 0xA0000000 && a < 0xC0000000) a -= 0x40000000;
+      if (a < lo0 || a >= hi0) continue;
+      const g = gaps.find((x) => a >= x.lo && a < x.hi);
+      if (g) throw new UnloadedCode(message(g, pc >>> 0), pc, g);
+    }
+  };
+}
 // The creation registry (src/debug/, the trace and snapshot gates): every function registered here is called with each
 // new machine at the end of createMachine. Returns the function that unregisters it.
 const ON_MACHINE = [];
@@ -62,9 +81,13 @@ export function onMachine(fn) {
 // hdmi (the HDMI port's transmitter, its hot-plug pin and the sink, src/dev/hdmi.mjs; false, the default: none, and
 // their addresses stay the lab stub's), audio (the audio serial port and the SCA page, src/dev/audio.mjs; false, the
 // default: none, and their addresses stay the lab stub's), cores (a second MN103 core on the bus, src/core/cores.mjs:
-// {second: its core number, quantum: the interleave's instructions}; null, the default: CPU 0 alone, nothing changes).
+// {second: its core number, quantum: the interleave's instructions}; null, the default: CPU 0 alone, nothing changes),
+// unloaded (S-STALERAM: {gaps: [{lo, hi, ...}], fill, message(gap, pc)}, the run-time ranges of the image the boot does
+// not load, src/fw/sections.mjs bootLoads: their DRAM holds the byte fill instead of the image's, and an instruction
+// with a byte there is refused before it runs, UnloadedCode with message(gap, pc); reads and writes there are not
+// watched; null, the default: the whole image in DRAM, nothing changes).
 export const WATCH_LOG_MAX = 200000;
-export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 1000000, clock = () => performance.now(), mutant = 0, oneInsn = false, keepStderr = false, coverage = null, hdmi = false, audio = false, cores: coresOpt = null } = {}) {
+export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 1000000, clock = () => performance.now(), mutant = 0, oneInsn = false, keepStderr = false, coverage = null, hdmi = false, audio = false, cores: coresOpt = null, unloaded = null } = {}) {
   if (dramBytes > mem.DRAM_MAX || dramBytes < 64 << 20) throw new Error(`om-emu: DRAM must be 64..${mem.DRAM_MAX >> 20} MiB`);
   const myGen = ++generation;
   const tCreate = clock();
@@ -181,7 +204,14 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
   const n1 = Math.min(rom.length, mem.ROM_SIZE), copy = mem.DRAM_OFF + (IMAGE_BASE - 0x60000000);
   if (IMAGE_BASE < 0x60000000 || IMAGE_BASE - 0x60000000 + rom.length > dramBytes) throw new Error(`createMachine: the run-time image ${hex8(IMAGE_BASE)}+0x${rom.length.toString(16)} is outside the DRAM 0x60000000+0x${dramBytes.toString(16)}`);
   mem.U8.set(rom.subarray(0, n1), mem.ROM_OFF); mem.markDirty(mem.ROM_OFF, n1);
-  mem.U8.set(rom, copy); mem.markDirty(copy, rom.length);
+  mem.U8.set(rom, copy);
+  // S-STALERAM: the ranges the boot does not load hold the fill in DRAM (the flash view keeps the block as it is)
+  for (const g of unloaded?.gaps ?? []) {
+    if (g.lo < IMAGE_BASE || g.hi > IMAGE_BASE + rom.length || g.lo >= g.hi) throw new Error(`createMachine: the unloaded range ${hex8(g.lo)}..${hex8(g.hi)} is not inside the run-time image`);
+    mem.U8.fill(unloaded.fill, copy + (g.lo - IMAGE_BASE), copy + (g.hi - IMAGE_BASE));
+  }
+  mem.markDirty(copy, rom.length);
+  setFetchGuard(unloaded?.gaps.length ? fetchGuard(unloaded) : null);
   // The flash library's window (src/fw/board.mjs; E143 has none, its lab never reaches one): RAM holding the part of
   // the main block the boot copies there, which later builds call by address (E147: the image head at 0x3FFDEFE0,
   // a d32 call from flash into it, X; E144: file 0x1681fe0, 6 KiB at 0x47000800, the reset head's copy, D).

@@ -126,47 +126,7 @@ const HEAD_WALK = 400;
 const WORD_LOOP = [0x79, 0x51, 0x6a, 0x52, 0xf1, 0x04, 0xc1, 0xfa];
 const SETLB_LOOP = [0xdb, 0x71, 0x51, 0x60, 0x50, 0x44, 0xfa, 0xc9, null, null, 0xd4];
 export function resetHead(img) {
-  const { base, target } = imageBase(img);
-  const s16 = (o) => (img[o] | img[o + 1] << 8) << 16 >> 16;
-  const R = { d0: null, d1: null, d2: null, d3: null, a0: null, a1: null, a2: null, a3: null };
-  const D = ['d0', 'd1', 'd2', 'd3'], An = ['a0', 'a1', 'a2', 'a3'], mem = new Map();
-  const kill = (...rs) => rs.forEach((r) => { R[r] = null; });
-  const add = (r, k) => { R[r] = R[r] === null ? null : (R[r] + k) >>> 0; };
-  const calls = [], words = [], setlb = [];
-  let p = target - base, done = false;
-  for (let n = 0; n < HEAD_WALK; n++) {
-    const op = img[p], o2 = img[p + 1], call = callAt(img, p);
-    let len;
-    if (bytesAt(img, p, WORD_LOOP)) {
-      words.push({ at: p, src: R.a1, end: R.a0, dst: R.a2 }); kill('d0', 'd1', 'd2'); len = WORD_LOOP.length;
-    } else if (bytesAt(img, p, SETLB_LOOP)) {
-      setlb.push({ at: p, src: R.a1, dst: R.a0, len: (img[p + 8] | img[p + 9] << 8) * 4 }); kill('d0', 'd1', 'a0', 'a1'); len = SETLB_LOOP.length;
-    } else if (op === 0xfc && (o2 & 0xfc) === 0xcc) { R[D[o2 & 3]] = u32(img, p + 2); len = 6; }                  // mov imm32,Dn
-    else if (op === 0xfc && (o2 & 0xfc) === 0xdc) { R[An[o2 & 3]] = u32(img, p + 2); len = 6; }                   // mov imm32,An
-    else if (op === 0xfc && (o2 & 0xf3) === 0x81) { mem.set(u32(img, p + 2), R[D[o2 >> 2 & 3]]); len = 6; }       // mov Dm,(abs32)
-    else if (op === 0xfc && (o2 & 0xf3) === 0x82) len = 6;                                                        // movbu Dm,(abs32)
-    else if (op === 0xfc && (o2 & 0xfc) === 0xa4) { R[D[o2 & 3]] = mem.get(u32(img, p + 2)) ?? null; len = 6; }    // mov (abs32),Dn
-    else if (op === 0xfc && (o2 & 0xfc) === 0xc0) { add(D[o2 & 3], u32(img, p + 2)); len = 6; }                   // add imm32,Dn
-    else if (op === 0xfc && (o2 & 0xfc) === 0xd0) { add(An[o2 & 3], u32(img, p + 2)); len = 6; }                  // add imm32,An
-    else if (op >= 0x2c && op <= 0x2f) { R[D[op & 3]] = s16(p + 1) >>> 0; len = 3; }                              // mov imm16,Dn
-    else if (op >= 0x24 && op <= 0x27) { R[An[op & 3]] = img[p + 1] | img[p + 2] << 8; len = 3; }                 // mov imm16,An
-    else if (op >= 0x80 && op <= 0x9f && (op >> 2 & 3) === (op & 3)) { R[(op < 0x90 ? D : An)[op & 3]] = (img[p + 1] << 24 >> 24) >>> 0; len = 2; }   // mov imm8
-    else if (op >= 0x80 && op <= 0x9f) { const r = op < 0x90 ? D : An; R[r[op & 3]] = R[r[op >> 2 & 3]]; len = 1; } // mov Rm,Rn
-    else if (op <= 0x0c && (op & 3) === 0) { R[D[op >> 2]] = 0; len = 1; }                                        // clr Dn
-    else if (op === 0xf1 && o2 === 0xd0) { R.d0 = R.a0; len = 2; }                                                // mov a0,d0
-    else if (op === 0xf1 && o2 === 0x14) { R.d0 = R.d0 === null || R.a1 === null ? null : (R.d0 - R.a1) >>> 0; len = 2; }   // sub a1,d0
-    else if (call) {                                                                                              // call, calls
-      calls.push({ at: p, to: call.to, a0: R.a0, a1: R.a1, d0: R.d0, d1: R.d1 });
-      kill('d0', 'd1', 'a0', 'a1'); len = call.len;
-    } else if ((op === 0xf0 && (o2 === 0xfc || o2 === 0xfd)) || op === 0xde || op === 0xdf) { done = true; break; }   // rets, retf, ret
-    else if ((op >= 0x40 && op <= 0x4f && (op & 3) >= 2) || (op >= 0xc0 && op <= 0xca) || op === 0xce || op === 0xcf) len = 2;   // mov to (d8,sp), branches, movm
-    else if (op === 0xcb) len = 1;
-    else if (op === 0xf8 && o2 === 0xfe) len = 3;                                                                 // add imm8,sp
-    else if (op === 0xfa && o2 === 0xfe) len = 4;                                                                 // add imm16,sp
-    else { len = insnLength(op, o2); kill('d0', 'd1'); }
-    p += len;
-  }
-  if (!done) throw new Error(`resetHead: no ret within ${HEAD_WALK} instructions of the init function at ${h8(target)}`);
+  const { base, target, calls, words, setlb } = headWalk(img, 'resetHead');
   const flash = calls.filter((c) => c.a0 !== null && c.a1 !== null && c.a0 >= 0x40000000 && c.a0 < 0x48000000);
   if (!flash.length) throw new Error('resetHead: no flash copy');
   if (new Set(flash.map((c) => c.to)).size !== 1) throw new Error(`resetHead: flash copies to ${new Set(flash.map((c) => c.to)).size} routines, want 1`);
@@ -197,6 +157,86 @@ export function resetHead(img) {
     library = { base: (dst - at) >>> 0, size: at + len, image: [file, len, at] };
   }
   return { entry: target, flash_base, copies, library, preload };
+}
+// The walk of the reset jump's target (imageBase) to its ret that resetHead and headCopies read: {base, target, calls:
+// [{at, to, a0, a1, d0, d1}] (the registers at each call, null where not known), words, setlb (the two copy loops'
+// registers), stores: Map(abs32 word -> {at, value}) (each `mov Dm,(abs32)`, the last one kept), loads: Set(abs32
+// word) (each `mov (abs32),Dn`)}. A call ends what it may clobber (d0, d1, a0, a1), not the stores the walk tracks.
+function headWalk(img, rule) {
+  const { base, target } = imageBase(img);
+  const s16 = (o) => (img[o] | img[o + 1] << 8) << 16 >> 16;
+  const R = { d0: null, d1: null, d2: null, d3: null, a0: null, a1: null, a2: null, a3: null };
+  const D = ['d0', 'd1', 'd2', 'd3'], An = ['a0', 'a1', 'a2', 'a3'], mem = new Map(), stores = new Map(), loads = new Set();
+  const kill = (...rs) => rs.forEach((r) => { R[r] = null; });
+  const add = (r, k) => { R[r] = R[r] === null ? null : (R[r] + k) >>> 0; };
+  const calls = [], words = [], setlb = [];
+  let p = target - base, done = false;
+  for (let n = 0; n < HEAD_WALK; n++) {
+    const op = img[p], o2 = img[p + 1], call = callAt(img, p);
+    let len;
+    if (bytesAt(img, p, WORD_LOOP)) {
+      words.push({ at: p, src: R.a1, end: R.a0, dst: R.a2 }); kill('d0', 'd1', 'd2'); len = WORD_LOOP.length;
+    } else if (bytesAt(img, p, SETLB_LOOP)) {
+      setlb.push({ at: p, src: R.a1, dst: R.a0, len: (img[p + 8] | img[p + 9] << 8) * 4 }); kill('d0', 'd1', 'a0', 'a1'); len = SETLB_LOOP.length;
+    } else if (op === 0xfc && (o2 & 0xfc) === 0xcc) { R[D[o2 & 3]] = u32(img, p + 2); len = 6; }                  // mov imm32,Dn
+    else if (op === 0xfc && (o2 & 0xfc) === 0xdc) { R[An[o2 & 3]] = u32(img, p + 2); len = 6; }                   // mov imm32,An
+    else if (op === 0xfc && (o2 & 0xf3) === 0x81) { mem.set(u32(img, p + 2), R[D[o2 >> 2 & 3]]); stores.set(u32(img, p + 2), { at: p, value: R[D[o2 >> 2 & 3]] }); len = 6; }   // mov Dm,(abs32)
+    else if (op === 0xfc && (o2 & 0xf3) === 0x82) len = 6;                                                        // movbu Dm,(abs32)
+    else if (op === 0xfc && (o2 & 0xfc) === 0xa4) { R[D[o2 & 3]] = mem.get(u32(img, p + 2)) ?? null; loads.add(u32(img, p + 2)); len = 6; }   // mov (abs32),Dn
+    else if (op === 0xfc && (o2 & 0xfc) === 0xc0) { add(D[o2 & 3], u32(img, p + 2)); len = 6; }                   // add imm32,Dn
+    else if (op === 0xfc && (o2 & 0xfc) === 0xd0) { add(An[o2 & 3], u32(img, p + 2)); len = 6; }                  // add imm32,An
+    else if (op >= 0x2c && op <= 0x2f) { R[D[op & 3]] = s16(p + 1) >>> 0; len = 3; }                              // mov imm16,Dn
+    else if (op >= 0x24 && op <= 0x27) { R[An[op & 3]] = img[p + 1] | img[p + 2] << 8; len = 3; }                 // mov imm16,An
+    else if (op >= 0x80 && op <= 0x9f && (op >> 2 & 3) === (op & 3)) { R[(op < 0x90 ? D : An)[op & 3]] = (img[p + 1] << 24 >> 24) >>> 0; len = 2; }   // mov imm8
+    else if (op >= 0x80 && op <= 0x9f) { const r = op < 0x90 ? D : An; R[r[op & 3]] = R[r[op >> 2 & 3]]; len = 1; } // mov Rm,Rn
+    else if (op <= 0x0c && (op & 3) === 0) { R[D[op >> 2]] = 0; len = 1; }                                        // clr Dn
+    else if (op === 0xf1 && o2 === 0xd0) { R.d0 = R.a0; len = 2; }                                                // mov a0,d0
+    else if (op === 0xf1 && o2 === 0x14) { R.d0 = R.d0 === null || R.a1 === null ? null : (R.d0 - R.a1) >>> 0; len = 2; }   // sub a1,d0
+    else if (op === 0xf1 && o2 === 0x10) { R.d0 = R.d0 === null || R.a0 === null ? null : (R.d0 - R.a0) >>> 0; len = 2; }   // sub a0,d0
+    else if (call) {                                                                                              // call, calls
+      calls.push({ at: p, to: call.to, a0: R.a0, a1: R.a1, d0: R.d0, d1: R.d1 });
+      kill('d0', 'd1', 'a0', 'a1'); len = call.len;
+    } else if ((op === 0xf0 && (o2 === 0xfc || o2 === 0xfd)) || op === 0xde || op === 0xdf) { done = true; break; }   // rets, retf, ret
+    else if ((op >= 0x40 && op <= 0x4f && (op & 3) >= 2) || (op >= 0xc0 && op <= 0xca) || op === 0xce || op === 0xcf) len = 2;   // mov to (d8,sp), branches, movm
+    else if (op === 0xcb) len = 1;
+    else if (op === 0xf8 && o2 === 0xfe) len = 3;                                                                 // add imm8,sp
+    else if (op === 0xfa && o2 === 0xfe) len = 4;                                                                 // add imm16,sp
+    else { len = insnLength(op, o2); kill('d0', 'd1'); }
+    p += len;
+  }
+  if (!done) throw new Error(`${rule}: no ret within ${HEAD_WALK} instructions of the init function at ${h8(target)}`);
+  return { base, target, calls, words, setlb, stores, loads };
+}
+
+// The reset head's own copies into the run-time image on the E143 family, whose head runs from the flash view at
+// 0x50000000 (src/fw/board.mjs reset_head null; fact 'sections.head', src/fw/sections.mjs bootLoads): the walk
+// (headWalk) of the init function to its ret, and each call with a0 in DRAM (either view), a1 in the block's flash
+// view and d1 = 0x10200, the flash driver's copy mode that the section loader passes too (E143 0x50000155..0x500001dc,
+// E147 0x50000144..0x500001cb, five calls of 0x50002320 / 0x5000230f, D). Each copies d0 bytes in place: the
+// destination is the run-time address of the source's block offset, flash address - 0x50000020 (X: E143, E146 and
+// E147, the five rows each). Four of the lengths are end words the same walk stores with constants and then loads,
+// less the destination (E147: the stores 0x500000e5..0x5000011f, the loads at 0x50000126..0x5000018f; no other
+// instruction names the words, X: a byte scan of the block for each word and its other view). Returns {copies: [{at,
+// to, dst, len}], ends: [{at, word, end}]}: ends are the end words the walk stores and never loads whose value lies in
+// the run-time image (E147 0x629607a0 = 0x603a3804, stored at 0x50000103: a range ends there that no copy of the head
+// names; ? who loads it). Throws for no such copy, copies to two routines, an unknown length, or one not in place.
+export const HEAD_COPY_MODE = 0x10200, FLASH_VIEW = 0x50000000;
+export function headCopies(img) {
+  const { base, calls, stores, loads } = headWalk(img, 'headCopies');
+  const flash = (a) => a !== null && a >= FLASH_VIEW + BASE_PAGE_OFFSET && a < FLASH_VIEW + BASE_PAGE_OFFSET + img.length;
+  const dram = (a) => a !== null && cached(a) >= base && cached(a) < base + img.length;
+  const rows = calls.filter((c) => dram(c.a0) && flash(c.a1) && c.d1 === HEAD_COPY_MODE);
+  if (!rows.length) throw new Error('headCopies: no copy from the flash view into the run-time image');
+  if (new Set(rows.map((c) => c.to)).size !== 1) throw new Error(`headCopies: copies to ${new Set(rows.map((c) => c.to)).size} routines, want 1`);
+  const copies = rows.map((c) => {
+    const dst = cached(c.a0), file = c.a1 - FLASH_VIEW - BASE_PAGE_OFFSET;
+    if (c.d0 === null || c.d0 === 0 || dst + c.d0 > base + img.length) throw new Error(`headCopies: the copy at ${h8(FLASH_VIEW + c.at)} has length ${c.d0 === null ? 'unknown' : h8(c.d0)}`);
+    if (dst !== base + file) throw new Error(`headCopies: the copy at ${h8(FLASH_VIEW + c.at)} moves block offset ${h8(file)} to ${h8(dst)}, not in place (${h8(base + file)})`);
+    return { at: FLASH_VIEW + c.at, to: FLASH_VIEW + c.to, dst, len: c.d0 };
+  });
+  const ends = [...stores].filter(([w, s]) => !loads.has(w) && s.value !== null && cached(s.value) > base && cached(s.value) <= base + img.length)
+    .map(([word, s]) => ({ at: FLASH_VIEW + s.at, word, end: cached(s.value) }));
+  return { copies, ends };
 }
 
 // The address of the board's core byte (src/fw/board.mjs core_byte, which the lab's core-id getter returns): the
@@ -2580,6 +2620,59 @@ export function bootState(img) {
   if (stage === null && key === null) return { key: null, stage: null };
   if (stage === null || key === null) throw new Error(`bootState: ${stage === null ? 'no stage-bit test' : 'no boot key store'}, but the other`);
   return { key: u32(img, key + 5), stage: u32(img, stage + 2) };
+}
+// The boot's section loader, which the lab does not run (fact 'sections', src/fw/sections.mjs bootLoads, src/lab/menu.mjs
+// S-SECLOADED, the loaded-ranges mode; docs/om1-cores-spec.md 3.6, docs/hle-gaps.md 4.6.3). CPU 2's USTART_L2 copies
+// the main block's sections from flash to DRAM one by one, load_section(n) for n = 1..count (E143 0x50024e6b, E147
+// 0x50024eb5, D):
+//   mov d0,a3; mov -1,d3; add d0,d3; call END,[],0; mov d0,d2; mov d3,d0; extbu d0; mul 12,d0; mov d0,a2;
+//   add TABLE,a2 ... call flash driver (d0 = end - dest, d1 = 0x10200, a0 = dest, a1 = (4,a2)) ...
+//   extbu d3; mov 1,d0; asl d3,d0; mov (COPIED),d1; or d1,d0; mov d0,(COPIED)
+// - TABLE: count rows of {dest, flash source, flag} (12 bytes), the sections in order (E143 0x60029b1c, E147 0x60029b28);
+// - END(n), the section's end: a switch `clr d1; cmp 1,d0; blt; cmp count,d0; bgt; add -1,d0; asl2 d0; mov JT,a0;
+//   mov (d0,a0),a0; jmp (a0)` whose case n is `mov imm32,d0` (E143 0x50024e02, E147 0x50024e4c): the end is that
+//   immediate, the only place the build keeps it (the word a patch raises to grow a section: E147's section 6 at
+//   0x60045e9c, caduceus-om3's v0.29 and its camera probes GX1..GX4, their report);
+// - COPIED, the "copied" mask: bit n - 1 ORed in after section n's copy; load_section's read-modify-write is the only
+//   instruction that names the word (E143 0xa32df1f8, E146 0xa32df2d0, E147 0xa32de590; X: a byte scan of each block
+//   for the word and its other view). The per-section init ORs the same bits into the stages' ready word (fact
+//   boot.stage, S-BOOTSTAGE), which has readers.
+// Returns {loader, switch (disassembly notation), table, copied, ends: [the run-time address of each case's immediate,
+// section 1 first], head: [the call sites of the reset head's copies, headCopies]}, or null where the build holds no
+// such loader (X: E143, E146 and E147 hold one, the 15 other expanded images none); throws for two, or for a switch or
+// case of another form.
+export const SECTIONS_E143 = { loader: 0x50024E6B, switch: 0x50024E02, table: 0x60029B1C, copied: 0xA32DF1F8,
+  ends: [0x60045E3A, 0x60045E42, 0x60045E7A, 0x60045E4A, 0x60045E6A, 0x60045E52, 0x60045E5A, 0x60045E72, 0x60045E62, 0x60045E83],
+  head: [0x50000155, 0x50000178, 0x5000019B, 0x500001BA, 0x500001DC] };
+const SECTION_LOAD = [0xf1, 0xe3, 0x8f, 0xff, 0xe3, 0xcd, null, null, 0x00, 0x00, 0x82, 0x8c, 0x14, 0xf9, 0x14, 0x0c, 0xf1, 0xe2, 0xfc, 0xd2];
+const SECTION_MASK = [0x17, 0x80, 0x01, 0xf2, 0x9c, 0xfc, 0xa5, null, null, null, null, 0xf2, 0x14, 0xfc, 0x81];
+export const SECTION_SWITCH = [0x04, 0xa0, 0x01, 0xc0, null, 0xa0, null, 0xc1, null, 0x28, 0xff, 0x54, 0xfc, 0xdc, null, null, null, null, 0xf3, 0x80, 0xf0, 0xf4];
+export const SECTION_ROW = 12;
+const SECTION_SPAN = 0x80;     // load_section's mask store after its head (E143 0x50024e6b -> 0x50024ec9, D)
+export function sectionLoader(img) {
+  const at = oneAt(img, SECTION_LOAD, 'sectionLoader', 'section loads');
+  if (at === null) return null;
+  const { base } = imageBase(img);
+  let mask = null;
+  for (let q = at; q < at + SECTION_SPAN && mask === null; q++) if (bytesAt(img, q, SECTION_MASK) && u32(img, q + 7) === u32(img, q + 15)) mask = u32(img, q + 7);
+  if (mask === null) throw new Error(`sectionLoader: no 'mov (W),d1; or d1,d0; mov d0,(W)' within 0x${SECTION_SPAN.toString(16)} bytes of load_section ${h8(0x50000000 + at)}`);
+  const sw = callAt(img, at + 5).to;
+  const ends = sectionEnds(img, base, 0x50000000 + sw, 'sectionLoader');
+  const head = headCopies(img).copies.map((c) => c.at);
+  return { loader: 0x50000000 + at, switch: 0x50000000 + sw, table: u32(img, at + 20), copied: mask, ends, head };
+}
+// The run-time addresses of the end switch's case immediates (sectionLoader) at sw (disassembly notation), read from img
+// (run-time base `base`); also src/fw/sections.mjs's check of an image in use. Throws for another form.
+export function sectionEnds(img, base, sw, rule) {
+  const o = sw - 0x50000000;
+  if (!bytesAt(img, o, SECTION_SWITCH)) throw new Error(`${rule}: the section end switch at ${h8(sw)} is not 'clr d1; cmp 1,d0; blt; cmp N,d0; bgt; add -1,d0; asl2 d0; mov JT,a0; mov (d0,a0),a0; jmp (a0)'`);
+  const count = img[o + 6], jt = u32(img, o + 14) - base, ends = [];
+  for (let n = 1; n <= count; n++) {
+    const c = u32(img, jt + 4 * (n - 1)) - base;
+    if (!(c >= 0 && c + 6 <= img.length) || img[c] !== 0xfc || img[c + 1] !== 0xcc) throw new Error(`${rule}: the end switch ${h8(sw)}'s case ${n} at ${h8(base + c)} is not 'mov imm32,d0'`);
+    ends.push(base + c + 2);
+  }
+  return ends;
 }
 // The boot chain's stage-3 module init that the lab's start skips (fact 'mm_init', src/lab/osd.mjs H-MMINIT): the
 // chain traces each step, `mov <"3_8">,a0; call trace`, and then starts the step. The E143 and E144 families start a
@@ -5453,7 +5546,7 @@ export function readPlacedFacts({ img, at }) {
 // {change_task, change_entry, queue_word, queue_id, task_init, frame_wait, timer_sleep, sync, face_colour}}, {timer:
 // {reload_less_one}}, {dial: {select, select_end, table_ptr, table0}}, {touch_panel: {driver}}, {lens: {mount}}, {iic:
 // {waits}}, {touch: {i2c_write, i2c_read}}, {touch_api: {open}}, {touch_int: {wait, poll, word}}, {shooting: {start, end, auto_through}}, {func_direct:
-// {run, id}}, {broker: {init}}, {card: {shots_query, detect, movie_rate}}, {boot: {key, stage}}, {dpc: {init}} (with board.dpc), {sio: {tx_start, rx_start, done, dispatch, restart, channels}}, {storage: {init, tasks, fileclbk, nand, command, album_init, status, cflush, names}}, {power_off: {usb_disconnect}}, {gui: {stride, height,
+// {run, id}}, {broker: {init}}, {card: {shots_query, detect, movie_rate}}, {boot: {key, stage}}, {sections: {loader, switch, table, copied, ends, head}} (null where its rule reads none), {dpc: {init}} (with board.dpc), {sio: {tx_start, rx_start, done, dispatch, restart, channels}}, {storage: {init, tasks, fileclbk, nand, command, album_init, status, cflush, names}}, {power_off: {usb_disconnect}}, {gui: {stride, height,
 // banks, kind3}}, {recview: {word, standby}}, {cbs: {NAME: code}}, {mode_dial: {table, names}}, {prop_store: {init,
 // objects}}, {mm_init} and {ctors: [[table, count]]} (no memories, take, GUI task, handlers, task init, timer sleep, face colour, timer,
 // dial, touch, touch_api, shooting, func_direct, boot, dpc, sio, power_off, cbs or prop_store part where its rule reads
@@ -5505,6 +5598,7 @@ export function readFacts({ img, family, resLoad }) {
   facts.broker = { init: brokerInit(img) };
   facts.card = { shots_query: shotsQuery(img), detect: cardDetect(img), movie_rate: movieRate(img) };
   facts.boot = bootState(img);
+  facts.sections = sectionLoader(img);
   facts.mm_init = mmInit(img);
   const dpc = deferredCalls(img);
   if (dpc !== undefined) { facts.board.dpc = { triggers: dpc.triggers, irqs: dpc.irqs }; facts.dpc = { init: dpc.init }; }

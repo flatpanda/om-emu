@@ -18,10 +18,11 @@
 //   patchSession  (E143's blocks) a patch file the test writes: 16 bytes of the main block's 0xFF tail padding
 //                 (0x1ffff00, never run: the code ends at 0x1a70c3b) changed and 8 bytes of the resource block's index
 //                 written as they are; bin/debug.mjs, which loads no resource block, refuses that file and reads the
-//                 new bytes of the main block's patch alone at their run-time and flash addresses; bin/play.mjs prints
-//                 the patched line, its status and GET /api/session carry the summary (the main block's sha256 the test
-//                 computes, the resource block's the stock prefix's), the live debug route reads
-//                 the new bytes after the bring-up, the session runs, a model switch is refused, and session.json has
+//                 new bytes of the main block's patch alone at their flash address and, the tail lying past section
+//                 10's loaded end, S-STALERAM's 0xA5 at their run-time address (--loaded off: the new bytes);
+//                 bin/play.mjs prints the patched line, its status and GET /api/session carry the summary (the main
+//                 block's sha256 the test computes, the resource block's the stock prefix's) and S-STALERAM, the live
+//                 debug route reads 0xA5 and the new bytes at the flash view after the bring-up, the session runs, a model switch is refused, and session.json has
 //                 the summary but no patch among its args; bin/nav.mjs prints the line and its session.json the summary;
 //                 a file whose old bytes differ, an overlap and a file that cannot be read are refused by all three
 //                 tools (exit 1) before any lab; play.mjs --replay of the patched session.json without --patch is
@@ -284,14 +285,21 @@ export async function patchSession() {
     const dr = node([path.join(EMU, 'bin/debug.mjs'), '--entry', '0x502d0336', '--stop', '0x502d0336', '--patch', file]);
     ok(dr.status === 1 && /^debug.mjs: --patch refused: .*tiny.json patch 1 \(index head as it is\): the resource block is not loaded here/.test(dr.stderr) && !dr.stdout,
       `debug.mjs refuses a resource-block patch: rc ${dr.status} ${dr.stderr.slice(0, 300)}`);
+    // (the tail lies past section 10's loaded end: with --patch the loaded-ranges mode is on by default, S-STALERAM,
+    // and its DRAM holds the fill, 0xA5, while the flash view holds the patch; --loaded off maps the whole block)
+    const stale = 'a5'.repeat(16);
     const d = node([path.join(EMU, 'bin/debug.mjs'), '--entry', '0x502d0336', '--stop', '0x502d0336', '--patch', mainOnly, '--read', `${run}:16`, '--read', `${flash}:16`]);
     let dj = null;
     try { dj = JSON.parse(d.stdout); } catch { /* reported below */ }
     const hx = (a) => '0x' + a.toString(16).padStart(8, '0');
     const ds = dj?.patch;
-    ok(d.status === 0 && dj && dj.memory[hx(run)] === hexNew && dj.memory[hx(flash)] === hexNew && /debug.mjs: patched: 1 patch \(16 bytes changed\)/.test(d.stderr) &&
+    ok(d.status === 0 && dj && dj.memory[hx(run)] === stale && dj.memory[hx(flash)] === hexNew && /debug.mjs: patched: 1 patch \(16 bytes changed\)/.test(d.stderr) &&
       ds && ds.applied === 1 && ds.bytes === 16 && ds.blocks.length === 1 && ds.blocks[0].block === 'main' && ds.blocks[0].sha256 === wantSha,
       `debug.mjs --patch: rc ${d.status} ${JSON.stringify(dj?.memory)} ${JSON.stringify(ds)} ${d.stderr.slice(0, 300)}`);
+    const dOff = node([path.join(EMU, 'bin/debug.mjs'), '--entry', '0x502d0336', '--stop', '0x502d0336', '--patch', mainOnly, '--loaded', 'off', '--read', `${run}:16`]);
+    let dOffJ = null;
+    try { dOffJ = JSON.parse(dOff.stdout); } catch { /* reported below */ }
+    ok(dOff.status === 0 && dOffJ?.memory[hx(run)] === hexNew, `debug.mjs --patch --loaded off: rc ${dOff.status} ${JSON.stringify(dOffJ?.memory)} ${dOff.stderr.slice(0, 300)}`);
 
     // bin/play.mjs: the line, the status, the session options, the bytes after the bring-up, session.json
     const pl = await startPlay('patch', ['--idle', 'off', '--patch', file]);
@@ -303,7 +311,9 @@ export async function patchSession() {
       const sess = await pl.json('GET', '/api/session');
       ok(summaryOk(sess.patch), `GET /api/session's patch: ${JSON.stringify(sess.patch)}`);
       const rd = await pl.json('POST', '/api/debug', { id: 1, op: 'read', addr: hx(run), size: 16 });
-      ok(rd.ok && rd.hex === hexNew, `the live route reads the patched bytes after the bring-up: ${JSON.stringify(rd)}`);
+      const rf = await pl.json('POST', '/api/debug', { id: 2, op: 'read', addr: hx(flash), size: 16 });
+      ok(rd.ok && rd.hex === stale && rf.ok && rf.hex === hexNew && st.stand_ins?.includes('S-STALERAM'),
+        `the live route after the bring-up: the patched tail's DRAM ${rd.hex} (S-STALERAM), its flash view ${rf.hex}, the stand-ins ${st.stand_ins?.filter((x) => /STALE/.test(x))}`);
       ok(JSON.stringify(st.patch_audit) === '{"hooks":[],"ported":null,"tasks":[]}' && !st.stand_ins.includes('H-PATCHTASK'),
         `the status's patch audit on E143: no hook on the patched bytes, no port table: ${JSON.stringify(st.patch_audit)}`);
       const sw = await pl.req('POST', '/api/model', { model: 'E146' });

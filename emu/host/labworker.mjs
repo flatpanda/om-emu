@@ -20,7 +20,7 @@ import { withCardFiles } from '../src/lab/cardfs.mjs';
 import { debugHost } from './debughost.mjs';
 import { CARD_VIEW } from '../web/cardfiles.mjs';
 
-const { args: a, flags, port, out, argv, patches, nvram: nvramFile, cardFiles } = workerData;
+const { args: a, flags, port, out, argv, patches, nvram: nvramFile, cardFiles, loaded } = workerData;
 const post = (m, transfer) => parentPort.postMessage(m, transfer);
 export const wallClock = () => Number(process.hrtime.bigint()) / 1e9;    // monotonic seconds, one clock on every thread
 // an input as the main thread posted it: its JSON text plus seq and t_wall
@@ -44,6 +44,7 @@ const fw = patches ? patchedFirmware(patches) : null;
 const env = {
   rom: fw?.rom ?? loadImage(), resBlock: fw?.resBlock ?? loadBlock(), nand: loadNand(), createHash, ...(trace?.fields ?? {}),
   ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}),
+  loaded,                            // --loaded: S-STALERAM (src/lab/sim.mjs loadedRanges)
   deflate: (b, level) => new Uint8Array(zlib.deflateSync(b, { level })),
   wallClock, queue, flags,
   readReplay: (p) => fs.readFileSync(p, 'utf8'),

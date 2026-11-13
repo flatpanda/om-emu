@@ -45,7 +45,9 @@
 // audio port's registers, slots and interrupt, the sound IC's register file, the sink), the published site's files
 // and the browser player's download command (test_site.mjs), the patch overlays' rules on synthetic blocks (both
 // shapes of patches, digest-anchored runs, --main's runs), the lab's patch rules and audit, H-PATCHTASK's guard, the
-// patched build's state file and the --replay check of a patched session (test_patch.mjs patchUnits), the NAND the resource tables are read from
+// patched build's state file and the --replay check of a patched session (test_patch.mjs patchUnits), the boot's
+// section loader on a synthetic block (the rules, the reader of what the boot loads, the machine's unloaded ranges:
+// test_sections.mjs sectionsUnits), the NAND the resource tables are read from
 // (test_resnand.mjs resnandUnits: the container's blocks at their load addresses, the browser's extract, the sound
 // area's builder, S-RESNAND's layer), and S-NVRAM's choice, document, record and replay (test_nvram.mjs nvramUnits).
 // bin/test.mjs runs all of these too, with everything else.
@@ -90,6 +92,7 @@ import { siteTests } from '../test/test_site.mjs';
 import { audioUnits } from '../test/test_audio.mjs';
 import { audioHwUnits } from '../test/test_audiohw.mjs';
 import { patchUnits } from '../test/test_patch.mjs';
+import { sectionsUnits } from '../test/test_sections.mjs';
 import { resnandUnits } from '../test/test_resnand.mjs';
 import { nvramUnits } from '../test/test_nvram.mjs';
 import { cardfsUnits, cardCliTests } from '../test/test_cardfs.mjs';
@@ -123,6 +126,7 @@ report('scene stand-in (S-SCENE)', sceneUnits());
 report('audio output and the shutter sound (src/lab/audio.mjs, S-SHUTTERSND)', await audioUnits());
 report('audio port, sound IC and sink (src/dev/audio.mjs, S-WM8946, src/lab/audiohw.mjs)', audioHwUnits());
 report('patch overlays: file shapes, digest-anchored runs, --main, block references, old bytes, overlaps, ranges, digests, the hook rule, the audit, H-PATCHTASK, a patched replay (src/fw/patch.mjs, src/lab/patchaudit.mjs)', patchUnits());
+report('the boot\'s section loader: the rules, what the boot loads, the unloaded ranges in the machine (src/fw/sections.mjs, S-STALERAM)', await sectionsUnits());
 report('the resource tables\' NAND: blocks at their load addresses, the extract, the sound area builder, S-RESNAND (src/fw/nand.mjs)', await resnandUnits());
 report('S-NVRAM: bin/play.mjs\'s choice, the document, the record and its replay (host/nvram.mjs, src/lab/nvramdoc.mjs)', await nvramUnits());
 report('command-line parser', argsTests());

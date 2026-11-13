@@ -483,6 +483,16 @@ The second card slot (E143, E146; `docs/hle-gaps.md` 4.8.12): the lab has both s
 
 **Confidence:** medium (the chain is the firmware's own end to end and its samples are checked sample for sample; the sound itself is the lab's)
 
+### 7.16 Patched firmware: what the lab checks against the patch, and what it does not (H-PATCHTASK, the hook rule)
+
+**Where:** `emu/src/fw/patch.mjs` (the overlay, digest-anchored runs, `mainPatches`), `emu/src/lab/patchaudit.mjs` (the hook rule, the audit), `emu/src/lab/hle.mjs` (`_loop1`), `emu/src/lab/kernel.mjs` (`LabTask._task_start`, H-PATCHTASK), `emu/test/test_patch.mjs`
+
+**Emulator:** A patch overlay (`--patch`, `--main`) changes bytes of the main code block before the run; the ports, facts and hooks stay the stock block's. A lab hook reached at a pc whose first instruction overlaps a changed byte stops the session (`PatchHooked`). After the bring-up the status lists the installed hooks on changed bytes and the model's ported addresses and facts there (`patch_audit`). A task start whose entry's first instruction overlaps a changed byte is taken and runs natively (H-PATCHTASK); every other unmodelled entry is still refused.
+
+**Expected / concern:** The hook rule looks at the hooked instruction only: a stand-in that replaces a whole function (it returns for it) also hides a patch to that function's later bytes, which no rule here catches (I). A fact that `bin/port.mjs` read from bytes other than its own address (an immediate inside an instruction, a table walked from a pointer) is not audited. The section loader is not run: the whole main block is mapped, so code a patch places in a gap the camera's loader does not copy, or in a section that loads later than its caller runs, runs in the lab and not on the camera (caduceus-om3's own camera notes report both, their report). H-PATCHTASK assumes a changed entry is the patch's own task; a patch that rewrites the first bytes of a stock task the lab does not model would have that task started too.
+
+**Confidence:** high (each rule is the code's; the gaps are stated by what the rules do not look at)
+
 ## 8. What the tests establish
 
 ### 8.1 Above the ISA, the tests are emu's own regression data

@@ -3,13 +3,18 @@
 //   nvramUnits     (pure) bin/play.mjs's choice (host/nvram.mjs nvramChoice: on by default in the model's own file,
 //                  --nvram over OM_EMU_NVRAM, off, a file; refused where it cannot apply); the document's saves and
 //                  its model check; the Player's record (recordNvram: the start, each session's clock, a document
-//                  only where another writer changed it) and its replay in memory (replayNvram)
+//                  only where another writer changed it) and its replay in memory (replayNvram); the B store's
+//                  check (src/lab/menu.mjs backupImageValid)
 //   nvramSessions  in the lab: on a fresh file the first session starts on the shooting screen where a session without
 //                  it shows the date prompt (at the start's frame); the blank store's saves of E and M reach the file;
 //                  a setting changed in the session and saved as the menu closes (the native menu-close save, posted
 //                  to the flash task) is back in the next session, whose registry bootstrap restores M and E; the
 //                  Player records what each session started from
-//   nvramHost      bin/play.mjs (HOME a fresh directory): by default the state is kept in ~/.om-emu/nvram-E143.json
+//   nvramPowerSession  in the lab, on the process's model (bin/test.mjs: E143 here, E146 and E147 in children): the
+//                  power lever's native power-off saves the B store into the SCPU words the file keeps; the next start
+//                  on that file restores M, E and B ('BlR.') and reaches the same screen, on E143 with a setting kept;
+//                  controls: a broken B image starts with 'BlD.', and the mutant nvram-b-unread stops at the check
+//   nvramHost     bin/play.mjs (HOME a fresh directory): by default the state is kept in ~/.om-emu/nvram-E143.json
 //                  and the startup line names it; the second session restores M and E and the first one's settings
 //                  (the STORE digest); --replay of the first session's session.json, and of its session.jsonl,
 //                  repeats it frame for frame from the recorded state without touching the file, and without the
@@ -17,7 +22,7 @@
 //                  leave the file; OM_EMU_NVRAM=FILE keeps it there; E146 keeps its own file, refuses E143's, and
 //                  E143's stays as it was; E144, whose build lacks S-NVRAM's sites, runs blank by default and refuses
 //                  --nvram on
-//   node emu/test/test_nvram.mjs [units|lab|host]
+//   node emu/test/test_nvram.mjs [units|lab|power|host]    (power: OM_EMU_MODEL=E146 or E147 for those bodies)
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -53,6 +58,13 @@ export async function nvramUnits() {
   ok(C({ scpuNative: true }).file === null && /OM_EMU_SCPU=native/.test(C({ env: '/x', scpuNative: true }).refuse ?? ''), 'OM_EMU_SCPU=native: off by default, refused when asked for');
   ok(/--replay/.test(C({ arg: 'off', replay: true }).refuse ?? '') && C({ env: '/x', replay: true }).envIgnored && C({ replay: true }).file === null, '--replay: --nvram refused, OM_EMU_NVRAM ignored');
   ok(/on, off or a file/.test(C({ arg: '' }).refuse ?? ''), '--nvram with an empty value refused');
+  // the B store's check (menu.mjs backupImageValid): the format u16 first, the 28 u16 summing to 0
+  const { backupImageValid } = await import('../src/lab/menu.mjs');
+  const img = [0xFFF4000A, 1, 0, 0x10000, ...Array(10).fill(0)];
+  ok(backupImageValid(img, 0x000A), 'a B image the power-off saves passes the check');
+  ok(!backupImageValid(Array(14).fill(0), 0x000A), 'zero words (no B save yet) fail it: their first u16 is not the format');
+  ok(!backupImageValid([img[0], 2, ...img.slice(2)], 0x000A), 'a changed word fails it (the sum)');
+  ok(!backupImageValid(img, 0x000B) && !backupImageValid(img.slice(1), 0x000A), 'another format, or 13 words, fail it');
   // the document: saves stamp the model; another model's is refused; a store that is not base64 is refused
   const M = Uint8Array.from({ length: 30 }, (_, i) => i);
   let j = D.nvramSave(null, 'M', M);
@@ -140,6 +152,63 @@ export async function nvramSessions() {
   ok(s.get(SID) === VALUE, `setting ${SID} kept: ${s.get(SID)}, want ${VALUE}`);
   ok(s.lab.state() === 0x108, `the restored camera reaches its screen: GUI 0x${s.lab.state().toString(16)}`);
   ok(fileNvram(file).doc()?.model === 'E143', 'the file names its model');
+  return { checks, bad };
+}
+
+// The power lever's off (H-POWER, S-SHUTDOWN) and the next start on the same file, on the model this process runs
+// (E143 in bin/test.mjs's process, E146 and E147 each in a child with OM_EMU_MODEL): the native power-off saves the B
+// store into the SCPU window's backed-up words, which the file keeps; the next session restores them with M and E,
+// and the registry bootstrap prints 'BlR.' as the lab expects (menu.mjs B_WORDS); on E143 a setting changed before the
+// off is back. Controls: the same file with B's check word broken starts with 'BlD.' (the lab follows the firmware's
+// check, not the file's mere words), and the mutant nvram-b-unread (the lab's expectation before B was counted) stops
+// at the bootstrap's check
+export async function nvramPowerSession() {
+  const bad = [];
+  let checks = 0;
+  const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
+  const { MODEL, ON_LAB_MODEL } = await import('../src/fw/model.mjs');
+  const { B_WORDS, backupImageValid } = await import('../src/lab/menu.mjs');
+  const out = path.join(J, `out/test-nvram-power-${MODEL}`);
+  fs.rmSync(out, { recursive: true, force: true });
+  fs.mkdirSync(out, { recursive: true });
+  const file = path.join(out, 'nvram.json');
+  const { Player } = await import('../src/lab/player.mjs');
+  const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
+  const { fileNvram } = await import('../host/nvram.mjs');
+  const base = await labBase();
+  const open = (f, mutant = null) => {
+    const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: path.join(out, 'o'), no_wait_on_error: true, x_mutant: mutant }, { ...base, nvram: fileNvram(f) });
+    pl.open_session();
+    pl.session.idle_slice(pl.session.lab.lab_time() + 1500e6);
+    return pl;
+  };
+  const prints = (pl) => JSON.stringify(pl.session.lab.store_log.phases.find((p) => p.label.startsWith('registry bootstrap')).prints);
+  const loaded = (pl) => JSON.stringify(pl.session.lab.store_log.nvram.loaded);
+  let pl = open(file);
+  const gui = pl.session.lab.state();
+  ok(loaded(pl) === '[]' && prints(pl) === '["FlD.","BlD.","ElD.","MlD."]', `a fresh file: loaded ${loaded(pl)}, prints ${prints(pl)}`);
+  if (ON_LAB_MODEL) pl.session.set(SID, VALUE);
+  const rec = pl.power('off');
+  ok(rec?.power_off?.frames?.[0]?.cmd === '0x85' && pl.session === null, `the power lever's off runs the native power-off: ${JSON.stringify(rec?.power_off?.frames)}`);
+  const kept = JSON.parse(fs.readFileSync(file, 'utf8'));
+  const words = B_WORDS.map((o) => kept.scpu?.[o]);
+  ok(words.every((w) => Number.isInteger(w)) && backupImageValid(words, 0x000A), `the file keeps the B image the power-off saved: ${JSON.stringify(kept.scpu)}`);
+  pl = open(file);
+  ok(loaded(pl) === '["M","E","B"]' && prints(pl) === '["FlD.","BlR.","ElR.","MlR."]', `the next start restores M, E and B: loaded ${loaded(pl)}, prints ${prints(pl)}`);
+  ok(pl.session.lab.state() === gui, `the restored camera reaches the first start's screen: GUI 0x${pl.session.lab.state().toString(16)}, want 0x${gui.toString(16)}`);
+  if (ON_LAB_MODEL) ok(pl.session.get(SID) === VALUE, `setting ${SID} kept across the power-off: ${pl.session.get(SID)}, want ${VALUE}`);
+  pl.close_session();
+  // control 1: B's check word broken (the sum no longer 0): the bootstrap builds B from its template, and so does the lab
+  const broken = path.join(out, 'broken.json');
+  fs.writeFileSync(broken, JSON.stringify({ ...kept, scpu: { ...kept.scpu, 8: (kept.scpu[8] ^ 0x10000) >>> 0 } }));
+  pl = open(broken);
+  ok(loaded(pl) === '["M","E"]' && prints(pl) === '["FlD.","BlD.","ElR.","MlR."]', `a broken B image: loaded ${loaded(pl)}, prints ${prints(pl)}`);
+  pl.close_session();
+  // control 2: the expectation without B (nvram-b-unread) is refused at the bootstrap's check
+  fs.writeFileSync(file, JSON.stringify(kept));
+  let err = null;
+  try { open(file, 'nvram-b-unread'); } catch (e) { err = e; }
+  ok(/registry bootstrap: prints \["FlD\.", "BlR\.", "ElR\.", "MlR\."\]/.test(err?.message ?? ''), `the mutant nvram-b-unread stops at the bootstrap's check: ${err?.message?.slice(0, 200) ?? 'no error'}`);
   return { checks, bad };
 }
 
@@ -263,7 +332,7 @@ export async function nvramHost() {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const which = process.argv[2] ?? 'all';
   let failed = 0;
-  for (const [name, f] of [['units', nvramUnits], ['lab', nvramSessions], ['host', nvramHost]]) {
+  for (const [name, f] of [['units', nvramUnits], ['lab', nvramSessions], ['power', nvramPowerSession], ['host', nvramHost]]) {
     if (which !== 'all' && which !== name) continue;
     const r = await f();
     console.log(`S-NVRAM ${name}: ${r.checks - r.bad.length}/${r.checks}`);

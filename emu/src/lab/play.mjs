@@ -1172,6 +1172,7 @@ export class PlaySession extends N.NavSession {
     const us = this.opts.us_clock ?? 'lab';
     if (!['lab', 'reads'].includes(us)) throw new ValueError(`us_clock ${show(us)}: lab or reads`);
     if (us === 'reads') lab.sim.write(IRQ.TIMER_DEBUG + IRQ.T_USMODE, pack('<I', 0));
+    lab.mutant = this.opts.mutant ?? null;           // (nvram-b-unread: menu.mjs nvram_load)
     // H-TPINIT before the start's display open (PlayLab.kernel_display) where the driver waits for the INT
     lab.touch_init_early = this.touch_on && (fact('touch_int', null) ?? null) !== null;
   }

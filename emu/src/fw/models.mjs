@@ -565,6 +565,9 @@ export const MODELS = {
     // REC_FILE and REC_IMAGE natively, at the addresses recFile and recImage read (X: test_storage's S2 file, its Exif
     // Model 'OM-1MarkII', made in REC_IMAGE's task 28 since 2026-11-10, docs/hle-gaps.md 4.3.5)
     rec_native: true,
+    // S-NVRAM's B store (src/lab/menu.mjs B_WORDS): its format, the halfword the registry bootstrap gives the store
+    // (`movhu (0x6009a3cc),d0` at 0x50041778, E143's 0x50040b71; 0x000a, D)
+    nvram: { b_format: 0x000A },
     // as E143's (D): the GIO init 0x50002a21 ends with 0x50002b5e (0x50002a2e), slots at 0xa32c1f74; the EDID state is
     // the word 0x62a67880 its getter 0x501d8647 reads. The hot-plug handler's work runs in the display init's HDMI task
     // 0x501dc568 (extra_tasks), not in task 16 as E143's
@@ -650,6 +653,9 @@ export const MODELS = {
     // REC_FILE and REC_IMAGE natively, at the addresses recFile and recImage read (X: test_storage's S2 file, its Exif
     // Model 'OM-3', made in REC_IMAGE's task 28 since 2026-11-10, docs/hle-gaps.md 4.3.5)
     rec_native: true,
+    // S-NVRAM's B store (src/lab/menu.mjs B_WORDS): its format, the halfword the registry bootstrap gives the store
+    // (`movhu (0x60095508),d0` at 0x500416f7, E143's 0x50040b71; 0x000a, D)
+    nvram: { b_format: 0x000A },
     // as E146's (D): the GIO init 0x50002a11 ends with 0x50002b50 (0x50002a1e), slots at 0xa32c1c44; the EDID state
     // word 0x62a655e4 (its getter at 0x501e078a); the hot-plug work runs in the HDMI task 0x501e3eca
     hdmi: { gio_slots: 0x50002B50, state: [0x62A655E4, 4] },

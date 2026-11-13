@@ -108,6 +108,22 @@ export const REPLACE_INFO = [[A(0xA32A9788), A(0xA3212700)], [A(0xA32A978C), A(0
 // the SCPU words the camera keeps across power-off: the clock signature 0x00 (bits 7..2 = 42 once a clock set was
 // verified, 0x5005a59e) and the B store 0x08..0x3c
 export const SCPU_BACKED = [0x00, ...Array.from({ length: 14 }, (_, i) => 0x08 + 4 * i)];
+// The B store has no NAND mirror: its 56 bytes (the registry bootstrap's `mov 56,d0` at 0x50040ba4) are the SCPU
+// window's words 0x08..0x3c. The bootstrap's B load 0x5003f578 reads them (0x5003f918 -> 0x5004e4de, word i at
+// 0x98e00008 + 4 i) into a buffer and checks them (0x5003f389 -> 0x5003f831): the first u16 equals the store's format
+// byte (the template's halfword 0x60097964, 0x000a, which 0x50040b71 gives the store; 0x5003f353 takes its low byte)
+// and the 28 u16 sum to 0; a valid image is copied into the store ('BlR.', 0x601151c4), any other is built from the
+// template ('BlD.', 0x601151be; D). The save 0x5003f5a2 counts at +4 (0x5003f8a6), sets the check u16 at +2
+// (0x5003f87c) and writes the words out (0x5003f930 -> 0x5004e4c9; D); the native power-off saves it (X: the words
+// zero after the start, an image after the power lever's off), a menu close does not. The format is the body's own
+// (fact nvram.b_format: E146's and E147's are 0x000a too, src/fw/models.mjs)
+export const B_WORDS = SCPU_BACKED.slice(1);
+export function backupImageValid(words, format) {
+  if (words.length !== 14) return false;
+  let sum = 0;
+  for (const w of words) sum += (w & 0xFFFF) + (w >>> 16);
+  return (words[0] & 0xFFFF) === (format & 0xFF) && (sum & 0xFFFF) === 0;
+}
 // Why S-NVRAM cannot run on this model, or null: one of its code sites (the NAND write, the flash task's post, the
 // save's cache-flush return) or the stores' mirrors and the replace-info words has no place in the build
 // (src/fw/model.mjs A). X 2026-11-08: two sessions on a fresh file restore M and E on E143, E146 and E147; on the
@@ -205,6 +221,7 @@ export class MenuLab extends T.TextDisplayLab {
     this.store = store;
     this.store_first = !!opts.store_first;
     this.evf_layout = !!opts.evf_layout;
+    this.mutant = null;                              // a play session's mutant (PlaySession.lab_created)
     this.b2_options = {};
     this.takeover_log = null;
     this.inputs = new Map(opts.inputs ?? []);
@@ -698,7 +715,8 @@ export class MenuLab extends T.TextDisplayLab {
     }
     this.boot_stage();
     const reg = this.native(REGISTRY_INIT, null, 'registry bootstrap 0x50040aeb');
-    // with saved images the bootstrap restores those stores ('xlR.'); one it rejects is a broken save, not a blank camera
+    // with saved images (M, E; B in the SCPU words) the bootstrap restores those stores ('xlR.'); one it rejects is a
+    // broken save, not a blank camera
     const wantPrints = REGISTRY_PRINTS.map((p) => (loaded?.has(p[0]) ? p.replace('lD.', 'lR.') : p));
     if (JSON.stringify(reg.prints) !== JSON.stringify(wantPrints) || reg.errlog.length) {
       throw new MenuError(`registry bootstrap: prints ${show(reg.prints)}, errlog ${show(reg.errlog)}; expected ${show(wantPrints)} and none`);
@@ -763,7 +781,9 @@ export class MenuLab extends T.TextDisplayLab {
     return new ScpuM4(image, { now: () => this.lab_time(), lle: MODEL_INFO.scpu_lle });
   }
   // S-NVRAM's boot: the saved images (nvram.load()) into their mirrors (the NAND read the lab does not run), the
-  // replace-info state, the SCPU window's backed-up words. Returns the set of restored store letters.
+  // replace-info state, the SCPU window's backed-up words. Returns the set of restored store letters: M and E for their
+  // images, B when the restored words hold an image the bootstrap's check takes (B_WORDS; the mutant nvram-b-unread
+  // leaves B out, the bootstrap check's control)
   nvram_load(saved) {
     const out = new Set();
     this.store_log.nvram = { loaded: [], saves: [] };
@@ -778,6 +798,7 @@ export class MenuLab extends T.TextDisplayLab {
     if (out.size) for (const [a, v] of REPLACE_INFO) this.sim.word(a, v);
     // (SCPU words through CPU stores: the debugger's writes do not reach a device)
     if (saved.scpu) for (const off of SCPU_BACKED) if (saved.scpu[off] !== undefined) this.cpu_store(SCPU + off, saved.scpu[off] >>> 0);
+    if (backupImageValid(B_WORDS.map((off) => this.sim.u32(SCPU + off)), fact('nvram.b_format', 0x000A)) && this.mutant !== 'nvram-b-unread') out.add('B');
     this.store_log.nvram.loaded = [...out];
     return out;
   }

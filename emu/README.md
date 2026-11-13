@@ -59,14 +59,16 @@ blocks are the model's). `npm run play` in `emu/` does the same as `play.sh`. Ct
 
 **The camera's kept state (S-NVRAM).** The player keeps the camera's non-volatile state between sessions, as the
 camera does across a power-off: the settings stores M and E as the firmware saves them (the menu's close, the
-power-off), the SCPU window's backed-up words and the sub-CPU's memory (its RTC and backup registers). A camera whose
+power-off), the SCPU window's backed-up words (among them the store B, which the power lever's off saves there and
+the next start restores) and the sub-CPU's memory (its RTC and backup registers). A camera whose
 clock was set starts on its shooting screen with the last session's settings, not at the date prompt. `bin/play.mjs`
 keeps one JSON file per model, `~/.om-emu/nvram-<model>.json` (`nvram-E143.json`, `nvram-E146.json`, ...), and its
 startup line names the file in use. `--nvram off` (or `OM_EMU_NVRAM=off`) runs a blank camera at each start and leaves
 the file alone; `--nvram FILE` (or `OM_EMU_NVRAM=FILE`) keeps the state in FILE instead; `--nvram` wins over
 `OM_EMU_NVRAM`. Delete the file to start from a blank camera again. A file names its model and another model's is
 refused at start (exit 1), and so is a file that does not parse. The state is kept where the build places S-NVRAM's
-sites, E143, E146 and E147 (X: two sessions on a fresh file restore M and E on each); on the other bodies the player
+sites, E143, E146 and E147 (X: two sessions on a fresh file restore M and E on each, and M, E and B after a power
+lever's off, `test_nvram.mjs power`); on the other bodies the player
 runs blank and its line says why (the flash task's post `0x5003d95c` has no place in their builds), and `--nvram on`
 or a file is refused there. `OM_EMU_SCPU=native` runs blank by default as well (the sub-CPU's own backup domain is not
 kept), and refuses a kept state asked for. The browser player keeps the same document in OPFS by default (`nvram=0`

@@ -570,13 +570,20 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   bad += au.bad.length;
 }
 // the camera's non-volatile state kept between sessions (S-NVRAM): no date prompt, a setting kept across sessions;
-// bin/play.mjs keeping it by default per model, its opt-out, and --replay from the log's record
+// bin/play.mjs keeping it by default per model, its opt-out, and --replay from the log's record; the power lever's off
+// and the next start on the same file (the B store in the SCPU words): E143 here, E146 and E147 each in a process of
+// its own (the model is fixed when the lab is imported)
 {
-  const { nvramUnits, nvramSessions, nvramHost } = await import('../test/test_nvram.mjs');
-  const nu = await nvramUnits(), nv = await nvramSessions(), nh = await nvramHost();
-  console.log(`non-volatile state (S-NVRAM): units ${nu.checks - nu.bad.length}/${nu.checks}; across sessions ${nv.checks - nv.bad.length}/${nv.checks}; bin/play.mjs's default, opt-out and replay ${nh.checks - nh.bad.length}/${nh.checks}`);
-  [...nu.bad, ...nv.bad, ...nh.bad].forEach((x) => console.log('  ', x));
-  bad += nu.bad.length + nv.bad.length + nh.bad.length;
+  const { nvramUnits, nvramSessions, nvramPowerSession, nvramHost } = await import('../test/test_nvram.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const nu = await nvramUnits(), nv = await nvramSessions(), np = await nvramPowerSession(), nh = await nvramHost();
+  const others = ['E146', 'E147'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_nvram.mjs', import.meta.url).pathname, 'power'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
+  });
+  console.log(`non-volatile state (S-NVRAM): units ${nu.checks - nu.bad.length}/${nu.checks}; across sessions ${nv.checks - nv.bad.length}/${nv.checks}; power-off and restart (E143) ${np.checks - np.bad.length}/${np.checks}, ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}; bin/play.mjs's default, opt-out and replay ${nh.checks - nh.bad.length}/${nh.checks}`);
+  [...nu.bad, ...nv.bad, ...np.bad, ...nh.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += nu.bad.length + nv.bad.length + np.bad.length + nh.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // the body's Fn-type buttons reach the camera application's button mapping (ISO, +/-, Drive, AF/metering, AF-ON, |o|, front)
 {

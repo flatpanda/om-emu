@@ -124,12 +124,12 @@ async function boot(msg) {
     const fw = await firmware(msg.file ?? null, { cache: msg.cache !== false });
     post({ type: 'progress', stage: 'firmware', from: fw.from, rom: fw.rom.length, res: fw.res.length, nand: fw.nand?.length ?? 0, manifest: fw.manifest, cache_error: fw.cacheError ?? null, T: fw.T });
     // a patch overlay (the page's Patch start option): on the verified stock blocks, after the cache took them
-    let patch = null;
+    let patch = null, patchRanges = null;
     if (msg.args?.patch) {
       const p = msg.args.patch;      // a file the page could not read is refused, as checks/lib/env.mjs readPatchFiles does
       if (typeof p.text !== 'string') throw new PatchRefused(`${p.name}: cannot read it (${p.error ?? 'no text'})`);
       const r = applyPatches({ main: fw.rom, resource: fw.res }, readPatchText(p.text, p.name), { layout: patchLayout(MODEL_INFO), createHash });
-      fw.rom = r.blocks.main; fw.res = r.blocks.resource; patch = r.summary;
+      fw.rom = r.blocks.main; fw.res = r.blocks.resource; patch = r.summary; patchRanges = r.changed;
     }
     // The cache holds the verified original block; the player and its tables need the runtime image.
     fw.rom = expandImage(fw.rom);
@@ -157,7 +157,7 @@ async function boot(msg) {
       cardView: CARD_VIEW,                // the Card panel's reads of the card's files (web/cardfiles.mjs)
       lens, ...(nvram ? { nvram } : {}),
       ...(card ? { card } : {}),
-      ...(patch ? { patch } : {}),
+      ...(patch ? { patch, patchRanges } : {}),     // and the bytes it changed (src/lab/patchaudit.mjs)
       onStatus: (doc) => { post({ type: 'status', doc }); api?.notify(); },
       onFrame: (w, h, raw, meta) => {
         api.onFrame(w, h, raw, meta);

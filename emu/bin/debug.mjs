@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // The debug API's command line: runs firmware code on the JS machine from an entry point, plus a JSON-lines mode for
 // agents.
-//   node emu/bin/debug.mjs --entry ADDR [--image IMAGE | --patch FILE...] [--stop ADDR]... [--reg NAME=VALUE]...
+//   node emu/bin/debug.mjs --entry ADDR [--image IMAGE | --patch FILE... | --main FILE] [--stop ADDR]... [--reg NAME=VALUE]...
 //                            [--write ADDR=HEX]... [--read ADDR:SIZE]... [--step] [--stack [WORDS]] [--trace PATH]
 //                            [--insn-limit N]
 //   node emu/bin/debug.mjs --serve        one JSON request per line on stdin, one response per line on stdout
@@ -17,8 +17,9 @@
 // artifacts/nd128/OM1_v1.9_ND128.main-code.bin, built in memory from artifacts/nd128/manifest.json's patches (the file
 // itself is not read). --patch FILE (repeatable; not with --image) runs the stock main code block with FILE's patches
 // instead (src/fw/patch.mjs: a patch whose old bytes are not the stock block's, or two that overlap, is refused, exit
-// 1; so is a patch to the resource block, which this tool does not load); the run's JSON then has "patch" (the
-// overlay's summary), and --serve's load without an image loads it, its response's image 'patched: FILE...'. --trace
+// 1; so is a patch to the resource block, which this tool does not load); --main FILE a whole patched main code block
+// as the same overlay (checks/lib/env.mjs readMainFile; not with --patch or --image); the run's JSON then has "patch"
+// (the overlay's summary), and --serve's load without an image loads it, its response's image 'patched: FILE...'. --trace
 // PATH runs the machine in the one-instruction mode (every instruction a one-instruction TB) and writes QEMU -d exec's
 // 'MN10300 pc=' lines (its 'Trace 0:' lines carry host pointers and are not written). As for the checks, OM_MACHINE
 // gives the machine options (checks/lib/env.mjs). Also:
@@ -34,7 +35,7 @@
 import http from 'node:http';
 import path from 'node:path';
 import readline from 'node:readline';
-import { PATCHED, createHash, envMachine, runMain, readBytes, readPatched, readPatchFiles, patchedFirmware, SystemExit } from '../checks/lib/env.mjs';
+import { PATCHED, createHash, envMachine, runMain, readBytes, readPatched, overlayPatches, patchedFirmware, SystemExit } from '../checks/lib/env.mjs';
 import { PatchRefused, patchLine } from '../src/fw/patch.mjs';
 import { parseArgs, intValue } from '../checks/lib/args.mjs';
 import { Simulator, SP } from '../src/lab/sim.mjs';
@@ -51,6 +52,7 @@ const PROG = 'debug.mjs';
 const ACTIONS = [
   { opt: '--image', type: 'path', metavar: 'IMAGE' },
   { opt: '--patch', type: 'path', repeat: true, metavar: 'FILE' },
+  { opt: '--main', type: 'path', metavar: 'FILE' },
   { opt: '--entry', type: 'int', required: true, metavar: 'ADDR' },
   { opt: '--attach', type: 'str', metavar: 'URL' },
   { opt: '--stop', type: 'int', repeat: true, metavar: 'ADDR' },
@@ -70,7 +72,7 @@ const ACTIONS = [
   { opt: '--disasm', type: 'str', repeat: true, metavar: 'ADDR:LEN' },
   { opt: '--max-ms', type: 'int', metavar: 'N' },
 ];
-let overlay = null;          // --patch: {label, raw, summary}
+let overlay = null;          // --patch or --main: {label, raw, summary}
 function loadImage(p) {
   if (overlay && p === overlay.label) return overlay.raw;
   try { return p === PATCHED ? readPatched() : readBytes(p); } catch (e) { throw new RuntimeError(`${PROG}: cannot read the image ${p} (${e.code ?? e.message})`); }
@@ -79,13 +81,15 @@ function loadImage(p) {
 // refusal exits 1 with its reason, before any machine runs. The machine here loads no resource block (env has no
 // resBlock), so a patch to it is refused rather than reported as applied
 function patchOverlay(args) {
-  if (!args.patch.length) return null;
-  if (args.image !== undefined) args.error('--patch applies to the stock main code block: not with --image');
+  const opt = args.main !== undefined ? '--main' : '--patch';
+  if (!args.patch.length && args.main === undefined) return null;
+  if (args.main !== undefined && args.patch.length) args.error('--main and --patch exclude each other (--main is the whole change to the main code block)');
+  if (args.image !== undefined) args.error(`${opt} applies to the stock main code block: not with --image`);
   try {
-    const fw = patchedFirmware(readPatchFiles(args.patch), { resource: false });
-    return { label: `patched: ${args.patch.join(', ')}`, raw: fw.raw, summary: fw.summary };
+    const fw = patchedFirmware(overlayPatches(args), { resource: false });
+    return { label: `patched: ${args.main ?? args.patch.join(', ')}`, raw: fw.raw, summary: fw.summary };
   } catch (e) {
-    if (e instanceof PatchRefused) throw new SystemExit(`${PROG}: --patch refused: ${e.message}`);
+    if (e instanceof PatchRefused) throw new SystemExit(`${PROG}: ${opt} refused: ${e.message}`);
     throw e;
   }
 }
@@ -126,7 +130,7 @@ function main(argv) {
   const actions = serve ? ACTIONS.map((a) => a.opt === '--entry' ? { ...a, required: false } : a) : ACTIONS;
   const args = parseArgs(PROG, argv, actions);
   if (args.attach !== undefined) {
-    if (args.patch.length) args.error('--patch with --attach: the play session runs its own firmware (bin/play.mjs --patch FILE)');
+    if (args.patch.length || args.main !== undefined) args.error(`${args.main !== undefined ? '--main' : '--patch'} with --attach: the play session runs its own firmware (bin/play.mjs --patch FILE or --main FILE)`);
     let url;
     try { url = new URL(args.attach); } catch { args.error(`--attach ${args.attach}: not a URL`); }
     if (url.protocol !== 'http:' || !url.searchParams.get('t')) args.error(`--attach ${args.attach}: the play server's http://127.0.0.1:PORT/?t=TOKEN`);

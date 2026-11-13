@@ -49,6 +49,7 @@ import { STORAGE } from './storage.mjs';
 import { recStandIns } from './rec.mjs';
 import { AudioRing } from './audio.mjs';
 import { patchLine } from '../fw/patch.mjs';
+import { patchAudit } from './patchaudit.mjs';
 import { recordNvram, replayNvram, nvramRecord } from './nvramdoc.mjs';
 import { CPU2_STAND_INS } from './cpu2.mjs';
 import { PLAY_NATIVE_STAND_INS } from './playmod.mjs';
@@ -250,7 +251,7 @@ export function replayPatchRefusal(file, text, patch) {
   if (get(doc, 'patch') === null) return null;
   let what;
   try { what = patchLine(doc.patch); } catch { what = 'a patch overlay'; }
-  return `--replay ${file}: the session ran on patched firmware (${what}): refused without --patch (give the same --patch FILE again)`;
+  return `--replay ${file}: the session ran on patched firmware (${what}): refused without --patch (give the same --patch FILE, or --main FILE, again)`;
 }
 
 // A --replay file's record of the camera's kept state (S-NVRAM, src/lab/nvramdoc.mjs recordNvram): session.json's nvram
@@ -328,6 +329,8 @@ export class Player {
     this.a15_frames_closed = 0;
     this.replaying = false;
     this.live = null;                // the live debug route (debug_input), made at the first debug input
+    this.patch_audit = null;         // a patch overlay's audit (open_session), and the patch's tasks started in any session
+    this.patch_tasks = new Set();
     this.audio = new AudioRing();    // the sessions' sound as published (publish_audio), for GET /api/audio
     if (env.flags) {                 // the node host: stop and signalled live in shared memory (host/labworker.mjs)
       const f = env.flags;
@@ -370,6 +373,7 @@ export class Player {
     // after enter returned or raised (a failed enter closes and nulls the lab).
     try { s.enter(); } finally { this.env.onPlaySession?.(this, s, s.lab ?? null); }
     this.session = s;
+    this.patch_audit = patchAudit(s.lab);      // a patch overlay's audit after the bring-up (src/lab/patchaudit.mjs)
     this.down.clear();
     this.touch_last = null;
     this.anchor();
@@ -377,6 +381,7 @@ export class Player {
     this.set_phase('running');
   }
   close_session() {
+    if (this.patch_audit) this.patch_audit_doc();      // the session's patch tasks, kept for session.json
     if (this.live !== null) this.live.closed();
     if (this.session !== null) {
       this.publish_audio();
@@ -407,6 +412,7 @@ export class Player {
       ...(s?.audio_hw ? { audio: s.audio_hw.status() } : {}),                                           // --audio on only, likewise
       ...(this.live !== null ? { debug: this.live.status() } : {}),                                     // after a debug input only
       ...(this.env.patch ? { patch: this.env.patch } : {}),                                              // a patch overlay only
+      ...(this.patch_audit ? { patch_audit: this.patch_audit_doc() } : {}),                              // likewise, once the lab is up
       ...(this.env.nvram && s?.lab?.store_log?.nvram ? { nvram: { loaded: [...s.lab.store_log.nvram.loaded], saves: s.lab.store_log.nvram.saves.length } } : {}) };   // S-NVRAM only: the stores restored, the saves
     if (s !== null && s.lab !== null) {
       try { Object.assign(doc, s.status()); } catch (e) {
@@ -419,6 +425,11 @@ export class Player {
     this.status_doc = doc;
     if (this.env.onStatus) this.env.onStatus(doc);
     this.box.notifyAll();
+  }
+  // the audit after the bring-up and the tasks the patch made that started (H-PATCHTASK)
+  patch_audit_doc() {
+    for (const t of this.session?.lab?.lt?.patch_tasks ?? []) this.patch_tasks.add(t);
+    return { ...this.patch_audit, tasks: [...this.patch_tasks].map((t) => '0x' + (t >>> 0).toString(16).padStart(8, '0')) };
   }
   pace_ratio() {
     if (this.pace.length < 2) return null;
@@ -453,7 +464,8 @@ export class Player {
     if (this.session?.camapp?.modpost_taken) used.push('S-MODPOST');                         // a direct module post taken (E143)
     if (this.session?.camapp?.takerdy_events) used.push('S-TAKERDY');                        // a take-ready finished (E143, camapp 3)
     if (this.session?.boot_key !== undefined) used.push('S-BOOTKEY');                       // UI_IN's boot key: the power switch
-    if (this.session?.lab?.boot_staged) used.push('S-BOOTSTAGE');                          // the boot's first stage readied
+    if (this.session?.lab?.boot_staged) used.push('S-BOOTSTAGE');
+    if (this.patch_tasks.size || this.session?.lab?.lt?.patch_tasks?.length) used.push('H-PATCHTASK');   // a task a patch overlay made started (kernel.mjs), in any session                          // the boot's first stage readied
     if (this.session?.lab?.iic_answered) used.push('S-IICWAIT');                            // a body whose firmware waits on the IIC bus
     if (this.session?.camapp?.dispsync_released) used.push('S-DISPSYNC');                   // a body whose GUI synced its display updates
     if (this.session?.camapp?.subject?.used) used.push('S-SUBJECT');                         // subject detection's frames drawn (subject.mjs)
@@ -1180,6 +1192,7 @@ export class Player {
     const args = { ...this.a };
     const doc = { args, stand_ins: this.stand_ins_in_use(), assumptions_in_use: frames ? { A15: { frames, mode: this.a.a15 ?? 'auto' } } : {}, inputs: this.log,
       ...(this.env.patch ? { patch: this.env.patch } : {}),        // the patch overlay the firmware ran with (src/fw/patch.mjs)
+      ...(this.patch_audit ? { patch_audit: this.patch_audit_doc() } : {}),   // and its audit (src/lab/patchaudit.mjs)
       ...(this.nvram_record ? { nvram: this.nvram_record } : {}) };  // S-NVRAM: what each session started from (--replay)
     if (this.env.logSink) this.env.logSink('session.json', JSON.stringify(doc));
   }

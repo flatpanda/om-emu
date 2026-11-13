@@ -7,6 +7,7 @@ import { show } from '../util/show.mjs';
 import { hexDigits as fx } from '../util/hex.mjs';
 import { A, refuseUnmapped, MODEL_INFO, IMAGE_BASE } from '../fw/model.mjs';
 import { BOARD } from '../fw/board.mjs';
+import { PatchRanges } from './patchaudit.mjs';
 
 export const CALLER = A(0xA2100000), RETURN = A(0xA2100100), ISR_CALLER = A(0xA2100200), ISR_SP = A(0xA2180000);
 export const DATA = A(0xA2201000), DATA_END = A(0xA2300000);
@@ -79,6 +80,8 @@ export class HLE {
     this.drained = 0;
     this.stubObserver = null;          // capture's on_stub patch (tracer)
     this.coverage = env.machine?.coverage ?? null;     // the machine's coverage collector: every stand-in that fires
+    // a patch overlay's changed bytes (env.patchRanges): a hook reached on them stops the run (src/lab/patchaudit.mjs)
+    this.patch = env.patchRanges ? new PatchRanges(env.patchRanges, this.image) : null;
     if (this.session) this.session.attach(this);
   }
   close() { if (this.session) this.session.close(this, () => this.sim.close()); else this.sim.close(); }
@@ -238,6 +241,7 @@ export class HLE {
       const hook = this.hooks.get(pc);
       if (hook && !result.fault) {
         const [stub, name] = hook;
+        if (this.patch !== null) this.patch.refuseHook(pc, name);
         used += 1;
         if (this.coverage !== null) this.coverage.stub(pc, name);
         this.on_stub(name);

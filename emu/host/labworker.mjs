@@ -37,12 +37,13 @@ function sink(name, text) {
 // thread, written when the loop ends (argv: the server's own command line, from the main thread)
 const trace = tracedPlay(argv) ? installChildTrace({ argv, install: false }) : null;
 const cardSize = process.env.OM_EMU_CARD_SIZE ? { sectors: cardSectors(process.env.OM_EMU_CARD_SIZE) } : {};
-// --patch: the main thread's patches (host/playcli.mjs, verified there), applied to this thread's stock blocks; the
-// overlay's summary goes into the status and session.json (env.patch, src/lab/player.mjs)
+// --patch or --main: the main thread's patches (host/playcli.mjs, verified there), applied to this thread's stock
+// blocks; the overlay's summary goes into the status and session.json (env.patch, src/lab/player.mjs), the bytes it
+// changed to the lab's patch rules (env.patchRanges, src/lab/patchaudit.mjs)
 const fw = patches ? patchedFirmware(patches) : null;
 const env = {
   rom: fw?.rom ?? loadImage(), resBlock: fw?.resBlock ?? loadBlock(), nand: loadNand(), createHash, ...(trace?.fields ?? {}),
-  ...(fw ? { patch: fw.summary } : {}),
+  ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}),
   deflate: (b, level) => new Uint8Array(zlib.deflateSync(b, { level })),
   wallClock, queue, flags,
   readReplay: (p) => fs.readFileSync(p, 'utf8'),

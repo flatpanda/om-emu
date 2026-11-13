@@ -169,6 +169,7 @@ export class LabTask {
     this.pri = pri; this.stack_top = stack_top || SP; this.stack_size = stack_size;
     this.allow = new Set([...allow_tasks, ...(MODEL_INFO.extra_tasks ?? [])]);
     this.tid = null; this.idle_events = []; this.on_idle = null; this.started = [];
+    this.patch_tasks = [];              // H-PATCHTASK: the entries (disassembly notation) of the tasks a patch made
     this.settle_sem = null; this.settling = false; this.settle_log = []; this._settle_current = null;
     this._irq_open = false; this.native_opens = 0; this._accepted_seen = 0;
     this.strict_levels = true; this.time_mode = false; this.elapse_log = []; this.idle_again_limit = 1000;
@@ -236,11 +237,14 @@ export class LabTask {
     const b = this.sim.read(entry, 3);
     return (b[0] === 0xDE || b[0] === 0xDF) && b[1] === 0 && b[2] === 0;
   }
+  // A task whose entry is on bytes a patch overlay changed (src/lab/patchaudit.mjs) starts too: no stock task's code
+  // is there, so it is one the patch made, not one the lab left out (H-PATCHTASK, listed in patch_tasks)
   _task_start(hle, r) {
-    const entry = r.a2;
+    const entry = r.a2, d = disasm_of(entry);
     this.started.push(entry);
-    if (entry !== LAB_HOME && !this.allow.has(disasm_of(entry)) && !this._bare_return(entry)) {
-      throw new FirmwareError(`kernel would start firmware task entry 0x${fx(disasm_of(entry), 8)} (exinf 0x${r.d2.toString(16)}): not modelled`);
+    if (entry !== LAB_HOME && !this.allow.has(d) && !this._bare_return(entry)) {
+      if (this.hle.patch?.code(entry) == null) throw new FirmwareError(`kernel would start firmware task entry 0x${fx(d, 8)} (exinf 0x${r.d2.toString(16)}): not modelled`);
+      if (!this.patch_tasks.includes(d)) this.patch_tasks.push(d);
     }
     this.sim.packet('s');
   }

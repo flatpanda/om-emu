@@ -10,7 +10,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { Worker, MessageChannel } from 'node:worker_threads';
-import { REPO, loadImage, exitFor, readPatchFiles, patchedFirmware } from '../checks/lib/env.mjs';
+import { REPO, loadImage, exitFor, overlayPatches, patchedFirmware } from '../checks/lib/env.mjs';
 import { PatchRefused, patchLine } from '../src/fw/patch.mjs';
 import { parseArgs } from '../checks/lib/args.mjs';
 import { RuntimeError } from '../src/lab/errors.mjs';
@@ -68,8 +68,12 @@ export const ACTIONS = [
 // Player's options (as OM_EMU_LENS and the others are), so it is not among session.json's args; the overlay's summary
 // is its "patch" instead, and the status's.
 const PATCH = { opt: '--patch', type: 'path', repeat: true, metavar: 'FILE' };
+// --main FILE: a whole patched main code block (caduceus-om3's main.bin), the overlay that makes it from the stock
+// block (checks/lib/env.mjs readMainFile), reported as --patch's; not with --patch, the env and session.json the same
+const MAIN = { opt: '--main', type: 'path', metavar: 'FILE' };
 // --nvram on|off|FILE: where the camera's non-volatile state is kept between sessions (S-NVRAM; host/nvram.mjs
-// nvramChoice: on, the default, is the model's own file, ~/.om-emu/nvram-<model>.json; off a blank camera at each
+// nvramChoice: on, the default, is the model's own file, ~/.om-emu/nvram-<model>.json, or with --patch or --main the
+// patched build's own, ~/.om-emu/nvram-<model>-<its main block's sha256, 8 hex digits>.json; off a blank camera at each
 // start), the lab's env too and not among session.json's args, whose nvram records what each session started from
 const NVRAM = { opt: '--nvram', type: 'str', metavar: 'on|off|FILE' };
 // --card-put DOS/PATH=LOCAL (repeatable): LOCAL's bytes written to the card at DOS/PATH before the first session's
@@ -77,13 +81,15 @@ const NVRAM = { opt: '--nvram', type: 'str', metavar: 'on|off|FILE' };
 // be one the firmware formatted (node emu/bin/card.mjs new); the lab's env too, not among session.json's args
 const CARD_PUT = { opt: '--card-put', type: 'str', repeat: true, metavar: 'DOS/PATH=LOCAL' };
 // The parsed options: every option's key in ACTIONS' order, then no_wait_on_error; the --patch files, if any, as the
-// non-enumerable patch, --nvram's value (null when not given) as the non-enumerable nvram and the --card-put items as
-// the non-enumerable card_put ([] when none).
+// non-enumerable patch, --main's file (null when not given) as the non-enumerable main, --nvram's value (null when
+// not given) as the non-enumerable nvram and the --card-put items as the non-enumerable card_put ([] when none).
 export function parsePlayArgs(argv) {
-  const r = parseArgs(PROG, argv, [...ACTIONS, PATCH, NVRAM, CARD_PUT]);
+  const r = parseArgs(PROG, argv, [...ACTIONS, PATCH, MAIN, NVRAM, CARD_PUT]);
   if ((r.x_mutant || r.x_trim_keep) && !r.debug_api) r.error('--x-mutant and --x-trim-keep need --debug-api');
+  if (r.main !== undefined && r.patch.length) r.error('--main and --patch exclude each other (--main is the whole change to the main code block)');
   const a = {};
   Object.defineProperty(a, 'patch', { value: r.patch });
+  Object.defineProperty(a, 'main', { value: r.main ?? null });
   Object.defineProperty(a, 'nvram', { value: r.nvram ?? null });
   for (const item of r.card_put) if (!/^[^=]+=.+$/.test(item)) r.error(`--card-put ${item}: DOS/PATH=LOCAL`);
   Object.defineProperty(a, 'card_put', { value: r.card_put });
@@ -116,16 +122,16 @@ export async function main(argv) {
   try { a = parsePlayArgs(argv); } catch (e) { return exitFor(PROG, e); }
   const fw = await provision(PROG);     // the model's firmware on first use; nothing printed when it is there
   if (fw) return fw;
-  // --patch: read, parsed and verified against the stock blocks here, before the server starts; the lab worker applies
-  // the same patches (checked again) to its own blocks
+  // --patch (or --main): read, parsed and verified against the stock blocks here, before the server starts; the lab
+  // worker applies the same patches (checked again) to its own blocks
   let patches = null, overlay = null;
-  if (a.patch.length) {
+  if (a.patch.length || a.main !== null) {
     try {
-      patches = readPatchFiles(a.patch);
+      patches = overlayPatches(a);
       overlay = patchedFirmware(patches);
     } catch (e) {
       if (!(e instanceof PatchRefused)) throw e;
-      report(`${PROG}: --patch refused: ${e.message}`);
+      report(`${PROG}: ${a.main !== null ? '--main' : '--patch'} refused: ${e.message}`);
       return 1;
     }
   }
@@ -146,8 +152,10 @@ export async function main(argv) {
   // the camera's non-volatile state (S-NVRAM): kept by default in the model's file, --nvram / OM_EMU_NVRAM to choose,
   // checked here (a file of another model, or one that does not parse, is refused before the server starts); a
   // --replay's is its log's (the Player's: replayNvramRecord, in memory), never a file's
+  // (patched firmware: the default file is the patched build's own, keyed by its main block's sha256)
   const nv = nvramChoice({ arg: a.nvram, env: process.env.OM_EMU_NVRAM || null, model: MODEL, unsupported: nvramUnsupported(),
-    scpuNative: process.env.OM_EMU_SCPU === 'native' && !!MODEL_INFO.scpu_lle, replay: a.replay !== null });
+    scpuNative: process.env.OM_EMU_SCPU === 'native' && !!MODEL_INFO.scpu_lle, replay: a.replay !== null,
+    build: overlay ? overlay.summary.blocks.find((b) => b.block === 'main')?.sha256 ?? MODEL_INFO.rom_sha256 : null });
   if (nv.refuse) {
     report(`${PROG}: ${nv.refuse}`);
     return 1;
@@ -205,7 +213,7 @@ export async function main(argv) {
   // model's) refuse it. A model the lab does not load on is refused before this session stops (labLoads).
   const onSwitch = async (code) => {
     if (switchTo || trying) return `already switching to ${switchTo ?? trying}`;
-    if (patches) return `a session with --patch cannot switch (its patches are for ${MODEL}'s blocks): start ${PROG} --model ${code}`;
+    if (patches) return `a session with ${a.main !== null ? '--main' : '--patch'} cannot switch (its patches are for ${MODEL}'s blocks): start ${PROG} --model ${code}`;
     if (a.out !== null || a.replay !== null) return `a session with ${a.out !== null ? '--out' : '--replay'} cannot switch: start ${PROG} --model ${code}`;
     if (nv.custom) return `a session whose state is kept in ${nv.file} (${nv.source}) cannot switch (the file is ${MODEL}'s): start ${PROG} --model ${code}`;
     if (!blocksPresent(MODELS[code])) return `no firmware for ${code} (${MODELS[code].name}): run node emu/bin/fetch-fw.mjs --model ${code}`;

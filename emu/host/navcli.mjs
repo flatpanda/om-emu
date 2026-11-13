@@ -2,13 +2,16 @@
 // stdout line per token, a PNG per step (--png each|end|none; the .ycc removed), session.json (JSON with a one-space
 // indent), 'error: ...' on stderr and rc 1 for a FirmwareError or ValueError. Wall seconds print with two decimals
 // per step and one for the whole run. --patch FILE (repeatable) runs the stock blocks with FILE's patches
-// (src/fw/patch.mjs; a refusal is 'error: --patch refused: ...', rc 1, before the lab starts): a 'patched: ...' line
-// first, and session.json's patch the overlay's summary. Node-only (host/).
+// (src/fw/patch.mjs; a refusal is 'error: --patch refused: ...', rc 1, before the lab starts), --main FILE a whole
+// patched main code block as the same overlay (checks/lib/env.mjs readMainFile; not with --patch): a 'patched: ...'
+// line first, a 'patch audit: ...' line after the bring-up (src/lab/patchaudit.mjs), and session.json's patch the
+// overlay's summary, its patch_audit the audit. Node-only (host/).
 import fs from 'node:fs';
 import path from 'node:path';
 import { MODEL } from '../src/fw/model.mjs';
-import { REPO, loadImage, loadBlock, createHash, exitFor, readPatchFiles, patchedFirmware } from '../checks/lib/env.mjs';
+import { REPO, loadImage, loadBlock, createHash, exitFor, overlayPatches, patchedFirmware } from '../checks/lib/env.mjs';
 import { PatchRefused, patchLine } from '../src/fw/patch.mjs';
+import { patchAudit, auditLine } from '../src/lab/patchaudit.mjs';
 import { parseArgs, intValue } from '../checks/lib/args.mjs';
 import { write_outputs, jsonText } from '../checks/lib/png.mjs';
 import { isValueError } from '../checks/lib/errors.mjs';
@@ -51,6 +54,7 @@ export const ACTIONS = [
   { opt: '--out', type: 'path', default: null },
   { opt: '--tag', type: 'str', default: 'nav' },
   { opt: '--patch', type: 'path', repeat: true, metavar: 'FILE' },
+  { opt: '--main', type: 'path', metavar: 'FILE' },
 ];
 const say = (line) => process.stdout.write(line + '\n');
 // --seed FILE: a JSON object of setting id: value, both integers (an id as its decimal key), seeded in ascending id
@@ -86,11 +90,12 @@ function run(a) {
   const start = a.blank ? null : (a.start ?? '7,1,1').split(',').map(decimalInt);
   if (start !== null && (start.length !== 3 || start.includes(null))) a.error('--start: three integers T,P,C');
   const seed = a.seed ? readSeed(a.seed) : new Map();    // in the file's order
+  if (a.main !== undefined && a.patch.length) a.error('--main and --patch exclude each other (--main is the whole change to the main code block)');
   let fw = null;
-  if (a.patch.length) {
-    try { fw = patchedFirmware(readPatchFiles(a.patch)); } catch (e) {
+  if (a.patch.length || a.main !== undefined) {
+    try { fw = patchedFirmware(overlayPatches(a)); } catch (e) {
       if (!(e instanceof PatchRefused)) throw e;
-      process.stderr.write(`error: --patch refused: ${e.message}\n`);
+      process.stderr.write(`error: ${a.main !== undefined ? '--main' : '--patch'} refused: ${e.message}\n`);
       return 1;
     }
     say(`patched: ${patchLine(fw.summary)}`);
@@ -108,6 +113,7 @@ function run(a) {
   const trace = installChildTrace({ argv: process.argv.slice(2), install: false });
   if (trace) process.on('exit', (code) => trace.finish(code));
   const env = { rom: fw?.rom ?? loadImage(), resBlock: fw?.resBlock ?? loadBlock(), createHash, ...(trace?.fields ?? {}),
+    ...(fw ? { patchRanges: fw.changed } : {}),
     writeOutputs: (lab, name, device, comp, dump, dir) => write_outputs(lab, name, device, comp, dump, dir) };
   const nav = new N.NavSession(env, { lang: a.lang, device: a.device, u1: a.u1, start, seed, open_menu: false, out, tag: a.tag,
     store_first: a.store_first, evf_layout: a.evf_layout, a15: a.a15, time: a.time });
@@ -117,6 +123,11 @@ function run(a) {
     try {
       const lab = nav.lab;
       doc.bring_up_seconds = nav.bringup_seconds;
+      const audit = patchAudit(lab);
+      if (audit) {
+        say(`patch audit: ${auditLine(audit)}`);
+        doc.patch_audit = audit;
+      }
       const store = {};
       for (const [k, v] of Object.entries(lab.store_log)) if (k !== 'cflush') store[k] = v;
       store.cflush = {};
@@ -153,6 +164,8 @@ function run(a) {
         doc.time = { boot: lab.time_log_boot, lab_time: lab.lab_time(), timer };
       } else doc.time = null;
       doc.b2 = lab.takeover_log;
+      // the tasks the patch made that started (H-PATCHTASK, src/lab/kernel.mjs)
+      if (doc.patch_audit) doc.patch_audit.tasks = lab.lt.patch_tasks.map((t) => '0x' + t.toString(16).padStart(8, '0'));
     } finally { nav.close(); }
   } catch (e) {
     if (!(e instanceof FirmwareError || isValueError(e))) throw e;

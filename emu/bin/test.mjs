@@ -19,8 +19,8 @@
 // synthesized shutter sound at a
 // release, and the AF beep end to end (test_audio.mjs), the audio hardware and AUD_EXEC's play path on E143
 // (test_audiohw.mjs), the SCPU's clock, ports, link pins and sub-CPU model
-// (test_scpu.mjs), the publication audit (test_pubaudit.mjs), patch overlays (test_patch.mjs: the rules, --patch on
-// E143 through debug.mjs, play.mjs and nav.mjs), the HDMI port and a plug in play on E143,
+// (test_scpu.mjs), the publication audit (test_pubaudit.mjs), patch overlays (test_patch.mjs: the rules, --patch and
+// --main on E143 through debug.mjs, play.mjs and nav.mjs, the hook rule; an om3-patch-2 file and --main on E147), the HDMI port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample, check_level on E146 and its PER_ROTATE groups (--rotate
 // on) on E143 and E146 (test_acc.mjs), the card and the
 // file system on E143, E146, E147, E144, E142, E134, E148, E137, E125, E130, E133, E129 and the E118 family (S2's
@@ -367,14 +367,21 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...sc.bad, ...ss.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += sc.bad.length + ss.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
-// patch overlays (src/fw/patch.mjs): the rules on synthetic blocks, then --patch on E143 through bin/debug.mjs,
-// bin/play.mjs and bin/nav.mjs with a tiny patch file the test writes
+// patch overlays (src/fw/patch.mjs, src/lab/patchaudit.mjs): the rules on synthetic blocks, then --patch and --main on
+// E143 through bin/debug.mjs, bin/play.mjs and bin/nav.mjs with a tiny patch file the test writes, and an om3-patch-2
+// file the test writes and its block as --main on E147, in a process of its own (the model is fixed when the lab is
+// imported)
 {
   const { patchUnits, patchSession } = await import('../test/test_patch.mjs');
+  const { spawnSync } = await import('node:child_process');
   const pu = patchUnits(), ps = await patchSession();
-  console.log(`patch overlays: units ${pu.checks - pu.bad.length}/${pu.checks}; on E143 ${ps.checks - ps.bad.length}/${ps.checks}`);
-  [...pu.bad, ...ps.bad].forEach((x) => console.log('  ', x));
-  bad += pu.bad.length + ps.bad.length;
+  const others = ['E147'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_patch.mjs', import.meta.url).pathname, '--session-model'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
+  });
+  console.log(`patch overlays: units ${pu.checks - pu.bad.length}/${pu.checks}; on E143 ${ps.checks - ps.bad.length}/${ps.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  [...pu.bad, ...ps.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += pu.bad.length + ps.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // the publication audit (bin/pubaudit.mjs) on a throwaway repository with made-up firmware
 {

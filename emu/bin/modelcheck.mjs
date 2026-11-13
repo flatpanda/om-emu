@@ -32,23 +32,41 @@
 // when its shooting screen is drawn again (PROBE_REDRAW) has the screen redrawn before each window by a key that
 // cycles it back to the view it had, as a user would. A body in PROBE_XFAIL is expected to fail the probe, strictly:
 // its failure is printed and does not count, its pass does, so a fix forces the table's update.
-//   node emu/bin/modelcheck.mjs [MODEL ...] [--no-port] [--card-size GiB]
+// --patch FILE (repeatable) or --main FILE runs the path on patched firmware: the one MODEL named (another number of
+// models is refused), the overlay made and checked as bin/play.mjs makes it (checks/lib/env.mjs; a refusal fails the
+// run before any step), its line printed first, its audit after each device's line (src/lab/patchaudit.mjs); implies
+// --no-port (src/fw/ports.mjs stays the stock blocks' tables). The tables above are the stock firmware's.
+//   node emu/bin/modelcheck.mjs [MODEL ...] [--no-port] [--card-size GiB] [--patch FILE... | --main FILE]
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { MODELS, romPath } from '../src/fw/models.mjs';
 import { SdCard, cardSectors } from '../src/lab/sdcard.mjs';
+import { patchLine } from '../src/fw/patch.mjs';
+import { auditLine } from '../src/lab/patchaudit.mjs';
 
 const REPO = path.resolve(new URL('../../', import.meta.url).pathname);
-const args = process.argv.slice(2), noPort = args.includes('--no-port');
-const sizeAt = args.indexOf('--card-size');
-if (sizeAt >= 0 && !(sizeAt + 1 < args.length)) { console.error('modelcheck: --card-size needs a size in GiB'); process.exit(2); }
+const args = process.argv.slice(2);
+// the options with a value: --card-size GiB, --patch FILE (repeatable), --main FILE
+const valued = new Set(), values = { '--card-size': [], '--patch': [], '--main': [] };
+args.forEach((a, i) => {
+  if (!(a in values) || valued.has(i)) return;
+  if (!(i + 1 < args.length)) { console.error(`modelcheck: ${a} needs ${a === '--card-size' ? 'a size in GiB' : 'a FILE'}`); process.exit(2); }
+  values[a].push(args[i + 1]);
+  valued.add(i + 1);
+});
 // the card's capacity in sectors (null: the default card), checked here so that a size the card model refuses stops
 // the run before any child
-const SECTORS = sizeAt >= 0 ? cardSectors(args[sizeAt + 1]) : null;
-const unknown = args.filter((a, i) => a.startsWith('--') && a !== '--no-port' && a !== '--card-size' && i !== sizeAt + 1);
-if (unknown.length) { console.error(`modelcheck: unknown option ${unknown[0]} (--no-port, --card-size GiB)`); process.exit(2); }
-const want = args.filter((a, i) => !a.startsWith('--') && !(sizeAt >= 0 && i === sizeAt + 1));
+const SECTORS = values['--card-size'].length ? cardSectors(values['--card-size'].at(-1)) : null;
+const unknown = args.filter((a, i) => a.startsWith('--') && !valued.has(i) && a !== '--no-port' && !(a in values));
+if (unknown.length) { console.error(`modelcheck: unknown option ${unknown[0]} (--no-port, --card-size GiB, --patch FILE, --main FILE)`); process.exit(2); }
+const want = args.filter((a, i) => !a.startsWith('--') && !valued.has(i));
+// --patch / --main: the overlay the child makes (checks/lib/env.mjs overlayPatches), on the one model named
+const OVERLAY = values['--patch'].length || values['--main'].length
+  ? { patch: values['--patch'].map((f) => path.resolve(f)), main: values['--main'].length ? path.resolve(values['--main'].at(-1)) : null } : null;
+if (OVERLAY && OVERLAY.patch.length && OVERLAY.main) { console.error('modelcheck: --main and --patch exclude each other'); process.exit(2); }
+if (OVERLAY && want.length !== 1) { console.error(`modelcheck: ${OVERLAY.main ? '--main' : '--patch'} runs on one model, named (an overlay is for one model's blocks): ${want.length} given`); process.exit(2); }
+const noPort = args.includes('--no-port') || OVERLAY !== null;
 const models = (want.length ? want : Object.keys(MODELS).filter((k) => k !== 'E143' && MODELS[k].checked))
   .filter((k) => fs.existsSync(path.join(REPO, romPath(MODELS[k]))));
 
@@ -134,7 +152,19 @@ const { runtime } = await import(J + '/src/lab/hle.mjs');
 const { openVolume } = await import(J + '/refs/volume.mjs');
 const { memoryCard } = await import(J + '/src/lab/sdcard.mjs');
 const SHOTS_QUERY = ${SHOTS_QUERY}, card = {};
-const env = { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, ...(SECTORS === null ? {} : { card: memoryCard({ sectors: SECTORS }) }), deflate: (b, l) => new Uint8Array(zlib.deflateSync(b, { level: l })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)) };
+// --patch / --main: the overlay on this model's stock blocks (a refusal is the run's line, no step taken)
+const OVERLAY = JSON.parse(process.argv[5] || 'null');
+let fw = null;
+if (OVERLAY) {
+  const E = await import(J + '/checks/lib/env.mjs');
+  try { fw = E.patchedFirmware(E.overlayPatches(OVERLAY)); } catch (e) {
+    if (e.name !== 'PatchRefused') throw e;
+    console.log(JSON.stringify({ refused: e.message }));
+    process.exit(0);
+  }
+}
+const env = { rom: fw?.rom ?? loadImage(), resBlock: fw?.resBlock ?? loadBlock(), nand: loadNand(), createHash, ...(SECTORS === null ? {} : { card: memoryCard({ sectors: SECTORS }) }), deflate: (b, l) => new Uint8Array(zlib.deflateSync(b, { level: l })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)),
+  ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}) };
 const pl = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, device: DEVICE }, { ...env, wallClock: () => performance.now() / 1000 });
 pl.open_session();
 const s = pl.session, lab = s.lab, out = [];
@@ -232,7 +262,7 @@ if (s.storage) {
     for (const f of st.files) { const e = vol.find(f.path.slice(3).replaceAll('\\\\', '/')); if (e && !e.dir && e.size === f.size) card.found += 1; }
   } catch (e) { card.error = e.message.slice(0, 120); }
 }
-console.log(JSON.stringify({ steps: out, probe, card: s.storage ? card : null }));
+console.log(JSON.stringify({ steps: out, probe, card: s.storage ? card : null, ...(fw ? { patch: fw.summary, audit: pl.patch_audit_doc() } : {}) }));
 `;
 let bad = 0;
 for (const m of models) {
@@ -247,7 +277,7 @@ for (const m of models) {
   const full = [PATH[0], ...answer, ...PATH.slice(1)];
   const scp = device === 'tft' && SCP[m] ? SCP[m].map((state, i) => [SCP_KEYS[i], state, 1]) : [];
   const path_ = [...(device === 'evf' && !EVF_PLAY.has(m) ? full.slice(0, full.indexOf(PATH[2]) + 1) : full), ...scp, ...MENU_PATH], menuAt = path_.length - MENU_PATH.length;
-  const r = spawnSync(process.execPath, ['--max-old-space-size=6144', '--input-type=module', '-e', CHILD, path.join(REPO, 'emu'), device, JSON.stringify(path_.slice(1).map((p) => p[0])), PROBE_REDRAW[m] ?? ''], { encoding: 'utf8', env: { ...process.env, OM_EMU_MODEL: m }, maxBuffer: 1 << 26 });
+  const r = spawnSync(process.execPath, ['--max-old-space-size=6144', '--input-type=module', '-e', CHILD, path.join(REPO, 'emu'), device, JSON.stringify(path_.slice(1).map((p) => p[0])), PROBE_REDRAW[m] ?? '', JSON.stringify(OVERLAY)], { encoding: 'utf8', env: { ...process.env, OM_EMU_MODEL: m }, maxBuffer: 1 << 26 });
   const xs = SDXC ? SDXC_XFAIL[m] : null;
   if (xs) {
     const stopped = r.status !== 0 && xs[0].test(r.stdout + r.stderr);
@@ -256,8 +286,10 @@ for (const m of models) {
     continue;
   }
   const line = r.stdout.trim().split('\n').pop();
-  let steps, probe, card;
-  try { ({ steps, probe, card } = JSON.parse(line)); } catch { console.log(`${m} (${MODELS[m].name}) ${device}: FAILED ${(r.stderr || r.stdout).split('\n').filter(Boolean).slice(-3).join(' | ').slice(0, 600)}`); bad++; continue; }
+  let steps, probe, card, refused, patch, audit;
+  try { ({ steps, probe, card, refused, patch, audit } = JSON.parse(line)); } catch { console.log(`${m} (${MODELS[m].name}) ${device}: FAILED ${(r.stderr || r.stdout).split('\n').filter(Boolean).slice(-3).join(' | ').slice(0, 600)}`); bad++; continue; }
+  if (refused) { console.log(`${m} (${MODELS[m].name}): FAILED ${OVERLAY.main ? '--main' : '--patch'} refused: ${refused}`); bad++; break; }
+  if (patch && device === 'tft') console.log(`${m} (${MODELS[m].name}): patched: ${patchLine(patch)}`);
   const problems = [], notes = [];
   if (prompt && steps[0][1] !== prompt.state) problems.push(`start: GUI state 0x${steps[0][1].toString(16)}, want the prompt 0x${prompt.state.toString(16)} (START_PROMPT: ${prompt.why})`);
   steps.forEach(([k, state, name, images, frame, , values], i) => {
@@ -302,6 +334,7 @@ for (const m of models) {
   const shown = (probe?.count && !probe.back ? `, count at ${box(probe.count)}${probe.redraw ? ` (redrawn by ${probe.redraw} x ${PROBE_REDRAW[m].toUpperCase()})` : ''}` : '')
     + (card ? `; card ${card.gib} GiB ${card.kind}: ${card.type ?? '?'} '${card.label}'${card.cluster_kib ? ` at sector ${card.start} (${card.cluster_kib} KiB clusters)` : ''} ${card.formatted ? 'formatted, ' : ''}${card.shots} shots, ${card.found} file(s) read back` : '');
   console.log(`${m} (${MODELS[m].name}) ${device}: ${problems.length ? 'FAILED ' + problems.join('; ') : 'ok'} — ${steps.map(([k, st, , n, f]) => `${k} 0x${st.toString(16)} ${n} ${f}`).join(', ')}${shown}${notes.length ? '; ' + notes.join('; ') : ''}`);
+  if (audit) console.log(`${m} (${MODELS[m].name}) ${device}: patch audit: ${auditLine(audit, audit.tasks)}`);
   if (problems.length) bad++;
   }
 }

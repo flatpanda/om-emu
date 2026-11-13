@@ -628,7 +628,8 @@ function showStatus(s) {
 // the status's patch: the overlay's summary (src/fw/patch.mjs patchLine's wording)
 function patchText(p) {
   const blocks = p.blocks.map((b) => `${b.block} block sha256 ${b.sha256.slice(0, 16)} (stock ${b.stock_sha256.slice(0, 16)})`).join(', ');
-  return `patched firmware, not stock: ${p.applied} patch${p.applied === 1 ? '' : 'es'} (${p.bytes} bytes changed) from ${p.files.join(', ')}; ${blocks}`;
+  const not = (p.not_applied ?? []).map((x) => `${x.field} (${x.why})`).join(', ');
+  return `patched firmware, not stock: ${p.applied} patch${p.applied === 1 ? '' : 'es'} (${p.bytes} bytes changed) from ${p.files.join(', ')}; ${blocks}${not ? `; not applied: ${not}` : ''}`;
 }
 function note(t) { $('s-last').textContent = t; logEvent('! ' + t); }
 // ---- S-SCENE controls ------------------------------------------------------------------------------------------------

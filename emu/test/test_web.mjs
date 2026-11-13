@@ -694,6 +694,14 @@ export async function workerTests() {
       w.postMessage({ type: 'boot', binPath: bin, args: { idle: 'off', patch: { name: 'wrong.json', text: wrong } } });   // as the page boots: the firmware progress below is the same
       const pf = await until((m, i) => i >= p0 && m.type === 'boot-failed', 60000);
       if (!pf || !/wrong.json patch 0: old bytes differ from the stock main block at 0x01ffff00/.test(pf.message)) bad.push(`worker boot with a wrong patch: ${pf ? pf.message : 'no boot-failed'}`);
+      // a digest-anchored file (caduceus-om3's om3-patch-2 shape, src/fw/patch.mjs) is read in the Worker too: one made
+      // for another block than the stock one fails the boot at its before digest
+      checks++;
+      const a0 = seen.length;
+      const anchored = JSON.stringify({ format: 'om3-patch-2', main_base: '0x60021020', main_sha256_before: '0'.repeat(64), main_sha256_after: '1'.repeat(64), runs: [['0x62020f20', '00']] });
+      w.postMessage({ type: 'boot', binPath: bin, args: { idle: 'off', patch: { name: 'anchored.json', text: anchored } } });
+      const af = await until((m, i) => i >= a0 && m.type === 'boot-failed', 60000);
+      if (!af || !/^anchored.json: main_sha256_before 0{16}\.\.\. is not the stock main block's/.test(af.message)) bad.push(`worker boot with an om3-patch-2 file for another block: ${af ? af.message : 'no boot-failed'}`);
       // a patch file the page could not read ({name, error}) fails the boot too: never the stock firmware in its place
       checks++;
       const q0 = seen.length;

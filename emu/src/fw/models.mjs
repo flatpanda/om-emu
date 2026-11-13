@@ -656,6 +656,17 @@ export const MODELS = {
     // S-NVRAM's B store (src/lab/menu.mjs B_WORDS): its format, the halfword the registry bootstrap gives the store
     // (`movhu (0x60095508),d0` at 0x500416f7, E143's 0x50040b71; 0x000a, D)
     nvram: { b_format: 0x000A },
+    // the creative dial (src/lab/play.mjs creative_dial): UI_IN's 0x1906 on bits 0..4 of group 5, polarity 1 (its
+    // tables, X). UI_IN's level getter 0x501570c5 answers 0x1906 through 0x501571c5: the entry of the board's value
+    // table (0x60360010 + 4 board) at the decoded position's index (byte 0xa32d9d0e, 0..4; D). A turn to position k
+    // sets the picture-mode family, setting 897, natively: 988, 901, 898, 899, 900 for k = 0..4 (X: test_cdial.mjs,
+    // the getter after each turn; the start's position 1 reads 901), and the application opens the Picture Mode page of
+    // MONO 1, COLOR 1, ART 1 (Pop Art) and the Color Creator for positions 0, 1, 3 and 4 (X: their frames, the wheel
+    // plane left out of the composite); at position 2 (898) no page opens and the screen stays as it was (X). The labels
+    // follow those pages; position 2 is unnamed (?). Caduceus for OM-3's camera report (2026-11-10): the body's four
+    // positions CRT, ART, COLOR, MONO set 897 to 900, 899, 901, 988, and 898 is no position of the body's dial; which
+    // way the dial turns between the lab's positions is not in the firmware (?)
+    creative_dial: { labels: ['MONO', 'COLOR', 'position 2', 'ART', 'CRT'] },
     // as E146's (D): the GIO init 0x50002a11 ends with 0x50002b50 (0x50002a1e), slots at 0xa32c1c44; the EDID state
     // word 0x62a655e4 (its getter at 0x501e078a); the hot-plug work runs in the HDMI task 0x501e3eca
     hdmi: { gio_slots: 0x50002B50, state: [0x62A655E4, 4] },

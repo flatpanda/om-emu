@@ -986,7 +986,7 @@ $('quit').onclick = () => { api('/api/quit', {}).catch(() => {}); };
 // ---- firmware and start (the browser player) ------------------------------------------------------------------------
 const Q = new URLSearchParams(location.search);
 const ARGS = {};
-for (const k of ['lang', 'device', 'a15', 'start', 'tab', 'idle', 'touch', 'us_clock', 'compose', 'hdmi', 'audio', 'rotate', 'lens', 'card_size']) if (Q.has(k)) ARGS[k] = Q.get(k);
+for (const k of ['lang', 'device', 'a15', 'start', 'tab', 'idle', 'touch', 'us_clock', 'compose', 'hdmi', 'audio', 'rotate', 'lens', 'card_size', 'creative_dial']) if (Q.has(k)) ARGS[k] = Q.get(k);
 for (const k of ['no_bgdraw', 'debug_api']) if (Q.get(k) === '1') ARGS[k] = true;
 // the kept settings (S-NVRAM) are on unless the query says nvram=0, as bin/play.mjs keeps them unless --nvram off
 if (Q.get('nvram') !== '0') ARGS.nvram = true;

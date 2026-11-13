@@ -196,7 +196,7 @@ function tokenInt(tok, parse) {
 }
 // The parts of a step record the page and the session log keep.
 const LIGHT_KEEP = ['n', 'token', 'kind', 'indices', 'messages', 'state_before', 'state_after', 'panels', 'engine_commands', 'errlog',
-  'writes', 'seconds', 'control', 'action', 'uiin', 'camseq', 'gestures', 'tp_status', 'touch_posted', 'cafwd', 'mode_dial_index', 'device',
+  'writes', 'seconds', 'control', 'action', 'uiin', 'camseq', 'gestures', 'tp_status', 'touch_posted', 'cafwd', 'mode_dial_index', 'position', 'device',
   'set', 'wait', 'get', 'tp_image', 'held_ms', 'uiin_decoded', 'dial_unread', 'dispq', 'keymap', 'switch', 'info', 'state_from', 'from_state',
   'ca_posts'];
 export function light(rec) {
@@ -355,6 +355,7 @@ export class Player {
       ...((a.rotate ?? 'off') !== 'off' ? { rotate: a.rotate } : {}),   // absent when off: the recorded documents
       ...((a.take ?? 'stand-in') !== 'stand-in' ? { take: a.take } : {}),   // the TAKE probe (take.mjs); absent by default
       ...((a.cpu2 ?? 'stand-in') !== 'stand-in' ? { cpu2: a.cpu2 } : {}),   // CPU 2 natively (cpu2.mjs)
+      ...((a.creative_dial ?? null) !== null ? { creative_dial: a.creative_dial } : {}),   // the creative dial's start position
       ...(this.camapp_components ? { camapp_components: true } : {}), ...(this.camapp_native_tra ? { camapp_native_tra: true } : {}),
       ...(this.camapp_native_tra && this.camapp_play_native ? { camapp_play_native: true } : {}), ...(this.cam_fe ? { cam_fe: true } : {}) };
   }
@@ -988,6 +989,10 @@ export class Player {
         return s.switch_input(c.id, 1 - s.bit_of(c.id));
       }
       if (c.kind === 'modedial') return s.switch_input('mode_dial', (s.mode_index + (act === 'down' ? 1 : 0)) % MODE_DIAL.positions.length);
+      if (c.kind === 'posswitch') {                 // a press steps it on, wrapping (not wired: refused with its reason)
+        if (act !== 'down') return null;
+        return s.switch_input(c.id, c.positions ? (s.cdial_index + 1) % c.positions.length : 0);
+      }
       if (c.kind === 'display') return act === 'down' ? s.display_input(c.id) : null;
       if (c.kind === 'power') return act === 'down' ? this.power(act) : null;
       if (c.kind === 'dial') throw new ValueError('dials take {type: dial}');
@@ -1016,6 +1021,11 @@ export class Player {
         return s.switch_input(c.id, (((s.mode_index + (integer(inp, 'step') % n)) % n) + n) % n);
       }
       if (c.kind === 'modedial') return s.switch_input(c.id, integer(inp, 'value'));
+      if (c.kind === 'posswitch' && c.positions && has(inp, 'step')) {  // the creative dial: step as the mode dial
+        const n = c.positions.length;
+        return s.switch_input(c.id, (((s.cdial_index + (integer(inp, 'step') % n)) % n) + n) % n);
+      }
+      if (c.kind === 'posswitch') return s.switch_input(c.id, c.positions ? integer(inp, 'value') : 0);
       return s.switch_input(c.id, bit_value(inp));
     }
     if (t === 'dial') {

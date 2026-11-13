@@ -57,6 +57,7 @@
 // Worker-safe.
 import { controlsDoc, screensDoc } from './playui.mjs';
 import { jsonType } from './player.mjs';
+import { CONTROLS, apply_uiin_layout } from './play.mjs';
 import { decimalInt, decimalNumber } from '../util/parse.mjs';
 import { base64Bytes } from '../util/bytes.mjs';
 import { MODEL } from '../fw/model.mjs';
@@ -178,7 +179,7 @@ export class PlayApi {
     }
     const no = this.allowed(req, path, args);
     if (no) return no;
-    if (path === '/api/controls') return this.send(200, this._controls ??= controlsDoc(this.tables));
+    if (path === '/api/controls') return this.send(200, this._controls ??= controlsDoc(this.tables, this.posswitchRows()));
     if (path === '/api/screens') return this.send(200, screensDoc());
     if (path === '/api/status') {
       const after = intArg(args, 'after');
@@ -205,7 +206,15 @@ export class PlayApi {
   sessionDoc() {
     const a = this.player.a;
     return { host: null, lens: 'native', nvram: null, card: null, card_size: null, ...(this.opts.session ?? {}), hdmi: a.hdmi ?? 'off', audio: a.audio ?? 'auto', rotate: a.rotate ?? 'off', debug_api: !!a.debug_api,
-      card_image: !!this.opts.cardImage };
+      ...((a.creative_dial ?? null) !== null ? { creative_dial: a.creative_dial } : {}), card_image: !!this.opts.cardImage };
+  }
+  // /api/controls' position switches (play.mjs creative_dial) as the model's UI_IN tables wire them: E143's rows are
+  // the other controls' (playui.mjs), and E143 has no position switch
+  posswitchRows() {
+    const image = this.tables?.image;
+    if (!image) return {};
+    apply_uiin_layout(image);
+    return Object.fromEntries(CONTROLS.filter((c) => c.posswitch).map((c) => [c.id, { uiin: c.uiin, positions: c.positions, labels: c.labels, status: c.status, reason: c.reason }]));
   }
   // GET /api/card, /api/card/file and /api/card/image (the header says what each answers)
   card(path, args) {

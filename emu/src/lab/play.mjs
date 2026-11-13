@@ -242,6 +242,15 @@ CONTROLS.push(
     reason: "the key matrix (0x60224774) has no BKT key; BKT is a function a button can be given (button settings)" }),
 );
 CONTROLS.push(row('lock', 'Lock lever', 'none', null, [null, null, null], { status: 'not-wired', reason: 'the producer of 0x0202123d/0x0202123e is ?' }));
+// The creative dial (the OM-3's front dial): UI_IN's position switch 0x1906, one code on several bits of a group of
+// its own, one bit at its polarity per position, which E143's tables lack. A ported model whose tables hold it gets its
+// positions (apply_uiin_layout: uiin is the first entry's, positions every entry's [group, byte, bit, polarity]); the
+// value of an input is a position, from 0, in entry order. What each position selects is the body's own reading
+// (MODELS creative_dial, with its evidence: E147's, a setting each turn sets natively); a body whose tables hold the
+// code and whose MODELS entry names nothing has the dial decoded only (E122)
+export const CREATIVE_DIAL_CODE = 0x1906;
+CONTROLS.push(row('creative_dial', 'Creative dial', 'posswitch', null, [null, null, null], { posswitch: CREATIVE_DIAL_CODE, positions: null, labels: null,
+  status: 'not-wired', reason: "0x1906 is not in E143's UI_IN tables" }));
 export const FW_KEYS = [
   [0, 0, 6, 0x1229, 1, 0], [1, 0, 2, 0x000B, 2, 0], [1, 0, 3, 0x2403, 1, 0], [1, 0, 6, 0x200D, 2, 0],
   [1, 0, 7, 0x2007, 1, 1], [1, 1, 0, 0x1506, 1, 0], [1, 1, 1, 0x1518, 1, 0], [1, 1, 2, 0x1712, 1, 0],
@@ -283,6 +292,7 @@ const TABLES = new WeakMap();
 export class Tables {
   static of(image) { let t = TABLES.get(image); if (!t) TABLES.set(image, t = new Tables(image)); return t; }
   constructor(image) {
+    this.image = image;                              // (the key matrix of /api/controls' position switches, playapi.mjs)
     this.v = imageView(image, IMAGE_BASE, MODEL);
     this.ev = new Map();
     for (let a = EV_NAMES; ; a += 8) {
@@ -349,9 +359,11 @@ export function mode_dial_names(v, n) {
   });
 }
 // a ported model's other position switches (one code on several bits, one bit at its polarity per position, like
-// E147's creative dial 0x1909): [[group, byte, bit, polarity] of the idle position], set in the idle image. The idle
-// position is the second: on E147 the first makes S2 ask for the dial to be turned (X); which position is which
-// profile is not known
+// E147's 0x1909 and its creative dial 0x1906): [[group, byte, bit, polarity] of the idle position], set in the idle
+// image. The idle position is the second: on E147 the first makes S2 ask for the dial to be turned (X). The creative
+// dial (CONTROLS creative_dial) starts there too unless the session asks for another position (opts.creative_dial);
+// on E147 the second is COLOR (src/fw/models.mjs creative_dial). What 0x1909 is on E147 is not known: its three
+// positions change neither the picture-mode family nor the screen (X)
 export const SWITCH_IDLE_POSITION = 1;
 export const POSITION_SWITCHES = [];
 // a ported model's switches the idle image sets by state, not by bit: [code, state], a switch's state 0 being its bit
@@ -501,6 +513,14 @@ export function apply_uiin_layout(image) {
     const e = at.get(c.uiin[3]);
     if (e) c.uiin = e;
     else { c.status = 'not-wired'; c.reason = `0x${c.uiin[3].toString(16)} is not in ${MODEL}'s UI_IN tables`; c.uiin = null; }
+  }
+  for (const c of CONTROLS) {                      // the position switches (creative_dial): wired where the body names them
+    if (!c.posswitch) continue;
+    const l = byCode.get(c.posswitch), named = MODEL_INFO.creative_dial?.labels ?? null;
+    if (!l || l.length < 2) { c.reason = `0x${fx(c.posswitch, 4)} is not in ${MODEL}'s UI_IN tables`; continue; }
+    if (named && named.length !== l.length) throw new PlayError(`${c.name}: src/fw/models.mjs names ${named.length} positions, ${MODEL}'s UI_IN tables hold ${l.length}`);
+    Object.assign(c, { uiin: at.get(c.posswitch), positions: l, labels: named ?? l.map((_, k) => `position ${k}`), status: named ? 'wired' : 'decoded',
+      reason: named ? null : `UI_IN decodes it natively; what each position selects is not read on ${MODEL}` });
   }
   for (const c of CONTROLS) if (c.uiin && c.uiin[3] !== MODE_DIAL_CODE) UIIN_ENTRIES.set(c.uiin.slice(0, 3).join(','), c.uiin);
   MODE_DIAL.names = mode_dial_names(imageView(image, IMAGE_BASE, MODEL), MODE_DIAL.positions.length);
@@ -1041,6 +1061,15 @@ export class PlaySession extends N.NavSession {
     apply_uiin_layout(env.rom);                    // the model's key matrix (E143: checked against CONTROLS)
     this.images = idle_images();
     if (take === 'probe') set_lever(this.images, LEVER_PROBE_STATE);   // (E143 only, checked above)
+    // the creative dial at the session's start: the idle image's position (SWITCH_IDLE_POSITION), or opts.creative_dial
+    const cd = BY_ID.get('creative_dial');
+    this.cdial_index = cd.positions ? SWITCH_IDLE_POSITION : null;
+    if ((opts.creative_dial ?? null) !== null) {
+      if (!cd.positions) throw new ValueError(`--creative-dial: ${cd.reason}`);
+      const k = opts.creative_dial;
+      if (!Number.isInteger(k) || k < 0 || k >= cd.positions.length) throw new ValueError(`--creative-dial ${show(k)}: a position 0..${cd.positions.length - 1} (${cd.labels.join(', ')})`);
+      this.posswitch_image(cd, k);
+    }
     this.scpu_port = scpuPort();
     this.hdmi_port = hdmi === 'on';
     this.hdmi_plugged = false;
@@ -1746,23 +1775,35 @@ export class PlaySession extends N.NavSession {
     return [...['s1', 's2'].filter((k) => want[k] && !this.pressed.has(k)).map((k) => [k, 'down']),
       ...['s2', 's1'].filter((k) => !want[k] && this.pressed.has(k)).map((k) => [k, 'up'])];
   }
-  // Fn lever, monitor, rotate, power, fw switches (value 0 or 1 = the bit), mode dial (value = a position, from 0).
+  // A position switch's group images at position k: k's bit at its polarity, every other position's at the other value
+  // (the mutant cdial-reversed takes the entries in reverse order: test_cdial.mjs's control)
+  posswitch_image(c, k) {
+    const at = this.opts.mutant === 'cdial-reversed' ? c.positions.length - 1 - k : k;
+    c.positions.forEach(([g, b, bit, pol], i) => set_bit(this.images[g], b, bit, i === at ? pol : 1 - pol));
+    this.cdial_index = k;
+  }
+  // Fn lever, monitor, rotate, power, fw switches (value 0 or 1 = the bit), mode dial and creative dial (value = a
+  // position, from 0).
   switch_input(cid, value) {
     const c = BY_ID.get(cid);
     if (c === undefined) throw new KeyError(show(cid));
     if (c.status === 'not-wired') throw new PlayError(`${c.name}: not wired (${c.reason})`);
-    if (!['switch', 'fwswitch', 'modedial', 'power'].includes(c.kind)) {
+    if (!['switch', 'fwswitch', 'modedial', 'posswitch', 'power'].includes(c.kind)) {
       throw new ValueError(`${c.name}: not a switch (kind ${c.kind}); keys take {type: key}, dials {type: dial}, LV and the eye sensor {type: key}`);
     }
-    const positions = MODE_DIAL.positions.length;
+    const positions = c.kind === 'posswitch' ? c.positions.length : MODE_DIAL.positions.length, dial = c.kind === 'modedial' || c.kind === 'posswitch';
     if (c.kind === 'modedial' && !(value >= 0 && value < positions)) throw new ValueError(`mode dial position ${value}: 0..${positions - 1}`);
-    if (c.kind !== 'modedial' && value !== 0 && value !== 1) throw new ValueError(`${c.name}: value ${show(value).slice(0, 40)} is not 0 or 1`);
+    if (c.kind === 'posswitch' && !(Number.isInteger(value) && value >= 0 && value < positions)) throw new ValueError(`${c.name} position ${show(value).slice(0, 40)}: 0..${positions - 1} (${c.labels.join(', ')})`);
+    if (!dial && value !== 0 && value !== 1) throw new ValueError(`${c.name}: value ${show(value).slice(0, 40)} is not 0 or 1`);
     if (this.hdmi_port && c.uiin[3] === HDMI_SWITCH) throw new ValueError(`${c.name}: with --hdmi on the HDMI switch is the firmware's own (input hdmi)`);
-    this.begin(`${String(this.steps.length).padStart(2, '0')}-switch ${cid} ${value}`);
-    const state0 = this.lab.state();
     const [g, b, bit, code, , pol] = c.uiin;
     const viaG4 = g === 4 && g4set() && this.opts.mutant !== 'no-g4set';
+    // (H-G4SET sets one code's state; a position switch in the producer's group is not modelled)
+    if (c.kind === 'posswitch' && viaG4) throw new PlayError(`${c.name}: in UI_IN's group 4, which H-G4SET's producer pushes on ${MODEL}; a position there is not modelled`);
+    this.begin(`${String(this.steps.length).padStart(2, '0')}-switch ${cid} ${value}`);
+    const state0 = this.lab.state();
     if (c.kind === 'modedial') { this.images[MODE_DIAL.group].set(mode_image(value)); this.mode_index = value; }
+    else if (c.kind === 'posswitch') this.posswitch_image(c, value);
     else if (!viaG4) set_bit(this.images[g], b, bit, value);
     const [codes, decoded] = viaG4 ? this.g4_set(code, value === pol ? 0 : 1) : this.push_group(g);   // H-G4SET: 0 = bit at its polarity
     const posted = [];
@@ -1772,6 +1813,7 @@ export class PlaySession extends N.NavSession {
     }
     const extra = this.extra(c, value, codes, decoded);
     if (c.kind === 'modedial') extra.mode_dial_index = this.lab.sim.u32(MODE_DIAL_INDEX);
+    if (c.kind === 'posswitch') extra.position = { index: value, label: c.labels[value] };
     return this.end(`switch ${cid} ${value}`, 'switch', posted, [], extra);
   }
   // H-POWER after the power lever's off (src/lab/power.mjs): on a body that gives power_native and runs PER_SCPU over
@@ -2483,6 +2525,7 @@ export class PlaySession extends N.NavSession {
       tp_gestures: [...GESTURES].sort((a, b) => a[0] - b[0]).filter(([b]) => mask && (mask & b)).map(([, n]) => n),
       lab_ns: lab.lab_time(), gate: lab.sim.u32(B7_GATE), pressed: [...this.pressed].sort(), mode_dial: this.mode_index,
       mode_dial_positions: MODE_DIAL.names, bits,
+      ...(this.cdial_index !== null ? { creative_dial: this.cdial_index, creative_dial_positions: BY_ID.get('creative_dial').labels } : {}),
       dispq: this.dispq_total + (lab.dispq ? lab.dispq.length : 0), menu, engine_total: lab.exec_history.length + this.exec_trimmed,
       harness_entries: lists, heap, layout: lab.b2_snapshot(), a15: this.a15_status(), a15_frames: this.a15_frames, switches: this.switches,
       eye: lab.sim.read(EYE_WORD, 1)[0], xcpu: lab.xcpu_log ? lab.xcpu_log.length : 0, xcpu_waiting: lab.xcpu_waiting ?? 0,

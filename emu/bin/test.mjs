@@ -28,7 +28,7 @@
 // firmware mounting what it wrote on E143 and E147 (test_cardfs.mjs), INFO's still information
 // in playback with two pictures, RIGHT, LEFT, OK's wizard, INFO's three views and the erase or its refusal on the 19
 // bodies (test_playinfo.mjs), the erase in playback natively on fifteen bodies and its refusal on the four others
-// (test_erase.mjs), a tap on the touch mode icon on E143, ten bodies of the E144
+// (test_erase.mjs), the creative dial refused on E143 and turned on E147 (test_cdial.mjs), a tap on the touch mode icon on E143, ten bodies of the E144
 // family and the E118 family, and in the super control panel on E144 and the E118 family, and with the EVF active
 // on the E118 family and the E144 family's bodies with an EVF, the AF Targeting Pad off and on (test_touch.mjs),
 // subject
@@ -584,6 +584,18 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`non-volatile state (S-NVRAM): units ${nu.checks - nu.bad.length}/${nu.checks}; across sessions ${nv.checks - nv.bad.length}/${nv.checks}; power-off and restart (E143) ${np.checks - np.bad.length}/${np.checks}, ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}; bin/play.mjs's default, opt-out and replay ${nh.checks - nh.bad.length}/${nh.checks}`);
   [...nu.bad, ...nv.bad, ...np.bad, ...nh.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += nu.bad.length + nv.bad.length + np.bad.length + nh.bad.length + others.filter(([, rc]) => rc !== 0).length;
+}
+// the creative dial (UI_IN's position switch 0x1906): refused on E143 with its reason; turned through its positions on
+// E147 in a process of its own (the model is fixed when the lab is imported), where each sets the picture-mode family
+{
+  const { cdialSession } = await import('../test/test_cdial.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const cd = await cdialSession();
+  const r = spawnSync(process.execPath, [new URL('../test/test_cdial.mjs', import.meta.url).pathname], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' });
+  const lines = (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0);
+  console.log(`creative dial: E143 ${cd.checks - cd.bad.length}/${cd.checks}; E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
+  [...cd.bad, ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
+  bad += cd.bad.length + (r.status === 0 ? 0 : 1);
 }
 // the body's Fn-type buttons reach the camera application's button mapping (ISO, +/-, Drive, AF/metering, AF-ON, |o|, front)
 {

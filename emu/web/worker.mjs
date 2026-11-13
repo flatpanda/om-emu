@@ -101,6 +101,7 @@ function playerArgs(q = {}) {
   for (const k of ['lang', 'device', 'a15', 'start', 'tab', 'idle', 'touch', 'us_clock', 'compose', 'hdmi', 'audio', 'rotate']) if (typeof q[k] === 'string') a[k] = q[k];
   for (const k of ['no_bgdraw', 'debug_api']) if (q[k] !== undefined) a[k] = !!q[k];
   if (q.x_trim_keep !== undefined) a.x_trim_keep = q.x_trim_keep;
+  if (typeof q.creative_dial === 'string') a.creative_dial = Number(q.creative_dial);   // the creative dial's start position
   return a;
 }
 

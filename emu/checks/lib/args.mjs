@@ -2,7 +2,8 @@
 //   { opt: '--seed', type: 'int' | 'number' | 'str' | 'path' | 'flag', choices, metavar, default, required,
 //     repeat (given more than once: the list of the values, [] when not given), bare (the value of the option given
 //     without one: '--stack [WORDS]') }
-// and positionals { name, positional: true, required (default true) }, which take the non-option arguments in order.
+// and positionals { name, positional: true, required (default true), rest (the last one only: the list of all the
+// arguments left, [] when none) }, which take the non-option arguments in order.
 // An option's value is --opt=VALUE or the next argument unless that starts with '--' (so '--seed -1' is a value). int
 // is decimal or 0x / 0o / 0b, with an optional '-'; number a finite decimal. No abbreviations; '--' ends the options.
 // The result holds the values by dest ('--write-notes' -> write_notes, a positional by its name; an option neither
@@ -17,7 +18,7 @@ const metavar = (a) => a.metavar ?? (a.choices ? a.choices.join('|') : dest(a).t
 
 export function usage(prog, spec) {
   const one = (a) => {
-    if (a.positional) return a.required === false ? `[${metavar(a)}]` : metavar(a);
+    if (a.positional) return a.rest ? `[${metavar(a)}...]` : a.required === false ? `[${metavar(a)}]` : metavar(a);
     const s = a.type === 'flag' ? a.opt : `${a.opt} ${a.bare !== undefined ? `[${metavar(a)}]` : metavar(a)}`;
     return `${a.required ? s : `[${s}]`}${a.repeat ? '...' : ''}`;
   };
@@ -58,8 +59,9 @@ export function parseArgs(prog, argv, spec) {
     else fail(`${name} needs a value`);
   }
   const positionals = spec.filter((a) => a.positional);
-  if (rest.length > positionals.length) fail(`unexpected argument ${rest[positionals.length]}`);
-  positionals.forEach((a, k) => { if (k < rest.length) out[a.name] = rest[k]; });
+  const many = positionals.at(-1)?.rest ? positionals.length - 1 : -1;      // the last positional takes the rest
+  if (many < 0 && rest.length > positionals.length) fail(`unexpected argument ${rest[positionals.length]}`);
+  positionals.forEach((a, k) => { if (k === many) out[a.name] = rest.slice(k); else if (k < rest.length) out[a.name] = rest[k]; });
   for (const a of spec) {
     const d = dest(a);
     if (Object.hasOwn(out, d)) continue;

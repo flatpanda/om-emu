@@ -49,7 +49,9 @@
 // section loader on a synthetic block (the rules, the reader of what the boot loads, the machine's unloaded ranges:
 // test_sections.mjs sectionsUnits), the NAND the resource tables are read from
 // (test_resnand.mjs resnandUnits: the container's blocks at their load addresses, the browser's extract, the sound
-// area's builder, S-RESNAND's layer), and S-NVRAM's choice, document, record and replay (test_nvram.mjs nvramUnits).
+// area's builder, S-RESNAND's layer), S-NVRAM's choice, document, record and replay (test_nvram.mjs nvramUnits), and
+// the scripted session's token grammar, its Player inputs, the expects on fakes and bin/session.mjs's usage errors
+// (test_session.mjs sessionUnits).
 // bin/test.mjs runs all of these too, with everything else.
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
@@ -96,6 +98,7 @@ import { sectionsUnits } from '../test/test_sections.mjs';
 import { resnandUnits } from '../test/test_resnand.mjs';
 import { nvramUnits } from '../test/test_nvram.mjs';
 import { cardfsUnits, cardCliTests } from '../test/test_cardfs.mjs';
+import { sessionUnits } from '../test/test_session.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -130,6 +133,7 @@ report('the boot\'s section loader: the rules, what the boot loads, the unloaded
 report('the resource tables\' NAND: blocks at their load addresses, the extract, the sound area builder, S-RESNAND (src/fw/nand.mjs)', await resnandUnits());
 report('S-NVRAM: bin/play.mjs\'s choice, the document, the record and its replay (host/nvram.mjs, src/lab/nvramdoc.mjs)', await nvramUnits());
 report('command-line parser', argsTests());
+report('the scripted session: tokens, their Player inputs, the expects on fakes, bin/session.mjs\'s usage errors (host/session.mjs)', sessionUnits());
 report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnits());
 report('SCPU clock, ports, link pins and the sub-CPU (S-SCPUDEV)', scpuUnits());
 report('HDMI port: transmitter, hot-plug pin, sink (S-HDMISINK)', hdmiUnits());

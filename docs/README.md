@@ -33,7 +33,8 @@ The emulator's own documents are in `emu/` ([README](../emu/README.md), [ARCHITE
 [FIDELITY-NOTES](../emu/FIDELITY-NOTES.md)); the firmware-patch investigations are in `analysis/`
 ([feature gap](../analysis/feature-gap/README.md), [lens gates](../analysis/lens-gates/README.md),
 [ND128](../analysis/nd128/README.md), [the oly_fw_analysis study](../analysis/oly-fw-analysis/README.md), [the
-om-c-firmware study](../analysis/om-c-firmware/README.md)).
+om-c-firmware study](../analysis/om-c-firmware/README.md), [the caduceus-om3
+study](../analysis/caduceus-om3/README.md)).
 
 ## Evidence tags
 

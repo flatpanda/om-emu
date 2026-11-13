@@ -20,7 +20,8 @@
 //   resolve against it), settle MS (the lab time after a press, a dial or a switch; default 600), tokens [TEXT...]
 //   (checked before the boot: a token the grammar or the model does not have throws TokenError), say(line) (the human
 //   lines: the patched firmware, the patch audit, the kept state, the card).
-// It throws TokenError (a usage error) or SessionRefused (an option refused: a patch, the nvram file, a --card-put);
+// It throws TokenError (a usage error) or SessionRefused (an option refused: a patch, the nvram file, a --card-put, an
+// --out it cannot make; a local file a step cannot write is that step's failure, 'FILE: cannot write it (CODE)');
 // a lab error during the boot is the first step's failure, not a throw.
 // The session's methods (each step's record is the JSON line bin/session.mjs prints):
 //   step(text)   one token -> {step, token, ok, phase, lab_ns, gui, frame, ...its result, error?}; after a failed step
@@ -212,6 +213,14 @@ export function exifFields(x) {
 // ---- the session (the lab imported here, after the model is fixed) ----------------------------------------------
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 const BUG = (e) => e instanceof TypeError || e instanceof ReferenceError || e instanceof SyntaxError || e instanceof RangeError;
+// a local file the session writes (shot, card-get, --card-get), its directory made; one it cannot write is refused
+// with the reason, as bin/card.mjs's get refuses it
+const writeLocal = (file, bytes) => {
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, bytes);
+  } catch (e) { throw new SessionRefused(`${file}: cannot write it (${e.code ?? e.message})`); }
+};
 
 export async function openSession(o = {}) {
   if (o.model) process.env.OM_EMU_MODEL = o.model;      // effective only before the lab's first import
@@ -299,7 +308,7 @@ export async function openSession(o = {}) {
   });
   let cardFile = o.card ? path.resolve(o.card) : null, card = cardOf(o.card, putFiles);
   if (STORAGE) say(cardFile ? `card ${cardFile} (written back in place)${putFiles.length ? `; --card-put ${putFiles.map((f) => `${f.path} (${f.bytes.length} bytes)`).join(', ')}` : ''}` : 'card: a blank card in memory (the firmware formats it)');
-  if (out) fs.mkdirSync(out, { recursive: true });
+  if (out) { try { fs.mkdirSync(out, { recursive: true }); } catch (e) { throw new SessionRefused(`--out ${out}: cannot make it (${e.code ?? e.message})`); } }
 
   // the Player's options and env, as play's lab worker makes them (host/labworker.mjs), idle off
   const a = { ...PLAYER_PARSER, no_browser: true, idle: 'off', debug_api: true, out: out ?? '<out>', no_wait_on_error: true, hdmi: 'off', audio: 'auto', rotate: 'off',
@@ -407,8 +416,7 @@ export async function openSession(o = {}) {
       } else if (st.kind === 'shot') {
         if (!frame) throw new SessionRefused('no frame published yet in this session');
         const file = local(st.file);
-        fs.mkdirSync(path.dirname(file), { recursive: true });
-        fs.writeFileSync(file, pngRaw(frame.w, frame.h, frame.raw));
+        writeLocal(file, pngRaw(frame.w, frame.h, frame.raw));
         rec.file = file;
         rec.size = [frame.w, frame.h];
       } else if (st.kind === 'card-ls') rec.card = listing();
@@ -416,8 +424,7 @@ export async function openSession(o = {}) {
         const f = fileBytes(st.path);
         if (!f) throw new SessionRefused(`no ${st.path} on the card`);
         const file = local(st.local);
-        fs.mkdirSync(path.dirname(file), { recursive: true });
-        fs.writeFileSync(file, f.bytes);
+        writeLocal(file, f.bytes);
         Object.assign(rec, { path: f.path, size: f.bytes.length, file });
       } else if (st.kind === 'exif') {
         const x = exifOf(st.path);
@@ -511,8 +518,7 @@ export async function openSession(o = {}) {
           const f = fileBytes(dosPath('--card-get', g.path));
           if (!f) throw new SessionRefused(`--card-get: no ${g.path} on the card`);
           const file = path.resolve(g.local);
-          fs.mkdirSync(path.dirname(file), { recursive: true });
-          fs.writeFileSync(file, f.bytes);
+          writeLocal(file, f.bytes);
           say(`--card-get: ${f.path} (${f.bytes.length} bytes) -> ${file}`);
         } catch (e) {
           if (BUG(e)) throw e;

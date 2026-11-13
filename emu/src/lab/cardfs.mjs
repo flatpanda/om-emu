@@ -9,9 +9,10 @@
 //
 // Nothing here stands in for the camera: the files are written while the card is out of the firmware's hands, as a
 // computer's card reader would write them. What it writes (the host's own choice where the specifications leave one):
-//   names     FAT32: 8.3 short names only (A-Z, 0-9 and ! # $ % & ' ( ) - @ ^ _ ` { } ~; compared without case and
-//             stored upper-case, no long-name entries); another name is refused, not shortened. exFAT: any name of 1 to
-//             255 characters but the specification's forbidden ones, compared up-cased by the volume's own table
+//   names     FAT32: 8.3 short names only (A-Z, 0-9 and ! # $ % & ' ( ) - @ ^ _ ` { } ~; compared without the case of
+//             a-z and stored upper-case, no long-name entries); another name is refused, not shortened or folded
+//             (shortName). exFAT: any name of 1 to 255 characters but the specification's forbidden ones, compared
+//             up-cased by the volume's own table
 //   stamp     every entry this writes, created or replaced, is dated FIXED_STAMP (1980-01-01 00:00:00, the FAT epoch:
 //             not a time anything happened) unless the caller gives one (fatStamp); FAT32's create, write and access
 //             dates, exFAT's create, modify and access timestamps, the UTC offsets left invalid (0)
@@ -153,9 +154,11 @@ class Writer {
 // ---- FAT32
 const FAT_EOC = 0xfffffff, FAT_EOC_MIN = 0xffffff8, ATTR_DIR = 0x10, ATTR_ARCHIVE = 0x20, ATTR_LFN = 0x0f, ATTR_LABEL = 0x08;
 const SHORT_CHARS = /^[A-Z0-9!#$%&'()\-@^_`{}~]+$/;
-// an 8.3 name as its 11 bytes' text ('LOOKS   BIN'), or a refusal
+// an 8.3 name as its 11 bytes' text ('LOOKS   BIN'), or a refusal. The characters are checked before the case is
+// folded, and only a-z are folded: Unicode's upper-casing would turn some other names into 8.3 ones ('straße.txt'
+// into STRASSE.TXT, the ligature U+FB01 into FI), a name shortened under another spelling, which this writer refuses
 export function shortName(name) {
-  const up = name.toUpperCase(), dot = up.lastIndexOf('.');
+  const up = /[^\x21-\x7e]/.test(name) ? '' : name.replace(/[a-z]/g, (c) => c.toUpperCase()), dot = up.lastIndexOf('.');
   const base = dot < 0 ? up : up.slice(0, dot), ext = dot < 0 ? '' : up.slice(dot + 1);
   if (!base.length || base.length > 8 || ext.length > 3 || (dot >= 0 && !ext.length) || !SHORT_CHARS.test(base) || (ext && !SHORT_CHARS.test(ext))) {
     throw new CardFsError(`'${name}' is not an 8.3 name (1-8 characters, a dot and 0-3 more, of A-Z 0-9 and ! # $ % & ' ( ) - @ ^ _ \` { } ~): this writer makes no long names on FAT32`);

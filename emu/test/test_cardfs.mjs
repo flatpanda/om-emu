@@ -7,7 +7,8 @@
 //                   FAT's copies alike and FSInfo's free count the FAT's on FAT32; the bitmap on exFAT, its backup boot
 //                   region untouched); a file replaced (its old clusters given back), a directory grown past its
 //                   cluster (on exFAT a contiguous one chained first), a file deleted with its long-name entries, an
-//                   empty file; refused: a name FAT32's 8.3 or exFAT's rules do not take, a path through a file, a
+//                   empty file; refused: a name FAT32's 8.3 or exFAT's rules do not take (on FAT32 one that only Unicode's
+//                   upper-casing makes 8.3, by put and rm, and not found by the reader), a path through a file, a
 //                   missing file, a directory, a blank card, a FAT16 volume and a full card (the volume unchanged:
 //                   each operation is all or nothing); a card's sector store written directly (zero sectors not
 //                   kept, the card marked dirty so a closing session saves it) and the session hook (withCardFiles:
@@ -15,7 +16,8 @@
 //                   FAT entry, a cross-linked chain, a lost cluster, FSInfo's free count off by one, a FAT copy
 //                   changed, an exFAT bitmap bit cleared and a set checksum changed are each caught by the reader
 //   cardCliTests    without firmware: bin/card.mjs on a card the test makes (ls, put, get to a file and to stdout,
-//                   mkdir, rm, --stamp, --help; refusals exit 1, usage errors 2)
+//                   mkdir, rm, --stamp, --help; refusals exit 1 with one 'card.mjs: ' line, a LOCAL get cannot write
+//                   and a card in a read-only directory among them (the card unchanged, no .tmp left); usage errors 2)
 //   cardfsSession   (firmware) on the body of OM_EMU_MODEL (E143 by default), on a 64 GiB SDXC card (the
 //                   firmware's exFAT on E143 and E147) and the default 8 GiB SDHC card (FAT32): a blank card the
 //                   firmware formats, S2's picture on it; between sessions the writer puts the picture back under a
@@ -91,7 +93,14 @@ function fatUnits(ok) {
   const raw = f.read(f.start + 32 + 2 * 544, 1);
   ok(raw[64] === 0xe5 && raw[64 + 11] === 0x0f && raw[96] === 0xe5, 'the long-name entry before it marked deleted too');
   // refusals
+  w.put('FILM.BIN', bytes(10, 4));
   const snap = f.disk.slice();
+  // names Unicode's upper-casing turns into 8.3 ones (sharp s, the fi ligature, long s, dotless i): refused by put and
+  // rm, not folded into STRASSE.TXT or FILM.BIN, and not found by the reader under them
+  const folds = ['stra\u00dfe.txt', '\ufb01lm.bin', '\u017f.txt', '\u0131.txt'];
+  ok(folds.every((n) => throwsLike(() => w.put(n, a), /not an 8\.3 name/)) && throwsLike(() => w.rm('\ufb01lm.bin'), /not an 8\.3 name/) && same(f.disk, snap)
+    && vol().find('\ufb01lm.bin') === null && vol().find('stra\u00dfe.txt') === null && vol().find('film.bin')?.size === 10,
+    `a name upper-cased into an 8.3 one refused, the volume unchanged, FILM.BIN kept and not found under '\ufb01lm.bin': ${folds.map((n) => { try { return shortName(n); } catch { return 'refused'; } })}`);
   ok(throwsLike(() => w.put('Long Name.jpg', a), /not an 8\.3 name/) && throwsLike(() => shortName('ABCDEFGHI.TXT'), /8\.3/) && throwsLike(() => shortName('A.TEXT'), /8\.3/) && throwsLike(() => shortName('A B.TXT'), /8\.3/),
     'a name 8.3 does not take is refused, not shortened');
   ok(throwsLike(() => w.put('EMPTY/X.TXT', a), /is a file/) && throwsLike(() => w.rm('NONE.TXT'), /no such file/) && throwsLike(() => w.rm('DCIM'), /is a directory/)
@@ -242,11 +251,23 @@ export function cardCliTests() {
     const saved = cardFromImage(new Uint8Array(fs.readFileSync(file))), v = openVolume((lba, n) => saved.read(lba, n));
     ok(v.check().length === 0 && v.find('OM3MOD/DEBUG.TXT')?.size === 5000, `the saved card is consistent: ${v.check()}`);
     // refusals (1) and usage errors (2)
-    const refused = [['put', file, local, 'Long Name.jpg', /not an 8\.3 name/], ['ls', blank, /the card is blank \(not formatted\): node emu\/bin\/card\.mjs new/], ['put', blank, local, 'A.TXT', /the card is blank/],
-      ['new', file, /exists \(--force/], ['ls', path.join(tmp, 'none.omsd'), /cannot read it \(ENOENT\)/], ['ls', local, /not an OMSD/], ['rm', file, 'DCIM', /is a directory/], ['get', file, 'DCIM', back, /is a directory/]];
+    const refused = [['put', file, local, 'Long Name.jpg', /not an 8\.3 name/], ['put', file, local, 'stra\u00dfe.txt', /not an 8\.3 name/], ['ls', blank, /the card is blank \(not formatted\): node emu\/bin\/card\.mjs new/], ['put', blank, local, 'A.TXT', /the card is blank/],
+      ['new', file, /exists \(--force/], ['ls', path.join(tmp, 'none.omsd'), /cannot read it \(ENOENT\)/], ['ls', local, /not an OMSD/], ['rm', file, 'DCIM', /is a directory/], ['get', file, 'DCIM', back, /is a directory/],
+      // a LOCAL get cannot write: the reason on one line, no Node stack
+      ['get', file, 'OM3MOD/DEBUG.TXT', path.join(tmp, 'none', 'x.bin'), /^card\.mjs: .*x\.bin: cannot write it \(ENOENT\)\n$/], ['get', file, 'OM3MOD/DEBUG.TXT', tmp, /^card\.mjs: .*: cannot write it \(EISDIR\)\n$/]];
     for (const [cmd, ...rest] of refused) {
       const re = rest.pop(), x = cardTool(cmd, ...rest);
       ok(x.status === 1 && /^card\.mjs: /.test(text(x)) && re.test(text(x)), `${cmd} ${rest.slice(1).join(' ')}: exit ${x.status}, ${text(x).trim()}`);
+    }
+    // a card whose directory is read-only (not as root, whom the mode does not stop): the put refused on one line, the
+    // card's bytes as they were and no temporary file left
+    if (process.getuid?.() !== 0) {
+      const ro = path.join(tmp, 'ro'), rc = path.join(ro, 'card.omsd');
+      fs.mkdirSync(ro); fs.copyFileSync(file, rc); fs.chmodSync(ro, 0o555);
+      const was = fs.readFileSync(rc), x = cardTool('put', rc, local, 'RO.BIN');
+      fs.chmodSync(ro, 0o755);
+      ok(x.status === 1 && /^card\.mjs: .*card\.omsd: cannot save it \(EACCES\)\n$/.test(text(x)) && fs.readFileSync(rc).equals(was) && !fs.existsSync(`${rc}.tmp`),
+        `put on a card in a read-only directory: exit ${x.status}, ${text(x).trim().slice(0, 200)}`);
     }
     for (const args of [[], ['format', file], ['get', file], ['put', file, local, 'X.TXT', '--stamp', 'yesterday'], ['ls', file, '--bogus']]) {
       const x = cardTool(...args);

@@ -17,8 +17,9 @@
 // card-ls, card-get:DOS/PATH=LOCAL, exif:DOS/PATH, and the checks expect:gui=NAME (or ~TEXT), expect:mem:ADDR=HEX (or
 // !=HEX), expect:card:DOS/PATH, expect:standin:NAME, expect:exif:DOS/PATH:FIELD=TEXT (or ~TEXT); a card path may end in a
 // pattern with * and ? (the last match by name). Relative LOCAL and FILE paths of the tokens resolve against --out.
-// Exit 0 when every step passed; 1 a firmware or lab error, a refused input or option, or a failed expect (the step
-// named on stderr); 2 a usage error.
+// Exit 0 when every step passed; 1 a firmware or lab error, a refused input or option, a local file a step cannot write
+// or an --out it cannot make ('FILE: cannot write it (CODE)'), or a failed expect (the step named on stderr); 2 a usage
+// error.
 import fs from 'node:fs';
 import { takeModel, importLab } from '../host/modelarg.mjs';
 import { parseArgs, UsageError } from '../checks/lib/args.mjs';

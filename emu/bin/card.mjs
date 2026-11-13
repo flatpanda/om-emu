@@ -16,8 +16,8 @@
 // the tests and the player's Card panel do); put, mkdir and rm write it with src/lab/cardfs.mjs (FAT32: 8.3 names
 // only; parent directories made as needed; entries dated 1980-01-01 00:00:00 unless --stamp gives a time: now, or a
 // local time) and save CARD again (a temporary file, then a rename). DOS/PATH takes '/' or '\' and is compared
-// without case. Exit 0; 1 refused or failed (the reason on stderr after 'card.mjs: '); 2 a usage error (with the
-// usage line).
+// without case. Exit 0; 1 refused or failed (the reason on stderr after 'card.mjs: ': a LOCAL get cannot write, a CARD
+// that cannot be saved, left as it was); 2 a usage error (with the usage line).
 import fs from 'node:fs';
 import path from 'node:path';
 import { takeModel } from '../host/modelarg.mjs';
@@ -46,10 +46,16 @@ const readCard = (file) => {
   try { bytes = new Uint8Array(fs.readFileSync(file)); } catch (e) { throw new Refused(`${file}: cannot read it (${e.code ?? e.message})`); }
   try { return cardFromImage(bytes); } catch (e) { throw new Refused(`${file}: ${e.message}`); }
 };
+// CARD saved through a temporary file and a rename, so a failed save leaves the card as it was (and no .tmp behind)
 const saveCard = (file, card) => {
   const tmp = `${file}.tmp`;
-  fs.writeFileSync(tmp, cardImage(card));
-  fs.renameSync(tmp, file);
+  try {
+    fs.writeFileSync(tmp, cardImage(card));
+    fs.renameSync(tmp, file);
+  } catch (e) {
+    try { fs.rmSync(tmp, { force: true }); } catch { /* the reason below is the save's */ }
+    throw new Refused(`${file}: cannot save it (${e.code ?? e.message})`);
+  }
 };
 const volumeOf = (card, file) => {
   const read = (lba, n) => card.read(lba, n);
@@ -77,7 +83,9 @@ async function cmdNew(a) {
   const { MODEL } = await import('../src/fw/model.mjs');
   let r;
   try { r = await formatCard({ sectors }); } catch (e) { if (e instanceof RangeError) a.error(`--size ${a.size}: ${e.message}`); throw new Refused(e.message); }
-  fs.mkdirSync(path.dirname(path.resolve(a.card)), { recursive: true });
+  try { fs.mkdirSync(path.dirname(path.resolve(a.card)), { recursive: true }); } catch (e) {
+    throw new Refused(`${a.card}: cannot save it (${e.code ?? e.message})`);
+  }
   saveCard(a.card, r.card);
   const vol = volumeOf(r.card, a.card), part = mbrPartition(r.card.read(0, 1));
   process.stdout.write(`${a.card}: ${MODEL}'s firmware formatted a ${describe(r.card, vol)}${part ? ` (MBR partition type 0x${part.type.toString(16)} at sector ${part.start})` : ''}\n`);
@@ -115,7 +123,7 @@ function cmdGet(a) {
   const bytes = vol.data(e);
   if (a.local === '-') process.stdout.write(bytes);
   else {
-    fs.writeFileSync(a.local, bytes);
+    try { fs.writeFileSync(a.local, bytes); } catch (e) { throw new Refused(`${a.local}: cannot write it (${e.code ?? e.message})`); }
     process.stderr.write(`${PROG}: ${a.path} (${bytes.length} bytes) -> ${a.local}\n`);
   }
   return 0;

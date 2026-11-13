@@ -870,12 +870,16 @@ on an SDHC card; on an SDXC card exFAT on E143 and E147), not a lab-made one, an
 existing file is refused without `--force`. `ls` and `get` read the volume with the independent readers
 (`refs/volume.mjs`), as the tests and the Card panel do. `put` (making the parent directories), `mkdir` and `rm` (a
 file) write it with `src/lab/cardfs.mjs`, from Microsoft's FAT and exFAT specifications and sharing no code with the
-readers: on FAT32 only 8.3 names (another name is refused, not shortened; names are compared without case and stored
-upper-case), on exFAT any name the specification allows; every entry it writes is dated 1980-01-01 00:00:00 (the FAT
+readers: on FAT32 only 8.3 names (another name is refused, not shortened; names are compared without the case of a-z
+and stored upper-case, and a name that only Unicode's upper-casing makes an 8.3 one, such as `straße.txt` or one with
+the `ﬁ` ligature, is refused too, not folded into `STRASSE.TXT`), on exFAT any name the specification allows; every entry it writes is dated 1980-01-01 00:00:00 (the FAT
 epoch, not a time anything happened) unless `--stamp` gives one; the FAT's copies, FSInfo's free count and next-free
 hint (FAT32) and the allocation bitmap (exFAT) are kept, and an operation that fails (a full card, a name refused, a
-broken chain) changes nothing. A blank card is refused with the way to format one. Exit 0; 1 refused (the reason on
-stderr); 2 a usage error.
+broken chain) changes nothing. A blank card is refused with the way to format one. Exit 0; 1 refused or failed (the
+reason on one stderr line after `card.mjs: `: a LOCAL that `get` cannot write and a card that cannot be saved too, the
+card then as it was and no temporary file left); 2 a usage error. The readers compare a name one character for one
+(ECMAScript's case-insensitive rule: no character folds into two, nor a non-ASCII one into ASCII), so `get` and `ls`
+of `straße.txt` do not find `STRASSE.TXT` either.
 
 `--card-put DOS/PATH=LOCAL` (repeatable) on `bin/play.mjs` puts LOCAL's bytes on the card `OM_EMU_CARD` keeps at the
 first session's start, before the firmware's insertion mounts it; the files are checked on a copy before the server
@@ -945,7 +949,8 @@ line.
 | `expect:card:DOS/PATH`, `expect:standin:NAME` | the file is on the card; the stand-in is in use |
 | `expect:exif:DOS/PATH:FIELD=TEXT`, `~TEXT` | the Exif field (`Make`, `Model`, `ImageDescription`, `UserComment`, `DateTimeOriginal`, `ExposureTime`, ...) is, or contains, TEXT |
 
-A card path takes `/` or `\`, compared without case; its last part may be a pattern with `*` and `?`, which names the
+A card path takes `/` or `\`, compared without case one character for one (`straße.txt` does not name `STRASSE.TXT`,
+as in `bin/card.mjs`); its last part may be a pattern with `*` and `?`, which names the
 last match by name (`DCIM/100OMSYS/*.JPG`: the newest picture). Exif text is as the camera wrote it (`Model` is
 `OM-3` padded with spaces; `UserComment` is the text after its 8-byte character code). A control the model does not
 have, like any malformed token or option, is a usage error before the boot.
@@ -962,8 +967,9 @@ at the end), `card_file`, `nvram`, `errors`, `steps`, `failed` (`{step, token, m
 stderr: the patched firmware and the patch audit at the start, the kept state, the card, and last
 `session.mjs: passed; ...` or `session.mjs: FAILED at step N (TOKEN): MESSAGE; ...`, which also says `POKED: n
 write(s) (...)` or `no poke`. Exit 0 when every step passed; 1 for a firmware or lab error (a session that stops, an
-Unported path, a call that faults or runs out of budget), an input the player refused or dropped, a failed expect, or an
-option refused (a patch, the nvram file, a `--card-put`); 2 a usage error. A failure ends the run: no step after it
+Unported path, a call that faults or runs out of budget), an input the player refused or dropped, a failed expect, a
+local file a step cannot write (a `shot`, a `card-get`, a `--card-get`: `FILE: cannot write it (CODE)`), or an option
+refused (a patch, the nvram file, a `--card-put`, an `--out` it cannot make); 2 a usage error. A failure ends the run: no step after it
 runs, and nothing is retried or swallowed.
 
 **The scripting contract.** Stable, for projects that script om-emu: the module `host/session.mjs` with

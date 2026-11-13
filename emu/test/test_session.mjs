@@ -12,10 +12,12 @@
 //                   restored), the card kept across the restart, a write reported as a poke (summary and the last
 //                   line); controls: a failed expect exits 1 naming the step and runs nothing after it, a restart with
 //                   --nvram off restores nothing, a call over its budget exits 1, with --loaded on a call into a gap
-//                   refused and a callee that reaches one ending the run (the session cannot go on), a control the
-//                   model lacks is a usage error. E147 (bin/test.mjs runs it in a child with OM_EMU_MODEL=E147): a synthetic om3-patch-2 file
-//                   the test writes (16 bytes of the main block's 0xFF padding at 0x107f00, in the tail of the reset
-//                   head's first copy, loaded, never run) as --patch: the patched and audit start lines, S-SECLOADED and S-STALERAM, the
+//                   refused and a callee that reaches one ending the run (the session cannot go on), an --out it
+//                   cannot make and a shot it cannot write exit 1 with the reason on one line, a control the model
+//                   lacks is a usage error. E147 (bin/test.mjs runs it in a child with OM_EMU_MODEL=E147): a synthetic
+//                   om3-patch-2 file the test writes (16 bytes of the main block's 0xFF padding at 0x107f00, in the
+//                   tail of the reset head's first copy, loaded, never run) as --patch: the patched and audit start
+//                   lines, S-SECLOADED and S-STALERAM, the
 //                   loaded mask, the patched bytes at run time, the card file, S2's Exif, the creative dial's setting
 //                   by the getter, power:off and restart with the stores restored, no poke; control: the same file
 //                   with a run in the 0xFF tail past section 10's loaded end, reported by the start line and the
@@ -197,6 +199,15 @@ async function e143({ ok }, { T, newCard, step, sameFile, hello }) {
   const k = cli(['--model', 'E143', '--patch', T('callee.json'), 'wait:500', `call:${h8(FN)}`, 'wait:100']);
   ok(k.rc === 1 && k.steps.length === 3 && k.last.startsWith(`session.mjs: FAILED at step 2 (call:${h8(FN)}): call: UnloadedCode: `) && k.last.includes(`pc ${h8(gap)} runs code the boot does not load`) &&
     k.last.includes('the session cannot go on') && k.steps.at(-1).ok === false, `E143 control: a callee in a gap: rc ${k.rc} ${k.steps.length} steps | ${k.last.slice(0, 200)} ... ${k.last.slice(-300)}`);
+  // a local file the run cannot write: an --out through a file is refused at the start, a shot onto a directory is the
+  // step's failure, each with the reason on one line (no Node stack), exit 1
+  const o = cli(['--model', 'E143', '--out', T('hello.txt', 'x'), 'wait:100']);
+  ok(o.rc === 1 && o.err.endsWith(`session.mjs: --out ${T('hello.txt', 'x')}: cannot make it (ENOTDIR)\n`) && !/\n {4}at /.test(o.err) && o.sum?.ok === false && !o.steps.length,
+    `E143 an --out it cannot make: rc ${o.rc} ${o.err.slice(-300)}`);
+  fs.mkdirSync(T('out2', 'd.png'), { recursive: true });
+  const w = cli(['--model', 'E143', '--out', T('out2'), 'wait:300', 'shot:d.png', 'wait:100']);
+  ok(w.rc === 1 && w.steps.length === 3 && step(w, 'shot:d.png').error === `${T('out2', 'd.png')}: cannot write it (EISDIR)` && /^session\.mjs: FAILED at step 2 \(shot:d\.png\): .*: cannot write it \(EISDIR\); /.test(w.last),
+    `E143 a shot it cannot write: rc ${w.rc} ${JSON.stringify(step(w, 'shot:d.png'))} | ${w.last}`);
   // control: a control the model does not have is a usage error before the boot
   const u = cli(['--model', 'E143', 'no_such_key']);
   ok(u.rc === 2 && /no_such_key: E143 has no control "no_such_key"/.test(u.err) && !u.lines.length, `E143 control: an unknown control: rc ${u.rc} ${u.err.slice(0, 200)}`);

@@ -9,6 +9,17 @@ import { ValueError } from './errors.mjs';
 const u16 = (b, o) => b[o] | b[o + 1] << 8;
 const u32 = (b, o) => (b[o] | b[o + 1] << 8 | b[o + 2] << 16 | b[o + 3] << 24) >>> 0;
 const ascii = (b, o, n) => String.fromCharCode(...b.subarray(o, o + n));
+// a name's case folded for a comparison, one character for one: a character's upper case counts only when it is one
+// character, and never an ASCII one for a non-ASCII character (ECMAScript's case-insensitive match, which
+// host/session.mjs's patterns use), so 'stra\u00dfe.txt' does not find STRASSE.TXT nor '\ufb01lm.bin' FILM.BIN
+const fold = (s) => {
+  let o = '';
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i], u = c.toUpperCase();
+    o += u.length === 1 && (c < '\x80' || u >= '\x80') ? u : c;
+  }
+  return o;
+};
 
 // The first partition of an MBR: {type, start, sectors}, or null when sector 0 is no MBR (no 0x55aa, or a boot
 // sector with its own BPB at 0)
@@ -144,7 +155,8 @@ export class FatVolume {
   find(path) {
     let cluster = this.rootCluster, entry = null;
     for (const part of path.split('/').filter(Boolean)) {
-      entry = this.list(cluster).find((e) => e.name.toUpperCase() === part.toUpperCase() || e.short.toUpperCase() === part.toUpperCase()) ?? null;
+      const want = fold(part);
+      entry = this.list(cluster).find((e) => fold(e.name) === want || fold(e.short) === want) ?? null;
       if (!entry) return null;
       cluster = entry.cluster;
     }

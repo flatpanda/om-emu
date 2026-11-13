@@ -226,6 +226,16 @@ A second is met on E118 (2026-10-31): its movie record time divides by the movie
 
 **Confidence:** medium (the path is the firmware's own and runs end to end on a lab WAV; the port's bit semantics and timing are inferred, and no camera recording checks the output)
 
+### 4.8 The whole main block is in DRAM; what the boot does not load holds the image's bytes (S-STALERAM, `--loaded`)
+
+**Where:** `emu/src/machine.mjs` (`unloaded`, `fetchGuard`), `emu/src/fw/sections.mjs` (`bootLoads`), `emu/src/fw/facts.mjs` (`sectionLoader`, `headCopies`), `emu/src/lab/sim.mjs` (`loadedRanges`), `emu/test/test_sections.mjs`
+
+**Emulator:** `createMachine` copies the whole main block to DRAM at the image base. On the camera the boot copies parts of it: the reset head's own copies (five on E143, E146 and E147, D: E147 `0x50000144..0x500001cb`, their lengths from end words the head stores with constants and loads back, `0x500000e5..0x5000018f`) and CPU 2's section loader, each section from its table row's start up to the value of its end word, the immediate of its case in the end switch (E143 `0x50024e02`, E147 `0x50024e4c`, D). From each section's end to the next section's start, and from the last's to the image's end, the boot loads nothing but the head's copies; in the stock blocks those ranges hold only `0xFF` padding (X: `test/test_sections.mjs`, 14 gaps on each of the three bodies, 9.2 MB on E143, 8.5 MB on E147). By default the lab keeps the image's bytes there. With `--loaded on` (`bin/play.mjs`, `bin/nav.mjs`, `bin/debug.mjs`; `auto`, the default, is on for patched firmware on these three bodies) the ranges hold `0xA5` instead and an instruction with a byte in one stops the session with a FirmwareError that names the range, the section, its loaded end and the end word that holds it (S-STALERAM). The ranges are read from the image in use, so a patch that raises an end word moves its gap.
+
+**Expected / concern:** On the camera those ranges hold whatever RAM held before: caduceus-om3's camera probes GX1..GX4 summed the gaps after sections 1 to 9 to values that were never all-`0xFF` and changed between power-ons, and code placed past section 6's end ran on the camera once the end word at `0x60045e9c` was raised (their report, research/NOTES.md "Firmware-space probe"). No value of the fill is right; `0xA5` is only not the file's. Only execution is caught: a read of a gap sees `0xA5` without a stop, and a write there is not reported. The image's head before section 1 counts as loaded: the reset jump enters it, so a boot stage before the main block's fills at least part of it, and which part is not read (?; E147's `0x60129000..0x60134000`, past the head's first copy, is treated as loaded although caduceus-om3 judged it unloaded without a camera probe). One end word the head stores is never loaded by a copy of its own (E147 `0x629607a0` = `0x603a3804`): the gap before that end counts as loaded too (?: who copies it). Code the firmware itself writes into a gap and runs would be refused as well; the stock sessions run in this mode (E147: start and S1 in play, X) did not reach any.
+
+**Confidence:** high (the gaps are read from the loaders' own code; the camera's contents are their report)
+
 ## 5. Display (VSC) and OSD engine
 
 ### 5.1 VSC register validity comes from the firmware image under test
@@ -489,9 +499,29 @@ The second card slot (E143, E146; `docs/hle-gaps.md` 4.8.12): the lab has both s
 
 **Emulator:** A patch overlay (`--patch`, `--main`) changes bytes of the main code block before the run; the ports, facts and hooks stay the stock block's. A lab hook reached at a pc whose first instruction overlaps a changed byte stops the session (`PatchHooked`). After the bring-up the status lists the installed hooks on changed bytes and the model's ported addresses and facts there (`patch_audit`). A task start whose entry's first instruction overlaps a changed byte is taken and runs natively (H-PATCHTASK); every other unmodelled entry is still refused.
 
-**Expected / concern:** The hook rule looks at the hooked instruction only: a stand-in that replaces a whole function (it returns for it) also hides a patch to that function's later bytes, which no rule here catches (I). A fact that `bin/port.mjs` read from bytes other than its own address (an immediate inside an instruction, a table walked from a pointer) is not audited. The section loader is not run: the whole main block is mapped, so code a patch places in a gap the camera's loader does not copy, or in a section that loads later than its caller runs, runs in the lab and not on the camera (caduceus-om3's own camera notes report both, their report). H-PATCHTASK assumes a changed entry is the patch's own task; a patch that rewrites the first bytes of a stock task the lab does not model would have that task started too.
+**Expected / concern:** The hook rule looks at the hooked instruction only: a stand-in that replaces a whole function (it returns for it) also hides a patch to that function's later bytes, which no rule here catches (I). A fact that `bin/port.mjs` read from bytes other than its own address (an immediate inside an instruction, a table walked from a pointer) is not audited. The section loader is not run: code a patch places in a gap the camera's loader does not copy stops the session only in the loaded-ranges mode (S-STALERAM, 4.8; on by default with an overlay on E143, E146 and E147), and code in a section that loads later than its caller runs runs in the lab and not on the camera (7.18); caduceus-om3's own camera notes report both (their report). H-PATCHTASK assumes a changed entry is the patch's own task; a patch that rewrites the first bytes of a stock task the lab does not model would have that task started too.
 
 **Confidence:** high (each rule is the code's; the gaps are stated by what the rules do not look at)
+
+### 7.17 The section loader's copied mask set at the store's start (S-SECLOADED)
+
+**Where:** `emu/src/lab/menu.mjs` (`sections_loaded`), `emu/src/fw/facts.mjs` (`sectionLoader`, fact `sections`)
+
+**Emulator:** CPU 2's USTART_L2 does not run (`docs/hle-gaps.md` 4.6.3). load_section ORs bit n - 1 into its copied mask after section n's copy (E143 `0xa32df1f8`, E146 `0xa32df2d0`, E147 `0xa32de590`, D); the lab sets one bit per case of the image's own end switch (ten on the three bodies) before the settings store's start, next to S-BOOTSTAGE. No instruction of the stock blocks names the word but load_section's read-modify-write (X: a byte scan of the three blocks for the word in both DRAM views), so stock runs do not change.
+
+**Expected / concern:** On the camera the bits come one by one as CPU 2 copies the sections, during CPU 0's boot, and are all set long before the camera application runs (I: the loader's ten copies run at the start of USTART_L2). Code that tests the mask (caduceus-om3's half-press gate requires all ten) sees them set from the store's start in the lab. The stages' ready word, which the per-section init sets for the same sections and which has readers, keeps S-BOOTSTAGE's bit alone: which of its waits the lab's sessions would reach with more bits set is not known (?).
+
+**Confidence:** high
+
+### 7.18 Every section is in place from the reset: the boot's load order is not modelled
+
+**Where:** `emu/src/machine.mjs` (the image copied at creation), `docs/hle-gaps.md` 4.6.3
+
+**Emulator:** The whole image is in DRAM before the first instruction, so code in any section can call or read code and data in any other at any time. S-STALERAM (4.8) leaves out what the boot never loads, not what it loads late.
+
+**Expected / concern:** On the camera CPU 2 copies the sections one after another while CPU 0 boots, and the per-section init marks each one ready (the stages' ready word); code that runs early in the boot, or a hook placed in an early section, can reach a later section before it is loaded and find stale RAM there. Caduceus-om3's v0.20 test 1 bootlooped on the camera for this reason: a hook in section 2's image pipeline used routines placed in section 8, which was not yet loaded (their report, research/NOTES.md "v0.20 grain research"; the build had run in om-emu). Modelling it needs the boot to run with the loader's timing (ROADMAP "Full-boot LLE"); the lab does not attempt it.
+
+**Confidence:** high (that the lab cannot show it); the camera failure is their report
 
 ## 8. What the tests establish
 

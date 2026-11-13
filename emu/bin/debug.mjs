@@ -24,7 +24,7 @@
 // 'MN10300 pc=' lines (its 'Trace 0:' lines carry host pointers and are not written). As for the checks, OM_MACHINE
 // gives the machine options (checks/lib/env.mjs). --loaded auto|on|off: the loaded-ranges mode (S-STALERAM,
 // src/lab/sim.mjs loadedRanges: the DRAM the boot does not load holds a fill, an instruction there an uncaught
-// FirmwareError naming the section and its end word, exit 1); auto, the default, is on with --patch on a body whose
+// FirmwareError naming the section and its end word, exit 1); auto, the default, is on with --patch or --main on a body whose
 // section loader the lab reads, off otherwise. Also:
 //   --serve                     the JSON-lines mode (no --entry needed)
 //   --watch ADDR:LEN[:KIND]     a stopping watchpoint (KIND r, w or rw; default w), per virtual address; a stop on it
@@ -40,6 +40,7 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { PATCHED, createHash, envMachine, runMain, readBytes, readPatched, overlayPatches, patchedFirmware, SystemExit } from '../checks/lib/env.mjs';
 import { PatchRefused, patchLine } from '../src/fw/patch.mjs';
+import { startUnloaded, unloadedLine } from '../src/lab/patchaudit.mjs';
 import { parseArgs, intValue } from '../checks/lib/args.mjs';
 import { Simulator, SP } from '../src/lab/sim.mjs';
 import { RuntimeError } from '../src/lab/errors.mjs';
@@ -76,7 +77,7 @@ const ACTIONS = [
   { opt: '--disasm', type: 'str', repeat: true, metavar: 'ADDR:LEN' },
   { opt: '--max-ms', type: 'int', metavar: 'N' },
 ];
-let overlay = null;          // --patch or --main: {label, raw, summary}
+let overlay = null;          // --patch or --main: {label, raw, summary, unloaded (src/lab/patchaudit.mjs startUnloaded)}
 function loadImage(p) {
   if (overlay && p === overlay.label) return overlay.raw;
   try { return p === PATCHED ? readPatched() : readBytes(p); } catch (e) { throw new RuntimeError(`${PROG}: cannot read the image ${p} (${e.code ?? e.message})`); }
@@ -91,7 +92,7 @@ function patchOverlay(args) {
   if (args.image !== undefined) args.error(`${opt} applies to the stock main code block: not with --image`);
   try {
     const fw = patchedFirmware(overlayPatches(args), { resource: false });
-    return { label: `patched: ${args.main ?? args.patch.join(', ')}`, raw: fw.raw, summary: fw.summary };
+    return { label: `patched: ${args.main ?? args.patch.join(', ')}`, raw: fw.raw, summary: fw.summary, unloaded: startUnloaded(fw, args.loaded) };
   } catch (e) {
     if (e instanceof PatchRefused) throw new SystemExit(`${PROG}: ${opt} refused: ${e.message}`);
     throw e;
@@ -143,6 +144,7 @@ function main(argv) {
   }
   overlay = patchOverlay(args);
   if (overlay) process.stderr.write(`${PROG}: patched: ${patchLine(overlay.summary)}\n`);
+  if (overlay?.unloaded !== undefined) process.stderr.write(`${PROG}: patch audit: ${unloadedLine(overlay.unloaded)}\n`);
   if (serve) { startServe(); return 0; }
   const { regs, writes, reads, watches, disasms } = items(args);       // all checked before the machine starts
   const oneInsn = args.trace !== undefined || args.trace_mode === 'one-insn' && args.exec_trace !== undefined;

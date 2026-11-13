@@ -40,9 +40,9 @@ const le4 = (v) => new Uint8Array([v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff
 // The build's section loader (fact 'sections', src/fw/facts.mjs sectionLoader), or null where its rule reads none
 export const sectionsFact = () => fact('sections', SECTIONS_E143) ?? null;
 // The loaded-ranges mode (S-STALERAM): env.loaded 'on', 'off' or 'auto' (absent: auto, on for patched firmware,
-// env.patch, on a body whose section loader the rule reads, else off). Returns null when off, else what the boot loads
-// of env.rom (src/fw/sections.mjs bootLoads: read from the image in use, a patched end word's value included). 'on' on
-// a body without the rule throws.
+// env.patch, the overlay summary --patch and --main both give, on a body whose section loader the rule reads, else
+// off). Returns null when off, else what the boot loads of env.rom (src/fw/sections.mjs bootLoads: read from the image
+// in use, a patched end word's value included). 'on' on a body without the rule throws.
 export function loadedRanges(env) {
   const mode = env.loaded ?? 'auto';
   if (!['on', 'off', 'auto'].includes(mode)) throw new ValueError(`loaded ${mode}: on, off or auto`);

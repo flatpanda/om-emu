@@ -13,7 +13,7 @@ import path from 'node:path';
 import { MODEL } from '../src/fw/model.mjs';
 import { REPO, loadImage, loadBlock, createHash, exitFor, overlayPatches, patchedFirmware } from '../checks/lib/env.mjs';
 import { PatchRefused, patchLine } from '../src/fw/patch.mjs';
-import { patchAudit, auditLine } from '../src/lab/patchaudit.mjs';
+import { patchAudit, auditLine, startUnloaded, unloadedLine } from '../src/lab/patchaudit.mjs';
 import { parseArgs, intValue } from '../checks/lib/args.mjs';
 import { write_outputs, jsonText } from '../checks/lib/png.mjs';
 import { isValueError } from '../checks/lib/errors.mjs';
@@ -102,6 +102,8 @@ function run(a) {
       return 1;
     }
     say(`patched: ${patchLine(fw.summary)}`);
+    const unloaded = startUnloaded(fw, a.loaded);     // the overlay's bytes the boot does not load, before the lab
+    if (unloaded !== undefined) say(`patch audit: ${unloadedLine(unloaded)}`);
   }
   const out = a.out ?? path.join(OUT, a.tag);
   fs.mkdirSync(out, { recursive: true });

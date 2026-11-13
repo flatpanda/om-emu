@@ -14,10 +14,15 @@
 //                    (src/fw/ports.mjs PORTS and FACTS) on patched bytes: the lab calls or reads the patched bytes
 //                    there, which is reported, not refused. E143 has no such table (its addresses are src/lab's own
 //                    literals): ported is null there
+//   unloadedRuns     the changed bytes that lie where the boot does not load (S-STALERAM's gaps, src/lab/sim.mjs
+//                    loadedRanges): on the camera they never reach DRAM. Code there stops the session when it runs;
+//                    data there reads the fill, which nothing reports (reads of a gap are not watched), so the hosts
+//                    report these at the start, before anything runs (startUnloaded), and the audit carries them
 import { insnLength } from '../core/cpu.mjs';
-import { FirmwareError } from './errors.mjs';
+import { FirmwareError, ValueError } from './errors.mjs';
 import { IMAGE_BASE, MODEL, ON_LAB_MODEL } from '../fw/model.mjs';
 import { PORTS, FACTS } from '../fw/ports.mjs';
+import { loadedRanges } from './sim.mjs';
 
 export class PatchHooked extends FirmwareError {}
 
@@ -105,7 +110,46 @@ export function patchAudit(lab) {
     facts = leaves(FACTS[MODEL] ?? {}, '', []);
   }
   const hooks = [...lab.hooks].map(([pc, [, name]]) => [pc, name]);
-  return auditTables(ranges, { hooks, ports, facts, len: lab.image.length });
+  const a = auditTables(ranges, { hooks, ports, facts, len: lab.image.length });
+  return { ...a, unloaded: unloadedRuns(ranges.ranges, lab.sim?.loads ?? null, ranges.base) };
+}
+
+// The pieces of the changed ranges (changed: sorted [offset, length] of the main block) that lie in the gaps of loads
+// (src/lab/sim.mjs loadedRanges' result; null, the loaded-ranges mode off: null, nothing checked), base the block's
+// run-time address: [{at, len, n, end, word}], each piece's run-time address and length, its section, that section's
+// loaded end and the end word that holds it.
+export function unloadedRuns(changed, loads, base = IMAGE_BASE) {
+  if (!loads) return null;
+  const out = [];
+  for (const [off, len] of changed) {
+    const lo = (base >>> 0) + off, hi = lo + len;
+    for (const g of loads.gaps) {
+      const a = Math.max(lo, g.lo), b = Math.min(hi, g.hi);
+      if (a < b) out.push({ at: hex8(a), len: b - a, n: g.n, end: hex8(g.end), word: hex8(g.word) });
+    }
+  }
+  return out;
+}
+
+// At a host's start, before any lab (host/playcli.mjs, host/navcli.mjs, bin/debug.mjs): unloadedRuns of an overlay
+// (checks/lib/env.mjs patchedFirmware's {rom, summary, changed}) in the loaded-ranges mode loaded ('auto', 'on',
+// 'off'), resolved as the lab resolves it; undefined where that mode is refused (--loaded on on a body without the
+// rule: the lab reports it)
+export function startUnloaded(fw, loaded) {
+  let loads;
+  try { loads = loadedRanges({ rom: fw.rom, patch: fw.summary, loaded }); } catch (e) {
+    if (e instanceof ValueError) return undefined;
+    throw e;
+  }
+  return unloadedRuns(fw.changed, loads);
+}
+
+// unloadedRuns' result as words (the start line, auditLine)
+export function unloadedLine(u) {
+  if (u === null) return 'the loaded ranges not checked (the loaded-ranges mode off)';
+  if (!u.length) return 'no patched byte where the boot does not load';
+  const shown = u.slice(0, 8).map((x) => `${x.at}+${x.len} (past section ${x.n}'s loaded end ${x.end}, its end word at ${x.word})`);
+  return `${u.length} patched range(s) where the boot does not load, stale RAM on the camera (code there stops the session; data there reads S-STALERAM's fill, unreported): ${shown.join(', ')}${u.length > 8 ? `, and ${u.length - 8} more` : ''}`;
 }
 
 // The audit as one line (host/navcli.mjs; the play status carries the object)
@@ -114,5 +158,6 @@ export function auditLine(a, tasks = []) {
   const ported = a.ported === null ? 'ports and facts not audited (E143: the lab\'s own build)'
     : a.ported.length ? `${a.ported.length} ported address(es) or fact(s) on patched bytes, which the lab calls or reads as patched: ${a.ported.map((p) => p.fact ? `${p.at} (fact ${p.fact})` : `${p.at} (E143 ${p.e143.join(', ')})`).join(', ')}`
       : 'no ported address or fact on patched bytes';
-  return `${hooks}; ${ported}${tasks.length ? `; H-PATCHTASK: ${tasks.join(', ')}` : ''}`;
+  const unloaded = a.unloaded === undefined ? '' : `; ${unloadedLine(a.unloaded)}`;
+  return `${hooks}; ${ported}${unloaded}${tasks.length ? `; H-PATCHTASK: ${tasks.join(', ')}` : ''}`;
 }

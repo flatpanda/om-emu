@@ -12,6 +12,7 @@ import { spawn } from 'node:child_process';
 import { Worker, MessageChannel } from 'node:worker_threads';
 import { REPO, loadImage, exitFor, overlayPatches, patchedFirmware } from '../checks/lib/env.mjs';
 import { PatchRefused, patchLine } from '../src/fw/patch.mjs';
+import { startUnloaded, unloadedLine } from '../src/lab/patchaudit.mjs';
 import { parseArgs } from '../checks/lib/args.mjs';
 import { RuntimeError } from '../src/lab/errors.mjs';
 import { MODEL, MODEL_INFO } from '../src/fw/model.mjs';
@@ -210,6 +211,9 @@ export async function main(argv) {
   const holder = { port: 0 };
   const check = { token, get port() { return holder.port; }, noHost: a.x_mutant === 'no-host-check' };
   if (overlay) say(`play: patched firmware: ${patchLine(overlay.summary)}`);
+  // the overlay's bytes where the boot does not load (S-STALERAM's gaps), before the lab starts (src/lab/patchaudit.mjs)
+  const unloaded = overlay ? startUnloaded(overlay, a.loaded) : undefined;
+  if (unloaded !== undefined) say(`play: patch audit: ${unloadedLine(unloaded)}`);
   if (cardFiles) say(`play: --card-put: ${cardFiles.map((f) => `${f.path} (${f.bytes.length} bytes)`).join(', ')} onto ${process.env.OM_EMU_CARD} before the first session`);
   const rom = overlay?.rom ?? loadImage();
   let switchTo = null, trying = null;

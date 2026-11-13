@@ -425,7 +425,8 @@ change brought it back is not read).
   senders of 26, 59, 74, 75, 80 and 90 are not read (?).
 - **The EXIF set still divides by zero:** called on a template copy after the probe's start (as round 9 tried, 4.8.10),
   it stops at `0x50398ca5` under both camapp modes (X), so the state it divides by is the take's (takepic's), not the
-  start's. No end-to-end improvement (TAKE's frame mode in place of S-TAKEFRAME, its EXIF set in place of S-EXIFPRM)
+  start's (corrected in 4.3.11: the divisor is IMG_PRECON's white-balance table, which neither start builds; with
+  IMG_PRECON's init the set runs, X). No end-to-end improvement (TAKE's frame mode in place of S-TAKEFRAME, its EXIF set in place of S-EXIFPRM)
   is possible from this probe without inventing a request.
 
 **Each neighbour's reply (classification: (a) a native module the lab can start; (b) a modelled device or CPU 2; (c)
@@ -452,7 +453,9 @@ unknown):**
    Round 1 of this ran on 2026-11-09 (X, 4.1.7): S1's take request reaches TAKE_MAIN under camapp 3 and stops at
    TAKE_FOCUS's AF; round 2 (X, 4.1.8) runs TAKE_FOCUS and stops at TAKE_EXPOSE's request to EXP_MOVIE.
 2. **EXIF shooting parameters (S-EXIFPRM)** follow from 1: takepic's record (`0x503bba70`, the EXIF set from
-   `0x503bd48e`) is the take's, and the start does not fill the state the EXIF set divides by (X). A few hours after 1
+   `0x503bd48e`) is the take's, and the start does not fill the state the EXIF set divides by (X). (Since 2026-11-13
+   the EXIF set runs natively at S2 after H-RECPRECON, 4.3.11; what is left of this step is takepic's exposure
+   record, from TAKE_MAIN's take request.) A few hours after 1
    if takepic's own neighbours answer like the start's; otherwise unknown.
 3. **The orientation tag** (PER_ROTATE's getter at takepic `0x503bcd51` writing record `+0x950c`) comes with 2: the
    getter is native with `--rotate on`; nothing extra once takepic runs (I).
@@ -2745,7 +2748,8 @@ traRoutingSession, below).
     `0x503bcdac..0x503bce38`) and +38198 from the AE result object `0xc0ba` (`0x503bcecb`, with TAKE's +3604 1).
   - Tv and Av: ExposureTime and FNumber are the template's 0 (X: exiftool). The EXIF set (`0x5042992d`, which divides
     by zero in TAKE's state, 4.1.4) formats them from the record takepic filled; which of its fields it reads is not
-    read.
+    read. (4.3.11, 2026-11-13: the zero is IMG_PRECON's table, the set runs natively, and it reads Tv +38164 and Av
+    +38178; ExposureTime is now its 1 s for Tv 0, FNumber 0/10.)
   - ObjResponse, Number, Packet: REC_MAIN (`0x50539b9c`) copies them from the requester's 16-byte message on its
     queue (the id at `0x60043252`): +0 ObjResponse, +4 Number, +8 Command, +12 Packet (`0x50539bc8..0x50539bdd`).
     REC_FILE's reply sends Number and Packet back to ObjResponse (`0x5053984f..0x5053987a`). The requester (I: TAKE
@@ -3701,6 +3705,72 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   application's gate after a slide's notifyGesture; the GUI's answer to a tap in the first 0.2 s; the HDMI layout
   under camapp 3.
   (The AF pins are rewritten in 4.3.8: 13 checks.)
+
+#### 4.3.11 The EXIF set natively (2026-11-13; D unless tagged, addresses E143's)
+
+- **Why.** S-EXIFPRM copied the template and formatted the dates itself because the EXIF set "divides by zero in
+  TAKE's state" (4.1.4, 4.8.10). A patch that hooks the per-shot fill inside the EXIF set (a modified firmware's
+  photo code in ImageDescription and UserComment, for one) never ran in the lab. This round reads the divide back
+  to its operands.
+- **The EXIF set.** TAKE's takepic (`0x503bcd51`) calls the module's wrapper `0x5042992d` (`call 0x5042b50d; ret
+  [],4`) at `0x503bd48e` with a0 the shot's block. The body `0x5042b50d..0x5042cd6f` calls TAKE's arithmetic block
+  `0x5039821c` 20 times (`0x5042bb7e..0x5042c0fe`), each with a request on its stack whose +24 .. +36 point at four
+  halfwords of the block (the maker notes' white-balance gains, +6342 on). For the request's kind 0
+  (`0x503986f9..0x50398739`) the block copies a row of the white-balance preset table `0xa31f1bd0` (the request's +2
+  picks the table's block, `0x5039822a..0x50398240`, its +4 the row) through those pointers and calls `0x50398a55`, which
+  scales them and divides the larger of the +32 and +36 products, << 7, by the smaller (`0x50398ca5` /
+  `0x50398cbc`). With the table's zeros that divisor is 0. The table is IMG_PRECON's: its module init `0x502a49b3`
+  (USTART2's stage, `0x501e8ec0`) builds it through `0x5039814c` -> `0x5039950e` (4.2.2), and the lab's start does
+  not run that stage. So the zero is not TAKE's state, and 4.1.4's "the state it divides by is the take's
+  (takepic's), not the start's" is wrong: the probe's start does not run IMG_PRECON's init either (H-EXPINIT runs it
+  only with `--cpu2 native`). 4.2.2's mode-1 divide in TAKE_EXPOSE's white balance is the same instruction with
+  other operands (`0x5056f1bb`'s locals).
+- **Run natively (X: an experiment at S2, then the lab as below).** IMG_PRECON's init returns 0. Then the EXIF set on
+  S-EXIFPRM's block runs to its return: 18 calls of the arithmetic block (the request kinds 0 and 2; kind 2 at
+  `0x503983cc` is not read, its requests call `0x50398a55` twice each), no error log, and the per-shot fill's code
+  runs once (on E147 the instruction at `0x50436558`, E143's `0x5042c2d5`, after two string copies from the settings
+  store, `0x5042ceb5` at `0x5042c2c0` and `0x5042c2d0`). Without the init it stops at
+  `0x50398ca5` (fault 6), in the experiment and in the lab with H-RECPRECON taken out (X: test_storage's S2 stops
+  there). The init also binds its two queues to its flag (`0x5002c285`), resets its 13 settings (ids 50674 ..
+  50866; I: white-balance gains, such as 159/448; `0x50041dbc` -> `0x50041de5`, which copies each setting's
+  default) and copies settings into properties (`0x5004188b`). In a default session the 13 settings hold their
+  defaults already (X: read before and after, each of the four values the same).
+- **What the EXIF set writes and reads.** The dates from the time record +37800 (`0x5042c16a..0x5042c196`, the code
+  S-EXIFPRM ran itself before); the digital zoom ratio +4228 as 0/100 (X; the header maker's `0x504287f1` divides
+  by its denominator); X and Y resolution 350/1, the time offsets (`+09:00` from the lab's settings store), the
+  maker notes' white-balance gains, exposure mode, picture mode and the UTC date among others (X: exiftool, the file
+  before and after). It does not write the crop areas +40858 / +40866 (no access in the body; X: 0 after it), so
+  S-EXIFPRM keeps them. It reads the aspect +38122 (`0x5042c356`), so S-EXIFPRM writes TAKE's settings fields before
+  it. The shooting values are conversions of takepic's fields: ExposureTime +4152 from Tv +38164 with +38166, +38168
+  and +38200 (`0x50573517` from `0x5042c41f`; from +38212 instead where Tv is `0x8000`, `0x5042c3a6`), FNumber
+  +4192 from Av +38178 with +38182, +38184 and +38200 (`0x50573611`) only where the record's +37982 has bit 12
+  (`0x5042c460`), 0/10 otherwise. takepic fills Tv, +38172 and Av from its exposure record's +6, +8 and +10
+  (`0x503bcdac..0x503bcdc7`; the record is its argument's +48, or its request's +60), Sv +38174 from TAKE's state
+  (+3144's +202), +38170, +38176 and +38180 from the record's +56, +58 and +60, +38188, +38200 and +38202 from the
+  settings 41050, 35818 and 36442, and +38198 from the AE result object `0xc0ba` (`0x503bcecb`). The exposure record
+  comes with TAKE_MAIN's take request, which the lab does not run (S-RELSEQ), and S-EXPOSE's plan (`0x62a919dc`: +6
+  Tv, +10 Sv, +14 Av; its address appears in the code only at `0x50560b2c` and `0x5056108b`) has another layout; which of TAKE's steps copies
+  the plan into that record is not read (?). So S-EXIFPRM leaves takepic's fields the template's 0, and the file
+  carries the EXIF set's conversions of those zeros: ExposureTime 1 s (Tv 0), FNumber 0/10, ExposureProgram 5, and ISO
+  25 (REC_IMAGE's, 4.3.5). These are not the session's exposure.
+- **The lab (`emu/src/lab/rec.mjs`).** Where `src/fw/facts.mjs` recFile reads the EXIF set (`exif.set`: the wrapper,
+  the one call of the function that holds the date set and is followed by `ret [],4`; E143 `0x5042992d`, E146
+  `0x5042588c`, E147 `0x50433b5c`, X: `emu/test/test_facts.mjs`), H-RECPRECON runs IMG_PRECON's init (at its port's
+  place, `A()`: E146 `0x502bbc32`, E147 `0x502cd4b6`) at the first picture, unless H-EXPINIT ran it, and S-EXIFPRM
+  runs the EXIF set natively after its copy, the clock read, the crop areas and TAKE's settings fields. Its own date
+  formatting and the zoom ratio 1/1 remain on the bodies whose rule reads no EXIF set (the E144 family,
+  recFileInline's, the E118 family's).
+- **What runs (X, `emu/test/test_storage.mjs` storageSession on E143, E146 and E147).** One native run of the EXIF set
+  per picture, after H-RECPRECON. The file's dates are the clock's, as before. X and Y resolution 350/1, the zoom
+  ratio 0/100, ExposureTime 10/10 and FNumber 0/10 (refs/exif.mjs). Control: a fresh template copy, with the clock
+  read after the clock was set to another date, gets that date from the EXIF set and keeps the template's empty
+  DateTimeOriginal without it. A modified OM-3 firmware that hooks the per-shot fill (Caduceus v0.29, outside the
+  tree) wrote its film's name into ImageDescription and its code into UserComment in the card's file, which it did
+  not before (X).
+- **Open.** The source of takepic's exposure record (TAKE_MAIN's take request, 4.1.4's plan step 1) and of TAKE's
+  state +3144; the lens flag +37982 and the lens fields; the EXIF set on the E144 family's, recFileInline's and the
+  E118 family's REC versions (no rule reads it there; the E118 family's set divided by zero too, finding 103, whether
+  in the same table is not read); the orientation (4.1.4's plan step 3).
 
 ### 4.4 AF, lens and body IS
 
@@ -6439,7 +6509,8 @@ there (it stays on the other bodies).
   I: which call starts it on the camera is not read). At S2: S-EXIFPRM, the shot's record as TAKE would hand it: the
   template copied natively, the clock read into +37800, the dates formatted natively, and three records the header maker
   divides by, the crop areas +40858 / +40866 `{0, 0, 1, 1}` (I: the full frame) and DigitalZoomRatio +4228 1/1 (I); the
-  EXIF set itself does not run (X: it divides by zero in TAKE's state at `0x50398ca5`), so exposure, aperture, ISO,
+  EXIF set itself does not run (X: it divides by zero in TAKE's state at `0x50398ca5`; since 2026-11-13 it runs on
+  E143, E146 and E147 after H-RECPRECON, the divisor being IMG_PRECON's table, 4.3.11), so exposure, aperture, ISO,
   focal length, the lens and the image size stay 0 (ISO 25 on E143 since 4.3.3: rec_bracket_after_trig computes it
   from the record's Sv +38174, which the template leaves 0, X; 4.3.5 corrects 4.3.3's "the packet's Sv"). S-RECIMAGE,
   REC_IMAGE's part: the packet for a single-slot JPEG

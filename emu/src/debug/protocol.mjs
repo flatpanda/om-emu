@@ -57,6 +57,9 @@
 //   disasm {addr, n} -> {lines}   n is a byte count (default 16), not an instruction count: one line per instruction
 //     that starts in [addr, addr + n), with all its bytes (an instruction longer than objdump's 4 bytes a line is
 //     one line)
+//   call     refused here: a firmware function called through a play session's harness is the live route's
+//     (src/debug/call.mjs)
+//   an exec trace's jsonl record carries pc, op, sp, d0-d3, a0-a3, mdr, psw and insns (its QEMU line the first seven)
 import { A } from '../fw/model.mjs';
 import { Debugger } from './debugger.mjs';
 import { regsHex, hex8 } from './regs.mjs';
@@ -208,6 +211,7 @@ export class Protocol {
       }
       case 'stats': return { stats: this._need().stats() };
       case 'disasm': { const a = addr(q.addr, 'addr'), n = optCount(q.n, 'n', 16, 1); return { lines: this._need().disasm(a, n) }; }
+      case 'call': throw new BadRequest('call: a play session\'s live route only (src/debug/call.mjs: the lab\'s harness and stand-ins answer the call); a standalone machine has neither: write a stub, reset {regs} and cont {stops}');
       default: throw new BadRequest(`unknown op ${JSON.stringify(q.op)}`);
     }
   }

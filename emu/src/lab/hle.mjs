@@ -201,19 +201,20 @@ export class HLE {
     this.sim.write(CALLER, cat(bytes(0xdd), u32le(runtime(fn) - CALLER), bytes(mask, size, 0xff)));
     if (stack && stack.length) this.sim.write(SP + 4, stack);
     this.sim.reset({ pc: CALLER, sp: SP, ...SAVED, ...(regs ?? {}) });
-    return this._loop(CALLER + 7, SP, limit);
+    return this._loop(CALLER + 7, SP, limit, regs);
   }
   calls(fn, regs = null, sp = SP, trampoline = CALLER, limit = 5000) {
     refuseUnmapped(fn, 'calls');
     this.sim.write(trampoline, cat(bytes(0xfc, 0xff), u32le(runtime(fn) - trampoline), bytes(0xff)));
     this.sim.reset({ pc: trampoline, sp, ...SAVED, ...(regs ?? {}) });
-    return this._loop(trampoline + 6, sp, limit);
+    return this._loop(trampoline + 6, sp, limit, regs);
   }
-  _loop(done, sp, limit) {
+  // regs: the registers the call started with; a callee-saved one (SAVED's) given there must come back as given
+  _loop(done, sp, limit, regs = null) {
     this.call_depth = (this.call_depth ?? 0) + 1;
-    try { return this._loop1(done, sp, limit); } finally { this.call_depth -= 1; }
+    try { return this._loop1(done, sp, limit, regs); } finally { this.call_depth -= 1; }
   }
-  _loop1(done, sp, limit) {
+  _loop1(done, sp, limit, regs = null) {
     let used = 0;
     while (used < limit) {
       const stops = new Set(this.hooks.keys());
@@ -229,7 +230,7 @@ export class HLE {
       used += this.drained;
       const pc = result.pc;
       if (pc === done && !result.fault) {
-        if (result.sp !== sp || Object.entries(SAVED).some(([k, v]) => result[k] !== v)) {
+        if (result.sp !== sp || Object.entries(SAVED).some(([k, v]) => result[k] !== (regs?.[k] ?? v) >>> 0)) {
           throw new FirmwareError(`bad return state: ${show(result)}`);
         }
         return result;

@@ -22,7 +22,7 @@
 // a ValueError.
 import { Simulator, SP as SIM_SP, BASE } from '../lab/sim.mjs';
 import { IMAGE_BASE, IMAGE_END } from '../fw/model.mjs';
-import { R, S, SP, D0, PSW } from '../core/cpu.mjs';
+import { R, S, SP, D0, A0, PSW, MDR } from '../core/cpu.mjs';
 import { ValueError, RuntimeError } from '../lab/errors.mjs';
 import { RspError, WATCH_LOG_MAX } from '../machine.mjs';
 import { REGS, regNumber } from './regs.mjs';
@@ -210,7 +210,8 @@ export class Debugger {
   }
 
   // ---- traces (null stops one). Each sink gets a record object; formatting is the sink's (trace.mjs).
-  // exec: {pc, op, sp, d0, d1, d2, psw, insns} before each instruction executes. mode 'native' (inline forms routed
+  // exec: {pc, op, sp, d0, d1, d2, psw, insns, d3, a0, a1, a2, a3, mdr} before each instruction executes (the QEMU
+  // line, trace.mjs execLine, prints the first seven; a jsonl record has them all). mode 'native' (inline forms routed
   // through the helper, the untraced run's interrupt looks) or 'one-insn' (every instruction a one-instruction TB:
   // the debugger must have been created with oneInsn). from/to: a pc range [from, to); pcs: a set.
   traceExec(sink, { mode = 'native', from = null, to = null, pcs = null } = {}) {
@@ -220,7 +221,8 @@ export class Debugger {
     this.m.setExecTrace((pc, op) => {
       pc >>>= 0;
       if (!all && (pc < lo || pc >= hi || (set !== null && !set.has(pc)))) return;
-      sink({ pc, op, sp: R[SP] >>> 0, d0: R[D0] >>> 0, d1: R[D0 + 1] >>> 0, d2: R[D0 + 2] >>> 0, psw: R[PSW] & 0xffff, insns: S.insns });
+      sink({ pc, op, sp: R[SP] >>> 0, d0: R[D0] >>> 0, d1: R[D0 + 1] >>> 0, d2: R[D0 + 2] >>> 0, psw: R[PSW] & 0xffff, insns: S.insns,
+        d3: R[D0 + 3] >>> 0, a0: R[A0] >>> 0, a1: R[A0 + 1] >>> 0, a2: R[A0 + 2] >>> 0, a3: R[A0 + 3] >>> 0, mdr: R[MDR] >>> 0 });
     }, { mode });
   }
   // mmio: {dir 'r' | 'w', cpu 0 | -1, addr, value, size, name, pc (cpu 0), insns, err}. Filters: from/to, an address

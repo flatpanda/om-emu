@@ -40,6 +40,10 @@
 //   ems1                    the EMS1 engine's model (src/dev/ems1.mjs, S-EMS1): {runs, busy, status, dropped, last: the
 //                           newest run {n, t_ns, start: the start word, channels: their mask, params: {offset:
 //                           value}} or null}, offsets and values in hex; refused on a board without the engine
+//   call {fn, ...}          a firmware function run natively through the lab's harness, its hooks and stand-ins
+//                           answering (src/debug/call.mjs lists the fields, the convention and what is restored);
+//                           running or halted only (refused at a debug stop, inside a tick) and with no stopping
+//                           watchpoint armed; an error's detail (pc, steps, stubs, reads) rides in error.detail
 // and the protocol's reads and the ops that change memory or registers (regs, reg, setReg, setRegs, read, write,
 // stack, stderr, stats, disasm, watchLog, trace, lab {time}); load, quit, reset, cpuStore, snapshot, restore, drop,
 // abort and lab time moves are refused (protocol.mjs). A control input (restart, power, quit, ...) while stopped lets
@@ -54,8 +58,9 @@ import { Debugger } from './debugger.mjs';
 import { Protocol, BadRequest, outcome, list, addr, count, watchList } from './protocol.mjs';
 import { regsHex, hex8 } from './regs.mjs';
 import { TCB_SP } from '../lab/kernel.mjs';
+import { callSpec, runCall } from './call.mjs';
 
-const RUN_CONTROL = new Set(['state', 'halt', 'cont', 'resume', 'step', 'break', 'watch', 'detach', 'tasks', 'standins', 'dml', 'pdt', 'ems1']);
+const RUN_CONTROL = new Set(['state', 'halt', 'cont', 'resume', 'step', 'break', 'watch', 'detach', 'tasks', 'standins', 'dml', 'pdt', 'ems1', 'call']);
 const isControl = (inp) => inp !== null && typeof inp === 'object' && inp.type === 'control';
 const absent = (v) => v === undefined || v === null;
 const hexWatch = (w) => ({ ...w, addr: hex8(w.addr), hit: hex8(w.hit), value: hex8(w.value), pc: hex8(w.pc) });
@@ -115,7 +120,7 @@ export class LiveDebug {
       const r = RUN_CONTROL.has(q.op) ? this._op(q) : this.proto._op(q);
       return r === null ? null : { id, ok: true, ...r };
     } catch (e) {
-      return { id, ok: false, error: { type: e?.name ?? 'Error', message: String(e?.message ?? e) } };
+      return { id, ok: false, error: { type: e?.name ?? 'Error', message: String(e?.message ?? e), ...(e?.detail ? { detail: e.detail } : {}) } };
     }
   }
   // At every tick: a cont's maxMs that passed halts the session.
@@ -204,6 +209,12 @@ export class LiveDebug {
         return { count: ws.length };
       }
       case 'tasks': return this._tasks();
+      case 'call': {
+        const spec = callSpec(q);
+        if (this.at !== null) throw new BadRequest('call: not at a debug stop (the lab is inside a tick there): cont, then call between ticks (running or halted)');
+        if (this.watches.some((w) => w.action === 'stop')) throw new BadRequest('call: a stopping watchpoint is armed (it would end the call inside the harness): give it action \'log\' or clear it');
+        return runCall(this.lab, this.dbg, spec);
+      }
       case 'standins': {
         const n = absent(q.limit) ? 100 : count(q.limit, 'limit'), cut = (v) => (n ? v.slice(-n) : []);
         const camapp = this.player.session?.camapp ?? null;

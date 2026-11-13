@@ -23,7 +23,7 @@ export function irqLine(r) {
 }
 // A JSON record per line: addresses, register values and MMIO values as '0x%08x' strings (the protocol's form, so a
 // grep for 0x502d0336 finds them), op '0x%02x', psw '0x%04x'; counts, sizes, levels and names as they are.
-const HEXF = { pc: 8, sp: 8, d0: 8, d1: 8, d2: 8, addr: 8, value: 8, op: 2, psw: 4 };
+const HEXF = { pc: 8, sp: 8, d0: 8, d1: 8, d2: 8, d3: 8, a0: 8, a1: 8, a2: 8, a3: 8, mdr: 8, addr: 8, value: 8, op: 2, psw: 4 };
 export function jsonLine(kind, r) {
   const o = { kind };
   for (const [k, v] of Object.entries(r)) o[k] = Object.hasOwn(HEXF, k) && typeof v === 'number' ? `0x${h(v, HEXF[k])}` : v;

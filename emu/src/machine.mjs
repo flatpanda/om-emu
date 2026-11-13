@@ -359,6 +359,8 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
     // 'limit' (insn-limit, fault 7), 'paused' (budget), 'watch' (a stopping watchpoint), 'halt' (a paused continue
     // halted), code: the fault code}.
     lastStop() { return lastStop; },
+    // The insn limit the machine was made with (0: none): a run ends with 'limit' once insns (register 15) reaches it.
+    insnLimit() { live(); return S.limit; },
     // Exec trace: fn(pc, op) before each instruction executes. mode 'native': every decoded form runs through the
     // helper (setForceHelper), the interrupt looks unchanged; 'one-insn': every instruction runs as a one-instruction
     // TB: the machine must have been created with oneInsn. null: off.

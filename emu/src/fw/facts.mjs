@@ -3453,7 +3453,9 @@ export function recorder(img) {
 //   bytes, u32 offset}, the entries around DateTime's {0x0132, 2, 20}, body 0x6058e0): Make's, Model's and
 //   DigitalZoomRatio's offsets, its three dates the date set's; crop, the crop areas of a JPEG and a RAW, `cmp 3,d0;
 //   bne; mov (..,sp),a0; add RAW,a0; bra; mov (..,sp),a0; add JPEG,a0; movhu (a0),d0; movhu (4,a0),d1` after the
-//   FileType's read (0x5053efd4 and 0x50542a3a, the same areas)
+//   FileType's read (0x5053efd4 and 0x50542a3a, the same areas); set, the EXIF set as TAKE's takepic calls it
+//   (0x503bd48e, a0 the shot's block): the module's wrapper `call S; ret [],4` (0x5042992d), the one call to S, the
+//   function that holds the date set (S 0x5042b50d, its entry within EXIF_SET_SPAN bytes before it)
 // - clock_set: the camera's clock setting, the function that ends right before the clock read (fact 'recorder') with
 //   `mov 10499,d0; movhu d0,(8,a2); ret` (0x5012b7a7; the storage test sets the clock with it, X)
 // E146 and E147 read every part (X: their sessions record S2's file natively with them; E146's values as read by hand
@@ -3466,7 +3468,7 @@ export const REC_FILE_E143 = {
   exif: {
     init: 0x504298BD, cflush: 0x504298F6, template: 0x62A6C358, copy: 0x504298F9, size: 92252, time: 37800,
     date: { format: 0x5012BD20, code: 0x4200, copy: 0x50003843, original: 4089, created: 4109, modified: 1364 },
-    tags: { make: 1480, model: 1504, zoom: 4228 }, crop: [40858, 40866],
+    tags: { make: 1480, model: 1504, zoom: 4228 }, crop: [40858, 40866], set: 0x5042992D,
   },
   init: 0x50539665,
   task: { id: 27, entry: 0x5053F1A4, flag: 0x60043182, queue: 0x6004324E, handled: 0x5053F20D },
@@ -3491,6 +3493,8 @@ const EXIF_COPY = [0xfc, 0xdd, null, null, null, null, 0x2d, null, null, 0xdb, 0
 const EXIF_INIT = [0xcd, 0x09, 0x00, null, null, 0x00, 0xdf, 0x00, 0x04];
 const EXIF_DATES = [0xfa, 0xd2, null, null, 0xfc, 0xc3, null, null, null, null, 0x98, 0xf1, 0xed, 0x2c, null, null, 0xdd];
 const EXIF_DATE_COPY = [0x5c, null, 0x99, 0xfa, 0xd0, null, null, 0xdd];
+// the EXIF set: its body's entry at most this far before the date set (E143 0xc5d, X), the wrapper's `ret [],4`
+const EXIF_SET_SPAN = 0x1000, EXIF_SET_RET = [0xdf, 0x00, 0x04];
 const EXIF_CROP = [0xa0, 0x03, 0xc9, 0x0c, 0x5c, null, 0xfc, 0xd0, null, null, null, null, 0xca, 0x0a, 0x5c, null, 0xfc, 0xd0, null, null,
   null, null, 0xf0, 0x60, 0xf8, 0x64, 0x04];
 const REC_CONTEXTS = [0xfa, 0x63, null, null, 0xfc, 0xde, null, null, null, null, 0xa0, 0x01, 0xc9, 0x08, 0xfc, 0xde];
@@ -3651,6 +3655,9 @@ export function recFile(img, kcb) {
   const [{ c: copy, t: template, init: exifInit }] = copies, fmt = callAt(img, dt + 16), c1 = dt + 16 + fmt.len, c2 = c1 + EXIF_DATE_COPY.length + 6;
   if (!bytesAt(img, c1, EXIF_DATE_COPY) || !bytesAt(img, c2, EXIF_DATE_COPY) || callAt(img, c1 + 7).to !== callAt(img, c2 + 7).to) return undefined;
   const date = { format: 0x50000000 + fmt.to, code: u16(dt + 14), copy: 0x50000000 + callAt(img, c1 + 7).to, original: u16(dt + 2), created: u16(c1 + 5), modified: u16(c2 + 5) };
+  // the EXIF set: the module's wrapper, the one call to the function that holds the date set
+  const body = entryOf(img, dt, EXIF_SET_SPAN), calls = body === undefined ? [] : callsTo(img, body);
+  if (calls.length !== 1 || !bytesAt(img, calls[0] + callAt(img, calls[0]).len, EXIF_SET_RET) || !isRet(img, calls[0] - 3)) return undefined;
   const dtTag = [];
   for (let o = img.indexOf(0x32); o >= 0; o = img.indexOf(0x32, o + 1)) if (bytesAt(img, o, [0x32, 0x01, 0x02, 0x00, 20, 0, 0, 0])) dtTag.push(o);
   if (dtTag.length !== 1) return undefined;
@@ -3670,6 +3677,7 @@ export function recFile(img, kcb) {
     exif: {
       init: 0x50000000 + exifInit, cflush: 0x50000000 + copy - 3, template, copy: 0x50000000 + copy, size: -s16(copy + 7) * 4,
       time: u32(img, dt + 6), date, tags: { make: tag.get(0x010f), model: tag.get(0x0110), zoom: tag.get(0xa404) }, crop: [...crops][0].split(',').map(Number),
+      set: 0x50000000 + calls[0],
     },
     init: 0x50000000 + init,
     task: { id: task.id, entry: task.entry, flag, queue: Q, handled: 0x50000000 + recv.handled },

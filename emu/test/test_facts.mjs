@@ -325,7 +325,9 @@ const LENS_DRIVER_FOUND = {
 // the buffer at the record's +8, the record's init 0x5052b008, the header clear 0x5052ab6b's fill 0x5048142b, the
 // contexts' pick 0x5051cdb5, the crop areas 0x5051fce5), E147's as the rule reads them (X: its session records S2's
 // file natively; D: the copy 0x50433b21 of 22990 words, the record's init 0x5053a22f, the crop areas 0x5052eddb, the
-// bind before REC_FILE's entry 0x5052b093), none on the other 15 bodies (X: the E144 family's REC_FILE receives
+// bind before REC_FILE's entry 0x5052b093; the EXIF set's wrapper, E146's 0x5042588c and E147's 0x50433b5c, the
+// cross-build map's place of E143's 0x5042992d, X: their sessions run it natively, 2026-11-13), none on the other 15
+// bodies (X: the E144 family's REC_FILE receives
 // without the file name, the older bodies have no such receive). The E144 family's (src/fw/facts.mjs recFileQueue,
 // 2026-11-10): E144's as read by hand (D: the EXIF init 0x5030b384 and its copy 0x5030b3b9 of 7925 words, the date set
 // 0x5030dc6a with the time at +28508, REC_FILE task 31 at 0x503f5dc0 waiting on its queue word 0x60041864, its record
@@ -358,7 +360,7 @@ const REC_FILE_FOUND = {
   E146: {
     exif: { init: 0x50425815, cflush: 0x5042584E, template: 0x62A9B198, copy: 0x50425851, size: 91704, time: 37452,
       date: { format: 0x5012C051, code: 0x4200, copy: 0x50003844, original: 4089, created: 4109, modified: 1364 },
-      tags: { make: 1480, model: 1504, zoom: 4228 }, crop: [40312, 40320] },
+      tags: { make: 1480, model: 1504, zoom: 4228 }, crop: [40312, 40320], set: 0x5042588C },
     init: 0x50516B8A, task: { id: 27, entry: 0x5051BFA3, flag: 0x600431B0, queue: 0x6004328C, handled: 0x5051C00C },
     packet: { size: 276, post: 0x50516E45, fields: { pExifParam: 20, HandleTarget: 100, BuffAddr1: 132, BuffSize1: 136, HeaderSize: 172,
       Status: 184, Mode: 186, Media: 190, Media2: 192, RecordDevice: 194, ImgAspect: 269, Free: 271, FileType: 273 } },
@@ -369,7 +371,7 @@ const REC_FILE_FOUND = {
   E147: {
     exif: { init: 0x50433AE5, cflush: 0x50433B1E, template: 0x62A97CD4, copy: 0x50433B21, size: 91960, time: 37452,
       date: { format: 0x50135E76, code: 0x4200, copy: 0x5000382D, original: 4089, created: 4109, modified: 1364 },
-      tags: { make: 1480, model: 1504, zoom: 4228 }, crop: [40576, 40584] },
+      tags: { make: 1480, model: 1504, zoom: 4228 }, crop: [40576, 40584], set: 0x50433B5C },
     init: 0x50525C72, task: { id: 27, entry: 0x5052B093, flag: 0x60043122, queue: 0x600431FE, handled: 0x5052B0FC },
     packet: { size: 276, post: 0x50525F2D, fields: { pExifParam: 20, HandleTarget: 100, BuffAddr1: 132, BuffSize1: 136, HeaderSize: 172,
       Status: 184, Mode: 186, Media: 190, Media2: 192, RecordDevice: 194, ImgAspect: 269, Free: 271, FileType: 273 } },

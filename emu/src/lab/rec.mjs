@@ -63,18 +63,35 @@
 //               (0x5054b00d)
 //   H-RECFILE   REC_FILE (task 27) started with act_tsk, as the start function starts REC's tasks after the init (I:
 //               which call starts it is not read); it then waits on its flag (the E144 family's on its queue)
+//   H-RECPRECON (where the rule reads the EXIF set, exif.set: E143, E146, E147) IMG_PRECON's module init (0x502a49b3,
+//               USTART2's stage's call at 0x501e8ec0, which the lab's start does not run) natively before the first
+//               picture, unless H-EXPINIT ran it (src/lab/take.mjs, --take probe with --cpu2 native): its two queues
+//               bound to its flag (0x5002c285), its 13 settings from id 50674 on reset to their defaults (0x50041dbc;
+//               X: the values the lab's store holds already), properties copied from the settings store (0x5004188b)
+//               and the white-balance preset table 0xa31f1bd0 (0x5039950e), whose rows the EXIF set's gains read
+//               (docs/hle-gaps.md 4.3.11)
 //   S-EXIFPRM   the shot's EXIF parameter block (pExifParam, the packet's +28; on the camera TAKE's per-shot record,
-//               0x503afc3e(HandleTarget), 92252 bytes), as TAKE would hand it to REC, whose shooting info TAKE fills
-//               and the lab does not run: the template copied by TAKE's own copy (0x504298f9, TAKE's call 0x503bba70);
-//               the camera's clock read natively (0x5012b7cd) into the capture's time record at +37800 (I: TAKE's; the
-//               EXIF set 0x5042992d formats the dates from there, 0x5042c16e); the dates formatted natively as the EXIF
-//               set does (0x5042c16a..0x5042c196: 0x5012bd20 with the format 0x4200 into DateTimeOriginal +4089, copied
-//               to CreateDate +4109 and DateTime +1364); and three records whose zero the header maker would divide by,
-//               which TAKE and the EXIF set fill: the crop areas +40858 (JPEG) and +40866 (RAW), {0, 0, 1, 1} (I: the
-//               full frame, by 0x5054a031..0x5054a0ad's arithmetic (x + 1) * width / xden - 1), and the digital zoom
-//               ratio +4228 (EXIF 0xa404) 1/1 (I: no digital zoom; 0x504287f1 divides by its denominator). The EXIF set
-//               itself does not run: it divides by zero in TAKE's state (0x50398ca5, X), so exposure, aperture, ISO,
-//               focal length, the lens and the image size stay the template's (0). Also the record's fields REC_IMAGE
+//               0x503afc3e(HandleTarget), 92252 bytes), as TAKE's takepic hands it to REC, whose shooting values
+//               takepic fills and the lab does not run: the template copied by TAKE's own copy (0x504298f9, TAKE's
+//               call 0x503bba70); the camera's clock read natively (0x5012b7cd) into the capture's time record at
+//               +37800 (I: TAKE's; the EXIF set formats the dates from there, 0x5042c16e); the crop areas +40858 (JPEG)
+//               and +40866 (RAW), whose zero the header maker would divide by and which neither the EXIF set (D: no
+//               access in 0x5042b50d..0x5042cd6f; X: 0 after it) nor REC writes, {0, 0, 1, 1} (I: the full frame, by
+//               0x5054a031..0x5054a0ad's arithmetic (x + 1) * width / xden - 1); the fields REC_IMAGE reads that
+//               TAKE's fill takes from the settings store (below); then, where the rule reads it (exif.set: E143, E146,
+//               E147), the EXIF set natively (0x5042992d, takepic's call at 0x503bd48e with a0 the block;
+//               docs/hle-gaps.md 4.3.11): the dates (0x5042c16a..0x5042c196: 0x5012bd20 with the format 0x4200 into
+//               DateTimeOriginal +4089, copied to CreateDate +4109 and DateTime +1364), the digital zoom ratio +4228
+//               (EXIF 0xa404; X: 0/100, which the header maker 0x504287f1 divides by its denominator), the maker
+//               notes' white-balance gains from H-RECPRECON's table (TAKE's arithmetic block 0x5039821c, 18 calls,
+//               X; with the table's zeros it divides by zero at 0x50398ca5, X) and the shooting values from takepic's
+//               fields (0x503bcdac..0x503bcee1: Tv +38164 and Av +38178 from its exposure record, Sv +38174 from
+//               TAKE's state), which stay the template's 0: their source is TAKE_MAIN's request, not run in the lab
+//               (D), so ExposureTime is the set's 1 s of Tv 0 (0x50573517 from 0x5042c41f), FNumber 0/10 (the lens
+//               flag +37982 bit 12 clear, 0x5042c460) and focal length, the lens and the image size the template's.
+//               Where the rule reads no EXIF set (the E144 family, recFileInline's and the E118 family's versions) it
+//               does not run, and S-EXIFPRM formats the dates natively as it does and sets the zoom ratio 1/1 (I: no
+//               digital zoom), the shooting values the template's 0. Also the record's fields REC_IMAGE
 //               reads (below) that TAKE's fill takes from the settings store, each
 //               read natively with the settings read 0x500417da as TAKE's fill reads it (D): the bracket's +38074,
 //               +38076, +38078, +38080 (ids 35217, 38737, 38769, 38785, halfwords) and +38086 (id 40401, a byte), from
@@ -175,7 +192,7 @@
 import { FirmwareError, runtime, disasm, where } from './hle.mjs';
 import { pack } from '../util/bytes.mjs';
 import { K_CFLUSH } from './menu.mjs';
-import { MODEL_INFO, fact } from '../fw/model.mjs';
+import { MODEL_INFO, fact, A } from '../fw/model.mjs';
 import { REC_FILE_E143, REC_IMAGE_E143 } from '../fw/facts.mjs';
 
 export class RecError extends FirmwareError {}
@@ -251,6 +268,9 @@ const SLICE_MS = 5, LIMIT_MS = 20000, WAI = 4;
 // buffer's size estimate adds it (0x5054a7b3) and its clear covers it (0x5054986f); the encoder's stream follows it
 // (I). E143's here; each body's is the rule's (jpeg.header: 41984 on E146 and E147 too)
 export const HEADER = REC_FILE_E143.jpeg.header;
+// IMG_PRECON's module init (H-RECPRECON), E143's, at its place in the build (bin/port.mjs; src/lab/take.mjs's H-EXPINIT
+// runs the same function)
+const PRECON_INIT = 0x502A49B3;
 // the rule's facts for this model (E143's given at REC_FILE_E143); throws on a body without them
 export const recFacts = () => fact('rec_file', REC_FILE_E143);
 
@@ -274,6 +294,8 @@ export class RecFile {
     // keeps S-RECIMAGE
     this.image = this.R.task.flag !== null ? recImageFacts() : null;
     this.imgpro_init = false;      // H-RECIMGPRO run (the application's start had not run the image library's init)
+    this.precon_init = false;      // H-RECPRECON run (H-EXPINIT had not run IMG_PRECON's init)
+    this.exif_sets = 0;            // the EXIF set's native runs (S-EXIFPRM, where the rule reads it)
     this.images = [];              // each picture's REC_IMAGE run {task, encoded, reply, alive, fills, take}
     // the E118 family's REC version (recFileFrame): REC_FILE's file context is rec_file_record's frame's, so each
     // picture's file is read from the registration's block at FILECLBK's reply, and REC_FILE's reply is taken (the
@@ -284,10 +306,14 @@ export class RecFile {
   get header() { return this.R.jpeg.header; }
   // whether H-RECIMGPRO runs (or ran) at the first picture: where camapp 3's H-IMGPROINIT did not run at the start
   imgpro_by_rec() { return !!this.image && !this.s.camapp?.imgpro_inited; }
-  // H-EXIFINIT, H-RECINIT, H-RECFILE (with REC_IMAGE natively also H-RECSHARED, H-RECIMGPRO, H-RECIMAGE), at the first
-  // picture (I: in the lab nothing reads REC's or the EXIF module's state before it, as TAKE, REC_MAIN and REC_PREPRO
-  // do not run; at the bring-up they would shift every later session's instruction counts for no change the firmware
-  // sees)
+  // whether the EXIF set runs natively (the rule reads it), and whether H-RECPRECON runs (or ran) at the first picture:
+  // there, where H-EXPINIT did not run IMG_PRECON's init
+  exif_set() { return this.R.exif.set !== undefined; }
+  precon_by_rec() { return this.exif_set() && this.s.camapp?.take?.exp_tid == null; }
+  // H-EXIFINIT, H-RECINIT, H-RECFILE (with REC_IMAGE natively also H-RECSHARED, H-RECIMGPRO, H-RECIMAGE; with the EXIF
+  // set natively also H-RECPRECON), at the first picture (I: in the lab nothing reads REC's or the EXIF module's state
+  // before it, as TAKE, REC_MAIN and REC_PREPRO do not run; at the bring-up they would shift every later session's
+  // instruction counts for no change the firmware sees)
   bring_up() {
     this.started = true;
     const lab = this.lab, R = this.R, X = R.exif, I = this.image;
@@ -295,6 +321,12 @@ export class RecFile {
     lab.call(X.init, null, null, null, 2000000);
     const make = this.text(X.template + X.tags.make, 24);
     if (!make) throw new RecError(`H-EXIFINIT: the EXIF template ${h8(X.template)} has no Make after the init`);
+    if (this.precon_by_rec()) {
+      const rc = lab.call(A(PRECON_INIT), null, null, null, 2000000).d0 & 0xFFFF;
+      if (rc !== 0) throw new RecError(`H-RECPRECON: IMG_PRECON's init ${h8(A(PRECON_INIT))} returned ${rc}`);
+      this.s.settle('H-RECPRECON');
+      this.precon_init = true;
+    }
     // REC's init returns 0, or 8191 after its error log where a part of it fails (D on E143 and E144; X: 0 on both)
     const ri = lab.call(R.init, null, null, null, 2000000).d0 | 0;
     if (ri !== 0) throw new RecError(`H-RECINIT: REC's init ${h8(R.init)} returned ${ri}`);
@@ -335,17 +367,23 @@ export class RecFile {
     const lab = this.lab, sim = lab.sim, X = this.R.exif, D = X.date, x = lab.alloc(new Uint8Array(X.size), 64);
     lab.call(X.copy, { a0: x }, null, null, 2000000);
     lab.call(this.clock_read, { a0: x + X.time }, null, null, 2000000);
-    lab.call(D.format, { a0: x + D.original, a1: x + X.time, d0: D.code }, null, null, 2000000);
-    for (const to of [D.created, D.modified]) lab.call(D.copy, { a0: x + to, a1: x + D.original }, null, null, 2000000);
     for (const at of X.crop) sim.write(x + at, pack('<HHHH', 0, 0, 1, 1));
-    if (X.tags.zoom !== null) sim.write(x + X.tags.zoom, pack('<II', 1, 1));
     // the fields REC_IMAGE reads that TAKE's fill takes from the settings store, read as it reads them (where REC_IMAGE
-    // runs natively)
+    // runs natively); the EXIF set reads the aspect too (0x5042c356)
     const take = {};
     for (const [id, at, n] of this.image?.take ?? []) {
       const v = lab.call(this.image.settings, { d0: id, d1: 0, a0: 0 }, null, null, 2000000).d0 & (n === 1 ? 0xFF : 0xFFFF);
       sim.write(x + at, n === 1 ? Uint8Array.of(v) : pack('<H', v));
       take[id] = v;
+    }
+    if (this.exif_set()) {
+      // the EXIF set natively, as takepic calls it once its fill is made: the dates, the zoom ratio, the gains
+      lab.call(X.set, { a0: x }, null, null, 2000000);
+      this.exif_sets += 1;
+    } else {
+      lab.call(D.format, { a0: x + D.original, a1: x + X.time, d0: D.code }, null, null, 2000000);
+      for (const to of [D.created, D.modified]) lab.call(D.copy, { a0: x + to, a1: x + D.original }, null, null, 2000000);
+      if (X.tags.zoom !== null) sim.write(x + X.tags.zoom, pack('<II', 1, 1));
     }
     const t = sim.read(x + X.time, 10);
     return { x, clock: { date: [t[0] | t[1] << 8, t[2], t[3], t[4], t[5], t[6]], status: t[8] | t[9] << 8 }, date: this.text(x + D.original, 20), take };
@@ -590,9 +628,10 @@ export class RecFile {
   }
 }
 // The stand-ins a RecFile uses (src/lab/player.mjs's list): with REC_IMAGE natively (H-RECIMGPRO where the
-// application's start did not run the image library's init), the E144 family's and recFileInline's with S-RECIMAGE
+// application's start did not run the image library's init; H-RECPRECON where the EXIF set runs natively and
+// H-EXPINIT did not run IMG_PRECON's init), the E144 family's and recFileInline's with S-RECIMAGE
 export function recStandIns(rec) {
-  return rec.image ? ['H-EXIFINIT', 'H-RECINIT', 'H-RECSHARED', ...(rec.imgpro_by_rec() ? ['H-RECIMGPRO'] : []), 'H-RECFILE', 'H-RECIMAGE', 'S-EXIFPRM', 'S-RECREQ', 'S-JPEGENC']
+  return rec.image ? ['H-EXIFINIT', ...(rec.precon_by_rec() ? ['H-RECPRECON'] : []), 'H-RECINIT', 'H-RECSHARED', ...(rec.imgpro_by_rec() ? ['H-RECIMGPRO'] : []), 'H-RECFILE', 'H-RECIMAGE', 'S-EXIFPRM', 'S-RECREQ', 'S-JPEGENC']
     : ['H-EXIFINIT', 'H-RECINIT', 'H-RECFILE', 'S-EXIFPRM', 'S-RECIMAGE', 'S-JPEGENC'];
 }
 // The lab's JPEG as the encoder's stream: without the JFIF APP0 that follows its SOI (the file's APPn segments are the

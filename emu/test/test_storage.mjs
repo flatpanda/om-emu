@@ -34,8 +34,10 @@
 //                   REC_IMAGE's own task made it from S-RECREQ's packet: the encode in task 28 (S-JPEGENC from
 //                   ImageParam's parameter set on; before it the error logs of ImageParam's four sources' lookups
 //                   only), the header area cleared by the imgpro unit's fill natively, REC_FILE's reply, pAlive
-//                   cleared, the aspect from the setting and the ISO from the record's +38174 0,
-//                   on E143, E146 and E147; on the E118 family REC_FILE's own four requests to the file module
+//                   cleared, the aspect from the setting and the ISO from the record's +38174 0, the EXIF set run
+//                   natively once after H-RECPRECON (its resolution, zoom ratio and its conversions of the template's
+//                   zero exposure in the file; a fresh block with the clock moved gets the new date from the set and
+//                   none without it), on E143, E146 and E147; on the E118 family REC_FILE's own four requests to the file module
 //                   each answered 0, its own cluster allocation of the file's bytes and its reply taken, the whole
 //                   stream after the header, the directory entry's stamp the clock's, then a second picture, PLAY
 //                   and back and a third: the firmware's own numbers, counts, clusters and the FAT's free count
@@ -599,7 +601,7 @@ export async function storageSession() {
       { rom: loadImage(), resBlock, nand: loadNand(), createHash, wallClock: () => performance.now() / 1000, card: { open: () => card, save() {} } });
     try {
       pl.open_session();
-      const rec = pl.session.storage.rec, DATE = [2026, 11, 8, 12, 34, 56], HEADER = rec?.header, body = EXIF_BODY[MODEL];
+      const rec = pl.session.storage.rec, DATE = [2026, 11, 8, 12, 34, 56], HEADER = rec?.header, body = EXIF_BODY[MODEL], setRuns = [];
       // the DCF name: the file letter, the month in hex and the day of the capture's stamp (docs/hle-gaps.md 4.8.9)
       const file1 = rec ? `${DIR}/P${DATE[1].toString(16).toUpperCase()}${String(DATE[2]).padStart(2, '0')}0001.${names.ext}` : FILE1;
       if (rec) {
@@ -608,6 +610,8 @@ export async function storageSession() {
         lab.sim.write(at, pack('<HBBBBBBH', ...DATE, 0, 0));
         lab.call(rec.R.clock_set, { a0: at }, null, null, 2000000);
         pl.session.settle('the clock setting');
+        // the EXIF set's runs, seen at its entry (where the rule reads it: S-EXIFPRM runs it natively)
+        if (rec.exif_set()) lab.observe(rec.R.exif.set, (l, r) => setRuns.push(r.a0 >>> 0), 'obs-exif-set');
       }
       const SHOT = [{ type: 'token', token: 'WAIT:100' }, { type: 'key', id: 's1', action: 'down' }, { type: 'key', id: 's2', action: 'down' }, { type: 'token', token: 'WAIT:700' },
         { type: 'key', id: 's2', action: 'up' }, { type: 'key', id: 's1', action: 'up' }];
@@ -659,6 +663,36 @@ export async function storageSession() {
           ok(fill?.length === 1 && fill[0].mode === 4 && fill[0].dst === y?.addr && fill[0].bytes === HEADER && fill[0].value === 0, `the header area cleared by the imgpro unit natively (one linear fill of 0 over the buffer's ${HEADER} bytes): ${JSON.stringify(fill)}`);
           ok(y?.aspect === run.take[12417] && run.take[40401] === 1, `ImgAspect from the record's aspect, TAKE's setting 12417 (${run?.take?.[12417]}): ${y?.aspect}; the bracket's 40401 ${run?.take?.[40401]}`);
           ok(x?.exif?.get(0x8827) === 25 && x?.exif?.get(0x8831) === 25, `the ISO REC_IMAGE derives from the record's +38174 0 (rec_bracket_after_trig 0x5053bfe2: the shot's record's +38174, on E146 and E147 +37826; on E143 also the SvAdj rec_bracket_update_iso 0x5053bca6 sets), ISO and StandardOutputSensitivity: ${x?.exif?.get(0x8827)} ${x?.exif?.get(0x8831)}`);
+        }
+        // the EXIF set natively where the rule reads it (E143, E146, E147; src/lab/rec.mjs S-EXIFPRM after H-RECPRECON,
+        // docs/hle-gaps.md 4.3.11): run once for the shot, on the packet's block, seen at its entry; in the file
+        // (refs/exif.mjs) what it writes over the template's: X and Y resolution 350/1 (the template's 0/0), the
+        // digital zoom ratio 0/100 (S-EXIFPRM's 1/1 before), the time offsets; and its conversions of takepic's
+        // shooting values, which stay the template's 0 in the lab (their source, TAKE_MAIN's request, does not run):
+        // ExposureTime 1 s (Tv 0), FNumber 0/10 (the lens flag clear). A change that gives them a source updates this
+        if (rec.exif_set()) {
+          const used = pl.stand_ins_in_use();
+          const tags = [[0x011A, 'ifd0'], [0x011B, 'ifd0'], [0xA404, 'exif'], [0x829A, 'exif'], [0x829D, 'exif']].map(([k, d]) => JSON.stringify(x?.[d]?.get(k)));
+          ok(used.includes('H-RECPRECON') && rec.precon_init && rec.exif_sets === 1 && setRuns.length === 1, `the EXIF set ran natively once, after H-RECPRECON (${used.filter((n) => /PRECON|EXIF/.test(n)).join(' ')}): ${rec.exif_sets} by the lab's count, ${setRuns.length} seen at its entry 0x${rec.R.exif.set.toString(16)}`);
+          ok(tags.join(' ') === '[350,1] [350,1] [0,100] [10,10] [0,10]' && x?.exif?.get(0x9010) === x?.exif?.get(0x9011) && /^[+-]\d\d:\d\d$/.test(x?.exif?.get(0x9010) ?? ''),
+            `the EXIF set's values: X and Y resolution, DigitalZoomRatio, ExposureTime and FNumber ${tags.join(' ')} (want [350,1] [350,1] [0,100] [10,10] [0,10]), OffsetTime ${x?.exif?.get(0x9010)}`);
+          // the control: the dates are the EXIF set's, from its block's time record; a fresh copy of the template with
+          // the clock read after the clock is set to another date gets that date from the set, and keeps the
+          // template's empty DateTimeOriginal without it
+          const lab = s2.lab, X = rec.R.exif, D2 = [2025, 3, 4, 5, 6, 8], at = lab.alloc(new Uint8Array(10), 4);
+          const block = (set) => {
+            const b = lab.alloc(new Uint8Array(X.size), 64);
+            lab.call(X.copy, { a0: b }, null, null, 2000000);
+            lab.call(rec.clock_read, { a0: b + X.time }, null, null, 2000000);
+            if (set) lab.call(X.set, { a0: b }, null, null, 2000000);
+            return rec.text(b + X.date.original, 20);
+          };
+          lab.sim.write(at, pack('<HBBBBBBH', ...D2, 0, 0));
+          lab.call(rec.R.clock_set, { a0: at }, null, null, 2000000);
+          const withSet = block(true), without = block(false);
+          lab.sim.write(at, pack('<HBBBBBBH', ...DATE, 0, 0));
+          lab.call(rec.R.clock_set, { a0: at }, null, null, 2000000);
+          ok(withSet === '2025:03:04 05:06:08' && without === '', `a fresh block with the clock at 2025-03-04 05:06:08: the EXIF set's DateTimeOriginal '${withSet}', without it '${without}' (the template's)`);
         }
         // the REC version before the family's (src/fw/facts.mjs recFileInline: E130, E133, E129): REC_FILE's reply to
         // the requester taken with status 0, and the file's context, on rec_make_file's stack, read at the

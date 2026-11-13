@@ -24,7 +24,8 @@
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample, check_level on E146 and its PER_ROTATE groups (--rotate
 // on) on E143 and E146 (test_acc.mjs), the card and the
 // file system on E143, E146, E147, E144, E142, E134, E148, E137, E125, E130, E133, E129 and the E118 family (S2's
-// file with its header maker's Exif) and SDXC cards on E143 (test_storage.mjs), INFO's still information
+// file with its header maker's Exif) and SDXC cards on E143 (test_storage.mjs), the host's card writer and the
+// firmware mounting what it wrote on E143 and E147 (test_cardfs.mjs), INFO's still information
 // in playback with two pictures, RIGHT, LEFT, OK's wizard, INFO's three views and the erase or its refusal on the 19
 // bodies (test_playinfo.mjs), the erase in playback natively on fifteen bodies and its refusal on the four others
 // (test_erase.mjs), a tap on the touch mode icon on E143, ten bodies of the E144
@@ -430,6 +431,20 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   sx.notes.forEach((x) => console.log('   note:', x));
   [...su.bad, ...ss.bad, ...sx.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
   bad += su.bad.length + ss.bad.length + sx.bad.length + others.filter(([, rc]) => rc !== 0).length;
+}
+// the host's card writer (src/lab/cardfs.mjs): its units, then the firmware mounting a card it wrote (a picture put
+// back under a later DCF number, a file of the host's own): E143 here, E147 in a process of its own
+{
+  const { cardfsUnits, cardCliTests, cardfsSession } = await import('../test/test_cardfs.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const cu = cardfsUnits(), cc = cardCliTests(), cs = await cardfsSession();
+  const others = ['E147'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_cardfs.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
+  });
+  console.log(`card writer: units ${cu.checks - cu.bad.length}/${cu.checks}; bin/card.mjs ${cc.checks - cc.bad.length}/${cc.checks}; in play (E143) ${cs.checks - cs.bad.length}/${cs.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  [...cu.bad, ...cc.bad, ...cs.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += cu.bad.length + cc.bad.length + cs.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // the second card slot (test_storage.mjs --slot2: E143's and E146's two card slots, one card and two, the save slot,
 // the cards out and in, on E143 also under control camapp 3; docs/hle-gaps.md 4.8.12), each body in a process of

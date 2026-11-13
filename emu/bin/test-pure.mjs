@@ -11,7 +11,9 @@
 // interpreter's transfer forms, the coverage union, the block aggregation), the SCPU's clock, ports and link
 // (test_scpu.mjs), the HDMI port's device and sink (test_hdmi.mjs), the kind-3 VSC's COMPOSE on E122's and E118's boards (a
 // child per board, test_vsc3.mjs), the accelerometer stand-in's sample
-// (test_acc.mjs), the SD card model (SDHC and SDXC) and the FAT and exFAT readers (test_storage.mjs), S-SUBJECT's
+// (test_acc.mjs), the SD card model (SDHC and SDXC) and the FAT and exFAT readers (test_storage.mjs), the host's
+// writer of the card's FAT32 and exFAT volumes read back by those readers, and bin/card.mjs on a card the test makes
+// (test_cardfs.mjs cardfsUnits, cardCliTests), S-SUBJECT's
 // subject boxes and transform (test_subject.mjs), the DML engine's register file (test_mdet.mjs dmlUnits, S-DML),
 // the PDT / TRC unit's register file (test_pdt.mjs pdtUnits, S-PDT),
 // the A53's ISC node-4 service against the oracle's recorded exchanges (test_a53isc.mjs a53iscUnits, S-A53ISC),
@@ -87,6 +89,7 @@ import { audioHwUnits } from '../test/test_audiohw.mjs';
 import { patchUnits } from '../test/test_patch.mjs';
 import { resnandUnits } from '../test/test_resnand.mjs';
 import { nvramUnits } from '../test/test_nvram.mjs';
+import { cardfsUnits, cardCliTests } from '../test/test_cardfs.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -126,6 +129,8 @@ report('HDMI port: transmitter, hot-plug pin, sink (S-HDMISINK)', hdmiUnits());
 report('kind-3 VSC COMPOSE on E122\'s and E118\'s boards (planes, palette groups, order codes, scaler, levels, refusals, the line compare)', vsc3Units());
 report('accelerometer sample (S-ACCSAMPLE)', accUnits());
 report('SD card and FAT / exFAT readers (S-SDCARD, refs/fat.mjs, refs/exfat.mjs)', storageUnits());
+report('the host\'s card writer on FAT32 and exFAT, read back by refs/ (src/lab/cardfs.mjs)', cardfsUnits());
+report('bin/card.mjs on a card the test makes: ls, put, get, mkdir, rm, refusals and usage errors', cardCliTests());
 report('subject frames: the scene\'s subject boxes, DISP_FRAME\'s transform taken back (S-SUBJECT)', subjectUnits());
 report('the DML engine\'s register file: images, output area, completion, refusals (S-DML)', dmlUnits());
 report('the PDT / TRC unit\'s register file: resets, images, results, completions, refusals (S-PDT)', pdtUnits());

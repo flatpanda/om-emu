@@ -109,8 +109,9 @@ const EXIF_BODY = { E143: { model: 'OM-1', version: '0231', ...OM }, E146: { mod
   E120: { model: 'E-M10MarkII', version: '0230', ...OLY } };
 
 // A FAT32 volume built here, for the reader: [read(lba, n), the files' bytes]. 70000 sectors at LBA 2048, 512-byte
-// clusters: 69416 clusters, past FAT16's 65524, so FAT32 by the specification's cluster count
-function buildFat32() {
+// clusters: 68880 clusters, past FAT16's 65524, so FAT32 by the specification's cluster count; FSInfo's free count
+// the FAT's (68876). Also the host writer's FAT32 volume (test/test_cardfs.mjs)
+export function buildFat32() {
   const disk = new Uint8Array(72048 * SECTOR), put16 = (o, v) => { disk[o] = v & 255; disk[o + 1] = v >> 8 & 255; };
   const put32 = (o, v) => { for (let i = 0; i < 4; i++) disk[o + i] = (v >>> (8 * i)) & 255; };
   const start = 2048, total = 70000, reserved = 32, fatSize = 544, spc = 1;
@@ -123,7 +124,7 @@ function buildFat32() {
   disk[b + 66] = 0x29; put32(b + 67, 0x1234abcd); disk.set([...'TEST LABEL '].map((c) => c.charCodeAt(0)), b + 71);
   disk.set([...'FAT32   '].map((c) => c.charCodeAt(0)), b + 82); disk[b + 510] = 0x55; disk[b + 511] = 0xaa;
   const fi = (start + 1) * SECTOR;
-  put32(fi, 0x41615252); put32(fi + 484, 0x61417272); put32(fi + 488, 0); put32(fi + 492, 6); disk[fi + 510] = 0x55; disk[fi + 511] = 0xaa;
+  put32(fi, 0x41615252); put32(fi + 484, 0x61417272); put32(fi + 488, 68876); put32(fi + 492, 6); disk[fi + 510] = 0x55; disk[fi + 511] = 0xaa;
   const fat = (start + reserved) * SECTOR, firstData = start + reserved + 2 * fatSize;
   const setFat = (c, v) => { put32(fat + 4 * c, v); put32(fat + fatSize * SECTOR + 4 * c, v); };
   setFat(0, 0x0ffffff8); setFat(1, 0x0fffffff);

@@ -1,8 +1,9 @@
 // An independent reader of a FAT volume on a block device, written from Microsoft's FAT specification (FAT: General
 // Overview of On-Disk Format, version 1.03) and the MBR's partition table, for checking what the firmware wrote to the
-// lab's card (src/lab/sdcard.mjs). It imports only refs/ (test_pure.mjs) and reads through read(lba, count) -> bytes
-// (512-byte sectors), so it shares no code with the firmware or the lab. FAT12 / FAT16 / FAT32 and long file names;
-// an exFAT volume is recognised and refused here (refs/exfat.mjs reads it; refs/volume.mjs picks the reader).
+// lab's card (src/lab/sdcard.mjs) and what the host's writer put there (src/lab/cardfs.mjs). It imports only refs/
+// (test_pure.mjs) and reads through read(lba, count) -> bytes (512-byte sectors), so it shares no code with the
+// firmware or the lab. FAT12 / FAT16 / FAT32 and long file names, and the volume's consistency (check); an exFAT
+// volume is recognised and refused here (refs/exfat.mjs reads it; refs/volume.mjs picks the reader).
 import { ValueError } from './errors.mjs';
 
 const u16 = (b, o) => b[o] | b[o + 1] << 8;
@@ -148,6 +149,61 @@ export class FatVolume {
       cluster = entry.cluster;
     }
     return entry;
+  }
+  // The volume's consistency, as a list of problems (none: consistent), by the specification's rules (a writer that
+  // breaks one is reported, not excused): every directory's and file's chain stays in the volume and ends in an
+  // end-of-chain mark, a file's is as long as its size needs and a directory's at least one cluster, no cluster is
+  // taken twice, the FAT marks no cluster in use that nothing takes (a lost cluster; bad ones 0x0ffffff7 aside), the
+  // FAT's copies are the same and, on FAT32, FSInfo's free count (unless 0xffffffff, unknown) is the FAT's
+  check() {
+    const problems = [], owner = new Map(), per = this.spc * 512, bad = this.type === 'FAT32' ? 0x0ffffff7 : this.type === 'FAT16' ? 0xfff7 : 0xff7;
+    const walkChain = (what, c) => {
+      const out = [];
+      for (;;) {
+        if (c < 2 || c > this.clusters + 1) { problems.push(`${what}: its chain reaches ${c === 0 ? 'a free entry' : `cluster ${c}`}, outside 2..${this.clusters + 1}`); break; }
+        if (out.length > this.clusters) { problems.push(`${what}: its chain loops`); break; }
+        if (owner.has(c)) problems.push(`cluster ${c} is ${owner.get(c)}'s and ${what}'s`);
+        else owner.set(c, what);
+        out.push(c);
+        const n = this.next(c);
+        if (this.eoc(n)) break;
+        c = n;
+      }
+      return out;
+    };
+    const walk = (cluster, path) => {
+      for (const e of this.list(cluster)) {
+        if (e.name === '.' || e.name === '..') continue;
+        const p = `${path}/${e.name}`;
+        if (e.dir) {
+          if (e.cluster === 0) { problems.push(`${p}: a directory without a cluster`); continue; }
+          const before = problems.length;
+          walkChain(p, e.cluster);
+          if (problems.length === before) walk(e.cluster, p);
+        } else {
+          const need = Math.ceil(e.size / per), cs = e.cluster ? walkChain(p, e.cluster) : [];
+          if (cs.length !== need) problems.push(`${p}: ${cs.length} clusters in its chain, ${need} for its ${e.size} bytes`);
+        }
+      }
+    };
+    if (this.type === 'FAT32') walkChain('the root directory', this.rootCluster);
+    walk(this.rootCluster, '');
+    const lost = [];
+    for (let c = 2; c < this.clusters + 2; c++) { const v = this.next(c); if (v !== 0 && v !== bad && !owner.has(c)) lost.push(c); }
+    if (lost.length) problems.push(`${lost.length} cluster(s) in use in the FAT and taken by nothing (the first ${lost.slice(0, 8).join(', ')})`);
+    const fatStart = this.start + this.reserved;
+    for (let k = 1; k < this.nfats; k++) {
+      for (let s = 0; s < this.fatSize; s++) {
+        const a = this.read(fatStart + s, 1), b = this.read(fatStart + k * this.fatSize + s, 1);
+        if (a.some((v, i) => v !== b[i])) { problems.push(`FAT copy ${k + 1} differs from the first at its sector ${s}`); break; }
+      }
+    }
+    const fsi = this.fsInfo();
+    if (fsi && fsi.free !== 0xffffffff) {
+      const free = this.freeClusters();
+      if (fsi.free !== free) problems.push(`FSInfo's free count ${fsi.free}, the FAT's ${free}`);
+    }
+    return problems;
   }
   // a file's bytes, by its entry
   data(entry) {

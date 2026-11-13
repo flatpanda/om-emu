@@ -16,10 +16,11 @@ import { installChildTrace, tracedPlay } from '../checks/lib/childtrace.mjs';
 import { fileNvram } from './nvram.mjs';
 import { fileCard, secondCard } from './card.mjs';
 import { memoryCard, cardSectors } from '../src/lab/sdcard.mjs';
+import { withCardFiles } from '../src/lab/cardfs.mjs';
 import { debugHost } from './debughost.mjs';
 import { CARD_VIEW } from '../web/cardfiles.mjs';
 
-const { args: a, flags, port, out, argv, patches, nvram: nvramFile } = workerData;
+const { args: a, flags, port, out, argv, patches, nvram: nvramFile, cardFiles } = workerData;
 const post = (m, transfer) => parentPort.postMessage(m, transfer);
 export const wallClock = () => Number(process.hrtime.bigint()) / 1e9;    // monotonic seconds, one clock on every thread
 // an input as the main thread posted it: its JSON text plus seq and t_wall
@@ -62,7 +63,9 @@ const env = {
   // OM_EMU_CARD=FILE: the card in the first slot is kept between sessions in FILE (storage.mjs, host/card.mjs);
   // OM_EMU_CARD_SIZE=GiB: a new card's capacity (8 by default; above 32 an SDXC card, sdcard.mjs), kept in memory
   // for the player's life without OM_EMU_CARD
-  ...(process.env.OM_EMU_CARD ? { card: fileCard(process.env.OM_EMU_CARD, cardSize) }
+  // --card-put (host/playcli.mjs, which checked them on a copy): the files put on that card at the first session's
+  // open, before the firmware's insertion mounts it
+  ...(process.env.OM_EMU_CARD ? { card: cardFiles ? withCardFiles(fileCard(process.env.OM_EMU_CARD, cardSize), cardFiles) : fileCard(process.env.OM_EMU_CARD, cardSize) }
     : process.env.OM_EMU_CARD_SIZE ? { card: memoryCard(cardSize) } : {}),
   // OM_EMU_CARD2=FILE: a card in the second slot from the start, kept in FILE (a body whose second slot the lab
   // models, src/fw/models.mjs card_fs.second_slot; never the first slot's file: host/card.mjs secondCard);

@@ -25,7 +25,9 @@ import { newFlags } from './portqueue.mjs';
 import { PlayerProxy, wallClock } from './proxy.mjs';
 import { createPlayServer, pngCache, pngRgba } from './server.mjs';
 import { jpegRgba } from '../web/cardfiles.mjs';
-import { cardGiB } from '../src/lab/sdcard.mjs';
+import { cardGiB, cardSectors } from '../src/lab/sdcard.mjs';
+import { cardPut, CardFsError } from '../src/lab/cardfs.mjs';
+import { fileCard } from './card.mjs';
 import { installSignals, installLabKill } from './signals.mjs';
 import { installMemProbe } from './memprobe.mjs';
 import { stackOf } from '../checks/lib/errors.mjs';
@@ -69,14 +71,21 @@ const PATCH = { opt: '--patch', type: 'path', repeat: true, metavar: 'FILE' };
 // nvramChoice: on, the default, is the model's own file, ~/.om-emu/nvram-<model>.json; off a blank camera at each
 // start), the lab's env too and not among session.json's args, whose nvram records what each session started from
 const NVRAM = { opt: '--nvram', type: 'str', metavar: 'on|off|FILE' };
+// --card-put DOS/PATH=LOCAL (repeatable): LOCAL's bytes written to the card at DOS/PATH before the first session's
+// insertion mounts it (src/lab/cardfs.mjs withCardFiles, in the lab worker), on the card OM_EMU_CARD keeps, which must
+// be one the firmware formatted (node emu/bin/card.mjs new); the lab's env too, not among session.json's args
+const CARD_PUT = { opt: '--card-put', type: 'str', repeat: true, metavar: 'DOS/PATH=LOCAL' };
 // The parsed options: every option's key in ACTIONS' order, then no_wait_on_error; the --patch files, if any, as the
-// non-enumerable patch, and --nvram's value (null when not given) as the non-enumerable nvram.
+// non-enumerable patch, --nvram's value (null when not given) as the non-enumerable nvram and the --card-put items as
+// the non-enumerable card_put ([] when none).
 export function parsePlayArgs(argv) {
-  const r = parseArgs(PROG, argv, [...ACTIONS, PATCH, NVRAM]);
+  const r = parseArgs(PROG, argv, [...ACTIONS, PATCH, NVRAM, CARD_PUT]);
   if ((r.x_mutant || r.x_trim_keep) && !r.debug_api) r.error('--x-mutant and --x-trim-keep need --debug-api');
   const a = {};
   Object.defineProperty(a, 'patch', { value: r.patch });
   Object.defineProperty(a, 'nvram', { value: r.nvram ?? null });
+  for (const item of r.card_put) if (!/^[^=]+=.+$/.test(item)) r.error(`--card-put ${item}: DOS/PATH=LOCAL`);
+  Object.defineProperty(a, 'card_put', { value: r.card_put });
   for (const x of ACTIONS) {
     const k = x.opt.slice(2).replaceAll('-', '_');
     a[k] = r[k];
@@ -148,6 +157,28 @@ export async function main(argv) {
       return 1;
     }
   }
+  // --card-put: the local files read here, and put on a copy of the kept card in memory, so a refusal (no
+  // OM_EMU_CARD, a blank or missing card, a name the volume does not take, a full card) stops the start; the lab worker
+  // puts the same files on the card it opens
+  let cardFiles = null;
+  if (a.card_put.length) {
+    const file = process.env.OM_EMU_CARD;
+    if (!file) {
+      report(`${PROG}: --card-put needs the card kept in a file, OM_EMU_CARD=FILE (a card the firmware formatted: node emu/bin/card.mjs new FILE)`);
+      return 1;
+    }
+    try {
+      cardFiles = a.card_put.map((item) => {
+        const at = item.indexOf('='), local = item.slice(at + 1);
+        try { return { path: item.slice(0, at), bytes: new Uint8Array(fs.readFileSync(local)) }; } catch (e) { throw new CardFsError(`${local}: cannot read it (${e.code ?? e.message})`); }
+      });
+      cardPut(fileCard(file, process.env.OM_EMU_CARD_SIZE ? { sectors: cardSectors(process.env.OM_EMU_CARD_SIZE) } : {}).open(), cardFiles);
+    } catch (e) {
+      if (e instanceof TypeError || e instanceof ReferenceError) throw e;     // a bug, not a refusal
+      report(`${PROG}: --card-put refused: ${file}: ${e.message}`);
+      return 1;
+    }
+  }
   let replayNvram = null;          // the log's record, for the line and the session line (a malformed one is the Player's to report)
   if (replayText !== null) {
     try { replayNvram = replayNvramRecord(a.replay, replayText, (p) => fs.readFileSync(p, 'utf8')); } catch { /* the Player raises it */ }
@@ -164,6 +195,7 @@ export async function main(argv) {
   const holder = { port: 0 };
   const check = { token, get port() { return holder.port; }, noHost: a.x_mutant === 'no-host-check' };
   if (overlay) say(`play: patched firmware: ${patchLine(overlay.summary)}`);
+  if (cardFiles) say(`play: --card-put: ${cardFiles.map((f) => `${f.path} (${f.bytes.length} bytes)`).join(', ')} onto ${process.env.OM_EMU_CARD} before the first session`);
   const rom = overlay?.rom ?? loadImage();
   let switchTo = null, trying = null;
   // POST /api/model: a reason to refuse, or null (the switch is taken: playapi queues the quit). A switch never
@@ -237,7 +269,7 @@ export async function main(argv) {
   }
   // a 16 MB stack (node's default is 4 MB): headroom for a request body that nests deeply, should a message of the lab
   // show part of it
-  worker = new Worker(new URL('./labworker.mjs', import.meta.url), { workerData: { args: a, flags, port: port2, out, argv, patches, nvram: nv.file }, transferList: [port2],
+  worker = new Worker(new URL('./labworker.mjs', import.meta.url), { workerData: { args: a, flags, port: port2, out, argv, patches, nvram: nv.file, cardFiles }, transferList: [port2],
     resourceLimits: { stackSizeMb: 16 } });
   worker.on('message', (m) => proxy.onMessage(m));
   const ended = await new Promise((resolve) => {

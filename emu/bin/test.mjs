@@ -34,7 +34,8 @@
 // bodies (test_playinfo.mjs), the erase in playback natively on fifteen bodies and its refusal on the four others
 // (test_erase.mjs), the creative dial refused on E143 and turned on E147 (test_cdial.mjs), the scripted session through
 // bin/session.mjs on E143 and on E147 with a synthetic om3-patch-2 file (test_session.mjs), its traces, breakpoints and
-// watchpoints on E143 and E147 (test_trace.mjs), a tap on the touch mode icon on E143, ten bodies of the E144
+// watchpoints on E143 and E147 (test_trace.mjs), a Caduceus film's values below the pixels on E147 with OM_CADUCEUS
+// (test_looks.mjs), a tap on the touch mode icon on E143, ten bodies of the E144
 // family and the E118 family, and in the super control panel on E144 and the E118 family, and with the EVF active
 // on the E118 family and the E144 family's bodies with an EVF, the AF Targeting Pad off and on (test_touch.mjs),
 // subject
@@ -661,6 +662,18 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`session traces and stops: units ${tu.checks - tu.bad.length}/${tu.checks}; E143 ${ts.checks - ts.bad.length}/${ts.checks}; E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
   [...tu.bad, ...ts.bad, ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += tu.bad.length + ts.bad.length + (r.status === 0 ? 0 : 1);
+}
+// a Caduceus film checked below the pixels (test_looks.mjs): the LOOKS.BIN reader and a film's values, then, with
+// OM_CADUCEUS (a caduceus-om3 checkout), a release's films on E147 in a process of its own; not run without it
+{
+  const { looksUnits } = await import('../test/test_looks.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const lu = looksUnits();
+  const r = process.env.OM_CADUCEUS ? spawnSync(process.execPath, [new URL('../test/test_looks.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' }) : null;
+  const lines = r ? (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0) : [];
+  console.log(`Caduceus films below the pixels: units ${lu.checks - lu.bad.length}/${lu.checks}; E147 ${r === null ? 'not run (OM_CADUCEUS unset)' : r.status === 0 ? 'ok' : 'FAILED'}`);
+  [...lu.bad, ...(r === null || r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
+  bad += lu.bad.length + (r === null || r.status === 0 ? 0 : 1);
 }
 // the body's Fn-type buttons reach the camera application's button mapping (ISO, +/-, Drive, AF/metering, AF-ON, |o|, front)
 {

@@ -234,7 +234,8 @@ export async function callSession() {
       ok(r?.ok && r.end === 'stop' && r.stubs.length === 0, `a stop on the patched hook's pc: ${JSON.stringify(r).slice(0, 300)}`);
     } finally { lab0.patch = patch0; }
     ok(JSON.stringify(ask({ op: 'regs' }).regs) === JSON.stringify(regs0), 'the 16 registers as before the calls (insns among them)');
-    // refusals: a frame the image cannot give, a stopping watchpoint armed, a debug stop
+    // refusals: a frame the image cannot give, a stopping watchpoint armed, a watchpoint's stop (a call runs at a
+    // breakpoint's stop since 2026-11-14: test_tools.mjs)
     r = ask({ op: 'call', fn: '0x50000000' });
     ok(r && !r.ok && /call-site frames \[\]: give frame/.test(r.error.message), `no call site: ${JSON.stringify(r?.error)}`);
     const stime = A.session.lab.nk.kcb(36);
@@ -248,7 +249,7 @@ export async function callSession() {
     apply(A, { type: 'token', token: 'WAIT:20' });
     A.q.feed = null;
     r = results.get(held[0])?.debug;
-    ok(r && !r.ok && /not at a debug stop/.test(r.error.message) && results.get(held[1])?.debug?.state === 'running', `refused at a debug stop: ${JSON.stringify(r?.error)}`);
+    ok(r && !r.ok && /not at a watch stop \(only at a breakpoint's\)/.test(r.error.message) && results.get(held[1])?.debug?.state === 'running', `refused at a watchpoint's stop: ${JSON.stringify(r?.error)}`);
     // the inputs the session without calls will make (its memory compared below), and the negative control's
     // memory: a write left in place (restore false)
     const ia = inputs(A), pa = pages(A);

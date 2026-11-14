@@ -589,7 +589,7 @@ Their main driver (`tools/emulator/session_ed1.mjs`, D) against `bin/session.mjs
 | calls from a spec with memory, sp or pc and stop pcs (`ncall`, `tonecall`) | `call:FN:entry=PC,stop=PC,frame=MASK/SIZE`, or `call:@FILE` with the op's whole request (memory, reads, scratch, restore); `sp` and `mdr` are the frame the harness's CALL builds, a larger frame for code that moved `sp` before the entry (their two drivers give their values so, 4.1) |
 | exec-trace watches (`WATCH`, `WSTACK`, ...) | `trace:PC`, `trace:mem:ADDR:LEN[:r\|w\|rw]`: each step's hits with the 16 registers and counts; `break:` with `read:` and the other tokens at the stop, then `resume`; `trace:PC:stack=N` is `WSTACK`, the N words from `sp` up at every hit |
 | a dump of RAM (`0x60000000..0x63000000`, `0xa2000000..0xa6000000`) | `dump:ADDR:LEN:FILE`, at most 64 MiB a token, so one token per range here; ranges the boot does not load are named in the record with S-STALERAM's fill |
-| the player's `a15` and EVF options (`a15: 'on'`, the TFT) | `--a15 auto\|off\|on`, `--device tft\|evf`; on E147 the switch from the EVF back to the TFT fails the lab's re-entry check (4.4) |
+| the player's `a15` and EVF options (`a15: 'on'`, the TFT) | `--a15 auto\|off\|on`, `--device tft\|evf`; on E147 a live display switch fails the lab's re-entry check in either direction (4.4) |
 
 ### 4.4 What the lab cannot verify today
 
@@ -627,8 +627,10 @@ Their main driver (`tools/emulator/session_ed1.mjs`, D) against `bin/session.mjs
   call at a watchpoint's stop is refused (`emu/README.md` "The debug API"). A stop is a main-loop visit an untraced run
   need not make, so the interrupt taken after it may differ; logging traces and a break at a hooked pc do not change the
   run (X).
-- **E147's EVF back to the TFT**: the switch fails the lab's re-entry check (X: `the re-entry landed on GUI state 0x0108
-  panel 0`), so a script that starts on the EVF stays there.
+- **E147's live display switch**: the switch fails the lab's re-entry check in either direction, the EVF back to the TFT
+  and the TFT to the EVF (X: `the re-entry landed on GUI state 0x0108 panel 0`, not the switch's panel 10, with
+  `switch:eye=1` or `eye` after the open or S1; after S1 at `a68dca3` too), so a script stays on the display `--device`
+  picks.
 - **`bin/nav.mjs` on E147**: its bring-up check stops at start, stock too (X: `error: bring-up: tasks started: [...]`).
   Use `bin/session.mjs`.
 
@@ -862,7 +864,7 @@ left is below.
 3. **E147's remaining key differences**: OK on their custom Picture Mode row, the ISO and Fn-type keys (not in board
    0's tables), the Fn lever and setting 534, and the still / movie switch's two movie positions (6). Size: days (I).
    Payoff: the Button Function paths users run.
-4. **E147's switch from the EVF back to the TFT** (4.4): read the screen the re-entry lands on (GUI state `0x0108`
+4. **E147's live display switch, either direction** (4.4): read the screen the re-entry lands on (GUI state `0x0108`
    panel 0) and which screen the switch should hold; E143 fails the same check right after S2's rec view
    (`docs/ROADMAP.md` "Debug API follow-ups" 7). Size: days (I). Payoff: their driver's EVF steps.
 5. **The second slot's media word** where no media manager runs: a rule for the setter's second-slot store, then

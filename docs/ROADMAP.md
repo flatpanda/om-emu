@@ -827,7 +827,7 @@ follow-ups):
 - Stage bits 7 to 9 need CPU 1 to run section 8's constructors (hle-gaps.md 4.6.4), so a patch task that waits for
   them never runs; S-STAGE9 and S-SECLOADED set bits 8 and 9 ahead of the camera's order.
 - E147's still / movie switch: what tells its two movie positions apart, and whether the camera's start sets setting 44
-  from it (hle-gaps.md 4.1.13). E147's switch from the EVF back to the TFT fails the re-entry check.
+  from it (hle-gaps.md 4.1.13). E147's live display switch fails the re-entry check in either direction (EVF to TFT and TFT to EVF).
 - `bin/nav.mjs` on E146 and E147 (Next stops above): its bring-up check stops at start on E147, stock too (X).
 - The exFAT case of the card writer's "S2 leaves the writer's files intact" check has no negative control.
 

@@ -1182,8 +1182,10 @@ the eye sensor's switches with `shot:` taking each display's frame (EVF 1600 x 1
 failing a step with an engine refusal by default and only reporting it with `report`, and on E118, whose stock INFO
 meets BMP_LUT refusals, `report` as the default and `fail` failing the step; on E147 a 32-word capture at the EXIF fill
 site through S2, a call of the settings getter at a breakpoint there with the rest of the shot unchanged, and `--device
-evf`'s first shot from the EVF (1024 x 768). On E147 the switch from the EVF back to the TFT fails its re-entry check
-(X: `the re-entry landed on GUI state 0x0108 panel 0`), so a script starting on the EVF stays there.
+evf`'s first shot from the EVF (1024 x 768). On E147 a live display switch fails its re-entry check in either direction,
+from the EVF back to the TFT and from the TFT to the EVF (X: `the re-entry landed on GUI state 0x0108 panel 0, not the
+screen the switch left (0x0108 panel 10)`, `switch:eye=1` or `eye` right after the open or after S1; after S1 at
+`a68dca3` too), so an E147 script picks its display with `--device` and stays on it.
 
 ## The browser player
 

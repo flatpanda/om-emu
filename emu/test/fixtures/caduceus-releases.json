@@ -830,7 +830,7 @@
    },
    "notes": [
     "no photo code (from v0.27): the film kept over power:off shows in the title alone",
-    "films at power-on without a half press (their NOTES): not shown in the lab, a lab limit: the SDLOAD worker H-PATCHTASK starts (audit tasks) waits for the boot-stage bits 0x2e9 at 0xa32de58c, of which S-BOOTSTAGE sets bit 0 only, so the state word is still 0 after 4.5 s and the half press loads them"
+    "films at power-on without a half press (their NOTES): not shown in the lab, a lab limit: the SDLOAD worker H-PATCHTASK starts (audit tasks) waits for the boot-stage bits 0x2e9 at 0xa32de58c, of which S-BOOTSTAGE sets bits 0 to 6 (sections 1 to 7) and not bits 7 and 9, which follow section 8's step on CPU 1 (docs/hle-gaps.md 4.6.4), so the state word is still 0 after 4.5 s and the half press loads them"
    ]
   },
   "v0.27": {
@@ -914,7 +914,7 @@
     "pokes": []
    },
    "notes": [
-    "films at power-on without a half press (their NOTES): not shown in the lab, a lab limit: the SDLOAD worker H-PATCHTASK starts (audit tasks) waits for the boot-stage bits 0x2e9 at 0xa32de58c, of which S-BOOTSTAGE sets bit 0 only, so the state word is still 0 after 4.5 s and the half press loads them"
+    "films at power-on without a half press (their NOTES): not shown in the lab, a lab limit: the SDLOAD worker H-PATCHTASK starts (audit tasks) waits for the boot-stage bits 0x2e9 at 0xa32de58c, of which S-BOOTSTAGE sets bits 0 to 6 (sections 1 to 7) and not bits 7 and 9, which follow section 8's step on CPU 1 (docs/hle-gaps.md 4.6.4), so the state word is still 0 after 4.5 s and the half press loads them"
    ]
   },
   "v0.27.1": {

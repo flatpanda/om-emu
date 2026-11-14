@@ -15,9 +15,9 @@
 // (0x08) (D: 0x50a62a05..0x50a62aca). The lab allows the two CPU 0 tasks' starts (their id words
 // MODEL_INFO.audio.starts) and checks after the start that AUD_MAIN and AUD_COPY_DATA wait. USTART3 calls 0x501553fa
 // just before (0x501e94fd): that is the still-image and power modules' step (0x50167b3a, 0x50858656), not the audio
-// module's, and the lab does not run it (D). The lab's image holds every stage's code (as for S-BOOTSTAGE's stage 1,
-// src/lab/menu.mjs), so H-AUDSTART sets stage 6's bit before AUD_MAIN's start, for the whole session (any other code
-// that reads stage 6 sees it set too); the later stages stay unset.
+// module's, and the lab does not run it (D). Stage 6's bit is S-BOOTSTAGE's (src/lab/menu.mjs stage_bits), set before
+// the store's start once the lab has run segment 6's constructors, the per-segment step's work; H-AUDSTART checks it
+// is set (before 2026-11-14 H-AUDSTART set it itself, at AUD_MAIN's start).
 //
 // S-AUDCPU2: CPU 2 is not in the lab. AUD_MAIN's starts of its CPU 2 tasks go through OlyTaSt to OlyTaStCpu
 // 0x5002d325 (cpu_conn kind 9, docs/om1-cores-spec.md); the stand-in answers that call, from AUD_MAIN's task and for
@@ -82,10 +82,10 @@ export class AudioHw {
     this.starts = f.starts.map((w) => { const t = this.id(w); if (!tasks.has(t)) throw new AudioHwError(`H-AUDSTART: no static task ${t} (the id word ${h8(w)})`); return [t, tasks.get(t)]; });
     this.cpu2_ids = new Map(f.cpu2.map(([w, name]) => [this.id(w), name]));
     for (const id of this.cpu2_ids.keys()) if ((id >> 12) !== CPU2) throw new AudioHwError(`S-AUDCPU2: the id 0x${id.toString(16)} is not a CPU 2 task`);
-    // the stage AUD_MAIN waits for (0x50024de8(stage) at 0x50a62a48: 2 ms sleeps until the stage's bit is set)
+    // the stage AUD_MAIN waits for (0x50024de8(stage) at 0x50a62a48: 2 ms sleeps until the stage's bit is set), which
+    // S-BOOTSTAGE has set once the lab ran the section's constructors (src/lab/menu.mjs stage_bits)
     const word = bootFacts().stage, b = lab.sim.read(word, 1)[0], bit = 1 << (f.stage - 1);
-    if (b & bit) throw new AudioHwError(`H-AUDSTART: the stage word ${h8(word)} has stage ${f.stage}'s bit before AUD_MAIN's start`);
-    lab.sim.write(word, Uint8Array.of(b | bit));
+    if (!(b & bit)) throw new AudioHwError(`H-AUDSTART: the stage word ${h8(word)} lacks stage ${f.stage}'s bit, which AUD_MAIN waits for (S-BOOTSTAGE sets it once the lab has run the section's constructors)`);
     this.codec = new CodecLink(lab);                // S-WM8946
     this.codec.bring_up();
     lab.hook(f.task_start_cpu, (h, r) => this._start_cpu(h, r), 'S-AUDCPU2');

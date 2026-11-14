@@ -23,6 +23,7 @@ import { pack, unpack, unpackFrom, bytesHex } from '../util/bytes.mjs';
 import { hex, hexDigits as fx } from '../util/hex.mjs';
 import { Tally } from '../util/tally.mjs';
 import { BOOT_E143, PROP_STORE_E143, CTORS_E143, STATE_PARENTS_E143, sectionEnds } from '../fw/facts.mjs';
+import { bootLoads } from '../fw/sections.mjs';
 // an om1.scpu command line on stderr (src/dev/scpu.mjs): its value, pc and count
 const SCPU_COMMAND = /^om-emu: scpu command 0x([0-9a-f]+) pc 0x([0-9a-f]+) #([0-9]+)(?: |$)/;
 
@@ -757,21 +758,49 @@ export class MenuLab extends T.TextDisplayLab {
     if ((JSON.stringify(db.prints) !== JSON.stringify(dbPrints) && !backupSave) || dbErrlog.length) throw new MenuError(`settings-DB init: prints ${show(db.prints)}, errlog ${show(dbErrlog.slice(0, 4))}`);
     this.store_log.scpu = this.scpu_registers();
   }
-  // S-BOOTSTAGE: the boot's first stage readied, its bit (bit 0) set in the stages' ready word (fact 'boot.stage',
-  // src/fw/facts.mjs bootState) before the store's start, as the boot's stage step would have set it (E129: the stage
-  // step for stage 1 in the init task's chain; E143: the per-segment step for segment 1, D), which the lab, ending the
-  // init task (src/lab/kernel.mjs), does not run. The lab's image holds every stage's code, so the stage is in place;
-  // the step's other work is not done (E129: the stage's loaded mark, the current stage, the region set-up of a block
-  // the lab does not model and the stage's hook list, empty for stage 1, D). E129's settings flash read waits for the
-  // bit (2 ms sleeps, no timeout, D), and without it the store's registry bootstrap blocked (X); E143's and the other
-  // bodies' starts test it at most and run as before with it (X: E143's screens, bin/modelcheck.mjs). The later stages
-  // stay unset (?: which of their tests the lab's sessions reach). The addresses are in docs/model-survey.md (E129)
+  // S-BOOTSTAGE: the boot's stages readied, their bits set in the stages' ready word (fact 'boot.stage',
+  // src/fw/facts.mjs bootState) before the store's start, as the boot's stage steps would have set them, which the
+  // lab, ending the init task (src/lab/kernel.mjs), does not run (stage_bits: which). The lab's image holds every
+  // stage's code, so the stages are in place; the steps' other work is not done (E129: the stage's loaded mark, the
+  // current stage, the region set-up of a block the lab does not model and the stage's hook list, empty for stage 1;
+  // E143, E146, E147: the same region set-up and the highest section done, a word only the step reads; D). E129's
+  // settings flash read waits for bit 0 (2 ms sleeps, no timeout, D), and without it the store's registry bootstrap
+  // blocked (X); the other bodies' starts test the bits at most. The addresses are in docs/model-survey.md (E129) and
+  // docs/hle-gaps.md 4.6.4 (E143, E146, E147)
   boot_stage() {
     if (bootFacts().stage === null) return;          // a build without the stage test (the E118 family's)
-    const word = bootFacts().stage, b = this.sim.read(word, 1)[0];
-    if (b & 1) throw new MenuError(`S-BOOTSTAGE: the stage word ${h8(word)} has stage 1's bit before the store's start`);
-    this.sim.write(word, Uint8Array.of(b | 1));
+    const word = bootFacts().stage, bits = this.stage_bits(), v = this.sim.u32(word);
+    if (v & bits) throw new MenuError(`S-BOOTSTAGE: the stage word ${h8(word)} holds ${h8(v)} before the store's start`);
+    this.sim.write(word, pack('<I', (v | bits) >>> 0));
     this.boot_staged = true;
+    this.stage_bits_set = bits;
+  }
+  // The stages whose step the lab performs, as bits of the stages' ready word (bit n - 1 for stage n). On the bodies
+  // whose section loader src/fw/facts.mjs sectionLoader reads (E143, E146, E147) stage n is section n: CPU 2's
+  // USTART_L2 copies the sections in order and after each posts the per-section step for it, to CPU 0 but for section
+  // 8's, which goes to CPU 1; it waits for stage 7's bit before posting section 8's step and for stage 8's before
+  // section 9's, and posts section 10's after that (D; the addresses in docs/hle-gaps.md 4.6.4). The step's work the lab has to do is the section's static constructors (its table in the
+  // section's loaded range, src/fw/facts.mjs ctorTables; sections 1, 4 and 9 have empty tables, 3, 5 and 10 none):
+  // section 2's run at the lab's start (src/lab/osd.mjs mm_ctors), 6's and 7's in run_static_ctors (CTOR_TABLES), 8's
+  // are CPU 1's and do not run. So the bits are those of the sections in order up to the first whose constructors the
+  // lab has not run (all of them ok): 0x7f where run_static_ctors ran, 0x1f where it did not; section 8's bit and
+  // those after it stay clear (their steps follow section 8's on the camera). Elsewhere the stage step is another form
+  // (E129's, docs/model-survey.md), read for stage 1 alone: bit 0
+  stage_bits() {
+    const f = sectionsFact();
+    if (f === null) return 1;
+    const tables = fact('ctors', CTORS_E143), ran = new Set([tables[0][0], ...this.ctor_tables_ran()]);
+    let bits = 0;
+    for (const s of bootLoads(this.env.rom, IMAGE_BASE, f).sections) {
+      if (tables.some(([t]) => t >= s.start && t < s.end && !ran.has(t))) break;
+      bits |= 1 << (s.n - 1);
+    }
+    return bits;
+  }
+  // the tables of CTOR_TABLES run_static_ctors ran, every constructor of each ok
+  ctor_tables_ran() {
+    return CTOR_TABLES.filter(([, n], m) => { const r = this.ctor_results.filter((c) => c.module === m); return r.length === n && r.every((c) => c.status === 'ok'); })
+      .map(([t]) => t);
   }
   // S-SECLOADED: the boot's sections copied, one bit per section in the section loader's copied mask (fact
   // 'sections.copied', src/fw/facts.mjs sectionLoader), as load_section sets bit n - 1 after section n's copy on CPU 2
@@ -779,8 +808,8 @@ export class MenuLab extends T.TextDisplayLab {
   // creation, every section of it (S-STALERAM leaves out only what lies past a section's end). The count is the image's
   // own, the cases of its end switch (patched firmware's as it is). No instruction of the stock builds reads the word (X:
   // E143, E146, E147), so their runs do not change; code a patch adds may (caduceus-om3's half-press gate tests it for
-  // every section, their editor.s pr_gate). Before the store's start, beside S-BOOTSTAGE; the stages' ready word, which
-  // the per-section init sets for the same sections, has readers and keeps only S-BOOTSTAGE's bit. no_secloaded (set
+  // every section, their editor.s pr_gate). Before the store's start, beside S-BOOTSTAGE, which sets the stages' ready
+  // word for the sections whose per-section step the lab performs (stage_bits). no_secloaded (set
   // in lab_created): the stand-in left out, a negative control
   sections_loaded() {
     const f = sectionsFact();

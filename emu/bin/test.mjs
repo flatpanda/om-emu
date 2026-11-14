@@ -23,7 +23,8 @@
 // (test_scpu.mjs), the publication audit (test_pubaudit.mjs), patch overlays (test_patch.mjs: the rules, --patch and
 // --main on E143 through debug.mjs, play.mjs and nav.mjs, the hook rule; an om3-patch-2 file and --main on E147), the
 // boot's section loader (test_sections.mjs: the rules and the unloaded ranges on a synthetic block, a patched routine
-// past section 6's end through debug.mjs on E143 and E147, and S-SECLOADED with its negative control on E143), the HDMI
+// past section 6's end through debug.mjs on E143 and E147, and S-SECLOADED with its negative control on E143), the
+// boot's stage bits S-BOOTSTAGE sets and the boot job they follow on E143, E146 and E147 (test_bootstage.mjs), the HDMI
 // port and a plug in play on E143,
 // E146 and E147 (test_hdmi.mjs), the accelerometer's sample, check_level on E146 and its PER_ROTATE groups (--rotate
 // on) on E143 and E146 (test_acc.mjs), the card and the
@@ -423,6 +424,20 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   console.log(`section loader: units ${su.checks - su.bad.length}/${su.checks}; on E143 ${ss.checks - ss.bad.length}/${ss.checks}; E147 ${r.status === 0 ? 'ok' : 'FAILED'}`);
   [...su.bad, ...ss.bad, ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += su.bad.length + ss.bad.length + (r.status === 0 ? 0 : 1);
+}
+// the boot's stage bits (S-BOOTSTAGE, src/lab/menu.mjs stage_bits): the boot job they follow read from the block and
+// the stage word after a play session's open, E143 here, E146 and E147 each in a process of its own
+{
+  const { bootstageImage, bootstageSession } = await import('../test/test_bootstage.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const bi = await bootstageImage(), bs = await bootstageSession();
+  const others = ['E146', 'E147'].map((m) => {
+    const r = spawnSync(process.execPath, [new URL('../test/test_bootstage.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: m }, encoding: 'utf8' });
+    return [m, r.status, (r.stdout + r.stderr).trim().split('\n').filter((l) => l.startsWith('   ') || r.status !== 0)];
+  });
+  console.log(`the boot's stage bits: E143's block ${bi.checks - bi.bad.length}/${bi.checks}, its session ${bs.checks - bs.bad.length}/${bs.checks}; ${others.map(([m, rc]) => `${m} ${rc === 0 ? 'ok' : 'FAILED'}`).join(', ')}`);
+  [...bi.bad, ...bs.bad, ...others.flatMap(([m, rc, lines]) => (rc === 0 ? [] : lines.map((l) => `${m}: ${l.trim()}`)))].forEach((x) => console.log('  ', x));
+  bad += bi.bad.length + bs.bad.length + others.filter(([, rc]) => rc !== 0).length;
 }
 // the OSD engine's picture runs across a row end (A-BMPWRAP): the units, then Caduceus for OM-3's v0.29 guides on E147
 // in a process of its own when OM_CADUCEUS names their checkout (skipped otherwise; their bytes are read there)

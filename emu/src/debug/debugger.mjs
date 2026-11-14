@@ -32,6 +32,7 @@ import { DEBUG as VSC_DEBUG, DOORBELL, DOORBELL_STUB, DBG_ARG0, DBG_LAST_RESULT,
 const KINDS = { r: 1, w: 2, rw: 3, a: 3 };
 const u32le = (b) => (b[0] | b[1] << 8 | b[2] << 16 | b[3] << 24) >>> 0;
 const le4 = (v) => new Uint8Array([v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff, (v >>> 24) & 0xff]);
+const PROBE = Symbol('probe');           // a probe range's watch id: {[PROBE]: index}, no id a request can give
 const SLICE = 1000000;                 // maxMs: continues run in slices of this many instructions
 // A 32-bit register or stored value, signed or unsigned, as a u32.
 function word(v, what) {
@@ -46,6 +47,7 @@ export class Debugger {
     this.snaps = new Map(); this.nextSnap = 1;
     this.bps = new Set();
     this.log = []; this.logDropped = 0; this.hits = 0;     // a lab's watch log (watch)
+    this.watched = []; this.probed = []; this.probeSink = null;   // watch()'s ranges, the probes' (probes)
   }
   static create(env, { insnLimit = null, mutant = null, oneInsn = false, disasm = null } = {}) {
     const machine = { ...env.machine, ...(mutant !== null ? { mutant } : {}), ...(oneInsn ? { oneInsn } : {}) };
@@ -55,7 +57,9 @@ export class Debugger {
   static attach(sim, { lab = null, routed = false, disasm = null } = {}) { return new Debugger(sim, { lab, attached: true, routed, disasm }); }
   close() {
     this.m.setExecTrace(null); this.m.setMmioTrace(null); this.m.setIrqTrace(null);
-    if (!this.m.paused()) this.m.setWatchpoints([]);
+    if (!this.m.paused()) { this.m.setWatchpoints([]); this.m.setProbes([], null); }
+    if (this.lab) this.lab.probeHook = null;
+    this.probeSink = null;
     this.snaps.clear();
     if (!this.attached) this.sim.close();
   }
@@ -188,10 +192,49 @@ export class Debugger {
       return { id: w.id ?? i, lo, hi, kind: KINDS[w.kind ?? 'w'], stop: (w.action ?? 'stop') === 'stop' };
     });
     if (ws.some((w) => w.stop)) this._noStops('a stopping watchpoint');
-    this.m.setWatchpoints(ws, this.lab ? { onLog: (rec) => this._logHit(rec) } : {});
+    this.watched = ws;
+    this._setWatch();
+  }
+  // the machine's one watch list: watch()'s and the probes' ranges (probes)
+  _setWatch() {
+    const all = this.probed.length ? [...this.watched, ...this.probed] : this.watched;
+    this.m.setWatchpoints(all, this.lab ? { onLog: (rec) => this._logHit(rec) } : {});
+  }
+
+  // ---- probes: a lab session's logging traces (src/debug/live.mjs probe). pcs: run-time pcs whose instructions are
+  // recorded as they are about to run (machine.setProbes: at the arrival, before the fetch, in a continue or a single
+  // step), and the lab's hooks that answer at one of them in place of the firmware (HLE.probeHook: no firmware
+  // instruction runs there; a pass-through observer's single step is the machine's probe); mem: [{lo, hi | len, kind
+  // 'r' | 'w' | 'rw'}] ranges whose CPU accesses are recorded (log watchpoints beside watch()'s list). Nothing of the run
+  // changes: no stop, no TB end, no interrupt look, no decode kind. Each hit is sink(record), the registers as numbers:
+  //   {kind: 'pc', pc, regs, lab_ns}                  regs before the instruction runs
+  //   {kind: 'hook', pc, hook: name, regs, lab_ns}    regs as the lab's hook takes the stop
+  //   {kind: 'mem', range: index into mem, addr, size, dir 'r' | 'w', value, pc (the accessing instruction's), regs,
+  //    lab_ns}                                        regs as the access happens (inside the instruction: its own
+  //                                                   register writes may not all have happened)
+  // probes() or probes({}) turns them off. Refused on a standalone machine (no lab clock, no hooks).
+  probes({ pcs = [], mem = [] } = {}, sink = null) {
+    if (!this.lab) throw new Error('probes: only on a lab session (Debugger.attach(sim, {lab}))');
+    const ranges = mem.map((w, i) => {
+      const lo = Number(w.lo) >>> 0, hi = w.hi !== undefined ? Number(w.hi) : lo + Number(w.len);
+      if (!Object.hasOwn(KINDS, w.kind ?? 'w')) throw new ValueError(`probe kind ${w.kind}: 'r', 'w' or 'rw'`);
+      return { id: { [PROBE]: i }, lo, hi, kind: KINDS[w.kind ?? 'w'], stop: false };
+    });
+    const on = sink !== null && (pcs.length > 0 || ranges.length > 0);
+    const clock = this.m.devices.clock, set = new Set(pcs.map((x) => x >>> 0));
+    this.probeSink = on ? sink : null;
+    this.m.setProbes(on ? [...set] : [], on && set.size ? (pc) => sink({ kind: 'pc', pc, regs: this.regs(), lab_ns: clock.t }) : null);
+    this.lab.probeHook = on && set.size ? (pc, hook) => { if (set.has(pc >>> 0)) sink({ kind: 'hook', pc: pc >>> 0, hook, regs: this.regs(), lab_ns: clock.t }); } : null;
+    this.probed = on ? ranges : [];
+    this._setWatch();
   }
   // A lab's log hit: stamped with the lab clock and its number, kept as the machine keeps its own (src/machine.mjs).
   _logHit(rec) {
+    const p = rec.id?.[PROBE];
+    if (p !== undefined) {
+      if (this.probeSink !== null) this.probeSink({ kind: 'mem', range: p, addr: rec.addr, size: rec.size, dir: rec.dir, value: rec.value, pc: rec.pc, regs: this.regs(), lab_ns: this.m.devices.clock.t });
+      return;
+    }
     rec.lab_ns = this.m.devices.clock.t; rec.n = ++this.hits;
     this.log.push(rec);
     if (this.log.length >= WATCH_LOG_MAX) { this.log.splice(0, WATCH_LOG_MAX / 2); this.logDropped += WATCH_LOG_MAX / 2; }

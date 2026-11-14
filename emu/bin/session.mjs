@@ -18,6 +18,11 @@
 // one with mem is a poke), card-ls, card-get:DOS/PATH=LOCAL, exif:DOS/PATH, and the checks expect:gui=NAME (or ~TEXT), expect:mem:ADDR=HEX (or
 // !=HEX), expect:card:DOS/PATH, expect:standin:NAME, expect:exif:DOS/PATH:FIELD=TEXT (or ~TEXT); a card path may end in a
 // pattern with * and ? (the last match by name). Relative LOCAL and FILE paths of the tokens resolve against --out.
+// Traces and stops: trace:PC[,PC...] and trace:mem:ADDR:LEN[:r|w|rw] record each hit in the later steps' records
+// (trace:off disarms); break:PC[,PC...] and break:mem:ADDR:LEN[:r|w|rw] end the step that meets one at the stop, where
+// the next tokens (reads, writes, expects, the card, trace:, break:) run until resume (break:off disarms). A run whose
+// tokens end at a stop ends there, nothing run after it (the summary's ended_at_stop, the last line), exit 0 when
+// every step passed.
 // Exit 0 when every step passed; 1 a firmware or lab error, a refused input or option, a local file a step cannot write
 // or an --out it cannot make ('FILE: cannot write it (CODE)'), or a failed expect (the step named on stderr); 2 a usage
 // error.
@@ -63,7 +68,7 @@ async function main(argv) {
   let s;
   try {
     s = await openSession({ patch: a.patch, main: a.main, card: a.card, cardPut: a.card_put, cardGet: a.card_get, nvram: a.nvram, loaded: a.loaded,
-      creativeDial: a.creative_dial, settle: a.settle, out: a.out, tokens, say: err });
+      creativeDial: a.creative_dial, settle: a.settle, out: a.out, tokens, say: err, onRecord: line });
   } catch (e) {
     if (!(e instanceof SessionRefused)) throw e;
     err(e.message);
@@ -71,12 +76,13 @@ async function main(argv) {
     return 1;
   }
   line(s.first);
-  if (s.first.ok) for (const t of tokens) { const r = s.step(t); line(r); if (!r.ok) break; }
+  if (s.first.ok) s.run(tokens);              // each record printed as it ends (onRecord): a debug stop's record first
   const sum = s.close();
   line(sum);
   const f = sum.failed;
   const poked = sum.pokes.length ? `; POKED: ${sum.pokes.length} write(s) (${sum.pokes.map((p) => `step ${p.step} ${p.addr ?? p.token}`).join(', ')}): the run depends on memory the firmware did not write` : '; no poke';
-  err(`${f ? `FAILED at ${f.step === null ? f.token : `step ${f.step} (${f.token})`}: ${f.message}` : 'passed'}; ${sum.steps} step(s) on ${sum.model}${sum.patch ? ', patched' : ''}${poked}`);
+  const e = sum.ended_at_stop, atStop = e ? `; ended at the debug stop of step ${e.step} (${e.kind} at ${e.pc}): nothing ran after it` : '';
+  err(`${f ? `FAILED at ${f.step === null ? f.token : `step ${f.step} (${f.token})`}: ${f.message}` : 'passed'}; ${sum.steps} step(s) on ${sum.model}${sum.patch ? ', patched' : ''}${atStop}${poked}`);
   return f ? 1 : 0;
 }
 

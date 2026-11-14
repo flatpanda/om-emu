@@ -7,7 +7,7 @@ import { IMAGE_BASE } from './fw/model.mjs';
 import * as mem from './core/mem.mjs';
 import { Fault, Unported, TbUndecidable, K_RAM, K_ROM, K_ROMD, K_MMIO, BUS, addRegion, allocWindow } from './core/mem.mjs';
 import { R, S, PC, PSW, UNDEF, HAZ, HI, UC, UD, UV, resetCpu, execInterrupt, getRegs, setRegs, limitFault, trapLines, admits, setExecTrace, setCoverage, setFetchGuard } from './core/cpu.mjs';
-import { run, resetInterp, configureInterp, setBreakpoints, setWatch, windowRemapped, stepAny, setForceHelper, flushDecode, interpState, setInterpState, RUN_VISIT, RUN_LIMIT, RUN_FAULT, RUN_BP } from './core/interp.mjs';
+import { run, resetInterp, configureInterp, setBreakpoints, setWatch, windowRemapped, stepAny, setForceHelper, flushDecode, interpState, setInterpState, setProbes, probeStep, RUN_VISIT, RUN_LIMIT, RUN_FAULT, RUN_BP } from './core/interp.mjs';
 import { Intc, setIrqTrace } from './dev/intc.mjs';
 import { snapshotDevices, restoreDevices, devicesBytes } from './debug/snapshot.mjs';
 import { Clock, Timer } from './dev/timer.mjs';
@@ -365,7 +365,7 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
       if (pendingDebug) { pendingDebug = false; return; }
       const account = () => { stats.insns += S.insns - i0; stats.guestMs += clock() - t0; };
       if (S.limit && S.insns + 1 > S.limit) lastStop = limitStop();
-      else try { stepAny(); } catch (e) {          // (an instruction fetched from MMIO: interp.mjs)
+      else try { probeStep(); stepAny(); } catch (e) {          // (an instruction fetched from MMIO: interp.mjs)
         if (!(e instanceof Fault)) { account(); failed = e; mem.clearWatchHit(); throw e; }
         lastStop = { kind: 'fault', code: e.code };
         trap(e);
@@ -401,6 +401,10 @@ export function createMachine({ rom, dramBytes = BOARD.dram_size, insnLimit = 10
       setExecTrace(fn);
       setForceHelper(fn !== null && mode === 'native' && !this.oneInsn);
     },
+    // Exec probes: fn(pc) right before the instruction at each pc of pcs runs (interp.mjs setProbes: in a continue or
+    // a single step, at the arrival before its fetch), with nothing of the run changed: no stop, no TB end, no look, no
+    // decode kind, so the untraced run's instructions, interrupt looks and stops are the same. [] or null: off.
+    setProbes(pcs, fn) { live(); notPaused('setProbes'); setProbes(fn === null ? [] : pcs.map((x) => x >>> 0), fn); },
     // MMIO trace: fn(dir 0/1, addr, value, size, name, cpu 0/-1, err) (mem.mjs). null turns it off.
     setMmioTrace(fn) { live(); mem.setMmioTrace(fn); },
     // Interrupt trace: fn(0, irq, level, pc, insns) per presentation, fn(1, level, pc, insns) per acceptance.

@@ -53,7 +53,8 @@
 // (test_resnand.mjs resnandUnits: the container's blocks at their load addresses, the browser's extract, the sound
 // area's builder, S-RESNAND's layer), S-NVRAM's choice, document, record and replay (test_nvram.mjs nvramUnits), and
 // the scripted session's token grammar, its Player inputs, the expects on fakes and bin/session.mjs's usage errors
-// (test_session.mjs sessionUnits).
+// (test_session.mjs sessionUnits), and its traces and stops: the tokens, the machine's exec probes on a blank image,
+// the live route's hit log and bin/session.mjs's usage errors for them (test_trace.mjs traceUnits).
 // bin/test.mjs runs all of these too, with everything else.
 //   node emu/bin/test-pure.mjs
 import { vectors } from '../test/test_vectors.mjs';
@@ -102,6 +103,7 @@ import { resnandUnits } from '../test/test_resnand.mjs';
 import { nvramUnits } from '../test/test_nvram.mjs';
 import { cardfsUnits, cardCliTests } from '../test/test_cardfs.mjs';
 import { sessionUnits } from '../test/test_session.mjs';
+import { traceUnits } from '../test/test_trace.mjs';
 
 let bad = 0;
 const report = (name, r, passed = r.checks - r.bad.length, total = r.checks) => {
@@ -137,6 +139,7 @@ report('the resource tables\' NAND: blocks at their load addresses, the extract,
 report('S-NVRAM: bin/play.mjs\'s choice, the document, the record and its replay (host/nvram.mjs, src/lab/nvramdoc.mjs)', await nvramUnits());
 report('command-line parser', argsTests());
 report('the scripted session: tokens, their Player inputs, the expects on fakes, bin/session.mjs\'s usage errors (host/session.mjs)', sessionUnits());
+report('the scripted session\'s traces and stops: tokens, the machine\'s exec probes, the live route\'s hit log (src/core/interp.mjs setProbes, src/debug/live.mjs)', await traceUnits());
 report('firmware map units (coverage option, decoder, union, blocks)', fwmapUnits());
 report('SCPU clock, ports, link pins and the sub-CPU (S-SCPUDEV)', scpuUnits());
 report('HDMI port: transmitter, hot-plug pin, sink (S-HDMISINK)', hdmiUnits());

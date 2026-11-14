@@ -19,20 +19,32 @@
 //   loaded 'auto'|'on'|'off' (S-STALERAM), creativeDial K, out DIR (session-N.json logs; relative paths of the tokens
 //   resolve against it), settle MS (the lab time after a press, a dial or a switch; default 600), tokens [TEXT...]
 //   (checked before the boot: a token the grammar or the model does not have throws TokenError), say(line) (the human
-//   lines: the patched firmware, the patch audit, the kept state, the card).
+//   lines: the patched firmware, the patch audit, the kept state, the card), onRecord(record) (each step's record as
+//   it ends, in step order: a debug stop's record ends at the stop, before the records of the tokens run there),
+//   atStop(record) (a debug stop's tokens for a lone step(): called at the stop and after each token run there, it
+//   returns the next token's text, 'resume' to let the firmware go on, or null to end the run at the stop).
 // It throws TokenError (a usage error) or SessionRefused (an option refused: a patch, the nvram file, a --card-put, an
 // --out it cannot make; a local file a step cannot write is that step's failure, 'FILE: cannot write it (CODE)');
 // a lab error during the boot is the first step's failure, not a throw.
 // The session's methods (each step's record is the JSON line bin/session.mjs prints):
 //   step(text)   one token -> {step, token, ok, phase, lab_ns, gui, frame, ...its result, error?}; after a failed step
-//                (a firmware or lab error, a refused input, a failed expect) the session takes no more steps
-//   run(texts)   the tokens in order until one fails; their records
+//                (a firmware or lab error, a refused input, a failed expect) the session takes no more steps; a step
+//                that met a debug stop returns the record that ran last (resume's), the others went to onRecord
+//   run(texts)   the tokens in order until one fails; their records (a debug stop takes its tokens from texts)
+// Traces and stops (the live debug route's probe, break and watch ops, src/debug/live.mjs; the armed sets are the
+// script's: sent whole at each trace: or break: token and again after each restart): trace:PC[,PC...] and
+// trace:mem:ADDR:LEN[:r|w|rw] record each hit while later steps run (a step's record: hits, the first HITS_PER_STEP,
+// hits_dropped, hit_counts), trace:off disarms; break:PC[,PC...] and break:mem:ADDR:LEN[:r|w|rw] stop the firmware
+// inside the step that meets one (its record: stopped), where only the AT_STOP kinds run until resume, whose record
+// carries the rest of that step; break:off disarms. A run that ends at a stop (its tokens done) or fails there ends
+// with the firmware held (StopEnd unwinds the tick: nothing runs after the stop) and the summary's ended_at_stop.
 //   input(inp)   one raw input as POST /api/input takes it, its result; listed in the summary as the tokens' are
 //                (a debug write, setReg(s) or call with mem among pokes, a harness token among harness_inputs, a
 //                call that ran among calls; a poke's token is 'input', the others' entries have via 'input')
 //   status()     the Player's status document (play's GET /api/status)
 //   summary()    {summary, ok, model, patch, patch_audit, stand_ins, pokes, harness_inputs, calls, card, nvram, errors,
-//                steps, failed}
+//                steps, failed, traces ({armed: the arming steps, now, counts, hits_dropped, stops} or null),
+//                ended_at_stop ({step, token, kind, pc, lab_ns} or null)}
 //   close()      the session closed, --card-get's files copied off, the logs written; the summary
 // Node-only (host/).
 import fs from 'node:fs';
@@ -41,8 +53,12 @@ import zlib from 'node:zlib';
 import { UsageError, intValue } from '../checks/lib/args.mjs';
 
 export const PRESS_MS = 150, HOLD_MS = 2000, SETTLE_MS = 600, DIAL_MAX = 8, READ_MAX = 0x10000;
+export const HITS_PER_STEP = 100;      // a record's hits: the first this many, the rest counted (hits_dropped)
 export class TokenError extends UsageError {}
 export class SessionRefused extends Error {}
+class StopEnd extends Error {}          // unwinds a held debug stop at the script's end or a failure there
+// the steps that run at a debug stop (the firmware held inside a tick): reads, pokes, checks, the card, arming, resume
+const AT_STOP = new Set(['read', 'write', 'expect', 'card-ls', 'card-get', 'exif', 'shot', 'trace', 'break', 'resume']);
 
 // ---- the token grammar (firmware-free) --------------------------------------------------------------------------
 // A script's text as tokens: '#' at a token's start comments out the rest of its line; tokens are separated by white
@@ -73,7 +89,7 @@ const PLAY_TOKEN = /^(?:(?:WAIT|WAIT_UNTIL|EV|SET|CLOCK|GET|XCALL|WINDOWS):\S+|O
 // play's tokens that are harness inputs, not the camera's (the summary lists them): a GUI event posted, a setting
 // set through its native setter, the clock set, a native call of the lab's
 const HARNESS_TOKEN = /^(?:EV:|SET:|CLOCK:|XCALL:|OPEN$|CLOSE$)/;
-const RESERVED = ['wait', 'hold', 'switch', 'restart', 'shot', 'read', 'write', 'call', 'exif', 'expect'];
+const RESERVED = ['wait', 'hold', 'switch', 'restart', 'shot', 'read', 'write', 'call', 'exif', 'expect', 'trace', 'break', 'resume'];
 const CALL_KEYS =['d0', 'd1', 'd2', 'd3', 'a0', 'a1', 'a2', 'a3', 'limit', 'space', 'entry', 'stop', 'frame'];
 // the fields of a call:@FILE request (src/debug/call.mjs callSpec's)
 export const CALL_FILE_KEYS = ['fn', 'space', 'entry', 'stops', 'regs', 'stack', 'frame', 'mem', 'read', 'restore', 'limit', 'scratch'];
@@ -136,6 +152,15 @@ export function parseToken(t) {
     }
     return step('call', { fn: addrOf(t, m[1], 'the function'), regs, limit, space, ...(entry !== null ? { entry } : {}), ...(stops.length ? { stops } : {}), ...(frame ? { frame } : {}) });
   }
+  if ((m = /^(trace|break):(?:(off)|mem:([^:]+):([^:]+)(?::(r|w|rw))?|([^:]+))$/.exec(t))) {
+    if (m[2]) return step(m[1], { off: true });
+    if (m[6] !== undefined) return step(m[1], { pcs: m[6].split(',').map((a) => addrOf(t, a, 'the pc')) });
+    const len = intValue(m[4]), lo = addrOf(t, m[3], 'the address');
+    if (len === null || len < 1 || lo + len > 2 ** 32) throw new TokenError(`${t}: the length ${JSON.stringify(m[4])} is not 1.. bytes within 32 bits`);
+    return step(m[1], { mem: { addr: lo, len, kind: m[5] ?? 'w' } });
+  }
+  if ((m = /^(trace|break):/.exec(t))) throw new TokenError(`${t}: ${m[1]}:PC[,PC...], ${m[1]}:mem:ADDR:LEN[:r|w|rw] or ${m[1]}:off`);
+  if (t === 'resume') return step('resume');
   if (t === 'card-ls') return step('card-ls');
   if ((m = /^card-get:([^=]+)=(.+)$/.exec(t))) return step('card-get', { path: dosPath(t, m[1]), local: m[2] });
   if ((m = /^exif:(.+)$/.exec(t))) return step('exif', { path: dosPath(t, m[1]) });
@@ -149,7 +174,7 @@ export function parseToken(t) {
     return step('dial', { id: m[1], detents: n });
   }
   if (new RegExp(`^${ID}$`).test(t)) return step('press', { id: t });
-  throw new TokenError(`${t}: not a token (keys and KEY:down|up, hold:KEY[:MS], DIAL:+N|-N, wait:MS, play's WAIT:/EV:/SET:/... tokens, switch:ID=V|+N, power:off, restart[:card=FILE], shot:FILE.png, read:ADDR:LEN, write:ADDR=HEX, call:FN[:d0=..,entry=..,stop=..], call:@FILE, card-ls, card-get:DOS=LOCAL, exif:DOS, expect:...)`);
+  throw new TokenError(`${t}: not a token (keys and KEY:down|up, hold:KEY[:MS], DIAL:+N|-N, wait:MS, play's WAIT:/EV:/SET:/... tokens, switch:ID=V|+N, power:off, restart[:card=FILE], shot:FILE.png, read:ADDR:LEN, write:ADDR=HEX, call:FN[:d0=..,entry=..,stop=..], call:@FILE, card-ls, card-get:DOS=LOCAL, exif:DOS, expect:..., trace:PC[,PC..]|mem:ADDR:LEN[:r|w|rw]|off, break:..., resume)`);
 }
 // A call:@FILE token's request: the file's text (name: the file, for the refusals) as a JSON object of the call op's
 // fields (CALL_FILE_KEYS; src/debug/call.mjs checks their values), else TokenError
@@ -255,6 +280,7 @@ export async function openSession(o = {}) {
   const { PatchRefused, patchLine } = await import('../src/fw/patch.mjs');
   const { startUnloaded, unloadedLine } = await import('../src/lab/patchaudit.mjs');
   const { Player } = await import('../src/lab/player.mjs');
+  const { codePc, notationOf } = await import('../src/debug/live.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { BY_ID } = await import('../src/lab/play.mjs');
   const { STORAGE } = await import('../src/lab/storage.mjs');
@@ -351,13 +377,18 @@ export async function openSession(o = {}) {
   const baseEnv = { rom: fw?.rom ?? E.loadImage(), resBlock: fw?.resBlock ?? E.loadBlock(), nand: E.loadNand(), createHash: E.createHash, ...E.scpuEnv(),
     ...(fw ? { patch: fw.summary, patchRanges: fw.changed } : {}), loaded: o.loaded ?? 'auto',
     deflate: (b, level) => new Uint8Array(zlib.deflateSync(b, { level })), inflate: (b) => new Uint8Array(zlib.inflateSync(b)),
-    wallClock: () => Number(process.hrtime.bigint()) / 1e9,
+    wallClock: () => Number(process.hrtime.bigint()) / 1e9, debugHost: { holdStop: (r) => holdStop(r) },
     onFrame: (w, h, raw, meta) => { frame = { w, h, raw: raw.slice(), sha16: meta.sha16 }; }, onAudio: () => {} };
   const envFor = (k) => ({ ...baseEnv, card, ...(nv.file ? { nvram: fileNvram(nv.file) } : {}),
     ...(out ? { logSink: (name, text) => { const f = path.join(out, `session-${k}${name.slice('session'.length)}`); if (name.endsWith('.jsonl')) fs.appendFileSync(f, text); else fs.writeFileSync(f, text); } } : {}) });
 
   const records = [], pokes = [], harness = [], calls = [], errors = [], standins = new Set();
   let pl = null, failed = null, tasks = new Set(), audit = null, closed = false, lastFrameError = null;
+  // traces and stops: the armed sets (run-time pcs, ranges {addr, len, kind}), the arming steps, the hits' totals; the
+  // record whose inputs run now (a stop ends it, resume's takes over), the stop held now and the one the run ended at,
+  // where a held stop's tokens come from (run()'s list; else options.atStop), the records completed
+  const traced = { pcs: [], mem: [] }, stops = { pcs: [], mem: [] }, armedLog = [], hitTotals = new Map(), completed = new WeakSet();
+  let hitsDropped = 0, stopCount = 0, running = null, held = null, ended = null, source = null, stopError = null;
   const fail = (rec, message) => { rec.ok = false; rec.error = message; failed ??= { step: rec.step, token: rec.token, message }; errors.push(`step ${rec.step} (${rec.token}): ${message}`); };
   const labMessage = () => pl?.error?.message ?? 'the session stopped';
   // the OSD engine's refusals since the last record ({NAME: count}, src/dev/engine.mjs failures), or null; the firmware
@@ -394,10 +425,15 @@ export async function openSession(o = {}) {
     note();
     try { pl.close_session(); } finally { pl.write_log(); }
   };
-  // one input through the Player's own loop (submit, then the tick that takes it): its result
+  // one input through the Player's own loop (submit, then the tick that takes it): its result; at a debug stop (held,
+  // inside a tick) a debug input is taken as the live route takes one there (live.mjs stopped)
   const apply = (inp) => {
     const seq = pl.submit(inp);
-    pl.tick();
+    if (held) {
+      const x = pl.next_debug(false, false);
+      if (x?.seq !== seq) throw new Error(`session: at a debug stop the Player took ${JSON.stringify(x)}, not input ${seq}`);
+      pl.debug_input(x);
+    } else pl.tick();
     const res = pl.pop_result(seq);
     if (res === null) throw new SessionRefused(`input ${JSON.stringify(inp)}: no result (an answer the player defers, such as a debug cont, is not scripted)`);
     return res;
@@ -457,15 +493,26 @@ export async function openSession(o = {}) {
   const run = (st) => {
     const rec = { step: records.length, token: st.text, ok: true };
     records.push(rec);
+    running = rec;
     try {
       if (failed) throw new SessionRefused(`the run failed at step ${failed.step}`);
+      if (ended) throw new SessionRefused(`the run ended at the debug stop of step ${ended.step}`);
+      if (held && !AT_STOP.has(st.kind)) {
+        throw new SessionRefused(st.kind === 'call' ? 'call: not at a debug stop: the stop is inside the lab\'s tick, where the live route refuses a call (src/debug/live.mjs); resume, then call'
+          : `${st.text}: at a debug stop only read:, write:, expect:, card-ls, card-get:, exif:, shot:, trace:, break: and resume run (the firmware is held inside a tick); resume first`);
+      }
       if (st.kind === 'restart') {
         const positions = pl?.phase === 'off' ? pl.off_positions : null;    // after power:off; else a battery pull, a fresh start
+        drain(rec);                                // the old session's last hits, before its Player goes
         closePlayer();
         if (st.card) { cardFile = path.resolve(local(st.card)); card = fileCard(cardFile); rec.card = cardFile; }
         open(positions);
         rec.session = sessionNo;
         if (pl.phase === 'error') fail(rec, labMessage());
+        else if (traced.pcs.length || traced.mem.length || stops.pcs.length || stops.mem.length) sendArmed(rec, true, true);   // the script's traces and stops, on the new session
+      } else if (st.kind === 'trace' || st.kind === 'break') arm(st, rec);
+      else if (st.kind === 'resume') {
+        if (!held) throw new SessionRefused('resume: the session is not at a debug stop');
       } else if (st.kind === 'shot') {
         if (!frame) throw new SessionRefused('no frame published yet in this session');
         const file = local(st.file);
@@ -492,10 +539,11 @@ export async function openSession(o = {}) {
       } else {
         for (const inp of stepInputs(st, settle)) {
           const before = pl.dropped.toObject(), res = apply(inp);
-          if (pl.phase === 'error') { fail(rec, labMessage()); if (pl.error?.stderr_tail) rec.stderr_tail = pl.error.stderr_tail; break; }
-          if (res.error) { fail(rec, res.error); break; }
-          if (res.dropped) { fail(rec, `the player dropped ${JSON.stringify(inp)} (${Object.keys(pl.dropped.toObject()).filter((k) => pl.dropped.toObject()[k] !== before[k]).join(', ') || 'no reason counted'})`); break; }
-          if (pl.input_error && inp.type !== 'debug') { fail(rec, `the input was not taken: ${pl.input_error}`); break; }
+          const r = running;                       // after a debug stop and resume, resume's record carries the rest
+          if (pl.phase === 'error') { fail(r, labMessage()); if (pl.error?.stderr_tail) r.stderr_tail = pl.error.stderr_tail; break; }
+          if (res.error) { fail(r, res.error); break; }
+          if (res.dropped) { fail(r, `the player dropped ${JSON.stringify(inp)} (${Object.keys(pl.dropped.toObject()).filter((k) => pl.dropped.toObject()[k] !== before[k]).join(', ') || 'no reason counted'})`); break; }
+          if (pl.input_error && inp.type !== 'debug') { fail(r, `the input was not taken: ${pl.input_error}`); break; }
           if (res.debug) {
             // a call:@FILE request with mem writes memory the firmware did not (a poke, as input()'s call with mem)
             if (st.kind === 'call' && st.request?.mem?.length) pokes.push({ step: rec.step, token: st.text, mem: st.request.mem });
@@ -515,15 +563,25 @@ export async function openSession(o = {}) {
         if (st.kind === 'token' && HARNESS_TOKEN.test(st.token)) harness.push({ step: rec.step, token: st.token });
       }
     } catch (e) {
+      if (e instanceof StopEnd) {                // the script ended at a debug stop, or a step there failed: nothing ran after it
+        if (stopError) { const u = stopError; stopError = null; throw u; }
+        return running;
+      }
       if (BUG(e) && !(e instanceof LabError)) throw e;
-      fail(rec, e instanceof SessionRefused || e instanceof CardFsError ? e.message : `${e.name}: ${e.message}`);
+      fail(running, e instanceof SessionRefused || e instanceof CardFsError ? e.message : `${e.name}: ${e.message}`);
     }
+    return complete(running, st.kind);
+  };
+  // a step's record finished: the session's state after it, the probes' hits, and onRecord (once per record)
+  const complete = (rec, kind = null) => {
+    if (completed.has(rec)) return rec;
+    completed.add(rec);
     try {
       if (pl?.session) pl.publish_status();
     } catch (e) { if (BUG(e)) throw e; }
     const st2 = pl?.status_doc ?? {};
     Object.assign(rec, { phase: pl?.phase ?? null, lab_ns: pl?.session?.lab?.lab_time() ?? null, gui: pl?.session ? st2.gui_name ?? null : null, frame: pl?.frame?.[3] ?? null });
-    if (st.kind === 'restart') {
+    if (kind === 'restart') {
       rec.nvram = st2.nvram ?? null;          // the stores the new session restored (S-NVRAM)
       rec.carried = st2.carried ?? null;      // the controls' positions carried from power:off (null: a fresh start)
     }
@@ -531,8 +589,85 @@ export async function openSession(o = {}) {
     lastFrameError = pl?.frame_error ?? null;
     const osd = osdErrors();
     if (osd) rec.osd_errors = osd;
+    drain(rec);
     note();
+    o.onRecord?.(rec);
     return rec;
+  };
+
+  // ---- traces and stops (trace:, break:, resume): the live debug route's probe, break and watch ops on the
+  // session's Player (src/debug/live.mjs), the script's armed sets sent whole at each change and after each restart
+  const label = (w) => `${h8(w.addr)}+${w.len}:${w.kind}`;
+  const describe = () => ({ trace: { pcs: traced.pcs.map((pc) => h8(notationOf(pc))), mem: traced.mem.map(label) },
+    break: { pcs: stops.pcs.map((pc) => h8(notationOf(pc))), mem: stops.mem.map(label) } });
+  const debugOp = (op, body) => {
+    const r = apply({ type: 'debug', op, ...body });
+    if (!r.debug?.ok) throw new SessionRefused(`${op}: ${r.debug?.error?.message ?? r.error ?? 'refused'}`);
+    return r.debug;
+  };
+  const sendArmed = (rec, probes, breaks) => {
+    if (!pl?.session) throw new SessionRefused(`no session to arm (${pl?.phase ?? 'none'}): restart first`);
+    if (breaks) {
+      const hooks = pl.session.lab?.hooks ?? new Map();
+      const hooked = stops.pcs.filter((pc) => hooks.has(pc)).map((pc) => `${h8(notationOf(pc))} (${hooks.get(pc)[1]})`);
+      if (hooked.length) throw new SessionRefused(`break: the lab's hook takes every stop at ${hooked.join(', ')}, so no debug stop can happen there; break at the caller, or trace: the pc (a hook's arrivals come as kind 'hook')`);
+      debugOp('break', { pcs: stops.pcs });
+      debugOp('watch', { list: stops.mem.map((w, i) => ({ id: i, addr: w.addr, len: w.len, kind: w.kind, action: 'stop' })) });
+    }
+    if (probes) {
+      const p = debugOp('probe', { pcs: traced.pcs, mem: traced.mem.map((w) => ({ addr: w.addr, len: w.len, kind: w.kind })) });
+      if (p.hooked.length) rec.hooked = p.hooked;
+    }
+    rec.armed = describe();
+  };
+  const arm = (st, rec) => {
+    const set = st.kind === 'trace' ? traced : stops, was = { pcs: [...set.pcs], mem: [...set.mem] };
+    if (st.kind === 'break' && !st.off && !source && !o.atStop) throw new SessionRefused('break: a debug stop runs the script\'s next tokens where it is held: run() (bin/session.mjs) or options.atStop gives them, a lone step() does not');
+    if (st.off) { set.pcs = []; set.mem = []; } else {
+      for (const a of st.pcs ?? []) { const pc = codePc(a, 'pc'); if (!set.pcs.includes(pc)) set.pcs.push(pc); }
+      if (st.mem) set.mem.push(st.mem);
+    }
+    try { sendArmed(rec, st.kind === 'trace', st.kind === 'break'); } catch (e) { set.pcs = was.pcs; set.mem = was.mem; throw e; }
+    armedLog.push({ step: rec.step, token: st.text });
+  };
+  // the probes' hits since the last record onto rec (at most HITS_PER_STEP, the rest counted), and their counts
+  const drain = (rec) => {
+    const L = pl?.live ?? null;
+    if (L === null || (armedLog.length === 0 && !L.hitLog.length && !L.hitDropped)) return;
+    const h = L.take_hits(HITS_PER_STEP);
+    const key = (k) => (k.startsWith('mem:') ? `mem ${traced.mem[Number(k.slice(4))] ? label(traced.mem[Number(k.slice(4))]) : k}` : k);
+    if (h.hits.length) rec.hits = h.hits.map((x) => (x.kind === 'mem' ? { ...x, range: traced.mem[x.range] ? label(traced.mem[x.range]) : x.range } : x));
+    if (h.dropped) { rec.hits_dropped = h.dropped; hitsDropped += h.dropped; }
+    const c = Object.entries(h.counts).map(([k, v]) => [key(k), v]);
+    if (c.length) rec.hit_counts = Object.fromEntries(c);
+    for (const [k, v] of c) hitTotals.set(k, (hitTotals.get(k) ?? 0) + v);
+  };
+  // the live route's holdStop: the firmware is held at a debug stop inside the tick of running's input; the record ends
+  // there, the script's next tokens run at the stop until resume (whose record carries the rest of that step), and the
+  // script's end or a failure there ends the run at the stop (StopEnd unwinds the tick: nothing runs after it)
+  const holdStop = (srec) => {
+    const rec = running, rt = Number(srec.regs.pc);
+    rec.stopped = { kind: srec.stop, pc: h8(notationOf(rt)), lab_ns: srec.lab_ns, regs: srec.regs,
+      ...(srec.watch ? { watch: { range: stops.mem[srec.watch.id] ? label(stops.mem[srec.watch.id]) : srec.watch.id, addr: srec.watch.addr, size: srec.watch.size, dir: srec.watch.dir, value: srec.watch.value, pc: h8(notationOf(Number(srec.watch.pc))) } } : {}) };
+    stopCount += 1;
+    held = { step: rec.step, token: rec.token, kind: srec.stop, pc: rec.stopped.pc, lab_ns: srec.lab_ns };
+    try {
+      complete(rec);
+      for (;;) {
+        const t = source ? source.next() : o.atStop ? o.atStop(rec) ?? null : null;
+        if (t === null) { ended = held; throw new StopEnd(); }
+        let st2;
+        try { st2 = parse(t); } catch (e) { stopError = e; ended = held; throw new StopEnd(); }
+        if (st2.kind === 'resume') {
+          const r = { step: records.length, token: st2.text, ok: true, resumed: { step: held.step, pc: held.pc } };
+          records.push(r);
+          running = r;
+          return;
+        }
+        const r = run(st2);
+        if (!r.ok) { ended = held; throw new StopEnd(); }
+      }
+    } finally { held = null; }
   };
 
   // the first session; a lab error during its boot is step 'open''s failure
@@ -558,7 +693,8 @@ export async function openSession(o = {}) {
     let cardRows = null;
     if (STORAGE) { try { cardRows = listing(); } catch (e) { if (BUG(e)) throw e; cardRows = { error: e.message }; } }
     return { summary: true, ok: failed === null, model: MODEL, patch: fw ? patchLine(fw.summary) : null, patch_audit: audit ?? startAudit, stand_ins: [...standins], pokes, harness_inputs: harness, calls,
-      card: cardRows, card_file: cardFile, nvram: nv.file, errors: [...errors], steps: records.length, failed };
+      card: cardRows, card_file: cardFile, nvram: nv.file, errors: [...errors], steps: records.length, failed,
+      traces: armedLog.length ? { armed: armedLog, now: describe(), counts: Object.fromEntries(hitTotals), hits_dropped: hitsDropped, stops: stopCount } : null, ended_at_stop: ended };
   };
   return {
     model: MODEL,
@@ -567,7 +703,15 @@ export async function openSession(o = {}) {
     get player() { return pl; },
     first: records[0],
     step: (t) => run(parse(t)),
-    run: (texts) => { const done = []; for (const t of texts ?? planned.map((x) => x.text)) { const r = run(parse(t)); done.push(r); if (!r.ok) break; } return done; },
+    run: (texts) => {
+      const list = texts ?? planned.map((x) => x.text), n0 = records.length, prev = source;
+      let i = 0;
+      source = { next: () => (i < list.length ? list[i++] : null) };      // a debug stop's tokens: the list's next ones
+      try {
+        while (i < list.length) { const r = run(parse(list[i++])); if (!r.ok || failed || ended) break; }
+      } finally { source = prev; }
+      return records.slice(n0);
+    },
     planned: planned.map((x) => x.text),
     input: (inp) => {
       if (inp?.type === 'debug' && (['write', 'setReg', 'setRegs'].includes(inp.op) || (inp.op === 'call' && inp.mem))) pokes.push({ step: records.length, token: 'input', input: inp });

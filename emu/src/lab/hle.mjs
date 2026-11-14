@@ -79,6 +79,9 @@ export class HLE {
     this.builtins_seen = 0;
     this.drained = 0;
     this.stubObserver = null;          // capture's on_stub patch (tracer)
+    // the debugger's exec probes (src/debug/debugger.mjs probes): (pc, name, regs) at a hook that answers in place of
+    // the firmware (not a pass-through observer, whose single step meets the machine's probe), or null
+    this.probeHook = null;
     this.coverage = env.machine?.coverage ?? null;     // the machine's coverage collector: every stand-in that fires
     // a patch overlay's changed bytes (env.patchRanges): a hook reached on them stops the run (src/lab/patchaudit.mjs)
     this.patch = env.patchRanges ? new PatchRanges(env.patchRanges, this.image) : null;
@@ -250,6 +253,7 @@ export class HLE {
       if (hook && !result.fault) {
         const [stub, name, pass] = hook;
         if (this.patch !== null) this.patch.refuseHook(pc, name, pass);
+        if (this.probeHook !== null && !pass) this.probeHook(pc, name, result);
         used += 1;
         if (this.coverage !== null) this.coverage.stub(pc, name);
         this.on_stub(name);

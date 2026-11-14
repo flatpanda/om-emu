@@ -24,8 +24,22 @@
 //   break {pcs}             the debug breakpoints ([] clears)
 //   watch {list}            as the protocol's; stopping entries need a host whose queue blocks (below); the log
 //                           entries carry lab_ns and n
-//   detach                  breakpoints, watchpoints and traces off, then run on: {state: 'running'}
-//   state                   {state, stops, breakpoints, watchpoints, waiting, routed, stop?: the record}
+//   detach                  breakpoints, watchpoints, traces and probes off, then run on: {state: 'running'}
+//   state                   {state, stops, breakpoints, watchpoints, probes, waiting, routed, stop?: the record}
+//   probe {pcs?, mem?}      the logging probes, the set replaced ({} or empty lists: off): pcs, code addresses whose
+//                           instructions are recorded as they are about to run (an address in the image's notation
+//                           range is taken as notation, as call's fn, and probed at run time; any other as run), and
+//                           the lab's hooks that answer at one of them in place of the firmware; mem [{addr, len,
+//                           kind: r|w|rw}], ranges whose CPU accesses are recorded (Debugger.probes: nothing of the
+//                           run changes); answers {pcs: [{pc, runtime}], mem: [{addr, len, kind}], hooked: [{pc, hook,
+//                           pass}]} (hooked: the armed pcs a lab hook holds now: a hook that is not a pass-through
+//                           observer answers there in place of the firmware, so its arrivals come as kind 'hook')
+//   hits {limit?}           the probes' hits since the last hits (kept across a session's close, so the hits of a
+//                           power-off are not lost), taken off the log: {hits: the first limit (default HITS_MAX)
+//                           [{kind: pc|hook|mem, pc, hook?, range?, addr?, size?, dir?, value?, regs, lab_ns}],
+//                           dropped (the hits beyond them: the log keeps the first HITS_MAX since the last take,
+//                           and counts the rest), counts {pc or 'mem:N': hits, each counted}}; pc in the disassembly
+//                           notation for an image address, regs as run
 //   tasks                   the kernel's tasks: [{tid, entry (disassembly notation), state, priority, sp (saved),
 //                           running}]
 //   standins {limit?}       the stand-in log: the last limit (default 100) harness stub calls by name (calls), the
@@ -51,17 +65,32 @@
 // the stop go: the breakpoints and stopping watchpoints are cleared, the tick runs to its end and the control runs in
 // its place in the queue; while halted, controls run at once. The host's stop (a signal) does the same.
 // routed: a debug stop waits inside the tick for the next input, which needs a blocking queue (the node host's
-// PortQueue); on a host whose queue does not block (the browser's Worker, a headless ArrayQueue) break, cont's stops
-// and stopping watchpoints are refused, and halt, the reads and log watchpoints remain.
+// PortQueue) or a host that holds the stop itself (host.holdStop); on a host with neither (the browser's Worker, a
+// headless ArrayQueue) break, cont's stops and stopping watchpoints are refused, and halt, the reads, log
+// watchpoints and probes remain.
 // host: {openSink, disasm, resolvePath} as the protocol's (the node host: host/debughost.mjs); without them trace and
-// disasm are refused. Worker-safe.
+// disasm are refused. holdStop(record) (the scripted session, host/session.mjs): a debug stop is held by calling it
+// with the stop's record (as cont answers it) instead of waiting on the queue; it runs debug inputs through the
+// Player's debug_input meanwhile, and when it returns the stop is let go as by resume (unless it was let go already).
+// Worker-safe.
 import { Debugger } from './debugger.mjs';
-import { Protocol, BadRequest, outcome, list, addr, count, watchList } from './protocol.mjs';
+import { Protocol, BadRequest, outcome, list, dict, addr, count, watchList } from './protocol.mjs';
 import { regsHex, hex8 } from './regs.mjs';
 import { TCB_SP } from '../lab/kernel.mjs';
 import { callSpec, runCall } from './call.mjs';
+import { IMAGE_BASE, IMAGE_END } from '../fw/model.mjs';
+import { BASE, runtime, disasm } from '../lab/hle.mjs';
 
-const RUN_CONTROL = new Set(['state', 'halt', 'cont', 'resume', 'step', 'break', 'watch', 'detach', 'tasks', 'standins', 'dml', 'pdt', 'ems1', 'call']);
+const RUN_CONTROL = new Set(['state', 'halt', 'cont', 'resume', 'step', 'break', 'watch', 'detach', 'tasks', 'standins', 'dml', 'pdt', 'ems1', 'call', 'probe', 'hits']);
+export const HITS_MAX = 10000;           // the probes' log: the first this many hits since the last take, the rest counted
+const KIND_NAMES = { r: 'r', w: 'w', rw: 'rw' };
+// A code address of a request: one in the image's notation range is taken as notation (call's fn), any other as run
+export function codePc(v, what) {
+  const a = addr(v, what);
+  return a >= BASE && a < BASE + (IMAGE_END - IMAGE_BASE) ? runtime(a) : a;
+}
+// A run-time pc in the disassembly notation when it is an image address, else as run
+export const notationOf = (pc) => ((pc >>> 0) >= IMAGE_BASE && (pc >>> 0) < IMAGE_END ? disasm(pc >>> 0) : pc >>> 0);
 const isControl = (inp) => inp !== null && typeof inp === 'object' && inp.type === 'control';
 const absent = (v) => v === undefined || v === null;
 const hexWatch = (w) => ({ ...w, addr: hex8(w.addr), hit: hex8(w.hit), value: hex8(w.value), pc: hex8(w.pc) });
@@ -79,8 +108,10 @@ export class LiveDebug {
     this.waiting = [];               // the conts answered at the next stop or halt: {inp, k0, deadline}
     this.stops = 0;                  // debug stops so far, this session
     this.let_go = null;              // why the last stop was let go without a cont (a control, the host's stop)
+    this.probes = null;              // the armed probes {pcs: [run-time pc], mem: [{lo, len, kind}]}, or null
+    this.hitLog = []; this.hitDropped = 0; this.hitCounts = new Map();   // since the last take (hits), across sessions
   }
-  get routed() { return this.player.q.canBlock === true; }
+  get routed() { return this.player.q.canBlock === true || typeof this.host.holdStop === 'function'; }
   // ---- the session
   // The debugger of the session now running (a new one after a restart).
   _attach() {
@@ -102,7 +133,7 @@ export class LiveDebug {
     try { this.proto._closeSinks(); this.dbg.close(); } catch { /* a machine a newer one replaced, or one stopped on a host error */ }
     if (this.sim.debug === this) this.sim.debug = null;
     this.lab = this.sim = this.dbg = this.proto = null;
-    this.pcs = new Set(); this.watches = [];
+    this.pcs = new Set(); this.watches = []; this.probes = null;
     this.halted = false; this.at = null; this.holding = false; this.stops = 0;
   }
   // The Simulator's hook is on only while a stop is armed (a debug breakpoint, a stopping watchpoint).
@@ -117,6 +148,7 @@ export class LiveDebug {
     const id = q.id ?? null;
     try {
       if (typeof q.op !== 'string') throw new BadRequest('a debug input has a string "op"');
+      if (q.op === 'hits') return { id, ok: true, ...this.take_hits(absent(q.limit) ? HITS_MAX : count(q.limit, 'limit')) };   // with or without a session
       this._attach();
       const r = RUN_CONTROL.has(q.op) ? this._op(q) : this.proto._op(q);
       return r === null ? null : { id, ok: true, ...r };
@@ -152,6 +184,10 @@ export class LiveDebug {
     this._answer(stop.kind);
     pl.set_phase('debug');
     try {
+      if (typeof this.host.holdStop === 'function') {
+        this.host.holdStop(this._record(stop.kind));
+        if (this.holding) this._run();
+      }
       while (this.holding) {
         if (pl.stopping()) { this._letGo('the host stops'); break; }
         if (!pl.q.canBlock) { this._letGo('the input queue does not block'); break; }
@@ -176,7 +212,7 @@ export class LiveDebug {
   _op(q) {
     switch (q.op) {
       case 'state': return { state: this.state_name(), stops: this.stops, breakpoints: [...this.pcs].map(hex8), watchpoints: this.watches.length,
-        waiting: this.waiting.length, routed: this.routed, ...(this.let_go ? { let_go: this.let_go } : {}),
+        probes: this.probes === null ? 0 : this.probes.pcs.length + this.probes.mem.length, waiting: this.waiting.length, routed: this.routed, ...(this.let_go ? { let_go: this.let_go } : {}),
         ...(this.at || this.halted ? { stop: this._record(this.at ? this.at.kind : 'halt') } : {}) };
       case 'halt':
         if (this.at || this.halted) return this._record(this.at ? this.at.kind : 'halt');
@@ -193,6 +229,7 @@ export class LiveDebug {
       case 'detach': {
         this.pcs = new Set(); this.watches = [];
         this.dbg.watch([]);
+        this.dbg.probes(); this.probes = null;
         this.proto._trace({ off: true });
         this._hook();
         this._answer('detach');
@@ -209,6 +246,7 @@ export class LiveDebug {
         this._hook();
         return { count: ws.length };
       }
+      case 'probe': return this._probe(q);
       case 'tasks': return this._tasks();
       case 'call': {
         const spec = callSpec(q);
@@ -248,9 +286,40 @@ export class LiveDebug {
       default: throw new BadRequest(`unknown op ${JSON.stringify(q.op)}`);
     }
   }
+  // ---- the probes (probe, hits)
+  _probe(q) {
+    const pcs = [...new Set(list(q.pcs ?? [], 'pcs').map((x, i) => codePc(x, `pcs[${i}]`)))];
+    const mem = list(q.mem ?? [], 'mem').map((w, i) => {
+      dict(w, `mem[${i}]`);
+      const kind = w.kind ?? 'w';
+      if (!Object.hasOwn(KIND_NAMES, kind)) throw new BadRequest(`mem[${i}].kind: 'r', 'w' or 'rw', got ${JSON.stringify(w.kind)}`);
+      const lo = addr(w.addr, `mem[${i}].addr`), len = count(w.len, `mem[${i}].len`, 1);
+      if (lo + len > 2 ** 32) throw new BadRequest(`mem[${i}]: ${hex8(lo)}+${len} runs past 32 bits`);
+      return { lo, len, kind };
+    });
+    this.dbg.probes({ pcs, mem }, (rec) => this._hit(rec));
+    this.probes = pcs.length || mem.length ? { pcs, mem } : null;
+    const hooked = [];
+    for (const pc of pcs) { const h = this.lab.hooks?.get(pc); if (h) hooked.push({ pc: hex8(notationOf(pc)), hook: h[1], pass: h[2] === true }); }
+    return { pcs: pcs.map((pc) => ({ pc: hex8(notationOf(pc)), runtime: hex8(pc) })), mem: mem.map((w) => ({ addr: hex8(w.lo), len: w.len, kind: w.kind })), hooked };
+  }
+  _hit(rec) {
+    const key = rec.kind === 'mem' ? `mem:${rec.range}` : hex8(notationOf(rec.pc));
+    this.hitCounts.set(key, (this.hitCounts.get(key) ?? 0) + 1);
+    if (this.hitLog.length < HITS_MAX) this.hitLog.push(rec); else this.hitDropped += 1;
+  }
+  // The probes' hits since the last take: the first limit as the hits op answers them, the rest counted as dropped
+  take_hits(limit = HITS_MAX) {
+    const log = this.hitLog, n = Math.min(limit, log.length);
+    const hits = log.slice(0, n).map((h) => ({ kind: h.kind, pc: hex8(notationOf(h.pc)), ...(h.kind === 'hook' ? { hook: h.hook } : {}),
+      ...(h.kind === 'mem' ? { range: h.range, addr: hex8(h.addr), size: h.size, dir: h.dir, value: hex8(h.value) } : {}), regs: regsHex(h.regs), lab_ns: h.lab_ns }));
+    const out = { hits, dropped: this.hitDropped + log.length - n, counts: Object.fromEntries(this.hitCounts) };
+    this.hitLog = []; this.hitDropped = 0; this.hitCounts = new Map();
+    return out;
+  }
   _needRouted(what) {
     if (!this.routed) {
-      throw new BadRequest(`${what}: a debug stop waits inside the session's tick for the next input, which this host's input queue cannot do (it does not block: the browser's Worker, a headless queue); halt, the reads and log watchpoints work here`);
+      throw new BadRequest(`${what}: a debug stop waits inside the session's tick for the next input, which this host's input queue cannot do (it does not block: the browser's Worker, a headless queue); halt, the reads, log watchpoints and probes work here`);
     }
   }
   _break(pcs, what) {

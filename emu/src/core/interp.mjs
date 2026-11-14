@@ -56,10 +56,36 @@ let BUILTIN = new Set();                             // the PERF2 builtin pcs of
 // The last TB start the run loop knows of (refusal c): its pc and the insns count of its first instruction, kept
 // across a budgeted continue's slices.
 let TB_PC = 0, TB_AT = 0;
+// The debugger's exec probes (setProbes): PROBE_FN(pc) right before the instruction at a pc of PROBE runs, with
+// nothing else changed: no stop, no TB end, no look, no decode kind (the probe pcs join BPH, the filter the run loop
+// already tests before every instruction, so the probes cost nothing while none is set and only a set lookup at a
+// filter hit while some are). It is called at the arrival, before the instruction's fetch: an arrival at a breakpoint
+// or at the budget or the insn limit calls nothing (the instruction does not run there), one whose fetch then faults,
+// is refused (S-STALERAM's guard) or leaves for a look first (code from a device, a faulting fetch with a request
+// pending) is called all the same, and one that comes back with the same insns count is not called again (P_PC,
+// P_N). A single step calls it too (probeStep, from the machine's step).
+const PROBE = new Set();
+let PROBE_FN = null, P_PC = -1, P_N = -1;
+function markProbes() { for (const pc of PROBE) BPH[pc & 0xffff] = 1; }
+export function setProbes(list, fn) {
+  PROBE.clear(); PROBE_FN = null; P_PC = -1; P_N = -1;
+  if (fn !== null) { for (const pc of list) PROBE.add(pc | 0); if (PROBE.size) PROBE_FN = fn; }
+  BPH.fill(0);
+  for (const b of BP) BPH[b & 0xffff] = 1;
+  if (WATCH !== -1) BPH[WATCH & 0xffff] = 1;
+  markProbes();
+}
+function probeAt(pc) {
+  if (pc === P_PC && S.insns === P_N) return;
+  P_PC = pc; P_N = S.insns;
+  PROBE_FN(pc >>> 0);
+}
+export function probeStep() { if (PROBE_FN !== null && PROBE.has(R[PC])) probeAt(R[PC]); }
 export function setBreakpoints(list) {
   BP.clear(); BPH.fill(0);
   for (const pc of list) { BP.add(pc | 0); BPH[pc & 0xffff] = 1; }
   if (WATCH !== -1) BPH[WATCH & 0xffff] = 1;
+  markProbes();
 }
 // At the start of every continue: the gate-1 pc to watch (-1: none) and the builtin pcs.
 export function setWatch(pc, builtins) {
@@ -70,6 +96,7 @@ export function setWatch(pc, builtins) {
   BPH.fill(0);
   for (const b of BP) BPH[b & 0xffff] = 1;
   if (WATCH !== -1) BPH[WATCH & 0xffff] = 1;
+  markProbes();
 }
 const isBP = (pc) => BPH[pc & 0xffff] !== 0 && BP.has(pc);
 // ---- per-core state (src/core/cores.mjs, createMachine's cores option): the breakpoints, the watched gate pc, the
@@ -90,6 +117,7 @@ export function setCoreInterp(s) {
   for (const pc of s.bp) { BP.add(pc | 0); BPH[pc & 0xffff] = 1; }
   WATCH = s.watch; BUILTIN = s.builtin;
   if (WATCH !== -1) BPH[WATCH & 0xffff] = 1;
+  markProbes();
   TB_PC = s.tbPc; TB_AT = s.tbAt; TB_START = s.tbStart; LOOKED_PC = s.lookedPc; LOOKED_N = s.lookedN;
   for (const i of localSlots) if ((ctag[i] >>> 16) === LOCAL_PAGE) dropSlot(i);
   localSlots.length = 0;
@@ -203,6 +231,7 @@ const cslots = new Map();
 export function resetInterp() {
   CODECH = new Uint8Array((TOTAL >>> CHUNK) + 1);
   cslots.clear(); ctag.fill(-1); ckind.fill(K.FB); cch0.fill(-1); cch1.fill(-1); BP.clear(); BPH.fill(0);
+  PROBE.clear(); PROBE_FN = null; P_PC = -1; P_N = -1;
   WATCH = -1; BUILTIN = new Set(); MUT = 0; ONE = false; TB_PC = 0; TB_AT = 0; SEGS = new Set([0x17]); FORCE_FB = false;
   LOCAL_PAGE = -1; localSlots.length = 0;
   setSmcHook(invalidateChunk);
@@ -442,6 +471,7 @@ export function run(budget = Infinity, resumed = false) {
       if (BPH[pc & 0xffff] !== 0) {
         if (BP.has(pc)) return RUN_BP;
         if (pc === WATCH && S.insns !== i0) watchArrival(pc, tbPc, tbAt);  // refusal (c): a plain arrival
+        if (PROBE_FN !== null && S.insns < lim && PROBE.has(pc)) probeAt(pc);   // before the fetch (setProbes)
       }
       if (S.insns >= lim && !(MUT === 4 && S.insns < bud && inlineAt(pc))) { TB_PC = tbPc; TB_AT = tbAt; return RUN_LIMIT; }
       if (((R[HAZ] !== 0 || S.irqWait) && MUT !== 5) || S.insns > near) {    // one-instruction TB

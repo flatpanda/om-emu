@@ -15,7 +15,9 @@
 //                   a second restart (no power:off) does not, a call over its budget exits 1, with --loaded on a call
 //                   into a gap refused and a callee that reaches one ending the run (the session cannot go on), an
 //                   --out it cannot make and a shot it cannot write exit 1 with the reason on one line, a control the
-//                   model lacks is a usage error. E147 (bin/test.mjs runs it in a child with OM_EMU_MODEL=E147): a
+//                   model lacks is a usage error; the module API's input(): a harness token (SET:) and a call sent
+//                   through it are listed in the summary (harness_inputs, calls, via 'input'), a read and a call that
+//                   fails (over its budget) are not. E147 (bin/test.mjs runs it in a child with OM_EMU_MODEL=E147): a
 //                   synthetic om3-patch-2 file the test writes (16 bytes of the main block's 0xFF padding at 0x107f00,
 //                   in the tail of the reset head's first copy, loaded, never run) as --patch: the patched and audit
 //                   start lines, S-SECLOADED and S-STALERAM, the
@@ -218,6 +220,18 @@ async function e143({ ok }, { T, newCard, step, sameFile, hello }) {
   // control: a control the model does not have is a usage error before the boot
   const u = cli(['--model', 'E143', 'no_such_key']);
   ok(u.rc === 2 && /no_such_key: E143 has no control "no_such_key"/.test(u.err) && !u.lines.length, `E143 control: an unknown control: rc ${u.rc} ${u.err.slice(0, 200)}`);
+  // the module API's input(): what changes the camera or runs its code is listed as the tokens' are; controls: a read
+  // and a call that fails are not
+  const { openSession } = await import('../host/session.mjs');
+  const m = await openSession({ model: 'E143', nvram: 'off' });
+  m.step('wait:500');
+  const set = m.input({ type: 'token', token: 'SET:1037=0' }), got = m.input({ type: 'debug', op: 'call', fn: 0x503c49ab, regs: { d0: 1037 } });
+  const rd = m.input({ type: 'debug', op: 'read', addr: Number(MASK), size: 4 }), over = m.input({ type: 'debug', op: 'call', fn: 0x503c49ab, regs: { d0: 24 }, limit: 5 });
+  const ms = m.close();
+  ok(set.record?.kind === 'set' && got.debug?.ok === true && got.debug.regs.d0 === '0x00000000' && JSON.stringify(ms.harness_inputs) === '[{"step":2,"token":"SET:1037=0","via":"input"}]',
+    `E143 input(): a harness token listed: ${JSON.stringify(set.record ?? set).slice(0, 160)} | ${JSON.stringify(ms.harness_inputs)}`);
+  ok(rd.debug?.ok === true && over.debug?.ok === false && JSON.stringify(ms.calls) === '[{"step":2,"fn":"0x503c49ab","via":"input"}]' && ms.pokes.length === 0,
+    `E143 input(): the call listed, the read and the failed call not: ${JSON.stringify(ms.calls)} ${JSON.stringify(ms.pokes)} | ${JSON.stringify(over.debug).slice(0, 160)}`);
 }
 
 async function e147({ ok }, { T, newCard, step, sameFile, hello }) {

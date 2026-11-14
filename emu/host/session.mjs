@@ -27,7 +27,9 @@
 //   step(text)   one token -> {step, token, ok, phase, lab_ns, gui, frame, ...its result, error?}; after a failed step
 //                (a firmware or lab error, a refused input, a failed expect) the session takes no more steps
 //   run(texts)   the tokens in order until one fails; their records
-//   input(inp)   one raw input as POST /api/input takes it (a debug write among them is a poke), its result
+//   input(inp)   one raw input as POST /api/input takes it, its result; listed in the summary as the tokens' are
+//                (a debug write, setReg(s) or call with mem among pokes, a harness token among harness_inputs, a
+//                call that ran among calls; a poke's token is 'input', the others' entries have via 'input')
 //   status()     the Player's status document (play's GET /api/status)
 //   summary()    {summary, ok, model, patch, patch_audit, stand_ins, pokes, harness_inputs, calls, card, nvram, errors,
 //                steps, failed}
@@ -336,6 +338,9 @@ export async function openSession(o = {}) {
   const open = (positions = null) => {
     sessionNo += 1;
     frame = null;
+    if (out) {                                     // a companion an earlier run left would start this session's replay there
+      try { fs.unlinkSync(path.join(out, `session-${sessionNo}.carried.json`)); } catch (e) { if (e.code !== 'ENOENT') throw new SessionRefused(`--out ${out}: cannot clear session-${sessionNo}.carried.json (${e.code ?? e.message})`); }
+    }
     pl = new Player(a, envFor(sessionNo));
     pl.off_positions = positions;
     pl.open_session();
@@ -513,7 +518,10 @@ export async function openSession(o = {}) {
     planned: planned.map((x) => x.text),
     input: (inp) => {
       if (inp?.type === 'debug' && (['write', 'setReg', 'setRegs'].includes(inp.op) || (inp.op === 'call' && inp.mem))) pokes.push({ step: records.length, token: 'input', input: inp });
-      return apply(inp);
+      const res = apply(inp);
+      if (inp?.type === 'token' && typeof inp.token === 'string' && HARNESS_TOKEN.test(inp.token)) harness.push({ step: records.length, token: inp.token, via: 'input' });
+      if (inp?.type === 'debug' && inp.op === 'call' && res.debug?.ok) calls.push({ step: records.length, fn: res.debug.fn.notation, via: 'input' });
+      return res;
     },
     status: () => pl.status_doc,
     summary,

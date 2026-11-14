@@ -11,8 +11,8 @@
 // env: the lab env (rom, resBlock, createHash, beginSession, ...) plus wallClock() (monotonic seconds:
 // the wall-clock fields, which the recordings strip, the 0.3 s page-order deadline, and under --idle wall the pacing and
 // touch_gap's user gap when the page sends no t_client), logSink(name, text) (session.jsonl / session.json; optional),
-// readReplay(path) (the --replay file's text, and for a .jsonl the S-NVRAM record beside it: a missing one throws
-// an error whose code is 'ENOENT', replayNvramRecord), and for a host that publishes (the browser player):
+// readReplay(path) (the --replay file's text, and for a .jsonl the S-NVRAM record and the controls' start positions
+// beside it: a missing one throws an error whose code is 'ENOENT', replayNvramRecord, replayCarried), and for a host that publishes (the browser player):
 // onStatus(doc) after
 // every published status, onFrame(w, h, raw, meta) after every published frame (raw: the composite's little-endian
 // words, valid only during the call; meta {seq, device, lab_ns, sha16}), and asyncHost (true: an input that overtook its
@@ -273,6 +273,31 @@ export function replayNvramRecord(file, text, read) {
   return nvramRecord(rec, side);
 }
 
+// A --replay file's record of where the physical controls stood at its first session's start (the status's carried:
+// a host that opens a Player per power-on, host/session.mjs, starts one after power:off with the positions the off
+// left): session.json's carried field; for a session.jsonl, the session.carried.json beside it (open_session writes
+// it at the first session's start). null: a start at the idle positions (no field, no companion). The shape is
+// checked here, the positions against the body by PlaySession (play.mjs carried).
+export function replayCarried(file, text, read) {
+  const name = String(file).split('/').at(-1);
+  let rec, where = file;
+  if (name.endsWith('.json') && name !== '.json') {
+    let doc;
+    try { doc = JSON.parse(text); } catch { return null; }          // replayEntries reports it
+    if (!isDict(doc) || doc.carried === undefined) return null;
+    rec = doc.carried;
+  } else {
+    where = String(file).replace(/(\.jsonl)?$/, '.carried.json');
+    let t;
+    try { t = read(where); } catch (e) { if (e?.code === 'ENOENT') return null; throw e; }
+    try { rec = JSON.parse(t); } catch (e) { throw new ValueError(`--replay ${file}: ${where}: ${e.message}`); }
+  }
+  const keys = ['mode_dial', 'creative_dial', 'lever'];
+  if (!isDict(rec) || !Object.keys(rec).every((k) => keys.includes(k) && Number.isInteger(rec[k])) || !Number.isInteger(rec.mode_dial))
+    throw new ValueError(`--replay ${file}: ${where === file ? 'its carried field' : where} ${show(rec)}: the controls' start positions ({mode_dial, creative_dial or lever}, integers)`);
+  return rec;
+}
+
 export class Player {
   constructor(a, env) {
     this.a = a;
@@ -331,6 +356,8 @@ export class Player {
     this.live = null;                // the live debug route (debug_input), made at the first debug input
     this.patch_audit = null;         // a patch overlay's audit (open_session), and the patch's tasks started in any session
     this.off_positions = null;       // the physical controls' positions the power lever's off left, for the next power-on (power)
+    this.carried_record = null;      // where the first session's controls started (off_positions then): session.json's carried
+    this.opened = false;             // a session was opened (the first one's start is the log's)
     this.patch_tasks = new Set();
     this.audio = new AudioRing();    // the sessions' sound as published (publish_audio), for GET /api/audio
     if (env.flags) {                 // the node host: stop and signalled live in shared memory (host/labworker.mjs)
@@ -369,6 +396,11 @@ export class Player {
     this.set_phase('starting');
     const tab = a.tab.split(',').map(decimalInt);
     if (tab.length !== 3 || tab.includes(null)) throw new ValueError(`--tab ${show(a.tab)}: three integers T,P,C`);
+    if (!this.opened) {                        // the log's start: a replay starts its first session there (replayCarried)
+      this.opened = true;
+      this.carried_record = this.off_positions;
+      if (this.off_positions !== null) this.env.logSink?.('session.carried.json', JSON.stringify(this.off_positions));
+    }
     const s = new PlaySession(this.env, { opts: this.opts(), lang: a.lang, device: a.device, start: tab, out: `${a.out}/shots`, tag: 'play',
       a15: (a.a15 ?? 'auto') === 'on' });
     // env.onPlaySession (the session replayer's recorder): the session and its lab as they stand right
@@ -775,6 +807,8 @@ export class Player {
     if (text !== null) {
       const rec = replayNvramRecord(this.a.replay, text, (p) => this.env.readReplay(p));
       this.nvram_use(rec ? replayNvram(rec, `the log ${this.a.replay}`) : null);
+      // and its controls from where the log's first session's started (a power-on after power:off), else the idle ones
+      this.off_positions = replayCarried(this.a.replay, text, (p) => this.env.readReplay(p));
     }
     this.replaying = replay !== null;
     try { this.open_session(); } catch (e) {
@@ -1203,7 +1237,8 @@ export class Player {
     const doc = { args, stand_ins: this.stand_ins_in_use(), assumptions_in_use: frames ? { A15: { frames, mode: this.a.a15 ?? 'auto' } } : {}, inputs: this.log,
       ...(this.env.patch ? { patch: this.env.patch } : {}),        // the patch overlay the firmware ran with (src/fw/patch.mjs)
       ...(this.patch_audit ? { patch_audit: this.patch_audit_doc() } : {}),   // and its audit (src/lab/patchaudit.mjs)
-      ...(this.nvram_record ? { nvram: this.nvram_record } : {}) };  // S-NVRAM: what each session started from (--replay)
+      ...(this.nvram_record ? { nvram: this.nvram_record } : {}),    // S-NVRAM: what each session started from (--replay)
+      ...(this.carried_record ? { carried: this.carried_record } : {}) };   // the first session's controls (--replay)
     if (this.env.logSink) this.env.logSink('session.json', JSON.stringify(doc));
   }
   // --replay: the logged inputs at their lab times (idle off between them); internal entries post the touch gestures at

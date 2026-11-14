@@ -66,7 +66,10 @@ controls keep their positions across the power-off too: a power-on after the pow
 lever, `{"type": "control", "op": "power"}`, `bin/session.mjs`'s `restart` after `power:off`) starts the mode dial,
 the creative dial (E147) and the Fn lever (E143) where the closing session left them, before the start reads them,
 and the status names them (`carried`, e.g. `{"mode_dial": 8, "lever": 1}`; X, `test/test_cdial.mjs`); a restart, a
-`camapp` control and every first start are fresh, at the idle positions. Other switches (the monitor, `rotate`)
+`camapp` control and every first start are fresh, at the idle positions. `bin/session.mjs` opens a new session log
+per `restart`, so a log whose first session started from carried positions records them (`session.json`'s `carried`,
+and `session.carried.json` beside `session.jsonl`), and its `--replay` starts the controls there again (X,
+`test/test_cdial.mjs` on E147, with the record dropped as the control). Other switches (the monitor, `rotate`)
 start at their idle levels after any power-on. `bin/play.mjs`
 keeps one JSON file per model, `~/.om-emu/nvram-<model>.json` (`nvram-E143.json`, `nvram-E146.json`, ...), and its
 startup line names the file in use. `--nvram off` (or `OM_EMU_NVRAM=off`) runs a blank camera at each start and leaves
@@ -933,7 +936,7 @@ it, checked on a copy first as play's; `--card-get DOS/PATH=LOCAL` (repeatable) 
 `--nvram off|FILE` is **off by default**, unlike play's: a scripted verification starts from a blank camera (S-SETSAVE)
 unless it names a file, where the camera's settings and clock are then kept between sessions and runs (S-NVRAM; a file
 of another model is refused). `--settle MS` (default 600) is the lab time after a press, a dial step or a switch.
-`--out DIR` gets each session's log (`session-N.json`, `.jsonl`, `.nvram.json`, the forms `--replay` reads), and the
+`--out DIR` gets each session's log (`session-N.json`, `.jsonl`, `.nvram.json`, `.carried.json` after `power:off`, the forms `--replay` reads), and the
 relative paths of the tokens resolve against it. `--script FILE` (repeatable) gives tokens before those of the command
 line. Each script line and each argument is split at white space; a double-quoted part keeps its spaces
 (`expect:exif:DCIM/100OMSYS/*.JPG:ImageDescription~"FILM 1"`), and `#` at a token's start comments out the rest of the
@@ -988,8 +991,10 @@ runs, and nothing is retried or swallowed.
 `creativeDial`, `settle`, `out`, `tokens`, `say`) and the session's `step(token)`, `run(tokens)`, `input(json)`,
 `status()`, `summary()` and `close()`; its errors `TokenError` (a usage error) and `SessionRefused`; the token grammar
 above; the fields of the step records and of the summary named above; `bin/session.mjs`'s options, output and exit
-status. `input(json)` takes what `POST /api/input` takes, and a debug `write`, `setReg`, `setRegs` or a `call` with
-`mem` through it is a poke too. A field may be added; one named here is not removed or changed in meaning without a
+status. `input(json)` takes what `POST /api/input` takes, and the summary lists what goes through it as it lists the
+tokens: a debug `write`, `setReg`, `setRegs` or a `call` with `mem` is a poke, a harness token (`EV:`, `SET:`,
+`CLOCK:`, `XCALL:`, `OPEN`, `CLOSE`) is in `harness_inputs` and a call that ran is in `calls`, the last two with
+`via: "input"`. A field may be added; one named here is not removed or changed in meaning without a
 note here. Not part of the contract: the lab's internals (`src/`, `scenarios/`, the Player's other fields), the play
 status document beyond what the records copy from it, and the stand-in lists' contents, which follow the lab.
 
@@ -999,7 +1004,8 @@ read back, the loaded mask, the settings getter called, S2's Exif, a shot, `powe
 restored, the card kept, the mode dial and the Fn lever carried by a restart after `power:off` and not by one
 without it, a write reported as a poke; a failed expect exiting 1 with nothing after it, a restart with `--nvram off`
 restoring nothing, a call over its budget, with `--loaded on` a call into a gap refused and a callee that reaches one
-ending the run, an `--out` it cannot make and a shot it cannot write, an unknown control) and on E147 with a synthetic
+ending the run, an `--out` it cannot make and a shot it cannot write, an unknown control, and `input()`'s harness
+token and call listed in the summary, a read and a failed call not) and on E147 with a synthetic
 `om3-patch-2` file (S-SECLOADED and S-STALERAM, the patched bytes at run time, the creative dial's setting by the
 getter, S2's Exif, the restart with the dial still where it was; and a run past section 10's loaded end reported by
 the audit and read as the fill).

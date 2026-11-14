@@ -7,9 +7,14 @@
 //                 session started with creative_dial 3 (the browser's ?creative_dial=3, web/args.mjs) reads 899 from the
 //                 start, and the browser's ?creative_dial= empty or 'x' is refused, not position 0; turned to 3, the
 //                 power lever off and the camera powered on again (control power), the new session starts at 3 and
-//                 reads 899, its status naming the positions carried. Controls: with the mutant cdial-reversed (the
+//                 reads 899, its status naming the positions carried; a Player opened on the positions that off left
+//                 (as bin/session.mjs's restart opens one) records them in its session.json (carried) and beside its
+//                 session.jsonl (session.carried.json), and --replay of either log (Player.run) starts the dial at 3
+//                 (899) again. Controls: with the mutant cdial-reversed (the
 //                 entries in reverse order) position 0 sets the last entry's family, a position past the dial's last is
-//                 refused, and a control restart after the power-off is a fresh start at 1 (901). E143 (bin/test.mjs's
+//                 refused, a control restart after the power-off is a fresh start at 1 (901), and the same replays with
+//                 the carried field or the companion dropped start at 1 (901); a malformed carried record is refused,
+//                 not taken. E143 (bin/test.mjs's
 //                 process): the dial is not wired, and an input or a start position for it is refused with the reason;
 //                 the mode dial and the Fn lever moved, the lever off and power on: both where they were (the status,
 //                 the lever's bit, the firmware's dial index), and at their idle positions after a restart
@@ -23,7 +28,7 @@ export async function cdialSession() {
   const ok = (cond, what) => { checks++; if (!cond) bad.push(what); };
   const { MODEL } = await import('../src/fw/model.mjs');
   const { loadImage, loadBlock, loadNand, createHash } = await import('../checks/lib/env.mjs');
-  const { Player } = await import('../src/lab/player.mjs');
+  const { Player, replayCarried } = await import('../src/lab/player.mjs');
   const { PLAYER_PARSER } = await import('../scenarios/session_replay.mjs');
   const { BY_ID, Tables } = await import('../src/lab/play.mjs');
   const { PlayApi } = await import('../src/lab/playapi.mjs');
@@ -121,6 +126,49 @@ export async function cdialSession() {
   s().idle_slice(s().lab.lab_time() + 1500e6);
   ok(s().status().creative_dial === 1 && s().get(FAMILY) === 901 && !('carried' in s().status()), `control: a restart after the off: position ${s().status().creative_dial}, family ${s().get(FAMILY)}`);
   pl.close_session();
+  // a Player per power-on (bin/session.mjs's restart, host/session.mjs): the next one opened on the positions the off
+  // left; its logs record them, and --replay of either log (Player.run's start) starts the dial there again
+  pl = open();
+  turn({ type: 'switch', id: 'creative_dial', value: 3 });
+  pl.power('off');
+  const left = pl.off_positions, files = new Map();
+  const sink = (name, text) => files.set(name, (name.endsWith('.jsonl') ? files.get(name) ?? '' : '') + text);
+  const p2 = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true }, { ...env, logSink: sink });
+  p2.off_positions = left;
+  p2.open_session();
+  p2.session.idle_slice(p2.session.lab.lab_time() + 1500e6);
+  const second = [p2.session.status().creative_dial, p2.session.get(FAMILY)];
+  p2.close_session();
+  p2.write_log();
+  const logged = JSON.parse(files.get('session.json') ?? '{}');
+  ok(second.join() === '3,899' && JSON.stringify(logged.carried) === JSON.stringify(left) && files.get('session.carried.json') === JSON.stringify(left),
+    `the second Player: position ${second[0]}, family ${second[1]}; session.json carried ${JSON.stringify(logged.carried)}, session.carried.json ${files.get('session.carried.json')}, want ${JSON.stringify(left)}`);
+  // --replay through Player.run (a quit queued behind the replay), the dial and the family read before its close
+  const replay = (name, texts) => {
+    const p = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, replay: `log/${name}` },
+      { ...env, readReplay: (f) => { const k = f.split('/').at(-1); if (!texts.has(k)) throw Object.assign(new Error(`${f}: none`), { code: 'ENOENT' }); return texts.get(k); } });
+    let got = null;
+    const close = p.close_session.bind(p);
+    p.close_session = () => {
+      if (p.session !== null && got === null) { p.session.idle_slice(p.session.lab.lab_time() + 1500e6); got = [p.session.status().creative_dial, p.session.get(FAMILY)]; }
+      close();
+    };
+    p.submit({ type: 'control', op: 'quit' });
+    p.run();
+    return got?.join() ?? 'none';
+  };
+  const { carried: _, ...dropped } = logged;
+  const r = {
+    json: replay('session.json', new Map([['session.json', files.get('session.json')]])),
+    jsonl: replay('session.jsonl', new Map([['session.jsonl', files.get('session.jsonl') ?? ''], ['session.carried.json', files.get('session.carried.json')]])),
+    json_dropped: replay('session.json', new Map([['session.json', JSON.stringify(dropped)]])),
+    jsonl_alone: replay('session.jsonl', new Map([['session.jsonl', files.get('session.jsonl') ?? '']])),
+  };
+  ok(r.json === '3,899' && r.jsonl === '3,899', `--replay of the second Player's logs: session.json ${r.json}, session.jsonl ${r.jsonl}; want 3,899`);
+  ok(r.json_dropped === '1,901' && r.jsonl_alone === '1,901', `control: the replays without the record start at the idle position: session.json without carried ${r.json_dropped}, session.jsonl alone ${r.jsonl_alone}; want 1,901`);
+  ok(throwsLike(() => replayCarried('s.json', JSON.stringify({ carried: { mode_dial: 2, creative_dial: '3' } }), null), /its carried field .*integers/) === true &&
+    throwsLike(() => replayCarried('s.jsonl', '', () => '[2]'), /s\.carried\.json .*integers/) === true,
+    'control: a malformed carried record refused');
   // control: the dial's entries taken in reverse order (the mutant cdial-reversed): position 0 sets the last entry's
   // family, which the check above would refuse
   pl = open({ x_mutant: 'cdial-reversed' });

@@ -4008,7 +4008,10 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   +10504..+10521, X: a write watch), and the EXIF set, which reads the picture mode, writes the maker notes'
   PictureMode (2 2, before 0 2) and ToneLevel. Caduceus for OM-3 v0.29 at COLOR now runs its `.hook_su` (the
   stub's call replaced by a jump to its code, which calls the stock set-up `0x504987bb`) once per S2 and still writes
-  its picture with the film's ImageDescription (X, `test_stillsetup.mjs --caduceus`).
+  its picture with the film's ImageDescription (X, `test_stillsetup.mjs --caduceus`). Golden's keys session, whose
+  S2 now takes Command 16's path, changed in its devices layer (the instruction counts at which the later interrupts
+  are taken; screen and output unchanged): X, with Command 16 left out its devices layer is the earlier recording's;
+  re-recorded 2026-11-14 with evidence firmware.
 - **Corrects.** 4.3.9's "the others ... by the request's bytes +37, +42 and +8, are not read": read above. A scout's
   note of the same day put the code at `0x50496710` inside the constructor `0x50496707`; it is the second step's
   own stub (E143 `0x504953c2`), taken for byte +8 1 or bit 19, not for the option byte.
@@ -5326,6 +5329,13 @@ on all three bodies by `emu/test/test_bootstage.mjs` (X: the same sequence of co
   section 6's, or run_static_ctors not run: `0x1f`) and the image's boot job with its own controls. In an E143 session
   of S1, S2, the menu, playback, INFO and power:off none of the tests above ran after the open (X: a trace of their
   call sites, 0 hits; the same trace counted 1,743 calls of the settings getter in a menu flow).
+- **A reader the EVF reaches (E143's addresses).** `0x50023b4c` tests stage 2 (`0x50024dcf` with 2): with the bit set
+  it reads property 270 through `0x503ee3bf`, the lab's prop_get hook, without it setting 12433 through `0x500417da`
+  (D). Sessions that start on the EVF or switch the display reach it: the golden sessions evf-idle, eye-burn,
+  switch-shoot, switch-scp and tokens-3b and check_nav's N8 (its two switch steps' hook counts, 155 and 142 before, 158
+  and 143 now) take the property path since this change (X; re-recorded 2026-11-14, evidence firmware; control: with
+  the bit cleared they matched the earlier recording but for the harness layer). Their screens and devices layers are
+  unchanged; the output layer moved with the stand-in counts.
 - **caduceus-om3's power-on load.** `0x2e9` is stages 1, 4, 6, 7, 8 and 10. The lab's `0x7f` lacks 8 and 10 (bits 7
   and 9): section 8's step, its six constructors on CPU 1, and section 10's step, posted after the wait for stage 8.
   So that worker still waits and their pins stand (the half press loads the films). It would run once CPU 1 runs

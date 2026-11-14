@@ -129,9 +129,9 @@ STEP N7 07-OPEN page panel 329 hooks 2353 sets 11 engine 92
 STEP N7C 00-OPEN page panel 329 hooks 9676 sets 192 engine 229
 STEP N8 00-OPEN page panel 329 hooks 9676 sets 192 engine 229
 STEP N8 01-SHOT page panel 329 hooks 1 sets 0 engine 0
-STEP N8 02-SWITCH:evf page panel 329 hooks 155 sets 0 engine 0
+STEP N8 02-SWITCH:evf page panel 329 hooks 158 sets 0 engine 0
 STEP N8 03-SHOT page panel 329 hooks 1 sets 0 engine 0
-STEP N8 04-SWITCH:tft page panel 329 hooks 142 sets 0 engine 0
+STEP N8 04-SWITCH:tft page panel 329 hooks 143 sets 0 engine 0
 STEP N8 05-SHOT page panel 329 hooks 1 sets 0 engine 0
 STOP N3 MENU: index 23: event storm: more than 810 GESetEvent calls in step 11-MENU; awaited 0x9ac6
 STORE N1 K-CFLUSH [["0x5004086a", 4]] replies [["0x5005a86c", "1c020080"]] requests 3 SCPU commands [["0x20041001", "0x5004e35f", 1]]

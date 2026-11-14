@@ -33,13 +33,13 @@
   "evf-idle": {
    "screen": "572fdf685e9ba1f6dc47ec2250b40713db5e494af183de714a81672c3b693068",
    "devices": "ea58d808088c15f196bad89b4aa970cc45b62ff3e04292430ddd9fe0020fd064",
-   "stops": "ba71af18f36a1e8a1de7f868cdb6db883d9d4092aa5ddddeb2259cbe439c37a1",
-   "harness": "73d2f104377374580b326b6c11ec2e94b9939ccf6a649e06c3598bd55106c4f3",
-   "output": "cf575a5b260cf2027e1cf4367d4940c67b903645e55b5302371bbcaa693795c4",
+   "stops": "a5d964715034336fffcd21c2420e64295a3e50c21cab1e31882e6c75dbc78af5",
+   "harness": "d01c0f2b24fcfab535bbecc5f2967e08e2541089a68852bf4b60d6d48eebdb04",
+   "output": "1575e81c459209b200cec919b7fee4faaea64ec3bc626e153ddd038cac0acc72",
    "items": {
     "screen": 3,
     "devices": 13098,
-    "stops": 170951,
+    "stops": 170955,
     "harness": 8,
     "output": 3
    }
@@ -47,13 +47,13 @@
   "eye-burn": {
    "screen": "2c30c7fcc8d09e5ce0cc116295191e5cfb7c19db80d86cf525ab8cba574d18fc",
    "devices": "24ad63750aed34065d1b9fbbcf3a38d45fac523812314d909e01984d1cd06d12",
-   "stops": "5cc27303f3a1a501cfd22b3ed206934499a01506f1f7b3c89e93cd0074b453b4",
-   "harness": "fa4a41f31c83635d7ab4e567a8d7a14a50739bcbd860581616ce5087addcae6b",
-   "output": "3ef16cbe00045c5758da618dec968eec2fb822d1b1f9250e596bcb13f643a664",
+   "stops": "1c084638a7181ddc6d62a6b5531477e10a2f7383211db4aa0ac156107e9fac92",
+   "harness": "d0f5e326ca0bcbd562c55a274f28bde55e66865359d49426a016aced94bc51b7",
+   "output": "e8015478bef536da4afeea36d6b9ba9924f399fe986d817f4b9cf9946976cf33",
    "items": {
     "screen": 6,
     "devices": 25283,
-    "stops": 342196,
+    "stops": 342204,
     "harness": 8,
     "output": 3
    }
@@ -158,14 +158,14 @@
   },
   "keys": {
    "screen": "c37fae5555e100f0b056e18220c0f572e0c814f4353d63eb40e82128017b93dd",
-   "devices": "754b89689c8de404be7b451f328b0756484d43684f882d1315ea19789791bb99",
-   "stops": "d55bcab86702099c851427c704d14571d4fd27b347d8d4bc3c641d8f42c0cb0e",
-   "harness": "3f6a4a92a87eb1a8a30b5d2239ff7fb961aeb2d7cf06448de7d56cda812afe43",
+   "devices": "587c848ed9aec0e0a00b21d18e7b1aa42bc3569523dc2aac6da11e40d03b31f7",
+   "stops": "5c13c33b715ac2fb3fdc3b049412f241c733d3f0ebb40710615367e06bd4ec60",
+   "harness": "c59fe089576b556e6715a40476ab94818a8cd913054baf1a88375b6015e36738",
    "output": "9079d88d15458c9135b1a0c0989ec7a4cf2e3b0df333fe2c97f35ca943d1f360",
    "items": {
     "screen": 5,
     "devices": 4235,
-    "stops": 100802,
+    "stops": 100820,
     "harness": 8,
     "output": 3
    }
@@ -467,13 +467,13 @@
   "switch-scp": {
    "screen": "6af2f08ff6d99b97f1f0e5a481b05720170474bf54250415fd1ae32a109ee87d",
    "devices": "cf2d9e3db9fdd9ac7ea24b57ebbdb823a330b9efb7d796ac84ccab73ac755021",
-   "stops": "2ce6ccafe3dc3a1d13bc2427a6f24e047597b9fd5370db2654475541b211fbec",
-   "harness": "32031fe98691d8b26a7ad9076f36f6f79ca876a2154443def86e6c7403a6f1dc",
-   "output": "22922172694649a4f3fa9d43ead7b6fb2cb97ecdb625dcd5beb04c8651c94bc9",
+   "stops": "264bb610d541bba87c9bdd8c661f31cccfe1d3991675e01276ab00bc8025d889",
+   "harness": "ed80e3cb13dbbe91125c461a82e9a4300e9f233bc2c4641e1e2b1dcc2102971b",
+   "output": "1cf3cf588a0f8a89ba2d0441859764380b7dee43cab0ab992c8f183c17f64d74",
    "items": {
     "screen": 7,
     "devices": 4242,
-    "stops": 68389,
+    "stops": 68403,
     "harness": 8,
     "output": 3
    }
@@ -481,13 +481,13 @@
   "switch-shoot": {
    "screen": "00313318d33e4935c274fb1b1310e621f15b5e15fd669de1a3c154778e746bf0",
    "devices": "3fa105817adf3a12133ca401a126e20fb4177cbeee6cd3835822500bf4113ae5",
-   "stops": "eff49e2db804e1c70646305fd786a5448871129c945c5320b10cfb9ba23709f1",
-   "harness": "a20eb05f554736146cd8c71790c938d1db63bb1fc38f7115d5ab6c4542e56586",
-   "output": "13c35a38fdb12b90eaf0c802cb14faf360b1799b2617bdc8e25b5376a26fc887",
+   "stops": "d0583973fe42bfc3e6ed0f60d4f32663d9b4914120f04f2f0d6d12e6298c97e8",
+   "harness": "6bd3a5e2a9f6672d4f88b484a45b4ef2a2004f95d55a543935fd70ba9eb8dc40",
+   "output": "c5c2579e55feb4b9a9d8d5bda4330605729a4634deaee8cf5acd35517b7bd4f5",
    "items": {
     "screen": 6,
     "devices": 4189,
-    "stops": 73869,
+    "stops": 73885,
     "harness": 8,
     "output": 3
    }
@@ -495,13 +495,13 @@
   "tokens-3b": {
    "screen": "3fbbe14d2201668b0755001b4619215cbb9d4c125f3e0ebd4cc90b37523e20a8",
    "devices": "dc859ac0f9e2c889720a180b1d780959bafb218a488f0607bd8dafd5f473ef08",
-   "stops": "e6ad6aa6c14a94bc8cae3bd0cec8a30d192dc654cdd877e93e7539db0ceb7888",
-   "harness": "396285d7387e172b5ddf92fc25d2846012a57fb175d41c932d95efca08f2f8db",
-   "output": "e074439182dbafc7210d745afe21b942d829aceddf39a12ef907f18927082c1b",
+   "stops": "26f3c733fe75e483d4443eaad16c4c3f7f5f8d9cf78ed126f87eaba1687a2e18",
+   "harness": "f88b9580bb952df83a6733e45b390e16901d472888a25fc65736eed1bd706710",
+   "output": "ee33abf2df9cd264074a6c608828ea9858a4d8a8af236255b2a50176e97d0c52",
    "items": {
     "screen": 9,
     "devices": 4269,
-    "stops": 65393,
+    "stops": 65399,
     "harness": 8,
     "output": 3
    }
@@ -1797,13 +1797,13 @@
   "check/nav#10": {
    "screen": "53eb65c884f25fc36a9c7b51df98b092f4f2f618c89c4c9fcc9384ba69f8db57",
    "devices": "b27f0037fe3dc04684f44995e3799ca79bdb7513c5dab163618a5767079a7471",
-   "stops": "adbfb28b2f0020cbec2d9136a11a265911726834b461e84f62fa87c585ffe0d0",
-   "harness": "157268f19143e50963b4d585244f02b20003445d969fd67b907ae3b7b0534588",
-   "output": "10b56a5b8379a5909c9ddf83f7d17be62d0f1397d544ae2da2f724b4ae333ff2",
+   "stops": "1dc2b01727428d31936060317dbb3b9fa44bb225804735048423144fe63c6e1b",
+   "harness": "dd2e2bf1c150e99acd2088bdabb578c0411b19cea81d49aa1d294a7ebd002139",
+   "output": "322573899c0bdc45c5a182c8269b0ec05732cecf65754e9672473149b7b3d2d4",
    "items": {
     "screen": 11,
     "devices": 28,
-    "stops": 16221,
+    "stops": 16233,
     "harness": 8,
     "output": 3
    }
@@ -1812,7 +1812,7 @@
    "screen": "d999ea18f9698e8fa67969c370e0d5c0eec6b65020d3a2dd53cd866d8211031d",
    "devices": "6129f877ba2d60d86268824f28c2ff57d6ed09eb94e313a5586465a2b8d0d2f9",
    "stops": "dcf29b9d1747c5f7d915f2a391216a52922024012ab2f1a795e711b2fe402c82",
-   "harness": "246e48e59c94344de23e811a4837fae067dbd732d91c2f05ca0591b3c7ac2380",
+   "harness": "42fff7c7bb6c22440ec0cdd974d4a021a489a35e6ad9b564a74547761b44949c",
    "output": "c74ccfcd236f81191b34740d94115e5db57ea72bd34a88bddc64a3950dc4cd6a",
    "items": {
     "screen": 1,
@@ -1826,7 +1826,7 @@
    "screen": "d999ea18f9698e8fa67969c370e0d5c0eec6b65020d3a2dd53cd866d8211031d",
    "devices": "94fd121faff8fa7a4397b94ebc10667016e7e0cf7431f938f2c3a578b380ab3b",
    "stops": "7d67b4e92cf53607ed3a1d747bd2e146aaf48f88e72443304e9b79714db271be",
-   "harness": "59e7e9cd5b86115e577dc0b6ba8a820d5a2ede654e98994ad7bc4da555f75f52",
+   "harness": "8133aa92b1b879ea4228fabfb258b00c3ad87890dbdc5245b87f594430ec3e74",
    "output": "0c80b3a8bae5fd06da7cc512b67128534ed2bbb74724c63865954d1f6781d0ab",
    "items": {
     "screen": 1,
@@ -1840,7 +1840,7 @@
    "screen": "f238b81188fb6ba7a2d81d866d215469179045ef432084f5965de0dd2875617c",
    "devices": "5b3fa8bf16a5f796aa0a51c65dba5b9474405ddfeb4ac90ee1bf4ebc4421509d",
    "stops": "d186560a06e24a1fbaad0cb036f24ad1fa0fe7770ebc141041c21cda9e323350",
-   "harness": "f9e50d55ef587dcbd0977d668d7d14452c59a38695eaff5bf65dd7c740a2583b",
+   "harness": "d7231bc46cbacd9b4dd640a1d44119373c5aff72ef3df17225615ced50ceca7b",
    "output": "7ffa62d356b864b0b6129d34d23a4457977d4784a0808366527f2da4126a7391",
    "items": {
     "screen": 1,
@@ -1854,7 +1854,7 @@
    "screen": "621644e4fc09e1cfb5b75226bd6867563f437d15fe7743a40d444d58de25c39d",
    "devices": "40e1aa320022bd78d5a12139618a87ca20248a0d19000ba8e687f5e000acb66d",
    "stops": "6856353c0f821b252a9fb9fa938e3ea0d1fa8e6c529db2b8d8cee048391439d5",
-   "harness": "610e9e15066bef8b621f337a85ca6f01604f3c6e5e2c71a2fb3e25320a4b8257",
+   "harness": "838ad763c1b8198832debcbe9297e2c6623aece089bfcb2b0859ef76b0b7a82c",
    "output": "be3fe234c94676f9fdf2a38fdf3f11f0c340fea6ec7e64293aff11381c9bf8e8",
    "items": {
     "screen": 1,
@@ -1868,7 +1868,7 @@
    "screen": "58ba088f9d70ecb62d72b9b589a627093471b43616c088aab2836598244781cd",
    "devices": "a448244b9bd93dcbc0ba675f866d651e00fceee94d9a0c2735d3341631d3849f",
    "stops": "36798d1ed0de51e677e1e53956e603e6918bdfd81209d2acd48e4100e66fc96a",
-   "harness": "bc758f433758d8682673d24ba1cd88c8a831b530679205dc662d9af623c25c6c",
+   "harness": "cfd35bf610aa17c51de4003c15d2e0bdb03a3ce5694295bce4ae657a307534e7",
    "output": "0d1bf1dae63542e4ac86f4cf76232c1b631adcdc38f12a8df028691625b3ac60",
    "items": {
     "screen": 2,
@@ -1882,7 +1882,7 @@
    "screen": "6c2c2078c75d02bd3a3c32fa587f7fd762257e313ca61c2737606dff7e53de59",
    "devices": "b060a844b1b1f7d1d34b2dd37aef3741c5ad0b68bdd7c647fb7626a8fa880d2c",
    "stops": "8b5c3337ef79c37a2723b91245002c3d54f2ac82486ce52cd5fa37df8a43afce",
-   "harness": "26c492bb5fe651d841e4f0be5c379c157ba07651f3cc81d2eacfddc1d9155e34",
+   "harness": "c3721e7a09ea65d6f0a3f7477ad8de4bb9fc30bb59e5b9ebad0abca98c82577b",
    "output": "5ff4e000c4e6972add40ef416622d108b76b39adbbdff6e83aa9aed7c8069825",
    "items": {
     "screen": 2,
@@ -1896,7 +1896,7 @@
    "screen": "e761b75f96da0ff62a0b9cb6b40cb33bc17107c35b638d88139406bd63d76b4d",
    "devices": "ec8adff4540a6b0467a95d4cf3b1d972c98f4c8da1731cb0c013319f9d87ff0b",
    "stops": "2ab8fda33023aef7f410a60be687f60dbfeb0b83f0c4f5363418912a569d9b0c",
-   "harness": "d7aaba6fcb145365112a3dd1b37f68a04272c21ef7d40f5224bc3dfc84fa8718",
+   "harness": "ef24fcde418e6929b91cb6f7434a91349b7771748d47238191d59847394a1989",
    "output": "cf4ac383b29d93008ef43457ebe7ef9c61c7ec6746739742cd854dd7df82bdf4",
    "items": {
     "screen": 3,
@@ -1910,7 +1910,7 @@
    "screen": "8a8b666783dd109d709565b76cdfd3c5f6ab2e4bca916221351a4613adcce9c5",
    "devices": "9f807c0e9f16fa222cf53881c203466650b6fb873ec7b8bfcbcd9d566a8f33c3",
    "stops": "8ec38b783499a7e20a563c5bd74d6c17a0adf75a947a9943aabb386278862b81",
-   "harness": "0ec109aabc2abf35ea2616159ecb26553b0701044df08e5ba739c977a51a18e0",
+   "harness": "7ee059c46f817e434c2d29d8c2ceb434df51afee3d8a91c87fece8a6bfa9b6da",
    "output": "c5f12ec08b6b59aca2428aed0dec6038110492346235095f254bfdae66685d22",
    "items": {
     "screen": 3,
@@ -1924,7 +1924,7 @@
    "screen": "2763b17cb84f09a220df08d1f50863787e746097353b3ae0d9980aaaa263eca2",
    "devices": "7ceebd73e1e8d70ee8e98dafb58d4a29847e2355036c940ff3954ff25845d4ba",
    "stops": "c6cd7f600ff570d17232bc984088ff3f734217a439ab2170cd49c835c5e25739",
-   "harness": "2d6d52cfa2b0f58a9d46fc735919df07c446db39f1af7da097e674f5b408962e",
+   "harness": "7264b1cde9432de75b6331d71a529a415bca10adde861b69f687509c718e0a45",
    "output": "cf35ae1bd944a1d6e8a9cfed06917a37ab5740e0a36b359e61114b52b689438b",
    "items": {
     "screen": 4,
@@ -1938,7 +1938,7 @@
    "screen": "1cabe67b35c4c2678f47a7f50309d12f159215bce0d671f35412ca8c94d56aa8",
    "devices": "b6925673df754e6d436d2b28910b96dac6ab275aace899a8dd66ef230fc74ff0",
    "stops": "4c14f4e5403c9bbf6eb7fb0affd5072ec9f984179619a6f4f7a080f61338038b",
-   "harness": "4ed1bce917b47abd47e62918c49f230ccb6f5947f474bd322a85b641b49e4d25",
+   "harness": "1242625481946ec978aa861a8e5dc4b85a3bfb023d4987b3c503c2d7f6ec6ddb",
    "output": "fa1e9c5f79d7a235e6a48b33513eb07608fb66b4f492b02e4eaf1eb6684023ed",
    "items": {
     "screen": 1,
@@ -1952,7 +1952,7 @@
    "screen": "02ef91e9a9b34ef5c1b78e9579529ecd71555635e0cf9cf41c51541e4aba20ff",
    "devices": "f95e52be4836f230a00d99c6af7fa6d99640af72a5ef71e279459e1e5a489cbd",
    "stops": "10b82ab7caffe10eecaa48b7e4cddec4ab7038b71f22c7deacb6f94a28b4bc3c",
-   "harness": "ee205a2a1cc27dd0ae3616c9d33f7451899150c3cca6494553aae1343be79d84",
+   "harness": "9ac2921a22b9574791d1b26d3c2c76580db209a1a37106d622a4184f30b3d01a",
    "output": "d8bd9eaaec94a0e0f8e6e38b5c16ba4330475220362783f115b13faf284de2e1",
    "items": {
     "screen": 8,
@@ -1966,7 +1966,7 @@
    "screen": "8d51ccacd3490bdd95a02d7db4d21b69f2019a8a236834cfe2317823a84572b4",
    "devices": "c5acfd7a2a48cc060e08b61840f9f3fe4a13d8ec70b4ebfadd32145e8acec504",
    "stops": "55cefc922cc7de4d806546e1605ec209d292fbf190c5233f88dc78815318308b",
-   "harness": "d551823fccbb3cb63fc10c1a966a97550f9354436b3748d2b5f0c00c66e65830",
+   "harness": "50387bde95233bfb0bc5399132d2cf04cd5df0450570e7b6c80030559c1124ce",
    "output": "7f6331f89cee48f59c062c26713ece5a93a8e02f837ab8cf8727ca8a242b2383",
    "items": {
     "screen": 2,
@@ -1980,7 +1980,7 @@
    "screen": "69174099efa826b397e08ecf4fdb61b24503abf1bb2e38d6512d4c709d94cc7a",
    "devices": "324c06da9a63e0d2bcd034fc7ec8aab01931f344bdc0d7ead1dcb260bf2d5d65",
    "stops": "5b4a82e055d9e64bd1d0d2c5ed7bfed5801e88f5e48e5ba4ff4d8a45812e26a6",
-   "harness": "ecaeaaf76325b405fe1d23797ffe8f7f7cc231935fb0d3983897e293cbbb2d79",
+   "harness": "c9226acf3264563a437c1ebdc9a2361d1748df49bef5748900980f085a361bd7",
    "output": "d698f5ff9b76002e05a0b2e524a758b32c018b1948774e2323234948bd3d3aec",
    "items": {
     "screen": 13,
@@ -4199,6 +4199,18 @@
      "power"
     ]
    }
+  },
+  {
+   "commit": "f926df0d",
+   "sessions": 19,
+   "reason": "S-BOOTSTAGE sets stage 2's bit (b4e4ca94): E143's test at 0x50023b4c (call 0x50024dcf with 2) then reads property 270 through 0x503ee3bf, the lab's prop_get hook, instead of setting 12433 through 0x500417da (D); X: with the bit cleared (stage_bits & ~2) these sessions differ from the previous recording in the harness layer only",
+   "evidence": "firmware"
+  },
+  {
+   "commit": "f926df0d",
+   "sessions": 1,
+   "reason": "S-RECREQ's packet carries Command 16 (ce6d785a), REC_MAIN's case for a still (D): the S2's REC work changes the instruction counts at which the later interrupts are taken (devices layer), screen and output unchanged; X: with Command 16 left out the devices layer is the previous recording's",
+   "evidence": "firmware"
   }
  ]
 }

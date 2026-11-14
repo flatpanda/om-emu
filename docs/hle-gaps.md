@@ -3838,7 +3838,8 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   settings 41050, 35818 and 36442, and +38198 from the AE result object `0xc0ba` (`0x503bcecb`). The exposure record
   comes with TAKE_MAIN's take request, which the lab does not run (S-RELSEQ), and S-EXPOSE's plan (`0x62a919dc`: +6
   Tv, +10 Sv, +14 Av; its address appears in the code only at `0x50560b2c` and `0x5056108b`) has another layout; which of TAKE's steps copies
-  the plan into that record is not read (?). So S-EXIFPRM leaves takepic's fields the template's 0, and the file
+  the plan into that record is not read (?; read in 4.3.13, 2026-11-14: the calculation publishes the plan into settings,
+  and StlRdy1's fill reads them into the record). So S-EXIFPRM leaves takepic's fields the template's 0, and the file
   carries the EXIF set's conversions of those zeros: ExposureTime 1 s (Tv 0), FNumber 0/10, ExposureProgram 5, and ISO
   25 (REC_IMAGE's, 4.3.5). These are not the session's exposure.
 - **The lab (`emu/src/lab/rec.mjs`).** Where `src/fw/facts.mjs` recFile reads the EXIF set (`exif.set`: the wrapper,
@@ -3855,8 +3856,8 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   DateTimeOriginal without it. A modified OM-3 firmware that hooks the per-shot fill (Caduceus v0.29, outside the
   tree) wrote its film's name into ImageDescription and its code into UserComment in the card's file, which it did
   not before (X).
-- **Open.** The source of takepic's exposure record (TAKE_MAIN's take request, 4.1.4's plan step 1) and of TAKE's
-  state +3144; the lens flag +37982 and the lens fields; the EXIF set on the E144 family's, recFileInline's and the
+- **Open.** The source of takepic's exposure record (TAKE_MAIN's take request, 4.1.4's plan step 1; read in 4.3.13,
+  where S-EXIFPRM gives the block its Tv and Av since 2026-11-14) and of TAKE's state +3144; the lens flag +37982 and the lens fields; the EXIF set on the E144 family's, recFileInline's and the
   E118 family's REC versions (no rule reads it there; the E118 family's set divided by zero too, finding 103, whether
   in the same table is not read); the orientation (4.1.4's plan step 3).
 
@@ -4014,6 +4015,109 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   fills after the picture mode (E147 settings 63153 at COLOR and 63281 at MONO into the record, `0x503c6df4..`, not
   written by S-EXIFPRM); the packets of the bodies that keep S-RECIMAGE (the E144 family and the older versions) still
   have Command 0 (their dumps' Command not read).
+
+#### 4.3.13 TAKE's shot up to REC's request (E143, E146, E147; 2026-11-14; D unless tagged, E143's addresses)
+
+- **Why.** Every data hook of a modified firmware's look sits in the image library's parameter set and run, which
+  S-JPEGENC stands in (4.3.9, 4.3.12). In the camera's order three things come first: TAKE's shot (its record, its
+  exposure and its RAW frame), the white-balance gains (4.3.4) and the set and run themselves. This round maps the
+  first two as far as the lab can run them, lands the step the code supports and stops at the first it does not.
+- **The single still in TAKE_MAIN (D; the state table `0x605bfbc8`, 4.1.7).** RdyTrig2Wait takes command 11
+  (`0x503c40b2`) and goes to RdyFcsTake (7), which asks TAKE_EXPOSE `0x600` synchronously (4.1.8) and goes to Standby
+  (11, `0x503c3a13`, with the packet in d1); Standby goes on to StlRdy1 (12; `0x503b0e48` in its own command 11, from its entry's path I). The packet is the requester's (the
+  message's parameter): TAKE_MAIN keeps the message's four words at its +44 (`0x50399c1d`), clears its +60, +64 and
+  +68, and for commands 11 and 12 calls `0x503b07d9` with its +0, which takepic later takes as the shot's id.
+  1. StlRdy1's entry (`0x503b0fed`) takes an exposure record from TAKE's ring (`0x503baeb6`: four slots of 96 bytes
+     at `0x62a4b6d0`), keeps it at the packet's +60 and fills it, `0x503bf619(0x40000000, record)` at `0x503b12f4`:
+     +0 flags (setting 49169, 49666), +4 1, +6 setting 41002, +8 41034, +10 41018, +12 41082 (`0x503bf6bd..`), +20
+     `0x5039048b()`. E146 and E147 call a fill that takes the record alone (E146 `0x503bfe9c`, E147 `0x503c9db8`,
+     the same four reads, through E147's settings read `0x50042360`). The still's states store into the record only
+     its +6 (`0x8001`, under TAKE context bytes `0x62a4af79` / `0x62a4b100`, I: the bulb or live-time case) and +42
+     (`0x503b1315..0x503b1334`); the other uses read it (a scan of the packet's +60 in `0x503b0900..0x503ba000`).
+  2. TAKE_EXPOSE's take_expose_calculate publishes its plan into those settings: `0x50598940`, called at
+     `0x50597fd5`, sets 41082 from the plan's +2, 41002 (Tv) from +6 unless setting 32986 is `0x8001`, 41034 from +8,
+     50522 from +10, 50538 from +12 and 41018 (Av) from +14 through the property setter.
+  3. StlRdy2's entry (`0x503b1455`) runs the shot-record fill `0x503bba51` (at `0x503b150f`, with the packet's +0):
+     the settings fields (recImage's take list and 4.3.12's picture mode among them) and TAKE_EXPOSE's shutter
+     range, `0x50599812(record + 38166, record + 38168)`, a copy of the halfwords `0x62abd796` and `0x62abd794`,
+     which the calculation's `0x50598df9` / `0x50598e13` write from its record's +48 and +50.
+  4. StlTake's entry (`0x503b1e1e`) registers `0x503b2e5d`, which calls takepic `0x503bcd51(0, 0x62a4a358, packet)`
+     and then `0x50597c6d`. takepic finds the shot's record through `0x503afc3e(packet +0)` (the shot table's flag 4),
+     copies the exposure record's +6, +8, +10, +56, +58, +60 into +38164 (Tv), +38172, +38178 (Av), +38170, +38176,
+     +38180 (`0x503bcdac..0x503bce38`), Sv +38174 from TAKE's context +3144's +202, +38160 from its +3352, +37992 and
+     +37988 from its +3730 and +3732, +38188, +38200, +38202 and +38196 from settings, +38198 from the AE result
+     `0xc0ba`, runs the lens step `0x5011fcf4` (then the lens flag +37982 bit 12 decides the focal and aperture
+     fields) and calls the EXIF set (`0x503bd48e`, 4.3.11). StlEnd1 / StlEnd2 free the record (`0x503baf23`).
+  5. The shot itself: an id of TAKE's shot table (`0x62a494a4`, 116 entries of 32 bytes) is allocated by
+     `0x503af59e` (25 callers; api_rec's `0x5040f482` among them; which one gives a normal still its id is not read,
+     ?): through `0x503af5c9` it takes MM buffers by a kind the settings 7745, 41002, 55058, 34241 and 61633 pick,
+     the Bayer and thumbnail handles at +2 and +10 (flag 1, `0x503b006b`), the shot record at +20 with its handle at
+     +24 (flag 4, `0x503afff1`, MM kind 5376) and the others (flags 8, `0x10`, `0x20`, `0x40`). ImageParam's four
+     sources read those handles (4.3.4). StlTake's reply table (24 tokens) carries the capture's events; which one
+     ends the sensor's readout into the Bayer buffer, and which unit and interrupt fill it (4.3's seam C1:
+     `cam_seq_dram_capture.c`, `cam_still_drv.c`, TAKE_DRAMCAP), is not read (?).
+  6. The white-balance gains (4.3.4): REC_PREPRO's rec_precon_wb_exec computes them from the record's +38190,
+     +38196, +38160, +38008, +37992, +37988, +37990, +38764, +38775 and others. Of those the shot-record fill writes
+     +38008, +38190, +38764 and +38775 from settings; takepic writes +37992, +37988 and +38160 from TAKE's context
+     (+3730, +3732, +3352), which TAKE's still states fill and the lab does not run, and +38196, +37990 from settings.
+     So the computation's inputs do not exist without TAKE's context: no step here gives them.
+- **Each step in the lab (X unless tagged; E143, E146, E147 alike unless said).**
+
+| Step | Default session (camapp 1) | Stand-in | Where |
+|---|---|---|---|
+| take-picture request (api_rec command 11) | not sent: S-RELSEQ posts the callbacks; under camapp 3 sent and taken unanswered (4.1.12, 4.1.13) | S-RELSEQ, S-TAKERDY | `src/lab/camapp.mjs` |
+| TAKE_MAIN's still states, RdyFcsTake to StlEnd2 | not run | S-MODACK (TAKE_EXEC) | `src/lab/camapp.mjs` |
+| TAKE_EXPOSE's plan into the settings | native (S-EXPOSE's calculation) on the shooting GUI state `0x0108`; E146 and E147 start at `0x102`, where it does not plan, so the settings read 0 until S1 has left it (X: E147 at `0x102` after 4 s, at `0x108` after S1, where the calculation gives Tv 1924, Av 1404) | S-EXPOSE | `src/lab/camapp.mjs` expose() |
+| StlRdy1's exposure record and its fill | native fill on a record of the lab's (since this round) | S-EXIFPRM | `src/lab/rec.mjs` exif_param() |
+| the shot-record fill | its six fields REC_IMAGE reads (4.3.5) and the shutter range (since this round) | S-EXIFPRM | same |
+| takepic | its copy of the exposure record (since this round) and the EXIF set it calls (4.3.11); the rest not run (Sv, TAKE context fields, the lens step) | S-EXIFPRM | same |
+| the shot's id and buffers (TAKE's shot table) | not allocated: HandleTarget 1, ImageParam's sources log `0x25000402` (4.3.4) | S-RECREQ, S-EXIFPRM's block | `src/lab/rec.mjs` |
+| the sensor's readout into the Bayer buffer | none (S-SCENE draws a view frame) | S-SCENE, S-JPEGENC | `src/lab/play.mjs`, `src/lab/rec.mjs` |
+| REC_PREPRO's white-balance gains | not run (0) | S-RECREQ | `src/lab/rec.mjs` |
+
+- **Landed: TAKE's exposure in the shot's record (`src/fw/facts.mjs` takeExposure, fact `take_exposure`;
+  `src/lab/rec.mjs` S-EXIFPRM).** The rule reads, on each body, StlRdy1's fill and its flags (E143 `0x40000000`, E146
+  and E147 none) with the ring's slot size and the fill's settings reads, the shot-record fill's range copy and its
+  two offsets, and takepic's six copies, from StlRdy1 (by name in TAKE_MAIN's state table), the shot-record fill's
+  bracket read and takepic's copy (E143 `0x503bbd26`, `0x503bcdac`, placed by the port); `emu/test/test_facts.mjs`
+  checks E143's, E146's (`0x503bfe9c`, `0x5057a795`, offsets less 348) and E147's (`0x503c9db8`, `0x5058abd3`) and
+  refuses three altered forms. S-EXIFPRM runs, after its settings fields, the fill on a 96-byte record of the lab's,
+  the range copy into its block, and takepic's copy of the record into the block; then the EXIF set as before.
+  - E143 (X, `emu/test/test_storage.mjs` storageSession 67 of 67): the record holds the plan's Tv 2052 and Av 1276
+    (the settings 41002 and 41018: the plan's 1/259 s and f/5.6); the range reads -1536 and 3840; the file's
+    ExposureTime is 1/250 s (the set's conversion; it was 1 s, Tv 0). A program shift with the main dial before the
+    shot gives Tv 2222 and 1/400 s (X, a probe). The range words are the calculation's: zeroed and recomputed by an
+    input, they are rewritten once each (X, a probe on `0x50598e03` and `0x50598e1c`).
+  - E146 and E147: in storageSession's shot (S1 and S2 from the start screen, where S-EXPOSE does not plan) the
+    fill reads 0 and ExposureTime stays 1 s (X). Past the start screen the plan's values come: Caduceus v0.29's
+    flow on E147 (`bin/session.mjs`) now writes ExposureTime 1/200 s where it wrote 1 s, the rest of its Exif the same
+    but the dates and the file's size the same (X).
+  - Not filled: Sv +38174 (TAKE's context), so ISO stays 25 (REC_IMAGE's); FNumber stays 0/10 (the lens step and
+    the lens flag are takepic's); the other takepic fields above. The files' size and picture are unchanged; only
+    the Exif exposure fields move.
+- **Not landed, with the evidence for the next step.**
+  - *The shot's buffers.* TAKE's shot allocation `0x503af59e(0)` runs natively in an E143 session after the start
+    (X, a probe): id 1, flags `0x7d`, Bayer handle 1, thumbnail handle 257, the shot record at an MM address with
+    handle 5377, no error logged. With it HandleTarget would be TAKE's id, the shot's record TAKE's (the lab's block
+    today) and ImageParam's sources would find their handles. Its name would be H-SHOTALLOC (TAKE's allocation run
+    natively at S2, before S-EXIFPRM). Not done: which caller allocates a normal still and with which kind is not
+    read, nor whether E146's and E147's MM answer the same (4.3.12's E147 extension did not); and it changes
+    S-EXIFPRM's block, the HandleTarget and the source logs storageSession pins.
+  - *The RAW frame.* No sensor readout exists in the lab. Once the Bayer buffer is TAKE's, a declared stand-in could
+    fill it, named S-RAWFRAME: a buffer of the geometry the shot's kind gives (the allocation's MM kind), its pixels
+    a fill of the lab's that is not a scene; the parameter set and run do not read pixels before the pipeline unit's
+    request (4.3.9), so its content matters only past item 4 of `analysis/caduceus-om3/README.md` 4.6. Not done:
+    its geometry is not read.
+  - *The white-balance gains.* Their inputs include TAKE's context fields the still states fill (item 6); without
+    those the computation divides by zero (4.3.4, X). No step here supports them.
+- **Sized plan to a development hook (I).** (1) H-SHOTALLOC and the shot's record as TAKE's: days (read the normal
+  still's caller and kind on three bodies, re-pin the sources' logs). (2) TAKE_EXPOSE's still request (RdyFcsTake's
+  `0x600`) natively, which the lab stopped at a jump to `0x000020fb` in 4.1.8: days to a week. (3) TAKE's still states with their neighbours stood in (the camera driver, BC, the dust filter),
+  which fill TAKE's context and so Sv and the white-balance inputs: 1-2 weeks (4.3's estimate). (4) REC_PREPRO's
+  white-balance step natively on that record: days after 3. (5) The parameter set natively, then the run up to the
+  pipeline unit's request (4.3.9's work pool and stage table): weeks. Every data hook in the set runs only after 5.
+- **Open.** The normal still's allocation caller; the readout's event and unit; what E146's and E147's start screen
+  (GUI state `0x102`) is and whether the camera plans there; TAKE_EXPOSE's `0x600`.
 
 ### 4.4 AF, lens and body IS
 

@@ -230,7 +230,7 @@ information, S2 the capture display and the rec view. What runs below it is stoo
   dates and maker notes, XMP) built by REC_IMAGE's header maker natively from the shot's EXIF parameters (S-EXIFPRM)
   and the lab's JPEG after it (S-JPEGENC). On E143, E146 and E147 the EXIF set, TAKE's per-shot fill of those
   parameters, runs natively too, after IMG_PRECON's init (H-RECPRECON; `docs/hle-gaps.md` 4.3.11), so a patch that
-  hooks it runs at S2; the shooting values it converts stay the template's 0 (ExposureTime 1 s, FNumber 0/10). REC_IMAGE's own task takes the packet (H-RECIMAGE, `docs/hle-gaps.md`
+  hooks it runs at S2. Before it S-EXIFPRM gives the shot's record TAKE's exposure as TAKE's still states make it (its exposure record filled natively from the settings the exposure plan publishes, TAKE_EXPOSE's shutter range, takepic's copy; `src/fw/facts.mjs` takeExposure, `docs/hle-gaps.md` 4.3.13): on E143 ExposureTime is the plan's shutter (1/250 s for the default scene), on E146 and E147 the plan's once S1 has left the start screen, where S-EXPOSE does not plan (1 s before); ISO (25) and FNumber (0/10) have no source yet. REC_IMAGE's own task takes the packet (H-RECIMAGE, `docs/hle-gaps.md`
   4.3.3; on E146 and E147 since 2026-11-10 at the addresses a rule reads, 4.3.5), which S-RECREQ posts to it as
   REC_PREPRO would (on E146 and E147 REC_RAWNR), the header clear's fill runs natively on the imgpro unit and
   S-JPEGENC stands in for the encode only (since 2026-11-11 for the parameter set's call, the run and Jpeg_Result,

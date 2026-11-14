@@ -5,25 +5,30 @@
 //                    rule's fact, none without a loader and two refused, a case of another form refused; the head's
 //                    copies (add, sub a0 and imm16 lengths), an unknown length and a copy not in place refused; the
 //                    reader's sections, head copies and gaps (a head copy splits a gap, the stored end closes one up
-//                    to it), a raised end word read from the image in use (its gap gone, and with 0x1000 more a gap
+//                    to it) and the ranges not shown loaded (the head's past its copies below section 1, the piece up
+//                    to the stored end) with their message, a raised end word read from the image in use (its gap gone, and with 0x1000 more a gap
 //                    still), an end past the image, a changed count, a moved head copy and a row not in place
 //                    refused; the machine with the gaps: the fill in both DRAM views, the flash view as it is, an
 //                    instruction in a gap refused by the step and by the decode (UnloadedCode, the message's words),
-//                    one ending in a gap refused, one outside run; and the control: no unloaded option, the gap's
-//                    bytes run; loadedRanges' modes (off, auto without a patch, a mode it does not know)
+//                    one ending in a gap refused, one outside run; an instruction in either range not shown loaded
+//                    refused with its own words, one in the head's first copy below them run; and the control: no
+//                    unloaded option, the gap's bytes run; loadedRanges' modes (off, auto without a patch, a mode it does not know)
 //   sectionsSession  (E143's block; E147's in a child with OM_EMU_MODEL) the stock block's gaps hold only 0xFF and
 //                    the reader's ranges as read; bin/debug.mjs with a patch the test writes: a call from section 6's
 //                    tail to a routine past its end stops in loaded mode (the default with --patch) with the gap,
 //                    the end and the end word named, exit 1; the controls: the same with --loaded off runs (d0 the
 //                    routine's), with the end word raised runs (and the gap's rest reads 0xA5), the routine in the
-//                    loaded tail runs; on E143 also S-SECLOADED in a nav session: the copied mask 0x3ff, and 0 with the
+//                    loaded tail runs; a routine in each range not shown loaded (E147: 0x60133000, where caduceus-om3's
+//                    slider build put its code, and 0x603a3000 below the stored end) stops with its own words and is
+//                    listed at the start as its own class, the control in the 0xFF tail of the head's first copy runs
+//                    with a clean audit; on E143 also S-SECLOADED in a nav session: the copied mask 0x3ff, and 0 with the
 //                    stand-in left out (lab.no_secloaded)
 //   node emu/test/test_sections.mjs [--session]
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { sectionLoader, headCopies, SECTIONS_E143 } from '../src/fw/facts.mjs';
-import { bootLoads, gapAt, gapMessage, POISON } from '../src/fw/sections.mjs';
+import { bootLoads, gapAt, gapMessage, unshownMessage, rangeMessage, POISON } from '../src/fw/sections.mjs';
 
 const EMU = path.resolve(new URL('..', import.meta.url).pathname);
 const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
@@ -100,6 +105,16 @@ export function sectionsUnits() {
   const wantGaps = [[0x14000, 0x16000, 1], [CLOSED, 0x20000, 1], [0x22000, 0x30000, 2], [0x38000, 0x3a000, 3], [0x3b000, SIZE, 3]];
   ok(same(L.gaps.map((g) => [g.lo - BASE, g.hi - BASE, g.n]), wantGaps) && L.gaps.every((g) => g.end === BASE + SECS[g.n - 1][1] && g.word === ends[g.n - 1]),
     `bootLoads' gaps: ${JSON.stringify(L.gaps.map((g) => [h8(g.lo), h8(g.hi), g.n]))}`);
+  // what no copy is shown to load: the head's range past its copies below section 1 (from the first copy's start; the
+  // head below it loaded), and the piece of section 1's gap up to the stored end W3
+  ok(same(L.unshown.map((u) => [u.lo - BASE, u.hi - BASE, u.kind, u.copy?.at]), [[HEAD[0][0] + HEAD[0][1], SECS[0][0], 'head', sites[0]], [HEAD[1][0] + HEAD[1][1], CLOSED, 'stored', sites[1]]]) &&
+    L.unshown[1].n === 1 && L.unshown[1].stored === BASE + CLOSED && L.unshown[1].word === W3 && L.unshown[0].next === BASE + SECS[0][0],
+  `bootLoads' unshown: ${JSON.stringify(L.unshown.map((u) => [h8(u.lo), h8(u.hi), u.kind, u.copy && h8(u.copy.at)]))}`);
+  const um = unshownMessage(L.unshown[0], BASE + 0x9000), us = unshownMessage(L.unshown[1], BASE + 0x18000);
+  ok(um.startsWith(`pc ${h8(BASE + 0x9000)} runs code the boot is not shown to load (?): ${h8(BASE + 0x8fe0)}..${h8(BASE + 0x10000)} lies between the end of the reset head's copy at ${h8(sites[0])}`) &&
+    um.includes(`section 1's start ${h8(BASE + 0x10000)}`) && um.includes('the extent of the boot stage before the main block\'s') && um.includes(`below ${h8(BASE + HEAD[0][0])}`) &&
+    us.includes(`the end ${h8(BASE + CLOSED)} that the reset head stores to ${h8(W3)}`) && us.includes('never loads') && rangeMessage(L.unshown[1], BASE + 0x18000, BASE, f) === us &&
+    rangeMessage(L.gaps[0], BASE + 0x14000, BASE, f) === gapMessage(L.gaps[0], BASE + 0x14000, BASE, f), `unshownMessage: ${um} / ${us}`);
   ok(gapAt(L.gaps, BASE + 0x25000)?.n === 2 && gapAt(L.gaps, BASE + 0x25000 + 0x40000000)?.n === 2 && gapAt(L.gaps, BASE + 0x21fff) === null && gapAt(L.gaps, BASE + 0x16800) === null,
     'gapAt: a gap in both views, none in a section or a head copy');
   // a raised end word (as caduceus-om3 raises section 6's), read from the image in use
@@ -118,7 +133,7 @@ export function sectionsUnits() {
   const msg = gapMessage(L.gaps[2], BASE + 0x25000, BASE, f);
   ok(msg.includes(`section 2's loaded end ${h8(BASE + 0x22000)}`) && msg.includes(`end word at ${h8(ends[1])}`) && msg.includes(`end switch ${h8(0x50000000 + SWITCH)}`) &&
     msg.includes(`load_section ${h8(0x50000000 + LOAD)}`), `gapMessage: ${msg}`);
-  return machineUnits(b, L, f, { checks, bad, ok });
+  return machineUnits(b, L, f, { get checks() { return checks; }, bad, ok });
 }
 
 // The machine with the gaps (createMachine's unloaded option) and its control, on the synthetic block; loadedRanges
@@ -153,6 +168,18 @@ async function machineUnits(b, L, f, r) {
   const fine = run(un, s1end - 0x10, 'step');
   ok(fine.err === null && fine.pc === s1end - 0x10 + 6, `an instruction in a section runs: ${fine.err?.message ?? h8(fine.pc)}`);
   // the control: without the option the gap's bytes are the file's and run
+  // with the ranges not shown loaded (src/lab/sim.mjs passes both lists): refused with their own words; the control, an
+  // instruction in the head copy's tail below them, runs
+  const NOT = [BASE + 0x9000, BASE + 0x18000], IN = BASE + 0x8f00;
+  for (const a of [...NOT, IN]) rom.set([0xcb, 0xcb], a - BASE);
+  const both = { gaps: [...L.gaps, ...L.unshown], fill: 0xA5, message: (g, pc) => rangeMessage(g, pc, BASE, f) };
+  for (const [a, kind] of [[NOT[0], 'head'], [NOT[1], 'stored']]) {
+    const x = run(both, a, 'step');
+    ok(x.err instanceof UnloadedCode && x.err.gap.kind === kind && x.err.message.startsWith(`pc ${h8(a)} runs code the boot is not shown to load (?)`) && x.m.dbgRead(a, 1)[0] === POISON,
+      `an instruction not shown loaded (${kind}): ${x.err?.name ?? 'ran'}: ${x.err?.message?.slice(0, 120)}`);
+  }
+  const inHead = run(both, IN, 'step');
+  ok(inHead.err === null && inHead.pc === IN + 1, `the control, an instruction inside the head's first copy: ${inHead.err?.message ?? h8(inHead.pc)}`);
   const c = run(null, g2.lo, 'step');
   ok(c.err === null && c.pc === g2.lo + 1 && c.m.dbgRead(g2.lo, 1)[0] === 0xcb, `no unloaded option: the gap's nop runs (${c.err?.message ?? h8(c.pc)})`);
   const c2 = run(null, (g2.lo + 0x40000000) >>> 0, 'cont');
@@ -210,6 +237,27 @@ export async function sectionsSession() {
     ok(raised.status === 0 && d0(raised) === '0x12345678' && mem?.[h8(six.end + 0x1000)] === 'a5a5a5a5', `${MODEL}: with the end word raised it runs, the gap's rest 0xA5: rc ${raised.status} d0 ${d0(raised)} ${JSON.stringify(mem)} ${raised.stderr.slice(-200)}`);
     const tail = dbg(tailFile, '--loaded', 'on');
     ok(tail.status === 0 && d0(tail) === '0x12345678', `${MODEL}: in section 6's loaded tail it runs: rc ${tail.status} d0 ${d0(tail)} ${tail.stderr.slice(-200)}`);
+    // the ranges no copy is shown to load: a routine in the head's tail below section 1 (on E147 where caduceus-om3's
+    // slider build put its code, their report) and one below the end the head stores and never loads, each refused
+    // and listed at the start as its own class; the control, a routine in the 0xFF tail of the head's first copy
+    // (copied), runs with a clean audit
+    const [uh, us] = ['head', 'stored'].map((k) => L.unshown.find((u) => u.kind === k));
+    const NOT = [[uh, uh.hi - 0x1000], [us, us.hi - 0x804]], IN = L.head[0].end - 0x100;
+    ok(uh && us && [...NOT.map(([, a]) => a), IN].every((a) => main.subarray(a - base, a - base + 9).every((x) => x === 0xff)),
+      `${MODEL}: the unshown ranges ${JSON.stringify(L.unshown.map((u) => [u.kind, h8(u.lo), h8(u.hi)]))}, their routines' bytes and the control's 0xFF`);
+    for (const [u, a] of NOT) {
+      const file = path.join(tmp, `unshown-${u.kind}.json`);
+      patchFile(main, base, file, at.site, a);
+      const r = dbg(file);
+      ok(r.status === 1 && r.stderr.includes(`FirmwareError: pc ${h8(a)} runs code the boot is not shown to load (?): ${h8(u.lo)}..${h8(u.hi)}`) &&
+        r.stderr.includes(`patch audit: 1 patched range(s) where the boot is not shown to load (?)`) && r.stderr.includes(`${h8(a)}+9 (in ${h8(u.lo)}..${h8(u.hi)}`) && !r.stderr.includes('no patched byte'),
+      `${MODEL}: a routine at ${h8(a)} (${u.kind}, not shown loaded): rc ${r.status} ${r.stderr.split('\n').filter((l) => /Error|patch audit/.test(l)).join(' / ').slice(0, 600)}`);
+    }
+    const inFile = path.join(tmp, 'inhead.json');
+    patchFile(main, base, inFile, at.site, IN);
+    const ih = dbg(inFile);
+    ok(ih.status === 0 && d0(ih) === '0x12345678' && ih.stderr.includes('patch audit: no patched byte where the boot does not load or is not shown to load'),
+      `${MODEL}: the control, a routine at ${h8(IN)} in the head's first copy: rc ${ih.status} d0 ${d0(ih)} ${ih.stderr.slice(-300)}`);
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }

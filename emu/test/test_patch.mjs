@@ -236,8 +236,19 @@ export function patchUnits() {
   ok(JSON.stringify(unloadedRuns([[0x14, 2], [0x42, 0x3e]], loads, 0x60000000)) === '[]' && unloadedRuns([[0x40, 1]], null, 0x60000000) === null,
     'unloadedRuns: changed bytes beside the gaps give none; the mode off, null');
   ok(unloadedLine(ur).startsWith('2 patched range(s) where the boot does not load, stale RAM on the camera') && unloadedLine(ur).endsWith("0x60000080+128 (past section 4's loaded end 0x60000080, its end word at 0x60000404)") &&
-    unloadedLine([]) === 'no patched byte where the boot does not load' && /not checked/.test(unloadedLine(null)) &&
+    unloadedLine([]) === 'no patched byte where the boot does not load or is not shown to load' && /not checked/.test(unloadedLine(null)) &&
     auditLine({ ...au, unloaded: ur }).includes('; 2 patched range(s) where the boot does not load'), `unloadedLine: ${unloadedLine(ur)}`);
+  // the ranges not shown to be loaded (bootLoads' unshown): their own class, after the gaps' pieces, and a line that
+  // never calls them clean (alone: not 'no patched byte where the boot does not load')
+  const withU = { ...loads, unshown: [{ lo: 0x60000020, hi: 0x60000030, kind: 'head', copy: { at: 0x50000144 } }, { lo: 0x60000060, hi: 0x60000070, kind: 'stored', copy: null }] };
+  const uu = unloadedRuns([[0x1e, 4], [0x3e, 6], [0x6f, 1]], withU, 0x60000000);
+  ok(JSON.stringify(uu) === JSON.stringify([{ at: '0x60000040', len: 2, n: 3, end: '0x60000040', word: '0x60000400' },
+    { at: '0x60000020', len: 2, unshown: 'head', lo: '0x60000020', hi: '0x60000030', copy: '0x50000144' }, { at: '0x6000006f', len: 1, unshown: 'stored', lo: '0x60000060', hi: '0x60000070', copy: null }]),
+  `unloadedRuns: the pieces not shown loaded: ${JSON.stringify(uu)}`);
+  const alone = unloadedLine(uu.slice(1)), mixed = unloadedLine(uu);
+  ok(alone.startsWith('2 patched range(s) where the boot is not shown to load (?)') && !alone.includes('no patched byte') && !alone.includes('where the boot does not load') &&
+    alone.includes("0x60000020+2 (in 0x60000020..0x60000030, past the reset head's copies, below section 1, after the head copy at 0x50000144)") && alone.endsWith('0x6000006f+1 (in 0x60000060..0x60000070, up to an end the reset head stores and never loads)') &&
+    mixed.startsWith('1 patched range(s) where the boot does not load') && mixed.includes('; 2 patched range(s) where the boot is not shown to load (?)'), `unloadedLine with unshown: ${alone} / ${mixed}`);
 
   // H-PATCHTASK: the kernel's task guard (src/lab/kernel.mjs LabTask._task_start) on a made-up kernel: an entry on
   // patched bytes starts and is listed, once; any other entry the lab does not model is refused, with or without an

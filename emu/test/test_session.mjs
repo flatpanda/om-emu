@@ -13,8 +13,8 @@
 //                   line); controls: a failed expect exits 1 naming the step and runs nothing after it, a restart with
 //                   --nvram off restores nothing, a call over its budget exits 1, a control the model lacks is a usage
 //                   error. E147 (bin/test.mjs runs it in a child with OM_EMU_MODEL=E147): a synthetic om3-patch-2 file
-//                   the test writes (16 bytes of the main block's 0xFF padding at 0x10c000, inside the boot's loaded
-//                   range, never run) as --patch: the patched and audit start lines, S-SECLOADED and S-STALERAM, the
+//                   the test writes (16 bytes of the main block's 0xFF padding at 0x107f00, in the tail of the reset
+//                   head's first copy, loaded, never run) as --patch: the patched and audit start lines, S-SECLOADED and S-STALERAM, the
 //                   loaded mask, the patched bytes at run time, the card file, S2's Exif, the creative dial's setting
 //                   by the getter, power:off and restart with the stores restored, no poke; control: the same file
 //                   with a run in the 0xFF tail past section 10's loaded end, reported by the start line and the
@@ -189,9 +189,9 @@ async function e147({ ok }, { T, newCard, step, sameFile, hello }) {
   const sha = (b) => createHash('sha256').update(b).digest('hex');
   const hx = (a) => '0x' + (a >>> 0).toString(16).padStart(8, '0');
   const main = readBytes(ORIGINAL);
-  // a made-up om3-patch-2 file (not caduceus bytes): 16 bytes of 0xFF padding inside the boot's loaded range, and for
-  // the control a second run in the 0xFF tail past section 10's loaded end
-  const PAD = 0x10c000, TAIL = 0x1ffff00, NEW = new TextEncoder().encode('om-emu session.!');
+  // a made-up om3-patch-2 file (not caduceus bytes): 16 bytes of 0xFF padding inside the boot's loaded range (the tail
+  // of the reset head's first copy), and for the control a second run in the 0xFF tail past section 10's loaded end
+  const PAD = 0x107f00, TAIL = 0x1ffff00, NEW = new TextEncoder().encode('om-emu session.!');
   ok(main.subarray(PAD, PAD + 16).every((x) => x === 0xff) && main.subarray(TAIL, TAIL + 16).every((x) => x === 0xff), 'E147: 0xFF padding at both runs');
   const doc = (offs) => {
     const want = main.slice();

@@ -14,15 +14,20 @@ const h8 = (v) => '0x' + (v >>> 0).toString(16).padStart(8, '0');
 export const POISON = 0xA5;
 
 // bootLoads(img, base, f): {count, copied, sections: [{n, start, end, word, src}], head: [{at, start, end}], ends:
-// [{at, word, end}], gaps: [{lo, hi, n, end, word}]}, run-time addresses (cached view). sections: the table's rows
-// with the end each end word holds in img; head: the reset head's copies; ends: the end words the head stores and
-// does not load (headCopies); gaps: what the boot provably does not load, each section's range from its end to the
-// next section's start (the last's to the image's end; n its number, end and word its end word's value and address),
-// less the head's copies and, up to such a stored end, the gap holding it (a range that ends there, its start not
-// known). The image's head up to section 1 is not a gap: some of it the head copies, the rest (the part the reset jump
-// enters, its tail before section 1) comes from a boot stage before the main block's, which the lab does not read (?).
-// Throws where img no longer has the fact's forms: the switch, its count, the case immediates at the fact's words, the
-// head's copies at the fact's sites; or a section not copied in place, or sections out of order.
+// [{at, word, end}], gaps: [{lo, hi, n, end, word}], unshown: [{lo, hi, kind, copy, ...}]}, run-time addresses
+// (cached view). sections: the table's rows with the end each end word holds in img; head: the reset head's copies;
+// ends: the end words the head stores and does not load (headCopies); gaps: what the boot provably does not load, each
+// section's range from its end to the next section's start (the last's to the image's end; n its number, end and word
+// its end word's value and address), less the head's copies and less the piece up to a stored end that lies in it.
+// unshown: what the boot is not shown to load (?: no copy the lab reads puts it in DRAM; the boot stage before the
+// main block's, whose extent the lab does not read, is not ruled out): kind 'head', the
+// pieces of the range from the head's first copy's start to section 1's start that no head copy covers; kind
+// 'stored', the piece of a gap up to an end the head stores and never loads (n the gap's section, stored that end,
+// at and word the store's instruction and the word it stores to). copy: the head copy whose end bounds the piece
+// from below, or null. The image's head below the first copy's start is loaded: the reset jump enters it and every
+// call before the first copy goes there, so a boot stage before the main block's put it there (I), whose extent the
+// lab does not read. Throws where img no longer has the fact's forms: the switch, its count, the case immediates at
+// the fact's words, the head's copies at the fact's sites; or a section not copied in place, or sections out of order.
 export function bootLoads(img, base, f) {
   const words = sectionEnds(img, base, f.switch, 'bootLoads');
   if (words.length !== f.ends.length || words.some((w, i) => w !== f.ends[i])) {
@@ -45,22 +50,32 @@ export function bootLoads(img, base, f) {
     throw new Error(`bootLoads: the reset head copies at ${sites.map(h8).join(' ')}, the build's at ${f.head.map(h8).join(' ')}`);
   }
   const head = hc.copies.map((c) => ({ at: c.at, start: c.dst, end: c.dst + c.len }));
-  // each section's tail range, less the head's copies (and, up to its end, a range a stored end closes)
+  const less = (pieces) => {           // [lo, hi) pieces less the head's copies
+    for (const c of head) pieces = pieces.flatMap(([lo, hi]) => [[lo, Math.min(hi, c.start)], [Math.max(lo, c.end), hi]]).filter(([lo, hi]) => lo < hi);
+    return pieces;
+  };
+  const below = (lo) => head.find((c) => c.end === lo) ?? null;
+  const unshown = [];
+  // the head's range from its first copy to section 1, less its copies
+  const first = Math.min(...head.map((c) => c.start));
+  if (first < sections[0].start) for (const [lo, hi] of less([[first, sections[0].start]])) unshown.push({ lo, hi, kind: 'head', copy: below(lo), first, next: sections[0].start });
+  // each section's tail range, less the head's copies and the piece up to a stored end in it
   const gaps = [];
   for (const s of sections) {
     const next = sections[s.n]?.start ?? base + img.length;
-    let pieces = s.end < next ? [[s.end, next]] : [];
-    for (const c of head) pieces = pieces.flatMap(([lo, hi]) => [[lo, Math.min(hi, c.start)], [Math.max(lo, c.end), hi]]).filter(([lo, hi]) => lo < hi);
+    const pieces = less(s.end < next ? [[s.end, next]] : []);
     for (const e of hc.ends) {
       const holder = pieces.find(([lo, hi]) => e.end > lo && e.end <= hi);
-      if (holder) holder[0] = e.end;
+      if (holder) { unshown.push({ lo: holder[0], hi: e.end, kind: 'stored', copy: below(holder[0]), n: s.n, stored: e.end, at: e.at, word: e.word }); holder[0] = e.end; }
     }
     for (const [lo, hi] of pieces) if (lo < hi) gaps.push({ lo, hi, n: s.n, end: s.end, word: s.word });
   }
-  return { count: sections.length, copied: f.copied, sections, head, ends: hc.ends, gaps };
+  unshown.sort((a, b) => a.lo - b.lo);
+  return { count: sections.length, copied: f.copied, sections, head, ends: hc.ends, gaps, unshown };
 }
 
-// The gap of bootLoads' gaps that holds the run-time address a (either DRAM view), or null.
+// The range of a list of bootLoads' (gaps, unshown, or both) that holds the run-time address a (either DRAM view), or
+// null.
 export function gapAt(gaps, a) {
   const c = cached(a >>> 0);
   return gaps.find((g) => c >= g.lo && c < g.hi) ?? null;
@@ -74,3 +89,18 @@ export function gapMessage(g, pc, base, f) {
     `the boot's section loader (load_section ${h8(f.loader)}) copies each section only up to its end word, so on the camera these bytes ` +
     `are stale RAM, not the image's (S-STALERAM, --loaded on): place the code inside a section's loaded range or raise that end word`;
 }
+
+// The words of S-STALERAM's refusal of an instruction at pc fetched from the range u of bootLoads' unshown.
+export function unshownMessage(u, pc) {
+  const from = u.copy ? `the end of the reset head's copy at ${h8(u.copy.at)} (${h8(u.copy.start)}..${h8(u.copy.end)})`
+    : u.kind === 'stored' ? `section ${u.n}'s loaded end ${h8(u.lo)}` : h8(u.lo);
+  const to = u.kind === 'head' ? `section 1's start ${h8(u.next)}, where the section loader's copies begin`
+    : `the end ${h8(u.stored)} that the reset head stores to ${h8(u.word)} (the instruction at ${h8(u.at)}) and never loads`;
+  return `pc ${h8(pc)} runs code the boot is not shown to load (?): ${h8(u.lo)}..${h8(u.hi)} lies between ${from} and ${to}; ` +
+    `no copy of the reset head or the section loader puts these bytes in DRAM, and the extent of the boot stage before the main block's ` +
+    `(which puts the head below ${u.kind === 'head' ? h8(u.first) : 'its first copy'} in place) is not read, so on the camera they may be stale RAM ` +
+    `(S-STALERAM, --loaded on): place the code inside a head copy or a section's loaded range`;
+}
+
+// The refusal's words for a range of either list (src/lab/sim.mjs): unshownMessage for an unshown one, else gapMessage
+export function rangeMessage(g, pc, base, f) { return g.kind ? unshownMessage(g, pc) : gapMessage(g, pc, base, f); }

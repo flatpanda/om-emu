@@ -4,7 +4,7 @@
 // in order), insns (the sum of insns deltas between a register write or read and the next read), probes.
 import { A, IMAGE_BASE, IMAGE_END, fact } from '../fw/model.mjs';
 import { SECTIONS_E143 } from '../fw/facts.mjs';
-import { bootLoads, gapMessage, POISON } from '../fw/sections.mjs';
+import { bootLoads, rangeMessage, POISON } from '../fw/sections.mjs';
 import { createMachine, RspError, UnloadedCode } from '../machine.mjs';
 import { RuntimeError, FirmwareError, ValueError, AssertionError } from './errors.mjs';
 import { bytesHex, hexBytes } from '../util/bytes.mjs';
@@ -60,10 +60,12 @@ export class Simulator {
   constructor(env, insnLimit = null, keepStderr = false) {
     this.env = env;
     const { mutant = 0, oneInsn = false, coverage = null, hdmi = false, audio = false, cores = null } = env.machine ?? {};
-    // S-STALERAM (loadedRanges): the unloaded ranges filled, an instruction there refused with its gap named
+    // S-STALERAM (loadedRanges): the unloaded ranges and those not shown loaded filled, an instruction there refused
+    // with its range named; unloaded: that option (src/debug/call.mjs checks a call's target against it), or null
     this.loads = loadedRanges(env);
     const f = this.loads ? sectionsFact() : null;
-    const unloaded = this.loads ? { gaps: this.loads.gaps, fill: POISON, message: (g, pc) => gapMessage(g, pc, IMAGE_BASE, f) } : null;
+    this.unloaded = this.loads ? { gaps: [...this.loads.gaps, ...this.loads.unshown], fill: POISON, message: (g, pc) => rangeMessage(g, pc, IMAGE_BASE, f) } : null;
+    const unloaded = this.unloaded;
     this.m = createMachine({ rom: env.rom, insnLimit: insnLimit === null ? 1000000 : insnLimit, ...(env.clock ? { clock: env.clock } : {}), mutant, oneInsn, keepStderr, coverage, hdmi, audio, cores, unloaded });
     this.breakpoints = new Set();
     this.known_insns = 0; this.ran = false;

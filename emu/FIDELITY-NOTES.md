@@ -519,7 +519,7 @@ The second card slot (E143, E146; `docs/hle-gaps.md` 4.8.12): the lab has both s
 
 **Emulator:** CPU 2's USTART_L2 does not run (`docs/hle-gaps.md` 4.6.3). load_section ORs bit n - 1 into its copied mask after section n's copy (E143 `0xa32df1f8`, E146 `0xa32df2d0`, E147 `0xa32de590`, D); the lab sets one bit per case of the image's own end switch (ten on the three bodies) before the settings store's start, next to S-BOOTSTAGE. No instruction of the stock blocks names the word but load_section's read-modify-write (X: a byte scan of the three blocks for the word in both DRAM views), so stock runs do not change.
 
-**Expected / concern:** On the camera the bits come one by one as CPU 2 copies the sections, during CPU 0's boot, and are all set long before the camera application runs (I: the loader's ten copies run at the start of USTART_L2). Code that tests the mask (caduceus-om3's half-press gate requires all ten) sees them set from the store's start in the lab. The stages' ready word, which the per-section init sets for the same sections and which has readers, keeps S-BOOTSTAGE's bit alone: which of its waits the lab's sessions would reach with more bits set is not known (?).
+**Expected / concern:** On the camera the bits come one by one as CPU 2 copies the sections, during CPU 0's boot. Sections 1 to 8 are copied at once; section 9's copy waits for stage 7's bit (CPU 0 has run section 7's constructors) and section 10's for stage 8's (CPU 1 has run section 8's), D, `docs/hle-gaps.md` 4.6.4; that all ten are set before the camera application runs is I. Code that tests the mask (caduceus-om3's half-press gate requires all ten) sees them set from the store's start in the lab, bits 8 and 9 included, which the camera sets only after CPU 1's step. The stages' ready word is S-BOOTSTAGE's (7.19).
 
 **Confidence:** high
 
@@ -529,9 +529,20 @@ The second card slot (E143, E146; `docs/hle-gaps.md` 4.8.12): the lab has both s
 
 **Emulator:** The whole image is in DRAM before the first instruction, so code in any section can call or read code and data in any other at any time. S-STALERAM (4.8) leaves out what the boot never loads, not what it loads late.
 
-**Expected / concern:** On the camera CPU 2 copies the sections one after another while CPU 0 boots, and the per-section init marks each one ready (the stages' ready word); code that runs early in the boot, or a hook placed in an early section, can reach a later section before it is loaded and find stale RAM there. Caduceus-om3's v0.20 test 1 bootlooped on the camera (their report); their static reading (I) is that a hook in section 2's image pipeline used routines placed in section 8 before that section was loaded (research/NOTES.md "v0.20 grain research"); the build had run in om-emu. Modelling it needs the boot to run with the loader's timing (ROADMAP "Full-boot LLE"); the lab does not attempt it.
+**Expected / concern:** On the camera CPU 2 copies the sections one after another while CPU 0 boots, and the per-section init marks each one ready (the stages' ready word); code that runs early in the boot, or a hook placed in an early section, can reach a later section before it is loaded and find stale RAM there. Caduceus-om3's v0.20 test 1 bootlooped on the camera (their report); their static reading (I) is that a hook in section 2's image pipeline used routines placed in section 8 before that section was loaded (research/NOTES.md "v0.20 grain research"); the build had run in om-emu. Modelling it needs the boot to run with the loader's timing (ROADMAP "Full-boot LLE"); the lab does not attempt it. What is read of that timing (`docs/hle-gaps.md` 4.6.4, D): each section is copied before its per-section step; sections 1 to 8 one after another, section 9 only once stage 7's bit is set, section 10 only once stage 8's bit is set (section 8's step, on CPU 1), and the byte flag after section 10 marks the end, which USTART_L and USTART4 wait for.
 
 **Confidence:** high (that the lab cannot show it); the camera failure is their report
+
+### 7.19 The stages' ready word set for sections 1 to 7 (S-BOOTSTAGE)
+
+**Where:** `emu/src/lab/menu.mjs` (`boot_stage`, `stage_bits`), `emu/src/lab/audiohw.mjs` (H-AUDSTART), `docs/hle-gaps.md` 4.6.4
+
+**Emulator:** On E143, E146 and E147 S-BOOTSTAGE sets bits 0 to 6 of the stages' ready word (`0x7f`; E147 `0xa32de58c`) before the settings store's start: bit n - 1 for each section n, in order, up to the first whose static constructor table (by its address in the section's loaded range, fact `ctors`) the lab has not run with every constructor ok. The lab runs section 2's at its start and 6's and 7's at the display bring-up, and sections 1, 3, 4 and 5 have none, so the bits are those of sections 1 to 7 (`0x1f` in a lab without the display bring-up's constructors). The step's other work, a region set-up in the block `0x99700000` and the highest section done, is not done. H-AUDSTART checks stage 6's bit instead of setting it. Other bodies keep bit 0 alone.
+
+**Expected / concern:** On the camera the per-section step sets bit n - 1 after section n's constructors, CPU 0's for every section but 8, whose step CPU 1 runs; the steps of sections 9 and 10 are posted only after stage 8's bit (D). The lab leaves bits 7 to 9 clear, so code that waits for stage 8, 9 or 10 waits for good, as caduceus-om3's v0.26.2 / v0.27 power-on worker does (it waits for `0x2e9`). S-STAGE9 (camapp 3) sets bit 8 alone, ahead of the camera's order. In the lab the bits are set at once at the store's start; on the camera they come as CPU 2 copies the sections, and whether any reader of stages 2 to 7 runs before the camera sets its bit is not known (?); in an E143 session of S1, S2, the menu and playback none of the tests ran after the open (X).
+
+**Confidence:** high for which steps set which bit (D, checked on the three blocks by `emu/test/test_bootstage.mjs`); medium for the timing
+
 
 ## 8. What the tests establish
 

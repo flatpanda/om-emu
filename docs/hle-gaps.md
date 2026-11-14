@@ -2468,7 +2468,7 @@ unchanged (X: golden identical). The registers and formulas are in `docs/om1-vsc
   run ends 1 ms of lab time after its start. Under camapp 3 only, at the application's start: H-IMGPROINIT runs the
   init's IRQ attach `0x5048c3a0`, the id bitmap's clear `0x5048ba3a` and the unit's own init `0x5050a6b2` natively (not
   the rest of `0x50481211`, which inits the unit at `0x9c200000` and others, nor `0x5048d57f`), and S-STAGE9 sets stage
-  9's bit (as S-BOOTSTAGE and H-AUDSTART set stages 1 and 6). Default sessions never write the unit (X: golden
+  9's bit (as S-BOOTSTAGE sets stages 1 to 7 since 2026-11-14, 4.6.4; before, it set 1 and H-AUDSTART 6). Default sessions never write the unit (X: golden
   unchanged). Since 2026-11-10 a default session that takes a picture does: REC's header clear's fill, one kind-14
   mode-4 run in REC_IMAGE's task after H-RECIMGPRO (4.3.3, X).
 - **Result (X, `emu/test/test_camapp.mjs` traRoutingSession 19 of 19; `emu/test/test_imgpro.mjs` 31 of 31).** After
@@ -4904,7 +4904,7 @@ broker's init now runs before the HighLevel steps (below); the default sessions 
   | 1_b | starts PER_SCPU (`0x50024079`); `0x50055e10`, `0x500540fc` | H-SCPUSTART, at the store init |
   | 0_y, 0_A | `0x50059649`; the power manager's init `0x50044eb6`; starts PWR_MAIN (`0x500240d2`); `0x50044fe0` | H-PWRSTART, after UI_IN's port scan |
   | 0_F | the fast start's reset `0x50023d89` and power start `0x50023db7`; `0x50053dd9`; starts PER_IN | none |
-  | 1_1 | W phase 1 | S-BOOTSTAGE |
+  | 1_1 | W phase 1 | S-BOOTSTAGE (phases 1 to 7, 4.6.4) |
   | 1_2 | the deferred task's init `0x5005304d` | H-DEFER, in H-BOOTTIME |
   | 1_6..1_e | `0x50046660`, `0x50044c83`; starts DBG_OUT, S_SHELL, U_SHELL; `0x5012b767`; UI_IN's `0x5014b714`; `0x50059680`; starts FLASH_PRM_EXEC_ASYNC | none |
   | | W CPU 3's magic (its boot jobs: the registry bootstrap `0x50040aeb` among them); `0x50003cf9` | the registry bootstrap at the store init |
@@ -4976,7 +4976,7 @@ broker's init now runs before the HighLevel steps (below); the default sessions 
 
   | Mark | USTART4 (`0x501e9d54`) | In the lab |
   |---|---|---|
-  | 4_2 | W phases 6 and 7 | H-AUDSTART sets 6 |
+  | 4_2 | W phases 6 and 7 | S-BOOTSTAGE sets both (4.6.4; H-AUDSTART set 6 before 2026-11-14) |
   | 4_4 | `0x501ea849`, an empty function (`retf`) | |
   | 4_5 | the HighLevel object's create `0x50ab222a` (MainSystem.cpp); starts HIGHLEVEL_MAIN (`0x501e9dca`); its init `0x50ab22bc` | S-CAMAPP |
   | | `0x501e6aa9`: the fast start's two callbacks registered (`0x50ab22f6`, `0x50ab2331`) | none |
@@ -5077,8 +5077,8 @@ broker's init now runs before the HighLevel steps (below); the default sessions 
   | USTART5 | phase 8 (`0x501e9ec2`) | `5_1`..`5_4`; phases 8, 9, 10 | a bus error: `0x50001129` writes 1 to `0x98d011c0` (the flash driver under `0x518f724a`, the call at `0x501e9ef5`) | the flash controller's NAND path, as USTART_L |
 
   So from the lab's reset state every start task stops at once at a condition of the overlay loader, of another
-  loader or of another core, as the map says it must (a default E143 session's bring-up sets the phases 1 and 6 and
-  none of the bytes; camapp 3 adds phase 9). With those granted, four of the seven stop at a device the lab has no
+  loader or of another core, as the map says it must (a default E143 session's bring-up set the phases 1 and 6 and
+  none of the bytes, camapp 3 adding phase 9; since 2026-11-14 it sets the phases 1 to 7, 4.6.4; the probe's lab sets none). With those granted, four of the seven stop at a device the lab has no
   model of (two at the flash controller), one at an init an earlier start task runs, one at tasks the probe does not
   start, and one in its own event loop.
   - *The check of a need (X).* `--before ADDR` calls a function natively before the task starts. With EXP's init
@@ -5108,6 +5108,67 @@ broker's init now runs before the HighLevel steps (below); the default sessions 
   release bits of 4.6.2); a model of the flash controller's NAND path (`0x98d011c0`, IRQ 237), which two start tasks
   stop at (the overlay loader stops at the same block's DMA for chip 1, `0x98d00200`, 4.6.2); the order differences
   kept above, each with its cost.
+
+#### 4.6.4 The stage word's bits on E143, E146 and E147 (2026-11-14; D unless tagged, addresses E147's)
+
+The stage word (`0xa32de58c`; E143 `0xa32df1f4`, E146 `0xa32df2cc`; fact `boot.stage`) is the phases' word of 4.6.3.
+caduceus-om3's v0.26.2 and v0.27 start a worker at power-on that waits until it holds `0x2e9` and then loads their
+films (their source; `analysis/caduceus-om3/README.md` 2.2). Until this section S-BOOTSTAGE set bit 0 alone (and
+H-AUDSTART bit 5 on E143 with audio on), so that worker never ran in the lab. What follows is read on E147 and checked
+on all three bodies by `emu/test/test_bootstage.mjs` (X: the same sequence of copies, waits and posts, the same cases).
+
+- **Its one writer: the per-section step** `0x50024f24(n)` (E143 `0x50024eda`, E146 `0x50024fa5`). For n above the
+  highest section done (`0xa32de594`, which only the step reads, X: a byte scan) it stores n there and, for n < 10,
+  sets up a region from section n's start to section 10's end four times, for the index pairs 0..1 by 0..1
+  (`0x50039762`, `0x5003938a`, `0x500397be`), in the block `0x99700000`, whose register pointers it takes from the table at
+  `0x60091dcc` (the string "[DbgSup-" follows it; what the region does is ?); for n = 10 it calls `0x500397b6`
+  instead. Then a switch on n (`0x50024fd7..0x50025031`) calls the section's static constructor block: 1 `0x501f43c4`
+  (none: the block is entered at its `beq` to the return, and the case's `cmp 1,d0` left Z set), 2 `0x501f43c6` (13
+  pointers at `0x60718770`), 4 `0x501f43db` (0), 6 `0x501f43f0` (49 at `0x60f1a6b4`), 7 `0x501f4405` (70 at
+  `0x6164aeb4`), 8 `0x501f443c` (6 at `0x617e45c8`), 9 `0x501f441a` (0); 3, 5 and 10 have no case. Last it ORs bit
+  n - 1 into the word (`0x5002503c..0x50025048`). The word's other references are the test `0x50024e19` and the wait
+  `0x50024e32` (X: a byte scan); each constructor table lies in its own section's loaded range (X, the test).
+- **Who runs it, where and in what order.** CPU 2's USTART_L2 (`0x500245a5`) does for n = 1..10: load_section(n)
+  (`0x50024eb5`: the copy, then bit n - 1 of the copied mask), its byte flag `0xa32de548 + n` = 1, and the post
+  `0x500364e1(core, 0x60045f44, n)`, the step's run-time address with n in a1. The core is 0 for every section but 8,
+  whose step goes to CPU 1 (`mov 1,d0` at `0x5002483e`). Between section 8's copy and its post it waits for stage 7
+  (`0x50024836`); between section 9's copy and its post for stage 8 (`0x50024872`); section 10's copy and post follow.
+  `0x500364e1` calls the function itself when the core is its own and otherwise puts it in a free slot of that core's
+  ring (`0x500364eb..0x500365f7`). So bits 0..6 come from CPU 0 as it serves the posts (I: in their order), bit 7 from
+  CPU 1 after bit 6, and bits 8 and 9 after bit 7. E143's sites: 4.6.3's phase table (`0x50024803`, `0x5002483f`).
+- **Its readers** (the stage, the call): waits for 1 (BOOT_CPU1..3 `0x50008cf3`, `0x5000907e`, `0x50009480`; stage 1
+  `0x50024903`), 2 (USTART_L `0x50024287`, USTART2 `0x501f72d1`), 3 (USTART3 `0x501f78ff`), 4 (USTART_L `0x500242cc`,
+  USTART3 `0x501f7915`), 6 (USTART4 `0x501f8154`, AUD_MAIN `0x50a62a68`), 7 (USTART4 `0x501f815d`, USTART_L2), 8
+  (USTART_L `0x5002438f`, USTART_L2, USTART5 `0x501f8296`), 9 (USTART5 `0x501f82ac`, the image player `0x50a6c66c`,
+  `0x5189427f`), 10 (USTART5 `0x501f82c2`); tests of 2 (`0x50023aeb`), 3 (`0x5017ac5f`, `0x50196b9a`), 6
+  (`0x502cddf1`, `0x502cde11`), 9 (`0x500411f2..0x50041265`, `0x50971acf`) and 10 (`0x50047ab2`). E143's are 4.6.3's
+  table; E146's have the same stages (X: a scan of each block for the calls and their `mov n,d0`).
+- **What the lab runs of the steps.** Section 2's constructors at every lab's start (`src/lab/osd.mjs` mm_ctors),
+  6's and 7's at the display bring-up (`src/lab/menu.mjs` run_static_ctors, CTOR_TABLES), 8's nowhere: they are
+  CPU 1's (4.6.2). The region set-up is not done (the lab has no device at `0x99700000`, X: a grep of `emu/src`;
+  S-BOOTSTAGE's text), nor the highest-section word. So the steps of sections 1 to 7 are the lab's to stand in for, and S-BOOTSTAGE
+  now sets bits 0..6, `0x7f`, before the settings store's start (`stage_bits`: the sections in order up to the first
+  whose constructor table, by its address in the section's loaded range, the lab has not run with every constructor
+  ok; `0x1f` in a lab that does not run run_static_ctors). Bit 7 stays clear, and bits 8 and 9 with it, since their
+  steps are posted only after the wait for stage 8. H-AUDSTART no longer sets bit 5: it refuses a word without it.
+  S-STAGE9 (camapp 3) still sets bit 8 at the application's start, ahead of where the boot would (after stage 8); its
+  reader, the image player, has no other way to start in the lab (4.3.1). The other bodies keep bit 0 alone: their
+  stage steps are another form (E129's, `docs/model-survey.md`), not read here.
+- **Measured (X).** After a play session's open the word reads `0x7f` on E143 (audio auto), E146 and E147 (it read
+  `0x01` on E147 before, X); `test_bootstage.mjs` pins it with the controls (section 7's constructors failed: `0x3f`;
+  section 6's, or run_static_ctors not run: `0x1f`) and the image's boot job with its own controls. In an E143 session
+  of S1, S2, the menu, playback, INFO and power:off none of the tests above ran after the open (X: a trace of their
+  call sites, 0 hits; the same trace counted 1,743 calls of the settings getter in a menu flow).
+- **caduceus-om3's power-on load.** `0x2e9` is stages 1, 4, 6, 7, 8 and 10. The lab's `0x7f` lacks 8 and 10 (bits 7
+  and 9): section 8's step, its six constructors on CPU 1, and section 10's step, posted after the wait for stage 8.
+  So that worker still waits and their pins stand (the half press loads the films). It would run once CPU 1 runs
+  section 8's constructors (a CPU 1 of the lab's, 4.6), not by setting the bits.
+- **Groundwork for the load order (FIDELITY 7.18).** Section n's copy comes before its step; sections 1 to 8 are
+  copied before the wait for stage 7, section 9 after stage 7's bit and before the wait for stage 8, section 10 after
+  stage 8's bit; the byte flag `0xa32de552` (section 10's, E143 `1b6`) marks the end, which USTART_L and USTART4 wait
+  for (4.6.3). So code in section 9 or 10 is not in RAM before CPU 0 has run section 7's constructors, nor section 10's
+  before CPU 1 has run section 8's; the lab holds every section from its start (S-SECLOADED's mask included, whose bit
+  9 the camera sets only after stage 8).
 
 ### 4.7 SCPU, power, clock, on-board sensors and persistence
 

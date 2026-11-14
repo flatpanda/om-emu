@@ -6322,6 +6322,33 @@ to the card switch), and are stood in at their seams with the firmware's own eve
   4.8.6); what the camera draws without a card ("No Card", the card icon).
   (The second slot is modelled since 2026-11-11, 4.8.12: its mount state 8 at the start is what the media manager
   leaves for an empty slot, X, and its switch `0x1518` and card-detect pin follow its card.)
+- **The media status at a removal, and a start with no card (2026-11-14):** the media status setter `0x50aca703`
+  (E147 `0x50adf011`; its trace names 0 NO_MOUNT, `0x1001` NOT_PRESENT, `0xf000` OK) has four callers on both bodies.
+  At a card's change the manager's notifier `0x50bb89b2` sends 711 `{kind, flag, 0}` (`0x50bb8a1b`) and then calls
+  updateMediaStatus(0) `0x50bb9adb` (`0x50bb8a34`), which for each of its four slot controllers
+  (`this + 436`) takes the device's status (`0x50bb7ac7`: the device at `+320`, its vt +124), turns NO_MOUNT into OK where the controller's `0x50bb7b46` says so and OK into NO_MOUNT where its `+168` is
+  set, and stores it through the setter (`0x50bb9b99`; E147 `0x50bd4e13`); the mount end does the same for its slot
+  (OK at `0x50bb816e..0x50bb8183`). Before that the sequence parts' card-switch case of each slot (`0x50c939c1` for
+  slot 1, `0x50c93ac7` for slot 2, entries of nine vtables; E147 `0x50cae8ca`, `0x50cae9d3`) reads the switch's
+  level (`0x50424f9a(0x02021506)`) and sets the mount state 0 and the status NO_MOUNT for level 0 or NOT_PRESENT for
+  any other (`0x50c93a2e..0x50c93a59`). A byte scan finds such a caller (`mov 4097,d1` before the call) of each
+  scanned body's setter (X, the 29 unpacked main blocks with one setter opening; E139, E144 and E148 need their
+  expanded images). X on E143 under control camapp 3 (the manager's own run, a hook on the setter): a start with the
+  second slot empty leaves SD2's word `0x60360be4` NOT_PRESENT; its removal writes NOT_PRESENT from the sequence parts
+  (return `0x50c93b66`) and then the update writes OK for slot 1 and NOT_PRESENT for slot 2 (twice); its insertion
+  writes NO_MOUNT from both, then after the mount the device's status (UNFORMAT `0x2000` for a blank card, which the
+  manager does not format). S-MEDIA now does the same for the first slot's word (S-CARD's `0x60360bec`, E147
+  `0x60369308`): NOT_PRESENT after the mount state 0 at a removal; NO_MOUNT at an insertion's change and OK after the
+  mount (the lab's insertion formats a blank card and refuses one it leaves unmounted). A session may start with the
+  first slot empty (the card holder's `out`, `src/lab/storage.mjs`; `bin/session.mjs --no-card`, and every start
+  after a session that ended with the card out): its card switch at the no-card level, no insertion request (the
+  manager sends an empty slot's port nothing, X above, 4.8.12), the mount state 8 (the manager's start leaves an
+  empty slot's so, X) and the status NOT_PRESENT (S-CARD). X on E143 and E147 (`test/test_nocard.mjs`): the shooting
+  screen then shows "No Card" with its icon, 0 shots and `[00:00]` in orange; the card put in is formatted and
+  mounted (the status OK, 803 shots on E143); taken out, the screen is the card-less start's pixel for pixel (the
+  removal's screen does not depend on the status word: X, the same frame with S-MEDIA's status write left out). I:
+  that the first slot's device answers NOT_PRESENT as the second's does. Open: the second slot's word where no
+  manager runs (no rule reads the setter's medium 8 store); the update's ERROR path and its `+168` case.
 
 #### 4.8.4 The card on more bodies, round 3 (2026-10-25; D unless tagged)
 

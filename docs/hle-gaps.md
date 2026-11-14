@@ -4105,7 +4105,12 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   bracket read and takepic's copy (E143 `0x503bbd26`, `0x503bcdac`, placed by the port); `emu/test/test_facts.mjs`
   checks E143's, E146's (`0x503bfe9c`, `0x5057a795`, offsets less 348) and E147's (`0x503c9db8`, `0x5058abd3`) and
   refuses three altered forms. S-EXIFPRM runs, after its settings fields, the fill on a 96-byte record of the lab's,
-  the range copy into its block, and takepic's copy of the record into the block; then the EXIF set as before.
+  the range copy into its block, and takepic's copy of the record into the block; then the EXIF set as before. The
+  fill's own stores reach +4 to +14, +20, +24, +32 and +44 of the record, none at +56, +58 or +60 (D, E143
+  `0x503bf619..0x503bf8b3`; its calls not read), and its last call `0x503bf8b3` is a bare `retf` (D; E147's
+  `0x503c9fd1` too). So the copy puts the lab record's 0 into +38170, +38176 and +38180 (the template's value there
+  too, so no output changes), where the camera copies whatever its ring slot holds; whether a step the lab does not
+  run writes those fields, or the slot keeps an earlier shot's, is not read (?).
   - E143 (X, `emu/test/test_storage.mjs` storageSession 67 of 67): the record holds the plan's Tv 2052 and Av 1276
     (the settings 41002 and 41018: the plan's 1/259 s and f/5.6); the range reads -1536 and 3840; the file's
     ExposureTime is 1/250 s (the set's conversion; it was 1 s, Tv 0). A program shift with the main dial before the
@@ -6470,9 +6475,9 @@ to the card switch), and are stood in at their seams with the firmware's own eve
   insertion requests (4.8.2), the mount state 8, 711 `{4, 1, 2}` and `{4, 1, 8}` (I: which notifications the manager
   sends at a change, and in which order). The Player's input `{"type": "card", "action": "remove" | "insert"}` takes
   S-SDCARD's card out (it then answers no command, as an empty slot) or puts it back, and changes the switch through
-  S-KEYBITS' bit, which UI_IN decodes natively. X: the shooting screen loses the card's count and movie time (no
-  "No Card" text is drawn, X 2026-10-24; on the tree of 2026-11-14 the removal's screen shows "No Card" with its icon,
-  the card-less start's pixel for pixel, below; which change between made the difference is not read) and gets them
+  S-KEYBITS' bit, which UI_IN decodes natively. X: the shooting screen loses the card's count and movie time (on the tree of
+  2026-11-14 it shows "No Card" with its icon, the card-less start's pixel for pixel, below; superseded: the note of
+  2026-10-24 that no "No Card" text is drawn, and which change between made the difference is not read) and gets them
   back after the insertion (803 and 5:25, the same pixels); the insertion takes
   about 0.8 s of lab time (logsec's 740 ms wait after the card switch). While the card is out S-CARD keeps no picture
   and answers 0 images.
@@ -6483,8 +6488,8 @@ to the card switch), and are stood in at their seams with the firmware's own eve
   15262 too; slot 2's switch `0x1518` is not stood in); the HLS components' own runs (the function component and the
   media manager in camapp 2); the media control's other commands (2, 3, 5, 6: erase all, copy, unlock, ...); the SD
   host's card detect (seam A); a card the firmware cannot mount (unreadable; an SDXC card it formats and mounts,
-  4.8.6); what the camera draws without a card ("No Card", the card icon; the firmware's own screen without a card
-  is drawn in the lab since 2026-11-14, below).
+  4.8.6). (What the camera draws without a card is no longer open: the firmware's own screen without a card, "No
+  Card" with the card icon, is drawn in the lab since 2026-11-14, below.)
   (The second slot is modelled since 2026-11-11, 4.8.12: its mount state 8 at the start is what the media manager
   leaves for an empty slot, X, and its switch `0x1518` and card-detect pin follow its card.)
 - **The media status at a removal, and a start with no card (2026-11-14):** the media status setter `0x50aca703`
@@ -6496,9 +6501,9 @@ to the card switch), and are stood in at their seams with the firmware's own eve
   (OK at `0x50bb816e..0x50bb8183`). Before that the sequence parts' card-switch case of each slot (`0x50c939c1` for
   slot 1, `0x50c93ac7` for slot 2, entries of nine vtables; E147 `0x50cae8ca`, `0x50cae9d3`) reads the switch's
   level (`0x50424f9a(0x02021506)`) and sets the mount state 0 and the status NO_MOUNT for level 0 or NOT_PRESENT for
-  any other (`0x50c93a2e..0x50c93a59`). A byte scan finds such a caller (`mov 4097,d1` before the call) of each
-  scanned body's setter (X, the 29 unpacked main blocks with one setter opening; E139, E144 and E148 need their
-  expanded images). X on E143 under control camapp 3 (the manager's own run, a hook on the setter): a start with the
+  any other (`0x50c93a2e..0x50c93a59`). A byte scan finds such a caller (`mov 4097,d1` before the call, `d0` 4)
+  of the setter on every body: X, the expanded main images of all 19 models, one setter opening each, E139
+  `0x509cc022`, E144 `0x50a14d2f` and E148 `0x50a13ac3` among them (each also has a medium-8 caller with `0x1001`). X on E143 under control camapp 3 (the manager's own run, a hook on the setter): a start with the
   second slot empty leaves SD2's word `0x60360be4` NOT_PRESENT; its removal writes NOT_PRESENT from the sequence parts
   (return `0x50c93b66`) and then the update writes OK for slot 1 and NOT_PRESENT for slot 2 (twice); its insertion
   writes NO_MOUNT from both, then after the mount the device's status (UNFORMAT `0x2000` for a blank card, which the

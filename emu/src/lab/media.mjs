@@ -70,14 +70,14 @@ const SLOT = 0, SECOND = 1;         // the first slot, drive 0, and the second, 
 const FLAG_MOUNTED = 0x1000, FLAG_ERRORS = 4 | 8, FLAG_KEEP = 0x4000;
 // S-MEDIA's media status of the first slot (S-CARD's word, camapp.mjs card_status; the setter's names: 0 NO_MOUNT,
 // 0x1001 NOT_PRESENT, 0xf000 OK): NOT_PRESENT after a removal and with the slot empty at the start; NO_MOUNT from an
-// insertion's change to its mount's end, then OK. These are the values the firmware's own media manager leaves in
-// the second slot's word under control camapp 3 (X, E143: NOT_PRESENT after a start with the slot empty and after a
+// insertion's change to its mount's end, then OK. These are the values the firmware's own media manager leaves in the
+// second slot's word under control camapp 3 (X, E143: NOT_PRESENT after a start with the slot empty and after a
 // removal; NO_MOUNT at an insertion, then its device's status after the mount), written at a change first by the
-// sequence parts' card-switch case of the slot (level not 0: the mount state 0 and NOT_PRESENT; level 0: NO_MOUNT)
-// and then by the manager's status update of every slot from its device, after its notification of the change (D on
-// E143 and E147, both slots' cases; every scanned body's setter has a caller that passes NOT_PRESENT so, X; the
-// addresses are in docs/hle-gaps.md 4.8.3). The second slot's word is not placed in the lab (no rule reads the
-// setter's medium 8 store) and is left to the firmware: under control camapp 3 the manager writes it (X)
+// sequence parts' card-switch case of the slot (level not 0: the mount state 0 and NOT_PRESENT; level 0: NO_MOUNT) and
+// then by the manager's status update of every slot from its device, after its notification of the change (D on E143
+// and E147, both slots' cases; the setter of every one of the 19 bodies' expanded images has a caller that passes
+// NOT_PRESENT so, X; the addresses are in docs/hle-gaps.md 4.8.3). The second slot's word is not placed in the lab (no
+// rule reads the setter's medium 8 store) and is left to the firmware: under control camapp 3 the manager writes it (X)
 export const MEDIA_NO_MOUNT = 0, MEDIA_NOT_PRESENT = 0x1001, MEDIA_OK = 0xF000;
 
 export class HlsMedia {

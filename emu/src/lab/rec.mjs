@@ -94,7 +94,9 @@
 //               publishes them (S-EXPOSE's take_expose_calculate; X: the plan's Tv and Av), the shot-record fill's
 //               copy of TAKE_EXPOSE's shutter range (into +38166 and +38168, to which the set clamps Tv) natively,
 //               and takepic's copy of the record's +6, +8, +10, +56, +58 and +60 into +38164, +38172, +38178,
-//               +38170, +38176 and +38180 (the copy alone, not takepic). So on E143 ExposureTime is the plan's
+//               +38170, +38176 and +38180 (the copy alone, not takepic). The fill's own stores do not reach +56, +58
+//               or +60 (D), so those copy the lab record's 0; what the camera's ring slot holds there is not read
+//               (?: docs/hle-gaps.md 4.3.13). So on E143 ExposureTime is the plan's
 //               shutter as the set gives it (1/250 s for S-SCENE's default scene, X); E146 and E147 start at a GUI
 //               state where S-EXPOSE does not plan, so a shot before S1 has left it finds the settings 0 (1 s), a
 //               later one the plan's (X). Sv +38174 (TAKE's state) stays 0, so ISO is 25 (REC_IMAGE's), and FNumber

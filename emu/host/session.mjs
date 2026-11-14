@@ -218,18 +218,27 @@ function parseExpect(t) {
 }
 
 // A step's Player inputs (play's POST /api/input documents) for the kinds that are inputs; settle: the lab time after
-// a press, a dial or a switch
+// a press, a dial or a switch. Each wait of a step (wait:MS, a press's, a hold's, the settle) goes as 'WAIT:ms' tokens
+// of at most WAIT_SLICE_MS, the idle player's slice (src/lab/player.mjs SLICE_NS): the camera application's
+// stand-ins deliver at the end of each Player input (src/lab/play.mjs PlaySession end: camapp.tick, the DISPLAY and
+// module replies, S-BOOTDONE, the timed callbacks), so one long WAIT held them to its end, and when the application's
+// start-up finished depended on how a script divided its waits (X, 2026-11-14: 'wait:2000' and 'wait:1500 wait:500'
+// before S1 gave Caduceus v0.29.1 two different Picture Mode pages). A play token 'WAIT:ms' is sent as written.
+export const WAIT_SLICE_MS = 50;
 export function stepInputs(st, settle = SETTLE_MS) {
-  const wait = (ms) => ({ type: 'token', token: `WAIT:${ms}` });
+  const wait = (ms) => {
+    const n = Math.max(1, Math.ceil(ms / WAIT_SLICE_MS));
+    return Array.from({ length: n }, (_, i) => ({ type: 'token', token: `WAIT:${i < n - 1 ? WAIT_SLICE_MS : ms - WAIT_SLICE_MS * (n - 1)}` }));
+  };
   const key = (id, action) => ({ type: 'key', id, action });
   switch (st.kind) {
-    case 'press': return [key(st.id, 'down'), wait(PRESS_MS), key(st.id, 'up'), wait(settle)];
-    case 'hold': return [key(st.id, 'down'), wait(st.ms), key(st.id, 'up'), wait(settle)];
+    case 'press': return [key(st.id, 'down'), ...wait(PRESS_MS), key(st.id, 'up'), ...wait(settle)];
+    case 'hold': return [key(st.id, 'down'), ...wait(st.ms), key(st.id, 'up'), ...wait(settle)];
     case 'edge': return [key(st.id, st.action)];
-    case 'dial': return [{ type: 'dial', id: st.id.replace(/_dial$/, ''), detents: st.detents }, wait(settle)];   // the Player's dial ids: main, sub
-    case 'wait': return [wait(st.ms)];
+    case 'dial': return [{ type: 'dial', id: st.id.replace(/_dial$/, ''), detents: st.detents }, ...wait(settle)];   // the Player's dial ids: main, sub
+    case 'wait': return wait(st.ms);
     case 'token': return [{ type: 'token', token: st.token }];
-    case 'switch': return [{ type: 'switch', id: st.id, ...('value' in st ? { value: st.value } : { step: st.by }) }, wait(settle)];
+    case 'switch': return [{ type: 'switch', id: st.id, ...('value' in st ? { value: st.value } : { step: st.by }) }, ...wait(settle)];
     case 'power': return [{ type: 'switch', id: 'power', value: 0 }];
     case 'read': return [{ type: 'debug', op: 'read', addr: st.addr, size: st.len }];
     case 'write': return [{ type: 'debug', op: 'write', addr: st.addr, hex: st.hex }];

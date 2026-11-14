@@ -1,6 +1,7 @@
 // The scripted session (host/session.mjs openSession, bin/session.mjs):
 //   sessionUnits    (firmware-free) the script splitter (quotes, comments), every token form and its refusals, each
-//                   step's Player inputs (a press: down, 150 ms, up, the settle), every expect on fakes with its
+//                   step's Player inputs (a press: down, 150 ms, up, the settle; each wait in WAIT_SLICE_MS
+//                   slices, a play WAIT token as written), every expect on fakes with its
 //                   negative control (gui = and ~, mem = and !=, card, standin, exif = and ~), the Exif fields by
 //                   name (UserComment after its character code), the parser's rest positional, and bin/session.mjs's
 //                   usage errors (exit 2 before any lab: an unknown option or token, a bad --loaded, --settle -1, a
@@ -25,13 +26,15 @@
 //                   dial's setting by the getter, power:off and restart with the stores restored and the dial still at
 //                   ART (the getter's 899, the record's carried), no poke; control: the same file with a run in the
 //                   0xFF tail past section 10's loaded end, reported by the start line and the summary's audit
-//                   (unloaded), read as S-STALERAM's fill, a write reported as a poke, a failed expect exiting 1
+//                   (unloaded), read as S-STALERAM's fill, a write reported as a poke, a failed expect exiting 1;
+//                   'wait:2000' and 'wait:1500 wait:500' end at the same lab time, GUI and frame, past the power-on
+//                   screen (control: one WAIT input per wait, they did not)
 //   node emu/test/test_session.mjs [--units] [--session]       (OM_EMU_MODEL=E147 for the OM-3)
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { splitScript, parseToken, stepInputs, expectFails, exifFields, TokenError, PRESS_MS, SETTLE_MS } from '../host/session.mjs';
+import { splitScript, parseToken, stepInputs, expectFails, exifFields, TokenError, PRESS_MS, SETTLE_MS, WAIT_SLICE_MS } from '../host/session.mjs';
 import { parseArgs } from '../checks/lib/args.mjs';
 
 const EMU = path.resolve(new URL('..', import.meta.url).pathname);
@@ -87,9 +90,15 @@ export function sessionUnits() {
   for (const x of refusals) ok(thrown(() => parseToken(x)) instanceof TokenError, `refused: ${JSON.stringify(x)} -> ${thrown(() => parseToken(x))?.message ?? 'taken'}`);
   // the Player inputs
   const inp = (x, settle) => JSON.stringify(stepInputs(parseToken(x), settle));
-  ok(inp('ok') === JSON.stringify([{ type: 'key', id: 'ok', action: 'down' }, { type: 'token', token: `WAIT:${PRESS_MS}` }, { type: 'key', id: 'ok', action: 'up' }, { type: 'token', token: `WAIT:${SETTLE_MS}` }]), `a press: ${inp('ok')}`);
-  ok(inp('hold:ok:900', 50) === JSON.stringify([{ type: 'key', id: 'ok', action: 'down' }, { type: 'token', token: 'WAIT:900' }, { type: 'key', id: 'ok', action: 'up' }, { type: 'token', token: 'WAIT:50' }]), `a hold: ${inp('hold:ok:900', 50)}`);
+  // the waits in WAIT_SLICE_MS slices, the last one the rest
+  const W = (...ms) => ms.map((x) => ({ type: 'token', token: `WAIT:${x}` }));
+  const S = (ms) => W(...Array(Math.ceil(ms / WAIT_SLICE_MS) - 1).fill(WAIT_SLICE_MS), ms - WAIT_SLICE_MS * (Math.ceil(ms / WAIT_SLICE_MS) - 1));
+  ok(WAIT_SLICE_MS === 50 && PRESS_MS % WAIT_SLICE_MS === 0 && SETTLE_MS % WAIT_SLICE_MS === 0, `the slice: ${WAIT_SLICE_MS} ms`);
+  ok(inp('ok') === JSON.stringify([{ type: 'key', id: 'ok', action: 'down' }, ...S(PRESS_MS), { type: 'key', id: 'ok', action: 'up' }, ...S(SETTLE_MS)]), `a press: ${inp('ok')}`);
+  ok(inp('hold:ok:920', 50) === JSON.stringify([{ type: 'key', id: 'ok', action: 'down' }, ...W(...Array(18).fill(50), 20), { type: 'key', id: 'ok', action: 'up' }, ...W(50)]), `a hold: ${inp('hold:ok:920', 50)}`);
   ok(inp('s2:down') === '[{"type":"key","id":"s2","action":"down"}]' && inp('wait:7') === '[{"type":"token","token":"WAIT:7"}]', 'an edge, a wait');
+  ok(inp('wait:120') === JSON.stringify(W(50, 50, 20)) && inp('wait:100') === JSON.stringify(W(50, 50)) && inp('WAIT:2000') === '[{"type":"token","token":"WAIT:2000"}]',
+    `a wait in slices, a play token as written: ${inp('wait:120')} ${inp('wait:100')} ${inp('WAIT:2000')}`);
   ok(inp('main_dial:-2', 10) === '[{"type":"dial","id":"main","detents":-2},{"type":"token","token":"WAIT:10"}]' && inp('sub_dial:+1', 0).startsWith('[{"type":"dial","id":"sub",'),
     `a dial (the Player's ids main, sub): ${inp('main_dial:-2', 10)} ${inp('sub_dial:+1', 0)}`);
   ok(inp('switch:creative_dial=4', 0) === '[{"type":"switch","id":"creative_dial","value":4},{"type":"token","token":"WAIT:0"}]' && inp('switch:mode_dial+2', 0).includes('"step":2'), 'a switch by value and by step');
@@ -283,6 +292,14 @@ async function e147({ ok }, { T, newCard, step, sameFile, hello }) {
   ok(c.sum?.patch_audit?.unloaded?.length === 1 && c.sum.patch_audit.unloaded[0].at === tail && c.sum.patch_audit.unloaded[0].n === 10, `E147 control: the audit's unloaded: ${JSON.stringify(c.sum?.patch_audit)}`);
   ok(c.sum?.pokes?.length === 1 && c.sum.pokes[0].addr === tail && /^session\.mjs: FAILED at step 5 \(expect:gui=NO_SUCH_STATE\): .*; POKED: 1 write\(s\) \(step 4 0x/.test(c.last) && c.steps.length === 6,
     `E147 control: a poke and a failed expect: ${JSON.stringify(c.sum?.pokes)} | ${c.last}`);
+  // the same lab time divided into other waits ends in the same state: the waits go in the idle player's slices
+  // (WAIT_SLICE_MS), so the application's start-up does not wait for a step's end (control, one WAIT input per wait:
+  // 'wait:2000' ended at 4.755 s on the power-on screen with no frame, 'wait:1500 wait:500' at 4.757 s on the shooting
+  // screen, X 2026-11-14)
+  const end = (r) => { const x = r.steps.at(-1) ?? {}; return JSON.stringify([x.lab_ns, x.gui, x.frame]); };
+  const w1 = cli(['--model', 'E147', 'wait:2000']), w2 = cli(['--model', 'E147', 'wait:1500', 'wait:500']);
+  ok(w1.rc === 0 && w2.rc === 0 && end(w1) === end(w2) && w1.steps.at(-1)?.frame !== null && w1.steps.at(-1)?.gui !== 'SS_COMMON/ID_ST_POWER_ON',
+    `E147 a wait divided otherwise: ${end(w1)} and ${end(w2)} | ${w1.last} | ${w2.last}`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

@@ -3320,10 +3320,11 @@ mode follows the lever in camapp 1 as it does in camapp 3.
   `0x50493617` of `docs/om1-imgpro-spec.md` 1).
   - The create fills the table (`0x504934a6`, called at `0x50491bbf`). For REC's still it takes the constructor
     `0x504a8e07` (through `0x504a7027`; the others, `0x5049cb5c`, `0x504953b9` and `0x504953a9`, by the request's
-    bytes +37, +42 and +8, are not read). That one gives two stages when the request's byte +40 is set, one or two by
-    three tests (`0x504a9f81`, `0x504a9572`, `0x504a8ed8`), and otherwise three: `0x504a88d1`, `0x504a88ee` and
-    `0x504a8961`. `0x504934a6` then appends `0x50494b9c` unless the request's byte +35 is 1 (or the byte +4556 of
-    the request's operations block, which the handle's +9304 points at, is set and the request's byte +39 is not 1).
+    bytes +37, +42 and +8, are not read; read in 4.3.12, 2026-11-13). That one gives two stages when the request's
+    byte +40 is set, one or two by three tests (`0x504a9f81`, `0x504a9572`, `0x504a8ed8`), and otherwise three:
+    `0x504a88d1`, `0x504a88ee` and `0x504a8961`. `0x504934a6` then appends `0x50494b9c` unless the request's byte
+    +35 is 1 (or the byte +4556 of the request's operations block, which the handle's +9304 points at, is set and the
+    request's byte +39 is not 1).
   - X (a probe: the shot record's four gains set to 256, a value with no source, so that the parameter set returns;
     the library's other units on the lab stub): the three run in that order. Nothing is appended: the request's byte
     +35 is 1 (X), rec_ImgPro_CreateParam's copy of the packet's ImgAspect (`0x505423a8..0x505423bd`). Stages 1 and
@@ -3771,6 +3772,117 @@ are fixed (the display switch under camapp 3, the session's module-9 scope); the
   state +3144; the lens flag +37982 and the lens fields; the EXIF set on the E144 family's, recFileInline's and the
   E118 family's REC versions (no rule reads it there; the E118 family's set divided by zero too, finding 103, whether
   in the same table is not read); the orientation (4.1.4's plan step 3).
+
+#### 4.3.12 The still pipeline's coverage and the constructor's inputs (E143, E146, E147; 2026-11-13; D unless tagged)
+
+- **Why.** Which parts of the still path below S2 run natively on each body, pinned, and what picks the image
+  library's pipeline constructor for REC's still (the create's stage-table fill, 4.3.9, whose other constructors were
+  not read). A modified firmware's capture-path code sits behind some of them (`analysis/caduceus-om3/README.md` 4.4).
+  Addresses are E143's unless a body is named.
+- **What runs (X, `emu/test/test_storage.mjs` storageSession's STILL_PATH: observers on each body's addresses through
+  one S1 + S2 with S-SCENE's live view; each address's first instructions read on its body, E146's and E147's placed
+  by the cross-build map).** The same on the three bodies:
+
+| Part | E143 | E146 | E147 | Runs |
+|---|---|---|---|---|
+| rec_ImgPro_CreateParam | `0x50542363` | `0x5051f5af` | `0x5052e69f` | 1 |
+| its calls: format word, flags, kind byte, extensions | `0x50542394`, `0x5054239e`, `0x505423c1`, `0x505423fe` | `0x5051f5e0`, `0x5051f5ea`, `0x5051f60d`, `0x5051f64a` | `0x5052e6d0`, `0x5052e6da`, `0x5052e6fd`, `0x5052e73a` | 1 each |
+| the extension's test (CreateParam's, the release's) | `0x50543f93` | `0x505216cf` | `0x505307c8` | 2 |
+| the extension's apply | `0x50543fbb` | `0x505216f7` | `0x50530805` | 0 |
+| the create; its stage-table fill | `0x50491699`; `0x504934a6` | `0x50483f0d`; `0x50485f48` | `0x5049272b`; `0x504947a6` | 1 |
+| the still constructor's stub and body | `0x504a7027`, `0x504a8e07` | `0x5049a01a`, `0x5049bfdb` | `0x504a88f1`, `0x504aa8b2` | 1 |
+| the create's second step | `0x50493541` | `0x50485fe3` | `0x50494841` | 1 |
+| rec_ImgPro_ImageParam | `0x50542528` | `0x5051f7c2` | `0x5052e8b2` | 1 |
+| the other constructors (kind, option, byte +8 1 or bit 19) | `0x5049cb5c`, `0x504953b9`, `0x504953a9` | `0x5048f852`, `0x50487ea9`, `0x50487e99` | `0x5049e129`, `0x50496707`, `0x504966f7` | 0 |
+| the second step's others (byte +8 1 or bit 19; kind) | `0x504953c2`, `0x5049cd1a` | `0x50487eb2`, `0x5048fa10` | `0x50496710`, `0x5049e2e7` | 0 |
+| the library's run; the generic kind handler | `0x50492758`; `0x5046d994` | `0x50485182`; `0x5045f338` | `0x504939e0`; `0x5046dba4` | 0 |
+| TAKE's shot-record fill; takepic | `0x503bba51`; `0x503bcd51` | `0x503bc37e`; `0x503bd6ab` | `0x503c660c`; `0x503c793b` | 0 |
+| the per-shot EXIF fill (the observers' control) | `0x5042c2d5` | `0x50428252` | `0x50436558` | 1 |
+
+  The release (`0x5054322e`; E146 `0x50520568`, E147 `0x5052f657`) runs once (4.3.9's pin). The format word's helper
+  also runs once from another REC function (`0x50551b17`, not read), and the library's format mapper below it once
+  more from `0x5054b3fa`, 1 ms earlier. TAKE's fill and takepic do not run even with E143's native TAKE under control
+  camapp 3 with `--take probe --cpu2 native` (X, a scout's probe of the same day, not rerun here). So natively:
+  CreateParam with its helpers, the create with the still constructor and its second step, ImageParam's body and the
+  release; stood in or not reached: the parameter set, the run, its stages and kinds (S-JPEGENC, 4.3.9), TAKE's shot
+  record and takepic (S-EXIFPRM).
+- **The request (D).** rec_jpeg_make_image clears the request on its stack (48 bytes at `0x50549b6b`; E146 56 at
+  `0x50527c52`, E147 60 at `0x50536e60`). CreateParam writes +0 (the callback) and +4 (the packet), then through its
+  helpers the format word +8 (4 bytes, `0x50547cf7`) and the flags +12 (`0x50547e3b`), +34 and +35 (the packet's +299),
+  the kind byte +37 (`0x50547be6`), +32 (`0x50547b3f`), +41 and +44 (`0x5054bf34`, `0x5054bf50`), and last applies the
+  request's extensions (`0x505436af`: one entry at `0x606e0048`, a test, an apply and a release; the test
+  `0x50543f93` passes for byte +8 1, and the apply `0x50543fbb` sets the request's two buffers at +16 and +24 through
+  `0x5054b049`; I: REC's allocation, as E147's `0x50538326`, which calls MM's). On E146 and E147 the same helpers
+  write +8 and +12, and from +32 on each field 8 bytes later (the kind byte +45; the packet's +269 into +42 and +43).
+  No code on the path writes the option byte +42 (E146 and E147 +50). The create copies the request to its handle + 4
+  (12 words, `0x5049185e`; E146 14, E147 15) and keeps the format word's bytes +8, +9 and halfword +10 as one code
+  (its context's +4552; E146 and E147 +5352). With byte +8 not 1 it sets the copy's bit 19 of +12 when that code is
+  11 or 12 (and bit 23 for 12, `0x50491b04..0x50491b33`), then clears bit 19 when +32's bits 4..7 are 4, or +37 or
+  +41 is set (`0x50491b34..0x50491b74`; E146 +40, +45 and +49, E147 also +52). Its other writes to the copy before
+  the fill are bits of +12 and the halfword +32 (E146 and E147 +40).
+- **The selector (D).** The stage-table fill (`0x504934a6`, from `0x50491bbf`): the kind byte not 0 or 4 takes
+  `0x5049cb5c`; else the option byte `0x504953b9`; else byte +8 1, or byte +8 0 or 2 with bit 19, `0x504953a9`; else
+  byte +8 0 or 2 the still constructor through `0x504a7027`; any other byte +8 no constructor (status 40642). With the
+  fill's status 0 the create's second step (`0x50493541`, from `0x50491be1`) calls `0x5049cd1a` for a kind byte, and
+  for byte +8 1 or bit 19 the stub `0x504953c2` (`call 0x504970dd`). E146 and E147 test the same at +45 and +50
+  (E147: the fill `0x504947a6` takes `0x5049e129`, `0x50496707`, `0x504966f7` or `0x504a88f1`; its second step
+  `0x50494841` calls `0x5049e2e7` or the stub `0x50496710`).
+- **The sources (D, the three bodies' forms the same unless said).**
+  - The option byte: none on this path (above).
+  - The kind byte for Mode 4097: 7 only when `0x5054c016` gives 1 (the record's +38764 is 22 and `0x50863f74`
+    answers) and `0x5054bfb3` gives 2 or 3 (the packet's +314 and +308: 9 and 1, or 1 and 2); otherwise 0. +38764 is
+    TAKE's shot kind from its own state (`0x503bc632..0x503bc79c`: 22 with its +3604 and +3605 1, 0 where none of
+    its cases holds), not a setting; +314 and +308 are the requester's packet fields (S-RECREQ's 0).
+  - The format word: `0x50547cf7` hands the library's mapper (`0x50484ce9`; E146 `0x50476e91`, E147 `0x50485767`) the
+    record's +38037 and +38008, its +38772 where +38037 is 100 or more (1 for 0), and a flag for Mode 4106 or 8198
+    with the packet's +264 above 1. The mapper gives {1, +38772, +38037} for +38037 of 100 or more; without the flag {2, 0, a
+    code} for +38008 in its table (9..212); otherwise {0, 0, +38037}. Then `0x50547cf7`'s own cases (Mode 8193 or
+    8198, +38008 67, +38764 14, `0x5054bfb3` 2 or 4; E147's last also for +37689 11 and 12) change it; none applies
+    with the lab's values (Mode 4097, 49169 3, +38764 0).
+  - TAKE's fill writes the three from the settings store: +38037 from setting 38017, and from setting 40209 where
+    38017 gives 6 (`0x503bc209..0x503bc237`: `mov 38017,d0; mov 0,a0; call S; mov (4,sp),a2; add 38037,a2; movbu
+    d0,(a2)`, then the second read; not the form recImage's `take` list matches, which stores through `(4,sp)` at
+    once); +38008 from 49169 and +38772 from 17601 in that form (`0x503bcbc4..0x503bcbd6`, `0x503bc1f4..0x503bc203`).
+    E146: +37689 at `0x503bcb36..0x503bcb64`, +37660 stored at `0x503bd50b`, +38224 at `0x503bcb30`; E147:
+    `0x503c6dc4..0x503c6df2`, `0x503c779b`, `0x503c6dbe`; the same settings read (4.3.5's).
+  - The flags +12 come from settings 62929, 38481 and 38497 (+38773, +38038, +38039; `0x50547e3b` sets bits of
+    +38773's table and bit 23, never bit 19), so they reach the fill only through the create's bit 19.
+- **Setting 38017 is the picture mode (X: TAKE's settings read after a shot).** E143 and E146 give 2; E147 at the
+  creative dial's start position (COLOR) 11, at MONO 12, at position 2 2, at ART 100 (17601 then 1), at CRT 9
+  (`--creative-dial`, `emu/src/fw/models.mjs` creative_dial); 49169 is 3 on the three (outside the mapper's table)
+  and 17601 0. That it is the picture mode is I, from that mapping and the EXIF set's use of +38037 (`0x5042b5f9`, a
+  table of 1..124 into the record's halfwords from +5576). With TAKE's fill the camera's request for a still would be
+  {0, 0, 2} on E143 and E146 at that mode: the still constructor, as in the lab. On E147 at COLOR or MONO it is
+  {0, 0, 11} or {0, 0, 12}: the create sets bit 19 (unless the request's +40, +49 or +52 clear it; the lab's are
+  `0x1000`, 0 and 0), so the fill takes `0x504966f7` and the second step the stub `0x50496710`; at ART {1, 1, 100}
+  takes the same pair. CRT and position 2 take the still constructor.
+- **E147's extension differs (D).** Its test (`0x505307c8`) passes also when the record's +37689 is 11 or 12 (E143's
+  and E146's for byte +8 1 only), so at COLOR or MONO CreateParam's extension first allocates the request's two
+  buffers (`0x50530805`: through REC's `0x50538326` and MM's `0x50521c4b`).
+- **Tried in the lab (X, experiments, nothing committed).**
+  - S-EXIFPRM also writing the three settings at E147's offsets: the request's format word is {0, 0, 11}, the
+    extension's test passes and its apply calls MM's allocation, which does not return: `0x50521cdc`'s retry calls
+    `0x5002c6e5` 10,124 times from 3855.7 ms to 13,993 ms of lab time, the create is never called, no file is written
+    and the step stops on an event storm (more than 1090 GESetEvent calls). Which of MM's banks it asks and why it has
+    no block is ? (MM's banks, 4.3.4).
+  - Bit 19 forced into the request's copy at the fill, on E143 and E147: `0x504953a9` (E147 `0x504966f7`) returns 0,
+    the second step's stub returns 40655 (`0x504975cf`, after its option objects' allocations; which one fails is
+    ?), and the create fails: REC_FILE replies status `0x1f60` with no encode (storageSession then stops at S-RECREQ's
+    check, 36 of 37).
+  - S-EXIFPRM also writing setting 38017 on E143 (2): the format word is {0, 0, 2}, the counts above are unchanged,
+    and the pin's request check fails (the negative control of the pin's request bytes; the dead control: the EXIF
+    fill's observer moved one byte gives 0 runs and fails, X on E146).
+- **The lab (no change).** The picture mode is a TAKE setting with D on the three bodies, but writing it stops
+  E147's still at an allocation the lab does not answer, and past that the stub fails too. So S-EXIFPRM writes the
+  six fields of 4.3.5 only, the request's format word, flags, kind and option are 0 on the three bodies, and the
+  create takes the still constructor for every still (pinned, above). On the camera an E147 still at COLOR, MONO or
+  ART takes `0x504966f7` and the stub `0x50496710` (D); in the lab neither runs (X). `emu/src/lab/playui.mjs`
+  S-EXIFPRM says so. The files are unchanged (the pin adds observers only; golden is not touched).
+- **Corrects.** 4.3.9's "the others ... by the request's bytes +37, +42 and +8, are not read": read above. A scout's
+  note of the same day put the code at `0x50496710` inside the constructor `0x50496707`; it is the second step's
+  own stub (E143 `0x504953c2`), taken for byte +8 1 or bit 19, not for the option byte.
+- **Open.** MM's allocation for E147's extension; the stub's option objects (`0x504970dd`) and its 40655; the
+  constructor `0x504953a9`'s stages (not read); the run (4.3.9).
 
 ### 4.4 AF, lens and body IS
 

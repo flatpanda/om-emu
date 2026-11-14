@@ -439,8 +439,16 @@ Their main driver (`tools/emulator/session_ed1.mjs`, D) against `bin/session.mjs
 - **Looks on pixels.** Their looks act as data handed to the development (settings, parameter records, LUTs and
   tables) and, for halation and the CPU grain, as code on the developed image (4.6). The S2 picture is S-SCENE's frame
   encoded by S-JPEGENC, so no film changes it, and none of the development's hook sites runs (X, 4.6). What the lab
-  checks today is a film's values where the camera takes them: its settings and the hooked capture reads (4.6). The
-  capture path below the EXIF fill (TAKE, development, encode), where their reboots and hangs happened, does not run.
+  checks today is a film's values where the camera takes them: its settings and the hooked capture reads (4.6). Below
+  the EXIF fill, where their reboots and hangs happened, the lab runs natively rec_ImgPro_CreateParam and its helpers
+  (`.hook_fx` among them), the image library's create with the still constructor and its second step, ImageParam's
+  body and the release; the parameter set, the run, its stages and kinds do not run (S-JPEGENC), nor do TAKE's
+  shot-record fill and takepic, even with E143's native TAKE (`docs/hle-gaps.md` 4.3.12, X, pinned per body in
+  `emu/test/test_storage.mjs`). The create's constructor follows setting 38017, which follows the creative dial (X; I:
+  the picture mode): on the camera an E147 still at COLOR, MONO or ART takes `0x504966f7` and the create's second step
+  the stub at `0x50496710`, their `.hook_su`, after CreateParam's extension allocates two buffers (D). The lab writes no
+  picture mode into the shot's record, so its create takes the still constructor and `.hook_su` does not run: writing
+  it stops the still at that allocation, which MM does not answer in the lab (X).
 - **The colour wheel's plane**: the GPU plane is not composed (`PLANC_UNOBSERVED`, stock too).
 - **The boot order** of sections against the tasks that call into them (FIDELITY 7.18).
 - **Timing, the watchdog and the cache**: no fetch cost, no cache or watchdog model (their lk7 / lk9 hang).

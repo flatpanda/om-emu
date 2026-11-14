@@ -511,6 +511,7 @@ export class Player {
       ...(mdet.installed && Object.values(mdet.pdt.e).some((x) => x.runs) ? ['A-PDT-1'] : []));
     const ems1 = this.session?.lab?.sim?.m?.devices?.ems1;                                  // the EMS1 engine (ems1.mjs)
     if (ems1?.touched) used.push('S-EMS1', ...(ems1.runs ? ['A-EMS1-1'] : []));
+    if (this.session?.lab?.sim?.m?.devices?.engine?.wraps) used.push('A-BMPWRAP');         // a picture run drawn across a row end (engine.mjs)
     if (this.session?.camapp?.shutter_sound?.opened) used.push('S-SHUTTERSND');              // a release's shutter sound emitted (shuttersnd.mjs)
     if (this.session?.lab?.panel_answered) used.push('S-PANELDONE');                        // a panel driver's serial completion wait answered
     if (this.session?.lab?.tp_sends?.length) used.push('S-TPSEND');                         // a send to the touch task the lab runs it for

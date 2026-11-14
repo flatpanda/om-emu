@@ -399,6 +399,18 @@ bad += pj.bad.length + rbx.bad.length + pg.bad.length + cdt.bad.length + wk.bad.
   [...su.bad, ...ss.bad, ...(r.status === 0 ? [] : lines.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
   bad += su.bad.length + ss.bad.length + (r.status === 0 ? 0 : 1);
 }
+// the OSD engine's picture runs across a row end (A-BMPWRAP): the units, then Caduceus for OM-3's v0.29 guides on E147
+// in a process of its own when OM_CADUCEUS names their checkout (skipped otherwise; their bytes are read there)
+{
+  const { osdWrapUnits } = await import('../test/test_osdwrap.mjs');
+  const { spawnSync } = await import('node:child_process');
+  const ou = osdWrapUnits();
+  const r = spawnSync(process.execPath, [new URL('../test/test_osdwrap.mjs', import.meta.url).pathname, '--session'], { env: { ...process.env, OM_EMU_MODEL: 'E147' }, encoding: 'utf8' });
+  const out = (r.stdout + r.stderr).trim().split('\n'), skipped = r.status === 0 && out.some((l) => l.includes(': skipped ('));
+  console.log(`OSD runs across a row end (A-BMPWRAP): units ${ou.checks - ou.bad.length}/${ou.checks}; their guides on E147 ${skipped ? 'skipped (OM_CADUCEUS unset)' : r.status === 0 ? 'ok' : 'FAILED'}`);
+  [...ou.bad, ...(r.status === 0 ? [] : out.map((l) => `E147: ${l.trim()}`))].forEach((x) => console.log('  ', x));
+  bad += ou.bad.length + (r.status === 0 ? 0 : 1);
+}
 // the publication audit (bin/pubaudit.mjs) on a throwaway repository with made-up firmware
 {
   const { pubauditTests } = await import('../test/test_pubaudit.mjs');

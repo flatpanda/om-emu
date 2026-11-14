@@ -328,6 +328,18 @@ export async function openSession(o = {}) {
   let pl = null, failed = null, tasks = new Set(), audit = null, closed = false, lastFrameError = null;
   const fail = (rec, message) => { rec.ok = false; rec.error = message; failed ??= { step: rec.step, token: rec.token, message }; errors.push(`step ${rec.step} (${rec.token}): ${message}`); };
   const labMessage = () => pl?.error?.message ?? 'the session stopped';
+  // the OSD engine's refusals since the last record ({NAME: count}, src/dev/engine.mjs failures), or null; the firmware
+  // goes on after one and the picture is not drawn, so a record says so. A restart's machine has its own engine
+  let osdEngine = null, osdSeen = {};
+  const osdErrors = () => {
+    const eng = pl?.session?.lab?.sim?.m?.devices?.engine ?? null;
+    if (eng !== osdEngine) { osdEngine = eng; osdSeen = {}; }
+    if (!eng) return null;
+    const d = {};
+    for (const [k, v] of Object.entries(eng.failures)) if (v > (osdSeen[k] ?? 0)) d[k] = v - (osdSeen[k] ?? 0);
+    osdSeen = { ...eng.failures };
+    return Object.keys(d).length ? d : null;
+  };
   const note = () => {                             // what the run used, kept across sessions
     if (!pl) return;
     for (const x of pl.stand_ins_in_use()) standins.add(x);
@@ -480,6 +492,8 @@ export async function openSession(o = {}) {
     }
     if (pl?.frame_error && pl.frame_error !== lastFrameError) rec.frame_error = pl.frame_error;     // once, when it changes
     lastFrameError = pl?.frame_error ?? null;
+    const osd = osdErrors();
+    if (osd) rec.osd_errors = osd;
     note();
     return rec;
   };
@@ -498,6 +512,8 @@ export async function openSession(o = {}) {
     if (pl?.session) pl.publish_status();
     Object.assign(rec, { phase: pl?.phase ?? null, lab_ns: pl?.session?.lab?.lab_time() ?? null, gui: pl?.session ? pl.status_doc.gui_name ?? null : null, frame: pl?.frame?.[3] ?? null,
       session: sessionNo, ...(pl?.status_doc?.nvram ? { nvram: pl.status_doc.nvram } : {}) });
+    const osd = osdErrors();
+    if (osd) rec.osd_errors = osd;
     note();
   }
 

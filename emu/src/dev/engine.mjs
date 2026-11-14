@@ -36,6 +36,8 @@ export class Engine {
     this.fifo = new Uint32Array(32); this.fifoCount = 0;
     this.lut = new Uint8Array(256); this.lutValid = false;
     this.failArg = 0; this.failValue = 0;
+    this.wraps = 0;                       // runs drawn across a row end (A-BMPWRAP)
+    this.failures = {};                   // error name -> count since the machine was made (the debug window's ring is cleared)
     const off = allocWindow(DEBUG_SIZE);
     this.d32 = new Uint32Array(buf, off, DEBUG_SIZE / 4);
     this.dset(D.MAGIC, 0x4544534F); this.dset(D.VERSION, 2);
@@ -54,6 +56,7 @@ export class Engine {
     for (let i = 0; i < 4 && i < n; i++) rec[4 + i] = words[i];
     for (let i = 0; i < 8; i++) this.dset(slot + 4 * i, rec[i]);
     this.dset(D.ERR_TOTAL, total + 1);
+    this.failures[NAMES[code]] = (this.failures[NAMES[code]] ?? 0) + 1;
     let line = `om-emu: osd-engine ERROR ${NAMES[code]} pc 0x${hex8(pc)} arg 0x${hex8(arg)} value 0x${hex8(value)} words`;
     for (let i = 0; i < n; i++) line += ' ' + hex8(words[i]);
     this.m.stderr(line);
@@ -194,7 +197,7 @@ export class Engine {
     let code = 0;
     this.bus.read(src + 4, data, 0, avail);
     const dv = new DataView(data.buffer);
-    let count = 0, pos = 0;
+    let count = 0, pos = 0, wraps = 0;
     const mask = 2 ** bits - 1, runmask = (1 << runbits) - 1;
     while (count < total && !code) {
       const tokens = perWord ? perWord : 1;
@@ -206,7 +209,13 @@ export class Engine {
         if (end > avail) { code = this.fail(E.DMA_RANGE, src + 4 + pos, avail); break; }
         const t = field64(lo, hi, bits * used, bits) & mask;
         const run = (t & runmask) + 1, col = count % width;
-        if (col + run > width) { code = this.fail(E.BMP_TOKEN, src + 4 + pos, t); break; }
+        // A-BMPWRAP: a format-0x0B run that crosses a row end goes on at the start of the next row (the picture one
+        // stream of width x lines pixels). No stock picture has such a run (X: a scan of every body's resource
+        // pictures); Caduceus for OM-3's guide pictures, encoded over the whole picture with no break at row ends,
+        // decode so to exactly their streams' lengths and draw on the camera (their report, I). A run that would
+        // leave the last row, or crosses a row end in another format, is refused
+        if (count + run > total || (col + run > width && fmt !== 0x0B)) { code = this.fail(E.BMP_TOKEN, src + 4 + pos, t); break; }
+        if (col + run > width) wraps++;
         px.fill(t >>> runbits, count, count + run);
         count += run;
       }
@@ -237,6 +246,7 @@ export class Engine {
       }
       this.bus.write(dst + y * stride, row);
     }
+    if (!code) this.wraps += wraps;                // the runs A-BMPWRAP drew (the player's stand-in list)
     return code;
   }
   execute(source, w, n) {

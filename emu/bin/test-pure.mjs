@@ -18,6 +18,7 @@
 // the PDT / TRC unit's register file (test_pdt.mjs pdtUnits, S-PDT),
 // the A53's ISC node-4 service against the oracle's recorded exchanges (test_a53isc.mjs a53iscUnits, S-A53ISC),
 // the EMS1 engine's register file (test_ems1.mjs ems1Units, S-EMS1),
+// the OSD engine's picture runs across a row end (test_osdwrap.mjs osdWrapUnits, A-BMPWRAP),
 // the imgpro unit's register file and fills (test_imgpro.mjs imgproUnits, S-IMGPRO),
 // the lab's baseline JPEG decoder and the pipeline block's register file (test_imgpipe.mjs jpegUnits, imgpipeUnits,
 // S-IMGPIPE),
@@ -73,6 +74,7 @@ import { dmlUnits } from '../test/test_mdet.mjs';
 import { pdtUnits } from '../test/test_pdt.mjs';
 import { a53iscUnits } from '../test/test_a53isc.mjs';
 import { ems1Units } from '../test/test_ems1.mjs';
+import { osdWrapUnits } from '../test/test_osdwrap.mjs';
 import { imgproUnits } from '../test/test_imgpro.mjs';
 import { jpegUnits, imgpipeUnits } from '../test/test_imgpipe.mjs';
 import { modpostUnits } from '../test/test_modpost.mjs';
@@ -147,6 +149,7 @@ report('the DML engine\'s register file: images, output area, completion, refusa
 report('the PDT / TRC unit\'s register file: resets, images, results, completions, refusals (S-PDT)', pdtUnits());
 report('the A53\'s ISC node-4 service against the oracle\'s recorded sccore, socket and CGI exchanges (S-A53ISC)', a53iscUnits());
 report('the EMS1 engine\'s register file: tables, images, results, completions, refusals (S-EMS1)', ems1Units());
+report('the OSD engine\'s picture runs across a row end: drawn as one stream, counted, the refusals kept (A-BMPWRAP)', osdWrapUnits());
 report('the imgpro unit\'s register file: the fills, their bytes and ends, refusals (S-IMGPRO)', imgproUnits());
 report('the lab\'s baseline JPEG decoder against the independent one (src/lab/jpeg.mjs, refs/jpeg.mjs)', jpegUnits());
 report('the pipeline block\'s and the JPEG codec\'s register file: a decode, its bytes and end, refusals (S-IMGPIPE)', imgpipeUnits());

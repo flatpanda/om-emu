@@ -69,18 +69,20 @@ them (`carried`, e.g. `{"mode_dial": 8, "lever": 1}`; X, `test/test_cdial.mjs`);
 first start are fresh, at the idle positions. `bin/session.mjs` opens a new session log per `restart`, so a log whose
 first session started from carried positions records them (`session.json`'s `carried`, and `session.carried.json` beside
 `session.jsonl`), and its `--replay` starts the controls there again (X, `test/test_cdial.mjs` on E147, with the record
-dropped as the control). Other switches (the monitor, `rotate`) start at their idle levels after any power-on.
-`bin/play.mjs` keeps one JSON file per model, `~/.om-emu/nvram-<model>.json` (`nvram-E143.json`, `nvram-E146.json`,
-...), and its startup line names the file in use. `--nvram off` (or `OM_EMU_NVRAM=off`) runs a blank camera at each
-start and leaves the file alone; `--nvram FILE` (or `OM_EMU_NVRAM=FILE`) keeps the state in FILE instead; `--nvram` wins
-over `OM_EMU_NVRAM`. Delete the file to start from a blank camera again. A file names its model and another model's is
-refused at start (exit 1), and so is a file that does not parse. The state is kept where the build places S-NVRAM's
-sites, E143, E146 and E147 (X: two sessions on a fresh file restore M and E on each, and M, E and B after a power
-lever's off, `test_nvram.mjs power`); on the other bodies the player runs blank and its line says why (the flash task's
-post `0x5003d95c` has no place in their builds), and `--nvram on` or a file is refused there. `OM_EMU_SCPU=native` runs
-blank by default as well (the sub-CPU's own backup domain is not kept), and refuses a kept state asked for. The browser
-player keeps the same document in OPFS by default (`nvram=0` for a blank camera; "Forget the kept settings" removes it;
-"The browser player").
+dropped as the control). A session that starts with the first card slot empty (`--no-card`, or a `card:out` before
+`power:off`) records it the same way (`session.json`'s `card_out`, `session.card.json`), and its `--replay` starts with
+the slot empty (X, `test/test_nocard.mjs` on E143 and E147, the record dropped as the control). Other switches (the
+monitor, `rotate`) start at their idle levels after any power-on. `bin/play.mjs` keeps one JSON file per model,
+`~/.om-emu/nvram-<model>.json` (`nvram-E143.json`, `nvram-E146.json`, ...), and its startup line names the file in use.
+`--nvram off` (or `OM_EMU_NVRAM=off`) runs a blank camera at each start and leaves the file alone; `--nvram FILE` (or
+`OM_EMU_NVRAM=FILE`) keeps the state in FILE instead; `--nvram` wins over `OM_EMU_NVRAM`. Delete the file to start from
+a blank camera again. A file names its model and another model's is refused at start (exit 1), and so is a file that
+does not parse. The state is kept where the build places S-NVRAM's sites, E143, E146 and E147 (X: two sessions on a
+fresh file restore M and E on each, and M, E and B after a power lever's off, `test_nvram.mjs power`); on the other
+bodies the player runs blank and its line says why (the flash task's post `0x5003d95c` has no place in their builds),
+and `--nvram on` or a file is refused there. `OM_EMU_SCPU=native` runs blank by default as well (the sub-CPU's own
+backup domain is not kept), and refuses a kept state asked for. The browser player keeps the same document in OPFS by
+default (`nvram=0` for a blank camera; "Forget the kept settings" removes it; "The browser player").
 
 The camera's clock in a session with the kept state is the host's local time, read once as the session starts, plus
 the offset the camera's own clock setting left, and then advances with lab time (src/lab/menu.mjs store_init), so a
@@ -1015,11 +1017,11 @@ that card before the first session mounts it, checked on a copy first as play's;
 verification starts from a blank camera (S-SETSAVE) unless it names a file, where the camera's settings and clock are
 then kept between sessions and runs (S-NVRAM; a file of another model is refused). `--settle MS` (default 600) is the
 lab time after a press, a dial step or a switch. `--out DIR` gets each session's log (`session-N.json`, `.jsonl`,
-`.nvram.json`, `.carried.json` after `power:off`, the forms `--replay` reads), and the relative paths of the tokens
-resolve against it. `--script FILE` (repeatable) gives tokens before those of the command line. Each script line and
-each argument is split at white space; a double-quoted part keeps its spaces
-(`expect:exif:DCIM/100OMSYS/*.JPG:ImageDescription~"FILM 1"`), and `#` at a token's start comments out the rest of the
-line.
+`.nvram.json`, `.card.json` when the first slot is empty at its start, `.carried.json` after `power:off`, the forms
+`--replay` reads), and the relative paths of the tokens resolve against it. `--script FILE` (repeatable) gives tokens
+before those of the command line. Each script line and each argument is split at white space; a double-quoted part keeps
+its spaces (`expect:exif:DCIM/100OMSYS/*.JPG:ImageDescription~"FILM 1"`), and `#` at a token's start comments out the
+rest of the line.
 
 | Token | What it does |
 | --- | --- |
@@ -1029,7 +1031,7 @@ line.
 | `switch:ID=V`, `switch:ID+N` | a switch or position switch set to V, or stepped (`creative_dial`, `still_movie`, `mode_dial`, `lever`, ...) |
 | `wait:MS`, and play's own tokens `WAIT:MS`, `WAIT_UNTIL:NS`, `EV:...`, `SET:id=v`, `GET:id`, `CLOCK:...`, `OPEN`, ... | lab time; play's tokens as play takes them (EV, SET, CLOCK, XCALL, OPEN and CLOSE are harness inputs a camera cannot get: the summary lists them) |
 | `power:off` | the power lever off: the firmware's own power-off, which saves the kept state |
-| `card:out`, `card:in` (`card:out:2`, `card:in:2`; `:1` names the first slot) | the card taken out of the first slot (the second) while the camera runs, or put back: the player's card input (S-MEDIA); a later `restart` keeps the slot as it is, so after `card:out` it is a power-on without a card |
+| `card:out`, `card:in` (`card:out:2`, `card:in:2`; `:1` names the first slot) | the card taken out of the first slot (the second) while the camera runs, or put back: the player's card input (S-MEDIA); a later `restart` keeps the slot as it is, so after `card:out` it is a power-on without a card (its log records the empty slot, `card_out`, which `--replay` restores) |
 | `restart[:card=FILE]` | a new session in this process on the same `--nvram` file and card (or the card FILE from now on, in the slot); after `power:off` the camera's power-on, the mode dial, creative dial, still / movie switch and (E143) Fn lever where they were (the record's `carried`); without `power:off` before it a battery pull, a fresh start at the idle positions |
 | `shot:FILE.png` | the last published frame of the display shown (`--device`, the eye sensor) as an RGB PNG, the pixels `GET /api/frame` gives; the record's `device` and `size` say which |
 | `read:ADDR:LEN`, `call:FN[:d0=..,a0=..,limit=N,space=..]` | the debug route's `read` and `call` ops (The debug API); `entry=PC`, `stop=PC` (repeatable) and `frame=MASK/SIZE` make a call into the middle of a function or one that ends at a stop pc |
@@ -1363,7 +1365,7 @@ firmware the run warns and skips that rule. `--explain N` prints what each firmw
 | `node emu/test/test_bootstage.mjs [--session]` (`OM_EMU_MODEL=E146` or `E147` for those bodies) | also in `bin/test.mjs`: the boot job S-BOOTSTAGE's bits follow, read from the body's block (USTART_L2's copies, stage waits and posts to CPU 0 and CPU 1, the per-section step's constructor blocks, each table in its section), with two altered copies as controls; with `--session` the stage word after a play session's open (`0x7f`) and `stage_bits`' controls (`docs/hle-gaps.md` 4.6.4) | the body's main block |
 | `node emu/test/test_trace.mjs [--units] [--session]` | also in both suites above: the scripted session's traces, breakpoints and watchpoints: the tokens, the machine's exec probes on a blank image and the live route's hit log; through `bin/session.mjs` on E143, and on E147 with `OM_EMU_MODEL=E147` (Scripted sessions) | the firmware for `--session` |
 | `node emu/test/test_tools.mjs [--units] [--session]` | also in both suites above: the scripted session's stack captures, dumps, breaks at hooked pcs, calls at a breakpoint's stop, `--a15`, `--device` and `--osd-errors`: the tokens, the route's stack words and the machine's CPU context firmware-free; through `bin/session.mjs` on E143 (and E118 for `--osd-errors`' default per body), and on E147 with `OM_EMU_MODEL=E147` (Scripted sessions) | the firmware for `--session` (E143's and E118's; E147's) |
-| `node emu/test/test_nocard.mjs [--units] [--session]` | also in both suites above (E147 in a process of its own): the session's `card:out` / `card:in` tokens; a start with the first slot empty (no insertion request, the media status word NOT_PRESENT, "No Card" on the shooting screen), the card put in (OK) and taken out (NOT_PRESENT, the screen the card-less start's), a power cycle with the slot still empty, and `--no-card` through `host/session.mjs` with no poke; `OM_EMU_MODEL` picks the body | the firmware for `--session` |
+| `node emu/test/test_nocard.mjs [--units] [--session]` | also in both suites above (E147 in a process of its own): the session's `card:out` / `card:in` tokens; a start with the first slot empty (no insertion request, the media status word NOT_PRESENT, "No Card" on the shooting screen), the card put in (OK) and taken out (NOT_PRESENT, the screen the card-less start's), a power cycle with the slot still empty, and `--no-card` through `host/session.mjs` with no poke, its logs' `card_out` record and `--replay` of a session that started card-less (control: the record dropped, the card in); `OM_EMU_MODEL` picks the body | the firmware for `--session` |
 | `node emu/test/test_smswitch.mjs` (`OM_EMU_MODEL=E147` for the OM-3) | also in `bin/test.mjs` (E147 in a process of its own): E147's still / movie switch as a player input (`still_movie`): its three positions and labels, the movie mode (setting 44) each gives after a move, a step and a key press, a position past the last refused, a power cycle on the kept state carrying it and a restart not, the carried record taken by `--replay`'s reader, `switch:still_movie=1` through `bin/session.mjs`; on E143 the input refused with its reason | the E147 firmware (E143's for the refusal) |
 | `node emu/test/test_fwmap.mjs` | the coverage option off and on, the static map's determinism and headline, the labels' keys, `run.mjs` under `OM_COVERAGE` (also in both suites above) | the E143 main block for the second half |
 | `OM_EMU_MODEL=E147 OM_CADUCEUS=CHECKOUT node emu/test/test_looks.mjs [--units] [--session]` | a Caduceus film checked below the pixels (`analysis/caduceus-om3/README.md` 4.6): the LOOKS.BIN reader and its refusals and a film's expected values (pure, also in both suites above); with `--session` a caduceus-om3 release (`releases/$OM_CADUCEUS_RELEASE`, `v0.29` by default) as `--patch` on E147 through `host/session.mjs`, FILM 1, 2 and 3 picked in the Picture Mode list: COLOR 1's 18 settings by the settings getter and the hooked WB fine-tune and Sharpness reads (targets read from the patched image; both of the EXIF set's WB pairs, and a trace over S2 showing it reads keys 7401 and 7417, not 34041 and 38521) against the film's LOOKS.BIN record, the film's name in S2's ImageDescription, no poke; controls: the values before each pick, a film with its WB shift off. `bin/test.mjs` runs the session only when `OM_CADUCEUS` is set (about 20 s) | the E147 firmware and a caduceus-om3 checkout for `--session` |

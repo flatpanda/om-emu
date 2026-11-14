@@ -473,7 +473,9 @@ export async function openSession(o = {}) {
     sessionNo += 1;
     frame = null;
     if (out) {                                     // a companion an earlier run left would start this session's replay there
-      try { fs.unlinkSync(path.join(out, `session-${sessionNo}.carried.json`)); } catch (e) { if (e.code !== 'ENOENT') throw new SessionRefused(`--out ${out}: cannot clear session-${sessionNo}.carried.json (${e.code ?? e.message})`); }
+      for (const c of ['carried', 'card']) {
+        try { fs.unlinkSync(path.join(out, `session-${sessionNo}.${c}.json`)); } catch (e) { if (e.code !== 'ENOENT') throw new SessionRefused(`--out ${out}: cannot clear session-${sessionNo}.${c}.json (${e.code ?? e.message})`); }
+      }
     }
     pl = new Player(a, envFor(sessionNo));
     pl.off_positions = positions;

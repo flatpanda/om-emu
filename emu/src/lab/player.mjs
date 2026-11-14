@@ -12,7 +12,7 @@
 // the wall-clock fields, which the recordings strip, the 0.3 s page-order deadline, and under --idle wall the pacing and
 // touch_gap's user gap when the page sends no t_client), logSink(name, text) (session.jsonl / session.json; optional),
 // readReplay(path) (the --replay file's text, and for a .jsonl the S-NVRAM record and the controls' start positions
-// beside it: a missing one throws an error whose code is 'ENOENT', replayNvramRecord, replayCarried), and for a host that publishes (the browser player):
+// beside it: a missing one throws an error whose code is 'ENOENT', replayNvramRecord, replayCarried, replayCardOut), and for a host that publishes (the browser player):
 // onStatus(doc) after
 // every published status, onFrame(w, h, raw, meta) after every published frame (raw: the composite's little-endian
 // words, valid only during the call; meta {seq, device, lab_ns, sha16}), and asyncHost (true: an input that overtook its
@@ -298,6 +298,30 @@ export function replayCarried(file, text, read) {
   return rec;
 }
 
+// A --replay file's record of the first card slot at its first session's start: true when the slot was empty (the
+// host's card holder out: host/session.mjs --no-card, or a card:out that a power:off and restart carried), false when
+// the card was in (no record: every start with the card in, and the logs written before the record existed).
+// session.json's card_out field; for a session.jsonl, the session.card.json beside it (open_session writes it at the
+// first session's start when the slot is empty).
+export function replayCardOut(file, text, read) {
+  const name = String(file).split('/').at(-1);
+  let rec, where = file;
+  if (name.endsWith('.json') && name !== '.json') {
+    let doc;
+    try { doc = JSON.parse(text); } catch { return false; }         // replayEntries reports it
+    if (!isDict(doc) || doc.card_out === undefined) return false;
+    rec = doc.card_out;
+  } else {
+    where = String(file).replace(/(\.jsonl)?$/, '.card.json');
+    let t;
+    try { t = read(where); } catch (e) { if (e?.code === 'ENOENT') return false; throw e; }
+    try { rec = JSON.parse(t); } catch (e) { throw new ValueError(`--replay ${file}: ${where}: ${e.message}`); }
+    rec = isDict(rec) ? rec.out : rec;
+  }
+  if (rec !== true && rec !== false) throw new ValueError(`--replay ${file}: ${where === file ? 'its card_out field' : where} ${show(rec)}: the first slot at the start (true: empty)`);
+  return rec;
+}
+
 export class Player {
   constructor(a, env) {
     this.a = a;
@@ -358,6 +382,7 @@ export class Player {
     this.patch_audit = null;         // a patch overlay's audit (open_session), and the patch's tasks started in any session
     this.off_positions = null;       // the physical controls' positions the power lever's off left, for the next power-on (power)
     this.carried_record = null;      // where the first session's controls started (off_positions then): session.json's carried
+    this.card_out_record = false;    // the first slot empty at the first session's start: session.json's card_out
     this.opened = false;             // a session was opened (the first one's start is the log's)
     this.patch_tasks = new Set();
     this.audio = new AudioRing();    // the sessions' sound as published (publish_audio), for GET /api/audio
@@ -401,6 +426,9 @@ export class Player {
       this.opened = true;
       this.carried_record = this.off_positions;
       if (this.off_positions !== null) this.env.logSink?.('session.carried.json', JSON.stringify(this.off_positions));
+      // and the first card slot, when it starts empty (the holder's out; replayCardOut)
+      this.card_out_record = !!STORAGE && this.env.card?.out === true;
+      if (this.card_out_record) this.env.logSink?.('session.card.json', JSON.stringify({ out: true }));
     }
     const s = new PlaySession(this.env, { opts: this.opts(), lang: a.lang, device: a.device, start: tab, out: `${a.out}/shots`, tag: 'play',
       a15: (a.a15 ?? 'auto') === 'on' });
@@ -811,6 +839,10 @@ export class Player {
       this.nvram_use(rec ? replayNvram(rec, `the log ${this.a.replay}`) : null);
       // and its controls from where the log's first session's started (a power-on after power:off), else the idle ones
       this.off_positions = replayCarried(this.a.replay, text, (p) => this.env.readReplay(p));
+      // and its first card slot as it was then: empty, or the card in (the host's card, else the player's in memory)
+      const out = replayCardOut(this.a.replay, text, (p) => this.env.readReplay(p));
+      if (out && !this.env.card) throw new ValueError(`--replay ${this.a.replay}: its first session started with the first card slot empty, and ${MODEL} has no card in the lab (S-CARD)`);
+      if (this.env.card) this.env.card.out = out;
     }
     this.replaying = replay !== null;
     try { this.open_session(); } catch (e) {
@@ -1240,7 +1272,8 @@ export class Player {
       ...(this.env.patch ? { patch: this.env.patch } : {}),        // the patch overlay the firmware ran with (src/fw/patch.mjs)
       ...(this.patch_audit ? { patch_audit: this.patch_audit_doc() } : {}),   // and its audit (src/lab/patchaudit.mjs)
       ...(this.nvram_record ? { nvram: this.nvram_record } : {}),    // S-NVRAM: what each session started from (--replay)
-      ...(this.carried_record ? { carried: this.carried_record } : {}) };   // the first session's controls (--replay)
+      ...(this.carried_record ? { carried: this.carried_record } : {}),     // the first session's controls (--replay)
+      ...(this.card_out_record ? { card_out: true } : {}) };              // and its first card slot empty (--replay)
     if (this.env.logSink) this.env.logSink('session.json', JSON.stringify(doc));
   }
   // --replay: the logged inputs at their lab times (idle off between them); internal entries post the touch gestures at

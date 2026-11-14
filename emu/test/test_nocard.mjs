@@ -12,7 +12,10 @@
 //                  start's, pixel for pixel; the session closed with the card out and opened again in the same Player
 //                  (a power cycle): the slot still empty. Then through host/session.mjs (bin/session.mjs's module):
 //                  --no-card, card:in, card:out, power:off and restart (the slot kept empty), the words read by the
-//                  session's read: token, no poke. Negative controls (by hand, 2026-11-14): with S-MEDIA's status
+//                  session's read: token, no poke; each session's log records the empty slot at its start
+//                  (session-N.json's card_out, session-N.card.json), and --replay of session 2 (Player.run, from
+//                  either form) starts with the slot empty and reads NOT_PRESENT (control: the record dropped, the
+//                  card in and OK). Negative controls (by hand, 2026-11-14): with S-MEDIA's status
 //                  writes left out the word read NOT_PRESENT after the insertion and OK after a removal on a card
 //                  started in; with the empty slot's insertion not skipped the open stops ("the insertion's
 //                  requests with the card out of the slot")
@@ -20,6 +23,7 @@
 import { parseToken, stepInputs, TokenError } from '../host/session.mjs';
 
 const J = JSON.stringify;
+const thrown = (f) => { try { f(); return null; } catch (e) { return e; } };
 export function nocardUnits() {
   const bad = [];
   let checks = 0;
@@ -104,9 +108,12 @@ export async function nocardSession() {
   try { pl.close_session(); } catch { /* closed */ }
 
   // ---- host/session.mjs: --no-card, card:in, card:out, power:off, restart (the slot kept empty)
+  const fs = await import('node:fs'), path = await import('node:path');
+  const tmp = path.join(process.env.HOME, '.cache/om-emu-tmp/test-nocard-' + process.pid);
+  fs.rmSync(tmp, { recursive: true, force: true });
   try {
     const { openSession } = await import('../host/session.mjs');
-    const s = await openSession({ model: MODEL, noCard: true });
+    const s = await openSession({ model: MODEL, noCard: true, out: tmp });
     const word = (r) => (r.hex.match(/../g).reverse().join('').replace(/^0+(?=.)/, ''));
     const run = (t) => { const r = s.step(t); if (!r.ok) throw new Error(`step ${r.step} (${t}): ${r.error}`); return r; };
     ok(s.first.ok, `openSession with noCard opens: ${J(s.first).slice(0, 300)}`);
@@ -122,6 +129,44 @@ export async function nocardSession() {
     ok([w0, w1, w2, w3].join() === ['1001', 'f000', '1001', '1001'].join() && sum.ok && sum.pokes.length === 0,
       `bin/session.mjs's module: --no-card ${w0}, card:in ${w1}, card:out ${w2}, after power:off and restart ${w3} (want 1001 f000 1001 1001), no poke: ${J({ ok: sum.ok, pokes: sum.pokes })}`);
   } catch (e) { bad.push(`${MODEL}: host/session.mjs: ${e.message.slice(0, 500)}`); }
+
+  // ---- the logs record the empty slot at each session's start (session.json's card_out, session.card.json beside
+  // session.jsonl), and --replay (Player.run) starts there with the slot empty: session 2 (the restart after card:out
+  // and power:off) replayed from either form reads NOT_PRESENT with no card in the slot; control: the same session.json
+  // with card_out dropped starts with the card in and reads OK
+  try {
+    const { replayCardOut } = await import('../src/lab/player.mjs');
+    const doc = (k) => JSON.parse(fs.readFileSync(path.join(tmp, `session-${k}.json`), 'utf8'));
+    const companion = (k) => { try { return fs.readFileSync(path.join(tmp, `session-${k}.card.json`), 'utf8'); } catch { return null; } };
+    ok(doc(1).card_out === true && doc(2).card_out === true && companion(1) === '{"out":true}' && companion(2) === '{"out":true}',
+      `the logs: session-1 and session-2 started with the slot empty: ${J([doc(1).card_out, doc(2).card_out, companion(1), companion(2)])}`);
+    const replay = (file) => {
+      const p = new Player({ ...PLAYER_PARSER, no_browser: true, idle: 'off', a15: 'on', out: '<out>', no_wait_on_error: true, replay: file },
+        { rom: loadImage(), resBlock: loadBlock(), nand: loadNand(), createHash, wallClock: () => performance.now() / 1000,
+          readReplay: (f) => fs.readFileSync(path.isAbsolute(f) ? f : path.join(tmp, f), 'utf8') });
+      let got = null;
+      const close = p.close_session.bind(p);
+      p.close_session = () => {
+        if (p.session !== null && got === null) got = { word: hx(p.session.lab.sim.u32(WORD)), present: p.session.storage.card.present, phase: p.phase };
+        close();
+      };
+      p.submit({ type: 'control', op: 'quit' });
+      p.run();
+      return got;
+    };
+    const ctl = path.join(tmp, 'control.json'), d2 = doc(2);
+    delete d2.card_out;
+    fs.writeFileSync(ctl, JSON.stringify(d2));
+    const [rj, rl, rc] = [path.join(tmp, 'session-2.json'), path.join(tmp, 'session-2.jsonl'), ctl].map(replay);
+    ok(rj?.word === hx(MEDIA_NOT_PRESENT) && rj.present === false && rl?.word === hx(MEDIA_NOT_PRESENT) && rl.present === false,
+      `--replay of session-2 (.json and .jsonl): the slot empty from the start, NOT_PRESENT: ${J([rj, rl])}`);
+    ok(rc?.word === hx(MEDIA_OK) && rc.present === true, `control: session-2.json without card_out replays with the card in, OK: ${J(rc)}`);
+    ok(replayCardOut('s.json', J({ inputs: [] }), null) === false && /its card_out field "yes"/.test(thrown(() => replayCardOut('s.json', J({ card_out: 'yes' }), null))?.message ?? '')
+      && /s\.card\.json 7/.test(thrown(() => replayCardOut('s.jsonl', '', () => '7'))?.message ?? ''),
+      'replayCardOut: no record is the card in; a malformed record is refused');
+    notes.push(`${MODEL}: --replay of session-2 ${rj?.word} (.json), ${rl?.word} (.jsonl); control ${rc?.word}`);
+  } catch (e) { bad.push(`${MODEL}: the logs' empty slot and --replay: ${e.message.slice(0, 500)}`); }
+  fs.rmSync(tmp, { recursive: true, force: true });
   return { checks, bad, notes };
 }
 
